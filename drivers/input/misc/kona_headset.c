@@ -120,6 +120,11 @@ struct mic_t {
 	struct input_dev *headset_button_idev;
 	int hs_state;
 	int button_state;
+	/*
+	 * 1 - mic bias is ON
+	 * 0 - mic bias is OFF
+	 */
+	int mic_bias_status;
 #ifdef CONFIG_KONA_NAHJ_SUPPORT
 	unsigned mic_gnd_gpio;
 #endif
@@ -235,6 +240,9 @@ static CHAL_ACI_vref_config_t aci_vref_config = { CHAL_ACI_VREF_OFF };
 
 static int aci_interface_init(struct mic_t *mic);
 static int aci_interface_init_micbias_off(struct mic_t *mic);
+
+extern void kona_mic_bias_on(void);
+extern void kona_mic_bias_off(void);
 
 /* Function to dump the HW regs */
 #ifdef DEBUG
@@ -807,8 +815,13 @@ static void accessory_detect_work_func(struct work_struct *work)
 			pr_err("Accessory removed spurious event \r\n");
 		} else {
 
-			/* Turn OFF MIC Bias */
-			aci_interface_init_micbias_off(p);
+			/*
+			 * Turn OFF MIC Bias. In case of Headphone and
+			 * unsupported Headset, we would have turned it OFF
+			 * earlier
+			 */
+			if (p->hs_state == OPEN_CABLE || p->hs_state ==	HEADSET)
+				aci_interface_init_micbias_off(p);
 
 			/* Inform userland about accessory removal */
 			p->hs_state = DISCONNECTED;
@@ -1029,6 +1042,13 @@ static int aci_interface_init_micbias_off(struct mic_t *p)
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
 			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+
+	/* Switch OFF Mic BIAS only if its not already OFF */
+	if (p->mic_bias_status == 1) {
+		kona_mic_bias_off();
+		p->mic_bias_status = 0;
+	}
+
 	return 0;
 }
 
@@ -1080,6 +1100,12 @@ static int aci_interface_init(struct mic_t *p)
 			    CHAL_ACI_BLOCK_COMP);
 
 	pr_debug("=== aci_interface_init: Interrupts disabled \r\n");
+
+	/* Turn ON only if its not already ON */
+	if (p->mic_bias_status == 0) {
+		kona_mic_bias_on();
+		p->mic_bias_status = 1;
+	}
 
 	/*
 	 * This ensures that the timing parameters are configured
@@ -1268,6 +1294,12 @@ static int __init hs_probe(struct platform_device *pdev)
 		pr_err("Platform data not present, could not proceed \r\n");
 		return -EINVAL;
 	}
+
+	/*
+	 * Assume that mic bias is ON, so that while initialization we can
+	 * turn this OFF and put it in known state.
+	 */
+	mic->mic_bias_status = 1;
 
 	/* Initialize the switch dev for headset */
 #ifdef CONFIG_SWITCH

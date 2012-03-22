@@ -749,18 +749,6 @@ static void chal_aci_block_ctrl_arg(CHAL_HANDLE handle,
 							     AUXMIC_AUXEN,
 							     MICAUX_EN, 1);
 				}
-
-#if 0
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA,
-						     ACI_SLEEP_CTRL,
-						     WEAK_SLEEP_EN, 1);
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA, ACI_MIC_BIAS,
-						     MIC_AUX_BIAS_GND, 0);
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA, ACI_ACI_CTRL, ACI_BIAS_PWRDN, ACI_BIAS_PWRDN_POWERUP);	// Power Up
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA, ACI_ADC_CTRL,
-						     AUDIORX_BIAS_PWRUP,
-						     AUDIORX_BIAS_PWRUP_POWERUP);
-#endif
 				break;
 			case CHAL_ACI_MIC_BIAS_DISCONTINUOUS:
 				// Set Bias Voltage
@@ -812,17 +800,6 @@ static void chal_aci_block_ctrl_arg(CHAL_HANDLE handle,
 				BRCM_WRITE_REG_FIELD(KONA_AUXMIC_VA,
 						     AUXMIC_F_PWRDWN,
 						     FORCE_PWR_DWN, 0);
-#if 0
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA,
-						     ACI_SLEEP_CTRL,
-						     WEAK_SLEEP_EN, 1);
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA, ACI_MIC_BIAS,
-						     MIC_AUX_BIAS_GND, 0);
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA, ACI_ACI_CTRL, ACI_BIAS_PWRDN, ACI_BIAS_PWRDN_POWERUP);	// Power Up
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA, ACI_ADC_CTRL,
-						     AUDIORX_BIAS_PWRUP,
-						     AUDIORX_BIAS_PWRUP_POWERUP);
-#endif
 				break;
 			case CHAL_ACI_MIC_BIAS_OFF:
 				/* MIC Bias can not turned full off in this state. MIC is also the supply for other internal blocks */
@@ -836,25 +813,6 @@ static void chal_aci_block_ctrl_arg(CHAL_HANDLE handle,
 				BRCM_WRITE_REG_FIELD(KONA_ACI_VA, ACI_MIC_BIAS,
 						     MIC_BIAS,
 						     ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
-#if 0
-				BRCM_WRITE_REG_FIELD(KONA_AUXMIC_VA,
-						     AUXMIC_F_PWRDWN,
-						     FORCE_PWR_DWN, 1);
-				BRCM_WRITE_REG_FIELD(KONA_AUXMIC_VA,
-						     AUXMIC_AUXEN, MICAUX_EN,
-						     0);
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA,
-						     ACI_SLEEP_CTRL,
-						     WEAK_SLEEP_EN, 0);
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA, ACI_MIC_BIAS,
-						     MIC_AUX_BIAS_GND, 1);
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA, ACI_ADC_CTRL,
-						     AUDIORX_BIAS_PWRUP,
-						     AUDIORX_BIAS_PWRUP_POWERDOWN);
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA, ACI_ACI_CTRL,
-						     ACI_BIAS_PWRDN,
-						     ACI_BIAS_PWRDN_POWERDOWN);
-#endif
 				break;
 			case CHAL_ACI_MIC_BIAS_GND:
 				/* MIC Bias can not turned full off in this state. MIC is also the supply for other internal blocks */

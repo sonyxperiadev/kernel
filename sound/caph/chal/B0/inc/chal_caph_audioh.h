@@ -2813,6 +2813,32 @@ extern cVoid chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff);
 extern cVoid chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff);
 
 /**
+* kona_mic_bias_on - Switch ON the MIC BIAS.
+*
+* Writes to the register if the MICBIAS block is not already ON.
+* and increments the user count. In case if the block is already ON,
+* just increments the user count
+*
+* NOTE that this funciton SHOULD NOT be called from interrupt/soft irq
+* context.
+*****************************************************************************/
+
+extern void kona_mic_bias_on(void);
+
+/**
+ * kona_mic_bias_off - Switch OFF the MIC BIAS.
+ *
+ * Writes to the register if the MICBIAS block is not already OFF.
+ * and decrements the user count. In case if the block is already OFF,
+ * just decrements the user count
+ *
+ * NOTE that this funciton SHOULD NOT be called from interrupt/soft irq
+ * context.
+*****************************************************************************/
+
+extern void kona_mic_bias_off(void);
+
+/**
 *
 *  @brief  Mute the ANALOG MIC and AUX MIC signals on the DATA line
 *
