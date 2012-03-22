@@ -1415,7 +1415,7 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 	   This is to make sure that PMU is not disabled if any other
 	   path is using the same speaker */
 
-	path = csl_caph_FindRenderPathID(sink_dev, src_dev);
+	path = csl_caph_FindPathID(sink_dev, src_dev);
 
 	/*Disable the PMU for HS/IHF */
 	if (path) {
@@ -2722,7 +2722,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		src_dev = getDeviceFromSrc(mic);
 		sink_dev = getDeviceFromSink(speaker);
 
-		pathID = csl_caph_FindRenderPathID(sink_dev, src_dev);
+		pathID = csl_caph_FindPathID(sink_dev, src_dev);
 
 		if (pathID == 0) {
 			audio_xassert(0, pathID);

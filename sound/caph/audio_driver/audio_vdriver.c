@@ -1371,6 +1371,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	UInt32 *memAddr = 0;
 	AUDIO_BITS_PER_SAMPLE_t bits = 24;
+	CSL_CAPH_PathID pathID;
 
 #if defined(ENABLE_BT16)
 	if (speaker == AUDIO_SINK_BTM)
@@ -1435,7 +1436,18 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	config.chnlNum = AUDIO_CHANNEL_MONO;
 	config.bitPerSample = bits;
 
-	telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
+	pathID = csl_caph_FindPathID(config.sink, config.source);
+	if (pathID) {
+		/* If voice recording is ongoing, no need to set up UL path.
+		 * Unable to handle this case: record and call use different
+		 * mics.
+		 */
+		aTrace(LOG_AUDIO_DRIVER, "%s UL path %d exits.\n",
+			__func__, pathID);
+		telephonyPathID.ulPathID = pathID;
+		AUDDRV_DisableDSPInput();
+	} else
+		telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s bNeedDualMic=%d *\n\r",
 			__func__, bNeedDualMic);
