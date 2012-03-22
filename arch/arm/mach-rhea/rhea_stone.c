@@ -70,12 +70,6 @@
 #if defined (CONFIG_HAPTIC)
 #include <linux/haptic.h>
 #endif
-#if defined (CONFIG_AL3006)
-#include <linux/al3006.h>
-#endif
-#if defined (CONFIG_BMP18X)
-#include <linux/bmp18x.h>
-#endif
 
 #define _RHEA_
 #include <mach/comms/platform_mconfig.h>
@@ -99,6 +93,15 @@
 
 #if defined(CONFIG_BCMI2CNFC)
 #include <linux/bcmi2cnfc.h>
+#endif
+
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#include <linux/bmp18x.h>
+#include <mach/rheastone/bmp18x_i2c_settings.h>
+#endif
+
+#if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
+#include <mach/rheastone/al3006_i2c_settings.h>
 #endif
 
 #if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
@@ -336,6 +339,24 @@ static struct i2c_board_info __initdata bcmi2cnfc[] = {
 	 .irq = gpio_to_irq(4),
 	 },
 
+};
+#endif
+
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+static struct i2c_board_info __initdata i2c_bmp18x_info[] =
+{
+	{
+		I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
+	},
+};
+#endif
+
+#if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
+static struct i2c_board_info __initdata i2c_al3006_info[] =
+{
+	{
+		I2C_BOARD_INFO("al3006", AL3006_I2C_ADDRESS),
+	},
 };
 #endif
 
@@ -1166,54 +1187,6 @@ static struct i2c_board_info bcm915500_i2c_boardinfo[] =
 };
 #endif
 
-#ifdef CONFIG_AL3006
-#define AL3006_INT_GPIO_PIN		31
-
-static int al3006_platform_init_hw(void)
-{
-	int rc;
-	rc = gpio_request(AL3006_INT_GPIO_PIN, "al3006");
-	if (rc < 0)
-	{
-		printk(KERN_ERR "unable to request GPIO pin %d\n", AL3006_INT_GPIO_PIN);
-		return rc;
-	}
-	gpio_direction_input(AL3006_INT_GPIO_PIN);
-
-	return 0;
-}
-
-static void al3006_platform_exit_hw(void)
-{
-	gpio_free(AL3006_INT_GPIO_PIN);
-}
-
-static struct al3006_platform_data al3006_platform_data = {
-	.i2c_pdata	= { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K), },
-	.init_platform_hw = al3006_platform_init_hw,
-	.exit_platform_hw = al3006_platform_exit_hw,
-};
-
-static struct i2c_board_info __initdata al3006_info[] =
-{
-	{
-		I2C_BOARD_INFO("al3006", 0x1d ),
-		.platform_data = &al3006_platform_data,
-		.irq = gpio_to_irq(AL3006_INT_GPIO_PIN),
-	},
-};
-#endif
-
-#ifdef CONFIG_BMP18X
-static struct i2c_board_info __initdata bmp18x_info[] =
-{
-	{
-		I2C_BOARD_INFO("bmp18x", 0x77 ),
-		/*.irq = */
-	},
-};
-#endif
-
 
 /* Rhea Ray specific i2c devices */
 static void __init rhea_stone_add_i2c_devices (void)
@@ -1253,16 +1226,6 @@ static void __init rhea_stone_add_i2c_devices (void)
 				ARRAY_SIZE(bcm915500_i2c_boardinfo));
 #endif
 
-#ifdef CONFIG_AL3006
-	i2c_register_board_info(1,
-			al3006_info,
-			ARRAY_SIZE(al3006_info));
-#endif
-#ifdef CONFIG_BMP18X_I2C
-	i2c_register_board_info(1,
-			bmp18x_info,
-			ARRAY_SIZE(bmp18x_info));
-#endif
 #if defined(CONFIG_BCMI2CNFC)
 #if defined(CONFIG_MACH_RHEA_STONE_EDN2X)
 	i2c_register_board_info(0, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
@@ -1279,6 +1242,28 @@ static void __init rhea_stone_add_i2c_devices (void)
 			inv_mpu_i2c0_boardinfo, ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
 #endif
 
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+	i2c_register_board_info(
+#ifdef BMP18X_I2C_BUS_ID
+			BMP18X_I2C_BUS_ID,
+#else
+			-1,
+#endif
+			i2c_bmp18x_info, ARRAY_SIZE(i2c_bmp18x_info));
+#endif
+
+#if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
+#ifdef AL3006_IRQ_GPIO
+	i2c_al3006_info[0].irq = gpio_to_irq(AL3006_IRQ_GPIO);
+#endif
+	i2c_register_board_info(
+#ifdef AL3006_I2C_BUS_ID
+		AL3006_I2C_BUS_ID,
+#else
+		-1,
+#endif
+		i2c_al3006_info, ARRAY_SIZE(i2c_al3006_info));
+#endif
 
 }
 
