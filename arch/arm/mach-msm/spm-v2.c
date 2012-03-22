@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -68,6 +68,9 @@ static inline void msm_spm_drv_set_vctl(struct msm_spm_driver_data *dev,
 
 	dev->reg_shadow[MSM_SPM_REG_SAW2_PMIC_DATA_0] &= ~0xFF;
 	dev->reg_shadow[MSM_SPM_REG_SAW2_PMIC_DATA_0] |= vlevel;
+
+	dev->reg_shadow[MSM_SPM_REG_SAW2_PMIC_DATA_1] &= ~0xC0;
+	dev->reg_shadow[MSM_SPM_REG_SAW2_PMIC_DATA_1] |= (vlevel & 0x3F);
 }
 
 static void msm_spm_drv_flush_shadow(struct msm_spm_driver_data *dev,
@@ -250,6 +253,7 @@ int msm_spm_drv_set_vdd(struct msm_spm_driver_data *dev, unsigned int vlevel)
 	msm_spm_drv_set_vctl(dev, vlevel);
 	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_VCTL);
 	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_PMIC_DATA_0);
+	msm_spm_drv_flush_shadow(dev, MSM_SPM_REG_SAW2_PMIC_DATA_1);
 	mb();
 
 	/* Wait for PMIC state to return to idle or until timeout */
