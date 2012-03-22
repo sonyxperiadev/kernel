@@ -1141,14 +1141,12 @@ int audio_aio_open(struct q6audio_aio *audio, struct file *file)
 		else {
 			pr_err("%s[%p]:event pkt alloc failed\n",
 				__func__, audio);
-			break;
+			rc = -ENOMEM;
+			goto fail;
 		}
 	}
-	return 0;
 fail:
-	q6asm_audio_client_free(audio->ac);
-	kfree(audio->codec_cfg);
-	kfree(audio);
+
 	return rc;
 }
 

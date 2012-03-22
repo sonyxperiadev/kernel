@@ -1142,6 +1142,7 @@ static __devinit int msm_dai_q6_dev_probe(struct platform_device *pdev)
 	case SLIMBUS_0_TX:
 		rc = snd_soc_register_dai(&pdev->dev,
 				&msm_dai_q6_slimbus_tx_dai);
+		break;
 	case INT_BT_SCO_RX:
 		rc = snd_soc_register_dai(&pdev->dev,
 					&msm_dai_q6_bt_sco_rx_dai);

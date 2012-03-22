@@ -249,8 +249,6 @@ static ssize_t apr_debug_write(struct file *file, const char __user *buf,
 	int len;
 	static int t_len;
 
-	if (count < 0)
-		return 0;
 	len = count > 63 ? 63 : count;
 	if (copy_from_user(l_buf + 20 , buf, len)) {
 		pr_info("Unable to copy data from user space\n");

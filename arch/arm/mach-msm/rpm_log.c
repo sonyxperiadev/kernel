@@ -186,11 +186,12 @@ static ssize_t msm_rpm_log_file_read(struct file *file, char __user *bufu,
 	struct msm_rpm_log_buffer *buf;
 
 	buf = file->private_data;
+	if (!buf)
+		return -ENOMEM;
+
 	pdata = buf->pdata;
 	if (!pdata)
 		return -EINVAL;
-	if (!buf)
-		return -ENOMEM;
 	if (!buf->data)
 		return -ENOMEM;
 	if (!bufu || count < 0)
