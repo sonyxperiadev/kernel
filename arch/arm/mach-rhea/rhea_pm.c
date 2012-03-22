@@ -14,26 +14,27 @@
 #include <linux/delay.h>
 #include <linux/suspend.h>
 #include <linux/module.h>
+#include <linux/dma-mapping.h>
+#include <linux/workqueue.h>
+#include <linux/err.h>
+#include <linux/debugfs.h>
+#include <linux/clk.h>
+#include <asm/io.h>
 #include <plat/kona_pm.h>
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
 #include <plat/cpu.h>
-#include <linux/clk.h>
-#include <asm/io.h>
-#include <mach/io_map.h>
 #include <plat/clock.h>
-#include <linux/err.h>
-#include <linux/debugfs.h>
+#include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_csr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_gicdist.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
-#include <linux/workqueue.h>
 #include <mach/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
-#include <linux/dma-mapping.h>
+#include <mach/pm.h>
 
 #include "pm_params.h"
 
@@ -315,10 +316,8 @@ int rhea_force_sleep(suspend_state_t state)
 	struct kona_idle_state s;
 	int i;
 
-	pr_info("Forcing AP sleep\n");
-
 	memset(&s, 0, sizeof(s));
-	s.state = RHEA_STATE_C2;
+	s.state = get_force_sleep_state();
 
 	/* No more scheduling out */
 	local_irq_disable();

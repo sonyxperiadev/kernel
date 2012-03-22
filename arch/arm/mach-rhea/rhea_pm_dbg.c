@@ -66,7 +66,7 @@ static void cmd_show_usage(void)
 	  "disable dormant gpio d g c\n"
 	  "display dormant gpio data d g d\n"
 #endif
-	  "force sleep: f\n"
+	  "force sleep: f <state from 0 to 4>\n"
 	  "display stats: s\n"
 	  "\n";
 
@@ -140,8 +140,22 @@ static void cmd_display_stats(const char *p)
 	pr_info("dormant trace %x\n", *dormant_trace_v);
 }
 
+static int force_sleep_state = 2;
+int get_force_sleep_state(void)
+{
+	return force_sleep_state;
+}
+
 static void cmd_force_sleep(const char *p)
 {
+	sscanf(p, "%d", &force_sleep_state);
+	if (force_sleep_state < 0 || force_sleep_state > 4) {
+		pr_err("Invalid state: %d\n", force_sleep_state);
+		force_sleep_state = 2;
+		return;
+	}
+
+	pr_info("Forcing system to state: %d\n", force_sleep_state);
 	kona_pm_reg_pm_enter_handler(&rhea_force_sleep);
 	request_suspend_state(PM_SUSPEND_MEM);
 }
