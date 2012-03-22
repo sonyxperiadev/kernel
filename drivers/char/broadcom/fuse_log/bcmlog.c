@@ -473,6 +473,20 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		}
 
+	case BCMLOG_IOC_SAVECONFIG:
+	case BCMLOG_IOC_RESETCONFIG:
+		{
+			rc = -1;
+
+			if (!CpCrashDumpInProgress())
+				rc = BCMLOG_SaveConfig(cmd ==
+						       BCMLOG_IOC_SAVECONFIG ? 1
+						       : 0);
+
+			break;
+
+		}
+
 	default:
 		rc = -1;
 		break;

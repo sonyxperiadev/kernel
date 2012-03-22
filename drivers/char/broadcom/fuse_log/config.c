@@ -31,6 +31,8 @@
 #define MAX_MTT_SD_SIZE       2048
 #define DEFAULT_MTT_SD_SIZE   2048
 
+/* work queue for reading config file */
+static struct delayed_work g_load_config_wq;
 /* log configuration */
 static struct BCMLOG_Config_t g_config;
 /* procfs file */
@@ -183,6 +185,8 @@ static int proc_read(char *page, char **start, off_t offset, int count,
  *		e - APP crash dump -> flash
  *		f - APP crash dump -> SD card
  *		g - APP crash dump -> disabled
+ *		 h - Save for reboot
+ *		 i - Restore defaults
  *		j - CP crash dump -> flash
  *		k - CP crash dump -> SD card
  *		l - CP crash dump -> disabled
@@ -233,6 +237,13 @@ static ssize_t proc_write(struct file *file, const char __user * buffer,
 		case 'g':
 			if (!g_config.ap_crashlog.lock)
 				g_config.ap_crashlog.dev = BCMLOG_OUTDEV_NONE;
+			break;
+		case 'h':
+			BCMLOG_SaveConfig(1);
+			break;
+		case 'i':
+			SetConfigDefaults();
+			BCMLOG_SaveConfig(0);
 			break;
 		case 'j':
 			if (!g_config.cp_crashlog.lock)
@@ -294,6 +305,105 @@ static ssize_t proc_write(struct file *file, const char __user * buffer,
 	return count;
 }
 
+/**
+*     Load configuration from persistent storage
+**/
+static int LoadConfigFromPersistentStorage(void)
+{
+	mm_segment_t oldfs;
+	struct file *config_file;
+	int rc = 0;
+
+	oldfs = get_fs();
+	set_fs(KERNEL_DS);
+
+	config_file = filp_open(BCMLOG_CONFIG_PS_FILE, O_RDONLY, 0);
+
+	if (IS_ERR(config_file)) {
+		rc = -1;
+	} else {
+		if (sizeof(struct BCMLOG_Config_t) !=
+				config_file->f_op->read(config_file,
+				(void *)&g_config,
+				sizeof(struct BCMLOG_Config_t),
+				&config_file->f_pos)) {
+			rc = -1;
+		}
+
+		filp_close(config_file, NULL);
+	}
+
+	set_fs(oldfs);
+
+	return rc;
+}
+
+/**
+ *     Work thread to read configuration file.  Called at driver
+ *     initialization, will reschedule itself periodically until
+ *     configuration is successfully loaded, up to predetermined
+ *     number of attempts.  Delay is necessary to wait until
+ *     file system is available.
+ *
+ *     @param  (in)    ptr to work structure
+ *     @note
+ *             Function prototype as required by INIT_DELAYED_WORK macro.
+ *     @note
+ *             There is a one-second delay between each attemt.  It was
+ *             determined emperically that 5 - 6 seconds is about
+ *             the time required for FS to come up, so we'll give
+ *             it up to 10 seconds.
+ **/
+static void try_load_config(struct work_struct *work)
+{
+	static int tries = 10;
+
+	if (--tries > 0)
+		if (LoadConfigFromPersistentStorage() < 0)
+			schedule_delayed_work(&g_load_config_wq, 1 * HZ);
+}
+
+/**
+*	Save or reset configuration persistent storage
+ *	@param			saveFlag [in] if nonzero save configuration else reset
+ *							configuration
+ *	@return	0 on success, -1 on error
+ **/
+int BCMLOG_SaveConfig(int saveFlag)
+{
+	mm_segment_t oldfs;
+	struct file *config_file;
+	int rc = 0;
+
+	oldfs = get_fs();
+	set_fs(KERNEL_DS);
+
+	config_file =
+	filp_open(BCMLOG_CONFIG_PS_FILE, O_WRONLY | O_TRUNC | O_CREAT,
+	0666);
+
+	if (IS_ERR(config_file))
+		rc = -1;
+
+	else {
+		if (saveFlag)
+			if (sizeof(struct BCMLOG_Config_t) !=
+					config_file->f_op->write(config_file,
+					(void *)&g_config,
+					sizeof(struct
+					BCMLOG_Config_t),
+					&config_file->f_pos))
+				rc = -1;
+
+		/* if !saveFlag the file is truncated to zero bytes,
+		* invalidating the configuration */
+		filp_close(config_file, NULL);
+	}
+
+	set_fs(oldfs);
+
+	return rc;
+}
 
 /**
  *	Enable or disable log ID
@@ -347,7 +457,7 @@ static ssize_t set_log_store(const char *buf, size_t size,
 
 	if (sscanf(buf, "%s", str) == 1) {
 		idx = get_log_idx(str);
-		if (!log->lock && ~((idx == BCMLOG_OUTDEV_CUSTOM) &&
+		if (!log->lock && !((idx == BCMLOG_OUTDEV_CUSTOM) &&
 				log->handler)) {
 			log->dev = idx;
 			return size;
@@ -625,6 +735,14 @@ void BCMLOG_InitConfig(void *h)
 	value = device_create_file(dev, &dev_attr_acm_dev);
 	if (value < 0)
 		pr_err("BCMLOG Init failed to create bcmlog acm_dev attribute\n");
+
+	/*
+	 *	start a thread to attempt to load configuration when
+	 *	filesystem ready
+	 */
+	INIT_DELAYED_WORK(&g_load_config_wq, try_load_config);
+
+	schedule_delayed_work(&g_load_config_wq, 1*HZ);
 
 }
 
