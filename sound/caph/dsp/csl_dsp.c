@@ -334,7 +334,7 @@ void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t
 void AP_ProcessStatus(void)
 {
 	VPStatQ_t status_msg;
-	static UInt32 ec28_err_count;
+	static UInt32 ec26_err_count, ec27_err_count, ec28_err_count;
 
 	while (VPSHAREDMEM_ReadStatusQ(&status_msg)) {
 		switch (status_msg.status) {
@@ -473,6 +473,8 @@ void AP_ProcessStatus(void)
 
 		case VP_STATUS_AUDIO_ENABLE_DONE:
 			{
+				ec26_err_count = 0;
+				ec27_err_count = 0;
 				ec28_err_count = 0;
 				if (AudioEnableDoneHandler != NULL) {
 					AudioEnableDoneHandler(status_msg.arg0);
@@ -485,12 +487,62 @@ void AP_ProcessStatus(void)
 				break;
 			}
 
+		case 0xec26:
+			{
+				volatile unsigned int *base_addr;
+				base_addr =
+					(volatile unsigned int *) (
+					HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR));
+				aError("ERROR: Pri Mic AADMAC's HW_RDY bit ");
+				aError("not set for right half when ");
+				aError("Pri Mic AADMAC int comes.\n");
+				aError("Pri_Mic_AADMAC_SR_1 = 0x%04x%04x\n",
+					status_msg.arg0, status_msg.arg1);
+				aError("Pri_Mic Expected SR1 = 0x%04x%04x\n",
+					status_msg.arg2, status_msg.arg3);
+				aError("CPH_AADMAC_CH13_AADMAC_SR_1= 0x%08x\n",
+					base_addr[
+					CPH_AADMAC_CH13_AADMAC_SR_1_OFFSET>>2]);
+				ec26_err_count++;
+				if (ec26_err_count > 0) {
+					Dump_Caph_regs();
+					ec26_err_count = 0;
+					BUG();
+				}
+				break;
+			}
+
+		case 0xec27:
+			{
+				volatile unsigned int *base_addr;
+				base_addr =
+					(volatile unsigned int *) (
+					HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR));
+				aError("ERROR: Sec Mic AADMAC's HW_RDY bit ");
+				aError("not set for right half when ");
+				aError("Sec Mic AADMAC int comes.\n");
+				aError("Sec_Mic_AADMAC_SR_1 = 0x%04x%04x\n",
+					status_msg.arg0, status_msg.arg1);
+				aError("Sec_Mic_AADMAC_CR_2 = 0x%04x%04x\n",
+					status_msg.arg2, status_msg.arg3);
+				aError("CPH_AADMAC_CH14_AADMAC_SR_1= 0x%08x\n",
+					base_addr[
+					CPH_AADMAC_CH14_AADMAC_SR_1_OFFSET>>2]);
+				ec27_err_count++;
+				if (ec27_err_count > 0) {
+					Dump_Caph_regs();
+					ec27_err_count = 0;
+					BUG();
+				}
+				break;
+			}
+
 		case 0xec28:
 			{
-				unsigned int *base_addr;
+				volatile unsigned int *base_addr;
 				base_addr =
-					((volatile unsigned int *)(
-					HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR)));
+					(volatile unsigned int *) (
+					HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR));
 				aError("ERROR: Spkr AADMAC's HW_RDY bit not ");
 				aError("set when Mic AADMAC int comes.\n");
 				aError("Spkr_AADMAC_SR_1 = 0x%04x%04x\n",
@@ -501,7 +553,7 @@ void AP_ProcessStatus(void)
 					base_addr[
 					CPH_AADMAC_CH12_AADMAC_SR_1_OFFSET>>2]);
 				ec28_err_count++;
-				if (ec28_err_count > 0) {
+				if (ec28_err_count > 4) {
 					Dump_Caph_regs();
 					ec28_err_count = 0;
 					BUG();
@@ -547,7 +599,7 @@ UInt32 *AUDIO_Return_IHF_48kHz_buffer_base_address(void)
 
 void Dump_Caph_regs(void)
 {
-	unsigned int *base_addr;
+	volatile unsigned int *base_addr;
 
 	base_addr = ((volatile unsigned int *)(
 		    HW_IO_PHYS_TO_VIRT(CFIFO_BASE_ADDR)));
@@ -806,7 +858,7 @@ void Dump_Caph_regs(void)
 	aError("CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH4	= 0x%08x\n",
 		base_addr[CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH4_OFFSET>>2]);
 
-	base_addr = ((volatile UInt32 *)(HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR)));
+	base_addr = ((volatile unsigned int *) (HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR)));
 	aError("AADMAC Regs:\n");
 	aError("============\n");
 	aError("CPH_AADMAC_CH1_AADMAC_CR_1		= 0x%08x\n",
