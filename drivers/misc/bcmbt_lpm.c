@@ -1,27 +1,12 @@
-/*
- *  linux/drivers/misc/bcmbt_lpm
- *
- *  Driver for bcm bt wake handling
- *
- *  Based on drivers/char/serial.c, by Linus Torvalds, Theodore Ts'o.
- *
- *  Copyright (C) 2001 Russell King.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * A note about mapbase / membase
- *
- *  mapbase is the physical address of the IO port.
- *  membase is an 'ioremapped' cookie.
- */
-
 /*******************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2010-2012 Broadcom Corporation.  All rights reserved.
 *
-* @file	drivers/serial/bcm_bt_lpm.c
+* @file	drivers/xxx/bcmbt_lpm.c
+*
+* This driver handles Broadcom LPM via tty line displine (N_BRCM_HCI)
+* It allows to asssert or de-assert BT_WAKE via ioct()
+* HOST_WAKE pin is handle in isr calling the platform host allow sleep/dis-
+* allow sleep functions (pi_mgr, wakelock)
 *
 * Unless you and Broadcom execute a separate written software license agreement
 * governing use of this software, this software is licensed to you under the
@@ -32,6 +17,8 @@
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
+
+/* #define DEBUG */
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -137,13 +124,13 @@ static int bcmbt_init_peripheral_clock(void)
 	return 0;
 }
 
-/*
 static int bcmbt_release_peripheral_clock(void)
 {
 	pi_mgr_qos_request_update(&btqos_node, PI_MGR_QOS_DEFAULT_VALUE);
+	pi_mgr_qos_request_remove(&btqos_node);
 	return 0;
 }
-*/
+
 static int bcmbt_tty_ioctl(struct tty_struct *tty, struct file *file,
 			   unsigned int cmd, unsigned long arg)
 {
@@ -237,11 +224,6 @@ static irqreturn_t host_wake_isr(int irq, void *dev)
 	} else {
 		/* release lock: enable deep sleep */
 		bcmbt_peripheral_clocks(BTLPM_DISABLE_CLOCK);
-#ifdef CONFIG_HAS_WAKELOCK
-		wake_unlock(&bcm_bt_lpm_data.host_wake_lock);
-#endif
-		pi_mgr_qos_request_update(&btqos_node,
-					  PI_MGR_QOS_DEFAULT_VALUE);
 		pr_debug("host_wake DEassert, release lock  at %lld\n",
 			 ktime_to_ns(ktime_get()));
 	}
@@ -271,7 +253,7 @@ int bcm_init_hostwake(struct bcm_bt_lpm_platform_data *gpio_data)
 
 	ret = request_irq(irq, host_wake_isr,
 			  (IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING |
-			   IRQF_NO_SUSPEND), "bt_host_wake", NULL);
+			   IRQF_NO_SUSPEND), "bt_host_wake", (void *)gpio_data);
 
 	pr_info("request_irq returned value=%u\n", ret);
 
@@ -323,19 +305,25 @@ static void clean_bt_wake(struct bcm_bt_lpm_platform_data *pdata)
 	wake_lock_destroy(&bcm_bt_lpm_data.bt_wake_lock);
 #endif
 	gpio_free((unsigned)pdata->gpio_bt_wake);
-
 	bcmbt_tty_cleanup();
+	bcm_bt_lpm_data.bt_wake_installed = 0;
 }
 
 static void clean_host_wake(struct bcm_bt_lpm_platform_data *pdata)
 {
+	unsigned int irq;
 	if (pdata->gpio_host_wake == -1)
 		return;
 
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&bcm_bt_lpm_data.host_wake_lock);
 #endif
+	irq = gpio_to_irq(pdata->gpio_host_wake);
+	free_irq(irq, (void *)pdata);
+	pr_debug("freed host wake irq=%d\n", irq);
 	gpio_free((unsigned)pdata->gpio_host_wake);
+	bcmbt_release_peripheral_clock();
+	bcm_bt_lpm_data.host_wake_installed = 0;
 }
 
 static int bcmbt_lpm_probe(struct platform_device *pdev)
@@ -355,6 +343,9 @@ static int bcmbt_lpm_remove(struct platform_device *pdev)
 		clean_bt_wake(pdata);
 		clean_host_wake(pdata);
 	}
+	pr_info("bcmbt_lpm_remove() unloading bcmbt-lpm, bt_wake: %d, host_wake:"
+			" %d\n", bcm_bt_lpm_data.bt_wake_installed,
+			bcm_bt_lpm_data.host_wake_installed);
 	return 0;
 }
 
