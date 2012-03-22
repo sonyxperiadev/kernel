@@ -123,7 +123,8 @@ enum _AUDIO_SINK_Enum_t {
 	AUDIO_SINK_MEM,
 	AUDIO_SINK_DSP,
 
-	AUDIO_SINK_UNDEFINED,
+	/* AUDIO_SINK_UNDEFINED value can't be changed due to customer req */
+	AUDIO_SINK_UNDEFINED = 19,
 	AUDIO_SINK_TOTAL_COUNT
 };
 #define AUDIO_SINK_Enum_t enum _AUDIO_SINK_Enum_t
