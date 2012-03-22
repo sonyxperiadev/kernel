@@ -343,8 +343,7 @@ static struct i2c_board_info __initdata bcmi2cnfc[] = {
 #endif
 
 #if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
-static struct i2c_board_info __initdata i2c_bmp18x_info[] =
-{
+static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
 	{
 		I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
 	},
@@ -352,8 +351,7 @@ static struct i2c_board_info __initdata i2c_bmp18x_info[] =
 #endif
 
 #if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
-static struct i2c_board_info __initdata i2c_al3006_info[] =
-{
+static struct i2c_board_info __initdata i2c_al3006_info[] = {
 	{
 		I2C_BOARD_INFO("al3006", AL3006_I2C_ADDRESS),
 	},
