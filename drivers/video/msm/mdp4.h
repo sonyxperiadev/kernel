@@ -440,14 +440,7 @@ static inline int mdp4_overlay_dtv_unset(struct msm_fb_data_type *mfd,
 }
 #endif
 
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
 void mdp4_dtv_set_black_screen(void);
-#else
-static inline void mdp4_dtv_set_black_screen(void)
-{
-    /* empty */
-}
-#endif
 
 static inline int mdp4_overlay_borderfill_supported(void)
 {
