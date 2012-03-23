@@ -263,6 +263,8 @@ void vtqb_unregister_image(struct vtqb_context *ctx, vtq_image_id_t image_id)
 	}
 
 	ctx->imagemap[image_id] = NULL;
+	if (proxy->next != NULL)
+		proxy->next->prevnext = proxy->prevnext;
 	*proxy->prevnext = proxy->next;
 	mutex_unlock(&ctx->mutex);
 
@@ -384,6 +386,8 @@ void vtqb_destroy_task(struct vtqb_context *ctx, vtq_task_id_t task_id)
 	}
 
 	ctx->taskmap[task_id] = NULL;
+	if (proxy->next != NULL)
+		proxy->next->prevnext = proxy->prevnext;
 	*proxy->prevnext = proxy->next;
 	mutex_unlock(&ctx->mutex);
 
