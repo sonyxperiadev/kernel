@@ -434,12 +434,18 @@ static void kona_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 	chained_irq_exit(chip, desc);
 }
 
+static int kona_gpio_irq_set_wake(struct irq_data *data, unsigned int on)
+{
+	return 0;
+}
+
 static struct irq_chip kona_gpio_irq_chip = {
 	.name = "KONA-GPIO",
 	.irq_ack = kona_gpio_irq_ack,
 	.irq_mask = kona_gpio_irq_mask,
 	.irq_unmask = kona_gpio_irq_unmask,
 	.irq_set_type = kona_gpio_irq_set_type,
+	.irq_set_wake = kona_gpio_irq_set_wake,
 };
 
 /* This lock class tells lockdep that GPIO irqs are in a different
