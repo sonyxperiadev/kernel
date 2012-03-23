@@ -22,10 +22,10 @@ struct kona_headset_pd {
 	 */
 	int phone_ref_offset;
 
-	/* accessory insertion/removal method -  
+	/*
+	 * accessory insertion/removal method -
 	 * If gpio is used program this variable as 1
 	 * if not program this as 0.
-	 * 
 	 */
 	int gpio_for_accessory_detection;
 
@@ -39,16 +39,21 @@ struct kona_headset_pd {
 	 */
 	unsigned int (*button_adc_values)[2];
 
+	/*
+	 * GPIO number to ground the mic line.
+	 */
+	int gpio_mic_gnd;
+
 };
 
 /*
  * NOTE:
  * Note that the following configurations are supported in the driver
- * 1) Config 1 
+ * 1) Config 1
  *      a) GPIO for accessory insertion
  *      b) COMP1 for accessory type detection (on open cable).
  *      c) COMP2 for button press/removal detection.
- * 3) Config 2 
+ * 3) Config 2
  *      a) COMP1 for accessory insertion/removal.
  *      c) COMP2 for button press/removal detection.
  *
