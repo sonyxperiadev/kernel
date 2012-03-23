@@ -231,11 +231,19 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_PMUID] =		{.map = 0x01, .addr = 0xF7, .mask = 0xFF, .ro = 0},
 	[PMU_REG_PMUREV] =		{.map = 0x01, .addr = 0xF8, .mask = 0xFF, .ro = 0},
 	[PMU_REG_PLLCTRL] =		{.map = 0x00, .addr = 0x0b, .mask = 0xFF, .ro = 0},
-	[PMU_REG_SYS_WDT_CLR] = 	{.map = 0x00, .addr = 0x01, .mask = 0x02, .ro = 0},
 
 	/* PMU BUS */
 	[PMU_REG_BUS_STATUS_WRITE_FIFO] =	{.map = 0x00, .addr = 0x00, .mask = 0x2, .ro = 1, .shift = 1},
 	[PMU_REG_BUS_STATUS_READ_FIFO] =	{.map = 0x00, .addr = 0x00, .mask = 0x1, .ro = 1, .shift = 0},
+
+	/* Watchdog */
+	[PMU_REG_SYS_WDT_EN] = {.map = 0x00, .addr = 0x01, .mask = 0x01, .ro =
+				0, .shift = 0},
+	[PMU_REG_SYS_WDT_CLR] = {.map = 0x00, .addr = 0x01, .mask = 0x02, .ro =
+				 0, .shift = 1},
+	[PMU_REG_SYS_WDT_TIME] = {.map = 0x00, .addr = 0x02, .mask = 0x7F, .ro =
+				  0, .shift = 0},
+
 
 	/*UAS*/
 	[PMU_REG_UAS_DET_MODE] =	{.map = 0x00, .addr = 0x70,

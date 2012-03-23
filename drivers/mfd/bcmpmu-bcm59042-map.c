@@ -330,6 +330,14 @@ static struct bcmpmu_reg_map bcm59042_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_SYS_WDT_CLR] =		{.map = 0x00, .addr = 0x01,
 		.mask = 0x02, .ro = 0},
 
+		/* Watchdog */
+	[PMU_REG_SYS_WDT_EN] = {.map = 0x00, .addr = 0x01, .mask = 0x01, .ro =
+				0, .shift = 0},
+	[PMU_REG_SYS_WDT_CLR] = {.map = 0x00, .addr = 0x01, .mask = 0x02, .ro =
+				 0, .shift = 1},
+	[PMU_REG_SYS_WDT_TIME] = {.map = 0x00, .addr = 0x02, .mask = 0x7F, .ro =
+				  0, .shift = 0},
+
 	/* PMU BUS */
 	[PMU_REG_BUS_STATUS_WRITE_FIFO] =	{.map = 0x00, .addr = 0x00,
 		.mask = 0x2, .ro = 1, .shift = 1},

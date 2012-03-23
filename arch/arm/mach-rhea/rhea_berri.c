@@ -130,6 +130,9 @@
 #include <media/soc_camera.h>
 #include <linux/delay.h>
 
+#ifdef CONFIG_WD_TAPPER
+#include <linux/broadcom/wd-tapper.h>
+#endif
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
@@ -1046,7 +1049,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	 .ahb_clk_name = "sdio4_ahb_clk",
 	 .sleep_clk_name = "sdio4_sleep_clk",
 	 .peri_clk_rate = 48000000,
-	 .register_status_notify=rhea_wifi_status_register,			 
+	 .register_status_notify = rhea_wifi_status_register,
 	 },
 
 
@@ -1510,6 +1513,26 @@ static struct platform_device rhea_camera = {
 		},
 };
 
+#ifdef CONFIG_WD_TAPPER
+static struct wd_tapper_platform_data wd_tapper_data = {
+	/* Set the count to the time equivalent to the time-out in milliseconds
+	 * required to pet the PMU watchdog to overcome the problem of reset in
+	 * suspend*/
+	.count = 28000,
+	.ch_num = 1,
+	.name = "aon-timer",
+};
+
+static struct platform_device wd_tapper = {
+	.name = "wd_tapper",
+	.id = 0,
+	.dev = {
+		.platform_data = &wd_tapper_data,
+		},
+};
+#endif
+
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_berri_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -1557,6 +1580,11 @@ static struct platform_device *rhea_berri_plat_devices[] __initdata = {
 	&board_bcmbt_lpm_device,
 #endif
 	&rhea_camera,
+
+#ifdef CONFIG_WD_TAPPER
+	&wd_tapper,
+#endif
+
 
 };
 
@@ -1643,9 +1671,9 @@ static void __init rhea_berri_add_i2c_devices(void)
 static int __init rhea_berri_add_lateInit_devices(void)
 {
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-		
+
 			printk(KERN_ERR "Calling WLAN_INIT!\n");
-		
+
 			 rhea_wlan_init();
 				printk(KERN_ERR "DONE WLAN_INIT!\n");
 #endif
@@ -1684,29 +1712,29 @@ static void __init rhea_berri_add_devices(void)
 #ifdef CONFIG_FB_BRCM_RHEA
 /*
  *  KONA FRAME BUFFER DISPLAY DRIVER PLATFORM CONFIG
- */ 
+ */
 struct kona_fb_platform_data konafb_devices[] __initdata = {
 	{
-		.dispdrv_name  = "BCM91008_ALEX", 
+		.dispdrv_name  = "BCM91008_ALEX",
 		.dispdrv_entry = DISP_DRV_BCM91008_ALEX_GetFuncTable,
 		.parms = {
 			.w0 = {
-				.bits = { 
-					.boot_mode  = 0,  	  
-					.bus_type   = RHEA_BUS_DSI,  	  
+				.bits = {
+					.boot_mode  = 0,
+					.bus_type   = RHEA_BUS_DSI,
 					.bus_no     = RHEA_BUS_0,
 					.bus_ch     = RHEA_BUS_CH_0,
 					.bus_width  = 0,
-					.te_input   = RHEA_TE_IN_0_LCD,	  
-					.col_mode_i = RHEA_CM_I_XRGB888,	  
-					.col_mode_o = RHEA_CM_O_RGB888,        
-				},	
+					.te_input   = RHEA_TE_IN_0_LCD,
+					.col_mode_i = RHEA_CM_I_XRGB888,
+					.col_mode_o = RHEA_CM_O_RGB888,
+				},
 			},
 			.w1 = {
-				.bits = { 
+				.bits = {
 					.api_rev  = RHEA_LCD_BOOT_API_REV,
-					.lcd_rst0 = 41,  	  
-				}, 
+					.lcd_rst0 = 41,
+				},
 			},
 		},
 	},
@@ -1716,24 +1744,24 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 		.dispdrv_entry = DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
 		.parms = {
 			.w0 = {
-				.bits = { 
-					.boot_mode  = 0,  	  
-					.bus_type   = RHEA_BUS_SMI,  
+				.bits = {
+					.boot_mode  = 0,
+					.bus_type   = RHEA_BUS_SMI,
 					.bus_no     = RHEA_BUS_0,
 					.bus_ch     = RHEA_BUS_CH_0,
 					.bus_width  = RHEA_BUS_WIDTH_16,
 					.te_input   = RHEA_TE_IN_0_LCD,
 					.col_mode_i = RHEA_CM_I_RGB565,
 					.col_mode_o = RHEA_CM_O_RGB565,
-				},	
+				},
 			},
 			.w1 = {
-				.bits = { 
+				.bits = {
 					.api_rev  = RHEA_LCD_BOOT_API_REV,
-					.lcd_rst0 = 41,  	  
-				}, 
+					.lcd_rst0 = 41,
+				},
 			},
-		}, 
+		},
 	},
 
 	{
@@ -1741,24 +1769,24 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 		.dispdrv_entry = DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
 		.parms = {
 			.w0 = {
-				.bits = { 
-					.boot_mode  = 0,  	  
-					.bus_type   = RHEA_BUS_SMI,  
+				.bits = {
+					.boot_mode  = 0,
+					.bus_type   = RHEA_BUS_SMI,
 					.bus_no     = RHEA_BUS_0,
 					.bus_ch     = RHEA_BUS_CH_0,
 					.bus_width  = RHEA_BUS_WIDTH_08,
 					.te_input   = RHEA_TE_IN_0_LCD,
 					.col_mode_i = RHEA_CM_I_RGB565,
 					.col_mode_o = RHEA_CM_O_RGB565,
-				},	
+				},
 			},
 			.w1 = {
-				.bits = { 
+				.bits = {
 					.api_rev  = RHEA_LCD_BOOT_API_REV,
-					.lcd_rst0 = 41,  	  
-				}, 
+					.lcd_rst0 = 41,
+				},
 			},
-		}, 
+		},
 	},
 
 	{
@@ -1766,51 +1794,51 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 		.dispdrv_entry = DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
 		.parms = {
 			.w0 = {
-				.bits = { 
-					.boot_mode  = 0,  	  
-					.bus_type   = RHEA_BUS_SMI,  
+				.bits = {
+					.boot_mode  = 0,
+					.bus_type   = RHEA_BUS_SMI,
 					.bus_no     = RHEA_BUS_0,
 					.bus_ch     = RHEA_BUS_CH_0,
 					.bus_width  = RHEA_BUS_WIDTH_08,
 					.te_input   = RHEA_TE_IN_0_LCD,
 					.col_mode_i = RHEA_CM_I_RGB565,
 					.col_mode_o = RHEA_CM_O_RGB565,
-				},	
+				},
 			},
 			.w1 = {
-				.bits = { 
+				.bits = {
 					.api_rev  = RHEA_LCD_BOOT_API_REV,
-					.lcd_rst0 = 41,  	  
-				}, 
+					.lcd_rst0 = 41,
+				},
 			},
 		},
 	},
-	
+
 	{
 		.dispdrv_name  = "R61581_HVGA_SMI",
 		.dispdrv_entry = DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
 		.parms = {
 			.w0 = {
-				.bits = { 
-					.boot_mode  = 0,  	  
-					.bus_type   = RHEA_BUS_SMI,  
+				.bits = {
+					.boot_mode  = 0,
+					.bus_type   = RHEA_BUS_SMI,
 					.bus_no     = RHEA_BUS_0,
 					.bus_ch     = RHEA_BUS_CH_0,
 					.bus_width  = RHEA_BUS_WIDTH_16,
 					.te_input   = RHEA_TE_IN_0_LCD,
 					.col_mode_i = RHEA_CM_I_RGB565,
 					.col_mode_o = RHEA_CM_O_RGB565,
-				},	
+				},
 			},
 			.w1 = {
-				.bits = { 
+				.bits = {
 					.api_rev  = RHEA_LCD_BOOT_API_REV,
-					.lcd_rst0 = 41,  	  
-				}, 
+					.lcd_rst0 = 41,
+				},
 			},
 		},
 	},
-	
+
 };
 
 #include "rhea_fb_init.c"

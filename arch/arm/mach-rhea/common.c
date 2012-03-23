@@ -83,10 +83,6 @@
 #endif
 #endif
 
-#ifdef CONFIG_WD_TAPPER
-#include <linux/broadcom/wd-tapper.h>
-#endif
-
 /* dynamic ETM support */
 unsigned int etm_on;
 EXPORT_SYMBOL(etm_on);
@@ -789,24 +785,6 @@ static struct platform_device caph_pcm_device = {
 };
 #endif
 
-#ifdef CONFIG_WD_TAPPER
-static struct wd_tapper_platform_data wd_tapper_data = {
-	/* Set the count to the time equivalent to the time-out in milliseconds
-	 * required to pet the PMU watchdog to overcome the problem of reset in
-	 * suspend*/
-	.count = 27000,
-	.ch_num = 1,
-	.name = "aon-timer",
-};
-
-static struct platform_device wd_tapper = {
-	.name = "wd_tapper",
-	.id = 0,
-	.dev = {
-		.platform_data = &wd_tapper_data,
-		},
-};
-#endif
 
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
@@ -858,10 +836,6 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 	&unicam_camera_device,
-#endif
-
-#ifdef CONFIG_WD_TAPPER
-	&wd_tapper,
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC

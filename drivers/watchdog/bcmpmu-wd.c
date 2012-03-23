@@ -82,16 +82,16 @@ module_param_named(watchdog_timeout, wd_hw_timeout, int,
 module_param_named(nowayout, nowayout, int, S_IRUGO);
 
 
-static int bcmpmu_wdog_enable(struct bcmpmu_wdog *wddev)
+static int bcmpmu_wdog_enable(struct bcmpmu_wdog *wddev, bool enable)
 {
 	struct bcmpmu *bcmpmu = wddev->bcmpmu;
 	int ret;
 
-	pr_debug("Inside %s\n", __func__);
+	pr_info("Inside %s: enable = %d\n", __func__, enable);
 
-	/* Enable The watchdog */
+	/* Enable/disable The watchdog */
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_SYS_WDT_EN,
-		bcmpmu->regmap[PMU_REG_SYS_WDT_EN].mask,
+		enable ? bcmpmu->regmap[PMU_REG_SYS_WDT_EN].mask : 0,
 		bcmpmu->regmap[PMU_REG_SYS_WDT_EN].mask);
 
 	return ret;
@@ -124,6 +124,9 @@ static int bcmpmu_wdog_settimeout(struct bcmpmu_wdog *wddev, int timeout)
 	pr_debug("Inside %s\n", __func__);
 
 	timeout <<= bcmpmu->regmap[PMU_REG_SYS_WDT_TIME].shift;
+
+	/*unlock write to hostctrl2 reg*/
+	bcmpmu_reg_write_unlock(bcmpmu);
 
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_SYS_WDT_TIME, timeout,
 		bcmpmu->regmap[PMU_REG_SYS_WDT_TIME].mask);
@@ -238,7 +241,7 @@ static int bcmpmu_wdog_open(struct inode *inode, struct file *file)
 		pr_info("Watchdog : test_and_set_bit failed!!\n");
 		return -EBUSY;
 	}
-	bcmpmu_wdog_enable(wddog);
+	bcmpmu_wdog_enable(wddog, true);
 	bcmpmu_wdog_reset(wddog);
 	file->private_data = wddog;
 
@@ -254,6 +257,10 @@ static int bcmpmu_wdog_release(struct inode *inode, struct file *file)
 	if (expect_close == 42) {
 		clear_bit(0, &wdog->wd_is_opened);
 		bcmpmu_wdog_keepalive(wdog, 0);
+		/*We reach here only if nowayout is zero and
+		WATCHDOG_OTP_ENABLED is NOT defined
+		*/
+		bcmpmu_wdog_enable(wddog, false);
 	} else {
 		pr_alert("Watchdog: Unexpected close, nobody feeds me\n");
 		cancel_delayed_work_sync(&wddog->wd_work);
@@ -372,7 +379,7 @@ static int __devinit bcmpmu_wdog_probe(struct platform_device *pdev)
 
 	wd_hw_timeout = bcmpmu_wdog_settimeout(wddog,
 				wd_pdata->watchdog_timeout);
-
+	pr_info("%s:wd_hw_timeout = %d\n", __func__, wd_hw_timeout);
 	if (wd_hw_timeout != wd_pdata->watchdog_timeout) {
 		pr_info("%s:Failed to set watchdog timeout value %d\n",
 				__func__, wd_pdata->watchdog_timeout);
