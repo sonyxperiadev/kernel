@@ -541,7 +541,7 @@ int mmc_change_freq(struct mmc *mmc)
 	if (mmc->version < MMC_VERSION_4)
 		return 0;
 
-	mmc->card_caps |= MMC_MODE_4BIT;
+	mmc->card_caps |= MMC_MODE_8BIT;
 
 	err = mmc_poll_send_ext_csd(mmc, ext_csd);
 
