@@ -684,6 +684,11 @@ static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 	{3200, 0},
 };
 
+static struct bcmpmu_wd_setting bcm59042_wd_setting = {
+	.watchdog_timeout = 127,
+};
+
+
 static int bcmpmu_init_platform_hw(struct bcmpmu *);
 
 static struct bcmpmu_platform_data bcmpmu_plat_data = {
@@ -716,6 +721,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.fg_capacity_full = 1300 * 3600,
 	.support_fg = 1,
 	.support_chrg_maint = 1,
+	.wd_setting = &bcm59042_wd_setting,
 	.chrg_resume_lvl = 4150,
 	.bc = BCMPMU_BC_PMU_BC12,
 	.batt_model = "Unknown",

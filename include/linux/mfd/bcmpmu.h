@@ -1207,5 +1207,5 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu, enum bcmpmu_usb_ctrl_t ctrl,
 void bcmpmu_client_power_off(void);
 void bcmpmu_update_pdata_dt_batt(struct bcmpmu_platform_data *pdata);
 void bcmpmu_update_pdata_dt_pmu(struct bcmpmu_platform_data *pdata);
-
+int bcmpmu_reg_write_unlock(struct bcmpmu *bcmpmu);
 #endif
