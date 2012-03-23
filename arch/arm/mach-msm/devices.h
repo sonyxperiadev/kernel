@@ -271,3 +271,8 @@ extern struct platform_device msm_etm_device;
 extern struct platform_device msm8960_cpu_idle_device;
 
 extern struct platform_device msm8960_msm_gov_device;
+
+extern struct platform_device msm_device_csic0;
+extern struct platform_device msm_device_csic1;
+extern struct platform_device msm_device_vfe;
+extern struct platform_device msm_device_vpe;
