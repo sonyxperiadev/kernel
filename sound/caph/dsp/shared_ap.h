@@ -632,16 +632,20 @@ typedef enum
     *  \par Command Code         
     *                    0x10
     *  \par Description 
-    *       This command enables/disables Digital Sound. In Athena this enables disables the PCM Interface Enable
-    *       bit in AMCR and clears the output (speaker) voice FIFO. \BR
+    *       This command enables/disables Digital Sound. \BR
     *
     *       This command is used for connecting to mono-bluetooth chip using HCI interface.\BR
     *
     *       The Bluetooth chip would be connected to the base-band using the PCM interface.
     *
     *              
-    *              @param  UInt16 pg_aud_sdsen_enable = 1/0 - Enables/Disables Digital Sound
-    *
+    *              @param  UInt16 	ds_enable_flag
+    *              					{
+    *              						bit0: 	= 1 Enable Digital Sound
+    *              								= 0 Disable Digital Sound
+    *              						bit1: 	= 1 Packed 16-bit AADMAC interface
+    *              								= 0 Unpacked 16-bit - one sample per 32-bit long-word in the lower 16-bits
+    *              					}
     */    	
 	VP_COMMAND_DIGITAL_SOUND,				// 0x10		( enable )
    /** \HR */
@@ -981,80 +985,11 @@ typedef enum
     *  \par Command Code         
     *                    0x23
     *  \par Description 
-    *       This command starts PTT recording.
+    *       This command enable/disable PTT session.
     *
-    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
-    *              
-    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
-    *                             
-    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
-    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
+    *              @param  UInt16 {bit0: 1: Enable; 0: disable;}
     */    
-    VP_COMMAND_PTT_START_RECORDING,	// 0x23
-   /** \HR */
-   /** \par Module
-    *                    Audio 
-    *  \par Command Code         
-    *                    0x24
-    *  \par Description 
-    *       This command stops PTT recording.
-    *
-    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
-    *              
-    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
-    *                             
-    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
-    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
-    */    
-    VP_COMMAND_PTT_STOP_RECORDING,	// 0x24
-   /** \HR */
-   /** \par Module
-    *                    Audio 
-    *  \par Command Code         
-    *                    0x25
-    *  \par Description 
-    *       This command starts PTT playback to UL.
-    *
-    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
-    *              
-    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
-    *                             
-    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
-    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
-    */    
-    VP_COMMAND_PTT_START_PLAYBACK,	// 0x25
-   /** \HR */
-   /** \par Module
-    *                    Audio 
-    *  \par Command Code         
-    *                    0x26
-    *  \par Description 
-    *       This command stops PTT playback to UL.
-    *
-    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
-    *              
-    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
-    *                             
-    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
-    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
-    */    
-    VP_COMMAND_PTT_STOP_PLAYBACK,	// 0x26
-   /** \HR */
-   /** \par Module
-    *                    Audio 
-    *  \par Command Code         
-    *                    0x27
-    *  \par Description 
-    *       This command stops PTT playback to UL.
-    *
-    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
-    *              
-    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
-    *                             
-    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
-    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
-    */    
-    VP_COMMAND_PTT_RESET	    // 0x27
+    VP_COMMAND_PTT_ENABLE	// 0x23
 } VPCommand_t;                                 
 /**
  * @}
@@ -1517,114 +1452,30 @@ typedef enum
 	    *  \par Command Code
 	    *                    0x21
 	    *  \par Description
-	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
+	    *       This reply is sent by the DSP to echo VP_COMMAND_PTT_ENABLE.
 	    *
-	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
-	    *              @param  None
-	    *              @param  None
+	    *              @param  UInt16 PTT_flag
+	    *              @param  UInt16 curr_int_rate_flag
+	    *              @param  UInt16 shared_voif_enable_flag (debugging)
 	    *              @param  None
 	    *
-	    *   \par Associated Command
-	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
-	    *        would be sent in the vp_status queue.
-	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
 	    */
-	VP_STATUS_PTT_RECORDED_STARTED,                 // 0x21 ( )
+	VP_STATUS_PTT_STATUS,                 // 0x21 ( )
 	   /** \HR */
 	   /** \par Module
 	    *                    Audio
 	    *  \par Command Code
 	    *                    0x22
 	    *  \par Description
-	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
+	    *       This reply is sent by the DSP to indicate PTT UL frame is read and ask next frame.
 	    *
-	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
-	    *              @param  None
-	    *              @param  None
+	    *              @param  UInt16 PTT_UL_buffer_index
+	    *              @param  UInt16 PTT_flag
+	    *              @param  UInt16 curr_int_rate_flag
 	    *              @param  None
 	    *
-	    *   \par Associated Command
-	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
-	    *        would be sent in the vp_status queue.
-	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
 	    */
-	VP_STATUS_PTT_RECORDED_STOPPED,                 // 0x22 ( )
-	   /** \HR */
-	   /** \par Module
-	    *                    Audio
-	    *  \par Command Code
-	    *                    0x23
-	    *  \par Description
-	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
-	    *
-	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
-	    *              @param  None
-	    *              @param  None
-	    *              @param  None
-	    *
-	    *   \par Associated Command
-	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
-	    *        would be sent in the vp_status queue.
-	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
-	    */
-	VP_STATUS_PTT_PLAYBACK_STARTED,                 // 0x23 ( )
-	   /** \HR */
-	   /** \par Module
-	    *                    Audio
-	    *  \par Command Code
-	    *                    0x24
-	    *  \par Description
-	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
-	    *
-	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
-	    *              @param  None
-	    *              @param  None
-	    *              @param  None
-	    *
-	    *   \par Associated Command
-	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
-	    *        would be sent in the vp_status queue.
-	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
-	    */
-	VP_STATUS_PTT_PLAYBACK_STOPPED,                 // 0x24 ( )
-	   /** \HR */
-	   /** \par Module
-	    *                    Audio
-	    *  \par Command Code
-	    *                    0x25
-	    *  \par Description
-	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
-	    *
-	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
-	    *              @param  None
-	    *              @param  None
-	    *              @param  None
-	    *
-	    *   \par Associated Command
-	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
-	    *        would be sent in the vp_status queue.
-	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
-	    */
-	VP_STATUS_PTT_RECORD_RATE_CHANGE,                 // 0x25 ( )
-	   /** \HR */
-	   /** \par Module
-	    *                    Audio
-	    *  \par Command Code
-	    *                    0x26
-	    *  \par Description
-	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
-	    *
-	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
-	    *              @param  None
-	    *              @param  None
-	    *              @param  None
-	    *
-	    *   \par Associated Command
-	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
-	    *        would be sent in the vp_status queue.
-	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
-	    */
-	VP_STATUS_PTT_PLAYBACK_RATE_CHANGE                 // 0x26 ( )
+	VP_STATUS_PTT_UL_FRAME_DONE                 // 0x22 ( )
 } VPStatus_t;
 /**
  * @}
@@ -2813,13 +2664,7 @@ EXTERN UInt16 shared_rhea_audio_test_select			           				AP_SHARED_SEC_DIAGN
 #endif
 
 //#ifdef PTT_SUPPORT	
-EXTERN UInt16 shared_PTT_buffer_size		           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
-EXTERN UInt16 shared_PTT_buffer_base_high			           				AP_SHARED_SEC_DIAGNOS;                                                                                                  
-EXTERN UInt16 shared_PTT_buffer_base_low			           				AP_SHARED_SEC_DIAGNOS;                                                                                                  
-EXTERN UInt16 shared_PTT_buffer_in			           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
-EXTERN UInt16 shared_PTT_buffer_out			           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
-EXTERN UInt16 shared_PTT_frame  			           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
-EXTERN UInt16 shared_PTT_frame_to_play		           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
+EXTERN UInt16 shared_PTT_UL_buffer[2][320]	           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
 //#endif
 
 EXTERN UInt32 NOT_USE_shared_memory_end                                     AP_SHARED_SEC_DIAGNOS;
