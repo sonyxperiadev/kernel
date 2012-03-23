@@ -102,6 +102,12 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	outer_flush_all();
 #endif
 
+	/*
+	 * Send the secondary CPU a soft interrupt. This will
+	 * wake it up in case the secondary CPU is in WFI state.
+	 */
+	gic_raise_softirq(cpumask_of(cpu), 1);
+
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
