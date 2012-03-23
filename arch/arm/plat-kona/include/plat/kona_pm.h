@@ -1,5 +1,5 @@
 /****************************************************************************
-*									      
+*
 * Copyright 2010 --2011 Broadcom Corporation.
 *
 * Unless you and Broadcom execute a separate written software license
@@ -13,8 +13,9 @@
 #define __KONA_PM_H__
 
 #ifdef CONFIG_CPU_IDLE
-/* Additional cpuidle flags for rhea */
+/* Additional cpuidle flags */
 #define CPUIDLE_FLAG_XTAL_ON    (1 << 16)
+#define CPUIDLE_ENTER_SUSPEND	(1 << 17)
 
 struct kona_idle_state {
 	char *name;

@@ -41,22 +41,24 @@
 static int keep_xtl_on;
 module_param_named(keep_xtl_on, keep_xtl_on, int, S_IRUGO|S_IWUSR|S_IWGRP);
 
+/* Rhea PM log values */
+enum {
 
-#if defined(DEBUG)
-#define pm_dbg printk
-#else
-#define pm_dbg(format...)              \
-	do {                            \
-	    if (pm_debug && pm_debug!=2)          	\
-		printk(format); 	\
+	LOG_SW2_STATUS		= 1 << 0,
+	LOG_INTR_STATUS		= 1 << 1,
+};
+
+#define pm_dbg(id, format...) \
+	do {		\
+		if (log_mask & (id)) \
+			pr_info(format); \
 	} while(0)
-#endif
 
 extern void enter_wfi(void);
 extern void dormant_enter(void);
 
-static u32 force_retention = 0;
-static u32 pm_debug = 2;
+static u32 force_retention;
+static u32 log_mask;
 /* Set this to 1 to enable dormant from boot */
 static u32 dormant_enable = 1;
 static int force_sleep;
@@ -223,6 +225,59 @@ static void clear_wakeup_interrupts(void)
 	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR5_OFFSET);
 	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR6_OFFSET);
 
+}
+
+static void log_wakeup_interrupts(void)
+{
+	pm_dbg(LOG_INTR_STATUS, "enable_set1 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "enable_set2 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET2_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "enable_set3 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET3_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "enable_set4 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET4_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "enable_set5 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET5_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "enable_set6 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET6_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "enable_set7 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET7_OFFSET));
+
+	pm_dbg(LOG_INTR_STATUS, "active_set1 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS1_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "active_set2 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS2_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "active_set3 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS3_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "active_set4 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS4_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "active_set5 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS5_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "active_set6 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS6_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "active_set7 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS7_OFFSET));
+
+	pm_dbg(LOG_INTR_STATUS, "GIC pending status1 = %x\n",
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET1_OFFSET));
+	pm_dbg(LOG_INTR_STATUS, "GIC pending status2 = %x\n",
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET2_OFFSET));
+
+	pm_dbg(LOG_INTR_STATUS, "GIC pending status3 = %x\n",
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
+
+	pm_dbg(LOG_INTR_STATUS, "GIC pending status4 = %x\n",
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
+
+	pm_dbg(LOG_INTR_STATUS, "GIC pending status5 = %x\n",
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET5_OFFSET));
+
+	pm_dbg(LOG_INTR_STATUS, "GIC pending status6 = %x\n",
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET6_OFFSET));
+
+	pm_dbg(LOG_INTR_STATUS, "GIC pending status7 = %x\n",
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET7_OFFSET));
 }
 
 static void config_wakeup_interrupts(void)
@@ -463,8 +518,8 @@ int enter_idle_state(struct kona_idle_state *state)
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2045*/
 
-	if(pm_debug != 2)
-		pr_info("SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
+	pm_dbg(LOG_SW2_STATUS,
+		"SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
 
 	pi_enable(pi,1);
@@ -472,44 +527,58 @@ int enter_idle_state(struct kona_idle_state *state)
 #ifdef PM_DEBUG
 	if(pwr_mgr_is_event_active(COMMON_INT_TO_AC_EVENT))
 	{
-		pm_dbg("%s:GIC act status1 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status1 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS1_OFFSET));
-		pm_dbg("%s:GIC act status2 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status2 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS2_OFFSET));
 
-		pm_dbg("%s:GIC act status3 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status3 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS3_OFFSET));
 
-		pm_dbg("%s:GIC act status4 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status4 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS4_OFFSET));
 
-		pm_dbg("%s:GIC act status5 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status5 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS5_OFFSET));
 
-		pm_dbg("%s:GIC act status6 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status6 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS6_OFFSET));
 
-		pm_dbg("%s:GIC act status7 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status7 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS7_OFFSET));
 
-		pm_dbg("%s:GIC pending status1 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status1 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET1_OFFSET));
-		pm_dbg("%s:GIC pending status2 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status2 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET2_OFFSET));
 
-		pm_dbg("%s:GIC pending status3 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status3 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
 
-		pm_dbg("%s:GIC pending status4 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status4 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
 
-		pm_dbg("%s:GIC pending status5 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status5 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET5_OFFSET));
 
-		pm_dbg("%s:GIC pending status6 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status6 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET6_OFFSET));
 
-		pm_dbg("%s:GIC pending status7 = %x\n",__func__,
+		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status7 = %x\n",
+			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET7_OFFSET));
 
 	}
@@ -519,9 +588,8 @@ int enter_idle_state(struct kona_idle_state *state)
 	pwr_mgr_process_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT,false);
 	pwr_mgr_process_events(USBOTG_EVENT,PHY_RESUME_EVENT,false);
 
-	//pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
-	//pwr_mgr_event_clear_events(USBOTG_EVENT,MODEMBUS_ACTIVE_EVENT);
-
+	if (state->flags & CPUIDLE_ENTER_SUSPEND)
+		log_wakeup_interrupts();
 
 	if (state->flags & CPUIDLE_FLAG_XTAL_ON || keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(true);
@@ -630,8 +698,8 @@ int __init rhea_pm_debug_init(void)
     dent_rhea_pm_root_dir = debugfs_create_dir("rhea_pm", 0);
     if(!dent_rhea_pm_root_dir)
 	return -ENOMEM;
-	if (!debugfs_create_u32("pm_debug", S_IRUGO | S_IWUSR,
-		dent_rhea_pm_root_dir, (int *)&pm_debug))
+	if (!debugfs_create_u32("log_mask", S_IRUGO | S_IWUSR,
+		dent_rhea_pm_root_dir, (int *)&log_mask))
 		return -ENOMEM;
 	if (!debugfs_create_file("en_self_refresh", S_IRUGO | S_IWUSR,
 		dent_rhea_pm_root_dir, NULL, &pm_en_self_refresh_fops))
