@@ -357,18 +357,6 @@ static struct i2c_board_info __initdata pmu_info[] = {
 };
 #endif
 
-#ifdef CONFIG_MFD_BCM59039
-struct regulator_consumer_supply hv6_supply[] = {
-	{.supply = "2v9sdxc"},
-};
-
-struct regulator_consumer_supply hv4_supply[] = {
-	{.supply = "hv4"},
-	{.supply = "2v9_vibra"},
-	{.supply = "vdd_sdio"},
-};
-#endif
-
 #ifdef CONFIG_KEYBOARD_BCM
 /*!
  * The keyboard definition structure.

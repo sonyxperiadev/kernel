@@ -979,7 +979,7 @@ static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name)
 
 	dev->vddo_sd_regulator = regulator_get(NULL, reg_name);
 
-	if (!IS_ERR(dev->vddo_sd_regulator)) {
+	if (dev->vddo_sd_regulator) {
 		ret = regulator_enable(dev->vddo_sd_regulator);
 		if (ret < 0) {
 			pr_err("%s: can't Enable regulator\n",
@@ -1012,7 +1012,7 @@ static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev, char *reg_name)
 
 	dev->vdd_sdxc_regulator = regulator_get(NULL, reg_name);
 
-	if (!IS_ERR(dev->vdd_sdxc_regulator)) {
+	if (dev->vddo_sd_regulator) {
 		ret = regulator_enable(dev->vdd_sdxc_regulator);
 		if (ret < 0) {
 			pr_err("%s: can't Enable regulator\n",

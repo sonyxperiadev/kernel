@@ -232,8 +232,6 @@ static struct regulator_init_data bcm59039_hv3ldo_data = {
 __weak struct regulator_consumer_supply hv4_supply[] = {
 	{.supply = "hv4"},
 	{.supply = "2v9_vibra"},
-	{ 0 }, /* Add a dummy variable to ensure we can use an array of 3 in rhea_ray.
-		  A hack at best to ensure we redefine the supply in board file. */
 };
 static struct regulator_init_data bcm59039_hv4ldo_data = {
 	.constraints = {
