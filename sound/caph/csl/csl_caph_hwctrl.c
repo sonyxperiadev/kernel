@@ -4647,13 +4647,12 @@ CSL_CAPH_MIXER_e csl_caph_FindMixer(CSL_CAPH_DEVICE_e speaker,
 		}
 		mixer = path->srcmRoute[sinkNo][0].outChnl;
 	} else {
-		if (speaker == CSL_CAPH_DEV_EP) {
+		if (speaker == CSL_CAPH_DEV_EP)
 			mixer = CSL_CAPH_SRCM_STEREO_CH2_L;
-		} else if (speaker == CSL_CAPH_DEV_IHF) {
+		else if (speaker == CSL_CAPH_DEV_IHF)
 			mixer = CSL_CAPH_SRCM_STEREO_CH2_R;
-		} else if (speaker == CSL_CAPH_DEV_HS) {
+		else if (speaker == CSL_CAPH_DEV_HS)
 			mixer = CSL_CAPH_SRCM_STEREO_CH1;
-		}
 	}
 
 	/*for the case of Stereo_IHF*/

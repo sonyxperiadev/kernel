@@ -737,6 +737,7 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 		"ALSA-CAPH %lx:capture_trigger subdevice=%d cmd=%d\n", jiffies,
 		substream_number, cmd);
 
+	callMode = chip->iEnablePhoneCall;
 	drv_handle = substream->runtime->private_data;
 	pSel = chip->streamCtl[substream_number].iLineSelect;
 

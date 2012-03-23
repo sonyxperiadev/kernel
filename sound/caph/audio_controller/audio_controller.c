@@ -2137,10 +2137,7 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 				AUDCTRL_GetAudioApp(), pathID, 0);
 		}
 
-		/* if bInVoiceCall== TRUE, assume the telphony_init() function
-		   sends ENABLE and CONNECT_UL */
-		if (bInVoiceCall != TRUE)
-			AUDDRV_EnableDSPInput(source, sr);
+		AUDDRV_EnableDSPInput(source, sr);
 	}
 
 }
@@ -2162,6 +2159,12 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 			"%s src 0x%x, sink 0x%x,sr %d",
 			__func__, source, sink, sr);
 
+	/*in call mode, return the UL path*/
+	if (bInVoiceCall && source != AUDIO_SOURCE_I2S) {
+		*pPathID = AUDDRV_GetULPath();
+		AUDDRV_EnableDSPInput(source, sr);
+		return;
+	}
 	if (isDigiMic(source)) {
 		/* Enable power to digital microphone */
 		powerOnDigitalMic(TRUE);
@@ -2210,9 +2213,11 @@ void AUDCTRL_DisableRecord(AUDIO_SOURCE_Enum_t source,
 
 	/* Disable DSP UL */
 	if (sink == AUDIO_SINK_DSP)
-		/* assume the telephony_deinit() function sends DISABLE */
-		if (bInVoiceCall != TRUE)
-			AUDDRV_DisableDSPInput();
+		AUDDRV_DisableDSPInput(1);
+
+	/*in call mode, return*/
+	if (bInVoiceCall && source != AUDIO_SOURCE_I2S)
+		return;
 
 	if (pathID)
 		path = csl_caph_FindPath(pathID);
