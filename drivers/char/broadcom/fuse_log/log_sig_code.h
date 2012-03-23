@@ -184,8 +184,8 @@ typedef enum
    L1DATA_AMR,
    L1DATA_SACCH,
    L1DATA_FACCH,
-   L1DATA_BPM_STATUS,
-	L1DATA_TWIF,   ///<Payload type {::TWIF_LOG_t}
+   L1DATA_BPM_STATUS, ///<Payload type {::BPM_STATUS_LOG_t}
+   L1DATA_TWIF,   ///<Payload type {::TWIF_LOG_t}
    AUDIO_DATA,
    /* End of log_gl1s */
 

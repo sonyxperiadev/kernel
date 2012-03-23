@@ -26,7 +26,7 @@
 #ifndef    _INC_SHARED_AP_H_
 #define    _INC_SHARED_AP_H_
 
-#include "types.h"
+#include "mobcom_types.h"
 #include "consts.h"
 
 /**
