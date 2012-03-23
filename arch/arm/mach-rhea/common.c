@@ -179,7 +179,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	 .is_pmu_i2c = false,
 	 },
 	{			/* for BSC1 */
-	 .speed = BSC_BUS_SPEED_50K,
+	 .speed = BSC_BUS_SPEED_400K,
 	 .dynamic_speed = 1,
 	 .bsc_clk = "bsc2_clk",
 	 .bsc_apb_clk = "bsc2_apb_clk",
