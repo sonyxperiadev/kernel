@@ -311,6 +311,21 @@ static int enter_dormant_state(struct kona_idle_state *state)
 	return 0;
 }
 
+static int enter_retention_state(struct kona_idle_state *state)
+{
+	scu_set_power_mode(SCU_STATUS_DORMANT);
+	/* Rhea B1 adds CHIREGS:PERIPH_SPARE_CONTROL2:PWRCTLx_BYPASS
+	 * bits for configuring low power modes. Hence these bits
+	 * also needs to be configured along with the POWER_STATUS
+	 * register in SCU.
+	 */
+	set_spare_power_status(SCU_STATUS_DORMANT);
+
+	enter_wfi();
+
+	set_spare_power_status(SCU_STATUS_NORMAL);
+}
+
 int rhea_force_sleep(suspend_state_t state)
 {
 	struct kona_idle_state s;
@@ -406,8 +421,7 @@ int enter_idle_state(struct kona_idle_state *state)
 	switch (state->state) {
 	case RHEA_STATE_C1:
 	case RHEA_STATE_C2:
-		scu_set_power_mode(SCU_STATUS_DORMANT);
-		enter_wfi();
+		enter_retention_state(state);
 		break;
 	case RHEA_STATE_C3:
 	case RHEA_STATE_C4:
