@@ -67,7 +67,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #define IHF_ST_SUPPORTED
 #define HEADSET_ST_SUPPORTED
-#define DIGIMIC_SUPPORTED
+/* #define DIGIMIC_SUPPORTED */
 
 #if defined(IHF_ST_SUPPORTED) | defined(HEADSET_ST_SUPPORTED)
 
@@ -324,9 +324,11 @@ void st_audio_store_registers(enum selftest_store_e test)
 	struct regulator *regl_hv7ldo = NULL;
 	audiohandle = chal_audio_init(KONA_AUDIOH_VA, KONA_SDT_BASE_VA);
 
-	if (TestActive[SELFTEST_DMIC] ||
-	    TestActive[SELFTEST_IHF] || TestActive[SELFTEST_HS]) {
+
+	if (!TestActive[SELFTEST_DMIC] &&
+	    !TestActive[SELFTEST_IHF] && !TestActive[SELFTEST_HS]) {
 		/* Store clock settings  */
+		bcmpmu_audio_init();
 		AudioClockState = csl_caph_QueryHWClock();
 	}
 
@@ -383,6 +385,7 @@ void st_audio_restore_registers(enum selftest_store_e test)
 {
 	CHAL_HANDLE audiohandle;
 	struct regulator *regl_hv7ldo = NULL;
+
 	audiohandle = chal_audio_init(KONA_AUDIOH_VA, KONA_SDT_BASE_VA);
 
 	switch (test) {
@@ -433,12 +436,14 @@ void st_audio_restore_registers(enum selftest_store_e test)
 	default:
 		break;
 	}
+	TestActive[test] = false;
 	if (!TestActive[SELFTEST_DMIC] &&
 	    !TestActive[SELFTEST_IHF] && !TestActive[SELFTEST_HS]) {
-		/* Retore clock settings  */
+		/* Restore clock settings  */
 		csl_caph_ControlHWClock(AudioClockState);
+		bcmpmu_audio_deinit();
 	}
-	TestActive[test] = false;
+
 }
 
 /******************/
@@ -621,7 +626,6 @@ static void std_selftest_ihf(struct SelftestUserCmdData_t *cmddata)
 		cmddata->subtestCount = 0;
 		cmddata->testStatus = ST_PASS;
 	}
-
 }
 #endif /* IHF_ST_SUPPORTED */
 
@@ -658,7 +662,6 @@ static void std_selftest_hs(struct SelftestUserCmdData_t *cmddata)
 
 	bcmpmu_hs_set_input_mode(0, PMU_HS_DIFFERENTIAL_DC_COUPLED);
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, 0);
-	bcmpmu_audio_init();
 	bcmpmu_hs_power(true);
 
 	/* PMU Input test */
@@ -1172,7 +1175,6 @@ static void std_selftest_dmic(struct SelftestUserCmdData_t *cmddata)
 		cmddata->subtestCount = 0;
 		cmddata->testStatus = ST_PASS;
 	}
-
 }
 #endif
 

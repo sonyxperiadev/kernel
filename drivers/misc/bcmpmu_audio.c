@@ -312,7 +312,7 @@ void bcmpmu_ihf_power(bool on)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	struct bcmpmu_rw_data reg;
-	pr_debug(KERN_WARNING "%s:  ######### ON = %d\n", __func__, on);
+	pr_debug("%s:  ######### ON = %d\n", __func__, on);
 	mutex_lock(&bcmpmu_audio->lock);
 	if (on) {
 		if (bcmpmu_audio->IHF_On) {
@@ -562,14 +562,13 @@ void bcmpmu_audio_ihf_selftest_backup(bool Enable)
 						bcmpmu_audio->bcmpmu->
 						regmap[PMU_REG_IHFSTO_O_IHFSTI].
 						mask);
-
 	}
 }
 
 /* Backup registers used for ihf selftest */
 void bcmpmu_audio_hs_selftest_backup(bool Enable)
 {
-	static unsigned int StoredRegValue[8];
+	static unsigned int StoredRegValue[7];
 	if (Enable) {
 		/* Store PMU register Values */
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
@@ -600,10 +599,7 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 					       PMU_REG_HSPUP_HS_PWRUP,
 					       &StoredRegValue[6],
 					       PMU_BITMASK_ALL);
-		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
-					       PMU_REG_PLLCTRL,
-					       &StoredRegValue[7],
-					       PMU_BITMASK_ALL);
+
 	} else {
 		/* Restore PMU register values */
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
@@ -624,6 +620,7 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 						bcmpmu_audio->bcmpmu->
 						regmap[PMU_REG_HSPGA2].
 						mask);
+
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
 						PMU_REG_HSIST_I_HS_ENST,
 						StoredRegValue[3],
@@ -636,6 +633,7 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 						bcmpmu_audio->bcmpmu->
 						regmap[PMU_REG_HSIST_I_HS_IST].
 						mask);
+
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
 						PMU_REG_HSPUP_IDDQ_PWRDWN,
 						StoredRegValue[5],
@@ -649,11 +647,6 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 						bcmpmu_audio->bcmpmu->
 						regmap[PMU_REG_HSPUP_HS_PWRUP].
 						mask);
-		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
-						PMU_REG_PLLCTRL,
-						StoredRegValue[7],
-						bcmpmu_audio->bcmpmu->
-						regmap[PMU_REG_PLLCTRL].mask);
 	}
 }
 
@@ -749,7 +742,7 @@ static void bcmpmu_audio_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu *bcmpmu = ((struct bcmpmu_audio *)data)->bcmpmu;
 	unsigned int mask;
-	pr_info("%s: Interrupt for %s\n", __func__,
+	pr_debug("%s: Interrupt for %s\n", __func__,
 			(irq == PMU_IRQ_AUD_HSAB_SHCKT) ? "HS SC" : "IHF SC");
 	switch (irq) {
 	case PMU_IRQ_AUD_HSAB_SHCKT:
