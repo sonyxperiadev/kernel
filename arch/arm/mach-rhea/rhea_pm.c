@@ -324,6 +324,7 @@ static int enter_retention_state(struct kona_idle_state *state)
 	enter_wfi();
 
 	set_spare_power_status(SCU_STATUS_NORMAL);
+	return 0;
 }
 
 int rhea_force_sleep(suspend_state_t state)
