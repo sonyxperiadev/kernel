@@ -29,34 +29,31 @@
 *
 *   @file   osdw_dsp_drv.c
 *
-*   @brief  This file accesses the shared memory for the VPU
+*   @brief  This file contains LMP specific DSP code
 *
 ****************************************************************************/
 #include "mobcom_types.h"
 #include <mach/comms/platform_mconfig.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
-#include "msconsts.h"
+#include "brcm_rdb_sysmap.h"
+#include "brcm_rdb_bintc.h"
+#include "chal_intc_inc.h"
+#include "io_map.h"
+#include "chip_irq.h"
+
 #include "shared.h"
 #include "csl_dsp.h"
-
-#include "brcm_rdb_sysmap.h"
-#include "io_map.h"
-
 #include "osdw_dsp_drv.h"
-#include "chal_intc_inc.h"
-#include "chip_irq.h"
 #include "csl_vpu.h"
-
-#include "irqflags.h"
-#include "csl_apcmd.h"
-#include "chal_bmodem_intc_inc.h"
-#include "csl_arm2sp.h"
 #include "audio_trace.h"
+
+#define BINTC_OUT_DEST_6		6
+#define BINTC_OUT_DEST_AP2DSP	15
+#define BMREG_BLOCK_SIZE (BINTC_IMR0_1_OFFSET-BINTC_IMR0_0_OFFSET)
 
 typedef struct {
 	struct tasklet_struct task;
-	CHAL_HANDLE h;
 } Dspdrv;
 
 static Dspdrv dsp_drv;
@@ -65,34 +62,43 @@ static Dspdrv dsp_drv;
 
 static void dsp_thread_proc(unsigned long data);
 static irqreturn_t rip_isr(int irq, void *dev_id);
-static UInt32 *DSPDRV_GetSharedMemoryAddress(void);
 
 /* Local function definitions */
 
-static void IRQ_Enable_BModem_Interrupt(InterruptId_t Id, UInt32 DstID)
+static void IRQ_Enable_BModem_Interrupt(void)
 {
-	chal_bmintc_enable_interrupt(dsp_drv.h, DstID,
-				     (UInt32) IRQ_TO_BMIRQ(Id));
+	*(volatile UInt32*)(KONA_BINTC_BASE_ADDR + BINTC_IMR0_0_SET_OFFSET +
+		BINTC_OUT_DEST_6*BMREG_BLOCK_SIZE) =
+		1<<IRQ_TO_BMIRQ(DSP_OTOAINT);
+
 	return;
 }
 
-static UInt32 IRQ_EnableRIPInt(void)
+static void IRQ_EnableRIPInt(void)
 {
-	chal_bmintc_enable_interrupt(dsp_drv.h, BINTC_OUT_DEST_AP2DSP,
-				     (UInt32) IRQ_TO_BMIRQ(AP_RIP_IRQ));
+	*(volatile UInt32*)(KONA_BINTC_BASE_ADDR + BINTC_IMR1_0_SET_OFFSET +
+	BINTC_OUT_DEST_AP2DSP*BMREG_BLOCK_SIZE) =
+	1<<(IRQ_TO_BMIRQ(AP_RIP_IRQ)-32);
 
-	return 1;
+	return;
 }
 
 static void IRQ_TriggerRIPInt(void)
 {
-	chal_bmintc_set_soft_int(dsp_drv.h, (UInt32) IRQ_TO_BMIRQ(AP_RIP_IRQ));
+	*(volatile UInt32*)(KONA_BINTC_BASE_ADDR + BINTC_ISWIR1_OFFSET) =
+		1<<(IRQ_TO_BMIRQ(AP_RIP_IRQ)-32);
+
+	return;
 }
 
-static void IRQ_SoftInt_Clear(InterruptId_t Id)
+static void IRQ_SoftInt_Clear(void)
 {
-	chal_bmintc_clear_soft_int(dsp_drv.h, IRQ_TO_BMIRQ(Id));
-	chal_bmintc_clear_interrupt(dsp_drv.h, IRQ_TO_BMIRQ(Id));
+	*(volatile UInt32*)(KONA_BINTC_BASE_ADDR + BINTC_ISWIR0_CLR_OFFSET) =
+		1<<IRQ_TO_BMIRQ(DSP_OTOAINT);
+	*(volatile UInt32*)(KONA_BINTC_BASE_ADDR + BINTC_ICR0_OFFSET) =
+		1<<IRQ_TO_BMIRQ(DSP_OTOAINT);
+
+	return;
 }
 
 /*****************************************************************************/
@@ -111,18 +117,26 @@ void DSPDRV_Init()
 
 	aTrace(LOG_AUDIO_DSP, "DSPDRV_Init:\n");
 
-	dsp_drv.h = chal_intc_init(KONA_BINTC_BASE_ADDR);
+	/* get DSP AP shared memory */
+	dsp_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
 
-	dsp_shared_mem = DSPDRV_GetSharedMemoryAddress();
+	if (dsp_shared_mem == NULL) {
+		aTrace(LOG_AUDIO_DSP,
+	       "\n\r\t* mapping shared memory failed\n\r");
+		return;
+	}
 
+	/* initialize DSP AP shared memory */
 	VPSHAREDMEM_Init(dsp_shared_mem);
 
 	/* Create Tasklet */
 	tasklet_init(&(dsp_drv.task), dsp_thread_proc,
 		     (unsigned long)(&dsp_drv));
 
+	/* enable AP to DSP interrupt */
 	IRQ_EnableRIPInt();
-	IRQ_Enable_BModem_Interrupt(BMIRQ23, 6);
+	/* enable DSP to AP interrupt */
+	IRQ_Enable_BModem_Interrupt();
 
 	/* Plug in the ISR enables  IRQ198 */
 	rc = request_irq(COMMS_SUBS6_IRQ, rip_isr, IRQF_DISABLED,
@@ -140,30 +154,6 @@ void DSPDRV_Init()
 	return;
 }
 
-/*****************************************************************************/
-/**
-*	Function Name:	DSPDRV_GetSharedMemoryAddress
-*
-*	Description: Gets DSP AP shared memory base address
-*
-*	Notes:
-*
-******************************************************************************/
-static UInt32 *DSPDRV_GetSharedMemoryAddress()
-{
-	UInt32 *dsp_shared_mem = NULL;
-
-	if (dsp_shared_mem == NULL) {
-		dsp_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
-		if (dsp_shared_mem == NULL) {
-			aTrace(LOG_AUDIO_DSP,
-			       "\n\r\t* mapping shared memory failed\n\r");
-			return NULL;
-		}
-	}
-
-	return dsp_shared_mem;
-}
 
 /*****************************************************************************/
 /**
@@ -181,7 +171,7 @@ static irqreturn_t rip_isr(int irq, void *dev_id)
 
 	disable_irq_nosync(COMMS_SUBS6_IRQ);
 	tasklet_schedule(&dev->task);
-	IRQ_SoftInt_Clear(BMIRQ23);
+	IRQ_SoftInt_Clear();
 
 	return IRQ_HANDLED;
 }
