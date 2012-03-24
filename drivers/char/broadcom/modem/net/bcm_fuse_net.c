@@ -536,10 +536,9 @@ int bcm_fuse_net_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			break;
 		}
 	}
-
-	BNET_DEBUG(DBG_ERROR, "%s: Use A SIM ID:%d, SIM ID:%d \n", __FUNCTION__,
-		   g_net_dev_tbl[i].sim_id, sim_id);
-
+	if (i < BCM_NET_MAX_PDP_CNTXS)  /*To avoid Out-of-bounds read*/
+	BNET_DEBUG(DBG_ERROR, "%s: Use A SIM ID:%d, SIM ID:%d\n", __FUNCTION__,
+				g_net_dev_tbl[i].sim_id, sim_id);
 	return 0;
 }
 
