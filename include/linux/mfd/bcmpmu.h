@@ -143,6 +143,11 @@ enum bcmpmu_reg {
 	PMU_REG_PONKEY_RESTART_DLY,
 
 	PMU_REG_AUXCTRL,
+	PMU_REG_CMPCTRL4,
+	PMU_REG_CMPCTRL5,
+	PMU_REG_CMPCTRL6,
+	PMU_REG_CMPCTRL7,
+	PMU_REG_CMPCTRL14,
 	PMU_REG_RTCSC,
 	PMU_REG_RTCMN,
 	PMU_REG_RTCHR,
@@ -799,16 +804,30 @@ struct bcmpmu_rw_data_ltp{
 	unsigned int len;
 };
 
+struct bcmpmu_ntc_data_ltp {
+	unsigned int map;
+	unsigned int addr;
+	unsigned long val[3];
+	unsigned int mask;
+};
+
 #define BCM_PMU_MAGIC   'P'
 #define BCM_PMU_CMD_READ_REG            0x83
 #define BCM_PMU_CMD_WRITE_REG           0x84
 #define BCM_PMU_CMD_BULK_READ_REG       0x85
 #define BCM_PMU_CMD_ADC_READ_REG        0x86
+#define BCM_PMU_CMD_NTC_TEMP			0x87
 
-#define BCM_PMU_IOCTL_READ_REG          _IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_READ_REG,  struct bcmpmu_rw_data_ltp )
-#define BCM_PMU_IOCTL_BULK_READ_REG     _IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_BULK_READ_REG, struct bcmpmu_rw_data_ltp)
-#define BCM_PMU_IOCTL_ADC_READ_REG     _IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_ADC_READ_REG, struct bcmpmu_adc_req)
-#define BCM_PMU_IOCTL_WRITE_REG         _IOW( BCM_PMU_MAGIC, BCM_PMU_CMD_WRITE_REG, struct bcmpmu_rw_data_ltp)
+#define BCM_PMU_IOCTL_READ_REG		\
+_IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_READ_REG, struct bcmpmu_rw_data_ltp)
+#define BCM_PMU_IOCTL_BULK_READ_REG		\
+_IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_BULK_READ_REG, struct bcmpmu_rw_data_ltp)
+#define BCM_PMU_IOCTL_ADC_READ_REG		\
+_IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_ADC_READ_REG, struct bcmpmu_adc_req)
+#define BCM_PMU_IOCTL_WRITE_REG		\
+_IOW(BCM_PMU_MAGIC, BCM_PMU_CMD_WRITE_REG, struct bcmpmu_rw_data_ltp)
+#define BCM_PMU_IOCTL_NTC_TEMP		\
+_IOW(BCM_PMU_MAGIC, BCM_PMU_CMD_NTC_TEMP, struct bcmpmu_ntc_data_ltp)
 
 enum bcmpmu_batt_event_t {
 	BCMPMU_BATT_EVENT_PRESENT,
