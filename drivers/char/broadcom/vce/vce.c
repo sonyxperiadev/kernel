@@ -1295,6 +1295,9 @@ void __exit vce_exit(void)
 	down(&vce_state.armctl_sem);
 	BUG_ON(vce_state.clock_enable_count != 0);
 
+	vtq_pervce_term(&vce_state.vtq_vce);
+	vtq_driver_term(&vce_state.vtq);
+
 	/* remove proc entries */
 	remove_proc_entry("status", vce_state.proc_vcedir);
 	remove_proc_entry("version", vce_state.proc_vcedir);
