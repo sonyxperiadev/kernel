@@ -2641,7 +2641,7 @@ dhd_open(struct net_device *net)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(net);
 #ifdef PROP_TXSTATUS
-	uint up = 0;
+//	uint up = 0;
 #endif
 #ifdef TOE
 	uint32 toe_ol;

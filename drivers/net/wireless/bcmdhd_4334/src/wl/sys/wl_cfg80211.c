@@ -3798,7 +3798,7 @@ wl_cfg80211_scan_abort(struct wl_priv *wl, struct net_device *ndev)
 	spin_lock_irqsave(&wl->cfgdrv_lock, flags);
 #if defined(BCM4334_CHIP)
 	if (wl->scan_request) {
-		struct cfg80211_scan_request *scan_request = wl->scan_request;
+//		struct cfg80211_scan_request *scan_request = wl->scan_request;
 		u8 temp_id = wl->escan_info.cur_sync_id;
 		wl->bss_list = (wl_scan_results_t *) wl->escan_info.escan_buf[(temp_id+1)%2];
 		wl_inform_bss(wl);

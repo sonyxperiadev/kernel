@@ -204,7 +204,7 @@ static struct resource rhea_wifi_resources[] = {
 static int rhea_wifi_cd = 0;	/* WIFI virtual 'card detect' status */
 static void (*wifi_status_cb) (int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
-static struct regulator *clk32kaudio_reg;
+//static struct regulator *clk32kaudio_reg;
 
 int rhea_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 			      void *dev_id)
@@ -283,13 +283,13 @@ static struct fixed_voltage_config rhea_vwlan = {
 	.init_data = &rhea_vmmc5,
 };
 
-static struct platform_device omap_vwlan_device = {
-	.name = "reg-fixed-voltage",
-	.id = 1,
-	.dev = {
-		.platform_data = &rhea_vwlan,
-		},
-};
+//static struct platform_device omap_vwlan_device = {
+//	.name = "reg-fixed-voltage",
+//	.id = 1,
+//	.dev = {
+//		.platform_data = &rhea_vwlan,
+//		},
+//};
 
 static int rhea_wifi_power(int on)
 {
@@ -367,7 +367,7 @@ __setup("androidboot.macaddr=", rhea_mac_addr_setup);
 
 static int rhea_wifi_get_mac_addr(unsigned char *buf)
 {
-	int type = omap4_rhea_get_type();
+//	int type = omap4_rhea_get_type();
 	uint rand_mac;
 
 //      if (type != RHEA_TYPE_TORO)
