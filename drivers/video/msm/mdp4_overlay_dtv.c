@@ -229,6 +229,7 @@ int mdp4_dtv_on(struct platform_device *pdev)
 	if (mfd->key != MFD_KEY)
 		return -EINVAL;
 
+	mdp_footswitch_ctrl(TRUE);
 	mdp4_overlay_panel_mode(MDP4_MIXER1, MDP4_PANEL_DTV);
 	if (dtv_pipe != NULL)
 		ret = mdp4_dtv_start(mfd);
@@ -259,6 +260,7 @@ int mdp4_dtv_off(struct platform_device *pdev)
 	mdp4_overlay_panel_mode_unset(MDP4_MIXER1, MDP4_PANEL_DTV);
 
 	ret = panel_next_off(pdev);
+	mdp_footswitch_ctrl(FALSE);
 
 	dev_info(&pdev->dev, "mdp4_overlay_dtv: off");
 	return ret;
