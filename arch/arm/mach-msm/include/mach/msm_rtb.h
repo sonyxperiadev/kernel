@@ -13,6 +13,10 @@
 #ifndef __MSM_RTB_H__
 #define __MSM_RTB_H__
 
+/*
+ * These numbers are used from the kernel command line and sysfs
+ * to control filtering. Remove items from here with extreme caution
+ */
 enum logk_event_type {
 	LOGK_NONE = 0,
 	LOGK_READL = 1,

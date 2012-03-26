@@ -54,6 +54,7 @@ struct msm_rtb_state {
 	int nentries;
 	int size;
 	int enabled;
+	int initialized;
 	uint32_t filter;
 	int step_size;
 };
@@ -65,8 +66,8 @@ static atomic_t msm_rtb_idx;
 #endif
 
 struct msm_rtb_state msm_rtb = {
-	.size = SZ_1M,
 	.filter = 1 << LOGK_READL | 1 << LOGK_WRITEL | 1 << LOGK_LOGBUF,
+	.enabled = 1,
 };
 
 module_param_named(filter, msm_rtb.filter, uint, 0644);
@@ -74,7 +75,7 @@ module_param_named(enable, msm_rtb.enabled, int, 0644);
 
 int msm_rtb_event_should_log(enum logk_event_type log_type)
 {
-	return msm_rtb.enabled &&
+	return msm_rtb.initialized && msm_rtb.enabled &&
 		((1 << log_type) & msm_rtb.filter);
 }
 EXPORT_SYMBOL(msm_rtb_event_should_log);
@@ -218,7 +219,7 @@ int msm_rtb_probe(struct platform_device *pdev)
 #endif
 
 
-	msm_rtb.enabled = 1;
+	msm_rtb.initialized = 1;
 	return 0;
 }
 
