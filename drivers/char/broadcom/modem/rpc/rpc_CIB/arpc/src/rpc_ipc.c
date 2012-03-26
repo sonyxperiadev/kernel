@@ -139,10 +139,11 @@ RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
 	RPC_SetProperty(RPC_PROP_VER, rpcVer);
 
 	if (dataIndFunc != NULL && interfaceType < INTERFACE_TOTAL) {
-
+		RPC_LOCK;
 		ipcInfoList[interfaceType].isInit = TRUE;
 		ipcInfoList[interfaceType].flowControlCb = flowControlCb;
 		ipcInfoList[interfaceType].pktIndCb = dataIndFunc;
+		RPC_UNLOCK;
 
 		return RPC_RESULT_OK;
 	}
@@ -158,8 +159,11 @@ RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
 	}
 	/*fixes compiler warnings */
 	if (dataIndFunc != NULL && interfaceType < INTERFACE_TOTAL) {
+		RPC_LOCK;
 		ipcInfoList[interfaceType].isInit = TRUE;
 		ipcInfoList[interfaceType].filterPktIndCb = dataIndFunc;
+		RPC_UNLOCK;
+
 		return RPC_RESULT_OK;
 	}
 
@@ -172,7 +176,7 @@ RPC_Result_t RPC_PACKET_SetContext(PACKET_InterfaceType_t interfaceType,
 				   UInt8 context)
 {
 	UInt8 *pBuf =
-	    (UInt8 *) IPC_BufferHeaderSizeSet((IPC_Buffer) dataBufHandle, 4);
+		(UInt8 *)IPC_BufferHeaderSizeSet((IPC_Buffer)dataBufHandle, 4);
 
 	if (pBuf)
 		pBuf[1] = context;
@@ -214,7 +218,7 @@ RPC_Result_t RPC_PACKET_SetContextEx(PACKET_InterfaceType_t interfaceType,
 				     UInt16 context)
 {
 	UInt8 *pBuf =
-	    (UInt8 *) IPC_BufferHeaderSizeSet((IPC_Buffer) dataBufHandle, 4);
+		(UInt8 *)IPC_BufferHeaderSizeSet((IPC_Buffer)dataBufHandle, 4);
 
 	if (pBuf) {
 		pBuf[2] = (UInt8) (context & 0xFF);
@@ -277,6 +281,7 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
 	IPC_Buffer bufHandle = 0;
 
 	/*Determine the pool index for the interface */
+	RPC_LOCK;
 	if (interfaceType == INTERFACE_PACKET) {
 		index = 0;	/*All channels use the same buffer pool */
 	} else {
@@ -288,6 +293,7 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
 		if (index >= MAX_CHANNELS) {
 			_DBG_(RPC_TRACE("RPC_PACKET_AllocateBuffer itype=%d \
 				invalid channel %d\r\n", interfaceType, index));
+			RPC_UNLOCK;
 			return NULL;
 		}
 	}
@@ -301,6 +307,7 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
 		      ("RPC_PACKET_AllocateBuffer(%c) PKT BEFORE %d\r\n",
 		       (gRpcProcType == RPC_COMMS) ? 'C' : 'A', requiredSize));
 
+	RPC_UNLOCK;
 	if (waitTime == PKT_ALLOC_NOWAIT)
 		bufHandle =
 		    IPC_AllocateBuffer(ipcInfoList[interfaceType].
@@ -380,6 +387,7 @@ UInt32 RPC_PACKET_Get_Num_FreeBuffers(PACKET_InterfaceType_t interfaceType,
 	UInt32 freeBuffers = 0;
 	int index;
 
+	RPC_LOCK;
 	if (channel == 0xFF) {
 		for (index = 0; index < MAX_CHANNELS; index++) {
 			if (ipcInfoList[interfaceType].ipc_buf_pool[index] != 0) {
@@ -410,6 +418,7 @@ UInt32 RPC_PACKET_Get_Num_FreeBuffers(PACKET_InterfaceType_t interfaceType,
 		       (int)interfaceType, (int)channel,
 		       (int)totalFreeBuffers));
 	}
+	RPC_UNLOCK;
 
 	return totalFreeBuffers;
 }
@@ -434,6 +443,7 @@ RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle)
 {
 	_DBG_(RPC_TRACE
 	      ("RPC_PACKET_FreeBuffer FREE h=%d\r\n", (int)dataBufHandle));
+
 	IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
 
 	return RPC_RESULT_OK;
