@@ -377,7 +377,6 @@ static int msm_rpm_set_exclusive_noirq(int ctx,
  *
  * Return value:
  *   0: success
- *   -EINTR: interrupted
  *   -EINVAL: invalid <ctx> or invalid id in <req> array
  *   -ENOSPC: request rejected
  *   -ENODEV: RPM driver not initialized
@@ -411,10 +410,7 @@ static int msm_rpm_set_common(
 		rc = msm_rpm_set_exclusive_noirq(ctx, sel_masks, req, count);
 		spin_unlock_irqrestore(&msm_rpm_lock, flags);
 	} else {
-		rc = mutex_lock_interruptible(&msm_rpm_mutex);
-		if (rc)
-			goto set_common_exit;
-
+		mutex_lock(&msm_rpm_mutex);
 		rc = msm_rpm_set_exclusive(ctx, sel_masks, req, count);
 		mutex_unlock(&msm_rpm_mutex);
 	}
@@ -426,7 +422,6 @@ set_common_exit:
 /*
  * Return value:
  *   0: success
- *   -EINTR: interrupted
  *   -EINVAL: invalid <ctx> or invalid id in <req> array
  *   -ENODEV: RPM driver not initialized.
  */
@@ -472,10 +467,7 @@ static int msm_rpm_clear_common(
 		spin_unlock_irqrestore(&msm_rpm_lock, flags);
 		BUG_ON(rc);
 	} else {
-		rc = mutex_lock_interruptible(&msm_rpm_mutex);
-		if (rc)
-			goto clear_common_exit;
-
+		mutex_lock(&msm_rpm_mutex);
 		rc = msm_rpm_set_exclusive(ctx, sel_masks, r, ARRAY_SIZE(r));
 		mutex_unlock(&msm_rpm_mutex);
 		BUG_ON(rc);
@@ -630,7 +622,6 @@ EXPORT_SYMBOL(msm_rpm_get_status);
  *
  * Return value:
  *   0: success
- *   -EINTR: interrupted
  *   -EINVAL: invalid <ctx> or invalid id in <req> array
  *   -ENOSPC: request rejected
  *   -ENODEV: RPM driver not initialized
@@ -671,7 +662,6 @@ EXPORT_SYMBOL(msm_rpm_set_noirq);
  *
  * Return value:
  *   0: success
- *   -EINTR: interrupted
  *   -EINVAL: invalid <ctx> or invalid id in <req> array
  */
 int msm_rpm_clear(int ctx, struct msm_rpm_iv_pair *req, int count)
@@ -716,7 +706,6 @@ EXPORT_SYMBOL(msm_rpm_clear_noirq);
  *
  * Return value:
  *   0: success
- *   -EINTR: interrupted
  *   -EINVAL: invalid id in <req> array
  *   -ENODEV: RPM driver not initialized
  */
@@ -741,9 +730,7 @@ int msm_rpm_register_notification(struct msm_rpm_notification *n,
 	if (rc)
 		goto register_notification_exit;
 
-	rc = mutex_lock_interruptible(&msm_rpm_mutex);
-	if (rc)
-		goto register_notification_exit;
+	mutex_lock(&msm_rpm_mutex);
 
 	if (!msm_rpm_init_notif_done) {
 		msm_rpm_initialize_notification();
@@ -777,7 +764,6 @@ EXPORT_SYMBOL(msm_rpm_register_notification);
  *
  * Return value:
  *   0: success
- *   -EINTR: interrupted
  *   -ENODEV: RPM driver not initialized
  */
 int msm_rpm_unregister_notification(struct msm_rpm_notification *n)
@@ -785,7 +771,7 @@ int msm_rpm_unregister_notification(struct msm_rpm_notification *n)
 	unsigned long flags;
 	unsigned int ctx;
 	struct msm_rpm_notif_config cfg;
-	int rc;
+	int rc = 0;
 	int i;
 
 	if (!msm_rpm_platform) {
@@ -795,9 +781,7 @@ int msm_rpm_unregister_notification(struct msm_rpm_notification *n)
 			return -ENODEV;
 	}
 
-	rc = mutex_lock_interruptible(&msm_rpm_mutex);
-	if (rc)
-		goto unregister_notification_exit;
+	mutex_lock(&msm_rpm_mutex);
 
 	ctx = MSM_RPM_CTX_SET_0;
 	cfg = msm_rpm_notif_cfgs[ctx];
@@ -815,7 +799,6 @@ int msm_rpm_unregister_notification(struct msm_rpm_notification *n)
 	msm_rpm_update_notification(ctx, &msm_rpm_notif_cfgs[ctx], &cfg);
 	mutex_unlock(&msm_rpm_mutex);
 
-unregister_notification_exit:
 	return rc;
 }
 EXPORT_SYMBOL(msm_rpm_unregister_notification);
