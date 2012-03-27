@@ -365,6 +365,8 @@ static int pmem_release(struct inode *inode, struct file *file)
 	if (!(PMEM_FLAGS_CONNECTED & data->flags) && has_allocation(file)) {
 		WARN_ON(data->ref);
 		ret = pmem_free(id, data);
+		if (ret)
+			printk(KERN_ERR"pmem: pmem_free failed\n");
 	}
 
 	/* if this file is a submap (mapped, connected file), downref the
@@ -468,7 +470,7 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 	BUG_ON(len < PAGE_SIZE);
 
 	/* do not use kmalloc yet */
-	if (false && (is_power_of_2(len) && (len <= KMALLOC_MAX_SIZE))) {
+	if (false && is_power_of_2(len) && (len <= KMALLOC_MAX_SIZE)) {
 		/* Try kmalloc allocation first */
 		addr = (unsigned long)kmalloc(len, GFP_KERNEL);
 		if (addr) {
@@ -565,11 +567,9 @@ static void pmem_update_kernel_mappings(int id, struct file *file,
 	unsigned long start;
 	phys_addr_t phys_start;
 
-	/* if allocated from carveout heap, we dont change any mappings */
-	if (data->flags & PMEM_FLAGS_CARVEOUT) {
-		BUG_ON(!(file->f_flags & O_SYNC));
+	/* if allocated from carveout or kmalloc heap, dont change anything */
+	if (data->flags & (PMEM_FLAGS_CARVEOUT | PMEM_FLAGS_KMALLOC))
 		return;
-	}
 
 	new_prot = pmem_access_prot(file, pgprot_kernel);
 	if (new_prot == pgprot_kernel) {
@@ -889,18 +889,19 @@ int get_pmem_addr(struct file *file, unsigned long *start,
 	struct pmem_data *data;
 	int id;
 
-	if (!is_pmem_file(file) || !has_allocation(file)) {
-		return -1;
+	if (!is_pmem_file(file)) {
+		printk(KERN_INFO"pmem: requested reference from non-pmem file\n");
+		return -EINVAL;
+	}
+
+	if (!has_allocation(file)) {
+		printk(KERN_INFO"pmem: requested reference from file with no "
+		       "allocation.\n");
+		*start = *len = *vstart = 0UL;
+		return 0;
 	}
 
 	data = (struct pmem_data *)file->private_data;
-	if (data->pfn == -1) {
-#if PMEM_DEBUG
-		printk(KERN_INFO "pmem: requested pmem data from file with no "
-		       "allocation.\n");
-		return -1;
-#endif
-	}
 	id = get_id(file);
 
 	down_read(&data->sem);
