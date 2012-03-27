@@ -49,8 +49,6 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I$(src)/chal/A0/inc/
 endif
 #RPC Header files
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/CAPI2_CIB/soc/debug/public/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/CAPI2_CIB/public/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/fuse_log
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/public/
 
