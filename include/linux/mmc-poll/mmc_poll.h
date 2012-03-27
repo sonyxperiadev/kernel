@@ -205,8 +205,7 @@ struct mmc_cid {
  * After the atmel_mci.c driver for AVR32 has
  * been replaced this structure will be removed.
  */
-struct mmc_csd
-{
+struct mmc_csd {
 	u8	csd_structure:2,
 		spec_vers:4,
 		rsvd1:2;

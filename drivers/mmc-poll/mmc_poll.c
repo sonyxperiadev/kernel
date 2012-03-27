@@ -23,7 +23,7 @@
  * MA 02111-1307 USA
  */
 
-/* 
+/*
  * TODO: brcm - I have ported this original code back to Linux, what should i
  * do with the license header ???
  */
@@ -31,18 +31,18 @@
 #include <linux/delay.h>
 #include <linux/list.h>
 #include <linux/types.h>
-#include <asm/string.h>
+#include <linux/string.h>
 #include <asm/div64.h>
 #include <linux/mmc-poll/mmc_poll.h>
 #include <linux/mmc-poll/part.h>
 
 #ifdef DEBUG
-#define debug(a,b...)  printk(a,##b)
+#define debug(a, b...)  printk(a, ##b)
 #else
-#define debug(a,b...)
+#define debug(a, b...)
 #endif
 
-#define printf(a,b...) printk(a,##b)
+#define printf(a, b...) printk(a, ##b)
 
 /*
  * To keep things simple, we are not using
@@ -54,10 +54,10 @@ static inline uint64_t lldiv(uint64_t dividend, uint32_t divisor)
 {
 	uint64_t __res = dividend;
 	do_div(__res, divisor);
-	return (__res);
+	return __res;
 }
 
-int mmc_delay_till_state(struct mmc *mmc, u8 state);
+static int mmc_delay_till_state(struct mmc *mmc, u8 state);
 
 static struct list_head mmc_devices;
 static int cur_dev_num = -1;
@@ -67,9 +67,10 @@ int __board_mmc_getcd(u8 *cd, struct mmc *mmc)
 	return -1;
 }
 
-int board_mmc_getcd(u8 *cd, struct mmc *mmc) __attribute__ ((weak,
-							     alias
-							     ("__board_mmc_getcd")));
+int board_mmc_getcd(
+	 u8 *cd, struct mmc *mmc) __attribute__ ((weak,
+						  alias
+						  ("__board_mmc_getcd")));
 
 int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 {
@@ -129,9 +130,9 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void *src)
 	data.flags = MMC_DATA_WRITE;
 
 	for (i = 0; i < blkcnt; i++) {
-		/* 
+		/*
 		 * According to JESD spec page 23, Table 22, the argument
-		 * for CMD 17 is defined as follows 
+		 * for CMD 17 is defined as follows
 		 * Data address for media =<2GB is a 32bit byte address and data
 		 * address for media > 2GB is a 32bit sector (512B) address.
 		 * so the next address decission is based on capacity
@@ -145,7 +146,7 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void *src)
 		    (const char *)((char *)src) + (i * mmc->write_bl_len);
 
 		if (mmc_send_cmd(mmc, &cmd, &data)) {
-			printk("mmc write failed\n");
+			pr_err("mmc write failed\n");
 			break;
 		}
 
@@ -154,7 +155,7 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void *src)
 		 * While performing block writes in polling mode with Hynix
 		 * eMMC Flash, I always saw that the third write command
 		 * (0x24) was failing for the first time (how crazy ..) and
-		 * also the stack does not check the status of the device 
+		 * also the stack does not check the status of the device
 		 * CMD13 before sending the next command. In the absence of
 		 * this we can only work around this problem for now.
 		 *
@@ -190,7 +191,7 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void *src)
 	data.flags = MMC_DATA_WRITE;
 
 	if (mmc_send_cmd(mmc, &cmd, &data)) {
-		printk("mmc write failed\n");
+		pr_err("mmc write failed\n");
 		return 0;
 	}
 
@@ -200,7 +201,7 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void *src)
 		cmd.resp_type = MMC_RSP_R1b;
 		cmd.flags = 0;
 		if (mmc_send_cmd(mmc, &cmd, NULL)) {
-			printk("mmc fail to send stop cmd\n");
+			pr_err("mmc fail to send stop cmd\n");
 			return 0;
 		}
 	}
@@ -259,9 +260,9 @@ int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start, lbaint_t blkcnt)
 	      mmc->high_capacity);
 
 	for (i = 0; i < blkcnt; i++) {
-		/* 
+		/*
 		 * According to JESD spec page 23, Table 22, the argument
-		 * for CMD 17 is defined as follows 
+		 * for CMD 17 is defined as follows
 		 * Data address for media =<2GB is a 32bit byte address and data
 		 * address for media > 2GB is a 32bit sector (512B) address.
 		 * so the next address decission is based on capacity
@@ -274,7 +275,7 @@ int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start, lbaint_t blkcnt)
 		data.dest = ((char *)dst) + (i * mmc->read_bl_len);
 
 		if (mmc_send_cmd(mmc, &cmd, &data)) {
-			printk("mmc read failed\n");
+			pr_err("mmc read failed\n");
 			break;
 		}
 	}
@@ -309,7 +310,7 @@ int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start, lbaint_t blkcnt)
 		cmd.resp_type = MMC_RSP_R1b;
 		cmd.flags = 0;
 		if (mmc_send_cmd(mmc, &cmd, NULL)) {
-			printk("mmc fail to send stop cmd\n");
+			pr_err("mmc fail to send stop cmd\n");
 			return 0;
 		}
 	}
@@ -330,7 +331,7 @@ static ulong mmc_bread(int dev_num, ulong start, lbaint_t blkcnt, void *dst)
 		return 0;
 
 	if ((start + blkcnt) > mmc->block_dev.lba) {
-		printk("MMC: block number 0x%lx exceeds max(0x%lx)\n",
+		pr_err("MMC: block number 0x%lx exceeds max(0x%lx)\n",
 		       start + blkcnt, mmc->block_dev.lba);
 		return 0;
 	}
@@ -504,7 +505,7 @@ int mmc_poll_switch(struct mmc *mmc, u8 set, u8 index, u8 value)
 	return mmc_send_cmd(mmc, &cmd, NULL);
 }
 
-int mmc_delay_till_state(struct mmc *mmc, u8 state)
+static int mmc_delay_till_state(struct mmc *mmc, u8 state)
 {
 	int timeout = 1000;
 	struct mmc_cmd cmd;
@@ -551,7 +552,9 @@ int mmc_change_freq(struct mmc *mmc)
 	cardtype = ext_csd[196] & 0xf;
 
 #ifndef ISLAND_MMC_FPGA_NO_HIGH_SPEED
-	// Don't send High speed switch command for island in case of working on FPGA.
+	/* Don't send High speed switch command for island in case of
+	 * working on FPGA
+	 */
 	err =
 	    mmc_poll_switch(mmc, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_HS_TIMING, 1);
 
@@ -987,7 +990,7 @@ int mmc_startup(struct mmc *mmc)
 		(mmc->cid[2] >> 24) & 0xf);
 
 #if defined(ISLAND_MMC_FPGA_NO_HIGH_SPEED)
-	// Have some delay for island FPGA.
+	/* Have some delay for island FPGA. */
 	udelay(100000);
 #endif
 
@@ -1061,9 +1064,8 @@ int mmc_init(struct mmc *mmc)
 
 	/* Test for SD version 2 */
 	err = mmc_poll_send_if_cond(mmc);
-	if (err < 0) {
-		debug("mmc_poll_send_if_cond returned %d \r\n", err);
-	}
+	if (err < 0)
+		debug("mmc_poll_send_if_cond returned %d\n", err);
 
 	/* Now try to get the SD card's operating condition */
 	err = sd_send_op_cond(mmc);
@@ -1073,10 +1075,10 @@ int mmc_init(struct mmc *mmc)
 	if (err == TIMEOUT) {
 		err = mmc_poll_send_op_cond(mmc);
 		if (err) {
-			printk("Card did not respond to voltage select!\n");
+			pr_err("Card did not respond to voltage select!\n");
 			return UNUSABLE_ERR;
 		}
-		debug("mmc_poll_send_op_cond: succeeded \r\n");
+		debug("mmc_poll_send_op_cond: succeeded\n");
 	}
 
 	return mmc_startup(mmc);
@@ -1090,16 +1092,16 @@ void print_mmc_devices(char separator)
 	list_for_each(entry, &mmc_devices) {
 		m = list_entry(entry, struct mmc, link);
 
-		printk("%s: %d", m->name, m->block_dev.dev);
+		pr_info("%s: %d", m->name, m->block_dev.dev);
 
 		if (entry->next != &mmc_devices)
-			printk("%c ", separator);
+			pr_info("%c ", separator);
 	}
 
-	printk("\n");
+	pr_info("\n");
 }
 
-/* 
+/*
  * Changed the signature of this function.
  * should be called during init to initialize the data structures
  * and internal variables
