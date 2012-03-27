@@ -1866,6 +1866,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				    ("V3D_IOCTL_PERF_COUNTER_ENABLE failed\n");
 				ret = -EPERM;
 			}
+		memset(&dev->perf_ctr, 0, sizeof(dev->perf_ctr));
 		}
 		break;
 	case V3D_IOCTL_PERF_COUNTER_DISABLE:{
