@@ -1004,8 +1004,11 @@ UInt32 Log_GetGroupSizeThreshold(UInt32 sig_code);
 	After it is sent out, "ready" is set to zero again for DSP to re-use this buffer.
 **/	
 
+#define	LOG_BUFFER_SIGNATURE	0x4642474C	//"LGBF" in little endian
+
 typedef struct
 {
+	unsigned int signature;	// must be LOG_BUFFER_SIGNATURE
 	unsigned int ready;
 	void *ptr;
 	unsigned int size;

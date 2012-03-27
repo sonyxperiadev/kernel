@@ -216,17 +216,32 @@ int bcm_sdiowl_init(void)
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
+
+
 #if defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_STONE_EDN2X)
-	dev->wifi_gpio->reset = 42;
-	dev->wifi_gpio->reg = -1;
-	dev->wifi_gpio->host_wake = 74;
-	dev->wifi_gpio->shutdown = -1;
-#else
-//Rhea Ray
-	dev->wifi_gpio->reset = 70;
-	dev->wifi_gpio->reg = -1;
-	dev->wifi_gpio->host_wake = 85;
-	dev->wifi_gpio->shutdown = -1;
+      dev->wifi_gpio->reset = 42;
+      dev->wifi_gpio->reg = -1;
+      dev->wifi_gpio->host_wake = 74;
+      dev->wifi_gpio->shutdown = -1;
+#endif	  
+#if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
+      dev->wifi_gpio->reset = 70;
+      dev->wifi_gpio->reg = -1;
+      dev->wifi_gpio->host_wake = 48;
+      dev->wifi_gpio->shutdown = -1;
+#endif	  
+#if defined(CONFIG_MACH_RHEA_SS_ZANIN)
+      dev->wifi_gpio->reset = 70;
+      dev->wifi_gpio->reg = -1;
+      dev->wifi_gpio->host_wake = 7;
+      dev->wifi_gpio->shutdown = -1;
+#endif	  
+#if defined(CONFIG_MACH_RHEA_BERRI)
+
+      dev->wifi_gpio->reset = 70;
+      dev->wifi_gpio->reg = -1;
+      dev->wifi_gpio->host_wake = 85;
+      dev->wifi_gpio->shutdown = -1;
 #endif
 
 #endif

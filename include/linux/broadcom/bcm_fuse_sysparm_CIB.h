@@ -85,6 +85,8 @@ typedef struct {
 UInt16 SYSPARM_GetLogFormat(void);
 SysAudioParm_t *APSYSPARM_GetAudioParmAccessPtr(void);
 SysIndMultimediaAudioParm_t *APSYSPARM_GetMultimediaAudioParmAccessPtr(void);
+int APSYSPARM_RefreshAudioParm(unsigned int addr);
+
 UInt16 SYSPARM_GetDefault4p2VoltReading(void);
 UInt16 SYSPARM_GetActual4p2VoltReading(void);
 UInt16 SYSPARM_GetBattLowThresh(void);

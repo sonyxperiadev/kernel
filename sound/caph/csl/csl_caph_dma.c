@@ -750,6 +750,31 @@ void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config)
 
 /****************************************************************************
 *
+*  Function Name:void csl_caph_dma_set_lobuffer_address(CSL_CAPH_DMA_CHNL_e
+*                                                         chnl, UInt8 *addr)
+*
+*  Description: set lobuffer address
+*
+****************************************************************************/
+
+void csl_caph_dma_set_lobuffer_address(CSL_CAPH_DMA_CHNL_e chnl, UInt8 *addr)
+{
+	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
+
+	/* aTrace(LOG_AUDIO_CSL, "%s::\n", __func__); */
+
+	if (chnl == CSL_CAPH_DMA_NONE)
+		return;
+
+	caph_aadmac_ch = csl_caph_dma_get_chal_chnl(chnl);
+	chal_caph_dma_set_buffer_address(handle, caph_aadmac_ch,
+					 (cUInt32) addr);
+
+	return;
+}
+
+/****************************************************************************
+*
 *  Function Name:void csl_caph_dma_set_hibuffer_address(CSL_CAPH_DMA_CHNL_e
 *                                                         chnl, UInt8 *addr)
 *
@@ -760,7 +785,7 @@ void csl_caph_dma_set_hibuffer_address(CSL_CAPH_DMA_CHNL_e chnl, UInt8 *addr)
 {
 	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
 
-	aTrace(LOG_AUDIO_CSL, "%s::\n", __func__);
+	/* aTrace(LOG_AUDIO_CSL, "%s::\n", __func__); */
 
 	if (chnl == CSL_CAPH_DMA_NONE)
 		return;

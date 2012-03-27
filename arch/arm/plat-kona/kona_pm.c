@@ -173,7 +173,9 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(1);
 #endif
+			def_suspend_state->flags |= CPUIDLE_ENTER_SUSPEND;
 			def_suspend_state->enter(def_suspend_state);
+			def_suspend_state->flags &= ~CPUIDLE_ENTER_SUSPEND;
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(0);
 #endif

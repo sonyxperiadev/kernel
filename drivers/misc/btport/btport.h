@@ -61,11 +61,5 @@
 #define IOCTL_BTPORT_LIST_DEVICE          0x1006
 #define IOCTL_BTPORT_GET_DEVICE_INFO      0x1007
 
-#ifndef FALSE
-#define FALSE 0
-#endif
-#ifndef TRUE
-#define TRUE (!FALSE)
-#endif
-
+#define IOCTL_RFCOMMCREATEDEV 0x100f
 #endif

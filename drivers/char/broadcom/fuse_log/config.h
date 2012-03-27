@@ -23,20 +23,31 @@
 #define BCMLOG_CONFIG_PS_FILE		"/data/brcm/parm_log.bin"
 /* /proc file to accept configuration changes */
 #define BCMLOG_CONFIG_PROC_FILE		"brcm_logcfg"
+#define BCMLOG_DEFAULT_FILE_BASE "/sdcard/"
+#define BCMLOG_DEFAULT_UART_DEV "/dev/ttyS0"
+#define BCMLOG_DEFAULT_ACM_DEV "/dev/ttyGS1"
+#define MAX_STR_NAME 40
+
+struct log_type_t {
+	int dev;
+	int lock;
+	int (*handler) (const char *, unsigned int, char);
+};
 
 struct BCMLOG_Config_t {
 	/*
 	 *      ap_crashlog_dev
 	 *      must be at beginning of struct; see brcm/dumpd/dumpd.c
 	 */
-	int ap_crashlog_dev;
-	int cp_crashlog_dev;
-	int runlog_dev;
+	struct log_type_t ap_crashlog;
+	struct log_type_t cp_crashlog;
+	struct log_type_t runlog;
 	unsigned long id_enable[1 + BCMLOG_MAX_LOG_ID / BITS_PER_LONG];
-	int sd_file_max;
-	int (*runlog_handler) (const char *, unsigned int, char);
-	int (*ap_crashlog_handler) (const char *, unsigned int, char);
-	int (*cp_crashlog_handler) (const char *, unsigned int, char);
+	int file_max;
+	char file_base[MAX_STR_NAME];
+	char uart_dev[MAX_STR_NAME];
+	char acm_dev[MAX_STR_NAME];
+
 };
 
 /**
@@ -65,11 +76,16 @@ int BCMLOG_SaveConfig(int saveFlag);
  *	Initialize logging configuration.  Schedules a work thread to
  *	load the configuration file once the file system is readable.
  **/
-void BCMLOG_InitConfig(void);
+void BCMLOG_InitConfig(void *dev);
 
 /**
  *	If the runtime log is on USB
  **/
 int BCMLOG_IsUSBLog(void);
+
+char *BCMLOG_GetFileBase(void);
+char *BCMLOG_GetUartDev(void);
+char *BCMLOG_GetAcmDev(void);
+
 
 #endif /* __BCMLOG_FIFO_H__ */

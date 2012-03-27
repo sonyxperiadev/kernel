@@ -116,6 +116,11 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <linux/delay.h>
 
+#ifdef CONFIG_WD_TAPPER
+#include <linux/broadcom/wd-tapper.h>
+#endif
+
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
 #include "board-Rhea_wifi.h"
@@ -937,7 +942,6 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	 .peri_clk_rate = 48000000,
 	 /* vdd_sdc regulator:needed to support UHS SD cards */
 	 .vddo_regulator_name = "vdd_sdio",
-	 .vddsdxc_regulator_name = "2v9sdxc",
 	 },
 	{			/* SDIO2 */
 	 .id = 1,
@@ -1494,6 +1498,25 @@ static struct platform_device rhea_camera = {
 		},
 };
 
+#ifdef CONFIG_WD_TAPPER
+static struct wd_tapper_platform_data wd_tapper_data = {
+	/* Set the count to the time equivalent to the time-out in milliseconds
+	 * required to pet the PMU watchdog to overcome the problem of reset in
+	 * suspend*/
+	.count = 28000,
+	.ch_num = 1,
+	.name = "aon-timer",
+};
+
+static struct platform_device wd_tapper = {
+	.name = "wd_tapper",
+	.id = 0,
+	.dev = {
+		.platform_data = &wd_tapper_data,
+		},
+};
+#endif
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -1540,6 +1563,10 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 	&board_bcmbt_lpm_device,
 #endif
 	&rhea_camera,
+
+#ifdef CONFIG_WD_TAPPER
+	&wd_tapper,
+#endif
 
 };
 

@@ -537,14 +537,20 @@ static void kona_mmc_set_ios(struct mmc *mmc)
 	if (mmc->clock)
 		kona_mmc_change_clock(host, mmc->clock);
 
-	// Width and edge setting.
-	// WIDTH : 
+	/* Width and edge setting. */
 	ctrl = readl(&host->reg->ctrl_host_pwr_blk_wak);
-	/*  1 = 4-bit mode , 0 = 1-bit mode */
-	if (mmc->bus_width == 4)
-		ctrl |= (1 << EMMCSDXC_CTRL_DXTW_SHIFT);
-	else
-		ctrl &= ~(1 << EMMCSDXC_CTRL_DXTW_SHIFT);
+
+	if (mmc->bus_width == 8) {
+		ctrl |= (1 << EMMCSDXC_CTRL_SDB_SHIFT);
+	} else {
+		ctrl &= ~(1 << EMMCSDXC_CTRL_SDB_SHIFT);
+
+		/*  1 = 4-bit mode , 0 = 1-bit mode */
+		if (mmc->bus_width == 4)
+			ctrl |= (1 << EMMCSDXC_CTRL_DXTW_SHIFT);
+		else
+			ctrl &= ~(1 << EMMCSDXC_CTRL_DXTW_SHIFT);
+	}
 
 	if (mmc->card_caps & MMC_MODE_HS)
 #ifdef CONFIG_SAMOA_FPGA
@@ -770,6 +776,9 @@ int kona_mmc_init(int dev_index)
 	    MMC_VDD_31_32 | MMC_VDD_32_33 | MMC_VDD_33_34 | MMC_VDD_34_35 |
 	    MMC_VDD_35_36;
 	mmc->host_caps = MMC_MODE_4BIT | MMC_MODE_HS_52MHz | MMC_MODE_HS;
+
+	if (dev_index > 1)
+		mmc->host_caps |= MMC_MODE_8BIT;
 
 	mmc_host[dev_index].base_clock_freq =
 	    kona_get_base_clock_freq(source_clk_reg);

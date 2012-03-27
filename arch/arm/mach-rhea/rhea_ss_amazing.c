@@ -1357,7 +1357,7 @@ static struct platform_device r61581_smi8_display_device = {
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 
 #define BCMBT_VREG_GPIO       (100)
-#define BCMBT_N_RESET_GPIO    (40)
+#define BCMBT_N_RESET_GPIO    (-1)
 #define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
 #define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
 

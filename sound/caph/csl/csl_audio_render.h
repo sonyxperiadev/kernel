@@ -46,6 +46,10 @@ struct _CSL_CAPH_Render_Drv_t {
 	CSL_CAPH_PathID pathID;
 	CSL_AUDRENDER_CB dmaCB;
 	CSL_CAPH_DMA_CHNL_e dmaCH;
+	UInt8 *ringBuffer;
+	UInt32 numBlocks;
+	UInt32 blockSize;
+	UInt32 blockIndex;
 	/*CSL_CAPH_DMA_CHNL_e dmaCH2;
 	AUDIO_NUM_OF_CHANNEL_t numChannels;
 	AUDIO_BITS_PER_SAMPLE_t bitsPerSample;

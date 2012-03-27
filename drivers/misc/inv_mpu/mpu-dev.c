@@ -1247,8 +1247,8 @@ static int mpu6050_read_accel(struct i2c_client* client, struct axis_data* coord
 		return -1;
 	}
 
-	if(retval = mutex_lock_interruptible(&mpu->mutex))
-	{
+	retval = mutex_lock_interruptible(&mpu->mutex);
+	if (retval) {
 		dev_err(&client->adapter->dev, "%s: mutex_lock_interruptible returned %d\n", __func__, retval);
 		return -1;
 	}
@@ -1302,9 +1302,9 @@ static int mpu6050_read_compass(struct i2c_client* client, struct axis_data* coo
 	p_data = kzalloc(slave->read_len, GFP_KERNEL);
 	if (!p_data)
 		return -1;
-	
-	if(retval = mutex_lock_interruptible(&mpu->mutex))
-	{
+
+	retval = mutex_lock_interruptible(&mpu->mutex);
+	if (retval) {
 		dev_err(&client->adapter->dev, "%s: mutex_lock_interruptible returned %d\n", __func__, retval);
 		kfree(p_data);
 		return -1;
@@ -1557,9 +1557,10 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 		(PFNACTIVATE)mpu6050_set_compass_power_mode,
 		(PFNREAD)mpu6050_read_compass);
 #endif
-	if(res = mpu6050_init(client, mpu)) {
+
+	res = mpu6050_init(client, mpu);
+	if (res)
 		goto out_slave_pdata_kzalloc_failed;
-	}
 #endif
 	return res;
 

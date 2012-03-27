@@ -307,7 +307,7 @@ static void reserve_skbs_list(void)
 
 	spin_lock_irqsave(&skb_pool.lock, flags);
 	while (skb_pool.qlen < MAX_SKBS) {
-		skb = alloc_skb(MAX_SKB_SIZE, GFP_KERNEL);
+		skb = alloc_skb(MAX_SKB_SIZE, GFP_ATOMIC);
 		if (!skb)
 			break;
 		__skb_queue_tail(&skb_pool, skb);

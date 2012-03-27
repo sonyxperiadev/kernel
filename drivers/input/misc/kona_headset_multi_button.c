@@ -119,6 +119,11 @@ struct mic_t {
 	int hs_state;
 	int button_state;
 	int button_pressed;
+	/*
+	 * 1 - mic bias is ON
+	 * 0 - mic bias is OFF
+	 */
+	int mic_bias_status;
 #ifdef CONFIG_HAS_WAKELOCK
 	/* The wakelock is added to prevent the Baseband from going to
 	 * suspend state while handling accessory detection/button press
@@ -250,6 +255,10 @@ static CHAL_ACI_vref_config_t aci_vref_config = {CHAL_ACI_VREF_OFF};
 static int __headset_hw_init (struct mic_t *mic);
 static void __handle_accessory_inserted (struct mic_t *p);
 static void __handle_accessory_removed (struct mic_t *p);
+
+/* APIs to switch ON and switch OFF Mic BIAS */
+extern void kona_mic_bias_on(void);
+extern void kona_mic_bias_off(void);
 
 /* Function to dump the HW regs */
 #ifdef DEBUG
@@ -673,6 +682,10 @@ static void accessory_detect_work_func(struct work_struct *work)
 	accessory_inserted = (accessory_inserted ^ p->headset_pd->hs_default_state);
 
 	if (accessory_inserted == 1) {
+
+		/* Switch ON the MIC BIAS */
+		kona_mic_bias_on();
+
 		__handle_accessory_inserted(p);
 
 		/* 
@@ -694,6 +707,10 @@ static void accessory_detect_work_func(struct work_struct *work)
 				CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
 				CHAL_ACI_BLOCK_COMP2);
 		}
+
+		/* Switch OFF the MIC BIAS in case of Headphone */
+		if (p->hs_state == HEADPHONE)
+			kona_mic_bias_off();
 	}else {
 		__handle_accessory_removed(p);
 
@@ -703,9 +720,8 @@ static void accessory_detect_work_func(struct work_struct *work)
 			CHAL_ACI_BLOCK_COMP);
 
 		/* Turn Off, MIC BIAS */
-		aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_GND;
-		chal_aci_block_ctrl(mic_dev->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-			CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+		if ((p->hs_state == OPEN_CABLE) || (p->hs_state == HEADSET))
+			kona_mic_bias_off();
 	}
 #ifdef CONFIG_HAS_WAKELOCK
 		wake_unlock(&p->accessory_wklock);
@@ -1330,6 +1346,15 @@ static int __headset_hw_init (struct mic_t *p)
 		CHAL_ACI_BLOCK_COMP);	
 
 	pr_debug ("=== __headset_hw_init: Interrupts disabled \r\n");
+
+	/*
+	 * For GPIO based detection, disable the mic bias during boot.
+	 * For Non GPIO case, switch it ON permanantly
+	 */
+	if (p->headset_pd->gpio_for_accessory_detection == 1)
+		kona_mic_bias_off();
+	else
+		kona_mic_bias_on();
 
 	/*
 	 * This ensures that the timing parameters are configured

@@ -84,7 +84,6 @@ struct _AUDDRV_PathID_t {
 #define AUDIO_MODEM(a)
 #endif
 
-/*static Boolean voiceInPathEnabled = FALSE; */
 /*this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.
 AUDEN for both voiceIn and voiceOut */
 static Boolean voicePlayOutpathEnabled = FALSE;
@@ -106,6 +105,9 @@ static Boolean dspNSEnable = TRUE;
 static Boolean controlFlagForCustomGain = FALSE;
 static Boolean inCallRateChange = FALSE;
 static int audio_tuning_flag;
+static Boolean voiceRecOn = FALSE;
+static AUDIO_SOURCE_Enum_t voiceInMic;
+static AUDIO_SAMPLING_RATE_t voiceInSr;
 
 struct _Audio_Driver_t {
 	UInt8 isRunning;
@@ -214,7 +216,7 @@ static void AP_ProcessAudioEnableDone(UInt16 enabled_path);
 */
 void AUDDRV_Init(void)
 {
-	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Init");
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Init\n");
 
 	if (sAudDrv.isRunning == TRUE)
 		return;
@@ -293,7 +295,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 		Send VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
 	////////////////////////////////////////////////////////////////-*/
 
-	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Telephony_Init");
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Telephony_Init\n");
 	csl_caph_ControlHWClock(TRUE); /*enable clock before any DSP command*/
 
 	currVoiceMic = mic;
@@ -430,7 +432,7 @@ void AUDDRV_Telephony_RateChange(AudioMode_t mode,
 
 void AUDDRV_RegisterRateChangeCallback(audio_codecId_handler_t codecId_cb)
 {
-	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_RegisterRateChangeCallback, 0x%lx",
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_RegisterRateChangeCallback, 0x%lx\n",
 			(long unsigned int)codecId_cb);
 	codecId_handler = codecId_cb;
 }
@@ -490,8 +492,8 @@ void AUDDRV_Telephony_Deinit(void)
 	UInt16 dma_mic_spk;
 #endif
 
-	aTrace(LOG_AUDIO_DRIVER,  "%s voicePlayOutpathEnabled = %d", __func__,
-			voicePlayOutpathEnabled);
+	aTrace(LOG_AUDIO_DRIVER, "%s voiceOut %d voiceRecOn %d\n",
+		__func__, voicePlayOutpathEnabled, voiceRecOn);
 
 /* continues speech playback when end the phone call.
 // continues speech recording when end the phone call.*/
@@ -523,13 +525,12 @@ void AUDDRV_Telephony_Deinit(void)
 #if defined(ENABLE_DMA_VOICE)
 		dma_mic_spk =
 			(UInt16) (DSP_AADMAC_PRI_MIC_EN) |
-			((UInt16)(DSP_AADMAC_IHF_SPKR_EN)) |
+			(UInt16) (DSP_AADMAC_IHF_SPKR_EN) |
 			(UInt16) (DSP_AADMAC_SPKR_EN) |
 			(UInt16) (DSP_AADMAC_SEC_MIC_EN);
 		csl_dsp_caph_control_aadmac_disable_path(dma_mic_spk);
 #endif
 		audio_control_dsp(AUDDRV_DSPCMD_MUTE_DSP_UL, 0, 0, 0, 0, 0);
-
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, FALSE,
 					0, 0, 0, 0);
 
@@ -538,15 +539,16 @@ void AUDDRV_Telephony_Deinit(void)
 
 	/*if voice recording, voice playback and voice call do not use PCM
 	interface, turn PCM off*/
-	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode()) {
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_SET_PCM, FALSE,
-				0, 0, 0, 0);
-	}
+	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode())
+		AUDDRV_SetPCMOnOff(0);
 
 	if (!inCallRateChange) {
 		currVoiceMic = AUDIO_SOURCE_UNDEFINED;
 		currVoiceSpkr = AUDIO_SINK_UNDEFINED;
 	}
+
+	if (voiceRecOn)
+		AUDDRV_EnableDSPInput(voiceInMic, voiceInSr);
 
 	return;
 }
@@ -562,7 +564,7 @@ void AUDDRV_Telephony_Deinit(void)
 void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 			    AUDIO_SAMPLING_RATE_t sample_rate)
 {
-	aTrace(LOG_AUDIO_DRIVER,  "%s mixer %d, sample_rate %u",
+	aTrace(LOG_AUDIO_DRIVER,  "%s mixer %d, sample_rate %u\n",
 		__func__, sink, sample_rate);
 
 	currVoiceSpkr = sink;
@@ -644,14 +646,22 @@ void AUDDRV_DisableDSPOutput(void)
 //
 // Function Name: AUDDRV_EnableDSPInput
 //
-// Description:   Enable audio DSP output for voice call
+// Description:   Enable audio DSP input for voice record
 //
 //=============================================================================
 */
 void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 			   AUDIO_SAMPLING_RATE_t sample_rate)
 {
-	aTrace(LOG_AUDIO_DRIVER,  "%s source %d *\n\r", __func__, source);
+	aTrace(LOG_AUDIO_DRIVER,  "%s source %d voiceRecOn %d, ulPath %d\n",
+		__func__, source, voiceRecOn, telephonyPathID.ulPathID);
+
+	voiceRecOn = TRUE;
+	voiceInMic = source;
+	voiceInSr = sample_rate;
+	/*only in non-call mode, tell DSP to start UL*/
+	if (telephonyPathID.ulPathID)
+		return;
 
 	if (source == AUDIO_SOURCE_BTM)
 		AUDDRV_SetPCMOnOff(1);
@@ -695,7 +705,6 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 				  0, 0);
 #endif
 	}
-/*              voiceInPathEnabled = TRUE; */
 
 /*
 When voice call ends, AUDDRV_DSPCMD_MUTE_DSP_UL is being sent to DSP and
@@ -717,18 +726,28 @@ For now, when voice record is started, UMUTE UL command will be sent */
 //
 //=============================================================================
 */
-void AUDDRV_DisableDSPInput(void)
+void AUDDRV_DisableDSPInput(int stop)
 {
-	aTrace(LOG_AUDIO_DRIVER,  "%s", __func__);
+	aTrace(LOG_AUDIO_DRIVER,  "%s stop %d, voiceRecOn %d, ulPath %d\n",
+		__func__, stop, voiceRecOn, telephonyPathID.ulPathID);
 
-	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE, 0, 0, 0,
-			  0);
+	if (stop)
+		voiceRecOn = FALSE;
+	/*only in non-call mode, tell DSP to stop UL*/
+	if (telephonyPathID.ulPathID)
+		return;
+
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0);
 #if defined(ENABLE_DMA_VOICE)
 	csl_dsp_caph_control_aadmac_disable_path((UInt16)
 						 DSP_AADMAC_PRI_MIC_EN);
 #endif
 	audio_control_dsp(AUDDRV_DSPCMD_MUTE_DSP_UL, 0, 0, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
+
+	if (currVoiceMic == AUDIO_SOURCE_BTM)
+		AUDDRV_SetPCMOnOff(0);
+	currVoiceMic = AUDIO_SOURCE_UNDEFINED;
 }
 
 
@@ -970,6 +989,44 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		mixInGain = param.mixInGain_mB;
 		mixInGainR = param.mixInGainR_mB;
 	}
+	if (param.mixOutGain_mB == GAIN_SYSPARM &&
+		param.mixOutGainR_mB == GAIN_SYSPARM) {
+		/* Q13p2 dB */
+		mixOutGain = (short)p->srcmixer_output_fine_gain_l;
+		mixOutGain = mixOutGain * 25;	/*into mB */
+		mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
+		mixOutGainR = mixOutGainR * 25;	/*into mB */
+	} else if (param.mixOutGain_mB == GAIN_SYSPARM) {
+		mixOutGain = (short)p->srcmixer_output_fine_gain_l;
+		mixOutGain = mixOutGain * 25;	/*into mB */
+		mixOutGainR = param.mixOutGainR_mB;
+	} else if (param.mixOutGainR_mB == GAIN_SYSPARM) {
+		mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
+		mixOutGainR = mixOutGainR * 25;	/*into mB */
+		mixOutGain = param.mixOutGain_mB;
+	} else {
+		mixOutGain = param.mixOutGain_mB;
+		mixOutGainR = param.mixOutGainR_mB;
+
+		/*aTrace(LOG_AUDIO_DRIVER,
+			"%s copy mixOutGain %d, %d\n",
+			__func__, mixOutGain, mixOutGainR);*/
+	}
+
+	/* Q13p2 dB */
+	mixBitSel = (short)p->srcmixer_output_coarse_gain_l;
+	mixBitSel = mixBitSel / 24;
+	/* bit_shift */
+
+	mixBitSelR = (short)p->srcmixer_output_coarse_gain_r;
+	mixBitSelR = mixBitSelR / 24;
+	/* bit_shift */
+
+	aTrace(LOG_AUDIO_DRIVER,
+		"%s: mixOutGain 0x%x, mixOutGainR 0x%x, "
+		"mixBitSel %d, mixBitSelR %d\n",
+		__func__, mixOutGain, mixOutGainR,
+		mixBitSel, mixBitSelR);
 
 	/*determine which which mixer input to apply the gains to */
 
@@ -1003,6 +1060,10 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 						  path->srcmRoute[i][j].inChnl,
 						  path->srcmRoute[i][j].outChnl,
 						  mixInGain, mixInGainR);
+					csl_srcmixer_setMixBitSel(
+						outChnl, mixBitSel, mixBitSelR);
+					csl_srcmixer_setMixOutGain(
+					outChnl, mixOutGain, mixOutGainR);
 				}
 	} else {
 		aError(
@@ -1012,45 +1073,6 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			csl_srcmixer_setMixAllInGain(outChnl,
 				mixInGain, mixInGain);
 		*/
-	}
-
-	if (outChnl) {
-		if (param.mixOutGain_mB == GAIN_SYSPARM &&
-			param.mixOutGainR_mB == GAIN_SYSPARM) {
-			/* Q13p2 dB */
-			mixOutGain = (short)p->srcmixer_output_fine_gain_l;
-			mixOutGain = mixOutGain * 25;	/*into mB */
-			mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
-			mixOutGainR = mixOutGainR * 25;	/*into mB */
-		} else if (param.mixOutGain_mB == GAIN_SYSPARM) {
-			mixOutGain = (short)p->srcmixer_output_fine_gain_l;
-			mixOutGain = mixOutGain * 25;	/*into mB */
-			mixOutGainR = param.mixOutGainR_mB;
-		} else if (param.mixOutGainR_mB == GAIN_SYSPARM) {
-			mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
-			mixOutGainR = mixOutGainR * 25;	/*into mB */
-			mixOutGain = param.mixOutGain_mB;
-		} else {
-			mixOutGain = param.mixOutGain_mB;
-			mixOutGainR = param.mixOutGainR_mB;
-		}
-
-		/* Q13p2 dB */
-		mixBitSel = (short)p->srcmixer_output_coarse_gain_l;
-		mixBitSel = mixBitSel / 24;
-		/* bit_shift */
-
-		mixBitSelR = (short)p->srcmixer_output_coarse_gain_r;
-		mixBitSelR = mixBitSelR / 24;
-		/* bit_shift */
-
-		aTrace(LOG_AUDIO_DRIVER,
-			"%s : mixOutGain 0x%x, mixOutGainR 0x%x, "
-			"mixBitSel %d, mixBitSelR %d\n",
-			__func__, mixOutGain, mixOutGainR,
-			mixBitSel, mixBitSelR);
-		csl_srcmixer_setMixBitSel(outChnl, mixBitSel, mixBitSelR);
-		csl_srcmixer_setMixOutGain(outChnl, mixOutGain, mixOutGainR);
 	}
 
 	if (path != 0) {
@@ -1125,9 +1147,8 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	gainTemp1 = p->mic_pga; /* Q13p2 */
 	csl_caph_audioh_setMicPga_by_mB(gainTemp1 * 25);
 
-	aTrace(LOG_AUDIO_DRIVER,
-			"%s mode=%d, app=%d mic_gain %d", __func__, audio_mode,
-		app, gainTemp1*25);
+	aTrace(LOG_AUDIO_DRIVER, "%s mode=%d, app=%d mic_gain %d\n",
+		__func__, audio_mode, app, gainTemp1*25);
 
 	gainTemp1 = p->amic_dga_coarse_gain;	/* Q13p2 dB */
 	gainTemp2 = p->amic_dga_fine_gain;	/* Q13p2 dB */
@@ -1371,6 +1392,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	UInt32 *memAddr = 0;
 	AUDIO_BITS_PER_SAMPLE_t bits = 24;
+	CSL_CAPH_PathID pathID;
 
 #if defined(ENABLE_BT16)
 	if (speaker == AUDIO_SINK_BTM)
@@ -1435,7 +1457,22 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	config.chnlNum = AUDIO_CHANNEL_MONO;
 	config.bitPerSample = bits;
 
-	telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
+	if (voiceRecOn && voiceInMic != mic)
+		aError("%s voice record (%d) and call (%d) different mics\n",
+			__func__, voiceInMic, mic);
+	pathID = csl_caph_FindPathID(config.sink, config.source);
+	if (pathID) {
+		/* If voice recording is ongoing, no need to set up UL path.
+		 * Unable to handle this case: record and call use different
+		 * mics.
+		 */
+		aTrace(LOG_AUDIO_DRIVER, "%s UL path %d exists\n",
+			__func__, pathID);
+		AUDDRV_DisableDSPInput(0);
+		/*do not set ulPathID before AUDDRV_DisableDSPInput*/
+		telephonyPathID.ulPathID = pathID;
+	} else
+		telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s bNeedDualMic=%d *\n\r",
 			__func__, bNeedDualMic);
@@ -1470,7 +1507,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 static void AUDDRV_Telephony_DeinitHW(void)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
-	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Telephony_DeinitHW");
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Telephony_DeinitHW\n");
 
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
@@ -1479,7 +1516,8 @@ static void AUDDRV_Telephony_DeinitHW(void)
 	config.streamID = CSL_CAPH_STREAM_NONE;
 	config.pathID = telephonyPathID.ulPathID;
 
-	(void)csl_caph_hwctrl_DisablePath(config);
+	if (!voiceRecOn)
+		csl_caph_hwctrl_DisablePath(config);
 
 	if (telephonyPathID.ul2PathID != 0) {
 		config.streamID = CSL_CAPH_STREAM_NONE;
@@ -1714,4 +1752,18 @@ static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 #if defined(CONFIG_BCM_MODEM)
 	csl_caph_enable_adcpath_by_dsp(enabled_path);
 #endif
+}
+
+/****************************************************************************
+*
+* Function Name: AUDDRV_GetULPath
+*
+* Description:   Get UL path
+*
+*****************************************************************************/
+int AUDDRV_GetULPath(void)
+{
+	int ret = (int)telephonyPathID.ulPathID;
+	aTrace(LOG_AUDIO_DRIVER,  "%s %d\n", __func__, ret);
+	return ret;
 }

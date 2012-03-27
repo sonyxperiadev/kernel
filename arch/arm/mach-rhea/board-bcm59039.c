@@ -88,19 +88,24 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x1B, .val = 0x13, .mask = 0xFF},
 
 
-	/*Init IOSR NM2 and LPM voltages to 1.8V
-	*/
-	{.map = 0, .addr = 0xC9, .val = 0x1A, .mask = 0xFF},
-	{.map = 0, .addr = 0xCA, .val = 0x1A, .mask = 0xFF},
 	{.map = 0, .addr = 0x13, .val = 0x43, .mask = 0xFF},
 	{.map = 0, .addr = 0x14, .val = 0x7F, .mask = 0xFF},
 	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
 	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
 	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
 
-	/*Init ASR LPM to 2.9V
+
+#ifdef CONFIG_MACH_RHEA_STONE_EDN2X
+	{.map = 0, .addr = 0xD9, .val = 0x1A, .mask = 0xFF},
+#else
+	/*Init ASR LPM to 2.9V - for Rhea EDN10 & EDN00 and 1.8V for EDN2x
 	*/
 	{.map = 0, .addr = 0xD9, .val = 0x1F, .mask = 0xFF},
+	/*Init IOSR NM2 and LPM voltages to 1.8V
+	*/
+	{.map = 0, .addr = 0xC9, .val = 0x1A, .mask = 0xFF},
+	{.map = 0, .addr = 0xCA, .val = 0x1A, .mask = 0xFF},
+#endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
@@ -416,7 +421,9 @@ static struct regulator_init_data bcm59039_iosr_nm_data = {
 			.max_uV = 1800000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
+#ifndef CONFIG_MACH_RHEA_STONE_EDN2X
 			.always_on = 1,
+#endif
 			},
 	.num_consumer_supplies = ARRAY_SIZE(iosr_nm_supply),
 	.consumer_supplies = iosr_nm_supply,
@@ -431,7 +438,9 @@ static struct regulator_init_data bcm59039_iosr_nm2_data = {
 			.min_uV = 700000,
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+#ifndef CONFIG_MACH_RHEA_STONE_EDN2X
 			.always_on = 1,
+#endif
 			},
 	.num_consumer_supplies = ARRAY_SIZE(iosr_nm2_supply),
 	.consumer_supplies = iosr_nm2_supply,
@@ -445,7 +454,9 @@ static struct regulator_init_data bcm59039_iosr_lpm_data = {
 			.min_uV = 700000,
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+#ifndef CONFIG_MACH_RHEA_STONE_EDN2X
 			.always_on = 1,
+#endif
 			},
 	.num_consumer_supplies = ARRAY_SIZE(iosr_lpm_supply),
 	.consumer_supplies = iosr_lpm_supply,
@@ -614,9 +625,16 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	[BCMPMU_REGULATOR_CSR_LPM] = {
 		BCMPMU_REGULATOR_CSR_LPM, &bcm59039_csr_lpm_data, 0xFF, 0
 	},
+#ifdef CONFIG_MACH_RHEA_STONE_EDN2X
+	/*EDN2x does not use IOSR*/
+	[BCMPMU_REGULATOR_IOSR_NM] = {
+		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0xAA, 0
+	},
+#else
 	[BCMPMU_REGULATOR_IOSR_NM] = {
 		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0x01, 0
 	},
+#endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
 	[BCMPMU_REGULATOR_IOSR_NM2] = {
 		BCMPMU_REGULATOR_IOSR_NM2, &bcm59039_iosr_nm2_data, 0xFF, 0
 	},
@@ -632,10 +650,16 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	[BCMPMU_REGULATOR_SDSR_LPM] = {
 		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0xFF, 0
 	},
-
+#ifdef CONFIG_MACH_RHEA_STONE_EDN2X
+	[BCMPMU_REGULATOR_ASR_NM] = {
+		BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x01, 0
+	},
+#else
 	[BCMPMU_REGULATOR_ASR_NM] = {
 		BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x11, 0
 	},
+#endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
+
 	[BCMPMU_REGULATOR_ASR_NM2] = {
 		BCMPMU_REGULATOR_ASR_NM2, &bcm59039_asr_nm2_data, 0xFF, 0
 	},
@@ -645,6 +669,9 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 };
 
 
+static struct bcmpmu_wd_setting bcm59039_wd_setting = {
+	.watchdog_timeout = 127,
+};
 
 
 static struct platform_device bcmpmu_audio_device = {
@@ -860,6 +887,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.fg_capacity_full = 1300 * 3600,
 	.support_fg = 1,
 	.support_chrg_maint = 1,
+	.wd_setting = &bcm59039_wd_setting,
 	.chrg_resume_lvl = 4150,
 	.fg_support_tc = 1,
 	.fg_tc_dn_lvl = 278,

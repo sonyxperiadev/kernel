@@ -850,7 +850,7 @@ static int i2c_ts_driver_reset_slave(void)
 	/* After Tango controller gets reset, it holds interrupt pin low for about 150ms.
 	    During this interrupt-pin holding period, it won't ACK to any I2C packet */
 	g_low_power_changed = 1;
-	msleep(GPIO_I2C_RESET_DELAY_USECS/10);
+	msleep(150);
 
 	return rc;
 }

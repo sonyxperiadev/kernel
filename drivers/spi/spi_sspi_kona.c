@@ -56,6 +56,8 @@
 
 extern void csl_caph_ControlHWClock(Boolean eanble);
 static uint8_t clk_name[3][32] = {"ssp0_clk", "ssp4_clk", "ssp3_clk"};
+
+#ifdef CONFIG_DMAC_PL330
 static char dma_tx_chan_name[3][32] = {
 	"SSP_0B_TX0",
 	"SSP_1B_TX0",
@@ -68,7 +70,7 @@ static unsigned int dma_fifo_base[3] = {
 	SSP0_BASE_ADDR,
 	SSP4_BASE_ADDR,
 	SSP3_BASE_ADDR };
-
+#endif
 struct spi_kona_config {
 	uint32_t speed_hz;
 	uint32_t bpw;
@@ -428,6 +430,7 @@ static int spi_kona_config_task(struct spi_device *spi,
 	return 0;
 }
 
+#ifdef CONFIG_DMAC_PL330
 static void spi_dma_callback(void *priv, enum pl330_xfer_status status)
 {
 	struct completion *c = (struct completion *)priv;
@@ -692,6 +695,20 @@ err:
 	dma_unmap_single(NULL, dma_rx_buf, spi_kona->count, DMA_FROM_DEVICE);
 	return ret;
 }
+#else
+static int spi_kona_dma_xfer_tx(struct spi_kona_data *spi_kona)
+{
+	return 0;
+}
+static int spi_kona_dma_xfer_rx(struct spi_kona_data *spi_kona)
+{
+	return 0;
+}
+static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
+{
+	return 0;
+}
+#endif
 
 static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 				 struct spi_transfer *transfer)
@@ -1077,7 +1094,7 @@ static int spi_kona_config_spi_hw(struct spi_kona_data *spi_kona)
 
 	return 0;
 }
-
+#ifdef CONFIG_DMAC_PL330
 static int spi_kona_setup_dma(struct spi_kona_data *spi_kona)
 {
 	struct spi_master *master = spi_kona->master;
@@ -1113,7 +1130,12 @@ err:
 	dma_free_chan(spi_kona->tx_dma_chan);
 	return -EIO;
 }
-
+#else
+static int spi_kona_setup_dma(struct spi_kona_data *spi_kona)
+{
+	return 0;
+}
+#endif
 static int spi_kona_probe(struct platform_device *pdev)
 {
 	struct spi_kona_platform_data *platform_info;

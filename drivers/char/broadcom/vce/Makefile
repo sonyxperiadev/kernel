@@ -3,11 +3,12 @@ CONFIG_VCE	?= n
 
 #Build flags
 EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -Werror -O2
+EXTRA_CFLAGS  += -Wno-parentheses
 
 EXTRA_CFLAGS  += -D__KERNEL__
 EXTRA_CFLAGS  += -D__linux__
 
-OBJ :=  vce.o
+OBJ :=  vce.o vtqbr.o vtq.o
 
 obj-$(CONFIG_VCE) := vce-driver.o
 	vce-driver-objs := $(OBJ)

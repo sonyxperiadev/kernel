@@ -3388,13 +3388,13 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #ifdef BCM43241_CHIP
 	int mimo_bw_cap = 1;
 #endif /* BCM43241_CHIP */
+#ifdef AUTOCOUNTRY
+	int autocountry = 1;
+#endif
 #ifdef PROP_TXSTATUS
 	dhd->wlfc_enabled = FALSE;
 	/* enable WLFC only if the firmware is VSDB */
 #endif /* PROP_TXSTATUS */
-#ifdef AUTOCOUNTRY
-	int autocountry = 1;
-#endif
 
 	DHD_TRACE(("Enter %s\n", __FUNCTION__));
 	dhd->op_mode = 0;
@@ -3652,6 +3652,9 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #ifdef PNO_SUPPORT
 	setbit(eventmask, WLC_E_PFN_NET_FOUND);
 #endif /* PNO_SUPPORT */
+#ifdef USE_FW_TRACE
+	setbit(eventmask, WLC_E_TRACE);
+#endif
 	/* enable dongle roaming event */
 	setbit(eventmask, WLC_E_ROAM);
 #ifdef WL_CFG80211
@@ -3702,7 +3705,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	dhd->pktfilter[0] = "100 0 0 0 0xffffff 0xffffff"; /* discard all broadcast packets */
 	dhd->pktfilter[1] = "102 0 0 36 0xffffffff 0x11940009"; /* discard NAT Keepalive packets */
 	dhd->pktfilter[2] = "104 0 0 38 0xffffffff 0x11940009"; /* discard NAT Keepalive packets */
-	dhd->pktfilter[3] = NULL;
+	dhd->pktfilter[3] = "106 0 0 0 0xffff 0x3333"; /* discard IPv6 Multicast packets */
 #else
 	/* Setup filter to allow only unicast */
 #if defined(CUSTOMER_HW_SAMSUNG)

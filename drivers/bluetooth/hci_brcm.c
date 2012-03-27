@@ -87,12 +87,12 @@
 #define TIMER_PERIOD 100	/* 100 ms */
 #define HOST_CONTROLLER_IDLE_TSH 500	/* 4 s */
 
-void assert_bt_wake()
+void assert_bt_wake(void)
 {
 	bcm_bzhw_assert_bt_wake();
 }
 
-void deassert_bt_wake()
+void deassert_bt_wake(void)
 {
 	bcm_bzhw_deassert_bt_wake();
 

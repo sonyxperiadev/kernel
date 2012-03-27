@@ -80,6 +80,21 @@ static char debug_fs_buf[3000];
 
 static int pi_debug = 0;
 
+enum {
+	/* Bits 0-15 control the logging of a feature ex, DFS, QOS etc */
+	/* Logs with PI_LOG_ERR will always be printed out. */
+	PI_LOG_ERR = 1 << 0,
+	PI_LOG_DBGFS = 1 << 1,
+	PI_LOG_INIT = 1 << 2,
+	PI_LOG_EN_DIS = 1 << 3,
+	PI_LOG_POLICY = 1 << 4,
+	PI_LOG_QOS = 1 << 5,
+	PI_LOG_DFS = 1 << 6,
+	PI_LOG_RESET = 1 << 7,
+
+	/* Bit 15-31 are used to define the Domains. */
+};
+
 /*PI init state*/
 enum
 {
@@ -189,7 +204,8 @@ int __pi_enable(struct pi *pi)
 	int ret = 0;
 	struct pi* dep_pi;
 
-	pi_dbg("%s: pi_name:%s, usageCount:%d\n",__func__,pi->name,pi->usg_cnt);
+	pi_dbg(pi->id, PI_LOG_EN_DIS, "%s: pi_name:%s, usageCount:%d\n",
+		__func__, pi->name, pi->usg_cnt);
 
 	/*Enable dependent PIs, if any*/
 	for(inx =0; inx < pi->num_dep_pi;inx++)
@@ -266,7 +282,7 @@ static int __pi_init(struct pi *pi)
 	struct pi* dep_pi;
 	int inx;
 
-	pi_dbg("%s:%s\n",__func__,pi->name);
+	pi_dbg(pi->id, PI_LOG_INIT, "%s:%s\n", __func__, pi->name);
 	if(pi->init != PI_INIT_NONE)
 		return 0;
 
@@ -286,6 +302,12 @@ static int __pi_init(struct pi *pi)
 	pi->init = PI_INIT_BASE;
 	/*make sure that PI is at wakeup policy*/
 	pwr_mgr_pi_set_wakeup_override(pi->id,false);
+
+	pi_dbg(pi->id, PI_LOG_INIT, "%s: %s %s during init\n", __func__,
+		pi->name, pi->flags & PI_ENABLE_ON_INIT ? "enable" : "disable");
+
+	if (pi->flags & PI_ENABLE_ON_INIT)
+		pi->usg_cnt++;
 
 	return ret;
 }
@@ -309,7 +331,8 @@ static int __pi_init_state(struct pi *pi)
 	int inx;
 	unsigned long flgs;
 
-	pi_dbg("%s:%s\n",__func__,pi->name);
+	pi_dbg(pi->id, PI_LOG_INIT, "%s:%s count:%d\n",
+			__func__, pi->name, pi->usg_cnt);
 	BUG_ON(pi->init == PI_INIT_NONE);
 
 	if(pi->init == PI_INIT_BASE)
@@ -331,11 +354,9 @@ static int __pi_init_state(struct pi *pi)
 
 		if(pi->num_states)
 		{
-			pi_dbg("%s: %s %s on init\n",__func__,pi->name,
-					pi->flags & PI_ENABLE_ON_INIT ? "enable" : "disable" );
-
-			if(pi->flags & PI_ENABLE_ON_INIT)
-				pi->usg_cnt++;
+			pi_dbg(pi->id, PI_LOG_INIT,
+			"%s: %s usage_cnt on init_state (late_init):%d\n",
+				__func__, pi->name, pi->usg_cnt);
 
 			if (pi->usg_cnt && pi->ops && pi->ops->enable)
 				pi->ops->enable(pi, 1);
@@ -353,8 +374,9 @@ static int __pi_init_state(struct pi *pi)
 		{
 			struct pm_policy_cfg cfg;
 			pwr_mgr_event_get_pi_policy(SOFTWARE_0_EVENT,pi->id,&cfg);
-			pi_dbg("%s: pi-%s cnt = %d  policy =%d\n",__func__,
-					pi->name,pi->usg_cnt,cfg.policy);
+			pi_dbg(pi->id, PI_LOG_INIT,
+				"%s: pi-%s cnt = %d  policy =%d\n", __func__,
+				pi->name, pi->usg_cnt, cfg.policy);
 			pwr_mgr_pi_set_wakeup_override(pi->id,true /*clear*/);
 		}
 		spin_unlock_irqrestore(&pi->lock, flgs);
@@ -377,19 +399,21 @@ static int pi_set_ccu_freq(struct pi *pi, u32 policy, u32 opp_inx)
 {
 	int inx;
 	int res = 0;
-	u32 freq;
+	u32 freq_id;
 	BUG_ON(opp_inx >= pi->num_opp);
 	for(inx =0; inx < pi->num_ccu_id;inx++)
 	{
-		freq = pi->pi_opp[inx].opp[opp_inx];
+		freq_id = pi->pi_opp[inx].opp[opp_inx];
 
-		pi_dbg("%s:%s clock %x policy freq => %ul\n",__func__,
-				pi->pi_ccu[inx]->name,policy,freq);
+		pi_dbg(pi->id, PI_LOG_DFS,
+			"%s:%s  policy => %x freq_id => %d\n", __func__,
+			pi->pi_ccu[inx]->name, policy, freq_id);
 
-		if((res = ccu_set_freq_policy(to_ccu_clk(pi->pi_ccu[inx]),CCU_POLICY(policy),freq)) != 0)
-		{
-			pi_dbg("%s:ccu_set_freq_policy failed\n",__func__);
-
+		res = ccu_set_freq_policy(to_ccu_clk(pi->pi_ccu[inx]),
+			CCU_POLICY(policy), freq_id);
+		if (res != 0) {
+			pi_dbg(pi->id, PI_LOG_DFS,
+				"%s:ccu_set_freq_policy failed\n", __func__);
 		}
 	}
 	return res;
@@ -506,7 +530,7 @@ static int pi_def_init(struct pi *pi)
 	struct pi_mgr_qos_object* qos;
 	struct pi_mgr_dfs_object* dfs;
 
-	pi_dbg("%s:%s\n",__func__,pi->name);
+	pi_dbg(pi->id, PI_LOG_INIT, "%s:%s\n", __func__, pi->name);
 
 	if ((pi->flags & PI_NO_QOS) == 0) {
 		qos = &pi_mgr.qos[pi->id];
@@ -518,7 +542,8 @@ static int pi_def_init(struct pi *pi)
 		qos->default_latency =
 			pi->pi_state[pi->num_states-1].hw_wakeup_latency;
 		pi->state_allowed = pi->num_states-1;
-		pi_dbg("qos->default_latency = %d state_allowed = %d\n",
+		pi_dbg(pi->id, PI_LOG_INIT,
+			"qos->default_latency = %d state_allowed = %d\n",
 				qos->default_latency, pi->state_allowed);
 		if (pi->flags & UPDATE_PM_QOS)	{
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
@@ -534,7 +559,8 @@ static int pi_def_init(struct pi *pi)
 
 	if((pi->flags & PI_NO_DFS) == 0)
 	{
-		pi_dbg( "pi->opp_active = %d\n",pi->opp_active);
+		pi_dbg(pi->id, PI_LOG_INIT, "pi->opp_active = %d\n",
+				pi->opp_active);
 		dfs = &pi_mgr.dfs[pi->id];
 		ATOMIC_INIT_NOTIFIER_HEAD(&dfs->notifiers);
 		plist_head_init(&dfs->requests);
@@ -557,19 +583,25 @@ static int pi_def_init(struct pi *pi)
 static int pi_def_enable(struct pi *pi, int enable)
 {
 	u32 policy;
-	pi_dbg("%s: pi_name:%s, enable:%d usageCount:%d\n",__func__,pi->name,enable,pi->usg_cnt);
+	pi_dbg(pi->id, PI_LOG_EN_DIS,
+		"%s: pi_name:%s, enable:%d usageCount:%d\n",
+			__func__, pi->name, enable, pi->usg_cnt);
 	if(enable)
 	{
 		policy = pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy;
-		pi_dbg("%s: policy = %d -- PI to be enabled\n",__func__,policy);
+		pi_dbg(pi->id, PI_LOG_EN_DIS,
+			"%s: policy = %d -- PI to be enabled\n",
+			__func__, policy);
 	}
 	else
 	{
 		policy = pi->pi_state[pi->state_allowed].state_policy;
-		pi_dbg("%s: policy = %d pi->state_allowed = %d\n",__func__,policy,pi->state_allowed);
+		pi_dbg(pi->id, PI_LOG_EN_DIS,
+			"%s: policy = %d pi->state_allowed = %d\n",
+				__func__, policy, pi->state_allowed);
 
 	}
-	pi_dbg("%s: calling pi_set_policy\n",__func__);
+	pi_dbg(pi->id, PI_LOG_EN_DIS, "%s: calling pi_set_policy\n", __func__);
 	return pi_set_policy(pi,policy,POLICY_QOS);
 }
 
@@ -580,7 +612,7 @@ static int pi_reset(struct pi *pi, int sub_domain)
 	struct ccu_clk *ccu_clk;
 	unsigned long flgs;
 
-	pi_dbg("%s: pi_name:%s, usageCount:%d\n", __func__,
+	pi_dbg(pi->id, PI_LOG_RESET, "%s:pi_name:%s,usageCount:%d\n", __func__,
 					pi->name, pi->usg_cnt);
 	if (pi->pi_info.reset_mgr_ccu_name == NULL ||
 					!pi->pi_info.pd_soft_reset_offset)
@@ -592,8 +624,8 @@ static int pi_reset(struct pi *pi, int sub_domain)
 		return -EPERM;
 
 	spin_lock_irqsave(&pi->lock, flgs);
-	pi_dbg("%s:pi:%s reset ccu str:%s\n", __func__, pi->name,
-				pi->pi_info.reset_mgr_ccu_name);
+	pi_dbg(pi->id, PI_LOG_RESET, "%s:pi:%s reset ccu str:%s\n",
+		__func__, pi->name, pi->pi_info.reset_mgr_ccu_name);
 	clk = clk_get(NULL, pi->pi_info.reset_mgr_ccu_name);
 	BUG_ON(clk == 0 || IS_ERR(clk));
 
@@ -602,9 +634,10 @@ static int pi_reset(struct pi *pi, int sub_domain)
 	ccu_reset_write_access_enable(ccu_clk, true);
 	reg_val = readl(ccu_clk->ccu_reset_mgr_base +
 					pi->pi_info.pd_soft_reset_offset);
-	pi_dbg("reset offset: %08x, reg_val: %08x\n",
+	pi_dbg(pi->id, PI_LOG_RESET, "reset offset: %08x, reg_val: %08x\n",
 		(ccu_clk->ccu_reset_mgr_base +
-				pi->pi_info.pd_soft_reset_offset), reg_val);
+		pi->pi_info.pd_soft_reset_offset), reg_val);
+
 	switch(sub_domain) {
 	case SUB_DOMAIN_0:
 	    reg_val = reg_val & ~pi->pi_info.pd_reset_mask0;
@@ -620,7 +653,7 @@ static int pi_reset(struct pi *pi, int sub_domain)
 		spin_unlock_irqrestore(&pi->lock, flgs);
 		return -EINVAL;
 	}
-	pi_dbg("writing reset value: %08x\n", reg_val);
+	pi_dbg(pi->id, PI_LOG_RESET, "writing reset value: %08x\n", reg_val);
 	writel(reg_val, ccu_clk->ccu_reset_mgr_base +
 					pi->pi_info.pd_soft_reset_offset);
 	udelay(10);
@@ -640,7 +673,8 @@ static int pi_reset(struct pi *pi, int sub_domain)
 		spin_unlock_irqrestore(&pi->lock, flgs);
 		return -EINVAL;
 	}
-	pi_dbg("writing reset release value: %08x\n", reg_val);
+	pi_dbg(pi->id, PI_LOG_RESET, "writing reset release value: %08x\n",
+			reg_val);
 	writel(reg_val, ccu_clk->ccu_reset_mgr_base + pi->pi_info.pd_soft_reset_offset);
 
 	ccu_reset_write_access_enable(ccu_clk , false);
@@ -691,7 +725,8 @@ static u32 pi_mgr_dfs_get_opp(const struct pi_mgr_dfs_object* dfs)
 
 		if(opp >= pi->num_opp)
 			opp = pi->num_opp - 1;
-		pi_dbg("%s:pi :%s opp = %d\n",__func__,pi->name,opp);
+		pi_dbg(pi->id, PI_LOG_DFS, "%s:pi :%s opp = %d\n",
+				__func__, pi->name, opp);
 	}
 
 	return opp;
@@ -726,23 +761,26 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
 	switch(action)
 	{
 	case NODE_ADD:
-		pi_dbg("%s:NODE_ADD -> opp req = %d\n",__func__,node->opp);
+		pi_dbg(pi->id, PI_LOG_DFS, "%s:NODE_ADD -> opp req = %d\n",
+				__func__, node->opp);
 		plist_node_init(&node->list,node->opp);
 		plist_add(&node->list, &dfs->requests);
 		break;
 	case NODE_DELETE:
-		pi_dbg("%s:NODE_DELETE -> opp req = %d\n",__func__,node->opp);
+		pi_dbg(pi->id, PI_LOG_DFS, "%s:NODE_DELETE -> opp req = %d\n",
+				__func__, node->opp);
 		plist_del(&node->list, &dfs->requests);
 		break;
 	case NODE_UPDATE:
-		pi_dbg("%s:NODE_UPDATE -> opp req = %d\n",__func__,node->opp);
+		pi_dbg(pi->id, PI_LOG_DFS, "%s:NODE_UPDATE -> opp req = %d\n",
+				__func__, node->opp);
 		plist_del(&node->list, &dfs->requests);
 		plist_node_init(&node->list,node->opp);
 		plist_add(&node->list, &dfs->requests);
 		break;
 
 	case NODE_RECALC:
-		pi_dbg("%s:NODE_RECALC\n", __func__);
+		pi_dbg(pi->id, PI_LOG_DFS, "%s:NODE_RECALC\n", __func__);
 		break;
 
 	default:
@@ -750,7 +788,8 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
 		break;
 	}
 	new_val = check_dfs_limit(pi, pi_mgr_dfs_get_opp(dfs));
-	pi_dbg("%s:pi_id= %d oldval = %d new val = %d\n",__func__,pi_id,old_val,new_val);
+	pi_dbg(pi->id, PI_LOG_DFS, "%s:pi_id= %d oldval = %d new val = %d\n",
+		__func__, pi_id, old_val, new_val);
 
 	if(old_val != new_val)
 	{
@@ -803,16 +842,19 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 	switch(action)
 	{
 	case NODE_ADD:
-		pi_dbg("%s:NODE_ADD -> lat req = %d\n",__func__,node->latency);
+		pi_dbg(pi->id, PI_LOG_QOS, "%s:NODE_ADD -> lat req = %d\n",
+			__func__, node->latency);
 		plist_node_init(&node->list,node->latency);
 		plist_add(&node->list, &qos->requests);
 		break;
 	case NODE_DELETE:
-		pi_dbg("%s:NODE_DELETE -> lat req = %d\n",__func__,node->latency);
+		pi_dbg(pi->id, PI_LOG_QOS, "%s:NODE_DELETE -> lat req = %d\n",
+			__func__, node->latency);
 		plist_del(&node->list, &qos->requests);
 		break;
 	case NODE_UPDATE:
-		pi_dbg("%s:NODE_UPDATE -> lat req = %d\n",__func__,node->latency);
+		pi_dbg(pi->id, PI_LOG_QOS, "%s:NODE_UPDATE -> lat req = %d\n",
+			__func__, node->latency);
 		plist_del(&node->list, &qos->requests);
 		plist_node_init(&node->list,node->latency);
 		plist_add(&node->list, &qos->requests);
@@ -822,7 +864,8 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 		break;
 	}
 	new_val = pi_mgr_qos_get_value(qos);
-	pi_dbg("%s:pi_id= %d oldval = %d new val = %d\n",__func__,pi_id,old_val,new_val);
+	pi_dbg(pi->id, PI_LOG_QOS, "%s:pi_id= %d oldval = %d new val = %d\n",
+			__func__, pi_id, old_val, new_val);
 
 	if(old_val != new_val)
 	{
@@ -905,7 +948,8 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 					old_val, new_val, PI_POSTCHANGE);
 
 	}
-	pi_dbg("%s:%s state allowed = %d\n",__func__,pi->name,pi->state_allowed);
+	pi_dbg(pi->id, PI_LOG_QOS, "%s:%s state allowed = %d\n", __func__,
+			pi->name, pi->state_allowed);
 	spin_unlock_irqrestore(&pi->lock, flgs);
 	return new_val;
 }
@@ -925,7 +969,7 @@ u32 pi_get_active_qos(int pi_id)
 	if(qos)
 		return pi_mgr_qos_get_value(qos);
 	else
-		pi_dbg("%s:invalid param \n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:invalid param\n", __func__);
 	return 0;
 }
 EXPORT_SYMBOL(pi_get_active_qos);
@@ -955,15 +999,18 @@ int pi_mgr_register(struct pi* pi)
 {
 	unsigned long flgs;
 
-	pi_dbg("%s:name:%s id:%d\n",__func__,pi->name,pi->id);
+	pi_dbg(pi->id, PI_LOG_INIT, "%s:name:%s id:%d\n", __func__,
+			pi->name, pi->id);
 	if(!pi_mgr.init)
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
+		pi_dbg(pi->id, PI_LOG_ERR,
+			"%s:ERROR - pi mgr not initialized\n", __func__);
 		return -EPERM;
 	}
 	if(pi->id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi->id])
 	{
-		pi_dbg("%s:pi already registered or invalid id \n",__func__);
+		pi_dbg(pi->id, PI_LOG_ERR,
+			"%s:pi already registered or invalid id\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pi_mgr_lock, flgs);
@@ -979,38 +1026,43 @@ EXPORT_SYMBOL(pi_mgr_register);
 int pi_mgr_qos_add_request(struct pi_mgr_qos_node *node, char *client_name,
 				u32 pi_id, u32 lat_value)
 {
-	pi_dbg("%s:client = %s,pi_id = %d, lat_val = %d\n", __func__,
-		client_name, pi_id, lat_value);
+	pi_dbg(pi_id, PI_LOG_QOS, "%s:client = %s,pi_id = %d, lat_val = %d\n",
+		__func__, client_name, pi_id, lat_value);
 	if(unlikely(!pi_mgr.init))
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n", __func__);
+		pi_dbg(pi_id, PI_LOG_ERR,
+			"%s:ERROR - pi mgr not initialized\n", __func__);
 		return -EPERM;
 	}
 	if(node == NULL)
 	{
-	    pi_dbg("%s:ERROR Invalid node\n", __func__);
+	    pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR Invalid node\n", __func__);
 	    return -EINVAL;
 	}
 	if(node->valid)
 	{
-	    pi_dbg("%s:ERROR node already added\n", __func__);
+	    pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR node already added\n",
+			__func__);
 	    return -EINVAL;
 	}
 	if(unlikely(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL))
 	{
-		pi_dbg("%s:ERROR - invalid pid\n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR -invalid pid\n", __func__);
 		return -EINVAL;
 	}
 
 	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))
 	{
-		pi_dbg("%s:ERROR - QOS not supported for this PI\n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR,
+			"%s:ERROR -QOS not supported for this PI\n", __func__);
 		return -EPERM;
 	}
 	if(lat_value == PI_MGR_QOS_DEFAULT_VALUE)
 	{
 		lat_value = pi_mgr.qos[pi_id].default_latency;
-		pi_dbg("%s:lat_value = PI_MGR_QOS_DEFAULT_VALUE, def_at = %d\n",__func__,lat_value);
+		pi_dbg(pi_id, PI_LOG_QOS,
+			"%s:lat_value =PI_MGR_QOS_DEFAULT_VALUE, def_at =%d\n",
+			__func__, lat_value);
 	}
 
 	node->name = client_name;
@@ -1026,11 +1078,13 @@ int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32 lat_value)
 {
 	if(!pi_mgr.init)
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
+		pi_dbg(node->pi_id, PI_LOG_ERR,
+			"%s:ERROR -pi mgr not initialized\n", __func__);
 		return -EINVAL;
 	}
 	BUG_ON(node->valid == 0);
-	pi_dbg("%s: exisiting req = %d new_req = %d\n",__func__,node->latency,lat_value);
+	pi_dbg(node->pi_id, PI_LOG_QOS, "%s: exisiting req = %d new_req = %d\n",
+		__func__, node->latency, lat_value);
 	if(lat_value == PI_MGR_QOS_DEFAULT_VALUE)
 		lat_value = pi_mgr.qos[node->pi_id].default_latency;
 
@@ -1046,11 +1100,13 @@ EXPORT_SYMBOL(pi_mgr_qos_request_update);
 
 int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node)
 {
-	pi_dbg("%s:name = %s, req = %d\n",__func__,node->name,node->latency);
+	pi_dbg(node->pi_id, PI_LOG_QOS, "%s:name = %s, req = %d\n", __func__,
+			node->name, node->latency);
 	BUG_ON(node->valid == 0);
 	if(!pi_mgr.init)
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
+		pi_dbg(node->pi_id, PI_LOG_ERR,
+			"%s:ERROR -pi mgr not initialized\n", __func__);
 		return -EINVAL;
 	}
 	pi_mgr_qos_update(node,node->pi_id,NODE_DELETE);
@@ -1075,39 +1131,45 @@ EXPORT_SYMBOL(pi_mgr_dfs_request_update);
 int pi_mgr_dfs_add_request_ex(struct pi_mgr_dfs_node *node, char* client_name, u32 pi_id, u32 opp, u32 weightage)
 {
 	struct pi* pi;
-	pi_dbg("%s:client = %s pi = %d opp = %d\n",__func__,client_name, pi_id, opp);
+	pi_dbg(pi_id, PI_LOG_DFS, "%s:client = %s pi = %d opp = %d\n",
+		__func__, client_name, pi_id, opp);
 	if(!pi_mgr.init)
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR -pi mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 	if(node == NULL)
 	{
-	    pi_dbg("%s:ERROR Invalid node\n",__func__);
+	    pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR Invalid node\n", __func__);
 	    return -EINVAL;
 	}
 	if(pi_id >= PI_MGR_PI_ID_MAX || (pi = pi_mgr.pi_list[pi_id]) == NULL)
 	{
-		pi_dbg("%s:ERROR - invalid pid\n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR-invalid pid\n", __func__);
 		return -EINVAL;
 	}
 	if(unlikely(pi->flags & PI_NO_DFS))
 	{
-		pi_dbg("%s:ERROR - DFS not supported for this PI\n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR,
+			"%s:ERROR -DFS not supported for this PI\n", __func__);
 		return -EPERM;
 	}
 
 	if(opp >= pi->num_opp && opp != PI_MGR_DFS_MIN_VALUE)
 	{
 		__WARN();
-		pi_dbg("%s:ERROR - %d:unsupported opp \n",__func__,opp);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR - %d:unsupported opp\n",
+			__func__, opp);
 		return -EINVAL;
 	}
 
 	if(PI_MGR_DFS_WIEGHTAGE_DEFAULT != weightage && weightage >= PI_MGR_DFS_WEIGHTAGE_BASE)
 	{
 		__WARN();
-		pi_dbg("%s:ERROR - %d:unsupported weightage \n",__func__,weightage);
+		pi_dbg(pi_id, PI_LOG_ERR,
+			"%s:ERROR - %d:unsupported weightage\n",
+				__func__, weightage);
 		return -EINVAL;
 	}
 
@@ -1143,26 +1205,32 @@ int pi_mgr_dfs_request_update_ex(struct pi_mgr_dfs_node* node, u32 opp, u32 weig
 	BUG_ON(pi==NULL);
 	if(!pi_mgr.init)
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
+		pi_dbg(node->pi_id, PI_LOG_ERR,
+			"%s:ERROR -pi mgr not initialized\n", __func__);
 		return -EINVAL;
 	}
 	BUG_ON(node->valid == 0);
 	if(opp >= pi->num_opp && opp != PI_MGR_DFS_MIN_VALUE)
 	{
 		__WARN();
-		pi_dbg("%s:ERROR - %d:unsupported opp \n",__func__,opp);
+		pi_dbg(node->pi_id, PI_LOG_ERR,
+			"%s:ERROR - %d:unsupported opp\n", __func__, opp);
 		return -EINVAL;
 	}
 
 	if(PI_MGR_DFS_WIEGHTAGE_DEFAULT != weightage && weightage >= PI_MGR_DFS_WEIGHTAGE_BASE)
 	{
 		__WARN();
-		pi_dbg("%s:ERROR - %d:unsupported weightage \n",__func__,weightage);
+		pi_dbg(node->pi_id, PI_LOG_ERR,
+			"%s:ERROR - %d:unsupported weightage\n",
+				__func__, weightage);
 		return -EINVAL;
 	}
 
-	pi_dbg("%s:client = %s pi = %d opp = %d opp_new = %d weightage = %d\n",__func__,
-			node->name, node->pi_id, opp,node->opp,weightage);
+	pi_dbg(node->pi_id, PI_LOG_DFS,
+		"%s:client = %s pi= %d opp= %d opp_new= %d weightage= %d\n",
+			__func__, node->name, node->pi_id,
+			node->opp, opp, weightage);
 
 	if(node->opp != opp || weightage != node->weightage)
 	{
@@ -1192,11 +1260,13 @@ EXPORT_SYMBOL(pi_mgr_dfs_request_update_ex);
 
 int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node)
 {
-	pi_dbg("%s:name = %s, req = %d\n",__func__,node->name,node->opp);
+	pi_dbg(node->pi_id, PI_LOG_DFS, "%s:name = %s, req = %d\n", __func__,
+			node->name, node->opp);
 	BUG_ON(node->valid == 0);
 	if(!pi_mgr.init)
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
+		pi_dbg(node->pi_id, PI_LOG_ERR,
+			"%s:ERROR - pi mgr not initialized\n", __func__);
 		return -EINVAL;
 	}
 	pi_mgr_dfs_update(node, node->pi_id, NODE_DELETE);
@@ -1240,13 +1310,14 @@ int pi_mgr_disable_policy_change(int pi_id, int disable)
 
 	if(disable && ((pi->flags & NO_POLICY_CHANGE) == 0))
 	{
-		pr_info("%s : dis pol change\n",__func__);
+		pi_dbg(pi_id, PI_LOG_POLICY, "%s :dis pol change\n", __func__);
 		pi->flags |= NO_POLICY_CHANGE;
 		pwr_mgr_pi_set_wakeup_override(pi->id,false);
 	}
 	else if(!disable && (pi->flags & NO_POLICY_CHANGE))
 	{
-		pr_info("%s : enable pol change\n",__func__);
+		pi_dbg(pi_id, PI_LOG_POLICY,
+			"%s :enable pol change\n", __func__);
 		pi->flags &= ~NO_POLICY_CHANGE;
 
 		/*Update PI DFS freq based on opp_active value*/
@@ -1278,7 +1349,9 @@ EXPORT_SYMBOL(pi_mgr_disable_policy_change);
 static int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier)
 {
 	if (unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_DFS))	{
-		pi_dbg("%s:ERROR - DFS not supported for this PI\n", __func__);
+		pi_dbg(pi_id, PI_LOG_ERR,
+			"%s:ERROR - DFS not supported for this PI\n",
+				__func__);
 		return -EINVAL;;
 	}
 
@@ -1290,7 +1363,8 @@ static int pi_mgr_dfs_remove_notifier(u32 pi_id,
 					struct notifier_block *notifier)
 {
 	if (unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_DFS))	{
-		pi_dbg("%s:ERROR - DFS not supported for this PI\n", __func__);
+		pi_dbg(pi_id, PI_LOG_ERR,
+			"%s:ERROR -DFS not supported for this PI\n", __func__);
 		return -EINVAL;;
 	}
 
@@ -1304,7 +1378,8 @@ static int pi_mgr_qos_add_notifier(u32 pi_id,
 					struct notifier_block *notifier)
 {
 	if (unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))	{
-		pi_dbg("%s:ERROR - QOS not supported for this PI\n", __func__);
+		pi_dbg(pi_id, PI_LOG_ERR,
+			"%s:ERROR -QOS not supported for this PI\n", __func__);
 		return -EINVAL;;
 	}
 
@@ -1315,7 +1390,8 @@ static int pi_mgr_qos_add_notifier(u32 pi_id,
 static int pi_mgr_qos_remove_notifier(u32 pi_id, struct notifier_block *notifier)
 {
 	if (unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))	{
-		pi_dbg("%s:ERROR - QOS not supported for this PI\n", __func__);
+		pi_dbg(pi_id, PI_LOG_ERR,
+			"%s:ERROR -QOS not supported for this PI\n", __func__);
 		return -EINVAL;;
 	}
 
@@ -1328,12 +1404,13 @@ int pi_mgr_register_notifier(u32 pi_id, struct notifier_block *notifier, u32 typ
 {
 	if(!pi_mgr.init)
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR -pi mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 	if(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL)
 	{
-		pi_dbg("%s:ERROR - invalid pid\n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR - invalid pid\n", __func__);
 		return -EINVAL;
 	}
 	switch(type)
@@ -1356,12 +1433,13 @@ int pi_mgr_unregister_notifier(u32 pi_id, struct notifier_block *notifier, u32 t
 {
 	if(!pi_mgr.init)
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR -pi mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 	if(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL)
 	{
-		pi_dbg("%s:ERROR - invalid pid\n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR -invalid pid\n", __func__);
 		return -EINVAL;
 	}
 	switch(type)
@@ -1382,15 +1460,15 @@ EXPORT_SYMBOL_GPL(pi_mgr_unregister_notifier);
 
 struct pi* pi_mgr_get(int pi_id)
 {
-	pi_dbg("%s: id:%d\n",__func__,pi_id);
 	if(!pi_mgr.init)
 	{
-		pi_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:ERROR -pi mgr not initialized\n",
+				__func__);
 		return NULL;
 	}
 	if(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL)
 	{
-		pi_dbg("%s:invalid pi_id id \n",__func__);
+		pi_dbg(pi_id, PI_LOG_ERR, "%s:invalid pi_id id\n", __func__);
 		return NULL;
 	}
 	return pi_mgr.pi_list[pi_id];
@@ -1458,11 +1536,13 @@ static int pi_debug_register_qos_client(void *data, u64 value)
     if(val >= PI_MGR_DEBUG_CLIENT_MAX)
 		return -EINVAL;
 
-    pi_dbg("%s: client_name  %s_%d \n", __func__, DEBUGFS_PM_CLIENT_NAME, val);
+	pi_dbg(pi->id, PI_LOG_DBGFS, "%s: client_name  %s_%d\n", __func__,
+			DEBUGFS_PM_CLIENT_NAME, val);
 
     if(debug_qos_client[val].pi)
 	{
-		pi_dbg("%s: client in use by %s\n",__func__,pi->name);
+		pi_dbg(pi->id, PI_LOG_ERR, "%s: client in use by %s\n",
+				__func__, pi->name);
 		return 0;
 	}
 
@@ -1499,7 +1579,8 @@ static int pi_debug_remove_qos_client(void *data, u64 value)
     if(val >= PI_MGR_DEBUG_CLIENT_MAX)
 		return -EINVAL;
 
-    pi_dbg("%s: client_name %s_%d \n", __func__, DEBUGFS_PM_CLIENT_NAME, val);
+	pi_dbg(pi->id, PI_LOG_DBGFS, "%s: client_name %s_%d\n", __func__,
+			DEBUGFS_PM_CLIENT_NAME, val);
 
     if(debug_qos_client[val].pi &&
 		debug_qos_client[val].pi->id == pi->id)
@@ -1508,17 +1589,18 @@ static int pi_debug_remove_qos_client(void *data, u64 value)
 				!debug_qos_client[val].dent_client);
 	    ret = pi_mgr_qos_request_remove(&debug_qos_client[val].debugfs_qos_node);
 	    if(ret)
-			pi_dbg("Failed to remove node\n");
+			pi_dbg(pi->id, PI_LOG_ERR, "Failed to remove node\n");
 	    debugfs_remove(debug_qos_client[val].dent_client);
 
 	    debug_qos_client[val].pi = NULL;
 	    debug_qos_client[val].client_name[0] = '\0';
 	    debug_qos_client[val].dent_client = NULL;
-	    pi_dbg("This client registration removed for this PI\n");
+	    pi_dbg(pi->id, PI_LOG_DBGFS,
+			"This client registration removed for this PI\n");
 	}
 	else
-		pi_dbg("%s: client not registered\n",__func__);
-
+		pi_dbg(pi->id, PI_LOG_ERR, "%s: client not registered\n",
+				__func__);
 	return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(pi_qos_remove_client_fops, NULL, pi_debug_remove_qos_client, "%llu\n");
@@ -1610,11 +1692,13 @@ static int pi_debug_register_dfs_client(void *data, u64 value)
     if(val >= PI_MGR_DEBUG_CLIENT_MAX)
 		return -EINVAL;
 
-    pi_dbg("%s: client_name  %s_%d \n", __func__, DEBUGFS_PM_CLIENT_NAME, val);
+	pi_dbg(pi->id, PI_LOG_DBGFS, "%s: client_name  %s_%d\n", __func__,
+			DEBUGFS_PM_CLIENT_NAME, val);
 
     if(debug_dfs_client[val].pi)
 	{
-		pi_dbg("%s: client in use by %s\n",__func__,pi->name);
+		pi_dbg(pi->id, PI_LOG_ERR, "%s:client in use by %s\n", __func__,
+			pi->name);
 		return 0;
 	}
 
@@ -1623,7 +1707,8 @@ static int pi_debug_register_dfs_client(void *data, u64 value)
 
     ret = pi_mgr_dfs_add_request(&debug_dfs_client[val].debugfs_dfs_node, debug_dfs_client[val].client_name, pi->id, PI_MGR_DFS_MIN_VALUE);
     if (ret)
-	pi_dbg("%s: DFS add request failed for %s\n",__func__,pi->name);
+	pi_dbg(pi->id, PI_LOG_ERR, "%s: DFS add request failed for %s\n",
+			__func__, pi->name);
 
     dent_client = debugfs_create_file(debug_dfs_client[val].client_name, S_IWUSR|S_IRUSR, dfs_dir,
 	    (void*)val, &pi_dfs_client_fops);
@@ -1651,7 +1736,8 @@ static int pi_debug_remove_dfs_client(void *data, u64 value)
     if(val < 0 || val >= PI_MGR_DEBUG_CLIENT_MAX)
 		return -EINVAL;
 
-    pi_dbg("%s: client_name %s_%d \n", __func__, DEBUGFS_PM_CLIENT_NAME, val);
+	pi_dbg(pi->id, PI_LOG_DBGFS, "%s: client_name %s_%d\n", __func__,
+			DEBUGFS_PM_CLIENT_NAME, val);
 
     if(debug_dfs_client[val].pi &&
 		debug_dfs_client[val].pi->id == pi->id)
@@ -1659,17 +1745,19 @@ static int pi_debug_remove_dfs_client(void *data, u64 value)
 		BUG_ON(!debug_dfs_client[val].dent_client );
 	    ret = pi_mgr_dfs_request_remove(&debug_dfs_client[val].debugfs_dfs_node);
 	    if(ret)
-			pi_dbg("Failed to remove node\n");
+			pi_dbg(pi->id, PI_LOG_ERR, "Failed to remove node\n");
 	    debugfs_remove(debug_dfs_client[val].dent_client);
 
 	    debug_dfs_client[val].pi = NULL;
 	    debug_dfs_client[val].client_name[0] = '\0';
 	    debug_dfs_client[val].dent_client = NULL;
 	    debug_dfs_client[val].debugfs_dfs_node.name = NULL;
-	    pi_dbg("This client registration removed for this PI\n");
+	    pi_dbg(pi->id, PI_LOG_DBGFS,
+			"This client registration removed for this PI\n");
 	}
 	else
-		pi_dbg("%s: client not registered\n",__func__);
+		pi_dbg(pi->id, PI_LOG_ERR,
+			"%s: client not registered\n", __func__);
 
 	return 0;
 }
@@ -1706,7 +1794,7 @@ static int pi_opp_set_min_lmt(void *data, u64 val)
 	BUG_ON(pi == NULL);
 
 	if (unlikely(val > pi->opp_lmt_max)) {
-		pr_info("%s: min > max\n", __func__);
+		pi_dbg(pi->id, PI_LOG_ERR, "%s: min > max\n", __func__);
 		return 0;
 	}
 	return pi_mgr_set_dfs_opp_limit(pi->id, (int)val, -1);
@@ -1730,8 +1818,8 @@ static int pi_opp_set_max_lmt(void *data, u64 val)
 
 	if (unlikely(val < pi->opp_lmt_min ||
 			val >= pi->num_opp)) {
-		pr_info("%s: min > max or max > max supported opp\n",
-				__func__);
+		pi_dbg(pi->id, PI_LOG_ERR,
+			"%s: min > max or max > max supported opp\n", __func__);
 		return 0;
 	}
 	return pi_mgr_set_dfs_opp_limit(pi->id, -1, (int)val);
@@ -1767,8 +1855,11 @@ static int pi_debug_reset(void *data, u64 val)
     if(pi && pi->ops && pi->ops->reset) {
 	if(val >= 0 && val <= 2)
 	    pi->ops->reset(pi, val);
-	else
-	    pi_dbg("write 0 to reset SUB_DOMAIN0, 1 to reset SUB_DOMAIN1 and 2 to reset both \n");
+	else {
+	    pi_dbg(pi->id, PI_LOG_ERR, "write 0 to reset SUB_DOMAIN0\n");
+	    pi_dbg(pi->id, PI_LOG_ERR, "write 1 to reset SUB_DOMAIN1\n");
+	    pi_dbg(pi->id, PI_LOG_ERR, "write 2 to reset both\n");
+	}
     }
     return 0;
 }
@@ -1786,7 +1877,8 @@ static int pi_debug_set_enable(void *data, u64 val)
 		else if(val == 0)
 			pi_enable(pi, 0);
 		else
-			pi_dbg("write 1 to enable; 0 to disable\n");
+			pi_dbg(pi->id, PI_LOG_ERR,
+				"write 1 to enable; 0 to disable\n");
     }
 
     return 0;
@@ -1798,7 +1890,7 @@ static int pi_debug_pol_change_disable_set(void *data, u64 val)
 {
     struct pi *pi = data;
     BUG_ON(pi == NULL);
-	pr_info("%s: val = %d\n",__func__,(u32)val);
+	pi_dbg(pi->id, PI_LOG_DBGFS, "%s: val = %d\n", __func__, (u32)val);
 	pi_mgr_disable_policy_change(pi->id, val != 0);
     return 0;
 }
@@ -1924,6 +2016,8 @@ static ssize_t read_file_pi_count(struct file *file, char __user *user_buf,
 				(long int)ms);
 	}
 
+
+
 	return simple_read_from_buffer(user_buf, count,
 				ppos, debug_fs_buf, len);
 }
@@ -1937,7 +2031,7 @@ static int pi_debug_count_clear(void *data, u64 val)
 		pm_mgr_pi_count_clear(true);
 		pm_mgr_pi_count_clear(false);
 	} else
-		pr_info("Invalid parm\n");
+		pi_dbg(0, PI_LOG_ERR, "Invalid parm\n");
 	return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(pi_debug_count_clr_fops, NULL, pi_debug_count_clear,
@@ -1956,22 +2050,26 @@ int __init pi_debug_init(void)
 
     dent_all_requests = debugfs_create_file("all_requests", S_IRUSR, dent_pi_root_dir, NULL, &all_req_fops);
     if(!dent_all_requests)
-		pi_dbg("Erro registering all_requests with debugfs\n");
+		pi_dbg(0, PI_LOG_ERR,
+			"Error registering all_requests with debugfs\n");
 
 	dent_chip_reset = debugfs_create_file("chip_reset", S_IRUSR | S_IWUSR,
 			dent_pi_root_dir, NULL, &chip_reset_fops);
     if(!dent_chip_reset)
-		pi_dbg("Erro registering all_requests with debugfs\n");
+		pi_dbg(0, PI_LOG_ERR,
+			"Error registering all_requests with debugfs\n");
 
 	dent_pi_count = debugfs_create_file("pi_count", S_IRUSR,
 				dent_pi_root_dir, NULL, &pi_debug_count_fops);
 	if (!dent_pi_count)
-		pi_dbg("Error registering pi_count with debugfs\n");
+		pi_dbg(0, PI_LOG_ERR,
+			"Error registering pi_count with debugfs\n");
 
 	dent_pi_count_clr = debugfs_create_file("pi_count_clear",
 	S_IRUSR|S_IWUSR, dent_pi_root_dir, NULL, &pi_debug_count_clr_fops);
 	if (!dent_pi_count_clr)
-		pi_dbg("Error registering pi_count_clear with debugfs\n");
+		pi_dbg(0, PI_LOG_ERR,
+			"Error registering pi_count_clear with debugfs\n");
 
     return 0;
 
@@ -1988,7 +2086,8 @@ int __init pi_debug_add_pi(struct pi *pi)
 
     BUG_ON(!dent_pi_root_dir);
 
-    pi_dbg("%s: adding %s to pi debugfs \n", __func__, pi->name);
+	pi_dbg(pi->id, PI_LOG_DBGFS, "%s: adding %s to pi debugfs\n",
+			__func__, pi->name);
 
     dent_pi_dir = debugfs_create_dir(pi->name, dent_pi_root_dir);
     if(!dent_pi_dir)

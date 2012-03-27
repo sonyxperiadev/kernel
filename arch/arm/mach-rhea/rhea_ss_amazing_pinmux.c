@@ -176,13 +176,12 @@ static struct __init pin_config board_pin_config[] = {
 #endif
 
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
-	PIN_CFG(GPS_CALREQ, GPIO99, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPS_CALREQ, GPIO99, 0, OFF, ON, 0, 0, 8MA), /* NFC_IRQ */
 
 	/* Bluetooth related GPIOS */
-	PIN_CFG(LCDSCL, GPIO39, 0, ON, OFF, 0, 0, 8MA),      /* BT_WAKE */
-	PIN_CFG(UBRTSN, GPIO47, 0, ON, OFF, 0, 0, 8MA),      /* BT_HOST_WAKE */
-	PIN_CFG(LCDSDA, GPIO40, 0, OFF, ON, 0, 0, 8MA),      /* BT_RESETN */
-	PIN_CFG(GPS_HOSTREQ, GPIO100, 0, OFF, ON, 0, 0, 8MA), /* BT_REG_ON */
+	PIN_CFG(LCDSCL, GPIO39, 0, ON, OFF, 0, 0, 8MA), /* BT_WAKE */
+	PIN_CFG(UBRTSN, GPIO47, 0, OFF, OFF, 0, 0, 8MA), /* BT_HOST_WAKE */
+	PIN_CFG(GPS_HOSTREQ, GPIO100, 0, ON, OFF, 0, 0, 8MA), /* BT_REG_ON */
 
 	PIN_CFG(MMC1DAT4, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(MMC1DAT7, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),

@@ -567,21 +567,79 @@ wl_get_status_all(struct wl_priv *wl, s32 status)
 	}
 	return cnt? true: false;
 }
+
+static inline void
+wl_set_status_all(struct wl_priv *wl, s32 status, u32 op)
+{
+	struct net_info *_net_info, *next;
+	list_for_each_entry_safe(_net_info, next, &wl->net_list, list) {
+		switch (op) {
+			case 1:
+				return; /* set all status is not allowed */
+			case 2:
+				clear_bit(status, &_net_info->sme_state);
+				break;
+			case 4:
+				return; /* change all status is not allowed */
+			default:
+				return; /*unknown operation */
+			}
+		}
+}
+#define wl_set_status_by_netdev(wl, status, _ndev, op) \
+{ \
+	struct net_info *_net_info, *next;\
+	int found = 0;\
+	list_for_each_entry_safe(_net_info, next, &(wl)->net_list, list) {\
+		if(_ndev && ((_net_info->ndev) == _ndev)) {\
+			found = 1;\
+			switch(op){\
+				case 1:\
+					set_bit(status, &(_net_info->sme_state));\
+					if(status == WL_STATUS_SCANNING)\
+						WL_SCAN2(("<<<Set SCANNING bit %p>>>\n", _ndev));\
+					break;\
+				case 2:\
+					 clear_bit(status, &(_net_info->sme_state));\
+					if(status == WL_STATUS_SCANNING)\
+						WL_SCAN2(("<<<Clear SCANNING bit %p>>>\n", _ndev));\
+					break;\
+				case 4:\
+					 change_bit(status, &(_net_info->sme_state));\
+					break;\
+			}\
+		}\
+	}\
+	if(found == 0)\
+		WL_ERR(("<<<Set Status command with not eixst device %p>>>\n", _ndev));\
+}
+
+#if 0
 static inline void
 wl_set_status_by_netdev(struct wl_priv *wl, s32 status,
 	struct net_device *ndev, u32 op)
 {
 
 	struct net_info *_net_info, *next;
+	int found = 0;
 
 	list_for_each_entry_safe(_net_info, next, &wl->net_list, list) {
 		if (ndev && (_net_info->ndev == ndev)) {
+			found = 1;
 			switch (op) {
 				case 1:
 					set_bit(status, &_net_info->sme_state);
+#if (WL_DBG_LEVEL > 0)
+					if(status == WL_STATUS_SCANNING )
+						WL_SCAN2(("<<<Set SCANNING bit %p >>>\n", ndev));
+#endif
 					break;
 				case 2:
 					clear_bit(status, &_net_info->sme_state);
+#if (WL_DBG_LEVEL > 0)
+					if(status == WL_STATUS_SCANNING )
+						WL_SCAN2(("<<<Clear SCANNING bit %p >>>\n", ndev));
+#endif
 					break;
 				case 4:
 					change_bit(status, &_net_info->sme_state);
@@ -590,9 +648,11 @@ wl_set_status_by_netdev(struct wl_priv *wl, s32 status,
 		}
 
 	}
+	if(found ==0 )
+		WL_ERR(("<<Set Status command with not exist device %p>>\n", ndev));
 
 }
-
+#endif
 static inline u32
 wl_get_status_by_netdev(struct wl_priv *wl, s32 status,
 	struct net_device *ndev)
@@ -658,6 +718,8 @@ wl_get_profile_by_netdev(struct wl_priv *wl, struct net_device *ndev)
 	(wl_set_status_by_netdev(wl, WL_STATUS_ ## stat, ndev, 1))
 #define wl_clr_drv_status(wl, stat, ndev)  \
 	(wl_set_status_by_netdev(wl, WL_STATUS_ ## stat, ndev, 2))
+#define wl_clr_drv_status_all(wl, stat) \
+	(wl_set_status_all(wl, WL_STATUS_ ## stat, 2))
 #define wl_chg_drv_status(wl, stat, ndev)  \
 	(wl_set_status_by_netdev(wl, WL_STATUS_ ## stat, ndev, 4))
 

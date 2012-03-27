@@ -780,4 +780,14 @@ Boolean AUDCTRL_GetMFDMode(void);
 ****************************************************************************/
 Boolean AUDCTRL_GetSRCClock(void);
 
+/********************************************************************
+*  @brief  Reload User Volume Setting From Sysparm
+*
+*  @param  none
+*
+*  @return  none
+*
+****************************************************************************/
+void ReloadUserVolSettingFromSysparm(void);
+
 #endif /* #define __AUDIO_CONTROLLER_H__ */

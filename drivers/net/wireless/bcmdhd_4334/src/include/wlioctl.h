@@ -1674,7 +1674,14 @@ typedef struct {
 /* WLC_GET_AUTH, WLC_SET_AUTH values */
 #define WL_AUTH_OPEN_SYSTEM		0	/* d11 open authentication */
 #define WL_AUTH_SHARED_KEY		1	/* d11 shared authentication */
-#define WL_AUTH_OPEN_SHARED     	2   /* try open, then shared if open failed w/rc 13 */
+#ifdef BCM4330_CHIP
+#define WL_AUTH_OPEN_SHARED		2	/* try open, then shared if open failed w/rc 13 */
+#else
+/* BCM4334(Phoenex branch) value changed to 3 */
+#define WL_AUTH_OPEN_SHARED		3	/* try open, then shared if open failed w/rc 13 */
+#endif
+
+
 
 /* Bit masks for radio disabled status - returned by WL_GET_RADIO */
 #define WL_RADIO_SW_DISABLE		(1<<0)

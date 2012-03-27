@@ -752,15 +752,15 @@ CSL_CAPH_HWConfig_Table_t *csl_caph_FindRenderPath(unsigned int streamID);
 CSL_CAPH_HWConfig_Table_t *csl_caph_FindCapturePath(unsigned int streamID);
 
 /****************************************************************************
-*  @brief  Find path (render path) ID
+*  @brief  Find path ID based on source and sink
 *
 *  @param   sink_dev
 *  @param   src_dev
 *
-*  @return CSL_CAPH_PathID render path ID
+*  @return CSL_CAPH_PathID path ID
 *
 *****************************************************************************/
-CSL_CAPH_PathID csl_caph_FindRenderPathID(CSL_CAPH_DEVICE_e sink_dev,
+CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
 	CSL_CAPH_DEVICE_e src_dev);
 
 /****************************************************************************

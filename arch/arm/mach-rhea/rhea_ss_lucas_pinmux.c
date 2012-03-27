@@ -118,18 +118,18 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* Bluetooth related GPIOS */
 	PIN_CFG(LCDSCL, GPIO39, 0, ON, OFF, 0, 0, 8MA),      		/* BT_WAKE */
-	PIN_CFG(LCDSDA, GPIO40, 0, OFF, ON, 0, 0, 8MA),      		/* BT_RESETN */
-	PIN_CFG(UBRTSN, GPIO47, 0, ON, OFF, 0, 0, 8MA), 		/* BT_HOST_WAKE */
-	PIN_CFG(GPS_HOSTREQ, GPIO100, 0, OFF, ON, 0, 0, 8MA), 		/* BT_REG_ON */
-	PIN_CFG(DCLKREQ4, SSP1DI, 0, OFF,  ON, 0, 0, 8MA),		/* BT_I2S_DO */
+	PIN_CFG(UBRTSN, GPIO47, 0, OFF, OFF, 0, 0, 8MA), 		/* BT_HOST_WAKE */
+	PIN_CFG(GPS_HOSTREQ, GPIO100, 0, ON, OFF, 0, 0, 8MA), 		/* BT_REG_ON */
+
 	/* SSP4 - I2S */
+	PIN_CFG(DCLKREQ4, SSP1DI, 0, OFF,  ON, 0, 0, 8MA),		/* BT_I2S_DO */
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, ON, 0, 0, 8MA),		/* BT_I2S_WS */
 	PIN_CFG(GPIO93, SSP1CK, 0, OFF, ON, 0, 0, 8MA),			/* BT_I2S_CLK */
 
-	PIN_CFG(MMC1DAT7, SSP2CK, 0, OFF, ON, 0, 0, 16MA), 		/* BT_PCM_CLK */
-	PIN_CFG(MMC1DAT6, SSP2DO, 0, OFF, ON, 0, 0, 16MA), 		/* BT_PCM_IN */
+	PIN_CFG(MMC1DAT7, SSP2CK, 0, OFF, OFF, 0, 0, 16MA), 		/* BT_PCM_CLK */
+	PIN_CFG(MMC1DAT6, SSP2DO, 0, OFF, OFF, 0, 0, 16MA), 		/* BT_PCM_IN */
 	PIN_CFG(MMC1DAT5, SSP2DI, 0, OFF, ON, 0, 0, 16MA), 		/* BT_PCM_OUT */
-	PIN_CFG(MMC1DAT4, SSP2SYN, 0, OFF, ON, 0, 0, 16MA), 		/* BT_PCM_SYNC */
+	PIN_CFG(MMC1DAT4, SSP2SYN, 0, OFF, OFF, 0, 0, 16MA), 		/* BT_PCM_SYNC */
 
 	PIN_CFG(GPIO18, UB2TX, 0, OFF, ON, 0, 0, 8MA),   		/* UB2_BT_UART_TX */
 	PIN_CFG(GPIO19, UB2RX, 0, OFF, ON, 0, 0, 8MA),			/* UB2_BT_UART_RX */
@@ -140,6 +140,7 @@ static struct __init pin_config board_pin_config[] = {
 	/* for GPS */
 	PIN_CFG(GPIO28, GPIO28, 0, OFF, ON, 0, 0, 8MA), 		/* GPS_EN */
 	PIN_CFG(DMIC0DQ, GPIO124, 0, ON, OFF, 0, 0, 8MA), 		/* GPS_HOST_REQ */
+
 	/* GPS - BSC2 */
 	PIN_BSC_CFG(GPIO16, BSC2CLK, 0x20), 				/* GPS_SCL */
 	PIN_BSC_CFG(GPIO17, BSC2DAT, 0x20), 				/* GPS_SDA */

@@ -293,6 +293,8 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 	cUInt32 reg_val;
 
 	if (pwronoff == TRUE) {
+		kona_mic_bias_on();
+
 		/*
 		Step 0.  Power up of the mic bias circuits from scratch needs to
 		follow certain sequence on the control signals:
@@ -380,10 +382,7 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
 		reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
 		reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
-#if 0
-		reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
-		reg_val |= (0 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
-#endif
+
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VMIC, reg_val);
 
 		/* 5.  turn off everything */
@@ -404,6 +403,8 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_BIAS);
 		reg_val &= ~(AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS, reg_val);
+
+		kona_mic_bias_off();
 	}
 	return;
 }

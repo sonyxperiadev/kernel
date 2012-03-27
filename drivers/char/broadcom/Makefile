@@ -16,7 +16,6 @@ obj-$(CONFIG_BCM_HEADSET_SW)               += headset.o
 ifdef CONFIG_RHEA_PANDA
 obj-$(CONFIG_BCM_MDMGPIO)              += mdmgpio/
 
-obj-$(CONFIG_BCM_HW_PCM)               += pcm/
 endif
 
 obj-$(CONFIG_BCM_RTC_CAL)           += rtc_cal/

@@ -251,7 +251,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t mixer_speaker_selection,
 void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t mic_selection,
 			AUDIO_SAMPLING_RATE_t sample_rate);
 void AUDDRV_DisableDSPOutput(void);
-void AUDDRV_DisableDSPInput(void);
+void AUDDRV_DisableDSPInput(int stop);
 
 #ifdef CONFIG_BCM_MODEM
 SysAudioParm_t *AudParmP(void);
@@ -294,5 +294,6 @@ void AUDDRV_NS(Boolean enable);
 
 void AUDDRV_SetTuningFlag(int flag);
 int AUDDRV_TuningFlag(void);
+int AUDDRV_GetULPath(void);
 
 #endif				/* __AUDIO_VDRIVER_H__ */

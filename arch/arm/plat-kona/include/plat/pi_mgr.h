@@ -34,13 +34,22 @@
 #define MAX_CCU_PER_PI 3
 #endif
 
+#define	PI_LOG_CONTROL_START_BIT	16
+
 #if defined(DEBUG)
 #define pi_dbg printk
 #else
-#define pi_dbg(format...)              \
-	do {                            \
-	    if (pi_debug)          	\
-		printk(format); 	\
+#define pi_dbg(pi_id, log_typ, format...)				\
+	do {								\
+		u32 __log_mask = 0;					\
+		if (log_typ == PI_LOG_ERR)				\
+			pr_info(format);				\
+		else if (pi_id >= 0) {					\
+			__log_mask = (((1 << PI_LOG_CONTROL_START_BIT)	\
+				<< pi_id) | (log_typ));\
+			if ((pi_debug & __log_mask) == __log_mask)	\
+				pr_info(format);			\
+	    }								\
 	} while(0)
 #endif
 

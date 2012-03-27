@@ -50,7 +50,7 @@ static int bcmpmu_otg_xceiv_set_vbus(struct otg_transceiver *otg, bool enabled)
 	 * operations. I2C operations take >200ms to complete */
 	bcm_hsotgctrl_phy_set_vbus_stat(enabled);
 
-	if (enabled) {
+	if (enabled && bcmpmu_otg_xceiv_check_id_gnd(xceiv_data)) {
 		dev_info(xceiv_data->dev, "Turning on VBUS\n");
 		xceiv_data->vbus_enabled = true;
 		stat =
@@ -82,6 +82,18 @@ bool bcmpmu_otg_xceiv_check_id_gnd(struct bcmpmu_otg_xceiv_data
 	return id_gnd;
 }
 
+bool bcmpmu_otg_xceiv_check_id_rid_a(struct bcmpmu_otg_xceiv_data
+				  *xceiv_data)
+{
+	unsigned int data = 0;
+	bool id_rid_a = false;
+
+	bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ID_VALUE, &data);
+	id_rid_a = (data == PMU_USB_ID_RID_A);
+
+	return id_rid_a;
+}
+
 static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
@@ -102,17 +114,18 @@ static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
 static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
-	bool id_gnd = false;
+	bool id_default_host = false;
 
 	if (xceiv_data) {
 
 		if (!xceiv_data->otg_enabled)
 			wake_lock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
 
-		id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
+		id_default_host = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
+			bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
 		/* Initialize OTG core and PHY */
-		bcm_hsotgctrl_phy_init(!id_gnd);
-		if (id_gnd)
+		bcm_hsotgctrl_phy_init(!id_default_host);
+		if (id_default_host)
 			xceiv_data->otg_xceiver.xceiver.state =
 			    OTG_STATE_A_IDLE;
 		else
@@ -271,14 +284,15 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
 	int status = 0;
-	bool id_gnd = false;
+	bool id_default_host = false;
 
 	dev_dbg(xceiv_data->dev, "Setting Peripheral\n");
 	otg->gadget = gadget;
 
-	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
+	id_default_host = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
+		  bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
 
-	if (!id_gnd) {
+	if (!id_default_host) {
 		if (xceiv_data->otg_enabled) {
 			/* REVISIT. Shutdown uses sequence for lowest power
 			 * and does not meet timing so don't do that in OTG mode
@@ -335,7 +349,8 @@ static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
 			bcm_otg_do_adp_calibration_probe(xceiv_data);
 		}
 
-		if (bcmpmu_otg_xceiv_check_id_gnd(xceiv_data)) {
+		if (bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
+			  bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data)) {
 			bcm_hsotgctrl_phy_set_id_stat(false);
 			bcm_hsotgctrl_phy_set_non_driving(false);
 		} else
@@ -505,6 +520,7 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(work, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_vbus_a_invalid_work);
+
 	dev_info(xceiv_data->dev, "A session invalid\n");
 
 	/* Inform the core of session invalid level  */
@@ -526,7 +542,7 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 						      (T_NO_ADP_DELAY_MIN_IN_MS));
 			else
 				bcm_otg_do_adp_probe(xceiv_data);
-		} else {
+		} else if (!bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data)) {
 			if (xceiv_data->otg_xceiver.otg_srp_reqd) {
 				/* Start Session End SRP timer */
 				xceiv_data->otg_xceiver.sess_end_srp_timer.
@@ -538,6 +554,18 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 					  sess_end_srp_timer);
 			} else
 				bcm_otg_do_adp_sense(xceiv_data);
+		}
+	} else {
+		bool id_default_host = false;
+
+		id_default_host =
+			bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
+			bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
+
+		if (!id_default_host) {
+			atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
+						   xceiver.notifier,
+						   USB_EVENT_NONE, NULL);
 		}
 	}
 }
@@ -592,19 +620,25 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 	    container_of(work, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_id_status_change_work);
 	bool id_gnd = false;
+	bool id_rid_a = false;
 
 	dev_info(xceiv_data->dev, "ID change detected\n");
 
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
+	id_rid_a = bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
 
 	bcm_hsotgctrl_phy_set_id_stat(!id_gnd);
 
 	if (id_gnd)
-		bcmpmu_otg_xceiv_set_vbus(&xceiv_data->otg_xceiver.xceiver, true);	/* Need to turn on Vbus within 200ms */
+		bcmpmu_otg_xceiv_set_vbus(&xceiv_data->otg_xceiver.
+		    xceiver, true); /* Need to turn on Vbus within 200ms */
+	else if (id_rid_a)
+		bcmpmu_otg_xceiv_set_vbus(&xceiv_data->otg_xceiver.
+		    xceiver, false); /* Not to turn on Vbus in RID_A case */
 
 	msleep(HOST_TO_PERIPHERAL_DELAY_MS);
 
-	if (id_gnd) {
+	if (id_gnd || id_rid_a) {
 		bcm_hsotgctrl_phy_deinit();
 		xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.
@@ -624,11 +658,13 @@ static void bcmpmu_otg_xceiv_chg_detect_handler(struct work_struct *work)
 		/* Core is already up so just set the Vbus status */
 		bcm_hsotgctrl_phy_set_vbus_stat(true);
 	} else {
-		bool id_gnd = false;
+		bool id_default_host = false;
 
-		id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
+		id_default_host =
+			bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
+			bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
 
-		if (!id_gnd && xceiv_data->otg_xceiver.xceiver.gadget)	/* Non-ACA interpretation for now */
+		if (!id_default_host && xceiv_data->otg_xceiver.xceiver.gadget)
 			atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
 						   xceiver.notifier,
 						   USB_EVENT_VBUS, NULL);
@@ -765,7 +801,8 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 
 	/* Check if we should default to A-device */
 	xceiv_data->otg_xceiver.xceiver.default_a =
-	    bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
+	    bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
+	    bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
 
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);

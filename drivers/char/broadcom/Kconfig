@@ -63,13 +63,6 @@ config BCM_AP_PANIC_ON_CPCRASH
         If you say Y here, a CP crash will result in AP panic.
         Debug tool can be used to extract CP dump later.
 
-config BCM_HW_PCM
-    tristate "HW_PCM Driver"
-    depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
-    default n
-    ---help---
-       Select to build the hw_pcm driver.
-
 config BCM_MDMGPIO
     tristate "MDMGPIO Driver"
     depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)

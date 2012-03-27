@@ -40,6 +40,7 @@
 #include "csl_caph_hwctrl.h"
 #include "csl_audio_render.h"
 #include "audio_trace.h"
+#include <plat/cpu.h>
 
 /***************************************************************************/
 /*                       G L O B A L   S E C T I O N                       */
@@ -104,7 +105,6 @@ UInt32 csl_audio_render_init(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVICE_e sink)
 	audDrv->streamID = streamID;
 	audDrv->source = source;
 	audDrv->sink = sink;
-
 	return audDrv->streamID;
 }
 
@@ -201,7 +201,13 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 		return RESULT_ERROR;
 	}
 	audDrv->dmaCH = csl_caph_hwctrl_GetdmaCH(audDrv->pathID);
-
+	audDrv->ringBuffer = ringBuffer;
+	audDrv->numBlocks = numBlocks;
+	audDrv->blockSize = blockSize;
+	/* assume everytime it starts, the first 2 buffers will be filled
+	when the interrupt comes, it will start from buffer 2
+	*/
+	audDrv->blockIndex = 1;
 	return RESULT_OK;
 }
 
@@ -315,34 +321,46 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 {
 	UInt32 streamID = 0;
 	CSL_CAPH_Render_Drv_t *audDrv = NULL;
+	UInt8 *addr = NULL;
 
 	/* aTrace(LOG_AUDIO_CSL, "AUDIO_DMA_CB::
 	   DMA callback. chnl = %d\n", chnl); */
 
-	/* will revisit this when sync with upper layer. */
+	streamID = GetStreamIDByDmaCH(chnl);
+
+	audDrv = GetRenderDriverByType(streamID);
+
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_LOW) ==
 	    CSL_CAPH_READY_NONE) {
 		/* aTrace(LOG_AUDIO_CSL, */
 		/* "DMARequest fill low half ch=0x%x \r\n", chnl); */
+		/* if (get_chip_rev_id() >= RHEA_CHIP_REV_B0) */ {
+			/* move to next block */
+			audDrv->blockIndex++;
+			if (audDrv->blockIndex >= audDrv->numBlocks)
+				audDrv->blockIndex = 0;
+			addr = audDrv->ringBuffer +
+				audDrv->blockIndex * audDrv->blockSize;
+			csl_caph_dma_set_lobuffer_address(chnl, addr);
+		}
 		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_LOW);
-		/*  for use with fpga test only. not needed for real case */
-
-		/* audDrv->bufDoneCb (audDrv->srcBuf,
-		   audDrv->srcBufSize, audDrv->streamID); */
 	}
 
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_HIGH) ==
 	    CSL_CAPH_READY_NONE) {
 		/*L og_DebugPrintf(LOG_AUDIO_CSL,
 		   "DMARequest fill high half ch=0x%x \r\n", chnl); */
+		/* if (get_chip_rev_id() >= RHEA_CHIP_REV_B0) */ {
+			/* move to next block */
+			audDrv->blockIndex++;
+			if (audDrv->blockIndex >= audDrv->numBlocks)
+				audDrv->blockIndex = 0;
+			addr = audDrv->ringBuffer +
+				audDrv->blockIndex * audDrv->blockSize;
+			csl_caph_dma_set_hibuffer_address(chnl, addr);
+		}
 		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_HIGH);
-		/*  for use with fpga test only. not needed for real case */
-		/* audDrv->bufDoneCb (audDrv->srcBuf,
-		   audDrv->srcBufSize, audDrv->streamID); */
 	}
-	streamID = GetStreamIDByDmaCH(chnl);
-
-	audDrv = GetRenderDriverByType(streamID);
 
 	/* aTrace(LOG_AUDIO_CSL, "AUDIO_DMA_CB:: DMA callback.
 	   streamID = %d, audDrv->streamID = %d, audDrv->dmaCB = %x\n",

@@ -108,7 +108,9 @@ typedef struct {
 // LOCAL FUNCTIONs
 static void DISPDRV_WrCmndP0(DISPDRV_HANDLE_T drvH, UInt32 reg);
 
+#ifdef DEBUG
 static void DISPDRV_WrCmndP1(DISPDRV_HANDLE_T drvH, UInt32 reg, UInt32 val);
+#endif
 
 // DRV INTERFACE FUNCTIONs
 static Int32 DISPDRV_Init(struct dispdrv_init_parms *parms,
@@ -255,6 +257,7 @@ static void DISPDRV_WrCmndPn(DISPDRV_HANDLE_T drvH, UInt32 Pn, UInt8 *Pdata)
 	CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 }
 
+#ifdef DEBUG
 //*****************************************************************************
 //
 // Function Name:  bcm91008_alex_WrCmndP1
@@ -284,6 +287,7 @@ static void DISPDRV_WrCmndP1(DISPDRV_HANDLE_T drvH, UInt32 reg, UInt32 value)
 
 	CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 }
+#endif
 
 //*****************************************************************************
 //

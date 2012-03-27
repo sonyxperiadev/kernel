@@ -156,7 +156,7 @@ static CSL_CAPH_SRCM_CHNL_TABLE_t chnlTable[OUTCHNL_MAX_NUM_CHNL] = {
 	{CSL_CAPH_SRCM_STEREO_CH2_R, 0x0000}
 };
 
-#define MIXER_GAIN_LEVEL_NUM 201 /*entries for (50dB * 4 + 1)*/
+#define MIXER_GAIN_LEVEL_NUM 202 /*entries for (50dB * 4 + 2)*/
 
 /* mapping table: maps Gain dB Q13.2 to register value. */
 static struct MixGainMapping_t
@@ -362,7 +362,8 @@ Mixer_GainTable[MIXER_GAIN_LEVEL_NUM] = {
 	{ -4925, 0xff3b, 55, 0x82f},
 	{ -4950, 0xff3a, 53, 0x839},
 	{ -4975, 0xff39, 52, 0x844},
-	{ -5000, 0xff38, 50, 0x84f}
+	{ -5000, 0xff38, 50, 0x84f},
+	{ -12700, 0xfe04, 0, 0x1fff}
 };
 
 /****************************************************************************

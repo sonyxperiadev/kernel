@@ -4647,18 +4647,17 @@ CSL_CAPH_MIXER_e csl_caph_FindMixer(CSL_CAPH_DEVICE_e speaker,
 		}
 		mixer = path->srcmRoute[sinkNo][0].outChnl;
 	} else {
-		if (speaker == CSL_CAPH_DEV_EP) {
+		if (speaker == CSL_CAPH_DEV_EP)
 			mixer = CSL_CAPH_SRCM_STEREO_CH2_L;
-		} else if (speaker == CSL_CAPH_DEV_IHF) {
+		else if (speaker == CSL_CAPH_DEV_IHF)
 			mixer = CSL_CAPH_SRCM_STEREO_CH2_R;
-			/*for the case of Stereo_IHF*/
-			if (isSTIHF)
-				mixer = (CSL_CAPH_SRCM_STEREO_CH2_R |
-				 CSL_CAPH_SRCM_STEREO_CH2_L);
-		} else if (speaker == CSL_CAPH_DEV_HS) {
+		else if (speaker == CSL_CAPH_DEV_HS)
 			mixer = CSL_CAPH_SRCM_STEREO_CH1;
-		}
 	}
+
+	/*for the case of Stereo_IHF*/
+	if (isSTIHF && speaker == CSL_CAPH_DEV_IHF)
+		mixer |= CSL_CAPH_SRCM_STEREO_CH2_L;
 
 	return mixer;
 }
@@ -4757,12 +4756,12 @@ CSL_CAPH_HWConfig_Table_t *csl_caph_FindCapturePath(unsigned int streamID)
 
 /****************************************************************************
 *
-*  Function Name: csl_caph_FindRenderPathID
+*  Function Name: csl_caph_FindPathID
 *
-*  Description: Find render path ID
+*  Description: Find path ID per source and sink
 *
 *****************************************************************************/
-CSL_CAPH_PathID csl_caph_FindRenderPathID(CSL_CAPH_DEVICE_e sink_dev,
+CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
 	CSL_CAPH_DEVICE_e src_dev)
 {
 	int i, j;

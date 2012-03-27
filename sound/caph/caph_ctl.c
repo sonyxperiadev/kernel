@@ -649,6 +649,21 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 				return -EINVAL;
 			}
 
+			if ((isSTIHF) &&
+				(curSpk == AUDIO_SINK_LOUDSPK) &&
+				(pChip->streamCtl[stream-1].dev_prop.p[1].sink
+				== AUDIO_SINK_HANDSET)) {
+				aTrace(LOG_ALSA_INTERFACE,
+					"Stereo IHF, remove EP path first.\n");
+				parm_spkr.src = AUDIO_SOURCE_I2S;
+				parm_spkr.sink = AUDIO_SINK_HANDSET;
+				parm_spkr.stream = (stream - 1);
+				AUDIO_Ctrl_Trigger(
+					ACTION_AUD_RemoveChannel,
+					&parm_spkr, NULL, 0);
+			pChip->streamCtl[stream - 1].dev_prop.p[1].sink =
+					AUDIO_SINK_UNDEFINED;
+			}
 			parm_spkr.src =
 			    pChip->streamCtl[stream - 1].dev_prop.p[0].source;
 			parm_spkr.sink =
@@ -656,6 +671,17 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 			parm_spkr.stream = (stream - 1);
 			AUDIO_Ctrl_Trigger(ACTION_AUD_SwitchSpkr, &parm_spkr,
 					   NULL, 0);
+
+			if (isSTIHF == TRUE &&
+				pSel[0] == AUDIO_SINK_LOUDSPK) {
+				parm_spkr.src = AUDIO_SOURCE_I2S;
+				parm_spkr.sink = AUDIO_SINK_HANDSET;
+				parm_spkr.stream = (stream - 1);
+				AUDIO_Ctrl_Trigger(ACTION_AUD_AddChannel,
+				&parm_spkr, NULL, 0);
+			pChip->streamCtl[stream-1].dev_prop.p[1].sink =
+					AUDIO_SINK_HANDSET;
+			}
 		}
 		break;
 
@@ -1278,6 +1304,17 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 			parm_FM.stream = (stream - 1);
 			AUDIO_Ctrl_Trigger(ACTION_AUD_EnableFMPlay, &parm_FM,
 					   NULL, 0);
+			if (isSTIHF == TRUE &&
+				pSel[0] == AUDIO_SINK_LOUDSPK) {
+				parm_spkr.src =
+				pChip->streamCtl[stream-1].dev_prop.p[0].source;
+				parm_spkr.sink = AUDIO_SINK_HANDSET;
+				parm_spkr.stream = (stream - 1);
+				AUDIO_Ctrl_Trigger(ACTION_AUD_AddChannel,
+				&parm_spkr, NULL, 0);
+				pChip->streamCtl[stream-1].dev_prop.p[1].sink =
+					AUDIO_SINK_HANDSET;
+			}
 		}
 		break;
 	case CTL_FUNCTION_FM_FORMAT:

@@ -503,6 +503,7 @@ static struct attribute* bmp18x_attributes[] =
 	&dev_attr_pressure0_input.attr,
 	&dev_attr_data.attr,
 	&dev_attr_oversampling.attr,
+	&dev_attr_pm.attr,
 	NULL
 };
 

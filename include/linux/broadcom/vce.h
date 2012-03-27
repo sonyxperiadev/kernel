@@ -19,12 +19,6 @@ the GPL, without Broadcom's express prior written consent.
 #ifdef __KERNEL__
 #endif
 
-/* typedef struct { */
-/* 	void *ptr;		// virtual address */
-/* 	unsigned int addr;	// physical address */
-/* 	unsigned int size; */
-/* } mem_t; */
-
 enum {
 	VCE_CMD_XXYYZZ = 0x80,
 	VCE_CMD_WAIT_IRQ,
@@ -38,9 +32,134 @@ enum {
 	VCE_CMD_UNINSTALL_ISR,
 	VCE_CMD_LAST,
 
+	/* vtq */
+
+	VTQ_CMD_XXYYZZ = 0x60,
+	VTQ_CMD_CONFIGURE,
+	VTQ_CMD_REGISTER_IMAGE,
+	VTQ_CMD_DEREGISTER_IMAGE,
+	VTQ_CMD_CREATE_TASK_RAW,
+	VTQ_CMD_CREATE_TASK,
+	VTQ_CMD_DESTROY_TASK,
+	VTQ_CMD_TASK_ADD_ENTRYPOINT,
+	VTQ_CMD_QUEUE_JOB,
+	VTQ_CMD_AWAIT_JOB,
+	VTQ_CMD_WHAT_WAS_LAST_QUEUED_JOB,
+	VTQ_CMD_FLUSH, /* flush is equivalent to await(last_queued) */
+	VTQ_CMD_LAST,
+
+	/* debug */
+
 	VCE_CMD_DEBUG_XXYYZZ = 0x40,
 	VCE_CMD_DEBUG_FETCH_KSTAT_IRQS,
 	VCE_CMD_DEBUG_LAST
+};
+
+struct vtq_configure_ioctldata {
+	/*
+	 * inputs
+	 */
+
+	/* TODO: we'll want some way to authenticate the request to
+	 * configure.  We reserve space in the ioctl command so that
+	 * if/when we get around to this, we don't break stuff. */
+	void *reserved0;
+
+	/* Base address of the imageloader image (a.k.a. firmware /
+	 * kernel) */
+	uint32_t /*progmemoffset*/ loader_base;
+
+	/* First entry point - used when ARM first tells VCE there's
+	 * some work for him */
+	uint32_t /*progmemoffset*/ loader_run;
+
+	/* Entrypoint of the "load next image" function -- reserved
+	 * for future */
+	uint32_t /*progmemoffset*/ loadimage_entrypoint;
+
+	/* There will undoutedly be further fixed entry points we will
+	 * need in the future and I want this ioctl to have some
+	 * longevity, so we reserve space for them here.  Must pass 0
+	 * for compatibility when these are not used. */
+	uint32_t aux1;
+	uint32_t aux2;
+	uint32_t aux3;
+
+	/* Relocated text of the imageloader image */
+	uint32_t *loader_text;
+	size_t loader_textsz;
+
+	/* Start address of DATA memory reservation */
+	uint32_t /*datamemoffset*/ datamem_reservation;
+
+	/* Address in LDM of VCE's copy of the write pointer (owned by
+	 * ARM) */
+	uint32_t /*datamemoffset*/ writepointer_locn;
+
+	/* Address in LDM of read pointer (owned by VCE) */
+	uint32_t /*datamemoffset*/ readpointer_locn;
+
+	/* Address of the start of the FIFO */
+	uint32_t /*datamemoffset*/ fifo_offset;
+
+	/* Number of entries in the FIFO */
+	size_t fifo_length;
+
+	/* Size of each FIFO entry in bytes */
+	size_t fifo_entry_size;
+
+	/* Which semaphore to use */
+	uint32_t semaphore_id;
+};
+
+struct vtq_registerimage_ioctldata {
+	/* result */
+	int image_id;
+
+	/* inputs */
+	const uint32_t *text;
+	size_t textsz;
+	const uint32_t *data;
+	size_t datasz;
+	size_t datamemreq;
+};
+
+struct vtq_deregisterimage_ioctldata {
+	/* input */
+	int image_id;
+};
+
+struct vtq_createtask_ioctldata {
+	/* result */
+	int task_id;
+
+	/* inputs */
+	int image_id;
+	uint32_t entrypoint;
+};
+
+struct vtq_destroytask_ioctldata {
+	/* input */
+	int task_id;
+};
+
+struct vtq_queuejob_ioctldata {
+	/* result */
+	uint32_t job_id;
+
+	/* input */
+	int task_id;
+	uint32_t arg0;
+	uint32_t arg1;
+	uint32_t arg2;
+	uint32_t arg3;
+	uint32_t arg4;
+	uint32_t arg5;
+};
+
+struct vtq_awaitjob_ioctldata {
+	/* input */
+	uint32_t job_id;
 };
 
 /* TODO: review (these were copy/psted from v3d) */
@@ -53,6 +172,27 @@ enum {
 #define VCE_IOCTL_UNUSE_ACP     _IO(BCM_VCE_MAGIC, VCE_CMD_UNUSE_ACP)
 #define VCE_IOCTL_ASSERT_IDLE   _IO(BCM_VCE_MAGIC, VCE_CMD_ASSERT_IDLE)
 #define VCE_IOCTL_UNINSTALL_ISR _IO(BCM_VCE_MAGIC, VCE_CMD_UNINSTALL_ISR)
+#define VTQ_IOCTL_CONFIGURE     _IOWR(BCM_VCE_MAGIC,			\
+				      VTQ_CMD_CONFIGURE,		\
+				       struct vtq_configure_ioctldata)
+#define VTQ_IOCTL_REGISTER_IMAGE _IOWR(BCM_VCE_MAGIC,			\
+				       VTQ_CMD_REGISTER_IMAGE,		\
+				       struct vtq_registerimage_ioctldata)
+#define VTQ_IOCTL_DEREGISTER_IMAGE _IOW(BCM_VCE_MAGIC,			\
+					VTQ_CMD_DEREGISTER_IMAGE,	\
+					struct vtq_registerimage_ioctldata)
+#define VTQ_IOCTL_CREATE_TASK   _IOWR(BCM_VCE_MAGIC,			\
+				      VTQ_CMD_CREATE_TASK,		\
+				      struct vtq_createtask_ioctldata)
+#define VTQ_IOCTL_DESTROY_TASK   _IOW(BCM_VCE_MAGIC,			\
+				      VTQ_CMD_DESTROY_TASK,		\
+				      struct vtq_destroytask_ioctldata)
+#define VTQ_IOCTL_QUEUE_JOB     _IOWR(BCM_VCE_MAGIC,			\
+				      VTQ_CMD_QUEUE_JOB,		\
+				      struct vtq_queuejob_ioctldata)
+#define VTQ_IOCTL_AWAIT_JOB     _IOW(BCM_VCE_MAGIC,			\
+				     VTQ_CMD_AWAIT_JOB,			\
+				     struct vtq_awaitjob_ioctldata)
 #define VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS  _IOR(BCM_VCE_MAGIC, VCE_CMD_DEBUG_FETCH_KSTAT_IRQS, unsigned int)
 
 #endif

@@ -573,7 +573,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 	unsigned int path;
 
 	aTrace(LOG_AUDIO_CNTLR,
-		"AUDIO_Ctrl_Process action_code=%d %s", action_code,
+		"AUDIO_Ctrl_Process action_code=%d %s\n", action_code,
 		&action_names[action_code][0]);
 
 	switch (action_code) {
@@ -751,18 +751,14 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 * AUDCTRL_EnableRecord enables HW path, reads SYSPARM
 			 * and sets HW gains as defined in SYSPARM.
 			 */
-			if ((param_start->callMode != 1) ||
-			    (param_start->pdev_prop->c.source ==
-			     AUDIO_SOURCE_I2S)) {
-				AUDCTRL_EnableRecord(param_start->pdev_prop->c.
-						     source,
-						     param_start->pdev_prop->c.
-						     sink,
-						     param_start->channels,
-						     param_start->rate, &path);
+			AUDCTRL_EnableRecord(param_start->pdev_prop->c.
+					     source,
+					     param_start->pdev_prop->c.
+					     sink,
+					     param_start->channels,
+					     param_start->rate, &path);
 
-				pathID[param_start->stream] = path;
-			}
+			pathID[param_start->stream] = path;
 
 			if (param_start->pdev_prop->c.drv_type ==
 			    AUDIO_DRIVER_CAPT_HQ)
@@ -790,18 +786,10 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDIO_DRIVER_Ctrl(param_stop->drv_handle,
 					  AUDIO_DRIVER_STOP, NULL);
 
-			if ((param_stop->callMode != 1) ||
-			    (param_stop->pdev_prop->c.source ==
-			     AUDIO_SOURCE_I2S)) {
-				/* allow FM recording in call mode */
-				AUDCTRL_DisableRecord(param_stop->pdev_prop->c.
-						      source,
-						      param_stop->pdev_prop->c.
-						      sink,
-						      pathID[param_stop->
-							     stream]);
-				pathID[param_stop->stream] = 0;
-			}
+			AUDCTRL_DisableRecord(param_stop->pdev_prop->c.source,
+					param_stop->pdev_prop->c.sink,
+					pathID[param_stop->stream]);
+			pathID[param_stop->stream] = 0;
 		}
 		break;
 	case ACTION_AUD_OpenRecord:

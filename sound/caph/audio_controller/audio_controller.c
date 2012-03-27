@@ -158,6 +158,7 @@ static int bmuteVoiceCall = FALSE;
 static Boolean isMFD = FALSE;
 static Boolean is26MClk = FALSE;
 static Boolean muteInPlay = FALSE;
+static Boolean isStIHF = FALSE;
 
 /*
 static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
@@ -206,6 +207,7 @@ static AudioMode_t currAudioMode = AUDIO_MODE_HANDSET;
  /* need to update this on AP and also in audioapi.c on CP. */
 static AudioMode_t currAudioMode_playback = AUDIO_MODE_SPEAKERPHONE;
 static AudioMode_t currAudioMode_record = AUDIO_MODE_SPEAKERPHONE;
+static AudioMode_t currAudioMode_fm = AUDIO_MODE_HEADSET;
 
 static struct regulator *vibra_reg;
 
@@ -1036,6 +1038,7 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 	/*enable clock if it is not enabled. */
 
 	AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
+	currAudioMode_fm = mode;
 
 	app = AUDCTRL_GetAudioApp();
 	sp_struct.mode = mode;
@@ -1415,7 +1418,7 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 	   This is to make sure that PMU is not disabled if any other
 	   path is using the same speaker */
 
-	path = csl_caph_FindRenderPathID(sink_dev, src_dev);
+	path = csl_caph_FindPathID(sink_dev, src_dev);
 
 	/*Disable the PMU for HS/IHF */
 	if (path) {
@@ -1961,8 +1964,25 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 		(void)csl_caph_hwctrl_AddPath(pathID, config);
 	}
 #ifndef CONFIG_ENABLE_SSMULTICAST
-	AUDCTRL_SetAudioMode_ForMusicPlayback(
-		GetAudioModeBySink(sink), pathID, FALSE);
+	if (currAudioApp == AUDIO_APP_FM) {
+		if (isStIHF &&
+			currAudioMode_fm == AUDIO_MODE_SPEAKERPHONE &&
+			sink == AUDIO_SINK_HANDSET)
+			AUDCTRL_SetAudioMode_ForFM(
+				AUDIO_MODE_SPEAKERPHONE, pathID, FALSE);
+		else
+			AUDCTRL_SetAudioMode_ForFM(
+				GetAudioModeBySink(sink), pathID, FALSE);
+	} else {
+		if (isStIHF &&
+			currAudioMode_playback == AUDIO_MODE_SPEAKERPHONE &&
+			sink == AUDIO_SINK_HANDSET)
+				AUDCTRL_SetAudioMode_ForMusicPlayback(
+				AUDIO_MODE_SPEAKERPHONE, pathID, FALSE);
+		else
+			AUDCTRL_SetAudioMode_ForMusicPlayback(
+				GetAudioModeBySink(sink), pathID, FALSE);
+	}
 #else
 	AUDCTRL_SetAudioMode_ForMusicMulticast(
 		GetAudioModeBySink(sink));
@@ -2117,10 +2137,7 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 				AUDCTRL_GetAudioApp(), pathID, 0);
 		}
 
-		/* if bInVoiceCall== TRUE, assume the telphony_init() function
-		   sends ENABLE and CONNECT_UL */
-		if (bInVoiceCall != TRUE)
-			AUDDRV_EnableDSPInput(source, sr);
+		AUDDRV_EnableDSPInput(source, sr);
 	}
 
 }
@@ -2142,6 +2159,12 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 			"%s src 0x%x, sink 0x%x,sr %d",
 			__func__, source, sink, sr);
 
+	/*in call mode, return the UL path*/
+	if (bInVoiceCall && source != AUDIO_SOURCE_I2S) {
+		*pPathID = AUDDRV_GetULPath();
+		AUDDRV_EnableDSPInput(source, sr);
+		return;
+	}
 	if (isDigiMic(source)) {
 		/* Enable power to digital microphone */
 		powerOnDigitalMic(TRUE);
@@ -2190,9 +2213,11 @@ void AUDCTRL_DisableRecord(AUDIO_SOURCE_Enum_t source,
 
 	/* Disable DSP UL */
 	if (sink == AUDIO_SINK_DSP)
-		/* assume the telephony_deinit() function sends DISABLE */
-		if (bInVoiceCall != TRUE)
-			AUDDRV_DisableDSPInput();
+		AUDDRV_DisableDSPInput(1);
+
+	/*in call mode, return*/
+	if (bInVoiceCall && source != AUDIO_SOURCE_I2S)
+		return;
 
 	if (pathID)
 		path = csl_caph_FindPath(pathID);
@@ -2283,8 +2308,6 @@ Result_t AUDCTRL_StartCapture(unsigned int streamID)
 
 	aTrace(LOG_AUDIO_CNTLR, "%s streamID=0x%x\n", __func__, streamID);
 
-	csl_audio_capture_start(streamID);
-
 	path = csl_caph_FindCapturePath(streamID);
 	mode = GetAudioModeFromCaptureDev(path->source);
 	if (path->snk_sampleRate == AUDIO_SAMPLING_RATE_48000)
@@ -2293,6 +2316,8 @@ Result_t AUDCTRL_StartCapture(unsigned int streamID)
 		AUDCTRL_SaveAudioApp(AUDIO_APP_RECORDING);
 
 	AUDCTRL_SetAudioMode_ForMusicRecord(mode, 0);
+	/* start capture after gain setting to reduce glitch */
+	csl_audio_capture_start(streamID);
 
 	return RESULT_OK;
 }
@@ -2722,7 +2747,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		src_dev = getDeviceFromSrc(mic);
 		sink_dev = getDeviceFromSink(speaker);
 
-		pathID = csl_caph_FindRenderPathID(sink_dev, src_dev);
+		pathID = csl_caph_FindPathID(sink_dev, src_dev);
 
 		if (pathID == 0) {
 			audio_xassert(0, pathID);
@@ -2937,6 +2962,7 @@ void AUDCTRL_SetBTMTypeWB(Boolean isWB)
 void AUDCTRL_SetIHFmode(Boolean stIHF)
 {
 	csl_caph_hwctrl_SetIHFmode(stIHF);
+	isStIHF = stIHF;
 }
 
 /****************************************************************************
@@ -3519,6 +3545,15 @@ Boolean AUDCTRL_GetMFDMode(void)
 Boolean AUDCTRL_GetSRCClock(void)
 {
 	return is26MClk;
+}
+
+void ReloadUserVolSettingFromSysparm(void)
+{
+	int i, j;
+
+	for (i = 0; i <= AUDIO_MODE_RESERVE; i++)
+		for (j = 0; j <= AUDIO_APP_RESERVED15; j++)
+			fillUserVolSetting(i, j);
 }
 
 static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app)

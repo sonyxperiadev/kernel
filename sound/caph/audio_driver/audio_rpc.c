@@ -36,6 +36,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "bcm_fuse_sysparm_CIB.h"
 #include "csl_caph.h"
 #include "audio_vdriver.h"
+#include "audio_controller.h"
 
 #include "csl_apcmd.h"
 #include "audio_trace.h"
@@ -106,6 +107,8 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 			    ResultDataBufHandle_t dataBufHandle,
 			    UInt32 userContextData)
 {
+	static unsigned int tunedAudioParam_addr;
+
 	if (MSG_AUDIO_CALL_STATUS_IND == pMsg->msgId) {
 		UInt32 *codecID = NULL;
 		codecID = (UInt32 *) pMsg->dataBuf;
@@ -125,6 +128,8 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 			"HandleAudioEventrespCb : start tuning addr=0x%x\r\n",
 			addr);
 		AUDDRV_SetTuningFlag(1);
+
+		tunedAudioParam_addr = addr;
 	}
 
 	if (MSG_AUDIO_STOP_TUNING_IND == pMsg->msgId) {
@@ -134,6 +139,9 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 			"HandleAudioEventrespCb : stop tuning addr=0x%x\r\n",
 			addr);
 		AUDDRV_SetTuningFlag(0);
+
+		APSYSPARM_RefreshAudioParm(addr);
+		ReloadUserVolSettingFromSysparm();
 	}
 
 	if (MSG_AUDIO_TUNING_SETPARM_IND == pMsg->msgId) {
@@ -145,6 +153,9 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 			(int)paramInd.audioModeApp,
 			(int)paramInd.audioParamType,
 			*((UInt16 *)&paramInd.param[0]));
+
+		APSYSPARM_RefreshAudioParm(tunedAudioParam_addr);
+		ReloadUserVolSettingFromSysparm();
 	}
 
 	if ((MSG_AUDIO_CTRL_GENERIC_RSP == pMsg->msgId) ||

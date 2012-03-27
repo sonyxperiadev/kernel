@@ -128,13 +128,15 @@ extern unsigned char brcm_get_netcon_status(void);
 #endif
 
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-#define 	MAX_RX_SKBS				110
-#define 	MAX_RX_SKB_SIZE			2048
+#define	MAX_RX_SKBS				210
+#define	MAX_RX_SKBS_CLONE		90
+#define	MAX_RX_SKB_SIZE			2048
 #define	NOT_PRE_ALLOC_SKB			0x12345678
 #define	MAX_RETRY_SKB_ALLOC		50
-#define 	UETH_RX_SKB_THRESHOLD	200
+#define	UETH_RX_SKB_THRESHOLD	200
 static struct sk_buff_head skb_rx_pool;
 atomic_t ueth_rx_skb_ref_count = ATOMIC_INIT(0);
+atomic_t ueth_rx_skb_cloned_ref_count = ATOMIC_INIT(0);
 EXPORT_SYMBOL_GPL(ueth_rx_skb_ref_count);
 
 /**
@@ -156,17 +158,24 @@ static void refill_rx_skbs(struct sk_buff *skb)
 }
 
 /**
- * void ueth_recycle_rx_skbs(struct sk_buff *skb) - recycle the skb buf for the logging to avoid to run out of memory
+ * void ueth_recycle_rx_skbs(struct sk_buff *skb) - recycle the skb buf for
+ * rx_submit and skb_clone.
  *
  */
 
-void ueth_recycle_rx_skbs(struct sk_buff *skb)
+void ueth_recycle_rx_skbs(struct sk_buff *skb, unsigned char is_cloned)
 {
+	if (is_cloned) {
+		atomic_dec(&ueth_rx_skb_cloned_ref_count);
+		/*pr_info(" --:cloned_count=%d\n",
+			atomic_read(&ueth_rx_skb_cloned_ref_count)); */
+	}
        refill_rx_skbs(skb);
 }
 
 /**
- * unsigned short netpoll_skb_size(void) - the whole skb size which includes the memory buffer for the logging data.
+ * unsigned short netpoll_skb_size(void) - the whole skb size for
+ * rx_submit and skb_clone.
  *
  */
 unsigned short ueth_rx_skb_size(void)
@@ -191,7 +200,8 @@ static void ueth_rx_skb_queue_purge(struct sk_buff_head *list)
 }
 
 /**
- * static void reserve_skbs_list(void) - reserve the skb buf list with allocated memory buffer for the logging data at beginning.
+ * static void reserve_skbs_list(void) - reserve the skb buf list with
+ * allocated memory for rx_submit and skb_clone.
  *
  */
 static void reserve_rx_skbs_list(void)
@@ -200,8 +210,8 @@ static void reserve_rx_skbs_list(void)
        unsigned long flags;
 	 unsigned char retry_alloc_skb = 0;
 
-       pr_info("reserve_rx_skbs_list \n");
-
+	pr_info("reserve_rx_skbs_list\n");
+	atomic_set(&ueth_rx_skb_cloned_ref_count, 0);
 	skb_queue_head_init(&skb_rx_pool);
 
        spin_lock_irqsave(&skb_rx_pool.lock, flags);
@@ -224,6 +234,53 @@ static void reserve_rx_skbs_list(void)
 		}
 	}
        spin_unlock_irqrestore(&skb_rx_pool.lock, flags);
+}
+
+/**
+ * struct sk_buff * ueth_get_skb_4_clone(void) - get the skb from skb_rx_pool for skb_clone().
+ *
+ */
+struct sk_buff *ueth_get_skb_4_clone(void)
+{
+	struct sk_buff *skb;
+
+	skb = skb_dequeue(&skb_rx_pool);
+	if (skb == NULL)
+		pr_info("%s:skb_rx_pool is empty...\n", __func__);
+	else {
+		atomic_inc(&ueth_rx_skb_cloned_ref_count);
+		skb->signature = SKB_UETH_RX_PRE_ALLOC_MEM_SIG;
+		/* pr_info(" ++:cloned_count=%d\n",
+			atomic_read(&ueth_rx_skb_cloned_ref_count)); */
+	}
+	return skb;
+}
+
+/**
+ * struct sk_buff * ueth_get_skb_4_clone(void) - get the skb from skb_rx_pool for rx_submit().
+ *
+ */
+struct sk_buff *ueth_get_skb(void)
+{
+	unsigned long flags;
+	struct sk_buff *skb;
+	unsigned int skb_cloned_no;
+
+	spin_lock_irqsave(&skb_rx_pool.lock, flags);
+	skb_cloned_no = atomic_read(&ueth_rx_skb_cloned_ref_count);
+	if (skb_cloned_no < MAX_RX_SKBS_CLONE)
+		skb = __skb_dequeue(&skb_rx_pool);
+	else {
+		skb = NULL;
+		pr_info("skb_rx_pool.qlen = %d, cloned_count=%d\n",
+				skb_rx_pool.qlen, skb_cloned_no);
+	}
+	spin_unlock_irqrestore(&skb_rx_pool.lock, flags);
+
+	if (skb != NULL)
+		skb->signature = SKB_UETH_RX_PRE_ALLOC_MEM_SIG;
+
+	return skb;
 }
 #endif
 
@@ -423,7 +480,8 @@ rx_submit(struct eth_dev *dev, struct usb_request *req, gfp_t gfp_flags)
 		allocate the new skbs. */
 		if (atomic_read(&ueth_rx_skb_ref_count) > UETH_RX_SKB_THRESHOLD) {
 			skb = NULL;
-			DBG(dev, "ueth_rx_skb_ref_count = %d \n", atomic_read(&ueth_rx_skb_ref_count));
+			DBG(dev, "ueth_rx_skb_ref_count = %d\n",
+				atomic_read(&ueth_rx_skb_ref_count));
 			goto enomem;
 		} else {
 #endif
@@ -435,14 +493,15 @@ rx_submit(struct eth_dev *dev, struct usb_request *req, gfp_t gfp_flags)
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
 			skb->signature = SKB_UETH_RX_NO_PRE_ALLOC_MEM_SIG;
 			atomic_inc(&ueth_rx_skb_ref_count);
-			/* pr_info("++: ueth_rx_skb_ref_count = %d \n", atomic_read(&ueth_rx_skb_ref_count)); */
+			/* pr_info("++: ueth_rx_skb_ref_count = %d\n", a
+			tomic_read(&ueth_rx_skb_ref_count)); */
 		}
 	} else {
-		skb = skb_dequeue(&skb_rx_pool);
-	       if (skb == NULL) {
-	               DBG(dev, "no rx skb\n");
-	               goto enomem;
-	       }
+		skb = ueth_get_skb();
+		if (skb == NULL) {
+			pr_info("no rx skb\n");
+			goto enomem;
+		}
 	       skb->signature = SKB_UETH_RX_PRE_ALLOC_MEM_SIG;
 		gfp_flags =GFP_ATOMIC;
 	}

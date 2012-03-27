@@ -266,6 +266,9 @@ enum bcmpmu_reg {
 	PMU_REG_HS_SC_EDISABLE,
 	PMU_REG_HSPUP_IDDQ_PWRDWN,
 	PMU_REG_HSPUP_HS_PWRUP,
+	PMU_REG_HSCP3_CP_CG_SEL,
+	PMU_REG_HSIST_OC_DISOCMUX,
+	PMU_REG_IHFPOP_POPTIME_CTL,
 	PMU_REG_HSPGA1,
 	PMU_REG_HSPGA2,
 	PMU_REG_HSPGA3,
@@ -1226,5 +1229,5 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu, enum bcmpmu_usb_ctrl_t ctrl,
 void bcmpmu_client_power_off(void);
 void bcmpmu_update_pdata_dt_batt(struct bcmpmu_platform_data *pdata);
 void bcmpmu_update_pdata_dt_pmu(struct bcmpmu_platform_data *pdata);
-
+int bcmpmu_reg_write_unlock(struct bcmpmu *bcmpmu);
 #endif

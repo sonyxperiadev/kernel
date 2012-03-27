@@ -31,7 +31,6 @@
 #define WL_DBG(x)
 
 #define MAX_ROAM_CACHE 100
-#define WL_CHANSPEC_CTL_SB_NONE 0x0300 /*chanyun temp : fix chan spec*/
 
 typedef struct {
 	chanspec_t chanspec;
@@ -40,7 +39,13 @@ typedef struct {
 } roam_channel_cache;
 
 static int n_roam_cache = 0;
+static int roam_band = WLC_BAND_AUTO;
 static roam_channel_cache roam_cache[MAX_ROAM_CACHE];
+
+void set_roam_band(int band)
+{
+	roam_band = band;
+}
 
 void reset_roam_cache(void)
 {
@@ -86,11 +91,13 @@ int get_roam_channel_list(int target_chan, chanspec_t *channels, const wlc_ssid_
 	*channels++ = (target_chan & WL_CHANSPEC_CHAN_MASK) | band | WL_CHANSPEC_BW_20 | WL_CHANSPEC_CTL_SB_NONE;
 
 	for(i=0; i<n_roam_cache; i++) {
+		chanspec_t ch = roam_cache[i].chanspec;
 		if ((roam_cache[i].ssid_len == ssid->SSID_len) &&
-			((roam_cache[i].chanspec & WL_CHANSPEC_CHAN_MASK) != target_chan) &&
+			((ch & WL_CHANSPEC_CHAN_MASK) != target_chan) &&
+			((roam_band == WLC_BAND_AUTO) || ((roam_band == WLC_BAND_2G) && CHSPEC_IS2G(ch)) || ((roam_band == WLC_BAND_5G) && CHSPEC_IS5G(ch))) &&
 			(memcmp(roam_cache[i].ssid, ssid->SSID, ssid->SSID_len) == 0)) {
 			/* match found, add it */
-			*channels = roam_cache[i].chanspec & WL_CHANSPEC_CHAN_MASK;
+			*channels = ch & WL_CHANSPEC_CHAN_MASK;
 			WL_DBG((" %s: %02d\n", __FUNCTION__, *channels));
 			if (*channels <= 14)
 				*channels |= WL_CHANSPEC_BAND_2G | WL_CHANSPEC_BW_20 | WL_CHANSPEC_CTL_SB_NONE;

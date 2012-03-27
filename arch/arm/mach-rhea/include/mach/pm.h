@@ -43,6 +43,7 @@ extern int rhea_force_sleep(suspend_state_t state);
 extern void request_suspend_state(suspend_state_t state);
 extern void instrument_dormant_entry(void);
 extern void instrument_dormant_exit(void);
+extern int get_force_sleep_state(void);
 #endif /* __ASSEMBLY__ */
 
 #endif /*__RHEA_PM_H__*/

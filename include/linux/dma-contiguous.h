@@ -58,11 +58,12 @@ struct page;
 struct device;
 
 /* All stats in nr_pages */
-struct dev_cma_stats {
+struct dev_cma_info {
+	unsigned long start_pfn;
+	unsigned long nr_pages;
 	unsigned long max_free_block;
 	unsigned long total_alloc;
 	unsigned long peak_alloc;
-	unsigned long size;
 };
 
 #ifdef CONFIG_CMA
@@ -83,10 +84,8 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 				       unsigned int order);
 int dma_release_from_contiguous(struct device *dev, struct page *pages,
 				int count);
-void get_cma_area(struct device *dev, phys_addr_t *start,
-			  unsigned long *size);
-void get_dev_cma_stats(struct device *dev,
-			struct dev_cma_stats *cs);
+void get_dev_cma_info(struct device *dev,
+			struct dev_cma_info *info);
 #else
 
 #define MAX_CMA_AREAS	(0)
@@ -114,10 +113,7 @@ int dma_release_from_contiguous(struct device *dev, struct page *pages,
 	return 0;
 }
 
-static inline void get_cma_area(struct device *dev, phys_addr_t *start,
-			  unsigned long *size) { }
-
-void get_dev_cma_stats(struct device *dev, struct dev_cma_stats *cs)
+void get_dev_cma_info(struct device *dev, struct dev_cma_info *info)
 {
 	return 0;
 }

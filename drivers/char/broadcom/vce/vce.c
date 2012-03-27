@@ -36,8 +36,13 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_vce.h>
 
 #include <linux/broadcom/vce.h>
+#include <linux/broadcom/vtq.h>
+#include "vtqbr.h"
 
-#define DRIVER_VERSION 10106
+/* Private configuration stuff -- not part of exposed API */
+#include "vtqinit_priv.h"
+
+#define DRIVER_VERSION 10107
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -67,7 +72,7 @@ static struct clk *vce_clk;
 
 /* Per VCE state: (actually, some global state mixed in here too --
  * TODO: separate this out in order to support multiple VCEs) */
-static struct {
+static struct vce {
 	struct mutex clockctl_sem;
 	uint32_t clock_enable_count;
 	struct completion *g_irq_sem;
@@ -82,12 +87,19 @@ static struct {
 	struct pi_mgr_qos_node cpu_qos_node;
 	struct semaphore armctl_sem;
 	uint32_t arm_keepawake_count;
+	struct vtq_global *vtq;
+	struct vtq_vce *vtq_vce;
+	bool debug_ioctl;
+	uint32_t *vtq_firmware;
 } vce_state;
 
 /* Per open handle state: */
 typedef struct {
 	struct completion irq_sem;
 	int vce_acquired;
+	struct vtqb_context *vtq_ctx;
+	int api_direct;
+	int api_vtq;
 } vce_t;
 
 /* Per mmap handle state: */
@@ -109,6 +121,13 @@ static void reset_vce(void);
 	vce_reg_poke(reg, (value << VCE_ ## reg ## _ ## field ## _SHIFT) & VCE_ ## reg ## _ ## field ## _MASK)
 #define vce_reg_peek(reg) \
 	readl(vce_base + VCE_ ## reg ## _OFFSET)
+
+#define trace_ioctl_entry(ioctl) \
+	printk(KERN_INFO "IOCTL TRACE: %u   >> " #ioctl "\n",	\
+	       get_current()->pid);
+#define trace_ioctl_return(ioctl) \
+	printk(KERN_INFO "IOCTL TRACE: %u <<   " #ioctl "\n",	\
+	       get_current()->pid);
 
 static bool vce_is_idle(void)
 {
@@ -158,6 +177,9 @@ static void reset_vce(void)
 
 static irqreturn_t vce_isr(int irq, void *unused)
 {
+	irqreturn_t ret;
+	int handled_by_vtq;
+
 	(void)irq;		/* TODO: shouldn't this be used?? */
 	(void)unused;
 
@@ -179,10 +201,14 @@ static irqreturn_t vce_isr(int irq, void *unused)
 	 *spurious re-fires of the ISR */
 	(void)vce_reg_peek(STATUS);
 
+	ret = vtq_isr(vce_state.vtq_vce);
+	handled_by_vtq = (ret == IRQ_HANDLED);
+
 	if (vce_state.g_irq_sem)
 		complete(vce_state.g_irq_sem);
 	else
-		err_print("Got VCE interrupt but noone wants it\n");
+		if (!handled_by_vtq)
+			err_print("Got VCE interrupt but noone wants it\n");
 
 	return IRQ_HANDLED;
 }
@@ -213,7 +239,6 @@ static void _power_off(void)
 	s = pi_mgr_dfs_request_remove(&vce_state.dfs_node);
 	BUG_ON(s != 0);
 	vce_state.dfs_node.name = NULL;
-
 }
 
 static int _clock_on(void)
@@ -223,14 +248,16 @@ static int _clock_on(void)
 	BUG_ON(vce_clk != NULL);
 
 	vce_clk = clk_get(NULL, "vce_axi_clk");
-	if (!vce_clk) {
+	if (IS_ERR(vce_clk)) {
 		err_print("%s: error get clock\n", __func__);
+		vce_clk = NULL;
 		return -EIO;
 	}
 
 	s = clk_enable(vce_clk);
 	if (s != 0) {
 		err_print("%s: error enabling clock\n", __func__);
+		clk_put(vce_clk);
 		vce_clk = NULL;
 		return -EIO;
 	}
@@ -243,6 +270,7 @@ static void _clock_off(void)
 {
 	BUG_ON(vce_clk == NULL);
 	clk_disable(vce_clk);
+	clk_put(vce_clk);
 	vce_clk = NULL;
 	BUG_ON(vce_clk != NULL);
 }
@@ -386,12 +414,16 @@ static int vce_open(struct inode *inode, struct file *filp)
 	dev->vce_acquired = 0;
 	init_completion(&dev->irq_sem);
 
+	dev->vtq_ctx = NULL; /* defer to later */
+
+	dev->api_direct = 0;
+	dev->api_vtq = 0;
+
 	filp->private_data = dev;
 	return 0;
 }
 
-/* TODO: task list ... */
-static int vce_release(struct inode *inode, struct file *filp)
+static int vce_file_release(struct inode *inode, struct file *filp)
 {
 	vce_t *dev;
 
@@ -416,7 +448,7 @@ static int vce_release(struct inode *inode, struct file *filp)
 		{
 			int uglyctr = 0;
 			while (!vce_is_idle() && (uglyctr++ < 10000))
-				usleep_range(100, 200);
+				usleep_range(1000, 20000);
 		}
 		mutex_unlock(&vce_state.work_lock);
 		if (vce_is_idle())
@@ -430,6 +462,10 @@ static int vce_release(struct inode *inode, struct file *filp)
 		vce_state.g_irq_sem = NULL;
 		complete(&vce_state.acquire_sem);
 		clock_off();
+	}
+
+	if (dev->api_vtq) {
+		vtqb_destroy_context(dev->vtq_ctx);
 	}
 
 	if (try_wait_for_completion(&dev->irq_sem)) {
@@ -547,6 +583,90 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	dev = (vce_t *) (filp->private_data);
 
+	/* We just present a single device, but we answer IOCTLs on
+	 * behalf of two separate libraries that don't mix -- so we go
+	 * modal and refuse to let the caller switch APIs at half
+	 * time */
+	if (_IOC_NR(cmd) >= VCE_CMD_XXYYZZ && _IOC_NR(cmd) < VCE_CMD_LAST) {
+		if (dev->api_vtq) {
+			dbg_print("Attempt to mix VCE(direct) and VTQ APIS\n");
+			return -EINVAL;
+		}
+		dev->api_direct = 1;
+	}
+
+	if (_IOC_NR(cmd) >= VTQ_CMD_XXYYZZ && _IOC_NR(cmd) < VTQ_CMD_LAST) {
+		if (dev->api_direct) {
+			dbg_print("Attempt to mix VCE(direct) and VTQ APIS\n");
+			return -EINVAL;
+		}
+		if (!dev->api_vtq) {
+			/* Create VTQ ctx upon first API usage */
+			dev->vtq_ctx = vtqb_create_context(vce_state.vtq_vce);
+			if (dev->vtq_ctx == NULL) {
+				err_print("Failed to create VTQ ctx -- oh.\n");
+				return -EINVAL;
+			}
+		}
+		dev->api_vtq = 1;
+	}
+
+	if (vce_state.debug_ioctl) {
+		switch (cmd) {
+		case VCE_IOCTL_WAIT_IRQ:
+			trace_ioctl_entry(VCE_IOCTL_WAIT_IRQ);
+			break;
+		case VCE_IOCTL_EXIT_IRQ_WAIT:
+			trace_ioctl_entry(VCE_IOCTL_EXIT_IRQ_WAIT);
+			break;
+		case VCE_IOCTL_RESET:
+			trace_ioctl_entry(VCE_IOCTL_RESET);
+			break;
+		case VCE_IOCTL_HW_ACQUIRE:
+			trace_ioctl_entry(VCE_IOCTL_HW_ACQUIRE);
+			break;
+		case VCE_IOCTL_HW_RELEASE:
+			trace_ioctl_entry(VCE_IOCTL_HW_RELEASE);
+			break;
+		case VCE_IOCTL_UNUSE_ACP:
+			trace_ioctl_entry(VCE_IOCTL_UNUSE_ACP);
+			break;
+		case VCE_IOCTL_USE_ACP:
+			trace_ioctl_entry(VCE_IOCTL_USE_ACP);
+			break;
+		case VCE_IOCTL_ASSERT_IDLE:
+			trace_ioctl_entry(VCE_IOCTL_ASSERT_IDLE);
+			break;
+		case VCE_IOCTL_UNINSTALL_ISR:
+			trace_ioctl_entry(VCE_IOCTL_UNINSTALL_ISR);
+			break;
+		case VTQ_IOCTL_CONFIGURE:
+			trace_ioctl_entry(VTQ_IOCTL_CONFIGURE);
+			break;
+		case VTQ_IOCTL_REGISTER_IMAGE:
+			trace_ioctl_entry(VTQ_IOCTL_REGISTER_IMAGE);
+			break;
+		case VTQ_IOCTL_DEREGISTER_IMAGE:
+			trace_ioctl_entry(VTQ_IOCTL_DEREGISTER_IMAGE);
+			break;
+		case VTQ_IOCTL_CREATE_TASK:
+			trace_ioctl_entry(VTQ_IOCTL_CREATE_TASK);
+			break;
+		case VTQ_IOCTL_DESTROY_TASK:
+			trace_ioctl_entry(VTQ_IOCTL_DESTROY_TASK);
+			break;
+		case VTQ_IOCTL_QUEUE_JOB:
+			trace_ioctl_entry(VTQ_IOCTL_QUEUE_JOB);
+			break;
+		case VTQ_IOCTL_AWAIT_JOB:
+			trace_ioctl_entry(VTQ_IOCTL_AWAIT_JOB);
+			break;
+		case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
+			trace_ioctl_entry(VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS);
+			break;
+		}
+	}
+
 	switch (cmd) {
 	case VCE_IOCTL_WAIT_IRQ:
 		{
@@ -561,31 +681,6 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case VCE_IOCTL_EXIT_IRQ_WAIT:
 		/* Up the semaphore to release the thread that's waiting for irq */
 		complete(&dev->irq_sem);
-		break;
-
-	case VCE_IOCTL_RESET:
-		{
-			int force;
-
-			force = arg;
-
-			/* TODO: should we assert clocks are already
-			 *on?  or just ignore the request when clocks
-			 *are off?  We'll get a PoR anyway?  Or
-			 *should we handle case with power on and
-			 *clocks off (e.g. other mm block has power)
-			 *by deferring the reset to the next clock
-			 *on?  FIXME */
-			clock_on();
-			if (!vce_is_idle() && !force) {
-				dbg_print("vce not idle -- "
-					  "indicate FORCE to override\n");
-				clock_off();
-				return -EAGAIN;
-			}
-			reset_vce();
-			clock_off();
-		}
 		break;
 
 	case VCE_IOCTL_HW_ACQUIRE:
@@ -637,22 +732,145 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
-#if 0
-		/* Some DEBUG stuff -- we may wish to lose this in production driver... */
-	case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
+		/* TODO: perhaps all VTQ_* ioctls should pull the last
+		 * known readptr so that the client can cache it */
+
+	case VTQ_IOCTL_CONFIGURE:
 		{
-			unsigned int dacount;
-			unsigned int copyerr;
-			dacount = kstat_irqs_cpu(IRQ_VCE, /*cpu= */ 0);
-			copyerr =
-			    copy_to_user((void *)arg, &dacount,
-					 sizeof(dacount));
-			if (copyerr != 0) {
-				ret = -EINVAL;
+			struct vtq_configure_ioctldata *d;
+			uint32_t *fw;
+			unsigned int c;
+			int s;
+
+			d = (struct vtq_configure_ioctldata *)arg;
+
+			/* This kmalloc never gets freed */
+			fw = kmalloc(d->loader_textsz, GFP_KERNEL);
+			if (fw == NULL) {
+				err_print("failed to copy firmware\n");
+				return -EINVAL;
 			}
+
+			c = copy_from_user(fw, d->loader_text,
+					   d->loader_textsz);
+			if (c > 0) {
+				err_print("failed to copy firmware\n");
+				kfree(fw);
+				return -EINVAL;
+			}
+
+			s = vtq_configure(vce_state.vtq_vce,
+				d->loader_base,
+				d->loader_run,
+				d->loadimage_entrypoint,
+				fw,
+				d->loader_textsz,
+				d->datamem_reservation,
+				d->writepointer_locn,
+				d->readpointer_locn,
+				d->fifo_offset,
+				d->fifo_length,
+				d->fifo_entry_size,
+				d->semaphore_id);
+
+			if (s != 0) {
+				err_print("failed to copy firmware\n");
+				kfree(fw);
+				return -EINVAL;
+			}
+
+			/* we squirrel this away so we don't leak
+			 * memory at driver unload time */
+			vce_state.vtq_firmware = fw;
 		}
 		break;
-#endif
+
+	case VTQ_IOCTL_REGISTER_IMAGE:
+		{
+			struct vtq_registerimage_ioctldata *d;
+			uint32_t *scratch; /* TODO: fix this! */
+			unsigned int c;
+			vtq_image_id_t image_id;
+
+			d = (struct vtq_registerimage_ioctldata *)arg;
+			scratch = kmalloc(0x6000, GFP_KERNEL);
+			BUG_ON(scratch == NULL);
+
+			c = copy_from_user(scratch+0x0000, d->text, d->textsz);
+			BUG_ON(c != 0);
+
+			c = copy_from_user(scratch+0x4000, d->data, d->datasz);
+			BUG_ON(c != 0);
+
+			image_id = vtqb_register_image(dev->vtq_ctx,
+				scratch+0x0000/*text*/, d->textsz,
+				scratch+0x1000/*data*/, d->datasz,
+				d->datamemreq);
+			if (image_id < 0)
+				ret = -EINVAL;
+			else
+				d->image_id = image_id;
+
+			kfree(scratch);
+		}
+		break;
+
+	case VTQ_IOCTL_DEREGISTER_IMAGE:
+		{
+			struct vtq_deregisterimage_ioctldata *d;
+
+			d = (struct vtq_deregisterimage_ioctldata *)arg;
+
+			vtqb_unregister_image(dev->vtq_ctx, d->image_id);
+			/* TODO: we should have a way to ensure the
+			 * caller owned the image id they're trying to
+			 * free.  FIXME */
+		}
+		break;
+
+	case VTQ_IOCTL_CREATE_TASK:
+		{
+			struct vtq_createtask_ioctldata *d;
+			vtq_task_id_t task_id;
+
+			d = (struct vtq_createtask_ioctldata *)arg;
+			task_id = vtqb_create_task(dev->vtq_ctx,
+					d->image_id, d->entrypoint);
+			if (task_id < 0)
+				ret = -EINVAL;
+			else
+				d->task_id = task_id;
+		}
+		break;
+
+	case VTQ_IOCTL_DESTROY_TASK:
+		{
+			struct vtq_destroytask_ioctldata *d;
+
+			d = (struct vtq_destroytask_ioctldata *)arg;
+			vtqb_destroy_task(dev->vtq_ctx, d->task_id);
+		}
+		break;
+
+	case VTQ_IOCTL_QUEUE_JOB:
+		{
+			struct vtq_queuejob_ioctldata *d;
+
+			d = (struct vtq_queuejob_ioctldata *)arg;
+			ret = vtqb_queue_job(dev->vtq_ctx,
+				d->task_id, d->arg0, d->arg1, d->arg2,
+				d->arg3, d->arg4, d->arg5, 0, &d->job_id);
+		}
+		break;
+
+	case VTQ_IOCTL_AWAIT_JOB:
+		{
+			struct vtq_awaitjob_ioctldata *d;
+
+			d = (struct vtq_awaitjob_ioctldata *)arg;
+			ret = vtqb_await_job(dev->vtq_ctx, d->job_id);
+		}
+		break;
 
 	default:
 		{
@@ -661,12 +879,68 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 	}
 
+	if (vce_state.debug_ioctl) {
+		switch (cmd) {
+		case VCE_IOCTL_WAIT_IRQ:
+			trace_ioctl_return(VCE_IOCTL_WAIT_IRQ);
+			break;
+		case VCE_IOCTL_EXIT_IRQ_WAIT:
+			trace_ioctl_return(VCE_IOCTL_EXIT_IRQ_WAIT);
+			break;
+		case VCE_IOCTL_RESET:
+			trace_ioctl_return(VCE_IOCTL_RESET);
+			break;
+		case VCE_IOCTL_HW_ACQUIRE:
+			trace_ioctl_return(VCE_IOCTL_HW_ACQUIRE);
+			break;
+		case VCE_IOCTL_HW_RELEASE:
+			trace_ioctl_return(VCE_IOCTL_HW_RELEASE);
+			break;
+		case VCE_IOCTL_UNUSE_ACP:
+			trace_ioctl_return(VCE_IOCTL_UNUSE_ACP);
+			break;
+		case VCE_IOCTL_USE_ACP:
+			trace_ioctl_return(VCE_IOCTL_USE_ACP);
+			break;
+		case VCE_IOCTL_ASSERT_IDLE:
+			trace_ioctl_return(VCE_IOCTL_ASSERT_IDLE);
+			break;
+		case VCE_IOCTL_UNINSTALL_ISR:
+			trace_ioctl_return(VCE_IOCTL_UNINSTALL_ISR);
+			break;
+		case VTQ_IOCTL_CONFIGURE:
+			trace_ioctl_return(VTQ_IOCTL_CONFIGURE);
+			break;
+		case VTQ_IOCTL_REGISTER_IMAGE:
+			trace_ioctl_return(VTQ_IOCTL_REGISTER_IMAGE);
+			break;
+		case VTQ_IOCTL_DEREGISTER_IMAGE:
+			trace_ioctl_return(VTQ_IOCTL_DEREGISTER_IMAGE);
+			break;
+		case VTQ_IOCTL_CREATE_TASK:
+			trace_ioctl_return(VTQ_IOCTL_CREATE_TASK);
+			break;
+		case VTQ_IOCTL_DESTROY_TASK:
+			trace_ioctl_return(VTQ_IOCTL_DESTROY_TASK);
+			break;
+		case VTQ_IOCTL_QUEUE_JOB:
+			trace_ioctl_return(VTQ_IOCTL_QUEUE_JOB);
+			break;
+		case VTQ_IOCTL_AWAIT_JOB:
+			trace_ioctl_return(VTQ_IOCTL_AWAIT_JOB);
+			break;
+		case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
+			trace_ioctl_return(VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS);
+			break;
+		}
+	}
+
 	return ret;
 }
 
 static struct file_operations vce_fops = {
 	.open = vce_open,
-	.release = vce_release,
+	.release = vce_file_release,
 	.mmap = vce_mmap,
 	.unlocked_ioctl = vce_ioctl,
 };
@@ -805,6 +1079,42 @@ e0:
 	return ret;
 }
 
+void __iomem *vce_get_base_address(struct vce *vce)
+{
+	(void) vce;
+	return vce_base;
+}
+
+int vce_acquire(struct vce *vce)
+{
+	if (!try_module_get(THIS_MODULE)) {
+		err_print("Failed to increment module refcount\n");
+		return -EINVAL;
+	}
+	/* At the moment we support only one VCE, and the
+	 * clock_on()/clock_off() functions assume it */
+	BUG_ON(vce != &vce_state);
+	clock_on();
+
+	/* Wait for the VCE HW to become available */
+	if (wait_for_completion_interruptible(&vce_state.acquire_sem)) {
+		err_print("Wait for VCE HW failed\n");
+		clock_off();
+		module_put(THIS_MODULE);
+		return -ERESTARTSYS;
+	}
+
+	return 0;
+}
+
+void vce_release(struct vce *vce)
+{
+	complete(&vce_state.acquire_sem);	/* VCE is up for grab */
+	clock_off();
+	module_put(THIS_MODULE);
+}
+
+
 int __init vce_init(void)
 {
 	int ret;
@@ -906,13 +1216,37 @@ int __init vce_init(void)
 		goto err5;
 	}
 
+	ret = vtq_driver_init(&vce_state.vtq,
+			&vce_state, vce_state.proc_vcedir);
+	if (ret) {
+		err_print("Failed to initialize VTQ (0)\n");
+		ret = -ENOENT;
+		goto err_vtq_init0;
+	}
+
+	ret = vtq_pervce_init(&vce_state.vtq_vce,
+			vce_state.vtq, &vce_state, vce_state.proc_vcedir);
+	if (ret) {
+		err_print("Failed to initialize VTQ (2)\n");
+		ret = -ENOENT;
+		goto err_vtq_init2;
+	}
+
+	vce_state.debug_ioctl = 0; /* TODO: proc entry maybe? */
+
 	return 0;
 
 	/*
 	   error exit paths
 	 */
 
-	/*  pi_mgr_qos_request_remove(vce_state.cpu_qos_node); */
+	/* vtq_pervce_term(&vce_state.vtqvce); */
+err_vtq_init2:
+
+	vtq_driver_term(&vce_state.vtq);
+err_vtq_init0:
+
+	pi_mgr_qos_request_remove(&vce_state.cpu_qos_node);
 err5:
 
 	remove_proc_entry("status", vce_state.proc_vcedir);
@@ -927,7 +1261,7 @@ err2:
 err2a:
 
 	iounmap(vce_base);
-	vce_base = 0;
+	vce_base = NULL;
 err:
 
 	device_destroy(vce_state.vce_class, MKDEV(vce_major, 0));
@@ -947,10 +1281,22 @@ void __exit vce_exit(void)
 {
 	dbg_print("VCE driver Exit\n");
 
+	if (vce_state.clock_enable_count > 0) {
+		err_print("BUG: Clock enabled (%d) unloading driver\n",
+			vce_state.clock_enable_count);
+		while (vce_state.clock_enable_count > 0) {
+			reset_vce();
+			clock_off();
+		}
+	}
+
 	mutex_lock(&vce_state.work_lock);
 	mutex_lock(&vce_state.clockctl_sem);
 	down(&vce_state.armctl_sem);
 	BUG_ON(vce_state.clock_enable_count != 0);
+
+	vtq_pervce_term(&vce_state.vtq_vce);
+	vtq_driver_term(&vce_state.vtq);
 
 	/* remove proc entries */
 	remove_proc_entry("status", vce_state.proc_vcedir);
@@ -965,6 +1311,9 @@ void __exit vce_exit(void)
 		iounmap(vce_base);
 
 	pi_mgr_qos_request_remove(&vce_state.cpu_qos_node);
+
+	if (vce_state.vtq_firmware != NULL)
+		kfree(vce_state.vtq_firmware);
 
 	device_destroy(vce_state.vce_class, MKDEV(vce_major, 0));
 	class_destroy(vce_state.vce_class);
