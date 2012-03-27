@@ -756,12 +756,13 @@ CSL_CAPH_HWConfig_Table_t *csl_caph_FindCapturePath(unsigned int streamID);
 *
 *  @param   sink_dev
 *  @param   src_dev
+*  @param   skip_path
 *
 *  @return CSL_CAPH_PathID path ID
 *
 *****************************************************************************/
 CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
-	CSL_CAPH_DEVICE_e src_dev);
+	CSL_CAPH_DEVICE_e src_dev, CSL_CAPH_PathID skip_path);
 
 /****************************************************************************
 *  @brief  Set SRCMixer clock rate to use 26MHz

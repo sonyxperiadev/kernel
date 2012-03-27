@@ -178,6 +178,10 @@ void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl);
 void csl_caph_audioh_set_minimum_filter(int path_id);
 void csl_caph_audioh_set_linear_filter(int path_id);
 void csl_caph_audioh_adcpath_global_enable(Boolean enable);
+void csl_caph_audioh_start_hs(void);
+void csl_caph_audioh_start_ihf(void);
+void csl_caph_audioh_stop_hs(void);
+void csl_caph_audioh_stop_ihf(void);
 
 /**
 *

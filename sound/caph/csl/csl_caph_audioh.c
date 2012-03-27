@@ -82,6 +82,8 @@ static CHAL_HANDLE handle = 0x0;
 static UInt8 micStatus = 0x0;
 static UInt8 epIHFStatus = 0x0;
 
+static int audioh_hs_on, audioh_ihf_on;
+
 #if defined(USE_SYSPARM_FILE)
 #else
 
@@ -798,8 +800,6 @@ void csl_caph_audioh_start(int path_id)
 		break;
 
 	case AUDDRV_PATH_HEADSET_OUTPUT:
-
-    /*  chnl_enable = CHAL_AUDIO_CHANNEL_LEFT; */
 		if (path[path_id].sample_mode == AUDIO_CHANNEL_STEREO) {
 			chnl_enable =
 			    CHAL_AUDIO_CHANNEL_LEFT | CHAL_AUDIO_CHANNEL_RIGHT;
@@ -813,15 +813,16 @@ void csl_caph_audioh_start(int path_id)
 			chnl_enable = CHAL_AUDIO_CHANNEL_LEFT;
 		}
 
-		chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
-		chal_audio_hspath_set_gain(handle, 0);
-		chal_audio_hspath_enable(handle, chnl_enable);
+		if (!audioh_hs_on) {
+			audioh_hs_on = 1;
+			chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
+			chal_audio_hspath_set_gain(handle, 0);
+		}
 
+		chal_audio_hspath_enable(handle, chnl_enable);
 		break;
 
 	case AUDDRV_PATH_IHF_OUTPUT:
-
-	/*  chnl_enable = CHAL_AUDIO_CHANNEL_LEFT; */
 		if (path[path_id].sample_mode == AUDIO_CHANNEL_STEREO) {
 			chnl_enable =
 			    CHAL_AUDIO_CHANNEL_LEFT | CHAL_AUDIO_CHANNEL_RIGHT;
@@ -835,11 +836,13 @@ void csl_caph_audioh_start(int path_id)
 			chnl_enable = CHAL_AUDIO_CHANNEL_LEFT;
 		}
 
-		chal_audio_ihfpath_set_dac_pwr(handle, chnl_enable);
-		chal_audio_ihfpath_set_gain(handle, 0);
+		if (!audioh_ihf_on) {
+			audioh_ihf_on = 1;
+			chal_audio_ihfpath_set_dac_pwr(handle, chnl_enable);
+			chal_audio_ihfpath_set_gain(handle, 0);
+		}
 		chal_audio_ihfpath_enable(handle, chnl_enable);
 		epIHFStatus |= CSL_CAPH_AUDIOH_IHF_ON;
-
 		break;
 
 	case AUDDRV_PATH_EARPICEC_OUTPUT:
@@ -978,12 +981,14 @@ static void csl_caph_audioh_stop_keep_config(int path_id)
 		break;
 
 	case AUDDRV_PATH_HEADSET_OUTPUT:
+		audioh_hs_on = 0;
 		chal_audio_hspath_int_enable(handle, FALSE, FALSE);
 		chal_audio_hspath_enable(handle, 0);
 		chal_audio_hspath_set_dac_pwr(handle, 0);
 		break;
 
 	case AUDDRV_PATH_IHF_OUTPUT:
+		audioh_ihf_on = 0;
 		chal_audio_ihfpath_int_enable(handle, FALSE, FALSE);
 		chal_audio_ihfpath_enable(handle, 0);
 		chal_audio_ihfpath_set_dac_pwr(handle, 0);
@@ -2316,4 +2321,102 @@ csl_caph_Mic_Gain_t csl_caph_map_mB_gain_to_registerVal(csl_caph_MIC_Path_e mic,
 
 	return outGain;
 
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_audioh_start_hs
+*
+*  Description: start hs path
+*
+****************************************************************************/
+void csl_caph_audioh_start_hs(void)
+{
+	UInt16 chnl_enable = 0;
+
+	aTrace(LOG_AUDIO_CSL, "%s, audioh_hs_on %d\n", __func__, audioh_hs_on);
+
+	/*avoid to enable twice during HW mixing*/
+	if (audioh_hs_on)
+		return;
+	audioh_hs_on = 1;
+
+	/*headset only supports stereo*/
+	chnl_enable = CHAL_AUDIO_CHANNEL_LEFT | CHAL_AUDIO_CHANNEL_RIGHT;
+
+	chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
+	chal_audio_hspath_set_gain(handle, 0);
+	/*chal_audio_hspath_enable(handle, chnl_enable);*/
+}
+
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_audioh_start_ihf
+*
+*  Description: start ihf path
+*
+****************************************************************************/
+void csl_caph_audioh_start_ihf(void)
+{
+	UInt16 chnl_enable = 0;
+
+	aTrace(LOG_AUDIO_CSL, "%s, audioh_ihf_on %d\n",
+		__func__, audioh_ihf_on);
+
+	/*avoid to enable twice during HW mixing*/
+	if (audioh_ihf_on)
+		return;
+	audioh_ihf_on = 1;
+
+	/*ihf only supports mono*/
+	chnl_enable = CHAL_AUDIO_CHANNEL_LEFT;
+
+	chal_audio_ihfpath_set_dac_pwr(handle, chnl_enable);
+	chal_audio_ihfpath_set_gain(handle, 0);
+	/*chal_audio_ihfpath_enable(handle, chnl_enable);*/
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_audioh_stop_hs
+*
+*  Description: stop hs path
+*
+****************************************************************************/
+void csl_caph_audioh_stop_hs(void)
+{
+	aTrace(LOG_AUDIO_CSL, "%s, audioh_hs_on %d\n", __func__, audioh_hs_on);
+
+	if (!audioh_hs_on)
+		return;
+	audioh_hs_on = 0;
+
+	chal_audio_hspath_int_enable(handle, FALSE, FALSE);
+	chal_audio_hspath_enable(handle, 0);
+	chal_audio_hspath_set_dac_pwr(handle, 0);
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_audioh_stop_ihf
+*
+*  Description: stop ihf path
+*
+****************************************************************************/
+void csl_caph_audioh_stop_ihf(void)
+{
+	aTrace(LOG_AUDIO_CSL, "%s, audioh_ihf_on %d\n",
+		__func__, audioh_ihf_on);
+
+	if (!audioh_ihf_on)
+		return;
+	audioh_ihf_on = 0;
+
+	chal_audio_ihfpath_int_enable(handle, FALSE, FALSE);
+	chal_audio_ihfpath_enable(handle, 0);
+	chal_audio_ihfpath_set_dac_pwr(handle, 0);
+	epIHFStatus &= ~CSL_CAPH_AUDIOH_IHF_ON;
+	if (epIHFStatus == 0)
+		chal_audio_earpath_set_dac_pwr(handle, 0);
 }

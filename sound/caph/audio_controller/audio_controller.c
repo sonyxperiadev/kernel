@@ -77,6 +77,8 @@ Only one loopback path can be enabled at a time.*/
 #define HW_SIDETONE_LOOPBACK
 #undef HW_ANALOG_LOOPBACK
 
+#define EANBLE_POP_CONTROL
+
 #define VIBRA_LDO_REGULATOR "2v9_vibra"
 /** Private Type and Constant declarations */
 
@@ -211,6 +213,12 @@ static AudioMode_t currAudioMode_fm = AUDIO_MODE_HEADSET;
 
 static struct regulator *vibra_reg;
 
+/*wait in us, to avoid hs/ihf pop noise*/
+static int wait_bb_on = 1*1000;
+static int wait_hspmu_on = 10*1000;
+static int wait_ihfpmu_on = 20*1000;
+static int wait_pmu_off = 2*1000;
+
 static int isDigiMic(AUDIO_SOURCE_Enum_t source);
 static int needDualMic(AudioMode_t mode, AudioApp_t app);
 static AudioMode_t GetAudioModeFromCaptureDev(CSL_CAPH_DEVICE_e source);
@@ -219,6 +227,24 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 			       int use, int force);
 static void setExternAudioGain(AudioMode_t mode, AudioApp_t app);
 static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app);
+
+static void audioh_start_hs(void)
+{
+#if defined(EANBLE_POP_CONTROL)
+	csl_caph_ControlHWClock(TRUE);
+	csl_caph_audioh_start_hs();
+#endif
+	usleep_range(wait_bb_on, wait_bb_on+1000);
+}
+
+static void audioh_start_ihf(void)
+{
+#if defined(EANBLE_POP_CONTROL)
+	csl_caph_ControlHWClock(TRUE);
+	csl_caph_audioh_start_ihf();
+#endif
+	usleep_range(wait_bb_on, wait_bb_on+2000);
+}
 
 /****************************************************************************
 *
@@ -351,7 +377,6 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 	voiceCallMic = source;
 
 	powerOnExternalAmp(sink, TelephonyUse, TRUE, FALSE);
-
 #ifdef CONFIG_ENABLE_VOIF
 	mode = AUDCTRL_GetAudioMode();
 
@@ -575,7 +600,6 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	if (voiceCallSpkr != sink)
 		powerOnExternalAmp(voiceCallSpkr, TelephonyUse,
 				FALSE, FALSE);
-
 	if (voiceCallMic != source) {
 		if (isDigiMic(voiceCallMic)) {
 			/* Disable power to digital microphone */
@@ -591,13 +615,12 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	}
 
 	AUDDRV_Telephony_Deinit();
+
 	AUDDRV_Telephony_Init(source, sink, mode, app,
 	bNeedDualMic, bmuteVoiceCall);	/* retain the mute flag */
-
 	if (voiceCallSpkr != sink)
 		powerOnExternalAmp(sink, TelephonyUse,
 				TRUE, FALSE);
-
 	voiceCallSpkr = sink;
 	voiceCallMic = source;
 }
@@ -1406,6 +1429,7 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 		if (bInVoiceCall != TRUE)
 			AUDDRV_DisableDSPOutput();
 
+#if !defined(EANBLE_POP_CONTROL)
 	if ((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)
 	    || sink == AUDIO_SINK_BTS)
 		;
@@ -1413,12 +1437,13 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 		config.pathID = pathID;
 		(void)csl_caph_hwctrl_DisablePath(config);
 	}
+#endif
 
 	/* Need CSL API to obtain the pathID from the same speaker info.
 	   This is to make sure that PMU is not disabled if any other
 	   path is using the same speaker */
 
-	path = csl_caph_FindPathID(sink_dev, src_dev);
+	path = csl_caph_FindPathID(sink_dev, src_dev, pathID);
 
 	/*Disable the PMU for HS/IHF */
 	if (path) {
@@ -1441,7 +1466,15 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 			AUDCTRL_RemoveAudioApp(AUDIO_APP_MUSIC);
 		}
 	}
-
+#if defined(EANBLE_POP_CONTROL)
+	if ((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)
+	    || sink == AUDIO_SINK_BTS)
+		;
+	else {
+		config.pathID = pathID;
+		(void)csl_caph_hwctrl_DisablePath(config);
+	}
+#endif
 	if (sink == AUDIO_SINK_VIBRA) {
 		if (vibra_reg) {
 			ret = regulator_disable(vibra_reg);
@@ -1865,6 +1898,17 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 					   FALSE, FALSE);
 	}
 
+#if defined(EANBLE_POP_CONTROL)
+	if (source == AUDIO_SOURCE_I2S && AUDCTRL_InVoiceCall() == FALSE
+		&& fmPlayStarted == TRUE) {
+		if (sink == AUDIO_SINK_LOUDSPK || sink == AUDIO_SINK_HEADSET)
+			powerOnExternalAmp(sink, FmUse, TRUE, FALSE);
+	} else {
+		if (sink == AUDIO_SINK_LOUDSPK || sink == AUDIO_SINK_HEADSET)
+			powerOnExternalAmp(sink, AudioUse, TRUE, FALSE);
+	}
+#endif
+
 	/* add new spk first... */
 	if (getDeviceFromSink(sink) != CSL_CAPH_DEV_NONE) {
 		config.source = getDeviceFromSrc(source);
@@ -1880,18 +1924,19 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 
 	if (source == AUDIO_SOURCE_I2S && AUDCTRL_InVoiceCall() == FALSE
 		&& fmPlayStarted == TRUE) {
+#if !defined(EANBLE_POP_CONTROL)
 		if (sink == AUDIO_SINK_LOUDSPK || sink == AUDIO_SINK_HEADSET)
 			powerOnExternalAmp(sink, FmUse, TRUE, FALSE);
-
+#endif
 		AUDCTRL_SetAudioMode_ForFM(
 			GetAudioModeBySink(sink), pathID, FALSE);
 	} else {
+#if !defined(EANBLE_POP_CONTROL)
 		if (sink == AUDIO_SINK_LOUDSPK || sink == AUDIO_SINK_HEADSET)
 			powerOnExternalAmp(sink, AudioUse, TRUE, FALSE);
-
+#endif
 		AUDCTRL_SetAudioMode_ForMusicPlayback(
 			GetAudioModeBySink(sink), pathID, FALSE);
-
 	}
 
 	return;
@@ -2747,7 +2792,7 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		src_dev = getDeviceFromSrc(mic);
 		sink_dev = getDeviceFromSink(speaker);
 
-		pathID = csl_caph_FindPathID(sink_dev, src_dev);
+		pathID = csl_caph_FindPathID(sink_dev, src_dev, 0);
 
 		if (pathID == 0) {
 			audio_xassert(0, pathID);
@@ -3044,6 +3089,9 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 		break;
 	case AUDCTRL_HW_CFG_MFD:
 		isMFD = arg1 ? TRUE : FALSE;
+		break;
+	case AUDCTRL_HW_CFG_WAIT:
+		AUDCTRL_ConfigWait(arg1, arg2);
 		break;
 
 	case AUDCTRL_HW_WRITE_GAIN:
@@ -3430,13 +3478,16 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 					"power OFF pmu HS amp\n");
 
 				extern_hs_off();
+				usleep_range(wait_pmu_off, wait_pmu_off+2000);
 			}
 			HS_IsOn = FALSE;
 		} else {
 			if (HS_IsOn != TRUE && ampControl == TRUE) {
 				aTrace(LOG_AUDIO_CNTLR,
 					"powerOnExternalAmp power on HS");
+				audioh_start_hs();
 				extern_hs_on();
+				usleep_range(wait_hspmu_on, wait_hspmu_on+2000);
 			}
 
 			setExternAudioGain(GetAudioModeBySink(speaker),
@@ -3451,13 +3502,17 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 				aTrace(LOG_AUDIO_CNTLR,
 					"power OFF pmu IHF amp\n");
 				extern_ihf_off();
+				usleep_range(wait_pmu_off, wait_pmu_off+2000);
 			}
 			IHF_IsOn = FALSE;
 		} else {
 			if (IHF_IsOn != TRUE && ampControl == TRUE) {
 				aTrace(LOG_AUDIO_CNTLR,
 					"powerOnExternalAmp power on IHF");
+				audioh_start_ihf();
 				extern_ihf_on();
+				usleep_range(wait_ihfpmu_on,
+					wait_ihfpmu_on+2000);
 		}
 
 		setExternAudioGain(GetAudioModeBySink(speaker),
@@ -3571,4 +3626,43 @@ static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app)
 	user_vol_setting[app][mode].R = (short)p->srcmixer_output_fine_gain_r;
 	user_vol_setting[app][mode].R *= 25;
 	user_vol_setting[app][mode].valid = TRUE;
+}
+
+/********************************************************************
+*  @brief  Configure wait duration
+*
+*  @param  wait_id	wait id
+*
+*  @param  wait_length	wait duration in ms
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_ConfigWait(int wait_id, int wait_length)
+{
+	int *p_wait = NULL, old_wait = 0, new_wait = wait_length*1000;
+
+	switch (wait_id) {
+	case AUDCTRL_WAIT_BASEBAND_ON:
+		p_wait = &wait_bb_on;
+		break;
+	case AUDCTRL_WAIT_HSPMU_ON:
+		p_wait = &wait_hspmu_on;
+		break;
+	case AUDCTRL_WAIT_IHFPMU_ON:
+		p_wait = &wait_ihfpmu_on;
+		break;
+	case AUDCTRL_WAIT_PMU_OFF:
+		p_wait = &wait_pmu_off;
+		break;
+	default:
+		break;
+	}
+
+	if (p_wait) {
+		old_wait = *p_wait;
+		*p_wait = new_wait;
+	}
+	aTrace(LOG_AUDIO_CNTLR, "%s wait id %d length %d to %d us\n",
+		__func__, wait_id, old_wait, new_wait);
 }

@@ -4762,7 +4762,9 @@ CSL_CAPH_HWConfig_Table_t *csl_caph_FindCapturePath(unsigned int streamID)
 *
 *****************************************************************************/
 CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
-	CSL_CAPH_DEVICE_e src_dev)
+	CSL_CAPH_DEVICE_e src_dev,
+	CSL_CAPH_PathID skip_path/*skip this path*/
+	)
 {
 	int i, j;
 	CSL_CAPH_PathID pathID = 0;
@@ -4772,11 +4774,15 @@ CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
 			if (HWConfig_Table[i].sink[j] == sink_dev
 			    && HWConfig_Table[i].source == src_dev) {
 				pathID = HWConfig_Table[i].pathID;
-				break;
+				if (skip_path != pathID)
+					break;
+				pathID = 0;
 			}
 		}
 	}
 
+	aTrace(LOG_AUDIO_CSL, "%s sink %d src %d skip_path %d, pathID %d\n",
+		__func__, sink_dev, src_dev, skip_path, pathID);
 	return pathID;
 }
 

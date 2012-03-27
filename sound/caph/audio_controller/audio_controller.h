@@ -59,6 +59,7 @@ enum __AUDCTRL_HW_ACCESS_TYPE_en_t {
 	AUDCTRL_HW_CFG_SSP,
 	AUDCTRL_HW_CFG_MFD,
 	AUDCTRL_HW_CFG_CLK,
+	AUDCTRL_HW_CFG_WAIT,
 	/* below are for internal purposes */
 	AUDCTRL_HW_READ_GAIN = 20,
 	AUDCTRL_HW_WRITE_GAIN,
@@ -102,6 +103,14 @@ enum __AUDCTRL_GAIN_POINT_en_t {
 
 };
 #define AUDCTRL_GAIN_POINT_en_t enum __AUDCTRL_GAIN_POINT_en_t
+
+enum __AUDCTRL_WAIT_e {
+	AUDCTRL_WAIT_BASEBAND_ON,
+	AUDCTRL_WAIT_HSPMU_ON,
+	AUDCTRL_WAIT_IHFPMU_ON,
+	AUDCTRL_WAIT_PMU_OFF,
+};
+#define AUDCTRL_WAIT_e enum __AUDCTRL_WAIT_e
 
 /**
 *  @brief  This function is the Init entry point for Audio Controller
@@ -789,5 +798,17 @@ Boolean AUDCTRL_GetSRCClock(void);
 *
 ****************************************************************************/
 void ReloadUserVolSettingFromSysparm(void);
+
+/********************************************************************
+*  @brief  Configure wait duration
+*
+*  @param  wait_id	wait id
+*
+*  @param  wait_length	wait duration in ms
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_ConfigWait(int wait_id, int wait_length);
 
 #endif /* #define __AUDIO_CONTROLLER_H__ */
