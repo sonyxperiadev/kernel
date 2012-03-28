@@ -2,14 +2,14 @@
 *
 *     Copyright (c) 2009 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 #include <linux/module.h>
@@ -56,18 +56,18 @@
 static int __init bcm_fuse_net_init_module(void);
 static void __exit bcm_fuse_net_exit_module(void);
 
-// used to generate valid RPC client ID for fuse_net driver
+/* used to generate valid RPC client ID for fuse_net driver */
 extern unsigned char SYS_GenClientID(void);
 
 /**
-   Packet Data EndPoint buffer pool info
+ * Packet Data EndPoint buffer pool info
  */
 #define BCM_NET_MAX_DATA_LEN       1600	/* bytes */
 #define BCM_NET_MAX_NUM_PKTS       250	/* packets */
 
 #define BCM_DUALSIM_SIMID_NETIOCTL (SIOCDEVPRIVATE + 1)
 
-//ip protocol header
+/* ip protocol header */
 #define IPV6_PROTOCOL_HEADER 0x60
 #define PROTOCOL_HEADER_OFFSET 0xf0
 
@@ -99,15 +99,16 @@ static uint8_t bcm_fuse_net_pdp_id(net_drvr_info_t *drvr_info_ptr);
 static uint8_t bcm_fuse_net_find_entry(net_drvr_info_t *ndrvr_info_ptr);
 static void bcm_fuse_net_free_entry(uint8_t pdp_cid);
 
-/** 
-	Definitions for bcm_fuse_net proc entry
-*/
+/**
+ * Definitions for bcm_fuse_net proc entry
+ */
 #define BCM_FUSE_NET_PROC_MAX_STR_LEN       15
+
 static struct proc_dir_entry *bcm_fuse_net_config_proc_entry;
 
-/** 
-	Write function for bcm_fuse_net proc entry
-*/
+/**
+ * Write function for bcm_fuse_net proc entry
+ */
 static ssize_t bcm_fuse_net_proc_write(struct file *procFp,
 				       const char __user *ubuff,
 				       unsigned long len, void *data)
@@ -150,10 +151,10 @@ static ssize_t bcm_fuse_net_proc_write(struct file *procFp,
 		g_net_dev_tbl[proc_idx].sim_id = proc_sim_id;
 	}
 
-	return ((ssize_t) length);
+	return (ssize_t) length;
 }
 
-/** 
+/**
 	Read function for bcm_fuse_net proc entry
 */
 static int bcm_fuse_net_proc_read(char *ubuff, char **start, off_t off,
@@ -190,7 +191,7 @@ static void bcm_fuse_net_fc_cb(RPC_FlowCtrlEvent_t event, unsigned char cid)
 	net_drvr_info_t *ndrvr_info_ptr = NULL;
 
 	if (printk_ratelimit())
-	   BNET_DEBUG(DBG_INFO,"%s: flow control for all data channel \n", __FUNCTION__);
+	   BNET_DEBUG(DBG_INFO,"%s: flow control for all data channel\n", __FUNCTION__);
 
 	Note that, cid here from rpc_ipc.c implmentation is the pool index, where current
 	implementation in ipc is that "All channels use the same buffer pool"
@@ -257,7 +258,7 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType,
 	unsigned char *data_ptr = NULL;
 	net_drvr_info_t *ndrvr_info_ptr = NULL;
 
-	/* BNET_DEBUG(DBG_INFO,"%s: receive packet \n", __FUNCTION__); */
+	/* BNET_DEBUG(DBG_INFO,"%s: receive packet\n", __FUNCTION__); */
 
 	data_len = RPC_PACKET_GetBufferLength(dataBufHandle);
 
@@ -348,7 +349,7 @@ static int bcm_fuse_net_open(struct net_device *dev)
 
 	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
 		BNET_DEBUG(DBG_INFO,
-			   "%s: g_net_dev_tbl[%d]=0x%x,dev_ptr 0x%x, dev 0x%x, 0x%x \n",
+			   "%s: g_net_dev_tbl[%d]=0x%x,dev_ptr 0x%x, dev 0x%x, 0x%x\n",
 			   __FUNCTION__, i, (unsigned int)(&g_net_dev_tbl[i]),
 			   (unsigned int)(g_net_dev_tbl[i].dev_ptr),
 			   (unsigned int)dev, (unsigned int)(&ndrvr_info_ptr));
@@ -409,7 +410,7 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
 			sim_id = g_net_dev_tbl[i].sim_id;
 			t_ndrvr_info_ptr = &g_net_dev_tbl[i];
 			BNET_DEBUG(DBG_TRACE,
-				   "%s: g_net_dev_tbl[%d]=0x%x, a_sim_id %d, sim_id %d \n",
+				   "%s: g_net_dev_tbl[%d]=0x%x, a_sim_id %d, sim_id %d\n",
 				   __FUNCTION__, i,
 				   (unsigned int)(&g_net_dev_tbl[i]),
 				   g_net_dev_tbl[i].sim_id, sim_id);
@@ -492,7 +493,7 @@ static struct net_device_stats *bcm_fuse_net_stats(struct net_device *dev)
 	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
 		if (g_net_dev_tbl[i].dev_ptr == dev) {
 			ndrvr_info_ptr = &g_net_dev_tbl[i];
-			/* BNET_DEBUG(DBG_INFO,"%s: g_net_dev_tbl[%d]=0x%x \n", __FUNCTION__, i, &g_net_dev_tbl[i]); */
+			/* BNET_DEBUG(DBG_INFO,"%s: g_net_dev_tbl[%d]=0x%x\n", __FUNCTION__, i, &g_net_dev_tbl[i]); */
 			break;
 		}
 	}
@@ -521,7 +522,7 @@ int bcm_fuse_net_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	int i, sim_id = 3;
 
 	if (BCM_DUALSIM_SIMID_NETIOCTL != cmd)
-		BNET_DEBUG(DBG_INFO, "%s: Incorrect IOCTL ID 0x%x \n",
+		BNET_DEBUG(DBG_INFO, "%s: Incorrect IOCTL ID 0x%x\n",
 			   __FUNCTION__, cmd);
 
 	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
@@ -529,7 +530,7 @@ int bcm_fuse_net_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			sim_id = *(int *)ifr->ifr_data;
 			g_net_dev_tbl[i].sim_id = sim_id;
 			BNET_DEBUG(DBG_ERROR,
-				   "%s: g_net_dev_tbl[%d]=0x%x, a_sim_id:%d, sim_id:%d \n",
+				   "%s: g_net_dev_tbl[%d]=0x%x, a_sim_id:%d, sim_id:%d\n",
 				   __FUNCTION__, i,
 				   (unsigned int)(&g_net_dev_tbl[i]),
 				   g_net_dev_tbl[i].sim_id, sim_id);
@@ -577,7 +578,7 @@ static int bcm_fuse_net_attach(unsigned int dev_index)
 
 	if (dev_index >= BCM_NET_MAX_PDP_CNTXS) {
 		BNET_DEBUG(DBG_ERROR,
-			   "%s: Invalid dev_index[%d] passed as parameter \n",
+			   "%s: Invalid dev_index[%d] passed as parameter\n",
 			   __FUNCTION__, dev_index);
 		return -1;
 	}
@@ -627,7 +628,7 @@ static int bcm_fuse_net_deattach(unsigned int dev_index)
 
 	if (dev_index >= BCM_NET_MAX_PDP_CNTXS) {
 		BNET_DEBUG(DBG_ERROR,
-			   "%s: Invalid dev_index[%d] passed as parameter \n",
+			   "%s: Invalid dev_index[%d] passed as parameter\n",
 			   __FUNCTION__, dev_index);
 		return -1;
 	}
@@ -676,7 +677,7 @@ static net_drvr_info_t *bcm_fuse_net_device_pdp_lookup(uint8_t pdp_context_id)
 		   "%s: No network device mapping for PDP context id[%d]\n",
 		   __FUNCTION__, pdp_context_id);
 
-      FOUND_ENTRY:
+FOUND_ENTRY:
 	spin_unlock_irqrestore(&g_dev_lock, flags);
 
 	return drvr_info_ptr;
@@ -691,9 +692,8 @@ static uint8_t bcm_fuse_net_find_entry(net_drvr_info_t *ndrvr_info_ptr)
 	unsigned long flags;
 	uint8_t dev_idx = BCM_NET_MAX_PDP_CNTXS;
 
-	if (ndrvr_info_ptr == NULL) {
+	if (ndrvr_info_ptr == NULL)
 		return dev_idx;
-	}
 
 	spin_lock_irqsave(&g_dev_lock, flags);
 
@@ -709,7 +709,7 @@ static uint8_t bcm_fuse_net_find_entry(net_drvr_info_t *ndrvr_info_ptr)
 	BNET_DEBUG(DBG_ERROR, "%s: Entry for device interface in use\n",
 		   __FUNCTION__);
 
-      FOUND_ENTRY:
+FOUND_ENTRY:
 	spin_unlock_irqrestore(&g_dev_lock, flags);
 
 	return dev_idx;
@@ -738,7 +738,7 @@ static void bcm_fuse_net_free_entry(uint8_t pdp_cid)
 		}
 	}
 
-      FREE_ENTRY_EXIT:
+FREE_ENTRY_EXIT:
 	spin_unlock_irqrestore(&g_dev_lock, flags);
 
 	return;
@@ -753,9 +753,8 @@ static uint8_t bcm_fuse_net_pdp_id(net_drvr_info_t *drvr_info_ptr)
 	unsigned long flags;
 	uint8_t pdp_cid = BCM_NET_INVALID_PDP_CNTX;
 
-	if (drvr_info_ptr == NULL) {
+	if (drvr_info_ptr == NULL)
 		return pdp_cid;
-	}
 
 	spin_lock_irqsave(&g_dev_lock, flags);
 
@@ -772,7 +771,7 @@ static uint8_t bcm_fuse_net_pdp_id(net_drvr_info_t *drvr_info_ptr)
 	BNET_DEBUG(DBG_ERROR, "%s: No PDP context id for net devie [%p]\n",
 		   __FUNCTION__, drvr_info_ptr->dev_ptr);
 
-      FOUND_ENTRY:
+FOUND_ENTRY:
 	spin_unlock_irqrestore(&g_dev_lock, flags);
 
 	return pdp_cid;
@@ -803,39 +802,37 @@ static net_drvr_info_t *bcm_fuse_net_device_cid_lookup(unsigned char cid)
 	BNET_DEBUG(DBG_ERROR, "%s: No network device mapping for cid[%d]\n",
 		   __FUNCTION__, cid);
 
-      FOUND_ENTRY:
+FOUND_ENTRY:
 	spin_unlock_irqrestore(&g_dev_lock, flags);
 
 	return drvr_info_ptr;
 }
-#endif //#ifdef INCLUDE_UNUSED_CODE
+#endif /*#ifdef INCLUDE_UNUSED_CODE */
 
 static int __init bcm_fuse_net_init_module(void)
 {
 	unsigned int i = 0;
 
-	BNET_DEBUG(DBG_INFO, "%s: << \n", __FUNCTION__);
+	BNET_DEBUG(DBG_INFO, "%s: <<\n", __FUNCTION__);
 	spin_lock_init(&g_dev_lock);
 
-	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
+	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
 		memset(&g_net_dev_tbl[i], 0, sizeof(net_drvr_info_t));
-	}
 
-	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
+	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
 		bcm_fuse_net_attach(i);
-	}
 
 	/* proc entry for net config settings */
 	bcm_fuse_net_config_proc_entry =
 	    create_proc_entry("bcm_fuse_net_config", 0666, NULL);
 	if (bcm_fuse_net_config_proc_entry == NULL) {
 		BNET_DEBUG(DBG_INFO,
-			   "%s: Couldn't create bcm_fuse_net_config_proc_entry! \n",
-			   __FUNCTION__);
+		   "%s: Couldn't create bcm_fuse_net_config_proc_entry!\n",
+		   __FUNCTION__);
 	} else {
 		BNET_DEBUG(DBG_INFO,
-			   "%s: bcm_fuse_net_config_proc_entry created \n",
-			   __FUNCTION__);
+		   "%s: bcm_fuse_net_config_proc_entry created\n",
+		   __FUNCTION__);
 		bcm_fuse_net_config_proc_entry->write_proc =
 		    bcm_fuse_net_proc_write;
 		bcm_fuse_net_config_proc_entry->read_proc =
@@ -852,9 +849,8 @@ static void __exit bcm_fuse_net_exit_module(void)
 {
 	unsigned int i = 0;
 
-	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
+	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
 		bcm_fuse_net_deattach(i);
-	}
 
 	remove_proc_entry("bcm_fuse_net_sim", bcm_fuse_net_config_proc_entry);
 
