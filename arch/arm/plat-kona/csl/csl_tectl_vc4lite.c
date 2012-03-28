@@ -19,7 +19,7 @@
 *  @brief  TE (tearing) Control CSL driver
 *
 ****************************************************************************/
-#if ( defined (_HERA_)  || defined(_RHEA_) || defined(_SAMOA_) )
+#if (defined(_RHEA_))
 
 // use PMUX_DRV for enabling TE inputs, otherwise set MUX Control Directly
 //#define __USE_PMUX_DRV__
@@ -43,16 +43,6 @@
 
 #define TE_IN_COUNT     (3)
 
-// default STD Pad Control: P-UP MODE=3 ? ( same as reset value from RDB )
-//                          MUX control bits [10..08]
-#define PAD_CTRL_STD    0x00000023
-
-#define PAD_CTRL_LCDTE  ((volatile UInt32*) HW_IO_PHYS_TO_VIRT(0x350048E4))	//   LCD_TE
-#ifndef __USE_PMUX_DRV__
-#define PAD_CTRL_DSI0TE ((volatile UInt32*) HW_IO_PHYS_TO_VIRT(0x35004838))	//   DSI0TE
-#define PAD_CTRL_GPIO28 ((volatile UInt32*) HW_IO_PHYS_TO_VIRT(0x350048AC))	//   DSI1TE
-#endif
-
 // Local CSL Config
 typedef struct {
 	cBool inUse;
@@ -64,72 +54,6 @@ typedef struct {
 static CSL_TE_CFG_t teCslCfg[TE_IN_COUNT];
 
 static Int32 csl_tectl_vc4l_CfgInput(UInt32 teIn, pTECTL_CFG teCfg);
-static void cslTectlEnableLcdTeMux(void);
-static void cslTectlEnableDsi0TeMux(void);
-static void cslTectlEnableDsi1TeMux(void);
-
-//*****************************************************************************
-//
-// Function Name:  cslTectlEnableDsi1TeMux
-// 
-// Description:    Select LCD TE Chip Input
-//                 
-//*****************************************************************************
-static void cslTectlEnableLcdTeMux(void)
-{
-#ifndef __KERNEL__
-#ifndef FPGA_VERSION
-	// (0)LCDTE or (1)LCDTE
-	// (4)GPIO42
-	*PAD_CTRL_LCDTE = PAD_CTRL_STD | (0x0 << 8);
-#endif
-#endif
-}
-
-//*****************************************************************************
-//
-// Function Name:  cslTectlEnableDsi0TeMux
-// 
-// Description:    Select DSI0 TE Chip Input
-//                 
-//*****************************************************************************
-static void cslTectlEnableDsi0TeMux(void)
-{
-#ifndef FPGA_VERSION
-#ifdef __USE_PMUX_DRV__
-	PinMuxConfig_t pmuxCfg;
-
-	// module 0  DSI0TE   (0)GPIO37  (4)DSI0TE 
-	pmuxCfg.DWord = PAD_CTRL_STD;
-	pmuxCfg.PinMuxConfigBitField.mux = 4;
-	PMUXDRV_Config_DSI(0, pmuxCfg);	// first par = DSI module
-#else
-	*PAD_CTRL_DSI0TE = PAD_CTRL_STD | (4 << 8);
-#endif
-#endif
-}
-
-//*****************************************************************************
-//
-// Function Name:  cslTectlEnableDsi1TeMux
-// 
-// Description:    Select DSI1 TE Chip Input
-//                 
-//*****************************************************************************
-static void cslTectlEnableDsi1TeMux(void)
-{
-#ifndef FPGA_VERSION
-#ifdef __USE_PMUX_DRV__
-	PinMuxConfig_t pmuxCfg;
-	// module 1  GPIO28   (0)GPIO28  (1)DSI1TE
-	pmuxCfg.DWord = PAD_CTRL_STD;
-	pmuxCfg.PinMuxConfigBitField.mux = 1;
-	PMUXDRV_Config_DSI(1, pmuxCfg);	// first par = DSI module
-#else
-	*PAD_CTRL_GPIO28 = PAD_CTRL_STD | (1 << 8);
-#endif
-#endif
-}
 
 //*****************************************************************************
 //
@@ -185,13 +109,10 @@ static Int32 csl_tectl_vc4l_CfgInput(UInt32 teIn, pTECTL_CFG teCfg)
 
 	if (teIn == TE_VC4L_IN_0_LCD) {
 		teCslCfg[teIn].teIn_cHal = TE_VC4L_IN_0;	//  HERA's LCD_TE  input
-		cslTectlEnableLcdTeMux();
 	} else if (teIn == TE_VC4L_IN_1_DSI0) {
 		teCslCfg[teIn].teIn_cHal = TE_VC4L_IN_1;	//  HERA's DSI0_TE input
-		cslTectlEnableDsi0TeMux();
 	} else if (teIn == TE_VC4L_IN_2_DSI1) {
 		teCslCfg[teIn].teIn_cHal = TE_VC4L_IN_2;	//  HERA's DSI1_TE input
-		cslTectlEnableDsi1TeMux();
 	}
 
 	teCslCfg[teIn].teCfg.hsync_line = teCfg->hsync_line;
@@ -239,4 +160,4 @@ Int32 CSL_TECTL_VC4L_OpenInput(UInt32 teIn,	// which TE Input Pin
 
 #else
 #error "[CSL TECTL] ERROR: Available For HERA/RHEA Only!"
-#endif // #if ( defined (_HERA_)  || defined(_RHEA_))
+#endif // #if (defined(_RHEA_))
