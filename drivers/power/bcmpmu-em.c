@@ -952,9 +952,9 @@ static unsigned char em_batt_get_batt_health(struct bcmpmu *pmu, int volt, int t
 	int health;
 	if (volt > 4200)
 		health = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
-	else if (volt < 3000)
+	else if (volt < pem->cutoff_volt)
 		health = POWER_SUPPLY_HEALTH_DEAD;
-	else if (temp > 350)
+	else if (temp > 341)
 		health = POWER_SUPPLY_HEALTH_OVERHEAT;
 	else
 		health = POWER_SUPPLY_HEALTH_GOOD;
@@ -1322,7 +1322,7 @@ static void em_algorithm(struct work_struct *work)
 		__func__, capacity, pem->batt_volt, pem->batt_curr);
 	save_fg_cap(pem->bcmpmu, capacity);
 
-	propval.intval = pem->batt_temp;
+	propval.intval = (pem->batt_temp - 273) * 10;
 	ps->set_property(ps, POWER_SUPPLY_PROP_TEMP, &propval);
 
 	propval.intval = em_batt_get_capacity_lvl(pem, capacity);
