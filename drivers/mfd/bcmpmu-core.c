@@ -356,22 +356,22 @@ static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 			ntc.mask = 0xff;
 			ntc.addr = ntc.addr & 0xff;
 
-			printk(KERN_DEBUG "BCMPMU ntc register=0x%X, val=0x%X, map=0x%X\n",
+			printk(KERN_DEBUG "BCMPMU ntc register=0x%X, val=0x%lX, map=0x%X\n",
 				ntc.addr, ntc.val[0], ntc.map);
 			if (ntc.addr == 0x13) {
-				printk(KERN_DEBUG "BCMPMU NTCHT_RISE  val=0x%X\n",
+				printk(KERN_DEBUG "BCMPMU NTCHT_RISE  val=0x%lX\n",
 					ntc.val[0]);
 				bcmpmu_ntcht_rise_set(ntc.val[0]);
 			} else if (ntc.addr == 0x14) {
-				printk(KERN_DEBUG "BCMPMU NTCHT_FALL  val=0x%X\n",
+				printk(KERN_DEBUG "BCMPMU NTCHT_FALL  val=0x%lX\n",
 					ntc.val[0]);
 				bcmpmu_ntcht_fall_set(ntc.val[0]);
 			} else if (ntc.addr == 0x15) {
-				printk(KERN_DEBUG "BCMPMU NTCCT_RISE  val=0x%X\n",
+				printk(KERN_DEBUG "BCMPMU NTCCT_RISE  val=0x%lX\n",
 					ntc.val[0]);
 				bcmpmu_ntcct_rise_set(ntc.val[0]);
 			} else if (ntc.addr == 0x16) {
-				printk(KERN_DEBUG "BCMPMU NTCCT_FALL  val=0x%X\n",
+				printk(KERN_DEBUG "BCMPMU NTCCT_FALL  val=0x%lX\n",
 					ntc.val[0]);
 				bcmpmu_ntcct_fall_set(ntc.val[0]);
 			}
