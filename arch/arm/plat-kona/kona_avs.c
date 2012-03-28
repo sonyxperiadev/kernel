@@ -50,10 +50,36 @@ module_param_named(silicon_type, avs_info.silicon_type, int, S_IRUGO);
 module_param_named(svt_silicon_type, avs_info.svt_silicon_type, int, S_IRUGO);
 module_param_named(lvt_silicon_type, avs_info.lvt_silicon_type, int, S_IRUGO);
 
-module_param_named(avs_mon_val0, avs_info.monitor_val0, int, S_IRUGO);
-module_param_named(avs_mon_val1, avs_info.monitor_val1, int, S_IRUGO);
-module_param_named(avs_mon_val2, avs_info.monitor_val2, int, S_IRUGO);
-module_param_named(avs_mon_val3, avs_info.monitor_val3, int, S_IRUGO);
+module_param_named(avs_mon_val0, avs_info.monitor_val0, int, S_IRUGO | S_IWUSR
+			| S_IWGRP);
+module_param_named(avs_mon_val1, avs_info.monitor_val1, int, S_IRUGO | S_IWUSR
+			| S_IWGRP);
+module_param_named(avs_mon_val2, avs_info.monitor_val2, int, S_IRUGO | S_IWUSR
+			| S_IWGRP);
+module_param_named(avs_mon_val3, avs_info.monitor_val3, int, S_IRUGO | S_IWUSR
+			| S_IWGRP);
+
+struct trigger_avs {
+	int dummy;
+};
+
+#define __param_check_trigger_avs(name, p, type) \
+	static inline struct type *__check_##name(void) { return (p); }
+
+#define param_check_trigger_avs(name, p) \
+	__param_check_trigger_avs(name, p, trigger_avs)
+
+static int param_set_trigger_avs(const char *val,
+			const struct kernel_param *kp);
+static struct kernel_param_ops param_ops_trigger_avs = {
+	.set = param_set_trigger_avs,
+};
+
+static struct trigger_avs trigger_avs;
+module_param_named(trigger_avs, trigger_avs, trigger_avs,
+				S_IWUSR | S_IWGRP);
+
+
 
 struct mon_val {
 
@@ -211,6 +237,44 @@ static u32 kona_avs_get_lvt_type(struct avs_info *avs_inf_ptr)
 					   lvt_nmos_inx];
 }
 
+static int avs_find_silicon_type(void)
+{
+	if (!avs_info.pdata)
+		return  -EPERM;
+
+	avs_info.svt_silicon_type = kona_avs_get_svt_type(&avs_info);
+	avs_info.lvt_silicon_type = kona_avs_get_lvt_type(&avs_info);
+	avs_info.silicon_type = min(avs_info.lvt_silicon_type,
+				avs_info.svt_silicon_type);
+	if (avs_info.pdata->silicon_type_notify)
+		avs_info.pdata->silicon_type_notify(avs_info.silicon_type);
+	pr_info("%s:svt type: %d lvt type: %d  silicon type: %d\n",
+		__func__, avs_info.svt_silicon_type, avs_info.lvt_silicon_type,
+		avs_info.silicon_type);
+
+	return 0;
+}
+
+static int param_set_trigger_avs(const char *val, const struct kernel_param *kp)
+{
+	int trig;
+	int ret = -1;
+
+	pr_info("%s\n", __func__);
+	if (!val)
+		return -EINVAL;
+	if (!avs_info.pdata) {
+		pr_info("%s : invalid paltform data !!\n", __func__);
+		return  -EPERM;
+	}
+	ret = sscanf(val, "%d", &trig);
+	pr_info("%s, trig:%d\n", __func__, trig);
+	if (trig == 1)
+		avs_find_silicon_type();
+
+	return 0;
+}
+
 static int kona_avs_drv_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -235,17 +299,8 @@ static int kona_avs_drv_probe(struct platform_device *pdev)
 	if (ret)
 		goto error;
 
-	avs_info.svt_silicon_type = kona_avs_get_svt_type(&avs_info);
-	avs_info.lvt_silicon_type = kona_avs_get_lvt_type(&avs_info);
+	avs_find_silicon_type();
 
-	avs_info.silicon_type =
-	    min(avs_info.lvt_silicon_type, avs_info.svt_silicon_type);
-
-	if (pdata->silicon_type_notify)
-		pdata->silicon_type_notify(avs_info.silicon_type);
-	pr_info("%s:svt type: %d lvt type: %d  silicon type: %d\n", __func__,
-		avs_info.svt_silicon_type, avs_info.lvt_silicon_type,
-		avs_info.silicon_type);
 error:
 	return ret;
 }
