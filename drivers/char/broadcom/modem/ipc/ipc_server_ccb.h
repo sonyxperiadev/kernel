@@ -22,109 +22,109 @@
 #include <linux/broadcom/IPCInterface.h>
 #endif
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     IPC Server Client Callback Init
-    	Register for all endpoints during initialization
+	Register for all endpoints during initialization
 
-    @param  None     
+    @param  None
 
     @special
-        None.
-    
+	None.
+
     @retval   0 - success
 
     @ingroup  IPC_PROXY_SERVER
 */
 int ipcs_ccb_init(void);
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     Default Capi2App endpoint flow_control handler
 
-    @param  IPC_BufferPool     
+    @param  IPC_BufferPool
     @param  IPC_FlowCtrlEvent_T
 
     @special
-        None.
-    
+	None.
+
     @retval   None
 
     @ingroup  IPC_PROXY_SERVER
 */
 void ipcs_capi2app_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event);
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     Default Capi2App buffer_delivery handler
 
-    @param  IPC_Buffer     
+    @param  IPC_Buffer
 
     @special
-        None.
-    
+	None.
+
     @retval   None
 
     @ingroup  IPC_PROXY_SERVER
 */
 void ipcs_capi2app_bd(IPC_Buffer ipc_buffer);
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     Default Capi2AppData endpoint flow_control handler
 
-    @param  IPC_BufferPool     
+    @param  IPC_BufferPool
     @param  IPC_FlowCtrlEvent_T
 
     @special
-        None.
-    
+	None.
+
     @retval   None
 
     @ingroup  IPC_PROXY_SERVER
 */
 void ipcs_capi2psd_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event);
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     Default Capi2AppData buffer_delivery handler
 
-    @param  IPC_Buffer     
+    @param  IPC_Buffer
 
     @special
-        None.
-    
+	None.
+
     @retval   None
 
     @ingroup  IPC_PROXY_SERVER
 */
 void ipcs_capi2psd_bd(IPC_Buffer ipc_buffer);
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     Default LogApps endpoint flow_control handler
 
-    @param  IPC_BufferPool     
+    @param  IPC_BufferPool
     @param  IPC_FlowCtrlEvent_T
 
     @special
-        None.
-    
+	None.
+
     @retval   None
 
     @ingroup  IPC_PROXY_SERVER
 */
 void ipcs_cplog_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event);
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     Default LogApps buffer_delivery handler
 
-    @param  IPC_Buffer     
+    @param  IPC_Buffer
 
     @special
-        None.
-    
+	None.
+
     @retval   None
 
     @ingroup  IPC_PROXY_SERVER
@@ -133,66 +133,66 @@ void ipcs_cplog_bd(IPC_Buffer ipc_buffer);
 
 void ipcs_log_BufferDelivery(IPC_Buffer buffer);
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     Default AudioControl endpoint flow_control handler
 
-    @param  IPC_BufferPool     
+    @param  IPC_BufferPool
     @param  IPC_FlowCtrlEvent_T
 
     @special
-        None.
-    
+	None.
+
     @retval   None
 
     @ingroup  IPC_PROXY_SERVER
 */
 void ipcs_audioctrl_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event);
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     Default AudioControl buffer_delivery handler
 
-    @param  IPC_Buffer     
+    @param  IPC_Buffer
 
     @special
-        None.
-    
+	None.
+
     @retval   None
 
     @ingroup  IPC_PROXY_SERVER
 */
 void ipcs_audioctrl_bd(IPC_Buffer ipc_buffer);
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     Default Capi2AppCSDData endpoint flow_control handler
 
-    @param  IPC_BufferPool     
+    @param  IPC_BufferPool
     @param  IPC_FlowCtrlEvent_T
 
     @special
-        None.
-    
+	None.
+
     @retval   None
 
     @ingroup  IPC_PROXY_SERVER
 */
 void ipcs_capi2csd_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event);
 
-//--------------------------------------------------
+/*--------------------------------------------------*/
 /**
     Default Capi2AppCSDData buffer_delivery handler
 
-    @param  IPC_Buffer     
+    @param  IPC_Buffer
 
     @special
-        None.
-    
+	None.
+
     @retval   None
 
     @ingroup  IPC_PROXY_SERVER
 */
 void ipcs_capi2csd_bf(IPC_Buffer ipc_buffer);
 
-#endif //_BCM_FUSE_IPCS_CCB_H_
+#endif /* _BCM_FUSE_IPCS_CCB_H_ */

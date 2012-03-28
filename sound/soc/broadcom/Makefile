@@ -46,8 +46,6 @@ subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I$(src)/chal/B0/inc/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/caph/chal/B0/inc/
 #RPC Header files
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
-subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/modem/CAPI2_CIB/soc/debug/public/
-subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/modem/CAPI2_CIB/public/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/fuse_log
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/modem/public/
 

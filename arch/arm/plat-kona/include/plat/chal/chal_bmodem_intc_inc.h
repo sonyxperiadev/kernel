@@ -1,69 +1,71 @@
-//***************************************************************************
-//
-//      Copyright © 2004-2010 Broadcom Corporation
-//      
-//      This program is the proprietary software of Broadcom Corporation 
-//      and/or its licensors, and may only be used, duplicated, modified 
-//      or distributed pursuant to the terms and conditions of a separate, 
-//      written license agreement executed between you and Broadcom (an 
-//      "Authorized License").  Except as set forth in an Authorized 
-//      License, Broadcom grants no license (express or implied), right 
-//      to use, or waiver of any kind with respect to the Software, and 
-//      Broadcom expressly reserves all rights in and to the Software and 
-//      all intellectual property rights therein.  IF YOU HAVE NO 
-//      AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE 
-//      IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE 
-//      ALL USE OF THE SOFTWARE.  
-//      
-//      Except as expressly set forth in the Authorized License,
-//      
-//      1.      This program, including its structure, sequence and 
-//              organization, constitutes the valuable trade secrets 
-//              of Broadcom, and you shall use all reasonable efforts 
-//              to protect the confidentiality thereof, and to use 
-//              this information only in connection with your use 
-//              of Broadcom integrated circuit products.
-//      
-//      2.      TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE 
-//              IS PROVIDED "AS IS" AND WITH ALL FAULTS AND BROADCOM 
-//              MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES, 
-//              EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, 
-//              WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY 
-//              DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE, 
-//              MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A 
-//              PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR 
-//              COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR 
-//              CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE 
-//              RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.  
-//
-//      3.      TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT 
-//              SHALL BROADCOM OR ITS LICENSORS BE LIABLE FOR 
-//              (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR 
-//              EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY 
-//              WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE 
-//              SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE 
-//              POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN 
-//              EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE 
-//              ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE 
-//              LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE 
-//              OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-//
-//***************************************************************************
+/****************************************************************************
+*
+*	Copyright (c) 2004-2010 Broadcom Corporation
+*
+*	This program is the proprietary software of Broadcom Corporation
+*	and/or its licensors, and may only be used, duplicated, modified
+*	or distributed pursuant to the terms and conditions of a separate,
+*	written license agreement executed between you and Broadcom (an
+*	"Authorized License").  Except as set forth in an Authorized
+*	License, Broadcom grants no license (express or implied), right
+*	to use, or waiver of any kind with respect to the Software, and
+*	Broadcom expressly reserves all rights in and to the Software and
+*	all intellectual property rights therein.  IF YOU HAVE NO
+*	AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE
+*	IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE
+*	ALL USE OF THE SOFTWARE.
+*
+*	Except as expressly set forth in the Authorized License,
+*
+*	1.	This program, including its structure, sequence and
+*		organization, constitutes the valuable trade secrets
+*		of Broadcom, and you shall use all reasonable efforts
+*		to protect the confidentiality thereof, and to use
+*		this information only in connection with your use
+*		of Broadcom integrated circuit products.
+*
+*	2.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE
+*		IS PROVIDED "AS IS" AND WITH ALL FAULTS AND BROADCOM
+*		MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES,
+*		EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE,
+*		WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY
+*		DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE,
+*		MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A
+*		PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR
+*		COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR
+*		CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE
+*		RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
+*
+*	3.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT
+*		SHALL BROADCOM OR ITS LICENSORS BE LIABLE FOR
+*		(i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR
+*		EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY
+*		WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE
+*		SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE
+*		POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN
+*		EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE
+*		ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE
+*		LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE
+*		OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
+*
+****************************************************************************/
 
-//============================================================================
-//
-// \file   chal_bmintc_inc.h
-// \brief  OS independent code of BModem INTC using inline function.
-// \note
-//============================================================================
+/*==========================================================================
+*
+* file   chal_bmintc_inc.h
+* brief  OS independent code of BModem INTC using inline function.
+* note
+*==========================================================================*/
 #ifndef _CHAL_BMINTC_INC_H_
 #define _CHAL_BMINTC_INC_H_
 #include "chal_types.h"
 #include "brcm_rdb_sysmap.h"
 #include "brcm_rdb_bintc.h"
 
-#define BMINTC_WRITE32( regOffset, data)  CHAL_REG_WRITE32( ((cUInt32) h) + (regOffset), data)
-#define BMINTC_READ32( regOffset)   CHAL_REG_READ32( ((cUInt32) h) + (regOffset))
+#define BMINTC_WRITE32(regOffset, data)  \
+			CHAL_REG_WRITE32(((cUInt32) h) + (regOffset), data)
+#define BMINTC_READ32(regOffset) \
+			CHAL_REG_READ32(((cUInt32) h) + (regOffset))
 
 typedef struct {
 	cUInt32 mask[2];
@@ -116,25 +118,28 @@ typedef enum {
 #define BINTC_OUT_DEST_DSP_NORM     BINTC_OUT_DEST_17
 #define BINTC_OUT_DEST_DSP_ERR      BINTC_OUT_DEST_18
 
-/* distance between BINTC output registers
-* note that #14 should correspond to CP FIQ but corresponding registers don't exist
-* instead, one has to program ISEL registers (via functions chal_bmintc_set_intr_to_irq/fiq)
-* to select between IRQ/FIQ */
+/**
+ * distance between BINTC output registers
+ * note that #14 should correspond to CP FIQ but corresponding registers
+ * don't exist instead, one has to program ISEL registers
+ * (via functions chal_bmintc_set_intr_to_irq/fiq)
+ * to select between IRQ/FIQ
+ **/
 #define BMREG_BLOCK_SIZE (BINTC_IMR0_1_OFFSET-BINTC_IMR0_0_OFFSET)
 
-//==============================================================================
-//
-// Function Name: void chal_bmintc_clear_interrupt(CHAL_HANDLE h, cUInt32 Id  ) 
-//
-// Description:   Clear an interrupt
-//
-// param:         h: cHal handle.
-//
-// param:         Id: Interrupt Id 
-//
-//
-// Notes:
-//
+/*==============================================================================
+*
+* Function Name: void chal_bmintc_clear_interrupt(CHAL_HANDLE h, cUInt32 Id)
+*
+* Description:   Clear an interrupt
+*
+* param:         h: cHal handle.
+*
+* param:         Id: Interrupt Id
+*
+*
+* Notes:
+*============================================================================*/
 __forceinline static void chal_bmintc_clear_interrupt(CHAL_HANDLE h, cUInt32 Id)
 {
 
@@ -148,41 +153,41 @@ __forceinline static void chal_bmintc_clear_interrupt(CHAL_HANDLE h, cUInt32 Id)
 	}
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_clear_all(CHAL_HANDLE h, chal_bmintc_mask_t *mask )  
-//
-// Description:   Clear all interrupts except those in the mask
-//
-// param:         h: cHal handle.
-//
-// param:         maks: pointer to intc mask 
-//
-//
-// Notes:
-//
+/*==============================================================================
+*
+* Function Name: chal_bmintc_clear_all(CHAL_HANDLE h, chal_bmintc_mask_t *mask)
+*
+* Description:   Clear all interrupts except those in the mask
+*
+* param:         h: cHal handle.
+*
+* param:         maks: pointer to intc mask
+*
+*
+* Notes:
+*=============================================================================*/
 __forceinline static void chal_bmintc_clear_intr_mask(CHAL_HANDLE h,
-						      chal_bmintc_mask_t * mask)
+						chal_bmintc_mask_t *mask)
 {
-
 	BMINTC_WRITE32(BINTC_ICR0_OFFSET, mask->mask[0]);
 	BMINTC_WRITE32(BINTC_ICR1_OFFSET, mask->mask[1]);
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_enable_interrupt(CHAL_HANDLE h,cUInt32 destId,cUInt32 Id) 
-//
-// Description:   enable an interrupt
-//
-// param:         h: cHal handle.
-//
-// param:         Id: Interrupt Id 
-//
-// param:         destId: output destination of an interrupt
-//
-// Notes:
-//
+/*==============================================================================
+*
+* Function Name: chal_bmintc_enable_interrupt(CHAL_HANDLE h,
+*                                             cUInt32 destId,cUInt32 Id)
+*
+* Description:   enable an interrupt
+*
+* param:         h: cHal handle.
+*
+* param:         Id: Interrupt Id
+*
+* param:         destId: output destination of an interrupt
+*
+* Notes:
+*=============================================================================*/
 __forceinline static void chal_bmintc_enable_interrupt(CHAL_HANDLE h,
 						       cUInt32 destId,
 						       cUInt32 Id)
@@ -191,8 +196,7 @@ __forceinline static void chal_bmintc_enable_interrupt(CHAL_HANDLE h,
 	if (Id >= 64)
 		return;
 
-	if (Id >= 32)		// Id < 64
-	{
+	if (Id >= 32) {		/* Id < 64 */
 		BMINTC_WRITE32(BINTC_IMR1_0_SET_OFFSET +
 			       destId * BMREG_BLOCK_SIZE, (1 << (Id - 32)));
 	} else {
@@ -201,6 +205,7 @@ __forceinline static void chal_bmintc_enable_interrupt(CHAL_HANDLE h,
 
 	}
 }
+
 __forceinline static void chal_bmintc_enable_DSP_interrupt(CHAL_HANDLE h,
 							   cUInt32 destId,
 							   cUInt32 Id)
@@ -209,30 +214,30 @@ __forceinline static void chal_bmintc_enable_DSP_interrupt(CHAL_HANDLE h,
 
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_disable_interrupt(CHAL_HANDLE h,cUInt32 destId,cUInt32 Id) 
-//
-// Description:   disable an interrupt
-//
-// param:         h: cHal handle.
-//
-// param:         Id: Interrupt Id 
-//
-// param:         destId: output destination of an interrupt 
-//
-// Notes:
-//
+
+/*==============================================================================
+*
+* Function Name: chal_bmintc_disable_interrupt(CHAL_HANDLE h,
+*                                              cUInt32 destId,cUInt32 Id)
+*
+* Description:   disable an interrupt
+*
+* param:         h: cHal handle.
+*
+* param:         Id: Interrupt Id
+*
+* param:         destId: output destination of an interrupt
+*
+* Notes:
+*=============================================================================*/
 __forceinline static void chal_bmintc_disable_interrupt(CHAL_HANDLE h,
 							cUInt32 destId,
 							cUInt32 Id)
 {
-
 	if (Id >= 64)
 		return;
 
-	if (Id >= 32)		// Id < 64
-	{
+	if (Id >= 32) {		/* Id < 64 */
 		BMINTC_WRITE32(BINTC_IMR1_0_CLR_OFFSET +
 			       destId * BMREG_BLOCK_SIZE, (1 << (Id - 32)));
 	} else {
@@ -242,27 +247,25 @@ __forceinline static void chal_bmintc_disable_interrupt(CHAL_HANDLE h,
 	}
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_disable_interrupts(CHAL_HANDLE h, 
-//                                             cUInt32 destId, 
-//                                             chal_bmintc_mask_t *mask
-//                                            ) 
-//
-// Description:   disable all interrupts in the mask
-//
-// param:         h: cHal handle.
-//
-// param:         maks: pointer to intc mask 
-//
-// param:         destId: output destination of an interrupt
-//
-// Notes:
-//
+/*==============================================================================
+*
+* Function Name: chal_bmintc_disable_interrupts(CHAL_HANDLE h,
+*                                             cUInt32 destId,
+*                                             chal_bmintc_mask_t *mask)
+*
+* Description:   disable all interrupts in the mask
+*
+* param:         h: cHal handle.
+*
+* param:         maks: pointer to intc mask
+*
+* param:         destId: output destination of an interrupt
+*
+* Notes:
+*=============================================================================*/
 __forceinline static void chal_bmintc_disable_intr_mask(CHAL_HANDLE h,
-							cUInt32 destId,
-							chal_bmintc_mask_t *
-							mask)
+						cUInt32 destId,
+						chal_bmintc_mask_t *mask)
 {
 
 	BMINTC_WRITE32(BINTC_IMR1_0_CLR_OFFSET + destId * BMREG_BLOCK_SIZE,
@@ -273,34 +276,37 @@ __forceinline static void chal_bmintc_disable_intr_mask(CHAL_HANDLE h,
 
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_restore_interrupts(CHAL_HANDLE h, 
-//                                             cUInt32 destId, 
-//                                             chal_bmintc_mask_t *mask)  
-//
-// Description:   restore all interrupts based on the mask
-//
-// param:         h: cHal handle.
-//
-// param:         maks: pointer to intc mask 
-//
-// param:         destId: output destination of an interrupt
-//
-// Notes:
-//
+
+/*==============================================================================
+*
+* Function Name: chal_bmintc_restore_interrupts(CHAL_HANDLE h,
+*                                             cUInt32 destId,
+*                                             chal_bmintc_mask_t *mask)
+*
+* Description:   restore all interrupts based on the mask
+*
+* param:         h: cHal handle.
+*
+* param:         maks: pointer to intc mask
+*
+* param:         destId: output destination of an interrupt
+*
+* Notes:
+*=============================================================================*/
 __forceinline static void chal_bmintc_restore_interrupts(CHAL_HANDLE h,
-							 cUInt32 destId,
-							 chal_bmintc_mask_t *
-							 mask)
+						 cUInt32 destId,
+						 chal_bmintc_mask_t *mask)
 {
-	/* disable all set interrupt so only those set in mask are set when we return from the function */
+    /*
+     * disable all set interrupt so only those set in mask are set when
+     * we return from the function
+     */
 	BMINTC_WRITE32(BINTC_IMR0_0_CLR_OFFSET + destId * BMREG_BLOCK_SIZE,
 		       0xffffffff);
 	BMINTC_WRITE32(BINTC_IMR1_0_CLR_OFFSET + destId * BMREG_BLOCK_SIZE,
 		       0xffffffff);
 
-	//each destination has 7 32bit registers
+    /* each destination has 7 32bit registers */
 	BMINTC_WRITE32(BINTC_IMR1_0_SET_OFFSET + destId * BMREG_BLOCK_SIZE,
 		       mask->mask[1]);
 
@@ -309,29 +315,28 @@ __forceinline static void chal_bmintc_restore_interrupts(CHAL_HANDLE h,
 
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_get_interrupt_mask(CHAL_HANDLE h, 
-//                                             cUInt32 destId, 
-//                                             chal_bmintc_mask_t* mask)  
-//
-// Description:   Get interrupt mask
-//
-// param:         h: cHal handle.
-//
-// param:         destId: output destination of an interrupt
-//
-// param:         mask (out): intec mask
-//
-// Notes:
-//
+/*==============================================================================
+*
+* Function Name: chal_bmintc_get_interrupt_mask(CHAL_HANDLE h,
+*                                             cUInt32 destId,
+*                                             chal_bmintc_mask_t* mask)
+*
+* Description:   Get interrupt mask
+*
+* param:         h: cHal handle.
+*
+* param:         destId: output destination of an interrupt
+*
+* param:         mask (out): intec mask
+*
+* Notes:
+*=============================================================================*/
 __forceinline static void chal_bmintc_get_interrupt_mask(CHAL_HANDLE h,
-							 cUInt32 destId,
-							 chal_bmintc_mask_t *
-							 mask)
+						cUInt32 destId,
+						chal_bmintc_mask_t *mask)
 {
 
-	//each destination has 7 32bit registers
+    /* each destination has 7 32bit registers */
 	mask->mask[0] =
 	    BMINTC_READ32(BINTC_IMR0_0_OFFSET + destId * BMREG_BLOCK_SIZE);
 	mask->mask[1] =
@@ -340,22 +345,26 @@ __forceinline static void chal_bmintc_get_interrupt_mask(CHAL_HANDLE h,
 	return;
 }
 
-//==============================================================================
-//
-// Function Name: Boolean chal_bmintc_is_interrupt_enabled(CHAL_HANDLE h,cUInt32 destId, cUInt32 Id  ) 
-//
-// Description:   Is an interrupt enabled?
-//
-// param:         h: cHal handle.
-//
-// param:         Id: Interrupt Id 
-//
-// param:         destId: output destination of an interrupt
-//
-// return:        TRUE or FALSE
-//
-// Notes:
-//
+
+
+/*==============================================================================
+*
+* Function Name: Boolean chal_bmintc_is_interrupt_enabled(CHAL_HANDLE h,
+*                                                         cUInt32 destId,
+*                                                         cUInt32 Id)
+*
+* Description:   Is an interrupt enabled?
+*
+* param:         h: cHal handle.
+*
+* param:         Id: Interrupt Id
+*
+* param:         destId: output destination of an interrupt
+*
+* return:        TRUE or FALSE
+*
+* Notes:
+*=============================================================================*/
 __forceinline static Boolean chal_bmintc_is_interrupt_enabled(CHAL_HANDLE h,
 							      cUInt32 destId,
 							      cUInt32 Id)
@@ -364,9 +373,8 @@ __forceinline static Boolean chal_bmintc_is_interrupt_enabled(CHAL_HANDLE h,
 	if (Id >= 64)
 		return 0;
 
-	if (Id >= 32)		// Id < 64
-	{
-		//each destination has 7 32bit registers
+	if (Id >= 32) {		/* Id < 64 */
+		/* each destination has 7 32bit registers */
 		return ((BMINTC_READ32
 			 (BINTC_IMR1_0_OFFSET +
 			  destId * BMREG_BLOCK_SIZE) & (1 << (Id - 32))) != 0);
@@ -378,22 +386,25 @@ __forceinline static Boolean chal_bmintc_is_interrupt_enabled(CHAL_HANDLE h,
 
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_get_status(CHAL_HANDLE h, cUInt32 destId, chal_bmintc_mask_t *mask )  
-//
-// Description:   Get interrupt status
-//
-// param:         h: cHal handle.
-//
-// param:         maks: pointer to intc mask 
-//
-// param:         destId: output destination of an interrupt
-//
-// Notes:
-//
-__forceinline static void chal_bmintc_get_status(CHAL_HANDLE h, cUInt32 destId,
-						 chal_bmintc_mask_t * status)
+/*==============================================================================
+*
+* Function Name: chal_bmintc_get_status(CHAL_HANDLE h,
+*                                       cUInt32 destId,
+*                                       chal_bmintc_mask_t *mask)
+*
+* Description:   Get interrupt status
+*
+* param:         h: cHal handle.
+*
+* param:         maks: pointer to intc mask
+*
+* param:         destId: output destination of an interrupt
+*
+* Notes:
+*=============================================================================*/
+__forceinline static void chal_bmintc_get_status(CHAL_HANDLE h,
+						cUInt32 destId,
+						chal_bmintc_mask_t *status)
 {
 
 	status->mask[0] =
@@ -403,24 +414,25 @@ __forceinline static void chal_bmintc_get_status(CHAL_HANDLE h, cUInt32 destId,
 
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_get_status(CHAL_HANDLE h, cUInt32 destId, chal_bmintc_mask_t *mask )  
-//
-// Description:   Get interrupt status
-//
-// param:         h: cHal handle.
-//
-// param:         maks: pointer to intc mask 
-//
-// param:         destId: output destination of an interrupt
-//
-// Notes:
-//
+/*==============================================================================
+*
+* Function Name: chal_bmintc_get_status(CHAL_HANDLE h,
+*                                       cUInt32 destId,
+*                                       chal_bmintc_mask_t *mask)
+*
+* Description:   Get interrupt status
+*
+* param:         h: cHal handle.
+*
+* param:         maks: pointer to intc mask
+*
+* param:         destId: output destination of an interrupt
+*
+* Notes:
+*=============================================================================*/
 __forceinline static UInt32 chal_bmintc_get_per_register_status(CHAL_HANDLE h,
-								cUInt32 destId,
-								cUInt32
-								reg_offset)
+							cUInt32 destId,
+							cUInt32 reg_offset)
 {
 
 	if (reg_offset == 0) {
@@ -433,22 +445,25 @@ __forceinline static UInt32 chal_bmintc_get_per_register_status(CHAL_HANDLE h,
 
 }
 
-//==============================================================================
-//
-// Function Name: Boolean chal_bmintc_is_interrupt_active(CHAL_HANDLE h, cUInt32 destId, cUInt32 Id  ) 
-//
-// Description:   Is an interrupt triggered or not.
-//
-// param:         h: cHal handle.
-//
-// param:         Id: Interrupt Id 
-//
-// param:         destId: output destination of an interrupt
-//
-// return:        TRUE or FALSE
-//
-// Notes:
-//
+
+/*==============================================================================
+*
+* Function Name: Boolean chal_bmintc_is_interrupt_active(CHAL_HANDLE h,
+*                                                        cUInt32 destId,
+*                                                        cUInt32 Id)
+*
+* Description:   Is an interrupt triggered or not.
+*
+* param:         h: cHal handle.
+*
+* param:         Id: Interrupt Id
+*
+* param:         destId: output destination of an interrupt
+*
+* return:        TRUE or FALSE
+*
+* Notes:
+*=============================================================================*/
 __forceinline static Boolean chal_bmintc_is_interrupt_active(CHAL_HANDLE h,
 							     cUInt32 destId,
 							     cUInt32 Id)
@@ -457,60 +472,63 @@ __forceinline static Boolean chal_bmintc_is_interrupt_active(CHAL_HANDLE h,
 	if (Id >= 64)
 		return 0;
 
-	if (Id >= 32)		// Id < 64
+	if (Id >= 32)		/* Id < 64 */
 		return ((BMINTC_READ32
 			 (BINTC_IMSR1_0_OFFSET +
 			  destId * BMREG_BLOCK_SIZE) & (1 << (Id - 32))) != 0);
-	else			// Id < 32 
+	else			/* Id < 32 */
 		return ((BMINTC_READ32
 			 (BINTC_IMSR0_0_OFFSET +
 			  destId * BMREG_BLOCK_SIZE) & (1 << Id)) != 0);
 }
 
 #if 0
-//==============================================================================
-//
-// Function Name: chal_bmintc_set_irq_trigger(CHAL_HANDLE h, cUInt32 Id, cUInt32 EdgeSetting ) 
-//
-// Description:   Set an interrupt triggering mechanism.
-//
-// param:         h: cHal handle.
-//
-// param:         Id: Interrupt Id 
-//
-// param:         EdgeSetting: low, high, rising, falling, or either
-//
-// Notes:
-//
-__forceinline static void chal_bmintc_set_irq_trigger(CHAL_HANDLE h, cUInt32 Id,
-						      cUInt32 EdgeSetting)
+/*==============================================================================
+*
+* Function Name: chal_bmintc_set_irq_trigger(CHAL_HANDLE h,
+*                                            cUInt32 Id,
+*                                            cUInt32 EdgeSetting)
+*
+* Description:   Set an interrupt triggering mechanism.
+*
+* param:         h: cHal handle.
+*
+* param:         Id: Interrupt Id
+*
+* param:         EdgeSetting: low, high, rising, falling, or either
+*
+* Notes:
+*=============================================================================*/
+__forceinline static void chal_bmintc_set_irq_trigger(CHAL_HANDLE h,
+							cUInt32 Id,
+							cUInt32 EdgeSetting)
 {
 
 }
 #endif
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_set_soft_int(CHAL_HANDLE h, cUInt32 Id  ) 
-//
-// Description:   set a soft interrupt
-//
-// param:         h: cHal handle.
-//
-// param:         Id: Interrupt Id 
-//
-//
-// Notes:
-//
+/*==============================================================================
+*
+* Function Name: chal_bmintc_set_soft_int(CHAL_HANDLE h, cUInt32 Id)
+*
+* Description:   set a soft interrupt
+*
+* param:         h: cHal handle.
+*
+* param:         Id: Interrupt Id
+*
+*
+* Notes:
+*=============================================================================*/
 __forceinline static void chal_bmintc_set_soft_int(CHAL_HANDLE h, cUInt32 Id)
 {
 
 	if (Id >= 64)
 		return;
 
-	if (Id >= 32)		// Id < 64
+	if (Id >= 32)		/*Id < 64 */
 		BMINTC_WRITE32(BINTC_ISWIR1_OFFSET, 1 << (Id - 32));
-	else			// Id < 32 
+	else			/* Id < 32 */
 		BMINTC_WRITE32(BINTC_ISWIR0_OFFSET, 1 << Id);
 
 }
@@ -520,46 +538,48 @@ __forceinline static void chal_bmintc_set_DSP_soft_int(CHAL_HANDLE h,
 	BMINTC_WRITE32(BINTC_ISWIR1_OFFSET, 1 << Id);
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_clear_soft_int(CHAL_HANDLE h, cUInt32 Id  ) 
-//
-// Description:   Clear a soft interrupt
-//
-// param:         h: cHal handle.
-//
-// param:         Id: Interrupt Id 
-//
-//
-// Notes:
-//
+/*==============================================================================
+*
+* Function Name: chal_bmintc_clear_soft_int(CHAL_HANDLE h, cUInt32 Id)
+*
+* Description:   Clear a soft interrupt
+*
+* param:         h: cHal handle.
+*
+* param:         Id: Interrupt Id
+*
+*
+* Notes:
+*=============================================================================*/
 __forceinline static void chal_bmintc_clear_soft_int(CHAL_HANDLE h, cUInt32 Id)
 {
 
 	if (Id >= 64)
 		return;
 
-	if (Id >= 32)		// Id < 64
+	if (Id >= 32)		/* Id < 64 */
 		BMINTC_WRITE32(BINTC_ISWIR1_CLR_OFFSET, 1 << (Id - 32));
-	else			// Id < 32 
+	else			/* Id < 32 */
 		BMINTC_WRITE32(BINTC_ISWIR0_CLR_OFFSET, 1 << Id);
 
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_set_intr_to_fiq( CHAL_HANDLE h, cUInt32 Id)
-//
-// Description:   Change interrupt to FIQ
-//
-// param:         h: cHal handle.
-//
-// param:         Id: interrupt id.
-//
-// return:        
-//
-// Notes:
-//
+
+
+/*=============================================================================
+*
+* Function Name: chal_bmintc_set_intr_to_fiq( CHAL_HANDLE h, cUInt32 Id)
+*
+* Description:   Change interrupt to FIQ
+*
+* param:         h: cHal handle.
+*
+* param:         Id: interrupt id.
+*
+* return:
+*
+* Notes:
+*=============================================================================*/
 __forceinline static void chal_bmintc_set_intr_to_fiq(CHAL_HANDLE h, cUInt32 Id)
 {
 	UInt32 bits = 0;
@@ -567,13 +587,11 @@ __forceinline static void chal_bmintc_set_intr_to_fiq(CHAL_HANDLE h, cUInt32 Id)
 	if (Id >= 64)
 		return;
 
-	if (Id >= 32)		// Id < 64
-	{
+	if (Id >= 32) {		/* Id < 64 */
 		bits = BMINTC_READ32(BINTC_ISELR1_13_OFFSET);
 		bits |= 1 << (Id - 32);
 		BMINTC_WRITE32(BINTC_ISELR1_13_OFFSET, bits);
-	} else			// Id < 32 
-	{
+	} else {		/* Id < 32 */
 		bits = BMINTC_READ32(BINTC_ISELR0_13_OFFSET);
 		bits |= 1 << Id;
 		BMINTC_WRITE32(BINTC_ISELR0_13_OFFSET, bits);
@@ -581,20 +599,20 @@ __forceinline static void chal_bmintc_set_intr_to_fiq(CHAL_HANDLE h, cUInt32 Id)
 
 }
 
-//==============================================================================
-//
-// Function Name: chal_bmintc_set_intr_to_fiq( CHAL_HANDLE h, cUInt32 Id)
-//
-// Description:   Change interrupt to IRQ
-//
-// param:         h: cHal handle.
-//
-// param:         Id: interrupt id.
-//
-// return:        
-//
-// Notes:
-//
+/*=============================================================================
+*
+* Function Name: chal_bmintc_set_intr_to_fiq( CHAL_HANDLE h, cUInt32 Id)
+*
+* Description:   Change interrupt to IRQ
+*
+* param:         h: cHal handle.
+*
+* param:         Id: interrupt id.
+*
+* return:
+*
+* Notes:
+*=============================================================================*/
 __forceinline static void chal_bmintc_set_intr_to_irq(CHAL_HANDLE h, cUInt32 Id)
 {
 	UInt32 bits = 0;
@@ -602,34 +620,32 @@ __forceinline static void chal_bmintc_set_intr_to_irq(CHAL_HANDLE h, cUInt32 Id)
 	if (Id >= 64)
 		return;
 
-	if (Id >= 32)		// Id < 64
-	{
+	if (Id >= 32) {		/* Id < 64 */
 		bits = BMINTC_READ32(BINTC_ISELR1_13_OFFSET);
 		bits &= ~(1 << (Id - 32));
 		BMINTC_WRITE32(BINTC_ISELR1_13_OFFSET, bits);
-	} else			// Id < 32 
-	{
+	} else {		/* Id < 32 */
 		bits = BMINTC_READ32(BINTC_ISELR0_13_OFFSET);
 		bits &= ~(1 << Id);
 		BMINTC_WRITE32(BINTC_ISELR0_13_OFFSET, bits);
 	}
 }
 
-//==============================================================================
-//
-// Function Name: CHAL_HANDLE chal_bmintc_init(const cUInt32 DeviceBaseAddress)
-//
-// Description:   Init cHAL mIntc module
-//
-// param:         DeviceBaseAddress: base virtual addr of intc block
-//
-//
-// Notes:
-//
+/*==============================================================================
+*
+* Function Name: CHAL_HANDLE chal_bmintc_init(const cUInt32 DeviceBaseAddress)
+*
+* Description:   Init cHAL mIntc module
+*
+* param:         DeviceBaseAddress: base virtual addr of intc block
+*
+*
+* Notes:
+*=============================================================================*/
 __forceinline static CHAL_HANDLE chal_bmintc_init(cUInt32 DeviceBaseAddress)
 {
 
 	return (CHAL_HANDLE) DeviceBaseAddress;
 }
 
-#endif //_CHAL_BMINTC_INC_H_
+#endif /* _CHAL_BMINTC_INC_H_ */

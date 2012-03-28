@@ -1,15 +1,15 @@
-/*
-	©2007 Broadcom Corporation
-
-	Unless you and Broadcom execute a separate written software license
-	agreement governing use of this software, this software is licensed to you
-	under the terms of the GNU General Public License version 2, available
-	at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
-
-   Notwithstanding the above, under no circumstances may you combine this
-   software in any way with any other Broadcom software provided under a license
-   other than the GPL, without Broadcom's express prior written consent.
-*/
+/*******************************************************************************
+*    ©2007 Broadcom Corporation
+*
+*    Unless you and Broadcom execute a separate written software license
+*    agreement governing use of this software, this software is licensed to you
+*    under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
+*
+*  Notwithstanding the above, under no circumstances may you combine this
+*  software in any way with any other Broadcom software provided under a license
+*  other than the GPL, without Broadcom's express prior written consent.
+*******************************************************************************/
 #ifdef UNDER_LINUX
 #include <linux/module.h>
 #include <linux/stddef.h>
@@ -17,12 +17,12 @@
 #include <linux/broadcom/csl_types.h>
 #include <linux/broadcom/ipcinterface.h>
 #include <linux/broadcom/ipcproperties.h>
-#else // UNDER_LINUX
+#else /* UNDER_LINUX */
 #include "mobcom_types.h"
 #include "osheap.h"
 #include "ipcproperties.h"
 #include "ipcinterface.h"
-#endif //UNDER_LINUX
+#endif /* UNDER_LINUX */
 
 #include "ipc_bufferpool.h"
 #include "ipc_buffer.h"
@@ -30,37 +30,38 @@
 
 #ifndef UNDER_LINUX
 #include <stdlib.h>
-#endif
+#endif /* UNDER_LINUX */
 
 extern UInt32 TIMER_GetValue(void);
 
-//============================================================
-// Defines
-//============================================================
+/*============================================================
+* Defines
+*===========================================================*/
 
-#define CHECK_FLOW_STATE(POOL, NEW_STATE, REPORT_NEEDED)\
-if	(POOL->FlowControlState	!= NEW_STATE)\
-{\
-	POOL->FlowControlState			= NEW_STATE;\
-	if (!POOL->FlowControlCallPending)\
-	{\
-		REPORT_NEEDED					= IPC_TRUE;\
-		POOL->FlowControlCallPending	= IPC_TRUE;\
-	}\
-}\
+#define CHECK_FLOW_STATE(POOL, NEW_STATE, REPORT_NEEDED) \
+	if (POOL->FlowControlState != NEW_STATE) { \
+		POOL->FlowControlState	= NEW_STATE; \
+		if (!POOL->FlowControlCallPending) { \
+			REPORT_NEEDED	= IPC_TRUE; \
+			POOL->FlowControlCallPending = IPC_TRUE; \
+		} \
+	} \
 
-// Convert a Pool Offset into the offset of its Buffer Queue structure
-// to be passed to the Queue functions
-#define IPC_POOLFreeQ(Pool)	(Pool + OFFSETOF (IPC_BufferPool_T, FreeBufferQ))
+/**
+ * Convert a Pool Offset into the offset of its Buffer Queue structure
+ * to be passed to the Queue functions
+ */
+#define IPC_POOLFreeQ(Pool) (Pool + OFFSETOF(IPC_BufferPool_T, FreeBufferQ))
 
-//============================================================
-// Types
-//============================================================
+/*============================================================
+* Types
+*===========================================================*/
 
-//============================================================
-// Variables
-//============================================================
-//For debug
+/*============================================================
+* Variables
+*===========================================================*/
+
+/* For debug */
 #define IPC_POOLLIST_LENGTH 4
 typedef struct IPC_PoolList_S {
 	IPC_U32 Count;
@@ -69,18 +70,19 @@ typedef struct IPC_PoolList_S {
 
 IPC_PoolList_T PoolList[IPC_EndpointId_Count];
 
-//============================================================
-// Functions
-//============================================================
+/*============================================================
+* Functions
+*===========================================================*/
 
-//**************************************************
-IPC_BufferPool IPC_CreateBufferPoolWithDescriptor
-    (IPC_EndpointId_T SourceEndpointId,
-     IPC_EndpointId_T DestinationEndpointId,
-     IPC_U32 NumberOfBuffers,
-     IPC_U32 BufferSize,
-     IPC_U32 FlowStartLimit,
-     IPC_U32 FlowStopLimit, IPC_U32 LocalDescriptorSize) {
+/**************************************************/
+IPC_BufferPool IPC_CreateBufferPoolWithDescriptor(
+	IPC_EndpointId_T SourceEndpointId,
+	IPC_EndpointId_T DestinationEndpointId,
+	IPC_U32 NumberOfBuffers,
+	IPC_U32 BufferSize,
+	IPC_U32 FlowStartLimit,
+	IPC_U32 FlowStopLimit, IPC_U32 LocalDescriptorSize)
+{
 	IPC_U32 MaxDataSize = ALIGN4(BufferSize);
 	IPC_BufferPool Pool;
 	IPC_BufferPool_T *PoolPtr;
@@ -94,7 +96,7 @@ IPC_BufferPool IPC_CreateBufferPoolWithDescriptor
 		  SourceEndpointId, DestinationEndpointId, NumberOfBuffers,
 		  BufferSize);
 
-	// Sanity Checks
+	/* Sanity Checks */
 	if (NumberOfBuffers == 0) {
 		IPC_TRACE(IPC_Channel_Error, "IPC_CreateBufferPool",
 			  "Invalid NumberOfBuffers %d", NumberOfBuffers, 0, 0,
@@ -127,7 +129,7 @@ IPC_BufferPool IPC_CreateBufferPoolWithDescriptor
 			  "Invalid FlowStopLimit %d", FlowStopLimit, 0, 0, 0);
 		return 0;
 	}
-	// Allocate Sm For Pool
+	/* Allocate Sm For Pool */
 	Pool =
 	    IPC_SmPoolAlloc(sizeof(IPC_BufferPool_T),
 			    DestinationEpPtr->MaxHeaderSize, MaxDataSize,
@@ -141,14 +143,14 @@ IPC_BufferPool IPC_CreateBufferPoolWithDescriptor
 
 	if (LocalDescriptorSize != 0) {
 #ifdef UNDER_LINUX
-		// Use kmalloc instead of OSHEAP_Alloc in Linux platform
+		/* Use kmalloc instead of OSHEAP_Alloc in Linux platform */
 		LocalData =
 		    kmalloc((LocalDescriptorSize * NumberOfBuffers),
 			    GFP_KERNEL);
 #else
 		LocalData =
 		    (char *)OSHEAP_Alloc(LocalDescriptorSize * NumberOfBuffers);
-#endif // UNDER_LINUX
+#endif /* UNDER_LINUX */
 
 		if (!LocalData) {
 			IPC_TRACE(IPC_Channel_Error, "IPC_CreateBufferPool",
@@ -159,7 +161,7 @@ IPC_BufferPool IPC_CreateBufferPoolWithDescriptor
 		LocalData = 0;
 	}
 
-	// Initialise Pool
+	/* Initialise Pool */
 	PoolPtr = IPC_PoolPtr(Pool);
 
 	PoolPtr->Cpu = IPC_SM_CURRENT_CPU;
@@ -187,7 +189,7 @@ IPC_BufferPool IPC_CreateBufferPoolWithDescriptor
 	IPC_QInitialise(IPC_SmOffset(&PoolPtr->FreeBufferQ), Pool);
 	IPC_QInitialise(IPC_SmOffset(&PoolPtr->AllocatedBufferQ), Pool);
 
-	// Initialise Buffers in pool
+	/* Initialise Buffers in pool */
 	Buffer = Pool + sizeof(IPC_BufferPool_T);
 
 	for (Id = 0; Id < NumberOfBuffers; Id++) {
@@ -202,13 +204,12 @@ IPC_BufferPool IPC_CreateBufferPoolWithDescriptor
 
 	}
 
-	// For Debug
+	/* For Debug */
 	{
 		IPC_PoolList_T *EpPools = &PoolList[PoolPtr->SourceEndpointId];
 
-		if (EpPools->Count < IPC_POOLLIST_LENGTH) {
+		if (EpPools->Count < IPC_POOLLIST_LENGTH)
 			EpPools->Pool[EpPools->Count++] = PoolPtr;
-		}
 	}
 
 	IPC_TRACE(IPC_Channel_Pool, "IPC_CreateBufferPool", "Pool %08X", Pool,
@@ -217,19 +218,21 @@ IPC_BufferPool IPC_CreateBufferPoolWithDescriptor
 	return Pool;
 }
 
-//**************************************************
-IPC_BufferPool IPC_CreateBufferPool
-    (IPC_EndpointId_T SourceEndpointId,
-     IPC_EndpointId_T DestinationEndpointId,
-     IPC_U32 NumberOfBuffers,
-     IPC_U32 BufferSize, IPC_U32 FlowStartLimit, IPC_U32 FlowStopLimit) {
+/**************************************************/
+IPC_BufferPool IPC_CreateBufferPool(IPC_EndpointId_T SourceEndpointId,
+		IPC_EndpointId_T DestinationEndpointId,
+		IPC_U32 NumberOfBuffers,
+		IPC_U32 BufferSize,
+		IPC_U32 FlowStartLimit,
+		IPC_U32 FlowStopLimit)
+{
 	return IPC_CreateBufferPoolWithDescriptor
 	    (SourceEndpointId,
 	     DestinationEndpointId,
 	     NumberOfBuffers, BufferSize, FlowStartLimit, FlowStopLimit, 0);
 }
 
-//**************************************************
+/**************************************************/
 IPC_EndpointId_T IPC_PoolSourceEndpointId(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -243,7 +246,7 @@ IPC_EndpointId_T IPC_PoolSourceEndpointId(IPC_BufferPool Pool)
 	return PoolPtr->SourceEndpointId;
 }
 
-//**************************************************
+/**************************************************/
 IPC_EndpointId_T IPC_PoolDestinationEndpointId(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -258,7 +261,7 @@ IPC_EndpointId_T IPC_PoolDestinationEndpointId(IPC_BufferPool Pool)
 }
 
 #ifdef IPC_DEBUG
-//**************************************************
+/**************************************************/
 IPC_BufferPool_T *IPC_PoolToPtr(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr;
@@ -271,14 +274,14 @@ IPC_BufferPool_T *IPC_PoolToPtr(IPC_BufferPool Pool)
 
 	PoolPtr = IPC_PoolPtr(Pool);
 
-	// Sanity check on Pool Structure
+	/* Sanity check on Pool Structure */
 	if (PoolPtr->FreeBufferQ.Link.Item != Pool)
 		return 0;
 
 	return PoolPtr;
 }
 
-//**************************************************
+/**************************************************/
 IPC_U32 IPC_PoolMaxDataSize(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -292,7 +295,7 @@ IPC_U32 IPC_PoolMaxDataSize(IPC_BufferPool Pool)
 	return PoolPtr->MaxDataSize;
 }
 
-//**************************************************
+/**************************************************/
 IPC_U32 IPC_PoolMaxHeaderSize(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -306,7 +309,7 @@ IPC_U32 IPC_PoolMaxHeaderSize(IPC_BufferPool Pool)
 	return PoolPtr->MaxHeaderSize;
 }
 
-//**************************************************
+/**************************************************/
 IPC_CPU_ID_T IPC_PoolOwningCpu(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -320,7 +323,7 @@ IPC_CPU_ID_T IPC_PoolOwningCpu(IPC_BufferPool Pool)
 	return PoolPtr->Cpu;
 }
 
-//**************************************************
+/**************************************************/
 void IPC_PoolAddBytesSent(IPC_BufferPool Pool, IPC_U32 Bytes)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -334,8 +337,8 @@ void IPC_PoolAddBytesSent(IPC_BufferPool Pool, IPC_U32 Bytes)
 	PoolPtr->BytesSent += Bytes;
 }
 
-#endif
-//**************************************************
+#endif /* IPC_DEBUG */
+/**************************************************/
 void IPC_PoolSetFreeCallback(IPC_BufferPool Pool,
 			     IPC_BufferFreeFPtr_T BufferFreeFunction)
 {
@@ -350,7 +353,7 @@ void IPC_PoolSetFreeCallback(IPC_BufferPool Pool,
 	PoolPtr->BufferFreeFunction = BufferFreeFunction;
 }
 
-//**************************************************
+/**************************************************/
 IPC_Boolean IPC_PoolUserParameterSet(IPC_BufferPool Pool, IPC_U32 Parameter)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -366,7 +369,7 @@ IPC_Boolean IPC_PoolUserParameterSet(IPC_BufferPool Pool, IPC_U32 Parameter)
 	return IPC_TRUE;
 }
 
-//**************************************************
+/**************************************************/
 IPC_U32 IPC_PoolUserParameterGet(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -380,7 +383,7 @@ IPC_U32 IPC_PoolUserParameterGet(IPC_BufferPool Pool)
 	return PoolPtr->UserParameter;
 }
 
-//**************************************************
+/**************************************************/
 void IPC_PoolNextPoolSet(IPC_BufferPool Pool, IPC_BufferPool NextPool)
 {
 	IPC_BufferPool_T *LastPoolPtr = IPC_PoolPtr(Pool);
@@ -388,15 +391,15 @@ void IPC_PoolNextPoolSet(IPC_BufferPool Pool, IPC_BufferPool NextPool)
 
 }
 
-//**************************************************
+/**************************************************/
 void IPC_PoolDelete(IPC_BufferPool Pool)
 {
 	IPC_TRACE(IPC_Channel_Error, "IPC_PoolDelete", "Not yet Implemented", 0,
 		  0, 0, 0);
 }
 
-//**************************************************
-void IPC_ReportFlowControlEvent(IPC_BufferPool_T * PoolPtr,
+/**************************************************/
+void IPC_ReportFlowControlEvent(IPC_BufferPool_T *PoolPtr,
 				IPC_FlowCtrlEvent_T Event)
 {
 	IPC_FlowCtrlEvent_T ReportedFlowControlState;
@@ -404,20 +407,20 @@ void IPC_ReportFlowControlEvent(IPC_BufferPool_T * PoolPtr,
 	IPC_BufferPool Pool = IPC_SmOffset(PoolPtr);
 
 	CRITICAL_REIGON_SETUP if (!SourceEp->FlowControlFunction) {
-		// No Flow Control callback defined
+		/* No Flow Control callback defined */
 		PoolPtr->FlowControlCallPending = IPC_FALSE;
 		return;
 	}
 
 	CRITICAL_REIGON_ENTER if (Event != PoolPtr->FlowControlState) {
-		// State has already changed back - do not report change
+		/* State has already changed back - do not report change */
 		PoolPtr->FlowControlCallPending = IPC_FALSE;
 		CRITICAL_REIGON_LEAVE return;
 	}
 	CRITICAL_REIGON_LEAVE ReportedFlowControlState = Event;
 
 	while (1) {
-		// Update Statistics
+		/* Update Statistics */
 		switch (ReportedFlowControlState) {
 		case IPC_FLOW_START:
 			PoolPtr->FlowStartCalls++;
@@ -428,7 +431,7 @@ void IPC_ReportFlowControlEvent(IPC_BufferPool_T * PoolPtr,
 			break;
 
 		default:
-			// Something badly wrong
+			/* Something badly wrong */
 			break;
 		}
 
@@ -448,7 +451,7 @@ void IPC_ReportFlowControlEvent(IPC_BufferPool_T * PoolPtr,
 		CRITICAL_REIGON_ENTER
 #else
 		/*
-		   Linux Issue: 
+		   Linux Issue:
 		   ==> Before PoolPtr->FlowControlCallPending is set to FALSE, the cbk ( IPC_FLOW_START ) will trigger Net IRQ calling IPC_AllocateBufferWait()
 		   ==> Now the buffer count is zero but the IPC_AllocateBuffer() does not report IPC_FLOW_STOP since the PoolPtr->FlowControlCallPending is still TRUE
 		   ==> The Net IRQ calls IPC_AllocateBufferWait() again ( since IPC_FLOW_STOP was not sent ) and caz of no buffer, it will try to Wait on Event
@@ -473,7 +476,7 @@ void IPC_ReportFlowControlEvent(IPC_BufferPool_T * PoolPtr,
 	CRITICAL_REIGON_LEAVE}
 }
 
-//**************************************************
+/**************************************************/
 IPC_Buffer IPC_AllocateBuffer(IPC_BufferPool Pool)
 {
 	CRITICAL_REIGON_SETUP IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -508,14 +511,12 @@ IPC_Buffer IPC_AllocateBuffer(IPC_BufferPool Pool)
 
 	BufferCount = --PoolPtr->FreeBuffers;
 
-	// Flow Control Check
-	if (BufferCount == PoolPtr->FlowStopLimit) {
+	/* Flow Control Check */
+	if (BufferCount == PoolPtr->FlowStopLimit)
 		CHECK_FLOW_STATE(PoolPtr, IPC_FLOW_STOP, FlowControlCallNeeded)
-	}
 
-	CRITICAL_REIGON_LEAVE if (FlowControlCallNeeded) {
+	CRITICAL_REIGON_LEAVE if (FlowControlCallNeeded)
 		IPC_ReportFlowControlEvent(PoolPtr, IPC_FLOW_STOP);
-	}
 
 	Buffer = IPC_QEntryPtr(QElement)->Item;
 	if (Buffer) {
@@ -536,7 +537,7 @@ IPC_Buffer IPC_AllocateBuffer(IPC_BufferPool Pool)
 		  "Buf %d (%08X) Pool %08X, %d Left", IPC_BufferId(Buffer),
 		  Buffer, Pool, BufferCount);
 
-	// Update Statistics
+	/* Update Statistics */
 	PoolPtr->Allocations++;
 
 	if (BufferCount < PoolPtr->LowWaterMark) {
@@ -546,7 +547,7 @@ IPC_Buffer IPC_AllocateBuffer(IPC_BufferPool Pool)
 	return Buffer;
 }
 
-//**************************************************
+/**************************************************/
 IPC_Buffer IPC_AllocateBufferWait(IPC_BufferPool Pool, IPC_U32 MilliSeconds)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -559,31 +560,38 @@ IPC_Buffer IPC_AllocateBufferWait(IPC_BufferPool Pool, IPC_U32 MilliSeconds)
 	endTick = MilliSeconds;
 
 	while (curTick < endTick) {
-		// Try straight allocate first (saves event operations most of the time)
+		/**
+		 * Try straight allocate first
+		 * (saves event operations most of the time)
+		 */
+
 		Buffer = IPC_AllocateBuffer(Pool);
 		if (Buffer) {
 			return Buffer;
 		}
-		// Check Event exists
+		/* Check Event exists */
 		if (!PoolPtr->EmptyEvent) {
-			// Can't suspend without an event flag
+			/* Can't suspend without an event flag */
 			IPC_TRACE(IPC_Channel_Error, "IPC_AllocateBufferWait",
 				  "No Event Flag for Pool %08X", Pool, 0, 0, 0);
 			return 0;
 		}
-		// Clear event before waiting on it
+		/* Clear event before waiting on it */
 		if (IPC_OK != IPC_EVENT_CLEAR(PoolPtr->EmptyEvent)) {
 			IPC_TRACE(IPC_Channel_Error, "IPC_AllocateBufferWait",
 				  "Cannot clear Event Flag %08P for Pool %08X",
 				  PoolPtr->EmptyEvent, Pool, 0, 0);
 			return 0;
 		}
-		// Check in case the event was set  before the clear
+		/* Check in case the event was set  before the clear */
 		Buffer = IPC_AllocateBuffer(Pool);
 		if (Buffer) {
 			return Buffer;
 		}
-		// Now can safely wait for the event to be set by the buffer free
+		/**
+		 * Now can safely wait for the event to be set
+		 * by the buffer free
+		 */
 		IPC_TRACE(IPC_Channel_FlowControl, "IPC_AllocateBufferWait",
 			  "Pool %08X Empty, waiting for %d Milliseconds, total=%d",
 			  Pool, (endTick - curTick), MilliSeconds, 0);
@@ -593,7 +601,7 @@ IPC_Buffer IPC_AllocateBufferWait(IPC_BufferPool Pool, IPC_U32 MilliSeconds)
 		    IPC_EVENT_WAIT(PoolPtr->EmptyEvent, (endTick - curTick));
 		afterTick = TIMER_GetValue();
 
-		//Handle wrap around for 0xFFFFFFFF
+		/* Handle wrap around for 0xFFFFFFFF */
 		curTick += (UInt32) (afterTick - beforeTick);
 
 		if (IPC_ERROR == errCode) {
@@ -602,9 +610,8 @@ IPC_Buffer IPC_AllocateBufferWait(IPC_BufferPool Pool, IPC_U32 MilliSeconds)
 				  PoolPtr->EmptyEvent, Pool, 0, 0);
 			return 0;
 		} else if (IPC_OK == errCode) {
-			continue;	//retry
-		} else		// IPC_TIMEOUT 
-		{
+			continue;	/* retry */
+		} else {		/* IPC_TIMEOUT */
 			break;
 		}
 	}
@@ -612,7 +619,7 @@ IPC_Buffer IPC_AllocateBufferWait(IPC_BufferPool Pool, IPC_U32 MilliSeconds)
 	return IPC_AllocateBuffer(Pool);
 }
 
-//**************************************************
+/**************************************************/
 IPC_U32 IPC_PoolFreeBuffers(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -624,7 +631,7 @@ IPC_U32 IPC_PoolFreeBuffers(IPC_BufferPool Pool)
 	return PoolPtr->FreeBuffers;
 }
 
-//**************************************************
+/**************************************************/
 void IPC_BufferReturnToPool(IPC_Buffer Buffer, IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -644,7 +651,7 @@ void IPC_BufferReturnToPool(IPC_Buffer Buffer, IPC_BufferPool Pool)
 	IPC_QAddBack(IPC_BufferQueue(Buffer),
 		     IPC_POOLFreeQ(IPC_SmOffset(PoolPtr)));
 
-	// Flow Control Check
+	/* Flow Control Check */
 	if (BufferCount == PoolPtr->FlowStartLimit) {
 		CHECK_FLOW_STATE(PoolPtr, IPC_FLOW_START, FlowControlCallNeeded)
 	}
@@ -652,7 +659,7 @@ void IPC_BufferReturnToPool(IPC_Buffer Buffer, IPC_BufferPool Pool)
 	CRITICAL_REIGON_LEAVE if (FlowControlCallNeeded) {
 		IPC_ReportFlowControlEvent(PoolPtr, IPC_FLOW_START);
 	}
-	// Last ditch check - should never happen
+	/* Last ditch check - should never happen */
 	if (PoolPtr->FlowControlState == IPC_FLOW_STOP
 	    && !PoolPtr->FlowControlCallPending
 	    && PoolPtr->FlowStartLimit < BufferCount) {
@@ -660,13 +667,13 @@ void IPC_BufferReturnToPool(IPC_Buffer Buffer, IPC_BufferPool Pool)
 			  "Retry Flow Start", 0, 0, 0, 0);
 		IPC_ReportFlowControlEvent(PoolPtr, IPC_FLOW_START);
 	}
-	// For IPC_AllocateBufferWait ()
+	/* For IPC_AllocateBufferWait () */
 	if ((BufferCount == 1) && (PoolPtr->EmptyEvent)) {
 		IPC_EVENT_SET(PoolPtr->EmptyEvent);
 	}
 }
 
-//**************************************************
+/**************************************************/
 void IPC_BufferReturn(IPC_Buffer Buffer, IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -687,7 +694,7 @@ void IPC_BufferReturn(IPC_Buffer Buffer, IPC_BufferPool Pool)
 	}
 }
 
-//**************************************************
+/**************************************************/
 void IPC_PoolDumpStats(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -714,7 +721,7 @@ void IPC_PoolDumpStats(IPC_BufferPool Pool)
 		  PoolPtr->LowWaterMark, PoolPtr->FlowControlState);
 }
 
-//**************************************************
+/**************************************************/
 void IPC_PoolDump(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
@@ -792,7 +799,7 @@ void IPC_PoolDump(IPC_BufferPool Pool)
 #endif
 }
 
-//**************************************************
+/**************************************************/
 void IPC_PoolDumpAll(IPC_BufferPool FirstPool)
 {
 	IPC_BufferPool Pool = FirstPool;

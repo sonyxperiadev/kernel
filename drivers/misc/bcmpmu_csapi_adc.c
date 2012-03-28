@@ -289,7 +289,7 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 
 			ar.sig = PMU_ADC_FG_RAW;
 			ar.tm = PMU_ADC_TM_HK;
-			ar.flags = PMU_ADC_RAW_AND_UNIT;
+			ar.flags = PMU_ADC_RAW_ONLY;
 
 			status =
 			    bcmpmu_adc_chipset_api->bcmpmu->
@@ -369,6 +369,8 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 	struct adc_channels_t *chan;
 	struct bcmpmu_adc_req req;
 
+	pr_debug("%s: raw %d", __func__, raw);
+
 	if (!bcmpmu_adc_chipset_api)
 		return -ENOMEM;
 
@@ -385,6 +387,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 
 	req.sig = chan->sig;
 	req.raw = raw;
+	req.cal = raw;
 	req.flags = PMU_ADC_UNIT_ONLY;
 
 	bcmpmu_adc_chipset_api->bcmpmu->adc_req(bcmpmu_adc_chipset_api->bcmpmu,
@@ -892,7 +895,7 @@ static long bcmpmu_adc_chipset_ioctl(struct file *file, unsigned int cmd,
 #define MAX_USER_INPUT_LEN      256
 #define MAX_ARGS 25
 
-#define adccsapi_kstrtol(arg) (simple_strtol(arg, NULL, 0))
+#define adccsapi_kstrtol(arg)  (kstrtol(arg, 10, &val) ? val : val)
 
 static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 					const char __user *buffer, size_t len,
@@ -905,6 +908,7 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 	char *argv[MAX_ARGS];
 	u8 channel;
 	int i, status;
+	int val; /* used in macro */
 
 	/*int ret, i; */
 	int adc_raw, adc_unit;

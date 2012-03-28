@@ -30,91 +30,94 @@
 
 struct kobject *mmc_test_kobj;
 
-#define APANIC_PARTITION_BLOCK_START_ADDRESS	(0x70800) //(0x1C000)
+#define APANIC_PARTITION_BLOCK_START_ADDRESS	(0x70800) /* (0x1C000) */
 #define BLOCK_SIZE				(512)
 struct mmc *mmc;
-unsigned char *wr_buff = NULL;
-unsigned char *rd_buff = NULL;
+unsigned char *wr_buff;
+unsigned char *rd_buff;
 
 static void print_mmcinfo(struct mmc *mmc)
 {
-	printk("Device: %s\n", mmc->name);
-	printk("Manufacturer ID: %x\n", mmc->cid[0] >> 24);
-	printk("OEM: %x\n", (mmc->cid[0] >> 8) & 0xffff);
-	printk("Name: %c%c%c%c%c \n", mmc->cid[0] & 0xff,
+	pr_info("Device: %s\n", mmc->name);
+	pr_info("Manufacturer ID: %x\n", mmc->cid[0] >> 24);
+	pr_info("OEM: %x\n", (mmc->cid[0] >> 8) & 0xffff);
+	pr_info("Name: %c%c%c%c%c\n", mmc->cid[0] & 0xff,
 			(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
 			(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
 
-	printk("Tran Speed: %d\n", mmc->tran_speed);
-	printk("Rd Block Len: %d\n", mmc->read_bl_len);
+	pr_info("Tran Speed: %d\n", mmc->tran_speed);
+	pr_info("Rd Block Len: %d\n", mmc->read_bl_len);
 
-	printk("%s version %d.%d\n", IS_SD(mmc) ? "SD" : "MMC",
+	pr_info("%s version %d.%d\n", IS_SD(mmc) ? "SD" : "MMC",
 			(mmc->version >> 4) & 0xf, mmc->version & 0xf);
 
-	printk("High Capacity: %s\n", mmc->high_capacity ? "Yes" : "No");
-	printk("Capacity: %lld\n", mmc->capacity);
+	pr_info("High Capacity: %s\n", mmc->high_capacity ? "Yes" : "No");
+	pr_info("Capacity: %lld\n", mmc->capacity);
 
-	printk("Bus Width: %d-bit\n", mmc->bus_width);
+	pr_info("Bus Width: %d-bit\n", mmc->bus_width);
 }
 
-static void fill_buff (unsigned char *ptr, unsigned long size, unsigned char val)
+static void fill_buff(unsigned char *ptr, unsigned long size,
+			unsigned char val)
 {
 	int i;
-	for (i=0; i<size; i++) 
+	for (i = 0; i < size; i++)
 		*(ptr + i) = val;
 	return;
 }
 
-static void dump_buff (unsigned char *ptr, unsigned long size)
+static void dump_buff(unsigned char *ptr, unsigned long size)
 {
 	int i;
-	for (i=0;i<size;i++) {
+	for (i = 0; i < size; i++) {
 		if (i%10 == 0)
-			printk ("\r\n");
-		printk("0x%x ", *(ptr+i));
+			pr_info("\n");
+		pr_info("0x%x ", *(ptr+i));
 	}
 	return;
 }
 
-static int rhearay_mmc_init (void) 
+static int rhearay_mmc_init(void)
 {
 	int status;
 
 	mmc_initialize();
 
 	/* For eMMC initilaize the instance number 2 and for SD Card use 1 */
-	status = kona_mmc_init (2);
-	//status = kona_mmc_init (1);
+	status = kona_mmc_init(2);
+	/* status = kona_mmc_init (1); */
 	if (status  < 0) {
-		printk("rhearay_mmc_init failed \r\n");
+		pr_err("rhearay_mmc_init failed\n");
 		return -1;
 	}
-	printk("kona_mmc_init done \r\n");
+	pr_info("kona_mmc_init done\n");
 
 	/* Use 0 for the first device registered via kona_mmc_init etc */
-	mmc = find_mmc_device (0);
+	mmc = find_mmc_device(0);
 	if (mmc == NULL) {
-		printk("No mmc device found\r\n");
+		pr_err("No mmc device found\n");
 		return -1;
 	}
 
 	if (mmc_init(mmc) < 0) {
-		printk("mmc init failed \r\n");
+		pr_err("mmc init failed\n");
 		return -1;
 	}
-	printk("mmc_init done \r\n");
+	pr_info("mmc_init done\n");
 
 	print_mmcinfo(mmc);
 
 #if 0
 	/* read dummy data */
-	fill_buff ((unsigned char *)rd_buff, sizeof(rd_buff), (unsigned char)0xa5);
+	fill_buff((unsigned char *)rd_buff, sizeof(rd_buff),
+	(unsigned char)0xa5);
 
-	mmc->block_dev.block_read(0,APANIC_PARTITION_BLOCK_START_ADDRESS,1,rd_buff);
+	mmc->block_dev.block_read(0, APANIC_PARTITION_BLOCK_START_ADDRESS,
+	1, rd_buff);
 	if (ret == 0)
-		printk("kona_mmc_poll_read: block_read returned 0 \r\n");
+		pr_info("kona_mmc_poll_read: block_read returned 0\n");
 	else
-		printk("kona_mmc_poll_read: bock_read returned %d \r\n", ret);
+		pr_info("kona_mmc_poll_read: bock_read returned %d\n", ret);
 
 	dump_buff((unsigned char *)rd_buff, 512);
 #endif
@@ -127,12 +130,13 @@ kona_mmc_poll_init(struct device *dev, struct device_attribute *attr,
 {
 	int cmd;
 
-	if (sscanf(buf,"%d",&cmd) == 1) 
+	if (sscanf(buf, "%d", &cmd) == 1)
 		rhearay_mmc_init();
 	else
-		printk("Usage: echo [any_number] > /sys/mmc_test/mmc_poll_init \r\n");
+		pr_info("Usage: echo [any_number] > "
+			"/sys/mmc_test/mmc_poll_init\n");
 
-	return n; 
+	return n;
 }
 
 static ssize_t
@@ -143,24 +147,27 @@ kona_mmc_poll_read(struct device *dev, struct device_attribute *attr,
 	int cnt;
 	int ret;
 
-	if (sscanf(buf,"%d", &cnt) != 1) {
-		printk("Usage: echo [number_of_blocks_to_read] > /sys/mmc_test/mmc_poll_read \r\n");
+	if (sscanf(buf, "%d", &cnt) != 1) {
+		pr_info("Usage: echo [number_of_blocks_to_read] > "
+			"/sys/mmc_test/mmc_poll_read \r\n");
 		return n;
 	}
 
 	blk = APANIC_PARTITION_BLOCK_START_ADDRESS;
 	dev_num = 0;
 
-	printk("Reading %d blocks starting from block number %ld \r\n", cnt, blk);
+	pr_info("Reading %d blocks starting from block number %ld \r\n",
+		cnt, blk);
 
 	rd_buff = kmalloc(cnt * BLOCK_SIZE , GFP_KERNEL);
-	fill_buff ((unsigned char *)rd_buff, cnt * BLOCK_SIZE, (unsigned char)0xa5);
+	fill_buff((unsigned char *)rd_buff, cnt * BLOCK_SIZE,
+		   (unsigned char)0xa5);
 
-	ret = mmc->block_dev.block_read (dev_num, blk, cnt, rd_buff);
+	ret = mmc->block_dev.block_read(dev_num, blk, cnt, rd_buff);
 	if (ret == 0)
-		printk("kona_mmc_poll_read: block_read returned 0 \r\n");
+		pr_info("kona_mmc_poll_read: block_read returned 0 \r\n");
 	else
-		printk("kona_mmc_poll_read: bock_read returned %d \r\n", ret);
+		pr_info("kona_mmc_poll_read: bock_read returned %d \r\n", ret);
 
 	dump_buff((unsigned char *)rd_buff, cnt * BLOCK_SIZE);
 
@@ -176,24 +183,27 @@ kona_mmc_poll_write(struct device *dev, struct device_attribute *attr,
 	int ret;
 	int cnt, pattern;
 
-	if (sscanf(buf,"%d %x", &cnt, &pattern) != 2) {
-		printk("Usage: echo [num_blks_to_write] [byte_pattern] > /sys/mmc_test/mmc_poll_write \r\n");
+	if (sscanf(buf, "%d %x", &cnt, &pattern) != 2) {
+		pr_info("Usage: echo [num_blks_to_write] [byte_pattern] > "
+			"/sys/mmc_test/mmc_poll_write\n");
 		return n;
 	}
 
 	blk = APANIC_PARTITION_BLOCK_START_ADDRESS;
 	dev_num = 0;
 
-	printk("Writing %d blocks starting from block nu %ld with pattern 0x%x \r\n", cnt, blk, pattern);
+	pr_info("Writing %d blocks starting from block nu %ld with pattern "
+		"0x%x\n", cnt, blk, pattern);
 
 	wr_buff = kmalloc(cnt * BLOCK_SIZE , GFP_KERNEL);
-	fill_buff ((unsigned char *)wr_buff, cnt * BLOCK_SIZE, (unsigned char)pattern);
+	fill_buff((unsigned char *)wr_buff, cnt * BLOCK_SIZE,
+		   (unsigned char)pattern);
 
-	ret = mmc->block_dev.block_write(dev_num,blk,cnt,wr_buff);
+	ret = mmc->block_dev.block_write(dev_num, blk, cnt, wr_buff);
 	if (ret == 0)
-		printk("kona_mmc_poll_write: block_read returned 0 \r\n");
+		pr_info("kona_mmc_poll_write: block_read returned 0\n");
 	else
-		printk("kona_mmc_poll_write: bock_read returned %d \r\n", ret);
+		pr_info("kona_mmc_poll_write: bock_read returned %d\n", ret);
 
 	kfree(wr_buff);
 	return n;

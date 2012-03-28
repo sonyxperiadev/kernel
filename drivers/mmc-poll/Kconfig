@@ -14,5 +14,5 @@ menuconfig MMCPOLL_TEST
 	help
 	  This selects the test code to validate polling mode MMC driver
 	  Gives sysfs interface to initialize, read and write into the MMC
-	  apanic partition using MMC Poll APIs.
-
+	  kpanic partition using MMC Poll APIs.
+	  Disable the config as default.

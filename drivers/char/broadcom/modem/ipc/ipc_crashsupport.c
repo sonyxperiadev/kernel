@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*     Copyright (c) 2009 Broadcom Corporation
+*   Copyright (c) 2009 Broadcom Corporation
 *
 *   Unless you and Broadcom execute a separate written software license
 *   agreement governing use of this software, this software is licensed to you
@@ -150,10 +150,11 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		abort();
 	}
 
-#if defined(CONFIG_BRCM_CP_CRASH_DUMP)\
-	 || defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) || defined(CONFIG_BCM_AP_PANIC_ON_CPCRASH)
+#if defined(CONFIG_BRCM_CP_CRASH_DUMP) \
+	|| defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) \
+	|| defined(CONFIG_BCM_AP_PANIC_ON_CPCRASH)
 	while (SmLocalControl.SmControl->CrashDump == NULL)
-		;
+		; /* No op */
 #endif
 
 	/* **NOTE** for now, continue doing simple dump out IPC_DEBUG so there
@@ -238,7 +239,7 @@ cleanUp:
 #endif
 
 #ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
-	IPC_DEBUG (DBG_ERROR, "CP crashed, crashing AP now..\n");
+	IPC_DEBUG(DBG_ERROR, "CP crashed, crashing AP now..\n");
 
 #ifdef CONFIG_SEC_DEBUG
 	cp_abort();

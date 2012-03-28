@@ -792,6 +792,11 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 #endif
 
 	ret = sdhci_suspend_host(host, state);
+
+	if (dev->vdd_sdxc_regulator) {
+		regulator_disable(dev->vdd_sdxc_regulator);
+	}
+
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to suspend sdhci host err=%d\n",
 			ret);
@@ -807,6 +812,11 @@ static int sdhci_pltfm_resume(struct platform_device *pdev)
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
 
+	if (dev->vdd_sdxc_regulator) {
+		int retn = regulator_enable(dev->vdd_sdxc_regulator);
+		if (retn)
+			pr_err("Enabling sdxc regulator failed during resume\n");
+	}
 	ret = sdhci_resume_host(host);
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to resume sdhci host err=%d\n",
@@ -979,7 +989,7 @@ static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name)
 
 	dev->vddo_sd_regulator = regulator_get(NULL, reg_name);
 
-	if (dev->vddo_sd_regulator) {
+	if (!IS_ERR(dev->vddo_sd_regulator)) {
 		ret = regulator_enable(dev->vddo_sd_regulator);
 		if (ret < 0) {
 			pr_err("%s: can't Enable regulator\n",
@@ -1012,7 +1022,7 @@ static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev, char *reg_name)
 
 	dev->vdd_sdxc_regulator = regulator_get(NULL, reg_name);
 
-	if (dev->vddo_sd_regulator) {
+	if (!IS_ERR(dev->vdd_sdxc_regulator)) {
 		ret = regulator_enable(dev->vdd_sdxc_regulator);
 		if (ret < 0) {
 			pr_err("%s: can't Enable regulator\n",

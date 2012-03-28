@@ -1,20 +1,21 @@
-/*
-	©2007-2009 Broadcom Corporation
+/*******************************************************************************
+*    ©2007-2009 Broadcom Corporation
+*
+*    Unless you and Broadcom execute a separate written software license
+*    agreement governing use of this software, this software is licensed to you
+*    under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
+*
+*  Notwithstanding the above, under no circumstances may you combine this
+*  software in any way with any other Broadcom software provided under a license
+*  other than the GPL, without Broadcom's express prior written consent.
+*
+*******************************************************************************/
 
-	Unless you and Broadcom execute a separate written software license
-	agreement governing use of this software, this software is licensed to you
-	under the terms of the GNU General Public License version 2, available
-	at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
-
-   Notwithstanding the above, under no circumstances may you combine this
-   software in any way with any other Broadcom software provided under a license
-   other than the GPL, without Broadcom's express prior written consent.
-*/
-
-//============================================================
-// IPC_SharedMemory.c
-//
-//============================================================
+/*============================================================
+* IPC_SharedMemory.c
+*
+*===========================================================*/
 #ifdef UNDER_LINUX
 #include <linux/kernel.h>
 #include <linux/string.h>
@@ -24,7 +25,7 @@
 #else
 #include "mobcom_types.h"
 #include "ipcproperties.h"
-#endif // UNDER_LINUX
+#endif /* UNDER_LINUX */
 
 #include "ipc_buffer.h"
 #include "ipc_bufferpool.h"
@@ -34,11 +35,11 @@
 #include "ipc_cppowersaving.h"
 #include "ipc_appowersaving.h"
 
-//============================================================
-// Static data
-//============================================================
+/*============================================================
+* Static data
+*===========================================================*/
 
-//**************************************************
+/**************************************************/
 const IPC_CPU_ID_T IPC_OTHER_CPU[IPC_CPU_ID_Count] = {
 	IPC_NO_CPU,
 	IPC_AP_CPU,
@@ -46,63 +47,65 @@ const IPC_CPU_ID_T IPC_OTHER_CPU[IPC_CPU_ID_Count] = {
 };
 
 #ifdef FUSE_IPC_CRASH_SUPPORT
-//**************************************************
-// Reason for CP crash used by AP.
-// Should be kept in sync with IPC_CrashCode_T
+/**************************************************/
+/**
+ * Reason for CP crash used by AP.
+ * Should be kept in sync with IPC_CrashCode_T
+ */
 
 char *const g_IpcAPtimeOutCode[IPC_CP_MAX_CRASH_CODE] = {
-	"CRUN",			//#define       IPC_CP_NOT_CRASHED              0
-	"CACR",			//#define       IPC_CP_ANALYSING_CRASH          1
-	"CUCR",			//#define       IPC_CP_UNKNOWN_CRASH            2
-	"CAST",			//#define       IPC_CP_ASSERT                   3
-	"CDAB",			//#define       IPC_CP_DATA_ABORT               4
-	"CPFH",			//#define       IPC_CP_PREFETCH_FAILURE         5
-	"CUDF",			//#define       IPC_CP_UNDEFINED_INSTRUCTION    6
-	"CDBZ",			//#define       IPC_CP_DIVIDED_BY_ZERO          7
-	"CNFP",			//#define       IPC_CP_NULL_FUNCTION_POINTER    8
-	"CSKO",			//#define       IPC_CP_STACK_OVERFLOW                   9
-	"ARST",			//#define       IPC_AP_RESET                    10
-	"CRAI",			//#define       IPC_CP_RAISE_CALLED             11
-	"CEXT",			//#define       IPC_CP_EXIT_CALLED              12
-	"AAST",			//#define       IPC_AP_ASSERT                                   13
-	"CBAP"			//#define       IPC_CP_CRASHED_BY_AP                    14
+	"CRUN",		/*#define       IPC_CP_NOT_CRASHED              0  */
+	"CACR",		/*#define       IPC_CP_ANALYSING_CRASH          1  */
+	"CUCR",		/*#define       IPC_CP_UNKNOWN_CRASH            2  */
+	"CAST",		/*#define       IPC_CP_ASSERT                   3  */
+	"CDAB",		/*#define       IPC_CP_DATA_ABORT               4  */
+	"CPFH",		/*#define       IPC_CP_PREFETCH_FAILURE         5  */
+	"CUDF",		/*#define       IPC_CP_UNDEFINED_INSTRUCTION    6  */
+	"CDBZ",		/*#define       IPC_CP_DIVIDED_BY_ZERO          7  */
+	"CNFP",		/*#define       IPC_CP_NULL_FUNCTION_POINTER    8  */
+	"CSKO",		/*#define       IPC_CP_STACK_OVERFLOW           9  */
+	"ARST",		/*#define       IPC_AP_RESET                    10 */
+	"CRAI",		/*#define       IPC_CP_RAISE_CALLED             11 */
+	"CEXT",		/*#define       IPC_CP_EXIT_CALLED              12 */
+	"AAST",		/*#define       IPC_AP_ASSERT                   13 */
+	"CBAP"		/*#define       IPC_CP_CRASHED_BY_AP            14 */
 };
 
-//**************************************************
+/**************************************************/
 IPC_Boolean g_bCpCrashed = IPC_FALSE;
 
-#endif //FUSE_IPC_CRASH_SUPPORT
+#endif /* FUSE_IPC_CRASH_SUPPORT */
 
-//**************************************************
-// Control structure in local memory - CPU specific data
+/**************************************************/
+/* Control structure in local memory - CPU specific data */
 
 IPC_SmLocalControl_T SmLocalControl;
 
-//**************************************************
-// Used for converting Shared Memory offsets to real C pointers
+/**************************************************/
+/* Used for converting Shared Memory offsets to real C pointers */
 
 char *SmBase;
 
-//**************************************************
-// For debug
+/**************************************************/
+/* For debug */
 volatile IPC_SmControl SmView;
 
-//============================================================
-// Local Macros
-//============================================================
+/*============================================================
+* Local Macros
+*===========================================================*/
 
-//============================================================
-// Local Functions
-//============================================================
+/*============================================================
+* Local Functions
+*===========================================================*/
 
-//**************************************************
+/**************************************************/
 #define RAISE_INTERRUPT	\
 	do {	\
 		(*SmLocalControl.RaiseInterrupt)();	\
-		SmLocalControl.SmControl->Interrupts[IPC_CPU_ID_INDEX(IPC_SM_CURRENT_CPU)].InterruptRaised ++;	\
+		SmLocalControl.SmControl->Interrupts[IPC_CPU_ID_INDEX(IPC_SM_CURRENT_CPU)].InterruptRaised++;	\
 	} while (0)
 
-//**************************************************
+/**************************************************/
 void IPC_SmFifoWrite(IPC_Fifo Fifo, IPC_Buffer Message)
 {
 	CRITICAL_REIGON_SETUP IPC_U32 OriginalWritePointer;
@@ -120,9 +123,8 @@ void IPC_SmFifoWrite(IPC_Fifo Fifo, IPC_Buffer Message)
 	Fifo->WriteIndex = IPC_FIFOINCREMENT(OriginalWritePointer);
 	Fifo->WriteCount++;
 
-	if (IPC_FIFOCOUNT(Fifo) > Fifo->HighWaterMark) {
+	if (IPC_FIFOCOUNT(Fifo) > Fifo->HighWaterMark)
 		Fifo->HighWaterMark = IPC_FIFOCOUNT(Fifo);
-	}
 
 	CRITICAL_REIGON_LEAVE if (OriginalWritePointer == 0) {
 		IPC_TRACE(IPC_Channel_General, "IPC_SmFifoWrite",
@@ -131,16 +133,15 @@ void IPC_SmFifoWrite(IPC_Fifo Fifo, IPC_Buffer Message)
 	}
 
 	if (Fifo->ReadIndex == OriginalWritePointer) {
-		// Remote end is not currently reading FIFO
+		/* Remote end is not currently reading FIFO */
 		IPC_TRACE(IPC_Channel_Sm, "IPC_SmFifoWrite",
 			  "Interrupting other Cpu", 0, 0, 0, 0);
 		RAISE_INTERRUPT;
 	}
 }
 
-//**************************************************
-// Only called by the SM HISR, so no critical reigon
-//
+/**************************************************/
+/* Only called by the SM HISR, so no critical reigon */
 static IPC_Buffer IPC_SmFifoRead(IPC_Fifo Fifo)
 {
 	IPC_Buffer Buffer;
@@ -169,15 +170,15 @@ static IPC_Buffer IPC_SmFifoRead(IPC_Fifo Fifo)
 	return Buffer;
 }
 
-//============================================================
-// Visible Functions
-//============================================================
-//**************************************************
-//
-void IPC_EndpointRegister
-    (IPC_EndpointId_T EndpointId,
-     IPC_FlowCntrlFPtr_T FlowControlFunction,
-     IPC_BufferDeliveryFPtr_T DeliveryFunction, IPC_U32 HeaderSize) {
+/*============================================================
+* Visible Functions
+*===========================================================*/
+/**************************************************/
+
+void IPC_EndpointRegister(IPC_EndpointId_T EndpointId,
+	IPC_FlowCntrlFPtr_T FlowControlFunction,
+	IPC_BufferDeliveryFPtr_T DeliveryFunction, IPC_U32 HeaderSize)
+{
 	IPC_EP_T *EP = &SmLocalControl.SmControl->Endpoints[EndpointId];
 
 	IPC_TRACE(IPC_Channel_Sm, "IPC_EndpointRegister",
@@ -193,7 +194,7 @@ void IPC_EndpointRegister
 
 }
 
-//**************************************************
+/**************************************************/
 #ifdef IPC_DEBUG
 IPC_Endpoint IPC_SmEndpointInfo(IPC_EndpointId_T EndpointId)
 {
@@ -205,7 +206,7 @@ IPC_Endpoint IPC_SmEndpointInfo(IPC_EndpointId_T EndpointId)
 		switch (EndpointPtr->Cpu) {
 		case IPC_CP_CPU:
 		case IPC_AP_CPU:
-			// Valid Endpoint, do nothing
+			/* Valid Endpoint, do nothing */
 			break;
 
 		default:
@@ -218,23 +219,25 @@ IPC_Endpoint IPC_SmEndpointInfo(IPC_EndpointId_T EndpointId)
 }
 #endif
 
-//**************************************************
+/**************************************************/
 IPC_Boolean IPC_SmIsEndpointRegistered(IPC_EndpointId_T EndpointId)
 {
 	IPC_Endpoint EndpointPtr = IPC_SmEndpointInfo(EndpointId);
 
-	if (EndpointPtr == 0) {
+	if (EndpointPtr == 0)
 		return IPC_FALSE;
-	} else {
+	else
 		return IPC_TRUE;
-	}
 }
 
-//**************************************************
+/**************************************************/
 IPC_CPU_ID_T IPC_SmCurrentCpu(void)
 {
 #ifdef HOST_TEST
-	// No separate memory for the 2 CPUs; part of test code, keep the "extern", no need to be cleaned here.
+	/**
+	 * No separate memory for the 2 CPUs; part of test code,
+	 * keep the "extern", no need to be cleaned here.
+	 */
 	extern IPC_CPU_ID_T IPCTest_CurrentCpu(void);
 	return IPCTest_CurrentCpu();
 #else
@@ -242,7 +245,7 @@ IPC_CPU_ID_T IPC_SmCurrentCpu(void)
 #endif
 }
 
-//**************************************************
+/**************************************************/
 IPC_SmPtr IPC_SmAlloc(IPC_U32 Size)
 {
 	IPC_CPU_ID_T Cpu = IPC_SM_CURRENT_CPU;
@@ -260,7 +263,7 @@ IPC_SmPtr IPC_SmAlloc(IPC_U32 Size)
 		switch (Cpu) {
 		case IPC_AP_CPU:
 			{
-				// Allocate from the bottom up for AP
+				/* Allocate from the bottom up for AP */
 				Allocated = *ApAllocated;
 				*ApAllocated += Size;
 			}
@@ -268,7 +271,7 @@ IPC_SmPtr IPC_SmAlloc(IPC_U32 Size)
 
 		case IPC_CP_CPU:
 			{
-				// Allocate from the top down for CP
+				/* Allocate from the top down for CP */
 				*CpAllocated -= Size;
 				Allocated = *CpAllocated;
 			}
@@ -294,28 +297,28 @@ IPC_SmPtr IPC_SmAlloc(IPC_U32 Size)
 	}
 }
 
-//**************************************************
+/**************************************************/
 void IPC_SmAddPool(IPC_BufferPool Pool)
 {
-	// Add to Pool list
-	if (SmLocalControl.SmControl->FirstPool == 0) {
+	/* Add to Pool list */
+	if (SmLocalControl.SmControl->FirstPool == 0)
 		SmLocalControl.SmControl->FirstPool = Pool;
-	}
 
-	if (SmLocalControl.SmControl->LastPool == 0) {
+	if (SmLocalControl.SmControl->LastPool == 0)
 		SmLocalControl.SmControl->LastPool = Pool;
-
-	} else {
+	else {
 
 		IPC_PoolNextPoolSet(SmLocalControl.SmControl->LastPool, Pool);
 		SmLocalControl.SmControl->LastPool = Pool;
 	}
 }
 
-//**************************************************
-IPC_SmPtr IPC_SmPoolAlloc
-    (IPC_U32 PoolOverhead,
-     IPC_U32 HeaderSize, IPC_U32 DataSize, IPC_U32 BufferCount) {
+/**************************************************/
+IPC_SmPtr IPC_SmPoolAlloc(IPC_U32 PoolOverhead,
+			IPC_U32 HeaderSize,
+			IPC_U32 DataSize,
+			IPC_U32 BufferCount)
+{
 	IPC_SmPtr Pool;
 
 	if (SmLocalControl.SmControl->
@@ -344,7 +347,7 @@ IPC_SmPtr IPC_SmPoolAlloc
 	return Pool;
 }
 
-//**************************************************
+/**************************************************/
 void IPC_SmSendBuffer(IPC_Buffer Buffer)
 {
 	IPC_EndpointId_T DestinationEpId;
@@ -391,7 +394,7 @@ void IPC_SmSendBuffer(IPC_Buffer Buffer)
 	}
 }
 
-//**************************************************
+/**************************************************/
 #ifdef IPC_DEBUG
 void IPC_SmFreeBuffer(IPC_Buffer Buffer, IPC_CPU_ID_T OwningCpu)
 {
@@ -407,33 +410,33 @@ void IPC_SmFreeBuffer(IPC_Buffer Buffer, IPC_CPU_ID_T OwningCpu)
 #endif
 
 #ifdef FUSE_IPC_CRASH_SUPPORT
-//**************************************************
+/**************************************************/
 void IPCCP_SetCPCrashedStatus(IPC_CrashCode_T CrashCode)
 {
 	SmLocalControl.SmControl->CrashCode = CrashCode;
 
-	// Just for the info that CP is crashed
+	/* Just for the info that CP is crashed */
 	RAISE_INTERRUPT;
 }
 
-//**************************************************
+/**************************************************/
 void IPCCP_SignalCrashToAP(IPC_CrashCode_T CrashCode, void *Dump)
 {
 	SmLocalControl.SmControl->CrashCode = CrashCode;
 	SmLocalControl.SmControl->CrashDump = Dump;
 
-	// Interrupt AP so that it can start taking the crash dump out
+	/* Interrupt AP so that it can start taking the crash dump out */
 	RAISE_INTERRUPT;
 }
 
-//**************************************************
-void IPCAP_GetCrashData(IPC_CrashCode_T * CrashCode, void **Dump)
+/**************************************************/
+void IPCAP_GetCrashData(IPC_CrashCode_T *CrashCode, void **Dump)
 {
 	*CrashCode = SmLocalControl.SmControl->CrashCode;
 	*Dump = (void **)SmLocalControl.SmControl->CrashDump;
 }
 
-//**************************************************
+/**************************************************/
 void IPCAP_ClearCrashData(void)
 {
 	SmLocalControl.SmControl->CrashCode = 0;
@@ -442,8 +445,8 @@ void IPCAP_ClearCrashData(void)
 
 }
 
-#endif //FUSE_IPC_CRASH_SUPPORT
-//**************************************************
+#endif /* FUSE_IPC_CRASH_SUPPORT */
+/**************************************************/
 
 void IPC_ProcessEvents(void)
 {
@@ -474,10 +477,13 @@ void IPC_ProcessEvents(void)
 #ifdef FUSE_IPC_CRASH_SUPPORT
 	if ((Cpu == IPC_AP_CPU) && (g_bCpCrashed == IPC_FALSE)
 	    && (SmLocalControl.SmControl->CrashCode != IPC_CP_NOT_CRASHED)) {
-		// CP has crashed so set the crash status
+		/* CP has crashed so set the crash status */
 		g_bCpCrashed = IPC_TRUE;
 
-		// CP should be analysing crach here as this is the first indication - but call crash function in case finished.
+		/**
+		 * CP should be analysing crach here as this is the first
+		 * indication - but call crash function in case finished.
+		 */
 		if (SmLocalControl.IPCCPCrashed)
 			SmLocalControl.IPCCPCrashed(SmLocalControl.SmControl->
 						    CrashCode);
@@ -490,18 +496,25 @@ void IPC_ProcessEvents(void)
 		    && (SmLocalControl.SmControl->CrashCode !=
 			IPC_CP_NOT_CRASHED)) {
 
-			//if CP is not analysing any more than we should have crash dump now
-			//call the function to handle the crash dump
+			/**
+			 * if CP is not analysing any more than we should
+			 * have crash dump now
+			 *
+			 * call the function to handle the crash dump
+			 */
 			if (SmLocalControl.IPCCPCrashed)
 				SmLocalControl.IPCCPCrashed(SmLocalControl.
 							    SmControl->
 							    CrashCode);
-			//This function can call  IPCAP_GetCrashData to get crash location.
+			/**
+			 * This function can call  IPCAP_GetCrashData to get
+			 * crash location.
+			 */
 		} else {
 			g_bCpCrashed = IPC_FALSE;
 		}
 	} else
-#endif //FUSE_IPC_CRASH_SUPPORT
+#endif /* FUSE_IPC_CRASH_SUPPORT */
 	{
 		{
 			IPC_Fifo SendFifo = SmLocalControl.SendFifo;
@@ -557,17 +570,18 @@ void IPC_ProcessEvents(void)
 	}
 }
 
-//**************************************************
-void IPC_Initialise
-    (void *Sm_BaseAddress,
-     IPC_U32 Sm_Size,
-     IPC_CPU_ID_T CPUID,
-     IPC_ControlInfo_T * ControlInfo,
-     IPCConfiguredFPtr_T IPCConfigured, IPCResetFPtr_T IPCReset
+/**************************************************/
+void IPC_Initialise(void *Sm_BaseAddress,
+		IPC_U32 Sm_Size,
+		IPC_CPU_ID_T CPUID,
+		IPC_ControlInfo_T *ControlInfo,
+		IPCConfiguredFPtr_T IPCConfigured,
+		IPCResetFPtr_T IPCReset
 #ifdef FUSE_IPC_CRASH_SUPPORT
-     , IPCCPCrashCbFptr_T IPCCPCrashedCb
-#endif				//FUSE_IPC_CRASH_SUPPORT
-    ) {
+		, IPCCPCrashCbFptr_T IPCCPCrashedCb
+#endif	/* FUSE_IPC_CRASH_SUPPORT */
+)
+{
 	IPC_U32 CpuIndex = IPC_CPU_ID_INDEX(CPUID);
 	IPC_SmControl SmControl;
 
@@ -575,10 +589,10 @@ void IPC_Initialise
 		  "Cpu %d, Sm_Base %08X, Sm_Size %d", CPUID, Sm_BaseAddress,
 		  Sm_Size, 0);
 
-	SmView = (IPC_SmControl) Sm_BaseAddress;	// For debug only
+	SmView = (IPC_SmControl) Sm_BaseAddress;	/* For debug only */
 	SmBase = Sm_BaseAddress;
 
-	// Initialise CPU local control structure
+	/* Initialise CPU local control structure */
 	SmLocalControl.CpuId = CPUID;
 	SmLocalControl.SmControl = (IPC_SmControl) Sm_BaseAddress;
 	SmLocalControl.RaiseInterrupt = ControlInfo->RaiseEventFptr;
@@ -602,7 +616,7 @@ void IPC_Initialise
 	    (SmLocalControl.Event.Clear == 0) ||
 	    (SmLocalControl.Event.Wait == 0)
 	    ) {
-		// Need all four to be useful
+		/* Need all four to be useful */
 		SmLocalControl.Event.Create = 0;
 		SmLocalControl.Event.Set = 0;
 		SmLocalControl.Event.Clear = 0;
@@ -614,10 +628,10 @@ void IPC_Initialise
 	g_bCpCrashed = IPC_FALSE;
 #endif
 
-	// Initialise Shared Memory
+	/* Initialise Shared Memory */
 	SmControl = SmLocalControl.SmControl;
 
-	// Basic Sm Initialisation only done once
+	/* Basic Sm Initialisation only done once */
 	if (SmControl->Initialised[IPC_CPU_ID_INDEX(IPC_OTHER_CPU[CPUID])] == 0) {
 		SmControl->Size = Sm_Size;
 		SmControl->Allocated[IPC_CPU_ID_INDEX(IPC_AP_CPU)] =
@@ -638,14 +652,14 @@ void IPC_Initialise
 	}
 #ifdef FUSE_COMMS_PROCESSOR
 	{
-		IPC_CpPSInitialise((IPC_PowerSavingInfo_T *) & SmLocalControl.
+		IPC_CpPSInitialise((IPC_PowerSavingInfo_T *) &SmLocalControl.
 				   SmControl->PS,
 				   (IPC_PlatformSpecificPowerSavingInfo_T *)
 				   ControlInfo->PowerSavingStruct);
 	}
 #elif defined(FUSE_APPS_PROCESSOR)
 	{
-		IPC_ApPSInitialise((IPC_PowerSavingInfo_T *) & SmLocalControl.
+		IPC_ApPSInitialise((IPC_PowerSavingInfo_T *) &SmLocalControl.
 				   SmControl->PS,
 				   (IPC_PlatformSpecificPowerSavingInfo_T *)
 				   ControlInfo->PowerSavingStruct);
@@ -674,12 +688,13 @@ void IPC_Initialise
 }
 
 #ifdef UNDER_LINUX
-//**************************************************
-// Check if the other CP IPC has initialized
-// Return       0       Not initialized
-//                      -1      CP crash
-//                      -2      AP/CP IPC version mismatch
-//                      1       CP initialized and IPC verson match
+/**************************************************
+* Check if the other CP IPC has initialized
+* Return       0       Not initialized
+*                      -1      CP crash
+*                      -2      AP/CP IPC version mismatch
+*                      1       CP initialized and IPC verson match
+**************************************************/
 
 int IPC_IsCpIpcInit(void *pSmBase, IPC_CPU_ID_T Cpu)
 {
@@ -692,10 +707,10 @@ int IPC_IsCpIpcInit(void *pSmBase, IPC_CPU_ID_T Cpu)
 		if (crash_code != IPC_CP_NOT_CRASHED
 		    && crash_code < IPC_CP_MAX_CRASH_CODE
 		    && pSmControl->CrashDump != NULL) {
-			// CP crash
+			/* CP crash */
 			return -1;
 		} else {
-			// CP IPC not initialized
+			/* CP IPC not initialized */
 			return 0;
 		}
 	} else {
@@ -703,13 +718,13 @@ int IPC_IsCpIpcInit(void *pSmBase, IPC_CPU_ID_T Cpu)
 		    pSmControl->Version[IPC_CPU_ID_INDEX(IPC_OTHER_CPU[Cpu])];
 		if (cp_version != IPC_Version) {
 			printk(KERN_ERR
-			       "AP/CP IPC Version Mismatch, AP=0x%x CP=0x%x \n",
+			       "AP/CP IPC Version Mismatch, AP=0x%x CP=0x%x\n",
 			       IPC_Version, cp_version);
 			return -2;
 		} else {
-			// CP initialized and IPC verson match
+			/* CP initialized and IPC verson match */
 			printk(KERN_WARNING
-			       "AP/CP IPC Version match, AP=0x%x CP=0x%x \n",
+			       "AP/CP IPC Version match, AP=0x%x CP=0x%x\n",
 			       IPC_Version, cp_version);
 			return 1;
 		}
@@ -717,8 +732,8 @@ int IPC_IsCpIpcInit(void *pSmBase, IPC_CPU_ID_T Cpu)
 
 }
 
-#endif // UNDER_LINUX
-//**************************************************
+#endif /* UNDER_LINUX */
+/**************************************************/
 void IPC_Configured(void)
 {
 	IPC_CPU_ID_T Cpu = SmLocalControl.CpuId;
@@ -730,22 +745,22 @@ void IPC_Configured(void)
 	}
 
 	IPC_TRACE(IPC_Channel_Sm, "IPC_Configured", "Cpu %d", Cpu, 0, 0, 0);
-	SmLocalControl.SmControl->Initialised[IPC_CPU_ID_INDEX(Cpu)] =
+	SmLocalControl.SmControl->Initialised[IPC_CPU_ID_INDEX(Cpu)] =
 	    IPC_SmConfigured;
-	if (SmLocalControl.SmControl->
+	if (SmLocalControl.SmControl->
 	     Initialised[IPC_CPU_ID_INDEX(IPC_OTHER_CPU[Cpu])] ==
 	     IPC_SmConfigured) {
-		SmLocalControl.ConfiguredReported = IPC_TRUE;
+		SmLocalControl.ConfiguredReported = IPC_TRUE;
 		(*SmLocalControl.IPCInitialisedFunction) ();
 		RAISE_INTERRUPT;
 	}
-}
+}
 
-//============================================================
-// Sleep Mode
-//============================================================
+/*============================================================
+* Sleep Mode
+*===========================================================*/
 
-//**************************************************
+/**************************************************/
 void IPC_ApSleepModeSet(IPC_Boolean Setting)
 {
 	IPC_TRACE(IPC_Channel_Error, "IPC_ApSleepModeSet",
@@ -753,24 +768,24 @@ void IPC_ApSleepModeSet(IPC_Boolean Setting)
 		  0);
 }
 
-//**************************************************
+/**************************************************/
 IPC_Boolean IPC_ApSleepModeGet(void)
 {
 	return SmLocalControl.SmControl->PS.ApDeepSleepEnabled;
 }
 
-//**************************************************
+/**************************************************/
 IPC_PowerSavingInfo_T *IPC_ApGetAddrPSStruct(void)
 {
-	return (IPC_PowerSavingInfo_T *) & SmLocalControl.SmControl->PS;
+	return (IPC_PowerSavingInfo_T *) &SmLocalControl.SmControl->PS;
 }
 
-//============================================================
-//Persistent Data Store Functions
-//============================================================
+/*============================================================
+*Persistent Data Store Functions
+*===========================================================*/
 
-//**************************************************
-void IPC_GetPersistentData(IPC_PersistentDataStore_t * thePersistentData)
+/**************************************************/
+void IPC_GetPersistentData(IPC_PersistentDataStore_t *thePersistentData)
 {
 	thePersistentData->DataLength =
 	    IPC_PERSISTENT_DATA_SIZE * sizeof(IPC_U32);
@@ -778,11 +793,11 @@ void IPC_GetPersistentData(IPC_PersistentDataStore_t * thePersistentData)
 	    (void *)&SmLocalControl.SmControl->PersistentData;
 }
 
-//============================================================
-//Property Functions
-//============================================================
+/*============================================================
+*Property Functions
+*===========================================================*/
 
-//**************************************************
+/**************************************************/
 IPC_Boolean IPC_SetProperty(IPC_PropertyID_E PropertyId, IPC_U32 value)
 {
 	IPC_Boolean retValue = IPC_TRUE;
@@ -795,8 +810,7 @@ IPC_Boolean IPC_SetProperty(IPC_PropertyID_E PropertyId, IPC_U32 value)
 		} else {
 			retValue = IPC_FALSE;
 		}
-	} else			//Must be CP
-	{
+	} else {		/* Must be CP */
 		if ((PropertyId >= IPC_PROPERTY_START_CP)
 		    && (PropertyId <= IPC_PROPERTY_END_CP)) {
 			SmLocalControl.SmControl->Properties[PropertyId] =
@@ -808,24 +822,24 @@ IPC_Boolean IPC_SetProperty(IPC_PropertyID_E PropertyId, IPC_U32 value)
 	return retValue;
 }
 
-//**************************************************
-IPC_Boolean IPC_GetProperty(IPC_PropertyID_E PropertyId, IPC_U32 * value)
+/**************************************************/
+IPC_Boolean IPC_GetProperty(IPC_PropertyID_E PropertyId, IPC_U32 *value)
 {
 	IPC_Boolean retValue = IPC_TRUE;
 
-	if (PropertyId < IPC_NUM_OF_PROPERTIES) {
+	if (PropertyId < IPC_NUM_OF_PROPERTIES)
 		*value = SmLocalControl.SmControl->Properties[PropertyId];
-	} else {
+	else
 		retValue = IPC_FALSE;
-	}
+
 	return retValue;
 }
 
-//============================================================
-// Debug Functions
-//============================================================
+/*============================================================
+* Debug Functions
+*===========================================================*/
 
-//**************************************************
+/**************************************************/
 #if defined(FUSE_COMMS_PROCESSOR) || (defined(FUSE_APPS_PROCESSOR) && !defined(UNDER_CE) && !defined(UNDER_LINUX))
 extern char *GetFuncNameByAddr(IPC_U32, IPC_U32, IPC_U32 *);
 #endif
@@ -898,7 +912,7 @@ void IPC_Dump(void)
 		IPC_Endpoint EpPtr =
 		    &SmLocalControl.SmControl->Endpoints[EpIndex];
 
-		EpPtr = EpPtr;	// Compiler warning
+		EpPtr = EpPtr;	/* Compiler warning */
 
 		IPC_TRACE(IPC_Channel_General, "IPC_Ep_Dump",
 			  "Ep Name %-12.12s, Id %d, CPU %s, HeaderSize %d",
@@ -986,7 +1000,7 @@ int IPC_DumpStatus(char *buf)
 
 	CpuIndex = IPC_CPU_ID_INDEX(IPC_AP_CPU);
 	p += sprintf(p,
-		     "IPC_AP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d \n",
+		     "IPC_AP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d\n",
 		     IPC_AP_CPU, SmControl->Initialised[CpuIndex],
 		     SmControl->Allocated[CpuIndex],
 		     SmControl->CurrentBuffers[CpuIndex]);
@@ -998,40 +1012,40 @@ int IPC_DumpStatus(char *buf)
 		     SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
 
 	p += sprintf(p,
-		     "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d \n",
+		     "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d\n",
 		     SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
 		     SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
 		     SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
 		     SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
 
 	p += sprintf(p,
-		     "Version %08X, InterruptRaised %d, InterruptHandled %d \n",
+		     "Version %08X, InterruptRaised %d, InterruptHandled %d\n",
 		     SmControl->Version[CpuIndex],
 		     SmControl->Interrupts[CpuIndex].InterruptRaised,
 		     SmControl->Interrupts[CpuIndex].InterruptHandled);
 
 	CpuIndex = IPC_CPU_ID_INDEX(IPC_CP_CPU);
 	p += sprintf(p,
-		     "IPC_CP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d \n",
+		     "IPC_CP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d\n",
 		     IPC_CP_CPU, SmControl->Initialised[CpuIndex],
 		     SmControl->Allocated[CpuIndex],
 		     SmControl->CurrentBuffers[CpuIndex]);
 
-	p += sprintf(p, "Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d \n",
+	p += sprintf(p, "Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d\n",
 		     SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
 		     SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
 		     SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
 		     SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
 
 	p += sprintf(p,
-		     "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d \n",
+		     "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d\n",
 		     SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
 		     SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
 		     SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
 		     SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
 
 	p += sprintf(p,
-		     "Version %08X, InterruptRaised %d, InterruptHandled %d \n",
+		     "Version %08X, InterruptRaised %d, InterruptHandled %d\n",
 		     SmControl->Version[CpuIndex],
 		     SmControl->Interrupts[CpuIndex].InterruptRaised,
 		     SmControl->Interrupts[CpuIndex].InterruptHandled);
