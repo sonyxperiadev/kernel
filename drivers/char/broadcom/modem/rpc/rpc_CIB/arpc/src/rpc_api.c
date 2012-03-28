@@ -2,21 +2,21 @@
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
 *
 *   @file   rpc_ser.c
 *
-*   @brief  This file define the request/respose structure for 
+*   @brief  This file define the request/respose structure for
 *	serialize/deserialize.
 *
 ****************************************************************************/
@@ -41,8 +41,8 @@
 #define MAX_LOG_BUFFER_SIZE 4000	/* ~4.5K */
 #endif
 
-Result_t RPC_SerializeMsg(RPC_InternalMsg_t * rpcMsg, char *stream,
-			  UInt32 streamLen, UInt32 * outLen)
+Result_t RPC_SerializeMsg(RPC_InternalMsg_t *rpcMsg, char *stream,
+			  UInt32 streamLen, UInt32 *outLen)
 {
 	XDR xdrs;
 	Result_t result = RESULT_OK;
@@ -55,14 +55,13 @@ Result_t RPC_SerializeMsg(RPC_InternalMsg_t * rpcMsg, char *stream,
 		      ("RPC_SYS_isValidClientID (Invalid)  %d",
 		       rpcMsg->rootMsg.clientID));
 
-	//assert(isValid);
+	/*assert(isValid); */
 
 	if (DETAIL_LOG_ENABLED) {
 		detailLogBuffer = (char *)capi2_malloc(MAX_LOG_BUFFER_SIZE+1);
 		xdrmem_create(&xdrs, stream, streamLen, detailLogBuffer,
 			MAX_LOG_BUFFER_SIZE, XDR_ENCODE);
-	}
-	else
+	} else
 		xdrmem_create(&xdrs, stream, streamLen, NULL, 0, XDR_ENCODE);
 
 	result =
@@ -89,17 +88,20 @@ Result_t RPC_SerializeMsg(RPC_InternalMsg_t * rpcMsg, char *stream,
 	*outLen = xdr_getpos(&xdrs);
 	xdr_destroy(&xdrs);
 
-	return (result);
+	return result;
 }
 
-Result_t RPC_SendMsg(RPC_InternalMsg_t * rpcMsg)
+Result_t RPC_SendMsg(RPC_InternalMsg_t *rpcMsg)
 {
 	char *stream;
 	bool_t ret;
 	UInt32 len;
 	PACKET_InterfaceType_t rpcInterfaceType;
 	PACKET_BufHandle_t bufHandle;
-	//coverity[var_decl], "entry" will be inited in function rpc_fast_lookup()
+	/**
+	 * coverity[var_decl], "entry" will be inited in
+	 * function rpc_fast_lookup()
+	 */
 	RPC_InternalXdrInfo_t entry;
 	UInt8 cid;
 	UInt32 maxPktSize = 0;
@@ -151,7 +153,7 @@ Result_t RPC_SendMsg(RPC_InternalMsg_t * rpcMsg)
 	return result;
 }
 
-Result_t RPC_SerializeReq(RPC_Msg_t * rpcMsg)
+Result_t RPC_SerializeReq(RPC_Msg_t *rpcMsg)
 {
 	RPC_InternalMsg_t rpcInMsg;
 
@@ -162,7 +164,7 @@ Result_t RPC_SerializeReq(RPC_Msg_t * rpcMsg)
 	return RPC_SendMsg(&rpcInMsg);
 }
 
-Result_t RPC_SerializeRsp(RPC_Msg_t * rpcMsg)
+Result_t RPC_SerializeRsp(RPC_Msg_t *rpcMsg)
 {
 	RPC_InternalMsg_t rpcInMsg;
 
@@ -175,7 +177,7 @@ Result_t RPC_SerializeRsp(RPC_Msg_t * rpcMsg)
 
 /* Deserialize the response stream passed by the IPC */
 Result_t RPC_DeserializeMsg(char *stream, UInt32 stream_len,
-			    ResultDataBuffer_t * dataBuf)
+			    ResultDataBuffer_t *dataBuf)
 {
 	XDR *xdrs = NULL;
 	RPC_InternalMsg_t *rpcMsg = NULL;
@@ -190,11 +192,12 @@ Result_t RPC_DeserializeMsg(char *stream, UInt32 stream_len,
 		memset(rpcMsg, 0, sizeof(RPC_InternalMsg_t));
 
 		if (DETAIL_LOG_ENABLED) {
-			detailLogBuffer = (char *)capi2_malloc(MAX_LOG_BUFFER_SIZE+1);
-			xdrmem_create(xdrs, stream, stream_len, detailLogBuffer,
-				MAX_LOG_BUFFER_SIZE, XDR_DECODE);
-		}
-		else
+			detailLogBuffer =
+				(char *)capi2_malloc(MAX_LOG_BUFFER_SIZE+1);
+			xdrmem_create(xdrs, stream, stream_len,
+					detailLogBuffer,
+					MAX_LOG_BUFFER_SIZE, XDR_DECODE);
+		} else
 			xdrmem_create(xdrs, stream, stream_len, NULL, 0,
 				      XDR_DECODE);
 
@@ -203,21 +206,20 @@ Result_t RPC_DeserializeMsg(char *stream, UInt32 stream_len,
 		    RESULT_ERROR;
 
 #ifdef DEVELOPMENT_RPC_XDR_DETAIL_LOG
-			if (DETAIL_LOG_ENABLED) {
-				if (rpcMsg->rootMsg.msgId != MSG_CAPI2_ACK_RSP &&
-					(xdrs->x_op == XDR_ENCODE ||
-					xdrs->x_op == XDR_DECODE)) {
-					if ((strlen(detailLogBuffer)+3) <
-						MAX_LOG_BUFFER_SIZE)
-						strncat(detailLogBuffer, "}\r\n", 3);
+		if (DETAIL_LOG_ENABLED) {
+			if (rpcMsg->rootMsg.msgId != MSG_CAPI2_ACK_RSP &&
+				(xdrs->x_op == XDR_ENCODE ||
+				xdrs->x_op == XDR_DECODE)) {
+				if ((strlen(detailLogBuffer)+3) <
+					MAX_LOG_BUFFER_SIZE)
+					strncat(detailLogBuffer, "}\r\n", 3);
 					_DBG_(Rpc_DebugOutputString(detailLogBuffer));
 				}
 			}
 #endif
 
-	} else {
+	} else
 		result = RESULT_ERROR;
-	}
 
 	if (detailLogBuffer) {
 		xdrmem_log_reset(xdrs);
@@ -225,7 +227,7 @@ Result_t RPC_DeserializeMsg(char *stream, UInt32 stream_len,
 	}
 
 	/* The AP side want to free up the deserialized buffer. */
-	return (result);
+	return result;
 }
 
 
@@ -243,12 +245,18 @@ void RPC_SYSFreeResultDataBuffer(ResultDataBufHandle_t dataBufHandle)
 	if (dataBuf && dataBuf->refCount > 0) {
 		--(dataBuf->refCount);
 		if (dataBuf->refCount == 0) {
-			/* Free up the memory allocated during deserialization of the pointers */
+			/**
+			 * Free up the memory allocated during
+			 * deserialization of the pointers
+			 */
 			dataBuf->xdrs.x_op = XDR_FREE;
 			xdr_RPC_InternalMsg_t(&dataBuf->xdrs, &dataBuf->rsp);
 			xdr_destroy(&dataBuf->xdrs);
 			capi2_free(dataBuf);
-			// coverity[deref_after_free]: Dereferencing freed pointer "dataBuf"
+			/**
+			 * coverity[deref_after_free]
+			 *  Dereferencing freed pointer "dataBuf"
+			 */
 			_DBG_(RPC_TRACE_INFO
 			      ("RPC_SYSFreeResultDataBuffer ( FREE ) ref=%d",
 			       (dataBuf) ? dataBuf->refCount : -1));
@@ -290,7 +298,7 @@ Result_t RPC_SendAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ackResult,
 
 Result_t RPC_SendAckForRequest(ResultDataBufHandle_t handle, UInt32 ackUsrData)
 {
-	//reqXdrClientId
+	/*reqXdrClientId */
 	ResultDataBuffer_t *dataBuf = (ResultDataBuffer_t *) handle;
 	if (dataBuf) {
 		return RPC_SendAckEx(dataBuf->rsp.rootMsg.tid,
@@ -314,7 +322,7 @@ UInt32 RPC_GetMsgPayloadSize(MsgType_t msgID)
 	    xdr_size : 0;
 }
 
-Result_t RPC_SendSimpleMsg(UInt32 tid, UInt8 clientID, RPC_SimpleMsg_t * pMsg)
+Result_t RPC_SendSimpleMsg(UInt32 tid, UInt8 clientID, RPC_SimpleMsg_t *pMsg)
 {
 	RPC_InternalMsg_t rpcInMsg;
 

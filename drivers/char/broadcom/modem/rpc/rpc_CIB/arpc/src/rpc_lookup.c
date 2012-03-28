@@ -2,21 +2,21 @@
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
 *
 *   @file   rpc_ser.c
 *
-*   @brief  This file define the request/respose structure for 
+*   @brief  This file define the request/respose structure for
 *	serialize/deserialize.
 *
 ****************************************************************************/
@@ -58,11 +58,11 @@ static UInt32 **tableBase = NULL;
 		|
 		|(0xff)
 		|------>NULL
-		
+
 
  */
 
-bool_t rpc_build_lookup(const RPC_XdrInfo_t * tbl, UInt16 table_size,
+bool_t rpc_build_lookup(const RPC_XdrInfo_t *tbl, UInt16 table_size,
 			UInt16 clientIndex)
 {
 	bool_t bRetVal = TRUE;
@@ -104,8 +104,8 @@ bool_t rpc_build_lookup(const RPC_XdrInfo_t * tbl, UInt16 table_size,
 			} else {
 				UInt32 val = 0;
 
-//                              if(tableBase2[id2] != 0xFFFF)
-//                                      _DBG_(RPC_TRACE("xdr_build_lookup duplicate entry = 0x%x, 0x%x, 0x%x\r\n", id, id1, id2));
+				/*if(tableBase2[id2] != 0xFFFF) */
+				/*_DBG_(RPC_TRACE("xdr_build_lookup duplicate entry = 0x%x, 0x%x, 0x%x\r\n", id, id1, id2)); */
 
 				val = (UInt32) ((UInt32)
 						((clientIndex << 16) &
@@ -114,7 +114,9 @@ bool_t rpc_build_lookup(const RPC_XdrInfo_t * tbl, UInt16 table_size,
 							    0xFFFF));
 				tableBase2[id2] = val;
 
-				//_DBG_(RPC_TRACE("rpc_build_lookup = 0x%x, 0x%x, 0x%x\r\n", id, id1, id2));
+				/*_DBG_(RPC_TRACE
+				    ("rpc_build_lookup = 0x%x, 0x%x, 0x%x\r\n",
+				    id, id1, id2)); */
 			}
 		}
 	} else {
@@ -123,7 +125,7 @@ bool_t rpc_build_lookup(const RPC_XdrInfo_t * tbl, UInt16 table_size,
 	return bRetVal;
 }
 
-Boolean rpc_register_xdr(UInt8 clientIndex, const RPC_XdrInfo_t * tbl,
+Boolean rpc_register_xdr(UInt8 clientIndex, const RPC_XdrInfo_t *tbl,
 			 UInt16 table_size)
 {
 	return rpc_build_lookup(tbl, table_size, clientIndex);
@@ -147,17 +149,17 @@ UInt32 rpc_basic_fast_lookup(UInt16 dscm)
 
 	if (tableBase2 == NULL) {
 		/* message not handled in RPC */
-		//_DBG_(RPC_TRACE
-		//    ("xdr_fast_lookup no RPC entry (tableBase2 is NULL) = 0x%x, 0x%x, 0x%x\r\n",
-		//     id, id1, id2));
+		/*_DBG_(RPC_TRACE
+			("xdr_fast_lookup no RPC entry (tableBase2 is NULL) = 0x%x, 0x%x, 0x%x\r\n",
+			id, id1, id2)); */
 		return 0xFFFF;
 	} else if (tableBase2[id2] != 0xFFFF) {
 		nodeVal = tableBase2[id2];
 	} else {
 		/* message not handled in RPC */
-		//_DBG_(RPC_TRACE
-		//    ("xdr_fast_lookup no RPC entry = 0x%x, 0x%x, 0x%x\r\n",
-		//     id, id1, id2));
+		/*_DBG_(RPC_TRACE
+		    ("xdr_fast_lookup no RPC entry = 0x%x, 0x%x, 0x%x\r\n",
+		    id, id1, id2)); */
 		return 0xFFFF;
 	}
 	return nodeVal;
@@ -200,7 +202,7 @@ UInt32 rpc_basic_set_val(UInt16 dscm, UInt8 val)
 	return nodeVal;
 }
 
-Boolean rpc_fast_lookup(UInt16 dscm, RPC_InternalXdrInfo_t * outParam)
+Boolean rpc_fast_lookup(UInt16 dscm, RPC_InternalXdrInfo_t *outParam)
 {
 	if (outParam) {
 		RPC_XdrInfo_t *pXdr;
@@ -238,7 +240,7 @@ Boolean rpc_fast_lookup(UInt16 dscm, RPC_InternalXdrInfo_t * outParam)
 	return FALSE;
 }
 
-Boolean rpc_lookup_set_mask(const UInt16 * msgIds, UInt8 listSize,
+Boolean rpc_lookup_set_mask(const UInt16 *msgIds, UInt8 listSize,
 			    UInt8 maskValue)
 {
 	if (msgIds && listSize > 0) {

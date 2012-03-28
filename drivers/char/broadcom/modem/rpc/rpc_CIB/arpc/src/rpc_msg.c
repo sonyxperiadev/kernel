@@ -2,21 +2,21 @@
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
 *
 *   @file   rpc_msg.c
 *
-*   @brief  This file define the request/respose structure for 
+*   @brief  This file define the request/respose structure for
 *	serialize/deserialize.
 *
 ****************************************************************************/
@@ -36,37 +36,43 @@
 #include "xassert.h"
 
 XDR_ENUM_FUNC(Result_t)
-    XDR_ENUM_FUNC(MsgType_t)
-    XDR_ENUM_FUNC(RPC_MsgType_t)
-    XDR_ENUM_FUNC(RPC_Direction_t)
-    XDR_ENUM_FUNC(RPC_ACK_Result_t)
+XDR_ENUM_FUNC(MsgType_t)
+XDR_ENUM_FUNC(RPC_MsgType_t)
+XDR_ENUM_FUNC(RPC_Direction_t)
+XDR_ENUM_FUNC(RPC_ACK_Result_t)
 
-    XDR_STRUCT_DECLARE(RPC_SimpleMsg_t)
+XDR_STRUCT_DECLARE(RPC_SimpleMsg_t)
+
 #define _T(a) a
+
 static RPC_XdrInfo_t ACK_dscrm[] = {
 	/* Add phonebook message serialize/deserialize routine map */
-	{MSG_CAPI2_ACK_RSP, _T("MSG_CAPI2_ACK_RSP"), (xdrproc_t) xdr_RPC_Ack_t,
-	 sizeof(RPC_Ack_t), 0}
+	{MSG_CAPI2_ACK_RSP, _T("MSG_CAPI2_ACK_RSP"),
+	 (xdrproc_t) xdr_RPC_Ack_t, sizeof(RPC_Ack_t), 0}
 	,
+
 	{MSG_RPC_SIMPLE_REQ_RSP, _T("MSG_RPC_SIMPLE_REQ_RSP"),
 	 (xdrproc_t) xdr_RPC_SimpleMsg_t, sizeof(RPC_SimpleMsg_t), 0}
 	,
+
 	/* Add other modules message to serialize/deserialize routine map */
 	{(MsgType_t) __dontcare__, "", NULL_xdrproc_t, 0, 0}
 };
 
-bool_t xdr_RPC_SimpleMsg_t(XDR * xdrs, RPC_SimpleMsg_t * msg)
+bool_t xdr_RPC_SimpleMsg_t(XDR *xdrs, RPC_SimpleMsg_t *msg)
 {
-	return (_xdr_u_long(xdrs, &msg->type, "type") &&
+	return  _xdr_u_long(xdrs, &msg->type, "type") &&
 		_xdr_u_long(xdrs, &msg->param1, "param1") &&
-		_xdr_u_long(xdrs, &msg->param2, "param2")
-	    );
+		_xdr_u_long(xdrs, &msg->param2, "param2");
 }
 
-static bool_t xdr_RPC_Msg_t(XDR * xdrs, RPC_Msg_t * rpcMsg)
+static bool_t xdr_RPC_Msg_t(XDR *xdrs, RPC_Msg_t *rpcMsg)
 {
 	Boolean ret;
-	//coverity[var_decl], "entry" will be inited in function rpc_fast_lookup()
+	/**
+	 * coverity[var_decl], "entry" will be inited in function
+	 * rpc_fast_lookup()
+	 */
 	RPC_InternalXdrInfo_t entry;
 	char tempBuf[MAX_XDR_BASIC_LOG];
 
@@ -86,7 +92,10 @@ static bool_t xdr_RPC_Msg_t(XDR * xdrs, RPC_Msg_t * rpcMsg)
 			return FALSE;
 
 		if (entry.mainProc != NULL) {
-//                      entry.mainProc(xdrs, (char**)&(rpcMsg->dataBuf), rpcMsg->msgId, entry.xdrInfo->xdr_proc);
+			/*entry.mainProc(xdrs,
+					(char**)&(rpcMsg->dataBuf),
+					rpcMsg->msgId,
+					entry.xdrInfo->xdr_proc); */
 			xdr_pointerEx(xdrs, (char **)&(rpcMsg->dataBuf),
 				      entry.maxDataBufSize, entry.mainProc,
 				      entry.xdrInfo->xdr_proc);
@@ -110,17 +119,16 @@ static bool_t xdr_RPC_Msg_t(XDR * xdrs, RPC_Msg_t * rpcMsg)
 				x_basiclogbuffer : "")));
 		}
 
-		if (rpcMsg->dataLen == 0) {
+		if (rpcMsg->dataLen == 0)
 			rpcMsg->dataLen = entry.xdrInfo->xdr_size;
-		}
 
-		return (TRUE);
+		return TRUE;
 	}
 
-	return (FALSE);
+	return FALSE;
 }
 
-bool_t xdr_RPC_InternalMsg_t(XDR * xdrs, RPC_InternalMsg_t * val)
+bool_t xdr_RPC_InternalMsg_t(XDR *xdrs, RPC_InternalMsg_t *val)
 {
 	if (XDR_ENUM(xdrs, &val->msgType, RPC_MsgType_t) &&
 	    xdr_u_char(xdrs, &val->clientIndex) &&
@@ -131,46 +139,47 @@ bool_t xdr_RPC_InternalMsg_t(XDR * xdrs, RPC_InternalMsg_t * val)
 	_DBG_(RPC_TRACE
 	      ("RPC: FAIL !!!! Message (%x)  fail to %s\n", val->msgType,
 	       (xdrs->x_op == XDR_DECODE) ? "DECODE" : "ENCODE"));
-//      xassert(0,val->rootMsg.msgId);
+	/*xassert(0,val->rootMsg.msgId); */
+
 	return FALSE;
 }
 
-bool_t xdr_RPC_Ack_t(XDR * xdrs, RPC_Ack_t * data)
+bool_t xdr_RPC_Ack_t(XDR *xdrs, RPC_Ack_t *data)
 {
 	if (_xdr_u_long(xdrs, &data->ackUsrData, "ackUsrData") &&
 	    XDR_ENUM(xdrs, &data->ackResult, RPC_ACK_Result_t)
 	    )
-		return (TRUE);
+		return TRUE;
 	else
-		return (FALSE);
+		return FALSE;
 }
 
-bool_t xdr_uchar_ptr_t(XDR * xdrs, unsigned char **ptr)
+bool_t xdr_uchar_ptr_t(XDR *xdrs, unsigned char **ptr)
 {
 	u_int len = (*ptr) ? (strlen((char *)(*ptr)) + 1) : 0;
 	return xdr_bytes(xdrs, (char **)ptr, &len, 512);
 }
 
-bool_t xdr_char_ptr_t(XDR * xdrs, char **ptr)
+bool_t xdr_char_ptr_t(XDR *xdrs, char **ptr)
 {
 	u_int len = (*ptr) ? (strlen(*ptr) + 1) : 0;
 	return xdr_bytes(xdrs, ptr, &len, 512);
 }
 
 #ifdef DEVELOPMENT_RPC_XDR_DETAIL_LOG
-bool_t xdr_u_char_dbg(XDR * xdrs, u_char * p, u_char * s)
+bool_t xdr_u_char_dbg(XDR *xdrs, u_char *p, u_char *s)
 {
 	XDR_LOG(xdrs, (char *)s)
 	    return xdr_u_char(xdrs, p);
 }
 
-bool_t xdr_u_int16_dbg(XDR * xdrs, u_int16_t * p, u_char * s)
+bool_t xdr_u_int16_dbg(XDR *xdrs, u_int16_t *p, u_char *s)
 {
 	XDR_LOG(xdrs, (char *)s)
 	    return xdr_u_int16_t(xdrs, p);
 }
 
-bool_t xdr_u_long_dbg(XDR * xdrs, u_long * p, u_char * s)
+bool_t xdr_u_long_dbg(XDR *xdrs, u_long *p, u_char *s)
 {
 	XDR_LOG(xdrs, (char *)s)
 	    return xdr_u_long(xdrs, p);
@@ -195,17 +204,16 @@ void Rpc_DebugOutputString(char *pStr)
 		strLen = strlen(tempStr);
 	}
 
-	if (tempStr < pStr) {
+	if (tempStr < pStr)
 		RPC_TRACE_DETAIL(tempStr);
-	}
 }
 #endif
 
-bool_t xdr_default_proc(XDR * xdrs, void *unp)
+bool_t xdr_default_proc(XDR *xdrs, void *unp)
 {
 	if (xdrs || unp) {
-	}			//fixes compiler warnings
-	return (TRUE);
+	}			/*fixes compiler warnings */
+	return TRUE;
 }
 
 /*
@@ -228,7 +236,7 @@ RPC_XdrInfo_t *RPC_InternalXdr(UInt16 index)
 	return &ACK_dscrm[index];
 }
 
-bool_t xdr_xdr_string_t(XDR * xdrs, xdr_string_t * str)
+bool_t xdr_xdr_string_t(XDR *xdrs, xdr_string_t *str)
 {
 	return xdr_bytes(xdrs, &str->str, &str->len, 1024);
 }

@@ -42,7 +42,7 @@
 #include "mqueue.h"
 #include "bcmlog.h"
 
-//#define MQ_TRACE_TRACE_ON
+/*#define MQ_TRACE_TRACE_ON */
 
 #ifdef MQ_TRACE_TRACE_ON
 #define _DBG(a) a

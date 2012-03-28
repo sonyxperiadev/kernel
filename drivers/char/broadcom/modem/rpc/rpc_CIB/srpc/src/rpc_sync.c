@@ -23,9 +23,9 @@
 *
 ****************************************************************************/
 
-//******************************************************************************
-//                              include block
-//******************************************************************************
+/*==============================================================================
+*                              include block
+*============================================================================*/
 #ifdef WIN32
 #define _WINSOCKAPI_
 #endif
@@ -55,41 +55,47 @@
 #include <plat/osabstract/ossemaphore.h>
 #include <linux/delay.h>
 #include <linux/syscalls.h>
-#define OSHEAP_Alloc(x) kmalloc( x, GFP_KERNEL )
-#define OSHEAP_Delete(x) kfree( x )
-#define OSTASK_GetCurrentTask( ) sys_gettid( )
-#define OSTASK_IsValidTask(x)  ( NULL != find_task_by_vpid( (pid_t) (x)) )
+#define OSHEAP_Alloc(x) kmalloc(x, GFP_KERNEL)
+#define OSHEAP_Delete(x) kfree(x)
+#define OSTASK_GetCurrentTask() sys_gettid()
+#define OSTASK_IsValidTask(x)  (NULL != find_task_by_vpid((pid_t) (x)))
 #define OSTASK_Sleep(x)  msleep(x)
 #endif
 
-//--------------------------------------------------------------------
-// Local Definitions
-//--------------------------------------------------------------------
-#define  MAX_TASKS_NUM						20	// number of concurrent tasks to support
+/*====================================================================
+* Local Definitions
+*===================================================================*/
+/* number of concurrent tasks to support */
+#define  MAX_TASKS_NUM						20
 
 #ifdef FPGA_VERSION
-#define  RPC_SEMAPHORE_TIMEOUT			(TICKS_FOREVER)	//FPGA very slow but should NOT be slower than 60 secs. Need further investigation.
+/* FPGA very slow but should NOT be slower than 60 secs.
+   Need further investigation. */
+#define  RPC_SEMAPHORE_TIMEOUT			(TICKS_FOREVER)
 #else
-#define  RPC_SEMAPHORE_TIMEOUT			(TICKS_ONE_SECOND * 60)	// 60 [second]
+/* 60 [second] */
+#define  RPC_SEMAPHORE_TIMEOUT			(TICKS_ONE_SECOND * 60)
 #endif
 
-#define REMOTE_AP_NOT_RESPONDING (semaStatus==OSSTATUS_SUCCESS)
-#define REMOTE_CP_NOT_RESPONDING (semaStatus==OSSTATUS_SUCCESS)
+#define REMOTE_AP_NOT_RESPONDING (semaStatus == OSSTATUS_SUCCESS)
+#define REMOTE_CP_NOT_RESPONDING (semaStatus == OSSTATUS_SUCCESS)
 
-//---------------------------------------------------------------------
-// Local variables
-//---------------------------------------------------------------------
+/*---------------------------------------------------------------------
+* Local variables
+*--------------------------------------------------------------------*/
 static UInt32 sCurrTID = 1;
 
-// semaphore to manage access to array of task/req structs
+/* semaphore to manage access to array of task/req structs */
 static Semaphore_t semaTaskReq = NULL;
 
-// always keep one client registered with RPC so we 
-// can get responses to synchronous calls without having 
-// a rpc client registered
+/**
+	always keep one client registered with RPC so we
+	can get responses to synchronous calls without having
+	a rpc client registered
+**/
 static UInt8 sClientId = INVALID_CLIENT_ID;
 
-// number of ticks to sleep while waiting for RPC to initialize
+/* number of ticks to sleep while waiting for RPC to initialize */
 #define		RPC_INIT_SLEEP_TICKS	50
 
 typedef struct {
@@ -97,49 +103,79 @@ typedef struct {
 	UInt32 val;
 } RPC_SyncContext_t;
 
-// struct use to map request data to the task that originated the request
+/* struct use to map request data to the task that originated the request */
 typedef struct {
-	Task_t task;		// task ID of originating task
-	UInt32 tid;		// transaction ID of request
-	Semaphore_t ackSema;	// semaphore used to wait/signal request ack
-	RPC_ACK_Result_t ack;	// ack result from RPC
-	Boolean isResultPending;	// pending result from ack
-	Semaphore_t rspSema;	// semaphore used to wait/signal request response
-	Result_t result;	// result code from response
-	MsgType_t msgType;	// message type of response
-	void *data;		// pointer to data buffer from response (may be null)
-//vvvv  void* data;                                     // pointer to data buffer from response (may be null)
-	Int32 dataLen;		// size of response data buffer
-	UInt32 rspSize;		// size of actual data from response copied into data buffer
-	Boolean releaseC2Buf;	// if TRUE, release response buffer immediately in response callback;
-	// if FALSE, calling api must call RPC_SyncReleaseResponseBuffer() to release buffer memory
-	void *dataBufHandle;	// handle to response data buffer
+	/* task ID of originating task */
+	Task_t task;
+
+	/* transaction ID of request */
+	UInt32 tid;
+
+	/* semaphore used to wait/signal request ack */
+	Semaphore_t ackSema;
+
+	/* ack result from RPC */
+	RPC_ACK_Result_t ack;
+
+	/* pending result from ack */
+	Boolean isResultPending;
+
+	/* semaphore used to wait/signal request response */
+	Semaphore_t rspSema;
+
+	/* result code from response */
+	Result_t result;
+
+	/* message type of response */
+	MsgType_t msgType;
+
+	/* pointer to data buffer from response (may be null) */
+	void *data;
+
+	/* size of response data buffer */
+	Int32 dataLen;
+
+	/* size of actual data from response copied into data buffer */
+	UInt32 rspSize;
+	/**
+	  if TRUE, release response buffer immediately in response callback;
+	  if FALSE, calling api must call RPC_SyncReleaseResponseBuffer() to release buffer memory
+	 */
+	Boolean releaseC2Buf;
+
+	/* handle to response data buffer */
+	void *dataBufHandle;
 } TaskRequestMap_t;
 
 static TaskRequestMap_t sTaskRequestMap[MAX_TASKS_NUM];
 
-// -------------------------------------------------------------------------------
+/*----------------------------------------------------------------------------*/
 
-// internal helper functions
-// get task/response map struct for current task
+/**
+ internal helper functions
+ get task/response map struct for current task
+**/
 static TaskRequestMap_t *GetMapForCurrentTask(void);
-// get unused task/response map struct to be used with current task
+
+/* get unused task/response map struct to be used with current task */
 static TaskRequestMap_t *GetNewMapForCurrentTask(void);
-// get task/response map struct with the specified transaction ID
+
+/* get task/response map struct with the specified transaction ID */
 static TaskRequestMap_t *GetMapForTID(UInt32 tid);
 
-void RPC_SyncHandleResponse(RPC_Msg_t * pMsg,
+void RPC_SyncHandleResponse(RPC_Msg_t *pMsg,
 			    ResultDataBufHandle_t dataBufHandle,
 			    UInt32 userContextData);
+
 void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ackResult,
 		       UInt32 ackData);
 
-//**************************************************************************************
+/******************************************************************************/
 /**
-	Initialize the RPC Sync Framework.  
+	Initialize the RPC Sync Framework.
 	@param		timeout (in) Number of ticks to wait for emulator initialization
-	@return		\n RESULT_OK for success, 
-				\n RESULT_ERROR for failure, 
+	@return		\n RESULT_OK for success,
+			\n RESULT_ERROR for failure,
 	@note
 	This function will block until emulator is initialized or timeout duration has expired.
 **/
@@ -147,10 +183,10 @@ Result_t RPC_SyncInitialize()
 {
 	Result_t result = RESULT_OK;
 
-	// reset task map storage
+	/* reset task map storage */
 	memset(&sTaskRequestMap, 0, sizeof(sTaskRequestMap));
 
-	// create semaphore to manage access to array of task/req structs
+	/* create semaphore to manage access to array of task/req structs */
 	semaTaskReq = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
 	assert(semaTaskReq);
 
@@ -164,18 +200,18 @@ typedef struct {
 	UInt8 clientID;
 } RPC_SyncParams_t;
 
-//**************************************************************************************
+/******************************************************************************/
 /**
-	Register new RPC client.  
-	@return		Client ID 
+	Register new RPC client.
+	@return		Client ID
 **/
-RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t * initParams,
-				    RPC_SyncInitParams_t * syncInitParams)
+RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t *initParams,
+				    RPC_SyncInitParams_t *syncInitParams)
 {
 	RPC_SyncParams_t *internalParam =
 	    (RPC_SyncParams_t *) OSHEAP_Alloc(sizeof(RPC_SyncParams_t));
-	if(!internalParam)
-	{
+
+	if (!internalParam) {
 		panic("RPC_SyncRegisterClient: OSHEAP_Alloc failed");
 		return 0;
 	}
@@ -192,16 +228,18 @@ RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t * initParams,
 	return RPC_SYS_RegisterClient(&internalParam->SyncRpcParams);
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
-	Deregister Async RPC client.  
+	Deregister Async RPC client.
 	@param		inClientId (in) Client id of RPC client.
 **/
 void RPC_SyncDeregisterClient(UInt8 inClientId)
 {
-	//get user data
-	//delete buffer
-	//set user data
+	/* get user data */
+
+	/* delete buffer */
+
+	/* set user data */
 }
 
 TaskRequestMap_t *RPC_SyncInitTaskMap(void)
@@ -211,15 +249,15 @@ TaskRequestMap_t *RPC_SyncInitTaskMap(void)
 	if (!taskMap) {
 		taskMap = GetNewMapForCurrentTask();
 		assert(taskMap);
-		// fill in struct (task field is already filled in by GetNewMapForCurrentTask() call)
+		/* fill in struct (task field is already filled in by GetNewMapForCurrentTask() call) */
 		taskMap->ackSema = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
 		assert(taskMap->ackSema);
-		// start in signalled state
+		/* start in signalled state */
 		OSSEMAPHORE_Obtain(taskMap->ackSema, TICKS_FOREVER);
 
 		taskMap->rspSema = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
 		assert(taskMap->rspSema);
-		// start in signalled state
+		/* start in signalled state */
 		OSSEMAPHORE_Obtain(taskMap->rspSema, TICKS_FOREVER);
 
 	}
@@ -237,7 +275,7 @@ TaskRequestMap_t *RPC_SyncInitTaskMap(void)
 	return taskMap;
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
 	Prepare to issue a RPC request.
 	@param		data (in) pointer to buffer to store response
@@ -246,7 +284,7 @@ TaskRequestMap_t *RPC_SyncInitTaskMap(void)
 
 	@note
 	If size is -1, this indicates that the response size is variable and buffer should
-	be allocated by the RPC callback handler. The buffer will be freed by the caller 
+	be allocated by the RPC callback handler. The buffer will be freed by the caller
 	of RPC_SyncWaitForResponse
 
 **/
@@ -255,12 +293,13 @@ UInt32 RPC_SyncCreateTID(void *data, Int32 size)
 	UInt32 tid;
 	TaskRequestMap_t *taskMap = NULL;
 
-	//Protect the tid with semaphore
+	/*Protect the tid with semaphore */
 	OSSEMAPHORE_Obtain(semaTaskReq, TICKS_FOREVER);
 	tid = sCurrTID;
-	if (0 == ++sCurrTID) {
+
+	if (0 == ++sCurrTID)
 		sCurrTID = 1;
-	}
+
 	OSSEMAPHORE_Release(semaTaskReq);
 
 	taskMap = RPC_SyncInitTaskMap();
@@ -284,7 +323,7 @@ UInt32 RPC_SyncSetTID(UInt32 tid, void *data, Int32 size)
 	return tid;
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
 	Retrieve the response from a RPC function call. Note that this includes the ack result as well.
 	@param		tid (in) Transaction id for request.
@@ -292,25 +331,27 @@ UInt32 RPC_SyncSetTID(UInt32 tid, void *data, Int32 size)
 	@param		ack (out) Ack result for request
 	@param		msgType (out) Message type of response.
 	@param		dataSize (out) Actual data size copied to response data buffer
-	
+
 	@return Result code of response.
-	
+
 **/
-Result_t RPC_SyncWaitForResponse(UInt32 tid, UInt8 cid, RPC_ACK_Result_t * ack,
-				 MsgType_t * msgType, UInt32 * dataSize)
+Result_t RPC_SyncWaitForResponse(UInt32 tid, UInt8 cid, RPC_ACK_Result_t *ack,
+				 MsgType_t *msgType, UInt32 *dataSize)
 {
 	OSStatus_t semaStatus;
 	Result_t result = RESULT_OK;
 	TaskRequestMap_t *taskMap = GetMapForCurrentTask();
 	assert(taskMap);
 
-	// wait to be signalled that request has been ack'd
+	/* wait to be signalled that request has been ack'd */
 	semaStatus =
 	    OSSEMAPHORE_Obtain(taskMap->ackSema, RPC_SEMAPHORE_TIMEOUT);
-	//If you see this assert then likely remote processor does not free the buffers.
-	//- Likely cause is CAPI2 Task on remote processor is stuck waiting on a Queue.
-	//- or Watchdog issue where CAPI2 Task does not get chance to run.
-	//- or Remote processor is completely DEAD
+	/*
+	 If you see this assert then likely remote processor does not free the buffers.
+	 - Likely cause is CAPI2 Task on remote processor is stuck waiting on a Queue.
+	 - or Watchdog issue where CAPI2 Task does not get chance to run.
+	 - or Remote processor is completely DEAD
+	*/
 #ifdef FUSE_APPS_PROCESSOR
 	xassert(REMOTE_CP_NOT_RESPONDING, semaStatus);
 #else
@@ -319,32 +360,34 @@ Result_t RPC_SyncWaitForResponse(UInt32 tid, UInt8 cid, RPC_ACK_Result_t * ack,
 
 	*ack = taskMap->ack;
 
-	// request ack'd by comm proc?
+	/* request ack'd by comm proc? */
 
 	if (ACK_SUCCESS == taskMap->ack) {
-		// synchronous response or error response from async api?
+		/* synchronous response or error response from async api? */
 		if (!taskMap->isResultPending) {
-			// yes, so wait to be signalled that response is ready
+			/*
+			  yes, so wait to be signalled that response is ready
+			*/
 			semaStatus =
 			    OSSEMAPHORE_Obtain(taskMap->rspSema,
 					       RPC_SEMAPHORE_TIMEOUT);
-			//If you see this assert then likely remote processor does not free the buffers.
-			//- Likely cause is CAPI2 Task on remote processor is stuck waiting on a Queue.
-			//- or Watchdog issue where CAPI2 Task does not get chance to run.
-			//- or Remote processor is completely DEAD
+			/*
+			  If you see this assert then likely remote processor does not free the buffers.
+			  - Likely cause is CAPI2 Task on remote processor is stuck waiting on a Queue.
+			  - or Watchdog issue where CAPI2 Task does not get chance to run.
+			  - or Remote processor is completely DEAD
+			*/
 #ifdef FUSE_APPS_PROCESSOR
 			xassert(REMOTE_CP_NOT_RESPONDING, semaStatus);
 #else
 			xassert(REMOTE_AP_NOT_RESPONDING, semaStatus);
 #endif
 
-			if (msgType) {
+			if (msgType)
 				*msgType = taskMap->msgType;
-			}
 
-			if (dataSize) {
+			if (dataSize)
 				*dataSize = taskMap->rspSize;
-			}
 
 			result = taskMap->result;
 		} else {
@@ -363,7 +406,7 @@ Result_t RPC_SyncWaitForResponse(UInt32 tid, UInt8 cid, RPC_ACK_Result_t * ack,
 	return result;
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
 	Retrieve the response from a RPC function call. Note that this includes the ack result as well.
 	@param		tid (in) Transaction id for request.
@@ -372,13 +415,13 @@ Result_t RPC_SyncWaitForResponse(UInt32 tid, UInt8 cid, RPC_ACK_Result_t * ack,
 	@param		msgType (out) Message type of response.
 	@param		dataSize (out) Actual data size copied to response data buffer
 	@param		timeout (in) timer value
-	
+
 	@return Result code of response.
-	
+
 **/
 Result_t RPC_SyncWaitForResponseTimer(UInt32 tid, UInt8 cid,
-				      RPC_ACK_Result_t * ack,
-				      MsgType_t * msgType, UInt32 * dataSize,
+				      RPC_ACK_Result_t *ack,
+				      MsgType_t *msgType, UInt32 *dataSize,
 				      UInt32 timeout)
 {
 	OSStatus_t semaStatus;
@@ -386,12 +429,14 @@ Result_t RPC_SyncWaitForResponseTimer(UInt32 tid, UInt8 cid,
 	TaskRequestMap_t *taskMap = GetMapForCurrentTask();
 	assert(taskMap);
 
-	// wait to be signalled that request has been ack'd
+	/* wait to be signalled that request has been ack'd */
 	semaStatus = OSSEMAPHORE_Obtain(taskMap->ackSema, (Ticks_t) timeout);
-	//If you see this assert then likely remote processor does not free the buffers.
-	//- Likely cause is CAPI2 Task on remote processor is stuck waiting on a Queue.
-	//- or Watchdog issue where CAPI2 Task does not get chance to run.
-	//- or Remote processor is completely DEAD
+	/*
+	 If you see this assert then likely remote processor does not free the buffers.
+	 - Likely cause is CAPI2 Task on remote processor is stuck waiting on a Queue.
+	 - or Watchdog issue where CAPI2 Task does not get chance to run.
+	 - or Remote processor is completely DEAD
+	*/
 
 	if (semaStatus == OSSTATUS_TIMEOUT)
 		return RESULT_TIMER_EXPIRED;
@@ -400,31 +445,32 @@ Result_t RPC_SyncWaitForResponseTimer(UInt32 tid, UInt8 cid,
 
 	*ack = taskMap->ack;
 
-	// request ack'd by comm proc?
-
+	/* request ack'd by comm proc? */
 	if (ACK_SUCCESS == taskMap->ack) {
-		// synchronous response or error response from async api?
+		/* synchronous response or error response from async api? */
 		if (!taskMap->isResultPending) {
-			// yes, so wait to be signalled that response is ready
+			/*
+			 yes, so wait to be signalled that response is ready
+			*/
 			semaStatus =
 			    OSSEMAPHORE_Obtain(taskMap->rspSema,
 					       (Ticks_t) timeout);
-			//If you see this assert then likely remote processor does not free the buffers.
-			//- Likely cause is CAPI2 Task on remote processor is stuck waiting on a Queue.
-			//- or Watchdog issue where CAPI2 Task does not get chance to run.
-			//- or Remote processor is completely DEAD
+			/*
+			 If you see this assert then likely remote processor does not free the buffers.
+			 - Likely cause is CAPI2 Task on remote processor is stuck waiting on a Queue.
+			 - or Watchdog issue where CAPI2 Task does not get chance to run.
+			 - or Remote processor is completely DEAD
+			*/
 			if (semaStatus == OSSTATUS_TIMEOUT)
 				return RESULT_TIMER_EXPIRED;
 			else if (semaStatus != OSSTATUS_SUCCESS)
 				return RESULT_ERROR;
 
-			if (msgType) {
+			if (msgType)
 				*msgType = taskMap->msgType;
-			}
 
-			if (dataSize) {
+			if (dataSize)
 				*dataSize = taskMap->rspSize;
-			}
 
 			result = taskMap->result;
 		} else {
@@ -443,7 +489,7 @@ Result_t RPC_SyncWaitForResponseTimer(UInt32 tid, UInt8 cid,
 	return result;
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
 	Handle the ack result from the RPC function call.
 	@param		tid (in) Transaction id for request.
@@ -454,7 +500,7 @@ void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ack,
 		       UInt32 ackData)
 {
 	OSStatus_t semaStatus;
-	// find the map struct corresponding to this transaction ID
+	/* find the map struct corresponding to this transaction ID */
 	TaskRequestMap_t *taskMap = NULL;
 	Boolean isResultPending = (ackData) ? TRUE : FALSE;
 
@@ -466,10 +512,10 @@ void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ack,
 	}
 
 	taskMap = GetMapForTID(tid);
-//      assert(taskMap);
+	/*assert(taskMap); */
 
 	if (taskMap) {
-		// record ack status
+		/* record ack status */
 		taskMap->ack = ack;
 		taskMap->isResultPending = isResultPending;
 
@@ -477,12 +523,14 @@ void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ack,
 		      ("RPC_SyncHandleAck tid %d ack %d pending %d\r\n", tid,
 		       ack, isResultPending));
 
-		// since there won't be anybody waiting on it (ie. it will
-		// be dispatched using the client ID/msg type)
-		if ((ACK_SUCCESS == ack) && isResultPending) {
+		/**
+		    since there won't be anybody waiting on it (ie. it will
+		    be dispatched using the client ID/msg type)
+		**/
+		if ((ACK_SUCCESS == ack) && isResultPending)
 			taskMap->tid = 0;
-		}
-		// notify calling task of receipt of ack
+
+		/* notify calling task of receipt of ack */
 		semaStatus = OSSEMAPHORE_Release(taskMap->ackSema);
 		if (semaStatus != OSSTATUS_SUCCESS) {
 			_DBG_(RPC_TRACE
@@ -495,9 +543,9 @@ void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ack,
 	}
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
-	Handle the response from a RPC function call. 
+	Handle the response from a RPC function call.
 	@param		tid (in) Transaction id for request.
 	@param		cid (in) Client id for request
 	@param		msgType (in) Message type of response.
@@ -506,11 +554,11 @@ void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ack,
 	@param		dataSize (in) size of response data buffer
 	@param		dataBufHandle (in) handle to response data buffer
 
-    @return		\n TRUE if response handled,
-				\n FALSE if response not handled.
+	@return		\n TRUE if response handled,
+			\n FALSE if response not handled.
 
 **/
-void RPC_SyncHandleResponse(RPC_Msg_t * pMsg,
+void RPC_SyncHandleResponse(RPC_Msg_t *pMsg,
 			    ResultDataBufHandle_t dataBufHandle,
 			    UInt32 userContextData)
 {
@@ -524,15 +572,14 @@ void RPC_SyncHandleResponse(RPC_Msg_t * pMsg,
 	UInt32 dataLength = pMsg->dataLen;
 
 	TaskRequestMap_t *taskMap = NULL;
-	// default is to always release response buffer automatically
+	/* default is to always release response buffer automatically */
 	Boolean bReleaseResponseBuffer = TRUE;
 
 	internalParam = (RPC_SyncParams_t *) (void *)userContextData;
 	assert(internalParam != NULL);
 
-	if (0 != tid) {
+	if (0 != tid)
 		taskMap = GetMapForTID(tid);
-	}
 
 	if (internalParam && internalParam->syncInitParams.copyCb)
 		internalParam->syncInitParams.copyCb(msgType, dataBuf,
@@ -547,7 +594,7 @@ void RPC_SyncHandleResponse(RPC_Msg_t * pMsg,
 	       tid, clientID, msgType, result, (taskMap) ? taskMap->dataLen : 0,
 	       (taskMap) ? 1 : 0, dataLength));
 
-	// did we find a pending request with this transaction id?
+	/* did we find a pending request with this transaction id? */
 	if (taskMap) {
 		taskMap->result = result;
 		taskMap->tid = 0;
@@ -558,18 +605,17 @@ void RPC_SyncHandleResponse(RPC_Msg_t * pMsg,
 		xassert(!dataBuf || !(taskMap->data)
 			|| (taskMap->dataLen >= (Int32) dataLength), msgType);
 
-		// need to keep response buffer around for deep copy
-		if (!bReleaseResponseBuffer) {
+		/* need to keep response buffer around for deep copy */
+		if (!bReleaseResponseBuffer)
 			taskMap->dataBufHandle = dataBufHandle;
-		}
-		// notify calling task of receipt of response
+
+		/* notify calling task of receipt of response */
 		semaStatus = OSSEMAPHORE_Release(taskMap->rspSema);
 		if (semaStatus != OSSTATUS_SUCCESS) {
 			_DBG_(RPC_TRACE
 			      ("WARNING!!!! RPC_SyncHandleResponse: Semaphore release failed\r\n"));
 		}
-	} else			//Dispatch unsolicited notifications to the client
-	{
+	} else {	/* Dispatch unsolicited notifications to the client */
 		if (RESULT_OK != result) {
 			_DBG_(RPC_TRACE
 			      ("WARNING!!!! RPC_SyncHandleResponse tid %d cid %d result=%d noTaskMap \r\n",
@@ -582,21 +628,21 @@ void RPC_SyncHandleResponse(RPC_Msg_t * pMsg,
 						   internalParam->clientParams.
 						   userData);
 
-		return;		// The buffer will be freed by the client
+		return;		/* The buffer will be freed by the client */
 	}
 
 	if (bReleaseResponseBuffer) {
-		// release response buffer
+		/* release response buffer */
 		RPC_SYSFreeResultDataBuffer(dataBufHandle);
 	}
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
-	Lock the response buffer associated with the current task. After calling this api, 
+	Lock the response buffer associated with the current task. After calling this api,
 	response buffer will not be automatically released byRPC Sync Framework. Client apis
-	must call RPC_SyncReleaseResponseBuffer() to release the response buffer. 
-	
+	must call RPC_SyncReleaseResponseBuffer() to release the response buffer
+
 	Note: response buffer for a given call must be released before another rpc
 		  call is made from the same task
 **/
@@ -608,7 +654,7 @@ void RPC_SyncLockResponseBuffer(void)
 	taskMap->releaseC2Buf = FALSE;
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
 	Release the response buffer associated with the current task.
 **/
@@ -638,11 +684,11 @@ UInt8 RPC_SyncGetClientId()
 	return sClientId;
 }
 
-//
-//  Internal helper functions
-//
+/*=============================================================================
+*  Internal helper functions
+*============================================================================*/
 
-// get task/response map struct for current task
+/* get task/response map struct for current task */
 TaskRequestMap_t *GetMapForCurrentTask(void)
 {
 	TaskRequestMap_t *taskMap = (TaskRequestMap_t *) NULL;
@@ -659,7 +705,7 @@ TaskRequestMap_t *GetMapForCurrentTask(void)
 	return taskMap;
 }
 
-// get unused task/response map struct to be used with current task
+/* get unused task/response map struct to be used with current task */
 TaskRequestMap_t *GetNewMapForCurrentTask()
 {
 	TaskRequestMap_t *taskMap = NULL;
@@ -706,7 +752,7 @@ TaskRequestMap_t *GetNewMapForCurrentTask()
 	return taskMap;
 }
 
-// get task/response map struct with the specified transaction ID
+/* get task/response map struct with the specified transaction ID */
 TaskRequestMap_t *GetMapForTID(UInt32 tid)
 {
 	TaskRequestMap_t *taskMap = NULL;
@@ -722,10 +768,10 @@ TaskRequestMap_t *GetMapForTID(UInt32 tid)
 	return taskMap;
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
-	Add ctx to tid. 
-	@param		val (in) context value to be added 
+	Add ctx to tid.
+	@param		val (in) context value to be added
 
 **/
 UInt32 RPC_SyncAddCbkToTid(UInt32 val)
@@ -748,10 +794,10 @@ UInt32 RPC_SyncAddCbkToTid(UInt32 val)
 	return (UInt32) ctx;
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
-	Get context from tid. 
-	@param		tid (in) tid 
+	Get context from tid.
+	@param		tid (in) tid
 
 **/
 UInt32 RPC_SyncGetCbkFromTid(UInt32 tid)
@@ -775,10 +821,10 @@ UInt32 RPC_SyncGetCbkFromTid(UInt32 tid)
 	return val;
 }
 
-//**************************************************************************************
+/******************************************************************************/
 /**
-	Delete context from tid. 
-	@param		tid (in) tid 
+	Delete context from tid.
+	@param		tid (in) tid
 
 **/
 void RPC_SyncDeleteCbkFromTid(UInt32 tid)

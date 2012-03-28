@@ -1,4 +1,4 @@
-/*	$NetBSD: xdr_reference.c,v 1.13 2000/01/22 22:19:18 mycroft Exp $	*/
+/*	$NetBSD: xdr_reference.c,v 1.13 2000/01/22 22:19:18 mycroft Exp $ */
 
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -7,23 +7,23 @@
  * may copy or modify Sun RPC without charge, but are not authorized
  * to license or distribute it to anyone else except as part of a product or
  * program developed by the user.
- * 
+ *
  * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
  * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
  * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
- * 
+ *
  * Sun RPC is provided with no support and without any obligation on the
  * part of Sun Microsystems, Inc. to assist in its use, correction,
  * modification or enhancement.
- * 
+ *
  * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
  * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
  * OR ANY PART THEREOF.
- * 
+ *
  * In no event will Sun Microsystems, Inc. be liable for any lost revenue
  * or profits or other special, indirect and consequential damages, even if
  * Sun has been advised of the possibility of such damages.
- * 
+ *
  * Sun Microsystems, Inc.
  * 2550 Garcia Avenue
  * Mountain View, California  94043
@@ -32,7 +32,7 @@
 #include "xdr.h"
 #ifdef __weak_alias
 __weak_alias(xdr_pointer, _xdr_pointer)
-    __weak_alias(xdr_reference, _xdr_reference)
+__weak_alias(xdr_reference, _xdr_reference)
 #endif
 /*
  * XDR an indirect pointer
@@ -43,9 +43,9 @@ __weak_alias(xdr_pointer, _xdr_pointer)
  * size is the sizeof the referneced structure.
  * proc is the routine to handle the referenced structure.
  */
-bool_t xdr_referenceEx(XDR * xdrs, caddr_t * pp,	/* the pointer to work on */
-		       u_int size,	/* size of the object pointed to */
-		       xdrproc_t proc, xdrproc_t xdr_user_obj)
+bool_t xdr_referenceEx(XDR *xdrs, caddr_t *pp, /* the pointer to work on */
+		u_int size,	/* size of the object pointed to */
+		xdrproc_t proc, xdrproc_t xdr_user_obj)
 {				/* xdr routine to handle the object */
 	caddr_t loc = *pp;
 	bool_t stat;
@@ -53,13 +53,13 @@ bool_t xdr_referenceEx(XDR * xdrs, caddr_t * pp,	/* the pointer to work on */
 	if (loc == NULL)
 		switch (xdrs->x_op) {
 		case XDR_FREE:
-			return (TRUE);
+			return TRUE;
 
 		case XDR_DECODE:
 			*pp = loc = (caddr_t) XDR_ALLOC(xdrs, size);
 			if (loc == NULL) {
-				//warnx("xdr_reference: out of memory");
-				return (FALSE);
+				/*warnx("xdr_reference: out of memory"); */
+				return FALSE;
 			}
 			memset(loc, 0, size);
 			break;
@@ -74,10 +74,10 @@ bool_t xdr_referenceEx(XDR * xdrs, caddr_t * pp,	/* the pointer to work on */
 		XDR_DEALLOC(xdrs, loc, size);
 		*pp = NULL;
 	}
-	return (stat);
+	return stat;
 }
 
-bool_t xdr_reference(XDR * xdrs, caddr_t * pp,	/* the pointer to work on */
+bool_t xdr_reference(XDR *xdrs, caddr_t *pp,	/* the pointer to work on */
 		     u_int size,	/* size of the object pointed to */
 		     xdrproc_t proc)
 {				/* xdr routine to handle the object */
@@ -104,24 +104,25 @@ bool_t xdr_reference(XDR * xdrs, caddr_t * pp,	/* the pointer to work on */
  *
  */
 bool_t
-xdr_pointerEx(XDR * xdrs, char **objpp, u_int obj_size, xdrproc_t xdr_obj,
+xdr_pointerEx(XDR *xdrs, char **objpp, u_int obj_size, xdrproc_t xdr_obj,
 	      xdrproc_t xdr_user_obj)
 {
 
 	bool_t more_data;
 
 	more_data = (*objpp != NULL);
-	if (!xdr_bool(xdrs, &more_data)) {
-		return (FALSE);
-	}
+
+	if (!xdr_bool(xdrs, &more_data))
+		return FALSE;
+
 	if (!more_data) {
 		*objpp = NULL;
-		return (TRUE);
+		return TRUE;
 	}
-	return (xdr_referenceEx(xdrs, objpp, obj_size, xdr_obj, xdr_user_obj));
+	return xdr_referenceEx(xdrs, objpp, obj_size, xdr_obj, xdr_user_obj);
 }
 
-bool_t xdr_pointer(XDR * xdrs, char **objpp, u_int obj_size, xdrproc_t xdr_obj)
+bool_t xdr_pointer(XDR *xdrs, char **objpp, u_int obj_size, xdrproc_t xdr_obj)
 {
 	return xdr_pointerEx(xdrs, objpp, obj_size, xdr_obj, NULL);
 }

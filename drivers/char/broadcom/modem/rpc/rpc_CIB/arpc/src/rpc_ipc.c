@@ -7,9 +7,9 @@
 *   under the terms of the GNU General Public License version 2, available
 *    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this
-*   software in any way with any other Broadcom software provided under a license
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
@@ -54,29 +54,35 @@ static spinlock_t mLock;
 #define RPC_LOCK_INIT
 #endif
 
-//#define _DBG_(a) a
-//#undef RPC_TRACE
-//#define RPC_TRACE(fmt,args...) printk (fmt, ##args)
+/*#define _DBG_(a) a */
+/*#undef RPC_TRACE */
+/*#define RPC_TRACE(fmt,args...) printk (fmt, ##args) */
 
 /*****************************************************************************
-                              Global defines
+				Global defines
 ******************************************************************************/
 
 /**
 	RPC IPC Data structure. Array of Interfaces.
 **/
 typedef struct {
-	Boolean isInit;		/* Is Enpoint initialized */
-	IPC_BufferPool ipc_buf_pool[MAX_CHANNELS];	/* Each Enpoint can have
-							   array of buffer pools per channel */
-	UInt8 ipc_buf_id[MAX_CHANNELS];	/* Channel identifier for buffer pool
-					   ( cid or call index ) */
-	RPC_PACKET_DataIndCallBackFunc_t *pktIndCb;	/* Callback for
-							   interface buffer delivery */
-	RPC_FlowControlCallbackFunc_t *flowControlCb;	/* Flow control
-							   callback */
-	RPC_PACKET_DataIndCallBackFunc_t *filterPktIndCb;	/* Callback for
-								   interface buffer delivery */
+	/* Is Enpoint initialized */
+	Boolean isInit;
+
+	/* Each Enpoint can have array of buffer pools per channel */
+	IPC_BufferPool ipc_buf_pool[MAX_CHANNELS];
+
+	/* Channel identifier for buffer pool ( cid or call index ) */
+	UInt8 ipc_buf_id[MAX_CHANNELS];
+
+	/* Callback for interface buffer delivery */
+	RPC_PACKET_DataIndCallBackFunc_t *pktIndCb;
+
+	/* Flow control callback */
+	RPC_FlowControlCallbackFunc_t *flowControlCb;
+
+	/* Callback for interface buffer delivery */
+	RPC_PACKET_DataIndCallBackFunc_t *filterPktIndCb;
 } RPC_IPCInfo_t;
 
 typedef struct {
@@ -90,7 +96,7 @@ typedef struct {
 
 static RPC_IPCInfo_t ipcInfoList[INTERFACE_TOTAL] = { {0} };
 
-static RPC_IPCBufInfo_t ipcBufList[INTERFACE_TOTAL] = { {{0}} };
+static RPC_IPCBufInfo_t ipcBufList[INTERFACE_TOTAL] = { { {0} } };
 
 static RpcProcessorType_t gRpcProcType;
 
@@ -134,7 +140,9 @@ RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
 					flowControlCb)
 {
 	if (rpcClientID) {
+		/* Do nothing */
 	}
+
 	/*fixes compiler warnings */
 	RPC_SetProperty(RPC_PROP_VER, rpcVer);
 
@@ -156,7 +164,9 @@ RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
 					  dataIndFunc)
 {
 	if (rpcClientID) {
+		/* Do nothing */
 	}
+
 	/*fixes compiler warnings */
 	if (dataIndFunc != NULL && interfaceType < INTERFACE_TOTAL) {
 		RPC_LOCK;
@@ -679,22 +689,21 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 
 	}
 
-	if (result != RPC_RESULT_PENDING ) {
-		if(type != (Int8)INTERFACE_PACKET)
-		{
-			_DBG_(RPC_TRACE
-			      ("k:IPC_FreeBuffer (No Handling) h=%d type=%d\r\n",
-			       (int)bufHandle, type));
-			freeRpcPkts++;
+	if (result != RPC_RESULT_PENDING) {
+		if (type != (Int8)INTERFACE_PACKET) {
+		    _DBG_(RPC_TRACE
+			 ("k:IPC_FreeBuffer (No Handling) h=%d type=%d\r\n",
+			 (int)bufHandle, type));
+		    freeRpcPkts++;
 		}
 		IPC_FreeBuffer(bufHandle);
 	}
 
 }
 
-/*******************************************************************************
+/******************************************************************************
 			RPC CMD Callback Implementation
-*******************************************************************************/
+******************************************************************************/
 
 IPC_BufferPool RPC_InternalGetCmdPoolHandle(void)
 {

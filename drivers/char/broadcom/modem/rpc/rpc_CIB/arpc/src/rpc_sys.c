@@ -2,14 +2,14 @@
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
@@ -42,16 +42,16 @@ extern Boolean xdr_main_init(void);
 static RPC_Result_t RPC_BufferDelivery(PACKET_InterfaceType_t interfaceType,
 				       UInt8 index,
 				       PACKET_BufHandle_t dataBufHandle);
-UInt8 GetClientIndex(ResultDataBuffer_t * pDataBuf, Boolean * isUnsolicited);
+UInt8 GetClientIndex(ResultDataBuffer_t *pDataBuf, Boolean *isUnsolicited);
 void SYS_ReleaseClientID(unsigned char clientID);
 static Boolean gRpcInit = FALSE;
 
 static RPC_USER_LOCK_DECLARE(gRpcLock);
 RPC_USER_LOCK_DECLARE(gRpcFreeLock);
 
-//******************************************************************************
-//                              RPC Apps EP Register
-//******************************************************************************
+/******************************************************************************
+*                              RPC Apps EP Register
+******************************************************************************/
 RPC_Result_t RPC_SYS_EndPointRegister(RpcProcessorType_t processorType)
 {
 	RPC_Result_t result = RPC_RESULT_OK;
@@ -78,7 +78,7 @@ Result_t RPC_SYS_Init(RPC_EventCallbackFunc_t eventCb)
 		RPC_USER_LOCK_INIT(gRpcFreeLock);
 
 	}
-	//xdr_main_init();
+	/*xdr_main_init(); */
 
 	return (res == RPC_RESULT_OK) ? RESULT_OK : RESULT_ERROR;
 }
@@ -124,11 +124,10 @@ static RPC_Result_t RPC_BufferDelivery(PACKET_InterfaceType_t interfaceType,
 				       PACKET_BufHandle_t dataBufHandle)
 {
 	if (interfaceType || index) {
-	}			//fixes compiler warnings
+	}			/*fixes compiler warnings */
 
-	if (index == 0xCD) {
+	if (index == 0xCD)
 		index = 0;
-	}
 
 	if (RPC_IsRegisteredClient(index, dataBufHandle)) {
 		RPC_PACKET_IncrementBufferRef(dataBufHandle, index);
@@ -147,7 +146,7 @@ typedef struct {
 	Boolean notifyUnsolicited;
 } RPC_InitLocalParams_t;
 
-Int8 gClientIndex = 0;		//Client Index zero is reserved
+Int8 gClientIndex = 0;		/* Client Index zero is reserved */
 
 #define MAX_RPC_CLIENTS 25
 static RPC_InitParams_t gClientMap[MAX_RPC_CLIENTS];
@@ -202,7 +201,7 @@ static int RPC_FindUnsedSlot(void)
 	return -1;
 }
 
-RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t * params)
+RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params)
 {
 	UInt8 userClientID;
 	UInt8 clientIndex = 0;
@@ -211,9 +210,8 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t * params)
 	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient gRpcInit=%d tblSize=%d",
 		gRpcInit, params->table_size));
 
-	if (!gRpcInit) {
+	if (!gRpcInit)
 		RPC_SYS_Init(NULL);
-	}
 
 	RPC_USER_LOCK(gRpcLock);
 
@@ -260,7 +258,7 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t * params)
 }
 
 Boolean RPC_SYS_LookupXdr(UInt8 clientIndex, UInt16 index,
-			  XdrClientInfo_t * clientInfo)
+			  XdrClientInfo_t *clientInfo)
 {
 	clientInfo->mainProc = NULL;
 	clientInfo->xdrEntry = NULL;
@@ -318,13 +316,15 @@ Boolean RPC_EnableUnsolicitedMsgs(RPC_Handle_t handle, Boolean bSet)
 	return FALSE;
 }
 
-Boolean RPC_RegisterUnsolicitedMsgs(RPC_Handle_t handle, const UInt16 * msgIds,
-				    UInt8 listSize)
+Boolean RPC_RegisterUnsolicitedMsgs(RPC_Handle_t handle,
+				const UInt16 *msgIds,
+				UInt8 listSize)
 {
 	if (!msgIds || listSize == 0) {
-		_DBG_(RPC_TRACE
-		      ("RPC_RegisterUnsolicitedMsgs FAIL handle=0x%x listSize=%d",
-		       handle, listSize));
+	    _DBG_(RPC_TRACE
+		("RPC_RegisterUnsolicitedMsgs FAIL handle=0x%x listSize=%d",
+		handle, listSize));
+
 		return FALSE;
 	}
 
@@ -364,17 +364,17 @@ Boolean RPC_IsRegisteredClient(UInt8 channel, PACKET_BufHandle_t dataBufHandle)
 	return ret;
 }
 
-UInt8 GetClientIndex(ResultDataBuffer_t * pDataBuf, Boolean * isUnsolicited)
+UInt8 GetClientIndex(ResultDataBuffer_t *pDataBuf, Boolean *isUnsolicited)
 {
 	RPC_Msg_t *pMsg = &(pDataBuf->rsp.rootMsg);
-	//coverity[var_decl], entry will be initialized in the function rpc_fast_lookup() below
+	/*coverity[var_decl], entry will be initialized in the function rpc_fast_lookup() below */
 	RPC_InternalXdrInfo_t entry;
 	bool_t ret = 0;
 	UInt8 index;
 
 	*isUnsolicited = FALSE;
 
-	//Check if message is unsolicited
+	/*Check if message is unsolicited */
 	if (pDataBuf->rsp.rootMsg.msgId != MSG_CAPI2_ACK_RSP) {
 		ret =
 		    rpc_fast_lookup((UInt16) pDataBuf->rsp.rootMsg.msgId,
@@ -389,10 +389,10 @@ UInt8 GetClientIndex(ResultDataBuffer_t * pDataBuf, Boolean * isUnsolicited)
 			      ("RPC GetClientIndex msgId=0x%x xdrClient=%d mask=%x unsol=%d",
 			       pDataBuf->rsp.rootMsg.msgId, entry.clientIndex,
 			       entry.mask, *isUnsolicited));
-			//*isUnsolicited = FALSE;
+			/**isUnsolicited = FALSE; */
 		}
 	}
-	//Lookup index on registered clients
+	/*Lookup index on registered clients */
 	index = gClientIDs[pMsg->clientID];
 
 	if (index > 0 && index < MAX_RPC_CLIENTS)
@@ -403,24 +403,23 @@ UInt8 GetClientIndex(ResultDataBuffer_t * pDataBuf, Boolean * isUnsolicited)
 	if (pDataBuf->rsp.rootMsg.msgId == MSG_CAPI2_ACK_RSP) {
 		index = pDataBuf->rsp.clientIndex;
 	} else {
-		//Lookup clientIndex based on XDR table registered client
-		if (ret && entry.clientIndex < MAX_RPC_CLIENTS) {
+		/*Lookup clientIndex based on XDR table registered client */
+		if (ret && entry.clientIndex < MAX_RPC_CLIENTS)
 			index = entry.clientIndex;
-		}
 	}
 	return index;
 }
 
-void RPC_DispatchMsg(ResultDataBuffer_t * pDataBuf)
+void RPC_DispatchMsg(ResultDataBuffer_t *pDataBuf)
 {
 	UInt8 clientIndex;
 	Boolean isUnsolicited = FALSE;
 	RPC_Msg_t *pMsg = &(pDataBuf->rsp.rootMsg);
 	int i;
 
-	pDataBuf->refCount = 1;	//set
+	pDataBuf->refCount = 1;	/*set */
 
-	//Handle Ack first
+	/*Handle Ack first */
 	if (pMsg->msgId == MSG_CAPI2_ACK_RSP) {
 		RPC_Ack_t *ackRsp = (RPC_Ack_t *) pMsg->dataBuf;
 		clientIndex = GetClientIndex(pDataBuf, &isUnsolicited);
@@ -444,8 +443,7 @@ void RPC_DispatchMsg(ResultDataBuffer_t * pDataBuf)
 								 [clientIndex].
 								 userData);
 			}
-		} else		//RPC_TYPE_RESPONSE
-		{
+		} else {	/* RPC_TYPE_RESPONSE */
 			if (clientIndex > 0
 			    && (pMsg->tid != 0 || pMsg->clientID != 0)
 			    && !(isUnsolicited)) {
@@ -461,15 +459,14 @@ void RPC_DispatchMsg(ResultDataBuffer_t * pDataBuf)
 									  [clientIndex].
 									  userData);
 				}
-			} else if ((pMsg->tid == 0 && pMsg->clientID == 0) || isUnsolicited)	//unsolicited
-			{
+			} else if ((pMsg->tid == 0 && pMsg->clientID == 0) || isUnsolicited) {	/*unsolicited */
 				UInt32 numClients = 0;
 				_DBG_(RPC_TRACE_INFO
 				      ("RPC_DispatchMsg Broadcast msgId=0x%x xdrClient=%d tid=%d cid=%d unsol=%d ",
 				       pMsg->msgId, clientIndex, pMsg->tid,
 				       pMsg->clientID, isUnsolicited));
-				//Set the ref count first
-				pDataBuf->refCount = 0;	//reset
+				/*Set the ref count first */
+				pDataBuf->refCount = 0;	/* reset */
 				for (i = 1; i <= gClientIndex; i++) {
 					if (gClientMap[i].respCb != NULL
 					    && (gClientLocalMap[i].
@@ -479,7 +476,7 @@ void RPC_DispatchMsg(ResultDataBuffer_t * pDataBuf)
 				}
 
 				numClients = pDataBuf->refCount;
-				//Broadcast the message
+				/*Broadcast the message */
 				for (i = 1; i <= gClientIndex; i++) {
 					if (gClientMap[i].respCb != NULL
 					    && (gClientLocalMap[i].
@@ -512,7 +509,7 @@ void RPC_DispatchMsg(ResultDataBuffer_t * pDataBuf)
 
 				}
 
-				//No clients handle this message?
+				/*No clients handle this message? */
 				if (numClients == 0) {
 					_DBG_(RPC_TRACE_INFO
 					      ("RPC_DispatchMsg Broadcast Ignored msgId=0x%x cIndex=%d tid=%d cid=%d unsol=%d regUnsol=%d",
@@ -531,7 +528,7 @@ void RPC_DispatchMsg(ResultDataBuffer_t * pDataBuf)
 				       pMsg->clientID, isUnsolicited));
 				RPC_SYSFreeResultDataBuffer((ResultDataBufHandle_t) pDataBuf);
 			}
-		}		//RPC_TYPE_RESPONSE
+		}		/*RPC_TYPE_RESPONSE */
 	}
 }
 
@@ -539,7 +536,7 @@ PACKET_InterfaceType_t RPC_GetInterfaceType(UInt8 clientIndex)
 {
 	xassert(clientIndex < MAX_RPC_CLIENTS, clientIndex);
 
-	//coverity[overrun-local], clientIndex has checked in above xassert function, so it will not overrun of array gClientMap.
+	/*coverity[overrun-local], clientIndex has checked in above xassert function, so it will not overrun of array gClientMap. */
 	return (PACKET_InterfaceType_t) (gClientMap[clientIndex].iType);
 }
 
@@ -547,6 +544,6 @@ UInt32 RPC_GetUserData(UInt8 clientIndex)
 {
 	xassert(clientIndex < MAX_RPC_CLIENTS, clientIndex);
 
-	//coverity[overrun-buffer-val], clientIndex has checked in above xassert function, so it will not overrun of array gClientMap.
+	/*coverity[overrun-buffer-val], clientIndex has checked in above xassert function, so it will not overrun of array gClientMap. */
 	return gClientMap[clientIndex].userData;
 }
