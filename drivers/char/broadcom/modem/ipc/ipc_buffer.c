@@ -1,15 +1,15 @@
-/*
-	©2007 Broadcom Corporation
-
-	Unless you and Broadcom execute a separate written software license
-	agreement governing use of this software, this software is licensed to you
-	under the terms of the GNU General Public License version 2, available
-	at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
-
-   Notwithstanding the above, under no circumstances may you combine this
-   software in any way with any other Broadcom software provided under a license
-   other than the GPL, without Broadcom's express prior written consent.
-*/
+/*******************************************************************************
+*    (c) 2007 Broadcom Corporation
+*
+*    Unless you and Broadcom execute a separate written software license
+*    agreement governing use of this software, this software is licensed to you
+*    under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
+*
+*  Notwithstanding the above, under no circumstances may you combine this
+*  software in any way with any other Broadcom software provided under a license
+*  other than the GPL, without Broadcom's express prior written consent.
+*******************************************************************************/
 
 #ifdef UNDER_LINUX
 #include <linux/stddef.h>
@@ -21,7 +21,7 @@
 #include "mobcom_types.h"
 #include "ipcproperties.h"
 #include "ipcinterface.h"
-#endif //UNDER_LINUX
+#endif /* UNDER_LINUX */
 
 #include "ipc_buffer.h"
 #include "ipc_trace.h"
@@ -31,43 +31,43 @@
 #include <string.h>
 #define IPC_BUFFER_STATS
 #endif
-#endif // UNDER_LINUX
+#endif /* UNDER_LINUX */
 
 #ifdef IPC_BUFFER_STATS
-extern UInt32 LISR_Active;	//to avoid assertion inside LISR
+extern UInt32 LISR_Active;	/* to avoid assertion inside LISR */
 #endif
 
 extern UInt32 TIMER_GetValue(void);
 
-//============================================================
-// Typedefs
-//============================================================
-//**************************************************
+/*============================================================
+* Typedefs
+*===========================================================*/
+/**************************************************/
 
-//============================================================
-// Functions
-//============================================================
+/*============================================================
+* Functions
+*===========================================================*/
 
-//**************************************************
+/**************************************************/
 IPC_U32 IPC_BufferOverhead(void)
 {
 	return sizeof(IPC_Buffer_T);
 }
 
 #ifdef IPC_DEBUG
-//**************************************************
+/**************************************************/
 IPC_SmPtr IPC_BufferQueue(IPC_Buffer Buffer)
 {
-	return (Buffer + OFFSETOF(IPC_Buffer_T, Q));
+	return Buffer + OFFSETOF(IPC_Buffer_T, Q);
 }
 
-//**************************************************
+/**************************************************/
 IPC_U32 IPC_BufferId(IPC_Buffer Buffer)
 {
 	return IPC_SmOffsetToPointer(IPC_Buffer_T, Buffer)->BufferId;
 }
 
-//**************************************************
+/**************************************************/
 IPC_Buffer_T *IPC_BufferToPtr(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_SmOffsetToPointer(IPC_Buffer_T, Buffer);
@@ -78,14 +78,14 @@ IPC_Buffer_T *IPC_BufferToPtr(IPC_Buffer Buffer)
 	if (Buffer >= ((IPC_SmControl) SmBase)->Size)
 		return 0;
 
-	// Sanity check on Buffer structure
+	/* Sanity check on Buffer structure */
 	if (BufferPtr->Q.Item != Buffer)
 		return 0;
 
 	return BufferPtr;
 }
 
-//**************************************************
+/**************************************************/
 IPC_BufferPool IPC_BufferOwningPool(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -100,7 +100,7 @@ IPC_BufferPool IPC_BufferOwningPool(IPC_Buffer Buffer)
 }
 #endif
 
-//**************************************************
+/**************************************************/
 void *IPC_BufferLocalDescriptor(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -114,7 +114,7 @@ void *IPC_BufferLocalDescriptor(IPC_Buffer Buffer)
 	return (void *)BufferPtr->LocalData;
 }
 
-//**************************************************
+/**************************************************/
 IPC_ReturnCode_T IPC_SendBuffer(IPC_Buffer Buffer, IPC_Priority_T Priority)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -136,10 +136,9 @@ IPC_ReturnCode_T IPC_SendBuffer(IPC_Buffer Buffer, IPC_Priority_T Priority)
 			     BufferPtr->DataSize + BufferPtr->HeaderSize);
 
 #ifdef IPC_BUFFER_STATS
-	// Debug output - turned off by default for performance
-	if (BufferPtr->BufferId == 0 && 0 == LISR_Active) {
+	/* Debug output - turned off by default for performance */
+	if (BufferPtr->BufferId == 0 && 0 == LISR_Active)
 		IPC_PoolDumpStats(BufferPtr->Pool);
-	}
 #endif
 
 	IPC_SmSendBuffer(Buffer);
@@ -147,7 +146,7 @@ IPC_ReturnCode_T IPC_SendBuffer(IPC_Buffer Buffer, IPC_Priority_T Priority)
 	return IPC_OK;
 }
 
-//**************************************************
+/**************************************************/
 void IPC_BufferDone(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -155,7 +154,7 @@ void IPC_BufferDone(IPC_Buffer Buffer)
 	IPC_BufferReturnToPool(Buffer, BufferPtr->Pool);
 }
 
-//**************************************************
+/**************************************************/
 void IPC_FreeBuffer(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -190,7 +189,7 @@ void IPC_FreeBuffer(IPC_Buffer Buffer)
 	}
 }
 
-//**************************************************
+/**************************************************/
 void *IPC_BufferDataPointer(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -215,7 +214,7 @@ void *IPC_BufferDataPointer(IPC_Buffer Buffer)
 	return IPC_SmAddress(DataOffset);
 }
 
-//**************************************************
+/**************************************************/
 void IPC_IncrementBufferDataPointer(IPC_Buffer Buffer, IPC_U32 offset)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -245,7 +244,7 @@ void IPC_IncrementBufferDataPointer(IPC_Buffer Buffer, IPC_U32 offset)
 	BufferPtr->HeaderSize += offset;
 }
 
-//**************************************************
+/**************************************************/
 void IPC_DecrementBufferDataPointer(IPC_Buffer Buffer, IPC_U32 offset)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -273,7 +272,7 @@ void IPC_DecrementBufferDataPointer(IPC_Buffer Buffer, IPC_U32 offset)
 	BufferPtr->HeaderSize -= offset;
 }
 
-//**************************************************
+/**************************************************/
 IPC_U32 IPC_BufferDataSize(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -290,7 +289,7 @@ IPC_U32 IPC_BufferDataSize(IPC_Buffer Buffer)
 	return BufferPtr->DataSize;
 }
 
-//****************************************
+/****************************************/
 IPC_U32 IPC_BufferSetDataSize(IPC_Buffer Buffer, IPC_U32 Length)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -317,7 +316,7 @@ IPC_U32 IPC_BufferSetDataSize(IPC_Buffer Buffer, IPC_U32 Length)
 	}
 }
 
-//****************************************
+/****************************************/
 void *IPC_BufferHeaderSizeSet(IPC_Buffer Buffer, IPC_U32 HeaderSize)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -345,7 +344,7 @@ void *IPC_BufferHeaderSizeSet(IPC_Buffer Buffer, IPC_U32 HeaderSize)
 	}
 }
 
-//****************************************
+/****************************************/
 void *IPC_BufferHeaderAdd(IPC_Buffer Buffer, IPC_U32 HeaderSize)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -374,7 +373,7 @@ void *IPC_BufferHeaderAdd(IPC_Buffer Buffer, IPC_U32 HeaderSize)
 	}
 }
 
-//****************************************
+/****************************************/
 void *IPC_BufferHeaderRemove(IPC_Buffer Buffer, IPC_U32 HeaderSize)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -401,7 +400,7 @@ void *IPC_BufferHeaderRemove(IPC_Buffer Buffer, IPC_U32 HeaderSize)
 	}
 }
 
-//****************************************
+/****************************************/
 IPC_U32 IPC_BufferHeaderSizeGet(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -421,7 +420,7 @@ IPC_U32 IPC_BufferHeaderSizeGet(IPC_Buffer Buffer)
 	return HeaderSize;
 }
 
-//****************************************
+/****************************************/
 void *IPC_BufferHeaderPointer(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -438,7 +437,7 @@ void *IPC_BufferHeaderPointer(IPC_Buffer Buffer)
 	return IPC_SmAddress(BufferPtr->DataOffset - BufferPtr->HeaderSize);
 }
 
-//**************************************************
+/**************************************************/
 IPC_U32 IPC_BufferPoolUserParameter(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -452,8 +451,9 @@ IPC_U32 IPC_BufferPoolUserParameter(IPC_Buffer Buffer)
 	return Parameter;
 }
 
-//****************************************
-// Returns the user parameter of the  buffer
+/*********************************************/
+/* Returns the user parameter of the  buffer */
+/*********************************************/
 
 IPC_U32 IPC_BufferUserParameterGet(IPC_Buffer Buffer)
 {
@@ -468,8 +468,9 @@ IPC_U32 IPC_BufferUserParameterGet(IPC_Buffer Buffer)
 	return BufferPtr->UserParameter;
 }
 
-//****************************************
-// Sets the user parameter of the  buffer
+/******************************************/
+/* Sets the user parameter of the  buffer */
+/******************************************/
 
 IPC_Boolean IPC_BufferUserParameterSet(IPC_Buffer Buffer, IPC_U32 Value)
 {
@@ -486,7 +487,7 @@ IPC_Boolean IPC_BufferUserParameterSet(IPC_Buffer Buffer, IPC_U32 Value)
 	return IPC_TRUE;
 }
 
-//**************************************************
+/**************************************************/
 IPC_EndpointId_T IPC_BufferSourceEndpointId(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -500,7 +501,7 @@ IPC_EndpointId_T IPC_BufferSourceEndpointId(IPC_Buffer Buffer)
 	return IPC_PoolSourceEndpointId(BufferPtr->Pool);
 }
 
-//**************************************************
+/**************************************************/
 IPC_EndpointId_T IPC_BufferDestinationEndpointId(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
@@ -522,7 +523,7 @@ IPC_EndpointId_T IPC_BufferDestinationEndpointId(IPC_Buffer Buffer)
 
 }
 
-//**************************************************
+/**************************************************/
 void *IPC_BufferFill(IPC_Buffer Buffer, void *SourcePtr, IPC_U32 SourceLength)
 {
 	IPC_Buffer_T *BufferPtr;
@@ -557,9 +558,11 @@ void *IPC_BufferFill(IPC_Buffer Buffer, void *SourcePtr, IPC_U32 SourceLength)
 		      SourceLength);
 }
 
-//**************************************************
-void *IPC_BufferFillByLinkList
-    (IPC_Buffer Buffer, IPC_LinkList_T * LinkListPtr, IPC_U32 LinkListLength) {
+/**************************************************/
+void *IPC_BufferFillByLinkList(IPC_Buffer Buffer,
+				IPC_LinkList_T *LinkListPtr,
+				IPC_U32 LinkListLength)
+{
 	IPC_Buffer_T *BufferPtr;
 	IPC_U32 MaxDataSize;
 	IPC_U32 SourceLength;
@@ -568,9 +571,9 @@ void *IPC_BufferFillByLinkList
 	unsigned char *q;
 
 	SourceLength = 0;
-	for (i = 0; i < LinkListLength; i++) {
+	for (i = 0; i < LinkListLength; i++)
 		SourceLength += LinkListPtr[i].size;
-	}
+
 	if (SourceLength == 0)
 		return NULL;
 
@@ -604,7 +607,7 @@ void *IPC_BufferFillByLinkList
 	return (void *)q;
 }
 
-//**************************************************
+/**************************************************/
 void IPC_BufferReset(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_SmOffsetToPointer(IPC_Buffer_T, Buffer);
@@ -617,10 +620,13 @@ void IPC_BufferReset(IPC_Buffer Buffer)
 	    IPC_PoolPtr(BufferPtr->Pool)->MaxHeaderSize;
 }
 
-//**************************************************
-IPC_SmPtr IPC_BufferInitialise
-    (IPC_BufferPool Pool,
-     IPC_SmPtr Buffer, IPC_U32 Id, IPC_U32 HeaderSize, IPC_U32 DataSize) {
+/**************************************************/
+IPC_SmPtr IPC_BufferInitialise(IPC_BufferPool Pool,
+				IPC_SmPtr Buffer,
+				IPC_U32 Id,
+				IPC_U32 HeaderSize,
+				IPC_U32 DataSize)
+{
 	IPC_Buffer_T *BufferPtr = IPC_SmOffsetToPointer(IPC_Buffer_T, Buffer);
 
 	BufferPtr->Pool = Pool;
@@ -639,12 +645,16 @@ IPC_SmPtr IPC_BufferInitialise
 
 }
 
-//**************************************************
+/**************************************************/
 void IPC_BufferDump(IPC_Buffer Buffer)
 {
 	IPC_Buffer_T *BufferPtr = IPC_BufferToPtr(Buffer);
-	// DataPtr is used to dump the contents of the first 4 U32s of the memory location
-	// coverity[returned_pointer]
+	/**
+	 * DataPtr is used to dump the contents of the first 4 U32s
+	 * of the memory location
+	 *
+	 * coverity[returned_pointer]
+	 */
 	IPC_U32 *DataPtr = IPC_BufferDataPointer(Buffer);
 
 	if (BufferPtr == 0) {

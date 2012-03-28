@@ -1,21 +1,22 @@
-/*
-	©2007 Broadcom Corporation
+/*******************************************************************************
+*    ©2007 Broadcom Corporation
+*
+*    Unless you and Broadcom execute a separate written software license
+*    agreement governing use of this software, this software is licensed to you
+*    under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
+*
+*  Notwithstanding the above, under no circumstances may you combine this
+*  software in any way with any other Broadcom software provided under a license
+*  other than the GPL, without Broadcom's express prior written consent.
+*
+*******************************************************************************/
 
-	Unless you and Broadcom execute a separate written software license
-	agreement governing use of this software, this software is licensed to you
-	under the terms of the GNU General Public License version 2, available
-	at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
-
-   Notwithstanding the above, under no circumstances may you combine this
-   software in any way with any other Broadcom software provided under a license
-   other than the GPL, without Broadcom's express prior written consent.
-*/
-
-//============================================================
-// IPC_Trace.c
-//
-// Demo Trace Facility
-//============================================================
+/*============================================================
+* IPC_Trace.c
+*
+* Demo Trace Facility
+*===========================================================*/
 #ifdef UNDER_LINUX
 #include <linux/kernel.h>
 #include <linux/stddef.h>
@@ -26,7 +27,7 @@
 #include "logapi.h"
 #include "log.h"
 #include "ipcinterface.h"
-#endif // UNDER_LINUX
+#endif /* UNDER_LINUX */
 
 #include "ipc_trace.h"
 
@@ -38,9 +39,9 @@
 #include <Ril.h>
 #elif defined(UNDER_LINUX)
 
-// Don't include anything.
+/* Don't include anything. */
 
-#else // not UNDER_CE or UNDER_LINUX
+#else /* not UNDER_CE or UNDER_LINUX */
 
 #include <stdarg.h>
 
@@ -52,14 +53,14 @@
 #include "mti_trace.h"
 
 #ifdef FUSE_COMMS_PROCESSOR
-#include "chip_version.h"	//HFA
+#include "chip_version.h"	/* HFA */
 #if !defined(UNDER_CE) && !defined(UNDER_LINUX)
 #include "dump.h"
 #endif
 #endif
 
 #if defined(FUSE_APPS_PROCESSOR)
-#include "chip_version.h"	//HFA
+#include "chip_version.h"	/* HFA */
 #if !defined(UNDER_CE) && !defined(UNDER_LINUX)
 #include "dump.h"
 #endif
@@ -67,9 +68,9 @@
 #endif
 #endif
 
-//============================================================
-// Constants
-//============================================================
+/*============================================================
+* Constants
+*===========================================================*/
 
 const char *const ChannelNames[IPC_Channel_All] = {
 	"Data",
@@ -84,39 +85,39 @@ const char *const ChannelNames[IPC_Channel_All] = {
 	"Debug"
 };
 
-//============================================================
-// Static Data
-//============================================================
+/*============================================================
+* Static Data
+*===========================================================*/
 
 #define MAX_DEBUG_STRING 80
 
 IPC_Boolean TraceChannel[IPC_Channel_All] = {
-	IPC_FALSE,		// Data
-	IPC_FALSE,		// Buffer
-	IPC_FALSE,		// Pool
-	IPC_FALSE,		// Queue
-	IPC_TRUE,		// General
-	IPC_TRUE,		// Error
-	IPC_FALSE,		// Hisr
-	IPC_FALSE,		// Sm
-	IPC_TRUE,		// FlowControl
-	IPC_FALSE		// Debug
+	IPC_FALSE,		/* Data		*/
+	IPC_FALSE,		/* Buffer	*/
+	IPC_FALSE,		/* Pool		*/
+	IPC_FALSE,		/* Queue	*/
+	IPC_TRUE,		/* General	*/
+	IPC_TRUE,		/* Error	*/
+	IPC_FALSE,		/* Hisr		*/
+	IPC_FALSE,		/* Sm		*/
+	IPC_TRUE,		/* FlowControl	*/
+	IPC_FALSE		/* Debug	*/
 };
 
 IPC_Boolean TraceToAt = IPC_FALSE;
 
-//============================================================
-// Functions
-//============================================================
+/*============================================================
+* Functions
+*===========================================================*/
 
-//**************************************************
+/**************************************************/
 
 void IPC_TraceToAt(IPC_Boolean Setting)
 {
 	TraceToAt = Setting;
 }
 
-//**************************************************
+/**************************************************/
 #ifdef FUSE_APPS_PROCESSOR
 void IPC_TraceApps(IPC_U32 Channel, char *Text, IPC_U32 P1, IPC_U32 P2,
 		   IPC_U32 P3, IPC_U32 P4)
@@ -129,11 +130,11 @@ void IPC_TraceApps(IPC_U32 Channel, char *Text, IPC_U32 P1, IPC_U32 P2,
 	(void)printf(Text, GetCurrentThreadId(), ChannelNames[Channel], P1, P2,
 		     P3, P4);
 #elif defined(UNDER_LINUX)
-	//printk(KERN_INFO Text, P1, P2, P3, P4);
+	/* printk(KERN_INFO Text, P1, P2, P3, P4); */
 #else
-#if 0				// Legacy code. Keep for information purpose. Hui Luo, 11/4/09
+#if 0				/* Legacy code. Keep for information purpose. Hui Luo, 11/4/09 */
 	if (TraceToAt) {
-		// Trace to AT UART
+		/* Trace to AT UART */
 		char OutBuf[MAX_DEBUG_STRING];
 		IPC_U32 OutLength;
 
@@ -142,14 +143,14 @@ void IPC_TraceApps(IPC_U32 Channel, char *Text, IPC_U32 P1, IPC_U32 P2,
 		OutLength =
 		    snprintf(OutBuf, MAX_DEBUG_STRING, "\n%s:\t%-20.20s\t%s",
 			     ChannelNames[Channel], Function, Buffer);
-		AT_OutputUnsolicitedStr(OutBuf);	//REMOVE_MPX
+		AT_OutputUnsolicitedStr(OutBuf);	/*REMOVE_MPX */
 	} else {
 
 		(void)snprintf(Buffer, MAX_DEBUG_STRING, Text, P1, P2, P3, P4);
 
 		Dbgprintf(0, "%-15.15s %s", Function, Buffer);
 	}
-#endif // Legacy code. Keep for information purpose. Hui Luo, 11/4/09 */
+#endif /* Legacy code. Keep for information purpose. Hui Luo, 11/4/09 */
 	if (asserted == 0xCA) {
 		snprintf(assert_buf, ASSERT_BUF_SIZE, Text, P1, P2, P3, P4);
 		DUMP_String(assert_buf);
@@ -160,7 +161,7 @@ void IPC_TraceApps(IPC_U32 Channel, char *Text, IPC_U32 P1, IPC_U32 P2,
 }
 #endif
 
-//**************************************************
+/**************************************************/
 #ifdef FUSE_COMMS_PROCESSOR
 void IPC_TraceComms(char *Text, IPC_U32 P1, IPC_U32 P2, IPC_U32 P3, IPC_U32 P4)
 {
@@ -168,7 +169,7 @@ void IPC_TraceComms(char *Text, IPC_U32 P1, IPC_U32 P2, IPC_U32 P3, IPC_U32 P4)
 		snprintf(assert_buf, ASSERT_BUF_SIZE, Text, P1, P2, P3, P4);
 		DUMP_String(assert_buf);
 	} else {
-		// cannot do any logging because CP logging uses IPC. Hui Luo, 11/5/09
+		/* cannot do any logging because CP logging uses IPC. Hui Luo, 11/5/09 */
 	}
 }
 #endif
@@ -187,7 +188,7 @@ void IPC_TraceWin(IPC_U32 Channel, char *Function, char *Text, IPC_U32 P1,
 }
 #endif
 
-//**************************************************
+/**************************************************/
 #ifdef UNDER_LINUX
 void IPC_TraceLinux(IPC_U32 Channel, char *Function, char *Text, IPC_U32 P1,
 		    IPC_U32 P2, IPC_U32 P3, IPC_U32 P4)
@@ -200,14 +201,14 @@ void IPC_TraceLinux(IPC_U32 Channel, char *Function, char *Text, IPC_U32 P1,
 }
 #endif
 
-//**************************************************
+/**************************************************/
 IPC_Boolean IPC_SetTraceChannel(IPC_Channel_E Channel, IPC_Boolean Setting)
 {
 	if (Channel == IPC_Channel_All) {
 		IPC_U32 i;
-		for (i = 0; i < IPC_Channel_All; i++) {
+		for (i = 0; i < IPC_Channel_All; i++)
 			TraceChannel[i] = Setting;
-		}
+
 		return IPC_TRUE;
 	}
 
@@ -220,7 +221,7 @@ IPC_Boolean IPC_SetTraceChannel(IPC_Channel_E Channel, IPC_Boolean Setting)
 	return IPC_FALSE;
 }
 
-//**************************************************
+/**************************************************/
 /*
 #ifndef RPC_INCLUDED
 //Reserved
@@ -321,7 +322,7 @@ const char *IPC_GetEndPointName(IPC_EndpointId_T ep)
 		return EndPointName[0];
 }
 
-//**************************************************
+/**************************************************/
 static const char *CpuName[] = {
 	"No",
 	"CP",

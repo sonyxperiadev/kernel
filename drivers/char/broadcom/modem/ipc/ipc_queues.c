@@ -1,36 +1,36 @@
-/*
-	©2007 Broadcom Corporation
+/*******************************************************************************
+*    ©2007 Broadcom Corporation
+*
+*    Unless you and Broadcom execute a separate written software license
+*    agreement governing use of this software, this software is licensed to you
+*    under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
+*
+*  Notwithstanding the above, under no circumstances may you combine this
+*  software in any way with any other Broadcom software provided under a license
+*  other than the GPL, without Broadcom's express prior written consent.
+*******************************************************************************/
 
-	Unless you and Broadcom execute a separate written software license
-	agreement governing use of this software, this software is licensed to you
-	under the terms of the GNU General Public License version 2, available
-	at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
-
-   Notwithstanding the above, under no circumstances may you combine this
-   software in any way with any other Broadcom software provided under a license
-   other than the GPL, without Broadcom's express prior written consent.
-*/
-
-//============================================================
-// IPC_Queues.c
-//
-// Doubly linked list functions for use ONLY in Shared Memory
-// All the pointers are offsets from the start of shared memory
-//============================================================
+/*============================================================
+* IPC_Queues.c
+*
+* Doubly linked list functions for use ONLY in Shared Memory
+* All the pointers are offsets from the start of shared memory
+*===========================================================*/
 #ifdef UNDER_LINUX
 #include <linux/broadcom/csl_types.h>
 #include <linux/broadcom/ipcproperties.h>
 #else
 #include "mobcom_types.h"
 #include "ipcproperties.h"
-#endif // UNDER_LINUX
+#endif /* UNDER_LINUX */
 #include "ipc_queues.h"
 #include "ipc_trace.h"
 
-//============================================================
-// Create / delete
-//============================================================
-//**************************************************
+/*============================================================
+* Create / delete
+*===========================================================*/
+/**************************************************/
 IPC_SmQ IPC_QCreate(void)
 {
 	IPC_SmQ Queue = IPC_SmAlloc(sizeof(IPC_QHead_T));
@@ -44,7 +44,7 @@ IPC_SmQ IPC_QCreate(void)
 	return IPC_QInitialise(Queue, Queue);
 }
 
-//**************************************************
+/**************************************************/
 IPC_SmQ IPC_QInitialise(IPC_SmQ Queue, IPC_SmPtr Item)
 {
 	IPC_QHead QPtr = IPC_QHeadPtr(Queue);
@@ -56,10 +56,10 @@ IPC_SmQ IPC_QInitialise(IPC_SmQ Queue, IPC_SmPtr Item)
 	return Queue;
 }
 
-//============================================================
-// Queue adds
-//============================================================
-//**************************************************
+/*============================================================
+* Queue adds
+*===========================================================*/
+/**************************************************/
 IPC_SmQEntry IPC_QAddBefore(IPC_SmQEntry Entry, IPC_SmQEntry Before)
 {
 	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
@@ -75,7 +75,7 @@ IPC_SmQEntry IPC_QAddBefore(IPC_SmQEntry Entry, IPC_SmQEntry Before)
 	return Entry;
 }
 
-//**************************************************
+/**************************************************/
 IPC_SmQEntry IPC_QAddAfter(IPC_SmQEntry Entry, IPC_SmQEntry After)
 {
 	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
@@ -91,7 +91,7 @@ IPC_SmQEntry IPC_QAddAfter(IPC_SmQEntry Entry, IPC_SmQEntry After)
 	return Entry;
 }
 
-//**************************************************
+/**************************************************/
 IPC_SmQEntry IPC_QAddFront(IPC_SmQEntry Entry, IPC_SmQ Queue)
 {
 	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
@@ -107,7 +107,7 @@ IPC_SmQEntry IPC_QAddFront(IPC_SmQEntry Entry, IPC_SmQ Queue)
 	return Entry;
 }
 
-//**************************************************
+/**************************************************/
 #ifdef IPC_DEBUG
 void IPC_QAddBack(IPC_SmQEntry Entry, IPC_SmQ Queue)
 {
@@ -122,10 +122,10 @@ void IPC_QAddBack(IPC_SmQEntry Entry, IPC_SmQ Queue)
 	HeadPtr->Link.Previous = Entry;
 }
 
-//============================================================
-// Queue Removes
-//============================================================
-//**************************************************
+/*============================================================
+* Queue Removes
+*===========================================================*/
+/**************************************************/
 void IPC_QRemove(IPC_SmQEntry Entry)
 {
 	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
@@ -140,7 +140,7 @@ void IPC_QRemove(IPC_SmQEntry Entry)
 }
 #endif
 
-//**************************************************
+/**************************************************/
 IPC_SmQEntry IPC_QGetFirst(IPC_SmQ Queue)
 {
 	IPC_QHead HeadPtr = IPC_QHeadPtr(Queue);
@@ -160,7 +160,7 @@ IPC_SmQEntry IPC_QGetFirst(IPC_SmQ Queue)
 	return Entry;
 }
 
-//**************************************************
+/**************************************************/
 IPC_SmQEntry IPC_QGetLast(IPC_SmQ Queue)
 {
 	IPC_QHead HeadPtr = IPC_QHeadPtr(Queue);
@@ -180,10 +180,10 @@ IPC_SmQEntry IPC_QGetLast(IPC_SmQ Queue)
 	return Entry;
 }
 
-//============================================================
-// Queue walking
-//============================================================
-//**************************************************
+/*============================================================
+* Queue walking
+*===========================================================*/
+/**************************************************/
 IPC_SmQEntry IPC_QNext(IPC_SmQEntry Entry)
 {
 	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
@@ -191,7 +191,7 @@ IPC_SmQEntry IPC_QNext(IPC_SmQEntry Entry)
 	return EntryPtr->Next;
 }
 
-//**************************************************
+/**************************************************/
 IPC_SmQEntry IPC_QPrevious(IPC_SmQEntry Entry)
 {
 	IPC_QEntry EntryPtr = IPC_QEntryPtr(Entry);
