@@ -36,16 +36,18 @@ struct vtqb_context;
 
 extern struct vtqb_context *vtqb_create_context(struct vtq_vce *vce);
 extern void vtqb_destroy_context(struct vtqb_context *ctx);
-extern vtq_image_id_t vtqb_register_image(struct vtqb_context *ctx,
+#define VTQ_MAX_PROXY_IMAGES 8
+typedef int vtq_proxy_image_id_t;
+extern vtq_proxy_image_id_t vtqb_register_image(struct vtqb_context *ctx,
 		const uint32_t *text,
 		size_t textsz,
 		const uint32_t *data,
 		size_t datasz,
 		size_t datamemreq);
 extern void vtqb_unregister_image(struct vtqb_context *ctx,
-		vtq_image_id_t image_id);
+		vtq_proxy_image_id_t image_id);
 extern vtq_task_id_t vtqb_create_task(struct vtqb_context *ctx,
-		vtq_image_id_t image_id,
+		vtq_proxy_image_id_t image_id,
 		uint32_t entrypt);
 extern void vtqb_destroy_task(struct vtqb_context *ctx,
 		vtq_task_id_t task_id);

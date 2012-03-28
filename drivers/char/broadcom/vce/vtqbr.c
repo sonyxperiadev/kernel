@@ -31,7 +31,7 @@ the GPL, without Broadcom's express prior written consent.
  * operation */
 
 struct vtqb_image {
-	vtq_image_id_t real_image;
+	struct vtq_image *real_image;
 	struct vtqb_image *next;
 	struct vtqb_image **prevnext;
 };
@@ -49,7 +49,7 @@ struct vtqb_context {
 	struct vtqb_task *tasklist;
 	struct vtq_context *real_context;
 	/* TODO: lose these arrays */
-	struct vtqb_image *imagemap[VTQ_MAX_IMAGES];
+	struct vtqb_image *imagemap[VTQ_MAX_PROXY_IMAGES];
 	/* TODO: lose these arrays */
 	struct vtqb_task *taskmap[VTQ_MAX_TASKS];
 	vtq_job_id_t last_queued_job_id;
@@ -116,19 +116,19 @@ void vtqb_destroy_context(struct vtqb_context *ctx)
 
 	distance = ctx->last_queued_job_id
 		- vtq_get_read_pointer(ctx->real_context);
-	while (distance > 0) {
+	if (distance > 0) {
 		dbg_print("Cleaning up VTQ context after lazy or buggy app -- "
 			  "%d jobs are still outstanding\n", distance);
+	}
+	while (distance > 0) {
 		s = vtq_await_job(ctx->real_context, ctx->last_queued_job_id);
 		if (s != 0) {
-			err_print("Failed to wait during context destruction.  "
-				  "This is probably fatal.  BUG!  FIXME\n");
-			dbg_print("will try again shortly\n");
-			s = msleep_interruptible(500);
-			if (s != 0) {
-				err_print("No choice but to leak\n");
-				return;
-			}
+			/* The wait can fail if a signal is
+			 * pending... which is likely if we're being
+			 * killed.  I don't like msleep ere, but
+			 * without a vtq_await_job_noninterruptible,
+			 * or some such, we have no choice */
+			msleep(100);
 		}
 		distance = ctx->last_queued_job_id
 			- vtq_get_read_pointer(ctx->real_context);
@@ -137,7 +137,8 @@ void vtqb_destroy_context(struct vtqb_context *ctx)
 	while (ctx->tasklist) {
 		struct vtqb_task *next;
 		next = ctx->tasklist->next;
-		dbg_print("Cleaning up left over task %d\n",
+		dbg_print("Cleaning up left over task %p a.k.a  %d\n",
+			ctx->tasklist,
 			ctx->tasklist->real_task);
 		vtq_destroy_task(ctx->real_context,
 			ctx->tasklist->real_task);
@@ -148,7 +149,7 @@ void vtqb_destroy_context(struct vtqb_context *ctx)
 	while (ctx->imagelist) {
 		struct vtqb_image *next;
 		next = ctx->imagelist->next;
-		dbg_print("Cleaning up left over image %d\n",
+		dbg_print("Cleaning up left over image %p\n",
 			ctx->imagelist->real_image);
 		vtq_unregister_image(ctx->real_context,
 			ctx->imagelist->real_image);
@@ -165,21 +166,22 @@ void vtqb_destroy_context(struct vtqb_context *ctx)
 
 /* job loader -- copied from testloader */
 
-vtq_image_id_t vtqb_register_image(struct vtqb_context *ctx,
+vtq_proxy_image_id_t vtqb_register_image(struct vtqb_context *ctx,
 				   const uint32_t *text,
 				   size_t textsz,
 				   const uint32_t *data,
 				   size_t datasz,
 				   size_t datamemreq)
 {
-	vtq_image_id_t image_id;
+	struct vtq_image *image;
 	struct vtqb_image *proxy;
+	vtq_proxy_image_id_t proxy_image_id;
 
-	image_id = vtq_register_image(ctx->real_context,
+	image = vtq_register_image(ctx->real_context,
 				      text, textsz,
 				      data, datasz,
 				      datamemreq);
-	if (image_id < 0) {
+	if (image < 0) {
 		err_print("failed to register image\n");
 		goto err_register_image;
 	}
@@ -196,26 +198,32 @@ vtq_image_id_t vtqb_register_image(struct vtqb_context *ctx,
 		goto err_cleaned;
 	}
 
-	if (ctx->imagemap[image_id] != NULL) {
-		err_print("image id already taken!  BUG!\n");
+	for (proxy_image_id = 0;
+			proxy_image_id < VTQ_MAX_PROXY_IMAGES;
+			proxy_image_id++) {
+		if (ctx->imagemap[proxy_image_id] == NULL)
+			break;
+	}
+	if (proxy_image_id >= VTQ_MAX_PROXY_IMAGES) {
+		err_print("all image ids in this context are taken!\n");
 		goto err_badimage;
 	}
 
-	proxy->real_image = image_id;
+	proxy->real_image = image;
 	proxy->next = ctx->imagelist;
 	if (proxy->next != NULL)
 		proxy->next->prevnext = &proxy->next;
 	proxy->prevnext = &ctx->imagelist;
 	ctx->imagelist = proxy;
 
-	ctx->imagemap[image_id] = proxy;
+	ctx->imagemap[proxy_image_id] = proxy;
 
 	mutex_unlock(&ctx->mutex);
 
 	/* success */
 
-	BUG_ON(image_id < 0);
-	return image_id;
+	BUG_ON(proxy_image_id < 0 || proxy_image_id >= VTQ_MAX_PROXY_IMAGES);
+	return proxy_image_id;
 
 	/*
 	  error exit paths follow
@@ -229,16 +237,18 @@ err_cleaned:
 	kfree(proxy);
 err_kmalloc:
 
-	vtq_unregister_image(ctx->real_context, image_id);
+	vtq_unregister_image(ctx->real_context, image);
 err_register_image:
 
 	dbg_print("image registration failed\n");
 	return -1;
 }
 
-void vtqb_unregister_image(struct vtqb_context *ctx, vtq_image_id_t image_id)
+void vtqb_unregister_image(struct vtqb_context *ctx,
+			   vtq_proxy_image_id_t proxy_image_id)
 {
 	struct vtqb_image *proxy;
+	struct vtq_image *image;
 
 	mutex_lock(&ctx->mutex);
 	if (ctx->cleaned) {
@@ -246,14 +256,14 @@ void vtqb_unregister_image(struct vtqb_context *ctx, vtq_image_id_t image_id)
 		return;
 	}
 
-	if (image_id < 0 || image_id >= VTQ_MAX_TASKS) {
+	if (proxy_image_id < 0 || proxy_image_id >= VTQ_MAX_PROXY_IMAGES) {
 		/* must be bad data from user space -- just ignore it */
 		mutex_unlock(&ctx->mutex);
 		err_print("bad image id");
 		return;
 	}
 
-	proxy = ctx->imagemap[image_id];
+	proxy = ctx->imagemap[proxy_image_id];
 
 	if (proxy == NULL) {
 		/* must be bad data from user space -- just ignore it */
@@ -262,7 +272,8 @@ void vtqb_unregister_image(struct vtqb_context *ctx, vtq_image_id_t image_id)
 		return;
 	}
 
-	ctx->imagemap[image_id] = NULL;
+	image = proxy->real_image;
+	ctx->imagemap[proxy_image_id] = NULL;
 	if (proxy->next != NULL)
 		proxy->next->prevnext = proxy->prevnext;
 	*proxy->prevnext = proxy->next;
@@ -270,17 +281,17 @@ void vtqb_unregister_image(struct vtqb_context *ctx, vtq_image_id_t image_id)
 
 	kfree(proxy);
 
-	vtq_unregister_image(ctx->real_context, image_id);
+	vtq_unregister_image(ctx->real_context, image);
 }
 
 vtq_task_id_t vtqb_create_task(struct vtqb_context *ctx,
-			       vtq_image_id_t image_id,
+			       vtq_proxy_image_id_t image_id,
 			       uint32_t entrypt)
 {
 	vtq_task_id_t task_id;
 	struct vtqb_task *proxy;
 
-	if (image_id < 0 || image_id > VTQ_MAX_IMAGES) {
+	if (image_id < 0 || image_id > VTQ_MAX_PROXY_IMAGES) {
 		dbg_print("bad image ID\n");
 		goto err_badimage1;
 	}
@@ -298,7 +309,9 @@ vtq_task_id_t vtqb_create_task(struct vtqb_context *ctx,
 		goto err_badimage2;
 	}
 
-	task_id = vtq_create_task(ctx->real_context, image_id, entrypt);
+	task_id = vtq_create_task(ctx->real_context,
+			ctx->imagemap[image_id]->real_image,
+			entrypt);
 	if (task_id < 0) {
 		err_print("failed to create task\n");
 		goto err_create_task;

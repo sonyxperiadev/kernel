@@ -13,15 +13,18 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/kernel.h>
 
+#include <linux/dma-mapping.h>
 #include <linux/errno.h>
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/interrupt.h>
+#include <linux/kref.h>
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
 #include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/workqueue.h>
 
 #include <linux/broadcom/vce.h>
 #include <linux/broadcom/vtq.h>
@@ -53,6 +56,7 @@ struct vtq_global {
 	vtq_progmemoffset_t loaderkernel_loadoffset;
 	size_t loaderkernel_size;
 	vtq_progmemoffset_t loaderkernel_firstentry;
+	vtq_progmemoffset_t loaderkernel_loadimage_entrypoint;
 
 	/*
 	 *
@@ -64,15 +68,29 @@ struct vtq_global {
 	 * the kernel log */
 	int debug_fifo;
 };
-typedef uint32_t image_prog_bitmap_t; /* hack */
+typedef uint32_t prog_bitmap_t;
 struct vtq_image {
-	/* we (currently) store image structs in an array.  We set the
-	 * occupied flag to indicate that the entry is valid. */
-	int occupied;
+	/* Track references to this image so that we can defer the
+	 * freeing of it until current in-flight loads have
+	 * completed. */
+	struct kref ref;
+	struct work_struct unregister_work;
 
 	/* We record a bitmap of task-types supported by this image
 	 * (i.e. for whom this image has entrypoints) */
-	image_prog_bitmap_t bitmap;
+	prog_bitmap_t bitmap;
+
+	/* We keep a copy of the text and data in device addressable
+	 * memory  */
+	struct {
+		void *virtaddr;
+		size_t sz;
+		uint32_t busaddr;
+	} dmainfo;
+	int textoffset;
+	size_t textsz;
+	int dataoffset;
+	size_t datasz;
 
 	/* Entry point (PC value) for each task-type supported by this
 	 * image.  Array entry is only valid when the corresponding
@@ -80,13 +98,17 @@ struct vtq_image {
 	 * fat wasteful array. */
 	uint32_t entrypts[VTQ_MAX_TASKS];
 };
+struct image_list {
+	struct image_list *next;
+	struct vtq_image *image;
+};
 struct vtq_task {
 	/* we (currently) store task structs in an array.  We set the
 	 * occupied flag to indicate that the entry is valid. */
 	int occupied;
 
-	/* hack.  TODO: sort me out */
-	vtq_image_id_t bestimage;
+	/* List of images that can serve this task */
+	struct image_list *suitable_images;
 };
 struct vtq_vce {
 	/* Our route back to the VCE driver: */
@@ -119,22 +141,14 @@ struct vtq_vce {
 	 * -- the actual fifo entry will be modulo the fifo size,
 	 * which must therefore be power-of-2 */
 	vtq_job_id_t writeptr;
-	/* next image id is for allocating image IDs -- we do this
-	 * *badly* at the moment, it's possible to starve this out
-	 * even without filling all the image slots.  We get away with
-	 * it at the moment but as soon as we start using lots of
-	 * images, this will need fixing */
-	vtq_image_id_t next_image_id;
-	/* array (FIXME! not good!) of images */
-	struct vtq_image images[VTQ_MAX_IMAGES];
-	/* current image id is the id of the image for whom a LOAD
-	 * entry has been put into the FIFO -- actually it's the
-	 * *only* image at the moment, but that will change when we
-	 * start auto-loading them */
-	vtq_image_id_t current_image_id;
+
+	/* currently loaded image. */
+	struct vtq_image *current_image;
 
 	/* array (FIXME! not good!) of tasks */
 	struct vtq_task tasks[VTQ_MAX_TASKS];
+	/* Image loads that are in flight */
+	struct vtq_image **inflightloads;
 
 	/* a wait-queue for threads wanting to be notified when a VCE
 	 * job is complete.  At the moment this serves two purposes:
@@ -155,7 +169,7 @@ struct vtq_vce {
 	/* General stuff below needs both mutexes or special gloves */
 	int on; /* yeah - I know it's wrong -- I'll fix
 				it. :) */
-	atomic_t dont_auto_close;
+	struct work_struct unload_work;
 };
 
 #define err_print(fmt, arg...) \
@@ -182,7 +196,7 @@ int vtq_driver_init(struct vtq_global **vtq_global_out,
 	vtq_global->loaderkernel_loadoffset = 0;
 	vtq_global->loaderkernel_firstentry = 0;
 
-	vtq_global->debug_fifo = 1; /* TODO: proc entry for this? */
+	vtq_global->debug_fifo = 0; /* TODO: proc entry for this? */
 
 	/* success */
 	*vtq_global_out = vtq_global;
@@ -201,6 +215,11 @@ void vtq_driver_term(struct vtq_global **vtq_global_state_ptr)
 	kfree(*vtq_global_state_ptr);
 	*vtq_global_state_ptr = NULL;
 }
+
+/* Me hates forward declarations, but I screwed up on these ones. :) */
+static void try_unload_if_empty(struct work_struct *);
+static void put_image_work(struct work_struct *);
+static void put_image(struct vtq_image *image);
 
 int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 		    struct vtq_global *global,
@@ -223,13 +242,8 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 	vtq_pervce_state->writeptr = 07734;
 	vtq_pervce_state->last_known_readptr = vtq_pervce_state->writeptr;
 
-	vtq_pervce_state->next_image_id = 0;
-
 	for (i = 0; i < VTQ_MAX_TASKS; i++)
 		vtq_pervce_state->tasks[i].occupied = 0;
-
-	for (i = 0; i < VTQ_MAX_IMAGES; i++)
-		vtq_pervce_state->images[i].occupied = 0;
 
 	vtq_pervce_state->global = global;
 
@@ -245,11 +259,15 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 	/* Configured later via ioctl */
 	vtq_pervce_state->fifo_length = 0;
 	vtq_pervce_state->is_configured = 0;
+	vtq_pervce_state->inflightloads = NULL;
 
-	vtq_pervce_state->current_image_id = -1;
+	vtq_pervce_state->current_image = NULL;
 
 	vtq_pervce_state->on = 0;
-	atomic_set(&vtq_pervce_state->dont_auto_close, 0);
+
+	/* Initialize the work_t for unloading the loader after the
+	 * FIFO is empty */
+	INIT_WORK(&vtq_pervce_state->unload_work, try_unload_if_empty);
 
 	/* success */
 
@@ -265,6 +283,7 @@ err_kmalloc_vtq_pervce_state:
 
 void vtq_pervce_term(struct vtq_vce **vtq_pervce_state_ptr)
 {
+	flush_work(&(*vtq_pervce_state_ptr)->unload_work);
 	kfree(*vtq_pervce_state_ptr);
 	*vtq_pervce_state_ptr = NULL;
 }
@@ -283,6 +302,18 @@ int vtq_configure(struct vtq_vce *v,
 		  size_t fifo_entry_size,
 		  uint32_t semaphore_id)
 {
+	struct vtq_image **inflightloads;
+	unsigned int i;
+
+	inflightloads = kmalloc(fifo_length * sizeof(*inflightloads),
+			GFP_KERNEL);
+	if (inflightloads == NULL) {
+		err_print("Unable to allocate memory for perjob data\n");
+		return -1;
+	}
+	for (i = 0; i < fifo_length; i++)
+		inflightloads[i] = NULL;
+
 	mutex_lock(&v->host_mutex);
 
 	if (v->is_configured) {
@@ -300,8 +331,7 @@ int vtq_configure(struct vtq_vce *v,
 	 * about it. */
 	v->global->loaderkernel_loadoffset = loader_base;
 	v->global->loaderkernel_firstentry = loader_run;
-	/* TODO: v->global->loadimage_entrypoint = loadimage_entrypoint; */
-	(void)loadimage_entrypoint;
+	v->global->loaderkernel_loadimage_entrypoint = loadimage_entrypoint;
 	v->global->relocatedloaderkernelimage = loader_text;
 	v->global->loaderkernel_size = loader_textsz;
 	v->progmem_reservation = loader_base - 0x20;
@@ -310,9 +340,9 @@ int vtq_configure(struct vtq_vce *v,
 	v->readptr_locn = readpointer_locn;
 	v->circbuf_locn = fifo_offset;
 	v->fifo_length = fifo_length;
+	v->inflightloads = inflightloads;
 	v->fifo_entrysz = fifo_entry_size;
 	v->semanum = semaphore_id;
-
 	v->is_configured = 1;
 	mutex_unlock(&v->host_mutex);
 
@@ -337,28 +367,15 @@ static void vce_download_program_at(struct vtq_vce *v,
 	}
 }
 
-static void vce_download_data_at(struct vtq_vce *v,
-				 vtq_datamemoffset_t loadoffset,
-				 const uint32_t *image,
-				 size_t size)
-{
-	if (size & 3) {
-		err_print("bad size\n");
-		return;
-	}
-
-	while (size > 0) {
-		vce_writedata(&v->io, loadoffset, *image);
-		loadoffset += 4;
-		size -= 4;
-		image++;
-	}
-}
-
 static void _loadloader(struct vtq_vce *v)
 {
-	/* TODO: we should acquire the VCE here -- at the moment, we
-	 * have a big exclusive (ugly!) lock */
+	int s;
+
+	s = vce_acquire(v->driver_priv);
+	if (s < 0) {
+		err_print("failed to acquire the VCE (signal?)\n");
+		return;
+	}
 
 	vce_download_program_at(v,
 				v->global->loaderkernel_loadoffset,
@@ -378,20 +395,54 @@ static void _loadloader(struct vtq_vce *v)
 	v->on = 1;
 }
 
-/* TODO: we should defer this.  Currently we do the unload in the ISR.
- * Not so good.  Well, it's fine for now, as all we do is stop the
- * VCE, but we don't want to do any significant work, like stopping
- * the clocks or power. */
 static void _unloadloader(struct vtq_vce *v)
 {
+	unsigned long flags;
+
+	if (v->current_image != NULL) {
+		put_image(v->current_image);
+		v->current_image = NULL;
+	}
 	vce_stop(&v->io);
 	/* Have to pulse the semaphore, else we'll be hosed next time! */
 	vce_clearsema(&v->io, v->semanum);
 	vce_setsema(&v->io, v->semanum);
 	v->on = 0;
+	/* We need to wait for any running ISR to complete before we
+	 * can turn clocks off etc... */
+	spin_lock_irqsave(&v->vce_mutex, flags);
+	BUG_ON(v->on);
+	spin_unlock_irqrestore(&v->vce_mutex, flags);
 
-	/* TODO: here would should be releasing VCE, instead of that
-	 * big ugly lock */
+	/* Finally let VCE power down */
+	mb();
+	vce_release(v->driver_priv);
+}
+
+static void try_unload_if_empty(struct work_struct *work)
+{
+	struct vtq_vce *v;
+	int distance;
+
+	v = container_of(work, struct vtq_vce, unload_work);
+	mutex_lock(&v->host_mutex);
+	if (!v->on) {
+		mutex_unlock(&v->host_mutex);
+		return;
+	}
+	distance = v->writeptr - v->last_known_readptr;
+	if (distance > 0) {
+		mutex_unlock(&v->host_mutex);
+		return;
+	}
+	BUG_ON(distance < 0);
+
+	/* TODO: check a special flag to abort the shutdown sequence?
+	 * or is that one optimization too far?  Consider. */
+
+	_unloadloader(v);
+
+	mutex_unlock(&v->host_mutex);
 }
 
 irqreturn_t vtq_isr(struct vtq_vce *vce)
@@ -399,38 +450,44 @@ irqreturn_t vtq_isr(struct vtq_vce *vce)
 	unsigned long flags;
 	irqreturn_t ret;
 	vtq_job_id_t our_rptr, their_rptr;
+	uint32_t fifo_index;
 	int distance;
+	struct vtq_image *image;
 
+	/* First we do a fast-path check without the mutex: */
 	if (!vce->on)
 		return IRQ_NONE;
 
 	ret = IRQ_NONE;
 
+	spin_lock_irqsave(&vce->vce_mutex, flags);
+	if (!vce->on) {
+		spin_unlock_irqrestore(&vce->vce_mutex, flags);
+		return IRQ_NONE;
+	}
 	their_rptr = vce_readdata(&vce->io, vce->readptr_locn);
 
-	spin_lock_irqsave(&vce->vce_mutex, flags);
-	{
-		our_rptr = vce->last_known_readptr;
-		distance = their_rptr - our_rptr;
-		if (distance > 0)
-			ret = IRQ_HANDLED;
-		while (distance > 0) {
-			if (vce->global->debug_fifo)
-				printk(KERN_INFO "VTQ: DEQ: %u\n", our_rptr);
+	our_rptr = vce->last_known_readptr;
+	distance = their_rptr - our_rptr;
+	if (distance > 0)
+		ret = IRQ_HANDLED;
+	while (distance > 0) {
+		if (vce->global->debug_fifo)
+			printk(KERN_INFO "VTQ: DEQ: %u\n", our_rptr);
 
-			/* TODO: with the image-loader, we may need to
-			 * decrement refcounts on images... we don't
-			 * bother with that at the moment as we have
-			 * one image and a big exclusive lock */
-
-			our_rptr++;
-			distance = their_rptr - our_rptr;
+		fifo_index = our_rptr & (vce->fifo_length-1);
+		image = vce->inflightloads[fifo_index];
+		if (image != NULL) {
+			schedule_work(&image->unregister_work);
+			vce->inflightloads[fifo_index] = NULL;
 		}
-		if (our_rptr == vce->writeptr)
-			if (atomic_read(&vce->dont_auto_close) == 0)
-				_unloadloader(vce);
-		vce->last_known_readptr = our_rptr;
+		our_rptr++;
+		distance = their_rptr - our_rptr;
 	}
+	vce->last_known_readptr = our_rptr;
+	if (our_rptr == vce->writeptr)
+		schedule_work(&vce->unload_work);
+
 	spin_unlock_irqrestore(&vce->vce_mutex, flags);
 
 	if (ret == IRQ_HANDLED) {
@@ -500,15 +557,14 @@ void vtq_destroy_context(struct vtq_context *ctx)
  *
  */
 
-vtq_image_id_t vtq_register_image(struct vtq_context *ctx,
+struct vtq_image *vtq_register_image(struct vtq_context *ctx,
 		const uint32_t *text,
 		size_t textsz,
 		const uint32_t *data,
 		size_t datasz,
 		size_t datamemreq)
 {
-	int s;
-	vtq_image_id_t image_id;
+	struct vtq_image *image;
 
 	mutex_lock(&ctx->vce->host_mutex);
 
@@ -525,40 +581,45 @@ vtq_image_id_t vtq_register_image(struct vtq_context *ctx,
 		goto err_bad_image_param;
 	}
 
-	image_id = ctx->vce->next_image_id; /* TODO: search for free space? */
-
-	if (image_id >= 1) {
-		err_print("can't register more than one image! (yet)\n");
+	image = kmalloc(sizeof(*image), GFP_KERNEL);
+	if (image == NULL) {
+		err_print("failed to allocate image\n");
 		goto err_find_image_id;
 	}
 
-	ctx->vce->images[image_id].occupied = 1;
-	ctx->vce->images[image_id].bitmap = 0;
+	kref_init(&image->ref);
+	INIT_WORK(&image->unregister_work, put_image_work);
 
-	/*
-	 * TODO: We shouldn't be acquiring the vce here -- normally
-	 * we'd store away the image data somewhere and we'd acquire
-	 * in _loadloader when the first job goes into the FIFO.  We
-	 * have to keep VCE on and locked while this one and only
-	 * image is loaded (for now)
-	 */
+	image->bitmap = 0;
 
-	s = vce_acquire(ctx->vce->driver_priv);
-	if (s < 0) {
-		err_print("failed to acquire the VCE (signal??)\n");
-		goto err_acquire;
+	image->dmainfo.sz = textsz + datasz;
+	/* TODO: we shouldn't really need this extra allocation... how
+	 * can we avoid it? */
+	image->dmainfo.virtaddr =
+		dma_alloc_coherent(NULL, textsz + datasz,
+			&image->dmainfo.busaddr, GFP_DMA);
+	if (image->dmainfo.virtaddr == NULL) {
+		err_print("dma_alloc_coherent failed\n");
+		goto err_dma_alloc;
+	}
+	image->textoffset = 0;
+	image->textsz = textsz;
+	image->dataoffset = textsz;
+	image->datasz = datasz;
+
+	{
+		char *imagecopy;
+
+		imagecopy = image->dmainfo.virtaddr;
+		memcpy(imagecopy + image->textoffset, text, textsz);
+		memcpy(imagecopy + image->dataoffset, data, datasz);
 	}
 
-	vce_download_program_at(ctx->vce, 0, text, textsz);
-	vce_download_data_at(ctx->vce, 0, data, datasz);
-	ctx->vce->current_image_id = image_id;
-
-	ctx->vce->next_image_id++; /* FIXME! */
 	mutex_unlock(&ctx->vce->host_mutex);
 
 	/* success */
 
-	return image_id;
+	return image;
 
 	/*
 
@@ -566,43 +627,68 @@ vtq_image_id_t vtq_register_image(struct vtq_context *ctx,
 
 	*/
 
-	/*vce_release(ctx->vce->driver_priv);*/
-err_acquire:
+	/* dma_free_coherent */
+err_dma_alloc:
 
 err_find_image_id:
 err_bad_image_param:
 	mutex_unlock(&ctx->vce->host_mutex);
 
-	return -1;
+	return NULL;
 }
 
-void vtq_unregister_image(struct vtq_context *ctx, vtq_image_id_t image_id)
+static void cleanup_image(struct kref *ref)
 {
+	struct vtq_image *image;
+
+	image = container_of(ref, struct vtq_image, ref);
+
+	dma_free_coherent(NULL,
+			  image->dmainfo.sz,
+			  image->dmainfo.virtaddr,
+			  image->dmainfo.busaddr);
+
+	kfree(image);
+}
+
+static void put_image(struct vtq_image *image)
+{
+	kref_put(&image->ref, cleanup_image);
+}
+
+static void put_image_work(struct work_struct *work)
+{
+	struct vtq_image *i;
+
+	i = container_of(work, struct vtq_image, unregister_work);
+	put_image(i);
+}
+
+static void get_image(struct vtq_image *image)
+{
+	kref_get(&image->ref);
+}
+
+void vtq_unregister_image(struct vtq_context *ctx, struct vtq_image *image)
+{
+	(void) ctx;
+
+#if 0
 	struct vtq_vce *v;
 
 	v = ctx->vce;
-
 	mutex_lock(&v->host_mutex);
-	v->images[image_id].occupied = 0;
 
-	if (image_id + 1 == v->next_image_id) {
-		/* TODO: this is ridiculously hacky!  FIXME */
-		while (v->next_image_id > 0
-			&& !v->images[v->next_image_id - 1].occupied)
-			v->next_image_id--;
-		/* TODO: move the next_image_id back if poss */
-	}
-
-	/* See corresponding comment in register_image - we should
-	 * have released VCE already when the last job was expunged
-	 * from the FIFO, but, while we have the big lock, we have to
-	 * defer it to here. */
-
-	BUG_ON(v->on);
-	v->current_image_id = -1;
-	vce_release(v->driver_priv);
+	/* TODO: here we should go through and remove out entrypoints
+	 * from tasks.  At the moment, they'd just keep a reference to
+	 * us and the image will hang around.  We mandate in the API
+	 * that tasks should be destroyed before images anyway, so
+	 * there's no need to put this right right now. */
 
 	mutex_unlock(&v->host_mutex);
+#endif
+
+	put_image(image);
 }
 
 /* **************** */
@@ -615,36 +701,44 @@ void vtq_unregister_image(struct vtq_context *ctx, vtq_image_id_t image_id)
 
 static void vtq_add_task_entrypt(struct vtq_context *ctx,
 		vtq_task_id_t prog_id,
-		vtq_image_id_t image_id,
+		struct vtq_image *image,
 		uint32_t entrypt)
 {
+	struct image_list *l;
+
 	/* We need the host mutex while we modify the bitmap, as the
 	 * queue and complete functions will trust this data */
 	mutex_lock(&ctx->vce->host_mutex);
-	ctx->vce->images[image_id].bitmap |= (1<<prog_id);
-	/* TODO: ought to be better than this! we should find some
-	 * algorithm for choosing among all possible images, perhaps
-	 * the one that would have also satisfied the largest number
-	 * of previous requests?  at the moment we set a bestimage
-	 * here to be the most recently image we added and use that.
-	 * At the moment, we only support tasks in one image anyway.
-	 * This needs to be reviewed. */
-	ctx->vce->tasks[prog_id].bestimage = image_id;
-	ctx->vce->images[image_id].entrypts[prog_id] = entrypt;
+	get_image(image);
+	image->bitmap |= (1<<prog_id);
+
+	l = kmalloc(sizeof(*l), GFP_KERNEL);
+	l->image = image;
+	l->next = ctx->vce->tasks[prog_id].suitable_images;
+	ctx->vce->tasks[prog_id].suitable_images = l;
+
+	image->entrypts[prog_id] = entrypt;
 	mutex_unlock(&ctx->vce->host_mutex);
 }
 
 static void vtq_remove_all_entrypts(struct vtq_context *ctx,
 		vtq_task_id_t prog_id)
 {
-	vtq_image_id_t image_id;
+	struct vtq_image *image;
+	struct image_list *image_list;
+	struct image_list *next;
 
-	/* We need to hold the host mutex while we modify the bitmap,
-	 * as the queue and complete functions will trust this data */
 	mutex_lock(&ctx->vce->host_mutex);
-	for (image_id = 0; image_id < ctx->vce->next_image_id; image_id++) {
-		if (ctx->vce->images[image_id].bitmap & (1<<prog_id))
-			ctx->vce->images[image_id].bitmap &= ~(1<<prog_id);
+	image_list = ctx->vce->tasks[prog_id].suitable_images;
+	ctx->vce->tasks[prog_id].suitable_images = NULL;
+
+	while (image_list != NULL) {
+		image = image_list->image;
+		next = image_list->next;
+		kfree(image_list);
+		image_list = next;
+		image->bitmap &= ~(1<<prog_id);
+		put_image(image);
 	}
 	mutex_unlock(&ctx->vce->host_mutex);
 }
@@ -656,7 +750,7 @@ static vtq_task_id_t vtq_assign_prog_id(struct vtq_context *ctx)
 	for (prog_id = 0; prog_id < VTQ_MAX_TASKS; prog_id++) {
 		if (!ctx->vce->tasks[prog_id].occupied) {
 			ctx->vce->tasks[prog_id].occupied = 1;
-			ctx->vce->tasks[prog_id].bestimage = -1;
+			ctx->vce->tasks[prog_id].suitable_images = NULL;
 			mutex_unlock(&ctx->vce->host_mutex);
 			return prog_id;
 		}
@@ -674,7 +768,7 @@ static void vtq_free_prog_id(struct vtq_context *ctx, vtq_task_id_t prog_id)
 }
 
 vtq_task_id_t vtq_create_task(struct vtq_context *ctx,
-			      vtq_image_id_t image_id,
+			      struct vtq_image *image,
 			      uint32_t entrypt)
 {
 	vtq_task_id_t prog_id;
@@ -683,7 +777,7 @@ vtq_task_id_t vtq_create_task(struct vtq_context *ctx,
 	if (prog_id < 0)
 		return prog_id;
 
-	vtq_add_task_entrypt(ctx, prog_id, image_id, entrypt);
+	vtq_add_task_entrypt(ctx, prog_id, image, entrypt);
 
 	return prog_id;
 }
@@ -721,9 +815,9 @@ static int got_room_for_job(struct vtq_context *ctx, vtq_task_id_t task_id)
 
 	njobsinq = ctx->vce->writeptr - ctx->vce->last_known_readptr;
 	room = ctx->vce->fifo_length - njobsinq;
-	if (ctx->vce->current_image_id >= 0) {
+	if (ctx->vce->current_image != NULL) {
 		curimagebitmap =
-			ctx->vce->images[ctx->vce->current_image_id].bitmap;
+			ctx->vce->current_image->bitmap;
 		imagehasentrypt =
 			curimagebitmap & (1<<task_id);
 	} else {
@@ -753,6 +847,8 @@ int vtq_queue_job(struct vtq_context *ctx,
 	uint32_t datamemaddress;
 	uint32_t job_entrypoint;
 	vtq_job_id_t next_job_id;
+	uint32_t fifo_index;
+	struct vtq_image *new_image;
 	int s;
 
 	(void) flags_do_not_use_me;
@@ -779,9 +875,6 @@ int vtq_queue_job(struct vtq_context *ctx,
 	/* got room for job will leave the host_mutex acquired when
 	 * the condition is met */
 
-	/* stop the ISR from turning us off when FIFO becomes empty */
-	atomic_inc(&ctx->vce->dont_auto_close);
-
 	/* spin lock is unlocked so isr can run, but isr won't turn us
 	 * off now (because we said so above) and we are the only ones
 	 * allowed to turn on, so this test should be safe */
@@ -799,33 +892,75 @@ int vtq_queue_job(struct vtq_context *ctx,
 		}
 	}
 
+	fifo_index = ctx->vce->writeptr & (ctx->vce->fifo_length-1);
 	datamemaddress = ctx->vce->circbuf_locn
-		+ ctx->vce->fifo_entrysz
-		* (ctx->vce->writeptr & (ctx->vce->fifo_length-1));
+		+ ctx->vce->fifo_entrysz * fifo_index;
 
 	/* Insert a load-image if req'd */
-	if (ctx->vce->current_image_id >= 0) {
+	if (ctx->vce->current_image != NULL) {
 		curimagebitmap =
-			ctx->vce->images[ctx->vce->current_image_id].bitmap;
+			ctx->vce->current_image->bitmap;
 		curimagehasentrypt =
 			curimagebitmap & (1<<task_id);
 	} else {
 		curimagehasentrypt = 0;
 	}
 	if (!curimagehasentrypt) {
-		/* This is where we ought to insert an extra job that
-		 * loads the new image by DMA */
+		uint32_t imagehwaddr;
 
-		printk(KERN_ERR "NO AUTO LOADER.  CAN'T COPE WITH THIS.\n");
-		/* TODO FIXME! */
-		mutex_unlock(&ctx->vce->host_mutex);
-		return -ENOENT;
+		BUG_ON(!ctx->vce->on);
+
+		/* TODO: find_image_for_prog(prog_id); - or similar --
+		 * for now, we just use first one... we assume there
+		 * is one!  This is fine for now, but we'll eventually
+		 * expect that a single task can be served by more
+		 * than one image. */
+		BUG_ON(ctx->vce->tasks[task_id].suitable_images == NULL);
+		BUG_ON(ctx->vce->tasks[task_id].suitable_images->image == NULL);
+		new_image = ctx->vce->tasks[task_id].suitable_images->image;
+		get_image(new_image);
+		ctx->vce->inflightloads[fifo_index] = new_image;
+		imagehwaddr = new_image->dmainfo.busaddr;
+		vce_writedata(&ctx->vce->io, datamemaddress,
+			ctx->vce->global->loaderkernel_loadimage_entrypoint);
+		vce_writedata(&ctx->vce->io, datamemaddress+4, 0);
+		vce_writedata(&ctx->vce->io, datamemaddress+8,
+			imagehwaddr + new_image->textoffset);
+		vce_writedata(&ctx->vce->io, datamemaddress+12,
+			new_image->textsz);
+		vce_writedata(&ctx->vce->io, datamemaddress+16, 0);
+		vce_writedata(&ctx->vce->io, datamemaddress+20,
+			imagehwaddr + new_image->dataoffset);
+		vce_writedata(&ctx->vce->io, datamemaddress+24,
+			new_image->datasz);
+		if (ctx->vce->global->debug_fifo) {
+			printk(KERN_INFO "VTQ: Q: %u: "
+			       "0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X (n/a)\n",
+			       ctx->vce->writeptr,
+			       ctx->vce->global->loaderkernel_loadimage_entrypoint,
+			       0, imagehwaddr + new_image->textoffset,
+			       new_image->textsz,
+			       0, imagehwaddr + new_image->dataoffset,
+			       new_image->datasz);
+		}
+
+		ctx->vce->writeptr++;
+		if (ctx->vce->current_image != NULL)
+			put_image(ctx->vce->current_image);
+		get_image(new_image);
+		ctx->vce->current_image = new_image;
+
+		fifo_index = ctx->vce->writeptr & (ctx->vce->fifo_length-1);
+		datamemaddress = ctx->vce->circbuf_locn +
+			ctx->vce->fifo_entrysz * fifo_index;
 	}
+
+	BUG_ON(ctx->vce->inflightloads[fifo_index] != NULL);
 
 	BUG_ON(!ctx->vce->on);
 
 	job_entrypoint =
-		ctx->vce->images[ctx->vce->current_image_id].entrypts[task_id];
+		ctx->vce->current_image->entrypts[task_id];
 	vce_writedata(&ctx->vce->io, datamemaddress, job_entrypoint);
 	vce_writedata(&ctx->vce->io, datamemaddress+4, arg0);
 	vce_writedata(&ctx->vce->io, datamemaddress+8, arg1);
@@ -840,7 +975,7 @@ int vtq_queue_job(struct vtq_context *ctx,
 		       job_entrypoint,
 		       arg0, arg1, arg2, arg3, arg4, arg5, 0);
 	ctx->vce->writeptr++;
-	atomic_dec(&ctx->vce->dont_auto_close);
+	wmb();
 	vce_writedata(&ctx->vce->io,
 		ctx->vce->writeptr_locn, ctx->vce->writeptr);
 	next_job_id = ctx->vce->writeptr;

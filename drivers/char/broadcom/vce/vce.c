@@ -42,7 +42,7 @@ the GPL, without Broadcom's express prior written consent.
 /* Private configuration stuff -- not part of exposed API */
 #include "vtqinit_priv.h"
 
-#define DRIVER_VERSION 10107
+#define DRIVER_VERSION 10108
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -790,7 +790,7 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			struct vtq_registerimage_ioctldata *d;
 			uint32_t *scratch; /* TODO: fix this! */
 			unsigned int c;
-			vtq_image_id_t image_id;
+			vtq_proxy_image_id_t image_id;
 
 			d = (struct vtq_registerimage_ioctldata *)arg;
 			scratch = kmalloc(0x6000, GFP_KERNEL);
