@@ -77,7 +77,7 @@ struct i2c_priv_data
 
 struct tango_i2c {
 	struct workqueue_struct *ktouch_wq;
-	struct work_struct work;
+	struct delayed_work work;
 	struct mutex mutex_wq;
 	struct i2c_client *client;
 	struct i2c_client *dummy_client;
@@ -124,8 +124,17 @@ typedef enum
 #define POWER_MODE_DEEP_SLEEP		2
 #define POWER_MODE_FREEZE			3
 
-/* Inerrupt Mode */
-#define INT_MODE_ACT_LOW_TOUCH	0x09
+/* Inerrupt Modes */
+#define ENABLE_IND_MODE			(1 << 3)
+
+#define INT_POL_ACTIVE_LOW		0
+#define INT_POL_ACTIVE_HIGH		(1 << 2)
+
+#define INT_MODE_ASSERT_PERIOD		0
+#define INT_MODE_ASSERT_MOVING		1
+#define INT_MODE_ASSERT_TOUCH		2
+
+#define INT_MODE_ACT_LOW_TOUCH		(INT_MODE_ASSERT_TOUCH | ENABLE_IND_MODE)
 
 /* Special Operations */
 #define SPECIAL_OP_OFFSET			0x37
@@ -292,6 +301,7 @@ static void i2c_ts_early_suspend(struct early_suspend *desc)
 	};
 
 	i2c_ts_suspend_driver(data->client, mesg);
+	cancel_delayed_work_sync(&data->work);
 }
 
 static void i2c_ts_late_resume(struct early_suspend *desc)
@@ -337,9 +347,19 @@ static int i2c_ts_driver_check_mod_params(void)
 	}
 }
 
+int is_pen_down(void)
+{
+	struct i2c_client *client;
+
+	client = (p_tango_i2c_dev->dummy_client) ? p_tango_i2c_dev->dummy_client
+						 : p_tango_i2c_dev->client;
+	return i2c_smbus_read_byte_data(client, gp_i2c_ts->num_fingers_idx);
+}
+
 static void tango_i2c_wq(struct work_struct *work)
 {
-	struct tango_i2c *tango_dev = container_of(work, struct tango_i2c, work);
+	struct tango_i2c *tango_dev = container_of(to_delayed_work(work),
+							struct tango_i2c, work);
 
 	mutex_lock(&tango_dev->mutex_wq);
 	TS_DEBUG("tango_i2c_wq run\n");
@@ -352,6 +372,10 @@ static void tango_i2c_wq(struct work_struct *work)
 
 	TS_DEBUG("tango_i2c_wq leave\n");
 	mutex_unlock(&tango_dev->mutex_wq);
+
+	if (is_pen_down() > 0)
+		queue_delayed_work(tango_dev->ktouch_wq,
+				&tango_dev->work, HZ / 50);
 }
 
 static irqreturn_t i2c_ts_driver_isr(int irq, void *dev_id)
@@ -361,7 +385,7 @@ static irqreturn_t i2c_ts_driver_isr(int irq, void *dev_id)
 	// TS_DEBUG("i2c_ts_driver_isr with irq:%d\n", irq);
 
 	 /* postpone I2C transactions to the workqueue as it may block */
-	queue_work(tango_dev->ktouch_wq, &tango_dev->work);
+	queue_delayed_work(tango_dev->ktouch_wq, &tango_dev->work, 0);
 
 	return IRQ_HANDLED;
 }
@@ -1010,7 +1034,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 
 	mutex_init(&p_tango_i2c_dev->mutex_wq);
 	p_tango_i2c_dev->ktouch_wq = create_workqueue("tango_touch_wq");
-	INIT_WORK(&p_tango_i2c_dev->work, tango_i2c_wq);
+	INIT_DELAYED_WORK(&p_tango_i2c_dev->work, tango_i2c_wq);
 	i2c_set_clientdata(p_i2c_client, p_tango_i2c_dev);
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	p_tango_i2c_dev->suspend_desc.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
@@ -1050,10 +1074,10 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	}
 
 	if ((rc = request_irq(gpio_to_irq(gp_i2c_ts->gpio_irq_pin),
-								 i2c_ts_driver_isr,
-								 (IRQF_TRIGGER_FALLING),
-								 "GPIO cap touch screen irq",
-								 p_tango_i2c_dev)) < 0)
+				 i2c_ts_driver_isr,
+				 (IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING),
+				 "GPIO cap touch screen irq",
+				 p_tango_i2c_dev)) < 0)
 	{
 		TS_ERR("request_irq(%d) failed, rc = %d\n",
 				 gp_i2c_ts->gpio_irq_pin, rc);
