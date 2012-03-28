@@ -45,6 +45,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <plat/clock.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
+#include <linux/regulator/consumer.h>
 
 /* TODO - define the major device ID */
 #define UNICAM_DEV_MAJOR	0
@@ -97,6 +98,7 @@ typedef struct {
 typedef struct {
 	unsigned int csi0_unicam_gpio;
 	unsigned int csi1_unicam_gpio;
+	struct regulator *reg;
 } unicam_info_t;
 
 static unicam_info_t unicam_info;
@@ -171,6 +173,12 @@ static int unicam_open(struct inode *inode, struct file *filp)
 		goto err;
 	}
 
+	ret = regulator_enable(unicam_info.reg);
+	if (ret < 0) {
+		pr_err("%s: cannot enable regulator: %d\n", __func__, ret);
+		goto err;
+	}
+
 	return 0;
 
       err:
@@ -185,6 +193,9 @@ static int unicam_release(struct inode *inode, struct file *filp)
 
 	disable_irq(IRQ_UNICAM);
 	free_irq(IRQ_UNICAM, dev);
+
+	if (regulator_disable(unicam_info.reg) < 0)
+		pr_err("%s: cannot disable regulator\n", __func__);
 
 	reset_unicam();
 	disable_unicam_clock();
@@ -559,6 +570,7 @@ static void reset_unicam(void)
 
 static int __devexit unicam_drv_remove(struct platform_device *pdev)
 {
+	regulator_put(unicam_info.reg);
 	pi_mgr_dfs_request_remove(&unicam_dfs_node);
 	unicam_dfs_node.name = NULL;
 	pi_mgr_qos_request_remove(&unicam_qos_node);
@@ -579,6 +591,13 @@ static int unicam_drv_probe(struct platform_device *pdev)
 		goto error;
 	}
 
+	unicam_info.reg = regulator_get(&pdev->dev, "vcc");
+	if (IS_ERR(unicam_info.reg)) {
+		pr_err("%s: cannot get regulator: %d\n", __func__, ret);
+		ret = PTR_ERR(unicam_info.reg);
+		goto error;
+	}
+
 	unicam_info.csi0_unicam_gpio = pdata->csi0_gpio;
 	unicam_info.csi1_unicam_gpio = pdata->csi1_gpio;
 
@@ -589,7 +608,7 @@ static int unicam_drv_probe(struct platform_device *pdev)
 		printk(KERN_ERR "%s: failed to register PI DFS request\n",
 		       __func__);
 		ret = -EIO;
-		goto error;
+		goto dfs_request_fail;
 	}
 	ret = pi_mgr_qos_add_request(&unicam_qos_node, "unicam", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
 	if (ret) {
@@ -602,6 +621,8 @@ static int unicam_drv_probe(struct platform_device *pdev)
 
 qos_request_fail:
 	pi_mgr_dfs_request_remove(&unicam_dfs_node);
+dfs_request_fail:
+	regulator_put(unicam_info.reg);
 error:
 	return ret;
 }
