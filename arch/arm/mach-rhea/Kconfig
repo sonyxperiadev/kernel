@@ -230,6 +230,14 @@ config RHEA_WA_HWJIRA_2489
 	 Say Y to enable RHEA JIRA 2489 workaround
 	 Refer JIRA DB for more info on this JIRA
 
+config RHEA_WA_HWJIRA_2706
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2706"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2706 workaround
+	 Refer JIRA DB for more info on this JIRA
+
 config RHEALC_2093
 	bool "Enable RheaLC&2093"
 	default n
