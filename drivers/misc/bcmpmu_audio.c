@@ -332,9 +332,6 @@ void bcmpmu_ihf_power(bool on)
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFLDO_PUP,
 				bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask,
 				bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
-		/* Enable IHF ALC/APS - OPTIONAL */
-		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC_BYPASS, false,
-				bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask);
 	} else {
 		if (!bcmpmu_audio->IHF_On) {
 			printk(KERN_INFO "%s: IHF is already off.\n", __func__);
