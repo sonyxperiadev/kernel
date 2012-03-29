@@ -131,7 +131,13 @@ struct pmem_info {
 	struct work_struct pmem_shrinker;
 	/* Task killed by the pmem_shrinker */
 	struct task_struct *deathpending;
-	/* Wait Queue to wait for killed process to die .. */
+	/* Semaphore that protects deathpending.. */
+	struct semaphore shrinker_sem;
+	/* Flag set by process that failed allocation
+	 * in order to force shriker to kill one process
+	 * w/o checking watermarks */
+	int force_kill;
+	/* Processes waiting for shrinker to finish when allocation fails */
 	wait_queue_head_t deatheaters;
 	/* Stats for the CMA region for this device */
 	struct dev_cma_info cma;
@@ -247,6 +253,22 @@ static int is_master_owner(struct file *file)
 		ret = 1;
 	fput_light(master_file, put_needed);
 	return ret;
+}
+
+/* Must be called with data->sem held */
+static inline bool is_cma_allocation(struct pmem_data *data)
+{
+	return !!(data->flags & PMEM_FLAGS_CMA);
+}
+
+static inline bool is_kmalloc_allocation(struct pmem_data *data)
+{
+	return !!(data->flags & PMEM_FLAGS_KMALLOC);
+}
+
+static inline bool is_carveout_allocation(struct pmem_data *data)
+{
+	return !!(data->flags & PMEM_FLAGS_CARVEOUT);
 }
 
 /* Must be called with p_info->lock held */
@@ -449,10 +471,6 @@ static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 
 	BUG_ON(!current->group_leader->mm);
 	add_mm_counter(current->group_leader->mm, MM_CMAPAGES, nr_pages);
-	if (!pmem_watermark_ok(&pmem[id])) {
-		schedule_work(&pmem[id].pmem_shrinker);
-		wake_up_all(&cleaners);
-	}
 
 	data->pfn = page_to_pfn(page);
 	data->size = len;
@@ -720,26 +738,52 @@ static struct vm_operations_struct vm_ops = {
 	.close = pmem_vma_close,
 };
 
-static bool should_retry_allocation(int id)
+static bool should_retry_allocation(int id, struct pmem_data *data)
 {
+	long ret;
+	bool answer;
 
-	if (pmem_watermark_ok(&pmem[id]) || fatal_signal_pending(current))
+	up_write(&data->sem);
+
+	if (signal_pending(current)) {
+		answer = false;
 		goto out;
-
-	/* Dont retry any allocations for now */
-	goto out;
-
-	/* retry only if we have a pending death .. */
-	if (pmem[id].deathpending) {
-		printk(KERN_INFO "%s: waiting for deathpending!\n", __func__);
-		if (wait_event_interruptible(pmem[id].deatheaters,
-					     (pmem[id].deathpending == NULL)))
-			goto out;
-
-		return true;
 	}
+
+	/* if the work was idle, we rescheule with force_kill = 1
+	 * if it wasn't idle, then just retry the allocation
+	 * as the pending work must have killed someone
+	 */
+	if (flush_work_sync(&pmem[id].pmem_shrinker)) {
+		answer = true;
+		goto out;
+	}
+
+	pmem[id].force_kill = 1;
+	schedule_work(&pmem[id].pmem_shrinker);
+	printk(KERN_INFO"pmem:%s:%d Waiting for a process to get killed\n",
+	       current->group_leader->comm, current->pid);
+	ret = wait_event_interruptible_timeout(pmem[id].deatheaters,
+					       (pmem[id].force_kill == 0),
+					       HZ * 2);
+	/* if we got a signal or timed out, dont retry */
+	if (ret == 0 || ret == -ERESTARTSYS) {
+		printk(KERN_INFO
+		       "pmem:%s:%d Waiting for death timed out(%ld)\n",
+		       current->group_leader->comm, current->pid, ret);
+		answer = false;
+		goto out;
+	}
+
+	answer = true;
+
 out:
-	return false;
+	if (answer) {
+		printk(KERN_INFO"pmem:%s:%d Wait done, now retry\n",
+		       current->group_leader->comm, current->pid);
+	}
+	down_write(&data->sem);
+	return answer;
 }
 
 static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
@@ -747,6 +791,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	struct pmem_data *data;
 	unsigned long vma_size = vma->vm_end - vma->vm_start;
 	int ret = 0, id = get_id(file);
+	unsigned int pass = 0;
 
 	if (vma->vm_pgoff || !PMEM_IS_PAGE_ALIGNED(vma_size)) {
 		printk(KERN_ERR "pmem: mmaps must be at offset zero, aligned"
@@ -777,17 +822,23 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		do {
 			ret = pmem_allocate(file, id, data,
 					    vma->vm_end - vma->vm_start);
-			if (ret != 0)
-				printk(KERN_ERR "pmem: could not allocate\n");
-			else
+			if (ret == 0)
 				break;
-		} while (should_retry_allocation(id));
+			if (++pass >= 10)
+				break;
+		} while (should_retry_allocation(id, data));
+
+		if (is_cma_allocation(data) && !pmem_watermark_ok(&pmem[id])) {
+			schedule_work(&pmem[id].pmem_shrinker);
+			wake_up_all(&cleaners);
+		}
 	}
 
 	if (pmem_len(data) != vma_size) {
-		printk(KERN_WARNING "pmem: mmap size [%lu] does not match"
+		printk(KERN_WARNING"pmem: mmap size [%lu] does not match"
 		       "size of backing region [%lu].\n", vma_size,
 		       pmem_len(data));
+		printk(KERN_ALERT "pmem:%d FATAL alloc failure\n", __LINE__);
 		ret = -EINVAL;
 		goto error_up_write;
 	}
@@ -825,7 +876,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		     current->pid);
 	} else {
 		if (pmem_map_pfn_range(id, file, vma, data, 0, vma_size)) {
-			printk(KERN_INFO "pmem: mmap failed in kernel!\n");
+			printk(KERN_INFO"pmem: mmap failed in kernel!\n");
 			ret = -EAGAIN;
 			goto error_free_mem;
 		}
@@ -890,12 +941,14 @@ int get_pmem_addr(struct file *file, unsigned long *start,
 	int id;
 
 	if (!is_pmem_file(file)) {
-		printk(KERN_INFO"pmem: requested reference from non-pmem file\n");
+		printk(KERN_ERR
+		       "pmem: requested reference from non-pmem file\n");
 		return -EINVAL;
 	}
 
 	if (!has_allocation(file)) {
-		printk(KERN_INFO"pmem: requested reference from file with no "
+		printk(KERN_WARNING
+			"pmem: requested reference from file with no "
 		       "allocation.\n");
 		*start = *len = *vstart = 0UL;
 		return 0;
@@ -1608,7 +1661,7 @@ pmem_task_notify_func(struct notifier_block *self,
 			       "%s: %s(%d) pmem deathpending killed\n",
 			       __func__, task->comm, task->pid);
 			pmem[id].deathpending = NULL;
-			wake_up_all(&pmem[id].deatheaters);
+			up(&pmem[id].shrinker_sem);
 		}
 	}
 
@@ -1633,11 +1686,11 @@ static void pmem_shrink(struct work_struct *work)
 
 	mutex_lock(&p_info->shrinker_lock);
 
-	if (pmem_watermark_ok(p_info) || p_info->deathpending)
+	if (!p_info->force_kill &&
+	    (pmem_watermark_ok(p_info) || p_info->deathpending))
 		goto out;
 
-	/* Scan the list and find the task with minimum oom_adj value
-	 */
+	/* Scan the list and find the task with minimum oom_adj value */
 	mutex_lock(&p_info->data_list_lock);
 	list_for_each(itr, &p_info->data_list) {
 		int oom_adj;
@@ -1676,6 +1729,18 @@ static void pmem_shrink(struct work_struct *work)
 			continue;
 		}
 
+		/* dont kill anything below PREVIOUS_APP_ADJ as
+		 * that can have impact on interactivity. However
+		 * if force_kill is set, we have an allocation
+		 * failure, and in that case, we need to kill whaterver
+		 * we can
+		 */
+		if ((oom_adj <= 7) && (!p_info->force_kill)) {
+			task_unlock(task);
+			put_task_struct(task);
+			continue;
+		}
+
 		task_cmasize = get_mm_cma(task->mm);
 		task_unlock(task);
 		put_task_struct(task);
@@ -1706,15 +1771,19 @@ static void pmem_shrink(struct work_struct *work)
 		       selected_task_cmasize);
 		p_info->deathpending = selected;
 		force_sig(SIGKILL, selected);
+		/* wait for process to die .... */
+		down(&p_info->shrinker_sem);
 	} else {
-		printk(KERN_ALERT "pmem: didn't find suitable task to kill\n");
-		goto out;
+		printk(KERN_ALERT"pmem: didn't find suitable task to kill\n");
 	}
 
-	/* wait on queue ... */
-	wait_event(p_info->deatheaters, (p_info->deathpending == NULL));
 out:
 	mutex_unlock(&p_info->shrinker_lock);
+	if (p_info->force_kill) {
+		p_info->force_kill = 0;
+		printk(KERN_INFO"Waking up deatheaters\n");
+		wake_up_all(&p_info->deatheaters);
+	}
 }
 
 int pmem_setup(struct platform_device *pdev,
@@ -1733,13 +1802,14 @@ int pmem_setup(struct platform_device *pdev,
 		/* These are only used when we have associated CMA region */
 		mutex_init(&pmem[id].shrinker_lock);
 		INIT_WORK(&pmem[id].pmem_shrinker, pmem_shrink);
+		sema_init(&pmem[id].shrinker_sem, 1);
 		init_waitqueue_head(&pmem[id].deatheaters);
 		pmem[id].deathpending = NULL;
 		/*
 		 * High watermark is set so we have atleast 10MB of
 		 * contiguous block free in our CMA region
 		 */
-		pmem[id].hwm = (10 * SZ_1M) / PAGE_SIZE;
+		pmem[id].hwm = (4 * SZ_1M) / PAGE_SIZE;
 	} else {
 		memset(&pmem[id].cma, 0, sizeof(pmem[id].cma));
 	}

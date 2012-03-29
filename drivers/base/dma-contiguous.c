@@ -6,8 +6,8 @@
  *	Michal Nazarewicz <mina86@mina86.com>
  *
  * This program is free software; you can redistribute it and/or
- *modify it under the terms of the GNU General Public License as
- *published by the Free Software Foundation; either version 2 of the
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
  * License or (at your optional) any later version of the license.
  */
 
@@ -705,7 +705,6 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 			       toKB(cma->info.max_free_block),
 			       cma->info.max_free_block);
 			ret = -ENOMEM;
-			show_mem(SHOW_MEM_FILTER_NODES);
 			goto error;
 		}
 
