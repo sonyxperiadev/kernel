@@ -147,7 +147,10 @@ void ProcessCPCrashedDump(struct work_struct *work)
 
 	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice())
-		&& ap_triggered == 0) {
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+		&& ap_triggered == 0
+#endif
+	    ) {
 		/* we kill AP when CP crashes */
 		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
 		abort();

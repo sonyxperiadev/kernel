@@ -1516,8 +1516,11 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile)
 	 * triggered first because file operations are not allowed in
 	 * atomic context. So we switch the port to emmc and save cp dump
 	 */
-	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice()) &&
-				ap_triggered) {
+	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+	    && ap_triggered
+#endif
+	    ) {
 		dump_port = BCMLOG_OUTDEV_PANIC;
 		BCMLOG_SetCpCrashLogDevice(dump_port);
 	}
