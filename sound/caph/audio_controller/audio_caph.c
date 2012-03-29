@@ -403,9 +403,24 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 	return size;
 }
 
-/** HAL_AUDIO_Ctrl: Client call this function to execute audio HAL functions.
- *        This function forward the message to worker thread to do actual work
- */
+/**
+  * AUDIO_Ctrl_Trigger
+  *      Client call this function to execute audio HAL functions.
+  *      This function forward the message to worker thread to do actual work
+  * @action_code: action request enum
+  * @arg_param: argument for the action request
+  * @callback: callback function pointer,
+  *     see typedef void (*PFuncAudioCtrlCB)(int)
+  * @block: bit 0 to indicate blocking call or not
+  *     It is also used as private data for the call back function if callback
+  *     is specified.
+  *     The caller will get called as callback(block)
+  *     When used as private data for the call back function, please pass
+  *     a pointer which is 4 bytes alignment (block&0x03 ==0 ), because we
+  *     we reserve bit 0 to indicate block mode.
+  *
+  * Return 0 for success, non-zero for error code
+  */
 Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 			    void *arg_param, void *callback, int block)
 {
@@ -524,7 +539,7 @@ AUDIO_Ctrl_Trigger_Wait:
 		     sizeof(TMsgAudioCtrl));
 
 	queue_work(sgThreadData.pWorkqueue_AudioControl, &sgThreadData.mwork);
-	if (block) {
+	if (block & 1) {
 		osStatus =
 		    OSSEMAPHORE_Obtain(sgThreadData.action_complete, to_jiff);
 		if (osStatus != OSSTATUS_SUCCESS) {
@@ -1178,7 +1193,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		break;
 	}
 
-	if (block) {
+	if (block & 1) {
 		/* put the message in output fifo if waiting */
 		msgAudioCtrl.action_code = action_code;
 		if (arg_param)
@@ -1201,5 +1216,11 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		/* release the semaphore */
 		OSSEMAPHORE_Release(sgThreadData.action_complete);
 	}
+
+	if (callback) {
+		PFuncAudioCtrlCB pCB = (PFuncAudioCtrlCB)callback;
+		pCB(block);
+	}
+
 
 }

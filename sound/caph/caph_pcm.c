@@ -203,6 +203,11 @@ static int PcmHwParams(struct snd_pcm_substream *substream,
 static int PcmHwFree(struct snd_pcm_substream *substream)
 {
 	int res;
+	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+	int substream_number = substream->number;
+
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		substream_number += CTL_STREAM_PANEL_PCMIN - 1;
 
 	/*DEBUG("\n %lx:hw_free - stream=%lx\n",
 	 * jiffies, (UInt32) substream);
@@ -212,6 +217,16 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 	 * Below function is not required as audio uses its own queue
 	 */
 	/* flush_scheduled_work(); */
+	aTrace(LOG_ALSA_INTERFACE, "PcmHwFree:completion %p stream #%d\n",
+		chip->streamCtl[substream_number].pStopCompletion,
+		substream->number);
+	if (chip->streamCtl[substream_number].pStopCompletion) {
+		wait_for_completion(chip->streamCtl[substream_number].
+			pStopCompletion);
+		kfree(chip->streamCtl[substream_number].pStopCompletion);
+		chip->streamCtl[substream_number].pStopCompletion = NULL;
+		aTrace(LOG_ALSA_INTERFACE, "Release completion\n");
+	}
 
 	res = snd_pcm_lib_free_pages(substream);
 	return res;
@@ -254,7 +269,6 @@ static int PcmPlaybackOpen(struct snd_pcm_substream *substream)
 	chip->streamCtl[substream_number].dev_prop.p[0].drv_type =
 	    AUDIO_DRIVER_PLAY_AUDIO;
 	chip->streamCtl[substream_number].pSubStream = substream;
-
 	/*open the playback device */
 	AUDIO_Ctrl_Trigger(ACTION_AUD_OpenPlay, &param_open, NULL, 1);
 	drv_handle = param_open.drv_handle;
@@ -353,6 +367,13 @@ static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 	   runtime->dma_bytes);
 	 */
 	return 0;
+}
+
+static void CtrlStopCB(int priv)
+{
+	struct completion *compl_ptr = (struct completion *)priv;
+	aTrace(LOG_ALSA_INTERFACE, "CtrlStopCB:%p\n", compl_ptr);
+	complete(compl_ptr);
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -471,6 +492,7 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_STOP:
 		{
 			BRCM_AUDIO_Param_Stop_t param_stop;
+			struct completion *compl_ptr;
 
 			param_stop.drv_handle = drv_handle;
 			param_stop.pdev_prop =
@@ -480,8 +502,23 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 			    (LOG_ALSA_INTERFACE,
 			     "ACTION_AUD_StopPlay param_stop.stream %d\n",
 			     param_stop.stream);
+
+			compl_ptr =
+				kzalloc(sizeof(struct completion), GFP_KERNEL);
+			if (compl_ptr == NULL) {
+				aTrace(LOG_ALSA_INTERFACE,
+					"%s cannot create completion at %d\n",
+					__func__, __LINE__);
+				return -ENOMEM;
+			}
+			init_completion(compl_ptr);
+			CAPH_ASSERT(chip->streamCtl[substream_number]
+				.pStopCompletion == NULL);
+			chip->streamCtl[substream_number].pStopCompletion
+				= compl_ptr;
+
 			AUDIO_Ctrl_Trigger(ACTION_AUD_StopPlay, &param_stop,
-					   NULL, 0);
+					   CtrlStopCB, (int)compl_ptr);
 
 		}
 		break;
@@ -800,6 +837,7 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_STOP:
 		{
 			BRCM_AUDIO_Param_Stop_t param_stop;
+			struct completion *compl_ptr;
 
 			param_stop.drv_handle = drv_handle;
 			param_stop.pdev_prop =
@@ -807,8 +845,23 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 			param_stop.stream = substream_number;
 
 			param_stop.callMode = callMode;
+
+			compl_ptr =
+				kzalloc(sizeof(struct completion), GFP_KERNEL);
+			if (compl_ptr == NULL) {
+				aTrace(LOG_ALSA_INTERFACE,
+					"%s cannot create completion at %d\n",
+					__func__, __LINE__);
+				return -ENOMEM;
+			}
+			init_completion(compl_ptr);
+			CAPH_ASSERT(chip->streamCtl[substream_number]
+				.pStopCompletion == NULL);
+			chip->streamCtl[substream_number].pStopCompletion
+				= compl_ptr;
+
 			AUDIO_Ctrl_Trigger(ACTION_AUD_StopRecord, &param_stop,
-					   NULL, 0);
+					   CtrlStopCB, (int)compl_ptr);
 
 		}
 		break;
