@@ -2334,12 +2334,16 @@ void csl_caph_audioh_start_hs(void)
 {
 	UInt16 chnl_enable = 0;
 
+	/*this function is only called by playback*/
+
 	aTrace(LOG_AUDIO_CSL, "%s, audioh_hs_on %d\n", __func__, audioh_hs_on);
 
 	/*avoid to enable twice during HW mixing*/
 	if (audioh_hs_on)
 		return;
 	audioh_hs_on = 1;
+
+	chal_audio_hspath_mute(handle, 1);
 
 	/*headset only supports stereo*/
 	chnl_enable = CHAL_AUDIO_CHANNEL_LEFT | CHAL_AUDIO_CHANNEL_RIGHT;
@@ -2368,6 +2372,8 @@ void csl_caph_audioh_start_ihf(void)
 	if (audioh_ihf_on)
 		return;
 	audioh_ihf_on = 1;
+
+	chal_audio_ihfpath_mute(handle, 1);
 
 	/*ihf only supports mono*/
 	chnl_enable = CHAL_AUDIO_CHANNEL_LEFT;

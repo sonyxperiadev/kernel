@@ -3485,6 +3485,16 @@ CSL_CAPH_PathID csl_caph_hwctrl_StartPath(CSL_CAPH_PathID pathID)
 
 	csl_caph_hwctrl_PrintPath(path);
 
+	/*
+	Mute dac to avoid 2ms pop noise after bootup.
+	This would be removed after filter-flushing function is ready.
+	*/
+	if (path->sink[0] == CSL_CAPH_DEV_HS ||
+	    path->sink[0] == CSL_CAPH_DEV_IHF) {
+		usleep_range(2*1000, 3*1000);
+		csl_caph_hwctrl_UnmuteSink(pathID, path->sink[0]);
+	}
+
 	return path->pathID;
 }
 
