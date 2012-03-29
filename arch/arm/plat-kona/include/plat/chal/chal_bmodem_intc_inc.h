@@ -58,9 +58,9 @@
 *==========================================================================*/
 #ifndef _CHAL_BMINTC_INC_H_
 #define _CHAL_BMINTC_INC_H_
-#include "chal_types.h"
-#include "brcm_rdb_sysmap.h"
-#include "brcm_rdb_bintc.h"
+#include <plat/chal/chal_types.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_bintc.h>
 
 #define BMINTC_WRITE32(regOffset, data)  \
 			CHAL_REG_WRITE32(((cUInt32) h) + (regOffset), data)

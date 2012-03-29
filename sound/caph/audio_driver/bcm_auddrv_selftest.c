@@ -47,7 +47,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "chal_types.h"
+#include <plat/chal/chal_types.h>
 
 #include "csl_caph.h"
 #include "csl_caph_hwctrl.h"
@@ -61,8 +61,8 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/io_map.h>
 #include "linux/gpio.h"
 #include "linux/interrupt.h"
-#include "mach/chip_pinmux.h"
-#include "mach/pinmux.h"
+#include <mach/chip_pinmux.h>
+#include <mach/pinmux.h>
 #include "audio_trace.h"
 
 #define IHF_ST_SUPPORTED

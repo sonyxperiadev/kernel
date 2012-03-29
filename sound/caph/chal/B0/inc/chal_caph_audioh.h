@@ -37,8 +37,8 @@
 #ifndef _CHAL_CAPH_AUDIOH_
 #define _CHAL_CAPH_AUDIOH_
 
-#include "chal_types.h"
-#include "brcm_rdb_sysmap.h"
+#include <plat/chal/chal_types.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include "chal_caph.h"
 
 /**

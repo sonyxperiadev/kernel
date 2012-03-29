@@ -40,7 +40,7 @@
 #include "csl_caph.h"
 #include "csl_caph_srcmixer.h"
 #include "csl_caph_dma.h"
-#include "irqs.h"
+#include <mach/irqs.h>
 #include "audio_trace.h"
 #include <plat/cpu.h>
 

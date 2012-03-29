@@ -52,22 +52,6 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/rpc/r
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/fuse_log
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/public/
 
-#Platform header files
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/mach
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/
-ifdef CONFIG_ARCH_RHEA_BX
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/rdb_Bx/
-else
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/rdb_A0/
-endif
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/chal/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/csl/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/osabstract/
-
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_module.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_ctl.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_pcm.o

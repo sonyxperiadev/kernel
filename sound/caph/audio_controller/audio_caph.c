@@ -41,7 +41,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "ossemaphore.h"
+#include <plat/osabstract/ossemaphore.h>
 #include "bcm_fuse_sysparm_CIB.h"
 #include "csl_caph.h"
 #include "audio_vdriver.h"

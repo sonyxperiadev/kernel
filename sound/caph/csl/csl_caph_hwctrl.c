@@ -39,9 +39,9 @@
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_intc.h"
-#include "brcm_rdb_audioh.h"
-#include "brcm_rdb_khub_clk_mgr_reg.h"
-#include "brcm_rdb_sysmap.h"
+#include <mach/rdb/brcm_rdb_audioh.h>
+#include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include "csl_caph.h"
 #include "csl_caph_cfifo.h"
 #include "csl_caph_switch.h"
@@ -57,18 +57,18 @@
 #include "csl_audio_capture.h"
 
 #include <mach/io_map.h>
-#include "clock.h"
+#include <plat/clock.h>
 #include "clk.h"
 #if defined(ENABLE_DMA_VOICE)
 #include "csl_dsp_caph_control_api.h"
 #endif
 
 #if !defined(CNEON_COMMON) && !defined(CNEON_LMP)
-#include "chal_common_os.h"
-#include "chal_aci.h"
+#include <plat/chal/chal_common_os.h>
+#include <plat/chal/chal_aci.h>
 #endif
-#include "brcm_rdb_sysmap.h"
-#include "brcm_rdb_bintc.h"
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_bintc.h>
 #define BINTC_OUT_DEST_DSP_NORM 17
 #define BMREG_BLOCK_SIZE (BINTC_IMR0_1_OFFSET-BINTC_IMR0_0_OFFSET)
 

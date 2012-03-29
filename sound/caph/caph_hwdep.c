@@ -46,7 +46,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/hwdep.h>
 
 #include "mobcom_types.h"
-#include "osdal_os.h"
+#include <plat/osdal_os.h>
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "audio_trace.h"

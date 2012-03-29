@@ -36,12 +36,12 @@
 #include <mach/comms/platform_mconfig.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
-#include "brcm_rdb_sysmap.h"
-#include "brcm_rdb_bintc.h"
-#include "chal_intc_inc.h"
-#include "io_map.h"
-#include "chip_irq.h"
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/io_map.h>
+#include <mach/rdb/brcm_rdb_bintc.h>
 
+#include <plat/chal/chal_intc_inc.h>
+#include <plat/chal/chip_irq.h>
 #include "shared.h"
 #include "csl_dsp.h"
 #include "osdw_dsp_drv.h"

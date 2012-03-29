@@ -35,8 +35,8 @@
 ****************************************************************************/
 
 #include "chal_caph_srcmixer.h"
-#include "brcm_rdb_srcmixer.h"
-#include "brcm_rdb_util.h"
+#include <mach/rdb/brcm_rdb_srcmixer.h>
+#include <mach/rdb/brcm_rdb_util.h>
 
 /****************************************************************************
 			G L O B A L   S E C T I O N

@@ -36,7 +36,7 @@
 
 #ifndef _CHAL_CAPH_
 #define _CHAL_CAPH_
-#include "chal_types.h"
+#include <plat/chal/chal_types.h>
 
 /**
 * CAPH OWNER: ARM or DSP

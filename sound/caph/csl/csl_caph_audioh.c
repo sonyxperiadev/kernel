@@ -34,7 +34,7 @@
 
 #include "mobcom_types.h"
 
-#include "chal_types.h"
+#include <plat/chal/chal_types.h>
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "csl_caph.h"

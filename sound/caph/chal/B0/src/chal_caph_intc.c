@@ -34,8 +34,8 @@
 ****************************************************************************/
 
 #include "chal_caph_intc.h"
-#include "brcm_rdb_ahintc.h"
-#include "brcm_rdb_util.h"
+#include <mach/rdb/brcm_rdb_ahintc.h>
+#include <mach/rdb/brcm_rdb_util.h>
 
 /****************************************************************************
 *                        G L O B A L   S E C T I O N
