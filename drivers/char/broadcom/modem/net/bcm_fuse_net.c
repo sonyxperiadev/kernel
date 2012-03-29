@@ -292,7 +292,7 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType,
 	memcpy(skb_put(skb, data_len), data_ptr, data_len);
 
 	skb->dev = ndrvr_info_ptr->dev_ptr;
-	//skb->ip_summed = CHECKSUM_UNNECESSARY;	/* don't check it */
+	/*skb->ip_summed = CHECKSUM_UNNECESSARY;*/	/* don't check it */
 	skb->pkt_type = PACKET_HOST;
 	ndrvr_info_ptr->dev_ptr->last_rx = jiffies;
 
@@ -521,29 +521,26 @@ int bcm_fuse_net_config(struct net_device *dev_ptr, struct ifmap *map)
 int bcm_fuse_net_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 {
 	int i;
-        int sim_id = 3;
+	int sim_id = 3;
 
 	BNET_DEBUG(DBG_INFO, "bcm_fuse_net_ioctl cmd=%d\n", cmd);
 
-	if (BCM_DUALSIM_SIMID_NETIOCTL != cmd)
-	{
-	    BNET_DEBUG(DBG_INFO, "%s: Incorrect IOCTL ID 0x%x\n",
+	if (BCM_DUALSIM_SIMID_NETIOCTL != cmd) {
+		BNET_DEBUG(DBG_INFO, "%s: Incorrect IOCTL ID 0x%x\n",
 			   __FUNCTION__, cmd);
-	    return -ENOTTY;
+		return -ENOTTY;
 	}
 
-	//get sim_id
-        if (copy_from_user(&sim_id, ifr->ifr_data, sizeof(int)))
-        {
-            BNET_DEBUG(DBG_ERROR, "error reading ifr_data\n");
-            return -EFAULT;
-        }
+	/*get sim_id*/
+	if (copy_from_user(&sim_id, ifr->ifr_data, sizeof(int))) {
+		BNET_DEBUG(DBG_ERROR, "error reading ifr_data\n");
+		return -EFAULT;
+	}
 
-        if ( (sim_id<0) || (sim_id>BCM_MAX_SIM_ID))
-        {
-            BNET_DEBUG(DBG_ERROR, "invalid sim id=%d", sim_id);
-            return -EINVAL;
-        }
+	if ((sim_id < 0) || (sim_id > BCM_MAX_SIM_ID)) {
+		BNET_DEBUG(DBG_ERROR, "invalid sim id=%d", sim_id);
+		return -EINVAL;
+	}
 
 	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
 		if (g_net_dev_tbl[i].dev_ptr == dev) {
@@ -584,7 +581,7 @@ static void bcm_fuse_net_init(struct net_device *dev)
 	dev->mtu = BCM_NET_MAX_DATA_LEN;
 	dev->tx_queue_len = BCM_NET_MAX_NUM_PKTS;
 	dev->flags = IFF_NOARP | IFF_DYNAMIC;
-	dev->type  = ARPHRD_NONE;   //per MobC00183378 request
+	dev->type  = ARPHRD_NONE;   /*per MobC00183378 request*/
 }
 
 /**
