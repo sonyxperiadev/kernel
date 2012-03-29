@@ -21,7 +21,7 @@
 *
 ****************************************************************************/
 
-#define UNDER_LINUX		// Only supports Rhea
+#define UNDER_LINUX		/* Only supports Rhea */
 #define FUSE_APPS_PROCESSOR
 
 #include "linux/broadcom/mobcom_types.h"
@@ -36,7 +36,7 @@
 #include "mach/rdb/brcm_rdb_atb2ocp.h"
 #include "mach/rdb/brcm_rdb_wgm_ocp2atb.h"
 #include "mach/rdb/brcm_rdb_hubocp2atb.h"
-#endif //defined(_HERA_)
+#endif /* defined(_HERA_) */
 #include "mach/rdb/brcm_rdb_cstf.h"
 #include "mach/rdb/brcm_rdb_axitp1.h"
 #include "mach/rdb/brcm_rdb_gictr.h"
@@ -46,51 +46,62 @@
 #include "mach/rdb/brcm_rdb_etb2axi.h"
 #if !defined(_SAMOA_)
 #include "mach/rdb/brcm_rdb_globperf.h"
-#endif // !defined(_SAMOA_)
+#endif /* !defined(_SAMOA_) */
 #if !defined(_HERA_)
 #include "mach/rdb/brcm_rdb_atb_stm.h"
 #include "mach/rdb/brcm_rdb_swstm.h"
 #include "mach/rdb/brcm_rdb_chipreg.h"
-#endif // !defined(_HERA_)
+#endif /* !defined(_HERA_) */
 
-//==============================================================================
-// Local Definition
-//==============================================================================
-#define CHAL_TRACE_REG_DATA_FIELD_SET(r,f,d) ( (((BRCM_REGTYPE(r))d) << BRCM_FIELDSHIFT(r,f)) & BRCM_FIELDMASK(r,f))
-#define CHAL_TRACE_REG_DATA_FIELD_GET(r,f,d) ( (((BRCM_REGTYPE(r))d) & BRCM_FIELDMASK(r,f) ) >> BRCM_FIELDSHIFT(r,f) )
+/*=======================================================
+*  Local Definition
+* ========================================================
+*/
+#define CHAL_TRACE_REG_DATA_FIELD_SET(r, f, d) ((((BRCM_REGTYPE(r))d) \
+		<< BRCM_FIELDSHIFT(r, f)) & BRCM_FIELDMASK(r, f))
+#define CHAL_TRACE_REG_DATA_FIELD_GET(r, f, d) ((((BRCM_REGTYPE(r))d) & \
+		BRCM_FIELDMASK(r, f)) >> BRCM_FIELDSHIFT(r, f))
 
-//==============================================================================
-// Local Variables
-//==============================================================================
-/* CHAL must be designed as a very simple interface with zero or minimal intelligence. */
-/* CHAL must not have any local storage (global variables, arrays, etc. within CHAL module), unless absolutely necessary (for complex blocks). */
-/* CHAL must not maintain any information about the handle. The handle itself can serve as the base address of a hardware block. */
+/*=======================================================
+*  Local Variables
+* =======================================================
+*/
+/* CHAL must be designed as a very simple interface with zero or
+* minimal intelligence. */
+/*CHAL must not have any local storage (global variables, arrays,
+*	etc. within CHAL module), unless absolutely necessary
+*	(for complex blocks). */
+/* CHAL must not maintain any information about the handle.
+*	The handle itself can
+*	serve as the base address of a hardware block. */
 
-//******************************************************************************
-// Local Functions
-//******************************************************************************
+/******************************************************************************
+*  Local Functions
+******************************************************************************
+*/
 static cUInt32 chal_trace_funnel_get_baseaddr(CHAL_HANDLE handle,
 					      CHAL_TRACE_FUNNEL_t funnel_type);
 static cUInt32 chal_trace_axitrace_get_baseaddr(CHAL_HANDLE handle,
 						CHAL_TRACE_AXITRACE_t
 						axitrace_type);
 
-//===========================================================================
-// Function Definition
-//===========================================================================
-
-//**************************************************************************
-//
-// Function Name: chal_trace_init
-//
-// Description: 
-//
-//**************************************************************************/
-cBool chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr)
+/*===========================================================================
+* Function Definition
+*===========================================================================
+*/
+/**************************************************************************
+*
+* Function Name: chal_trace_init
+*
+* Description:
+*
+*************************************************************************
+*/
+cBool chal_trace_init(CHAL_TRACE_DEV_t *pTraceDev_baseaddr)
 {
 	chal_dprintf(CDBG_INFO, "chal_trace_init\n");
 
-	// All register config values taken from T32 script
+	/* All register config values taken from T32 script */
 
 #if defined(CONFIG_ARCH_RHEA)
 	BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_PERIPH_SPARE_CONTROL1,
@@ -100,12 +111,12 @@ cBool chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr)
 			     PTI_CLK_IS_IDLE, 1);
 #endif
 
-	// Config ATB Filter rm id's for STM
+	/* Config ATB Filter rm id's for STM */
 	BRCM_WRITE_REG(KONA_ATBFILTER_VA, ATBFILTER_ATB_FILTER, 0x203);
-	// Config Funnels
+	/* Config Funnels */
 	BRCM_WRITE_REG(KONA_FUNNEL_VA, CSTF_FUNNEL_CONTROL, 0xe40);
 	BRCM_WRITE_REG(KONA_FIN_FUNNEL_VA, CSTF_FUNNEL_CONTROL, 0xe02);
-	// Config STM
+	/* Config STM */
 	BRCM_WRITE_REG(KONA_STM_VA, ATB_STM_CONFIG, 0x102);
 	BRCM_WRITE_REG(KONA_SWSTM_VA, SWSTM_R_CONFIG, 0x82);
 	BRCM_WRITE_REG(KONA_SWSTM_ST_VA, SWSTM_R_CONFIG, 0x82);
@@ -113,14 +124,15 @@ cBool chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr)
 	return TRUE;
 }
 
-#if defined (_HERA_)
-//**************************************************************************
-//
-// Function Name: chal_trace_cfg_hub_atb2pti
-//
-// Description: Config hub  ATB to PTI Configuration 
-//
-//**************************************************************************
+#if defined(_HERA_)
+/**************************************************************************
+*
+* Function Name: chal_trace_cfg_hub_atb2pti
+*
+* Description: Config hub  ATB to PTI Configuration
+*
+**************************************************************************
+*/
 cBool chal_trace_cfg_hub_atb2pti(CHAL_HANDLE handle, cBool twobit_mode,
 				 cBool intlv_mode, cBool pti_en,
 				 cUInt8 match_id)
@@ -143,13 +155,14 @@ cBool chal_trace_cfg_hub_atb2pti(CHAL_HANDLE handle, cBool twobit_mode,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cfg_hub_atb2ocp_sw_id
-//
-// Description: Config hub ATB to OCP SW Source ID's
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cfg_hub_atb2ocp_sw_id
+*
+* Description: Config hub ATB to OCP SW Source ID's
+*
+**************************************************************************
+*/
 cBool chal_trace_cfg_hub_atb2ocp_sw_id(CHAL_HANDLE handle, cUInt8 sw,
 				       cUInt8 atb_id)
 {
@@ -190,13 +203,14 @@ cBool chal_trace_cfg_hub_atb2ocp_sw_id(CHAL_HANDLE handle, cUInt8 sw,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cfg_hub_atb2ocp_filter_id
-//
-// Description: Config hub ATB to OCP Filter-Out ID's
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cfg_hub_atb2ocp_filter_id
+*
+* Description: Config hub ATB to OCP Filter-Out ID's
+*
+**************************************************************************
+*/
 cBool chal_trace_cfg_hub_atb2ocp_filter_id(CHAL_HANDLE handle, cUInt8 filter,
 					   cUInt8 atb_id)
 {
@@ -241,13 +255,14 @@ cBool chal_trace_cfg_hub_atb2ocp_filter_id(CHAL_HANDLE handle, cUInt8 filter,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cfg_fabric_apb2atb
-//
-// Description: Config fabric APB to ATB atb ID
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cfg_fabric_apb2atb
+*
+* Description: Config fabric APB to ATB atb ID
+*
+**************************************************************************
+*/
 cBool chal_trace_cfg_fabric_apb2atb_atb_id(CHAL_HANDLE handle, cUInt8 cpu_n,
 					   cUInt8 atb_id)
 {
@@ -292,13 +307,14 @@ cBool chal_trace_cfg_fabric_apb2atb_atb_id(CHAL_HANDLE handle, cUInt8 cpu_n,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cfg_fabric_apb2atb_stall_mode
-//
-// Description: Config fabric APB to ATB stall mode
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cfg_fabric_apb2atb_stall_mode
+*
+* Description: Config fabric APB to ATB stall mode
+*
+**************************************************************************
+*/
 cBool chal_trace_cfg_fabric_apb2atb_stall_mode(CHAL_HANDLE handle,
 					       cBool stall_mode)
 {
@@ -315,13 +331,14 @@ cBool chal_trace_cfg_fabric_apb2atb_stall_mode(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cfg_comms_ocp2atb
-//
-// Description: Config COMMS OCP to ATB
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cfg_comms_ocp2atb
+*
+* Description: Config COMMS OCP to ATB
+*
+**************************************************************************
+*/
 cBool chal_trace_cfg_comms_ocp2atb(CHAL_HANDLE handle, cUInt8 atb_id)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -336,13 +353,14 @@ cBool chal_trace_cfg_comms_ocp2atb(CHAL_HANDLE handle, cUInt8 atb_id)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cfg_hub_ocp2atb
-//
-// Description: Config HUB OCP to ATB
-//
-//**************************************************************************
+/***************************************************************************
+*
+* Function Name: chal_trace_cfg_hub_ocp2atb
+*
+* Description: Config HUB OCP to ATB
+*
+***************************************************************************
+*/
 cBool chal_trace_cfg_hub_ocp2atb(CHAL_HANDLE handle, cUInt8 atb_id)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -356,15 +374,17 @@ cBool chal_trace_cfg_hub_ocp2atb(CHAL_HANDLE handle, cUInt8 atb_id)
 
 	return status;
 }
-#endif //defined(_HERA_)
+#endif /* defined(_HERA_) */
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_set_enable
-//
-// Description: Config Funnel_Control bits CSTF Control Register enable bits for each port
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_set_enable
+*
+* Description: Config Funnel_Control bits CSTF Control
+* Register enable bits for each port
+*
+**************************************************************************
+*/
 cBool chal_trace_funnel_set_enable(CHAL_HANDLE handle,
 				   CHAL_TRACE_FUNNEL_t funnel_type,
 				   cUInt8 port_n, cBool enable)
@@ -432,13 +452,15 @@ cBool chal_trace_funnel_set_enable(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_set_min_hold_time
-//
-// Description: Config Funnel_Control bits CSTF Control Register Minimum_hold_time_3_0 field
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_set_min_hold_time
+*
+* Description: Config Funnel_Control bits CSTF Control
+* Register Minimum_hold_time_3_0 field
+*
+**************************************************************************
+*/
 cBool chal_trace_funnel_set_min_hold_time(CHAL_HANDLE handle,
 					  CHAL_TRACE_FUNNEL_t funnel_type,
 					  cUInt8 min_hold_time)
@@ -457,13 +479,14 @@ cBool chal_trace_funnel_set_min_hold_time(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_set_priority
-//
-// Description: Config Priority_Control bits CSTF Priority Control Register
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_set_priority
+*
+* Description: Config Priority_Control bits CSTF Priority Control Register
+*
+**************************************************************************
+*/
 cBool chal_trace_funnel_set_priority(CHAL_HANDLE handle,
 				     CHAL_TRACE_FUNNEL_t funnel_type,
 				     cUInt8 port_n, cUInt8 priority)
@@ -539,13 +562,14 @@ cBool chal_trace_funnel_set_priority(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_set_itctrl
-//
-// Description: Config ItCtrl bits Integration Mode Control Registers.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_set_itctrl
+*
+* Description: Config ItCtrl bits Integration Mode Control Registers.
+*
+**************************************************************************
+*/
 cBool chal_trace_funnel_set_itctrl(CHAL_HANDLE handle,
 				   CHAL_TRACE_FUNNEL_t funnel_type, cUInt8 mode)
 {
@@ -562,13 +586,14 @@ cBool chal_trace_funnel_set_itctrl(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_set_claim_tag_set
-//
-// Description: Config Claim_Tag_Set bits Claim Tag Set Registers.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_set_claim_tag_set
+*
+* Description: Config Claim_Tag_Set bits Claim Tag Set Registers.
+*
+**************************************************************************
+*/
 cBool chal_trace_funnel_set_claim_tag_set(CHAL_HANDLE handle,
 					  CHAL_TRACE_FUNNEL_t funnel_type,
 					  cUInt8 ctv)
@@ -587,13 +612,14 @@ cBool chal_trace_funnel_set_claim_tag_set(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_set_claim_tag_clear
-//
-// Description: Config Claim_Tag_Clear bits Claim Tag Clear Registers.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_set_claim_tag_clear
+*
+* Description: Config Claim_Tag_Clear bits Claim Tag Clear Registers.
+*
+**************************************************************************
+*/
 cBool chal_trace_funnel_set_claim_tag_clear(CHAL_HANDLE handle,
 					    CHAL_TRACE_FUNNEL_t funnel_type,
 					    cUInt8 ctv)
@@ -612,13 +638,14 @@ cBool chal_trace_funnel_set_claim_tag_clear(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_set_lock_access
-//
-// Description: Set LockAccess bits Lock Access Registers.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_set_lock_access
+*
+* Description: Set LockAccess bits Lock Access Registers.
+*
+**************************************************************************
+*/
 cBool chal_trace_funnel_set_lock_access(CHAL_HANDLE handle,
 					CHAL_TRACE_FUNNEL_t funnel_type,
 					cUInt32 write_access_code)
@@ -637,13 +664,14 @@ cBool chal_trace_funnel_set_lock_access(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_get_lock_status
-//
-// Description: Read LockStatus bits Lock Status Registers.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_get_lock_status
+*
+* Description: Read LockStatus bits Lock Status Registers.
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_funnel_get_lock_status(CHAL_HANDLE handle,
 					  CHAL_TRACE_FUNNEL_t funnel_type)
 {
@@ -652,20 +680,21 @@ cUInt32 chal_trace_funnel_get_lock_status(CHAL_HANDLE handle,
 
 	base_address = chal_trace_funnel_get_baseaddr(handle, funnel_type);
 
-	if (base_address) {
+	if (base_address)
 		lock_status = BRCM_READ_REG(base_address, CSTF_LOCKSTATUS);
-	}
 
 	return lock_status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_locked
-//
-// Description: Return TRUE when the lock mechanism is implemented and device write access is locked.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_locked
+*
+* Description: Return TRUE when the lock mechanism is implemented
+* and device write access is locked.
+*
+**************************************************************************
+*/
 cBool chal_trace_funnel_locked(CHAL_HANDLE handle,
 			       CHAL_TRACE_FUNNEL_t funnel_type)
 {
@@ -687,13 +716,14 @@ cBool chal_trace_funnel_locked(CHAL_HANDLE handle,
 	return lock_status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_get_auth_status
-//
-// Description: Read AuthStatus bits Authentication Status Registers.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_get_auth_status
+*
+* Description: Read AuthStatus bits Authentication Status Registers.
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_funnel_get_auth_status(CHAL_HANDLE handle,
 					  CHAL_TRACE_FUNNEL_t funnel_type)
 {
@@ -702,20 +732,20 @@ cUInt32 chal_trace_funnel_get_auth_status(CHAL_HANDLE handle,
 
 	base_address = chal_trace_funnel_get_baseaddr(handle, funnel_type);
 
-	if (base_address) {
+	if (base_address)
 		auth_status = BRCM_READ_REG(base_address, CSTF_AUTHSTATUS);
-	}
 
 	return auth_status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_get_device_id
-//
-// Description: Read Device_ID bits Component Configuration Registers.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_get_device_id
+*
+* Description: Read Device_ID bits Component Configuration Registers.
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_funnel_get_device_id(CHAL_HANDLE handle,
 					CHAL_TRACE_FUNNEL_t funnel_type)
 {
@@ -724,20 +754,21 @@ cUInt32 chal_trace_funnel_get_device_id(CHAL_HANDLE handle,
 
 	base_address = chal_trace_funnel_get_baseaddr(handle, funnel_type);
 
-	if (base_address) {
+	if (base_address)
 		device_id = BRCM_READ_REG(base_address, CSTF_DEVICE_ID);
-	}
 
 	return device_id;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_get_device_type_identifier
-//
-// Description: Read Device_Type_Identifier bits Device Type Identifier Registers.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_get_device_type_identifier
+*
+* Description: Read Device_Type_Identifier bits Device
+* Type Identifier Registers.
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_funnel_get_device_type_identifier(CHAL_HANDLE handle,
 						     CHAL_TRACE_FUNNEL_t
 						     funnel_type)
@@ -755,33 +786,35 @@ cUInt32 chal_trace_funnel_get_device_type_identifier(CHAL_HANDLE handle,
 	return device_type_id;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_funnel_get_baseaddr
-//
-// Description: returns the base address of the register block for each funnel_type .
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_funnel_get_baseaddr
+*
+* Description: returns the base address of the register
+* block for each funnel_type .
+*
+***************************************************************************
+*/
 static cUInt32 chal_trace_funnel_get_baseaddr(CHAL_HANDLE handle,
 					      CHAL_TRACE_FUNNEL_t funnel_type)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 base_address = 0;
 
-	if (funnel_type < CHAL_TRACE_MAX_FUNNEL) {
+	if (funnel_type < CHAL_TRACE_MAX_FUNNEL)
 		base_address = pTraceDev->FUNNEL_base[funnel_type];
-	}
 
 	return base_address;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_gic_set_config
-//
-// Description: Set GIC Trace Config
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_gic_set_config
+*
+* Description: Set GIC Trace Config
+*
+**************************************************************************
+*/
 cBool chal_trace_gic_set_config(CHAL_HANDLE handle,
 				CHAL_TRACE_GIC_CONF_t *p_gic_config)
 {
@@ -808,13 +841,14 @@ cBool chal_trace_gic_set_config(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_gic_get_config
-//
-// Description: Get GIC Trace Config
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_gic_get_config
+*
+* Description: Get GIC Trace Config
+*
+**************************************************************************
+*/
 cBool chal_trace_gic_get_config(CHAL_HANDLE handle,
 				CHAL_TRACE_GIC_CONF_t *p_gic_config)
 {
@@ -843,13 +877,14 @@ cBool chal_trace_gic_get_config(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_gic_set_outid
-//
-// Description: Set GIC Trace Output ID's
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_gic_set_outid
+*
+* Description: Set GIC Trace Output ID's
+*
+**************************************************************************
+*/
 cBool chal_trace_gic_set_outid(CHAL_HANDLE handle, cUInt8 atb_id)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -864,13 +899,14 @@ cBool chal_trace_gic_set_outid(CHAL_HANDLE handle, cUInt8 atb_id)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_gic_set_cmd
-//
-// Description: Set GIC trace Local Command
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_gic_set_cmd
+*
+* Description: Set GIC trace Local Command
+*
+**************************************************************************
+*/
 cBool chal_trace_gic_set_cmd(CHAL_HANDLE handle, CHAL_TRACE_LOCAL_CMD_t command)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -885,13 +921,14 @@ cBool chal_trace_gic_set_cmd(CHAL_HANDLE handle, CHAL_TRACE_LOCAL_CMD_t command)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_gic_get_status
-//
-// Description: Get GIC Trace Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_gic_get_status
+*
+* Description: Get GIC Trace Status
+*
+***************************************************************************
+*/
 cBool chal_trace_gic_get_status(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -908,13 +945,14 @@ cBool chal_trace_gic_get_status(CHAL_HANDLE handle)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_gic_get_latency
-//
-// Description: Get FIQ/IRQ Latency
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_gic_get_latency
+*
+* Description: Get FIQ/IRQ Latency
+*
+***************************************************************************
+*/
 cUInt32 chal_trace_gic_get_latency(CHAL_HANDLE handle,
 				   CHAL_TRACE_GIC_LAT_t fiq_irq)
 {
@@ -955,13 +993,14 @@ cUInt32 chal_trace_gic_get_latency(CHAL_HANDLE handle,
 	return latency;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_pwrmgr_set_atb_id
-//
-// Description: Set PM ATB trace ID
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_pwrmgr_set_atb_id
+*
+* Description: Set PM ATB trace ID
+*
+***************************************************************************
+*/
 cBool chal_trace_pwrmgr_set_atb_id(CHAL_HANDLE handle, cUInt8 atb_id)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -977,13 +1016,14 @@ cBool chal_trace_pwrmgr_set_atb_id(CHAL_HANDLE handle, cUInt8 atb_id)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_axi_set_atm_config
-//
-// Description: Set AXI Trace Config
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_axi_set_atm_config
+*
+* Description: Set AXI Trace Config
+*
+**************************************************************************
+*/
 cBool chal_trace_axi_set_atm_config(CHAL_HANDLE handle,
 				    CHAL_TRACE_AXITRACE_t axitrace_type,
 				    CHAL_TRACE_ATM_CONF_t *p_atm_config)
@@ -1061,13 +1101,14 @@ cBool chal_trace_axi_set_atm_config(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_axi_get_atm_config
-//
-// Description: Get AXI Trace Config
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_axi_get_atm_config
+*
+* Description: Get AXI Trace Config
+*
+**************************************************************************
+*/
 cBool chal_trace_axi_get_atm_config(CHAL_HANDLE handle,
 				    CHAL_TRACE_AXITRACE_t axitrace_type,
 				    CHAL_TRACE_ATM_CONF_t *p_atm_config)
@@ -1140,13 +1181,14 @@ cBool chal_trace_axi_get_atm_config(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_axi_set_atm_outid
-//
-// Description: Set AXI Trace Output ID's
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_axi_set_atm_outid
+*
+* Description: Set AXI Trace Output ID's
+*
+**************************************************************************
+*/
 cBool chal_trace_axi_set_atm_outid(CHAL_HANDLE handle,
 				   CHAL_TRACE_AXITRACE_t axitrace_type,
 				   cUInt8 w_atb_id, cUInt8 r_atb_id)
@@ -1167,13 +1209,14 @@ cBool chal_trace_axi_set_atm_outid(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_axi_set_atm_cmd
-//
-// Description: Set AXI trace Local Command
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_axi_set_atm_cmd
+*
+* Description: Set AXI trace Local Command
+*
+**************************************************************************
+*/
 cBool chal_trace_axi_set_atm_cmd(CHAL_HANDLE handle,
 				 CHAL_TRACE_AXITRACE_t axitrace_type,
 				 CHAL_TRACE_LOCAL_CMD_t cmd)
@@ -1192,13 +1235,14 @@ cBool chal_trace_axi_set_atm_cmd(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_axi_get_status
-//
-// Description: Return AXI Trace Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_axi_get_status
+*
+* Description: Return AXI Trace Status
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_axi_get_status(CHAL_HANDLE handle,
 				  CHAL_TRACE_AXITRACE_t axitrace_type)
 {
@@ -1207,20 +1251,20 @@ cUInt32 chal_trace_axi_get_status(CHAL_HANDLE handle,
 
 	base_address = chal_trace_axitrace_get_baseaddr(handle, axitrace_type);
 
-	if (base_address) {
+	if (base_address)
 		atm_status = BRCM_READ_REG(base_address, AXITP1_ATM_STATUS);
-	}
 
 	return atm_status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_axi_get_status_sat
-//
-// Description: Return AXI Trace Status SAT_STOPPED field
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_axi_get_status_sat
+*
+* Description: Return AXI Trace Status SAT_STOPPED field
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_axi_get_status_sat(CHAL_HANDLE handle,
 				      CHAL_TRACE_AXITRACE_t axitrace_type)
 {
@@ -1238,13 +1282,14 @@ cUInt32 chal_trace_axi_get_status_sat(CHAL_HANDLE handle,
 	return atm_status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_axi_get_count
-//
-// Description: Return AXI Trace Performance Count
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_axi_get_count
+*
+* Description: Return AXI Trace Performance Count
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_axi_get_count(CHAL_HANDLE handle,
 				 CHAL_TRACE_AXITRACE_t axitrace_type,
 				 CHAL_TRACE_AXITRACE_COUNT_t counter)
@@ -1375,13 +1420,14 @@ cUInt32 chal_trace_axi_get_count(CHAL_HANDLE handle,
 	return atm_count;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_axi_set_filter
-//
-// Description: Set AXI filter configuratin/address low/address high
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_axi_set_filter
+*
+* Description: Set AXI filter configuratin/address low/address high
+*
+**************************************************************************
+*/
 cBool chal_trace_axi_set_filter(CHAL_HANDLE handle,
 				CHAL_TRACE_AXITRACE_t axitrace_type,
 				cUInt8 filter_num,
@@ -1691,13 +1737,15 @@ cBool chal_trace_axi_set_filter(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_axitrace_get_baseaddr
-//
-// Description: returns the base address of the register block for each axitrace .
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_axitrace_get_baseaddr
+*
+* Description: returns the base address of the register
+* block for each axitrace .
+*
+***************************************************************************
+*/
 static cUInt32 chal_trace_axitrace_get_baseaddr(CHAL_HANDLE handle,
 						CHAL_TRACE_AXITRACE_t
 						axitrace_type)
@@ -1705,20 +1753,20 @@ static cUInt32 chal_trace_axitrace_get_baseaddr(CHAL_HANDLE handle,
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 base_address = 0;
 
-	if (axitrace_type < CHAL_TRACE_MAX_AXITRACE) {
+	if (axitrace_type < CHAL_TRACE_MAX_AXITRACE)
 		base_address = pTraceDev->AXITRACE_base[axitrace_type];
-	}
 
 	return base_address;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_control
-//
-// Description: Global enable.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_control
+*
+* Description: Global enable.
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_control(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 				 cBool enable)
 {
@@ -1734,13 +1782,14 @@ cBool chal_trace_cti_set_control(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_int_ack
-//
-// Description: Acknowledges nCTIIRQ outputs.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_int_ack
+*
+* Description: Acknowledges nCTIIRQ outputs.
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_int_ack(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 				 cUInt8 int_ack)
 {
@@ -1756,13 +1805,14 @@ cBool chal_trace_cti_set_int_ack(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_app_set
-//
-// Description: CTI Application Trigger Set
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_app_set
+*
+* Description: CTI Application Trigger Set
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_app_set(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 				 cUInt8 channel)
 {
@@ -1778,13 +1828,14 @@ cBool chal_trace_cti_set_app_set(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_app_clear
-//
-// Description: CTI Application Trigger Clear
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_app_clear
+*
+* Description: CTI Application Trigger Clear
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_app_clear(CHAL_HANDLE handle,
 				   CHAL_TRACE_CTI_t cti_type, cUInt8 channel)
 {
@@ -1800,13 +1851,14 @@ cBool chal_trace_cti_set_app_clear(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_app_pulse
-//
-// Description: CTI Application Pulse
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_app_pulse
+*
+* Description: CTI Application Pulse
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_app_pulse(CHAL_HANDLE handle,
 				   CHAL_TRACE_CTI_t cti_type, cUInt8 channel)
 {
@@ -1822,13 +1874,14 @@ cBool chal_trace_cti_set_app_pulse(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_in_en
-//
-// Description: CTI Trigger n to Channel Enable
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_in_en
+*
+* Description: CTI Trigger n to Channel Enable
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_in_en(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 			       cUInt8 n_trigger, cUInt8 channel)
 {
@@ -1893,13 +1946,14 @@ cBool chal_trace_cti_set_in_en(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_out_en
-//
-// Description: CTI Channel to Trigger n Enable
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_out_en
+*
+* Description: CTI Channel to Trigger n Enable
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_out_en(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 				cUInt8 n_trigger, cUInt8 channel)
 {
@@ -1972,13 +2026,14 @@ cBool chal_trace_cti_set_out_en(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_trig_in_status
-//
-// Description: CTI Trigger In Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_trig_in_status
+*
+* Description: CTI Trigger In Status
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_trig_in_status(CHAL_HANDLE handle,
 					  CHAL_TRACE_CTI_t cti_type)
 {
@@ -1994,13 +2049,14 @@ cUInt32 chal_trace_cti_get_trig_in_status(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_trig_out_status
-//
-// Description: CTI Trigger Out Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_trig_out_status
+*
+* Description: CTI Trigger Out Status
+*
+***************************************************************************
+*/
 cUInt32 chal_trace_cti_get_trig_out_status(CHAL_HANDLE handle,
 					   CHAL_TRACE_CTI_t cti_type)
 {
@@ -2016,13 +2072,14 @@ cUInt32 chal_trace_cti_get_trig_out_status(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_ch_in_status
-//
-// Description: CTI Channel in Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_ch_in_status
+*
+* Description: CTI Channel in Status
+*
+***************************************************************************
+*/
 cUInt32 chal_trace_cti_get_ch_in_status(CHAL_HANDLE handle,
 					CHAL_TRACE_CTI_t cti_type)
 {
@@ -2038,13 +2095,14 @@ cUInt32 chal_trace_cti_get_ch_in_status(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_ch_out_status
-//
-// Description: CTI Channel Out Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_ch_out_status
+*
+* Description: CTI Channel Out Status
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_ch_out_status(CHAL_HANDLE handle,
 					 CHAL_TRACE_CTI_t cti_type)
 {
@@ -2060,13 +2118,14 @@ cUInt32 chal_trace_cti_get_ch_out_status(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_ch_gate
-//
-// Description: CTI Channel Gate
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_ch_gate
+*
+* Description: CTI Channel Gate
+*
+***************************************************************************
+*/
 cBool chal_trace_cti_set_ch_gate(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 				 cUInt8 channel)
 {
@@ -2082,13 +2141,14 @@ cBool chal_trace_cti_set_ch_gate(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_asic_control
-//
-// Description: ASIC Control / Enables edge detection for trigger output n
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_asic_control
+*
+* Description: ASIC Control / Enables edge detection for trigger output n
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_asic_control(CHAL_HANDLE handle,
 				      CHAL_TRACE_CTI_t cti_type,
 				      cUInt8 triger_output)
@@ -2105,13 +2165,14 @@ cBool chal_trace_cti_set_asic_control(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_it_ch_in_ack
-//
-// Description: Integ. Test Channel In Ack
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_it_ch_in_ack
+*
+* Description: Integ. Test Channel In Ack
+*
+***************************************************************************
+*/
 cBool chal_trace_cti_set_it_ch_in_ack(CHAL_HANDLE handle,
 				      CHAL_TRACE_CTI_t cti_type, cUInt8 channel)
 {
@@ -2127,13 +2188,14 @@ cBool chal_trace_cti_set_it_ch_in_ack(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_it_trig_in_ack
-//
-// Description: Integ. Test Trigger In Ack
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_it_trig_in_ack
+*
+* Description: Integ. Test Trigger In Ack
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_it_trig_in_ack(CHAL_HANDLE handle,
 					CHAL_TRACE_CTI_t cti_type,
 					cUInt8 trigger)
@@ -2150,13 +2212,14 @@ cBool chal_trace_cti_set_it_trig_in_ack(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_it_ch_out
-//
-// Description: Integ. Test Channel Out
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_it_ch_out
+*
+* Description: Integ. Test Channel Out
+*
+***************************************************************************
+*/
 cBool chal_trace_cti_set_it_ch_out(CHAL_HANDLE handle,
 				   CHAL_TRACE_CTI_t cti_type, cUInt8 channel)
 {
@@ -2172,13 +2235,14 @@ cBool chal_trace_cti_set_it_ch_out(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_it_trig_out
-//
-// Description: Integ. Test Trigger Out
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_it_trig_out
+*
+* Description: Integ. Test Trigger Out
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_it_trig_out(CHAL_HANDLE handle,
 				     CHAL_TRACE_CTI_t cti_type, cUInt8 trigger)
 {
@@ -2194,13 +2258,14 @@ cBool chal_trace_cti_set_it_trig_out(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_it_ch_out_ack
-//
-// Description: Integ. Test Channel Out Ack
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_it_ch_out_ack
+*
+* Description: Integ. Test Channel Out Ack
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_it_ch_out_ack(CHAL_HANDLE handle,
 					 CHAL_TRACE_CTI_t cti_type)
 {
@@ -2216,13 +2281,14 @@ cUInt32 chal_trace_cti_get_it_ch_out_ack(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_it_trig_out_ack
-//
-// Description: Integ. Test Trigger Out Ack
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_it_trig_out_ack
+*
+* Description: Integ. Test Trigger Out Ack
+*
+***************************************************************************
+*/
 cUInt32 chal_trace_cti_get_it_trig_out_ack(CHAL_HANDLE handle,
 					   CHAL_TRACE_CTI_t cti_type)
 {
@@ -2238,13 +2304,14 @@ cUInt32 chal_trace_cti_get_it_trig_out_ack(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_it_ch_in
-//
-// Description: Integ. Test Channel In
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_it_ch_in
+*
+* Description: Integ. Test Channel In
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_it_ch_in(CHAL_HANDLE handle,
 				    CHAL_TRACE_CTI_t cti_type)
 {
@@ -2259,13 +2326,14 @@ cUInt32 chal_trace_cti_get_it_ch_in(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_it_trig_in
-//
-// Description: Integ. External Output Control
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_it_trig_in
+*
+* Description: Integ. External Output Control
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_it_trig_in(CHAL_HANDLE handle,
 				      CHAL_TRACE_CTI_t cti_type)
 {
@@ -2280,13 +2348,14 @@ cUInt32 chal_trace_cti_get_it_trig_in(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_int_mode_control
-//
-// Description: Integragtion mode enable.
-//
-//**************************************************************************
+/***************************************************************************
+*
+* Function Name: chal_trace_cti_set_int_mode_control
+*
+* Description: Integragtion mode enable.
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_int_mode_control(CHAL_HANDLE handle,
 					  CHAL_TRACE_CTI_t cti_type,
 					  cBool enable)
@@ -2303,13 +2372,14 @@ cBool chal_trace_cti_set_int_mode_control(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_claim_set
-//
-// Description: Claim Tag Set
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_claim_set
+*
+* Description: Claim Tag Set
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_claim_set(CHAL_HANDLE handle,
 				   CHAL_TRACE_CTI_t cti_type, cUInt8 channel)
 {
@@ -2325,13 +2395,14 @@ cBool chal_trace_cti_set_claim_set(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_claim_clr
-//
-// Description: Claim Tag Clear
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_claim_clr
+*
+* Description: Claim Tag Clear
+*
+***************************************************************************
+*/
 cBool chal_trace_cti_set_claim_clr(CHAL_HANDLE handle,
 				   CHAL_TRACE_CTI_t cti_type, cUInt8 channel)
 {
@@ -2347,13 +2418,14 @@ cBool chal_trace_cti_set_claim_clr(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_set_lock_access
-//
-// Description: Lock Access
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_set_lock_access
+*
+* Description: Lock Access
+*
+**************************************************************************
+*/
 cBool chal_trace_cti_set_lock_access(CHAL_HANDLE handle,
 				     CHAL_TRACE_CTI_t cti_type, cUInt32 control)
 {
@@ -2369,13 +2441,14 @@ cBool chal_trace_cti_set_lock_access(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_lock_status
-//
-// Description: Lock Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_lock_status
+*
+* Description: Lock Status
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_lock_status(CHAL_HANDLE handle,
 				       CHAL_TRACE_CTI_t cti_type)
 {
@@ -2391,13 +2464,14 @@ cUInt32 chal_trace_cti_get_lock_status(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_auth_status
-//
-// Description: Authentication Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_auth_status
+*
+* Description: Authentication Status
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_auth_status(CHAL_HANDLE handle,
 				       CHAL_TRACE_CTI_t cti_type)
 {
@@ -2413,13 +2487,14 @@ cUInt32 chal_trace_cti_get_auth_status(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_dev_id
-//
-// Description: Device ID
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_dev_id
+*
+* Description: Device ID
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_dev_id(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -2433,13 +2508,14 @@ cUInt32 chal_trace_cti_get_dev_id(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_dev_type
-//
-// Description: Device Type
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_dev_type
+*
+* Description: Device Type
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_dev_type(CHAL_HANDLE handle,
 				    CHAL_TRACE_CTI_t cti_type)
 {
@@ -2454,13 +2530,14 @@ cUInt32 chal_trace_cti_get_dev_type(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_per_id
-//
-// Description: Peripheral ID n
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_per_id
+*
+* Description: Peripheral ID n
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_per_id(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 				  cUInt8 n_peripheral)
 {
@@ -2507,13 +2584,14 @@ cUInt32 chal_trace_cti_get_per_id(CHAL_HANDLE handle, CHAL_TRACE_CTI_t cti_type,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_per_id
-//
-// Description: Component ID n
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_per_id
+*
+* Description: Component ID n
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_cti_get_comp_id(CHAL_HANDLE handle,
 				   CHAL_TRACE_CTI_t cti_type,
 				   cUInt8 n_component)
@@ -2555,70 +2633,71 @@ cUInt32 chal_trace_cti_get_comp_id(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_ram_depth
-//
-// Description: Ram Depth
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_ram_depth
+*
+* Description: Ram Depth
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_ram_depth(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_RDP);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_ram_read_data
-//
-// Description: Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_ram_read_data
+*
+* Description: Status
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_status(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_STS);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_ram_read_data
-//
-// Description: RAM Read Data
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_ram_read_data
+*
+* Description: RAM Read Data
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_ram_read_data(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_RRD);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_ram_read_pointer
-//
-// Description: RAM Read Pointer
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_ram_read_pointer
+*
+* Description: RAM Read Pointer
+*
+***************************************************************************
+*/
 cBool chal_trace_etb_set_ram_read_pointer(CHAL_HANDLE handle, cUInt32 rrp)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -2632,13 +2711,14 @@ cBool chal_trace_etb_set_ram_read_pointer(CHAL_HANDLE handle, cUInt32 rrp)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_ram_write_pointer
-//
-// Description: RAM Write Pointer
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_ram_write_pointer
+*
+* Description: RAM Write Pointer
+*
+**************************************************************************
+*/
 cBool chal_trace_etb_set_ram_write_pointer(CHAL_HANDLE handle, cUInt32 rwp)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -2652,13 +2732,14 @@ cBool chal_trace_etb_set_ram_write_pointer(CHAL_HANDLE handle, cUInt32 rwp)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_trigger_counter
-//
-// Description: Trigger Counter
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_trigger_counter
+*
+* Description: Trigger Counter
+*
+**************************************************************************
+*/
 cBool chal_trace_etb_set_trigger_counter(CHAL_HANDLE handle, cUInt32 trg)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -2672,13 +2753,14 @@ cBool chal_trace_etb_set_trigger_counter(CHAL_HANDLE handle, cUInt32 trg)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_control
-//
-// Description: Trace Capture Enable
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_control
+*
+* Description: Trace Capture Enable
+*
+***************************************************************************
+*/
 cBool chal_trace_etb_set_control(CHAL_HANDLE handle, cBool enable)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -2693,13 +2775,14 @@ cBool chal_trace_etb_set_control(CHAL_HANDLE handle, cBool enable)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_ram_write_data
-//
-// Description: RAM Write Data
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_ram_write_data
+*
+* Description: RAM Write Data
+*
+**************************************************************************
+*/
 cBool chal_trace_etb_set_ram_write_data(CHAL_HANDLE handle, cUInt32 rwd)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -2713,32 +2796,33 @@ cBool chal_trace_etb_set_ram_write_data(CHAL_HANDLE handle, cUInt32 rwd)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_ff_status
-//
-// Description: Formatter and Flush Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_ff_status
+*
+* Description: Formatter and Flush Status
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_ff_status(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_FFSR);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_ff_control
-//
-// Description: Formatter and Flush Control
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_ff_control
+*
+* Description: Formatter and Flush Control
+*
+***************************************************************************
+*/
 cBool chal_trace_etb_set_ff_control(CHAL_HANDLE handle,
 				    CHAL_TRACE_ETB_FF_CONF_t *ffcr)
 {
@@ -2772,13 +2856,14 @@ cBool chal_trace_etb_set_ff_control(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_it_misc_op0
-//
-// Description: Integ. Test Misc. Output 0
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_it_misc_op0
+*
+* Description: Integ. Test Misc. Output 0
+*
+**************************************************************************
+*/
 cBool chal_trace_etb_set_it_misc_op0(CHAL_HANDLE handle, cBool full,
 				     cBool acq_comp)
 {
@@ -2796,13 +2881,14 @@ cBool chal_trace_etb_set_it_misc_op0(CHAL_HANDLE handle, cBool full,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_it_tr_fl_in_ack
-//
-// Description: Integ. Test Trigger In and Flush In Ack
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_it_tr_fl_in_ack
+*
+* Description: Integ. Test Trigger In and Flush In Ack
+*
+**************************************************************************
+*/
 cBool chal_trace_etb_set_it_tr_fl_in_ack(CHAL_HANDLE handle, cBool trig,
 					 cBool flush)
 {
@@ -2820,51 +2906,52 @@ cBool chal_trace_etb_set_it_tr_fl_in_ack(CHAL_HANDLE handle, cBool trig,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_it_tr_fl_in
-//
-// Description: Integ. Test Trigger In and Flush In
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_it_tr_fl_in
+*
+* Description: Integ. Test Trigger In and Flush In
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_it_tr_fl_in(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_ITTRFLIN);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_it_atb_data0
-//
-// Description: Integ. Test ATB Data 0
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_it_atb_data0
+*
+* Description: Integ. Test ATB Data 0
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_it_atb_data0(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_ITATBDATA0);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_it_atb_ctrl2
-//
-// Description: Integ. Test ATB Control 2
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_it_atb_ctrl2
+*
+* Description: Integ. Test ATB Control 2
+*
+**************************************************************************
+*/
 cBool chal_trace_etb_set_it_atb_ctrl2(CHAL_HANDLE handle, cBool afvalids,
 				      cBool atreadys)
 {
@@ -2882,51 +2969,52 @@ cBool chal_trace_etb_set_it_atb_ctrl2(CHAL_HANDLE handle, cBool afvalids,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_it_atb_ctrl1
-//
-// Description: Integ. Test ATB Control 1
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_it_atb_ctrl1
+*
+* Description: Integ. Test ATB Control 1
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_it_atb_ctrl1(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_ITATBCTR1);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_it_atb_ctrl0
-//
-// Description: Integ. Test ATB Control 0
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_it_atb_ctrl0
+*
+* Description: Integ. Test ATB Control 0
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_it_atb_ctrl0(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_ITATBCTR0);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_int_mode_control
-//
-// Description: Integragtion mode enable.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_int_mode_control
+*
+* Description: Integragtion mode enable.
+*
+**************************************************************************
+*/
 cBool chal_trace_etb_set_int_mode_control(CHAL_HANDLE handle, cBool enable)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -2941,13 +3029,14 @@ cBool chal_trace_etb_set_int_mode_control(CHAL_HANDLE handle, cBool enable)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_claim_set
-//
-// Description: Claim Tag Set
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_claim_set
+*
+* Description: Claim Tag Set
+*
+***************************************************************************
+*/
 cBool chal_trace_etb_set_claim_set(CHAL_HANDLE handle, cUInt8 channel)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -2962,13 +3051,14 @@ cBool chal_trace_etb_set_claim_set(CHAL_HANDLE handle, cUInt8 channel)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_claim_clr
-//
-// Description: Claim Tag Clear
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_claim_clr
+*
+* Description: Claim Tag Clear
+*
+**************************************************************************
+*/
 cBool chal_trace_etb_set_claim_clr(CHAL_HANDLE handle, cUInt8 channel)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -2983,13 +3073,14 @@ cBool chal_trace_etb_set_claim_clr(CHAL_HANDLE handle, cUInt8 channel)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_set_lock_access
-//
-// Description: Lock Access
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_set_lock_access
+*
+* Description: Lock Access
+*
+***************************************************************************
+*/
 cBool chal_trace_etb_set_lock_access(CHAL_HANDLE handle, cUInt32 control)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -3004,89 +3095,90 @@ cBool chal_trace_etb_set_lock_access(CHAL_HANDLE handle, cUInt32 control)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_lock_status
-//
-// Description: Lock Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_lock_status
+*
+* Description: Lock Status
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_lock_status(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_LOCKSTATUS);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_auth_status
-//
-// Description: Authentication Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_auth_status
+*
+* Description: Authentication Status
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_auth_status(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_AUTHSTATUS);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_dev_id
-//
-// Description: Device ID
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_dev_id
+*
+* Description: Device ID
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_dev_id(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_DEVID);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_dev_type
-//
-// Description: Device Type
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_dev_type
+*
+* Description: Device Type
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_dev_type(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB_base) {
+	if (pTraceDev->ETB_base)
 		status = BRCM_READ_REG(pTraceDev->ETB_base, ETB_DEVTYPE);
-	}
 
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_per_id
-//
-// Description: Peripheral ID n
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_per_id
+*
+* Description: Peripheral ID n
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_per_id(CHAL_HANDLE handle, cUInt8 n_peripheral)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -3122,13 +3214,14 @@ cUInt32 chal_trace_etb_get_per_id(CHAL_HANDLE handle, cUInt8 n_peripheral)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb_get_comp_id
-//
-// Description: Component ID n
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb_get_comp_id
+*
+* Description: Component ID n
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb_get_comp_id(CHAL_HANDLE handle, cUInt8 n_component)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -3164,13 +3257,14 @@ cUInt32 chal_trace_etb_get_comp_id(CHAL_HANDLE handle, cUInt8 n_component)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb2axi_set_config
-//
-// Description: ETB to AXI Configuration
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb2axi_set_config
+*
+* Description: ETB to AXI Configuration
+*
+**************************************************************************
+*/
 cBool chal_trace_etb2axi_set_config(CHAL_HANDLE handle, cBool flush)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -3185,13 +3279,14 @@ cBool chal_trace_etb2axi_set_config(CHAL_HANDLE handle, cBool flush)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_etb2axi_set_wr_ptr
-//
-// Description: ETB to AXI Configuration
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_etb2axi_set_wr_ptr
+*
+* Description: ETB to AXI Configuration
+*
+**************************************************************************
+*/
 cBool chal_trace_etb2axi_set_wr_ptr(CHAL_HANDLE handle, cUInt32 wr_ptr)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -3206,33 +3301,34 @@ cBool chal_trace_etb2axi_set_wr_ptr(CHAL_HANDLE handle, cUInt32 wr_ptr)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_cti_get_lock_status
-//
-// Description: Device Type
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_cti_get_lock_status
+*
+* Description: Device Type
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_etb2axi_get_status(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
 	cUInt32 status = 0;
 
-	if (pTraceDev->ETB2AXI_base) {
+	if (pTraceDev->ETB2AXI_base)
 		status = BRCM_READ_REG(pTraceDev->ETB2AXI_base, ETB2AXI_STATUS);
-	}
 
 	return status;
 }
 
 #if !defined(_SAMOA_)
-//**************************************************************************
-//
-// Function Name: chal_trace_globperf_set_config
-//
-// Description: Set GLOBPERF_GLB_CONFIG - Counter Config
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_globperf_set_config
+*
+* Description: Set GLOBPERF_GLB_CONFIG - Counter Config
+*
+***************************************************************************
+*/
 cBool chal_trace_globperf_set_config(CHAL_HANDLE handle, cBool counter_stop_en,
 				     cUInt32 timeout)
 {
@@ -3251,13 +3347,14 @@ cBool chal_trace_globperf_set_config(CHAL_HANDLE handle, cBool counter_stop_en,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_globperf_set_cmd
-//
-// Description: Set GLOBPERF_GLB_CMD - Global Command
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_globperf_set_cmd
+*
+* Description: Set GLOBPERF_GLB_CMD - Global Command
+*
+**************************************************************************
+*/
 cBool chal_trace_globperf_set_cmd(CHAL_HANDLE handle, CHAL_TRACE_GLB_CMD_t cmd)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -3272,13 +3369,14 @@ cBool chal_trace_globperf_set_cmd(CHAL_HANDLE handle, CHAL_TRACE_GLB_CMD_t cmd)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_globperf_get_status
-//
-// Description: Return GLOBPERF_GLB_STATUS - Request Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_globperf_get_status
+*
+* Description: Return GLOBPERF_GLB_STATUS - Request Status
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_globperf_get_status(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -3293,13 +3391,14 @@ cUInt32 chal_trace_globperf_get_status(CHAL_HANDLE handle)
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_globperf_get_count
-//
-// Description: Return GLOBPERF_GLB_COUNT - Counter Status
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_globperf_get_count
+*
+* Description: Return GLOBPERF_GLB_COUNT - Counter Status
+*
+***************************************************************************
+*/
 cUInt32 chal_trace_globperf_get_count(CHAL_HANDLE handle)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -3312,16 +3411,17 @@ cUInt32 chal_trace_globperf_get_count(CHAL_HANDLE handle)
 
 	return status;
 }
-#endif // !defined(_SAMOA_)
+#endif /* !defined(_SAMOA_) */
 
 #if !defined(_HERA_)
-//**************************************************************************
-//
-// Function Name: chal_trace_atb_stm_set_config
-//
-// Description: Set ATB_STM Config
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_atb_stm_set_config
+*
+* Description: Set ATB_STM Config
+*
+**************************************************************************
+*/
 cBool chal_trace_atb_stm_set_config(CHAL_HANDLE handle, cBool twobit_mode,
 				    cUInt8 break_limit, cUInt8 output_mode,
 				    cUInt8 atb_id)
@@ -3344,13 +3444,14 @@ cBool chal_trace_atb_stm_set_config(CHAL_HANDLE handle, cBool twobit_mode,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_atb_stm_set_en
-//
-// Description: Set STM_EN_LO/HI
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_atb_stm_set_en
+*
+* Description: Set STM_EN_LO/HI
+*
+**************************************************************************
+*/
 cBool chal_trace_atb_stm_set_en(CHAL_HANDLE handle, cUInt32 low_half,
 				cUInt32 high_half)
 {
@@ -3368,13 +3469,14 @@ cBool chal_trace_atb_stm_set_en(CHAL_HANDLE handle, cUInt32 low_half,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_atb_stm_get_en
-//
-// Description: Return STM_EN_LO/HI
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_atb_stm_get_en
+*
+* Description: Return STM_EN_LO/HI
+*
+**************************************************************************
+*/
 cUInt32 chal_trace_atb_stm_get_en(CHAL_HANDLE handle, cBool high)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -3395,13 +3497,14 @@ cUInt32 chal_trace_atb_stm_get_en(CHAL_HANDLE handle, cBool high)
 	return reg_value;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_atb_stm_set_sw
-//
-// Description: Set STM_SW_LO/HI
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_atb_stm_set_sw
+*
+* Description: Set STM_SW_LO/HI
+*
+**************************************************************************
+*/
 cBool chal_trace_atb_stm_set_sw(CHAL_HANDLE handle, cUInt32 low_half,
 				cUInt32 high_half)
 {
@@ -3419,13 +3522,14 @@ cBool chal_trace_atb_stm_set_sw(CHAL_HANDLE handle, cUInt32 low_half,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_atb_stm_get_sw
-//
-// Description: Return STM_SW_LO/HI
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_atb_stm_get_sw
+*
+* Description: Return STM_SW_LO/HI
+*
+***************************************************************************
+*/
 cUInt32 chal_trace_atb_stm_get_sw(CHAL_HANDLE handle, cBool high)
 {
 	CHAL_TRACE_DEV_t *pTraceDev = (CHAL_TRACE_DEV_t *) handle;
@@ -3446,13 +3550,14 @@ cUInt32 chal_trace_atb_stm_get_sw(CHAL_HANDLE handle, cBool high)
 	return reg_value;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_sw_stm_set_config
-//
-// Description: Set SWSTM Config
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_sw_stm_set_config
+*
+* Description: Set SWSTM Config
+*
+**************************************************************************
+*/
 cBool chal_trace_sw_stm_set_config(CHAL_HANDLE handle,
 				   CHAL_TRACE_SWSTM_t swstm_st,
 				   cBool stall_mode, cUInt8 atb_id)
@@ -3471,13 +3576,14 @@ cBool chal_trace_sw_stm_set_config(CHAL_HANDLE handle,
 	return status;
 }
 
-//**************************************************************************
-//
-// Function Name: chal_trace_sw_stm_write
-//
-// Description: Creates x-byte value with Channel y.
-//
-//**************************************************************************
+/**************************************************************************
+*
+* Function Name: chal_trace_sw_stm_write
+*
+* Description: Creates x-byte value with Channel y.
+*
+**************************************************************************
+*/
 cBool chal_trace_sw_stm_write(CHAL_HANDLE handle, CHAL_TRACE_SWSTM_t swstm_st,
 			      cUInt8 n_channel, cUInt8 n_bytes, cUInt32 value)
 {
@@ -3486,7 +3592,8 @@ cBool chal_trace_sw_stm_write(CHAL_HANDLE handle, CHAL_TRACE_SWSTM_t swstm_st,
 
 	if (pTraceDev->SW_STM_base[swstm_st]) {
 		switch (n_bytes) {
-			// Use BRCM_WRITE_REG_IDX even though the registers are not indexed registers. 
+			/* Use BRCM_WRITE_REG_IDX even though the
+			* registers are not indexed registers. */
 		case 1:
 			BRCM_WRITE_REG_IDX(pTraceDev->SW_STM_base[swstm_st],
 					   SWSTM_R_VAL_1BYTE_CHAN00, n_channel,
@@ -3516,4 +3623,4 @@ cBool chal_trace_sw_stm_write(CHAL_HANDLE handle, CHAL_TRACE_SWSTM_t swstm_st,
 
 	return status;
 }
-#endif // !defined(_HERA_)
+#endif /* !defined(_HERA_) */

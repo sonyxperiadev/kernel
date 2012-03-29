@@ -1,27 +1,32 @@
-/************************************************************************************************/
-/*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
-/*                                                                                              */
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
+/********************************************************
+*
+*  Copyright 2011  Broadcom Corporation
+*
+*     Unless you and Broadcom execute a separate written
+*     software license agreement governing use of this
+*     software, this software is licensed to you under the
+*     terms of the GNU
+*     General Public License version 2 (the GPL), available at
+*
+*          http://www.broadcom.com/licenses/GPLv2.php
+*
+*     with the following added to such license:
+*
+*     As a special exception, the copyright holders of this software
+*     give you permission to link this software with independent
+*     modules, and to copy and distribute the resulting executable
+*     under terms of your choice, provided that you also meet,
+*     for each linked independent module, the terms and conditions
+*     of the license of that module. An independent module is a module
+*     which is not derived from this software.  The special exception does
+*    not apply to any modifications of the software.
+*
+*     Notwithstanding the above, under no circumstances may you combine
+*     this software in any way with any other Broadcom software provided
+*     under a license other than the GPL, without Broadcom's express
+*     prior written consent.
+*
+*********************************************************/
 
 /**
 *
@@ -37,14 +42,14 @@
 extern "C" {
 #endif
 
-#if defined (_HERA_)
+#if defined(_HERA_)
 #define CSL_TRACE_PERF_COUNT_SUPPORT
 #undef CSL_TRACE_STM_SUPPORT
 #undef CSL_TRACE_AXI_TRACE_SUPPORT
 #undef CSL_TRACE_GIC_TRACE_SUPPORT
 #undef CSL_TRACE_PWRMGR_TRACE_SUPPORT
 
-#elif defined (_RHEA_)
+#elif defined(_RHEA_)
 
 #define CSL_TRACE_PERF_COUNT_SUPPORT
 #define CSL_TRACE_STM_SUPPORT
@@ -52,7 +57,7 @@ extern "C" {
 #define CSL_TRACE_GIC_TRACE_SUPPORT
 #define CSL_TRACE_PWRMGR_TRACE_SUPPORT
 
-#elif defined (_SAMOA_)
+#elif defined(_SAMOA_)
 
 #undef CSL_TRACE_PERF_COUNT_SUPPORT
 #define CSL_TRACE_STM_SUPPORT
@@ -123,7 +128,8 @@ extern "C" {
 		CSL_TRACE_NO_INIT,	/* CSL not initialized */
 		CSL_TRACE_INIT,	/* CSL already initialized */
 		CSL_TRACE_INVALID_PARM,	/* invalid parameter */
-		CSL_TRACE_SATURATION,	/* peformance counter saturation occured */
+		/* peformance counter saturation occured */
+		CSL_TRACE_SATURATION,
 	} CSL_TRACE_ERR_CODE_t;
 
 	typedef enum {
@@ -159,8 +165,11 @@ extern "C" {
 	} CSL_TRACE_AXIChannel_t;
 
 	typedef enum {
-		PWRMGR_TRACE_MODE_A = 0,	/* Outputs PM/CCU interface signals (voltage request, policy info) */
-		PWRMGR_TRACE_MODE_B = 1,	/* Outputs PM I2C interface signals and 16-bit PM debug bus */
+		/* Outputs PM/CCU interface signals
+		(voltage request, policy info) */
+		PWRMGR_TRACE_MODE_A = 0,
+		/* Outputs PM I2C interface signals and 16-bit PM debug bus */
+		PWRMGR_TRACE_MODE_B = 1,
 	} CSL_TRACE_pwr_mgr_mode_t;
 
 	typedef struct {
@@ -209,8 +218,10 @@ extern "C" {
 *
 *  @param  axitrace_id - index of the axi_trace module.
 *  @param  channel - AXI bus channel type
-*  @param  pBusyCount - pointer of a structure CSL_TRACE_Report_st_t where the busy count will be stored.
-*                  utilization percentage will be stored as the unit of basis point (0.01%)
+*  @param  pBusyCount - pointer of a structure CSL_TRACE_Report_st_t
+*                  where the busy count will be stored.
+*                  utilization percentage will be stored as the unit of
+*		basis point (0.01%)
 *
 *  @return CSL_TRACE_ERR_CODE_t CSL_TRACE_OK if successfull; error code otherwise
 *
@@ -218,7 +229,7 @@ extern "C" {
 	CSL_TRACE_ERR_CODE_t
 	    csl_trace_get_recent_busy_count(CSL_TRACE_AXITraceID_t axitrace_id,
 					    CSL_TRACE_AXIChannel_t channel,
-					    CSL_TRACE_Report_st_t * pBusyCount);
+					    CSL_TRACE_Report_st_t *pBusyCount);
 
 /**
 *
@@ -244,12 +255,13 @@ extern "C" {
 *
 *****************************************************************************/
 	CSL_TRACE_ERR_CODE_t csl_trace_stop_perfcounter(void);
-#endif				// (CSL_TRACE_PERF_COUNT_SUPPORT)
+#endif				/* (CSL_TRACE_PERF_COUNT_SUPPORT) */
 
-#if defined (CSL_TRACE_AXI_TRACE_SUPPORT)
+#if defined(CSL_TRACE_AXI_TRACE_SUPPORT)
 /**
 *
-*  @brief  This function enables or disables the AXI trace and configures the STM and funnel accordingly.
+*  @brief  This function enables or disables the AXI trace and configures
+*	the STM and funnel accordingly.
 *
 *  @param  on - 1 turns on the trace, 0 turns off the trace.
 *  @param  axi_id - AXITRACE ID (1 ~ 19).
@@ -262,12 +274,13 @@ extern "C" {
 						     CSL_TRACE_AXITraceID_t
 						     axi_id,
 						     Boolean time_stamp);
-#endif				//(CSL_TRACE_AXI_TRACE_SUPPORT)
+#endif				/*(CSL_TRACE_AXI_TRACE_SUPPORT) */
 
-#if defined (CSL_TRACE_GIC_TRACE_SUPPORT)
+#if defined(CSL_TRACE_GIC_TRACE_SUPPORT)
 /**
 *
-*  @brief  This function enables or disables the GIC trace and configures the STM and funnel accordingly.
+*  @brief  This function enables or disables the GIC trace and configures the
+*	STM and funnel accordingly.
 *
 *  @param  on - 1 turns on the trace, 0 turns off the trace.
 *  @param  time_stamp - This bit sets the bit 0 of the ATB ID
@@ -277,17 +290,20 @@ extern "C" {
 *****************************************************************************/
 	CSL_TRACE_ERR_CODE_t csl_trace_set_gic_trace(Boolean on,
 						     Boolean time_stamp);
-#endif				// (CSL_TRACE_GIC_TRACE_SUPPORT)
+#endif				/* (CSL_TRACE_GIC_TRACE_SUPPORT) */
 
-#if defined (CSL_TRACE_PWRMGR_TRACE_SUPPORT)
+#if defined(CSL_TRACE_PWRMGR_TRACE_SUPPORT)
 /**
 *
-*  @brief  This function enables or disables the power manager trace and configures the STM and funnel accordingly. 
+*  @brief  This function enables or disables the power manager trace and
+*	configures the STM and funnel accordingly.
 *
 *  @param  on - 1 turns on the trace, 0 turns off the trace.
 *  @param  mode - This bit sets the bit 0 of the ATB ID.
-*                 If the bit 0 of the ATB  ID is zero, the output will be PM/CCU interface signals (voltage request, policy info).
-*                 If 1, the output will be PM I2C interface signals and 16-bit PM debug bus.
+*                 If the bit 0 of the ATB  ID is zero, the output will be PM/CCU
+*		interface signals (voltage request, policy info).
+*                 If 1, the output will be PM I2C interface signals and 16-bit
+*		PM debug bus.
 *
 *  @return CSL_TRACE_ERR_CODE_t CSL_TRACE_OK if successfull; error code otherwise
 *
@@ -295,12 +311,13 @@ extern "C" {
 	CSL_TRACE_ERR_CODE_t csl_trace_set_powermgr(Boolean on,
 						    CSL_TRACE_pwr_mgr_mode_t
 						    mode);
-#endif				// (CSL_TRACE_PWRMGR_TRACE_SUPPORT)
+#endif				/* (CSL_TRACE_PWRMGR_TRACE_SUPPORT) */
 
-#if defined (CSL_TRACE_STM_SUPPORT)
+#if defined(CSL_TRACE_STM_SUPPORT)
 /**
 *
-*  @brief  This function enables or disables the SW STM trace and configures the STM and funnel accordingly. 
+*  @brief  This function enables or disables the SW STM trace and configures the
+*	STM and funnel accordingly.
 *
 *  @param  on - 1 turns on the trace, 0 turns off the trace.
 *
@@ -326,11 +343,11 @@ extern "C" {
 *
 *****************************************************************************/
 	CSL_TRACE_ERR_CODE_t csl_trace_stm_write(UInt8 ch, Boolean ts,
-						 UInt32 len, UInt8 * data);
+						 UInt32 len, UInt8 *data);
 #endif				/* CNEON_COMMON */
-#endif				// (CSL_TRACE_STM_SUPPORT)
+#endif				/* ( (CSL_TRACE_STM_SUPPORT) */
 
 #ifdef __cplusplus
 }
 #endif
-#endif				// __CSL_TRACE_H__
+#endif				/* _CSL_TRACE_H__ */

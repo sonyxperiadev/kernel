@@ -2,14 +2,15 @@
 *
 *     Copyright (c) 2009 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+*   Notwithstanding the above, under no circumstances may you combine this
+*   software in any way with any other Broadcom software provided under
+*   a license other than the GPL, without Broadcom's express prior
+*   written consent.
 *
 ****************************************************************************/
 
@@ -43,11 +44,10 @@ unsigned long BCMLOG_FifoGetNumContig(BCMLOG_Fifo_t *pFifo)
 {
 	unsigned long numContig = 0;
 
-	if (pFifo->idx_read <= pFifo->idx_write) {
+	if (pFifo->idx_read <= pFifo->idx_write)
 		numContig = pFifo->idx_write - pFifo->idx_read;
-	} else {
+	else
 		numContig = pFifo->buf_sz - pFifo->idx_read;
-	}
 
 	return numContig;
 }
@@ -128,7 +128,7 @@ unsigned long BCMLOG_FifoAdd(BCMLOG_Fifo_t *pFifo, unsigned char *pSrcBuf,
 }
 
 /**
- *	Remove up to rmSize oldest bytes from FIFO 
+ *	Remove up to rmSize oldest bytes from FIFO
  *	@param	pFifo			(inout)	the FIFO
  *	@param	maxMsgs			(in)	max number of bytes to remove
  *	@return	number of bytes removed
