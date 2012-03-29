@@ -46,6 +46,8 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/proc_fs.h>
 #include <linux/ioport.h>
 #include <linux/interrupt.h>
+#include <linux/proc_fs.h>	/* Necessary because we use proc fs */
+#include <linux/seq_file.h>	/* for seq_file */
 
 #include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/ipc_sharedmemory.h>
@@ -60,6 +62,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "rpc_ipc.h"
 #include "rpc_client_msgs.h"
+#include "rpc_debug.h"
 
 #include <linux/broadcom/rpc_ipc_kernel.h>
 
@@ -157,11 +160,16 @@ typedef struct {
 } RpcPktkElement_t;
 
 typedef struct {
+	UInt32 ts;
+	UInt8 state;
 	UInt8 clientId;
 	rpc_pkt_reg_ind_t info;
 	rpc_pkt_reg_ind_ex_t infoEx;
 	struct file *filep;
 	int availData;
+	pid_t	pid;
+	pid_t	tid;
+	char pidName[TASK_COMM_LEN];
 	int IsMsgsRegistered;
 	RpcCbkElement_t mQ;
 	spinlock_t mLock;
@@ -305,6 +313,8 @@ static int rpcipc_open(struct inode *inode, struct file *file)
 		priv->clientId = 0;
 		file->private_data = priv;
 
+		HISTORY_RPC_LOG("open", 0, 0, (int)file, (int)current->tgid);
+
 		if (is_CP_running()) {
 			_DBG(RPC_TRACE
 			     ("rpcipc_open success file=%x sysrpc_initialized=%d\n",
@@ -341,12 +351,14 @@ static int rpcipc_release(struct inode *inode, struct file *file)
 
 	BUG_ON(!priv);
 
+	HISTORY_RPC_LOG("release", 0, 0, (int)file, (int)current->tgid);
 
 	for (k = 0; k < 0xFF; k++) {
 		RpcClientInfo_t *cInfo;
 		cInfo = gRpcClientList[k];
 
 		if (cInfo && (cInfo->filep == file)) {
+		
 			free_client_all_pkts(cInfo->clientId);
 			RpcListCleanup(cInfo->clientId);
 			SYS_ReleaseClientID(cInfo->clientId);
@@ -572,11 +584,12 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 	      (int)cInfo, (int)dataBufHandle, clientId, (int)elem, (int)msgId, broadcastMsg));
 
 	/* add to queue */
+	RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA, clientId, PKT_STATE_CID_DISPATCH,  0, (int)msgId, (UInt8)interfaceType);
 	spin_lock_bh(&cInfo->mLock);
 	list_add_tail(&elem->mList, &cInfo->mQ.mList);
+	cInfo->availData = 1;
 	spin_unlock_bh(&cInfo->mLock);
 
-	cInfo->availData = 1;
 	wake_up_interruptible(&cInfo->mWaitQ);
 
 	return RPC_RESULT_PENDING;
@@ -756,28 +769,29 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 
 	spin_lock_bh(&cInfo->mLock);
 	ioc_param.isEmpty = (Boolean) list_empty(&cInfo->mQ.mList);
+	if(ioc_param.isEmpty)
+		cInfo->availData = 0;
 	spin_unlock_bh(&cInfo->mLock);
 
 	if (ioc_param.waitTime > 0 && ioc_param.isEmpty) {
-		/*int jiffyBefore = jiffies;*/
-		RPC_READ_UNLOCK;
 
-		/*_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ioc() before clientID %d\n",
-		      (int)ioc_param.clientId));*/
-		wait_event_interruptible_timeout(cInfo->mWaitQ,
+
+		cInfo->ts = jiffies_to_msecs(jiffies);
+		cInfo->state = 1;
+		cInfo->tid = current->pid;
+		RPC_READ_UNLOCK;
+		wait_event_interruptible_timeout(cInfo->mWaitQ, 
 						cInfo->availData,
 						 msecs_to_jiffies(ioc_param.
 								  waitTime));
-		/*_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ioc() after clientID %d wait %d\n",
-			(int)ioc_param.clientId,
-			jiffies_to_msecs(jiffies - jiffyBefore)));*/
-
-
 		RPC_READ_LOCK;
+		cInfo->state = 2;
+		cInfo->ts = jiffies_to_msecs(jiffies);
 
-		cInfo->availData = 0;
+
+
+
+
 
 	    spin_lock_bh(&cInfo->mLock);
 		ioc_param.isEmpty = (Boolean) list_empty(&cInfo->mQ.mList);
@@ -855,6 +869,10 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
 	list_add_tail(&pktElem->mList, &cInfo->pktQ.mList);
 
 	spin_unlock_bh(&cInfo->mLock);
+	
+	HISTORY_RPC_LOG_PKT("rxBuf", ioc_param.clientId, (int)Item->dataBufHandle);
+
+	RpcDbgUpdatePktStateEx((int)Item->dataBufHandle, PKT_STATE_NA, ioc_param.clientId, PKT_STATE_CID_FETCH,  0, 0, 0xFF);
 
 	ioc_param.type = Item->type;
 	ioc_param.interfaceType = Item->interfaceType;
@@ -913,6 +931,8 @@ static long handle_pkt_read_buffer_ioc(struct file *filp, unsigned int cmd,
 	      (int)ioc_param.userBufLen));
 
 	buffer = RPC_PACKET_GetBufferData(ioc_param.dataBufHandle);
+	
+	HISTORY_RPC_LOG_PKT("GetBufPtr", ioc_param.clientId, (int)ioc_param.dataBufHandle);
 
 	if (copy_to_user(ioc_param.userBuf, buffer, ioc_param.userBufLen) != 0) {
 		_DBG(RPC_TRACE
@@ -942,6 +962,8 @@ static long handle_pkt_get_buffer_info_ioc(struct file *filp, unsigned int cmd,
 	ioc_param.kernelPtr = buffer;
 	ioc_param.kernelBasePtr = IPC_SmAddress(0);
 	ioc_param.offset = IPC_SmOffset(buffer);
+
+	HISTORY_RPC_LOG_PKT("GetBufInfo", 0, (int)ioc_param.dataBufHandle);
 
 	_DBG(RPC_TRACE
 	     ("k:handle_pkt_get_buffer_info_ioc pkt=%x ptr=%x offset=%d base=%x len=%d\n",
@@ -1005,6 +1027,8 @@ static long handle_pkt_send_buffer_ioc(struct file *filp, unsigned int cmd,
 		RPC_PACKET_SendData(ioc_param.clientId, ioc_param.interfaceType,
 				    ioc_param.channel, ioc_param.dataBufHandle);
 		RPC_READ_LOCK;
+		
+		HISTORY_RPC_LOG_PKT("Send", ioc_param.clientId, (int)ioc_param.dataBufHandle);
 	}
 
 	return 0;
@@ -1029,6 +1053,8 @@ static long handle_pkt_alloc_buffer_ioc(struct file *filp, unsigned int cmd,
 					ioc_param.requiredSize,
 					ioc_param.channel, ioc_param.waitTime);
 	RPC_READ_LOCK;
+
+	HISTORY_RPC_LOG_PKT("Alloc", 0, (int)ioc_param.pktBufHandle);
 
 	_DBG(RPC_TRACE
 	     ("k:handle_pkt_alloc_buffer_ioc pkt=%x len=%d\n",
@@ -1214,7 +1240,9 @@ static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd,
 		cInfo = gRpcClientList[cid];
 
 		if (cInfo) {
+			spin_lock_bh(&cInfo->mLock);
 			cInfo->availData = 1;
+			spin_unlock_bh(&cInfo->mLock);			
 			wake_up_interruptible(&cInfo->mWaitQ);
 			ioc_param.outParam = 1;
 		} else {
@@ -1229,6 +1257,8 @@ static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd,
 		      ioc_param.type));
 		return -1;
 	}
+
+	HISTORY_RPC_LOG("Cmd", 0, (int)ioc_param.dataBufHandle, ioc_param.input1, ioc_param.outParam);
 
 	_DBG(RPC_TRACE
 	     ("k:handle_pkt_cmd_ioc cmd=%d itype=%x handle=%x i1=%x i2=%x res=%x out=%x\n",
@@ -1306,12 +1336,19 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 
 	cInfo->clientId = clientId;
 	cInfo->filep = filp;
+
 	/* Init module  queue */
+
+	cInfo->pid = current->tgid;
+	strncpy(cInfo->pidName,current->comm,TASK_COMM_LEN);
+
 	INIT_LIST_HEAD(&cInfo->mQ.mList);
 	INIT_LIST_HEAD(&cInfo->pktQ.mList);
 	spin_lock_init(&cInfo->mLock);
 	init_waitqueue_head(&cInfo->mWaitQ);
 	cInfo->availData = 0;
+
+	HISTORY_RPC_LOG("Register", clientId, 0, current->tgid, cInfo->info.interfaceType);
 
 	RPC_PACKET_RegisterFilterCbk(ioc_param.rpcClientID,
 				     ioc_param.interfaceType, RPC_ServerRxCbk);
@@ -1355,6 +1392,8 @@ static long handle_pkt_deregister_data_ind_ioc(struct file *filp,
 
 	RpcListCleanup(cInfo->clientId);
 	SYS_ReleaseClientID(cInfo->clientId);
+	
+	HISTORY_RPC_LOG("DeRegister", cInfo->clientId, 0, current->tgid, cInfo->info.interfaceType);
 
 	_DBG(RPC_TRACE
 	     ("k:handle_pkt_deregister_data_ind_ioc client=%d numclients=%d\n",
@@ -1427,12 +1466,17 @@ static long handle_pkt_register_data_ind_ex_ioc(struct file *filp,
 
 	cInfo->clientId = clientId;
 	cInfo->filep = filp;
-	/* Init module  queue */
+
+	cInfo->pid = current->tgid;
+	strncpy(cInfo->pidName,current->comm,TASK_COMM_LEN);
+	// Init module  queue
 	INIT_LIST_HEAD(&cInfo->mQ.mList);
 	INIT_LIST_HEAD(&cInfo->pktQ.mList);
 	spin_lock_init(&cInfo->mLock);
 	init_waitqueue_head(&cInfo->mWaitQ);
 	cInfo->availData = 0;
+
+	HISTORY_RPC_LOG("RegisterEx", clientId, 0, current->tgid, cInfo->info.interfaceType);
 
 	RPC_PACKET_RegisterFilterCbk(ioc_param_ex.rpcClientID,
 				     ioc_param_ex.interfaceType, RPC_ServerRxCbk);
@@ -1468,27 +1512,28 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 
 	spin_lock_bh(&cInfo->mLock);
 	ioc_param.isEmpty = (Boolean) list_empty(&cInfo->mQ.mList);
+	if(ioc_param.isEmpty)
+		cInfo->availData = 0;
 	spin_unlock_bh(&cInfo->mLock);
 
 	if (ioc_param.waitTime > 0 && ioc_param.isEmpty) {
+
+		cInfo->state = 1;
+		cInfo->ts = jiffies_to_msecs(jiffies);
+		cInfo->tid = current->pid;
 		RPC_READ_UNLOCK;
 
-		/*_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ex_ioc() before clientID %d\n",
-		      (int)ioc_param.clientId)); */
-		wait_event_interruptible_timeout(cInfo->mWaitQ,
+		wait_event_interruptible_timeout(cInfo->mWaitQ, 
 						cInfo->availData,
 						 msecs_to_jiffies(ioc_param.
 								  waitTime));
-		/*_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ex_ioc() after clientID %d wait %d\n",
-			(int)ioc_param.clientId,
-			jiffies_to_msecs(jiffies - jiffyBefore)));*/
-
-
 		RPC_READ_LOCK;
 
-		cInfo->availData = 0;
+		cInfo->state = 2;
+		cInfo->ts = jiffies_to_msecs(jiffies);
+
+
+
 
 	    spin_lock_bh(&cInfo->mLock);
 		ioc_param.isEmpty = (UInt8) list_empty(&cInfo->mQ.mList);
@@ -1528,6 +1573,8 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 		ioc_param.bufInfo.context2 = RPC_PACKET_GetContextEx(Item->interfaceType, Item->dataBufHandle);
 
 		ioc_param.offset = IPC_SmOffset(ioc_param.bufInfo.buffer);
+
+		RpcDbgUpdatePktStateEx((int)Item->dataBufHandle, PKT_STATE_NA, ioc_param.clientId, PKT_STATE_CID_FETCH,  0, 0, 0xFF);
 
 		_DBG(RPC_TRACE
 		     ("k:handle_pkt_poll_ex_ioc cid=%d item=%x len=%d pkt=%d wait=%d\n", ioc_param.clientId, (int)Item,
@@ -1583,6 +1630,8 @@ static long handle_pkt_alloc_buffer_ptr_ioc(struct file *filp, unsigned int cmd,
 	_DBG(RPC_TRACE
 	     ("k:handle_pkt_alloc_buffer_ptr_ioc pkt=%x len=%d\n",
 	      (int)ioc_param.pktBufHandle, (int)ioc_param.requiredSize));
+
+	HISTORY_RPC_LOG("Alloc", 0, (int)ioc_param.pktBufHandle, ioc_param.offset, ioc_param.allocatedSize);
 
 	if (copy_to_user
 	    ((rpc_pkt_alloc_buf_ptr_t *) param, &ioc_param,
@@ -1644,6 +1693,9 @@ static long handle_pkt_send_buffer_ex_ioc(struct file *filp, unsigned int cmd,
 		RPC_PACKET_SendData(ioc_param.txBuf.clientId, ioc_param.txBuf.interfaceType,
 				    ioc_param.txBuf.channel, ioc_param.txBuf.dataBufHandle);
 		RPC_READ_LOCK;
+
+		HISTORY_RPC_LOG("SendEx", ioc_param.txBuf.clientId, (int)ioc_param.txBuf.dataBufHandle, ioc_param.txBuf.interfaceType, ioc_param.txBuf.context2);
+
 	}
 
 	return 0;
@@ -1694,6 +1746,8 @@ static long handle_pkt_reg_msgs_ioc(struct file *filp, unsigned int cmd,
 					ioc_param.msgsSize);
 
 	cInfo->IsMsgsRegistered = 1;
+
+	HISTORY_RPC_LOG("RegMsgs", cid, 0, readSize, ioc_param.msgsSize);
 
 	_DBG(RPC_TRACE
 	     ("k:handle_pkt_reg_msgs_ioc cid=%d offset=%d sz=%d readsz=%d ret=%d\n",
@@ -1877,60 +1931,196 @@ struct page *rpcipc_vma_nopage(struct vm_area_struct *vma,
 	return NULL;
 }
 
+
 /****************************************************************************
 *                      LOG PROC FILE
 ****************************************************************************/
 
-extern ssize_t kRpcReadLogData(char *destBuf, size_t len);
-int gRpcLogToConsole = 0;
 
-int log_buf_read(char *buf, char **start, off_t offset, int count, int *eof,
-		 void *data)
+
+void RpcDumpTaskState(RpcOutputContext_t* c, pid_t tid, pid_t pid)
 {
-	int len, bytesLeft = count, index = 0;
-	do {
-		len = kRpcReadLogData((buf + index), bytesLeft);
-		bytesLeft -= len;
-		index += len;
-	} while (len > 0 && bytesLeft > 0);
+	struct task_struct *t = pid_task(find_vpid(tid), PIDTYPE_PID);
+	if(t)
+	{
+		RpcDbgDumpStr(c,  "\t%s pid:%d tid:%d state:%d flag:%x\n",
+						t->comm, pid, tid, (int)t->state, (int)t->flags);
 
-	if (index > 0)
-		buf[index - 1] = '\0';
-
-	/*printk ( KERN_INFO "read: c=%d b=%d i=%d l=%d\n",count, bytesLeft, index, len);*/
-
-	return index;
+		sched_show_task(t);
+	}
 }
 
-static int log_buf_write(struct file *file, const char *buf,
-			 unsigned long count, void *data)
+int RpcDbgListClientMsgs(RpcOutputContext_t* c)
 {
-	int ret, len;
-	char tbuf[64];
+	UInt8 clientId;
+	RpcClientInfo_t *cInfo;
+	RpcPktkElement_t *pktItem = NULL;
+	RpcCbkElement_t *cbkItem = NULL;
+	struct list_head *listptr, *pos;
+  	int k;
 
-	len = min_t(size_t, 63, count);
-	ret = copy_from_user(tbuf, buf, len);
-	tbuf[len] = '\0';
 
-	if (ret == 0) {
-		if (tbuf[0] == '1')
-			gRpcLogToConsole = 1;
-		else
-			gRpcLogToConsole = 0;
+	for (k = 0; k < 0xFF; k++) 
+	{
+		clientId = k;
+		cInfo = gRpcClientList[clientId];
 
-		printk("RPC: Proc write buf=%s, val=%d\n", tbuf,
-		       gRpcLogToConsole);
+		if(!cInfo)
+			continue;
+
+		RpcDbgDumpStr(c, "%s cid:%d state:%s ts:%u RxData:%d\n",
+						cInfo->pidName,
+						(int)clientId,
+						(cInfo->state == 1)?"Wait":"Active",
+						(unsigned int)cInfo->ts,
+						(int)cInfo->availData);
+			
+
+		RpcDumpTaskState(c, cInfo->tid, cInfo->pid);
+		
+		spin_lock_bh(&cInfo->mLock);
+
+		list_for_each_safe(listptr, pos, &cInfo->pktQ.mList) 
+		{
+			pktItem = list_entry(listptr, RpcPktkElement_t, mList);
+		
+			RpcDbgDumpStr(c,  "\tcid:%d NOT FREED pkt:%d\n",
+								(int)clientId,
+								(int)pktItem->dataBufHandle);
+		}
+
+		list_for_each_safe(listptr, pos, &cInfo->mQ.mList) 
+		{
+			cbkItem = list_entry(listptr, RpcCbkElement_t, mList);
+			
+			RpcDbgDumpStr(c, "\tcid:%d QUEUED pkt:%d\n",
+								(int)clientId,
+								(int)cbkItem->dataBufHandle);
+		}
+
+		spin_unlock_bh(&cInfo->mLock);
+
+	}
+	return 0;
+}
+
+//***************************************************************************
+//                      LOG SEQ PROC FILE
+//***************************************************************************
+
+
+typedef struct
+{
+	UInt32 counter;
+	int offset;
+	int eof;
+	RpcOutputContext_t out;
+}RpcLogContext_t;
+
+static void *log_seq_start(struct seq_file *s, loff_t *pos)
+{
+	static RpcLogContext_t context = {0,0,0, { 1, NULL, {0} }};
+
+	context.out.type = 1;
+	context.out.seq = s;
+
+
+
+	/* beginning a new sequence ? */	
+	if ( context.eof == 0 )
+	{	
+		/* yes => return a non null value to begin the sequence */
+		return &context;
+	}
+	else
+	{
+		/* no => it's the end of the sequence, return end to stop reading */
+		context.offset = 0;
+		context.counter = 0;
+		*pos = 0;
+		context.eof = 0;
+		return NULL;
+	}
+}
+
+static void *log_seq_next(struct seq_file *s, void *v, loff_t *pos)
+{
+	RpcLogContext_t *context = (RpcLogContext_t*)v;
+
+	(*pos)++;
+
+
+	if( context->eof || *pos > 250)
+	{
+		context->eof = 1;
+		return NULL;
 	}
 
-	return count;
+	return (void*)context;
 }
+
+static void log_seq_stop(struct seq_file *s, void *v)
+{
+}
+
+static int log_seq_show(struct seq_file *s, void *v)
+{
+	int ret = 0;
+	RpcLogContext_t *context = (RpcLogContext_t*)v;
+	
+
+	if( context->counter == 0 )
+		RpcDbgDumpHdr(&(context->out));
+	else if( context->counter == 1)
+		RpcDbgListClientMsgs(&(context->out));
+	else if( context->counter == 2)
+		ret = RpcDbgDumpPktState(&(context->out), &(context->offset), 10);
+	else if( context->counter == 3)
+		ret = RbcDbgDumpGenInfo(&(context->out), &(context->offset), 10);
+
+	if( ret == 0 )
+	{
+		if(context->counter >= 3)
+			context->eof = 1;
+
+		context->offset = 0;
+		(context->counter)++;
+	}
+
+
+	return 0;
+}
+
+
+
+static struct seq_operations log_seq_ops = {
+	.start = log_seq_start,
+	.next  = log_seq_next,
+	.stop  = log_seq_stop,
+	.show  = log_seq_show
+};
+
+static int my_open(struct inode *inode, struct file *file)
+{
+	return seq_open(file, &log_seq_ops);
+}
+
+static struct file_operations my_file_ops = {
+	.owner   = THIS_MODULE,
+	.open    = my_open,
+	.read    = seq_read,
+	.llseek  = seq_lseek,
+	.release = seq_release
+};
 
 int log_proc_init(void)
 {
 	struct proc_dir_entry *myproc = create_proc_entry("bcmrpclog", 0667, 0);
 
-	myproc->read_proc = log_buf_read;
-	myproc->write_proc = log_buf_write;
+	if(myproc == NULL)
+		return -ENOMEM;
+
+	myproc->proc_fops = &my_file_ops;
 
 	return 0;
 }
@@ -1938,6 +2128,29 @@ int log_proc_init(void)
 void log_proc_cleanup(void)
 {
 	remove_proc_entry("bcmrpclog", NULL);
+}
+
+int RpcDbgDumpHistoryLogging(int type, int level)
+{
+	RpcOutputContext_t outContext;
+	int offset = 0;
+	
+	memset(&outContext, 0 , sizeof(RpcOutputContext_t) );
+
+	outContext.type = type;
+
+	RpcDbgDumpStr(&outContext,"===== RPC memory dump Begin ( %d )=====", type);
+
+	RpcDbgDumpHdr(&outContext);
+	RpcDbgListClientMsgs(&outContext);
+    if(level > 0)
+	{
+		RpcDbgDumpPktState(&outContext,&offset, 0);
+		RbcDbgDumpGenInfo(&outContext, &offset, 0);
+	}
+	RpcDbgDumpStr(&outContext,"===== RPC memory dump End =====");
+
+	return 0;
 }
 
 static int major;
@@ -1982,6 +2195,8 @@ static int __init rpcipc_ModuleInit(void)
 	}
 
 	log_proc_init();
+
+	RpcDbgInit();
 
 	DEFINE_RPC_LOCK;
 

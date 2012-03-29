@@ -30,9 +30,13 @@
 #include "consts.h"
 #ifdef LINUX_RPC_KERNEL
 #include <linux/module.h>
+#include <linux/proc_fs.h>	/* Necessary because we use proc fs */
+#include <linux/seq_file.h>	/* for seq_file */
 #define CSL_TYPES_H
 #define USE_KTHREAD_HANDOVER
 #endif
+
+#include "rpc_debug.h"
 
 #if defined(CNEON_COMMON) && defined(FUSE_APPS_PROCESSOR)
 #include "ostask.h"
@@ -125,8 +129,8 @@ static UInt32 rpcVer = BCM_RPC_VER;
 static MsgQueueHandle_t rpcMQhandle;
 #endif
 
-static UInt32 recvRpcPkts = 0;
-static UInt32 freeRpcPkts = 0;
+UInt32 recvRpcPkts = 0;
+UInt32 freeRpcPkts = 0;
 
 /*******************************************************************************
 			Packet Data API Implementation
@@ -456,6 +460,8 @@ RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle)
 
 	IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
 
+	RpcDbgUpdatePktState((int)dataBufHandle, PKT_STATE_PKT_FREE);
+
 	return RPC_RESULT_OK;
 }
 
@@ -486,10 +492,15 @@ RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 		       (int)dataBufHandle, (int)rpcClientID, (int)recvRpcPkts,
 		       (int)freeRpcPkts));
 		IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
-	} else
+		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_PKT_FREE, rpcClientID,PKT_STATE_CID_FREE,  0, 0, 0xFF);
+	} else {
+
+		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA, rpcClientID,PKT_STATE_CID_FREE,  0, 0, 0xFF);
+
 		_DBG_(RPC_TRACE
 		      ("k:RPC_PACKET_FreeBufferEx h=%d, ref=%d, cid=%d\r\n",
 		       (int)dataBufHandle, (int)refCount, (int)rpcClientID));
+	}
 
 	RPC_UNLOCK;
 	return RPC_RESULT_OK;
@@ -609,6 +620,8 @@ static int rpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 	       (int)data));*/
 
 	if (ipcInfoList[(int)type].filterPktIndCb != NULL) {
+		RpcDbgUpdatePktState((int)bufHandle, PKT_STATE_RPC_PROCESS);
+
 		result =
 		    ipcInfoList[(int)type].
 		    filterPktIndCb((PACKET_InterfaceType_t)
@@ -620,6 +633,8 @@ static int rpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 		_DBG_(RPC_TRACE
 		      ("IPC_FreeBuffer (No Handling) h=%d\r\n",
 		       (int)bufHandle));
+
+		RpcDbgUpdatePktState((int)bufHandle, PKT_STATE_PKT_FREE);
 		IPC_FreeBuffer(bufHandle);
 	}
 
@@ -642,6 +657,8 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 			      ("RPC_BufferDelivery NEW h=%d type=%d rcvPkts=%d freePkts=%d\r\n",
 			       (int)bufHandle, (int)type, (int)recvRpcPkts,
 			       (int)freeRpcPkts));
+
+			RpcDbgUpdatePktStateEx((int)bufHandle, PKT_STATE_NEW, 0, PKT_STATE_NA,  0, 0, type);
 		}
 
 		if (ipcInfoList[(int)type].pktIndCb != NULL)
@@ -669,6 +686,9 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 					_DBG_(RPC_TRACE
 					      ("RPC_BufferDelivery FAIL h=%d r=%d\n",
 					       (int)bufHandle, ret));
+				else
+					RpcDbgUpdatePktState((int)bufHandle, PKT_STATE_RPC_POST);
+
 
 				result = (ret == 0) ? RPC_RESULT_PENDING :
 				    RPC_RESULT_ERROR;
@@ -695,6 +715,7 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 			 ("k:IPC_FreeBuffer (No Handling) h=%d type=%d\r\n",
 			 (int)bufHandle, type));
 		    freeRpcPkts++;
+			RpcDbgUpdatePktState((int)bufHandle, PKT_STATE_PKT_FREE);
 		}
 		IPC_FreeBuffer(bufHandle);
 	}

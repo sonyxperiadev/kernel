@@ -221,8 +221,7 @@ void kRpcDebugPrintf(char *fmt, ...)
 	vsnprintf(buf, (MAX_LOG_SIZE - 1), fmt, ap);
 	va_end(ap);
 
-	if (gRpcLogToConsole)
-		printk(KERN_INFO "k:%s\n", buf);
+	printk(KERN_INFO "k:%s\n", buf);
 }
 
 ssize_t kRpcReadLogData(char *destBuf, size_t len)

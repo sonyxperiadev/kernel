@@ -104,6 +104,8 @@ static void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf,
 extern void cp_abort(void);
 #endif
 
+extern int RpcDbgDumpHistoryLogging(int type, int level);
+
 /*********************************************************************
 *
 *   Retrieve string from physical address
@@ -142,6 +144,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	IPC_U32 *Dump;
 	void __iomem *DumpVAddr;
 
+
 	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice())
 		&& ap_triggered == 0) {
@@ -149,6 +152,8 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
 		abort();
 	}
+	
+	RpcDbgDumpHistoryLogging(0, 0);
 
 #if defined(CONFIG_BRCM_CP_CRASH_DUMP) \
 	|| defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) \
@@ -404,6 +409,8 @@ void DUMP_CP_assert_log(void)
 		}
 #endif
 	}
+
+	RpcDbgDumpHistoryLogging(2, 1);
 
 	IPC_DEBUG(DBG_ERROR, "Starting CP RAM dump - do not power down...\n");
 

@@ -100,6 +100,9 @@ static int sysRpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 	_DBG(SYSRPC_TRACE(
 		"RPC_BufferDelivery PROCESS sysrpc mHandle=%x event=%d\n",
 		(int)mHandle, (int)data));
+	
+	RpcDbgUpdatePktState((int)data, PKT_STATE_SYSRPC_PROCESS);
+
 	RPC_HandleEvent(data);
 	return 0;
 }
@@ -123,6 +126,9 @@ static void sysRpcHandlerCbk(void *eventHandle)
 			(int)eventHandle));
 		RPC_PACKET_FreeBufferEx(eventHandle, 0);
 	}
+	else
+		RpcDbgUpdatePktState((int)eventHandle, PKT_STATE_SYSRPC_POST);
+
 }
 
 /****************************************************************************
