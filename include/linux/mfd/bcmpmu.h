@@ -26,7 +26,6 @@
 #include <linux/i2c-kona.h>
 
 #define	PMU_BITMASK_ALL		0xFFFFFFFF
-#define	PMU_REG_INIT_MAX	100
 
 struct bcmpmu;
 struct regulator_init_data;

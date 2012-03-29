@@ -27,6 +27,7 @@
 #include <linux/mfd/bcmpmu.h>
 
 struct bcmpmu_dt_batt_data {
+	int valid;
 	char *model;
 	uint32_t *voltcap_map_len;
 	uint32_t *voltcap_map_width;
@@ -40,6 +41,7 @@ struct bcmpmu_dt_batt_data {
 struct bcmpmu_dt_batt_data battdata = {0};
 
 struct bcmpmu_dt_pmu_data {
+	int valid;
 	uint32_t *cutoff;
 	uint32_t *fg_slp_curr_ua;
 	uint32_t *fg_factor;
@@ -102,6 +104,7 @@ int __init early_init_dt_scan_pmu(unsigned long node, const char *uname,
 		pmudata.reginit_size = size/4;
 		pmudata.reginit_data = (uint32_t *)prop;
 	}
+	pmudata.valid = 1;
 	return 1;
 }
 
@@ -162,6 +165,7 @@ int __init early_init_dt_scan_batt(unsigned long node, const char *uname,
 	else
 		battdata.model = (char *)prop;
 
+	battdata.valid = 1;
 	return 1;
 }
 
@@ -170,7 +174,10 @@ void bcmpmu_update_pdata_dt_batt(struct bcmpmu_platform_data *pdata)
 	uint32_t *p = battdata.voltcap_map;
 	uint32_t len = 0, wid = 0;
 	int i;
-	
+
+	if (battdata.valid == 0)
+		return;
+
 	if (battdata.eoc != 0)
 		pdata->chrg_eoc = be32_to_cpu(*battdata.eoc);
 	if (battdata.chrg_1c != NULL)
@@ -186,8 +193,8 @@ void bcmpmu_update_pdata_dt_batt(struct bcmpmu_platform_data *pdata)
 	if (battdata.voltcap_map_len != 0)
 		len = be32_to_cpu(*battdata.voltcap_map_len);
 
-	if (wid * len != battdata.voltcap_map_size) /* we have a padding in device tree */
-		printk(KERN_INFO "%s: battery volt cap table not match, width=0x%X, len=0x%X, size=%ld\n",
+	if (wid * len != battdata.voltcap_map_size)
+		printk(KERN_INFO "%s: batt v-c tbl err, w=0x%X, l=0x%X, size=%ld\n",
 			__func__, wid, len, battdata.voltcap_map_size);
 	else if (len != pdata->batt_voltcap_map_len) 
 		printk(KERN_INFO "%s: battery vcmap-size incorrect\n", __func__);
@@ -201,16 +208,20 @@ void bcmpmu_update_pdata_dt_batt(struct bcmpmu_platform_data *pdata)
 
 void bcmpmu_update_pdata_dt_pmu(struct bcmpmu_platform_data *pdata)
 {
-	uint32_t *p = pmudata.reginit_data;
+	uint32_t *p, *p1, *tbl;
 	uint32_t len = 0, wid = 0;
 	int i;
+
+	if (pmudata.valid == 0)
+		return;
 
 	if (pmudata.cutoff != 0)
 		pdata->cutoff_volt = be32_to_cpu(*pmudata.cutoff);
 	if (pmudata.fg_slp_curr_ua != NULL)
 		pdata->fg_slp_curr_ua = be32_to_cpu(*pmudata.fg_slp_curr_ua);
 	if (pmudata.fg_factor != 0)
-		pdata->fg_factor = (pdata->fg_factor * be32_to_cpu(*pmudata.fg_factor))/1000;
+		pdata->fg_factor = (pdata->fg_factor *
+			be32_to_cpu(*pmudata.fg_factor))/1000;
 	if (pmudata.fg_sns_res != 0)
 		pdata->fg_sns_res = be32_to_cpu(*pmudata.fg_sns_res);
 
@@ -220,17 +231,21 @@ void bcmpmu_update_pdata_dt_pmu(struct bcmpmu_platform_data *pdata)
 		len = be32_to_cpu(*pmudata.reginit_len);
 
 	if (wid * len != pmudata.reginit_size)
-		printk(KERN_INFO "%s: pmu reg init table not match, width=0x%X, len=0x%X, size=%ld\n",
+		printk(KERN_INFO "%s: pmu reg init table error, w=%d, l=%d size=%ld\n",
 			__func__, wid, len, pmudata.reginit_size);
-	else if (len > PMU_REG_INIT_MAX) 
-		printk(KERN_INFO "%s: pmu reg init table too big\n", __func__);
 	else {
-		pdata->init_max = len;
-		for (i=0; i<len; i++) {
-			pdata->init_data[i].map = be32_to_cpu(*p++);
-			pdata->init_data[i].addr = be32_to_cpu(*p++);
-			pdata->init_data[i].val = be32_to_cpu(*p++);
-			pdata->init_data[i].mask = be32_to_cpu(*p++);
+		tbl = kzalloc(len * sizeof(struct bcmpmu_rw_data), GFP_KERNEL);
+		if (tbl == NULL)
+			printk(KERN_INFO
+				"%s: failed to alloc mem for pdata->init_data.\n",
+				__func__);
+		else {
+			pdata->init_max = len;
+			p = pmudata.reginit_data;
+			p1 = tbl;
+			for (i = 0; i < pmudata.reginit_size; i++)
+				*p1++ = be32_to_cpu(*p++);
+			pdata->init_data = (struct bcmpmu_rw_data *)tbl;
 		}
 	}
 }

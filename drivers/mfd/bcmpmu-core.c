@@ -103,16 +103,38 @@ static ssize_t store_regwrite(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
+static ssize_t show_reginit(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
+	ssize_t count;
+	int i;
+	count = sprintf(buf, "BCMPMU reg init table\n");
+	for (i = 0; i < pdata->init_max; i++)
+		count += sprintf(buf+count,
+			"map=0x%X, addr=0x%X, val=0x%X, mask=0x%X\n",
+			pdata->init_data[i].map,
+			pdata->init_data[i].addr,
+			pdata->init_data[i].val,
+			pdata->init_data[i].mask);
+	return count;
+}
+
 static DEVICE_ATTR(adcreq, 0644, NULL, store_adc_req);
 static DEVICE_ATTR(rgltr, 0644, NULL, store_rgltr);
 static DEVICE_ATTR(regread, 0644, NULL, store_regread);
 static DEVICE_ATTR(regwrite, 0644, NULL, store_regwrite);
+static DEVICE_ATTR(reginit, 0644, show_reginit, NULL);
+static DEVICE_ATTR(test, 0644, NULL, NULL);
 
 static struct attribute *bcmpmu_core_attrs[] = {
 	&dev_attr_regread.attr,
 	&dev_attr_regwrite.attr,
 	&dev_attr_adcreq.attr,
 	&dev_attr_rgltr.attr,
+	&dev_attr_reginit.attr,
+	&dev_attr_test.attr,
 	NULL
 };
 
