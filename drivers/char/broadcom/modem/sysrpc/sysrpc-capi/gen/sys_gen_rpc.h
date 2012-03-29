@@ -7,8 +7,8 @@
 *   under the terms of the GNU General Public License version 2, available
 *    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this
-*   software in any way with any other Broadcom software provided under a license
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
@@ -20,7 +20,7 @@
 #ifndef SYS_GEN_MSG_H
 #define SYS_GEN_MSG_H
 
-//***************** < 1 > **********************
+/****************** < 1 > **********************/
 
 typedef struct {
 	UInt32 cmd;
@@ -79,7 +79,7 @@ typedef struct {
 	UInt32 val;
 } SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t;
 
-//***************** < 2 > **********************
+/****************** < 2 > **********************/
 
 bool_t xdr_CAPI2_CPPS_Control_Req_t(void *xdrs, CAPI2_CPPS_Control_Req_t *rsp);
 bool_t xdr_CAPI2_CPPS_Control_Rsp_t(void *xdrs, CAPI2_CPPS_Control_Rsp_t *rsp);
@@ -110,7 +110,7 @@ bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t(void *xdrs,
 						       SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t
 						       *rsp);
 
-//***************** < 3 > **********************
+/****************** < 3 > **********************/
 
 Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t *pReqMsg, UInt32 cmd,
 				   UInt32 address, UInt32 offset, UInt32 size);
@@ -129,9 +129,9 @@ Result_t Handle_SYS_SIMLOCKApi_SetStatusEx(RPC_Msg_t *pReqMsg, UInt8 simId,
 Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t *pReqMsg,
 						      UInt8 simId);
 
-//***************** < 12 > **********************
+/****************** < 12 > **********************/
 
-//***************************************************************************************
+/******************************************************************************/
 /**
 	Function response for the CAPI2_SYSRPC_PMU_IsSIMReady
 	@param		tid (in) Unique exchange/transaction id which is passed in the request
@@ -145,7 +145,7 @@ Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t *pReqMsg,
 void CAPI2_SYSRPC_PMU_IsSIMReady(UInt32 tid, UInt8 clientID,
 				 PMU_SIMLDO_t simldo);
 
-//***************************************************************************************
+/******************************************************************************/
 /**
 	Function response for the CAPI2_SYSRPC_PMU_ActivateSIM
 	@param		tid (in) Unique exchange/transaction id which is passed in the request
@@ -160,7 +160,7 @@ void CAPI2_SYSRPC_PMU_IsSIMReady(UInt32 tid, UInt8 clientID,
 void CAPI2_SYSRPC_PMU_ActivateSIM(UInt32 tid, UInt8 clientID,
 				  PMU_SIMLDO_t simldo, PMU_SIMVolt_t volt);
 
-//***************************************************************************************
+/******************************************************************************/
 /**
 	Function response for the SYS_SimLockApi_GetStatus
 	@param		tid (in) Unique exchange/transaction id which is passed in the request
@@ -177,7 +177,7 @@ void SYS_SimLockApi_GetStatus(UInt32 tid, UInt8 clientID, UInt8 simId,
 			      SYS_SIMLOCK_SIM_DATA_t *sim_data,
 			      Boolean is_testsim);
 
-//***************************************************************************************
+/******************************************************************************/
 /**
 	Function response for the SYS_SIMLOCKApi_SetStatusEx
 	@param		tid (in) Unique exchange/transaction id which is passed in the request
@@ -192,7 +192,7 @@ void SYS_SimLockApi_GetStatus(UInt32 tid, UInt8 clientID, UInt8 simId,
 void SYS_SIMLOCKApi_SetStatusEx(UInt32 tid, UInt8 clientID, UInt8 simId,
 				SYS_SIMLOCK_STATE_t *simlock_state);
 
-//***************************************************************************************
+/******************************************************************************/
 /**
 	Function response for the SYS_SimApi_GetCurrLockedSimlockTypeEx
 	@param		tid (in) Unique exchange/transaction id which is passed in the request
@@ -206,6 +206,6 @@ void SYS_SIMLOCKApi_SetStatusEx(UInt32 tid, UInt8 clientID, UInt8 simId,
 void SYS_SimApi_GetCurrLockedSimlockTypeEx(UInt32 tid, UInt8 clientID,
 					   UInt8 simId);
 
-//***************** < 16 > **********************
+/****************** < 16 > **********************/
 
 #endif

@@ -193,7 +193,7 @@ static int __devinit bcmpmu_rpc_probe(struct platform_device *pdev)
 	schedule_delayed_work(&prpc->work, msecs_to_jiffies(prpc->rate * 1000));
 	return 0;
 
-      err:
+err:
 	return ret;
 }
 

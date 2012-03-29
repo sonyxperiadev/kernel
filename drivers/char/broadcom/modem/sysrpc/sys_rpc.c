@@ -7,8 +7,8 @@
 *   under the terms of the GNU General Public License version 2, available
 *    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this
-*   software in any way with any other Broadcom software provided under a license
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
@@ -69,8 +69,8 @@ static void HandleSysEventRspCb(RPC_Msg_t *pMsg,
 				ResultDataBufHandle_t dataBufHandle,
 				UInt32 userContextData)
 {
-	//SYS_ReqRep_t* rsp;
-	// SYS_TRACE( "HandleSysEventRspCb msg=0x%x clientID=%d \n", pMsg->msgId, 0);
+	/*SYS_ReqRep_t* rsp; */
+	/* SYS_TRACE( "HandleSysEventRspCb msg=0x%x clientID=%d\n", pMsg->msgId, 0); */
 
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 }
@@ -119,7 +119,7 @@ static Boolean SysCopyPayload(MsgType_t msgType,
 void SYS_InitRpc(void)
 {
 	static int first_time = 1;
-	//UInt8 ret = 0;
+	/*UInt8 ret = 0; */
 
 	if (first_time) {
 		RPC_InitParams_t params = { 0 };
@@ -139,7 +139,7 @@ void SYS_InitRpc(void)
 
 		first_time = 0;
 
-		// SYS_TRACE( "SYS_InitRpc \n");
+		/* SYS_TRACE("SYS_InitRpc\n"); */
 	}
 }
 
@@ -183,7 +183,7 @@ Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t *pReqMsg, UInt32 cmd,
 	SYS_ReqRep_t data;
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
-	data.req_rep_u.CAPI2_CPPS_Control_Rsp.val = (UInt32)3;	//CPPS_CONTROL_NO_FFS_SUPPORT_ON_AP
+	data.req_rep_u.CAPI2_CPPS_Control_Rsp.val = (UInt32)3;	/*CPPS_CONTROL_NO_FFS_SUPPORT_ON_AP */
 
 	data.result = result;
 	Send_SYS_RspForRequest(pReqMsg, MSG_CPPS_CONTROL_RSP, &data);
@@ -197,7 +197,7 @@ Result_t Handle_CAPI2_FLASH_SaveImage(RPC_Msg_t *pReqMsg, UInt32 flash_addr,
 	SYS_ReqRep_t data;
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
-	data.req_rep_u.CAPI2_FLASH_SaveImage_Rsp.val = FALSE;	//(Boolean)FlashSaveData(flash_addr,length,(UInt8*)shared_mem_addr);
+	data.req_rep_u.CAPI2_FLASH_SaveImage_Rsp.val = FALSE;	/*(Boolean)FlashSaveData(flash_addr,length,(UInt8*)shared_mem_addr);*/
 
 	data.result = result;
 	Send_SYS_RspForRequest(pReqMsg, MSG_FLASH_SAVEIMAGE_RSP, &data);
@@ -232,7 +232,7 @@ void SysApi_GetSimLockStatus(ClientInfo_t *inClientInfoPtr,
 
 	if (res == RESULT_TIMER_EXPIRED) {
 		SYS_TRACE
-		    ("SysApi_GetSimLockStatus WARNING!!! (Timeout) Check if AP is handling this message \n");
+		    ("SysApi_GetSimLockStatus WARNING!!! (Timeout) Check if AP is handling this message\n");
 		simlock_state->network_lock_enabled = FALSE;
 		simlock_state->network_subset_lock_enabled = FALSE;
 		simlock_state->service_provider_lock_enabled = FALSE;
