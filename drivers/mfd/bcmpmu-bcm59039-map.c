@@ -174,6 +174,10 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 		.mask = 0x03,   .ro = 0, .shift = 0},
 	[PMU_REG_HSPGA1] =		{.map = 0x01, .addr = 0xA6, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HSPGA2] =		{.map = 0x01, .addr = 0xA7, .mask = 0xFF, .ro = 0},
+	[PMU_REG_HSPGA1_LGAIN] = {
+		.map = 0x01, .addr = 0xA6, .mask = 0x3F, .ro = 0},
+	[PMU_REG_HSPGA2_RGAIN] = {
+		.map = 0x01, .addr = 0xA7, .mask = 0x3F, .ro = 0},
 	[PMU_REG_HSDRV_DISSC] =		{.map = 0x01, .addr = 0xA3, .mask = 0x10, .ro = 0, .shift = 4},
 	[PMU_REG_IHFALC_BYPASS] =	{.map = 0x01, .addr = 0x89, .mask = 0x04, .ro = 0, .shift = 2},
 	/* charge */

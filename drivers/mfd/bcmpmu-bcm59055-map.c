@@ -140,6 +140,10 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {	/* revisit 
 		.ro = 0, .shift = 6},
 	[PMU_REG_HSPGA1] = {.map = 0x01, .addr = 0x9E, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HSPGA2] = {.map = 0x01, .addr = 0x9F, .mask = 0xFF, .ro = 0},
+	[PMU_REG_HSPGA1_LGAIN] = {
+		.map = 0x01, .addr = 0x9E, .mask = 0x3F, .ro = 0},
+	[PMU_REG_HSPGA2_RGAIN] = {
+		.map = 0x01, .addr = 0x9F, .mask = 0x3F, .ro = 0},
 	[PMU_REG_HSPGA3] = {.map = 0x01, .addr = 0xA0, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HSDRV_DISSC] = {.map = 0x01, .addr = 0x9B, .mask = 0x10,
 		.ro = 0, .shift = 4},
