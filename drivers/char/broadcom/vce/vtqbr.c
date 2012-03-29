@@ -181,7 +181,7 @@ vtq_proxy_image_id_t vtqb_register_image(struct vtqb_context *ctx,
 				      text, textsz,
 				      data, datasz,
 				      datamemreq);
-	if (image < 0) {
+	if (image == NULL) {
 		err_print("failed to register image\n");
 		goto err_register_image;
 	}

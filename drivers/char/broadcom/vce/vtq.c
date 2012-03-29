@@ -587,9 +587,6 @@ struct vtq_image *vtq_register_image(struct vtq_context *ctx,
 		goto err_find_image_id;
 	}
 
-	kref_init(&image->ref);
-	INIT_WORK(&image->unregister_work, put_image_work);
-
 	image->bitmap = 0;
 
 	image->dmainfo.sz = textsz + datasz;
@@ -615,6 +612,9 @@ struct vtq_image *vtq_register_image(struct vtq_context *ctx,
 		memcpy(imagecopy + image->dataoffset, data, datasz);
 	}
 
+	kref_init(&image->ref);
+	INIT_WORK(&image->unregister_work, put_image_work);
+
 	mutex_unlock(&ctx->vce->host_mutex);
 
 	/* success */
@@ -630,6 +630,7 @@ struct vtq_image *vtq_register_image(struct vtq_context *ctx,
 	/* dma_free_coherent */
 err_dma_alloc:
 
+	kfree(image);
 err_find_image_id:
 err_bad_image_param:
 	mutex_unlock(&ctx->vce->host_mutex);
