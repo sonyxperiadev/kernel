@@ -30,6 +30,7 @@
 #include <linux/workqueue.h>
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
+#include <linux/if_arp.h>
 
 #define CSL_TYPES_H
 #include <linux/broadcom/bcm_fuse_net_if.h>
@@ -62,10 +63,11 @@ extern unsigned char SYS_GenClientID(void);
 /**
  * Packet Data EndPoint buffer pool info
  */
-#define BCM_NET_MAX_DATA_LEN       1600	/* bytes */
+#define BCM_NET_MAX_DATA_LEN       1500	/* bytes */
 #define BCM_NET_MAX_NUM_PKTS       250	/* packets */
 
 #define BCM_DUALSIM_SIMID_NETIOCTL (SIOCDEVPRIVATE + 1)
+#define BCM_MAX_SIM_ID 2
 
 /* ip protocol header */
 #define IPV6_PROTOCOL_HEADER 0x60
@@ -290,7 +292,7 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType,
 	memcpy(skb_put(skb, data_len), data_ptr, data_len);
 
 	skb->dev = ndrvr_info_ptr->dev_ptr;
-	skb->ip_summed = CHECKSUM_UNNECESSARY;	/* don't check it */
+	//skb->ip_summed = CHECKSUM_UNNECESSARY;	/* don't check it */
 	skb->pkt_type = PACKET_HOST;
 	ndrvr_info_ptr->dev_ptr->last_rx = jiffies;
 
@@ -518,16 +520,33 @@ int bcm_fuse_net_config(struct net_device *dev_ptr, struct ifmap *map)
 */
 int bcm_fuse_net_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 {
+	int i;
+        int sim_id = 3;
 
-	int i, sim_id = 3;
+	BNET_DEBUG(DBG_INFO, "bcm_fuse_net_ioctl cmd=%d\n", cmd);
 
 	if (BCM_DUALSIM_SIMID_NETIOCTL != cmd)
-		BNET_DEBUG(DBG_INFO, "%s: Incorrect IOCTL ID 0x%x\n",
+	{
+	    BNET_DEBUG(DBG_INFO, "%s: Incorrect IOCTL ID 0x%x\n",
 			   __FUNCTION__, cmd);
+	    return -ENOTTY;
+	}
+
+	//get sim_id
+        if (copy_from_user(&sim_id, ifr->ifr_data, sizeof(int)))
+        {
+            BNET_DEBUG(DBG_ERROR, "error reading ifr_data\n");
+            return -EFAULT;
+        }
+
+        if ( (sim_id<0) || (sim_id>BCM_MAX_SIM_ID))
+        {
+            BNET_DEBUG(DBG_ERROR, "invalid sim id=%d", sim_id);
+            return -EINVAL;
+        }
 
 	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
 		if (g_net_dev_tbl[i].dev_ptr == dev) {
-			sim_id = *(int *)ifr->ifr_data;
 			g_net_dev_tbl[i].sim_id = sim_id;
 			BNET_DEBUG(DBG_ERROR,
 				   "%s: g_net_dev_tbl[%d]=0x%x, a_sim_id:%d, sim_id:%d\n",
@@ -565,6 +584,7 @@ static void bcm_fuse_net_init(struct net_device *dev)
 	dev->mtu = BCM_NET_MAX_DATA_LEN;
 	dev->tx_queue_len = BCM_NET_MAX_NUM_PKTS;
 	dev->flags = IFF_NOARP | IFF_DYNAMIC;
+	dev->type  = ARPHRD_NONE;   //per MobC00183378 request
 }
 
 /**
