@@ -186,6 +186,7 @@ struct _TPcm_Stream_Ctrls {
 	snd_pcm_uframes_t	 stream_hw_ptr;
 	TIDChanOfDev	dev_prop;
 	void   *pSubStream;
+	struct completion stopCompletion;
 	struct completion *pStopCompletion;
 
 };

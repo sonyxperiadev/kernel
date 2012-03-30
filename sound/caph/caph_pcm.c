@@ -205,6 +205,7 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 	int res;
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	int substream_number = substream->number;
+	struct completion *compl_ptr;
 
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		substream_number += CTL_STREAM_PANEL_PCMIN - 1;
@@ -220,10 +221,20 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 	aTrace(LOG_ALSA_INTERFACE, "PcmHwFree:completion %p stream #%d\n",
 		chip->streamCtl[substream_number].pStopCompletion,
 		substream->number);
-	if (chip->streamCtl[substream_number].pStopCompletion) {
-		wait_for_completion(chip->streamCtl[substream_number].
-			pStopCompletion);
-		kfree(chip->streamCtl[substream_number].pStopCompletion);
+	compl_ptr = chip->streamCtl[substream_number].pStopCompletion;
+	if (compl_ptr) {
+		long ret;
+		#define	TIMEOUT_STOP_REQ_MS	30000
+		ret = wait_for_completion_interruptible_timeout(compl_ptr,
+			msecs_to_jiffies(TIMEOUT_STOP_REQ_MS));
+		/* The return value is -ERESTARTSYS if interrupted,      */
+		/* 0 if timed out, positive (at least 1, or number of jiffies*/
+		/* left till timeout) if completed.                         */
+		if (ret <= 0) {
+			aError("ERROR timeout waiting for STOP REQ."
+				"t=%d ret=%ld\n", TIMEOUT_STOP_REQ_MS, ret);
+			BUG();
+		}
 		chip->streamCtl[substream_number].pStopCompletion = NULL;
 		aTrace(LOG_ALSA_INTERFACE, "Release completion\n");
 	}
@@ -503,17 +514,9 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 			     "ACTION_AUD_StopPlay param_stop.stream %d\n",
 			     param_stop.stream);
 
-			compl_ptr =
-				kzalloc(sizeof(struct completion), GFP_KERNEL);
-			if (compl_ptr == NULL) {
-				aTrace(LOG_ALSA_INTERFACE,
-					"%s cannot create completion at %d\n",
-					__func__, __LINE__);
-				return -ENOMEM;
-			}
+			compl_ptr = &chip->streamCtl[substream_number]
+				.stopCompletion;
 			init_completion(compl_ptr);
-			CAPH_ASSERT(chip->streamCtl[substream_number]
-				.pStopCompletion == NULL);
 			chip->streamCtl[substream_number].pStopCompletion
 				= compl_ptr;
 
@@ -846,17 +849,9 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 
 			param_stop.callMode = callMode;
 
-			compl_ptr =
-				kzalloc(sizeof(struct completion), GFP_KERNEL);
-			if (compl_ptr == NULL) {
-				aTrace(LOG_ALSA_INTERFACE,
-					"%s cannot create completion at %d\n",
-					__func__, __LINE__);
-				return -ENOMEM;
-			}
+			compl_ptr = &chip->streamCtl[substream_number]
+				.stopCompletion;
 			init_completion(compl_ptr);
-			CAPH_ASSERT(chip->streamCtl[substream_number]
-				.pStopCompletion == NULL);
 			chip->streamCtl[substream_number].pStopCompletion
 				= compl_ptr;
 
