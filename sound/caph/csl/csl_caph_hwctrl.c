@@ -3687,6 +3687,11 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID,
 
 	csl_caph_hwctrl_PrintPath(path);
 
+	if (path->sink[sinkNo] == CSL_CAPH_DEV_HS ||
+	    path->sink[sinkNo] == CSL_CAPH_DEV_IHF) {
+		usleep_range(2*1000, 3*1000);
+		csl_caph_hwctrl_UnmuteSink(pathID, path->sink[sinkNo]);
+	}
 	return RESULT_OK;
 }
 
