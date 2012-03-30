@@ -247,7 +247,7 @@ static int rhea_wifi_set_carddetect(int val)
 		bcm_sdiowl_term();
 	return 0;
 }
-
+#if 0
 static int rhea_wifi_power_state;
 
 struct fixed_voltage_data {
@@ -283,13 +283,14 @@ static struct fixed_voltage_config rhea_vwlan = {
 	.init_data = &rhea_vmmc5,
 };
 
-//static struct platform_device omap_vwlan_device = {
-//	.name = "reg-fixed-voltage",
-//	.id = 1,
-//	.dev = {
-//		.platform_data = &rhea_vwlan,
-//		},
-//};
+static struct platform_device omap_vwlan_device = {
+	.name = "reg-fixed-voltage",
+	.id = 1,
+	.dev = {
+		.platform_data = &rhea_vwlan,
+		},
+};
+#endif
 
 static int rhea_wifi_power(int on)
 {
