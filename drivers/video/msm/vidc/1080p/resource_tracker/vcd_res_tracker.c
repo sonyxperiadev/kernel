@@ -618,8 +618,9 @@ u32 res_trk_get_firmware_addr(struct ddl_buf_addr *firm_addr)
 			   __func__);
 		return -EINVAL;
 	}
-	memcpy(firm_addr, &resource_context.firmware_addr,
-		sizeof(struct ddl_buf_addr));
+	if (!res_trk_check_for_sec_session())
+		memcpy(firm_addr, &resource_context.firmware_addr,
+				sizeof(struct ddl_buf_addr));
 	return 0;
 }
 
