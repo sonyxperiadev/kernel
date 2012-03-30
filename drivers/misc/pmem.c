@@ -457,7 +457,7 @@ lock_mm:
 	return ret;
 }
 
-/* Must be called with p_info->lock held */
+#ifdef CONFIG_ANDROID_PMEM_LOW_MEMORY_KILLER
 static bool pmem_watermark_ok(struct pmem_info *p_info)
 {
 	get_dev_cma_info(&p_info->pdev->dev, &p_info->cma);
@@ -512,6 +512,20 @@ out:
 	down_write(&data->sem);
 	return answer;
 }
+
+#else
+
+static bool pmem_watermark_ok(struct pmem_info *p_info)
+{
+	return true;
+}
+
+static bool should_retry_allocation(int id, struct pmem_data *data)
+{
+	return false;
+}
+
+#endif /* CONFIG_ANDROID_PMEM_LOW_MEMORY_KILLER */
 
 static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 {
