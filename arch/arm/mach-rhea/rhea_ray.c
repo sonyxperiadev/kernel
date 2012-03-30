@@ -211,6 +211,11 @@ static struct regulator_init_data bcm59055_simldo_data = {
 };
 
 struct regulator_consumer_supply h6ldo_supply[] = {
+	{.supply = "vdd_sdxc"},
+};
+
+struct regulator_consumer_supply hv4_supply[] = {
+	{.supply = "hv4ldo_uc"},
 	{.supply = "vdd_sdio"},
 };
 
@@ -359,7 +364,7 @@ static struct i2c_board_info __initdata pmu_info[] = {
 
 #ifdef CONFIG_MFD_BCM59039
 struct regulator_consumer_supply hv6_supply[] = {
-	{.supply = "2v9sdxc"},
+	{.supply = "vdd_sdxc"},
 };
 
 struct regulator_consumer_supply hv4_supply[] = {
@@ -952,8 +957,10 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	 .ahb_clk_name = "sdio1_ahb_clk",
 	 .sleep_clk_name = "sdio1_sleep_clk",
 	 .peri_clk_rate = 48000000,
-	 /* vdd_sdc regulator:needed to support UHS SD cards */
+	 /*The SD card regulator*/
 	 .vddo_regulator_name = "vdd_sdio",
+	 /*The SD controller regulator*/
+	 .vddsdxc_regulator_name = "vdd_sdxc",
 	 },
 	{			/* SDIO2 */
 	 .id = 1,

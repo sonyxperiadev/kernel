@@ -215,6 +215,7 @@ static struct regulator_init_data bcm59039_hv2ldo_data = {
 
 __weak struct regulator_consumer_supply hv3_supply[] = {
 	{.supply = "hv3"},
+	{.supply = "dummy"}, /* Overridden in board file */
 };
 static struct regulator_init_data bcm59039_hv3ldo_data = {
 	.constraints = {
@@ -223,7 +224,7 @@ static struct regulator_init_data bcm59039_hv3ldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv3_supply),
 	.consumer_supplies = hv3_supply,
@@ -265,7 +266,7 @@ static struct regulator_init_data bcm59039_hv5ldo_data = {
 };
 
 __weak struct regulator_consumer_supply hv6_supply[] = {
-	{.supply = "vdd_sdio"},
+	{.supply = "vdd_sdxc"},
 };
 static struct regulator_init_data bcm59039_hv6ldo_data = {
 	.constraints = {

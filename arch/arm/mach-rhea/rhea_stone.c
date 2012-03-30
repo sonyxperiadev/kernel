@@ -180,6 +180,17 @@ extern int rhea_wifi_status_register(
 #define TANGO_GPIO_RESET_PIN			70
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ 	14
 
+#ifdef CONFIG_MFD_BCM59039
+struct regulator_consumer_supply hv6_supply[] = {
+	{.supply = "vdd_sdxc"},
+};
+
+struct regulator_consumer_supply hv3_supply[] = {
+	{.supply = "hv3"},
+	{.supply = "vdd_sdio"},
+};
+#endif
+
 #ifdef CONFIG_KEYBOARD_BCM
 /*!
  * The keyboard definition structure.
@@ -732,8 +743,10 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.ahb_clk_name = "sdio1_ahb_clk",
 		.sleep_clk_name = "sdio1_sleep_clk",
 		.peri_clk_rate = 48000000,
-		/* vdd_sdc regulator: needed to support UHS SD cards */
+		/*The SD card regulator*/
 		.vddo_regulator_name = "vdd_sdio",
+		/*The SD controller regulator*/
+		.vddsdxc_regulator_name = "vdd_sdxc",
 	},
 	{ /* SDIO1 */
 		.id = 1,

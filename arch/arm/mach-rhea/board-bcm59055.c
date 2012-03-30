@@ -278,7 +278,7 @@ static struct regulator_init_data bcm59055_hv3ldo_data = {
 
 __weak struct regulator_consumer_supply hv4_supply[] = {
 	{.supply = "hv4ldo_uc"},
-	{.supply = "2v9sdxc"},
+	{.supply = "vdd_sdio"},
 };
 static struct regulator_init_data bcm59055_hv4ldo_data = {
 	.constraints = {
@@ -315,7 +315,7 @@ static struct regulator_init_data bcm59055_hv5ldo_data = {
 
 __weak struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "hv6ldo_uc"},
-	{.supply = "vdd_sdio"},
+	{.supply = "vdd_sdxc"},
 };
 static struct regulator_init_data bcm59055_hv6ldo_data = {
 	.constraints = {

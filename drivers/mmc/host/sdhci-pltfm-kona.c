@@ -744,13 +744,13 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 		gpio_free(dev->cd_gpio);
 	}
 
-	if (dev->vdd_sdxc_regulator) {
-		regulator_disable(dev->vdd_sdxc_regulator);
-		regulator_put(dev->vdd_sdxc_regulator);
-	}
 	if (dev->vddo_sd_regulator) {
 		regulator_disable(dev->vddo_sd_regulator);
 		regulator_put(dev->vddo_sd_regulator);
+	}
+	if (dev->vdd_sdxc_regulator) {
+		regulator_disable(dev->vdd_sdxc_regulator);
+		regulator_put(dev->vdd_sdxc_regulator);
 	}
 
 	proc_term(pdev);
@@ -793,8 +793,8 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 
 	ret = sdhci_suspend_host(host, state);
 
-	if (dev->vdd_sdxc_regulator) {
-		regulator_disable(dev->vdd_sdxc_regulator);
+	if (dev->vddo_sd_regulator) {
+		regulator_disable(dev->vddo_sd_regulator);
 	}
 
 	if (ret) {
@@ -812,8 +812,8 @@ static int sdhci_pltfm_resume(struct platform_device *pdev)
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
 
-	if (dev->vdd_sdxc_regulator) {
-		int retn = regulator_enable(dev->vdd_sdxc_regulator);
+	if (dev->vddo_sd_regulator) {
+		int retn = regulator_enable(dev->vddo_sd_regulator);
 		if (retn)
 			pr_err("Enabling sdxc regulator failed during resume\n");
 	}
@@ -983,21 +983,21 @@ int sdio_stop_clk(enum sdio_devtype devtype, int insert)
 }
 EXPORT_SYMBOL(sdio_stop_clk);
 
-static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name)
+static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev, char *reg_name)
 {
 	int ret;
 
-	dev->vddo_sd_regulator = regulator_get(NULL, reg_name);
+	dev->vdd_sdxc_regulator = regulator_get(NULL, reg_name);
 
-	if (!IS_ERR(dev->vddo_sd_regulator)) {
-		ret = regulator_enable(dev->vddo_sd_regulator);
+	if (!IS_ERR(dev->vdd_sdxc_regulator)) {
+		ret = regulator_enable(dev->vdd_sdxc_regulator);
 		if (ret < 0) {
-			pr_err("%s: can't Enable regulator\n",
+			pr_err("%s: can't Enable sdxc controller regulator\n",
 			       reg_name);
 			ret = -1;
 		} else {
 			/* Configure 3.3V default */
-			ret = regulator_set_voltage(dev->vddo_sd_regulator,
+			ret = regulator_set_voltage(dev->vdd_sdxc_regulator,
 						    3300000, 3300000);
 			if (ret < 0) {
 				pr_err("%s: can't set 3.3V\n",
@@ -1010,27 +1010,31 @@ static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name)
 			}
 		}
 	} else {
-		pr_err("%s: could not get regulator\n", reg_name);
+		pr_err("%s: could not get sdxc regulator\n", reg_name);
+		/* We have found out the errno and need not do IS_ERR
+		 * in future.
+		 */
+		dev->vdd_sdxc_regulator = NULL;
 		ret = -1;
 	}
 	return ret;
 }
 
-static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev, char *reg_name)
+static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name)
 {
 	int ret;
 
-	dev->vdd_sdxc_regulator = regulator_get(NULL, reg_name);
+	dev->vddo_sd_regulator = regulator_get(NULL, reg_name);
 
-	if (!IS_ERR(dev->vdd_sdxc_regulator)) {
-		ret = regulator_enable(dev->vdd_sdxc_regulator);
+	if (!IS_ERR(dev->vddo_sd_regulator)) {
+		ret = regulator_enable(dev->vddo_sd_regulator);
 		if (ret < 0) {
-			pr_err("%s: can't Enable regulator\n",
+			pr_err("%s: can't Enable sd card regulator\n",
 			       reg_name);
 			ret = -1;
 		} else {
 			/* Configure 2.9V default */
-			ret = regulator_set_voltage(dev->vdd_sdxc_regulator,
+			ret = regulator_set_voltage(dev->vddo_sd_regulator,
 						    2900000, 2900000);
 			if (ret < 0) {
 				pr_err("%s: can't set 2.9V\n",
@@ -1043,7 +1047,11 @@ static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev, char *reg_name)
 			}
 		}
 	} else {
-		pr_err("%s: could not get regulator\n", reg_name);
+		pr_err("%s: could not get sd card regulator\n", reg_name);
+		/* We have found out the errno and need not do IS_ERR
+		 * in future.
+		 */
+		dev->vddo_sd_regulator = NULL;
 		ret = -1;
 	}
 	return ret;
@@ -1053,9 +1061,9 @@ int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host)
 	struct sdio_dev *dev = sdhci_priv(host);
 	int ret = 0;
 
-	if (dev->vddo_sd_regulator) {
+	if (dev->vdd_sdxc_regulator) {
 		ret =
-		    regulator_set_voltage(dev->vddo_sd_regulator, 3300000,
+		    regulator_set_voltage(dev->vdd_sdxc_regulator, 3300000,
 					  3300000);
 		if (ret < 0)
 			dev_err(dev->dev, "cant set vddo regulator to 3.3V!\n");
@@ -1070,9 +1078,9 @@ int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host)
 	struct sdio_dev *dev = sdhci_priv(host);
 	int ret = 0;
 
-	if (dev->vddo_sd_regulator) {
+	if (dev->vdd_sdxc_regulator) {
 		ret =
-		    regulator_set_voltage(dev->vddo_sd_regulator, 1800000,
+		    regulator_set_voltage(dev->vdd_sdxc_regulator, 1800000,
 					  1800000);
 		if (ret < 0)
 			dev_err(dev->dev, "Cant set vddo regulator to 1.8V!\n");
