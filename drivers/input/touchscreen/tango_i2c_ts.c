@@ -191,6 +191,8 @@ static int g_num_bad_events_per_touch		= 0;
  * The surface X coordinate of the center of the touching ellipse */
 static int g_blob_size						= 0;
 
+static int g_tango_probe_flag			= 0;
+
 static int mod_param_debug = (I2C_TS_DRIVER_SHOW_RAW_EVENTS << 1) &
 							 I2C_TS_DRIVER_SHOW_INPUT_EVENTS;
 module_param(mod_param_debug, int, 0644);
@@ -1015,6 +1017,23 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	else
 		gp_i2c_ts->layout = TANGO_S32_LAYOUT;
 
+
+	g_low_power_changed = 1;
+	rc = i2c_ts_driver_check_mod_params();
+
+	if (rc < 0)
+	{  /* This also ensures that the slave is actually there! */
+		TS_ERR("%s i2c_ts_driver_probe() failed to write to slave, rc = %d\n",
+				 I2C_TS_DRIVER_NAME, rc);
+		g_tango_probe_flag = 1;
+		gpio_free(gp_i2c_ts->gpio_reset_pin);
+		goto ERROR2;
+	}
+	else
+	{
+		rc = 0;
+	}
+
 	if (p_tango_i2c_dev->dummy_client) {
 		rc = device_create_file(&p_tango_i2c_dev->dummy_client->dev,
 						&dev_attr);
@@ -1042,21 +1061,6 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	p_tango_i2c_dev->suspend_desc.resume = i2c_ts_late_resume,
 	register_early_suspend(&p_tango_i2c_dev->suspend_desc);
 #endif
-
-
-	g_low_power_changed = 1;
-	rc = i2c_ts_driver_check_mod_params();
-
-	if (rc < 0)
-	{  /* This also ensures that the slave is actually there! */
-		TS_ERR("%s i2c_ts_driver_probe() failed to write to slave, rc = %d\n",
-				 I2C_TS_DRIVER_NAME, rc);
-		goto ERROR2;
-	}
-	else
-	{
-		rc = 0;
-	}
 
 	if ((rc = gpio_request(gp_i2c_ts->gpio_irq_pin,
 						   "i2c touch screen driver")) != 0)
@@ -1254,6 +1258,10 @@ int __init i2c_ts_driver_init(void)
 	}
 
 	rc = i2c_add_driver(&tango_i2c_driver);
+
+	/* Probe fails, delet driver */
+	if (g_tango_probe_flag)
+	    i2c_del_driver(&tango_i2c_driver);
 
 	if (rc != 0)
 	{
