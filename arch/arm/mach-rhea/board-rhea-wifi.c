@@ -247,8 +247,9 @@ static int rhea_wifi_set_carddetect(int val)
 		bcm_sdiowl_term();
 	return 0;
 }
-#if 0
+
 static int rhea_wifi_power_state;
+#if 0
 
 struct fixed_voltage_data {
 	struct regulator_desc desc;
