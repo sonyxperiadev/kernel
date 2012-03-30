@@ -305,8 +305,7 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
 				break;
 		}
 		if (index >= MAX_CHANNELS) {
-			_DBG_(RPC_TRACE("RPC_PACKET_AllocateBuffer itype=%d \
-				invalid channel %d\r\n", interfaceType, index));
+			_DBG_(RPC_TRACE("RPC_PACKET_AllocateBuffer itype=%d invalid channel %d\r\n", interfaceType, index));
 			RPC_UNLOCK;
 			return NULL;
 		}
@@ -492,10 +491,10 @@ RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 		       (int)dataBufHandle, (int)rpcClientID, (int)recvRpcPkts,
 		       (int)freeRpcPkts));
 		IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
-		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_PKT_FREE, rpcClientID,PKT_STATE_CID_FREE,  0, 0, 0xFF);
+		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_PKT_FREE, rpcClientID, PKT_STATE_CID_FREE,  0, 0, 0xFF);
 	} else {
 
-		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA, rpcClientID,PKT_STATE_CID_FREE,  0, 0, 0xFF);
+		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA, rpcClientID, PKT_STATE_CID_FREE,  0, 0, 0xFF);
 
 		_DBG_(RPC_TRACE
 		      ("k:RPC_PACKET_FreeBufferEx h=%d, ref=%d, cid=%d\r\n",

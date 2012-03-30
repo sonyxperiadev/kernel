@@ -155,7 +155,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
 		abort();
 	}
-	
+
 	RpcDbgDumpHistoryLogging(0, 0);
 
 #if defined(CONFIG_BRCM_CP_CRASH_DUMP) \

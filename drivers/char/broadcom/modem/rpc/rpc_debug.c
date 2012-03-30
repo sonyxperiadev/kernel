@@ -2,14 +2,14 @@
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
@@ -96,8 +96,8 @@ extern UInt32 freeRpcPkts;
 
 atomic_t gRpcDbgPktGenCurIndex = ATOMIC_INIT(-1);
 atomic_t gRpcGlobalCount = ATOMIC_INIT(0);
-//atomic_t gRpcTotalRcvPkts = ATOMIC_INIT(0);
-//atomic_t gRpcTotalFreePkts = ATOMIC_INIT(0);
+/*atomic_t gRpcTotalRcvPkts = ATOMIC_INIT(0); */
+/*atomic_t gRpcTotalFreePkts = ATOMIC_INIT(0); */
 atomic_t gLastGoodIndex = ATOMIC_INIT(0);
 
 void RpcDbgLogGenInfo(char *logStr, UInt8 cid, UInt32 pktHandle, UInt32 cmd1,
@@ -120,7 +120,9 @@ void RpcDbgLogGenInfo(char *logStr, UInt8 cid, UInt32 pktHandle, UInt32 cmd1,
 	gRpcDbgGenInfoList[curIndex].pktHandle = pktHandle;
 	gRpcDbgGenInfoList[curIndex].ts = jiffies_to_msecs(jiffies);
 	strncpy(gRpcDbgGenInfoList[curIndex].data, logStr, MAX_DATA_STR);
-	gRpcDbgGenInfoList[curIndex].data[MAX_DATA_STR] = '\0';	//The size is (MAX_DATA_STR + 1)
+
+	/*The size is (MAX_DATA_STR + 1) */
+	gRpcDbgGenInfoList[curIndex].data[MAX_DATA_STR] = '\0';
 }
 
 void RpcDbgUpdatePktStateEx(UInt32 pktHandle, UInt32 pktstatus, UInt8 cid,
@@ -129,18 +131,18 @@ void RpcDbgUpdatePktStateEx(UInt32 pktHandle, UInt32 pktstatus, UInt8 cid,
 {
 	int i, k;
 
-	//cache read
+	/*cache read */
 	i = atomic_read(&gLastGoodIndex);
 
-	//no hit?
+	/*no hit? */
 	if (gRpcDbgPktStatusList[i].pktHandle != pktHandle) {
-		//Look for existing
+		/*Look for existing */
 		for (i = 0; i < MAX_RPC_PACKETS; i++) {
 			if (gRpcDbgPktStatusList[i].pktHandle == pktHandle)
 				break;
 		}
 
-		//Look for unused 
+		/*Look for unused  */
 		if (i == MAX_RPC_PACKETS) {
 			for (i = 0; i < MAX_RPC_PACKETS; i++) {
 				if (gRpcDbgPktStatusList[i].pktHandle == 0) {
@@ -152,7 +154,7 @@ void RpcDbgUpdatePktStateEx(UInt32 pktHandle, UInt32 pktstatus, UInt8 cid,
 		}
 
 	}
-	//Set Data
+	/*Set Data */
 	if (i < MAX_RPC_PACKETS) {
 		if (gRpcDbgPktStatusList[i].pktHandle == pktHandle) {
 			gRpcDbgPktStatusList[i].ts = jiffies_to_msecs(jiffies);
@@ -226,7 +228,7 @@ char *GetStatusStr(UInt32 status)
 	return "";
 }
 
-int RbcDbgDumpGenInfo(RpcOutputContext_t * c, int *offset, int maxlimit)
+int RbcDbgDumpGenInfo(RpcOutputContext_t *c, int *offset, int maxlimit)
 {
 	int i, ret = 0, limit = 0;
 
@@ -235,7 +237,7 @@ int RbcDbgDumpGenInfo(RpcOutputContext_t * c, int *offset, int maxlimit)
 
 	if (*offset == 0) {
 		RpcDbgDumpStr(c,
-			      "\n************** RPC GEN DUMP BEGIN ***********\n");
+		      "\n************** RPC GEN DUMP BEGIN ***********\n");
 	}
 
 	for (i = (*offset); i < RPC_DBG_GEN_MAX; i++) {
@@ -264,7 +266,7 @@ int RbcDbgDumpGenInfo(RpcOutputContext_t * c, int *offset, int maxlimit)
 	return 0;
 }
 
-int RpcDbgDumpPktState(RpcOutputContext_t * c, int *offset, int maxlimit)
+int RpcDbgDumpPktState(RpcOutputContext_t *c, int *offset, int maxlimit)
 {
 	int i, k, ret = 0, limit = 0;
 
@@ -273,7 +275,7 @@ int RpcDbgDumpPktState(RpcOutputContext_t * c, int *offset, int maxlimit)
 
 	if (*offset == 0) {
 		RpcDbgDumpStr(c,
-			      "\n************** RPC PKT State Begin ***********\n");
+		      "\n************** RPC PKT State Begin ***********\n");
 	}
 
 	for (i = (*offset); i < MAX_RPC_PACKETS; i++) {
@@ -326,7 +328,7 @@ int RpcDbgDumpPktState(RpcOutputContext_t * c, int *offset, int maxlimit)
 	return 0;
 }
 
-int RpcDbgDumpHdr(RpcOutputContext_t * c)
+int RpcDbgDumpHdr(RpcOutputContext_t *c)
 {
 	RpcDbgDumpStr(c, "\n************** RPC/IPC DUMP ***********\n");
 	RpcDbgDumpStr(c, "\nRcvCount=%d FreeCount=%d\n", (int)recvRpcPkts,
@@ -341,7 +343,7 @@ void RpcDbgInit(void)
 	memset(&gRpcDbgPktStatusList[0], 0, sizeof(gRpcDbgPktStatusList));
 }
 
-int RpcDbgDumpStr(RpcOutputContext_t * c, char *fmt, ...)
+int RpcDbgDumpStr(RpcOutputContext_t *c, char *fmt, ...)
 {
 	int n = 0;
 	va_list ap;
@@ -353,12 +355,12 @@ int RpcDbgDumpStr(RpcOutputContext_t * c, char *fmt, ...)
 	vsnprintf(c->buffer, MAX_BUF_LEN, fmt, ap);
 	va_end(ap);
 
-	if (c->type == 0) {
+	if (c->type == 0)
 		printk(c->buffer);
-	} else if (c->type == 1 && c->seq) {
+	else if (c->type == 1 && c->seq)
 		n = seq_printf(c->seq, c->buffer);
-	} else if (c->type == 2) {
+	else if (c->type == 2)
 		BCMLOG_LogCPCrashDumpString(c->buffer);
-	}
+
 	return n;
 }
