@@ -85,21 +85,25 @@ static int mmc_queue_thread(void *d)
 		set_current_state(TASK_RUNNING);
 
 #ifdef CONFIG_MMC_PERF_PROFILING
-		bytes_xfer = blk_rq_bytes(req);
-		if (rq_data_dir(req) == READ) {
-			start = ktime_get();
-			mq->issue_fn(mq, req);
-			diff = ktime_sub(ktime_get(), start);
-			host->perf.rbytes_mmcq += bytes_xfer;
-			host->perf.rtime_mmcq =
-				ktime_add(host->perf.rtime_mmcq, diff);
+		if (host->perf_enable) {
+			bytes_xfer = blk_rq_bytes(req);
+			if (rq_data_dir(req) == READ) {
+				start = ktime_get();
+				mq->issue_fn(mq, req);
+				diff = ktime_sub(ktime_get(), start);
+				host->perf.rbytes_mmcq += bytes_xfer;
+				host->perf.rtime_mmcq =
+					ktime_add(host->perf.rtime_mmcq, diff);
+			} else {
+				start = ktime_get();
+				mq->issue_fn(mq, req);
+				diff = ktime_sub(ktime_get(), start);
+				host->perf.wbytes_mmcq += bytes_xfer;
+				host->perf.wtime_mmcq =
+					ktime_add(host->perf.wtime_mmcq, diff);
+			}
 		} else {
-			start = ktime_get();
 			mq->issue_fn(mq, req);
-			diff = ktime_sub(ktime_get(), start);
-			host->perf.wbytes_mmcq += bytes_xfer;
-			host->perf.wtime_mmcq =
-				ktime_add(host->perf.wtime_mmcq, diff);
 		}
 #else
 			mq->issue_fn(mq, req);
