@@ -220,7 +220,7 @@ static struct regulator *vibra_reg;
 /*wait in us, to avoid hs/ihf pop noise*/
 static int wait_bb_on = 1*1000;
 static int wait_hspmu_on = 10*1000;
-static int wait_ihfpmu_on = 20*1000;
+static int wait_ihfpmu_on = 40*1000;
 static int wait_pmu_off = 2*1000;
 
 static int isDigiMic(AUDIO_SOURCE_Enum_t source);
