@@ -14,6 +14,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/kernel.h>
 
 #include <linux/clk.h>
+#include <linux/completion.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/errno.h>
@@ -22,8 +23,8 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/interrupt.h>
 #include <linux/kernel_stat.h>
 #include <linux/mm.h>
+#include <linux/mutex.h>
 #include <linux/proc_fs.h>
-#include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 
@@ -85,7 +86,7 @@ static struct vce {
 	uint32_t isr_installed;
 	struct pi_mgr_dfs_node dfs_node;
 	struct pi_mgr_qos_node cpu_qos_node;
-	struct semaphore armctl_sem;
+	struct mutex armctl_sem;
 	uint32_t arm_keepawake_count;
 	struct vtq_global *vtq;
 	struct vtq_vce *vtq_vce;
@@ -359,26 +360,26 @@ static void clock_off(void)
 
 static void cpu_keepawake_dec(void)
 {
-	down(&vce_state.armctl_sem);
+	mutex_lock(&vce_state.armctl_sem);
 	vce_state.arm_keepawake_count -= 1;
 	if (vce_state.arm_keepawake_count == 0) {
 		pi_mgr_qos_request_update(&vce_state.cpu_qos_node,
 					  PI_MGR_QOS_DEFAULT_VALUE);
 		scu_standby(1);
 	}
-	up(&vce_state.armctl_sem);
+	mutex_unlock(&vce_state.armctl_sem);
 }
 
 static void cpu_keepawake_inc(void)
 {
-	down(&vce_state.armctl_sem);
+	mutex_lock(&vce_state.armctl_sem);
 	if (vce_state.arm_keepawake_count == 0) {
 		pi_mgr_qos_request_update(&vce_state.cpu_qos_node, 0);
 		scu_standby(0);
 		mb();
 	}
 	vce_state.arm_keepawake_count += 1;
-	up(&vce_state.armctl_sem);
+	mutex_unlock(&vce_state.armctl_sem);
 }
 
 #ifdef VCE_DEBUG
@@ -1149,7 +1150,7 @@ int __init vce_init(void)
 
 	/* For the power management */
 	mutex_init(&vce_state.clockctl_sem);
-	sema_init(&vce_state.armctl_sem, 1);
+	mutex_init(&vce_state.armctl_sem);
 
 	/* We map the registers -- even though the power to the domain
 	 *remains off... TODO: consider whether that's dangerous?  It
@@ -1292,7 +1293,7 @@ void __exit vce_exit(void)
 
 	mutex_lock(&vce_state.work_lock);
 	mutex_lock(&vce_state.clockctl_sem);
-	down(&vce_state.armctl_sem);
+	mutex_lock(&vce_state.armctl_sem);
 	BUG_ON(vce_state.clock_enable_count != 0);
 
 	vtq_pervce_term(&vce_state.vtq_vce);
