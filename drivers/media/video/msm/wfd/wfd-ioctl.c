@@ -40,9 +40,7 @@
 #define WFD_DEVICE_SECURE (WFD_DEVICE_NUMBER_BASE + 1)
 #define DEFAULT_WFD_WIDTH 640
 #define DEFAULT_WFD_HEIGHT 480
-#define VSG_SCRATCH_BUFFERS 1
-#define MDP_WRITEBACK_BUFFERS 3
-#define VENC_INPUT_BUFFERS (VSG_SCRATCH_BUFFERS + MDP_WRITEBACK_BUFFERS)
+#define VENC_INPUT_BUFFERS 4
 
 struct wfd_device {
 	struct platform_device *pdev;
@@ -125,7 +123,6 @@ int wfd_allocate_input_buffers(struct wfd_device *wfd_dev,
 	int rc;
 	unsigned long flags;
 	struct mdp_buf_info mdp_buf = {0};
-	struct vsg_buf_info vsg_buf = {};
 	spin_lock_irqsave(&inst->inst_lock, flags);
 	if (inst->input_bufs_allocated) {
 		spin_unlock_irqrestore(&inst->inst_lock, flags);
@@ -152,25 +149,13 @@ int wfd_allocate_input_buffers(struct wfd_device *wfd_dev,
 		mdp_buf.cookie = mregion;
 		mdp_buf.kvaddr = (u32) mregion->kvaddr;
 		mdp_buf.paddr = (u32) mregion->paddr;
-		vsg_buf.mdp_buf_info = mdp_buf;
 
-		if (i < MDP_WRITEBACK_BUFFERS) {
-			rc = v4l2_subdev_call(&wfd_dev->mdp_sdev, core, ioctl,
-					MDP_Q_BUFFER, (void *)&mdp_buf);
-			if (rc) {
-				WFD_MSG_ERR("Unable to queue the"
-						" buffer to mdp\n");
-				break;
-			}
-		} else /*if (i < VSG_SCRATCH_BUFFERS*/ {
-			rc = v4l2_subdev_call(&wfd_dev->vsg_sdev, core, ioctl,
-					VSG_SET_SCRATCH_BUFFER,
-					(void *)&vsg_buf);
-			if (rc) {
-				WFD_MSG_ERR("Unable to set scratch"
-						" buffer to vsg\n");
-				break;
-			}
+		rc = v4l2_subdev_call(&wfd_dev->mdp_sdev, core, ioctl,
+				MDP_Q_BUFFER, (void *)&mdp_buf);
+		if (rc) {
+			WFD_MSG_ERR("Unable to queue the"
+					" buffer to mdp\n");
+			break;
 		}
 	}
 	rc = v4l2_subdev_call(&wfd_dev->enc_sdev, core, ioctl,
@@ -391,6 +376,8 @@ int wfd_vidbuf_start_streaming(struct vb2_queue *q)
 	struct wfd_inst *inst = (struct wfd_inst *)priv_data->private_data;
 	int rc = 0;
 
+	WFD_MSG_ERR("Stream on called\n");
+	WFD_MSG_DBG("enc start\n");
 	rc = v4l2_subdev_call(&wfd_dev->enc_sdev, core, ioctl,
 			ENCODE_START, (void *)inst->venc_inst);
 	if (rc) {
@@ -398,6 +385,7 @@ int wfd_vidbuf_start_streaming(struct vb2_queue *q)
 		goto subdev_start_fail;
 	}
 
+	WFD_MSG_DBG("vsg start\n");
 	rc = v4l2_subdev_call(&wfd_dev->vsg_sdev, core, ioctl,
 			VSG_START, NULL);
 	if (rc) {
@@ -411,6 +399,7 @@ int wfd_vidbuf_start_streaming(struct vb2_queue *q)
 		rc = PTR_ERR(inst->mdp_task);
 		goto subdev_start_fail;
 	}
+	WFD_MSG_DBG("mdp start\n");
 	rc = v4l2_subdev_call(&wfd_dev->mdp_sdev, core, ioctl,
 			 MDP_START, (void *)inst->mdp_inst);
 	if (rc)
@@ -426,17 +415,20 @@ int wfd_vidbuf_stop_streaming(struct vb2_queue *q)
 		(struct wfd_device *)video_drvdata(priv_data);
 	struct wfd_inst *inst = (struct wfd_inst *)priv_data->private_data;
 	int rc = 0;
+	WFD_MSG_DBG("mdp stop\n");
 	rc = v4l2_subdev_call(&wfd_dev->mdp_sdev, core, ioctl,
 			 MDP_STOP, (void *)inst->mdp_inst);
 	if (rc)
 		WFD_MSG_ERR("Failed to stop MDP\n");
 
+	WFD_MSG_DBG("vsg stop\n");
 	rc = v4l2_subdev_call(&wfd_dev->vsg_sdev, core, ioctl,
 			 VSG_STOP, NULL);
 	if (rc)
 		WFD_MSG_ERR("Failed to stop VSG\n");
 
 	kthread_stop(inst->mdp_task);
+	WFD_MSG_DBG("enc stop\n");
 	rc = v4l2_subdev_call(&wfd_dev->enc_sdev, core, ioctl,
 			ENCODE_STOP, (void *)inst->venc_inst);
 	if (rc)
@@ -1060,6 +1052,7 @@ static int wfd_open(struct file *filp)
 	enc_mops.op_buffer_done = venc_op_buffer_done;
 	enc_mops.ip_buffer_done = venc_ip_buffer_done;
 	enc_mops.cbdata = filp;
+	enc_mops.secure = wfd_dev->secure_device;
 	rc = v4l2_subdev_call(&wfd_dev->enc_sdev, core, ioctl, OPEN,
 				(void *)&enc_mops);
 	if (rc || !enc_mops.cookie) {
