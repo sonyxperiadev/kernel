@@ -74,7 +74,6 @@ struct vtq_image {
 	 * freeing of it until current in-flight loads have
 	 * completed. */
 	struct kref ref;
-	struct work_struct unregister_work;
 
 	/* We record a bitmap of task-types supported by this image
 	 * (i.e. for whom this image has entrypoints) */
@@ -120,7 +119,7 @@ struct vtq_vce {
 
 	/* Current circular buffer parameters (can be changed only
 	 * when fifo empty) */
-	unsigned int fifo_length;
+	unsigned int vce_fifo_length;
 	size_t fifo_entrysz;
 	vtq_datamemoffset_t readptr_locn;
 	vtq_datamemoffset_t writeptr_locn;
@@ -141,21 +140,25 @@ struct vtq_vce {
 	 * -- the actual fifo entry will be modulo the fifo size,
 	 * which must therefore be power-of-2 */
 	vtq_job_id_t writeptr;
+	vtq_job_id_t last_acknowledged_job;
 
 	/* currently loaded image. */
 	struct vtq_image *current_image;
 
 	/* array (FIXME! not good!) of tasks */
 	struct vtq_task tasks[VTQ_MAX_TASKS];
-	/* Image loads that are in flight */
-	struct vtq_image **inflightloads;
+
+	/* Per-job info: e.g. image loads that are in flight; flags */
+	unsigned int host_fifo_length;
+	struct jobinfo *runningjobs;
 
 	/* a wait-queue for threads wanting to be notified when a VCE
-	 * job is complete.  At the moment this serves two purposes:
-	 * those waiting to enter the queue, and those waiting for a
-	 * particular job to finish.  Consider breaking into two
-	 * wait-queues... */
+	 * job is complete. */
 	wait_queue_head_t job_complete_wq;
+	/* a wait-queue for threads wanting to be notified when a VCE
+	 * job is complete and has been cleaned up, so that the entry
+	 * in the host fifo can be used for a new job. */
+	wait_queue_head_t more_room_in_fifo_wq;
 
 	/* Anything relating to completions must take this mutex */
 	spinlock_t vce_mutex;
@@ -170,6 +173,18 @@ struct vtq_vce {
 	int on; /* yeah - I know it's wrong -- I'll fix
 				it. :) */
 	struct work_struct unload_work;
+	struct work_struct cleanup_work;
+
+	/* Debug stuff below: */
+	struct proc_dir_entry *proc_dir;
+	struct proc_dir_entry *proc_fifo;
+};
+
+/* Information about a queued/running job that needs to be picked up
+ * after the job completes */
+struct jobinfo {
+	/* imageload in flight -- so we can dec its ref */
+	struct vtq_image *inflightimage;
 };
 
 #define err_print(fmt, arg...) \
@@ -218,8 +233,96 @@ void vtq_driver_term(struct vtq_global **vtq_global_state_ptr)
 
 /* Me hates forward declarations, but I screwed up on these ones. :) */
 static void try_unload_if_empty(struct work_struct *);
-static void put_image_work(struct work_struct *);
 static void put_image(struct vtq_image *image);
+static void cleanup(struct work_struct *work);
+
+/*
+ * Proc entries for Debug etc
+ */
+static int proc_fifo_read(char *buffer, char **start, off_t offset,
+		int bytes, int *eof, void *priv)
+{
+	struct vtq_vce *v;
+	uint32_t writeptr, readptr, ackptr;
+	int ret;
+	int len;
+	int required_bytes;
+
+	ret = 0;
+
+	v = (struct vtq_vce *)priv;
+
+	mutex_lock(&v->host_mutex);
+	writeptr = v->writeptr;
+	readptr = v->last_known_readptr;
+	ackptr = v->last_acknowledged_job;
+	mutex_unlock(&v->host_mutex);
+
+	/* estimate length of buffer req'd */
+	/* required_bytes = 100 + 100 * (writeptr - ackptr); */
+	/* TODO: be a little more precise about the length of buffer required */
+	required_bytes = 200;
+
+	if (bytes < required_bytes) {
+		ret = -1;
+		goto err_too_small;
+	}
+
+	len = sprintf(buffer, "%u/%u/%u\n"
+		"%d job(s) queued or running on VCE\n"
+		"%d job(s) completed but not acknowledged\n",
+		writeptr, readptr, ackptr,
+		writeptr - readptr, readptr - ackptr);
+
+	/* TODO: be a proper read_proc function */
+	(void)start;
+	(void)offset;
+	(void)eof;
+
+	ret = len;
+
+	BUG_ON(len > bytes);
+	BUG_ON(ret < 0);
+	return ret;
+
+	/*
+	   error exit paths follow
+	 */
+
+err_too_small:
+	BUG_ON(ret >= 0);
+	return ret;
+}
+
+static void term_procentries(struct vtq_vce *v)
+{
+	remove_proc_entry("fifo", v->proc_dir);
+}
+
+static int init_procentries(struct vtq_vce *v)
+{
+	v->proc_fifo = create_proc_entry("fifo",
+			(S_IRUSR | S_IRGRP),
+			v->proc_dir);
+	if (v->proc_fifo == NULL) {
+		err_print("Failed to create vtq/fifo proc entry\n");
+		goto err_procentry_fifo;
+	}
+	v->proc_fifo->read_proc = proc_fifo_read;
+	v->proc_fifo->data = (void *)v;
+
+	/* success */
+
+	return 0;
+
+	/*
+	 * error exit paths follow
+	 */
+
+	/* remove_proc_entry("fifo", v->proc_dir); */
+err_procentry_fifo:
+	return -1;
+}
 
 int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 		    struct vtq_global *global,
@@ -228,8 +331,7 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 {
 	struct vtq_vce *vtq_pervce_state;
 	int i;
-
-	(void) proc_vcedir;
+	int s;
 
 	vtq_pervce_state = kmalloc(sizeof(*vtq_pervce_state), GFP_KERNEL);
 	if (vtq_pervce_state == NULL) {
@@ -241,6 +343,7 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 
 	vtq_pervce_state->writeptr = 07734;
 	vtq_pervce_state->last_known_readptr = vtq_pervce_state->writeptr;
+	vtq_pervce_state->last_acknowledged_job = vtq_pervce_state->writeptr;
 
 	for (i = 0; i < VTQ_MAX_TASKS; i++)
 		vtq_pervce_state->tasks[i].occupied = 0;
@@ -251,15 +354,17 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 	vce_init_base(&vtq_pervce_state->io, vtq_pervce_state->driver_priv);
 
 	init_waitqueue_head(&vtq_pervce_state->job_complete_wq);
+	init_waitqueue_head(&vtq_pervce_state->more_room_in_fifo_wq);
 
 	spin_lock_init(&vtq_pervce_state->vce_mutex);
 
 	init_waitqueue_head(&vtq_pervce_state->vce_given_work_wq);
 
 	/* Configured later via ioctl */
-	vtq_pervce_state->fifo_length = 0;
+	vtq_pervce_state->vce_fifo_length = 0;
+	vtq_pervce_state->host_fifo_length = 0;
 	vtq_pervce_state->is_configured = 0;
-	vtq_pervce_state->inflightloads = NULL;
+	vtq_pervce_state->runningjobs = NULL;
 
 	vtq_pervce_state->current_image = NULL;
 
@@ -269,12 +374,23 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 	 * FIFO is empty */
 	INIT_WORK(&vtq_pervce_state->unload_work, try_unload_if_empty);
 
+	/* This is the cleanup activity that runs after the ISR. */
+	INIT_WORK(&vtq_pervce_state->cleanup_work, cleanup);
+
+	vtq_pervce_state->proc_dir = proc_vcedir;
+	s = init_procentries(vtq_pervce_state);
+	if (s != 0)
+		goto err_init_procentries;
+
 	/* success */
 
 	*vtq_pervce_state_out = vtq_pervce_state;
 	return 0;
 
 	/* error exit paths follow */
+
+	/* term_procentries(&vtq_pervce_state); */
+err_init_procentries:
 
 	/* kfree(vtq_pervce_state); */
 err_kmalloc_vtq_pervce_state:
@@ -284,6 +400,8 @@ err_kmalloc_vtq_pervce_state:
 void vtq_pervce_term(struct vtq_vce **vtq_pervce_state_ptr)
 {
 	flush_work(&(*vtq_pervce_state_ptr)->unload_work);
+	flush_work(&(*vtq_pervce_state_ptr)->cleanup_work);
+	term_procentries(*vtq_pervce_state_ptr);
 	kfree(*vtq_pervce_state_ptr);
 	*vtq_pervce_state_ptr = NULL;
 }
@@ -298,21 +416,28 @@ int vtq_configure(struct vtq_vce *v,
 		  vtq_datamemoffset_t writepointer_locn,
 		  vtq_datamemoffset_t readpointer_locn,
 		  vtq_datamemoffset_t fifo_offset,
-		  size_t fifo_length,
+		  size_t vce_fifo_length,
 		  size_t fifo_entry_size,
 		  uint32_t semaphore_id)
 {
-	struct vtq_image **inflightloads;
+	struct jobinfo *jobs;
 	unsigned int i;
+	size_t host_fifo_length;
 
-	inflightloads = kmalloc(fifo_length * sizeof(*inflightloads),
+	/* We make the host fifo the same length, but this doesn't
+	 * have to be the case.  Longer would allow for lazier
+	 * cleanup.  There's no real known benefit to that, but we
+	 * keep the concept separate in case we change our minds
+	 * later. */
+	host_fifo_length = vce_fifo_length;
+	jobs = kmalloc(host_fifo_length * sizeof(*jobs),
 			GFP_KERNEL);
-	if (inflightloads == NULL) {
+	if (jobs == NULL) {
 		err_print("Unable to allocate memory for perjob data\n");
 		return -1;
 	}
-	for (i = 0; i < fifo_length; i++)
-		inflightloads[i] = NULL;
+	for (i = 0; i < host_fifo_length; i++)
+		jobs[i].inflightimage = NULL;
 
 	mutex_lock(&v->host_mutex);
 
@@ -339,8 +464,9 @@ int vtq_configure(struct vtq_vce *v,
 	v->writeptr_locn = writepointer_locn;
 	v->readptr_locn = readpointer_locn;
 	v->circbuf_locn = fifo_offset;
-	v->fifo_length = fifo_length;
-	v->inflightloads = inflightloads;
+	v->vce_fifo_length = vce_fifo_length;
+	v->host_fifo_length = host_fifo_length;
+	v->runningjobs = jobs;
 	v->fifo_entrysz = fifo_entry_size;
 	v->semanum = semaphore_id;
 	v->is_configured = 1;
@@ -445,14 +571,56 @@ static void try_unload_if_empty(struct work_struct *work)
 	mutex_unlock(&v->host_mutex);
 }
 
+static void cleanup(struct work_struct *work)
+{
+	struct vtq_vce *vce;
+	vtq_job_id_t our_rptr, their_rptr;
+	uint32_t host_fifo_index;
+	int distance;
+	struct vtq_image *image;
+	struct jobinfo *job;
+
+	vce = container_of(work, struct vtq_vce, cleanup_work);
+
+	mutex_lock(&vce->host_mutex);
+
+	our_rptr = vce->last_acknowledged_job;
+	their_rptr = vce->last_known_readptr;
+	distance = their_rptr - our_rptr;
+
+	if (distance == 0)
+		dbg_print("Nothing to do in cleanup...\n");
+
+	while (distance > 0) {
+		host_fifo_index = our_rptr & (vce->host_fifo_length-1);
+		job = &vce->runningjobs[host_fifo_index];
+
+		if (vce->global->debug_fifo)
+			printk(KERN_INFO "VTQ: CLEANUP: %u\n", our_rptr);
+
+		image = job->inflightimage;
+		if (image != NULL) {
+			put_image(image);
+			job->inflightimage = NULL;
+		}
+		our_rptr++;
+		distance = their_rptr - our_rptr;
+	}
+	vce->last_acknowledged_job = our_rptr;
+
+	mutex_unlock(&vce->host_mutex);
+
+	/* Still needs to be wakeupall, I think, as the first guys
+	 * condition may not be met -- TODO: check this */
+	wake_up_all(&vce->more_room_in_fifo_wq);
+}
+
 irqreturn_t vtq_isr(struct vtq_vce *vce)
 {
 	unsigned long flags;
 	irqreturn_t ret;
 	vtq_job_id_t our_rptr, their_rptr;
-	uint32_t fifo_index;
 	int distance;
-	struct vtq_image *image;
 
 	/* First we do a fast-path check without the mutex: */
 	if (!vce->on)
@@ -465,42 +633,27 @@ irqreturn_t vtq_isr(struct vtq_vce *vce)
 		spin_unlock_irqrestore(&vce->vce_mutex, flags);
 		return IRQ_NONE;
 	}
-	their_rptr = vce_readdata(&vce->io, vce->readptr_locn);
-
 	our_rptr = vce->last_known_readptr;
+	their_rptr = vce_readdata(&vce->io, vce->readptr_locn);
 	distance = their_rptr - our_rptr;
-	if (distance > 0)
+
+	if (distance > 0) {
 		ret = IRQ_HANDLED;
-	while (distance > 0) {
-		if (vce->global->debug_fifo)
-			printk(KERN_INFO "VTQ: DEQ: %u\n", our_rptr);
 
-		fifo_index = our_rptr & (vce->fifo_length-1);
-		image = vce->inflightloads[fifo_index];
-		if (image != NULL) {
-			schedule_work(&image->unregister_work);
-			vce->inflightloads[fifo_index] = NULL;
-		}
-		our_rptr++;
-		distance = their_rptr - our_rptr;
+		vce->last_known_readptr = their_rptr;
+
+		/* Wake up those waiting to hear that the job is
+		 * complete -- must be wake_up_all as their may be
+		 * several parties wanting to hear the news. */
+		wake_up_all(&vce->job_complete_wq);
+
+		schedule_work(&vce->cleanup_work);
+		if (their_rptr == vce->writeptr)
+			schedule_work(&vce->unload_work);
 	}
-	vce->last_known_readptr = our_rptr;
-	if (our_rptr == vce->writeptr)
-		schedule_work(&vce->unload_work);
-
 	spin_unlock_irqrestore(&vce->vce_mutex, flags);
 
-	if (ret == IRQ_HANDLED) {
-		/* I don't like "wake_up_all", but, we have the
-		 * queue_job and the await_job both waiting on it.
-		 * So, we need to wake them both up.  Should this be
-		 * two separate wait queues?  I'm thinking that if
-		 * there are multiple "await_job()s" waiting, they
-		 * *all* want to be woken, but if there are multiple
-		 * "queue_job()s" waiting, they don't all need to be
-		 * woken. TODO: FIXME! */
-		wake_up_all(&vce->job_complete_wq);
-	} else {
+	if (ret != IRQ_HANDLED) {
 		dbg_print("SPURIOUS INTERRUPT -- We're \"on\", "
 		       "and received int, but had nothing to do\n");
 	}
@@ -613,7 +766,6 @@ struct vtq_image *vtq_register_image(struct vtq_context *ctx,
 	}
 
 	kref_init(&image->ref);
-	INIT_WORK(&image->unregister_work, put_image_work);
 
 	mutex_unlock(&ctx->vce->host_mutex);
 
@@ -655,14 +807,6 @@ static void cleanup_image(struct kref *ref)
 static void put_image(struct vtq_image *image)
 {
 	kref_put(&image->ref, cleanup_image);
-}
-
-static void put_image_work(struct work_struct *work)
-{
-	struct vtq_image *i;
-
-	i = container_of(work, struct vtq_image, unregister_work);
-	put_image(i);
 }
 
 static void get_image(struct vtq_image *image)
@@ -807,15 +951,19 @@ vtq_job_id_t vtq_get_read_pointer(struct vtq_context *ctx)
 
 static int got_room_for_job(struct vtq_context *ctx, vtq_task_id_t task_id)
 {
-	int njobsinq;
-	int room;
+	int njobsinvceq, njobsinhostq;
+	int roominvce, roomonhost, room, room_required;
 	uint32_t curimagebitmap;
 	int imagehasentrypt, haveenoughroom;
 
 	mutex_lock(&ctx->vce->host_mutex);
 
-	njobsinq = ctx->vce->writeptr - ctx->vce->last_known_readptr;
-	room = ctx->vce->fifo_length - njobsinq;
+	njobsinvceq = ctx->vce->writeptr - ctx->vce->last_known_readptr;
+	njobsinhostq = ctx->vce->writeptr - ctx->vce->last_acknowledged_job;
+	roominvce = ctx->vce->vce_fifo_length - njobsinvceq;
+	roomonhost = ctx->vce->host_fifo_length - njobsinhostq;
+	room = roominvce < roomonhost ? roominvce : roomonhost;
+
 	if (ctx->vce->current_image != NULL) {
 		curimagebitmap =
 			ctx->vce->current_image->bitmap;
@@ -825,7 +973,8 @@ static int got_room_for_job(struct vtq_context *ctx, vtq_task_id_t task_id)
 		imagehasentrypt = 0;
 	}
 
-	haveenoughroom = room >= (imagehasentrypt ? 1 : 2);
+	room_required = (imagehasentrypt ? 1 : 2);
+	haveenoughroom = room >= room_required;
 	if (!haveenoughroom)
 		mutex_unlock(&ctx->vce->host_mutex);
 
@@ -848,8 +997,10 @@ int vtq_queue_job(struct vtq_context *ctx,
 	uint32_t datamemaddress;
 	uint32_t job_entrypoint;
 	vtq_job_id_t next_job_id;
-	uint32_t fifo_index;
+	uint32_t vce_fifo_index;
+	uint32_t host_fifo_index;
 	struct vtq_image *new_image;
+	struct jobinfo *job;
 	int s;
 
 	(void) flags_do_not_use_me;
@@ -867,7 +1018,7 @@ int vtq_queue_job(struct vtq_context *ctx,
 		return -1;
 	}
 
-	s = wait_event_interruptible(ctx->vce->job_complete_wq,
+	s = wait_event_interruptible(ctx->vce->more_room_in_fifo_wq,
 				     got_room_for_job(ctx, task_id));
 	if (s) {
 		dbg_print("wait_event_interruptible was interrupted\n");
@@ -893,9 +1044,10 @@ int vtq_queue_job(struct vtq_context *ctx,
 		}
 	}
 
-	fifo_index = ctx->vce->writeptr & (ctx->vce->fifo_length-1);
+	vce_fifo_index = ctx->vce->writeptr & (ctx->vce->vce_fifo_length-1);
+	host_fifo_index = ctx->vce->writeptr & (ctx->vce->host_fifo_length-1);
 	datamemaddress = ctx->vce->circbuf_locn
-		+ ctx->vce->fifo_entrysz * fifo_index;
+		+ ctx->vce->fifo_entrysz * vce_fifo_index;
 
 	/* Insert a load-image if req'd */
 	if (ctx->vce->current_image != NULL) {
@@ -920,7 +1072,8 @@ int vtq_queue_job(struct vtq_context *ctx,
 		BUG_ON(ctx->vce->tasks[task_id].suitable_images->image == NULL);
 		new_image = ctx->vce->tasks[task_id].suitable_images->image;
 		get_image(new_image);
-		ctx->vce->inflightloads[fifo_index] = new_image;
+		job = &ctx->vce->runningjobs[host_fifo_index];
+		job->inflightimage = new_image;
 		imagehwaddr = new_image->dmainfo.busaddr;
 		vce_writedata(&ctx->vce->io, datamemaddress,
 			ctx->vce->global->loaderkernel_loadimage_entrypoint);
@@ -951,12 +1104,16 @@ int vtq_queue_job(struct vtq_context *ctx,
 		get_image(new_image);
 		ctx->vce->current_image = new_image;
 
-		fifo_index = ctx->vce->writeptr & (ctx->vce->fifo_length-1);
+		vce_fifo_index = ctx->vce->writeptr
+			& (ctx->vce->vce_fifo_length-1);
+		host_fifo_index = ctx->vce->writeptr
+			& (ctx->vce->host_fifo_length-1);
 		datamemaddress = ctx->vce->circbuf_locn +
-			ctx->vce->fifo_entrysz * fifo_index;
+			ctx->vce->fifo_entrysz * vce_fifo_index;
 	}
 
-	BUG_ON(ctx->vce->inflightloads[fifo_index] != NULL);
+	job = &ctx->vce->runningjobs[host_fifo_index];
+	BUG_ON(job->inflightimage != NULL);
 
 	BUG_ON(!ctx->vce->on);
 
