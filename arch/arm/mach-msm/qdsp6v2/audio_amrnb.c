@@ -138,6 +138,11 @@ static int audio_open(struct inode *inode, struct file *file)
 		goto fail;
 	}
 	rc = audio_aio_open(audio, file);
+	if (IS_ERR_OR_NULL(audio)) {
+		pr_err("%s: audio_aio_open failed\n", __func__);
+		rc = -EACCES;
+		goto fail;
+	}
 
 #ifdef CONFIG_DEBUG_FS
 	snprintf(name, sizeof name, "msm_amrnb_%04x", audio->ac->session);

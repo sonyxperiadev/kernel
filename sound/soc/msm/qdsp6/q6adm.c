@@ -76,7 +76,11 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 		index = afe_get_port_index(data->token);
 		pr_debug("%s: Port ID %d, index %d\n", __func__,
 			data->token, index);
-
+		if (index < 0 || index >= AFE_MAX_PORTS) {
+			pr_err("%s: invalid port idx %d token %d\n",
+					__func__, index, data->token);
+			return 0;
+		}
 		if (data->opcode == APR_BASIC_RSP_RESULT) {
 			pr_debug("APR_BASIC_RSP_RESULT\n");
 			switch (payload[0]) {
@@ -142,6 +146,11 @@ static int send_adm_cal_block(int port_id, struct acdb_cal_block *aud_cal)
 
 	pr_debug("%s: Port id %d, index %d\n", __func__, port_id, index);
 
+	if (index < 0 || index >= AFE_MAX_PORTS) {
+		pr_err("%s: invalid port idx %d portid %d\n",
+				__func__, index, port_id);
+		goto done;
+	}
 	if (!aud_cal || aud_cal->cal_size == 0) {
 		pr_debug("%s: No ADM cal to send for port_id = %d!\n",
 			__func__, port_id);
@@ -502,6 +511,12 @@ int adm_matrix_map(int session_id, int path, int num_copps,
 	pr_debug("%s: session 0x%x path:%d num_copps:%d port_id[0]:%d\n",
 		 __func__, session_id, path, num_copps, port_id[0]);
 
+	if (index < 0 || index >= AFE_MAX_PORTS) {
+		pr_err("%s: invalid port idx %d token %d\n",
+					__func__, index, copp_id);
+		ret = -EINVAL;
+		goto fail_cmd;
+	}
 	route.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
 				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
 	route.hdr.pkt_size = sizeof(route);
@@ -526,7 +541,8 @@ int adm_matrix_map(int session_id, int path, int num_copps,
 		pr_debug("%s: port_id[%d]: %d, index: %d\n", __func__, i,
 			 port_id[i], tmp);
 
-		route.session[0].copp_id[i] =
+		if ((tmp >= 0) && (tmp < AFE_MAX_PORTS))
+			route.session[0].copp_id[i] =
 					atomic_read(&this_adm.copp_id[tmp]);
 	}
 	if (num_copps % 2)
