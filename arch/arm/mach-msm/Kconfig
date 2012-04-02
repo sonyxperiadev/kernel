@@ -168,6 +168,7 @@ config ARCH_MSM8960
 	select MSM_MULTIMEDIA_USE_ION
 	select MULTI_IRQ_HANDLER
 	select MSM_PM8X60 if PM
+	select HOLES_IN_ZONE if SPARSEMEM
 
 config ARCH_MSM8930
 	bool "MSM8930"
@@ -205,6 +206,7 @@ config ARCH_MSM8930
 	select MSM_ULTRASOUND
 	select MULTI_IRQ_HANDLER
 	select MSM_PM8X60 if PM
+	select HOLES_IN_ZONE if SPARSEMEM
 
 config ARCH_APQ8064
 	bool "APQ8064"
@@ -221,6 +223,7 @@ config ARCH_APQ8064
 	select MSM_AUDIO_QDSP6 if SND_SOC
 	select MULTI_IRQ_HANDLER
 	select MSM_PM8X60 if PM
+	select HOLES_IN_ZONE if SPARSEMEM
 
 config ARCH_MSMCOPPER
 	bool "MSM Copper"
