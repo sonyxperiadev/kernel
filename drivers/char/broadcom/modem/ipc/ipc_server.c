@@ -86,9 +86,12 @@ static void *EventCreate(void)
 {
 	struct IPC_Evt_t *ipcEvt;
 
-	ipcEvt = kmalloc(sizeof(struct IPC_Evt_t), GFP_KERNEL);
+	ipcEvt = kmalloc(sizeof(struct IPC_Evt_t), GFP_ATOMIC);
 	if (!ipcEvt)
-		return (void *)IPC_ERROR;
+	{
+		IPC_DEBUG(DBG_ERROR, "IPC event create fail\n");
+		return NULL;
+	}
 
 	init_waitqueue_head(&(ipcEvt->evt_wait));
 	ipcEvt->evt = 0;
