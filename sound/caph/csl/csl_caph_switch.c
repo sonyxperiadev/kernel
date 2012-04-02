@@ -449,6 +449,9 @@ CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t
 	 * Do not set the switch channel anymore.
 	 */
 	if (dstStatus != CAPH_DST_OK) {
+		audio_xassert(0, dstStatus);
+		aTrace(LOG_AUDIO_CSL, "%s::sw %d dst 0x%lx used by other sw\n",
+			__func__, chnl_config.chnl, chnl_config.FIFO_dstAddr);
 		chal_caph_switch_free_channel(handle, chal_chnl);
 		status = CSL_CAPH_SWITCH_BORROWER;
 		return status;

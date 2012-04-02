@@ -1933,23 +1933,33 @@ static void csl_caph_config_sw
 			CSL_CAPH_HWConfig_Table_t *path2 =
 				&HWConfig_Table[src_path-1];
 			CSL_CAPH_SWITCH_CONFIG_t *swcfg2;
-			int i;
+			int i, j;
+			CSL_CAPH_SWITCH_CHNL_e cur_sw = swCfg->chnl;
 
-			csl_caph_switch_release_channel(swCfg->chnl);
-
-			aTrace(LOG_AUDIO_CSL,
-			"%s path %d, sw %d can clone the one in path %d. Released.\n",
-			__func__, pathID, swCfg->chnl, src_path);
-
-			for (i = 0; i < MAX_BLOCK_NUM; i++) {
-				swcfg2 = &path2->sw[sinkNo][i];
-				if (swcfg2->FIFO_srcAddr == src_addr &&
+			for (j = 0; j < MAX_SINK_NUM; j++) {
+				for (i = 0; i < MAX_BLOCK_NUM; i++) {
+					swcfg2 = &path2->sw[j][i];
+					if (swcfg2->FIFO_srcAddr == src_addr &&
 					swcfg2->FIFO_dstAddr == dst_addr) {
-					memcpy(swCfg, swcfg2, sizeof(*swCfg));
-					swCfg->cloned = TRUE;
-					break;
+						memcpy(swCfg, swcfg2,
+							sizeof(*swCfg));
+						swCfg->cloned = TRUE;
+						break;
+					}
 				}
+				if (swCfg->cloned)
+					break;
 			}
+
+			if (swCfg->cloned)
+				csl_caph_switch_release_channel(cur_sw);
+			else
+				audio_xassert(0, cur_sw);
+			aTrace(LOG_AUDIO_CSL,
+				"%s sw %d in path %d sink %d clones sw %d "
+				"in path %d sink %d\n",
+				__func__, cur_sw, pathID, sinkNo, swCfg->chnl,
+				src_path, j);
 		}
 	}
 
