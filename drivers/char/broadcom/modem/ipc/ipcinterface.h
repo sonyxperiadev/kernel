@@ -1,5 +1,6 @@
 /*******************************************************************************
-*    ©2007-2009 Broadcom Corporation
+*
+*     Copyright (c) 2007-2008 Broadcom Corporation
 *
 *    Unless you and Broadcom execute a separate written software license
 *    agreement governing use of this software, this software is licensed to you
@@ -273,7 +274,7 @@ typedef IPC_ReturnCode_T(*IPC_EventWaitFPtr_T) (void *Event,
 						 IPC_U32 MilliSeconds);
 
 /* Special values for MilliSeconds */
-#define IPC_WAIT_FOREVER	~0
+#define IPC_WAIT_FOREVER	(~0)
 #define IPC_WAIT_NOWAIT		 0
 
 /**************************************************/
