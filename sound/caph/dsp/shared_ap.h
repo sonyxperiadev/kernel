@@ -989,7 +989,21 @@ typedef enum
     *
     *              @param  UInt16 {bit0: 1: Enable; 0: disable;}
     */    
-    VP_COMMAND_PTT_ENABLE	// 0x23
+    VP_COMMAND_PTT_ENABLE,	// 0x23
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x24
+    *  \par Description 
+    *       This command enable/disable a call using an external modem.\BR
+    *       This should be sent before the enabling of any audio at the start 
+    *       of a call and after the disabling of any audio at the end of a call.
+    *
+    *              @param  UInt16 arg0 = 1: Enable\BR
+    *                                  = 0: Disable
+    */    
+    VP_COMMAND_EXT_MODEM_CALL	// 0x24
 } VPCommand_t;                                 
 /**
  * @}
@@ -1431,7 +1445,7 @@ typedef enum
 	   /** \par Module
 	    *                    Audio
 	    *  \par Command Code
-	    *                    0x20
+	    *                    0x1A
 	    *  \par Description
 	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
 	    *
@@ -1445,12 +1459,12 @@ typedef enum
 	    *        would be sent in the vp_status queue.
 	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
 	    */
-	VP_STATUS_AUDIO_ENABLE_DONE,                 // 0x20 ( )
+	VP_STATUS_AUDIO_ENABLE_DONE,                 // 0x1A ( )
 	   /** \HR */
 	   /** \par Module
 	    *                    Audio
 	    *  \par Command Code
-	    *                    0x21
+	    *                    0x1B
 	    *  \par Description
 	    *       This reply is sent by the DSP to echo VP_COMMAND_PTT_ENABLE.
 	    *
@@ -1460,12 +1474,12 @@ typedef enum
 	    *              @param  None
 	    *
 	    */
-	VP_STATUS_PTT_STATUS,                 // 0x21 ( )
+	VP_STATUS_PTT_STATUS,                 // 0x1B ( )
 	   /** \HR */
 	   /** \par Module
 	    *                    Audio
 	    *  \par Command Code
-	    *                    0x22
+	    *                    0x1C
 	    *  \par Description
 	    *       This reply is sent by the DSP to indicate PTT UL frame is read and ask next frame.
 	    *
@@ -1475,7 +1489,7 @@ typedef enum
 	    *              @param  None
 	    *
 	    */
-	VP_STATUS_PTT_UL_FRAME_DONE                 // 0x22 ( )
+	VP_STATUS_PTT_UL_FRAME_DONE                 // 0x1C ( )
 } VPStatus_t;
 /**
  * @}
