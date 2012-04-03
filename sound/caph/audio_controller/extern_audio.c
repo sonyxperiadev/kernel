@@ -352,6 +352,7 @@ static struct PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM] = {
 
 static char ihf_IsOn;
 static char hs_IsOn;
+static int pll_IsOn;
 static int hs_gain_l = -400; /* mB */
 static int hs_gain_r = -400; /* mB */
 static int ihf_gain = -400; /* mB */
@@ -447,7 +448,10 @@ static struct PMU_AudioGainMapping_t map2pmu_ihf_gain(int arg_gain_mB)
 void extern_hs_on(void)
 {
 	/*enable the audio PLL before power ON */
-	bcmpmu_audio_init();
+	if (pll_IsOn == 0) {
+		bcmpmu_audio_init();
+		pll_IsOn = 1;
+	}
 
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH,
 				  PMU_HSGAIN_MUTE),
@@ -480,7 +484,11 @@ void extern_hs_off(void)
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)
 		/*disable the audio PLL after power OFF*/
-		bcmpmu_audio_deinit();
+		if (pll_IsOn == 1) {
+			bcmpmu_audio_deinit();
+			pll_IsOn = 0;
+		}
+
 }
 
 /********************************************************************
@@ -496,7 +504,10 @@ void extern_ihf_on(void)
 	audio_gpio_output(GPIO_IHF_EXT_AMP, 1);
 #else
 	/*enable the audio PLL before power ON */
-	bcmpmu_audio_init();
+	if (pll_IsOn == 0) {
+		bcmpmu_audio_init();
+		pll_IsOn = 1;
+	}
 
 	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE),
 	bcmpmu_ihf_power(1);
@@ -522,7 +533,11 @@ void extern_ihf_off(void)
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)
 		/*disable the audio PLL after power OFF*/
-		bcmpmu_audio_deinit();
+		if (pll_IsOn == 1) {
+			bcmpmu_audio_deinit();
+			pll_IsOn = 0;
+		}
+
 #endif
 }
 
