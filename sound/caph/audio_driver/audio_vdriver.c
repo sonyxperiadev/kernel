@@ -832,34 +832,34 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 //		For SS multicase both HS and IHF params are from mode SPEAKER
 //=============================================================================
 */
-void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
-					AudioApp_t app)
+void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param)
 {
-	int mixInGain;	/* Register value. */
-	int mixOutGain;	/* Bit12:0, Output Fine Gain */
-	int mixBitSel;
-	/*CSL_CAPH_HWConfig_Table_t *path = NULL;*/
+	int mixInGain, mixOutGain, mixBitSel;	/* Register value. */
+	int mixInGainR, mixOutGainR, mixBitSelR;	/* Register value. */
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
-	AudioMode_t audio_mode = AUDIO_MODE_SPEAKERPHONE;
 
 #ifdef CONFIG_BCM_MODEM
 	SysAudioParm_t *p;
 #else
 	AudioSysParm_t *p;
 #endif
-/*For SS multicast case always load params from mode AUDIO_MODE_SPEAKERPHONE*/
-	p = &(AudParmP()[audio_mode + app * AUDIO_MODE_NUMBER]);
+	/*For SS Multicast mode is always AUDIO_MODE_SPEAKERPHONE*/
+	p = &(AudParmP()[AUDIO_MODE_SPEAKERPHONE + \
+			param.app * AUDIO_MODE_NUMBER]);
 
-	aTrace(LOG_AUDIO_DRIVER, "%s mode=%d, app %d,\n",
-			__func__, audio_mode, app);
+	aTrace(LOG_AUDIO_DRIVER,  "%s mode=%d, app %d, pathID %d\n",
+			__func__, param.mode, param.app, param.pathID);
 
+	mixInGain = mixOutGain = mixBitSel = 0;
+	mixInGainR = mixOutGainR = mixBitSelR = 0;
 	/* Load the speaker gains form sysparm. */
 
 	/*determine which mixer output to apply the gains to */
 
-	switch (audiomode) {
-
+	switch (param.mode) {
 	case AUDIO_MODE_HEADSET:
+	case AUDIO_MODE_TTY:
 		outChnl = CSL_CAPH_SRCM_STEREO_CH1;
 		break;
 
@@ -872,38 +872,122 @@ void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
 
 	/*Load HW Mixer gains from sysparm */
 
-	mixInGain = (short)p->srcmixer_input_gain_l;	/* Q13p2 dB */
-	mixInGain = mixInGain * 25;	/* into mB */
-/*	mixInGain = (short) AudParmP()[
-	arg_audio_mode].srcmixer_input_gain_r;
-	mixInGain = mixInGain*25; //into mB
-*/
+	if (param.mixInGain_mB == GAIN_SYSPARM &&
+		param.mixInGainR_mB == GAIN_SYSPARM) {
+		/*GAIN_SYSPARM means use sysparm*/
+		mixInGain = (short)p->srcmixer_input_gain_l; /* Q13p2 dB */
+		mixInGain = mixInGain * 25;	/* into mB */
+		mixInGainR = (short)p->srcmixer_input_gain_r; /* Q13p2 dB */
+		mixInGainR = mixInGainR * 25;	/* into mB */
+	} else if (param.mixInGain_mB == GAIN_SYSPARM) {
+		mixInGain = (short)p->srcmixer_input_gain_l; /* Q13p2 dB */
+		mixInGain = mixInGain * 25;	/* into mB */
+		mixInGainR = param.mixInGainR_mB;
+	} else if (param.mixInGainR_mB == GAIN_SYSPARM) {
+		mixInGainR = (short)p->srcmixer_input_gain_r; /* Q13p2 dB */
+		mixInGainR = mixInGainR * 25;	/* into mB */
+		mixInGain = param.mixInGain_mB;
+	} else {
+		mixInGain = param.mixInGain_mB;
+		mixInGainR = param.mixInGainR_mB;
+	}
 
-	/*determine which which mixer input to apply the gains to */
+	/*determine which mixer input to apply the gains to */
 
-	if (outChnl)
-		csl_srcmixer_setMixAllInGain(outChnl,
-				mixInGain, mixInGain);
+	if (param.pathID >= 1)
+		path = csl_caph_FindPath(param.pathID);
+
+	if (path != 0) {
+		int i, j;
+		for (i = 0; i < MAX_SINK_NUM; i++)
+			for (j = 0; j < MAX_BLOCK_NUM; j++)
+				if (path->srcmRoute[i][j].outChnl !=
+				CSL_CAPH_SRCM_CH_NONE) {
+					/*and supposedly
+					path->srcmRoute[i][j].sink
+					matches this speaker*/
+
+					outChnl = path->srcmRoute[i][j].outChnl;
+
+					aTrace(LOG_AUDIO_DRIVER,
+					"%s pathID %d outChnl 0x%x inChnl 0x%x\n",
+					__func__, param.pathID, outChnl,
+					path->srcmRoute[i][j].inChnl);
+
+					aTrace(LOG_AUDIO_DRIVER,
+						"mixInGain 0x%x, mixInGainR 0x%x\n",
+						mixInGain, mixInGainR);
+					csl_srcmixer_setMixInGain(
+						  path->srcmRoute[i][j].inChnl,
+						  path->srcmRoute[i][j].outChnl,
+						  mixInGain, mixInGainR);
+				}
+	} else {
+		aError(
+		"AUDDRV_SetAudioMode_Speaker can not find path\n");
+	}
+
 	if (outChnl) {
-		/* Q13p2 dB */
-		mixOutGain = (short)p->srcmixer_output_fine_gain_l;
-		mixOutGain = mixOutGain * 25;	/*into mB */
-		/* mixOutGain = (short) AudParmP()[
-		   arg_audio_mode].srcmixer_output_fine_gain_r; */
-		/* mixOutGain = mixOutGain*25; //into mB */
+		if (param.mixOutGain_mB == GAIN_SYSPARM &&
+			param.mixOutGainR_mB == GAIN_SYSPARM) {
+			/* Q13p2 dB */
+			mixOutGain = (short)p->srcmixer_output_fine_gain_l;
+			mixOutGain = mixOutGain * 25;	/*into mB */
+			mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
+			mixOutGainR = mixOutGainR * 25;	/*into mB */
+		} else if (param.mixOutGain_mB == GAIN_SYSPARM) {
+			mixOutGain = (short)p->srcmixer_output_fine_gain_l;
+			mixOutGain = mixOutGain * 25;	/*into mB */
+			mixOutGainR = param.mixOutGainR_mB;
+		} else if (param.mixOutGainR_mB == GAIN_SYSPARM) {
+			mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
+			mixOutGainR = mixOutGainR * 25;	/*into mB */
+			mixOutGain = param.mixOutGain_mB;
+		} else {
+			mixOutGain = param.mixOutGain_mB;
+			mixOutGainR = param.mixOutGainR_mB;
+		}
 
 		/* Q13p2 dB */
 		mixBitSel = (short)p->srcmixer_output_coarse_gain_l;
 		mixBitSel = mixBitSel / 24;
 		/* bit_shift */
 
-		/* mixBitSel = (short) AudParmP()
-		   [arg_audio_mode].srcmixer_output_coarse_gain_r; */
-		/* mixBitSel = mixBitSel / 24; */
+		mixBitSelR = (short)p->srcmixer_output_coarse_gain_r;
+		mixBitSelR = mixBitSelR / 24;
 		/* bit_shift */
 
-		csl_srcmixer_setMixBitSel(outChnl, mixBitSel);
-		csl_srcmixer_setMixOutGain(outChnl, mixOutGain);
+		aTrace(LOG_AUDIO_DRIVER,
+			"%s : mixOutGain 0x%x, mixOutGainR 0x%x, "
+			"mixBitSel %d, mixBitSelR %d\n",
+			__func__, mixOutGain, mixOutGainR,
+			mixBitSel, mixBitSelR);
+		csl_srcmixer_setMixBitSel(outChnl, mixBitSel, mixBitSelR);
+		csl_srcmixer_setMixOutGain(outChnl, mixOutGain, mixOutGainR);
+	}
+
+
+/* Do not enable/disable sidetone path based on sysparm when in HW loopback */
+	if (!param.inHWlpbk) {
+		/*Config sidetone */
+		void *coef = NULL;
+		UInt16 gain = 0;
+		UInt16 enable = 0;
+
+		enable = p->hw_sidetone_enable;
+		if (!enable) {
+			AUDDRV_HW_DisableSideTone(param.mode);
+		} else {
+			/*first step: enable sidetone */
+			AUDDRV_HW_EnableSideTone(param.mode);
+
+			/*second step: set filter and gain. */
+			coef = (void *)&(p->hw_sidetone_eq[0]);
+			AUDDRV_HW_SetFilter(AUDDRV_SIDETONE_FILTER, coef);
+
+			gain = p->hw_sidetone_gain;
+			csl_caph_audioh_sidetone_set_gain(gain);
+		}
 	}
 }
 #endif
