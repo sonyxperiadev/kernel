@@ -355,6 +355,7 @@ static void rhea_pm_init_wa_flgs(void)
 #define GHZ(x) (MHZ(x)*1000)
 
 static const u32 a9_freq_list[A9_FREQ_MAX] = {
+	[A9_FREQ_700_MHZ] = MHZ(700),
 	[A9_FREQ_800_MHZ] = MHZ(800),
 	[A9_FREQ_850_MHZ] = MHZ(850),
 	[A9_FREQ_1_GHZ] = GHZ(1),

@@ -40,10 +40,10 @@
 #include "csl_arm2sp.h"
 #include "csl_vpu.h"
 #include "audio_trace.h"
-#include "memory.h"
-#include "brcm_rdb_sysmap.h"
-#include "brcm_rdb_cph_cfifo.h"
-#include "brcm_rdb_cph_aadmac.h"
+#include <linux/memory.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_cph_cfifo.h>
+#include <mach/rdb/brcm_rdb_cph_aadmac.h>
 
 AP_SharedMem_t *vp_shared_mem;
 

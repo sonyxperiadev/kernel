@@ -37,7 +37,7 @@
 #ifndef _CHAL_CAPH_INTC_
 #define _CHAL_CAPH_INTC_
 
-#include "chal_types.h"
+#include <plat/chal/chal_types.h>
 #include "chal_caph.h"
 
 /**

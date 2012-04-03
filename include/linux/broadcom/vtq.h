@@ -57,18 +57,14 @@ extern void vtq_destroy_context(struct vtq_context *ctx);
        that is not compatible with the current FIFO configuration
        (i.e. would spill over into the reserved memory)
 */
-typedef int vtq_image_id_t;
-extern vtq_image_id_t vtq_register_image(struct vtq_context *ctx,
+extern struct vtq_image *vtq_register_image(struct vtq_context *ctx,
 		const uint32_t *text,
 		size_t textsz,
 		const uint32_t *data,
 		size_t datasz,
 		size_t datamemreq);
 extern void vtq_unregister_image(struct vtq_context *ctx,
-		vtq_image_id_t image_id);
-
-/* TODO: we should have limitless (linkedlist of) images */
-#define VTQ_MAX_IMAGES 8
+		struct vtq_image *);
 
 /* task */
 
@@ -77,7 +73,7 @@ extern void vtq_unregister_image(struct vtq_context *ctx,
 
 typedef int vtq_task_id_t;
 extern vtq_task_id_t vtq_create_task(struct vtq_context *ctx,
-		vtq_image_id_t image_id,
+		struct vtq_image *image,
 		uint32_t entrypt);
 extern void vtq_destroy_task(struct vtq_context *ctx,
 		vtq_task_id_t task_id);

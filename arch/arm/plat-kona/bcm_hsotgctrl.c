@@ -814,6 +814,30 @@ int bcm_hsotgctrl_set_phy_iso(bool on)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_set_phy_iso);
 
+int bcm_hsotgctrl_set_bc_iso(bool on)
+{
+	unsigned long val;
+	void *hsotg_ctrl_base;
+
+	if (NULL != local_hsotgctrl_handle)
+		hsotg_ctrl_base = local_hsotgctrl_handle->hsotg_ctrl_base;
+	else
+		return -ENODEV;
+
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+
+	if (on)
+		val |= HSOTG_CTRL_PHY_CFG_BC_ISO_I_MASK;
+	else
+		val &= ~HSOTG_CTRL_PHY_CFG_BC_ISO_I_MASK;
+
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_set_bc_iso);
+
+
 int bcm_hsotgctrl_set_soft_ldo_pwrdn(bool on)
 {
 	unsigned long val;

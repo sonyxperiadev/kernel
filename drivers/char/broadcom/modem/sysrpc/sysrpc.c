@@ -52,11 +52,11 @@ static void safe_strncat(char *dst, const char *src, int len)
 {
 	int l_dst = strlen(dst);
 	int l_src = strlen(src);
-	if (l_dst + l_src < len) {
+
+	if (l_dst + l_src < len)
 		strncat(dst, src, len - l_dst - l_src);
-	}
 }
-#endif //INCLUDE_UNUSED_CODE
+#endif /*INCLUDE_UNUSED_CODE*/
 
 static int procfile_read(char *page, char **start, off_t offset,
 			 int count, int *eof, void *data)

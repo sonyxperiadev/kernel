@@ -7,9 +7,9 @@
 *   under the terms of the GNU General Public License version 2, available
 *    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this
+* Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a license
-*   other than the GPL, without Broadcom's express prior written consent.
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
@@ -100,6 +100,9 @@ static int sysRpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 	_DBG(SYSRPC_TRACE(
 		"RPC_BufferDelivery PROCESS sysrpc mHandle=%x event=%d\n",
 		(int)mHandle, (int)data));
+
+	RpcDbgUpdatePktState((int)data, PKT_STATE_SYSRPC_PROCESS);
+
 	RPC_HandleEvent(data);
 	return 0;
 }
@@ -122,7 +125,9 @@ static void sysRpcHandlerCbk(void *eventHandle)
 			"sysrpc: sysRpcHandlerCbk POST event FAIL=%x\n\n",
 			(int)eventHandle));
 		RPC_PACKET_FreeBufferEx(eventHandle, 0);
-	}
+	} else
+		RpcDbgUpdatePktState((int)eventHandle, PKT_STATE_SYSRPC_POST);
+
 }
 
 /****************************************************************************

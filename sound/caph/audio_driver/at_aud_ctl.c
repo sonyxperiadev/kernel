@@ -52,15 +52,15 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "auddrv_audlog.h"
 
 #include <linux/io.h>
-#include "brcm_rdb_sysmap.h"
-#include "brcm_rdb_audioh.h"
-#include "brcm_rdb_sdt.h"
-#include "brcm_rdb_srcmixer.h"
-#include "brcm_rdb_cph_cfifo.h"
-#include "brcm_rdb_cph_aadmac.h"
-#include "brcm_rdb_cph_ssasw.h"
-#include "brcm_rdb_ahintc.h"
-#include "brcm_rdb_util.h"
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_audioh.h>
+#include <mach/rdb/brcm_rdb_sdt.h>
+#include <mach/rdb/brcm_rdb_srcmixer.h>
+#include <mach/rdb/brcm_rdb_cph_cfifo.h>
+#include <mach/rdb/brcm_rdb_cph_aadmac.h>
+#include <mach/rdb/brcm_rdb_cph_ssasw.h>
+#include <mach/rdb/brcm_rdb_ahintc.h>
+#include <mach/rdb/brcm_rdb_util.h>
 
 #include "csl_caph_hwctrl.h"
 

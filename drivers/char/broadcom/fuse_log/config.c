@@ -753,7 +753,8 @@ int BCMLOG_GetRunlogDevice(void)
 
 void BCMLOG_SetRunlogDevice(int run_log_dev)
 {
-	g_config.runlog.dev = run_log_dev;
+	if (!g_config.runlog.lock)
+		g_config.runlog.dev = run_log_dev;
 }
 
 int BCMLOG_GetSdFileMax(void)

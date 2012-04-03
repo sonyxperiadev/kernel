@@ -410,7 +410,8 @@ void SYS_GenGetPayloadInfo(void *dataBuf, MsgType_t msgType, void **ppBuf,
 #if defined(FUSE_APPS_PROCESSOR)
 
 void _D(SIMLOCKApi_SetStatusEx) (UInt8 simId,
-				 SYS_SIMLOCK_STATE_t *simlock_state) {
+				 SYS_SIMLOCK_STATE_t *simlock_state)
+{
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
@@ -421,7 +422,8 @@ void _D(SIMLOCKApi_SetStatusEx) (UInt8 simId,
 				NULL);
 }
 
-UInt32 _D(SimApi_GetCurrLockedSimlockTypeEx) (UInt8 simId) {
+UInt32 _D(SimApi_GetCurrLockedSimlockTypeEx) (UInt8 simId)
+{
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;

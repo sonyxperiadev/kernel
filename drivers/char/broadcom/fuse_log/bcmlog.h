@@ -328,7 +328,9 @@ extern "C" {
 
 	extern void (*BrcmLogString) (const char *inLogString,
 				      unsigned short inSender);
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 	extern int ap_triggered;
+#endif
 	extern int brcm_retrive_early_printk(void);
 	extern int bcmlog_mtt_on;
 	extern unsigned short bcmlog_log_ulogging_id;

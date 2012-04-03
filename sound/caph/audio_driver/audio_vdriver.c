@@ -1460,7 +1460,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	if (voiceRecOn && voiceInMic != mic)
 		aError("%s voice record (%d) and call (%d) different mics\n",
 			__func__, voiceInMic, mic);
-	pathID = csl_caph_FindPathID(config.sink, config.source);
+	pathID = csl_caph_FindPathID(config.sink, config.source, 0);
 	if (pathID) {
 		/* If voice recording is ongoing, no need to set up UL path.
 		 * Unable to handle this case: record and call use different

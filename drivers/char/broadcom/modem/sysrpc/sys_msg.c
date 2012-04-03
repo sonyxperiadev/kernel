@@ -37,9 +37,9 @@
 #include "sys_rpc.h"
 
 XDR_ENUM_FUNC(PMU_SIMLDO_t)
-    XDR_ENUM_FUNC(PMU_SIMVolt_t)
+XDR_ENUM_FUNC(PMU_SIMVolt_t)
 
-    XDR_ENUM_FUNC(SYS_SIM_SECURITY_STATE_t)
+XDR_ENUM_FUNC(SYS_SIM_SECURITY_STATE_t)
 
 bool_t xdr_SYS_ReqRep_t(XDR *xdrs, SYS_ReqRep_t *req, xdrproc_t proc)
 {

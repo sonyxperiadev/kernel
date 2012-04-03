@@ -141,7 +141,7 @@ static struct brcm_netconsole_callbacks brcm_dummy_callbacks = {
 };
 
 static struct brcm_netconsole_callbacks *brcm_netconsole_cb =
-    &brcm_dummy_callbacks;
+	&brcm_dummy_callbacks;
 
 #ifdef	CONFIG_BRCM_NETCONSOLE_DYNAMIC
 
@@ -652,7 +652,7 @@ static struct config_item *make_brcm_netconsole_target(struct config_group
 	/* Remove the previous brcm_netconsole_target */
 	if (!list_empty(&target_list)) {
 		list_for_each_entry_safe(nt, tmp, &target_list, list) {
-			pr_info("%s: remove previous nt->list \n", __func__);
+			pr_info("%s: remove previous nt->list\n", __func__);
 			if (brcm_netconsole_cb->stop)
 				brcm_netconsole_cb->stop();
 			nt_enabled = FALSE;
@@ -760,6 +760,7 @@ char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks *_cb)
 	else
 		return 0;	/* logging is not ready to send */
 }
+EXPORT_SYMBOL(brcm_netconsole_register_callbacks);
 
 /* .... to be discarded .... */
 unsigned char brcm_get_netcon_status(void)
@@ -768,6 +769,7 @@ unsigned char brcm_get_netcon_status(void)
 		cur_rndis_status ? "on" : "off");
 	return cur_rndis_status;
 }
+EXPORT_SYMBOL(brcm_get_netcon_status);
 
 /**
 * This function is called to call the callback functions to start/stop the logging.
@@ -785,9 +787,8 @@ void brcm_current_netcon_status(unsigned char status)
 	if (list_empty(&target_list)) {
 		pr_info("1. list_empty\n");
 		nt = alloc_param_target(NULL);
-		if (IS_ERR(nt)) {
+		if (IS_ERR(nt))
 			return;
-		}
 
 		spin_lock_irqsave(&target_list_lock, flags);
 		list_add(&nt->list, &target_list);
@@ -820,10 +821,7 @@ void brcm_current_netcon_status(unsigned char status)
 	pr_info("status= %d, nt_enabled = %d\n", status, nt_enabled);
 
 }
-
-EXPORT_SYMBOL(brcm_get_netcon_status);
 EXPORT_SYMBOL(brcm_current_netcon_status);
-EXPORT_SYMBOL(brcm_netconsole_register_callbacks);
 
 /* Handle network interface device notifications */
 static int brcm_netconsole_netdev_event(struct notifier_block *this,
@@ -839,9 +837,10 @@ static int brcm_netconsole_netdev_event(struct notifier_block *this,
 	spin_lock_irqsave(&target_list_lock, flags);
 	list_for_each_entry(nt, &target_list, list) {
 		brcm_netconsole_target_get(nt);
-		if (nt->np.dev == dev) {
+
+		if (nt->np.dev == dev)
 			strlcpy(nt->np.dev_name, dev->name, IFNAMSIZ);
-		}
+
 		brcm_netconsole_target_put(nt);
 	}
 	spin_unlock_irqrestore(&target_list_lock, flags);
@@ -932,9 +931,10 @@ int brcm_klogging(char *data, int length)
 
 			for (left = length; left;) {
 				frag = min(left, MAX_PRINT_CHUNK);
-				if (frag > netpoll_free_memory()) {
+
+				if (frag > netpoll_free_memory())
 					goto end_of_send;
-				}
+
 				netpoll_send_udp(&nt->np, tmp, frag);
 				tmp += frag;
 				left -= frag;
@@ -947,7 +947,6 @@ end_of_send:
 	spin_unlock_irqrestore(&target_list_lock, flags);
 	return len_sent;
 }
-
 EXPORT_SYMBOL(brcm_klogging);
 
 static struct brcm_console brcm_netconsole = {

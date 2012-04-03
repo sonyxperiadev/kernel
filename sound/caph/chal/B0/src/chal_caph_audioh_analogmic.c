@@ -35,14 +35,14 @@
 ****************************************************************************/
 #include <linux/io.h>
 #include <linux/delay.h>
-#include "io_map.h"
+#include <mach/io_map.h>
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
-#include "brcm_rdb_audioh.h"
-#include "brcm_rdb_util.h"
-#include "brcm_rdb_aci.h"
-#include "brcm_rdb_auxmic.h"
-#include "brcm_rdb_padctrlreg.h"
+#include <mach/rdb/brcm_rdb_audioh.h>
+#include <mach/rdb/brcm_rdb_util.h>
+#include <mach/rdb/brcm_rdb_aci.h>
+#include <mach/rdb/brcm_rdb_auxmic.h>
+#include <mach/rdb/brcm_rdb_padctrlreg.h>
 
 /****************************************************************************
 *                        G L O B A L   S E C T I O N

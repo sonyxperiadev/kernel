@@ -39,9 +39,9 @@
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_intc.h"
-#include "brcm_rdb_audioh.h"
-#include "brcm_rdb_khub_clk_mgr_reg.h"
-#include "brcm_rdb_sysmap.h"
+#include <mach/rdb/brcm_rdb_audioh.h>
+#include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include "csl_caph.h"
 #include "csl_caph_cfifo.h"
 #include "csl_caph_switch.h"
@@ -57,18 +57,18 @@
 #include "csl_audio_capture.h"
 
 #include <mach/io_map.h>
-#include "clock.h"
+#include <plat/clock.h>
 #include "clk.h"
 #if defined(ENABLE_DMA_VOICE)
 #include "csl_dsp_caph_control_api.h"
 #endif
 
 #if !defined(CNEON_COMMON) && !defined(CNEON_LMP)
-#include "chal_common_os.h"
-#include "chal_aci.h"
+#include <plat/chal/chal_common_os.h>
+#include <plat/chal/chal_aci.h>
 #endif
-#include "brcm_rdb_sysmap.h"
-#include "brcm_rdb_bintc.h"
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_bintc.h>
 #define BINTC_OUT_DEST_DSP_NORM 17
 #define BMREG_BLOCK_SIZE (BINTC_IMR0_1_OFFSET-BINTC_IMR0_0_OFFSET)
 
@@ -1933,23 +1933,33 @@ static void csl_caph_config_sw
 			CSL_CAPH_HWConfig_Table_t *path2 =
 				&HWConfig_Table[src_path-1];
 			CSL_CAPH_SWITCH_CONFIG_t *swcfg2;
-			int i;
+			int i, j;
+			CSL_CAPH_SWITCH_CHNL_e cur_sw = swCfg->chnl;
 
-			csl_caph_switch_release_channel(swCfg->chnl);
-
-			aTrace(LOG_AUDIO_CSL,
-			"%s path %d, sw %d can clone the one in path %d. Released.\n",
-			__func__, pathID, swCfg->chnl, src_path);
-
-			for (i = 0; i < MAX_BLOCK_NUM; i++) {
-				swcfg2 = &path2->sw[sinkNo][i];
-				if (swcfg2->FIFO_srcAddr == src_addr &&
+			for (j = 0; j < MAX_SINK_NUM; j++) {
+				for (i = 0; i < MAX_BLOCK_NUM; i++) {
+					swcfg2 = &path2->sw[j][i];
+					if (swcfg2->FIFO_srcAddr == src_addr &&
 					swcfg2->FIFO_dstAddr == dst_addr) {
-					memcpy(swCfg, swcfg2, sizeof(*swCfg));
-					swCfg->cloned = TRUE;
-					break;
+						memcpy(swCfg, swcfg2,
+							sizeof(*swCfg));
+						swCfg->cloned = TRUE;
+						break;
+					}
 				}
+				if (swCfg->cloned)
+					break;
 			}
+
+			if (swCfg->cloned)
+				csl_caph_switch_release_channel(cur_sw);
+			else
+				audio_xassert(0, cur_sw);
+			aTrace(LOG_AUDIO_CSL,
+				"%s sw %d in path %d sink %d clones sw %d "
+				"in path %d sink %d\n",
+				__func__, cur_sw, pathID, sinkNo, swCfg->chnl,
+				src_path, j);
 		}
 	}
 
@@ -3485,6 +3495,16 @@ CSL_CAPH_PathID csl_caph_hwctrl_StartPath(CSL_CAPH_PathID pathID)
 
 	csl_caph_hwctrl_PrintPath(path);
 
+	/*
+	Mute dac to avoid 2ms pop noise after bootup.
+	This would be removed after filter-flushing function is ready.
+	*/
+	if (path->sink[0] == CSL_CAPH_DEV_HS ||
+	    path->sink[0] == CSL_CAPH_DEV_IHF) {
+		usleep_range(2*1000, 3*1000);
+		csl_caph_hwctrl_UnmuteSink(pathID, path->sink[0]);
+	}
+
 	return path->pathID;
 }
 
@@ -3677,6 +3697,11 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID,
 
 	csl_caph_hwctrl_PrintPath(path);
 
+	if (path->sink[sinkNo] == CSL_CAPH_DEV_HS ||
+	    path->sink[sinkNo] == CSL_CAPH_DEV_IHF) {
+		usleep_range(2*1000, 3*1000);
+		csl_caph_hwctrl_UnmuteSink(pathID, path->sink[sinkNo]);
+	}
 	return RESULT_OK;
 }
 
@@ -4762,7 +4787,9 @@ CSL_CAPH_HWConfig_Table_t *csl_caph_FindCapturePath(unsigned int streamID)
 *
 *****************************************************************************/
 CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
-	CSL_CAPH_DEVICE_e src_dev)
+	CSL_CAPH_DEVICE_e src_dev,
+	CSL_CAPH_PathID skip_path/*skip this path*/
+	)
 {
 	int i, j;
 	CSL_CAPH_PathID pathID = 0;
@@ -4772,11 +4799,15 @@ CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
 			if (HWConfig_Table[i].sink[j] == sink_dev
 			    && HWConfig_Table[i].source == src_dev) {
 				pathID = HWConfig_Table[i].pathID;
-				break;
+				if (skip_path != pathID)
+					break;
+				pathID = 0;
 			}
 		}
 	}
 
+	aTrace(LOG_AUDIO_CSL, "%s sink %d src %d skip_path %d, pathID %d\n",
+		__func__, sink_dev, src_dev, skip_path, pathID);
 	return pathID;
 }
 

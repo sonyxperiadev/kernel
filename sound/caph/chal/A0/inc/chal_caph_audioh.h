@@ -37,8 +37,8 @@
 #ifndef _CHAL_HERA_AUDIO_
 #define _CHAL_HERA_AUDIO_
 
-#include "chal_types.h"
-#include "brcm_rdb_sysmap.h"
+#include <plat/chal/chal_types.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include "chal_caph.h"
 
 /**

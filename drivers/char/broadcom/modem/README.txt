@@ -6,9 +6,7 @@ The subdirectories of modem are:
        ipc           - interprocessor communications
        rpc           - remote procedure call support
        sysrpc        - rpc callback handler (CP->AP)
-       at            - AT command handler support
        net           - network support
-       CAPI2_CIB     - shared header files
 
 The files in these directories were copied from the 'gb_brcm' branch and modified for the Rhea 
 platform.  gb_brcm branch was synced to commit ff75a35f6d10e2311b5b4dcce78a5b89dcc967ca. 

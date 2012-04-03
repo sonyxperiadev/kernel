@@ -7,23 +7,23 @@
  * may copy or modify Sun RPC without charge, but are not authorized
  * to license or distribute it to anyone else except as part of a product or
  * program developed by the user.
- * 
+ *
  * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
  * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
  * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
- * 
+ *
  * Sun RPC is provided with no support and without any obligation on the
  * part of Sun Microsystems, Inc. to assist in its use, correction,
  * modification or enhancement.
- * 
+ *
  * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
  * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
  * OR ANY PART THEREOF.
- * 
+ *
  * In no event will Sun Microsystems, Inc. be liable for any lost revenue
  * or profits or other special, indirect and consequential damages, even if
  * Sun has been advised of the possibility of such damages.
- * 
+ *
  * Sun Microsystems, Inc.
  * 2550 Garcia Avenue
  * Mountain View, California  94043
@@ -56,13 +56,13 @@ static u_int xdrmem_getpos __P((XDR *));
 static bool_t xdrmem_setpos __P((XDR *, u_int));
 static int32_t *xdrmem_inline_aligned __P((XDR *, u_int));
 static int32_t *xdrmem_inline_unaligned __P((XDR *, u_int));
-//static void* xdrmem_alloc __P((XDR *, int));
-//static void xdrmem_free __P((XDR *, void*, int));
+/*static void* xdrmem_alloc __P((XDR *, int)); */
+/*static void xdrmem_free __P((XDR *, void*, int)); */
 
 #define TEMP_STR_LEN 40
-#define XDR_LOG_STR_CAT(xdrs,src) strncat(xdrs->x_logbuffer, src, (xdrs->x_logsize - strlen(xdrs->x_logbuffer) - 1));
+#define XDR_LOG_STR_CAT(xdrs, src) strncat(xdrs->x_logbuffer, src, (xdrs->x_logsize - strlen(xdrs->x_logbuffer) - 1));
 
-#define XDR_LOG_BUF_AVAILABLE(xdrs,reqSize) (xdrs->x_logbuffer != NULL && (strlen(xdrs->x_logbuffer)+reqSize < xdrs->x_logsize) )?TRUE:FALSE
+#define XDR_LOG_BUF_AVAILABLE(xdrs, reqSize) (xdrs->x_logbuffer != NULL && (strlen(xdrs->x_logbuffer)+reqSize < xdrs->x_logsize)) ? TRUE : FALSE
 
 static const struct xdr_ops xdrmem_ops_aligned = {
 	xdrmem_getlong_aligned,
@@ -74,8 +74,8 @@ static const struct xdr_ops xdrmem_ops_aligned = {
 	xdrmem_inline_aligned,
 	xdrmem_destroy,
 	NULL,
-	NULL,			//xdrmem_alloc,
-	NULL			//xdrmem_free
+	NULL,			/*xdrmem_alloc */
+	NULL			/*xdrmem_free */
 };
 
 static const struct xdr_ops xdrmem_ops_unaligned = {
@@ -88,26 +88,26 @@ static const struct xdr_ops xdrmem_ops_unaligned = {
 	xdrmem_inline_unaligned,
 	xdrmem_destroy,
 	NULL,
-	NULL,			//xdrmem_alloc,
-	NULL			//xdrmem_free
+	NULL,			/*xdrmem_alloc */
+	NULL			/*xdrmem_free */
 };
 
-void xdrmem_logbytes(XDR * xdrs, const char *addr, u_int len);
+void xdrmem_logbytes(XDR *xdrs, const char *addr, u_int len);
 
 /*
  * The procedure xdrmem_create initializes a stream descriptor for a
- * memory buffer.  
+ * memory buffer.
  */
 void
-xdrmem_create(XDR * xdrs,
+xdrmem_create(XDR *xdrs,
 	      char *addr,
 	      u_int size, char *logbuffer, u_int logsize, enum xdr_op op)
 {
 	xdrs->x_logbuffer = logbuffer;
 	xdrs->x_logsize = logsize;
-	if (logbuffer != NULL) {
+
+	if (logbuffer != NULL)
 		memset(logbuffer, 0xCD, logsize);
-	}
 
 	xdrs->x_op = op;
 	xdrs->x_ops = ((unsigned long)addr & (sizeof(int32_t) - 1))
@@ -127,7 +127,7 @@ xdrmem_create(XDR * xdrs,
 
 }
 
- /*ARGSUSED*/ static void xdrmem_destroy(XDR * xdrs)
+ /*ARGSUSED*/ static void xdrmem_destroy(XDR *xdrs)
 {
 	if (xdrs && xdrs->x_ops->x_free && xdrs->x_decodebuffer)
 		mem_free(xdrs->x_decodebuffer, xdrs->x_decodeBufsize);
@@ -155,11 +155,12 @@ static void	xdrmem_free(XDR *xdrs, void* buf, int sz)
 }
 */
 
-static bool_t xdrmem_getlong_aligned(XDR * xdrs, long *lp)
+static bool_t xdrmem_getlong_aligned(XDR *xdrs, long *lp)
 {
 
 	if (xdrs->x_handy < sizeof(int32_t))
-		return (FALSE);
+		return FALSE;
+
 	xdrs->x_handy -= sizeof(int32_t);
 	*lp = ntohl(*(u_int32_t *) xdrs->x_private);
 	xdrs->x_private = (char *)xdrs->x_private + sizeof(int32_t);
@@ -169,16 +170,17 @@ static bool_t xdrmem_getlong_aligned(XDR * xdrs, long *lp)
 		snprintf(temp, TEMP_STR_LEN, "{%lx} ", *lp);
 		XDR_LOG_STR_CAT(xdrs, temp);
 	}
-	return (TRUE);
+	return TRUE;
 }
 
-static bool_t xdrmem_putlong_aligned(XDR * xdrs, const long *lp)
+static bool_t xdrmem_putlong_aligned(XDR *xdrs, const long *lp)
 {
 
 	if (xdrs->x_handy < sizeof(int32_t))
-		return (FALSE);
+		return FALSE;
+
 	xdrs->x_handy -= sizeof(int32_t);
-	*(u_int32_t *) xdrs->x_private = htonl((u_int32_t) * lp);
+	*(u_int32_t *) xdrs->x_private = htonl((u_int32_t) *lp);
 	xdrs->x_private = (char *)xdrs->x_private + sizeof(int32_t);
 
 	if (XDR_LOG_BUF_AVAILABLE(xdrs, TEMP_STR_LEN)) {
@@ -186,33 +188,38 @@ static bool_t xdrmem_putlong_aligned(XDR * xdrs, const long *lp)
 		snprintf(temp, TEMP_STR_LEN, "{%lx} ", *lp);
 		XDR_LOG_STR_CAT(xdrs, temp);
 	}
-	return (TRUE);
+
+	return TRUE;
 }
 
-static bool_t xdrmem_getlong_unaligned(XDR * xdrs, long *lp)
+static bool_t xdrmem_getlong_unaligned(XDR *xdrs, long *lp)
 {
 	u_int32_t l;
 
 	if (xdrs->x_handy < sizeof(int32_t))
-		return (FALSE);
+		return FALSE;
+
 	xdrs->x_handy -= sizeof(int32_t);
 	memmove(&l, xdrs->x_private, sizeof(int32_t));
 	*lp = ntohl(l);
 	xdrs->x_private = (char *)xdrs->x_private + sizeof(int32_t);
-	return (TRUE);
+
+	return TRUE;
 }
 
-static bool_t xdrmem_putlong_unaligned(XDR * xdrs, const long *lp)
+static bool_t xdrmem_putlong_unaligned(XDR *xdrs, const long *lp)
 {
 	u_int32_t l;
 
 	if (xdrs->x_handy < sizeof(int32_t))
-		return (FALSE);
+		return FALSE;
+
 	xdrs->x_handy -= sizeof(int32_t);
-	l = htonl((u_int32_t) * lp);
+	l = htonl((u_int32_t) *lp);
 	memmove(xdrs->x_private, &l, sizeof(int32_t));
 	xdrs->x_private = (char *)xdrs->x_private + sizeof(int32_t);
-	return (TRUE);
+
+	return TRUE;
 }
 
 static bool_t isAlpha(char y)
@@ -223,47 +230,53 @@ static bool_t isAlpha(char y)
 	return FALSE;
 }
 
-static bool_t xdrmem_getbytes(XDR * xdrs, char *addr, u_int len)
+static bool_t xdrmem_getbytes(XDR *xdrs, char *addr, u_int len)
 {
 
 	if (xdrs->x_handy < len)
-		return (FALSE);
+		return FALSE;
+
 	xdrs->x_handy -= len;
 	memmove(addr, xdrs->x_private, len);
 	xdrs->x_private = (char *)xdrs->x_private + len;
 	xdrmem_logbytes(xdrs, addr, len);
-	return (TRUE);
+
+	return TRUE;
 }
 
-static bool_t xdrmem_putbytes(XDR * xdrs, const char *addr, u_int len)
+static bool_t xdrmem_putbytes(XDR *xdrs, const char *addr, u_int len)
 {
 
 	if (xdrs->x_handy < len)
-		return (FALSE);
+		return FALSE;
+
 	xdrs->x_handy -= len;
 	memmove(xdrs->x_private, addr, len);
 	xdrs->x_private = (char *)xdrs->x_private + len;
 	xdrmem_logbytes(xdrs, addr, len);
-	return (TRUE);
+
+	return TRUE;
 }
 
-static u_int xdrmem_getpos(XDR * xdrs)
+static u_int xdrmem_getpos(XDR *xdrs)
 {
 
 	/* XXX w/64-bit pointers, u_int not enough! */
 	return (u_int) ((u_long) xdrs->x_private - (u_long) xdrs->x_base);
 }
 
-static bool_t xdrmem_setpos(XDR * xdrs, u_int pos)
+static bool_t xdrmem_setpos(XDR *xdrs, u_int pos)
 {
 	char *newaddr = xdrs->x_base + pos;
 	char *lastaddr = (char *)xdrs->x_private + xdrs->x_handy;
 
 	if ((long)newaddr > (long)lastaddr)
-		return (FALSE);
+		return FALSE;
+
 	xdrs->x_private = newaddr;
 	xdrs->x_handy = (int)((long)lastaddr - (long)newaddr);
-	return (TRUE);
+
+	return TRUE;
 }
 
 static int32_t *xdrmem_inline_aligned(XDR * xdrs, u_int len)
@@ -275,18 +288,18 @@ static int32_t *xdrmem_inline_aligned(XDR * xdrs, u_int len)
 		buf = (int32_t *) xdrs->x_private;
 		xdrs->x_private = (char *)xdrs->x_private + len;
 	}
-	return (buf);
+	return buf;
 }
 
 /* ARGSUSED */
 static int32_t *xdrmem_inline_unaligned(XDR * xdrs, u_int len)
 {
 	if (xdrs || len) {
-	}			//fixes compiler warnings
-	return (0);
+	}			/* fixes compiler warnings */
+	return 0;
 }
 
-void xdrmem_log(XDR * xdrs, char *str)
+void xdrmem_log(XDR *xdrs, char *str)
 {
 	if (XDR_LOG_BUF_AVAILABLE(xdrs, 5)) {
 		XDR_LOG_STR_CAT(xdrs, "\r\n");
@@ -294,7 +307,7 @@ void xdrmem_log(XDR * xdrs, char *str)
 	}
 }
 
-void xdrmem_log_start(XDR * xdrs, char *str)
+void xdrmem_log_start(XDR *xdrs, char *str)
 {
 	if (xdrs->x_logbuffer != NULL && (strlen(str) + 5 < xdrs->x_logsize)) {
 		memset(xdrs->x_logbuffer, 0, xdrs->x_logsize);
@@ -311,29 +324,29 @@ void xdrmem_log_reset(XDR *xdrs)
 #define MAX_ARRAY_LEN 300
 #define MAX_BYTES_PER_LINE 20
 
-void xdrmem_logbytes(XDR * xdrs, const char *addr, u_int len)
+void xdrmem_logbytes(XDR *xdrs, const char *addr, u_int len)
 {
 
-	//Check if we have any space left
+	/*Check if we have any space left */
 	if (XDR_LOG_BUF_AVAILABLE(xdrs, TEMP_STR_LEN)) {
 		int availSize;
 		u_int i, max_len;
 		char temp[TEMP_STR_LEN];
 		bool_t alphaFound = TRUE;
 
-		//Check for avail buffer
+		/* Check for avail buffer */
 		availSize =
 		    xdrs->x_logsize - strlen(xdrs->x_logbuffer) - TEMP_STR_LEN;
-		//3 bytes per BYTE including comma and \r\n per 20 entries
+		/* 3 bytes per BYTE including comma and \r\n per 20 entries */
 		max_len =
 		    (availSize / 3) - (availSize / MAX_BYTES_PER_LINE) * 2 - 10;
-		//choose the minimum
+		/* choose the minimum */
 		max_len = (len < max_len) ? len : max_len;
 
-		//Start
+		/* Start */
 		XDR_LOG_STR_CAT(xdrs, "{");
 		for (i = 0; i < max_len; i++) {
-			//Log as chars until you find non-ascii char
+			/* Log as chars until you find non-ascii char */
 			if (isAlpha(addr[i]) && alphaFound)
 				snprintf(temp, TEMP_STR_LEN, "%c", addr[i]);
 			else {
@@ -341,24 +354,24 @@ void xdrmem_logbytes(XDR * xdrs, const char *addr, u_int len)
 				snprintf(temp, TEMP_STR_LEN, "%2x,",
 					 (unsigned char)(addr[i]));
 			}
-			//append
+			/* append */
 			XDR_LOG_STR_CAT(xdrs, temp);
 
-			//wrap up the line
-			if (i > 0 && (i % MAX_BYTES_PER_LINE) == 0) {
+			/* wrap up the line */
+			if (i > 0 && (i % MAX_BYTES_PER_LINE) == 0)
 				XDR_LOG_STR_CAT(xdrs, "\r\n");
-			}
-			//Should not come here, but check in case
+
+			/* Should not come here, but check in case */
 			if (strlen(xdrs->x_logbuffer) + TEMP_STR_LEN >
 			    xdrs->x_logsize)
 				break;
 		}
 
 		if (XDR_LOG_BUF_AVAILABLE(xdrs, TEMP_STR_LEN)) {
-			//Did we log every thing?
+			/* Did we log every thing? */
 			if (len > MAX_ARRAY_LEN)
 				XDR_LOG_STR_CAT(xdrs, "...");
-			//Done
+			/* Done */
 			XDR_LOG_STR_CAT(xdrs, "}");
 		}
 	}

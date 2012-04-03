@@ -36,8 +36,8 @@
 
 #include "chal_caph.h"
 #include "chal_caph_dma.h"
-#include "brcm_rdb_cph_aadmac.h"
-#include "brcm_rdb_util.h"
+#include <mach/rdb/brcm_rdb_cph_aadmac.h>
+#include <mach/rdb/brcm_rdb_util.h>
 #include <plat/cpu.h>
 
 /****************************************************************************

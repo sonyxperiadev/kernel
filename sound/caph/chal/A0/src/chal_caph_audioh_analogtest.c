@@ -36,8 +36,8 @@ Copyright 2009 - 2010 Broadcom Corporation.  All rights reserved.               
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
-#include "brcm_rdb_audioh.h"
-#include "brcm_rdb_util.h"
+#include <mach/rdb/brcm_rdb_audioh.h>
+#include <mach/rdb/brcm_rdb_util.h>
 
 
 //****************************************************************************

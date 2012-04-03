@@ -24,6 +24,7 @@ int bcm_hsotgctrl_bc_status(unsigned long *status);
 int bcm_hsotgctrl_bc_vdp_src_off(void);
 int bcm_hsotgctrl_reset_clk_domain(void);
 int bcm_hsotgctrl_set_phy_iso(bool on);
+int bcm_hsotgctrl_set_bc_iso(bool on);
 int bcm_hsotgctrl_set_soft_ldo_pwrdn(bool on);
 int bcm_hsotgctrl_set_aldo_pdn(bool on);
 int bcm_hsotgctrl_set_phy_resetb(bool on);

@@ -2,14 +2,14 @@
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
@@ -17,7 +17,7 @@
 *   @file   xdr_porting_layer.h
 *
 *   @brief  This file contains type definitions and the functions needed by xdr.
-*		    
+*
 *
 ****************************************************************************/
 #ifndef __XDR_PORTING_LAYER_H__
@@ -84,7 +84,7 @@ typedef unsigned long double u_longlong_t;
 
 #ifndef UNDER_LINUX_MODEM
 #ifdef __BIG_ENDIAN
-#define lswap()			// Not needed on big-endian machines */
+#define lswap()			/* Not needed on big-endian machines */
 #define      htonl(l) (l)
 #define      ntohl(l) (l)
 #define      htons(s) (s)
@@ -103,12 +103,12 @@ extern unsigned long lswap(unsigned long l);	/* swap bytes in 32 bit long */
 #endif
 
 #ifdef LINUX_RPC_KERNEL
-#define mem_free(a,b)	kfree(a)
+#define mem_free(a, b)	kfree(a)
 #define mem_alloc(a)	kmalloc(a, GFP_KERNEL)
 
 #define strlen(a)		strlen(a)
 #else
-#define mem_free(a,b)	free(a)
+#define mem_free(a, b)	free(a)
 #define mem_alloc(a)	malloc(a)
 #define strlen(a)		strlen(a)
 #endif

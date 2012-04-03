@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Copyright 2010 Broadcom Corporation.  All rights reserved.
 *
-* 	@file	arch/arm/plat-bcmap/irq.c
+*	@file	arch/arm/plat-bcmap/irq.c
 *
 * Unless you and Broadcom execute a separate written software license agreement
 * governing use of this software, this software is licensed to you under the
@@ -31,7 +31,7 @@
 #include <asm/mach/irq.h>
 #include <mach/irqs.h>
 #include <mach/io_map.h>
-// for BINTC register offsets
+/* for BINTC register offsets */
 #include <mach/rdb/brcm_rdb_bintc.h>
 
 #define INTC_IMR             0x0000
@@ -42,12 +42,12 @@
 #define INTC_ICPR            0x0020
 #define INTC_ICCR            0x0024
 #define INTC_ISELR           0x0028
-//#define INTC_SWIR(x)         (x < 64 ? 0x0030 : 0x0024)
+/*#define INTC_SWIR(x)         (x < 64 ? 0x0030 : 0x0024) */
 #define INTC_SICR(x)         (x < 64 ? 0x0034 : 0x0028)
 #define INTC_ARM9_SLEEP      0x0038
 
-// **FIXME** applicable to Rhea/BI; only for BI bup
-// extracted from Rhea chip_irq.h
+/* **FIXME** applicable to Rhea/BI; only for BI bup */
+/* extracted from Rhea chip_irq.h */
 #define NUM_KONAIRQs          224
 #define LAST_KONAIRQ          (NUM_KONAIRQs-1)
 #define FIRST_BMIRQ           (LAST_KONAIRQ+1)
@@ -55,7 +55,7 @@
 #define FIRST_BMIRQ           (LAST_KONAIRQ+1)
 #define IRQ_TO_BMIRQ(irq)         ((irq)-FIRST_BMIRQ)
 
-// **FIXME** MAG - use offsets from Rhea RDB...
+/* **FIXME** MAG - use offsets from Rhea RDB... */
 #define INTC_SWIR(x)         (x < 64 ? 0x0030 : 0x0020)
 
 enum interrupt_source_type {
@@ -132,11 +132,11 @@ static int intc_set_type(struct irq_data *d, unsigned int flow_type)
 void intc_trigger_softirq(unsigned int irq)
 {
 	void __iomem *base = (void __iomem *)(KONA_BINTC_BASE_ADDR);
-	// convert to BModem IRQ
+	/* convert to BModem IRQ */
 	unsigned int birq = IRQ_TO_BMIRQ(irq);
 	unsigned long flags;
-	//removed printouts
-	//printk("intc_trigger_softirq\n");
+	/* removed printouts */
+	/* printk("intc_trigger_softirq\n"); */
 	spin_lock_irqsave(&intc_lock, flags);
 	if (birq >= 32)
 		writel(1 << (birq - 32), base + BINTC_ISWIR1_OFFSET);
@@ -144,7 +144,6 @@ void intc_trigger_softirq(unsigned int irq)
 		writel(1 << birq, base + BINTC_ISWIR0_OFFSET);
 	spin_unlock_irqrestore(&intc_lock, flags);
 }
-
 EXPORT_SYMBOL(intc_trigger_softirq);
 
 #if 0				/* #if defined(CONFIG_PM) */
@@ -313,8 +312,9 @@ static int intc_set_wake(unsigned int irq, unsigned int on)
 }
 
 #else
-static inline void intc_pm_register(void __iomem * base, unsigned int irq,
-				    u32 arg1)
+static inline void intc_pm_register(void __iomem *base,
+				unsigned int irq,
+				u32 arg1)
 {
 }
 
@@ -337,10 +337,10 @@ static struct irq_chip intc_chip = {
 /**
  * bcm_intc_init - initialise a vectored interrupt controller
  * @param base				iomem base address
- * @param irq_start			starting interrupt number, must be muliple of 32
+ * @param irq_start		starting interrupt number, must be muliple of 32
  * @param intc_sources		bitmask of interrupt sources to allow
  * @param resume_sources	bitmask of interrupt sources to allow for resume
- 
+ *
  * The INTC module in Broadcom SoC handles 64 interrupts. The first set
  * of 32 interrupts are handled in first block 0x00 of INTC registers,
  * while the second set of 32 interrupts are handled at 0x100. In that

@@ -48,9 +48,11 @@ static int bcmbt_rfkill_set_power(void *data, bool blocked)
 		gpio_set_value(vreg_gpio, BCMBT_VREG_ON);
 		if (BCMBT_UNUSED_GPIO != n_reset_gpio)
 			gpio_set_value(n_reset_gpio, BCMBT_N_RESET_OFF);
+#if 0
 		pr_info("bcm_bt_rfkill_setpower: unblocked %s\n",
 			gpio_get_value(vreg_gpio) ? "High [POWER ON]" :
 			"Low [POWER_OFF]");
+#endif
 	} else {		/* Transmitter OFF (Blocked) */
 		gpio_set_value(vreg_gpio, BCMBT_VREG_OFF);
 		if (BCMBT_UNUSED_GPIO != n_reset_gpio)
@@ -59,9 +61,11 @@ static int bcmbt_rfkill_set_power(void *data, bool blocked)
 			gpio_set_value(aux1_gpio, BCMBT_AUX1_OFF);
 		if (BCMBT_UNUSED_GPIO != aux0_gpio)
 			gpio_set_value(aux0_gpio, BCMBT_AUX0_OFF);
+#if 0
 		pr_info("bcm_bt_rfkill_setpower: blocked %s\n",
 			gpio_get_value(vreg_gpio) ? "High [POWER ON]" :
 			"Low [POWER_OFF]");
+#endif
 	}
 	return 0;
 }
@@ -74,11 +78,12 @@ static int bcmbt_rfkill_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct bcmbt_rfkill_platform_data *pdata = pdev->dev.platform_data;
-
+#if 0
 	gpio_request(pdata->vreg_gpio, "rfkill_vreg_gpio");
 	pr_err("bcmbt_rfkill_probe:  Set vreg_gpio: %d, level: %s\n",
 	       pdata->vreg_gpio,
 	       gpio_get_value(pdata->vreg_gpio) ? "High" : "Low");
+#endif
 	gpio_export(pdata->vreg_gpio, false);
 	gpio_direction_output(pdata->vreg_gpio, BCMBT_VREG_OFF);
 

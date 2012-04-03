@@ -2,14 +2,14 @@
 *
 *     Copyright (c) 2009 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
@@ -58,15 +58,15 @@ static unsigned char gClientIdIndex = 0;
 unsigned char gSysClientIDs[255] = { 0 };
 void kRpcDebugPrintf(char *fmt, ...);
 
-// ******************************************************************************
-/**	
+/******************************************************************************/
+/**
 *   Assign unique client id
 *
-*	@return 		    unique client ID.
+*	@return		unique client ID.
 *
 *   @note Copy of function in taskmsgs_util.c
 *
-********************************************************************************/
+*******************************************************************************/
 unsigned char SYS_GenClientID(void)
 {
 	unsigned char clientID, i;
@@ -108,22 +108,22 @@ void SYS_ReleaseClientID(unsigned char clientID)
 
 }
 
-// ******************************************************************************
-/**	
+/******************************************************************************/
+/**
 *   Check for registered client ID
 *
-*	@return 		    TRUE if registered client ID, FALSE otherwise
+*	@return		TRUE if registered client ID, FALSE otherwise
 *
 *   @note Copy of function in taskmsgs_util.c
 *
-********************************************************************************/
+*******************************************************************************/
 Boolean SYS_IsRegisteredClientID(UInt8 clientID)
 {
-	//Log_DebugPrintf(LOGID_MISC, "SYS_IsRegisteredClientID clientID=%d gClientIdIndex=%d gClientIdIndex2=%d", clientID, gSysClientIDs[clientID], gSysClientIDs[clientID+1]);
+	/*Log_DebugPrintf(LOGID_MISC, "SYS_IsRegisteredClientID clientID=%d gClientIdIndex=%d gClientIdIndex2=%d", clientID, gSysClientIDs[clientID], gSysClientIDs[clientID+1]);*/
 	return (gSysClientIDs[clientID] > 0) ? TRUE : FALSE;
 }
 
-/************************************** Ring Buffer Logging ************************************************/
+/*********************** Ring Buffer Logging *********************************/
 #define MAX_VAL 0xFF
 #define MAX_LOG_SIZE 128
 typedef struct {
@@ -134,7 +134,7 @@ typedef struct {
 spinlock_t mLogLock;
 LogDataElem_t gLogData[MAX_VAL];
 
-#define INC_INDEX(x) ( (x+1) >= MAX_VAL )?0:(x+1)
+#define INC_INDEX(x) ((x+1) >= MAX_VAL) ? 0 : (x+1)
 
 typedef struct {
 	int ri;
@@ -153,15 +153,14 @@ void InitRingBuffer(void)
 	}
 }
 
-int getNextWriteIndex(mRingBuffer_t * p)
+int getNextWriteIndex(mRingBuffer_t *p)
 {
 	int cur_wi;
 
 	InitRingBuffer();
 	spin_lock(&mLogLock);
-	if (p->wi == p->ri && p->isAvail) {
+	if (p->wi == p->ri && p->isAvail)
 		p->ri = INC_INDEX(p->ri);
-	}
 
 	cur_wi = p->wi;
 
@@ -171,7 +170,7 @@ int getNextWriteIndex(mRingBuffer_t * p)
 	return cur_wi;
 }
 
-int peekNextReadIndex(mRingBuffer_t * p)
+int peekNextReadIndex(mRingBuffer_t *p)
 {
 	int cur_ri;
 	InitRingBuffer();
@@ -185,7 +184,7 @@ int peekNextReadIndex(mRingBuffer_t * p)
 	return cur_ri;
 }
 
-int getNextReadIndex(mRingBuffer_t * p)
+int getNextReadIndex(mRingBuffer_t *p)
 {
 	int cur_ri;
 
@@ -200,9 +199,9 @@ int getNextReadIndex(mRingBuffer_t * p)
 
 	p->ri = INC_INDEX(p->ri);
 
-	if (p->ri == p->wi) {
+	if (p->ri == p->wi)
 		p->isAvail = 0;
-	}
+
 	spin_unlock(&mLogLock);
 	return cur_ri;
 }
@@ -222,14 +221,13 @@ void kRpcDebugPrintf(char *fmt, ...)
 	vsnprintf(buf, (MAX_LOG_SIZE - 1), fmt, ap);
 	va_end(ap);
 
-	if (gRpcLogToConsole)
-		printk(KERN_INFO "k:%s\n", buf);
+	printk(KERN_INFO "k:%s\n", buf);
 }
 
 ssize_t kRpcReadLogData(char *destBuf, size_t len)
 {
 	size_t i = 0;
-//      ssize_t ret = 0;
+	/*ssize_t ret = 0;*/
 	int index = 0;
 
 	index = peekNextReadIndex(&gLogBuffer);
@@ -240,11 +238,11 @@ ssize_t kRpcReadLogData(char *destBuf, size_t len)
 		logbuf = gLogData[index].logData;
 		logsize = strlen(logbuf);
 		i = min_t(size_t, (len - 1), logsize);
-		//ret = copy_to_user(destBuf, logbuf, i);
+		/*ret = copy_to_user(destBuf, logbuf, i);*/
 		strncpy(destBuf, logbuf, i);
-		//destBuf[len-1] = '\0';
+		/*destBuf[len-1] = '\0';*/
 		getNextReadIndex(&gLogBuffer);
-		//printk(KERN_INFO "Read: ret=%d w:%d r:%d slen=%d dest=<%s> src=<%s> mlen=%d slen=%d\n",ret, gLogBuffer.wi,gLogBuffer.ri, logsize, destBuf, logbuf, i, len);
+		/*printk(KERN_INFO "Read: ret=%d w:%d r:%d slen=%d dest=<%s> src=<%s> mlen=%d slen=%d\n",ret, gLogBuffer.wi,gLogBuffer.ri, logsize, destBuf, logbuf, i, len);*/
 	} else
 		printk(KERN_INFO "No Data available\n");
 
@@ -256,7 +254,7 @@ int RpcLog_DetailLogEnabled(void)
 	return 0;
 }
 
-//JW, to do, hack
+/*JW, to do, hack */
 Boolean IsBasicCapi2LoggingEnable(void)
 {
 	return true;

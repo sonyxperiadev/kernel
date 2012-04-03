@@ -2,14 +2,14 @@
 *
 *     Copyright (c) 2009 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 #include <linux/kernel.h>
@@ -55,22 +55,22 @@ RegulatorInfo_t gRegulatorList[2] = { {NULL, FALSE, SIMLDO1, "sim_vcc"},
 {NULL, FALSE, SIMLDO2, "sim2_vcc"}
 };
 
-#define REG_INDEX(a) (a == SIMLDO2)?1:0
+#define REG_INDEX(a) ((a == SIMLDO2) ? 1 : 0)
 
 #define DBG_INFO	KERN_INFO
 #define DBG_ERROR	KERN_ERR
 
-#define KRIL_DEBUG(level,fmt,args...) printk(level fmt, ##args)
+#define KRIL_DEBUG(level, fmt, args...) printk(level fmt, ##args)
 
 static void SysRpc_OpenRegulator(PMU_SIMLDO_t ldo);
 
-// initialize sysrpc interface
+/* initialize sysrpc interface */
 void KRIL_SysRpc_Init(void)
 {
 	static int inited = 0;
 
 	if (!inited) {
-		// make sure we can't be re-initialized...
+		/* make sure we can't be re-initialized... */
 		inited = 1;
 
 		KRIL_DEBUG(DBG_INFO, " calling SYS_InitRpc\n");
@@ -116,7 +116,7 @@ Result_t Handle_CAPI2_SYSRPC_PMU_IsSIMReady(RPC_Msg_t *pReqMsg,
 			   (int)IS_ERR(curReg->handle));
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
-	data.req_rep_u.CAPI2_SYSRPC_PMU_IsSIMReady_Rsp.val = curReg->isSimInit;	//(Boolean)(regulator_is_enabled > 0);
+	data.req_rep_u.CAPI2_SYSRPC_PMU_IsSIMReady_Rsp.val = curReg->isSimInit;	/*(Boolean)(regulator_is_enabled > 0); */
 	data.result = result;
 	Send_SYS_RspForRequest(pReqMsg, MSG_PMU_IS_SIM_READY_RSP, &data);
 
@@ -155,7 +155,7 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 	case PMU_SIM3P0Volt:
 		{
 			KRIL_DEBUG(DBG_INFO, " PMU_SIM3P0Volt\n");
-			// 3.0 V SIM
+			/* 3.0 V SIM */
 			simMicroVolts = THREE_VOLTS_IN_MICRO_VOLTS;
 			break;
 		}
@@ -163,7 +163,7 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 	case PMU_SIM1P8Volt:
 		{
 			KRIL_DEBUG(DBG_INFO, " PMU_SIM1P8Volt\n");
-			// 1.8 V SIM
+			/* 1.8 V SIM */
 			simMicroVolts = ONE_PT_EIGHT_VOLTS_IN_MICRO_VOLTS;
 			break;
 		}
@@ -207,7 +207,7 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 
 		curReg->isSimInit = TRUE;
 	}
-	//PMU_ActivateSIM(volt);
+	/*PMU_ActivateSIM(volt); */
 
 	data.result = result;
 	Send_SYS_RspForRequest(pReqMsg, MSG_PMU_ACTIVATE_SIM_RSP, &data);

@@ -31,8 +31,8 @@ Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.               
 *
 ****************************************************************************/
 #include "chal_caph_dma.h"
-#include "brcm_rdb_cph_aadmac.h"
-#include "brcm_rdb_util.h"
+#include <mach/rdb/brcm_rdb_cph_aadmac.h>
+#include <mach/rdb/brcm_rdb_util.h>
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N

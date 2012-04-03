@@ -21,7 +21,7 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DMSP -DFUSE_DUAL_PROCESSOR_ARCHITECT
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DUNDER_LINUX -DUNDER_LINUX_MODEM -DLINUX_RPC_KERNEL
 #the options below are used by audio
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_DMA_VOICE
-#subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_BT16
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_BT16
 #subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DVOLTE_SUPPORT
 ifdef CONFIG_ARCH_RHEA_BX
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCAPH_48K_MONO_PASSTHRU
@@ -49,26 +49,8 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I$(src)/chal/A0/inc/
 endif
 #RPC Header files
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/CAPI2_CIB/soc/debug/public/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/CAPI2_CIB/public/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/fuse_log
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/public/
-
-#Platform header files
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/mach
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/
-ifdef CONFIG_ARCH_RHEA_BX
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/rdb_Bx/
-else
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-rhea/include/mach/rdb_A0/
-endif
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/chal/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/csl/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/osabstract/
 
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_module.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_ctl.o

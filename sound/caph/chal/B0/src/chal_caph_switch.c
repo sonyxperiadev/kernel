@@ -35,8 +35,8 @@
 ****************************************************************************/
 
 #include "chal_caph_switch.h"
-#include "brcm_rdb_cph_ssasw.h"
-#include "brcm_rdb_util.h"
+#include <mach/rdb/brcm_rdb_cph_ssasw.h>
+#include <mach/rdb/brcm_rdb_util.h>
 
 /****************************************************************************
 *			G L O B A L   S E C T I O N

@@ -2,14 +2,14 @@
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 #include "string.h"
@@ -29,7 +29,7 @@
 #include "logapi.h"
 #endif
 
-//#ifdef FUSE_COMMS_PROCESSOR
+/*#ifdef FUSE_COMMS_PROCESSOR */
 
 #define EM_RPC_CLIENT_ID 201
 
@@ -64,13 +64,13 @@ void sendDrxSignal(void)
 	RPC_SerializeRsp(&msg);
 }
 
-void HandleDrxEventRspCb(RPC_Msg_t * pMsg,
+void HandleDrxEventRspCb(RPC_Msg_t *pMsg,
 			 ResultDataBufHandle_t dataBufHandle,
 			 UInt32 userContextData)
 {
 	_DBG_(RPC_TRACE("HandleDrxEventRspCb %d\r\n", pMsg->msgId));
 	if (pMsg->msgId == MSG_ADC_DRX_SYNC_IND) {
-		//Handle event
+		/*Handle event */
 	} else if (pMsg->msgId == MSG_RPC_SIMPLE_REQ_RSP) {
 		RPC_SimpleMsg_t *pSimpMsg = (RPC_SimpleMsg_t *) pMsg->dataBuf;
 		_DBG_(RPC_TRACE

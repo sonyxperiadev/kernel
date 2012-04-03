@@ -65,7 +65,7 @@
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "bcm_fuse_sysparm_CIB.h"
-#include "chal_types.h"
+#include <plat/chal/chal_types.h>
 #include "audio_trace.h"
 
 #include "csl_caph.h"
@@ -76,10 +76,10 @@
 #include "caph_common.h"
 #include "voif_handler.h"
 
-#include "brcm_rdb_sysmap.h"
-#include "brcm_rdb_khub_clk_mgr_reg.h"
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 
-#include "ossemaphore.h"
+#include <plat/osabstract/ossemaphore.h>
 #include "msconsts.h"
 #include "csl_aud_queue.h"
 #include "csl_vpu.h"

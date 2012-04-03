@@ -35,8 +35,8 @@
 
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
-#include "brcm_rdb_audioh.h"
-#include "brcm_rdb_util.h"
+#include <mach/rdb/brcm_rdb_audioh.h>
+#include <mach/rdb/brcm_rdb_util.h>
 
 /****************************************************************************
 *                        G L O B A L   S E C T I O N
@@ -916,6 +916,13 @@ cVoid chal_audio_hspath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable_chan)
 {
 	cUInt32 base = ((ChalAudioCtrlBlk_t *) handle)->audioh_base;
 	cUInt32 reg_value;
+
+	/* clearing i_hs_dac_ctl[9] bit to shorten settle time for DAC/Headset
+	 AUDIOH_HS_DAC
+	*/
+	reg_value = BRCM_READ_REG(base, AUDIOH_HS_DAC_CTRL);
+	reg_value &= ~(1<<9);
+	BRCM_WRITE_REG(base, AUDIOH_HS_DAC_CTRL, reg_value);
 
 	reg_value = BRCM_READ_REG(base, AUDIOH_HS_PWR);
 

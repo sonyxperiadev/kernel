@@ -32,4 +32,4 @@ void bcm_enable_reentrancy(void);
 
 void bcm_disable_reentrancy(void);
 
-#endif //_BCM_FUSE_LNX_IF_H_
+#endif /* _BCM_FUSE_LNX_IF_H_ */

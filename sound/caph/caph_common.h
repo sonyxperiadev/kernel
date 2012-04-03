@@ -52,6 +52,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 #include <linux/wakelock.h>
+#include <linux/completion.h>
 
 #endif /*__KERNEL__*/
 
@@ -185,6 +186,8 @@ struct _TPcm_Stream_Ctrls {
 	snd_pcm_uframes_t	 stream_hw_ptr;
 	TIDChanOfDev	dev_prop;
 	void   *pSubStream;
+	struct completion stopCompletion;
+	struct completion *pStopCompletion;
 
 };
 
@@ -315,6 +318,7 @@ extern int BrcmCreateAuddrv_testSysFs(struct snd_card *card);
 extern int BrcmCreateAuddrv_selftestSysFs(struct snd_card *card);
 extern int LaunchAudioCtrlThread(void);
 extern int TerminateAudioHalThread(void);
+typedef	void (*PFuncAudioCtrlCB)(int);
 #endif /* __KERNEL__ */
 #endif /* __CAPH_COMMON_H__ */
 

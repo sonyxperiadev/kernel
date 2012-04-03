@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*     Copyright (c) 2009 Broadcom Corporation
+*   Copyright (c) 2009 Broadcom Corporation
 *
 *   Unless you and Broadcom execute a separate written software license
 *   agreement governing use of this software, this software is licensed to you
@@ -104,6 +104,8 @@ static void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf,
 extern void cp_abort(void);
 #endif
 
+extern int RpcDbgDumpHistoryLogging(int type, int level);
+
 /*********************************************************************
 *
 *   Retrieve string from physical address
@@ -142,18 +144,25 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	IPC_U32 *Dump;
 	void __iomem *DumpVAddr;
 
+
 	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice())
-		&& ap_triggered == 0) {
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+		&& ap_triggered == 0
+#endif
+	    ) {
 		/* we kill AP when CP crashes */
 		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
 		abort();
 	}
 
-#if defined(CONFIG_BRCM_CP_CRASH_DUMP)\
-	 || defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) || defined(CONFIG_BCM_AP_PANIC_ON_CPCRASH)
+	RpcDbgDumpHistoryLogging(0, 0);
+
+#if defined(CONFIG_BRCM_CP_CRASH_DUMP) \
+	|| defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) \
+	|| defined(CONFIG_BCM_AP_PANIC_ON_CPCRASH)
 	while (SmLocalControl.SmControl->CrashDump == NULL)
-		;
+		; /* No op */
 #endif
 
 	/* **NOTE** for now, continue doing simple dump out IPC_DEBUG so there
@@ -238,7 +247,7 @@ cleanUp:
 #endif
 
 #ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
-	IPC_DEBUG (DBG_ERROR, "CP crashed, crashing AP now..\n");
+	IPC_DEBUG(DBG_ERROR, "CP crashed, crashing AP now..\n");
 
 #ifdef CONFIG_SEC_DEBUG
 	cp_abort();
@@ -403,6 +412,8 @@ void DUMP_CP_assert_log(void)
 		}
 #endif
 	}
+
+	RpcDbgDumpHistoryLogging(2, 1);
 
 	IPC_DEBUG(DBG_ERROR, "Starting CP RAM dump - do not power down...\n");
 

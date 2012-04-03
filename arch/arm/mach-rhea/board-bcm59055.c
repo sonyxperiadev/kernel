@@ -278,7 +278,7 @@ static struct regulator_init_data bcm59055_hv3ldo_data = {
 
 __weak struct regulator_consumer_supply hv4_supply[] = {
 	{.supply = "hv4ldo_uc"},
-	{.supply = "2v9sdxc"},
+	{.supply = "vdd_sdio"},
 };
 static struct regulator_init_data bcm59055_hv4ldo_data = {
 	.constraints = {
@@ -315,7 +315,7 @@ static struct regulator_init_data bcm59055_hv5ldo_data = {
 
 __weak struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "hv6ldo_uc"},
-	{.supply = "vdd_sdio"},
+	{.supply = "vdd_sdxc"},
 };
 static struct regulator_init_data bcm59055_hv6ldo_data = {
 	.constraints = {
@@ -754,6 +754,82 @@ static struct i2c_board_info __initdata pmu_info[] = {
 	},
 };
 
+/*700 Mhz CSR voltage definitions....*/
+
+#define CSR_REG_VAL_RETN_SS_700M		0x4
+#define CSR_REG_VAL_RETN_TT_700M		0x4
+#define CSR_REG_VAL_RETN_FF_700M		0x4
+
+#define CSR_REG_VAL_ECO_SS_700M		0x7
+#define CSR_REG_VAL_ECO_TT_700M		0x7
+#define CSR_REG_VAL_ECO_FF_700M		0x7
+
+#define CSR_REG_VAL_NRML_SS_700M		0xF
+#define CSR_REG_VAL_NRML_TT_700M		0xC
+#define CSR_REG_VAL_NRML_FF_700M		0xA
+
+#define CSR_REG_VAL_TURBO_SS_700M		0x14
+#define CSR_REG_VAL_TURBO_TT_700M		0x11
+#define CSR_REG_VAL_TURBO_FF_700M		0xE
+
+
+
+#define PMU_SCR_VLT_TBL_SS_700M		ARRAY_LIST(\
+						CSR_REG_VAL_RETN_SS_700M,\
+						CSR_REG_VAL_RETN_SS_700M,\
+						CSR_REG_VAL_RETN_SS_700M,\
+						CSR_REG_VAL_RETN_SS_700M,\
+						CSR_REG_VAL_RETN_SS_700M,\
+						CSR_REG_VAL_RETN_SS_700M,\
+						CSR_REG_VAL_RETN_SS_700M,\
+						CSR_REG_VAL_RETN_SS_700M,\
+						CSR_REG_VAL_ECO_SS_700M,\
+						CSR_REG_VAL_ECO_SS_700M,\
+						CSR_REG_VAL_ECO_SS_700M,\
+						CSR_REG_VAL_NRML_SS_700M,\
+						CSR_REG_VAL_NRML_SS_700M,\
+						CSR_REG_VAL_NRML_SS_700M,\
+						CSR_REG_VAL_TURBO_SS_700M,\
+						CSR_REG_VAL_TURBO_SS_700M)
+
+
+#define PMU_SCR_VLT_TBL_TT_700M		ARRAY_LIST(\
+						CSR_REG_VAL_RETN_TT_700M,\
+						CSR_REG_VAL_RETN_TT_700M,\
+						CSR_REG_VAL_RETN_TT_700M,\
+						CSR_REG_VAL_RETN_TT_700M,\
+						CSR_REG_VAL_RETN_TT_700M,\
+						CSR_REG_VAL_RETN_TT_700M,\
+						CSR_REG_VAL_RETN_TT_700M,\
+						CSR_REG_VAL_RETN_TT_700M,\
+						CSR_REG_VAL_ECO_TT_700M,\
+						CSR_REG_VAL_ECO_TT_700M,\
+						CSR_REG_VAL_ECO_TT_700M,\
+						CSR_REG_VAL_NRML_TT_700M,\
+						CSR_REG_VAL_NRML_TT_700M,\
+						CSR_REG_VAL_NRML_TT_700M,\
+						CSR_REG_VAL_TURBO_TT_700M,\
+						CSR_REG_VAL_TURBO_TT_700M)
+
+#define PMU_SCR_VLT_TBL_FF_700M		ARRAY_LIST(\
+						CSR_REG_VAL_RETN_FF_700M,\
+						CSR_REG_VAL_RETN_FF_700M,\
+						CSR_REG_VAL_RETN_FF_700M,\
+						CSR_REG_VAL_RETN_FF_700M,\
+						CSR_REG_VAL_RETN_FF_700M,\
+						CSR_REG_VAL_RETN_FF_700M,\
+						CSR_REG_VAL_RETN_FF_700M,\
+						CSR_REG_VAL_RETN_FF_700M,\
+						CSR_REG_VAL_ECO_FF_700M,\
+						CSR_REG_VAL_ECO_FF_700M,\
+						CSR_REG_VAL_ECO_FF_700M,\
+						CSR_REG_VAL_NRML_FF_700M,\
+						CSR_REG_VAL_NRML_FF_700M,\
+						CSR_REG_VAL_NRML_FF_700M,\
+						CSR_REG_VAL_TURBO_FF_700M,\
+						CSR_REG_VAL_TURBO_FF_700M)
+
+
 /*800 Mhz CSR voltage definitions....*/
 
 #define CSR_REG_VAL_RETN_SS_800M		0x3 /*0.88V*/
@@ -982,18 +1058,21 @@ static struct i2c_board_info __initdata pmu_info[] = {
 					CSR_REG_VAL_TURBO_FF_1G)
 
 const u8 csr_vlt_table_ss[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
+	[A9_FREQ_700_MHZ]	= PMU_SCR_VLT_TBL_SS_700M,
 	[A9_FREQ_800_MHZ]	= PMU_SCR_VLT_TBL_SS_800M,
 	[A9_FREQ_850_MHZ]	= PMU_SCR_VLT_TBL_SS_850M,
 	[A9_FREQ_1_GHZ]		= PMU_SCR_VLT_TBL_SS_1G,
 };
 
 const u8 csr_vlt_table_tt[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
+	[A9_FREQ_700_MHZ]	= PMU_SCR_VLT_TBL_TT_700M,
 	[A9_FREQ_800_MHZ]	= PMU_SCR_VLT_TBL_TT_800M,
 	[A9_FREQ_850_MHZ]	= PMU_SCR_VLT_TBL_TT_850M,
 	[A9_FREQ_1_GHZ]		= PMU_SCR_VLT_TBL_TT_1G,
 };
 
 const u8 csr_vlt_table_ff[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
+	[A9_FREQ_700_MHZ]	= PMU_SCR_VLT_TBL_FF_700M,
 	[A9_FREQ_800_MHZ]	= PMU_SCR_VLT_TBL_FF_800M,
 	[A9_FREQ_850_MHZ]	= PMU_SCR_VLT_TBL_FF_850M,
 	[A9_FREQ_1_GHZ]		= PMU_SCR_VLT_TBL_FF_1G,

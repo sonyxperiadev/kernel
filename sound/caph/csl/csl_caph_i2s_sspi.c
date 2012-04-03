@@ -38,12 +38,12 @@
  */
 #include <string.h>
 #include "mobcom_types.h"
-#include "chal_types.h"
-#include "chal_sspi.h"
+#include <plat/chal/chal_types.h>
+#include <plat/chal/chal_sspi.h>
 #include "csl_caph_i2s_sspi.h"
-#include "brcm_rdb_sspil.h"
-#include "brcm_rdb_padctrlreg.h"
-#include "brcm_rdb_sysmap.h"
+#include <mach/rdb/brcm_rdb_sspil.h>
+#include <mach/rdb/brcm_rdb_padctrlreg.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include "audio_trace.h"
 /*
  * global variable declarations

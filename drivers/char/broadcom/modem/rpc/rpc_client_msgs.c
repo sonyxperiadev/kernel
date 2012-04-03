@@ -2,14 +2,14 @@
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license 
-*   agreement governing use of this software, this software is licensed to you 
-*   under the terms of the GNU General Public License version 2, available 
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"). 
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this 
-*   software in any way with any other Broadcom software provided under a license 
-*   other than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
@@ -92,13 +92,12 @@ static Boolean rpc_build_lookup_msgs(UInt16 *tbl, UInt16 table_size,
 			if (tableBase2 == 0) {
 				bRetVal = FALSE;
 			} else {
+				if (tableBase2[id2] == 0xFFFF)
+					tableBase2[id2] = 0;
 
-                              if(tableBase2[id2] == 0xFFFF)
-				tableBase2[id2] = 0;
-					
 				tableBase2[id2] |= mask;
 
-				//_DBG_(RPC_TRACE("rpc_build_lookup = 0x%x, 0x%x, 0x%x\r\n", id, id1, id2));
+				/*_DBG_(RPC_TRACE("rpc_build_lookup = 0x%x, 0x%x, 0x%x\r\n", id, id1, id2)); */
 			}
 		}
 	} else {
@@ -109,53 +108,48 @@ static Boolean rpc_build_lookup_msgs(UInt16 *tbl, UInt16 table_size,
 
 Boolean rpc_reset_client_msgs(UInt8 clientId)
 {
-	int i,k;
+	int i, k;
 	UInt32 mask = 1;
 
-	if(!tableBase)
+	if (!tableBase)
 		return FALSE;
 
 
-	if(clientId >= 60 && clientId < 92)
-	{
-		mask = mask << (clientId - 60 );
+	if (clientId >= 60 && clientId < 92) {
+		mask = mask << (clientId - 60);
 		_DBG_(RPC_TRACE
 		      ("rpc_register_client_msgs cid=%d mask=%x \r\n",
 		       clientId, mask));
 
-		for(i=0;i<256;i++)
-		{
-			if(tableBase[i] != 0)
-			{
+		for (i = 0; i < 256; i++) {
+			if (tableBase[i] != 0) {
 				UInt32 *tableBase2 = tableBase[i];
-				for(k=0;k<256;k++)
-				{
-					if(tableBase2[k] != 0xFFFF && tableBase2[k] & mask)
+				for (k = 0; k < 256; k++) {
+					if (tableBase2[k] != 0xFFFF &&
+							tableBase2[k] & mask)
 						tableBase2[k] &= ~mask;
 				}
 			}
 		}
-	}
-	else
+	} else
 		return FALSE;
 
 	return TRUE;
 }
 
 Boolean rpc_register_client_msgs(UInt8 clientId, UInt16 *tbl,
-			 		UInt16 table_size)
+				UInt16 table_size)
 {
 	UInt32 mask = 1;
 
-	if(clientId >= 60 && clientId < 92)
-	{
-		mask = mask << (clientId - 60 );
+	if (clientId >= 60 && clientId < 92) {
+		mask = mask << (clientId - 60);
 		_DBG_(RPC_TRACE
 		      ("rpc_register_client_msgs cid=%d sz=%d mask=%x \r\n",
 		       clientId, table_size, mask));
 
-//		printk("rpc_register_client_msgs cid=%d sz=%d mask=%x \r\n",
-//		       (int)clientId, (int)table_size, (int)mask);
+		/*printk("rpc_register_client_msgs cid=%d sz=%d mask=%x \r\n",
+		       (int)clientId, (int)table_size, (int)mask); */
 
 		return rpc_build_lookup_msgs(tbl, table_size, mask);
 	}
@@ -194,13 +188,12 @@ int rpc_is_registered_msg(UInt16 dscm, UInt8 clientId)
 		return -1;
 	}
 
-	if(clientId >= 60 && clientId < 92)
-	{
+	if (clientId >= 60 && clientId < 92) {
 		UInt32 mask = 1;
-		mask = mask << (clientId - 60 );
+		mask = mask << (clientId - 60);
 		_DBG_(RPC_TRACE
-		      ("rpc_is_registered_msg cid=%d msgId=%x mask=%x val=%x ret=%d\r\n",
-		       clientId, dscm, mask, nodeVal, (nodeVal & mask) ? 1: 0));
+		    ("rpc_is_registered_msg cid=%d msgId=%x mask=%x val=%x ret=%d\r\n",
+		    clientId, dscm, mask, nodeVal, (nodeVal & mask) ? 1 : 0));
 		return (nodeVal & mask) ? 1 : 0;
 	}
 

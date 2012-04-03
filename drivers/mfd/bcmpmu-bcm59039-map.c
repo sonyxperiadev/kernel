@@ -57,6 +57,16 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_PONKEY_RESTART_DLY] = {.map = 0x00, .addr = 0x0E,
 		.mask = 0x07, .ro = 0, .shift = 0},
 	[PMU_REG_AUXCTRL] =		{.map = 0x00, .addr = 0x0F, .mask = 0xFF, .ro = 0},
+	[PMU_REG_CMPCTRL4] = {.map = 0x00, .addr = 0x13,
+		.mask = 0xFF, .ro = 0},
+	[PMU_REG_CMPCTRL5] = {.map = 0x00, .addr = 0x14,
+		.mask = 0xFF, .ro = 0},
+	[PMU_REG_CMPCTRL6] = {.map = 0x00, .addr = 0x15,
+		.mask = 0xFF, .ro = 0},
+	[PMU_REG_CMPCTRL7] = {.map = 0x00, .addr = 0x16,
+		.mask = 0xFF, .ro = 0},
+	[PMU_REG_CMPCTRL14] = {.map = 0x00, .addr = 0x1D,
+		.mask = 0xFF, .ro = 0},
 	[PMU_REG_RTCSC] =		{.map = 0x00, .addr = 0x20, .mask = 0x3F, .ro = 0},
 	[PMU_REG_RTCMN] =		{.map = 0x00, .addr = 0x21, .mask = 0x3F, .ro = 0},
 	[PMU_REG_RTCHR] =		{.map = 0x00, .addr = 0x22, .mask = 0x1F, .ro = 0},
@@ -164,6 +174,10 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 		.mask = 0x03,   .ro = 0, .shift = 0},
 	[PMU_REG_HSPGA1] =		{.map = 0x01, .addr = 0xA6, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HSPGA2] =		{.map = 0x01, .addr = 0xA7, .mask = 0xFF, .ro = 0},
+	[PMU_REG_HSPGA1_LGAIN] = {
+		.map = 0x01, .addr = 0xA6, .mask = 0x3F, .ro = 0},
+	[PMU_REG_HSPGA2_RGAIN] = {
+		.map = 0x01, .addr = 0xA7, .mask = 0x3F, .ro = 0},
 	[PMU_REG_HSDRV_DISSC] =		{.map = 0x01, .addr = 0xA3, .mask = 0x10, .ro = 0, .shift = 4},
 	[PMU_REG_IHFALC_BYPASS] =	{.map = 0x01, .addr = 0x89, .mask = 0x04, .ro = 0, .shift = 2},
 	/* charge */

@@ -7,23 +7,23 @@
  * may copy or modify Sun RPC without charge, but are not authorized
  * to license or distribute it to anyone else except as part of a product or
  * program developed by the user.
- * 
+ *
  * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
  * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
  * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
- * 
+ *
  * Sun RPC is provided with no support and without any obligation on the
  * part of Sun Microsystems, Inc. to assist in its use, correction,
  * modification or enhancement.
- * 
+ *
  * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
  * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
  * OR ANY PART THEREOF.
- * 
+ *
  * In no event will Sun Microsystems, Inc. be liable for any lost revenue
  * or profits or other special, indirect and consequential damages, even if
  * Sun has been advised of the possibility of such damages.
- * 
+ *
  * Sun Microsystems, Inc.
  * 2550 Garcia Avenue
  * Mountain View, California  94043
@@ -143,7 +143,7 @@ typedef struct __rpc_xdr {
  *
  * XXX can't actually prototype it, because some take three args!!!
  */
-typedef bool_t(*xdrproc_t) (XDR *, void *, ... /* XDR *, void *, u_int */ );
+typedef bool_t(*xdrproc_t) (XDR *, void *, ... /* XDR *, void *, u_int */);
 
 typedef u_int(*capi2_proc_t) (void *reqRep, void *rsp);
 
@@ -169,12 +169,16 @@ typedef struct xdr_discrim *(*xdr_lookup) (enum_t dscm);
 	(*(xdrs)->x_ops->x_putlong)(xdrs, longp)
 
 #define XDR_ALLOC(xdrs, sz)			\
-	(xdrs->x_ops->x_alloc)?(*(xdrs)->x_ops->x_alloc)(xdrs, sz):mem_alloc(sz)
+	(xdrs->x_ops->x_alloc) ? \
+	(*(xdrs)->x_ops->x_alloc)(xdrs, sz) : \
+	mem_alloc(sz)
 
 #define XDR_DEALLOC(xdrs, buf, sz)			\
-	(xdrs->x_ops->x_free)?(*(xdrs)->x_ops->x_free)(xdrs, buf, sz):mem_free(buf, sz)
+	(xdrs->x_ops->x_free) ? \
+	(*(xdrs)->x_ops->x_free)(xdrs, buf, sz) : \
+	mem_free(buf, sz)
 
-static __inline int xdr_getint32(XDR * xdrs, int32_t * ip)
+static __inline int xdr_getint32(XDR *xdrs, int32_t *ip)
 {
 	long l;
 
@@ -184,7 +188,7 @@ static __inline int xdr_getint32(XDR * xdrs, int32_t * ip)
 	return 1;
 }
 
-static __inline int xdr_putint32(XDR * xdrs, int32_t * ip)
+static __inline int xdr_putint32(XDR *xdrs, int32_t *ip)
 {
 	long l;
 
@@ -221,10 +225,10 @@ static __inline int xdr_putint32(XDR * xdrs, int32_t * ip)
 	(*(xdrs)->x_ops->x_inline)(xdrs, len)
 
 #define	XDR_DESTROY(xdrs)				\
-	if ((xdrs)->x_ops->x_destroy) 			\
+	if ((xdrs)->x_ops->x_destroy)			\
 		(*(xdrs)->x_ops->x_destroy)(xdrs)
 #define	xdr_destroy(xdrs)				\
-	if ((xdrs)->x_ops->x_destroy) 			\
+	if ((xdrs)->x_ops->x_destroy)			\
 		(*(xdrs)->x_ops->x_destroy)(xdrs)
 
 #define XDR_CONTROL(xdrs, req, op)			\
@@ -279,12 +283,12 @@ struct xdr_discrim {
  * of external representation.
  */
 #define IXDR_GET_INT32(buf)		((int32_t)ntohl((u_int32_t)*(buf)++))
-#define IXDR_PUT_INT32(buf, v)		(*(buf)++ =(int32_t)htonl((u_int32_t)v))
+#define IXDR_PUT_INT32(buf, v)	       (*(buf)++ = (int32_t)htonl((u_int32_t)v))
 #define IXDR_GET_U_INT32(buf)		((u_int32_t)IXDR_GET_INT32(buf))
 #define IXDR_PUT_U_INT32(buf, v)	IXDR_PUT_INT32((buf), ((int32_t)(v)))
 
 #define IXDR_GET_LONG(buf)		((long)ntohl((u_int32_t)*(buf)++))
-#define IXDR_PUT_LONG(buf, v)		(*(buf)++ =(int32_t)htonl((u_int32_t)v))
+#define IXDR_PUT_LONG(buf, v)	       (*(buf)++ = (int32_t)htonl((u_int32_t)v))
 
 #define IXDR_GET_BOOL(buf)		((bool_t)IXDR_GET_LONG(buf))
 #define IXDR_GET_ENUM(buf, t)		((t)IXDR_GET_LONG(buf))
@@ -311,19 +315,19 @@ extern void xdrmem_log(XDR *xdrs, char *str);
 extern void xdrmem_log_start(XDR *xdrs, char *str);
 extern void xdrmem_log_reset(XDR *xdrs);
 
-#define _xdr_u_char(a,b,c)		xdr_u_char_dbg(a,b,(u_char*)c)
-#define _xdr_u_int16_t(a,b,c)	xdr_u_int16_dbg(a,b,(u_char*)c)
-#define _xdr_u_long(a,b,c)		xdr_u_long_dbg(a,b,(u_char*)c)
+#define _xdr_u_char(a, b, c)		xdr_u_char_dbg(a, b, (u_char *)c)
+#define _xdr_u_int16_t(a, b, c)		xdr_u_int16_dbg(a, b, (u_char *)c)
+#define _xdr_u_long(a, b, c)		xdr_u_long_dbg(a, b, (u_char *)c)
 
 /*xdr log macros and functions*/
-#define XDR_LOG(x,y)	xdrmem_log(x, y );
-#define XDR_LOG_RESET(x,y)	xdrmem_log_start(x, y );
+#define XDR_LOG(x, y)	xdrmem_log(x, y);
+#define XDR_LOG_RESET(x, y)	xdrmem_log_start(x, y);
 
 #else
-#define _xdr_u_char(a,b,c)		xdr_u_char(a,b)
-#define _xdr_u_int16_t(a,b,c)	xdr_u_int16_t(a,b)
-#define XDR_LOG_RESET(x,y)
-#define XDR_LOG(x,y)
+#define _xdr_u_char(a, b, c)		xdr_u_char(a, b)
+#define _xdr_u_int16_t(a, b, c)	xdr_u_int16_t(a, b)
+#define XDR_LOG_RESET(x, y)
+#define XDR_LOG(x, y)
 #endif
 
 typedef struct {
@@ -331,11 +335,11 @@ typedef struct {
 	char *str;
 } xdr_string_t;
 
-bool_t xdr_xdr_string_t(XDR * xdrs, xdr_string_t * str);
+bool_t xdr_xdr_string_t(XDR *xdrs, xdr_string_t *str);
 
 /*
- * xdr_enum expects fixed enum_t and would not work for compiler optimised enums.
- * Macro for serializing/deserialising enum as long and back to enum. 
+ * xdr_enum expects fixed enum_t and would not work for compiler optimised enums
+ * Macro for serializing/deserialising enum as long and back to enum.
  */
 
 /*
@@ -350,38 +354,39 @@ XDR_ENUM(xdrs, &enum_val, enumType) : Invoke xdr enum function call
 /* This macro expands into the enum specific xdr implementation*/
 #ifdef DEVELOPMENT_RPC_XDR_DETAIL_LOG
 
-#define XDR_ENUM_FUNC( en ) \
-bool_t xdr ## _ ## en(XDR *x, en *v) \
-{								\
-	bool_t r;					\
-	int i = *v; \
-	XDR_LOG(x, #en );	\
-	r = xdr_int(x,&i); \
-	*v = (en)i; \
-	return r;					\
-}
+#define XDR_ENUM_FUNC(en) \
+	bool_t xdr ## _ ## en(XDR *x, en *v)	\
+	{					\
+		bool_t r;			\
+		int i = *v;			\
+		XDR_LOG(x, #en);		\
+		r = xdr_int(x, &i);		\
+		*v = (en)i;			\
+		return r;			\
+	}
 #else
-#define XDR_ENUM_FUNC( en ) \
-bool_t xdr ## _ ## en(XDR *x, en *v) \
-{								\
-	bool_t r;					\
-	int i = *v; \
-	r = xdr_int(x,&i); \
-	*v = (en)i; \
-	return r;					\
-}
-#endif
+
+#define XDR_ENUM_FUNC(en) \
+	bool_t xdr ## _ ## en(XDR *x, en *v)	\
+	{					\
+		bool_t r;			\
+		int i = *v;			\
+		r = xdr_int(x, &i);		\
+		*v = (en)i;			\
+		return r;			\
+	}
+#endif /* DEVELOPMENT_RPC_XDR_DETAIL_LOG */
 
 /* This macros expands to enum function prototype*/
-#define XDR_ENUM_DECLARE( en ) \
-bool_t xdr ## _ ## en(XDR *x, en *v);
+#define XDR_ENUM_DECLARE(en) \
+	bool_t xdr ## _ ## en(XDR *x, en *v);
 
 #define XDR_STRUCT_DECLARE	XDR_ENUM_DECLARE
 
 /* This macros expands to function name */
-#define XDR_ENUM_DEF( en ) (xdrproc_t)xdr ## _ ## en
+#define XDR_ENUM_DEF(en) ((xdrproc_t)xdr ## _ ## en)
 
-#define XDR_ENUM_ENTRY( en ) (xdrproc_t)xdr ## _ ## en , sizeof(en)
+#define XDR_ENUM_ENTRY(en) ((xdrproc_t)xdr ## _ ## en , sizeof(en))
 
 /*
  * usage:
@@ -441,44 +446,47 @@ extern bool_t xdr_u_longlong_t(XDR *, u_longlong_t *);
 
 typedef char *char_ptr_t;
 typedef unsigned char *uchar_ptr_t;
-bool_t xdr_uchar_ptr_t(XDR * xdrs, unsigned char **ptr);
-bool_t xdr_char_ptr_t(XDR * xdrs, char **ptr);
+bool_t xdr_uchar_ptr_t(XDR *xdrs, unsigned char **ptr);
+bool_t xdr_char_ptr_t(XDR *xdrs, char **ptr);
 
 #define xdr_Boolean		xdr_u_char
-#define _xdr_Boolean	_xdr_u_char
+#define _xdr_Boolean		_xdr_u_char
 
-#define xdr_u_int8_t	xdr_u_char
-#define _xdr_u_int8_t	_xdr_u_char
+#define xdr_u_int8_t		xdr_u_char
+#define _xdr_u_int8_t		_xdr_u_char
 
-#define xdr_UInt32	xdr_u_long
-#define _xdr_UInt32	_xdr_u_long
+#define xdr_UInt32		xdr_u_long
+#define _xdr_UInt32		_xdr_u_long
 
-#define xdr_Int32	xdr_long
+#define xdr_Int32		xdr_long
 
-#define xdr_UInt8	xdr_u_char
-#define _xdr_UInt8	_xdr_u_char
+#define xdr_UInt8		xdr_u_char
+#define _xdr_UInt8		_xdr_u_char
 
-#define xdr_Int8	xdr_char
-#define _xdr_Int8(a,b,c)	xdr_char(a,b)
+#define xdr_Int8		xdr_char
+#define _xdr_Int8(a, b, c)	xdr_char(a, b)
 
-#define xdr_UInt16	xdr_u_int16_t
-#define _xdr_UInt16	_xdr_u_int16_t
+#define xdr_UInt16		xdr_u_int16_t
+#define _xdr_UInt16		_xdr_u_int16_t
 
-bool_t xdr_bitfields(register XDR * xdrs,	/* XDR stream pointer   */
-		     u_int num_fields,	/* Number of bit fields */
-		     u_char * widths,	/* Bit field widths     */
-		     u_long * values	/* Bit field values     */
+bool_t xdr_bitfields(register XDR *xdrs,	/* XDR stream pointer   */
+		u_int num_fields,		/* Number of bit fields */
+		u_char *widths,			/* Bit field widths     */
+		u_long *values			/* Bit field values     */
     );
 __END_DECLS
+
 /*
  * Common opaque bytes objects used by many rpc protocols;
  * declared here due to commonality.
  */
 #define MAX_NETOBJ_SZ 1024
-    struct netobj {
+
+struct netobj {
 	u_int n_len;
 	char *n_bytes;
 };
+
 typedef struct netobj netobj;
 extern bool_t xdr_netobj(XDR *, struct netobj *);
 
@@ -510,4 +518,5 @@ extern bool_t xdrrec_skiprecord(XDR *);
 extern bool_t xdrrec_eof(XDR *);
 extern u_int xdrrec_readbytes(XDR *, caddr_t, u_int);
 __END_DECLS
+
 #endif /* !_RPC_XDR_H_ */

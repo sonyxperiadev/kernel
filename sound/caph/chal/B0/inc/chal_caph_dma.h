@@ -37,7 +37,7 @@
 #ifndef _CHAL_CAPH_DMA_
 #define _CHAL_CAPH_DMA_
 
-#include "chal_types.h"
+#include <plat/chal/chal_types.h>
 #include "chal_caph.h"
 
 /* Max number of chnnels supported by Hardware */

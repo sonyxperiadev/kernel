@@ -35,7 +35,7 @@ enum {
 };
 
 #ifdef CONFIG_KONA_PM_DISABLE_SUSPEND
-static int allow_suspend = 0;
+static int allow_suspend;
 #else
 static int allow_suspend = 1;
 #endif
@@ -47,7 +47,7 @@ static int kona_pm_log_lvl = KONAL_PM_LOG_LVL_ERROR;
 module_param_named(kona_pm_log_lvl, kona_pm_log_lvl, int,
 		   S_IRUGO | S_IWUSR | S_IWGRP);
 
-static struct kona_idle_state *def_suspend_state = NULL;
+static struct kona_idle_state *def_suspend_state;
 #define LOG_LEVEL_ENABLED(lvl) ((lvl) & kona_pm_log_lvl)
 #ifdef CONFIG_CPU_IDLE
 
@@ -71,7 +71,7 @@ __weak int kona_mach_get_idle_states(struct kona_idle_state **idle_states)
 }
 
 #ifdef CONFIG_KONA_PM_DISABLE_WFI
-static int allow_idle = 0;
+static int allow_idle;
 #else
 static int allow_idle = 1;
 #endif
@@ -87,6 +87,14 @@ __weak int kona_mach_enter_idle_state(struct cpuidle_device *dev,
 	int ret;
 	int mach_ret = -1;
 	struct kona_idle_state *kona_state = cpuidle_get_statedata(state);
+#ifdef CONFIG_HAS_WAKELOCK
+		/*Enter simple WFI (safe state) if idle wake lock
+		is active*/
+		BUG_ON(!dev->safe_state);
+		if (has_wake_lock(WAKE_LOCK_IDLE))
+			kona_state = cpuidle_get_statedata(dev->safe_state);
+#endif
+
 	BUG_ON(kona_state == NULL);
 
 	local_irq_disable();

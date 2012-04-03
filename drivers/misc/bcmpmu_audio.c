@@ -29,6 +29,35 @@
 #include <linux/mfd/bcmpmu.h>
 #include <linux/broadcom/bcmpmu_audio.h>
 
+/*
+ * Steps to increment IHF/HS gain exponentially
+ */
+static const u32 hs_gain_steps[] = {
+	0x00, 0x0A, 0x0F, 0x1E, 0x3C, 0x3F,
+};
+
+#define HS_GAIN_NSTEPS       ARRAY_SIZE(hs_gain_steps)
+#define MAX_HS_GAIN          (0x3F)
+
+static const u32 ihf_gain_steps[] = {
+	0x00, 0x0A, 0x0F, 0x1E, 0x3C, 0x3F,
+};
+
+#define IHF_GAIN_NSTEPS      ARRAY_SIZE(ihf_gain_steps)
+#define MAX_IHF_GAIN         (0x3F)
+
+/* Debug interface to disable gain ramping from
+ * command line. To disable gain ramping, set the gain
+ * steps to 0.
+ */
+static int hs_gain_nsteps = HS_GAIN_NSTEPS;
+module_param_named(hs_gain_nsteps, hs_gain_nsteps, int,
+		   S_IRUGO | S_IWUSR | S_IWGRP);
+
+static int ihf_gain_nsteps = IHF_GAIN_NSTEPS;
+module_param_named(ihf_gain_nsteps, ihf_gain_nsteps, int,
+		   S_IRUGO | S_IWUSR | S_IWGRP);
+
 struct bcmpmu_audio {
 	struct bcmpmu *bcmpmu;
 	bool IHF_On;
@@ -38,6 +67,149 @@ struct bcmpmu_audio {
 	u32 pll_use_count;
 };
 static struct bcmpmu_audio *bcmpmu_audio;
+
+enum {
+	GAIN_RAMP_UP = 0,
+	GAIN_RAMP_NIL = 1,
+	GAIN_RAMP_DOWN = 2,
+};
+
+/* Callers of get_gain_ramp API must pass this structure to the API
+ * with the 'table' and 'size' parameters initialized to the correct
+ * gain table. The API returns the ramp sequence in 'start', 'end'
+ * and 'dir' fields.
+ */
+struct gain_ramp {
+	const u32 *table; /* Table of gain values in increasing order    */
+	int size;         /* Number of gain entries in the table         */
+
+	int start;        /* Start index of the ramp sequence            */
+	int end;          /* End index of the ramp sequence              */
+	int dir;          /* GAIN_RAMP_UP, GAIN_RAMP_NIL, GAIN_RAMP_DOWN */
+};
+
+/* Description:
+ *     Returns the index of the first step for a ramp-up
+ *     or ramp-down sequence. For ramp-up, the start index
+ *     is the first gain value above the input gain, searching
+ *     from 0 to max. For ramp-down, the start index is
+ *     the first gain value below the input gain, searching
+ *     from max to 0.
+ */
+static int get_start_index(const u32 *table, int nsteps, u32 gain, int dir)
+{
+	int i;
+
+	if (dir == GAIN_RAMP_UP) {
+		for (i = 0; i < nsteps; i++)
+			if (table[i] > gain)
+				break;
+	} else {
+		for (i = nsteps - 1; i >= 0; i--)
+			if (table[i] < gain)
+				break;
+	}
+
+	return i;
+}
+
+/* Description:
+ *     Returns the index of the last step for a ramp-up
+ *     or ramp-down sequence. For ramp-up, the end index
+ *     is the first gain value below the input gain, searching
+ *     from max to 0. For ramp-down, the end index is
+ *     the first gain value above the input gain, searching
+ *     from 0 to max.
+ */
+static int get_end_index(const u32 *table, int nsteps, u32 gain, int dir)
+{
+	int i;
+
+	if (dir == GAIN_RAMP_UP) {
+		for (i = nsteps - 1; i >= 0; i--)
+			if (table[i] < gain)
+				break;
+	} else {
+		for (i = 0; i < nsteps; i++)
+			if (table[i] > gain)
+				break;
+	}
+
+	return i;
+}
+
+/* Description:
+ *     Returns the ramp sequence to ramp the gain from 'old'
+ *     to 'new'.
+ * Assumes:
+ *     'table' and 'size' fields of gain_ramp struct are initialized
+ *     with data of the desired ramp table.
+ * Returns:
+ *     ramp direction in gain_ramp->dir: GAIN_RAMP_UP, GAIN_RAMP_DOWN
+ *     or GAIN_RAMP_NIL
+ */
+static void get_gain_ramp(u32 old, u32 new, struct gain_ramp *ramp)
+{
+	if (old != new) {
+		ramp->dir = (new > old) ? GAIN_RAMP_UP : GAIN_RAMP_DOWN;
+		ramp->start = get_start_index(ramp->table, ramp->size, old,
+					      ramp->dir);
+		ramp->end = get_end_index(ramp->table, ramp->size, new,
+					  ramp->dir);
+	} else {
+		ramp->dir = GAIN_RAMP_NIL;
+	}
+}
+
+/* Description:
+ *    Configures the input gain to the register.
+ * Inputs:
+ *    reg  - register enum
+ *    data - data read from the register (callee will have to read the
+ *           register data and pass it in this parameter).
+ *    mask - mask for the gain bits.
+ *    gain - new gain value
+ */
+static void _bcmpmu_set_gain(u32 reg, u32 gain)
+{
+	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
+
+	pr_debug("%s: reg = 0x%x, gain = 0x%x\n", __func__, reg, gain);
+
+	bcmpmu->write_dev(bcmpmu, reg, gain, bcmpmu->regmap[reg].mask);
+	usleep_range(900, 1100);
+}
+
+static void bcmpmu_set_gain(struct gain_ramp *ramp, u32 reg, u32 new_gain)
+{
+	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
+	u32 cur_gain;
+	int i;
+
+	/* Read present gain setting */
+	bcmpmu->read_dev(bcmpmu, reg, &cur_gain, bcmpmu->regmap[reg].mask);
+
+	/* Compute the ramp sequence */
+	get_gain_ramp(cur_gain, new_gain, ramp);
+
+	/* Ramp gain */
+	if (ramp->dir == GAIN_RAMP_UP) {
+		/* Program the ramp */
+		for (i = ramp->start; i <= ramp->end; i++)
+			_bcmpmu_set_gain(reg, ramp->table[i]);
+
+		/* Program the target gain */
+		_bcmpmu_set_gain(reg, new_gain);
+
+	} else if (ramp->dir == GAIN_RAMP_DOWN) {
+		/* Program the ramp */
+		for (i = ramp->start; i >= ramp->end; i--)
+			_bcmpmu_set_gain(reg, ramp->table[i]);
+
+		/* Program the target gain */
+		_bcmpmu_set_gain(reg, new_gain);
+	}
+}
 
 /* callee of this API need to put 20ms delay to
  * make sure power up seq done properly by h/w
@@ -187,43 +359,25 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 }
 EXPORT_SYMBOL(bcmpmu_hs_set_input_mode);
 
-void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain)
+void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, u32 gain)
 {
-	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
-	int data1, data2;
-	pr_debug(KERN_WARNING "%s: ######### PATH = %d, GAIN = %d\n",
-		__func__, path, gain);
+	struct gain_ramp ramp = {
+		.table = hs_gain_steps,
+		.size = hs_gain_nsteps,
+	};
+	pr_debug("%s: path = %d, gain = %d\n", __func__, path, gain);
 
 	mutex_lock(&bcmpmu_audio->lock);
-	bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPGA1, &data1,
-			PMU_BITMASK_ALL);
-	bcmpmu->read_dev(bcmpmu_audio->bcmpmu, PMU_REG_HSPGA2, &data2,
-			PMU_BITMASK_ALL);
 
-	if (path == PMU_AUDIO_HS_LEFT) {
-		data1 &= ~BCMPMU_HS_GAIN_MASK;
-		data1 |= (gain & BCMPMU_HS_GAIN_MASK);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA1, data1,
-				bcmpmu->regmap[PMU_REG_HSPGA1].mask);
-	} else if (path == PMU_AUDIO_HS_RIGHT) {
-		data2 &= ~BCMPMU_HS_GAIN_MASK;
-		data2 |= (gain & BCMPMU_HS_GAIN_MASK);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA2, data2,
-				bcmpmu->regmap[PMU_REG_HSPGA2].mask);
-	} else {  /*for PMU_AUDIO_HS_BOTH*/
-		data1 &= ~BCMPMU_HS_GAIN_MASK;
-		data1 |= (gain & BCMPMU_HS_GAIN_MASK);
-		data2 &= ~BCMPMU_HS_GAIN_MASK;
-		data2 |= (gain & BCMPMU_HS_GAIN_MASK);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA1, data1,
-				bcmpmu->regmap[PMU_REG_HSPGA1].mask);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA2, data2,
-				bcmpmu->regmap[PMU_REG_HSPGA2].mask);
-	}
+	if (path == PMU_AUDIO_HS_LEFT || path == PMU_AUDIO_HS_BOTH)
+		bcmpmu_set_gain(&ramp, PMU_REG_HSPGA1_LGAIN, gain);
+
+	if (path == PMU_AUDIO_HS_RIGHT || path == PMU_AUDIO_HS_BOTH)
+		bcmpmu_set_gain(&ramp, PMU_REG_HSPGA2_RGAIN, gain);
+
 	mutex_unlock(&bcmpmu_audio->lock);
 }
 EXPORT_SYMBOL(bcmpmu_hs_set_gain);
-
 
 /* callee of this API need to put 65ms delay to
  * make sure power up seq done properly by h/w
@@ -232,7 +386,7 @@ void bcmpmu_ihf_power(bool on)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	struct bcmpmu_rw_data reg;
-	pr_debug(KERN_WARNING "%s:  ######### ON = %d\n", __func__, on);
+	pr_debug("%s:  ######### ON = %d\n", __func__, on);
 	mutex_lock(&bcmpmu_audio->lock);
 	if (on) {
 		if (bcmpmu_audio->IHF_On) {
@@ -252,9 +406,6 @@ void bcmpmu_ihf_power(bool on)
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFLDO_PUP,
 				bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask,
 				bcmpmu->regmap[PMU_REG_IHFLDO_PUP].mask);
-		/* Enable IHF ALC/APS - OPTIONAL */
-		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC_BYPASS, false,
-				bcmpmu->regmap[PMU_REG_IHFALC_BYPASS].mask);
 	} else {
 		if (!bcmpmu_audio->IHF_On) {
 			printk(KERN_INFO "%s: IHF is already off.\n", __func__);
@@ -310,15 +461,14 @@ EXPORT_SYMBOL(bcmpmu_ihf_bypass_en);
 
 void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain)
 {
-	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
-	u8 val;
-	pr_debug(KERN_WARNING "%s:  ######### GAIN = %d\n", __func__, gain);
-	mutex_lock(&bcmpmu_audio->lock);
-	val = (gain & bcmpmu->regmap[PMU_REG_IHFPGA2_GAIN].mask) <<
-	    bcmpmu->regmap[PMU_REG_IHFPGA2_GAIN].shift;
+	struct gain_ramp ramp = {
+		.table = ihf_gain_steps,
+		.size = ihf_gain_nsteps,
+	};
+	pr_debug("%s: gain = %d\n", __func__, gain);
 
-	bcmpmu->write_dev(bcmpmu, PMU_REG_IHFPGA2_GAIN,
-			  val, bcmpmu->regmap[PMU_REG_IHFPGA2_GAIN].mask);
+	mutex_lock(&bcmpmu_audio->lock);
+	bcmpmu_set_gain(&ramp, PMU_REG_IHFPGA2_GAIN, gain);
 	mutex_unlock(&bcmpmu_audio->lock);
 }
 EXPORT_SYMBOL(bcmpmu_ihf_set_gain);
@@ -482,14 +632,13 @@ void bcmpmu_audio_ihf_selftest_backup(bool Enable)
 						bcmpmu_audio->bcmpmu->
 						regmap[PMU_REG_IHFSTO_O_IHFSTI].
 						mask);
-
 	}
 }
 
 /* Backup registers used for ihf selftest */
 void bcmpmu_audio_hs_selftest_backup(bool Enable)
 {
-	static unsigned int StoredRegValue[8];
+	static unsigned int StoredRegValue[7];
 	if (Enable) {
 		/* Store PMU register Values */
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
@@ -520,10 +669,7 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 					       PMU_REG_HSPUP_HS_PWRUP,
 					       &StoredRegValue[6],
 					       PMU_BITMASK_ALL);
-		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,
-					       PMU_REG_PLLCTRL,
-					       &StoredRegValue[7],
-					       PMU_BITMASK_ALL);
+
 	} else {
 		/* Restore PMU register values */
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
@@ -544,6 +690,7 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 						bcmpmu_audio->bcmpmu->
 						regmap[PMU_REG_HSPGA2].
 						mask);
+
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
 						PMU_REG_HSIST_I_HS_ENST,
 						StoredRegValue[3],
@@ -556,6 +703,7 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 						bcmpmu_audio->bcmpmu->
 						regmap[PMU_REG_HSIST_I_HS_IST].
 						mask);
+
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
 						PMU_REG_HSPUP_IDDQ_PWRDWN,
 						StoredRegValue[5],
@@ -569,11 +717,6 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 						bcmpmu_audio->bcmpmu->
 						regmap[PMU_REG_HSPUP_HS_PWRUP].
 						mask);
-		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,
-						PMU_REG_PLLCTRL,
-						StoredRegValue[7],
-						bcmpmu_audio->bcmpmu->
-						regmap[PMU_REG_PLLCTRL].mask);
 	}
 }
 
@@ -669,7 +812,7 @@ static void bcmpmu_audio_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu *bcmpmu = ((struct bcmpmu_audio *)data)->bcmpmu;
 	unsigned int mask;
-	pr_info("%s: Interrupt for %s\n", __func__,
+	pr_debug("%s: Interrupt for %s\n", __func__,
 			(irq == PMU_IRQ_AUD_HSAB_SHCKT) ? "HS SC" : "IHF SC");
 	switch (irq) {
 	case PMU_IRQ_AUD_HSAB_SHCKT:

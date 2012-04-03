@@ -10,6 +10,7 @@ menuconfig BRCM_CHAR_DRIVERS
 
 config BRCM_CP_CRASH_DUMP_EMMC
 	bool "cp crash dump to eMMC"
+	depends on APANIC_ON_MMC
         default y
         ---help---
         Say Y to enable the cp crash dump to eMMC support

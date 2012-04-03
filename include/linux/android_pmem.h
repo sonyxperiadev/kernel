@@ -16,6 +16,8 @@
 #ifndef _ANDROID_PMEM_H_
 #define _ANDROID_PMEM_H_
 
+#include <linux/platform_device.h>
+
 #define PMEM_IOCTL_MAGIC 'p'
 #define PMEM_GET_PHYS		_IOW(PMEM_IOCTL_MAGIC, 1, unsigned int)
 #define PMEM_MAP		_IOW(PMEM_IOCTL_MAGIC, 2, unsigned int)
@@ -60,10 +62,6 @@ int get_pmem_user_addr(struct file *file, unsigned long *start,
 		       unsigned long *end);
 void put_pmem_file(struct file* file);
 void flush_pmem_file(struct file *file, unsigned long start, unsigned long len);
-int pmem_setup(struct platform_device *pdev,
-		struct android_pmem_platform_data *pdata);
-int pmem_remap(struct pmem_region *region, struct file *file,
-	       unsigned operation);
 
 #else
 static inline int is_pmem_file(struct file *file) { return 0; }
@@ -75,11 +73,6 @@ static inline int get_pmem_user_addr(struct file *file, unsigned long *start,
 static inline void put_pmem_file(struct file* file) { return; }
 static inline void flush_pmem_file(struct file *file, unsigned long start,
 				   unsigned long len) { return; }
-int pmem_setup(struct platform_device *pdev,
-		struct android_pmem_platform_data *pdata) { return -ENOSYS; }
-
-static inline int pmem_remap(struct pmem_region *region, struct file *file,
-			     unsigned operation) { return -ENOSYS; }
 #endif
 
 #endif //_ANDROID_PPP_H_

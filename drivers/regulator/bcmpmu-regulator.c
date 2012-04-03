@@ -395,7 +395,7 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 
 	return ret;
 register_fail:
-	while (i >= 0) {
+	while (i-- > 0) {
 		if (regl[i])
 			regulator_unregister(regl[i]);
 	}
@@ -408,8 +408,11 @@ static int bcmpmu_regulator_remove(struct platform_device *pdev)
 {
 	struct bcmpmu  *bcmpmu = platform_get_drvdata(pdev);
 	int             i = 0;
-	while (i < bcmpmu->pdata->num_of_regl)
-		regulator_unregister(regl[i]);
+	while (i < bcmpmu->pdata->num_of_regl) {
+		if (regl[i])
+			regulator_unregister(regl[i]);
+		i++;
+	}
 	kfree(regl);
 	return 0;
 }

@@ -6457,9 +6457,6 @@ int root_ccu_clk_init(struct clk* clk)
     writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
 
 
-    /* MobC00173104 : change the settling time to 4 ms */
-    writel (0x82, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTAL_STRTDLY_OFFSET);
-
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
 /* We observed some glitch with root PLL1 8 phase output
 and this was causing A9 to freeze when MM wakes up from retention
