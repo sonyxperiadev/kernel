@@ -167,7 +167,8 @@ int bcm_otg_adp_init(struct bcmpmu_otg_xceiv_data *xceiv_data)
 	INIT_WORK(&xceiv_data->bcm_otg_sens_end_work,
 		  bcmpmu_otg_xceiv_adp_sense_end_handler);
 
-	if (xceiv_data->bcm_otg_adp_change_done_notifier.notifier_call == NULL) {
+	if (xceiv_data->bcm_otg_adp_change_done_notifier.
+		    notifier_call == NULL) {
 		xceiv_data->bcm_otg_adp_change_done_notifier.notifier_call =
 		    bcmpmu_otg_xceiv_adp_change_notif_handler;
 		bcmpmu_add_notifier(BCMPMU_USB_EVENT_ADP_CHANGE,

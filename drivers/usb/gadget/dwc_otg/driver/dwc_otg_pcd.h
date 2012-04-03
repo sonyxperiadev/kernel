@@ -63,12 +63,12 @@ struct cfiobject;
 /**
  * Get the pointer to the core_if from the pcd pointer.
  */
-#define GET_CORE_IF( _pcd ) (_pcd->core_if)
+#define GET_CORE_IF(_pcd) (_pcd->core_if)
 
 /**
  * States of EP0.
  */
-typedef enum ep0_state {
+enum ep0_state {
 	EP0_DISCONNECT,		/* no host */
 	EP0_IDLE,
 	EP0_IN_DATA_PHASE,
@@ -76,15 +76,10 @@ typedef enum ep0_state {
 	EP0_IN_STATUS_PHASE,
 	EP0_OUT_STATUS_PHASE,
 	EP0_STALL,
-} ep0state_e;
+};
 
 /** Fordward declaration.*/
 struct dwc_otg_pcd;
-
-/** DWC_otg iso request structure.
- *
- */
-typedef struct usb_iso_request dwc_otg_pcd_iso_request_t;
 
 #ifdef DWC_UTE_PER_IO
 
@@ -118,14 +113,16 @@ struct dwc_iso_xreq_port {
 	uint32_t error_count;
 	/** reserved for future extension */
 	uint32_t res;
-	/** Will be allocated and freed in the UTE gadget and based on the CFC value */
+	/** Will be allocated and freed in the UTE gadget and
+	 * based on the CFC value
+	 */
 	struct dwc_iso_pkt_desc_port *per_io_frame_descs;
 };
 #endif
 /** DWC_otg request structure.
  * This structure is a list of requests.
  */
-typedef struct dwc_otg_pcd_request {
+struct dwc_otg_pcd_request {
 	void *priv;
 	void *buf;
 	dwc_dma_t dma;
@@ -138,7 +135,7 @@ typedef struct dwc_otg_pcd_request {
 	struct dwc_iso_xreq_port ext_req;
 	/*void *priv_ereq_nport; */
 #endif
-} dwc_otg_pcd_request_t;
+};
 
 DWC_CIRCLEQ_HEAD(req_list, dwc_otg_pcd_request);
 
@@ -146,7 +143,7 @@ DWC_CIRCLEQ_HEAD(req_list, dwc_otg_pcd_request);
  * This structure describes an EP, there is an array of EPs in the PCD
  * structure.
  */
-typedef struct dwc_otg_pcd_ep {
+struct dwc_otg_pcd_ep {
 	/** USB EP Descriptor */
 	const usb_endpoint_descriptor_t *desc;
 
@@ -163,13 +160,13 @@ typedef struct dwc_otg_pcd_ep {
 #endif				/*_EN_ISOC_*/
 
 	/** DWC_otg ep data. */
-	dwc_ep_t dwc_ep;
+	struct dwc_ep dwc_ep;
 
 	/** Pointer to PCD */
 	struct dwc_otg_pcd *pcd;
 
 	void *priv;
-} dwc_otg_pcd_ep_t;
+};
 
 /** DWC_otg PCD Structure.
  * This structure encapsulates the data for the dwc_otg PCD.
@@ -177,9 +174,9 @@ typedef struct dwc_otg_pcd_ep {
 struct dwc_otg_pcd {
 	const struct dwc_otg_pcd_function_ops *fops;
 	/** Core Interface */
-	dwc_otg_core_if_t *core_if;
+	struct dwc_otg_core_if *core_if;
 	/** State of EP0 */
-	ep0state_e ep0state;
+	enum ep0_state ep0state;
 	/** EP0 Request is pending */
 	unsigned ep0_pending:1;
 	/** Indicates when SET CONFIGURATION Request is in process */
@@ -217,12 +214,12 @@ struct dwc_otg_pcd {
 	dwc_dma_t status_buf_dma_handle;
 
 	/** EP0 */
-	dwc_otg_pcd_ep_t ep0;
+	struct dwc_otg_pcd_ep ep0;
 
 	/** Array of IN EPs. */
-	dwc_otg_pcd_ep_t in_ep[MAX_EPS_CHANNELS - 1];
+	struct dwc_otg_pcd_ep in_ep[MAX_EPS_CHANNELS - 1];
 	/** Array of OUT EPs. */
-	dwc_otg_pcd_ep_t out_ep[MAX_EPS_CHANNELS - 1];
+	struct dwc_otg_pcd_ep out_ep[MAX_EPS_CHANNELS - 1];
 	/** number of valid EPs in the above array. */
 /*        unsigned      num_eps : 4;*/
 	dwc_spinlock_t *lock;
@@ -247,13 +244,16 @@ struct dwc_otg_pcd {
 };
 
 /*FIXME this functions should be static, and this prototypes should be removed*/
-extern void dwc_otg_request_nuke(dwc_otg_pcd_ep_t *ep);
-extern void dwc_otg_request_done(dwc_otg_pcd_ep_t *ep,
-				 dwc_otg_pcd_request_t *req, int32_t status);
+extern void dwc_otg_request_nuke(struct dwc_otg_pcd_ep *ep);
+extern void dwc_otg_request_done(struct dwc_otg_pcd_ep *ep,
+			 struct dwc_otg_pcd_request *req, int32_t status);
 
-void dwc_otg_iso_buffer_done(dwc_otg_pcd_t *pcd, dwc_otg_pcd_ep_t *ep,
+void dwc_otg_iso_buffer_done(struct dwc_otg_pcd *pcd, struct dwc_otg_pcd_ep *ep,
 			     void *req_handle);
-
+void start_next_request(struct dwc_otg_pcd_ep *ep);
 extern void do_test_mode(void *data);
+extern struct dwc_otg_pcd_ep *get_ep_by_addr(
+	struct dwc_otg_pcd *pcd, u16 wIndex);
+extern void complete_xiso_ep(struct dwc_otg_pcd_ep *ep);
 #endif
 #endif /* DWC_HOST_ONLY */

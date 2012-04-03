@@ -1,5 +1,5 @@
 /* ==========================================================================
- e $File: //dwh/usb_iip/dev/software/otg/linux/drivers/dwc_otg_driver.c $
+ * $File: //dwh/usb_iip/dev/software/otg/linux/drivers/dwc_otg_driver.c $
  * $Revision: #82 $
  * $Date: 2010/03/09 $
  * $Change: 1458980 $
@@ -47,7 +47,6 @@
  * this file system to perform diagnostics on the driver components or the
  * device.
  */
-
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -96,7 +95,7 @@ extern int pcd_init(
 #else
 			   struct platform_device *_dev
 #endif
-    );
+);
 extern int hcd_init(
 #ifdef LM_INTERFACE
 			   struct lm_device *_dev
@@ -105,7 +104,7 @@ extern int hcd_init(
 #else
 			   struct platform_device *_dev
 #endif
-    );
+);
 
 extern int pcd_remove(
 #ifdef LM_INTERFACE
@@ -115,7 +114,7 @@ extern int pcd_remove(
 #else
 			     struct platform_device *_dev
 #endif
-    );
+);
 
 extern void hcd_remove(
 #ifdef LM_INTERFACE
@@ -125,7 +124,7 @@ extern void hcd_remove(
 #else
 			      struct platform_device *_dev
 #endif
-    );
+);
 
 /*-------------------------------------------------------------------------*/
 /* Encapsulate the module parameter settings */
@@ -300,7 +299,14 @@ static ssize_t dbg_level_show(struct device_driver *drv, char *buf)
 static ssize_t dbg_level_store(struct device_driver *drv, const char *buf,
 			       size_t count)
 {
-	g_dbg_lvl = simple_strtoul(buf, NULL, 16);
+	int err;
+	uint32_t dbg_lvl;
+
+	err = kstrtoul(buf, 16, (unsigned long *)&dbg_lvl);
+
+	if (err >= 0)
+		g_dbg_lvl = dbg_lvl;
+
 	return count;
 }
 
@@ -311,7 +317,7 @@ static DRIVER_ATTR(debuglevel, S_IRUGO | S_IWUSR, dbg_level_show,
  * This function is called during module intialization
  * to pass module parameters to the DWC_OTG CORE.
  */
-static int set_parameters(dwc_otg_core_if_t *core_if)
+static int set_parameters(struct dwc_otg_core_if *core_if)
 {
 	int retval = 0;
 	int i;
@@ -352,8 +358,7 @@ static int set_parameters(dwc_otg_core_if_t *core_if)
 	if (dwc_otg_module_params.host_support_fs_ls_low_power != -1) {
 		retval +=
 		    dwc_otg_set_param_host_support_fs_ls_low_power(core_if,
-								   dwc_otg_module_params.
-								   host_support_fs_ls_low_power);
+			dwc_otg_module_params.host_support_fs_ls_low_power);
 	}
 	if (dwc_otg_module_params.enable_dynamic_fifo != -1) {
 		retval +=
@@ -376,8 +381,7 @@ static int set_parameters(dwc_otg_core_if_t *core_if)
 	if (dwc_otg_module_params.dev_nperio_tx_fifo_size != -1) {
 		retval +=
 		    dwc_otg_set_param_dev_nperio_tx_fifo_size(core_if,
-							      dwc_otg_module_params.
-							      dev_nperio_tx_fifo_size);
+			      dwc_otg_module_params.dev_nperio_tx_fifo_size);
 	}
 	if (dwc_otg_module_params.host_rx_fifo_size != -1) {
 		retval +=
@@ -388,14 +392,12 @@ static int set_parameters(dwc_otg_core_if_t *core_if)
 	if (dwc_otg_module_params.host_nperio_tx_fifo_size != -1) {
 		retval +=
 		    dwc_otg_set_param_host_nperio_tx_fifo_size(core_if,
-							       dwc_otg_module_params.
-							       host_nperio_tx_fifo_size);
+			       dwc_otg_module_params.host_nperio_tx_fifo_size);
 	}
 	if (dwc_otg_module_params.host_perio_tx_fifo_size != -1) {
 		retval +=
 		    dwc_otg_set_param_host_perio_tx_fifo_size(core_if,
-							      dwc_otg_module_params.
-							      host_perio_tx_fifo_size);
+				dwc_otg_module_params.host_perio_tx_fifo_size);
 	}
 	if (dwc_otg_module_params.max_transfer_size != -1) {
 		retval +=
@@ -434,8 +436,7 @@ static int set_parameters(dwc_otg_core_if_t *core_if)
 	if (dwc_otg_module_params.host_ls_low_power_phy_clk != -1) {
 		retval +=
 		    dwc_otg_set_param_host_ls_low_power_phy_clk(core_if,
-								dwc_otg_module_params.
-								host_ls_low_power_phy_clk);
+			dwc_otg_module_params.host_ls_low_power_phy_clk);
 	}
 	if (dwc_otg_module_params.phy_ulpi_ddr != -1) {
 		retval +=
@@ -482,18 +483,17 @@ static int set_parameters(dwc_otg_core_if_t *core_if)
 		if (dwc_otg_module_params.dev_perio_tx_fifo_size[i] != -1) {
 			retval +=
 			    dwc_otg_set_param_dev_perio_tx_fifo_size(core_if,
-								     dwc_otg_module_params.
-								     dev_perio_tx_fifo_size
-								     [i], i);
+				dwc_otg_module_params.dev_perio_tx_fifo_size[i],
+				  i);
 		}
 	}
 
 	for (i = 0; i < 15; i++) {
 		if (dwc_otg_module_params.dev_tx_fifo_size[i] != -1) {
 			retval += dwc_otg_set_param_dev_tx_fifo_size(core_if,
-								     dwc_otg_module_params.
-								     dev_tx_fifo_size
-								     [i], i);
+						     dwc_otg_module_params.
+						     dev_tx_fifo_size
+						     [i], i);
 		}
 	}
 	if (dwc_otg_module_params.thr_ctl != -1) {
@@ -582,7 +582,7 @@ static int set_parameters(dwc_otg_core_if_t *core_if)
  */
 static irqreturn_t dwc_otg_common_irq(int irq, void *dev)
 {
-	dwc_otg_device_t *otg_dev = dev;
+	struct dwc_otg_device *otg_dev = dev;
 	int32_t retval = IRQ_NONE;
 
 	retval = dwc_otg_handle_common_intr(otg_dev->core_if);
@@ -608,14 +608,14 @@ static void dwc_otg_driver_remove(struct pci_dev *_dev
 #else
 static int dwc_otg_driver_remove(struct platform_device *_dev
 #endif
-    )
+)
 {
 #ifdef LM_INTERFACE
-	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
+	struct dwc_otg_device *otg_dev = lm_get_drvdata(_dev);
 #elif defined(PCI_INTERFACE)
-	dwc_otg_device_t *otg_dev = pci_get_drvdata(_dev);
+	struct dwc_otg_device *otg_dev = pci_get_drvdata(_dev);
 #else
-	dwc_otg_device_t *otg_dev = platform_get_drvdata(_dev);
+	struct dwc_otg_device *otg_dev = platform_get_drvdata(_dev);
 #endif
 
 	DWC_DEBUGPL(DBG_ANY, "%s(%p)\n", __func__, _dev);
@@ -700,10 +700,10 @@ static int dwc_otg_driver_probe(struct pci_dev *_dev,
 #else
 static int dwc_otg_driver_probe(struct platform_device *_dev
 #endif
-    )
+)
 {
 	int retval = 0;
-	dwc_otg_device_t *dwc_otg_device;
+	struct dwc_otg_device *dwc_otg_device;
 #if !defined LM_INTERFACE && !defined(PCI_INTERFACE)
 	struct resource *resource;
 #endif
@@ -730,7 +730,7 @@ static int dwc_otg_driver_probe(struct platform_device *_dev
 	dev_dbg(&_dev->dev, "start=0x%08x\n", resource->start);
 #endif
 
-	dwc_otg_device = dwc_alloc(sizeof(dwc_otg_device_t));
+	dwc_otg_device = dwc_alloc(sizeof(struct dwc_otg_device));
 
 	if (!dwc_otg_device) {
 		dev_err(&_dev->dev, "kmalloc of dwc_otg_device failed\n");
@@ -953,12 +953,11 @@ static int dwc_otg_driver_probe(struct platform_device *_dev
 #ifdef CONFIG_USB_OTG
 	if (dwc_otg_device->core_if->xceiver->shutdown &&
 	    (!dwc_otg_device->core_if->xceiver->default_a) &&
-	    (!dwc_otg_device->core_if->core_params->otg_supp_enable))
+	    (!dwc_otg_device->core_if->core_params->otg_supp_enable)) {
 #else
 	if (dwc_otg_device->core_if->xceiver->shutdown &&
-	    (!dwc_otg_device->core_if->xceiver->default_a))
+	    (!dwc_otg_device->core_if->xceiver->default_a)) {
 #endif /* CONFIG_USB_OTG */
-	{
 		/* Shutdown USB when in non-OTG device mode until
 		 * a driver is registered */
 		w_shutdown_core((void *)(dwc_otg_device->core_if));
@@ -978,7 +977,7 @@ fail:
 static int dwc_otg_runtime_suspend(struct device *dev)
 {
 	int status = 0;
-	dwc_otg_device_t *otg_dev = dev_get_drvdata(dev);
+	struct dwc_otg_device *otg_dev = dev_get_drvdata(dev);
 	if (otg_dev &&
 	    (otg_dev->core_if->core_params->otg_supp_enable ||
 	     (otg_dev->core_if->xceiver->state != OTG_STATE_UNDEFINED))) {
@@ -997,7 +996,7 @@ static int dwc_otg_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static struct dev_pm_ops dwc_otg_pm_ops = {
+static const struct dev_pm_ops dwc_otg_pm_ops = {
 	.runtime_suspend = dwc_otg_runtime_suspend,
 	.runtime_resume = dwc_otg_runtime_resume,
 };
@@ -1022,7 +1021,7 @@ static struct lm_driver dwc_otg_driver = {
 	.remove = dwc_otg_driver_remove,
 };
 #elif defined(PCI_INTERFACE)
-static const struct pci_device_id pci_ids[] = { {
+static DEFINE_PCI_DEVICE_TABLE(pci_ids) = { {
 						 PCI_DEVICE(0x16c3, 0xabcd),
 						 .driver_data =
 						 (unsigned long)0xdeadbeef,
@@ -1610,10 +1609,11 @@ MODULE_PARM_DESC(otg_enable, "OTG support 0=OTG Disabled 1=OTG Enabled");
 
 <tr>
  <td>thr_ctl</td>
- <td>Specifies whether to enable Thresholding for Device mode. Bits 0, 1, 2 of this
- parmater specifies if thresholding is enabled for non-Iso Tx, Iso Tx and Rx
- transfers accordingly.
- The driver will automatically detect the value for this parameter if none is
+ <td>Specifies whether to enable Thresholding for Device mode.
+ Bits 0, 1, 2 of this parameter specifies if thresholding is enabled
+ for non-Iso Tx, Iso Tx and Rx transfers accordingly.
+ The driver will automatically detect the value for this parameter
+ if none is
  specified.
  - Values: 0 to 7 (default 0)
  Bit values indicate:

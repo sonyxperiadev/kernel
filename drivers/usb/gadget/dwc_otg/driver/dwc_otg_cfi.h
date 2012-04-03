@@ -65,10 +65,10 @@ struct dwc_otg_pcd_ep;
 #define CFI_INFO(fmt...)
 #endif
 
-#define min(x,y) ({ \
+#define min(x, y) ({ \
 	x < y ? x : y; })
 
-#define max(x,y) ({ \
+#define max(x, y) ({ \
 	x > y ? x : y; })
 
 /**
@@ -81,14 +81,15 @@ struct _ddma_sg_buffer_setup {
 	uint8_t bOutEndpointAddress;
 	/* The IN EP address */
 	uint8_t bInEndpointAddress;
-	/* Number of bytes to put between transfer segments (must be DWORD boundaries) */
+	/* Number of bytes to put between transfer segments
+	 * (must be DWORD boundaries) */
 	uint8_t bOffset;
-	/* The number of transfer segments (a DMA descriptors per each segment) */
+	/* The number of transfer segments (a DMA descriptors per
+	 * each segment) */
 	uint8_t bCount;
 	/* Size (in byte) of each transfer segment */
 	uint16_t wSize;
-} __attribute__ ((packed));
-typedef struct _ddma_sg_buffer_setup ddma_sg_buffer_setup_t;
+} __packed;
 
 /** Descriptor DMA Concatenation Buffer setup structure */
 struct _ddma_concat_buffer_setup_hdr {
@@ -99,44 +100,41 @@ struct _ddma_concat_buffer_setup_hdr {
 	uint8_t bDescCount;
 	/* The total size of the transfer */
 	uint16_t wSize;
-} __attribute__ ((packed));
-typedef struct _ddma_concat_buffer_setup_hdr ddma_concat_buffer_setup_hdr_t;
+} __packed;
 
 /** Descriptor DMA Concatenation Buffer setup structure */
 struct _ddma_concat_buffer_setup {
 	/* The SG header */
-	ddma_concat_buffer_setup_hdr_t hdr;
+	struct _ddma_concat_buffer_setup_hdr hdr;
 
 	/* The XFER sizes pointer (allocated dynamically) */
 	uint16_t *wTxBytes;
-} __attribute__ ((packed));
-typedef struct _ddma_concat_buffer_setup ddma_concat_buffer_setup_t;
+} __packed;
 
 /** Descriptor DMA Alignment Buffer setup structure */
 struct _ddma_align_buffer_setup {
 #define BS_ALIGN_VAL_HDR_LEN	2
 	uint8_t bEndpointAddress;
 	uint8_t bAlign;
-} __attribute__ ((packed));
-typedef struct _ddma_align_buffer_setup ddma_align_buffer_setup_t;
+} __packed;
 
 /** Transmit FIFO Size setup structure */
 struct _tx_fifo_size_setup {
 	uint8_t bEndpointAddress;
 	uint16_t wDepth;
-} __attribute__ ((packed));
-typedef struct _tx_fifo_size_setup tx_fifo_size_setup_t;
+} __packed;
 
 /** Transmit FIFO Size setup structure */
 struct _rx_fifo_size_setup {
 	uint16_t wDepth;
-} __attribute__ ((packed));
-typedef struct _rx_fifo_size_setup rx_fifo_size_setup_t;
+} __packed;
 
 /**
- * struct cfi_usb_ctrlrequest - the CFI implementation of the struct usb_ctrlrequest
- * This structure encapsulates the standard usb_ctrlrequest and adds a pointer
- * to the data returned in the data stage of a 3-stage Control Write requests.
+ * struct cfi_usb_ctrlrequest - the CFI implementation of the
+ * struct usb_ctrlrequest
+ * This structure encapsulates the standard usb_ctrlrequest and
+ * adds a pointer to the data returned in the data stage of a
+ * 3-stage Control Write requests.
  */
 struct cfi_usb_ctrlrequest {
 	uint8_t bRequestType;
@@ -159,16 +157,17 @@ struct cfi_ep {
 	dwc_list_link_t lh;
 	/* Pointer to the active PCD endpoint structure */
 	struct dwc_otg_pcd_ep *ep;
-	/* The last descriptor in the chain of DMA descriptors of the endpoint */
+	/* The last descriptor in the chain of DMA descriptors
+	 * of the endpoint */
 	struct dwc_otg_dma_desc *dma_desc_last;
 	/* The SG feature value */
-	ddma_sg_buffer_setup_t *bm_sg;
+	struct _ddma_sg_buffer_setup *bm_sg;
 	/* The Circular feature value */
-	ddma_sg_buffer_setup_t *bm_circ;
+	struct _ddma_sg_buffer_setup *bm_circ;
 	/* The Concatenation feature value */
-	ddma_concat_buffer_setup_t *bm_concat;
+	struct _ddma_concat_buffer_setup *bm_concat;
 	/* The Alignment feature value */
-	ddma_align_buffer_setup_t *bm_align;
+	struct _ddma_align_buffer_setup *bm_align;
 	/* XFER length */
 	uint32_t xfer_len;
 	/*
@@ -178,26 +177,30 @@ struct cfi_ep {
 	 */
 	uint32_t desc_count;
 };
-typedef struct cfi_ep cfi_ep_t;
 
-typedef struct cfi_dma_buff {
+struct cfi_dma_buff {
 #define CFI_IN_BUF_LEN	1024
 #define CFI_OUT_BUF_LEN	1024
 	dma_addr_t addr;
 	uint8_t *buf;
-} cfi_dma_buff_t;
+};
 
 struct cfiobject;
 
 /**
  * This is the interface for the CFI operations.
  *
- * @param	ep_enable			Called when any endpoint is enabled and activated.
- * @param	release				Called when the CFI object is released and it needs to correctly
- *								deallocate the dynamic memory
- * @param	ctrl_write_complete	Called when the data stage of the request is complete
+ * @param	ep_enable		 Called when any endpoint is enabled
+ *							 and activated
+ * @param	release			 Called when the CFI object is
+ *							 released and it needs
+ *							 to correctly
+ *							 deallocate dynamic
+ *							 memory
+ * @param	ctrl_write_complete Called when the data stage of
+ *							 the request is complete
  */
-typedef struct cfi_ops {
+struct cfi_ops {
 	int (*ep_enable) (struct cfiobject *cfi, struct dwc_otg_pcd *pcd,
 			  struct dwc_otg_pcd_ep *ep);
 	void *(*ep_alloc_buf) (struct cfiobject *cfi, struct dwc_otg_pcd *pcd,
@@ -209,29 +212,30 @@ typedef struct cfi_ops {
 	void (*build_descriptors) (struct cfiobject *cfi,
 				   struct dwc_otg_pcd *pcd,
 				   struct dwc_otg_pcd_ep *ep,
-				   dwc_otg_pcd_request_t *req);
-} cfi_ops_t;
+				   struct dwc_otg_pcd_request *req);
+};
 
 struct cfiobject {
-	cfi_ops_t ops;
+	struct cfi_ops ops;
 	struct dwc_otg_pcd *pcd;
 	struct usb_gadget *gadget;
 
 	/* Buffers used to send/receive CFI-related request data */
-	cfi_dma_buff_t buf_in;
-	cfi_dma_buff_t buf_out;
+	struct cfi_dma_buff buf_in;
+	struct cfi_dma_buff buf_out;
 
 	/* CFI specific Control request wrapper */
 	struct cfi_usb_ctrlrequest ctrl_req;
 
-	/* The list of active EP's in the PCD of type cfi_ep_t */
+	/* The list of active EP's in the PCD of type struct cfi_ep */
 	dwc_list_link_t active_eps;
 
 	/* This flag shall control the propagation of a specific request
 	 * to the gadget's processing routines.
 	 * 0 - no gadget handling
-	 * 1 - the gadget needs to know about this request (w/o completing a status
-	 * phase - just return a 0 to the _setup callback)
+	 * 1 - the gadget needs to know about this request
+	 * (w/o completing a status phase - just return a 0
+	 * to the _setup callback)
 	 */
 	uint8_t need_gadget_att;
 
@@ -240,7 +244,6 @@ struct cfiobject {
 	 */
 	uint8_t need_status_in_complete;
 };
-typedef struct cfiobject cfiobject_t;
 
 #define DUMP_MSG
 
@@ -277,7 +280,7 @@ static inline void dump_msg(const u8 *buf, unsigned int length)
 #endif
 
 /**
- * This function returns a pointer to cfi_ep_t object with the addr address.
+ * This function returns a pointer to struct cfi_ep object with the addr address.
  */
 static inline struct cfi_ep *get_cfi_ep_by_addr(struct cfiobject *cfi,
 						uint8_t addr)
@@ -296,7 +299,7 @@ static inline struct cfi_ep *get_cfi_ep_by_addr(struct cfiobject *cfi,
 }
 
 /**
- * This function returns a pointer to cfi_ep_t object that matches
+ * This function returns a pointer to struct cfi_ep object that matches
  * the dwc_otg_pcd_ep object.
  */
 static inline struct cfi_ep *get_cfi_ep_by_pcd_ep(struct cfiobject *cfi,
@@ -314,5 +317,5 @@ static inline struct cfi_ep *get_cfi_ep_by_pcd_ep(struct cfiobject *cfi,
 }
 
 int cfi_setup(struct dwc_otg_pcd *pcd, struct cfi_usb_ctrlrequest *ctrl);
-
+int init_cfi(struct cfiobject *cfiobj);
 #endif				/* (__DWC_OTG_CFI_H__) */

@@ -44,7 +44,7 @@
 #include "dwc_otg_cil.h"
 
 #ifdef DEBUG
-inline const char *op_state_str(dwc_otg_core_if_t *core_if)
+inline const char *op_state_str(struct dwc_otg_core_if *core_if)
 {
 	return (core_if->op_state == A_HOST ? "a_host" :
 		(core_if->op_state == A_SUSPEND ? "a_suspend" :
@@ -58,9 +58,9 @@ inline const char *op_state_str(dwc_otg_core_if_t *core_if)
  *
  * @param core_if Programming view of DWC_otg controller.
  */
-int32_t dwc_otg_handle_mode_mismatch_intr(dwc_otg_core_if_t *core_if)
+int32_t dwc_otg_handle_mode_mismatch_intr(struct dwc_otg_core_if *core_if)
 {
-	gintsts_data_t gintsts;
+	union gintsts_data gintsts;
 	DWC_WARN("Mode Mismatch Interrupt: currently in %s mode\n",
 		 dwc_otg_mode(core_if) ? "Host" : "Device");
 
@@ -78,13 +78,14 @@ int32_t dwc_otg_handle_mode_mismatch_intr(dwc_otg_core_if_t *core_if)
  *
  * @param core_if Programming view of DWC_otg controller.
  */
-int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t *core_if)
+int32_t dwc_otg_handle_otg_intr(struct dwc_otg_core_if *core_if)
 {
-	dwc_otg_core_global_regs_t *global_regs = core_if->core_global_regs;
-	gotgint_data_t gotgint;
-	gotgctl_data_t gotgctl;
-	gintmsk_data_t gintmsk;
-	gpwrdn_data_t gpwrdn;
+	struct dwc_otg_core_global_regs *global_regs =
+		core_if->core_global_regs;
+	union gotgint_data gotgint;
+	union gotgctl_data gotgctl;
+	union gintmsk_data gintmsk;
+	union gpwrdn_data gpwrdn;
 
 	gotgint.d32 = dwc_read_reg32(&global_regs->gotgint);
 	gotgctl.d32 = dwc_read_reg32(&global_regs->gotgctl);
@@ -192,7 +193,8 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t *core_if)
 			dwc_modify_reg32(&global_regs->gotgctl, gotgctl.d32, 0);
 			DWC_DEBUGPL(DBG_ANY, "HNP Failed\n");
 			__DWC_ERROR("Device Not Connected/Responding\n");
-			/* Stop and re-start PCD to move back to B_PERIPHERAL state */
+			/* Stop and re-start PCD to move back
+			 * to B_PERIPHERAL state */
 			cil_pcd_stop(core_if);
 			cil_pcd_start(core_if);
 			core_if->op_state = B_PERIPHERAL;
@@ -247,9 +249,9 @@ int32_t dwc_otg_handle_otg_intr(dwc_otg_core_if_t *core_if)
 
 void w_conn_id_status_change(void *p)
 {
-	dwc_otg_core_if_t *core_if = p;
+	struct dwc_otg_core_if *core_if = p;
 	uint32_t count = 0;
-	gotgctl_data_t gotgctl = {.d32 = 0 };
+	union gotgctl_data gotgctl = {.d32 = 0 };
 
 	gotgctl.d32 = dwc_read_reg32(&core_if->core_global_regs->gotgctl);
 	DWC_DEBUGPL(DBG_CIL, "gotgctl=%0x\n", gotgctl.d32);
@@ -309,7 +311,8 @@ void w_conn_id_status_change(void *p)
  *
  * @param core_if Programming view of DWC_otg controller.
  */
-int32_t dwc_otg_handle_conn_id_status_change_intr(dwc_otg_core_if_t *core_if)
+int32_t dwc_otg_handle_conn_id_status_change_intr(
+	struct dwc_otg_core_if *core_if)
 {
 
 	/*
@@ -319,8 +322,8 @@ int32_t dwc_otg_handle_conn_id_status_change_intr(dwc_otg_core_if_t *core_if)
 	 * called if the HCD state is HALT. This means that the interrupt does
 	 * not get handled and Linux complains loudly.
 	 */
-	gintmsk_data_t gintmsk = {.d32 = 0 };
-	gintsts_data_t gintsts = {.d32 = 0 };
+	union gintmsk_data gintmsk = {.d32 = 0 };
+	union gintsts_data gintsts = {.d32 = 0 };
 
 	gintmsk.b.sofintr = 1;
 	dwc_modify_reg32(&core_if->core_global_regs->gintmsk, gintmsk.d32, 0);
@@ -351,10 +354,10 @@ int32_t dwc_otg_handle_conn_id_status_change_intr(dwc_otg_core_if_t *core_if)
  *
  * @param core_if Programming view of DWC_otg controller.
  */
-int32_t dwc_otg_handle_session_req_intr(dwc_otg_core_if_t *core_if)
+int32_t dwc_otg_handle_session_req_intr(struct dwc_otg_core_if *core_if)
 {
-	hprt0_data_t hprt0;
-	gintsts_data_t gintsts;
+	union hprt0_data hprt0;
+	union gintsts_data gintsts;
 
 #ifndef DWC_HOST_ONLY
 	DWC_DEBUGPL(DBG_ANY, "++Session Request Interrupt++\n");
@@ -376,8 +379,9 @@ int32_t dwc_otg_handle_session_req_intr(dwc_otg_core_if_t *core_if)
 		} else
 #endif
 		{
-			/* Start the Connection timer. So a message can be displayed
-			 * if connect does not occur within connection wait timeout */
+			/* Start the Connection timer. So a message
+			 * can be displayed if connect does not occur
+			 * within connection wait timeout */
 			cil_hcd_session_start(core_if);
 		}
 	}
@@ -393,14 +397,14 @@ int32_t dwc_otg_handle_session_req_intr(dwc_otg_core_if_t *core_if)
 
 void w_wakeup_detected(void *p)
 {
-	dwc_otg_core_if_t *core_if = (dwc_otg_core_if_t *)p;
+	struct dwc_otg_core_if *core_if = (struct dwc_otg_core_if *)p;
 	/*
 	 * Clear the Resume after 70ms. (Need 20 ms minimum. Use 70 ms
 	 * so that OPT tests pass with all PHYs).
 	 */
-	hprt0_data_t hprt0 = {.d32 = 0 };
+	union hprt0_data hprt0 = {.d32 = 0 };
 #if 0
-	pcgcctl_data_t pcgcctl = {.d32 = 0 };
+	union pcgcctl_data pcgcctl = {.d32 = 0 };
 	/* Restart the Phy Clock */
 	pcgcctl.b.stoppclk = 1;
 	dwc_modify_reg32(core_if->pcgcctl, pcgcctl.d32, 0);
@@ -422,7 +426,7 @@ void w_wakeup_detected(void *p)
 
 void w_a_periph_done(void *p)
 {
-	dwc_otg_core_if_t *core_if = (dwc_otg_core_if_t *)p;
+	struct dwc_otg_core_if *core_if = (struct dwc_otg_core_if *)p;
 
 	if (core_if->op_state == A_PERIPHERAL) {
 		/* Clear the a_peripheral flag, back to a_host. */
@@ -439,9 +443,9 @@ void w_a_periph_done(void *p)
  * power mode. The controller automatically begins resume
  * signaling. The handler schedules a time to stop resume signaling.
  */
-int32_t dwc_otg_handle_wakeup_detected_intr(dwc_otg_core_if_t *core_if)
+int32_t dwc_otg_handle_wakeup_detected_intr(struct dwc_otg_core_if *core_if)
 {
-	gintsts_data_t gintsts;
+	union gintsts_data gintsts;
 
 	DWC_DEBUGPL(DBG_ANY,
 		    "++Resume and Remote Wakeup Detected Interrupt++\n");
@@ -458,14 +462,14 @@ int32_t dwc_otg_handle_wakeup_detected_intr(dwc_otg_core_if_t *core_if)
 #endif
 
 	if (dwc_otg_is_device_mode(core_if)) {
-		dctl_data_t dctl = {.d32 = 0 };
+		union dctl_data dctl = {.d32 = 0 };
 		DWC_DEBUGPL(DBG_PCD, "DSTS=0x%0x\n",
 			    dwc_read_reg32(&core_if->dev_if->dev_global_regs->
 					   dsts));
 		if (core_if->lx_state == DWC_OTG_L2) {
 #ifdef PARTIAL_POWER_DOWN
 			if (core_if->hwcfg4.b.power_optimiz) {
-				pcgcctl_data_t power = {.d32 = 0 };
+				union pcgcctl_data power = {.d32 = 0 };
 
 				power.d32 = dwc_read_reg32(core_if->pcgcctl);
 				DWC_DEBUGPL(DBG_CIL, "PCGCCTL=%0x\n",
@@ -491,7 +495,7 @@ int32_t dwc_otg_handle_wakeup_detected_intr(dwc_otg_core_if_t *core_if)
 							       p);
 			}
 		} else {
-			glpmcfg_data_t lpmcfg;
+			union glpmctl_data lpmcfg;
 			lpmcfg.d32 =
 			    dwc_read_reg32(&core_if->core_global_regs->glpmcfg);
 			lpmcfg.b.hird_thres &= (~(1 << 4));
@@ -502,7 +506,7 @@ int32_t dwc_otg_handle_wakeup_detected_intr(dwc_otg_core_if_t *core_if)
 		core_if->lx_state = DWC_OTG_L0;
 	} else {
 		if (core_if->lx_state != DWC_OTG_L1) {
-			pcgcctl_data_t pcgcctl = {.d32 = 0 };
+			union pcgcctl_data pcgcctl = {.d32 = 0 };
 
 			/* Restart the Phy Clock */
 			pcgcctl.b.stoppclk = 1;
@@ -527,10 +531,11 @@ int32_t dwc_otg_handle_wakeup_detected_intr(dwc_otg_core_if_t *core_if)
  * This interrupt indicates that the Wakeup Logic has detected a
  * Device disconnect.
  */
-static int32_t dwc_otg_handle_pwrdn_disconnect_intr(dwc_otg_core_if_t *core_if)
+static int32_t dwc_otg_handle_pwrdn_disconnect_intr(
+	struct dwc_otg_core_if *core_if)
 {
-	gpwrdn_data_t gpwrdn = {.d32 = 0 };
-	gpwrdn_data_t gpwrdn_temp = {.d32 = 0 };
+	union gpwrdn_data gpwrdn = {.d32 = 0 };
+	union gpwrdn_data gpwrdn_temp = {.d32 = 0 };
 	gpwrdn_temp.d32 = dwc_read_reg32(&core_if->core_global_regs->gpwrdn);
 
 	DWC_PRINTF("%s called\n", __func__);
@@ -594,10 +599,10 @@ static int32_t dwc_otg_handle_pwrdn_disconnect_intr(dwc_otg_core_if_t *core_if)
  * This interrupt indicates that the Wakeup Logic has detected a
  * remote wakeup sequence.
  */
-static int32_t dwc_otg_handle_pwrdn_wakeup_detected_intr(dwc_otg_core_if_t
+static int32_t dwc_otg_handle_pwrdn_wakeup_detected_intr(struct dwc_otg_core_if
 							 *core_if)
 {
-	gpwrdn_data_t gpwrdn = {.d32 = 0 };
+	union gpwrdn_data gpwrdn = {.d32 = 0 };
 	DWC_DEBUGPL(DBG_ANY,
 		    "++Powerdown Remote Wakeup Detected Interrupt++\n");
 
@@ -621,10 +626,11 @@ static int32_t dwc_otg_handle_pwrdn_wakeup_detected_intr(dwc_otg_core_if_t
 	return 1;
 }
 
-static int32_t dwc_otg_handle_pwrdn_idsts_change(dwc_otg_core_if_t *core_if)
+static int32_t dwc_otg_handle_pwrdn_idsts_change(
+	struct dwc_otg_core_if *core_if)
 {
-	gpwrdn_data_t gpwrdn = {.d32 = 0 };
-	gpwrdn_data_t gpwrdn_temp = {.d32 = 0 };
+	union gpwrdn_data gpwrdn = {.d32 = 0 };
+	union gpwrdn_data gpwrdn_temp = {.d32 = 0 };
 
 	if (!core_if->hibernation_suspend) {
 		DWC_PRINTF("Already exited from Hibernation\n");
@@ -693,9 +699,10 @@ static int32_t dwc_otg_handle_pwrdn_idsts_change(dwc_otg_core_if_t *core_if)
 	return 1;
 }
 
-static int32_t dwc_otg_handle_pwrdn_session_change(dwc_otg_core_if_t *core_if)
+static int32_t dwc_otg_handle_pwrdn_session_change(
+	struct dwc_otg_core_if *core_if)
 {
-	gpwrdn_data_t gpwrdn = {.d32 = 0 };
+	union gpwrdn_data gpwrdn = {.d32 = 0 };
 	int32_t otg_cap_param = core_if->core_params->otg_cap;
 	DWC_DEBUGPL(DBG_ANY, "%s called\n", __func__);
 
@@ -775,11 +782,12 @@ static int32_t dwc_otg_handle_pwrdn_session_change(dwc_otg_core_if_t *core_if)
  * This interrupt indicates that the Wakeup Logic has detected a
  * status change either on IDDIG or BSessVld.
  */
-static uint32_t dwc_otg_handle_pwrdn_stschng_intr(dwc_otg_core_if_t *core_if)
+static uint32_t dwc_otg_handle_pwrdn_stschng_intr(
+	struct dwc_otg_core_if *core_if)
 {
 	int retval = 0;
-	gpwrdn_data_t gpwrdn = {.d32 = 0 };
-	gpwrdn_data_t gpwrdn_temp = {.d32 = 0 };
+	union gpwrdn_data gpwrdn = {.d32 = 0 };
+	union gpwrdn_data gpwrdn_temp = {.d32 = 0 };
 
 	DWC_PRINTF("%s called\n", __func__);
 
@@ -803,9 +811,9 @@ static uint32_t dwc_otg_handle_pwrdn_stschng_intr(dwc_otg_core_if_t *core_if)
  * This interrupt indicates that the Wakeup Logic has detected a
  * SRP.
  */
-static int32_t dwc_otg_handle_pwrdn_srp_intr(dwc_otg_core_if_t *core_if)
+static int32_t dwc_otg_handle_pwrdn_srp_intr(struct dwc_otg_core_if *core_if)
 {
-	gpwrdn_data_t gpwrdn = {.d32 = 0 };
+	union gpwrdn_data gpwrdn = {.d32 = 0 };
 
 	DWC_PRINTF("%s called\n", __func__);
 
@@ -872,15 +880,15 @@ static int32_t dwc_otg_handle_pwrdn_srp_intr(dwc_otg_core_if_t *core_if)
 
 /** This interrupt indicates that restore command after Hibernation
  * was completed by the core. */
-int32_t dwc_otg_handle_restore_done_intr(dwc_otg_core_if_t *core_if)
+int32_t dwc_otg_handle_restore_done_intr(struct dwc_otg_core_if *core_if)
 {
-	pcgcctl_data_t pcgcctl;
+	union pcgcctl_data pcgcctl;
 	DWC_DEBUGPL(DBG_ANY, "++Restore Done Interrupt++\n");
 
 	/* TODO De-assert restore signal. 8.a */
 	pcgcctl.d32 = dwc_read_reg32(core_if->pcgcctl);
 	if (pcgcctl.b.restoremode == 1) {
-		gintmsk_data_t gintmsk = {.d32 = 0 };
+		union gintmsk_data gintmsk = {.d32 = 0 };
 		/*
 		 * If restore mode is Remote Wakeup,
 		 * unmask Remote Wakeup interrupt.
@@ -897,9 +905,9 @@ int32_t dwc_otg_handle_restore_done_intr(dwc_otg_core_if_t *core_if)
  * This interrupt indicates that a device has been disconnected from
  * the root port.
  */
-int32_t dwc_otg_handle_disconnect_intr(dwc_otg_core_if_t *core_if)
+int32_t dwc_otg_handle_disconnect_intr(struct dwc_otg_core_if *core_if)
 {
-	gintsts_data_t gintsts;
+	union gintsts_data gintsts;
 
 	DWC_DEBUGPL(DBG_ANY, "++Disconnect Detected Interrupt++ (%s) %s\n",
 		    (dwc_otg_is_host_mode(core_if) ? "Host" : "Device"),
@@ -914,7 +922,7 @@ int32_t dwc_otg_handle_disconnect_intr(dwc_otg_core_if_t *core_if)
 		cil_pcd_start(core_if);
 		core_if->op_state = B_PERIPHERAL;
 	} else if (dwc_otg_is_device_mode(core_if)) {
-		gotgctl_data_t gotgctl = {.d32 = 0 };
+		union gotgctl_data gotgctl = {.d32 = 0 };
 		gotgctl.d32 =
 		    dwc_read_reg32(&core_if->core_global_regs->gotgctl);
 		if (gotgctl.b.hstsethnpen == 1) {
@@ -936,9 +944,10 @@ int32_t dwc_otg_handle_disconnect_intr(dwc_otg_core_if_t *core_if)
 			/* A-Cable still connected but device disconnected. */
 			cil_hcd_disconnect(core_if);
 			if (core_if->adp_enable) {
-				gpwrdn_data_t gpwrdn;
+				union gpwrdn_data gpwrdn;
 				/* Power off the core */
 				if (core_if->power_down == 2) {
+					/* Nothing to do for now */
 				} else {
 					/* Enable Power Down Logic */
 					gpwrdn.b.pmuactv = 1;
@@ -993,11 +1002,11 @@ int32_t dwc_otg_handle_disconnect_intr(dwc_otg_core_if_t *core_if)
  * When power management is enabled the core will be put in low power
  * mode.
  */
-int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
+int32_t dwc_otg_handle_usb_suspend_intr(struct dwc_otg_core_if *core_if)
 {
-	dsts_data_t dsts;
-	gintsts_data_t gintsts;
-	dcfg_data_t dcfg;
+	union dsts_data dsts;
+	union gintsts_data gintsts;
+	union dcfg_data dcfg;
 
 	DWC_DEBUGPL(DBG_ANY, "USB SUSPEND\n");
 
@@ -1015,7 +1024,7 @@ int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
 /** @todo Add a module parameter for power management. */
 
 		if (dsts.b.suspsts && core_if->hwcfg4.b.power_optimiz) {
-			pcgcctl_data_t power = {.d32 = 0 };
+			union pcgcctl_data power = {.d32 = 0 };
 			DWC_DEBUGPL(DBG_CIL, "suspend\n");
 
 			power.b.pwrclmp = 1;
@@ -1050,9 +1059,9 @@ int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
 				    dcfg.b.devaddr);
 
 			if (core_if->lx_state != DWC_OTG_L3 && dcfg.b.devaddr) {
-				pcgcctl_data_t pcgcctl = {.d32 = 0 };
-				gpwrdn_data_t gpwrdn = {.d32 = 0 };
-				gusbcfg_data_t gusbcfg = {.d32 = 0 };
+				union pcgcctl_data pcgcctl = {.d32 = 0 };
+				union gpwrdn_data gpwrdn = {.d32 = 0 };
+				union gusbcfg_data gusbcfg = {.d32 = 0 };
 
 				/* Change to L2(suspend) state */
 				core_if->lx_state = DWC_OTG_L2;
@@ -1169,10 +1178,10 @@ int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
 /**
  * This function hadles LPM transaction received interrupt.
  */
-static int32_t dwc_otg_handle_lpm_intr(dwc_otg_core_if_t *core_if)
+static int32_t dwc_otg_handle_lpm_intr(struct dwc_otg_core_if *core_if)
 {
-	glpmcfg_data_t lpmcfg;
-	gintsts_data_t gintsts;
+	union glpmctl_data lpmcfg;
+	union gintsts_data gintsts;
 
 	if (!core_if->core_params->lpm_enable)
 		DWC_PRINTF("Unexpected LPM interrupt\n");
@@ -1207,13 +1216,13 @@ static int32_t dwc_otg_handle_lpm_intr(dwc_otg_core_if_t *core_if)
 /**
  * This function returns the Core Interrupt register.
  */
-static inline uint32_t dwc_otg_read_common_intr(dwc_otg_core_if_t *core_if)
+static inline uint32_t dwc_otg_read_common_intr(struct dwc_otg_core_if *core_if)
 {
 	uint32_t ret = 0;
 
-	gintsts_data_t gintsts;
-	gintmsk_data_t gintmsk;
-	gintmsk_data_t gintmsk_common = {.d32 = 0 };
+	union gintsts_data gintsts;
+	union gintmsk_data gintmsk;
+	union gintmsk_data gintmsk_common = {.d32 = 0 };
 	gintmsk_common.b.wkupintr = 1;
 	gintmsk_common.b.sessreqintr = 1;
 	gintmsk_common.b.conidstschng = 1;
@@ -1249,7 +1258,7 @@ static inline uint32_t dwc_otg_read_common_intr(dwc_otg_core_if_t *core_if)
 /* MACRO for clearing interupt bits in GPWRDN register */
 #define CLEAR_GPWRDN_INTR(__core_if, __intr) \
 do { \
-		gpwrdn_data_t gpwrdn = {.d32 = 0}; \
+		union gpwrdn_data gpwrdn = {.d32 = 0}; \
 		gpwrdn.b.__intr = 1; \
 		dwc_modify_reg32(&__core_if->core_global_regs->gpwrdn, \
 		0, gpwrdn.d32); \
@@ -1270,11 +1279,11 @@ do { \
  * - ADP Transaction Received Interrupt
  *
  */
-int32_t dwc_otg_handle_common_intr(dwc_otg_core_if_t *core_if)
+int32_t dwc_otg_handle_common_intr(struct dwc_otg_core_if *core_if)
 {
 	int retval = 0;
-	gintsts_data_t gintsts;
-	gpwrdn_data_t gpwrdn = {.d32 = 0 };
+	union gintsts_data gintsts;
+	union gpwrdn_data gpwrdn = {.d32 = 0 };
 
 	if (core_if->hibernation_suspend <= 0) {
 		gintsts.d32 = dwc_otg_read_common_intr(core_if);
@@ -1335,7 +1344,7 @@ int32_t dwc_otg_handle_common_intr(dwc_otg_core_if_t *core_if)
 				dwc_otg_handle_pwrdn_disconnect_intr(core_if);
 			else
 				DWC_PRINTF
-				    ("Disconnect detected while linestate is not 0\n");
+				    ("Disconnect detected. linestate not 0!\n");
 
 			retval |= 1;
 		}
@@ -1343,7 +1352,8 @@ int32_t dwc_otg_handle_common_intr(dwc_otg_core_if_t *core_if)
 		if (gpwrdn.b.lnstschng && gpwrdn.b.lnstchng_msk) {
 			CLEAR_GPWRDN_INTR(core_if, lnstschng);
 			/* remote wakeup from hibernation */
-			if (gpwrdn.b.linestate == 2 || gpwrdn.b.linestate == 1) {
+			if (gpwrdn.b.linestate == 2 ||
+				    gpwrdn.b.linestate == 1) {
 				dwc_otg_handle_pwrdn_wakeup_detected_intr
 				    (core_if);
 			} else {

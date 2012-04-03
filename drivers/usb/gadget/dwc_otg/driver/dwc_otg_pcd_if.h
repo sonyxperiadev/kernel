@@ -43,7 +43,6 @@
  */
 
 struct dwc_otg_pcd;
-typedef struct dwc_otg_pcd dwc_otg_pcd_t;
 
 /** Maxpacket size for EP0 */
 #define MAX_EP0_SIZE	64
@@ -55,21 +54,23 @@ typedef struct dwc_otg_pcd dwc_otg_pcd_t;
 
 /** This function will be called whenever a previously queued request has
  * completed.  The status value will be set to -DWC_E_SHUTDOWN to indicated a
- * failed or aborted transfer, or -DWC_E_RESTART to indicate the device was reset,
- * or -DWC_E_TIMEOUT to indicate it timed out, or -DWC_E_INVALID to indicate invalid
- * parameters. */
-typedef int (*dwc_completion_cb_t) (dwc_otg_pcd_t *pcd, void *ep_handle,
+ * failed or aborted transfer, or -DWC_E_RESTART to indicate the device was
+ * reset, or -DWC_E_TIMEOUT to indicate it timed out, or -DWC_E_INVALID
+ * to indicate invalid parameters.
+ */
+typedef int (*dwc_completion_cb_t) (struct dwc_otg_pcd *pcd, void *ep_handle,
 				    void *req_handle, int32_t status,
 				    uint32_t actual);
 /**
  * This function will be called whenever a previousle queued ISOC request has
- * completed. Count of ISOC packets could be read using dwc_otg_pcd_get_iso_packet_count
- * function.
- * The status of each ISOC packet could be read using dwc_otg_pcd_get_iso_packet_*
- * functions.
+ * completed. Count of ISOC packets could be read using
+ * dwc_otg_pcd_get_iso_packet_count function.
+ * The status of each ISOC packet could be read using
+ * dwc_otg_pcd_get_iso_packet_* functions.
  */
-typedef int (*dwc_isoc_completion_cb_t) (dwc_otg_pcd_t *pcd, void *ep_handle,
-					 void *req_handle, int proc_buf_num);
+typedef int (*dwc_isoc_completion_cb_t) (struct dwc_otg_pcd *pcd,
+	void *ep_handle, void *req_handle,
+	int proc_buf_num);
 /** This function should handle any SETUP request that cannot be handled by the
  * PCD Core.  This includes most GET_DESCRIPTORs, SET_CONFIGS, Any
  * class-specific requests, etc.  The function must non-blocking.
@@ -78,30 +79,30 @@ typedef int (*dwc_isoc_completion_cb_t) (dwc_otg_pcd_t *pcd, void *ep_handle,
  * Returns -DWC_E_NOT_SUPPORTED if the request is not supported.
  * Returns -DWC_E_INVALID if the setup request had invalid parameters or bytes.
  * Returns -DWC_E_SHUTDOWN on any other error. */
-typedef int (*dwc_setup_cb_t) (dwc_otg_pcd_t *pcd, uint8_t *bytes);
+typedef int (*dwc_setup_cb_t) (struct dwc_otg_pcd *pcd, uint8_t *bytes);
 /** This is called whenever the device has been disconnected.  The function
  * driver should take appropriate action to clean up all pending requests in the
  * PCD Core, remove all endpoints (except ep0), and initialize back to reset
  * state. */
-typedef int (*dwc_disconnect_cb_t) (dwc_otg_pcd_t *pcd);
+typedef int (*dwc_disconnect_cb_t) (struct dwc_otg_pcd *pcd);
 /** This function is called when device has been connected. */
-typedef int (*dwc_connect_cb_t) (dwc_otg_pcd_t *pcd, int speed);
+typedef int (*dwc_connect_cb_t) (struct dwc_otg_pcd *pcd, int speed);
 /** This function is called when device has been suspended */
-typedef int (*dwc_suspend_cb_t) (dwc_otg_pcd_t *pcd);
+typedef int (*dwc_suspend_cb_t) (struct dwc_otg_pcd *pcd);
 /** This function is called when device has received LPM tokens, i.e.
  * device has been sent to sleep state. */
-typedef int (*dwc_sleep_cb_t) (dwc_otg_pcd_t *pcd);
+typedef int (*dwc_sleep_cb_t) (struct dwc_otg_pcd *pcd);
 /** This function is called when device has been resumed
  * from suspend(L2) or L1 sleep state. */
-typedef int (*dwc_resume_cb_t) (dwc_otg_pcd_t *pcd);
+typedef int (*dwc_resume_cb_t) (struct dwc_otg_pcd *pcd);
 /** This function is called whenever hnp params has been changed.
  * User can call get_b_hnp_enable, get_a_hnp_support, get_a_alt_hnp_support functions
  * to get hnp parameters. */
-typedef int (*dwc_hnp_params_changed_cb_t) (dwc_otg_pcd_t *pcd);
+typedef int (*dwc_hnp_params_changed_cb_t) (struct dwc_otg_pcd *pcd);
 /** This function is called whenever USB RESET is detected. */
-typedef int (*dwc_reset_cb_t) (dwc_otg_pcd_t *pcd);
+typedef int (*dwc_reset_cb_t) (struct dwc_otg_pcd *pcd);
 
-typedef int (*cfi_setup_cb_t) (dwc_otg_pcd_t *pcd, void *ctrl_req_bytes);
+typedef int (*cfi_setup_cb_t) (struct dwc_otg_pcd *pcd, void *ctrl_req_bytes);
 
 /**
  *
@@ -109,7 +110,7 @@ typedef int (*cfi_setup_cb_t) (dwc_otg_pcd_t *pcd, void *ctrl_req_bytes);
  * @param ereq_port Pointer to the extended request structure created in the
  *					portable part.
  */
-typedef int (*xiso_completion_cb_t) (dwc_otg_pcd_t *pcd, void *ep_handle,
+typedef int (*xiso_completion_cb_t) (struct dwc_otg_pcd *pcd, void *ep_handle,
 				     void *req_handle, int32_t status,
 				     void *ereq_port);
 /** Function Driver Ops Data Structure */
@@ -134,25 +135,25 @@ struct dwc_otg_pcd_function_ops {
 /** @name Function Driver Functions */
 /** @{ */
 
-/** Call this function to get pointer on dwc_otg_pcd_t,
+/** Call this function to get pointer on struct dwc_otg_pcd,
  * this pointer will be used for all PCD API functions.
  *
  * @param core_if The DWC_OTG Core
  */
-extern dwc_otg_pcd_t *dwc_otg_pcd_init(dwc_otg_core_if_t * core_if);
+extern struct dwc_otg_pcd *dwc_otg_pcd_init(struct dwc_otg_core_if * core_if);
 
 /** Frees PCD allocated by dwc_otg_pcd_init
  *
  * @param pcd The PCD
  */
-extern void dwc_otg_pcd_remove(dwc_otg_pcd_t *pcd);
+extern void dwc_otg_pcd_remove(struct dwc_otg_pcd *pcd);
 
 /** Call this to bind the function driver to the PCD Core.
  *
- * @param pcd Pointer on dwc_otg_pcd_t returned by dwc_otg_pcd_init function.
+ * @param pcd Pointer on struct dwc_otg_pcd returned by dwc_otg_pcd_init function.
  * @param fops The Function Driver Ops data structure containing pointers to all callbacks.
  */
-extern void dwc_otg_pcd_start(dwc_otg_pcd_t *pcd,
+extern void dwc_otg_pcd_start(struct dwc_otg_pcd *pcd,
 			      const struct dwc_otg_pcd_function_ops *fops);
 
 /** Enables an endpoint for use.  This function enables an endpoint in
@@ -170,7 +171,7 @@ extern void dwc_otg_pcd_start(dwc_otg_pcd_t *pcd,
  * @param ep_desc Endpoint descriptor
  * @param ep_handle Handle on endpoint, that will be used to identify endpoint.
  */
-extern int dwc_otg_pcd_ep_enable(dwc_otg_pcd_t *pcd,
+extern int dwc_otg_pcd_ep_enable(struct dwc_otg_pcd *pcd,
 				 const uint8_t *ep_desc, void *ep_handle);
 
 /** Disable the endpoint referenced by ep_handle.
@@ -178,7 +179,7 @@ extern int dwc_otg_pcd_ep_enable(dwc_otg_pcd_t *pcd,
  * Returns -DWC_E_INVALID if invalid parameters were passed.
  * Returns -DWC_E_SHUTDOWN if any other error ocurred.
  * Returns 0 on success. */
-extern int dwc_otg_pcd_ep_disable(dwc_otg_pcd_t *pcd, void *ep_handle);
+extern int dwc_otg_pcd_ep_disable(struct dwc_otg_pcd *pcd, void *ep_handle);
 
 /** Queue a data transfer request on the endpoint referenced by ep_handle.
  * After the transfer is completes, the complete callback will be called with
@@ -198,7 +199,7 @@ extern int dwc_otg_pcd_ep_disable(dwc_otg_pcd_t *pcd, void *ep_handle);
  * Returns -DWC_E_INVALID if invalid parameters were passed.
  * Returns -DWC_E_SHUTDOWN if any other error ocurred.
  * Returns 0 on success. */
-extern int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t *pcd, void *ep_handle,
+extern int dwc_otg_pcd_ep_queue(struct dwc_otg_pcd *pcd, void *ep_handle,
 				uint8_t *buf, dwc_dma_t dma_buf,
 				uint32_t buflen, int zero, void *req_handle,
 				int atomic_alloc);
@@ -206,9 +207,10 @@ extern int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t *pcd, void *ep_handle,
 /**
  *
  * @param ereq_nonport	Pointer to the extended request part of the
- *						usb_request structure defined in usb_gadget.h file.
+ *						usb_request structure
+ *						defined in usb_gadget.h file.
  */
-extern int dwc_otg_pcd_xiso_ep_queue(dwc_otg_pcd_t *pcd, void *ep_handle,
+extern int dwc_otg_pcd_xiso_ep_queue(struct dwc_otg_pcd *pcd, void *ep_handle,
 				     uint8_t *buf, dwc_dma_t dma_buf,
 				     uint32_t buflen, int zero,
 				     void *req_handle, int atomic_alloc,
@@ -221,22 +223,24 @@ extern int dwc_otg_pcd_xiso_ep_queue(dwc_otg_pcd_t *pcd, void *ep_handle,
  * Returns -DWC_E_INVALID if invalid parameters were passed.
  * Returns -DWC_E_SHUTDOWN if any other error ocurred.
  * Returns 0 on success. */
-extern int dwc_otg_pcd_ep_dequeue(dwc_otg_pcd_t *pcd, void *ep_handle,
+extern int dwc_otg_pcd_ep_dequeue(struct dwc_otg_pcd *pcd, void *ep_handle,
 				  void *req_handle);
 
 /** Halt (STALL) an endpoint or clear it.
  *
  * Returns -DWC_E_INVALID if invalid parameters were passed.
  * Returns -DWC_E_SHUTDOWN if any other error ocurred.
- * Returns -DWC_E_AGAIN if the STALL cannot be sent and must be tried again later
+ * Returns -DWC_E_AGAIN if the STALL cannot be sent and
+ *		    must be tried again later
  * Returns 0 on success. */
-extern int dwc_otg_pcd_ep_halt(dwc_otg_pcd_t *pcd, void *ep_handle, int value);
+extern int dwc_otg_pcd_ep_halt(struct dwc_otg_pcd *pcd,
+	void *ep_handle, int value);
 
 /** This function should be called on every hardware interrupt */
-extern int32_t dwc_otg_pcd_handle_intr(dwc_otg_pcd_t *pcd);
+extern int32_t dwc_otg_pcd_handle_intr(struct dwc_otg_pcd *pcd);
 
 /** This function returns current frame number */
-extern int dwc_otg_pcd_get_frame_number(dwc_otg_pcd_t *pcd);
+extern int dwc_otg_pcd_get_frame_number(struct dwc_otg_pcd *pcd);
 
 /**
  * Start isochronous transfers on the endpoint referenced by ep_handle.
@@ -264,7 +268,7 @@ extern int dwc_otg_pcd_get_frame_number(dwc_otg_pcd_t *pcd);
  * Returns -DW_E_SHUTDOWN for any other error.
  * Returns 0 on success
  */
-extern int dwc_otg_pcd_iso_ep_start(dwc_otg_pcd_t *pcd, void *ep_handle,
+extern int dwc_otg_pcd_iso_ep_start(struct dwc_otg_pcd *pcd, void *ep_handle,
 				    uint8_t *buf0, uint8_t *buf1,
 				    dwc_dma_t dma0, dwc_dma_t dma1,
 				    int sync_frame, int dp_frame,
@@ -281,7 +285,7 @@ extern int dwc_otg_pcd_iso_ep_start(dwc_otg_pcd_t *pcd, void *ep_handle,
  * Returns -DWC_E_INVALID if incorrect arguments are passed to the function
  * Returns 0 on success
  */
-int dwc_otg_pcd_iso_ep_stop(dwc_otg_pcd_t *pcd, void *ep_handle,
+int dwc_otg_pcd_iso_ep_stop(struct dwc_otg_pcd *pcd, void *ep_handle,
 			    void *req_handle);
 
 /** Get ISOC packet status.
@@ -295,7 +299,7 @@ int dwc_otg_pcd_iso_ep_stop(dwc_otg_pcd_t *pcd, void *ep_handle,
  * @param offset Out parameter for returning offset
  *
  */
-extern void dwc_otg_pcd_get_iso_packet_params(dwc_otg_pcd_t *pcd,
+extern void dwc_otg_pcd_get_iso_packet_params(struct dwc_otg_pcd *pcd,
 					      void *ep_handle,
 					      void *iso_req_handle, int packet,
 					      int *status, int *actual,
@@ -307,7 +311,7 @@ extern void dwc_otg_pcd_get_iso_packet_params(dwc_otg_pcd_t *pcd,
  * @param ep_handle The handle of the endpoint
  * @param iso_req_handle
  */
-extern int dwc_otg_pcd_get_iso_packet_count(dwc_otg_pcd_t *pcd,
+extern int dwc_otg_pcd_get_iso_packet_count(struct dwc_otg_pcd *pcd,
 					    void *ep_handle,
 					    void *iso_req_handle);
 
@@ -315,45 +319,45 @@ extern int dwc_otg_pcd_get_iso_packet_count(dwc_otg_pcd_t *pcd,
  * a session is already in progress, but the device is suspended,
  * remote wakeup signaling is started.
  */
-extern int dwc_otg_pcd_wakeup(dwc_otg_pcd_t *pcd);
+extern int dwc_otg_pcd_wakeup(struct dwc_otg_pcd *pcd);
 
 /** This function returns 1 if LPM support is enabled, and 0 otherwise. */
-extern int dwc_otg_pcd_is_lpm_enabled(dwc_otg_pcd_t *pcd);
+extern int dwc_otg_pcd_is_lpm_enabled(struct dwc_otg_pcd *pcd);
 
 /** This function returns 1 if remote wakeup is allowed and 0, otherwise. */
-extern int dwc_otg_pcd_get_rmwkup_enable(dwc_otg_pcd_t *pcd);
+extern int dwc_otg_pcd_get_rmwkup_enable(struct dwc_otg_pcd *pcd);
 
 /** Initiate SRP */
-extern void dwc_otg_pcd_initiate_srp(dwc_otg_pcd_t *pcd);
+extern void dwc_otg_pcd_initiate_srp(struct dwc_otg_pcd *pcd);
 
 /** Starts remote wakeup signaling. */
-extern void dwc_otg_pcd_remote_wakeup(dwc_otg_pcd_t *pcd, int set);
+extern void dwc_otg_pcd_remote_wakeup(struct dwc_otg_pcd *pcd, int set);
 
 /** Soft disconnect enable/disable */
-extern void dwc_otg_pcd_disconnect(dwc_otg_pcd_t *pcd, int enable);
+extern void dwc_otg_pcd_disconnect(struct dwc_otg_pcd *pcd, int enable);
 
 /** Stop PCD */
-extern void dwc_otg_pcd_stop(dwc_otg_pcd_t *pcd);
+extern void dwc_otg_pcd_stop(struct dwc_otg_pcd *pcd);
 
 /** Starts micorsecond soft disconnect. */
-extern void dwc_otg_pcd_disconnect_us(dwc_otg_pcd_t *pcd, int no_of_usecs);
+extern void dwc_otg_pcd_disconnect_us(struct dwc_otg_pcd *pcd, int no_of_usecs);
 /** This function returns whether device is dualspeed.*/
-extern uint32_t dwc_otg_pcd_is_dualspeed(dwc_otg_pcd_t *pcd);
+extern uint32_t dwc_otg_pcd_is_dualspeed(struct dwc_otg_pcd *pcd);
 
 /** This function returns whether device is otg. */
-extern uint32_t dwc_otg_pcd_is_otg(dwc_otg_pcd_t *pcd);
+extern uint32_t dwc_otg_pcd_is_otg(struct dwc_otg_pcd *pcd);
 
 /** This function returns whether device is otg2.0. */
-uint32_t dwc_otg_pcd_is_otg20(dwc_otg_pcd_t *pcd);
+uint32_t dwc_otg_pcd_is_otg20(struct dwc_otg_pcd *pcd);
 
 /** These functions allow to get hnp parameters */
-extern uint32_t get_b_hnp_enable(dwc_otg_pcd_t *pcd);
-extern uint32_t get_a_hnp_support(dwc_otg_pcd_t *pcd);
-extern uint32_t get_a_alt_hnp_support(dwc_otg_pcd_t *pcd);
+extern uint32_t get_b_hnp_enable(struct dwc_otg_pcd *pcd);
+extern uint32_t get_a_hnp_support(struct dwc_otg_pcd *pcd);
+extern uint32_t get_a_alt_hnp_support(struct dwc_otg_pcd *pcd);
 
 /** CFI specific Interface functions */
 /** Allocate a cfi buffer */
-extern uint8_t *cfiw_ep_alloc_buffer(dwc_otg_pcd_t *pcd, void *pep,
+extern uint8_t *cfiw_ep_alloc_buffer(struct dwc_otg_pcd *pcd, void *pep,
 				     dwc_dma_t *addr, size_t buflen,
 				     int flags);
 

@@ -141,7 +141,7 @@ static inline uint8_t dwc_otg_hcd_is_pipe_in(struct dwc_otg_hcd_pipe_info *pipe)
 static inline uint8_t dwc_otg_hcd_is_pipe_out(struct dwc_otg_hcd_pipe_info
 					      *pipe)
 {
-	return (!dwc_otg_hcd_is_pipe_in(pipe));
+	return !dwc_otg_hcd_is_pipe_in(pipe);
 }
 
 static inline void dwc_otg_hcd_fill_pipe(struct dwc_otg_hcd_pipe_info *pipe,
@@ -159,19 +159,19 @@ static inline void dwc_otg_hcd_fill_pipe(struct dwc_otg_hcd_pipe_info *pipe,
 /**
  * Phases for control transfers.
  */
-typedef enum dwc_otg_control_phase {
+enum dwc_otg_control_phase {
 	DWC_OTG_CONTROL_SETUP,
 	DWC_OTG_CONTROL_DATA,
 	DWC_OTG_CONTROL_STATUS
-} dwc_otg_control_phase_e;
+};
 
 /** Transaction types. */
-typedef enum dwc_otg_transaction_type {
+enum dwc_otg_transaction_type {
 	DWC_OTG_TRANSACTION_NONE,
 	DWC_OTG_TRANSACTION_PERIODIC,
 	DWC_OTG_TRANSACTION_NON_PERIODIC,
 	DWC_OTG_TRANSACTION_ALL
-} dwc_otg_transaction_type_e;
+};
 
 struct dwc_otg_qh;
 
@@ -188,7 +188,7 @@ struct dwc_otg_qh;
  * its transactions are complete or if an error occurred. Otherwise, it
  * remains in the schedule so more transactions can be executed later.
  */
-typedef struct dwc_otg_qtd {
+struct dwc_otg_qtd {
 	/**
 	 * Determines the PID of the next data packet for the data phase of
 	 * control transfers. Ignored for other transfer types.<br>
@@ -199,7 +199,7 @@ typedef struct dwc_otg_qtd {
 	uint8_t data_toggle;
 
 	/** Current phase for control transfers (Setup, Data, or Status). */
-	dwc_otg_control_phase_e control_phase;
+	enum dwc_otg_control_phase control_phase;
 
 	/** Keep track of the current split type
 	 * for FS/LS endpoints on a HS Hub */
@@ -249,7 +249,7 @@ typedef struct dwc_otg_qtd {
 	 */
 	uint16_t isoc_frame_index_last;
 
-} dwc_otg_qtd_t;
+};
 
 DWC_CIRCLEQ_HEAD(dwc_otg_qtd_list, dwc_otg_qtd);
 
@@ -258,7 +258,7 @@ DWC_CIRCLEQ_HEAD(dwc_otg_qtd_list, dwc_otg_qtd);
  * maintains a list of transfers (QTDs) for that endpoint. A QH structure may
  * be entered in either the non-periodic or periodic schedule.
  */
-typedef struct dwc_otg_qh {
+struct dwc_otg_qh {
 	/**
 	 * Endpoint type.
 	 * One of the following values:
@@ -339,7 +339,7 @@ typedef struct dwc_otg_qh {
 	/** @{ */
 
 	/** Descriptor List. */
-	dwc_otg_host_dma_desc_t *desc_list;
+	struct dwc_otg_host_dma_desc *desc_list;
 
 	/** Descriptor List physical address. */
 	dwc_dma_t desc_list_dma;
@@ -361,7 +361,7 @@ typedef struct dwc_otg_qh {
 
 	/** @} */
 
-} dwc_otg_qh_t;
+};
 
 DWC_CIRCLEQ_HEAD(hc_list, dwc_hc);
 
@@ -371,13 +371,13 @@ DWC_CIRCLEQ_HEAD(hc_list, dwc_hc);
  */
 struct dwc_otg_hcd {
 	/** DWC OTG Core Interface Layer */
-	dwc_otg_core_if_t *core_if;
+	struct dwc_otg_core_if *core_if;
 
 	/** Function HCD driver callbacks */
 	struct dwc_otg_hcd_function_ops *fops;
 
 	/** Internal DWC HCD Flags */
-	volatile union dwc_otg_hcd_internal_flags {
+	union dwc_otg_hcd_internal_flags {
 		uint32_t d32;
 		struct {
 			unsigned port_connect_status_change:1;
@@ -471,7 +471,7 @@ struct dwc_otg_hcd {
 
 	/**
 	 * Free host channels in the controller. This is a list of
-	 * dwc_hc_t items.
+	 * struct dwc_hc items.
 	 */
 	struct hc_list free_hc_list;
 	/**
@@ -562,34 +562,36 @@ struct dwc_otg_hcd {
 
 /** @name Transaction Execution Functions */
 /** @{ */
-extern dwc_otg_transaction_type_e dwc_otg_hcd_select_transactions(dwc_otg_hcd_t
+extern enum dwc_otg_transaction_type dwc_otg_hcd_select_transactions(struct dwc_otg_hcd
 								  *hcd);
-extern void dwc_otg_hcd_queue_transactions(dwc_otg_hcd_t *hcd,
-					   dwc_otg_transaction_type_e tr_type);
+extern void dwc_otg_hcd_queue_transactions(struct dwc_otg_hcd *hcd,
+			enum dwc_otg_transaction_type tr_type);
 
 /** @} */
 
 /** @name Interrupt Handler Functions */
 /** @{ */
-extern int32_t dwc_otg_hcd_handle_intr(dwc_otg_hcd_t *dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_sof_intr(dwc_otg_hcd_t *dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_rx_status_q_level_intr(dwc_otg_hcd_t *
+extern int32_t dwc_otg_hcd_handle_intr(struct dwc_otg_hcd *dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_sof_intr(struct dwc_otg_hcd *dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_rx_status_q_level_intr(struct dwc_otg_hcd *
 							 dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_np_tx_fifo_empty_intr(dwc_otg_hcd_t *
+extern int32_t dwc_otg_hcd_handle_np_tx_fifo_empty_intr(struct dwc_otg_hcd *
 							dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_perio_tx_fifo_empty_intr(dwc_otg_hcd_t *
+extern int32_t dwc_otg_hcd_handle_perio_tx_fifo_empty_intr(struct dwc_otg_hcd *
 							   dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_incomplete_periodic_intr(dwc_otg_hcd_t *
+extern int32_t dwc_otg_hcd_handle_incomplete_periodic_intr(struct dwc_otg_hcd *
 							   dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_conn_id_status_change_intr(dwc_otg_hcd_t *
-							     dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_disconnect_intr(dwc_otg_hcd_t *dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_hc_intr(dwc_otg_hcd_t *dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_hc_n_intr(dwc_otg_hcd_t *dwc_otg_hcd,
+extern int32_t dwc_otg_hcd_handle_port_intr(struct dwc_otg_hcd *dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_conn_id_status_change_intr(
+	struct dwc_otg_hcd *dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_disconnect_intr(
+	struct dwc_otg_hcd *dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_hc_intr(struct dwc_otg_hcd *dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_hc_n_intr(struct dwc_otg_hcd *dwc_otg_hcd,
 					    uint32_t num);
-extern int32_t dwc_otg_hcd_handle_session_req_intr(dwc_otg_hcd_t *dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_wakeup_detected_intr(dwc_otg_hcd_t *
+extern int32_t dwc_otg_hcd_handle_session_req_intr(
+	struct dwc_otg_hcd *dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_wakeup_detected_intr(struct dwc_otg_hcd *
 						       dwc_otg_hcd);
 /** @} */
 
@@ -597,18 +599,20 @@ extern int32_t dwc_otg_hcd_handle_wakeup_detected_intr(dwc_otg_hcd_t *
 /** @{ */
 
 /* Implemented in dwc_otg_hcd_queue.c */
-extern dwc_otg_qh_t *dwc_otg_hcd_qh_create(dwc_otg_hcd_t *hcd,
-					   dwc_otg_hcd_urb_t *urb,
-					   int atomic_alloc);
-extern void dwc_otg_hcd_qh_free(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh);
-extern int dwc_otg_hcd_qh_add(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh);
-extern void dwc_otg_hcd_qh_remove(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh);
-extern void dwc_otg_hcd_qh_deactivate(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh,
-				      int sched_csplit);
+extern struct dwc_otg_qh *dwc_otg_hcd_qh_create(struct dwc_otg_hcd *hcd,
+	struct dwc_otg_hcd_urb *urb, int atomic_alloc);
+extern void dwc_otg_hcd_qh_free(struct dwc_otg_hcd *hcd,
+	struct dwc_otg_qh *qh);
+extern int dwc_otg_hcd_qh_add(struct dwc_otg_hcd *hcd,
+	struct dwc_otg_qh *qh);
+extern void dwc_otg_hcd_qh_remove(struct dwc_otg_hcd *hcd,
+	struct dwc_otg_qh *qh);
+extern void dwc_otg_hcd_qh_deactivate(struct dwc_otg_hcd *hcd,
+	struct dwc_otg_qh *qh, int sched_csplit);
 
 /** Remove and free a QH */
-static inline void dwc_otg_hcd_qh_remove_and_free(dwc_otg_hcd_t *hcd,
-						  dwc_otg_qh_t *qh)
+static inline void dwc_otg_hcd_qh_remove_and_free(struct dwc_otg_hcd *hcd,
+						  struct dwc_otg_qh *qh)
 {
 	uint64_t flags;
 
@@ -621,34 +625,44 @@ static inline void dwc_otg_hcd_qh_remove_and_free(dwc_otg_hcd_t *hcd,
 
 /** Allocates memory for a QH structure.
  * @return Returns the memory allocate or NULL on error. */
-static inline dwc_otg_qh_t *dwc_otg_hcd_qh_alloc(int atomic_alloc)
+static inline struct dwc_otg_qh *dwc_otg_hcd_qh_alloc(int atomic_alloc)
 {
 	if (atomic_alloc)
-		return (dwc_otg_qh_t *) dwc_alloc_atomic(sizeof(dwc_otg_qh_t));
+		return
+		  (struct dwc_otg_qh *)
+		    dwc_alloc_atomic(sizeof(struct dwc_otg_qh));
 	else
-		return (dwc_otg_qh_t *) dwc_alloc(sizeof(dwc_otg_qh_t));
+		return
+		  (struct dwc_otg_qh *)
+		    dwc_alloc(sizeof(struct dwc_otg_qh));
 }
 
-extern dwc_otg_qtd_t *dwc_otg_hcd_qtd_create(dwc_otg_hcd_urb_t *urb,
-					     int atomic_alloc);
-extern void dwc_otg_hcd_qtd_init(dwc_otg_qtd_t *qtd, dwc_otg_hcd_urb_t *urb);
-extern int dwc_otg_hcd_qtd_add(dwc_otg_qtd_t *qtd, dwc_otg_hcd_t *dwc_otg_hcd,
-			       dwc_otg_qh_t **qh);
+extern struct dwc_otg_qtd *dwc_otg_hcd_qtd_create(struct dwc_otg_hcd_urb *urb,
+			int atomic_alloc);
+extern void dwc_otg_hcd_qtd_init(struct dwc_otg_qtd *qtd,
+	struct dwc_otg_hcd_urb *urb);
+extern int dwc_otg_hcd_qtd_add(struct dwc_otg_qtd *qtd,
+			struct dwc_otg_hcd *dwc_otg_hcd,
+			struct dwc_otg_qh **qh);
 
 /** Allocates memory for a QTD structure.
  * @return Returns the memory allocate or NULL on error. */
-static inline dwc_otg_qtd_t *dwc_otg_hcd_qtd_alloc(int atomic_alloc)
+static inline struct dwc_otg_qtd *dwc_otg_hcd_qtd_alloc(int atomic_alloc)
 {
 	if (atomic_alloc)
-		return (dwc_otg_qtd_t *) dwc_alloc_atomic(sizeof(dwc_otg_qtd_t));
+		return
+		  (struct dwc_otg_qtd *)
+		    dwc_alloc_atomic(sizeof(struct dwc_otg_qtd));
 	else
-		return (dwc_otg_qtd_t *) dwc_alloc(sizeof(dwc_otg_qtd_t));
+		return
+		  (struct dwc_otg_qtd *)
+		    dwc_alloc(sizeof(struct dwc_otg_qtd));
 }
 
 /** Frees the memory for a QTD structure.  QTD should already be removed from
  * list.
  * @param qtd QTD to free.*/
-static inline void dwc_otg_hcd_qtd_free(dwc_otg_qtd_t *qtd)
+static inline void dwc_otg_hcd_qtd_free(struct dwc_otg_qtd *qtd)
 {
 	dwc_free(qtd);
 }
@@ -658,9 +672,9 @@ static inline void dwc_otg_hcd_qtd_free(dwc_otg_qtd_t *qtd)
  * @param qtd QTD to remove from list.
  * @param qh QTD belongs to.
  */
-static inline void dwc_otg_hcd_qtd_remove(dwc_otg_hcd_t *hcd,
-					  dwc_otg_qtd_t *qtd,
-					  dwc_otg_qh_t *qh)
+static inline void dwc_otg_hcd_qtd_remove(struct dwc_otg_hcd *hcd,
+					  struct dwc_otg_qtd *qtd,
+					  struct dwc_otg_qh *qh)
 {
 	uint64_t flags;
 	DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
@@ -669,9 +683,9 @@ static inline void dwc_otg_hcd_qtd_remove(dwc_otg_hcd_t *hcd,
 }
 
 /** Remove and free a QTD */
-static inline void dwc_otg_hcd_qtd_remove_and_free(dwc_otg_hcd_t *hcd,
-						   dwc_otg_qtd_t *qtd,
-						   dwc_otg_qh_t *qh)
+static inline void dwc_otg_hcd_qtd_remove_and_free(struct dwc_otg_hcd *hcd,
+						   struct dwc_otg_qtd *qtd,
+						   struct dwc_otg_qh *qh)
 {
 	dwc_otg_hcd_qtd_remove(hcd, qtd, qh);
 	dwc_otg_hcd_qtd_free(qtd);
@@ -682,34 +696,36 @@ static inline void dwc_otg_hcd_qtd_remove_and_free(dwc_otg_hcd_t *hcd,
 /** @name Descriptor DMA Supporting Functions */
 /** @{ */
 
-extern void dwc_otg_hcd_start_xfer_ddma(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh);
-extern void dwc_otg_hcd_complete_xfer_ddma(dwc_otg_hcd_t *hcd,
-					   dwc_hc_t *hc,
-					   dwc_otg_hc_regs_t *hc_regs,
-					   dwc_otg_halt_status_e halt_status);
+extern void dwc_otg_hcd_start_xfer_ddma(struct dwc_otg_hcd *hcd,
+	struct dwc_otg_qh *qh);
+extern void dwc_otg_hcd_complete_xfer_ddma(struct dwc_otg_hcd *hcd,
+				   struct dwc_hc *hc,
+				   struct dwc_otg_hc_regs *hc_regs,
+				   enum dwc_otg_halt_status halt_status);
 
-extern int dwc_otg_hcd_qh_init_ddma(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh,
-				    int atomic_alloc);
-extern void dwc_otg_hcd_qh_free_ddma(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh);
+extern int dwc_otg_hcd_qh_init_ddma(struct dwc_otg_hcd *hcd,
+	struct dwc_otg_qh *qh, int atomic_alloc);
+extern void dwc_otg_hcd_qh_free_ddma(struct dwc_otg_hcd *hcd,
+	struct dwc_otg_qh *qh);
 
 /** @} */
 
 /** @name Internal Functions */
 /** @{ */
-dwc_otg_qh_t *dwc_urb_to_qh(dwc_otg_hcd_urb_t *urb);
+struct dwc_otg_qh *dwc_urb_to_qh(struct dwc_otg_hcd_urb *urb);
 /** @} */
 
 #ifdef CONFIG_USB_DWC_OTG_LPM
-extern int dwc_otg_hcd_get_hc_for_lpm_tran(dwc_otg_hcd_t *hcd,
+extern int dwc_otg_hcd_get_hc_for_lpm_tran(struct dwc_otg_hcd *hcd,
 					   uint8_t devaddr);
-extern void dwc_otg_hcd_free_hc_from_lpm(dwc_otg_hcd_t *hcd);
+extern void dwc_otg_hcd_free_hc_from_lpm(struct dwc_otg_hcd *hcd);
 #endif
 
 /** Gets the QH that contains the list_head */
-#define dwc_list_to_qh(_list_head_ptr_) container_of(_list_head_ptr_, dwc_otg_qh_t, qh_list_entry)
+#define dwc_list_to_qh(_list_head_ptr_) container_of(_list_head_ptr_, struct dwc_otg_qh, qh_list_entry)
 
 /** Gets the QTD that contains the list_head */
-#define dwc_list_to_qtd(_list_head_ptr_) container_of(_list_head_ptr_, dwc_otg_qtd_t, qtd_list_entry)
+#define dwc_list_to_qtd(_list_head_ptr_) container_of(_list_head_ptr_, struct dwc_otg_qtd, qtd_list_entry)
 
 /** Check if QH is non-periodic  */
 #define dwc_qh_is_non_per(_qh_ptr_) ((_qh_ptr_->ep_type == UE_BULK) || \
@@ -763,9 +779,9 @@ static inline uint16_t dwc_micro_frame_num(uint16_t frame)
 	return frame & 0x7;
 }
 
-void dwc_otg_hcd_save_data_toggle(dwc_hc_t *hc,
-				  dwc_otg_hc_regs_t *hc_regs,
-				  dwc_otg_qtd_t *qtd);
+void dwc_otg_hcd_save_data_toggle(struct dwc_hc *hc,
+				  struct dwc_otg_hc_regs *hc_regs,
+				  struct dwc_otg_qtd *qtd);
 
 #ifdef DEBUG
 /**
@@ -779,11 +795,14 @@ void dwc_otg_hcd_save_data_toggle(dwc_hc_t *hc,
  */
 #define dwc_sample_frrem(_hcd, _qh, _letter) \
 { \
-	hfnum_data_t hfnum; \
-	dwc_otg_qtd_t *qtd; \
-	qtd = list_entry(_qh->qtd_list.next, dwc_otg_qtd_t, qtd_list_entry); \
-	if (usb_pipeint(qtd->urb->pipe) && _qh->start_split_frame != 0 && !qtd->complete_split) { \
-		hfnum.d32 = dwc_read_reg32(&_hcd->core_if->host_if->host_global_regs->hfnum); \
+	union hfnum_data hfnum; \
+	struct dwc_otg_qtd *qtd; \
+	qtd = list_entry(_qh->qtd_list.next, struct dwc_otg_qtd,\
+					qtd_list_entry); \
+	if (usb_pipeint(qtd->urb->pipe) && _qh->start_split_frame != 0 &&\
+		!qtd->complete_split) { \
+		hfnum.d32 = dwc_read_reg32(&_hcd->core_if->host_if->\
+		host_global_regs->hfnum); \
 		switch (hfnum.b.frnum & 0x7) { \
 		case 7: \
 			_hcd->hfnum_7_samples_##_letter++; \
@@ -795,7 +814,8 @@ void dwc_otg_hcd_save_data_toggle(dwc_hc_t *hc,
 			break; \
 		default: \
 			_hcd->hfnum_other_samples_##_letter++; \
-			_hcd->hfnum_other_frrem_accum_##_letter += hfnum.b.frrem; \
+			_hcd->hfnum_other_frrem_accum_##_letter +=\
+			hfnum.b.frrem; \
 			break; \
 		} \
 	} \

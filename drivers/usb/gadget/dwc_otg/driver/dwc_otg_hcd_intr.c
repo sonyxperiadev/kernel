@@ -35,19 +35,21 @@
 #include "dwc_otg_hcd.h"
 #include "dwc_otg_regs.h"
 
+#define PHY_CLK_PARAM_6MHZ DWC_HOST_LS_LOW_POWER_PHY_CLK_PARAM_6MHZ
 /** @file
  * This file contains the implementation of the HCD Interrupt handlers.
  */
 
 /** This function handles interrupts for the HCD. */
-int32_t dwc_otg_hcd_handle_intr(dwc_otg_hcd_t *dwc_otg_hcd)
+int32_t dwc_otg_hcd_handle_intr(struct dwc_otg_hcd *dwc_otg_hcd)
 {
 	int retval = 0;
 
-	dwc_otg_core_if_t *core_if = dwc_otg_hcd->core_if;
-	gintsts_data_t gintsts;
+	struct dwc_otg_core_if *core_if = dwc_otg_hcd->core_if;
+	union gintsts_data gintsts;
 #ifdef DEBUG
-	dwc_otg_core_global_regs_t *global_regs = core_if->core_global_regs;
+	struct dwc_otg_core_global_regs *global_regs =
+		core_if->core_global_regs;
 #endif
 
 	/* Exit from ISR if core is hibernated */
@@ -108,9 +110,10 @@ int32_t dwc_otg_hcd_handle_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 		}
 #ifdef DEBUG
 #ifndef DEBUG_SOF
-		if (gintsts.d32 != DWC_SOF_INTR_MASK)
-#endif
+		if (gintsts.d32 != DWC_SOF_INTR_MASK) {
+#else
 		{
+#endif
 			DWC_DEBUGPL(DBG_HCD,
 				    "DWC OTG HCD Finished Servicing Interrupts\n");
 			DWC_DEBUGPL(DBG_HCDV, "DWC OTG HCD gintsts=0x%08x\n",
@@ -172,13 +175,13 @@ static inline void track_missed_sofs(uint16_t curr_frame_number)
  * (micro)frame. Periodic transactions may be queued to the controller for the
  * next (micro)frame.
  */
-int32_t dwc_otg_hcd_handle_sof_intr(dwc_otg_hcd_t *hcd)
+int32_t dwc_otg_hcd_handle_sof_intr(struct dwc_otg_hcd *hcd)
 {
-	hfnum_data_t hfnum;
+	union hfnum_data hfnum;
 	dwc_list_link_t *qh_entry;
-	dwc_otg_qh_t *qh;
-	dwc_otg_transaction_type_e tr_type;
-	gintsts_data_t gintsts = {.d32 = 0 };
+	struct dwc_otg_qh *qh;
+	enum dwc_otg_transaction_type tr_type;
+	union gintsts_data gintsts = {.d32 = 0 };
 
 	hfnum.d32 =
 	    dwc_read_reg32(&hcd->core_if->host_if->host_global_regs->hfnum);
@@ -199,7 +202,7 @@ int32_t dwc_otg_hcd_handle_sof_intr(dwc_otg_hcd_t *hcd)
 	/* Determine whether any periodic QHs should be executed. */
 	qh_entry = DWC_LIST_FIRST(&hcd->periodic_sched_inactive);
 	while (qh_entry != &hcd->periodic_sched_inactive) {
-		qh = DWC_LIST_ENTRY(qh_entry, dwc_otg_qh_t, qh_list_entry);
+		qh = DWC_LIST_ENTRY(qh_entry, struct dwc_otg_qh, qh_list_entry);
 		qh_entry = qh_entry->next;
 		if (dwc_frame_num_le(qh->sched_frame, hcd->frame_number)) {
 			/*
@@ -221,13 +224,16 @@ int32_t dwc_otg_hcd_handle_sof_intr(dwc_otg_hcd_t *hcd)
 	return 1;
 }
 
-/** Handles the Rx Status Queue Level Interrupt, which indicates that there is at
- * least one packet in the Rx FIFO.  The packets are moved from the FIFO to
- * memory if the DWC_otg controller is operating in Slave mode. */
-int32_t dwc_otg_hcd_handle_rx_status_q_level_intr(dwc_otg_hcd_t *dwc_otg_hcd)
+/** Handles the Rx Status Queue Level Interrupt, which indicates that
+ * there is at least one packet in the Rx FIFO.  The packets are moved
+ * from the FIFO to memory if the DWC_otg controller is operating in
+ * Slave mode.
+ */
+int32_t dwc_otg_hcd_handle_rx_status_q_level_intr(
+	struct dwc_otg_hcd *dwc_otg_hcd)
 {
-	host_grxsts_data_t grxsts;
-	dwc_hc_t *hc = NULL;
+	union host_grxsts_data grxsts;
+	struct dwc_hc *hc = NULL;
 
 	DWC_DEBUGPL(DBG_HCD, "--RxStsQ Level Interrupt--\n");
 
@@ -273,7 +279,8 @@ int32_t dwc_otg_hcd_handle_rx_status_q_level_intr(dwc_otg_hcd_t *dwc_otg_hcd)
  * data packets may be written to the FIFO for OUT transfers. More requests
  * may be written to the non-periodic request queue for IN transfers. This
  * interrupt is enabled only in Slave mode. */
-int32_t dwc_otg_hcd_handle_np_tx_fifo_empty_intr(dwc_otg_hcd_t *dwc_otg_hcd)
+int32_t dwc_otg_hcd_handle_np_tx_fifo_empty_intr(
+	struct dwc_otg_hcd *dwc_otg_hcd)
 {
 	DWC_DEBUGPL(DBG_HCD, "--Non-Periodic TxFIFO Empty Interrupt--\n");
 	dwc_otg_hcd_queue_transactions(dwc_otg_hcd,
@@ -285,7 +292,8 @@ int32_t dwc_otg_hcd_handle_np_tx_fifo_empty_intr(dwc_otg_hcd_t *dwc_otg_hcd)
  * packets may be written to the FIFO for OUT transfers. More requests may be
  * written to the periodic request queue for IN transfers. This interrupt is
  * enabled only in Slave mode. */
-int32_t dwc_otg_hcd_handle_perio_tx_fifo_empty_intr(dwc_otg_hcd_t *dwc_otg_hcd)
+int32_t dwc_otg_hcd_handle_perio_tx_fifo_empty_intr(
+	struct dwc_otg_hcd *dwc_otg_hcd)
 {
 	DWC_DEBUGPL(DBG_HCD, "--Periodic TxFIFO Empty Interrupt--\n");
 	dwc_otg_hcd_queue_transactions(dwc_otg_hcd,
@@ -296,11 +304,11 @@ int32_t dwc_otg_hcd_handle_perio_tx_fifo_empty_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 /** There are multiple conditions that can cause a port interrupt. This function
  * determines which interrupt conditions have occurred and handles them
  * appropriately. */
-int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd)
+int32_t dwc_otg_hcd_handle_port_intr(struct dwc_otg_hcd *dwc_otg_hcd)
 {
 	int retval = 0;
-	hprt0_data_t hprt0;
-	hprt0_data_t hprt0_modify;
+	union hprt0_data hprt0;
+	union hprt0_data hprt0_modify;
 
 	hprt0.d32 = dwc_read_reg32(dwc_otg_hcd->core_if->host_if->hprt0);
 	hprt0_modify.d32 = dwc_read_reg32(dwc_otg_hcd->core_if->host_if->hprt0);
@@ -327,7 +335,9 @@ int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 	}
 
 	if (hprt0.b.prtconndet) {
-		/** @todo - check if steps performed in 'else' block should be perfromed regardles adp */
+		/** @todo - check if steps performed in 'else' block
+		 * should be perfromed regardles adp
+		 */
 		if (dwc_otg_hcd->core_if->adp_enable &&
 		    dwc_otg_hcd->core_if->adp.vbuson_timer_started == 1) {
 			DWC_TIMER_CANCEL(dwc_otg_hcd->core_if->adp.
@@ -349,7 +359,9 @@ int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 			dwc_otg_hcd->flags.b.port_connect_status = 1;
 			hprt0_modify.b.prtconndet = 1;
 
-			/* B-Device has connected, Delete the connection timer. */
+			/* B-Device has connected,
+			 * Delete the connection timer.
+			 */
 			DWC_TIMER_CANCEL(dwc_otg_hcd->conn_timer);
 		}
 		/* The Hub driver asserts a reset when it sees port connect
@@ -365,17 +377,17 @@ int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 		hprt0_modify.b.prtenchng = 1;
 		if (hprt0.b.prtena == 1) {
 			int do_reset = 0;
-			dwc_otg_core_params_t *params =
+			struct dwc_otg_core_params *params =
 			    dwc_otg_hcd->core_if->core_params;
-			dwc_otg_core_global_regs_t *global_regs =
+			struct dwc_otg_core_global_regs *global_regs =
 			    dwc_otg_hcd->core_if->core_global_regs;
-			dwc_otg_host_if_t *host_if =
+			struct dwc_otg_host_if *host_if =
 			    dwc_otg_hcd->core_if->host_if;
 
 			/* Check if we need to adjust the PHY clock speed for
 			 * low power and adjust it */
 			if (params->host_support_fs_ls_low_power) {
-				gusbcfg_data_t usbcfg;
+				union gusbcfg_data usbcfg;
 
 				usbcfg.d32 =
 				    dwc_read_reg32(&global_regs->gusbcfg);
@@ -386,9 +398,11 @@ int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 					/*
 					 * Low power
 					 */
-					hcfg_data_t hcfg;
+					union hcfg_data hcfg;
 					if (usbcfg.b.phylpwrclksel == 0) {
-						/* Set PHY low power clock select for FS/LS devices */
+						/* Set PHY low power clock
+						 * select for FS/LS devices
+						 */
 						usbcfg.b.phylpwrclksel = 1;
 						dwc_write_reg32(&global_regs->
 								gusbcfg,
@@ -402,11 +416,9 @@ int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 							   hcfg);
 
 					if (hprt0.b.prtspd ==
-					    DWC_HPRT0_PRTSPD_LOW_SPEED
-					    && params->
-					    host_ls_low_power_phy_clk ==
-					    DWC_HOST_LS_LOW_POWER_PHY_CLK_PARAM_6MHZ)
-					{
+					    DWC_HPRT0_PRTSPD_LOW_SPEED &&
+					    params->host_ls_low_power_phy_clk ==
+					    PHY_CLK_PARAM_6MHZ) {
 						/* 6 MHZ */
 						DWC_DEBUGPL(DBG_CIL,
 							    "FS_PHY programming HCFG to 6 MHz (Low Power)\n");
@@ -455,7 +467,9 @@ int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 			}
 
 			if (!do_reset) {
-				/* Port has been enabled set the reset change flag */
+				/* Port has been enabled
+				 * set the reset change flag
+				 */
 				dwc_otg_hcd->flags.b.port_reset_change = 1;
 			}
 		} else {
@@ -483,11 +497,11 @@ int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd)
  * interrupt. There are multiple conditions that can cause each host channel
  * interrupt. This function determines which conditions have occurred for each
  * host channel interrupt and handles them appropriately. */
-int32_t dwc_otg_hcd_handle_hc_intr(dwc_otg_hcd_t *dwc_otg_hcd)
+int32_t dwc_otg_hcd_handle_hc_intr(struct dwc_otg_hcd *dwc_otg_hcd)
 {
 	int i;
 	int retval = 0;
-	haint_data_t haint;
+	union haint_data haint;
 
 	/* Clear appropriate bits in HCINTn to clear the interrupt bit in
 	 * GINTSTS */
@@ -512,13 +526,13 @@ int32_t dwc_otg_hcd_handle_hc_intr(dwc_otg_hcd_t *dwc_otg_hcd)
  * return. short_read may also be NULL on entry, in which case it remains
  * unchanged.
  */
-static uint32_t get_actual_xfer_length(dwc_hc_t *hc,
-				       dwc_otg_hc_regs_t *hc_regs,
-				       dwc_otg_qtd_t *qtd,
-				       dwc_otg_halt_status_e halt_status,
+static uint32_t get_actual_xfer_length(struct dwc_hc *hc,
+				       struct dwc_otg_hc_regs *hc_regs,
+				       struct dwc_otg_qtd *qtd,
+				       enum dwc_otg_halt_status halt_status,
 				       int *short_read)
 {
-	hctsiz_data_t hctsiz;
+	union hctsiz_data hctsiz;
 	uint32_t length;
 
 	if (short_read != NULL)
@@ -562,10 +576,10 @@ static uint32_t get_actual_xfer_length(dwc_hc_t *hc,
  * @return 1 if the data transfer specified by the URB is completely finished,
  * 0 otherwise.
  */
-static int update_urb_state_xfer_comp(dwc_hc_t *hc,
-				      dwc_otg_hc_regs_t *hc_regs,
-				      dwc_otg_hcd_urb_t *urb,
-				      dwc_otg_qtd_t *qtd)
+static int update_urb_state_xfer_comp(struct dwc_hc *hc,
+				      struct dwc_otg_hc_regs *hc_regs,
+				      struct dwc_otg_hcd_urb *urb,
+				      struct dwc_otg_qtd *qtd)
 {
 	int xfer_done = 0;
 	int short_read = 0;
@@ -595,7 +609,7 @@ static int update_urb_state_xfer_comp(dwc_hc_t *hc,
 	}
 #ifdef DEBUG
 	{
-		hctsiz_data_t hctsiz;
+		union hctsiz_data hctsiz;
 		hctsiz.d32 = dwc_read_reg32(&hc_regs->hctsiz);
 		DWC_DEBUGPL(DBG_HCDV, "DWC_otg: %s: %s, channel %d\n",
 			    __func__, (hc->ep_is_in ? "IN" : "OUT"),
@@ -620,15 +634,15 @@ static int update_urb_state_xfer_comp(dwc_hc_t *hc,
  * saved in the QH for non-control transfers and it's saved in the QTD for
  * control transfers.
  */
-void dwc_otg_hcd_save_data_toggle(dwc_hc_t *hc,
-				  dwc_otg_hc_regs_t *hc_regs,
-				  dwc_otg_qtd_t *qtd)
+void dwc_otg_hcd_save_data_toggle(struct dwc_hc *hc,
+				  struct dwc_otg_hc_regs *hc_regs,
+				  struct dwc_otg_qtd *qtd)
 {
-	hctsiz_data_t hctsiz;
+	union hctsiz_data hctsiz;
 	hctsiz.d32 = dwc_read_reg32(&hc_regs->hctsiz);
 
 	if (hc->ep_type != DWC_OTG_EP_TYPE_CONTROL) {
-		dwc_otg_qh_t *qh = hc->qh;
+		struct dwc_otg_qh *qh = hc->qh;
 		if (hctsiz.b.pid == DWC_HCTSIZ_DATA0)
 			qh->data_toggle = DWC_OTG_HC_PID_DATA0;
 		else
@@ -650,14 +664,15 @@ void dwc_otg_hcd_save_data_toggle(dwc_hc_t *hc,
  * @return DWC_OTG_HC_XFER_COMPLETE if there are more frames remaining to be
  * transferred in the URB. Otherwise return DWC_OTG_HC_XFER_URB_COMPLETE.
  */
-static dwc_otg_halt_status_e
-update_isoc_urb_state(dwc_otg_hcd_t *hcd,
-		      dwc_hc_t *hc,
-		      dwc_otg_hc_regs_t *hc_regs,
-		      dwc_otg_qtd_t *qtd, dwc_otg_halt_status_e halt_status)
+static enum dwc_otg_halt_status
+update_isoc_urb_state(struct dwc_otg_hcd *hcd,
+		      struct dwc_hc *hc,
+		      struct dwc_otg_hc_regs *hc_regs,
+		      struct dwc_otg_qtd *qtd,
+		      enum dwc_otg_halt_status halt_status)
 {
-	dwc_otg_hcd_urb_t *urb = qtd->urb;
-	dwc_otg_halt_status_e ret_val = halt_status;
+	struct dwc_otg_hcd_urb *urb = qtd->urb;
+	enum dwc_otg_halt_status ret_val = halt_status;
 	struct dwc_otg_hcd_iso_packet_desc *frame_desc;
 
 	frame_desc = &urb->iso_descs[qtd->isoc_frame_index];
@@ -668,7 +683,8 @@ update_isoc_urb_state(dwc_otg_hcd_t *hcd,
 		    get_actual_xfer_length(hc, hc_regs, qtd, halt_status, NULL);
 
 		/* non DWORD-aligned buffer case handling. */
-		if (hc->align_buff && frame_desc->actual_length && hc->ep_is_in) {
+		if (hc->align_buff && frame_desc->actual_length &&
+			    hc->ep_is_in) {
 			dwc_memcpy(urb->buf + frame_desc->offset +
 				   qtd->isoc_split_offset, hc->qh->dw_align_buf,
 				   frame_desc->actual_length);
@@ -695,7 +711,8 @@ update_isoc_urb_state(dwc_otg_hcd_t *hcd,
 		    get_actual_xfer_length(hc, hc_regs, qtd, halt_status, NULL);
 
 		/* non DWORD-aligned buffer case handling. */
-		if (hc->align_buff && frame_desc->actual_length && hc->ep_is_in) {
+		if (hc->align_buff && frame_desc->actual_length &&
+			    hc->ep_is_in) {
 			dwc_memcpy(urb->buf + frame_desc->offset +
 				   qtd->isoc_split_offset, hc->qh->dw_align_buf,
 				   frame_desc->actual_length);
@@ -732,10 +749,11 @@ update_isoc_urb_state(dwc_otg_hcd_t *hcd,
  * non-periodic schedule. For periodic QHs, removes the QH from the periodic
  * schedule if no more QTDs are linked to the QH.
  */
-static void deactivate_qh(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh, int free_qtd)
+static void deactivate_qh(struct dwc_otg_hcd *hcd,
+	struct dwc_otg_qh *qh, int free_qtd)
 {
 	int continue_split = 0;
-	dwc_otg_qtd_t *qtd;
+	struct dwc_otg_qtd *qtd;
 
 	DWC_DEBUGPL(DBG_HCDV, "  %s(%p,%p,%d)\n", __func__, hcd, qh, free_qtd);
 
@@ -768,12 +786,12 @@ static void deactivate_qh(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh, int free_qtd)
  * @param halt_status Reason the channel is being released. This status
  * determines the actions taken by this function.
  */
-static void release_channel(dwc_otg_hcd_t *hcd,
-			    dwc_hc_t *hc,
-			    dwc_otg_qtd_t *qtd,
-			    dwc_otg_halt_status_e halt_status)
+static void release_channel(struct dwc_otg_hcd *hcd,
+			    struct dwc_hc *hc,
+			    struct dwc_otg_qtd *qtd,
+			    enum dwc_otg_halt_status halt_status)
 {
-	dwc_otg_transaction_type_e tr_type;
+	enum dwc_otg_transaction_type tr_type;
 	int free_qtd;
 
 	DWC_DEBUGPL(DBG_HCDV, "  %s: channel %d, halt_status %d\n",
@@ -832,7 +850,7 @@ cleanup:
 		hcd->non_periodic_channels--;
 		break;
 
-default:
+	default:
 		/*
 		 * Don't release reservations for periodic channels here.
 		 * That's done when a periodic transfer is descheduled (i.e.
@@ -857,9 +875,10 @@ default:
  * simply released since the core always halts the channel automatically in
  * DMA mode.
  */
-static void halt_channel(dwc_otg_hcd_t *hcd,
-			 dwc_hc_t *hc,
-			 dwc_otg_qtd_t *qtd, dwc_otg_halt_status_e halt_status)
+static void halt_channel(struct dwc_otg_hcd *hcd,
+			 struct dwc_hc *hc,
+			 struct dwc_otg_qtd *qtd,
+			 enum dwc_otg_halt_status halt_status)
 {
 	if (hcd->core_if->dma_enable) {
 		release_channel(hcd, hc, qtd, halt_status);
@@ -870,8 +889,8 @@ static void halt_channel(dwc_otg_hcd_t *hcd,
 	dwc_otg_hc_halt(hcd->core_if, hc, halt_status);
 
 	if (hc->halt_on_queue) {
-		gintmsk_data_t gintmsk = {.d32 = 0 };
-		dwc_otg_core_global_regs_t *global_regs;
+		union gintmsk_data gintmsk = {.d32 = 0 };
+		struct dwc_otg_core_global_regs *global_regs;
 		global_regs = hcd->core_if->core_global_regs;
 
 		if (hc->ep_type == DWC_OTG_EP_TYPE_CONTROL ||
@@ -909,13 +928,13 @@ static void halt_channel(dwc_otg_hcd_t *hcd,
  * Complete interrupt. This function should be called after any endpoint type
  * specific handling is finished to release the host channel.
  */
-static void complete_non_periodic_xfer(dwc_otg_hcd_t *hcd,
-				       dwc_hc_t *hc,
-				       dwc_otg_hc_regs_t *hc_regs,
-				       dwc_otg_qtd_t *qtd,
-				       dwc_otg_halt_status_e halt_status)
+static void complete_non_periodic_xfer(struct dwc_otg_hcd *hcd,
+				       struct dwc_hc *hc,
+				       struct dwc_otg_hc_regs *hc_regs,
+				       struct dwc_otg_qtd *qtd,
+				       enum dwc_otg_halt_status halt_status)
 {
-	hcint_data_t hcint;
+	union hcint_data hcint;
 
 	qtd->error_count = 0;
 
@@ -961,13 +980,13 @@ static void complete_non_periodic_xfer(dwc_otg_hcd_t *hcd,
  * interrupt. This function should be called after any endpoint type specific
  * handling is finished to release the host channel.
  */
-static void complete_periodic_xfer(dwc_otg_hcd_t *hcd,
-				   dwc_hc_t *hc,
-				   dwc_otg_hc_regs_t *hc_regs,
-				   dwc_otg_qtd_t *qtd,
-				   dwc_otg_halt_status_e halt_status)
+static void complete_periodic_xfer(struct dwc_otg_hcd *hcd,
+				   struct dwc_hc *hc,
+				   struct dwc_otg_hc_regs *hc_regs,
+				   struct dwc_otg_qtd *qtd,
+				   enum dwc_otg_halt_status halt_status)
 {
-	hctsiz_data_t hctsiz;
+	union hctsiz_data hctsiz;
 	qtd->error_count = 0;
 
 	hctsiz.d32 = dwc_read_reg32(&hc_regs->hctsiz);
@@ -980,10 +999,10 @@ static void complete_periodic_xfer(dwc_otg_hcd_t *hcd,
 	}
 }
 
-static int32_t handle_xfercomp_isoc_split_in(dwc_otg_hcd_t *hcd,
-					     dwc_hc_t *hc,
-					     dwc_otg_hc_regs_t *hc_regs,
-					     dwc_otg_qtd_t *qtd)
+static int32_t handle_xfercomp_isoc_split_in(struct dwc_otg_hcd *hcd,
+					     struct dwc_hc *hc,
+					     struct dwc_otg_hc_regs *hc_regs,
+					     struct dwc_otg_qtd *qtd)
 {
 	uint32_t len;
 	struct dwc_otg_hcd_iso_packet_desc *frame_desc;
@@ -1025,14 +1044,14 @@ static int32_t handle_xfercomp_isoc_split_in(dwc_otg_hcd_t *hcd,
  * Handles a host channel Transfer Complete interrupt. This handler may be
  * called in either DMA mode or Slave mode.
  */
-static int32_t handle_hc_xfercomp_intr(dwc_otg_hcd_t *hcd,
-				       dwc_hc_t *hc,
-				       dwc_otg_hc_regs_t *hc_regs,
-				       dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_xfercomp_intr(struct dwc_otg_hcd *hcd,
+				       struct dwc_hc *hc,
+				       struct dwc_otg_hc_regs *hc_regs,
+				       struct dwc_otg_qtd *qtd)
 {
 	int urb_xfer_done;
-	dwc_otg_halt_status_e halt_status = DWC_OTG_HC_XFER_COMPLETE;
-	dwc_otg_hcd_urb_t *urb = qtd->urb;
+	enum dwc_otg_halt_status halt_status = DWC_OTG_HC_XFER_COMPLETE;
+	struct dwc_otg_hcd_urb *urb = qtd->urb;
 	int pipe_type = dwc_otg_hcd_get_pipe_type(&urb->pipe_info);
 
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
@@ -1154,12 +1173,12 @@ handle_xfercomp_done:
  * Handles a host channel STALL interrupt. This handler may be called in
  * either DMA mode or Slave mode.
  */
-static int32_t handle_hc_stall_intr(dwc_otg_hcd_t *hcd,
-				    dwc_hc_t *hc,
-				    dwc_otg_hc_regs_t *hc_regs,
-				    dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_stall_intr(struct dwc_otg_hcd *hcd,
+				    struct dwc_hc *hc,
+				    struct dwc_otg_hc_regs *hc_regs,
+				    struct dwc_otg_qtd *qtd)
 {
-	dwc_otg_hcd_urb_t *urb = qtd->urb;
+	struct dwc_otg_hcd_urb *urb = qtd->urb;
 	int pipe_type = dwc_otg_hcd_get_pipe_type(&urb->pipe_info);
 
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
@@ -1200,11 +1219,11 @@ handle_stall_done:
  * actual_length field of the URB to reflect the number of bytes that have
  * actually been transferred via the host channel.
  */
-static void update_urb_state_xfer_intr(dwc_hc_t *hc,
-				       dwc_otg_hc_regs_t *hc_regs,
-				       dwc_otg_hcd_urb_t *urb,
-				       dwc_otg_qtd_t *qtd,
-				       dwc_otg_halt_status_e halt_status)
+static void update_urb_state_xfer_intr(struct dwc_hc *hc,
+				       struct dwc_otg_hc_regs *hc_regs,
+				       struct dwc_otg_hcd_urb *urb,
+				       struct dwc_otg_qtd *qtd,
+				       enum dwc_otg_halt_status halt_status)
 {
 	uint32_t bytes_transferred = get_actual_xfer_length(hc, hc_regs, qtd,
 							    halt_status, NULL);
@@ -1218,7 +1237,7 @@ static void update_urb_state_xfer_intr(dwc_hc_t *hc,
 
 #ifdef DEBUG
 	{
-		hctsiz_data_t hctsiz;
+		union hctsiz_data hctsiz;
 		hctsiz.d32 = dwc_read_reg32(&hc_regs->hctsiz);
 		DWC_DEBUGPL(DBG_HCDV, "DWC_otg: %s: %s, channel %d\n",
 			    __func__, (hc->ep_is_in ? "IN" : "OUT"),
@@ -1241,10 +1260,10 @@ static void update_urb_state_xfer_intr(dwc_hc_t *hc,
  * Handles a host channel NAK interrupt. This handler may be called in either
  * DMA mode or Slave mode.
  */
-static int32_t handle_hc_nak_intr(dwc_otg_hcd_t *hcd,
-				  dwc_hc_t *hc,
-				  dwc_otg_hc_regs_t *hc_regs,
-				  dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_nak_intr(struct dwc_otg_hcd *hcd,
+				  struct dwc_hc *hc,
+				  struct dwc_otg_hc_regs *hc_regs,
+				  struct dwc_otg_qtd *qtd)
 {
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
 		    "NAK Received--\n", hc->hc_num);
@@ -1321,10 +1340,10 @@ handle_nak_done:
  * performing the PING protocol in Slave mode, when errors occur during
  * either Slave mode or DMA mode, and during Start Split transactions.
  */
-static int32_t handle_hc_ack_intr(dwc_otg_hcd_t *hcd,
-				  dwc_hc_t *hc,
-				  dwc_otg_hc_regs_t *hc_regs,
-				  dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_ack_intr(struct dwc_otg_hcd *hcd,
+				  struct dwc_hc *hc,
+				  struct dwc_otg_hc_regs *hc_regs,
+				  struct dwc_otg_qtd *qtd)
 {
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
 		    "ACK Received--\n", hc->hc_num);
@@ -1364,7 +1383,7 @@ static int32_t handle_hc_ack_intr(dwc_otg_hcd_t *hcd,
 
 					frame_desc =
 					    &qtd->urb->iso_descs[qtd->
-								 isoc_frame_index];
+						 isoc_frame_index];
 					qtd->isoc_split_offset += 188;
 
 					if ((frame_desc->length -
@@ -1415,10 +1434,10 @@ static int32_t handle_hc_ack_intr(dwc_otg_hcd_t *hcd,
  * handled in the xfercomp interrupt handler, not here. This handler may be
  * called in either DMA mode or Slave mode.
  */
-static int32_t handle_hc_nyet_intr(dwc_otg_hcd_t *hcd,
-				   dwc_hc_t *hc,
-				   dwc_otg_hc_regs_t *hc_regs,
-				   dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_nyet_intr(struct dwc_otg_hcd *hcd,
+				   struct dwc_hc *hc,
+				   struct dwc_otg_hc_regs *hc_regs,
+				   struct dwc_otg_qtd *qtd)
 {
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
 		    "NYET Received--\n", hc->hc_num);
@@ -1496,10 +1515,10 @@ handle_nyet_done:
  * Handles a host channel babble interrupt. This handler may be called in
  * either DMA mode or Slave mode.
  */
-static int32_t handle_hc_babble_intr(dwc_otg_hcd_t *hcd,
-				     dwc_hc_t *hc,
-				     dwc_otg_hc_regs_t *hc_regs,
-				     dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_babble_intr(struct dwc_otg_hcd *hcd,
+				     struct dwc_hc *hc,
+				     struct dwc_otg_hc_regs *hc_regs,
+				     struct dwc_otg_qtd *qtd)
 {
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
 		    "Babble Error--\n", hc->hc_num);
@@ -1515,7 +1534,7 @@ static int32_t handle_hc_babble_intr(dwc_otg_hcd_t *hcd,
 				    qtd->urb, -DWC_E_OVERFLOW);
 		halt_channel(hcd, hc, qtd, DWC_OTG_HC_XFER_BABBLE_ERR);
 	} else {
-		dwc_otg_halt_status_e halt_status;
+		enum dwc_otg_halt_status halt_status;
 		halt_status = update_isoc_urb_state(hcd, hc, hc_regs, qtd,
 						    DWC_OTG_HC_XFER_BABBLE_ERR);
 		halt_channel(hcd, hc, qtd, halt_status);
@@ -1530,18 +1549,18 @@ handle_babble_done:
  * Handles a host channel AHB error interrupt. This handler is only called in
  * DMA mode.
  */
-static int32_t handle_hc_ahberr_intr(dwc_otg_hcd_t *hcd,
-				     dwc_hc_t *hc,
-				     dwc_otg_hc_regs_t *hc_regs,
-				     dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_ahberr_intr(struct dwc_otg_hcd *hcd,
+				     struct dwc_hc *hc,
+				     struct dwc_otg_hc_regs *hc_regs,
+				     struct dwc_otg_qtd *qtd)
 {
-	hcchar_data_t hcchar;
-	hcsplt_data_t hcsplt;
-	hctsiz_data_t hctsiz;
+	union hcchar_data hcchar;
+	union hcsplt_data hcsplt;
+	union hctsiz_data hctsiz;
 	uint32_t hcdma;
 	char *pipetype, *speed;
 
-	dwc_otg_hcd_urb_t *urb = qtd->urb;
+	struct dwc_otg_hcd_urb *urb = qtd->urb;
 
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
 		    "AHB Error--\n", hc->hc_num);
@@ -1630,10 +1649,10 @@ handle_ahberr_done:
  * Handles a host channel transaction error interrupt. This handler may be
  * called in either DMA mode or Slave mode.
  */
-static int32_t handle_hc_xacterr_intr(dwc_otg_hcd_t *hcd,
-				      dwc_hc_t *hc,
-				      dwc_otg_hc_regs_t *hc_regs,
-				      dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_xacterr_intr(struct dwc_otg_hcd *hcd,
+				      struct dwc_hc *hc,
+				      struct dwc_otg_hc_regs *hc_regs,
+				      struct dwc_otg_qtd *qtd)
 {
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
 		    "Transaction Error--\n", hc->hc_num);
@@ -1673,7 +1692,7 @@ static int32_t handle_hc_xacterr_intr(dwc_otg_hcd_t *hcd,
 		break;
 	case UE_ISOCHRONOUS:
 		{
-			dwc_otg_halt_status_e halt_status;
+			enum dwc_otg_halt_status halt_status;
 			halt_status =
 			    update_isoc_urb_state(hcd, hc, hc_regs, qtd,
 						  DWC_OTG_HC_XFER_XACT_ERR);
@@ -1692,10 +1711,10 @@ handle_xacterr_done:
  * Handles a host channel frame overrun interrupt. This handler may be called
  * in either DMA mode or Slave mode.
  */
-static int32_t handle_hc_frmovrun_intr(dwc_otg_hcd_t *hcd,
-				       dwc_hc_t *hc,
-				       dwc_otg_hc_regs_t *hc_regs,
-				       dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_frmovrun_intr(struct dwc_otg_hcd *hcd,
+				       struct dwc_hc *hc,
+				       struct dwc_otg_hc_regs *hc_regs,
+				       struct dwc_otg_qtd *qtd)
 {
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
 		    "Frame Overrun--\n", hc->hc_num);
@@ -1709,10 +1728,10 @@ static int32_t handle_hc_frmovrun_intr(dwc_otg_hcd_t *hcd,
 		break;
 	case UE_ISOCHRONOUS:
 		{
-			dwc_otg_halt_status_e halt_status;
+			enum dwc_otg_halt_status halt_status;
 			halt_status =
 			    update_isoc_urb_state(hcd, hc, hc_regs, qtd,
-						  DWC_OTG_HC_XFER_FRAME_OVERRUN);
+				  DWC_OTG_HC_XFER_FRAME_OVERRUN);
 
 			halt_channel(hcd, hc, qtd, halt_status);
 		}
@@ -1728,10 +1747,10 @@ static int32_t handle_hc_frmovrun_intr(dwc_otg_hcd_t *hcd,
  * Handles a host channel data toggle error interrupt. This handler may be
  * called in either DMA mode or Slave mode.
  */
-static int32_t handle_hc_datatglerr_intr(dwc_otg_hcd_t *hcd,
-					 dwc_hc_t *hc,
-					 dwc_otg_hc_regs_t *hc_regs,
-					 dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_datatglerr_intr(struct dwc_otg_hcd *hcd,
+					 struct dwc_hc *hc,
+					 struct dwc_otg_hc_regs *hc_regs,
+					 struct dwc_otg_qtd *qtd)
 {
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
 		    "Data Toggle Error--\n", hc->hc_num);
@@ -1755,15 +1774,16 @@ static int32_t handle_hc_datatglerr_intr(dwc_otg_hcd_t *hcd,
  * taken and a warning is issued.
  * @return 1 if halt status is ok, 0 otherwise.
  */
-static inline int halt_status_ok(dwc_otg_hcd_t *hcd,
-				 dwc_hc_t *hc,
-				 dwc_otg_hc_regs_t *hc_regs, dwc_otg_qtd_t *qtd)
+static inline int halt_status_ok(struct dwc_otg_hcd *hcd,
+				 struct dwc_hc *hc,
+				 struct dwc_otg_hc_regs *hc_regs,
+				 struct dwc_otg_qtd *qtd)
 {
-	hcchar_data_t hcchar;
-	hctsiz_data_t hctsiz;
-	hcint_data_t hcint;
-	hcintmsk_data_t hcintmsk;
-	hcsplt_data_t hcsplt;
+	union hcchar_data hcchar;
+	union hctsiz_data hctsiz;
+	union hcint_data hcint;
+	union hcintmsk_data hcintmsk;
+	union hcsplt_data hcsplt;
 
 	if (hc->halt_status == DWC_OTG_HC_XFER_NO_HALT_STATUS) {
 		/*
@@ -1814,13 +1834,13 @@ static inline int halt_status_ok(dwc_otg_hcd_t *hcd,
  * Handles a host Channel Halted interrupt in DMA mode. This handler
  * determines the reason the channel halted and proceeds accordingly.
  */
-static void handle_hc_chhltd_intr_dma(dwc_otg_hcd_t *hcd,
-				      dwc_hc_t *hc,
-				      dwc_otg_hc_regs_t *hc_regs,
-				      dwc_otg_qtd_t *qtd)
+static void handle_hc_chhltd_intr_dma(struct dwc_otg_hcd *hcd,
+				      struct dwc_hc *hc,
+				      struct dwc_otg_hc_regs *hc_regs,
+				      struct dwc_otg_qtd *qtd)
 {
-	hcint_data_t hcint;
-	hcintmsk_data_t hcintmsk;
+	union hcint_data hcint;
+	union hcintmsk_data hcintmsk;
 	int out_nak_enh = 0;
 
 	/* For core with OUT NAK enhancement, the flow for high-
@@ -1895,48 +1915,56 @@ static void handle_hc_chhltd_intr_dma(dwc_otg_hcd_t *hcd,
 	} else if (!out_nak_enh) {
 		if (hcint.b.nyet) {
 			/*
-			 * Must handle nyet before nak or ack. Could get a nyet at the
-			 * same time as either of those on a BULK/CONTROL OUT that
+			 * Must handle nyet before nak or ack.
+			 * Could get a nyet at the same time as
+			 * either of those on a BULK/CONTROL OUT that
 			 * started with a PING. The nyet takes precedence.
 			 */
 			handle_hc_nyet_intr(hcd, hc, hc_regs, qtd);
 		} else if (hcint.b.nak && !hcintmsk.b.nak) {
 			/*
-			 * If nak is not masked, it's because a non-split IN transfer
-			 * is in an error state. In that case, the nak is handled by
-			 * the nak interrupt handler, not here. Handle nak here for
-			 * BULK/CONTROL OUT transfers, which halt on a NAK to allow
-			 * rewinding the buffer pointer.
+			 * If nak is not masked, it's because
+			 * a non-split IN transfer is in an error
+			 * state. In that case, the nak is handled
+			 * by the nak interrupt handler, not here.
+			 * Handle nak here for BULK/CONTROL
+			 * OUT transfers, which halt on a NAK to
+			 * allow rewinding the buffer pointer.
 			 */
 			handle_hc_nak_intr(hcd, hc, hc_regs, qtd);
 		} else if (hcint.b.ack && !hcintmsk.b.ack) {
 			/*
-			 * If ack is not masked, it's because a non-split IN transfer
-			 * is in an error state. In that case, the ack is handled by
-			 * the ack interrupt handler, not here. Handle ack here for
-			 * split transfers. Start splits halt on ACK.
+			 * If ack is not masked, it's because
+			 * a non-split IN transfer is in an error
+			 * state. In that case, the ack is handled
+			 * by the ack interrupt handler, not here.
+			 * Handle ack here for split transfers.
+			 * Start splits halt on ACK.
 			 */
 			handle_hc_ack_intr(hcd, hc, hc_regs, qtd);
 		} else {
 			if (hc->ep_type == DWC_OTG_EP_TYPE_INTR ||
 			    hc->ep_type == DWC_OTG_EP_TYPE_ISOC) {
 				/*
-				 * A periodic transfer halted with no other channel
-				 * interrupts set. Assume it was halted by the core
-				 * because it could not be completed in its scheduled
-				 * (micro)frame.
+				 * A periodic transfer halted with no
+				 * other channel interrupts set.
+				 * Assume it was halted by the core
+				 * because it could not be completed
+				 * in its scheduled (micro)frame.
 				 */
 #ifdef DEBUG
 				DWC_PRINTF
-				    ("%s: Halt channel %d (assume incomplete periodic transfer)\n",
+				    ("%s: Halt channel %d "
+				     "(assume incomplete periodic transfer)\n",
 				     __func__, hc->hc_num);
 #endif
 				halt_channel(hcd, hc, qtd,
-					     DWC_OTG_HC_XFER_PERIODIC_INCOMPLETE);
+				     DWC_OTG_HC_XFER_PERIODIC_INCOMPLETE);
 			} else {
 				DWC_ERROR
-				    ("%s: Channel %d, DMA Mode -- ChHltd set, but reason "
-				     "for halting is unknown, hcint 0x%08x, intsts 0x%08x\n",
+				    ("%s: Channel %d, DMA Mode "
+				     "--ChHltd set, but reason for halting is unknown, "
+				     "hcint 0x%08x, intsts 0x%08x\n",
 				     __func__, hc->hc_num, hcint.d32,
 				     dwc_read_reg32(&hcd->core_if->
 						    core_global_regs->gintsts));
@@ -1960,10 +1988,10 @@ static void handle_hc_chhltd_intr_dma(dwc_otg_hcd_t *hcd,
  * processing a transfer on a channel. Other host channel interrupts (except
  * ahberr) are disabled in DMA mode.
  */
-static int32_t handle_hc_chhltd_intr(dwc_otg_hcd_t *hcd,
-				     dwc_hc_t *hc,
-				     dwc_otg_hc_regs_t *hc_regs,
-				     dwc_otg_qtd_t *qtd)
+static int32_t handle_hc_chhltd_intr(struct dwc_otg_hcd *hcd,
+				     struct dwc_hc *hc,
+				     struct dwc_otg_hc_regs *hc_regs,
+				     struct dwc_otg_qtd *qtd)
 {
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
 		    "Channel Halted--\n", hc->hc_num);
@@ -1982,14 +2010,14 @@ static int32_t handle_hc_chhltd_intr(dwc_otg_hcd_t *hcd,
 }
 
 /** Handles interrupt for a specific Host Channel */
-int32_t dwc_otg_hcd_handle_hc_n_intr(dwc_otg_hcd_t *dwc_otg_hcd, uint32_t num)
+int32_t dwc_otg_hcd_handle_hc_n_intr(struct dwc_otg_hcd *dwc_otg_hcd, uint32_t num)
 {
 	int retval = 0;
-	hcint_data_t hcint;
-	hcintmsk_data_t hcintmsk;
-	dwc_hc_t *hc;
-	dwc_otg_hc_regs_t *hc_regs;
-	dwc_otg_qtd_t *qtd;
+	union hcint_data hcint;
+	union hcintmsk_data hcintmsk;
+	struct dwc_hc *hc;
+	struct dwc_otg_hc_regs *hc_regs;
+	struct dwc_otg_qtd *qtd;
 
 	DWC_DEBUGPL(DBG_HCDV, "--Host Channel Interrupt--, Channel %d\n", num);
 
