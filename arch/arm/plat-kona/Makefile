@@ -62,3 +62,5 @@ obj-$(CONFIG_KONA_DT_BCMPMU)	+= bcmpmu-dt.o
 
 # wfi_count.o is required for SW-7022.
 obj-$(CONFIG_KONA_WFI_WORKAROUND) += wfi_count.o
+#kona profiler
+obj-$(CONFIG_KONA_PROFILER) += profiler.o ccu_profiler.o pi_profiler.o

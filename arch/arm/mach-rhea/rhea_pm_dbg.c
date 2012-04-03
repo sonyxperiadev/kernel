@@ -18,6 +18,9 @@
 #include <mach/rdb/brcm_rdb_gpio.h>
 #include <mach/pm.h>
 #include <mach/pwr_mgr.h>
+#ifdef CONFIG_KONA_PROFILER
+#include <plat/profiler.h>
+#endif
 
 /*****************************************************************************
  *                        SLEEP STATE DEBUG INTERFACE                        *
@@ -260,6 +263,14 @@ void instrument_idle_entry(void)
 	 * entering low power state.
 	 */
 	snapshot_get();
+
+	/**
+	 * Take profiling counter samples
+	 * before entering idle state
+	 */
+#ifdef CONFIG_KONA_PROFILER
+	profiler_idle_entry_cb();
+#endif
 }
 
 void instrument_idle_exit(void)

@@ -208,6 +208,12 @@ config KONA_DT_BCMPMU
 	help
 	  Say Y if you support BCMPMU nodes in DeviceTree
 
+config KONA_PROFILER
+	bool "Support Kona profiling framework"
+	default 0
+	help
+	  Say Y if you want to enable Kona profiling
+
 config KONA_NAHJ_SUPPORT
        bool "Support NAHJ headset as headphone"
        default n
