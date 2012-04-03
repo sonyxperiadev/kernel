@@ -143,6 +143,17 @@ enum bcmpmu_reg {
 	PMU_REG_PONKEY_RESTART_DLY,
 
 	PMU_REG_AUXCTRL,
+
+	PMU_REG_NTCHT_RISE_LO,
+	PMU_REG_NTCHT_RISE_HI,
+	PMU_REG_NTCHT_FALL_LO,
+	PMU_REG_NTCHT_FALL_HI,
+	PMU_REG_NTCCT_RISE_LO,
+	PMU_REG_NTCCT_RISE_HI,
+	PMU_REG_NTCCT_FALL_LO,
+	PMU_REG_NTCCT_FALL_HI,
+
+
 	PMU_REG_CMPCTRL4,
 	PMU_REG_CMPCTRL5,
 	PMU_REG_CMPCTRL6,
@@ -812,7 +823,7 @@ struct bcmpmu_rw_data_ltp{
 struct bcmpmu_ntc_data_ltp {
 	unsigned int map;
 	unsigned int addr;
-	unsigned long val[3];
+	int val[3];
 	unsigned int mask;
 };
 
@@ -1083,6 +1094,13 @@ struct bcmpmu {
 	int (*set_icc_qc) (struct bcmpmu *pmu, int curr);
 	int (*set_eoc) (struct bcmpmu *pmu, int curr);
 	int (*set_vfloat) (struct bcmpmu *pmu, int volt);
+
+	/* NTC  */
+	int (*ntcht_rise_set) (struct bcmpmu *pmu, int val);
+	int (*ntcht_fall_set) (struct bcmpmu *pmu, int val);
+	int (*ntcct_rise_set) (struct bcmpmu *pmu, int val);
+	int (*ntcct_fall_set) (struct bcmpmu *pmu, int val);
+
 
 	/* fg */
 	int (*fg_currsmpl) (struct bcmpmu *pmu, int *data);

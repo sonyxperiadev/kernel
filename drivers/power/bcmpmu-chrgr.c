@@ -305,6 +305,91 @@ static int bcmpmu_chrgr_wac_en(struct bcmpmu *bcmpmu, int en)
 	return ret;
 }
 
+static int bcmpmu_ntcht_rise_set(struct bcmpmu *bcmpmu, int val)
+{
+	unsigned int hi_val, lo_val;
+	int nbytes = 0;
+	hi_val = (((val >> 8) & 0xFF)) << 6;
+	lo_val = (val & 0xFF);
+
+	if (bcmpmu->write_dev) {
+		nbytes = bcmpmu->write_dev(bcmpmu,
+					   PMU_REG_NTCHT_RISE_LO,
+					   lo_val,
+		bcmpmu->regmap[PMU_REG_NTCHT_RISE_LO].mask);
+
+		nbytes += bcmpmu->write_dev(bcmpmu,
+					    PMU_REG_NTCHT_RISE_HI,
+					    hi_val,
+		bcmpmu->regmap[PMU_REG_NTCHT_RISE_HI].mask);
+	}
+	return nbytes;
+}
+
+static int bcmpmu_ntcht_fall_set(struct bcmpmu *bcmpmu, int val)
+{
+	unsigned int hi_val, lo_val;
+	int nbytes = 0;
+	hi_val = (((val >> 8) & 0xFF)) << 4;
+	lo_val = (val & 0xFF);
+
+	if (bcmpmu->write_dev) {
+		nbytes = bcmpmu->write_dev(bcmpmu,
+					   PMU_REG_NTCHT_FALL_LO,
+					   lo_val,
+		bcmpmu->regmap[PMU_REG_NTCHT_FALL_LO].mask);
+
+		nbytes += bcmpmu->write_dev(bcmpmu,
+					    PMU_REG_NTCHT_FALL_HI,
+					    hi_val,
+		bcmpmu->regmap[PMU_REG_NTCHT_FALL_HI].mask);
+	}
+	return nbytes;
+}
+
+
+static int bcmpmu_ntcct_rise_set(struct bcmpmu *bcmpmu, int val)
+{
+	unsigned int hi_val, lo_val;
+	int nbytes = 0;
+	hi_val = (((val >> 8) & 0xFF)) << 2;
+	lo_val = (val & 0xFF);
+
+	if (bcmpmu->write_dev) {
+		nbytes = bcmpmu->write_dev(bcmpmu,
+					   PMU_REG_NTCCT_RISE_LO,
+					   lo_val,
+		bcmpmu->regmap[PMU_REG_NTCCT_RISE_LO].mask);
+
+		nbytes += bcmpmu->write_dev(bcmpmu,
+					    PMU_REG_NTCCT_RISE_HI,
+					    hi_val,
+		bcmpmu->regmap[PMU_REG_NTCCT_RISE_HI].mask);
+	}
+	return nbytes;
+}
+
+static int bcmpmu_ntcct_fall_set(struct bcmpmu *bcmpmu, int val)
+{
+	unsigned int hi_val, lo_val;
+	int nbytes = 0;
+	hi_val = ((val >> 8) & 0xFF);
+	lo_val = (val & 0xFF);
+
+	if (bcmpmu->write_dev) {
+		nbytes = bcmpmu->write_dev(bcmpmu,
+					   PMU_REG_NTCCT_FALL_LO,
+					   lo_val,
+		bcmpmu->regmap[PMU_REG_NTCCT_FALL_LO].mask);
+
+		nbytes += bcmpmu->write_dev(bcmpmu,
+					    PMU_REG_NTCCT_FALL_HI,
+					    hi_val,
+		bcmpmu->regmap[PMU_REG_NTCCT_FALL_HI].mask);
+	}
+	return nbytes;
+}
+
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 static ssize_t
@@ -467,6 +552,13 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	bcmpmu->set_icc_qc = bcmpmu_set_icc_qc;
 	bcmpmu->set_eoc = bcmpmu_set_eoc;
 	bcmpmu->set_vfloat = bcmpmu_set_vfloat;
+
+	bcmpmu->ntcht_rise_set = bcmpmu_ntcht_rise_set;
+	bcmpmu->ntcht_fall_set = bcmpmu_ntcht_fall_set;
+	bcmpmu->ntcct_rise_set = bcmpmu_ntcct_rise_set;
+	bcmpmu->ntcct_fall_set = bcmpmu_ntcct_fall_set;
+
+
 
 	pchrgr->eoc = 0;
 

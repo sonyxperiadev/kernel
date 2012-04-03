@@ -152,11 +152,6 @@ static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
 			    loff_t *p);
 static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 				unsigned long arg);
-static ssize_t bcmpmu_ntcht_rise_set(unsigned long val);
-static ssize_t bcmpmu_ntcht_fall_set(unsigned long val);
-static ssize_t bcmpmu_ntcct_rise_set(unsigned long val);
-static ssize_t bcmpmu_ntcct_fall_set(unsigned long val);
-
 
 static const struct file_operations bcmpmu_fops = {
 	.owner = THIS_MODULE,
@@ -356,24 +351,24 @@ static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 			ntc.mask = 0xff;
 			ntc.addr = ntc.addr & 0xff;
 
-			printk(KERN_DEBUG "BCMPMU ntc register=0x%X, val=0x%lX, map=0x%X\n",
+			printk(KERN_DEBUG "BCMPMU ntc register=0x%X, val=0x%X, map=0x%X\n",
 				ntc.addr, ntc.val[0], ntc.map);
 			if (ntc.addr == 0x13) {
-				printk(KERN_DEBUG "BCMPMU NTCHT_RISE  val=0x%lX\n",
+				printk(KERN_DEBUG "BCMPMU NTCHT_RISE  val=0x%X\n",
 					ntc.val[0]);
-				bcmpmu_ntcht_rise_set(ntc.val[0]);
+				bcmpmu->ntcht_rise_set(bcmpmu, ntc.val[0]);
 			} else if (ntc.addr == 0x14) {
-				printk(KERN_DEBUG "BCMPMU NTCHT_FALL  val=0x%lX\n",
+				printk(KERN_DEBUG "BCMPMU NTCHT_FALL  val=0x%X\n",
 					ntc.val[0]);
-				bcmpmu_ntcht_fall_set(ntc.val[0]);
+				bcmpmu->ntcht_fall_set(bcmpmu, ntc.val[0]);
 			} else if (ntc.addr == 0x15) {
-				printk(KERN_DEBUG "BCMPMU NTCCT_RISE  val=0x%lX\n",
+				printk(KERN_DEBUG "BCMPMU NTCCT_RISE  val=0x%X\n",
 					ntc.val[0]);
-				bcmpmu_ntcct_rise_set(ntc.val[0]);
+				bcmpmu->ntcct_rise_set(bcmpmu, ntc.val[0]);
 			} else if (ntc.addr == 0x16) {
-				printk(KERN_DEBUG "BCMPMU NTCCT_FALL  val=0x%lX\n",
+				printk(KERN_DEBUG "BCMPMU NTCCT_FALL  val=0x%X\n",
 					ntc.val[0]);
-				bcmpmu_ntcct_fall_set(ntc.val[0]);
+				bcmpmu->ntcct_fall_set(bcmpmu, ntc.val[0]);
 			}
 		} else {
 			printk(KERN_ERR "%s: failed to copy from user.\n",
@@ -423,111 +418,6 @@ static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
 	return ret;
 }
 
-static ssize_t bcmpmu_ntcht_rise_set(unsigned long val)
-{
-	unsigned int reg_lvalue, reg_hvalue;
-	int bytes = 0;
-
-	reg_lvalue = val & 0xFF;
-	reg_hvalue = (val >> 8) & 0xFF;
-
-	printk(KERN_DEBUG "bcmpmu_ntcht_rise_set reg_lvalue=0x%X, reg_hvalue=0x%X\n",
-		reg_lvalue, reg_hvalue);
-
-	BUG_ON(!bcmpmu_core);
-
-	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_CMPCTRL4, reg_lvalue,
-					0xff);
-	bytes++;
-
-	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_CMPCTRL14, reg_hvalue,
-					0xff);
-	bytes++;
-
-	printk(KERN_DEBUG "bcmpmu_ntcht_rise_set return bytes=0x%X\n",
-		bytes);
-
-	return bytes;
-}
-
-static ssize_t bcmpmu_ntcht_fall_set(unsigned long val)
-{
-	unsigned int reg_lvalue, reg_hvalue;
-	int bytes = 0;
-
-	reg_lvalue = val & 0xFF;
-	reg_hvalue = (val >> 8) & 0xFF;
-
-	printk(KERN_DEBUG "bcmpmu_ntcht_fall_set reg_lvalue=0x%X, reg_hvalue=0x%X\n",
-		reg_lvalue, reg_hvalue);
-
-	BUG_ON(!bcmpmu_core);
-
-	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_CMPCTRL5, reg_lvalue,
-					0xff);
-	bytes++;
-
-	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_CMPCTRL14, reg_hvalue,
-					0xff);
-	bytes++;
-
-	printk(KERN_DEBUG "bcmpmu_ntcht_rise_set return bytes=0x%X\n",
-		bytes);
-
-	return bytes;
-}
-
-static ssize_t bcmpmu_ntcct_rise_set(unsigned long val)
-{
-	unsigned int reg_lvalue, reg_hvalue;
-	int bytes = 0;
-
-	reg_lvalue = val & 0xFF;
-	reg_hvalue = (val >> 8) & 0xFF;
-
-	printk(KERN_DEBUG "bcmpmu_ntcct_rise_set reg_lvalue=0x%X, reg_hvalue=0x%X\n",
-		reg_lvalue, reg_hvalue);
-
-	BUG_ON(!bcmpmu_core);
-
-	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_CMPCTRL6, reg_lvalue,
-					0xff);
-	bytes++;
-
-	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_CMPCTRL14, reg_hvalue,
-					0xff);
-	bytes++;
-
-	printk(KERN_DEBUG "bcmpmu_ntcht_rise_set return bytes=0x%X\n",
-		bytes);
-
-	return bytes;
-}
-
-static ssize_t bcmpmu_ntcct_fall_set(unsigned long val)
-{
-	unsigned int reg_lvalue, reg_hvalue;
-	int bytes = 0;
-
-	reg_lvalue = val & 0xFF;
-	reg_hvalue = (val >> 8) & 0xFF;
-
-	printk(KERN_DEBUG "bcmpmu_ntcct_fall_set reg_lvalue=0x%X, reg_hvalue=0x%X\n",
-		reg_lvalue, reg_hvalue);
-
-	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_CMPCTRL7, reg_lvalue,
-					0xff);
-	bytes++;
-
-	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_CMPCTRL14, reg_hvalue,
-					0xff);
-	bytes++;
-
-	printk(KERN_DEBUG "bcmpmu_ntcht_rise_set return bytes=0x%X\n",
-		bytes);
-
-	return bytes;
-}
 
 static void bcmpmu_register_init(struct bcmpmu *pmu)
 {
