@@ -1444,6 +1444,14 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_JIG_UART_INS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_JIG_USB_INS);
+	/* in 59039 BC happened from PMU and BB's BCDAVDD33 pin is floated
+	 * need to set bc_iso_i in order to avoid any impact due to
+	 * BCDAVDD33 as floated.
+	*/
+#if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042)
+	bcm_hsotgctrl_set_bc_iso(true);
+#endif
+
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_accy_attr_group);
 #endif
