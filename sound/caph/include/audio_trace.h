@@ -57,7 +57,7 @@ extern int gAudioDebugLevel;
 
 #define aError(format, args...) \
 	do { \
-		pr_err(pr_fmt(format), ##args);\
+		pr_err(pr_fmt("AUD_ERR:"format), ##args);\
 	} while (0)
 
 #define aWarn(format, args...) \
@@ -81,7 +81,7 @@ extern int gAudioDebugLevel;
 
 #define audio_xassert(a, b) \
 {if ((a) == 0)\
-	pr_info("%s assert line %d, %d, 0x%x.",\
+	pr_info("AUD_ERR:%s assert line %d, %d, 0x%x\n",\
 			__func__, __LINE__, a, b);\
 }
 
