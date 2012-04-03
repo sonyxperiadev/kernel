@@ -129,11 +129,12 @@ extern unsigned char brcm_get_netcon_status(void);
 
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
 #define	MAX_RX_SKBS				210
-#define	MAX_RX_SKBS_CLONE		90
+#define	MAX_RX_SKBS_CLONE		70
 #define	MAX_RX_SKB_SIZE			2048
 #define	NOT_PRE_ALLOC_SKB			0x12345678
 #define	MAX_RETRY_SKB_ALLOC		50
 #define	UETH_RX_SKB_THRESHOLD	200
+#define	MIN_RESERVE_SKBS			50
 static struct sk_buff_head skb_rx_pool;
 atomic_t ueth_rx_skb_ref_count = ATOMIC_INIT(0);
 atomic_t ueth_rx_skb_cloned_ref_count = ATOMIC_INIT(0);
@@ -220,19 +221,22 @@ static void reserve_rx_skbs_list(void)
                if (!skb) {
                       /* pr_info("alloc_skb is failed... qlen=%d\n", skb_rx_pool.qlen); */
 			  if (++retry_alloc_skb > MAX_RETRY_SKB_ALLOC) {
-				pr_info("Set No Pre Alloc SKB: skb_rx_pool.qlen=%d\n", skb_rx_pool.qlen);
+				pr_info("It is NOT in Pre Alloc SKB mode\n");
+				pr_info("skb_rx_pool.qlen=%d\n",
+					skb_rx_pool.qlen);
 				spin_unlock_irqrestore(&skb_rx_pool.lock, flags);
 				ueth_rx_skb_queue_purge(&skb_rx_pool);
 				skb_rx_pool.qlen = NOT_PRE_ALLOC_SKB;
 				return;
 			  }
 		} else {
-			pr_info("TX_SKB NO:%d\n", skb_rx_pool.qlen);
+			pr_debug("TX_SKB NO:%d\n", skb_rx_pool.qlen);
 			retry_alloc_skb = 0;
 			skb->signature = SKB_UETH_RX_PRE_ALLOC_MEM_SIG;
 			__skb_queue_tail(&skb_rx_pool, skb);
 		}
 	}
+	pr_info("It is in Pre Alloc SKB mode.");
        spin_unlock_irqrestore(&skb_rx_pool.lock, flags);
 }
 
@@ -246,7 +250,8 @@ struct sk_buff *ueth_get_skb_4_clone(void)
 
 	skb = skb_dequeue(&skb_rx_pool);
 	if (skb == NULL)
-		pr_info("%s:skb_rx_pool is empty...\n", __func__);
+		pr_info("%s:skb_rx_pool is empty, cloned_count=%d\\n", __func__,
+				atomic_read(&ueth_rx_skb_cloned_ref_count));
 	else {
 		atomic_inc(&ueth_rx_skb_cloned_ref_count);
 		skb->signature = SKB_UETH_RX_PRE_ALLOC_MEM_SIG;
@@ -264,16 +269,17 @@ struct sk_buff *ueth_get_skb(void)
 {
 	unsigned long flags;
 	struct sk_buff *skb;
-	unsigned int skb_cloned_no;
+	int skb_cloned_no;
 
 	spin_lock_irqsave(&skb_rx_pool.lock, flags);
 	skb_cloned_no = atomic_read(&ueth_rx_skb_cloned_ref_count);
-	if (skb_cloned_no < MAX_RX_SKBS_CLONE)
+	if ((skb_cloned_no < MAX_RX_SKBS_CLONE) &&
+		(skb_rx_pool.qlen > MIN_RESERVE_SKBS))
 		skb = __skb_dequeue(&skb_rx_pool);
 	else {
 		skb = NULL;
-		pr_info("skb_rx_pool.qlen = %d, cloned_count=%d\n",
-				skb_rx_pool.qlen, skb_cloned_no);
+		pr_debug("skb_rx_pool.qlen = %d, cloned_count=%d\n",
+			skb_rx_pool.qlen, skb_cloned_no);
 	}
 	spin_unlock_irqrestore(&skb_rx_pool.lock, flags);
 
@@ -499,7 +505,7 @@ rx_submit(struct eth_dev *dev, struct usb_request *req, gfp_t gfp_flags)
 	} else {
 		skb = ueth_get_skb();
 		if (skb == NULL) {
-			pr_info("no rx skb\n");
+			pr_debug("no rx skb\n");
 			goto enomem;
 		}
 	       skb->signature = SKB_UETH_RX_PRE_ALLOC_MEM_SIG;
@@ -939,9 +945,24 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 			spin_unlock_irqrestore(&dev->lock, flags);
 			if (!skb)
 				goto drop;
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+			/* The following is to eliminate to malloc for
+				the unaligned memory*/
+			spin_lock_irqsave(&dev->lock, flags);
+			if (skb_headroom(skb) >
+				((unsigned long)skb->data & 3)) {
+				u8 *data = skb->data;
+				size_t len = skb_headlen(skb);
+				skb->data -= ((unsigned long)skb->data & 3);
+				memmove(skb->data, data, len);
+				skb_set_tail_pointer(skb, len);
+				pr_debug("mem_mv");
+			}
+			spin_unlock_irqrestore(&dev->lock, flags);
+#endif
 		}
 	}
-    length = skb->len;
+	length = skb->len;
 
 	req->buf = skb->data;
 	req->context = skb;

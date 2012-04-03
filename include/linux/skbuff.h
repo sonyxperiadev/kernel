@@ -45,10 +45,10 @@
 #define SKB_MAX_HEAD(X)		(SKB_MAX_ORDER((X), 0))
 #define SKB_MAX_ALLOC		(SKB_MAX_ORDER(0, 2))
 
-#define SKB_NETPOLL_SIGNATURE	0x12345678
+#define SKB_NETPOLL_SIGNATURE				0x12345678
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-#define SKB_UETH_RX_PRE_ALLOC_MEM_SIG  0xfedcba98
-#define SKB_UETH_RX_NO_PRE_ALLOC_MEM_SIG  0x789ABCDE
+#define SKB_UETH_RX_PRE_ALLOC_MEM_SIG	0xfedcba98
+#define SKB_UETH_RX_NO_PRE_ALLOC_MEM_SIG	0x789ABCDE
 
 extern atomic_t ueth_rx_skb_ref_count;
 extern unsigned short ueth_rx_skb_size(void);
@@ -1429,6 +1429,12 @@ static inline int pskb_network_may_pull(struct sk_buff *skb, unsigned int len)
  * Since this trade off varies between architectures, we allow NET_IP_ALIGN
  * to be overridden.
  */
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+#ifdef NET_IP_ALIGN
+#undef NET_IP_ALIGN
+#endif
+#define NET_IP_ALIGN	0
+#endif
 #ifndef NET_IP_ALIGN
 #define NET_IP_ALIGN	2
 #endif
