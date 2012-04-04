@@ -29,7 +29,7 @@
   * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
   * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
   * DAMAGE.
-  * ========================================================================== */
+  * =================================== */
 #ifndef DWC_HOST_ONLY
 
 /** @file
@@ -73,7 +73,7 @@
 #endif
 #include <linux/io.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 28)
 #include <linux/usb_ch9.h>
 #include <linux/usb_gadget.h>
 #else
@@ -279,7 +279,7 @@ static void dwc_otg_pcd_free_request(struct usb_ep *ep, struct usb_request *req)
 	kfree(req);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 28)
 /**
  * This function allocates an I/O buffer to be used for a transfer
  * to/from the specified endpoint.
@@ -612,7 +612,7 @@ static struct usb_isoc_ep_ops dwc_otg_pcd_ep_ops = {
 		   .alloc_request = dwc_otg_pcd_alloc_request,
 		   .free_request = dwc_otg_pcd_free_request,
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 28)
 		   .alloc_buffer = dwc_otg_pcd_alloc_buffer,
 		   .free_buffer = dwc_otg_pcd_free_buffer,
 #endif
@@ -639,7 +639,7 @@ static struct usb_ep_ops dwc_otg_pcd_ep_ops = {
 	.alloc_request = dwc_otg_pcd_alloc_request,
 	.free_request = dwc_otg_pcd_free_request,
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 28)
 	.alloc_buffer = dwc_otg_pcd_alloc_buffer,
 	.free_buffer = dwc_otg_pcd_free_buffer,
 #endif
@@ -1029,7 +1029,12 @@ static int _hnp_changed(dwc_otg_pcd_t *pcd)
 
 static int _reset(dwc_otg_pcd_t *pcd)
 {
-	return 0;
+
+	if (gadget_wrapper->gadget.is_otg)
+		return 0;
+	if (gadget_wrapper->driver && gadget_wrapper->driver->reset)
+		gadget_wrapper->driver->reset(&gadget_wrapper->gadget);
+		return 0;
 }
 
 #ifdef DWC_UTE_CFI
@@ -1220,7 +1225,7 @@ static struct gadget_wrapper *alloc_wrapper(
 #else
 						   struct platform_device *_dev
 #endif
-    )
+)
 {
 	static char pcd_name[] = "dwc_otg_pcd";
 
@@ -1243,7 +1248,7 @@ static struct gadget_wrapper *alloc_wrapper(
 
 	d->gadget.name = pcd_name;
 	d->pcd = otg_dev->pcd;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 30)
 	strcpy(d->gadget.dev.bus_id, "gadget");
 #else
 	d->gadget.dev.init_name = "gadget";
@@ -1293,7 +1298,7 @@ int pcd_init(
 #else
 		    struct platform_device *_dev
 #endif
-    )
+)
 {
 #ifdef LM_INTERFACE
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
@@ -1364,7 +1369,7 @@ void pcd_remove(
 #else
 		       struct platform_device *_dev
 #endif
-    )
+)
 {
 #ifdef LM_INTERFACE
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
@@ -1437,7 +1442,6 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	DWC_DEBUGPL(DBG_ANY, "unregistered driver '%s'\n", driver->driver.name);
 	return 0;
 }
-
 EXPORT_SYMBOL(usb_gadget_unregister_driver);
 
 /*
@@ -1523,7 +1527,6 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	return 0;
 
 }
-
 EXPORT_SYMBOL(usb_gadget_probe_driver);
 
 #endif /* DWC_HOST_ONLY */

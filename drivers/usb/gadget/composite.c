@@ -38,6 +38,7 @@
 
 /* big enough to hold our biggest descriptor */
 #define USB_BUFSIZ	1024
+#define PRE_CONFIG_CURRENT 100
 
 #ifdef CONFIG_USB_LPM
 #define USB_DEVICE_CAPABILITY_20_EXTENSION	0x02
@@ -1383,6 +1384,18 @@ composite_resume(struct usb_gadget *gadget)
 	cdev->suspended = 0;
 }
 
+static void
+composite_reset(struct usb_gadget *gadget)
+{
+	struct usb_composite_dev	*cdev = get_gadget_data(gadget);
+
+	DBG(cdev, "reset\n");
+	usb_gadget_vbus_draw(gadget, PRE_CONFIG_CURRENT);
+
+	if (composite->reset)
+		composite->reset(cdev);
+}
+
 /*-------------------------------------------------------------------------*/
 
 static struct usb_gadget_driver composite_driver = {
@@ -1395,7 +1408,7 @@ static struct usb_gadget_driver composite_driver = {
 
 	.suspend	= composite_suspend,
 	.resume		= composite_resume,
-
+	.reset		= composite_reset,
 	.driver	= {
 		.owner		= THIS_MODULE,
 	},
