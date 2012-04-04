@@ -247,12 +247,16 @@ static cVoid chal_caph_dma_rheaB0_set_ddrfifo_status(CHAL_HANDLE handle,
 		if ((1UL << index) & channel) {
 			/* found the channel we are looking for, Set the
 			   DDR fifo status */
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
+
 			/* mark to preserve HW_RDY bits */
-			cr = CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_MASK |
+			cr |= CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_MASK |
 			    CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_HIGH_MASK;
 			if (status == CAPH_READY_NONE) {
 				/* set Reset bit */
-			cr |=
+				cr |=
 			CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
 				BRCM_WRITE_REG_IDX(base,
 						   CPH_AADMAC_CH1_AADMAC_SR_1,
@@ -261,8 +265,15 @@ static cVoid chal_caph_dma_rheaB0_set_ddrfifo_status(CHAL_HANDLE handle,
 						   cr);
 
 				/* clear Reset bit */
-			cr = CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_MASK |
-			CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_HIGH_MASK;
+				cr = BRCM_READ_REG_IDX(base,
+					CPH_AADMAC_CH1_AADMAC_SR_1,
+					(index*CHAL_CAPH_DMA_CH_REG_SIZE));
+				cr &=
+			~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
+				cr |=
+			CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_MASK
+			| CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_HIGH_MASK;
+
 				BRCM_WRITE_REG_IDX(base,
 						   CPH_AADMAC_CH1_AADMAC_SR_1,
 						   (index *
@@ -273,6 +284,7 @@ static cVoid chal_caph_dma_rheaB0_set_ddrfifo_status(CHAL_HANDLE handle,
 
 	/* cr already set to CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_MASK |
 			   CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_HIGH_MASK  */
+#if 0 /*no need to separate low and high writes*/
 			if (status & CAPH_READY_LOW) {
 				cr |=
 				    CAPH_READY_LOW <<
@@ -296,6 +308,15 @@ static cVoid chal_caph_dma_rheaB0_set_ddrfifo_status(CHAL_HANDLE handle,
 						    CHAL_CAPH_DMA_CH_REG_SIZE),
 						   cr);
 			}
+#else
+			cr |= (status <<
+			CPH_AADMAC_CH1_AADMAC_SR_1_CH1_SW_READY_LOW_SHIFT);
+			BRCM_WRITE_REG_IDX(base,
+					   CPH_AADMAC_CH1_AADMAC_SR_1,
+					   (index *
+					    CHAL_CAPH_DMA_CH_REG_SIZE),
+					   cr);
+#endif
 
 			break;
 		}
@@ -311,7 +332,7 @@ static cVoid chal_caph_dma_rheaB0_set_ddrfifo_status(CHAL_HANDLE handle,
 *			CAPH_DMA_CHANNEL_e channel,
 *			CAPH_DMA_CHNL_FIFO_STATUS_e status)
 *
-*  Description: set CAPH DMA ddr fifo status
+*  Description: clear CAPH DMA ddr fifo status
 *
 ****************************************************************************/
 static cVoid chal_caph_dma_rheaB0_clr_ddrfifo_status(CHAL_HANDLE handle,
@@ -321,9 +342,9 @@ static cVoid chal_caph_dma_rheaB0_clr_ddrfifo_status(CHAL_HANDLE handle,
 {
 	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
 	cUInt8 index;
-	cUInt32 sr = 0;
+	cUInt32 sr;
 
-	if (cpu_is_rhea_B0()) {
+	/*if (cpu_is_rhea_B0()) {*/
 
 		/*-- Rhea B0 --*/
 
@@ -344,7 +365,7 @@ static cVoid chal_caph_dma_rheaB0_clr_ddrfifo_status(CHAL_HANDLE handle,
 			break;
 		}
 	}
-
+#if 0 /*B0 code does the same thing*/
 	} else {
 
 		/*-- Rhea B1 --*/
@@ -382,7 +403,7 @@ static cVoid chal_caph_dma_rheaB0_clr_ddrfifo_status(CHAL_HANDLE handle,
 	}
 
 	}
-
+#endif
 	return;
 }
 
@@ -401,7 +422,10 @@ static cVoid chal_caph_dma_rheaB0_clr_channel_fifo(CHAL_HANDLE handle,
 	cUInt8 index;
 	cUInt32 cr;
 
-	if (cpu_is_rhea_B0()) {
+/*B1 version preserves HW_READY bits, but somehow it may cause crash under
+  stress (audio log enabled)
+*/
+	/*if (cpu_is_rhea_B0()) {*/
 
 		/*-- Rhea B0 --*/
 
@@ -442,44 +466,56 @@ static cVoid chal_caph_dma_rheaB0_clr_channel_fifo(CHAL_HANDLE handle,
 					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
 					   cr);
 		}
-
 	}
+#if 0
 	} else {
-
 		/*-- Rhea B1 --*/
 
-			/* Find the FIFOs we are looking for */
+		/* Find the FIFOs we are looking for */
 	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
 		if ((1UL << index) & channel) {
 			/* SW_RDY bits are cleared by
 			writing 0, then 1, and 0 to RST bit */
 			/* Clear Reset by writing 0
 			to FIFO_RST bits, while still preserving HW_RDY bits */
-			cr = CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_MASK |
-			    CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_HIGH_MASK;
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
+			cr &=
+			~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
+			cr |= CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_MASK
+			| CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_HIGH_MASK;
 			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
 					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
 					   cr);
 
 			/* Set Reset bit */
-			cr |=
-			    CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
+			cr |= CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_MASK |
+			   CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_HIGH_MASK |
+			   CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
 			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
 					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
 					   cr);
 
 			/* Clear Reset bit */
-			cr = CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_MASK |
-			    CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_HIGH_MASK;
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
+			cr &=
+			~CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_FIFO_RST_MASK;
+			cr |= CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_LOW_MASK |
+			CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_HIGH_MASK;
 			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
 					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
 					   cr);
 		}
 
 	}
-
 	}
-
+#endif
 	return;
 }
 

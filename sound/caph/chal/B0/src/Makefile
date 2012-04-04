@@ -28,7 +28,6 @@ obj-$(BUILD_CHAL) 	+= chal_caph_intc.o
 obj-$(BUILD_CHAL) 	+= chal_caph_dma.o
 obj-$(BUILD_CHAL) 	+= chal_caph_dma_rhea_B0.o
 obj-$(BUILD_CHAL) 	+= chal_caph_cfifo.o
-#obj-$(BUILD_CHAL) 	+= chal_caph_cfifo_rhea_B0.o
 obj-$(BUILD_CHAL) 	+= chal_caph_audioh_vout.o
 obj-$(BUILD_CHAL) 	+= chal_caph_audioh_vin.o
 obj-$(BUILD_CHAL) 	+= chal_caph_audioh_vibra.o
