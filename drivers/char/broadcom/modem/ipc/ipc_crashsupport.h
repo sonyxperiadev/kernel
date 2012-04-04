@@ -20,6 +20,12 @@ extern "C" {
 	extern int cp_crashed;
 	extern void abort(void);
 
+#if defined(CONFIG_BCM_AP_PANIC_ON_CPCRASH) && defined(CONFIG_SEC_DEBUG)
+extern void cp_abort(void);
+#endif
+
+extern int RpcDbgDumpHistoryLogging(int type, int level);
+
 #ifdef CONFIG_HAS_WAKELOCK
 	extern struct wake_lock ipc_wake_lock;
 #endif

@@ -295,8 +295,16 @@ void die(const char *str, struct pt_regs *regs, int err)
 	spin_unlock_irq(&die_lock);
 	oops_exit();
 
-	if (in_interrupt())
+	if (in_interrupt()) {
+#ifdef CONFIG_BCM_CPDUMP_INIRQ
+		/* CP crash APIs uses some function calls which should
+		 * be done in process context. So we manually clear
+		 * soft IRQs. This is for Broadcom use only */
+		current_thread_info()->preempt_count =
+			current_thread_info()->preempt_count & 0x11110011;
+#endif
 		panic("Fatal exception in interrupt");
+	}
 	if (panic_on_oops)
 		panic("Fatal exception");
 	if (ret != NOTIFY_STOP)

@@ -100,12 +100,6 @@ static void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump);
 static void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf,
 			    UInt32 inStrBufLen);
 
-#if defined(CONFIG_BCM_AP_PANIC_ON_CPCRASH) && defined(CONFIG_SEC_DEBUG)
-extern void cp_abort(void);
-#endif
-
-extern int RpcDbgDumpHistoryLogging(int type, int level);
-
 /*********************************************************************
 *
 *   Retrieve string from physical address
@@ -143,7 +137,6 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	char outString[512] = { 0 };
 	IPC_U32 *Dump;
 	void __iomem *DumpVAddr;
-
 
 	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice())
