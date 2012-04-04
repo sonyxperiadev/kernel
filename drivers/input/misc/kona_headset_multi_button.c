@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Copyright 2010 Broadcom Corporation.  All rights reserved.
 *
-*	@file	drivers/input/misc/brcm_headset.c
+*	@file	drivers/input/misc/kona_headset_multi_button.c
 *
 * Unless you and Broadcom execute a separate written software license agreement
 * governing use of this software, this software is licensed to you under the
@@ -22,6 +22,30 @@
  * to just disable this macro and try MIC BIAS configuraiton in Continuous
  * mode.
  */
+
+ /*
+  * Driver HW resource usage info:
+  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  * GPIO MODE
+  * GPIO  - Accessory insertion/removal detection.
+  *
+  * COMP2 - When an accessory is connected, this is used for the acccessory
+  *			type detection. ie. Headset/Headphone/Open Cable.
+  *
+  * COMP1 - If the connected accesory is a headset, configured to detect
+  *         button press.
+  *
+  * NON-GPIO MODE
+  * COMP2 - Accessory insertion detection.When an accessory is connected,
+  *			this is used for the acccessory type detection.
+  *			ie. Headset/Headphone/Open Cable.
+  *
+  * COMP2_INV - Used for Accessory removal detection.
+  *
+  * COMP1 - If the connected accesory is a headset, configured to detect
+  *         button press
+  */
+
 #define CONFIG_MIC_BIAS_PERIODIC
 
 #include <linux/kernel.h>
@@ -252,6 +276,8 @@ static CHAL_ACI_micbias_config_t aci_init_mic_bias = {
 /* Vref */
 static CHAL_ACI_vref_config_t aci_vref_config = {CHAL_ACI_VREF_OFF};
 
+static int __headset_hw_init_micbias_on(struct mic_t *p);
+static int __headset_hw_init_micbias_off(struct mic_t *p);
 static int __headset_hw_init (struct mic_t *mic);
 static void __handle_accessory_inserted (struct mic_t *p);
 static void __handle_accessory_removed (struct mic_t *p);
@@ -684,7 +710,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 	if (accessory_inserted == 1) {
 
 		/* Switch ON the MIC BIAS */
-		kona_mic_bias_on();
+		__headset_hw_init_micbias_on(p);
 
 		__handle_accessory_inserted(p);
 
@@ -710,8 +736,12 @@ static void accessory_detect_work_func(struct work_struct *work)
 
 		/* Switch OFF the MIC BIAS in case of Headphone */
 		if (p->hs_state == HEADPHONE)
-			kona_mic_bias_off();
+			__headset_hw_init_micbias_off(p);
 	}else {
+		/* Turn Off, MIC BIAS */
+		if ((p->hs_state == OPEN_CABLE) || (p->hs_state == HEADSET))
+			__headset_hw_init_micbias_off(p);
+
 		__handle_accessory_removed(p);
 
 		/* Disable comparator interrupts */
@@ -719,9 +749,6 @@ static void accessory_detect_work_func(struct work_struct *work)
 			CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
 			CHAL_ACI_BLOCK_COMP);
 
-		/* Turn Off, MIC BIAS */
-		if ((p->hs_state == OPEN_CABLE) || (p->hs_state == HEADSET))
-			kona_mic_bias_off();
 	}
 #ifdef CONFIG_HAS_WAKELOCK
 		wake_unlock(&p->accessory_wklock);
@@ -985,6 +1012,7 @@ static void __handle_accessory_inserted (struct mic_t *p)
 		/* Fall through to send the update to userland */
 	case HEADPHONE:
 
+		pr_debug("accessory_detect_work_func: Detected headphone\r\n");
 		/* Clear pending interrupts if any */
 		chal_aci_block_ctrl(p->aci_chal_hdl,	
 			CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
@@ -1003,7 +1031,8 @@ static void __handle_accessory_inserted (struct mic_t *p)
 #endif
 		break;
 	default:
-		pr_err("%s():Unknown accessory type %d \r\n",__func__, p->hs_state);
+		pr_err("%s():Unknown accessory type \
+			%d \r\n", __func__, p->hs_state);
 		break;
 	}
 
@@ -1295,6 +1324,172 @@ irqreturn_t comp2_inv_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static int __headset_hw_init_micbias_off(struct mic_t *p)
+{
+	if (p == NULL)
+		return -1;
+
+	/* First disable all the interrupts */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
+			    CHAL_ACI_BLOCK_COMP);
+
+	/* Clear pending interrupts if any */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+			    CHAL_ACI_BLOCK_COMP);
+
+	/* Configure the comparator 1 for button press */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
+			    CHAL_ACI_BLOCK_COMP1,
+			    &comp_values_for_button_press);
+
+	/* Configure the comparator 2 for accessory detection */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER, CHAL_ACI_BLOCK_COMP2,
+		&comp_values_for_type_det);
+	/*
+	 * Connect P_MIC_DATA_IN to P_MIC_OUT  and P_MIC_OUT to COMP2
+	 * Note that one API can do this.
+	 */
+	chal_aci_set_mic_route(p->aci_chal_hdl, CHAL_ACI_MIC_ROUTE_MIC);
+
+	/* Set the threshold value for button press */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+			    CHAL_ACI_BLOCK_COMP1, 600);
+
+	/* Set the threshold value for button press */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+			    CHAL_ACI_BLOCK_COMP2, 1900);
+
+	aci_vref_config.mode = CHAL_ACI_VREF_OFF;
+	chal_aci_block_ctrl(p->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_VREF,
+			    CHAL_ACI_BLOCK_GENERIC, &aci_vref_config);
+
+	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_OFF;
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+
+	/* Switch OFF Mic BIAS only if its not already OFF */
+	if (p->mic_bias_status == 1) {
+		kona_mic_bias_off();
+		p->mic_bias_status = 0;
+	}
+
+	return 0;
+}
+
+
+
+static int __headset_hw_init_micbias_on(struct mic_t *p)
+{
+	if (p == NULL)
+		return -1;
+/*
+ * IMPORTANT
+ *---------
+ * Configuring these AUDIOH MIC registers was required to get ACI interrupts
+ *for button press. Really not sure about the connection.
+ * But this logic was taken from the BLTS code and if this is not
+ *done then we were not getting the ACI interrupts for button press.
+ *
+ * Looks like if the Audio driver init happens this is not required, in
+ *case if Audio driver is not included in the build then this macro should
+ *be included to get headset working.
+ *
+ * Ideally if a macro is used to control brcm audio driver inclusion that does
+ * AUDIOH init, then we	 don't need another macro here, it can be something
+ *like #ifndef CONFING_BRCM_AUDIOH
+ *
+ */
+#ifdef CONFIG_HS_PERFORM_AUDIOH_SETTINGS
+	/* AUDIO settings */
+	writel(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_SEL_MIC1B_MIC2_MASK,
+	       KONA_AUDIOH_VA + AUDIOH_AUDIORX_VRX1_OFFSET);
+	writel(0x0, KONA_AUDIOH_VA + AUDIOH_AUDIORX_VRX2_OFFSET);
+	writel((AUDIOH_AUDIORX_VREF_AUDIORX_VREF_POWERCYCLE_MASK |
+		AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK),
+	       KONA_AUDIOH_VA + AUDIOH_AUDIORX_VREF_OFFSET);
+	writel((AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK |
+		AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK),
+	       KONA_AUDIOH_VA + AUDIOH_AUDIORX_VMIC_OFFSET);
+	writel(AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK,
+	       KONA_AUDIOH_VA + AUDIOH_AUDIORX_BIAS_OFFSET);
+#endif
+
+	/* First disable all the interrupts */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
+			    CHAL_ACI_BLOCK_COMP);
+
+	/* Clear pending interrupts if any */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+			    CHAL_ACI_BLOCK_COMP);
+
+	pr_debug("=== aci_interface_init: Interrupts disabled \r\n");
+
+	/* Turn ON only if its not already ON */
+	if (p->mic_bias_status == 0) {
+		kona_mic_bias_on();
+		pr_debug("=== __headset_hw_init_micbias_on:called kona_mic_bias_on\r\n");
+		p->mic_bias_status = 1;
+	}
+
+		aci_init_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
+		chal_aci_block_ctrl(p->aci_chal_hdl,
+			CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+			CHAL_ACI_BLOCK_GENERIC, &aci_init_mic_bias);
+
+	/* Configure comparator 1 for button press */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER, CHAL_ACI_BLOCK_COMP1,
+		&comp_values_for_button_press);
+
+	pr_debug("=== %s: ACI Block1 comprator1 configured \r\n", __func__);
+
+	/* Configure the comparator 2 for accessory detection */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER, CHAL_ACI_BLOCK_COMP2,
+		&comp_values_for_type_det);
+
+	pr_debug("=== %s: ACI Block2 comprator2 configured \r\n", __func__);
+
+	/*
+	 * Connect P_MIC_DATA_IN to P_MIC_OUT  and P_MIC_OUT to COMP2
+	 * Note that one API can do this.
+	 */
+	chal_aci_set_mic_route(p->aci_chal_hdl, CHAL_ACI_MIC_ROUTE_MIC);
+
+	pr_debug("=== %s: Configured MIC route \r\n", __func__);
+
+	/* Fast power up the Vref of ADC block */
+	/*
+	 * NOTE:
+	 * This chal call was failing becuase internally this call
+	 *was configuring AUDIOH registers as well. We have commmented
+	 *configuring AUDIOH reigsrs in CHAL and it works OK
+	 */
+	aci_vref_config.mode = CHAL_ACI_VREF_FAST_ON;
+	chal_aci_block_ctrl(p->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_VREF,
+			    CHAL_ACI_BLOCK_GENERIC, &aci_vref_config);
+
+	pr_debug("=== %s: Configured Vref and ADC \r\n", __func__);
+
+	/* Set the threshold value for accessory type detection */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+		CHAL_ACI_BLOCK_COMP2,
+		1900);
+
+	pr_debug("===%s Configured the threshold value for \
+				button press\r\n", __func__);
+	return 0;
+}
 
 static int __headset_hw_init (struct mic_t *p)
 {
@@ -1345,15 +1540,11 @@ static int __headset_hw_init (struct mic_t *p)
 		CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
 		CHAL_ACI_BLOCK_COMP);	
 
-	pr_debug ("=== __headset_hw_init: Interrupts disabled \r\n");
+	pr_debug("=== __headset_hw_init: Interrupts disabled \r\n");
 
 	/*
-	 * For GPIO based detection, disable the mic bias during boot.
 	 * For Non GPIO case, switch it ON permanantly
 	 */
-	if (p->headset_pd->gpio_for_accessory_detection == 1)
-		kona_mic_bias_off();
-	else
 		kona_mic_bias_on();
 
 	/*
@@ -1391,21 +1582,21 @@ static int __headset_hw_init (struct mic_t *p)
 		CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
 		CHAL_ACI_BLOCK_GENERIC, &aci_init_mic_bias);
 
-	pr_debug ("=== __headset_hw_init: MIC BIAS settings done \r\n");
+	pr_debug("=== __headset_hw_init: MIC BIAS settings done \r\n");
 
 	/* Configure comparator 1 for button press */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 		CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER, CHAL_ACI_BLOCK_COMP1,
 		&comp_values_for_button_press);
 
-	pr_debug ("=== __headset_hw_init: ACI Block1 comprator1 configured \r\n");
+	pr_debug("=== __headset_hw_init: ACI Block1 comprator1 configured \r\n");
 
 	/* Configure the comparator 2 for accessory detection */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 		CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER, CHAL_ACI_BLOCK_COMP2,
 		&comp_values_for_type_det);
 
-	pr_debug ("=== __headset_hw_init: ACI Block2 comprator2 configured \r\n");
+	pr_debug("=== __headset_hw_init: ACI Block2 comprator2 configured \r\n");
 
 	/* 
 	 * Connect P_MIC_DATA_IN to P_MIC_OUT  and P_MIC_OUT to COMP2
@@ -1421,7 +1612,7 @@ static int __headset_hw_init (struct mic_t *p)
 	 * for button press detection.
 	 */
 
-	pr_debug ("=== __headset_hw_init: Configured MIC route \r\n");
+	pr_debug("=== __headset_hw_init: Configured MIC route \r\n");
 
 	/* Fast power up the Vref of ADC block */
 	/*
@@ -1434,7 +1625,7 @@ static int __headset_hw_init (struct mic_t *p)
 	 chal_aci_block_ctrl(p->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_VREF,
 	 	CHAL_ACI_BLOCK_GENERIC, &aci_vref_config);
 
-	pr_debug ("=== __headset_hw_init: Configured Vref and ADC \r\n");
+	pr_debug("=== __headset_hw_init: Configured Vref and ADC \r\n");
 
 	/* Power down the MIC Bias and put in HIZ */ 
 	chal_aci_block_ctrl(p->aci_chal_hdl, 
@@ -1442,7 +1633,7 @@ static int __headset_hw_init (struct mic_t *p)
 		CHAL_ACI_BLOCK_GENERIC,
 		TRUE);
 
-	pr_debug ("=== __headset_hw_init: powered down MIC BIAS and put in High impedence state \r\n");
+	pr_debug("=== __headset_hw_init: powered down MIC BIAS and put in High impedence state \r\n");
 
 	/* Set the threshold value for button press */
 	/* 
@@ -1458,15 +1649,9 @@ static int __headset_hw_init (struct mic_t *p)
 		CHAL_ACI_BLOCK_COMP1,
 		600);
 
-	pr_debug ("=== __headset_hw_init: Configured the threshold value for button press\r\n");
+	pr_debug("=== __headset_hw_init: Configured the threshold value for button press\r\n");
 
 	/* Set the threshold value for accessory type detection */
-	if (p->headset_pd->gpio_for_accessory_detection == 1)  {
-		chal_aci_block_ctrl(p->aci_chal_hdl,
-				CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-				CHAL_ACI_BLOCK_COMP2,
-				1900);
-	} else {
 		/* COMP2 used for accessory insertion/removal detection */
 		chal_aci_block_ctrl(p->aci_chal_hdl,
 				CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
@@ -1477,9 +1662,8 @@ static int __headset_hw_init (struct mic_t *p)
 		comp2_level = chal_aci_block_read(p->aci_chal_hdl,
 				CHAL_ACI_BLOCK_COMP2,
 				CHAL_ACI_BLOCK_COMP_RAW);
-	}
 	
-	pr_debug ("=== __headset_hw_init: Configured the threshold value for type detection\r\n");
+	pr_debug("=== __headset_hw_init: Configured the threshold value for type detection\r\n");
  
 	return 0;
 }
@@ -1525,7 +1709,6 @@ static int headset_hw_init(struct mic_t *mic)
 	writel(0x100A00, KONA_HUB_CLK_VA + 0x104);
 	writel(0x40000100, KONA_HUB_CLK_VA + 0x124);
 #endif
-	__headset_hw_init (mic);
 
 	/* 
 	 * If the platform uses GPIO for insetion/removal detection configure
@@ -1566,8 +1749,11 @@ static int headset_hw_init(struct mic_t *mic)
 			return status;
 		}
 
+		__headset_hw_init_micbias_off(mic);
 		pr_info("headset_hw_init: gpio config done \r\n");
 	} else {
+
+		__headset_hw_init(mic);
 		pr_info("%s() - Platform uses COMP2 for accessory insertion and COMP2 INV for removal \r\n", __func__);
 		/* 
 		 * This platform does not have GPIO for accessory
@@ -1659,6 +1845,12 @@ static int __init hs_probe(struct platform_device *pdev)
 		irq_resource_num++;
 		pr_info("HS GPIO irq %d\n", mic->gpio_irq);
 	}
+
+	/*
+	 * Assume that mic bias is ON, so that while initialization we can
+	 * turn this OFF and put it in known state.
+	 */
+	mic->mic_bias_status = 1;
 
 	pr_info("%s() GPIO used for accessory insertion %d (1 - yes, 0 - no)",
 		__func__,  mic->headset_pd->gpio_for_accessory_detection);
