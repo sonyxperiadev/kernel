@@ -583,6 +583,9 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 };
 
 
+static struct bcmpmu_wd_setting bcm59039_wd_setting = {
+  .watchdog_timeout = 127,
+};
 
 
 static struct platform_device bcmpmu_audio_device = {
