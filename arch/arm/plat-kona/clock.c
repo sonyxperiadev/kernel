@@ -4893,6 +4893,36 @@ static int ccu_debug_get_freqid(void *data, u64 *val)
 
 DEFINE_SIMPLE_ATTRIBUTE(ccu_freqid_fops, ccu_debug_get_freqid, NULL, "%llu\n");
 
+static int ccu_debug_wr_en_get(void *data, u64 *val)
+{
+	struct clk *clock = data;
+	struct ccu_clk *ccu_clk;
+	BUG_ON(!clock);
+	ccu_clk = to_ccu_clk(clock);
+	*val = ccu_clk->write_access_en_count;
+	return 0;
+}
+
+static int ccu_debug_wr_en_set(void *data, u64 val)
+{
+	struct clk *clock = data;
+	struct ccu_clk *ccu_clk;
+
+	BUG_ON(!clock);
+	ccu_clk = to_ccu_clk(clock);
+
+	if (val)
+		ccu_write_access_enable(ccu_clk, true);
+	else
+		ccu_write_access_enable(ccu_clk, false);
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(ccu_wr_en_fops, ccu_debug_wr_en_get, ccu_debug_wr_en_set
+		, "%llu\n");
+
+
+
 static int ccu_debug_get_policy(void *data, u64 *val)
 {
 	struct clk *clock = data;
@@ -5548,10 +5578,11 @@ int __init clock_debug_init(void)
 
 int __init clock_debug_add_ccu(struct clk *c)
 {
+	#define DENT_COUNT 6
 	struct ccu_clk *ccu_clk;
-	struct dentry *dent_clock_list = 0, *dent_freqid = 0, *dent_policy = 0,
-	    *dent_volt_tbl = 0;
-	struct dentry *dent_count;
+	int i = 0;
+	struct dentry *dentry[DENT_COUNT] = {NULL};
+
 
 	BUG_ON(!dent_clk_root_dir);
 	ccu_clk = to_ccu_clk(c);
@@ -5560,39 +5591,47 @@ int __init clock_debug_add_ccu(struct clk *c)
 	if (!ccu_clk->dent_ccu_dir)
 		goto err;
 
-	dent_clock_list = debugfs_create_file("clock_list",
+	dentry[i] = debugfs_create_file("clock_list",
 					      S_IRUGO, ccu_clk->dent_ccu_dir, c,
 					      &ccu_clock_list_fops);
-	if (!dent_clock_list)
+	if (!dentry[i])
 		goto err;
 
-	dent_freqid = debugfs_create_file("freq_id", S_IRUGO,
+	dentry[++i] = debugfs_create_file("freq_id", S_IRUGO,
 					  ccu_clk->dent_ccu_dir, c,
 					  &ccu_freqid_fops);
-	if (!dent_freqid)
+	if (!dentry[i])
 		goto err;
 
-	dent_policy = debugfs_create_file("policy", S_IRUGO,
+	dentry[++i] = debugfs_create_file("policy", S_IRUGO,
 					  ccu_clk->dent_ccu_dir, c,
 					  &ccu_policy_fops);
-	if (!dent_policy)
+	if (!dentry[i])
 		goto err;
 
-	dent_count = debugfs_create_u32("use_cnt", S_IRUGO,
+	dentry[++i] = debugfs_create_u32("use_cnt", S_IRUGO,
 					ccu_clk->dent_ccu_dir, &c->use_cnt);
-	if (!dent_count)
+	if (!dentry[i])
 		goto err;
-	dent_volt_tbl = debugfs_create_file("volt_id_update",
+	dentry[++i] = debugfs_create_file("volt_id_update",
 					    (S_IWUSR | S_IRUSR),
 					    ccu_clk->dent_ccu_dir, c,
 					    &ccu_volt_tbl_update_fops);
-	if (!dent_volt_tbl)
+	if (!dentry[i])
+		goto err;
+
+	dentry[++i] = debugfs_create_file("wr_en", S_IWUSR|S_IRUSR,
+					  ccu_clk->dent_ccu_dir, c,
+					  &ccu_wr_en_fops);
+	if (!dentry[i])
 		goto err;
 
 	return 0;
 err:
+	for (i = 0; i < DENT_COUNT && dentry[i]; i++)
+		debugfs_remove(dentry[i]);
 	debugfs_remove(ccu_clk->dent_ccu_dir);
-	debugfs_remove(dent_clock_list);
+
 	return -ENOMEM;
 }
 
