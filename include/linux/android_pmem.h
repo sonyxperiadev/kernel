@@ -62,7 +62,8 @@ int get_pmem_user_addr(struct file *file, unsigned long *start,
 		       unsigned long *end);
 void put_pmem_file(struct file* file);
 void flush_pmem_file(struct file *file, unsigned long start, unsigned long len);
-
+void flush_pmem_process_file(struct file *file, void *virt_base,
+			     unsigned long offset);
 #else
 static inline int is_pmem_file(struct file *file) { return 0; }
 static inline int get_pmem_file(int fd, unsigned long *start,
@@ -73,6 +74,8 @@ static inline int get_pmem_user_addr(struct file *file, unsigned long *start,
 static inline void put_pmem_file(struct file* file) { return; }
 static inline void flush_pmem_file(struct file *file, unsigned long start,
 				   unsigned long len) { return; }
+void flush_pmem_process_file(struct file *file, void *virt_base,
+			     unsigned long offset) { return; }
 #endif
 
 #endif //_ANDROID_PPP_H_

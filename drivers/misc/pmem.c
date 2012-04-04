@@ -727,7 +727,7 @@ do_cache_op(unsigned long start, unsigned long end, int flags)
 	up_read(&mm->mmap_sem);
 }
 
-static void flush_pmem_process_file(struct file *file, void *virt_base,
+void flush_pmem_process_file(struct file *file, void *virt_base,
 			     unsigned long offset)
 {
 	struct pmem_data *data;
