@@ -971,7 +971,7 @@ static inline struct page *
 __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 {
 	struct free_area * area;
-	int current_order;
+	int current_order, real_order;
 	struct page *page;
 	int migratetype, i;
 
@@ -985,9 +985,24 @@ __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 			if (migratetype == MIGRATE_RESERVE)
 				break;
 
-			area = &(zone->free_area[current_order]);
-			if (list_empty(&area->free_list[migratetype]))
-				continue;
+			if (is_migrate_cma(migratetype)) {
+				if (current_order < (MAX_ORDER - 1))
+					continue; /* we looked at it already */
+
+				for (real_order = order;
+				     real_order < MAX_ORDER; real_order++) {
+					area = &(zone->free_area[real_order]);
+					if (!list_empty(&area->free_list[migratetype]))
+						break;
+				}
+				if (real_order == MAX_ORDER)
+					continue;
+			} else {
+				area = &(zone->free_area[current_order]);
+				real_order = current_order;
+				if (list_empty(&area->free_list[migratetype]))
+					continue;
+			}
 
 			page = list_entry(area->free_list[migratetype].next,
 					struct page, lru);
@@ -1006,7 +1021,7 @@ __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 			 * MIGRATE_CMA areas.
 			 */
 			if (!is_migrate_cma(migratetype) &&
-			    (unlikely(current_order >= pageblock_order / 2) ||
+			    (unlikely(real_order >= pageblock_order / 2) ||
 			     start_migratetype == MIGRATE_RECLAIMABLE ||
 			     page_group_by_mobility_disabled)) {
 				int pages;
@@ -1027,17 +1042,15 @@ __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 			rmv_page_order(page);
 
 			/* Take ownership for orders >= pageblock_order */
-			if (current_order >= pageblock_order &&
-			    !is_migrate_cma(migratetype))
-				change_pageblock_range(page, current_order,
+			if (!is_migrate_cma(migratetype) &&
+			    real_order >= pageblock_order)
+				change_pageblock_range(page, real_order,
 							start_migratetype);
 
-			expand(zone, page, order, current_order, area,
-			       is_migrate_cma(migratetype)
-			     ? migratetype : start_migratetype);
+			expand(zone, page, order, real_order, area, migratetype);
 
-			trace_mm_page_alloc_extfrag(page, order, current_order,
-				start_migratetype, migratetype);
+			trace_mm_page_alloc_extfrag(page, order, real_order,
+					start_migratetype, migratetype);
 
 			return page;
 		}
