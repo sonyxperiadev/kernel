@@ -43,6 +43,17 @@ static int vlt_tbl_init;
 static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x01, .val = 0x00, .mask = 0x01},
 	{.map = 0, .addr = 0x0c, .val = 0x1b, .mask = 0xFF},
+#if defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_STONE_EDN2X)
+	{.map = 0, .addr = 0x13, .val = 0x3d, .mask = 0xFF},
+	{.map = 0, .addr = 0x14, .val = 0x79, .mask = 0xFF},
+	{.map = 0, .addr = 0x15, .val = 0x20, .mask = 0xFF},
+#else
+	{.map = 0, .addr = 0x13, .val = 0x43, .mask = 0xFF},
+	{.map = 0, .addr = 0x14, .val = 0x7F, .mask = 0xFF},
+	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
+#endif /* CONFIG_MACH_RHEA_STONE */
+	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
+	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
 	{.map = 0, .addr = 0x40, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x41, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x42, .val = 0xFF, .mask = 0xFF},
@@ -86,14 +97,6 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x1C, .val = 0x13, .mask = 0xFF},
 	/*CMPCTRL12, Set bits 4, 1 for NTC Sync. Mode*/
 	{.map = 0, .addr = 0x1B, .val = 0x13, .mask = 0xFF},
-
-
-	{.map = 0, .addr = 0x13, .val = 0x43, .mask = 0xFF},
-	{.map = 0, .addr = 0x14, .val = 0x7F, .mask = 0xFF},
-	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
-	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
-	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
-
 
 #ifdef CONFIG_MACH_RHEA_STONE_EDN2X
 	{.map = 0, .addr = 0xD9, .val = 0x1A, .mask = 0xFF},
