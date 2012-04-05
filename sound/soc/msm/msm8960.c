@@ -491,9 +491,9 @@ static int msm8960_enable_codec_ext_clk(struct snd_soc_codec *codec, int enable,
 			if (clk_users == 0) {
 				pr_debug("%s: disabling MCLK. clk_users = %d\n",
 					 __func__, clk_users);
+				tabla_mclk_enable(codec, 0, dapm);
 				clk_disable(codec_clk);
 				clk_put(codec_clk);
-				tabla_mclk_enable(codec, 0, dapm);
 			}
 		} else {
 			pr_err("%s: Error releasing Tabla MCLK\n", __func__);
