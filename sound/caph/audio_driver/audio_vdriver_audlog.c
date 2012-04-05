@@ -258,36 +258,38 @@ Result_t AUDDRV_AudLog_Start(UInt32 log_stream,
 				log_stream, (uint) log_consumer);
 
 		return res;
-	}
-	/* check the capture point number is in reasonable range */
-	if ((log_capture_point <= 0) || (log_capture_point > 0x8000))
-		return RESULT_ERROR;
+	} else if (log_stream > 0 && log_stream <= 4) {
 
-	/* set up logging message consumer */
-	sLogInfo.log_consumer[log_stream - 1] = log_consumer;
+		/* check the capture point number is in reasonable range */
+		if ((log_capture_point <= 0) || (log_capture_point > 0x8000))
+			return RESULT_ERROR;
 
-	/* call init to check if need to open file and create task */
-	AUDDRV_AudLog_Init();
-	auddrv_log_state = AUDDRV_LOG_STATE_STARTED;
+		/* set up logging message consumer */
+		sLogInfo.log_consumer[log_stream - 1] = log_consumer;
 
-	/* check the stream number is between 1 and 4 */
-	/* start the stream logging captrue */
+		/* call init to check if need to open file and create task */
+		AUDDRV_AudLog_Init();
+		auddrv_log_state = AUDDRV_LOG_STATE_STARTED;
 
-	/* allocate memory for all the 4 streams as we read all the 4 streams
-	 * data in the AUDLOG_ProcessLogChannel() */
+		/* check the stream number is between 1 and 4 */
+		/* start the stream logging captrue */
 
-	loggingbuf = kmalloc(LOG_WB_SIZE, GFP_KERNEL); /* maxFrameSize */
-	if (loggingbuf == NULL) {
-		aError("AUDDRV_AudLog_Start : not able to allocate memory for");
-		aError("the logging data\n");
-		return RESULT_LOW_MEMORY;
-	}
+		/* allocate memory for all the 4 streams as we read all the
+		* 4 streams data in the AUDLOG_ProcessLogChannel() */
 
-	AUDIO_MODEM(res = CSL_LOG_Start(log_stream, log_capture_point);)
+		loggingbuf = kmalloc(LOG_WB_SIZE, GFP_KERNEL); /*maxFrameSize*/
+		if (loggingbuf == NULL) {
+			aError("AUDDRV_AudLog_Start : not able to allocate");
+			aError("memory for the logging data\n");
+			return RESULT_LOW_MEMORY;
+		}
 
-	aTrace(LOG_AUDIO_DRIVER,
+		AUDIO_MODEM(res = CSL_LOG_Start(log_stream, log_capture_point);)
+
+		aTrace(LOG_AUDIO_DRIVER,
 			    "===> Start_Log stream %ld log_consumer %d===>\r\n",
 			    log_stream, (uint) log_consumer);
+	}
 	return res;
 }
 

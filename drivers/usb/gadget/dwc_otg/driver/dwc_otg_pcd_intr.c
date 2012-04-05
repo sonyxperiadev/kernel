@@ -44,6 +44,7 @@ extern void complete_xiso_ep(dwc_otg_pcd_ep_t *ep);
 /*#define PRINT_CFI_DMA_DESCS*/
 
 #define DEBUG_EP0
+static inline void ep0_do_stall(dwc_otg_pcd_t *pcd, const int err_val);
 
 /**
  * This function updates OTG.
@@ -788,6 +789,7 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	int i = 0;
 	gintsts_data_t gintsts;
 	pcgcctl_data_t power = {.d32 = 0 };
+	int ret = 0;
 
 #ifdef CONFIG_USB_OTG_UTILS
 	if (core_if->xceiver->set_suspend &&
@@ -935,6 +937,11 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	gintsts.b.usbreset = 1;
 	dwc_write_reg32(&core_if->core_global_regs->gintsts, gintsts.d32);
 
+	DWC_SPINUNLOCK(pcd->lock);
+	ret = pcd->fops->reset(pcd);
+	DWC_SPINLOCK(pcd->lock);
+	if (ret < 0)
+		ep0_do_stall(pcd, ret);
 	return 1;
 }
 

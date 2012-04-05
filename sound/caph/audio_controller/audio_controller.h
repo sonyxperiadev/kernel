@@ -333,7 +333,8 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 *
 *	@return		none
 ****************************************************************************/
-void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode);
+void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode,
+					unsigned int arg_pathID);
 #endif
 
 /**

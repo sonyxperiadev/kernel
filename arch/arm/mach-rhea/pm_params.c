@@ -363,7 +363,7 @@ static const u32 a9_freq_list[A9_FREQ_MAX] = {
 };
 
 
-int __init pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
+int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 {
 #define RATE_ADJ 10
 	struct clk *a9_pll_chnl1;

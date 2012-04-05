@@ -99,8 +99,14 @@ typedef enum {
 	/* for internal use */
 	INTERFACE_CAPI2 = INTERFACE_START,
 
+	/* for PMU */
+	INTERFACE_PMU,
+
+	/* for audio */
+	INTERFACE_AUDIO,
+
 	/* for packet data */
-	INTERFACE_PACKET = INTERFACE_RPC_TOTAL,
+	INTERFACE_PACKET,
 
 	/* for csd data */
 	INTERFACE_CSD,

@@ -40,20 +40,9 @@
 #define PMU_DEVICE_I2C_BUSNO 2
 static int vlt_tbl_init;
 
-static struct bcmpmu_rw_data register_init_data[] = {
+static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0x01, .val = 0x00, .mask = 0x01},
 	{.map = 0, .addr = 0x0c, .val = 0x1b, .mask = 0xFF},
-#if defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_STONE_EDN2X)
-	{.map = 0, .addr = 0x13, .val = 0x3d, .mask = 0xFF},
-	{.map = 0, .addr = 0x14, .val = 0x79, .mask = 0xFF},
-	{.map = 0, .addr = 0x15, .val = 0x20, .mask = 0xFF},
-#else
-	{.map = 0, .addr = 0x13, .val = 0x43, .mask = 0xFF},
-	{.map = 0, .addr = 0x14, .val = 0x7F, .mask = 0xFF},
-	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
-#endif /* CONFIG_MACH_RHEA_STONE */
-	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
-	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
 	{.map = 0, .addr = 0x40, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x41, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x42, .val = 0xFF, .mask = 0xFF},
@@ -68,9 +57,9 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	* temp workaround for LDOs, to be revisited once final
 		OTP value available
 	*/
-	{.map = 0, .addr = 0xB1, .val = 0x4B, .mask = 0xFF},
+	{.map = 0, .addr = 0xB1, .val = 0x4D, .mask = 0xFF},	// HVLDO1CTRL, VDD_AUD_2.9V.
 	{.map = 0, .addr = 0xB2, .val = 0x04, .mask = 0xFF},
-	{.map = 0, .addr = 0xB3, .val = 0x25, .mask = 0xFF},
+	{.map = 0, .addr = 0xB3, .val = 0x23, .mask = 0xFF},	// RFLDOCTRL, VRF_2.7V.
 	{.map = 0, .addr = 0xB4, .val = 0x27, .mask = 0xFF},
 	{.map = 0, .addr = 0xB5, .val = 0x05, .mask = 0xFF},
 	{.map = 0, .addr = 0xB6, .val = 0x07, .mask = 0xFF},
@@ -78,6 +67,25 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0xB8, .val = 0x06, .mask = 0xFF},
 	{.map = 0, .addr = 0xB9, .val = 0x07, .mask = 0xFF},
 	{.map = 0, .addr = 0xBD, .val = 0x21, .mask = 0xFF},
+	
+	{.map = 0, .addr = 0xC1, .val = 0x04, .mask = 0xFF},
+	{.map = 0, .addr = 0xAD, .val = 0x11, .mask = 0xFF},
+	{.map = 0, .addr = 0x0B, .val = 0x02, .mask = 0xFF},
+	{.map = 0, .addr = 0x1B, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0x1C, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0x0A, .val = 0x0E, .mask = 0xFF},
+	{.map = 0, .addr = 0xA0, .val = 0x01, .mask = 0xFF},
+	{.map = 0, .addr = 0xA2, .val = 0x01, .mask = 0xFF},
+	{.map = 0, .addr = 0x13, .val = 0x43, .mask = 0xFF},
+	{.map = 0, .addr = 0x14, .val = 0x7F, .mask = 0xFF},
+	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
+	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
+	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},          
+
+    {.map = 0, .addr = 0x0C, .val = 0x64, .mask = 0xFF}, //  Smart Reset Change as suggested by Ismael
+    {.map = 0, .addr = 0x0D, .val = 0x6D, .mask = 0xFF},
+    {.map = 0, .addr = 0x0E, .val = 0x41, .mask = 0xFF},
+    {.map = 0, .addr = 0x05, .val = 0xB6, .mask = 0xFF},
 
 	/*Init SDSR NM, NM2 and LPM voltages to 1.2V
 	*/
@@ -98,55 +106,49 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	/*CMPCTRL12, Set bits 4, 1 for NTC Sync. Mode*/
 	{.map = 0, .addr = 0x1B, .val = 0x13, .mask = 0xFF},
 
-#ifdef CONFIG_MACH_RHEA_STONE_EDN2X
-	{.map = 0, .addr = 0xD9, .val = 0x1A, .mask = 0xFF},
-#else
-	/*Init ASR LPM to 2.9V - for Rhea EDN10 & EDN00 and 1.8V for EDN2x
-	*/
-	{.map = 0, .addr = 0xD9, .val = 0x1F, .mask = 0xFF},
 	/*Init IOSR NM2 and LPM voltages to 1.8V
 	*/
 	{.map = 0, .addr = 0xC9, .val = 0x1A, .mask = 0xFF},
 	{.map = 0, .addr = 0xCA, .val = 0x1A, .mask = 0xFF},
-#endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
-};
+
+};                                                    
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
 	/*
 	* This table is hardware dependent and need to get from platform team
 	*/
-	/*
-	* adc temp
-	*/
-	{932, 233},			/* -40 C */
-	{900, 238},			/* -35 C */
-	{860, 243},			/* -30 C */
-	{816, 248},			/* -25 C */
-	{760, 253},			/* -20 C */
-	{704, 258},			/* -15 C */
-	{636, 263},			/* -10 C */
-	{568, 268},			/* -5 C */
-	{500, 273},			/* 0 C */
-	{440, 278},			/* 5 C */
-	{376, 283},			/* 10 C */
-	{324, 288},			/* 15 C */
-	{272, 293},			/* 20 C */
-	{228, 298},			/* 25 C */
-	{192, 303},			/* 30 C */
-	{160, 308},			/* 35 C */
-	{132, 313},			/* 40 C */
-	{112, 318},			/* 45 C */
-	{92, 323},			/* 50 C */
-	{76, 328},			/* 55 C */
-	{64, 333},			/* 60 C */
-	{52, 338},			/* 65 C */
-	{44, 343},			/* 70 C */
-	{36, 348},			/* 75 C */
-	{32, 353},			/* 80 C */
-	{28, 358},			/* 85 C */
-	{24, 363},			/* 90 C */
-	{20, 368},			/* 95 C */
-	{16, 373},			/* 100 C */
+  /*
+   * { adc readings 10-bits,  temperature in degree K }
+   */
+  {932, 233},    /* -40 C */
+  {900, 238},    /* -35 C */
+  {860, 243},    /* -30 C */
+  {816, 248},    /* -25 C */
+  {760, 253},    /* -20 C */
+  {704, 258},    /* -15 C */
+  {636, 263},    /* -10 C */
+  {568, 268},    /* -5 C */
+  {500, 273},    /* 0 C */
+  {440, 278},    /* 5 C */
+  {376, 283},    /* 10 C */
+  {324, 288},    /* 15 C */
+  {272, 293},    /* 20 C */
+  {228, 298},    /* 25 C */
+  {192, 303},    /* 30 C */
+  {160, 308},    /* 35 C */
+  {132, 313},    /* 40 C */
+  {112, 318},    /* 45 C */
+  {92, 323},     /* 50 C */
+  {76, 328},     /* 55 C */
+  {64, 333},     /* 60 C */
+  {52, 338},     /* 65 C */
+  {44, 343},     /* 70 C */
+  {36, 348},     /* 75 C */
+  {32, 353},     /* 80 C */
+  {28, 358},     /* 85 C */
+  {24, 363},     /* 90 C */
+  {20, 368},     /* 95 C */
+  {16, 373},     /* 100 C */
 };
 
 __weak struct regulator_consumer_supply rf_supply[] = {
@@ -157,8 +159,7 @@ static struct regulator_init_data bcm59039_rfldo_data = {
 			.name = "rfldo",
 			.min_uV = 1300000,
 			.max_uV = 3300000,
-			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
-			REGULATOR_CHANGE_VOLTAGE,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(rf_supply),
@@ -176,7 +177,7 @@ static struct regulator_init_data bcm59039_camldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(cam_supply),
 	.consumer_supplies = cam_supply,
@@ -194,7 +195,7 @@ static struct regulator_init_data bcm59039_hv1ldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 1,	// VDD_AUD_2.9V
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv1_supply),
 	.consumer_supplies = hv1_supply,
@@ -217,8 +218,7 @@ static struct regulator_init_data bcm59039_hv2ldo_data = {
 };
 
 __weak struct regulator_consumer_supply hv3_supply[] = {
-	{.supply = "hv3"},
-	{.supply = "dummy"}, /* Overridden in board file */
+	{.supply = "vmmc"},
 };
 static struct regulator_init_data bcm59039_hv3ldo_data = {
 	.constraints = {
@@ -227,7 +227,7 @@ static struct regulator_init_data bcm59039_hv3ldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 0,
+			.always_on = 0,	// VDD_SDIO_3.0V for T-flash
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv3_supply),
 	.consumer_supplies = hv3_supply,
@@ -236,8 +236,6 @@ static struct regulator_init_data bcm59039_hv3ldo_data = {
 __weak struct regulator_consumer_supply hv4_supply[] = {
 	{.supply = "hv4"},
 	{.supply = "2v9_vibra"},
-	{.supply = "dummy"}, /* Add a dummy variable to ensure we can use an array of 3 in rhea_ray.
-		  A hack at best to ensure we redefine the supply in board file. */
 };
 static struct regulator_init_data bcm59039_hv4ldo_data = {
 	.constraints = {
@@ -245,9 +243,9 @@ static struct regulator_init_data bcm59039_hv4ldo_data = {
 			.min_uV = 1300000,
 			.max_uV = 3300000,
 			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 0,
-		},
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 0,	// Vibrator
+			},
 	.num_consumer_supplies = ARRAY_SIZE(hv4_supply),
 	.consumer_supplies = hv4_supply,
 };
@@ -262,14 +260,14 @@ static struct regulator_init_data bcm59039_hv5ldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 1,	// VLCD_3.0
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv5_supply),
 	.consumer_supplies = hv5_supply,
 };
 
 __weak struct regulator_consumer_supply hv6_supply[] = {
-	{.supply = "vdd_sdxc"},
+	{.supply = "vdd_sdio"},
 };
 static struct regulator_init_data bcm59039_hv6ldo_data = {
 	.constraints = {
@@ -278,7 +276,7 @@ static struct regulator_init_data bcm59039_hv6ldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 1,	// VDD_SDXC(BB_SDIO)
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv6_supply),
 	.consumer_supplies = hv6_supply,
@@ -294,7 +292,7 @@ static struct regulator_init_data bcm59039_hv7ldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,	// NC
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv7_supply),
 	.consumer_supplies = hv7_supply,
@@ -310,7 +308,7 @@ static struct regulator_init_data bcm59039_hv8ldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 1,	// VDD_SENSOR_3.0V
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv8_supply),
 	.consumer_supplies = hv8_supply,
@@ -325,8 +323,9 @@ static struct regulator_init_data bcm59039_hv9ldo_data = {
 			.min_uV = 1300000,
 			.max_uV = 3300000,
 			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
+			REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 0,	// VCAM_IO_1.8V
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv9_supply),
 	.consumer_supplies = hv9_supply,
@@ -343,8 +342,7 @@ static struct regulator_init_data bcm59039_hv10ldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-
-			},
+			},	// VDD_KEY_LED_3.3V
 	.num_consumer_supplies = ARRAY_SIZE(hv10_supply),
 	.consumer_supplies = hv10_supply,
 };
@@ -363,7 +361,7 @@ static struct regulator_init_data bcm59039_simldo_data = {
 is not detected by baseband if SIMLDO is disabled. As a temp. workaround
 we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
-			.always_on = 1,
+           .always_on = 1,
 #endif
 
 			},
@@ -427,9 +425,7 @@ static struct regulator_init_data bcm59039_iosr_nm_data = {
 			.max_uV = 1800000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-#ifndef CONFIG_MACH_RHEA_STONE_EDN2X
 			.always_on = 1,
-#endif
 			},
 	.num_consumer_supplies = ARRAY_SIZE(iosr_nm_supply),
 	.consumer_supplies = iosr_nm_supply,
@@ -444,9 +440,7 @@ static struct regulator_init_data bcm59039_iosr_nm2_data = {
 			.min_uV = 700000,
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
-#ifndef CONFIG_MACH_RHEA_STONE_EDN2X
 			.always_on = 1,
-#endif
 			},
 	.num_consumer_supplies = ARRAY_SIZE(iosr_nm2_supply),
 	.consumer_supplies = iosr_nm2_supply,
@@ -460,9 +454,7 @@ static struct regulator_init_data bcm59039_iosr_lpm_data = {
 			.min_uV = 700000,
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
-#ifndef CONFIG_MACH_RHEA_STONE_EDN2X
 			.always_on = 1,
-#endif
 			},
 	.num_consumer_supplies = ARRAY_SIZE(iosr_lpm_supply),
 	.consumer_supplies = iosr_lpm_supply,
@@ -519,93 +511,42 @@ static struct regulator_init_data bcm59039_sdsr_lpm_data = {
 	.consumer_supplies = sdsr_lpm_supply,
 };
 
-struct regulator_consumer_supply asr_nm_supply[] = {
-	{.supply = "asr_nm_uc"},
-};
-
-static struct regulator_init_data bcm59039_asr_nm_data = {
-	.constraints = {
-			.name = "asr_nm",
-			.min_uV = 700000,
-			.max_uV = 2900000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
-			},
-	.num_consumer_supplies = ARRAY_SIZE(asr_nm_supply),
-	.consumer_supplies = asr_nm_supply,
-};
-
-struct regulator_consumer_supply asr_nm2_supply[] = {
-	{.supply = "asr_nm2_uc"},
-};
-
-static struct regulator_init_data bcm59039_asr_nm2_data = {
-	.constraints = {
-			.name = "asr_nm2",
-			.min_uV = 700000,
-			.max_uV = 2900000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
-			},
-	.num_consumer_supplies = ARRAY_SIZE(asr_nm2_supply),
-	.consumer_supplies = asr_nm2_supply,
-};
-
-struct regulator_consumer_supply asr_lpm_supply[] = {
-	{.supply = "asr_lpm_uc"},
-};
-
-static struct regulator_init_data bcm59039_asr_lpm_data = {
-	.constraints = {
-			.name = "asr_lpm",
-			.min_uV = 700000,
-			.max_uV = 2900000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
-			},
-	.num_consumer_supplies = ARRAY_SIZE(asr_lpm_supply),
-	.consumer_supplies = asr_lpm_supply,
-};
-
 struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_RFLDO] = {
 		BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data, 0x01, 0
 	},
 	[BCMPMU_REGULATOR_CAMLDO] = {
-		BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0x11, 0
+		BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
 	},
-	[BCMPMU_REGULATOR_HV1LDO] =	{
-		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x11, 0
+	[BCMPMU_REGULATOR_HV1LDO] =	{	// VDD_AUD_2.9V
+		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x11, BCMPMU_REGL_LPM_IN_DSM
 	},
-	[BCMPMU_REGULATOR_HV2LDO] =	{
-		BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x11, 0
+	[BCMPMU_REGULATOR_HV2LDO] =	{	// VDD_USB_3.3V
+		BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x11, BCMPMU_REGL_LPM_IN_DSM
 	},
-	[BCMPMU_REGULATOR_HV3LDO] = {
-		BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0x11, 0
+	[BCMPMU_REGULATOR_HV3LDO] = {		// VDD_SDIO_3.0V(T-flash)
+		BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
 	},
-	[BCMPMU_REGULATOR_HV4LDO] =	{
-		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, 0
+	[BCMPMU_REGULATOR_HV4LDO] =	{	// VDD_VIB_2.9V
+		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
 	},
-	[BCMPMU_REGULATOR_HV5LDO] = {
-		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x11, 0
+	[BCMPMU_REGULATOR_HV5LDO] = {		// VLCD_3.0V
+		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x01, 0
 	},
-	[BCMPMU_REGULATOR_HV6LDO] = {
-		BCMPMU_REGULATOR_HV6LDO, &bcm59039_hv6ldo_data, 0x11, 0
+	[BCMPMU_REGULATOR_HV6LDO] = {		// VDD_SDXC(BB-SDIO)
+		BCMPMU_REGULATOR_HV6LDO, &bcm59039_hv6ldo_data, 0x11, BCMPMU_REGL_LPM_IN_DSM
 	},
-	[BCMPMU_REGULATOR_HV7LDO] = {
-		BCMPMU_REGULATOR_HV7LDO, &bcm59039_hv7ldo_data, 0x22, 0
+	[BCMPMU_REGULATOR_HV7LDO] = {		// NC
+		BCMPMU_REGULATOR_HV7LDO, &bcm59039_hv7ldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
 	},
-	[BCMPMU_REGULATOR_HV8LDO] = {
-		BCMPMU_REGULATOR_HV8LDO, &bcm59039_hv8ldo_data, 0x11, 0
+	[BCMPMU_REGULATOR_HV8LDO] = {		// VDD_SENSOR_3.0V
+			BCMPMU_REGULATOR_HV8LDO, &bcm59039_hv8ldo_data, 0x11, BCMPMU_REGL_LPM_IN_DSM
 	},
-	[BCMPMU_REGULATOR_HV9LDO] = {
-		BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0x11, 0
+	[BCMPMU_REGULATOR_HV9LDO] = {		// VCAM_IO_1.8V
+				BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
 	},
-	[BCMPMU_REGULATOR_HV10LDO] = {
-		BCMPMU_REGULATOR_HV10LDO, &bcm59039_hv10ldo_data, 0xAA, 0
+	[BCMPMU_REGULATOR_HV10LDO] = {		// VDD_KEY_LED_3.3V
+				BCMPMU_REGULATOR_HV10LDO, &bcm59039_hv10ldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
 	},
 
 /*TODO: We observed that, on Rhearay HW, interrupt from GPIO expander
@@ -618,7 +559,7 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	},
 #else
 	[BCMPMU_REGULATOR_SIMLDO] = {
-		BCMPMU_REGULATOR_SIMLDO, &bcm59039_simldo_data, 0xAA,
+		BCMPMU_REGULATOR_SIMLDO, &bcm59039_simldo_data, 0x11,
 			BCMPMU_REGL_LPM_IN_DSM
 	},
 #endif
@@ -631,16 +572,9 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	[BCMPMU_REGULATOR_CSR_LPM] = {
 		BCMPMU_REGULATOR_CSR_LPM, &bcm59039_csr_lpm_data, 0xFF, 0
 	},
-#ifdef CONFIG_MACH_RHEA_STONE_EDN2X
-	/*EDN2x does not use IOSR*/
-	[BCMPMU_REGULATOR_IOSR_NM] = {
-		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0xAA, 0
-	},
-#else
 	[BCMPMU_REGULATOR_IOSR_NM] = {
 		BCMPMU_REGULATOR_IOSR_NM, &bcm59039_iosr_nm_data, 0x01, 0
 	},
-#endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
 	[BCMPMU_REGULATOR_IOSR_NM2] = {
 		BCMPMU_REGULATOR_IOSR_NM2, &bcm59039_iosr_nm2_data, 0xFF, 0
 	},
@@ -656,27 +590,10 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	[BCMPMU_REGULATOR_SDSR_LPM] = {
 		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0xFF, 0
 	},
-#ifdef CONFIG_MACH_RHEA_STONE_EDN2X
-	[BCMPMU_REGULATOR_ASR_NM] = {
-		BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x01, 0
-	},
-#else
-	[BCMPMU_REGULATOR_ASR_NM] = {
-		BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x11, 0
-	},
-#endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
-
-	[BCMPMU_REGULATOR_ASR_NM2] = {
-		BCMPMU_REGULATOR_ASR_NM2, &bcm59039_asr_nm2_data, 0xFF, 0
-	},
-	[BCMPMU_REGULATOR_ASR_LPM] = {
-		BCMPMU_REGULATOR_ASR_LPM, &bcm59039_asr_lpm_data, 0xFF, 0
-	},
 };
 
-
 static struct bcmpmu_wd_setting bcm59039_wd_setting = {
-	.watchdog_timeout = 127,
+  .watchdog_timeout = 127,
 };
 
 
@@ -715,9 +632,7 @@ static struct platform_device *bcmpmu_client_devices[] = {
 #endif
 };
 
-
-
-static int bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
+static int __init bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
 	pr_info("REG: pmu_init_platform_hw called\n");
 	return 0;
@@ -734,13 +649,13 @@ static struct bcmpmu_adc_setting adc_setting = {
 };
 
 static struct bcmpmu_charge_zone chrg_zone[] = {
-	{.tl = 268, .th = 333, .v = 3000, .fc = 10, .qc = 100},	/* Zone QC */
+ 	{.tl = 268, .th = 333, .v = 3000, .fc = 10, .qc = 100},	/* Zone QC */
 	{.tl = 268, .th = 272, .v = 4200, .fc = 100, .qc = 0},	/* Zone LL */
 	{.tl = 273, .th = 282, .v = 4200, .fc = 100, .qc = 0},	/* Zone L */
-	{.tl = 283, .th = 318, .v = 4200, .fc = 100, .qc = 0},	/* Zone N */
+ 	{.tl = 283, .th = 318, .v = 4200, .fc = 100, .qc = 0},	/* Zone N */
 	{.tl = 319, .th = 323, .v = 4200, .fc = 100, .qc = 0},	/* Zone H */
 	{.tl = 324, .th = 333, .v = 4200, .fc = 100, .qc = 0},	/* Zone HH */
-	{.tl = 268, .th = 333, .v = 0, .fc = 0, .qc = 0},	/* Zone OUT */
+	{.tl = 268, .th = 333, .v = 0, .fc = 0, .qc = 0},	/* Zone OUT */                         
 };
 
 static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
@@ -751,7 +666,7 @@ static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 	* volt capacity
 	*/
 	{4160, 100},
-	{4122, 95},
+    {4122, 95},
 	{4072, 90},
 	{4031, 85},
 	{3978, 80},
@@ -773,10 +688,11 @@ static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 	{3480, 6},
 	{3400, 4},
 	{3310, 2},
-	{3200, 0},
+	{3200, 0},                   
 };
 
 static int bcmpmu_init_platform_hw(struct bcmpmu *);
+
 
 static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 /* This table is default data, the real data from board file or device tree*/
@@ -863,6 +779,7 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 20 */
 };
 
+
 static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), },
 	.init = bcmpmu_init_platform_hw,
@@ -871,8 +788,6 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.i2c_adapter_id = PMU_DEVICE_I2C_BUSNO,
 	.i2c_pagesize = 256,
 	.init_data = &register_init_data[0],
-	/* # of registers defined in register_init_data.
-	   This value will come from device tree */
 	.init_max = ARRAY_SIZE(register_init_data),
 	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
@@ -899,10 +814,9 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.fg_tc_dn_lvl = 278,
 	.fg_tc_up_lvl = 288,
 	.fg_zone_settle_tm = 60,
-	.fg_zone_info = &fg_zone[0],
+	.fg_zone_info = &fg_zone[0],	
 	.bc = BCMPMU_BC_PMU_BC12,
 	.batt_model = "Unknown",
-	.cutoff_volt = 3300,
 	.cutoff_count_max = 3,
 	.hard_reset_en = -1,
 	.restart_en = -1,
@@ -910,7 +824,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.pok_shtdwn_dly = -1,
 	.pok_restart_dly = -1,
 	.pok_restart_deb = -1,
-	.pok_lock = 1, /*Keep ponkey locked by default*/
+	.cutoff_volt = 3300,
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {

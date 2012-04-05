@@ -275,6 +275,9 @@ enum {
 	/*Ref clk flags */
 	CLK_RATE_FIXED = (1 << 24),
 
+	/* PLL flags */
+	INIT_PLL_OFFSET_CFG = (1 << 28),
+
 };
 
 /*clk type*/
@@ -600,6 +603,8 @@ struct pll_clk {
 	u32 ndiv_frac_mask;
 	u32 ndiv_frac_shift;
 
+	u32 pll_offset_offset;
+	u32 pll_offset_cfg_val;
 	struct pll_cfg_ctrl_info *cfg_ctrl_info;
 };
 

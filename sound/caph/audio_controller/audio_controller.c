@@ -98,26 +98,26 @@ struct AUDCTRL_SPKR_Mapping_t {
 static struct AUDCTRL_SPKR_Mapping_t \
 SPKR_Mapping_Table[AUDIO_SINK_TOTAL_COUNT] = {
 	/* sink ino                                       Device ID */
-	{AUDIO_SINK_HANDSET, CSL_CAPH_DEV_EP},
-	{AUDIO_SINK_HEADSET, CSL_CAPH_DEV_HS},
-	{AUDIO_SINK_HANDSFREE, CSL_CAPH_DEV_IHF},
-	{AUDIO_SINK_BTM, CSL_CAPH_DEV_BT_SPKR},
-	{AUDIO_SINK_LOUDSPK, CSL_CAPH_DEV_IHF},
-	{AUDIO_SINK_TTY, CSL_CAPH_DEV_HS},
-	{AUDIO_SINK_HAC, CSL_CAPH_DEV_EP},
-	{AUDIO_SINK_USB, CSL_CAPH_DEV_MEMORY},
-	{AUDIO_SINK_BTS, CSL_CAPH_DEV_BT_SPKR},
-	{AUDIO_SINK_I2S, CSL_CAPH_DEV_FM_TX},
-	{AUDIO_SINK_VIBRA, CSL_CAPH_DEV_VIBRA},
-	{AUDIO_SINK_HEADPHONE, CSL_CAPH_DEV_HS},
-	{AUDIO_SINK_VALID_TOTAL, CSL_CAPH_DEV_NONE},
-	{AUDIO_SINK_MEM, CSL_CAPH_DEV_MEMORY},
-	{AUDIO_SINK_DSP, CSL_CAPH_DEV_DSP},
-	{AUDIO_SINK_RESERVED1, CSL_CAPH_DEV_NONE},
-	{AUDIO_SINK_RESERVED2, CSL_CAPH_DEV_NONE},
-	{AUDIO_SINK_RESERVED3, CSL_CAPH_DEV_NONE},
-	{AUDIO_SINK_RESERVED4, CSL_CAPH_DEV_NONE},
-	{AUDIO_SINK_UNDEFINED, CSL_CAPH_DEV_NONE}
+	[AUDIO_SINK_HANDSET] = {AUDIO_SINK_HANDSET, CSL_CAPH_DEV_EP},
+	[AUDIO_SINK_HEADSET] = {AUDIO_SINK_HEADSET, CSL_CAPH_DEV_HS},
+	[AUDIO_SINK_HANDSFREE] = {AUDIO_SINK_HANDSFREE, CSL_CAPH_DEV_IHF},
+	[AUDIO_SINK_BTM] = {AUDIO_SINK_BTM, CSL_CAPH_DEV_BT_SPKR},
+	[AUDIO_SINK_LOUDSPK] = {AUDIO_SINK_LOUDSPK, CSL_CAPH_DEV_IHF},
+	[AUDIO_SINK_TTY] = {AUDIO_SINK_TTY, CSL_CAPH_DEV_HS},
+	[AUDIO_SINK_HAC] = {AUDIO_SINK_HAC, CSL_CAPH_DEV_EP},
+	[AUDIO_SINK_USB] = {AUDIO_SINK_USB, CSL_CAPH_DEV_MEMORY},
+	[AUDIO_SINK_BTS] = {AUDIO_SINK_BTS, CSL_CAPH_DEV_BT_SPKR},
+	[AUDIO_SINK_I2S] = {AUDIO_SINK_I2S, CSL_CAPH_DEV_FM_TX},
+	[AUDIO_SINK_VIBRA] = {AUDIO_SINK_VIBRA, CSL_CAPH_DEV_VIBRA},
+	[AUDIO_SINK_HEADPHONE] = {AUDIO_SINK_HEADPHONE, CSL_CAPH_DEV_HS},
+	[AUDIO_SINK_VALID_TOTAL] = {AUDIO_SINK_VALID_TOTAL, CSL_CAPH_DEV_NONE},
+	[AUDIO_SINK_MEM] = {AUDIO_SINK_MEM, CSL_CAPH_DEV_MEMORY},
+	[AUDIO_SINK_DSP] = {AUDIO_SINK_DSP, CSL_CAPH_DEV_DSP},
+	[AUDIO_SINK_RESERVED1] = {AUDIO_SINK_RESERVED1, CSL_CAPH_DEV_NONE},
+	[AUDIO_SINK_RESERVED2] = {AUDIO_SINK_RESERVED2, CSL_CAPH_DEV_NONE},
+	[AUDIO_SINK_RESERVED3] = {AUDIO_SINK_RESERVED3, CSL_CAPH_DEV_NONE},
+	[AUDIO_SINK_RESERVED4] = {AUDIO_SINK_RESERVED4, CSL_CAPH_DEV_NONE},
+	[AUDIO_SINK_UNDEFINED] = {AUDIO_SINK_UNDEFINED, CSL_CAPH_DEV_NONE}
 };
 
 struct AUDIO_SOURCE_Mapping_t {
@@ -1168,7 +1168,8 @@ also need to support audio profile (and/or mode) set from user space code
 *	@return         none
 *
 **********************************************************************/
-void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode)
+void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode,
+					unsigned int arg_pathID)
 {
 	Boolean bClk = csl_caph_QueryHWClock();
 	SetAudioMode_Sp_t sp_struct;
@@ -1186,27 +1187,48 @@ void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode)
 	/*For SS Multicast to IHF+HS, mode will be always Speakerphone*/
 	currAudioMode_playback = AUDIO_MODE_SPEAKERPHONE;
 
+	sp_struct.app = AUDCTRL_GetAudioApp();
+	sp_struct.pathID = arg_pathID;
+	sp_struct.inHWlpbk = FALSE;
+
+	if (muteInPlay) {
+		sp_struct.mixInGain_mB = GAIN_NA;
+		sp_struct.mixInGainR_mB = GAIN_NA;
+	} else {
+		sp_struct.mixInGain_mB = GAIN_SYSPARM;
+		sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+	}
+	{
+		int i, j;
+
+		i = AUDCTRL_GetAudioApp();
+		j = AUDIO_MODE_SPEAKERPHONE;
+		if (user_vol_setting[i][j].valid == FALSE)
+			fillUserVolSetting(j, i);
+		sp_struct.mixOutGain_mB = user_vol_setting[i][j].L;
+		sp_struct.mixOutGainR_mB = user_vol_setting[i][j].R;
+	}
+
 	switch (currAudioMode) {
 
 	case AUDIO_MODE_HEADSET:
 	if (mode == AUDIO_MODE_SPEAKERPHONE) {
 		/*adding IHF reload HS param*/
-		AUDDRV_SetAudioMode_Multicast(
-			AUDIO_MODE_HEADSET, AUDCTRL_GetAudioApp()
-			);
+		sp_struct.mode = AUDIO_MODE_HEADSET;
+		AUDDRV_SetAudioMode_Multicast(sp_struct);
 
 		/*Load HS params from mode RESERVED*/
 		setExternAudioGain(AUDIO_MODE_RESERVE, AUDCTRL_GetAudioApp());
-
-		AUDDRV_SetAudioMode_Multicast(mode, AUDCTRL_GetAudioApp());
+		sp_struct.mode = mode;
+		AUDDRV_SetAudioMode_Multicast(sp_struct);
 	}
 	break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
 	if (mode == AUDIO_MODE_HEADSET) {
 		/*Adding HS load HS param*/
-		AUDDRV_SetAudioMode_Multicast(
-			mode, AUDCTRL_GetAudioApp());
+		sp_struct.mode = mode;
+		AUDDRV_SetAudioMode_Multicast(sp_struct);
 		/*Load HS params from mode RESERVED*/
 		setExternAudioGain(AUDIO_MODE_RESERVE, AUDCTRL_GetAudioApp());
 	}
@@ -1216,10 +1238,6 @@ void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode)
 	right now for any BT+IHF case we will not end up here*/
 	default:
 
-	sp_struct.mode = mode;
-	sp_struct.app = AUDCTRL_GetAudioApp();
-	sp_struct.pathID = 0;
-	sp_struct.inHWlpbk = FALSE;
 	AUDDRV_SetAudioMode_Speaker(sp_struct); /* need pathID */
 	currAudioMode_playback = mode;
 	break;
@@ -2012,7 +2030,7 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 		config.sink = speaker;
 		(void)csl_caph_hwctrl_AddPath(pathID, config);
 	}
-#ifndef CONFIG_ENABLE_SSMULTICAST
+
 	if (currAudioApp == AUDIO_APP_FM) {
 		if (isStIHF &&
 			currAudioMode_fm == AUDIO_MODE_SPEAKERPHONE &&
@@ -2029,13 +2047,15 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 				AUDCTRL_SetAudioMode_ForMusicPlayback(
 				AUDIO_MODE_SPEAKERPHONE, pathID, FALSE);
 		else
-			AUDCTRL_SetAudioMode_ForMusicPlayback(
+#ifndef CONFIG_ENABLE_SSMULTICAST
+				AUDCTRL_SetAudioMode_ForMusicPlayback(
 				GetAudioModeBySink(sink), pathID, FALSE);
-	}
 #else
-	AUDCTRL_SetAudioMode_ForMusicMulticast(
-		GetAudioModeBySink(sink));
+				/*Revisit for stIHF case*/
+				AUDCTRL_SetAudioMode_ForMusicMulticast(
+				GetAudioModeBySink(sink), pathID);
 #endif
+	}
 	return;
 
 }
@@ -2081,7 +2101,7 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 
 		sp_struct.mode = AUDIO_MODE_HEADSET;
 		sp_struct.app = AUDCTRL_GetAudioApp();
-		sp_struct.pathID = 0;
+		sp_struct.pathID = pathID;
 		sp_struct.inHWlpbk = FALSE;
 		AUDDRV_SetAudioMode_Speaker(sp_struct);
 		setExternAudioGain(AUDIO_MODE_HEADSET, AUDCTRL_GetAudioApp());

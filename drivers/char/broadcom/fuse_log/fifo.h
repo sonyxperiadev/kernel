@@ -26,7 +26,7 @@ typedef struct {
 	/* /< buffer size */
 	unsigned long		 buf_sz;
 	/* /< number of available bytes */
-/*	unsigned long		 n_avail;
+/*	unsigned long		 n_avail; */
 	/* /< index of first data byte */
 	unsigned long		 idx_read;
 	/* /< index of first free byte */

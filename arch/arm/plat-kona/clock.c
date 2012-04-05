@@ -4210,6 +4210,10 @@ static int pll_clk_init(struct clk *clk)
 		       CCU_REG_ADDR(pll_clk->ccu_clk,
 				    pll_clk->pll_ctrl_offset));
 	}
+	if (clk->flags & INIT_PLL_OFFSET_CFG) {
+		writel(pll_clk->pll_offset_cfg_val,
+		CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_offset_offset));
+	}
 	/* Disable write access */
 	ccu_write_access_enable(pll_clk->ccu_clk, false);
 

@@ -109,7 +109,7 @@ struct usb_function {
 	struct usb_descriptor_header	**hs_descriptors;
 
 	struct usb_configuration	*config;
-	
+
 	/* disabled is zero if the function is enabled */
 	int				disabled;
 
@@ -260,7 +260,7 @@ int usb_remove_config(struct usb_composite_dev *,
  * @strings: tables of strings, keyed by identifiers assigned during bind()
  *	and language IDs provided in control requests
  * @needs_serial: set to 1 if the gadget needs userspace to provide
- * 	a serial number.  If one is not provided, warning will be printed.
+ *	a serial number.  If one is not provided, warning will be printed.
  * @unbind: Reverses bind; called as a side effect of unregistering
  *	this driver.
  * @disconnect: optional driver disconnect method
@@ -295,6 +295,7 @@ struct usb_composite_driver {
 	/* global suspend hooks */
 	void			(*suspend)(struct usb_composite_dev *);
 	void			(*resume)(struct usb_composite_dev *);
+	void			(*reset)(struct usb_composite_dev *);
 };
 
 extern int usb_composite_probe(struct usb_composite_driver *driver,

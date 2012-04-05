@@ -184,7 +184,7 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 	uint32_t status;
 
 	/* get interrupt status */
-	status = bsc_read_intr_status((uint32_t) dev->virt_base);
+	status = bsc_read_intr_status((uint32_t)dev->virt_base);
 
 	/* got nothing, something is wrong */
 	if (!status) {
@@ -193,7 +193,7 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 	}
 
 	/* ack and clear the interrupts */
-	bsc_clear_intr_status((uint32_t) dev->virt_base, status);
+	bsc_clear_intr_status((uint32_t)dev->virt_base, status);
 
 	if (status & I2C_MM_HS_ISR_SES_DONE_MASK)
 		complete(&dev->ses_done);
@@ -229,7 +229,7 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 			status);
 
 		/* disable interrupts since the master will now reset */
-		bsc_disable_intr((uint32_t) dev->virt_base, 0xFF);
+		bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
 		queue_work(dev->reset_wq, &dev->reset_work);
 	}
 
@@ -261,7 +261,7 @@ static int bsc_wait_cmdbusy(struct bsc_i2c_dev *dev)
 
 	/* wait for CMDBUSY is ready  */
 	limit = (loops_per_jiffy * msecs_to_jiffies(CMDBUSY_DELAY));
-	while ((bsc_read_intr_status((uint32_t) dev->virt_base) &
+	while ((bsc_read_intr_status((uint32_t)dev->virt_base) &
 		I2C_MM_HS_ISR_CMDBUSY_MASK) && (time++ < limit))
 		cpu_relax();
 
@@ -284,34 +284,34 @@ static int bsc_send_cmd(struct bsc_i2c_dev *dev, BSC_CMD_t cmd)
 		return rc;
 
 	/* enable the session done (SES) interrupt */
-	bsc_enable_intr((uint32_t) dev->virt_base,
+	bsc_enable_intr((uint32_t)dev->virt_base,
 			I2C_MM_HS_IER_I2C_INT_EN_MASK);
 
 	/* mark as incomplete before sending the command */
 	INIT_COMPLETION(dev->ses_done);
 
 	/* send the command */
-	isl_bsc_send_cmd((uint32_t) dev->virt_base, cmd);
+	isl_bsc_send_cmd((uint32_t)dev->virt_base, cmd);
 
 	/*
 	 * Block waiting for the transaction to finish. When it's finished we'll
 	 *be signaled by the interrupt
 	 */
 	time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
-	bsc_disable_intr((uint32_t) dev->virt_base,
+	bsc_disable_intr((uint32_t)dev->virt_base,
 			 I2C_MM_HS_IER_I2C_INT_EN_MASK);
 	if (time_left == 0 || dev->err_flag == 1) {
 		dev_err(dev->device, "controller timed out\n");
 
 		/* clear command */
 		dev->err_flag = 0;
-		isl_bsc_send_cmd((uint32_t) dev->virt_base, BSC_CMD_NOACTION);
+		isl_bsc_send_cmd((uint32_t)dev->virt_base, BSC_CMD_NOACTION);
 
 		return -ETIMEDOUT;
 	}
 
 	/* clear command */
-	isl_bsc_send_cmd((uint32_t) dev->virt_base, BSC_CMD_NOACTION);
+	isl_bsc_send_cmd((uint32_t)dev->virt_base, BSC_CMD_NOACTION);
 
 	return 0;
 }
@@ -379,7 +379,7 @@ static int bsc_xfer_read_byte(struct bsc_i2c_dev *dev, unsigned int no_ack,
 	 * Now read the data from the BSC DATA register. Since BSC does not have
 	 *an RX FIFO, we can only read one byte at a time
 	 */
-	bsc_read_data((uint32_t) dev->virt_base, data, 1);
+	bsc_read_data((uint32_t)dev->virt_base, data, 1);
 
 	return 0;
 }
@@ -419,14 +419,14 @@ static unsigned int bsc_xfer_read_fifo_single(struct bsc_i2c_dev *dev,
 	unsigned long time_left;
 
 	/* enable the read complete interrupt */
-	bsc_enable_intr((uint32_t) dev->virt_base,
+	bsc_enable_intr((uint32_t)dev->virt_base,
 			I2C_MM_HS_IER_READ_COMPLETE_INT_MASK);
 
 	/* mark as incomplete before starting the RX FIFO */
 	INIT_COMPLETION(dev->rx_ready);
 
 	/* start the RX FIFO */
-	bsc_start_rx_fifo((uint32_t) dev->virt_base, last_byte_nak, len);
+	bsc_start_rx_fifo((uint32_t)dev->virt_base, last_byte_nak, len);
 	barrier();
 
 	/*
@@ -434,7 +434,7 @@ static unsigned int bsc_xfer_read_fifo_single(struct bsc_i2c_dev *dev,
 	 *we'll be signaled by the interrupt
 	 */
 	time_left = wait_for_completion_timeout(&dev->rx_ready, SES_TIMEOUT);
-	bsc_disable_intr((uint32_t) dev->virt_base,
+	bsc_disable_intr((uint32_t)dev->virt_base,
 			 I2C_MM_HS_IER_READ_COMPLETE_INT_MASK);
 	if (time_left == 0) {
 		dev_err(dev->device, "RX FIFO time out\n");
@@ -443,11 +443,11 @@ static unsigned int bsc_xfer_read_fifo_single(struct bsc_i2c_dev *dev,
 
 	BSC_DBG(dev, "*** read start ***\n");
 	for (i = 0; i < len; i++) {
-		buf[i] = bsc_read_from_rx_fifo((uint32_t) dev->virt_base);
+		buf[i] = bsc_read_from_rx_fifo((uint32_t)dev->virt_base);
 		BSC_DBG(dev, "reading %2.2X\n", buf[i]);
 
 		/* sanity check */
-		if (bsc_rx_fifo_is_empty((uint32_t) dev->virt_base)
+		if (bsc_rx_fifo_is_empty((uint32_t)dev->virt_base)
 		    && i != len - 1)
 			dev_err(dev->device, "RX FIFO error\n");
 	}
@@ -456,7 +456,7 @@ static unsigned int bsc_xfer_read_fifo_single(struct bsc_i2c_dev *dev,
 	return len;
 }
 
-static unsigned int bsc_xfer_read_fifo(struct bsc_i2c_dev *dev, uint8_t * buf,
+static unsigned int bsc_xfer_read_fifo(struct bsc_i2c_dev *dev, uint8_t *buf,
 				       unsigned int len)
 {
 	unsigned int i, rc, last_byte_nak = 0, bytes_read = 0;
@@ -518,21 +518,21 @@ static int bsc_xfer_write_byte(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 		return rc;
 
 	/* enable the session done (SES) interrupt */
-	bsc_enable_intr((uint32_t) dev->virt_base,
+	bsc_enable_intr((uint32_t)dev->virt_base,
 			I2C_MM_HS_IER_I2C_INT_EN_MASK);
 
 	/* mark as incomplete before sending the data */
 	INIT_COMPLETION(dev->ses_done);
 
 	/* send data */
-	bsc_write_data((uint32_t) dev->virt_base, data, 1);
+	bsc_write_data((uint32_t)dev->virt_base, data, 1);
 
 	/*
 	 * Block waiting for the transaction to finish. When it's finished we'll
 	 *be signaled by the interrupt
 	 */
 	time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
-	bsc_disable_intr((uint32_t) dev->virt_base,
+	bsc_disable_intr((uint32_t)dev->virt_base,
 			 I2C_MM_HS_IER_I2C_INT_EN_MASK);
 	if (time_left == 0 || dev->err_flag == 1) {
 		dev->err_flag = 0;
@@ -541,7 +541,7 @@ static int bsc_xfer_write_byte(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 	}
 
 	/* unexpected NAK */
-	if (!bsc_get_ack((uint32_t) dev->virt_base) && !nak_ok) {
+	if (!bsc_get_ack((uint32_t)dev->virt_base) && !nak_ok) {
 		BSC_DBG(dev, "unexpected NAK\n");
 		return -EREMOTEIO;
 	}
@@ -583,10 +583,10 @@ static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 		return rc;
 
 	/* enable TX FIFO */
-	bsc_set_tx_fifo((uint32_t) dev->virt_base, 1);
+	bsc_set_tx_fifo((uint32_t)dev->virt_base, 1);
 
 	/* enable the no ack and TX FIFO empty interrupt */
-	bsc_enable_intr((uint32_t) dev->virt_base,
+	bsc_enable_intr((uint32_t)dev->virt_base,
 			I2C_MM_HS_IER_FIFO_INT_EN_MASK |
 			I2C_MM_HS_IER_NOACK_EN_MASK);
 
@@ -594,7 +594,7 @@ static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 	INIT_COMPLETION(dev->tx_fifo_empty);
 
 	/* sending data to the TX FIFO */
-	bsc_write_data((uint32_t) dev->virt_base, buf, len);
+	bsc_write_data((uint32_t)dev->virt_base, buf, len);
 
 	/*
 	 * Block waiting for the transaction to finish. When it's finished
@@ -602,7 +602,7 @@ static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 	 */
 	time_left =
 	    wait_for_completion_timeout(&dev->tx_fifo_empty, SES_TIMEOUT);
-	bsc_disable_intr((uint32_t) dev->virt_base,
+	bsc_disable_intr((uint32_t)dev->virt_base,
 			 I2C_MM_HS_IER_FIFO_INT_EN_MASK |
 			 I2C_MM_HS_IER_NOACK_EN_MASK);
 	if (time_left == 0) {
@@ -616,7 +616,7 @@ static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 		return rc;
 
 	/* disable TX FIFO */
-	bsc_set_tx_fifo((uint32_t) dev->virt_base, 0);
+	bsc_set_tx_fifo((uint32_t)dev->virt_base, 0);
 
 	return len;
 }
@@ -783,7 +783,7 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 	}
 
 	/* check to make sure no slave replied to the master code by accident */
-	if (bsc_get_ack((uint32_t) dev->virt_base)) {
+	if (bsc_get_ack((uint32_t)dev->virt_base)) {
 		dev_err(dev->device,
 			"one of the slaves replied to the high-speed "
 			"master code unexpectedly\n");
@@ -796,7 +796,7 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 	 *master going into high-speed mode. We need to restore the BSC_TIM
 	 *value when the device switches back to fast speed
 	 */
-	dev->tim_val = bsc_get_tim((uint32_t) dev->virt_base);
+	dev->tim_val = bsc_get_tim((uint32_t)dev->virt_base);
 
 	/* configure the bsc clock to 26MHz for HS mode */
 	if (dev->bsc_clk) {
@@ -805,18 +805,18 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 		clk_set_rate(dev->bsc_clk, 26000000);
 		clk_enable(dev->bsc_clk);
 		dev_info(dev->device, "HS mode clock rate is set to %ld\n",
-			clk_get_rate(dev->bsc_clk));
+			 clk_get_rate(dev->bsc_clk));
 	}
 
 	/* Turn-off autosense and Tout interrupt for HS mode */
-	bsc_disable_intr((uint32_t) dev->virt_base,
+	bsc_disable_intr((uint32_t)dev->virt_base,
 			 I2C_MM_HS_IER_ERR_INT_EN_MASK);
-	bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
+	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
 	/* Disable the slew rate for high speed */
 	i2c_pin_cfg(adapter->nr, 0);
 	/* configure the bus into high-speed mode */
-	bsc_start_highspeed((uint32_t) dev->virt_base);
+	bsc_start_highspeed((uint32_t)dev->virt_base);
 	dev_info(dev->device, "Adapter is switched to HS mode\n");
 
 	return 0;
@@ -827,7 +827,7 @@ static void stop_high_speed_mode(struct i2c_adapter *adapter)
 	struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
 
 	/* Restore TIM register value */
-	bsc_set_tim((uint32_t) dev->virt_base, dev->tim_val);
+	bsc_set_tim((uint32_t)dev->virt_base, dev->tim_val);
 
 	/* Enable the slew rate if setting it back to FS mode */
 	i2c_pin_cfg(adapter->nr, 1);
@@ -838,7 +838,7 @@ static void stop_high_speed_mode(struct i2c_adapter *adapter)
 		clk_set_rate(dev->bsc_clk, 13000000);
 		clk_enable(dev->bsc_clk);
 	}
-	bsc_stop_highspeed((uint32_t) dev->virt_base);
+	bsc_stop_highspeed((uint32_t)dev->virt_base);
 }
 
 static void shutdown_high_speed_mode_adap(struct bsc_i2c_dev *dev)
@@ -850,7 +850,7 @@ static void shutdown_high_speed_mode_adap(struct bsc_i2c_dev *dev)
 	/* PMU HS mode: switch adapter to F/S */
 	stop_high_speed_mode(&dev->adapter);
 
-	bsc_set_autosense((uint32_t) dev->virt_base, 1, 1);
+	bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 	/* Send STOP command to PMU, needed in case of reboot */
 	rc = bsc_xfer_stop(&dev->adapter);
 	if (rc < 0)
@@ -859,7 +859,7 @@ static void shutdown_high_speed_mode_adap(struct bsc_i2c_dev *dev)
 		dev_info(dev->device,
 			 "STOP sent to PMU after switching to F/S mode\n");
 
-	bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
+	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 	mutex_unlock(&dev->dev_lock);
 }
 
@@ -880,8 +880,8 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 	if (d) {
 
 		client = i2c_verify_client(d);
-		pd = (struct i2c_slave_platform_data *)client->dev.
-		    platform_data;
+		pd = (struct i2c_slave_platform_data *)client->
+		    dev.platform_data;
 		if (pd) {
 			BSC_DBG(dev, "client addr=0x%x, speed=0x%x\n",
 				client->addr, pd->i2c_speed);
@@ -920,7 +920,7 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 	/* configure the adapter bus speed */
 	if (set_speed != dev->current_speed) {
 		/* HSTIM is calculated based on 26MHz source */
-		bsc_set_bus_speed((uint32_t) dev->virt_base,
+		bsc_set_bus_speed((uint32_t)dev->virt_base,
 				  gBusSpeedTable[set_speed]);
 		dev->current_speed = set_speed;
 	}
@@ -928,7 +928,7 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 	/* high-speed mode */
 	if (dev->high_speed_mode) {
 		/* Disable Timeout interrupts for HS mode */
-		bsc_disable_intr((uint32_t) dev->virt_base,
+		bsc_disable_intr((uint32_t)dev->virt_base,
 				 I2C_MM_HS_IER_ERR_INT_EN_MASK);
 
 		/*
@@ -936,10 +936,10 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 		 * for a long time. Need to turn off auto-sense for high-speed
 		 * mode
 		 */
-		bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
+		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 	} else {
 		/* Enable Timeout interrupts for F/S mode */
-		bsc_enable_intr((uint32_t) dev->virt_base,
+		bsc_enable_intr((uint32_t)dev->virt_base,
 				I2C_MM_HS_IER_ERR_INT_EN_MASK);
 
 		/* In case of the Keypad controller LM8325, the maximum timeout
@@ -948,9 +948,9 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 		 * errors. To overcome this problem we need ot enable autosense
 		 * with the timeout disabled */
 		if (pd && TIMEOUT_IS_VALID(pd) && !pd->autosense_timeout_enable)
-			bsc_set_autosense((uint32_t) dev->virt_base, 1, 0);
+			bsc_set_autosense((uint32_t)dev->virt_base, 1, 0);
 		else
-			bsc_set_autosense((uint32_t) dev->virt_base, 1, 1);
+			bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 	}
 }
 
@@ -995,7 +995,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 		 *during bootup & stay always in HS mode(PMU BSC)
 		 */
 	if (hw_cfg && !(hw_cfg->speed != BSC_BUS_SPEED_HS))
-		bsc_set_autosense((uint32_t) dev->virt_base, 1, 1);
+		bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 
 	/* send start command, if its not in HS mode */
 	if (!(dev->high_speed_mode && hw_cfg)) {
@@ -1085,7 +1085,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	if (dev->high_speed_mode && hw_cfg && !hw_cfg->is_pmu_i2c)
 		stop_high_speed_mode(adapter);
 	else
-		bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
+		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
 	bsc_disable_clk(dev);
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
@@ -1108,7 +1108,7 @@ hs_ret:
 	if (dev->high_speed_mode && hw_cfg && !hw_cfg->is_pmu_i2c)
 		stop_high_speed_mode(adapter);
 	else
-		bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
+		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
 err_ret:
 	bsc_disable_clk(dev);
@@ -1122,7 +1122,9 @@ err_ret:
 
 static u32 bsc_functionality(struct i2c_adapter *adap)
 {
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL |
+	return I2C_FUNC_I2C | (I2C_FUNC_SMBUS_EMUL &
+			       ~(I2C_FUNC_SMBUS_WRITE_BLOCK_DATA |
+				 I2C_FUNC_SMBUS_READ_BLOCK_DATA)) |
 	    I2C_FUNC_10BIT_ADDR | I2C_FUNC_PROTOCOL_MANGLING;
 }
 
@@ -1132,7 +1134,7 @@ static struct i2c_algorithm bsc_algo = {
 };
 
 static int
-proc_debug_write(struct file *file, const char __user * buffer,
+proc_debug_write(struct file *file, const char __user *buffer,
 		 unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1179,7 +1181,7 @@ proc_debug_read(char *buffer, char **start, off_t off, int count,
 }
 
 static int
-proc_reset_write(struct file *file, const char __user * buffer,
+proc_reset_write(struct file *file, const char __user *buffer,
 		 unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1203,7 +1205,7 @@ proc_reset_write(struct file *file, const char __user * buffer,
 
 	if (reset) {
 		/* disable all interrupts since the master will now reset */
-		bsc_disable_intr((uint32_t) dev->virt_base, 0xFF);
+		bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
 		queue_work(dev->reset_wq, &dev->reset_work);
 	}
 
@@ -1211,7 +1213,7 @@ proc_reset_write(struct file *file, const char __user * buffer,
 }
 
 static int
-proc_tx_fifo_write(struct file *file, const char __user * buffer,
+proc_tx_fifo_write(struct file *file, const char __user *buffer,
 		   unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1260,7 +1262,7 @@ proc_tx_fifo_read(char *buffer, char **start, off_t off, int count,
 }
 
 static int
-proc_rx_fifo_write(struct file *file, const char __user * buffer,
+proc_rx_fifo_write(struct file *file, const char __user *buffer,
 		   unsigned long count, void *data)
 {
 	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
@@ -1464,14 +1466,14 @@ static void i2c_master_reset(struct work_struct *work)
 	}
 
 	/* reset BSC controller */
-	bsc_reset((uint32_t) dev->virt_base);
+	bsc_reset((uint32_t)dev->virt_base);
 
 	/* clear all interrupts */
-	bsc_clear_intr_status((uint32_t) dev->virt_base, 0xFF);
+	bsc_clear_intr_status((uint32_t)dev->virt_base, 0xFF);
 
 	/* re-enable bus error (timeout) interrupt */
 	if (!dev->high_speed_mode)
-		bsc_enable_intr((uint32_t) dev->virt_base,
+		bsc_enable_intr((uint32_t)dev->virt_base,
 				I2C_MM_HS_IER_ERR_INT_EN_MASK);
 
 	bsc_disable_clk(dev);
@@ -1599,7 +1601,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	}
 
 	/* high speed - For any speed defined between BSC_BUS_SPEED_HS
-     * & BSC_BUS_SPEED_HS_FPGA */
+	 * & BSC_BUS_SPEED_HS_FPGA */
 	if (dev->speed >= BSC_BUS_SPEED_HS
 	    && dev->speed <= BSC_BUS_SPEED_HS_FPGA)
 		dev->high_speed_mode = 1;
@@ -1628,20 +1630,19 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	 * Configure BSC timing registers
 	 * HS timing is calculated based on 26MHz source
 	 */
-	bsc_set_bus_speed((uint32_t) dev->virt_base,
-			  gBusSpeedTable[dev->speed]);
+	bsc_set_bus_speed((uint32_t)dev->virt_base, gBusSpeedTable[dev->speed]);
 
 	/* curent speed configured */
 	dev->current_speed = dev->speed;
 
 	/* init I2C controller */
-	isl_bsc_init((uint32_t) dev->virt_base);
+	isl_bsc_init((uint32_t)dev->virt_base);
 
 	/* disable and clear interrupts */
-	bsc_disable_intr((uint32_t) dev->virt_base, 0xFF);
-	bsc_clear_intr_status((uint32_t) dev->virt_base, 0xFF);
+	bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
+	bsc_clear_intr_status((uint32_t)dev->virt_base, 0xFF);
 	/* keep clock stretching disabled during probe */
-	bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
+	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
 	/* high-speed mode */
 	if (dev->high_speed_mode) {
@@ -1714,9 +1715,9 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 #endif
 		/* Enable autosense, will be turned off on successful
 		 * transition to HS */
-		bsc_enable_intr((uint32_t) dev->virt_base,
+		bsc_enable_intr((uint32_t)dev->virt_base,
 				I2C_MM_HS_IER_ERR_INT_EN_MASK);
-		bsc_set_autosense((uint32_t) dev->virt_base, 1, 1);
+		bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 		/* send start command */
 		if (bsc_xfer_start(adap) < 0) {
 			dev_err(dev->device, "start command failed\n");
@@ -1750,8 +1751,8 @@ err_destroy_wq:
 		destroy_workqueue(dev->reset_wq);
 
 err_bsc_deinit:
-	bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
-	bsc_deinit((uint32_t) dev->virt_base);
+	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
+	bsc_deinit((uint32_t)dev->virt_base);
 
 	iounmap(dev->virt_base);
 
@@ -1792,8 +1793,8 @@ static int bsc_remove(struct platform_device *pdev)
 	if (dev->reset_wq)
 		destroy_workqueue(dev->reset_wq);
 
-	bsc_set_autosense((uint32_t) dev->virt_base, 0, 0);
-	bsc_deinit((uint32_t) dev->virt_base);
+	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
+	bsc_deinit((uint32_t)dev->virt_base);
 
 	iounmap(dev->virt_base);
 

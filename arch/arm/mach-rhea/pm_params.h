@@ -147,6 +147,13 @@
 #define KPS_CCU_FREQ_POLICY_TBL	\
 		ARRAY_LIST(KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_ECO,\
 			KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_NRML)
+
+/* PLL Offset config values for RF interference reduction
+*  as suggested by modem team */
+#define PLLARM_OFFEST_CONFIG    0x35589D9
+#define PLLDSI_OFFEST_CONFIG    0x0
+#define PLL1_OFFSET_CONFIG	0xBFFFF
+
 /*supported A9 freqs*/
 enum {
 	A9_FREQ_700_MHZ,
@@ -188,7 +195,7 @@ extern const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
 			u32 silicon_type);
 extern int __jira_wa_enabled(u32 jira);
 extern int __init rhea_pm_params_init(void);
-extern int __init pm_init_pmu_sr_vlt_map_table(u32 silicon_type);
+extern int pm_init_pmu_sr_vlt_map_table(u32 silicon_type);
 
 #endif	/*__PM_PARAMS_H__*/
 

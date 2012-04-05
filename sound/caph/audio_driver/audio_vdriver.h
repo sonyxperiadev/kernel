@@ -267,8 +267,7 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param);
 
 #ifdef CONFIG_ENABLE_SSMULTICAST
-void AUDDRV_SetAudioMode_Multicast(AudioMode_t audio_mode,
-			AudioApp_t audio_app);
+void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param);
 #endif
 
 void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,

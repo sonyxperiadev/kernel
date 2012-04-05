@@ -766,11 +766,11 @@ struct bcmpmu_voltcap_map {
 };
 
 struct bcmpmu_charge_zone {
-	int tl;
-	int th;
-	int v;
-	int fc;
-	int qc;
+	int tl;    /* low boundary of this temperature range */
+	int th;    /* High boundary of this temperature range */
+	int v;     /* Charge voltage (Vfloat) in this temperature range */
+	int fc;    /* percentage of 1C rate in this temperature range */
+	int qc;    /* qc charging rate in this temperature range */
 };
 
 struct bcmpmu_fg_zone {
