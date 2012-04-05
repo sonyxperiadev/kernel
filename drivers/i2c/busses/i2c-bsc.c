@@ -1122,7 +1122,9 @@ err_ret:
 
 static u32 bsc_functionality(struct i2c_adapter *adap)
 {
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL |
+	return I2C_FUNC_I2C | (I2C_FUNC_SMBUS_EMUL &
+			       ~(I2C_FUNC_SMBUS_WRITE_BLOCK_DATA |
+				 I2C_FUNC_SMBUS_READ_BLOCK_DATA)) |
 	    I2C_FUNC_10BIT_ADDR | I2C_FUNC_PROTOCOL_MANGLING;
 }
 
