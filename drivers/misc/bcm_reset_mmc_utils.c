@@ -110,13 +110,13 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 		/* read the BCB from the misc partition */
 		/* read the entire block as we'll have to
 		   rewrite it hence we need to erase */
-		/*FIXME hack mmc_hd->first_minor + mmc_hd->partno);
-		 *With the current implementation, major/minor numbers
-		 *returned are not reliable.Need to find a
-		 better way to do this*/
-		devid = MKDEV(259, 16);
-		pr_debug(" Open device with id %d, major %d, partno %d\n",
-			 devid, mmc_hd->major, mmc_hd->partno);
+		devid = MKDEV(mmc_hd->major, mmc_hd->partno + 1);
+		pr_debug(" Open device with id %d, major %d, "
+					" partno %d mmc_hd->first_minor %d "
+					"mmc_hd->partno %d\n",
+					devid, mmc_hd->major, mmc_hd->partno,
+					mmc_hd->first_minor, mmc_hd->partno);
+
 		bdev = blkdev_get_by_dev(devid, FMODE_READ, NULL);
 		if (IS_ERR(bdev)) {
 			printk(KERN_ERR "misc: open device failed with %ld\n",
@@ -177,7 +177,7 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 		pr_debug("%s prepare to write back to BCB\n", __func__);
 		/* Write the block back to 'misc'
 		   First, erase it */
-		devid = MKDEV(259, 16);	/*FIXME hack */
+		devid = MKDEV(mmc_hd->major, mmc_hd->partno + 1);
 		bdev = blkdev_get_by_dev(devid, FMODE_WRITE, NULL);
 		if (IS_ERR(bdev)) {
 			printk(KERN_ERR "misc: open device failed with %ld\n",
@@ -215,7 +215,7 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 
 		pr_debug("%s writing back to BCB\n", __func__);
 		/* Then write the block back */
-		devid = MKDEV(259, 16);	/*FIXME hack */
+		devid = MKDEV(mmc_hd->major, mmc_hd->partno + 1);
 		bdev = blkdev_get_by_dev(devid, FMODE_WRITE, NULL);
 		if (IS_ERR(bdev)) {
 			printk(KERN_ERR "misc: open device failed with %ld\n",
@@ -259,7 +259,9 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 			wait_for_completion(&complete);
 		}
 		blkdev_put(bdev, FMODE_WRITE);
-		pr_debug("%s written back to BCB\n", __func__);
+		pr_debug("%s written back to BCB bcb->recovery %s "
+					"bcb->commadn %s\n",
+					__func__, bcb->recovery, bcb->command);
 	}
 
       clean_up:
