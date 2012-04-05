@@ -432,7 +432,8 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 					    AUD_LOG_NONE;
 					audio_log_cbinfo[index].pPrivate = NULL;
 				}
-			} else {
+			} else if ((p_log_info->log_link > 0) &&
+						(p_log_info->log_link <= 4)) {
 				logging_link[p_log_info->log_link - 1] = 0;
 				rtn = AUDDRV_AudLog_Stop(p_log_info->log_link);
 				if (rtn < 0)

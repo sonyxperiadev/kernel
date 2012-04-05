@@ -540,9 +540,15 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		ret =
 		    copy_from_user(dataptr, (int __user *)arg,
 				   sizeof(UserCtrl_data_t));
+		if (ret != 0)
+			goto error_out;
 
 		enable = (Boolean) dataptr->data[0];
 		size = dataptr->data[1];
+		if (size <= 0 || size > sizeof(UserCtrl_data_t)) {
+			ret = -EINVAL;
+			goto error_out;
+		}
 		ret =
 		    AUDDRV_User_CtrlDSP(AUDDRV_USER_SP_CTRL, enable, size,
 					(void *)&(dataptr->data[2]));
@@ -550,6 +556,10 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			kfree(dataptr);
 			dataptr = NULL;
 		}
+		break;
+error_out:
+		kfree(dataptr);
+		dataptr = NULL;
 		break;
 	case DSPCtrl_Ioctl_SPSetVar:
 		/*

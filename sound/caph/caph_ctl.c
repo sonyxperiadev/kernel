@@ -1073,6 +1073,7 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 	case CTL_FUNCTION_CFG_IHF:
 		ucontrol->value.integer.value[0] = pChip->pi32CfgIHF[0];
 		ucontrol->value.integer.value[1] = pChip->pi32CfgIHF[1];
+		break;
 	case CTL_FUNCTION_CFG_SSP:
 		ucontrol->value.integer.value[0] =
 		    pChip->i32CfgSSP[kcontrol->id.index];
