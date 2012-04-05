@@ -157,6 +157,17 @@
 
 extern bool camdrv_ss_power(int cam_id,int bOn);
 
+#if (defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042))
+struct regulator_consumer_supply hv6_supply[] = {
+	{.supply = "vdd_sdxc"},
+};
+
+struct regulator_consumer_supply hv3_supply[] = {
+	{.supply = "hv3"},
+	{.supply = "vdd_sdio"},
+};
+#endif
+
 #ifdef CONFIG_MFD_BCMPMU
 void __init board_pmu_init(void);
 #endif
