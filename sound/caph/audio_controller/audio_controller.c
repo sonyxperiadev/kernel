@@ -1893,6 +1893,7 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 		audio_xassert(0, pathID);
 		return;
 	}
+	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
 	curr_spk = csl_caph_FindSinkDevice(pathID);
 
@@ -2019,6 +2020,7 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 	   return;
 	   } */
 
+	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 	speaker = getDeviceFromSink(sink);
 	if (speaker != CSL_CAPH_DEV_NONE) {
 		/*Enable the PMU for HS/IHF. */
