@@ -2238,6 +2238,42 @@ static struct bus_clk CLK_NAME(nor) = {
 };
 
 /*
+Peri clock name NOR_ASYNC
+*/
+/*peri clk src list*/
+/* default value of nor_var_clk is 52M, so using ref_52M clk for source for now
+ * as nor_var_clk is not defined*/
+static struct clk *nor_async_peri_clk_src_list[] =
+			DEFINE_ARRAY_ARGS(CLK_PTR(crystal), CLK_PTR(ref_52m));
+static struct peri_clk clk_nor_async = {
+	.clk =	{
+		.flags = NOR_ASYNC_PERI_CLK_FLAGS,
+		.clk_type = CLK_TYPE_PERI,
+		.id	= CLK_NOR_ASYNC_PERI_CLK_ID,
+		.name = NOR_ASYNC_PERI_CLK_NAME_STR,
+		.dep_clks =
+		DEFINE_ARRAY_ARGS(CLK_PTR(audioh_apb), NULL),
+		.ops = &gen_peri_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(khub),
+	.clk_gate_offset  = KHUB_CLK_MGR_REG_NOR_CLKGATE_OFFSET,
+	.clk_en_mask = KHUB_CLK_MGR_REG_NOR_CLKGATE_NOR_ASYNC_CLK_EN_MASK,
+	.gating_sel_mask =
+		KHUB_CLK_MGR_REG_NOR_CLKGATE_NOR_ASYNC_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask = KHUB_CLK_MGR_REG_NOR_CLKGATE_NOR_ASYNC_HYST_VAL_MASK,
+	.hyst_en_mask = KHUB_CLK_MGR_REG_NOR_CLKGATE_NOR_ASYNC_HYST_EN_MASK,
+	.stprsts_mask = KHUB_CLK_MGR_REG_NOR_CLKGATE_NOR_ASYNC_STPRSTS_MASK,
+
+	.src_clk = {
+		.count = ARRAY_SIZE(nor_async_peri_clk_src_list),
+		.src_inx = 1,
+		.clk = nor_async_peri_clk_src_list,
+	},
+	.clk_sel_val = 30,
+};
+
+
+/*
 Peri clock name AUDIOH_2P4M
 */
 /*peri clk src list*/
@@ -6990,6 +7026,7 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(SSP4_APB_BUS_CLK_NAME_STR,NULL,ssp4_apb),
 	BRCM_REGISTER_CLK(VAR_SPM_APB_BUS_CLK_NAME_STR,NULL,var_spm_apb),
 	BRCM_REGISTER_CLK(NOR_BUS_CLK_NAME_STR,NULL,nor),
+	BRCM_REGISTER_CLK(NOR_ASYNC_PERI_CLK_NAME_STR, NULL, nor_async),
 	BRCM_REGISTER_CLK(AUDIOH_2P4M_PERI_CLK_NAME_STR,NULL,audioh_2p4m),
 	BRCM_REGISTER_CLK(AUDIOH_156M_PERI_CLK_NAME_STR,NULL,audioh_156m),
 	BRCM_REGISTER_CLK(SSP3_AUDIO_PERI_CLK_NAME_STR,NULL,ssp3_audio),
