@@ -88,12 +88,6 @@ static DEFINE_MUTEX(cma_mutex);
 #define CMA_SIZE_MBYTES 0
 #endif
 
-#ifdef CONFIG_CMA_SIZE_PERCENTAGE
-#define CMA_SIZE_PERCENTAGE CONFIG_CMA_SIZE_PERCENTAGE
-#else
-#define CMA_SIZE_PERCENTAGE 0
-#endif
-
 /* Must be called with cma_mutex held */
 static void recalculate_cma_region_stats(struct cma *cma)
 {
@@ -236,8 +230,7 @@ static inline void cma_debugfs_create_file(struct cma *cma)
  * Users, who want to set the size of global CMA area for their system
  *should use cma= kernel parameter.
  */
-static unsigned long size_bytes = CMA_SIZE_MBYTES * SZ_1M;
-static unsigned long size_percent = CMA_SIZE_PERCENTAGE;
+static const unsigned long size_bytes = CMA_SIZE_MBYTES * SZ_1M;
 static long size_cmdline = -1;
 
 static int __init early_cma(char *p)
@@ -249,7 +242,9 @@ static int __init early_cma(char *p)
 
 early_param("cma", early_cma);
 
-static unsigned long __init cma_early_get_total_pages(void)
+#ifdef CONFIG_CMA_SIZE_PERCENTAGE
+
+static unsigned long __init __maybe_unused cma_early_percent_memory(void)
 {
 	struct memblock_region *reg;
 	unsigned long total_pages = 0;
@@ -261,8 +256,18 @@ static unsigned long __init cma_early_get_total_pages(void)
 	for_each_memblock(memory, reg)
 	    total_pages += memblock_region_memory_end_pfn(reg) -
 	    memblock_region_memory_base_pfn(reg);
-	return total_pages;
+
+	return (total_pages * CONFIG_CMA_SIZE_PERCENTAGE / 100) << PAGE_SHIFT;
 }
+
+#else
+
+static inline __maybe_unused unsigned long cma_early_percent_memory(void)
+{
+	return 0;
+}
+
+#endif
 
 /**
  *dma_contiguous_reserve() - reserve area for contiguous memory handling
@@ -276,40 +281,29 @@ static unsigned long __init cma_early_get_total_pages(void)
 void __init dma_contiguous_reserve(phys_addr_t limit)
 {
 	unsigned long selected_size = 0;
-	unsigned long total_pages;
 
 	pr_debug("%s(limit %08lx)\n", __func__, (unsigned long)limit);
 
-	total_pages = cma_early_get_total_pages();
-	size_percent *= (total_pages << PAGE_SHIFT) / 100;
-
-	pr_debug
-	    ("%s: total available: %ld MiB, size absolute: %ld MiB"
-	     " size percentage: %ld MiB\n",
-	     __func__, (total_pages << PAGE_SHIFT) / SZ_1M, size_bytes / SZ_1M,
-	     size_percent / SZ_1M);
-
-#ifdef CONFIG_CMA_SIZE_SEL_MBYTES
-	selected_size = size_bytes;
-#elif defined(CONFIG_CMA_SIZE_SEL_PERCENTAGE)
-	selected_size = size_percent;
-#elif defined(CONFIG_CMA_SIZE_SEL_MIN)
-	selected_size = min(size_bytes, size_percent);
-#elif defined(CONFIG_CMA_SIZE_SEL_MAX)
-	selected_size = max(size_bytes, size_percent);
-#endif
-
-	if (size_cmdline != -1)
+	if (size_cmdline != -1) {
 		selected_size = size_cmdline;
+	} else {
+#ifdef CONFIG_CMA_SIZE_SEL_MBYTES
+		selected_size = size_bytes;
+#elif defined(CONFIG_CMA_SIZE_SEL_PERCENTAGE)
+		selected_size = cma_early_percent_memory();
+#elif defined(CONFIG_CMA_SIZE_SEL_MIN)
+		selected_size = min(size_bytes, cma_early_percent_memory());
+#elif defined(CONFIG_CMA_SIZE_SEL_MAX)
+		selected_size = max(size_bytes, cma_early_percent_memory());
+#endif
+	}
 
-	if (!selected_size)
-		return;
-
-	pr_debug("%s: reserving %ld MiB for global area\n", __func__,
-		 selected_size / SZ_1M);
-
-	dma_declare_contiguous(NULL, selected_size, 0, limit);
-};
+	if (selected_size) {
+		pr_debug("%s: reserving %ld MiB for global area\n", __func__,
+			 selected_size / SZ_1M);
+		dma_declare_contiguous(NULL, selected_size, 0, limit);
+	}
+}
 
 #ifdef CONFIG_CMA_STATS
 /* Should be called with cma_mutex held */
@@ -480,7 +474,7 @@ core_initcall(cma_init_reserved_areas);
  *			      for particular device
  *@dev:   Pointer to device structure.
  *@size:  Size of the reserved memory.
- *@start: Start address of the reserved memory (optional, 0 for any).
+ *@base:  Start address of the reserved memory (optional, 0 for any).
  *@limit: End address of the reserved memory (optional, 0 for any).
  *
  * This function reserves memory for specified device. It should be
@@ -826,42 +820,40 @@ error:
  *@pages: Allocated pages.
  *@count: Number of allocated pages.
  *
- * This funtion releases memory allocated by dma_alloc_from_contiguous().
- * It returns 0 when provided pages do not belong to contiguous area and
- * 1 on success.
+ * This function releases memory allocated by dma_alloc_from_contiguous().
+ * It returns false when provided pages do not belong to contiguous area and
+ * true otherwise.
  */
-int dma_release_from_contiguous(struct device *dev, struct page *pages,
+bool dma_release_from_contiguous(struct device *dev, struct page *pages,
 				int count)
 {
 	struct cma *cma = dev_get_cma_area(dev);
 	unsigned long pfn;
 
 	if (!cma || !pages)
-		return 0;
+		return false;
 
 	pr_debug("%s(page %p)\n", __func__, (void *)pages);
 
 	pfn = page_to_pfn(pages);
 
 	if (pfn < cma->base_pfn || pfn >= cma->base_pfn + cma->count)
-		return 0;
+		return false;
 
 	trace_cma_release_start(cma, pfn, count);
 
-	mutex_lock(&cma_mutex);
+	VM_BUG_ON(pfn + count > cma->base_pfn + cma->count);
 
+	mutex_lock(&cma_mutex);
 	bitmap_clear(cma->bitmap, pfn - cma->base_pfn, count);
 	free_contig_range(pfn, count);
-
 	update_alloc_list(dev, cma, pfn, count, 0, 0);
-
 	recalculate_cma_region_stats(cma);
-
 	mutex_unlock(&cma_mutex);
 
 	trace_cma_release_end(cma, pfn, count);
 
-	return 1;
+	return true;
 }
 
 #ifdef CONFIG_CMA_STATS

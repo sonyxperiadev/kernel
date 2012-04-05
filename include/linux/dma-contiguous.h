@@ -82,7 +82,7 @@ int dma_declare_contiguous(struct device *dev, unsigned long size,
 
 struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 				       unsigned int order);
-int dma_release_from_contiguous(struct device *dev, struct page *pages,
+bool dma_release_from_contiguous(struct device *dev, struct page *pages,
 				int count);
 void get_dev_cma_info(struct device *dev,
 			struct dev_cma_info *info);
@@ -107,10 +107,10 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 }
 
 static inline
-int dma_release_from_contiguous(struct device *dev, struct page *pages,
-				int count)
+bool dma_release_from_contiguous(struct device *dev, struct page *pages,
+				 int count)
 {
-	return 0;
+	return false;
 }
 
 void get_dev_cma_info(struct device *dev, struct dev_cma_info *info)
