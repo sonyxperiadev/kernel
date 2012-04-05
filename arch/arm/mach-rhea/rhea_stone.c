@@ -180,7 +180,7 @@ extern int rhea_wifi_status_register(
 #define TANGO_GPIO_RESET_PIN			70
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ 	14
 
-#ifdef CONFIG_MFD_BCM59039
+#if (defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042))
 struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "vdd_sdxc"},
 };
