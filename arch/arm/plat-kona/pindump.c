@@ -32,6 +32,7 @@
 #include <linux/io.h>
 #include <linux/fs.h>
 #include <linux/seq_file.h>
+#include <linux/debugfs.h>
 
 #include <mach/pinmux.h>
 #include <mach/hardware.h>
@@ -41,6 +42,13 @@
 #include <mach/io_map.h>
 
 #define GPIO_CTRL(gpio) (GPIO_GPCTR0_OFFSET + (gpio * 4))
+
+
+static struct dentry *root_entry, *dump_dentry;
+extern uint32_t dt_gpio[];
+extern uint32_t dt_pinmux[];
+extern uint32_t dt_pinmux_nr;
+
 
 static int pindump_proc_show(struct seq_file *m, void *v)
 {
@@ -107,4 +115,79 @@ module_init(proc_pindump_init);
 
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("Dumps the pinmux and GPIO configuration in proc fs.");
+MODULE_LICENSE("GPL");
+
+
+/* dump initial values */
+
+static int dtsdump_show(struct seq_file *m, void *v)
+{
+	int i, sel, gpio, gpio_cnt = 0;
+	uint32_t val, gpctr;
+
+	//base = g_chip_pin_desc.base;
+
+	/* print pin-mux */
+	for (i = 0; i <dt_pinmux_nr; i++) {
+		seq_printf(m, "0x%08x /* pad 0x%x*/\n", dt_pinmux[i], i * 4);
+	}
+	/* print configured GPIO */
+	seq_printf(m, "Pin-mux configured as GPIO\n");
+	for (i = 0; i < dt_pinmux_nr; i++) {
+		val = dt_pinmux[i];
+		sel = ((union pinmux_reg)val).b.sel;
+		if (g_chip_pin_desc.desc_tbl[i].f_tbl[sel] >= PF_FIRST_GPIO &&
+		    g_chip_pin_desc.desc_tbl[i].f_tbl[sel] <= PF_LAST_GPIO) {
+			gpio_cnt++;
+			gpio =
+			    g_chip_pin_desc.desc_tbl[i].f_tbl[sel] -
+			    PF_FIRST_GPIO;
+			gpctr = dt_gpio[gpio];
+			gpctr &= GPIO_GPCTR0_IOTR_MASK;
+			seq_printf(m, "%d  0x%08x /*%s*/\n", gpio, gpctr,
+				   ((gpctr ==
+				     GPIO_GPCTR0_IOTR_CMD_INPUT) ? "Input" :
+				    "Output"));
+		}
+	}
+	seq_printf(m, "Toatl Pin-mux configured as GPIO= %d\n", gpio_cnt);
+
+	return 0;
+
+}
+
+
+static int dtsdump_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dtsdump_show, inode->i_private);
+}
+
+static struct file_operations default_file_operations = {
+	.open = dtsdump_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int __init debug_dtsdump_init(void)
+{
+
+        root_entry = debugfs_create_dir("dtsdump", NULL);
+        if (!root_entry) {
+                printk("Fail to create dir: dtsdump\n");
+                return 1;
+        }
+		
+		dump_dentry = debugfs_create_file("dtsdump", 0444, root_entry, NULL, &default_file_operations);
+        return 0;
+}
+
+static void __exit debug_dtsdump_exit(void)
+{
+        debugfs_remove(dump_dentry);
+        debugfs_remove(root_entry);
+}
+
+module_init(debug_dtsdump_init);
+module_exit(debug_dtsdump_exit);
 MODULE_LICENSE("GPL");

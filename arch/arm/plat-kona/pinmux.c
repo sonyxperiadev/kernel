@@ -33,8 +33,8 @@
 #include <linux/of_fdt.h>
 
 /* pin-mux configuration data from DT */
-static uint32_t dt_pinmux[PN_MAX];
-static uint32_t dt_pinmux_nr;
+uint32_t dt_pinmux[PN_MAX];
+uint32_t dt_pinmux_nr;
 
 extern uint32_t dt_pinmux_gpio_mask[];
 
