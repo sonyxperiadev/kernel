@@ -64,6 +64,8 @@ static const struct ov5640_datafmt ov5640_fmts[] = {
 	 */
 	{V4L2_MBUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_JPEG},
 	{V4L2_MBUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
+	/* {V4L2_MBUS_FMT_JPEG_1X8, V4L2_COLORSPACE_JPEG}, */
+
 };
 
 enum ov5640_size {
@@ -275,28 +277,28 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x11,
 			      },
 	[OV5640_SIZE_UXGA] = {
-			/*  Timing control  2624 x 1952 --> 1600 x 1200 */
-			      .x_addr_start = 512,
-			      .y_addr_start = 376,
-			      .x_addr_end = 2111,
-			      .y_addr_end = 1575,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 1600,
 			      .v_output_size = 1200,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
-			      .h_total_size = 2200,
-			      .v_total_size = 1280,
+			      .h_total_size = 2844,
+			      .v_total_size = 1968,
 			/*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
 			      .out_mode_sel = 0x06,
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x11,
+			      .sclk_dividers = 0x02,
+			      .sys_mipi_clk = 0x12,
 			      },
 	[OV5640_SIZE_1080P] = {
 			/*  Timing control  2624 x 1952 --> 1952 x 1088 */
@@ -323,17 +325,17 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x11,
 			       },
 	[OV5640_SIZE_QXGA] = {
-			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 2048,
 			      .v_output_size = 1536,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -347,17 +349,17 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			      },
 	[OV5640_SIZE_5MP] = {
-			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 2560,
 			      .v_output_size = 1920,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -374,17 +376,17 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 
 static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 	[OV5640_SIZE_QVGA] = {
-			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 320,
 			      .v_output_size = 240,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -398,17 +400,17 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_VGA] = {
-			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 640,
 			      .v_output_size = 480,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -422,17 +424,17 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_XGA] = {
-			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 1024,
 			      .v_output_size = 768,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -446,17 +448,17 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_720P] = {
-			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 1280,
 			      .v_output_size = 720,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -470,17 +472,17 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_1280x960] = {
-			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 1280,
 			      .v_output_size = 960,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -494,17 +496,17 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			      },
 	[OV5640_SIZE_UXGA] = {
-			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 1600,
 			      .v_output_size = 1200,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -518,17 +520,17 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_1080P] = {
-			/*  Timing control  2624 x 1952 --> 2560 x 1920 */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 1920,
 			      .v_output_size = 1080,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -542,17 +544,17 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_QXGA] = {
-			/*  Timing control  2624 x 1952 --> 2560 x 1920  */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/*  Output image size */
 			      .h_output_size = 2048,
 			      .v_output_size = 1536,
-			/*  ISP Windowing size  2560 x 1920 --> 2560 x 1920 */
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -566,17 +568,17 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			       },
 	[OV5640_SIZE_5MP] = {
-			/* Timing control  2624 x 1952 --> 2560 x 1920 */
-			      .x_addr_start = 32,
-			      .y_addr_start = 16,
-			      .x_addr_end = 2591,
-			      .y_addr_end = 1935,
+			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
 			/* Output image size */
 			      .h_output_size = 2560,
 			      .v_output_size = 1920,
-			/* ISP Windowing size  2560 x 1920 --> 2560 x 1920*/
-			      .isp_h_offset = 0,
-			      .isp_v_offset = 0,
+			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
 			/* Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
@@ -2161,7 +2163,7 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
-	*frames = 5;
+	*frames = 2;
 
 	return 0;
 }
