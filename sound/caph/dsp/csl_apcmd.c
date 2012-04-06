@@ -615,3 +615,25 @@ void VPRIPCMDQ_VoLTE_Put_Frame(UInt16 timestamp, UInt8 codecType,
 }
 
 #endif /* VOLTE_SUPPORT */
+
+/*****************************************************************************/
+/**
+	Function Name:       VPRIPCMDQ_PTTEnable
+
+	Description:
+
+	Notes:
+
+******************************************************************************/
+void VPRIPCMDQ_PTTEnable(UInt16 arg0)
+{
+	VPCmdQ_t msg;
+
+	msg.cmd = VP_COMMAND_PTT_ENABLE;
+	msg.arg0 = arg0;	/* enable/disable */
+	msg.arg1 = 0;
+	msg.arg2 = 0;
+	VPSHAREDMEM_PostCmdQ(&msg);
+
+}
+

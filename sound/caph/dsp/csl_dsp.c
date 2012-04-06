@@ -57,6 +57,7 @@ static MainAMRStatusCB_t MainAMRStatusHandler = NULL;
 static VoIPStatusCB_t VoIPStatusHandler = NULL;
 static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 static AudioEnableDoneStatusCB_t AudioEnableDoneHandler = NULL;
+static PTTStatusCB_t PTTStatusHandler = NULL;
 
 static void Dump_Caph_regs(void);
 
@@ -327,6 +328,20 @@ void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t
 /*********************************************************************/
 /**
 *
+*   CSL_RegisterPTTStatusHandler registers PTT status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register
+*
+**********************************************************************/
+void CSL_RegisterPTTStatusHandler(PTTStatusCB_t callbackFunction)
+{
+	PTTStatusHandler = callbackFunction;
+
+}
+
+/*********************************************************************/
+/**
+*
 *   AP_ProcessStatus processes VPU status message from DSP on AP.
 *
 *
@@ -483,6 +498,34 @@ void AP_ProcessStatus(void)
 						"AP DSP Interrupt:"
 						"AudioEnableDoneHandler"
 						"is not registered");
+				}
+				break;
+			}
+
+		case VP_STATUS_PTT_STATUS:
+			{
+				{
+					aTrace(LOG_AUDIO_DSP,
+					       "AP DSP Interrupt:"
+					       "PTT_STATUS = 0x%x, 0x%x, 0x%x",
+						    status_msg.arg0,
+						    status_msg.arg1,
+						    status_msg.arg2);
+				}
+				break;
+			}
+
+		case VP_STATUS_PTT_UL_FRAME_DONE:
+			{
+				if (PTTStatusHandler != NULL) {
+					PTTStatusHandler(status_msg.arg0,
+							  status_msg.arg1,
+							  status_msg.arg2);
+				} else {
+					aTrace(LOG_AUDIO_DSP,
+					       "AP DSP Interrupt:"
+					       "PTTStatusHandler"
+					       "is not registered");
 				}
 				break;
 			}
