@@ -105,7 +105,7 @@ static IPC_ReturnCode_T EventSet(void *Event)
 
 	/* **FIXME** need to protect access to this? */
 	ipcEvt->evt = 1;
-	wake_up(&(ipcEvt->evt_wait));
+	wake_up_interruptible(&(ipcEvt->evt_wait));
 	return IPC_OK;
 }
 
@@ -123,14 +123,19 @@ static IPC_ReturnCode_T EventClear(void *Event)
 static IPC_ReturnCode_T EventWait(void *Event, IPC_U32 MilliSeconds)
 {
 	struct IPC_Evt_t *ipcEvt = (struct IPC_Evt_t *)Event;
+	int ret;
 
 	if (MilliSeconds == IPC_WAIT_FOREVER)
-		wait_event((ipcEvt->evt_wait), (ipcEvt->evt == 1));
-	else if (!wait_event_timeout((ipcEvt->evt_wait), (ipcEvt->evt == 1),
-				     msecs_to_jiffies(MilliSeconds)))
-		return IPC_TIMEOUT;
-
-	return IPC_OK;
+	{
+		ret = wait_event_interruptible((ipcEvt->evt_wait), (ipcEvt->evt == 1));
+		return (ret == 0) ? IPC_OK : IPC_ERROR;
+	}
+	else
+	{
+		ret = wait_event_interruptible_timeout((ipcEvt->evt_wait), (ipcEvt->evt == 1),
+				     msecs_to_jiffies(MilliSeconds));		
+		return (ret == 0) ? IPC_TIMEOUT : ((ret == -ERESTARTSYS) ? IPC_ERROR : IPC_OK);
+	}
 }
 
 /**
