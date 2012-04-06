@@ -1,5 +1,5 @@
 /* ==========================================================================
- * $File: //dwh/usb_iip/dev/software/otg/linux/drivers/dwc_otg_driver.c $
+ e $File: //dwh/usb_iip/dev/software/otg/linux/drivers/dwc_otg_driver.c $
  * $Revision: #82 $
  * $Date: 2010/03/09 $
  * $Change: 1458980 $
@@ -629,16 +629,8 @@ static int dwc_otg_driver_remove(struct platform_device *_dev
 #endif
 	}
 #ifndef DWC_DEVICE_ONLY
-	if (otg_dev->hcd) {
+	if (otg_dev->hcd)
 		hcd_remove(_dev);
-	} else {
-		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev->hcd NULL!\n", __func__);
-#if defined(LM_INTERFACE) || defined(PCI_INTERFACE)
-		return;
-#else
-		return -ENODEV;
-#endif
-	}
 #endif
 
 #ifndef DWC_HOST_ONLY
@@ -742,6 +734,7 @@ static int dwc_otg_driver_probe(struct platform_device *_dev
 
 	if (!dwc_otg_device) {
 		dev_err(&_dev->dev, "kmalloc of dwc_otg_device failed\n");
+		platform_set_drvdata(_dev, 0);
 		retval = -ENOMEM;
 		goto fail;
 	}
@@ -829,8 +822,9 @@ static int dwc_otg_driver_probe(struct platform_device *_dev
 	dwc_otg_device->core_if = dwc_otg_cil_init(dwc_otg_device->base);
 	if (!dwc_otg_device->core_if) {
 		dev_err(&_dev->dev, "CIL initialization failed!\n");
-		retval = -ENOMEM;
-		goto fail;
+		platform_set_drvdata(_dev, 0);
+		dwc_free(dwc_otg_device);
+		return -ENOMEM;
 	}
 
 	/*
@@ -844,9 +838,9 @@ static int dwc_otg_driver_probe(struct platform_device *_dev
 		dev_err(&_dev->dev, "Bad value for SNPSID: 0x%08x\n",
 			dwc_otg_get_gsnpsid(dwc_otg_device->core_if));
 		dwc_otg_cil_remove(dwc_otg_device->core_if);
+		platform_set_drvdata(_dev, 0);
 		dwc_free(dwc_otg_device);
-		retval = -EINVAL;
-		goto fail;
+		return -EINVAL;
 	}
 
 	/*
@@ -854,8 +848,9 @@ static int dwc_otg_driver_probe(struct platform_device *_dev
 	 */
 	if (set_parameters(dwc_otg_device->core_if)) {
 		dwc_otg_cil_remove(dwc_otg_device->core_if);
-		retval = -EINVAL;
-		goto fail;
+		platform_set_drvdata(_dev, 0);
+		dwc_free(dwc_otg_device);
+		return -EINVAL;
 	}
 
 	/*
