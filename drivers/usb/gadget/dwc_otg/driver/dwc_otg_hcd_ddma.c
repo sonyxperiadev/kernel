@@ -988,7 +988,7 @@ static void complete_non_isoc_xfer_ddma(dwc_otg_hcd_t *hcd,
 		n_bytes = 0;
 		xfer_done = 0;
 
-		for (i = 0; i < qtd->n_desc; i++) {
+		for (i = 0; qtd && (i < qtd->n_desc); i++) {
 			dma_desc = &qh->desc_list[n_desc];
 
 			n_bytes = qh->n_bytes[n_desc];

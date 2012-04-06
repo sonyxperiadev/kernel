@@ -4,7 +4,7 @@
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2, available at
-* http://www.broadcom.com/licenses/GPLv2.php (the "GPL"). 
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
 *
 * Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a
@@ -47,8 +47,7 @@ struct kona_otg_cp {
 /*
  * Callback functions to be registered by the lower level driver
  */
-struct kona_otg_cp_ops
-{
+struct kona_otg_cp_ops {
 	int (*state_poll) (struct kona_otg_cp *otg_cp);
 
 	/* to turn on/off VBUS power */
@@ -57,7 +56,9 @@ struct kona_otg_cp_ops
 
 extern int kona_otg_cp_register(struct kona_otg_cp *cp);
 extern int kona_otg_cp_unregister(struct kona_otg_cp *cp);
-extern int kona_otg_cp_id_change(const struct kona_otg_cp *cp, enum kona_otg_cp_id id);
-extern int kona_otg_cp_volt_change(const struct kona_otg_cp *cp, enum kona_otg_cp_volt_state volt_state);
+extern int kona_otg_cp_id_change(const struct kona_otg_cp *cp,
+		enum kona_otg_cp_id id);
+extern int kona_otg_cp_volt_change(const struct kona_otg_cp *cp,
+		enum kona_otg_cp_volt_state volt_state);
 
 #endif /* _KONA_OTG_CP_H */
