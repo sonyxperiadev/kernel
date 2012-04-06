@@ -46,7 +46,7 @@
 #define DWC_OTG_ADP_ATTACHED	1
 #define DWC_OTG_ADP_UNKOWN	2
 
-struct dwc_otg_adp {
+typedef struct dwc_otg_adp {
 	uint32_t initial_probe;
 	int32_t probe_timer_values[2];
 	uint32_t probe_enabled;
@@ -56,23 +56,22 @@ struct dwc_otg_adp {
 	dwc_timer_t *vbuson_timer;
 	uint32_t vbuson_timer_started;
 	uint32_t attached;
-};
+} dwc_otg_adp_t;
 
 /**
  * Attach Detect Protocol functions
  */
 
-extern void dwc_otg_adp_write_reg(struct dwc_otg_core_if *core_if,
-	uint32_t value);
-extern uint32_t dwc_otg_adp_read_reg(struct dwc_otg_core_if *core_if);
-extern uint32_t dwc_otg_adp_probe_start(struct dwc_otg_core_if *core_if);
-extern uint32_t dwc_otg_adp_sense_start(struct dwc_otg_core_if *core_if);
-extern uint32_t dwc_otg_adp_probe_stop(struct dwc_otg_core_if *core_if);
-extern uint32_t dwc_otg_adp_sense_stop(struct dwc_otg_core_if *core_if);
-extern void dwc_otg_adp_start(struct dwc_otg_core_if *core_if);
-extern void dwc_otg_adp_init(struct dwc_otg_core_if *core_if);
-extern void dwc_otg_adp_remove(struct dwc_otg_core_if *core_if);
-extern int32_t dwc_otg_adp_handle_intr(struct dwc_otg_core_if *core_if);
-extern int32_t dwc_otg_adp_handle_srp_intr(struct dwc_otg_core_if *core_if);
+extern void dwc_otg_adp_write_reg(dwc_otg_core_if_t *core_if, uint32_t value);
+extern uint32_t dwc_otg_adp_read_reg(dwc_otg_core_if_t *core_if);
+extern uint32_t dwc_otg_adp_probe_start(dwc_otg_core_if_t *core_if);
+extern uint32_t dwc_otg_adp_sense_start(dwc_otg_core_if_t *core_if);
+extern uint32_t dwc_otg_adp_probe_stop(dwc_otg_core_if_t *core_if);
+extern uint32_t dwc_otg_adp_sense_stop(dwc_otg_core_if_t *core_if);
+extern void dwc_otg_adp_start(dwc_otg_core_if_t *core_if);
+extern void dwc_otg_adp_init(dwc_otg_core_if_t *core_if);
+extern void dwc_otg_adp_remove(dwc_otg_core_if_t *core_if);
+extern int32_t dwc_otg_adp_handle_intr(dwc_otg_core_if_t *core_if);
+extern int32_t dwc_otg_adp_handle_srp_intr(dwc_otg_core_if_t *core_if);
 
 #endif	/*__DWC_OTG_ADP_H__*/

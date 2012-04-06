@@ -50,9 +50,9 @@
  * @param hcd HCD instance.
  * @param qh The QH to free.
  */
-void dwc_otg_hcd_qh_free(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
+void dwc_otg_hcd_qh_free(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
-	struct dwc_otg_qtd *qtd, *qtd_tmp;
+	dwc_otg_qtd_t *qtd, *qtd_tmp;
 	uint64_t flags;
 
 	/* Free each QTD in the QTD list */
@@ -78,12 +78,12 @@ void dwc_otg_hcd_qh_free(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
 	return;
 }
 
-#define BitStuffTime(bytecount)  ((8 * 7 * bytecount) / 6)
+#define BitStuffTime(bytecount)  ((8 * 7* bytecount) / 6)
 #define HS_HOST_DELAY		5	/* nanoseconds */
 #define FS_LS_HOST_DELAY	1000	/* nanoseconds */
 #define HUB_LS_SETUP		333	/* nanoseconds */
 #define NS_TO_US(ns)		((ns + 500) / 1000)
-		/* convert & round nanoseconds to microseconds */
+				/* convert & round nanoseconds to microseconds */
 
 static uint32_t calc_bus_time(int speed, int is_in, int is_isoc, int bytecount)
 {
@@ -151,14 +151,13 @@ static uint32_t calc_bus_time(int speed, int is_in, int is_isoc, int bytecount)
  *		to initialize the QH.
  */
 #define SCHEDULE_SLOP 10
-void qh_init(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
-	struct dwc_otg_hcd_urb *urb)
+void qh_init(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh, dwc_otg_hcd_urb_t *urb)
 {
 	char *speed, *type;
 	int dev_speed;
 	uint32_t hub_addr, hub_port;
 
-	dwc_memset(qh, 0, sizeof(struct dwc_otg_qh));
+	dwc_memset(qh, 0, sizeof(dwc_otg_qh_t));
 
 	/* Initialize QH */
 	qh->ep_type = dwc_otg_hcd_get_pipe_type(&urb->pipe_info);
@@ -190,7 +189,7 @@ void qh_init(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
 
 	if (qh->ep_type == UE_INTERRUPT || qh->ep_type == UE_ISOCHRONOUS) {
 		/* Compute scheduling parameters once and save them. */
-		union hprt0_data hprt;
+		hprt0_data_t hprt;
 
 		/** @todo Account for split transfers in the bus time. */
 		int bytecount =
@@ -286,10 +285,10 @@ void qh_init(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
  *		to initialize the QH.
  *
  * @return Returns pointer to the newly allocated QH, or NULL on error. */
-struct dwc_otg_qh *dwc_otg_hcd_qh_create(struct dwc_otg_hcd *hcd,
-	struct dwc_otg_hcd_urb *urb, int atomic_alloc)
+dwc_otg_qh_t *dwc_otg_hcd_qh_create(dwc_otg_hcd_t *hcd,
+				    dwc_otg_hcd_urb_t *urb, int atomic_alloc)
 {
-	struct dwc_otg_qh *qh = NULL;
+	dwc_otg_qh_t *qh = NULL;
 
 	/* Allocate memory */
 	qh = dwc_otg_hcd_qh_alloc(atomic_alloc);
@@ -312,7 +311,7 @@ struct dwc_otg_qh *dwc_otg_hcd_qh_create(struct dwc_otg_hcd *hcd,
  *
  * @return 0 if successful, negative error code otherise.
  */
-static int periodic_channel_available(struct dwc_otg_hcd *hcd)
+static int periodic_channel_available(dwc_otg_hcd_t *hcd)
 {
 	/*
 	 * Currently assuming that there is a dedicated host channnel for each
@@ -347,8 +346,7 @@ static int periodic_channel_available(struct dwc_otg_hcd *hcd)
  *
  * @return 0 if successful, negative error code otherwise.
  */
-static int check_periodic_bandwidth(
-	struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
+static int check_periodic_bandwidth(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 	int status;
 	int16_t max_claimed_usecs;
@@ -389,7 +387,7 @@ static int check_periodic_bandwidth(
  *
  * @return 0 if successful, negative error code otherwise.
  */
-static int check_max_xfer_size(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
+static int check_max_xfer_size(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 	int status;
 	uint32_t max_xfer_size;
@@ -419,7 +417,7 @@ static int check_max_xfer_size(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
  *
  * @return 0 if successful, negative error code otherwise.
  */
-static int schedule_periodic(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
+static int schedule_periodic(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 	int status = 0;
 
@@ -439,9 +437,7 @@ static int schedule_periodic(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
 
 	status = check_max_xfer_size(hcd, qh);
 	if (status) {
-		DWC_INFO
-			("%s: Channel max transfer size too small "
-			"for periodic transfer.\n", __func__); /* NOTICE */
+		DWC_INFO("%s: Channel max transfer size too small " "for periodic transfer.\n", __func__);	/* NOTICE */
 		return status;
 	}
 
@@ -473,7 +469,7 @@ static int schedule_periodic(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
  *
  * @return 0 if successful, negative error code otherwise.
  */
-int dwc_otg_hcd_qh_add(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
+int dwc_otg_hcd_qh_add(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 	int status = 0;
 
@@ -502,7 +498,7 @@ done:
  * @param hcd The HCD state structure for the DWC OTG controller.
  * @param qh QH for the periodic transfer.
  */
-static void deschedule_periodic(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
+static void deschedule_periodic(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 	DWC_LIST_REMOVE_INIT(&qh->qh_list_entry);
 
@@ -521,7 +517,7 @@ static void deschedule_periodic(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
  *
  * @param hcd The HCD state structure.
  * @param qh QH to remove from schedule. */
-void dwc_otg_hcd_qh_remove(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
+void dwc_otg_hcd_qh_remove(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 	if (DWC_LIST_EMPTY(&qh->qh_list_entry)) {
 		/* QH is not in a schedule. */
@@ -555,7 +551,7 @@ done:
  * inactive schedule. If there are no QTDs attached to the QH, the QH is
  * completely removed from the periodic schedule.
  */
-void dwc_otg_hcd_qh_deactivate(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
+void dwc_otg_hcd_qh_deactivate(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh,
 			       int sched_next_periodic_split)
 {
 	uint64_t flags;
@@ -571,15 +567,14 @@ void dwc_otg_hcd_qh_deactivate(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
 		uint16_t frame_number = dwc_otg_hcd_get_frame_number(hcd);
 
 		if (qh->do_split) {
-			/* Schedule the next continuing
-			 * periodic split transfer
-			 */
+			/* Schedule the next continuing periodic split transfer */
 			if (sched_next_periodic_split) {
 
 				qh->sched_frame = frame_number;
 				if (dwc_frame_num_le(frame_number,
-					dwc_frame_num_inc(qh->
-						start_split_frame, 1))) {
+						     dwc_frame_num_inc(qh->
+								       start_split_frame,
+								       1))) {
 					/*
 					 * Allow one frame to elapse after start
 					 * split microframe before scheduling
@@ -591,7 +586,8 @@ void dwc_otg_hcd_qh_deactivate(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
 					    (qh->ep_is_in != 0)) {
 						qh->sched_frame =
 						    dwc_frame_num_inc(qh->
-							sched_frame, 1);
+								      sched_frame,
+								      1);
 					}
 				}
 			} else {
@@ -637,14 +633,12 @@ void dwc_otg_hcd_qh_deactivate(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
  * This function allocates and initializes a QTD.
  *
  * @param urb The URB to create a QTD from.  Each URB-QTD pair will end up
- *			  pointing to each other so each
- *			  pair should have a unique correlation.
+ *		pointing to each other so each pair should have a unique correlation.
  *
  * @return Returns pointer to the newly allocated QTD, or NULL on error. */
-struct dwc_otg_qtd *dwc_otg_hcd_qtd_create(
-	struct dwc_otg_hcd_urb *urb, int atomic_alloc)
+dwc_otg_qtd_t *dwc_otg_hcd_qtd_create(dwc_otg_hcd_urb_t *urb, int atomic_alloc)
 {
-	struct dwc_otg_qtd *qtd;
+	dwc_otg_qtd_t *qtd;
 
 	qtd = dwc_otg_hcd_qtd_alloc(atomic_alloc);
 	if (qtd == NULL)
@@ -659,9 +653,9 @@ struct dwc_otg_qtd *dwc_otg_hcd_qtd_create(
  *
  * @param qtd The QTD to initialize.
  * @param urb The URB to use for initialization.  */
-void dwc_otg_hcd_qtd_init(struct dwc_otg_qtd *qtd, struct dwc_otg_hcd_urb *urb)
+void dwc_otg_hcd_qtd_init(dwc_otg_qtd_t *qtd, dwc_otg_hcd_urb_t *urb)
 {
-	dwc_memset(qtd, 0, sizeof(struct dwc_otg_qtd));
+	dwc_memset(qtd, 0, sizeof(dwc_otg_qtd_t));
 	qtd->urb = urb;
 	if (dwc_otg_hcd_get_pipe_type(&urb->pipe_info) == UE_CONTROL) {
 		/*
@@ -696,13 +690,13 @@ void dwc_otg_hcd_qtd_init(struct dwc_otg_qtd *qtd, struct dwc_otg_hcd_urb *urb)
  *
  * @return 0 if successful, negative error code otherwise.
  */
-int dwc_otg_hcd_qtd_add(struct dwc_otg_qtd *qtd,
-			struct dwc_otg_hcd *hcd, struct dwc_otg_qh **qh)
+int dwc_otg_hcd_qtd_add(dwc_otg_qtd_t *qtd,
+			dwc_otg_hcd_t *hcd, dwc_otg_qh_t **qh)
 {
 	int retval = 0;
 	uint64_t flags;
 
-	struct dwc_otg_hcd_urb *urb = qtd->urb;
+	dwc_otg_hcd_urb_t *urb = qtd->urb;
 
 	DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 

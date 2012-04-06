@@ -53,7 +53,7 @@ struct dwc_otg_hcd;
  * This structure is a wrapper that encapsulates the driver components used to
  * manage a single DWC_otg controller.
  */
-struct dwc_otg_device {
+typedef struct dwc_otg_device {
 	/** Base address returned from ioremap() */
 	void *base;
 
@@ -67,7 +67,7 @@ struct dwc_otg_device {
 #endif
 
 	/** Pointer to the core interface structure. */
-	struct dwc_otg_core_if *core_if;
+	dwc_otg_core_if_t *core_if;
 
 	/** Register offset for Diagnostic API. */
 	uint32_t reg_offset;
@@ -80,7 +80,7 @@ struct dwc_otg_device {
 
 	/** Flag to indicate whether the common IRQ handler is installed. */
 	uint8_t common_irq_installed;
-};
+} dwc_otg_device_t;
 
 /*We must clear S3C24XX_EINTPEND external interrupt register
  * because after clearing in this register trigerred IRQ from
@@ -91,7 +91,7 @@ struct dwc_otg_device {
 #ifdef CONFIG_MACH_IPMATE
 #define  S3C2410X_CLEAR_EINTPEND()   \
 do { \
-	__raw_writel(1UL << 11, S3C24XX_EINTPEND); \
+	__raw_writel(1UL << 11,S3C24XX_EINTPEND); \
 } while (0)
 #else
 #define  S3C2410X_CLEAR_EINTPEND()   do { } while (0)

@@ -41,7 +41,7 @@
 
 static inline uint8_t frame_list_idx(uint16_t frame)
 {
-	return frame & (MAX_FRLIST_EN_NUM - 1);
+	return (frame & (MAX_FRLIST_EN_NUM - 1));
 }
 
 static inline uint16_t desclist_idx_inc(uint16_t idx, uint16_t inc,
@@ -62,30 +62,30 @@ static inline uint16_t desclist_idx_dec(uint16_t idx, uint16_t inc,
 	      MAX_DMA_DESC_NUM_GENERIC) - 1);
 }
 
-static inline uint16_t max_desc_num(struct dwc_otg_qh *qh)
+static inline uint16_t max_desc_num(dwc_otg_qh_t *qh)
 {
 	return (((qh->ep_type == UE_ISOCHRONOUS)
 		 && (qh->dev_speed == DWC_OTG_EP_SPEED_HIGH))
 		? MAX_DMA_DESC_NUM_HS_ISOC : MAX_DMA_DESC_NUM_GENERIC);
 }
-static inline uint16_t frame_incr_val(struct dwc_otg_qh *qh)
+static inline uint16_t frame_incr_val(dwc_otg_qh_t *qh)
 {
 	return ((qh->dev_speed == DWC_OTG_EP_SPEED_HIGH)
 		? ((qh->interval + 8 - 1) / 8)
 		: qh->interval);
 }
 
-static int desc_list_alloc(struct dwc_otg_qh *qh, int atomic_alloc)
+static int desc_list_alloc(dwc_otg_qh_t *qh, int atomic_alloc)
 {
 	int retval = 0;
 
 	if (atomic_alloc)
-		qh->desc_list = (struct dwc_otg_host_dma_desc *)
-		    dwc_dma_alloc_atomic(sizeof(struct dwc_otg_host_dma_desc) *
+		qh->desc_list = (dwc_otg_host_dma_desc_t *)
+		    dwc_dma_alloc_atomic(sizeof(dwc_otg_host_dma_desc_t) *
 					 max_desc_num(qh), &qh->desc_list_dma);
 	else
-		qh->desc_list = (struct dwc_otg_host_dma_desc *)
-		    dwc_dma_alloc(sizeof(struct dwc_otg_host_dma_desc) *
+		qh->desc_list = (dwc_otg_host_dma_desc_t *)
+		    dwc_dma_alloc(sizeof(dwc_otg_host_dma_desc_t) *
 				  max_desc_num(qh), &qh->desc_list_dma);
 
 	if (!qh->desc_list) {
@@ -96,7 +96,7 @@ static int desc_list_alloc(struct dwc_otg_qh *qh, int atomic_alloc)
 	}
 
 	dwc_memset(qh->desc_list, 0x00,
-		   sizeof(struct dwc_otg_host_dma_desc) * max_desc_num(qh));
+		   sizeof(dwc_otg_host_dma_desc_t) * max_desc_num(qh));
 
 	if (atomic_alloc)
 		qh->n_bytes =
@@ -109,7 +109,7 @@ static int desc_list_alloc(struct dwc_otg_qh *qh, int atomic_alloc)
 	if (!qh->n_bytes) {
 		retval = -DWC_E_NO_MEMORY;
 		DWC_ERROR
-		    ("%s: alloc failed for descriptors' size actual values\n",
+		    ("%s: Failed to allocate array for descriptors' size actual values\n",
 		     __func__);
 
 	}
@@ -117,7 +117,7 @@ static int desc_list_alloc(struct dwc_otg_qh *qh, int atomic_alloc)
 
 }
 
-static void desc_list_free(struct dwc_otg_qh *qh)
+static void desc_list_free(dwc_otg_qh_t *qh)
 {
 	if (qh->desc_list) {
 		dwc_dma_free(max_desc_num(qh), qh->desc_list,
@@ -131,7 +131,7 @@ static void desc_list_free(struct dwc_otg_qh *qh)
 	}
 }
 
-static int frame_list_alloc(struct dwc_otg_hcd *hcd, int atomic_alloc)
+static int frame_list_alloc(dwc_otg_hcd_t *hcd, int atomic_alloc)
 {
 	int retval = 0;
 	if (hcd->frame_list)
@@ -154,7 +154,7 @@ static int frame_list_alloc(struct dwc_otg_hcd *hcd, int atomic_alloc)
 	return retval;
 }
 
-static void frame_list_free(struct dwc_otg_hcd *hcd)
+static void frame_list_free(dwc_otg_hcd_t *hcd)
 {
 	if (!hcd->frame_list)
 		return;
@@ -164,9 +164,9 @@ static void frame_list_free(struct dwc_otg_hcd *hcd)
 	hcd->frame_list = NULL;
 }
 
-static void per_sched_enable(struct dwc_otg_hcd *hcd, uint16_t fr_list_en)
+static void per_sched_enable(dwc_otg_hcd_t *hcd, uint16_t fr_list_en)
 {
-	union hcfg_data hcfg;
+	hcfg_data_t hcfg;
 
 	hcfg.d32 =
 	    dwc_read_reg32(&hcd->core_if->host_if->host_global_regs->hcfg);
@@ -204,9 +204,9 @@ static void per_sched_enable(struct dwc_otg_hcd *hcd, uint16_t fr_list_en)
 
 }
 
-static void per_sched_disable(struct dwc_otg_hcd *hcd)
+static void per_sched_disable(dwc_otg_hcd_t *hcd)
 {
-	union hcfg_data hcfg;
+	hcfg_data_t hcfg;
 
 	hcfg.d32 =
 	    dwc_read_reg32(&hcd->core_if->host_if->host_global_regs->hcfg);
@@ -226,11 +226,10 @@ static void per_sched_disable(struct dwc_otg_hcd *hcd)
  * Activates/Deactivates FrameList entries for the channel
  * based on endpoint servicing period.
  */
-void update_frame_list(struct dwc_otg_hcd *hcd,
-	struct dwc_otg_qh *qh, uint8_t enable)
+void update_frame_list(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh, uint8_t enable)
 {
 	uint16_t i, j, inc;
-	struct dwc_hc *hc = qh->channel;
+	dwc_hc_t *hc = qh->channel;
 
 	inc = frame_incr_val(qh);
 
@@ -266,7 +265,7 @@ void update_frame_list(struct dwc_otg_hcd *hcd,
 }
 
 #if 1
-void dump_frame_list(struct dwc_otg_hcd *hcd)
+void dump_frame_list(dwc_otg_hcd_t *hcd)
 {
 	int i = 0;
 	DWC_PRINTF("--FRAME LIST (hex) --\n");
@@ -280,18 +279,17 @@ void dump_frame_list(struct dwc_otg_hcd *hcd)
 }
 #endif
 
-static void release_channel_ddma(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
+static void release_channel_ddma(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
-	struct dwc_hc *hc = qh->channel;
+	dwc_hc_t *hc = qh->channel;
 	if (dwc_qh_is_non_per(qh))
 		hcd->non_periodic_channels--;
 	else
 		update_frame_list(hcd, qh, 0);
 
 	/*
-	 * The condition is added to prevent double cleanup try in case
-	 * of device disconnect. See channel cleanup in
-	 * dwc_otg_hcd_disconnect_cb().
+	 * The condition is added to prevent double cleanup try in case of device
+	 * disconnect. See channel cleanup in dwc_otg_hcd_disconnect_cb().
 	 */
 	if (hc->qh) {
 		dwc_otg_hc_cleanup(hcd->core_if, hc);
@@ -304,8 +302,7 @@ static void release_channel_ddma(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
 
 	if (qh->desc_list) {
 		dwc_memset(qh->desc_list, 0x00,
-			sizeof(struct dwc_otg_host_dma_desc) *
-			    max_desc_num(qh));
+			   sizeof(dwc_otg_host_dma_desc_t) * max_desc_num(qh));
 	}
 }
 
@@ -320,7 +317,7 @@ static void release_channel_ddma(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
  *
  * @return 0 if successful, negative error code otherwise.
  */
-int dwc_otg_hcd_qh_init_ddma(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
+int dwc_otg_hcd_qh_init_ddma(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh,
 			     int atomic_alloc)
 {
 	int retval = 0;
@@ -356,7 +353,7 @@ int dwc_otg_hcd_qh_init_ddma(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
  * @param hcd The HCD state structure for the DWC OTG controller.
  * @param qh The QH to init.
  */
-void dwc_otg_hcd_qh_free_ddma(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
+void dwc_otg_hcd_qh_free_ddma(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 	desc_list_free(qh);
 
@@ -378,7 +375,7 @@ void dwc_otg_hcd_qh_free_ddma(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
 	}
 }
 
-static uint8_t frame_to_desc_idx(struct dwc_otg_qh *qh, uint16_t frame_idx)
+static uint8_t frame_to_desc_idx(dwc_otg_qh_t *qh, uint16_t frame_idx)
 {
 	if (qh->dev_speed == DWC_OTG_EP_SPEED_HIGH) {
 		/*
@@ -387,7 +384,7 @@ static uint8_t frame_to_desc_idx(struct dwc_otg_qh *qh, uint16_t frame_idx)
 		 */
 		return (frame_idx & ((MAX_DMA_DESC_NUM_HS_ISOC / 8) - 1)) * 8;
 	} else {
-		return frame_idx & (MAX_DMA_DESC_NUM_GENERIC - 1);
+		return (frame_idx & (MAX_DMA_DESC_NUM_GENERIC - 1));
 	}
 }
 
@@ -395,30 +392,25 @@ static uint8_t frame_to_desc_idx(struct dwc_otg_qh *qh, uint16_t frame_idx)
  * Determine starting frame for Isochronous transfer.
  * Few frames skipped to prevent race condition with HC.
  */
-static uint8_t calc_starting_frame(struct dwc_otg_hcd *hcd,
-	struct dwc_otg_qh *qh, uint8_t *skip_frames)
+static uint8_t calc_starting_frame(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh,
+				   uint8_t *skip_frames)
 {
 	uint16_t frame = 0;
 	hcd->frame_number = dwc_otg_hcd_get_frame_number(hcd);
 
-	/* sched_frame is always frame number(not uFrame) both
-	 * in FS and HS !!
-	 */
+	/* sched_frame is always frame number(not uFrame) both in FS and HS !! */
 
 	/*
 	 * skip_frames is used to limit activated descriptors number
 	 * to avoid the situation when HC services the last activated
 	 * descriptor firstly.
 	 * Example for FS:
-	 * Current frame is 1, scheduled frame is 3. Since HC
-	 * always fetches the descriptor corresponding to
-	 * curr_frame+1, the descriptor corresponding to frame 2
-	 * will be fetched. If the number of descriptors is max=64
-	 * (or greater) the list will be fully programmed with Active
-	 * descriptors and it is possible case(rare) that the latest
-	 * descriptor(considering rollback) corresponding to
-	 * frame 2 will be serviced first. HS case is more probable
-	 * because, in fact, up to 11 uframes(16 in the code)
+	 * Current frame is 1, scheduled frame is 3. Since HC always fetches the descriptor
+	 * corresponding to curr_frame+1, the descriptor corresponding to frame 2
+	 * will be fetched. If the number of descriptors is max=64 (or greather) the list will
+	 * be fully programmed with Active descriptors and it is possible case(rare) that the latest
+	 * descriptor(considering rollback) corresponding to frame 2 will be serviced first.
+	 * HS case is more probable because, in fact, up to 11 uframes(16 in the code)
 	 * may be skipped.
 	 */
 	if (qh->dev_speed == DWC_OTG_EP_SPEED_HIGH) {
@@ -445,8 +437,8 @@ static uint8_t calc_starting_frame(struct dwc_otg_hcd *hcd,
 	} else {
 		/*
 		 * Two frames are skipped for FS - the current and the next.
-		 * But for descriptor programming, 1 frame(descriptor) is
-		 * enough, see example above.
+		 * But for descriptor programming, 1 frame(descriptor) is enough,
+		 * see example above.
 		 */
 		*skip_frames = 1;
 		frame = dwc_frame_num_inc(hcd->frame_number, 2);
@@ -459,20 +451,17 @@ static uint8_t calc_starting_frame(struct dwc_otg_hcd *hcd,
  * Calculate initial descriptor index for isochronous transfer
  * based on scheduled frame.
  */
-static uint8_t recalc_initial_desc_idx(struct dwc_otg_hcd *hcd,
-	struct dwc_otg_qh *qh)
+static uint8_t recalc_initial_desc_idx(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 	uint16_t frame = 0, fr_idx, fr_idx_tmp;
 	uint8_t skip_frames = 0;
 	/*
 	 * With current ISOC processing algorithm the channel is being
 	 * released when no more QTDs in the list(qh->ntd == 0).
-	 * Thus this function is called only when qh->ntd == 0 and
-	 * qh->channel == 0.
+	 * Thus this function is called only when qh->ntd == 0 and qh->channel == 0.
 	 *
-	 * So qh->channel != NULL branch is not used and just not
-	 * removed from the source file. It is required for another
-	 * possible approach which is,
+	 * So qh->channel != NULL branch is not used and just not removed from the
+	 * source file. It is required for another possible approach which is,
 	 * do not disable and release the channel when ISOC session completed,
 	 * just move QH to inactive schedule until new QTD arrives.
 	 * On new QTD, the QH moved back to 'ready' schedule,
@@ -480,14 +469,12 @@ static uint8_t recalc_initial_desc_idx(struct dwc_otg_hcd *hcd,
 	 * In this case channel is released only on ep_disable.
 	 */
 
-	/* Calculate starting descriptor index.
-	 * For INTERRUPT endpoint it is always 0.
-	 */
+	/* Calculate starting descriptor index. For INTERRUPT endpoint it is always 0. */
 	if (qh->channel) {
 		frame = calc_starting_frame(hcd, qh, &skip_frames);
 		/*
-		 * Calculate initial descriptor index based on FrameList
-		 * current bitmap and servicing period.
+		 * Calculate initial descriptor index based on FrameList current bitmap
+		 * and servicing period.
 		 */
 		fr_idx_tmp = frame_list_idx(frame);
 		fr_idx =
@@ -511,12 +498,12 @@ static uint8_t recalc_initial_desc_idx(struct dwc_otg_hcd *hcd,
 #define MAX_ISOC_XFER_SIZE_HS 3072
 #define DESCNUM_THRESHOLD 4
 
-static void init_isoc_dma_desc(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
+static void init_isoc_dma_desc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh,
 			       uint8_t skip_frames)
 {
 	struct dwc_otg_hcd_iso_packet_desc *frame_desc;
-	struct dwc_otg_qtd *qtd;
-	struct dwc_otg_host_dma_desc *dma_desc;
+	dwc_otg_qtd_t *qtd;
+	dwc_otg_host_dma_desc_t *dma_desc;
 	uint16_t idx, inc, n_desc, ntd_max, max_xfer_size;
 
 	idx = qh->td_last;
@@ -533,12 +520,12 @@ static void init_isoc_dma_desc(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
 	    MAX_ISOC_XFER_SIZE_FS;
 
 	DWC_CIRCLEQ_FOREACH(qtd, &qh->qtd_list, qtd_list_entry) {
-		while ((qh->ntd < ntd_max) &&
-			(qtd->isoc_frame_index_last < qtd->urb->packet_count)) {
+		while ((qh->ntd < ntd_max)
+		       && (qtd->isoc_frame_index_last < qtd->urb->packet_count)) {
 
 			dma_desc = &qh->desc_list[idx];
 			dwc_memset(dma_desc, 0x00,
-				   sizeof(struct dwc_otg_host_dma_desc));
+				   sizeof(dwc_otg_host_dma_desc_t));
 
 			frame_desc =
 			    &qtd->urb->iso_descs[qtd->isoc_frame_index_last];
@@ -594,9 +581,8 @@ static void init_isoc_dma_desc(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
 		 * Move IOC "up". Required even if there is only one QTD
 		 * in the list, cause QTDs migth continue to be queued,
 		 * but during the activation it was only one queued.
-		 * Actually more than one QTD might be in the list if this
-		 * function calledfrom XferCompletion - QTDs was
-		 * queued during HW processing of the previous
+		 * Actually more than one QTD might be in the list if this function called
+		 * from XferCompletion - QTDs was queued during HW processing of the previous
 		 * descriptor chunk.
 		 */
 		idx =
@@ -615,22 +601,20 @@ static void init_isoc_dma_desc(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh,
 #endif
 }
 
-static void init_non_isoc_dma_desc(struct dwc_otg_hcd *hcd,
-	struct dwc_otg_qh *qh)
+static void init_non_isoc_dma_desc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 
-	struct dwc_hc *hc;
-	struct dwc_otg_host_dma_desc *dma_desc;
-	struct dwc_otg_qtd *qtd;
+	dwc_hc_t *hc;
+	dwc_otg_host_dma_desc_t *dma_desc;
+	dwc_otg_qtd_t *qtd;
 	int num_packets, len, n_desc = 0;
 
 	hc = qh->channel;
 
 	/*
 	 * Start with hc->xfer_buff initialized in
-	 * assign_and_init_hc(), then if SG transfer
-	 * consists of multiple URBs, this pointer re-assigned
-	 * to the buffer of the currently processed QTD.
+	 * assign_and_init_hc(), then if SG transfer consists of multiple URBs,
+	 * this pointer re-assigned to the buffer of the currently processed QTD.
 	 * For non-SG request there is always one QTD active.
 	 */
 
@@ -659,15 +643,10 @@ static void init_non_isoc_dma_desc(struct dwc_otg_hcd *hcd,
 					    (len + hc->max_packet -
 					     1) / hc->max_packet;
 				} else {
-					/* Need 1 packet
-					 * for transfer length
-					 * of 0.
-					 */
+					/* Need 1 packet for transfer length of 0. */
 					num_packets = 1;
 				}
-				/* Always program an integral # of max
-				* packets for IN transfers.
-				*/
+				/* Always program an integral # of max packets for IN transfers. */
 				len = num_packets * hc->max_packet;
 			}
 
@@ -677,7 +656,7 @@ static void init_non_isoc_dma_desc(struct dwc_otg_hcd *hcd,
 
 			if ((qh->ep_type == UE_CONTROL)
 			    && (qtd->control_phase == DWC_OTG_CONTROL_SETUP))
-				dma_desc->status.b.sup = 1;/* Setup Packet */
+				dma_desc->status.b.sup = 1;	/* Setup Packet */
 
 			dma_desc->status.b.a = 1;	/* Active descriptor */
 
@@ -706,9 +685,7 @@ static void init_non_isoc_dma_desc(struct dwc_otg_hcd *hcd,
 	}
 
 	if (n_desc) {
-		/* Request Transfer Complete interrupt
-		 * for the last descriptor
-		 */
+		/* Request Transfer Complete interrupt for the last descriptor */
 		qh->desc_list[n_desc - 1].status.b.ioc = 1;
 		/* End of List indicator */
 		qh->desc_list[n_desc - 1].status.b.eol = 1;
@@ -723,9 +700,8 @@ static void init_non_isoc_dma_desc(struct dwc_otg_hcd *hcd,
  *
  * For Interrupt and Isochronous endpoints initializes descriptor list
  * then updates FrameList, marking appropriate entries as active.
- * In case of Isochronous, the starting descriptor index is
- * calculated based on the scheduled frame, but only on the first
- * transfer descriptor within a session.
+ * In case of Isochronous, the starting descriptor index is calculated based
+ * on the scheduled frame, but only on the first transfer descriptor within a session.
  * Then starts the transfer via enabling the channel.
  * For Isochronous endpoint the channel is not halted on XferComplete
  * interrupt so remains assigned to the endpoint(QH) until session is done.
@@ -735,10 +711,10 @@ static void init_non_isoc_dma_desc(struct dwc_otg_hcd *hcd,
  *
  * @return 0 if successful, negative error code otherwise.
  */
-void dwc_otg_hcd_start_xfer_ddma(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
+void dwc_otg_hcd_start_xfer_ddma(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 	/* Channel is already assigned */
-	struct dwc_hc *hc = qh->channel;
+	dwc_hc_t *hc = qh->channel;
 	uint8_t skip_frames = 0;
 
 	switch (hc->ep_type) {
@@ -784,15 +760,15 @@ void dwc_otg_hcd_start_xfer_ddma(struct dwc_otg_hcd *hcd, struct dwc_otg_qh *qh)
 	}
 }
 
-static void complete_isoc_xfer_ddma(struct dwc_otg_hcd *hcd,
-				    struct dwc_hc *hc,
-				    struct dwc_otg_hc_regs *hc_regs,
-				    enum dwc_otg_halt_status halt_status)
+static void complete_isoc_xfer_ddma(dwc_otg_hcd_t *hcd,
+				    dwc_hc_t *hc,
+				    dwc_otg_hc_regs_t *hc_regs,
+				    dwc_otg_halt_status_e halt_status)
 {
 	struct dwc_otg_hcd_iso_packet_desc *frame_desc;
-	struct dwc_otg_qtd *qtd, *qtd_tmp;
-	struct dwc_otg_qh *qh;
-	struct dwc_otg_host_dma_desc *dma_desc;
+	dwc_otg_qtd_t *qtd, *qtd_tmp;
+	dwc_otg_qh_t *qh;
+	dwc_otg_host_dma_desc_t *dma_desc;
 	uint16_t idx, remain;
 	uint8_t urb_compl;
 
@@ -810,11 +786,10 @@ static void complete_isoc_xfer_ddma(struct dwc_otg_hcd *hcd,
 		 * Channel is halted in these error cases.
 		 * Considered as serious issues.
 		 * Complete all URBs marking all frames as failed,
-		 * irrespective whether some of the descriptors(frames)
-		 * succeeded or no.
+		 * irrespective whether some of the descriptors(frames) succeeded or no.
 		 * Pass error code to completion routine as well, to
-		 * update urb->status, some of class drivers might
-		 * use it to stop queing transfer requests.
+		 * update urb->status, some of class drivers might use it to stop
+		 * queing transfer requests.
 		 */
 		int err = (halt_status == DWC_OTG_HC_XFER_AHB_ERR)
 		    ? (-DWC_E_IO)
@@ -849,14 +824,11 @@ static void complete_isoc_xfer_ddma(struct dwc_otg_hcd *hcd,
 			remain =
 			    hc->ep_is_in ? dma_desc->status.b_isoc.n_bytes : 0;
 
-			if (dma_desc->status.b_isoc.sts ==
-				DMA_DESC_STS_PKTERR) {
+			if (dma_desc->status.b_isoc.sts == DMA_DESC_STS_PKTERR) {
 				/*
-				 * XactError or, unable to complete
-				 * all the transactions in the scheduled
-				 * micro-frame/frame,
-				 * both indicated by
-				 * DMA_DESC_STS_PKTERR.
+				 * XactError or, unable to complete all the transactions
+				 * in the scheduled micro-frame/frame,
+				 * both indicated by DMA_DESC_STS_PKTERR.
 				 */
 				qtd->urb->error_count++;
 				frame_desc->actual_length =
@@ -872,10 +844,8 @@ static void complete_isoc_xfer_ddma(struct dwc_otg_hcd *hcd,
 
 			if (++qtd->isoc_frame_index == qtd->urb->packet_count) {
 				/*
-				 * urb->status is not used for isoc
-				 * transfers here.
-				 * The individual frame_desc status
-				 * are used instead.
+				 * urb->status is not used for isoc transfers here.
+				 * The individual frame_desc status are used instead.
 				 */
 
 				hcd->fops->complete(hcd, qtd->urb->priv,
@@ -883,11 +853,10 @@ static void complete_isoc_xfer_ddma(struct dwc_otg_hcd *hcd,
 				dwc_otg_hcd_qtd_remove_and_free(hcd, qtd, qh);
 
 				/*
-				 * This check is necessary because urb_dequeue
-				 * can be calledfrom urb complete
-				 * callback(sound driver example).
-				 * All pending URBs are dequeued there,
-				 * so no need for further processing.
+				 * This check is necessary because urb_dequeue can be called
+				 * from urb complete callback(sound driver example).
+				 * All pending URBs are dequeued there, so no need for
+				 * further processing.
 				 */
 				if (hc->halt_status ==
 				    DWC_OTG_HC_XFER_URB_DEQUEUE) {
@@ -918,16 +887,16 @@ stop_scan:
 	qh->td_first = idx;
 }
 
-uint8_t update_non_isoc_urb_state_ddma(struct dwc_otg_hcd *hcd,
-				       struct dwc_hc *hc,
-				       struct dwc_otg_qtd *qtd,
-				       struct dwc_otg_host_dma_desc *dma_desc,
-				       enum dwc_otg_halt_status halt_status,
+uint8_t update_non_isoc_urb_state_ddma(dwc_otg_hcd_t *hcd,
+				       dwc_hc_t *hc,
+				       dwc_otg_qtd_t *qtd,
+				       dwc_otg_host_dma_desc_t *dma_desc,
+				       dwc_otg_halt_status_e halt_status,
 				       uint32_t n_bytes, uint8_t *xfer_done)
 {
 
 	uint16_t remain = hc->ep_is_in ? dma_desc->status.b.n_bytes : 0;
-	struct dwc_otg_hcd_urb *urb = qtd->urb;
+	dwc_otg_hcd_urb_t *urb = qtd->urb;
 
 	if (halt_status == DWC_OTG_HC_XFER_AHB_ERR) {
 		urb->status = -DWC_E_IO;
@@ -965,9 +934,8 @@ uint8_t update_non_isoc_urb_state_ddma(struct dwc_otg_hcd *hcd,
 			urb->actual_length += n_bytes - remain;
 			if (remain || urb->actual_length == urb->length) {
 				/*
-				 * For Control Data stage do not set
-				 * urb->status=0 to prevent URB callback.
-				 * Set it when Status phase done. See below.
+				 * For Control Data stage do not set urb->status=0 to prevent
+				 * URB callback. Set it when Status phase done. See below.
 				 */
 				*xfer_done = 1;
 			}
@@ -989,15 +957,15 @@ uint8_t update_non_isoc_urb_state_ddma(struct dwc_otg_hcd *hcd,
 	return 0;
 }
 
-static void complete_non_isoc_xfer_ddma(struct dwc_otg_hcd *hcd,
-					struct dwc_hc *hc,
-					struct dwc_otg_hc_regs *hc_regs,
-					enum dwc_otg_halt_status halt_status)
+static void complete_non_isoc_xfer_ddma(dwc_otg_hcd_t *hcd,
+					dwc_hc_t *hc,
+					dwc_otg_hc_regs_t *hc_regs,
+					dwc_otg_halt_status_e halt_status)
 {
-	struct dwc_otg_hcd_urb *urb = NULL;
-	struct dwc_otg_qtd *qtd, *qtd_tmp;
-	struct dwc_otg_qh *qh;
-	struct dwc_otg_host_dma_desc *dma_desc;
+	dwc_otg_hcd_urb_t *urb = NULL;
+	dwc_otg_qtd_t *qtd, *qtd_tmp;
+	dwc_otg_qh_t *qh;
+	dwc_otg_host_dma_desc_t *dma_desc;
 	uint32_t n_bytes, n_desc, i;
 	uint8_t failed = 0, xfer_done;
 
@@ -1042,8 +1010,7 @@ static void complete_non_isoc_xfer_ddma(struct dwc_otg_hcd *hcd,
 				if (failed)
 					goto stop_scan;
 			} else if (qh->ep_type == UE_CONTROL) {
-				if (qtd->control_phase ==
-					  DWC_OTG_CONTROL_SETUP) {
+				if (qtd->control_phase == DWC_OTG_CONTROL_SETUP) {
 					if (urb->length > 0) {
 						qtd->control_phase =
 						    DWC_OTG_CONTROL_DATA;
@@ -1062,13 +1029,12 @@ static void complete_non_isoc_xfer_ddma(struct dwc_otg_hcd *hcd,
 							    "  Control data transfer done\n");
 					} else if (i + 1 == qtd->n_desc) {
 						/*
-						 * Last descriptor for
-						 * Control data stage which is
+						 * Last descriptor for Control data stage which is
 						 * not completed yet.
 						 */
 						dwc_otg_hcd_save_data_toggle(hc,
-							     hc_regs,
-							     qtd);
+									     hc_regs,
+									     qtd);
 					}
 				}
 			}
@@ -1083,8 +1049,7 @@ stop_scan:
 	if (qh->ep_type != UE_CONTROL) {
 		/*
 		 * Resetting the data toggle for bulk
-		 * and interrupt endpoints in case of stall.
-		 * See handle_hc_stall_intr()
+		 * and interrupt endpoints in case of stall. See handle_hc_stall_intr()
 		 */
 		if (halt_status == DWC_OTG_HC_XFER_STALL)
 			qh->data_toggle = DWC_OTG_HC_PID_DATA0;
@@ -1093,15 +1058,14 @@ stop_scan:
 	}
 
 	if (halt_status == DWC_OTG_HC_XFER_COMPLETE) {
-		union hcint_data hcint;
+		hcint_data_t hcint;
 		hcint.d32 = dwc_read_reg32(&hc_regs->hcint);
 		if (hcint.b.nyet) {
 			/*
-			 * Got a NYET on the last transaction of the
-			  * transfer. It means that the endpoint should
-			  * be in the PING state at the beginning of the
-			  * next transfer.
-			  */
+			 * Got a NYET on the last transaction of the transfer. It
+			 * means that the endpoint should be in the PING state at the
+			 * beginning of the next transfer.
+			 */
 			qh->ping_state = 1;
 			clear_hc_int(hc_regs, nyet);
 		}
@@ -1127,14 +1091,14 @@ stop_scan:
  * @param halt_status Reason the channel is being halted,
  *		      or just XferComplete for isochronous transfer
  */
-void dwc_otg_hcd_complete_xfer_ddma(struct dwc_otg_hcd *hcd,
-				    struct dwc_hc *hc,
-				    struct dwc_otg_hc_regs *hc_regs,
-				    enum dwc_otg_halt_status halt_status)
+void dwc_otg_hcd_complete_xfer_ddma(dwc_otg_hcd_t *hcd,
+				    dwc_hc_t *hc,
+				    dwc_otg_hc_regs_t *hc_regs,
+				    dwc_otg_halt_status_e halt_status)
 {
 	uint8_t continue_isoc_xfer = 0;
-	enum dwc_otg_transaction_type tr_type;
-	struct dwc_otg_qh *qh = hc->qh;
+	dwc_otg_transaction_type_e tr_type;
+	dwc_otg_qh_t *qh = hc->qh;
 	uint64_t flags;
 
 	if (hc->ep_type == DWC_OTG_EP_TYPE_ISOC) {
@@ -1165,9 +1129,7 @@ void dwc_otg_hcd_complete_xfer_ddma(struct dwc_otg_hcd *hcd,
 		 *  Frame Rollover interrupt should be used.
 		 */
 	} else {
-		/* Scan descriptor list to complete the URB(s),
-		 * then release the channel
-		 */
+		/* Scan descriptor list to complete the URB(s), then release the channel */
 		complete_non_isoc_xfer_ddma(hcd, hc, hc_regs, halt_status);
 
 		release_channel_ddma(hcd, qh);
@@ -1178,9 +1140,7 @@ void dwc_otg_hcd_complete_xfer_ddma(struct dwc_otg_hcd *hcd,
 
 		if (!DWC_CIRCLEQ_EMPTY(&qh->qtd_list)) {
 			DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
-			/* Add back to inactive non-periodic schedule
-			 * on normal completion
-			 */
+			/* Add back to inactive non-periodic schedule on normal completion */
 			dwc_otg_hcd_qh_add(hcd, qh);
 			DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
 		}

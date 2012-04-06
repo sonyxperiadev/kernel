@@ -55,8 +55,7 @@
  */
 #define VEN_CORE_RESET_FEATURES		0xB4
 
-/** This command forces the PCD to write the deferred values
- * of a Core Features */
+/** This command forces the PCD to write the deferred values of a Core Features */
 #define VEN_CORE_ACTIVATE_FEATURES	0xB5
 
 /** This request reads a DWORD value from a register at the specified offset */
@@ -93,9 +92,10 @@ struct cfi_all_features_header {
 	uint16_t wNumFeatures;
 } UPACKED;
 
-/** This structure is a header of the Core Feature descriptor
- * dataset returned to the Host after the VEN_CORE_GET_FEATURES
- * request
+typedef struct cfi_all_features_header cfi_all_features_header_t;
+
+/** This structure is a header of the Core Feature descriptor dataset returned to
+ *  the Host after the VEN_CORE_GET_FEATURES request
  */
 struct cfi_feature_desc_header {
 #define CFI_FEATURE_DESC_HDR_LEN	8
@@ -128,13 +128,16 @@ struct cfi_feature_desc_header {
 	/* uint8_t *name; */
 } UPACKED;
 
+typedef struct cfi_feature_desc_header cfi_feature_desc_header_t;
+
 /**
- * This structure describes a NULL terminated string referenced
- * by its id field. It is very similar to usb_string structure but
- * has the id field type set to 16-bit.
+ * This structure describes a NULL terminated string referenced by its id field.
+ * It is very similar to usb_string structure but has the id field type set to 16-bit.
  */
 struct cfi_string {
 	uint16_t id;
 	const uint8_t *s;
 };
+typedef struct cfi_string cfi_string_t;
+
 #endif

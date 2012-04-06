@@ -39,8 +39,7 @@
 /**
  * @file
  *
- * This file contains the data structures for accessing the
- * DWC_otg core registers.
+ * This file contains the data structures for accessing the DWC_otg core registers.
  *
  * The application interfaces with the HS OTG core by reading from and
  * writing to the Control and Status Register (CSR) space through the
@@ -69,13 +68,13 @@
  * The dwc_otg_core_global_regs structure defines the size
  * and relative field offsets for the Core Global registers.
  */
-struct dwc_otg_core_global_regs {
+typedef struct dwc_otg_core_global_regs {
 	/** OTG Control and Status Register.  <i>Offset: 000h</i> */
-	uint32_t gotgctl;
+	volatile uint32_t gotgctl;
 	/** OTG Interrupt Register.	 <i>Offset: 004h</i> */
-	uint32_t gotgint;
+	volatile uint32_t gotgint;
 	/**Core AHB Configuration Register.	 <i>Offset: 008h</i> */
-	uint32_t gahbcfg;
+	volatile uint32_t gahbcfg;
 
 #define DWC_GLBINTRMASK		0x0001
 #define DWC_DMAENABLE		0x0020
@@ -85,42 +84,38 @@ struct dwc_otg_core_global_regs {
 #define DWC_PTXEMPTYLVL_HALFEMPTY	0x0000
 
 	/**Core USB Configuration Register.	 <i>Offset: 00Ch</i> */
-	uint32_t gusbcfg;
+	volatile uint32_t gusbcfg;
 	/**Core Reset Register.	 <i>Offset: 010h</i> */
-	uint32_t grstctl;
+	volatile uint32_t grstctl;
 	/**Core Interrupt Register.	 <i>Offset: 014h</i> */
-	uint32_t gintsts;
+	volatile uint32_t gintsts;
 	/**Core Interrupt Mask Register.  <i>Offset: 018h</i> */
-	uint32_t gintmsk;
-	/**Receive Status Queue Read Register (Read Only).
-	 * <i>Offset: 01Ch</i>
-	 */
-	uint32_t grxstsr;
-	/**Receive Status Queue Read & POP Register (Read Only).
-	 * <i>Offset: 020h</i>
-	 */
-	uint32_t grxstsp;
+	volatile uint32_t gintmsk;
+	/**Receive Status Queue Read Register (Read Only).	<i>Offset: 01Ch</i> */
+	volatile uint32_t grxstsr;
+	/**Receive Status Queue Read & POP Register (Read Only).  <i>Offset: 020h</i>*/
+	volatile uint32_t grxstsp;
 	/**Receive FIFO Size Register.	<i>Offset: 024h</i> */
-	uint32_t grxfsiz;
+	volatile uint32_t grxfsiz;
 	/**Non Periodic Transmit FIFO Size Register.  <i>Offset: 028h</i> */
-	uint32_t gnptxfsiz;
+	volatile uint32_t gnptxfsiz;
 	/**Non Periodic Transmit FIFO/Queue Status Register (Read
 	 * Only). <i>Offset: 02Ch</i> */
-	uint32_t gnptxsts;
+	volatile uint32_t gnptxsts;
 	/**I2C Access Register.	 <i>Offset: 030h</i> */
-	uint32_t gi2cctl;
+	volatile uint32_t gi2cctl;
 	/**PHY Vendor Control Register.	 <i>Offset: 034h</i> */
-	uint32_t gpvndctl;
+	volatile uint32_t gpvndctl;
 	/**General Purpose Input/Output Register.  <i>Offset: 038h</i> */
-	uint32_t ggpio;
+	volatile uint32_t ggpio;
 	/**User ID Register.  <i>Offset: 03Ch</i> */
-	uint32_t guid;
+	volatile uint32_t guid;
 	/**Synopsys ID Register (Read Only).  <i>Offset: 040h</i> */
-	uint32_t gsnpsid;
+	volatile uint32_t gsnpsid;
 	/**User HW Config1 Register (Read Only).  <i>Offset: 044h</i> */
-	uint32_t ghwcfg1;
+	volatile uint32_t ghwcfg1;
 	/**User HW Config2 Register (Read Only).  <i>Offset: 048h</i> */
-	uint32_t ghwcfg2;
+	volatile uint32_t ghwcfg2;
 #define DWC_SLAVE_ONLY_ARCH 0
 #define DWC_EXT_DMA_ARCH 1
 #define DWC_INT_DMA_ARCH 2
@@ -134,36 +129,33 @@ struct dwc_otg_core_global_regs {
 #define DWC_MODE_NO_SRP_CAPABLE_HOST	6
 
 	/**User HW Config3 Register (Read Only).  <i>Offset: 04Ch</i> */
-	uint32_t ghwcfg3;
+	volatile uint32_t ghwcfg3;
 	/**User HW Config4 Register (Read Only).  <i>Offset: 050h</i>*/
-	uint32_t ghwcfg4;
+	volatile uint32_t ghwcfg4;
 	/** Core LPM Configuration register <i>Offset: 054h</i>*/
-	uint32_t glpmcfg;
+	volatile uint32_t glpmcfg;
 	/** Global PowerDn Register <i>Offset: 058h</i> */
-	uint32_t gpwrdn;
+	volatile uint32_t gpwrdn;
 	/** Global DFIFO SW Config Register  <i>Offset: 05Ch</i> */
-	uint32_t gdfifocfg;
+	volatile uint32_t gdfifocfg;
 	/** ADP Control Register  <i>Offset: 060h</i> */
-	uint32_t adpctl;
+	volatile uint32_t adpctl;
 	/** Reserved  <i>Offset: 064h-0FFh</i> */
-	uint32_t reserved39[39];
+	volatile uint32_t reserved39[39];
 	/** Host Periodic Transmit FIFO Size Register. <i>Offset: 100h</i> */
-	uint32_t hptxfsiz;
-	/** Device Periodic Transmit FIFO#n Register
-	 * if dedicated fifos are disabled,
-	 * otherwise Device Transmit FIFO#n Register.
-	 * <i>Offset: 104h + (FIFO_Number-1)*04h,
-	 * 1 <= FIFO Number <= 15 (1<=n<=15).</i>
-	 */
-	uint32_t dtxfsiz[15];
-};
+	volatile uint32_t hptxfsiz;
+	/** Device Periodic Transmit FIFO#n Register if dedicated fifos are disabled,
+		otherwise Device Transmit FIFO#n Register.
+	 * <i>Offset: 104h + (FIFO_Number-1)*04h, 1 <= FIFO Number <= 15 (1<=n<=15).</i> */
+	volatile uint32_t dtxfsiz[15];
+} dwc_otg_core_global_regs_t;
 
 /**
  * This union represents the bit fields of the Core OTG Control
  * and Status Register (GOTGCTL).  Set the bits using the bit
  * fields then write the <i>d32</i> value to the register.
  */
-union gotgctl_data {
+typedef union gotgctl_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -184,14 +176,14 @@ union gotgctl_data {
 		unsigned otgver:1;
 		unsigned reserved21_31:11;
 	} b;
-};
+} gotgctl_data_t;
 
 /**
  * This union represents the bit fields of the Core OTG Interrupt Register
  * (GOTGINT).  Set/clear the bits using the bit fields then write the <i>d32</i>
  * value to the register.
  */
-union gotgint_data {
+typedef union gotgint_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -225,14 +217,14 @@ union gotgint_data {
 		unsigned reserved31_21:11;
 
 	} b;
-};
+} gotgint_data_t;
 
 /**
  * This union represents the bit fields of the Core AHB Configuration
  * Register (GAHBCFG). Set/clear the bits using the bit fields then
  * write the <i>d32</i> value to the register.
  */
-union gahbcfg_data {
+typedef union gahbcfg_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -256,14 +248,14 @@ union gahbcfg_data {
 #define DWC_GAHBCFG_TXFEMPTYLVL_HALFEMPTY	0
 		unsigned reserved9_31:23;
 	} b;
-};
+} gahbcfg_data_t;
 
 /**
  * This union represents the bit fields of the Core USB Configuration
  * Register (GUSBCFG). Set the bits using the bit fields then write
  * the <i>d32</i> value to the register.
  */
-union gusbcfg_data {
+typedef union gusbcfg_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -294,14 +286,14 @@ union gusbcfg_data {
 		unsigned force_dev_mode:1;
 		unsigned reserved31:1;
 	} b;
-};
+} gusbcfg_data_t;
 
 /**
  * This union represents the bit fields of the Core Reset Register
  * (GRSTCTL).  Set/clear the bits using the bit fields then write the
  * <i>d32</i> value to the register.
  */
-union grstctl_data {
+typedef union grstctl_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -418,14 +410,14 @@ union grstctl_data {
 		 * Machine is in IDLE condition. */
 		unsigned ahbidle:1;
 	} b;
-};
+} grstctl_t;
 
 /**
  * This union represents the bit fields of the Core Interrupt Mask
  * Register (GINTMSK). Set/clear the bits using the bit fields then
  * write the <i>d32</i> value to the register.
  */
-union gintmsk_data {
+typedef union gintmsk_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -462,13 +454,13 @@ union gintmsk_data {
 		unsigned sessreqintr:1;
 		unsigned wkupintr:1;
 	} b;
-};
+} gintmsk_data_t;
 /**
  * This union represents the bit fields of the Core Interrupt Register
  * (GINTSTS).  Set/clear the bits using the bit fields then write the
  * <i>d32</i> value to the register.
  */
-union gintsts_data {
+typedef union gintsts_data {
 	/** raw register data */
 	uint32_t d32;
 #define DWC_SOF_INTR_MASK 0x0008
@@ -507,14 +499,14 @@ union gintsts_data {
 		unsigned sessreqintr:1;
 		unsigned wkupintr:1;
 	} b;
-};
+} gintsts_data_t;
 
 /**
  * This union represents the bit fields in the Device Receive Status Read and
  * Pop Registers (GRXSTSR, GRXSTSP) Read the register into the <i>d32</i>
  * element then read out the bits using the <i>b</i>it elements.
  */
-union device_grxsts_data {
+typedef union device_grxsts_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -533,14 +525,14 @@ union device_grxsts_data {
 		unsigned fn:4;
 		unsigned reserved:7;
 	} b;
-};
+} device_grxsts_data_t;
 
 /**
  * This union represents the bit fields in the Host Receive Status Read and
  * Pop Registers (GRXSTSR, GRXSTSP) Read the register into the <i>d32</i>
  * element then read out the bits using the <i>b</i>it elements.
  */
-union host_grxsts_data {
+typedef union host_grxsts_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -557,15 +549,14 @@ union host_grxsts_data {
 
 		unsigned reserved:11;
 	} b;
-};
+} host_grxsts_data_t;
 
 /**
  * This union represents the bit fields in the FIFO Size Registers (HPTXFSIZ,
- * GNPTXFSIZ, DPTXFSIZn, DIEPTXFn). Read the register into
- * the <i>d32</i> element then
+ * GNPTXFSIZ, DPTXFSIZn, DIEPTXFn). Read the register into the <i>d32</i> element then
  * read out the bits using the <i>b</i>it elements.
  */
-union fifosize_data {
+typedef union fifosize_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -573,7 +564,7 @@ union fifosize_data {
 		unsigned startaddr:16;
 		unsigned depth:16;
 	} b;
-};
+} fifosize_data_t;
 
 /**
  * This union represents the bit fields in the Non-Periodic Transmit
@@ -581,7 +572,7 @@ union fifosize_data {
  * <i>d32</i> element then read out the bits using the <i>b</i>it
  * elements.
  */
-union gnptxsts_data {
+typedef union gnptxsts_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -603,7 +594,7 @@ union gnptxsts_data {
 		unsigned nptxqtop_chnep:4;
 		unsigned reserved:1;
 	} b;
-};
+} gnptxsts_data_t;
 
 /**
  * This union represents the bit fields in the Transmit
@@ -611,7 +602,7 @@ union gnptxsts_data {
  * <i>d32</i> element then read out the bits using the <i>b</i>it
  * elements.
  */
-union dtxfsts_data {
+typedef union dtxfsts_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -619,14 +610,14 @@ union dtxfsts_data {
 		unsigned txfspcavail:16;
 		unsigned reserved:16;
 	} b;
-};
+} dtxfsts_data_t;
 
 /**
  * This union represents the bit fields in the I2C Control Register
  * (I2CCTL). Read the register into the <i>d32</i> element then read out the
  * bits using the <i>b</i>it elements.
  */
-union gi2cctl_data {
+typedef union gi2cctl_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -642,14 +633,14 @@ union gi2cctl_data {
 		unsigned rw:1;
 		unsigned bsydne:1;
 	} b;
-};
+} gi2cctl_data_t;
 
 /**
  * This union represents the bit fields in the User HW Config1
  * Register.  Read the register into the <i>d32</i> element then read
  * out the bits using the <i>b</i>it elements.
  */
-union hwcfg1_data {
+typedef union hwcfg1_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -671,14 +662,14 @@ union hwcfg1_data {
 		unsigned ep_dir14:2;
 		unsigned ep_dir15:2;
 	} b;
-};
+} hwcfg1_data_t;
 
 /**
  * This union represents the bit fields in the User HW Config2
  * Register.  Read the register into the <i>d32</i> element then read
  * out the bits using the <i>b</i>it elements.
  */
-union hwcfg2_data {
+typedef union hwcfg2_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -713,14 +704,14 @@ union hwcfg2_data {
 		unsigned dev_token_q_depth:5;
 		unsigned otg_enable_ic_usb:1;
 	} b;
-};
+} hwcfg2_data_t;
 
 /**
  * This union represents the bit fields in the User HW Config3
  * Register.  Read the register into the <i>d32</i> element then read
  * out the bits using the <i>b</i>it elements.
  */
-union hwcfg3_data {
+typedef union hwcfg3_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -747,14 +738,14 @@ union hwcfg3_data {
 		unsigned otg_lpm_en:1;
 		unsigned dfifo_depth:16;
 	} b;
-};
+} hwcfg3_data_t;
 
 /**
  * This union represents the bit fields in the User HW Config4
  * Register.  Read the register into the <i>d32</i> element then read
  * out the bits using the <i>b</i>it elements.
  */
-union hwcfg4_data {
+typedef union hwcfg4_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -776,14 +767,14 @@ union hwcfg4_data {
 		unsigned desc_dma:1;
 		unsigned desc_dma_dyn:1;
 	} b;
-};
+} hwcfg4_data_t;
 
 /**
  * This union represents the bit fields of the Core LPM Configuration
  * Register (GLPMCFG). Set the bits using bit fields then write
  * the <i>d32</i> value to the register.
  */
-union glpmctl_data {
+typedef union glpmctl_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -870,8 +861,7 @@ union glpmctl_data {
 		unsigned reserved28_29:2;
 		/** In host mode once this bit is set, the host
 		 * configures to drive the HSIC Idle state on the bus.
-		 * It then waits for the  device to initiate the Connect
-		 * sequence.
+		 * It then waits for the  device to initiate the Connect sequence.
 		 * In device mode once this bit is set, the device waits for
 		 * the HSIC Idle line state on the bus. Upon receving the Idle
 		 * line state, it initiates the HSIC Connect sequence.
@@ -882,14 +872,14 @@ union glpmctl_data {
 		 */
 		unsigned inv_sel_hsic:1;
 	} b;
-};
+} glpmcfg_data_t;
 
 /**
  * This union represents the bit fields of the Core ADP Timer, Control and
  * Status Register (ADPTIMCTLSTS). Set the bits using bit fields then write
  * the <i>d32</i> value to the register.
  */
-union adpctl_data {
+typedef union adpctl_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -905,14 +895,12 @@ union adpctl_data {
 		unsigned prb_dschg:1;
 		/** Probe Delta (PRB_DELTA)
 		 *  These bits set the resolution for RTIM   value.
-		 *  The bits are defined in units of 32 kHz clock
-		 * cycles as follows:
+		 *  The bits are defined in units of 32 kHz clock cycles as follows:
 		 *  2'b00  -  1 cycles
 		 *  2'b01  -  2 cycles
 		 *  2'b10 -  3 cycles
 		 *  2'b11 - 4 cycles
-		 *  For example if this value is chosen to 2'b01,
-		 * it means that RTIM
+		 *  For example if this value is chosen to 2'b01, it means that RTIM
 		 *  increments for every 3(three) 32Khz clock cycles.
 		 */
 		unsigned prb_delta:2;
@@ -924,17 +912,14 @@ union adpctl_data {
 		 *  2'b11  -  Reserved
 		 */
 		unsigned prb_per:2;
-		/** These bits capture the latest time it took for
-		 * VBUS to ramp from VADP_SINK
-		 *  to VADP_PRB.  The bits are defined in units
-		 * of 32 kHz clock cycles as follows:
+		/** These bits capture the latest time it took for VBUS to ramp from VADP_SINK
+		 *  to VADP_PRB.  The bits are defined in units of 32 kHz clock cycles as follows:
 		 *  0x000  -  1 cycles
 		 *  0x001  -  2 cycles
 		 *  0x002  -  3 cycles
 		 *  etc
 		 *  0x7FF  -  2048 cycles
-		 *  A time of 1024 cycles at 32 kHz corresponds
-		 * to a time of 32 msec.
+		 *  A time of 1024 cycles at 32 kHz corresponds to a time of 32 msec.
 		*/
 		unsigned rtim:11;
 		/** Enable Probe (EnaPrb)
@@ -966,8 +951,7 @@ union adpctl_data {
 		unsigned adp_prb_int:1;
 		/**
 		 *  ADP Sense Interrupt (ADP_SNS_INT)
-		 *  When this bit is set, it means that the
-		 * VBUS voltage is greater than
+		 *  When this bit is set, it means that the VBUS voltage is greater than
 		 *  VADP_SNS value or VADP_SNS is reached.
 		 *  This bit is valid only if OTG_Ver = 1'b1.
 		 */
@@ -1006,7 +990,7 @@ union adpctl_data {
 		 /** Reserved */
 		unsigned reserved29_31:3;
 	} b;
-};
+} adpctl_data_t;
 
 /*
 Device Registers */
@@ -1019,57 +1003,57 @@ Device Registers */
  * <i>These registers are visible only in Device mode and must not be
  * accessed in Host mode, as the results are unknown.</i>
  */
-struct dwc_otg_dev_global_regs {
+typedef struct dwc_otg_dev_global_regs {
 	/** Device Configuration Register. <i>Offset 800h</i> */
-	uint32_t dcfg;
+	volatile uint32_t dcfg;
 	/** Device Control Register. <i>Offset: 804h</i> */
-	uint32_t dctl;
+	volatile uint32_t dctl;
 	/** Device Status Register (Read Only). <i>Offset: 808h</i> */
-	uint32_t dsts;
+	volatile uint32_t dsts;
 	/** Reserved. <i>Offset: 80Ch</i> */
 	uint32_t unused;
 	/** Device IN Endpoint Common Interrupt Mask
 	 * Register. <i>Offset: 810h</i> */
-	uint32_t diepmsk;
+	volatile uint32_t diepmsk;
 	/** Device OUT Endpoint Common Interrupt Mask
 	 * Register. <i>Offset: 814h</i> */
-	uint32_t doepmsk;
+	volatile uint32_t doepmsk;
 	/** Device All Endpoints Interrupt Register.  <i>Offset: 818h</i> */
-	uint32_t daint;
+	volatile uint32_t daint;
 	/** Device All Endpoints Interrupt Mask Register.  <i>Offset:
 	 * 81Ch</i> */
-	uint32_t daintmsk;
+	volatile uint32_t daintmsk;
 	/** Device IN Token Queue Read Register-1 (Read Only).
 	 * <i>Offset: 820h</i> */
-	uint32_t dtknqr1;
+	volatile uint32_t dtknqr1;
 	/** Device IN Token Queue Read Register-2 (Read Only).
 	 * <i>Offset: 824h</i> */
-	uint32_t dtknqr2;
+	volatile uint32_t dtknqr2;
 	/** Device VBUS	 discharge Register.  <i>Offset: 828h</i> */
-	uint32_t dvbusdis;
+	volatile uint32_t dvbusdis;
 	/** Device VBUS Pulse Register.	 <i>Offset: 82Ch</i> */
-	uint32_t dvbuspulse;
+	volatile uint32_t dvbuspulse;
 	/** Device IN Token Queue Read Register-3 (Read Only). /
 	 *	Device Thresholding control register (Read/Write)
 	 * <i>Offset: 830h</i> */
-	uint32_t dtknqr3_dthrctl;
+	volatile uint32_t dtknqr3_dthrctl;
 	/** Device IN Token Queue Read Register-4 (Read Only). /
 	 *	Device IN EPs empty Inr. Mask Register (Read/Write)
 	 * <i>Offset: 834h</i> */
-	uint32_t dtknqr4_fifoemptymsk;
+	volatile uint32_t dtknqr4_fifoemptymsk;
 	/** Device Each Endpoint Interrupt Register (Read Only). /
 	 * <i>Offset: 838h</i> */
-	uint32_t deachint;
+	volatile uint32_t deachint;
 	/** Device Each Endpoint Interrupt mask Register (Read/Write). /
 	 * <i>Offset: 83Ch</i> */
-	uint32_t deachintmsk;
+	volatile uint32_t deachintmsk;
 	/** Device Each In Endpoint Interrupt mask Register (Read/Write). /
 	 * <i>Offset: 840h</i> */
-	uint32_t diepeachintmsk[MAX_EPS_CHANNELS];
+	volatile uint32_t diepeachintmsk[MAX_EPS_CHANNELS];
 	/** Device Each Out Endpoint Interrupt mask Register (Read/Write). /
 	 * <i>Offset: 880h</i> */
-	uint32_t doepeachintmsk[MAX_EPS_CHANNELS];
-};
+	volatile uint32_t doepeachintmsk[MAX_EPS_CHANNELS];
+} dwc_otg_device_global_regs_t;
 
 /**
  * This union represents the bit fields in the Device Configuration
@@ -1077,7 +1061,7 @@ struct dwc_otg_dev_global_regs {
  * set/clear the bits using the <i>b</i>it elements.  Write the
  * <i>d32</i> member to the dcfg register.
  */
-union dcfg_data {
+typedef union dcfg_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1105,14 +1089,14 @@ union dcfg_data {
 		/** Enable Descriptor DMA in Device mode */
 		unsigned descdma:1;
 	} b;
-};
+} dcfg_data_t;
 
 /**
  * This union represents the bit fields in the Device Control
  * Register.  Read the register into the <i>d32</i> member then
  * set/clear the bits using the <i>b</i>it elements.
  */
-union dctl_data {
+typedef union dctl_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1149,14 +1133,14 @@ union dctl_data {
 
 		unsigned reserved17_31:15;
 	} b;
-};
+} dctl_data_t;
 
 /**
  * This union represents the bit fields in the Device Status
  * Register.  Read the register into the <i>d32</i> member then
  * set/clear the bits using the <i>b</i>it elements.
  */
-union dsts_data {
+typedef union dsts_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1176,7 +1160,7 @@ union dsts_data {
 		unsigned soffn:14;
 		unsigned reserved22_31:10;
 	} b;
-};
+} dsts_data_t;
 
 /**
  * This union represents the bit fields in the Device IN EP Interrupt
@@ -1185,7 +1169,7 @@ union dsts_data {
  * - Read the register into the <i>d32</i> member then set/clear the
  *	 bits using the <i>b</i>it elements.
  */
-union diepint_data {
+typedef union diepint_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1218,8 +1202,13 @@ union diepint_data {
 
 		unsigned reserved14_31:18;
 	} b;
-};
+} diepint_data_t;
 
+/**
+ * This union represents the bit fields in the Device IN EP
+ * Common/Dedicated Interrupt Mask Register.
+ */
+typedef union diepint_data diepmsk_data_t;
 
 /**
  * This union represents the bit fields in the Device OUT EP Interrupt
@@ -1228,7 +1217,7 @@ union diepint_data {
  * - Read the register into the <i>d32</i> member then set/clear the
  *	 bits using the <i>b</i>it elements.
  */
-union doepint_data {
+typedef union doepint_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1266,8 +1255,13 @@ union doepint_data {
 
 		unsigned reserved15_31:17;
 	} b;
-};
+} doepint_data_t;
 
+/**
+ * This union represents the bit fields in the Device OUT EP
+ * Common/Dedicated Interrupt Mask Register.
+ */
+typedef union doepint_data doepmsk_data_t;
 
 /**
  * This union represents the bit fields in the Device All EP Interrupt
@@ -1275,7 +1269,7 @@ union doepint_data {
  * - Read the register into the <i>d32</i> member then set/clear the
  *	 bits using the <i>b</i>it elements.
  */
-union daint_data {
+typedef union daint_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1321,7 +1315,7 @@ union daint_data {
 		unsigned outep14:1;
 		unsigned outep15:1;
 	} b;
-};
+} daint_data_t;
 
 /**
  * This union represents the bit fields in the Device IN Token Queue
@@ -1329,7 +1323,7 @@ union daint_data {
  * - Read the register into the <i>d32</i> member.
  * - READ-ONLY Register
  */
-union dtknq1_data {
+typedef union dtknq1_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1343,14 +1337,14 @@ union dtknq1_data {
 		/** EP Numbers of IN Tokens 0 ... 4 */
 		unsigned epnums0_5:24;
 	} b;
-};
+} dtknq1_data_t;
 
 /**
  * This union represents Threshold control Register
  * - Read and write the register into the <i>d32</i> member.
  * - READ-WRITABLE Register
  */
-union dthrctl_data {
+typedef union dthrctl_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1372,7 +1366,7 @@ union dthrctl_data {
 		/** Reserved */
 		unsigned reserved26_31:6;
 	} b;
-};
+} dthrctl_data_t;
 
 /**
  * Device Logical IN Endpoint-Specific Registers. <i>Offsets
@@ -1384,30 +1378,30 @@ union dthrctl_data {
  * <i>These registers are visible only in Device mode and must not be
  * accessed in Host mode, as the results are unknown.</i>
  */
-struct dwc_otg_dev_in_ep_regs {
+typedef struct dwc_otg_dev_in_ep_regs {
 	/** Device IN Endpoint Control Register. <i>Offset:900h +
 	 * (ep_num * 20h) + 00h</i> */
-	uint32_t diepctl;
+	volatile uint32_t diepctl;
 	/** Reserved. <i>Offset:900h + (ep_num * 20h) + 04h</i> */
 	uint32_t reserved04;
 	/** Device IN Endpoint Interrupt Register. <i>Offset:900h +
 	 * (ep_num * 20h) + 08h</i> */
-	uint32_t diepint;
+	volatile uint32_t diepint;
 	/** Reserved. <i>Offset:900h + (ep_num * 20h) + 0Ch</i> */
 	uint32_t reserved0C;
 	/** Device IN Endpoint Transfer Size
 	 * Register. <i>Offset:900h + (ep_num * 20h) + 10h</i> */
-	uint32_t dieptsiz;
+	volatile uint32_t dieptsiz;
 	/** Device IN Endpoint DMA Address Register. <i>Offset:900h +
 	 * (ep_num * 20h) + 14h</i> */
-	uint32_t diepdma;
+	volatile uint32_t diepdma;
 	/** Device IN Endpoint Transmit FIFO Status Register. <i>Offset:900h +
 	 * (ep_num * 20h) + 18h</i> */
-	uint32_t dtxfsts;
+	volatile uint32_t dtxfsts;
 	/** Device IN Endpoint DMA Buffer Register. <i>Offset:900h +
 	 * (ep_num * 20h) + 1Ch</i> */
-	uint32_t diepdmab;
-};
+	volatile uint32_t diepdmab;
+} dwc_otg_dev_in_ep_regs_t;
 
 /**
  * Device Logical OUT Endpoint-Specific Registers. <i>Offsets:
@@ -1419,37 +1413,37 @@ struct dwc_otg_dev_in_ep_regs {
  * <i>These registers are visible only in Device mode and must not be
  * accessed in Host mode, as the results are unknown.</i>
  */
-struct dwc_otg_dev_out_ep_regs {
+typedef struct dwc_otg_dev_out_ep_regs {
 	/** Device OUT Endpoint Control Register. <i>Offset:B00h +
 	 * (ep_num * 20h) + 00h</i> */
-	uint32_t doepctl;
+	volatile uint32_t doepctl;
 	/** Device OUT Endpoint Frame number Register.	<i>Offset:
 	 * B00h + (ep_num * 20h) + 04h</i> */
-	uint32_t doepfn;
+	volatile uint32_t doepfn;
 	/** Device OUT Endpoint Interrupt Register. <i>Offset:B00h +
 	 * (ep_num * 20h) + 08h</i> */
-	uint32_t doepint;
+	volatile uint32_t doepint;
 	/** Reserved. <i>Offset:B00h + (ep_num * 20h) + 0Ch</i> */
 	uint32_t reserved0C;
 	/** Device OUT Endpoint Transfer Size Register. <i>Offset:
 	 * B00h + (ep_num * 20h) + 10h</i> */
-	uint32_t doeptsiz;
+	volatile uint32_t doeptsiz;
 	/** Device OUT Endpoint DMA Address Register. <i>Offset:B00h
 	 * + (ep_num * 20h) + 14h</i> */
-	uint32_t doepdma;
-	/** Reserved. <i>Offset:B00h + * (ep_num * 20h) + 18h</i> */
+	volatile uint32_t doepdma;
+	/** Reserved. <i>Offset:B00h + 	 * (ep_num * 20h) + 18h</i> */
 	uint32_t unused;
 	/** Device OUT Endpoint DMA Buffer Register. <i>Offset:B00h
 	 * + (ep_num * 20h) + 1Ch</i> */
 	uint32_t doepdmab;
-};
+} dwc_otg_dev_out_ep_regs_t;
 
 /**
  * This union represents the bit fields in the Device EP Control
  * Register.  Read the register into the <i>d32</i> member then
  * set/clear the bits using the <i>b</i>it elements.
  */
-union depctl_data {
+typedef union depctl_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1541,14 +1535,14 @@ union depctl_data {
 		/** Endpoint Enable */
 		unsigned epena:1;
 	} b;
-};
+} depctl_data_t;
 
 /**
  * This union represents the bit fields in the Device EP Transfer
  * Size Register.  Read the register into the <i>d32</i> member then
  * set/clear the bits using the <i>b</i>it elements.
  */
-union deptsiz_data {
+typedef union deptsiz_data {
 		/** raw register data */
 	uint32_t d32;
 		/** register bits */
@@ -1561,14 +1555,14 @@ union deptsiz_data {
 		unsigned mc:2;
 		unsigned reserved:1;
 	} b;
-};
+} deptsiz_data_t;
 
 /**
  * This union represents the bit fields in the Device EP 0 Transfer
  * Size Register.  Read the register into the <i>d32</i> member then
  * set/clear the bits using the <i>b</i>it elements.
  */
-union deptsiz0_data {
+typedef union deptsiz0_data {
 		/** raw register data */
 	uint32_t d32;
 		/** register bits */
@@ -1585,7 +1579,7 @@ union deptsiz0_data {
 		unsigned supcnt:2;
 		unsigned reserved31;
 	} b;
-};
+} deptsiz0_data_t;
 
 /*
 DMA Descriptor Specific Structures */
@@ -1610,7 +1604,7 @@ DMA Descriptor Specific Structures */
  * set/clear the bits using the <i>b</i>it, <i>b_iso_out</i> and
  * <i>b_iso_in</i> elements.
  */
-union dev_dma_desc_sts {
+typedef union dev_dma_desc_sts {
 		/** raw register data */
 	uint32_t d32;
 		/** quadlet bits */
@@ -1678,7 +1672,7 @@ union dev_dma_desc_sts {
 		unsigned bs:2;
 	} b_iso_in;
 /*#endif*/                                /* DWC_EN_ISOC */
-};
+} dev_dma_desc_sts_t;
 
 /**
  * DMA Descriptor structure
@@ -1686,38 +1680,38 @@ union dev_dma_desc_sts {
  * DMA Descriptor structure contains two quadlets:
  * Status quadlet and Data buffer pointer.
  */
-struct dwc_otg_dev_dma_desc {
+typedef struct dwc_otg_dev_dma_desc {
 	/** DMA Descriptor status quadlet */
-	union dev_dma_desc_sts status;
+	dev_dma_desc_sts_t status;
 	/** DMA Descriptor data buffer pointer */
 	uint32_t buf;
-};
+} dwc_otg_dev_dma_desc_t;
 
 /**
  * The dwc_otg_dev_if structure contains information needed to manage
  * the DWC_otg controller acting in device mode. It represents the
  * programming view of the device-specific aspects of the controller.
  */
-struct dwc_otg_dev_if {
+typedef struct dwc_otg_dev_if {
 	/** Pointer to device Global registers.
 	 * Device Global Registers starting at offset 800h
 	 */
-	struct dwc_otg_dev_global_regs *dev_global_regs;
+	dwc_otg_device_global_regs_t *dev_global_regs;
 #define DWC_DEV_GLOBAL_REG_OFFSET 0x800
 
 	/**
 	 * Device Logical IN Endpoint-Specific Registers 900h-AFCh
 	 */
-	struct dwc_otg_dev_in_ep_regs *in_ep_regs[MAX_EPS_CHANNELS];
+	dwc_otg_dev_in_ep_regs_t *in_ep_regs[MAX_EPS_CHANNELS];
 #define DWC_DEV_IN_EP_REG_OFFSET 0x900
 #define DWC_EP_REG_OFFSET 0x20
 
 	/** Device Logical OUT Endpoint-Specific Registers B00h-CFCh */
-	struct dwc_otg_dev_out_ep_regs *out_ep_regs[MAX_EPS_CHANNELS];
+	dwc_otg_dev_out_ep_regs_t *out_ep_regs[MAX_EPS_CHANNELS];
 #define DWC_DEV_OUT_EP_REG_OFFSET 0xB00
 
 	/* Device configuration information */
-	uint8_t speed; /**< Device Speed 0: Unknown, 1: LS, 2:FS, 3: HS */
+	uint8_t speed;				 /**< Device Speed	0: Unknown, 1: LS, 2:FS, 3: HS */
 	uint8_t num_in_eps;		 /**< Number # of Tx EP range: 0-15 exept ep0 */
 	uint8_t num_out_eps;		 /**< Number # of Rx EP range: 0-15 exept ep 0*/
 
@@ -1742,26 +1736,26 @@ struct dwc_otg_dev_if {
 
 	/** 2 descriptors for SETUP packets */
 	dwc_dma_t dma_setup_desc_addr[2];
-	struct dwc_otg_dev_dma_desc *setup_desc_addr[2];
+	dwc_otg_dev_dma_desc_t *setup_desc_addr[2];
 
 	/** Pointer to Descriptor with latest SETUP packet */
-	struct dwc_otg_dev_dma_desc *psetup;
+	dwc_otg_dev_dma_desc_t *psetup;
 
 	/** Index of current SETUP handler descriptor */
 	uint32_t setup_desc_index;
 
 	/** Descriptor for Data In or Status In phases */
 	dwc_dma_t dma_in_desc_addr;
-	struct dwc_otg_dev_dma_desc *in_desc_addr;
+	dwc_otg_dev_dma_desc_t *in_desc_addr;
 
 	/** Descriptor for Data Out or Status Out phases */
 	dwc_dma_t dma_out_desc_addr;
-	struct dwc_otg_dev_dma_desc *out_desc_addr;
+	dwc_otg_dev_dma_desc_t *out_desc_addr;
 
 	/** Setup Packet Detected - if set clear NAK when queueing */
 	uint32_t spd;
 
-};
+} dwc_otg_dev_if_t;
 
 /*
 Host Mode Register Structures */
@@ -1771,33 +1765,31 @@ Host Mode Register Structures */
  * field offsets for the Host Mode Global Registers.  Host Global
  * Registers offsets 400h-7FFh.
 */
-struct dwc_otg_host_global_regs {
+typedef struct dwc_otg_host_global_regs {
 	/** Host Configuration Register.   <i>Offset: 400h</i> */
-	uint32_t hcfg;
+	volatile uint32_t hcfg;
 	/** Host Frame Interval Register.	<i>Offset: 404h</i> */
-	uint32_t hfir;
+	volatile uint32_t hfir;
 	/** Host Frame Number / Frame Remaining Register. <i>Offset: 408h</i> */
-	uint32_t hfnum;
+	volatile uint32_t hfnum;
 	/** Reserved.	<i>Offset: 40Ch</i> */
 	uint32_t reserved40C;
-	/** Host Periodic Transmit FIFO/ Queue Status Register.
-	 * <i>Offset: 410h</i>
-	 */
-	uint32_t hptxsts;
+	/** Host Periodic Transmit FIFO/ Queue Status Register. <i>Offset: 410h</i> */
+	volatile uint32_t hptxsts;
 	/** Host All Channels Interrupt Register. <i>Offset: 414h</i> */
-	uint32_t haint;
+	volatile uint32_t haint;
 	/** Host All Channels Interrupt Mask Register. <i>Offset: 418h</i> */
-	uint32_t haintmsk;
+	volatile uint32_t haintmsk;
 	/** Host Frame List Base Address Register . <i>Offset: 41Ch</i> */
-	uint32_t hflbaddr;
-};
+	volatile uint32_t hflbaddr;
+} dwc_otg_host_global_regs_t;
 
 /**
  * This union represents the bit fields in the Host Configuration Register.
  * Read the register into the <i>d32</i> member then set/clear the bits using
  * the <i>b</i>it elements. Write the <i>d32</i> member to the hcfg register.
  */
-union hcfg_data {
+typedef union hcfg_data {
 	/** raw register data */
 	uint32_t d32;
 
@@ -1821,13 +1813,13 @@ union hcfg_data {
 		/** Periodic Scheduling Enabled Status */
 		unsigned perschedstat:1;
 	} b;
-};
+} hcfg_data_t;
 
 /**
  * This union represents the bit fields in the Host Frame Remaing/Number
- * Register.
+ * Register. 
  */
-union hfir_data {
+typedef union hfir_data {
 	/** raw register data */
 	uint32_t d32;
 
@@ -1836,13 +1828,13 @@ union hfir_data {
 		unsigned frint:16;
 		unsigned reserved:16;
 	} b;
-};
+} hfir_data_t;
 
 /**
  * This union represents the bit fields in the Host Frame Remaing/Number
- * Register.
+ * Register. 
  */
-union hfnum_data {
+typedef union hfnum_data {
 	/** raw register data */
 	uint32_t d32;
 
@@ -1852,9 +1844,9 @@ union hfnum_data {
 #define DWC_HFNUM_MAX_FRNUM 0x3FFF
 		unsigned frrem:16;
 	} b;
-};
+} hfnum_data_t;
 
-union hptxsts_data {
+typedef union hptxsts_data {
 	/** raw register data */
 	uint32_t d32;
 
@@ -1876,7 +1868,7 @@ union hptxsts_data {
 		unsigned ptxqtop_chnum:4;
 		unsigned ptxqtop_odd:1;
 	} b;
-};
+} hptxsts_data_t;
 
 /**
  * This union represents the bit fields in the Host Port Control and Status
@@ -1884,7 +1876,7 @@ union hptxsts_data {
  * bits using the <i>b</i>it elements. Write the <i>d32</i> member to the
  * hprt0 register.
  */
-union hprt0_data {
+typedef union hprt0_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1908,13 +1900,13 @@ union hprt0_data {
 #define DWC_HPRT0_PRTSPD_LOW_SPEED	2
 		unsigned reserved19_31:13;
 	} b;
-};
+} hprt0_data_t;
 
 /**
  * This union represents the bit fields in the Host All Interrupt
- * Register.
+ * Register. 
  */
-union haint_data {
+typedef union haint_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1942,13 +1934,13 @@ union haint_data {
 		unsigned chint:16;
 		unsigned reserved:16;
 	} b2;
-};
+} haint_data_t;
 
 /**
  * This union represents the bit fields in the Host All Interrupt
- * Register.
+ * Register. 
  */
-union haintmsk_data {
+typedef union haintmsk_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -1976,42 +1968,28 @@ union haintmsk_data {
 		unsigned chint:16;
 		unsigned reserved:16;
 	} b2;
-};
+} haintmsk_data_t;
 
 /**
  * Host Channel Specific Registers. <i>500h-5FCh</i>
  */
-struct dwc_otg_hc_regs {
-	/** Host Channel 0 Characteristic Register.
-	 * <i>Offset: 500h + (chan_num * 20h) + 00h</i>
-	 */
-	uint32_t hcchar;
-	/** Host Channel 0 Split Control Register.
-	 * <i>Offset: 500h + (chan_num * 20h) + 04h</i>
-	 */
-	uint32_t hcsplt;
-	/** Host Channel 0 Interrupt Register.
-	 * <i>Offset: 500h + (chan_num * 20h) + 08h</i>
-	 */
-	uint32_t hcint;
-	/** Host Channel 0 Interrupt Mask Register.
-	 * <i>Offset: 500h + (chan_num * 20h) + 0Ch</i>
-	 */
-	uint32_t hcintmsk;
-	/** Host Channel 0 Transfer Size Register.
-	 * <i>Offset: 500h + (chan_num * 20h) + 10h</i>
-	 */
-	uint32_t hctsiz;
-	/** Host Channel 0 DMA Address Register.
-	 * <i>Offset: 500h + (chan_num * 20h) + 14h</i>
-	 */
-	uint32_t hcdma;
-	uint32_t reserved;
-	/** Host Channel 0 DMA Buffer Address Register.
-	 *<i>Offset: 500h + (chan_num * 20h) + 1Ch</i>
-	 */
-	uint32_t hcdmab;
-};
+typedef struct dwc_otg_hc_regs {
+	/** Host Channel 0 Characteristic Register. <i>Offset: 500h + (chan_num * 20h) + 00h</i> */
+	volatile uint32_t hcchar;
+	/** Host Channel 0 Split Control Register. <i>Offset: 500h + (chan_num * 20h) + 04h</i> */
+	volatile uint32_t hcsplt;
+	/** Host Channel 0 Interrupt Register. <i>Offset: 500h + (chan_num * 20h) + 08h</i> */
+	volatile uint32_t hcint;
+	/** Host Channel 0 Interrupt Mask Register. <i>Offset: 500h + (chan_num * 20h) + 0Ch</i> */
+	volatile uint32_t hcintmsk;
+	/** Host Channel 0 Transfer Size Register. <i>Offset: 500h + (chan_num * 20h) + 10h</i> */
+	volatile uint32_t hctsiz;
+	/** Host Channel 0 DMA Address Register. <i>Offset: 500h + (chan_num * 20h) + 14h</i> */
+	volatile uint32_t hcdma;
+	volatile uint32_t reserved;
+	/** Host Channel 0 DMA Buffer Address Register. <i>Offset: 500h + (chan_num * 20h) + 1Ch</i> */
+	volatile uint32_t hcdmab;
+} dwc_otg_hc_regs_t;
 
 /**
  * This union represents the bit fields in the Host Channel Characteristics
@@ -2019,7 +1997,7 @@ struct dwc_otg_hc_regs {
  * bits using the <i>b</i>it elements. Write the <i>d32</i> member to the
  * hcchar register.
  */
-union hcchar_data {
+typedef union hcchar_data {
 	/** raw register data */
 	uint32_t d32;
 
@@ -2060,9 +2038,9 @@ union hcchar_data {
 		/** Channel enable */
 		unsigned chen:1;
 	} b;
-};
+} hcchar_data_t;
 
-union hcsplt_data {
+typedef union hcsplt_data {
 	/** raw register data */
 	uint32_t d32;
 
@@ -2090,13 +2068,13 @@ union hcsplt_data {
 		/** Split Enble */
 		unsigned spltena:1;
 	} b;
-};
+} hcsplt_data_t;
 
 /**
  * This union represents the bit fields in the Host All Interrupt
- * Register.
+ * Register. 
  */
-union hcint_data {
+typedef union hcint_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -2132,7 +2110,7 @@ union hcint_data {
 		/** Reserved */
 		unsigned reserved14_31:18;
 	} b;
-};
+} hcint_data_t;
 
 /**
  * This union represents the bit fields in the Host Channel Interrupt Mask
@@ -2140,7 +2118,7 @@ union hcint_data {
  * bits using the <i>b</i>it elements. Write the <i>d32</i> member to the
  * hcintmsk register.
  */
-union hcintmsk_data {
+typedef union hcintmsk_data {
 	/** raw register data */
 	uint32_t d32;
 
@@ -2162,7 +2140,7 @@ union hcintmsk_data {
 		unsigned frm_list_roll:1;
 		unsigned reserved14_31:18;
 	} b;
-};
+} hcintmsk_data_t;
 
 /**
  * This union represents the bit fields in the Host Channel Transfer Size
@@ -2171,7 +2149,7 @@ union hcintmsk_data {
  * hcchar register.
  */
 
-union hctsiz_data {
+typedef union hctsiz_data {
 	/** raw register data */
 	uint32_t d32;
 
@@ -2228,14 +2206,13 @@ union hctsiz_data {
 		/** Do PING protocol when 1 */
 		unsigned dopng:1;
 	} b_ddma;
-};
+} hctsiz_data_t;
 
 /**
- * This union represents the bit fields in
- * the Host DMA Address
+ * This union represents the bit fields in the Host DMA Address 
  * Register used in Descriptor DMA mode.
  */
-union hcdma_data {
+typedef union hcdma_data {
 	/** raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -2246,15 +2223,14 @@ union hcdma_data {
 		/** Start Address of Descriptor List */
 		unsigned dma_addr:21;
 	} b;
-};
+} hcdma_data_t;
 
 /**
  * This union represents the bit fields in the DMA Descriptor
- * status quadlet for host mode. Read the quadlet into the
- * <i>d32</i> member then set/clear the bits using the
- * <i>b</i>it elements.
+ * status quadlet for host mode. Read the quadlet into the <i>d32</i> member then
+ * set/clear the bits using the <i>b</i>it elements.
  */
-union host_dma_desc_sts {
+typedef union host_dma_desc_sts {
 	/** raw register data */
 	uint32_t d32;
 	/** quadlet bits */
@@ -2263,9 +2239,7 @@ union host_dma_desc_sts {
 	struct {
 		/** Number of bytes */
 		unsigned n_bytes:17;
-		/** QTD offset to jump when Short Packet
-		 * received - only for IN EPs
-		 */
+		/** QTD offset to jump when Short Packet received - only for IN EPs */
 		unsigned qtd_offset:6;
 		/**
 		 * Set to request the core to jump to alternate QTD if
@@ -2303,7 +2277,7 @@ union host_dma_desc_sts {
 		/** Active Bit */
 		unsigned a:1;
 	} b_isoc;
-};
+} host_dma_desc_sts_t;
 
 #define	MAX_DMA_DESC_SIZE		131071
 #define MAX_DMA_DESC_NUM_GENERIC	64
@@ -2315,12 +2289,12 @@ union host_dma_desc_sts {
  * DMA Descriptor structure contains two quadlets:
  * Status quadlet and Data buffer pointer.
  */
-struct dwc_otg_host_dma_desc {
+typedef struct dwc_otg_host_dma_desc {
 	/** DMA Descriptor status quadlet */
-	union host_dma_desc_sts status;
+	host_dma_desc_sts_t status;
 	/** DMA Descriptor data buffer pointer */
 	uint32_t buf;
-};
+} dwc_otg_host_dma_desc_t;
 
 /** OTG Host Interface Structure.
  *
@@ -2329,17 +2303,17 @@ struct dwc_otg_host_dma_desc {
  * represents the programming view of the host-specific aspects of the
  * controller.
  */
-struct dwc_otg_host_if {
+typedef struct dwc_otg_host_if {
 	/** Host Global Registers starting at offset 400h.*/
-	struct dwc_otg_host_global_regs *host_global_regs;
+	dwc_otg_host_global_regs_t *host_global_regs;
 #define DWC_OTG_HOST_GLOBAL_REG_OFFSET 0x400
 
 	/** Host Port 0 Control and Status Register */
-	uint32_t *hprt0;
+	volatile uint32_t *hprt0;
 #define DWC_OTG_HOST_PORT_REGS_OFFSET 0x440
 
 	/** Host Channel Specific Registers at offsets 500h-5FCh. */
-	struct dwc_otg_hc_regs *hc_regs[MAX_EPS_CHANNELS];
+	dwc_otg_hc_regs_t *hc_regs[MAX_EPS_CHANNELS];
 #define DWC_OTG_HOST_CHAN_REGS_OFFSET 0x500
 #define DWC_OTG_CHAN_REGS_OFFSET 0x20
 
@@ -2351,14 +2325,14 @@ struct dwc_otg_host_if {
 	/** Periodic Tx FIFO Size (Only 1 host periodic Tx FIFO) */
 	uint16_t perio_tx_fifo_size;
 
-};
+} dwc_otg_host_if_t;
 
 /**
  * This union represents the bit fields in the Power and Clock Gating Control
  * Register. Read the register into the <i>d32</i> member then set/clear the
  * bits using the <i>b</i>it elements.
  */
-union pcgcctl_data {
+typedef union pcgcctl_data {
 	/** raw register data */
 	uint32_t d32;
 
@@ -2393,14 +2367,14 @@ union pcgcctl_data {
 		unsigned p2hd_prt_spd:2;
 		unsigned if_dev_mode:1;
 	} b;
-};
+} pcgcctl_data_t;
 
 /**
  * This union represents the bit fields in the Global Data FIFO Software Configuration Register.
  * Read the register into the <i>d32</i> member then set/clear the
  * bits using the <i>b</i>it elements.
  */
-union gdfifocfg_data {
+typedef union gdfifocfg_data {
 	/* raw register data */
 	uint32_t d32;
 	/** register bits */
@@ -2410,14 +2384,14 @@ union gdfifocfg_data {
 		/** Start address of EP info controller */
 		unsigned epinfobase:16;
 	} b;
-};
+} gdfifocfg_data_t;
 
 /**
  * This union represents the bit fields in the Global Power Down Register
  * Register. Read the register into the <i>d32</i> member then set/clear the
  * bits using the <i>b</i>it elements.
  */
-union gpwrdn_data {
+typedef union gpwrdn_data {
 	/* raw register data */
 	uint32_t d32;
 
@@ -2472,6 +2446,6 @@ union gpwrdn_data {
 		/** Reserved 24_31 */
 		unsigned reserved24_31:8;
 	} b;
-};
+} gpwrdn_data_t;
 
 #endif
