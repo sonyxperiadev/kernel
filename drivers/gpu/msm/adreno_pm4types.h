@@ -29,11 +29,6 @@
 /* skip N 32-bit words to get to the next packet */
 #define CP_NOP			0x10
 
-/* indirect buffer dispatch.  prefetch parser uses this packet type to determine
-*  whether to pre-fetch the IB
-*/
-#define CP_INDIRECT_BUFFER	0x3f
-
 /* indirect buffer dispatch.  same as IB, but init is pipelined */
 #define CP_INDIRECT_BUFFER_PFD	0x37
 
@@ -117,6 +112,9 @@
 /* load constants from a location in memory */
 #define CP_LOAD_CONSTANT_CONTEXT 0x2e
 
+/* (A2x) sets binning configuration registers */
+#define CP_SET_BIN_DATA             0x2f
+
 /* selective invalidation of state pointers */
 #define CP_INVALIDATE_STATE	0x3b
 
@@ -188,11 +186,20 @@
 #define cp_nop_packet(cnt) \
 	 (CP_TYPE3_PKT | (((cnt)-1) << 16) | (CP_NOP << 8))
 
+#define pkt_is_type0(pkt) (((pkt) & 0XC0000000) == CP_TYPE0_PKT)
+
+#define type0_pkt_size(pkt) ((((pkt) >> 16) & 0x3FFF) + 1)
+#define type0_pkt_offset(pkt) ((pkt) & 0x7FFF)
+
+#define pkt_is_type3(pkt) (((pkt) & 0xC0000000) == CP_TYPE3_PKT)
+
+#define cp_type3_opcode(pkt) (((pkt) >> 8) & 0xFF)
+#define type3_pkt_size(pkt) ((((pkt) >> 16) & 0x3FFF) + 1)
 
 /* packet headers */
 #define CP_HDR_ME_INIT	cp_type3_packet(CP_ME_INIT, 18)
 #define CP_HDR_INDIRECT_BUFFER_PFD cp_type3_packet(CP_INDIRECT_BUFFER_PFD, 2)
-#define CP_HDR_INDIRECT_BUFFER	cp_type3_packet(CP_INDIRECT_BUFFER, 2)
+#define CP_HDR_INDIRECT_BUFFER_PFE cp_type3_packet(CP_INDIRECT_BUFFER_PFE, 2)
 
 /* dword base address of the GFX decode space */
 #define SUBBLOCK_OFFSET(reg) ((unsigned int)((reg) - (0x2000)))
