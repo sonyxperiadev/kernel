@@ -11,23 +11,23 @@ config BCMDHD_4334
 config BCMDHD_FW_PATH
 	depends on BCMDHD_4334
 	string "Firmware path"
-	default "/system/etc/firmware/fw_bcmdhd.bin"
+	default "/system/vendor/firmware/fw_wifi.bin_b2"
 	---help---
 	  Path to the firmware file.
 
 config BCMDHD_NVRAM_PATH
 	depends on BCMDHD_4334
 	string "NVRAM path"
-	default "/system/etc/wifi/bcmdhd.cal"
+	default "/system/vendor/firmware/fw_wifi_nvram.txt"
 	---help---
 	  Path to the calibration file.
 
 config BCMDHD_IF_PREFIX
 	depends on BCMDHD_4334
 	string "Wireless interface prefix"
-	default ""
+	default "wlan%d"
 	---help---
-	  Name of wireless interface. The default value is "eth%d".
+	  Name of wireless interface. The default value is "wlan%d".
 
 config BCMDHD_WEXT
 	bool "Enable WEXT support"

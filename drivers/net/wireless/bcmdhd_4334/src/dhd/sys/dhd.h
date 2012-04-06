@@ -259,6 +259,9 @@ typedef struct dhd_pub {
 	uint8 htsfdlystat_sz; /* Size of delay stats, max 255B */
 #endif
 	struct reorder_info *reorder_bufs[WLHOST_REORDERDATA_MAXFLOWS];
+#ifdef PNO_SUPPORT
+	struct wake_lock 	pno_wakelock;
+#endif
 } dhd_pub_t;
 
 	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP)
@@ -656,12 +659,13 @@ extern char fw_path2[MOD_PARAM_PATHLEN];
 /* Flag to indicate if we should download firmware on driver load */
 extern uint dhd_download_fw_on_driverload;
 
-#ifdef WL_CFG80211
+#if defined(WL_CFG80211) && defined(CUSTOMER_HW_SAMSUNG)
 /* CSP#505233: Flags to indicate if we distingish power off policy when
  * user set the memu "Keep Wi-Fi on during sleep" to "Never"
  */
-extern bool suspend_power_off;
-#endif /* WL_CFG80211 */
+extern int sleep_never;
+int dhd_deepsleep(struct net_device *dev, int flag);
+#endif /* WL_CFG80211 && CUSTOMER_HW_SAMSUNG */
 
 #ifdef BCM4334_CHECK_CHIP_REV
 /* Check chip revision */

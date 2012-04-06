@@ -72,6 +72,8 @@ extern void htsf_update(struct dhd_info *dhd, void *data);
 int dhd_msg_level = DHD_ERROR_VAL;
 
 
+
+
 #include <wl_iw.h>
 
 char fw_path[MOD_PARAM_PATHLEN];
@@ -1051,20 +1053,20 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 			}
 #endif /* WL_CFG80211 */
 		if (ifevent->ifidx > 0 && ifevent->ifidx < DHD_MAX_IFS) {
-					if (ifevent->action == WLC_E_IF_ADD) {
-						if (dhd_add_if(dhd_pub->info, ifevent->ifidx,
-							NULL, event->ifname,
-							event->addr.octet,
-							ifevent->flags, ifevent->bssidx)) {
-							DHD_ERROR(("%s: dhd_add_if failed!!"
-									" ifidx: %d for %s\n",
-									__FUNCTION__,
-									ifevent->ifidx,
-									event->ifname));
-							return (BCME_ERROR);
-						}
-					}
-					else if (ifevent->action == WLC_E_IF_DEL)
+			if (ifevent->action == WLC_E_IF_ADD) {
+				if (dhd_add_if(dhd_pub->info, ifevent->ifidx,
+					NULL, event->ifname,
+					event->addr.octet,
+					ifevent->flags, ifevent->bssidx)) {
+					DHD_ERROR(("%s: dhd_add_if failed!!"
+							" ifidx: %d for %s\n",
+							__FUNCTION__,
+							ifevent->ifidx,
+							event->ifname));
+					return (BCME_ERROR);
+				}
+			}
+			else if (ifevent->action == WLC_E_IF_DEL)
 				dhd_del_if(dhd_pub->info, ifevent->ifidx);
 		} else {
 #ifndef PROP_TXSTATUS

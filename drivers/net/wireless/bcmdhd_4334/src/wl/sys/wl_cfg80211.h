@@ -142,6 +142,7 @@ do {									\
 #define WL_MED_DWELL_TIME       400
 #define WL_LONG_DWELL_TIME 	1000
 #define IFACE_MAX_CNT 		2
+#define WL_SCAN_CONNECT_DWELL_TIME_MS 100
 
 #define WL_SCAN_TIMER_INTERVAL_MS	8000 /* Scan timeout */
 #define WL_CHANNEL_SYNC_RETRY 	5
@@ -411,6 +412,7 @@ struct afx_hdl {
 	s32 my_listen_chan;	/* my listen channel in GON Req frame */
 	bool is_listen;
 	bool ack_recv;
+	bool is_active;
 };
 
 /* private data of cfg80211 interface */
@@ -428,6 +430,7 @@ struct wl_priv {
 	spinlock_t eq_lock;	/* for event queue synchronization */
 	spinlock_t cfgdrv_lock;	/* to protect scan status (and others if needed) */
 	struct completion act_frm_scan;
+	struct completion iface_disable;
 #ifdef WL_CFG80211_SYNC_GON_TIME
 	struct completion wait_next_af;
 #endif /* WL_CFG80211_SYNC_GON_TIME */
@@ -767,7 +770,7 @@ extern int wl_cfg80211_hang(struct net_device *dev, u16 reason);
 extern s32 wl_mode_to_nl80211_iftype(s32 mode);
 int wl_cfg80211_do_driver_init(struct net_device *net);
 void wl_cfg80211_enable_trace(int level);
-
+extern s32 wl_update_wiphybands(struct wl_priv *wl);
 /* do scan abort */
 extern s32 wl_cfg80211_scan_abort(struct wl_priv *wl, struct net_device *ndev);
 

@@ -243,8 +243,8 @@ static int rhea_wifi_set_carddetect(int val)
 	} else
 		pr_warning("%s: Nobody to notify\n", __func__);
 
-	if (val == 0)
-		bcm_sdiowl_term();
+//	if (val == 0)
+//		bcm_sdiowl_term();
 	return 0;
 }
 
@@ -318,6 +318,8 @@ static int rhea_wifi_power(int on)
 #endif
 	if (on)
 		bcm_sdiowl_init();
+	else
+		bcm_sdiowl_term();
 
 	rhea_wifi_power_state = on;
 

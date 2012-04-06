@@ -59,8 +59,15 @@ int dhd_monitor_uninit(void);
 #ifndef DHD_MAX_IFS
 #define DHD_MAX_IFS 16
 #endif
-#define MON_PRINT(format, ...) printk("DHD-MON: %s " format, __func__, ##__VA_ARGS__)
-#define MON_TRACE MON_PRINT
+
+#define MON_DEBUG 0
+#if MON_DEBUG
+	#define MON_PRINT(format, ...) printk("DHD-MON: %s " format, __func__, ##__VA_ARGS__)
+	#define MON_TRACE MON_PRINT
+#else
+	#define MON_PRINT(format, ...)
+	#define MON_TRACE MON_PRINT
+#endif
 
 typedef struct monitor_interface {
 	int radiotap_enabled;

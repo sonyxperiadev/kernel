@@ -18,7 +18,10 @@ extern int _dhd_set_mac_address(struct dhd_info *dhd,
 #ifdef SLP_PATH
 #define CIDINFO "/opt/etc/.cid.info"
 #define PSMINFO "/opt/etc/.psm.info"
+#define MACINFO "/opt/etc/.mac.info"
+#define	REVINFO "/data/.rev"
 #else
+#define	REVINFO "/data/.rev"
 #define CIDINFO "/data/.cid.info"
 #define PSMINFO "/data/.psm.info"
 #endif /*SLP_PATH*/
@@ -38,10 +41,6 @@ int dhd_read_macaddr(struct dhd_info *dhd, struct ether_addr *mac)
 	char *nvfilepath       = "/data/.nvmac.info";
 #endif
 	int ret = 0;
-	struct dentry *parent;
-	struct dentry *dentry;
-	struct inode *p_inode;
-	struct inode *c_inode;
 
 		fp = filp_open(filepath, O_RDONLY, 0);
 		if (IS_ERR(fp)) {
@@ -54,13 +53,6 @@ start_readmac:
 			}
 			oldfs = get_fs();
 			set_fs(get_ds());
-		/* set uid , gid of parent directory */
-		dentry = fp->f_path.dentry;
-		parent = dget_parent(dentry);
-		c_inode = dentry->d_inode;
-		p_inode = parent->d_inode;
-		c_inode->i_uid = p_inode->i_uid;
-		c_inode->i_gid = p_inode->i_gid;
 
 		/* Generating the Random Bytes for 3 last octects of the MAC address */
 			get_random_bytes(randommac, 3);
@@ -467,6 +459,8 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 	int ret = -1;
 #ifdef BCM4334_CHIP
 	unsigned char cis_buf[250] = {0};
+	const char *revfilepath = REVINFO;
+	int flag_b3 = 0;	
 #else
 	unsigned char cis_buf[128] = {0};
 #endif
@@ -485,6 +479,7 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 	if (ret < 0) {
 		DHD_ERROR(("%s: CIS reading failed, err=%d\n",
 			__FUNCTION__, ret));
+		return ret;
 	} else {
 #ifdef BCM4334_CHIP
 		unsigned char semco_id[4] = {0x00, 0x00, 0x33, 0x33};
@@ -514,6 +509,31 @@ int dhd_check_module_cid(dhd_pub_t *dhd)
 			dhd_write_cid_file(cidfilepath, "murata", 6);
 		}
 
+		/* Try reading out from OTP to distinguish B2 or B3 */
+		memset(cis_buf, 0, sizeof(cis_buf));	
+		cish = (cis_rw_t *)&cis_buf[8];
+		
+		cish->source = 0;
+		cish->byteoff = 0;
+		cish->nbytes = sizeof(cis_buf);
+
+		strcpy(cis_buf, "otpdump");
+		ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, cis_buf,
+					sizeof(cis_buf), 0, 0);
+		if (ret < 0) {
+			DHD_ERROR(("%s: OTP reading failed, err=%d\n",
+				__FUNCTION__, ret));
+			return ret;
+		}
+
+		/* otp 33th character is identifier for 4334B3 */
+		cis_buf[34] = '\0';
+		flag_b3 = bcm_atoi(&cis_buf[33]);
+		if(flag_b3 & 0x1){
+			DHD_ERROR(("REV MATCH FOUND : 4334B3, %c\n", cis_buf[33]));			
+			dhd_write_cid_file(revfilepath, "4334B3", 6);
+		}
+					
 #else /* BCM4330_CHIP */
 		unsigned char murata_id[4] = {0x80, 0x06, 0x81, 0x00};
 		unsigned char semco_ve[4] = {0x80, 0x02, 0x81, 0x99};
@@ -643,10 +663,6 @@ int dhd_write_macaddr(struct ether_addr *mac)
 	mm_segment_t oldfs    = {0};
 	int ret = -1;
 	int retry_count = 0;
-	struct dentry *parent;
-	struct dentry *dentry;
-	struct inode *p_inode;
-	struct inode *c_inode;
 
 startwrite:
 
@@ -663,13 +679,6 @@ startwrite:
 	} else {
 		oldfs = get_fs();
 		set_fs(get_ds());
-		/* set uid , gid of parent directory */
-		dentry = fp_mac->f_path.dentry;
-		parent = dget_parent(dentry);
-		c_inode = dentry->d_inode;
-		p_inode = parent->d_inode;
-		c_inode->i_uid = p_inode->i_uid;
-		c_inode->i_gid = p_inode->i_gid;
 
 		if (fp_mac->f_mode & FMODE_WRITE) {
 			ret = fp_mac->f_op->write(fp_mac, (const char *)buf,
@@ -724,14 +733,6 @@ void sec_control_pm(dhd_pub_t *dhd, uint *power_mode)
 				__FUNCTION__, __LINE__));
 			return;
 		} else {
-			struct dentry *dentry;
-			struct inode *c_inode;
-			/* set uid , gid to system id(1000) */
-			dentry = fp->f_path.dentry;
-			c_inode = dentry->d_inode;
-			c_inode->i_uid = (uid_t)1000;
-			c_inode->i_gid = (uid_t)1000;
-
 			oldfs = get_fs();
 			set_fs(get_ds());
 
@@ -777,7 +778,7 @@ void sec_control_pm(dhd_pub_t *dhd, uint *power_mode)
 		filp_close(fp, NULL);
 }
 #endif
-#ifdef CUSTOMER_SET_COUNTRY
+#ifdef GLOBALCONFIG_WLAN_COUNTRY_CODE
 int dhd_customer_set_country(dhd_pub_t *dhd)
 {
 	struct file *fp = NULL;

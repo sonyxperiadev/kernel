@@ -374,6 +374,28 @@ wl_cfgp2p_ifadd(struct wl_priv *wl, struct ether_addr *mac, u8 if_type,
 	return err;
 }
 
+/* Disable a P2P BSS.
+ * Parameters:
+ * @mac      : MAC address of the BSS to create
+ * Returns 0 if success.
+ */
+s32
+wl_cfgp2p_ifdisable(struct wl_priv *wl, struct ether_addr *mac)
+{
+	s32 ret;
+	struct net_device *netdev = wl_to_prmry_ndev(wl);
+
+	CFGP2P_INFO(("------primary idx %d : wl p2p_ifdis %02x:%02x:%02x:%02x:%02x:%02x\n",
+	    netdev->ifindex, mac->octet[0], mac->octet[1], mac->octet[2],
+	    mac->octet[3], mac->octet[4], mac->octet[5]));
+	ret = wldev_iovar_setbuf(netdev, "p2p_ifdis", mac, sizeof(*mac),
+		wl->ioctl_buf, WLC_IOCTL_MAXLEN, &wl->ioctl_buf_sync);
+	if (unlikely(ret < 0)) {
+		printk("'wl p2p_ifdis' error %d\n", ret);
+	}
+	return ret;
+}
+
 /* Delete a P2P BSS.
  * Parameters:
  * @mac      : MAC address of the BSS to create
@@ -496,8 +518,7 @@ wl_cfgp2p_set_p2p_mode(struct wl_priv *wl, u8 mode, u32 channel, u16 listen_ms, 
 	s32 ret;
 	struct net_device *dev;
 	CFGP2P_DBG(("enter\n"));
-
-	if (unlikely(bssidx >= P2PAPI_BSSCFG_MAX)) {
+	if (unlikely(bssidx == WL_INVALID || bssidx >= P2PAPI_BSSCFG_MAX)) {
 		CFGP2P_ERR((" %d index out of range\n", bssidx));
 		return -1;
 	}
@@ -719,8 +740,8 @@ wl_cfgp2p_escan(struct wl_priv *wl, struct net_device *dev, u16 active,
 #define P2PAPI_SCAN_DWELL_TIME_MS 80
 #define P2PAPI_SCAN_SOCIAL_DWELL_TIME_MS 40
 #define P2PAPI_SCAN_HOME_TIME_MS 60
-#define P2PAPI_SCAN_NPROBS_TIME_MS 25
-#define P2PAPI_SCAN_AF_SEARCH_DWELL_TIME_MS (P2PAPI_SCAN_NPROBS_TIME_MS + 5)
+#define P2PAPI_SCAN_NPROBS_TIME_MS 30
+#define P2PAPI_SCAN_AF_SEARCH_DWELL_TIME_MS 100
 
 	struct net_device *pri_dev = wl_to_p2p_bss_ndev(wl, P2PAPI_BSSCFG_PRIMARY);
 	//wl_set_p2p_status(wl, SCANNING);
@@ -775,12 +796,15 @@ wl_cfgp2p_escan(struct wl_priv *wl, struct net_device *dev, u16 active,
 		memcpy(&eparams->params.ssid, &ssid, sizeof(wlc_ssid_t));
 
 	eparams->params.home_time = htod32(P2PAPI_SCAN_HOME_TIME_MS);
-	if (wl_get_drv_status_all(wl, CONNECTED))
-		eparams->params.active_time = htod32(-1);
-	else if (num_chans == SOCIAL_CHAN_CNT)
+
+	if (num_chans == SOCIAL_CHAN_CNT)
 		eparams->params.active_time = htod32(P2PAPI_SCAN_SOCIAL_DWELL_TIME_MS);
 	else if (num_chans == AF_PEER_SEARCH_CNT)
 		eparams->params.active_time = htod32(P2PAPI_SCAN_AF_SEARCH_DWELL_TIME_MS);
+	else if (num_chans == 1)
+		eparams->params.active_time = htod32(WL_SCAN_CONNECT_DWELL_TIME_MS);
+	else if (wl_get_drv_status_all(wl, CONNECTED))
+		eparams->params.active_time = -1;
 	else
 		eparams->params.active_time = htod32(P2PAPI_SCAN_DWELL_TIME_MS);
 	eparams->params.nprobes = htod32((eparams->params.active_time /
@@ -827,7 +851,7 @@ wl_cfgp2p_act_frm_search(struct wl_priv *wl, struct net_device *ndev,
 	s32 ret = 0;
 	u32 chan_cnt = 0;
 	u16 *default_chan_list = NULL;
-	if (!p2p_is_on(wl))
+	if (!p2p_is_on(wl) || ndev == NULL || bssidx == WL_INVALID)
 		return -BCME_ERROR;
 	CFGP2P_DBG((" Enter\n"));
 	if (bssidx == P2PAPI_BSSCFG_PRIMARY)
@@ -1045,7 +1069,11 @@ wl_cfgp2p_set_management_ie(struct wl_priv *wl, struct net_device *ndev, s32 bss
 				}
 				pos += ie_len;
 			}
+		} else {
+			CFGP2P_ERR(("<<<< VNDR_IE_LEN : %d, VNDR_IE_FLAG : %d, BSSIDX  : %d >>>>",
+				vndr_ie_len, pktflag, bssidx));
 		}
+		
 	}
 #undef IE_TYPE
 #undef IE_TYPE_LEN
@@ -1364,25 +1392,31 @@ wl_cfgp2p_discover_listen(struct wl_priv *wl, s32 channel, u32 duration_ms)
 		CFGP2P_DBG(("previous LISTEN is not completed yet\n"));
 		goto exit;
 
-	} else
+	}
+#ifndef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
+	else
 		wl_clr_p2p_status(wl, LISTEN_EXPIRED);
+#endif /* not WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
 
 	ret = wl_cfgp2p_set_p2p_mode(wl, WL_P2P_DISC_ST_LISTEN, channel, (u16) duration_ms,
 	            wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_DEVICE));
 	_timer = &wl->p2p->listen_timer;
 
 	/*  We will wait to receive WLC_E_P2P_DISC_LISTEN_COMPLETE from dongle ,
-	 *  otherwise we will wait up to duration_ms + 100ms + duration / 20
+	 *  otherwise we will wait up to duration_ms + 100ms + duration / 10
 	 */
 	if (ret == BCME_OK) {
-		extra_delay = EXTRA_DEAY_TIME + (duration_ms / 20);
+		extra_delay = EXTRA_DEAY_TIME + (duration_ms / 10);
 	} else {
 		/* if failed to set listen, it doesn't need to wait whole duration. */
-		duration_ms = 50 + duration_ms / 20;
+		duration_ms = 100 + duration_ms / 20;
 		extra_delay = 0;
 	}
 
 	INIT_TIMER(_timer, wl_cfgp2p_listen_expired, duration_ms, extra_delay);
+#ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
+	wl_clr_p2p_status(wl, LISTEN_EXPIRED);
+#endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
 
 #undef EXTRA_DEAY_TIME
 exit:
