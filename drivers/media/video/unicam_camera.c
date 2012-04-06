@@ -513,11 +513,28 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	cslCamLaneCtrl_st.param =
 	    unicam_dev->if_params.parms.serial.hs_term_time;
 
+	dprintk("hs_term_time is set to = %d\n", cslCamLaneCtrl_st.param);
+
 	if (csl_cam_set_lane_control
 	    (unicam_dev->cslCamHandle, &cslCamLaneCtrl_st)) {
 		dev_err(unicam_dev->dev,
 			"csl_cam_set_lane_control(): FAILED\n");
 		return -1;
+	}
+
+	if (unicam_dev->if_params.parms.serial.hs_settle_time != 0) {
+		cslCamLaneCtrl_st.lane_select = CSL_CAM_DATA_LANE_0;
+		cslCamLaneCtrl_st.lane_control = CSL_CAM_LANE_HS_SETTLE_TIME;
+		cslCamLaneCtrl_st.param =
+			unicam_dev->if_params.parms.serial.hs_settle_time;
+		dprintk("hs_settle_time is set to = %d\n",
+					cslCamLaneCtrl_st.param);
+		if (csl_cam_set_lane_control
+		    (unicam_dev->cslCamHandle, &cslCamLaneCtrl_st)) {
+			dev_err(unicam_dev->dev,
+				"csl_cam_set_lane_control(): FAILED\n");
+			return -1;
+		}
 	}
 
 	/* pipelince decode */

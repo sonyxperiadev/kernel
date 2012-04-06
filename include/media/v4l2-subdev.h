@@ -371,6 +371,7 @@ struct v4l2_subdev_sensor_serial_parms {
 	unsigned int phy_rate;		/* output rate at CSI phy in bps */
 	unsigned int pix_clk;		/* pixel clock in Hz */
 	unsigned int hs_term_time;	/* high speed termination time */
+	unsigned int hs_settle_time;
 };
 
 struct v4l2_subdev_sensor_parallel_parms {
