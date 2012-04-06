@@ -151,157 +151,6 @@ static struct ref_clk CLK_NAME(crystal) = {
  .ccu_clk = &CLK_NAME(root),
 };
 
-static int en_8ph_pll1_clk_init(struct clk *clk)
-{
-	return 0;
-}
-
-static int en_8ph_pll1_clk_enable(struct clk *clk, int enable)
-{
-	struct ref_clk *ref_clk;
-	u32 reg_val = 0;
-	int insurance = 1000;
-
-	BUG_ON(clk->clk_type != CLK_TYPE_REF);
-	ref_clk = to_ref_clk(clk);
-
-	BUG_ON(ref_clk->ccu_clk == NULL);
-	clk_dbg("%s, clock: %s enable: %d\n", __func__, clk->name, enable);
-
-	/* enable write access*/
-	ccu_write_access_enable(ref_clk->ccu_clk, true);
-
-	if (enable) {
-		CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
-		reg_val = readl(KONA_ROOT_CLK_VA
-				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-		reg_val |= ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
-		/*Enable 8ph bit in pll 1*/
-		do {
-			writel(reg_val, KONA_ROOT_CLK_VA
-				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-			insurance--;
-		} while (!(readl(KONA_ROOT_CLK_VA +
-			ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET) &
-			ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK) &&
-			insurance);
-		CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
-	} else {
-		CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
-		reg_val = readl(KONA_ROOT_CLK_VA +
-			ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-		reg_val &=
-			~ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
-		/*Disable 8ph bit in pll 1*/
-		writel(reg_val, KONA_ROOT_CLK_VA +
-			ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
-		CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
-	}
-
-	/* Disable write access*/
-	ccu_write_access_enable(ref_clk->ccu_clk, false);
-	return 0;
-
-}
-
-
-struct gen_clk_ops en_8ph_pll1_ref_clk_ops;
-/*
-Ref 8phase_en_pll1 clk
-*/
-static struct ref_clk clk_8phase_en_pll1 = {
-
-	.clk =	{
-				.name = REF_8PHASE_EN_PLL1_CLK_NAME_STR,
-				.clk_type = CLK_TYPE_REF,
-				.id = CLK_8PHASE_EN_PLL1_REF_CLK_ID,
-				.rate = FREQ_MHZ(624),
-				.ops = &en_8ph_pll1_ref_clk_ops,
-	},
-	.ccu_clk = &CLK_NAME(root),
-};
-
-static int misc_clk_init(struct clk *clk)
-{
-	return 0;
-}
-
-static int misc_clk_enable(struct clk *clk, int enable)
-{
-	u32 reg_val = 0;
-	u32 reg_offset;
-	u32 reg_mask;
-	u32 reg_base;
-
-	BUG_ON(clk->clk_type != CLK_TYPE_MISC);
-
-	clk_dbg("%s, clock: %s enable: %d\n", __func__, clk->name, enable);
-
-	switch (clk->id) {
-	case CLK_TPIU_PERI_CLK_ID:
-		reg_base = KONA_CHIPREG_VA;
-		reg_offset = CHIPREG_PERIPH_SPARE_CONTROL1_OFFSET;
-		reg_mask = CHIPREG_PERIPH_SPARE_CONTROL1_TPIU_CLK_IS_IDLE_MASK;
-		break;
-	case CLK_PTI_PERI_CLK_ID:
-		reg_base = KONA_CHIPREG_VA;
-		reg_offset = CHIPREG_PERIPH_SPARE_CONTROL1_OFFSET;
-		reg_mask = CHIPREG_PERIPH_SPARE_CONTROL1_PTI_CLK_IS_IDLE_MASK;
-		break;
-	default:
-		return -EINVAL;
-	}
-	if (enable) {
-		reg_val = readl(reg_base + reg_offset);
-		if (clk->flags & INVERT_ENABLE)
-			reg_val &= ~reg_mask;
-		else
-			reg_val |= reg_mask;
-		writel(reg_val, reg_base + reg_offset);
-	} else {
-		reg_val = readl(reg_base + reg_offset);
-		if (clk->flags & INVERT_ENABLE)
-			reg_val |= reg_mask;
-		else
-			reg_val &= ~reg_mask;
-		writel(reg_val, reg_base + reg_offset);
-	}
-
-	return 0;
-
-}
-
-struct gen_clk_ops misc_clk_ops = {
-	.init = misc_clk_init,
-	.enable = misc_clk_enable,
-};
-
-/*
-Misc clock name TPIU
-*/
-/*peri clk src list*/
-static struct clk clk_tpiu = {
-	.clk_type = CLK_TYPE_MISC,
-	.id	= CLK_TPIU_PERI_CLK_ID,
-	.name = TPIU_PERI_CLK_NAME_STR,
-	.flags = TPIU_MISC_CLK_FLAGS,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-	.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(8phase_en_pll1), NULL),
-#endif
-	.ops = &misc_clk_ops,
-};
-
-static struct clk clk_pti = {
-	.clk_type = CLK_TYPE_MISC,
-	.id	= CLK_PTI_PERI_CLK_ID,
-	.name = PTI_PERI_CLK_NAME_STR,
-	.flags = PTI_MISC_CLK_FLAGS,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-	.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(8phase_en_pll1), NULL),
-#endif
-	.ops = &misc_clk_ops,
-};
-
 /*
 Ref clock name FRAC_1M
 */
@@ -1860,8 +1709,6 @@ KHUB_CLK_MGR_REG_ATB_CLKGATE_ATB_FILTER_APB_HW_SW_GATING_SEL_MASK,
  .soft_reset_offset	= KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET,
  .clk_reset_mask	= KHUB_RST_MGR_REG_SOFT_RSTN1_ATB_FILTER_SOFT_RSTN_MASK,
 };
-
-
 
 
 /*
@@ -3888,14 +3735,7 @@ static struct peri_clk CLK_NAME(sdio2) = {
 				.clk_type = CLK_TYPE_PERI,
 				.id	= CLK_SDIO2_PERI_CLK_ID,
 				.name = SDIO2_PERI_CLK_NAME_STR,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-				.dep_clks =
-				DEFINE_ARRAY_ARGS(CLK_PTR(sdio2_ahb),
-					CLK_PTR(8phase_en_pll1), NULL),
-#else
-				.dep_clks =
-				DEFINE_ARRAY_ARGS(CLK_PTR(sdio2_ahb), NULL),
-#endif
+				.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio2_ahb),NULL),
 				.ops = &gen_peri_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(kpm),
@@ -3992,14 +3832,7 @@ static struct peri_clk CLK_NAME(sdio3) = {
 				.clk_type = CLK_TYPE_PERI,
 				.id	= CLK_SDIO3_PERI_CLK_ID,
 				.name = SDIO3_PERI_CLK_NAME_STR,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-				.dep_clks =
-				DEFINE_ARRAY_ARGS(CLK_PTR(sdio3_ahb),
-					CLK_PTR(8phase_en_pll1), NULL),
-#else
-				.dep_clks
-				= DEFINE_ARRAY_ARGS(CLK_PTR(sdio3_ahb), NULL),
-#endif
+				.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio3_ahb),NULL),
 				.ops = &gen_peri_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(kpm),
@@ -4094,14 +3927,7 @@ static struct peri_clk CLK_NAME(sdio1) = {
 				.clk_type = CLK_TYPE_PERI,
 				.id	= CLK_SDIO1_PERI_CLK_ID,
 				.name = SDIO1_PERI_CLK_NAME_STR,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-				.dep_clks =
-				DEFINE_ARRAY_ARGS(CLK_PTR(sdio1_ahb),
-					CLK_PTR(8phase_en_pll1), NULL),
-#else
-				.dep_clks
-				= DEFINE_ARRAY_ARGS(CLK_PTR(sdio1_ahb), NULL),
-#endif
+				.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio1_ahb),NULL),
 				.ops = &gen_peri_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(kpm),
@@ -4164,12 +3990,7 @@ static struct peri_clk CLK_NAME(sdio4) = {
 		.clk_type = CLK_TYPE_PERI,
 		.id	= CLK_SDIO4_PERI_CLK_ID,
 		.name = SDIO4_PERI_CLK_NAME_STR,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-		.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio4_ahb),
-			CLK_PTR(8phase_en_pll1), NULL),
-#else
-		.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio4_ahb), NULL),
-#endif
+		.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio4_ahb),NULL),
 		.ops = &gen_peri_clk_ops,
 	},
 	.ccu_clk = &CLK_NAME(kpm),
@@ -5559,11 +5380,6 @@ static struct ccu_clk CLK_NAME(mm) = {
 				.name = MM_CCU_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-				.dep_clks = DEFINE_ARRAY_ARGS(
-					CLK_PTR(8phase_en_pll1), NULL),
-#endif
-
 		},
 	.ccu_ops = &mm_ccu_ops,
 	.ccu_state_save = &mm_state_save,
@@ -6644,12 +6460,30 @@ int root_ccu_clk_init(struct clk* clk)
     reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
     writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
 
-	/*Reset 8-phase enable de-glitch enable bit for B1 and later chips*/
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+/* We observed some glitch with root PLL1 8 phase output
+and this was causing A9 to freeze when MM wakes up from retention
+Temp. workaround is to keep 96Mhz var vdd clock always on to avoid
+possible glitch on 8phase enable. This clock will be forcefully disabled
+by HW during deep sleep */
+	if (JIRA_WA_ENABLED(2490)) {
+
+		reg_val = readl(KONA_ROOT_CLK_VA +
+				ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+		reg_val |=
+			ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_96M_VARVDD_SW_EN_MASK;
+		writel(reg_val,
+			KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+	}
+#endif /*CONFIG_RHEA_WA_HWJIRA_2490*/
+
+	/*Set 8-phase enable de-glitch enable bit for B1 and later chips*/
 	if (get_chip_rev_id() >= RHEA_CHIP_REV_B1) {
 		reg_val = readl(KONA_ROOT_CLK_VA +
 					ROOT_CLK_MGR_REG_PLL1CTRL3_OFFSET);
-		reg_val &=
-		~ROOT_CLK_MGR_REG_PLL1CTRL3_PLL1_8PHASE_EN_DEGLITCH_EN_MASK;
+		reg_val |=
+		ROOT_CLK_MGR_REG_PLL1CTRL3_PLL1_8PHASE_EN_DEGLITCH_EN_MASK;
 		writel(reg_val,
 			KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL3_OFFSET);
 	}
@@ -6900,8 +6734,6 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(A9_PLL_CHNL1_CLK_NAME_STR,NULL,a9_pll_chnl1),
 	BRCM_REGISTER_CLK(ARM_CORE_CLK_NAME_STR,NULL,a9_core),
 	/*ROOT CCU*/
-	BRCM_REGISTER_CLK(REF_8PHASE_EN_PLL1_CLK_NAME_STR,
-			NULL, 8phase_en_pll1),
 	BRCM_REGISTER_CLK(FRAC_1M_REF_CLK_NAME_STR,NULL,frac_1m),
 	BRCM_REGISTER_CLK(REF_96M_VARVDD_REF_CLK_NAME_STR,NULL,ref_96m_varvdd),
 	BRCM_REGISTER_CLK(REF_96M_REF_CLK_NAME_STR,NULL,ref_96m),
@@ -6931,8 +6763,6 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(REF_CX40_REF_CLK_NAME_STR,NULL,ref_cx40),
 	BRCM_REGISTER_CLK(REF_1M_REF_CLK_NAME_STR,NULL,ref_1m),
 	BRCM_REGISTER_CLK(REF_32K_REF_CLK_NAME_STR,NULL,ref_32k),
-	BRCM_REGISTER_CLK_DIRECT(TPIU_PERI_CLK_NAME_STR, NULL, &clk_tpiu),
-	BRCM_REGISTER_CLK_DIRECT(PTI_PERI_CLK_NAME_STR, NULL, &clk_pti),
 	BRCM_REGISTER_CLK(PMU_BSC_VAR_REF_CLK_NAME_STR,NULL,pmu_bsc_var),
 	BRCM_REGISTER_CLK(BBL_32K_REF_CLK_NAME_STR,NULL,bbl_32k),
 	BRCM_REGISTER_CLK(HUB_TIMER_APB_BUS_CLK_NAME_STR,NULL,hub_timer_apb),
@@ -7135,32 +6965,6 @@ static int set_mm_override(void)
 }
 #endif
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-static int remove_dep_clks(void)
-{
-	int clk_inx, inx;
-
-	struct clk *clks_arr[] = {
-	    &clk_sdio1.clk,
-	    &clk_sdio2.clk,
-	    &clk_sdio3.clk,
-	    &clk_sdio4.clk,
-	    &clk_mm.clk,
-	    &clk_tpiu,
-	    &clk_pti
-	};
-	for (clk_inx = 0; clk_inx < ARRAY_SIZE(clks_arr); clk_inx++) {
-		for (inx = 0; inx < MAX_DEP_CLKS
-			&& clks_arr[clk_inx]->dep_clks[inx]; inx++)
-			;
-		clk_dbg("clk: %s index: %d\n", clks_arr[clk_inx]->name, inx);
-		if (inx > 0)
-			clks_arr[clk_inx]->dep_clks[inx - 1] = NULL;
-	}
-	return 0;
-}
-#endif
-
 int __init rhea_clock_init(void)
 {
 
@@ -7183,23 +6987,11 @@ int __init rhea_clock_init(void)
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
 	dig_ch_peri_clk_ops.init = dig_clk_init;
 
-	en_8ph_pll1_ref_clk_ops = gen_peri_clk_ops;
-	en_8ph_pll1_ref_clk_ops.init = en_8ph_pll1_clk_init;
-	en_8ph_pll1_ref_clk_ops.enable = en_8ph_pll1_clk_enable;
-
-
-
 /*Update arm_switch flag based on runtime settings*/
 #ifdef CONFIG_RHEA_WA_HWJIRA_2531
 	if (!JIRA_WA_ENABLED(2531))
 		CLK_NAME(arm_switch).clk.flags |= AUTO_GATE;
 #endif
-/* Remove dependency on 8ph_en clock */
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-	if (!JIRA_WA_ENABLED(2490))
-		remove_dep_clks();
-#endif
-
 
 	printk(KERN_INFO "%s registering clocks.\n", __func__);
 
@@ -7208,7 +7000,6 @@ int __init rhea_clock_init(void)
 
     return 0;
 }
-
 
 #ifdef CONFIG_DEBUG_FS
 int set_gpio_mux_for_debug_bus(int mux_sel, int mux_param)
@@ -7388,101 +7179,8 @@ int clock_monitor_enable(struct clk *clk, int monitor)
     return ret;
 }
 
-static int misc_clk_status(struct clk *clk)
-{
-	u32 reg_val = 0;
-	int status;
-	u32 reg_offset, reg_mask, reg_shift, reg_base;
-
-	BUG_ON(clk->clk_type != CLK_TYPE_MISC);
-
-	clk_dbg("%s, clock: %s\n", __func__, clk->name);
-
-	switch (clk->id) {
-	case CLK_TPIU_PERI_CLK_ID:
-		reg_base = KONA_CHIPREG_VA;
-		reg_offset = CHIPREG_PERIPH_SPARE_CONTROL1_OFFSET;
-		reg_mask =
-			CHIPREG_PERIPH_SPARE_CONTROL1_TPIU_CLK_IS_IDLE_MASK;
-		reg_shift =
-			CHIPREG_PERIPH_SPARE_CONTROL1_TPIU_CLK_IS_IDLE_SHIFT;
-		break;
-	case CLK_PTI_PERI_CLK_ID:
-		reg_base = KONA_CHIPREG_VA;
-		reg_offset = CHIPREG_PERIPH_SPARE_CONTROL1_OFFSET;
-		reg_mask = CHIPREG_PERIPH_SPARE_CONTROL1_PTI_CLK_IS_IDLE_MASK;
-		reg_shift =
-			CHIPREG_PERIPH_SPARE_CONTROL1_PTI_CLK_IS_IDLE_SHIFT;
-		break;
-	default:
-		return -EINVAL;
-	}
-	reg_val = readl(reg_base + reg_offset);
-	status = (reg_val & reg_mask) >> reg_shift;
-	if (clk->flags & INVERT_ENABLE) {
-		if (status)
-			status = 0;
-		else
-			status = 1;
-	}
-	return status;
-}
-
-
-static int clk_debug_misc_status(void *data, u64 *val)
-{
-	struct clk *clock = data;
-
-	*val = misc_clk_status(clock);
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(misc_clock_status_fops, clk_debug_misc_status,
-					NULL, "%llu\n");
-
-static int clk_debug_misc_enable(void *data, u64 val)
-{
-	struct clk *clock = data;
-	if (val == 1)
-		clk_enable(clock);
-	else if (val == 0)
-		clk_disable(clock);
-	else
-		clk_dbg("Invalid value\n");
-
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(misc_clock_enable_fops, NULL, clk_debug_misc_enable,
-					"%llu\n");
-
-int __init clock_debug_add_misc_clock(struct clk *c)
-{
-	struct dentry *dent_clk_dir = 0, *dent_enable = 0, *dent_status = 0;
-
-	if (c->clk_type != CLK_TYPE_MISC)
-		return 0;
-	/* Add TPIU and PTI clocks to root CCU */
-	if (clk_root.dent_ccu_dir) {
-		dent_clk_dir = debugfs_create_dir(c->name,
-					clk_root.dent_ccu_dir);
-		if (!dent_clk_dir)
-			return -ENOMEM;
-
-		dent_enable = debugfs_create_file("enable", S_IRUGO | S_IWUSR,
-			dent_clk_dir, c, &misc_clock_enable_fops);
-		if (!dent_enable)
-			return -ENOMEM;
-
-		dent_status = debugfs_create_file("status", S_IRUGO,
-			dent_clk_dir, c, &misc_clock_status_fops);
-		if (!dent_status)
-			return -ENOMEM;
-
-	}
-
-	return 0;
-}
-
 #endif
+
 
 int __init clock_late_init(void)
 {
@@ -7490,12 +7188,10 @@ int __init clock_late_init(void)
 	int i;
 	clock_debug_init();
 	for (i=0; i<ARRAY_SIZE(rhea_clk_tbl); i++) {
-		if (rhea_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU)
-			clock_debug_add_ccu(rhea_clk_tbl[i].clk);
-		else if (rhea_clk_tbl[i].clk->clk_type == CLK_TYPE_MISC)
-			clock_debug_add_misc_clock(rhea_clk_tbl[i].clk);
-		else
-			clock_debug_add_clock(rhea_clk_tbl[i].clk);
+	    if(rhea_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU)
+		clock_debug_add_ccu(rhea_clk_tbl[i].clk);
+	    else
+		clock_debug_add_clock (rhea_clk_tbl[i].clk);
 	}
 #endif
 	return 0;

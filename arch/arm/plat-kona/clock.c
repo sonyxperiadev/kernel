@@ -259,15 +259,6 @@ static int __pll_chnl_clk_init(struct clk *clk)
 	return ret;
 }
 
-static int __misc_clk_init(struct clk *clk)
-{
-	int ret = 0;
-
-	if (clk->ops && clk->ops->init)
-		ret = clk->ops->init(clk);
-	return ret;
-}
-
 static int __clk_init(struct clk *clk)
 {
 	int ret = 0;
@@ -298,9 +289,7 @@ static int __clk_init(struct clk *clk)
 		case CLK_TYPE_PLL_CHNL:
 			ret = __pll_chnl_clk_init(clk);
 			break;
-		case CLK_TYPE_MISC:
-			ret = __misc_clk_init(clk);
-			break;
+
 		default:
 			clk_dbg("%s - %s: unknown clk_type\n", __func__,
 				clk->name);
@@ -428,19 +417,12 @@ EXPORT_SYMBOL(clk_reset);
 static int __ccu_clk_enable(struct clk *clk)
 {
 	int ret = 0;
-	int inx;
 	struct ccu_clk *ccu_clk;
 	clk_dbg("%s ccu name:%s\n", __func__, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
 	ccu_clk = to_ccu_clk(clk);
-	/*Make sure that all dependent & src clks are enabled/disabled*/
-	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
-		clk_dbg("%s, Enabling dependant clock %s\n", __func__,
-			clk->dep_clks[inx]->name);
 
-		__clk_enable(clk->dep_clks[inx]);
-	}
 	/*enable PI */
 #ifdef CONFIG_KONA_PI_MGR
 	if (ccu_clk->pi_id != -1) {
@@ -450,6 +432,7 @@ static int __ccu_clk_enable(struct clk *clk)
 		__pi_enable(pi);
 	}
 #endif
+
 	if (clk->use_cnt++ == 0) {
 		if (clk->ops && clk->ops->enable) {
 			ret = clk->ops->enable(clk, 1);
@@ -624,24 +607,6 @@ static int __pll_chnl_clk_enable(struct clk *clk)
 	}
 	return ret;
 }
-static int __misc_clk_enable(struct clk *clk)
-{
-	int ret = 0;
-	int inx;
-
-	/*Make sure that all dependent clks are enabled*/
-	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
-		clk_dbg("%s, Disabling dependant clock %s\n", __func__,
-			clk->dep_clks[inx]->name);
-		__clk_enable(clk->dep_clks[inx]);
-	}
-	if (clk->use_cnt++ == 0) {
-		if (clk->ops && clk->ops->enable)
-			ret = clk->ops->enable(clk, 1);
-	}
-	return ret;
-
-}
 
 int __clk_enable(struct clk *clk)
 {
@@ -671,9 +636,7 @@ int __clk_enable(struct clk *clk)
 	case CLK_TYPE_PLL_CHNL:
 		ret = __pll_chnl_clk_enable(clk);
 		break;
-	case CLK_TYPE_MISC:
-		ret = __misc_clk_enable(clk);
-		break;
+
 	default:
 		clk_dbg("%s - %s: unknown clk_type\n", __func__, clk->name);
 		if (clk->ops && clk->ops->enable)
@@ -708,13 +671,11 @@ EXPORT_SYMBOL(clk_enable);
 static int __ccu_clk_disable(struct clk *clk)
 {
 	int ret = 0;
-	int inx;
 	struct ccu_clk *ccu_clk;
 	clk_dbg("%s ccu name:%s\n", __func__, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
 	ccu_clk = to_ccu_clk(clk);
-
 	if (clk->use_cnt && --clk->use_cnt == 0) {
 		if (clk->ops && clk->ops->enable) {
 /*Debug interface to avoid clk disable*/
@@ -732,12 +693,6 @@ static int __ccu_clk_disable(struct clk *clk)
 		__pi_disable(pi);
 	}
 #endif
-	/*Make sure that all dependent & src clks are disabled*/
-	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
-		clk_dbg("%s, Disabling dependant clock %s\n", __func__,
-				clk->dep_clks[inx]->name);
-		__clk_disable(clk->dep_clks[inx]);
-	}
 
 	return ret;
 }
@@ -921,27 +876,6 @@ static int __pll_chnl_clk_disable(struct clk *clk)
 	return ret;
 }
 
-static int __misc_clk_disable(struct clk *clk)
-{
-	int inx, ret = 0;
-	if (clk->use_cnt && --clk->use_cnt == 0) {
-		/*Debug interface to avoid clk disable*/
-#ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
-		if (clk->ops && clk->ops->enable)
-			ret = clk->ops->enable(clk, 0);
-#endif
-	}
-	/*Make sure that all dependent clks are disabled*/
-	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx];
-		inx++) {
-		clk_dbg("%s, Disabling dependant clock %s\n", __func__,
-			clk->dep_clks[inx]->name);
-		__clk_disable(clk->dep_clks[inx]);
-	}
-
-	return ret;
-}
-
 static void __clk_disable(struct clk *clk)
 {
 	int ret = 0;
@@ -973,9 +907,6 @@ static void __clk_disable(struct clk *clk)
 
 	case CLK_TYPE_PLL_CHNL:
 		ret = __pll_chnl_clk_disable(clk);
-		break;
-	case CLK_TYPE_MISC:
-		ret = __misc_clk_disable(clk);
 		break;
 
 	default:
@@ -3199,7 +3130,7 @@ static unsigned long peri_clk_round_rate(struct clk *clk, unsigned long rate)
 {
 	u32 new_rate;
 	struct peri_clk *peri_clk;
-	struct clk_div *clk_div = NULL;
+	struct clk_div *clk_div;
 
 	if (clk->clk_type != CLK_TYPE_PERI)
 		return -EPERM;
@@ -3207,8 +3138,6 @@ static unsigned long peri_clk_round_rate(struct clk *clk, unsigned long rate)
 	peri_clk = to_peri_clk(clk);
 
 	clk_div = &peri_clk->clk_div;
-	if (clk_div == NULL)
-		return -EPERM;
 
 	new_rate = peri_clk_calculate_div(peri_clk, rate, NULL, NULL, NULL);
 	clk_dbg("%s:rate = %d\n", __func__, new_rate);
@@ -5636,6 +5565,7 @@ int __init clock_debug_add_clock(struct clk *c)
 		core_clk = to_core_clk(c);
 		dent_ccu_dir = core_clk->ccu_clk->dent_ccu_dir;
 		break;
+
 	default:
 		return -EINVAL;
 	}
