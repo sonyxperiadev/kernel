@@ -330,10 +330,18 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 
 	audDrv = GetRenderDriverByType(streamID);
 
+	/* occasionally even render is stopped, one or two intr still
+	happens in hw. in this case of late intr, we will not handle them */
+	if (audDrv->dmaCB == NULL)
+		return;
+
+	/* when system is heavily loaded, both buffers could be emptied by hw.
+	in this case need to inform upper layer to fill data for both buffers */
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_LOW) ==
 	    CSL_CAPH_READY_NONE) {
-		/* aTrace(LOG_AUDIO_CSL, */
-		/* "DMARequest fill low half ch=0x%x \r\n", chnl); */
+
+		audDrv->dmaCB(audDrv->streamID);
+
 		/* if (get_chip_rev_id() >= RHEA_CHIP_REV_B0) */ {
 			/* move to next block */
 			audDrv->blockIndex++;
@@ -348,6 +356,9 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_HIGH) ==
 	    CSL_CAPH_READY_NONE) {
+
+		audDrv->dmaCB(audDrv->streamID);
+
 		/*L og_DebugPrintf(LOG_AUDIO_CSL,
 		   "DMARequest fill high half ch=0x%x \r\n", chnl); */
 		/* if (get_chip_rev_id() >= RHEA_CHIP_REV_B0) */ {
@@ -361,14 +372,6 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 		}
 		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_HIGH);
 	}
-
-	/* aTrace(LOG_AUDIO_CSL, "AUDIO_DMA_CB:: DMA callback.
-	   streamID = %d, audDrv->streamID = %d, audDrv->dmaCB = %x\n",
-	   streamID, audDrv->streamID, audDrv->dmaCB);
-	 */
-
-	if (audDrv->dmaCB != NULL)
-		audDrv->dmaCB(audDrv->streamID);
 }
 
 /* ==========================================================================
@@ -421,6 +424,28 @@ UInt16 csl_audio_render_get_current_position(UInt32 streamID)
 
 	if (audDrv->dmaCH != CSL_CAPH_DMA_NONE)
 		return csl_caph_dma_read_currmempointer(audDrv->dmaCH);
+	else
+		return 0;
+}
+
+/* ==========================================================================
+//
+// Function Name: csl_audio_render_get_current_buffer
+//
+// Description: Get the current render buffer for this streamID
+//
+// =========================================================================*/
+UInt16 csl_audio_render_get_current_buffer(UInt32 streamID)
+{
+	CSL_CAPH_Render_Drv_t *audDrv = NULL;
+
+	if (streamID != CSL_CAPH_STREAM_NONE)
+		audDrv = &sRenderDrv[streamID];
+	else
+		return 0;
+
+	if (audDrv->dmaCH != CSL_CAPH_DMA_NONE)
+		return csl_caph_dma_check_dmabuffer(audDrv->dmaCH);
 	else
 		return 0;
 }

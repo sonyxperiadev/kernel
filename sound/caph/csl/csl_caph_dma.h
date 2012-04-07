@@ -375,6 +375,16 @@ UInt16 csl_caph_dma_read_currmempointer(CSL_CAPH_DMA_CHNL_e chnl);
 
 /**
 *
+*  @brief  check dma buffer being used
+*
+*  @param   chnl  (in) caph dma channel
+*
+*  @return dma buffer being used
+*****************************************************************************/
+UInt16 csl_caph_dma_check_dmabuffer(CSL_CAPH_DMA_CHNL_e chnl);
+
+/**
+*
 *  @brief  read dma channel time stamp
 *
 *  @param   chnl  (in) caph dma channel

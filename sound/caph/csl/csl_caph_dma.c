@@ -534,6 +534,7 @@ static void caph_dma_isr_bottom_half_func(unsigned long data)
 	 * "%s: DMA chanel %d\n", __func__, channel);
 	 */
 	/* call the callback to do more work */
+
 	if (dmaCH_ctrl[channel].bUsed == TRUE
 	    && dmaCH_ctrl[channel].caphDmaCb != NULL)
 		dmaCH_ctrl[channel].caphDmaCb(channel);
@@ -1156,6 +1157,21 @@ UInt8 csl_caph_dma_read_reqcount(CSL_CAPH_DMA_CHNL_e chnl)
 UInt16 csl_caph_dma_read_currmempointer(CSL_CAPH_DMA_CHNL_e chnl)
 {
 	return chal_caph_dma_read_currmempointer(handle,
+						 csl_caph_dma_get_chal_chnl
+						 (chnl));
+}
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_dma_check_dmabuffer(CSL_CAPH_DMA_CHNL_e
+*                                                     chnl)
+*
+*  Description: check dma buffer being used
+*
+****************************************************************************/
+UInt16 csl_caph_dma_check_dmabuffer(CSL_CAPH_DMA_CHNL_e chnl)
+{
+	return chal_caph_dma_check_dmabuffer(handle,
 						 csl_caph_dma_get_chal_chnl
 						 (chnl));
 }

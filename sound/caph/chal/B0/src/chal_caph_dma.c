@@ -760,6 +760,45 @@ cUInt16 chal_caph_dma_read_currmempointer(CHAL_HANDLE handle,
 
 /****************************************************************************
 *
+*  Function Name: cUInt16 chal_caph_dma_check_dmabuffer(CHAL_HANDLE handle,
+*			CAPH_DMA_CHANNEL_e channel)
+*
+*  Description: check which buffer is being used by dma
+*
+****************************************************************************/
+cUInt16 chal_caph_dma_check_dmabuffer(CHAL_HANDLE handle,
+					  CAPH_DMA_CHANNEL_e channel)
+{
+	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
+	cUInt8 index;
+	cUInt32 sr = 0;
+
+	/* Find the channel we are looking for */
+	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
+		if ((1UL << index) & channel) {
+			/* Get the channel status */
+			sr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_SR_1,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
+
+			/* Extract Current buffer used */
+			sr &=
+		(CPH_AADMAC_CH1_AADMAC_SR_1_CH1_LO_SEL_MASK |
+		CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HI_SEL_MASK);
+			sr >>=
+		CPH_AADMAC_CH1_AADMAC_SR_1_CH1_LO_SEL_SHIFT;
+			break;
+		}
+
+	}
+
+	/* return the Current buffer being used */
+	return (cUInt16) sr;
+}
+
+
+/****************************************************************************
+*
 *  Function Name: cUInt32 chal_caph_dma_read_timestamp(CHAL_HANDLE handle,
 *			CAPH_DMA_CHANNEL_e channel)
 *

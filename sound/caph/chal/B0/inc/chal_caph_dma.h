@@ -335,6 +335,18 @@ cUInt16 chal_caph_dma_read_currmempointer(CHAL_HANDLE handle,
 
 /**
 *
+*  @brief  check caph ping pong buffer used by dma
+*
+*  @param  handle  (in) handle of the caph dma block
+*  @param  channel  (in) caph dma channel id
+*
+*  @return cUInt16
+*****************************************************************************/
+cUInt16 chal_caph_dma_check_dmabuffer(CHAL_HANDLE handle,
+					  CAPH_DMA_CHANNEL_e channel);
+
+/**
+*
 *  @brief  read caph dma timestamp
 *
 *  @param  handle  (in) handle of the caph dma block

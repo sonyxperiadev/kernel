@@ -153,6 +153,16 @@ Result_t csl_audio_render_resume(UInt32 streamID);
 *****************************************************************************/
 UInt16 csl_audio_render_get_current_position(UInt32 streamID);
 
+/**
+*
+*  @brief  get current dma processing buffer for this stream
+*
+*  @param   streamID  (in) render audio stream id
+*
+*  @return UInt16 current buffer being processed by dma: 1-low 2-hi 0-none
+*****************************************************************************/
+UInt16 csl_audio_render_get_current_buffer(UInt32 streamID);
+
 CSL_CAPH_Render_Drv_t *GetRenderDriverByType(UInt32 streamID);
 
 #endif /* _CSL_AUDIO_RENDER_ */
