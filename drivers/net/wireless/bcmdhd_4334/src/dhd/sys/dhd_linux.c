@@ -4312,6 +4312,16 @@ static int __init
 dhd_module_init(void)
 {
 	int error = 0;
+struct file *fp;
+	fp=filp_open("/system/vendor/firmware",O_RDONLY,0);
+	if(IS_ERR(fp))
+	{
+		fp=NULL;
+		return -ENODEV;
+	}
+	else
+		filp_close(fp,NULL);
+
 
 #if 1 && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 	int retry = POWERUP_MAX_RETRY;
