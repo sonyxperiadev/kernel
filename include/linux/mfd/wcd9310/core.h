@@ -107,7 +107,7 @@ void tabla_irq_exit(struct tabla *tabla);
 int tabla_get_logical_addresses(u8 *pgd_la, u8 *inf_la);
 int tabla_get_intf_type(void);
 
-void tabla_lock_sleep(struct tabla *tabla);
+bool tabla_lock_sleep(struct tabla *tabla);
 void tabla_unlock_sleep(struct tabla *tabla);
 enum tabla_pm_state tabla_pm_cmpxchg(struct tabla *tabla, enum tabla_pm_state o,
 				     enum tabla_pm_state n);
