@@ -230,13 +230,14 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 		/* The return value is -ERESTARTSYS if interrupted,      */
 		/* 0 if timed out, positive (at least 1, or number of jiffies*/
 		/* left till timeout) if completed.                         */
-		if (ret <= 0) {
-			aError("ERROR timeout waiting for STOP REQ."
+		WARN(ret <= 0, "ERROR timeout waiting for STOP REQ."
 				"t=%d ret=%ld\n", TIMEOUT_STOP_REQ_MS, ret);
-			BUG();
-		}
-		chip->streamCtl[substream_number].pStopCompletion = NULL;
-		aTrace(LOG_ALSA_INTERFACE, "Release completion\n");
+		if (ret > 0) {
+			chip->streamCtl[substream_number].pStopCompletion
+				= NULL;
+			aTrace(LOG_ALSA_INTERFACE, "Release completion\n");
+		} else
+			return 0;/*return without releasing DMA buffer*/
 	}
 
 	res = snd_pcm_lib_free_pages(substream);
@@ -577,7 +578,7 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	snd_pcm_uframes_t pos = 0;
-	int whichbuffer;
+	int whichbuffer = 1;
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	UInt16 dmaPointer = 0;
 	if ((callMode == 0)
@@ -617,7 +618,7 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 
 	aTrace(LOG_ALSA_INTERFACE,
 		"PcmPlaybackPointer substream->number = %d pos=%lu"
-		"state=%d whichbuffer=%d, int_pos=%d\n",
+		"state=%d whichbuffer=%d, int_pos=%lu\n",
 		substream->number, pos, runtime->status->state,
 		whichbuffer, chip->streamCtl[substream->number].stream_hw_ptr);
 	return pos;
