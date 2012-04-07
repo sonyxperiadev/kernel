@@ -24,6 +24,10 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+/* This (linux/uaccess) is here so we can support the procfs debug
+ * stuff... but, that is polluting this file...  TODO: move it
+ * outside! */
+#include <linux/uaccess.h>
 #include <linux/workqueue.h>
 
 #include <linux/broadcom/vce.h>
@@ -64,9 +68,26 @@ struct vtq_global {
 	 *
 	 */
 
+	/* g->proc_dir represent the dir under /proc for the VTQ
+	 * driver global proc entries, e.g. /proc/vce/vtq/ or
+	 * similar */
+	struct proc_dir_entry *proc_dir;
+	struct proc_dir_entry *proc_debug;
+
 	/* debug_fifo: when true all Q and de-Q events are printed to
 	 * the kernel log */
-	int debug_fifo;
+	unsigned long debug_fifo;
+
+	/* host_push: don't use the DMAPROGIN but have ARM write into
+	 * VCE instruction memory directly (a debug aid) */
+	/* N.B. There is a race here.  host_push is a *debug*
+	 * feature...  don't use it in real life!  In particular, if
+	 * you *enable* host push *after* got_room_for_job has found
+	 * room but before queue_job has finished writing into the
+	 * FIFO this would be extremely dangerous.  Only set this once
+	 * at boot time before any jobs have been issued.  This switch
+	 * is not protected by a mutex! */
+	unsigned long host_push;
 };
 typedef uint32_t prog_bitmap_t;
 struct vtq_image {
@@ -176,6 +197,13 @@ struct vtq_vce {
 	struct work_struct cleanup_work;
 
 	/* Debug stuff below: */
+
+	/* v->proc_dir represent the dir under /proc for the VTQ
+	 * related proc entries for this specific instance of VCE,
+	 * e.g., eventually, /proc/vce/vce0/vtq/ or similar -- but we
+	 * don't bother with that now as we only have one VCE... but
+	 * we make the distinction so we can support this in
+	 * future. */
 	struct proc_dir_entry *proc_dir;
 	struct proc_dir_entry *proc_fifo;
 };
@@ -194,11 +222,87 @@ struct jobinfo {
 	printk(KERN_WARNING "VTQ: debug: %s() %s:%d " fmt, \
 		__func__, "vtq.c", __LINE__, ##arg)
 
+
+/*
+ * Global (driver) /proc entries for Debug etc
+ */
+
+static int proc_debug_write(struct file *file,
+		const char *buf, unsigned long nbytes,
+		void *priv)
+{
+	struct vtq_global *g;
+	char request[100];
+	int s;
+
+	g = (struct vtq_global *)priv;
+
+	if (nbytes > sizeof(request) - 1)
+		nbytes = sizeof(request) - 1;
+
+	s = copy_from_user(request, buf, nbytes);
+	nbytes -= s;
+	request[nbytes] = 0;
+
+	/*
+	 * N.B.  No mutex here.  Do not change at runtime.  Actually,
+	 * trace-fifo is probably harmless to change at runtime, but
+	 * host-push should be configured once at boot and left alone
+	 */
+	if (!strncmp(request, "trace-fifo=", 11)) {
+		s = strict_strtoul(request + 11, 0, &g->debug_fifo);
+		if (s)
+			err_print("bad argument to trace-fifo=\n");
+		dbg_print("g->debug_fifo = %lu\n", g->debug_fifo);
+	}
+
+	if (!strncmp(request, "host-push=", 10)) {
+		s = strict_strtoul(request + 10, 0, &g->host_push);
+		if (s)
+			err_print("bad argument to host-push=\n");
+		dbg_print("g->host_push = %lu\n", g->host_push);
+	}
+
+	return nbytes;
+}
+
+static void term_driverprocentries(struct vtq_global *g)
+{
+	remove_proc_entry("debug", g->proc_dir);
+}
+
+static int init_driverprocentries(struct vtq_global *g)
+{
+	g->proc_debug = create_proc_entry("debug",
+			(S_IRUSR | S_IRGRP),
+			g->proc_dir);
+	if (g->proc_debug == NULL) {
+		err_print("Failed to create vtq/debug proc entry\n");
+		goto err_procentry_debug;
+	}
+	g->proc_debug->write_proc = proc_debug_write;
+	g->proc_debug->data = (void *)g;
+
+	/* success */
+
+	return 0;
+
+	/*
+	 * error exit paths follow
+	 */
+
+	/* remove_proc_entry("debug", g->proc_dir); */
+err_procentry_debug:
+
+	return -1;
+}
+
 int vtq_driver_init(struct vtq_global **vtq_global_out,
 		    struct vce *vce,
 		    struct proc_dir_entry *proc_vcedir)
 {
 	struct vtq_global *vtq_global;
+	int s;
 
 	vtq_global = kmalloc(sizeof(*vtq_global), GFP_KERNEL);
 	if (vtq_global == NULL) {
@@ -211,7 +315,13 @@ int vtq_driver_init(struct vtq_global **vtq_global_out,
 	vtq_global->loaderkernel_loadoffset = 0;
 	vtq_global->loaderkernel_firstentry = 0;
 
-	vtq_global->debug_fifo = 0; /* TODO: proc entry for this? */
+	vtq_global->debug_fifo = 0;
+	vtq_global->host_push = 0;
+
+	vtq_global->proc_dir = proc_vcedir;
+	s = init_driverprocentries(vtq_global);
+	if (s != 0)
+		goto err_init_procentries;
 
 	/* success */
 	*vtq_global_out = vtq_global;
@@ -219,7 +329,10 @@ int vtq_driver_init(struct vtq_global **vtq_global_out,
 
 	/* error exit paths follow */
 
-	/*kfree(vtq_global);*/
+	/* term_driverprocentries(vtq_global); */
+err_init_procentries:
+
+	kfree(vtq_global);
 err_kmalloc_vtq_global_state:
 
 	return -ENOENT;
@@ -227,6 +340,7 @@ err_kmalloc_vtq_global_state:
 
 void vtq_driver_term(struct vtq_global **vtq_global_state_ptr)
 {
+	term_driverprocentries(*vtq_global_state_ptr);
 	kfree(*vtq_global_state_ptr);
 	*vtq_global_state_ptr = NULL;
 }
@@ -237,8 +351,9 @@ static void put_image(struct vtq_image *image);
 static void cleanup(struct work_struct *work);
 
 /*
- * Proc entries for Debug etc
+ * Per-VCE /proc entries for Debug etc
  */
+
 static int proc_fifo_read(char *buffer, char **start, off_t offset,
 		int bytes, int *eof, void *priv)
 {
@@ -389,10 +504,10 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 
 	/* error exit paths follow */
 
-	/* term_procentries(&vtq_pervce_state); */
+	/* term_procentries(vtq_pervce_state); */
 err_init_procentries:
 
-	/* kfree(vtq_pervce_state); */
+	kfree(vtq_pervce_state);
 err_kmalloc_vtq_pervce_state:
 	return -ENOENT;
 }
@@ -479,6 +594,24 @@ static void vce_download_program_at(struct vtq_vce *v,
 				    vtq_progmemoffset_t loadoffset,
 				    const uint32_t *image,
 				    size_t size)
+{
+	if (size & 3) {
+		err_print("bad size\n");
+		return;
+	}
+
+	while (size > 0) {
+		vce_writeprog(&v->io, loadoffset, *image);
+		loadoffset += 4;
+		size -= 4;
+		image++;
+	}
+}
+
+static void vce_download_data_at(struct vtq_vce *v,
+				 vtq_datamemoffset_t loadoffset,
+				 const uint32_t *image,
+				 size_t size)
 {
 	if (size & 3) {
 		err_print("bad size\n");
@@ -973,8 +1106,16 @@ static int got_room_for_job(struct vtq_context *ctx, vtq_task_id_t task_id)
 		imagehasentrypt = 0;
 	}
 
-	room_required = (imagehasentrypt ? 1 : 2);
-	haveenoughroom = room >= room_required;
+	/* in host-push mode, we never mix task types in the FIFO */
+	if (!imagehasentrypt &&
+	    ctx->vce->global->host_push &&
+	    njobsinvceq > 0) {
+		haveenoughroom = 0;
+	} else {
+		room_required = (imagehasentrypt ? 1 : 3);
+		haveenoughroom = room >= room_required;
+	}
+
 	if (!haveenoughroom)
 		mutex_unlock(&ctx->vce->host_mutex);
 
@@ -1058,7 +1199,7 @@ int vtq_queue_job(struct vtq_context *ctx,
 	} else {
 		curimagehasentrypt = 0;
 	}
-	if (!curimagehasentrypt) {
+	if (!curimagehasentrypt && !ctx->vce->global->host_push) {
 		uint32_t imagehwaddr;
 
 		BUG_ON(!ctx->vce->on);
@@ -1081,21 +1222,21 @@ int vtq_queue_job(struct vtq_context *ctx,
 		vce_writedata(&ctx->vce->io, datamemaddress+8,
 			imagehwaddr + new_image->textoffset);
 		vce_writedata(&ctx->vce->io, datamemaddress+12,
-			new_image->textsz);
+			new_image->textsz >> 2);
 		vce_writedata(&ctx->vce->io, datamemaddress+16, 0);
 		vce_writedata(&ctx->vce->io, datamemaddress+20,
 			imagehwaddr + new_image->dataoffset);
 		vce_writedata(&ctx->vce->io, datamemaddress+24,
-			new_image->datasz);
+			new_image->datasz >> 2);
 		if (ctx->vce->global->debug_fifo) {
 			printk(KERN_INFO "VTQ: Q: %u: "
 			       "0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X (n/a)\n",
 			       ctx->vce->writeptr,
 			       ctx->vce->global->loaderkernel_loadimage_entrypoint,
 			       0, imagehwaddr + new_image->textoffset,
-			       new_image->textsz,
+			       new_image->textsz >> 2,
 			       0, imagehwaddr + new_image->dataoffset,
-			       new_image->datasz);
+			       new_image->datasz >> 2);
 		}
 
 		ctx->vce->writeptr++;
@@ -1110,6 +1251,31 @@ int vtq_queue_job(struct vtq_context *ctx,
 			& (ctx->vce->host_fifo_length-1);
 		datamemaddress = ctx->vce->circbuf_locn +
 			ctx->vce->fifo_entrysz * vce_fifo_index;
+	}
+	if (!curimagehasentrypt && ctx->vce->global->host_push) {
+		BUG_ON(!ctx->vce->on);
+		BUG_ON(ctx->vce->last_known_readptr != ctx->vce->writeptr);
+		BUG_ON(ctx->vce->tasks[task_id].suitable_images == NULL);
+		BUG_ON(ctx->vce->tasks[task_id].suitable_images->image == NULL);
+		new_image = ctx->vce->tasks[task_id].suitable_images->image;
+		vce_download_program_at(ctx->vce,
+				0,
+				(const uint32_t *)new_image->dmainfo.virtaddr
+					+ (new_image->textoffset>>2),
+				new_image->textsz);
+		vce_download_data_at(ctx->vce,
+				0,
+				(const uint32_t *)new_image->dmainfo.virtaddr
+					+ (new_image->dataoffset>>2),
+				new_image->datasz);
+		wmb();
+
+		if (ctx->vce->current_image != NULL)
+			put_image(ctx->vce->current_image);
+		get_image(new_image);
+		ctx->vce->current_image = new_image;
+		if (ctx->vce->global->debug_fifo)
+			printk(KERN_INFO "VTQ: Image Push: %p\n", new_image);
 	}
 
 	job = &ctx->vce->runningjobs[host_fifo_index];
@@ -1138,9 +1304,9 @@ int vtq_queue_job(struct vtq_context *ctx,
 		ctx->vce->writeptr_locn, ctx->vce->writeptr);
 	next_job_id = ctx->vce->writeptr;
 
-	mutex_unlock(&ctx->vce->host_mutex);
-
 	vce_clearsema(&ctx->vce->io, ctx->vce->semanum);
+
+	mutex_unlock(&ctx->vce->host_mutex);
 
 	wake_up_all(&ctx->vce->vce_given_work_wq);
 

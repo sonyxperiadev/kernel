@@ -43,7 +43,7 @@ the GPL, without Broadcom's express prior written consent.
 /* Private configuration stuff -- not part of exposed API */
 #include "vtqinit_priv.h"
 
-#define DRIVER_VERSION 10109
+#define DRIVER_VERSION 10110
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -92,6 +92,14 @@ static struct vce {
 	struct vtq_vce *vtq_vce;
 	bool debug_ioctl;
 	uint32_t *vtq_firmware;
+
+	/* This spinlock is to protect against a supposed race
+	 * condition where a stray interrupt might arrive after we've
+	 * stopped VCE and just as we're powering down.  This may not
+	 * be real... if we can prove there is no race, or we can
+	 * change the design to avoid such race, we could get rid of
+	 * this lock. */
+	spinlock_t isrclocks_spin;
 } vce_state;
 
 /* Per open handle state: */
@@ -180,12 +188,20 @@ static irqreturn_t vce_isr(int irq, void *unused)
 {
 	irqreturn_t ret;
 	int handled_by_vtq;
+	unsigned long flags;
 
 	(void)irq;		/* TODO: shouldn't this be used?? */
 	(void)unused;
 
 	dbg_print("Got vce interrupt\n");
 
+	spin_lock_irqsave(&vce_state.isrclocks_spin, flags);
+
+	if (vce_state.clock_enable_count == 0) {
+		err_print("interrupt with VCE off :(  Almost certainly a bug.\n");
+		spin_unlock_irqrestore(&vce_state.isrclocks_spin, flags);
+		return IRQ_HANDLED;
+	}
 	if (!(vce_reg_peek(STATUS) & VCE_STATUS_VCE_INTERRUPT_POS_MASK)) {
 		err_print
 		    ("VCE Interrupt went away.  Almost certainly a bug.\n");
@@ -201,6 +217,7 @@ static irqreturn_t vce_isr(int irq, void *unused)
 	 *we may choose to remove the read at the cost of potential
 	 *spurious re-fires of the ISR */
 	(void)vce_reg_peek(STATUS);
+	spin_unlock_irqrestore(&vce_state.isrclocks_spin, flags);
 
 	ret = vtq_isr(vce_state.vtq_vce);
 	handled_by_vtq = (ret == IRQ_HANDLED);
@@ -333,6 +350,13 @@ static void stop_clock_and_power_off(void)
 
 	/* Theoretically, we might consider unmapping VCE regs here */
 	BUG_ON(vce_base == NULL);
+
+	/* Flush out the ISR */
+	{
+		unsigned long flags;
+		spin_lock_irqsave(&vce_state.isrclocks_spin, flags);
+		spin_unlock_irqrestore(&vce_state.isrclocks_spin, flags);
+	}
 
 	_clock_off();
 	_power_off();
@@ -1151,6 +1175,7 @@ int __init vce_init(void)
 	/* For the power management */
 	mutex_init(&vce_state.clockctl_sem);
 	mutex_init(&vce_state.armctl_sem);
+	spin_lock_init(&vce_state.isrclocks_spin);
 
 	/* We map the registers -- even though the power to the domain
 	 *remains off... TODO: consider whether that's dangerous?  It
