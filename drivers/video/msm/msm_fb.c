@@ -2112,6 +2112,8 @@ int mdp_blit(struct fb_info *info, struct mdp_blit_req *req)
 
 		/* blit first region */
 		if (((splitreq.flags & 0x07) == 0x07) ||
+			((splitreq.flags & 0x07) == 0x05) ||
+			((splitreq.flags & 0x07) == 0x02) ||
 			((splitreq.flags & 0x07) == 0x0)) {
 
 			if (splitreq.flags & MDP_ROT_90) {
@@ -2192,6 +2194,8 @@ int mdp_blit(struct fb_info *info, struct mdp_blit_req *req)
 
 		/* blit second region */
 		if (((splitreq.flags & 0x07) == 0x07) ||
+			((splitreq.flags & 0x07) == 0x05) ||
+			((splitreq.flags & 0x07) == 0x02) ||
 			((splitreq.flags & 0x07) == 0x0)) {
 			splitreq.src_rect.h = s_h_1;
 			splitreq.src_rect.y = s_y_1;
