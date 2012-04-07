@@ -33,8 +33,8 @@
 #include <linux/of_fdt.h>
 
 /* pin-mux configuration data from DT */
-uint32_t dt_pinmux[PN_MAX];
-uint32_t dt_pinmux_nr;
+static uint32_t dt_pinmux[PN_MAX];
+static uint32_t dt_pinmux_nr;
 
 extern uint32_t dt_pinmux_gpio_mask[];
 
@@ -222,4 +222,19 @@ int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio, enum PIN_FUNC * PF_gpio
 		}
 	}
 	return -ENOENT;
+}
+
+uint32_t * get_pinmux_value(uint32_t *pinmux)
+{
+	int i=0;
+	for(i;i<PN_MAX;i++) {
+		*(pinmux+i)=dt_pinmux[i];
+	}
+	return pinmux;
+}
+
+uint32_t * get_pinmux_nr(uint32_t *pinmux_nr)
+{
+	*pinmux_nr=dt_pinmux_nr;
+	return pinmux_nr;
 }

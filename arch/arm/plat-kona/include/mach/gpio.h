@@ -44,4 +44,7 @@
 
 int __init kona_gpio_init(int num_bank);
 
+uint32_t * get_gpio_value(uint32_t *);
+int * get_max_entry(int *);
+
 #endif /* __PLAT_GPIO_H */

@@ -45,10 +45,6 @@
 
 
 static struct dentry *root_entry, *dump_dentry;
-extern uint32_t dt_gpio[];
-extern uint32_t dt_pinmux[];
-extern uint32_t dt_pinmux_nr;
-
 
 static int pindump_proc_show(struct seq_file *m, void *v)
 {
@@ -113,10 +109,6 @@ static int __init proc_pindump_init(void)
 
 module_init(proc_pindump_init);
 
-MODULE_AUTHOR("Broadcom");
-MODULE_DESCRIPTION("Dumps the pinmux and GPIO configuration in proc fs.");
-MODULE_LICENSE("GPL");
-
 
 /* dump initial values */
 
@@ -124,13 +116,20 @@ static int dtsdump_show(struct seq_file *m, void *v)
 {
 	int i, sel, gpio, gpio_cnt = 0;
 	uint32_t val, gpctr;
-
-	//base = g_chip_pin_desc.base;
-
+	int max=0;
+	uint32_t dt_pinmux[PN_MAX];
+	uint32_t dt_pinmux_nr;
+	
+	get_max_entry(&max);
+	uint32_t dt_gpio[max+1];
+	get_pinmux_nr(&dt_pinmux_nr);
+	get_pinmux_value(&dt_pinmux);
 	/* print pin-mux */
 	for (i = 0; i <dt_pinmux_nr; i++) {
 		seq_printf(m, "0x%08x /* pad 0x%x*/\n", dt_pinmux[i], i * 4);
 	}
+
+	get_gpio_value(dt_gpio);
 	/* print configured GPIO */
 	seq_printf(m, "Pin-mux configured as GPIO\n");
 	for (i = 0; i < dt_pinmux_nr; i++) {
@@ -173,9 +172,9 @@ static int __init debug_dtsdump_init(void)
 {
 
         root_entry = debugfs_create_dir("dtsdump", NULL);
-        if (!root_entry) {
-                printk("Fail to create dir: dtsdump\n");
-                return 1;
+        if (!root_entry && IS_ERR(root_entry)) {
+                printk(KERN_ERR, "Fail to create dir: dtsdump\n");
+                return PTR_ERR(root_entry);
         }
 		
 		dump_dentry = debugfs_create_file("dtsdump", 0444, root_entry, NULL, &default_file_operations);
@@ -190,4 +189,7 @@ static void __exit debug_dtsdump_exit(void)
 
 module_init(debug_dtsdump_init);
 module_exit(debug_dtsdump_exit);
+
+MODULE_AUTHOR("Broadcom");
+MODULE_DESCRIPTION("Dumps the pinmux and GPIO configuration in proc fs.");
 MODULE_LICENSE("GPL");
