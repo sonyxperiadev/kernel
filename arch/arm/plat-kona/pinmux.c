@@ -224,17 +224,17 @@ int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio, enum PIN_FUNC * PF_gpio
 	return -ENOENT;
 }
 
-uint32_t * get_pinmux_value(uint32_t *pinmux)
+uint32_t *get_pinmux_value(uint32_t *pinmux)
 {
-	int i=0;
-	for(i;i<PN_MAX;i++) {
-		*(pinmux+i)=dt_pinmux[i];
+	int i = 0;
+	for (i; i < PN_MAX; i++) {
+		*(pinmux+i) = dt_pinmux[i];
 	}
 	return pinmux;
 }
 
-uint32_t * get_pinmux_nr(uint32_t *pinmux_nr)
+uint32_t *get_pinmux_nr(uint32_t *pinmux_nr)
 {
-	*pinmux_nr=dt_pinmux_nr;
+	*pinmux_nr = dt_pinmux_nr;
 	return pinmux_nr;
 }
