@@ -9,6 +9,7 @@
 #include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/cdev.h>
+#include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
@@ -23,6 +24,7 @@
 #include "mach/rdb/brcm_rdb_util.h"
 #include "mach/rdb/brcm_rdb_chipreg.h"
 #include <mach/hardware.h>
+#include <mach/clock.h>
 #include <plat/chal/chal_trace.h>
 #include <mach/io_map.h>
 #endif
@@ -280,6 +282,18 @@ int kona_trace_stm_write(int ch, int ts, size_t len, uint8_t *data)
 	return 0;
 }
 
+int pti_enable(int enable)
+{
+	static struct clk *clk;
+	if (!clk)
+		clk = clk_get(NULL, PTI_PERI_CLK_NAME_STR);
+	if (enable)
+		clk_enable(clk);
+	else
+		clk_disable(clk);
+	return 0;
+}
+
 void stm_trace_buffer_start(int channel)
 {
 	uint8_t trace_type = 0x72;	/* make it configurable */
@@ -296,9 +310,8 @@ void stm_trace_buffer_start(int channel)
 #endif
 	if (pti_read == 1) {
 #if defined(CONFIG_ARCH_RHEA)
-		BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA,
-				     CHIPREG_PERIPH_SPARE_CONTROL1,
-				     PTI_CLK_IS_IDLE, 0);
+		pti_enable(1);
+
 #elif defined(CONFIG_ARCH_ISLAND)
 		BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_ARM_PERI_CONTROL,
 				     PTI_CLK_IS_IDLE, 0);
@@ -307,8 +320,7 @@ void stm_trace_buffer_start(int channel)
 	kona_trace_stm_write(channel, FALSE, 1, &trace_type);
 /* leave it on when enabled by DFSD */
 #if defined(CONFIG_ARCH_RHEA)
-	BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_PERIPH_SPARE_CONTROL1,
-			     PTI_CLK_IS_IDLE, pti_read);
+	pti_enable(pti_read);
 #elif defined(CONFIG_ARCH_ISLAND)
 	BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_ARM_PERI_CONTROL,
 			     PTI_CLK_IS_IDLE, pti_read);
@@ -331,9 +343,7 @@ void stm_trace_buffer_end(int channel)
 #endif
 	if (pti_read == 1) {
 #if defined(CONFIG_ARCH_RHEA)
-		BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA,
-				     CHIPREG_PERIPH_SPARE_CONTROL1,
-				     PTI_CLK_IS_IDLE, 0);
+		pti_enable(1);
 #elif defined(CONFIG_ARCH_ISLAND)
 		BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_ARM_PERI_CONTROL,
 				     PTI_CLK_IS_IDLE, 0);
@@ -342,8 +352,7 @@ void stm_trace_buffer_end(int channel)
 	kona_trace_stm_write(channel, TRUE, 1, &termination);
 /* leave it on when enabled by DFSD */
 #if defined(CONFIG_ARCH_RHEA)
-	BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_PERIPH_SPARE_CONTROL1,
-			     PTI_CLK_IS_IDLE, pti_read);
+	pti_enable(pti_read);
 #elif defined(CONFIG_ARCH_ISLAND)
 	BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_ARM_PERI_CONTROL,
 			     PTI_CLK_IS_IDLE, pti_read);
@@ -365,9 +374,7 @@ int stm_trace_buffer_data(int channel, const void *data_ptr, size_t length)
 
 	if (pti_read == 1) {
 #if defined(CONFIG_ARCH_RHEA)
-		BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA,
-				     CHIPREG_PERIPH_SPARE_CONTROL1,
-				     PTI_CLK_IS_IDLE, 0);
+		pti_enable(1);
 #elif defined(CONFIG_ARCH_ISLAND)
 		BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_ARM_PERI_CONTROL,
 				     PTI_CLK_IS_IDLE, 0);
@@ -376,8 +383,7 @@ int stm_trace_buffer_data(int channel, const void *data_ptr, size_t length)
 	kona_trace_stm_write(channel, FALSE, length, (uint8_t *) data_ptr);
 /* leave it on when enabled by DFSD */
 #if defined(CONFIG_ARCH_RHEA)
-	BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_PERIPH_SPARE_CONTROL1,
-			     PTI_CLK_IS_IDLE, pti_read);
+	pti_enable(pti_read);
 #elif defined(CONFIG_ARCH_ISLAND)
 	BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_ARM_PERI_CONTROL,
 			     PTI_CLK_IS_IDLE, pti_read);
@@ -405,9 +411,7 @@ int stm_trace_send_bytes(int channel, const void *data_ptr, size_t length)
 
 	if (pti_read == 1) {
 #if defined(CONFIG_ARCH_RHEA)
-		BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA,
-				     CHIPREG_PERIPH_SPARE_CONTROL1,
-				     PTI_CLK_IS_IDLE, 0);
+		pti_enable(1);
 #elif defined(CONFIG_ARCH_ISLAND)
 		BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_ARM_PERI_CONTROL,
 				     PTI_CLK_IS_IDLE, 0);
@@ -421,8 +425,7 @@ int stm_trace_send_bytes(int channel, const void *data_ptr, size_t length)
 
 /* leave it on when enabled by DFSD */
 #if defined(CONFIG_ARCH_RHEA)
-	BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_PERIPH_SPARE_CONTROL1,
-			     PTI_CLK_IS_IDLE, pti_read);
+	pti_enable(pti_read);
 #elif defined(CONFIG_ARCH_ISLAND)
 	BRCM_WRITE_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_ARM_PERI_CONTROL,
 			     PTI_CLK_IS_IDLE, pti_read);

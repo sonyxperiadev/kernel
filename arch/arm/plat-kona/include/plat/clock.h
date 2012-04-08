@@ -138,6 +138,12 @@
 		.dev_id = dev,\
 		.clk = CLK_PTR(clock),\
 	}
+#define BRCM_REGISTER_CLK_DIRECT(con, dev, clock)	\
+	{\
+		.con_id = con,\
+		.dev_id = dev,\
+		.clk = clock,\
+	}
 
 #define DEFINE_ARRAY_ARGS(...) {__VA_ARGS__}
 
@@ -283,6 +289,7 @@ enum {
 	CLK_TYPE_CORE,
 	CLK_TYPE_PLL,
 	CLK_TYPE_PLL_CHNL,
+	CLK_TYPE_MISC,
 };
 
 enum {
