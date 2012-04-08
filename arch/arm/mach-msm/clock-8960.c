@@ -4501,6 +4501,7 @@ static DEFINE_CLK_VOTER(dfab_sps_clk, &dfab_clk.c);
 static DEFINE_CLK_VOTER(dfab_bam_dmux_clk, &dfab_clk.c);
 static DEFINE_CLK_VOTER(dfab_scm_clk, &dfab_clk.c);
 static DEFINE_CLK_VOTER(dfab_tzcom_clk, &dfab_clk.c);
+static DEFINE_CLK_VOTER(dfab_qseecom_clk, &dfab_clk.c);
 
 static DEFINE_CLK_VOTER(ebi1_msmbus_clk, &ebi1_clk.c);
 /*
@@ -5133,6 +5134,7 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_DUMMY("dfab_clk",		DFAB_CLK,		NULL, 0),
 	CLK_DUMMY("bus_clk",		DFAB_SCM_CLK,	"scm", 0),
 	CLK_LOOKUP("bus_clk",		dfab_tzcom_clk.c,       "tzcom"),
+        CLK_LOOKUP("bus_clk",           dfab_qseecom_clk.c,     "qseecom"),
 	CLK_LOOKUP("alt_core_clk",    usb_hsic_xcvr_fs_clk.c,  "msm_hsic_host"),
 	CLK_LOOKUP("phy_clk",	      usb_hsic_hsic_clk.c,     "msm_hsic_host"),
 	CLK_LOOKUP("cal_clk",	      usb_hsic_hsio_cal_clk.c, "msm_hsic_host"),
@@ -5434,7 +5436,7 @@ static struct clk_lookup msm_clocks_8960_v1[] __initdata = {
 	CLK_LOOKUP("bus_clk",		dfab_bam_dmux_clk.c,	"BAM_RMNT"),
 	CLK_LOOKUP("bus_clk",		dfab_scm_clk.c,	"scm"),
 	CLK_LOOKUP("bus_clk",		dfab_tzcom_clk.c,	"tzcom"),
-
+	CLK_LOOKUP("bus_clk",		dfab_qseecom_clk.c,	"qseecom"),
 	CLK_LOOKUP("mem_clk",		ebi1_adm_clk.c, "msm_dmov"),
 
 	CLK_LOOKUP("l2_mclk",		l2_m_clk,     NULL),
