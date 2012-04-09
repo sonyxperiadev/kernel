@@ -7456,7 +7456,8 @@ DEFINE_SIMPLE_ATTRIBUTE(misc_clock_enable_fops, NULL, clk_debug_misc_enable,
 
 int __init clock_debug_add_misc_clock(struct clk *c)
 {
-	struct dentry *dent_clk_dir = 0, *dent_enable = 0, *dent_status = 0;
+	struct dentry *dent_clk_dir = 0, *dent_enable = 0, *dent_status = 0,
+	*dent_use_cnt = 0;
 
 	if (c->clk_type != CLK_TYPE_MISC)
 		return 0;
@@ -7475,6 +7476,11 @@ int __init clock_debug_add_misc_clock(struct clk *c)
 		dent_status = debugfs_create_file("status", S_IRUGO,
 			dent_clk_dir, c, &misc_clock_status_fops);
 		if (!dent_status)
+			return -ENOMEM;
+
+		dent_use_cnt = debugfs_create_u32("use_cnt", S_IRUGO,
+				dent_clk_dir, (unsigned int *)&c->use_cnt);
+		if (!dent_use_cnt)
 			return -ENOMEM;
 
 	}
