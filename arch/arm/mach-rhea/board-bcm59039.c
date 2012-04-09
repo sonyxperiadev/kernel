@@ -109,6 +109,10 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0xC9, .val = 0x1A, .mask = 0xFF},
 	{.map = 0, .addr = 0xCA, .val = 0x1A, .mask = 0xFF},
 #endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
+
+	/*FGOPMODCTRL, Set bits 4, 1 for FG Sync. Mode*/
+	{.map = 1, .addr = 0x42, .val = 0x15, .mask = 0xFF},
+
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
