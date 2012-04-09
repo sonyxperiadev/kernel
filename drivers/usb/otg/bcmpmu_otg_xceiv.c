@@ -193,8 +193,8 @@ static int bcmpmu_otg_xceiv_set_suspend(struct otg_transceiver *otg,
 	if (!xceiv_data)
 		return -EINVAL;
 
-	/* REVISIT: When we use external wake interrupt, we will add more power savings */
-	bcm_hsotgctrl_set_phy_clk_request(!suspend);
+	if (!xceiv_data->otg_enabled && suspend)
+		bcm_hsotgctrl_handle_bus_suspend();
 
 	return 0;
 }
@@ -327,9 +327,9 @@ static int bcmpmu_otg_xceiv_set_vbus_power(struct otg_transceiver *otg,
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
 
-	return (bcmpmu_usb_set(xceiv_data->bcmpmu,
+	return bcmpmu_usb_set(xceiv_data->bcmpmu,
 			       BCMPMU_USB_CTRL_CHRG_CURR_LMT,
-			       xceiv_data->otg_enabled ? 0 : ma));
+			       xceiv_data->otg_enabled ? 0 : ma);
 }
 
 static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
@@ -523,6 +523,9 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 
 	dev_info(xceiv_data->dev, "A session invalid\n");
 
+	if (!bcm_hsotgctrl_get_clk_count())
+		bcm_hsotgctrl_en_clock(true);
+
 	/* Inform the core of session invalid level  */
 	bcm_hsotgctrl_phy_set_vbus_stat(false);
 
@@ -537,9 +540,9 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 				       BCMPMU_USB_CTRL_SET_ADP_COMP_METHOD, 1);
 			if (xceiv_data->otg_xceiver.otg_vbus_off)
 				schedule_delayed_work(&xceiv_data->
-						      bcm_otg_delayed_adp_work,
-						      msecs_to_jiffies
-						      (T_NO_ADP_DELAY_MIN_IN_MS));
+					bcm_otg_delayed_adp_work,
+					msecs_to_jiffies
+					  (T_NO_ADP_DELAY_MIN_IN_MS));
 			else
 				bcm_otg_do_adp_probe(xceiv_data);
 		} else if (!bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data)) {
@@ -881,7 +884,7 @@ static int bcmpmu_otg_xceiv_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static struct dev_pm_ops bcmpmu_otg_xceiv_pm_ops = {
+static const struct dev_pm_ops bcmpmu_otg_xceiv_pm_ops = {
 	.runtime_suspend = bcmpmu_otg_xceiv_runtime_suspend,
 	.runtime_resume = bcmpmu_otg_xceiv_runtime_resume,
 };

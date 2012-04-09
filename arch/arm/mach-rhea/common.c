@@ -524,6 +524,11 @@ static struct resource kona_hsotgctrl_platform_resource[] = {
 	       .end = HUB_CLK_BASE_ADDR + SZ_4K - 1,
 	       .flags = IORESOURCE_MEM,
 	       },
+	[3] = {
+	       .start = BCM_INT_ID_RESERVED128,
+	       .end = BCM_INT_ID_RESERVED128,
+	       .flags = IORESOURCE_IRQ,
+	       },
 };
 
 static struct platform_device board_kona_hsotgctrl_platform_device = {
