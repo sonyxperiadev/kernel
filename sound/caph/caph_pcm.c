@@ -599,28 +599,28 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 		whichbuffer = csl_audio_render_get_current_buffer(
 			StreamIdOfDriver(runtime->private_data));
 		if (whichbuffer != 1 && whichbuffer != 2) {
-			aError("Error unexpected: PcmPlaybackPointer"
+			/* aError("Error unexpected: PcmPlaybackPointer"
 					"whichbuffer=%d state=%d\n",
-					whichbuffer, runtime->status->state);
+					whichbuffer, runtime->status->state); */
 			whichbuffer = 1;
 		}
 
-		if (runtime->status->state == SNDRV_PCM_STATE_RUNNING) {
-			/* pos = (whichbuffer -1)*runtime->period_size; */
+		if (runtime->status->state == SNDRV_PCM_STATE_RUNNING)
 			pos = (whichbuffer - 1)*runtime->period_size;
-		} else
+		else
 			pos = chip->streamCtl[substream->number].stream_hw_ptr;
 	} else
 	pos =
 	    chip->streamCtl[substream->number].stream_hw_ptr +
 	    bytes_to_frames(runtime, dmaPointer);
 	pos %= runtime->buffer_size;
-
+	/*
 	aTrace(LOG_ALSA_INTERFACE,
 		"PcmPlaybackPointer substream->number = %d pos=%lu"
 		"state=%d whichbuffer=%d, int_pos=%lu\n",
 		substream->number, pos, runtime->status->state,
 		whichbuffer, chip->streamCtl[substream->number].stream_hw_ptr);
+	*/
 	return pos;
 }
 
