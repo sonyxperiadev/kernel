@@ -23,6 +23,7 @@
 #include <linux/uaccess.h>
 #include <linux/errno.h>
 #include <linux/platform_device.h>
+#include <trace/stm.h>
 
 #include "config.h"
 
@@ -460,6 +461,8 @@ static ssize_t set_log_store(const char *buf, size_t size,
 		if (!log->lock && !((idx == BCMLOG_OUTDEV_CUSTOM) &&
 				log->handler)) {
 			log->dev = idx;
+			if (idx != BCMLOG_OUTDEV_STM)
+				check_pti_disable();
 			return size;
 		}
 	}

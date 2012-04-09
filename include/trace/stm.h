@@ -53,6 +53,8 @@ int stm_trace_buffer(const void *data, size_t length);
 #endif
 
 #ifdef CONFIG_BCM_STM
+void check_pti_disable(void);
+
 /* ATB ID definitions */
 enum {
 	ATB_ID_SW_STM_A9 = 1,

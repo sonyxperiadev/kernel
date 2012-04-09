@@ -432,6 +432,17 @@ int stm_trace_send_bytes(int channel, const void *data_ptr, size_t length)
 #endif
 	return length;
 }
+
+void check_pti_disable(void)
+{
+	int pti_stat;
+
+	pti_stat =
+	    BRCM_READ_REG_FIELD(KONA_CHIPREG_VA, CHIPREG_PERIPH_SPARE_CONTROL1,
+				PTI_CLK_IS_IDLE);
+	if (!pti_stat)
+		pti_enable(0);
+}
 #endif
 
 int stm_alloc_channel(int offset)
