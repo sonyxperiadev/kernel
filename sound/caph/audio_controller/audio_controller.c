@@ -1451,7 +1451,7 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 		if (bInVoiceCall != TRUE)
 			AUDDRV_DisableDSPOutput();
 
-#if !defined(dis_EANBLE_POP_CONTROL)
+#if !defined(EANBLE_POP_CONTROL)
 	if ((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)
 	    || sink == AUDIO_SINK_BTS)
 		;
@@ -1488,7 +1488,7 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 			AUDCTRL_RemoveAudioApp(AUDIO_APP_MUSIC);
 		}
 	}
-#if defined(dis_EANBLE_POP_CONTROL)
+#if defined(EANBLE_POP_CONTROL)
 	if ((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)
 	    || sink == AUDIO_SINK_BTS)
 		;
