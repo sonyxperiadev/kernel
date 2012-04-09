@@ -58,6 +58,7 @@
 #include <linux/memcontrol.h>
 #include <linux/prefetch.h>
 #include <linux/migrate.h>
+#include <linux/page-debug-flags.h>
 
 #include <asm/tlbflush.h>
 #include <asm/div64.h>
@@ -971,7 +972,7 @@ static inline struct page *
 __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 {
 	struct free_area * area;
-	int current_order;
+	int current_order, real_order;
 	struct page *page;
 	int migratetype, i;
 
@@ -985,9 +986,24 @@ __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 			if (migratetype == MIGRATE_RESERVE)
 				break;
 
-			area = &(zone->free_area[current_order]);
-			if (list_empty(&area->free_list[migratetype]))
-				continue;
+			if (is_migrate_cma(migratetype)) {
+				if (current_order < (MAX_ORDER - 1))
+					continue; /* we looked at it already */
+
+				for (real_order = order;
+				     real_order < MAX_ORDER; real_order++) {
+					area = &(zone->free_area[real_order]);
+					if (!list_empty(&area->free_list[migratetype]))
+						break;
+				}
+				if (real_order == MAX_ORDER)
+					continue;
+			} else {
+				area = &(zone->free_area[current_order]);
+				real_order = current_order;
+				if (list_empty(&area->free_list[migratetype]))
+					continue;
+			}
 
 			page = list_entry(area->free_list[migratetype].next,
 					struct page, lru);
@@ -1006,7 +1022,7 @@ __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 			 * MIGRATE_CMA areas.
 			 */
 			if (!is_migrate_cma(migratetype) &&
-			    (unlikely(current_order >= pageblock_order / 2) ||
+			    (unlikely(real_order >= pageblock_order / 2) ||
 			     start_migratetype == MIGRATE_RECLAIMABLE ||
 			     page_group_by_mobility_disabled)) {
 				int pages;
@@ -1027,17 +1043,15 @@ __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 			rmv_page_order(page);
 
 			/* Take ownership for orders >= pageblock_order */
-			if (current_order >= pageblock_order &&
-			    !is_migrate_cma(migratetype))
-				change_pageblock_range(page, current_order,
+			if (!is_migrate_cma(migratetype) &&
+			    real_order >= pageblock_order)
+				change_pageblock_range(page, real_order,
 							start_migratetype);
 
-			expand(zone, page, order, current_order, area,
-			       is_migrate_cma(migratetype)
-			     ? migratetype : start_migratetype);
+			expand(zone, page, order, real_order, area, migratetype);
 
-			trace_mm_page_alloc_extfrag(page, order, current_order,
-				start_migratetype, migratetype);
+			trace_mm_page_alloc_extfrag(page, order, real_order,
+					start_migratetype, migratetype);
 
 			return page;
 		}
@@ -1107,9 +1121,9 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
 		else
 			list_add_tail(&page->lru, list);
 #ifdef CONFIG_CMA
-		mt = get_pageblock_migratetype(page);
-		if (!is_migrate_cma(mt) && mt != MIGRATE_ISOLATE)
-			mt = migratetype;
+			mt = get_pageblock_migratetype(page);
+			if (!is_migrate_cma(mt) && mt != MIGRATE_ISOLATE)
+				mt = migratetype;
 #endif
 		set_page_private(page, mt);
 		list = &page->lru;
@@ -5215,14 +5229,7 @@ static void setup_per_zone_lowmem_reserve(void)
 	calculate_totalreserve_pages();
 }
 
-/**
- * setup_per_zone_wmarks - called when min_free_kbytes changes
- * or when memory is hot-{added|removed}
- *
- * Ensures that the watermark[min,low,high] values for each zone are set
- * correctly with respect to min_free_kbytes.
- */
-void setup_per_zone_wmarks(void)
+static void __setup_per_zone_wmarks(void)
 {
 	unsigned long pages_min = min_free_kbytes >> (PAGE_SHIFT - 10);
 	unsigned long lowmem_pages = 0;
@@ -5269,17 +5276,31 @@ void setup_per_zone_wmarks(void)
 
 		zone->watermark[WMARK_LOW]  = min_wmark_pages(zone) + (tmp >> 2);
 		zone->watermark[WMARK_HIGH] = min_wmark_pages(zone) + (tmp >> 1);
-#ifdef CONFIG_CMA
-		zone->watermark[WMARK_MIN] += zone->min_cma_pages;
-		zone->watermark[WMARK_LOW] += zone->min_cma_pages;
-		zone->watermark[WMARK_HIGH] += zone->min_cma_pages;
-#endif
+
+		zone->watermark[WMARK_MIN] += cma_wmark_pages(zone);
+		zone->watermark[WMARK_LOW] += cma_wmark_pages(zone);
+		zone->watermark[WMARK_HIGH] += cma_wmark_pages(zone);
+
 		setup_zone_migrate_reserve(zone);
 		spin_unlock_irqrestore(&zone->lock, flags);
 	}
 
 	/* update totalreserve_pages */
 	calculate_totalreserve_pages();
+}
+
+/**
+ * setup_per_zone_wmarks - called when min_free_kbytes changes
+ * or when memory is hot-{added|removed}
+ *
+ * Ensures that the watermark[min,low,high] values for each zone are set
+ * correctly with respect to min_free_kbytes.
+ */
+void setup_per_zone_wmarks(void)
+{
+	mutex_lock(&zonelists_mutex);
+	__setup_per_zone_wmarks();
+	mutex_unlock(&zonelists_mutex);
 }
 
 /*
@@ -5370,8 +5391,8 @@ module_init(init_per_zone_wmark_min)
 
 /*
  * min_free_kbytes_sysctl_handler - just a wrapper around proc_dointvec() so
- *	that we can call two helper functions whenever min_free_kbytes
- *	changes.
+ * that we can call two helper functions whenever min_free_kbytes
+ * changes.
  */
 int min_free_kbytes_sysctl_handler(ctl_table *table, int write,
 	void __user *buffer, size_t *length, loff_t *ppos)
@@ -5779,14 +5800,16 @@ out:
 
 #ifdef CONFIG_CMA
 
-static unsigned long pfn_align_to_maxpage_down(unsigned long pfn)
+static unsigned long pfn_max_align_down(unsigned long pfn)
 {
-	return pfn & ~(MAX_ORDER_NR_PAGES - 1);
+	return pfn & ~(max_t(unsigned long, MAX_ORDER_NR_PAGES,
+			     pageblock_nr_pages) - 1);
 }
 
-static unsigned long pfn_align_to_maxpage_up(unsigned long pfn)
+static unsigned long pfn_max_align_up(unsigned long pfn)
 {
-	return ALIGN(pfn, MAX_ORDER_NR_PAGES);
+	return ALIGN(pfn, max_t(unsigned long, MAX_ORDER_NR_PAGES,
+				pageblock_nr_pages));
 }
 
 static struct page *
@@ -5845,6 +5868,18 @@ static int __alloc_contig_migrate_range(unsigned long start, unsigned long end)
 }
 
 /*
+ * Update zone's cma pages counter used for watermark level calculation.
+ */
+static inline void __update_cma_watermarks(struct zone *zone, int count)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&zone->lock, flags);
+	zone->min_cma_pages += count;
+	spin_unlock_irqrestore(&zone->lock, flags);
+	setup_per_zone_wmarks();
+}
+
+/*
  * Trigger memory pressure bump to reclaim some pages in order to be able to
  * allocate 'count' pages in single page units. Does similar work as
  *__alloc_pages_slowpath() function.
@@ -5855,20 +5890,15 @@ static int __reclaim_pages(struct zone *zone, gfp_t gfp_mask, int count)
 	struct zonelist *zonelist = node_zonelist(0, gfp_mask);
 	int did_some_progress = 0;
 	int order = 1;
-	unsigned long watermark, flags;
 
 	/*
 	 * Increase level of watermarks to force kswapd do his job
 	 * to stabilise at new watermark level.
 	 */
-	spin_lock_irqsave(&zone->lock, flags);
-	zone->min_cma_pages += count;
-	spin_unlock_irqrestore(&zone->lock, flags);
-	setup_per_zone_wmarks();
+	__update_cma_watermarks(zone, count);
 
 	/* Obey watermarks as if the page was being allocated */
-	watermark = low_wmark_pages(zone) + count;
-	while (!zone_watermark_ok(zone, 0, watermark, 0, 0)) {
+	while (!zone_watermark_ok(zone, 0, low_wmark_pages(zone), 0, 0)) {
 		wake_all_kswapd(order, zonelist, high_zoneidx, zone_idx(zone));
 
 		did_some_progress = __perform_reclaim(gfp_mask, order, zonelist,
@@ -5880,10 +5910,7 @@ static int __reclaim_pages(struct zone *zone, gfp_t gfp_mask, int count)
 	}
 
 	/* Restore original watermark levels. */
-	spin_lock_irqsave(&zone->lock, flags);
-	zone->min_cma_pages -= count;
-	spin_unlock_irqrestore(&zone->lock, flags);
-	setup_per_zone_wmarks();
+	__update_cma_watermarks(zone, -count);
 
 	return count;
 }
@@ -5917,10 +5944,12 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 
 	/*
 	 * What we do here is we mark all pageblocks in range as
-	 * MIGRATE_ISOLATE.  Because of the way page allocator work, we
-	 * align the range to MAX_ORDER pages so that page allocator
-	 * won't try to merge buddies from different pageblocks and
-	 * change MIGRATE_ISOLATE to some other migration type.
+	 * MIGRATE_ISOLATE.  Because pageblock and max order pages may
+	 * have different sizes, and due to the way page allocator
+	 * work, we align the range to biggest of the two pages so
+	 * that page allocator won't try to merge buddies from
+	 * different pageblocks and change MIGRATE_ISOLATE to some
+	 * other migration type.
 	 *
 	 * Once the pageblocks are marked as MIGRATE_ISOLATE, we
 	 * migrate the pages from an unaligned range (ie. pages that
@@ -5933,14 +5962,12 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	 *
 	 * This lets us mark the pageblocks back as
 	 * MIGRATE_CMA/MIGRATE_MOVABLE so that free pages in the
-	 * MAX_ORDER aligned range but not in the unaligned, original
-	 * range are put back to page allocator so that buddy can use
-	 * them.
+	 * aligned range but not in the unaligned, original range are
+	 * put back to page allocator so that buddy can use them.
 	 */
 
-	ret = start_isolate_page_range(pfn_align_to_maxpage_down(start),
-				       pfn_align_to_maxpage_up(end),
-				       migratetype);
+	ret = start_isolate_page_range(pfn_max_align_down(start),
+				       pfn_max_align_up(end), migratetype);
 	if (ret)
 		goto done;
 
@@ -6006,8 +6033,8 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 		free_contig_range(end, outer_end - end);
 
 done:
-	undo_isolate_page_range(pfn_align_to_maxpage_down(start),
-				pfn_align_to_maxpage_up(end), migratetype);
+	undo_isolate_page_range(pfn_max_align_down(start),
+				pfn_max_align_up(end), migratetype);
 	return ret;
 }
 
