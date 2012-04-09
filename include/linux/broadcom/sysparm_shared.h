@@ -128,10 +128,11 @@ struct _EchoNlp_t {
 	UInt16		\
 	echo_subband_nlp_noise_margin_wb[DSP_SUBBAND_NLP_FREQ_BINS_WB];
 	UInt16		echo_subband_nlp_dt_fine_control;
-	UInt16		nlp_distortion_coupling; /* NLP distortion coupling */
+	UInt16		nlp_distortion_coupling[DSP_SUBBAND_NLP_FREQ_BINS_WB];
 	UInt16		reverb_time_constant;	/* reverb control */
 	Int16		reverb_level;	/* reverb control */
 #endif
+	UInt16		nlp_dl_lookahead_enable;
 };
 #define EchoNlp_t struct _EchoNlp_t
 
@@ -326,25 +327,21 @@ NUM_OF_GROUP_HW_SIDETONE];
 	UInt16 echo_path_change_detection_threshold; /* echo path change det */
 	Smart_Compressor_t smart_compressor;    /*smart compressor */
 
-	/* Multi-Band Compressor parameters */
-	UInt16 multiband_comp_g_low;
-	UInt16 multiband_comp_g_mid;
-	UInt16 multiband_comp_g_high;
-
-	UInt16 multiband_comp_p_low;
-	UInt16 multiband_comp_p_mid;
-	UInt16 multiband_comp_p_high;
-
-	UInt16 multiband_comp_alpha_low;
-	UInt16 multiband_comp_alpha_mid;
-	UInt16 multiband_comp_alpha_high;
-
-	UInt16 multiband_comp_beta_low;
-	UInt16 multiband_comp_beta_mid;
-	UInt16 multiband_comp_beta_high;
 	Int32  \
 	fm_radio_digital_vol[NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME]; /* mB */
 	UInt16 ltpf_enable;
+
+	/* Multi-Band Compressor parameters */
+	UInt16 multiband_comp_g[DSP_SUBBAND_NLP_FREQ_BINS_WB];
+	UInt16 multiband_comp_p[DSP_SUBBAND_NLP_FREQ_BINS_WB];
+	UInt16 multiband_comp_dt_p[DSP_SUBBAND_NLP_FREQ_BINS_WB];
+	/*UInt16 multiband_comp_alpha[DSP_SUBBAND_NLP_FREQ_BINS_WB];*/
+	UInt16 multiband_comp_beta[DSP_SUBBAND_NLP_FREQ_BINS_WB];
+
+	/* software eq parameters */
+	UInt16 mic1_eq_enable;
+	UInt16 mic2_eq_enable;
+	UInt16 speaker_eq_enable;
 
 };
 #define SysAudioParm_t struct _SysAudioParm_t
