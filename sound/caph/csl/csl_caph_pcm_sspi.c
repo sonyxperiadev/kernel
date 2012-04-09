@@ -480,7 +480,9 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	}
 	/*only 16B case was tested for the following 2 protocols */
 	else if ((devCfg->protocol == CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL) &&
-		 (devCfg->format == CSL_PCM_WORD_LENGTH_16_BIT)) {
+		 ((devCfg->format == CSL_PCM_WORD_LENGTH_16_BIT) ||
+		 /* dsp changed to use 16bit pack data */
+		 (devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT))) {
 		protocol = SSPI_PROT_STEREO_16B_PCM;
 		frmMask = SSPI_HW_FRAME0_MASK | SSPI_HW_FRAME1_MASK;
 	} else if ((devCfg->protocol == CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL) &&

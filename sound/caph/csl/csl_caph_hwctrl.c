@@ -4419,6 +4419,8 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 			en_lpbk_i2s = en_lpbk;
 		else if (bus == CSL_SSP_PCM)
 			en_lpbk_pcm = en_lpbk;
+		else if (bus == CSL_SSP_TDM)
+			en_lpbk_pcm = en_lpbk;
 		return;
 	}
 	if (port == CSL_SSP_3) {
@@ -4592,7 +4594,12 @@ static void csl_caph_hwctrl_tdm_config(
 				|| path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
 				/* this is unpacked 16bit, 32bit per sample with
 				   msb = 0 */
+#if defined(ENABLE_BT16)
+				pcmCfg.format =
+					CSL_PCM_WORD_LENGTH_PACK_16_BIT;
+#else
 				pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT;
+#endif
 			else if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
 				&& path->source == CSL_CAPH_DEV_BT_MIC)
 				pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
@@ -4609,7 +4616,7 @@ static void csl_caph_hwctrl_tdm_config(
 			pcmCfg.ext_bits = 0;
 			pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
 			pcmTxCfg.enable = 1;
-			pcmTxCfg.loopback_enable = 0;
+			pcmTxCfg.loopback_enable = en_lpbk_pcm;
 			pcmRxCfg.enable = 1;
 			pcmRxCfg.loopback_enable = 0;
 			csl_pcm_config(pcmHandleSSP, &pcmCfg,
