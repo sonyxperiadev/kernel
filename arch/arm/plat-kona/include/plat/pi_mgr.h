@@ -143,11 +143,7 @@ struct pi {
 	struct pm_pi_info pi_info;
 	u32 *dep_pi;
 	u32 num_dep_pi;
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
-	struct pm_qos_request_list *pm_qos;
-#else
 	struct pm_qos_request_list pm_qos;
-#endif
 	struct pi_ops *ops;
 	spinlock_t lock;
 };
