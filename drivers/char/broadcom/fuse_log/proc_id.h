@@ -1,50 +1,13 @@
-/****************************************************************************
+/******************************************************************************
 *
-*     Copyright (c) 2005 Broadcom Corporation
-*           All Rights Reserved
+* (c) 1999-2008 Broadcom Corporation
 *
-*     No portions of this material may be reproduced in any form without the
-*     written permission of:
+* Unless you and Broadcom execute a separate written software license agreement
+* governing use of this software, this software is licensed to you under the
+* terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
 *
-*           Broadcom Corporation
-*           16215 Alton Parkway
-*           P.O. Box 57013
-*           Irvine, California 92619-7013
-*
-*     All information contained in this document is Broadcom Corporation
-*     company private, proprietary, and trade secret.
-*
-****************************************************************************/
-/* ========================================================
-** Copyright (C) 1997-2000 COMNEON GmbH & Co. OHG. All rights reserved.
-** ========================================================
-**
-** ========================================================
-**
-** This document contains proprietary information belonging to COMNEON.
-** Passing on and copying of this document, use and communication of its
-** contents is not permitted without prior written authorisation.
-**
-** ========================================================
-**
-** Revision Information :
-**    File name:
-**    SCCS version:
-**    Date:
-**
-** ========================================================
-**
-** Contents:
-**
-** ========================================================
-** History:
-**
-** Date         Author          Comment
-**
-** 31.07.00     GES             Created.
-**
-** ========================================================
-*/
+******************************************************************************/
 
 #ifndef PROC_ID_H
 #define PROC_ID_H

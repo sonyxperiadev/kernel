@@ -1,20 +1,14 @@
-/****************************************************************************
+/******************************************************************************
 *
-*     Copyright (c) 2004 Broadcom Corporation
-*           All Rights Reserved
+* (c) 1999-2008 Broadcom Corporation
 *
-*     No portions of this material may be reproduced in any form without the
-*     written permission of:
+* Unless you and Broadcom execute a separate written software license agreement
+* governing use of this software, this software is licensed to you under the
+* terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
 *
-*           Broadcom Corporation
-*           16215 Alton Parkway
-*           P.O. Box 57013
-*           Irvine, California 92619-7013
-*
-*     All information contained in this document is Broadcom Corporation
-*     company private, proprietary, and trade secret.
-*
-****************************************************************************/
+******************************************************************************/
+
 /**
 *
 *   @file   rpc_sync.c

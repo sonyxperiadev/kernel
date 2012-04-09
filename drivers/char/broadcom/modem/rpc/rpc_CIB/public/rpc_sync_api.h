@@ -1,20 +1,14 @@
-/****************************************************************************
+/******************************************************************************
 *
-*     Copyright (c) 2005 Broadcom Corporation
-*           All Rights Reserved
+* (c) 1999-2008 Broadcom Corporation
 *
-*     No portions of this material may be reproduced in any form without the
-*     written permission of:
+* Unless you and Broadcom execute a separate written software license agreement
+* governing use of this software, this software is licensed to you under the
+* terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
 *
-*           Broadcom Corporation
-*           16215 Alton Parkway
-*           P.O. Box 57013
-*           Irvine, California 92619-7013
-*
-*     All information contained in this document is Broadcom Corporation
-*     company private, proprietary, and trade secret.
-*
-****************************************************************************/
+******************************************************************************/
+
 /**
 *
 *   @file   rpc_sync_api.h
@@ -29,24 +23,24 @@
 *   @brief      This group defines the types and prototypes for the RPC SYNC fuctions.
 *
 \msc
-		"AP Client", RPC, "CP Client";
-		"AP Client"=>RPC [label="RPC_SyncInitialize()", URL="\ref RPC_SyncInitialize()"];
-		"CP Client">>RPC [label="RPC_SyncInitialize()", URL="\ref RPC_SyncInitialize()"];
-		"AP Client"=>RPC [label="RPC_SyncRegisterClient()", URL="\ref RPC_SyncRegisterClient()"];
-		"CP Client">>RPC [label="RPC_SyncRegisterClient()", URL="\ref RPC_SyncRegisterClient()"];
-		"AP Client"=>RPC [label="RPC_SyncCreateTID()", URL="\ref RPC_SyncCreateTID()"];
-		"AP Client"=>RPC [label="RPC_SerializeReq()", URL="\ref RPC_SerializeReq()"];
-		RPC rbox RPC [label="Serialize, send IPC Msg, Deser msg"];
-		"AP Client":>RPC [label="RPC_SyncWaitForResponse()", URL="\ref RPC_SyncWaitForResponse()"];
-		"AP Client"=>RPC [label="CBK: Notify Request"];
-		"AP Client"=>"AP Client" [label="thread blocks"];
-		"CP Client"=>RPC [label="RPC_SendAckForRequest()", URL="\ref RPC_SendAckForRequest()"];
-		RPC rbox RPC [label="ARPC:Serialize, send IPC Msg, Deser msg"];
-		RPC rbox RPC [label="SRPC:Raise ACK Sem"];
-		"CP Client"=>RPC [label="RPC_SerializeRsp()", URL="\ref RPC_SerializeRsp()"];
-		RPC rbox RPC [label="ARPC:Serialize, send IPC Msg, Deser msg"];
-		RPC rbox RPC [label="SRPC:Copy Resp Data, Raise RSP Sem"];
-		"AP Client"=>"AP Client" [label="thread unblocks"];
+	"AP Client", RPC, "CP Client";
+	"AP Client"=>RPC [label="RPC_SyncInitialize()", URL="\ref RPC_SyncInitialize()"];
+	"CP Client">>RPC [label="RPC_SyncInitialize()", URL="\ref RPC_SyncInitialize()"];
+	"AP Client"=>RPC [label="RPC_SyncRegisterClient()", URL="\ref RPC_SyncRegisterClient()"];
+	"CP Client">>RPC [label="RPC_SyncRegisterClient()", URL="\ref RPC_SyncRegisterClient()"];
+	"AP Client"=>RPC [label="RPC_SyncCreateTID()", URL="\ref RPC_SyncCreateTID()"];
+	"AP Client"=>RPC [label="RPC_SerializeReq()", URL="\ref RPC_SerializeReq()"];
+	RPC rbox RPC [label="Serialize, send IPC Msg, Deser msg"];
+	"AP Client":>RPC [label="RPC_SyncWaitForResponse()", URL="\ref RPC_SyncWaitForResponse()"];
+	"AP Client"=>RPC [label="CBK: Notify Request"];
+	"AP Client"=>"AP Client" [label="thread blocks"];
+	"CP Client"=>RPC [label="RPC_SendAckForRequest()", URL="\ref RPC_SendAckForRequest()"];
+	RPC rbox RPC [label="ARPC:Serialize, send IPC Msg, Deser msg"];
+	RPC rbox RPC [label="SRPC:Raise ACK Sem"];
+	"CP Client"=>RPC [label="RPC_SerializeRsp()", URL="\ref RPC_SerializeRsp()"];
+	RPC rbox RPC [label="ARPC:Serialize, send IPC Msg, Deser msg"];
+	RPC rbox RPC [label="SRPC:Copy Resp Data, Raise RSP Sem"];
+	"AP Client"=>"AP Client" [label="thread unblocks"];
 \endmsc
 ****************************************************************************/
 
