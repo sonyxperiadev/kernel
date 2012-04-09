@@ -3642,7 +3642,7 @@ void dhd_detach(dhd_pub_t *dhdp)
 	}
 #endif /* defined(CONFIG_WIRELESS_EXT) */
 
-	if (&dhd->thr_sysioc_ctl.thr_pid >= 0) {
+	if (dhd->thr_sysioc_ctl.thr_pid >= 0) {
 		PROC_STOP(&dhd->thr_sysioc_ctl);
 	}
 
