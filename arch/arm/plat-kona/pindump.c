@@ -43,7 +43,6 @@
 
 #define GPIO_CTRL(gpio) (GPIO_GPCTR0_OFFSET + (gpio * 4))
 
-
 static struct dentry *root_entry, *dump_dentry;
 
 static int pindump_proc_show(struct seq_file *m, void *v)
@@ -109,31 +108,25 @@ static int __init proc_pindump_init(void)
 
 module_init(proc_pindump_init);
 
-
 /* dump initial values */
 
 static int dtsdump_show(struct seq_file *m, void *v)
 {
 	int i, sel, gpio, gpio_cnt = 0;
 	uint32_t val, gpctr;
-	int max = 0;
-	uint32_t dt_pinmux[PN_MAX];
-	uint32_t dt_pinmux_nr;
+	uint32_t dt_pinmux;
+	uint32_t dt_pinmux_nr = get_dts_pinmux_nr();
 
-	get_max_entry(&max);
-	uint32_t dt_gpio[max+1];
-	get_pinmux_nr(&dt_pinmux_nr);
-	get_pinmux_value(&dt_pinmux);
 	/* print pin-mux */
 	for (i = 0; i < dt_pinmux_nr; i++) {
-		seq_printf(m, "0x%08x /* pad 0x%x*/\n", dt_pinmux[i], i * 4);
+		dt_pinmux = get_dts_pinmux_value(i);
+		seq_printf(m, "0x%08x /* pad 0x%x*/\n", dt_pinmux, i * 4);
 	}
 
-	get_gpio_value(dt_gpio);
 	/* print configured GPIO */
 	seq_printf(m, "Pin-mux configured as GPIO\n");
 	for (i = 0; i < dt_pinmux_nr; i++) {
-		val = dt_pinmux[i];
+		val = get_dts_pinmux_value(i);
 		sel = ((union pinmux_reg)val).b.sel;
 		if (g_chip_pin_desc.desc_tbl[i].f_tbl[sel] >= PF_FIRST_GPIO &&
 		    g_chip_pin_desc.desc_tbl[i].f_tbl[sel] <= PF_LAST_GPIO) {
@@ -141,7 +134,7 @@ static int dtsdump_show(struct seq_file *m, void *v)
 			gpio =
 			    g_chip_pin_desc.desc_tbl[i].f_tbl[sel] -
 			    PF_FIRST_GPIO;
-			gpctr = dt_gpio[gpio];
+			gpctr = get_dts_gpio_value(gpio);
 			gpctr &= GPIO_GPCTR0_IOTR_MASK;
 			seq_printf(m, "%d  0x%08x /*%s*/\n", gpio, gpctr,
 				   ((gpctr ==
@@ -155,13 +148,12 @@ static int dtsdump_show(struct seq_file *m, void *v)
 
 }
 
-
 static int dtsdump_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, dtsdump_show, inode->i_private);
 }
 
-static struct file_operations default_file_operations = {
+static const struct file_operations default_file_operations = {
 	.open = dtsdump_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
@@ -175,9 +167,9 @@ static int __init debug_dtsdump_init(void)
 	if (!root_entry && IS_ERR(root_entry)) {
 		printk(KERN_ERR, "Fail to create dir: dtsdump\n");
 		return PTR_ERR(root_entry);
-		}
-	dump_dentry = debugfs_create_file("dtsdump", 0444, root_entry, 
-		NULL, &default_file_operations);
+	}
+	dump_dentry = debugfs_create_file("dtsdump", 0444, root_entry, NULL,
+					  &default_file_operations);
 	return 0;
 }
 

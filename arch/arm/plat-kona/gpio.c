@@ -129,7 +129,7 @@ int __init early_init_dt_scan_gpio(unsigned long node, const char *uname,
 
 			/* mark and save for late processing */
 			dt_gpio[gpio] = cfg | DT_GPIO_VALID;
-			if(gpio > max_entry)
+			if (gpio > max_entry)
 				max_entry = gpio;
 		}
 	}
@@ -584,17 +584,7 @@ int __init kona_gpio_init(int num_bank)
 	return 0;
 }
 
-uint32_t *get_gpio_value(uint32_t * gpio)
+uint32_t get_dts_gpio_value(uint32_t index)
 {
-	int i = 0;
-	for (i; i < max_entry+1; i++) {
-		*(gpio+i) = dt_gpio[i];
-	}
-	return gpio;
-}
-
-int *get_max_entry(int * max)
-{
-	*max = max_entry;
-	return max;
+	return dt_gpio[index];
 }

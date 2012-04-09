@@ -52,7 +52,7 @@ int __init early_init_dt_scan_pinmux(unsigned long node, const char *uname,
 
 	prop = of_get_flat_dt_prop(node, "reg", &i);
 
-	p = (uint32_t *) prop;
+	p = (uint32_t *)prop;
 	i = be32_to_cpu(p[1]);
 	printk(KERN_INFO "reg: 0x%x, 0x%x\n", be32_to_cpu(p[0]),
 	       be32_to_cpu(p[1]));
@@ -75,7 +75,7 @@ int __init early_init_dt_scan_pinmux(unsigned long node, const char *uname,
 		printk(KERN_ERR "Wrong pad number!\n");
 		dt_pinmux_nr = 0;
 	} else {
-		p = (uint32_t *) prop;
+		p = (uint32_t *)prop;
 		for (i = 0; i < dt_pinmux_nr; i++) {
 			dt_pinmux[i] = be32_to_cpu(p[i]);
 			/* printk(KERN_INFO "%d: 0x%x\n", i, dt_pinmux[i]); */
@@ -200,13 +200,12 @@ int pinmux_set_pin_config(struct pin_config *config)
 	       base + g_chip_pin_desc.desc_tbl[name].reg_offset);
 
 	pr_debug("[PINMUX] - write value 0x%08x to register 0x%08x\n",
-		config->reg.val,
-		g_chip_pin_desc.desc_tbl[name].reg_offset);
+		 config->reg.val, g_chip_pin_desc.desc_tbl[name].reg_offset);
 
 	return ret;
 }
 
-int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio, enum PIN_FUNC * PF_gpio)
+int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio, enum PIN_FUNC *PF_gpio)
 {
 	int func;
 	for (func = 0; func < MAX_ALT_FUNC; func++) {
@@ -224,17 +223,12 @@ int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio, enum PIN_FUNC * PF_gpio
 	return -ENOENT;
 }
 
-uint32_t *get_pinmux_value(uint32_t *pinmux)
+uint32_t get_dts_pinmux_value(uint32_t index)
 {
-	int i = 0;
-	for (i; i < PN_MAX; i++) {
-		*(pinmux+i) = dt_pinmux[i];
-	}
-	return pinmux;
+	return dt_pinmux[index];
 }
 
-uint32_t *get_pinmux_nr(uint32_t *pinmux_nr)
+uint32_t get_dts_pinmux_nr()
 {
-	*pinmux_nr = dt_pinmux_nr;
-	return pinmux_nr;
+	return dt_pinmux_nr;
 }

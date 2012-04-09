@@ -134,7 +134,7 @@ static inline int is_ball_valid(enum PIN_NAME name)
 int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio,
 		     enum PIN_FUNC *PF_gpio);
 
-uint32_t * get_pinmux_value(uint32_t *);
-uint32_t * get_pinmux_nr(uint32_t *);
+uint32_t get_dts_pinmux_value(uint32_t index);
+uint32_t get_dts_pinmux_nr(void);
 
 #endif /*__PINMUX_H_ */
