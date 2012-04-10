@@ -31,6 +31,3 @@ int bcm_hsotgctrl_set_phy_resetb(bool on);
 int bcm_hsotgctrl_set_phy_clk_request(bool on);
 int bcm_hsotgctrl_phy_mdio_init(void);
 int bcm_hsotgctrl_set_ldo_suspend_mask(void);
-int bcm_hsotgctrl_phy_wakeup_condition(bool set);
-int bcm_hsotgctrl_handle_bus_suspend(void);
-int bcm_hsotgctrl_get_clk_count(void);
