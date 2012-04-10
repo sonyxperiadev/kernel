@@ -449,7 +449,11 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate)
 	AudioMode_t mode;
 	AudioApp_t app;
 	int bNeedDualMic;
-	aTrace(LOG_AUDIO_CNTLR, "%s sample_rate %d", __func__, sample_rate);
+	aTrace(LOG_AUDIO_CNTLR, "%s sample_rate %d-->%d",
+		__func__, voiceCallSampleRate, sample_rate);
+
+	if (voiceCallSampleRate == sample_rate)
+		return;
 
 	voiceCallSampleRate = sample_rate;
 	/* remember the rate for current call.

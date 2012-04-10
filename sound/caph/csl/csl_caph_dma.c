@@ -674,13 +674,16 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
 	CAPH_CFIFO_e caph_cfifo_fifo = CAPH_CFIFO_VOID;
 	CAPH_CFIFO_CHNL_DIRECTION_e direction = CAPH_CFIFO_IN;
 
-	aTrace
-	      (LOG_AUDIO_CSL,
-	       "%s:: dir %d fifo %d dma %d mem %p size %ld Tsize %d dmaCB %p.\r\n",
-	       __func__,
-	       chnl_config.direction, chnl_config.fifo, chnl_config.dma_ch,
-	       chnl_config.mem_addr, chnl_config.mem_size, chnl_config.Tsize,
-	       chnl_config.dmaCB);
+	aTrace(LOG_AUDIO_CSL,
+		"%s::dir %d fifo %d dma %d mem %p size %ld Tsize %d dmaCB %p "
+		"n_dma_buf %d dma_buf_size %d\n",
+		__func__,
+		chnl_config.direction, chnl_config.fifo,
+		chnl_config.dma_ch, chnl_config.mem_addr,
+		chnl_config.mem_size, chnl_config.Tsize,
+		chnl_config.dmaCB,
+		chnl_config.n_dma_buf,
+		chnl_config.dma_buf_size);
 
 	if ((chnl_config.fifo == CSL_CAPH_CFIFO_NONE)
 	    || (chnl_config.dma_ch == CSL_CAPH_DMA_NONE))
@@ -716,6 +719,13 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
 
 	dmaCH_ctrl[chnl_config.dma_ch].caphDmaCb = chnl_config.dmaCB;
 
+	if (chnl_config.n_dma_buf) {
+		chal_caph_dma_set_hibuffer(handle, caph_aadmac_ch,
+		(cUInt32) (chnl_config.mem_addr + chnl_config.dma_buf_size),
+		0);
+		chal_caph_dma_en_hibuffer(handle, caph_aadmac_ch);
+	}
+
 	return;
 }
 
@@ -732,12 +742,15 @@ void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config)
 	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
 
 	aTrace(LOG_AUDIO_CSL,
-			"%s:: dir %d fifo %d dma %d mem %p size %ld Tsize %d dmaCB %p.\r\n",
-			__func__,
-			chnl_config.direction, chnl_config.fifo,
-			chnl_config.dma_ch, chnl_config.mem_addr,
-			chnl_config.mem_size, chnl_config.Tsize,
-			chnl_config.dmaCB);
+		"%s::dir %d fifo %d dma %d mem %p size %ld Tsize %d dmaCB %p "
+		"n_dma_buf %d dma_buf_size %d\n",
+		__func__,
+		chnl_config.direction, chnl_config.fifo,
+		chnl_config.dma_ch, chnl_config.mem_addr,
+		chnl_config.mem_size, chnl_config.Tsize,
+		chnl_config.dmaCB,
+		chnl_config.n_dma_buf,
+		chnl_config.dma_buf_size);
 
 	if (chnl_config.dma_ch == CSL_CAPH_DMA_NONE)
 		return;

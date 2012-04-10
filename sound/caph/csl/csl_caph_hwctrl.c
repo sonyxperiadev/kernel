@@ -1044,8 +1044,13 @@ static void csl_caph_obtain_blocks
 	srOut = path->src_sampleRate;
 
 	/* dsp data is 24bit mono*/
-	if (path->source == CSL_CAPH_DEV_DSP)
+	if (path->source == CSL_CAPH_DEV_DSP) {
 		dataFormat = CSL_CAPH_24BIT_MONO;
+#if defined(ENABLE_BT16)
+		if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR)
+			dataFormat = CSL_CAPH_16BIT_MONO;
+#endif
+	}
 	if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) {
 		if ((bt_mode == BT_MODE_WB) || (bt_mode == BT_MODE_WB_TEST))
 			path->snk_sampleRate =
@@ -1676,6 +1681,23 @@ static void csl_caph_config_dma(CSL_CAPH_PathID
 	blockIdx = path->blockIdx[sinkNo][blockPathIdx];
 
 	memset(&dmaCfg, 0, sizeof(dmaCfg));
+
+	if (path->streamID) {
+		/*playback, configure the 1st dma*/
+		/*record, configure the last dma*/
+		if (path->source == CSL_CAPH_DEV_MEMORY && !blockIdx) {
+			CSL_CAPH_Render_Drv_t *auddrv;
+			auddrv = GetRenderDriverByType(path->streamID);
+			dmaCfg.n_dma_buf = auddrv->numBlocks;
+			dmaCfg.dma_buf_size = auddrv->blockSize;
+		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY &&
+			blockIdx) {
+			CSL_CAPH_Capture_Drv_t *auddrv;
+			auddrv = GetCaptureDriverByType(path->streamID);
+			dmaCfg.n_dma_buf = auddrv->numBlocks;
+			dmaCfg.dma_buf_size = auddrv->blockSize;
+		}
+	}
 
 	if (path->source == CSL_CAPH_DEV_DSP_throughMEM &&
 		path->sink[sinkNo] == CSL_CAPH_DEV_IHF &&

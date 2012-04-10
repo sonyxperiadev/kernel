@@ -833,3 +833,42 @@ static cVoid chal_caph_dma_default_set_hibuffer(CHAL_HANDLE handle,
 						cUInt32 address, cUInt32 size)
 {
 }
+
+/****************************************************************************
+*
+*  Function Name: cVoid chal_caph_dma_en_hibuffer(CHAL_HANDLE handle,
+*			CAPH_DMA_CHANNEL_e channel)
+*
+*  Description: enable CAPH DMA channel hi buffer
+*
+****************************************************************************/
+cVoid chal_caph_dma_en_hibuffer(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e channel)
+{
+	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
+	cUInt8 index;
+	cUInt32 cr = 0;
+
+	/* Find the channel we are looking for */
+	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
+		if ((1UL << index) & channel) {
+			/* enable the use of hi buffer */
+			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_2,
+					       (index *
+						CHAL_CAPH_DMA_CH_REG_SIZE));
+
+			/* Configure the use of buffer base address register */
+			cr |=
+			    (1 <<
+		CPH_AADMAC_CH1_AADMAC_CR_2_CH1_AADMAC_HIGH_BASE_EN_SHIFT);
+
+			/* Apply the settings in the hardware */
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_2,
+					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
+					   cr);
+			break;
+		}
+
+	}
+
+	return;
+}
