@@ -445,9 +445,9 @@ JIRA flag is turned off
 #else
 #define ARM_SWITCH_CLK_FLAGS				AUTO_GATE|HYST_ENABLE|HYST_HIGH
 #endif
-#define ROOT_CCU_CLK_FLAGS				CCU_KEEP_UNLOCKED
-#define APB10_BUS_CLK_FLAGS					AUTO_GATE
-#define APB9_BUS_CLK_FLAGS					AUTO_GATE
+#define ROOT_CCU_CLK_FLAGS		(CCU_KEEP_UNLOCKED|CCU_DBG_BUS_EN)
+#define APB10_BUS_CLK_FLAGS			AUTO_GATE
+#define APB9_BUS_CLK_FLAGS			AUTO_GATE
 #define ACI_APB_BUS_CLK_FLAGS				AUTO_GATE|HYST_ENABLE|HYST_HIGH
 #define PWRMGR_AXI_BUS_CLK_FLAGS			AUTO_GATE|HYST_ENABLE|HYST_HIGH
 #define APB6_BUS_CLK_FLAGS 					AUTO_GATE
@@ -507,7 +507,7 @@ JIRA flag is turned off
 #define DSI1_PIX_PHY_REF_CLK_FLAGS 		0
 #define TEST_DEBUG_REF_CLK_FLAGS 		0
 #define REF_APB6_FREE_CLK_FLAGS 		AUTO_GATE
-#define KHUB_CCU_CLK_FLAGS 			CCU_TARGET_AC
+#define KHUB_CCU_CLK_FLAGS			(CCU_TARGET_AC|CCU_DBG_BUS_EN)
 #define NOR_APB_BUS_CLK_FLAGS 			DISABLE_ON_INIT|HYST_ENABLE|HYST_HIGH
 #define TMON_APB_BUS_CLK_FLAGS 			AUTO_GATE|HYST_ENABLE|HYST_HIGH
 #define APB5_BUS_CLK_FLAGS 			AUTO_GATE
@@ -569,7 +569,7 @@ JIRA flag is turned off
 #define HUB_TIMER_PERI_CLK_FLAGS		ENABLE_ON_INIT|DONOT_NOTIFY_STATUS_TO_CCU|HYST_ENABLE|HYST_HIGH
 /*JIRA HWRHEA-1183 : PMU BSC clock should be autogated, else AON cannot wakeup from sleep*/
 #define PMU_BSC_PERI_CLK_FLAGS			AUTO_GATE|DONOT_NOTIFY_STATUS_TO_CCU|HYST_ENABLE|HYST_HIGH
-#define KPM_CCU_CLK_FLAGS 				CCU_TARGET_AC
+#define KPM_CCU_CLK_FLAGS			(CCU_TARGET_AC|CCU_DBG_BUS_EN)
 #define USB_OTG_AHB_BUS_CLK_FLAGS 		DISABLE_ON_INIT | NOTIFY_STATUS_TO_CCU
 #define SDIO2_AHB_BUS_CLK_FLAGS 		DISABLE_ON_INIT
 #define SDIO3_AHB_BUS_CLK_FLAGS 		DISABLE_ON_INIT
@@ -595,7 +595,7 @@ JIRA flag is turned off
 #define USB_IC_PERI_CLK_FLAGS 			DISABLE_ON_INIT
 #define USBH_48M_PERI_CLK_FLAGS 		HYST_ENABLE|HYST_HIGH
 #define USBH_12M_PERI_CLK_FLAGS 		HYST_ENABLE|HYST_HIGH
-#define KPS_CCU_CLK_FLAGS 				CCU_TARGET_AC
+#define KPS_CCU_CLK_FLAGS			(CCU_TARGET_AC|CCU_DBG_BUS_EN)
 #define EXT_AXI_BUS_CLK_FLAGS			AUTO_GATE|HYST_ENABLE|HYST_HIGH
 #define UARTB_APB_BUS_CLK_FLAGS 		AUTO_GATE
 #define UARTB2_APB_BUS_CLK_FLAGS 		AUTO_GATE
@@ -705,7 +705,7 @@ int clk_set_crystal_pwr_on_idle(int enable);
 int rhea_clock_init(void);
 int rhea_chip_reset(void);
 #ifdef CONFIG_DEBUG_FS
-int set_gpio_mux_for_debug_bus(int mux_sel, int mux_param);
+int debug_bus_mux_sel(int mux_sel, int mux_param);
 int set_clk_idle_debug_mon(int clk_idle, int db_sel);
 int set_clk_monitor_debug(int mon_select, int db_sel);
 #endif

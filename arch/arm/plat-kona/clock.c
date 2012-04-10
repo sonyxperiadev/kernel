@@ -1908,8 +1908,51 @@ int ccu_save_state(struct ccu_clk *ccu_clk, int save)
 	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
-
 EXPORT_SYMBOL(ccu_save_state);
+
+int ccu_get_dbg_bus_status(struct ccu_clk *ccu_clk)
+{
+	int ret;
+
+	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
+	    || !ccu_clk->ccu_ops->get_dbg_bus_status
+		|| !CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN))
+		return -EINVAL;
+	CCU_ACCESS_EN(ccu_clk, 1);
+	ret = ccu_clk->ccu_ops->get_dbg_bus_status(ccu_clk);
+	CCU_ACCESS_EN(ccu_clk, 0);
+	return ret;
+}
+EXPORT_SYMBOL(ccu_get_dbg_bus_status);
+
+int ccu_set_dbg_bus_sel(struct ccu_clk *ccu_clk, u32 sel)
+{
+	int ret;
+	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
+	    || !ccu_clk->ccu_ops->set_dbg_bus_sel
+		|| !CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN))
+		return -EINVAL;
+	CCU_ACCESS_EN(ccu_clk, 1);
+	ret = ccu_clk->ccu_ops->set_dbg_bus_sel(ccu_clk, sel);
+	CCU_ACCESS_EN(ccu_clk, 0);
+	return ret;
+}
+EXPORT_SYMBOL(ccu_set_dbg_bus_sel);
+
+int ccu_get_dbg_bus_sel(struct ccu_clk *ccu_clk)
+{
+	int ret;
+	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
+	    || !ccu_clk->ccu_ops->get_dbg_bus_sel
+		|| !CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN))
+		return -EINVAL;
+
+	CCU_ACCESS_EN(ccu_clk, 1);
+	ret = ccu_clk->ccu_ops->get_dbg_bus_sel(ccu_clk);
+	CCU_ACCESS_EN(ccu_clk, 0);
+	return ret;
+}
+EXPORT_SYMBOL(ccu_get_dbg_bus_sel);
 
 /*CCU access functions */
 static int ccu_clk_write_access_enable(struct ccu_clk *ccu_clk, int enable)
@@ -2378,6 +2421,42 @@ static int ccu_clk_save_state(struct ccu_clk *ccu_clk, int save)
 	return ret;
 }
 
+
+static int ccu_clk_get_dbg_bus_status(struct ccu_clk *ccu_clk)
+{
+	u32 reg;
+	BUG_ON(!ccu_clk ||
+			!CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN));
+	reg = readl(CCU_DBG_BUS_REG(ccu_clk));
+	return (reg & CCU_DBG_BUS_STATUS_MASK) >>
+				CCU_DBG_BUS_STATUS_SHIFT;
+}
+static int ccu_clk_set_dbg_bus_sel(struct ccu_clk *ccu_clk, u32 sel)
+{
+	u32 reg;
+	BUG_ON(!ccu_clk ||
+			!CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN));
+	ccu_write_access_enable(ccu_clk, true);
+	reg = readl(CCU_DBG_BUS_REG(ccu_clk));
+	reg &= ~CCU_DBG_BUS_SEL_MASK;
+	reg |= (sel << CCU_DBG_BUS_SEL_SHIFT) &
+				CCU_DBG_BUS_SEL_MASK;
+	writel(reg, CCU_DBG_BUS_REG(ccu_clk));
+	ccu_write_access_enable(ccu_clk, false);
+	return 0;
+}
+
+static int ccu_clk_get_dbg_bus_sel(struct ccu_clk *ccu_clk)
+{
+	u32 reg;
+	BUG_ON(!ccu_clk ||
+			!CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN));
+	reg = readl(CCU_DBG_BUS_REG(ccu_clk));
+	reg &= CCU_DBG_BUS_SEL_MASK;
+	return (int)((reg & CCU_DBG_BUS_SEL_MASK) >>
+					CCU_DBG_BUS_SEL_SHIFT);
+}
+
 struct ccu_clk_ops gen_ccu_ops = {
 	.write_access = ccu_clk_write_access_enable,
 	.rst_write_access = ccu_rst_write_access_enable,
@@ -2394,6 +2473,9 @@ struct ccu_clk_ops gen_ccu_ops = {
 	.set_active_policy = ccu_clk_set_active_policy,
 	.get_active_policy = ccu_clk_get_active_policy,
 	.save_state = ccu_clk_save_state,
+	.get_dbg_bus_status = ccu_clk_get_dbg_bus_status,
+	.set_dbg_bus_sel = ccu_clk_set_dbg_bus_sel,
+	.get_dbg_bus_sel = ccu_clk_get_dbg_bus_sel,
 };
 
 /*Generic ccu ops functions*/
@@ -4770,7 +4852,7 @@ struct gen_clk_ops gen_core_clk_ops = {
 
 #ifdef CONFIG_DEBUG_FS
 
-__weak int set_gpio_mux_for_debug_bus(int mux_sel, int mux_param)
+__weak int debug_bus_mux_sel(int mux_sel, int mux_param)
 {
 	return 0;
 }
@@ -4789,6 +4871,12 @@ __weak int clock_monitor_enable(struct clk *clk, int monitor)
 {
 	return 0;
 }
+__weak int set_ccu_dbg_bus_mux(struct ccu_clk *ccu_clk, int mux_sel,
+			int mux_param)
+{
+	return 0;
+}
+
 
 static int clk_debugfs_open(struct inode *inode, struct file *file)
 {
@@ -4804,8 +4892,8 @@ static ssize_t set_clk_idle_debug(struct file *file, char const __user *buf,
 	int clk_idle = 0;
 	char input_str[100];
 
-	if (count > 100)
-		len = 100;
+	if (count > sizeof(input_str))
+		len = sizeof(input_str);
 	else
 		len = count;
 
@@ -4923,6 +5011,65 @@ DEFINE_SIMPLE_ATTRIBUTE(ccu_wr_en_fops, ccu_debug_wr_en_get, ccu_debug_wr_en_set
 
 
 
+
+static ssize_t ccu_debug_get_dbg_bus_status(struct file *file,
+					char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	u32 len = 0;
+	struct ccu_clk *ccu_clk;
+	char out_str[20];
+	int status;
+	struct clk *clk = file->private_data;
+
+	BUG_ON(clk == NULL);
+	ccu_clk = to_ccu_clk(clk);
+	memset(out_str, 0, sizeof(out_str));
+	status = ccu_get_dbg_bus_status(ccu_clk);
+	if (status == -EINVAL)
+		len += snprintf(out_str+len, sizeof(out_str)-len,
+			"error!!\n");
+	else
+		len += snprintf(out_str+len, sizeof(out_str)-len,
+			"%x\n", (u32)status);
+
+	return simple_read_from_buffer(user_buf, count, ppos,
+			out_str, len);
+}
+
+static ssize_t ccu_debug_set_dbg_bus_sel(struct file *file,
+				  char const __user *buf, size_t count,
+				  loff_t *offset)
+{
+	struct clk *clk = file->private_data;
+	struct ccu_clk *ccu_clk;
+	u32 len = 0;
+	char input_str[10];
+	u32 sel = 0, mux = 0, mux_parm = 0;
+
+	BUG_ON(clk == NULL);
+	ccu_clk = to_ccu_clk(clk);
+
+	memset(input_str, 0, ARRAY_SIZE(input_str));
+	if (count > ARRAY_SIZE(input_str))
+		len = ARRAY_SIZE(input_str);
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	sscanf(&input_str[0], "%x%x%x", &sel, &mux, &mux_parm);
+	set_ccu_dbg_bus_mux(ccu_clk, mux, mux_parm);
+	ccu_set_dbg_bus_sel(ccu_clk, sel);
+	return count;
+}
+
+static const struct file_operations ccu_dbg_bus_fops = {
+	.open = clk_debugfs_open,
+	.write = ccu_debug_set_dbg_bus_sel,
+	.read = ccu_debug_get_dbg_bus_status,
+};
 static int ccu_debug_get_policy(void *data, u64 *val)
 {
 	struct clk *clock = data;
@@ -5467,11 +5614,6 @@ int ccu_volt_tbl_display(struct clk *clk, u8 *volt_tbl)
 	return ret;
 }
 
-static int ccu_volt_id_update_open(struct inode *inode, struct file *file)
-{
-	file->private_data = inode->i_private;
-	return 0;
-}
 
 static ssize_t ccu_volt_id_display(struct file *file, char __user *buf,
 				   size_t len, loff_t *offset)
@@ -5548,7 +5690,7 @@ static ssize_t ccu_volt_id_update(struct file *file,
 }
 
 static struct file_operations ccu_volt_tbl_update_fops = {
-	.open = ccu_volt_id_update_open,
+	.open = clk_debugfs_open,
 	.write = ccu_volt_id_update,
 	.read = ccu_volt_id_display,
 };
@@ -5625,6 +5767,13 @@ int __init clock_debug_add_ccu(struct clk *c)
 					  &ccu_wr_en_fops);
 	if (!dentry[i])
 		goto err;
+
+	if (CLK_FLG_ENABLED(c, CCU_DBG_BUS_EN)) {
+		struct dentry *dent;
+		dent = debugfs_create_file("dbg_bus", S_IWUSR|S_IRUGO,
+					  ccu_clk->dent_ccu_dir, c,
+					  &ccu_dbg_bus_fops);
+	}
 
 	return 0;
 err:

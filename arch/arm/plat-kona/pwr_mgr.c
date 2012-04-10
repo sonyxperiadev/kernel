@@ -1984,7 +1984,6 @@ static int pwr_mgr_pm_i2c_var_data_read(u8 *data)
 
 #ifdef CONFIG_DEBUG_FS
 
-static u32 bmdm_pwr_mgr_base;
 
 __weak void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param)
 {
@@ -2030,9 +2029,33 @@ static ssize_t set_pm_mgr_dbg_bus(struct file *file, char const __user *buf,
 	return count;
 }
 
+static ssize_t get_pm_mgr_dbg_bus(struct file *file,
+					char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	u32 len = 0;
+	char out_str[20];
+	u32 bus_val;
+	u32 reg = PWR_MGR_REG_ADDR(PWRMGR_POWER_MANAGER_I2C_ENABLE_OFFSET);
+
+	memset(out_str, 0, sizeof(out_str));
+	bus_val = readl(reg) &
+	PWRMGR_POWER_MANAGER_I2C_ENABLE_POWER_MANAGER_DEBUG_BUS_MASK;
+	bus_val >>=
+	PWRMGR_POWER_MANAGER_I2C_ENABLE_POWER_MANAGER_DEBUG_BUS_SHIFT;
+
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+			"%x\n", bus_val);
+
+	return simple_read_from_buffer(user_buf, count, ppos,
+			out_str, len);
+}
+
+
 static struct file_operations set_pm_dbg_bus_fops = {
 	.open = pwrmgr_debugfs_open,
 	.write = set_pm_mgr_dbg_bus,
+	.read = get_pm_mgr_dbg_bus,
 };
 
 
@@ -2045,8 +2068,8 @@ static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
 	int param = 0;
 	char input_str[100];
 	u32 reg_val;
-	u32 reg_addr =
-	    bmdm_pwr_mgr_base + BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_OFFSET;
+	u32 reg_addr = (u32)file->private_data +
+				BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_OFFSET;
 	if (count > 100)
 		len = 100;
 	else
@@ -2073,9 +2096,33 @@ static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
 	return count;
 }
 
+static ssize_t get_bmdm_mgr_dbg_bus(struct file *file,
+					char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	u32 len = 0;
+	char out_str[20];
+	u32 bus_val;
+	u32 reg = (u32)file->private_data +
+				BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_OFFSET;
+
+	memset(out_str, 0, sizeof(out_str));
+	bus_val = readl(reg) &
+	BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_POWER_MANAGER_DEBUG_BUS_MASK;
+	bus_val >>=
+	BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_POWER_MANAGER_DEBUG_BUS_SHIFT;
+
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+			"%x\n", bus_val);
+
+	return simple_read_from_buffer(user_buf, count, ppos,
+			out_str, len);
+}
+
 static struct file_operations set_bmdm_dbg_bus_fops = {
 	.open = pwrmgr_debugfs_open,
 	.write = set_bmdm_mgr_dbg_bus,
+	.read = get_bmdm_mgr_dbg_bus,
 };
 
 
@@ -2397,8 +2444,6 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 	if (!dent_pwr_root_dir)
 		return -ENOMEM;
 
-	bmdm_pwr_mgr_base = bmdm_pwr_base;
-
 	if (!debugfs_create_u32
 	    ("debug", S_IWUSR | S_IRUSR, dent_pwr_root_dir, (int *)&pwr_debug))
 		return -ENOMEM;
@@ -2413,7 +2458,8 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 	     &set_pm_dbg_bus_fops))
 		return -ENOMEM;
 	if (!debugfs_create_file
-	    ("bmdm_debug_bus", S_IWUSR | S_IRUSR, dent_pwr_root_dir, NULL,
+	    ("bmdm_debug_bus", S_IWUSR | S_IRUSR, dent_pwr_root_dir,
+		(void *)bmdm_pwr_base,
 	     &set_bmdm_dbg_bus_fops))
 		return -ENOMEM;
 #if defined(CONFIG_KONA_PWRMGR_REV2)
