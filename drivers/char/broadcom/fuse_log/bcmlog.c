@@ -375,6 +375,7 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				    (kbuf_str, lcl->str, lcl->size)) {
 					BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
 						      "bad userspace pointer\n");
+					kfree(kbuf_str);
 					rc = -1;
 					break;
 				}
@@ -455,6 +456,7 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 					if (copy_from_user
 					    (kernelSigBuf, lcl->sigPtr,
 					     lcl->sigBufSize)) {
+						kfree(kernelSigBuf);
 						rc = -1;
 						break;
 					}
