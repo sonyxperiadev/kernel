@@ -23,6 +23,9 @@
 #include <linux/types.h>
 #include <linux/sched.h>
 #include <linux/delay.h>
+#include <linux/reboot.h>
+#include <linux/kmsg_dump.h>
+#include <linux/mfd/bcmpmu.h>
 
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS
 #include <mach/kona_timer.h>
@@ -99,6 +102,30 @@ reset_reason_store(struct device *dev, struct device_attribute *attr,
 }
 
 static DEVICE_ATTR(reset_reason, 0664, reset_reason_show, reset_reason_store);
+
+static ssize_t
+kona_hard_reset(struct device *dev, struct device_attribute *attr,
+		   const char *buf, size_t n)
+{
+	unsigned int hard_reset_reason;
+
+	if (sscanf(buf, "%d", &hard_reset_reason) == 1) {
+		if ((hard_reset_reason < 1) || (hard_reset_reason > 15))
+			goto err;
+		kernel_restart_prepare(NULL);
+		printk(KERN_EMERG "Restarting system (hard reset)\n");
+		kmsg_dump(KMSG_DUMP_RESTART);
+		machine_shutdown();
+		bcmpmu_client_hard_reset(hard_reset_reason);
+		return n;
+	}
+err:
+	pr_info("\r\nusage: echo [hard_reset_reason (1-15)] > "
+		"/sys/bcm/hard_reset\r\n");
+	return -EINVAL;
+}
+
+static DEVICE_ATTR(hard_reset, 0600, NULL, kona_hard_reset);
 
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS
 static ssize_t
@@ -232,6 +259,7 @@ static struct attribute *bcm_attrs[] = {
 	&dev_attr_timer_stop_test.attr,
 #endif
 	&dev_attr_reset_reason.attr,
+	&dev_attr_hard_reset.attr,
 	NULL,
 };
 

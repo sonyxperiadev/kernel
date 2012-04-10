@@ -54,6 +54,7 @@ static struct bcmpmu_rw_data register_init_data[] = {
 #endif /* CONFIG_MACH_RHEA_STONE */
 	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
 	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
+	{.map = 0, .addr = 0x2D, .val = 0x00, .mask = 0xF3},
 	{.map = 0, .addr = 0x40, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x41, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x42, .val = 0xFF, .mask = 0xFF},
