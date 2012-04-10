@@ -128,8 +128,18 @@ enum {
 };
 
 #endif
-
-static int pwr_debug = 0;
+static int pwr_dbg_mask;
+enum {
+	/* Logs with PWR_LOG_ERR will always be printed out. */
+	PWR_LOG_ERR = 1 << 0,		/*b 00000001*/
+	PWR_LOG_DBG = 1 << 1,		/*b 00000010*/
+	PWR_LOG_DBGFS = 1 << 2,		/*b 00000100*/
+	PWR_LOG_INIT = 1 << 3,		/*b 00001000*/
+	PWR_LOG_EVENT = 1 << 4,		/*b 00010000*/
+	PWR_LOG_CONFIG = 1 << 5,	/*b 00100000*/
+	PWR_LOG_SEQ = 1 << 6,		/*b 01000000*/
+	PWR_LOG_PI = 1 << 7,		/*b 10000000*/
+};
 /* global spinlock for pwr mgr API */
 static DEFINE_SPINLOCK(pwr_mgr_lock);
 static DEFINE_MUTEX(seq_mutex);
@@ -158,15 +168,16 @@ int pwr_mgr_event_trg_enable(int event_id, int event_trg_type)
 	u32 reg_val = 0;
 	u32 reg_offset;
 	unsigned long flgs;
-	pwr_dbg("%s:event_id: %d, trg : %d\n",
+	pwr_dbg(PWR_LOG_EVENT, "%s:event_id: %d, trg : %d\n",
 		__func__, event_id, event_trg_type);
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
 	if (unlikely(event_id >= PWR_MGR_NUM_EVENTS)) {
-		pwr_dbg("%s:invalid event id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid event id\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -184,7 +195,7 @@ int pwr_mgr_event_trg_enable(int event_id, int event_trg_type)
 		reg_val |= PWRMGR_EVENT_NEGEDGE_CONDITION_ENABLE_MASK;
 
 	writel(reg_val, PWR_MGR_REG_ADDR(reg_offset));
-	pwr_dbg("%s:reg_addr:%x value = %x\n", __func__,
+	pwr_dbg(PWR_LOG_EVENT, "%s:reg_addr:%x value = %x\n", __func__,
 		PWR_MGR_REG_ADDR(reg_offset), reg_val);
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 
@@ -198,14 +209,15 @@ int pwr_mgr_get_event_trg_type(int event_id)
 	u32 reg_val = 0;
 	int trig_type = PM_TRIG_NONE;
 	u32 reg_offset;
-	pwr_dbg("%s:event_id: %d\n", __func__, event_id);
+	pwr_dbg(PWR_LOG_EVENT, "%s:event_id: %d\n", __func__, event_id);
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR,
+			"%s:ERROR - pwr mgr not initialized\n", __func__);
 		return -EPERM;
 	}
 
 	if (unlikely(event_id >= PWR_MGR_NUM_EVENTS)) {
-		pwr_dbg("%s:invalid event id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid event id\n", __func__);
 		return -EPERM;
 	}
 	reg_offset = event_id * 4;
@@ -230,9 +242,10 @@ int pwr_mgr_event_clear_events(u32 event_start, u32 event_end)
 	int inx;
 	unsigned long flgs;
 
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_EVENT, "%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 	if (event_end == EVENT_ID_ALL) {
@@ -245,7 +258,7 @@ int pwr_mgr_event_clear_events(u32 event_start, u32 event_end)
 
 	if (unlikely(event_end >= PWR_MGR_NUM_EVENTS ||
 		     event_start > event_end)) {
-		pwr_dbg("%s:invalid event id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid event id\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -266,14 +279,15 @@ EXPORT_SYMBOL(pwr_mgr_event_clear_events);
 bool pwr_mgr_is_event_active(int event_id)
 {
 	u32 reg_val = 0;
-	pwr_dbg("%s : event_id = %d\n", __func__, event_id);
+	pwr_dbg(PWR_LOG_EVENT, "%s : event_id = %d\n", __func__, event_id);
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return false;
 	}
 
 	if (unlikely(event_id >= PWR_MGR_NUM_EVENTS)) {
-		pwr_dbg("%s:invalid event id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid event id\n", __func__);
 		return false;
 	}
 	reg_val = readl(PWR_MGR_REG_ADDR(event_id * 4));
@@ -288,15 +302,16 @@ int pwr_mgr_event_set(int event_id, int event_state)
 	u32 reg_val = 0;
 	unsigned long flgs;
 
-	pwr_dbg("%s : event_id = %d : enable = %d\n", __func__, event_id,
-		!!event_state);
+	pwr_dbg(PWR_LOG_EVENT, "%s : event_id = %d : enable = %d\n",
+		__func__, event_id, !!event_state);
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 
 	if (unlikely(event_id >= PWR_MGR_NUM_EVENTS)) {
-		pwr_dbg("%s:invalid event id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid event id\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -320,19 +335,20 @@ int pwr_mgr_event_set_pi_policy(int event_id, int pi_id,
 	int realEventId, i;
 	unsigned long flgs;
 
-	pwr_dbg
-	    ("%s : event_id = %d : pi_id = %d, ac : %d, ATL : %d, policy: %d\n",
-	     __func__, event_id, pi_id, pm_policy_cfg->ac, pm_policy_cfg->atl,
-	     pm_policy_cfg->policy);
+	pwr_pi_dbg(pi_id, PWR_LOG_PI,
+	"%s : event_id = %d : pi_id = %d, ac : %d, ATL : %d, policy: %d\n",
+		__func__, event_id, pi_id, pm_policy_cfg->ac,
+		pm_policy_cfg->atl, pm_policy_cfg->policy);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR,
+			"%s:ERROR - pwr mgr not initialized\n", __func__);
 		return -EPERM;
 	}
 
 	if (unlikely
 	    (event_id >= PWR_MGR_NUM_EVENTS || pi_id >= pwr_mgr.info->num_pi)) {
-		pwr_dbg("%s:invalid group/pi id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid group/pi id\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -371,18 +387,19 @@ int pwr_mgr_event_set_pi_policy(int event_id, int pi_id,
 	reg_val |= (pm_policy_cfg->policy & PM_POLICY_MASK) <<
 	    pi->pi_info.pm_policy_shift;
 
-	pwr_dbg("%s:reg val %08x shift val: %08x\n", __func__, reg_val,
-		pi->pi_info.pm_policy_shift);
+	pwr_pi_dbg(pi_id, PWR_LOG_PI, "%s:reg val %08x shift val: %08x\n",
+		__func__, reg_val, pi->pi_info.pm_policy_shift);
 
 	writel(reg_val,
 	       PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, realEventId));
-	pwr_dbg
-	    ("%s : event_id = %d : pi_id = %d, ac : %d, ATL : %d, policy: %d\n",
-	     __func__, event_id, pi_id, pm_policy_cfg->ac, pm_policy_cfg->atl,
-	     pm_policy_cfg->policy);
+	pwr_pi_dbg(pi_id, PWR_LOG_PI,
+	"%s : event_id = %d : pi_id = %d, ac : %d,ATL : %d, policy: %d\n",
+	__func__, event_id, pi_id, pm_policy_cfg->ac, pm_policy_cfg->atl,
+			pm_policy_cfg->policy);
 
-	pwr_dbg("%s:reg val %08x written to register: %08x\n",
-		__func__, reg_val,
+	pwr_pi_dbg(pi_id, PWR_LOG_PI,
+		"%s:reg val %08x written to register: %08x\n", __func__,
+		reg_val,
 		PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, event_id * 4));
 
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
@@ -400,16 +417,18 @@ int pwr_mgr_event_get_pi_policy(int event_id, int pi_id,
 	int realEventId, i;
 	unsigned long flgs;
 
-	pwr_dbg("%s : event_id = %d : pi_id = %d\n", __func__, event_id, pi_id);
+	pwr_pi_dbg(pi_id, PWR_LOG_PI, "%s : event_id = %d : pi_id = %d\n",
+			__func__, event_id, pi_id);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
 	if (unlikely
 	    (event_id >= PWR_MGR_NUM_EVENTS || pi_id >= pwr_mgr.info->num_pi)) {
-		pwr_dbg("%s:invalid event/pi id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid event/pi id\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -449,15 +468,16 @@ int pwr_mgr_set_pi_fixed_volt_map(int pi_id, bool activate)
 	u32 reg_val = 0;
 	unsigned long flgs;
 	const struct pi *pi;
-	pwr_dbg("%s : pi_id = %d\n", __func__, pi_id);
+	pwr_pi_dbg(pi_id, PWR_LOG_PI, "%s : pi_id = %d\n", __func__, pi_id);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
 	if (unlikely(pi_id >= pwr_mgr.info->num_pi)) {
-		pwr_dbg("%s:invalid event/pi id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid event/pi id\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -481,16 +501,18 @@ int pwr_mgr_set_pi_vmap(int pi_id, int vset, bool activate)
 	u32 reg_val = 0;
 	unsigned long flgs;
 	const struct pi *pi;
-	pwr_dbg("%s : vset = %d : pi_id = %d\n", __func__, vset, pi_id);
+	pwr_pi_dbg(pi_id, PWR_LOG_PI, "%s : vset = %d : pi_id = %d\n",
+			__func__, vset, pi_id);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
 	if (unlikely(pi_id >= pwr_mgr.info->num_pi ||
 		     vset < VOLT0 || vset > VOLT2)) {
-		pwr_dbg("%s:invalid param\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid param\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -518,15 +540,17 @@ int pwr_mgr_pi_set_wakeup_override(int pi_id, bool clear)
 	u32 reg_val = 0;
 	unsigned long flgs;
 	const struct pi *pi;
-	pwr_dbg("%s : clear = %d : pi_id = %d\n", __func__, clear, pi_id);
+	pwr_dbg(PWR_LOG_CONFIG, "%s : clear = %d : pi_id = %d\n",
+			__func__, clear, pi_id);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 
 	if (unlikely(pi_id >= pwr_mgr.info->num_pi)) {
-		pwr_dbg("%s:invalid param\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid param\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -538,7 +562,7 @@ int pwr_mgr_pi_set_wakeup_override(int pi_id, bool clear)
 		reg_val &= ~pi->pi_info.wakeup_overide_mask;
 	else
 		reg_val |= pi->pi_info.wakeup_overide_mask;
-	pr_info("%s:just before reg update...\n", __func__);
+	pr_info("%s:writing to wakeup override for pi: %d\n", __func__, pi_id);
 	writel(reg_val, PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return 0;
@@ -553,11 +577,12 @@ int pwr_mgr_set_pc_sw_override(int pc_pin, bool enable, int value)
 	u32 value_mask, enable_mask;
 	unsigned long flgs;
 
-	pwr_dbg("%s : pc_pin = %d : enable = %d, value = %d\n",
-		__func__, pc_pin, enable, value);
+	pwr_dbg(PWR_LOG_CONFIG, "%s : pc_pin = %d : enable = %d, value = %d\n",
+			__func__, pc_pin, enable, value);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
@@ -581,7 +606,7 @@ int pwr_mgr_set_pc_sw_override(int pc_pin, bool enable, int value)
 		enable_mask = PWRMGR_PC0_SW_OVERRIDE_ENABLE_MASK;
 		break;
 	default:
-		pwr_dbg("%s:invalid param\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid param\n", __func__);
 		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 		return -EINVAL;
 	}
@@ -605,11 +630,12 @@ int pwr_mgr_set_pc_clkreq_override(int pc_pin, bool enable, int value)
 	u32 value_mask, enable_mask;
 	unsigned long flgs;
 
-	pwr_dbg("%s : pc_pin = %d : enable = %d, value = %d\n",
+	pwr_dbg(PWR_LOG_CONFIG, "%s : pc_pin = %d : enable = %d, value = %d\n",
 		__func__, pc_pin, enable, value);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
@@ -633,7 +659,7 @@ int pwr_mgr_set_pc_clkreq_override(int pc_pin, bool enable, int value)
 		enable_mask = PWRMGR_PC0_CLKREQ_OVERRIDE_ENABLE_MASK;
 		break;
 	default:
-		pwr_dbg("%s:invalid param\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid param\n", __func__);
 		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 		return -EINVAL;
 	}
@@ -656,10 +682,10 @@ int pm_get_pc_value(int pc_pin)
 	u32 reg_val = 0;
 	u32 value;
 
-	pwr_dbg("%s : pc_pin = %d \n", __func__, pc_pin);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 
@@ -679,11 +705,13 @@ int pm_get_pc_value(int pc_pin)
 		value = reg_val & PWRMGR_PC0_CURRENT_VALUE_MASK;
 		break;
 	default:
-		pwr_dbg("%s:invalid param\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid param\n", __func__);
 		return -EINVAL;
 		break;
 	}
 
+	pwr_dbg(PWR_LOG_DBG, "%s: pc_pin:%d  value:%d\n",
+				__func__, pc_pin, !!value);
 	return (!!value);
 }
 
@@ -695,7 +723,8 @@ int pm_mgr_pi_count_clear(bool clear)
 	unsigned long flgs;
 
 	if (unlikely(!pwr_mgr.info)) {
-		pr_err("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 
@@ -724,22 +753,24 @@ int pwr_mgr_pi_counter_enable(int pi_id, bool enable)
 	u32 reg_val = 0;
 	const struct pi *pi;
 	unsigned long flgs;
-	pwr_dbg("%s : pi_id = %d enable = %d\n", __func__, pi_id, enable);
+	pwr_dbg(PWR_LOG_DBG, "%s : pi_id = %d enable = %d\n",
+			__func__, pi_id, enable);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 
 	if (unlikely(pi_id >= pwr_mgr.info->num_pi)) {
-		pwr_dbg("%s:invalid param\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid param\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
 	reg_val = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
-	pwr_dbg("%s:counter reg val = %x\n", __func__, reg_val);
+	pwr_dbg(PWR_LOG_DBG, "%s:counter reg val = %x\n", __func__, reg_val);
 
 	if (enable)
 		reg_val |=
@@ -762,15 +793,16 @@ int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 	unsigned long flgs;
 
 	const struct pi *pi;
-	pwr_dbg("%s : pi_id = %d\n", __func__, pi_id);
+	pwr_dbg(PWR_LOG_DBG, "%s : pi_id = %d\n", __func__, pi_id);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
 	if (unlikely(pi_id >= pwr_mgr.info->num_pi)) {
-		pwr_dbg("%s:invalid param\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid param\n", __func__);
 		return -EINVAL;
 	}
 	pi = pi_mgr_get(pi_id);
@@ -790,7 +822,7 @@ int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 
 	if (insurance >= 1000)
 		return -EIO;
-	pwr_dbg("%s:counter reg val = %x\n", __func__, reg_val2);
+	pwr_dbg(PWR_LOG_DBG, "%s:counter reg val = %x\n", __func__, reg_val2);
 
 	if (over_flow)
 		*over_flow = !!(reg_val2 &
@@ -813,7 +845,8 @@ int pwr_mgr_pm_i2c_sem_lock()
 	unsigned long flgs;
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 	BUG_ON(pwr_mgr.sem_locked);
@@ -850,7 +883,8 @@ int pwr_mgr_pm_i2c_sem_unlock()
 {
 	unsigned long flgs;
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 	BUG_ON(pwr_mgr.sem_locked == false);
@@ -875,7 +909,8 @@ int pwr_mgr_pm_i2c_sem_lock()
 	unsigned long flgs;
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EINVAL;
 	}
 
@@ -916,7 +951,8 @@ int pwr_mgr_pm_i2c_sem_lock()
 	} while (read_val != value && insurance);
 
 	if (read_val != value) {
-		pr_info("%s: failed to acquire PMU I2C HW sem !!\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:failed to acquire PMU I2C HW sem!!\n",
+				__func__);
 		ret = -EAGAIN;
 	} else
 		pwr_mgr.sem_locked = true;
@@ -931,7 +967,8 @@ int pwr_mgr_pm_i2c_sem_unlock()
 	unsigned long flgs;
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 	BUG_ON(pwr_mgr.sem_locked == false);
@@ -952,10 +989,11 @@ EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);
 int pwr_mgr_pm_i2c_enable(bool enable)
 {
 	u32 reg_val;
-	pwr_dbg("%s:enable = %d\n", __func__, enable);
+	pwr_dbg(PWR_LOG_CONFIG, "%s:enable = %d\n", __func__, enable);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EINVAL;
 	}
 	reg_val =
@@ -981,15 +1019,16 @@ int pwr_mgr_set_v0x_specific_i2c_cmd_ptr(int v0x,
 	u32 offset;
 	unsigned long flgs;
 
-	pwr_dbg("%s:v0x = %d\n", __func__, v0x);
+	pwr_dbg(PWR_LOG_CONFIG, "%s:v0x = %d\n", __func__, v0x);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 
 	if (unlikely(v0x < VOLT0 || v0x > VOLT2)) {
-		pwr_dbg("%s:ERROR - invalid param\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - invalid param\n", __func__);
 		return -EINVAL;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -1018,8 +1057,8 @@ int pwr_mgr_set_v0x_specific_i2c_cmd_ptr(int v0x,
 	    & PWRMGR_VO_SPECIFIC_I2C_COMMAND_POINTER_MASK;
 	writel(reg_val, PWR_MGR_REG_ADDR(offset));
 
-	pwr_dbg("%s: %x set to %x register\n", __func__, reg_val,
-		PWR_MGR_REG_ADDR(offset));
+	pwr_dbg(PWR_LOG_CONFIG, "%s: %x set to %x register\n", __func__,
+			reg_val, PWR_MGR_REG_ADDR(offset));
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return 0;
 
@@ -1032,20 +1071,22 @@ int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd *i2c_cmd, u32 num_cmds)
 	u8 cmd0_data, cmd1_data;
 	unsigned long flgs;
 
-	pwr_dbg("%s:num_cmds = %d\n", __func__, num_cmds);
+	pwr_dbg(PWR_LOG_CONFIG, "%s:num_cmds = %d\n", __func__, num_cmds);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 
 	if (unlikely((pwr_mgr.info->flags & PM_PMU_I2C) == 0)) {
-		pwr_dbg("%s:ERROR - invalid param\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - invalid param\n", __func__);
 		return -EINVAL;
 	}
 	if (unlikely(num_cmds > PM_I2C_CMD_MAX)) {
-		pwr_dbg("%s:ERROR - invalid param(num_cmds > PM_I2C_CMD_MAX)\n",
-			__func__);
+		pwr_dbg(PWR_LOG_ERR,
+			"%s:ERROR- invalid param(num_cmds > PM_I2C_CMD_MAX)\n",
+				__func__);
 		return -EINVAL;
 	}
 
@@ -1067,15 +1108,16 @@ int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd *i2c_cmd, u32 num_cmds)
 			    (reg_val & I2C_CMD1_DATA_MASK) >>
 			    I2C_CMD1_DATA_SHIFT;
 		}
-		pwr_dbg("%s:cmd0 = %x cmd0_data = %x cmd1 = %x cmd1_data = %x",
+		pwr_dbg(PWR_LOG_CONFIG,
+			"%s:cmd0 = %x cmd0_data = %x cmd1 = %x cmd1_data = %x",
 			__func__, cmd0, cmd0_data, cmd1, cmd1_data);
 		reg_val = I2C_COMMAND_WORD(cmd1, cmd1_data, cmd0, cmd0_data);
 		writel(reg_val,
 		       PWR_MGR_REG_ADDR
 		       (PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_OFFSET
 			+ inx * 4));
-		pwr_dbg("%s: %x set to %x register\n", __func__, reg_val,
-			PWR_MGR_REG_ADDR
+		pwr_dbg(PWR_LOG_CONFIG, "%s: %x set to %x register\n",
+			__func__, reg_val, PWR_MGR_REG_ADDR
 			(PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_OFFSET
 			 + inx * 4));
 	}
@@ -1091,17 +1133,18 @@ int pwr_mgr_pm_i2c_var_data_write(const u8 *var_data, int count)
 	u32 reg_val;
 	unsigned long flgs;
 
-	pwr_dbg("%s:\n", __func__);
+	pwr_dbg(PWR_LOG_CONFIG, "%s:\n", __func__);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 
 	if (unlikely
 	    ((pwr_mgr.info->flags & PM_PMU_I2C) == 0
 	     || (count > PWRMGR_I2C_VAR_DATA_REG * 4))) {
-		pwr_dbg("%s:ERROR - invalid param or not supported\n",
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - invalid param or not supported\n",
 			__func__);
 		return -EINVAL;
 	}
@@ -1133,8 +1176,8 @@ int pwr_mgr_pm_i2c_var_data_write(const u8 *var_data, int count)
 		       PWR_MGR_REG_ADDR
 		       (PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
 			+ inx * 4));
-		pwr_dbg("%s: %x set to %x register\n", __func__, reg_val,
-			PWR_MGR_REG_ADDR
+		pwr_dbg(PWR_LOG_CONFIG, "%s: %x set to %x register\n",
+				__func__, reg_val, PWR_MGR_REG_ADDR
 			(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
 			 + inx * 4));
 	}
@@ -1149,10 +1192,11 @@ int pwr_mgr_arm_core_dormant_enable(bool enable)
 {
 	unsigned long flgs;
 	u32 reg_val = 0;
-	pwr_dbg("%s : enable = %d\n", __func__, enable);
+	pwr_dbg(PWR_LOG_CONFIG, "%s : enable = %d\n", __func__, enable);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -1177,15 +1221,17 @@ int pwr_mgr_pi_retn_clamp_enable(int pi_id, bool enable)
 	const struct pi *pi;
 	unsigned long flgs;
 
-	pwr_dbg("%s : pi_id = %d enable = %d\n", __func__, pi_id, enable);
+	pwr_dbg(PWR_LOG_CONFIG, "%s : pi_id = %d enable = %d\n", __func__,
+			pi_id, enable);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
 	if (unlikely(pi_id >= pwr_mgr.info->num_pi)) {
-		pwr_dbg("%s:invalid param\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid param\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -1208,10 +1254,11 @@ int pwr_mgr_ignore_power_ok_signal(bool ignore)
 {
 	unsigned long flgs;
 	u32 reg_val = 0;
-	pwr_dbg("%s :ignore = %d\n", __func__, ignore);
+	pwr_dbg(PWR_LOG_CONFIG, "%s :ignore = %d\n", __func__, ignore);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -1235,10 +1282,11 @@ int pwr_mgr_ignore_dap_powerup_request(bool ignore)
 {
 	unsigned long flgs;
 	u32 reg_val = 0;
-	pwr_dbg("%s :ignore = %d\n", __func__, ignore);
+	pwr_dbg(PWR_LOG_CONFIG, "%s :ignore = %d\n", __func__, ignore);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -1268,11 +1316,12 @@ int pwr_mgr_register_event_handler(u32 event_id,
 	unsigned long flgs;
 	int ret = 0;
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 	if (unlikely(event_id >= PWR_MGR_NUM_EVENTS)) {
-		pwr_dbg("%s:invalid event id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid event id\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -1281,8 +1330,9 @@ int pwr_mgr_register_event_handler(u32 event_id,
 		pwr_mgr.event_cb[event_id].param = param;
 	} else {
 		ret = -EINVAL;
-		pwr_dbg("%s:Handler already registered for event id: %d\n",
-			__func__, event_id);
+		pwr_dbg(PWR_LOG_ERR,
+			"%s:Handler already registered for event id: %d\n",
+				__func__, event_id);
 	}
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return ret;
@@ -1294,11 +1344,12 @@ int pwr_mgr_unregister_event_handler(u32 event_id)
 {
 	unsigned long flgs;
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 	if (unlikely(event_id >= PWR_MGR_NUM_EVENTS)) {
-		pwr_dbg("%s:invalid event id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid event id\n", __func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -1320,9 +1371,10 @@ int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event)
 	u32 bit_pos;
 	u32 event_reg;
 #endif
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_EVENT, "%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 
@@ -1336,7 +1388,7 @@ int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event)
 
 	if (unlikely(event_end >= PWR_MGR_NUM_EVENTS ||
 		     event_start > event_end)) {
-		pwr_dbg("%s:invalid event id\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:invalid event id\n", __func__);
 		return -EPERM;
 	}
 
@@ -1348,7 +1400,8 @@ int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event)
 
 	for (inx = event_start; inx <= event_end; inx++) {
 		if (reg_val & (1 << bit_pos)) {
-			pwr_dbg("%s:event id : %x\n", __func__, inx);
+			pwr_dbg(PWR_LOG_EVENT, "%s:event id : %x\n",
+					__func__, inx);
 			if (pwr_mgr.event_cb[inx].pwr_mgr_event_cb)
 				pwr_mgr.event_cb[inx].pwr_mgr_event_cb(inx,
 								       pwr_mgr.
@@ -1372,7 +1425,8 @@ int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event)
 	for (inx = event_start; inx <= event_end; inx++) {
 		reg_val = readl(PWR_MGR_REG_ADDR(inx * 4));
 		if (reg_val & PWRMGR_EVENT_CONDITION_ACTIVE_MASK) {
-			pwr_dbg("%s:event id : %x\n", __func__, inx);
+			pwr_dbg(PWR_LOG_EVENT, "%s:event id : %x\n",
+					__func__, inx);
 			if (pwr_mgr.event_cb[inx].pwr_mgr_event_cb)
 				pwr_mgr.event_cb[inx].pwr_mgr_event_cb(inx,
 								       pwr_mgr.
@@ -1404,7 +1458,7 @@ static irqreturn_t pwr_mgr_irq_handler(int irq, void *dev_id)
 	u32 status, mask;
 	u32 reg;
 
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_DBG, "%s\n", __func__);
 
 	BUG_ON(unlikely(!pwr_mgr.info));
 
@@ -1412,7 +1466,8 @@ static irqreturn_t pwr_mgr_irq_handler(int irq, void *dev_id)
 	status = readl(PWR_MGR_REG_ADDR(PWRMGR_INTR_STATUS_OFFSET));
 	mask = readl(PWR_MGR_REG_ADDR(PWRMGR_INTR_MASK_OFFSET));
 
-	pwr_dbg("%s: status : %x, mask =%x\n", __func__, status, mask);
+	pwr_dbg(PWR_LOG_DBG, "%s: status : %x, mask =%x\n", __func__, status,
+			mask);
 	if (status & PWR_MGR_INTR_MASK(PWRMGR_INTR_I2C_SW_SEQ) &&
 	    mask & PWR_MGR_INTR_MASK(PWRMGR_INTR_I2C_SW_SEQ)) {
 		/* Clear interrupts */
@@ -1434,7 +1489,8 @@ static irqreturn_t pwr_mgr_irq_handler(int irq, void *dev_id)
 			/* Clear interrupts */
 			pwr_mgr_clr_intr_status(PWRMGR_INTR_EVENTS);
 
-			pr_info("%s:PWRMGR_INTR_EVENTS\n", __func__);
+			pwr_dbg(PWR_LOG_DBG, "%s:PWRMGR_INTR_EVENTS\n",
+				__func__);
 			schedule_work(&pwr_mgr.pwrmgr_work);
 		}
 	}
@@ -1446,7 +1502,8 @@ static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 	u32 reg_val = 0;
 	u32 mask, shift;
 
-	pwr_dbg("%s:cmd_offset = %d, cmd_data = %x reg_Addr = %x\n", __func__,
+	pwr_dbg(PWR_LOG_CONFIG,
+		"%s:cmd_offset = %d, cmd_data = %x reg_Addr = %x\n", __func__,
 		cmd_offset, cmd_data,
 		PWR_MGR_REG_ADDR(PWR_MGR_I2C_CMD_OFF_TO_REG_OFF(cmd_offset)));
 
@@ -1454,11 +1511,11 @@ static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 	    readl(PWR_MGR_REG_ADDR(PWR_MGR_I2C_CMD_OFF_TO_REG_OFF(cmd_offset)));
 	shift = PWR_MGR_I2C_CMD_OFF_TO_CMD_DATA_SHIFT(cmd_offset);
 	mask = PWR_MGR_I2C_CMD_OFF_TO_CMD_DATA_MASK(cmd_offset);
-	pwr_dbg("%s:reg_val = %x, shift = %d, mask = %x\n", __func__,
-		reg_val, shift, mask);
+	pwr_dbg(PWR_LOG_CONFIG, "%s:reg_val = %x, shift = %d, mask = %x\n",
+		__func__, reg_val, shift, mask);
 	reg_val &= ~mask;
 	reg_val |= cmd_data << shift;
-	pwr_dbg("%s:new reg  = %x,\n", __func__, reg_val);
+	pwr_dbg(PWR_LOG_CONFIG, "%s:new reg  = %x,\n", __func__, reg_val);
 	writel(reg_val,
 	       PWR_MGR_REG_ADDR(PWR_MGR_I2C_CMD_OFF_TO_REG_OFF(cmd_offset)));
 
@@ -1470,7 +1527,7 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	int ret = 0;
 	int reg;
 	unsigned long flag = 0;
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_SEQ, "%s, action:%d\n", __func__, action);
 
 	reg_val = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 	reg_val &= ~(PWRMGR_I2C_REQ_TRG_MASK | PWRMGR_I2C_SW_START_ADDR_MASK);
@@ -1542,7 +1599,7 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 #endif
 	if (!wait_for_completion_timeout(&pwr_mgr.i2c_seq_done,
 			 msecs_to_jiffies(pwr_mgr.info->i2c_seq_timeout))) {
-		pr_info("%s seq timedout !!\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s seq timedout !!\n", __func__);
 		ret = -EAGAIN;
 	}
 
@@ -1558,9 +1615,10 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	int ret;
 	u32 reg;
 
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_SEQ, "%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
-		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 
@@ -1583,7 +1641,7 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		reg = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
 				PWRMGR_I2C_READ_DATA_SHIFT);
 		if (reg & 0x1) {
-			pr_debug("PWRMGR: I2C READ NACK\n");
+			pwr_dbg(PWR_LOG_ERR, "PWRMGR: I2C READ NACK\n");
 			ret = -EAGAIN;
 			goto out_unlock;
 		}
@@ -1602,6 +1660,9 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	}
 out_unlock:
 	mutex_unlock(&seq_mutex);
+	pwr_dbg(PWR_LOG_SEQ,
+		"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x; ret_val:%d\n",
+		__func__, reg_addr, slave_id, *reg_val, ret);
 	return ret;
 }
 
@@ -1613,9 +1674,10 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 	u32 reg;
 	u8 i2c_data;
 
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_SEQ, "%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
-		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 
@@ -1641,11 +1703,16 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 		i2c_data = reg & PWRMGR_I2C_READ_DATA_MASK;
 		if (i2c_data & 0x1) {
-			pr_debug("PWRMGR: I2C WRITE NACK from PMU\n");
+			pwr_dbg(PWR_LOG_ERR,
+				"PWRMGR: I2C WRITE NACK from PMU\n");
 			ret = -EAGAIN;
 		}
 	}
 	mutex_unlock(&seq_mutex);
+	pwr_dbg(PWR_LOG_SEQ,
+		"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x; ret_val:%d\n",
+		__func__, reg_addr, slave_id, reg_val, ret);
+
 	return ret;
 }
 
@@ -1656,10 +1723,11 @@ int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start, u8 slave_id, u8 count,
 {
 	int i;
 	int ret = 0;
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_SEQ, "%s\n", __func__);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
 		return -EPERM;
 	}
 	if (pwr_mgr.info->flags & I2C_SIMULATE_BURST_MODE) {
@@ -1667,9 +1735,15 @@ int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start, u8 slave_id, u8 count,
 			ret = pwr_mgr_pmu_reg_read(reg_addr_start + i,
 						   slave_id, &reg_val[i]);
 			if (ret)
-				return ret;
+				goto out;
+			pwr_dbg(PWR_LOG_SEQ,
+			"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x\n",
+			__func__, reg_addr_start + i, slave_id, reg_val[i]);
+
 		}
 	}
+out:
+	pwr_dbg(PWR_LOG_SEQ, "%s ret_val:%d\n", __func__, ret);
 	return ret;
 }
 
@@ -1680,9 +1754,10 @@ int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start, u8 slave_id, u8 count,
 {
 	int i;
 	int ret = 0;
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_SEQ, "%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
-		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 	if (pwr_mgr.info->flags & I2C_SIMULATE_BURST_MODE) {
@@ -1690,9 +1765,14 @@ int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start, u8 slave_id, u8 count,
 			ret = pwr_mgr_pmu_reg_write(reg_addr_start + i,
 						    slave_id, reg_val[i]);
 			if (ret)
-				return ret;
+				goto out;
+			pwr_dbg(PWR_LOG_SEQ,
+			"%s reg_addr:0x%0x; slave_id:%d; reg_val:ox%0x\n",
+			__func__, reg_addr_start + i, slave_id, reg_val[i]);
 		}
 	}
+out:
+	pwr_dbg(PWR_LOG_SEQ, "%s ret_val:%d\n", __func__, ret);
 	return ret;
 }
 
@@ -1703,9 +1783,10 @@ int pwr_mgr_mask_intr(u32 intr, bool mask)
 	u32 reg_val = 0;
 	unsigned long flgs;
 	u32 reg_mask = 0;
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_CONFIG, "%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
-		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
@@ -1733,9 +1814,10 @@ int pwr_mgr_get_intr_status(u32 intr)
 {
 	u32 reg_val = 0;
 	unsigned long flgs;
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_DBG, "%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
-		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
@@ -1753,9 +1835,10 @@ int pwr_mgr_clr_intr_status(u32 intr)
 	u32 mask = intr;
 	unsigned long flgs;
 
-	pwr_dbg("%s\n", __func__);
+	pwr_dbg(PWR_LOG_DBG, "%s\n", __func__);
 	if (unlikely(!pwr_mgr.info)) {
-		pr_info("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -1793,8 +1876,8 @@ static void pwr_mgr_dump_i2c_cmd_regs(void)
 		data0 = reg_val & 0xFF;
 		cmd1 = (reg_val & (0xF << 20)) >> 20;
 		data1 = (reg_val & (0xFF << 12)) >> 12;
-		pr_info("[%d]\t%02x\t%02x\n[%d]\t%02x\t%02x\n", idx * 2, cmd0,
-			data0, (idx * 2) + 1, cmd1, data1);
+		pwr_dbg(PWR_LOG_DBG, "[%d]\t%02x\t%02x\n[%d]\t%02x\t%02x\n",
+			idx * 2, cmd0, data0, (idx * 2) + 1, cmd1, data1);
 	}
 }
 #endif
@@ -1863,15 +1946,18 @@ static int pwr_mgr_pm_i2c_var_data_modify(u8 index, u8 val)
 	u32 data_loc;
 	u32 reg_val;
 	unsigned long flgs;
-	pr_info("%s: index:%d, value:%d\n", __func__, index, val);
+	pwr_dbg(PWR_LOG_CONFIG, "%s: index:%d, value:%d\n", __func__,
+			index, val);
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 	if (unlikely((pwr_mgr.info->flags & PM_PMU_I2C) == 0 )) {
-		pwr_dbg("%s:ERROR - invalid param or not supported\n",
-			__func__);
+		pwr_dbg(PWR_LOG_ERR,
+			"%s:ERROR - invalid param or not supported\n",
+					__func__);
 		return -EINVAL;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -1919,7 +2005,7 @@ static int pwr_mgr_pm_i2c_var_data_modify(u8 index, u8 val)
 			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_MASK;
 		    break;
 	default:
-		pr_info("return as data_loc is invalid\n");
+		pwr_dbg(PWR_LOG_ERR, "return as data_loc is invalid\n");
 		spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 		return -EINVAL;
 	}
@@ -1929,10 +2015,10 @@ static int pwr_mgr_pm_i2c_var_data_modify(u8 index, u8 val)
 			+ reg_inx * 4));
 
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
-	pr_info("%s: %x set to %x register\n", __func__, reg_val,
-			PWR_MGR_REG_ADDR
-			(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
-			 + reg_inx * 4));
+	pwr_dbg(PWR_LOG_CONFIG, "%s: %x set to %x register\n", __func__,
+		reg_val, PWR_MGR_REG_ADDR
+		(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
+		+ reg_inx * 4));
 
 	return 0;
 }
@@ -1945,11 +2031,13 @@ static int pwr_mgr_pm_i2c_var_data_read(u8 *data)
 	unsigned long flgs;
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EINVAL;
 	}
 	if (unlikely((pwr_mgr.info->flags & PM_PMU_I2C) == 0 )) {
-		pwr_dbg("%s:ERROR - invalid param or not supported\n",
+		pwr_dbg(PWR_LOG_ERR,
+			"%s:ERROR - invalid param or not supported\n",
 			__func__);
 		return -EINVAL;
 	}
@@ -2019,13 +2107,10 @@ static ssize_t set_pm_mgr_dbg_bus(struct file *file, char const __user *buf,
 	    readl(PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
 	reg_val &= ~(0xF << 20);
 	reg_val |= (val & 0x0F) << 20;
-	pwr_dbg("reg_val to be written %08x\n", reg_val);
+	pwr_dbg(PWR_LOG_DBGFS, "reg_val to be written %08x\n", reg_val);
 	writel(reg_val,
 	       PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
 
-	reg_val =
-	    readl(PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
-	pwr_dbg("PC_PIN_OVERRIDE_CONTROL Register: %08x\n", reg_val);
 	return count;
 }
 
@@ -2079,7 +2164,7 @@ static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
 		return -EFAULT;
 	sscanf(input_str, "%d%d%d", &val, &db_sel, &param);
 
-	pwr_dbg("%s: val: %d\n", __func__, val);
+	pwr_dbg(PWR_LOG_DBGFS, "%s: val: %d\n", __func__, val);
 	pwr_mgr_mach_debug_fs_init(1, db_sel, param);
 	reg_val = readl(reg_addr);
 	reg_val &=
@@ -2088,11 +2173,9 @@ static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
 	    (val <<
 	     BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_DEBUG_BUS_SELECT_SHIFT) &
 	    BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_DEBUG_BUS_SELECT_MASK;
-	pwr_dbg("reg_val to be written %08x\n", reg_val);
+	pwr_dbg(PWR_LOG_DBGFS, "reg_val to be written %08x\n", reg_val);
 	writel(reg_val, reg_addr);
-	reg_val = readl(reg_addr);
-	pwr_dbg("BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL Register: %08x\n",
-		reg_val);
+
 	return count;
 }
 
@@ -2298,13 +2381,13 @@ static ssize_t pwr_mgr_i2c_req(struct file *file, char const __user *buf,
 		return -EFAULT;
 	sscanf(input_str, "%x%x%x", &slv_addr, &reg_addr, &reg_val);
 	if (reg_addr == 0xFFFF || slv_addr == 0xFFFF) {
-		pr_info("invalid param\n");
+		pwr_dbg(PWR_LOG_ERR, "invalid param\n");
 		return count;
 	}
 	if (reg_val == 0xFFFF) {
 		u8 val = 0xFF;
 		pwr_mgr_pmu_reg_read((u8) reg_addr, (u8) slv_addr, &val);
-		pr_info("[%x] = %x\n", reg_addr, val);
+		pwr_dbg(PWR_LOG_DBGFS, "[%x] = %x\n", reg_addr, val);
 	} else {
 		pwr_mgr_pmu_reg_write((u8) reg_addr, (u8) slv_addr,
 				      (u8) reg_val);
@@ -2384,7 +2467,8 @@ static ssize_t pwr_mgr_pmu_volt_inx_tbl_update(struct file *file, char const __u
 			break;
 
 		data[inx] = (u8)val;
-		pr_info("data[%d] :%x  len:%d\n", inx, data[inx], len);
+		pwr_dbg(PWR_LOG_DBGFS, "data[%d] :%x  len:%d\n", inx,
+				data[inx], len);
 		str_ptr += len;
 		inx++;
 		if (inx > 16)
@@ -2394,25 +2478,26 @@ static ssize_t pwr_mgr_pmu_volt_inx_tbl_update(struct file *file, char const __u
 	if (inx == 2) {
 		/*max inx is 0xF*/
 		if (data[0] > 0xF) {
-			pr_info("invalid inx\n");
+			pwr_dbg(PWR_LOG_ERR, "invalid inx\n");
 			return count;
 		}
 		local_irq_disable();
 		pwr_mgr_pm_i2c_enable(false);
 		pwr_mgr_pm_i2c_var_data_modify(data[0], data[1]);
-		pr_info("index:%d , value= %x\n", data[0], data[1]);
+		pwr_dbg(PWR_LOG_DBGFS, "index:%d , value= %x\n",
+					data[0], data[1]);
 		pwr_mgr_pm_i2c_enable(true);
 		local_irq_enable();
 	} else if (inx == 16) {
 		for (i = 0; i < 16; i++)
-			pr_info("data[%d] = %x\n", i, data[i]);
+			pwr_dbg(PWR_LOG_DBGFS, "data[%d] = %x\n", i, data[i]);
 		local_irq_disable();
 		pwr_mgr_pm_i2c_enable(false);
 		pwr_mgr_pm_i2c_var_data_write(data, inx);
 		pwr_mgr_pm_i2c_enable(true);
 		local_irq_enable();
 	} else
-		pr_info("invalid number of arguments\n");
+		pwr_dbg(PWR_LOG_DBGFS, "invalid number of arguments\n");
 
 	return count;
 }
@@ -2436,7 +2521,8 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 	int i;
 
 	if (unlikely(!pwr_mgr.info)) {
-		pwr_dbg("%s:ERROR - pwr mgr not initialized\n", __func__);
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+				__func__);
 		return -EPERM;
 	}
 
@@ -2445,7 +2531,8 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 		return -ENOMEM;
 
 	if (!debugfs_create_u32
-	    ("debug", S_IWUSR | S_IRUSR, dent_pwr_root_dir, (int *)&pwr_debug))
+	    ("pwr_dbg_mask", S_IWUSR | S_IRUSR, dent_pwr_root_dir,
+	    (int *)&pwr_dbg_mask))
 		return -ENOMEM;
 
 	if (!debugfs_create_u32

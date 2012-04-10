@@ -85,12 +85,33 @@
 #if defined(DEBUG)
 #define pwr_dbg printk
 #else
-#define pwr_dbg(format...)              \
-	do {                            \
-	    if (pwr_debug)          	\
-		printk(format); 	\
+#define pwr_dbg(log_typ, format...)					\
+	do {								\
+		if ((log_typ) == PWR_LOG_ERR)				\
+			pr_err(format);					\
+		else if (pwr_dbg_mask & (log_typ))			\
+			pr_info(format);				\
+	} while (0)
+#endif
+
+#define	PWR_PI_LOG_CNTRL_START_BIT	16
+/* this can be used when logs need to controlled for a specific PI */
+#if defined(DEBUG)
+#define pwr_pi_dbg printk
+#else
+#define pwr_pi_dbg(pi_id, log_typ, format...)				\
+	do {								\
+		u32 __log_mask = 0;					\
+		if ((log_typ) == PWR_LOG_PI) {				\
+			__log_mask = (((1 << PWR_PI_LOG_CNTRL_START_BIT)\
+				<< pi_id) | (log_typ));			\
+			if ((pwr_dbg_mask & __log_mask) == __log_mask)	\
+				pr_info(format);			\
+		}							\
 	} while(0)
 #endif
+
+
 
 #ifndef PM_I2C_CMD_MAX
 #define PM_I2C_CMD_MAX 64
