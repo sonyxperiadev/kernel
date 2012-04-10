@@ -138,11 +138,9 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 			if (mmc_hd->nr_sects - i >= 8) {
 				bio_vec.bv_len = PAGE_SIZE;
 				bio.bi_size = PAGE_SIZE;
-				i += 8;
 			} else {
 				bio_vec.bv_len = (mmc_hd->nr_sects - i) * 512;
 				bio.bi_size = (mmc_hd->nr_sects - i) * 512;
-				i = mmc_hd->nr_sects;
 			}
 			init_completion(&complete);
 			bio.bi_private = &complete;
@@ -152,6 +150,11 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 
 			/* Copy the read buffer */
 			memcpy(flashblock + (i * 512), page, bio.bi_size);
+
+			if (mmc_hd->nr_sects - i >= 8)
+				i += 8;
+			else
+				i = mmc_hd->nr_sects;
 		}
 
 		blkdev_put(bdev, FMODE_READ);
