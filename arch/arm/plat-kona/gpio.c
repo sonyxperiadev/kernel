@@ -87,7 +87,6 @@ static struct kona_gpio kona_gpio = {
 /* gpio configuration data from DT */
 extern uint32_t dt_gpio[];
 extern uint32_t dt_pinmux_gpio_mask[];
-int max_entry;
 
 int __init early_init_dt_scan_gpio(unsigned long node, const char *uname,
 				   int depth, void *data)
@@ -129,8 +128,6 @@ int __init early_init_dt_scan_gpio(unsigned long node, const char *uname,
 
 			/* mark and save for late processing */
 			dt_gpio[gpio] = cfg | DT_GPIO_VALID;
-			if (gpio > max_entry)
-				max_entry = gpio;
 		}
 	}
 
