@@ -288,13 +288,15 @@ int RpcDbgDumpPktState(RpcOutputContext_t *c, int *offset, int maxlimit)
 
 			ret =
 			    RpcDbgDumpStr(c,
-					  "pkt:%d TS:%u status:%s itype:%d\n",
+					  "pkt:%d TS:%u status:%s itype:%d c1=%d c2=0x%x\n",
 					  (unsigned int)gRpcDbgPktStatusList[i].
 					  pktHandle,
 					  (int)gRpcDbgPktStatusList[i].ts,
 					  GetStatusStr(gRpcDbgPktStatusList[i].
 						       status),
-					  (int)gRpcDbgPktStatusList[i].itype);
+					  (int)gRpcDbgPktStatusList[i].itype,
+					  (int)gRpcDbgPktStatusList[i].context1,
+					  (int)gRpcDbgPktStatusList[i].context2);
 
 			if (ret != 0)
 				return ret;
@@ -330,7 +332,6 @@ int RpcDbgDumpPktState(RpcOutputContext_t *c, int *offset, int maxlimit)
 
 int RpcDbgDumpHdr(RpcOutputContext_t *c)
 {
-	RpcDbgDumpStr(c, "\n************** RPC/IPC DUMP ***********\n");
 	RpcDbgDumpStr(c, "\nRcvCount=%d FreeCount=%d\n", (int)recvRpcPkts,
 		      (int)freeRpcPkts);
 

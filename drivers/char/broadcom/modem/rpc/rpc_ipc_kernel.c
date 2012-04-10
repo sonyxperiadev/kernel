@@ -258,6 +258,8 @@ static long handle_pkt_send_buffer_ex_ioc(struct file *filp, unsigned int cmd,
 static long handle_pkt_reg_msgs_ioc(struct file *filp, unsigned int cmd,
 				       UInt32 param);
 static long free_client_all_pkts(UInt8 clientId);
+static int RpcIsTaskValid(pid_t tid);
+
 /*****************************************************************/
 extern Boolean is_CP_running(void);
 extern UInt32 RPC_GetMaxPktSize(PACKET_InterfaceType_t interfaceType,
@@ -566,6 +568,29 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 		}
 	}
 
+	/*Find out if the process of client is dead*/
+	if(cInfo->tid && RpcIsTaskValid(cInfo->tid) == -ESRCH)
+	{
+		HISTORY_RPC_LOG("zombie", clientId, (int)dataBufHandle, 
+						(int)cInfo->tid, (int)cInfo->pid);
+
+		_DBG(RPC_TRACE("k:RPC_ServerDispatchMsg ERROR(	\
+				Invalid tid %d) cid %d, pid %d name %s\n",	
+			cInfo->tid, clientId, cInfo->pid, cInfo->pidName));
+		/*Switch to write lock and back to read lock*/
+		RPC_READ_UNLOCK;
+
+		RPC_WRITE_LOCK;
+		free_client_all_pkts(cInfo->clientId);
+		RpcListCleanup(cInfo->clientId);
+		/*SYS_ReleaseClientID(cInfo->clientId);*/
+		RPC_WRITE_UNLOCK;
+
+		RPC_READ_LOCK;
+
+		return RPC_RESULT_ERROR;
+	}	
+
 	elem = kmalloc(sizeof(RpcCbkElement_t), in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
 	if (!elem) {
 		_DBG(RPC_TRACE("k:RPC_ServerDispatchMsg Allocation error\n"));
@@ -717,27 +742,29 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 	    _DBG(RPC_TRACE("k:rpcipc_poll() precheck list not empty\n"));
 	    return mask;
 	}
+	cInfo->ts = jiffies_to_msecs(jiffies);
+	cInfo->state = 1;
+
 	spin_unlock_bh(&cInfo->mLock);
 
 	/*wait till data is ready */
 	/*_DBG(RPC_TRACE("k:rpcipc_poll() begin wait %x\n", (int)jiffies));*/
 	poll_wait(filp, &cInfo->mWaitQ, wait);
-	/*wait_event_interruptible(&cInfo->mWaitQ, gAvailData);*/
-
-	/*wait_event_interruptible_timeout(cInfo->mWaitQ, gAvailData, 10000);*/
-
 	/*_DBG(RPC_TRACE("k:rpcipc_poll() end wait %x\n", (int)jiffies));*/
 
 	spin_lock_bh(&cInfo->mLock);
 
 	if (!list_empty(&cInfo->mQ.mList))
 		mask |= (POLLIN | POLLRDNORM);
+	
+	cInfo->state = 2;
+	cInfo->ts = jiffies_to_msecs(jiffies);
+	cInfo->availData = 0;
 
 	spin_unlock_bh(&cInfo->mLock);
 
 	_DBG(RPC_TRACE("rpcipc_poll: mask = %x\n", (int)mask));
 
-	cInfo->availData = 0;
 
 	/*_DBG(RPC_TRACE("k:rpcipc_poll() mask=%x avail=%d\n", (int)mask, (int)(mask & (POLLIN | POLLRDNORM))?1:0 )); */
 
@@ -762,7 +789,7 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 	cInfo = gRpcClientList[ioc_param.clientId];
 	if (!cInfo) {
 		_DBG(RPC_TRACE
-		     ("k:rpcipc_poll invalid clientID %d\n",
+		     ("k:handle_pkt_poll_ioc invalid clientID %d\n",
 		      ioc_param.clientId));
 		return -EINVAL;
 	}
@@ -772,31 +799,37 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 
 	if (ioc_param.isEmpty)
 		cInfo->availData = 0;
+	
+	cInfo->ts = jiffies_to_msecs(jiffies);
+	cInfo->state = 1;
+	cInfo->tid = current->pid;
 
 	spin_unlock_bh(&cInfo->mLock);
 
 	if (ioc_param.waitTime > 0 && ioc_param.isEmpty) {
 
 
-		cInfo->ts = jiffies_to_msecs(jiffies);
-		cInfo->state = 1;
-		cInfo->tid = current->pid;
 		RPC_READ_UNLOCK;
 		wait_event_interruptible_timeout(cInfo->mWaitQ,
 						cInfo->availData,
 						 msecs_to_jiffies(ioc_param.
 								  waitTime));
 		RPC_READ_LOCK;
-		cInfo->state = 2;
-		cInfo->ts = jiffies_to_msecs(jiffies);
 
-
-
-
+		/* Re-evaluate cInfo after wait */
+		cInfo = gRpcClientList[ioc_param.clientId];
+		if (!cInfo) {
+			_DBG(RPC_TRACE
+			 ("k:pkt_poll_ioc invalid clientID after WAIT %d\n",
+			      ioc_param.clientId));
+			return -EINVAL;
+		}
 
 
 	    spin_lock_bh(&cInfo->mLock);
 		ioc_param.isEmpty = (Boolean) list_empty(&cInfo->mQ.mList);
+		cInfo->state = 2;
+		cInfo->ts = jiffies_to_msecs(jiffies);
 	    spin_unlock_bh(&cInfo->mLock);
 	}
 
@@ -869,6 +902,9 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
 	/* Add to free List */
 	pktElem->dataBufHandle = Item->dataBufHandle;
 	list_add_tail(&pktElem->mList, &cInfo->pktQ.mList);
+
+	cInfo->state = 2;
+	cInfo->ts = jiffies_to_msecs(jiffies);
 
 	spin_unlock_bh(&cInfo->mLock);
 
@@ -1342,6 +1378,7 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 	/* Init module  queue */
 
 	cInfo->pid = current->tgid;
+	cInfo->tid = 0;
 	strncpy(cInfo->pidName, current->comm, TASK_COMM_LEN);
 
 	INIT_LIST_HEAD(&cInfo->mQ.mList);
@@ -1470,6 +1507,7 @@ static long handle_pkt_register_data_ind_ex_ioc(struct file *filp,
 	cInfo->filep = filp;
 
 	cInfo->pid = current->tgid;
+	cInfo->tid = 0;
 	strncpy(cInfo->pidName, current->comm, TASK_COMM_LEN);
 	/* Init module  queue */
 	INIT_LIST_HEAD(&cInfo->mQ.mList);
@@ -1516,13 +1554,13 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 	ioc_param.isEmpty = (Boolean) list_empty(&cInfo->mQ.mList);
 	if (ioc_param.isEmpty)
 		cInfo->availData = 0;
+	cInfo->state = 1;
+	cInfo->ts = jiffies_to_msecs(jiffies);
+	cInfo->tid = current->pid;
 	spin_unlock_bh(&cInfo->mLock);
 
 	if (ioc_param.waitTime > 0 && ioc_param.isEmpty) {
 
-		cInfo->state = 1;
-		cInfo->ts = jiffies_to_msecs(jiffies);
-		cInfo->tid = current->pid;
 		RPC_READ_UNLOCK;
 
 		wait_event_interruptible_timeout(cInfo->mWaitQ,
@@ -1531,14 +1569,19 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 								  waitTime));
 		RPC_READ_LOCK;
 
-		cInfo->state = 2;
-		cInfo->ts = jiffies_to_msecs(jiffies);
-
-
-
+		/* Re-evaluate cInfo after wait */
+		cInfo = gRpcClientList[ioc_param.clientId];
+		if (!cInfo) {
+			_DBG(RPC_TRACE
+			     ("k:handle_pkt_poll_ex_ioc invalid clientID after WAIT %d\n",
+			      ioc_param.clientId));
+			return -EINVAL;
+		}
 
 	    spin_lock_bh(&cInfo->mLock);
 		ioc_param.isEmpty = (UInt8) list_empty(&cInfo->mQ.mList);
+		cInfo->state = 2;
+		cInfo->ts = jiffies_to_msecs(jiffies);
 	    spin_unlock_bh(&cInfo->mLock);
 	}
 
@@ -1938,18 +1981,32 @@ struct page *rpcipc_vma_nopage(struct vm_area_struct *vma,
 *                      LOG PROC FILE
 ****************************************************************************/
 
-
-
-void RpcDumpTaskState(RpcOutputContext_t *c, pid_t tid, pid_t pid)
+int RpcIsTaskValid(pid_t inTid)
 {
-	struct task_struct *t = pid_task(find_vpid(tid), PIDTYPE_PID);
+	struct task_struct *task;
+	rcu_read_lock();
+	task = find_task_by_vpid(inTid);
+	rcu_read_unlock();
+	return (!task) ? -ESRCH : 0;
+}
+
+void RpcDumpTaskState(RpcOutputContext_t *c, pid_t inTid, pid_t inPid)
+{
+	struct task_struct *t;
+	
+	rcu_read_lock();
+	t = find_task_by_vpid(inTid);
+	rcu_read_unlock();
 
 	if (t) {
-		RpcDbgDumpStr(c,  "\t%s pid:%d tid:%d state:%d flag:%x\n",
-			t->comm, pid, tid, (int)t->state, (int)t->flags);
+		RpcDbgDumpStr(c, "\t%s pid:%d tid:%d state:%d flag:0x%x\n",
+			      t->comm, inPid, inTid, (int)t->state, (int)t->flags);
 
 		sched_show_task(t);
 	}
+	else
+		RpcDbgDumpStr(c,"\tError!!!(Process not found) pid:%d tid:%d\n",
+						inPid, inTid);
 }
 
 int RpcDbgListClientMsgs(RpcOutputContext_t *c)
@@ -1969,12 +2026,13 @@ int RpcDbgListClientMsgs(RpcOutputContext_t *c)
 		if (!cInfo)
 			continue;
 
-		RpcDbgDumpStr(c, "%s cid:%d state:%s ts:%u RxData:%d\n",
+		RpcDbgDumpStr(c, "%s cid:%d state:%s ts:%u RxData:%d if:%d\n",
 					cInfo->pidName,
 					(int)clientId,
 					(cInfo->state == 1) ? "Wait" : "Active",
 					(unsigned int)cInfo->ts,
-					(int)cInfo->availData);
+					(int)cInfo->availData,
+					(int)cInfo->info.interfaceType);
 
 		RpcDumpTaskState(c, cInfo->tid, cInfo->pid);
 
@@ -2047,7 +2105,7 @@ static void *log_seq_next(struct seq_file *s, void *v, loff_t *pos)
 	(*pos)++;
 
 
-	if (context->eof || *pos > 250) {
+	if (context->eof || *pos > 10000) {
 		context->eof = 1;
 		return NULL;
 	}
@@ -2075,7 +2133,10 @@ static int log_seq_show(struct seq_file *s, void *v)
 
 	if (ret == 0) {
 		if (context->counter >= 3)
+		{
+			RpcDbgDumpHdr(&(context->out));
 			context->eof = 1;
+		}
 
 		context->offset = 0;
 		(context->counter)++;
@@ -2142,6 +2203,7 @@ int RpcDbgDumpHistoryLogging(int type, int level)
 	if (level > 0) {
 		RpcDbgDumpPktState(&outContext, &offset, 0);
 		RbcDbgDumpGenInfo(&outContext, &offset, 0);
+		RpcDbgDumpHdr(&outContext);
 	}
 
 	RpcDbgDumpStr(&outContext, "===== RPC memory dump End =====");
