@@ -663,7 +663,6 @@ typedef enum {
 typedef void(*IPCAP_CPResetHandler_T)(IPC_CPResetEvent_t inEvent);
 int IPCAP_RegisterCPResetHandler(IPCAP_CPResetHandler_T inResetHandler);
 void IPCAP_ReadyForReset( int inClientID );
-
 /* Crash handling functions CP side */
 
 /****************************************/

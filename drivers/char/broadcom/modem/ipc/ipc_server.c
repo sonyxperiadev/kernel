@@ -73,7 +73,7 @@ struct ipcs_info_t {
 	void __iomem *apcp_shmem;
 	struct class *mDriverClass;	/* driver class */
 	struct device *drvdata;
-}
+};
 
 static struct ipcs_info_t g_ipc_info = { 0 };
 static Boolean cp_running = 0;	//FALSE;
@@ -84,6 +84,15 @@ static DEFINE_SPINLOCK(cp_state_notifier_lock);
 struct wake_lock ipc_wake_lock;
 #endif
 static IPC_PlatformSpecificPowerSavingInfo_T ipc_ps;
+
+extern int IpcCPCrashCheck(void);
+extern void ProcessCPCrashedDump(struct work_struct *work);
+
+#if defined(CONFIG_BCM215X_PM) && defined(CONFIG_ARCH_BCM2153)
+extern void pm_ipc_power_saving_init(IPC_PlatformSpecificPowerSavingInfo_T* ipc_ps);
+#endif
+
+static struct proc_dir_entry *bcm_ipc_test_proc_entry;
 
 struct IPC_Evt_t {
 	wait_queue_head_t evt_wait;
@@ -119,7 +128,6 @@ static IPC_ReturnCode_T EventSet(void *Event)
 
 static IPC_ReturnCode_T EventClear(void *Event)
 {
-
 	struct IPC_Evt_t *ipcEvt = (struct IPC_Evt_t *)Event;
 
 	/* **FIXME** need to protect access to this? */
@@ -275,6 +283,7 @@ void WaitForCpIpc(void *pSmBase)
 
 	if (!is_ap_only_boot()) { /* Check for AP_BOOT or NORMAL_BOOT */
 	    ret = IPC_IsCpIpcInit(pSmBase, IPC_AP_CPU);
+		IPC_DEBUG(DBG_WARN, "back from IPC_IsCpIpcInit\n");
 	    while (ret == 0) {
 		/* Wait up to 2s for CP to init */
 		if (k++ > 200)
@@ -352,7 +361,7 @@ void ipcs_cp_notifier_unregister(struct notifier_block *nb)
 /**
    static int ipcs_init(void *smbase, unsigned int size)
  */
-static int __init ipcs_init(void *smbase, unsigned int size)
+static int __init ipcs_init(void *smbase, unsigned int size, int isReset)
 {
 	int rc = 0;
 
@@ -453,20 +462,10 @@ static int CP_Boot(void)
     iounmap(cp_bmodem_r4cfg);
 	IPC_DEBUG(DBG_TRACE, "exit\n");
 
-		iounmap(cp_boot_itcm);
-
-		/* boot CP */
-		*(unsigned int *)(cp_bmodem_r4cfg) = 0x5;
-	} else {
-		IPC_DEBUG(DBG_TRACE,
-			  "(R4 COMMS) already started - init code 0x%x ...\n",
-			  r4init);
-	}
-
-	iounmap(cp_bmodem_r4cfg);
-
 	return started;
 }
+
+
 void Comms_Start(int isReset)
 {
 	void __iomem *apcp_shmem;
@@ -481,6 +480,7 @@ void Comms_Start(int isReset)
 	if (isReset) {
 		IPC_DEBUG(DBG_INFO, "call CP_Boot\n");
 		CP_Boot();
+	}
 #endif
 
 	apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
@@ -511,13 +511,9 @@ void Comms_Start(int isReset)
 	 *	- read main address
 	 *	- write to init address
 	 */
-	reg_val = readl(cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER);
-	IPC_DEBUG(DBG_TRACE, "init addr 0x%x\n", reg_val);
 	reg_val = readl(cp_boot_base+MAIN_ADDRESS_OFFSET+RESERVED_HEADER);
 	IPC_DEBUG(DBG_TRACE, "main addr 0x%x\n", reg_val);
 	writel(reg_val, cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER);
-	reg_val = readl(cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER);
-	IPC_DEBUG(DBG_TRACE, "init addr after 0x%x\n", reg_val);
 
 	iounmap(cp_boot_base);
 	IPC_DEBUG(DBG_TRACE, "modem (R4 COMMS) started ...\n");
@@ -526,6 +522,10 @@ void Comms_Start(int isReset)
 arch_initcall(Comms_Start);
 
 
+struct device *ipcs_get_drvdata(void)
+{
+	return g_ipc_info.drvdata;
+}
 
 static int ipcs_read_proc(char *page, char **start, off_t off, int count,
 			  int *eof, void *data)
@@ -542,11 +542,6 @@ static int ipcs_read_proc(char *page, char **start, off_t off, int count,
 	return len;
 }
 
-struct device *ipcs_get_drvdata(void)
-{
-	return g_ipc_info.drvdata;
-}
-
 static int __init ipcs_module_init(void)
 {
 	int rc = -1;
@@ -559,13 +554,6 @@ static int __init ipcs_module_init(void)
 		IPC_DEBUG(DBG_ERROR,
 			  "ipcs_module_init: can't create /proc/driver/bcmipc\n");
 		//return -1;
-	}
-  
-	rc = register_chrdev_region(g_ipc_info.devnum, 1, BCM_KERNEL_IPC_NAME);
-	if (rc < 0) 
-	{
-		IPC_DEBUG(DBG_ERROR, "Error registering the IPC device\n");
-		goto out;
 	}
 
 	IPC_DEBUG(DBG_TRACE, "start ...\n");
@@ -614,7 +602,7 @@ static int __init ipcs_module_init(void)
 	}
 
 	IPC_DEBUG(DBG_TRACE, "ipcs_init\n");
-	if (ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE)) {
+	if (ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE, 0)) {
 		rc = -1;
 		IPC_DEBUG(DBG_ERROR, "ipcs_init() failed\n");
 		goto out_ipc_init_fail;

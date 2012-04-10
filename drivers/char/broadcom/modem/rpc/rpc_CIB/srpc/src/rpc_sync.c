@@ -228,7 +228,9 @@ RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t *initParams,
 		panic("RPC_SyncRegisterClient: OSHEAP_Alloc failed");
 		return 0;
 	}
-
+	/* **FIXME** MAG - need special CP reset handler in here? Release all
+	   semaphores for pending requests?
+	*/
 	internalParam->clientParams = *initParams;
 	internalParam->SyncRpcParams = *initParams;
 
@@ -238,6 +240,7 @@ RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t *initParams,
 	internalParam->SyncRpcParams.cpResetCb = RPC_SyncCPResetCb;
 
 	internalParam->syncInitParams = *syncInitParams;
+		pr_info("RPC_SyncRegisterClient: calling RPC_SYS_RegisterClient\n");
 
 	return RPC_SYS_RegisterClient(&internalParam->SyncRpcParams);
 }

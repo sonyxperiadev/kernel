@@ -153,6 +153,7 @@ typedef struct {
 	UInt8 channel;
 	PACKET_BufHandle_t dataBufHandle;
 	RPC_FlowCtrlEvent_t event;
+	RPC_CPResetEvent_t cpResetEvent;
 } RpcCbkElement_t;
 
 typedef struct {
@@ -177,12 +178,13 @@ typedef struct {
 	spinlock_t mLock;
 	wait_queue_head_t mWaitQ;
 	RpcPktkElement_t pktQ;
+	int ackdCPReset;
 } RpcClientInfo_t;
 
 RpcClientInfo_t *gRpcClientList[0xFF] = { 0 };
 static int gNumActiveClients = 0;
 static int gEnableKprint = 0;
-
+static int gCPResetting = 0;
 /**
  *  module status
  */
@@ -528,6 +530,13 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg)
 			RPC_READ_UNLOCK;
 			break;
 		}
+	case RPC_PKT_ACK_CP_RESET_IOC:
+		{
+			RPC_WRITE_LOCK;
+			retVal = handle_pkt_ack_cp_reset_ioc(filp, cmd, arg);			
+			RPC_WRITE_UNLOCK;
+			break;
+		}
 	default:
 		retVal = -ENOIOCTLCMD;
 		_DBG(RPC_TRACE
@@ -560,9 +569,11 @@ RPC_Result_t RPC_ServerDispatchCPResetMsg(PACKET_InterfaceType_t interfaceType,
 		return RPC_RESULT_ERROR;
 	}
 	
-	elem = kmalloc(sizeof(RpcCbkElement_t), in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
+	elem = kmalloc(sizeof(RpcCbkElement_t), in_interrupt() ?
+			GFP_ATOMIC : GFP_KERNEL);
 	if (!elem) {
-		_DBG(RPC_TRACE("k:RPC_ServerDispatchCPResetMsg Allocation error\n"));
+		_DBG(RPC_TRACE(
+			"k:RPC_ServerDispatchCPResetMsg Allocation error\n"));
 		return RPC_RESULT_ERROR;
 	}
 	memset(elem, 0, sizeof(RpcCbkElement_t));
@@ -833,7 +844,7 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 					    RPC_ServerDispatchMsg(interfaceType,
 								  k, channel,
 								  dataBufHandle,
-								  msgId, 1);
+								  msgId, 1 );
 					if (ret2 == RPC_RESULT_PENDING) {
 						bSent = 1;
 					}
@@ -1023,6 +1034,9 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 	if (copyRc != 0) {
 		_DBG(RPC_TRACE
 			("k:handle_pkt_poll_ioc - copy_to_user() FAILS! RC=%d\n", copyRc));
+		_DBG(RPC_TRACE
+			("  src addr=%x, dest addr=%x, size=%d\n",
+				(int)&ioc_param, (int)param, sizeof(rpc_pkt_avail_t)));
 		_DBG(RPC_TRACE
 			("  clientId:%d, isEmpty:%d, waitTime:%d\n", (int)ioc_param.clientId,
 				(int)ioc_param.isEmpty, (int)ioc_param.waitTime));
@@ -1554,16 +1568,18 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 	cInfo->infoEx.interfaceType = cInfo->info.interfaceType;
 	cInfo->infoEx.dataIndFuncEx = NULL;
 	cInfo->infoEx.flowIndFunc = cInfo->info.flowIndFunc;
-
+	cInfo->infoEx.cpResetFunc = cInfo->info.cpResetFunc;
+	
 	cInfo->clientId = clientId;
 	cInfo->filep = filp;
-
-	/* Init module  queue */
 
 	cInfo->pid = current->tgid;
 	cInfo->tid = 0;
 	strncpy(cInfo->pidName, current->comm, TASK_COMM_LEN);
 
+	cInfo->ackdCPReset = 0;
+
+	/* Init module  queue */
 	INIT_LIST_HEAD(&cInfo->mQ.mList);
 	INIT_LIST_HEAD(&cInfo->pktQ.mList);
 	spin_lock_init(&cInfo->mLock);
@@ -1573,7 +1589,9 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 	HISTORY_RPC_LOG("Register", clientId, 0, current->tgid, cInfo->info.interfaceType);
 
 	RPC_PACKET_RegisterFilterCbk(ioc_param.rpcClientID,
-				     ioc_param.interfaceType, RPC_ServerRxCbk);
+				     ioc_param.interfaceType, 
+				     RPC_ServerRxCbk,
+				     RPC_ServerCPResetCallback);
 
 	return 0;
 }
@@ -1685,6 +1703,7 @@ static long handle_pkt_register_data_ind_ex_ioc(struct file *filp,
 	cInfo->info.interfaceType = cInfo->infoEx.interfaceType;
 	cInfo->info.dataIndFunc = NULL;
 	cInfo->info.flowIndFunc = cInfo->infoEx.flowIndFunc;
+	cInfo->info.cpResetFunc = cInfo->infoEx.cpResetFunc;
 
 	cInfo->clientId = clientId;
 	cInfo->filep = filp;
@@ -1692,6 +1711,8 @@ static long handle_pkt_register_data_ind_ex_ioc(struct file *filp,
 	cInfo->pid = current->tgid;
 	cInfo->tid = 0;
 	strncpy(cInfo->pidName, current->comm, TASK_COMM_LEN);
+
+	cInfo->ackdCPReset = 0;
 	/* Init module  queue */
 	INIT_LIST_HEAD(&cInfo->mQ.mList);
 	INIT_LIST_HEAD(&cInfo->pktQ.mList);
@@ -1702,7 +1723,9 @@ static long handle_pkt_register_data_ind_ex_ioc(struct file *filp,
 	HISTORY_RPC_LOG("RegisterEx", clientId, 0, current->tgid, cInfo->info.interfaceType);
 
 	RPC_PACKET_RegisterFilterCbk(ioc_param_ex.rpcClientID,
-				     ioc_param_ex.interfaceType, RPC_ServerRxCbk);
+				     ioc_param_ex.interfaceType, 
+				     RPC_ServerRxCbk,
+				     RPC_ServerCPResetCallback);
 
 	return 0;
 }
@@ -1715,7 +1738,7 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 	RpcCbkElement_t *Item = NULL;
 	rpc_pkt_rx_buf_ex_t ioc_param;
 	int jiffyBefore = jiffies;
-	RpcPktkElement_t *pktElem;
+	RpcPktkElement_t *pktElem = NULL;
 
 	if (copy_from_user
 	    (&ioc_param, (rpc_pkt_rx_buf_ex_t *) param,
@@ -1774,7 +1797,7 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 			_DBG(RPC_TRACE("k:handle_pkt_poll_ex_ioc Allocation error cid=%d\n", ioc_param.clientId));
 			return -EFAULT;
 		}
-
+		
 		spin_lock_bh(&cInfo->mLock);
 		entry = cInfo->mQ.mList.next;
 		Item = list_entry(entry, RpcCbkElement_t, mList);
@@ -1791,33 +1814,51 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 		ioc_param.isEmpty = 0;	
 		ioc_param.type = Item->type;
 		ioc_param.event = Item->event;
+		ioc_param.cpResetEvent = Item->cpResetEvent;
 		ioc_param.dataIndFuncEx = cInfo->infoEx.dataIndFuncEx;
 		ioc_param.dataIndFunc = cInfo->info.dataIndFunc;
-		ioc_param.flowIndFunc = (cInfo->infoEx.flowIndFunc) ? cInfo->infoEx.flowIndFunc : cInfo->info.flowIndFunc;
-
+		ioc_param.flowIndFunc = (cInfo->infoEx.flowIndFunc) ?
+			cInfo->infoEx.flowIndFunc :
+			cInfo->info.flowIndFunc;
+		ioc_param.cpResetFunc = (cInfo->infoEx.cpResetFunc) ?
+			cInfo->infoEx.cpResetFunc :
+			cInfo->info.cpResetFunc;
 		ioc_param.bufInfo.interfaceType = Item->interfaceType;
 		ioc_param.bufInfo.channel = Item->channel;
 		ioc_param.bufInfo.dataBufHandle = Item->dataBufHandle;
 		if ( Item->dataBufHandle ) {
-			ioc_param.bufInfo.bufferLen = RPC_PACKET_GetBufferLength(Item->dataBufHandle);
-			ioc_param.bufInfo.buffer = RPC_PACKET_GetBufferData(Item->dataBufHandle);
-			ioc_param.bufInfo.context1 = RPC_PACKET_GetContext(Item->interfaceType, Item->dataBufHandle);
-			ioc_param.bufInfo.context2 = RPC_PACKET_GetContextEx(Item->interfaceType, Item->dataBufHandle);
+			ioc_param.bufInfo.bufferLen =
+				RPC_PACKET_GetBufferLength(
+					Item->dataBufHandle);
+			ioc_param.bufInfo.buffer =
+				RPC_PACKET_GetBufferData(Item->dataBufHandle);
+			ioc_param.bufInfo.context1 =
+				RPC_PACKET_GetContext(Item->interfaceType,
+					Item->dataBufHandle);
+			ioc_param.bufInfo.context2 =
+				RPC_PACKET_GetContextEx(Item->interfaceType,
+					Item->dataBufHandle);
 		
-			ioc_param.offset = IPC_SmOffset(ioc_param.bufInfo.buffer);
+			ioc_param.offset = IPC_SmOffset(
+				ioc_param.bufInfo.buffer);
 			
 			RpcDbgUpdatePktStateEx((int)Item->dataBufHandle, PKT_STATE_NA, ioc_param.clientId, PKT_STATE_CID_FETCH,  0, 0, 0xFF);
-			HISTORY_RPC_LOG_PKT("rxBufEx", ioc_param.clientId, (int)Item->dataBufHandle);
+			HISTORY_RPC_LOG_PKT("rxBufEx", ioc_param.clientId,
+				(int)Item->dataBufHandle);
 		} else {
 			kfree( pktElem );
 		}
 		_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ex_ioc cid=%d item=%x len=%d pkt=%d wait=%d\n", ioc_param.clientId, (int)Item,
-		      (int)ioc_param.bufInfo.bufferLen, (int)Item->dataBufHandle, jiffies_to_msecs(jiffies - jiffyBefore)));
+			("k:handle_pkt_poll_ex_ioc cid=%d item=%x len=%d pkt=%d wait=%d\n",
+			ioc_param.clientId, (int)Item,
+			(int)ioc_param.bufInfo.bufferLen,
+			(int)Item->dataBufHandle,
+			jiffies_to_msecs(jiffies - jiffyBefore)));
 
 		kfree(entry);
 
-	} else {
+	}
+	else {
 		_DBG(RPC_TRACE
 		     ("k:handle_pkt_poll_ex_ioc EMPTY cid=%d wait=%d\n",
 		      (int)ioc_param.clientId, jiffies_to_msecs(jiffies - jiffyBefore)));
@@ -2170,8 +2211,9 @@ static void RpcServerCleanup(void)
 {
 	int k;
 
-	for (k = 0; k < 0xFF; k++)
+	for (k = 0; k < 0xFF; k++) {
 		RpcListCleanup(k);
+	}
 }
 
 /* mmap() requirements for ipcdev.
@@ -2506,8 +2548,9 @@ static int __init rpcipc_ModuleInit(void)
 	struct device *drvdata;
 	_DBG(RPC_TRACE("enter rpcipc_ModuleInit()\n"));
 
-	for (k = 0; k < 0xFF; k++)
+	for (k = 0; k < 0xFF; k++) {
 		gRpcClientList[k] = NULL;
+	}
 
 	gNumActiveClients = 0;
 

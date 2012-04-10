@@ -287,10 +287,8 @@ void HandleAudioEventReqCb(RPC_Msg_t *pMsg,
 #endif
 }
 
-=======
 static void HandleAudioCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
 {
-	/* **FIXME** MAG - what is needed to do here ? */
 	pr_info("HandleAudioCPResetCb: event %s client ID %d\n",
 		RPC_CPRESET_START==event?
 		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
@@ -301,8 +299,13 @@ static void HandleAudioCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
 			audioClientId, clientID);
 
 	/* for now, just ack that we're ready for reset */
-	if (RPC_CPRESET_START == event)
+	if (RPC_CPRESET_START == event) {
+		AUDDRV_HandleCPReset(TRUE);
 		RPC_AckCPReset(audioClientId);
+	} else if (RPC_CPRESET_COMPLETE == event) {
+		AUDDRV_HandleCPReset(FALSE);
+		RPC_AckCPReset(audioClientId);
+	}
 }
 
 /*  AUDIO API CODE */
@@ -320,6 +323,7 @@ void Audio_InitRpc(void)
 		params.xdrtbl = AUDIO_Prim_dscrm;
 		params.respCb = HandleAudioEventrespCb;
 		params.reqCb = HandleAudioEventReqCb;
+		params.cpResetCb = HandleAudioCPResetCb;
 		syncParams.copyCb = AudioCopyPayload;
 
 		handle = RPC_SyncRegisterClient(&params, &syncParams);

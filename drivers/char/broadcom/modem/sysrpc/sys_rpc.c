@@ -46,6 +46,8 @@
 #define _D(a) a
 #endif
 
+static RPC_Handle_t sRPCHandle;
+
 /********************** REGISTER CBK HANDLERS *******************************************/
 
 static void HandleSysReqMsg(RPC_Msg_t *pMsg,
@@ -145,6 +147,7 @@ void SYS_InitRpc(void)
 		params.iType = INTERFACE_RPC_DEFAULT;
 		params.respCb = HandleSysEventRspCb;
 		params.reqCb = HandleSysReqMsg;
+		params.cpResetCb = HandleSysCPResetCb;
 		params.mainProc = (xdrproc_t) xdr_SYS_ReqRep_t;
 		sysGetXdrStruct(&(params.xdrtbl), &(params.table_size));
 		params.maxDataBufSize = sizeof(SYS_ReqRep_t);

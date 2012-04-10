@@ -315,6 +315,9 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType,
 
 	netif_rx(skb);
 
+	return RPC_RESULT_OK;
+}
+
 /* callback for CP silent reset events */
 void bcm_fuse_net_cp_reset_cb(RPC_CPResetEvent_t event,
 			PACKET_InterfaceType_t interface)
@@ -377,11 +380,12 @@ static int bcm_fuse_net_open(struct net_device *dev)
        Register callbacks with the RPC Proxy server
     */
 	if (0 == IsFirstCall) {
-		g_NetClientId = SYS_GenClientID();
-		ret =
-		    RPC_PACKET_RegisterDataInd(g_NetClientId, INTERFACE_PACKET,
-					       bcm_fuse_net_bd_cb,
-					       bcm_fuse_net_fc_cb);
+        g_NetClientId = SYS_GenClientID();
+        ret = RPC_PACKET_RegisterDataInd (g_NetClientId,
+						INTERFACE_PACKET,
+						bcm_fuse_net_bd_cb,
+						bcm_fuse_net_fc_cb,
+						bcm_fuse_net_cp_reset_cb);
 		if (RPC_RESULT_OK != ret) {
 			BNET_DEBUG(DBG_ERROR,
 				   "%s: first call client ID[%d] FAIL\n",
@@ -391,29 +395,29 @@ static int bcm_fuse_net_open(struct net_device *dev)
 		IsFirstCall++;
 		BNET_DEBUG(DBG_INFO, "%s: first call client ID[%d]\n",
 			   __FUNCTION__, g_NetClientId);
-	}
+    }
 
 	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
 		BNET_DEBUG(DBG_INFO,
 			   "%s: g_net_dev_tbl[%d]=0x%x,dev_ptr 0x%x, dev 0x%x, 0x%x\n",
 			   __FUNCTION__, i, (unsigned int)(&g_net_dev_tbl[i]),
 			   (unsigned int)(g_net_dev_tbl[i].dev_ptr),
-			   (unsigned int)dev, (unsigned int)(&ndrvr_info_ptr));
-	}
+            (unsigned int)dev, (unsigned int)(&ndrvr_info_ptr));
+    }
 
-	idx = bcm_fuse_net_find_entry(&ndrvr_info_ptr);
+    idx = bcm_fuse_net_find_entry(&ndrvr_info_ptr);
 	if (idx == BCM_NET_MAX_PDP_CNTXS) {
 		BNET_DEBUG(DBG_ERROR,
 			   "%s: No free device interface to assign for pdp_cid[%d]\n",
 			   __FUNCTION__, idx);
 		return -EISCONN;
-	}
+    }
 
-	spin_lock_irqsave(&g_dev_lock, flags);
-	/* g_net_dev_tbl[idx].pdp_context_id = idx+1; */
-	g_net_dev_tbl[idx].pdp_context_id = RMNET_TO_CID(idx);
-
-	spin_unlock_irqrestore(&g_dev_lock, flags);
+    spin_lock_irqsave(&g_dev_lock, flags);
+    //g_net_dev_tbl[idx].pdp_context_id = idx+1;
+    g_net_dev_tbl[idx].pdp_context_id = RMNET_TO_CID(idx);
+	
+    spin_unlock_irqrestore(&g_dev_lock, flags);
 	BNET_DEBUG(DBG_INFO,
 		   "%s: BCM_FUSE_NET_ACTIVATE_PDP: rmnet[%d] pdp_info.cid=%d\n",
 		   __FUNCTION__, idx, g_net_dev_tbl[idx].pdp_context_id);

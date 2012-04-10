@@ -223,6 +223,19 @@ typedef void (RPC_EventCallbackFunc_t) (void *eventHandle);
 typedef void (RPC_CPResetCallbackFunc_t) (RPC_CPResetEvent_t event,
 					  UInt8 clientID);
 
+//***************************************************************************************
+/**
+    Function callback to pass events for CP reset
+	@param		event (in ) RPC_CPRESET_START to indicate CP reset process
+			is starting; RPC_CPRESET_COMPLETE to indicate CP reset is
+			complete and normal RPC operations may resum
+	@return		None
+	@note
+		This callback is registered via RPC_SYS_RegisterClient for RPC commands
+
+**/
+typedef void (RPC_CPResetCallbackFunc_t) (RPC_CPResetEvent_t event);
+
 /**
 RPC Init params
 **/
@@ -239,6 +252,9 @@ typedef struct {
 	/* Flow control event callback */
 	RPC_FlowControlCallbackFunc_t *flowCb;
 
+	/* CP reset control callback */
+	RPC_CPResetCallbackFunc_t *cpResetCb;
+	
 	/* Interface type */
 	RPC_InterfaceType_t iType;
 

@@ -89,8 +89,20 @@ typedef struct {
 	/* Flow control callback */
 	RPC_FlowControlCallbackFunc_t *flowControlCb;
 
-	/* Callback for interface buffer delivery */
+	/* Callback for CP reset process */
+	RPC_PACKET_CPResetCallbackFunc_t *cpResetCb;
+	
+	/* is client ready for CP reset? */
+	Boolean readyForCPReset;
+
+	/* Callback for	interface buffer delivery */
 	RPC_PACKET_DataIndCallBackFunc_t *filterPktIndCb;
+
+ /* Callback for CP reset process */
+	RPC_PACKET_CPResetCallbackFunc_t *cpFilterResetCb;
+
+	/* is client ready for CP reset? */
+	Boolean filterReadyForCPReset;
 } RPC_IPCInfo_t;
 
 typedef struct {
@@ -140,6 +152,8 @@ MsgQueueHandle_t rpcMQhandle;
 UInt32 recvRpcPkts;
 UInt32 freeRpcPkts;
 
+static int sIPCResetClientId = 0;
+
 /*******************************************************************************
 			Packet Data API Implementation
 ******************************************************************************/
@@ -149,7 +163,9 @@ RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
 					RPC_PACKET_DataIndCallBackFunc_t
 					dataIndFunc,
 					RPC_FlowControlCallbackFunc_t
-					flowControlCb)
+					flowControlCb,
+					RPC_PACKET_CPResetCallbackFunc_t
+					cpResetCb)
 {
 	if (rpcClientID) {
 		/* Do nothing */
@@ -163,8 +179,8 @@ RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
 		ipcInfoList[interfaceType].isInit = TRUE;
 		ipcInfoList[interfaceType].flowControlCb = flowControlCb;
 		ipcInfoList[interfaceType].pktIndCb = dataIndFunc;
+		ipcInfoList[interfaceType].cpResetCb = cpResetCb;
 		RPC_UNLOCK;
-
 		return RPC_RESULT_OK;
 	}
 	return RPC_RESULT_ERROR;
@@ -173,7 +189,8 @@ RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
 RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
 					  PACKET_InterfaceType_t interfaceType,
 					  RPC_PACKET_DataIndCallBackFunc_t
-					  dataIndFunc)
+					  dataIndFunc,
+					  RPC_PACKET_CPResetCallbackFunc_t cpResetCb)
 {
 	if (rpcClientID) {
 		/* Do nothing */
@@ -184,8 +201,8 @@ RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
 		RPC_LOCK;
 		ipcInfoList[interfaceType].isInit = TRUE;
 		ipcInfoList[interfaceType].filterPktIndCb = dataIndFunc;
+		ipcInfoList[interfaceType].cpFilterResetCb = cpResetCb;
 		RPC_UNLOCK;
-
 		return RPC_RESULT_OK;
 	}
 
@@ -328,7 +345,8 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
 				break;
 		}
 		if (index >= MAX_CHANNELS) {
-			_DBG_(RPC_TRACE("RPC_PACKET_AllocateBuffer itype=%d invalid channel %d\r\n", interfaceType, index));
+			_DBG_(RPC_TRACE("RPC_PACKET_AllocateBuffer itype=%d \
+				invalid channel %d\r\n", interfaceType, index));
 			RPC_UNLOCK;
 			return NULL;
 		}
@@ -638,8 +656,7 @@ void CheckReadyForCPReset(void)
 			break;
 		}
 	
-	if (ready)
-	{
+	if (ready) {
 		_DBG_(RPC_TRACE("CheckReadyForCPReset done\n"));
 		/* ready for start CP reset, so notify IPC here */
 		IPCAP_ReadyForReset( sIPCResetClientId );
@@ -1074,10 +1091,8 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 
 		if (itype >= INTERFACE_CAPI2 && itype < INTERFACE_PACKET) {
 			ipcBufList[itype].max_pkts[0] = CFG_RPC_CMD_MAX_PACKETS;
-			ipcBufList[itype].max_pkts[1] =
-			    CFG_RPC_CMD_MAX_PACKETS2;
-			ipcBufList[itype].max_pkts[2] =
-			    CFG_RPC_CMD_MAX_PACKETS3;
+			ipcBufList[itype].max_pkts[1] = CFG_RPC_CMD_MAX_PACKETS2;
+			ipcBufList[itype].max_pkts[2] = CFG_RPC_CMD_MAX_PACKETS3;
 
 			ipcBufList[itype].pkt_size[0] = CFG_RPC_CMD_PKT_SIZE;
 			ipcBufList[itype].pkt_size[1] = CFG_RPC_CMD_PKT_SIZE2;

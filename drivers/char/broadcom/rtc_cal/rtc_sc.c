@@ -346,6 +346,7 @@ void RTCSC_InitRpc(void)
 			/sizeof(RPC_XdrInfo_t));
 		params.xdrtbl = RTCSC_Prim_dscrm;
 		params.respCb = HandleRTCSCEventRspCb;
+		params.cpResetCb = HandleRTCSCCPResetCb;
 
 		handle = RPC_SYS_RegisterClient(&params);
 		RTCSCClientId = RTCSC_CLIENT_ID;

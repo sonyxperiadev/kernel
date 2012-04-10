@@ -49,7 +49,7 @@ static Boolean gRpcInit = FALSE;
 static RPC_USER_LOCK_DECLARE(gRpcLock);
 RPC_USER_LOCK_DECLARE(gRpcFreeLock);
 
-static Boolean sCpResetting;
+static Boolean sCpResetting = FALSE;
 
 /******************************************************************************
 *                              RPC Apps EP Register
@@ -145,9 +145,11 @@ static RPC_Result_t RPC_BufferDelivery(PACKET_InterfaceType_t interfaceType,
 	return RPC_RESULT_ERROR;
 }
 
-typedef struct {
+typedef struct
+{
 	Boolean notifyUnsolicited;
-} RPC_InitLocalParams_t;
+	Boolean ackdCPReset;
+}RPC_InitLocalParams_t;
 
 Int8 gClientIndex = 0;		/* Client Index zero is reserved */
 
@@ -295,8 +297,9 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params)
 	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient gRpcInit=%d tblSize=%d",
 		gRpcInit, params->table_size));
 
-	if (!gRpcInit)
+	if (!gRpcInit) {
 		RPC_SYS_Init(NULL);
+	}
 
 	RPC_USER_LOCK(gRpcLock);
 
@@ -326,10 +329,8 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params)
 	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient index=%d userClientID=%d gClientIndex=%d", clientIndex, userClientID, gClientIndex));
 
 	RPC_PACKET_RegisterDataInd(userClientID,
-				   (PACKET_InterfaceType_t) (gClientMap
-							     [clientIndex].
-							     iType),
-				   RPC_BufferDelivery, params->flowCb);
+		(PACKET_InterfaceType_t)(gClientMap[clientIndex].iType),
+		RPC_BufferDelivery, params->flowCb, RPC_Handle_CPReset);
 
 	rpc_internal_xdr_init();
 	rpc_register_xdr(clientIndex, params->xdrtbl, params->table_size);
@@ -337,6 +338,7 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params)
 	gClientIDs[userClientID] = clientIndex;
 	gClientIDMap[clientIndex] = userClientID;
 	gClientLocalMap[clientIndex].notifyUnsolicited = FALSE;
+	gClientLocalMap[clientIndex].ackdCPReset = FALSE;
 
 	RPC_USER_UNLOCK(gRpcLock);
 	return (RPC_Handle_t)clientIndex;

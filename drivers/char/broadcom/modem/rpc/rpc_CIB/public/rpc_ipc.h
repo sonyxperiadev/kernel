@@ -151,6 +151,23 @@ typedef enum {
 } RPC_FlowCtrlEvent_t;
 
 /**
+RPC CP Reset Control Events
+RPC_CPRESET_START:	sent when CP reset process has been
+			initiated; indicates that CP has
+			crashed and client should
+			- clean up and pending RPC operations
+			- ack that it is ready for reset by 
+			calling XXX api
+			- suspend further RPC operations until 
+			receiving RPC_CPRESET_COMPLETE event
+		
+**/
+typedef enum {
+	RPC_CPRESET_START,	///< CP Reset starting
+	RPC_CPRESET_COMPLETE	///< CP Reset complete
+} RPC_CPResetEvent_t;
+
+/**
 RPC Error codes
 **/
 typedef enum {
@@ -228,8 +245,12 @@ typedef struct {
     Function callback to pass events for CP reset
 	@param		event (in ) RPC_CPRESET_START to indicate CP reset process
 			is starting; RPC_CPRESET_COMPLETE to indicat CP reset is
+<<<<<<< HEAD
 			complete and normal RPC operations may resume
 	@param		interface (in) interface type callback is for
+=======
+			complete and normal RPC operations may resum
+>>>>>>> 458ee74... IPC/RPC: checkpoint CP reset work
 	@return		None
 	@note
 		This callback is registered via RPC_PACKET_RegisterDataInd for Packet Data.
@@ -293,11 +314,10 @@ typedef RPC_Result_t(RPC_PACKET_DataIndCallBackFuncEx_t) (RpcPktBufferInfo_t *bu
 		to distinguish between different Primary PDP context sessions.
 **/
 RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
-					PACKET_InterfaceType_t interfaceType,
-					RPC_PACKET_DataIndCallBackFunc_t
-					dataIndFunc,
-					RPC_FlowControlCallbackFunc_t
-					flowControlCb);
+			PACKET_InterfaceType_t interfaceType,
+			RPC_PACKET_DataIndCallBackFunc_t  dataIndFunc,
+			RPC_FlowControlCallbackFunc_t flowControlCb,
+			RPC_PACKET_CPResetCallbackFunc_t cpResetCb);
 
 /******************************************************************************/
 /**
@@ -325,8 +345,8 @@ RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID,
 	@note
 				Client need to call RPC_PACKET_GetBufferData to get the actual buffer pointer
 **/
-PACKET_BufHandle_t RPC_PACKET_AllocateBuffer(PACKET_InterfaceType_t
-					     interfaceType, UInt32 requiredSize,
+PACKET_BufHandle_t RPC_PACKET_AllocateBuffer(PACKET_InterfaceType_t  interfaceType, 
+					     UInt32 requiredSize,
 					     UInt8 channel);
 
 /******************************************************************************/
@@ -341,8 +361,7 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBuffer(PACKET_InterfaceType_t
 	@note
 				Client need to call RPC_PACKET_GetBufferData to get the actual buffer pointer
 **/
-PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
-					       interfaceType,
+PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t  interfaceType,
 					       UInt32 requiredSize,
 					       UInt8 channel, UInt32 waitTime);
 
@@ -495,7 +514,8 @@ UInt16 RPC_PACKET_GetContextEx(PACKET_InterfaceType_t interfaceType,
 RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
 					  PACKET_InterfaceType_t interfaceType,
 					  RPC_PACKET_DataIndCallBackFunc_t
-					  dataIndFunc);
+					  dataIndFunc,
+					  RPC_PACKET_CPResetCallbackFunc_t cpResetCb);
 
 RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 				     UInt8 rpcClientID);
@@ -506,7 +526,8 @@ UInt32 RPC_PACKET_IncrementBufferRef(PACKET_BufHandle_t dataBufHandle,
 RPC_Result_t RPC_PACKET_RegisterDataIndEx(UInt8 rpcClientID,
 				PACKET_InterfaceType_t interfaceType,
 				RPC_PACKET_DataIndCallBackFuncEx_t dataIndFunc,
-				RPC_FlowControlCallbackFunc_t	flowControlCb);
+					RPC_FlowControlCallbackFunc_t	flowControlCb,
+					RPC_PACKET_CPResetCallbackFunc_t cpResetCb);
 
 PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx2(PACKET_InterfaceType_t interfaceType,
 						UInt32 requiredSize,
