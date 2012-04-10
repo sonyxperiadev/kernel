@@ -34,7 +34,7 @@ void diag_smd_cntl_notify(void *ctxt, unsigned event)
 			queue_work(driver->diag_wq,
 				 &(driver->diag_read_smd_cntl_work));
 		else
-			pr_info("diag: incomplete pkt on Modem CNTL ch\n");
+			pr_debug("diag: incomplete pkt on Modem CNTL ch\n");
 		break;
 	case SMD_EVENT_OPEN:
 		queue_work(driver->diag_cntl_wq,
@@ -58,7 +58,7 @@ void diag_smd_qdsp_cntl_notify(void *ctxt, unsigned event)
 			queue_work(driver->diag_wq,
 				 &(driver->diag_read_smd_qdsp_cntl_work));
 		else
-			pr_info("diag: incomplete pkt on LPASS CNTL ch\n");
+			pr_debug("diag: incomplete pkt on LPASS CNTL ch\n");
 		break;
 	case SMD_EVENT_OPEN:
 		queue_work(driver->diag_cntl_wq,
@@ -82,7 +82,7 @@ void diag_smd_wcnss_cntl_notify(void *ctxt, unsigned event)
 			queue_work(driver->diag_wq,
 				 &(driver->diag_read_smd_wcnss_cntl_work));
 		else
-			pr_info("diag: incomplete pkt on WCNSS CNTL ch\n");
+			pr_debug("diag: incomplete pkt on WCNSS CNTL ch\n");
 		break;
 	case SMD_EVENT_OPEN:
 		queue_work(driver->diag_cntl_wq,
