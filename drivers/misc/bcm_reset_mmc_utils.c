@@ -101,11 +101,11 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 		/* Allocate a buffer to hold a block from 'misc' */
 		flashblock = kmalloc(mmc_hd->nr_sects * 512, GFP_KERNEL);
 
-		memset(flashblock, 0, mmc_hd->nr_sects * 512);
-
 		/* If the allocation fails, return */
 		if (flashblock == NULL)
 			goto clean_up;
+
+		memset(flashblock, 0, mmc_hd->nr_sects * 512);
 
 		/* read the BCB from the misc partition */
 		/* read the entire block as we'll have to
