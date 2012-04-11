@@ -453,7 +453,7 @@ static void spi_dma_callback(void *priv, enum pl330_xfer_status status)
 
 static int spi_kona_dma_xfer_rx(struct spi_kona_data *spi_kona)
 {
-	dma_addr_t dma_rx_buf;
+	dma_addr_t dma_rx_buf = 0;
 	u32 rx_fifo, cfg_rx;
 	CHAL_HANDLE chandle = spi_kona->chandle;
 	int ret = -EIO;
@@ -518,7 +518,7 @@ err:
 
 static int spi_kona_dma_xfer_tx(struct spi_kona_data *spi_kona)
 {
-	dma_addr_t dma_tx_buf;
+	dma_addr_t dma_tx_buf = 0;
 	u32 tx_fifo, cfg_tx;
 	CHAL_HANDLE chandle = spi_kona->chandle;
 	int ret = -EIO;
@@ -584,7 +584,7 @@ err:
 
 static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 {
-	dma_addr_t dma_rx_buf, dma_tx_buf;
+	dma_addr_t dma_rx_buf = 0, dma_tx_buf = 0;
 	u32 tx_fifo, rx_fifo, cfg_rx, cfg_tx;
 	CHAL_HANDLE chandle = spi_kona->chandle;
 	int ret = -EIO;
@@ -690,9 +690,9 @@ static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 err2:
 	dma_stop_transfer(spi_kona->rx_dma_chan);
 err1:
-	dma_unmap_single(NULL, dma_tx_buf, spi_kona->count, DMA_TO_DEVICE);
-err:
 	dma_unmap_single(NULL, dma_rx_buf, spi_kona->count, DMA_FROM_DEVICE);
+err:
+	dma_unmap_single(NULL, dma_tx_buf, spi_kona->count, DMA_TO_DEVICE);
 	return ret;
 }
 #else
