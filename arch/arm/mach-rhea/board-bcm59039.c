@@ -85,10 +85,10 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0xD1, .val = 0x13, .mask = 0xFF},
 	{.map = 0, .addr = 0xD2, .val = 0x13, .mask = 0xFF},
 
-	/*Init CSR LPM  to 0.9 V
+	/*Init CSR LPM  to 0.88 V
 	CSR NM2 to 1.22V
 	*/
-	{.map = 0, .addr = 0xC1, .val = 0x04, .mask = 0xFF},
+	{.map = 0, .addr = 0xC1, .val = 0x03, .mask = 0xFF},
 	{.map = 0, .addr = 0xC2, .val = 0x14, .mask = 0xFF},
 
 	/*PLLCTRL, Clear Bit 0 to disable PLL when PC2:PC1 = 0b00*/
