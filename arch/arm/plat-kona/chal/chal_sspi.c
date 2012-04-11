@@ -3292,9 +3292,6 @@ uint32_t chal_sspi_read_data(CHAL_HANDLE handle,
 			break;
 
 		switch (tmp) {
-		case 0:
-			break;
-
 		case 1:
 			val = CHAL_REG_READ32(ctlbase);
 			FLD_SET(val, SPI_FIFO_DATA_RWSIZE_8,
@@ -3467,9 +3464,6 @@ uint32_t chal_sspi_write_data(CHAL_HANDLE handle,
 			break;
 
 		switch (tmp) {
-		case 0:
-			break;
-
 		case 1:
 			val = CHAL_REG_READ32(ctlbase);
 			FLD_SET(val, SPI_FIFO_DATA_RWSIZE_8,
