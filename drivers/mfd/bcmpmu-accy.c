@@ -659,6 +659,7 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		pr_info("%s : PMU_IRQ_JIG_USB_INS\n",__func__);
 		blocking_notifier_call_chain(&paccy->event[BCMPMU_JIG_EVENT_USB].
 					     notifiers, BCMPMU_JIG_EVENT_USB, NULL);
+		break;
 
 	case PMU_IRQ_EOC:
 		schedule_delayed_work(&paccy->det_work, 0);

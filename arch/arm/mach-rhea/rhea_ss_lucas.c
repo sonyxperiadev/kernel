@@ -132,6 +132,10 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
+
+#include <linux/mfd/bcmpmu.h>
+#include <plat/pi_mgr.h>
+
 #include <linux/ktd259b_bl.h>
 
 #include <media/soc_camera.h>
