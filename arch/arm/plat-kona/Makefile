@@ -56,7 +56,7 @@ obj-$(CONFIG_KONA_PI_MGR) += pi_mgr.o
 obj-$(CONFIG_KONA_CPU_FREQ_DRV) += kona_cpufreq.o
 obj-$(CONFIG_KONA_AVS) += kona_avs.o
 obj-$(CONFIG_KONA_ATAG_DT) += atag_dt.o
-obj-$(CONFIG_USB_DWC_OTG) += bcm_hsotgctrl.o
+obj-$(CONFIG_KONA_USB_CONTROL) += bcm_hsotgctrl.o
 obj-$(CONFIG_PROC_PINMUX_DUMP)	+= pindump.o
 obj-$(CONFIG_KONA_DT_BCMPMU)	+= bcmpmu-dt.o
 

@@ -27,6 +27,7 @@ config MFD_CORE
 config MFD_BCMPMU
 	bool "MFD BCM PMU"
 	depends on MFD_CORE && I2C_BSC
+	select KONA_USB_CONTROL
 	default n
 	help
 	  Support for the Broadcom PMUs
