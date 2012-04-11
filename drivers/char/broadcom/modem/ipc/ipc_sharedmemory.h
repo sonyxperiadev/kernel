@@ -1,5 +1,5 @@
 /*******************************************************************************
-*    ©2007-2009 Broadcom Corporation
+*     Copyright (c) 2007-2009 Broadcom Corporation
 *
 *    Unless you and Broadcom execute a separate written software license
 *    agreement governing use of this software, this software is licensed to you
@@ -101,9 +101,9 @@ typedef volatile struct IPC_Fifo_S {
 	volatile IPC_Buffer Buffer[IPC_SM_MAX_BUFFERS];
 } IPC_Fifo_T;
 
-typedef IPC_Fifo_T *IPC_Fifo;
+typedef IPC_Fifo_T * IPC_Fifo;
 
-#define IPC_FIFOINCREMENT(Index)	((Index + 1) &(~IPC_SM_MAX_BUFFERS))
+#define IPC_FIFOINCREMENT(Index)	((Index + 1) & (~IPC_SM_MAX_BUFFERS))
 
 #define IPC_FIFOCOUNT(Fifo)\
 	((Fifo->WriteIndex - Fifo->ReadIndex + IPC_SM_MAX_BUFFERS) & ~IPC_SM_MAX_BUFFERS)
@@ -145,7 +145,7 @@ typedef volatile struct IPC_SmControl_S {
 	volatile IPC_U32 Size;
 } IPC_SmControl_T;
 
-typedef IPC_SmControl_T *IPC_SmControl;
+typedef IPC_SmControl_T * IPC_SmControl;
 
 /**************************************************/
 /* Control structure in local memory - CPU specific data */
