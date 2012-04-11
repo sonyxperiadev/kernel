@@ -6895,6 +6895,14 @@ typedef enum
 	payload is void 
 	**/
 	MSG_SYSPARM_GET_IMEI_STRING_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x6F7,	///<Payload type {void}
+	 /** 
+	api is CAPI2_MsDbApi_SetElementEx 
+	**/
+	MSG_MS_SET_ELEMENT_EX_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6FC,	///<Payload type {CAPI2_MsDbApi_SetElementEx_Req_t}
+	 /** 
+	payload is void 
+	**/
+	MSG_MS_SET_ELEMENT_EX_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x6FD,
 
 	//MSG_GEN_REQ_END = 0x48FF
 

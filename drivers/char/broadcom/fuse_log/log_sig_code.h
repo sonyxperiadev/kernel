@@ -229,6 +229,11 @@ typedef enum {
 	UMTS_HS_DL_DRX_INFO = ((P_log_umacul << 16) | 9),
 	UMTS_HS_NODEB_DRX_INFO = ((P_log_umacul << 16) | 10),
 	UMACUL_AMR_UL = ((P_log_umacul << 16) | 11),
+    UMTS_HS_DL_DRX_GRANT_MONITORING = ((P_log_umacul << 16) | 12),
+    UMTS_HS_DL_DRX_GRANT_MONITORING_TIMER = ((P_log_umacul << 16) | 13),
+    UMTS_HS_DL_DRX_L1_MON_TICK_TIMER = ((P_log_umacul << 16) | 14),
+    UMTS_HS_DL_DRX_DATA_AVAILABLE = ((P_log_umacul << 16) | 15),
+    UMTS_HS_UL_DTX_PREAMBLES = ((P_log_umacul << 16) | 16),
 #else
 	UMTS_HS_TX_INFO,
 	UMTS_HS_GRANT_INFO,
@@ -241,6 +246,11 @@ typedef enum {
 	UMTS_HS_DL_DRX_INFO,
 	UMTS_HS_NODEB_DRX_INFO,
 	UMACUL_AMR_UL,
+    UMTS_HS_DL_DRX_GRANT_MONITORING,
+    UMTS_HS_DL_DRX_GRANT_MONITORING_TIMER,
+    UMTS_HS_DL_DRX_L1_MON_TICK_TIMER,
+    UMTS_HS_DL_DRX_DATA_AVAILABLE,
+    UMTS_HS_UL_DTX_PREAMBLES,
 #endif
 	/* End of log_umacul */
 #endif /* #if defined(STACK_wedge) && defined(UMTS) */
