@@ -1555,7 +1555,7 @@ static int __devinit msm_rotator_probe(struct platform_device *pdev)
 		clk_disable_unprepare(msm_rotator_dev->imem_clk);
 #endif
 	if (ver != pdata->hardware_version_number)
-		pr_info("%s: invalid HW version ver 0x%x\n",
+		pr_debug("%s: invalid HW version ver 0x%x\n",
 			DRIVER_NAME, ver);
 
 	rotator_hw_revision = ver;
