@@ -43,7 +43,7 @@ the GPL, without Broadcom's express prior written consent.
 /* Private configuration stuff -- not part of exposed API */
 #include "vtqinit_priv.h"
 
-#define DRIVER_VERSION 10110
+#define DRIVER_VERSION 10111
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -819,13 +819,24 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 			d = (struct vtq_registerimage_ioctldata *)arg;
 			scratch = kmalloc(0x6000, GFP_KERNEL);
-			BUG_ON(scratch == NULL);
+			if (scratch == NULL) {
+				err_print("kmalloc failed\n");
+				return -EINVAL;
+			}
 
 			c = copy_from_user(scratch+0x0000, d->text, d->textsz);
-			BUG_ON(c != 0);
+			if (c != 0) {
+				dbg_print("bad user buffer\n");
+				kfree(scratch);
+				return -EINVAL;
+			}
 
-			c = copy_from_user(scratch+0x4000, d->data, d->datasz);
-			BUG_ON(c != 0);
+			c = copy_from_user(scratch+0x1000, d->data, d->datasz);
+			if (c != 0) {
+				dbg_print("bad user buffer\n");
+				kfree(scratch);
+				return -EINVAL;
+			}
 
 			image_id = vtqb_register_image(dev->vtq_ctx,
 				scratch+0x0000/*text*/, d->textsz,
