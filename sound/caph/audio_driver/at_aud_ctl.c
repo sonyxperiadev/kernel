@@ -146,7 +146,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		/* spk: 0 = handset, 1 = headset, 2 = loud speaker */
 	case 11:
 		loopback_input = loopback_api_input = Params[1];
-		loopback_output = loopback_api_input = Params[2];
+		loopback_output = loopback_api_output = Params[2];
 		sidetone_mode = Params[3];
 
 		if (((loopback_input > 6) && (loopback_input != 11)) ||
