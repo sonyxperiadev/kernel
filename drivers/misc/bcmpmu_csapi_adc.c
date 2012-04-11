@@ -895,7 +895,7 @@ static long bcmpmu_adc_chipset_ioctl(struct file *file, unsigned int cmd,
 #define MAX_USER_INPUT_LEN      256
 #define MAX_ARGS 25
 
-#define adccsapi_kstrtol(arg)  (kstrtol(arg, 10, &val) ? val : val)
+#define adccsapi_kstrtol(arg)  (kstrtol(arg, 10, &val) < 0 ? 0 : val)
 
 static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 					const char __user *buffer, size_t len,
@@ -908,7 +908,7 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 	char *argv[MAX_ARGS];
 	u8 channel;
 	int i, status;
-	int val; /* used in macro */
+	long val; /* used in macro */
 
 	/*int ret, i; */
 	int adc_raw, adc_unit;
