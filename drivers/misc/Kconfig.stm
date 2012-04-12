@@ -97,7 +97,7 @@ config STM_TRACE_PRINTK
 config STM_TRACE_PRINTK_CHANNEL
        int "trace_printk channel"
        range 0 255
-       depends on TRACING
+       depends on STM_TRACE_PRINTK
        default 250
        help
          STM trace_printk channel number
@@ -105,7 +105,7 @@ config STM_TRACE_PRINTK_CHANNEL
 config STM_TRACE_BPRINTK_CHANNEL
        int "trace_bprintk channel"
        range 0 255
-       depends on TRACING
+       depends on STM_TRACE_PRINTK
        default 249
        help
          STM trace binary printk channel number
