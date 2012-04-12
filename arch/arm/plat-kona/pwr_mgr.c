@@ -1646,7 +1646,7 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		reg = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
 				PWRMGR_I2C_READ_DATA_SHIFT);
 		if (reg & 0x1) {
-			pwr_dbg(PWR_LOG_ERR, "PWRMGR: I2C READ NACK\n");
+			pr_debug("PWRMGR: I2C READ NACK\n");
 			ret = -EAGAIN;
 			goto out_unlock;
 		}
