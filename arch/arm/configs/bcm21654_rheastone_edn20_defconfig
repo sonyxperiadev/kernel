@@ -1255,7 +1255,7 @@ CONFIG_BRCM_UNIFIED_DHD_SUPPORT=y
 # CONFIG_ATH_COMMON is not set
 # CONFIG_B43 is not set
 # CONFIG_B43LEGACY is not set
-CONFIG_BCMDHD_4334=y
+CONFIG_BCMDHD_4334=m
 CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_wifi.bin_b2"
 CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/fw_wifi_nvram.txt"
 CONFIG_BCMDHD_IF_PREFIX="wlan%d"

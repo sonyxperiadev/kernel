@@ -1,0 +1,49 @@
+config BCMDHD_4334
+	tristate "Broadcom 4334 wireless cards support"
+	depends on MMC
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4334 chipset.
+	  This driver uses the kernel's wireless extensions subsystem.
+	  If you choose to build a module, it'll be called dhd. Say M if
+	  unsure.
+
+config BCMDHD_FW_PATH
+	depends on BCMDHD_4334
+	string "Firmware path"
+	default "/system/vendor/firmware/fw_wifi.bin_b2"
+	---help---
+	  Path to the firmware file.
+
+config BCMDHD_NVRAM_PATH
+	depends on BCMDHD_4334
+	string "NVRAM path"
+	default "/system/vendor/firmware/fw_wifi_nvram.txt"
+	---help---
+	  Path to the calibration file.
+
+config BCMDHD_IF_PREFIX
+	depends on BCMDHD_4334
+	string "Wireless interface prefix"
+	default "wlan%d"
+	---help---
+	  Name of wireless interface. The default value is "wlan%d".
+
+config BCMDHD_WEXT
+	bool "Enable WEXT support"
+	depends on BCMDHD_4334 && CFG80211 = n
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	help
+	  Enables WEXT support
+
+config BROADCOM_WIFI_RESERVED_MEM
+	bool "Enable STATIC BUFFER Support for 4334"
+	depends on BCMDHD_4334
+	help
+	  Enables  STATIC BUFFER Support for WLAN 4334
+
+
+
+
+	  
