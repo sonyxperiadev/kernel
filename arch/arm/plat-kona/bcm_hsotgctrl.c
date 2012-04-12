@@ -683,7 +683,7 @@ static int __init bcm_hsotgctrl_init(void)
 
 	return platform_driver_register(&bcm_hsotgctrl_driver);
 }
-module_init(bcm_hsotgctrl_init);
+arch_initcall(bcm_hsotgctrl_init);
 
 static void __exit bcm_hsotgctrl_exit(void)
 {

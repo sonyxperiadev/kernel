@@ -221,5 +221,11 @@ config KONA_NAHJ_SUPPORT
          Say Y if you support invalid (mic and gnd lines are swapped) headset as headphone.
          Should have extra HW to ground MIC pin.
 
+config KONA_USB_CONTROL
+       bool "Support BCM USB wrapper framework"
+       default n
+       help
+         Say Y if you want to enable BCM USB wrapper framework
+
 endmenu
 

@@ -54,6 +54,7 @@ static struct bcmpmu_rw_data register_init_data[] = {
 #endif /* CONFIG_MACH_RHEA_STONE */
 	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
 	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
+	{.map = 0, .addr = 0x2D, .val = 0x00, .mask = 0xF3},
 	{.map = 0, .addr = 0x40, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x41, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x42, .val = 0xFF, .mask = 0xFF},
@@ -79,16 +80,16 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0xB9, .val = 0x07, .mask = 0xFF},
 	{.map = 0, .addr = 0xBD, .val = 0x21, .mask = 0xFF},
 
-	/*Init SDSR NM, NM2 and LPM voltages to 1.2V
+	/*Init SDSR NM, NM2 and LPM voltages to 1.24V
 	*/
-	{.map = 0, .addr = 0xD0, .val = 0x13, .mask = 0xFF},
-	{.map = 0, .addr = 0xD1, .val = 0x13, .mask = 0xFF},
-	{.map = 0, .addr = 0xD2, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0xD0, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD1, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD2, .val = 0x15, .mask = 0xFF},
 
-	/*Init CSR LPM  to 0.9 V
+	/*Init CSR LPM  to 0.88 V
 	CSR NM2 to 1.22V
 	*/
-	{.map = 0, .addr = 0xC1, .val = 0x04, .mask = 0xFF},
+	{.map = 0, .addr = 0xC1, .val = 0x03, .mask = 0xFF},
 	{.map = 0, .addr = 0xC2, .val = 0x14, .mask = 0xFF},
 
 	/*PLLCTRL, Clear Bit 0 to disable PLL when PC2:PC1 = 0b00*/

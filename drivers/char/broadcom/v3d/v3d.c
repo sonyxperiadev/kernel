@@ -221,6 +221,8 @@ typedef struct {
 	bool uses_worklist;
 	dvts_object_t shared_dvts_object;
 	uint32_t shared_dvts_object_usecount;
+	uint32_t last_completed_job_id;
+	uint32_t last_submitted_job_id;
 #ifdef V3D_PERF_SUPPORT
 	uint32_t perf_ctr[16];
 	uint32_t v3d_perf_mask;
@@ -787,11 +789,11 @@ static int v3d_thread(void *data)
 				KLOG_E("lock acquire failed");
 				do_exit(-1);
 			}
-#if 0
+
 			if (v3d_job_curr == NULL) {
 				continue;
 			}
-#endif
+
 			if (v3d_in_use == 0) {
 				/* Job completed or fatal oom happened or current job was killed as part of app close */
 				if ((v3d_job_curr->job_type == V3D_JOB_BIN)
@@ -824,11 +826,6 @@ static int v3d_thread(void *data)
 								      (((v3d_job_t *)v3d_job_curr)->v3d_job_done_q));
 					}
 					v3d_job_curr = v3d_job_curr->next;
-#if 0
-					if (v3d_job_curr != NULL) {
-						ret = v3d_job_start();
-					}
-#endif
 				} else
 				    if (((v3d_job_curr->job_type ==
 					  V3D_JOB_BIN_REND)
@@ -862,12 +859,6 @@ static int v3d_thread(void *data)
 					}
 
 					v3d_job_curr = v3d_job_curr->next;
-
-#if 0
-					if (v3d_job_curr != NULL) {
-						ret = v3d_job_start();
-					}
-#endif
 				} else if (v3d_job_curr->job_intern_state == 0) {
 #if 0
 					ret = v3d_job_start();	/* What is this? */
@@ -903,11 +894,6 @@ static int v3d_thread(void *data)
 				v3d_job_kill((v3d_job_t *)v3d_job_curr,
 					     V3D_JOB_STATUS_TIMED_OUT);
 				v3d_job_curr = v3d_job_curr->next;
-#if 0
-				if (v3d_job_curr != NULL) {
-					ret = v3d_job_start();
-				}
-#endif
 			}
 		}
 	}
@@ -972,10 +958,13 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 
 	dev = (v3d_t *)(filp->private_data);
 
+	/* Initialize result*/
+	p_job_status->job_status = V3D_JOB_STATUS_ERROR;
+	p_job_status->job_id = dev->last_completed_job_id;
+
 	/* Lock the code */
 	if (mutex_lock_interruptible(&v3d_sem)) {
 		KLOG_E("lock acquire failed");
-		p_job_status->job_status = V3D_JOB_STATUS_ERROR;
 		return -ERESTARTSYS;
 	}
 
@@ -1002,12 +991,10 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 			      && (p_v3d_wait_job->job_status !=
 				  V3D_JOB_STATUS_RUNNING)))) {
 				KLOG_E("wait interrupted");
-				p_job_status->job_status = V3D_JOB_STATUS_ERROR;
 				return -ERESTARTSYS;
 			}
 			if (mutex_lock_interruptible(&v3d_sem)) {
 				KLOG_E("lock acquire failed");
-				p_job_status->job_status = V3D_JOB_STATUS_ERROR;
 				return -ERESTARTSYS;
 			}
 		}
@@ -1017,6 +1004,7 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 		/* Return the status recorded by v3d */
 		p_job_status->job_status = p_v3d_wait_job->job_status;
 		p_job_status->job_id = p_v3d_wait_job->job_id;
+		dev->last_completed_job_id = p_v3d_wait_job->job_id;
 
 		/* Remove all jobs from queue from head till the job (inclusive) on which wait was happening */
 		v3d_job_free(filp, p_v3d_wait_job);
@@ -1710,7 +1698,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case V3D_IOCTL_WAIT_JOB:{
-			v3d_job_status_t job_status;
+			v3d_job_status_t job_status = {0,0,0};
 			KLOG_V("v3d_ioctl :V3D_IOCTL_WAIT_JOB");
 			ret = v3d_job_wait(filp, &job_status);
 			if (copy_to_user

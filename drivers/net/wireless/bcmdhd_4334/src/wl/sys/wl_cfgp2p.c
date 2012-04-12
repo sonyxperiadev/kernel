@@ -319,9 +319,7 @@ wl_cfgp2p_set_firm_p2p(struct wl_priv *wl)
 			return ret;
 		}
 	}
-	val = 1;
-	/* Disable firmware roaming for P2P  */
-	wldev_iovar_setint(ndev, "roam_off", val);
+
 	/* In case of COB type, firmware has default mac address
 	 * After Initializing firmware, we have to set current mac address to
 	 * firmware for P2P device address

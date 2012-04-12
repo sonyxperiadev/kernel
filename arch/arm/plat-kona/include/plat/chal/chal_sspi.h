@@ -12,7 +12,7 @@
 * consent.
 *****************************************************************************/
 /**
-*  
+*
 *  @file   chal_sspi.h
 *  @brief  SSPI cHAL interface
 *  @note
@@ -31,7 +31,7 @@ extern "C" {
 #include "chal_reg.h"
 
 /**
- * @addtogroup cHAL_Interface 
+ * @addtogroup cHAL_Interface
  * @{
  */
 
@@ -379,38 +379,39 @@ extern "C" {
 * SSPI interrupt-enable bits
 *****************************************************************************/
 #define SSPIL_INTR_ENABLE_DMA_TX0 \
-            (SSPIL_INTERRUPT_ENABLE_DMA_TX0_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_DMA_TX0_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_DMA_RX0 \
-            (SSPIL_INTERRUPT_ENABLE_DMA_RX0_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_DMA_RX0_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_DMA_TX1 \
-            (SSPIL_INTERRUPT_ENABLE_DMA_TX1_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_DMA_TX1_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_DMA_RX1 \
-            (SSPIL_INTERRUPT_ENABLE_DMA_RX1_INTERRUPT_ENB_MASK)
-#define SSPIL_INTR_ENABLE_AJUMP (SSPIL_INTERRUPT_ENABLE_DMA_RX1_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_DMA_RX1_INTERRUPT_ENB_MASK)
+#define SSPIL_INTR_ENABLE_AJUMP \
+	(SSPIL_INTERRUPT_ENABLE_DMA_RX1_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_FIFO_OVERRUN \
-            (SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_FIFO_UNDERRUN \
-            (SSPIL_INTERRUPT_ENABLE_FIFO_UNDERRUN_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_FIFO_UNDERRUN_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_MASTER_CLKEXT_TOUT \
-            (SSPIL_INTERRUPT_ENABLE_MASTER_CLKEXT_TIMEOUT_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_MASTER_CLKEXT_TIMEOUT_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_SLAVE_TOUT \
-            (SSPIL_INTERRUPT_ENABLE_SLAVE_TIMEOUT_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_SLAVE_TIMEOUT_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_SLAVE_PROT \
-            (SSPIL_INTERRUPT_ENABLE_SLAVE_PROTOCOL_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_SLAVE_PROTOCOL_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_PIO_TX_START \
-            (SSPIL_INTERRUPT_ENABLE_PIO_TX_START_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_PIO_TX_START_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_PIO_TX_STOP \
-            (SSPIL_INTERRUPT_ENABLE_PIO_TX_STOP_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_PIO_TX_STOP_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_PIO_RX_START \
-            (SSPIL_INTERRUPT_ENABLE_PIO_RX_START_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_PIO_RX_START_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_PIO_RX_STOP \
-            (SSPIL_INTERRUPT_ENABLE_PIO_RX_STOP_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_PIO_RX_STOP_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_APB_TX_ERROR \
-            (SSPIL_INTERRUPT_ENABLE_APB_TX_ERROR_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_APB_TX_ERROR_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_APB_RX_ERROR \
-            (SSPIL_INTERRUPT_ENABLE_APB_RX_ERROR_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_APB_RX_ERROR_INTERRUPT_ENB_MASK)
 #define SSPIL_INTR_ENABLE_SCHEDULER \
-            (SSPIL_INTERRUPT_ENABLE_SCHEDULER_INTERRUPT_ENB_MASK)
+	(SSPIL_INTERRUPT_ENABLE_SCHEDULER_INTERRUPT_ENB_MASK)
 /**
 * SSPI interrupt-status bits
 *****************************************************************************/
@@ -420,94 +421,102 @@ extern "C" {
 #define SSPIL_INTR_STATUS_DMA_RX1 (SSPIL_INTERRUPT_STATUS_DMA_RX1_STATUS_MASK)
 #define SSPIL_INTR_STATUS_AJUMP   (SSPIL_INTERRUPT_STATUS_AJUMP_STATUS_MASK)
 #define SSPIL_INTR_STATUS_FIFO_OVERRUN \
-            (SSPIL_INTERRUPT_STATUS_FIFO_OVERRUN_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_FIFO_OVERRUN_STATUS_MASK)
 #define SSPIL_INTR_STATUS_FIFO_UNDERRUN \
-            (SSPIL_INTERRUPT_STATUS_FIFO_UNDERRUN_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_FIFO_UNDERRUN_STATUS_MASK)
 #define SSPIL_INTR_STATUS_MASTER_CLKEXT_TOUT \
-            (SSPIL_INTERRUPT_STATUS_MASTER_CLKEXT_TIMEOUT_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_MASTER_CLKEXT_TIMEOUT_STATUS_MASK)
 #define SSPIL_INTR_STATUS_SLAVE_TOUT \
-            (SSPIL_INTERRUPT_STATUS_SLAVE_TIMEOUT_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_SLAVE_TIMEOUT_STATUS_MASK)
 #define SSPIL_INTR_STATUS_SLAVE_PROT \
-            (SSPIL_INTERRUPT_STATUS_SLAVE_PROTOCOL_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_SLAVE_PROTOCOL_STATUS_MASK)
 #define SSPIL_INTR_STATUS_PIO_TX_START \
-            (SSPIL_INTERRUPT_STATUS_PIO_TX_START_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_PIO_TX_START_STATUS_MASK)
 #define SSPIL_INTR_STATUS_PIO_TX_STOP \
-            (SSPIL_INTERRUPT_STATUS_PIO_TX_STOP_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_PIO_TX_STOP_STATUS_MASK)
 #define SSPIL_INTR_STATUS_PIO_RX_START \
-            (SSPIL_INTERRUPT_STATUS_PIO_RX_START_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_PIO_RX_START_STATUS_MASK)
 #define SSPIL_INTR_STATUS_PIO_RX_STOP \
-            (SSPIL_INTERRUPT_STATUS_PIO_RX_STOP_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_PIO_RX_STOP_STATUS_MASK)
 #define SSPIL_INTR_STATUS_APB_TX_ERROR \
-            (SSPIL_INTERRUPT_STATUS_APB_TX_ERROR_ACCESS_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_APB_TX_ERROR_ACCESS_STATUS_MASK)
 #define SSPIL_INTR_STATUS_APB_RX_ERROR \
-            (SSPIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_STATUS_MASK)
-#define SSPIL_INTR_STATUS_SCHEDULER (SSPIL_INTERRUPT_STATUS_SCHEDULER_STATUS_MASK)
+	(SSPIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_STATUS_MASK)
+#define SSPIL_INTR_STATUS_SCHEDULER \
+	(SSPIL_INTERRUPT_STATUS_SCHEDULER_STATUS_MASK)
 #define SSPIL_INTR_STATUS_COPY_SSPI_INT \
-            (SSPIL_INTERRUPT_STATUS_COPY_SSPI_INT_MASK)
+	(SSPIL_INTERRUPT_STATUS_COPY_SSPI_INT_MASK)
 #define SSPIL_DETAIL_INTR_STS_FIFO_OVERRUN_RX0 \
-         (1 << (SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT))
+	(1 << (SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT))
 #define SSPIL_DETAIL_INTR_STS_FIFO_OVERRUN_RX1 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT)+1))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT)+1))
 #define SSPIL_DETAIL_INTR_STS_FIFO_OVERRUN_RX2 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT)+2))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT)+2))
 #define SSPIL_DETAIL_INTR_STS_FIFO_OVERRUN_RX3 \
-         (1U << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT)+3))
+	(1U << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT)+3))
 #define SSPIL_DETAIL_INTR_STS_FIFO_UNDERRUN_TX0 \
-         (1 << (SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_SHIFT))
+	(1 << (SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_SHIFT))
 #define SSPIL_DETAIL_INTR_STS_FIFO_UNDERRUN_TX1 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_SHIFT)+1))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_SHIFT)+1))
 #define SSPIL_DETAIL_INTR_STS_FIFO_UNDERRUN_TX2 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_SHIFT)+2))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_SHIFT)+2))
 #define SSPIL_DETAIL_INTR_STS_FIFO_UNDERRUN_TX3 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_SHIFT)+3))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_FIFO_UNDERRUN_VECTOR_SHIFT)+3))
 #define SSPIL_DETAIL_INTR_STS_PIO_TX_START_TX0 \
-         (1 << (SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_START_VECTOR_SHIFT))
+	(1 << (SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_START_VECTOR_SHIFT))
 #define SSPIL_DETAIL_INTR_STS_PIO_TX_START_TX1 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_START_VECTOR_SHIFT)+1))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_START_VECTOR_SHIFT)+1))
 #define SSPIL_DETAIL_INTR_STS_PIO_TX_START_TX2 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_START_VECTOR_SHIFT)+2))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_START_VECTOR_SHIFT)+2))
 #define SSPIL_DETAIL_INTR_STS_PIO_TX_START_TX3 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_START_VECTOR_SHIFT)+3))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_START_VECTOR_SHIFT)+3))
 #define SSPIL_DETAIL_INTR_STS_PIO_TX_STOP_TX0 \
-         (1 << (SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_STOP_VECTOR_SHIFT))
+	(1 << (SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_STOP_VECTOR_SHIFT))
 #define SSPIL_DETAIL_INTR_STS_PIO_TX_STOP_TX1 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_STOP_VECTOR_SHIFT)+1))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_STOP_VECTOR_SHIFT)+1))
 #define SSPIL_DETAIL_INTR_STS_PIO_TX_STOP_TX2 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_STOP_VECTOR_SHIFT)+2))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_STOP_VECTOR_SHIFT)+2))
 #define SSPIL_DETAIL_INTR_STS_PIO_TX_STOP_TX3 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_STOP_VECTOR_SHIFT)+3))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_TX_STOP_VECTOR_SHIFT)+3))
 #define SSPIL_DETAIL_INTR_STS_PIO_RX_START_RX0 \
-         (1 << (SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_START_VECTOR_SHIFT))
+	(1 << (SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_START_VECTOR_SHIFT))
 #define SSPIL_DETAIL_INTR_STS_PIO_RX_START_RX1 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_START_VECTOR_SHIFT)+1))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_START_VECTOR_SHIFT)+1))
 #define SSPIL_DETAIL_INTR_STS_PIO_RX_START_RX2 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_START_VECTOR_SHIFT)+2))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_START_VECTOR_SHIFT)+2))
 #define SSPIL_DETAIL_INTR_STS_PIO_RX_START_RX3 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_START_VECTOR_SHIFT)+3))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_START_VECTOR_SHIFT)+3))
 #define SSPIL_DETAIL_INTR_STS_PIO_RX_STOP_RX0 \
-         (1 << (SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_STOP_VECTOR_SHIFT))
+	(1 << (SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_STOP_VECTOR_SHIFT))
 #define SSPIL_DETAIL_INTR_STS_PIO_RX_STOP_RX1 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_STOP_VECTOR_SHIFT)+1))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_STOP_VECTOR_SHIFT)+1))
 #define SSPIL_DETAIL_INTR_STS_PIO_RX_STOP_RX2 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_STOP_VECTOR_SHIFT)+2))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_STOP_VECTOR_SHIFT)+2))
 #define SSPIL_DETAIL_INTR_STS_PIO_RX_STOP_RX3 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_STOP_VECTOR_SHIFT)+3))
+	(1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_PIO_RX_STOP_VECTOR_SHIFT)+3))
 #define SSPIL_DETAIL_INTR_STS_APB_TX_ERR_TX0 \
-         (1 << (SSPIL_DETAIL_INTERRUPT_STATUS_APB_TX_ERROR_ACCESS_VECTOR_SHIFT))
+	(1 << (SSPIL_DETAIL_INTERRUPT_STATUS_APB_TX_ERROR_ACCESS_VECTOR_SHIFT))
 #define SSPIL_DETAIL_INTR_STS_APB_TX_ERR_TX1 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_APB_TX_ERROR_ACCESS_VECTOR_SHIFT)+1))
+	(1 << \
+	((SSPIL_DETAIL_INTERRUPT_STATUS_APB_TX_ERROR_ACCESS_VECTOR_SHIFT)+1))
 #define SSPIL_DETAIL_INTR_STS_APB_TX_ERR_TX2 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_APB_TX_ERROR_ACCESS_VECTOR_SHIFT)+2))
+	(1 << \
+	((SSPIL_DETAIL_INTERRUPT_STATUS_APB_TX_ERROR_ACCESS_VECTOR_SHIFT)+2))
 #define SSPIL_DETAIL_INTR_STS_APB_TX_ERR_TX3 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_APB_TX_ERROR_ACCESS_VECTOR_SHIFT)+3))
+	(1 << \
+	((SSPIL_DETAIL_INTERRUPT_STATUS_APB_TX_ERROR_ACCESS_VECTOR_SHIFT)+3))
 #define SSPIL_DETAIL_INTR_STS_APB_RX_ERR_RX0 \
-         (1 << (SSPIL_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT))
+	(1 << \
+	(SSPIL_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT))
 #define SSPIL_DETAIL_INTR_STS_APB_RX_ERR_RX1 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT)+1))
+	(1 << \
+	((SSPIL_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT)+1))
 #define SSPIL_DETAIL_INTR_STS_APB_RX_ERR_RX2 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT)+2))
+	(1 << \
+	((SSPIL_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT)+2))
 #define SSPIL_DETAIL_INTR_STS_APB_RX_ERR_RX3 \
-         (1 << ((SSPIL_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT)+3))
+	(1 << \
+	((SSPIL_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT)+3))
 /**
 *
 *  @brief  Initialize SSPI CHAL internal data structure
@@ -601,7 +610,7 @@ extern "C" {
 
 /**
 *
-*  @brief  Set SSPI type. There two types of SSPI core, Full-version coreor 
+*  @brief  Set SSPI type. There two types of SSPI core, Full-version coreor
 *  Lite-version core.
 *
 *  @param    handle (in) SSPI CHAL handle
@@ -737,12 +746,13 @@ extern "C" {
 	CHAL_SSPI_STATUS_t chal_sspi_get_dma_status(CHAL_HANDLE handle,
 						    CHAL_SSPI_DMA_CHAN_SEL_t
 						    channel,
-						    CHAL_SSPI_FIFO_ID_t *
-						    fifo_id, uint32_t * off_on);
+						    CHAL_SSPI_FIFO_ID_t
+						    *fifo_id,
+						    uint32_t *off_on);
 
 /**
 *
-*  @brief  Set the idle state values to be driven on CS, CLK, TX, RX lines 
+*  @brief  Set the idle state values to be driven on CS, CLK, TX, RX lines
 *          until a task initializes them
 *
 *  @param    handle  (in) SSPI CHAL handle
@@ -758,24 +768,24 @@ extern "C" {
 *  @brief  Configure a frame definition in the the frame table
 *
 *  @param    handle      (in) SSPI CHAL handle
-*  @param    *frm_bitmap (io) the in parameter is the bitmap of the 
-*                                 available frames for CHAL to use. The out 
-*                                 parameter is the bitmap of the frames that 
+*  @param    *frm_bitmap (io) the in parameter is the bitmap of the
+*                                 available frames for CHAL to use. The out
+*                                 parameter is the bitmap of the frames that
 *                                 CHAL actually programmed.
-*  @param    prot        (in) protocol type, on which the frame definition is 
+*  @param    prot        (in) protocol type, on which the frame definition is
 *                             set based
 *  @param    word_len    (in) length of word for the specified protocol
-*  @param    ext_bits    (in) dummy-bit period before or after transferring 
+*  @param    ext_bits    (in) dummy-bit period before or after transferring
 *                             the valid data bits in the frame. This parameter
-*                             is used for Left/Right justified Audio protocol, 
-*                             I2S Extended Mode, PCM Extended Mode and 
-*                             3-channel TDM/PCM mode. It is ignored for all 
+*                             is used for Left/Right justified Audio protocol,
+*                             I2S Extended Mode, PCM Extended Mode and
+*                             3-channel TDM/PCM mode. It is ignored for all
 *                             other protocols.
 *
 *  @return SSPI status
 ******************************************************************************/
 	CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
-					       uint32_t * frm_bitmap,
+					       uint32_t *frm_bitmap,
 					       CHAL_SSPI_PROT_t prot,
 					       uint32_t word_len,
 					       uint32_t ext_bits);
@@ -786,7 +796,7 @@ extern "C" {
 *
 *  @param    handle   (in) SSPI CHAL handle
 *  @param    patt_idx (in) index of the pattern entry to be configured
-*  @param    type     (in) pattern type, on which the pattern definition is 
+*  @param    type     (in) pattern type, on which the pattern definition is
 *                          set based
 *
 *  @return SSPI status
@@ -809,8 +819,8 @@ extern "C" {
 	CHAL_SSPI_STATUS_t chal_sspi_set_sequence(CHAL_HANDLE handle,
 						  uint32_t seq_idx,
 						  CHAL_SSPI_PROT_t prot,
-						  chal_sspi_seq_conf_t *
-						  seq_conf);
+						  chal_sspi_seq_conf_t
+						  *seq_conf);
 
 /**
 *
@@ -825,7 +835,7 @@ extern "C" {
 	CHAL_SSPI_STATUS_t chal_sspi_set_task(CHAL_HANDLE handle,
 					      uint32_t task_idx,
 					      CHAL_SSPI_PROT_t prot,
-					      chal_sspi_task_conf_t * tk_conf);
+					      chal_sspi_task_conf_t *tk_conf);
 
 /**
 *
@@ -844,7 +854,7 @@ extern "C" {
 
 /**
 *
-*  @brief  Get the currently configured divisor value of a clock divider in 
+*  @brief  Get the currently configured divisor value of a clock divider in
 *          SSPI core
 *
 *  @param    handle      (in) SSPI CHAL handle
@@ -856,7 +866,7 @@ extern "C" {
 	CHAL_SSPI_STATUS_t chal_sspi_get_clk_divider(CHAL_HANDLE handle,
 						     CHAL_SSPI_CLK_DIVIDER_t
 						     clk_divider,
-						     uint32_t * clk_div);
+						     uint32_t *clk_div);
 
 /**
 *
@@ -882,7 +892,7 @@ extern "C" {
 ******************************************************************************/
 
 	CHAL_SSPI_STATUS_t chal_sspi_get_clk_src_select(CHAL_HANDLE handle,
-							uint32_t * clk_src);
+							uint32_t *clk_src);
 
 /**
 *
@@ -892,9 +902,9 @@ extern "C" {
 *  @param    trig           (in) the trigger selection
 *  @param    num_cycle_edge (in) the number of 26MHz period between each clock
 *                                edges, minus one
-*  @param    num_clk_edge   (in) the number of clock edges between each 
+*  @param    num_clk_edge   (in) the number of clock edges between each
 *                                resynchronization, minus one
-*  @param    enable         (in) enable/disable the 26MHz clock 
+*  @param    enable         (in) enable/disable the 26MHz clock
 *                                resynchronization mecanism
 *
 *  @return SSPI status
@@ -914,19 +924,20 @@ extern "C" {
 *  @param    trig           (out) the trigger selection
 *  @param    num_cycle_edge (out) the number of 26MHz period between each clock
 *                                 edges, minus one
-*  @param    num_clk_edge   (out) the number of clock edges between each 
+*  @param    num_clk_edge   (out) the number of clock edges between each
 *                                 resynchronization, minus one
-*  @param    enable         (out) enable/disable the 26MHz clock 
+*  @param    enable         (out) enable/disable the 26MHz clock
 *                                 resynchronization mecanism
 *
 *  @return SSPI status
 ******************************************************************************/
 	CHAL_SSPI_STATUS_t chal_sspi_get_caph_clk_gen(CHAL_HANDLE handle,
 						      CHAL_SSPI_CAPH_CLK_TRIG_t
-						      * trig,
-						      uint32_t * num_cycle_edge,
-						      uint32_t * num_clk_edge,
-						      uint32_t * enable);
+						      *trig,
+						      uint32_t *
+						      num_cycle_edge,
+						      uint32_t *num_clk_edge,
+						      uint32_t *enable);
 
 /**
 *
@@ -936,7 +947,7 @@ extern "C" {
 *  @param    trig           (in) the trigger selection
 *  @param    word_len       (in) the number of bits in each word of data
 *  @param    num_chan       (in) the number of channels used for data
-*                                (mono, stero, 3-chan or 4-chan) 
+*                                (mono, stero, 3-chan or 4-chan)
 *
 *  @return SSPI status
 ******************************************************************************/
@@ -949,7 +960,7 @@ extern "C" {
 
 /**
 *
-*  @brief  Setup a logical FIFO size to one of four different 
+*  @brief  Setup a logical FIFO size to one of four different
 *          size (full, half, quarter or none of the physical FIFO size)
 *
 *  @param    handle    (in) SSPI CHAL handle
@@ -965,7 +976,7 @@ extern "C" {
 
 /**
 *
-*  @brief  Get the currently configured size of a logical FIFO 
+*  @brief  Get the currently configured size of a logical FIFO
 *          or none of the physical FIFO size)
 *
 *  @param    handle    (in) SSPI CHAL handle
@@ -976,7 +987,7 @@ extern "C" {
 ******************************************************************************/
 	CHAL_SSPI_STATUS_t chal_sspi_get_fifo_size(CHAL_HANDLE handle,
 						   CHAL_SSPI_FIFO_ID_t fifo_id,
-						   uint32_t * fifo_size);
+						   uint32_t *fifo_size);
 
 /**
 *
@@ -1007,11 +1018,11 @@ extern "C" {
 	CHAL_SSPI_STATUS_t chal_sspi_get_fifo_endian(CHAL_HANDLE handle,
 						     CHAL_SSPI_FIFO_ID_t
 						     fifo_id,
-						     uint32_t * fifo_endian);
+						     uint32_t *fifo_endian);
 
 /**
 *
-*  @brief  Setup the FIFO threshold (# of bytes), which can be used by a task 
+*  @brief  Setup the FIFO threshold (# of bytes), which can be used by a task
 *          to identify the initial condition before starting any tranaction.
 *
 *  @param    handle     (in) SSPI CHAL handle
@@ -1027,8 +1038,8 @@ extern "C" {
 
 /**
 *
-*  @brief  Get the currently configured FIFO threshold, which can be used by a 
-*          task to identify the initial condition before starting any 
+*  @brief  Get the currently configured FIFO threshold, which can be used by a
+*          task to identify the initial condition before starting any
 *          tranaction.
 *
 *  @param    handle     (in) SSPI CHAL handle
@@ -1040,11 +1051,11 @@ extern "C" {
 	CHAL_SSPI_STATUS_t chal_sspi_get_fifo_threshold(CHAL_HANDLE handle,
 							CHAL_SSPI_FIFO_ID_t
 							fifo_id,
-							uint32_t * fifo_thres);
+							uint32_t *fifo_thres);
 
 /**
 *
-*  @brief  Setup one of the three ways (unpack, 8-bit or 16-bit) to pack data 
+*  @brief  Setup one of the three ways (unpack, 8-bit or 16-bit) to pack data
 *          in the logical FIFO
 *
 *  @param    handle    (in) SSPI CHAL handle
@@ -1060,7 +1071,7 @@ extern "C" {
 
 /**
 *
-*  @brief  Get the currently configured data-packing way for the specified 
+*  @brief  Get the currently configured data-packing way for the specified
 *          logical FIFO
 *
 *  @param    handle    (in) SSPI CHAL handle
@@ -1071,7 +1082,7 @@ extern "C" {
 ******************************************************************************/
 	CHAL_SSPI_STATUS_t chal_sspi_get_fifo_pack(CHAL_HANDLE handle,
 						   CHAL_SSPI_FIFO_ID_t fifo_id,
-						   uint32_t * fifo_pack);
+						   uint32_t *fifo_pack);
 
 /**
 *
@@ -1092,7 +1103,7 @@ extern "C" {
 
 /**
 *
-*  @brief  Get the currently configured data-size way for the specified 
+*  @brief  Get the currently configured data-size way for the specified
 *          logical FIFO
 *
 *  @param    handle    (in) SSPI CHAL handle
@@ -1104,7 +1115,7 @@ extern "C" {
 	CHAL_SSPI_STATUS_t chal_sspi_get_fifo_data_size(CHAL_HANDLE handle,
 							CHAL_SSPI_FIFO_ID_t
 							fifo_id,
-							uint32_t * fifo_size);
+							uint32_t *fifo_size);
 
 /**
 *
@@ -1148,7 +1159,8 @@ extern "C" {
 	CHAL_SSPI_STATUS_t chal_sspi_get_fifo_repeat_count(CHAL_HANDLE handle,
 							   CHAL_SSPI_FIFO_ID_t
 							   fifo_id,
-							   uint8_t * fifo_rcnt);
+							   uint8_t *
+							   fifo_rcnt);
 
 /**
 *
@@ -1162,8 +1174,9 @@ extern "C" {
 *  @return SSPI status
 ******************************************************************************/
 	CHAL_SSPI_STATUS_t chal_sspi_get_fifo_level(CHAL_HANDLE handle,
-						    CHAL_SSPI_FIFO_ID_t fifo_id,
-						    uint16_t * fifo_level);
+						    CHAL_SSPI_FIFO_ID_t
+						    fifo_id,
+						    uint16_t *fifo_level);
 
 /**
 *
@@ -1195,15 +1208,16 @@ extern "C" {
 *
 *  @param    handle      (in)  SSPI CHAL handle
 *  @param    fifo_id     (in)  the logical FIFO, of which the size is set
-*  @param    start_thres (in)  the minimum number of words inside fifo needed 
-*                              to generate a pio_start_interrupt and start a 
+*  @param    start_thres (in)  the minimum number of words inside fifo needed
+*                              to generate a pio_start_interrupt and start a
 *                              thresmet generation.
-*  @param    stop_thres  (in)  the minimum number of free words needed to 
+*  @param    stop_thres  (in)  the minimum number of free words needed to
 *                              stop a thresmet generation
 *
 *  @return SSPI status
 ******************************************************************************/
-	CHAL_SSPI_STATUS_t chal_sspi_set_fifo_pio_threshhold(CHAL_HANDLE handle,
+	CHAL_SSPI_STATUS_t chal_sspi_set_fifo_pio_threshhold(CHAL_HANDLE
+							     handle,
 							     CHAL_SSPI_FIFO_ID_t
 							     fifo_id,
 							     uint32_t
@@ -1217,15 +1231,16 @@ extern "C" {
 *
 *  @param    handle      (in)  SSPI CHAL handle
 *  @param    fifo_id     (in)  the logical FIFO, of which the size is set
-*  @param    start_thres (out) the minimum number of words inside fifo needed 
-*                              to generate a pio_start_interrupt and start a 
+*  @param    start_thres (out) the minimum number of words inside fifo needed
+*                              to generate a pio_start_interrupt and start a
 *                              thresmet generation.
-*  @param    stop_thres  (out) the minimum number of free words needed to 
+*  @param    stop_thres  (out) the minimum number of free words needed to
 *                              stop a thresmet generation
 *
 *  @return SSPI status
 ******************************************************************************/
-	CHAL_SSPI_STATUS_t chal_sspi_get_fifo_pio_threshhold(CHAL_HANDLE handle,
+	CHAL_SSPI_STATUS_t chal_sspi_get_fifo_pio_threshhold(CHAL_HANDLE
+							     handle,
 							     CHAL_SSPI_FIFO_ID_t
 							     fifo_id,
 							     uint32_t *
@@ -1240,20 +1255,18 @@ extern "C" {
 *  @param    handle   (in)  SSPI CHAL handle
 *  @param    fifo_id  (in)  the logical FIFO, of which the size is set
 *  @param    start_en (in)  Enable/Disable PIO start interrupt
-*                           Enable - 1, Disable - 0 
+*                           Enable - 1, Disable - 0
 *  @param    stop_en (in)   Enable/Disable PIO stop interrupt
-*                           Enable - 1, Disable - 0 
+*                           Enable - 1, Disable - 0
 *
 *  @return SSPI status
 ******************************************************************************/
-	CHAL_SSPI_STATUS_t chal_sspi_enable_fifo_pio_start_stop_intr(CHAL_HANDLE
-								     handle,
-								     CHAL_SSPI_FIFO_ID_t
-								     fifo_id,
-								     uint32_t
-								     start_en,
-								     uint32_t
-								     stop_en);
+	CHAL_SSPI_STATUS_t
+	    chal_sspi_enable_fifo_pio_start_stop_intr(CHAL_HANDLE handle,
+						      CHAL_SSPI_FIFO_ID_t
+						      fifo_id,
+						      uint32_t start_en,
+						      uint32_t stop_en);
 
 /**
 *
@@ -1271,7 +1284,7 @@ extern "C" {
 	uint32_t chal_sspi_read_data(CHAL_HANDLE handle,
 				     CHAL_SSPI_FIFO_ID_t fifo_id,
 				     CHAL_SSPI_PROT_t prot,
-				     uint8_t * buf, uint32_t size);
+				     uint8_t *buf, uint32_t size);
 
 /**
 *
@@ -1288,7 +1301,7 @@ extern "C" {
 	uint32_t chal_sspi_write_data(CHAL_HANDLE handle,
 				      CHAL_SSPI_FIFO_ID_t fifo_id,
 				      CHAL_SSPI_PROT_t prot,
-				      uint8_t * buf, uint32_t size);
+				      uint8_t *buf, uint32_t size);
 
 /**
 *
@@ -1302,7 +1315,7 @@ extern "C" {
 *************************************************************************/
 	CHAL_SSPI_STATUS_t chal_sspi_read_fifo(CHAL_HANDLE handle,
 					       CHAL_SSPI_FIFO_ID_t fifo_id,
-					       uint32_t * data);
+					       uint32_t *data);
 
 /**
 *
@@ -1323,9 +1336,9 @@ extern "C" {
 *  @brief  Enalble/Disable SSPI interrups
 *
 *  @param    handle    (in) SSPI CHAL handle
-*  @param    intr_mask (in) Enable - if the corresponding bit of intr_mask 
+*  @param    intr_mask (in) Enable - if the corresponding bit of intr_mask
 *                          of is set.
-*                          Disable - if the corresponding bit of intr_mask 
+*                          Disable - if the corresponding bit of intr_mask
 *                          of is reset
 *
 *  @return SSPI status
@@ -1338,9 +1351,9 @@ extern "C" {
 *  @brief  Enalble/Disable SSPI error interrups
 *
 *  @param    handle    (in) SSPI CHAL handle
-*  @param    intr_mask (in) Enable - if the corresponding bit of intr_mask 
+*  @param    intr_mask (in) Enable - if the corresponding bit of intr_mask
 *                          of is set.
-*                          Disable - if the corresponding bit of intr_mask 
+*                          Disable - if the corresponding bit of intr_mask
 *                          of is reset
 *
 *  @return SSPI status
@@ -1359,7 +1372,7 @@ extern "C" {
 *  @return SSPI status
 ***********************************************************************/
 	CHAL_SSPI_STATUS_t chal_sspi_get_intr_mask(CHAL_HANDLE handle,
-						   uint32_t * intr_mask);
+						   uint32_t *intr_mask);
 
 /**
 *
@@ -1372,7 +1385,7 @@ extern "C" {
 *  @return SSPI status
 ***********************************************************************/
 	CHAL_SSPI_STATUS_t chal_sspi_get_error_intr_mask(CHAL_HANDLE handle,
-							 uint32_t * intr_mask);
+							 uint32_t *intr_mask);
 
 /**
 *
@@ -1381,14 +1394,14 @@ extern "C" {
 *  @param    handle     (in)  SSPI CHAL handle
 *  @param    status     (out) Interrupt status. It is a bitmask shows what kind
 *                             of SSPI interrupts received
-*  @param    det_status (out) Detailed interrupt status. It is a bitmask shows 
+*  @param    det_status (out) Detailed interrupt status. It is a bitmask shows
 *                             the detailed info of SSPI interrupts received
 *
 *  @return SSPI status
 ***********************************************************************/
 	CHAL_SSPI_STATUS_t chal_sspi_get_intr_status(CHAL_HANDLE handle,
-						     uint32_t * status,
-						     uint32_t * det_status);
+						     uint32_t *status,
+						     uint32_t *det_status);
 
 /**
 *
@@ -1398,7 +1411,7 @@ extern "C" {
 *  @param    intr_mask     (in) Interrupt mask
 *                               - Clear the interrupt bits based on intr_mask.
 *  @param    det_intr_mask (in) Detailed interrupt mask
-*                               - Clear the interrupt bits based on 
+*                               - Clear the interrupt bits based on
 *                                 det_intr_mask. Some interrupt bits can not be
 *                                 cleared before the related bits are cleared
 *                                 first in detailed interrupt status register.
@@ -1425,7 +1438,7 @@ extern "C" {
 
 /**
 *
-*  @brief  Enalble/Disable SSPI task scheduler to start/stop to execute the 
+*  @brief  Enalble/Disable SSPI task scheduler to start/stop to execute the
 *          configured tasks
 *
 *  @param    handle (in) SSPI CHAL handle

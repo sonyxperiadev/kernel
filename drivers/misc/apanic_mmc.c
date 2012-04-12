@@ -84,7 +84,7 @@ void mmc_panic_copy_dev_name(char *dev_name, int dev_num)
 
 	if (strlen(APANIC_BLK_PATH) + strlen(dev_name) <
 		sizeof(ctx->dev_path))
-		sprintf(ctx->dev_path, "%s/%s", APANIC_BLK_PATH, dev_name);
+		snprintf(ctx->dev_path, sizeof(ctx->dev_path), "%s/%s", APANIC_BLK_PATH, dev_name);
 	else
 		printk(KERN_ERR DRVNAME "block dev name is too long\n");
 
@@ -523,7 +523,8 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 	int ret;
 
 	/* Allocate memory to store the path name passed from user */
-	user_dev_path = kmalloc(count, GFP_KERNEL);
+	/* Allocate an extra byte for storing the NULL character */
+	user_dev_path = kmalloc(count+1, GFP_KERNEL);
 	if (NULL == user_dev_path) {
 		printk(KERN_ERR DRVNAME "Unable to allocate memory \r\n");
 		ret = -1;

@@ -1156,6 +1156,7 @@ int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
 
 #ifdef CONFIG_USB_OTG_UTILS
 	if (core_if->xceiver->set_suspend &&
+	    core_if->gadget_pullup_on &&
 	    !core_if->core_params->otg_supp_enable) {
 		/* Suspend trasceiver */
 		otg_set_suspend(core_if->xceiver, 1);

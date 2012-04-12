@@ -128,7 +128,7 @@ static cVoid chal_caph_dma_rheaB0_set_hibuffer(CHAL_HANDLE handle,
 {
 	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
 	cUInt8 index;
-	cUInt32 cr = 0;
+	/*cUInt32 cr = 0;*/
 
 	/* Find the channel we are looking for */
 	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
@@ -138,7 +138,7 @@ static cVoid chal_caph_dma_rheaB0_set_hibuffer(CHAL_HANDLE handle,
 			CPH_AADMAC_CH1_AADMAC_CR_3_CH1_AADMAC_HIGH_BASE_MASK;
 			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_3,
 					   index, address);
-
+#if 0
 			/* enable the use of hi buffer */
 			cr = BRCM_READ_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_2,
 					       (index *
@@ -155,6 +155,7 @@ static cVoid chal_caph_dma_rheaB0_set_hibuffer(CHAL_HANDLE handle,
 			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_2,
 					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
 					   cr);
+#endif
 			break;
 		}
 

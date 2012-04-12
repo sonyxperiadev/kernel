@@ -87,6 +87,8 @@ struct _CSL_CAPH_DMA_CONFIG_t {
 	UInt32 mem_size;
 	UInt8 Tsize;
 	CSL_CAPH_DMA_CALLBACK_p dmaCB;
+	int n_dma_buf;
+	int dma_buf_size;
 };
 #define CSL_CAPH_DMA_CONFIG_t struct _CSL_CAPH_DMA_CONFIG_t
 

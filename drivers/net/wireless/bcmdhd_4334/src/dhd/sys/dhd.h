@@ -259,7 +259,7 @@ typedef struct dhd_pub {
 	uint8 htsfdlystat_sz; /* Size of delay stats, max 255B */
 #endif
 	struct reorder_info *reorder_bufs[WLHOST_REORDERDATA_MAXFLOWS];
-#ifdef PNO_SUPPORT
+#if defined(PNO_SUPPORT) && defined(CONFIG_HAS_WAKELOCK)
 	struct wake_lock 	pno_wakelock;
 #endif
 } dhd_pub_t;

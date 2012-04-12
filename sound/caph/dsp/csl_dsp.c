@@ -44,6 +44,7 @@
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_cph_cfifo.h>
 #include <mach/rdb/brcm_rdb_cph_aadmac.h>
+#include <mach/rdb/brcm_rdb_ahintc.h>
 
 AP_SharedMem_t *vp_shared_mem;
 
@@ -546,11 +547,12 @@ void AP_ProcessStatus(void)
 				aError("CPH_AADMAC_CH13_AADMAC_SR_1= 0x%08x\n",
 					base_addr[
 					CPH_AADMAC_CH13_AADMAC_SR_1_OFFSET>>2]);
+				aError("shared_aadmac_aud_enable = 0x%04x\n",
+				vp_shared_mem->shared_aadmac_aud_enable);
 				ec26_err_count++;
 				if (ec26_err_count > 0) {
 					Dump_Caph_regs();
 					ec26_err_count = 0;
-					BUG();
 				}
 				break;
 			}
@@ -571,11 +573,12 @@ void AP_ProcessStatus(void)
 				aError("CPH_AADMAC_CH14_AADMAC_SR_1= 0x%08x\n",
 					base_addr[
 					CPH_AADMAC_CH14_AADMAC_SR_1_OFFSET>>2]);
+				aError("shared_aadmac_aud_enable = 0x%04x\n",
+				vp_shared_mem->shared_aadmac_aud_enable);
 				ec27_err_count++;
 				if (ec27_err_count > 0) {
 					Dump_Caph_regs();
 					ec27_err_count = 0;
-					BUG();
 				}
 				break;
 			}
@@ -595,11 +598,12 @@ void AP_ProcessStatus(void)
 				aError("CPH_AADMAC_CH12_AADMAC_SR_1= 0x%08x\n",
 					base_addr[
 					CPH_AADMAC_CH12_AADMAC_SR_1_OFFSET>>2]);
+				aError("shared_aadmac_aud_enable = 0x%04x\n",
+				vp_shared_mem->shared_aadmac_aud_enable);
 				ec28_err_count++;
 				if (ec28_err_count > 4) {
 					Dump_Caph_regs();
 					ec28_err_count = 0;
-					BUG();
 				}
 				break;
 			}
@@ -644,32 +648,10 @@ void Dump_Caph_regs(void)
 {
 	volatile unsigned int *base_addr;
 
-	base_addr = ((volatile unsigned int *)(
-		    HW_IO_PHYS_TO_VIRT(CFIFO_BASE_ADDR)));
+	base_addr = ((volatile unsigned int *)
+		(HW_IO_PHYS_TO_VIRT(CFIFO_BASE_ADDR)));
 	aError("CFIFO Regs:\n");
 	aError("===========\n");
-	aError("CPH_CFIFO_CH1_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH1_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CH2_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH2_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CH3_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH3_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CH4_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH4_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CH5_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH5_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CH6_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH6_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CH7_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH7_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CH8_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH8_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CH9_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH9_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CH10_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH10_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CH11_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CH11_PADDR_OFFSET>>2]);
 	aError("CPH_CFIFO_CH12_PADDR			= 0x%08x\n",
 		base_addr[CPH_CFIFO_CH12_PADDR_OFFSET>>2]);
 	aError("CPH_CFIFO_CH13_PADDR			= 0x%08x\n",
@@ -680,66 +662,12 @@ void Dump_Caph_regs(void)
 		base_addr[CPH_CFIFO_CH15_PADDR_OFFSET>>2]);
 	aError("CPH_CFIFO_CH16_PADDR			= 0x%08x\n",
 		base_addr[CPH_CFIFO_CH16_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CTL_1			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CTL_1_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CTL_2			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CTL_2_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CTL_3			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CTL_3_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CTL_4			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CTL_4_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CTL_5			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CTL_5_OFFSET>>2]);
 	aError("CPH_CFIFO_CPH_CTL_6			= 0x%08x\n",
 		base_addr[CPH_CFIFO_CPH_CTL_6_OFFSET>>2]);
 	aError("CPH_CFIFO_CPH_CTL_7			= 0x%08x\n",
 		base_addr[CPH_CFIFO_CPH_CTL_7_OFFSET>>2]);
 	aError("CPH_CFIFO_CPH_CTL_8			= 0x%08x\n",
 		base_addr[CPH_CFIFO_CPH_CTL_8_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_1			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_1_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_1			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_1_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_2			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_2_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_2			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_2_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_3			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_3_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_3			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_3_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_4			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_4_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_4			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_4_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_5			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_5_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_5			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_5_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_6			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_6_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_6			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_6_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_7			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_7_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_7			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_7_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_8			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_8_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_8			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_8_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_9			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_9_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_9			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_9_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_10			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_10_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_10			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_10_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_CR_11			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_CR_11_OFFSET>>2]);
-	aError("CPH_CFIFO_CPH_SR_11			= 0x%08x\n",
-		base_addr[CPH_CFIFO_CPH_SR_11_OFFSET>>2]);
 	aError("CPH_CFIFO_CPH_CR_12			= 0x%08x\n",
 		base_addr[CPH_CFIFO_CPH_CR_12_OFFSET>>2]);
 	aError("CPH_CFIFO_CPH_SR_12			= 0x%08x\n",
@@ -774,28 +702,6 @@ void Dump_Caph_regs(void)
 		base_addr[CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH3_OFFSET>>2]);
 	aError("CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH4	= 0x%08x\n",
 		base_addr[CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH4_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH1_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH1_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH2_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH2_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH3_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH3_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH4_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH4_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH5_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH5_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH6_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH6_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH7_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH7_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH8_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH8_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH9_PADDR			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH9_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH10_PADDR		= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH10_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CH11_PADDR		= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CH11_PADDR_OFFSET>>2]);
 	aError("CPH_CFIFO_DSP_CH12_PADDR		= 0x%08x\n",
 		base_addr[CPH_CFIFO_DSP_CH12_PADDR_OFFSET>>2]);
 	aError("CPH_CFIFO_DSP_CH13_PADDR		= 0x%08x\n",
@@ -806,66 +712,12 @@ void Dump_Caph_regs(void)
 		base_addr[CPH_CFIFO_DSP_CH15_PADDR_OFFSET>>2]);
 	aError("CPH_CFIFO_DSP_CH16_PADDR		= 0x%08x\n",
 		base_addr[CPH_CFIFO_DSP_CH16_PADDR_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CTL_1			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CTL_1_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CTL_2			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CTL_2_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CTL_3			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CTL_3_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CTL_4			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CTL_4_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CTL_5			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CTL_5_OFFSET>>2]);
 	aError("CPH_CFIFO_DSP_CPH_CTL_6			= 0x%08x\n",
 		base_addr[CPH_CFIFO_DSP_CPH_CTL_6_OFFSET>>2]);
 	aError("CPH_CFIFO_DSP_CPH_CTL_7			= 0x%08x\n",
 		base_addr[CPH_CFIFO_DSP_CPH_CTL_7_OFFSET>>2]);
 	aError("CPH_CFIFO_DSP_CPH_CTL_8			= 0x%08x\n",
 		base_addr[CPH_CFIFO_DSP_CPH_CTL_8_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_1			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_1_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_1			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_1_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_2			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_2_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_2			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_2_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_3			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_3_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_3			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_3_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_4			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_4_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_4			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_4_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_5			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_5_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_5			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_5_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_6			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_6_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_6			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_6_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_7			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_7_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_7			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_7_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_8			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_8_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_8			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_8_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_9			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_9_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_9			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_9_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_10			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_10_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_10			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_10_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_CR_11			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_CR_11_OFFSET>>2]);
-	aError("CPH_CFIFO_DSP_CPH_SR_11			= 0x%08x\n",
-		base_addr[CPH_CFIFO_DSP_CPH_SR_11_OFFSET>>2]);
 	aError("CPH_CFIFO_DSP_CPH_CR_12			= 0x%08x\n",
 		base_addr[CPH_CFIFO_DSP_CPH_CR_12_OFFSET>>2]);
 	aError("CPH_CFIFO_DSP_CPH_SR_12			= 0x%08x\n",
@@ -901,75 +753,10 @@ void Dump_Caph_regs(void)
 	aError("CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH4	= 0x%08x\n",
 		base_addr[CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH4_OFFSET>>2]);
 
-	base_addr = ((volatile unsigned int *) (HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR)));
+	base_addr = ((volatile unsigned int *)
+		(HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR)));
 	aError("AADMAC Regs:\n");
 	aError("============\n");
-	aError("CPH_AADMAC_CH1_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH1_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH1_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH1_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH1_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH1_AADMAC_SR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH2_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH2_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH2_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH2_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH2_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH2_AADMAC_SR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH3_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH3_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH3_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH3_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH3_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH3_AADMAC_SR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH4_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH4_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH4_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH4_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH4_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH4_AADMAC_SR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH5_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH5_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH5_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH5_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH5_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH5_AADMAC_SR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH6_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH6_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH6_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH6_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH6_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH6_AADMAC_SR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH7_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH7_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH7_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH7_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH7_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH7_AADMAC_SR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH8_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH8_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH8_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH8_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH8_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH8_AADMAC_SR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH9_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH9_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH9_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH9_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH9_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH9_AADMAC_SR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH10_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH10_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH10_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH10_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH10_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH10_AADMAC_SR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH11_AADMAC_CR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH11_AADMAC_CR_1_OFFSET>>2]);
-	aError("CPH_AADMAC_CH11_AADMAC_CR_2		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH11_AADMAC_CR_2_OFFSET>>2]);
-	aError("CPH_AADMAC_CH11_AADMAC_SR_1		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH11_AADMAC_SR_1_OFFSET>>2]);
 	aError("CPH_AADMAC_CH12_AADMAC_CR_1		= 0x%08x\n",
 		base_addr[CPH_AADMAC_CH12_AADMAC_CR_1_OFFSET>>2]);
 	aError("CPH_AADMAC_CH12_AADMAC_CR_2		= 0x%08x\n",
@@ -1010,28 +797,6 @@ void Dump_Caph_regs(void)
 		base_addr[CPH_AADMAC_CH4_AADMAC_TS_OFFSET>>2]);
 	aError("CPH_AADMAC_CH1_2_EXTENDED_WRAP		= 0x%08x\n",
 		base_addr[CPH_AADMAC_CH1_2_EXTENDED_WRAP_OFFSET>>2]);
-	aError("CPH_AADMAC_CH1_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH1_AADMAC_CR_3_OFFSET>>2]);
-	aError("CPH_AADMAC_CH2_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH2_AADMAC_CR_3_OFFSET>>2]);
-	aError("CPH_AADMAC_CH3_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH3_AADMAC_CR_3_OFFSET>>2]);
-	aError("CPH_AADMAC_CH4_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH4_AADMAC_CR_3_OFFSET>>2]);
-	aError("CPH_AADMAC_CH5_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH5_AADMAC_CR_3_OFFSET>>2]);
-	aError("CPH_AADMAC_CH6_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH6_AADMAC_CR_3_OFFSET>>2]);
-	aError("CPH_AADMAC_CH7_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH7_AADMAC_CR_3_OFFSET>>2]);
-	aError("CPH_AADMAC_CH8_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH8_AADMAC_CR_3_OFFSET>>2]);
-	aError("CPH_AADMAC_CH9_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH9_AADMAC_CR_3_OFFSET>>2]);
-	aError("CPH_AADMAC_CH10_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH10_AADMAC_CR_3_OFFSET>>2]);
-	aError("CPH_AADMAC_CH11_AADMAC_CR_3		= 0x%08x\n",
-		base_addr[CPH_AADMAC_CH11_AADMAC_CR_3_OFFSET>>2]);
 	aError("CPH_AADMAC_CH12_AADMAC_CR_3		= 0x%08x\n",
 		base_addr[CPH_AADMAC_CH12_AADMAC_CR_3_OFFSET>>2]);
 	aError("CPH_AADMAC_CH13_AADMAC_CR_3		= 0x%08x\n",
@@ -1044,4 +809,171 @@ void Dump_Caph_regs(void)
 		base_addr[CPH_AADMAC_CH16_AADMAC_CR_3_OFFSET>>2]);
 	aError("CPH_AADMAC_AADMAC_GCR_1			= 0x%08x\n",
 		base_addr[CPH_AADMAC_AADMAC_GCR_1_OFFSET>>2]);
+
+	base_addr = ((volatile unsigned int *)
+		(HW_IO_PHYS_TO_VIRT(AHINTC_BASE_ADDR)));
+	aError("AHINTC Regs:\n");
+	aError("===========\n");
+	aError("AHINTC_DSP_AHINTC_CONTROL		= 0x%08x\n",
+		base_addr[AHINTC_DSP_AHINTC_CONTROL_OFFSET>>2]);
+	aError("AHINTC_DSP_LEVELDETECT_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_LEVELDETECT_0_OFFSET>>2]);
+	aError("AHINTC_DSP_LEVELDETECT_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_LEVELDETECT_1_OFFSET>>2]);
+	aError("AHINTC_DSP_LEVELDETECT_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_LEVELDETECT_2_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_ARM_STD_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_ARM_STD_0_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_ARM_STD_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_ARM_STD_1_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_ARM_STD_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_ARM_STD_2_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_ARM_ERR_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_ARM_ERR_0_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_ARM_ERR_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_ARM_ERR_1_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_ARM_ERR_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_ARM_ERR_2_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_DSP_STD_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_DSP_STD_0_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_DSP_STD_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_DSP_STD_1_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_DSP_STD_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_DSP_STD_2_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_DSP_ERR_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_DSP_ERR_0_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_DSP_ERR_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_DSP_ERR_1_OFFSET>>2]);
+	aError("AHINTC_DSP_STATUS_DSP_ERR_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_STATUS_DSP_ERR_2_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_ARM_STD_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_ARM_STD_0_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_ARM_STD_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_ARM_STD_1_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_ARM_STD_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_ARM_STD_2_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_ARM_ERR_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_ARM_ERR_0_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_ARM_ERR_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_ARM_ERR_1_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_ARM_ERR_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_ARM_ERR_2_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_DSP_STD_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_DSP_STD_0_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_DSP_STD_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_DSP_STD_1_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_DSP_STD_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_DSP_STD_2_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_DSP_ERR_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_DSP_ERR_0_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_DSP_ERR_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_DSP_ERR_1_OFFSET>>2]);
+	aError("AHINTC_DSP_CLEAR_DSP_ERR_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_CLEAR_DSP_ERR_2_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_ARM_STD_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_ARM_STD_0_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_ARM_STD_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_ARM_STD_1_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_ARM_STD_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_ARM_STD_2_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_ARM_ERR_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_ARM_ERR_0_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_ARM_ERR_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_ARM_ERR_1_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_ARM_ERR_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_ARM_ERR_2_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_DSP_STD_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_DSP_STD_0_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_DSP_STD_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_DSP_STD_1_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_DSP_STD_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_DSP_STD_2_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_DSP_ERR_0		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_DSP_ERR_0_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_DSP_ERR_1		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_DSP_ERR_1_OFFSET>>2]);
+	aError("AHINTC_DSP_ENABLE_DSP_ERR_2		= 0x%08x\n",
+		base_addr[AHINTC_DSP_ENABLE_DSP_ERR_2_OFFSET>>2]);
+	aError("AHINTC_AHINTC_CONTROL			= 0x%08x\n",
+		base_addr[AHINTC_AHINTC_CONTROL_OFFSET>>2]);
+	aError("AHINTC_LEVELDETECT_0			= 0x%08x\n",
+		base_addr[AHINTC_LEVELDETECT_0_OFFSET>>2]);
+	aError("AHINTC_LEVELDETECT_1			= 0x%08x\n",
+		base_addr[AHINTC_LEVELDETECT_1_OFFSET>>2]);
+	aError("AHINTC_LEVELDETECT_2			= 0x%08x\n",
+		base_addr[AHINTC_LEVELDETECT_2_OFFSET>>2]);
+	aError("AHINTC_STATUS_ARM_STD_0			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_ARM_STD_0_OFFSET>>2]);
+	aError("AHINTC_STATUS_ARM_STD_1			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_ARM_STD_1_OFFSET>>2]);
+	aError("AHINTC_STATUS_ARM_STD_2			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_ARM_STD_2_OFFSET>>2]);
+	aError("AHINTC_STATUS_ARM_ERR_0			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_ARM_ERR_0_OFFSET>>2]);
+	aError("AHINTC_STATUS_ARM_ERR_1			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_ARM_ERR_1_OFFSET>>2]);
+	aError("AHINTC_STATUS_ARM_ERR_2			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_ARM_ERR_2_OFFSET>>2]);
+	aError("AHINTC_STATUS_DSP_STD_0			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_DSP_STD_0_OFFSET>>2]);
+	aError("AHINTC_STATUS_DSP_STD_1			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_DSP_STD_1_OFFSET>>2]);
+	aError("AHINTC_STATUS_DSP_STD_2			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_DSP_STD_2_OFFSET>>2]);
+	aError("AHINTC_STATUS_DSP_ERR_0			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_DSP_ERR_0_OFFSET>>2]);
+	aError("AHINTC_STATUS_DSP_ERR_1			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_DSP_ERR_1_OFFSET>>2]);
+	aError("AHINTC_STATUS_DSP_ERR_2			= 0x%08x\n",
+		base_addr[AHINTC_STATUS_DSP_ERR_2_OFFSET>>2]);
+	aError("AHINTC_CLEAR_ARM_STD_0			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_ARM_STD_0_OFFSET>>2]);
+	aError("AHINTC_CLEAR_ARM_STD_1			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_ARM_STD_1_OFFSET>>2]);
+	aError("AHINTC_CLEAR_ARM_STD_2			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_ARM_STD_2_OFFSET>>2]);
+	aError("AHINTC_CLEAR_ARM_ERR_0			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_ARM_ERR_0_OFFSET>>2]);
+	aError("AHINTC_CLEAR_ARM_ERR_1			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_ARM_ERR_1_OFFSET>>2]);
+	aError("AHINTC_CLEAR_ARM_ERR_2			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_ARM_ERR_2_OFFSET>>2]);
+	aError("AHINTC_CLEAR_DSP_STD_0			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_DSP_STD_0_OFFSET>>2]);
+	aError("AHINTC_CLEAR_DSP_STD_1			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_DSP_STD_1_OFFSET>>2]);
+	aError("AHINTC_CLEAR_DSP_STD_2			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_DSP_STD_2_OFFSET>>2]);
+	aError("AHINTC_CLEAR_DSP_ERR_0			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_DSP_ERR_0_OFFSET>>2]);
+	aError("AHINTC_CLEAR_DSP_ERR_1			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_DSP_ERR_1_OFFSET>>2]);
+	aError("AHINTC_CLEAR_DSP_ERR_2			= 0x%08x\n",
+		base_addr[AHINTC_CLEAR_DSP_ERR_2_OFFSET>>2]);
+	aError("AHINTC_ENABLE_ARM_STD_0			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_ARM_STD_0_OFFSET>>2]);
+	aError("AHINTC_ENABLE_ARM_STD_1			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_ARM_STD_1_OFFSET>>2]);
+	aError("AHINTC_ENABLE_ARM_STD_2			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_ARM_STD_2_OFFSET>>2]);
+	aError("AHINTC_ENABLE_ARM_ERR_0			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_ARM_ERR_0_OFFSET>>2]);
+	aError("AHINTC_ENABLE_ARM_ERR_1			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_ARM_ERR_1_OFFSET>>2]);
+	aError("AHINTC_ENABLE_ARM_ERR_2			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_ARM_ERR_2_OFFSET>>2]);
+	aError("AHINTC_ENABLE_DSP_STD_0			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_DSP_STD_0_OFFSET>>2]);
+	aError("AHINTC_ENABLE_DSP_STD_1			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_DSP_STD_1_OFFSET>>2]);
+	aError("AHINTC_ENABLE_DSP_STD_2			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_DSP_STD_2_OFFSET>>2]);
+	aError("AHINTC_ENABLE_DSP_ERR_0			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_DSP_ERR_0_OFFSET>>2]);
+	aError("AHINTC_ENABLE_DSP_ERR_1			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_DSP_ERR_1_OFFSET>>2]);
+	aError("AHINTC_ENABLE_DSP_ERR_2			= 0x%08x\n",
+		base_addr[AHINTC_ENABLE_DSP_ERR_2_OFFSET>>2]);
+
+
 }

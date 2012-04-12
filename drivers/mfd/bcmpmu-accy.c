@@ -86,6 +86,7 @@ enum bcmpmu_usb_det_state_t {
 	USB_CONNECTED,
 	USB_DETECT,
 	USB_RETRY,
+	USB_DISCONNECTED,
 };
 
 static const char *const chrgr_type_str[] = {
@@ -149,6 +150,7 @@ struct bcmpmu_accy {
 	enum bcmpmu_bc_t bc;
 };
 static struct bcmpmu_accy *bcmpmu_accy;
+static void bc_detection(struct bcmpmu_accy *paccy);
 
 static unsigned int get_bc_status(struct bcmpmu_accy *paccy)
 {
@@ -159,18 +161,8 @@ static unsigned int get_bc_status(struct bcmpmu_accy *paccy)
 
 	if ((paccy->bc == BCMPMU_BC_BB_BC11) ||
 	    (paccy->bc == BCMPMU_BC_BB_BC12)) {
-		u32 insurance = 100;
-
-		while (insurance--) {
-			status = temp = 0;
-			if (bcm_hsotgctrl_bc_status(&status) == 0) {
-				mdelay(15);
-				bcm_hsotgctrl_bc_status(&temp);
-				if (temp == status)
-					return (unsigned int)status;
-			}
-		}
-		return 0;
+		bcm_hsotgctrl_bc_status(&status);
+		return status;
 	} else if (paccy->bc == BCMPMU_BC_PMU_BC12) {
 		ret = bcmpmu->read_dev(bcmpmu,
 				       PMU_REG_BC_STATUS_DONE,
@@ -199,7 +191,7 @@ static unsigned int get_bc_status(struct bcmpmu_accy *paccy)
 		return 0;
 }
 
-static enum bcmpmu_chrgr_type_t get_charger_type(struct bcmpmu_accy *paccy,
+static enum bcmpmu_chrgr_type_t _get_charger_type(struct bcmpmu_accy *paccy,
 						 unsigned int bc_status)
 {
 	enum bcmpmu_chrgr_type_t type;
@@ -572,6 +564,34 @@ static void send_chrgr_event(struct bcmpmu *pmu,
 	power_supply_changed(ps);
 }
 
+static void bcdldo_off(struct bcmpmu_accy *paccy)
+{
+	struct bcmpmu *bcmpmu = paccy->bcmpmu;
+
+	bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL5_USB_DET_LDO_EN, false,
+			  bcmpmu->regmap[PMU_REG_MBCCTRL5_USB_DET_LDO_EN].mask);
+}
+
+static void bcdldo_on(struct bcmpmu_accy *paccy)
+{
+	struct bcmpmu *bcmpmu = paccy->bcmpmu;
+
+	bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL5_USB_DET_LDO_EN,
+			  bcmpmu->regmap[PMU_REG_MBCCTRL5_USB_DET_LDO_EN].mask,
+			  bcmpmu->regmap[PMU_REG_MBCCTRL5_USB_DET_LDO_EN].mask);
+}
+
+static void bcdldo_cycle_power(struct bcmpmu_accy *paccy)
+{
+	bcdldo_off(paccy);
+	/* Scope trace shows the decay time of the BCDLDO line
+	 * is about 4ms. Hence a 5ms delay here to ensure proper
+	 * power cycle.
+	 */
+	usleep_range(4000, 6000);
+	bcdldo_on(paccy);
+}
+
 static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu_accy *paccy = data;
@@ -584,18 +604,42 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_USBINS:
-		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_IN, NULL);
+		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&
+		    (paccy->bc != BCMPMU_BC_BB_BC12))
+			send_usb_event(bcmpmu, BCMPMU_USB_EVENT_IN, NULL);
 		break;
 	case PMU_IRQ_USBRM:
-		schedule_delayed_work(&paccy->det_work, 0);
+		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&
+		    (paccy->bc != BCMPMU_BC_BB_BC12)) {
+			schedule_delayed_work(&paccy->det_work, 0);
+		} else {
+			/* The state m/c already has a check of UBPD status
+			 * to determine a removal and move the state machine
+			 * to IDLE. But control can sometimes reach the state
+			 * m/c before the PMU UBPD bit has changed. Hence
+			 * using a dummy DISCONNECTED state to force-reset
+			 * the state m/c back to IDLE.
+			 */
+			paccy->det_state = USB_DISCONNECTED;
+			bc_detection(paccy);
+		}
 		break;
 	case PMU_IRQ_CHGDET_LATCH:
-		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_CHGDET_LATCH, NULL);
-		schedule_delayed_work(&paccy->det_work, msecs_to_jiffies(0));
+		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&
+		    (paccy->bc != BCMPMU_BC_BB_BC12)) {
+			send_usb_event(bcmpmu, BCMPMU_USB_EVENT_CHGDET_LATCH,
+				       NULL);
+			schedule_delayed_work(&paccy->det_work,
+					      msecs_to_jiffies(0));
+		} else {
+			bc_detection(paccy);
+		}
 		break;
 
 	case PMU_IRQ_VBUS_1V5_F:
-		schedule_delayed_work(&paccy->det_work, 0);
+		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&
+		    (paccy->bc != BCMPMU_BC_BB_BC12))
+			schedule_delayed_work(&paccy->det_work, 0);
 		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_SESSION_INVALID, NULL);
 
 		bcmpmu->usb_accy_data.usb_dis = 1;
@@ -604,14 +648,22 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_VBUS_4V5_R:
-		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_VBUS_VALID, NULL);
 		paccy->det_state = USB_IDLE;
-		schedule_delayed_work(&paccy->det_work, 0);
+		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&
+		    (paccy->bc != BCMPMU_BC_BB_BC12)) {
+			send_usb_event(bcmpmu, BCMPMU_USB_EVENT_VBUS_VALID,
+				       NULL);
+			schedule_delayed_work(&paccy->det_work, 0);
+		} else {
+			bc_detection(paccy);
+		}
 		break;
 
 	case PMU_IRQ_VBUS_4V5_F:
 		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_VBUS_INVALID, NULL);
-		schedule_delayed_work(&paccy->det_work, 0);
+		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&
+		    (paccy->bc != BCMPMU_BC_BB_BC12))
+			schedule_delayed_work(&paccy->det_work, 0);
 		break;
 
 	case PMU_IRQ_IDCHG:
@@ -641,6 +693,9 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_CHGDET_TO:
+		if ((paccy->bc == BCMPMU_BC_BB_BC11) ||
+		    (paccy->bc == BCMPMU_BC_BB_BC12))
+			bc_detection(paccy);
 		break;
 
 	case PMU_IRQ_FGC:
@@ -659,6 +714,7 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		pr_info("%s : PMU_IRQ_JIG_USB_INS\n",__func__);
 		blocking_notifier_call_chain(&paccy->event[BCMPMU_JIG_EVENT_USB].
 					     notifiers, BCMPMU_JIG_EVENT_USB, NULL);
+		break;
 
 	case PMU_IRQ_EOC:
 		schedule_delayed_work(&paccy->det_work, 0);
@@ -744,6 +800,173 @@ static const struct attribute_group bcmpmu_accy_attr_group = {
 };
 #endif
 
+#define BC_MAX_RETRIES		3
+
+static int get_charger_type(struct bcmpmu_accy *paccy)
+{
+	u32 bc_status;
+	int charger_type = PMU_CHRGR_TYPE_NONE;
+
+	bc_status = get_bc_status(paccy);
+	pr_accy(FLOW, "%s: bc_status: 0x%x\n", __func__, bc_status);
+
+	if (is_detection_done(paccy, bc_status)) {
+		charger_type = _get_charger_type(paccy, bc_status);
+		log_charger_type(charger_type);
+	}
+
+	return charger_type;
+}
+
+static enum bcmpmu_usb_type_t get_usb_type(enum bcmpmu_chrgr_type_t chrgr_type)
+{
+	enum bcmpmu_usb_type_t usb_type;
+
+	switch (chrgr_type) {
+	case PMU_CHRGR_TYPE_SDP:
+		usb_type = PMU_USB_TYPE_SDP;
+		break;
+	case PMU_CHRGR_TYPE_CDP:
+		usb_type = PMU_USB_TYPE_CDP;
+		break;
+	case PMU_CHRGR_TYPE_ACA:
+		usb_type = PMU_USB_TYPE_ACA;
+		break;
+	default:
+		usb_type = PMU_USB_TYPE_NONE;
+		break;
+	}
+
+	return usb_type;
+}
+
+static void bc_detection(struct bcmpmu_accy *paccy)
+{
+	struct bcmpmu *bcmpmu = paccy->bcmpmu;
+	int id;
+	int vbus;
+	enum bcmpmu_chrgr_type_t chrgr_type = PMU_USB_TYPE_NONE;
+	enum bcmpmu_usb_type_t usb_type = PMU_CHRGR_TYPE_NONE;
+	static bool type2_retry;
+
+	bcmpmu_usb_get(bcmpmu, BCMPMU_USB_CTRL_GET_SESSION_STATUS, &vbus);
+	bcmpmu_usb_get(bcmpmu, BCMPMU_USB_CTRL_GET_ID_VALUE, &id);
+
+	pr_accy(FLOW, "%s: vbus=0x%x, id: 0x%x, state: %d\n", __func__, vbus,
+		id, paccy->det_state);
+
+	switch (paccy->det_state) {
+	case USB_IDLE:
+		if (vbus != 0 && id != PMU_USB_ID_GROUND) {
+			/* Scheduling delay can cause control to reach here
+			 * after BCDLDO is fully ON and BC clock OFF. BC clock
+			 * gets enabled here. Hence, restart BC by
+			 * power-cycling BCDLDO to get proper detection.
+			 */
+			enable_bc_clock(paccy, true);
+			wake_lock(&paccy->wake_lock);
+			bcdldo_cycle_power(paccy);
+			paccy->retry_cnt = 0;
+			paccy->det_state = USB_DETECT;
+			type2_retry = false;
+		}
+		break;
+	case USB_DETECT:
+		chrgr_type = get_charger_type(paccy);
+		if (chrgr_type == PMU_CHRGR_TYPE_NONE) {
+			/* No valid charger type detected, retry */
+			if (paccy->retry_cnt < BC_MAX_RETRIES) {
+				paccy->retry_cnt++;
+				bcdldo_cycle_power(paccy);
+			} else {
+				pr_accy(FLOW, "%s: max retries done\n",
+					__func__);
+				paccy->det_state = USB_IDLE;
+				bcdldo_off(paccy);
+			}
+		} else if (chrgr_type == PMU_CHRGR_TYPE_TYPE2 &&
+			   type2_retry == false) {
+			type2_retry = true;
+			/* If the USB cable is inserted very slowly, the BC
+			 * hardware returns charger type as TYPE2. So to really
+			 * confirm whether the charger type is type2, we need
+			 * to restart detection. This is done by power cycling
+			 * the BCDLDO.
+			 */
+			pr_accy(FLOW, "%s: re-checking PMU_CHRGR_TYPE_TYPE2\n",
+				__func__);
+			chrgr_type = PMU_CHRGR_TYPE_NONE;
+			bcdldo_cycle_power(paccy);
+		} else {
+			/* Detection is successful */
+			paccy->det_state = USB_CONNECTED;
+			bcdldo_off(paccy);
+		}
+		break;
+	case USB_CONNECTED:
+	{
+		bool stat;
+		stat = bcmpmu->get_env_bit_status(bcmpmu, PMU_ENV_P_UBPD_INT);
+		if (stat != true) {
+			paccy->det_state = USB_IDLE;
+		} else {
+			usb_type = bcmpmu->usb_accy_data.usb_type;
+			chrgr_type = bcmpmu->usb_accy_data.chrgr_type;
+		}
+		break;
+	}
+	case USB_DISCONNECTED:
+		/* After USB_RM interrupt, the USBPD_INT may still be active
+		 * when control reaches this state machine. Hence this new
+		 * state to reset the state machine on USB removal. This will
+		 * avoid having to add a undertain delay in the code.
+		 */
+		paccy->det_state = USB_IDLE;
+		break;
+	default:
+		paccy->det_state = USB_IDLE;
+		break;
+	} /* end of state m/c */
+
+	usb_type = get_usb_type(chrgr_type);
+	pr_accy(FLOW, "%s, usb=%d, chrgr=%d, state: %d\n", __func__, usb_type,
+		chrgr_type, paccy->det_state);
+
+	if (paccy->det_state == USB_IDLE && wake_lock_active(&paccy->wake_lock))
+		wake_unlock(&paccy->wake_lock);
+
+	if ((usb_type < PMU_USB_TYPE_MAX) &&
+	    (usb_type != bcmpmu->usb_accy_data.usb_type)) {
+		bcmpmu->usb_accy_data.usb_type = usb_type;
+		send_usb_event(paccy->bcmpmu,
+			       BCMPMU_USB_EVENT_USB_DETECTION, &usb_type);
+	}
+
+	if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
+	    (chrgr_type != bcmpmu->usb_accy_data.chrgr_type)) {
+		bcmpmu->usb_accy_data.chrgr_type = chrgr_type;
+		bcmpmu->usb_accy_data.max_curr_chrgr =
+		    chrgr_curr_lmt[chrgr_type];
+		send_chrgr_event(paccy->bcmpmu,
+				 BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+				 &chrgr_type);
+		send_chrgr_event(paccy->bcmpmu,
+				 BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+				 &chrgr_curr_lmt[chrgr_type]);
+	}
+
+	if (paccy->det_state == USB_IDLE && paccy->clock_en != 0)
+		enable_bc_clock(paccy, false);
+}
+
+static void bc_det_work(struct work_struct *work)
+{
+	struct bcmpmu_accy *paccy =
+	    container_of(work, struct bcmpmu_accy, det_work.work);
+
+	bc_detection(paccy);
+}
+
 static void usb_det_work(struct work_struct *work)
 {
 	int ret;
@@ -784,7 +1007,8 @@ static void usb_det_work(struct work_struct *work)
 			pr_accy(FLOW, "%s, bc_status=0x%X, retry=%d\n",
 				__func__, bc_status, paccy->retry_cnt);
 			if (is_detection_done(paccy, bc_status)) {
-				chrgr_type = get_charger_type(paccy, bc_status);
+				chrgr_type = _get_charger_type(paccy,
+							       bc_status);
 				log_charger_type(chrgr_type);
 				if (chrgr_type != PMU_CHRGR_TYPE_NONE) {
 					paccy->det_state = USB_CONNECTED;
@@ -1388,7 +1612,13 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	paccy->bc = pdata->bc;
 
 	INIT_DELAYED_WORK(&paccy->adp_work, usb_adp_work);
-	INIT_DELAYED_WORK(&paccy->det_work, usb_det_work);
+	if ((paccy->bc == BCMPMU_BC_BB_BC11) ||
+	    (paccy->bc == BCMPMU_BC_BB_BC12)) {
+		INIT_DELAYED_WORK(&paccy->det_work, bc_det_work);
+	} else {
+		INIT_DELAYED_WORK(&paccy->det_work, usb_det_work);
+	}
+
 	wake_lock_init(&paccy->wake_lock, WAKE_LOCK_SUSPEND, "usb_accy");
 	for (i = 0; i < BCMPMU_EVENT_MAX; i++) {
 		paccy->event[i].event_id = i;
@@ -1458,7 +1688,12 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 
 	bc_det_sts_clear(paccy);
 	bc_det_restart(paccy);
-	schedule_delayed_work(&paccy->det_work, 500);
+
+	if ((paccy->bc == BCMPMU_BC_BB_BC11) ||
+	    (paccy->bc == BCMPMU_BC_BB_BC12))
+		schedule_delayed_work(&paccy->det_work, 0);
+	else
+		schedule_delayed_work(&paccy->det_work, 500);
 	return 0;
 
       err:

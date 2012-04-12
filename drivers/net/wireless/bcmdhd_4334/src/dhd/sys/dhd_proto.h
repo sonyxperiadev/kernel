@@ -34,7 +34,8 @@
 #include <wlioctl.h>
 
 #ifndef IOCTL_RESP_TIMEOUT
-#define IOCTL_RESP_TIMEOUT  20000 /* In milli second */
+/* PVR patch#6 : reduce IOCTL response time 20s to 5s */
+#define IOCTL_RESP_TIMEOUT  5000 /* In milli second */
 #endif /* IOCTL_RESP_TIMEOUT */
 
 /*

@@ -357,4 +357,15 @@ cUInt16 chal_caph_dma_check_dmabuffer(CHAL_HANDLE handle,
 cUInt32 chal_caph_dma_read_timestamp(CHAL_HANDLE handle,
 				     CAPH_DMA_CHANNEL_e channel);
 
+/**
+*
+*  @brief  enable dma channel hi buffer
+*
+*  @param  handle  (in) handle of the caph dma block
+*  @param  channel  (in) caph dma channel id
+*
+*  @return cVoid
+*****************************************************************************/
+cVoid chal_caph_dma_en_hibuffer(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e channel);
+
 #endif /* _CHAL_CAPH_DMA_ */

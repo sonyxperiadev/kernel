@@ -2659,9 +2659,9 @@ static int
 dhd_open(struct net_device *net)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(net);
-//#ifdef PROP_TXSTATUS
-//	uint up = 0;
-//#endif
+#ifdef PROP_TXSTATUS
+	uint up = 0;
+#endif
 #ifdef TOE
 	uint32 toe_ol;
 #endif
@@ -4006,6 +4006,7 @@ dhd_net_attach(dhd_pub_t *dhdp, int ifidx)
 #else
 		net->netdev_ops = &dhd_ops_pri;
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31) */
+		memcpy(temp_addr, dhd->pub.mac.octet, ETHER_ADDR_LEN);
 	} else {
 		/*
 		 * We have to use the primary MAC for virtual interfaces
@@ -4312,16 +4313,6 @@ static int __init
 dhd_module_init(void)
 {
 	int error = 0;
-struct file *fp;
-	fp=filp_open("/system/vendor/firmware",O_RDONLY,0);
-	if(IS_ERR(fp))
-	{
-		fp=NULL;
-		return -ENODEV;
-	}
-	else
-		filp_close(fp,NULL);
-
 
 #if 1 && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 	int retry = POWERUP_MAX_RETRY;
@@ -4557,12 +4548,12 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 	/* Totally stop the timer */
 	if (!wdtick && dhd->wd_timer_valid == TRUE) {
 		dhd->wd_timer_valid = FALSE;
-		dhd_os_spin_unlock(pub, flags);
 #ifdef DHDTHREAD
 		del_timer_sync(&dhd->timer);
 #else
 		del_timer(&dhd->timer);
 #endif /* DHDTHREAD */
+		dhd_os_spin_unlock(pub, flags);
 		return;
 	}
 
@@ -5233,7 +5224,7 @@ int net_os_wake_lock_timeout(struct net_device *dev)
 		ret = dhd_os_wake_lock_timeout(&dhd->pub);
 	return ret;
 }
-#ifdef PNO_SUPPORT
+#if defined(PNO_SUPPORT) && defined(CONFIG_HAS_WAKELOCK)
 int net_os_wake_lock_timeout_for_pno(struct net_device *dev, int sec)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
@@ -5242,9 +5233,7 @@ int net_os_wake_lock_timeout_for_pno(struct net_device *dev, int sec)
 
 	if (dhd) {
 		spin_lock_irqsave(&dhd->wakelock_spinlock, flags);
-#ifdef CONFIG_HAS_WAKELOCK
 		wake_lock_timeout(&dhd->pub.pno_wakelock, HZ * sec);
-#endif
 		spin_unlock_irqrestore(&dhd->wakelock_spinlock, flags);
 	}
 	return ret;

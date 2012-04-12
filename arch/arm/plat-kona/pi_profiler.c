@@ -102,7 +102,8 @@ static int pi_prof_get_counter(struct profiler *profiler,
 	if (!pi)
 		return -ENODEV;
 	*overflow = 0;
-	*counter = pwr_mgr_pi_counter_read(pi_profiler->pi_id, overflow);
+	*counter = pwr_mgr_pi_counter_read(pi_profiler->pi_id,
+					(bool *)overflow);
 	return 0;
 }
 
