@@ -40,6 +40,7 @@
 #include <linux/broadcom/bcmpmu_audio.h>
 
 #include <plat/chal/chal_aci.h>
+#include <plat/kona_mic_bias.h>
 
 /* TODO:
  * 1. There is a issue now with the interrupts being issued from ACI on headset
@@ -233,9 +234,6 @@ static CHAL_ACI_vref_config_t aci_vref_config = { CHAL_ACI_VREF_OFF };
 
 static int aci_interface_init(struct mic_t *mic);
 static int aci_interface_init_micbias_off(struct mic_t *mic);
-
-extern void kona_mic_bias_on(void);
-extern void kona_mic_bias_off(void);
 
 /* Function to dump the HW regs */
 #ifdef DEBUG
