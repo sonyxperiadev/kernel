@@ -789,11 +789,11 @@ static int v3d_thread(void *data)
 				KLOG_E("lock acquire failed");
 				do_exit(-1);
 			}
-#if 0
+
 			if (v3d_job_curr == NULL) {
 				continue;
 			}
-#endif
+
 			if (v3d_in_use == 0) {
 				/* Job completed or fatal oom happened or current job was killed as part of app close */
 				if ((v3d_job_curr->job_type == V3D_JOB_BIN)
@@ -826,11 +826,6 @@ static int v3d_thread(void *data)
 								      (((v3d_job_t *)v3d_job_curr)->v3d_job_done_q));
 					}
 					v3d_job_curr = v3d_job_curr->next;
-#if 0
-					if (v3d_job_curr != NULL) {
-						ret = v3d_job_start();
-					}
-#endif
 				} else
 				    if (((v3d_job_curr->job_type ==
 					  V3D_JOB_BIN_REND)
@@ -864,12 +859,6 @@ static int v3d_thread(void *data)
 					}
 
 					v3d_job_curr = v3d_job_curr->next;
-
-#if 0
-					if (v3d_job_curr != NULL) {
-						ret = v3d_job_start();
-					}
-#endif
 				} else if (v3d_job_curr->job_intern_state == 0) {
 #if 0
 					ret = v3d_job_start();	/* What is this? */
@@ -905,11 +894,6 @@ static int v3d_thread(void *data)
 				v3d_job_kill((v3d_job_t *)v3d_job_curr,
 					     V3D_JOB_STATUS_TIMED_OUT);
 				v3d_job_curr = v3d_job_curr->next;
-#if 0
-				if (v3d_job_curr != NULL) {
-					ret = v3d_job_start();
-				}
-#endif
 			}
 		}
 	}
