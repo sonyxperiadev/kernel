@@ -610,8 +610,7 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 				&audioEnableDone,
 				timeout_jiff);
 			if (!jiff_in) {
-				aTrace(LOG_AUDIO_DRIVER,
-					"!!!Timeout on COMMAND_AUDIO_ENABLE"
+				aError("!!!Timeout on COMMAND_AUDIO_ENABLE"
 					" resp!!!\n");
 				init_completion(&audioEnableDone);
 			}

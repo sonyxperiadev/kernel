@@ -1324,7 +1324,7 @@ int AUDDRV_User_CtrlDSP(AudioDrvUserCtrl_t UserCtrlType, Boolean enable,
 			if (param == NULL)
 				return -EINVAL;
 
-			csl_dsp_sp_cnfg_msg((UInt16) enable, 0, 1, spCtrl,
+			csl_dsp_sp_cnfg_msg(1, 0, 1, spCtrl,
 					    (UInt32 *) param);
 			ConfigSP = FALSE;
 		} else {

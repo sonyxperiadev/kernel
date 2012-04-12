@@ -593,8 +593,6 @@ WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY3_MASK2_OFFSET) ,regVal);
 				       KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET))
 			 = (UInt32) 0x0000FFFF);
 
-			/* mdelay(1000); */
-
 			/* srcMixer clock */
 			(*((UInt32 *) (KONA_HUB_CLK_BASE_VA +
 				       KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET))
@@ -848,7 +846,7 @@ static int HandlePlayCommand()
 			aTrace(LOG_AUDIO_DRIVER, "Playback started\n");
 
 			/*  Need to implement some sync mechanism */
-			mdelay(5000);
+			msleep(5000);
 			aTrace(LOG_AUDIO_DRIVER, " Stop playback\n");
 
 			AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_STOP, NULL);
@@ -1066,7 +1064,7 @@ static int HandleCaptCommand()
 
 			aTrace(LOG_AUDIO_DRIVER, "capture started\n");
 
-			mdelay(5000);
+			msleep(5000);
 
 			aTrace(LOG_AUDIO_DRIVER, " Stop capture\n");
 
@@ -1256,7 +1254,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 		AUDDRV_VoiceRender_Stop(drvtype, TRUE);
 
 		/* need to give time to dsp to stop. */
-		mdelay(3);	/* make sure the path turned on */
+		msleep(3);	/* make sure the path turned on */
 
 		AUDDRV_VoiceRender_Shutdown(drvtype);
 
