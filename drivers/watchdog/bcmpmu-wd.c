@@ -237,10 +237,26 @@ static int bcmpmu_wdog_open(struct inode *inode, struct file *file)
 {
 	pr_info("Inside %s\n", __func__);
 
+	/**
+	 * cancel the workqueue which was petting the watchdog
+	 * till now. Now, user space process which has opened
+	 * the watchdog driver should pet it.Failing to do so,
+	 * watchdog driver will do force crash of the kernel
+	 */
+
+	/**
+	 * cancel the work before setting "wd_is_opened"
+	 * This call ensures that either work is cancelled
+	 * (if its waiting for execution) or wait for it
+	 * to finish (if it already executing)
+	 */
+	bcmpmu_wdog_keepalive(wddog, EARLY_PANIC_WORK_DELAY);
+
 	if (test_and_set_bit(0, &wddog->wd_is_opened)) {
 		pr_info("Watchdog : test_and_set_bit failed!!\n");
 		return -EBUSY;
 	}
+
 	bcmpmu_wdog_enable(wddog, true);
 	bcmpmu_wdog_reset(wddog);
 	file->private_data = wddog;
