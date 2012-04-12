@@ -125,7 +125,7 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 	* Regualtor should be on in DSM also
 	*/
 	val &= ~((LDO_MODE_MASK << PM0_SHIFT) | (LDO_MODE_MASK << PM2_SHIFT));
-	val |= ((LDO_NORMAL << PM1_SHIFT) | (LDO_NORMAL << PM3_SHIFT));
+	val |= ((LDO_NORMAL << PM0_SHIFT) | (LDO_NORMAL << PM2_SHIFT));
 	break;
 
 	default:
