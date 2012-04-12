@@ -238,9 +238,9 @@ int bcm_sdiowl_init(void)
 #endif	  
 #if defined(CONFIG_MACH_RHEA_BERRI_EDN40) || defined (CONFIG_MACH_RHEA_BERRI)
 
-      dev->wifi_gpio->reset = 70;
+      dev->wifi_gpio->reset = 115;
       dev->wifi_gpio->reg = -1;
-      dev->wifi_gpio->host_wake = 85;
+      dev->wifi_gpio->host_wake = 74;
       dev->wifi_gpio->shutdown = -1;
 #endif
 
