@@ -1144,7 +1144,8 @@ int pwr_mgr_pm_i2c_var_data_write(const u8 *var_data, int count)
 	if (unlikely
 	    ((pwr_mgr.info->flags & PM_PMU_I2C) == 0
 	     || (count > PWRMGR_I2C_VAR_DATA_REG * 4))) {
-		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - invalid param or not supported\n",
+		pwr_dbg(PWR_LOG_ERR,
+			"%s:ERROR - invalid param or not supported\n",
 			__func__);
 		return -EINVAL;
 	}
