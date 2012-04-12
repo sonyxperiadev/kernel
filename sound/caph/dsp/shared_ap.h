@@ -2678,7 +2678,7 @@ EXTERN UInt16 shared_rhea_audio_test_select			           				AP_SHARED_SEC_DIAGN
 #endif
 
 //#ifdef PTT_SUPPORT	
-EXTERN UInt16 shared_PTT_UL_buffer[2][320]	           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
+EXTERN Int16 shared_PTT_UL_buffer[2][320]	           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
 //#endif
 
 EXTERN UInt32 NOT_USE_shared_memory_end                                     AP_SHARED_SEC_DIAGNOS;
