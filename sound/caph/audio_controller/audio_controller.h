@@ -264,6 +264,16 @@ AudioApp_t AUDCTRL_GetAudioApp(void);
 ****************************************************************************/
 void AUDCTRL_SetUserAudioApp(AudioApp_t audio_app);
 
+/**
+*   Get audio app
+*
+*	@return		AudioApp_t		audio app
+*
+*	@param		none
+*
+****************************************************************************/
+AudioApp_t AUDCTRL_GetUserAudioApp(void);
+
 /*********************************************************************
 *   Save audio app
 *

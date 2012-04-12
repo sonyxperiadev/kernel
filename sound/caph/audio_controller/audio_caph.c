@@ -50,6 +50,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_caph.h"
 #include "caph_common.h"
 #include "audio_trace.h"
+#include "audctrl_policy.h"
 
 #define USE_HR_TIMER
 
@@ -403,6 +404,107 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 	return size;
 }
 
+/*
+Sets the user set audio app based on the App policy
+*/
+
+void AUDIO_Ctrl_SetUserAudioApp(AudioApp_t app)
+{
+	int state;
+	AudioApp_t userapp;
+	AudioMode_t mode;
+
+	if (app != AUDIO_APP_MUSIC) {
+
+		AUDCTRL_SetUserAudioApp(app);
+
+		/*Get current state If we are already in state incall,record,FM
+		we need to apply the new app prof here based on policy,For app
+		prof set from user side with setparams like GVS,VoIP we may get
+		the set app profile call after we start the record path.
+		we are reloading the correct App here.
+		*/
+
+		state =  AUDIO_Policy_GetState();
+
+		if (state == BRCM_STATE_INCALL || state == BRCM_STATE_FM ||
+			state == BRCM_STATE_RECORD) {
+			userapp = AUDIO_Policy_Get_Profile(app);
+			aTrace(LOG_AUDIO_CNTLR, "AudioPolicy state=%d, App=%d\n"
+					, state, userapp);
+			if (userapp != AUDCTRL_GetAudioApp()) {
+				/*Save user app,set audio mode methods below
+				will query the current audioapp*/
+				AUDCTRL_SaveAudioApp(userapp);
+				mode = AUDCTRL_GetAudioMode();
+
+				switch (userapp) {
+				case AUDIO_APP_VT_CALL:
+				case AUDIO_APP_VT_CALL_WB:
+					AUDCTRL_SetAudioMode(mode, userapp);
+				break;
+				/*Assuming Both HQ and RECORDING is
+				at 48khz for SS*/
+				case AUDIO_APP_RECORDING_HQ:
+				case AUDIO_APP_RECORDING:
+				case AUDIO_APP_RECORDING_GVS:
+					AUDCTRL_SetAudioMode_ForMusicRecord(
+					mode,
+					pathID[CTL_STREAM_PANEL_PCMIN-1]);
+				break;
+				case AUDIO_APP_VOIP:
+				case AUDIO_APP_VOIP_INCOMM:
+					AUDCTRL_SetAudioMode_ForMusicRecord(
+					mode,
+					pathID[CTL_STREAM_PANEL_PCMIN-1]);
+					AUDCTRL_SetAudioMode_ForMusicPlayback(
+					mode,
+					pathID[CTL_STREAM_PANEL_PCMOUT1-1],
+					FALSE);
+				break;
+				case AUDIO_APP_LOOPBACK:
+					AUDCTRL_SetAudioMode(mode, userapp);
+				break;
+				/* For FM play case we alawys set FM mode first
+				and then start FM,So we are always in FM app
+				when we start.we will not end up here for
+				present FM design
+				*/
+				case AUDIO_APP_FM:
+					AUDCTRL_SetAudioMode_ForFM(mode,
+						pathID[CTL_STREAM_PANEL_FM-1],
+								FALSE);
+				aWarn("WARNING: %s new app requested = %d",
+							__func__, app);
+				break;
+				/*For Music,we will query the app policy and
+				apply the correct app. Voice call app is not
+				set from user space
+				*/
+				case AUDIO_APP_MUSIC:
+				case AUDIO_APP_VOICE_CALL:
+				case AUDIO_APP_VOICE_CALL_WB:
+				case AUDIO_APP_RESERVED12:
+				case AUDIO_APP_RESERVED13:
+				case AUDIO_APP_RESERVED14:
+				case AUDIO_APP_RESERVED15:
+				/*To keep compiler happy*/
+				aWarn("In %s new app requested=%d",
+					__func__, app);
+				break;
+				default:
+				/*We should not be here*/
+				aError("!!Error in %s new app requested=%d",
+				__func__, app);
+				break;
+				}
+			}
+		}
+
+	}
+}
+
+
 /**
   * AUDIO_Ctrl_Trigger
   *      Client call this function to execute audio HAL functions.
@@ -586,6 +688,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 	unsigned int len;
 	int i;
 	unsigned int path;
+	int app_profile;
 
 	aTrace(LOG_AUDIO_CNTLR,
 		"AUDIO_Ctrl_Process action_code=%d %s\n", action_code,
@@ -621,15 +724,24 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_Start_t *param_start =
 			    (BRCM_AUDIO_Param_Start_t *) arg_param;
+			AudioMode_t  newmode = GetAudioModeBySink(
+					param_start->pdev_prop->p[0].sink);
 
 			CAPH_ASSERT(param_start->stream >=
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && param_start->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+
+			newmode = AUDIO_Policy_Get_Mode( \
+				param_start->pdev_prop->p[0].sink);
+			app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_MUSIC);
+			AUDCTRL_SaveAudioMode((AudioMode_t)newmode);
+			AUDCTRL_SaveAudioApp((AudioApp_t)app_profile);
+
 			if (param_start->pdev_prop->p[0].drv_type ==
 			    AUDIO_DRIVER_PLAY_AUDIO) {
 
-				/* Enable the playback the path */
+				/* Enable the playback path */
 				AUDCTRL_EnablePlay(
 					param_start->pdev_prop->p[0].source,
 					param_start->pdev_prop->p[0].sink,
@@ -756,6 +868,38 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			BRCM_AUDIO_Param_Start_t *param_start =
 			    (BRCM_AUDIO_Param_Start_t *) arg_param;
 
+			AudioApp_t app_prof = AUDIO_APP_RECORDING;
+			AudioMode_t  new_mode = AUDIO_MODE_SPEAKERPHONE;
+			AudioMode_t cur_mode;
+
+			cur_mode = AUDCTRL_GetAudioMode();
+
+			/*Audio app for Voip,GVS will be set from user side*/
+			app_prof = AUDCTRL_GetUserAudioApp();
+
+			/*use current mode based on mode earpiece or speaker*/
+			if (app_prof == AUDIO_APP_VOIP ||
+				app_prof == AUDIO_APP_VOIP_INCOMM)
+				new_mode = cur_mode;
+
+			/*use mode headset for aux mic*/
+			if (param_start->pdev_prop->c.source ==
+				AUDIO_SOURCE_ANALOG_AUX)
+				new_mode = AUDIO_MODE_HEADSET;
+
+			/*For FM Rec request app policy with FM APP*/
+			if (param_start->pdev_prop->c.source ==
+				AUDIO_SOURCE_I2S) {
+				app_prof = AUDIO_APP_FM;
+				/*keep the mode*/
+				new_mode = cur_mode;
+			}
+			app_profile = AUDIO_Policy_Get_Profile(app_prof);
+			new_mode = AUDIO_Policy_Get_Mode(new_mode);
+
+			AUDCTRL_SaveAudioMode(new_mode);
+			AUDCTRL_SaveAudioApp(app_profile);
+
 			CAPH_ASSERT(param_start->stream >=
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && param_start->stream <
@@ -786,6 +930,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 						  AUDIO_DRIVER_START,
 						  &param_start->mixMode);
 
+			AUDIO_Policy_SetState(BRCM_STATE_RECORD);
 		}
 		break;
 	case ACTION_AUD_StopRecord:
@@ -805,6 +950,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					param_stop->pdev_prop->c.sink,
 					pathID[param_stop->stream-1]);
 			pathID[param_stop->stream-1] = 0;
+			AUDIO_Policy_RestoreState();
 		}
 		break;
 	case ACTION_AUD_OpenRecord:
@@ -838,6 +984,13 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_spkr->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+
+			/*Query for MUSIC profile,in case we are not in
+			state normal like FM,Voice,Recording policy will
+			decide,else we will set MUSIC profile*/
+
+			app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_MUSIC);
+			AUDCTRL_SaveAudioApp(app_profile);
 			AUDCTRL_AddPlaySpk(parm_spkr->src, parm_spkr->sink,
 					   pathID[parm_spkr->stream-1]);
 		}
@@ -859,19 +1012,43 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_Call_t *parm_call =
 			    (BRCM_AUDIO_Param_Call_t *) arg_param;
+			AudioMode_t  audio_mode = AUDIO_MODE_SPEAKERPHONE;
+			audio_mode = GetAudioModeBySink(parm_call->new_spkr);
+			app_profile = AUDIO_APP_VOICE_CALL;
+			/*Consider VT-NB case*/
+			if (AUDIO_APP_VT_CALL == AUDCTRL_GetUserAudioApp())
+				app_profile = AUDIO_APP_VT_CALL;
+
+			if (AUDCTRL_Telephony_HW_16K(audio_mode)) {
+				if (app_profile == AUDIO_APP_VT_CALL)
+					app_profile = AUDIO_APP_VT_CALL_WB;
+				else
+					app_profile = AUDIO_APP_VOICE_CALL_WB;
+			}
+			app_profile = AUDIO_Policy_Get_Profile(app_profile);
+			AUDCTRL_SaveAudioApp(app_profile);
+			AUDCTRL_SaveAudioMode(audio_mode);
+
 			AUDCTRL_EnableTelephony(parm_call->new_mic,
 						parm_call->new_spkr);
+
+			AUDIO_Policy_SetState(BRCM_STATE_INCALL);
 		}
 		break;
 
 	case ACTION_AUD_DisableTelephony:
 		AUDCTRL_DisableTelephony();
+		AUDIO_Policy_RestoreState();
 		break;
 
 	case ACTION_AUD_SetTelephonyMicSpkr:
 		{
 			BRCM_AUDIO_Param_Call_t *parm_call =
 			    (BRCM_AUDIO_Param_Call_t *) arg_param;
+			AudioMode_t  audio_mode = GetAudioModeBySink(
+							parm_call->new_spkr);
+			AUDCTRL_SaveAudioMode(audio_mode);
+
 			AUDCTRL_SetTelephonyMicSpkr(parm_call->new_mic,
 						    parm_call->new_spkr);
 		}
@@ -1028,10 +1205,15 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_Spkr_t *parm_spkr =
 			    (BRCM_AUDIO_Param_Spkr_t *) arg_param;
+			AudioMode_t  audio_mode;
 			CAPH_ASSERT(parm_spkr->stream >=
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_spkr->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+			audio_mode = GetAudioModeBySink(parm_spkr->sink);
+			audio_mode = AUDIO_Policy_Get_Mode(audio_mode);
+			AUDCTRL_SaveAudioMode(audio_mode);
+
 			AUDCTRL_SwitchPlaySpk(parm_spkr->src, parm_spkr->sink,
 					      pathID[parm_spkr->stream-1]);
 		}
@@ -1062,20 +1244,16 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_FM_t *parm_FM =
 			    (BRCM_AUDIO_Param_FM_t *) arg_param;
+			AudioMode_t fm_mode;
 			CAPH_ASSERT(parm_FM->stream >=
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_FM->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
-
-			/*
-			 * do not change voice call's audio mode. will delete
-			 * the lines
-			 *
-			 * can set music app and mode
-			 */
-			/* re-enable FM; need to fill audio app */
-			AUDCTRL_SaveAudioApp(AUDIO_APP_FM);
-			AUDCTRL_SaveAudioMode((AudioMode_t) parm_FM->sink);
+			/*Query FM mode from Policy*/
+			app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_FM);
+			AUDCTRL_SaveAudioApp(app_profile);
+			fm_mode = GetAudioModeBySink(parm_FM->sink);
+			AUDCTRL_SaveAudioMode(fm_mode);
 
 			AUDCTRL_EnablePlay(parm_FM->source,
 					   parm_FM->sink,
@@ -1083,6 +1261,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					   AUDIO_SAMPLING_RATE_48000, &path);
 
 			pathID[parm_FM->stream-1] = path;
+			AUDIO_Policy_SetState(BRCM_STATE_FM);
 		}
 		break;
 	case ACTION_AUD_DisableFMPlay:
@@ -1095,8 +1274,21 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_LAST - 1));
 			AUDCTRL_DisablePlay(parm_FM->source, parm_FM->sink,
 					    pathID[parm_FM->stream-1]);
+
+			AUDIO_Policy_RestoreState();
+			/*if we are playing Music+FM play and FM Stop,
+			or music start happend first and then FM stop
+			restore app prof to Music*/
+			if (BRCM_STATE_NORMAL == AUDIO_Policy_GetState()) {
+				AudioApp_t app_prof;
+				app_prof = AUDIO_Policy_Get_Profile(
+						AUDIO_APP_MUSIC);
+				AUDCTRL_SaveAudioApp(app_prof);
+				AUDCTRL_SetAudioMode_ForMusicPlayback(
+				AUDCTRL_GetAudioMode(), pathID[parm_FM->stream],
+								FALSE);
+			}
 			pathID[parm_FM->stream-1] = 0;
-			AUDCTRL_SetUserAudioApp(AUDIO_APP_MUSIC);
 		}
 		break;
 	case ACTION_AUD_SetARM2SPInst:
@@ -1166,6 +1358,21 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 * AUDIO_ID_CALL16k
 			 * 0x06 indicates AMR NB
 			 */
+			if (AUDCTRL_InVoiceCall()) {
+				if (param_rate_change->codecID == 0x0A) {
+					app_profile = AUDIO_APP_VOICE_CALL_WB;
+				} else if (param_rate_change->codecID == 0x06) {
+					app_profile = AUDIO_APP_VOICE_CALL;
+					} else {
+					aError("Invalid Telephony CodecID %d\n",
+						param_rate_change->codecID);
+						break;
+				}
+			app_profile = AUDIO_Policy_Get_Profile(app_profile);
+			AUDCTRL_SaveAudioMode(AUDCTRL_GetAudioMode());
+			AUDCTRL_SaveAudioApp(app_profile);
+			}
+
 			AUDCTRL_Telephony_RequestRateChange(param_rate_change->
 							    codecID);
 		}
@@ -1175,7 +1382,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_SetApp_t *parm_setapp =
 				(BRCM_AUDIO_Param_SetApp_t *)arg_param;
-			AUDCTRL_SetUserAudioApp(parm_setapp->aud_app);
+			AUDIO_Ctrl_SetUserAudioApp(parm_setapp->aud_app);
 		}
 		break;
 	case ACTION_AUD_AMPEnable:

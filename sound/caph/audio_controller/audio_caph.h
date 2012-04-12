@@ -267,6 +267,8 @@ int LaunchAudioCtrlThread(void);
 
 int TerminateAudioHalThread(void);
 
+void AUDIO_Ctrl_SetUserAudioApp(AudioApp_t app);
+
 Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 			    void *arg_param, void *callback, int block);
 

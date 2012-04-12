@@ -48,46 +48,35 @@ struct BRCM_PREVMODEQueue {
 static int tState = BRCM_STATE_NORMAL;
 static int tPrevState = BRCM_STATE_NORMAL;
 
-/* ---- Functions ecported --------------------------------- */
-
-static int NextAudioProfile[AUDIO_STATE_NUM][16] /*[AUDIO_APP_NUMBER] */ = {
+/* ---- Functions exported --------------------------------- */
+/*
+	We should adapt the policy table based on the number of
+	App profiles supported on platform.
+*/
+static int NextAudioProfile[AUDIO_STATE_NUM][AUDIO_APP_NUMBER] = {
+	/*BRCM_STATE_NORMAL*/
 	{AUDIO_APP_VOICE_CALL, AUDIO_APP_VOICE_CALL_WB, AUDIO_APP_MUSIC, \
-	AUDIO_APP_RECORDING, AUDIO_APP_FM, AUDIO_APP_RECORDING_GVS, \
-	AUDIO_APP_VOIP, AUDIO_APP_VOIP_INCOMM, AUDIO_APP_VT_CALL, \
-	AUDIO_APP_VT_CALL_WB},	/*BRCM_STATE_NORMAL*/
+	AUDIO_APP_RECORDING_HQ, AUDIO_APP_RECORDING, AUDIO_APP_RECORDING_GVS, \
+	AUDIO_APP_FM, AUDIO_APP_VOIP, AUDIO_APP_VOIP_INCOMM, \
+	AUDIO_APP_VT_CALL, AUDIO_APP_VT_CALL_WB, AUDIO_APP_LOOPBACK, \
+	-1, -1, -1, -1},
 
-	{AUDIO_APP_VOICE_CALL,
-	AUDIO_APP_VOICE_CALL_WB,
-	-1,
-	-1,
-	-1,
-	-1,
-	-1,
-	-1,
-	AUDIO_APP_VT_CALL,
-	AUDIO_APP_VT_CALL_WB},	/*BRCM_STATE_INCALL*/
+	/*BRCM_STATE_INCALL*/
+	{AUDIO_APP_VOICE_CALL, AUDIO_APP_VOICE_CALL_WB, -1, -1, -1, -1, -1, \
+	-1, -1, AUDIO_APP_VT_CALL, AUDIO_APP_VT_CALL_WB, -1, -1, -1, -1, -1},
 
-	{AUDIO_APP_VOICE_CALL,
-	AUDIO_APP_VOICE_CALL_WB,
-	AUDIO_APP_FM,
-	AUDIO_APP_RECORDING,
-	AUDIO_APP_FM,
-	AUDIO_APP_RECORDING_GVS,
-	AUDIO_APP_VOIP,
-	AUDIO_APP_VOIP_INCOMM,
-	AUDIO_APP_VT_CALL,
-	AUDIO_APP_VT_CALL_WB},	/*BRCM_STATE_FM*/
+	/*BRCM_STATE_FM*/
+	{AUDIO_APP_VOICE_CALL, AUDIO_APP_VOICE_CALL_WB, AUDIO_APP_FM, \
+	AUDIO_APP_RECORDING_HQ, AUDIO_APP_RECORDING, AUDIO_APP_RECORDING_GVS, \
+	AUDIO_APP_FM, AUDIO_APP_VOIP, AUDIO_APP_VOIP_INCOMM, \
+	AUDIO_APP_VT_CALL, AUDIO_APP_VT_CALL_WB, AUDIO_APP_LOOPBACK, \
+	-1, -1, -1, -1},
 
-	{AUDIO_APP_VOICE_CALL,
-	AUDIO_APP_VOICE_CALL_WB,
-	-1,
-	AUDIO_APP_RECORDING,
-	-1,
-	AUDIO_APP_RECORDING_GVS,
-	AUDIO_APP_VOIP,
-	AUDIO_APP_VOIP_INCOMM,
-	AUDIO_APP_VT_CALL,
-	AUDIO_APP_VT_CALL_WB}	/*BRCM_STATE_RECORD*/
+	/*BRCM_STATE_RECORD*/
+	{AUDIO_APP_VOICE_CALL, AUDIO_APP_VOICE_CALL_WB, -1, \
+	AUDIO_APP_RECORDING_HQ, AUDIO_APP_RECORDING, AUDIO_APP_RECORDING_GVS, \
+	 -1, AUDIO_APP_VOIP, AUDIO_APP_VOIP_INCOMM, AUDIO_APP_VT_CALL, \
+	AUDIO_APP_VT_CALL_WB, AUDIO_APP_LOOPBACK, -1, -1, -1, -1}
 };
 
 static int tTopStatePtr;
@@ -108,10 +97,17 @@ Result_t AUDIO_Policy_SetState(int state)
 	if (state >= BRCM_STATE_END)
 		return 0;
 
-	/* back up the current state */
-	tPrevState = tState;
-	/* if we are currently in incall state, don't change it.*/
-	if (tState == BRCM_STATE_INCALL)
+	/* back up the current state is state requested
+		and present are not same */
+	if (tState != state)
+		tPrevState = tState;
+
+	/* if we are currently in incall or FM state, don't change it.
+	If we are currently in FM state and requested is INCALL change state
+	to INCALL as CALL has higher priority over FM
+	*/
+	if ((tState == BRCM_STATE_INCALL || tState == BRCM_STATE_FM) &&
+		state != BRCM_STATE_INCALL)
 		return 0;
 
 	tState = state;
