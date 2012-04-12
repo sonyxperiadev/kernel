@@ -1319,7 +1319,7 @@ static int pl330_remove(struct platform_device *pdev)
 
 	spin_lock_irqsave(&lock, flags);
 	/* Free all channel descriptors first */
-	list_for_each_entry_safe(cdesc, &dmac->chan_list, node) {
+	list_for_each_entry(cdesc, &dmac->chan_list, node) {
 		/* free requests */
 		_cleanup_req(&cdesc->req);
 		/* Free channel desc */
