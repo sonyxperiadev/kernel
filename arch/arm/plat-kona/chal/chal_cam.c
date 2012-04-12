@@ -326,8 +326,8 @@ cVoid chal_cam_deinit(CHAL_HANDLE handle)
         pCamDevice->init = FALSE;
 		/* Disable clocks here */
         BRCM_WRITE_REG(clk_base_addr,MM_CLK_MGR_REG_WR_ACCESS,0xA5A501); // enable access
-        BRCM_WRITE_REG(clk_base_addr,MM_CLK_MGR_REG_CSI0_LP_CLKGATE, 0x00000000);  // default value
-        BRCM_WRITE_REG(clk_base_addr,MM_CLK_MGR_REG_CSI0_AXI_CLKGATE, 0x0000000);  // ...
+        BRCM_WRITE_REG(clk_base_addr,MM_CLK_MGR_REG_CSI0_LP_CLKGATE, 0x00000302);  // default value
+        BRCM_WRITE_REG(clk_base_addr,MM_CLK_MGR_REG_CSI0_AXI_CLKGATE, 0x0000302);  // ...
 
     }
 }
