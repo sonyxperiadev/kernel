@@ -572,6 +572,7 @@ void mdp4_dma_e_done_dtv()
 
 void mdp4_external_vsync_dtv()
 {
+
 	complete_all(&dtv_comp);
 }
 
