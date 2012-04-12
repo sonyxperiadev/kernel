@@ -187,6 +187,7 @@ struct bcmpmu_em {
 	struct bcmpmu_fg_zone *fg_zone_ptr;
 	int fg_dbg_temp;
 	unsigned long fg_zone_tm;
+	int piggyback_chrg;
 };
 static struct bcmpmu_em *bcmpmu_em;
 
@@ -965,6 +966,9 @@ static void update_charge_zone(struct bcmpmu_em *pem)
 {
 	unsigned char zone = pem->charge_zone;
 
+	if (pem->piggyback_chrg)
+		return;
+
 	switch (zone) {
 	case CHRG_ZONE_QC:
 		if (pem->batt_volt > pem->zone[pem->charge_zone].v)
@@ -1044,6 +1048,12 @@ static int em_reset_status(struct bcmpmu *bcmpmu)
 {
 	struct bcmpmu_em *pem = bcmpmu->eminfo;
 	return pem->fg_force_cal;
+}
+
+static int bcmpmu_get_capacity(struct bcmpmu *bcmpmu)
+{
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	return pem->batt_capacity;
 }
 
 static void em_algorithm(struct work_struct *work)
@@ -1200,6 +1210,9 @@ static void em_algorithm(struct work_struct *work)
 		return;
 	}
 
+
+	if (pem->piggyback_chrg == 0) {
+	/* fixme */
 	if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE) {
 		if (pem->charge_state == CHRG_STATE_MAINT){
 			if ((pem->batt_volt < pem->chrg_resume_lvl) ||
@@ -1241,6 +1254,7 @@ static void em_algorithm(struct work_struct *work)
 		pem->charge_state = CHRG_STATE_IDLE;
 		pem->charge_zone = CHRG_ZONE_OUT;
 	}
+	}
 
 	if (pem->transition != 0) {
 		pem->mode = MODE_TRANSITION;
@@ -1266,6 +1280,7 @@ static void em_algorithm(struct work_struct *work)
 		return;
 	}
 
+	if (pem->piggyback_chrg == 0) {  /* fixme */
 	ps = power_supply_get_by_name("battery");
 
 	if (pem->chrgr_type == PMU_CHRGR_TYPE_NONE) {
@@ -1349,6 +1364,19 @@ static void em_algorithm(struct work_struct *work)
 
 	if (psy_changed)
 		power_supply_changed(ps);
+
+	} else { /* fixme */
+	if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
+	    (pem->fg_comp_mode == 0) &&
+	    (capacity > pem->batt_capacity))
+		capacity = pem->batt_capacity;
+
+	pem->batt_capacity = capacity;
+	pr_em(REPORT, "%s, update capacity=%d, volt=%d, curr=%d\n",
+		__func__, capacity, pem->batt_volt, pem->batt_curr);
+	save_fg_cap(pem->bcmpmu, capacity);
+	}  /* fixme */
+
 
 	schedule_delayed_work(&pem->work, msecs_to_jiffies(get_update_rate(pem)));
 
@@ -1442,6 +1470,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	init_waitqueue_head(&pem->wait);
 	mutex_init(&pem->lock);
 	pem->bcmpmu = bcmpmu;
+	bcmpmu->fg_get_capacity = bcmpmu_get_capacity;
 	bcmpmu->eminfo = pem;
 	bcmpmu_em = pem;
 	pem->chrgr_curr = 0;
@@ -1460,6 +1489,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	pem->pollrate = POLLRATE_HIGHBAT;
 
 	pem->support_fg = pdata->support_fg;
+	pem->piggyback_chrg = pdata->piggyback_chrg;
 	if (pdata->fg_capacity_full)
 		pem->fg_capacity_full = pdata->fg_capacity_full;
 	else

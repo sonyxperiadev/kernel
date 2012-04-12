@@ -279,9 +279,16 @@ config POWER_BCMPMU
 
 config BCMPMU_EM
 	tristate "BCMPMU charging and gauging driver"
-	depends on POWER_BCMPMU
+	depends on MFD_BCMPMU
 	default n
 	help
 	 Say Y to include kernel charging and gauging module for BCM PMUs.
+
+config CHARGER_BCMPMU_SPA
+	bool "BCMPMU support SPA"
+	depends on MFD_BCMPMU
+	default n
+	help
+	 Say Y to support SPA charging module for BCM PMUs.
 
 endif # POWER_SUPPLY

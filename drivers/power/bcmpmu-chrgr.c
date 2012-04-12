@@ -39,11 +39,6 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 		} \
 	} while (0)
 
-extern const unsigned int bcmpmu_chrgr_icc_fc_settings[PMU_CHRGR_CURR_MAX];
-extern const unsigned int bcmpmu_chrgr_icc_qc_settings[PMU_CHRGR_QC_CURR_MAX];
-extern const unsigned int bcmpmu_chrgr_eoc_settings[PMU_CHRGR_EOC_CURR_MAX];
-extern const unsigned int bcmpmu_chrgr_vfloat_settings[PMU_CHRGR_VOLT_MAX];
-
 struct bcmpmu_chrgr {
 	struct bcmpmu *bcmpmu;
 	struct power_supply chrgr;

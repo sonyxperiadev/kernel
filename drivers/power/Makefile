@@ -50,4 +50,5 @@ obj-m += cmp_battery.o
 cmp_battery-objs += cmp_battery_bq24616.o
 endif
 obj-$(CONFIG_POWER_BCMPMU)	+= bcmpmu-batt.o bcmpmu-chrgr.o
+obj-$(CONFIG_CHARGER_BCMPMU_SPA) += bcmpmu-chrgr-pb.o
 obj-$(CONFIG_BCMPMU_EM) 	+= bcmpmu-em.o

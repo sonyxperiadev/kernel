@@ -570,6 +570,7 @@ static struct platform_device bcmpmu_accy_device = {
 	.dev.platform_data = NULL,
 };
 
+#ifdef CONFIG_POWER_BCMPMU
 static struct platform_device bcmpmu_batt_device = {
 	.name = "bcmpmu_batt",
 	.id = -1,
@@ -581,6 +582,7 @@ static struct platform_device bcmpmu_chrgr_device = {
 	.id = -1,
 	.dev.platform_data = NULL,
 };
+#endif
 
 static struct platform_device bcmpmu_rtc_device = {
 	.name = "bcmpmu_rtc",
@@ -617,8 +619,10 @@ static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_hwmon_device,
 	&bcmpmu_regulator,
 	&bcmpmu_rtc_device,
+#ifdef CONFIG_POWER_BCMPMU
 	&bcmpmu_batt_device,
 	&bcmpmu_chrgr_device,
+#endif
 	&bcmpmu_accy_device,
 	&bcmpmu_ponkey_device,
 	&bcmpmu_watchdog,

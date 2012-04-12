@@ -711,16 +711,25 @@ static struct platform_device bcmpmu_rpc = {
 };
 #endif
 
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+static struct platform_device bcmpmu_chrgr_spa_device = {
+	.name = "bcmpmu_chrgr_pb",
+	.id = -1,
+	.dev.platform_data = NULL,
+};
+#endif
+
 static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_audio_device,
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+	&bcmpmu_chrgr_spa_device,
+#endif
 	&bcmpmu_em_device,
 	&bcmpmu_otg_xceiv_device,
 #ifdef CONFIG_BCMPMU_RPC
 	&bcmpmu_rpc,
 #endif
 };
-
-
 
 static int bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
@@ -868,6 +877,44 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 20 */
 };
 
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+static void notify_spa(enum bcmpmu_event_t event, int data)
+{
+	printk(KERN_INFO "%s event=%d, data=%d\n",
+		__func__, event, data);
+
+	switch (event) {
+	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_CHARGER, data)
+		*/
+		break;
+	case BCMPMU_CHRGR_EVENT_MBTEMP:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_TEMP, data);
+		*/
+		break;
+	case BCMPMU_CHRGR_EVENT_MBOV:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_OVP, data);
+		*/
+		break;
+	case BCMPMU_CHRGR_EVENT_USBOV:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_OVP, data);
+		*/
+		break;
+	case BCMPMU_CHRGR_EVENT_EOC:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_EOC, 0);
+		*/
+		break;
+	default:
+		break;
+	}
+}
+#endif
+
 static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), },
 	.init = bcmpmu_init_platform_hw,
@@ -916,6 +963,11 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.pok_restart_dly = -1,
 	.pok_restart_deb = -1,
 	.pok_lock = 1, /*Keep ponkey locked by default*/
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+	.piggyback_chrg = 1,
+	.piggyback_chrg_name = "bcm59039_charger",
+	.piggyback_notify = notify_spa,
+#endif
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {

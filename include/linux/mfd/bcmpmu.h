@@ -860,12 +860,6 @@ _IOW(BCM_PMU_MAGIC, BCM_PMU_CMD_WRITE_REG, struct bcmpmu_rw_data_ltp)
 #define BCM_PMU_IOCTL_NTC_TEMP		\
 _IOW(BCM_PMU_MAGIC, BCM_PMU_CMD_NTC_TEMP, struct bcmpmu_ntc_data_ltp)
 
-enum bcmpmu_batt_event_t {
-	BCMPMU_BATT_EVENT_PRESENT,
-	BCMPMU_BATT_EVENT_MBOV,
-	BCMPMU_BATT_EVENT_MAX,
-};
-
 enum bcmpmu_usb_accy_t {
 	USB,
 	CHARGER,
@@ -915,14 +909,17 @@ enum bcmpmu_event_t {
 	BCMPMU_USB_EVENT_SESSION_END_VALID,
 	BCMPMU_USB_EVENT_VBUS_OVERCURRENT,
 	BCMPMU_USB_EVENT_RIC_C_TO_FLOAT,
+	BCMPMU_USB_EVENT_CHGDET_LATCH,
 	/* events for battery charging */
 	BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
 	BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
 	BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
-	BCMPMU_USB_EVENT_CHGDET_LATCH,
+	BCMPMU_CHRGR_EVENT_MBOV,
+	BCMPMU_CHRGR_EVENT_USBOV,
+	BCMPMU_CHRGR_EVENT_MBTEMP,
+	BCMPMU_CHRGR_EVENT_EOC,
 	/* events for fuel gauge */
 	BCMPMU_FG_EVENT_FGC,
-
 	/*Events for JIG*/
 	BCMPMU_JIG_EVENT_USB,
 	BCMPMU_JIG_EVENT_UART,
@@ -1128,6 +1125,7 @@ struct bcmpmu {
 	int (*fg_trim_write) (struct bcmpmu *pmu, int data);
 	void (*em_reset) (struct bcmpmu *pmu);
 	int (*em_reset_status) (struct bcmpmu *pmu);
+	int (*fg_get_capacity) (struct bcmpmu *bcmpmu);
 
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;
@@ -1219,6 +1217,9 @@ struct bcmpmu_platform_data {
 	int pok_lock;
 	/* IHF power up/down auto seq */
 	int ihf_autoseq_dis;
+	int piggyback_chrg;
+	char *piggyback_chrg_name;
+	void (*piggyback_notify) (enum bcmpmu_event_t event, int data);
 };
 
 struct bcmpmu_fg {
@@ -1235,6 +1236,10 @@ struct bcmpmu_fg {
 	int fg_ibat_avg;
 };
 
+extern const unsigned int bcmpmu_chrgr_icc_fc_settings[PMU_CHRGR_CURR_MAX];
+extern const unsigned int bcmpmu_chrgr_icc_qc_settings[PMU_CHRGR_QC_CURR_MAX];
+extern const unsigned int bcmpmu_chrgr_eoc_settings[PMU_CHRGR_EOC_CURR_MAX];
+extern const unsigned int bcmpmu_chrgr_vfloat_settings[PMU_CHRGR_VOLT_MAX];
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
 int bcmpmu_sel_adcsync(enum bcmpmu_adc_timing_t timing);
