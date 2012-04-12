@@ -771,7 +771,7 @@ static void BCMLOG_HandleCpCrashDumpData_Custom_STM(const char *buf, int size)
 	static int rem_data_len;
 	static int rem_header_len;
 	static char partial_header[MTT_HEADER_SIZE];
-	int i = 0, j = 0;
+	int i = 0, j = 0, k = 0, tmp_size = 0;
 	int complete_size = 0;
 	int packet_size;
 	const char *p_buf = buf;
@@ -815,6 +815,7 @@ static void BCMLOG_HandleCpCrashDumpData_Custom_STM(const char *buf, int size)
 				stm_trace_buffer_end(FUSE_LOG_CHANNEL);
 			}
 			p_buf += (packet_size - rem_header_len);
+			size -= (packet_size - rem_header_len);
 			rem_size -= (packet_size - rem_header_len);
 			rem_header_len = 0;
 			rem_data_len = 0;
@@ -846,6 +847,7 @@ static void BCMLOG_HandleCpCrashDumpData_Custom_STM(const char *buf, int size)
 			}
 
 			p_buf += rem_data_len;
+			size -= rem_data_len;
 			rem_size -= rem_data_len;
 			rem_data_len = 0;
 		} else {
@@ -871,88 +873,62 @@ static void BCMLOG_HandleCpCrashDumpData_Custom_STM(const char *buf, int size)
 	 * CP will increment rd_index and send another data to AP on next
 	 * turn.
 	 */
-	while (i + 12 < rem_size) {
+	while (i + 12 < size) {
 		if (p_buf[i] == MTTLOG_FrameSync0
 		    && p_buf[i + 1] == MTTLOG_FrameSync1) {
+			k = i;
 			i += (MTT_HEADER_SIZE + MTT_PAYLOAD_CS_SIZE +
 			      (((unsigned
 				 short)(p_buf[i + 10])) << 8) +
 			      (unsigned short)(p_buf[i + 11]));
-			if (i <= rem_size)
-				complete_size = i;
-		} else
-			break;
-	}
-
-	/* this is a complete packet, so send using stm_trace_buffer_onchannel()
-	 * which will send start, data, and end bytes at once.
-	 */
-	if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM)
-		BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-		p_buf, complete_size, BCMLOG_CUSTOM_COMPLETE);
-	else if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM)
-		stm_trace_buffer_onchannel(FUSE_LOG_CHANNEL, p_buf,
-		complete_size);
-
-	rem_size -= complete_size;
-	/* increment the buffer to look for another A5 C3 in a fream from CP */
-	p_buf += complete_size;
-
-	/* if a buffer contains 0s, skip and look for another sync byte */
-	while ((p_buf[0] != MTTLOG_FrameSync0
-				|| p_buf[1] != MTTLOG_FrameSync1)
-			       && 1 < rem_size) {
-				p_buf++;
+			if (i < size) {
+				complete_size = i - k;
+				tmp_size = tmp_size + complete_size;
+				if (complete_size) {
+					if (BCMLOG_GetCpCrashLogDevice() ==
+							BCMLOG_OUTDEV_CUSTOM)
+						BCMLOG_CallHandler(
+						BCMLOG_CUSTOM_CP_CRASH_LOG,
+						(p_buf + k), complete_size,
+						BCMLOG_CUSTOM_COMPLETE);
+					else if (BCMLOG_GetCpCrashLogDevice() ==
+						BCMLOG_OUTDEV_STM)
+						stm_trace_buffer_onchannel(
+						FUSE_LOG_CHANNEL,
+						(p_buf + k), complete_size);
+					rem_size -= complete_size;
+				}
+			}
+		} else {
+			while ((p_buf[i] != MTTLOG_FrameSync0
+				|| p_buf[i + 1] != MTTLOG_FrameSync1)
+			       && i < size) {
+				i++;
+				tmp_size++;
 				rem_size--;
-	}
-
-	if ((rem_size == 1) && (p_buf[0] != MTTLOG_FrameSync0)) {
-		p_buf++;
-		rem_size--;
-	}
-
-	/* after skipping 0s, go through the loop again to parse a packet */
-	while (j + 12 < rem_size) {
-		if (p_buf[j] == MTTLOG_FrameSync0
-		    && p_buf[j + 1] == MTTLOG_FrameSync1) {
-			j += (MTT_HEADER_SIZE + MTT_PAYLOAD_CS_SIZE +
-			      (((unsigned
-				 short)(p_buf[j + 10])) << 8) +
-			      (unsigned short)(p_buf[j + 11]));
-			if (j <= rem_size)
-				complete_size = j;
+			}
 		}
 	}
-	if (complete_size) {
-		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM)
-			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-			p_buf, complete_size, BCMLOG_CUSTOM_COMPLETE);
-		else if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM)
-			stm_trace_buffer_onchannel(FUSE_LOG_CHANNEL,
-				p_buf, complete_size);
-		rem_size -= complete_size;
-	}
-
 	/* some bytes left, take care of it on next visit either as
 	 * a partial header(< MTT_HEADER_SIZE) or partial data(
 	 * >= MTT_HEADER_SIZE */
 	if ((rem_size > 0) && (rem_size < MTT_HEADER_SIZE)) {
-		memcpy(partial_header, &p_buf[complete_size], rem_size);
+		memcpy(partial_header, &p_buf[tmp_size], rem_size);
 		rem_header_len = rem_size;
 	} else if (rem_size >= MTT_HEADER_SIZE) {
 		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM)
 			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-				   &p_buf[complete_size], rem_size,
+				   &p_buf[tmp_size], rem_size,
 				   BCMLOG_CUSTOM_START);
 		else if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM) {
 			stm_trace_buffer_start(FUSE_LOG_CHANNEL);
 			stm_trace_buffer_data(FUSE_LOG_CHANNEL,
-				&p_buf[complete_size], rem_size);
+				&p_buf[tmp_size], rem_size);
 		}
 		rem_data_len =
 		    (MTT_HEADER_SIZE + MTT_PAYLOAD_CS_SIZE +
-		     (((unsigned short)(p_buf[complete_size + 10])) << 8) +
-		     (unsigned short)(p_buf[complete_size + 11])) - rem_size;
+		     (((unsigned short)(p_buf[tmp_size + 10])) << 8) +
+		     (unsigned short)(p_buf[tmp_size + 11])) - rem_size;
 	}
 }
 
