@@ -922,10 +922,13 @@ int pwr_mgr_pm_i2c_sem_lock()
 			    pi_mgr_dfs_add_request(&pwr_mgr.sem_dfs_client,
 						   "sem_wa",
 						   PWRMGR_HW_SEM_WA_PI_ID,
-						   PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+					   PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
 		else
-			pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,
-						  PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+			ret =
+			 pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,
+					  PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+		if (ret)
+			return ret;
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 
@@ -965,6 +968,7 @@ EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_lock);
 int pwr_mgr_pm_i2c_sem_unlock()
 {
 	unsigned long flgs;
+	int ret = 0;
 
 	if (unlikely(!pwr_mgr.info)) {
 		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
@@ -977,9 +981,9 @@ int pwr_mgr_pm_i2c_sem_unlock()
 	pwr_mgr.sem_locked = false;
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
-		pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,
+		ret = pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,
 					  PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
-	return 0;
+	return ret;
 }
 
 EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);
@@ -2387,12 +2391,16 @@ static ssize_t pwr_mgr_i2c_req(struct file *file, char const __user *buf,
 	}
 	if (reg_val == 0xFFFF) {
 		u8 val = 0xFF;
-		pwr_mgr_pmu_reg_read((u8) reg_addr, (u8) slv_addr, &val);
-		pwr_dbg(PWR_LOG_DBGFS, "[%x] = %x\n", reg_addr, val);
-	} else {
+		int ret;
+		ret = pwr_mgr_pmu_reg_read((u8) reg_addr, (u8) slv_addr, &val);
+		if (!ret)
+			pr_info("[%x] = %x\n", reg_addr, val);
+		else
+			pr_info("Read error\n");
+
+	} else
 		pwr_mgr_pmu_reg_write((u8) reg_addr, (u8) slv_addr,
-				      (u8) reg_val);
-	}
+			      (u8) reg_val);
 	return count;
 }
 
