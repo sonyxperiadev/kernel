@@ -72,16 +72,6 @@ static void sdhci_finish_command(struct sdhci_host *);
 static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode);
 static void sdhci_tuning_timer(unsigned long data);
 
-#ifdef CONFIG_MMC_BCM_SD
-extern int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
-extern int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host);
-extern int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host);
-#else
-#define sdhci_pltfm_clk_enable(..)	do { }while(0)
-#define sdhci_pltfm_set_3v3_signalling(..)	do { }while(0)
-#define sdhci_pltfm_set_1v8_signalling(..)	do { }while(0)
-#endif
-
 static void sdhci_dumpregs(struct sdhci_host *host)
 {
 	printk(KERN_DEBUG DRIVER_NAME ": =========== REGISTER DUMP (%s)===========\n",
@@ -1965,6 +1955,18 @@ static void sdhci_enable_preset_value(struct mmc_host *mmc, bool enable)
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
+static int sdhci_enable(struct mmc_host *mmc)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+	return sdhci_pltfm_enable(host);
+}
+
+static int sdhci_disable(struct mmc_host *mmc, int lazy)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+	return sdhci_pltfm_disable(host, lazy);
+}
+
 static const struct mmc_host_ops sdhci_ops = {
 	.request	= sdhci_request,
 	.set_ios	= sdhci_set_ios,
@@ -1973,6 +1975,8 @@ static const struct mmc_host_ops sdhci_ops = {
 	.start_signal_voltage_switch	= sdhci_start_signal_voltage_switch,
 	.execute_tuning			= sdhci_execute_tuning,
 	.enable_preset_value		= sdhci_enable_preset_value,
+	.disable	= sdhci_disable,
+	.enable		= sdhci_enable,
 };
 
 /*****************************************************************************\

@@ -70,6 +70,11 @@
 
 #define SD_DETECT_GPIO_DEBOUNCE_128MS	128
 
+#define KONA_SDMMC_DISABLE_DELAY	(100)
+#define KONA_SDMMC_OFF_TIMEOUT		(8000)
+
+enum {ENABLED = 0, DISABLED, OFF};
+
 struct procfs {
 	char name[MAX_PROC_NAME_SIZE];
 	struct proc_dir_entry *parent;
@@ -82,6 +87,9 @@ struct sdio_dev {
 	unsigned long clk_hz;
 	enum sdio_devtype devtype;
 	int cd_gpio;
+	/* Dynamic Power Managment State */
+	int dpm_state;
+	int suspended;
 	struct sdio_wifi_gpio_cfg *wifi_gpio;
 	struct procfs proc;
 	struct clk *peri_clk;
@@ -102,6 +110,8 @@ static struct sdio_dev *gDevs[SDIO_DEV_TYPE_MAX];
 static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name);
 static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev,
 					   char *reg_name);
+static int sdhci_kona_anystate_to_off(struct sdio_dev *dev);
+static int sdhci_kona_off_to_enabled(struct sdio_dev *dev);
 
 /*
  * Get the base clock. Use central clock source for now. Not sure if different
@@ -493,6 +503,32 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	dev->cd_gpio = hw_cfg->cd_gpio;
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		dev->wifi_gpio = &hw_cfg->wifi_gpio;
+	/*
+	 * In the corresponding mmc_host->caps filed, need to
+	 * expose the MMC_CAP_DISABLE capability only for SD Card interface.
+	 * Note that for now we are exposing Dynamic Power Management
+	 * capability on the interface that suppors SD Card.
+	 *
+	 * When we finally decide to do away with managing clocks from sdhci.c
+	 * and when we enable the DISABLED state management, we need to
+	 * enable this capability for ALL SDIO interfaces. For WLAN interface
+	 * we should ensure that the regulator is NOT turned OFF so that the
+	 * handshakes need not happen again.
+	 */
+	if (dev->devtype == SDIO_DEV_TYPE_SDMMC) {
+		host->mmc->caps |= MMC_CAP_DISABLE;
+		/*
+		 * There are multiple paths that can trigger disable work.
+		 * One common path is from
+		 * mmc/card/block.c function,  mmc_blk_issue_rq after the
+		 * transfer is done.
+		 * mmc_release_host-->mmc_host_lazy_disable, this starts the
+		 * mmc disable work only if host->disable_delay is non zero.
+		 * So we need to set disable_delay otherwise the work will never
+		 * get scheduled.
+		 */
+		mmc_set_disable_delay(host->mmc, KONA_SDMMC_DISABLE_DELAY);
+	}
 
 	pr_debug("%s: DEV TYPE %x\n", __func__, dev->devtype);
 
@@ -543,6 +579,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	dev->clk_hz = clk_get_rate(dev->peri_clk);
 #endif
 
+	dev->dpm_state = DISABLED;
+	dev->suspended = 0;
+
 	if (hw_cfg->vddo_regulator_name) {
 		ret =
 		    sdhci_pltfm_regulator_init(dev,
@@ -558,6 +597,14 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		if (ret < 0)
 			goto err_term_clk;
 	}
+
+	/*
+	 * Note that we are truning ON the regulators in the above code block.
+	 * So we should mark our state as enabled. In case when we want to
+	 * handle clock too here, based on the state of the clocks that is
+	 * left in the "probe" function, we'll have to update the below state.
+	 */
+	dev->dpm_state = ENABLED;
 
 	ret = bcm_kona_sd_reset(dev);
 	if (ret)
@@ -792,17 +839,20 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 #endif
 
 	ret = sdhci_suspend_host(host, state);
-
-	if (dev->vddo_sd_regulator) {
-		regulator_disable(dev->vddo_sd_regulator);
-	}
-
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to suspend sdhci host err=%d\n",
 			ret);
 		return ret;
 	}
 
+	ret = sdhci_kona_anystate_to_off(dev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Unable to Turn OFF regulator err=%d\n",
+			ret);
+		return ret;
+	}
+
+	dev->suspended = 1;
 	return 0;
 }
 
@@ -812,11 +862,13 @@ static int sdhci_pltfm_resume(struct platform_device *pdev)
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
 
-	if (dev->vddo_sd_regulator) {
-		int retn = regulator_enable(dev->vddo_sd_regulator);
-		if (retn)
-			pr_err("Enabling sdxc regulator failed during resume\n");
+	ret = sdhci_kona_off_to_enabled(dev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Unable to Turn ON regulator err=%d\n",
+			ret);
+		return ret;
 	}
+
 	ret = sdhci_resume_host(host);
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to resume sdhci host err=%d\n",
@@ -851,6 +903,7 @@ static int sdhci_pltfm_resume(struct platform_device *pdev)
 			bcm_kona_sd_card_emulate(dev, 0);
 	}
 #endif
+	dev->suspended = 0;
 	return 0;
 }
 #else
@@ -1088,4 +1141,212 @@ int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host)
 			dev_dbg(dev->dev, "vddo regulator is set to 1.8V\n");
 	}
 	return ret;
+}
+
+int sdhci_kona_sdio_regulator_power(struct sdio_dev *dev, int power_state)
+{
+	int ret = 0;
+
+	/*
+	 * Note that from the board file the appropriate regualtor names are
+	 * populated. For example, in SD Card case there are two regulators to
+	 * control
+	 * vddo - That controls the power to the external card
+	 * vddsdxc - That controls the power to the IO lines
+	 * For the interfaces used for eMMC and WLAN only vddo is present.
+	 * The understanding is that,  if for some intefaces like WLAN if the
+	 * regulator need not be switched OFF then from the board file do not
+	 * populate the regulator names.
+	 */
+	if (dev->vdd_sdxc_regulator) {
+		if (power_state) {
+			dev_dbg(dev->dev, "Turning ON sdxc sd \r\n");
+			ret = regulator_enable(dev->vdd_sdxc_regulator);
+		} else {
+			dev_dbg(dev->dev, "Turning OFF sdxc sd \r\n");
+			ret = regulator_disable(dev->vdd_sdxc_regulator);
+		}
+	 }
+
+	 if (dev->vddo_sd_regulator) {
+		if (power_state) {
+			dev_dbg(dev->dev, "Turning ON vddo sd \r\n");
+			ret = regulator_enable(dev->vddo_sd_regulator);
+		} else{
+			dev_dbg(dev->dev, "Turning OFF vddo sd \r\n");
+			ret = regulator_disable(dev->vddo_sd_regulator);
+		}
+	 }
+
+	return ret;
+}
+
+/* Dynamic Power Management Implementation */
+/*
+ *   State machine
+ *
+ *   ENABLED -> DISABLED ->  OFF
+ *     ^___________|          |
+ *     |______________________|
+ *
+ * ENABLED:  ahb clk and peripheral clock is ON and regulators are ON
+ * DISABLED: ahb clk and peripheral clock are OFF and regulators are ON
+ *           (For now this state is just a place holder,clk mgmt will be
+ *            be introduced later)
+ * OFF:      both clocks are OFF and regulator is turned OFF
+ *
+ * State transition handlers will return the timeout for the
+ * next state transition or negative error.
+ */
+
+static int sdhci_kona_disabled_to_enabled(struct sdio_dev *dev)
+{
+	/*
+	 * TODO: Switch ON the clock from here and remove clock mgmt calls
+	 * made from all over the place in sdhci.c
+	 */
+	dev->dpm_state = ENABLED;
+	dev_dbg(dev->dev, "Disabled --> Enabled \r\n");
+
+	return 0;
+}
+
+static int sdhci_kona_off_to_enabled(struct sdio_dev *dev)
+{
+	/* TODO:
+	 * Once clk mgmt is introduced we need to turn ON the clocks here too
+	 */
+
+	/* Note that the sequence triggered by mmc_power_restore_host changes
+	 * the regulator voltage setting etc. But the regulator should be
+	 * enabled in first place.
+	 */
+	sdhci_kona_sdio_regulator_power(dev, 1);
+
+	/*
+	 * This is key, we are calling mmc_power_restore_host, which if needed
+	 * would re-trigger the protocol handshake with the card.
+	 */
+	if ((dev->devtype == SDIO_DEV_TYPE_SDMMC) && (dev->suspended != 1))
+		mmc_power_restore_host(dev->host->mmc);
+	dev->dpm_state = ENABLED;
+	pr_info("OFF --> Enabled \r\n");
+	return 0;
+}
+
+static int sdchi_kona_enabled_to_disabled(struct sdio_dev *dev)
+{
+	/*
+	 * TODO: Switch OFF the clock from here and remove clock mgmt calls
+	 * made from all over the place in sdhci.c
+	 * For now, just change the state to disabled and return
+	 * KONA_SDMMC_OFF_TIMEOUT. If nothing else happens on this SD
+	 * interface. "disable" entry point will be called after the
+	 * KONA_SDMMC_OFF_TIMEOUT milli seconds.
+	 */
+	dev->dpm_state = DISABLED;
+	dev_dbg(dev->dev, "Enabled --> Disabled \r\n");
+
+	/*
+	 * This is called when mmc_power_off is already called
+	 * from suspend path. If we don't return 0, the caller
+	 * mmc_host_do_disable would schedule the work queue.
+	 * This statement would avoid it.
+	 */
+	if (dev->host->mmc->ios.power_mode == MMC_POWER_OFF)
+		return 0;
+
+	return KONA_SDMMC_OFF_TIMEOUT;
+
+}
+
+static int sdchi_kona_disabled_to_off(struct sdio_dev *dev)
+{
+	/*
+	 * We have already turned OFF the clocks, now
+	 * turn OFF the regulators
+	 */
+	sdhci_kona_sdio_regulator_power(dev, 0);
+	dev->dpm_state = OFF;
+	pr_info("Disabled --> OFF\r\n");
+	return 0;
+}
+
+/*
+ * When the suspend of the platform driver is called, we don't know the
+ * current DPM state. So we can call this function to switch OFF the
+ * regulator. Need to revisit this function once we do clock management
+ * through this framework.
+ */
+static int sdhci_kona_anystate_to_off(struct sdio_dev *dev)
+{
+	switch (dev->dpm_state) {
+	case OFF:
+		dev_dbg(dev->dev, "Already regulators are OFF \r\n");
+		return 0;
+	case DISABLED:
+		/* Turn OFF the regulator */
+		dev_dbg(dev->dev, "Disabled->OFF \r\n");
+		dev->dpm_state = OFF;
+		return sdhci_kona_sdio_regulator_power(dev, 0);
+	case ENABLED:
+		/* TODO: Turn OFF the clocks */
+		/* Turn OFF the regulator */
+		dev_dbg(dev->dev, "ENABLED ->Disabled->OFF \r\n");
+		dev->dpm_state = OFF;
+		return sdhci_kona_sdio_regulator_power(dev, 0);
+	default:
+		dev_dbg(dev->dev, "Invalid state %d \r\n",
+			dev->dpm_state);
+		return -EINVAL;
+	}
+}
+
+int sdhci_pltfm_enable(struct sdhci_host *host)
+{
+	struct sdio_dev *dev;
+
+	if (host == NULL)
+		return -EINVAL;
+
+	dev = sdhci_priv(host);
+	if (dev == NULL)
+		return -EINVAL;
+
+	switch (dev->dpm_state) {
+	case DISABLED:
+		return sdhci_kona_disabled_to_enabled(dev);
+	case OFF:
+		return sdhci_kona_off_to_enabled(dev);
+	case ENABLED:
+		dev_dbg(dev->dev, "Already enabled \r\n");
+		return 0;
+	default:
+		dev_dbg(dev->dev, "Invalid Current State is %d \r\n",
+			dev->dpm_state);
+		return -EINVAL;
+	}
+}
+
+int sdhci_pltfm_disable(struct sdhci_host *host, int lazy)
+{
+	struct sdio_dev *dev;
+
+	if (host == NULL)
+		return -EINVAL;
+
+	dev = sdhci_priv(host);
+	if (dev == NULL)
+		return -EINVAL;
+
+	switch (dev->dpm_state) {
+	case ENABLED:
+		return sdchi_kona_enabled_to_disabled(dev);
+	case DISABLED:
+		return sdchi_kona_disabled_to_off(dev);
+	default:
+		dev_dbg(dev->dev, "Invalid Current State is %d \r\n",
+			dev->dpm_state);
+		return -EINVAL;
+	}
 }

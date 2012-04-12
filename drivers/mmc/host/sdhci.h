@@ -386,4 +386,18 @@ extern void sdhci_enable_irq_wakeups(struct sdhci_host *host);
 extern void sdhci_disable_irq_wakeups(struct sdhci_host *host);
 #endif
 
+#ifdef CONFIG_MMC_BCM_SD
+extern int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
+extern int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host);
+extern int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host);
+extern int sdhci_pltfm_enable(struct sdhci_host *host);
+extern int sdhci_pltfm_disable(struct sdhci_host *host, int lazy);
+#else
+#define sdhci_pltfm_clk_enable(..)	do { } while (0)
+#define sdhci_pltfm_set_3v3_signalling(..)	do { } while (0)
+#define sdhci_pltfm_set_1v8_signalling(..)	do { } while (0)
+#define sdhci_pltfm_enable(..)		do { } while (0)
+#define sdhci_pltfm_disable(..)		do { } while (0)
+#endif
+
 #endif /* __SDHCI_HW_H */
