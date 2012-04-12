@@ -440,6 +440,8 @@ int sec_simlock_get_status(sec_simlock_sim_data_t *sim_data,
 						simID, sim_data->imsi_string,
 						is_test_sim);
 	if (!sim_data || !sim_lock_state) {
+		pr_err("%s: invalid sim_data or sim_lock_state ptrs, exit\n",
+								__func__);
 		result = -1;
 	} else {
 		/* cache current SIM data */
@@ -454,14 +456,15 @@ int sec_simlock_get_status(sec_simlock_sim_data_t *sim_data,
 		sim_lock_state->network_lock = SEC_SIMLOCK_SECURITY_OPEN;
 		sim_lock_state->network_subset_lock =
 					SEC_SIMLOCK_SECURITY_OPEN;
-		sim_lock_state->service_provider_lock_enabled =
+		sim_lock_state->service_provider_lock =
 					SEC_SIMLOCK_SECURITY_OPEN;
-		sim_lock_state->corporate_lock_enabled =
+		sim_lock_state->corporate_lock =
 					SEC_SIMLOCK_SECURITY_OPEN;
-		sim_lock_state->phone_lock_enabled =
+		sim_lock_state->phone_lock =
 					SEC_SIMLOCK_SECURITY_OPEN;
 
 #ifdef CONFIG_BRCM_SIM_SECURE_ENABLE
+		pr_info("%s: SIM SECURE enabled\n", __func__);
 		/* update lock state */
 		SIMLockCheckAllLocks(simID,
 			sim_data->imsi_string,
@@ -471,7 +474,24 @@ int sec_simlock_get_status(sec_simlock_sim_data_t *sim_data,
 
 		/* retrieve current SIM lock state for this SIM */
 		SIMLockGetSIMLockState(simID, sim_lock_state);
+#else
+		pr_info("%s: SIM SECURE not enabled\n", __func__);
 #endif
+		pr_info("%s enabled: %d, %d, %d, %d, %d\n",
+		  __func__,
+		  sim_lock_state->network_lock_enabled,
+		  sim_lock_state->network_subset_lock_enabled,
+		  sim_lock_state->service_provider_lock_enabled,
+		  sim_lock_state->corporate_lock_enabled,
+		  sim_lock_state->phone_lock_enabled);
+
+		pr_info("%s status: %d, %d, %d, %d, %d\n",
+		  __func__,
+		  sim_lock_state->network_lock,
+		  sim_lock_state->network_subset_lock,
+		  sim_lock_state->service_provider_lock,
+		  sim_lock_state->corporate_lock,
+		  sim_lock_state->phone_lock);
 	}
 
 	return result;
