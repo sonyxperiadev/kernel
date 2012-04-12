@@ -217,7 +217,7 @@ static ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev,
 			aTrace(LOG_AUDIO_DRIVER,
 					"\nBcm_AudDrv_test SysFS :type=%s"
 			" arg1=%d, arg2=%d, arg3=%d, arg4=%d\n",
-			sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]],
+			sgBrcm_auddrv_TestName[sgBrcm_auddrv_TestValues[0]-1],
 			sgBrcm_auddrv_TestValues[1],
 			sgBrcm_auddrv_TestValues[2],
 			sgBrcm_auddrv_TestValues[3],
