@@ -94,6 +94,19 @@ static const struct v4l2_frmsize_discrete ov5640_frmsizes[OV5640_SIZE_LAST] = {
 	{2560, 1920},
 };
 
+/* Scalers to map image resolutions into AF 80x60 virtual viewfinder */
+static const struct ov5640_af_zone_scale af_zone_scale[OV5640_SIZE_LAST] = {
+	{4, 4},
+	{8, 8},
+	{12, 12},
+	{16, 12},
+	{16, 16},
+	{20, 20},
+	{24, 18},
+	{26, 26},
+	{32, 32},
+};
+
 /* Find a data format by a pixel code in an array */
 static int ov5640_find_datafmt(enum v4l2_mbus_pixelcode code)
 {
@@ -147,6 +160,12 @@ struct ov5640 {
 	 * focus_status = 0 focus cancelled or not focusing
 	 */
 	atomic_t focus_status;
+
+	/*
+	 * touch_focus holds number of valid touch focus areas. 0 = none
+	*/
+	int touch_focus;
+	v4l2_touch_area touch_area[OV5640_MAX_FOCUS_AREAS];
 };
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
@@ -796,6 +815,15 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .step = 1,
 	 .default_value = AUTO_FOCUS_OFF,
 	 },
+	{
+	 .id = V4L2_CID_CAMERA_TOUCH_AF_AREA,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "Touch focus areas",
+	 .minimum = 0,
+	 .maximum = OV5640_MAX_FOCUS_AREAS,
+	 .step = 1,
+	 .default_value = 1,
+	},
 
 };
 
@@ -1041,6 +1069,248 @@ static int ov5640_af_infinity(struct i2c_client *client)
 	return ret;
 }
 
+/* Set the touch area x,y in VVF coordinates*/
+static int ov5640_af_touch(struct i2c_client *client)
+{
+	int ret = OV5640_AF_SUCCESS;
+	struct ov5640 *ov5640 = to_ov5640(client);
+
+	/* verify # zones correct */
+	if (ov5640->touch_focus) {
+
+		/* touch zone config */
+		ret = ov5640_reg_write(client, 0x3024,
+					(u8)ov5640->touch_area[0].x);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, 0x3025,
+					(u8)ov5640->touch_area[0].y);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, OV5640_CMD_MAIN, 0x81);
+		if (ret)
+			return ret;
+		ret = ov5640_af_ack(client, 50);
+		if (ret) {
+			dev_dbg(&client->dev, "zone config ack failed\n");
+			return ret;
+		}
+
+	}
+
+	return ret;
+}
+
+/* Set the touch area, areas can overlap and
+are givin in current sensor resolution coords */
+static int ov5640_af_area(struct i2c_client *client)
+{
+	int ret = OV5640_AF_SUCCESS;
+	struct ov5640 *ov5640 = to_ov5640(client);
+	u8 weight[OV5640_MAX_FOCUS_AREAS];
+	int i;
+
+	/* verify # zones correct */
+	if ((ov5640->touch_focus) &&
+			(ov5640->touch_focus <= OV5640_MAX_FOCUS_AREAS)) {
+
+		/* enable zone config */
+		ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, OV5640_CMD_MAIN, 0x8f);
+		if (ret)
+			return ret;
+		ret = ov5640_af_ack(client, 50);
+		if (ret) {
+			dev_dbg(&client->dev, "zone config ack failed\n");
+			return ret;
+		}
+
+		/* clear all zones */
+		for (i = 0; i < OV5640_MAX_FOCUS_AREAS; i++)
+			weight[i] = 0;
+
+		/* write area to sensor */
+		for (i = 0; i < ov5640->touch_focus; i++) {
+
+			ret = ov5640_reg_write(client, 0x3024,
+						(u8)ov5640->touch_area[i].x);
+			if (ret)
+				return ret;
+			ret = ov5640_reg_write(client, 0x3025,
+						(u8)ov5640->touch_area[i].y);
+			if (ret)
+				return ret;
+			ret = ov5640_reg_write(client, 0x3026,
+						(u8)(ov5640->touch_area[i].x
+						+ ov5640->touch_area[i].w));
+			if (ret)
+				return ret;
+			ret = ov5640_reg_write(client, 0x3027,
+						(u8)(ov5640->touch_area[i].y
+						+ ov5640->touch_area[i].h));
+			if (ret)
+				return ret;
+			ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
+			if (ret)
+				return ret;
+			ret = ov5640_reg_write(client, OV5640_CMD_MAIN,
+						(0x90+i));
+			if (ret)
+				return ret;
+			ret = ov5640_af_ack(client, 50);
+			if (ret) {
+				dev_dbg(&client->dev, "zone update failed\n");
+				return ret;
+			}
+			weight[i] = (u8)ov5640->touch_area[i].weight;
+		}
+
+		/* enable zone with weight */
+		ret = ov5640_reg_write(client, 0x3024, weight[0]);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, 0x3025, weight[1]);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, 0x3026, weight[2]);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, 0x3027, weight[3]);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, 0x3028, weight[4]);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, OV5640_CMD_MAIN, 0x98);
+		if (ret)
+			return ret;
+		ret = ov5640_af_ack(client, 50);
+		if (ret) {
+			dev_dbg(&client->dev, "weights failed\n");
+			return ret;
+		}
+
+		/* launch zone configuration */
+		ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
+		if (ret)
+			return ret;
+		ret = ov5640_reg_write(client, OV5640_CMD_MAIN, 0x9f);
+		if (ret)
+			return ret;
+		ret = ov5640_af_ack(client, 50);
+		if (ret) {
+			dev_dbg(&client->dev, "launch failed\n");
+			return ret;
+		}
+	}
+
+
+	return ret;
+}
+
+
+/* Convert touch area from sensor resolution coords to ov5640 VVF zone */
+static int ov5640_af_zone_conv(struct i2c_client *client,
+					v4l2_touch_area *zone_area,
+					int zone)
+{
+	int ret = 0;
+	u32 x0, y0, x1, y1, weight;
+	struct ov5640 *ov5640 = to_ov5640(client);
+
+	/* Reset zone */
+	ov5640->touch_area[zone].x = 0;
+	ov5640->touch_area[zone].y = 0;
+	ov5640->touch_area[zone].w = 0;
+	ov5640->touch_area[zone].h = 0;
+	ov5640->touch_area[zone].weight = 0;
+
+	/* x y w h are in current sensor resolution dimensions */
+	if (((u32) zone_area->x + (u32) zone_area->w)
+				> ov5640_frmsizes[ov5640->i_size].width) {
+		iprintk("zone width error: x=0x%x w=0x%x",
+					zone_area->x, zone_area->w);
+		ret = -EINVAL;
+		goto out;
+	} else if (((u32) zone_area->y + (u32) zone_area->h)
+				> ov5640_frmsizes[ov5640->i_size].height) {
+		iprintk("zone height error: y=0x%x h=0x%x",
+					zone_area->y, zone_area->h);
+		ret = -EINVAL;
+		goto out;
+	} else if ((u32) zone_area->weight > 1000) {
+
+		iprintk("zone weight error: weight=0x%x", zone_area->weight);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	/* conv area to sensor VVF zone */
+	x0 = (u32)zone_area->x / af_zone_scale[ov5640->i_size].x_scale;
+	if (x0 > (OV5640_AF_NORMALIZED_W - 8))
+		x0 = (OV5640_AF_NORMALIZED_W - 8);
+	x1 = ((u32)zone_area->x + (unsigned int)zone_area->w)
+		/ af_zone_scale[ov5640->i_size].x_scale;
+	if (x1 > OV5640_AF_NORMALIZED_W)
+		x1 = OV5640_AF_NORMALIZED_W;
+	y0 = (u32)zone_area->y / af_zone_scale[ov5640->i_size].y_scale;
+	if (y0 > (OV5640_AF_NORMALIZED_H - 8))
+		y0 = (OV5640_AF_NORMALIZED_H - 8);
+	y1 = ((u32)zone_area->y + (unsigned int)zone_area->h)
+		/ af_zone_scale[ov5640->i_size].y_scale;
+	if (y1 > OV5640_AF_NORMALIZED_H)
+		y1 = OV5640_AF_NORMALIZED_H;
+
+	/* weight ranges from 1-1000 */
+	/* Convert weight */
+	weight = 0;
+	if ((zone_area->weight > 0) && (zone_area->weight <= 125))
+		weight = 1;
+	else if ((zone_area->weight > 125) && (zone_area->weight <= 250))
+		weight = 2;
+	else if ((zone_area->weight > 250) && (zone_area->weight <= 375))
+		weight = 3;
+	else if ((zone_area->weight > 375) && (zone_area->weight <= 500))
+		weight = 4;
+	else if ((zone_area->weight > 500) && (zone_area->weight <= 625))
+		weight = 5;
+	else if ((zone_area->weight > 625) && (zone_area->weight <= 750))
+		weight = 6;
+	else if ((zone_area->weight > 750) && (zone_area->weight <= 875))
+		weight = 7;
+	else if (zone_area->weight > 875)
+		weight = 8;
+
+	/* Minimum zone size */
+	if (((x1 - x0) >= 8) && ((y1 - y0) >= 8)) {
+
+		ov5640->touch_area[zone].x = (int) x0;
+		ov5640->touch_area[zone].y = (int) y0;
+		ov5640->touch_area[zone].w = (int) (x1 - x0);
+		ov5640->touch_area[zone].h = (int) (y1 - y0);
+		ov5640->touch_area[zone].weight = (int) weight;
+
+	} else {
+		dev_dbg(&client->dev,
+			"zone %d size failed: x0=%d x1=%d y0=%d y1=%d w=%d\n",
+				zone, x0, x1, y0, y1, weight);
+		ret = -EINVAL;
+		goto out;
+	}
+
+out:
+
+	return ret;
+}
+
 static int ov5640_af_status(struct i2c_client *client, int num_trys)
 {
 	int ret = OV5640_AF_SUCCESS;
@@ -1085,6 +1355,7 @@ static int ov5640_af_status(struct i2c_client *client, int num_trys)
 				&& (af_zone3 != 0) && (af_zone4 != 0)) {
 			dev_dbg(&client->dev, "zones failed\n");
 			ret = OV5640_AF_FAIL;
+			iprintk("zones failed");
 			goto out;
 		}
 
@@ -1099,12 +1370,25 @@ static int ov5640_af_start(struct i2c_client *client)
 	int ret = 0;
 	struct ov5640 *ov5640 = to_ov5640(client);
 
-	if (ov5640->focus_mode == FOCUS_MODE_MACRO)
+	if (ov5640->focus_mode == FOCUS_MODE_MACRO) {
+		/*
+		 * FIXME: Can the af_area be set before af_macro, or does
+		 * this need to be inside the af_macro func?
+		 ret = ov5640_af_area(client);
+		 */
 		ret = ov5640_af_macro(client);
-	else if (ov5640->focus_mode == FOCUS_MODE_INFINITY)
+	} else if (ov5640->focus_mode == FOCUS_MODE_INFINITY)
 		ret = ov5640_af_infinity(client);
 	else {
-		ov5640_af_center(client);
+		if (ov5640->touch_focus) {
+			if (ov5640->touch_focus == 1)
+				ret = ov5640_af_touch(client);
+			else
+				ret = ov5640_af_area(client);
+		} else
+			ret = ov5640_af_center(client);
+		if (ret)
+			return ret;
 		ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
 		if (ret)
 			return ret;
@@ -1469,6 +1753,7 @@ static int ov5640_get_af_status(struct i2c_client *client, int num_trys)
 	ret = 0;
 out:
 	atomic_set(&ov5640->focus_status, OV5640_NOT_FOCUSING);
+
 	return ret;
 }
 
@@ -1507,11 +1792,15 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAMERA_FOCUS_MODE:
 		ctrl->value = ov5640->focus_mode;
 		break;
+	case V4L2_CID_CAMERA_TOUCH_AF_AREA:
+		ctrl->value = ov5640->touch_focus;
+		break;
 	case V4L2_CID_CAMERA_AUTO_FOCUS_RESULT:
 		/*
 		 * this is called from another thread to read AF status
 		 */
 		ctrl->value = ov5640_get_af_status(client, 100);
+		ov5640->touch_focus = 0;
 		break;
 	}
 
@@ -1815,6 +2104,32 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ret;
 		break;
 
+	case V4L2_CID_CAMERA_TOUCH_AF_AREA:
+
+		if (ov5640->touch_focus < OV5640_MAX_FOCUS_AREAS) {
+			v4l2_touch_area touch_area;
+			if (copy_from_user(&touch_area,
+					(v4l2_touch_area *)ctrl->value,
+					sizeof(v4l2_touch_area)))
+				return -EINVAL;
+
+			iprintk("z=%d x=0x%x y=0x%x w=0x%x h=0x%x weight=0x%x",
+				ov5640->touch_focus, touch_area.x,
+				touch_area.y, touch_area.w, touch_area.h,
+				touch_area.weight);
+
+			ret = ov5640_af_zone_conv(client, &touch_area,
+							ov5640->touch_focus);
+			if (ret == 0)
+				ov5640->touch_focus++;
+			ret = 0;
+
+		} else
+			dev_dbg(&client->dev,
+				"Maximum touch focus areas already set\n");
+
+		break;
+
 	case V4L2_CID_CAMERA_SET_AUTO_FOCUS:
 
 		if (ctrl->value > AUTO_FOCUS_ON)
@@ -1830,6 +2145,7 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				ret = ov5640_af_release(client);
 				atomic_set(&ov5640->focus_status,
 						OV5640_NOT_FOCUSING);
+				ov5640->touch_focus = 0;
 			}
 			break;
 
@@ -1969,6 +2285,7 @@ static int ov5640_init(struct i2c_client *client)
 	ov5640->whitebalance = WHITE_BALANCE_AUTO;
 	ov5640->framerate = FRAME_RATE_AUTO;
 	ov5640->focus_mode = FOCUS_MODE_AUTO;
+	ov5640->touch_focus = 0;
 	atomic_set(&ov5640->focus_status, OV5640_NOT_FOCUSING);
 
 	dev_dbg(&client->dev, "Sensor initialized\n");

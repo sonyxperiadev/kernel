@@ -41,6 +41,8 @@
 
 #define OV5640_NOT_FOCUSING				0
 #define OV5640_FOCUSING					1
+
+#define OV5640_MAX_FOCUS_AREAS				5
 /**
  *struct ov5640_reg - ov5640 register format
  *@reg: 16-bit offset to register
@@ -52,6 +54,14 @@
 struct ov5640_reg {
 	u16 reg;
 	u8 val;
+};
+
+/**
+* Define a structure for OV5640 AF zone scale values
+ */
+struct ov5640_af_zone_scale {
+	u32 x_scale;
+	u32 y_scale;
 };
 
 /* TODO: Divide this properly */
