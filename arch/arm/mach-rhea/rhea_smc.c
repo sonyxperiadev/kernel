@@ -128,7 +128,7 @@ u32 hw_sec_pub_dispatcher(u32 service, u32 flags, ...)
 	va_list list;
 	int i, nargs, id;
 
-	BUG_ON(service > SEC_API_MAX);
+	BUG_ON(service >= SEC_API_MAX);
 	if (smc_buf_v == NULL)
 		return -ENODEV;
 

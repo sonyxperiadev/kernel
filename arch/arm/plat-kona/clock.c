@@ -215,9 +215,8 @@ static int __pll_clk_init(struct clk *clk)
 	}
 
 	else if (CLK_FLG_ENABLED(clk, DISABLE_ON_INIT)) {
-		if (clk->ops->enable) {
+		if (clk->ops && clk->ops->enable)
 			clk->ops->enable(clk, 0);
-		}
 	}
 	INIT_LIST_HEAD(&clk->list);
 	list_add(&clk->list, &pll_clk->ccu_clk->clk_list);
@@ -250,9 +249,8 @@ static int __pll_chnl_clk_init(struct clk *clk)
 	}
 
 	else if (CLK_FLG_ENABLED(clk, DISABLE_ON_INIT)) {
-		if (clk->ops->enable) {
+		if (clk->ops && clk->ops->enable)
 			clk->ops->enable(clk, 0);
-		}
 	}
 
 	CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 0);
