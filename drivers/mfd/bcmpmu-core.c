@@ -24,6 +24,7 @@
 #include <linux/fs.h>
 #include <linux/miscdevice.h>
 #include <linux/uaccess.h>
+#include <linux/rtc.h>
 
 #include <linux/mfd/bcmpmu.h>
 
@@ -129,6 +130,124 @@ void bcmpmu_client_power_off(void)
 }
 
 EXPORT_SYMBOL(bcmpmu_client_power_off);
+
+int bcmpmu_client_hard_reset(unsigned char reset_reason)
+{
+	unsigned int val;
+	int ret = 0;
+	struct rtc_time tm;
+	unsigned long alarm_time;
+
+	BUG_ON(!bcmpmu_core);
+
+	if ((reset_reason < 1) || (reset_reason > 15)) {
+		pr_warning("%s: reset_reason out of range : %d\n",
+			__func__, reset_reason);
+		reset_reason = 1;
+	}
+
+	pr_info("hard reset with reset_reason : %d\n", reset_reason);
+
+	/* read the RTC */
+	ret = bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_RTCYR,
+				&tm.tm_year, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	tm.tm_year += 100;
+
+	ret = bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_RTCMT,
+				&tm.tm_mon, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	tm.tm_mon -= 1;
+
+	ret = bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_RTCDT,
+				&tm.tm_mday, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	ret = bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_RTCHR,
+				&tm.tm_hour, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	ret = bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_RTCMN,
+				&tm.tm_min, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	ret = bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_RTCSC,
+				&tm.tm_sec, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	/* Set the alarm as RTC + 2sec */
+	rtc_tm_to_time(&tm, &alarm_time);
+	alarm_time += 2;
+	rtc_time_to_tm(alarm_time, &tm);
+
+	ret = bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_RTCYR_ALM,
+				tm.tm_year - 100, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	ret = bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_RTCMT_ALM,
+				tm.tm_mon + 1, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	ret = bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_RTCDT_ALM,
+				tm.tm_mday, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	ret = bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_RTCHR_ALM,
+				tm.tm_hour, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	ret = bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_RTCMN_ALM,
+				tm.tm_min, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	ret = bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_RTCSC_ALM,
+				tm.tm_sec, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	/* Set the reset reason */
+	ret = bcmpmu_core->read_dev(bcmpmu_core, PMU_REG_RTC_CORE,
+				&val, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	/*
+	 * bit[1:0] should be 0 not to clear
+	 * bit[7:2] can be used as scratch register
+	 * use bit[7:4] for the hard reset reason
+	 */
+	val &= ~0xF3;
+	val |= (reset_reason << 4);
+
+	ret = bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_RTC_CORE,
+				val, PMU_BITMASK_ALL);
+	if (unlikely(ret))
+		goto err;
+
+	bcmpmu_client_power_off();
+
+	/* This should never be reached. */
+	pr_err("PMU shutdown failure");
+	return -EIO;
+err:
+	pr_err("PMU hard reset failure");
+	return ret;
+}
+EXPORT_SYMBOL(bcmpmu_client_hard_reset);
+
 
 int bcmpmu_reg_write_unlock(struct bcmpmu *bcmpmu)
 {

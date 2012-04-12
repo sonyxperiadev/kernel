@@ -149,6 +149,11 @@ int get_force_sleep_state(void)
 	return force_sleep_state;
 }
 
+#if defined(CONFIG_MACH_RHEA_SS_LUCAS)
+extern void uas_jig_force_sleep(void);
+#endif
+
+
 static void cmd_force_sleep(const char *p)
 {
 	sscanf(p, "%d", &force_sleep_state);
@@ -157,6 +162,10 @@ static void cmd_force_sleep(const char *p)
 		force_sleep_state = 2;
 		return;
 	}
+
+#if defined(CONFIG_MACH_RHEA_SS_LUCAS)
+	uas_jig_force_sleep();
+#endif
 
 	pr_info("Forcing system to state: %d\n", force_sleep_state);
 	kona_pm_reg_pm_enter_handler(&rhea_force_sleep);

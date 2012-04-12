@@ -48,6 +48,13 @@
 #include <plat/kona_avs.h>
 #endif
 
+#ifdef CONFIG_DEBUG_FS
+/*GPIO0-15 debug bus select values*/
+#define DBG_BUS_PM_DBG_BUS_SEL		0x2
+#define DBG_BUS_BMDB_DBG_BUS_SEL	0xD
+
+#endif
+
 #define VLT_LUT_SIZE	16
 /*PM policy definitions for Rhea */
 #define PM_OFF		0
@@ -442,9 +449,10 @@ early_initcall(rhea_pwr_mgr_init);
 void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param)
 {
 	if (db_mux == 0)	/*GPIO ? */
-		mux_param = (type == 0) ? 2 : 0xD;
+		mux_param = (type == 0) ? DBG_BUS_PM_DBG_BUS_SEL
+				: DBG_BUS_BMDB_DBG_BUS_SEL;
 
-	set_gpio_mux_for_debug_bus(db_mux, mux_param);
+	debug_bus_mux_sel(db_mux, mux_param);
 }
 
 #endif /*CONFIG_DEBUG_FS */

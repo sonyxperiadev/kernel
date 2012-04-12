@@ -432,7 +432,8 @@ int enter_idle_state(struct kona_idle_state *state)
 	config_wakeup_interrupts();
 
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
-	pi_enable(pi,0);
+	BUG_ON(pi == NULL);
+	pi_enable(pi, 0);
 #ifdef CONFIG_RHEA_WA_HWJIRA_2301
 	if (JIRA_WA_ENABLED(2301)) {
 		/*

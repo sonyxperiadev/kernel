@@ -132,6 +132,9 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
+#include <linux/mfd/bcmpmu.h>
+#include <plat/pi_mgr.h>
+
 #include <media/soc_camera.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
@@ -2126,6 +2129,109 @@ static void __init rhea_ray_reserve(void)
 {
 	board_common_reserve();
 }
+
+
+/* For Samsung long duration testing wake_lock must be hold once UART
+ * cable is connected, so that system won't go to sleep.
+ * uas_notify_init() will register for JIG_UART insertion and removal and
+ * hold and release the wake_lock accordingly
+ */
+struct notifier_block nb[2];
+#ifdef CONFIG_HAS_WAKELOCK
+static struct wake_lock jig_uart_wl;
+#endif
+
+#ifdef CONFIG_KONA_PI_MGR
+static struct pi_mgr_qos_node qos_node;
+#endif
+
+extern int bcmpmu_get_uas_sw_grp(void);
+static int uas_jig_uart_handler(struct notifier_block *nb,
+				unsigned long event, void *para)
+{
+	switch (event) {
+	case BCMPMU_JIG_EVENT_UART:
+		pr_info("%s: BCMPMU_JIG_EVENT_UART uart_connected\n", __func__);
+#ifdef CONFIG_HAS_WAKELOCK
+		if (wake_lock_active(&jig_uart_wl) == 0)
+			wake_lock(&jig_uart_wl);
+#endif
+
+#ifdef CONFIG_KONA_PI_MGR
+		pi_mgr_qos_request_update(&qos_node, 0);
+#endif
+		break;
+	case BCMPMU_USB_EVENT_ID_CHANGE:
+	default:
+		pr_info("%s: UART JIG SW GRP %d\n",
+			__func__, bcmpmu_get_uas_sw_grp());
+		if (bcmpmu_get_uas_sw_grp() != UAS_SW_GRP_UART_JIG) {
+#ifdef CONFIG_HAS_WAKELOCK
+			if (wake_lock_active(&jig_uart_wl))
+				wake_unlock(&jig_uart_wl);
+#endif
+#ifdef CONFIG_KONA_PI_MGR
+			pi_mgr_qos_request_update(&qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+#endif
+		}
+		break;
+	}
+	return 0;
+}
+
+void uas_jig_force_sleep(void)
+{
+	pr_info("%s: UART JIG SW GRP=%d\n",
+		__func__, bcmpmu_get_uas_sw_grp());
+
+#ifdef CONFIG_HAS_WAKELOCK
+	if (wake_lock_active(&jig_uart_wl)) {
+		wake_unlock(&jig_uart_wl);
+		pr_info("UART JIG Force\n");
+	}
+#endif
+#ifdef CONFIG_KONA_PI_MGR
+	pi_mgr_qos_request_update(&qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+#endif
+}
+
+static int __init uas_notify_init(void)
+{
+	int ret = 0;
+	pr_info("uas_notify_init: STARTED\n");
+	nb[0].notifier_call = uas_jig_uart_handler;
+	nb[1].notifier_call = uas_jig_uart_handler;
+	ret = bcmpmu_add_notifier(BCMPMU_JIG_EVENT_UART, &nb[0]);
+	ret |= bcmpmu_add_notifier(BCMPMU_USB_EVENT_ID_CHANGE, &nb[1]);
+	if (ret) {
+		pr_info("%s: failed to register for JIG UART notification\n",
+			__func__);
+		return -1;
+	}
+#ifdef CONFIG_KONA_PI_MGR
+	pi_mgr_qos_add_request(&qos_node, "jig_uart", PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+			       PI_MGR_QOS_DEFAULT_VALUE);
+#endif
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&jig_uart_wl, WAKE_LOCK_SUSPEND, "jig_uart_wake");
+#endif
+	if (bcmpmu_get_uas_sw_grp() == UAS_SW_GRP_UART_JIG) {
+		pr_info("uas_notify_init: JIG UART CONNECTED\n");
+#ifdef CONFIG_HAS_WAKELOCK
+		if (wake_lock_active(&jig_uart_wl) == 0)
+			wake_lock(&jig_uart_wl);
+#endif
+#ifdef CONFIG_KONA_PI_MGR
+		pi_mgr_qos_request_update(&qos_node, 0);
+#endif
+
+	}
+	return 0;
+}
+
+late_initcall(uas_notify_init);
+
+
 
 #define TSP_SDA 27
 #define TSP_SCL 26

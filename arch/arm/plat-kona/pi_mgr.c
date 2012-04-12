@@ -324,8 +324,11 @@ static int __pi_init_state(struct pi *pi)
 			BUG_ON(pi->pi_ccu[inx] == 0 || IS_ERR(pi->pi_ccu[inx]));
 		}
 		spin_lock_irqsave(&pi->lock, flgs);
-		if (pi->ops && pi->ops->init_state)
+		if (pi->ops && pi->ops->init_state) {
 			ret = pi->ops->init_state(pi);
+			if (ret)
+				return ret;
+		}
 
 		pi->init = PI_INIT_COMPLETE;
 
@@ -348,8 +351,8 @@ static int __pi_init_state(struct pi *pi)
 		}
 		if ((pi->flags & NO_POLICY_CHANGE) == 0) {
 			struct pm_policy_cfg cfg;
-			pwr_mgr_event_get_pi_policy(SOFTWARE_0_EVENT, pi->id,
-						    &cfg);
+			ret = pwr_mgr_event_get_pi_policy(SOFTWARE_0_EVENT,
+					pi->id, &cfg);
 			pi_dbg(pi->id, PI_LOG_INIT,
 			       "%s: pi-%s cnt = %d  policy =%d\n", __func__,
 			       pi->name, pi->usg_cnt, cfg.policy);
@@ -585,6 +588,7 @@ static int pi_def_enable(struct pi *pi, int enable)
 static int pi_reset(struct pi *pi, int sub_domain)
 {
 	u32 reg_val;
+	u32 mask;
 	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	unsigned long flgs;
@@ -617,39 +621,24 @@ static int pi_reset(struct pi *pi, int sub_domain)
 
 	switch (sub_domain) {
 	case SUB_DOMAIN_0:
-		reg_val = reg_val & ~pi->pi_info.pd_reset_mask0;
+		mask = pi->pi_info.pd_reset_mask0;
 		break;
 	case SUB_DOMAIN_1:
-		reg_val = reg_val & ~pi->pi_info.pd_reset_mask1;
+		mask = pi->pi_info.pd_reset_mask1;
 		break;
 	case SUB_DOMAIN_BOTH:
-		reg_val = reg_val & ~pi->pi_info.pd_reset_mask0;
-		reg_val = reg_val & ~pi->pi_info.pd_reset_mask1;
+		mask = pi->pi_info.pd_reset_mask0 | pi->pi_info.pd_reset_mask1;
 		break;
 	default:
 		spin_unlock_irqrestore(&pi->lock, flgs);
 		return -EINVAL;
 	}
+	reg_val &= ~mask;
 	pi_dbg(pi->id, PI_LOG_RESET, "writing reset value: %08x\n", reg_val);
 	writel(reg_val, ccu_clk->ccu_reset_mgr_base +
 	       pi->pi_info.pd_soft_reset_offset);
 	udelay(10);
-
-	switch (sub_domain) {
-	case SUB_DOMAIN_0:
-		reg_val = reg_val | pi->pi_info.pd_reset_mask0;
-		break;
-	case SUB_DOMAIN_1:
-		reg_val = reg_val | pi->pi_info.pd_reset_mask1;
-		break;
-	case SUB_DOMAIN_BOTH:
-		reg_val = reg_val | pi->pi_info.pd_reset_mask0;
-		reg_val = reg_val | pi->pi_info.pd_reset_mask1;
-		break;
-	default:
-		spin_unlock_irqrestore(&pi->lock, flgs);
-		return -EINVAL;
-	}
+	reg_val |= mask;
 	pi_dbg(pi->id, PI_LOG_RESET, "writing reset release value: %08x\n",
 	       reg_val);
 	writel(reg_val,
@@ -1811,7 +1800,7 @@ static int pi_debug_reset(void *data, u64 val)
 	struct pi *pi = data;
 
 	if (pi && pi->ops && pi->ops->reset) {
-		if (val >= 0 && val <= 2)
+		if (val <= 2)
 			pi->ops->reset(pi, val);
 		else {
 			pi_dbg(pi->id, PI_LOG_ERR,

@@ -43,10 +43,10 @@
 	do {								\
 		u32 __log_mask = 0;					\
 		if (log_typ == PI_LOG_ERR)				\
-			pr_info(format);				\
-		else if (pi_id >= 0) {					\
+			pr_err(format);				\
+		else {					\
 			__log_mask = (((1 << PI_LOG_CONTROL_START_BIT)	\
-				<< pi_id) | (log_typ));\
+				<< (u32)(pi_id)) | (log_typ));\
 			if ((pi_debug & __log_mask) == __log_mask)	\
 				pr_info(format);			\
 	    }								\

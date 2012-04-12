@@ -72,8 +72,6 @@ extern void htsf_update(struct dhd_info *dhd, void *data);
 int dhd_msg_level = DHD_ERROR_VAL;
 
 
-
-
 #include <wl_iw.h>
 
 char fw_path[MOD_PARAM_PATHLEN];

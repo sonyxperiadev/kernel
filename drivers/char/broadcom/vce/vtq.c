@@ -619,7 +619,7 @@ static void vce_download_data_at(struct vtq_vce *v,
 	}
 
 	while (size > 0) {
-		vce_writeprog(&v->io, loadoffset, *image);
+		vce_writedata(&v->io, loadoffset, *image);
 		loadoffset += 4;
 		size -= 4;
 		image++;
@@ -860,6 +860,10 @@ struct vtq_image *vtq_register_image(struct vtq_context *ctx,
 	}
 	if (textsz > ctx->vce->global->loaderkernel_loadoffset) {
 		err_print("INSTRUCTION memory requirement too big\n");
+		goto err_bad_image_param;
+	}
+	if (textsz > 0x2000 && !ctx->vce->global->host_push) {
+		err_print("Images over 8kB are not supported currently\n");
 		goto err_bad_image_param;
 	}
 	if (textsz & 3 || datasz & 3 || datamemreq & 3) {

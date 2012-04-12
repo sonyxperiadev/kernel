@@ -52,7 +52,12 @@
 #include <plat/cpu.h>
 #include "pm_params.h"
 
-
+#ifdef CONFIG_DEBUG_FS
+/*GPIO0-15/ debug bus select values*/
+#define CCU_GPIO_DBG_BUS_SEL 0xB
+#define ROOT_CCU_GPIO_DBG_BUS_SEL 0xF
+#define ROOT_CCU_SDDAT_DBG_BUS_SEL 0x8
+#endif
 unsigned long clock_get_xtal(void)
 {
 	return FREQ_MHZ(26);
@@ -135,6 +140,7 @@ static struct ccu_clk CLK_NAME(root) = {
 	.reset_wr_access_offset = ROOT_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.ccu_ops = &root_ccu_ops,
 	.clk_mon_offset = ROOT_CLK_MGR_REG_CLKMON_OFFSET,
+	.dbg_bus_offset = ROOT_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
 };
 
 /*
@@ -1329,6 +1335,7 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.freq_tbl = DEFINE_ARRAY_ARGS(khub_clk_freq_list0,khub_clk_freq_list1,khub_clk_freq_list2,khub_clk_freq_list3,khub_clk_freq_list4,khub_clk_freq_list5,khub_clk_freq_list6),
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_RST_BASE_ADDR),
 	.reset_wr_access_offset = KHUB_RST_MGR_REG_WR_ACCESS_OFFSET,
+	.dbg_bus_offset = KHUB_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
 
 };
 
@@ -3538,6 +3545,7 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.freq_tbl = DEFINE_ARRAY_ARGS(kpm_clk_freq_list0,kpm_clk_freq_list1,kpm_clk_freq_list2,kpm_clk_freq_list3,kpm_clk_freq_list4,kpm_clk_freq_list5,kpm_clk_freq_list6,kpm_clk_freq_list7),
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPM_RST_MGR_REG_WR_ACCESS_OFFSET,
+	.dbg_bus_offset = KPM_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
 
 };
 
@@ -4474,6 +4482,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.freq_tbl = DEFINE_ARRAY_ARGS(kps_clk_freq_list0,kps_clk_freq_list1,kps_clk_freq_list2,kps_clk_freq_list3,kps_clk_freq_list4,kps_clk_freq_list5),
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPS_RST_MGR_REG_WR_ACCESS_OFFSET,
+	.dbg_bus_offset = KPS_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
 
 };
 
@@ -7209,6 +7218,9 @@ int __init rhea_clock_init(void)
 /*only clk mgr write_access and reset mgr access functions is needed for root ccu*/
 	root_ccu_ops.write_access =  gen_ccu_ops.write_access;
 	root_ccu_ops.rst_write_access  = gen_ccu_ops.rst_write_access;
+	root_ccu_ops.get_dbg_bus_status =  gen_ccu_ops.get_dbg_bus_status;
+	root_ccu_ops.set_dbg_bus_sel =  gen_ccu_ops.set_dbg_bus_sel;
+	root_ccu_ops.get_dbg_bus_sel =  gen_ccu_ops.get_dbg_bus_sel;
 
 	mm_ccu_ops = gen_ccu_ops;
 	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;
@@ -7248,10 +7260,9 @@ int __init rhea_clock_init(void)
 
 
 #ifdef CONFIG_DEBUG_FS
-int set_gpio_mux_for_debug_bus(int mux_sel, int mux_param)
+int debug_bus_mux_sel(int mux_sel, int mux_param)
 {
 	u32 reg_val;
-	pr_info("in %s \n", __func__);
 
 	/*Get pad control write access by rwiting password */
 	writel(0xa5a501, KONA_PAD_CTRL + PADCTRLREG_WR_ACCESS_OFFSET);
@@ -7316,6 +7327,26 @@ int set_gpio_mux_for_debug_bus(int mux_sel, int mux_param)
 
     return 0;
 }
+int set_ccu_dbg_bus_mux(struct ccu_clk *ccu_clk, int mux_sel,
+			int mux_param)
+{
+	if (mux_sel == 0)
+		debug_bus_mux_sel(mux_sel, CCU_GPIO_DBG_BUS_SEL);
+	else {
+		u32 reg = readl(KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+		reg &=
+		~CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
+		reg |=
+		(CCU_GPIO_DBG_BUS_SEL <<
+		CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_SHIFT) &
+		CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
+		writel(reg,
+			KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+	}
+
+	return 0;
+}
 
 int set_clk_idle_debug_mon(int clk_idle, int db_sel)
 {
@@ -7323,14 +7354,14 @@ int set_clk_idle_debug_mon(int clk_idle, int db_sel)
 	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 
-	pr_info("in %s clk_idle:%d\n", __func__, clk_idle);
 	if (clk_idle > 0xF) {
 		clk_dbg("%s: Invalid value for rootCCU debug bus: %d\n",
 			__func__, clk_idle);
 	return -EINVAL;
 	}
-	set_gpio_mux_for_debug_bus(db_sel,
-		(db_sel == 0) ? 0xF : 8);
+	debug_bus_mux_sel(db_sel,
+		(db_sel == 0) ? ROOT_CCU_GPIO_DBG_BUS_SEL :
+			ROOT_CCU_SDDAT_DBG_BUS_SEL);
 
 	clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
 	ccu_clk = to_ccu_clk(clk);
@@ -7354,8 +7385,9 @@ int set_clk_monitor_debug(int mon_select, int db_sel)
 		writel(0x303, KONA_PAD_CTRL + PADCTRLREG_CAMCS1_OFFSET);
 		break;
 	case MONITOR_DEBUG_BUS_GPIO:
-		set_gpio_mux_for_debug_bus(db_sel,
-			(db_sel == 0) ? 0xF : 8);
+		debug_bus_mux_sel(db_sel,
+			(db_sel == 0) ? ROOT_CCU_GPIO_DBG_BUS_SEL :
+					ROOT_CCU_SDDAT_DBG_BUS_SEL);
 		break;
 	default:
 		return -EINVAL;

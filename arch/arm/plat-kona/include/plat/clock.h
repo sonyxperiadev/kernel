@@ -109,6 +109,12 @@
 #define CLK_DIV_TRIGGER		1
 #define CLK_DIV_TRIG_OK		0
 
+#define CCU_DBG_BUS_STATUS_MASK		0xFFFF
+#define CCU_DBG_BUS_STATUS_SHIFT	0
+#define CCU_DBG_BUS_SEL_MASK		(0x1F << 16)
+#define CCU_DBG_BUS_SEL_SHIFT		16
+
+
 #define CCU_POLICY_MASK_ENABLE_ALL_MASK	0x7FFFFFFF
 
 #define CCU_REG_ADDR(ccu,offset)	((u32)(ccu->ccu_clk_mgr_base + offset))
@@ -123,6 +129,7 @@
 #define CCU_VLT_PERI_REG(ccu)		CCU_REG_ADDR(ccu, ccu->vlt_peri_offset)
 #define CCU_VLT0_3_REG(ccu)			CCU_REG_ADDR(ccu, ccu->vlt0_3_offset)
 #define CCU_VLT4_7_REG(ccu)			CCU_REG_ADDR(ccu, ccu->vlt4_7_offset)
+#define CCU_DBG_BUS_REG(ccu)		CCU_REG_ADDR(ccu, ccu->dbg_bus_offset)
 
 #define CCU_REG_ADDR_FROM_REGBITS(ccu, register_bits)	CCU_REG_ADDR(ccu, \
 (register_bits).reg_offset)
@@ -271,6 +278,7 @@ enum {
 	CCU_TARGET_AC = (1 << 17),
 	CCU_ACCESS_ENABLE = (1 << 18),
 	CCU_KEEP_UNLOCKED = (1 << 19),
+	CCU_DBG_BUS_EN = (1 << 20),
 
 	/*Ref clk flags */
 	CLK_RATE_FIXED = (1 << 24),
@@ -349,6 +357,9 @@ struct ccu_clk_ops {
 	int (*set_active_policy) (struct ccu_clk * ccu_clk, u32 policy);
 	int (*get_active_policy) (struct ccu_clk * ccu_clk);
 	int (*save_state) (struct ccu_clk * ccu_clk, int save);
+	int (*get_dbg_bus_status) (struct ccu_clk *ccu_clk);
+	int (*set_dbg_bus_sel) (struct ccu_clk *ccu_clk, u32 sel);
+	int (*get_dbg_bus_sel) (struct ccu_clk *ccu_clk);
 };
 
 struct clk_div {
@@ -479,6 +490,7 @@ struct ccu_clk {
 	u32 lvm0_3_offset;
 	u32 vlt0_3_offset;
 	u32 vlt4_7_offset;
+	u32 dbg_bus_offset;
 
 	u8 freq_volt[MAX_CCU_FREQ_COUNT];
 	const u8 freq_count;
@@ -748,6 +760,9 @@ int ccu_get_voltage(struct ccu_clk *ccu_clk, int freq_id);
 int ccu_set_active_policy(struct ccu_clk *ccu_clk, u32 policy);
 int ccu_get_active_policy(struct ccu_clk *ccu_clk);
 int ccu_save_state(struct ccu_clk *ccu_clk, int save);
+int ccu_get_dbg_bus_status(struct ccu_clk *ccu_clk);
+int ccu_set_dbg_bus_sel(struct ccu_clk *ccu_clk, u32 sel);
+int ccu_get_dbg_bus_sel(struct ccu_clk *ccu_clk);
 
 #if defined(DEBUG)
 #define	clk_dbg printk

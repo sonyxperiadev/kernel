@@ -95,7 +95,7 @@ extern int net_os_set_suspend_disable(struct net_device *dev, int val);
 extern int net_os_set_suspend(struct net_device *dev, int val);
 extern int wl_iw_parse_ssid_list_tlv(char** list_str, wlc_ssid_t* ssid,
 	int max, int *bytes_left);
-#ifdef PNO_SUPPORT
+#if defined(PNO_SUPPORT) && defined(CONFIG_HAS_WAKELOCK)
 int net_os_wake_lock_timeout_for_pno(struct net_device *dev, int sec);
 #endif
 

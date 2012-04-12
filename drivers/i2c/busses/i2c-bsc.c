@@ -918,7 +918,7 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
 	/* configure the adapter bus speed */
-	if (set_speed != dev->current_speed) {
+	if (set_speed != dev->current_speed && set_speed < BSC_BUS_SPEED_MAX) {
 		/* HSTIM is calculated based on 26MHz source */
 		bsc_set_bus_speed((uint32_t)dev->virt_base,
 				  gBusSpeedTable[set_speed]);

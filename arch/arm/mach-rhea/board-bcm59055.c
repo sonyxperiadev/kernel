@@ -42,6 +42,7 @@
 
 static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x0c, .val = 0x1b, .mask = 0xFF},
+	{.map = 0, .addr = 0x2e, .val = 0x00, .mask = 0xF3},
 	{.map = 0, .addr = 0x40, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x41, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x42, .val = 0xFF, .mask = 0xFF},
@@ -80,16 +81,16 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x7C, .val = 0xA7, .mask = 0xFF},
 	{.map = 0, .addr = 0x7D, .val = 0x08, .mask = 0xFF},
 
-	/*Init SDSR NM, NM2 and LPM voltages to 1.2V
+	/*Init SDSR NM, NM2 and LPM voltages to 1.24V
 	*/
-	{.map = 0, .addr = 0xD0, .val = 0x13, .mask = 0xFF},
-	{.map = 0, .addr = 0xD1, .val = 0x13, .mask = 0xFF},
-	{.map = 0, .addr = 0xD2, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0xD0, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD1, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD2, .val = 0x15, .mask = 0xFF},
 
-	/*Init CSR LPM  to 0.9 V
+	/*Init CSR LPM  to 0.88 V
 	CSR NM2 to 1.22V
 	*/
-	{.map = 0, .addr = 0xC1, .val = 0x04, .mask = 0xFF},
+	{.map = 0, .addr = 0xC1, .val = 0x03, .mask = 0xFF},
 	{.map = 0, .addr = 0xC2, .val = 0x14, .mask = 0xFF},
 
 	/*Set IOSR LMP voltage to 1.8V*/
