@@ -787,6 +787,7 @@ EXPORT_SYMBOL(pwr_mgr_pi_counter_enable);
 
 int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 {
+#define PWR_MGR_PI_COUNT_READ_TOLERANCE 2
 	u32 reg_val1 = 0;
 	u32 reg_val2 = 0;
 	int insurance;
@@ -812,7 +813,8 @@ int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 	do {
 		reg_val1 = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
 		reg_val2 = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
-		if ((reg_val2 >= reg_val1) && ((reg_val2 - reg_val1) < 2))
+		if ((reg_val2 >= reg_val1) &&
+		    ((reg_val2 - reg_val1) <= PWR_MGR_PI_COUNT_READ_TOLERANCE))
 			break;
 		insurance++;
 	} while (insurance < 1000);
