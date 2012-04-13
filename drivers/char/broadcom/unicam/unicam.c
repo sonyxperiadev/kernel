@@ -23,9 +23,9 @@ the GPL, without Broadcom's express prior written consent.
 #include <plat/kona_unicam.h>
 #include <linux/mutex.h>
 #include <mach/irqs.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <linux/clk.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <linux/proc_fs.h>
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
@@ -79,29 +79,29 @@ printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
 
 static int unicam_major = UNICAM_DEV_MAJOR;
 static struct class *unicam_class;
-static void __iomem *unicam_base = NULL;
-static void __iomem *mmcfg_base = NULL;
-static void __iomem *mmclk_base = NULL;
-static void __iomem *padctl_base = NULL;
+static void __iomem *unicam_base;
+static void __iomem *mmcfg_base;
+static void __iomem *mmclk_base;
+static void __iomem *padctl_base;
 static struct pi_mgr_dfs_node unicam_dfs_node = {
 	.valid = 0,
 };
 static struct pi_mgr_qos_node unicam_qos_node;
 
-typedef struct {
+struct unicam {
 	struct completion irq_sem;
 	cam_isr_reg_status_st_t unicam_isr_reg_status;
 	unsigned int irq_pending;
 	unsigned int irq_start;
-} unicam_t;
+};
 
-typedef struct {
+struct unicam_info {
 	unsigned int csi0_unicam_gpio;
 	unsigned int csi1_unicam_gpio;
 	struct regulator *reg;
-} unicam_info_t;
+};
 
-static unicam_info_t unicam_info;
+static struct unicam_info unicam_info;
 
 static int enable_unicam_clock(void);
 static void disable_unicam_clock(void);
@@ -117,13 +117,14 @@ static inline void reg_write(void __iomem *, unsigned int reg,
 
 static irqreturn_t unicam_isr(int irq, void *dev_id)
 {
-	unicam_t *dev;
+	struct unicam *dev;
 	unsigned int rx_status, image_intr;
-	dev = (unicam_t *) dev_id;
+	dev = dev_id;
 
 	rx_status = reg_read(unicam_base, CAM_STA_OFFSET);
 	image_intr = reg_read(unicam_base, CAM_ISTA_OFFSET);
-	reg_write(unicam_base, CAM_ISTA_OFFSET, image_intr);	/*  enable access */
+	/*  enable access */
+	reg_write(unicam_base, CAM_ISTA_OFFSET, image_intr);
 	reg_write(unicam_base, CAM_STA_OFFSET, rx_status);
 
 	if (dev->irq_start == 1) {
@@ -142,7 +143,7 @@ static int unicam_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
 
-	unicam_t *dev = kmalloc(sizeof(unicam_t), GFP_KERNEL);
+	struct unicam *dev = kmalloc(sizeof(struct unicam), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
@@ -181,15 +182,15 @@ static int unicam_open(struct inode *inode, struct file *filp)
 
 	return 0;
 
-      err:
-	if (dev)
-		kfree(dev);
+err:
+	kfree(dev);
+
 	return ret;
 }
 
 static int unicam_release(struct inode *inode, struct file *filp)
 {
-	unicam_t *dev = (unicam_t *) filp->private_data;
+	struct unicam *dev = filp->private_data;
 
 	disable_irq(IRQ_UNICAM);
 	free_irq(IRQ_UNICAM, dev);
@@ -204,9 +205,7 @@ static int unicam_release(struct inode *inode, struct file *filp)
 		printk(KERN_ERR "%s: failed to update dfs request for unicam\n",
 		       __func__);
 	scu_standby(1);
-
-	if (dev)
-		kfree(dev);
+	kfree(dev);
 
 	return 0;
 }
@@ -216,8 +215,8 @@ static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
 	unsigned long vma_size = vma->vm_end - vma->vm_start;
 
 	if (vma_size & (~PAGE_MASK)) {
-		pr_err(KERN_ERR
-		       "unicam_mmap: mmaps must be aligned to a multiple of pages_size.\n");
+		pr_err(KERN_ERR "%s: mmaps must be aligned to multiple of pages_size.\n",
+			__func__);
 		return -EINVAL;
 	}
 
@@ -232,7 +231,7 @@ static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
 	if (remap_pfn_range(vma,
 			    vma->vm_start,
 			    vma->vm_pgoff, vma_size, vma->vm_page_prot)) {
-		pr_err("%s(): remap_pfn_range() failed\n", __FUNCTION__);
+		pr_err("%s(): remap_pfn_range() failed\n", __func__);
 		return -EINVAL;
 	}
 
@@ -241,9 +240,9 @@ static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
 
 static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	unicam_t *dev;
+	struct unicam *dev;
 	int ret = 0;
-	static int interrupt_irq = 0;
+	static int interrupt_irq;
 	sensor_ctrl_t sensor_ctrl;
 
 	if (_IOC_TYPE(cmd) != BCM_UNICAM_MAGIC)
@@ -261,7 +260,7 @@ static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	if (ret)
 		return -EFAULT;
 
-	dev = (unicam_t *) (filp->private_data);
+	dev = filp->private_data;
 
 	switch (cmd) {
 	case UNICAM_IOCTL_WAIT_IRQ:
@@ -297,27 +296,27 @@ static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case UNICAM_IOCTL_OPEN_CSI0:
-		dbg_print("Open unicam CSI0 port \n");
+		dbg_print("Open unicam CSI0 port\n");
 		unicam_open_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
 		break;
 
 	case UNICAM_IOCTL_CLOSE_CSI0:
-		dbg_print("Close unicam CSI0 port \n");
+		dbg_print("Close unicam CSI0 port\n");
 		unicam_close_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
 		break;
 
 	case UNICAM_IOCTL_OPEN_CSI1:
-		dbg_print("Open unicam CSI1 port \n");
+		dbg_print("Open unicam CSI1 port\n");
 		unicam_open_csi(CSI1_UNICAM_PORT, CSI1_UNICAM_CLK);
 		break;
 
 	case UNICAM_IOCTL_CLOSE_CSI1:
-		dbg_print("close unicam CSI1 port \n");
+		dbg_print("close unicam CSI1 port\n");
 		unicam_close_csi(CSI1_UNICAM_PORT, CSI1_UNICAM_CLK);
 		break;
 
 	case UNICAM_IOCTL_CONFIG_SENSOR:
-		dbg_print("Config Sensor \n");
+		dbg_print("Config Sensor\n");
 		if (copy_from_user
 		    (&sensor_ctrl, (sensor_ctrl_t *) arg,
 		     sizeof(sensor_ctrl_t)))
@@ -332,7 +331,7 @@ static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	return ret;
 }
 
-static struct file_operations unicam_fops = {
+static const struct file_operations unicam_fops = {
 	.open = unicam_open,
 	.release = unicam_release,
 	.mmap = unicam_mmap,
@@ -373,14 +372,13 @@ static void unicam_init_camera_intf(void)
 static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
 {
 	/*  primary sensor */
-	if ((sensor_id == 0) && (unicam_info.csi0_unicam_gpio != 0xffffffff)) {
+	if ((sensor_id == 0) && (unicam_info.csi0_unicam_gpio != 0xffffffff))
 		gpio_set_value(unicam_info.csi0_unicam_gpio, enable);
-	}
 	/*  secondary sensor */
 	else if ((sensor_id == 1)
-		 && (unicam_info.csi0_unicam_gpio != 0xffffffff)) {
+		 && (unicam_info.csi0_unicam_gpio != 0xffffffff))
 		gpio_set_value(unicam_info.csi1_unicam_gpio, enable);
-	}
+
 	msleep(10);
 }
 
@@ -392,44 +390,63 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 	if (port == 0) {
 		/*  Set Camera CSI0 Phy & Clock Registers */
 		reg_write(mmcfg_base, MM_CFG_CSI0_LDO_CTL_OFFSET, 0x5A00000F);
-
-		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	/*  enable access */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_PHY_DIV_OFFSET, 0x00000888);	/*  csi0_rx0_bclkhs */
+		/*  enable access */
+		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+			0xA5A501);
+		/*  csi0_rx0_bclkhs */
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_PHY_DIV_OFFSET,
+			0x00000888);
 		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_DIV_OFFSET,
-			  0x00000040);
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET, 0x00000303);	/*  default value */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, 0x00000303);	/*  ... */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_SHIFT));	/*  CSI0 trigger change */
+			0x00000040);
+		/*  default value */
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET,
+			0x00000303);
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET,
+			0x00000303);
+		/*  CSI0 trigger change */
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET,
+			(1 << MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_SHIFT));
 
 		/*  Select Camera Phy AFE 0 */
 		/*  AFE 0 Select:  CSI0 has PHY selection. */
 		value =
 		    reg_read(mmcfg_base,
 			     MM_CFG_CSI0_PHY_CTRL_OFFSET) & 0x7fffffff;
-		reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);	/*  enable access */
+		/*  enable access */
+		reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);
 	} else {
 		/*  Set Camera CSI1 Phy & Clock Registers */
 		reg_write(mmcfg_base, MM_CFG_CSI1_LDO_CTL_OFFSET, 0x5A00000F);
-
-		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	/*  enable access */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_PHY_DIV_OFFSET, 0x00000888);	/*  csi1_rx0_bclkhs */
+		/*  enable access */
+		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+			0xA5A501);
+		/*  csi1_rx0_bclkhs */
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_PHY_DIV_OFFSET,
+			0x00000888);
 		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_DIV_OFFSET,
-			  0x00000040);
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET, 0x00000303);	/*  default value */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000303);	/*  ... */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI1_LP_TRIGGER_SHIFT));	/*  CSI1 trigger change */
+			0x00000040);
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET,
+			0x00000303);
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET,
+			0x00000303);
+		/*  CSI1 trigger change */
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET,
+			(1 << MM_CLK_MGR_REG_DIV_TRIG_CSI1_LP_TRIGGER_SHIFT));
 
 		/*  Select Camera Phy AFE 1 */
 		/*  AFE 1 Select:  CSI0 has PHY selection. */
 		value =
 		    reg_read(mmcfg_base,
 			     MM_CFG_CSI0_PHY_CTRL_OFFSET) | 0x80000000;
-		reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);	/*  enable access */
+		/*  enable access */
+		reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);
 	}
 
 	if (clk_src == 0) {
 		/*  Enable DIG0 clock out to sensor */
-		/*  Select DCLK1  (bits 10:8 = 0x000 => DCLK1 , bits 2:0 = 3 => 8 mAmps strength */
+		/*  Select DCLK1  (bits 10:8 = 0x000 => DCLK1 , bits 2:0 = 3 =>
+		 *  8 mAmps strength
+		 */
 		value =
 		    reg_read(padctl_base,
 			     PADCTRLREG_DCLK1_OFFSET) &
@@ -437,25 +454,24 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 		reg_write(padctl_base, PADCTRLREG_DCLK1_OFFSET, value);
 
 		dig_chan_clk = clk_get(NULL, "dig_ch0_clk");
-		if (!dig_chan_clk) {
+		if (!dig_chan_clk)
 			err_print("%s: error get clock\n", __func__);
-		}
 
 		ret = clk_enable(dig_chan_clk);
-		if (ret) {
+		if (ret)
 			err_print("%s: error enable unicam clock\n", __func__);
-		}
 
 		ret = clk_set_rate(dig_chan_clk, 13000000);
-		if (ret) {
+		if (ret)
 			err_print("%s: error changing clock rate\n", __func__);
-		}
 
 		dbg_print("dig_chan_clk rate %lu\n",
 			  clk_get_rate(dig_chan_clk));
 	} else {		/* if (clk_src == 1) { */
 		/*  Enable DIG1 clock out sensor */
-		/*  Select DCLK2  (bits 10:8 = 0x000 => DCLK2 , bits 2:0 = 3 => 8 mAmps strength */
+		/*  Select DCLK2  (bits 10:8 = 0x000 => DCLK2,
+		 *  bits 2:0 = 3 => 8 mAmps strength
+		 */
 		value =
 		    reg_read(padctl_base,
 			     PADCTRLREG_GPIO32_OFFSET) &
@@ -464,19 +480,16 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 		reg_write(padctl_base, PADCTRLREG_GPIO32_OFFSET, value);
 
 		dig_chan_clk = clk_get(NULL, "dig_ch1_clk");
-		if (!dig_chan_clk) {
+		if (!dig_chan_clk)
 			err_print("%s: error get clock\n", __func__);
-		}
 
 		ret = clk_enable(dig_chan_clk);
-		if (ret) {
+		if (ret)
 			err_print("%s: error enable unicam clock\n", __func__);
-		}
 
 		ret = clk_set_rate(dig_chan_clk, 13000000);
-		if (ret) {
+		if (ret)
 			err_print("%s: error changing clock rate\n", __func__);
-		}
 
 		dbg_print("dig_chan_clk rate %lu\n",
 			  clk_get_rate(dig_chan_clk));
@@ -489,14 +502,23 @@ static void unicam_close_csi(unsigned int port, unsigned int clk_src)
 
 	if (port == 0) {
 		/*  Disable Camera CSI0 Phy & Clock Registers */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	/*  enable access */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET, 0x00000302);	/*  default value */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, 0x00000302);	/*  ... */
+		/*  enable access */
+		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+			0xA5A501);
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET,
+			0x00000302);
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET,
+			0x00000302);
 	} else {
 		/*  Disable Camera CSI1 Phy & Clock Registers */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	/*  enable access */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET, 0x00000302);	/*  default value */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000302);	/*  ... */
+		/*  enable access */
+		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+			0xA5A501);
+		/*  default value */
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET,
+			0x00000302);
+		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET,
+			0x00000302);
 	}
 
 	if (clk_src == 0) {
@@ -610,9 +632,11 @@ static int unicam_drv_probe(struct platform_device *pdev)
 		ret = -EIO;
 		goto dfs_request_fail;
 	}
-	ret = pi_mgr_qos_add_request(&unicam_qos_node, "unicam", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+	ret = pi_mgr_qos_add_request(&unicam_qos_node, "unicam",
+		PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
 	if (ret) {
-		printk(KERN_ERR "%s: failed to register PI QOS request\n", __func__);
+		printk(KERN_ERR "%s: failed to register PI QOS request\n",
+			__func__);
 		ret = -EIO;
 		goto qos_request_fail;
 	}
@@ -681,7 +705,7 @@ int __init unicam_init(void)
 
 	return ret;
 
-      err:
+err:
 	err_print("Failed to MAP the unicam IO space\n");
 	unregister_chrdev(unicam_major, UNICAM_DEV_NAME);
 	return ret;
