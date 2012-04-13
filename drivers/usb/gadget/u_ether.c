@@ -133,11 +133,12 @@ extern unsigned char brcm_get_netcon_status(void);
 #define	MAX_RX_SKB_SIZE			2048
 #define	NOT_PRE_ALLOC_SKB			0x12345678
 #define	MAX_RETRY_SKB_ALLOC		50
-#define	UETH_RX_SKB_THRESHOLD	200
+#define	UETH_RX_SKB_THRESHOLD	40
 #define	MIN_RESERVE_SKBS			50
 static struct sk_buff_head skb_rx_pool;
 atomic_t ueth_rx_skb_ref_count = ATOMIC_INIT(0);
 atomic_t ueth_rx_skb_cloned_ref_count = ATOMIC_INIT(0);
+static int	skb_limit_no;
 EXPORT_SYMBOL_GPL(ueth_rx_skb_ref_count);
 
 /**
@@ -209,7 +210,7 @@ static void reserve_rx_skbs_list(void)
 {
        struct sk_buff *skb;
        unsigned long flags;
-	 unsigned char retry_alloc_skb = 0;
+	unsigned char retry_alloc_skb = 0;
 
 	pr_info("reserve_rx_skbs_list\n");
 	atomic_set(&ueth_rx_skb_cloned_ref_count, 0);
@@ -484,19 +485,28 @@ rx_submit(struct eth_dev *dev, struct usb_request *req, gfp_t gfp_flags)
 		In this case, we stop to allocate new skb because of the limited memory pool and
 		wait for the skbs to be released by upper level network drivers to be available to
 		allocate the new skbs. */
-		if (atomic_read(&ueth_rx_skb_ref_count) > UETH_RX_SKB_THRESHOLD) {
+		if ((atomic_read(&ueth_rx_skb_ref_count) + skb_limit_no)
+						> UETH_RX_SKB_THRESHOLD) {
 			skb = NULL;
-			DBG(dev, "ueth_rx_skb_ref_count = %d\n",
-				atomic_read(&ueth_rx_skb_ref_count));
+			pr_debug("ueth_rx_skb_ref_count = %d, skb_limit_no=%d\n",
+			atomic_read(&ueth_rx_skb_ref_count), skb_limit_no);
 			goto enomem;
 		} else {
 #endif
 			skb = alloc_skb(size + NET_IP_ALIGN, gfp_flags);
 			if (skb == NULL) {
 				DBG(dev, "no rx skb\n");
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+				skb_limit_no = UETH_RX_SKB_THRESHOLD/2;
+#endif
 				goto enomem;
 			}
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+			else {
+				if (skb_limit_no)
+					skb_limit_no--;
+			}
+
 			skb->signature = SKB_UETH_RX_NO_PRE_ALLOC_MEM_SIG;
 			atomic_inc(&ueth_rx_skb_ref_count);
 			/* pr_info("++: ueth_rx_skb_ref_count = %d\n", a
@@ -548,12 +558,6 @@ enomem:
 		DBG(dev, "rx submit --> %d\n", retval);
 		if (skb)
 			dev_kfree_skb_any(skb);
-#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-		spin_lock_irqsave(&dev->req_rx_lock, flags);
-		list_add(&req->list, &dev->rx_reqs);
-		spin_unlock_irqrestore(&dev->req_rx_lock, flags);
-		return retval;
-#endif
 		spin_lock_irqsave(&dev->req_lock, flags);
 		list_add(&req->list, &dev->rx_reqs);
 		spin_unlock_irqrestore(&dev->req_lock, flags);
@@ -627,15 +631,6 @@ next_frame:
 		defer_kevent(dev, WORK_RX_MEMORY);
 quiesce:
 		dev_kfree_skb_any(skb);
-#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-		spin_lock(&dev->req_rx_lock);
-		list_add(&req->list, &dev->rx_reqs);
-		spin_unlock(&dev->req_rx_lock);
-		req = NULL;
-		if (req)
-			rx_submit(dev, req, GFP_ATOMIC);
-		return;
-#endif
 		goto clean;
 
 	/* data overrun */
@@ -729,26 +724,6 @@ static void rx_fill(struct eth_dev *dev, gfp_t gfp_flags)
 	unsigned long		flags;
 
 	/* fill unused rxq slots with some skb */
-#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-	spin_lock_irqsave(&dev->req_rx_lock, flags);
-	while (!list_empty(&dev->rx_reqs)) {
-		req = container_of(dev->rx_reqs.next,
-				struct usb_request, list);
-		list_del_init(&req->list);
-
-		spin_unlock_irqrestore(&dev->req_rx_lock, flags);
-
-		if (rx_submit(dev, req, gfp_flags) < 0) {
-			defer_kevent(dev, WORK_RX_MEMORY);
-			return;
-		}
-
-		spin_lock_irqsave(&dev->req_rx_lock, flags);
-		}
-	spin_unlock_irqrestore(&dev->req_rx_lock, flags);
-	return;
-#endif
-
 	spin_lock_irqsave(&dev->req_lock, flags);
 
 	while (!list_empty(&dev->rx_reqs)) {
@@ -1348,7 +1323,9 @@ struct net_device *gether_connect(struct gether *link)
 
 	if (result == 0) {
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-		reserve_rx_skbs_list();
+		pr_info("USB Ether: It is in SKB threshold mode!\n");
+		skb_rx_pool.qlen = NOT_PRE_ALLOC_SKB;
+		skb_limit_no = 0;
 #endif
 		dev->zlp = link->is_zlp_ok;
 		DBG(dev, "qlen %d\n", qlen(dev->gadget));
