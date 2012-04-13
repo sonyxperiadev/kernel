@@ -1126,6 +1126,40 @@ static int got_room_for_job(struct vtq_context *ctx, vtq_task_id_t task_id)
 	return haveenoughroom;
 }
 
+static void q(struct vtq_vce *v,
+	      uint32_t pc,
+	      uint32_t r1,
+	      uint32_t r2,
+	      uint32_t r3,
+	      uint32_t r4,
+	      uint32_t r5,
+	      uint32_t r6)
+{
+	uint32_t vce_fifo_index;
+	uint32_t datamemaddress;
+
+	BUG_ON(v->writeptr + 1 - v->last_known_readptr > v->vce_fifo_length);
+	vce_fifo_index = v->writeptr & (v->vce_fifo_length-1);
+	datamemaddress = v->circbuf_locn
+		+ v->fifo_entrysz * vce_fifo_index;
+
+	vce_writedata(&v->io, datamemaddress, pc);
+	vce_writedata(&v->io, datamemaddress+4, r1);
+	vce_writedata(&v->io, datamemaddress+8, r2);
+	vce_writedata(&v->io, datamemaddress+12, r3);
+	vce_writedata(&v->io, datamemaddress+16, r4);
+	vce_writedata(&v->io, datamemaddress+20, r5);
+	vce_writedata(&v->io, datamemaddress+24, r6);
+	if (v->global->debug_fifo) {
+		printk(KERN_INFO "VTQ: Q: %u: "
+				"0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\n",
+				v->writeptr,
+				pc, r1, r2, r3, r4, r5, r6);
+	}
+
+	v->writeptr++;
+}
+
 int vtq_queue_job(struct vtq_context *ctx,
 		vtq_task_id_t task_id,
 		vtq_job_arg_t arg0,
@@ -1139,10 +1173,8 @@ int vtq_queue_job(struct vtq_context *ctx,
 {
 	int curimagehasentrypt;
 	uint32_t curimagebitmap;
-	uint32_t datamemaddress;
 	uint32_t job_entrypoint;
 	vtq_job_id_t next_job_id;
-	uint32_t vce_fifo_index;
 	uint32_t host_fifo_index;
 	struct vtq_image *new_image;
 	struct jobinfo *job;
@@ -1189,11 +1221,6 @@ int vtq_queue_job(struct vtq_context *ctx,
 		}
 	}
 
-	vce_fifo_index = ctx->vce->writeptr & (ctx->vce->vce_fifo_length-1);
-	host_fifo_index = ctx->vce->writeptr & (ctx->vce->host_fifo_length-1);
-	datamemaddress = ctx->vce->circbuf_locn
-		+ ctx->vce->fifo_entrysz * vce_fifo_index;
-
 	/* Insert a load-image if req'd */
 	if (ctx->vce->current_image != NULL) {
 		curimagebitmap =
@@ -1217,44 +1244,22 @@ int vtq_queue_job(struct vtq_context *ctx,
 		BUG_ON(ctx->vce->tasks[task_id].suitable_images->image == NULL);
 		new_image = ctx->vce->tasks[task_id].suitable_images->image;
 		get_image(new_image);
+		host_fifo_index = ctx->vce->writeptr
+			& (ctx->vce->host_fifo_length-1);
 		job = &ctx->vce->runningjobs[host_fifo_index];
 		job->inflightimage = new_image;
 		imagehwaddr = new_image->dmainfo.busaddr;
-		vce_writedata(&ctx->vce->io, datamemaddress,
-			ctx->vce->global->loaderkernel_loadimage_entrypoint);
-		vce_writedata(&ctx->vce->io, datamemaddress+4, 0);
-		vce_writedata(&ctx->vce->io, datamemaddress+8,
-			imagehwaddr + new_image->textoffset);
-		vce_writedata(&ctx->vce->io, datamemaddress+12,
-			new_image->textsz >> 2);
-		vce_writedata(&ctx->vce->io, datamemaddress+16, 0);
-		vce_writedata(&ctx->vce->io, datamemaddress+20,
-			imagehwaddr + new_image->dataoffset);
-		vce_writedata(&ctx->vce->io, datamemaddress+24,
+		q(ctx->vce,
+			ctx->vce->global->loaderkernel_loadimage_entrypoint,
+			0, imagehwaddr + new_image->textoffset,
+			new_image->textsz >> 2,
+			0, imagehwaddr + new_image->dataoffset,
 			new_image->datasz >> 2);
-		if (ctx->vce->global->debug_fifo) {
-			printk(KERN_INFO "VTQ: Q: %u: "
-			       "0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X (n/a)\n",
-			       ctx->vce->writeptr,
-			       ctx->vce->global->loaderkernel_loadimage_entrypoint,
-			       0, imagehwaddr + new_image->textoffset,
-			       new_image->textsz >> 2,
-			       0, imagehwaddr + new_image->dataoffset,
-			       new_image->datasz >> 2);
-		}
 
-		ctx->vce->writeptr++;
 		if (ctx->vce->current_image != NULL)
 			put_image(ctx->vce->current_image);
 		get_image(new_image);
 		ctx->vce->current_image = new_image;
-
-		vce_fifo_index = ctx->vce->writeptr
-			& (ctx->vce->vce_fifo_length-1);
-		host_fifo_index = ctx->vce->writeptr
-			& (ctx->vce->host_fifo_length-1);
-		datamemaddress = ctx->vce->circbuf_locn +
-			ctx->vce->fifo_entrysz * vce_fifo_index;
 	}
 	if (!curimagehasentrypt && ctx->vce->global->host_push) {
 		BUG_ON(!ctx->vce->on);
@@ -1282,6 +1287,8 @@ int vtq_queue_job(struct vtq_context *ctx,
 			printk(KERN_INFO "VTQ: Image Push: %p\n", new_image);
 	}
 
+	host_fifo_index = ctx->vce->writeptr
+		& (ctx->vce->host_fifo_length-1);
 	job = &ctx->vce->runningjobs[host_fifo_index];
 	BUG_ON(job->inflightimage != NULL);
 
@@ -1289,20 +1296,8 @@ int vtq_queue_job(struct vtq_context *ctx,
 
 	job_entrypoint =
 		ctx->vce->current_image->entrypts[task_id];
-	vce_writedata(&ctx->vce->io, datamemaddress, job_entrypoint);
-	vce_writedata(&ctx->vce->io, datamemaddress+4, arg0);
-	vce_writedata(&ctx->vce->io, datamemaddress+8, arg1);
-	vce_writedata(&ctx->vce->io, datamemaddress+12, arg2);
-	vce_writedata(&ctx->vce->io, datamemaddress+16, arg3);
-	vce_writedata(&ctx->vce->io, datamemaddress+20, arg4);
-	vce_writedata(&ctx->vce->io, datamemaddress+24, arg5);
-	if (ctx->vce->global->debug_fifo)
-		printk(KERN_INFO "VTQ: Q: %u: "
-		       "0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\n",
-		       ctx->vce->writeptr,
-		       job_entrypoint,
-		       arg0, arg1, arg2, arg3, arg4, arg5, 0);
-	ctx->vce->writeptr++;
+
+	q(ctx->vce, job_entrypoint, arg0, arg1, arg2, arg3, arg4, arg5);
 	wmb();
 	vce_writedata(&ctx->vce->io,
 		ctx->vce->writeptr_locn, ctx->vce->writeptr);
