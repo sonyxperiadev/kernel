@@ -1587,6 +1587,7 @@ static int mmc_blk_probe(struct mmc_card *card)
 	while ((disk_part = disk_part_iter_next(&piter))) {
 		strncpy(mmcpart_table[index][cnt].partname,
 			disk_part->info->volname, BDEVNAME_SIZE);
+		mmcpart_table[index][cnt].partname[sizeof(mmcpart_table[index][cnt].partname)-1] = '\0';
 		mmcpart_table[index][cnt].hd.start_sect = disk_part->start_sect;
 		mmcpart_table[index][cnt].hd.nr_sects = disk_part->nr_sects;
 		pr_debug(KERN_ERR
