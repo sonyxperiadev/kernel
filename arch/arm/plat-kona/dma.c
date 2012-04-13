@@ -1314,12 +1314,12 @@ static int pl330_probe(struct platform_device *pdev)
 static int pl330_remove(struct platform_device *pdev)
 {
 	unsigned long flags;
-	struct pl330_chan_desc *cdesc;
+	struct pl330_chan_desc *cdesc, *temp;
 	int irq;
 
 	spin_lock_irqsave(&lock, flags);
 	/* Free all channel descriptors first */
-	list_for_each_entry(cdesc, &dmac->chan_list, node) {
+	list_for_each_entry_safe(cdesc, temp, &dmac->chan_list, node) {
 		/* free requests */
 		_cleanup_req(&cdesc->req);
 		/* Free channel desc */
