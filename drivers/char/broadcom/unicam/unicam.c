@@ -66,17 +66,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #define UNICAM_MEM_POOL_SIZE   SZ_8M
 
-/* #define UNICAM_DEBUG */
-#ifdef UNICAM_DEBUG
-#define dbg_print(fmt, arg...) \
-printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
-#else
-#define dbg_print(fmt, arg...)   do { } while (0)
-#endif
-
-#define err_print(fmt, arg...) \
-	printk(KERN_ERR "%s():" fmt, __func__, ##arg)
-
 static int unicam_major = UNICAM_DEV_MAJOR;
 static struct class *unicam_class;
 static void __iomem *unicam_base;
@@ -99,6 +88,7 @@ struct unicam_info {
 	unsigned int csi0_unicam_gpio;
 	unsigned int csi1_unicam_gpio;
 	struct regulator *reg;
+	struct device *dev;
 };
 
 static struct unicam_info unicam_info;
@@ -154,7 +144,7 @@ static int unicam_open(struct inode *inode, struct file *filp)
 	dev->irq_start = 0;
 
 	if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-		printk(KERN_ERR "%s:failed to update dfs request for unicam\n",
+		dev_err(unicam_info.dev, "%s:failed to update dfs request for unicam\n",
 		       __func__);
 		return -EIO;
 	}
@@ -170,13 +160,15 @@ static int unicam_open(struct inode *inode, struct file *filp)
 	    request_irq(IRQ_UNICAM, unicam_isr, IRQF_DISABLED | IRQF_SHARED,
 			UNICAM_DEV_NAME, dev);
 	if (ret) {
-		err_print("request_irq failed ret = %d\n", ret);
+		dev_err(unicam_info.dev, "%s: request_irq failed ret = %d\n",
+			__func__, ret);
 		goto err;
 	}
 
 	ret = regulator_enable(unicam_info.reg);
 	if (ret < 0) {
-		pr_err("%s: cannot enable regulator: %d\n", __func__, ret);
+		dev_err(unicam_info.dev, "%s: cannot enable regulator: %d\n",
+			__func__, ret);
 		goto err;
 	}
 
@@ -196,13 +188,14 @@ static int unicam_release(struct inode *inode, struct file *filp)
 	free_irq(IRQ_UNICAM, dev);
 
 	if (regulator_disable(unicam_info.reg) < 0)
-		pr_err("%s: cannot disable regulator\n", __func__);
+		dev_err(unicam_info.dev, "%s: cannot disable regulator\n",
+			__func__);
 
 	reset_unicam();
 	disable_unicam_clock();
 	pi_mgr_qos_request_update(&unicam_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 	if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_MGR_DFS_MIN_VALUE))
-		printk(KERN_ERR "%s: failed to update dfs request for unicam\n",
+		dev_err(unicam_info.dev, "%s: failed to update dfs request for unicam\n",
 		       __func__);
 	scu_standby(1);
 	kfree(dev);
@@ -215,7 +208,7 @@ static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
 	unsigned long vma_size = vma->vm_end - vma->vm_start;
 
 	if (vma_size & (~PAGE_MASK)) {
-		pr_err(KERN_ERR "%s: mmaps must be aligned to multiple of pages_size.\n",
+		dev_err(unicam_info.dev, "%s: mmaps must be aligned to multiple of pages_size.\n",
 			__func__);
 		return -EINVAL;
 	}
@@ -231,7 +224,8 @@ static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
 	if (remap_pfn_range(vma,
 			    vma->vm_start,
 			    vma->vm_pgoff, vma_size, vma->vm_page_prot)) {
-		pr_err("%s(): remap_pfn_range() failed\n", __func__);
+		dev_err(unicam_info.dev, "%s(): remap_pfn_range() failed\n",
+			__func__);
 		return -EINVAL;
 	}
 
@@ -266,13 +260,13 @@ static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case UNICAM_IOCTL_WAIT_IRQ:
 		interrupt_irq = 0;
 		dev->irq_start = 1;
-		dbg_print("UNICAM: Waiting for interrupt\n");
+		dev_dbg(unicam_info.dev, "UNICAM: Waiting for interrupt\n");
 		if (wait_for_completion_interruptible(&dev->irq_sem)) {
 			disable_irq(IRQ_UNICAM);
 			return -ERESTARTSYS;
 		}
 		if (interrupt_irq) {
-			printk(KERN_ERR "interrupted irq ioctl\n");
+			dev_dbg(unicam_info.dev, "interrupted irq ioctl\n");
 			return -EIO;
 		}
 		dev->unicam_isr_reg_status.dropped_frames =
@@ -282,13 +276,13 @@ static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		     &dev->unicam_isr_reg_status,
 		     sizeof(cam_isr_reg_status_st_t)))
 			ret = -EPERM;
-		dbg_print("UNICAM: Frame Received: dropped=%d\n",
+		dev_dbg(unicam_info.dev, "UNICAM: Frame Received: dropped=%d\n",
 			  dev->unicam_isr_reg_status.dropped_frames);
 		dev->irq_pending = 0;	/*  allow a new frame */
 		break;
 	case UNICAM_IOCTL_RETURN_IRQ:
 		interrupt_irq = 1;
-		printk(KERN_ERR "Interrupting irq ioctl\n");
+		dev_dbg(unicam_info.dev, "Interrupting irq ioctl\n");
 		if (dev->irq_pending == 0) {
 			complete(&dev->irq_sem);
 			dev->irq_pending = 1;
@@ -296,27 +290,27 @@ static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case UNICAM_IOCTL_OPEN_CSI0:
-		dbg_print("Open unicam CSI0 port\n");
+		dev_dbg(unicam_info.dev, "Open unicam CSI0 port\n");
 		unicam_open_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
 		break;
 
 	case UNICAM_IOCTL_CLOSE_CSI0:
-		dbg_print("Close unicam CSI0 port\n");
+		dev_dbg(unicam_info.dev, "Close unicam CSI0 port\n");
 		unicam_close_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
 		break;
 
 	case UNICAM_IOCTL_OPEN_CSI1:
-		dbg_print("Open unicam CSI1 port\n");
+		dev_dbg(unicam_info.dev, "Open unicam CSI1 port\n");
 		unicam_open_csi(CSI1_UNICAM_PORT, CSI1_UNICAM_CLK);
 		break;
 
 	case UNICAM_IOCTL_CLOSE_CSI1:
-		dbg_print("close unicam CSI1 port\n");
+		dev_dbg(unicam_info.dev, "close unicam CSI1 port\n");
 		unicam_close_csi(CSI1_UNICAM_PORT, CSI1_UNICAM_CLK);
 		break;
 
 	case UNICAM_IOCTL_CONFIG_SENSOR:
-		dbg_print("Config Sensor\n");
+		dev_dbg(unicam_info.dev, "Config Sensor\n");
 		if (copy_from_user
 		    (&sensor_ctrl, (sensor_ctrl_t *) arg,
 		     sizeof(sensor_ctrl_t)))
@@ -455,17 +449,20 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 
 		dig_chan_clk = clk_get(NULL, "dig_ch0_clk");
 		if (!dig_chan_clk)
-			err_print("%s: error get clock\n", __func__);
+			dev_err(unicam_info.dev, "%s: error get clock\n",
+				__func__);
 
 		ret = clk_enable(dig_chan_clk);
 		if (ret)
-			err_print("%s: error enable unicam clock\n", __func__);
+			dev_err(unicam_info.dev, "%s: error enable unicam clock\n",
+				__func__);
 
 		ret = clk_set_rate(dig_chan_clk, 13000000);
 		if (ret)
-			err_print("%s: error changing clock rate\n", __func__);
+			dev_err(unicam_info.dev, "%s: error changing clock rate\n",
+				__func__);
 
-		dbg_print("dig_chan_clk rate %lu\n",
+		dev_dbg(unicam_info.dev, "dig_chan_clk rate %lu\n",
 			  clk_get_rate(dig_chan_clk));
 	} else {		/* if (clk_src == 1) { */
 		/*  Enable DIG1 clock out sensor */
@@ -481,17 +478,20 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 
 		dig_chan_clk = clk_get(NULL, "dig_ch1_clk");
 		if (!dig_chan_clk)
-			err_print("%s: error get clock\n", __func__);
+			dev_err(unicam_info.dev, "%s: error get clock\n",
+				__func__);
 
 		ret = clk_enable(dig_chan_clk);
 		if (ret)
-			err_print("%s: error enable unicam clock\n", __func__);
+			dev_err(unicam_info.dev, "%s: error enable unicam clock\n",
+				__func__);
 
 		ret = clk_set_rate(dig_chan_clk, 13000000);
 		if (ret)
-			err_print("%s: error changing clock rate\n", __func__);
+			dev_err(unicam_info.dev, "%s: error changing clock rate\n",
+				__func__);
 
-		dbg_print("dig_chan_clk rate %lu\n",
+		dev_dbg(unicam_info.dev, "dig_chan_clk rate %lu\n",
 			  clk_get_rate(dig_chan_clk));
 	}
 }
@@ -546,24 +546,26 @@ static int enable_unicam_clock(void)
 
 	unicam_clk = clk_get(NULL, "csi0_axi_clk");
 	if (!unicam_clk) {
-		err_print("%s: error get clock\n", __func__);
+		dev_err(unicam_info.dev, "%s: error get clock\n", __func__);
 		return -EIO;
 	}
 
 	ret = clk_enable(unicam_clk);
 	if (ret) {
-		err_print("%s: error enable unicam clock\n", __func__);
+		dev_err(unicam_info.dev, "%s: error enable unicam clock\n",
+			__func__);
 		return -EIO;
 	}
 #if 0
 	ret = clk_set_rate(unicam_clk, 250000000);
 	if (ret) {
-		err_print("%s: error changing clock rate\n", __func__);
+		dev_err(unicam_info.dev, "%s: error changing clock rate\n",
+			__func__);
 		/* return -EIO; */
 	}
 #endif
 	rate = clk_get_rate(unicam_clk);
-	dbg_print("unicam_clk_clk rate %lu\n", rate);
+	dev_dbg(unicam_info.dev, "unicam_clk_clk rate %lu\n", rate);
 
 	return 0;
 }
@@ -605,29 +607,32 @@ static int unicam_drv_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct kona_unicam_platform_data *pdata = pdev->dev.platform_data;
 
-	dbg_print("%s\n", __func__);
+	dev_dbg(unicam_info.dev, "%s\n", __func__);
 
 	if (!pdata) {
-		dbg_print("%s : invalid paltform data !!\n", __func__);
+		dev_dbg(unicam_info.dev, "%s : invalid paltform data !!\n",
+			__func__);
 		ret = -EPERM;
 		goto error;
 	}
 
 	unicam_info.reg = regulator_get(&pdev->dev, "vcc");
 	if (IS_ERR(unicam_info.reg)) {
-		pr_err("%s: cannot get regulator: %d\n", __func__, ret);
+		dev_err(&pdev->dev, "%s: cannot get regulator: %d\n", __func__,
+			ret);
 		ret = PTR_ERR(unicam_info.reg);
 		goto error;
 	}
 
 	unicam_info.csi0_unicam_gpio = pdata->csi0_gpio;
 	unicam_info.csi1_unicam_gpio = pdata->csi1_gpio;
+	unicam_info.dev = &pdev->dev;
 
 	ret =
 	    pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam", PI_MGR_PI_ID_MM,
 				   PI_MGR_DFS_MIN_VALUE);
 	if (ret) {
-		printk(KERN_ERR "%s: failed to register PI DFS request\n",
+		dev_err(&pdev->dev, "%s: failed to register PI DFS request\n",
 		       __func__);
 		ret = -EIO;
 		goto dfs_request_fail;
@@ -635,7 +640,7 @@ static int unicam_drv_probe(struct platform_device *pdev)
 	ret = pi_mgr_qos_add_request(&unicam_qos_node, "unicam",
 		PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
 	if (ret) {
-		printk(KERN_ERR "%s: failed to register PI QOS request\n",
+		dev_err(&pdev->dev, "%s: failed to register PI QOS request\n",
 			__func__);
 		ret = -EIO;
 		goto qos_request_fail;
@@ -661,7 +666,7 @@ int __init unicam_init(void)
 {
 	int ret;
 
-	dbg_print("unicam driver Init\n");
+	dev_dbg(unicam_info.dev, "unicam driver Init\n");
 
 	ret = register_chrdev(0, UNICAM_DEV_NAME, &unicam_fops);
 	if (ret < 0)
@@ -671,7 +676,8 @@ int __init unicam_init(void)
 
 	unicam_class = class_create(THIS_MODULE, UNICAM_DEV_NAME);
 	if (IS_ERR(unicam_class)) {
-		err_print("Failed to create unicam class\n");
+		dev_err(unicam_info.dev, "%s Failed to create unicam class\n",
+			__func__);
 		unregister_chrdev(unicam_major, UNICAM_DEV_NAME);
 		return PTR_ERR(unicam_class);
 	}
@@ -706,14 +712,15 @@ int __init unicam_init(void)
 	return ret;
 
 err:
-	err_print("Failed to MAP the unicam IO space\n");
+	dev_err(unicam_info.dev, "%s: Failed to MAP the unicam IO space\n",
+		__func__);
 	unregister_chrdev(unicam_major, UNICAM_DEV_NAME);
 	return ret;
 }
 
 void __exit unicam_exit(void)
 {
-	dbg_print("unicam driver Exit\n");
+	dev_dbg(unicam_info.dev, "unicam driver Exit\n");
 	if (unicam_base)
 		iounmap(unicam_base);
 
