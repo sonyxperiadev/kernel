@@ -878,7 +878,7 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 	mutex_lock(&dev->mutex);
 
 	sscanf(buff, "%d", &enabled);
-	if (enabled && !dev->enabled) {
+	if (enabled && !dev->enabled && cdev) {
 		/* update values in composite driver's copy of device descriptor */
 		cdev->desc.idVendor = device_desc.idVendor;
 		cdev->desc.idProduct = device_desc.idProduct;
@@ -890,12 +890,14 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 					android_bind_config);
 		usb_gadget_connect(cdev->gadget);
 		dev->enabled = true;
-	} else if (!enabled && dev->enabled) {
+	} else if (!enabled && dev->enabled && cdev) {
 		usb_gadget_disconnect(cdev->gadget);
 		/* Cancel pending control requests */
 		usb_ep_dequeue(cdev->gadget->ep0, cdev->req);
 		usb_remove_config(cdev, &android_config_driver);
 		dev->enabled = false;
+	} else if (!cdev) {
+		pr_err("android_usb: composite driver not found");
 	} else {
 		pr_err("android_usb: already %s\n",
 				dev->enabled ? "enabled" : "disabled");
