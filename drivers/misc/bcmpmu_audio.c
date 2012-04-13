@@ -178,7 +178,7 @@ static void _bcmpmu_set_gain(u32 reg, u32 gain)
 	pr_debug("%s: reg = 0x%x, gain = 0x%x\n", __func__, reg, gain);
 
 	bcmpmu->write_dev(bcmpmu, reg, gain, bcmpmu->regmap[reg].mask);
-	usleep_range(900, 1100);
+	udelay(50);
 }
 
 static void bcmpmu_set_gain(struct gain_ramp *ramp, u32 reg, u32 new_gain)
