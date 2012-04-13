@@ -116,6 +116,13 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
     {.map = 0, .addr = 0x0D, .val = 0x6D, .mask = 0xFF},
     {.map = 0, .addr = 0x0E, .val = 0x41, .mask = 0xFF},
     {.map = 0, .addr = 0x05, .val = 0xB6, .mask = 0xFF},
+
+
+	/* Disable the charging elapsed timer by TCH[2:0]=111b 
+	   OTP default value; TCH[2:0] = 010b (5hrs) ,TTR[2:0] = 011b (45mins)
+        */
+	{.map = 0, .addr = 0x50, .val = 0x3B, .mask = 0xFF},
+
                                                                                                 
 };
 
