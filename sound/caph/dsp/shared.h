@@ -43,7 +43,11 @@
 #ifndef    _INC_SHARED_H_
 #define    _INC_SHARED_H_
 
+#ifdef MSP
 #include "mobcom_types.h"
+#else
+#include "types.h"
+#endif
 #include "consts.h"
 
 #define SMC_NPG        //Remove SMC page.
