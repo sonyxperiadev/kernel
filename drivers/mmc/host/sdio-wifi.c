@@ -17,6 +17,9 @@
 #include <linux/delay.h>
 #include <linux/irq.h>
 
+#include <mach/chip_pinmux.h>
+#include <mach/pinmux.h>
+
 #include <asm/gpio.h>
 
 #include <mach/sdio_platform.h>
@@ -24,6 +27,8 @@
 
 #define PRINT_ERR(format, args...) printk(KERN_ERR "%s: " format, __FUNCTION__, ## args)
 #define PRINT_INFO(format, args...) printk(KERN_INFO "%s: " format, __FUNCTION__, ## args)
+
+struct pin_config SdioPinCfgs;
 
 struct sdio_wifi_dev {
 	atomic_t dev_is_ready;
@@ -197,6 +202,57 @@ int bcm_sdiowl_init(void)
 
 	printk(KERN_ERR "%s:ENTRY\n", __FUNCTION__);
 
+
+//Set the Pull of Sdio Lines first
+
+	SdioPinCfgs.name = PN_MMC1CMD;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.drv_sth=3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT0;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.drv_sth=3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+	SdioPinCfgs.name = PN_MMC1DAT1;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.drv_sth=3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT2;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.drv_sth=3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT3;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.drv_sth=3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+
+ 
+
+
+
+//-----------------------------------
+
+
+
 	/* check if the SDIO device is already up */
 	rc = sdio_dev_is_initialized(SDIO_DEV_TYPE_WIFI);
 	if (rc <= 0) {
@@ -317,6 +373,59 @@ void bcm_sdiowl_term(void)
 	printk(KERN_ERR " %s GPIO Released \n", __FUNCTION__);
 
 	dev->wifi_gpio = NULL;
+
+
+//Set the Pull down on sdio lines
+
+	SdioPinCfgs.name = PN_MMC1CMD;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=0;
+	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.drv_sth=0;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT0;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=0;
+	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.drv_sth=0;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+	SdioPinCfgs.name = PN_MMC1DAT1;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=0;
+	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.drv_sth=0;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT2;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=0;
+	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.drv_sth=0;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT3;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=0;
+	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.drv_sth=0;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+
+ 
+
+
+
+//-----------------------------------
+
+
+
+	
 }
 
 EXPORT_SYMBOL(bcm_sdiowl_term);
