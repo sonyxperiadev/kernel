@@ -527,7 +527,7 @@ static int is_accessory_supported(struct mic_t *mic_dev)
 		 mic_level2);
 
 	if ((mic_level1 - mic_level2) >= MIC_CHANGE_DETECTION_THRESHOLD) {
-		pr_info("%s(): Unsupported accessory \r\n", __func__);
+		pr_debug("%s(): swapped pin order headset\r\n", __func__);
 		ret = 0;
 	} else {
 		pr_debug("%s(): Supported accessory \r\n", __func__);
@@ -621,25 +621,31 @@ static void accessory_detect_work_func(struct work_struct *work)
 
 		/* Check whether the connected accessory is supported first */
 		if (is_accessory_supported(p) == 0) {
-#ifdef CONFIG_KONA_NAHJ_SUPPORT
-			/* ground the mic pin */
-			if (gpio_is_valid(p->headset_pd->gpio_mic_gnd))
-				gpio_set_value(p->headset_pd->gpio_mic_gnd, 1);
-#else
-			pr_info("%s(): ACCESSORY IS NOT SUPPORTED \r\n",
+			pr_info("%s(): swapped pin order headset detected\r\n",
 				__func__);
+			if ((p->headset_pd->gpio_mic_gnd)
+			    && (gpio_is_valid(p->headset_pd->gpio_mic_gnd))) {
+				pr_info
+				    ("%s(): "
+				    "mic2gnd forcing enabled with GPIO %d\r\n",
+				     __func__, p->headset_pd->gpio_mic_gnd);
+				gpio_set_value(p->headset_pd->gpio_mic_gnd, 1);
+			} else {
+				pr_info("%s(): ACCESSORY IS NOT SUPPORTED \r\n",
+					__func__);
 
-			p->hs_state = UNSUPPORTED;
-			/*
-			 * Bit map of the state variable
-			 * 0xFF - Accessory not supported
-			 * There by we keep enough room to add other accessory
-			 * types between 2..0xFF if needed in future
-			 */
-			switch_set_state(&(p->sdev), 0xFF);
-			aci_interface_init_micbias_off(p);
-			return;
-#endif
+				p->hs_state = UNSUPPORTED;
+				/*
+				 * Bit map of the state variable
+				 * 0xFF - Accessory not supported
+				 * There by we keep enough room to add other
+				 * accessory types between 2..0xFF
+				 * if needed in future
+				 */
+				switch_set_state(&(p->sdev), 0xFF);
+				aci_interface_init_micbias_off(p);
+				return;
+			}
 		}
 
 		p->hs_state = detect_hs_type(p);
@@ -813,7 +819,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 			 * unsupported Headset, we would have turned it OFF
 			 * earlier
 			 */
-			if (p->hs_state == OPEN_CABLE || p->hs_state ==	HEADSET)
+			if (p->hs_state == OPEN_CABLE || p->hs_state == HEADSET)
 				aci_interface_init_micbias_off(p);
 
 			/* Inform userland about accessory removal */
@@ -832,10 +838,9 @@ static void accessory_detect_work_func(struct work_struct *work)
 					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
 					    CHAL_ACI_BLOCK_COMP);
 
-#ifdef CONFIG_KONA_NAHJ_SUPPORT
-			if (gpio_is_valid(p->headset_pd->gpio_mic_gnd))
+			if ((p->headset_pd->gpio_mic_gnd)
+			    && (gpio_is_valid(p->headset_pd->gpio_mic_gnd)))
 				gpio_set_value(p->headset_pd->gpio_mic_gnd, 0);
-#endif
 		}
 	}
 }
@@ -1200,16 +1205,19 @@ static int headset_hw_init(struct mic_t *mic)
 		pr_err("%s: gpio set direction input failed\n", __func__);
 		return status;
 	}
-#ifdef CONFIG_KONA_NAHJ_SUPPORT
-	status =
-	    gpio_request_one(mic->headset_pd->gpio_mic_gnd,
-			     GPIOF_DIR_OUT | GPIOF_INIT_LOW, "NAHJ_MIC_GND");
-	if (status < 0) {
-		pr_err("%s: failed to get (NAHJ_MIC_GND) gpio %d\n",
-		       __func__, mic->headset_pd->gpio_mic_gnd);
-		return status;
+
+	if ((mic->headset_pd->gpio_mic_gnd)
+	    && (gpio_is_valid(mic->headset_pd->gpio_mic_gnd))) {
+		status =
+		    gpio_request_one(mic->headset_pd->gpio_mic_gnd,
+				     GPIOF_DIR_OUT | GPIOF_INIT_LOW,
+				     "HEADSET_MIC_GND");
+		if (status < 0) {
+			pr_err("%s: failed to get MIC to GND gpio %d\n",
+			       __func__, mic->headset_pd->gpio_mic_gnd);
+			return status;
+		}
 	}
-#endif
 
 	pr_info("headset_hw_init: gpio config done \r\n");
 
@@ -1259,10 +1267,9 @@ static int hs_remove(struct platform_device *pdev)
 	free_irq(mic->hsbirq_press, mic);
 	free_irq(mic->hsbirq_release, mic);
 
-#ifdef CONFIG_KONA_NAHJ_SUPPORT
-	if (gpio_is_valid(mic->headset_pd->gpio_mic_gnd))
+	if ((mic->headset_pd->gpio_mic_gnd)
+	    && (gpio_is_valid(mic->headset_pd->gpio_mic_gnd)))
 		gpio_free(mic->headset_pd->gpio_mic_gnd);
-#endif
 
 	hs_unreginputdev(mic);
 	hs_unregswitchdev(mic);
