@@ -970,12 +970,14 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 
 	mutex_lock(&dev->dev_lock);
 	bsc_enable_clk(dev);
+	bsc_enable_pad_output((uint32_t)dev->virt_base, true);
 	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 	if (hw_cfg && hw_cfg->is_pmu_i2c) {
 		rc = pwr_mgr_pm_i2c_sem_lock();
 		if (rc) {
+			bsc_enable_pad_output((uint32_t)dev->virt_base, false);
 			bsc_disable_clk(dev);
 			mutex_unlock(&dev->dev_lock);
 			return rc;
@@ -1087,6 +1089,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	else
 		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
+	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
 	bsc_disable_clk(dev);
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 	if (rel_hw_sem)
@@ -1111,6 +1114,7 @@ hs_ret:
 		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
 err_ret:
+	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
 	bsc_disable_clk(dev);
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 	if (rel_hw_sem)
@@ -1733,6 +1737,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 #endif
 	}
 
+	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
 	bsc_disable_clk(dev);
 	return 0;
 

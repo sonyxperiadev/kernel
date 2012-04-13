@@ -128,6 +128,7 @@ static inline void bsc_set_soft_reset(uint32_t baseAddr, unsigned char enable);
 static inline unsigned char bsc_get_soft_reset_ready(uint32_t baseAddr);
 static inline unsigned char bsc_get_soft_reset(uint32_t baseAddr);
 static inline BSC_MODE_t bsc_set_mode(uint32_t baseAddr, BSC_MODE_t mode);
+static inline void bsc_enable_pad_output(uint32_t baseAddr, bool enable);
 
 /**
 *
@@ -1081,4 +1082,26 @@ static inline unsigned char bsc_get_soft_reset_ready(uint32_t baseAddr)
 		((baseAddr + I2C_MM_HS_SFTRST_OFFSET),
 		 I2C_MM_HS_SFTRST_SWRST_RDY_MASK,
 		 I2C_MM_HS_SFTRST_SWRST_RDY_SHIFT));
+}
+
+
+/**
+*
+*  @brief  Enable/Disable pad output
+*
+*  @param  baseAddr  (in) mapped address of this BSC instance
+*  @param  enable    (in) state of the pad output to be set
+*
+*  @return none
+*****************************************************************************/
+static inline void bsc_enable_pad_output(uint32_t baseAddr, bool enable)
+{
+	if (enable)
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_PADCTL_OFFSET),
+			I2C_MM_HS_PADCTL_PAD_OUT_EN_MASK,
+			I2C_MM_HS_PADCTL_PAD_OUT_EN_SHIFT, 0);
+	else
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_PADCTL_OFFSET),
+			I2C_MM_HS_PADCTL_PAD_OUT_EN_MASK,
+			I2C_MM_HS_PADCTL_PAD_OUT_EN_SHIFT, 1);
 }
