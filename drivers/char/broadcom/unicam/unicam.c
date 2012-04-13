@@ -132,8 +132,8 @@ static irqreturn_t unicam_isr(int irq, void *dev_id)
 static int unicam_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
+	struct unicam *dev = kzalloc(sizeof(struct unicam), GFP_KERNEL);
 
-	struct unicam *dev = kmalloc(sizeof(struct unicam), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
@@ -360,7 +360,7 @@ static void unicam_init_camera_intf(void)
 		gpio_direction_output(unicam_info.csi1_unicam_gpio, 0);
 		gpio_set_value(unicam_info.csi1_unicam_gpio, 0);
 	}
-	msleep(10);
+	usleep_range(10000, 12000);
 }
 
 static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
@@ -373,7 +373,7 @@ static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
 		 && (unicam_info.csi0_unicam_gpio != 0xffffffff))
 		gpio_set_value(unicam_info.csi1_unicam_gpio, enable);
 
-	msleep(10);
+	usleep_range(10000, 12000);
 }
 
 static void unicam_open_csi(unsigned int port, unsigned int clk_src)
