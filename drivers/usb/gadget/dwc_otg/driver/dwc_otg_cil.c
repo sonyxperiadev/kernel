@@ -70,6 +70,8 @@ void dwc_otg_core_soft_disconnect(dwc_otg_core_if_t *core_if, bool en)
 	gotgctl_data_t gotgctl = {.d32 = 0 };
 
 	if (dwc_otg_is_device_mode(core_if)) {
+		if (en)
+			core_if->device_speed = 0;
 		gotgctl.d32 =
 		    dwc_read_reg32(&core_if->core_global_regs->gotgctl);
 		dctl.d32 =
@@ -4884,6 +4886,8 @@ void dwc_otg_core_reset(dwc_otg_core_if_t *core_if)
 		}
 		dwc_udelay(1);
 	} while (greset.b.csftrst == 1);
+
+	core_if->device_speed = 0;
 
 	/* Wait 60ms after core reset for right ID/mode to take effect */
 	dwc_mdelay(60);

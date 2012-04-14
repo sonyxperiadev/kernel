@@ -1155,8 +1155,11 @@ int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
 	dwc_write_reg32(&core_if->core_global_regs->gintsts, gintsts.d32);
 
 #ifdef CONFIG_USB_OTG_UTILS
+	/* Don't do any PHY/power-saving for
+	 * "fake" suspend
+	 */
 	if (core_if->xceiver->set_suspend &&
-	    core_if->gadget_pullup_on &&
+	    core_if->device_speed &&
 	    !core_if->core_params->otg_supp_enable) {
 		/* Suspend trasceiver */
 		otg_set_suspend(core_if->xceiver, 1);

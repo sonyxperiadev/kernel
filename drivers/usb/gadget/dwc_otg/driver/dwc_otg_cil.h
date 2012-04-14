@@ -968,6 +968,8 @@ struct dwc_otg_core_if {
 	/* Save last requested max Vbus current draw value */
 	uint32_t vbus_ma;
 
+	/* Current negotiated speed in device mode */
+	int device_speed;
 #ifdef CONFIG_USB_OTG_UTILS
 	/* OTG transceiver */
 	struct otg_transceiver *xceiver;

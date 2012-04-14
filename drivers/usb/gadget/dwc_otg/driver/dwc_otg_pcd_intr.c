@@ -594,6 +594,7 @@ void dwc_otg_pcd_stop(dwc_otg_pcd_t *pcd)
 		return;
 	}
 	pcd->ep0state = EP0_DISCONNECT;
+	pcd->core_if->device_speed = 0;
 
 	/* Reset the OTG state. */
 	dwc_otg_pcd_update_otg(pcd, 1);
@@ -809,6 +810,7 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	}
 
 	core_if->lx_state = DWC_OTG_L0;
+	core_if->device_speed = 0;
 
 	DWC_PRINTF("USB RESET\n");
 #ifdef DWC_EN_ISOC
@@ -1004,6 +1006,7 @@ int32_t dwc_otg_pcd_handle_enum_done_intr(dwc_otg_pcd_t *pcd)
 	ep0->stopped = 0;
 
 	speed = get_device_speed(GET_CORE_IF(pcd));
+	pcd->core_if->device_speed = speed;
 	pcd->fops->connect(pcd, speed);
 
 	/* Set USB turnaround time based on device speed and PHY interface. */

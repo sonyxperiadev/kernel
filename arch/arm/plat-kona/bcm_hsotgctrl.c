@@ -611,7 +611,6 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-#ifndef CONFIG_MACH_RHEA_STONE_EDN2X
 	/* Clear PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(false);
 
@@ -620,7 +619,6 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 
 	/* Disable OTG AHB clock */
 	bcm_hsotgctrl_en_clock(false);
-#endif
 
 	return 0;
 }
