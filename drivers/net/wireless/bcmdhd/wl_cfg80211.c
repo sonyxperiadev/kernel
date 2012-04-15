@@ -6196,6 +6196,9 @@ static s32 wl_config_ifmode(struct wl_priv *wl, struct net_device *ndev, s32 ift
 	s32 infra = 0;
 	s32 err = 0;
 	s32 mode = 0;
+	s32 ap=0;
+
+	WL_ERR((" %s type (%d) : \n",__FUNCTION__,iftype));
 	switch (iftype) {
 	case NL80211_IFTYPE_MONITOR:
 	case NL80211_IFTYPE_WDS:
@@ -6227,6 +6230,17 @@ static s32 wl_config_ifmode(struct wl_priv *wl, struct net_device *ndev, s32 ift
 		WL_ERR(("WLC_SET_INFRA error (%d)\n", err));
 		return err;
 	}
+	if(iftype==NL80211_IFTYPE_STATION)
+		{
+	ap=htod32(ap);
+			err = wldev_ioctl(ndev, WLC_SET_AP, &ap, sizeof(ap), true);
+			if (unlikely(err)) {
+				WL_ERR(("WLC_SET_AP error (%d)\n", err));
+				return err;
+			}	
+
+		}
+
 
 	wl_set_mode_by_netdev(wl, ndev, mode);
 
