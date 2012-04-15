@@ -142,7 +142,7 @@ static int dtsdump_show(struct seq_file *m, void *v)
 				    "Output"));
 		}
 	}
-	seq_printf(m, "Toatl Pin-mux configured as GPIO= %d\n", gpio_cnt);
+	seq_printf(m, "Total Pin-mux configured as GPIO= %d\n", gpio_cnt);
 
 	return 0;
 
@@ -165,7 +165,6 @@ static int __init debug_dtsdump_init(void)
 
 	root_entry = debugfs_create_dir("dtsdump", NULL);
 	if (!root_entry && IS_ERR(root_entry)) {
-		printk(KERN_ERR, "Fail to create dir: dtsdump\n");
 		return PTR_ERR(root_entry);
 	}
 	dump_dentry = debugfs_create_file("dtsdump", 0444, root_entry, NULL,
