@@ -891,6 +891,7 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
 	if (list_empty(&cInfo->mQ.mList)) {
 		spin_unlock_bh(&cInfo->mLock);
 		_DBG(RPC_TRACE("k:handle_pkt_rx_buffer_ioc Q empty\n"));
+		kfree(pktElem);
 		return -EAGAIN;
 	}
 
