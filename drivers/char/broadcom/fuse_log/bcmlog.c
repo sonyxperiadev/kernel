@@ -771,7 +771,7 @@ static void BCMLOG_HandleCpCrashDumpData_Custom_STM(const char *buf, int size)
 	static int rem_data_len;
 	static int rem_header_len;
 	static char partial_header[MTT_HEADER_SIZE];
-	int i = 0, j = 0, k = 0, tmp_size = 0;
+	int i = 0, k = 0, tmp_size = 0;
 	int complete_size = 0;
 	int packet_size;
 	const char *p_buf = buf;
