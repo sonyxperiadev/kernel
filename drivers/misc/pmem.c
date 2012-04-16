@@ -1749,6 +1749,7 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 			if (buf_order > 3) {
 				printk(KERN_ERR
 				       "pmem: user list is too long\n");
+				n = debug_bufmax - 1;
 				break;
 			}
 			kfree(buffer);
