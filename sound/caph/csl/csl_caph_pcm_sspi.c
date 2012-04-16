@@ -89,7 +89,7 @@ static void csl_pcm_reset(CSL_PCM_HANDLE_t *pDevice)
 		return;
 	}
 
-	reg = (u32 *)ioremap_nocache(HUB_RST_BASE_ADDR, 3*sizeof(u32));
+	reg = (u32 *)KONA_HUB_RST_VA;
 	reg_wr = readl(reg);
 
 	if ((reg_wr & KHUB_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK) == 0) {
@@ -121,7 +121,6 @@ static void csl_pcm_reset(CSL_PCM_HANDLE_t *pDevice)
 			(0xa5a5<<KHUB_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
 		writel(data, reg);
 	}*/
-	iounmap(reg);
 }
 
 /*
