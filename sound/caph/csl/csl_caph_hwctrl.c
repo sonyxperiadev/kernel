@@ -3523,7 +3523,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_StartPath(CSL_CAPH_PathID pathID)
 	*/
 	if (path->sink[0] == CSL_CAPH_DEV_HS ||
 	    path->sink[0] == CSL_CAPH_DEV_IHF) {
-		usleep_range(2*1000, 3*1000);
+		if (path->src_sampleRate != AUDIO_SAMPLING_RATE_48000)
+			usleep_range(2*1000, 3*1000);
 		csl_caph_hwctrl_UnmuteSink(pathID, path->sink[0]);
 	}
 
@@ -3721,7 +3722,8 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID,
 
 	if (path->sink[sinkNo] == CSL_CAPH_DEV_HS ||
 	    path->sink[sinkNo] == CSL_CAPH_DEV_IHF) {
-		usleep_range(2*1000, 3*1000);
+		if (path->src_sampleRate != AUDIO_SAMPLING_RATE_48000)
+			usleep_range(2*1000, 3*1000);
 		csl_caph_hwctrl_UnmuteSink(pathID, path->sink[sinkNo]);
 	}
 	return RESULT_OK;

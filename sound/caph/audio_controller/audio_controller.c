@@ -217,9 +217,13 @@ static AudioMode_t currAudioMode_fm = AUDIO_MODE_HEADSET;
 static struct regulator *vibra_reg;
 
 /*wait in us, to avoid hs/ihf pop noise*/
-static int wait_bb_on = 1*1000;
+static int wait_bb_on;
 static int wait_hspmu_on = 10*1000;
+#if defined(CONFIG_IHF_EXT_AMPLIFIER)
+static int wait_ihfpmu_on;
+#else
 static int wait_ihfpmu_on = 40*1000;
+#endif
 static int wait_pmu_off = 2*1000;
 
 static int isDigiMic(AUDIO_SOURCE_Enum_t source);
@@ -231,13 +235,19 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 static void setExternAudioGain(AudioMode_t mode, AudioApp_t app);
 static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app);
 
+static void audctl_usleep_range(int min, int max)
+{
+	if (min)
+		usleep_range(min, max);
+}
+
 static void audioh_start_hs(void)
 {
 #if defined(EANBLE_POP_CONTROL)
 	csl_caph_ControlHWClock(TRUE);
 	csl_caph_audioh_start_hs();
 #endif
-	usleep_range(wait_bb_on, wait_bb_on+1000);
+	audctl_usleep_range(wait_bb_on, wait_bb_on+1000);
 }
 
 static void audioh_start_ihf(void)
@@ -246,7 +256,7 @@ static void audioh_start_ihf(void)
 	csl_caph_ControlHWClock(TRUE);
 	csl_caph_audioh_start_ihf();
 #endif
-	usleep_range(wait_bb_on, wait_bb_on+2000);
+	audctl_usleep_range(wait_bb_on, wait_bb_on+2000);
 }
 
 /****************************************************************************
@@ -3438,7 +3448,8 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 					"power OFF pmu HS amp\n");
 
 				extern_hs_off();
-				usleep_range(wait_pmu_off, wait_pmu_off+2000);
+				audctl_usleep_range(wait_pmu_off,
+					wait_pmu_off+2000);
 			}
 			HS_IsOn = FALSE;
 		} else {
@@ -3447,7 +3458,8 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 					"powerOnExternalAmp power on HS");
 				audioh_start_hs();
 				extern_hs_on();
-				usleep_range(wait_hspmu_on, wait_hspmu_on+2000);
+				audctl_usleep_range(wait_hspmu_on,
+					wait_hspmu_on+2000);
 			}
 
 			setExternAudioGain(GetAudioModeBySink(speaker),
@@ -3462,7 +3474,8 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 				aTrace(LOG_AUDIO_CNTLR,
 					"power OFF pmu IHF amp\n");
 				extern_ihf_off();
-				usleep_range(wait_pmu_off, wait_pmu_off+2000);
+				audctl_usleep_range(wait_pmu_off,
+					wait_pmu_off+2000);
 			}
 			IHF_IsOn = FALSE;
 		} else {
@@ -3471,7 +3484,7 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 					"powerOnExternalAmp power on IHF");
 				audioh_start_ihf();
 				extern_ihf_on();
-				usleep_range(wait_ihfpmu_on,
+				audctl_usleep_range(wait_ihfpmu_on,
 					wait_ihfpmu_on+2000);
 		}
 
