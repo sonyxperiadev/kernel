@@ -74,12 +74,12 @@ extern "C" {
 #endif
 
 #define PARM_IND_RAM_OFFSET                    0x140000
-#define PARM_IND_SIZE                          0x00080000
+#define PARM_IND_SIZE                          0x000A0000
 
 #define PARM_IND_RAM_ADDR                      (EXT_RAM_BASE_ADDR + PARM_IND_RAM_OFFSET)
 
 #ifndef ISLANDRAY
-#define PARM_DEP_ROM_ADDR      0x00100000
+#define PARM_DEP_ROM_ADDR      0x00120000
 #else
 #define PARM_DEP_ROM_ADDR      0x00380000
 #endif
@@ -102,7 +102,7 @@ extern "C" {
 #define DSP_PRAM_ROM_ADDR      0x00400000
 #endif
 
-#define DSP_PRAM_RAM_OFFSET                    0x1D0000
+#define DSP_PRAM_RAM_OFFSET                    0x1F0000
 #define DSP_PRAM_RAM_ADDR                      (EXT_RAM_BASE_ADDR + DSP_PRAM_RAM_OFFSET)
 /* #ifndef ISLANDRAY  */
 #define DSP_PRAM_SIZE                                          0x00004000
@@ -261,7 +261,7 @@ extern "C" {
 #define IPC_BASE                               (EXT_RAM_BASE_ADDR + IPC_OFFSET)
 #define IPC_SIZE                                               0x00200000
 
-#define PARM_DEP_RAM_OFFSET                    0x1C0000
+#define PARM_DEP_RAM_OFFSET                    0x1E0000
 #define PARM_DEP_RAM_ADDR                      (EXT_RAM_BASE_ADDR + PARM_DEP_RAM_OFFSET)
 #ifndef ISLANDRAY
 #define PARM_DEP_SIZE                                          0x00010000
