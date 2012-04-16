@@ -219,11 +219,7 @@ static struct brcm_netconsole_target *alloc_param_target(char *target_config)
 	}
 
 	nt->np.name = "brcm_netconsole";
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-	strlcpy(nt->np.dev_name, "usb0", IFNAMSIZ);
-#else
 	strlcpy(nt->np.dev_name, "rndis0", IFNAMSIZ);
-#endif
 	nt->np.local_port = 5042;
 	nt->np.remote_port = 5042;
 	remote_mac[0] = 0xaa;
@@ -672,11 +668,7 @@ static struct config_item *make_brcm_netconsole_target(struct config_group
 	}
 
 	nt->np.name = "brcm_netconsole";
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-	strlcpy(nt->np.dev_name, "usb0", IFNAMSIZ);
-#else
 	strlcpy(nt->np.dev_name, "rndis0", IFNAMSIZ);
-#endif
 	nt->np.local_port = 5042;
 	nt->np.remote_port = 5042;
 	remote_mac[0] = 0xaa;

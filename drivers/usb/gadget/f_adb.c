@@ -404,11 +404,6 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 	return r;
 }
 
-#ifdef	CONFIG_USB_G_ANDROID_2_6_SYSFS
-static atomic_t adb_enable_excl;
-void set_enable_store(char *str, int value);
-#endif
-
 static int adb_open(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "adb_open\n");
@@ -447,42 +442,6 @@ static struct miscdevice adb_device = {
 	.name = adb_shortname,
 	.fops = &adb_fops,
 };
-
-#ifdef	CONFIG_USB_G_ANDROID_2_6_SYSFS
-
-static int adb_enable_open(struct inode *ip, struct file *fp)
-{
-	if (atomic_inc_return(&adb_enable_excl) != 1) {
-		atomic_dec(&adb_enable_excl);
-		return -EBUSY;
-	}
-
-	pr_info("enabling adb\n");
-	set_enable_store("adb", 1);
-
-	return 0;
-}
-
-static int adb_enable_release(struct inode *ip, struct file *fp)
-{
-	pr_info("disabling adb\n");
-	set_enable_store("adb", 0);
-	atomic_dec(&adb_enable_excl);
-	return 0;
-}
-
-static const struct file_operations adb_enable_fops = {
-	.owner =   THIS_MODULE,
-	.open =    adb_enable_open,
-	.release = adb_enable_release,
-};
-
-static struct miscdevice adb_enable_device = {
-	.minor = MISC_DYNAMIC_MINOR,
-	.name = "android_adb_enable",
-	.fops = &adb_enable_fops,
-};
-#endif
 
 static int
 adb_function_bind(struct usb_configuration *c, struct usb_function *f)
@@ -622,9 +581,6 @@ static int adb_setup(void)
 
 	INIT_LIST_HEAD(&dev->tx_idle);
 
-	/* start enabled */
-	dev->function.disabled = 1;
-
 	/* _adb_dev must be set before calling usb_gadget_register_driver */
 	_adb_dev = dev;
 
@@ -632,18 +588,7 @@ static int adb_setup(void)
 	if (ret)
 		goto err;
 
-#ifdef	CONFIG_USB_G_ANDROID_2_6_SYSFS
-	ret = misc_register(&adb_enable_device);
-	if (ret)
-		goto err2;
-#endif
-
 	return 0;
-
-#ifdef	CONFIG_USB_G_ANDROID_2_6_SYSFS
-err2:
-	misc_deregister(&adb_device);
-#endif
 
 err:
 	kfree(dev);
@@ -654,9 +599,6 @@ err:
 static void adb_cleanup(void)
 {
 	misc_deregister(&adb_device);
-#ifdef	CONFIG_USB_G_ANDROID_2_6_SYSFS
-	misc_deregister(&adb_enable_device);
-#endif
 	kfree(_adb_dev);
 	_adb_dev = NULL;
 }

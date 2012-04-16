@@ -75,9 +75,6 @@ struct android_usb_function {
 	struct device *dev;
 	char *dev_name;
 	struct device_attribute **attributes;
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-	bool enabled;
-#endif
 	/* for android_dev.enabled_functions */
 	struct list_head enabled_list;
 
@@ -113,9 +110,6 @@ static struct class *android_class;
 static struct android_dev *_android_dev;
 static int android_bind_config(struct usb_configuration *c);
 static void android_unbind_config(struct usb_configuration *c);
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-void set_enable_store(char *str, int value);
-#endif
 
 /* string IDs are assigned dynamically */
 #define STRING_MANUFACTURER_IDX		0
@@ -377,9 +371,7 @@ static int rndis_function_bind_config(struct android_usb_function *f,
 		rndis->ethaddr[0], rndis->ethaddr[1], rndis->ethaddr[2],
 		rndis->ethaddr[3], rndis->ethaddr[4], rndis->ethaddr[5]);
 
-#ifndef CONFIG_USB_G_ANDROID_2_6_SYSFS
 	ret = gether_setup_name(c->cdev->gadget, rndis->ethaddr, "rndis");
-#endif
 	if (ret) {
 		pr_err("%s: gether_setup failed\n", __func__);
 		return ret;
@@ -404,9 +396,7 @@ static int rndis_function_bind_config(struct android_usb_function *f,
 static void rndis_function_unbind_config(struct android_usb_function *f,
 						struct usb_configuration *c)
 {
-#ifndef CONFIG_USB_G_ANDROID_2_6_SYSFS
 	gether_cleanup();
-#endif
 }
 
 static ssize_t rndis_manufacturer_show(struct device *dev,
@@ -1076,34 +1066,12 @@ static int android_bind(struct usb_composite_dev *cdev)
 
 	dev->cdev = cdev;
 
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-{
-	struct rndis_function_config *rndis;
-	struct android_usb_function *f;
-	struct android_usb_function **functions = dev->functions;
-
-	set_enable_store("mass_storage", 1);
-
-	while ((f = *functions++)) {
-		if (!strcmp("rndis", f->name)) {
-			rndis = (struct rndis_function_config *)f->config;
-			ret = gether_setup_name(cdev->gadget, rndis->ethaddr, "usb");
-			return 0;
-		}
-	}
-}
-#endif
-
 	return 0;
 }
 
 static int android_usb_unbind(struct usb_composite_dev *cdev)
 {
 	struct android_dev *dev = _android_dev;
-
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-	gether_cleanup();
-#endif
 
 	cancel_work_sync(&dev->work);
 	android_cleanup_functions(dev->functions);
@@ -1152,17 +1120,9 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (!dev->connected) {
 		dev->connected = 1;
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-		cdev->connected = 1;
-		schedule_work(&cdev->switch_work);
-#endif
 		schedule_work(&dev->work);
 	}
 	else if (c->bRequest == USB_REQ_SET_CONFIGURATION && cdev->config) {
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-		cdev->connected = 1;
-		schedule_work(&cdev->switch_work);
-#endif
 		schedule_work(&dev->work);
 	}
 	spin_unlock_irqrestore(&cdev->lock, flags);
@@ -1207,335 +1167,11 @@ static int android_create_device(struct android_dev *dev)
 	return 0;
 }
 
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-struct class *usb_composite_class;
-struct device *rndis_device = NULL;
-struct device *adb_comp_device = NULL;
-struct device *msc_device = NULL;
-
-static int check_enabled(char *str)
-{
-	struct android_dev *dev = _android_dev;
-	struct android_usb_function *f;
-	int found = 0;
-
-	list_for_each_entry(f, &dev->enabled_functions, enabled_list)
-	{
-		if(!strcmp(f->name, str)){
-			found = 1;
-		}
-	}
-	return found;
-}
-
-struct device *get_2_6_device(char *str)
-{
-	struct device *dev = NULL;
-	if(!strcmp(str,"rndis")){
-		dev = rndis_device;
-	}
-	else if(!strcmp(str,"mass_storage")){
-		dev = msc_device;
-	}
-	else if(!strcmp(str,"adb")){
-		dev = adb_comp_device;
-	}
-	else
-	{
-		printk("get_2_6_device device not found\n");
-	}
-	return dev;
-}
-
-void set_enable_store(char *str, int value)
-{
-	struct android_dev *dev = _android_dev;
-	struct android_usb_function *f = NULL;
-	struct usb_composite_dev *cdev;
-	int err;
-	struct list_head *pos = NULL;
-	struct list_head *n;
-	struct device *kdev = get_2_6_device(str);
-	static bool b_adb = false;
-
-	pr_info("%s",__FUNCTION__);
-
-	pr_info("%s, enable=%d\n",str, value);
-
-	if(!strcmp(str,"adb")){ 
-	  b_adb = false; 
-	} 
-
-	if(value){
-		//Setup PIDs for RNDIS and ADB
-		if(!strcmp(str,"rndis")){
-			device_desc.idProduct = 0x4e13;
-		}
-		else if(!strcmp(str,"adb")){
-			device_desc.idProduct = 0x0d02;
-		}
-		err = android_enable_function(dev, str);
-		list_for_each_safe(pos, n, &dev->enabled_functions)
-		{
-			f = list_entry(pos, struct android_usb_function, enabled_list);
-			if(pos && f && !strcmp(f->name, str)){
-				f->enabled = 1;
-				kobject_uevent(&kdev->kobj, KOBJ_CHANGE);
-			}
-		}
-		if (err)
-			pr_err("android_usb: Cannot enable");
-
-		/* Windows does not support other interfaces when RNDIS is enabled,
-		 * so we disable UMS and MTP when RNDIS is on.
-		 */
-		if(!strcmp(str,"rndis")){
-			list_for_each_safe(pos, n, &dev->enabled_functions){
-				if(pos)
-					f = list_entry(pos, struct android_usb_function, enabled_list);
-				if (!strcmp(f->name, "mass_storage")
-					|| !strcmp(f->name, "mtp")) {
-					f->enabled = 0;
-					list_del(pos);
-					kdev = get_2_6_device("mass_storage");
-					kobject_uevent(&kdev->kobj, KOBJ_CHANGE);
-				}
-				if (!strcmp(f->name, "adb")) {
-					f->enabled = 0;
-					list_del(pos);
-					kdev = get_2_6_device("adb");
-					kobject_uevent(&kdev->kobj, KOBJ_CHANGE);
-					b_adb = true;
-				}
-			}
-		}
-
-	}
-	else {
-		list_for_each_safe(pos, n, &dev->enabled_functions)
-		{
-			f = list_entry(pos, struct android_usb_function, enabled_list);
-			if(pos && f && !strcmp(f->name, str)){
-				f->enabled = 0;
-				kobject_uevent(&kdev->kobj, KOBJ_CHANGE);
-				list_del(pos);
-			}
-		}
-		/* Windows does not support other interfaces when RNDIS is enabled,
-		 * so we disable UMS and MTP when RNDIS is on.
-		 */
-		if(!strcmp(str,"rndis")){
-			device_desc.idProduct = 0x0d02;
-			err = android_enable_function(dev, "mass_storage");
-			if (b_adb) {
-				err = android_enable_function(dev, "adb");
-				b_adb = false;
-			}
-			list_for_each_safe(pos, n, &dev->enabled_functions){
-
-				f = list_entry(pos, struct android_usb_function, enabled_list);
-				if (!strcmp(f->name, "mass_storage")
-					|| !strcmp(f->name, "mtp")) {
-					f->enabled = 1;
-					kdev = get_2_6_device("mass_storage");
-					kobject_uevent(&kdev->kobj, KOBJ_CHANGE);
-				}
-
-				if (!strcmp(f->name, "adb")) {
-					f->enabled = 1;
-					kdev = get_2_6_device("adb");
-					kobject_uevent(&kdev->kobj, KOBJ_CHANGE);
-				}
-				if (err)
-					pr_err("android_usb: Cannot enable");
-			}
-		}
-
-	}
-
-	//Disconnect
-	cdev = dev->cdev;
-	if (dev->enabled) {
-		usb_gadget_disconnect(cdev->gadget);
-		usb_remove_config(cdev, &android_config_driver);
-		dev->enabled = false;
-		msleep(200);
-	}
-
-	//Connect
-	/* update values in composite driver's copy of device descriptor */
-	cdev->desc.idVendor = device_desc.idVendor;
-	cdev->desc.idProduct = device_desc.idProduct;
-	cdev->desc.bcdDevice = device_desc.bcdDevice;
-	cdev->desc.bDeviceClass = device_desc.bDeviceClass;
-	cdev->desc.bDeviceSubClass = device_desc.bDeviceSubClass;
-	cdev->desc.bDeviceProtocol = device_desc.bDeviceProtocol;
-	usb_add_config(cdev, &android_config_driver,
-				android_bind_config);
-	usb_gadget_connect(cdev->gadget);
-	dev->enabled = true;
-
-}
-
-static ssize_t rndis_enable_show(struct device *pdev, struct device_attribute *attr,
-		char *buf)
-{
-	return sprintf(buf, "%d\n", check_enabled("rndis"));
-}
-
-static ssize_t rndis_enable_store(
-		struct device *pdev, struct device_attribute *attr,
-		const char *ibuf, size_t size)
-{
-	int value;
-	printk("rndis_enable_store calls set_enable_store\n");
-	sscanf(ibuf, "%d", &value);
-	set_enable_store("rndis", value);
-	return size;
-}
-static ssize_t adb_enable_show(struct device *pdev, struct device_attribute *attr,
-		char *buf)
-{
-	return sprintf(buf, "%d\n", check_enabled("adb"));
-}
-
-static ssize_t adb_enable_store(
-		struct device *pdev, struct device_attribute *attr,
-		const char *ibuf, size_t size)
-{
-	int value;
-	sscanf(ibuf, "%d", &value);
-	printk("adb_enable_store calls set_enable_store\n");
-	set_enable_store("adb", value);
-
-	return size;
-}
-static ssize_t msc_enable_show(struct device *pdev, struct device_attribute *attr,
-		char *buf)
-{
-	return sprintf(buf, "%d\n", check_enabled("mass_storage"));
-}
-
-static ssize_t msc_enable_store(
-		struct device *pdev, struct device_attribute *attr,
-		const char *ibuf, size_t size)
-{
-	int value;
-	printk("msc_enable_store calls set_enable_store\n");
-	sscanf(ibuf, "%d", &value);
-	set_enable_store("mass_storage", value);
-
-	return size;
-}
-
-struct device_attribute dev_attr_rndis_enable = __ATTR(enable, S_IRUGO | S_IWUSR,
-					rndis_enable_show, rndis_enable_store);
-struct device_attribute dev_attr_adb_enable = __ATTR(enable, S_IRUGO | S_IWUSR,
-					adb_enable_show, adb_enable_store);
-struct device_attribute dev_attr_msc_enable = __ATTR(enable, S_IRUGO | S_IWUSR,
-					msc_enable_show, msc_enable_store);
-
-static int
-composite_uevent(struct device *dev, struct kobj_uevent_env *env)
-{
-	struct android_dev *adev = _android_dev;
-	struct android_usb_function *f = NULL;
-	char name[20] = "";
-	struct list_head *pos = NULL;
-	struct list_head *n;
-	int enabled = 0;
-
-
-	if(dev == rndis_device)
-	{
-		strcpy(name,"rndis");
-	}
-	else if(dev == msc_device)
-	{
-		strcpy(name,"mass_storage");
-	}
-	else if(dev == adb_comp_device)
-	{
-		strcpy(name,"adb");
-	}
-	else {
-		return 0;
-	}
-
-	if(!adev){
-		pr_err("composite_uevent No adev\n");
-		return 0;
-	}
-	list_for_each_safe(pos, n, &adev->enabled_functions)
-	{
-		if(pos)
-			f = list_entry(pos, struct android_usb_function, enabled_list);
-		if(pos && f && !strcmp(f->name, name)){
-			enabled = f->enabled;
-		}
-	}
-	if (!f || !strlen(name) || !dev) {
-		/* this happens when the device is first created */
-		pr_err("composite_uevent FAILED dev:%p NULL f:%p RNDIS:%p MSC:%p ADB:%p \n",dev, f,
-			rndis_device, msc_device, adb_comp_device);
-		return 0;
-	}
-
-	//Convert mass storage name to 2.6 style
-	if(!strcmp(name,"mass_storage")){
-		strcpy(name,"usb_mass_storage");
-	}
-	if (add_uevent_var(env, "FUNCTION=%s", name))
-		return -ENOMEM;
-	if (add_uevent_var(env, "ENABLED=%d", enabled))
-		return -ENOMEM;
-	return 0;
-}
-
-#endif
 
 static int __init init(void)
 {
 	struct android_dev *dev;
 	int err;
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-	int value;
-
-	usb_composite_class = class_create(THIS_MODULE, "usb_composite");
-	if (IS_ERR(usb_composite_class))
-		return PTR_ERR(usb_composite_class);
-
-	usb_composite_class->dev_uevent = composite_uevent;
-	rndis_device = device_create(usb_composite_class, NULL,
-		MKDEV(0, 0), NULL, "rndis");
-
-	value = device_create_file(rndis_device, &dev_attr_rndis_enable);
-	if (value < 0) {
-		device_destroy(usb_composite_class, MKDEV(0, 0));
-		return value;
-	}
-
-	adb_comp_device = device_create(usb_composite_class, NULL,
-		MKDEV(0, 0), NULL, "adb");
-
-	value = device_create_file(adb_comp_device, &dev_attr_adb_enable);
-	if (value < 0) {
-		device_destroy(usb_composite_class, MKDEV(0, 0));
-		device_destroy(usb_composite_class, MKDEV(0, 0));
-		return value;
-	}
-
-	msc_device = device_create(usb_composite_class, NULL,
-		MKDEV(0, 0), NULL, "usb_mass_storage");
-
-	value = device_create_file(msc_device, &dev_attr_msc_enable);
-	if (value < 0) {
-		device_destroy(usb_composite_class, MKDEV(0, 0));
-		device_destroy(usb_composite_class, MKDEV(0, 0));
-		device_destroy(usb_composite_class, MKDEV(0, 0));
-		return value;
-	}
-#endif
 
 	android_class = class_create(THIS_MODULE, "android_usb");
 	if (IS_ERR(android_class))
@@ -1570,12 +1206,6 @@ module_init(init);
 static void __exit cleanup(void)
 {
 	usb_composite_unregister(&android_usb_driver);
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-	device_destroy(usb_composite_class, MKDEV(0, 0));
-	device_destroy(usb_composite_class, MKDEV(0, 0));
-	device_destroy(usb_composite_class, MKDEV(0, 0));
-	class_destroy(usb_composite_class);
-#endif
 	class_destroy(android_class);
 	kfree(_android_dev);
 	_android_dev = NULL;
