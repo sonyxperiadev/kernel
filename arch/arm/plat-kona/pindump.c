@@ -164,9 +164,9 @@ static int __init debug_dtsdump_init(void)
 {
 
 	root_entry = debugfs_create_dir("dtsdump", NULL);
-	if (!root_entry && IS_ERR(root_entry)) {
+	if (!root_entry && IS_ERR(root_entry))
 		return PTR_ERR(root_entry);
-	}
+
 	dump_dentry = debugfs_create_file("dtsdump", 0444, root_entry, NULL,
 					  &default_file_operations);
 	return 0;
