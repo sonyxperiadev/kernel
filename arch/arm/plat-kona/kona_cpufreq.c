@@ -261,6 +261,101 @@ static int kona_cpufreq_exit(struct cpufreq_policy *policy)
 	return 0;
 }
 
+#ifdef CONFIG_KONA_CPU_FREQ_LIMITS
+
+#define kona_cpufreq_power_attr(_name, _mode)	\
+static struct kobj_attribute _name##_attr = {	\
+	.attr	= {				\
+		.name = __stringify(_name),	\
+		.mode = _mode,			\
+	},					\
+	.show	= _name##_show,			\
+	.store	= _name##_store,		\
+}
+
+#define kona_cpufreq_show(fname, obj)				\
+	static ssize_t fname##_show(struct kobject *kobj,	\
+			struct kobj_attribute *attr, char *buf)	\
+{								\
+	ssize_t ret = -EINTR;					\
+	int cpu = smp_processor_id();				\
+	struct cpufreq_policy policy;				\
+	if (!cpufreq_get_policy(&policy, cpu))			\
+		ret = sprintf(buf, "%u\n", policy.obj);		\
+	return ret;						\
+}
+
+#define DEFAULT_LIMIT	(-1)
+#define kona_cpufreq_store(fname, obj)				\
+static ssize_t fname##_store(struct kobject *kobj,		\
+	struct kobj_attribute *attr, const char *buf, size_t n)	\
+{								\
+	int cpu = smp_processor_id();				\
+	long val;						\
+	struct cpufreq_policy *policy;				\
+	if (strict_strtol(buf, 10, &val))			\
+		return -EINVAL;					\
+	policy = cpufreq_cpu_get(cpu);				\
+	if (!policy)						\
+		return -EINVAL;					\
+	if (val == DEFAULT_LIMIT)				\
+		val = (long)policy->cpuinfo.obj##_freq;		\
+	policy->user_policy.obj = (unsigned int)val;		\
+	cpufreq_cpu_put(policy);				\
+	cpufreq_update_policy(cpu);				\
+	return n;						\
+}
+
+
+static ssize_t cpufreq_table_show(struct kobject *kobj,
+			struct kobj_attribute *attr, char *buf)
+
+{
+	ssize_t count = 0;
+	int num, i;
+	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
+	int cpu = smp_processor_id();
+
+	num = pdata->num_freqs;
+	/*List in descending order*/
+	for (i = num - 1; i >= 0; i--)
+		count += sprintf(&buf[count], "%d ",
+				pdata->freq_tbl[i].cpu_freq);
+	count += sprintf(&buf[count], "\n");
+	return count;
+}
+
+#define cpufreq_table_store	NULL
+#define cpufreq_cur_store	NULL
+
+kona_cpufreq_show(cpufreq_max, max);
+kona_cpufreq_show(cpufreq_min, min);
+kona_cpufreq_show(cpufreq_cur, cur);
+
+kona_cpufreq_store(cpufreq_max, max);
+kona_cpufreq_store(cpufreq_min, min);
+
+kona_cpufreq_power_attr(cpufreq_max, S_IRUGO|S_IWUSR);
+kona_cpufreq_power_attr(cpufreq_min, S_IRUGO|S_IWUSR);
+kona_cpufreq_power_attr(cpufreq_cur, S_IRUGO);
+kona_cpufreq_power_attr(cpufreq_table, S_IRUGO);
+
+static struct attribute *_cpufreq_attr[] = {
+	&cpufreq_max_attr.attr,
+	&cpufreq_min_attr.attr,
+	&cpufreq_cur_attr.attr,
+	&cpufreq_table_attr.attr,
+	NULL,
+};
+
+static struct attribute_group _cpufreq_attr_group = {
+	.attrs = _cpufreq_attr,
+};
+
+
+
+#endif /*CONFIG_KONA_CPU_FREQ_LIMITS*/
+
 /*********************************************************************
  *                              INIT CODE                            *
  *********************************************************************/
@@ -344,6 +439,13 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 	kona_cpufreq->pdata = pdata;
 	platform_set_drvdata(pdev, kona_cpufreq);
 
+#ifdef CONFIG_KONA_CPU_FREQ_LIMITS
+	ret = sysfs_create_group(power_kobj, &_cpufreq_attr_group);
+	if (ret) {
+		pr_info("%s:sysfs_create_group failed\n", __func__);
+		return ret;
+	}
+#endif
 	return cpufreq_register_driver(&kona_cpufreq_driver);
 
 }

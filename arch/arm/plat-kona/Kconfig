@@ -132,6 +132,15 @@ config KONA_CPU_FREQ_DRV
        help
 	Say Y if you want to enable generic Kona cpu-freq driver for Kona platforms
 
+config KONA_CPU_FREQ_LIMITS
+       bool "Enable sysfs interface to control CPU freq limits"
+       depends on KONA_CPU_FREQ_DRV
+       help
+	Say Y to add sysfs interfaces to control CPU freq limits
+	under /sys/power folder. CPU-freq max & min limits can be set/read
+	using these interfaces. Interace to read freq table and active freq
+	also get added if this config is enabled.
+
 config KONA_POWER_MGR
        bool "Enable Kona power manager driver"
        select KONA_PI_MGR
