@@ -805,8 +805,9 @@ static int dwc_otg_driver_probe(struct platform_device *_dev
 
 	if (!dwc_otg_device->base) {
 		dev_err(&_dev->dev, "ioremap() failed\n");
-		retval = -ENOMEM;
-		goto fail;
+		platform_set_drvdata(_dev, 0);
+		dwc_free(dwc_otg_device);
+		return -ENOMEM;
 	}
 	dev_dbg(&_dev->dev, "base=0x%08x\n", (unsigned)dwc_otg_device->base);
 
