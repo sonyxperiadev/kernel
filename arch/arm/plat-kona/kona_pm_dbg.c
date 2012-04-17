@@ -20,6 +20,7 @@
 static u32 handle_simple_parm(struct snapshot *s);
 static u32 handle_clk_parm(struct snapshot *s);
 static u32 handle_ahb_reg_parm(struct snapshot *s);
+static u32 handle_user_defined_parm(struct snapshot *s);
 static void snapshot_add_reg(u32 reg, u32 mask, u32 good);
 static void snapshot_del_reg(u32 reg);
 static void snapshot_show_list(void);
@@ -304,6 +305,17 @@ err:
 	return ret;
 }
 
+/* Call registered function to get data */
+static u32 handle_user_defined_parm(struct snapshot *s)
+{
+	u32 ret = 0;
+
+	if (s->func)
+		ret = s->func(s->data);
+
+	return ret;
+}
+
 /*****************************************************************************
  *                                   API                                     *
  *****************************************************************************/
@@ -323,23 +335,13 @@ void snapshot_get(void)
 	for (i = 0; i < snapshot_len; i++) {
 		s = &snapshot[i];
 
-		if (s->handler) {
+		if (s->handler)
 			s->curr = s->handler(s);
-			/* If the read value is different from the
-			 * expected value, we get a mismatch (non-zero).
-			 */
-			s->curr ^= s->good;
-		}
 	}
 
 	list_for_each_entry(s, &snapshot_list, node) {
-		if (s->handler) {
+		if (s->handler)
 			s->curr = s->handler(s);
-			/* If the read value is different from the
-			 * expected value, we get a mismatch (non-zero).
-			 */
-			s->curr ^= s->good;
-		}
 	}
 }
 EXPORT_SYMBOL(snapshot_get);
@@ -362,17 +364,15 @@ void snapshot_show(void)
 	for (i = 0; i < snapshot_len; i++) {
 		s = &snapshot[i];
 
-		if (s->curr) {
+		if (s->curr != s->good)
 			pr_info("[%s]: expected:0x%08x mismatch:0x%08x\n",
 				s->name, s->good, s->curr);
-		}
 	}
 
 	list_for_each_entry(s, &snapshot_list, node) {
-		if (s->curr == 0) {
+		if (s->curr != s->good)
 			pr_info("[%d]: expected:0x%08x mismatch:0x%08x\n",
 				s->reg, s->good, s->curr);
-		}
 	}
 }
 EXPORT_SYMBOL(snapshot_show);
@@ -394,6 +394,9 @@ void snapshot_table_register(struct snapshot *table, size_t len)
 			break;
 		case SNAPSHOT_AHB_REG:
 			snapshot[i].handler = handle_ahb_reg_parm;
+			break;
+		case SNAPSHOT_USER_DEFINED:
+			snapshot[i].handler = handle_user_defined_parm;
 			break;
 		default:
 			snapshot[i].handler = NULL;

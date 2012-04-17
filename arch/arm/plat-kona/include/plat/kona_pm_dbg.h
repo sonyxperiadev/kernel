@@ -18,6 +18,7 @@ enum {
 	SNAPSHOT_SIMPLE,
 	SNAPSHOT_CLK,
 	SNAPSHOT_AHB_REG,
+	SNAPSHOT_USER_DEFINED,
 };
 
 struct snapshot {
@@ -28,6 +29,7 @@ struct snapshot {
 	u32 good;		/* expected value for sleep entry   */
 	char *name;
 	u32 curr;		/* actual value after applying mask */
+	u32 (*func)(void *data);/* user defined handler             */
 
 	/* Fields used internally */
 	 u32(*handler) (struct snapshot *);
@@ -62,6 +64,16 @@ struct snapshot {
 		.type = SNAPSHOT_AHB_REG,	\
 		.data = _clk,			\
 		.name = #_reg,			\
+	}
+
+#define USER_DEFINED_PARM(_func, _data, _name)	\
+	{					\
+		.data = _data,			\
+		.func = _func,			\
+		.type = SNAPSHOT_USER_DEFINED,	\
+		.mask = 0,			\
+		.good = 0,			\
+		.name = _name,			\
 	}
 
 extern void snapshot_get(void);

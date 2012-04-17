@@ -12,12 +12,14 @@
 #include <linux/dma-mapping.h>
 #include <plat/kona_pm_dbg.h>
 #include <plat/pwr_mgr.h>
+#include <plat/pi_mgr.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_csr.h>
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_gpio.h>
 #include <mach/pm.h>
 #include <mach/pwr_mgr.h>
+#include <mach/pi_mgr.h>
 #ifdef CONFIG_KONA_PROFILER
 #include <plat/profiler.h>
 #endif
@@ -234,10 +236,34 @@ void instrument_dormant_exit(void)
  *               INTERFACE TO TAKE REGISTER SNAPSHOT BEFORE SLEEP            *
  *****************************************************************************/
 
-#define MIN_PWR_STATE		\
+static u32 mm_pi_id = PI_MGR_PI_ID_MM;
+static u32 hub_pi_id = PI_MGR_PI_ID_HUB_SWITCHABLE;
+static u32 hub_aon_pi_id = PI_MGR_PI_ID_HUB_AON;
+static u32 arm_pi_id = PI_MGR_PI_ID_ARM_CORE;
+static u32 arm_subsys_pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM;
+static u32 modem_pi_id = PI_MGR_PI_ID_MODEM;
+
+static u32 get_pi_count(void *data)
+{
+	u32 ret = 0;
+	int id = *(int *)data;
+
+	ret = pi_get_use_count(id);
+
+	return ret;
+}
+
+#define AP_MIN_PWR_STATE		\
 	(KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET)
-#define USB_OTG_P1CTL		\
+#define MODEM_MIN_PWR_STATE		\
+	(KONA_MEMC0_NS_VA + CSR_MODEM_MIN_PWR_STATE_OFFSET)
+#define DSP_MIN_PWR_STATE		\
+	(KONA_MEMC0_NS_VA + CSR_DSP_MIN_PWR_STATE_OFFSET)
+#define USB_OTG_P1CTL			\
 	(KONA_USB_HSOTG_CTRL_VA + HSOTG_CTRL_PHY_P1CTL_OFFSET)
+#define HW_FREQ_CHANGE_CNTRL		\
+	(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET)
+#define DDR_PLL_PWRDN_BIT CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK
 
 /* SNAPSHOT TABLE:
  * ---------------
@@ -249,17 +275,32 @@ static struct snapshot snapshot[] = {
 	/*
 	 * Simple register parms
 	 */
-	SIMPLE_PARM(MIN_PWR_STATE, 0, 3),
+	SIMPLE_PARM(AP_MIN_PWR_STATE, 0, 3),
+	SIMPLE_PARM(MODEM_MIN_PWR_STATE, 0, 3),
+	SIMPLE_PARM(DSP_MIN_PWR_STATE, 0, 3),
+	SIMPLE_PARM(HW_FREQ_CHANGE_CNTRL, DDR_PLL_PWRDN_BIT, DDR_PLL_PWRDN_BIT),
 
 	/*
 	 * List of clocks that prevent entry to low power state
 	 */
 	CLK_PARM("dig_ch0_clk"),
+	CLK_PARM("tpiu_clk"),
+	CLK_PARM("pti_clk"),
 
 	/*
 	 * AHB register parms (needs AHB clk enabled before register read)
 	 */
 	AHB_REG_PARM(USB_OTG_P1CTL, 0, (1 << 30), "usb_otg_clk"),
+
+	/*
+	 * PI usage counts
+	 */
+	USER_DEFINED_PARM(get_pi_count, &mm_pi_id, "mm"),
+	USER_DEFINED_PARM(get_pi_count, &hub_pi_id, "hub"),
+	USER_DEFINED_PARM(get_pi_count, &hub_aon_pi_id, "hub_aon"),
+	USER_DEFINED_PARM(get_pi_count, &arm_pi_id, "arm"),
+	USER_DEFINED_PARM(get_pi_count, &arm_subsys_pi_id, "arm_subsys"),
+	USER_DEFINED_PARM(get_pi_count, &modem_pi_id, "modem"),
 };
 
 /*****************************************************************************

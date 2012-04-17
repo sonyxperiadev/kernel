@@ -911,6 +911,18 @@ int pi_state_allowed(int pi_id)
 }
 EXPORT_SYMBOL(pi_state_allowed);
 
+int pi_get_use_count(int pi_id)
+{
+	int ret = -EINVAL;
+	struct pi *pi = pi_mgr_get(pi_id);
+
+	if (pi)
+		ret = pi->usg_cnt;
+
+	return ret;
+}
+EXPORT_SYMBOL(pi_get_use_count);
+
 u32 pi_get_active_qos(int pi_id)
 {
 	struct pi_mgr_qos_object *qos = &pi_mgr.qos[pi_id];
