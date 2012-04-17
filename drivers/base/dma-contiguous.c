@@ -685,13 +685,11 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 		pageno = bitmap_find_next_zero_area(cma->bitmap, cma->count,
 						    start, count, mask);
 		if (pageno >= cma->count) {
-			printk(KERN_ERR "%s:%d ## CMA ALLOCATION FAILED ##\n",
+			pr_debug("%s:%d ## CMA ALLOCATION FAILED ##\n",
 			       __func__, __LINE__);
-			printk(KERN_ERR
-			       "%s:%d # Couldn't find %d pages in cma\n",
+			pr_debug("%s:%d # Couldn't find %d pages in cma\n",
 			       __func__, __LINE__, count);
-			printk(KERN_ERR
-			       "%s:%d # Total allocation(%lukB, %ld pages)"
+			pr_debug("%s:%d # Total allocation(%lukB, %ld pages)"
 			       " Largest free block(%lukB, %ld pages)\n",
 			       __func__, __LINE__,
 			       toKB(cma->info.total_alloc),
@@ -715,9 +713,11 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 			       __pfn_to_phys(pfn + count));
 			goto error;
 		}
+
 		pr_debug
 		    ("%s(): memory range at %p is busy !\n",
 		     __func__, pfn_to_page(pfn));
+
 		/* try again with a bit different memory target */
 		start = pageno + mask + 1;
 	}
@@ -726,15 +726,12 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 	for (;;) {
 		ret = find_best_area(cma, count, mask, &best_fit);
 		if (ret) {
-			printk(KERN_ERR
-			       "%s:%d #### CMA ALLOCATION FAILED ####\n",
+			pr_debug("%s:%d #### CMA ALLOCATION FAILED ####\n",
 			       __func__, __LINE__);
-			printk(KERN_ERR
-			       "%s:%d # Couldn't find %d pages in cma\n",
+			pr_debug("%s:%d # Couldn't find %d pages in cma\n",
 			       __func__, __LINE__, count);
 
-			printk(KERN_ERR
-			       "%s:%d # Total alloc(%lukB, %ld pages)"
+			pr_debug("%s:%d # Total alloc(%lukB, %ld pages)"
 			       " Largest block(%lukB, %ld pages)\n",
 			       __func__, __LINE__,
 			       toKB(cma->info.total_alloc),

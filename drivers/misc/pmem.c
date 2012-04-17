@@ -532,18 +532,12 @@ static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 	struct page *page;
 	unsigned long nr_pages = len >> PAGE_SHIFT;
 
-	if (nr_pages > pmem[id].cma.nr_pages) {
-		printk(KERN_ERR "pmem:%d Failed to allocate %lu pages\n",
-		       __LINE__, nr_pages);
+	if (nr_pages > pmem[id].cma.nr_pages)
 		return -ENOMEM;
-	}
 
 	page = dma_alloc_from_contiguous(&pmem[id].pdev->dev, nr_pages, 0);
-	if (!page) {
-		printk(KERN_ERR "pmem:%d Failed to allocate %lu pages\n",
-		       __LINE__, nr_pages);
+	if (!page)
 		return -ENOMEM;
-	}
 
 	BUG_ON(!current->group_leader->mm);
 	add_mm_counter(current->group_leader->mm, MM_CMAPAGES, nr_pages);
@@ -1364,11 +1358,23 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	}
 
 	if (pmem_len(data) != vma_size) {
-		printk(KERN_WARNING"pmem: mmap size [%lu] does not match"
-		       "size of backing region [%lu].\n", vma_size,
-		       pmem_len(data));
-		printk(KERN_ALERT "pmem:%d FATAL alloc failure\n", __LINE__);
-		ret = -EINVAL;
+		printk(KERN_ERR"%s:%d pmem: Alloc failed (%ldkB, %ld pages)\n",
+				current->group_leader->comm,
+				current->group_leader->pid,
+				vma_size/SZ_1K, vma_size >> PAGE_SHIFT);
+		get_dev_cma_info(&pmem[id].pdev->dev, &pmem[id].cma);
+		printk(KERN_ERR"CMA region details\n");
+		printk(KERN_ERR "start PFN    : %lx\n"
+				"nr_pages     : %ld pages\n"
+				"biggest free : %ld pages\n"
+				"total alloc  : %ld pages\n"
+				"peak alloc   : %ld pages\n",
+				 pmem[id].cma.start_pfn,
+				 pmem[id].cma.nr_pages,
+				 pmem[id].cma.max_free_block,
+				 pmem[id].cma.total_alloc,
+				 pmem[id].cma.peak_alloc);
+		ret = -ENOMEM;
 		goto error_up_write;
 	}
 
