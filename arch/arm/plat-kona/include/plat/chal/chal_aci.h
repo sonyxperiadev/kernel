@@ -16,7 +16,7 @@
 *
 *  @file   chal_aci.h
 *  @brief  ACI Accessory cHAL interface
-*  @note  
+*  @note
 *
 *****************************************************************************/
 
@@ -30,7 +30,7 @@ extern "C" {
 #include "chal_types.h"
 
 /**
- * @addtogroup cHAL_Interface 
+ * @addtogroup cHAL_Interface
  * @{
  */
 
@@ -41,21 +41,26 @@ extern "C" {
  */
 /* -------------------------------------------------------------------------- */
 
-#define HAL_ACC_FILTER_BLOCK_CLOCK   32768	/* Filter block operating rate in Hz */
+#define HAL_ACC_FILTER_BLOCK_CLOCK   32768	/* Filter block operating
+						 rate in Hz */
 
 /**
 * Microphone line route control type
 ******************************************************************************/
 	typedef enum {
-		CHAL_ACI_MIC_ROUTE_TV,	///< MIC Line routed to TV out
-		CHAL_ACI_MIC_ROUTE_MIC,	///< MIC line routed to analouge microphone input
-		CHAL_ACI_MIC_ROUTE_ACI_OPEN,	///< MIC line routed to ACI block; data line is open
-		CHAL_ACI_MIC_ROUTE_ACI_CLOSED,	///< MIC line routed to ACI block; data line is closed (connected)
-		CHAL_ACI_MIC_ROUTE_ALL_OFF	///< MIC OFF; all detection blocks are powered down
+		CHAL_ACI_MIC_ROUTE_TV,	/*< MIC Line routed to TV out */
+		CHAL_ACI_MIC_ROUTE_MIC,	/*< MIC line routed to analouge
+					 microphone input */
+		CHAL_ACI_MIC_ROUTE_ACI_OPEN,	/*< MIC line routed to ACI
+					 block; data line is open */
+		CHAL_ACI_MIC_ROUTE_ACI_CLOSED,	/*< MIC line routed to ACI
+				 block; data line is closed (connected) */
+		CHAL_ACI_MIC_ROUTE_ALL_OFF	/*< MIC OFF; all detection
+						 blocks are powered down */
 	} CHAL_ACI_mic_route_t;
 
 /**
-* ACI Accessory Filter action types 
+* ACI Accessory Filter action types
 ******************************************************************************/
 	typedef enum {
 		CHAL_ACI_BLOCK_ACTION_ENABLE,
@@ -129,9 +134,11 @@ extern "C" {
 * ACI Accessory ADC voltage range parameter types
 ******************************************************************************/
 	typedef enum {
-		CHAL_ACI_BLOCK_ADC_FULL_RANGE,	///< ADC can measure full range voltages (0 - 2.5v) with low resolution
-		CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE,	///<  Same as above
-		CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE,	///< ADC can measure low voltages (0 - 0.3125v) with hig resolution
+		CHAL_ACI_BLOCK_ADC_FULL_RANGE,	/*< ADC can measure full
+			 range voltages (0 - 2.5v) with low resolution */
+		CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE,	/*< Same as above */
+		CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE,	/*< ADC can measure low
+			 voltages (0 - 0.3125v) with hig resolution */
 		CHAL_ACI_BLOCK_ADC_OFF
 	} CHAL_ACI_range_config_adc_t;
 
@@ -157,7 +164,7 @@ extern "C" {
 		CHAL_ACI_BLOCK_COMP_LINE_UNDEFINED = -1
 	} CHAL_ACI_block_comp_output_t;
 
-/** 
+/**
  * ACI Accessory MIC Bias mode configuration type
 ******************************************************************************/
 	typedef enum {
@@ -168,20 +175,22 @@ extern "C" {
 		CHAL_ACI_MIC_BIAS_HIZ
 	} CHAL_ACI_micbias_mode_t;
 
-/** 
-* ACI Accessory MIC Bias voltage configuration type Note: 
-* enumeration is also used to configure the hw register (AUXMIC_AUXEN_REG) 
+/**
+* ACI Accessory MIC Bias voltage configuration type Note:
+* enumeration is also used to configure the hw register (AUXMIC_AUXEN_REG)
 ******************************************************************************/
 	typedef enum {
 		CHAL_ACI_MIC_BIAS_0_45V = 0,	/* bias = 0.45V */
-		CHAL_ACI_MIC_BIAS_2_1V = (1 << 0),	/* enable, bias = 2.1V, */
-		CHAL_ACI_MIC_BIAS_2_5V = ((1 << 0) | (1 << 1))	/* enable, bias = 2.5V, */
+		CHAL_ACI_MIC_BIAS_2_1V = (1 << 0),	/* enable,
+							 bias = 2.1V, */
+		CHAL_ACI_MIC_BIAS_2_5V = ((1 << 0) | (1 << 1))
+						/* enable, bias = 2.5V, */
 	} CHAL_ACI_micbias_voltage_t;
 
-/** 
-* The MIC Bias probe cycle used in Discontinuous mode. 
+/**
+* The MIC Bias probe cycle used in Discontinuous mode.
 * Note: enumeration is also used to configure the hw register
-* (AUXMIC_PRB_CYC_REG) 
+* (AUXMIC_PRB_CYC_REG)
 ******************************************************************************/
 	typedef enum {
 		CHAL_ACI_MIC_BIAS_PRB_CYC_4MS = 0x00,
@@ -194,9 +203,9 @@ extern "C" {
 		CHAL_ACI_MIC_BIAS_PRB_CYC_512MS = 0x07
 	} CHAL_ACI_micbias_probe_cycle_t;
 
-/** 
-* The MIC Bias measurement delay used in Discontinuous mode. 
-* Note: enumeration is also used to configure the hw register 
+/**
+* The MIC Bias measurement delay used in Discontinuous mode.
+* Note: enumeration is also used to configure the hw register
 * (AUXMIC_MSR_DLY_REG)
 ******************************************************************************/
 	typedef enum {
@@ -210,11 +219,11 @@ extern "C" {
 		CHAL_ACI_MIC_BIAS_MSR_DLY_128MS = 0x07
 	} CHAL_ACI_micbias_measure_delay_t;
 
-/** 
-* The MIC Bias measurement interval used is in Discontinuous 
-* mode. 
-* Note: enumeration is also used to configure the hw register 
-* (AUXMIC_MSR_INTVL_REG) 
+/**
+* The MIC Bias measurement interval used is in Discontinuous
+* mode.
+* Note: enumeration is also used to configure the hw register
+* (AUXMIC_MSR_INTVL_REG)
 ******************************************************************************/
 	typedef enum {
 		CHAL_ACI_MIC_BIAS_MSR_INTVL_2MS = 0x00,
@@ -227,9 +236,9 @@ extern "C" {
 		CHAL_ACI_MIC_BIAS_MSR_INTVL_256MS = 0x07
 	} CHAL_ACI_micbias_measure_interval_t;
 
-/** 
-* The MIC Bias measurement interval control is used in 
-* Discontinuous mode. Note: enumeration is also used to 
+/**
+* The MIC Bias measurement interval control is used in
+* Discontinuous mode. Note: enumeration is also used to
 * configure the hw register
 ******************************************************************************/
 	typedef enum {
@@ -237,8 +246,8 @@ extern "C" {
 		CHAL_ACI_MIC_BIAS_2_MEASUREMENT = 0x01
 	} CHAL_ACI_micbias_measure_control_t;
 
-/** 
-*  ACI Accessory MIC Bias Configuration parameter type 
+/**
+*  ACI Accessory MIC Bias Configuration parameter type
 ******************************************************************************/
 	typedef struct {
 		CHAL_ACI_micbias_mode_t mode;
@@ -249,7 +258,7 @@ extern "C" {
 		CHAL_ACI_micbias_measure_control_t measure_control;
 	} CHAL_ACI_micbias_config_t;
 
-/** 
+/**
  * ACI Accessory Vref mode configuration type
 ******************************************************************************/
 	typedef enum {
@@ -258,8 +267,8 @@ extern "C" {
 		CHAL_ACI_VREF_OFF
 	} CHAL_ACI_vref_mode_t;
 
-/** 
-*  ACI Accessory Vref Configuration parameter type 
+/**
+*  ACI Accessory Vref Configuration parameter type
 ******************************************************************************/
 	typedef struct {
 		CHAL_ACI_vref_mode_t mode;
@@ -305,8 +314,8 @@ extern "C" {
 	} CHAL_ACI_RXDAR_SOURCE_t;
 
 /**
-* Command parameter for chal_aci_xxx Interrupt control functions Note: 
-* Enumeration is equal to the register bit position 
+* Command parameter for chal_aci_xxx Interrupt control functions Note:
+* Enumeration is equal to the register bit position
 ******************************************************************************/
 	typedef enum {
 		CHAL_ACI_NOPINT = (1 << 8),
@@ -323,24 +332,28 @@ extern "C" {
 	} CHAL_ACI_INTERRUPT_SELECT_t, CHAL_ACI_INTERRUPT_MASK_t;
 
 /**
-* Command parameter for chal_aci_command 
+* Command parameter for chal_aci_command
 * Note: Enumeration is equal to the register values in ACI Command Register
 ******************************************************************************/
 	typedef enum {
-		CHAL_ACI_CMD_NOP = 0x0,	///< No Operation (=NOP)
-		CHAL_ACI_CMD_RESET_LEARN = 0x1,	///< Generate reset & learn sequence
-		CHAL_ACI_CMD_SEND_DATA = 0x2,	///< Send data when written into ACITxDaR
-		CHAL_ACI_CMD_RECV_BYTE = 0x3,	///< Receive 8-bit data via ACIRxDaR
-		CHAL_ACI_CMD_RECV_BYTE_LEARN = 0x4,	///< Receive 1+8-bit data with learn seq.
+		CHAL_ACI_CMD_NOP = 0x0,	/*< No Operation (=NOP) */
+		CHAL_ACI_CMD_RESET_LEARN = 0x1,	/*< Generate reset &
+							 learn sequence */
+		CHAL_ACI_CMD_SEND_DATA = 0x2,	/*< Send data when written
+							 into ACITxDaR */
+		CHAL_ACI_CMD_RECV_BYTE = 0x3,	/*< Receive 8-bit data via
+							 ACIRxDaR */
+		CHAL_ACI_CMD_RECV_BYTE_LEARN = 0x4,	/*< Receive 1+8-bit
+						 data with learn seq. */
 		CHAL_ACI_CMD_MAX = 0x4
 	} CHAL_ACI_COMMAND_t;
 
-// ---- Function Prototypes -------------------------------------------------
+/* ---- Function Prototypes --------------------------------------------- */
 
 /**
 *
 *  @brief Standard Init entry point for Accessory driver which should be the
-*        	first function to call.
+*		first function to call.
 *
 *  @param  baseAddr  (in) mapped address of this ACI Accessory instance
 *
@@ -362,10 +375,10 @@ extern "C" {
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_set_mic_route(CHAL_HANDLE handle,
@@ -373,10 +386,10 @@ extern "C" {
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_block_ctrl(CHAL_HANDLE handle,
@@ -385,10 +398,10 @@ extern "C" {
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cInt32 chal_aci_block_read(CHAL_HANDLE handle, CHAL_ACI_block_id_t id,
@@ -398,170 +411,170 @@ extern "C" {
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_enable_aci(void);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_disable_aci(void);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cBool chal_aci_is_aci_enabled(void);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_rx_input_set(CHAL_ACI_RX_INPUT_TYPE_t input_type);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_bus_hold_set(CHAL_ACI_BUS_HOLD_TIME_t bus_hold);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_start_pulse_set(cUInt8 start_pulse_length);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_rxdar_use(CHAL_ACI_RXDAR_USE_t use);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_rxdar_source(CHAL_ACI_RXDAR_SOURCE_t source);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_tx_output_high(cBool high);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	CHAL_ACI_INTERRUPT_MASK_t chal_aci_interrupt_read(void);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cUInt16 chal_aci_rx_read(void);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_tx_write(cUInt16 data);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_command(CHAL_ACI_COMMAND_t command);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_interrupt_enable(CHAL_ACI_INTERRUPT_SELECT_t mask);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_interrupt_disable(CHAL_ACI_INTERRUPT_SELECT_t mask);
 
 /**
 *
-*  @brief  
+*  @brief
 *
 *  @param  handle (in) this Accessory instance
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_interrupt_acknowledge(CHAL_ACI_INTERRUPT_SELECT_t mask);
 
 /**
 *
-*  @brief This function will power on the ACI part for AUX MIC for audio 
+*  @brief This function will power on the ACI part for AUX MIC for audio
 *
 *  @param  Void
-*  
+*
 *  @return none
 ****************************************************************************/
 	cVoid chal_aci_powerup_auxmic(void);
@@ -571,4 +584,4 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#endif				//_CHAL_ACI_H_
+#endif				/* _CHAL_ACI_H_ */
