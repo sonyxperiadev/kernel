@@ -678,6 +678,41 @@ void extern_ihf_off(void)
 #endif
 }
 
+/********************************************************************
+*  @brief  power on external stereo speaker amplifier and switch
+*
+*  @param  none
+*  @return none
+*
+****************************************************************************/
+void extern_stereo_speaker_on(void)
+{
+#if defined(CONFIG_STEREO_SPEAKER)
+	return;
+#else
+	extern_ihf_on();
+	return;
+#endif
+}
+
+/********************************************************************
+*  @brief  power off external stereo speaker amplifier and switch
+*
+*  @param  none
+*  @return none
+*
+****************************************************************************/
+void extern_stereo_speaker_off(void)
+{
+#if defined(CONFIG_STEREO_SPEAKER)
+	return;
+#else
+	extern_ihf_off();
+	return;
+#endif
+}
+
+
 
 
 /********************************************************************

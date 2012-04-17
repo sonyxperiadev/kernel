@@ -44,3 +44,9 @@ config IHF_EXT_AMPLIFIER
         default n
         help
           Say Y here to enable the external amp for IHF
+config STEREO_SPEAKER
+        boolean "Define if device has stereo speaker support"
+        depends on BCM_ALSA_SOUND
+        default n
+        help
+          Say Y here to enable the stereo speaker

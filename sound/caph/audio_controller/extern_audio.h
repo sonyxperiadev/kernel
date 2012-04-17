@@ -72,6 +72,26 @@ void extern_ihf_on(void);
 ****************************************************************************/
 void extern_ihf_off(void);
 
+/********************************************************************
+*  @brief  power on external stereo speaker amplifier and switches
+*
+*  @param  none
+*  @return none
+*
+****************************************************************************/
+void extern_stereo_speaker_on(void);
+
+/********************************************************************
+*  @brief  power off external stereo speaker and switches
+*
+*  @param  none
+*  @return none
+*
+****************************************************************************/
+void extern_stereo_speaker_off(void);
+
+
+
 
 /********************************************************************
 *  @brief  Find the actual headset gain (mB) that external audio chip can support

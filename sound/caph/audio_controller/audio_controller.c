@@ -3360,15 +3360,22 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 			__func__, speaker, usage_flag, use, force);
 	if (force == TRUE) {
 		if (use == FALSE) {
-			if (IHF_IsOn == TRUE)
-				extern_ihf_off();
+			if (IHF_IsOn == TRUE) {
+				if (isStIHF == TRUE)
+					extern_stereo_speaker_off();
+				else
+					extern_ihf_off();
+			}
 			if (HS_IsOn == TRUE)
 				extern_hs_off();
 			ampControl = FALSE;
 		}
 		if (use == TRUE) {
 			if (IHF_IsOn == TRUE) {
-				extern_ihf_on();
+				if (isStIHF == TRUE)
+					extern_stereo_speaker_on();
+				else
+					extern_ihf_on();
 				setExternAudioGain(
 					GetAudioModeBySink(AUDIO_SINK_LOUDSPK),
 					AUDCTRL_GetAudioApp());
@@ -3473,7 +3480,10 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 			if (IHF_IsOn != FALSE) {
 				aTrace(LOG_AUDIO_CNTLR,
 					"power OFF pmu IHF amp\n");
-				extern_ihf_off();
+				if (isStIHF == TRUE)
+					extern_stereo_speaker_off();
+				else
+					extern_ihf_off();
 				audctl_usleep_range(wait_pmu_off,
 					wait_pmu_off+2000);
 			}
@@ -3483,16 +3493,19 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 				aTrace(LOG_AUDIO_CNTLR,
 					"powerOnExternalAmp power on IHF");
 				audioh_start_ihf();
-				extern_ihf_on();
+				if (isStIHF == TRUE)
+					extern_stereo_speaker_on();
+				else
+					extern_ihf_on();
 				audctl_usleep_range(wait_ihfpmu_on,
 					wait_ihfpmu_on+2000);
-		}
+			}
 
-		setExternAudioGain(GetAudioModeBySink(speaker),
+			setExternAudioGain(GetAudioModeBySink(speaker),
 			AUDCTRL_GetAudioApp());
 
-		IHF_IsOn = TRUE;
-	}
+			IHF_IsOn = TRUE;
+		}
 	}
 }
 
