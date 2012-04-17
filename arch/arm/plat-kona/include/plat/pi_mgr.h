@@ -17,6 +17,7 @@
 #include <linux/notifier.h>
 #include <linux/pm_qos_params.h>
 #include <mach/pi_mgr.h>
+#include <asm/cputime.h>
 
 #define PI_MGR_QOS_DEFAULT_VALUE 		0xFFFFFFFF
 #define PI_MGR_DFS_MIN_VALUE 			0xFFFFFFFF
@@ -79,6 +80,9 @@ enum {
 	UPDATE_PM_QOS = (1 << 5),
 	NO_POLICY_CHANGE = (1 << 6),
 	DFS_LIMIT_CHECK_EN = (1 << 7),
+#ifdef	CONFIG_KONA_PI_DFS_STATS
+	ENABLE_DFS_STATS = (1 << 8),
+#endif
 };
 
 struct pm_pi_info {
@@ -117,6 +121,19 @@ struct pi_opp {
 	u32 opp[PI_OPP_MAX];
 };
 
+#ifdef	CONFIG_KONA_PI_DFS_STATS
+struct pi_dfs_stats {
+	u32 qos_pi_id;
+	u32 total_trans;
+	u32 dfs_pi_active;
+	u64 last_time;
+	u32 last_index;
+	struct notifier_block pi_dfs_notify_blk;
+	struct notifier_block pi_state_notify_blk;
+	cputime64_t *time_in_state;
+	u32 *trans_table;
+};
+#endif
 struct pi {
 	char *name;
 	u32 flags;
@@ -146,6 +163,9 @@ struct pi {
 	struct pm_qos_request_list pm_qos;
 	struct pi_ops *ops;
 	spinlock_t lock;
+#ifdef CONFIG_KONA_PI_DFS_STATS
+	struct pi_dfs_stats pi_dfs_stats;
+#endif
 };
 
 struct pi_mgr_qos_node {

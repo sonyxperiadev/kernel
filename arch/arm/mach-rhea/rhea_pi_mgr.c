@@ -49,6 +49,19 @@
 #define RETN_POLICY PM_POLICY_1
 #define SHTDWN_POLICY PM_POLICY_0
 
+
+#define OPP_ECONOMY_STRING	"ECONOMY"
+#define OPP_NORMAL_STRING	"NORMAL"
+#define OPP_TURBO_STRING	"TURBO"
+
+
+#define	ARM_PI_NUM_OPP			3
+#define	MM_PI_NUM_OPP			3
+#define	HUB_PI_NUM_OPP			2
+#define	AON_PI_NUM_OPP			2
+#define	SUB_SYS_PI_NUM_OPP		2
+
+
 #define PI_STATE(state_id,policy,latency, flg) \
 		{.id = state_id,.state_policy = policy,\
 		.hw_wakeup_latency = latency,.flags = flg}
@@ -73,6 +86,10 @@ static struct pi_state arm_core_states[] = {
 	PI_STATE(ARM_CORE_STATE_DORMANT, RETN_POLICY, 10000, 0),
 
 };
+#ifdef CONFIG_KONA_PI_DFS_STATS
+static cputime64_t arm_core_time_in_state[ARM_PI_NUM_OPP];
+static u32 arm_core_trans_table[ARM_PI_NUM_OPP * ARM_PI_NUM_OPP];
+#endif
 
 static struct pi arm_core_pi = {
 	.name = "arm_core",
@@ -93,7 +110,7 @@ static struct pi arm_core_pi = {
 	.opp_lmt_max = 2,
 	.opp_lmt_min = 0,
 	.pi_opp = &arm_opp,
-	.num_opp = 3,
+	.num_opp = ARM_PI_NUM_OPP,
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
 
 	.pi_info = {
@@ -115,6 +132,13 @@ static struct pi arm_core_pi = {
 		    .rtn_clmp_dis_mask =
 		    PWRMGR_PI_DEFAULT_POWER_STATE_PI_ARM_CORE_RETENTION_CLAMP_DISABLE_MASK,
 		    },
+#ifdef CONFIG_KONA_PI_DFS_STATS
+	.pi_dfs_stats = {
+		.qos_pi_id = PI_MGR_PI_ID_ARM_CORE,
+		.time_in_state = arm_core_time_in_state,
+		.trans_table = arm_core_trans_table,
+	},
+#endif
 	.ops = &gen_pi_ops,
 };
 
@@ -135,6 +159,10 @@ static struct pi_state mm_states[] = {
 	PI_STATE(PI_STATE_SHUTDOWN, SHTDWN_POLICY, 100, PI_STATE_SAVE_CONTEXT),
 };
 
+#ifdef CONFIG_KONA_PI_DFS_STATS
+static cputime64_t mm_time_in_state[MM_PI_NUM_OPP];
+static u32 mm_trans_table[MM_PI_NUM_OPP * MM_PI_NUM_OPP];
+#endif
 static struct pi mm_pi = {
 	.name = "mm",
 	.id = PI_MGR_PI_ID_MM,
@@ -154,7 +182,7 @@ static struct pi mm_pi = {
 			      [PI_OPP_ECONOMY] = 35,
 			      [PI_OPP_NORMAL] = 50,
 			      },
-	.num_opp = 3,
+	.num_opp = MM_PI_NUM_OPP,
 	.opp_lmt_max = 2,
 	.opp_lmt_min = 0,
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
@@ -185,6 +213,13 @@ static struct pi mm_pi = {
 		    .pd_reset_mask1 =
 		    ROOT_RST_MGR_REG_PD_SOFT_RSTN_MM_SUB_SOFT_RSTN_MASK,
 		    },
+#ifdef CONFIG_KONA_PI_DFS_STATS
+	.pi_dfs_stats = {
+		.qos_pi_id = PI_MGR_PI_ID_MM,
+		.time_in_state = mm_time_in_state,
+		.trans_table = mm_trans_table,
+	},
+#endif
 	.ops = &gen_pi_ops,
 };
 
@@ -203,7 +238,10 @@ static struct pi_state hub_states[] = {
 	PI_STATE(PI_STATE_RETENTION, RETN_POLICY, 100, 0),
 
 };
-
+#ifdef CONFIG_KONA_PI_DFS_STATS
+static cputime64_t hub_time_in_state[HUB_PI_NUM_OPP];
+static u32 hub_trans_table[HUB_PI_NUM_OPP * HUB_PI_NUM_OPP];
+#endif
 static struct pi hub_pi = {
 	.name = "hub",
 	.id = PI_MGR_PI_ID_HUB_SWITCHABLE,
@@ -219,7 +257,7 @@ static struct pi hub_pi = {
 	.num_states = ARRAY_SIZE(hub_states),
 	.opp_active = 0,
 	.pi_opp = &hub_opp,
-	.num_opp = 2,
+	.num_opp = HUB_PI_NUM_OPP,
 	.opp_lmt_max = 1,
 	.opp_lmt_min = 0,
 	.opp_def_weightage = {
@@ -254,6 +292,13 @@ static struct pi hub_pi = {
 		    ROOT_RST_MGR_REG_PD_SOFT_RSTN_HUB_SOFT_RSTN_MASK,
 
 		    },
+#ifdef CONFIG_KONA_PI_DFS_STATS
+	.pi_dfs_stats = {
+		.qos_pi_id = PI_MGR_PI_ID_ARM_CORE,
+		.time_in_state = hub_time_in_state,
+		.trans_table = hub_trans_table,
+	},
+#endif
 	.ops = &gen_pi_ops,
 };
 
@@ -272,6 +317,10 @@ static struct pi_state aon_states[] = {
 	PI_STATE(PI_STATE_RETENTION, RETN_POLICY, 100, 0),
 };
 
+#ifdef CONFIG_KONA_PI_DFS_STATS
+static cputime64_t aon_time_in_state[AON_PI_NUM_OPP];
+static u32 aon_trans_table[AON_PI_NUM_OPP * AON_PI_NUM_OPP];
+#endif
 static struct pi aon_pi = {
 	.name = "aon",
 	.id = PI_MGR_PI_ID_HUB_AON,
@@ -288,7 +337,7 @@ static struct pi aon_pi = {
 	.opp_active = 0,
 	/*opp frequnecies ...need to revisit */
 	.pi_opp = &aon_opp,
-	.num_opp = 2,
+	.num_opp = AON_PI_NUM_OPP,
 	.opp_lmt_max = 1,
 	.opp_lmt_min = 0,
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
@@ -312,6 +361,13 @@ static struct pi aon_pi = {
 		    .rtn_clmp_dis_mask =
 		    PWRMGR_PI_DEFAULT_POWER_STATE_PI_HUB_AON_RETENTION_CLAMP_DISABLE_MASK,
 		    },
+#ifdef CONFIG_KONA_PI_DFS_STATS
+	.pi_dfs_stats = {
+		.qos_pi_id = PI_MGR_PI_ID_ARM_CORE,
+		.time_in_state = aon_time_in_state,
+		.trans_table = aon_trans_table,
+	},
+#endif
 	.ops = &gen_pi_ops,
 };
 
@@ -337,7 +393,10 @@ static struct pi_state sub_sys_states[] = {
 	PI_STATE(PI_STATE_RETENTION, RETN_POLICY, 100, 0),
 
 };
-
+#ifdef CONFIG_KONA_PI_DFS_STATS
+static cputime64_t subsys_time_in_state[SUB_SYS_PI_NUM_OPP];
+static u32 subsys_trans_table[SUB_SYS_PI_NUM_OPP * SUB_SYS_PI_NUM_OPP];
+#endif
 /*
 
 */
@@ -372,7 +431,7 @@ static struct pi sub_sys_pi = {
 	.num_states = ARRAY_SIZE(sub_sys_states),
 	.opp_active = 0,
 	.pi_opp = sub_sys_opp,
-	.num_opp = 2,
+	.num_opp = SUB_SYS_PI_NUM_OPP,
 	.opp_lmt_max = 1,
 	.opp_lmt_min = 0,
 	.opp_def_weightage = {
@@ -410,6 +469,13 @@ static struct pi sub_sys_pi = {
 		    ROOT_RST_MGR_REG_PD_SOFT_RSTN_KMST_SOFT_RSTN_MASK,
 
 		    },
+#ifdef CONFIG_KONA_PI_DFS_STATS
+	.pi_dfs_stats = {
+		.qos_pi_id = PI_MGR_PI_ID_ARM_CORE,
+		.time_in_state = subsys_time_in_state,
+		.trans_table = subsys_trans_table,
+	},
+#endif
 	.ops = &gen_pi_ops,
 };
 
@@ -464,6 +530,26 @@ struct pi *pi_list[] = {
 	&sub_sys_pi,
 	&modem_pi
 };
+
+char *get_opp_name(int opp)
+{
+	char *name = NULL;
+	switch (opp) {
+	case PI_OPP_ECONOMY:
+		name = OPP_ECONOMY_STRING;
+		break;
+	case PI_OPP_NORMAL:
+		name = OPP_NORMAL_STRING;
+		break;
+	case PI_OPP_TURBO:
+		name = OPP_TURBO_STRING;
+		break;
+	default:
+		return NULL;
+	}
+
+	return name;
+}
 
 void __init rhea_pi_mgr_init()
 {

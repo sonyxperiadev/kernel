@@ -25,6 +25,7 @@
 #include <plat/clock.h>
 #include <plat/pi_mgr.h>
 #include <plat/pwr_mgr.h>
+#include <asm/cputime.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/uaccess.h>
@@ -303,6 +304,162 @@ int pi_init(struct pi *pi)
 }
 EXPORT_SYMBOL(pi_init);
 
+#ifdef CONFIG_KONA_PI_DFS_STATS
+static int pi_dfs_stats_update(struct pi *pi)
+{
+	u64 cur_time;
+	unsigned long flgs;
+	if (!pi)
+		return -EPERM;
+
+	cur_time = get_jiffies_64();
+	spin_lock_irqsave(&pi->lock, flgs);
+
+	if (pi->pi_dfs_stats.dfs_pi_active || pi->usg_cnt) {
+		if (pi->pi_dfs_stats.time_in_state)
+			pi->pi_dfs_stats.
+			time_in_state[pi->pi_dfs_stats.last_index] +=
+				cur_time - pi->pi_dfs_stats.last_time;
+	}
+	pi->pi_dfs_stats.last_time = cur_time;
+
+	spin_unlock_irqrestore(&pi->lock, flgs);
+	return 0;
+}
+
+static int pi_freq_chg_notifier(struct notifier_block *self, unsigned long
+event, void *data)
+{
+	struct pi_notify_param *p = data;
+	struct pi *pi = NULL;
+	unsigned long flgs;
+
+	if (event != PI_POSTCHANGE)
+		return 0;
+
+	pi = pi_mgr_get(p->pi_id);
+	BUG_ON(pi == NULL);
+	pi_dfs_stats_update(pi);
+	spin_lock_irqsave(&pi->lock, flgs);
+
+	pi->pi_dfs_stats.last_index = p->new_value;
+	if (pi->pi_dfs_stats.trans_table)
+		pi->pi_dfs_stats.trans_table[p->old_value *
+			pi->num_opp + p->new_value]++;
+	pi->pi_dfs_stats.total_trans++;
+	spin_unlock_irqrestore(&pi->lock, flgs);
+
+	return 0;
+}
+
+static int pi_state_chg_notifier(struct notifier_block *self, unsigned long
+event, void *data)
+{
+	struct pi_notify_param *p = data;
+	struct pi *dfs_dep_pi = NULL;
+	struct pi_dfs_stats *pi_dfs_stats = NULL;
+
+	unsigned long flgs;
+
+	if (event != PI_POSTCHANGE)
+		return 0;
+
+	pi_dfs_stats = container_of(self, struct pi_dfs_stats, pi_state_notify_blk);
+	dfs_dep_pi = container_of(pi_dfs_stats, struct pi, pi_dfs_stats);
+	pi_dfs_stats_update(dfs_dep_pi);
+
+	spin_lock_irqsave(&dfs_dep_pi->lock, flgs);
+
+	if (!IS_ACTIVE_POLICY(p->new_value) && IS_ACTIVE_POLICY(p->old_value))
+		dfs_dep_pi->pi_dfs_stats.dfs_pi_active = 0;
+	else if (IS_ACTIVE_POLICY(p->new_value)
+				&& !IS_ACTIVE_POLICY(p->old_value))
+		dfs_dep_pi->pi_dfs_stats.dfs_pi_active = 1;
+
+	spin_unlock_irqrestore(&dfs_dep_pi->lock, flgs);
+
+	return 0;
+}
+static int __pi_dfs_stats_clear(struct pi *pi)
+{
+	int i;
+
+	if (!pi)
+		return -EPERM;
+
+	for (i = pi->num_opp - 1; i >= 0; i--)
+		pi->pi_dfs_stats.time_in_state[i] = 0;
+	for (i = (pi->num_opp * pi->num_opp) - 1; i >= 0; i--)
+		pi->pi_dfs_stats.trans_table[i] = 0;
+	pi->pi_dfs_stats.total_trans = 0;
+	pi->pi_dfs_stats.last_time = get_jiffies_64();
+	pi->pi_dfs_stats.last_index = pi->opp_active;
+
+	return 0;
+}
+static int pi_dfs_stats_clear(struct pi *pi)
+{
+	unsigned long flgs;
+	if (!pi)
+		return -EPERM;
+	spin_lock_irqsave(&pi->lock, flgs);
+	__pi_dfs_stats_clear(pi);
+	spin_unlock_irqrestore(&pi->lock, flgs);
+	return 0;
+}
+
+static int __pi_dfs_stats_enable(struct pi *pi, int enable)
+{
+	struct pi *dfs_pi = NULL;
+
+	dfs_pi = pi_mgr_get(pi->pi_dfs_stats.qos_pi_id);
+	if (dfs_pi == NULL)
+		return -EPERM;
+	if (enable) {
+		pi->pi_dfs_stats.last_time = get_jiffies_64();
+		pi->pi_dfs_stats.last_index = pi->opp_active;
+		pi_mgr_register_notifier(pi->id,&pi->pi_dfs_stats.pi_dfs_notify_blk,
+		PI_NOTIFY_DFS_CHANGE);
+		if (dfs_pi->usg_cnt)
+			pi->pi_dfs_stats.dfs_pi_active = 1;
+		pi_mgr_register_notifier(pi->pi_dfs_stats.qos_pi_id,
+			&pi->pi_dfs_stats.pi_state_notify_blk,
+			PI_NOTIFY_POLICY_CHANGE);
+		pi->flags |= ENABLE_DFS_STATS;
+	} else {
+		pi_mgr_unregister_notifier(pi->id,
+			&pi->pi_dfs_stats.pi_dfs_notify_blk,
+					PI_NOTIFY_DFS_CHANGE);
+		pi_mgr_unregister_notifier(pi->pi_dfs_stats.qos_pi_id,
+			&pi->pi_dfs_stats.pi_state_notify_blk,
+			PI_NOTIFY_POLICY_CHANGE);
+		pi_dfs_stats_clear(pi);
+		pi->flags &= ~ENABLE_DFS_STATS;
+	}
+	return 0;
+}
+
+static int pi_dfs_stats_enable(struct pi *pi, int enable)
+{
+	int ret = 0;
+	unsigned long flgs;
+	if (!pi)
+		return -EPERM;
+	if (((pi->flags & ENABLE_DFS_STATS) && enable) ||
+				(!(pi->flags & ENABLE_DFS_STATS) && !enable))
+		return 0;
+
+	if (!(pi->flags & ENABLE_DFS_STATS) && enable) {
+		spin_lock_irqsave(&pi->lock, flgs);
+		ret  = __pi_dfs_stats_enable(pi, 1);
+		spin_unlock_irqrestore(&pi->lock, flgs);
+	} else if ((pi->flags & ENABLE_DFS_STATS) && !enable) {
+		ret  = __pi_dfs_stats_enable(pi, 0);
+	}
+	return ret;
+}
+#endif
+
 static int __pi_init_state(struct pi *pi)
 {
 	int ret = 0;
@@ -359,6 +516,15 @@ static int __pi_init_state(struct pi *pi)
 			pwr_mgr_pi_set_wakeup_override(pi->id,
 				true/*clear*/);
 		}
+#ifdef CONFIG_KONA_PI_DFS_STATS
+		pi->pi_dfs_stats.pi_dfs_notify_blk.notifier_call =
+					pi_freq_chg_notifier;
+		pi->pi_dfs_stats.pi_state_notify_blk.notifier_call =
+					pi_state_chg_notifier;
+		if (pi->flags & ENABLE_DFS_STATS) {
+			__pi_dfs_stats_enable(pi, 1);
+		}
+#endif
 		spin_unlock_irqrestore(&pi->lock, flgs);
 	}
 	return ret;
@@ -372,6 +538,8 @@ int pi_init_state(struct pi *pi)
 	return ret;
 }
 EXPORT_SYMBOL(pi_init_state);
+
+
 
 #ifndef CONFIG_CHANGE_POLICY_FOR_DFS
 static int pi_set_ccu_freq(struct pi *pi, u32 policy, u32 opp_inx)
@@ -1420,6 +1588,16 @@ __weak int chip_reset(void)
 	return 0;
 }
 
+__weak int get_state_dep_pi_id(u32 pi_id)
+{
+	return -1;
+}
+
+__weak char *get_opp_name(int opp)
+{
+	return NULL;
+}
+
 #ifdef CONFIG_DEBUG_FS
 
 static int pi_debugfs_open(struct inode *inode, struct file *file)
@@ -1796,6 +1974,125 @@ static int pi_opp_get_max_lmt(void *data, u64 * val)
 DEFINE_SIMPLE_ATTRIBUTE(pi_opp_max_lmt_fops, pi_opp_get_max_lmt,
 			pi_opp_set_max_lmt, "%llu\n");
 
+#ifdef CONFIG_KONA_PI_DFS_STATS
+static ssize_t pi_dfs_get_time_in_state(struct file *file,
+					   char __user *user_buf, size_t count,
+					   loff_t *ppos)
+{
+	struct pi *pi = NULL;
+	u32 i, len = 0;
+
+	pi = (struct pi *) file->private_data;
+	BUG_ON(pi == NULL);
+	if (pi->flags & ENABLE_DFS_STATS)
+		pi_dfs_stats_update(pi);
+
+	for (i = 0; i < pi->num_opp; i++)
+		len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) -
+		len, "%s %llu\n",
+		get_opp_name(i), (u64)
+		cputime64_to_clock_t(pi->pi_dfs_stats.time_in_state[i]));
+
+	return simple_read_from_buffer(user_buf, count, ppos, debug_fs_buf,
+				       len);
+}
+
+static const struct file_operations pi_dfs_time_in_state_fops = {
+	.open = pi_debugfs_open,
+	.read = pi_dfs_get_time_in_state,
+};
+
+static ssize_t pi_dfs_get_trans_table(struct file *file,
+					   char __user *user_buf, size_t count,
+					   loff_t *ppos)
+{
+	struct pi *pi = NULL;
+	u32 i, j, len = 0;
+
+	pi = (struct pi *) file->private_data;
+	BUG_ON(pi == NULL);
+	if (pi->flags & ENABLE_DFS_STATS)
+		pi_dfs_stats_update(pi);
+
+	len += snprintf(debug_fs_buf + len , sizeof(debug_fs_buf) - len,
+					"   From  :    To\n");
+	len += snprintf(debug_fs_buf + len , sizeof(debug_fs_buf) - len,
+					"         : ");
+	for (i = 0; i < pi->num_opp; i++) {
+		if (len >= sizeof(debug_fs_buf))
+			break;
+		len += snprintf(debug_fs_buf + len , sizeof(debug_fs_buf) - len,
+			 "%10s", get_opp_name(i));
+	}
+	if (len >= sizeof(debug_fs_buf))
+		return sizeof(debug_fs_buf);
+	len += snprintf(debug_fs_buf + len , sizeof(debug_fs_buf) - len, "\n");
+
+	for (i = 0; i < pi->num_opp; i++) {
+		if (len >= sizeof(debug_fs_buf))
+			break;
+		len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+				"%10s: ", get_opp_name(i));
+		for (j = 0; j < pi->num_opp; j++) {
+			if (len >= sizeof(debug_fs_buf))
+				break;
+			len += snprintf(debug_fs_buf + len,
+				sizeof(debug_fs_buf) - len, "%9u ",
+				pi->pi_dfs_stats.
+				trans_table[i*pi->num_opp+j]);
+		}
+		if (len >= sizeof(debug_fs_buf))
+			break;
+		len += snprintf(debug_fs_buf + len ,
+					sizeof(debug_fs_buf) - len, "\n");
+	}
+	if (len >= sizeof(debug_fs_buf))
+		return sizeof(debug_fs_buf);
+
+	return simple_read_from_buffer(user_buf, count, ppos, debug_fs_buf,
+				       len);
+}
+
+static const struct file_operations pi_dfs_trans_table_fops = {
+	.open = pi_debugfs_open,
+	.read = pi_dfs_get_trans_table,
+};
+
+static int pi_dfs_clear_stats(void *data, u64 val)
+{
+	int ret = 0;
+	struct pi *pi = data;
+	if (pi == NULL)
+		return -EINVAL;
+
+	if (val == 1)
+		ret = pi_dfs_stats_clear(pi);
+
+	return ret;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pi_dfs_clear_stats_fops, NULL, pi_dfs_clear_stats,
+			"%llu\n");
+
+static int pi_dfs_enable_stats(void *data, u64 val)
+{
+	int ret = 0;
+	struct pi *pi = data;
+	if (pi == NULL)
+		return -EINVAL;
+
+	if (val == 0)
+		ret = pi_dfs_stats_enable(pi, 0);
+	else
+		ret = pi_dfs_stats_enable(pi, 1);
+
+	return ret;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pi_dfs_enable_stats_fops, NULL, pi_dfs_enable_stats,
+			"%llu\n");
+#endif /* CONFIG_KONA_PI_DFS_STATS */
+
 static int debug_chip_reset(void *data, u64 val)
 {
 	int ret = 0;
@@ -2055,8 +2352,13 @@ int __init pi_debug_add_pi(struct pi *pi)
 	    *dent_remove_qos_client = 0, *dent_remove_dfs_client =
 	    0, *dent_register_dfs_client = 0, *dent_request_dfs =
 	    0, *dent_qos_dir = 0, *dent_qos = 0, *dent_request_qos =
-	    0, *dent_state = 0, *dent_opp = 0, *dent_reset = 0, *dent_flags =
-	    0, *dent_pol_disable;
+	    0, *dent_state = 0, *dent_opp = 0, *dent_reset = 0, *dent_flags = 0,
+#ifdef CONFIG_KONA_PI_DFS_STATS
+	    *dent_dfs_stats_dir = 0,
+	    *dent_time_in_state = 0, *dent_total_trans = 0,
+	    *dent_trans_table = 0, *dent_clear_stats = 0, *dent_en_stats = 0,
+#endif
+	    *dent_pol_disable = 0;
 
 	BUG_ON(!dent_pi_root_dir);
 
@@ -2152,6 +2454,37 @@ int __init pi_debug_add_pi(struct pi *pi)
 			goto err;
 		debugfs_info[pi->id].dfs_dir = dent_dfs_dir;
 
+#ifdef CONFIG_KONA_PI_DFS_STATS
+		dent_dfs_stats_dir = debugfs_create_dir("stats", dent_dfs_dir);
+		if (!dent_dfs_stats_dir)
+			goto err;
+
+		dent_time_in_state = debugfs_create_file("time_in_state",
+		S_IRUSR, dent_dfs_stats_dir, pi, &pi_dfs_time_in_state_fops);
+		if (!dent_time_in_state)
+			goto err;
+
+		dent_trans_table = debugfs_create_file("trans_table",
+		S_IRUSR, dent_dfs_stats_dir, pi, &pi_dfs_trans_table_fops);
+		if (!dent_trans_table)
+			goto err;
+
+		dent_total_trans = debugfs_create_u32("total_trans", S_IRUSR,
+		dent_dfs_stats_dir, &pi->pi_dfs_stats.total_trans);
+		if (!dent_total_trans)
+			goto err;
+
+		dent_clear_stats = debugfs_create_file("clear_stats",
+		S_IRUSR, dent_dfs_stats_dir, pi, &pi_dfs_clear_stats_fops);
+		if (!dent_clear_stats)
+			goto err;
+
+		dent_en_stats = debugfs_create_file("enable_stats",
+			S_IRUSR | S_IWUSR, dent_dfs_stats_dir, pi,
+			&pi_dfs_enable_stats_fops);
+		if (!dent_en_stats)
+			goto err;
+#endif
 		dent_dfs =
 		    debugfs_create_file("dfs", S_IRUSR, dent_dfs_dir, pi,
 					&pi_dfs_fops);
