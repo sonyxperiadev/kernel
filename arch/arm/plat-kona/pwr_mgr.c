@@ -2107,7 +2107,7 @@ static ssize_t set_pm_mgr_dbg_bus(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
-	sscanf(input_str, "%d%d%d", &val, &db_sel, &param);
+	sscanf(input_str, "%x%x%x", &val, &db_sel, &param);
 
 	pwr_mgr_mach_debug_fs_init(0, db_sel, param);
 	reg_val =
@@ -2169,7 +2169,7 @@ static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
-	sscanf(input_str, "%d%d%d", &val, &db_sel, &param);
+	sscanf(input_str, "%x%x%x", &val, &db_sel, &param);
 
 	pwr_dbg(PWR_LOG_DBGFS, "%s: val: %d\n", __func__, val);
 	pwr_mgr_mach_debug_fs_init(1, db_sel, param);
