@@ -1899,11 +1899,6 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 		up = list_entry(l, struct uart_8250_port, list);
 
 		iir = serial_in(up, UART_IIR);
-		if ((iir & UART_IIR_BUSY) == UART_IIR_BUSY) {
-			/* clear the busy detect indication interrupt */
-			(void)serial_inp(up, UART_USR);
-			handled = 1;
-		} else
 		if (!(iir & UART_IIR_NO_INT)) {
 #ifdef CONFIG_RHEA_UART_RX_FIX
 			up->iir = iir;
