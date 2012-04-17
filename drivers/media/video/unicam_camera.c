@@ -744,7 +744,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	struct v4l2_format thumb_fmt;
 	struct v4l2_pix_format *thumb_pix;
 	__u32 pixfmt = pix->pixelformat;
-	int thumb;
+	int thumb=0;
 	int ret;
 
 	dprintk("-enter");
