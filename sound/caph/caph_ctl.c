@@ -1459,7 +1459,10 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 			if (indexVal != -1) {
 				pSel[indexVal] =
 				    ucontrol->value.integer.value[1];
-
+				if (isSTIHF == TRUE && pSel[indexVal] ==
+					AUDIO_SINK_LOUDSPK &&
+					(indexVal+1 < MAX_PLAYBACK_DEV))
+					pSel[indexVal+1] = AUDIO_SINK_HANDSET;
 				if (pChip->streamCtl[stream - 1].pSubStream !=
 				    NULL) {
 					pStream =
@@ -1487,13 +1490,11 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 							AUDIO_Ctrl_Trigger
 							(ACTION_AUD_AddChannel,
 							&parm_spkr, NULL, 0);
-				if (isSTIHF == TRUE &&
-					pSel[indexVal] ==
-					AUDIO_SINK_LOUDSPK &&
-					++indexVal < MAX_PLAYBACK_DEV) {
-					pSel[indexVal] = AUDIO_SINK_HANDSET;
+				if (pSel[indexVal] == AUDIO_SINK_LOUDSPK &&
+						pSel[indexVal+1] ==
+						AUDIO_SINK_HANDSET) {
 					parm_spkr.src = AUDIO_SINK_MEM;
-					parm_spkr.sink = pSel[indexVal];
+					parm_spkr.sink = pSel[indexVal+1];
 					parm_spkr.stream = (stream - 1);
 					AUDIO_Ctrl_Trigger(
 						ACTION_AUD_AddChannel,
@@ -1510,13 +1511,21 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 					/* sink to remove */
 					indexVal = i;
 					sink = pSel[indexVal];
+					pSel[indexVal] = AUDIO_SINK_UNDEFINED;
+					if (isSTIHF == TRUE && sink ==
+							AUDIO_SINK_LOUDSPK &&
+							pSel[indexVal+1] ==
+							AUDIO_SINK_HANDSET)
+						pSel[indexVal+1] =
+							AUDIO_SINK_UNDEFINED;
 					if (i != 0)
 						break;
 				} else if (indexVal != -1) {
 					if (pSel[i] != AUDIO_SINK_UNDEFINED) {
 						pSel[indexVal] = pSel[i];
+						pSel[i] = AUDIO_SINK_UNDEFINED;
 						indexVal = i;
-						break;
+						/* break; */
 					}
 				}
 			}
@@ -1538,10 +1547,6 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				if (isSTIHF == TRUE &&
 					sink == AUDIO_SINK_LOUDSPK) {
 					/* stIHF, remove EP path first */
-					if (indexVal+1 >= MAX_PLAYBACK_DEV)
-						aError(
-							"stIHF, something wrong!!!\n");
-					else {
 						parm_spkr.src = AUDIO_SINK_MEM;
 						parm_spkr.sink =
 							AUDIO_SINK_HANDSET;
@@ -1549,10 +1554,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 						AUDIO_Ctrl_Trigger(
 						ACTION_AUD_RemoveChannel,
 						&parm_spkr, NULL, 0);
-						pSel[indexVal+1] =
-							AUDIO_SINK_UNDEFINED;
 					}
-				}
 				parm_spkr.src = AUDIO_SINK_MEM;
 				parm_spkr.sink = sink;
 				parm_spkr.stream = (stream - 1);
@@ -1561,7 +1563,6 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				     &parm_spkr, NULL, 0);
 				}
 				}
-				pSel[indexVal] = AUDIO_SINK_UNDEFINED;
 			}
 		}
 		break;
