@@ -49,9 +49,18 @@
 #include <linux/csapi_adc.h>
 #include <linux/mfd/bcmpmu.h>
 
-#define GLUE_DBG(text, ...)
-/*#define GLUE_DBG(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)*/
+/*#define GLUE_DBG(text, ...)*/
+#define GLUE_DBG(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)
 /*#define pr_debug(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)*/
+/*#define pr_info(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)*/
+
+#if 0
+ #define csapi_pr_debug(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)
+ #define csapi_pr_info(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)
+#else
+ #define csapi_pr_info pr_info
+ #define csapi_pr_debug pr_debug
+#endif
 
 #define FUELGAUGE_MINIMUM_TIME_BETWEEN_ADC_READS 9
 
@@ -163,7 +172,8 @@ static u16 read_hk_adc(int physical_channel)
 			    bcmpmu_adc_chipset_api->bcmpmu->
 			    adc_req(bcmpmu_adc_chipset_api->bcmpmu, &ar);
 		} while (status < 0);
-		pr_debug("%s: raw %d, cal %d, cnv %d", __func__, ar.raw, ar.cal,
+		csapi_pr_debug("%s: raw %d, cal %d, cnv %d", __func__,
+			       ar.raw, ar.cal,
 			 ar.cnv);
 		return ar.raw;
 	} else
@@ -184,7 +194,8 @@ static int read_rtm_adc(int physical_channel)
 		status =
 		    bcmpmu_adc_chipset_api->bcmpmu->
 		    adc_req(bcmpmu_adc_chipset_api->bcmpmu, &ar);
-		pr_debug("%s: Status %d, reading %d", __func__, status, ar.raw);
+		csapi_pr_debug("%s: Status %d, reading %d", __func__, status,
+			       ar.raw);
 		if (status < 0)
 			msleep(20);
 	} while (status < 0);
@@ -211,7 +222,7 @@ static int update_columb(void)
 
 	columb_counter = pfg->fg_columb_cnt;
 
-	pr_debug
+	csapi_pr_debug
 	    ("%s: columb_counter %d, pfg->fg_columb_cnt %d, pfg->ibat_avg %d",
 	     __func__, columb_counter, pfg->fg_columb_cnt, pfg->fg_ibat_avg);
 
@@ -257,7 +268,7 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 		ts_current_time = CURRENT_TIME;
 		current_time = (ts_current_time.tv_sec * 1000) +
 			(ts_current_time.tv_nsec / 1000000); /* milliseconds */
-		pr_debug
+		csapi_pr_debug
 		    ("hal_adc_raw_read: ibat: "
 		     "last_sample_time %d, current_time %d",
 		     ibat_last_sample_time, current_time);
@@ -285,7 +296,7 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 		/* Read sampleB register... */
 		{
 			struct bcmpmu_adc_req ar;
-			s16 ibat;
+			int ibat;
 
 			ar.sig = PMU_ADC_FG_RAW;
 			ar.tm = PMU_ADC_TM_HK;
@@ -295,8 +306,11 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 			    bcmpmu_adc_chipset_api->bcmpmu->
 			    adc_req(bcmpmu_adc_chipset_api->bcmpmu, &ar);
 			ibat = ar.raw;
+			if (ar.raw & 0x8000)	/* negative offset */
+				ibat |= 0xffff0000;
 			*val = ibat;
-			pr_debug("hal_adc_raw_read: IBAT reading returns %d",
+			csapi_pr_debug("hal_adc_raw_read: IBAT reading"
+				       " returns %d",
 				ibat);
 			return CSAPI_ADC_ERR_SUCCESS;
 		}
@@ -352,7 +366,7 @@ int csapi_adc_unit_read(struct csapi_cli *cli,
 
 	if (res >= 0) {
 		*val = csapi_adc_unit_convert(cli, cha, raw);
-		pr_debug("%s: raw %d, *val %d", __func__, raw, *val);
+		csapi_pr_debug("%s: raw %d, *val %d", __func__, raw, *val);
 		if (cb) {
 			int status = CSAPI_ADC_ERR_SUCCESS;
 			cb(cha, *val, status, ptr);
@@ -369,7 +383,7 @@ int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 	struct adc_channels_t *chan;
 	struct bcmpmu_adc_req req;
 
-	pr_debug("%s: raw %d", __func__, raw);
+	csapi_pr_debug("%s: raw %d", __func__, raw);
 
 	if (!bcmpmu_adc_chipset_api)
 		return -ENOMEM;
@@ -412,7 +426,7 @@ int csapi_cal_unit_convert_lock(struct csapi_cli *cli, u8 cha, int val)
 			  cha);
 		return -ENODEV;
 	}
-	pr_debug("%s: pchan 0x%x", __func__, (u32) chan);
+	csapi_pr_debug("%s: pchan 0x%x", __func__, (u32) chan);
 
 	chan->locked = true;
 	chan->lockvalue = val;
@@ -430,7 +444,7 @@ int csapi_cal_unit_convert_unlock(struct csapi_cli *cli, u8 cha)
 			  cha);
 		return -ENODEV;
 	}
-	pr_debug(KERN_INFO "%s: pchan 0x%x", __func__, (u32) chan);
+	csapi_pr_debug(KERN_INFO "%s: pchan 0x%x", __func__, (u32) chan);
 
 	chan->locked = false;
 	chan->lockvalue = 0;
@@ -452,7 +466,7 @@ int csapi_cal_data_get(struct csapi_cli *cli,
 			  "for channel %d", cha);
 		return -ENODEV;
 	}
-	pr_debug("%s: pchan 0x%x", __func__, (u32) pchan);
+	csapi_pr_debug("%s: pchan 0x%x", __func__, (u32) pchan);
 	*p1 = 0;
 	*p2 = 0;
 	*p3 = 0;
@@ -482,20 +496,11 @@ int csapi_cal_data_get(struct csapi_cli *cli,
 		*p2 = data.voffset;	/* Offset in uV */
 		*p3 = data.vmax;	/* reference voltage, uV */
 		break;
-		break;
 	case CSAPI_ADC_IBAT:
 	case CSAPI_ADC_IBAT_AVG:
 	case CSAPI_ADC_IBAT_CC:
-		{
-			int off;
-			*p1 = data.fg_k;
-			bcmpmu_adc_chipset_api->bcmpmu->
-			    fg_offset_cal_read(bcmpmu_adc_chipset_api->bcmpmu,
-					       &off);
-			off >>= 2;
-			data.voffset = off;
-			*p2 = data.voffset;
-		}
+		*p1 = data.fg_k;
+		*p2 = data.voffset;
 		break;
 	default:
 		break;
@@ -515,8 +520,8 @@ int csapi_cal_data_set(struct csapi_cli *cli,
 	pchan = &bcmpmu_adc_chipset_api->adc_channels[cha];
 
 	if (pchan->sig == PMU_ADC_MAX) {
-		pr_info("hal_adc_cal_get returns Not supported for channel %d",
-			cha);
+		csapi_pr_info("hal_adc_cal_get returns Not supported for "
+			      "channel %d", cha);
 		return -ENODEV;
 	}
 
@@ -561,8 +566,8 @@ int csapi_cal_data_set(struct csapi_cli *cli,
 	}
 	bcmpmu_adc_chipset_api->bcmpmu->unit_set(bcmpmu_adc_chipset_api->bcmpmu,
 						 pchan->sig, &data);
-	pr_info("hal_adc_cal_get for channel %d: Id %d, values %d, %d, %d", cha,
-		id, p1, p2, p3);
+	csapi_pr_info("hal_adc_cal_get for channel %d: Id %d, "
+		      "values %d, %d, %d", cha, id, p1, p2, p3);
 	return CSAPI_ADC_ERR_SUCCESS;
 }
 
@@ -592,7 +597,8 @@ s32 hal_adc_cal_calc_dalton(struct csapi_cal_req *Data)
 			return -ENODEV;
 
 		pchan->cal_id = Data->data[element].id;
-		pr_info("%s: Element %d, channel %d, raw %d, ref %d, id %d",
+		csapi_pr_info("%s: Element %d, channel %d, raw %d, "
+			      "ref %d, id %d",
 			__func__, element, Data->data[element].cha,
 			Data->data[element].raw, Data->data[element].ref,
 			Data->data[element].id);
@@ -631,21 +637,24 @@ s32 hal_adc_cal_calc_dalton(struct csapi_cal_req *Data)
 
 				/* Calculate uvperbit and offset */
 				if (read1 != read2) {
-					gain =
-					   ((bcmpmu_adc_chipset_api->
+					s64 tmp =
+					   div_s64(((bcmpmu_adc_chipset_api->
 					   adc_setting->compensation_volt_hi -
 					   bcmpmu_adc_chipset_api->adc_setting->
-					   compensation_volt_lo) * 1000) /
-					   (read2 - read1);
+					   compensation_volt_lo) *
+					   1000LL * 1000LL),
+					   (read2 - read1));
+					gain = div_s64(tmp, 1000);
 					offset =
 					    bcmpmu_adc_chipset_api->
 					    adc_setting->compensation_volt_hi *
-					    1000 - (read2 * gain);
-					pr_info("adc_cal_calc_dalton: read1 %d,"
+					    1000 - div_s64((read2 * tmp), 1000);
+					csapi_pr_info("adc_cal_calc_dalton:"
+						" read1 %d,"
 						" read2 %d, gain %d, offset %d",
 					    read1, read2, gain, offset);
 				} else {
-					pr_info
+					csapi_pr_info
 					    ("adc_cal_calc_dalton: Unable to "
 					     "get reference channel readings");
 					/*Get the gain/offset from normal data*/
@@ -662,6 +671,12 @@ s32 hal_adc_cal_calc_dalton(struct csapi_cal_req *Data)
 				bcmpmu_adc_chipset_api->bcmpmu->
 					unit_get(bcmpmu_adc_chipset_api->bcmpmu,
 					     pchan->sig, &bsi_data);
+				csapi_pr_info("Old: Gain %d, Offset %d, "
+					      "Pull %d",
+				    bsi_data.vstep, bsi_data.voffset,
+					      bsi_data.vmax);
+				bsi_data.voffset = offset;
+				bsi_data.vstep = gain;
 				vbsi_pullup =
 				    (Data->data[element].raw * gain +
 				     offset) * (bsi_data.rpullup / 1000);
@@ -671,11 +686,15 @@ s32 hal_adc_cal_calc_dalton(struct csapi_cal_req *Data)
 				vbsi_pullup +=
 				    Data->data[element].raw * gain + offset;
 				bsi_data.vmax = vbsi_pullup;
-				pr_info("%s: vbsi_pullup %d", __func__,
+				csapi_pr_info("%s: vbsi_pullup %d", __func__,
 					vbsi_pullup);
 				bcmpmu_adc_chipset_api->bcmpmu->
 				    unit_set(bcmpmu_adc_chipset_api->bcmpmu,
 					     pchan->sig, &bsi_data);
+				csapi_pr_info("New: Gain %d, Offset %d, "
+					      "Pull %d",
+				    bsi_data.vstep, bsi_data.voffset,
+					      bsi_data.vmax);
 			}
 			break;
 
@@ -816,13 +835,13 @@ s32 hal_adc_cal_calc_dalton(struct csapi_cal_req *Data)
 						       bcmpmu, &fgoffset);
 				if (fgoffset & 0x8000)	/* negative offset */
 					fgoffset |= 0xffff0000;
-				pr_info
+				csapi_pr_info
 				    ("hal_Adc_cal_calc_dalton: "
 				     "IBAT K calibration: "
 				     "FGOFFSET read from the PMU: 0x%x",
 				     fgoffset);
 				fgoffset /= 4;
-				pr_info
+				csapi_pr_info
 				    ("hal_Adc_cal_calc_dalton: "
 				     "IBAT K calibration: "
 				     "Converted FGOFFSET: 0x%x",
@@ -833,7 +852,7 @@ s32 hal_adc_cal_calc_dalton(struct csapi_cal_req *Data)
 				    ((Data->data[element].ref * 1024) /
 				     ((Data->data[element].raw -
 				       fgoffset) * 976 / 1000)) % 256;
-				pr_info
+				csapi_pr_info
 				    ("hal_Adc_cal_calc_dalton:"
 				     " IBAT K calibration: Reading %d, "
 				     "reference value %d, k %d, offset %d",
@@ -873,7 +892,7 @@ EXPORT_SYMBOL(csapi_cal_calc);
 
 static int bcmpmu_adc_chipset_open(struct inode *inode, struct file *file)
 {
-	pr_debug("%s\n", __func__);
+	csapi_pr_debug("%s\n", __func__);
 	file->private_data = PDE(inode)->data;
 
 	return 0;
@@ -895,7 +914,7 @@ static long bcmpmu_adc_chipset_ioctl(struct file *file, unsigned int cmd,
 #define MAX_USER_INPUT_LEN      256
 #define MAX_ARGS 25
 
-#define adccsapi_kstrtol(arg)  (kstrtol(arg, 10, &val) < 0 ? 0 : val)
+#define adccsapi_kstrtol(arg)  (kstrtol(arg, 10, &val) ? val : val)
 
 static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 					const char __user *buffer, size_t len,
@@ -908,12 +927,12 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 	char *argv[MAX_ARGS];
 	u8 channel;
 	int i, status;
-	long val; /* used in macro */
+	int val; /* used in macro */
 
 	/*int ret, i; */
 	int adc_raw, adc_unit;
 
-	pr_info("%s\n", __func__);
+	csapi_pr_info("%s\n", __func__);
 
 	if (!bcmpmu_adc_chipset_api) {
 		pr_err("%s: driver not initialized\n", __func__);
@@ -1069,6 +1088,7 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 				channel = adccsapi_kstrtol(argv[i + 1]);
 				csapi_cal_data_get(NULL, channel, &id, &p1, &p2,
 						   &p3);
+
 				printk(KERN_INFO
 				       "%s(%s): chl %d, id %d, p1 %d, "
 				       "p2 %d, p3 %d\n",
@@ -1162,10 +1182,10 @@ static int __devinit bcmpmu_adc_chipset_api_probe(struct platform_device *pdev)
 	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
 	struct bcmpmu_adc_chipset_api *priv_data;
 
-	pr_info("BCMPMU ADC CHIPSET API Driver\n");
+	csapi_pr_info("BCMPMU ADC CHIPSET API Driver\n");
 	priv_data = kzalloc(sizeof(struct bcmpmu_adc_chipset_api), GFP_KERNEL);
 	if (!priv_data) {
-		pr_info("%s: Memory can not be allocated!!\n", __func__);
+		csapi_pr_info("%s: Memory can not be allocated!!\n", __func__);
 		return -ENOMEM;
 	}
 	priv_data->bcmpmu = bcmpmu;

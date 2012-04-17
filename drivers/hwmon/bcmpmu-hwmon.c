@@ -324,6 +324,12 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 		padc->adcunit[req->sig].vstep = gain;
 		padc->adcunit[req->sig].voffset = offset;
 		break;
+	case PMU_ADC_FG_RAW:
+	case PMU_ADC_FG_CURRSMPL:
+		req->cal = req->raw * padc->adcunit[req->sig].vstep +
+			padc->adcunit[req->sig].voffset;
+			/* vstep, offset is in uV */
+		return;
 	default:
 		break;
 	}
@@ -373,12 +379,13 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 	case PMU_ADC_FG_RAW:
 	case PMU_ADC_FG_CURRSMPL:
 		{
-			int modifier = 0, ibat_to_return, offset = 0;
-			short reading;
-			reading = (short)(req->cal & 0xffff);
+			int modifier = 0, ibat_to_return;
+			int reading;
+			reading = req->raw;
+			if (req->cal & 0x8000)	/* negative offset */
+				reading |= 0xffff0000;
 
 			if (padc->adcunit && padc->adcunit[req->sig].fg_k) {
-				offset = padc->adcunit[req->sig].voffset;
 				modifier =
 				    (padc->adcunit[req->sig].fg_k >
 				     128) ? 768 +
@@ -398,7 +405,8 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 			pr_hwmon(DATA,
 				 "%s: raw %x, value %d, modifier %d Offset %d,"
 				 " ibat %d",
-				 __func__, req->raw, reading, modifier, offset,
+				 __func__, req->raw, reading, modifier,
+				 padc->adcunit[req->sig].voffset,
 				 ibat_to_return);
 			req->cnv = ibat_to_return;
 		}
