@@ -119,7 +119,18 @@
 #endif
 
 #include <plat/pi_mgr.h>
+
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
 #include <media/soc_camera.h>
+#endif
+
+#ifdef CONFIG_VIDEO_KONA
+#include <media/v4l2-device.h>
+#include <media/v4l2-subdev.h>
+#include <media/kona-unicam.h>
+#include <media/ov5640.h>
+#endif
+
 #include <linux/delay.h>
 #include <linux/gpio.h>
 
@@ -927,6 +938,7 @@ static struct platform_device lq043y1dx01_dsi_display_device = {
 
 #define OV5640_I2C_ADDRESS (0x3C)
 
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
 static struct i2c_board_info rhea_i2c_camera[] = {
 	{
 	 I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
@@ -1095,6 +1107,130 @@ static struct platform_device rhea_camera = {
 		.platform_data = &iclink_ov5640,
 		},
 };
+#endif
+
+#ifdef CONFIG_VIDEO_KONA
+static struct clk *dig_ch0_clk;
+
+static int rhea_stone_ov_cam1_power(struct v4l2_subdev *subdev, int on)
+{
+	struct device *dev = subdev->v4l2_dev->dev;
+	int ret;
+
+	if (on) {
+		/* reset gpio */
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		usleep_range(10000, 20000);
+		/* disable power down gpio */
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
+		usleep_range(5000, 10000);
+		/* disable reset gpio */
+		gpio_set_value(SENSOR_0_GPIO_RST, 1);
+		/* wait for sensor to come up */
+		msleep(30);
+		/* enable clk*/
+		ret = clk_enable(dig_ch0_clk);
+		if (ret) {
+			dev_err(dev, "error in clk_enable dig_ch0_clk\n");
+			return -EINVAL;
+		}
+		/* delay to start the clk */
+		usleep_range(10000, 20000);
+
+	} else {
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		usleep_range(1000, 2000);
+		/* power down gpio */
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
+
+		clk_disable(dig_ch0_clk);
+	}
+
+	return 0;
+}
+
+static struct ov5640_platform_data ov5640_cam1_pdata = {
+	.s_power = rhea_stone_ov_cam1_power,
+};
+
+struct unicam_subdev_i2c_board_info ov5640_cam1_i2c_device = {
+	.board_info = {
+		I2C_BOARD_INFO("ov5640-mc", OV5640_I2C_ADDRESS),
+		.platform_data = &ov5640_cam1_pdata,
+	},
+	.i2c_adapter_id = 0,
+};
+
+static struct unicam_v4l2_subdevs_groups rhea_stone_unicam_subdevs[] = {
+	{
+		/* ov5640 */
+		.i2c_info = &ov5640_cam1_i2c_device,
+		.interface = UNICAM_INTERFACE_CSI2_PHY1,
+		.bus = {
+			.csi2 = {
+				.lanes = CSI2_DUAL_LANE_SENSOR,
+				.port = UNICAM_PORT_AFE_0,
+			},
+		},
+	},
+};
+
+static struct unicam_platform_data rhea_stone_unicam_pdata = {
+	.subdevs = rhea_stone_unicam_subdevs,
+	.num_subdevs = ARRAY_SIZE(rhea_stone_unicam_subdevs),
+};
+
+static struct resource rhea_stone_unicam_rsrc[] = {
+	[0] = {
+		.start = BCM_INT_ID_RESERVED156,
+		.end = BCM_INT_ID_RESERVED156,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device rhea_stone_unicam_device = {
+	 /* adding prefix mc to differ from char unicam interface*/
+	.name = "kona-unicam-mc",
+	.id = 0,
+	.resource = rhea_stone_unicam_rsrc,
+	.num_resources = ARRAY_SIZE(rhea_stone_unicam_rsrc),
+	.dev = {
+		.platform_data = &rhea_stone_unicam_pdata,
+	},
+};
+
+static int __init rhea_stone_camera_init(void)
+{
+	dig_ch0_clk = clk_get(NULL, "dig_ch0_clk");
+	if (IS_ERR(dig_ch0_clk)) {
+		printk(KERN_ERR "unable to get dig_ch0_clk\n");
+		return -EINVAL;
+	}
+
+	if (clk_set_rate(dig_ch0_clk, 13000000)) {
+		printk(KERN_ERR "unable to set clk rate 13MHz\n");
+		clk_put(dig_ch0_clk);
+		return -EINVAL;
+	}
+
+	if (gpio_request(SENSOR_0_GPIO_RST, "CamRst")) {
+		printk(KERN_WARNING "cannot request gpio %d\n",
+				SENSOR_0_GPIO_RST);
+		return -EINVAL;
+	} else
+		gpio_direction_output(SENSOR_0_GPIO_RST, GPIOF_INIT_LOW);
+
+	if (gpio_request(SENSOR_0_GPIO_PWRDN, "CamPwr")) {
+		printk(KERN_WARNING "cannot request gpio %d\n",
+				SENSOR_0_GPIO_RST);
+		return -EINVAL;
+	} else
+		gpio_direction_output(SENSOR_0_GPIO_PWRDN, GPIOF_INIT_HIGH);
+
+	return 0;
+}
+late_initcall(rhea_stone_camera_init);
+#endif
 
 #ifdef CONFIG_WD_TAPPER
 static struct wd_tapper_platform_data wd_tapper_data = {
@@ -1151,7 +1287,14 @@ static struct platform_device *rhea_stone_plat_devices[] __initdata = {
 #ifdef CONFIG_BCM_BT_LPM
     &board_bcmbt_lpm_device,
 #endif
+
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
 	&rhea_camera,
+#endif
+
+#ifdef CONFIG_VIDEO_KONA
+	&rhea_stone_unicam_device,
+#endif
 
 #ifdef CONFIG_GPS_IRQ
 	&gps_hostwake,

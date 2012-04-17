@@ -229,5 +229,11 @@ config KONA_USB_CONTROL
        help
          Say Y if you want to enable BCM USB wrapper framework
 
+config KONA_CSL_CAMERA
+	tristate
+
+config KONA_CHAL_CAMERA
+	tristate
+
 endmenu
 

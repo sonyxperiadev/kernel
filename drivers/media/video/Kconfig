@@ -467,6 +467,16 @@ config VIDEO_OV7670
 	  OV7670 VGA camera.  It currently only works with the M88ALP01
 	  controller.
 
+config VIDEO_OV5640_MC
+	tristate "OmniVision OV5640 sensor MC support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	---help---
+	  This driver is derived from omap4 tree.
+	  Driver implements media controller api. It currently
+	  works with unicam media controller driver.
+	  Currently this driver support yuv,uyvy and jpeg 5MP capture.
+
+
 config VIDEO_MT9V011
 	tristate "Micron mt9v011 sensor support"
 	depends on I2C && VIDEO_V4L2
@@ -772,6 +782,16 @@ config VIDEO_OMAP3_DEBUG
 	---help---
 	  Enable debug messages on OMAP 3 camera controller driver.
 
+config VIDEO_KONA
+	tristate "Camera Support for Broadcom KONA platform"
+	depends on VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API && ARCH_KONA && EXPERIMENTAL
+	select VIDEOBUF2_DMA_CONTIG
+	select KONA_CSL_CAMERA
+	select KONA_CHAL_CAMERA
+	help
+	  Driver for KONA UNICAM controller.This driver uses media controller
+	  framework instead of soc camera.
+
 config SOC_CAMERA
 	tristate "SoC camera support"
 	depends on VIDEO_V4L2 && HAS_DMA && I2C
@@ -997,6 +1017,8 @@ config VIDEO_UNICAM_CAMERA
 	tristate "Broadcom Unicam camera host interface driver"
 	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
 	select VIDEOBUF2_DMA_CONTIG
+	select KONA_CSL_CAMERA
+	select KONA_CHAL_CAMERA
 	---help---
 	  This is a v4l2 driver for Broadcom Unicam host interface.
 
