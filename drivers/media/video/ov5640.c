@@ -2145,8 +2145,8 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				ret = ov5640_af_release(client);
 				atomic_set(&ov5640->focus_status,
 						OV5640_NOT_FOCUSING);
-				ov5640->touch_focus = 0;
 			}
+			ov5640->touch_focus = 0;
 			break;
 
 		case AUTO_FOCUS_ON:
