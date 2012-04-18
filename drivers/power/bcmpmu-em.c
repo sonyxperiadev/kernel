@@ -41,6 +41,7 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define POLL_SAMPLES		8
 #define POLLRATE_TRANSITION	3000
 #define POLLRATE_CHRG		5000
+#define POLLRATE_CHRG_MAINT	60000
 #define POLLRATE_LOWBAT		5000
 #define POLLRATE_HIGHBAT	60000
 #define POLLRATE_POLL		50
@@ -54,7 +55,6 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 	} while (0)
 
 enum {
-	CHRG_STATE_INIT,
 	CHRG_STATE_CHRG,
 	CHRG_STATE_IDLE,
 	CHRG_STATE_MAINT,
@@ -77,6 +77,7 @@ enum {
 	MODE_TRANSITION,
 	MODE_POLL,
 	MODE_IDLE,
+	MODE_CHRG_MAINT,
 };
 
 enum {
@@ -139,14 +140,16 @@ struct bcmpmu_em {
 	int bvcap_len;
 	int charge_1c_rate;
 	int eoc;
+	int eoc_state;
+	int support_hw_eoc;
 	int esr;
 	int cutoff_volt;
 	int cutoff_count;
 	int cutoff_count_max;
-	int fg_capacity_full;
+	s64 fg_capacity_full;
 	int support_fg;
 	int support_chrg_maint;
-	int fg_capacity;
+	s64 fg_capacity;
 	int fg_cap_cal;
 	int fg_force_cal;
 	int fg_lowbatt_cal;
@@ -157,6 +160,8 @@ struct bcmpmu_em {
 	int pollrate;
 	int chrgr_curr;
 	enum bcmpmu_chrgr_type_t chrgr_type;
+	int support_ext_chrgr;
+	int ext_chrgr;
 	int charge_state;
 	int charge_zone;
 	int resume_chrg;
@@ -270,8 +275,9 @@ static int get_fg_delta(struct bcmpmu *bcmpmu, int *delta)
 static void update_fg_delta(struct bcmpmu_em *pem)
 {
 	int cap = 100 + pem->cap_delta;
-	pem->fg_capacity_full  = (pem->fg_capacity_full * cap)/100;
-	pr_em(FLOW, "%s, delta=%d, fg_capacity_full = %d\n",
+	pem->fg_capacity_full  = pem->fg_capacity_full * cap;
+	pem->fg_capacity_full = div_s64(pem->fg_capacity_full, 100);
+	pr_em(FLOW, "%s, delta=%d, fg_capacity_full = %lld\n",
 		__func__, pem->cap_delta, pem->fg_capacity_full);
 }
 
@@ -540,7 +546,7 @@ pollrate_show(struct device *dev, struct device_attribute *attr,
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	struct bcmpmu_em *pem = bcmpmu->eminfo;
-	return sprintf(buf, "debug_mask is %x\n", pem->pollrate/1000);
+	return sprintf(buf, "poll rate is %x\n", pem->pollrate/1000);
 }
 
 static ssize_t
@@ -720,7 +726,7 @@ fg_temp_show(struct device *dev, struct device_attribute *attr,
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	struct bcmpmu_em *pem = bcmpmu->eminfo;
-	return sprintf(buf, "fg_dbg_temp=%d\n", pem->fg_dbg_temp - 273);
+	return sprintf(buf, "fg_dbg_temp=%d\n", pem->fg_dbg_temp);
 }
 
 static ssize_t
@@ -735,7 +741,7 @@ fg_temp_set(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 	if ((val > 100) || (val < -40))
 		return -EINVAL;
-	pem->fg_dbg_temp = val + 273;
+	pem->fg_dbg_temp = val;
 	return count;
 }
 
@@ -765,6 +771,15 @@ static const struct attribute_group bcmpmu_em_attr_group = {
 	.attrs = bcmpmu_em_attrs,
 };
 #endif
+
+static int is_charger_present(struct bcmpmu_em *pem)
+{
+	if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
+		(pem->ext_chrgr == 0))
+		return 0;
+	else
+		return 1;
+}
 
 static int em_batt_get_capacity(struct bcmpmu_em *pem, int pvolt, int curr)
 {
@@ -799,23 +814,105 @@ static int em_batt_get_capacity(struct bcmpmu_em *pem, int pvolt, int curr)
 	return cap;
 }
 
-static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
+static int update_adc_readings(struct bcmpmu_em *pem)
 {
 	struct bcmpmu_adc_req req;
-	int capacity = 0;
-	int capacity_v = 0;
-	int fg_result;
-	int ret;
-	int calibration = 0;
-	static int eoc_count = 0;
-	int volt;
-	int zone = pem->fg_zone;
 
 	req.sig = PMU_ADC_NTC;
 	req.tm = PMU_ADC_TM_HK;
 	req.flags = PMU_ADC_RAW_AND_UNIT;
 	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
 	pem->batt_temp = req.cnv;
+
+	req.sig = PMU_ADC_VMBATT;
+	req.tm = PMU_ADC_TM_HK;
+	req.flags = PMU_ADC_RAW_AND_UNIT;
+	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
+	pem->batt_volt = req.cnv;
+
+	req.sig = PMU_ADC_FG_CURRSMPL;
+	req.tm = PMU_ADC_TM_HK;
+	req.flags = PMU_ADC_RAW_AND_UNIT;
+	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
+	pem->batt_curr = req.cnv;
+
+	return 0;
+}
+
+static int update_eoc(struct bcmpmu_em *pem)
+{
+	static int eoc_count;
+	int capacity = 0;
+
+	if (pem->piggyback_chrg) {
+		if (is_charger_present(pem)) {
+			if (pem->support_hw_eoc) {
+				if ((pem->eoc_state == 1) &&
+					(pem->charge_state !=
+						CHRG_STATE_MAINT)) {
+					capacity = 100;
+					if (pem->fg_comp_mode == 0)
+						pem->fg_cap_cal = 1;
+					pem->fg_capacity =
+						pem->fg_capacity_full;
+					pem->charge_state = CHRG_STATE_MAINT;
+				}
+			} else if ((pem->batt_volt > 4150) &&
+				(pem->batt_curr < pem->eoc)) {
+					eoc_count++;
+				if (eoc_count > 5) {
+					capacity = 100;
+					if (pem->fg_comp_mode == 0)
+						pem->fg_cap_cal = 1;
+					pem->fg_capacity =
+						pem->fg_capacity_full;
+					pem->charge_state = CHRG_STATE_MAINT;
+				}
+			}
+		} else
+			eoc_count = 0;
+	} else if (is_charger_present(pem)) {
+		if (pem->support_hw_eoc) {
+			if ((pem->eoc_state == 1) &&
+				(pem->charge_state != CHRG_STATE_MAINT)) {
+				capacity = 100;
+				if (pem->fg_comp_mode == 0)
+					pem->fg_cap_cal = 1;
+				pem->fg_capacity = pem->fg_capacity_full;
+				pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 0);
+				pem->charge_state = CHRG_STATE_MAINT;
+			}
+		} else if ((pem->batt_volt > 4150) &&
+			(pem->batt_curr < pem->eoc)) {
+				eoc_count++;
+			if (eoc_count > 5) {
+				capacity = 100;
+				if (pem->fg_comp_mode == 0)
+					pem->fg_cap_cal = 1;
+				pem->fg_capacity = pem->fg_capacity_full;
+				if (pem->support_chrg_maint) {
+					pem->charge_state = CHRG_STATE_MAINT;
+					pem->bcmpmu->
+						chrgr_usb_en(pem->bcmpmu, 0);
+				}
+			}
+		}
+	} else
+		eoc_count = 0;
+	return capacity;
+}
+
+static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
+{
+	int capacity = 0;
+	int capacity_v = 0;
+	int fg_result;
+	int ret;
+	int calibration = 0;
+	int volt;
+	int zone = pem->fg_zone;
+	s64 capacity64;
+
 	if (pem->fg_dbg_temp != 0)
 		pem->batt_temp = pem->fg_dbg_temp;
 	pem->fg_zone = update_fg_zone(pem, pem->batt_temp);
@@ -838,17 +935,6 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 		};
 	};
 
-	req.sig = PMU_ADC_VMBATT;
-	req.tm = PMU_ADC_TM_HK;
-	req.flags = PMU_ADC_RAW_AND_UNIT;
-	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
-	pem->batt_volt = req.cnv;
-	req.sig = PMU_ADC_FG_CURRSMPL;
-	req.tm = PMU_ADC_TM_HK;
-	req.flags = PMU_ADC_RAW_AND_UNIT;
-	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
-	pem->batt_curr = req.cnv;
-
 	if (pem->support_fg == 0) {
 		capacity = em_batt_get_capacity(pem,
 			pem->batt_volt, pem->batt_curr);
@@ -868,13 +954,19 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 		if (pem->fg_capacity <= 0)
 			pem->fg_capacity = 0;
 
-		capacity = (pem->fg_capacity * 100)
-			/pem->fg_capacity_full;
-		if ((pem->chrgr_type != PMU_CHRGR_TYPE_NONE) &&
+		capacity64 = pem->fg_capacity * 100;
+		capacity = div64_s64(capacity64, pem->fg_capacity_full);
+
+		if ((is_charger_present(pem)) &&
 			(pem->batt_capacity != 100) &&
 			(capacity >= 100))
-			capacity--;
-		if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
+				capacity--;
+		else if ((is_charger_present(pem)) &&
+			(pem->batt_capacity == 100) &&
+			(pem->charge_state == CHRG_STATE_MAINT) &&
+			(capacity >= 99))
+			capacity = 100;
+		if ((!is_charger_present(pem)) &&
 			(capacity < 100))
 			capacity++;
 
@@ -891,7 +983,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 			pem->fg_cap_cal = 0;
 			pem->cal_mode = CAL_MODE_FORCE,
 			calibration = 1;
-		} else if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
+		} else if ((!is_charger_present(pem)) &&
 			   (pem->fg_lowbatt_cal != 0) &&
 			   (pem->fg_comp_mode == 0) &&
 			   (volt < 3550)) {
@@ -906,30 +998,18 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 			calibration = 1;
 		}
 	}
-	if ((pem->chrgr_type != PMU_CHRGR_TYPE_NONE) &&
-		(pem->batt_volt > 4150) &&
-		(pem->batt_curr < pem->eoc)) {
-		eoc_count++;
-		if (eoc_count > 5) {
-			capacity = 100;
-			if (pem->fg_comp_mode == 0)
-				pem->fg_cap_cal = 1;
-			pem->fg_capacity = pem->fg_capacity_full;
-			if (pem->support_chrg_maint) {
-				pem->charge_state = CHRG_STATE_MAINT;
-				if (pem->bcmpmu->chrgr_usb_maint)
-					pem->bcmpmu->chrgr_usb_maint(pem->bcmpmu, 1);
-			}
-		}
-	} else eoc_count = 0;
+
+	if (update_eoc(pem) == 100)
+		capacity = 100;
+
 	if (calibration == 0)
 		*cap = (capacity * pem->fg_temp_fact)/1000;
 	else
 		*cap = capacity;
 err:
-	pr_em(FLOW, "%s, facc=%d, fcp=%d, cp=%d, vcp=%d, t=%d, cl=%d, clm=%d\n",
+	pr_em(FLOW, "%s, facc=%d, fcp=%lld, cp=%d, vcp=%d, cl=%d, clm=%d\n",
 		__func__, fg_result, pem->fg_capacity, capacity,
-		capacity_v, pem->batt_temp, calibration, pem->cal_mode);
+		capacity_v, calibration, pem->cal_mode);
 	return calibration;
 }
 
@@ -946,20 +1026,6 @@ static unsigned char em_batt_get_capacity_lvl(struct bcmpmu_em *pem, int capacit
 	else
 		capacity_lvl = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
 	return capacity_lvl;
-}
-
-static unsigned char em_batt_get_batt_health(struct bcmpmu *pmu, int volt, int temp)
-{
-	int health;
-	if (volt > 4200)
-		health = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
-	else if (volt < 3000)
-		health = POWER_SUPPLY_HEALTH_DEAD;
-	else if (temp > 350)
-		health = POWER_SUPPLY_HEALTH_OVERHEAT;
-	else
-		health = POWER_SUPPLY_HEALTH_GOOD;
-	return health;
 }
 
 static void update_charge_zone(struct bcmpmu_em *pem)
@@ -993,11 +1059,13 @@ static void update_charge_zone(struct bcmpmu_em *pem)
 
 	if ((zone != pem->charge_zone) ||
 		(pem->force_update != 0)) {
-		pem->icc_qc = pem->icc_qc = min(pem->zone[pem->charge_zone].qc, pem->chrgr_curr);
+		pem->icc_qc = pem->icc_qc =
+			min(pem->zone[pem->charge_zone].qc, pem->chrgr_curr);
 		pem->bcmpmu->set_icc_qc(pem->bcmpmu, pem->icc_qc);
 		pem->vfloat = min(pem->zone[pem->charge_zone].v, 4200);
 		pem->bcmpmu->set_vfloat(pem->bcmpmu, pem->vfloat);
-		pem->icc_fc = (pem->zone[pem->charge_zone].fc * pem->charge_1c_rate)/100;
+		pem->icc_fc = (pem->zone[pem->charge_zone].fc *
+			pem->charge_1c_rate)/100;
 		pem->icc_fc = min(pem->icc_fc, pem->chrgr_curr);
 		pem->bcmpmu->set_icc_fc(pem->bcmpmu, pem->icc_fc);
 		pem->force_update = 0;
@@ -1014,6 +1082,9 @@ static int get_update_rate(struct bcmpmu_em *pem)
 			break;
 		case MODE_CHRG:
 			rate = POLLRATE_CHRG;
+			break;
+		case MODE_CHRG_MAINT:
+			rate = POLLRATE_CHRG_MAINT;
 			break;
 		case MODE_LOWBAT:
 			rate = POLLRATE_LOWBAT;
@@ -1056,17 +1127,146 @@ static int bcmpmu_get_capacity(struct bcmpmu *bcmpmu)
 	return pem->batt_capacity;
 }
 
-static void em_algorithm(struct work_struct *work)
+static void charging_algorithm(struct bcmpmu_em *pem)
+{
+	int charge_zone;
+	struct bcmpmu *bcmpmu = pem->bcmpmu;
+
+	if (pem->piggyback_chrg)
+		return;
+
+	if (is_charger_present(pem)) {
+		if (pem->charge_state == CHRG_STATE_MAINT) {
+			if (pem->support_hw_eoc) {
+				if (pem->batt_volt < pem->chrg_resume_lvl) {
+					pem->eoc_state = 0;
+					bcmpmu->chrgr_usb_en(bcmpmu, 1);
+					pem->charge_state = CHRG_STATE_CHRG;
+				}
+			} else if ((pem->batt_volt < pem->chrg_resume_lvl) ||
+				(pem->resume_chrg == 1)) {
+				pem->resume_chrg = 0;
+				bcmpmu->chrgr_usb_en(bcmpmu, 1);
+				pem->charge_state = CHRG_STATE_CHRG;
+			}
+		} else if (pem->charge_state != CHRG_STATE_CHRG) {
+			if (bcmpmu->get_env_bit_status(bcmpmu,
+				PMU_ENV_USB_VALID) == true)
+				pem->charge_state = CHRG_STATE_CHRG;
+			else {
+				if (pem->chrgr_curr != 0) {
+					bcmpmu->chrgr_usb_en(bcmpmu, 1);
+					pr_em(FLOW,
+						"%s, charger not ready yet.\n",
+						__func__);
+				}
+			}
+		}
+		charge_zone = -1;
+		while (charge_zone != pem->charge_zone) {
+			charge_zone = pem->charge_zone;
+			update_charge_zone(pem);
+		}
+	} else if (pem->charge_state != CHRG_STATE_IDLE) {
+		bcmpmu->set_icc_fc(bcmpmu, 0);
+		bcmpmu->chrgr_usb_en(bcmpmu, 0);
+		pem->charge_state = CHRG_STATE_IDLE;
+		pem->charge_zone = CHRG_ZONE_OUT;
+	}
+
+	if (!is_charger_present(pem))
+		return;
+	pr_em(FLOW, "%s, cst=%d, cty=%d, crr=%d, czn=%d, fc=%d, qc=%d, vf=%d\n",
+		__func__, pem->charge_state, pem->chrgr_type,
+		pem->chrgr_curr, pem->charge_zone,
+		pem->icc_fc, pem->icc_qc, pem->vfloat);
+}
+
+static void update_power_supply(struct bcmpmu_em *pem, int capacity)
 {
 	struct power_supply *ps;
 	union power_supply_propval propval;
+	struct bcmpmu *bcmpmu = pem->bcmpmu;
+	int psy_changed = 0;
+
+	if (pem->piggyback_chrg)
+		return;
+
+	ps = power_supply_get_by_name("battery");
+
+	if (!is_charger_present(pem)) {
+		if (pem->chrgr_curr != 0) {
+			bcmpmu->set_icc_fc(bcmpmu, 0);
+			pem->chrgr_curr = 0;
+			bcmpmu->chrgr_usb_en(bcmpmu, 0);
+		}
+		if ((ps) && (pem->batt_status !=
+				POWER_SUPPLY_STATUS_DISCHARGING)) {
+			propval.intval = POWER_SUPPLY_STATUS_DISCHARGING;
+			ps->set_property(ps,
+				POWER_SUPPLY_PROP_STATUS, &propval);
+			pem->batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
+			pr_em(FLOW, "%s, transition to discharging\n",
+				__func__);
+			psy_changed = 1;
+		}
+	} else {
+		if (capacity == 100) {
+			if ((ps) && (pem->batt_status !=
+				POWER_SUPPLY_STATUS_FULL)) {
+				propval.intval = POWER_SUPPLY_STATUS_FULL;
+				ps->set_property(ps,
+					POWER_SUPPLY_PROP_STATUS, &propval);
+				pem->batt_status = POWER_SUPPLY_STATUS_FULL;
+				pr_em(FLOW, "%s, transition to fully charged\n",
+					__func__);
+				psy_changed = 1;
+			}
+		} else {
+			if ((ps) && (pem->batt_status !=
+				POWER_SUPPLY_STATUS_CHARGING)) {
+				propval.intval = POWER_SUPPLY_STATUS_CHARGING;
+				ps->set_property(ps,
+					POWER_SUPPLY_PROP_STATUS, &propval);
+				pem->batt_status = POWER_SUPPLY_STATUS_CHARGING;
+				pr_em(FLOW, "%s, transition to charging\n",
+					__func__);
+				psy_changed = 1;
+			}
+		}
+	}
+	propval.intval = pem->batt_volt;
+	ps->set_property(ps, POWER_SUPPLY_PROP_VOLTAGE_NOW, &propval);
+
+	propval.intval = capacity;
+	ps->set_property(ps, POWER_SUPPLY_PROP_CAPACITY, &propval);
+	if (pem->batt_capacity != capacity)
+		psy_changed = 1;
+
+	propval.intval = em_batt_get_capacity_lvl(pem, capacity);
+	ps->set_property(ps, POWER_SUPPLY_PROP_CAPACITY_LEVEL, &propval);
+	if (pem->batt_capacity_lvl != propval.intval)
+		psy_changed = 1;
+	pem->batt_capacity_lvl = propval.intval;
+
+	/* tbd for battery detection */
+	propval.intval = 1;
+	ps->set_property(ps, POWER_SUPPLY_PROP_PRESENT, &propval);
+	if (pem->batt_present != propval.intval)
+		psy_changed = 1;
+	pem->batt_present = propval.intval;
+
+	if (psy_changed)
+		power_supply_changed(ps);
+}
+
+static void em_algorithm(struct work_struct *work)
+{
 	struct bcmpmu_em *pem =
 		container_of(work, struct bcmpmu_em, work.work);
 	struct bcmpmu *bcmpmu = pem->bcmpmu;
 	struct bcmpmu_adc_req req;
 	int capacity = pem->batt_capacity;
-	int psy_changed = 0;
-	int charge_zone;
 	int calibration;
 	int fg_result;
 
@@ -1112,14 +1312,16 @@ static void em_algorithm(struct work_struct *work)
 				(((capacity - pem->cap_init) > 10) ||
 				((capacity - pem->cap_init) < -10)))
 				capacity = pem->cap_init;
-			pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
+			pem->fg_capacity  = pem->fg_capacity_full * capacity;
+			pem->fg_capacity = div_s64(pem->fg_capacity, 100);
 			pem->batt_capacity = capacity;
 			pem->mode = MODE_IDLE;
 			if (capacity >= 30)
 				pem->fg_lowbatt_cal = 1;
 		}
 		first_run = 1;
-		schedule_delayed_work(&pem->work, msecs_to_jiffies(get_update_rate(pem)));
+		schedule_delayed_work(&pem->work,
+			msecs_to_jiffies(get_update_rate(pem)));
 		return;
 	}
 
@@ -1134,9 +1336,10 @@ static void em_algorithm(struct work_struct *work)
 		if (pem->cal_mode == CAL_MODE_CUTOFF)
 			if (req.cnv <= pem->cutoff_volt)
 				pem->cutoff_count++;
-		pr_em(FLOW, "%s, first_run=%d, poll_count=%d, vacc=%d, vmbatt=%d\n",
+		pr_em(FLOW, "%s, 1st_run=%d, poll_cnt=%d, vacc=%d, vmbatt=%d\n",
 			__func__, first_run, poll_count, vacc, req.cnv);
-		schedule_delayed_work(&pem->work, msecs_to_jiffies(get_update_rate(pem)));
+		schedule_delayed_work(&pem->work,
+			msecs_to_jiffies(get_update_rate(pem)));
 		return;
 	}
 	if (pem->mode == MODE_POLL) {
@@ -1182,8 +1385,10 @@ static void em_algorithm(struct work_struct *work)
 				pr_em(FLOW, "%s, Force cal\n", __func__);
 			} else if (pem->cal_mode == CAL_MODE_LOWBAT) {
 				if (pem->fg_cap_cal == 1) {
-					pem->cap_delta += capacity - pem->batt_capacity;
-					ret = save_fg_delta(pem->bcmpmu, pem->cap_delta);
+					pem->cap_delta +=
+						capacity - pem->batt_capacity;
+					ret = save_fg_delta(pem->bcmpmu,
+						pem->cap_delta);
 					if (ret != 0) pem->cap_delta = 0;
 					update_fg_delta(pem);
 					pem->fg_cap_cal = 0;
@@ -1196,9 +1401,10 @@ static void em_algorithm(struct work_struct *work)
 				pr_em(FLOW, "%s, High Volt cal.\n", __func__);
 			pem->cal_mode = CAL_MODE_NONE;
 		}
-		pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
+		pem->fg_capacity  = pem->fg_capacity_full * capacity;
+		pem->fg_capacity = div_s64(pem->fg_capacity, 100);
 		pem->batt_capacity = capacity;
-		pr_em(FLOW, "%s, cap thr volt map, v=%d, c=%d, cap_o=%d, cap_n=%d\n",
+		pr_em(FLOW, "%s, v=%d, c=%d, cap_o=%d, cap_n=%d\n",
 			__func__, pem->batt_volt, pem->batt_curr,
 			pem->batt_capacity, capacity);
 		pem->mode = MODE_IDLE;
@@ -1210,51 +1416,8 @@ static void em_algorithm(struct work_struct *work)
 		return;
 	}
 
-
-	if (pem->piggyback_chrg == 0) {
-	/* fixme */
-	if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE) {
-		if (pem->charge_state == CHRG_STATE_MAINT){
-			if ((pem->batt_volt < pem->chrg_resume_lvl) ||
-			    (pem->resume_chrg == 1)) {
-				pem->resume_chrg = 0;
-				if (bcmpmu->chrgr_usb_maint)
-					bcmpmu->chrgr_usb_maint(bcmpmu, 0);
-				pem->charge_state = CHRG_STATE_CHRG;
-			}
-		} else if (pem->charge_state != CHRG_STATE_CHRG) {
-			if (bcmpmu->get_env_bit_status(bcmpmu, PMU_ENV_USB_VALID) == true)
-				pem->charge_state = CHRG_STATE_CHRG;
-			else {
-				if (pem->chrgr_curr != 0) {
-					bcmpmu->chrgr_usb_en(bcmpmu, 1);
-					pr_em(FLOW, "%s, charger not ready yet.\n", __func__);
-					pem->mode = MODE_IDLE;
-					schedule_delayed_work(&pem->work,
-						msecs_to_jiffies(get_update_rate(pem)));
-					return;
-				}
-			}
-		} else {
-			if ((pem->bcmpmu->usb_accy_data.usb_dis == 1) &&
-			    (pem->chrgr_curr != 0)){
-				pem->bcmpmu->usb_accy_data.usb_dis = 0;
-				pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 1);
-			}
-			if ((pem->bcmpmu->usb_accy_data.usb_dis == 0) &&
-			    (pem->chrgr_curr == 0)){
-				pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 0);
-				pem->bcmpmu->usb_accy_data.usb_dis = 1;
-			}
-		}
-	} else if (pem->charge_state != CHRG_STATE_IDLE) {
-		bcmpmu->set_vfloat(bcmpmu, 0);
-		bcmpmu->set_icc_fc(bcmpmu, 0);
-		bcmpmu->chrgr_usb_en(bcmpmu, 0);
-		pem->charge_state = CHRG_STATE_IDLE;
-		pem->charge_zone = CHRG_ZONE_OUT;
-	}
-	}
+	ret = update_adc_readings(pem);
+	charging_algorithm(pem);
 
 	if (pem->transition != 0) {
 		pem->mode = MODE_TRANSITION;
@@ -1263,135 +1426,47 @@ static void em_algorithm(struct work_struct *work)
 		pem->transition = 0;
 	} else {
 		calibration = update_batt_capacity(pem, &capacity);
-		if (pem->chrgr_type == PMU_CHRGR_TYPE_NONE) {
+		if (!is_charger_present(pem)) {
 			if (pem->batt_volt > 3600)
 				pem->mode = MODE_HIGHBAT;
 			else
 				pem->mode = MODE_LOWBAT;
-		} else
-			pem->mode = MODE_CHRG;
+		} else {
+			if (pem->charge_state == CHRG_STATE_MAINT)
+				pem->mode = MODE_CHRG_MAINT;
+			else
+				pem->mode = MODE_CHRG;
+		}
 	}
 
 	if (calibration != 0) {
 		pem->mode = MODE_POLL;
 		poll_count = POLL_SAMPLES;
 		vacc = 0;
-		schedule_delayed_work(&pem->work, msecs_to_jiffies(get_update_rate(pem)));
+		schedule_delayed_work(&pem->work,
+			msecs_to_jiffies(get_update_rate(pem)));
 		return;
 	}
 
-	if (pem->piggyback_chrg == 0) {  /* fixme */
-	ps = power_supply_get_by_name("battery");
 
-	if (pem->chrgr_type == PMU_CHRGR_TYPE_NONE) {
-		if (pem->chrgr_curr != 0) {
-			bcmpmu->set_icc_fc(bcmpmu, 0);
-			pem->chrgr_curr = 0;
-			bcmpmu->chrgr_usb_en(bcmpmu, 0);
-		}
-		if ((ps) && (pem->batt_status != POWER_SUPPLY_STATUS_DISCHARGING)) {
-			propval.intval = POWER_SUPPLY_STATUS_DISCHARGING;
-			ps->set_property(ps, POWER_SUPPLY_PROP_STATUS, &propval);
-			pem->batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
-			pr_em(FLOW, "%s, transition to discharging\n", __func__);
-			psy_changed = 1;
-		}
-	} else {
-		if (capacity == 100) {
-			if ((ps) && (pem->batt_status != POWER_SUPPLY_STATUS_FULL)) {
-				propval.intval = POWER_SUPPLY_STATUS_FULL;
-				ps->set_property(ps, POWER_SUPPLY_PROP_STATUS, &propval);
-				pem->batt_status = POWER_SUPPLY_STATUS_FULL;
-				pr_em(FLOW, "%s, transition to fully charged\n", __func__);
-				psy_changed = 1;
-			}
-		} else {
-			if ((ps) && (pem->batt_status != POWER_SUPPLY_STATUS_CHARGING)) {
-				propval.intval = POWER_SUPPLY_STATUS_CHARGING;
-				ps->set_property(ps, POWER_SUPPLY_PROP_STATUS, &propval);
-				pem->batt_status = POWER_SUPPLY_STATUS_CHARGING;
-				pr_em(FLOW, "%s, transition to charging\n", __func__);
-				psy_changed = 1;
-			}
-		}
-		charge_zone = -1;
-		while (charge_zone != pem->charge_zone) {
-			charge_zone = pem->charge_zone;
-			update_charge_zone(pem);
-		}
-	}
-	propval.intval = pem->batt_volt;
-	ps->set_property(ps, POWER_SUPPLY_PROP_VOLTAGE_NOW, &propval);
-
-	if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
+	if ((!is_charger_present(pem)) &&
 	    (pem->fg_comp_mode == 0) &&
 	    (capacity > pem->batt_capacity))
 		capacity = pem->batt_capacity;
 
-	propval.intval = capacity;
-	ps->set_property(ps, POWER_SUPPLY_PROP_CAPACITY, &propval);
-	if (pem->batt_capacity != capacity)
-		psy_changed = 1;
+	update_power_supply(pem, capacity);
+
 	pem->batt_capacity = capacity;
 	pr_em(REPORT, "%s, update capacity=%d, volt=%d, curr=%d\n",
 		__func__, capacity, pem->batt_volt, pem->batt_curr);
 	save_fg_cap(pem->bcmpmu, capacity);
 
-	propval.intval = pem->batt_temp;
-	ps->set_property(ps, POWER_SUPPLY_PROP_TEMP, &propval);
+	schedule_delayed_work(&pem->work,
+		msecs_to_jiffies(get_update_rate(pem)));
 
-	propval.intval = em_batt_get_capacity_lvl(pem, capacity);
-	ps->set_property(ps, POWER_SUPPLY_PROP_CAPACITY_LEVEL, &propval);
-	if (pem->batt_capacity_lvl != propval.intval)
-		psy_changed = 1;
-	pem->batt_capacity_lvl = propval.intval;
-
-	propval.intval = em_batt_get_batt_health(bcmpmu,
-					pem->batt_volt, pem->batt_temp);
-	ps->set_property(ps, POWER_SUPPLY_PROP_HEALTH, &propval);
-	if (pem->batt_health != propval.intval)
-		psy_changed = 1;
-	if (pem->batt_health != propval.intval)
-		psy_changed = 1;
-	pem->batt_health = propval.intval;
-
-	/* tbd for battery detection */
-	propval.intval = 1;
-	ps->set_property(ps, POWER_SUPPLY_PROP_PRESENT, &propval);
-	if (pem->batt_present != propval.intval)
-		psy_changed = 1;
-	pem->batt_present = propval.intval;
-
-	if (psy_changed)
-		power_supply_changed(ps);
-
-	} else { /* fixme */
-	if ((pem->chrgr_type == PMU_CHRGR_TYPE_NONE) &&
-	    (pem->fg_comp_mode == 0) &&
-	    (capacity > pem->batt_capacity))
-		capacity = pem->batt_capacity;
-
-	pem->batt_capacity = capacity;
-	pr_em(REPORT, "%s, update capacity=%d, volt=%d, curr=%d\n",
-		__func__, capacity, pem->batt_volt, pem->batt_curr);
-	save_fg_cap(pem->bcmpmu, capacity);
-	}  /* fixme */
-
-
-	schedule_delayed_work(&pem->work, msecs_to_jiffies(get_update_rate(pem)));
-
-	if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE)
-		pr_em(FLOW, "%s, cstate=%d, ctype=%d, ccurr=%d, czone=%d, ifc=%d, iqc=%d, vf=%d\n",
-		__func__, pem->charge_state, pem->chrgr_type, pem->chrgr_curr, pem->charge_zone,
-				pem->icc_fc, pem->icc_qc, pem->vfloat);
-	pr_em(FLOW, "%s, update rate=%d\n", __func__, get_update_rate(pem));
-
-	/* Workaround for bcm59039 as its watchdog is enabled by otp,
-	 and can't be disabled. This wordaround needs to be removed
-	 once pmu watchdog driver in place*/
-	bcmpmu->write_dev(bcmpmu, PMU_REG_SYS_WDT_CLR,
-		bcmpmu->regmap[PMU_REG_SYS_WDT_CLR].mask,
-		bcmpmu->regmap[PMU_REG_SYS_WDT_CLR].mask);
+	pr_em(FLOW, "%s, mode=%d, cstate=%d, update rate=%d\n",
+		__func__, pem->mode,
+		pem->charge_state, get_update_rate(pem));
 
 	pem->time = get_seconds();
 }
@@ -1402,11 +1477,12 @@ static int em_event_handler(struct notifier_block *nb,
 	struct bcmpmu_em *pem = container_of(nb, struct bcmpmu_em, nb);
 	int capacity_v;
 	struct bcmpmu_adc_req req;
+	int data = 0;
 	
 	switch(event) {
 	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
 		pem->chrgr_type = *(enum bcmpmu_chrgr_type_t *)para;
-		if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE)
+		if (is_charger_present(pem))
 			pem->fg_cap_cal = 0;
 		else if (pem->batt_capacity >= 30)
 			pem->fg_lowbatt_cal = 1;
@@ -1419,7 +1495,6 @@ static int em_event_handler(struct notifier_block *nb,
 		pem->chrgr_curr = *(int *)para;
 		pem->force_update = 1;
 		pr_em(FLOW, "%s, chrgr curr=%d\n", __func__, pem->chrgr_curr);
-
 		break;
 
 	case BCMPMU_FG_EVENT_FGC:
@@ -1432,16 +1507,38 @@ static int em_event_handler(struct notifier_block *nb,
 		if ((pem->batt_capacity > (capacity_v + 10)) ||
 			((pem->batt_capacity + 10) < (capacity_v))) {
 			pem->batt_capacity = capacity_v;
-			pem->fg_capacity = (pem->fg_capacity_full * capacity_v)/100;
+			pem->fg_capacity = pem->fg_capacity_full * capacity_v;
+			pem->fg_capacity = div_s64(pem->fg_capacity, 100);
 			pem->fg_cap_cal = 0;
 		}
 		pr_em(FLOW, "%s, fgc event\n", __func__);
+		break;
 
 	case BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS:
-		if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE)
+		if (is_charger_present(pem))
 			pem->resume_chrg = 1;
 		pr_em(FLOW, "%s, resume vbus event\n", __func__);
+		break;
 
+	case BCMPMU_CHRGR_EVENT_EOC:
+		if (pem->charge_state == CHRG_STATE_CHRG)
+			pem->eoc_state = 1;
+		pr_em(FLOW, "%s, eoc event, eoc_state=%d\n",
+			__func__, pem->eoc_state);
+		break;
+
+	case BCMPMU_CHRGR_EVENT_CHRG_STATUS:
+		if (para) {
+			data = *(int *)para;
+			if (data == POWER_SUPPLY_STATUS_CHARGING) {
+				pem->charge_state = CHRG_STATE_CHRG;
+				pem->eoc_state = 0;
+			} else if (data == POWER_SUPPLY_STATUS_DISCHARGING)
+				pem->charge_state = CHRG_STATE_IDLE;
+		} else
+			pr_em(ERROR, "%s, no data avail.\n", __func__);
+		pr_em(FLOW, "%s, chrg sts event, data=%d, state=%d\n",
+			__func__, data, pem->charge_state);
 		break;
 	default:
 		break;
@@ -1494,7 +1591,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 		pem->fg_capacity_full = pdata->fg_capacity_full;
 	else
 		pem->fg_capacity_full = 1000*3600;
-	pem->fg_capacity = pem->fg_capacity_full/2;
+	pem->fg_capacity = pem->fg_capacity_full;
 
 	if (pdata->batt_voltcap_map) {
 		pem->bvcap = pdata->batt_voltcap_map;
@@ -1515,6 +1612,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 		pem->eoc = pdata->chrg_eoc;
 	else
 		pem->eoc = 50;
+	pem->support_hw_eoc = pdata->support_hw_eoc;
 	if (pdata->batt_impedence)
 		pem->esr = pdata->batt_impedence;
 	else
@@ -1569,19 +1667,38 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	pem->nb.notifier_call = em_event_handler;
 	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &pem->nb);
 	if (ret) {
-		pr_em(INIT, "%s, failed to register chrgr det notifier, err=%d\n",
+		pr_em(INIT, "%s, failed on chrgr det notifier, err=%d\n",
 			__func__, ret);
 		goto err;
 	}
 	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT, &pem->nb);
 	if (ret) {
-		pr_em(INIT, "%s, failed to register chrgr curr lmt notifier, err=%d\n",
+		pr_em(INIT, "%s, failed on chrgr curr lmt notifier, err=%d\n",
 			__func__, ret);
 		goto err;
 	}
 	ret = bcmpmu_add_notifier(BCMPMU_FG_EVENT_FGC, &pem->nb);
 	if (ret) {
-		pr_em(INIT, "%s, failed to register fgc notifier, err=%d\n",
+		pr_em(INIT, "%s, failed on fgc notifier, err=%d\n",
+			__func__, ret);
+		goto err;
+	}
+	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
+		&pem->nb);
+	if (ret) {
+		pr_em(INIT, "%s, failed on resume vbus notifier, err=%d\n",
+			__func__, ret);
+		goto err;
+	}
+	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_EOC, &pem->nb);
+	if (ret) {
+		pr_em(INIT, "%s, failed on eoc notifier, err=%d\n",
+			__func__, ret);
+		goto err;
+	}
+	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_STATUS, &pem->nb);
+	if (ret) {
+		pr_em(INIT, "%s, failed on chrg status notifier, err=%d\n",
 			__func__, ret);
 		goto err;
 	}
@@ -1601,10 +1718,17 @@ err:
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_em_attr_group);
 #endif
-	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &pem->nb);
-	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT, &pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+		&pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+		&pem->nb);
 	ret = bcmpmu_remove_notifier(BCMPMU_FG_EVENT_FGC, &pem->nb);
-	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS, &pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
+		&pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_EOC,
+		&pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_STATUS,
+		&pem->nb);
 	kfree(pem);
 	return ret;
 }
@@ -1620,10 +1744,17 @@ static int __devexit bcmpmu_em_remove(struct platform_device *pdev)
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_em_attr_group);
 #endif
-	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &pem->nb);
-	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT, &pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+		&pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+		&pem->nb);
 	ret = bcmpmu_remove_notifier(BCMPMU_FG_EVENT_FGC, &pem->nb);
-	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS, &pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
+		&pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_EOC,
+		&pem->nb);
+	ret = bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_STATUS,
+		&pem->nb);
 	kfree(pem);
 
 	return 0;
@@ -1641,7 +1772,7 @@ static int bcmpmu_em_resume(struct platform_device *pdev)
 	unsigned long time;
 	time = get_seconds();
 
-	if ((time - pem->time)*1000 > get_update_rate(pem)) {
+	if ((time - pem->time) * 1000 > get_update_rate(pem)) {
 		cancel_delayed_work_sync(&pem->work);
 		schedule_delayed_work(&pem->work, 0);
 	}

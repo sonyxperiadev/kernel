@@ -44,6 +44,7 @@ struct bcmpmu_batt {
 	wait_queue_head_t wait;
 	struct mutex lock;
 	char model[20];
+	int batt_temp_in_celsius;
 };
 
 static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
@@ -102,6 +103,7 @@ static int bcmpmu_get_batt_property(struct power_supply *battery,
 	int ret = 0;
 	struct bcmpmu_batt *pbatt =
 		container_of(battery, struct bcmpmu_batt, batt);
+	struct bcmpmu_adc_req req;
 
 	switch (property) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -125,7 +127,17 @@ static int bcmpmu_get_batt_property(struct power_supply *battery,
 		break;
 
 	case POWER_SUPPLY_PROP_TEMP:
-		propval->intval = pbatt->state.temp;
+		req.sig = PMU_ADC_NTC;
+		req.tm = PMU_ADC_TM_HK;
+		req.flags = PMU_ADC_RAW_AND_UNIT;
+		if (pbatt->bcmpmu->adc_req) {
+			pbatt->bcmpmu->adc_req(pbatt->bcmpmu, &req);
+			if (pbatt->batt_temp_in_celsius)
+				propval->intval = req.cnv;
+			else
+				propval->intval = (req.cnv - 273) * 10;
+		} else
+			ret = -ENODATA;
 		break;
 
 	case POWER_SUPPLY_PROP_HEALTH:
@@ -170,14 +182,6 @@ static int bcmpmu_set_batt_property(struct power_supply *ps,
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		pbatt->state.voltage = propval->intval;
-		break;
-
-	case POWER_SUPPLY_PROP_TEMP:
-		pbatt->state.temp = propval->intval;
-		break;
-
-	case POWER_SUPPLY_PROP_HEALTH:
-		pbatt->state.health = propval->intval;
 		break;
 
 	case POWER_SUPPLY_PROP_PRESENT:
@@ -274,7 +278,8 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	mutex_init(&pbatt->lock);
 	pbatt->bcmpmu = bcmpmu;
 	bcmpmu->battinfo = (void *)pbatt;
-	
+
+	pbatt->state.health = POWER_SUPPLY_HEALTH_GOOD;
 	pbatt->batt.properties = bcmpmu_batt_props;
 	pbatt->batt.num_properties = ARRAY_SIZE(bcmpmu_batt_props);
 	pbatt->batt.get_property = bcmpmu_get_batt_property;
@@ -282,6 +287,7 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	pbatt->batt.name = "battery";
 	pbatt->batt.type = POWER_SUPPLY_TYPE_BATTERY;
 	strcpy(pbatt->model, pdata->batt_model);
+	pbatt->batt_temp_in_celsius = pdata->batt_temp_in_celsius;
 	ret = power_supply_register(&pdev->dev, &pbatt->batt);
 	if (ret)
 		goto err;
