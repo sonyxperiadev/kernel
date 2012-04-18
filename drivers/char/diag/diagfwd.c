@@ -1710,6 +1710,7 @@ void diagfwd_init(void)
 {
 	diag_debug_buf_idx = 0;
 	driver->read_len_legacy = 0;
+	spin_lock_init(&diag_cntl_lock);
 
 	if (driver->event_mask == NULL) {
 		driver->event_mask = kzalloc(sizeof(
