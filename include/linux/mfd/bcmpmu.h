@@ -1241,7 +1241,6 @@ extern const unsigned int bcmpmu_chrgr_icc_qc_settings[PMU_CHRGR_QC_CURR_MAX];
 extern const unsigned int bcmpmu_chrgr_eoc_settings[PMU_CHRGR_EOC_CURR_MAX];
 extern const unsigned int bcmpmu_chrgr_vfloat_settings[PMU_CHRGR_VOLT_MAX];
 
-int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
 int bcmpmu_sel_adcsync(enum bcmpmu_adc_timing_t timing);
 
 int bcmpmu_init_pmurev_info(struct bcmpmu *bcmpmu);
