@@ -223,6 +223,21 @@ typedef struct {
 	UInt16 msgs[MAX_REG_MSGS]; /*copy only what is necessary ( 2 stage ) */
 } RpcPktRegMsgIds_t;
 
+//***************************************************************************************
+/**
+    Function callback to pass events for CP reset
+	@param		event (in ) RPC_CPRESET_START to indicate CP reset process
+			is starting; RPC_CPRESET_COMPLETE to indicat CP reset is
+			complete and normal RPC operations may resume
+	@param		interface (in) interface type callback is for
+	@return		None
+	@note
+		This callback is registered via RPC_PACKET_RegisterDataInd for Packet Data.
+
+**/
+typedef void (RPC_PACKET_CPResetCallbackFunc_t) (RPC_CPResetEvent_t event,
+					PACKET_InterfaceType_t interface);
+
 /******************************************************************************/
 /**
     Function callback to handle Flow control for RPC commands

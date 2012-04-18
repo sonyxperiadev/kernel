@@ -287,6 +287,24 @@ void HandleAudioEventReqCb(RPC_Msg_t *pMsg,
 #endif
 }
 
+=======
+static void HandleAudioCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
+{
+	/* **FIXME** MAG - what is needed to do here ? */
+	pr_info("HandleAudioCPResetCb: event %s client ID %d\n",
+		RPC_CPRESET_START==event?
+		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
+		clientID);
+
+	if (audioClientId != clientID)
+		pr_err("HandleAudioCPResetCb wrong cid expected %d got %d\n",
+			audioClientId, clientID);
+
+	/* for now, just ack that we're ready for reset */
+	if (RPC_CPRESET_START == event)
+		RPC_AckCPReset(audioClientId);
+}
+
 /*  AUDIO API CODE */
 #if defined(CONFIG_BCM_MODEM)
 void Audio_InitRpc(void)

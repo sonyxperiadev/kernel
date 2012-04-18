@@ -315,7 +315,51 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType,
 
 	netif_rx(skb);
 
-	return RPC_RESULT_OK;
+/* callback for CP silent reset events */
+void bcm_fuse_net_cp_reset_cb(RPC_CPResetEvent_t event,
+			PACKET_InterfaceType_t interface)
+{
+	int i;
+	struct net_device *dev_ptr = NULL;
+	
+	BNET_DEBUG(DBG_INFO, "event %s interface %d\n",
+		RPC_CPRESET_START==event?
+		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
+		interface);
+	
+	/* should just need to stop outgoing packet flow here
+	   until we get RPC_CPRESET_COMPLETE
+	*/
+	if ( event == RPC_CPRESET_START ) {
+		for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
+			if (g_net_dev_tbl[i].entry_stat == EInUse) {
+				dev_ptr = g_net_dev_tbl[i].dev_ptr;
+				netif_stop_queue(dev_ptr);
+				BNET_DEBUG( DBG_INFO,
+					"stopping interface %d\n",i );
+			}
+		
+		/* for now, just ack... */
+		RPC_PACKET_AckReadyForCPReset( 0, INTERFACE_PACKET );
+	} else if ( event == RPC_CPRESET_COMPLETE ) {
+		for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
+			if (g_net_dev_tbl[i].entry_stat == EInUse) {
+				dev_ptr = g_net_dev_tbl[i].dev_ptr;
+				if (netif_queue_stopped(dev_ptr)) {
+					netif_wake_queue(dev_ptr);
+					BNET_DEBUG( DBG_INFO,
+					"waking interface %d\n",i );
+				}
+			}
+	} else
+		BNET_DEBUG( DBG_INFO, "unexpected event %d\n", (int)event );	
+
+	/* **FIXME** MAG - net interfaces should be brought down as 
+	   part of CP reset (for Android, RIL or DUN will do this). Are
+	   there other situations where somebody else will need to bring
+	   down the interface?
+	*/
+	return;
 }
 
 static int bcm_fuse_net_open(struct net_device *dev)

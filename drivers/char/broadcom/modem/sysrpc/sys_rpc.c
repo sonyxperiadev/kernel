@@ -75,8 +75,26 @@ static void HandleSysEventRspCb(RPC_Msg_t *pMsg,
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 }
 
-static void SYS_GetPayloadInfo(SYS_ReqRep_t *reqRep, MsgType_t msgId,
-			       void **ppBuf, UInt32 *len)
+static void HandleSysCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
+{
+	/* **FIXME** MAG - what is needed to do here ? */
+	pr_info("HandleSysCPResetCb: event %s client %d\n",
+		RPC_CPRESET_START==event?
+		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
+		clientID);
+
+	if (RPC_SYS_GetClientID(sRPCHandle) != clientID) {
+		pr_err("HandleSysCPResetCb:\n");
+		pr_err("   wrong cid expected %d got %d\n",
+			RPC_SYS_GetClientID(sRPCHandle), clientID);
+	}
+
+	/* for now, just ack that we're ready... */
+	if ( RPC_CPRESET_START == event )
+		RPC_AckCPReset(clientID);
+}
+
+static void SYS_GetPayloadInfo(SYS_ReqRep_t* reqRep, MsgType_t msgId, void** ppBuf, UInt32* len)
 {
 	*ppBuf = NULL;
 	*len = 0;

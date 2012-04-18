@@ -591,6 +591,138 @@ static Int8 GetInterfaceType(IPC_EndpointId_T epId)
 	return -1;
 }
 
+
+/*
+-> central cp reset callback handler in rpc_ipc.c
+	-> who calls it?
+-> central handler init's 'ACK' field in ipcInfoList to "not ack'd"
+-> central handler runs all callbacks in ipcInfoList
+-> rpc_sys has it's own handler for various interface types
+	-> will handle callbacks for all clients of a given interface type
+-> provide 'ack' function in rpc_ipc.c and rpc_sys
+	-> in rpc_sys, handles for all clients of given type; if all ack'd,
+	calls ack in rpc_ipc for that interface type
+-> 'ack' function checks if all interfaces have ack'd; if so, notifies IP 
+	that it can reset 
+*/
+
+/* called when client of interfaceType is ready for silent CP reset; expected
+   to be called at some point after client's registered RPC_PACKET_CPResetCallbackFunc_t
+   is called.
+*/
+static Boolean sIsNotifyingCPReset;
+
+void CheckReadyForCPReset( void )
+{
+	PACKET_InterfaceType_t currIF;
+	Boolean ready = TRUE;
+
+	/* check if all init'd entries in ipcInfoList[] have ack'd
+	   if so, tell IPC CP can be reset; otherwise wait
+	   (IPC should set timer; if it expires before RPC says ready
+	   for reset, IPC should just crash AP as well)
+	*/
+	for (currIF = INTERFACE_START; currIF < INTERFACE_TOTAL; currIF++)
+		if ( ipcInfoList[currIF].isInit && 
+			((ipcInfoList[currIF].pktIndCb &&
+			!ipcInfoList[currIF].readyForCPReset) ||
+			 (ipcInfoList[currIF].filterPktIndCb &&
+			!ipcInfoList[currIF].filterReadyForCPReset))) {
+			/* haven't all ack'd yet, 
+			   so we're not ready for reset
+			*/
+			pr_info("CheckReadyForCPReset not done IF%d\n",
+									currIF);
+			ready = FALSE;
+			break;
+		}
+	
+	if ( ready )
+	{
+		pr_info("CheckReadyForCPReset done\n");
+		/* ready for start CP reset, so notify IPC here */
+		IPCAP_ReadyForReset( sIPCResetClientId );
+		
+		/* **FIXME** reset readyForCPReset flags here? 
+		   Or wait for reset complete event?
+		*/
+	}
+	pr_info("exit CheckReadyForCPReset\n");
+}
+
+/* callback from IPC to indicate status of CP reset process */
+void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
+{
+	RPC_CPResetEvent_t rpcEvent;
+	
+	pr_info("RPC_PACKET_CPResetHandler\n");
+	
+	sIsNotifyingCPReset = TRUE;
+	
+	rpcEvent= (inEvent==IPC_CPRESET_START)?
+			RPC_CPRESET_START:
+			RPC_CPRESET_COMPLETE;
+	RPC_PACKET_HandleNotifyCPReset( rpcEvent );
+
+	sIsNotifyingCPReset = FALSE;
+	
+	if ( inEvent==IPC_CPRESET_START )
+		CheckReadyForCPReset();
+		
+	pr_info("exit RPC_PACKET_CPResetHandler\n");
+}
+
+/* called to initiate notification of clients of start of CP reset */
+void RPC_PACKET_HandleNotifyCPReset( RPC_CPResetEvent_t inEvent )
+{
+	PACKET_InterfaceType_t currIF;
+	
+	for (currIF = INTERFACE_START; currIF < INTERFACE_TOTAL; currIF++)
+		if ( ipcInfoList[currIF].isInit ) {
+			if ( ipcInfoList[currIF].cpResetCb ) {
+				pr_info("RPC_PACKET_HandleNotifyCPReset\n");
+				pr_info("  notify IF %d\n", currIF);
+				ipcInfoList[currIF].cpResetCb(inEvent, currIF);
+			}
+			if (ipcInfoList[currIF].cpFilterResetCb) {
+				pr_info("RPC_PACKET_HandleNotifyCPReset\n");
+				pr_info("  notify fltr IF %d\n", currIF);
+				ipcInfoList[currIF].cpFilterResetCb(inEvent,
+								    currIF);
+			}
+		}
+}
+
+void RPC_PACKET_AckReadyForCPReset( UInt8 rpcClientID,
+				PACKET_InterfaceType_t interfaceType )
+{
+	if (rpcClientID) {
+	}
+	/*fixes compiler warnings */
+
+	ipcInfoList[interfaceType].readyForCPReset = TRUE;
+	
+	pr_info("RPC_PACKET_AckReadyForCPReset IF:%d\n",interfaceType);
+
+	if ( !sIsNotifyingCPReset )
+		CheckReadyForCPReset( );
+}
+
+void RPC_PACKET_FilterAckReadyForCPReset( UInt8 rpcClientID,
+					PACKET_InterfaceType_t interfaceType )
+{
+	if (rpcClientID) {
+	}
+	/*fixes compiler warnings */
+
+	ipcInfoList[interfaceType].filterReadyForCPReset = TRUE;
+	
+	pr_info("RPC_PACKET_FilterAckReadyForCPReset IF:%d\n",interfaceType);
+	
+	if ( !sIsNotifyingCPReset )
+		CheckReadyForCPReset( );
+}
+
 static void RPC_FlowCntrl(IPC_BufferPool Pool, IPC_FlowCtrlEvent_T Event)
 {
 	IPC_EndpointId_T epId = IPC_PoolSourceEndpointId(Pool);

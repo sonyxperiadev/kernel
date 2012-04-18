@@ -221,6 +221,8 @@ struct page *rpcipc_vma_nopage(struct vm_area_struct *vma,
 			       unsigned long address, int *type);
 
 /*****************************************************************/
+static void RPC_ServerCPResetCallback(RPC_CPResetEvent_t event,
+				PACKET_InterfaceType_t interfaceType);
 RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 			     UInt8 channel, PACKET_BufHandle_t dataBufHandle);
 static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
@@ -713,6 +715,41 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 	_DBG(RPC_TRACE("k:RPC_ServerRxCbk ret=%d\n", ret));
 
 	return ret;
+}
+
+/* handle notifcations of CP reset from rpc_ipc layer */
+void RPC_ServerCPResetCallback(RPC_CPResetEvent_t event,
+				PACKET_InterfaceType_t interfaceType)
+{
+	int k;
+
+	pr_info("RPC_ServerCPResetCallback: event %d interface %d\n",
+		  event, interfaceType);
+	
+	/* if we're already in process of resetting, just return */
+	if ( (gCPResetting && (event == RPC_CPRESET_START)) ||
+		(!gCPResetting && (event == RPC_CPRESET_COMPLETE)) ) {
+		pr_info("RPC_ServerCPResetCallback already handling event\n");
+		return;
+        }
+        
+        RPC_READ_LOCK;
+		
+	/* start of CP reset process; notify all user space clients */
+	gCPResetting = (event == RPC_CPRESET_START);
+	
+	for (k = 0; k < 0xFF; k++)
+		if ( gRpcClientList[k] ) {
+			pr_info("RPC_ServerCPResetCallback: client %d\n", k);
+			if ( event == RPC_CPRESET_START )
+				gRpcClientList[k]->ackdCPReset = 0;
+			RPC_ServerDispatchCPResetMsg(
+			      gRpcClientList[k]->info.interfaceType,
+				k, event );
+		}
+	
+	pr_info("RPC_ServerCPResetCallback: done\n");
+	RPC_READ_UNLOCK;
 }
 
 static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)

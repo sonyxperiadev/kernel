@@ -312,6 +312,27 @@ void HandleRTCSCEventRspCb(
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 }
 
+static void HandleRTCSCCPResetCb(RPC_CPResetEvent_t event,
+				UInt8 clientID)
+{
+	/* **FIXME** MAG - what is needed to do here ? */
+	pr_info("HandleRTCSCCPResetCb: event %s client %d\n",
+		RPC_CPRESET_START==event?
+		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
+		clientID);
+
+	if (clientID != RTCSCClientId) {
+		pr_err("HandleRTCSCCPResetCb wrong client ID\n");
+		pr_err("  expected %d got %d\n",
+			RTCSCClientId,
+			clientID);
+	}
+
+	/* for now, just ack that we're ready... */
+	if ( RPC_CPRESET_START == event )
+		RPC_AckCPReset(RTCSCClientId);
+}
+
 void RTCSC_InitRpc(void)
 {
 
