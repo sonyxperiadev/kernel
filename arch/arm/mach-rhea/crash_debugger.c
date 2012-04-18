@@ -27,7 +27,6 @@
 #include <linux/proc_fs.h>
 
 #include <mach/hardware.h>
-#include <mach/system.h>
 #include <mach/cdebugger.h>
 #include <linux/fs.h>
 
