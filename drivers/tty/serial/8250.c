@@ -82,7 +82,7 @@
 #endif
 
 #define UART_USR 31 /* UART status register */
-
+#define UART_RX_FIFO_LEVEL (0x21) /* UART Receive FIFO level register */
 /*
  * Configuration:
  *   share_irqs - whether we pass IRQF_SHARED to request_irq().  This option
@@ -275,7 +275,7 @@ static const struct serial8250_config uart_config[] = {
 		.name		= "16550A",
 		.fifo_size	= 256,
 		.tx_loadsz	= 256,
-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_11,
+		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
 		.flags		= UART_CAP_FIFO | UART_CAP_AFE,
 	},
 	[PORT_CIRRUS] = {
@@ -1574,6 +1574,17 @@ receive_chars(struct uart_8250_port *up, unsigned int *status)
 	unsigned char ch, lsr = *status;
 	int max_count = 256;
 	char flag;
+	int afe_status = 0;
+	int n_fifo;
+	int mcr;
+
+	/* Check whether Auto Flow control is enable in Modem control register */
+	mcr = serial_inp(up, UART_MCR);
+	if (mcr & UART_MCR_AFE) {
+		afe_status = 1;
+		/* Disabling Auto flow control */
+		serial_outp(up, UART_MCR, mcr & (~UART_MCR_AFE));
+	}
 
 
 #ifdef CONFIG_ARCH_RHEA
@@ -1678,12 +1689,36 @@ receive_chars(struct uart_8250_port *up, unsigned int *status)
 		if (uart_handle_sysrq_char(&up->port, ch))
 			goto ignore_char;
 
+		if (afe_status) {
+			/* Re-enable AFE if FIFO level go up. (this is not common)*/
+			n_fifo = serial_inp(up, UART_RX_FIFO_LEVEL);
+			/* FIXME: Currently this is added as a workaround for BT throughput.
+			 * Received data available interrpt is generated when FIFO is Half full.
+			 * Making sure we have enough time to clear the fifo by initially disabling
+			 * the auto flow control. When FIFO has more than 150 bytes, enable the auto
+			 * flow control so that we dont run into overrun condition. */
+			if (n_fifo >= 150) {
+				mcr = serial_inp(up, UART_MCR);
+				serial_outp(up, UART_MCR, mcr | (UART_MCR_AFE));
+				afe_status = 0;
+			}
+		}
+
 		uart_insert_char(&up->port, lsr, UART_LSR_OE, ch, flag);
 
 ignore_char:
 		lsr = serial_inp(up, UART_LSR);
 	} while ((lsr & (UART_LSR_DR | UART_LSR_BI)) && (max_count-- > 0));
 	spin_unlock(&up->port.lock);
+
+
+	/* Keep the Auto flow control to its pervious state.*/
+	if (afe_status) {
+		/* MUST enable AFE when exit this routine */
+		mcr = serial_inp(up, UART_MCR);
+		serial_outp(up, UART_MCR, mcr | (UART_MCR_AFE));
+	}
+
 	tty_flip_buffer_push(tty);
 	spin_lock(&up->port.lock);
 	*status = lsr;
@@ -3659,7 +3694,7 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
 
 #ifdef CONFIG_ARCH_RHEA
 #if defined(CONFIG_HAS_WAKELOCK)
-		wake_lock_init(&uart->uart_lock, WAKE_LOCK_SUSPEND, "UARTWAKE");
+		wake_lock_init(&uart->uart_lock, WAKE_LOCK_IDLE, "UARTWAKE");
 #endif
 		ret = pi_mgr_qos_add_request(&uart->qos_tx_node,(char *)clk_name,
 			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
