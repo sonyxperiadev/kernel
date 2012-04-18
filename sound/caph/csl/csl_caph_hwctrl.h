@@ -334,6 +334,13 @@ enum __BT_MODE_t {
 };
 #define BT_MODE_t enum __BT_MODE_t
 
+
+struct classg_G_ctrl {
+	UInt8 HS_DS_LAG;
+	UInt8 HS_DS_DELAY;
+	Boolean HS_DS_POLARITY;
+	UInt32 HS_DS_THRES;
+};
 /**
 *
 *  @brief  initialize the caph HW control CSL
@@ -773,6 +780,17 @@ CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
 *
 *****************************************************************************/
 void csl_caph_SetSRC26MClk(Boolean is26M);
+
+/****************************************************************************
+*  @brief   Headset Driver Supply Indicator Control for
+*				class G control
+*
+*  @param    struct classg_G_ctrl *pClassG
+*
+*  @return
+****************************************************************************/
+void csl_caph_classG_ctrl(struct classg_G_ctrl *pClassG);
+
 
 #if defined(CONFIG_BCM_MODEM)
 /****************************************************************************

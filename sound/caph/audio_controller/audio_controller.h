@@ -822,4 +822,18 @@ void ReloadUserVolSettingFromSysparm(void);
 ****************************************************************************/
 void AUDCTRL_ConfigWait(int wait_id, int wait_length);
 
+/********************************************************************
+*  @brief  Configure Headset Driver Supply Indicator for Class G control
+*
+*  @param
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_EnableHS_SuplyCtrl(UInt8 hs_ds_lag,
+						UInt8 hs_ds_delay,
+						Boolean hs_ds_polarity,
+						UInt32 hs_ds_thres);
+
+
 #endif /* #define __AUDIO_CONTROLLER_H__ */

@@ -4853,3 +4853,19 @@ void csl_caph_SetSRC26MClk(Boolean is26M)
 {
 	use26MClk = is26M;
 }
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_classG_ctrl
+*
+*  Description: Set Headset Driver Supply Indicator Control Register for
+*				class G control
+*
+*****************************************************************************/
+void csl_caph_classG_ctrl(struct classg_G_ctrl *pClassG)
+{
+	chal_audio_hspath_turn_on_pmu_signal();
+	chal_audio_hspath_hs_supply_ctrl(lp_handle, pClassG->HS_DS_POLARITY,
+		pClassG->HS_DS_DELAY, pClassG->HS_DS_LAG);
+	chal_audio_hspath_hs_supply_thres(lp_handle, pClassG->HS_DS_THRES);
+}

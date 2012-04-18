@@ -2897,4 +2897,18 @@ Boolean chal_audio_adcpath_global_enable_status(CHAL_HANDLE handle);
 
 cVoid chal_audio_adcpath_fifo_global_clear(CHAL_HANDLE handle, Boolean clear);
 
+/**
+*
+* Function Name: chal_audio_hspath_turn_on_pmu_signal
+*
+* Description:  Select CLass G as output in STAT2 Register
+*
+* Parameters:  None.
+* Return:      None.
+*
+*****************************************************************************/
+
+cVoid chal_audio_hspath_turn_on_pmu_signal(cVoid);
+
+
 #endif /* _CHAL_CAPH_AUDIOH_ */

@@ -3652,3 +3652,29 @@ void AUDCTRL_ConfigWait(int wait_id, int wait_length)
 	aTrace(LOG_AUDIO_CNTLR, "%s wait id %d length %d to %d us\n",
 		__func__, wait_id, old_wait, new_wait);
 }
+
+/****************************************************************************
+*
+* Function Name: AUDCTRL_EnableHS_SuplyCtrl
+*
+* Description:   Headset Driver Supply Indicator Control for
+*				class G output
+*
+****************************************************************************/
+void AUDCTRL_EnableHS_SuplyCtrl(UInt8 hs_ds_lag,
+						UInt8 hs_ds_delay,
+						Boolean hs_ds_polarity,
+						UInt32 hs_ds_thres)
+{
+	struct classg_G_ctrl classG;
+
+	classG.HS_DS_LAG = hs_ds_lag;
+	classG.HS_DS_DELAY = hs_ds_delay;
+	classG.HS_DS_POLARITY = hs_ds_polarity;
+	classG.HS_DS_THRES = hs_ds_thres;
+
+	csl_caph_classG_ctrl(&classG);
+
+}
+
+

@@ -1079,6 +1079,22 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			}
 		}
 		break;
+	case 1100:		/*tune Class G setting */
+		{
+			UInt8 hs_ds_lag;
+			UInt8 hs_ds_delay;
+			Boolean hs_ds_polarity;
+			UInt32 hs_ds_thres;
+
+			hs_ds_lag = Params[1];
+			hs_ds_delay = Params[2];
+			hs_ds_polarity = Params[3];
+			hs_ds_thres = Params[4];
+
+			AUDCTRL_EnableHS_SuplyCtrl(hs_ds_lag,
+				hs_ds_delay, hs_ds_polarity, hs_ds_thres);
+		}
+		break;
 
 	default:
 		aTrace(LOG_AUDIO_DRIVER,
