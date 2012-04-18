@@ -75,10 +75,6 @@ struct rhea_fb {
 	struct completion thread_sem;
 	struct mutex update_sem;
 	struct completion prev_buf_done_sem;
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON)  \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) &&	!defined(CONFIG_MACH_RHEA_STONE_EDN2X)
-	struct completion refresh_wait_sem;
-#endif
 	atomic_t buff_idx;
 	atomic_t is_fb_registered;
 	atomic_t is_graphics_started;
@@ -455,50 +451,6 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 }
 #endif
 
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40)  && !defined(CONFIG_MACH_RHEA_STONE) && !defined(CONFIG_MACH_RHEA_STONE_EDN2X)
-
-static int rhea_refresh_thread(void *arg)
-{
-	struct rhea_fb *fb = arg;
-
-	wait_for_completion(&fb->thread_sem);
-
-	do {
-		wait_for_completion(&fb->refresh_wait_sem);
-		mutex_lock(&fb->update_sem);
-		if (0 == fb->g_stop_drawing) {
-			rhea_clock_start(fb);
-			fb->display_ops->update(fb->display_hdl, fb->buff0,
-						NULL, NULL);
-			rhea_clock_stop(fb);
-			fb->base_update_count++;
-		}
-		mutex_unlock(&fb->update_sem);
-	} while (1);
-
-	rheafb_debug("RHEA refresh thread is exiting!\n");
-	return 0;
-}
-
-static int vt_notifier_call(struct notifier_block *blk,
-			    unsigned long code, void *_param)
-{
-	switch (code) {
-	case VT_UPDATE:
-		complete(&g_rhea_fb->refresh_wait_sem);
-		break;
-	}
-
-	return 0;
-}
-
-static struct notifier_block vt_notifier_block = {
-	.notifier_call = vt_notifier_call,
-};
-
-#endif /* !CONFIG_MACH_RHEA_RAY_EDN1X  && !CONFIG_MACH_RHEA_RAY_EDN2X && !CONFIG_MACH_RHEA_SS_COMMON */
-
 static struct fb_ops rhea_fb_ops = {
 	.owner = THIS_MODULE,
 	.fb_check_var = rhea_fb_check_var,
@@ -574,17 +526,6 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		fb->is_display_found = 1;
 	}
 
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) && !defined(CONFIG_MACH_RHEA_STONE_EDN2X)
-
-	init_completion(&fb->refresh_wait_sem);
-
-	fb->thread = kthread_run(rhea_refresh_thread, fb, "lcdrefresh_d");
-	if (IS_ERR(fb->thread)) {
-		ret = PTR_ERR(fb->thread);
-		goto thread_create_failed;
-	}
-#endif
 	framesize = fb->display_info->width * fb->display_info->height *
 	    fb->display_info->Bpp * 2;
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
@@ -706,12 +647,6 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_fb_registered, 1);
 	rheafb_info("RHEA Framebuffer probe successfull\n");
 
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) && !defined(CONFIG_MACH_RHEA_STONE_EDN2X)
-
-	register_vt_notifier(&vt_notifier_block);
-#endif
-
 #ifdef CONFIG_LOGO
 	fb_prepare_logo(&fb->fb, 0);
 	fb_show_logo(&fb->fb, 0);
@@ -756,11 +691,6 @@ err_enable_display_failed:
 	fb->display_ops->stop(&fb->dfs_node);
 #endif
 err_fbmem_alloc_failed:
-#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI) && !defined(CONFIG_MACH_RHEA_RAY_EDN2X) && !defined(CONFIG_MACH_RHEA_SS_COMMON) \
-	&& !defined(CONFIG_MACH_RHEA_RAY_DEMO) && !defined(CONFIG_MACH_RHEA_BERRI_EDN40) && !defined(CONFIG_MACH_RHEA_STONE) && !defined(CONFIG_MACH_RHEA_STONE_EDN2X)
-
-thread_create_failed:
-#endif
 	if (pi_mgr_dfs_request_remove(&fb->dfs_node)) {
 		printk(KERN_ERR "Failed to remove dfs request for LCD\n");
 	}
