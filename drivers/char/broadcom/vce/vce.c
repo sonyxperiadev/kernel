@@ -43,7 +43,7 @@ the GPL, without Broadcom's express prior written consent.
 /* Private configuration stuff -- not part of exposed API */
 #include "vtqinit_priv.h"
 
-#define DRIVER_VERSION 10111
+#define DRIVER_VERSION 10112
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -310,7 +310,7 @@ static int wire_interrupt_handler(void)
 	if (!vce_state.isr_installed) {
 		int s;
 		s = request_irq(IRQ_VCE, vce_isr,
-				IRQF_DISABLED | IRQF_TRIGGER_RISING,
+				IRQF_TRIGGER_HIGH,
 				VCE_DEV_NAME, NULL);
 		if (s != 0) {
 			err_print("request_irq failed s = %d\n", s);
