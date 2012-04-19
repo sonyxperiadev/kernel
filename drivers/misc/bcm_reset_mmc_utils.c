@@ -41,6 +41,7 @@
 #include <linux/completion.h>
 #include <linux/bio.h>
 #include <linux/mmc/core.h>
+#include <plat/kona_reset_reason.h>
 
 static struct raw_hd_struct *mmc_misc_hd;
 static void *bounce;
@@ -265,6 +266,11 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 		pr_debug("%s written back to BCB bcb->recovery %s "
 					"bcb->commadn %s\n",
 					__func__, bcb->recovery, bcb->command);
+	}
+
+	if (!strncmp(v, "ap_only", 7)) {
+		pr_info("Rebooting with ap_only mode\n");
+		do_set_ap_only_boot();
 	}
 
       clean_up:

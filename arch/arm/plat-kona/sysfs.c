@@ -26,6 +26,7 @@
 #include <linux/reboot.h>
 #include <linux/kmsg_dump.h>
 #include <linux/mfd/bcmpmu.h>
+#include <plat/kona_reset_reason.h>
 
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS
 #include <mach/kona_timer.h>
@@ -33,24 +34,86 @@
 
 struct kobject *bcm_kobj;
 
-#define REG_EMU_AREA 0x3404BF90
-
 static char *str_reset_reason[] = {
 	"power_on_reset",
 	"soft_reset",
 	"charging",
+	"ap_only",
 	"unknown"
 };
+
+static void set_emu_reset_reason(unsigned int const emu, int val)
+{
+	unsigned int *rst = (unsigned int *)ioremap(emu, 0x4);
+	unsigned short soc0 = 0;
+
+	soc0 = *rst;
+	soc0 &= ~(0xf);
+	soc0 |= val;
+	*rst = soc0;
+
+	pr_debug("%s: Reset reason: 0x%x", __func__, *rst);
+
+	iounmap(rst);
+}
+
+static unsigned int get_emu_reset_reason(unsigned int const emu)
+{
+	unsigned int *reset_reason = (unsigned int *)ioremap(emu, 0x4);
+	unsigned int rst;
+
+	pr_debug("%s: reset_reason 0x%x\n", __func__, *reset_reason);
+
+	rst = (*reset_reason) & 0xf;
+
+	iounmap(reset_reason);
+
+	return rst;
+}
+
+void do_set_ap_only_boot(void)
+{
+	pr_debug("%s\n", __func__);
+	set_emu_reset_reason(REG_EMU_AREA, AP_ONLY_BOOT);
+}
+EXPORT_SYMBOL(do_set_ap_only_boot);
+
+void do_clear_ap_only_boot(void)
+{
+	unsigned int rst;
+
+	rst = get_emu_reset_reason(REG_EMU_AREA);
+	rst = (rst & 0xf) & ~(AP_ONLY_BOOT);
+
+	set_emu_reset_reason(REG_EMU_AREA, rst);
+}
+EXPORT_SYMBOL(do_clear_ap_only_boot);
+
+/**
+ * This API checks to see if kernel boot is done for AP_ONLY mode
+ * Return Values:
+ * 1 = ap-only mode
+ * 0 = AP + CP mode
+ *
+ */
+unsigned int is_ap_only_boot(void)
+{
+	unsigned int rst;
+
+	rst = get_emu_reset_reason(REG_EMU_AREA);
+	rst = rst & 0xf;
+
+	pr_debug("%s\n reset_reason = 0x%x", __func__, rst);
+	return (rst == AP_ONLY_BOOT) ? 1 : 0;
+}
+EXPORT_SYMBOL(is_ap_only_boot);
 
 static ssize_t
 reset_reason_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	unsigned int index, *reset_reason, rst;
+	unsigned int index, rst;
 
-	reset_reason = (unsigned int *)ioremap(REG_EMU_AREA, 0x4);
-	pr_debug("%s: reset_reason 0x%x\n", __func__, *reset_reason);
-	rst = *reset_reason;
-	rst &= 0xf;
+	rst = get_emu_reset_reason(REG_EMU_AREA);
 
 	switch (rst) {
 	case 0x1:
@@ -59,6 +122,9 @@ reset_reason_show(struct device *dev, struct device_attribute *attr, char *buf)
 	case 0x3:
 		index = 2;
 		break;
+	case 0x4:
+		index = 3;
+		break;
 	default:
 		index = 0;
 	}
@@ -66,7 +132,6 @@ reset_reason_show(struct device *dev, struct device_attribute *attr, char *buf)
 	pr_debug("%s: reset reason index %d\n", __func__, index);
 	sprintf(buf, "%s\n", str_reset_reason[index]);
 
-	iounmap(reset_reason);
 	return strlen(str_reset_reason[index]) + 1;
 }
 
@@ -76,10 +141,7 @@ reset_reason_store(struct device *dev, struct device_attribute *attr,
 {
 	char reset_reason[32];
 	int i;
-	unsigned short soc0 = 0;
-	unsigned int *rst;
 
-	rst = (unsigned int *)ioremap(REG_EMU_AREA, 0x4);
 
 	if (sscanf(buf, "%s", reset_reason) == 1) {
 		pr_debug("%s: Reset reason: %s", __func__, reset_reason);
@@ -89,15 +151,11 @@ reset_reason_store(struct device *dev, struct device_attribute *attr,
 				break;
 		}
 
-		soc0 = *rst;
-		soc0 &= ~(0xf);
-		soc0 |= ((i + 1));
-		*rst = soc0;
+		set_emu_reset_reason(REG_EMU_AREA, (i + 1));
 
 		return n;
 	}
 
-	iounmap(rst);
 	return -EINVAL;
 }
 
