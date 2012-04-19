@@ -389,7 +389,7 @@ static int proc_fifo_read(char *buffer, char **start, off_t offset,
 		goto err_too_small;
 	}
 
-	len = sprintf(buffer, "%u/%u/%u\n"
+	len = snprintf(buffer, bytes, "%u/%u/%u\n"
 		"%d job(s) queued or running on VCE\n"
 		"%d job(s) completed but not acknowledged\n",
 		writeptr, readptr, ackptr,
@@ -402,7 +402,8 @@ static int proc_fifo_read(char *buffer, char **start, off_t offset,
 
 	ret = len;
 
-	BUG_ON(len > bytes);
+	BUG_ON(len > required_bytes - 1);
+	BUG_ON(ret > bytes);
 	BUG_ON(ret < 0);
 	return ret;
 
