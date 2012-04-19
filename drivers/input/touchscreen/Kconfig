@@ -764,6 +764,13 @@ config TOUCHSCREEN_TANGO
    help
      Say Y here if you have a Tango based touchscreen. If unsure, say N.
 
+config TOUCHSCREEN_FT5306
+   tristate "FT5306 Touchscreen"
+   depends on I2C
+   help
+     Say Y here if you have a Tango based touchscreen. If unsure, say N.
+
+
 config TOUCHSCREEN_W90X900
 	tristate "W90P910 touchscreen driver"
 	depends on HAVE_CLK
