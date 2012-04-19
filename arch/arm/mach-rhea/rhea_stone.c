@@ -933,9 +933,12 @@ static struct platform_device lq043y1dx01_dsi_display_device = {
 #define SENSOR_0_CLK			"dig_ch0_clk"
 #define SENSOR_0_CLK_FREQ		(13000000)
 
-#define SENSOR_1_GPIO_PWRDN		13
-#define SENSOR_1_CLK			"dig_ch0_clk"
+#define SENSOR_1_GPIO_PWRDN            (122)
+#define SENSOR_1_GPIO_RST              (99)
+#define SENSOR_1_CLK                   "dig_ch1_clk"
+#define SENSOR_1_CLK_FREQ              (13000000)
 
+#define TCM9001_I2C_ADDRESS (0x7C)
 #define OV5640_I2C_ADDRESS (0x3C)
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
@@ -943,6 +946,10 @@ static struct i2c_board_info rhea_i2c_camera[] = {
 	{
 	 I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
 	 },
+	{
+	I2C_BOARD_INFO("tcm9001", (TCM9001_I2C_ADDRESS >> 1)),
+	},
+
 };
 
 static int rhea_camera_power(struct device *dev, int on)
@@ -1100,11 +1107,137 @@ static struct soc_camera_link iclink_ov5640 = {
 	.priv =  &ov5640_if_params,
 };
 
-static struct platform_device rhea_camera = {
+static struct platform_device rhea_camera_back = {
 	.name = "soc-camera-pdrv",
 	.id = 0,
 	.dev = {
 		.platform_data = &iclink_ov5640,
+		},
+};
+
+static int rhea_camera_power_front(struct device *dev, int on)
+{
+	unsigned int value;
+	int ret = -1;
+	struct clk *clock;
+	struct clk *axi_clk;
+	static struct pi_mgr_dfs_node unicam_dfs_node;
+	printk(KERN_INFO "Rhea stone front camera power start %d\n", on);
+	if (!unicam_dfs_node.valid) {
+		ret =
+			pi_mgr_dfs_add_request(&unicam_dfs_node,
+				"unicam", PI_MGR_PI_ID_MM,
+				PI_MGR_DFS_MIN_VALUE);
+		if (ret) {
+			printk(KERN_INFO "PI DFS for front cl am\n");
+			return -1;
+		}
+		if (gpio_request_one
+			(SENSOR_1_GPIO_RST, GPIOF_DIR_OUT | GPIOF_INIT_LOW,
+				"Cam1Rst")) {
+			printk(KERN_ERR "SENSOR_1_GPIO_RST failed \n");
+			return -1;
+		}
+		if (gpio_request_one(SENSOR_1_GPIO_PWRDN, GPIOF_DIR_OUT |
+			GPIOF_INIT_LOW, "Cam1Pwr")) {
+			printk(KERN_ERR "SENSOR_1_GPIO_PWDN failed \n");
+			return -1;
+		}
+	}
+	/* Power on sequence start */
+	clock = clk_get(NULL, SENSOR_1_CLK);
+	if (!clock) {
+		printk(KERN_ERR "SENSOR_1_CLK get failed \n");
+		return -1;
+	} else {
+		printk("Got clock %s \n", SENSOR_1_CLK);
+	}
+	axi_clk = clk_get(NULL, "csi0_axi_clk");
+	if (!axi_clk) {
+		printk(KERN_ERR "unable to get clock csi0_axi_clk \n");
+	return -1;
+	}
+	if (on) {
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
+			printk(KERN_ERR " Unicam dfs update failed \n");
+			return -1;
+		}
+		value = clk_enable(axi_clk);
+		if (value) {
+			printk(KERN_ERR " AXI clock enable failed \n");
+		return -1;
+		}
+		clk_disable(clock);
+		/* Actual power up sequence starts here */
+		msleep(1);
+		gpio_set_value(SENSOR_1_GPIO_RST, 0);
+		printk(" PWDN set to HIGH ********** \n");
+		value = 0;
+		value = clk_set_rate(clock, SENSOR_1_CLK_FREQ);
+		if (value) {
+			printk("front cam clock rate fail %d\n", value);
+		}
+		value = clk_enable(clock);
+		if (value) {
+			printk(KERN_ERR"enabling clock for front cam fail \n");
+		} else {
+			printk(KERN_ERR"Enabled clock for front camera \n");
+		}
+		msleep(5);
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+		/* clk_set_rate returns the clock in the
+		same state it was in before calling */
+		/* So enable the clock now */
+		msleep(5);
+		gpio_set_value(SENSOR_1_GPIO_RST, 1);
+	} else {
+		gpio_set_value(SENSOR_1_GPIO_RST, 1);
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		clk_disable(clock);
+		clk_disable(axi_clk);
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
+			PI_MGR_DFS_MIN_VALUE)) {
+			printk(KERN_ERR "Unicam dfs update failed \n");
+		}
+	}
+	return 0;
+}
+
+static int rhea_camera_reset_front(struct device *dev)
+{
+	/* reset the camera gpio */
+	printk(KERN_INFO "%s:Front camera reset\n", __func__);
+	return 0;
+}
+static struct v4l2_subdev_sensor_interface_parms tcm9001_if_params = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1,
+	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+	.facing = V4L2_SUBDEV_SENSOR_FRONT,
+	.parms.serial = {
+		.lanes = 1,
+		.channel = 1,
+		/* maps to CSI2 AFE 1, 0 for rear camera */
+		.phy_rate = 0,
+		.pix_clk = 0
+	},
+};
+
+static struct soc_camera_link iclink_tcm9001 = {
+	.bus_id = 0,
+	.board_info = &rhea_i2c_camera[1],
+	.i2c_adapter_id = 0,
+	.module_name = "tcm9001",
+	.power = &rhea_camera_power_front,
+	.reset = &rhea_camera_reset_front,
+	.priv =  &tcm9001_if_params,
+};
+
+static struct platform_device rhea_camera_front = {
+	.name = "soc-camera-pdrv",
+	.id = 1,
+	.dev = {
+		.platform_data = &iclink_tcm9001,
 		},
 };
 #endif
@@ -1289,7 +1422,8 @@ static struct platform_device *rhea_stone_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
-	&rhea_camera,
+	&rhea_camera_back,
+	&rhea_camera_front,
 #endif
 
 #ifdef CONFIG_VIDEO_KONA

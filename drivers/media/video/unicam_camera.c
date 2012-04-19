@@ -381,7 +381,9 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 		unicam_dev->active = vb;
 		/* use this buffer to trigger capture */
 		unicam_camera_update_buf(unicam_dev);
-		unicam_camera_capture(unicam_dev);
+		if (unicam_dev->if_params.if_mode ==
+			V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)
+			unicam_camera_capture(unicam_dev);
 	}
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	dprintk("-exit");
@@ -433,6 +435,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	CSL_CAM_PIPELINE_st_t cslCamPipeline;
 	CSL_CAM_IMAGE_ID_st_t cslCamImageCtrl;
 	CSL_CAM_DATA_st_t cslCamDataCtrl;
+	CSL_CAM_FRAME_st_t cslCamFrame;
 
 	dprintk("-enter");
 	iprintk("enabling csi");
@@ -464,9 +467,13 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	/* we only support serial and csi2 sensor */
 	if ((unicam_dev->if_params.if_type == V4L2_SUBDEV_SENSOR_SERIAL)
 	    && (unicam_dev->if_params.if_mode ==
-		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2))
+		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)) {
 		csl_cam_intf_cfg_st.intf = CSL_CAM_INTF_CSI;
-	else {
+	} else if ((unicam_dev->if_params.if_type == V4L2_SUBDEV_SENSOR_SERIAL)
+	    && (unicam_dev->if_params.if_mode ==
+		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1)) {
+		csl_cam_intf_cfg_st.intf = CSL_CAM_INTF_CCP;
+	} else {
 		dev_err(unicam_dev->dev,
 			"CSI2 iface only supported,requested iface %d mode=%d\n",
 			unicam_dev->if_params.if_type,
@@ -490,15 +497,23 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	/* open camera interface */
 	csl_cam_intf_cfg_st.p_cpi_intf_st = NULL;
 
-	if (unicam_dev->if_params.parms.serial.lanes == 1)
-		csl_cam_intf_cfg_st.input_mode = CSL_CAM_INPUT_SINGLE_LANE;
-	else if (unicam_dev->if_params.parms.serial.lanes == 2)
-		csl_cam_intf_cfg_st.input_mode = CSL_CAM_INPUT_DUAL_LANE;
-	else {
-		dev_err(unicam_dev->dev,
-			"receiver only supports max 2 lanes, requested lanes(%d)\n",
-			unicam_dev->if_params.parms.serial.lanes);
-		return -EINVAL;
+	if ((unicam_dev->if_params.if_type == V4L2_SUBDEV_SENSOR_SERIAL)
+	    && (unicam_dev->if_params.if_mode ==
+		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)) {
+		if (unicam_dev->if_params.parms.serial.lanes == 1)
+			csl_cam_intf_cfg_st.input_mode =
+				CSL_CAM_INPUT_SINGLE_LANE;
+		else if (unicam_dev->if_params.parms.serial.lanes == 2)
+			csl_cam_intf_cfg_st.input_mode =
+				CSL_CAM_INPUT_DUAL_LANE;
+		else {
+			dev_err(unicam_dev->dev,
+				"receiver only supports max 2 lanes, requested lanes(%d)\n",
+				unicam_dev->if_params.parms.serial.lanes);
+			return -EINVAL;
+		}
+	} else {
+		 csl_cam_intf_cfg_st.input_mode = CSL_CAM_INPUT_MODE_DATA_CLOCK;
 	}
 
 	if (csl_cam_open(&csl_cam_intf_cfg_st, &unicam_dev->cslCamHandle)) {
@@ -576,9 +591,15 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 
 	if ((icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8)
 	    && (thumb == 0))
-		cslCamImageCtrl.image_data_id0 = 0x0;	/* thumbnail not supported */
+		cslCamImageCtrl.image_data_id0 = 0x0;
+		/* thumbnail not supported */
 	else
 		cslCamImageCtrl.image_data_id0 = 0x1E;
+
+	if (unicam_dev->if_params.if_mode ==
+		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1)
+		cslCamImageCtrl.image_data_id0 = 0x0;	/* CCP2 channel ID 0 */
+
 
 	if (csl_cam_set_image_type_control
 	    (unicam_dev->cslCamHandle, &cslCamImageCtrl)) {
@@ -589,10 +610,16 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 
 	/* set data capture */
 	cslCamDataCtrl.int_enable = (CSL_CAM_INTERRUPT_t) (CSL_CAM_INT_DISABLE);
-	cslCamDataCtrl.line_count = 2;
+	if (unicam_dev->if_params.if_mode ==
+		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
+		cslCamDataCtrl.line_count = 2;
+		cslCamDataCtrl.fsp_decode_enable = FALSE;
+	} else {
+		cslCamDataCtrl.line_count = 0;
+		cslCamDataCtrl.fsp_decode_enable = TRUE;
+	}
 	cslCamDataCtrl.data_id = 0x00;
 	cslCamDataCtrl.data_size = CSL_CAM_PIXEL_8BIT;
-	cslCamDataCtrl.fsp_decode_enable = FALSE;
 
 	if (csl_cam_set_data_type_control
 	    (unicam_dev->cslCamHandle, &cslCamDataCtrl)) {
@@ -606,6 +633,26 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 		dev_err(unicam_dev->dev, "csl_cam_rx_start(): FAILED\n");
 		return -1;
 	}
+
+	if (unicam_dev->if_params.if_mode ==
+		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1) {
+		cslCamFrame.int_enable = CSL_CAM_INT_LINE_COUNT;
+		/* CSL_CAM_INT_FRAME_END | CSL_CAM_INT_FRAME_START;
+		//CSL_CAM_INT_LINE_COUNT;
+		cslCamFrame.int_line_count =
+		(unicam_dev->icd->user_height - 1);*/
+		cslCamFrame.int_line_count = (unicam_dev->icd->user_height);
+		cslCamFrame.capture_mode = CSL_CAM_CAPTURE_MODE_NORMAL;
+		/* CSL_CAM_CAPTURE_MODE_NORMAL */
+		if (csl_cam_set_frame_control(
+			unicam_dev->cslCamHandle, &cslCamFrame)) {
+			  dev_err(unicam_dev->dev,
+			  "csl_cam_set_frame_control(): FAILED\n");
+			  return -1;
+		}
+
+	}
+
 
 	unicam_dev->streaming = 1;
 	dprintk("-exit");
@@ -788,7 +835,8 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	/* what format can unicam support */
 	switch (mf.code) {
 	case V4L2_MBUS_FMT_JPEG_1X8:
-		/* check here if thumbnail is supported and check thumbnail format */
+		/* check here if thumbnail is supported
+		and check thumbnail format */
 		ret =
 		    v4l2_subdev_call(sd, core, ioctl, VIDIOC_THUMB_SUPPORTED,
 				     (void *)&thumb);
@@ -990,7 +1038,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		    csl_cam_get_intr_status(unicam_dev->cslCamHandle,
 					    (CSL_CAM_INTERRUPT_t *) &status);
 
-		if (status & CSL_CAM_INT_FRAME_END) {
+		if ((status & CSL_CAM_INT_FRAME_END) ||
+			(status & CSL_CAM_INT_LINE_COUNT)) {
 			struct vb2_buffer *vb = unicam_dev->active;
 			fps++;
 
@@ -1005,7 +1054,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			}
 
 			dprintk("frame received");
-			/* csl_cam_register_display(unicam_dev->cslCamHandle); */
+			/* csl_cam_register_display(unicam_dev->cslCamHandle);*/
 			if (!vb)
 				goto out;
 			/* mark  the buffer done */
@@ -1077,10 +1126,12 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			ret = unicam_camera_update_buf(unicam_dev);
 			if (ret)
 				dprintk("error while queueing the buffer");
-
-			ret = unicam_camera_capture(unicam_dev);
-			if (ret)
-				dprintk(KERN_INFO "error triggering capture");
+			if (unicam_dev->if_params.if_mode ==
+				V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
+				ret = unicam_camera_capture(unicam_dev);
+				if (ret)
+					dprintk(KERN_INFO "error triggering capture");
+			}
 
 			spin_unlock(&unicam_dev->lock);
 		}
