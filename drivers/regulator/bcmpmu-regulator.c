@@ -429,8 +429,7 @@ static int __init bcmpmu_regulator_init(void)
 {
 	return platform_driver_register(&bcmpmu_regulator_driver);
 }
-
-module_init(bcmpmu_regulator_init);
+subsys_initcall(bcmpmu_regulator_init);
 
 static void __exit bcmpmu_regulator_exit(void)
 {
