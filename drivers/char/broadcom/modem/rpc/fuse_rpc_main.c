@@ -38,7 +38,9 @@
 #include <linux/broadcom/ipcinterface.h>
 #include <linux/broadcom/ipcproperties.h>
 #include <linux/kthread.h>
-
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+#endif
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "taskmsgs.h"
@@ -142,7 +144,7 @@ UInt32 RPC_Init(void)
 	int ret;
 
 	ret = MsgQueueInit(&sysRpcMQhandle, sysRpcKthreadFn,
-				"SysRpcKThread", 0, NULL);
+				"SysRpcKThread", 0, NULL,"sysrpc_wake_lock");
 
 	if (ret != 0) {
 		RPC_DEBUG(DBG_ERROR, "sysrpc: MsgQueueInit fail...!\n");

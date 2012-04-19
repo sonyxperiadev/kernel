@@ -34,6 +34,9 @@
 #include <linux/fcntl.h>
 #include <asm/system.h>
 #include <linux/kthread.h>
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+#endif
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -57,7 +60,7 @@
 static int MQueueKthreadFn(void *param);
 
 int MsgQueueInit(MsgQueueHandle_t *mHandle, MsgQueueThreadFn_t fn,
-		 char *name, unsigned int optionType, void *optionData)
+		 char *name, unsigned int optionType, void *optionData, char* wk_name)
 {
 	int ret = 0;
 	if (!mHandle) {
@@ -87,6 +90,10 @@ int MsgQueueInit(MsgQueueHandle_t *mHandle, MsgQueueThreadFn_t fn,
 		mHandle->valid = 1;
 		ret = 0;
 	}
+
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&(mHandle->mq_wake_lock), WAKE_LOCK_SUSPEND, wk_name);
+#endif
 
 	_DBG(MQ_TRACE("mq: MsgQueueInit mHandle=%x fn=%x nm=%s ret=%d\n",
 		      (int)mHandle, (int)fn, (name) ? name : "", ret));
@@ -213,7 +220,17 @@ static int MQueueKthreadFn(void *param)
 				mHandle=%x data=%d ret=%d\n",
 				(int)mHandle, (int)data, ret));
 		if (ret == 0 && data)
+		{
+#ifdef CONFIG_HAS_WAKELOCK
+			wake_lock(&(mHandle->mq_wake_lock));
+#endif
+			/* Call actual handler */
 			mHandle->mFn(mHandle, data);
+#ifdef CONFIG_HAS_WAKELOCK
+			wake_unlock(&(mHandle->mq_wake_lock));
+#endif
+
+		}
 		else
 			break;
 	}
@@ -234,6 +251,10 @@ int MsgQueueDeInit(MsgQueueHandle_t *mHandle)
 	/*Send NULL data to exit kthread */
 	if (mHandle->mThread)
 		MsgQueueAdd(mHandle, NULL);
+
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_destroy(&(mHandle->mq_wake_lock));
+#endif
 
 	mHandle->valid = 0;
 	return 0;
