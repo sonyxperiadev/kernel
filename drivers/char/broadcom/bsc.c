@@ -95,6 +95,7 @@ int bsc_register(const char *name, void *data, int len)
 
 	/* copy and save all required information and data */
 	strncpy(entry->param.name, name, BSC_NAME_LEN);
+	entry->param.name[BSC_NAME_LEN-1] = '\0';
 	entry->param.len = len;
 	memcpy(entry->param.data, data, len);
 
