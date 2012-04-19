@@ -171,6 +171,14 @@ extern int __jira_wa_enabled(u32 jira)
 #define BSC_PAD_OUT_EN				(0x0)
 #define BSC_PAD_OUT_DIS				(0x1<<2)
 
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#define SET_PC_PIN_CMD(pc_pin)			\
+	(SET_PC_PIN_CMD_##pc_pin##_PIN_VALUE_MASK|\
+	 SET_PC_PIN_CMD_##pc_pin##_PIN_OVERRIDE_MASK)
+
+#define PC_PIN_DEFAULT_STATE		SET_PC_PIN_CMD(PC3)
+#endif
+
 static struct i2c_cmd i2c_cmd[] = {
 	{REG_ADDR, 0},		/* 0:NOP */
 	{JUMP_VOLTAGE, 0},	/* 1: Jump based upon the voltage */
@@ -263,11 +271,16 @@ static struct i2c_cmd i2c_cmd[] = {
 	{REG_ADDR, 0},		/* 56: NOP */
 	{REG_ADDR, 0},		/* 57: NOP */
 #endif
-	{END, 0},		/* 58: End sequence (write/read) */
-	{SET_PC_PINS, 0x30},	/* 59: set2_ptr */
-	{END, 0},		/* 60: End sequence (SET2) */
-	{SET_PC_PINS, 0x31},	/* 61: set1_ptr */
-	{END, 0},		/* 62: End sequence (SET1) */
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+	{SET_PC_PINS, PC_PIN_DEFAULT_STATE},	/* 58: set PC3 high */
+#else
+	{REG_ADDR, 0},		/* 58: nop */
+#endif
+	{END, 0},		/* 59: End sequence (write/read) */
+	{SET_PC_PINS, 0x30},	/* 60: set2_ptr */
+	{END, 0},		/* 61: End sequence (SET2) */
+	{SET_PC_PINS, 0x31},	/* 62: set1_ptr */
+	{END, 0},		/* 63: End sequence (SET1) */
 };
 
 /*Default voltage lookup table
@@ -277,10 +290,10 @@ Need to move this to board-file
 static struct v0x_spec_i2c_cmd_ptr v0_ptr = {
 	.other_ptr = 2,
 	.set2_val = 1,		/*Retention voltage inx */
-	.set2_ptr = 59,
+	.set2_ptr = 60,
 	.set1_val = 2,		/*wakeup from retention voltage inx */
-	.set1_ptr = 61,
-	.zerov_ptr = 59,	/*Not used for Rhea */
+	.set1_ptr = 62,
+	.zerov_ptr = 60,	/*Not used for Rhea */
 };
 
 struct pwrmgr_init_param pwrmgr_init_param = {
@@ -300,6 +313,9 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 	.i2c_wr_reg_addr_off = 49,
 	.i2c_wr_val_addr_off = 51,
 	.i2c_seq_timeout = 100,
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+	.pc_toggle_off = 58,
+#endif
 #endif
 };
 

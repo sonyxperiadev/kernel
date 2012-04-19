@@ -520,6 +520,9 @@ int __init rhea_pwr_mgr_init_sequencer(void)
 	    pwrmgr_init_param.i2c_wr_val_addr_off;
 	rhea_pwr_mgr_info.i2c_seq_timeout = pwrmgr_init_param.i2c_seq_timeout;
 #endif
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+	rhea_pwr_mgr_info.pc_toggle_off = pwrmgr_init_param.pc_toggle_off;
+#endif
 
 	rhea_pwr_mgr_info.i2c_cmds = pwrmgr_init_param.cmd_buf;
 	rhea_pwr_mgr_info.num_i2c_cmds = pwrmgr_init_param.cmb_buf_size;

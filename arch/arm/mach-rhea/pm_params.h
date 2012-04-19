@@ -184,6 +184,9 @@ struct pwrmgr_init_param {
 	int i2c_wr_val_addr_off;
 	u32 i2c_seq_timeout;	/*timeout in ms */
 #endif
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+	int pc_toggle_off;
+#endif
 };
 
 extern struct pwrmgr_init_param pwrmgr_init_param;

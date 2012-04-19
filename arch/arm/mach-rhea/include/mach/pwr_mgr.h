@@ -18,6 +18,10 @@
 #ifdef CONFIG_DEBUG_FS
 #define PWRMGR_EVENT_ID_TO_STR(e) _rhea__event2str[e]
 
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#define PWRMGR_SW_SEQ_PC_PIN		PC3
+#endif
+
 extern const char *_rhea__event2str[];
 #endif
 

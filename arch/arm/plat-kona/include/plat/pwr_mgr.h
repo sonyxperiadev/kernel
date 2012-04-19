@@ -80,6 +80,15 @@
 #define PWRMGR_I2C_READ_DATA_SHIFT		0
 #define PWRMGR_I2C_READ_DATA_MASK		0xFF
 
+#define SET_PC_PIN_CMD_PC0_PIN_VALUE_MASK			(0x01)
+#define SET_PC_PIN_CMD_PC1_PIN_VALUE_MASK			(0x02)
+#define SET_PC_PIN_CMD_PC2_PIN_VALUE_MASK			(0x04)
+#define SET_PC_PIN_CMD_PC3_PIN_VALUE_MASK			(0x08)
+#define SET_PC_PIN_CMD_PC0_PIN_OVERRIDE_MASK			(0x10)
+#define SET_PC_PIN_CMD_PC1_PIN_OVERRIDE_MASK			(0x20)
+#define SET_PC_PIN_CMD_PC2_PIN_OVERRIDE_MASK			(0x40)
+#define SET_PC_PIN_CMD_PC3_PIN_OVERRIDE_MASK			(0x80)
+
 #endif /*CONFIG_KONA_PWRMGR_REV2 */
 
 #if defined(DEBUG)
@@ -240,6 +249,9 @@ struct pwr_mgr_info {
 	int i2c_wr_reg_addr_off;
 	int i2c_wr_val_addr_off;
 	u32 i2c_seq_timeout;	/*timeout in ms */
+#endif
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+	int pc_toggle_off;
 #endif
 };
 
