@@ -166,6 +166,13 @@ struct vtq_vce {
 	/* currently loaded image. */
 	struct vtq_image *current_image;
 
+	/* "retained" image.  When we release the reference to VCE, we
+	 * put the current image here, so that we can optimize away
+	 * the image load if we get VCE back and it still has this
+	 * image.  I thought about just using current_image for this
+	 * purpose, but doing so would result in race conditions */
+	struct vtq_image *retained_image;
+
 	/* array (FIXME! not good!) of tasks */
 	struct vtq_task tasks[VTQ_MAX_TASKS];
 
@@ -221,7 +228,6 @@ struct jobinfo {
 #define dbg_print(fmt, arg...) \
 	printk(KERN_WARNING "VTQ: debug: %s() %s:%d " fmt, \
 		__func__, "vtq.c", __LINE__, ##arg)
-
 
 /*
  * Global (driver) /proc entries for Debug etc
@@ -482,6 +488,7 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 	vtq_pervce_state->runningjobs = NULL;
 
 	vtq_pervce_state->current_image = NULL;
+	vtq_pervce_state->retained_image = NULL;
 
 	vtq_pervce_state->on = 0;
 
@@ -514,11 +521,28 @@ err_kmalloc_vtq_pervce_state:
 
 void vtq_pervce_term(struct vtq_vce **vtq_pervce_state_ptr)
 {
-	flush_work(&(*vtq_pervce_state_ptr)->unload_work);
-	flush_work(&(*vtq_pervce_state_ptr)->cleanup_work);
-	term_procentries(*vtq_pervce_state_ptr);
-	kfree(*vtq_pervce_state_ptr);
+	struct vtq_vce *v;
+
+	v = *vtq_pervce_state_ptr;
 	*vtq_pervce_state_ptr = NULL;
+
+	flush_work(&v->unload_work);
+	flush_work(&v->cleanup_work);
+
+	mutex_lock(&v->host_mutex);
+	if (v->retained_image != NULL) {
+		put_image(v->retained_image);
+		v->retained_image = NULL;
+	}
+	if (v->current_image != NULL) {
+		put_image(v->current_image);
+		v->current_image = NULL;
+		err_print("Image still current upon unload\n");
+	}
+	mutex_unlock(&v->host_mutex);
+
+	term_procentries(v);
+	kfree(v);
 }
 
 int vtq_configure(struct vtq_vce *v,
@@ -629,24 +653,38 @@ static void vce_download_data_at(struct vtq_vce *v,
 static void _loadloader(struct vtq_vce *v)
 {
 	int s;
+	uint32_t was_preserved;
 
-	s = vce_acquire(v->driver_priv);
+	s = vce_acquire(v->driver_priv, VCE_ACQUIRER_VTQ, &was_preserved);
 	if (s < 0) {
 		err_print("failed to acquire the VCE (signal?)\n");
 		return;
 	}
 
-	vce_download_program_at(v,
+	if (was_preserved) {
+		if (v->retained_image != NULL) {
+			BUG_ON(v->current_image != NULL);
+			v->current_image = v->retained_image;
+			v->retained_image = NULL;
+		}
+	} else {
+		vce_download_program_at(v,
 				v->global->loaderkernel_loadoffset,
 				v->global->relocatedloaderkernelimage,
 				v->global->loaderkernel_size);
 	/* Due to lack of fully working expression evaluation in the VCE
 	   toolchain, we have to have worklist_reentry at the start of the
 	   loader image. :( */
-	vce_writereg(&v->io, 59, v->global->loaderkernel_loadoffset);
-	vce_writereg(&v->io, 41, v->last_known_readptr);
-	vce_writedata(&v->io, v->writeptr_locn, v->writeptr);
-	vce_writedata(&v->io, v->readptr_locn, v->last_known_readptr);
+		vce_writereg(&v->io, 59, v->global->loaderkernel_loadoffset);
+		vce_writereg(&v->io, 41, v->last_known_readptr);
+		vce_writedata(&v->io, v->writeptr_locn, v->writeptr);
+		vce_writedata(&v->io, v->readptr_locn, v->last_known_readptr);
+
+		if (v->retained_image != NULL) {
+			put_image(v->retained_image);
+			v->retained_image = NULL;
+		}
+	}
 
 	vce_setpc(&v->io, v->global->loaderkernel_firstentry);
 	vce_run(&v->io);
@@ -659,7 +697,8 @@ static void _unloadloader(struct vtq_vce *v)
 	unsigned long flags;
 
 	if (v->current_image != NULL) {
-		put_image(v->current_image);
+		BUG_ON(v->retained_image != NULL);
+		v->retained_image = v->current_image;
 		v->current_image = NULL;
 	}
 	vce_stop(&v->io);
@@ -953,9 +992,6 @@ static void get_image(struct vtq_image *image)
 
 void vtq_unregister_image(struct vtq_context *ctx, struct vtq_image *image)
 {
-	(void) ctx;
-
-#if 0
 	struct vtq_vce *v;
 
 	v = ctx->vce;
@@ -967,8 +1003,20 @@ void vtq_unregister_image(struct vtq_context *ctx, struct vtq_image *image)
 	 * that tasks should be destroyed before images anyway, so
 	 * there's no need to put this right right now. */
 
+	if (v->retained_image == image) {
+		put_image(v->retained_image);
+		v->retained_image = NULL;
+	}
+	if (v->current_image == image) {
+		/* this is just to be neat and tidy... it would sort
+		 * itself out if we didn't do this now, but while
+		 * we've got the lock for clearing out the retained
+		 * one, we may as well clear up here too */
+		put_image(v->current_image);
+		v->current_image = NULL;
+	}
+
 	mutex_unlock(&v->host_mutex);
-#endif
 
 	put_image(image);
 }

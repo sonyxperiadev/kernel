@@ -30,7 +30,15 @@ struct vce_regmap {
 	uint32_t __iomem *regfile;
 };
 extern void __iomem *vce_get_base_address(struct vce *vce);
-extern int vce_acquire(struct vce *vce);
+
+#define VCE_ACQUIRER_NONE  0x40000000
+#define VCE_ACQUIRER_DONTCARE   1
+#define VCE_ACQUIRER_VTQ        2
+/* #define VCE_ACQUIRER_IOCTL      3 */
+
+extern int vce_acquire(struct vce *vce,
+		uint32_t this_acquirer,
+		uint32_t *was_preserved);
 extern void vce_release(struct vce *vce);
 
 #define vce_init_base(regmap, vce)					\

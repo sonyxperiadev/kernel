@@ -32,6 +32,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <plat/clock.h>
 #include <plat/pi_mgr.h>
+#include <plat/pwr_mgr.h>
 #include <plat/scu.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_vce.h>
@@ -42,8 +43,9 @@ the GPL, without Broadcom's express prior written consent.
 
 /* Private configuration stuff -- not part of exposed API */
 #include "vtqinit_priv.h"
+#include "vceprivate.h"
 
-#define DRIVER_VERSION 10112
+#define DRIVER_VERSION 10113
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -93,6 +95,14 @@ static struct vce {
 	bool debug_ioctl;
 	uint32_t *vtq_firmware;
 
+	/* acquirer-id of the client who has acquired the VCE
+	 * currently (if acquired) or who last acquired it (while not
+	 * acquired), or VCE_ACQUIRER_NONE if the block has been
+	 * powered off.  This is so that clients can optimize away
+	 * their initialization sequence if they know that VCE is
+	 * found "just how they left it" */
+	uint32_t acquirer;
+
 	/* This spinlock is to protect against a supposed race
 	 * condition where a stray interrupt might arrive after we've
 	 * stopped VCE and just as we're powering down.  This may not
@@ -109,6 +119,11 @@ typedef struct {
 	struct vtqb_context *vtq_ctx;
 	int api_direct;
 	int api_vtq;
+
+	/* The per-FD acquirer-ID -- at the moment this is 'dont-care'
+	 * because we have no current need to differentiate the
+	 * ioctl-based VCE clients. */
+	uint32_t acquirer_id;
 } vce_t;
 
 /* Per mmap handle state: */
@@ -444,6 +459,11 @@ static int vce_open(struct inode *inode, struct file *filp)
 	dev->api_direct = 0;
 	dev->api_vtq = 0;
 
+	/* We *could* have a different ID per file descriptor, but, we
+	 * have no current need to distinguish among acquirers that
+	 * came from userland */
+	dev->acquirer_id = VCE_ACQUIRER_DONTCARE;
+
 	filp->private_data = dev;
 	return 0;
 }
@@ -485,8 +505,7 @@ static int vce_file_release(struct inode *inode, struct file *filp)
 
 		/* Just free up the VCE HW */
 		vce_state.g_irq_sem = NULL;
-		complete(&vce_state.acquire_sem);
-		clock_off();
+		vce_release(&vce_state);
 	}
 
 	if (dev->api_vtq) {
@@ -710,15 +729,11 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case VCE_IOCTL_HW_ACQUIRE:
 		{
-			clock_on();
+			ret = vce_acquire(&vce_state, dev->acquirer_id, NULL);
 
-			/* Wait for the VCE HW to become available */
-			if (wait_for_completion_interruptible
-			    (&vce_state.acquire_sem)) {
-				err_print("Wait for VCE HW failed\n");
-				clock_off();
-				return -ERESTARTSYS;
-			}
+			if (ret != 0)
+				return ret;
+
 			vce_state.g_irq_sem = &dev->irq_sem;	/* Replace the irq sem with current process sem */
 			dev->vce_acquired = 1;	/* Mark acquired: will come handy in cleanup process */
 		}
@@ -728,8 +743,7 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		{
 			vce_state.g_irq_sem = NULL;	/* Free up the g_irq_sem */
 			dev->vce_acquired = 0;	/* Not acquired anymore */
-			complete(&vce_state.acquire_sem);	/* VCE is up for grab */
-			clock_off();
+			vce_release(&vce_state);
 		}
 		break;
 
@@ -1121,7 +1135,9 @@ void __iomem *vce_get_base_address(struct vce *vce)
 	return vce_base;
 }
 
-int vce_acquire(struct vce *vce)
+int vce_acquire(struct vce *vce,
+		uint32_t this_acquirer,
+		uint32_t *preserved)
 {
 	if (!try_module_get(THIS_MODULE)) {
 		err_print("Failed to increment module refcount\n");
@@ -1140,6 +1156,10 @@ int vce_acquire(struct vce *vce)
 		return -ERESTARTSYS;
 	}
 
+	if (preserved != NULL)
+		*preserved = (this_acquirer == vce_state.acquirer);
+	vce_state.acquirer = this_acquirer;
+
 	return 0;
 }
 
@@ -1150,6 +1170,31 @@ void vce_release(struct vce *vce)
 	module_put(THIS_MODULE);
 }
 
+/*
+ * Power management policy change callback...
+ *
+ * We're only interested in knowing when power is about to be removed
+ */
+
+static int mm_pol_chg_notifier(struct notifier_block *self,
+			       unsigned long event, void *data)
+{
+	struct pi_notify_param *p = data;
+
+	if (p->pi_id == PI_MGR_PI_ID_MM &&
+			IS_SHUTDOWN_POLICY(p->new_value) &&
+			event == PI_PRECHANGE) {
+		vce_state.acquirer = VCE_ACQUIRER_NONE;
+		BUG_ON(vce_state.clock_enable_count > 0);
+		dbg_print("VCE power down\n");
+	}
+
+	return 0;
+}
+
+static struct notifier_block mm_pol_chg_notify_blk = {
+	.notifier_call = mm_pol_chg_notifier,
+};
 
 int __init vce_init(void)
 {
@@ -1253,6 +1298,18 @@ int __init vce_init(void)
 		goto err5;
 	}
 
+	/* So we can optimize away reset stuff when power was
+	 * maintained */
+	ret = pi_mgr_register_notifier(PI_MGR_PI_ID_MM,
+			&mm_pol_chg_notify_blk,
+			PI_NOTIFY_POLICY_CHANGE);
+	if (ret != 0) {
+		err_print("Failed to register PM Notifier\n");
+		ret = -ENOENT;
+		goto err_reg_notifier;
+	}
+	vce_state.acquirer = VCE_ACQUIRER_NONE;
+
 	ret = vtq_driver_init(&vce_state.vtq,
 			&vce_state, vce_state.proc_vcedir);
 	if (ret) {
@@ -1282,6 +1339,11 @@ err_vtq_init2:
 
 	vtq_driver_term(&vce_state.vtq);
 err_vtq_init0:
+
+	pi_mgr_unregister_notifier(PI_MGR_PI_ID_MM,
+			&mm_pol_chg_notify_blk,
+			PI_NOTIFY_POLICY_CHANGE);
+err_reg_notifier:
 
 	pi_mgr_qos_request_remove(&vce_state.cpu_qos_node);
 err5:
@@ -1346,6 +1408,10 @@ void __exit vce_exit(void)
 	/* Unmap addresses */
 	if (vce_base)
 		iounmap(vce_base);
+
+	pi_mgr_unregister_notifier(PI_MGR_PI_ID_MM,
+			&mm_pol_chg_notify_blk,
+			PI_NOTIFY_POLICY_CHANGE);
 
 	pi_mgr_qos_request_remove(&vce_state.cpu_qos_node);
 
