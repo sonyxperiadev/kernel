@@ -713,6 +713,7 @@ static struct mpu_platform_data mpu6050_data = {
 			0, 0, -1},
 	.level_shifter = 0,
 
+#ifdef CONFIG_GPIO_PCA953X
 	.accel = {
 		  /*.get_slave_descr = mpu_get_slave_descr, */
 		  .adapt_num = 2,
@@ -731,6 +732,7 @@ static struct mpu_platform_data mpu6050_data = {
 				    1, 0, 0,
 				    0, 0, -1},
 		    },
+#endif /* CONFIG_GPIO_PCA953X */
 };
 
 static struct i2c_board_info __initdata mpu6050_info[] = {
@@ -1374,6 +1376,7 @@ static struct i2c_board_info rhea_i2c_camera[] = {
 
 static int rhea_camera_power(struct device *dev, int on)
 {
+#ifdef CONFIG_GPIO_PCA953X
 	unsigned int value;
 	int ret = -1;
 	struct clk *clock;
@@ -1477,6 +1480,7 @@ static int rhea_camera_power(struct device *dev, int on)
 		}
 	}
 
+#endif /* CONFIG_GPIO_PCA953X */
 	return 0;
 }
 
