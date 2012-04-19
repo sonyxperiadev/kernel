@@ -46,6 +46,7 @@ enum {
 	VTQ_CMD_AWAIT_JOB,
 	VTQ_CMD_WHAT_WAS_LAST_QUEUED_JOB,
 	VTQ_CMD_FLUSH, /* flush is equivalent to await(last_queued) */
+	VTQ_CMD_ONLOADHOOK,
 	VTQ_CMD_LAST,
 
 	/* debug */
@@ -157,6 +158,17 @@ struct vtq_queuejob_ioctldata {
 	uint32_t arg5;
 };
 
+struct vtq_onloadhook_ioctldata {
+	/* input */
+	uint32_t pc;
+	uint32_t r1;
+	uint32_t r2;
+	uint32_t r3;
+	uint32_t r4;
+	uint32_t r5;
+	uint32_t r6;
+};
+
 struct vtq_awaitjob_ioctldata {
 	/* input */
 	uint32_t job_id;
@@ -193,6 +205,9 @@ struct vtq_awaitjob_ioctldata {
 #define VTQ_IOCTL_AWAIT_JOB     _IOW(BCM_VCE_MAGIC,			\
 				     VTQ_CMD_AWAIT_JOB,			\
 				     struct vtq_awaitjob_ioctldata)
+#define VTQ_IOCTL_ONLOADHOOK _IOWR(BCM_VCE_MAGIC,			\
+				   VTQ_CMD_ONLOADHOOK,			\
+				   struct vtq_onloadhook_ioctldata)
 #define VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS  _IOR(BCM_VCE_MAGIC, VCE_CMD_DEBUG_FETCH_KSTAT_IRQS, unsigned int)
 
 #endif

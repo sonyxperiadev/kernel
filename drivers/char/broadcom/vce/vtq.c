@@ -130,6 +130,16 @@ struct vtq_task {
 	/* List of images that can serve this task */
 	struct image_list *suitable_images;
 };
+struct vtq_hook_list_node {
+	uint32_t pc;
+	uint32_t r1;
+	uint32_t r2;
+	uint32_t r3;
+	uint32_t r4;
+	uint32_t r5;
+	uint32_t r6;
+	struct vtq_hook_list_node *next;
+};
 struct vtq_vce {
 	/* Our route back to the VCE driver: */
 	struct vce *driver_priv;
@@ -146,6 +156,11 @@ struct vtq_vce {
 	vtq_datamemoffset_t writeptr_locn;
 	vtq_datamemoffset_t circbuf_locn;
 	uint32_t semanum;
+
+	/* Special entry (-ies) to write into FIFO every time VCE is
+	 * powered-up */
+	unsigned int onloadhook_count;
+	struct vtq_hook_list_node *onloadhook_list_head;
 
 	/* Space required in prog/data mem */
 	vtq_progmemoffset_t progmem_reservation;
@@ -491,6 +506,9 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 	vtq_pervce_state->current_image = NULL;
 	vtq_pervce_state->retained_image = NULL;
 
+	vtq_pervce_state->onloadhook_count = 0;
+	vtq_pervce_state->onloadhook_list_head = NULL;
+
 	vtq_pervce_state->on = 0;
 
 	/* Initialize the work_t for unloading the loader after the
@@ -523,6 +541,7 @@ err_kmalloc_vtq_pervce_state:
 void vtq_pervce_term(struct vtq_vce **vtq_pervce_state_ptr)
 {
 	struct vtq_vce *v;
+	struct vtq_hook_list_node *hook;
 
 	v = *vtq_pervce_state_ptr;
 	*vtq_pervce_state_ptr = NULL;
@@ -540,10 +559,51 @@ void vtq_pervce_term(struct vtq_vce **vtq_pervce_state_ptr)
 		v->current_image = NULL;
 		err_print("Image still current upon unload\n");
 	}
+	for (hook = v->onloadhook_list_head; hook != NULL;) {
+		struct vtq_hook_list_node *nexthook;
+		nexthook = hook->next;
+		kfree(hook);
+		hook = nexthook;
+	}
 	mutex_unlock(&v->host_mutex);
 
 	term_procentries(v);
 	kfree(v);
+}
+
+int vtq_onloadhook(struct vtq_vce *v,
+		uint32_t pc,
+		uint32_t r1,
+		uint32_t r2,
+		uint32_t r3,
+		uint32_t r4,
+		uint32_t r5,
+		uint32_t r6)
+{
+	struct vtq_hook_list_node *hook;
+	struct vtq_hook_list_node **tail;
+
+	hook = kmalloc(sizeof(*hook), GFP_KERNEL);
+	if (hook == NULL)
+		return -1;
+
+	hook->pc = pc;
+	hook->r1 = r1;
+	hook->r2 = r2;
+	hook->r3 = r3;
+	hook->r4 = r4;
+	hook->r5 = r5;
+	hook->r6 = r6;
+	hook->next = NULL;
+	mutex_lock(&v->host_mutex);
+	tail = &v->onloadhook_list_head;
+	while (*tail != NULL)
+		tail = &(*tail)->next;
+	*tail = hook;
+	v->onloadhook_count++;
+	mutex_unlock(&v->host_mutex);
+
+	return 0;
 }
 
 int vtq_configure(struct vtq_vce *v,
@@ -1166,7 +1226,17 @@ static int got_room_for_job(struct vtq_context *ctx, vtq_task_id_t task_id)
 	    njobsinvceq > 0) {
 		haveenoughroom = 0;
 	} else {
-		room_required = (imagehasentrypt ? 1 : 3);
+		/* NB.  We *may* need room for extra on-load
+		   entries... we cannot know at this time, we have to
+		   assume the worse case and if we can optimize away
+		   later, that's good, but we must not assume it in
+		   case power is lost to VCE.  TODO: perhaps it would
+		   be nicer to increment the clock count before this
+		   point so that we can know this, but let's not make
+		   it complicated unless this proves to be a
+		   performance issue */
+		room_required = (imagehasentrypt ? 1 : 3
+			+ ctx->vce->onloadhook_count);
 		haveenoughroom = room >= room_required;
 	}
 
@@ -1208,6 +1278,22 @@ static void q(struct vtq_vce *v,
 	}
 
 	v->writeptr++;
+}
+
+static void q_hooks(struct vtq_vce *v,
+		struct vtq_hook_list_node *hooks)
+{
+	while (hooks != NULL) {
+		q(v,
+				hooks->pc,
+				hooks->r1,
+				hooks->r2,
+				hooks->r3,
+				hooks->r4,
+				hooks->r5,
+				hooks->r6);
+		hooks = hooks->next;
+	}
 }
 
 int vtq_queue_job(struct vtq_context *ctx,
@@ -1284,6 +1370,8 @@ int vtq_queue_job(struct vtq_context *ctx,
 		uint32_t imagehwaddr;
 
 		BUG_ON(!ctx->vce->on);
+
+		q_hooks(ctx->vce, ctx->vce->onloadhook_list_head);
 
 		/* TODO: find_image_for_prog(prog_id); - or similar --
 		 * for now, we just use first one... we assume there

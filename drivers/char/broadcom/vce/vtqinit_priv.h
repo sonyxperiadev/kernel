@@ -32,4 +32,13 @@ extern int vtq_configure(struct vtq_vce *,
 			 size_t fifo_entry_size,
 			 uint32_t semaphore_id);
 
+extern int vtq_onloadhook(struct vtq_vce *,
+		uint32_t pc,
+		uint32_t r,
+		uint32_t r2,
+		uint32_t r3,
+		uint32_t r4,
+		uint32_t r5,
+		uint32_t r6);
+
 #endif

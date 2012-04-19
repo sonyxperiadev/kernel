@@ -705,6 +705,9 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case VTQ_IOCTL_AWAIT_JOB:
 			trace_ioctl_entry(VTQ_IOCTL_AWAIT_JOB);
 			break;
+		case VTQ_IOCTL_ONLOADHOOK:
+			trace_ioctl_entry(VTQ_IOCTL_ONLOADHOOK);
+			break;
 		case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
 			trace_ioctl_entry(VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS);
 			break;
@@ -922,6 +925,29 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
+	case VTQ_IOCTL_ONLOADHOOK:
+		{
+			struct vtq_onloadhook_ioctldata *d;
+			int s;
+
+			d = (struct vtq_onloadhook_ioctldata *)arg;
+
+			s = vtq_onloadhook(vce_state.vtq_vce,
+					d->pc,
+					d->r1,
+					d->r2,
+					d->r3,
+					d->r4,
+					d->r5,
+					d->r6);
+
+			if (s != 0) {
+				err_print("failed to register on-load hook\n");
+				return -EINVAL;
+			}
+		}
+		break;
+
 	default:
 		{
 			ret = -ENOTTY;
@@ -978,6 +1004,9 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		case VTQ_IOCTL_AWAIT_JOB:
 			trace_ioctl_return(VTQ_IOCTL_AWAIT_JOB);
+			break;
+		case VTQ_IOCTL_ONLOADHOOK:
+			trace_ioctl_return(VTQ_IOCTL_ONLOADHOOK);
 			break;
 		case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
 			trace_ioctl_return(VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS);
