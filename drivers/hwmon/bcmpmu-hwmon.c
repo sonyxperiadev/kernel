@@ -324,12 +324,6 @@ static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 		padc->adcunit[req->sig].vstep = gain;
 		padc->adcunit[req->sig].voffset = offset;
 		break;
-	case PMU_ADC_FG_RAW:
-	case PMU_ADC_FG_CURRSMPL:
-		req->cal = req->raw * padc->adcunit[req->sig].vstep +
-			padc->adcunit[req->sig].voffset;
-			/* vstep, offset is in uV */
-		return;
 	default:
 		break;
 	}
@@ -381,6 +375,7 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 		{
 			int modifier = 0, ibat_to_return;
 			int reading;
+			int voffset = 0;
 			reading = req->raw;
 			if (req->cal & 0x8000)	/* negative offset */
 				reading |= 0xffff0000;
@@ -398,6 +393,7 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 					 "%s: reading %d, ibat_to_return before"
 					 " negation and 976 modification %d",
 					 __func__, reading, ibat_to_return);
+				voffset = padc->adcunit[req->sig].voffset;
 			} else
 				ibat_to_return = reading;
 			ibat_to_return =
@@ -406,8 +402,7 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 				 "%s: raw %x, value %d, modifier %d Offset %d,"
 				 " ibat %d",
 				 __func__, req->raw, reading, modifier,
-				 padc->adcunit[req->sig].voffset,
-				 ibat_to_return);
+				 voffset, ibat_to_return);
 			req->cnv = ibat_to_return;
 		}
 		break;
@@ -1313,6 +1308,7 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	envregs = kzalloc((penv->env_size * sizeof(int)), GFP_KERNEL);
 	if (envregs == NULL) {
 		pr_hwmon(ERROR, "%s failed to alloc mem.\n", __func__);
+		kfree(penv);
 		return -ENOMEM;
 	}
 	penv->bcmpmu = bcmpmu;
@@ -1325,6 +1321,8 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	pfg = kzalloc(sizeof(struct bcmpmu_fg), GFP_KERNEL);
 	if (pfg == NULL) {
 		pr_hwmon(ERROR, "%s failed to alloc mem.\n", __func__);
+		kfree(penv);
+		kfree(envregs);
 		return -ENOMEM;
 	}
 	pfg->bcmpmu = bcmpmu;
@@ -1395,6 +1393,9 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 
 exit_remove_files:
 	sysfs_remove_group(&padc->hwmon_dev->kobj, &bcmpmu_hwmon_attr_group);
+	kfree(penv);
+	kfree(envregs);
+	kfree(pfg);
 	return ret;
 }
 

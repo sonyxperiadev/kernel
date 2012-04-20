@@ -255,7 +255,7 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 	}
 
 	pchan = &bcmpmu_adc_chipset_api->adc_channels[cha];
-	GLUE_DBG("hal_adc_raw_read: Reading CSAPI channel %x, pchan %p", cha,
+	GLUE_DBG("csapi_adc_raw_read: Reading CSAPI channel %x, pchan %p", cha,
 		  pchan);
 
 	if (pchan->sig == PMU_ADC_MAX)
@@ -269,7 +269,7 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 		current_time = (ts_current_time.tv_sec * 1000) +
 			(ts_current_time.tv_nsec / 1000000); /* milliseconds */
 		csapi_pr_debug
-		    ("hal_adc_raw_read: ibat: "
+		    ("csapi_adc_raw_read: ibat: "
 		     "last_sample_time %d, current_time %d",
 		     ibat_last_sample_time, current_time);
 		if (ibat_last_sample_time) {
@@ -286,7 +286,7 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 				/* current_time in milliseconds */
 				current_time = (ts_current_time.tv_sec * 1000) +
 					 (ts_current_time.tv_nsec / 1000000);
-				GLUE_DBG("hal_adc_raw_read: Waiting for next "
+				GLUE_DBG("csapi_adc_raw_read: Waiting for next "
 					  "sample to be available, "
 					  "new current_time %d", current_time);
 			}
@@ -309,7 +309,7 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 			if (ar.raw & 0x8000)	/* negative offset */
 				ibat |= 0xffff0000;
 			*val = ibat;
-			csapi_pr_debug("hal_adc_raw_read: IBAT reading"
+			csapi_pr_debug("csapi_adc_raw_read: IBAT reading"
 				       " returns %d",
 				ibat);
 			return CSAPI_ADC_ERR_SUCCESS;
@@ -349,9 +349,9 @@ int csapi_adc_raw_read(struct csapi_cli *cli,
 
 	if (cb) {
 		cb(cha, *val, status, ptr);
-		GLUE_DBG("hal_adc_raw_read: returned from callback");
+		GLUE_DBG("csapi_adc_raw_read: returned from callback");
 	}
-	GLUE_DBG("hal_adc_raw_read: Returning value %x, status %d, "
+	GLUE_DBG("csapi_adc_raw_read: Returning value %x, status %d, "
 		  "context %p", *val, status, ptr);
 	return status;
 }
@@ -370,7 +370,7 @@ int csapi_adc_unit_read(struct csapi_cli *cli,
 		if (cb) {
 			int status = CSAPI_ADC_ERR_SUCCESS;
 			cb(cha, *val, status, ptr);
-			GLUE_DBG("hal_adc_unit_read: returned from callback");
+			GLUE_DBG("csapi_adc_raw_read: returned from callback");
 		}
 		return 0;
 	}
@@ -462,7 +462,7 @@ int csapi_cal_data_get(struct csapi_cli *cli,
 	pchan = &bcmpmu_adc_chipset_api->adc_channels[cha];
 
 	if (pchan->sig == PMU_ADC_MAX) {
-		GLUE_DBG("hal_adc_cal_get returns Not supported "
+		GLUE_DBG("csapi_adc_raw_read returns Not supported "
 			  "for channel %d", cha);
 		return -ENODEV;
 	}
@@ -505,7 +505,7 @@ int csapi_cal_data_get(struct csapi_cli *cli,
 	default:
 		break;
 	}
-	GLUE_DBG("hal_adc_cal_get for channel %d: Id %d, values %d, %d, %d",
+	GLUE_DBG("csapi_adc_raw_read for channel %d: Id %d, values %d, %d, %d",
 		  cha, *id, *p1, *p2, *p3);
 	return CSAPI_ADC_ERR_SUCCESS;
 }
@@ -520,7 +520,7 @@ int csapi_cal_data_set(struct csapi_cli *cli,
 	pchan = &bcmpmu_adc_chipset_api->adc_channels[cha];
 
 	if (pchan->sig == PMU_ADC_MAX) {
-		csapi_pr_info("hal_adc_cal_get returns Not supported for "
+		csapi_pr_info("csapi_cal_data_set returns Not supported for "
 			      "channel %d", cha);
 		return -ENODEV;
 	}
@@ -566,7 +566,7 @@ int csapi_cal_data_set(struct csapi_cli *cli,
 	}
 	bcmpmu_adc_chipset_api->bcmpmu->unit_set(bcmpmu_adc_chipset_api->bcmpmu,
 						 pchan->sig, &data);
-	csapi_pr_info("hal_adc_cal_get for channel %d: Id %d, "
+	csapi_pr_info("csapi_cal_data_set for channel %d: Id %d, "
 		      "values %d, %d, %d", cha, id, p1, p2, p3);
 	return CSAPI_ADC_ERR_SUCCESS;
 }
@@ -914,7 +914,7 @@ static long bcmpmu_adc_chipset_ioctl(struct file *file, unsigned int cmd,
 #define MAX_USER_INPUT_LEN      256
 #define MAX_ARGS 25
 
-#define adccsapi_kstrtol(arg)  (kstrtol(arg, 10, &val) ? val : val)
+#define adccsapi_kstrtol(arg)  (kstrtol(arg, 10, &val) < 0 ? 0 : val)
 
 static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 					const char __user *buffer, size_t len,
@@ -927,7 +927,7 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 	char *argv[MAX_ARGS];
 	u8 channel;
 	int i, status;
-	int val; /* used in macro */
+	long val; /* used in macro */
 
 	/*int ret, i; */
 	int adc_raw, adc_unit;
