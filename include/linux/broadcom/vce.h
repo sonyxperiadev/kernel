@@ -137,6 +137,19 @@ struct vtq_createtask_ioctldata {
 	/* inputs */
 	int image_id;
 	uint32_t entrypoint;
+
+	/* task flags are not used currently, but we want to allow
+	 * them in future without breaking the API */
+	uint32_t flags;
+};
+
+struct vtq_createtask_ioctldata_noflags {
+	/* result */
+	int task_id;
+
+	/* inputs */
+	int image_id;
+	uint32_t entrypoint;
 };
 
 struct vtq_destroytask_ioctldata {
@@ -145,6 +158,24 @@ struct vtq_destroytask_ioctldata {
 };
 
 struct vtq_queuejob_ioctldata {
+	/* result */
+	uint32_t job_id;
+
+	/* input */
+	int task_id;
+	uint32_t arg0;
+	uint32_t arg1;
+	uint32_t arg2;
+	uint32_t arg3;
+	uint32_t arg4;
+	uint32_t arg5;
+
+	/* job flags are not used currently, but we want to allow them
+	 * in future without breaking the API */
+	uint32_t flags;
+};
+
+struct vtq_queuejob_ioctldata_noflags {
 	/* result */
 	uint32_t job_id;
 
@@ -196,12 +227,18 @@ struct vtq_awaitjob_ioctldata {
 #define VTQ_IOCTL_CREATE_TASK   _IOWR(BCM_VCE_MAGIC,			\
 				      VTQ_CMD_CREATE_TASK,		\
 				      struct vtq_createtask_ioctldata)
+#define VTQ_IOCTL_CREATE_TASK_NOFLAGS _IOWR(BCM_VCE_MAGIC,		\
+				      VTQ_CMD_CREATE_TASK,		\
+					struct vtq_createtask_ioctldata_noflags)
 #define VTQ_IOCTL_DESTROY_TASK   _IOW(BCM_VCE_MAGIC,			\
 				      VTQ_CMD_DESTROY_TASK,		\
 				      struct vtq_destroytask_ioctldata)
 #define VTQ_IOCTL_QUEUE_JOB     _IOWR(BCM_VCE_MAGIC,			\
 				      VTQ_CMD_QUEUE_JOB,		\
 				      struct vtq_queuejob_ioctldata)
+#define VTQ_IOCTL_QUEUE_JOB_NOFLAGS _IOWR(BCM_VCE_MAGIC,		\
+				      VTQ_CMD_QUEUE_JOB,		\
+				      struct vtq_queuejob_ioctldata_noflags)
 #define VTQ_IOCTL_AWAIT_JOB     _IOW(BCM_VCE_MAGIC,			\
 				     VTQ_CMD_AWAIT_JOB,			\
 				     struct vtq_awaitjob_ioctldata)

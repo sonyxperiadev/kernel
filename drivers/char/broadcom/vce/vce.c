@@ -45,7 +45,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10113
+#define DRIVER_VERSION 10115
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -696,11 +696,17 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case VTQ_IOCTL_CREATE_TASK:
 			trace_ioctl_entry(VTQ_IOCTL_CREATE_TASK);
 			break;
+		case VTQ_IOCTL_CREATE_TASK_NOFLAGS:
+			trace_ioctl_entry(VTQ_IOCTL_CREATE_TASK_NOFLAGS);
+			break;
 		case VTQ_IOCTL_DESTROY_TASK:
 			trace_ioctl_entry(VTQ_IOCTL_DESTROY_TASK);
 			break;
 		case VTQ_IOCTL_QUEUE_JOB:
 			trace_ioctl_entry(VTQ_IOCTL_QUEUE_JOB);
+			break;
+		case VTQ_IOCTL_QUEUE_JOB_NOFLAGS:
+			trace_ioctl_entry(VTQ_IOCTL_QUEUE_JOB_NOFLAGS);
 			break;
 		case VTQ_IOCTL_AWAIT_JOB:
 			trace_ioctl_entry(VTQ_IOCTL_AWAIT_JOB);
@@ -882,11 +888,12 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case VTQ_IOCTL_CREATE_TASK:
+	case VTQ_IOCTL_CREATE_TASK_NOFLAGS:
 		{
-			struct vtq_createtask_ioctldata *d;
+			struct vtq_createtask_ioctldata_noflags *d;
 			vtq_task_id_t task_id;
 
-			d = (struct vtq_createtask_ioctldata *)arg;
+			d = (struct vtq_createtask_ioctldata_noflags *)arg;
 			task_id = vtqb_create_task(dev->vtq_ctx,
 					d->image_id, d->entrypoint);
 			if (task_id < 0)
@@ -906,10 +913,11 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case VTQ_IOCTL_QUEUE_JOB:
+	case VTQ_IOCTL_QUEUE_JOB_NOFLAGS:
 		{
-			struct vtq_queuejob_ioctldata *d;
+			struct vtq_queuejob_ioctldata_noflags *d;
 
-			d = (struct vtq_queuejob_ioctldata *)arg;
+			d = (struct vtq_queuejob_ioctldata_noflags *)arg;
 			ret = vtqb_queue_job(dev->vtq_ctx,
 				d->task_id, d->arg0, d->arg1, d->arg2,
 				d->arg3, d->arg4, d->arg5, 0, &d->job_id);
