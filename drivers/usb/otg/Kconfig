@@ -155,14 +155,6 @@ config USB_BCM_OTG
        help
 	  Enable this to support Broadcom USB OTG driver
 
-config KONA_OTG_CP
-	tristate "Kona OTG Control"
-	depends on ARCH_KONA
-	help
-	 Enable this to support dynamic USB OTG (host/device) on Kona based
-	 chips.
-
-
 config MAX3353
 	tristate "MAX3353 OTG Charge Pump"
 	depends on I2C && KONA_OTG_CP
