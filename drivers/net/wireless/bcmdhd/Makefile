@@ -70,7 +70,7 @@ endif
 ###ifneq ($(CONFIG_ANDROID_CFG80211),)
 ifneq ($(CONFIG_CFG80211),)
 bcmdhd-objs += wl_cfg80211.o wl_cfgp2p.o dhd_linux_mon.o
-DHDCFLAGS += -DWL_CFG80211 -DWLP2P
+DHDCFLAGS += -DWL_CFG80211 -DWLP2P -DBCMWAPI_WPI -DBCMWAPI_WAI 
 endif
 ###endif 
 

@@ -1022,6 +1022,9 @@ BWL_PRE_PACKED_STRUCT struct dot11_management_notification {
 #define DOT11_MNG_EXT_CSA_ID            60  
 #define DOT11_MNG_HT_ADD            61  
 #define DOT11_MNG_EXT_CHANNEL_OFFSET        62  
+#ifdef BCMWAPI_WAI
+#define DOT11_MNG_WAPI_ID           68  /* d11 management WAPI id */
+#endif
 
 
 #define DOT11_MNG_RRM_CAP_ID        70  
@@ -1874,6 +1877,11 @@ typedef struct dot11_obss_ie dot11_obss_ie_t;
 #define WCN_OUI         "\x00\x50\xf2"  
 #define WCN_TYPE        4   
 
+#ifdef BCMWAPI_WPI
+#define SMS4_KEY_LEN        16
+#define SMS4_WPI_CBC_MAC_LEN    16
+#endif
+
 
 
 
@@ -1915,6 +1923,13 @@ typedef struct dot11_gtk_ie dot11_gtk_ie_t;
 #define BSSID_BROADCAST         "\xFF\xFF\xFF\xFF\xFF\xFF"
 
 
+#ifdef BCMWAPI_WAI
+#define WAPI_IE_MIN_LEN     20  /* WAPI IE min length */
+#define WAPI_VERSION        1   /* WAPI version */
+#define WAPI_VERSION_LEN    2   /* WAPI version length */
+#define WAPI_OUI        "\x00\x14\x72"  /* WAPI OUI */
+#define WAPI_OUI_LEN        DOT11_OUI_LEN   /* WAPI OUI length */
+#endif /* BCMWAPI_WAI */
 
 #include <packed_section_end.h>
 
