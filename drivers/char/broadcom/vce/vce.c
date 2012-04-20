@@ -45,7 +45,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10115
+#define DRIVER_VERSION 10116
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -124,6 +124,17 @@ typedef struct {
 	 * because we have no current need to differentiate the
 	 * ioctl-based VCE clients. */
 	uint32_t acquirer_id;
+
+	/* Low latency hack */
+	/* We should not be allowing callers to keep the clock and
+	 * power on for ARM and VCE, but we need to support some
+	 * legacy code that has no means to do the power management
+	 * and so we need to do it in this driver.  We use a simple
+	 * method of turning it on in response to a "debug" ioctl, and
+	 * turn it off when the file descriptor is closed.  At least
+	 * this safeguards against a dying process */
+	struct mutex low_latency_hack_mutex;
+	uint32_t low_latency_hack_is_enabled;
 } vce_t;
 
 /* Per mmap handle state: */
@@ -464,6 +475,9 @@ static int vce_open(struct inode *inode, struct file *filp)
 	 * came from userland */
 	dev->acquirer_id = VCE_ACQUIRER_DONTCARE;
 
+	mutex_init(&dev->low_latency_hack_mutex);
+	dev->low_latency_hack_is_enabled = 0;
+
 	filp->private_data = dev;
 	return 0;
 }
@@ -515,6 +529,12 @@ static int vce_file_release(struct inode *inode, struct file *filp)
 	if (try_wait_for_completion(&dev->irq_sem)) {
 		err_print
 		    ("VCE driver closing with unacknowledged interrupts\n");
+	}
+
+	if (dev->low_latency_hack_is_enabled) {
+		dbg_print("VCE Low Latency Hack is Off\n");
+		clock_off();
+		cpu_keepawake_dec();
 	}
 
 	kfree(dev);
@@ -716,6 +736,9 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
 			trace_ioctl_entry(VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS);
+			break;
+		case VCE_IOCTL_DEBUG_LOW_LATENCY_HACK:
+			trace_ioctl_entry(VCE_IOCTL_DEBUG_LOW_LATENCY_HACK);
 			break;
 		}
 	}
@@ -956,6 +979,22 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
+#define ALLOW_LOW_LATENCY_HACK
+#if defined ALLOW_LOW_LATENCY_HACK
+	case VCE_IOCTL_DEBUG_LOW_LATENCY_HACK:
+		{
+			mutex_lock(&dev->low_latency_hack_mutex);
+			if (!dev->low_latency_hack_is_enabled) {
+				dev->low_latency_hack_is_enabled = 1;
+				mutex_unlock(&dev->low_latency_hack_mutex);
+				cpu_keepawake_inc();
+				clock_on();
+				dbg_print("VCE Low Latency Hack is On\n");
+			} else
+				mutex_unlock(&dev->low_latency_hack_mutex);
+		}
+#endif
+
 	default:
 		{
 			ret = -ENOTTY;
@@ -1018,6 +1057,9 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
 			trace_ioctl_return(VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS);
+			break;
+		case VCE_IOCTL_DEBUG_LOW_LATENCY_HACK:
+			trace_ioctl_return(VCE_IOCTL_DEBUG_LOW_LATENCY_HACK);
 			break;
 		}
 	}

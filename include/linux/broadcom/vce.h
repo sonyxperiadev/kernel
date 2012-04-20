@@ -53,6 +53,7 @@ enum {
 
 	VCE_CMD_DEBUG_XXYYZZ = 0x40,
 	VCE_CMD_DEBUG_FETCH_KSTAT_IRQS,
+	VCE_CMD_DEBUG_LOW_LATENCY_HACK,
 	VCE_CMD_DEBUG_LAST
 };
 
@@ -246,5 +247,7 @@ struct vtq_awaitjob_ioctldata {
 				   VTQ_CMD_ONLOADHOOK,			\
 				   struct vtq_onloadhook_ioctldata)
 #define VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS  _IOR(BCM_VCE_MAGIC, VCE_CMD_DEBUG_FETCH_KSTAT_IRQS, unsigned int)
+#define VCE_IOCTL_DEBUG_LOW_LATENCY_HACK  _IO(BCM_VCE_MAGIC, \
+		VCE_CMD_DEBUG_LOW_LATENCY_HACK)
 
 #endif
