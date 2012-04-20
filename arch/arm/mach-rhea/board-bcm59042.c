@@ -269,7 +269,7 @@ static struct regulator_init_data bcm59042_hv6ldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv6_supply),
 	.consumer_supplies = hv6_supply,
