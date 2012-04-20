@@ -1337,7 +1337,7 @@ int pl330_submit_req(void *ch_id, struct pl330_req *r)
 	int ret = 0;
 
 	/* No Req or Unacquired Channel or DMAC */
-	if (!r || !thrd || thrd->free)
+	if (!r || !r->cfg || !thrd || thrd->free)
 		return -EINVAL;
 
 	pl330 = thrd->dmac;
