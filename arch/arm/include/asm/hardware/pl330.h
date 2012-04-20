@@ -117,6 +117,9 @@ struct pl330_reqcfg {
 	enum pl330_dstcachectrl dcctl;
 	enum pl330_srccachectrl scctl;
 	enum pl330_byteswap swap;
+	/* Peripheral flush control */
+	bool peri_flush_start;		/* peripheral needs FLUSHP before DMA start */
+	bool peri_flush_end;		/* peripheral needs FLUSHP afrer transfer */
 	struct pl330_config *pcfg;
 };
 

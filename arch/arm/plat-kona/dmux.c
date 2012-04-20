@@ -285,7 +285,7 @@ int dmux_dealloc_peripheral(u32 channel)
 	return 0;
 }
 
-__init int dmux_init(void)
+int dmux_init(void)
 {
 
 	printk(KERN_INFO "DMAC MUX Init\n");
@@ -303,11 +303,9 @@ __init int dmux_init(void)
 	return 0;
 }
 
-__exit void dmux_exit(void)
+void dmux_exit(void)
 {
 	clk_disable(dmux.dmux_clk);
 	return;
 }
 
-module_init(dmux_init);
-module_exit(dmux_exit);

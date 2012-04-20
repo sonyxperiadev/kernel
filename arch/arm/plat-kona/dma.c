@@ -557,6 +557,8 @@ int dma_setup_transfer(unsigned int chan,
 	/* configuration options */
 	config->src_inc = (cfg & DMA_CFG_SRC_ADDR_INCREMENT) ? 1 : 0;
 	config->dst_inc = (cfg & DMA_CFG_DST_ADDR_INCREMENT) ? 1 : 0;
+	config->peri_flush_start = (cfg & PERIPHERAL_FLUSHP_START) ? 1: 0;
+	config->peri_flush_end = (cfg & PERIPHERAL_FLUSHP_END) ? 1: 0;
 
 	/* Burst size */
 	config->brst_size = bs >> DMA_CFG_BURST_SIZE_SHIFT;
@@ -719,6 +721,8 @@ int dma_setup_transfer_sg(unsigned int chan,
 	/* configuration options */
 	config->src_inc = (cfg & DMA_CFG_SRC_ADDR_INCREMENT) ? 1 : 0;
 	config->dst_inc = (cfg & DMA_CFG_DST_ADDR_INCREMENT) ? 1 : 0;
+	config->peri_flush_start = (cfg & PERIPHERAL_FLUSHP_START) ? 1: 0;
+	config->peri_flush_end = (cfg & PERIPHERAL_FLUSHP_END) ? 1: 0;
 
 	/* Burst size */
 	config->brst_size = bs >> DMA_CFG_BURST_SIZE_SHIFT;
@@ -934,6 +938,8 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	/* configuration options */
 	config->src_inc = (cfg & DMA_CFG_SRC_ADDR_INCREMENT) ? 1 : 0;
 	config->dst_inc = (cfg & DMA_CFG_DST_ADDR_INCREMENT) ? 1 : 0;
+	config->peri_flush_start = (cfg & PERIPHERAL_FLUSHP_START) ? 1: 0;
+	config->peri_flush_end = (cfg & PERIPHERAL_FLUSHP_END) ? 1: 0;
 
 	/* Burst size */
 	config->brst_size = bs >> DMA_CFG_BURST_SIZE_SHIFT;
@@ -1074,13 +1080,17 @@ int dma_start_transfer(unsigned int chan)
 	if (ret)
 		goto err1;
 
-	/* Acquire DMUX semaphore while microcode loading
-	 * This call always success because protect(unprotect) happen
-	 * atomically within global spinlock.
-	 */
-	dmux_sema_protect();
 	if (pl330_submit_req(c->pl330_chan_id, &c->req) != 0)
 		goto err2;
+
+	/*
+	 * Acquire DMUX semaphore while microcode loading
+	 *
+	 * This HW semaphore call is redundant as PL330 driver always
+	 * serializes the microcode loading in an atomic conext.
+	 *
+	 */
+	dmux_sema_protect();
 
 	/* Start DMA channel thread */
 	if (pl330_chan_ctrl(c->pl330_chan_id, PL330_OP_START) != 0) {
@@ -1227,6 +1237,12 @@ static int pl330_probe(struct platform_device *pdev)
 		goto probe_err1;
 	}
 
+	if(dmux_init() != 0)	{
+		dev_err(&pdev->dev, "DMUX initialisation failed!\n");
+		ret = -ENODEV;
+		goto probe_err1;
+	}
+
 	pl330_info = kzalloc(sizeof(*pl330_info), GFP_KERNEL);
 	if (!pl330_info) {
 		ret = -ENOMEM;
@@ -1336,6 +1352,10 @@ static int pl330_remove(struct platform_device *pdev)
 	/* Free dmac descriptor */
 	kfree(dmac);
 	dmac = NULL;
+
+	/* De-initialise DMUX */
+	dmux_exit();
+
 	spin_unlock_irqrestore(&lock, flags);
 
 	return 0;
