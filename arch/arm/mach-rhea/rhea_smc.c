@@ -24,6 +24,7 @@
 #include <asm/cacheflush.h>
 #include <plat/scu.h>
 #include <mach/secure_api.h>
+#include <mach/pm.h>
 
 static u32 *smc_buf_p;
 static u32 *smc_buf_v;
@@ -113,6 +114,9 @@ static inline u32 smc(u32 service, u32 flags, u32 args)
 	scu_invalidate_all();
 	flush_cache_all();
 
+#ifdef DORMANT_PROFILE
+	clear_ns_gpio();
+#endif
 	ret = __smc(service, flags, args);
 
 	restore_cp15ctrl(cp15ctrl);

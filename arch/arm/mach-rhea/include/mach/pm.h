@@ -7,6 +7,32 @@
 
 #define KONA_MACH_MAX_IDLE_STATE 1
 
+/* Uncomment this to profile time taken by the dormant
+ * mode code. Use the following commands to control
+ * dormant mode profiling:
+ * 1. Enable profiling:
+ *    echo d p 1 <ns_gpio> <sec_gpio> <ref_gpio>
+ * 2. Disable profiling:
+ *    echo d p 0 0 0 0
+ * Three GPIOs are used in profiling the time taken by
+ * dormant mode code (in both Linux side and ABI-EXT).
+ *    a. ref_gpio: This GPIO is turned ON at dormant sequence
+ *       start and turned OFF at dormant sequence end. This GPIO
+ *       is used to create a reference on the oscilloscope to
+ *       correctly determine the start and end of one dormant
+ *       entry.
+ *    b. ns_gpio: This GPIO is used to time the dormant sequence
+ *       in the Linux side (till SMC in entry and from reset handler
+ *       to the end in the exit path). Two pulses are seen on ns_gpio
+ *       under one pulse of ref_gpio.
+ *    c. sec_gpio: Set this value to the GPIO used in ABI-EXT. If ABI-EXT
+ *       does not include the GPIO toggle code for timing, then give
+ *       a number which does not conflict with either of the above(this
+ *       is only a piece of test code and hence does not do any fancy
+ *       sanity check!).
+ */
+/* #define DORMANT_PROFILE */
+
 /* Set this to 0 to disable dormant mode tracing code */
 #define DORMANT_TRACE_ENABLE        1
 #define DORMANT_ENTRY               0xF0F0F0F0
@@ -21,24 +47,22 @@
 #define DORMANT_CTRL_PROG_END       0xE1
 
 #ifndef __ASSEMBLY__
-/*
- * Any change in this structure should reflect in the definition
- * in the asm file (arch/arm/mach-rhea/dm_pwr_policy_top.S).
- */
-struct dormant_gpio_data {
-	s32 enable;
-	u32 gpio_set_p;
-	u32 gpio_set_v;
-	u32 gpio_clr_p;
-	u32 gpio_clr_v;
-	u32 gpio_bit;
-};
-
 extern u32 dormant_start(void);
 
-/* Variables exported by asm code */
-extern struct dormant_gpio_data dormant_gpio_data;
+#ifdef DORMANT_PROFILE
+/* Vars exported by dm_pwr_policy_top.S for dormant profiling */
+extern u32 dormant_profile_on;
+extern u32 ns_gpio_set_p;
+extern u32 ns_gpio_clr_p;
+extern u32 ns_gpio_set_v;
+extern u32 ns_gpio_clr_v;
+extern u32 ns_gpio_bit;
 
+extern void clear_ns_gpio(void);
+#endif /* DORMANT_PROFILE */
+
+extern void dbg_gpio_set(u32 gpio);
+extern void dbg_gpio_clr(u32 gpio);
 extern int rhea_force_sleep(suspend_state_t state);
 extern void request_suspend_state(suspend_state_t state);
 extern void instrument_dormant_entry(void);
