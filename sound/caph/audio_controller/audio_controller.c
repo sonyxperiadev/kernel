@@ -1036,8 +1036,14 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 	sp_struct.mixOutGain_mB = GAIN_SYSPARM;
 	sp_struct.mixOutGainR_mB = GAIN_SYSPARM;
 	if (users_gain[AUDPATH_FM].valid) {
-		sp_struct.mixInGain_mB = users_gain[AUDPATH_FM].L;
-		sp_struct.mixInGainR_mB = users_gain[AUDPATH_FM].R;
+		/*do not apply FM mixer input gain to music*/
+		if (path->source == CSL_CAPH_DEV_MEMORY) {
+			sp_struct.mixInGain_mB = GAIN_SYSPARM;
+			sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+		} else {
+			sp_struct.mixInGain_mB = users_gain[AUDPATH_FM].L;
+			sp_struct.mixInGainR_mB = users_gain[AUDPATH_FM].R;
+		}
 	} else {
 		if (muteInPlay) {
 			sp_struct.mixInGain_mB = GAIN_NA;

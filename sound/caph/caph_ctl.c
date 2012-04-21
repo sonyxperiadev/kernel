@@ -1513,11 +1513,15 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 					sink = pSel[indexVal];
 					pSel[indexVal] = AUDIO_SINK_UNDEFINED;
 					if (isSTIHF == TRUE && sink ==
-							AUDIO_SINK_LOUDSPK &&
-							pSel[indexVal+1] ==
+						AUDIO_SINK_LOUDSPK) {
+						if (indexVal+1 >=
+							MAX_PLAYBACK_DEV)
+							break;
+						if (pSel[indexVal+1] ==
 							AUDIO_SINK_HANDSET)
-						pSel[indexVal+1] =
+							pSel[indexVal+1] =
 							AUDIO_SINK_UNDEFINED;
+					}
 					if (i != 0)
 						break;
 				} else if (indexVal != -1) {
