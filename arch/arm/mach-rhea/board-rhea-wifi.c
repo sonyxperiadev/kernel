@@ -159,7 +159,8 @@ err_skb_alloc:
 }
 #endif /* CONFIG_BROADCOM_WIFI_RESERVED_MEM */
 
-extern int bcm_sdiowl_init(void);
+
+extern int bcm_sdiowl_init(int onoff);
 extern int bcm_sdiowl_term(void);
 
 int rhea_wifi_status_register(void (*callback) (int card_present, void *dev_id),
@@ -188,18 +189,6 @@ int __init omap_mux_init_signal(const char *muxname, int val)
 	return 0;
 }
 
-#if 0
-static struct resource rhea_wifi_resources[] = {
-	[0] = {
-	       .name = "bcmdhd_wlan_irq",
-	       .start = -1,
-	       .end = -1,
-	       .flags =
-	       IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL |
-	       IORESOURCE_IRQ_SHAREABLE,
-	       },
-};
-#endif
 
 static int rhea_wifi_cd = 0;	/* WIFI virtual 'card detect' status */
 static void (*wifi_status_cb) (int card_present, void *dev_id);
@@ -317,7 +306,7 @@ static int rhea_wifi_power(int on)
 		regulator_disable(clk32kaudio_reg);
 #endif
 	if (on)
-		bcm_sdiowl_init();
+		bcm_sdiowl_init(on);
 	else
 		bcm_sdiowl_term();
 
@@ -463,13 +452,11 @@ static void *rhea_wifi_get_country_code(char *ccode)
 
 static struct resource rhea_wifi_resources[] = {
 	[0] = {
-	       .name = "bcmdhd_wlan_irq",
-	       .start = -1,
-	       .end = -1,
-	       .flags =
-	       IORESOURCE_IRQ | IORESOURCE_IRQ_LOWEDGE
-	       /* IORESOURCE_IRQ_HIGHLEVEL */  | IORESOURCE_IRQ_SHAREABLE,
-	       },
+		.name		= "bcmdhd_wlan_irq",
+		.start		= gpio_to_irq(74),	//GPIO74
+		.end		= gpio_to_irq(74),	//GPIO74
+		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_LOWEDGE/* IORESOURCE_IRQ_HIGHLEVEL */| IORESOURCE_IRQ_SHAREABLE | IRQF_NO_SUSPEND,
+	},
 };
 
 static struct wifi_platform_data rhea_wifi_control = {

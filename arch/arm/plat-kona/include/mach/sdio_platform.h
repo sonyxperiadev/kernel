@@ -35,6 +35,7 @@ struct sdio_wifi_gpio_cfg {
 	int shutdown;
 	int reg;
 	int host_wake;
+	int reserved;
 };
 
 /*
