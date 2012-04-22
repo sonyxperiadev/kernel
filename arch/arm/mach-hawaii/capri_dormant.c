@@ -19,13 +19,18 @@
 #include <linux/dma-mapping.h>
 #include <mach/io_map.h>
 #include <linux/slab.h>
+#include <plat/pwr_mgr.h>
+#include <mach/rdb/brcm_rdb_pwrmgr.h>
+#include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_scu.h>
+
+#ifdef DORMANT_TBD
 #include <mach/rdb/brcm_rdb_csr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_iroot_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_gicdist.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
-#include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_sectrap.h>
 #include <mach/rdb/brcm_rdb_axitp1.h>
 #include <mach/rdb/brcm_rdb_swstm.h>
@@ -39,10 +44,17 @@
 #include <mach/rdb/brcm_rdb_a9pmu.h>
 #include <mach/rdb/brcm_rdb_a9ptm.h>
 #include <mach/rdb/brcm_rdb_glbtmr.h>
+#endif /* DORMANT_TBD */
+
 #include <plat/pwr_mgr.h>
 #include <mach/pwr_mgr.h>
 
-static int enable_dormant;
+#ifdef CAPRI_DORMANT_CHANGE
+#include "appf_boot_api.h"
+#include "appf_types.h"
+#endif
+
+static int enable_dormant =1;
 module_param_named(enable_dormant, enable_dormant, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #ifdef CONFIG_ROM_SEC_DISPATCHER
@@ -53,6 +65,7 @@ u32 dormant_base_va;
 u32 dormant_base_pa;
 
 extern void dormant_start(void);
+extern struct appf_main_table main_table;
 
 /* Array of registers that needs to be saved and restored.  Please add to the end if new data
  * needs to be added.  Note that PLL DIV and TRIGGER registers are moved to the top of the list
@@ -61,8 +74,6 @@ extern void dormant_start(void);
 
 static u32 addnl_save_reg_list[][2] = {
 
-	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PL310_DIV_OFFSET), 0}, //0x3FE00A00 - PL310_DIV
-	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PL310_TRIGGER_OFFSET), 0}, //0x3FE00A04 - PL310_TRIGGER
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET), 0}, //0x3FE00008 - POLICY_FREQ
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET), 0}, //0x3FE0000C - POLICY_CTL
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_POLICY0_MASK_OFFSET), 0}, //0x3FE00010 - POLICY0_MASK
@@ -101,8 +112,14 @@ static u32 addnl_save_reg_list[][2] = {
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_CLKGATE_DBG_OFFSET), 0}, //0x3FE00E40 - CLKGATE_DBG
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_APB_CLKGATE_DBG1_OFFSET), 0}, //0x3FE00E48 - APB_CLKGATE_DBG1
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_CLKMON_OFFSET), 0}, //0x3FE00E64 - CLKMON
+
+/*	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PL310_DIV_OFFSET), 0}, //0x3FE00A00 - PL310_DIV
+	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PL310_TRIGGER_OFFSET), 0}, //0x3FE00A04 - PL310_TRIGGER
+*/
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_POLICY_DBG_OFFSET), 0}, //0x3FE00EC0 - POLICY_DBG
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_TGTMASK_DBG1_OFFSET), 0}, //0x3FE00EC4 - TGTMASK_DBG1
+
+#ifdef DORMANT_TBD
 
 	{ (KONA_SECTRAP1_VA+SECTRAP_TRAP_CONFIG_OFFSET), 0}, //0x3FE01000 - TRAP_CONFIG
 	{ (KONA_SECTRAP1_VA+SECTRAP_TRAP_STATUS_OFFSET), 0}, //0x3FE01004 - TRAP_STATUS
@@ -445,6 +462,7 @@ static u32 addnl_save_reg_list[][2] = {
 	{ (KONA_GICDIST_VA+GICDIST_INT_CONFIG13_OFFSET), 0}, //0x3FF01C34 - INT_CONFIG13
 	{ (KONA_GICDIST_VA+GICDIST_INT_CONFIG14_OFFSET), 0}, //0x3FF01C38 - INT_CONFIG14
 	{ (KONA_GICDIST_VA+GICDIST_INT_CONFIG15_OFFSET), 0} //0x3FF01C3C - INT_CONFIG15
+#endif /* DORMANT_TBD */
 };
 
 #ifdef CONFIG_ROM_SEC_DISPATCHER
@@ -520,6 +538,9 @@ static void dormant_restore_addnl_reg(void)
 			 */
 			writel(KPROC_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK | KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
 			KONA_PROC_CLK_VA + KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET);
+
+			/* break out of the loop for now */
+			break;
 		}
 	}
 
@@ -541,28 +562,51 @@ static void dormant_restore_addnl_reg(void)
 #endif
 }
 
+#define SCU_DORMANT_MODE_OFF_B 0x00
 int loop = 1;
 void dormant_enter(void)
 {
-
+	int rc;
 	if (enable_dormant) {
-		pr_info("%s:Enter\n", __func__);
 		dormant_save_addnl_reg();
 
-		dormant_start();
+		rc = main_table.entry_point((appf_u32)APPF_POWER_DOWN_CPU,
+				(appf_u32)2, (appf_u32)2, (appf_u32)NULL);
+		if (smp_processor_id() == 0) {
+			if (rc == APPF_OK) {
+				u32 boot_2nd_addr;
+				dormant_restore_addnl_reg();
 
-		dormant_restore_addnl_reg();
+				/* We are about to let CORE-1 go start running.
+				 * it's SMP bit is set in rom.  let us clear it's SCU
+				 * power control so we can start using it's SMP values
+				 */
+				writeb(SCU_DORMANT_MODE_OFF_B, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET + 1);
 
-	} else {
-		pr_info("%s:Dummy\n", __func__);
-	}
-	pr_info("%s: Exit\n", __func__);
-
+				boot_2nd_addr = readl(KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
+				boot_2nd_addr |= 1;
+				writel(boot_2nd_addr, KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
+			}
+		}
+	} 
 }
 
 
-int __init island_dormant_init(void)
+int __init capri_dormant_init(void)
 {
+	/* Ignore DAP power-up request to enter retention/dormant */
+	u32 reg_val = 0;
+
+	reg_val = readl(KONA_PWRMGR_VA
+		+ PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+	reg_val |= PWRMGR_PI_DEFAULT_POWER_STATE_IGNORE_DAP_POWERUPREQ_MASK;
+	writel(reg_val, KONA_PWRMGR_VA + PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+
+	appf_boottime_init();
+	main_table.entry_point((appf_u32)APPF_INITIALIZE,
+			(appf_u32)NULL, (appf_u32)NULL, (appf_u32)NULL);
+
+	/*
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 	dma_addr_t drmt_buf_phy;
 	dormant_base_va = (u32)dma_alloc_coherent(NULL, SZ_4K,
@@ -574,7 +618,7 @@ int __init island_dormant_init(void)
 	dormant_base_va = dormant_base_pa =
 	     (u32)kmalloc(SZ_4K, GFP_ATOMIC);
 #endif
+*/
 	return 0;
 }
-
-module_init(island_dormant_init);
+module_init(capri_dormant_init);
