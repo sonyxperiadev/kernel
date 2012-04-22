@@ -37,7 +37,7 @@ struct sdio_wifi_gpio_cfg {
 	int host_wake;
 	int reserved;
 };
-
+//New change
 /*
  * SDIO Platform flags:
  *

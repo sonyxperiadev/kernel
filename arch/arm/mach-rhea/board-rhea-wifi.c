@@ -458,7 +458,7 @@ static struct resource rhea_wifi_resources[] = {
 		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_LOWEDGE/* IORESOURCE_IRQ_HIGHLEVEL */| IORESOURCE_IRQ_SHAREABLE | IRQF_NO_SUSPEND,
 	},
 };
-
+//New chanege
 static struct wifi_platform_data rhea_wifi_control = {
 	.set_power = rhea_wifi_power,
 	.set_reset = rhea_wifi_reset,
