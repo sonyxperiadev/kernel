@@ -54,7 +54,7 @@
 #include "appf_types.h"
 #endif
 
-static int enable_dormant =1;
+static int enable_dormant = 1;
 module_param_named(enable_dormant, enable_dormant, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #ifdef CONFIG_ROM_SEC_DISPATCHER
@@ -588,7 +588,7 @@ void dormant_enter(void)
 				writel(boot_2nd_addr, KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
 			}
 		}
-	} 
+	}
 }
 
 
