@@ -2111,6 +2111,13 @@ config KEXEC
 	  initially work for you.  It may help to enable device hotplugging
 	  support.
 
+config CRASH_NOTES
+	bool "Support for storing crash_notes"
+	default n
+	help
+	  Expose crash_notes and fill it with register values at the time of
+	  panic.
+
 config ATAGS_PROC
 	bool "Export atags in procfs"
 	depends on ATAGS && KEXEC

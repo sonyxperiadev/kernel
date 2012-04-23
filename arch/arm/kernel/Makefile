@@ -85,3 +85,9 @@ obj-$(CONFIG_ARM_VIRT_EXT)	+= hyp-stub.o
 obj-$(CONFIG_ARM_PSCI)		+= psci.o
 
 extra-y := $(head-y) vmlinux.lds
+
+obj-$(CONFIG_CRASH_NOTES)	+= crash_notes.o
+CFLAGS_crash_notes.o		:= \
+	-D"INFO_PRODUCT=\"$(if $(TARGET_PRODUCT),$(TARGET_PRODUCT),unknown)\"" \
+	-D"INFO_VARIANT=\"$(if $(TARGET_BUILD_VARIANT),$(TARGET_BUILD_VARIANT),unknown)\"" \
+	-D"INFO_BUILDID=\"$(if $(BUILD_ID),$(BUILD_ID),unknown)\""
