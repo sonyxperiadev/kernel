@@ -127,7 +127,7 @@ void IPC_SmFifoWrite(IPC_Fifo Fifo, IPC_Buffer Message)
 		Fifo->HighWaterMark = IPC_FIFOCOUNT(Fifo);
 
 	CRITICAL_REIGON_LEAVE if (OriginalWritePointer == 0) {
-		IPC_TRACE(IPC_Channel_General, "IPC_SmFifoWrite",
+		IPC_TRACE(IPC_Channel_Debug, "IPC_SmFifoWrite",
 			  "Fifo %08X, Count %d, HighWaterMark %d", Fifo,
 			  Fifo->WriteCount, Fifo->HighWaterMark, 0);
 	}
@@ -847,7 +847,7 @@ extern char *GetFuncNameByAddr(IPC_U32, IPC_U32, IPC_U32 *);
 void IPC_Dump(void)
 {
 	IPC_SmControl SmControl = SmLocalControl.SmControl;
-	IPC_U32 EpIndex;
+	//IPC_U32 EpIndex;
 	IPC_U32 CpuIndex;
 
 	IPC_TRACE(IPC_Channel_General, "\n===== IPC Dump =====\n", "", 0, 0, 0,
@@ -907,6 +907,7 @@ void IPC_Dump(void)
 		  SmControl->Interrupts[CpuIndex].InterruptRaised,
 		  SmControl->Interrupts[CpuIndex].InterruptHandled, 0);
 
+#if 0
 	for (EpIndex = IPC_EP_None + 1; EpIndex < IPC_EndpointId_Count;
 	     EpIndex++) {
 		IPC_Endpoint EpPtr =
@@ -985,6 +986,7 @@ void IPC_Dump(void)
 #endif
 
 	}
+#endif
 
 	IPC_PoolDumpAll(SmControl->FirstPool);
 }
