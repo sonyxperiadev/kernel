@@ -987,7 +987,8 @@ static void usb_det_work(struct work_struct *work)
 	case USB_IDLE:
 		enable_bc_clock(paccy, true);
 		pr_accy(FLOW, "%s, enable clock\n", __func__);
-		msleep(1);
+		if (paccy->clock_en)
+			mdelay(1);
 		reset_bc(paccy);
 		paccy->retry_cnt = 0;
 		paccy->poll_cnt = 0;
@@ -1671,7 +1672,10 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	 * BCDAVDD33 as floated.
 	*/
 #if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042)
+	/* Enable/Disable USB OTG clock aroudn bc_iso change */
+	enable_bc_clock(paccy, true);
 	bcm_hsotgctrl_set_bc_iso(true);
+	enable_bc_clock(paccy, false);
 #endif
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
