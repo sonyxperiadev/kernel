@@ -966,6 +966,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.pok_restart_dly = -1,
 	.pok_restart_deb = -1,
 	.pok_lock = 1, /*Keep ponkey locked by default*/
+	.ihf_autoseq_dis = 1,
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 	.piggyback_chrg = 1,
 	.piggyback_chrg_name = "bcm59039_charger",
