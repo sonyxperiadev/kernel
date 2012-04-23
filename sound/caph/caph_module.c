@@ -44,6 +44,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/pcm.h>
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
+#include <plat/kona_reset_reason.h>
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -702,6 +703,11 @@ static int __devinit ALSAModuleInit(void)
 	int err = 0;
 
 	aTrace(LOG_ALSA_INTERFACE, "ALSA Module init called:\n");
+	if (is_ap_only_boot()) {
+		/* don't register audio driver for AP only boot mode */
+		aTrace(LOG_ALSA_INTERFACE, "AP Only Boot\n");
+		return 0;
+	}
 
 	err = platform_device_register(&sgPlatformDevice);
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:device register done %d\n"
