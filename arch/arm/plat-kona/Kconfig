@@ -157,7 +157,9 @@ config KONA_PI_DFS_STATS
        bool "Enable Kona PI DFS statistics support"
        depends on KONA_PI_MGR
        help
-	Say Y if you want to enable Kona PI DFS statistics (OPP transitions)
+	Say Y if you want to enable Kona PI DFS statistics (OPP transitions).
+	This will support OPP transitions statistics and also the time spent
+	by each PI in a given OPP.
 
 
 config KONA_PWRMGR_ENABLE_HW_SEM_WORKAROUND

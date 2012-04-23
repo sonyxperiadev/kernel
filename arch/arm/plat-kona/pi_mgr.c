@@ -364,7 +364,8 @@ event, void *data)
 	if (event != PI_POSTCHANGE)
 		return 0;
 
-	pi_dfs_stats = container_of(self, struct pi_dfs_stats, pi_state_notify_blk);
+	pi_dfs_stats = container_of(self, struct pi_dfs_stats,
+						pi_state_notify_blk);
 	dfs_dep_pi = container_of(pi_dfs_stats, struct pi, pi_dfs_stats);
 	pi_dfs_stats_update(dfs_dep_pi);
 
@@ -418,8 +419,8 @@ static int __pi_dfs_stats_enable(struct pi *pi, int enable)
 	if (enable) {
 		pi->pi_dfs_stats.last_time = get_jiffies_64();
 		pi->pi_dfs_stats.last_index = pi->opp_active;
-		pi_mgr_register_notifier(pi->id,&pi->pi_dfs_stats.pi_dfs_notify_blk,
-		PI_NOTIFY_DFS_CHANGE);
+		pi_mgr_register_notifier(pi->id, &pi->
+			pi_dfs_stats.pi_dfs_notify_blk, PI_NOTIFY_DFS_CHANGE);
 		if (dfs_pi->usg_cnt)
 			pi->pi_dfs_stats.dfs_pi_active = 1;
 		pi_mgr_register_notifier(pi->pi_dfs_stats.qos_pi_id,
@@ -521,9 +522,8 @@ static int __pi_init_state(struct pi *pi)
 					pi_freq_chg_notifier;
 		pi->pi_dfs_stats.pi_state_notify_blk.notifier_call =
 					pi_state_chg_notifier;
-		if (pi->flags & ENABLE_DFS_STATS) {
+		if (pi->flags & ENABLE_DFS_STATS)
 			__pi_dfs_stats_enable(pi, 1);
-		}
 #endif
 		spin_unlock_irqrestore(&pi->lock, flgs);
 	}
