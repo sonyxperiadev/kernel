@@ -656,6 +656,7 @@ void IPC_BufferDump(IPC_Buffer Buffer)
 	 * coverity[returned_pointer]
 	 */
 	IPC_U32 *DataPtr = IPC_BufferDataPointer(Buffer);
+	IPC_BufferPool_T *	PoolPtr	= IPC_PoolToPtr (BufferPtr->Pool);
 
 	if (BufferPtr == 0) {
 		IPC_TRACE(IPC_Channel_General, "IPC_BufferDump",
@@ -695,5 +696,19 @@ void IPC_BufferDump(IPC_Buffer Buffer)
 	IPC_TRACE(IPC_Channel_General, "              ",
 		  "Data 0..3 %08X %08X %08X %08X", DataPtr[0], DataPtr[1],
 		  DataPtr[2], DataPtr[3]);
+
+	IPC_TRACE(IPC_Channel_General, "              ",
+		  "Data 4..7 %08X %08X %08X %08X", DataPtr[4], DataPtr[5],
+		  DataPtr[6], DataPtr[7]);
+
+	// Print RPC message ID located at byte 18-19 of IPC buffer
+	if (PoolPtr->SourceEndpointId == IPC_EP_Capi2Cp ||
+			PoolPtr->DestinationEndpointId == IPC_EP_Capi2Cp)
+	{
+		UInt8 * rpcDataPtr = (UInt8 *)DataPtr;
+		UInt32 rpcMsgId = ((UInt32)(rpcDataPtr[19])) | ((UInt32)(rpcDataPtr[18]) << 8);
+		IPC_TRACE (IPC_Channel_General, "              ", "RPC message ID %08X",
+				rpcMsgId, 0, 0, 0);
+	}
 
 }

@@ -725,9 +725,10 @@ void IPC_PoolDumpStats(IPC_BufferPool Pool)
 void IPC_PoolDump(IPC_BufferPool Pool)
 {
 	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
-	IPC_SmQEntry QEntry = IPC_QNext(IPC_POOLFreeQ(Pool));
-	IPC_QEntry QEntryPtr = IPC_QEntryPtr(QEntry);
-	IPC_SmPtr QItem = QEntryPtr->Item;
+	IPC_U32			Id;
+	IPC_SmPtr		Buffer;
+	IPC_U32			BufferSize;
+	IPC_Buffer_T * BufferPtr;
 
 	IPC_TRACE(IPC_Channel_General, "----- IPC_PoolDump -----", "", 0, 0, 0,
 		  0);
@@ -751,52 +752,28 @@ void IPC_PoolDump(IPC_BufferPool Pool)
 						DestinationEndpointId));
 
 	IPC_TRACE(IPC_Channel_General, "            ",
-		  "BufSize %d, Free  %d, FlowState %01d, Param %08X",
-		  PoolPtr->MaxDataSize, PoolPtr->FreeBuffers,
+		  "BufCount %d, Free  %d, FlowState %01d, Param %08X",
+		  PoolPtr->MaxBuffers, PoolPtr->FreeBuffers,
 		  PoolPtr->FlowControlState, PoolPtr->UserParameter);
 
 	IPC_PoolDumpStats(Pool);
 
-#ifdef IPC_DEBUG
-	if (QItem == Pool) {
-		IPC_TRACE(IPC_Channel_General, "IPC_PoolDump",
-			  "No Free Buffers", 0, 0, 0, 0);
-	} else {
-		IPC_TRACE(IPC_Channel_General, "IPC_PoolDump", "Free Buffers",
-			  0, 0, 0, 0);
-		while (QItem != Pool) {
-			IPC_BufferDump(QItem);
-			QEntry = IPC_QNext(QEntry);
-			QEntryPtr = IPC_QEntryPtr(QEntry);
-			QItem = QEntryPtr->Item;
-		}
-	}
+	// Dump IPC buffer not consumed by receiver to debug IPC memory depletion issue
+	if (PoolPtr->MaxBuffers == PoolPtr->FreeBuffers)
+		return;
 
-	QEntry = IPC_QNext(IPC_SmOffset(&PoolPtr->AllocatedBufferQ.Link));
-	QEntryPtr = IPC_QEntryPtr(QEntry);
-	QItem = QEntryPtr->Item;
-
-	if (QItem == Pool) {
-		IPC_TRACE(IPC_Channel_General, "IPC_PoolDump",
-			  "No Allocated Buffers", 0, 0, 0, 0);
-	} else {
-		IPC_TRACE(IPC_Channel_General, "IPC_PoolDump",
-			  "Allocated Buffers", 0, 0, 0, 0);
-		while (QItem != Pool) {
-			IPC_BufferDump(QItem);
-			QEntry = IPC_QNext(QEntry);
-			QEntryPtr = IPC_QEntryPtr(QEntry);
-			QItem = QEntryPtr->Item;
+	Buffer = Pool + sizeof (IPC_BufferPool_T);
+	BufferSize = IPC_BufferOverhead() + PoolPtr->MaxHeaderSize + PoolPtr->MaxDataSize;
+	IPC_TRACE (IPC_Channel_General, "IPC_PoolDump", "Allocated Buffers:", 0, 0, 0, 0);
+	for (Id = 0; Id < PoolPtr->MaxBuffers; Id++)
+	{
+		BufferPtr = IPC_BufferToPtr(Buffer);
+		if (BufferPtr->StatusCode != IPC_BUFFER_STATUS_FREE)
+		{
+			IPC_BufferDump(Buffer);
 		}
+		Buffer += BufferSize;
 	}
-#else
-	while (QItem != Pool) {
-		IPC_BufferDump(QItem);
-		QEntry = IPC_QNext(QEntry);
-		QEntryPtr = IPC_QEntryPtr(QEntry);
-		QItem = QEntryPtr->Item;
-	}
-#endif
 }
 
 /**************************************************/

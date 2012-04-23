@@ -149,6 +149,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		abort();
 	}
 
+	IPC_Dump();
 	RpcDbgDumpHistoryLogging(0, 0);
 
 #if defined(CONFIG_BRCM_CP_CRASH_DUMP) \
