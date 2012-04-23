@@ -57,7 +57,6 @@
 #define DRV_CMD_RSSI				"RSSI"
 #define DRV_CMD_LINKSPEED			"LINKSPEED"
 
-
 typedef struct wlan_driver_priv_cmd {
 	char *buf;
 	int used_len;
@@ -85,11 +84,11 @@ extern char iface_name[IFNAMSIZ];
  */
 static int g_wifi_on = TRUE;
 
-
 /**
  * Local (static) function definitions
  */
-static int wl_elinux_get_link_speed(struct net_device *net, char *command, int total_len)
+static int wl_elinux_get_link_speed(struct net_device *net, char *command,
+				    int total_len)
 {
 	int link_speed;
 	int bytes_written;
@@ -101,14 +100,16 @@ static int wl_elinux_get_link_speed(struct net_device *net, char *command, int t
 
 	/* Convert Kbps to elinux Mbps */
 	link_speed = link_speed / 1000;
-	bytes_written = snprintf(command, total_len, "LinkSpeed %d", link_speed);
+	bytes_written =
+	    snprintf(command, total_len, "LinkSpeed %d", link_speed);
 	DHD_INFO(("%s: command result is %s\n", __FUNCTION__, command));
 	return bytes_written;
 }
 
-static int wl_elinux_get_rssi(struct net_device *net, char *command, int total_len)
+static int wl_elinux_get_rssi(struct net_device *net, char *command,
+			      int total_len)
 {
-	wlc_ssid_t ssid = {0};
+	wlc_ssid_t ssid = { 0 };
 	int rssi;
 	int bytes_written = 0;
 	int error;
@@ -126,8 +127,10 @@ static int wl_elinux_get_rssi(struct net_device *net, char *command, int total_l
 		memcpy(command, ssid.SSID, ssid.SSID_len);
 		bytes_written = ssid.SSID_len;
 	}
-	bytes_written += snprintf(&command[bytes_written], total_len, " rssi %d", rssi);
-	DHD_INFO(("%s: command result is %s (%d)\n", __FUNCTION__, command, bytes_written));
+	bytes_written +=
+	    snprintf(&command[bytes_written], total_len, " rssi %d", rssi);
+	DHD_INFO(("%s: command result is %s (%d)\n", __FUNCTION__, command,
+		  bytes_written));
 	return bytes_written;
 }
 
@@ -196,13 +199,13 @@ int wl_elinux_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		ret = -EINVAL;
 		goto exit;
 	}
-	if (copy_from_user(&priv_cmd, ifr->ifr_data, sizeof(wlan_driver_priv_cmd))) {
+	if (copy_from_user
+	    (&priv_cmd, ifr->ifr_data, sizeof(wlan_driver_priv_cmd))) {
 		ret = -EFAULT;
 		goto exit;
 	}
 	command = kmalloc(priv_cmd.total_len, GFP_KERNEL);
-	if (!command)
-	{
+	if (!command) {
 		DHD_ERROR(("%s: failed to allocate memory\n", __FUNCTION__));
 		ret = -ENOMEM;
 		goto exit;
@@ -212,7 +215,8 @@ int wl_elinux_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		goto exit;
 	}
 
-	DHD_INFO(("%s: WLAN driver private cmd \"%s\" on %s\n", __FUNCTION__, command, ifr->ifr_name));
+	DHD_INFO(("%s: WLAN driver private cmd \"%s\" on %s\n", __FUNCTION__,
+		  command, ifr->ifr_name));
 
 	if (strnicmp(command, DRV_CMD_TEST, strlen(DRV_CMD_TEST)) == 0) {
 		DHD_ERROR(("%s, Received TEST command\n", __FUNCTION__));
@@ -220,54 +224,74 @@ int wl_elinux_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 
 	if (!g_wifi_on) {
 		DHD_ERROR(("%s: Ignore private cmd \"%s\" - iface %s is down\n",
-			__FUNCTION__, command, ifr->ifr_name));
+			   __FUNCTION__, command, ifr->ifr_name));
 		ret = 0;
 		goto exit;
 	}
 
 	if (strnicmp(command, DRV_CMD_PM_1, strlen(DRV_CMD_PM_1)) == 0) {
 		val = htod32(1);
-		bytes_written = wldev_ioctl(net, WLC_SET_PM, &val, sizeof(val), true);
-	}
-	else if (strnicmp(command, DRV_CMD_PM_2, strlen(DRV_CMD_PM_2)) == 0) {
+		bytes_written =
+		    wldev_ioctl(net, WLC_SET_PM, &val, sizeof(val), true);
+	} else if (strnicmp(command, DRV_CMD_PM_2, strlen(DRV_CMD_PM_2)) == 0) {
 		val = htod32(2);
-		bytes_written = wldev_ioctl(net, WLC_SET_PM, &val, sizeof(val), true);
+		bytes_written =
+		    wldev_ioctl(net, WLC_SET_PM, &val, sizeof(val), true);
 	}
-#if 0 /* only for test */
+#if 0				/* only for test */
 	else if (strnicmp(command, DRV_CMD_PM_0, strlen(DRV_CMD_PM_0)) == 0) {
 		val = htod32(0);
-		bytes_written = wldev_ioctl(net, WLC_SET_PM, &val, sizeof(val), true);
+		bytes_written =
+		    wldev_ioctl(net, WLC_SET_PM, &val, sizeof(val), true);
 	}
 #endif /* only for test */
-	else if (strnicmp(command, DRV_CMD_ARPO_ENABLE, strlen(DRV_CMD_ARPO_ENABLE)) == 0) {
+	else if (strnicmp
+		 (command, DRV_CMD_ARPO_ENABLE,
+		  strlen(DRV_CMD_ARPO_ENABLE)) == 0) {
 		bytes_written = dhd_dev_arp_offload_enable(net, 1);
-	}
-	else if (strnicmp(command, DRV_CMD_ARPO_DISABLE, strlen(DRV_CMD_ARPO_DISABLE)) == 0) {
+	} else
+	    if (strnicmp
+		(command, DRV_CMD_ARPO_DISABLE,
+		 strlen(DRV_CMD_ARPO_DISABLE)) == 0) {
 		bytes_written = dhd_dev_arp_offload_enable(net, 0);
-	}
-	else if (strnicmp(command, DRV_CMD_RXFILTER_ENABLE, strlen(DRV_CMD_RXFILTER_ENABLE)) == 0) {
+	} else
+	    if (strnicmp
+		(command, DRV_CMD_RXFILTER_ENABLE,
+		 strlen(DRV_CMD_RXFILTER_ENABLE)) == 0) {
 		bytes_written = net_os_set_packet_filter(net, 1);
-	}
-	else if (strnicmp(command, DRV_CMD_RXFILTER_DISABLE, strlen(DRV_CMD_RXFILTER_DISABLE)) == 0) {
+	} else
+	    if (strnicmp
+		(command, DRV_CMD_RXFILTER_DISABLE,
+		 strlen(DRV_CMD_RXFILTER_DISABLE)) == 0) {
 		bytes_written = net_os_set_packet_filter(net, 0);
 	}
-#if 0 /* TBD */
-	else if (strnicmp(command, DRV_CMD_RXFILTER_ADD, strlen(DRV_CMD_RXFILTER_ADD)) == 0) {
-		int filter_num = *(command + strlen(DRV_CMD_RXFILTER_ADD) + 1) - '0';
-		bytes_written = net_os_rxfilter_add_remove(net, TRUE, filter_num);
-	}
-	else if (strnicmp(command, DRV_CMD_RXFILTER_REMOVE, strlen(DRV_CMD_RXFILTER_REMOVE)) == 0) {
-		int filter_num = *(command + strlen(DRV_CMD_RXFILTER_REMOVE) + 1) - '0';
-		bytes_written = net_os_rxfilter_add_remove(net, FALSE, filter_num);
+#if 0				/* TBD */
+	else if (strnicmp
+		 (command, DRV_CMD_RXFILTER_ADD,
+		  strlen(DRV_CMD_RXFILTER_ADD)) == 0) {
+		int filter_num =
+		    *(command + strlen(DRV_CMD_RXFILTER_ADD) + 1) - '0';
+		bytes_written =
+		    net_os_rxfilter_add_remove(net, TRUE, filter_num);
+	} else
+	    if (strnicmp
+		(command, DRV_CMD_RXFILTER_REMOVE,
+		 strlen(DRV_CMD_RXFILTER_REMOVE)) == 0) {
+		int filter_num =
+		    *(command + strlen(DRV_CMD_RXFILTER_REMOVE) + 1) - '0';
+		bytes_written =
+		    net_os_rxfilter_add_remove(net, FALSE, filter_num);
 	}
 #endif /* TBD */
 	else if (strnicmp(command, DRV_CMD_RSSI, strlen(DRV_CMD_RSSI)) == 0) {
-		bytes_written = wl_elinux_get_rssi(net, command, priv_cmd.total_len);
-	}
-	else if (strnicmp(command, DRV_CMD_LINKSPEED, strlen(DRV_CMD_LINKSPEED)) == 0) {
-		bytes_written = wl_elinux_get_link_speed(net, command, priv_cmd.total_len);
-	}
-	else {
+		bytes_written =
+		    wl_elinux_get_rssi(net, command, priv_cmd.total_len);
+	} else
+	    if (strnicmp(command, DRV_CMD_LINKSPEED, strlen(DRV_CMD_LINKSPEED))
+		== 0) {
+		bytes_written =
+		    wl_elinux_get_link_speed(net, command, priv_cmd.total_len);
+	} else {
 		DHD_ERROR(("Unknown PRIVATE command %s - ignored\n", command));
 		snprintf(command, 3, "OK");
 		bytes_written = strlen("OK");
@@ -277,18 +301,19 @@ int wl_elinux_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		if ((bytes_written == 0) && (priv_cmd.total_len > 0))
 			command[0] = '\0';
 		if (bytes_written >= priv_cmd.total_len) {
-			DHD_ERROR(("%s: bytes_written = %d\n", __FUNCTION__, bytes_written));
+			DHD_ERROR(("%s: bytes_written = %d\n", __FUNCTION__,
+				   bytes_written));
 			bytes_written = priv_cmd.total_len;
 		} else {
 			bytes_written++;
 		}
 		priv_cmd.used_len = bytes_written;
 		if (copy_to_user(priv_cmd.buf, command, bytes_written)) {
-			DHD_ERROR(("%s: failed to copy data to user buffer\n", __FUNCTION__));
+			DHD_ERROR(("%s: failed to copy data to user buffer\n",
+				   __FUNCTION__));
 			ret = -EFAULT;
 		}
-	}
-	else {
+	} else {
 		ret = bytes_written;
 	}
 
@@ -312,7 +337,8 @@ int wl_elinux_init(void)
 #ifdef CONFIG_BCMDHD_LNX_IF_PREFIX
 	if (!iface_name[0]) {
 		memset(iface_name, 0, IFNAMSIZ);
-		bcm_strncpy_s(iface_name, IFNAMSIZ, CONFIG_BCMDHD_LNX_IF_PREFIX, IFNAMSIZ);
+		bcm_strncpy_s(iface_name, IFNAMSIZ, CONFIG_BCMDHD_LNX_IF_PREFIX,
+			      IFNAMSIZ);
 	}
 #endif /* CONFIG_BCMDHD_LNX_IF_PREFIX */
 	return ret;

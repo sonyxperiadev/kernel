@@ -48,7 +48,6 @@
 #define WLC_SW_KEYS(wlc, bsscfg) ((((wlc)->wsec_swkeys) || \
 	((bsscfg)->wsec & WSEC_SWFLAG)))
 
-
 #define WSEC_WEP_ENABLED(wsec)  ((wsec) & WEP_ENABLED)
 #define WSEC_TKIP_ENABLED(wsec) ((wsec) & TKIP_ENABLED)
 #define WSEC_AES_ENABLED(wsec)  ((wsec) & AES_ENABLED)
@@ -70,8 +69,6 @@
 	           BRCM_AUTH_PSK |		\
 	           BRCM_AUTH_DPT))
 
-
-
 #define IS_WPA_AKM(akm) ((akm) == RSN_AKM_NONE ||		\
 			 (akm) == RSN_AKM_UNSPECIFIED ||	\
 			 (akm) == RSN_AKM_PSK)
@@ -83,8 +80,8 @@
 
 /* Broadcom(OUI) authenticated key managment suite */
 #define BRCM_AKM_NONE           0
-#define BRCM_AKM_PSK            1       /* Proprietary PSK AKM */
-#define BRCM_AKM_DPT            2       /* Proprietary DPT PSK AKM */
+#define BRCM_AKM_PSK            1	/* Proprietary PSK AKM */
+#define BRCM_AKM_DPT            2	/* Proprietary DPT PSK AKM */
 
 #define IS_BRCM_AKM(akm)        ((akm) == BRCM_AKM_PSK)
 
@@ -121,15 +118,16 @@ extern uint8 *wpa_array_cmp(int max_array, uint8 *x, uint8 *y, uint len);
 extern void wpa_incr_array(uint8 *array, uint len);
 
 /* Convert WPA IE cipher suite to locally used value */
-extern bool wpa_cipher(wpa_suite_t *suite, ushort *cipher, bool wep_ok);
+extern bool wpa_cipher(wpa_suite_t * suite, ushort * cipher, bool wep_ok);
 
 /* Look for a WPA IE; return it's address if found, NULL otherwise */
 extern wpa_ie_fixed_t *bcm_find_wpaie(uint8 *parse, uint len);
 /* Look for a WPS IE; return it's address if found, NULL otherwise */
 extern wpa_ie_fixed_t *bcm_find_wpsie(uint8 *parse, uint len);
-extern wps_at_fixed_t *bcm_wps_find_at(wps_at_fixed_t *at, int len, uint16 id);
+extern wps_at_fixed_t *bcm_wps_find_at(wps_at_fixed_t * at, int len, uint16 id);
 #ifdef WLTDLS
-extern bcm_tlv_t *bcm_find_wmeie(uint8 *parse, uint len, uint8 subtype, uint8 subtype_len);
+extern bcm_tlv_t *bcm_find_wmeie(uint8 *parse, uint len, uint8 subtype,
+				 uint8 subtype_len);
 #endif /* WLTDLS */
 
 #ifdef WLP2P
@@ -138,9 +136,9 @@ extern wifi_p2p_ie_t *bcm_find_p2pie(uint8 *parse, uint len);
 #endif
 
 /* Check whether the given IE looks like WFA IE with the specific type. */
-extern bool bcm_is_wfa_ie(uint8 *ie, uint8 **tlvs, uint *tlvs_len, uint8 type);
-extern bool bcm_has_ie(uint8 *ie, uint8 **tlvs, uint *tlvs_len,
-                       const uint8 *oui, int oui_len, uint8 type);
+extern bool bcm_is_wfa_ie(uint8 *ie, uint8 **tlvs, uint * tlvs_len, uint8 type);
+extern bool bcm_has_ie(uint8 *ie, uint8 **tlvs, uint * tlvs_len,
+		       const uint8 *oui, int oui_len, uint8 type);
 
 /* Check whether pointed-to IE looks like WPA. */
 #define bcm_is_wpa_ie(ie, tlvs, len)    bcm_is_wfa_ie(ie, tlvs, len, WPA_OUI_TYPE)
@@ -156,62 +154,67 @@ extern bool bcm_has_ie(uint8 *ie, uint8 **tlvs, uint *tlvs_len,
 #endif
 
 /* Convert WPA2 IE cipher suite to locally used value */
-extern bool wpa2_cipher(wpa_suite_t *suite, ushort *cipher, bool wep_ok);
+extern bool wpa2_cipher(wpa_suite_t * suite, ushort * cipher, bool wep_ok);
 
 #if defined(BCMSUP_PSK) || defined(BCMSUPPL)
 /* Look for an encapsulated GTK; return it's address if found, NULL otherwise */
 extern eapol_wpa2_encap_data_t *wpa_find_gtk_encap(uint8 *parse, uint len);
 
 /* Check whether pointed-to IE looks like an encapsulated GTK. */
-extern bool wpa_is_gtk_encap(uint8 *ie, uint8 **tlvs, uint *tlvs_len);
+extern bool wpa_is_gtk_encap(uint8 *ie, uint8 **tlvs, uint * tlvs_len);
 
 /* Look for encapsulated key data; return it's address if found, NULL otherwise */
-extern eapol_wpa2_encap_data_t *wpa_find_kde(uint8 *parse, uint len, uint8 type);
+extern eapol_wpa2_encap_data_t *wpa_find_kde(uint8 *parse, uint len,
+					     uint8 type);
 #endif /* defined(BCMSUP_PSK) || defined(BCMSUPPL) */
 
 #ifdef BCMSUP_PSK
 /* Calculate a pair-wise transient key */
 extern void wpa_calc_ptk(struct ether_addr *auth_ea, struct ether_addr *sta_ea,
-                                   uint8 *anonce, uint8* snonce, uint8 *pmk, uint pmk_len,
-                                   uint8 *ptk, uint ptk_len);
+			 uint8 *anonce, uint8 *snonce, uint8 *pmk,
+			 uint pmk_len, uint8 *ptk, uint ptk_len);
 
 /* Compute Message Integrity Code (MIC) over EAPOL message */
-extern bool wpa_make_mic(eapol_header_t *eapol, uint key_desc, uint8 *mic_key,
-                                   uchar *mic);
+extern bool wpa_make_mic(eapol_header_t * eapol, uint key_desc, uint8 *mic_key,
+			 uchar *mic);
 
 /* Check MIC of EAPOL message */
-extern bool wpa_check_mic(eapol_header_t *eapol, uint key_desc, uint8 *mic_key);
+extern bool wpa_check_mic(eapol_header_t * eapol, uint key_desc,
+			  uint8 *mic_key);
 
 /* Calculate PMKID */
-extern void wpa_calc_pmkid(struct ether_addr *auth_ea, struct ether_addr *sta_ea,
-                                     uint8 *pmk, uint pmk_len, uint8 *pmkid);
+extern void wpa_calc_pmkid(struct ether_addr *auth_ea,
+			   struct ether_addr *sta_ea, uint8 *pmk, uint pmk_len,
+			   uint8 *pmkid);
 
 /* Calculate PMKR0 for FT association */
-extern void wpa_calc_pmkR0(uchar *ssid, int ssid_len, uint16 mdid, uint8 *r0kh,
-	uint r0kh_len, struct ether_addr *sta_ea,
-	uint8 *pmk, uint pmk_len, uint8 *pmkid, uint8 *pmkr0name);
+extern void wpa_calc_pmkR0(uchar *ssid, int ssid_len, uint16 mdid,
+			   uint8 *r0kh, uint r0kh_len,
+			   struct ether_addr *sta_ea, uint8 *pmk, uint pmk_len,
+			   uint8 *pmkid, uint8 *pmkr0name);
 
 /* Calculate PMKR1 for FT association */
 extern void wpa_calc_pmkR1(struct ether_addr *r1kh, struct ether_addr *sta_ea,
-	uint8 *pmk, uint pmk_len, uint8 *pmkr0name, uint8 *pmkid, uint8 *pmkr1name);
+			   uint8 *pmk, uint pmk_len, uint8 *pmkr0name,
+			   uint8 *pmkid, uint8 *pmkr1name);
 
 /* Calculate PTK for FT association */
 extern void wpa_calc_ft_ptk(struct ether_addr *bssid, struct ether_addr *sta_ea,
-	uint8 *anonce, uint8* snonce, uint8 *pmk, uint pmk_len,
-	uint8 *ptk, uint ptk_len);
+			    uint8 *anonce, uint8 *snonce, uint8 *pmk,
+			    uint pmk_len, uint8 *ptk, uint ptk_len);
 
 /* Encrypt key data for a WPA key message */
-extern bool wpa_encr_key_data(eapol_wpa_key_header_t *body, uint16 key_info,
-                              uint8 *ekey, uint8 *gtk);
+extern bool wpa_encr_key_data(eapol_wpa_key_header_t * body, uint16 key_info,
+			      uint8 *ekey, uint8 *gtk);
 
 /* Decrypt key data from a WPA key message */
-extern bool wpa_decr_key_data(eapol_wpa_key_header_t *body, uint16 key_info,
-                                        uint8 *ekey, uint8 *gtk);
+extern bool wpa_decr_key_data(eapol_wpa_key_header_t * body, uint16 key_info,
+			      uint8 *ekey, uint8 *gtk);
 
 /* Decrypt a group transient key from a WPA key message */
-extern bool wpa_decr_gtk(eapol_wpa_key_header_t *body, uint16 key_info,
-                                   uint8 *ekey, uint8 *gtk);
-#endif  /* BCMSUP_PSK */
+extern bool wpa_decr_gtk(eapol_wpa_key_header_t * body, uint16 key_info,
+			 uint8 *ekey, uint8 *gtk);
+#endif /* BCMSUP_PSK */
 
 extern bool bcmwpa_akm2WPAauth(uint8 *akm, uint32 *auth, bool sta_iswpa);
 
@@ -219,33 +222,36 @@ extern bool bcmwpa_cipher2wsec(uint8 *cipher, uint32 *wsec);
 
 #if defined(MFP) || defined(WLFBT)
 /* Calculate PMKID */
-extern void kdf_calc_pmkid(struct ether_addr *auth_ea, struct ether_addr *sta_ea,
-	uint8 *pmk, uint pmk_len, uint8 *pmkid, uint8 *data, uint8 *digest);
+extern void kdf_calc_pmkid(struct ether_addr *auth_ea,
+			   struct ether_addr *sta_ea, uint8 *pmk, uint pmk_len,
+			   uint8 *pmkid, uint8 *data, uint8 *digest);
 extern void kdf_calc_ptk(struct ether_addr *auth_ea, struct ether_addr *sta_ea,
-                                   uint8 *anonce, uint8* snonce, uint8 *pmk, uint pmk_len,
-                                   uint8 *ptk, uint ptk_len);
+			 uint8 *anonce, uint8 *snonce, uint8 *pmk,
+			 uint pmk_len, uint8 *ptk, uint ptk_len);
 #endif
 
 #ifdef WLFBT
 /* Calculate PMKR0 for FT association */
-extern void wpa_calc_pmkR0(uchar *ssid, int ssid_len, uint16 mdid, uint8 *r0kh,
-                           uint r0kh_len, struct ether_addr *sta_ea,
-                           uint8 *pmk, uint pmk_len, uint8 *pmkid, uint8 *pmkr0name);
+extern void wpa_calc_pmkR0(uchar *ssid, int ssid_len, uint16 mdid,
+			   uint8 *r0kh, uint r0kh_len,
+			   struct ether_addr *sta_ea, uint8 *pmk, uint pmk_len,
+			   uint8 *pmkid, uint8 *pmkr0name);
 
 /* Calculate PMKR1 for FT association */
 extern void wpa_calc_pmkR1(struct ether_addr *r1kh, struct ether_addr *sta_ea,
-                           uint8 *pmk, uint pmk_len, uint8 *pmkr0name,
-                           uint8 *pmkid, uint8 *pmkr1name);
+			   uint8 *pmk, uint pmk_len, uint8 *pmkr0name,
+			   uint8 *pmkid, uint8 *pmkr1name);
 
 /* Calculate PTK for FT association */
 extern void wpa_calc_ft_ptk(struct ether_addr *bssid, struct ether_addr *sta_ea,
-                            uint8 *anonce, uint8* snonce, uint8 *pmk, uint pmk_len,
-                            uint8 *ptk, uint ptk_len);
+			    uint8 *anonce, uint8 *snonce, uint8 *pmk,
+			    uint pmk_len, uint8 *ptk, uint ptk_len);
 #endif /* WLFBT */
 
 #ifdef WLTDLS
 /* Calculate TPK for TDLS association */
 extern void wpa_calc_tpk(struct ether_addr *init_ea, struct ether_addr *resp_ea,
-struct ether_addr *bssid, uint8 *anonce, uint8* snonce, uint8 *tpk, uint tpk_len);
+			 struct ether_addr *bssid, uint8 *anonce,
+			 uint8 *snonce, uint8 *tpk, uint tpk_len);
 #endif
-#endif  /* _BCMWPA_H_ */
+#endif /* _BCMWPA_H_ */

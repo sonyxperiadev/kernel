@@ -32,34 +32,31 @@
 #include <proto/ethernet.h>
 
 typedef struct cdc_ioctl {
-	uint32 cmd;      
-	uint32 len;      
-	uint32 flags;    
-	uint32 status;   
+	uint32 cmd;
+	uint32 len;
+	uint32 flags;
+	uint32 status;
 } cdc_ioctl_t;
-
 
 #define CDC_MAX_MSG_SIZE   ETHER_MAX_LEN
 
+#define CDCL_IOC_OUTLEN_MASK   0x0000FFFF
 
-#define CDCL_IOC_OUTLEN_MASK   0x0000FFFF  
-					   
 #define CDCL_IOC_OUTLEN_SHIFT  0
-#define CDCL_IOC_INLEN_MASK    0xFFFF0000   
+#define CDCL_IOC_INLEN_MASK    0xFFFF0000
 #define CDCL_IOC_INLEN_SHIFT   16
 
-
-#define CDCF_IOC_ERROR		0x01	
-#define CDCF_IOC_SET		0x02	
-#define CDCF_IOC_OVL_IDX_MASK	0x3c	
-#define CDCF_IOC_OVL_RSV	0x40	
-#define CDCF_IOC_OVL		0x80	
-#define CDCF_IOC_ACTION_MASK	0xfe	
-#define CDCF_IOC_ACTION_SHIFT	1	
-#define CDCF_IOC_IF_MASK	0xF000	
+#define CDCF_IOC_ERROR		0x01
+#define CDCF_IOC_SET		0x02
+#define CDCF_IOC_OVL_IDX_MASK	0x3c
+#define CDCF_IOC_OVL_RSV	0x40
+#define CDCF_IOC_OVL		0x80
+#define CDCF_IOC_ACTION_MASK	0xfe
+#define CDCF_IOC_ACTION_SHIFT	1
+#define CDCF_IOC_IF_MASK	0xF000
 #define CDCF_IOC_IF_SHIFT	12
-#define CDCF_IOC_ID_MASK	0xFFFF0000	
-#define CDCF_IOC_ID_SHIFT	16		
+#define CDCF_IOC_ID_MASK	0xFFFF0000
+#define CDCF_IOC_ID_SHIFT	16
 
 #define CDC_IOC_IF_IDX(flags)	(((flags) & CDCF_IOC_IF_MASK) >> CDCF_IOC_IF_SHIFT)
 #define CDC_IOC_ID(flags)	(((flags) & CDCF_IOC_ID_MASK) >> CDCF_IOC_ID_SHIFT)
@@ -69,27 +66,25 @@ typedef struct cdc_ioctl {
 #define CDC_SET_IF_IDX(hdr, idx) \
 	((hdr)->flags = (((hdr)->flags & ~CDCF_IOC_IF_MASK) | ((idx) << CDCF_IOC_IF_SHIFT)))
 
-
-
 #define	BDC_HEADER_LEN		4
 
-#define BDC_PROTO_VER_1		1	
-#define BDC_PROTO_VER		2	
+#define BDC_PROTO_VER_1		1
+#define BDC_PROTO_VER		2
 
-#define BDC_FLAG_VER_MASK	0xf0	
-#define BDC_FLAG_VER_SHIFT	4	
+#define BDC_FLAG_VER_MASK	0xf0
+#define BDC_FLAG_VER_SHIFT	4
 
-#define BDC_FLAG__UNUSED	0x03	
-#define BDC_FLAG_SUM_GOOD	0x04	
-#define BDC_FLAG_SUM_NEEDED	0x08	
+#define BDC_FLAG__UNUSED	0x03
+#define BDC_FLAG_SUM_GOOD	0x04
+#define BDC_FLAG_SUM_NEEDED	0x08
 
 #define BDC_PRIORITY_MASK	0x7
 
-#define BDC_FLAG2_FC_FLAG	0x10	
-									
-#define BDC_PRIORITY_FC_SHIFT	4		
+#define BDC_FLAG2_FC_FLAG	0x10
 
-#define BDC_FLAG2_IF_MASK	0x0f	
+#define BDC_PRIORITY_FC_SHIFT	4
+
+#define BDC_FLAG2_IF_MASK	0x0f
 #define BDC_FLAG2_IF_SHIFT	0
 #define BDC_FLAG2_PAD_MASK		0xf0
 #define BDC_FLAG_PAD_MASK		0x03
@@ -112,10 +107,10 @@ typedef struct cdc_ioctl {
 	((hdr)->flags2 = (((hdr)->flags2 & ~BDC_FLAG2_IF_MASK) | ((idx) << BDC_FLAG2_IF_SHIFT)))
 
 struct bdc_header {
-	uint8	flags;			
-	uint8	priority;		
-	uint8	flags2;
-	uint8	dataOffset;
+	uint8 flags;
+	uint8 priority;
+	uint8 flags2;
+	uint8 dataOffset;
 };
 
-#endif 
+#endif

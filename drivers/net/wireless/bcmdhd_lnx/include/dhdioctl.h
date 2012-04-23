@@ -25,7 +25,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhdioctl.h 307573 2012-01-12 00:04:39Z $
+ * $Id: dhdioctl.h 323572 2012-03-26 06:28:14Z $
  */
 
 #ifndef _dhdioctl_h_
@@ -33,27 +33,25 @@
 
 #include <typedefs.h>
 
-
 /* require default structure packing */
 #define BWL_DEFAULT_PACKING
 #include <packed_section_start.h>
 
-
 /* Linux network driver ioctl encoding */
 typedef struct dhd_ioctl {
-	uint cmd;	/* common ioctl definition */
-	void *buf;	/* pointer to user buffer */
-	uint len;	/* length of user buffer */
-	bool set;	/* get or set request (optional) */
-	uint used;	/* bytes read or written (optional) */
-	uint needed;	/* bytes needed (optional) */
-	uint driver;	/* to identify target driver */
+	uint cmd;		/* common ioctl definition */
+	void *buf;		/* pointer to user buffer */
+	uint len;		/* length of user buffer */
+	bool set;		/* get or set request (optional) */
+	uint used;		/* bytes read or written (optional) */
+	uint needed;		/* bytes needed (optional) */
+	uint driver;		/* to identify target driver */
 } dhd_ioctl_t;
 
 /* Underlying BUS definition */
 enum {
-	BUS_TYPE_USB = 0, /* for USB dongles */
-	BUS_TYPE_SDIO /* for SDIO dongles */
+	BUS_TYPE_USB = 0,	/* for USB dongles */
+	BUS_TYPE_SDIO		/* for SDIO dongles */
 };
 
 /* per-driver magic numbers */
@@ -62,8 +60,8 @@ enum {
 /* bump this number if you change the ioctl interface */
 #define DHD_IOCTL_VERSION	1
 
-#define	DHD_IOCTL_MAXLEN	8192		/* max length ioctl buffer required */
-#define	DHD_IOCTL_SMLEN		256		/* "small" length ioctl buffer required */
+#define	DHD_IOCTL_MAXLEN	8192	/* max length ioctl buffer required */
+#define	DHD_IOCTL_SMLEN		256	/* "small" length ioctl buffer required */
 
 /* common ioctl definitions */
 #define DHD_GET_MAGIC				0
@@ -87,7 +85,8 @@ enum {
 #define DHD_BTA_VAL	0x1000
 #define DHD_ISCAN_VAL	0x2000
 #define DHD_ARPOE_VAL	0x4000
-#define DHD_WL_VAL	0x8000
+#define DHD_REORDER_VAL 0x8000
+#define DHD_WL_VAL	0x10000
 
 #ifdef SDTEST
 /* For pktgen iovar */
@@ -110,10 +109,10 @@ typedef struct dhd_pktgen {
 #define DHD_PKTGEN_VERSION 2
 
 /* Type of test packets to use */
-#define DHD_PKTGEN_ECHO		1 /* Send echo requests */
-#define DHD_PKTGEN_SEND 	2 /* Send discard packets */
-#define DHD_PKTGEN_RXBURST	3 /* Request dongle send N packets */
-#define DHD_PKTGEN_RECV		4 /* Continuous rx from continuous tx dongle */
+#define DHD_PKTGEN_ECHO		1	/* Send echo requests */
+#define DHD_PKTGEN_SEND 	2	/* Send discard packets */
+#define DHD_PKTGEN_RXBURST	3	/* Request dongle send N packets */
+#define DHD_PKTGEN_RECV		4	/* Continuous rx from continuous tx dongle */
 #endif /* SDTEST */
 
 /* Enter idle immediately (no timeout) */
@@ -122,7 +121,6 @@ typedef struct dhd_pktgen {
 /* Values for idleclock iovar: other values are the sd_divisor to use when idle */
 #define DHD_IDLE_ACTIVE	0	/* Do not request any SD clock change when idle */
 #define DHD_IDLE_STOP   (-1)	/* Request SD clock be stopped (and use SD1 mode) */
-
 
 /* require default structure packing */
 #include <packed_section_end.h>

@@ -40,7 +40,7 @@
 #define	DL_RDHW16		0x11	/* Read 16 bits */
 #define	DL_RDHW8		0x12	/* Read an 8 bit byte */
 #define	DL_WRHW			0x14	/* Write a hardware address (Ctl-out) */
-#define DL_WRHW_BLK     0x13    /* Block write to hardware access */
+#define DL_WRHW_BLK     0x13	/* Block write to hardware access */
 
 #define DL_CMD_RDHW		1	/* read data from a backplane address */
 #define DL_CMD_WRHW		2	/* write data to a backplane address */
@@ -64,7 +64,6 @@
 
 #define	DL_JTERROR		0x80000000
 
-
 /* states */
 #define DL_WAITING	0	/* waiting to rx first pkt that includes the hdr info */
 #define DL_READY	1	/* hdr was good, waiting for more of the compressed image */
@@ -78,79 +77,78 @@
 #define TIMEOUT		5000	/* Timeout for usb commands */
 
 struct bcm_device_id {
-	char	*name;
-	uint32	vend;
-	uint32	prod;
+	char *name;
+	uint32 vend;
+	uint32 prod;
 };
 
 typedef struct {
-	uint32	state;
-	uint32	bytes;
+	uint32 state;
+	uint32 bytes;
 } rdl_state_t;
 
 typedef struct {
-	uint32	chip;		/* Chip id */
-	uint32	chiprev;	/* Chip rev */
-	uint32  ramsize;    /* Size of  RAM */
-	uint32  remapbase;   /* Current remap base address */
-	uint32  boardtype;   /* Type of board */
-	uint32  boardrev;    /* Board revision */
+	uint32 chip;		/* Chip id */
+	uint32 chiprev;		/* Chip rev */
+	uint32 ramsize;		/* Size of  RAM */
+	uint32 remapbase;	/* Current remap base address */
+	uint32 boardtype;	/* Type of board */
+	uint32 boardrev;	/* Board revision */
 } bootrom_id_t;
 
 typedef struct {
-	uint32	chip;		/* Chip id */
-	uint32	chiprev;	/* Chip rev */
-	uint32	ccrev;		/* Chipcommon core rev */
-	uint32	siclock;	/* Backplane clock */
+	uint32 chip;		/* Chip id */
+	uint32 chiprev;		/* Chip rev */
+	uint32 ccrev;		/* Chipcommon core rev */
+	uint32 siclock;		/* Backplane clock */
 } jtagd_id_t;
 
 /* struct for backplane & jtag accesses */
 typedef struct {
-	uint32	cmd;		/* tag to identify the cmd */
-	uint32	addr;		/* backplane address for write */
-	uint32	len;		/* length of data: 1, 2, 4 bytes */
-	uint32	data;		/* data to write */
+	uint32 cmd;		/* tag to identify the cmd */
+	uint32 addr;		/* backplane address for write */
+	uint32 len;		/* length of data: 1, 2, 4 bytes */
+	uint32 data;		/* data to write */
 } hwacc_t;
 
 /* struct for backplane & jtag accesses */
 typedef struct {
-	uint32	cmd;		/* tag to identify the cmd */
-	uint32	addr;		/* backplane address for write */
-	uint32	len;		/* length of data: 1, 2, 4 bytes */
-	uint8	data[1];		/* data to write */
+	uint32 cmd;		/* tag to identify the cmd */
+	uint32 addr;		/* backplane address for write */
+	uint32 len;		/* length of data: 1, 2, 4 bytes */
+	uint8 data[1];		/* data to write */
 } hwacc_blk_t;
-
 
 /* Jtag configuration structure */
 typedef struct {
-	uint32	cmd;		/* tag to identify the cmd */
-	uint8	clkd;		/* Jtag clock divisor */
-	uint8	disgpio;	/* Gpio to disable external driver */
-	uint8	irsz;		/* IR size for readreg/writereg */
-	uint8	drsz;		/* DR size for readreg/writereg */
+	uint32 cmd;		/* tag to identify the cmd */
+	uint8 clkd;		/* Jtag clock divisor */
+	uint8 disgpio;		/* Gpio to disable external driver */
+	uint8 irsz;		/* IR size for readreg/writereg */
+	uint8 drsz;		/* DR size for readreg/writereg */
 
-	uint8	bigend;		/* Big endian */
-	uint8	mode;		/* Current mode */
-	uint16	delay;		/* Delay between jtagm "simple commands" */
+	uint8 bigend;		/* Big endian */
+	uint8 mode;		/* Current mode */
+	uint16 delay;		/* Delay between jtagm "simple commands" */
 
-	uint32	retries;	/* Number of retries for jtagm operations */
-	uint32	ctrl;		/* Jtag control reg copy */
+	uint32 retries;		/* Number of retries for jtagm operations */
+	uint32 ctrl;		/* Jtag control reg copy */
 } jtagconf_t;
 
-typedef void (*exec_fn_t)(void *sih);
+typedef void (*exec_fn_t) (void *sih);
 
 #define USB_CTRL_IN (USB_TYPE_VENDOR | 0x80 | USB_RECIP_INTERFACE)
 #define USB_CTRL_OUT (USB_TYPE_VENDOR | 0 | USB_RECIP_INTERFACE)
 
-#define USB_CTRL_EP_TIMEOUT 500 /* Timeout used in USB control_msg transactions. */
+#define USB_CTRL_EP_TIMEOUT 500	/* Timeout used in USB control_msg transactions. */
 
-#define RDL_CHUNK	1500  /* size of each dl transfer */
+#define RDL_CHUNK	1500	/* size of each dl transfer */
 
 /* bootloader makes special use of trx header "offsets" array */
 #define TRX_OFFSETS_DLFWLEN_IDX	0	/* Size of the fw; used in uncompressed case */
 #define TRX_OFFSETS_JUMPTO_IDX	1	/* RAM address for jumpto after download */
 #define TRX_OFFSETS_NVM_LEN_IDX	2	/* Length of appended NVRAM data */
 
-#define TRX_OFFSETS_DLBASE_IDX  0       /* RAM start address for download */
+#define TRX_OFFSETS_DLBASE_IDX  0	/* RAM start address for download */
 
-#endif  /* _USB_RDL_H */
+#endif /* _USB_RDL_H */

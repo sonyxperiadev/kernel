@@ -62,8 +62,8 @@ extern void sdstd_osfree(sdioh_info_t *sd);
 #define SDIOH_MODE_SD1		1
 #define SDIOH_MODE_SD4		2
 
-#define MAX_SLOTS 6 	/* For PCI: Only 6 BAR entries => 6 slots */
-#define SDIOH_REG_WINSZ	0x100 /* Number of registers in Standard Host Controller */
+#define MAX_SLOTS 6		/* For PCI: Only 6 BAR entries => 6 slots */
+#define SDIOH_REG_WINSZ	0x100	/* Number of registers in Standard Host Controller */
 
 #define SDIOH_TYPE_ARASAN_HDK	1
 #define SDIOH_TYPE_BCM27XX	2
@@ -81,7 +81,6 @@ extern void sdstd_osfree(sdioh_info_t *sd);
 #define sdstd_os_yield(sd)	do {} while (0)
 #define RETRIES_SMALL 100
 
-
 #define USE_BLOCKMODE		0x2	/* Block mode can be single block or multi */
 #define USE_MULTIBLOCK		0x4
 
@@ -91,76 +90,75 @@ extern void sdstd_osfree(sdioh_info_t *sd);
 
 #define HC_INTR_RETUNING	0x1000
 
-
 struct sdioh_info {
-	uint cfg_bar;                   	/* pci cfg address for bar */
-	uint32 caps;                    	/* cached value of capabilities reg */
-	uint32 curr_caps;                    	/* max current capabilities reg */
+	uint cfg_bar;		/* pci cfg address for bar */
+	uint32 caps;		/* cached value of capabilities reg */
+	uint32 curr_caps;	/* max current capabilities reg */
 
-	osl_t 		*osh;			/* osh handler */
-	volatile char 	*mem_space;		/* pci device memory va */
-	uint		lockcount; 		/* nest count of sdstd_lock() calls */
-	bool		client_intr_enabled;	/* interrupt connnected flag */
-	bool		intr_handler_valid;	/* client driver interrupt handler valid */
-	sdioh_cb_fn_t	intr_handler;		/* registered interrupt handler */
-	void		*intr_handler_arg;	/* argument to call interrupt handler */
-	bool		initialized;		/* card initialized */
-	uint		target_dev;		/* Target device ID */
-	uint16		intmask;		/* Current active interrupts */
-	void		*sdos_info;		/* Pointer to per-OS private data */
+	osl_t *osh;		/* osh handler */
+	volatile char *mem_space;	/* pci device memory va */
+	uint lockcount;		/* nest count of sdstd_lock() calls */
+	bool client_intr_enabled;	/* interrupt connnected flag */
+	bool intr_handler_valid;	/* client driver interrupt handler valid */
+	sdioh_cb_fn_t intr_handler;	/* registered interrupt handler */
+	void *intr_handler_arg;	/* argument to call interrupt handler */
+	bool initialized;	/* card initialized */
+	uint target_dev;	/* Target device ID */
+	uint16 intmask;		/* Current active interrupts */
+	void *sdos_info;	/* Pointer to per-OS private data */
 
-	uint32		controller_type;	/* Host controller type */
-	uint8		version;		/* Host Controller Spec Compliance Version */
-	uint 		irq;			/* Client irq */
-	int 		intrcount;		/* Client interrupts */
-	int 		local_intrcount;	/* Controller interrupts */
-	bool 		host_init_done;		/* Controller initted */
-	bool 		card_init_done;		/* Client SDIO interface initted */
-	bool 		polled_mode;		/* polling for command completion */
+	uint32 controller_type;	/* Host controller type */
+	uint8 version;		/* Host Controller Spec Compliance Version */
+	uint irq;		/* Client irq */
+	int intrcount;		/* Client interrupts */
+	int local_intrcount;	/* Controller interrupts */
+	bool host_init_done;	/* Controller initted */
+	bool card_init_done;	/* Client SDIO interface initted */
+	bool polled_mode;	/* polling for command completion */
 
-	bool 		sd_blockmode;		/* sd_blockmode == FALSE => 64 Byte Cmd 53s. */
-						/*  Must be on for sd_multiblock to be effective */
-	bool 		use_client_ints;	/* If this is false, make sure to restore */
-						/*  polling hack in wl_linux.c:wl_timer() */
-	int 		adapter_slot;		/* Maybe dealing with multiple slots/controllers */
-	int 		sd_mode;		/* SD1/SD4/SPI */
-	int 		client_block_size[SDIOD_MAX_IOFUNCS];		/* Blocksize */
-	uint32 		data_xfer_count;	/* Current transfer */
-	uint16 		card_rca;		/* Current Address */
-	int8		sd_dma_mode;		/* DMA Mode (PIO, SDMA, ... ADMA2) on CMD53 */
-	uint8 		num_funcs;		/* Supported funcs on client */
-	uint32 		com_cis_ptr;
-	uint32 		func_cis_ptr[SDIOD_MAX_IOFUNCS];
-	void		*dma_buf;		/* DMA Buffer virtual address */
-	ulong		dma_phys;		/* DMA Buffer physical address */
-	void		*adma2_dscr_buf;	/* ADMA2 Descriptor Buffer virtual address */
-	ulong		adma2_dscr_phys;	/* ADMA2 Descriptor Buffer physical address */
+	bool sd_blockmode;	/* sd_blockmode == FALSE => 64 Byte Cmd 53s. */
+	/*  Must be on for sd_multiblock to be effective */
+	bool use_client_ints;	/* If this is false, make sure to restore */
+	/*  polling hack in wl_linux.c:wl_timer() */
+	int adapter_slot;	/* Maybe dealing with multiple slots/controllers */
+	int sd_mode;		/* SD1/SD4/SPI */
+	int client_block_size[SDIOD_MAX_IOFUNCS];	/* Blocksize */
+	uint32 data_xfer_count;	/* Current transfer */
+	uint16 card_rca;	/* Current Address */
+	int8 sd_dma_mode;	/* DMA Mode (PIO, SDMA, ... ADMA2) on CMD53 */
+	uint8 num_funcs;	/* Supported funcs on client */
+	uint32 com_cis_ptr;
+	uint32 func_cis_ptr[SDIOD_MAX_IOFUNCS];
+	void *dma_buf;		/* DMA Buffer virtual address */
+	ulong dma_phys;		/* DMA Buffer physical address */
+	void *adma2_dscr_buf;	/* ADMA2 Descriptor Buffer virtual address */
+	ulong adma2_dscr_phys;	/* ADMA2 Descriptor Buffer physical address */
 
 	/* adjustments needed to make the dma align properly */
-	void		*dma_start_buf;
-	ulong		dma_start_phys;
-	uint		alloced_dma_size;
-	void		*adma2_dscr_start_buf;
-	ulong		adma2_dscr_start_phys;
-	uint		alloced_adma2_dscr_size;
+	void *dma_start_buf;
+	ulong dma_start_phys;
+	uint alloced_dma_size;
+	void *adma2_dscr_start_buf;
+	ulong adma2_dscr_start_phys;
+	uint alloced_adma2_dscr_size;
 
-	int 		r_cnt;			/* rx count */
-	int 		t_cnt;			/* tx_count */
-	bool		got_hcint;		/* local interrupt flag */
-	uint16		last_intrstatus;	/* to cache intrstatus */
-	int 	host_UHSISupported;		/* whether UHSI is supported for HC. */
-	int 	card_UHSI_voltage_Supported; 	/* whether UHSI is supported for
+	int r_cnt;		/* rx count */
+	int t_cnt;		/* tx_count */
+	bool got_hcint;		/* local interrupt flag */
+	uint16 last_intrstatus;	/* to cache intrstatus */
+	int host_UHSISupported;	/* whether UHSI is supported for HC. */
+	int card_UHSI_voltage_Supported;	/* whether UHSI is supported for
 						 * Card in terms of Voltage [1.8 or 3.3].
 						 */
-	int	global_UHSI_Supp;	/* type of UHSI support in both host and card.
-					 * HOST_SDR_UNSUPP: capabilities not supported/matched
-					 * HOST_SDR_12_25: SDR12 and SDR25 supported
-					 * HOST_SDR_50_104_DDR: one of SDR50/SDR104 or DDR50 supptd
-					 */
-	int	sd3_dat_state; 		/* data transfer state used for retuning check */
-	int	sd3_tun_state; 		/* tuning state used for retuning check */
-	bool	sd3_tuning_reqd; 	/* tuning requirement parameter */
-	uint32	caps3;			/* cached value of 32 MSbits capabilities reg (SDIO 3.0) */
+	int global_UHSI_Supp;	/* type of UHSI support in both host and card.
+				 * HOST_SDR_UNSUPP: capabilities not supported/matched
+				 * HOST_SDR_12_25: SDR12 and SDR25 supported
+				 * HOST_SDR_50_104_DDR: one of SDR50/SDR104 or DDR50 supptd
+				 */
+	int sd3_dat_state;	/* data transfer state used for retuning check */
+	int sd3_tun_state;	/* tuning state used for retuning check */
+	bool sd3_tuning_reqd;	/* tuning requirement parameter */
+	uint32 caps3;		/* cached value of 32 MSbits capabilities reg (SDIO 3.0) */
 };
 
 #define DMA_MODE_NONE	0
@@ -202,7 +200,6 @@ extern void sdstd_intrs_off(sdioh_info_t *sd, uint16 norm, uint16 err);
 /* Wait for specified interrupt and error bits to be set */
 extern void sdstd_spinbits(sdioh_info_t *sd, uint16 norm, uint16 err);
 
-
 /**************************************************************
  * Internal interfaces: bcmsdstd.c references to per-port code
  */
@@ -221,7 +218,8 @@ extern void sdstd_unlock(sdioh_info_t *sd);
 extern void sdstd_waitlockfree(sdioh_info_t *sd);
 
 /* OS-specific wait-for-interrupt-or-status */
-extern int sdstd_waitbits(sdioh_info_t *sd, uint16 norm, uint16 err, bool yield, uint16 *bits);
+extern int sdstd_waitbits(sdioh_info_t *sd, uint16 norm, uint16 err,
+			  bool yield, uint16 *bits);
 
 /* used by bcmsdstd_linux [implemented in sdstd] */
 extern void sdstd_3_enable_retuning_int(sdioh_info_t *sd);
