@@ -77,8 +77,10 @@ static u32 memc_freq_map = 0;
 #endif /* CONFIG_RHEA_WA_HWJIRA_2221 */
 
 static int enter_idle_state(struct kona_idle_state *state);
-static int enter_suspend_state(struct kona_idle_state* state);
+int enter_suspend_state(struct kona_idle_state* state);
+int enter_dormant_state(struct kona_idle_state *state);
 static void set_spare_power_status(unsigned int mode);
+
 
 enum {
 	RHEA_STATE_C0,
@@ -337,7 +339,7 @@ static void set_spare_power_status(unsigned int mode)
 	writel(val, KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
 }
 
-static int enter_dormant_state(struct kona_idle_state *state)
+int enter_dormant_state(struct kona_idle_state *state)
 {
 #ifdef CONFIG_RHEA_DORMANT_MODE
 	u32 v;
