@@ -287,7 +287,7 @@ IPC_Boolean IPC_SetTraceChannel(IPC_Channel_E Channel, IPC_Boolean Setting)
 #endif
 */
 
-static const char *EndPointName[] = {
+static const char *EndPointName[IPC_EndpointId_Count] = {
 	"IpcEpNone",
 	"IpcEpCapi2Ap",
 	"IpcEpCapi2Cp",
@@ -303,6 +303,8 @@ static const char *EndPointName[] = {
 	"IpcEpCustomerCp",
 	"IpcEpSerialAp",
 	"IpcEpSerialCp",
+	"IpcEpDrxAp",
+	"IpcEpDrxCp",
 
 	"IpcEpUnused1Ap",
 	"IpcEpUnused1Cp",
