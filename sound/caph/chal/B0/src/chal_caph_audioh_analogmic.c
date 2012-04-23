@@ -316,9 +316,11 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VREF, reg_val);
 
 		/* Set i_VRX_RCM(01111) */
-		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1,
-			       0x0F <<
-			       AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_RCM_SHIFT);
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_LDO_DIG_PWRDN_MASK);
+		reg_val |= 0x0F <<
+				AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_RCM_SHIFT;
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
 		/* Set i_Bias_pwrup(1) */
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS,
