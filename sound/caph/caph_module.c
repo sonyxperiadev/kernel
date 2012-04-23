@@ -750,6 +750,11 @@ static void __devexit ALSAModuleExit(void)
 {
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:ModuleExit\n", jiffies);
+	if (is_ap_only_boot()) {
+		/* AP only boot mode - no need to de-register */
+		aTrace(LOG_ALSA_INTERFACE, "AP Only Boot\n");
+		return 0;
+	}
 
 	snd_card_free(sgpCaph_chip->card);
 
