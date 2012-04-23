@@ -1067,10 +1067,7 @@ wl_cfgp2p_set_management_ie(struct wl_priv *wl, struct net_device *ndev, s32 bss
 				}
 				pos += ie_len;
 			}
-		} else {
-			CFGP2P_ERR(("<<<< VNDR_IE_LEN : %d, VNDR_IE_FLAG : %d, BSSIDX  : %d >>>>",
-				vndr_ie_len, pktflag, bssidx));
-		}
+		} 
 		
 	}
 #undef IE_TYPE

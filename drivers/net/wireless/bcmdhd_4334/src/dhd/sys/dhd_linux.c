@@ -337,6 +337,7 @@ char firmware_path[MOD_PARAM_PATHLEN];
 char nvram_path[MOD_PARAM_PATHLEN];
 
 int op_mode = 0;
+int disable_proptx = 0;
 module_param(op_mode, int, 0644);
 extern int wl_control_wl_start(struct net_device *dev);
 extern int net_os_send_hang_message(struct net_device *dev);
@@ -354,6 +355,9 @@ module_param(dhd_sysioc, uint, 0);
 
 /* Error bits */
 module_param(dhd_msg_level, int, 0);
+
+/* Disable Prop tx */
+module_param(disable_proptx, int, 0);
 
 /* load firmware and/or nvram values from the filesystem */
 module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0660);
@@ -924,7 +928,10 @@ _dhd_set_multicast_list(dhd_info_t *dhd, int ifidx)
 #endif /* MCAST_LIST_ACCUMULATION */
 
 #ifdef PASS_ALL_MCAST_PKTS
-	allmulti = TRUE;
+#ifdef PKT_FILTER_SUPPORT
+	if (!dhd->pub.early_suspended)
+		allmulti = TRUE;
+#endif
 #endif /* PASS_ALL_MCAST_PKTS */
 
 	/* Send down the multicast list first. */
@@ -2315,8 +2322,8 @@ static bool dhd_check_hang(struct net_device *net, dhd_pub_t *dhdp, int error)
 {
 	if (!dhdp)
 		return FALSE;
-	if ((error == -ETIMEDOUT) || ((dhdp->busstate == DHD_BUS_DOWN) &&
-		(!dhdp->dongle_reset))) {
+	if ((error == -ETIMEDOUT) || (error == -EREMOTEIO) 
+		|| ((dhdp->busstate == DHD_BUS_DOWN)&&(!dhdp->dongle_reset))) {
 		DHD_ERROR(("%s: Event HANG send up due to  re=%d te=%d e=%d s=%d\n", __FUNCTION__,
 			dhdp->rxcnt_timeout, dhdp->txcnt_timeout, error, dhdp->busstate));
 		net_os_send_hang_message(net);
@@ -2646,6 +2653,7 @@ dhd_stop(struct net_device *net)
 #endif /* CUSTOMER_HW_SAMSUNG */
 	}
 #endif /* WL_CFG80211 */
+	dhd->pub.dongle_trap_occured = 0;
 	dhd->pub.hang_was_sent = 0;
 	dhd->pub.rxcnt_timeout = 0;
 	dhd->pub.txcnt_timeout = 0;

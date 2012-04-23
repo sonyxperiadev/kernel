@@ -122,14 +122,8 @@ static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_ACA] = 0,
 };
 
-struct event_notifier {
-	u32 event_id;
-	struct blocking_notifier_head notifiers;
-};
-
 struct bcmpmu_accy {
 	struct bcmpmu *bcmpmu;
-	struct event_notifier event[BCMPMU_EVENT_MAX];
 	const int *usb_id_map;
 	int usb_id_map_len;
 	wait_queue_head_t wait;
@@ -339,8 +333,8 @@ int bcmpmu_add_notifier(u32 event_id, struct notifier_block *notifier)
 		pr_accy(ERROR, "%s: Invalid event id\n", __func__);
 		return -EINVAL;
 	}
-	return blocking_notifier_chain_register(&bcmpmu_accy->event[event_id].
-						notifiers, notifier);
+	return blocking_notifier_chain_register(
+		&bcmpmu_accy->bcmpmu->event[event_id].notifiers, notifier);
 }
 
 EXPORT_SYMBOL_GPL(bcmpmu_add_notifier);
@@ -357,8 +351,8 @@ int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier)
 		return -EINVAL;
 	}
 
-	return blocking_notifier_chain_unregister(&bcmpmu_accy->event[event_id].
-						  notifiers, notifier);
+	return blocking_notifier_chain_unregister(
+		&bcmpmu_accy->bcmpmu->event[event_id].notifiers, notifier);
 }
 
 EXPORT_SYMBOL_GPL(bcmpmu_remove_notifier);
@@ -495,7 +489,7 @@ static void send_usb_event(struct bcmpmu *pmu,
 				       paccy->usb_cb.clientdata);
 		pr_accy(FLOW, "%s, event=%d, val=%p\n", __func__, event, para);
 	}
-	blocking_notifier_call_chain(&paccy->event[event].notifiers,
+	blocking_notifier_call_chain(&paccy->bcmpmu->event[event].notifiers,
 				     event, para);
 
 }
@@ -531,7 +525,7 @@ static void send_chrgr_event(struct bcmpmu *pmu,
 	union power_supply_propval propval;
 	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)pmu->accyinfo;
 
-	blocking_notifier_call_chain(&paccy->event[event].notifiers,
+	blocking_notifier_call_chain(&paccy->bcmpmu->event[event].notifiers,
 				     event, para);
 	if (paccy->bcmpmu->usb_accy_data.chrgr_type == PMU_CHRGR_TYPE_NONE) {
 		chrgr_str = last_chgr_str;
@@ -645,9 +639,6 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 			schedule_delayed_work(&paccy->det_work, 0);
 		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_SESSION_INVALID, NULL);
 
-		bcmpmu->usb_accy_data.usb_dis = 1;
-		if (bcmpmu->chrgr_usb_en)
-			bcmpmu->chrgr_usb_en(bcmpmu, 0);
 		break;
 
 	case PMU_IRQ_VBUS_4V5_R:
@@ -702,27 +693,30 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_FGC:
-		blocking_notifier_call_chain(&paccy->event[BCMPMU_FG_EVENT_FGC].
-					     notifiers, BCMPMU_FG_EVENT_FGC,
-					     NULL);
+		blocking_notifier_call_chain(
+			&paccy->bcmpmu->event[BCMPMU_FG_EVENT_FGC].notifiers,
+			BCMPMU_FG_EVENT_FGC, NULL);
 		break;
 
 	case PMU_IRQ_JIG_UART_INS:
 		pr_info("%s : PMU_IRQ_JIG_UART_INS\n",__func__);
-		blocking_notifier_call_chain(&paccy->event[BCMPMU_JIG_EVENT_UART].
-					     notifiers, BCMPMU_JIG_EVENT_UART, NULL);
+		blocking_notifier_call_chain(
+			&paccy->bcmpmu->event[BCMPMU_JIG_EVENT_UART].notifiers,
+			BCMPMU_JIG_EVENT_UART, NULL);
 		break;
 
 	case PMU_IRQ_JIG_USB_INS:
 		pr_info("%s : PMU_IRQ_JIG_USB_INS\n",__func__);
-		blocking_notifier_call_chain(&paccy->event[BCMPMU_JIG_EVENT_USB].
-					     notifiers, BCMPMU_JIG_EVENT_USB, NULL);
+		blocking_notifier_call_chain(
+			&paccy->bcmpmu->event[BCMPMU_JIG_EVENT_USB].notifiers,
+			BCMPMU_JIG_EVENT_USB, NULL);
 		break;
 
 	case PMU_IRQ_RESUME_VBUS:
-		blocking_notifier_call_chain(&paccy->event[BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS].
-					     notifiers, BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
-					     NULL);
+		blocking_notifier_call_chain(
+			&paccy->bcmpmu->
+			event[BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS].notifiers,
+			BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS, NULL);
 		break;
 
 	default:
@@ -1621,8 +1615,8 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 
 	wake_lock_init(&paccy->wake_lock, WAKE_LOCK_SUSPEND, "usb_accy");
 	for (i = 0; i < BCMPMU_EVENT_MAX; i++) {
-		paccy->event[i].event_id = i;
-		BLOCKING_INIT_NOTIFIER_HEAD(&paccy->event[i].notifiers);
+		bcmpmu->event[i].event_id = i;
+		BLOCKING_INIT_NOTIFIER_HEAD(&bcmpmu->event[i].notifiers);
 	}
 
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBINS, bcmpmu_accy_isr, paccy);

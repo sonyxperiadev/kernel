@@ -30,6 +30,7 @@
 #include <linux/mfd/bcmpmu.h>
 #include <linux/io.h>
 #include <mach/io_map.h>
+#include <linux/regulator/consumer.h>
 #include <linux/usb/bcm_hsotgctrl.h>
 #include "bcmpmu_otg_xceiv.h"
 #include "bcm_otg_adp.h"
@@ -107,6 +108,14 @@ static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
 			    (&xceiv_data->otg_xceiver.xceiver_wake_lock))
 				wake_unlock(&xceiv_data->otg_xceiver.
 					    xceiver_wake_lock);
+
+			if (xceiv_data->bcm_hsotg_regulator) {
+				/* This should have no effect for most of
+				 * our platforms as "always on" parameter is set
+				 */
+				regulator_disable(xceiv_data->
+					    bcm_hsotg_regulator);
+			}
 		}
 	}
 }
@@ -118,8 +127,14 @@ static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
 
 	if (xceiv_data) {
 
-		if (!xceiv_data->otg_enabled)
+		if (!xceiv_data->otg_enabled) {
 			wake_lock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
+
+			if (xceiv_data->bcm_hsotg_regulator) {
+				regulator_enable(xceiv_data->
+					    bcm_hsotg_regulator);
+			}
+		}
 
 		id_default_host = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
 			bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
@@ -193,8 +208,8 @@ static int bcmpmu_otg_xceiv_set_suspend(struct otg_transceiver *otg,
 	if (!xceiv_data)
 		return -EINVAL;
 
-	if (!xceiv_data->otg_enabled && suspend)
-		bcm_hsotgctrl_handle_bus_suspend();
+	/* REVISIT: When we use external wake interrupt, we will add more power savings */
+	bcm_hsotgctrl_set_phy_clk_request(!suspend);
 
 	return 0;
 }
@@ -327,9 +342,9 @@ static int bcmpmu_otg_xceiv_set_vbus_power(struct otg_transceiver *otg,
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
 
-	return bcmpmu_usb_set(xceiv_data->bcmpmu,
+	return (bcmpmu_usb_set(xceiv_data->bcmpmu,
 			       BCMPMU_USB_CTRL_CHRG_CURR_LMT,
-			       xceiv_data->otg_enabled ? 0 : ma);
+			       xceiv_data->otg_enabled ? 0 : ma));
 }
 
 static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
@@ -523,9 +538,6 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 
 	dev_info(xceiv_data->dev, "A session invalid\n");
 
-	if (!bcm_hsotgctrl_get_clk_count())
-		bcm_hsotgctrl_en_clock(true);
-
 	/* Inform the core of session invalid level  */
 	bcm_hsotgctrl_phy_set_vbus_stat(false);
 
@@ -540,9 +552,9 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 				       BCMPMU_USB_CTRL_SET_ADP_COMP_METHOD, 1);
 			if (xceiv_data->otg_xceiver.otg_vbus_off)
 				schedule_delayed_work(&xceiv_data->
-					bcm_otg_delayed_adp_work,
-					msecs_to_jiffies
-					  (T_NO_ADP_DELAY_MIN_IN_MS));
+						      bcm_otg_delayed_adp_work,
+						      msecs_to_jiffies
+						      (T_NO_ADP_DELAY_MIN_IN_MS));
 			else
 				bcm_otg_do_adp_probe(xceiv_data);
 		} else if (!bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data)) {
@@ -688,6 +700,21 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	/* REVISIT: Currently there isn't a way to obtain
+	 * regulator string associated with USB. Hardcode for now
+	 */
+	xceiv_data->bcm_hsotg_regulator =
+		regulator_get(NULL, "hv2ldo_uc");
+
+	if (IS_ERR(xceiv_data->bcm_hsotg_regulator)) {
+		dev_warn(&pdev->dev, "Failed to get regulator handle\n");
+		kfree(xceiv_data);
+		return -ENODEV;
+	}
+
+	/* Enable USB LDO */
+	regulator_enable(xceiv_data->bcm_hsotg_regulator);
+
 	xceiv_data->dev = &pdev->dev;
 	xceiv_data->bcmpmu = bcmpmu;
 	xceiv_data->otg_xceiver.xceiver.dev = xceiv_data->dev;
@@ -700,6 +727,8 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	if (xceiv_data->bcm_otg_work_queue == NULL) {
 		dev_warn(&pdev->dev,
 			 "BCM OTG events work queue creation failed\n");
+		regulator_disable(xceiv_data->bcm_hsotg_regulator);
+		regulator_put(xceiv_data->bcm_hsotg_regulator);
 		kfree(xceiv_data);
 		return -ENOMEM;
 	}
@@ -822,8 +851,9 @@ error_attr_vbus:
 
 error_attr_host:
 	wake_lock_destroy(&xceiv_data->otg_xceiver.xceiver_wake_lock);
-
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
+	regulator_disable(xceiv_data->bcm_hsotg_regulator);
+	regulator_put(xceiv_data->bcm_hsotg_regulator);
 	kfree(xceiv_data);
 	return error;
 }
@@ -855,6 +885,8 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 			       &xceiv_data->bcm_otg_chg_detection_notifier);
 
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
+	regulator_disable(xceiv_data->bcm_hsotg_regulator);
+	regulator_put(xceiv_data->bcm_hsotg_regulator);
 	kfree(xceiv_data);
 	bcm_hsotgctrl_phy_deinit();
 
@@ -884,7 +916,7 @@ static int bcmpmu_otg_xceiv_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static const struct dev_pm_ops bcmpmu_otg_xceiv_pm_ops = {
+static struct dev_pm_ops bcmpmu_otg_xceiv_pm_ops = {
 	.runtime_suspend = bcmpmu_otg_xceiv_runtime_suspend,
 	.runtime_resume = bcmpmu_otg_xceiv_runtime_resume,
 };

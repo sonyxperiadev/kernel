@@ -34,6 +34,7 @@ struct bcmpmu_otg_xceiv_data {
 	struct device *dev;
 	struct bcmpmu *bcmpmu;
 
+	struct regulator *bcm_hsotg_regulator;
 	struct bcm_otg_xceiver otg_xceiver;
 
 	/* OTG Work queue and work struct for each item for work queue */

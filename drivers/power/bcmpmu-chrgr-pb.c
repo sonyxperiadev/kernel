@@ -392,6 +392,10 @@ static int bcmpmu_chrgr_set_property(struct power_supply *ps,
 			bcmpmu_chrgr_usb_en(bcmpmu, 1);
 		else if (propval->intval == POWER_SUPPLY_STATUS_DISCHARGING)
 			bcmpmu_chrgr_usb_en(bcmpmu, 0);
+		blocking_notifier_call_chain(
+			&pchrgr->bcmpmu->event[BCMPMU_CHRGR_EVENT_CHRG_STATUS].
+			notifiers, BCMPMU_CHRGR_EVENT_CHRG_STATUS,
+			(void *)&pchrgr->status);
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
@@ -441,7 +445,7 @@ static int bcmpmu_chrgr_get_property(struct power_supply *ps,
 		req.flags = PMU_ADC_RAW_AND_UNIT;
 		if (bcmpmu->adc_req) {
 			bcmpmu->adc_req(bcmpmu, &req);
-			propval->intval = (req.cnv - 273) * 10;
+			propval->intval = req.cnv;
 		} else
 			ret = -ENODATA;
 		break;
@@ -593,6 +597,11 @@ static void bcmpmu_chrgr_isr(enum bcmpmu_irq irq, void *data)
 		if (pdata->piggyback_notify)
 			pdata->piggyback_notify(
 				BCMPMU_CHRGR_EVENT_EOC, 0);
+		blocking_notifier_call_chain(
+			&pchrgr->bcmpmu->event[BCMPMU_CHRGR_EVENT_EOC].
+			notifiers, BCMPMU_CHRGR_EVENT_EOC,
+			NULL);
+
 		break;
 	default:
 		break;

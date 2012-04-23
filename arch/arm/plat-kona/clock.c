@@ -3632,6 +3632,10 @@ static unsigned long bus_clk_get_rate(struct clk *c)
 	current_policy = ccu_get_active_policy(ccu_clk);
 
 	freq_id = ccu_get_freq_policy(ccu_clk, current_policy);
+	if (freq_id < 0)
+		return 0;
+	BUG_ON(freq_id >= MAX_CCU_FREQ_COUNT);
+
 	clk_dbg("current_policy: %d freq_id %d freq_tbl_index :%d\n",
 		current_policy, freq_id, bus_clk->freq_tbl_index);
 	c->rate = ccu_clk->freq_tbl[freq_id][bus_clk->freq_tbl_index];
@@ -5385,7 +5389,6 @@ static int clk_parent_show(struct seq_file *seq, void *p)
 	struct peri_clk *peri_clk;
 	struct bus_clk *bus_clk;
 	struct ref_clk *ref_clk;
-	struct pll_clk *pll_clk;
 	struct pll_chnl_clk *pll_chnl_clk;
 	struct core_clk *core_clk;
 	switch (clock->clk_type) {
@@ -5422,9 +5425,9 @@ static int clk_parent_show(struct seq_file *seq, void *p)
 				   ref_clk->ccu_clk->clk.name);
 		break;
 	case CLK_TYPE_PLL:
-		pll_clk = to_pll_clk(clock);
 		seq_printf(seq, "PLL:  %s\n", clock->name);
 		break;
+
 	case CLK_TYPE_PLL_CHNL:
 		pll_chnl_clk = to_pll_chnl_clk(clock);
 		seq_printf(seq, "PLL:  %s; PLL channel:%s\n",
@@ -5460,7 +5463,6 @@ static int clk_source_show(struct seq_file *seq, void *p)
 	struct peri_clk *peri_clk;
 	struct bus_clk *bus_clk;
 	struct ref_clk *ref_clk;
-	struct pll_clk *pll_clk;
 	struct pll_chnl_clk *pll_chnl_clk;
 	struct core_clk *core_clk;
 	switch (clock->clk_type) {
@@ -5497,7 +5499,6 @@ static int clk_source_show(struct seq_file *seq, void *p)
 				   ref_clk->ccu_clk->clk.name);
 		break;
 	case CLK_TYPE_PLL:
-		pll_clk = to_pll_clk(clock);
 		seq_printf(seq, "PLL: %s\n", clock->name);
 		break;
 	case CLK_TYPE_PLL_CHNL:

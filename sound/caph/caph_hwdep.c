@@ -219,6 +219,8 @@ static long hwdep_read(struct snd_hwdep *hw, char __user * buf, long count,
 	long ret = 0;
 
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
+	if (!pVoIP)
+		return 0;
 	/* DEBUG("voip_read count %ld\n",count); */
 
 	if ((pVoIP->status == VoIP_Hwdep_Status_Started)
@@ -259,6 +261,8 @@ static long hwdep_write(struct snd_hwdep *hw, const char __user * buf,
 	bcm_caph_hwdep_voip_t *pVoIP;
 	long ret;
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
+	if (!pVoIP)
+		return count;
 
 	/* DEBUG("voip_write pVoIP->frame_size %d,pVoIP->"
 	 * "writecount %d\n",pVoIP->frame_size,pVoIP->writecount);
@@ -300,9 +304,6 @@ static int hwdep_open(struct snd_hwdep *hw, struct file *file)
 
 static int hwdep_release(struct snd_hwdep *hw, struct file *file)
 {
-	bcm_caph_hwdep_voip_t *pVoIP;
-	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
-
 	aTrace(LOG_ALSA_INTERFACE , "ALSA-CAPH VoIP_Ioctl_Release\n");
 	return 0;
 }
@@ -432,7 +433,8 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		break;
 	case VoIP_Ioctl_Stop:
 		aTrace(LOG_ALSA_INTERFACE, "VoIP_Ioctl_Stop\n");
-
+		if (!pVoIP)
+			break;
 		if (voipInstCnt == 2)
 			voipInstCnt--;
 		else if (voipInstCnt == 1) {
@@ -646,6 +648,7 @@ static int hwdep_dsp_status(struct snd_hwdep *hw,
 static void hwdep_private_free(struct snd_hwdep *hwdep)
 {
 	kfree(hwdep->private_data);
+	hwdep->private_data = NULL;
 }
 
 static unsigned int hwdep_poll(struct snd_hwdep *hw, struct file *file,
@@ -655,6 +658,8 @@ static unsigned int hwdep_poll(struct snd_hwdep *hw, struct file *file,
 	bcm_caph_hwdep_voip_t *pVoIP;
 
 	pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
+	if (!pVoIP)
+		return 0;
 	poll_wait(file, &pVoIP->sleep, wait);
 	if (pVoIP->status == VoIP_Hwdep_Status_Started) {
 

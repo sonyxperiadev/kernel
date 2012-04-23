@@ -173,7 +173,6 @@ static CSL_CAPH_SSP_e sspidI2SUse = CSL_CAPH_SSP_4;
 static Boolean sspTDM_enabled = FALSE;
 /*static void *bmintc_handle = NULL;*/
 static UInt32 dspSharedMemAddr;
-static CSL_CAPH_SWITCH_CONFIG_t fm_sw_config;
 static Boolean isSTIHF = FALSE;
 static BT_MODE_t bt_mode = BT_MODE_NB;
 static Boolean sClkCurEnabled = FALSE;
@@ -1202,10 +1201,6 @@ static void csl_caph_obtain_blocks
 		break;
 
 		case CAPH_SW:
-		if (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[sinkNo]
-			== CSL_CAPH_DEV_MEMORY && fmRxRunning == TRUE)
-			/*FM recording during direct playback*/
-			break;/*share the same switch as direct playback path*/
 		sw = csl_caph_switch_obtain_channel();
 
 		if (!path->sw[sinkNo][0].chnl)
@@ -1823,7 +1818,8 @@ static void csl_caph_config_sw
 	CSL_CAPH_SWITCH_CONFIG_t *swCfg;
 	CSL_CAPH_AUDIOH_BUFADDR_t audiohBufAddr;
 	CSL_CAPH_DEVICE_e sink;
-	int src_path, dst_path;
+	int src_path;
+	int is_broadcast = 0;
 
 	if (!pathID)
 		return;
@@ -1834,17 +1830,6 @@ static void csl_caph_config_sw
 	blockIdx = path->blockIdx[sinkNo][blockPathIdx];
 
 	swCfg = &path->sw[sinkNo][blockIdx];
-
-	/*FM recording during direct playback*/
-	if (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[sinkNo] ==
-			CSL_CAPH_DEV_MEMORY && fmRxRunning == TRUE) {
-		/* add this FIFO as second destination in switch*/
-		fm_sw_config.FIFO_dst2Addr =
-			csl_caph_cfifo_get_fifo_addr(path->cfifo[sinkNo][0]);
-		csl_caph_switch_add_dst(fm_sw_config.chnl,
-				fm_sw_config.FIFO_dst2Addr);
-		return;
-	}
 
 	if (blockPathIdx)
 		swCfg->FIFO_srcAddr =
@@ -1942,51 +1927,58 @@ static void csl_caph_config_sw
 
 	src_path = csl_caph_hwctrl_readHWResource(swCfg->FIFO_srcAddr, pathID);
 
+	/*If two switches share the same source/dst, release it.
+	  Do not expect non-default dst address (like FIFO_dst2Addr) is used.
+	  There exist two cases:
+	  - Two switches share the same source and dst addresses,
+	    like HW mixing.
+	  - Only source address is shared. This is broadcast case,
+	    like FM record during FM playback
+	*/
 	if (src_path) {
-		dst_path = csl_caph_hwctrl_readHWResource
-			(swCfg->FIFO_dstAddr, pathID);
+		UInt32 dst_addr = swCfg->FIFO_dstAddr;
+		UInt32 src_addr = swCfg->FIFO_srcAddr;
+		CSL_CAPH_HWConfig_Table_t *path2 = &HWConfig_Table[src_path-1];
+		CSL_CAPH_SWITCH_CONFIG_t *swcfg2;
+		int i, j;
+		CSL_CAPH_SWITCH_CHNL_e cur_sw = swCfg->chnl;
 
-		/*If two switches share the same source/dst, release it.*/
-		/*do not expect non-default dst address (like FIFO_dst2Addr)
-		  is used.*/
-		if (dst_path == src_path) {
-			UInt32 dst_addr = swCfg->FIFO_dstAddr;
-			UInt32 src_addr = swCfg->FIFO_srcAddr;
-			CSL_CAPH_HWConfig_Table_t *path2 =
-				&HWConfig_Table[src_path-1];
-			CSL_CAPH_SWITCH_CONFIG_t *swcfg2;
-			int i, j;
-			CSL_CAPH_SWITCH_CHNL_e cur_sw = swCfg->chnl;
-
-			for (j = 0; j < MAX_SINK_NUM; j++) {
-				for (i = 0; i < MAX_BLOCK_NUM; i++) {
-					swcfg2 = &path2->sw[j][i];
-					if (swcfg2->FIFO_srcAddr == src_addr &&
-					swcfg2->FIFO_dstAddr == dst_addr) {
-						memcpy(swCfg, swcfg2,
-							sizeof(*swCfg));
-						swCfg->cloned = TRUE;
-						break;
+		for (j = 0; j < MAX_SINK_NUM; j++) {
+			for (i = 0; i < MAX_BLOCK_NUM; i++) {
+				swcfg2 = &path2->sw[j][i];
+				if (swcfg2->FIFO_srcAddr == src_addr) {
+					memcpy(swCfg, swcfg2, sizeof(*swCfg));
+					swCfg->cloned = TRUE;
+					if (swCfg->FIFO_dstAddr != dst_addr) {
+						is_broadcast = 1;
+						swCfg->FIFO_dstAddr = dst_addr;
 					}
-				}
-				if (swCfg->cloned)
 					break;
+				}
 			}
-
 			if (swCfg->cloned)
-				csl_caph_switch_release_channel(cur_sw);
-			else
-				audio_xassert(0, cur_sw);
-			aTrace(LOG_AUDIO_CSL,
-				"%s sw %d in path %d sink %d clones sw %d "
-				"in path %d sink %d\n",
-				__func__, cur_sw, pathID, sinkNo, swCfg->chnl,
-				src_path, j);
+				break;
 		}
+
+		if (swCfg->cloned)
+			csl_caph_switch_release_channel(cur_sw);
+		else
+			audio_xassert(0, cur_sw);
+		aTrace(LOG_AUDIO_CSL,
+			"%s sw %d in path %d sink %d clones sw %d "
+			"in path %d sink %d\n",
+			__func__, cur_sw, pathID, sinkNo, swCfg->chnl,
+			src_path, j);
 	}
 
 	if (!swCfg->cloned)
 		swCfg->status = csl_caph_switch_config_channel(*swCfg);
+	else if (is_broadcast) {
+		csl_caph_switch_add_dst(swCfg->chnl, swCfg->FIFO_dstAddr);
+		aTrace(LOG_AUDIO_CSL, "broadcast sw %d 0x%x --> 0x%x\n",
+			swCfg->chnl, (u32)swCfg->FIFO_srcAddr,
+			(u32)swCfg->FIFO_dstAddr);
+	}
 
 	csl_caph_hwctrl_addHWResource(swCfg->FIFO_srcAddr, pathID);
 	csl_caph_hwctrl_addHWResource(swCfg->FIFO_dstAddr, pathID);
@@ -2198,15 +2190,6 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 			CSL_I2S_16BIT_48000HZ; /*48kHz or 8kHz?*/
 		csl_i2s_config(fmHandleSSP, &fmCfg);
 	}
-
-	if ((path->source == CSL_CAPH_DEV_FM_RADIO) &&
-		((path->sink[sinkNo] == CSL_CAPH_DEV_EP) ||
-		 (path->sink[sinkNo] == CSL_CAPH_DEV_IHF) ||
-		 (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) ||
-		 (path->sink[sinkNo] == CSL_CAPH_DEV_HS)))
-
-		memcpy(&fm_sw_config, &path->sw[sinkNo][0],
-				sizeof(CSL_CAPH_SWITCH_CONFIG_t));
 }
 
 /*
@@ -4852,4 +4835,20 @@ CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
 void csl_caph_SetSRC26MClk(Boolean is26M)
 {
 	use26MClk = is26M;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_classG_ctrl
+*
+*  Description: Set Headset Driver Supply Indicator Control Register for
+*				class G control
+*
+*****************************************************************************/
+void csl_caph_classG_ctrl(struct classg_G_ctrl *pClassG)
+{
+	chal_audio_hspath_turn_on_pmu_signal();
+	chal_audio_hspath_hs_supply_ctrl(lp_handle, pClassG->HS_DS_POLARITY,
+		pClassG->HS_DS_DELAY, pClassG->HS_DS_LAG);
+	chal_audio_hspath_hs_supply_thres(lp_handle, pClassG->HS_DS_THRES);
 }

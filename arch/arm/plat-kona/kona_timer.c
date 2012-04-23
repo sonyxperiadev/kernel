@@ -1,27 +1,31 @@
-/************************************************************************************************/
-/*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
-/*                                                                                              */
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
+/******************************************************************************/
+/*                                                                            */
+/*  Copyright 2010  Broadcom Corporation                                      */
+/*                                                                            */
+/*     Unless you and Broadcom execute a separate written software license    */
+/*     agreement governing use of this software, this software is licensed    */
+/*     to you under the terms of the GNU General Public License version 2     */
+/*     (the GPL), available at                                                */
+/*                                                                            */
+/*          http://www.broadcom.com/licenses/GPLv2.php                        */
+/*                                                                            */
+/*     with the following added to such license:                              */
+/*                                                                            */
+/*     As a special exception, the copyright holders of this software give    */
+/*     you permission to link this software with independent modules, and     */
+/*     to copy and distribute the resulting executable under terms of your    */
+/*     choice, provided that you also meet, for each linked independent       */
+/*     module, the terms and conditions of the license of that module. An     */
+/*     independent module is a module which is not derived from this          */
+/*     software.  The special exception does not apply to any modifications   */
+/*     of the software.                                                       */
+/*                                                                            */
+/*     Notwithstanding the above, under no circumstances may you combine      */
+/*     this software in any way with any other Broadcom software provided     */
+/*     under a license other than the GPL, without Broadcom's express prior   */
+/*     written consent.                                                       */
+/*                                                                            */
+/******************************************************************************/
 
 #include <linux/init.h>
 #include <linux/irq.h>
@@ -45,22 +49,20 @@
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #endif
 
-#include <asm/io.h>
+#include <linux/io.h>
 
 #define NUM_OF_TIMER_MODULES	(2)
 #define NUM_OF_CHANNELS		(4)
 
 /* Macros to set/get multiple register bits at one time */
 #define kona_set_reg_field(addr, mask, shift, val)      \
-            do                                              \
-            {                                               \
-               uint32_t tmp;                                \
-               tmp  = readl(addr);              \
-               tmp &= ~(mask);                              \
-               tmp |= (((val) << (shift)) & (mask));        \
-               writel(tmp, addr);                 \
-                                                            \
-            } while(0)
+	do {                                            \
+		uint32_t tmp;                                \
+		tmp  = readl(addr);              \
+		tmp &= ~(mask);                              \
+		tmp |= (((val) << (shift)) & (mask));        \
+		writel(tmp, addr);                 \
+	} while (0)
 
 /* Data structures */
 
@@ -76,7 +78,7 @@ enum config_state {
 	NOT_CONFIGURED = 0,	/* Timer module not configured */
 	CONFIGURED_FREE,	/* Timer module configured but
 				 * channels are not being used so
-				 * can change the rate 
+				 * can change the rate
 				 */
 	CONFIGURED_BUSY,	/* Timer module configured and channels
 				 * are being used so re-configuring
@@ -96,29 +98,29 @@ struct kona_timer_module {
 };
 
 static struct kona_timer aon_hub_timer[NUM_OF_CHANNELS] = {
-	{.ch_num = 0,.busy = 0,.irq = BCM_INT_ID_HUB_TIMERS1},
-	{.ch_num = 1,.busy = 0,.irq = BCM_INT_ID_HUB_TIMERS2},
-	{.ch_num = 2,.busy = 0,.irq = BCM_INT_ID_HUB_TIMERS3},
-	{.ch_num = 3,.busy = 0,.irq = BCM_INT_ID_HUB_TIMERS4},
+	{.ch_num = 0, .busy = 0, .irq = BCM_INT_ID_HUB_TIMERS1},
+	{.ch_num = 1, .busy = 0, .irq = BCM_INT_ID_HUB_TIMERS2},
+	{.ch_num = 2, .busy = 0, .irq = BCM_INT_ID_HUB_TIMERS3},
+	{.ch_num = 3, .busy = 0, .irq = BCM_INT_ID_HUB_TIMERS4},
 };
 
 static struct kona_timer periph_timer[NUM_OF_CHANNELS] = {
-	{.ch_num = 0,.busy = 0,.irq = BCM_INT_ID_PERIPH_TIMERS1},
-	{.ch_num = 1,.busy = 0,.irq = BCM_INT_ID_PERIPH_TIMERS2},
-	{.ch_num = 2,.busy = 0,.irq = BCM_INT_ID_PERIPH_TIMERS3},
-	{.ch_num = 3,.busy = 0,.irq = BCM_INT_ID_PERIPH_TIMERS4},
+	{.ch_num = 0, .busy = 0, .irq = BCM_INT_ID_PERIPH_TIMERS1},
+	{.ch_num = 1, .busy = 0, .irq = BCM_INT_ID_PERIPH_TIMERS2},
+	{.ch_num = 2, .busy = 0, .irq = BCM_INT_ID_PERIPH_TIMERS3},
+	{.ch_num = 3, .busy = 0, .irq = BCM_INT_ID_PERIPH_TIMERS4},
 };
 
 /* There are two instances of timer modules on Kona */
 static struct kona_timer_module timer_module_list[NUM_OF_TIMER_MODULES] = {
-	{.pkt = &aon_hub_timer[0],.name = "aon-timer",.cfg_state =
+	{.pkt = &aon_hub_timer[0], .name = "aon-timer", .cfg_state =
 	 NOT_CONFIGURED,
-	 .rate = 0,.num_of_timers = NUM_OF_CHANNELS,.reg_base =
+	 .rate = 0, .num_of_timers = NUM_OF_CHANNELS, .reg_base =
 	 IOMEM(KONA_TMR_HUB_VA),
 	 .clk_name = HUB_TIMER_PERI_CLK_NAME_STR},
-	{.pkt = &periph_timer[0],.name = "slave-timer",.cfg_state =
+	{.pkt = &periph_timer[0], .name = "slave-timer", .cfg_state =
 	 NOT_CONFIGURED,
-	 .rate = 0,.num_of_timers = NUM_OF_CHANNELS,.reg_base =
+	 .rate = 0, .num_of_timers = NUM_OF_CHANNELS, .reg_base =
 	 IOMEM(KONA_SYSTMR_VA),
 	 .clk_name = TIMERS_PERI_CLK_NAME_STR},
 };
@@ -140,28 +142,28 @@ static inline void __disable_channel(void __iomem *reg_base, int ch_num);
 static irqreturn_t kona_timer_isr(int irq, void *dev_id);
 
 static struct irqaction hub_timer_irq[NUM_OF_CHANNELS] = {
-	{.name = "Hub-Timer-Ch0",.flags = IRQF_DISABLED | IRQF_TIMER,
-	 .dev_id = &timer_module_list[0],.handler = kona_timer_isr},
-	{.name = "Hub-Timer-Ch1",.flags = IRQF_DISABLED | IRQF_TIMER,
-	 .dev_id = &timer_module_list[0],.handler = kona_timer_isr},
-	{.name = "Hub-Timer-Ch2",.flags = IRQF_DISABLED | IRQF_TIMER,
-	 .dev_id = &timer_module_list[0],.handler = kona_timer_isr},
-	{.name = "Hub-Timer-Ch3",.flags = IRQF_DISABLED | IRQF_TIMER,
-	 .dev_id = &timer_module_list[0],.handler = kona_timer_isr},
+	{.name = "Hub-Timer-Ch0", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[0], .handler = kona_timer_isr},
+	{.name = "Hub-Timer-Ch1", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[0], .handler = kona_timer_isr},
+	{.name = "Hub-Timer-Ch2", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[0], .handler = kona_timer_isr},
+	{.name = "Hub-Timer-Ch3", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[0], .handler = kona_timer_isr},
 };
 
 static struct irqaction periph_timer_irq[NUM_OF_CHANNELS] = {
-	{.name = "Slave-Timer-Ch0",.flags = IRQF_DISABLED | IRQF_TIMER,
-	 .dev_id = &timer_module_list[1],.handler = kona_timer_isr},
-	{.name = "Slave-Timer-Ch1",.flags = IRQF_DISABLED | IRQF_TIMER,
-	 .dev_id = &timer_module_list[1],.handler = kona_timer_isr},
-	{.name = "Slave-Timer-Ch2",.flags = IRQF_DISABLED | IRQF_TIMER,
-	 .dev_id = &timer_module_list[1],.handler = kona_timer_isr},
-	{.name = "Slave-Timer-Ch3",.flags = IRQF_DISABLED | IRQF_TIMER,
-	 .dev_id = &timer_module_list[1],.handler = kona_timer_isr},
+	{.name = "Slave-Timer-Ch0", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[1], .handler = kona_timer_isr},
+	{.name = "Slave-Timer-Ch1", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[1], .handler = kona_timer_isr},
+	{.name = "Slave-Timer-Ch2", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[1], .handler = kona_timer_isr},
+	{.name = "Slave-Timer-Ch3", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[1], .handler = kona_timer_isr},
 };
 
-static int kona_init_done = 0;
+static int kona_init_done;
 
 /*
  *  kona_timer_modules_init - Initialize the data structures
@@ -172,7 +174,7 @@ int __init kona_timer_modules_init(void)
 	int i;
 
 	if (kona_init_done != 0) {
-		pr_err("kona_timer_modules_init: Already initialized \n");
+		pr_err("kona_timer_modules_init: Already initialized\n");
 		return -1;
 	}
 
@@ -204,9 +206,10 @@ int __init kona_timer_modules_init(void)
 }
 
 /*
- * kona_timer_module_set_rate - Set the speed in which a timer module should count
+ * kona_timer_module_set_rate - Set the speed in which a timer module should
+ *                              count
  * name - Name of the Timer to configure
- * rate - Speed 
+ * rate - Speed
  */
 int kona_timer_module_set_rate(char *name, unsigned int rate)
 {
@@ -219,7 +222,7 @@ int kona_timer_module_set_rate(char *name, unsigned int rate)
 	if (pktm == NULL)
 		return -1;
 
-	/* 
+	/*
 	 * While multiple clients want to set the rate for the same timer, we
 	 * need protection
 	 */
@@ -277,8 +280,8 @@ int kona_timer_module_set_rate(char *name, unsigned int rate)
 			break;
 		default:
 			pr_err
-			    ("aon hub timer clock: Invalid value requested %d\r\n",
-			     rate);
+			    ("aon hub timer clock: Invalid value requested"
+			    " %d\r\n", rate);
 			goto err_out;
 		}
 	}
@@ -306,12 +309,11 @@ err_out:
 out:
 	return ret;
 }
-
 EXPORT_SYMBOL(kona_timer_module_set_rate);
 
-/* 
+/*
  * kona_timer_module_get_rate - Get the speed in which a timer module is running
- * name - Name of the Timer module 
+ * name - Name of the Timer module
  */
 int kona_timer_module_get_rate(char *name)
 {
@@ -323,7 +325,6 @@ int kona_timer_module_get_rate(char *name)
 
 	return pktm->rate;
 }
-
 EXPORT_SYMBOL(kona_timer_module_get_rate);
 
 /*
@@ -374,7 +375,6 @@ struct kona_timer *kona_timer_request(char *name, int channel)
 
 	return pkt;
 }
-
 EXPORT_SYMBOL(kona_timer_request);
 
 /*
@@ -406,7 +406,6 @@ int kona_timer_config(struct kona_timer *kt, struct timer_ch_cfg *pcfg)
 
 	return 0;
 }
-
 EXPORT_SYMBOL(kona_timer_config);
 
 /*
@@ -415,15 +414,15 @@ EXPORT_SYMBOL(kona_timer_config);
  *
  *  kt - Kona timer context (returned by kona_timer_request())
  *  load - The load value to be programmed. This function will internally
- *         add this value to the current counter and program the resultant in the
- *         match register. Once the timer is started when the counter
- *         reaches this value an interrupt will be raised
+ *         add this value to the current counter and program the resultant
+ *         in the match register. Once the timer is started when the
+ *         counter reaches this value an interrupt will be raised
  */
 int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 {
 	struct kona_timer_module *ktm;
 	unsigned long flags;
-	unsigned long reg, lsw;
+	unsigned long reg, lsw, temp = 0;
 
 	if (NULL == kt)
 		return -1;
@@ -431,7 +430,7 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 	ktm = kt->ktm;
 	spin_lock_irqsave(&ktm->lock, flags);
 
-	/* 
+	/*
 	 * Remember the reload value in case of periodic timers.
 	 * Note that the HW does not support periodic timers. Once
 	 * there is a match the interrupt is triggered and from the
@@ -451,17 +450,20 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 
 #ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
 	/* Poll the corresponding STCS bits to become 0.
-	 * This is to make sure the next event tick value is actually loaded (taking 3 32KHz clock cycles)
-	 * before enabling compare (taking 2 32KHz clock cycles). 
+	 * This is to make sure the next event tick value is actually loaded
+	 * (taking 3 32KHz clock cycles) before enabling compare (taking
+	 *  2 32KHz clock cycles).
 	 */
-	while (readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET) &
-	       (1 << (KONA_GPTIMER_STCS_STCM0_SYNC_SHIFT + kt->ch_num))) ;
+	do {
+		temp = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET) &
+	       (1 << (KONA_GPTIMER_STCS_STCM0_SYNC_SHIFT + kt->ch_num)) ;
+		} while (temp);
 #endif
 
 	/* Enable compare */
 	reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 
-	/* 
+	/*
 	 * Clean up the Match field (3..0), writing 1 to this bit
 	 * would clean the interrupt for the respective channel.
 	 * So do this for only the required channel.
@@ -475,7 +477,6 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 
 	return 0;
 }
-
 EXPORT_SYMBOL(kona_timer_set_match_start);
 
 /*
@@ -499,7 +500,6 @@ int kona_timer_stop(struct kona_timer *kt)
 	spin_unlock_irqrestore(&ktm->lock, flags);
 	return 0;
 }
-
 EXPORT_SYMBOL(kona_timer_stop);
 
 /*
@@ -524,7 +524,7 @@ int kona_timer_free(struct kona_timer *kt)
 	__disable_channel(ktm->reg_base, kt->ch_num);
 	kt->busy = 0;
 
-	/* 
+	/*
 	 * Check if all the channels in this module are free, if yes
 	 * then move the state of the timer module so that IF NEEDED
 	 * the rate can be re-configured.
@@ -535,7 +535,7 @@ int kona_timer_free(struct kona_timer *kt)
 			break;
 	}
 
-	/* All the timers are free (NOT BUSY) so move the 
+	/* All the timers are free (NOT BUSY) so move the
 	 * timer module's state
 	 */
 	if (i == NUM_OF_CHANNELS) {
@@ -544,7 +544,8 @@ int kona_timer_free(struct kona_timer *kt)
 		clk = clk_get(NULL, ktm->clk_name);
 		if (IS_ERR_OR_NULL(clk))
 			pr_err
-			    ("timer_free: clk_get failed, so clock manager is not up use local calls \r\n");
+			    ("timer_free: clk_get failed, so clock manager"
+			    " is not up use local calls \r\n");
 		else
 			clk_disable(clk);
 #endif
@@ -555,7 +556,6 @@ int kona_timer_free(struct kona_timer *kt)
 
 	return 0;
 }
-
 EXPORT_SYMBOL(kona_timer_free);
 
 /*
@@ -578,7 +578,6 @@ unsigned int kona_timer_get_counter(struct kona_timer *kt)
 
 	return counter;
 }
-
 EXPORT_SYMBOL(kona_timer_get_counter);
 
 /*
@@ -599,14 +598,14 @@ int kona_timer_disable_and_clear(struct kona_timer *kt)
 	ktm = kt->ktm;
 	spin_lock_irqsave(&ktm->lock, flags);
 
-	/* 
+	/*
 	 * clear and disable interrupts
 	 * We are using compare/match register 0 for our system interrupts
 	 */
 	reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 
 	/* Clear compare (0) interrupt */
-	/* 
+	/*
 	 * Clean up the Match field (3..0), writing 1 to this bit
 	 * would clean the interrupt for the respective channel.
 	 * So do this for only the required channel.
@@ -621,7 +620,6 @@ int kona_timer_disable_and_clear(struct kona_timer *kt)
 	spin_unlock_irqrestore(&ktm->lock, flags);
 	return 0;
 }
-
 EXPORT_SYMBOL(kona_timer_disable_and_clear);
 
 /* Return the counter value of hub timer */
@@ -629,7 +627,6 @@ unsigned long kona_hubtimer_get_counter(void)
 {
 	return __get_counter(timer_module_list[0].reg_base);
 }
-
 EXPORT_SYMBOL(kona_hubtimer_get_counter);
 
 /* Return the counter value of slave timer */
@@ -637,7 +634,6 @@ unsigned long kona_slavetimer_get_counter(void)
 {
 	return __get_counter(timer_module_list[1].reg_base);
 }
-
 EXPORT_SYMBOL(kona_slavetimer_get_counter);
 
 /* Local static functions */
@@ -659,7 +655,7 @@ static int __config_slave_timer_clock(struct kona_timer_module *pktm,
 	void __iomem *rootClockMgr_regs = IOMEM(KONA_ROOT_CLK_VA);
 #endif
 	uint32_t old_enable;
-	uint32_t val, mask;
+	uint32_t val, mask, temp = 0;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
 #endif
@@ -679,7 +675,8 @@ static int __config_slave_timer_clock(struct kona_timer_module *pktm,
 	clk = clk_get(NULL, pktm->clk_name);
 	if (IS_ERR_OR_NULL(clk)) {
 		pr_err
-		    ("clk_get failed, so clock manager is not up use local calls \r\n");
+		    ("clk_get failed, so clock manager is not up use"
+		    " local calls \r\n");
 		goto local_clk_cfg;
 	}
 	clk_set_rate(clk, rate);
@@ -707,8 +704,11 @@ local_clk_cfg:
 	writel(val | (1 << KPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT),
 	       slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET);
 
-	while (readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET) &
-	       (1 << KPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT)) ;
+	do {
+		temp = readl(slaveClockMgr_regs +
+			KPS_CLK_MGR_REG_DIV_TRIG_OFFSET) &
+	       (1 << KPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT) ;
+		} while (temp);
 
 	/* restore slave clock manager */
 	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
@@ -718,7 +718,7 @@ local_clk_cfg:
 	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
 
 #ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
-	/* 
+	/*
 	 * This fix is only for 1 MHz since the clock source for
 	 * 1MHz is from frac_1M. The 32KHz clock is from PMU and is always ON.
 	 */
@@ -747,7 +747,7 @@ local_clk_cfg:
 			  ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_OFFSET);
 		writel(val |
 		       (1 <<
-			ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_FRAC_1M_TRIGGER_OVERRIDE_SHIFT),
+		ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_FRAC_1M_TRIGGER_OVERRIDE_SHIFT),
 		       rootClockMgr_regs +
 		       ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_OFFSET);
 
@@ -761,10 +761,11 @@ local_clk_cfg:
 		       rootClockMgr_regs + ROOT_CLK_MGR_REG_FRAC_1M_TRG_OFFSET);
 
 		/* wait until completes */
-		while (readl
-		       (rootClockMgr_regs +
+		do {
+			temp = readl(rootClockMgr_regs +
 			ROOT_CLK_MGR_REG_FRAC_1M_TRG_OFFSET) & (1 <<
-								ROOT_CLK_MGR_REG_FRAC_1M_TRG_FRAC_1M_TRIGGER_SHIFT)) ;
+			ROOT_CLK_MGR_REG_FRAC_1M_TRG_FRAC_1M_TRIGGER_SHIFT) ;
+			} while (temp);
 
 		/* disable access to root clock manager */
 		val =
@@ -790,7 +791,7 @@ static int __config_aon_hub_timer_clock(struct kona_timer_module *pktm,
 	 * so all are ON
 	 */
 	void __iomem *reg_base = IOMEM(KONA_AON_CLK_VA);
-	unsigned long reg_val, old_enable;
+	unsigned long reg_val, old_enable, temp = 0;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
 #endif
@@ -810,7 +811,8 @@ static int __config_aon_hub_timer_clock(struct kona_timer_module *pktm,
 	clk = clk_get(NULL, pktm->clk_name);
 	if (IS_ERR_OR_NULL(clk)) {
 		pr_err
-		    ("clk_get failed, so clock manager is not up use local calls \r\n");
+		    ("clk_get failed, so clock manager is not up use local"
+			" calls \r\n");
 		goto local_clk_cfg;
 	}
 	clk_set_rate(clk, rate);
@@ -828,9 +830,9 @@ local_clk_cfg:
 	reg_val |= 0xA5A500 | 0x1;
 	writel(reg_val, reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
 
-	/* 
-	 * Assumed that the timer rate enum has 
-	 * 32KHz - 0, 1MHz - 1 and 19.5MHz -2 
+	/*
+	 * Assumed that the timer rate enum has
+	 * 32KHz - 0, 1MHz - 1 and 19.5MHz -2
 	 */
 	reg_val = readl(reg_base + KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_OFFSET);
 	reg_val &= ~KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_HUB_TIMER_PLL_SELECT_MASK;
@@ -838,9 +840,10 @@ local_clk_cfg:
 	writel(reg_val, reg_base + KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_OFFSET);
 
 	/*
-	 * Changing the HUB_TIMER source does not result in resetting the counter
-	 * the first read of the counter reflects the time from the starting of uboot
-	 * So, reset the counter so that next read indicates the start of Linux
+	 * Changing the HUB_TIMER source does not result in resetting the
+	 * counter the first read of the counter reflects the time from the
+	 * starting of uboot. So, reset the counter so that next read
+	 * indicates the start of Linux
 	 */
 	reg_val = readl(KONA_AON_RST_VA);
 	old_enable = reg_val & 0x1;
@@ -852,7 +855,7 @@ local_clk_cfg:
 	    readl(KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
 	reg_val =
 	    (reg_val) & ~(1 <<
-			  KHUBAON_RST_MGR_REG_SOFT_RSTN0_HUB_TIMER_SOFT_RSTN_SHIFT);
+		KHUBAON_RST_MGR_REG_SOFT_RSTN0_HUB_TIMER_SOFT_RSTN_SHIFT);
 	writel(reg_val,
 	       KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
 
@@ -860,7 +863,7 @@ local_clk_cfg:
 	    readl(KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
 	reg_val =
 	    (reg_val) | (1 <<
-			 KHUBAON_RST_MGR_REG_SOFT_RSTN0_HUB_TIMER_SOFT_RSTN_SHIFT);
+		KHUBAON_RST_MGR_REG_SOFT_RSTN0_HUB_TIMER_SOFT_RSTN_SHIFT);
 	writel(reg_val,
 	       KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
 
@@ -877,9 +880,11 @@ local_clk_cfg:
 		KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_HUB_TIMER_TRIGGER_SHIFT),
 	       reg_base + KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET);
 
-	while (readl(reg_base + KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET) &
-	       (1 <<
-		KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_HUB_TIMER_TRIGGER_SHIFT)) ;
+	do {
+		temp = readl(reg_base +
+			KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET) & (1 <<
+		KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_HUB_TIMER_TRIGGER_SHIFT) ;
+		} while (temp);
 
 	/* disable access to root clock manager */
 	reg_val = readl(reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
@@ -930,7 +935,7 @@ static inline unsigned long __get_counter(void __iomem *reg_base)
 		} while (1);
 		return cur;
 	} else {
-		return (readl(reg_base + KONA_GPTIMER_STCLO_OFFSET));
+		return readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
 	}
 }
 
@@ -953,29 +958,29 @@ static inline int irq_to_ch(int irq)
 	return -1;
 }
 
-/* 
+/*
  * In case the interrupt is for a channel that has to count
  * periodically, re-program the registers accordingly.
  *
- * Assuming that we have programmed the match register with a count say 'n'. 
- * Once the counter register (STCLO and STCHI) matches 'n' an interrupt will 
+ * Assuming that we have programmed the match register with a count say 'n'.
+ * Once the counter register (STCLO and STCHI) matches 'n' an interrupt will
  * be raised. Note that the timer would continue to count after raising the
- * interrupt. The next interrupt should happen at 2n. So the value n should 
- * be added to the STCMx register and programmed. (The Programmer's guide 
- * would say add 'n' to counter and re-program but doing this would cause 
- * clock skew since the timer continues to count even after raising the 
+ * interrupt. The next interrupt should happen at 2n. So the value n should
+ * be added to the STCMx register and programmed. (The Programmer's guide
+ * would say add 'n' to counter and re-program but doing this would cause
+ * clock skew since the timer continues to count even after raising the
  * interrupt (the time taken to service this interrupt would be the skew then).
  *
  * Handling Roll Over conditions
  * -----------------------------
  * 1) The counter register is 64 bit wide
- * 2) The match register is compared against the 32 least significant bits of the
- *    free running counter values
+ * 2) The match register is compared against the 32 least significant bits of
+ *     the free running counter values
  *
- * In this case the roll over condition is when the LSB 32 bits counts till 
- * 0xFFFFFFFF and then becomes 0 (since the counter is 64 bit the MSB will 
+ * In this case the roll over condition is when the LSB 32 bits counts till
+ * 0xFFFFFFFF and then becomes 0 (since the counter is 64 bit the MSB will
  * be counting but its immaterial since the comparison happens only with the
- * LSB 32 bits). Now while re-programming the match register the addition 
+ * LSB 32 bits). Now while re-programming the match register the addition
  * operation will cause the same overflow which will be matched next time
  * properly when the LSB matches this new value.
  */
@@ -999,7 +1004,7 @@ static irqreturn_t kona_timer_isr(int irq, void *dev_id)
 
 	/* First clear and disable the interrupt */
 	reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
-	/* 
+	/*
 	 * Clean up the Match field (3..0), writing 1 to this bit
 	 * would clean the interrupt for the respective channel.
 	 * So do this for only the required channel.

@@ -29,6 +29,9 @@ typedef struct tag_MsgQueueHandle_t {
 	struct task_struct *mThread;
 	MsgQueueThreadFn_t mFn;
 	int valid;
+#ifdef CONFIG_HAS_WAKELOCK
+	struct wake_lock mq_wake_lock;
+#endif
 } MsgQueueHandle_t;
 
 typedef struct {
@@ -37,7 +40,7 @@ typedef struct {
 } MsgQueueElement_t;
 
 int MsgQueueInit(MsgQueueHandle_t *mHandle, MsgQueueThreadFn_t fn, char *name,
-		 unsigned int optionType, void *optionData);
+		 unsigned int optionType, void *optionData, char* wk_name);
 int MsgQueueAdd(MsgQueueHandle_t *mHandle, void *data);
 int MsgQueueRemove(MsgQueueHandle_t *mHandle, void **outData);
 int MsgQueueDeInit(MsgQueueHandle_t *mhandle);

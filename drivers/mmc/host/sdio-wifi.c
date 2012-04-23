@@ -91,9 +91,13 @@ EXPORT_SYMBOL(bcm_sdiowl_rescan);
 
 static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 {
-	int rc;
+	int rc = 0;
 
-	printk(KERN_ERR "%s:ENTRY\n", __FUNCTION__);
+	printk(KERN_ERR "%s:ENTRY\n",__FUNCTION__);
+
+	if(gpio->reserved){
+		return rc;
+	}
 
 	PRINT_INFO("gpio pins reset:%d, req:%d wake:%d shutdown:%d\n",
 		   gpio->reset, gpio->reg, gpio->host_wake, gpio->shutdown);
@@ -122,8 +126,8 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 		printk(KERN_ERR "%s: RESET=%x\n", __FUNCTION__, gpio->reset);
 		PRINT_INFO("current value of reset GPIO: %d\n",
 			   gpio_get_value(gpio->reset));
-		gpio_direction_output(gpio->reset, 1);
-//      gpio_set_value(gpio->reset, 1);
+		gpio_direction_output(gpio->reset, 0);
+//      gpio_set_value(gpio->reset, 0);
 	}
 
 	if (gpio->shutdown >= 0) {
@@ -157,7 +161,9 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 			goto err_free_gpio_shutdown;
 		}
 	}
-	printk(KERN_ERR "%s: HOST_WAKE=%x\n", __FUNCTION__, gpio->host_wake);
+	printk(KERN_ERR "%s: HOST_WAKE=%x\n",__FUNCTION__,gpio->host_wake);
+
+	gpio->reserved = 1;
 
 	return 0;
 
@@ -189,9 +195,10 @@ static void wifi_gpio_free(struct sdio_wifi_gpio_cfg *gpio)
 
 	if (gpio->host_wake >= 0)
 		gpio_free(gpio->host_wake);
+		gpio->reserved = 0;
 }
 
-int bcm_sdiowl_init(void)
+int bcm_sdiowl_init(int onoff)
 {
 	int rc;
 	struct sdio_wifi_dev *dev = &gDev;
@@ -207,7 +214,7 @@ int bcm_sdiowl_init(void)
 
 	SdioPinCfgs.name = PN_MMC1CMD;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
 	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
@@ -215,14 +222,14 @@ int bcm_sdiowl_init(void)
 
 	SdioPinCfgs.name = PN_MMC1DAT0;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
 	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT1;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
 	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
@@ -230,7 +237,7 @@ int bcm_sdiowl_init(void)
 
 	SdioPinCfgs.name = PN_MMC1DAT2;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
 	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
@@ -238,14 +245,25 @@ int bcm_sdiowl_init(void)
 
 	SdioPinCfgs.name = PN_MMC1DAT3;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
 	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
+	SdioPinCfgs.name = PN_MMC1DAT4;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.drv_sth=3;
+	pinmux_set_pin_config(&SdioPinCfgs);
 
- 
+	SdioPinCfgs.name = PN_LCDTE;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=0;
+	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.drv_sth=3;
+	pinmux_set_pin_config(&SdioPinCfgs); 
 
 
 
@@ -310,8 +328,12 @@ int bcm_sdiowl_init(void)
 	}
 
 	/* reset the wifi chip */
-	__wifi_reset(dev->wifi_gpio->reset, 0);
-	__wifi_reset(dev->wifi_gpio->reset, 1);
+	if(onoff)
+		__wifi_reset(dev->wifi_gpio->reset, 1);
+	else
+		__wifi_reset(dev->wifi_gpio->reset, 0);
+
+ 	printk(KERN_ERR "%s: WLAN_REG_ON(GPIO%d) : value(%d)\n",__FUNCTION__, dev->wifi_gpio->reset, gpio_get_value(dev->wifi_gpio->reset));
 
 	printk(KERN_ERR "%s:GPIO TOGGLED AND EXIT\n", __FUNCTION__);
 
@@ -415,9 +437,20 @@ void bcm_sdiowl_term(void)
 	SdioPinCfgs.reg.b.drv_sth=0;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
+	SdioPinCfgs.name = PN_MMC1DAT4;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=0;
+	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.drv_sth=0;
+	pinmux_set_pin_config(&SdioPinCfgs);
 
 
- 
+	SdioPinCfgs.name = PN_LCDTE;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn=0;
+	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.drv_sth=0;
+	pinmux_set_pin_config(&SdioPinCfgs); 
 
 
 

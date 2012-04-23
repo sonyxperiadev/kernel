@@ -733,6 +733,7 @@ wl_android_sta_diassoc(struct net_device *dev, const char* straddr)
 {
 	scb_val_t scbval;
 	char addr[ETHER_ADDR_LEN];
+	s32 ret;
 
 	DHD_INFO(("%s: deauth STA %s\n", __FUNCTION__, straddr));
 
@@ -744,8 +745,10 @@ wl_android_sta_diassoc(struct net_device *dev, const char* straddr)
 		scbval.ea.octet[0], scbval.ea.octet[1], scbval.ea.octet[2],
 		scbval.ea.octet[3], scbval.ea.octet[4], scbval.ea.octet[5]));
 
-	wldev_ioctl(dev, WLC_SCB_DEAUTHENTICATE_FOR_REASON, &scbval,
-		sizeof(scb_val_t), true);
+	if ((ret = wldev_ioctl(dev, WLC_SCB_DEAUTHENTICATE_FOR_REASON, &scbval,
+		sizeof(scb_val_t), true)) < 0) {
+		DHD_ERROR(("%s : WLC_SCB_DEAUTHENTICATE_FOR_REASON error:%d\n", __FUNCTION__ , ret));
+	}
 
 	return 1;
 }
@@ -1254,7 +1257,7 @@ static int wifi_suspend(struct platform_device *pdev, pm_message_t state)
 		DHD_ERROR(("%s no driver data\n", __FUNCTION__));
 		return -EBUSY;
 	}
-#if defined(OOB_INTR_ONLY)
+#if defined(OOB_INTR_ONLY) && !defined(CUSTOMER_HW_SAMSUNG)
 	if (dhd_os_check_if_up(bcmsdh_get_drvdata()))
 		bcmsdh_oob_intr_set(0);
 #endif	/* defined(OOB_INTR_ONLY) */
@@ -1269,7 +1272,7 @@ static int wifi_resume(struct platform_device *pdev)
 	if (dhd_os_check_if_up(bcmsdh_get_drvdata()))
 		bcmsdh_oob_intr_set(1);
 #endif /* (OOB_INTR_ONLY) */
-#if defined(OOB_INTR_ONLY)
+#if defined(OOB_INTR_ONLY) && !defined(CUSTOMER_HW_SAMSUNG)
 	if (dhd_os_check_if_up(bcmsdh_get_drvdata()))
 		bcmsdh_oob_intr_set(1);
 #endif /* (OOB_INTR_ONLY) */

@@ -37,6 +37,10 @@
 #include "chal_caph_audioh_int.h"
 #include <mach/rdb/brcm_rdb_audioh.h>
 #include <mach/rdb/brcm_rdb_util.h>
+#include <linux/io.h>
+#include <mach/io_map.h>
+#include <mach/rdb/brcm_rdb_padctrlreg.h>
+
 
 /****************************************************************************
 *                        G L O B A L   S E C T I O N
@@ -810,7 +814,7 @@ cVoid chal_audio_hspath_hs_supply_ctrl(CHAL_HANDLE handle, Boolean hs_ds_pol,
 
 	hs_supply_ctl |=
 	    ((hs_ds_delay << AUDIOH_HS_DRIVER_SUPPLY_CTRL_HS_DS_DELAY_SHIFT) &
-	     AUDIOH_HS_DRIVER_SUPPLY_CTRL_HS_DS_LAG_MASK);
+	     AUDIOH_HS_DRIVER_SUPPLY_CTRL_HS_DS_DELAY_MASK);
 	hs_supply_ctl |=
 	    ((hs_ds_lag << AUDIOH_HS_DRIVER_SUPPLY_CTRL_HS_DS_LAG_SHIFT) &
 	     AUDIOH_HS_DRIVER_SUPPLY_CTRL_HS_DS_LAG_MASK);
@@ -982,4 +986,28 @@ cVoid chal_audio_hspath_set_filter(CHAL_HANDLE handle, cUInt16 filter)
 	BRCM_WRITE_REG(base, AUDIOH_MIN_PHASE, reg_val);
 
 	return;
+}
+
+
+/*============================================================================
+*
+* Function Name: chal_audio_hspath_turn_on_pmu_signal
+*
+* Description:  Select CLass G as output in STAT2 Register
+*
+* Parameters:  None.
+* Return:      None.
+*
+*============================================================================*/
+cVoid chal_audio_hspath_turn_on_pmu_signal(cVoid)
+{
+	cUInt32  regVal;
+	cUInt32   function = 1;
+
+    /* Select the function for STAT2 */
+    /* For function = 0 (alt_fn1), this will be set as HSDSI */
+	regVal = readl((KONA_PAD_CTRL+PADCTRLREG_STAT2_OFFSET));
+	regVal &= (~PADCTRLREG_STAT2_PINSEL_STAT2_MASK);
+	regVal |= (function << PADCTRLREG_STAT2_PINSEL_STAT2_SHIFT);
+	writel(regVal, (KONA_PAD_CTRL+PADCTRLREG_STAT2_OFFSET));
 }

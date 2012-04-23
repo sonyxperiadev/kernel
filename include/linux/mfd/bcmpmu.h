@@ -918,6 +918,7 @@ enum bcmpmu_event_t {
 	BCMPMU_CHRGR_EVENT_USBOV,
 	BCMPMU_CHRGR_EVENT_MBTEMP,
 	BCMPMU_CHRGR_EVENT_EOC,
+	BCMPMU_CHRGR_EVENT_CHRG_STATUS,
 	/* events for fuel gauge */
 	BCMPMU_FG_EVENT_FGC,
 	/*Events for JIG*/
@@ -1048,6 +1049,11 @@ struct bcmpmu_rev_info {
 	u8 ana_rev; /* Analog revision */
 };
 
+struct event_notifier {
+	u32 event_id;
+	struct blocking_notifier_head notifiers;
+};
+
 struct bcmpmu_platform_data;
 struct bcmpmu {
 	struct device *dev;
@@ -1064,6 +1070,10 @@ struct bcmpmu {
 	void *ponkeyinfo;
 	void *rpcinfo;
 	struct bcmpmu_rev_info rev_info;
+
+	/* event notifier */
+	struct event_notifier event[BCMPMU_EVENT_MAX];
+
 	/* reg access */
 	int (*read_dev) (struct bcmpmu *bcmpmu, int reg, unsigned int *val,
 			 unsigned int mask);
@@ -1168,9 +1178,9 @@ struct bcmpmu_platform_data {
 	int num_of_regl;
 	struct bcmpmu_regulator_init_data *regulator_init_data;
 
+	int batt_temp_in_celsius;
 	struct bcmpmu_temp_map *batt_temp_map;
 	int batt_temp_map_len;
-
 	struct bcmpmu_temp_map *batt_temp_voltmap;
 	int batt_temp_voltmap_len;
 	struct bcmpmu_temp_map *pa_temp_voltmap;
@@ -1190,6 +1200,7 @@ struct bcmpmu_platform_data {
 	int fg_sns_res;
 	int chrg_1c_rate;
 	int chrg_eoc;
+	int support_hw_eoc;
 	int batt_impedence;
 	struct bcmpmu_charge_zone *chrg_zone_map;
 	int fg_capacity_full;
@@ -1241,7 +1252,6 @@ extern const unsigned int bcmpmu_chrgr_icc_qc_settings[PMU_CHRGR_QC_CURR_MAX];
 extern const unsigned int bcmpmu_chrgr_eoc_settings[PMU_CHRGR_EOC_CURR_MAX];
 extern const unsigned int bcmpmu_chrgr_vfloat_settings[PMU_CHRGR_VOLT_MAX];
 
-int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
 int bcmpmu_sel_adcsync(enum bcmpmu_adc_timing_t timing);
 
 int bcmpmu_init_pmurev_info(struct bcmpmu *bcmpmu);

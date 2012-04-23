@@ -23,7 +23,9 @@
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <plat/clock.h>
 #include <asm/cacheflush.h>
+#include <asm/sizes.h>
 #include <linux/broadcom/mobcom_types.h>
 #include <mach/hardware.h>
 #include <mach/dma.h>
@@ -113,8 +115,8 @@ static int spum_aes_cpu_xfer(struct spum_aes_device *dd, u32 *in_buff,
 		}
 	}
 
-    /* wait for 1ms sec */
-	usleep_range(1000, 1500);
+	while(!(readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET)
+		& SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK));
 
 	status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 	while((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK)) {
@@ -145,9 +147,11 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 	}
 
 	cfg_rx = DMA_CFG_SRC_ADDR_INCREMENT | DMA_CFG_DST_ADDR_FIXED |
-			DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_2;
+			DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16 |
+			PERIPHERAL_FLUSHP_END;
 	cfg_tx = DMA_CFG_SRC_ADDR_FIXED | DMA_CFG_DST_ADDR_INCREMENT |
-			DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_2;
+			DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16 |
+			PERIPHERAL_FLUSHP_END;
 
 	rx_fifo = (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_IN_OFFSET;
 	tx_fifo = (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_OUT_OFFSET;
@@ -163,6 +167,10 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 		return -EINVAL;
 	}
 
+        if((sg_dma_address(req->src)%8) || (sg_dma_address(req->dst)%8))
+                pr_err("%s: src 0x%x dst 0x%x\n",
+                        __func__,sg_dma_address(req->src),sg_dma_address(req->dst));
+
 	length = min(rctx->rx_len, sg_dma_len(req->src));
 	length = min(length, sg_dma_len(req->dst));
 	
@@ -175,7 +183,7 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 	}
 
 	/* Tx setup */
-	if(dma_setup_transfer(dd->tx_dma_chan, tx_fifo, sg_dma_address(req->dst),length-64,/*workaround for DMA issue!!!*/
+	if(dma_setup_transfer(dd->tx_dma_chan, tx_fifo, sg_dma_address(req->dst),length,
 			DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI, cfg_tx)) {
 		pr_err("Tx dma_setup_transfer failed %d\n",err);
 		err = -EIO;
@@ -183,6 +191,10 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 	}
 
 	spum_dma_init(dd->io_axi_base);
+
+	rctx->rx_len -= sg_dma_len(req->src);
+	rctx->tx_len -= sg_dma_len(req->dst);
+	rctx->tx_offset += sg_dma_len(req->dst);
 
 	/* Rx start xfer */
 	if(dma_start_transfer(dd->rx_dma_chan)) {
@@ -199,9 +211,6 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 		goto err_xfer;
 	}
 
-	rctx->rx_len -= sg_dma_len(req->src);
-	rctx->tx_len -= sg_dma_len(req->dst)-64;
-	rctx->tx_offset += sg_dma_len(req->dst)-64;
 
 	pr_debug("%s: exit %d\n",__func__,err);
 	return err;
@@ -285,8 +294,6 @@ static int spum_aes_handle_queue(struct spum_aes_device *dd,
 	pr_debug("%s : entry \n",__func__);
 
 	spin_lock_irqsave(&dd->lock, flags);
-	if (req)
-		ret = ablkcipher_enqueue_request(&dd->queue, req);
 	if (test_bit(FLAGS_BUSY, &dd->flags)) {
 		spin_unlock_irqrestore(&dd->lock, flags);
 		return ret;
@@ -330,7 +337,9 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 	struct spum_aes_context *aes_ctx = crypto_tfm_ctx(req->base.tfm);
 	struct spum_request_context *rctx = ablkcipher_request_ctx(req);
 	struct spum_hw_context  spum_hw_aes_ctx;
+	unsigned long flags;
 	u32 cmd_len_bytes;
+	int ret = 0;
 	char *iv     = "\x00\x00\x00\x00\x00\x00\x00\x00"
 			"\x00\x00\x00\x00\x00\x00\x00\x00";
 
@@ -396,7 +405,13 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 
 	pr_debug("%s : exit \n",__func__);
 
-	return spum_aes_handle_queue(aes_ctx->dd, req);
+	spin_lock_irqsave(&aes_ctx->dd->lock, flags);
+	ret = ablkcipher_enqueue_request(&aes_ctx->dd->queue, req);
+	spin_unlock_irqrestore(&aes_ctx->dd->lock, flags);
+
+	tasklet_schedule(&aes_ctx->dd->queue_task);
+
+	return ret;
 }
 
 static int spum_aes_setkey(struct crypto_ablkcipher *tfm, const u8 *in_key, u32 key_len)
@@ -504,20 +519,18 @@ static int spum_aes_cra_init(struct crypto_tfm *tfm)
 {
 	struct spum_aes_device *dd = NULL;
 	struct spum_aes_context *ctx = crypto_tfm_ctx(tfm);
+	unsigned long flags;
 
 	pr_debug("%s: entry \n",__func__);
 
-	spin_lock_bh(&spum_drv_lock);
+	spin_lock_irqsave(&spum_drv_lock, flags);
 	list_for_each_entry(dd, &spum_drv_list, list) {
 			break;
 	}
-	spin_unlock_bh(&spum_drv_lock);
+	spin_unlock_irqrestore(&spum_drv_lock, flags);
 
 	ctx->dd = dd;
 	tfm->crt_ablkcipher.reqsize = sizeof(struct spum_request_context);
-
-	if(spum_aes_dma_init(dd))
-		return -1;
 
 	return 0;
 }
@@ -525,14 +538,9 @@ static int spum_aes_cra_init(struct crypto_tfm *tfm)
 static void spum_aes_cra_exit(struct crypto_tfm *tfm)
 {
 	struct spum_aes_context *ctx = crypto_tfm_ctx(tfm);
-	struct spum_aes_device *dd = ctx->dd;
 
 	pr_debug("%s: exit\n",__func__);
 
-	dma_free_callback(dd->rx_dma_chan);
-	dma_free_callback(dd->tx_dma_chan);
-	dma_free_chan(dd->rx_dma_chan);
-	dma_free_chan(dd->tx_dma_chan);
 	ctx->dd = NULL;
 }
 
@@ -626,7 +634,6 @@ static void spum_aes_done_task(unsigned long data)
 {
 	struct spum_aes_device *dd = (struct spum_aes_device *)data;
 	struct spum_request_context *rctx = ablkcipher_request_ctx(dd->req);
-	u32 status;
 	int err;
 
 	pr_debug("%s: entry\n",__func__);
@@ -644,18 +651,8 @@ static void spum_aes_done_task(unsigned long data)
 	dma_unmap_sg(dd->dev, dd->req->src, 1, DMA_TO_DEVICE);
 	dma_unmap_sg(dd->dev, dd->req->dst, 1, DMA_FROM_DEVICE);
 
-	while(rctx->tx_len-4) {
-		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
-		if((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK)) {
-			*(u32 *)(sg_virt(dd->req->dst)+rctx->tx_offset) =
-					readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
-			rctx->tx_len -=4;
-			rctx->tx_offset +=4;
-		}
-
-	}
-
 	if(rctx->rx_len && !err) {
+		pr_debug("%s: Still data left\n",__func__);
 		err = spum_aes_process_data(dd->req);
 		return;
 	}
@@ -788,6 +785,8 @@ static int spum_aes_probe(struct platform_device *pdev)
 	crypto_init_queue(&dd->queue, SPUM_AES_QUEUE_LENGTH);
 
 	/* Initialize SPU-M block */
+        if(clk_set_rate(dd->spum_open_clk, FREQ_MHZ(156)))
+                pr_debug("%s: Clock set failed!!!\n",__func__);
 	clk_enable(dd->spum_open_clk);
 	spum_init_device(dd->io_apb_base, dd->io_axi_base);
 	clk_disable(dd->spum_open_clk);
@@ -797,6 +796,11 @@ static int spum_aes_probe(struct platform_device *pdev)
 	spin_lock(&spum_drv_lock);
 	list_add_tail(&dd->list, &spum_drv_list);
 	spin_unlock(&spum_drv_lock);
+
+	if(spum_aes_dma_init(dd)) {
+		pr_debug("%s: DMA channel aqusition failed.\n",__func__);
+		return -1;
+	}
 
 	tasklet_init(&dd->done_task, spum_aes_done_task, (unsigned long)dd);
 	tasklet_init(&dd->queue_task, spum_aes_queue_task, (unsigned long)dd);
@@ -843,6 +847,12 @@ static int spum_aes_remove(struct platform_device *pdev)
 	tasklet_kill(&dd->queue_task);
 	tasklet_kill(&dd->done_task);
 	clk_put(dd->spum_open_clk);
+
+	/* Free DMA channels. */
+	dma_free_callback(dd->rx_dma_chan);
+	dma_free_callback(dd->tx_dma_chan);
+	dma_free_chan(dd->rx_dma_chan);
+	dma_free_chan(dd->tx_dma_chan);
 
 	kfree(dd);
 

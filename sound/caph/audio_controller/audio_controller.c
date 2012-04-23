@@ -1036,8 +1036,14 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 	sp_struct.mixOutGain_mB = GAIN_SYSPARM;
 	sp_struct.mixOutGainR_mB = GAIN_SYSPARM;
 	if (users_gain[AUDPATH_FM].valid) {
-		sp_struct.mixInGain_mB = users_gain[AUDPATH_FM].L;
-		sp_struct.mixInGainR_mB = users_gain[AUDPATH_FM].R;
+		/*do not apply FM mixer input gain to music*/
+		if (path->source == CSL_CAPH_DEV_MEMORY) {
+			sp_struct.mixInGain_mB = GAIN_SYSPARM;
+			sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+		} else {
+			sp_struct.mixInGain_mB = users_gain[AUDPATH_FM].L;
+			sp_struct.mixInGainR_mB = users_gain[AUDPATH_FM].R;
+		}
 	} else {
 		if (muteInPlay) {
 			sp_struct.mixInGain_mB = GAIN_NA;
@@ -3652,3 +3658,29 @@ void AUDCTRL_ConfigWait(int wait_id, int wait_length)
 	aTrace(LOG_AUDIO_CNTLR, "%s wait id %d length %d to %d us\n",
 		__func__, wait_id, old_wait, new_wait);
 }
+
+/****************************************************************************
+*
+* Function Name: AUDCTRL_EnableHS_SuplyCtrl
+*
+* Description:   Headset Driver Supply Indicator Control for
+*				class G output
+*
+****************************************************************************/
+void AUDCTRL_EnableHS_SuplyCtrl(UInt8 hs_ds_lag,
+						UInt8 hs_ds_delay,
+						Boolean hs_ds_polarity,
+						UInt32 hs_ds_thres)
+{
+	struct classg_G_ctrl classG;
+
+	classG.HS_DS_LAG = hs_ds_lag;
+	classG.HS_DS_DELAY = hs_ds_delay;
+	classG.HS_DS_POLARITY = hs_ds_polarity;
+	classG.HS_DS_THRES = hs_ds_thres;
+
+	csl_caph_classG_ctrl(&classG);
+
+}
+
+

@@ -252,6 +252,7 @@ typedef struct dhd_pub {
 	void* wlfc_state;
 #endif
 	bool	dongle_isolation;
+	bool	dongle_trap_occured;	/* flag for forcible sending HANG event whenever trap occured */
 	int   hang_was_sent;
 	int   rxcnt_timeout;		/* counter rxcnt timeout to send HANG */
 	int   txcnt_timeout;		/* counter txcnt timeout to send HANG */

@@ -32,6 +32,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <plat/clock.h>
 #include <plat/pi_mgr.h>
+#include <plat/pwr_mgr.h>
 #include <plat/scu.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_vce.h>
@@ -42,8 +43,9 @@ the GPL, without Broadcom's express prior written consent.
 
 /* Private configuration stuff -- not part of exposed API */
 #include "vtqinit_priv.h"
+#include "vceprivate.h"
 
-#define DRIVER_VERSION 10111
+#define DRIVER_VERSION 10116
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -93,6 +95,14 @@ static struct vce {
 	bool debug_ioctl;
 	uint32_t *vtq_firmware;
 
+	/* acquirer-id of the client who has acquired the VCE
+	 * currently (if acquired) or who last acquired it (while not
+	 * acquired), or VCE_ACQUIRER_NONE if the block has been
+	 * powered off.  This is so that clients can optimize away
+	 * their initialization sequence if they know that VCE is
+	 * found "just how they left it" */
+	uint32_t acquirer;
+
 	/* This spinlock is to protect against a supposed race
 	 * condition where a stray interrupt might arrive after we've
 	 * stopped VCE and just as we're powering down.  This may not
@@ -109,6 +119,22 @@ typedef struct {
 	struct vtqb_context *vtq_ctx;
 	int api_direct;
 	int api_vtq;
+
+	/* The per-FD acquirer-ID -- at the moment this is 'dont-care'
+	 * because we have no current need to differentiate the
+	 * ioctl-based VCE clients. */
+	uint32_t acquirer_id;
+
+	/* Low latency hack */
+	/* We should not be allowing callers to keep the clock and
+	 * power on for ARM and VCE, but we need to support some
+	 * legacy code that has no means to do the power management
+	 * and so we need to do it in this driver.  We use a simple
+	 * method of turning it on in response to a "debug" ioctl, and
+	 * turn it off when the file descriptor is closed.  At least
+	 * this safeguards against a dying process */
+	struct mutex low_latency_hack_mutex;
+	uint32_t low_latency_hack_is_enabled;
 } vce_t;
 
 /* Per mmap handle state: */
@@ -310,7 +336,7 @@ static int wire_interrupt_handler(void)
 	if (!vce_state.isr_installed) {
 		int s;
 		s = request_irq(IRQ_VCE, vce_isr,
-				IRQF_DISABLED | IRQF_TRIGGER_RISING,
+				IRQF_TRIGGER_HIGH,
 				VCE_DEV_NAME, NULL);
 		if (s != 0) {
 			err_print("request_irq failed s = %d\n", s);
@@ -444,6 +470,14 @@ static int vce_open(struct inode *inode, struct file *filp)
 	dev->api_direct = 0;
 	dev->api_vtq = 0;
 
+	/* We *could* have a different ID per file descriptor, but, we
+	 * have no current need to distinguish among acquirers that
+	 * came from userland */
+	dev->acquirer_id = VCE_ACQUIRER_DONTCARE;
+
+	mutex_init(&dev->low_latency_hack_mutex);
+	dev->low_latency_hack_is_enabled = 0;
+
 	filp->private_data = dev;
 	return 0;
 }
@@ -485,8 +519,7 @@ static int vce_file_release(struct inode *inode, struct file *filp)
 
 		/* Just free up the VCE HW */
 		vce_state.g_irq_sem = NULL;
-		complete(&vce_state.acquire_sem);
-		clock_off();
+		vce_release(&vce_state);
 	}
 
 	if (dev->api_vtq) {
@@ -496,6 +529,12 @@ static int vce_file_release(struct inode *inode, struct file *filp)
 	if (try_wait_for_completion(&dev->irq_sem)) {
 		err_print
 		    ("VCE driver closing with unacknowledged interrupts\n");
+	}
+
+	if (dev->low_latency_hack_is_enabled) {
+		dbg_print("VCE Low Latency Hack is Off\n");
+		clock_off();
+		cpu_keepawake_dec();
 	}
 
 	kfree(dev);
@@ -677,17 +716,29 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case VTQ_IOCTL_CREATE_TASK:
 			trace_ioctl_entry(VTQ_IOCTL_CREATE_TASK);
 			break;
+		case VTQ_IOCTL_CREATE_TASK_NOFLAGS:
+			trace_ioctl_entry(VTQ_IOCTL_CREATE_TASK_NOFLAGS);
+			break;
 		case VTQ_IOCTL_DESTROY_TASK:
 			trace_ioctl_entry(VTQ_IOCTL_DESTROY_TASK);
 			break;
 		case VTQ_IOCTL_QUEUE_JOB:
 			trace_ioctl_entry(VTQ_IOCTL_QUEUE_JOB);
 			break;
+		case VTQ_IOCTL_QUEUE_JOB_NOFLAGS:
+			trace_ioctl_entry(VTQ_IOCTL_QUEUE_JOB_NOFLAGS);
+			break;
 		case VTQ_IOCTL_AWAIT_JOB:
 			trace_ioctl_entry(VTQ_IOCTL_AWAIT_JOB);
 			break;
+		case VTQ_IOCTL_ONLOADHOOK:
+			trace_ioctl_entry(VTQ_IOCTL_ONLOADHOOK);
+			break;
 		case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
 			trace_ioctl_entry(VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS);
+			break;
+		case VCE_IOCTL_DEBUG_LOW_LATENCY_HACK:
+			trace_ioctl_entry(VCE_IOCTL_DEBUG_LOW_LATENCY_HACK);
 			break;
 		}
 	}
@@ -710,15 +761,11 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case VCE_IOCTL_HW_ACQUIRE:
 		{
-			clock_on();
+			ret = vce_acquire(&vce_state, dev->acquirer_id, NULL);
 
-			/* Wait for the VCE HW to become available */
-			if (wait_for_completion_interruptible
-			    (&vce_state.acquire_sem)) {
-				err_print("Wait for VCE HW failed\n");
-				clock_off();
-				return -ERESTARTSYS;
-			}
+			if (ret != 0)
+				return ret;
+
 			vce_state.g_irq_sem = &dev->irq_sem;	/* Replace the irq sem with current process sem */
 			dev->vce_acquired = 1;	/* Mark acquired: will come handy in cleanup process */
 		}
@@ -728,8 +775,7 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		{
 			vce_state.g_irq_sem = NULL;	/* Free up the g_irq_sem */
 			dev->vce_acquired = 0;	/* Not acquired anymore */
-			complete(&vce_state.acquire_sem);	/* VCE is up for grab */
-			clock_off();
+			vce_release(&vce_state);
 		}
 		break;
 
@@ -865,11 +911,12 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case VTQ_IOCTL_CREATE_TASK:
+	case VTQ_IOCTL_CREATE_TASK_NOFLAGS:
 		{
-			struct vtq_createtask_ioctldata *d;
+			struct vtq_createtask_ioctldata_noflags *d;
 			vtq_task_id_t task_id;
 
-			d = (struct vtq_createtask_ioctldata *)arg;
+			d = (struct vtq_createtask_ioctldata_noflags *)arg;
 			task_id = vtqb_create_task(dev->vtq_ctx,
 					d->image_id, d->entrypoint);
 			if (task_id < 0)
@@ -889,10 +936,11 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case VTQ_IOCTL_QUEUE_JOB:
+	case VTQ_IOCTL_QUEUE_JOB_NOFLAGS:
 		{
-			struct vtq_queuejob_ioctldata *d;
+			struct vtq_queuejob_ioctldata_noflags *d;
 
-			d = (struct vtq_queuejob_ioctldata *)arg;
+			d = (struct vtq_queuejob_ioctldata_noflags *)arg;
 			ret = vtqb_queue_job(dev->vtq_ctx,
 				d->task_id, d->arg0, d->arg1, d->arg2,
 				d->arg3, d->arg4, d->arg5, 0, &d->job_id);
@@ -907,6 +955,45 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			ret = vtqb_await_job(dev->vtq_ctx, d->job_id);
 		}
 		break;
+
+	case VTQ_IOCTL_ONLOADHOOK:
+		{
+			struct vtq_onloadhook_ioctldata *d;
+			int s;
+
+			d = (struct vtq_onloadhook_ioctldata *)arg;
+
+			s = vtq_onloadhook(vce_state.vtq_vce,
+					d->pc,
+					d->r1,
+					d->r2,
+					d->r3,
+					d->r4,
+					d->r5,
+					d->r6);
+
+			if (s != 0) {
+				err_print("failed to register on-load hook\n");
+				return -EINVAL;
+			}
+		}
+		break;
+
+#define ALLOW_LOW_LATENCY_HACK
+#if defined ALLOW_LOW_LATENCY_HACK
+	case VCE_IOCTL_DEBUG_LOW_LATENCY_HACK:
+		{
+			mutex_lock(&dev->low_latency_hack_mutex);
+			if (!dev->low_latency_hack_is_enabled) {
+				dev->low_latency_hack_is_enabled = 1;
+				mutex_unlock(&dev->low_latency_hack_mutex);
+				cpu_keepawake_inc();
+				clock_on();
+				dbg_print("VCE Low Latency Hack is On\n");
+			} else
+				mutex_unlock(&dev->low_latency_hack_mutex);
+		}
+#endif
 
 	default:
 		{
@@ -965,8 +1052,14 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case VTQ_IOCTL_AWAIT_JOB:
 			trace_ioctl_return(VTQ_IOCTL_AWAIT_JOB);
 			break;
+		case VTQ_IOCTL_ONLOADHOOK:
+			trace_ioctl_return(VTQ_IOCTL_ONLOADHOOK);
+			break;
 		case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
 			trace_ioctl_return(VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS);
+			break;
+		case VCE_IOCTL_DEBUG_LOW_LATENCY_HACK:
+			trace_ioctl_return(VCE_IOCTL_DEBUG_LOW_LATENCY_HACK);
 			break;
 		}
 	}
@@ -1121,7 +1214,9 @@ void __iomem *vce_get_base_address(struct vce *vce)
 	return vce_base;
 }
 
-int vce_acquire(struct vce *vce)
+int vce_acquire(struct vce *vce,
+		uint32_t this_acquirer,
+		uint32_t *preserved)
 {
 	if (!try_module_get(THIS_MODULE)) {
 		err_print("Failed to increment module refcount\n");
@@ -1140,6 +1235,10 @@ int vce_acquire(struct vce *vce)
 		return -ERESTARTSYS;
 	}
 
+	if (preserved != NULL)
+		*preserved = (this_acquirer == vce_state.acquirer);
+	vce_state.acquirer = this_acquirer;
+
 	return 0;
 }
 
@@ -1150,6 +1249,31 @@ void vce_release(struct vce *vce)
 	module_put(THIS_MODULE);
 }
 
+/*
+ * Power management policy change callback...
+ *
+ * We're only interested in knowing when power is about to be removed
+ */
+
+static int mm_pol_chg_notifier(struct notifier_block *self,
+			       unsigned long event, void *data)
+{
+	struct pi_notify_param *p = data;
+
+	if (p->pi_id == PI_MGR_PI_ID_MM &&
+			IS_SHUTDOWN_POLICY(p->new_value) &&
+			event == PI_PRECHANGE) {
+		vce_state.acquirer = VCE_ACQUIRER_NONE;
+		BUG_ON(vce_state.clock_enable_count > 0);
+		dbg_print("VCE power down\n");
+	}
+
+	return 0;
+}
+
+static struct notifier_block mm_pol_chg_notify_blk = {
+	.notifier_call = mm_pol_chg_notifier,
+};
 
 int __init vce_init(void)
 {
@@ -1253,6 +1377,18 @@ int __init vce_init(void)
 		goto err5;
 	}
 
+	/* So we can optimize away reset stuff when power was
+	 * maintained */
+	ret = pi_mgr_register_notifier(PI_MGR_PI_ID_MM,
+			&mm_pol_chg_notify_blk,
+			PI_NOTIFY_POLICY_CHANGE);
+	if (ret != 0) {
+		err_print("Failed to register PM Notifier\n");
+		ret = -ENOENT;
+		goto err_reg_notifier;
+	}
+	vce_state.acquirer = VCE_ACQUIRER_NONE;
+
 	ret = vtq_driver_init(&vce_state.vtq,
 			&vce_state, vce_state.proc_vcedir);
 	if (ret) {
@@ -1282,6 +1418,11 @@ err_vtq_init2:
 
 	vtq_driver_term(&vce_state.vtq);
 err_vtq_init0:
+
+	pi_mgr_unregister_notifier(PI_MGR_PI_ID_MM,
+			&mm_pol_chg_notify_blk,
+			PI_NOTIFY_POLICY_CHANGE);
+err_reg_notifier:
 
 	pi_mgr_qos_request_remove(&vce_state.cpu_qos_node);
 err5:
@@ -1346,6 +1487,10 @@ void __exit vce_exit(void)
 	/* Unmap addresses */
 	if (vce_base)
 		iounmap(vce_base);
+
+	pi_mgr_unregister_notifier(PI_MGR_PI_ID_MM,
+			&mm_pol_chg_notify_blk,
+			PI_NOTIFY_POLICY_CHANGE);
 
 	pi_mgr_qos_request_remove(&vce_state.cpu_qos_node);
 

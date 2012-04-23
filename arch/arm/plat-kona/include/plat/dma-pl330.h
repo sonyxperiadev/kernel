@@ -46,11 +46,11 @@ enum dma_direction {
 #define DMA_CFG_SRC_ADDR_FIXED			(0x0 << 0)
 #define DMA_CFG_SRC_ADDR_INCREMENT		(0x1 << 0)
 
-#define DMA_CFG_DST_ADDR_FIXED			(0x0 << 14)
-#define DMA_CFG_DST_ADDR_INCREMENT		(0x1 << 14)
+#define DMA_CFG_DST_ADDR_FIXED			(0x0 << 1)
+#define DMA_CFG_DST_ADDR_INCREMENT		(0x1 << 1)
 
 /* src and dest burst size is assumed to be same */
-#define DMA_CFG_BURST_SIZE_SHIFT        1
+#define DMA_CFG_BURST_SIZE_SHIFT        2
 #define DMA_CFG_BURST_SIZE_MASK         (0x7 << DMA_CFG_BURST_SIZE_SHIFT)
 
 #define DMA_CFG_BURST_SIZE_1            (0x0 << DMA_CFG_BURST_SIZE_SHIFT)
@@ -63,7 +63,7 @@ enum dma_direction {
 #define DMA_CFG_BURST_SIZE_128          (0x7 << DMA_CFG_BURST_SIZE_SHIFT)
 
 /* src and dest burst length is assumed to be same */
-#define DMA_CFG_BURST_LENGTH_SHIFT		4
+#define DMA_CFG_BURST_LENGTH_SHIFT		5
 #define DMA_CFG_BURST_LENGTH_MASK		(0xF << DMA_CFG_BURST_LENGTH_SHIFT)
 
 #define DMA_CFG_BURST_LENGTH_1          (0x0 << DMA_CFG_BURST_LENGTH_SHIFT)
@@ -82,6 +82,16 @@ enum dma_direction {
 #define DMA_CFG_BURST_LENGTH_14         (0xD << DMA_CFG_BURST_LENGTH_SHIFT)
 #define DMA_CFG_BURST_LENGTH_15         (0xE << DMA_CFG_BURST_LENGTH_SHIFT)
 #define DMA_CFG_BURST_LENGTH_16         (0xF << DMA_CFG_BURST_LENGTH_SHIFT)
+
+/* Peripheral request flush control */
+
+#define FLUSHP_CTRL_START_SHIFT         9
+#define PERIPHERAL_FLUSHP_START         (0x1 << FLUSHP_CTRL_START_SHIFT)
+#define FLUSHP_CTRL_END_SHIFT           10
+#define PERIPHERAL_FLUSHP_END           (0x1 << FLUSHP_CTRL_END_SHIFT)
+#define PERIPHERAL_FLUSHP_DEFAULT       (PERIPHERAL_FLUSHP_END | \
+                                          PERIPHERAL_FLUSHP_START)
+
 
 enum pl330_xfer_status {
 	DMA_PL330_XFER_OK,

@@ -43,8 +43,6 @@ struct bcmpmu_chrgr {
 	struct bcmpmu *bcmpmu;
 	struct power_supply chrgr;
 	struct power_supply usb;
-	wait_queue_head_t wait;
-	struct mutex lock;
 	int eoc;
 	int chrgrcurr_max;
 	enum bcmpmu_chrgr_type_t chrgrtype;
@@ -521,6 +519,24 @@ static const struct attribute_group bcmpmu_chrgr_attr_group = {
 };
 #endif
 
+static void bcmpmu_chrgr_isr(enum bcmpmu_irq irq, void *data)
+{
+	struct bcmpmu_chrgr *pchrgr = (struct bcmpmu_chrgr *)data;
+	pr_chrgr(FLOW, "%s, interrupt %d\n", __func__, irq);
+
+	switch (irq) {
+	case PMU_IRQ_EOC:
+		blocking_notifier_call_chain(
+			&pchrgr->bcmpmu->event[BCMPMU_CHRGR_EVENT_EOC].
+			notifiers, BCMPMU_CHRGR_EVENT_EOC,
+			NULL);
+		break;
+	default:
+		pr_chrgr(FLOW, "%s, interrupt not handled%d\n", __func__, irq);
+		break;
+	}
+}
+
 static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -535,8 +551,6 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 		printk("bcmpmu_chrgr: failed to alloc mem.\n") ;
 		return -ENOMEM;
 	}
-	init_waitqueue_head(&pchrgr->wait);
-	mutex_init(&pchrgr->lock);
 	pchrgr->bcmpmu = bcmpmu;
 	bcmpmu->chrgrinfo = (void *)pchrgr;
 
@@ -590,6 +604,11 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 		(pchrgr->usbtype < PMU_USB_TYPE_MAX))
 		pchrgr->usb_online = 1;
 
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_EOC,
+		bcmpmu_chrgr_isr, pchrgr);
+
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC);
+
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_chrgr_attr_group);
 #endif
@@ -610,6 +629,7 @@ static int __devexit bcmpmu_chrgr_remove(struct platform_device *pdev)
 	power_supply_unregister(&pchrgr->chrgr);
 	power_supply_unregister(&pchrgr->usb);
 
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_EOC);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_chrgr_attr_group);

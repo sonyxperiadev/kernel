@@ -1026,7 +1026,7 @@ sdioh_request_packet(sdioh_info_t *sd, uint fix_inc, uint write, uint func,
 			}
 
 			/* Align Patch */
-			if (!write) // read
+			if (write == 0 || pkt_len < 32) // read or small packet(ex-BDC header) skip 32 byte align
 				pkt_len = (pkt_len + 3) & 0xFFFFFFFC;
 			else if(pkt_len % DHD_SDALIGN) // write
 				pkt_len += DHD_SDALIGN - (pkt_len % DHD_SDALIGN);

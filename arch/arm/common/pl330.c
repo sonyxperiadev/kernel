@@ -243,7 +243,7 @@
 #define IS_FREE(req)	(*((u8 *)((req)->mc_cpu)) == CMD_DMAEND)
 
 /* Use this _only_ to wait on transient states */
-#define UNTIL(t, s)	while (!(_state(t) & (s))) cpu_relax();
+#define UNTIL(t, s)	while (!(_state(t) & (s)));
 
 #ifdef PL330_DEBUG_MCGEN
 static unsigned cmd_line;
@@ -1017,19 +1017,16 @@ static inline int _ldst_memtomem(unsigned dry_run, u8 buf[],
 	struct pl330_config *pcfg = pxs->r->cfg->pcfg;
 
 	/*
-	 * PL330 rev r0p0 needs needs memory barrier instructions
-	 * This workaround is not nedded for DMAC rev >= r1p0
+	 * PL330 rev r0p0 needs memory barrier instructions to avoid MFIFO lockup
+	 * This workaround is not needed for PL330 DMAC revision >= r1p0
 	 */
-	if (get_revision_id(pcfg->periph_id) >= PERIPH_REV_R1P0) {
-		while (cyc--) {
-			off += _emit_LD(dry_run, &buf[off], ALWAYS);
-			off += _emit_ST(dry_run, &buf[off], ALWAYS);
-		}
-	} else {
-		while (cyc--) {
-			off += _emit_LD(dry_run, &buf[off], ALWAYS);
+	while (cyc--) {
+		off += _emit_LD(dry_run, &buf[off], ALWAYS);
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
 			off += _emit_RMB(dry_run, &buf[off]);
-			off += _emit_ST(dry_run, &buf[off], ALWAYS);
+		}
+		off += _emit_ST(dry_run, &buf[off], ALWAYS);
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
 			off += _emit_WMB(dry_run, &buf[off]);
 		}
 	}
@@ -1057,7 +1054,9 @@ static inline int _ldst_devtomem(unsigned dry_run, u8 buf[],
 			off += _emit_RMB(dry_run, &buf[off]);
 		}
 		off += _emit_ST(dry_run, &buf[off], ALWAYS);
-		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
+			off += _emit_WMB(dry_run, &buf[off]);
+		}
 	}
 
 	return off;
@@ -1084,7 +1083,9 @@ static inline int _ldst_memtodev(unsigned dry_run, u8 buf[],
 			off += _emit_RMB(dry_run, &buf[off]);
 		}
 		off += _emit_STP(dry_run, &buf[off], c, pxs->r->peri);
-		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
+			off += _emit_WMB(dry_run, &buf[off]);
+		}
 	}
 
 	return off;
@@ -1240,6 +1241,10 @@ static int _setup_req(unsigned dry_run, struct pl330_thread *thrd,
 
 	PL330_DBGMC_START(req->mc_bus);
 
+	/* If Peripheral needs FLUSHP before starting DMA */
+	if(pxs->r->cfg->peri_flush_start)
+		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
+
 	/* DMAMOV CCR, ccr */
 	off += _emit_MOV(dry_run, &buf[off], CCR, pxs->ccr);
 
@@ -1254,6 +1259,10 @@ static int _setup_req(unsigned dry_run, struct pl330_thread *thrd,
 
 		x = x->next;
 	} while (x);
+
+	/* Some Peripheral needs FLUSHP after completing DMA */
+	if(pxs->r->cfg->peri_flush_end)
+		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
 
 	/* DMASEV peripheral/event */
 	off += _emit_SEV(dry_run, &buf[off], thrd->ev);
@@ -1328,7 +1337,7 @@ int pl330_submit_req(void *ch_id, struct pl330_req *r)
 	int ret = 0;
 
 	/* No Req or Unacquired Channel or DMAC */
-	if (!r || !thrd || thrd->free)
+	if (!r || !r->cfg || !thrd || thrd->free)
 		return -EINVAL;
 
 	pl330 = thrd->dmac;

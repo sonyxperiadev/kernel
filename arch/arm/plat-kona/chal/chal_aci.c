@@ -114,7 +114,7 @@ BRCM_WRITE_REG(KONA_ACI_VA, ACI_COMR, reg); \
 /* The loop below will take around 200us */
 #define HW_ACI_REGISTER_WRITE_SETTLE        do { \
 cUInt32 i;  \
-volatile cUInt32 j;  \
+volatile cUInt32 j = 0;  \
 	for (i = 0; i < 1000; i++)  {\
 		j += BRCM_READ_REG_FIELD(KONA_ACI_VA, \
 			ACI_COMP_DOUT, COMP1_DOUT); }  \

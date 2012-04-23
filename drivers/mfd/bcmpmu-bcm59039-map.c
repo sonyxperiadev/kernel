@@ -576,11 +576,6 @@ struct bcmpmu_adc_unit *bcmpmu_get_adcunit(struct bcmpmu *bcmpmu)
 	return NULL;
 }
 
-int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu)
-{
-	return 0;
-}
-
 const struct bcmpmu_env_info *bcmpmu_get_envregmap(struct bcmpmu *bcmpmu,
 					int *len)
 {

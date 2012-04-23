@@ -133,5 +133,7 @@ int dmux_alloc_peripheral(u32 channel, enum dma_peri peri, u8 * peri_req_id);
 int dmux_alloc_multi_peripheral(u32 channel, enum dma_peri a, enum dma_peri b,
 				u8 * src_id, u8 * dst_id);
 int dmux_dealloc_peripheral(u32 channel);
+int dmux_init(void);
+void dmux_exit(void);
 
 #endif /* __MACH_DMUX_H */

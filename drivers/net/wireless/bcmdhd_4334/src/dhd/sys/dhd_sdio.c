@@ -1974,6 +1974,9 @@ dhd_bus_rxctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 	if (bus->dhd->rxcnt_timeout >= MAX_CNTL_TIMEOUT)
 		return -ETIMEDOUT;
 
+	if (bus->dhd->dongle_trap_occured)
+		return -EREMOTEIO;
+
 	return rxlen ? (int)rxlen : -EIO;
 }
 
@@ -2537,6 +2540,7 @@ dhdsdio_checkdied(dhd_bus_t *bus, char *data, uint size)
 		}
 
 		if (sdpcm_shared.flags & SDPCM_SHARED_TRAP) {
+			bus->dhd->dongle_trap_occured = TRUE;
 			if ((bcmerror = dhdsdio_membytes(bus, FALSE,
 			                                 sdpcm_shared.trap_addr,
 			                                 (uint8*)&tr, sizeof(trap_t))) < 0)
@@ -6100,6 +6104,10 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 		memcpy(bus->dhd->mac.octet, (void *)&ea_addr, ETHER_ADDR_LEN);
 	}
 #endif /* GET_CUSTOM_MAC_ENABLE */
+#if 1
+	bcmsdh_reg_write(bus->sdh, 0x18000620, 2, 11);
+	bcmsdh_reg_write(bus->sdh, 0x18000628, 2, 0x00006401);
+#endif
 
 	/* if firmware path present try to download and bring up bus */
 	if (dhd_download_fw_on_driverload && (ret = dhd_bus_start(bus->dhd)) != 0) {

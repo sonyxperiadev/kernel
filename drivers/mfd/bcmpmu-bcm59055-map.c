@@ -759,11 +759,6 @@ const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(struct bcmpmu *bcmpmu)
 	return bcm59055_adc_ctrl_map;
 }
 
-int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu)
-{
-	return 0;
-}
-
 const struct bcmpmu_env_info *bcmpmu_get_envregmap(struct bcmpmu *bcmpmu,
 	 int *len)
 {

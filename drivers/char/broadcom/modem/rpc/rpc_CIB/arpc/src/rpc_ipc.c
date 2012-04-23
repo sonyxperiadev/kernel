@@ -32,6 +32,9 @@
 #include <linux/module.h>
 #include <linux/proc_fs.h>	/* Necessary because we use proc fs */
 #include <linux/seq_file.h>	/* for seq_file */
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+#endif
 #define CSL_TYPES_H
 #define USE_KTHREAD_HANDOVER
 #endif
@@ -981,7 +984,7 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 	RPC_LOCK_INIT;
 
 #ifdef USE_KTHREAD_HANDOVER
-	ret = MsgQueueInit(&rpcMQhandle, rpcKthreadFn, "RpcKThread", 0, NULL);
+	ret = MsgQueueInit(&rpcMQhandle, rpcKthreadFn, "RpcKThread", 0, NULL,"krpc_wake_lock");
 
 	if (ret != 0) {
 		_DBG_(RPC_TRACE("RPC_IPC_Init: MsgQueueInit failed\n"));
