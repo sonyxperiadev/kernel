@@ -455,7 +455,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	if (pdev->dev.parent)
+	/* Some PCI-based MFD need the parent here */
+	if (pdev->dev.parent != &platform_bus)
 		host =
 		    sdhci_alloc_host(pdev->dev.parent, sizeof(struct sdio_dev));
 	else
