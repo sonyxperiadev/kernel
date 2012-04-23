@@ -568,21 +568,44 @@ static void button_press_work_func(struct work_struct *work)
 	comp_status = chal_aci_block_read(p->aci_chal_hdl,
 					  CHAL_ACI_BLOCK_COMP2,
 					  CHAL_ACI_BLOCK_COMP_RAW);
-	if (comp_status == CHAL_ACI_BLOCK_COMP_LINE_LOW) {
-		if ((p->hs_state == HEADSET) &&
-		    (p->button_state == BUTTON_RELEASED)) {
-			p->button_state = BUTTON_PRESSED;
-			pr_info(" Sending Key Press\r\n");
-			input_report_key(p->headset_button_idev, KEY_SEND, 1);
+
+   /* What we observe is that while we plug-out the Headset from the
+    * connector, sometimes we get COMP1 interrupts indicating
+    * button press/release. While removing the headset there is some
+    * disturbance on the MIC line and if it happens to match the
+    * threshold programmed for button press/release the
+    * interrupt is fired.
+    * So practically we cannot avoid this situation.
+    * To handle this, we update the state of the accessory
+    * (connected / unconnected)in gpio_isr(). Once the button ISR
+    * happens, we read the ADC values etc immediately but we
+    * delay notifying this to the upper layers by
+    * 80 msec(this value is arrived at by experiment)
+    * So that if this is a spurious
+    * notification, the GPIO ISR would be fired by this time
+    * and would have updated the accessory state as disconnected.
+    * In such cases the upper layer is not notified.
+    */
+	usleep_range(80000, 90000);
+
+	if (p->hs_state != DISCONNECTED) {
+		if (comp_status == CHAL_ACI_BLOCK_COMP_LINE_LOW) {
+			if ((p->hs_state == HEADSET) &&
+			    (p->button_state == BUTTON_RELEASED)) {
+				p->button_state = BUTTON_PRESSED;
+				pr_info(" Sending Key Press\r\n");
+				input_report_key(p->headset_button_idev,
+					KEY_SEND, 1);
+				input_sync(p->headset_button_idev);
+			}
+			schedule_delayed_work(&(p->button_press_work),
+				      KEY_DETECT_DELAY);
+		} else {
+			p->button_state = BUTTON_RELEASED;
+			pr_info(" Sending Key Release\r\n");
+			input_report_key(p->headset_button_idev, KEY_SEND, 0);
 			input_sync(p->headset_button_idev);
 		}
-		schedule_delayed_work(&(p->button_press_work),
-				      KEY_DETECT_DELAY);
-	} else {
-		p->button_state = BUTTON_RELEASED;
-		pr_info(" Sending Key Release\r\n");
-		input_report_key(p->headset_button_idev, KEY_SEND, 0);
-		input_sync(p->headset_button_idev);
 	}
 }
 
@@ -941,6 +964,8 @@ inputdev_err:
 irqreturn_t gpio_isr(int irq, void *dev_id)
 {
 	struct mic_t *p = (struct mic_t *)dev_id;
+	if (gpio_get_value(irq_to_gpio(p->hsirq)) == p->headset_pd->hs_default_state)
+		p->hs_state = DISCONNECTED;
 	pr_debug("HS ISR GPIO STATE: 0x%x \r\n",
 		 gpio_get_value(irq_to_gpio(p->hsirq)));
 

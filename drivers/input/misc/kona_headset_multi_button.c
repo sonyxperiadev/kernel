@@ -78,7 +78,6 @@
 
 #include <plat/chal/chal_aci.h>
 #include <plat/kona_mic_bias.h>
-
 /*
  * The gpio_set_debounce expects the debounce argument in micro seconds
  * Previously the kona implementation which is called from gpio_set_debounce
@@ -666,40 +665,60 @@ static void button_work_func(struct work_struct *work)
 			* by reading the ADC values */
 			button_name = detect_button_pressed(p);
 
+		/* We observe that when Headset is plugged out from the
+		 * connector, sometimes we get COMP1 interrupts indicating
+		 * button press/release. While removing the headset,
+		 * there is some disturbance on the MIC line and if
+		 * it happens to match the threshold programmed for
+		 * button press/release the interrupt is fired.
+		 * So practically we cannot avoid this situation.
+		 * To handle this, we update the state of the accessory
+		 * (connected / unconnected)in gpio_isr(). Once the button ISR
+		 * happens, we read the ADC values etc immediately but we
+		 * delay notifying this to the upper layers by
+		 * 80 msec(this value is arrived at by experiment)
+		 * So that if this is a spurious
+		 * notification, the GPIO ISR would be fired by this time
+		 * and would have updated the accessory state as disconnected.
+		 * In such cases the upper layer is not notified.
+		 */
+			usleep_range(80000, 90000);
 			/*
 			 * Store which button is being pressed (KEY_VOLUMEUP,
 			 *	KEY_VOLUMEDOWN, KEY_SEND)
 			 * in the context structure
 			 */
-			switch (button_name) {
-			case BUTTON_SEND_END:
-				p->button_pressed = KEY_SEND;
-				break;
-			case BUTTON_VOLUME_UP:
-				p->button_pressed = KEY_VOLUMEUP;
-				break;
-			case BUTTON_VOLUME_DOWN:
-				p->button_pressed = KEY_VOLUMEDOWN;
-				break;
-			default:
-				pr_err("Button type not supported \r\n");
-				err = 1;
+			if (p->hs_state != DISCONNECTED) {
+				switch (button_name) {
+				case BUTTON_SEND_END:
+					p->button_pressed = KEY_SEND;
+					break;
+				case BUTTON_VOLUME_UP:
+					p->button_pressed = KEY_VOLUMEUP;
+					break;
+				case BUTTON_VOLUME_DOWN:
+					p->button_pressed = KEY_VOLUMEDOWN;
+					break;
+				default:
+					pr_err("Button type not supported \r\n");
+					err = 1;
 #ifdef CONFIG_HAS_WAKELOCK
-				wake_unlock(&p->accessory_wklock);
+					wake_unlock(&p->accessory_wklock);
 #endif
-				break;
-			}
+					break;
+				}
 
-			if (err)
-				goto out;
+				if (err)
+					goto out;
 
-			/* Notify the same to input sub-system */
-			p->button_state = BUTTON_PRESSED;
-			pr_info(" Sending Key Press\r\n");
-			pr_info("\n Button pressed =%d\n", button_name);
-			input_report_key(p->headset_button_idev,
+				/* Notify the same to input sub-system */
+				p->button_state = BUTTON_PRESSED;
+				pr_info(" Sending Key Press\r\n");
+				pr_info("\n Button pressed =%d\n", button_name);
+				input_report_key(p->headset_button_idev,
 					 p->button_pressed, 1);
-			input_sync(p->headset_button_idev);
+				input_sync(p->headset_button_idev);
+			}
 		}
 
 		/*
@@ -715,10 +734,33 @@ static void button_work_func(struct work_struct *work)
 		 * context structure Notify the corresponding release
 		 * event to the input sub-system
 		 */
-		p->button_state = BUTTON_RELEASED;
-		pr_info(" Sending Key Release\r\n");
-		input_report_key(p->headset_button_idev, p->button_pressed, 0);
-		input_sync(p->headset_button_idev);
+
+		/* We observe that when Headset is plugged out from the
+		 * connector, sometimes we get COMP1 interrupts indicating
+		 * button press/release. While removing the headset,
+		 * there is some disturbance on the MIC line and if
+		 * it happens to match the threshold programmed for
+		 * button press/release the interrupt is fired.
+		 * So practically we cannot avoid this situation.
+		 * To handle this, we update the state of the accessory
+		 * (connected / unconnected)in gpio_isr(). Once the button ISR
+		 * happens, we read the ADC values etc immediately but we
+		 * delay notifying this to the upper layers by
+		 * 80 msec(this value is arrived at by experiment)
+		 * So that if this is a spurious
+		 * notification, the GPIO ISR would be fired by this time
+		 * and would have updated the accessory state as disconnected.
+		 * In such cases the upper layer is not notified.
+		 */
+				usleep_range(80000, 90000);
+
+				if (p->hs_state != DISCONNECTED) {
+					p->button_state = BUTTON_RELEASED;
+					pr_info(" Sending Key Release\r\n");
+					input_report_key(p->headset_button_idev,
+						p->button_pressed, 0);
+					input_sync(p->headset_button_idev);
+				}
 #ifdef CONFIG_HAS_WAKELOCK
 		wake_unlock(&p->accessory_wklock);
 #endif
@@ -1241,6 +1283,8 @@ inputdev_err:
 irqreturn_t gpio_isr(int irq, void *dev_id)
 {
 	struct mic_t *p = (struct mic_t *)dev_id;
+	if (gpio_get_value(irq_to_gpio(p->gpio_irq)) == p->headset_pd->hs_default_state)
+		p->hs_state = DISCONNECTED;
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&p->accessory_wklock);
 #endif
@@ -1381,7 +1425,6 @@ irqreturn_t comp2_inv_isr(int irq, void *dev_id)
 
 	pr_debug("INV COMP2 After clearing 0x%x ... \r\n",
 		 readl(p->aci_chal_hdl + ACI_INT_OFFSET));
-
 	schedule_delayed_work(&(p->accessory_remove_work),
 			      ACCESSORY_INSERTION_REMOVE_SETTLE_TIME);
 	return IRQ_HANDLED;
