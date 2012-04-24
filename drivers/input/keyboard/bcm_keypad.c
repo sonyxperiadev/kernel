@@ -460,7 +460,6 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 	return ret;
 
 free_dev:
-	input_unregister_device(bcm_kb->input_dev);
 	input_free_device(bcm_kb->input_dev);
 
 free_irq:
@@ -486,7 +485,6 @@ static int __devexit bcm_keypad_remove(struct platform_device *pdev)
 
 	/* unregister everything */
 	input_unregister_device(bcm_kb->input_dev);
-	input_free_device(bcm_kb->input_dev);
 
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(keypad_root_dir);
