@@ -130,6 +130,7 @@ static int VolumeCtrlGet(struct snd_kcontrol *kcontrol,
 	CAPH_ASSERT(stream >= CTL_STREAM_PANEL_FIRST
 		    && stream < CTL_STREAM_PANEL_LAST);
 	stream--;
+	/* coverity[overrun-local] */
 	pVolume = pChip->streamCtl[stream].ctlLine[dev].iVolume;
 
 	/*
@@ -368,10 +369,7 @@ static int SelCtrlGet(struct snd_kcontrol *kcontrol,
 	CAPH_ASSERT(stream >= CTL_STREAM_PANEL_FIRST
 		    && stream < CTL_STREAM_PANEL_LAST);
 	stream--;
-	/*
-	 * coverity[OVERRUN_STATIC] - false alarm. stream is getting
-	 * decremented by 1 and used
-	 */
+	/* coverity[overrun-local] */
 	pSel = pChip->streamCtl[stream].iLineSelect;
 
 	/*
@@ -713,10 +711,7 @@ static int SwitchCtrlGet(struct snd_kcontrol *kcontrol,
 	CAPH_ASSERT(stream >= CTL_STREAM_PANEL_FIRST
 		    && stream < CTL_STREAM_PANEL_LAST);
 	stream--;
-	/*
-	 * coverity[OVERRUN_STATIC] - false alarm. stream is getting
-	 * decremented by 1 and used
-	 */
+	/* coverity[overrun-local] */
 	pMute = pChip->streamCtl[stream].ctlLine[dev].iMute;
 
 	ucontrol->value.integer.value[0] = pMute[0];
