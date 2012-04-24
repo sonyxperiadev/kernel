@@ -956,7 +956,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			result_code = VPU_record_start(*recordMode,
 				aud_drv->sample_rate,
 				speech_mode, 0,	/* used by AMRNB and AMRWB */
-				0, 0, num_frames);
+				1, 0, num_frames);
 
 			/*voice render shares the audio mode with voice call.*/
 		}
