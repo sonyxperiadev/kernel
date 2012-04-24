@@ -44,6 +44,7 @@
 #define VENC_INPUT_BUFFERS 4
 
 struct wfd_device {
+	struct mutex dev_lock;
 	struct platform_device *pdev;
 	struct v4l2_device v4l2_dev;
 	struct video_device *pvdev;
@@ -51,6 +52,7 @@ struct wfd_device {
 	struct v4l2_subdev enc_sdev;
 	struct v4l2_subdev vsg_sdev;
 	bool secure_device;
+	bool in_use;
 };
 
 struct mem_info {
@@ -1019,13 +1021,25 @@ int wfd_initialize_vb2_queue(struct vb2_queue *q, void *priv)
 static int wfd_open(struct file *filp)
 {
 	int rc = 0;
-	struct wfd_inst *inst;
-	struct wfd_device *wfd_dev;
+	struct wfd_inst *inst = NULL;
+	struct wfd_device *wfd_dev = NULL;
 	struct venc_msg_ops enc_mops;
 	struct vsg_msg_ops vsg_mops;
 
 	WFD_MSG_DBG("wfd_open: E\n");
 	wfd_dev = video_drvdata(filp);
+
+	mutex_lock(&wfd_dev->dev_lock);
+	if (wfd_dev->in_use) {
+		WFD_MSG_ERR("Device already in use.\n");
+		rc = -EBUSY;
+		mutex_unlock(&wfd_dev->dev_lock);
+		goto err_dev_busy;
+	}
+
+	wfd_dev->in_use = true;
+	mutex_unlock(&wfd_dev->dev_lock);
+
 	inst = kzalloc(sizeof(struct wfd_inst), GFP_KERNEL);
 	if (!inst || !wfd_dev) {
 		WFD_MSG_ERR("Could not allocate memory for "
@@ -1083,6 +1097,7 @@ err_venc:
 				MDP_CLOSE, (void *)inst->mdp_inst);
 err_mdp_open:
 	kfree(inst);
+err_dev_busy:
 	return rc;
 }
 
@@ -1115,9 +1130,13 @@ static int wfd_close(struct file *filp)
 		if (rc)
 			WFD_MSG_ERR("Failed to CLOSE vsg subdev: %d\n", rc);
 
-		wfd_stats_deinit(&inst->stats);
 		kfree(inst);
 	}
+
+	mutex_lock(&wfd_dev->dev_lock);
+	wfd_dev->in_use = false;
+	mutex_unlock(&wfd_dev->dev_lock);
+
 	WFD_MSG_DBG("wfd_close: X\n");
 	return 0;
 }
@@ -1244,6 +1263,8 @@ static int __devinit __wfd_probe(struct platform_device *pdev)
 		}
 
 		/* Other device specific stuff */
+		mutex_init(&wfd_dev[c].dev_lock);
+		wfd_dev[c].in_use = false;
 		switch (WFD_DEVICE_NUMBER_BASE + c) {
 		case WFD_DEVICE_SECURE:
 			wfd_dev[c].secure_device = true;
