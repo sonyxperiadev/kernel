@@ -39,5 +39,6 @@
 #define SSAPI_WRITE_SCU_STATUS                            0x01000004
 #define SSAPI_WRITE_PWR_GATE                              0x01000005
 
-extern unsigned secure_api_call(unsigned appl_id, unsigned flags, ...);
+extern unsigned secure_api_call(unsigned service_id, unsigned arg0,
+	unsigned arg1, unsigned arg2);
 #endif /* SEC_API_H */
