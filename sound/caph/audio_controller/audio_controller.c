@@ -1800,7 +1800,9 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 			if (mixInCh != CSL_CAPH_SRCM_INCHNL_NONE) {
 				csl_srcmixer_setMixInGain(mixInCh, mixer,
 					GAIN_NA, GAIN_NA);
-				muteInPlay = TRUE;
+				/*do not mute music even FM is muted*/
+				if (source != AUDIO_SOURCE_I2S)
+					muteInPlay = TRUE;
 			}
 		}
 	} else {
@@ -1815,7 +1817,8 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 				mixInGainR = mixInGainR * 25; /* into mB */
 				csl_srcmixer_setMixInGain(mixInCh, mixer,
 					mixInGain, mixInGainR);
-				muteInPlay = FALSE;
+				if (source != AUDIO_SOURCE_I2S)
+					muteInPlay = FALSE;
 			}
 		}
 	}
