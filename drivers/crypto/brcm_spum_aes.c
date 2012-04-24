@@ -231,7 +231,6 @@ static int spum_aes_finish_req(struct spum_aes_device *dd, int err)
 	dd->req = NULL;
 	rctx->tx_offset = 0;
 	clear_bit(FLAGS_BUSY, &dd->flags);
-	clk_disable(dd->spum_open_clk);
 
 	return 0;
 }
@@ -315,7 +314,6 @@ static int spum_aes_handle_queue(struct spum_aes_device *dd,
 	dd->req = req;
 	rctx->tx_offset = 0;
 
-	clk_enable(dd->spum_open_clk);
 	spum_init_device(dd->io_apb_base, dd->io_axi_base);
 	spum_set_pkt_length(dd->io_axi_base, rctx->rx_len, rctx->tx_len);
 
@@ -323,7 +321,7 @@ static int spum_aes_handle_queue(struct spum_aes_device *dd,
 
 	if(err != -EINPROGRESS) {
 		spum_aes_finish_req(dd, err);
-		tasklet_schedule(&dd->queue_task);
+		tasklet_hi_schedule(&dd->queue_task);
 	}
 
 	pr_debug("%s : exit\n",__func__);
@@ -409,7 +407,7 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 	ret = ablkcipher_enqueue_request(&aes_ctx->dd->queue, req);
 	spin_unlock_irqrestore(&aes_ctx->dd->lock, flags);
 
-	tasklet_schedule(&aes_ctx->dd->queue_task);
+	tasklet_hi_schedule(&aes_ctx->dd->queue_task);
 
 	return ret;
 }
@@ -532,14 +530,19 @@ static int spum_aes_cra_init(struct crypto_tfm *tfm)
 	ctx->dd = dd;
 	tfm->crt_ablkcipher.reqsize = sizeof(struct spum_request_context);
 
+	clk_enable(dd->spum_open_clk);
+
 	return 0;
 }
 
 static void spum_aes_cra_exit(struct crypto_tfm *tfm)
 {
 	struct spum_aes_context *ctx = crypto_tfm_ctx(tfm);
+ 	struct spum_aes_device *dd = ctx->dd;
 
 	pr_debug("%s: exit\n",__func__);
+
+	clk_disable(dd->spum_open_clk);
 
 	ctx->dd = NULL;
 }
@@ -686,7 +689,7 @@ static void spum_aes_dma_callback(void *data, enum pl330_xfer_status status)
 		return;
 	}
 
-	tasklet_schedule(&dd->done_task);
+	tasklet_hi_schedule(&dd->done_task);
 }
 
 static int spum_aes_dma_init(struct spum_aes_device *dd)
