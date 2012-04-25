@@ -48,6 +48,11 @@ struct kona_freq_map {
 	int opp;		/* Operating point eg: ECONOMY, NORMAL, TURBO */
 };
 
+#define DEFAULT_LIMIT	(-1)
+#define MIN_LIMIT	(0)
+#define CURRENT_FREQ	(1)
+#define MAX_LIMIT	(2)
+
 struct kona_cpufreq {
 	int pi_id;
 	struct pi_mgr_dfs_node dfs_node;
@@ -260,6 +265,56 @@ static int kona_cpufreq_exit(struct cpufreq_policy *policy)
 
 	return 0;
 }
+static int get_cpufreq_limit(unsigned int *val, int limit_type)
+{
+	int ret = 0;
+	int cpu = smp_processor_id();
+	struct cpufreq_policy policy;
+
+	ret = cpufreq_get_policy(&policy, cpu);
+	if (ret)
+		return -1;
+	switch (limit_type) {
+	case MAX_LIMIT:
+		*val = policy.max;
+		break;
+	case MIN_LIMIT:
+		*val = policy.min;
+		break;
+	case CURRENT_FREQ:
+		*val = policy.cur;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
+static int set_cpufreq_limit(unsigned int val, int limit_type)
+{
+	struct cpufreq_policy *policy;
+	int cpu = smp_processor_id();
+
+	if (limit_type != MAX_LIMIT && limit_type != MIN_LIMIT)
+		return -EINVAL;
+	policy = cpufreq_cpu_get(cpu);
+	if (!policy)
+		return -EINVAL;
+	if (limit_type == MAX_LIMIT) {
+		if (val == DEFAULT_LIMIT)
+			val = (long)policy->cpuinfo.max_freq;
+		policy->user_policy.max = val;
+	} else {
+		if (val == DEFAULT_LIMIT)
+			val = (long)policy->cpuinfo.min_freq;
+		policy->user_policy.min = val;
+	}
+	cpufreq_cpu_put(policy);
+	cpufreq_update_policy(cpu);
+
+	return 0;
+}
 
 #ifdef CONFIG_KONA_CPU_FREQ_LIMITS
 
@@ -273,39 +328,28 @@ static struct kobj_attribute _name##_attr = {	\
 	.store	= _name##_store,		\
 }
 
-#define kona_cpufreq_show(fname, obj)				\
+#define kona_cpufreq_show(fname, lmt_typ)			\
 	static ssize_t fname##_show(struct kobject *kobj,	\
 			struct kobj_attribute *attr, char *buf)	\
 {								\
 	ssize_t ret = -EINTR;					\
-	int cpu = smp_processor_id();				\
-	struct cpufreq_policy policy;				\
-	if (!cpufreq_get_policy(&policy, cpu))			\
-		ret = sprintf(buf, "%u\n", policy.obj);		\
+	unsigned int val;					\
+	if (!get_cpufreq_limit(&val, lmt_typ))			\
+		ret = sprintf(buf, "%u\n", val);		\
 	return ret;						\
 }
 
-#define DEFAULT_LIMIT	(-1)
-#define kona_cpufreq_store(fname, obj)				\
+
+#define kona_cpufreq_store(fname, lmt_typ)			\
 static ssize_t fname##_store(struct kobject *kobj,		\
 	struct kobj_attribute *attr, const char *buf, size_t n)	\
 {								\
-	int cpu = smp_processor_id();				\
-	long val;						\
-	struct cpufreq_policy *policy;				\
+	long val;                                               \
 	if (strict_strtol(buf, 10, &val))			\
 		return -EINVAL;					\
-	policy = cpufreq_cpu_get(cpu);				\
-	if (!policy)						\
-		return -EINVAL;					\
-	if (val == DEFAULT_LIMIT)				\
-		val = (long)policy->cpuinfo.obj##_freq;		\
-	policy->user_policy.obj = (unsigned int)val;		\
-	cpufreq_cpu_put(policy);				\
-	cpufreq_update_policy(cpu);				\
+	set_cpufreq_limit(val, lmt_typ);			\
 	return n;						\
 }
-
 
 static ssize_t cpufreq_table_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
@@ -314,7 +358,6 @@ static ssize_t cpufreq_table_show(struct kobject *kobj,
 	ssize_t count = 0;
 	int num, i;
 	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
-	int cpu = smp_processor_id();
 
 	num = pdata->num_freqs;
 	/*List in descending order*/
@@ -328,12 +371,12 @@ static ssize_t cpufreq_table_show(struct kobject *kobj,
 #define cpufreq_table_store	NULL
 #define cpufreq_cur_store	NULL
 
-kona_cpufreq_show(cpufreq_max, max);
-kona_cpufreq_show(cpufreq_min, min);
-kona_cpufreq_show(cpufreq_cur, cur);
+kona_cpufreq_show(cpufreq_min, MIN_LIMIT);
+kona_cpufreq_show(cpufreq_cur, CURRENT_FREQ);
+kona_cpufreq_show(cpufreq_max, MAX_LIMIT);
 
-kona_cpufreq_store(cpufreq_max, max);
-kona_cpufreq_store(cpufreq_min, min);
+kona_cpufreq_store(cpufreq_min, MIN_LIMIT);
+kona_cpufreq_store(cpufreq_max, MAX_LIMIT);
 
 kona_cpufreq_power_attr(cpufreq_max, S_IRUGO|S_IWUSR);
 kona_cpufreq_power_attr(cpufreq_min, S_IRUGO|S_IWUSR);
