@@ -724,6 +724,6 @@
 
 #define TRACE_MEM_SIZE                   131072        /* 128k */
 
-#define LOG_TX_SIZE                      131072        /* 128k */
+#define LOG_TX_SIZE                      0x200000        /* 2M */
 
 #endif /* _INC_MSCONSTS_H_ */
