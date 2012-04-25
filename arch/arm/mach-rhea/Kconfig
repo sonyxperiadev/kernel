@@ -49,6 +49,15 @@ config MACH_RHEA_FARADAY_EB10
 	  form one of the platforms for Nokia.
 	  Rhea plus delta RF modules.
 
+config MACH_RHEA_FARADAY_EB20
+       bool "Support Nokia Faraday EB20 board"
+       select RHEALC_2093
+       help
+         Support for the Nokia Faraday EB20 board.
+         This will be based on RheaLC program and
+         form one of the platforms for Nokia.
+         Rhea plus delta RF modules.
+
 config MACH_HERA_RAY
         bool "Support Broadcom Hera Ray board"
         help
