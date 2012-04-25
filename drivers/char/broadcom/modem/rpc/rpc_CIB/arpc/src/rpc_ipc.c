@@ -221,11 +221,12 @@ RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID,
 	    (UInt8 *) IPC_BufferHeaderSizeSet((IPC_Buffer) dataBufHandle, 4);
 	pCid[0] = channel;
 
-	if (rpcClientID) {
-	}
 	/*fixes compiler warnings */
-	ipcError =
-	    IPC_SendBuffer((IPC_Buffer) dataBufHandle, IPC_PRIORITY_DEFAULT);
+	if (rpcClientID)
+		;
+
+	ipcError = IPC_SendBuffer((IPC_Buffer) dataBufHandle,
+			IPC_PRIORITY_DEFAULT);
 
 	return (ipcError == IPC_OK) ? RPC_RESULT_OK : RPC_RESULT_ERROR;
 }
