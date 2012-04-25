@@ -215,18 +215,20 @@ RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID,
 				 UInt8 channel,
 				 PACKET_BufHandle_t dataBufHandle)
 {
-	IPC_ReturnCode_T ipcError;
-
+	IPC_ReturnCode_T ipcError = IPC_ERROR;
 	UInt8 *pCid =
 	    (UInt8 *) IPC_BufferHeaderSizeSet((IPC_Buffer) dataBufHandle, 4);
-	pCid[0] = channel;
+
 
 	/*fixes compiler warnings */
 	if (rpcClientID)
 		;
 
-	ipcError = IPC_SendBuffer((IPC_Buffer) dataBufHandle,
-			IPC_PRIORITY_DEFAULT);
+	if (pCid) {
+		pCid[0] = channel;
+		ipcError = IPC_SendBuffer((IPC_Buffer) dataBufHandle,
+				IPC_PRIORITY_DEFAULT);
+	}
 
 	return (ipcError == IPC_OK) ? RPC_RESULT_OK : RPC_RESULT_ERROR;
 }
