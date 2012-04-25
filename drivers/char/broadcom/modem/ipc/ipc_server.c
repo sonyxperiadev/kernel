@@ -376,7 +376,11 @@ static int __init ipcs_init(void *smbase, unsigned int size)
 	return 0;
 }
 
-#ifdef CONFIG_BCM_MODEM_DEFER_CP_START
+int ipcs_reinitialize_ipc(void)
+{
+	return ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE);
+}
+
 static int CP_Boot(void)
 {
 	int started = 0;
@@ -433,16 +437,17 @@ static int CP_Boot(void)
 
 	return started;
 }
-#endif
-
-static int __init Comms_Start(void)
+void Comms_Start(int isReset)
 {
 	void __iomem *apcp_shmem;
 	void __iomem *cp_boot_base;
 	u32 reg_val;
 
 #ifdef CONFIG_BCM_MODEM_DEFER_CP_START
-	CP_Boot();
+    CP_Boot();
+#else
+	if (isReset)
+		CP_Boot();
 #endif
 
 	apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);

@@ -612,7 +612,7 @@ static Int8 GetInterfaceType(IPC_EndpointId_T epId)
 */
 static Boolean sIsNotifyingCPReset;
 
-void CheckReadyForCPReset( void )
+void CheckReadyForCPReset(void)
 {
 	PACKET_InterfaceType_t currIF;
 	Boolean ready = TRUE;
@@ -637,15 +637,11 @@ void CheckReadyForCPReset( void )
 			break;
 		}
 	
-	if ( ready )
+	if (ready)
 	{
 		pr_info("CheckReadyForCPReset done\n");
 		/* ready for start CP reset, so notify IPC here */
 		IPCAP_ReadyForReset( sIPCResetClientId );
-		
-		/* **FIXME** reset readyForCPReset flags here? 
-		   Or wait for reset complete event?
-		*/
 	}
 	pr_info("exit CheckReadyForCPReset\n");
 }
@@ -654,21 +650,32 @@ void CheckReadyForCPReset( void )
 void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
 {
 	RPC_CPResetEvent_t rpcEvent;
+	PACKET_InterfaceType_t currIF;
 	
 	pr_info("RPC_PACKET_CPResetHandler\n");
 	
+	if (inEvent == IPC_CPRESET_START)
+		for (currIF = INTERFACE_START;
+			currIF < INTERFACE_TOTAL; currIF++) {
+			ipcInfoList[currIF].readyForCPReset = FALSE;
+			ipcInfoList[currIF].filterReadyForCPReset = FALSE;
+		}
+
 	sIsNotifyingCPReset = TRUE;
-	
-	rpcEvent= (inEvent==IPC_CPRESET_START)?
+
+	rpcEvent = (inEvent == IPC_CPRESET_START) ?
 			RPC_CPRESET_START:
 			RPC_CPRESET_COMPLETE;
-	RPC_PACKET_HandleNotifyCPReset( rpcEvent );
+	RPC_PACKET_HandleNotifyCPReset(rpcEvent);
 
 	sIsNotifyingCPReset = FALSE;
 	
-	if ( inEvent==IPC_CPRESET_START )
+	if (inEvent == IPC_CPRESET_START)
 		CheckReadyForCPReset();
-		
+	else
+		/* reset done, so re-register our endpoints */
+		RPC_IPC_EndPointInit(RPC_APPS);
+
 	pr_info("exit RPC_PACKET_CPResetHandler\n");
 }
 

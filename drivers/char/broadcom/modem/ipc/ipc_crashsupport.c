@@ -22,12 +22,17 @@
 #include <linux/string.h>
 #include <linux/serial_reg.h>
 #include <linux/workqueue.h>
+#include <linux/kthread.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_bmdm_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
 #endif
 #include <linux/fs.h>
 #include <linux/file.h>
 #include <linux/uaccess.h>
+#include <linux/interrupt.h>
 #include <linux/broadcom/ipcinterface.h>
 #include <linux/syscalls.h>
 #include "ipc_sharedmemory.h"
@@ -99,6 +104,22 @@ static void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump);
 static void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf,
 			    UInt32 inStrBufLen);
 
+#ifdef CONFIG_HAS_WAKELOCK
+extern struct wake_lock ipc_wake_lock;
+#endif
+
+static struct timer_list cp_reset_timer;
+/* set CP reset timeout to 2 seconds for now */
+#define CP_RESET_TIMEOUT_MILLISEC	2000
+
+/* wait for 500ms, 20ms at a time, for CP to be ready to reset */
+#define WAIT_FOR_CP_RESET_READY_MILLISEC	20
+#define WAIT_FOR_CP_RESET_READY_ITERATIONS	25
+
+extern int RpcDbgDumpHistoryLogging(int type, int level);
+extern void Comms_Start(int isReset);
+extern int ipcs_reinitialize_ipc(void);
+
 /*********************************************************************
 *
 *   Retrieve string from physical address
@@ -120,6 +141,192 @@ void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf, UInt32 inStrBufLen)
 
 	/* pad NULL in the end of the string */
 	inStrBuf[inStrBufLen - 1] = '\0', iounmap(virtAddr);
+}
+
+static IPCAP_CPResetHandler_T sCPResetHandler = NULL;
+
+/* registers client callback to be used for passing silent CP reset events */
+int IPCAP_RegisterCPResetHandler(IPCAP_CPResetHandler_T inResetHandler)
+{
+	/* **FIXME** need to support multiple clients, or just RPC? */
+	sCPResetHandler = inResetHandler;
+	IPC_DEBUG(DBG_ERROR, "cp reset handler registered\n");
+	return 1;
+}
+
+void HandleCPResetDone(void)
+{
+	IPC_DEBUG(DBG_ERROR, "notifying cp reset IPC_CPRESET_COMPLETE\n");
+	/* kick off notification to upper layer clients */
+	if (sCPResetHandler)
+		sCPResetHandler(IPC_CPRESET_COMPLETE);
+	IPC_DEBUG(DBG_ERROR, "DONE notifying cp reset IPC_CPRESET_COMPLETE\n");
+}
+
+int HandleRestartCP(void *data)
+{
+	int k = 0;
+	void __iomem *cp_root_reset_base;
+	void __iomem *cp_bmdm_reset_base;
+
+	IPC_DEBUG(DBG_ERROR, "enter\n");
+
+	/* verify that CP is ready to be reset */
+	while (IPC_CP_SILENT_RESET_READY !=
+		SmLocalControl.SmControl->CrashCode) {
+		/* not yet ready, so we'll wait up to 500ms */
+		if (k++ > WAIT_FOR_CP_RESET_READY_ITERATIONS)
+			break;
+		else
+			msleep(WAIT_FOR_CP_RESET_READY_MILLISEC);
+	}
+
+	if (IPC_CP_SILENT_RESET_READY != SmLocalControl.SmControl->CrashCode) {
+		/* CP not responding as ready, so we crash here */
+		IPC_DEBUG(DBG_ERROR, "CP not ready for reset, crashing\n");
+		BUG();
+	}
+
+	/* reload CP */
+	/* **FIXME** add call to Lori's code here */
+
+	IPC_DEBUG(DBG_ERROR, "resetting CP\n");
+
+	/* reset CP - copy from cp_reset.cmm rxd from CP team */
+	/*;CP reset, from AP
+	 *
+	 * D.S ZSD:0x35001F00 %LE %LONG 0xa5a501
+	 * D.S ZSD:0x35001F08 %LE %LONG 0x3bd	;reset
+	 * D.S ZSD:0x35001F08 %LE %LONG 0x3fd	;clear
+	 */
+	cp_root_reset_base = ioremap(ROOT_RST_BASE_ADDR,
+				ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET+4);
+	if (!cp_root_reset_base) {
+		IPC_DEBUG(DBG_ERROR,
+			"failed to remap ROOT_RST_BASE_ADDR, crashing\n");
+		BUG();
+	}
+	writel(0xa5a501, cp_root_reset_base+ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
+	writel(0x3bd, cp_root_reset_base+ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
+	writel(0x3fd, cp_root_reset_base+ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
+
+	/* reset R4 - copy from cp_reset.cmm rxd from CP team */
+	/*;R4 reset
+	*
+	* D.S ZSD:0x3a055f00 %LE %LONG 0xa5a501
+	* D.S ZSD:0x3a055f18 %LE %LONG 0x2 ;reset
+	* D.S ZSD:0x3a055f18 %LE %LONG 0x3  ;clear
+	*/
+	cp_bmdm_reset_base = ioremap(BMDM_RST_BASE_ADDR,
+				BMDM_RST_MGR_REG_CP_RSTN_OFFSET+4);
+	if (!cp_bmdm_reset_base) {
+		IPC_DEBUG(DBG_ERROR,
+			"failed to remap BMDM_RST_BASE_ADDR, crashing\n");
+		BUG();
+	}
+	writel(0xa5a501, cp_bmdm_reset_base+BMDM_RST_MGR_REG_WR_ACCESS_OFFSET);
+	writel(0x2, cp_bmdm_reset_base+BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+	writel(0x3, cp_bmdm_reset_base+BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+
+	IPC_DEBUG(DBG_ERROR, "rebooting CP\n");
+	/* reboot CP; this will also wipe IPC shared memory */
+	Comms_Start(1);
+
+	IPC_DEBUG(DBG_ERROR, "re-init IPC\n");
+	/* reinitialize IPC, and wait for IPC sync with CP */
+	if (ipcs_reinitialize_ipc()) {
+		IPC_DEBUG(DBG_ERROR, "ipcs_reinitialize_ipc failed\n");
+		/* CP didn't re-sync, so crash AP here */
+		BUG();
+	}
+
+	IPC_DEBUG(DBG_ERROR, "reenable IRQ_IPC_C2A\n");
+	/* re-enable CP to AP IRQ */
+	enable_irq(IRQ_IPC_C2A);
+
+	/* notify clients that we're back in business...*/
+	IPC_DEBUG(DBG_ERROR, "notifying clients CP reset is complete\n");
+	HandleCPResetDone();
+	IPC_DEBUG(DBG_ERROR, "notification done, exiting reset thread\n");
+
+	iounmap(cp_root_reset_base);
+	iounmap(cp_bmdm_reset_base);
+
+	/* done with thread */
+	do_exit(0);
+}
+
+/* callback from client indicating it is ready for CP reset */
+void IPCAP_ReadyForReset( int inClientID )
+{
+	IPC_DEBUG(DBG_ERROR, "ready for reset\n");
+	
+	/* get rid of the ack timeout timer */
+	del_timer(&cp_reset_timer);
+
+	IPC_DEBUG(DBG_ERROR, "starting cp_reset thread\n");
+
+	/* kick off CP restart thread */
+	kthread_run(HandleRestartCP, 0, "cp_reset");
+}
+
+void CPReset_Timer_Callback(unsigned long data)
+{
+	/* not all IPC/RPC clients ackd the reset in time, so crash AP */
+	IPC_DEBUG(DBG_ERROR, "cp reset timeout %ld jiffies\n", jiffies);
+	BUG();
+}
+
+void HandleCPResetStart(void)
+{
+	int ret;
+
+	/* per Silent CP Reset doc, need to:
+		- ack the silent cp reset notification from CP
+		- exit low power mode
+		- disable AP interrupts except CAPI HW int
+			- is this right? all interrupts? Check with Derek
+		- do reset notification to clients 
+		- audio/dsp interface reset (assume this is done in audio
+		  driver during reset notification process)
+	    
+	    Should also start timer here, and if reset notification process
+	    isn't complete in X seconds, 
+	*/
+
+	/* ACK start of silent reset to CP */
+	SmLocalControl.SmControl->CrashCode = IPC_AP_ACK_CP_RESET_START;
+
+	/* exit low power mode:
+	 * ipc_wake_lock acquired on IPC interrupt that triggered this
+	 * crash handler, and is not released until CP reset is complete
+	 */
+
+	IPC_DEBUG(DBG_ERROR, "disabling IRQ_IPC_C2A\n");
+
+	/* disable CP to AP interrupt */
+	disable_irq(IRQ_IPC_C2A);
+
+	/* set timeout timer for ack from IPC/RPC clients; if timer fires
+	 * before all have ack'd, we should crash AP
+	*/
+	setup_timer(&cp_reset_timer, CPReset_Timer_Callback, 0);
+	ret = mod_timer(&cp_reset_timer, jiffies +
+		msecs_to_jiffies(CP_RESET_TIMEOUT_MILLISEC));
+	if (ret)
+		IPC_DEBUG(DBG_ERROR, "ERROR starting CP reset timer %d\n",
+					ret);
+	else
+		IPC_DEBUG(DBG_ERROR, "CP reset timeout timer set for %d ms\n",
+				CP_RESET_TIMEOUT_MILLISEC);
+
+	IPC_DEBUG(DBG_ERROR, "start notifying cp reset IPC_CPRESET_START\n");
+
+	/* kick off notification to upper layer clients */
+	if (sCPResetHandler)
+		sCPResetHandler(IPC_CPRESET_START);
+
+	IPC_DEBUG(DBG_ERROR, "DONE notifying cp reset IPC_CPRESET_START\n");
 }
 
 /*************************************************
