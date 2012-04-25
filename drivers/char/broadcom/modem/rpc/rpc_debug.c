@@ -189,9 +189,9 @@ void RpcDbgUpdatePktStateEx(UInt32 pktHandle, UInt32 pktstatus, UInt8 cid,
 				}
 			}
 
-			if (context1)
+			if (context1 || pktstatus == PKT_STATE_NEW)
 				gRpcDbgPktStatusList[i].context1 = context1;
-			if (context2)
+			if (context2 || pktstatus == PKT_STATE_NEW)
 				gRpcDbgPktStatusList[i].context2 = context2;
 			if (itype != 0xFF)
 				gRpcDbgPktStatusList[i].itype = itype;
@@ -365,3 +365,81 @@ int RpcDbgDumpStr(RpcOutputContext_t *c, char *fmt, ...)
 
 	return n;
 }
+
+int RpcDbgDumpRawStr(RpcOutputContext_t *c, char *str)
+{
+	int n = 0;
+
+	if (!c)
+		return -1;
+
+	if (c->type == 0)
+		printk(str);
+	else if (c->type == 1 && c->seq)
+		n = seq_printf(c->seq, str);
+	else if (c->type == 2)
+		BCMLOG_LogCPCrashDumpString(str);
+
+	return n;
+}
+
+#define MAX_BUF_STR_LEN 1024
+static char sCallStackBuffer[MAX_BUF_STR_LEN+1]={0};
+static pid_t sTid = 0;
+
+/*
+Just copy the buffer and DO NOT CALL any kernel system calls OR acquire spin locks
+*/
+int RpcDumpPrintkCb(const char* str)
+{
+	if(sTid == current->pid) {
+		int remLen;
+		remLen = MAX_BUF_STR_LEN - strlen(sCallStackBuffer);
+		if(remLen > 0)
+			strncat(sCallStackBuffer, str, remLen);
+	}
+	return 0;
+}
+
+static void dumpCallStackStr(RpcOutputContext_t *c, char* inStr)
+{
+	char* bstr = inStr;
+	char* tstr = inStr;
+	while(*tstr != '\0')
+	{
+		if(*tstr == '\n')
+		{
+			*tstr = '\0';
+			RpcDbgDumpRawStr(c, bstr);
+			bstr = tstr+1;
+		}
+		tstr++;
+	}
+	RpcDbgDumpRawStr(c, "\n");
+}
+
+void RpcDumpTaskCallStack(RpcOutputContext_t *c, struct task_struct *t)
+{
+	if(c->type != 0)/* out to proc or crash dump */
+	{
+		memset(sCallStackBuffer, 0, (MAX_BUF_STR_LEN+1));
+		sTid = current->pid;
+		BCMLOG_RegisterPrintkRedirectCbk(1, RpcDumpPrintkCb);
+
+		sched_show_task(t);
+
+		BCMLOG_RegisterPrintkRedirectCbk(0, NULL);
+		dumpCallStackStr(c, sCallStackBuffer);
+	}
+	else
+		sched_show_task(t);
+}
+
+int RpcDbgDumpWakeLockStats(RpcOutputContext_t *c)
+{
+  //TBD
+  return 0;
+}
+
+
+

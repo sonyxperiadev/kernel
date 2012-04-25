@@ -61,6 +61,7 @@ extern "C" {
 #define BCMLOG_RPC_KERNEL_BASIC		1003
 /* RPC kernel driver logging for detailed information */
 #define BCMLOG_RPC_KERNEL_DETAIL	1004
+
 /* MTT limit ASCII size to be 256 */
 #define BCMLOG_MAX_ASCII_STRING_LENGTH	256
 
@@ -326,6 +327,7 @@ extern "C" {
 	int BCMLOG_GetApCrashLogDevice(void);
 	void BCMLOG_SetCpCrashLogDevice(int port);
 
+
 	extern void (*BrcmLogString) (const char *inLogString,
 				      unsigned short inSender);
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
@@ -340,6 +342,11 @@ extern "C" {
 	extern int BCMLOG_RegisterHandler(char log_type,
 					  int (*handler) (const char *,
 							  unsigned int, char));
+
+/**
+ *	printk redirect callback registration
+ **/	typedef int (*BrcmRedirectPrintkCbk)(const char* str);
+	void BCMLOG_RegisterPrintkRedirectCbk(int enable, BrcmRedirectPrintkCbk cb);
 
 #ifdef __cplusplus
 }

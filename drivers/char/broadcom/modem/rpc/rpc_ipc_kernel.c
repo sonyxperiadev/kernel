@@ -346,7 +346,7 @@ static int rpcipc_open(struct inode *inode, struct file *file)
 
 static int rpcipc_release(struct inode *inode, struct file *file)
 {
-	unsigned char k = 0;
+//	unsigned char k = 0;
 	RpcIpc_PrivData_t *priv = file->private_data;
 
 	RPC_WRITE_LOCK;
@@ -354,7 +354,7 @@ static int rpcipc_release(struct inode *inode, struct file *file)
 	BUG_ON(!priv);
 
 	HISTORY_RPC_LOG("release", 0, 0, (int)file, (int)current->tgid);
-
+/*
 	for (k = 0; k < 0xFF; k++) {
 		RpcClientInfo_t *cInfo;
 		cInfo = gRpcClientList[k];
@@ -365,7 +365,7 @@ static int rpcipc_release(struct inode *inode, struct file *file)
 			SYS_ReleaseClientID(cInfo->clientId);
 		}
 	}
-
+*/
 
 	_DBG(RPC_TRACE("rpcipc_release ok\n"));
 
@@ -2003,7 +2003,7 @@ void RpcDumpTaskState(RpcOutputContext_t *c, pid_t inTid, pid_t inPid)
 		RpcDbgDumpStr(c, "\t%s pid:%d tid:%d state:%d flag:0x%x\n",
 			      t->comm, inPid, inTid, (int)t->state, (int)t->flags);
 
-		sched_show_task(t);
+		RpcDumpTaskCallStack(c, t);
 	}
 	else
 		RpcDbgDumpStr(c,"\tError!!!(Process not found) pid:%d tid:%d\n",
@@ -2128,12 +2128,14 @@ static int log_seq_show(struct seq_file *s, void *v)
 	else if (context->counter == 1)
 	    RpcDbgListClientMsgs(&(context->out));
 	else if (context->counter == 2)
-	    ret = RpcDbgDumpPktState(&(context->out), &(context->offset), 10);
+	    RpcDbgDumpWakeLockStats(&context->out);
 	else if (context->counter == 3)
+	    ret = RpcDbgDumpPktState(&(context->out), &(context->offset), 10);
+	else if (context->counter == 4)
 	    ret = RbcDbgDumpGenInfo(&(context->out), &(context->offset), 10);
 
 	if (ret == 0) {
-		if (context->counter >= 3)
+		if (context->counter >= 4)
 		{
 			RpcDbgDumpHdr(&(context->out));
 			context->eof = 1;
@@ -2200,6 +2202,7 @@ int RpcDbgDumpHistoryLogging(int type, int level)
 
 	RpcDbgDumpHdr(&outContext);
 	RpcDbgListClientMsgs(&outContext);
+	RpcDbgDumpWakeLockStats(&outContext);
 
 	if (level > 0) {
 		RpcDbgDumpPktState(&outContext, &offset, 0);

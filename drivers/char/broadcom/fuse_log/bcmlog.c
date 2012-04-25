@@ -142,6 +142,12 @@ static int tot_size;
 static unsigned char *cp_buf;
 
 /**
+ *  Definitions used for redirect printk using cbks
+ **/
+static BrcmRedirectPrintkCbk sPrintkCbk = NULL;
+static atomic_t redirectEnabled = ATOMIC_INIT(0);
+
+/**
  *  Definitions used for logging binary signals
  **/
 #define HWTRC_B_SIGNAL_HEADER_SIZE  (2 + 12 * 2 + 2)
@@ -686,6 +692,18 @@ void BCMLOG_LogString(const char *inLogString, unsigned short inSender)
 
 	char temp_LogString[BCMLOG_MAX_ASCII_STRING_LENGTH];
 	int StringLength, j = 0, k = 0;
+
+	/* Redirect the printk string if reqested by client */
+	if(inSender == BCMLOG_LOG_ULOGGING_ID && 
+			atomic_read(&redirectEnabled) == 1)
+	{
+		unsigned long irql;
+		
+		irql = AcquireOutputLock();
+		if(sPrintkCbk)
+			sPrintkCbk(inLogString);
+		ReleaseOutputLock(irql);
+	}
 
 	if (!CpCrashDumpInProgress() && BCMLOG_LogIdIsEnabled(inSender)) {
 
@@ -2034,6 +2052,25 @@ static void BCMLOG_OutputLinkList(unsigned long ListSize,
 
 	ReleaseOutputLock(irql);
 }
+
+/**
+ *
+ * Function Name:       BCMLOG_RegisterPrintkRedirectCbk
+ *
+ * Description:         Register callback to redirect printk data to 
+ *       		temp buffer using registered callback 
+ * Notes:  		BrcmRedirectPrintkCbk should ONLY copy the data to 
+ * 			temp buffer and return.
+ **/
+void BCMLOG_RegisterPrintkRedirectCbk(int enable, BrcmRedirectPrintkCbk cb)
+{
+	unsigned long irql;
+	irql = AcquireOutputLock();
+	sPrintkCbk = cb;
+	atomic_set(&redirectEnabled, enable);
+	ReleaseOutputLock(irql);
+}
+
 
 /**
  *	export module init and export functions
