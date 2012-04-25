@@ -407,6 +407,15 @@ static int bcmpmu_chrgr_set_property(struct power_supply *ps,
 		pchrgr->eoc = propval->intval;
 		bcmpmu_set_eoc(bcmpmu, (int)propval->intval);
 		break;
+
+	case POWER_SUPPLY_PROP_CAPACITY:
+	  /* For SS QA test */
+	  if(propval->intval == 1 && (bcmpmu->em_reset))
+	    {
+	      bcmpmu->em_reset(bcmpmu);
+	    }
+	  break;
+
 	default:
 		ret = -EINVAL;
 		break;
