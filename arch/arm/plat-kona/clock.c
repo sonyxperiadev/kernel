@@ -54,8 +54,6 @@ enum {
 };
 
 /*fwd declarations....*/
-static int __clk_enable(struct clk *clk);
-static void __clk_disable(struct clk *clk);
 static int __pll_clk_enable(struct clk *clk);
 static int __pll_chnl_clk_enable(struct clk *clk);
 static int peri_clk_set_voltage_lvl(struct peri_clk *peri_clk, int voltage_lvl);
@@ -940,7 +938,7 @@ static int __misc_clk_disable(struct clk *clk)
 	return ret;
 }
 
-static void __clk_disable(struct clk *clk)
+void __clk_disable(struct clk *clk)
 {
 	int ret = 0;
 	clk_dbg("%s - %s\n", __func__, clk->name);
