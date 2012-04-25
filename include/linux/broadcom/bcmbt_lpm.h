@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2010-2012 Broadcom Corporation.  All rights reserved.
 *
 * @file	kernel/include/linux/broadcom//bcmbt_lpm.h
 *
@@ -26,6 +26,9 @@ struct bcm_bt_lpm_platform_data {
 struct bcm_bt_lpm_data {
 	unsigned int gpio_bt_wake;	/* HOST -> BCM chip wakeup gpio */
 	unsigned int gpio_host_wake;	/* BCM chip -> HOST wakeup gpio */
+	unsigned int polarity;	/* ASSERT polarity, e.g 0 -> active low */
+	int state; /* state of LPM, 0 off */
+	int timeout; /* 0: no timeout*/
 	/*spinlock_t          lock; */
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock host_wake_lock;	/* rx path */
@@ -35,11 +38,27 @@ struct bcm_bt_lpm_data {
 	int host_wake_installed;
 };
 
-extern int brcm_init_hostwake(struct bcm_bt_lpm_platform_data *gpio_data);
+/* cmds for LPM */
+#define DISABLE_LPM 0
+#define ENABLE_LPM_TYPE_OOB 1 /* BT_WAKE/HOST_WAKE fully automatic */
+#define ENABLE_LPM_TYPE_OOB_USER 2 /* BT_WAKE/HOST_WAKE, BT_WAKE toggled by
+				ioctl */
+/* polarity use by host/bt_wake: ACTIVE_LOW: ASSERTED at low level */
+#define ACTIVE_LOW  0
+#define ACTIVE_HIGH 1
+#define DEFAULT_TO  50	/* use 50ms as default timeout */
+struct bcmbt_set_lpm_mode {
+	int cmd;
+	int polarity;
+	int timeout;
+};
 
-#define TIO_ASSERT_BT_WAKE      0x8003
-#define TIO_DEASSERT_BT_WAKE    0x8004
+#define BRCM_SHARED_UART_MAGIC  0x80
+#define TIO_ASSERT_BT_WAKE      _IO(BRCM_SHARED_UART_MAGIC, 3)
+#define TIO_DEASSERT_BT_WAKE    _IO(BRCM_SHARED_UART_MAGIC, 4)
 #define TIO_GET_BT_WAKE_STATE   0x8005
+#define TIO_SET_LPM_MODE	_IOW(BRCM_SHARED_UART_MAGIC, 6, struct \
+	bcmbt_set_lpm_mode)
 
 #define GPIO_UARTB_SEL (-1)
 #define GPIO_BT_CLK32K_EN (-1)
