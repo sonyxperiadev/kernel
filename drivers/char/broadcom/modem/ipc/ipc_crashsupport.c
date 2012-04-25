@@ -35,12 +35,18 @@
 #include <linux/interrupt.h>
 #include <linux/broadcom/ipcinterface.h>
 #include <linux/syscalls.h>
+
+#include <linux/interrupt.h> 
+#include <linux/broadcom/ipcinterface.h>
+#include <linux/firmware.h>
+#include <linux/slab.h>
 #include "ipc_sharedmemory.h"
+#include "ipc_crashsupport.h"
+#include <mach/comms/platform_mconfig.h>
 
 #include "ipc_debug.h"
 #include "ipc_stubs.h"
 #include "bcmlog.h"
-#include "ipc_crashsupport.h"
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 #include <video/kona_fb_image_dump.h>
 #endif
@@ -97,12 +103,80 @@ static struct T_CRASH_SUMMARY *dumped_crash_summary_ptr = { 0 };
 #define MAX_CP_DUMP_RETRIES 5
 #define TICKS_ONE_SECOND 1024
 
+typedef struct {
+	const char *img_name;	/* CP image filename */
+	int ram_addr;			/* RAM address */
+	int img_size;	/* CP image size. 0 means the size is calculated. */
+} T_CP_IMGS;
+
+/* main image signature and offset */
+#define MSP_SIGNATURE_VALUE      0xBABEFACE
+#define MSP_SIGNATURE_OFFSET     0x20
+
+/* from kernel/arch/arm/mach-capri/include/mach/comms/platform_mconfig_rhea.h */
+#define CP_RO_RAM_OFFSET             0x200000
+#define CP_RO_RAM_ADDR              (EXT_RAM_BASE_ADDR + CP_RO_RAM_OFFSET)
+
+#define PARM_IND_RAM_OFFSET         0x100000
+#define PARM_IND_RAM_ADDR           (EXT_RAM_BASE_ADDR + PARM_IND_RAM_OFFSET)
+#define PARM_IND_SIZE               0x00040000
+
+#define DSP_DRAM_RAM_OFFSET         0x1800000
+#define DSP_DRAM_RAM_ADDR           (EXT_RAM_BASE_ADDR + DSP_DRAM_RAM_OFFSET)
+#define DSP_DRAM_SIZE               0x00200000
+
+#define DSP_PRAM_RAM_OFFSET         0x160000
+#define DSP_PRAM_RAM_ADDR           (EXT_RAM_BASE_ADDR + DSP_PRAM_RAM_OFFSET)
+#define DSP_PRAM_SIZE               0x00004000
+
+#define UMTS_CAL_RAM_OFFSET         0x64000
+#define UMTS_CAL_RAM_ADDR           (EXT_RAM_BASE_ADDR + UMTS_CAL_RAM_OFFSET)
+#define UMTS_CAL_SIZE               0x00020000
+
+#define PARM_SPML_IND_RAM_OFFSET    0x1B0000
+#define PARM_SPML_IND_RAM_ADDR   (EXT_RAM_BASE_ADDR + PARM_SPML_IND_RAM_OFFSET)
+#define PARM_SPML_IND_SIZE          0x00040000
+
+#define PARM_SPML_DEP_RAM_OFFSET    0x1F0000
+#define PARM_SPML_DEP_RAM_ADDR   (EXT_RAM_BASE_ADDR + PARM_SPML_DEP_RAM_OFFSET)
+#define PARM_SPML_DEP_SIZE          0x00010000
+
+/* from msp/cboot/bootldr/loader/capri/loader.h: */
+#define CP_RUN_ADDR                 CP_RO_RAM_ADDR
+#define CP_IMG_SIZE                 0	/* image size is calculated */
+
+#define CP_BOOT_RUN_ADDR            MODEM_DTCM_ADDRESS
+#define CP_BOOT_IMAGE_SIZE          0x00008000 /*CP_BOOT_SIZE*/
+
+static T_CP_IMGS g_cp_imgs[] = {
+		/* name,	addr,	size */
+	{ "sysparm_ind.img", PARM_IND_RAM_ADDR, PARM_IND_SIZE },
+	{ "sysparm_dep.img", PARM_DEP_RAM_ADDR, PARM_DEP_SIZE },
+	{ "parm_spml_ind.img", PARM_SPML_IND_RAM_ADDR, PARM_SPML_IND_SIZE },
+	{ "parm_spml_dep.img", PARM_SPML_DEP_RAM_ADDR, PARM_SPML_DEP_SIZE },
+	{ "umts_cal.img", UMTS_CAL_RAM_ADDR, UMTS_CAL_SIZE },
+	{ "cp_image.img", CP_RUN_ADDR, CP_IMG_SIZE },
+	{ "dsp_pram.img", DSP_PRAM_RAM_ADDR, DSP_PRAM_SIZE },
+	{ "dsp_dram.img", DSP_DRAM_RAM_ADDR, DSP_DRAM_SIZE },
+	{ "cp_boot.img", CP_BOOT_RUN_ADDR, CP_BOOT_IMAGE_SIZE },
+	{ NULL, 0, 0 }
+};
+
+
+extern struct device *drvdata;  /* RPC device **FixMe** Hack for now */
+
 /* internal helper functions */
 static void DUMP_CP_assert_log(void);
 static void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump);
 
 static void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf,
-			    UInt32 inStrBufLen);
+		UInt32 inStrBufLen);
+static void ReloadCP(void);
+static int DownloadFirmware(uint16_t len, const uint8_t *p_data, uint32_t addr);
+static int32_t LoadFirmware(struct device *p_device, const char *p_name,
+			int addr, int expectedSize);
+static UInt32 IsCommsImageValid(const UInt8 *ram_addr);
+static UInt32 CheckCommsImageSignature(UInt8 *p);
 
 #ifdef CONFIG_HAS_WAKELOCK
 extern struct wake_lock ipc_wake_lock;
@@ -188,7 +262,7 @@ int HandleRestartCP(void *data)
 	}
 
 	/* reload CP */
-	/* **FIXME** add call to Lori's code here */
+	ReloadCP();
 
 	IPC_DEBUG(DBG_ERROR, "resetting CP\n");
 
@@ -327,6 +401,154 @@ void HandleCPResetStart(void)
 		sCPResetHandler(IPC_CPRESET_START);
 
 	IPC_DEBUG(DBG_ERROR, "DONE notifying cp reset IPC_CPRESET_START\n");
+}
+
+/**
+*   Loads the image into RAM.
+*
+*	@param	len		(in) The size of the image.
+*	@param	p_data		(in) Pointer to the image data.
+*	@param	addr		(in) The RAM address to load the image into.
+*
+******************************************************************************/
+static int DownloadFirmware(uint16_t len, const uint8_t *p_data, uint32_t addr)
+{
+	void __iomem *virtAddr;
+
+	printk(KERN_INFO "%s: Downloading %d bytes from %p to address %p\n",
+		__func__, len, (unsigned int)p_data, addr);
+
+	virtAddr = ioremap_nocache(addr, len);
+	if (NULL == virtAddr) {
+		printk(KERN_INFO "%s: ioremap_nocache failed; copying to addr %p\n",
+				__func__, addr);
+		memcpy(addr, p_data, len);
+	} else {
+		printk(KERN_INFO "%s: copying to virtual addr %p\n",
+				__func__, virtAddr);
+		memcpy(virtAddr, p_data, len);
+		iounmap(virtAddr);
+	}
+
+	return 0;
+}
+
+/**
+*   Loads the image with the given name into RAM.
+*
+*	@param	p_device	(in) The kernel device.
+*	@param	p_name		(in) The image name. This image file must be located
+*							in /vendor/firmware.
+*	@param	addr		(in) The RAM address to load the image into.
+*	@param	expectedSize (in) The expected size of the image file, or 0
+*                             if the size is to be calculated.
+*
+******************************************************************************/
+static int32_t LoadFirmware(struct device *p_device, const char *p_name,
+				int addr, int expectedSize)
+{
+	const struct firmware *fw;
+	int32_t err;
+
+	printk(KERN_ERR "%s calling request_firmware for %s, device=%p\n",
+			__func__, p_name, p_device);
+
+	/** call kernel to start firmware load **/
+	/* request_firmware(const struct firmware **fw,
+	*                  const char *name,
+	*                  struct device *device);
+	*/
+	err = request_firmware(&fw, p_name, p_device);
+	if (err) {
+		printk(KERN_ERR "%s: Firmware request failed (%d)\n",
+			__func__, err);
+		return err;
+	}
+
+	if (fw)
+		printk(KERN_ERR "%s fw->size=%d\n", __func__, fw->size);
+	else
+		printk(KERN_ERR "%s: fw = NULL!\n", __func__);
+
+	if (expectedSize == 0) {
+		/* This is the main CP image */
+		if (IsCommsImageValid(fw->data))
+			printk(KERN_ERR "%s verified CP image\n", __func__);
+		else
+			printk(KERN_ERR "%s failed to verify main image\n",
+				__func__);
+	}
+
+	/** download to chip **/
+	err = DownloadFirmware(fw->size, fw->data, addr);
+
+	/** free kernel structure */
+	release_firmware(fw);
+
+	return err;
+}
+
+/**
+*   Reloads the CP images.
+*
+******************************************************************************/
+static void ReloadCP(void)
+{
+	int ret;
+	int index;
+
+	for (index = 0; (g_cp_imgs[index].img_name != NULL); index++) {
+		printk(KERN_ERR "%s() LoadFirmware for %s @ %p, size %d\n",
+			__func__, g_cp_imgs[index].img_name,
+			g_cp_imgs[index].ram_addr,
+			g_cp_imgs[index].img_size);
+		ret = LoadFirmware(drvdata, g_cp_imgs[index].img_name,
+				g_cp_imgs[index].ram_addr,
+				g_cp_imgs[index].img_size);
+		printk(KERN_ERR "%s() LoadFirmware for %s returned %d\n",
+			__func__, g_cp_imgs[index].img_name, ret);
+	}
+}
+
+/**
+*   Verifies the comms image signature.
+*
+*	@param	ram_addr (in) The address to verify.
+******************************************************************************/
+static UInt32 IsCommsImageValid(const UInt8 *ram_addr)
+{
+	UInt32 msp_signature;
+	static UInt32 cp_loaded;
+
+	printk(KERN_ERR "%s(): addr=%p\r\n", __func__, ram_addr);
+
+	msp_signature = CheckCommsImageSignature(
+		(UInt8 *)ram_addr + RESERVED_HEADER);
+	cp_loaded = (msp_signature == MSP_SIGNATURE_VALUE);
+
+	printk(KERN_ERR "MSP Signature: =%x, loaded=%d\r\n",
+			msp_signature, cp_loaded);
+	return cp_loaded;
+}
+
+/**
+*   Verifies the comms image signature.
+*
+*	@param	p (in) The address to verify.
+******************************************************************************/
+static UInt32 CheckCommsImageSignature(UInt8 *p)
+{
+	UInt8 *ptr;
+	UInt32 msp_signature = 0;
+
+	printk(KERN_ERR "%s(): addr=%p\r\n", __func__, p);
+	ptr =  p + MSP_SIGNATURE_OFFSET;
+	msp_signature = (UInt32)(*ptr++);
+	msp_signature += ((UInt32)(*ptr++)) << 8;
+	msp_signature += ((UInt32)(*ptr++)) << 16;
+	msp_signature += ((UInt32)(*ptr)) << 24;
+
+	return msp_signature;
 }
 
 /*************************************************
