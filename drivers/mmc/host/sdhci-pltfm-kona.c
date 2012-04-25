@@ -116,6 +116,13 @@ static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev,
 static int sdhci_kona_anystate_to_off(struct sdio_dev *dev);
 static int sdhci_kona_off_to_enabled(struct sdio_dev *dev);
 
+static int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
+static int sdhci_pltfm_set_signalling(struct sdhci_host *host, int sig_vol);
+static int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host);
+static int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host);
+static int sdhci_pltfm_set(struct sdhci_host *host, int enable, int lazy);
+static int sdhci_pltfm_enable(struct sdhci_host *host);
+static int sdhci_pltfm_disable(struct sdhci_host *host, int lazy);
 /*
  * Get the base clock. Use central clock source for now. Not sure if different
  * clock speed to each dev is allowed
@@ -141,6 +148,9 @@ static unsigned int sdhci_get_timeout_clock(struct sdhci_host *host)
 static struct sdhci_ops sdhci_pltfm_ops = {
 	.get_max_clk = sdhci_get_max_clk,
 	.get_timeout_clock = sdhci_get_timeout_clock,
+	.clk_enable = sdhci_pltfm_clk_enable,
+	.set_signalling = sdhci_pltfm_set_signalling,
+	.platform_set = sdhci_pltfm_set,
 };
 
 static int bcm_kona_sd_reset(struct sdio_dev *dev)
@@ -359,7 +369,7 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
+static int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
 {
 #ifdef CONFIG_ARCH_SAMOA
 	return 0;
@@ -1118,7 +1128,18 @@ static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name)
 	}
 	return ret;
 }
-int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host)
+
+static int sdhci_pltfm_set_signalling(struct sdhci_host *host, int sig_vol)
+{
+	if (sig_vol == MMC_SIGNAL_VOLTAGE_330)
+		return sdhci_pltfm_set_3v3_signalling(host);
+	else if (sig_vol == MMC_SIGNAL_VOLTAGE_180)
+		return sdhci_pltfm_set_1v8_signalling(host);
+	else
+		return -ENOSYS;
+}
+
+static int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host)
 {
 	struct sdio_dev *dev = sdhci_priv(host);
 	int ret = 0;
@@ -1135,7 +1156,7 @@ int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host)
 	return ret;
 }
 
-int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host)
+static int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host)
 {
 	struct sdio_dev *dev = sdhci_priv(host);
 	int ret = 0;
@@ -1311,7 +1332,15 @@ static int sdhci_kona_anystate_to_off(struct sdio_dev *dev)
 	}
 }
 
-int sdhci_pltfm_enable(struct sdhci_host *host)
+static int sdhci_pltfm_set(struct sdhci_host *host, int enable, int lazy)
+{
+	if (enable)
+		return sdhci_pltfm_enable(host);
+	else
+		return sdhci_pltfm_disable(host, lazy);
+}
+
+static int sdhci_pltfm_enable(struct sdhci_host *host)
 {
 	struct sdio_dev *dev;
 
@@ -1337,7 +1366,7 @@ int sdhci_pltfm_enable(struct sdhci_host *host)
 	}
 }
 
-int sdhci_pltfm_disable(struct sdhci_host *host, int lazy)
+static int sdhci_pltfm_disable(struct sdhci_host *host, int lazy)
 {
 	struct sdio_dev *dev;
 

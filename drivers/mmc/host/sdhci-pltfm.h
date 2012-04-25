@@ -20,7 +20,6 @@
 #include <linux/mmc/sdhci.h>
 #include <mach/sdio_platform.h>
 
-int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
 int sdio_dev_is_initialized(enum sdio_devtype devtype);
 struct mmc_card *sdio_get_mmc_card(enum sdio_devtype devtype);
 struct sdio_wifi_gpio_cfg *sdio_get_wifi_gpio(enum sdio_devtype devtype);

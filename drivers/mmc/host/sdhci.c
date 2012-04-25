@@ -1275,7 +1275,8 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	WARN_ON(host->mrq != NULL);
 
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 #ifndef SDHCI_USE_LEDS_CLASS
 	sdhci_activate_led(host);
 #endif
@@ -1347,7 +1348,8 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		return;
 	}
 
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 	/*
 	 * Reset the chip on each power off.
 	 * Should clear out any weird states.
@@ -1511,7 +1513,8 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 	if(host->quirks & SDHCI_QUIRK_RESET_CMD_DATA_ON_IOS)
 		sdhci_reset(host, SDHCI_RESET_CMD | SDHCI_RESET_DATA);
 
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 }
@@ -1530,7 +1533,8 @@ static int sdhci_check_ro(struct sdhci_host *host)
 
 	spin_lock_irqsave(&host->lock, flags);
 
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 	if (host->flags & SDHCI_DEVICE_DEAD)
 		is_readonly = 0;
 	else if (host->ops->get_ro)
@@ -1539,7 +1543,8 @@ static int sdhci_check_ro(struct sdhci_host *host)
 		is_readonly = !(sdhci_readl(host, SDHCI_PRESENT_STATE)
 				& SDHCI_WRITE_PROTECT);
 
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	/* This quirk needs to be replaced by a callback-function later */
@@ -1585,7 +1590,8 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 
 	spin_lock_irqsave(&host->lock, flags);
 
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 	if (host->flags & SDHCI_DEVICE_DEAD)
 		goto out;
 
@@ -1601,7 +1607,8 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 out:
 	mmiowb();
 
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
@@ -1623,9 +1630,9 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 	if (host->version < SDHCI_SPEC_300)
 		return 0;
 
-   /* Enable platform clocks */
-   sdhci_pltfm_clk_enable(host, 1);
-
+	/* Enable platform clocks */
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 	/*
 	 * We first check whether the request is to set signalling voltage
 	 * to 3.3V. If so, we change the voltage to 3.3V and return quickly.
@@ -1633,7 +1640,9 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 	if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
 		/* Switch VDDO_SDC to 3.3V */
-		ret = sdhci_pltfm_set_3v3_signalling(host);
+		if (host->ops->set_signalling)
+			ret = host->ops->set_signalling(host,
+					MMC_SIGNAL_VOLTAGE_330);
 		if(ret == 0) {
 			/* Set 1.8V Signal Enable in the Host Control2 register to 0 */
 			ctrl &= ~SDHCI_CTRL_VDD_180;
@@ -1672,11 +1681,14 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 			 * kept as 10ms.
 			 */
 			usleep_range(10000, 10500);
-			sdhci_pltfm_clk_enable(host, 0);
+			if (host->ops->clk_enable)
+				host->ops->clk_enable(host, 0);
 
 			/* Switch VDDO_SDC to 1.8V needed with UHS cards */
-			ret = sdhci_pltfm_set_1v8_signalling(host);
-			if(ret == 0)	{
+			if (host->ops->set_signalling)
+				ret = host->ops->set_signalling(host,
+						MMC_SIGNAL_VOLTAGE_180);
+			if (ret == 0) {
 				/*
 				 * Enable 1.8V Signal Enable in the Host Control2
 				 * register
@@ -1740,15 +1752,17 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 		/* This disable corresponds to the reference which
 		 * we kept enabled in finish tasklet.
 		 */
-		sdhci_pltfm_clk_enable(host, 0);
+		if (host->ops->clk_enable)
+			host->ops->clk_enable(host, 0);
 	} else
 		/* No signal voltage switch required */
 		ret = 0;
 
 clk_dis_ret:
-    /* Disable platform clocks */
-    sdhci_pltfm_clk_enable(host, 0);
-    return ret;
+	/* Disable platform clocks */
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
+	return ret;
 }
 
 static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
@@ -1766,7 +1780,8 @@ static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	disable_irq(host->irq);
 	spin_lock(&host->lock);
 
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 
 	/*
@@ -1782,7 +1797,8 @@ static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		requires_tuning_nonuhs)
 		ctrl |= SDHCI_CTRL_EXEC_TUNING;
 	else {
-		sdhci_pltfm_clk_enable(host, 0);
+		if (host->ops->clk_enable)
+			host->ops->clk_enable(host, 0);
 		spin_unlock(&host->lock);
 		enable_irq(host->irq);
 		return 0;
@@ -1926,7 +1942,8 @@ out:
 		err = 0;
 
 	sdhci_clear_set_irqs(host, SDHCI_INT_DATA_AVAIL, ier);
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 	spin_unlock(&host->lock);
 	enable_irq(host->irq);
 
@@ -1947,7 +1964,8 @@ static void sdhci_enable_preset_value(struct mmc_host *mmc, bool enable)
 
 	spin_lock_irqsave(&host->lock, flags);
 
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 
 	/*
@@ -1964,20 +1982,27 @@ static void sdhci_enable_preset_value(struct mmc_host *mmc, bool enable)
 		host->flags &= ~SDHCI_PV_ENABLED;
 	}
 
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
 static int sdhci_enable(struct mmc_host *mmc)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
-	return sdhci_pltfm_enable(host);
+	if (host->ops->platform_set)
+		return host->ops->platform_set(host, 1, 0);
+	else
+		return -ENODEV;
 }
 
 static int sdhci_disable(struct mmc_host *mmc, int lazy)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
-	return sdhci_pltfm_disable(host, lazy);
+	if (host->ops->platform_set)
+		return host->ops->platform_set(host, 0, lazy);
+	else
+		return -ENODEV;
 }
 
 static const struct mmc_host_ops sdhci_ops = {
@@ -2046,7 +2071,8 @@ static void sdhci_tasklet_card(unsigned long param)
 	ctrl &= ~SDHCI_CTRL_VDD_180;
 	sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);
 
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	mmc_detect_change(host->mmc, msecs_to_jiffies(200));
@@ -2124,8 +2150,8 @@ static void sdhci_tasklet_finish(unsigned long param)
 			goto end;
 	}
 
-	sdhci_pltfm_clk_enable(host, 0);
-
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 end:
 	spin_unlock_irqrestore(&host->lock, flags);
 
@@ -2428,7 +2454,8 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 
 	spin_lock(&host->lock);
 
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 	intmask = sdhci_readl(host, SDHCI_INT_STATUS);
 
 	if (!intmask || intmask == 0xffffffff) {
@@ -2488,7 +2515,8 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 
 	mmiowb();
 out:
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 	spin_unlock(&host->lock);
 
 	/*
@@ -2513,7 +2541,8 @@ int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 	int ret = 0;
 	struct mmc_host *mmc = host->mmc;
 
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 	sdhci_disable_card_detection(host);
 
 	/* Disable tuning since we are suspending */
@@ -2544,7 +2573,8 @@ int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 		ret = regulator_disable(host->vmmc);
 
 suspend_ret:
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 	return ret;
 }
 
@@ -2562,7 +2592,8 @@ int sdhci_resume_host(struct sdhci_host *host)
 
 	}
 
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 	if (host->flags & (SDHCI_USE_SDMA | SDHCI_USE_ADMA)) {
 		if (host->ops->enable_dma)
 			host->ops->enable_dma(host);
@@ -2591,7 +2622,8 @@ int sdhci_resume_host(struct sdhci_host *host)
 		host->flags |= SDHCI_NEEDS_RETUNING;
 
 resume_ret:
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 retval:
 	return ret;
 }
@@ -2601,11 +2633,14 @@ EXPORT_SYMBOL_GPL(sdhci_resume_host);
 void sdhci_enable_irq_wakeups(struct sdhci_host *host)
 {
 	u8 val;
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
+
 	val = sdhci_readb(host, SDHCI_WAKE_UP_CONTROL);
 	val |= SDHCI_WAKE_ON_INT;
 	sdhci_writeb(host, val, SDHCI_WAKE_UP_CONTROL);
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 }
 
 EXPORT_SYMBOL_GPL(sdhci_enable_irq_wakeups);
@@ -2613,11 +2648,13 @@ EXPORT_SYMBOL_GPL(sdhci_enable_irq_wakeups);
 void sdhci_disable_irq_wakeups(struct sdhci_host *host)
 {
 	u8 val;
-	sdhci_pltfm_clk_enable(host, 1);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
 	val = sdhci_readb(host, SDHCI_WAKE_UP_CONTROL);
 	val &= ~SDHCI_WAKE_ON_INT;
 	sdhci_writeb(host, val, SDHCI_WAKE_UP_CONTROL);
-	sdhci_pltfm_clk_enable(host, 0);
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
 }
 
 EXPORT_SYMBOL_GPL(sdhci_disable_irq_wakeups);
