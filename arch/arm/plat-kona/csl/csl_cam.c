@@ -1582,6 +1582,7 @@ Int32 csl_cam_set_dbl_buf(CSL_CAM_HANDLE cslCamH,
 	    || (cslBuffers.data1Buff == NULL)) {
 //       CSLCAM_DBG(CSLCAM_DBG_ID,  "[csl_cam_set_dbl_buf][Error] : ERROR! Buffer is NULL \n");    
 		success |= CSL_CAM_BAD_PARAM;
+		return success;
 	}
 // Set Image buffer 0
 	DBG_OUT(CSLCAM_DBG
