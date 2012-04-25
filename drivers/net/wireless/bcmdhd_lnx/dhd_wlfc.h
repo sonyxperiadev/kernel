@@ -30,7 +30,7 @@
 #define WLFC_HANGER_ITEM_STATE_FREE		1
 #define WLFC_HANGER_ITEM_STATE_INUSE	2
 
-#define WLFC_PKTID_HSLOT_MASK			0xffff /* allow 16 bits only */
+#define WLFC_PKTID_HSLOT_MASK			0xffff	/* allow 16 bits only */
 #define WLFC_PKTID_HSLOT_SHIFT			8
 
 /* x -> TXSTATUS TAG to/from firmware */
@@ -66,12 +66,12 @@ typedef enum ewlfc_mac_entry_action {
 } ewlfc_mac_entry_action_t;
 
 typedef struct wlfc_hanger_item {
-	uint8	state;
-	uint8	pad[3];
-	uint32	identifier;
-	void*	pkt;
+	uint8 state;
+	uint8 pad[3];
+	uint32 identifier;
+	void *pkt;
 #ifdef PROP_TXSTATUS_DEBUG
-	uint32	push_time;
+	uint32 push_time;
 #endif
 } wlfc_hanger_item_t;
 
@@ -91,7 +91,7 @@ typedef struct wlfc_hanger {
 #define WLFC_STATE_OPEN		1
 #define WLFC_STATE_CLOSE	2
 
-#define WLFC_PSQ_PREC_COUNT		((AC_COUNT + 1) * 2) /* 2 for each AC traffic and bc/mc */
+#define WLFC_PSQ_PREC_COUNT		((AC_COUNT + 1) * 2)	/* 2 for each AC traffic and bc/mc */
 #define WLFC_PSQ_LEN			64
 #define WLFC_SENDQ_LEN			256
 
@@ -104,17 +104,17 @@ typedef struct wlfc_mac_descriptor {
 	uint8 interface_id;
 	uint8 iftype;
 	uint8 state;
-	uint8 ac_bitmap; /* for APSD */
+	uint8 ac_bitmap;	/* for APSD */
 	uint8 requested_credit;
 	uint8 requested_packet;
 	uint8 ea[ETHER_ADDR_LEN];
 	/*
-	maintain (MAC,AC) based seq count for
-	packets going to the device. As well as bc/mc.
-	*/
+	   maintain (MAC,AC) based seq count for
+	   packets going to the device. As well as bc/mc.
+	 */
 	uint8 seq[AC_COUNT + 1];
 	uint8 generation;
-	struct pktq	psq;
+	struct pktq psq;
 	/* The AC pending bitmap that was reported to the fw at last change */
 	uint8 traffic_lastreported_bmp;
 	/* The new AC pending bitmap */
@@ -137,50 +137,50 @@ typedef struct wlfc_mac_descriptor {
 #define WLFC_SEQCOUNT(entry, prec) entry->seq[(prec)]
 
 typedef struct athost_wl_stat_counters {
-	uint32	pktin;
-	uint32	pkt2bus;
-	uint32	pktdropped;
-	uint32	tlv_parse_failed;
-	uint32	rollback;
-	uint32	rollback_failed;
-	uint32	sendq_full_error;
-	uint32	delayq_full_error;
-	uint32	credit_request_failed;
-	uint32	packet_request_failed;
-	uint32	mac_update_failed;
-	uint32	psmode_update_failed;
-	uint32	interface_update_failed;
-	uint32	wlfc_header_only_pkt;
-	uint32	txstatus_in;
-	uint32	d11_suppress;
-	uint32	wl_suppress;
-	uint32	bad_suppress;
-	uint32	pkt_freed;
-	uint32	pkt_free_err;
-	uint32	psq_wlsup_retx;
-	uint32	psq_wlsup_enq;
-	uint32	psq_d11sup_retx;
-	uint32	psq_d11sup_enq;
-	uint32	psq_hostq_retx;
-	uint32	psq_hostq_enq;
-	uint32	mac_handle_notfound;
-	uint32	wlc_tossed_pkts;
-	uint32	dhd_hdrpulls;
-	uint32	generic_error;
+	uint32 pktin;
+	uint32 pkt2bus;
+	uint32 pktdropped;
+	uint32 tlv_parse_failed;
+	uint32 rollback;
+	uint32 rollback_failed;
+	uint32 sendq_full_error;
+	uint32 delayq_full_error;
+	uint32 credit_request_failed;
+	uint32 packet_request_failed;
+	uint32 mac_update_failed;
+	uint32 psmode_update_failed;
+	uint32 interface_update_failed;
+	uint32 wlfc_header_only_pkt;
+	uint32 txstatus_in;
+	uint32 d11_suppress;
+	uint32 wl_suppress;
+	uint32 bad_suppress;
+	uint32 pkt_freed;
+	uint32 pkt_free_err;
+	uint32 psq_wlsup_retx;
+	uint32 psq_wlsup_enq;
+	uint32 psq_d11sup_retx;
+	uint32 psq_d11sup_enq;
+	uint32 psq_hostq_retx;
+	uint32 psq_hostq_enq;
+	uint32 mac_handle_notfound;
+	uint32 wlc_tossed_pkts;
+	uint32 dhd_hdrpulls;
+	uint32 generic_error;
 	/* an extra one for bc/mc traffic */
-	uint32	sendq_pkts[AC_COUNT + 1];
+	uint32 sendq_pkts[AC_COUNT + 1];
 #ifdef PROP_TXSTATUS_DEBUG
 	/* all pkt2bus -> txstatus latency accumulated */
-	uint32	latency_sample_count;
-	uint32	total_status_latency;
-	uint32	latency_most_recent;
-	int		idx_delta;
-	uint32	deltas[10];
-	uint32	fifo_credits_sent[6];
-	uint32	fifo_credits_back[6];
-	uint32	dropped_qfull[6];
-	uint32	signal_only_pkts_sent;
-	uint32	signal_only_pkts_freed;
+	uint32 latency_sample_count;
+	uint32 total_status_latency;
+	uint32 latency_most_recent;
+	int idx_delta;
+	uint32 deltas[10];
+	uint32 fifo_credits_sent[6];
+	uint32 fifo_credits_back[6];
+	uint32 dropped_qfull[6];
+	uint32 signal_only_pkts_sent;
+	uint32 signal_only_pkts_freed;
 #endif
 } athost_wl_stat_counters_t;
 
@@ -211,64 +211,65 @@ typedef struct athost_wl_stat_counters {
 #define WLFC_AC_BE_TRAFFIC_ONLY 0xD
 
 typedef struct athost_wl_status_info {
-	uint8	last_seqid_to_wlc;
+	uint8 last_seqid_to_wlc;
 
 	/* OSL handle */
-	osl_t*	osh;
+	osl_t *osh;
 	/* dhd pub */
-	void*	dhdp;
+	void *dhdp;
 
 	/* stats */
 	athost_wl_stat_counters_t stats;
 
 	/* the additional ones are for bc/mc and ATIM FIFO */
-	int		FIFO_credit[AC_COUNT + 2];
+	int FIFO_credit[AC_COUNT + 2];
 
 	/* Credit borrow counts for each FIFO from each of the other FIFOs */
-	int		credits_borrowed[AC_COUNT + 2][AC_COUNT + 2];
+	int credits_borrowed[AC_COUNT + 2][AC_COUNT + 2];
 
-	struct  pktq SENDQ;
+	struct pktq SENDQ;
 
 	/* packet hanger and MAC->handle lookup table */
-	void*	hanger;
+	void *hanger;
 	struct {
 		/* table for individual nodes */
-		wlfc_mac_descriptor_t	nodes[WLFC_MAC_DESC_TABLE_SIZE];
+		wlfc_mac_descriptor_t nodes[WLFC_MAC_DESC_TABLE_SIZE];
 		/* table for interfaces */
-		wlfc_mac_descriptor_t	interfaces[WLFC_MAX_IFNUM];
+		wlfc_mac_descriptor_t interfaces[WLFC_MAX_IFNUM];
 		/* OS may send packets to unknown (unassociated) destinations */
 		/* A place holder for bc/mc and packets to unknown destinations */
-		wlfc_mac_descriptor_t	other;
+		wlfc_mac_descriptor_t other;
 	} destination_entries;
 	/* token position for different priority packets */
-	uint8   token_pos[AC_COUNT+1];
+	uint8 token_pos[AC_COUNT + 1];
 	/* ON/OFF state for flow control to the host network interface */
-	uint8	hostif_flow_state[WLFC_MAX_IFNUM];
-	uint8	host_ifidx;
+	uint8 hostif_flow_state[WLFC_MAX_IFNUM];
+	uint8 host_ifidx;
 	/* to flow control an OS interface */
-	uint8	toggle_host_if;
+	uint8 toggle_host_if;
 
 	/*
-	Mode in which the dhd flow control shall operate. Must be set before
-	traffic starts to the device.
-	0 - Do not do any proptxtstatus flow control
-	1 - Use implied credit from a packet status
-	2 - Use explicit credit
-	*/
-	uint8	proptxstatus_mode;
+	   Mode in which the dhd flow control shall operate. Must be set before
+	   traffic starts to the device.
+	   0 - Do not do any proptxtstatus flow control
+	   1 - Use implied credit from a packet status
+	   2 - Use explicit credit
+	 */
+	uint8 proptxstatus_mode;
 
 	/* To borrow credits */
-	uint8   allow_credit_borrow;
+	uint8 allow_credit_borrow;
 
 	/* Timestamp to compute how long to defer borrowing for */
-	uint32  borrow_defer_timestamp;
+	uint32 borrow_defer_timestamp;
 
 } athost_wl_status_info_t;
 
 int dhd_wlfc_enable(dhd_pub_t *dhd);
 int dhd_wlfc_interface_event(struct dhd_info *,
-	ewlfc_mac_entry_action_t action, uint8 ifid, uint8 iftype, uint8* ea);
-int dhd_wlfc_FIFOcreditmap_event(struct dhd_info *dhd, uint8* event_data);
+			     ewlfc_mac_entry_action_t action, uint8 ifid,
+			     uint8 iftype, uint8 *ea);
+int dhd_wlfc_FIFOcreditmap_event(struct dhd_info *dhd, uint8 *event_data);
 int dhd_wlfc_event(struct dhd_info *dhd);
 int dhd_os_wlfc_block(dhd_pub_t *pub);
 int dhd_os_wlfc_unblock(dhd_pub_t *pub);

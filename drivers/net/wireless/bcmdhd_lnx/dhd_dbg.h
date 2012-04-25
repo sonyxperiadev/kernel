@@ -34,7 +34,7 @@
 								printf args;} while (0)
 #else
 #define DHD_ERROR(args)		do {if (dhd_msg_level & DHD_ERROR_VAL) printf args;} while (0)
-#endif 
+#endif
 #define DHD_TRACE(args)		do {if (dhd_msg_level & DHD_TRACE_VAL) printf args;} while (0)
 #define DHD_INFO(args)		do {if (dhd_msg_level & DHD_INFO_VAL) printf args;} while (0)
 #define DHD_DATA(args)		do {if (dhd_msg_level & DHD_DATA_VAL) printf args;} while (0)
@@ -70,7 +70,7 @@
 #define DHD_ERROR(args)    	do {if (net_ratelimit()) printf args;} while (0)
 #else
 #define DHD_ERROR(args)
-#endif 
+#endif
 #define DHD_TRACE(args)
 #define DHD_INFO(args)
 #define DHD_DATA(args)
@@ -99,7 +99,7 @@
 #define DHD_BTA_ON()		0
 #define DHD_ISCAN_ON()		0
 #define DHD_ARPOE_ON()		0
-#endif 
+#endif
 
 #define DHD_LOG(args)
 

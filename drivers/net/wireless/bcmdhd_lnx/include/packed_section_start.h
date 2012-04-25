@@ -37,25 +37,18 @@
  * $Id: packed_section_start.h 277737 2011-08-16 17:54:59Z $
  */
 
-
-
-
 #ifdef BWL_PACKED_SECTION
-	#error "BWL_PACKED_SECTION is already defined!"
+#error "BWL_PACKED_SECTION is already defined!"
 #else
-	#define BWL_PACKED_SECTION
+#define BWL_PACKED_SECTION
 #endif
 
-
-
-
-
 #if defined(__GNUC__)
-	#define	BWL_PRE_PACKED_STRUCT
-	#define	BWL_POST_PACKED_STRUCT	__attribute__ ((packed))
+#define	BWL_PRE_PACKED_STRUCT
+#define	BWL_POST_PACKED_STRUCT	__attribute__ ((packed))
 #elif defined(__CC_ARM)
-	#define	BWL_PRE_PACKED_STRUCT	__packed
-	#define	BWL_POST_PACKED_STRUCT
+#define	BWL_PRE_PACKED_STRUCT	__packed
+#define	BWL_POST_PACKED_STRUCT
 #else
-	#error "Unknown compiler!"
+#error "Unknown compiler!"
 #endif

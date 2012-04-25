@@ -25,25 +25,19 @@
  * $Id: wl_dbg.h,v 1.115.6.3 2010-12-15 21:42:23 $
  */
 
-
-
 #ifndef _wl_dbg_h_
 #define _wl_dbg_h_
-
 
 extern uint32 wl_msg_level;
 extern uint32 wl_msg_level2;
 
 #define WL_PRINT(args)      printf args
 
-
-
 #define WL_NONE(args)
 
 #define WL_ERROR(args)
 #define WL_TRACE(args)
 
-
 extern uint32 wl_msg_level;
 extern uint32 wl_msg_level2;
-#endif 
+#endif

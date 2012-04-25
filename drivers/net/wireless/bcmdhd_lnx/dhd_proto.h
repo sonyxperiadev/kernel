@@ -34,7 +34,7 @@
 #include <wlioctl.h>
 
 #ifndef IOCTL_RESP_TIMEOUT
-#define IOCTL_RESP_TIMEOUT  20000 /* In milli second */
+#define IOCTL_RESP_TIMEOUT  20000	/* In milli second */
 #endif
 
 /*
@@ -64,14 +64,16 @@ extern void dhd_prot_hdrpush(dhd_pub_t *, int ifidx, void *txp);
 extern int dhd_prot_hdrpull(dhd_pub_t *, int *ifidx, void *rxp);
 
 /* Use protocol to issue ioctl to dongle */
-extern int dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void * buf, int len);
+extern int dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc,
+			  void *buf, int len);
 
 /* Handles a protocol control response asynchronously */
 extern int dhd_prot_ctl_complete(dhd_pub_t *dhd);
 
 /* Check for and handle local prot-specific iovar commands */
 extern int dhd_prot_iovar_op(dhd_pub_t *dhdp, const char *name,
-                             void *params, int plen, void *arg, int len, bool set);
+			     void *params, int plen, void *arg, int len,
+			     bool set);
 
 /* Add prot dump output to a buffer */
 extern void dhd_prot_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf);
@@ -79,13 +81,15 @@ extern void dhd_prot_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf);
 /* Update local copy of dongle statistics */
 extern void dhd_prot_dstats(dhd_pub_t *dhdp);
 
-extern int dhd_ioctl(dhd_pub_t * dhd_pub, dhd_ioctl_t *ioc, void * buf, uint buflen);
+extern int dhd_ioctl(dhd_pub_t *dhd_pub, dhd_ioctl_t * ioc, void *buf,
+		     uint buflen);
 
 extern int dhd_preinit_ioctls(dhd_pub_t *dhd);
 
 #ifdef PROP_TXSTATUS
-extern int dhd_wlfc_enque_sendq(void* state, int prec, void* p);
-extern int dhd_wlfc_commit_packets(void* state, f_commitpkt_t fcommit, void* commit_ctx);
+extern int dhd_wlfc_enque_sendq(void *state, int prec, void *p);
+extern int dhd_wlfc_commit_packets(void *state, f_commitpkt_t fcommit,
+				   void *commit_ctx);
 extern void dhd_wlfc_cleanup(dhd_pub_t *dhd);
 #endif /* PROP_TXSTATUS */
 

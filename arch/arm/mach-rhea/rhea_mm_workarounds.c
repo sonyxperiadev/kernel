@@ -46,6 +46,7 @@
 
 static void *acp_workaround_src_buffer, *acp_workaround_dest_buffer;
 static u32 acp_workaround_src_buffer_phys, acp_workaround_dest_buffer_phys;
+static struct clk *ref_8ph_en_pll1_clk;
 
 #define MM_WORKAROUND_DEBUG_ENABLE	0
 
@@ -450,21 +451,17 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 			       unsigned long event, void *data)
 {
 	struct pi_notify_param *p = data;
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-	static struct clk *clk;
-	if (clk == NULL)
-		clk = clk_get(NULL, REF_8PHASE_EN_PLL1_CLK_NAME_STR);
-#endif
-	BUG_ON(p->pi_id != PI_MGR_PI_ID_MM);
 
+	BUG_ON(p->pi_id != PI_MGR_PI_ID_MM);
 	if (event == PI_PRECHANGE) {
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
-			if (JIRA_WA_ENABLED(2490)) {
-				if (IS_ACTIVE_POLICY(p->new_value) &&
-				    !IS_ACTIVE_POLICY(p->old_value)) {
-					clk_enable(clk);
-				}
+		if (JIRA_WA_ENABLED(2490)) {
+			if (IS_ACTIVE_POLICY(p->new_value) &&
+			    !IS_ACTIVE_POLICY(p->old_value)) {
+				if (ref_8ph_en_pll1_clk)
+					__clk_enable(ref_8ph_en_pll1_clk);
 			}
+		}
 #endif
 #ifdef CONFIG_RHEA_WA_HWJIRA_2348
 			if (JIRA_WA_ENABLED(2348)) {
@@ -527,7 +524,8 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 		if (JIRA_WA_ENABLED(2490)) {
 			if (!IS_ACTIVE_POLICY(p->new_value) &&
 			    IS_ACTIVE_POLICY(p->old_value)) {
-				clk_disable(clk);
+				if (ref_8ph_en_pll1_clk)
+					__clk_disable(ref_8ph_en_pll1_clk);
 			}
 		}
 #endif
@@ -590,6 +588,8 @@ int __init mm_workarounds_init(void)
 	writel(0x0, KONA_AXITRACE17_VA + 0xC);
 	writel(0x2, KONA_AXITRACE17_VA + 0xC);
 #endif /*CONFIG_RHEA_WA_HWJIRA_2489 */
+	ref_8ph_en_pll1_clk = clk_get(NULL, REF_8PHASE_EN_PLL1_CLK_NAME_STR);
+	BUG_ON(IS_ERR_OR_NULL(ref_8ph_en_pll1_clk));
 
 	return 0;
 }

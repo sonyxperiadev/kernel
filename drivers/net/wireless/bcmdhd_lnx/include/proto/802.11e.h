@@ -34,15 +34,14 @@
 /* This marks the start of a packed structure section. */
 #include <packed_section_start.h>
 
-
 /* WME Traffic Specification (TSPEC) element */
-#define WME_TSPEC_HDR_LEN           2           /* WME TSPEC header length */
-#define WME_TSPEC_BODY_OFF          2           /* WME TSPEC body offset */
+#define WME_TSPEC_HDR_LEN           2	/* WME TSPEC header length */
+#define WME_TSPEC_BODY_OFF          2	/* WME TSPEC body offset */
 
-#define WME_CATEGORY_CODE_OFFSET	0		/* WME Category code offset */
-#define WME_ACTION_CODE_OFFSET		1		/* WME Action code offset */
-#define WME_TOKEN_CODE_OFFSET		2		/* WME Token code offset */
-#define WME_STATUS_CODE_OFFSET		3		/* WME Status code offset */
+#define WME_CATEGORY_CODE_OFFSET	0	/* WME Category code offset */
+#define WME_ACTION_CODE_OFFSET		1	/* WME Action code offset */
+#define WME_TOKEN_CODE_OFFSET		2	/* WME Token code offset */
+#define WME_STATUS_CODE_OFFSET		3	/* WME Status code offset */
 
 BWL_PRE_PACKED_STRUCT struct tsinfo {
 	uint8 octets[3];
@@ -53,38 +52,38 @@ typedef struct tsinfo tsinfo_t;
 /* 802.11e TSPEC IE */
 typedef BWL_PRE_PACKED_STRUCT struct tspec {
 	uint8 oui[DOT11_OUI_LEN];	/* WME_OUI */
-	uint8 type;					/* WME_TYPE */
-	uint8 subtype;				/* WME_SUBTYPE_TSPEC */
-	uint8 version;				/* WME_VERSION */
-	tsinfo_t tsinfo;			/* TS Info bit field */
-	uint16 nom_msdu_size;		/* (Nominal or fixed) MSDU Size (bytes) */
-	uint16 max_msdu_size;		/* Maximum MSDU Size (bytes) */
+	uint8 type;		/* WME_TYPE */
+	uint8 subtype;		/* WME_SUBTYPE_TSPEC */
+	uint8 version;		/* WME_VERSION */
+	tsinfo_t tsinfo;	/* TS Info bit field */
+	uint16 nom_msdu_size;	/* (Nominal or fixed) MSDU Size (bytes) */
+	uint16 max_msdu_size;	/* Maximum MSDU Size (bytes) */
 	uint32 min_srv_interval;	/* Minimum Service Interval (us) */
 	uint32 max_srv_interval;	/* Maximum Service Interval (us) */
 	uint32 inactivity_interval;	/* Inactivity Interval (us) */
-	uint32 suspension_interval; /* Suspension Interval (us) */
-	uint32 srv_start_time;		/* Service Start Time (us) */
-	uint32 min_data_rate;		/* Minimum Data Rate (bps) */
-	uint32 mean_data_rate;		/* Mean Data Rate (bps) */
-	uint32 peak_data_rate;		/* Peak Data Rate (bps) */
-	uint32 max_burst_size;		/* Maximum Burst Size (bytes) */
-	uint32 delay_bound;			/* Delay Bound (us) */
-	uint32 min_phy_rate;		/* Minimum PHY Rate (bps) */
-	uint16 surplus_bw;			/* Surplus Bandwidth Allowance (range 1.0-8.0) */
-	uint16 medium_time;			/* Medium Time (32 us/s periods) */
+	uint32 suspension_interval;	/* Suspension Interval (us) */
+	uint32 srv_start_time;	/* Service Start Time (us) */
+	uint32 min_data_rate;	/* Minimum Data Rate (bps) */
+	uint32 mean_data_rate;	/* Mean Data Rate (bps) */
+	uint32 peak_data_rate;	/* Peak Data Rate (bps) */
+	uint32 max_burst_size;	/* Maximum Burst Size (bytes) */
+	uint32 delay_bound;	/* Delay Bound (us) */
+	uint32 min_phy_rate;	/* Minimum PHY Rate (bps) */
+	uint16 surplus_bw;	/* Surplus Bandwidth Allowance (range 1.0-8.0) */
+	uint16 medium_time;	/* Medium Time (32 us/s periods) */
 } BWL_POST_PACKED_STRUCT tspec_t;
 
-#define WME_TSPEC_LEN	(sizeof(tspec_t))		/* not including 2-bytes of header */
+#define WME_TSPEC_LEN	(sizeof(tspec_t))	/* not including 2-bytes of header */
 
 /* ts_info */
 /* 802.1D priority is duplicated - bits 13-11 AND bits 3-1 */
 #define TS_INFO_TID_SHIFT		1	/* TS info. TID shift */
 #define TS_INFO_TID_MASK		(0xf << TS_INFO_TID_SHIFT)	/* TS info. TID mask */
 #define TS_INFO_CONTENTION_SHIFT	7	/* TS info. contention shift */
-#define TS_INFO_CONTENTION_MASK	(0x1 << TS_INFO_CONTENTION_SHIFT) /* TS info. contention mask */
+#define TS_INFO_CONTENTION_MASK	(0x1 << TS_INFO_CONTENTION_SHIFT)	/* TS info. contention mask */
 #define TS_INFO_DIRECTION_SHIFT	5	/* TS info. direction shift */
-#define TS_INFO_DIRECTION_MASK	(0x3 << TS_INFO_DIRECTION_SHIFT) /* TS info. direction mask */
-#define TS_INFO_PSB_SHIFT		2		/* TS info. PSB bit Shift */
+#define TS_INFO_DIRECTION_MASK	(0x3 << TS_INFO_DIRECTION_SHIFT)	/* TS info. direction mask */
+#define TS_INFO_PSB_SHIFT		2	/* TS info. PSB bit Shift */
 #define TS_INFO_PSB_MASK		(1 << TS_INFO_PSB_SHIFT)	/* TS info. PSB mask */
 #define TS_INFO_UPLINK			(0 << TS_INFO_DIRECTION_SHIFT)	/* TS info. uplink */
 #define TS_INFO_DOWNLINK		(1 << TS_INFO_DIRECTION_SHIFT)	/* TS info. downlink */
@@ -123,7 +122,6 @@ typedef BWL_PRE_PACKED_STRUCT struct tspec {
 #define DOT11E_STATUS_END_TS				37	/* END TS */
 #define DOT11E_STATUS_UNKNOWN_TS			38	/* UNKNOWN TS */
 #define DOT11E_STATUS_QSTA_REQ_TIMEOUT		39	/* STA ADDTS request timeout */
-
 
 /* This marks the end of a packed structure section. */
 #include <packed_section_end.h>

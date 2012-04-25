@@ -30,6 +30,8 @@
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
+#include <linux/mmc/sd.h>
+
 #define CONFIG_MMC_ARASAN_HOST_FIX
 
 #include "sdhci.h"
@@ -1665,6 +1667,13 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 		present_state = sdhci_readl(host, SDHCI_PRESENT_STATE);
 		if (!((present_state & SDHCI_DATA_LVL_MASK) >>
 		       SDHCI_DATA_LVL_SHIFT)) {
+			/* This disable corresponds to the reference which
+			 * we kept enabled in finish tasklet. The delay is
+			 * kept as 10ms.
+			 */
+			usleep_range(10000, 10500);
+			sdhci_pltfm_clk_enable(host, 0);
+
 			/* Switch VDDO_SDC to 1.8V needed with UHS cards */
 			ret = sdhci_pltfm_set_1v8_signalling(host);
 			if(ret == 0)	{
@@ -1728,6 +1737,10 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 		printk(KERN_INFO DRIVER_NAME ": Switching to 1.8V signalling "
 			"voltage failed, retrying with S18R set to 0\n");
 		ret = -EAGAIN;
+		/* This disable corresponds to the reference which
+		 * we kept enabled in finish tasklet.
+		 */
+		sdhci_pltfm_clk_enable(host, 0);
 	} else
 		/* No signal voltage switch required */
 		ret = 0;
@@ -1989,6 +2002,7 @@ static void sdhci_tasklet_card(unsigned long param)
 {
 	struct sdhci_host *host;
 	unsigned long flags;
+	u16 ctrl;
 
 	host = (struct sdhci_host*)param;
 
@@ -2021,6 +2035,16 @@ static void sdhci_tasklet_card(unsigned long param)
 		pr_info("SD Card Inserted\n");
 #endif
 	}
+
+	/* Clear EN1P8V of Host Control register 2.
+	 * It is observed that 1.8V signalling fails
+	 * sometimes without this. We make sure
+	 * that SD card is not driven by 1.8V I/O before
+	 * its init
+	 */
+	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
+	ctrl &= ~SDHCI_CTRL_VDD_180;
+	sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);
 
 	sdhci_pltfm_clk_enable(host, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -2085,7 +2109,24 @@ static void sdhci_tasklet_finish(unsigned long param)
 #endif
 
 	mmiowb();
+
+	/* It is observed that even after getting response for
+	 * CMD11, card requires clock for some duration.
+	 * Otherwise the signal switching fails in the next
+	 * step. This can be removed once clocks are handled
+	 * in Dynamic Power Management.
+	 * The clock which is kept ON here will be disabled in
+	 * the 1.8V switching path.
+	 */
+	if (mrq->cmd) {
+		if ((mrq->cmd->opcode == SD_SWITCH_VOLTAGE)
+				&& (!(mrq->cmd->error)))
+			goto end;
+	}
+
 	sdhci_pltfm_clk_enable(host, 0);
+
+end:
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	mmc_request_done(host->mmc, mrq);

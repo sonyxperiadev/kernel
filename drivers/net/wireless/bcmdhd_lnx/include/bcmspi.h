@@ -33,7 +33,8 @@ extern bool spi_controller_highspeed_mode(sdioh_info_t *sd, bool hsmode);
 extern bool spi_check_client_intr(sdioh_info_t *sd, int *is_dev_intr);
 extern bool spi_hw_attach(sdioh_info_t *sd);
 extern bool spi_hw_detach(sdioh_info_t *sd);
-extern void spi_sendrecv(sdioh_info_t *sd, uint8 *msg_out, uint8 *msg_in, int msglen);
+extern void spi_sendrecv(sdioh_info_t *sd, uint8 *msg_out, uint8 *msg_in,
+			 int msglen);
 extern void spi_spinbits(sdioh_info_t *sd);
 extern void spi_waitbits(sdioh_info_t *sd, bool yield);
 

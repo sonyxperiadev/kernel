@@ -1,6 +1,7 @@
-/*
- * sdhci-pltfm-kona.c Support for SDHCI KONA platform devices
- * Copyright (c) 2010 - 2012 Broadcom Corporation
+/* sdhci-pltfm-kona.c Support for SDHCI KONA platform devices
+ *
+ * Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
+ * Copyright (C) 2010-2012 Broadcom Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+/* Portions of this software are Copyright 2012 Broadcom Corporation */
 
 /*
  * Supports:
@@ -455,8 +458,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	/* Some PCI-based MFD need the parent here */
-	if (pdev->dev.parent != &platform_bus)
+	if (pdev->dev.parent)
 		host =
 		    sdhci_alloc_host(pdev->dev.parent, sizeof(struct sdio_dev));
 	else
@@ -952,8 +954,9 @@ static void __exit sdhci_drv_exit(void)
 fs_initcall(sdhci_drv_init);
 module_exit(sdhci_drv_exit);
 
-MODULE_DESCRIPTION("Secure Digital Host Controller Interface platform driver");
-MODULE_AUTHOR("Mocean Laboratories <info@mocean-labs.com>");
+MODULE_DESCRIPTION("SDHCI platform driver for KONA architecture");
+MODULE_AUTHOR("Pierre Ossman <pierre@ossman.eu>");
+MODULE_AUTHOR("Broadcom Corporation");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:sdhci");
 

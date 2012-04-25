@@ -99,7 +99,6 @@ static cUInt32 chal_trace_axitrace_get_baseaddr(CHAL_HANDLE handle,
 */
 cBool chal_trace_init(CHAL_TRACE_DEV_t *pTraceDev_baseaddr)
 {
-	chal_dprintf(CDBG_INFO, "chal_trace_init\n");
 
 	/* All register config values taken from T32 script */
 

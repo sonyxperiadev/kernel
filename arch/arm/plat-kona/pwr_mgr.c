@@ -50,6 +50,12 @@
 #define PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP 	PI_MGR_DFS_MIN_VALUE
 #endif
 
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifndef PWRMGR_SW_SEQ_PC_PIN
+#define PWRMGR_SW_SEQ_PC_PIN		PC3
+#endif
+#endif
+
 #ifndef PWRMGR_SEM_VALUE
 #define PWRMGR_SEM_VALUE 1
 #endif
@@ -120,6 +126,8 @@ static char *pwr_mgr_event2str(int event)
 												I2C_CMD0_DATA_MASK : I2C_CMD1_DATA_MASK)
 
 #define PWR_MGR_INTR_MASK(x)     (1 << (x))
+#define PWR_MGR_SEQ_RETRIES		(10)
+
 /* I2C SW seq operations*/
 enum {
 	I2C_SEQ_READ,
@@ -156,6 +164,9 @@ struct pwr_mgr {
 	bool sem_locked;
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 i2c_seq_trg;
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+	int pc_status;
+#endif
 	struct completion i2c_seq_done;
 	struct work_struct pwrmgr_work;
 #endif
@@ -1527,7 +1538,179 @@ static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 	       PWR_MGR_REG_ADDR(PWR_MGR_I2C_CMD_OFF_TO_REG_OFF(cmd_offset)));
 
 }
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+static void pwr_mgr_seq_set_pc_pin_cmd(u32 offset, int pc_pin, int set)
+{
+	u8 cmd = 0;
+	u8 override_mask;
+	u8 value_mask;
 
+	switch (pc_pin) {
+	case PC0:
+		value_mask = SET_PC_PIN_CMD_PC0_PIN_VALUE_MASK;
+		override_mask = SET_PC_PIN_CMD_PC0_PIN_OVERRIDE_MASK;
+		break;
+	case PC1:
+		value_mask = SET_PC_PIN_CMD_PC1_PIN_VALUE_MASK;
+		override_mask = SET_PC_PIN_CMD_PC1_PIN_OVERRIDE_MASK;
+		break;
+	case PC2:
+		value_mask = SET_PC_PIN_CMD_PC2_PIN_VALUE_MASK;
+		override_mask = SET_PC_PIN_CMD_PC2_PIN_OVERRIDE_MASK;
+		break;
+	case PC3:
+		value_mask = SET_PC_PIN_CMD_PC3_PIN_VALUE_MASK;
+		override_mask = SET_PC_PIN_CMD_PC3_PIN_OVERRIDE_MASK;
+		break;
+	default:
+		BUG();
+		break;
+	}
+	if (set)
+		cmd = value_mask|override_mask;
+	else
+		cmd = override_mask;
+
+	pwr_mgr_update_i2c_cmd_data(offset, cmd);
+}
+static int pwr_mgr_sw_i2c_seq_start(u32 action)
+{
+	u32 reg_val;
+	int ret = 0;
+	int reg;
+	u32 sw_start_off = 0;
+	unsigned long flag = 0;
+	unsigned long timeout;
+	int retry = PWR_MGR_SEQ_RETRIES;
+	int pc_status;
+	int i;
+
+	pwr_mgr_clr_intr_status(PWRMGR_INTR_I2C_SW_SEQ);
+	switch (action) {
+	case I2C_SEQ_READ:
+			sw_start_off = ((pwr_mgr.info->i2c_rd_off <<
+						PWRMGR_I2C_SW_START_ADDR_SHIFT)&
+					PWRMGR_I2C_SW_START_ADDR_MASK);
+			break;
+	case I2C_SEQ_WRITE:
+			sw_start_off = ((pwr_mgr.info->i2c_wr_off <<
+						PWRMGR_I2C_SW_START_ADDR_SHIFT)&
+					PWRMGR_I2C_SW_START_ADDR_MASK);
+			break;
+	case I2C_SEQ_READ_FIFO:
+			sw_start_off = ((pwr_mgr.info->i2c_rd_fifo_off <<
+						PWRMGR_I2C_SW_START_ADDR_SHIFT)&
+					PWRMGR_I2C_SW_START_ADDR_MASK);
+			break;
+	default:
+			BUG();
+			break;
+	}
+
+	for (i = 0; i < retry; i++) {
+		INIT_COMPLETION(pwr_mgr.i2c_seq_done);
+		reg_val = readl(PWR_MGR_REG_ADDR(
+					PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
+		reg_val &= ~(PWRMGR_I2C_REQ_TRG_MASK |
+				PWRMGR_I2C_SW_START_ADDR_MASK);
+		reg_val |= sw_start_off;
+
+		pwr_mgr.i2c_seq_trg = (pwr_mgr.i2c_seq_trg + 1) %
+			((PWRMGR_I2C_REQ_TRG_MASK >> PWRMGR_I2C_REQ_TRG_SHIFT) +
+			 1);
+		if (!pwr_mgr.i2c_seq_trg)
+			pwr_mgr.i2c_seq_trg++;
+		reg_val |= pwr_mgr.i2c_seq_trg << PWRMGR_I2C_REQ_TRG_SHIFT;
+
+		if (action != I2C_SEQ_READ_FIFO) {
+			pwr_mgr.pc_status = pm_get_pc_value(
+					PWRMGR_SW_SEQ_PC_PIN);
+			if (pwr_mgr.pc_status)
+				pwr_mgr_seq_set_pc_pin_cmd(
+						pwr_mgr.info->pc_toggle_off,
+						PWRMGR_SW_SEQ_PC_PIN,
+						0);
+			else
+				pwr_mgr_seq_set_pc_pin_cmd(
+						pwr_mgr.info->pc_toggle_off,
+						PWRMGR_SW_SEQ_PC_PIN,
+						1);
+			spin_lock_irqsave(&pwr_mgr_lock, flag);
+			/**
+			 * Trigger the sequencer and immediately
+			 * clear the the interrupt status register
+			 * (JIRA 2706)
+			 */
+			writel(reg_val, PWR_MGR_REG_ADDR(
+						PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
+			reg = readl(PWR_MGR_REG_ADDR(
+					PWRMGR_INTR_STATUS_OFFSET));
+			reg |= PWR_MGR_INTR_MASK(PWRMGR_INTR_I2C_SW_SEQ);
+			writel(reg, PWR_MGR_REG_ADDR(
+					PWRMGR_INTR_STATUS_OFFSET));
+			/**
+			 * After trigger update the command offset to
+			 * "END" command to prohibit PWRMGR to repeate
+			 * the same sequence again.
+			 * Since last command in the sequencer
+			 * (offset : 63) is always "END" command, we can use
+			 * it for this purpose
+			 */
+
+			reg_val &= ~PWRMGR_I2C_SW_START_ADDR_MASK;
+			reg_val |= (((pwr_mgr.info->num_i2c_cmds-1) <<
+					PWRMGR_I2C_SW_START_ADDR_SHIFT) &
+					PWRMGR_I2C_SW_START_ADDR_MASK);
+			writel(reg_val, PWR_MGR_REG_ADDR(
+					PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
+
+			reg = readl(PWR_MGR_REG_ADDR(PWRMGR_INTR_MASK_OFFSET));
+			reg |= PWR_MGR_INTR_MASK(PWRMGR_INTR_I2C_SW_SEQ);
+			writel(reg, PWR_MGR_REG_ADDR(PWRMGR_INTR_MASK_OFFSET));
+			spin_unlock_irqrestore(&pwr_mgr_lock, flag);
+		} else {
+			pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ, false);
+			writel(reg_val, PWR_MGR_REG_ADDR(
+						PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
+		}
+		timeout = wait_for_completion_timeout(&pwr_mgr.i2c_seq_done,
+				msecs_to_jiffies(
+					pwr_mgr.info->i2c_seq_timeout));
+
+		if (!timeout) {
+			pwr_dbg(PWR_LOG_SEQ, "%s seq timedout !!\n", __func__);
+			continue;
+		} else {
+			if (action != I2C_SEQ_READ_FIFO) {
+				pc_status = pm_get_pc_value(
+						PWRMGR_SW_SEQ_PC_PIN);
+				if ((pwr_mgr.pc_status && !pc_status) ||
+					(!pwr_mgr.pc_status && pc_status))
+					break;
+			} else
+				break;
+		}
+		/**
+		 * We are here because actual sequence did not run.
+		 * Probably because when we trigged sw sequencer
+		 * HW sequencer was running and trigger request
+		 * was could not be taken by pwrmgr immediately.
+		 * And before pwrmgr could take the trigger,
+		 * sw offset by updated to and "END" command.
+		 *
+		 * Here we will wait for ~60-120us (HW sequence time)
+		 * before retying
+		 */
+		usleep_range(60, 120);
+	}
+	if (i == retry) {
+		pwr_dbg(PWR_LOG_ERR, "%s: max tries\n", __func__);
+		ret = -EAGAIN;
+	}
+	pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ, true);
+	return ret;
+}
+#else
 static int pwr_mgr_sw_i2c_seq_start(u32 action)
 {
 	u32 reg_val;
@@ -1616,6 +1799,7 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	/* writel(reg_val, PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET)); */
 	return ret;
 }
+#endif
 
 int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 {

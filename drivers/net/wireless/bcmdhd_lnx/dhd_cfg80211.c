@@ -33,16 +33,24 @@
 extern struct wl_priv *wlcfg_drv_priv;
 static int dhd_dongle_up = FALSE;
 
+#include <dngl_stats.h>
+#include <dhd.h>
+#include <dhdioctl.h>
+#include <wlioctl.h>
+#include <dhd_cfg80211.h>
+
 static s32 wl_dongle_up(struct net_device *ndev, u32 up);
 #if !defined(OEM_EMBEDDED_LINUX)
 static s32 wl_dongle_power(struct net_device *ndev, u32 power_mode);
 static s32 wl_dongle_glom(struct net_device *ndev, u32 glom, u32 dongle_align);
-static s32 wl_dongle_roam(struct net_device *ndev, u32 roamvar,	u32 bcn_timeout);
-static s32 wl_dongle_scantime(struct net_device *ndev, s32 scan_assoc_time, s32 scan_unassoc_time);
+static s32 wl_dongle_roam(struct net_device *ndev, u32 roamvar,
+			  u32 bcn_timeout);
+static s32 wl_dongle_scantime(struct net_device *ndev, s32 scan_assoc_time,
+			      s32 scan_unassoc_time);
 static s32 wl_dongle_offload(struct net_device *ndev, s32 arpoe, s32 arp_ol);
-static s32 wl_pattern_atoh(s8 *src, s8 *dst);
+static s32 wl_pattern_atoh(s8 * src, s8 * dst);
 static s32 wl_dongle_filter(struct net_device *ndev, u32 filter_mode);
-#endif 
+#endif
 
 /**
  * Function implementations
@@ -60,9 +68,45 @@ s32 dhd_cfg80211_deinit(struct wl_priv *wl)
 	return 0;
 }
 
+s32 dhd_cfg80211_get_opmode(struct wl_priv *wl)
+{
+	dhd_pub_t *dhd = (dhd_pub_t *)(wl->pub);
+	return dhd->op_mode;
+}
+
 s32 dhd_cfg80211_down(struct wl_priv *wl)
 {
 	dhd_dongle_up = FALSE;
+	return 0;
+}
+
+s32 dhd_cfg80211_set_p2p_info(struct wl_priv *wl, int val)
+{
+	dhd_pub_t *dhd = (dhd_pub_t *)(wl->pub);
+	dhd->op_mode |= val;
+	WL_ERR(("Set : op_mode=%d\n", dhd->op_mode));
+
+#ifdef ARP_OFFLOAD_SUPPORT
+	/* IF P2P is enabled, disable arpoe */
+	dhd_arp_offload_set(dhd, 0);
+	dhd_arp_offload_enable(dhd, false);
+#endif /* ARP_OFFLOAD_SUPPORT */
+
+	return 0;
+}
+
+s32 dhd_cfg80211_clean_p2p_info(struct wl_priv *wl)
+{
+	dhd_pub_t *dhd = (dhd_pub_t *)(wl->pub);
+	dhd->op_mode &= ~CONCURENT_MASK;
+	WL_ERR(("Clean : op_mode=%d\n", dhd->op_mode));
+
+#ifdef ARP_OFFLOAD_SUPPORT
+	/* IF P2P is disabled, enable arpoe back for STA mode. */
+	dhd_arp_offload_set(dhd, dhd_arp_mode);
+	dhd_arp_offload_enable(dhd, true);
+#endif /* ARP_OFFLOAD_SUPPORT */
+
 	return 0;
 }
 
@@ -76,21 +120,23 @@ static s32 wl_dongle_up(struct net_device *ndev, u32 up)
 	}
 	return err;
 }
+
 #if !defined(OEM_EMBEDDED_LINUX)
 static s32 wl_dongle_power(struct net_device *ndev, u32 power_mode)
 {
 	s32 err = 0;
 
 	WL_TRACE(("In\n"));
-	err = wldev_ioctl(ndev, WLC_SET_PM, &power_mode, sizeof(power_mode), true);
+	err =
+	    wldev_ioctl(ndev, WLC_SET_PM, &power_mode, sizeof(power_mode),
+			true);
 	if (unlikely(err)) {
 		WL_ERR(("WLC_SET_PM error (%d)\n", err));
 	}
 	return err;
 }
 
-static s32
-wl_dongle_glom(struct net_device *ndev, u32 glom, u32 dongle_align)
+static s32 wl_dongle_glom(struct net_device *ndev, u32 glom, u32 dongle_align)
 {
 	s8 iovbuf[WL_EVENTING_MASK_LEN + 12];
 
@@ -98,7 +144,7 @@ wl_dongle_glom(struct net_device *ndev, u32 glom, u32 dongle_align)
 
 	/* Match Host and Dongle rx alignment */
 	bcm_mkiovar("bus:txglomalign", (char *)&dongle_align, 4, iovbuf,
-		sizeof(iovbuf));
+		    sizeof(iovbuf));
 	err = wldev_ioctl(ndev, WLC_SET_VAR, iovbuf, sizeof(iovbuf), true);
 	if (unlikely(err)) {
 		WL_ERR(("txglomalign error (%d)\n", err));
@@ -115,8 +161,7 @@ dongle_glom_out:
 	return err;
 }
 
-static s32
-wl_dongle_roam(struct net_device *ndev, u32 roamvar, u32 bcn_timeout)
+static s32 wl_dongle_roam(struct net_device *ndev, u32 roamvar, u32 bcn_timeout)
 {
 	s8 iovbuf[WL_EVENTING_MASK_LEN + 12];
 
@@ -125,8 +170,10 @@ wl_dongle_roam(struct net_device *ndev, u32 roamvar, u32 bcn_timeout)
 	/* Setup timeout if Beacons are lost and roam is off to report link down */
 	if (roamvar) {
 		bcm_mkiovar("bcn_timeout", (char *)&bcn_timeout, 4, iovbuf,
-			sizeof(iovbuf));
-		err = wldev_ioctl(ndev, WLC_SET_VAR, iovbuf, sizeof(iovbuf), true);
+			    sizeof(iovbuf));
+		err =
+		    wldev_ioctl(ndev, WLC_SET_VAR, iovbuf, sizeof(iovbuf),
+				true);
 		if (unlikely(err)) {
 			WL_ERR(("bcn_timeout error (%d)\n", err));
 			goto dongle_rom_out;
@@ -145,12 +192,12 @@ dongle_rom_out:
 
 static s32
 wl_dongle_scantime(struct net_device *ndev, s32 scan_assoc_time,
-	s32 scan_unassoc_time)
+		   s32 scan_unassoc_time)
 {
 	s32 err = 0;
 
 	err = wldev_ioctl(ndev, WLC_SET_SCAN_CHANNEL_TIME, &scan_assoc_time,
-		sizeof(scan_assoc_time), true);
+			  sizeof(scan_assoc_time), true);
 	if (err) {
 		if (err == -EOPNOTSUPP) {
 			WL_INFO(("Scan assoc time is not supported\n"));
@@ -160,7 +207,7 @@ wl_dongle_scantime(struct net_device *ndev, s32 scan_assoc_time,
 		goto dongle_scantime_out;
 	}
 	err = wldev_ioctl(ndev, WLC_SET_SCAN_UNASSOC_TIME, &scan_unassoc_time,
-		sizeof(scan_unassoc_time), true);
+			  sizeof(scan_unassoc_time), true);
 	if (err) {
 		if (err == -EOPNOTSUPP) {
 			WL_INFO(("Scan unassoc time is not supported\n"));
@@ -174,8 +221,7 @@ dongle_scantime_out:
 	return err;
 }
 
-static s32
-wl_dongle_offload(struct net_device *ndev, s32 arpoe, s32 arp_ol)
+static s32 wl_dongle_offload(struct net_device *ndev, s32 arpoe, s32 arp_ol)
 {
 	/* Room for "event_msgs" + '\0' + bitvec */
 	s8 iovbuf[WL_EVENTING_MASK_LEN + 12];
@@ -208,7 +254,7 @@ dongle_offload_out:
 	return err;
 }
 
-static s32 wl_pattern_atoh(s8 *src, s8 *dst)
+static s32 wl_pattern_atoh(s8 * src, s8 * dst)
 {
 	int i;
 	if (strncmp(src, "0x", 2) != 0 && strncmp(src, "0X", 2) != 0) {
@@ -224,7 +270,7 @@ static s32 wl_pattern_atoh(s8 *src, s8 *dst)
 		char num[3];
 		strncpy(num, src, 2);
 		num[2] = '\0';
-		dst[i] = (u8) simple_strtoul(num, NULL, 16);
+		dst[i] = (u8)simple_strtoul(num, NULL, 16);
 		src += 2;
 	}
 	return i;
@@ -268,12 +314,14 @@ static s32 wl_dongle_filter(struct net_device *ndev, u32 filter_mode)
 
 	/* Parse pattern filter mask. */
 	mask_size = htod32(wl_pattern_atoh("0xff",
-		(char *)pkt_filterp->u.pattern.
-		    mask_and_pattern));
+					   (char *)pkt_filterp->u.pattern.
+					   mask_and_pattern));
 
 	/* Parse pattern filter pattern. */
 	pattern_size = htod32(wl_pattern_atoh("0x00",
-		(char *)&pkt_filterp->u.pattern.mask_and_pattern[mask_size]));
+					      (char *)&pkt_filterp->u.
+					      pattern.mask_and_pattern
+					      [mask_size]));
 
 	if (mask_size != pattern_size) {
 		WL_ERR(("Mask and pattern not the same size\n"));
@@ -291,7 +339,7 @@ static s32 wl_dongle_filter(struct net_device *ndev, u32 filter_mode)
 	 * guarantee that the buffer is properly aligned.
 	 */
 	memcpy((char *)pkt_filterp, &pkt_filter,
-		WL_PKT_FILTER_FIXED_LEN + WL_PKT_FILTER_PATTERN_FIXED_LEN);
+	       WL_PKT_FILTER_FIXED_LEN + WL_PKT_FILTER_PATTERN_FIXED_LEN);
 
 	err = wldev_ioctl(ndev, WLC_SET_VAR, buf, buf_len, true);
 	if (err) {
@@ -305,7 +353,7 @@ static s32 wl_dongle_filter(struct net_device *ndev, u32 filter_mode)
 
 	/* set mode to allow pattern */
 	bcm_mkiovar("pkt_filter_mode", (char *)&filter_mode, 4, iovbuf,
-		sizeof(iovbuf));
+		    sizeof(iovbuf));
 	err = wldev_ioctl(ndev, WLC_SET_VAR, iovbuf, sizeof(iovbuf), true);
 	if (err) {
 		if (err == -EOPNOTSUPP) {
@@ -319,7 +367,7 @@ static s32 wl_dongle_filter(struct net_device *ndev, u32 filter_mode)
 dongle_filter_out:
 	return err;
 }
-#endif 
+#endif
 
 s32 dhd_config_dongle(struct wl_priv *wl, bool need_lock)
 {
@@ -364,7 +412,7 @@ s32 dhd_config_dongle(struct wl_priv *wl, bool need_lock)
 	wl_dongle_scantime(ndev, 40, 80);
 	wl_dongle_offload(ndev, 1, 0xf);
 	wl_dongle_filter(ndev, 1);
-#endif 
+#endif
 	dhd_dongle_up = true;
 
 default_conf_out:
@@ -373,7 +421,6 @@ default_conf_out:
 	return err;
 
 }
-
 
 /* TODO: clean up the BT-Coex code, it still have some legacy ioctl/iovar functions */
 #define COEX_DHCP

@@ -30,7 +30,6 @@
 /* This marks the start of a packed structure section. */
 #include <packed_section_start.h>
 
-
 /* AMP HCI CMD packet format */
 typedef BWL_PRE_PACKED_STRUCT struct amp_hci_cmd {
 	uint16 opcode;
@@ -84,7 +83,7 @@ typedef BWL_PRE_PACKED_STRUCT struct amp_hci_cmd {
 /* AMP HCI command parameters */
 typedef BWL_PRE_PACKED_STRUCT struct read_local_cmd_parms {
 	uint8 plh;
-	uint8 offset[2];			/* length so far */
+	uint8 offset[2];	/* length so far */
 	uint8 max_remote[2];
 } BWL_POST_PACKED_STRUCT read_local_cmd_parms_t;
 
@@ -407,8 +406,8 @@ typedef BWL_PRE_PACKED_STRUCT struct status_change_evt_parms {
 
 /* AMP HCI ACL Data packet format */
 typedef BWL_PRE_PACKED_STRUCT struct amp_hci_ACL_data {
-	uint16	handle;			/* 12-bit connection handle + 2-bit PB and 2-bit BC flags */
-	uint16	dlen;			/* data total length */
+	uint16 handle;		/* 12-bit connection handle + 2-bit PB and 2-bit BC flags */
+	uint16 dlen;		/* data total length */
 	uint8 data[1];
 } BWL_POST_PACKED_STRUCT amp_hci_ACL_data_t;
 
@@ -422,19 +421,18 @@ typedef BWL_PRE_PACKED_STRUCT struct amp_hci_ACL_data {
 
 /* AMP Activity Report packet formats */
 typedef BWL_PRE_PACKED_STRUCT struct amp_hci_activity_report {
-	uint8	ScheduleKnown;
-	uint8	NumReports;
-	uint8	data[1];
+	uint8 ScheduleKnown;
+	uint8 NumReports;
+	uint8 data[1];
 } BWL_POST_PACKED_STRUCT amp_hci_activity_report_t;
 
 typedef BWL_PRE_PACKED_STRUCT struct amp_hci_activity_report_triple {
-	uint32	StartTime;
-	uint32	Duration;
-	uint32	Periodicity;
+	uint32 StartTime;
+	uint32 Duration;
+	uint32 Periodicity;
 } BWL_POST_PACKED_STRUCT amp_hci_activity_report_triple_t;
 
 #define HCI_AR_SCHEDULE_KNOWN		0x01
-
 
 /* This marks the end of a packed structure section. */
 #include <packed_section_end.h>

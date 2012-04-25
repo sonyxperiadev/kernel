@@ -57,52 +57,52 @@
 #define USE_MULTIBLOCK		0x4
 
 struct sdioh_info {
-	uint cfg_bar;                   	/* pci cfg address for bar */
-	uint32 caps;                    	/* cached value of capabilities reg */
-	uint		bar0;			/* BAR0 for PCI Device */
-	osl_t 		*osh;			/* osh handler */
-	void		*controller;	/* Pointer to SPI Controller's private data struct */
+	uint cfg_bar;		/* pci cfg address for bar */
+	uint32 caps;		/* cached value of capabilities reg */
+	uint bar0;		/* BAR0 for PCI Device */
+	osl_t *osh;		/* osh handler */
+	void *controller;	/* Pointer to SPI Controller's private data struct */
 
-	uint		lockcount; 		/* nest count of sdspi_lock() calls */
-	bool		client_intr_enabled;	/* interrupt connnected flag */
-	bool		intr_handler_valid;	/* client driver interrupt handler valid */
-	sdioh_cb_fn_t	intr_handler;		/* registered interrupt handler */
-	void		*intr_handler_arg;	/* argument to call interrupt handler */
-	bool		initialized;		/* card initialized */
-	uint32		target_dev;		/* Target device ID */
-	uint32		intmask;		/* Current active interrupts */
-	void		*sdos_info;		/* Pointer to per-OS private data */
+	uint lockcount;		/* nest count of sdspi_lock() calls */
+	bool client_intr_enabled;	/* interrupt connnected flag */
+	bool intr_handler_valid;	/* client driver interrupt handler valid */
+	sdioh_cb_fn_t intr_handler;	/* registered interrupt handler */
+	void *intr_handler_arg;	/* argument to call interrupt handler */
+	bool initialized;	/* card initialized */
+	uint32 target_dev;	/* Target device ID */
+	uint32 intmask;		/* Current active interrupts */
+	void *sdos_info;	/* Pointer to per-OS private data */
 
-	uint32		controller_type;	/* Host controller type */
-	uint8		version;		/* Host Controller Spec Compliance Version */
-	uint 		irq;			/* Client irq */
-	uint32 		intrcount;		/* Client interrupts */
-	uint32 		local_intrcount;	/* Controller interrupts */
-	bool 		host_init_done;		/* Controller initted */
-	bool 		card_init_done;		/* Client SDIO interface initted */
-	bool 		polled_mode;		/* polling for command completion */
+	uint32 controller_type;	/* Host controller type */
+	uint8 version;		/* Host Controller Spec Compliance Version */
+	uint irq;		/* Client irq */
+	uint32 intrcount;	/* Client interrupts */
+	uint32 local_intrcount;	/* Controller interrupts */
+	bool host_init_done;	/* Controller initted */
+	bool card_init_done;	/* Client SDIO interface initted */
+	bool polled_mode;	/* polling for command completion */
 
-	bool		sd_use_dma;		/* DMA on CMD53 */
-	bool 		sd_blockmode;		/* sd_blockmode == FALSE => 64 Byte Cmd 53s. */
-						/*  Must be on for sd_multiblock to be effective */
-	bool 		use_client_ints;	/* If this is false, make sure to restore */
-	bool		got_hcint;		/* Host Controller interrupt. */
-						/*  polling hack in wl_linux.c:wl_timer() */
-	int 		adapter_slot;		/* Maybe dealing with multiple slots/controllers */
-	int 		sd_mode;		/* SD1/SD4/SPI */
-	int 		client_block_size[SDIOD_MAX_IOFUNCS];		/* Blocksize */
-	uint32 		data_xfer_count;	/* Current register transfer size */
-	uint32		cmd53_wr_data;		/* Used to pass CMD53 write data */
-	uint32		card_response;		/* Used to pass back response status byte */
-	uint32		card_rsp_data;		/* Used to pass back response data word */
-	uint16 		card_rca;		/* Current Address */
-	uint8 		num_funcs;		/* Supported funcs on client */
-	uint32 		com_cis_ptr;
-	uint32 		func_cis_ptr[SDIOD_MAX_IOFUNCS];
-	void		*dma_buf;
-	ulong		dma_phys;
-	int 		r_cnt;			/* rx count */
-	int 		t_cnt;			/* tx_count */
+	bool sd_use_dma;	/* DMA on CMD53 */
+	bool sd_blockmode;	/* sd_blockmode == FALSE => 64 Byte Cmd 53s. */
+	/*  Must be on for sd_multiblock to be effective */
+	bool use_client_ints;	/* If this is false, make sure to restore */
+	bool got_hcint;		/* Host Controller interrupt. */
+	/*  polling hack in wl_linux.c:wl_timer() */
+	int adapter_slot;	/* Maybe dealing with multiple slots/controllers */
+	int sd_mode;		/* SD1/SD4/SPI */
+	int client_block_size[SDIOD_MAX_IOFUNCS];	/* Blocksize */
+	uint32 data_xfer_count;	/* Current register transfer size */
+	uint32 cmd53_wr_data;	/* Used to pass CMD53 write data */
+	uint32 card_response;	/* Used to pass back response status byte */
+	uint32 card_rsp_data;	/* Used to pass back response data word */
+	uint16 card_rca;	/* Current Address */
+	uint8 num_funcs;	/* Supported funcs on client */
+	uint32 com_cis_ptr;
+	uint32 func_cis_ptr[SDIOD_MAX_IOFUNCS];
+	void *dma_buf;
+	ulong dma_phys;
+	int r_cnt;		/* rx count */
+	int t_cnt;		/* tx_count */
 };
 
 /************************************************************

@@ -46,7 +46,6 @@
 #include <bcm_osl.h>
 #endif
 
-
 #endif /* !BCMDRIVER */
 
 #include <bcmendian.h>
@@ -61,20 +60,17 @@ void *_bcmutils_dummy_fn = NULL;
 
 #ifdef BCMDRIVER
 
-
-
 /* copy a pkt buffer chain into a buffer */
-uint
-pktcopy(osl_t *osh, void *p, uint offset, int len, uchar *buf)
+uint pktcopy(osl_t *osh, void *p, uint offset, int len, uchar *buf)
 {
 	uint n, ret = 0;
 
 	if (len < 0)
-		len = 4096; /* "infinite" */
+		len = 4096;	/* "infinite" */
 
 	/* skip 'offset' bytes */
 	for (; p && offset; p = PKTNEXT(osh, p)) {
-		if (offset < (uint)PKTLEN(osh, p))
+		if (offset < (uint) PKTLEN(osh, p))
 			break;
 		offset -= PKTLEN(osh, p);
 	}
@@ -84,7 +80,7 @@ pktcopy(osl_t *osh, void *p, uint offset, int len, uchar *buf)
 
 	/* copy the data */
 	for (; p && len; p = PKTNEXT(osh, p)) {
-		n = MIN((uint)PKTLEN(osh, p) - offset, (uint)len);
+		n = MIN((uint) PKTLEN(osh, p) - offset, (uint) len);
 		bcopy(PKTDATA(osh, p) + offset, buf, n);
 		buf += n;
 		len -= n;
@@ -96,14 +92,13 @@ pktcopy(osl_t *osh, void *p, uint offset, int len, uchar *buf)
 }
 
 /* copy a buffer into a pkt buffer chain */
-uint
-pktfrombuf(osl_t *osh, void *p, uint offset, int len, uchar *buf)
+uint pktfrombuf(osl_t *osh, void *p, uint offset, int len, uchar *buf)
 {
 	uint n, ret = 0;
 
 	/* skip 'offset' bytes */
 	for (; p && offset; p = PKTNEXT(osh, p)) {
-		if (offset < (uint)PKTLEN(osh, p))
+		if (offset < (uint) PKTLEN(osh, p))
 			break;
 		offset -= PKTLEN(osh, p);
 	}
@@ -113,7 +108,7 @@ pktfrombuf(osl_t *osh, void *p, uint offset, int len, uchar *buf)
 
 	/* copy the data */
 	for (; p && len; p = PKTNEXT(osh, p)) {
-		n = MIN((uint)PKTLEN(osh, p) - offset, (uint)len);
+		n = MIN((uint) PKTLEN(osh, p) - offset, (uint) len);
 		bcopy(buf, PKTDATA(osh, p) + offset, n);
 		buf += n;
 		len -= n;
@@ -124,11 +119,8 @@ pktfrombuf(osl_t *osh, void *p, uint offset, int len, uchar *buf)
 	return ret;
 }
 
-
-
 /* return total length of buffer chain */
-uint BCMFASTPATH
-pkttotlen(osl_t *osh, void *p)
+uint BCMFASTPATH pkttotlen(osl_t *osh, void *p)
 {
 	uint total;
 
@@ -139,18 +131,15 @@ pkttotlen(osl_t *osh, void *p)
 }
 
 /* return the last buffer of chained pkt */
-void *
-pktlast(osl_t *osh, void *p)
+void *pktlast(osl_t *osh, void *p)
 {
-	for (; PKTNEXT(osh, p); p = PKTNEXT(osh, p))
-		;
+	for (; PKTNEXT(osh, p); p = PKTNEXT(osh, p)) ;
 
 	return (p);
 }
 
 /* count segments of a chained packet */
-uint BCMFASTPATH
-pktsegcnt(osl_t *osh, void *p)
+uint BCMFASTPATH pktsegcnt(osl_t *osh, void *p)
 {
 	uint cnt;
 
@@ -160,18 +149,16 @@ pktsegcnt(osl_t *osh, void *p)
 	return cnt;
 }
 
-
 /*
  * osl multiple-precedence packet queue
  * hi_prec is always >= the number of the highest non-empty precedence
  */
-void * BCMFASTPATH
-pktq_penq(struct pktq *pq, int prec, void *p)
+void *BCMFASTPATH pktq_penq(struct pktq *pq, int prec, void *p)
 {
 	struct pktq_prec *q;
 
 	ASSERT(prec >= 0 && prec < pq->num_prec);
-	ASSERT(PKTLINK(p) == NULL);         /* queueing chains not allowed */
+	ASSERT(PKTLINK(p) == NULL);	/* queueing chains not allowed */
 
 	ASSERT(!pktq_full(pq));
 	ASSERT(!pktq_pfull(pq, prec));
@@ -194,13 +181,12 @@ pktq_penq(struct pktq *pq, int prec, void *p)
 	return p;
 }
 
-void * BCMFASTPATH
-pktq_penq_head(struct pktq *pq, int prec, void *p)
+void *BCMFASTPATH pktq_penq_head(struct pktq *pq, int prec, void *p)
 {
 	struct pktq_prec *q;
 
 	ASSERT(prec >= 0 && prec < pq->num_prec);
-	ASSERT(PKTLINK(p) == NULL);         /* queueing chains not allowed */
+	ASSERT(PKTLINK(p) == NULL);	/* queueing chains not allowed */
 
 	ASSERT(!pktq_full(pq));
 	ASSERT(!pktq_pfull(pq, prec));
@@ -222,8 +208,7 @@ pktq_penq_head(struct pktq *pq, int prec, void *p)
 	return p;
 }
 
-void * BCMFASTPATH
-pktq_pdeq(struct pktq *pq, int prec)
+void *BCMFASTPATH pktq_pdeq(struct pktq *pq, int prec)
 {
 	struct pktq_prec *q;
 	void *p;
@@ -247,8 +232,7 @@ pktq_pdeq(struct pktq *pq, int prec)
 	return p;
 }
 
-void * BCMFASTPATH
-pktq_pdeq_tail(struct pktq *pq, int prec)
+void *BCMFASTPATH pktq_pdeq_tail(struct pktq *pq, int prec)
 {
 	struct pktq_prec *q;
 	void *p, *prev;
@@ -277,7 +261,8 @@ pktq_pdeq_tail(struct pktq *pq, int prec)
 }
 
 void
-pktq_pflush(osl_t *osh, struct pktq *pq, int prec, bool dir, ifpkt_cb_t fn, int arg)
+pktq_pflush(osl_t *osh, struct pktq *pq, int prec, bool dir, ifpkt_cb_t fn,
+	    int arg)
 {
 	struct pktq_prec *q;
 	void *p, *prev = NULL;
@@ -285,7 +270,7 @@ pktq_pflush(osl_t *osh, struct pktq *pq, int prec, bool dir, ifpkt_cb_t fn, int 
 	q = &pq->q[prec];
 	p = q->head;
 	while (p) {
-		if (fn == NULL || (*fn)(p, arg)) {
+		if (fn == NULL || (*fn) (p, arg)) {
 			bool head = (p == q->head);
 			if (head)
 				q->head = PKTLINK(p);
@@ -308,8 +293,7 @@ pktq_pflush(osl_t *osh, struct pktq *pq, int prec, bool dir, ifpkt_cb_t fn, int 
 	}
 }
 
-bool BCMFASTPATH
-pktq_pdel(struct pktq *pq, void *pktbuf, int prec)
+bool BCMFASTPATH pktq_pdel(struct pktq *pq, void *pktbuf, int prec)
 {
 	struct pktq_prec *q;
 	void *p;
@@ -325,8 +309,7 @@ pktq_pdel(struct pktq *pq, void *pktbuf, int prec)
 		if ((q->head = PKTLINK(pktbuf)) == NULL)
 			q->tail = NULL;
 	} else {
-		for (p = q->head; p && PKTLINK(p) != pktbuf; p = PKTLINK(p))
-			;
+		for (p = q->head; p && PKTLINK(p) != pktbuf; p = PKTLINK(p)) ;
 		if (p == NULL)
 			return FALSE;
 
@@ -341,15 +324,15 @@ pktq_pdel(struct pktq *pq, void *pktbuf, int prec)
 	return TRUE;
 }
 
-void
-pktq_init(struct pktq *pq, int num_prec, int max_len)
+void pktq_init(struct pktq *pq, int num_prec, int max_len)
 {
 	int prec;
 
 	ASSERT(num_prec > 0 && num_prec <= PKTQ_MAX_PREC);
 
 	/* pq is variable size; only zero out what's requested */
-	bzero(pq, OFFSETOF(struct pktq, q) + (sizeof(struct pktq_prec) * num_prec));
+	bzero(pq,
+	      OFFSETOF(struct pktq, q) + (sizeof(struct pktq_prec) * num_prec));
 
 	pq->num_prec = (uint16)num_prec;
 
@@ -359,8 +342,7 @@ pktq_init(struct pktq *pq, int num_prec, int max_len)
 		pq->q[prec].max = pq->max;
 }
 
-void * BCMFASTPATH
-pktq_deq(struct pktq *pq, int *prec_out)
+void *BCMFASTPATH pktq_deq(struct pktq *pq, int *prec_out)
 {
 	struct pktq_prec *q;
 	void *p;
@@ -392,8 +374,7 @@ pktq_deq(struct pktq *pq, int *prec_out)
 	return p;
 }
 
-void * BCMFASTPATH
-pktq_deq_tail(struct pktq *pq, int *prec_out)
+void *BCMFASTPATH pktq_deq_tail(struct pktq *pq, int *prec_out)
 {
 	struct pktq_prec *q;
 	void *p, *prev;
@@ -432,8 +413,7 @@ pktq_deq_tail(struct pktq *pq, int *prec_out)
 	return p;
 }
 
-void *
-pktq_peek(struct pktq *pq, int *prec_out)
+void *pktq_peek(struct pktq *pq, int *prec_out)
 {
 	int prec;
 
@@ -449,8 +429,7 @@ pktq_peek(struct pktq *pq, int *prec_out)
 	return (pq->q[prec].head);
 }
 
-void *
-pktq_peek_tail(struct pktq *pq, int *prec_out)
+void *pktq_peek_tail(struct pktq *pq, int *prec_out)
 {
 	int prec;
 
@@ -467,8 +446,7 @@ pktq_peek_tail(struct pktq *pq, int *prec_out)
 	return (pq->q[prec].tail);
 }
 
-void
-pktq_flush(osl_t *osh, struct pktq *pq, bool dir, ifpkt_cb_t fn, int arg)
+void pktq_flush(osl_t *osh, struct pktq *pq, bool dir, ifpkt_cb_t fn, int arg)
 {
 	int prec;
 	for (prec = 0; prec < pq->num_prec; prec++)
@@ -478,8 +456,7 @@ pktq_flush(osl_t *osh, struct pktq *pq, bool dir, ifpkt_cb_t fn, int arg)
 }
 
 /* Return sum of lengths of a specific set of precedences */
-int
-pktq_mlen(struct pktq *pq, uint prec_bmp)
+int pktq_mlen(struct pktq *pq, uint prec_bmp)
 {
 	int prec, len;
 
@@ -493,8 +470,7 @@ pktq_mlen(struct pktq *pq, uint prec_bmp)
 }
 
 /* Priority dequeue from a specific set of precedences */
-void * BCMFASTPATH
-pktq_mdeq(struct pktq *pq, uint prec_bmp, int *prec_out)
+void *BCMFASTPATH pktq_mdeq(struct pktq *pq, uint prec_bmp, int *prec_out)
 {
 	struct pktq_prec *q;
 	void *p;
@@ -534,43 +510,51 @@ pktq_mdeq(struct pktq *pq, uint prec_bmp, int *prec_out)
 
 const unsigned char bcm_ctype[] = {
 
-	_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,            /* 0-7 */
-	_BCM_C, _BCM_C|_BCM_S, _BCM_C|_BCM_S, _BCM_C|_BCM_S, _BCM_C|_BCM_S, _BCM_C|_BCM_S, _BCM_C,
-	_BCM_C, /* 8-15 */
-	_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,            /* 16-23 */
-	_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,_BCM_C,            /* 24-31 */
-	_BCM_S|_BCM_SP,_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_P,        /* 32-39 */
-	_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_P,            /* 40-47 */
-	_BCM_D,_BCM_D,_BCM_D,_BCM_D,_BCM_D,_BCM_D,_BCM_D,_BCM_D,            /* 48-55 */
-	_BCM_D,_BCM_D,_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_P,            /* 56-63 */
-	_BCM_P, _BCM_U|_BCM_X, _BCM_U|_BCM_X, _BCM_U|_BCM_X, _BCM_U|_BCM_X, _BCM_U|_BCM_X,
-	_BCM_U|_BCM_X, _BCM_U, /* 64-71 */
-	_BCM_U,_BCM_U,_BCM_U,_BCM_U,_BCM_U,_BCM_U,_BCM_U,_BCM_U,            /* 72-79 */
-	_BCM_U,_BCM_U,_BCM_U,_BCM_U,_BCM_U,_BCM_U,_BCM_U,_BCM_U,            /* 80-87 */
-	_BCM_U,_BCM_U,_BCM_U,_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_P,            /* 88-95 */
-	_BCM_P, _BCM_L|_BCM_X, _BCM_L|_BCM_X, _BCM_L|_BCM_X, _BCM_L|_BCM_X, _BCM_L|_BCM_X,
-	_BCM_L|_BCM_X, _BCM_L, /* 96-103 */
-	_BCM_L,_BCM_L,_BCM_L,_BCM_L,_BCM_L,_BCM_L,_BCM_L,_BCM_L, /* 104-111 */
-	_BCM_L,_BCM_L,_BCM_L,_BCM_L,_BCM_L,_BCM_L,_BCM_L,_BCM_L, /* 112-119 */
-	_BCM_L,_BCM_L,_BCM_L,_BCM_P,_BCM_P,_BCM_P,_BCM_P,_BCM_C, /* 120-127 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     /* 128-143 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     /* 144-159 */
-	_BCM_S|_BCM_SP, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P,
-	_BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, /* 160-175 */
-	_BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P,
-	_BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, /* 176-191 */
-	_BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U,
-	_BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, /* 192-207 */
-	_BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_P, _BCM_U, _BCM_U, _BCM_U,
-	_BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_L, /* 208-223 */
-	_BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L,
-	_BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, /* 224-239 */
-	_BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_P, _BCM_L, _BCM_L, _BCM_L,
-	_BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L /* 240-255 */
+	_BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C,	/* 0-7 */
+	_BCM_C, _BCM_C | _BCM_S, _BCM_C | _BCM_S, _BCM_C | _BCM_S,
+	_BCM_C | _BCM_S, _BCM_C | _BCM_S, _BCM_C,
+	_BCM_C,			/* 8-15 */
+	_BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C,	/* 16-23 */
+	_BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C, _BCM_C,	/* 24-31 */
+	_BCM_S | _BCM_SP, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P,	/* 32-39 */
+	_BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P,	/* 40-47 */
+	_BCM_D, _BCM_D, _BCM_D, _BCM_D, _BCM_D, _BCM_D, _BCM_D, _BCM_D,	/* 48-55 */
+	_BCM_D, _BCM_D, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P,	/* 56-63 */
+	_BCM_P, _BCM_U | _BCM_X, _BCM_U | _BCM_X, _BCM_U | _BCM_X,
+	_BCM_U | _BCM_X, _BCM_U | _BCM_X,
+	_BCM_U | _BCM_X, _BCM_U,	/* 64-71 */
+	_BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U,	/* 72-79 */
+	_BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U,	/* 80-87 */
+	_BCM_U, _BCM_U, _BCM_U, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P,	/* 88-95 */
+	_BCM_P, _BCM_L | _BCM_X, _BCM_L | _BCM_X, _BCM_L | _BCM_X,
+	_BCM_L | _BCM_X, _BCM_L | _BCM_X,
+	_BCM_L | _BCM_X, _BCM_L,	/* 96-103 */
+	_BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L,	/* 104-111 */
+	_BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L,	/* 112-119 */
+	_BCM_L, _BCM_L, _BCM_L, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_C,	/* 120-127 */
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 128-143 */
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,	/* 144-159 */
+	_BCM_S | _BCM_SP, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P,
+	_BCM_P, _BCM_P, _BCM_P,
+	_BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P,	/* 160-175 */
+	_BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P,
+	_BCM_P, _BCM_P,
+	_BCM_P, _BCM_P, _BCM_P, _BCM_P, _BCM_P,	/* 176-191 */
+	_BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U,
+	_BCM_U, _BCM_U,
+	_BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U,	/* 192-207 */
+	_BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_P, _BCM_U,
+	_BCM_U, _BCM_U,
+	_BCM_U, _BCM_U, _BCM_U, _BCM_U, _BCM_L,	/* 208-223 */
+	_BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L,
+	_BCM_L, _BCM_L,
+	_BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L,	/* 224-239 */
+	_BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_P, _BCM_L,
+	_BCM_L, _BCM_L,
+	_BCM_L, _BCM_L, _BCM_L, _BCM_L, _BCM_L	/* 240-255 */
 };
 
-ulong
-bcm_strtoul(char *cp, char **endp, uint base)
+ulong bcm_strtoul(char *cp, char **endp, uint base)
 {
 	ulong result, last_result = 0, value;
 	bool minus;
@@ -598,25 +582,27 @@ bcm_strtoul(char *cp, char **endp, uint base)
 			}
 		} else
 			base = 10;
-	} else if (base == 16 && (cp[0] == '0') && ((cp[1] == 'x') || (cp[1] == 'X'))) {
+	} else if (base == 16 && (cp[0] == '0')
+		   && ((cp[1] == 'x') || (cp[1] == 'X'))) {
 		cp = &cp[2];
 	}
 
 	result = 0;
 
 	while (bcm_isxdigit(*cp) &&
-		(value = bcm_isdigit(*cp) ? *cp-'0' : bcm_toupper(*cp)-'A'+10) < base)
-	{
-		result = result*base + value;
+	       (value =
+		bcm_isdigit(*cp) ? *cp - '0' : bcm_toupper(*cp) - 'A' + 10) <
+	       base) {
+		result = result * base + value;
 		/* Detected overflow */
 		if (result < last_result && !minus)
-			return (ulong)-1;
+			return (ulong) - 1;
 		last_result = result;
 		cp++;
 	}
 
 	if (minus)
-		result = (ulong)(-(long)result);
+		result = (ulong) (-(long)result);
 
 	if (endp)
 		*endp = (char *)cp;
@@ -624,15 +610,13 @@ bcm_strtoul(char *cp, char **endp, uint base)
 	return (result);
 }
 
-int
-bcm_atoi(char *s)
+int bcm_atoi(char *s)
 {
 	return (int)bcm_strtoul(s, NULL, 10);
 }
 
 /* return pointer to location of substring 'needle' in 'haystack' */
-char*
-bcmstrstr(char *haystack, char *needle)
+char *bcmstrstr(char *haystack, char *needle)
 {
 	int len, nlen;
 	int i;
@@ -649,21 +633,18 @@ bcmstrstr(char *haystack, char *needle)
 	return (NULL);
 }
 
-char*
-bcmstrcat(char *dest, const char *src)
+char *bcmstrcat(char *dest, const char *src)
 {
 	char *p;
 
 	p = dest + strlen(dest);
 
-	while ((*p++ = *src++) != '\0')
-		;
+	while ((*p++ = *src++) != '\0') ;
 
 	return (dest);
 }
 
-char*
-bcmstrncat(char *dest, const char *src, uint size)
+char *bcmstrncat(char *dest, const char *src, uint size)
 {
 	char *endp;
 	char *p;
@@ -671,12 +652,10 @@ bcmstrncat(char *dest, const char *src, uint size)
 	p = dest + strlen(dest);
 	endp = p + size;
 
-	while (p != endp && (*p++ = *src++) != '\0')
-		;
+	while (p != endp && (*p++ = *src++) != '\0') ;
 
 	return (dest);
 }
-
 
 /****************************************************************************
 * Function:   bcmstrtok
@@ -697,8 +676,7 @@ bcmstrncat(char *dest, const char *src, uint size)
 * Returns:  Pointer to the next token found. NULL when no more tokens are found.
 *****************************************************************************
 */
-char *
-bcmstrtok(char **string, const char *delimiters, char *tokdelim)
+char *bcmstrtok(char **string, const char *delimiters, char *tokdelim)
 {
 	unsigned char *str;
 	unsigned long map[8];
@@ -721,7 +699,7 @@ bcmstrtok(char **string, const char *delimiters, char *tokdelim)
 	}
 	while (*delimiters++);
 
-	str = (unsigned char*)*string;
+	str = (unsigned char *)*string;
 
 	/* Find beginning of token (skip over leading delimiters). Note that
 	 * there is no token iff this loop sets str to point to the terminal
@@ -731,7 +709,7 @@ bcmstrtok(char **string, const char *delimiters, char *tokdelim)
 		str++;
 	}
 
-	nextoken = (char*)str;
+	nextoken = (char *)str;
 
 	/* Find the end of the token. If it is not the end of the string,
 	 * put a null there.
@@ -747,21 +725,18 @@ bcmstrtok(char **string, const char *delimiters, char *tokdelim)
 		}
 	}
 
-	*string = (char*)str;
+	*string = (char *)str;
 
 	/* Determine if a token has been found. */
-	if (nextoken == (char *) str) {
+	if (nextoken == (char *)str) {
 		return NULL;
-	}
-	else {
+	} else {
 		return nextoken;
 	}
 }
 
-
 #define xToLower(C) \
 	((C >= 'A' && C <= 'Z') ? (char)((int)C - (int)'A' + (int)'a') : C)
-
 
 /****************************************************************************
 * Function:   bcmstricmp
@@ -775,25 +750,27 @@ bcmstrtok(char **string, const char *delimiters, char *tokdelim)
 *             t1 > t2, when ignoring case sensitivity.
 *****************************************************************************
 */
-int
-bcmstricmp(const char *s1, const char *s2)
+int bcmstricmp(const char *s1, const char *s2)
 {
 	char dc, sc;
 
 	while (*s2 && *s1) {
 		dc = xToLower(*s1);
 		sc = xToLower(*s2);
-		if (dc < sc) return -1;
-		if (dc > sc) return 1;
+		if (dc < sc)
+			return -1;
+		if (dc > sc)
+			return 1;
 		s1++;
 		s2++;
 	}
 
-	if (*s1 && !*s2) return 1;
-	if (!*s1 && *s2) return -1;
+	if (*s1 && !*s2)
+		return 1;
+	if (!*s1 && *s2)
+		return -1;
 	return 0;
 }
-
 
 /****************************************************************************
 * Function:   bcmstrnicmp
@@ -809,35 +786,38 @@ bcmstricmp(const char *s1, const char *s2)
 *             t1 > t2, when ignoring case sensitivity.
 *****************************************************************************
 */
-int
-bcmstrnicmp(const char* s1, const char* s2, int cnt)
+int bcmstrnicmp(const char *s1, const char *s2, int cnt)
 {
 	char dc, sc;
 
 	while (*s2 && *s1 && cnt) {
 		dc = xToLower(*s1);
 		sc = xToLower(*s2);
-		if (dc < sc) return -1;
-		if (dc > sc) return 1;
+		if (dc < sc)
+			return -1;
+		if (dc > sc)
+			return 1;
 		s1++;
 		s2++;
 		cnt--;
 	}
 
-	if (!cnt) return 0;
-	if (*s1 && !*s2) return 1;
-	if (!*s1 && *s2) return -1;
+	if (!cnt)
+		return 0;
+	if (*s1 && !*s2)
+		return 1;
+	if (!*s1 && *s2)
+		return -1;
 	return 0;
 }
 
 /* parse a xx:xx:xx:xx:xx:xx format ethernet address */
-int
-bcm_ether_atoe(char *p, struct ether_addr *ea)
+int bcm_ether_atoe(char *p, struct ether_addr *ea)
 {
 	int i = 0;
 
 	for (;;) {
-		ea->octet[i++] = (char) bcm_strtoul(p, &p, 16);
+		ea->octet[i++] = (char)bcm_strtoul(p, &p, 16);
 		if (!*p++ || i == 6)
 			break;
 	}
@@ -845,14 +825,12 @@ bcm_ether_atoe(char *p, struct ether_addr *ea)
 	return (i == 6);
 }
 
-
 #if defined(CONFIG_USBRNDIS_RETAIL) || defined(NDIS_MINIPORT_DRIVER)
 /* registry routine buffer preparation utility functions:
  * parameter order is like strncpy, but returns count
  * of bytes copied. Minimum bytes copied is null char(1)/wchar(2)
  */
-ulong
-wchar2ascii(char *abuf, ushort *wbuf, ushort wbuflen, ulong abuflen)
+ulong wchar2ascii(char *abuf, ushort * wbuf, ushort wbuflen, ulong abuflen)
 {
 	ulong copyct = 1;
 	ushort i;
@@ -866,7 +844,7 @@ wchar2ascii(char *abuf, ushort *wbuf, ushort wbuflen, ulong abuflen)
 	for (i = 0; i < wbuflen; ++i) {
 		if (--abuflen == 0)
 			break;
-		*abuf++ = (char) *wbuf++;
+		*abuf++ = (char)*wbuf++;
 		++copyct;
 	}
 	*abuf = '\0';
@@ -875,28 +853,25 @@ wchar2ascii(char *abuf, ushort *wbuf, ushort wbuflen, ulong abuflen)
 }
 #endif /* CONFIG_USBRNDIS_RETAIL || NDIS_MINIPORT_DRIVER */
 
-char *
-bcm_ether_ntoa(const struct ether_addr *ea, char *buf)
+char *bcm_ether_ntoa(const struct ether_addr *ea, char *buf)
 {
 	static const char template[] = "%02x:%02x:%02x:%02x:%02x:%02x";
 	snprintf(buf, 18, template,
-		ea->octet[0]&0xff, ea->octet[1]&0xff, ea->octet[2]&0xff,
-		ea->octet[3]&0xff, ea->octet[4]&0xff, ea->octet[5]&0xff);
+		 ea->octet[0] & 0xff, ea->octet[1] & 0xff, ea->octet[2] & 0xff,
+		 ea->octet[3] & 0xff, ea->octet[4] & 0xff, ea->octet[5] & 0xff);
 	return (buf);
 }
 
-char *
-bcm_ip_ntoa(struct ipv4_addr *ia, char *buf)
+char *bcm_ip_ntoa(struct ipv4_addr *ia, char *buf)
 {
 	snprintf(buf, 16, "%d.%d.%d.%d",
-		ia->addr[0], ia->addr[1], ia->addr[2], ia->addr[3]);
+		 ia->addr[0], ia->addr[1], ia->addr[2], ia->addr[3]);
 	return (buf);
 }
 
 #ifdef BCMDRIVER
 
-void
-bcm_mdelay(uint ms)
+void bcm_mdelay(uint ms)
 {
 	uint i;
 
@@ -905,14 +880,9 @@ bcm_mdelay(uint ms)
 	}
 }
 
-
-
-
-
 #if defined(DHD_DEBUG)
 /* pretty hex print a pkt buffer chain */
-void
-prpkt(const char *msg, osl_t *osh, void *p0)
+void prpkt(const char *msg, osl_t *osh, void *p0)
 {
 	void *p;
 
@@ -922,14 +892,13 @@ prpkt(const char *msg, osl_t *osh, void *p0)
 	for (p = p0; p; p = PKTNEXT(osh, p))
 		prhex(NULL, PKTDATA(osh, p), PKTLEN(osh, p));
 }
-#endif  
+#endif
 
 /* Takes an Ethernet frame and sets out-of-bound PKTPRIO.
  * Also updates the inplace vlan tag if requested.
  * For debugging, it returns an indication of what it did.
  */
-uint BCMFASTPATH
-pktsetprio(void *pkt, bool update_vtag)
+uint BCMFASTPATH pktsetprio(void *pkt, bool update_vtag)
 {
 	struct ether_header *eh;
 	struct ethervlan_header *evh;
@@ -937,10 +906,10 @@ pktsetprio(void *pkt, bool update_vtag)
 	int priority = 0;
 	int rc = 0;
 
-	pktdata = (uint8 *) PKTDATA(NULL, pkt);
-	ASSERT(ISALIGNED((uintptr)pktdata, sizeof(uint16)));
+	pktdata = (uint8 *)PKTDATA(NULL, pkt);
+	ASSERT(ISALIGNED((uintptr) pktdata, sizeof(uint16)));
 
-	eh = (struct ether_header *) pktdata;
+	eh = (struct ether_header *)pktdata;
 
 	if (ntoh16(eh->ether_type) == ETHER_TYPE_8021Q) {
 		uint16 vlan_tag;
@@ -949,10 +918,11 @@ pktsetprio(void *pkt, bool update_vtag)
 		evh = (struct ethervlan_header *)eh;
 
 		vlan_tag = ntoh16(evh->vlan_tag);
-		vlan_prio = (int) (vlan_tag >> VLAN_PRI_SHIFT) & VLAN_PRI_MASK;
+		vlan_prio = (int)(vlan_tag >> VLAN_PRI_SHIFT) & VLAN_PRI_MASK;
 
 		if (ntoh16(evh->ether_type) == ETHER_TYPE_IP) {
-			uint8 *ip_body = pktdata + sizeof(struct ethervlan_header);
+			uint8 *ip_body =
+			    pktdata + sizeof(struct ethervlan_header);
 			uint8 tos_tc = IP_TOS46(ip_body);
 			dscp_prio = (int)(tos_tc >> IPV4_TOS_PREC_SHIFT);
 		}
@@ -990,19 +960,18 @@ pktsetprio(void *pkt, bool update_vtag)
 	return (rc | priority);
 }
 
-
 static char bcm_undeferrstr[32];
 static const char *bcmerrorstrtable[] = BCMERRSTRINGTABLE;
 
 /* Convert the error codes into related error strings  */
-const char *
-bcmerrorstr(int bcmerror)
+const char *bcmerrorstr(int bcmerror)
 {
 	/* check if someone added a bcmerror code but forgot to add errorstring */
 	ASSERT(ABS(BCME_LAST) == (ARRAYSIZE(bcmerrorstrtable) - 1));
 
 	if (bcmerror > 0 || bcmerror < BCME_LAST) {
-		snprintf(bcm_undeferrstr, sizeof(bcm_undeferrstr), "Undefined error %d", bcmerror);
+		snprintf(bcm_undeferrstr, sizeof(bcm_undeferrstr),
+			 "Undefined error %d", bcmerror);
 		return bcm_undeferrstr;
 	}
 
@@ -1011,12 +980,8 @@ bcmerrorstr(int bcmerror)
 	return bcmerrorstrtable[-bcmerror];
 }
 
-
-
-
 /* iovar table lookup */
-const bcm_iovar_t*
-bcm_iovar_lookup(const bcm_iovar_t *table, const char *name)
+const bcm_iovar_t *bcm_iovar_lookup(const bcm_iovar_t *table, const char *name)
 {
 	const bcm_iovar_t *vi;
 	const char *lookup_name;
@@ -1036,11 +1001,10 @@ bcm_iovar_lookup(const bcm_iovar_t *table, const char *name)
 	}
 	/* ran to end of table */
 
-	return NULL; /* var name not found */
+	return NULL;		/* var name not found */
 }
 
-int
-bcm_iovar_lencheck(const bcm_iovar_t *vi, void *arg, int len, bool set)
+int bcm_iovar_lencheck(const bcm_iovar_t *vi, void *arg, int len, bool set)
 {
 	int bcmerror = 0;
 
@@ -1085,8 +1049,7 @@ bcm_iovar_lencheck(const bcm_iovar_t *vi, void *arg, int len, bool set)
 	return bcmerror;
 }
 
-#endif  /* BCMDRIVER */
-
+#endif /* BCMDRIVER */
 
 /*******************************************************************************
  * crc8
@@ -1148,12 +1111,10 @@ static const uint8 crc8_table[256] = {
 #define CRC_INNER_LOOP(n, c, x) \
 	(c) = ((c) >> 8) ^ crc##n##_table[((c) ^ (x)) & 0xff]
 
-uint8
-hndcrc8(
-	uint8 *pdata,   /* pointer to array of data to process */
-	uint  nbytes,   /* number of input data bytes to process */
-	uint8 crc   /* either CRC8_INIT_VALUE or previous return value */
-)
+uint8 hndcrc8(uint8 *pdata,	/* pointer to array of data to process */
+	      uint nbytes,	/* number of input data bytes to process */
+	      uint8 crc		/* either CRC8_INIT_VALUE or previous return value */
+    )
 {
 	/* hard code the crc loop instead of using CRC_INNER_LOOP macro
 	 * to avoid the undefined and unnecessary (uint8 >> 8) operation.
@@ -1221,12 +1182,10 @@ static const uint16 crc16_table[256] = {
 	0x7BC7, 0x6A4E, 0x58D5, 0x495C, 0x3DE3, 0x2C6A, 0x1EF1, 0x0F78
 };
 
-uint16
-hndcrc16(
-	uint8 *pdata,  /* pointer to array of data to process */
-	uint nbytes, /* number of input data bytes to process */
-	uint16 crc     /* either CRC16_INIT_VALUE or previous return value */
-)
+uint16 hndcrc16(uint8 *pdata,	/* pointer to array of data to process */
+		uint nbytes,	/* number of input data bytes to process */
+		uint16 crc	/* either CRC16_INIT_VALUE or previous return value */
+    )
 {
 	while (nbytes-- > 0)
 		CRC_INNER_LOOP(16, crc, *pdata++);
@@ -1304,16 +1263,15 @@ static const uint32 crc32_table[256] = {
  * crc input is CRC32_INIT_VALUE for a fresh start, or previous return value if
  * accumulating over multiple pieces.
  */
-uint32
-hndcrc32(uint8 *pdata, uint nbytes, uint32 crc)
+uint32 hndcrc32(uint8 *pdata, uint nbytes, uint32 crc)
 {
 	uint8 *pend;
 #ifdef __mips__
 	uint8 tmp[4];
-	ulong *tptr = (ulong *)tmp;
+	ulong *tptr = (ulong *) tmp;
 
 	/* in case the beginning of the buffer isn't aligned */
-	pend = (uint8 *)((uint)(pdata + 3) & 0xfffffffc);
+	pend = (uint8 *)((uint) (pdata + 3) & 0xfffffffc);
 	nbytes -= (pend - pdata);
 	while (pdata < pend)
 		CRC_INNER_LOOP(32, crc, *pdata++);
@@ -1321,7 +1279,7 @@ hndcrc32(uint8 *pdata, uint nbytes, uint32 crc)
 	/* handle bulk of data as 32-bit words */
 	pend = pdata + (nbytes & 0xfffffffc);
 	while (pdata < pend) {
-		*tptr = *(ulong *)pdata;
+		*tptr = *(ulong *) pdata;
 		pdata += sizeof(ulong *);
 		CRC_INNER_LOOP(32, crc, tmp[0]);
 		CRC_INNER_LOOP(32, crc, tmp[1]);
@@ -1343,37 +1301,38 @@ hndcrc32(uint8 *pdata, uint nbytes, uint32 crc)
 }
 
 #ifdef notdef
-#define CLEN    1499    /*  CRC Length */
+#define CLEN    1499		/*  CRC Length */
 #define CBUFSIZ     (CLEN+4)
-#define CNBUFS      5 /* # of bufs */
+#define CNBUFS      5		/* # of bufs */
 
-void
-testcrc32(void)
+void testcrc32(void)
 {
 	uint j, k, l;
 	uint8 *buf;
 	uint len[CNBUFS];
 	uint32 crcr;
 	uint32 crc32tv[CNBUFS] =
-		{0xd2cb1faa, 0xd385c8fa, 0xf5b4f3f3, 0x55789e20, 0x00343110};
+	    { 0xd2cb1faa, 0xd385c8fa, 0xf5b4f3f3, 0x55789e20, 0x00343110 };
 
-	ASSERT((buf = MALLOC(CBUFSIZ*CNBUFS)) != NULL);
+	ASSERT((buf = MALLOC(CBUFSIZ * CNBUFS)) != NULL);
 
 	/* step through all possible alignments */
 	for (l = 0; l <= 4; l++) {
 		for (j = 0; j < CNBUFS; j++) {
 			len[j] = CLEN;
 			for (k = 0; k < len[j]; k++)
-				*(buf + j*CBUFSIZ + (k+l)) = (j+k) & 0xff;
+				*(buf + j * CBUFSIZ + (k + l)) = (j + k) & 0xff;
 		}
 
 		for (j = 0; j < CNBUFS; j++) {
-			crcr = crc32(buf + j*CBUFSIZ + l, len[j], CRC32_INIT_VALUE);
+			crcr =
+			    crc32(buf + j * CBUFSIZ + l, len[j],
+				  CRC32_INIT_VALUE);
 			ASSERT(crcr == crc32tv[j]);
 		}
 	}
 
-	MFREE(buf, CBUFSIZ*CNBUFS);
+	MFREE(buf, CBUFSIZ * CNBUFS);
 	return;
 }
 #endif /* notdef */
@@ -1386,8 +1345,7 @@ testcrc32(void)
  * *buflen is not modified if the TLV elt parameter is invalid, or is decremented
  * by the TLV parameter's length if it is valid.
  */
-bcm_tlv_t *
-bcm_next_tlv(bcm_tlv_t *elt, int *buflen)
+bcm_tlv_t *bcm_next_tlv(bcm_tlv_t * elt, int *buflen)
 {
 	int len;
 
@@ -1397,7 +1355,7 @@ bcm_next_tlv(bcm_tlv_t *elt, int *buflen)
 
 	/* advance to next elt */
 	len = elt->len;
-	elt = (bcm_tlv_t*)(elt->data + len);
+	elt = (bcm_tlv_t *) (elt->data + len);
 	*buflen -= (2 + len);
 
 	/* validate next elt */
@@ -1412,13 +1370,12 @@ bcm_next_tlv(bcm_tlv_t *elt, int *buflen)
  * triples, returning a pointer to the substring whose first element
  * matches tag
  */
-bcm_tlv_t *
-bcm_parse_tlvs(void *buf, int buflen, uint key)
+bcm_tlv_t *bcm_parse_tlvs(void *buf, int buflen, uint key)
 {
 	bcm_tlv_t *elt;
 	int totlen;
 
-	elt = (bcm_tlv_t*)buf;
+	elt = (bcm_tlv_t *) buf;
 	totlen = buflen;
 
 	/* find tagged parameter */
@@ -1429,7 +1386,7 @@ bcm_parse_tlvs(void *buf, int buflen, uint key)
 		if ((elt->id == key) && (totlen >= (len + 2)))
 			return (elt);
 
-		elt = (bcm_tlv_t*)((uint8*)elt + (len + 2));
+		elt = (bcm_tlv_t *) ((uint8 *)elt + (len + 2));
 		totlen -= (len + 2);
 	}
 
@@ -1442,13 +1399,12 @@ bcm_parse_tlvs(void *buf, int buflen, uint key)
  * matches tag.  Stop parsing when we see an element whose ID is greater
  * than the target key.
  */
-bcm_tlv_t *
-bcm_parse_ordered_tlvs(void *buf, int buflen, uint key)
+bcm_tlv_t *bcm_parse_ordered_tlvs(void *buf, int buflen, uint key)
 {
 	bcm_tlv_t *elt;
 	int totlen;
 
-	elt = (bcm_tlv_t*)buf;
+	elt = (bcm_tlv_t *) buf;
 	totlen = buflen;
 
 	/* find tagged parameter */
@@ -1464,7 +1420,7 @@ bcm_parse_ordered_tlvs(void *buf, int buflen, uint key)
 		if ((id == key) && (totlen >= (len + 2)))
 			return (elt);
 
-		elt = (bcm_tlv_t*)((uint8*)elt + (len + 2));
+		elt = (bcm_tlv_t *) ((uint8 *)elt + (len + 2));
 		totlen -= (len + 2);
 	}
 	return NULL;
@@ -1472,15 +1428,14 @@ bcm_parse_ordered_tlvs(void *buf, int buflen, uint key)
 
 #if defined(WLMSG_PRHDRS) || defined(WLMSG_PRPKT) || defined(WLMSG_ASSOC) || \
 	defined(DHD_DEBUG)
-int
-bcm_format_flags(const bcm_bit_desc_t *bd, uint32 flags, char* buf, int len)
+int bcm_format_flags(const bcm_bit_desc_t *bd, uint32 flags, char *buf, int len)
 {
 	int i;
-	char* p = buf;
+	char *p = buf;
 	char hexstr[16];
 	int slen = 0, nlen = 0;
 	uint32 bit;
-	const char* name;
+	const char *name;
 
 	if (len < 2 || !buf)
 		return 0;
@@ -1494,7 +1449,7 @@ bcm_format_flags(const bcm_bit_desc_t *bd, uint32 flags, char* buf, int len)
 			/* print any unnamed bits */
 			snprintf(hexstr, 16, "0x%X", flags);
 			name = hexstr;
-			flags = 0;  /* exit loop */
+			flags = 0;	/* exit loop */
 		} else if ((flags & bit) == 0)
 			continue;
 		flags &= ~bit;
@@ -1518,23 +1473,22 @@ bcm_format_flags(const bcm_bit_desc_t *bd, uint32 flags, char* buf, int len)
 	/* indicate the str was too short */
 	if (flags != 0) {
 		if (len < 2)
-			p -= 2 - len;   /* overwrite last char */
+			p -= 2 - len;	/* overwrite last char */
 		p += snprintf(p, 2, ">");
 	}
 
 	return (int)(p - buf);
 }
-#endif 
+#endif
 
 #if defined(WLMSG_PRHDRS) || defined(WLMSG_PRPKT) || defined(WLMSG_ASSOC) || \
 	defined(DHD_DEBUG) || defined(WLMEDIA_PEAKRATE)
 /* print bytes formatted as hex to a string. return the resulting string length */
-int
-bcm_format_hex(char *str, const void *bytes, int len)
+int bcm_format_hex(char *str, const void *bytes, int len)
 {
 	int i;
 	char *p = str;
-	const uint8 *src = (const uint8*)bytes;
+	const uint8 *src = (const uint8 *)bytes;
 
 	for (i = 0; i < len; i++) {
 		p += snprintf(p, 3, "%02X", *src);
@@ -1542,11 +1496,10 @@ bcm_format_hex(char *str, const void *bytes, int len)
 	}
 	return (int)(p - str);
 }
-#endif 
+#endif
 
 /* pretty hex print a contiguous buffer */
-void
-prhex(const char *msg, uchar *buf, uint nbytes)
+void prhex(const char *msg, uchar *buf, uint nbytes)
 {
 	char line[128], *p;
 	int len = sizeof(line);
@@ -1559,7 +1512,7 @@ prhex(const char *msg, uchar *buf, uint nbytes)
 	p = line;
 	for (i = 0; i < nbytes; i++) {
 		if (i % 16 == 0) {
-			nchar = snprintf(p, len, "  %04d: ", i);    /* line prefix */
+			nchar = snprintf(p, len, "  %04d: ", i);	/* line prefix */
 			p += nchar;
 			len -= nchar;
 		}
@@ -1570,7 +1523,7 @@ prhex(const char *msg, uchar *buf, uint nbytes)
 		}
 
 		if (i % 16 == 15) {
-			printf("%s\n", line);       /* flush line */
+			printf("%s\n", line);	/* flush line */
 			p = line;
 			len = sizeof(line);
 		}
@@ -1589,8 +1542,7 @@ static const char *crypto_algo_names[] = {
 	"AES_CCM",
 	"AES_OCB_MSDU",
 	"AES_OCB_MPDU",
-	"NALG"
-	"UNDEF",
+	"NALG" "UNDEF",
 	"UNDEF",
 	"UNDEF",
 #ifdef BCMWAPI_WPI
@@ -1599,15 +1551,13 @@ static const char *crypto_algo_names[] = {
 	"UNDEF"
 };
 
-const char *
-bcm_crypto_algo_name(uint algo)
+const char *bcm_crypto_algo_name(uint algo)
 {
-	return (algo < ARRAYSIZE(crypto_algo_names)) ? crypto_algo_names[algo] : "ERR";
+	return (algo <
+		ARRAYSIZE(crypto_algo_names)) ? crypto_algo_names[algo] : "ERR";
 }
 
-
-char *
-bcm_chipname(uint chipid, char *buf, uint len)
+char *bcm_chipname(uint chipid, char *buf, uint len)
 {
 	const char *fmt;
 
@@ -1617,22 +1567,21 @@ bcm_chipname(uint chipid, char *buf, uint len)
 }
 
 /* Produce a human-readable string for boardrev */
-char *
-bcm_brev_str(uint32 brev, char *buf)
+char *bcm_brev_str(uint32 brev, char *buf)
 {
 	if (brev < 0x100)
 		snprintf(buf, 8, "%d.%d", (brev & 0xf0) >> 4, brev & 0xf);
 	else
-		snprintf(buf, 8, "%c%03x", ((brev & 0xf000) == 0x1000) ? 'P' : 'A', brev & 0xfff);
+		snprintf(buf, 8, "%c%03x",
+			 ((brev & 0xf000) == 0x1000) ? 'P' : 'A', brev & 0xfff);
 
 	return (buf);
 }
 
-#define BUFSIZE_TODUMP_ATONCE 512 /* Buffer size */
+#define BUFSIZE_TODUMP_ATONCE 512	/* Buffer size */
 
 /* dump large strings to console */
-void
-printbig(char *buf)
+void printbig(char *buf)
 {
 	uint len, max_len;
 	char c;
@@ -1657,10 +1606,10 @@ printbig(char *buf)
 
 /* routine to dump fields in a fileddesc structure */
 uint
-bcmdumpfields(bcmutl_rdreg_rtn read_rtn, void *arg0, uint arg1, struct fielddesc *fielddesc_array,
-	char *buf, uint32 bufsize)
+bcmdumpfields(bcmutl_rdreg_rtn read_rtn, void *arg0, uint arg1,
+	      struct fielddesc *fielddesc_array, char *buf, uint32 bufsize)
 {
-	uint  filled_len;
+	uint filled_len;
 	int len;
 	struct fielddesc *cur_ptr;
 
@@ -1671,7 +1620,7 @@ bcmdumpfields(bcmutl_rdreg_rtn read_rtn, void *arg0, uint arg1, struct fielddesc
 		if (cur_ptr->nameandfmt == NULL)
 			break;
 		len = snprintf(buf, bufsize, cur_ptr->nameandfmt,
-			read_rtn(arg0, arg1, cur_ptr->offset));
+			       read_rtn(arg0, arg1, cur_ptr->offset));
 		/* check for snprintf overflow or error */
 		if (len < 0 || (uint32)len >= bufsize)
 			len = bufsize - 1;
@@ -1683,8 +1632,7 @@ bcmdumpfields(bcmutl_rdreg_rtn read_rtn, void *arg0, uint arg1, struct fielddesc
 	return filled_len;
 }
 
-uint
-bcm_mkiovar(char *name, char *data, uint datalen, char *buf, uint buflen)
+uint bcm_mkiovar(char *name, char *data, uint datalen, char *buf, uint buflen)
 {
 	uint len;
 
@@ -1708,31 +1656,30 @@ bcm_mkiovar(char *name, char *data, uint datalen, char *buf, uint buflen)
  * a uint16.
  */
 
-#define QDBM_OFFSET 153     /* Offset for first entry */
-#define QDBM_TABLE_LEN 40   /* Table size */
+#define QDBM_OFFSET 153		/* Offset for first entry */
+#define QDBM_TABLE_LEN 40	/* Table size */
 
 /* Smallest mW value that will round up to the first table entry, QDBM_OFFSET.
  * Value is ( mW(QDBM_OFFSET - 1) + mW(QDBM_OFFSET) ) / 2
  */
-#define QDBM_TABLE_LOW_BOUND 6493 /* Low bound */
+#define QDBM_TABLE_LOW_BOUND 6493	/* Low bound */
 
 /* Largest mW value that will round down to the last table entry,
  * QDBM_OFFSET + QDBM_TABLE_LEN-1.
  * Value is ( mW(QDBM_OFFSET + QDBM_TABLE_LEN - 1) + mW(QDBM_OFFSET + QDBM_TABLE_LEN) ) / 2.
  */
-#define QDBM_TABLE_HIGH_BOUND 64938 /* High bound */
+#define QDBM_TABLE_HIGH_BOUND 64938	/* High bound */
 
 static const uint16 nqdBm_to_mW_map[QDBM_TABLE_LEN] = {
 /* qdBm:    +0  +1  +2  +3  +4  +5  +6  +7 */
-/* 153: */      6683,   7079,   7499,   7943,   8414,   8913,   9441,   10000,
-/* 161: */      10593,  11220,  11885,  12589,  13335,  14125,  14962,  15849,
-/* 169: */      16788,  17783,  18836,  19953,  21135,  22387,  23714,  25119,
-/* 177: */      26607,  28184,  29854,  31623,  33497,  35481,  37584,  39811,
-/* 185: */      42170,  44668,  47315,  50119,  53088,  56234,  59566,  63096
+/* 153: */ 6683, 7079, 7499, 7943, 8414, 8913, 9441, 10000,
+/* 161: */ 10593, 11220, 11885, 12589, 13335, 14125, 14962, 15849,
+/* 169: */ 16788, 17783, 18836, 19953, 21135, 22387, 23714, 25119,
+/* 177: */ 26607, 28184, 29854, 31623, 33497, 35481, 37584, 39811,
+/* 185: */ 42170, 44668, 47315, 50119, 53088, 56234, 59566, 63096
 };
 
-uint16
-bcm_qdbm_to_mw(uint8 qdbm)
+uint16 bcm_qdbm_to_mw(uint8 qdbm)
 {
 	uint factor = 1;
 	int idx = qdbm - QDBM_OFFSET;
@@ -1753,11 +1700,10 @@ bcm_qdbm_to_mw(uint8 qdbm)
 	/* return the mW value scaled down to the correct factor of 10,
 	 * adding in factor/2 to get proper rounding.
 	 */
-	return ((nqdBm_to_mW_map[idx] + factor/2) / factor);
+	return ((nqdBm_to_mW_map[idx] + factor / 2) / factor);
 }
 
-uint8
-bcm_mw_to_qdbm(uint16 mw)
+uint8 bcm_mw_to_qdbm(uint16 mw)
 {
 	uint8 qdbm;
 	int offset;
@@ -1776,9 +1722,9 @@ bcm_mw_to_qdbm(uint16 mw)
 		offset -= 40;
 	}
 
-	for (qdbm = 0; qdbm < QDBM_TABLE_LEN-1; qdbm++) {
-		boundary = nqdBm_to_mW_map[qdbm] + (nqdBm_to_mW_map[qdbm+1] -
-			nqdBm_to_mW_map[qdbm])/2;
+	for (qdbm = 0; qdbm < QDBM_TABLE_LEN - 1; qdbm++) {
+		boundary = nqdBm_to_mW_map[qdbm] + (nqdBm_to_mW_map[qdbm + 1] -
+						    nqdBm_to_mW_map[qdbm]) / 2;
 		if (mw_uint < boundary)
 			break;
 	}
@@ -1788,9 +1734,7 @@ bcm_mw_to_qdbm(uint16 mw)
 	return (qdbm);
 }
 
-
-uint
-bcm_bitcount(uint8 *bitmap, uint length)
+uint bcm_bitcount(uint8 *bitmap, uint length)
 {
 	uint bitcount = 0, i;
 	uint8 tmp;
@@ -1807,16 +1751,14 @@ bcm_bitcount(uint8 *bitmap, uint length)
 #ifdef BCMDRIVER
 
 /* Initialization of bcmstrbuf structure */
-void
-bcm_binit(struct bcmstrbuf *b, char *buf, uint size)
+void bcm_binit(struct bcmstrbuf *b, char *buf, uint size)
 {
 	b->origsize = b->size = size;
 	b->origbuf = b->buf = buf;
 }
 
 /* Buffer sprintf wrapper to guard against buffer overflow */
-int
-bcm_bprintf(struct bcmstrbuf *b, const char *fmt, ...)
+int bcm_bprintf(struct bcmstrbuf *b, const char *fmt, ...)
 {
 	va_list ap;
 	int r;
@@ -1840,8 +1782,7 @@ bcm_bprintf(struct bcmstrbuf *b, const char *fmt, ...)
 	return r;
 }
 
-void
-bcm_inc_bytes(uchar *num, int num_bytes, uint8 amount)
+void bcm_inc_bytes(uchar *num, int num_bytes, uint8 amount)
 {
 	int i;
 
@@ -1853,8 +1794,7 @@ bcm_inc_bytes(uchar *num, int num_bytes, uint8 amount)
 	}
 }
 
-int
-bcm_cmp_bytes(uchar *arg1, uchar *arg2, uint8 nbytes)
+int bcm_cmp_bytes(uchar *arg1, uchar *arg2, uint8 nbytes)
 {
 	int i;
 
@@ -1865,8 +1805,7 @@ bcm_cmp_bytes(uchar *arg1, uchar *arg2, uint8 nbytes)
 	return 0;
 }
 
-void
-bcm_print_bytes(char *name, const uchar *data, int len)
+void bcm_print_bytes(char *name, const uchar *data, int len)
 {
 	int i;
 	int per_line = 0;
@@ -1882,21 +1821,22 @@ bcm_print_bytes(char *name, const uchar *data, int len)
 	}
 	printf("\n");
 }
+
 #if defined(WLTINYDUMP) || defined(WLMSG_INFORM) || defined(WLMSG_ASSOC) || \
 	defined(WLMSG_PRPKT) || defined(WLMSG_WSEC)
 #define SSID_FMT_BUF_LEN    ((4 * DOT11_MAX_SSID_LEN) + 1)
 
-int
-bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len)
+int bcm_format_ssid(char *buf, const uchar ssid[], uint ssid_len)
 {
 	uint i, c;
 	char *p = buf;
 	char *endp = buf + SSID_FMT_BUF_LEN;
 
-	if (ssid_len > DOT11_MAX_SSID_LEN) ssid_len = DOT11_MAX_SSID_LEN;
+	if (ssid_len > DOT11_MAX_SSID_LEN)
+		ssid_len = DOT11_MAX_SSID_LEN;
 
 	for (i = 0; i < ssid_len; i++) {
-		c = (uint)ssid[i];
+		c = (uint) ssid[i];
 		if (c == '\\') {
 			*p++ = '\\';
 			*p++ = '\\';
@@ -1911,7 +1851,7 @@ bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len)
 
 	return (int)(p - buf);
 }
-#endif 
+#endif
 
 #endif /* BCMDRIVER */
 
@@ -1922,8 +1862,7 @@ bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len)
  * Shortens buffer as needed and pads with NULs.  End of buffer is marked by two NULs.
 */
 
-unsigned int
-process_nvram_vars(char *varbuf, unsigned int len)
+unsigned int process_nvram_vars(char *varbuf, unsigned int len)
 {
 	char *dp;
 	bool findNewline;

@@ -25,7 +25,6 @@
  * $Id: bcmwifi.c,v 1.31.8.1 2010-08-03 17:47:05 $
  */
 
-
 #include <typedefs.h>
 
 #ifdef BCMDRIVER
@@ -40,19 +39,14 @@
 #ifndef ASSERT
 #define ASSERT(exp)
 #endif
-#endif 
+#endif
 #include <bcmwifi.h>
 
 #if defined(WIN32) && (defined(BCMDLL) || defined(WLMDLL))
-#include <bcmstdlib.h> 	
+#include <bcmstdlib.h>
 #endif
 
-
-
-
-
-char *
-wf_chspec_ntoa(chanspec_t chspec, char *buf)
+char *wf_chspec_ntoa(chanspec_t chspec, char *buf)
 {
 	const char *band, *bw, *sb;
 	uint channel;
@@ -61,7 +55,7 @@ wf_chspec_ntoa(chanspec_t chspec, char *buf)
 	bw = "";
 	sb = "";
 	channel = CHSPEC_CHANNEL(chspec);
-	
+
 	if ((CHSPEC_IS2G(chspec) && channel > CH_MAX_2G_CHANNEL) ||
 	    (CHSPEC_IS5G(chspec) && channel <= CH_MAX_2G_CHANNEL))
 		band = (CHSPEC_IS2G(chspec)) ? "b" : "a";
@@ -77,14 +71,11 @@ wf_chspec_ntoa(chanspec_t chspec, char *buf)
 		bw = "n";
 	}
 
-	
 	snprintf(buf, 6, "%d%s%s%s", channel, band, bw, sb);
 	return (buf);
 }
 
-
-chanspec_t
-wf_chspec_aton(char *a)
+chanspec_t wf_chspec_aton(char *a)
 {
 	char *endp = NULL;
 	uint channel, band, bw, ctl_sb;
@@ -92,14 +83,15 @@ wf_chspec_aton(char *a)
 
 	channel = strtoul(a, &endp, 10);
 
-	
 	if (endp == a)
 		return 0;
 
 	if (channel > MAXCHANNEL)
 		return 0;
 
-	band = ((channel <= CH_MAX_2G_CHANNEL) ? WL_CHANSPEC_BAND_2G : WL_CHANSPEC_BAND_5G);
+	band =
+	    ((channel <=
+	      CH_MAX_2G_CHANNEL) ? WL_CHANSPEC_BAND_2G : WL_CHANSPEC_BAND_5G);
 	bw = WL_CHANSPEC_BW_20;
 	ctl_sb = WL_CHANSPEC_CTL_SB_NONE;
 
@@ -109,7 +101,6 @@ wf_chspec_aton(char *a)
 	if (c == '\0')
 		goto done;
 
-	
 	if (c == 'a' || c == 'b') {
 		band = (c == 'a') ? WL_CHANSPEC_BAND_5G : WL_CHANSPEC_BAND_2G;
 		a++;
@@ -118,13 +109,12 @@ wf_chspec_aton(char *a)
 			goto done;
 	}
 
-	
 	if (c == 'n') {
 		bw = WL_CHANSPEC_BW_10;
 	} else if (c == 'l') {
 		bw = WL_CHANSPEC_BW_40;
 		ctl_sb = WL_CHANSPEC_CTL_SB_LOWER;
-		
+
 		if (channel <= (MAXCHANNEL - CH_20MHZ_APART))
 			channel += CH_10MHZ_APART;
 		else
@@ -132,7 +122,7 @@ wf_chspec_aton(char *a)
 	} else if (c == 'u') {
 		bw = WL_CHANSPEC_BW_40;
 		ctl_sb = WL_CHANSPEC_CTL_SB_UPPER;
-		
+
 		if (channel > CH_20MHZ_APART)
 			channel -= CH_10MHZ_APART;
 		else
@@ -145,48 +135,43 @@ done:
 	return (channel | band | bw | ctl_sb);
 }
 
-
-bool
-wf_chspec_malformed(chanspec_t chanspec)
+bool wf_chspec_malformed(chanspec_t chanspec)
 {
-	
+
 	if (!CHSPEC_IS5G(chanspec) && !CHSPEC_IS2G(chanspec))
 		return TRUE;
-	
+
 	if (!CHSPEC_IS40(chanspec) && !CHSPEC_IS20(chanspec))
 		return TRUE;
 
-	
 	if (CHSPEC_IS20_UNCOND(chanspec)) {
 		if (!CHSPEC_SB_NONE(chanspec))
 			return TRUE;
 	} else {
 		if (!CHSPEC_SB_UPPER(chanspec) && !CHSPEC_SB_LOWER(chanspec))
-		return TRUE;
+			return TRUE;
 	}
 
 	return FALSE;
 }
 
-
-uint8
-wf_chspec_ctlchan(chanspec_t chspec)
+uint8 wf_chspec_ctlchan(chanspec_t chspec)
 {
 	uint8 ctl_chan;
 
-	
 	if (CHSPEC_CTL_SB(chspec) == WL_CHANSPEC_CTL_SB_NONE) {
 		return CHSPEC_CHANNEL(chspec);
 	} else {
-		
+
 		ASSERT(CHSPEC_BW(chspec) == WL_CHANSPEC_BW_40);
-		
+
 		if (CHSPEC_CTL_SB(chspec) == WL_CHANSPEC_CTL_SB_UPPER) {
-			
+
 			ctl_chan = UPPER_20_SB(CHSPEC_CHANNEL(chspec));
 		} else {
-			ASSERT(CHSPEC_CTL_SB(chspec) == WL_CHANSPEC_CTL_SB_LOWER);
-			
+			ASSERT(CHSPEC_CTL_SB(chspec) ==
+			       WL_CHANSPEC_CTL_SB_LOWER);
+
 			ctl_chan = LOWER_20_SB(CHSPEC_CHANNEL(chspec));
 		}
 	}
@@ -194,15 +179,13 @@ wf_chspec_ctlchan(chanspec_t chspec)
 	return ctl_chan;
 }
 
-chanspec_t
-wf_chspec_ctlchspec(chanspec_t chspec)
+chanspec_t wf_chspec_ctlchspec(chanspec_t chspec)
 {
 	chanspec_t ctl_chspec = 0;
 	uint8 channel;
 
 	ASSERT(!wf_chspec_malformed(chspec));
 
-	
 	if (CHSPEC_CTL_SB(chspec) == WL_CHANSPEC_CTL_SB_NONE) {
 		return chspec;
 	} else {
@@ -211,21 +194,19 @@ wf_chspec_ctlchspec(chanspec_t chspec)
 		} else {
 			channel = LOWER_20_SB(CHSPEC_CHANNEL(chspec));
 		}
-		ctl_chspec = channel | WL_CHANSPEC_BW_20 | WL_CHANSPEC_CTL_SB_NONE;
+		ctl_chspec =
+		    channel | WL_CHANSPEC_BW_20 | WL_CHANSPEC_CTL_SB_NONE;
 		ctl_chspec |= CHSPEC_BAND(chspec);
 	}
 	return ctl_chspec;
 }
 
-
-int
-wf_mhz2channel(uint freq, uint start_factor)
+int wf_mhz2channel(uint freq, uint start_factor)
 {
 	int ch = -1;
 	uint base;
 	int offset;
 
-	
 	if (start_factor == 0) {
 		if (freq >= 2400 && freq <= 2500)
 			start_factor = WF_CHAN_FACTOR_2_4_G;
@@ -238,27 +219,22 @@ wf_mhz2channel(uint freq, uint start_factor)
 
 	base = start_factor / 2;
 
-	
 	if ((freq < base) || (freq > base + 1000))
 		return -1;
 
 	offset = freq - base;
 	ch = offset / 5;
 
-	
 	if (offset != (ch * 5))
 		return -1;
 
-	
 	if (start_factor == WF_CHAN_FACTOR_2_4_G && (ch < 1 || ch > 13))
 		return -1;
 
 	return ch;
 }
 
-
-int
-wf_channel2mhz(uint ch, uint start_factor)
+int wf_channel2mhz(uint ch, uint start_factor)
 {
 	int freq;
 

@@ -764,6 +764,14 @@ int ccu_get_dbg_bus_status(struct ccu_clk *ccu_clk);
 int ccu_set_dbg_bus_sel(struct ccu_clk *ccu_clk, u32 sel);
 int ccu_get_dbg_bus_sel(struct ccu_clk *ccu_clk);
 
+/*These clock API should only be called after
+* appropriate locks are acquired*/
+int __clk_enable(struct clk *clk);
+void __clk_disable(struct clk *clk);
+
+
+
+
 #if defined(DEBUG)
 #define	clk_dbg printk
 #else

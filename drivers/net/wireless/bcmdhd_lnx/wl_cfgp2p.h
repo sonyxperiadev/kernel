@@ -36,20 +36,20 @@ extern u32 wl_dbg_level;
  * saved_ie[] array of structures which in turn contains a bsscfg index field.
  */
 typedef enum {
-	P2PAPI_BSSCFG_PRIMARY, /* maps to driver's primary bsscfg */
-	P2PAPI_BSSCFG_DEVICE, /* maps to driver's P2P device discovery bsscfg */
-	P2PAPI_BSSCFG_CONNECTION, /* maps to driver's P2P connection bsscfg */
+	P2PAPI_BSSCFG_PRIMARY,	/* maps to driver's primary bsscfg */
+	P2PAPI_BSSCFG_DEVICE,	/* maps to driver's P2P device discovery bsscfg */
+	P2PAPI_BSSCFG_CONNECTION,	/* maps to driver's P2P connection bsscfg */
 	P2PAPI_BSSCFG_MAX
 } p2p_bsscfg_type_t;
 
 #define IE_MAX_LEN 300
 /* Structure to hold all saved P2P and WPS IEs for a BSSCFG */
 struct p2p_saved_ie {
-	u8  p2p_probe_req_ie[IE_MAX_LEN];
-	u8  p2p_probe_res_ie[IE_MAX_LEN];
-	u8  p2p_assoc_req_ie[IE_MAX_LEN];
-	u8  p2p_assoc_res_ie[IE_MAX_LEN];
-	u8  p2p_beacon_ie[IE_MAX_LEN];
+	u8 p2p_probe_req_ie[IE_MAX_LEN];
+	u8 p2p_probe_res_ie[IE_MAX_LEN];
+	u8 p2p_assoc_req_ie[IE_MAX_LEN];
+	u8 p2p_assoc_res_ie[IE_MAX_LEN];
+	u8 p2p_beacon_ie[IE_MAX_LEN];
 	u32 p2p_probe_req_ie_len;
 	u32 p2p_probe_res_ie_len;
 	u32 p2p_assoc_req_ie_len;
@@ -65,7 +65,7 @@ struct p2p_bss {
 };
 
 struct p2p_info {
-	bool on;    /* p2p on/off switch */
+	bool on;		/* p2p on/off switch */
 	bool scan;
 	bool vif_created;
 	s8 vir_ifname[IFNAMSIZ];
@@ -94,7 +94,6 @@ enum wl_cfgp2p_status {
 	WLP2P_STATUS_ACTION_TX_NOACK,
 	WLP2P_STATUS_SCANNING
 };
-
 
 #define wl_to_p2p_bss_ndev(w, type) 	((wl)->p2p->bss_idx[type].dev)
 #define wl_to_p2p_bss_bssidx(w, type) 	((wl)->p2p->bss_idx[type].bssidx)
@@ -140,123 +139,107 @@ enum wl_cfgp2p_status {
 		}									\
 	} while (0)
 
-extern bool
-wl_cfgp2p_is_pub_action(void *frame, u32 frame_len);
-extern bool
-wl_cfgp2p_is_p2p_action(void *frame, u32 frame_len);
-extern bool
-wl_cfgp2p_is_gas_action(void *frame, u32 frame_len);
-extern void
-wl_cfgp2p_print_actframe(bool tx, void *frame, u32 frame_len);
-extern s32
-wl_cfgp2p_init_priv(struct wl_priv *wl);
-extern void
-wl_cfgp2p_deinit_priv(struct wl_priv *wl);
-extern s32
-wl_cfgp2p_set_firm_p2p(struct wl_priv *wl);
+extern bool wl_cfgp2p_is_pub_action(void *frame, u32 frame_len);
+extern bool wl_cfgp2p_is_p2p_action(void *frame, u32 frame_len);
+extern bool wl_cfgp2p_is_gas_action(void *frame, u32 frame_len);
+extern void wl_cfgp2p_print_actframe(bool tx, void *frame, u32 frame_len);
+extern s32 wl_cfgp2p_init_priv(struct wl_priv *wl);
+extern void wl_cfgp2p_deinit_priv(struct wl_priv *wl);
+extern s32 wl_cfgp2p_set_firm_p2p(struct wl_priv *wl);
 extern s32
 wl_cfgp2p_set_p2p_mode(struct wl_priv *wl, u8 mode,
-            u32 channel, u16 listen_ms, int bssidx);
+		       u32 channel, u16 listen_ms, int bssidx);
 extern s32
 wl_cfgp2p_ifadd(struct wl_priv *wl, struct ether_addr *mac, u8 if_type,
-            chanspec_t chspec);
+		chanspec_t chspec);
+extern s32 wl_cfgp2p_ifdel(struct wl_priv *wl, struct ether_addr *mac);
 extern s32
-wl_cfgp2p_ifdel(struct wl_priv *wl, struct ether_addr *mac);
-extern s32
-wl_cfgp2p_ifchange(struct wl_priv *wl, struct ether_addr *mac, u8 if_type, chanspec_t chspec);
+wl_cfgp2p_ifchange(struct wl_priv *wl, struct ether_addr *mac, u8 if_type,
+		   chanspec_t chspec);
 
 extern s32
-wl_cfgp2p_ifidx(struct wl_priv *wl, struct ether_addr *mac, s32 *index);
+wl_cfgp2p_ifidx(struct wl_priv *wl, struct ether_addr *mac, s32 * index);
 
+extern s32 wl_cfgp2p_init_discovery(struct wl_priv *wl);
 extern s32
-wl_cfgp2p_init_discovery(struct wl_priv *wl);
+wl_cfgp2p_enable_discovery(struct wl_priv *wl, struct net_device *dev,
+			   const u8 *ie, u32 ie_len);
+extern s32 wl_cfgp2p_disable_discovery(struct wl_priv *wl);
 extern s32
-wl_cfgp2p_enable_discovery(struct wl_priv *wl, struct net_device *dev, const u8 *ie, u32 ie_len);
-extern s32
-wl_cfgp2p_disable_discovery(struct wl_priv *wl);
-extern s32
-wl_cfgp2p_escan(struct wl_priv *wl, struct net_device *dev, u16 active, u32 num_chans,
-	u16 *channels,
-	s32 search_state, u16 action, u32 bssidx);
+wl_cfgp2p_escan(struct wl_priv *wl, struct net_device *dev, u16 active,
+		u32 num_chans, u16 *channels, s32 search_state, u16 action,
+		u32 bssidx);
 
 extern s32
 wl_cfgp2p_act_frm_search(struct wl_priv *wl, struct net_device *ndev,
-	s32 bssidx, s32 channel);
+			 s32 bssidx, s32 channel);
 
-extern wpa_ie_fixed_t *
-wl_cfgp2p_find_wpaie(u8 *parse, u32 len);
+extern wpa_ie_fixed_t *wl_cfgp2p_find_wpaie(u8 *parse, u32 len);
 
-extern wpa_ie_fixed_t *
-wl_cfgp2p_find_wpsie(u8 *parse, u32 len);
+extern wpa_ie_fixed_t *wl_cfgp2p_find_wpsie(u8 *parse, u32 len);
 
-extern wifi_p2p_ie_t *
-wl_cfgp2p_find_p2pie(u8 *parse, u32 len);
+extern wifi_p2p_ie_t *wl_cfgp2p_find_p2pie(u8 *parse, u32 len);
 
 extern s32
-wl_cfgp2p_set_management_ie(struct wl_priv *wl, struct net_device *ndev, s32 bssidx,
-            s32 pktflag, const u8 *vndr_ie, u32 vndr_ie_len);
-extern s32
-wl_cfgp2p_clear_management_ie(struct wl_priv *wl, s32 bssidx);
+wl_cfgp2p_set_management_ie(struct wl_priv *wl, struct net_device *ndev,
+			    s32 bssidx, s32 pktflag, const u8 *vndr_ie,
+			    u32 vndr_ie_len);
+extern s32 wl_cfgp2p_clear_management_ie(struct wl_priv *wl, s32 bssidx);
 
-extern s32
-wl_cfgp2p_find_idx(struct wl_priv *wl, struct net_device *ndev);
-
+extern s32 wl_cfgp2p_find_idx(struct wl_priv *wl, struct net_device *ndev);
 
 extern s32
 wl_cfgp2p_listen_complete(struct wl_priv *wl, struct net_device *ndev,
-            const wl_event_msg_t *e, void *data);
+			  const wl_event_msg_t *e, void *data);
 extern s32
 wl_cfgp2p_discover_listen(struct wl_priv *wl, s32 channel, u32 duration_ms);
 
-extern s32
-wl_cfgp2p_discover_enable_search(struct wl_priv *wl, u8 enable);
+extern s32 wl_cfgp2p_discover_enable_search(struct wl_priv *wl, u8 enable);
 
 extern s32
 wl_cfgp2p_action_tx_complete(struct wl_priv *wl, struct net_device *ndev,
-            const wl_event_msg_t *e, void *data);
+			     const wl_event_msg_t *e, void *data);
 extern s32
 wl_cfgp2p_tx_action_frame(struct wl_priv *wl, struct net_device *dev,
-	wl_af_params_t *af_params, s32 bssidx);
+			  wl_af_params_t * af_params, s32 bssidx);
 
 extern void
-wl_cfgp2p_generate_bss_mac(struct ether_addr *primary_addr, struct ether_addr *out_dev_addr,
-            struct ether_addr *out_int_addr);
+wl_cfgp2p_generate_bss_mac(struct ether_addr *primary_addr,
+			   struct ether_addr *out_dev_addr,
+			   struct ether_addr *out_int_addr);
 
 extern void
-wl_cfg80211_change_ifaddr(u8* buf, struct ether_addr *p2p_int_addr, u8 element_id);
-extern bool
-wl_cfgp2p_bss_isup(struct net_device *ndev, int bsscfg_idx);
+wl_cfg80211_change_ifaddr(u8 *buf, struct ether_addr *p2p_int_addr,
+			  u8 element_id);
+extern bool wl_cfgp2p_bss_isup(struct net_device *ndev, int bsscfg_idx);
 
 extern s32
-wl_cfgp2p_bss(struct wl_priv *wl, struct net_device *ndev, s32 bsscfg_idx, s32 up);
+wl_cfgp2p_bss(struct wl_priv *wl, struct net_device *ndev, s32 bsscfg_idx,
+	      s32 up);
 
+extern s32 wl_cfgp2p_supported(struct wl_priv *wl, struct net_device *ndev);
 
-extern s32
-wl_cfgp2p_supported(struct wl_priv *wl, struct net_device *ndev);
-
-extern s32
-wl_cfgp2p_down(struct wl_priv *wl);
+extern s32 wl_cfgp2p_down(struct wl_priv *wl);
 
 extern s32
-wl_cfgp2p_set_p2p_noa(struct wl_priv *wl, struct net_device *ndev, char* buf, int len);
+wl_cfgp2p_set_p2p_noa(struct wl_priv *wl, struct net_device *ndev, char *buf,
+		      int len);
 
 extern s32
-wl_cfgp2p_get_p2p_noa(struct wl_priv *wl, struct net_device *ndev, char* buf, int len);
+wl_cfgp2p_get_p2p_noa(struct wl_priv *wl, struct net_device *ndev, char *buf,
+		      int len);
 
 extern s32
-wl_cfgp2p_set_p2p_ps(struct wl_priv *wl, struct net_device *ndev, char* buf, int len);
+wl_cfgp2p_set_p2p_ps(struct wl_priv *wl, struct net_device *ndev, char *buf,
+		     int len);
 
-extern u8 *
-wl_cfgp2p_retreive_p2pattrib(void *buf, u8 element_id);
+extern u8 *wl_cfgp2p_retreive_p2pattrib(void *buf, u8 element_id);
 
-extern u8 *
-wl_cfgp2p_retreive_p2p_dev_addr(wl_bss_info_t *bi, u32 bi_length);
+extern u8 *wl_cfgp2p_retreive_p2p_dev_addr(wl_bss_info_t * bi, u32 bi_length);
 
-extern s32
-wl_cfgp2p_register_ndev(struct wl_priv *wl);
+extern s32 wl_cfgp2p_register_ndev(struct wl_priv *wl);
 
-extern s32
-wl_cfgp2p_unregister_ndev(struct wl_priv *wl);
+extern s32 wl_cfgp2p_unregister_ndev(struct wl_priv *wl);
 
 /* WiFi Direct */
 #define SOCIAL_CHAN_1 1
@@ -268,7 +251,6 @@ wl_cfgp2p_unregister_ndev(struct wl_priv *wl);
 #define WL_P2P_INTERFACE_PREFIX "p2p"
 #define WL_P2P_TEMP_CHAN "11"
 
-
 #define IS_GAS_REQ(frame, len) (wl_cfgp2p_is_gas_action(frame, len) && \
 					((frame->action == P2PSD_ACTION_ID_GAS_IREQ) || \
 					(frame->action == P2PSD_ACTION_ID_GAS_CREQ)))
@@ -278,4 +260,4 @@ wl_cfgp2p_unregister_ndev(struct wl_priv *wl);
 						(frame->subtype == P2P_PAF_PROVDIS_REQ)))
 #define IS_P2P_SOCIAL(ch) ((ch == SOCIAL_CHAN_1) || (ch == SOCIAL_CHAN_2) || (ch == SOCIAL_CHAN_3))
 #define IS_P2P_SSID(ssid) (memcmp(ssid, WL_P2P_WILDCARD_SSID, WL_P2P_WILDCARD_SSID_LEN) == 0)
-#endif				/* _wl_cfgp2p_h_ */
+#endif /* _wl_cfgp2p_h_ */

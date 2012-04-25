@@ -28,6 +28,110 @@
  *                        SLEEP STATE DEBUG INTERFACE                        *
  *****************************************************************************/
 
+
+#define GPIO_GPORS_BASE_PHYS    (GPIO2_BASE_ADDR + GPIO_GPORS0_OFFSET)
+#define GPIO_GPORS_BASE_VIRT    (KONA_GPIO2_VA + GPIO_GPORS0_OFFSET)
+#define GPIO_GPORC_BASE_PHYS    (GPIO2_BASE_ADDR + GPIO_GPORC0_OFFSET)
+#define GPIO_GPORC_BASE_VIRT    (KONA_GPIO2_VA + GPIO_GPORC0_OFFSET)
+
+/* No check for gpio number to speed up the API */
+void dbg_gpio_set(u32 gpio)
+{
+	u32 reg, bit;
+
+	reg = gpio / 32;
+	reg = GPIO_GPORS_BASE_VIRT + reg * 4;
+	bit = 1 << (gpio % 32);
+
+	__raw_writel(bit, reg);
+}
+EXPORT_SYMBOL_GPL(dbg_gpio_set);
+
+/* No check for gpio number to speed up the API */
+void dbg_gpio_clr(u32 gpio)
+{
+	u32 reg, bit;
+
+	reg = gpio / 32;
+	reg = GPIO_GPORC_BASE_VIRT + reg * 4;
+	bit = 1 << (gpio % 32);
+
+	__raw_writel(bit, reg);
+}
+EXPORT_SYMBOL_GPL(dbg_gpio_clr);
+
+/*
+ * Dormant mode profiling
+ */
+#if defined(DORMANT_PROFILE) && defined(CONFIG_RHEA_DORMANT_MODE)
+
+static u32 ns_gpio;
+static u32 sec_gpio;
+static u32 ref_gpio;
+
+void clear_ns_gpio(void)
+{
+	if (dormant_profile_on)
+		dbg_gpio_clr(ns_gpio);
+}
+
+static void dormant_profile_entry(void)
+{
+	if (dormant_profile_on) {
+		dbg_gpio_set(ns_gpio);
+		dbg_gpio_set(sec_gpio);
+		dbg_gpio_set(ref_gpio);
+	}
+}
+
+static void dormant_profile_exit(void)
+{
+	if (dormant_profile_on) {
+		dbg_gpio_clr(ns_gpio);
+		dbg_gpio_clr(sec_gpio);
+		dbg_gpio_clr(ref_gpio);
+	}
+}
+
+static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
+{
+	u32 reg;
+
+	/* Setup configs for C routines */
+	ns_gpio = ns;
+	sec_gpio = sec;
+	ref_gpio = ref;
+
+	/* Setup configs for asm routines */
+	reg = ns / 32;
+	ns_gpio_set_v = GPIO_GPORS_BASE_VIRT + reg * 4;
+	ns_gpio_clr_v = GPIO_GPORC_BASE_VIRT + reg * 4;
+	ns_gpio_set_p = GPIO_GPORS_BASE_PHYS + reg * 4;
+	ns_gpio_clr_p = GPIO_GPORC_BASE_PHYS + reg * 4;
+	ns_gpio_bit = 1 << (ns % 32);
+
+	/* Setup common configs */
+	dormant_profile_on = on;
+}
+#else /* !DORMANT_PROFILE && !CONFIG_RHEA_DORMANT_MODE */
+void clear_ns_gpio(void)
+{
+}
+
+static void dormant_profile_entry(void)
+{
+}
+
+static void dormant_profile_exit(void)
+{
+}
+
+static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
+{
+}
+#endif /* DORMANT_PROFILE && CONFIG_RHEA_DORMANT_MODE */
+
+u32 dorm_profile_enable;
 u32 *dormant_trace_v;
 u32 *dormant_trace_p;
 
@@ -65,11 +169,9 @@ static void cmd_show_usage(void)
 	const char usage[] = "Usage:\n"
 	  "echo 'cmd string' > /sys/module/rhea_pm/parameters/debug\n"
 	  "'cmd string' is constructed as follows:\n"
-#ifdef CONFIG_RHEA_DORMANT_MODE
-	  "set dormant gpio d g s <gpio number>\n"
-	  "enable dormant gpio d g e\n"
-	  "disable dormant gpio d g c\n"
-	  "display dormant gpio data d g d\n"
+#ifdef DORMANT_PROFILE
+	  "start dormant profile: d p 1 <ns_gpio> <sec_gpio> <ref_gpio>\n"
+	  "stop dormant profile : d p 0 0 0 0\n"
 #endif
 	  "force sleep: f <state from 0 to 4>\n"
 	  "display stats: s\n"
@@ -77,67 +179,6 @@ static void cmd_show_usage(void)
 
 	pr_info("%s", usage);
 }
-
-#ifdef CONFIG_RHEA_DORMANT_MODE
-#define GPIO_GPORS_BASE_PHYS    (GPIO2_BASE_ADDR + GPIO_GPORS0_OFFSET)
-#define GPIO_GPORS_BASE_VIRT    (KONA_GPIO2_VA + GPIO_GPORS0_OFFSET)
-#define GPIO_GPORC_BASE_PHYS    (GPIO2_BASE_ADDR + GPIO_GPORC0_OFFSET)
-#define GPIO_GPORC_BASE_VIRT    (KONA_GPIO2_VA + GPIO_GPORC0_OFFSET)
-
-static void cmd_dormant_gpio(const char *p)
-{
-	u32 gpio;
-	u32 reg;
-
-	switch (*p) {
-	case 'e':
-		pr_info("%s: enabling dormant gpio\n", __func__);
-		dormant_gpio_data.enable = 1;
-		break;
-	case 'c':
-		pr_info("%s: disabling dormant gpio\n", __func__);
-		dormant_gpio_data.enable = 0;
-		break;
-	case 's':
-		p++;
-		while (*p == ' ' || *p == '\t')
-			p++;
-
-		sscanf(p, "%d", &gpio);
-		pr_info("%s: setting dormant gpio to %d\n", __func__, gpio);
-		reg = gpio / 32;
-		dormant_gpio_data.gpio_bit = 1 << (gpio % 32);
-		dormant_gpio_data.gpio_set_p = GPIO_GPORS_BASE_PHYS + reg * 4;
-		dormant_gpio_data.gpio_set_v = GPIO_GPORS_BASE_VIRT + reg * 4;
-		dormant_gpio_data.gpio_clr_p = GPIO_GPORC_BASE_PHYS + reg * 4;
-		dormant_gpio_data.gpio_clr_v = GPIO_GPORC_BASE_VIRT + reg * 4;
-		break;
-	case 'd':
-		pr_info("enable       : %d\n", dormant_gpio_data.enable);
-		pr_info("gpio set phys: %x\n", dormant_gpio_data.gpio_set_p);
-		pr_info("gpio set virt: %x\n", dormant_gpio_data.gpio_set_v);
-		pr_info("gpio clr phys: %x\n", dormant_gpio_data.gpio_clr_p);
-		pr_info("gpio clr virt: %x\n", dormant_gpio_data.gpio_clr_v);
-		pr_info("gpio bit     : %x\n", dormant_gpio_data.gpio_bit);
-		break;
-	}
-}
-
-static void cmd_dormant(const char *p)
-{
-	char cmd = *p;
-
-	p++;
-	while (*p == ' ' || *p == '\t')
-		p++;
-
-	switch (cmd) {
-	case 'g': /* Handle dormant gpio related commands */
-		cmd_dormant_gpio(p);
-		break;
-	}
-}
-#endif
 
 static void cmd_display_stats(const char *p)
 {
@@ -173,6 +214,31 @@ static void cmd_force_sleep(const char *p)
 	kona_pm_reg_pm_enter_handler(&rhea_force_sleep);
 	request_suspend_state(PM_SUSPEND_MEM);
 }
+
+#ifdef CONFIG_RHEA_DORMANT_MODE
+static void cmd_dormant_profile(const char *p)
+{
+	u32 on, ns, sec, ref;
+
+	sscanf(p, "%08x %08x %08x %08x", &on, &ns, &sec, &ref);
+	dormant_profile_config(on, ns, sec, ref);
+}
+
+static void cmd_dormant(const char *p)
+{
+	char cmd = *p;
+
+	p++;
+	while (*p == ' ' || *p == '\t')
+		p++;
+
+	switch (cmd) {
+	case 'p': /* Handle dormant profile commands */
+		cmd_dormant_profile(p);
+		break;
+	}
+}
+#endif
 
 static int param_set_debug(const char *val, const struct kernel_param *kp)
 {
@@ -224,12 +290,16 @@ void instrument_dormant_entry(void)
 {
 	if (dormant_trace_v)
 		*dormant_trace_v = DORMANT_ENTRY;
+
+	dormant_profile_entry();
 }
 
 void instrument_dormant_exit(void)
 {
 	if (dormant_trace_v)
 		*dormant_trace_v = DORMANT_EXIT;
+
+	dormant_profile_exit();
 }
 
 /*****************************************************************************
@@ -335,9 +405,9 @@ int __init rhea_pmdbg_init(void)
 #endif
 
 	snapshot_table_register(snapshot, ARRAY_SIZE(snapshot));
-#ifdef CONFIG_RHEA_DORMANT_MODE
-	dormant_gpio_data.enable = 0;
+	dormant_profile_config(0, 0, 0, 0);
 
+#ifdef CONFIG_RHEA_DORMANT_MODE
 	v = dma_alloc_coherent(NULL, SZ_1K, &p, GFP_ATOMIC);
 	if (v == NULL) {
 		pr_info("%s: tracer dma buffer alloc failed\n", __func__);

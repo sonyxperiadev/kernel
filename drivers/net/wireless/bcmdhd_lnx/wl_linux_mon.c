@@ -40,8 +40,7 @@
 #include <dngl_stats.h>
 #include <dhd.h>
 
-typedef enum monitor_states
-{
+typedef enum monitor_states {
 	MONITOR_STATE_DEINIT = 0x0,
 	MONITOR_STATE_INIT = 0x1,
 	MONITOR_STATE_INTERFACE_ADDED = 0x2,
@@ -57,33 +56,34 @@ extern int dhd_start_xmit(struct sk_buff *skb, struct net_device *net);
 
 typedef struct monitor_interface {
 	int radiotap_enabled;
-	struct net_device* real_ndev;	/* The real interface that the monitor is on */
-	struct net_device* mon_ndev;
+	struct net_device *real_ndev;	/* The real interface that the monitor is on */
+	struct net_device *mon_ndev;
 } monitor_interface;
 
 typedef struct dhd_linux_monitor {
 	void *dhd_pub;
 	monitor_states_t monitor_state;
 	monitor_interface mon_if[DHD_MAX_IFS];
-	struct mutex lock;		/* lock to protect mon_if */
+	struct mutex lock;	/* lock to protect mon_if */
 } dhd_linux_monitor_t;
 
 static dhd_linux_monitor_t g_monitor;
 
-static struct net_device* lookup_real_netdev(char *name);
-static monitor_interface* ndev_to_monif(struct net_device *ndev);
+static struct net_device *lookup_real_netdev(char *name);
+static monitor_interface *ndev_to_monif(struct net_device *ndev);
 static int dhd_mon_if_open(struct net_device *ndev);
 static int dhd_mon_if_stop(struct net_device *ndev);
-static int dhd_mon_if_subif_start_xmit(struct sk_buff *skb, struct net_device *ndev);
+static int dhd_mon_if_subif_start_xmit(struct sk_buff *skb,
+				       struct net_device *ndev);
 static void dhd_mon_if_set_multicast_list(struct net_device *ndev);
 static int dhd_mon_if_change_mac(struct net_device *ndev, void *addr);
 
 static const struct net_device_ops dhd_mon_if_ops = {
-	.ndo_open		= dhd_mon_if_open,
-	.ndo_stop		= dhd_mon_if_stop,
-	.ndo_start_xmit		= dhd_mon_if_subif_start_xmit,
+	.ndo_open = dhd_mon_if_open,
+	.ndo_stop = dhd_mon_if_stop,
+	.ndo_start_xmit = dhd_mon_if_subif_start_xmit,
 	.ndo_set_multicast_list = dhd_mon_if_set_multicast_list,
-	.ndo_set_mac_address 	= dhd_mon_if_change_mac,
+	.ndo_set_mac_address = dhd_mon_if_change_mac,
 };
 
 /**
@@ -93,7 +93,7 @@ static const struct net_device_ops dhd_mon_if_ops = {
 /* Look up dhd's net device table to find a match (e.g. interface "eth0" is a match for "mon.eth0"
  * "p2p-eth0-0" is a match for "mon.p2p-eth0-0")
  */
-static struct net_device* lookup_real_netdev(char *name)
+static struct net_device *lookup_real_netdev(char *name)
 {
 	int i;
 	int len = 0;
@@ -114,9 +114,9 @@ static struct net_device* lookup_real_netdev(char *name)
 		if (ndev && strstr(ndev->name, "p2p-p2p0")) {
 			len = strlen("p2p");
 		} else {
-		/* if p2p- is not present, then the IFNAMSIZ have reached and name
-		 * would have got reset. In this casse,look for p2p0-x in mon-p2p0-x
-		 */
+			/* if p2p- is not present, then the IFNAMSIZ have reached and name
+			 * would have got reset. In this casse,look for p2p0-x in mon-p2p0-x
+			 */
 			len = 0;
 		}
 		if (ndev && strstr(name, (ndev->name + len))) {
@@ -130,7 +130,7 @@ static struct net_device* lookup_real_netdev(char *name)
 	return ndev_found;
 }
 
-static monitor_interface* ndev_to_monif(struct net_device *ndev)
+static monitor_interface *ndev_to_monif(struct net_device *ndev)
 {
 	int i;
 
@@ -158,7 +158,8 @@ static int dhd_mon_if_stop(struct net_device *ndev)
 	return ret;
 }
 
-static int dhd_mon_if_subif_start_xmit(struct sk_buff *skb, struct net_device *ndev)
+static int dhd_mon_if_subif_start_xmit(struct sk_buff *skb,
+				       struct net_device *ndev)
 {
 	int ret = 0;
 	int rtap_len;
@@ -171,7 +172,7 @@ static int dhd_mon_if_subif_start_xmit(struct sk_buff *skb, struct net_device *n
 	unsigned char dst_mac_addr[6];
 	struct ieee80211_hdr *dot11_hdr;
 	struct ieee80211_radiotap_header *rtap_hdr;
-	monitor_interface* mon_if;
+	monitor_interface *mon_if;
 
 	MON_PRINT("enter\n");
 
@@ -215,12 +216,16 @@ static int dhd_mon_if_subif_start_xmit(struct sk_buff *skb, struct net_device *n
 		/* Skip the 802.11 header, QoS (if any) and SNAP, but leave spaces for
 		 * for two MAC addresses
 		 */
-		skb_pull(skb, dot11_hdr_len + qos_len + snap_len - sizeof(src_mac_addr) * 2);
-		pdata = (unsigned char*)skb->data;
+		skb_pull(skb,
+			 dot11_hdr_len + qos_len + snap_len -
+			 sizeof(src_mac_addr) * 2);
+		pdata = (unsigned char *)skb->data;
 		memcpy(pdata, dst_mac_addr, sizeof(dst_mac_addr));
-		memcpy(pdata + sizeof(dst_mac_addr), src_mac_addr, sizeof(src_mac_addr));
+		memcpy(pdata + sizeof(dst_mac_addr), src_mac_addr,
+		       sizeof(src_mac_addr));
 
-		MON_PRINT("if name: %s, matched if name %s\n", ndev->name, mon_if->real_ndev->name);
+		MON_PRINT("if name: %s, matched if name %s\n", ndev->name,
+			  mon_if->real_ndev->name);
 
 		/* Use the real net device to transmit the packet */
 		ret = dhd_start_xmit(skb, mon_if->real_ndev);
@@ -234,28 +239,28 @@ fail:
 
 static void dhd_mon_if_set_multicast_list(struct net_device *ndev)
 {
-	monitor_interface* mon_if;
+	monitor_interface *mon_if;
 
 	mon_if = ndev_to_monif(ndev);
 	if (mon_if == NULL || mon_if->real_ndev == NULL) {
 		MON_PRINT(" cannot find matched net dev, skip the packet\n");
 	} else {
 		MON_PRINT("enter, if name: %s, matched if name %s\n",
-		ndev->name, mon_if->real_ndev->name);
+			  ndev->name, mon_if->real_ndev->name);
 	}
 }
 
 static int dhd_mon_if_change_mac(struct net_device *ndev, void *addr)
 {
 	int ret = 0;
-	monitor_interface* mon_if;
+	monitor_interface *mon_if;
 
 	mon_if = ndev_to_monif(ndev);
 	if (mon_if == NULL || mon_if->real_ndev == NULL) {
 		MON_PRINT(" cannot find matched net dev, skip the packet\n");
 	} else {
 		MON_PRINT("enter, if name: %s, matched if name %s\n",
-		ndev->name, mon_if->real_ndev->name);
+			  ndev->name, mon_if->real_ndev->name);
 	}
 	return ret;
 }
@@ -269,7 +274,7 @@ int dhd_add_monitor(char *name, struct net_device **new_ndev)
 	int i;
 	int idx = -1;
 	int ret = 0;
-	struct net_device* ndev = NULL;
+	struct net_device *ndev = NULL;
 	dhd_linux_monitor_t **dhd_mon;
 
 	mutex_lock(&g_monitor.lock);
@@ -295,7 +300,7 @@ int dhd_add_monitor(char *name, struct net_device **new_ndev)
 		goto out;
 	}
 
-	ndev = alloc_etherdev(sizeof(dhd_linux_monitor_t*));
+	ndev = alloc_etherdev(sizeof(dhd_linux_monitor_t *));
 	if (!ndev) {
 		MON_PRINT("failed to allocate memory\n");
 		ret = -ENOMEM;
@@ -317,11 +322,12 @@ int dhd_add_monitor(char *name, struct net_device **new_ndev)
 	g_monitor.mon_if[idx].radiotap_enabled = TRUE;
 	g_monitor.mon_if[idx].mon_ndev = ndev;
 	g_monitor.mon_if[idx].real_ndev = lookup_real_netdev(name);
-	dhd_mon = (dhd_linux_monitor_t **)netdev_priv(ndev);
+	dhd_mon = (dhd_linux_monitor_t **) netdev_priv(ndev);
 	*dhd_mon = &g_monitor;
 	g_monitor.monitor_state = MONITOR_STATE_INTERFACE_ADDED;
 	MON_PRINT("net device returned: 0x%p\n", ndev);
-	MON_PRINT("found a matched net device, name %s\n", g_monitor.mon_if[idx].real_ndev->name);
+	MON_PRINT("found a matched net device, name %s\n",
+		  g_monitor.mon_if[idx].real_ndev->name);
 
 out:
 	if (ret && ndev)
@@ -341,7 +347,7 @@ int dhd_del_monitor(struct net_device *ndev)
 	mutex_lock(&g_monitor.lock);
 	for (i = 0; i < DHD_MAX_IFS; i++) {
 		if (g_monitor.mon_if[i].mon_ndev == ndev ||
-			g_monitor.mon_if[i].real_ndev == ndev) {
+		    g_monitor.mon_if[i].real_ndev == ndev) {
 			g_monitor.mon_if[i].real_ndev = NULL;
 			if (rtnl_is_locked()) {
 				rtnl_unlock();
@@ -350,7 +356,8 @@ int dhd_del_monitor(struct net_device *ndev)
 			unregister_netdev(g_monitor.mon_if[i].mon_ndev);
 			free_netdev(g_monitor.mon_if[i].mon_ndev);
 			g_monitor.mon_if[i].mon_ndev = NULL;
-			g_monitor.monitor_state = MONITOR_STATE_INTERFACE_DELETED;
+			g_monitor.monitor_state =
+			    MONITOR_STATE_INTERFACE_DELETED;
 			break;
 		}
 	}
@@ -359,10 +366,10 @@ int dhd_del_monitor(struct net_device *ndev)
 		rollback_lock = false;
 	}
 
-	if (g_monitor.monitor_state !=
-	MONITOR_STATE_INTERFACE_DELETED)
-		MON_PRINT("interface not found in monitor IF array, is this a monitor IF? 0x%p\n",
-			ndev);
+	if (g_monitor.monitor_state != MONITOR_STATE_INTERFACE_DELETED)
+		MON_PRINT
+		    ("interface not found in monitor IF array, is this a monitor IF? 0x%p\n",
+		     ndev);
 	mutex_unlock(&g_monitor.lock);
 
 	return 0;

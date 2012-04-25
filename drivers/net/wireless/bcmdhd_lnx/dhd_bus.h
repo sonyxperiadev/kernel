@@ -40,7 +40,7 @@ extern void dhd_bus_unregister(void);
 
 /* Download firmware image and nvram image */
 extern bool dhd_bus_download_firmware(struct dhd_bus *bus, osl_t *osh,
-	char *fw_path, char *nv_path);
+				      char *fw_path, char *nv_path);
 
 /* Stop bus module: clear pending frames, disable data flow */
 extern void dhd_bus_stop(struct dhd_bus *bus, bool enforce_mutex);
@@ -74,12 +74,13 @@ extern int dhd_bus_console_in(dhd_pub_t *dhd, uchar *msg, uint msglen);
 
 /* Deferred processing for the bus, return TRUE requests reschedule */
 extern bool dhd_bus_dpc(struct dhd_bus *bus);
-extern void dhd_bus_isr(bool * InterruptRecognized, bool * QueueMiniportHandleInterrupt, void *arg);
-
+extern void dhd_bus_isr(bool *InterruptRecognized,
+			bool *QueueMiniportHandleInterrupt, void *arg);
 
 /* Check for and handle local prot-specific iovar commands */
 extern int dhd_bus_iovar_op(dhd_pub_t *dhdp, const char *name,
-                            void *params, int plen, void *arg, int len, bool set);
+			    void *params, int plen, void *arg, int len,
+			    bool set);
 
 /* Add bus dump output to a buffer */
 extern void dhd_bus_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf);
@@ -91,7 +92,8 @@ extern void dhd_bus_clearcounts(dhd_pub_t *dhdp);
 extern uint dhd_bus_chip(struct dhd_bus *bus);
 
 /* Set user-specified nvram parameters. */
-extern void dhd_bus_set_nvram_params(struct dhd_bus * bus, const char *nvram_params);
+extern void dhd_bus_set_nvram_params(struct dhd_bus *bus,
+				     const char *nvram_params);
 
 extern void *dhd_bus_pub(struct dhd_bus *bus);
 extern void *dhd_bus_txq(struct dhd_bus *bus);

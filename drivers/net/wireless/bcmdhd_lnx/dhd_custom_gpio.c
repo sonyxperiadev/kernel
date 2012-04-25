@@ -1,13 +1,13 @@
 /*
 * Customer code to add GPIO control during WLAN start/stop
 * Copyright (C) 1999-2011, Broadcom Corporation
-*
+* 
 *         Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2 (the "GPL"),
 * available at http://www.broadcom.com/licenses/GPLv2.php, with the
 * following added to such license:
-*
+* 
 *      As a special exception, the copyright holders of this software give you
 * permission to link this software with independent modules, and to copy and
 * distribute the resulting executable under terms of your choice, provided that
@@ -15,7 +15,7 @@
 * the license of that module.  An independent module is a module which is not
 * derived from this software.  The special exception does not apply to any
 * modifications of the software.
-*
+* 
 *      Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
@@ -42,8 +42,8 @@ extern void bcm_sdiowl_reset_b(int onoff);
 #define WL_TRACE(x)
 
 #ifdef CUSTOMER_HW
-extern  void bcm_wlan_power_off(int);
-extern  void bcm_wlan_power_on(int);
+extern void bcm_wlan_power_off(int);
+extern void bcm_wlan_power_on(int);
 #endif /* CUSTOMER_HW */
 #if defined(CUSTOMER_HW2)
 #ifdef CONFIG_WIFI_CONTROL_FUNC
@@ -52,10 +52,25 @@ int wifi_get_irq_number(unsigned long *irq_flags_ptr);
 int wifi_get_mac_addr(unsigned char *buf);
 void *wifi_get_country_code(char *ccode);
 #else
-int wifi_set_power(int on, unsigned long msec) { return -1; }
-int wifi_get_irq_number(unsigned long *irq_flags_ptr) { return -1; }
-int wifi_get_mac_addr(unsigned char *buf) { return -1; }
-void *wifi_get_country_code(char *ccode) { return NULL; }
+int wifi_set_power(int on, unsigned long msec)
+{
+	return -1;
+}
+
+int wifi_get_irq_number(unsigned long *irq_flags_ptr)
+{
+	return -1;
+}
+
+int wifi_get_mac_addr(unsigned char *buf)
+{
+	return -1;
+}
+
+void *wifi_get_country_code(char *ccode)
+{
+	return NULL;
+}
 #endif /* CONFIG_WIFI_CONTROL_FUNC */
 #endif /* CUSTOMER_HW2 */
 
@@ -88,7 +103,7 @@ MODULE_PARM_DESC(dhd_oob_gpio_num, "DHD oob gpio number");
  */
 int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 {
-	int  host_oob_irq = 0;
+	int host_oob_irq = 0;
 
 #ifdef CUSTOMER_HW2
 	host_oob_irq = wifi_get_irq_number(irq_flags_ptr);
@@ -101,13 +116,12 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 #endif /* CUSTOMER_HW2 */
 
 	if (dhd_oob_gpio_num < 0) {
-		WL_ERROR(("%s: ERROR customer specific Host GPIO is NOT defined \n",
-			__FUNCTION__));
+		WL_ERROR(("%s: ERROR customer specific Host GPIO is NOT defined \n", __FUNCTION__));
 		return (dhd_oob_gpio_num);
 	}
 
 	WL_ERROR(("%s: customer specific Host GPIO number is (%d)\n",
-	         __FUNCTION__, dhd_oob_gpio_num));
+		  __FUNCTION__, dhd_oob_gpio_num));
 
 #if defined CUSTOMER_HW
 	host_oob_irq = MSM_GPIO_TO_INT(dhd_oob_gpio_num);
@@ -123,73 +137,72 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 #endif /* defined(OOB_INTR_ONLY) */
 
 /* Customer function to control hw specific wlan gpios */
-void
-dhd_customer_gpio_wlan_ctrl(int onoff)
+void dhd_customer_gpio_wlan_ctrl(int onoff)
 {
 	switch (onoff) {
-		case WLAN_RESET_OFF:
-			WL_TRACE(("%s: call customer specific GPIO to insert WLAN RESET\n",
-				__FUNCTION__));
+	case WLAN_RESET_OFF:
+		WL_TRACE(("%s: call customer specific GPIO to insert WLAN RESET\n", __FUNCTION__));
 #ifdef CUSTOMER_HW
-			bcm_wlan_power_off(2);
+		bcm_wlan_power_off(2);
 #endif /* CUSTOMER_HW */
 #ifdef CUSTOMER_HW2
-			wifi_set_power(0, 0);
+		wifi_set_power(0, 0);
 #endif
-			printk("%s: WLAN_RESET_OFF: call bcm_sdiowl_reset_b(0)\n", __FUNCTION__);
-			bcm_sdiowl_reset_b(0);
-			WL_ERROR(("=========== WLAN placed in RESET ========\n"));
+		printk("%s: WLAN_RESET_OFF: call bcm_sdiowl_reset_b(0)\n",
+		       __FUNCTION__);
+		bcm_sdiowl_reset_b(0);
+		WL_ERROR(("=========== WLAN placed in RESET ========\n"));
 		break;
 
-		case WLAN_RESET_ON:
-			WL_TRACE(("%s: callc customer specific GPIO to remove WLAN RESET\n",
-				__FUNCTION__));
+	case WLAN_RESET_ON:
+		WL_TRACE(("%s: callc customer specific GPIO to remove WLAN RESET\n", __FUNCTION__));
 #ifdef CUSTOMER_HW
-			bcm_wlan_power_on(2);
+		bcm_wlan_power_on(2);
 #endif /* CUSTOMER_HW */
 #ifdef CUSTOMER_HW2
-			wifi_set_power(1, 0);
+		wifi_set_power(1, 0);
 #endif
-			printk("%s: WLAN_RESET_ON: call bcm_sdiowl_reset_b(1)\n", __FUNCTION__);
-			bcm_sdiowl_reset_b(1);
-			OSL_DELAY(200);
-			WL_ERROR(("=========== WLAN going back to live  ========\n"));
+		printk("%s: WLAN_RESET_ON: call bcm_sdiowl_reset_b(1)\n",
+		       __FUNCTION__);
+		bcm_sdiowl_reset_b(1);
+		OSL_DELAY(200);
+		WL_ERROR(("=========== WLAN going back to live  ========\n"));
 		break;
 
-		case WLAN_POWER_OFF:
-			WL_TRACE(("%s: call customer specific GPIO to turn off WL_REG_ON\n",
-				__FUNCTION__));
+	case WLAN_POWER_OFF:
+		WL_TRACE(("%s: call customer specific GPIO to turn off WL_REG_ON\n", __FUNCTION__));
 #ifdef CUSTOMER_HW
-			bcm_wlan_power_off(1);
+		bcm_wlan_power_off(1);
 #endif /* CUSTOMER_HW */
-			printk("%s: WLAN_POWER_OFF: call bcm_sdiowl_reset_b(0)\n", __FUNCTION__);
-			bcm_sdiowl_reset_b(0);
-			printk("%s: WLAN_POWER_OFF: call bcm_sdiowl_term()\n", __FUNCTION__);
-			bcm_sdiowl_term();
+		printk("%s: WLAN_POWER_OFF: call bcm_sdiowl_reset_b(0)\n",
+		       __FUNCTION__);
+		bcm_sdiowl_reset_b(0);
+		printk("%s: WLAN_POWER_OFF: call bcm_sdiowl_term()\n",
+		       __FUNCTION__);
+		bcm_sdiowl_term();
 		break;
 
-		case WLAN_POWER_ON:
-			WL_TRACE(("%s: call customer specific GPIO to turn on WL_REG_ON\n",
-				__FUNCTION__));
+	case WLAN_POWER_ON:
+		WL_TRACE(("%s: call customer specific GPIO to turn on WL_REG_ON\n", __FUNCTION__));
 #ifdef CUSTOMER_HW
-			bcm_wlan_power_on(1);
-			/* Lets customer power to get stable */
-			OSL_DELAY(200);
+		bcm_wlan_power_on(1);
+		/* Lets customer power to get stable */
+		OSL_DELAY(200);
 #endif /* CUSTOMER_HW */
-			printk("%s: WLAN_POWER_ON: call bcm_sdiowl_init()\n", __FUNCTION__);
-			bcm_sdiowl_init();
-			/*
-			 * XXX: bcm_sdiowl_reset_b(1) is already called
-			 *      from bcm_sdiowl_init() function
-			 */
+		printk("%s: WLAN_POWER_ON: call bcm_sdiowl_init()\n",
+		       __FUNCTION__);
+		bcm_sdiowl_init();
+		/*
+		 * XXX: bcm_sdiowl_reset_b(1) is already called
+		 *      from bcm_sdiowl_init() function
+		 */
 		break;
 	}
 }
 
 #ifdef GET_CUSTOM_MAC_ENABLE
 /* Function to get custom MAC address */
-int
-dhd_custom_get_mac_address(unsigned char *buf)
+int dhd_custom_get_mac_address(unsigned char *buf)
 {
 	int ret = 0;
 
@@ -205,7 +218,8 @@ dhd_custom_get_mac_address(unsigned char *buf)
 #ifdef EXAMPLE_GET_MAC
 	/* EXAMPLE code */
 	{
-		struct ether_addr ea_example = {{0x00, 0x11, 0x22, 0x33, 0x44, 0xFF}};
+		struct ether_addr ea_example =
+		    { {0x00, 0x11, 0x22, 0x33, 0x44, 0xFF} };
 		bcopy((char *)&ea_example, buf, sizeof(struct ether_addr));
 	}
 #endif /* EXAMPLE_GET_MAC */
@@ -218,10 +232,10 @@ dhd_custom_get_mac_address(unsigned char *buf)
 const struct cntry_locales_custom translate_custom_table[] = {
 /* Table should be filled out based on custom platform regulatory requirement */
 #ifdef EXAMPLE_TABLE
-	{"",   "XY", 4},  /* Universal if Country code is unknown or empty */
-	{"US", "US", 69}, /* input ISO "US" to : US regrev 69 */
-	{"CA", "US", 69}, /* input ISO "CA" to : US regrev 69 */
-	{"EU", "EU", 5},  /* European union countries to : EU regrev 05 */
+	{"", "XY", 4},		/* Universal if Country code is unknown or empty */
+	{"US", "US", 69},	/* input ISO "US" to : US regrev 69 */
+	{"CA", "US", 69},	/* input ISO "CA" to : US regrev 69 */
+	{"EU", "EU", 5},	/* European union countries to : EU regrev 05 */
 	{"AT", "EU", 5},
 	{"BE", "EU", 5},
 	{"BG", "EU", 5},
@@ -252,7 +266,7 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"GB", "EU", 5},
 	{"KR", "XY", 3},
 	{"AU", "XY", 3},
-	{"CN", "XY", 3}, /* input ISO "CN" to : XY regrev 03 */
+	{"CN", "XY", 3},	/* input ISO "CN" to : XY regrev 03 */
 	{"TW", "XY", 3},
 	{"AR", "XY", 3},
 	{"MX", "XY", 3},
@@ -263,11 +277,10 @@ const struct cntry_locales_custom translate_custom_table[] = {
 #endif /* EXMAPLE_TABLE */
 };
 
-
 /* Customized Locale convertor
 *  input : ISO 3166-1 country abbreviation
 *  output: customized cspec
 */
-void get_customized_country_code(char *country_iso_code, wl_country_t *cspec)
+void get_customized_country_code(char *country_iso_code, wl_country_t * cspec)
 {
 }

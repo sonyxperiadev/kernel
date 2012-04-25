@@ -526,15 +526,15 @@ void dormant_enter(void)
 	bool ret = false;
 
 	if (dormant_base_va != 0) {
+		instrument_dormant_entry();
+
 		/* Count of total number of times dormant entry was
 		 * attempted.
 		 */
 		dormant_attempt++;
 		dormant_save_addnl_reg();
 
-		instrument_dormant_entry();
 		ret = dormant_start();
-		instrument_dormant_exit();
 
 		if (ret == true) {
 			/* Dormant entry succeeded */
@@ -543,6 +543,8 @@ void dormant_enter(void)
 		} else {
 			dormant_fail++;
 		}
+
+		instrument_dormant_exit();
 	}
 }
 
