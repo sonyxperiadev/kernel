@@ -1374,6 +1374,9 @@ typedef struct wl_sampledata {
 	uint32 flag;
 } wl_sampledata_t;
 
+#define WL_CHAN_RADAR       (1 << 3)    /* radar sensitive  channel */
+#define WL_CHAN_PASSIVE     (1 << 5)    /* channel is in passive mode */
+
 #define WL_ERROR_VAL        0x00000001
 #define WL_TRACE_VAL        0x00000002
 #define WL_PRHDRS_VAL       0x00000004

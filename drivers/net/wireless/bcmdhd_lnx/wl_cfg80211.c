@@ -1324,14 +1324,13 @@ static void wl_scan_prep(struct wl_scan_params *params,
 			else
 				chanspec |= WL_CHANSPEC_BAND_5G;
 
-			if (request->
-			    channels[i]->flags & IEEE80211_CHAN_NO_HT40) {
+			if (request->channels[i]->
+			    flags & IEEE80211_CHAN_NO_HT40) {
 				chanspec |= WL_CHANSPEC_BW_20;
 				chanspec |= WL_CHANSPEC_CTL_SB_NONE;
 			} else {
 				chanspec |= WL_CHANSPEC_BW_40;
-				if (request->
-				    channels[i]->flags &
+				if (request->channels[i]->flags &
 				    IEEE80211_CHAN_NO_HT40PLUS)
 					chanspec |= WL_CHANSPEC_CTL_SB_LOWER;
 				else
@@ -1563,8 +1562,8 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 				n_valid_chan = dtoh32(list->count);
 				for (i = 0; i < num_chans; i++) {
 					_freq =
-					    scan_request->
-					    channels[i]->center_freq;
+					    scan_request->channels[i]->
+					    center_freq;
 					channel =
 					    ieee80211_frequency_to_channel
 					    (_freq);
@@ -1801,7 +1800,8 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 
 				err = wl_cfgp2p_enable_discovery(wl, ndev,
 								 request->ie,
-								 request->ie_len);
+								 request->
+								 ie_len);
 
 				if (unlikely(err)) {
 					goto scan_out;
@@ -2458,16 +2458,18 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 						    wl_cfgp2p_find_idx(wl, dev),
 						    VNDR_IE_PRBREQ_FLAG,
 						    wl_to_p2p_bss_saved_ie(wl,
-									   P2PAPI_BSSCFG_DEVICE).p2p_probe_req_ie,
+									   P2PAPI_BSSCFG_DEVICE).
+						    p2p_probe_req_ie,
 						    wl_to_p2p_bss_saved_ie(wl,
-									   P2PAPI_BSSCFG_DEVICE).p2p_probe_req_ie_len);
+									   P2PAPI_BSSCFG_DEVICE).
+						    p2p_probe_req_ie_len);
 			wl_cfgp2p_set_management_ie(wl, dev,
 						    wl_cfgp2p_find_idx(wl, dev),
 						    VNDR_IE_ASSOCREQ_FLAG,
 						    sme->ie, sme->ie_len);
 		} else if (p2p_is_on(wl)
-			   && (sme->
-			       crypto.wpa_versions & NL80211_WPA_VERSION_2)) {
+			   && (sme->crypto.
+			       wpa_versions & NL80211_WPA_VERSION_2)) {
 			/* This is the connect req after WPS is done [credentials exchanged]
 			 * currently identified with WPA_VERSION_2 .
 			 * Update the previously set IEs with
@@ -3611,8 +3613,8 @@ static s32 wl_cfg80211_send_pending_tx_act_frm(struct wl_priv *wl)
 		tx_act_frm->channel = wl->afx_hdl->peer_chan;
 		wl->afx_hdl->ack_recv = (wl_cfgp2p_tx_action_frame(wl, dev,
 								   tx_act_frm,
-								   wl->
-								   afx_hdl->bssidx))
+								   wl->afx_hdl->
+								   bssidx))
 		    ? false : true;
 	}
 	return 0;
@@ -4459,16 +4461,16 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 					/* WPAIE */
 					wl->ap_info->rsn_ie = NULL;
 					wl->ap_info->wpa_ie = kmemdup(wpa_ie,
-								      wpa_ie->length
-								      +
+								      wpa_ie->
+								      length +
 								      WPA_RSN_IE_TAG_FIXED_LEN,
 								      GFP_KERNEL);
 				} else {
 					/* RSNIE */
 					wl->ap_info->wpa_ie = NULL;
 					wl->ap_info->rsn_ie = kmemdup(wpa2_ie,
-								      wpa2_ie->len
-								      +
+								      wpa2_ie->
+								      len +
 								      WPA_RSN_IE_TAG_FIXED_LEN,
 								      GFP_KERNEL);
 				}
@@ -7175,6 +7177,139 @@ eventmsg_out:
 
 }
 
+static int wl_construct_reginfo(struct wl_priv *wl, s32 bw_cap)
+{
+	struct net_device *dev = wl_to_prmry_ndev(wl);
+	struct ieee80211_channel *band_chan_arr = NULL;
+	wl_uint32_list_t *list;
+	u32 i, j, index, n_2g, n_5g, band, channel, array_size;
+	u32 *n_cnt = NULL;
+	chanspec_t c = 0;
+	s32 err = BCME_OK;
+	bool update;
+	bool ht40_allowed;
+	u8 *pbuf = NULL;
+
+#define LOCAL_BUF_LEN 1024
+	pbuf = kzalloc(LOCAL_BUF_LEN, GFP_KERNEL);
+	if (pbuf == NULL) {
+		WL_ERR(("failed to allocate local buf\n"));
+		return -ENOMEM;
+	}
+
+	list = (wl_uint32_list_t *) (void *)pbuf;
+	list->count = htod32(WL_NUMCHANSPECS);
+
+	err = wldev_iovar_getbuf_bsscfg(dev, "chanspecs", NULL,
+					0, pbuf, LOCAL_BUF_LEN, 0,
+					&wl->ioctl_buf_sync);
+	if (err != 0) {
+		WL_ERR(("get chanspecs failed with %d\n", err));
+		kfree(pbuf);
+		return err;
+	}
+#undef LOCAL_BUF_LEN
+
+	band = array_size = n_2g = n_5g = 0;
+	for (i = 0; i < dtoh32(list->count); i++) {
+		index = 0;
+		update = FALSE;
+		ht40_allowed = FALSE;
+		c = (chanspec_t) dtoh32(list->element[i]);
+		channel = CHSPEC_CHANNEL(c);
+		if (CHSPEC_IS40(c)) {
+			if (CHSPEC_SB_UPPER(c))
+				channel += CH_10MHZ_APART;
+			else
+				channel -= CH_10MHZ_APART;
+		}
+
+		if (CHSPEC_IS2G(c) && channel <= CH_MAX_2G_CHANNEL) {
+			band_chan_arr = __wl_2ghz_channels;
+			array_size = ARRAYSIZE(__wl_2ghz_channels);
+			n_cnt = &n_2g;
+			band = IEEE80211_BAND_2GHZ;
+			ht40_allowed =
+			    (bw_cap == WLC_N_BW_40ALL) ? TRUE : FALSE;
+		} else if (CHSPEC_IS5G(c) && channel > CH_MAX_2G_CHANNEL) {
+			band_chan_arr = __wl_5ghz_a_channels;
+			array_size = ARRAYSIZE(__wl_5ghz_a_channels);
+			n_cnt = &n_5g;
+			band = IEEE80211_BAND_5GHZ;
+			ht40_allowed =
+			    (bw_cap == WLC_N_BW_20ALL) ? FALSE : TRUE;
+		}
+
+		for (j = 0; (j < *n_cnt && (*n_cnt < array_size)); j++) {
+			if (band_chan_arr[j].hw_value == channel) {
+				update = TRUE;
+				break;
+			}
+		}
+
+		if (update)
+			index = j;
+		else
+			index = *n_cnt;
+
+		if (index < array_size) {
+			band_chan_arr[index].center_freq =
+			    ieee80211_channel_to_frequency(channel, band);
+			band_chan_arr[index].hw_value = channel;
+
+			if (CHSPEC_IS40(c) && ht40_allowed) {
+				u32 ht40_flag =
+				    band_chan_arr[index].
+				    flags & IEEE80211_CHAN_NO_HT40;
+				if (CHSPEC_SB_UPPER(c)) {
+					if (ht40_flag == IEEE80211_CHAN_NO_HT40)
+						band_chan_arr[index].flags &=
+						    ~IEEE80211_CHAN_NO_HT40;
+					band_chan_arr[index].flags |=
+					    IEEE80211_CHAN_NO_HT40PLUS;
+				} else {
+					band_chan_arr[index].flags &=
+					    ~IEEE80211_CHAN_NO_HT40;
+					if (ht40_flag == IEEE80211_CHAN_NO_HT40)
+						band_chan_arr[index].flags |=
+						    IEEE80211_CHAN_NO_HT40MINUS;
+				}
+			} else {
+				band_chan_arr[index].flags =
+				    IEEE80211_CHAN_NO_HT40;
+				if (band == IEEE80211_BAND_2GHZ)
+					channel |= WL_CHANSPEC_BAND_2G;
+				else
+					channel |= WL_CHANSPEC_BAND_5G;
+				err =
+				    wldev_iovar_getint(dev, "per_chan_info",
+						       &channel);
+				if (!err) {
+					if (channel & WL_CHAN_RADAR) {
+						band_chan_arr[index].flags |=
+						    IEEE80211_CHAN_RADAR |
+						    IEEE80211_CHAN_NO_IBSS;
+					}
+					if (channel & WL_CHAN_PASSIVE) {
+						band_chan_arr[index].flags |=
+						    IEEE80211_CHAN_PASSIVE_SCAN
+						    | IEEE80211_CHAN_NO_IBSS;
+					}
+				}
+			}
+
+			if (!update)
+				(*n_cnt)++;
+		}
+	}
+
+	__wl_band_2ghz.n_channels = n_2g;
+	__wl_band_5ghz_a.n_channels = n_5g;
+
+	kfree(pbuf);
+	return err;
+}
+
 s32 wl_update_wiphybands(struct wl_priv *wl)
 {
 	struct wiphy *wiphy;
@@ -7183,7 +7318,7 @@ s32 wl_update_wiphybands(struct wl_priv *wl)
 	u32 i = 0;
 	s32 err = 0;
 	int nmode = 0;
-	int bw_40 = 0;
+	int bw_cap = 0;
 	int index = 0;
 
 	WL_DBG(("Entry"));
@@ -7204,9 +7339,15 @@ s32 wl_update_wiphybands(struct wl_priv *wl)
 		WL_ERR(("error (%d)\n", err));
 	}
 
-	err = wldev_iovar_getint(wl_to_prmry_ndev(wl), "mimo_bw_cap", &bw_40);
+	err = wldev_iovar_getint(wl_to_prmry_ndev(wl), "mimo_bw_cap", &bw_cap);
 	if (unlikely(err)) {
 		WL_ERR(("error (%d)\n", err));
+	}
+
+	err = wl_construct_reginfo(wl, bw_cap);
+	if (err) {
+		WL_ERR(("wl_construct_reginfo() fails err=%d\n", err));
+		return err;
 	}
 
 	for (i = 1; i <= nband && i < sizeof(bandlist); i++) {
@@ -7214,19 +7355,25 @@ s32 wl_update_wiphybands(struct wl_priv *wl)
 		if (bandlist[i] == WLC_BAND_5G) {
 			wiphy->bands[IEEE80211_BAND_5GHZ] = &__wl_band_5ghz_a;
 			index = IEEE80211_BAND_5GHZ;
+			if (bw_cap == WLC_N_BW_40ALL
+			    || bw_cap == WLC_N_BW_20IN2G_40IN5G)
+				wiphy->bands[index]->ht_cap.cap |=
+				    IEEE80211_HT_CAP_SGI_40;
 		} else if (bandlist[i] == WLC_BAND_2G) {
 			wiphy->bands[IEEE80211_BAND_2GHZ] = &__wl_band_2ghz;
 			index = IEEE80211_BAND_2GHZ;
+			if (bw_cap == WLC_N_BW_40ALL)
+				wiphy->bands[index]->ht_cap.cap |=
+				    IEEE80211_HT_CAP_SGI_40;
 		}
 
 		if ((index >= 0) && nmode) {
-			wiphy->bands[index]->ht_cap.cap =
-			    IEEE80211_HT_CAP_DSSSCCK40
-			    | IEEE80211_HT_CAP_MAX_AMSDU |
-			    IEEE80211_HT_CAP_RX_STBC;
+			wiphy->bands[index]->ht_cap.cap |=
+			    IEEE80211_HT_CAP_SGI_20 | IEEE80211_HT_CAP_DSSSCCK40
+			    | IEEE80211_HT_CAP_MAX_AMSDU;
 			wiphy->bands[index]->ht_cap.ht_supported = TRUE;
 			wiphy->bands[index]->ht_cap.ampdu_factor =
-			    IEEE80211_HT_MAX_AMPDU_16K;
+			    IEEE80211_HT_MAX_AMPDU_64K;
 			wiphy->bands[index]->ht_cap.ampdu_density =
 			    IEEE80211_HT_MPDU_DENSITY_16;
 		}
