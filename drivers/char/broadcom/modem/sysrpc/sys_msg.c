@@ -58,7 +58,6 @@ bool_t xdr_SYS_ReqRep_t(XDR *xdrs, SYS_ReqRep_t *req, xdrproc_t proc)
 #define _xdr_short(a, b, c) xdr_short(a, b)
 #define _xdr_u_short(a, b, c) xdr_u_short(a, b)
 #define _xdr_double(a, b, c) xdr_double(a, b)
-#define _xdr_float(a, b, c) xdr_float(a, b)
 #define _xdr_long(a, b, c)  xdr_long(a, b)
 
 #define MAX_LOG_STRING_LENGTH   78
