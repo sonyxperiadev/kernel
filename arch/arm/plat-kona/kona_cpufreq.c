@@ -48,11 +48,6 @@ struct kona_freq_map {
 	int opp;		/* Operating point eg: ECONOMY, NORMAL, TURBO */
 };
 
-#define DEFAULT_LIMIT	(-1)
-#define MIN_LIMIT	(0)
-#define CURRENT_FREQ	(1)
-#define MAX_LIMIT	(2)
-
 struct kona_cpufreq {
 	int pi_id;
 	struct pi_mgr_dfs_node dfs_node;
@@ -265,7 +260,8 @@ static int kona_cpufreq_exit(struct cpufreq_policy *policy)
 
 	return 0;
 }
-static int get_cpufreq_limit(unsigned int *val, int limit_type)
+
+int get_cpufreq_limit(unsigned int *val, int limit_type)
 {
 	int ret = 0;
 	int cpu = smp_processor_id();
@@ -291,7 +287,7 @@ static int get_cpufreq_limit(unsigned int *val, int limit_type)
 	return ret;
 }
 
-static int set_cpufreq_limit(unsigned int val, int limit_type)
+int set_cpufreq_limit(unsigned int val, int limit_type)
 {
 	struct cpufreq_policy *policy;
 	int cpu = smp_processor_id();

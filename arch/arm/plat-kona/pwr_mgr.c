@@ -28,7 +28,9 @@
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 #include <linux/completion.h>
 #endif
-
+#if defined(CONFIG_KONA_CPU_FREQ_DRV)
+#include <plat/kona_cpufreq_drv.h>
+#endif
 #ifdef CONFIG_DEBUG_FS
 #include <asm/uaccess.h>
 #include <linux/debugfs.h>
@@ -40,16 +42,21 @@
 #endif /* PWRMGR_I2C_VAR_DATA_REG */
 
 #ifndef PWRMGR_HW_SEM_WA_PI_ID
-#define PWRMGR_HW_SEM_WA_PI_ID 0
+#define PWRMGR_HW_SEM_WA_PI_ID	3
 #endif
 
 #ifndef PWRMGR_HW_SEM_LOCK_WA_PI_OPP
 #define PWRMGR_HW_SEM_LOCK_WA_PI_OPP 2
 #endif
-#ifndef PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP
-#define PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP 	PI_MGR_DFS_MIN_VALUE
+#ifndef PWRMGR_HW_SEM_LOCK_WA_PI_LATENCY
+#define PWRMGR_HW_SEM_LOCK_WA_PI_LATENCY 0
 #endif
-
+#ifndef PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP
+#define	PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP	0
+#endif
+#ifndef PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY
+#define PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY     PI_MGR_QOS_DEFAULT_VALUE
+#endif
 #ifdef CONFIG_RHEA_WA_HWJIRA_2747
 #ifndef PWRMGR_SW_SEQ_PC_PIN
 #define PWRMGR_SW_SEQ_PC_PIN		PC3
@@ -160,7 +167,7 @@ struct pwr_mgr_event {
 struct pwr_mgr {
 	struct pwr_mgr_info *info;
 	struct pwr_mgr_event event_cb[PWR_MGR_NUM_EVENTS];
-	struct pi_mgr_dfs_node sem_dfs_client;
+	struct pi_mgr_qos_node sem_qos_client;
 	bool sem_locked;
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 i2c_seq_trg;
@@ -856,7 +863,9 @@ int pwr_mgr_pm_i2c_sem_lock()
 	int ret = -1;
 	const int max_wait_count = 10000;
 	unsigned long flgs;
-
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+	unsigned int cpu_freq;
+#endif
 	if (unlikely(!pwr_mgr.info)) {
 		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
 				__func__);
@@ -864,15 +873,19 @@ int pwr_mgr_pm_i2c_sem_lock()
 	}
 	BUG_ON(pwr_mgr.sem_locked);
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
-		if (!pwr_mgr.sem_dfs_client.valid)
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+#endif
+		if (!pwr_mgr.sem_qos_client.valid)
 			ret =
-			    pi_mgr_dfs_add_request(&pwr_mgr.sem_dfs_client,
-						   "sem_wa",
-						   PWRMGR_HW_SEM_WA_PI_ID,
-						   PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+			    pi_mgr_qos_add_request(&pwr_mgr.sem_qos_client,
+					"sem_wa",
+					PWRMGR_HW_SEM_WA_PI_ID,
+					PWRMGR_HW_SEM_LOCK_WA_PI_LATENCY);
 		else
-			pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,
-						  PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+			pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
+					PWRMGR_HW_SEM_LOCK_WA_PI_LATENCY);
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 
@@ -895,6 +908,9 @@ EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_lock);
 int pwr_mgr_pm_i2c_sem_unlock()
 {
 	unsigned long flgs;
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+	unsigned int cpu_freq;
+#endif
 	if (unlikely(!pwr_mgr.info)) {
 		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
 				__func__);
@@ -905,9 +921,14 @@ int pwr_mgr_pm_i2c_sem_unlock()
 	pwr_mgr_pm_i2c_enable(true);
 	pwr_mgr.sem_locked = false;
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
-	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
-		pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,
-					  PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
+	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
+		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+#endif
+		pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
+					  PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY);
+	}
 	return 0;
 }
 
@@ -920,6 +941,9 @@ int pwr_mgr_pm_i2c_sem_lock()
 	u32 ret = 0;
 	u32 insurance = 1000;
 	unsigned long flgs;
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+	unsigned int cpu_freq;
+#endif
 
 	if (unlikely(!pwr_mgr.info)) {
 		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
@@ -930,19 +954,24 @@ int pwr_mgr_pm_i2c_sem_lock()
 	BUG_ON(pwr_mgr.sem_locked);
 
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
-		if (!pwr_mgr.sem_dfs_client.valid)
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+#endif
+		if (!pwr_mgr.sem_qos_client.valid)
 			ret =
-			    pi_mgr_dfs_add_request(&pwr_mgr.sem_dfs_client,
-						   "sem_wa",
-						   PWRMGR_HW_SEM_WA_PI_ID,
-					   PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+			    pi_mgr_qos_add_request(&pwr_mgr.sem_qos_client,
+					"sem_wa",
+					PWRMGR_HW_SEM_WA_PI_ID,
+					PWRMGR_HW_SEM_LOCK_WA_PI_LATENCY);
 		else
-			ret =
-			 pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,
-					  PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+			ret = pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
+					PWRMGR_HW_SEM_LOCK_WA_PI_LATENCY);
 		if (ret)
 			return ret;
 	}
+
+
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 
 	value = PWRMGR_SEM_VALUE;
@@ -982,7 +1011,9 @@ int pwr_mgr_pm_i2c_sem_unlock()
 {
 	unsigned long flgs;
 	int ret = 0;
-
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+	unsigned int cpu_freq;
+#endif
 	if (unlikely(!pwr_mgr.info)) {
 		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
 				__func__);
@@ -993,9 +1024,16 @@ int pwr_mgr_pm_i2c_sem_unlock()
 	writel(0, PWR_MGR_REG_ADDR(PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_OFFSET));
 	pwr_mgr.sem_locked = false;
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
-	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0)
-		ret = pi_mgr_dfs_request_update(&pwr_mgr.sem_dfs_client,
-					  PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
+
+	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
+		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+#endif
+		pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
+					  PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY);
+	}
+
 	return ret;
 }
 
@@ -2107,7 +2145,7 @@ int pwr_mgr_init(struct pwr_mgr_info *info)
 {
 	int ret = 0;
 	pwr_mgr.info = info;
-	pwr_mgr.sem_dfs_client.name = NULL;
+	pwr_mgr.sem_qos_client.name = NULL;
 	pwr_mgr.sem_locked = false;
 
 	/* I2C seq is disabled by default */
