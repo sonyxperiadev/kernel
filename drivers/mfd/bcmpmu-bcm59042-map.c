@@ -531,7 +531,7 @@ static const struct bcmpmu_adc_map bcm59042_adc_map[PMU_ADC_MAX] = {
 		.dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x05, .vrng = 1200},
 	[PMU_ADC_BSI] =			{.addr0 = 0x8F, .addr1 = 0x8E,
 		.dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x06, .vrng = 1200},
-	[PMU_ADC_32KTEMP] =		{.addr0 = 0x8D, .addr1 = 0x8C,
+	[PMU_ADC_32KTEMP] =		{.addr0 = 0x93, .addr1 = 0x92,
 		.dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x08, .vrng = 1200},
 	[PMU_ADC_PATEMP] =		{.addr0 = 0x8D, .addr1 = 0x8C,
 		.dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x09, .vrng = 1200},
