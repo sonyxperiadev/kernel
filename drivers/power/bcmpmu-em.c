@@ -142,6 +142,7 @@ struct bcmpmu_em {
 	int eoc;
 	int eoc_state;
 	int support_hw_eoc;
+	int eoc_count;
 	int esr;
 	int cutoff_volt;
 	int cutoff_count;
@@ -193,6 +194,7 @@ struct bcmpmu_em {
 	int fg_dbg_temp;
 	unsigned long fg_zone_tm;
 	int piggyback_chrg;
+	void (*pb_notify) (enum bcmpmu_event_t event, int data);
 };
 static struct bcmpmu_em *bcmpmu_em;
 
@@ -841,7 +843,6 @@ static int update_adc_readings(struct bcmpmu_em *pem)
 
 static int update_eoc(struct bcmpmu_em *pem)
 {
-	static int eoc_count;
 	int capacity = 0;
 
 	if (pem->piggyback_chrg) {
@@ -857,10 +858,13 @@ static int update_eoc(struct bcmpmu_em *pem)
 						pem->fg_capacity_full;
 					pem->charge_state = CHRG_STATE_MAINT;
 				}
+				pr_em(FLOW, "%s, pb-hw, eoc_st=%d\n",
+					__func__, pem->eoc_state);
 			} else if ((pem->batt_volt > 4150) &&
-				(pem->batt_curr < pem->eoc)) {
-					eoc_count++;
-				if (eoc_count > 5) {
+				(pem->batt_curr < pem->eoc) &&
+				(pem->charge_state != CHRG_STATE_MAINT)) {
+					pem->eoc_count++;
+				if (pem->eoc_count > 5) {
 					capacity = 100;
 					if (pem->fg_comp_mode == 0)
 						pem->fg_cap_cal = 1;
@@ -868,9 +872,11 @@ static int update_eoc(struct bcmpmu_em *pem)
 						pem->fg_capacity_full;
 					pem->charge_state = CHRG_STATE_MAINT;
 				}
+				pr_em(FLOW, "%s, pb-sw, eoc_cnt=%d\n",
+					__func__, pem->eoc_count);
 			}
 		} else
-			eoc_count = 0;
+			pem->eoc_count = 0;
 	} else if (is_charger_present(pem)) {
 		if (pem->support_hw_eoc) {
 			if ((pem->eoc_state == 1) &&
@@ -882,10 +888,13 @@ static int update_eoc(struct bcmpmu_em *pem)
 				pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 0);
 				pem->charge_state = CHRG_STATE_MAINT;
 			}
+			pr_em(FLOW, "%s, brcm-hw, eoc_st=%d\n",
+				__func__, pem->eoc_state);
 		} else if ((pem->batt_volt > 4150) &&
-			(pem->batt_curr < pem->eoc)) {
-				eoc_count++;
-			if (eoc_count > 5) {
+			(pem->batt_curr < pem->eoc) &&
+			(pem->charge_state != CHRG_STATE_MAINT)) {
+				pem->eoc_count++;
+			if (pem->eoc_count > 5) {
 				capacity = 100;
 				if (pem->fg_comp_mode == 0)
 					pem->fg_cap_cal = 1;
@@ -896,9 +905,14 @@ static int update_eoc(struct bcmpmu_em *pem)
 						chrgr_usb_en(pem->bcmpmu, 0);
 				}
 			}
-		}
+			pr_em(FLOW, "%s, brcm-sw, eoc_cnt=%d\n",
+					__func__, pem->eoc_count);
+		} else
+			pem->eoc_count = 0;
 	} else
-		eoc_count = 0;
+		pem->eoc_count = 0;
+	pr_em(FLOW, "%s, eoc_st=%d, eoc_cnt=%d\n",
+			__func__, pem->eoc_state, pem->eoc_count);
 	return capacity;
 }
 
@@ -1189,8 +1203,16 @@ static void update_power_supply(struct bcmpmu_em *pem, int capacity)
 	struct bcmpmu *bcmpmu = pem->bcmpmu;
 	int psy_changed = 0;
 
-	if (pem->piggyback_chrg)
+	if (pem->piggyback_chrg) {
+		if ((is_charger_present(pem)) &&
+			(!pem->support_hw_eoc) &&
+			(capacity == 100) &&
+			(pem->batt_capacity < 100) &&
+			(pem->pb_notify))
+				pem->pb_notify(
+					BCMPMU_CHRGR_EVENT_EOC, 0);
 		return;
+	}
 
 	ps = power_supply_get_by_name("battery");
 
@@ -1488,6 +1510,7 @@ static int em_event_handler(struct notifier_block *nb,
 			pem->fg_lowbatt_cal = 1;
 		pem->force_update = 1;
 		pem->transition = 1;
+		pem->eoc_count = 0;
 		pr_em(FLOW, "%s, chrgr type=%d\n", __func__, pem->chrgr_type);
 		break;
 
@@ -1519,6 +1542,7 @@ static int em_event_handler(struct notifier_block *nb,
 	case BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS:
 		if (is_charger_present(pem))
 			pem->resume_chrg = 1;
+		pem->eoc_count = 0;
 		pr_em(FLOW, "%s, resume vbus event\n", __func__);
 		break;
 
@@ -1539,6 +1563,7 @@ static int em_event_handler(struct notifier_block *nb,
 				pem->charge_state = CHRG_STATE_IDLE;
 		} else
 			pr_em(ERROR, "%s, no data avail.\n", __func__);
+		pem->eoc_count = 0;
 		pr_em(FLOW, "%s, chrg sts event, data=%d, state=%d\n",
 			__func__, data, pem->charge_state);
 		break;
@@ -1589,6 +1614,8 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 
 	pem->support_fg = pdata->support_fg;
 	pem->piggyback_chrg = pdata->piggyback_chrg;
+	pem->pb_notify = pdata->piggyback_notify;
+
 	if (pdata->fg_capacity_full)
 		pem->fg_capacity_full = pdata->fg_capacity_full;
 	else
