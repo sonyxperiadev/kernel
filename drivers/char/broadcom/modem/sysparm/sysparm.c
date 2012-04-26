@@ -30,6 +30,7 @@
 
 #include <linux/broadcom/mobcom_types.h>
 #include <linux/broadcom/bcmtypes.h>
+#include <plat/kona_reset_reason.h>
 
 #include <mach/comms/platform_mconfig.h>
 #include <linux/broadcom/bcm_fuse_sysparm_CIB.h>
@@ -922,6 +923,11 @@ static UInt8 CalculateCheckDigit(UInt8 *inImeiStrPtr)
 static int sysparm_init(void)
 {
 	int sysparm_ready_count = 0;
+
+	if (is_ap_only_boot()) {
+		pr_info("[sysparm]: AP only boot, return error\n");
+		return 1;
+	}
 
 	pr_info
 	    ("[sysparm]: sysparm driver start (PARM_DEP_RAM_ADDR=%x PARM_DEP_SIZE=%x)\n",
