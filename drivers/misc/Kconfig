@@ -740,17 +740,34 @@ config RECOVERY
 	default n
 
 config BCM_RFKILL
-        bool "BCM RFKILL driver support for Bluetooth"
-        depends on RFKILL
-        default n
-        help
-          This driver adds RFKILL support for Broadcom bluetooth
+	bool "BCM RFKILL driver support for Bluetooth"
+	depends on RFKILL
+	default n
+	help
+	  This driver adds RFKILL support for Broadcom bluetooth chips
+	  If your platform uses a BCMxxx chip for BT, FM or GPS connectivity
+	  say Y.
+
+	  If unsure, say N.
 
 config BCM_BT_LPM
-        bool "BCM BT Low Power support"
-        default n
-        help
-          This driver adds Low Power mode support for Broadcom bluetooth
+	bool "BCM BT Low Power support"
+	default n
+	help
+	  This driver adds LPM tty ldisc support for Broadcom bluetooth BT chips.
+	  If your platform uses a BCMxxxx chip for BT, FM or GPS connectivity
+	  and requires N_BRCM_HCI line discpline, say Y.
+	  If not sure, say N.
+
+config BCM_BT_GPS_SELFTEST
+	bool "BRCM GPS test interface for GPS combos"
+	depends on BCM_BT_LPM
+	default n
+	help
+	  Provides GPS manufacturing test interface via BCM_BT_LPM ioctl i/f.
+	  If your platform uses a BCMxxxx BT+GPS chip with N_BRCM_HCI line
+	  discpline, say Y.
+	  If no GPS combo, say N.
 
 config BCM_USERFAULT_HANDLER
 	bool "BCM User fault handler"

@@ -660,14 +660,8 @@ void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 
 	}
 
-	/***
-	OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
-	omega_voice_parms =
-	AudParmP()[AUDCTRL_GetAudioMode()].omega_voice_parms;
 	audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam,
-		(UInt32)(&(omega_voice_parms[telephony_dl_gain_dB])),
-		0, 0, 0, 0);
-	***/
+	(mode + app * AUDIO_MODE_NUMBER), telephony_dl_gain_dB, 0, 0, 0);
 
 	/* if parm4 (OV_volume_step) is zero, volumectrl.c will calculate
 	   OV volume step based on digital_gain_dB, VOICE_VOLUME_MAX and

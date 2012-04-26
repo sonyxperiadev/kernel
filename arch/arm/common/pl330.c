@@ -487,7 +487,7 @@ static inline u32 _emit_LDP(unsigned dry_run, u8 buf[],
 }
 
 static inline u32 _emit_LP(unsigned dry_run, u8 buf[],
-		unsigned loop, u8 cnt)
+		unsigned loop, unsigned cnt)
 {
 	if (dry_run)
 		return SZ_DMALP;
@@ -498,7 +498,7 @@ static inline u32 _emit_LP(unsigned dry_run, u8 buf[],
 		buf[0] |= (1 << 1);
 
 	cnt--; /* DMAC increments by 1 internally */
-	buf[1] = cnt;
+	buf[1] = (u8)cnt;
 
 	PL330_DBGCMD_DUMP(SZ_DMALP, "\tDMALP_%c %u\n", loop ? '1' : '0', cnt);
 

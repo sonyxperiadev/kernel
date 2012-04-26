@@ -52,7 +52,7 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0x46, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x47, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x52, .val = 0x04, .mask = 0x04},
-	{.map = 0, .addr = 0x58, .val = 0x0F, .mask = 0x0F},
+	{.map = 0, .addr = 0x58, .val = 0x05, .mask = 0x0F},
 	/*
 	* temp workaround for LDOs, to be revisited once final
 		OTP value available
@@ -110,38 +110,38 @@ static struct bcmpmu_temp_map batt_temp_map[] = {
 	/*
 	* This table is hardware dependent and need to get from platform team
 	*/
- 	/*
-     * { adc readings 10-bits,  temperature in degree K }
+	/*
+	* adc temp
 	*/
-	{932, 233},			/* -40 C */
-	{900, 238},			/* -35 C */
-	{860, 243},			/* -30 C */
-	{816, 248},			/* -25 C */
-	{760, 253},			/* -20 C */
-	{704, 258},			/* -15 C */
-	{636, 263},			/* -10 C */
-	{568, 268},			/* -5 C */
-	{500, 273},			/* 0 C */
-	{440, 278},			/* 5 C */
-	{376, 283},			/* 10 C */
-	{324, 288},			/* 15 C */
-	{272, 293},			/* 20 C */
-	{228, 298},			/* 25 C */
-	{192, 303},			/* 30 C */
-	{160, 308},			/* 35 C */
-	{132, 313},			/* 40 C */
-	{112, 318},			/* 45 C */
-	{92, 323},			/* 50 C */
-	{76, 328},			/* 55 C */
-	{64, 333},			/* 60 C */
-	{52, 338},			/* 65 C */
-	{44, 343},			/* 70 C */
-	{36, 348},			/* 75 C */
-	{32, 353},			/* 80 C */
-	{28, 358},			/* 85 C */
-	{24, 363},			/* 90 C */
-	{20, 368},			/* 95 C */
-	{16, 373},			/* 100 C */
+	{932, -400},			/* -40 C */
+	{900, -350},			/* -35 C */
+	{860, -300},			/* -30 C */
+	{816, -250},			/* -25 C */
+	{760, -200},			/* -20 C */
+	{704, -150},			/* -15 C */
+	{636, -100},			/* -10 C */
+	{568, -50},			/* -5 C */
+	{500, 0},			/* 0 C */
+	{440, 50},			/* 5 C */
+	{376, 100},			/* 10 C */
+	{324, 150},			/* 15 C */
+	{272, 200},			/* 20 C */
+	{228, 250},			/* 25 C */
+	{192, 300},			/* 30 C */
+	{160, 350},			/* 35 C */
+	{132, 400},			/* 40 C */
+	{112, 450},			/* 45 C */
+	{92, 500},			/* 50 C */
+	{76, 550},			/* 55 C */
+	{64, 600},			/* 60 C */
+	{52, 650},			/* 65 C */
+	{44, 700},			/* 70 C */
+	{36, 750},			/* 75 C */
+	{32, 800},			/* 80 C */
+	{28, 850},			/* 85 C */
+	{24, 900},			/* 90 C */
+	{20, 950},			/* 95 C */
+	{16, 1000},			/* 100 C */
 };
 
 __weak struct regulator_consumer_supply rf_supply[] = {
@@ -621,8 +621,19 @@ static struct platform_device bcmpmu_rpc = {
 };
 #endif
 
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+static struct platform_device bcmpmu_chrgr_spa_device = {
+	.name = "bcmpmu_chrgr_pb",
+	.id = -1,
+	.dev.platform_data = NULL,
+};
+#endif
+
 static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_audio_device,
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+	&bcmpmu_chrgr_spa_device,
+#endif
 	&bcmpmu_em_device,
 	&bcmpmu_otg_xceiv_device,
 #ifdef CONFIG_BCMPMU_RPC
@@ -630,7 +641,7 @@ static struct platform_device *bcmpmu_client_devices[] = {
 #endif
 };
 
-static int __init bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
+static int bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
 	pr_info("REG: pmu_init_platform_hw called\n");
 	return 0;
@@ -647,13 +658,13 @@ static struct bcmpmu_adc_setting adc_setting = {
 };
 
 static struct bcmpmu_charge_zone chrg_zone[] = {
-	{.tl = 268, .th = 333, .v = 3000, .fc = 10, .qc = 100},	/* Zone QC */
-	{.tl = 268, .th = 272, .v = 4200, .fc = 100, .qc = 0},	/* Zone LL */
-	{.tl = 273, .th = 282, .v = 4200, .fc = 100, .qc = 0},	/* Zone L */
-	{.tl = 283, .th = 318, .v = 4200, .fc = 100, .qc = 0},	/* Zone N */
-	{.tl = 319, .th = 323, .v = 4200, .fc = 100, .qc = 0},	/* Zone H */
-	{.tl = 324, .th = 333, .v = 4200, .fc = 100, .qc = 0},	/* Zone HH */
-	{.tl = 268, .th = 333, .v = 0, .fc = 0, .qc = 0},	/* Zone OUT */
+	{.tl = -50, .th = 600, .v = 3000, .fc = 10, .qc = 100},	/* Zone QC */
+	{.tl = -50, .th = -1, .v = 4200, .fc = 100, .qc = 0},	/* Zone LL */
+	{.tl = 0, .th = 99, .v = 4200, .fc = 100, .qc = 0},	/* Zone L */
+	{.tl = 100, .th = 450, .v = 4200, .fc = 100, .qc = 0},	/* Zone N */
+	{.tl = 451, .th = 500, .v = 4200, .fc = 100, .qc = 0},	/* Zone H */
+	{.tl = 501, .th = 600, .v = 4200, .fc = 100, .qc = 0},	/* Zone HH */
+	{.tl = -50, .th = 600, .v = 0, .fc = 0, .qc = 0},	/* Zone OUT */
 };
 
 static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
@@ -691,10 +702,9 @@ static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 
 static int bcmpmu_init_platform_hw(struct bcmpmu *);
 
-
 static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 /* This table is default data, the real data from board file or device tree*/
-	{.temp = 253,
+	{.temp = -200,
 	 .reset = 0, .fct = 520, .guardband = 100,
 	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
 	 .esr_vl = 140, .esr_vl_slope = 100, .esr_vl_offset = 0,
@@ -703,7 +713,7 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .esr_vf = 140, .esr_vf_slope = 100, .esr_vf_offset = 0,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -20 */
-	{.temp = 258,
+	{.temp = -150,
 	 .reset = 0, .fct = 620, .guardband = 100,
 	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
 	 .esr_vl = 140, .esr_vl_slope = 100, .esr_vl_offset = 0,
@@ -712,7 +722,7 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .esr_vf = 140, .esr_vf_slope = 100, .esr_vf_offset = 0,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -15 */
-	{.temp = 263,
+	{.temp = -100,
 	 .reset = 0, .fct = 720, .guardband = 100,
 	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
 	 .esr_vl = 140, .esr_vl_slope = 100, .esr_vl_offset = 0,
@@ -721,7 +731,7 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .esr_vf = 140, .esr_vf_slope = 100, .esr_vf_offset = 0,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -10 */
-	{.temp = 268,
+	{.temp = -50,
 	 .reset = 0, .fct = 782, .guardband = 100,
 	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
 	 .esr_vl = 140, .esr_vl_slope = 100, .esr_vl_offset = 0,
@@ -730,7 +740,7 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .esr_vf = 140, .esr_vf_slope = 100, .esr_vf_offset = 0,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -5 */
-	{.temp = 273,
+	{.temp = 0,
 	 .reset = 0, .fct = 845, .guardband = 100,
 	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
 	 .esr_vl = 140, .esr_vl_slope = 100, .esr_vl_offset = 0,
@@ -739,7 +749,7 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .esr_vf = 140, .esr_vf_slope = 100, .esr_vf_offset = 0,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 0 */
-	{.temp = 278,
+	{.temp = 50,
 	 .reset = 0, .fct = 880, .guardband = 100,
 	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
 	 .esr_vl = 140, .esr_vl_slope = 100, .esr_vl_offset = 0,
@@ -748,7 +758,7 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .esr_vf = 140, .esr_vf_slope = 100, .esr_vf_offset = 0,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 5 */
-	{.temp = 283,
+	{.temp = 100,
 	 .reset = 0, .fct = 915, .guardband = 30,
 	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
 	 .esr_vl = 140, .esr_vl_slope = 100, .esr_vl_offset = 0,
@@ -757,7 +767,7 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .esr_vf = 140, .esr_vf_slope = 100, .esr_vf_offset = 0,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 10 */
-	{.temp = 288,
+	{.temp = 150,
 	 .reset = 0, .fct = 957, .guardband = 30,
 	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
 	 .esr_vl = 140, .esr_vl_slope = 100, .esr_vl_offset = 0,
@@ -766,7 +776,7 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .esr_vf = 140, .esr_vf_slope = 100, .esr_vf_offset = 0,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 15 */
-	{.temp = 293,
+	{.temp = 200,
 	 .reset = 0, .fct = 1000, .guardband = 30,
 	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
 	 .esr_vl = 140, .esr_vl_slope = 100, .esr_vl_offset = 0,
@@ -777,6 +787,44 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 20 */
 };
 
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+static void notify_spa(enum bcmpmu_event_t event, int data)
+{
+	printk(KERN_INFO "%s event=%d, data=%d\n",
+		__func__, event, data);
+
+	switch (event) {
+	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_CHARGER, data)
+		*/
+		break;
+	case BCMPMU_CHRGR_EVENT_MBTEMP:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_TEMP, data);
+		*/
+		break;
+	case BCMPMU_CHRGR_EVENT_MBOV:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_OVP, data);
+		*/
+		break;
+	case BCMPMU_CHRGR_EVENT_USBOV:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_OVP, data);
+		*/
+		break;
+	case BCMPMU_CHRGR_EVENT_EOC:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_EOC, 0);
+		*/
+		break;
+	default:
+		break;
+	}
+}
+#endif
+
 static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), },
 	.init = bcmpmu_init_platform_hw,
@@ -785,7 +833,10 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.i2c_adapter_id = PMU_DEVICE_I2C_BUSNO,
 	.i2c_pagesize = 256,
 	.init_data = &register_init_data[0],
+	/* # of registers defined in register_init_data.
+	   This value will come from device tree */
 	.init_max = ARRAY_SIZE(register_init_data),
+	.batt_temp_in_celsius = 1,
 	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
@@ -800,7 +851,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.batt_voltcap_map_len = ARRAY_SIZE(batt_voltcap_map),
 	.batt_impedence = 238,
 	.chrg_1c_rate = 1350,
-	.chrg_eoc = 67,
+	.chrg_eoc = 100,
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1350 * 3600,
 	.support_fg = 1,
@@ -808,11 +859,11 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.wd_setting = &bcm59039_wd_setting,
 	.chrg_resume_lvl = 4150,
 	.fg_support_tc = 1,
-	.fg_tc_dn_lvl = 278,
-	.fg_tc_up_lvl = 288,
+	.fg_tc_dn_lvl = 50, /* 5c */
+	.fg_tc_up_lvl = 200, /* 20c */
 	.fg_zone_settle_tm = 60,
-	.fg_zone_info = &fg_zone[0],	
-	.bc = BCMPMU_BC_PMU_BC12,	/* BCMPMU_BC_BB_BC12 */
+	.fg_zone_info = &fg_zone[0],
+	.bc = BCMPMU_BC_PMU_BC12,
 	.batt_model = "Unknown",
 	.cutoff_volt = 3200,
 	.cutoff_count_max = 3,
@@ -822,6 +873,12 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.pok_shtdwn_dly = -1,
 	.pok_restart_dly = -1,
 	.pok_restart_deb = -1,
+	.pok_lock = 1, /*Keep ponkey locked by default*/
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+	.piggyback_chrg = 1,
+	.piggyback_chrg_name = "bcm59039_charger",
+	.piggyback_notify = notify_spa,
+#endif
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {

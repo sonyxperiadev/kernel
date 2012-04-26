@@ -478,7 +478,11 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	    | SDHCI_QUIRK_32BIT_DMA_ADDR
 	    | SDHCI_QUIRK_32BIT_DMA_SIZE | SDHCI_QUIRK_32BIT_ADMA_SIZE;
 
-	pr_debug("%s: GET IRQ\n", __func__);
+#ifdef CONFIG_MACH_RHEA_FARADAY_EB20
+        host->quirks |= SDHCI_QUIRK_NO_MULTIBLOCK;
+#endif
+       
+        pr_debug("%s: GET IRQ\n", __func__);
 
 	if (hw_cfg->flags & KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE)
 		host->mmc->caps |= MMC_CAP_NONREMOVABLE;

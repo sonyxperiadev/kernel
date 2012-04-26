@@ -28,6 +28,7 @@ obj-$(CONFIG_MACH_RHEA_SS) += rhea_ss.o rhea_ss_pinmux.o
 obj-$(CONFIG_MACH_RHEA_SS_AMAZING) += rhea_ss_amazing.o rhea_ss_amazing_pinmux.o
 obj-$(CONFIG_MACH_RHEA_SS_LUCAS) += rhea_ss_lucas.o rhea_ss_lucas_pinmux.o
 obj-$(CONFIG_MACH_RHEA_FARADAY_EB10) += rhea_ray.o rhea_faraday_eb10_pinmux.o
+obj-$(CONFIG_MACH_RHEA_FARADAY_EB20) += rhea_faraday.o rhea_faraday_eb20_pinmux.o
 obj-$(CONFIG_MACH_RHEA_BERRI) += rhea_berri.o rhea_berri_pinmux.o
 obj-$(CONFIG_MACH_RHEA_BERRI_EDN40) += rhea_berri.o rhea_berri_pinmux.o board-rhea-wifi.o
 obj-$(CONFIG_MACH_RHEALC_BERRI) += rhea_berri.o rhea_berri_pinmux.o
