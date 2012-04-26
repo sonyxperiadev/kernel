@@ -48,6 +48,7 @@
 
 #include <plat/pwr_mgr.h>
 #include <mach/pwr_mgr.h>
+#include <mach/pm.h>
 
 #ifdef CAPRI_DORMANT_CHANGE
 #include "appf_boot_api.h"
@@ -66,7 +67,6 @@ u32 dormant_base_pa;
 
 extern void dormant_start(void);
 extern struct appf_main_table main_table;
-extern void enter_wfi(void);
 
 /* Array of registers that needs to be saved and restored.  Please add to the end if new data
  * needs to be added.  Note that PLL DIV and TRIGGER registers are moved to the top of the list
