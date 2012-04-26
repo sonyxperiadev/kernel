@@ -53,7 +53,6 @@ struct pl330_chan_desc {
 	int event_id;		/* ID of event/Interrupt line to notify */
 	u8 peri_req_id;		/* mapped peripheral request interface(PRI) ID */
 	void *pl330_chan_id;	/* PL330 channel id alloted */
-	unsigned int options;	/* DMA options */
 	struct pl330_reqcfg rqcfg;	/* DMA req configurations */
 	pl330_xfer_callback_t xfer_callback;	/* DMA callback function */
 	void *client_cookie;	/* client data for callback fn */
@@ -498,10 +497,19 @@ int dma_setup_transfer(unsigned int chan,
 	      + 1);
 
 	/* checking xfer size alignment */
-	if (xfer_size % (bl * w)) {
-		dev_err(dmac->pi->dev,
-			"xfer size not aligned to burst size x burst len\n");
-		goto err;
+	if ((rqtype != MEMTOMEM) && (cfg & (DMA_PERI_END_SINGLE_REQ |
+				DMA_PERI_REQ_ALWAYS_BURST)))	{
+		if (xfer_size % w) {
+			dev_err(dmac->pi->dev,
+				"xfer size not aligned to burst size\n");
+			goto err;
+		}
+	} else	{
+		if (xfer_size % (bl * w)) {
+			dev_err(dmac->pi->dev,
+				"xfer size not aligned to burst size x burst len\n");
+			goto err;
+		}
 	}
 
 	/* check buffer address alignment */
@@ -532,7 +540,7 @@ int dma_setup_transfer(unsigned int chan,
 		goto err1;
 	};
 
-	if ((rqtype != DMA_DIRECTION_MEM_TO_MEM) && (!c->is_peri_mapped)) {
+	if ((rqtype != MEMTOMEM) && (!c->is_peri_mapped)) {
 		spin_unlock_irqrestore(&lock, flags);
 		goto err1;
 	}
@@ -558,7 +566,9 @@ int dma_setup_transfer(unsigned int chan,
 	config->src_inc = (cfg & DMA_CFG_SRC_ADDR_INCREMENT) ? 1 : 0;
 	config->dst_inc = (cfg & DMA_CFG_DST_ADDR_INCREMENT) ? 1 : 0;
 	config->peri_flush_start = (cfg & PERIPHERAL_FLUSHP_START) ? 1: 0;
-	config->peri_flush_end = (cfg & PERIPHERAL_FLUSHP_END) ? 1: 0;
+	config->peri_flush_end = (cfg & PERIPHERAL_FLUSHP_END) ? 1 : 0;
+	config->always_burst = (cfg & DMA_PERI_REQ_ALWAYS_BURST) ? 1 : 0;
+	config->end_single_req = (cfg & DMA_PERI_END_SINGLE_REQ) ? 1 : 0;
 
 	/* Burst size */
 	config->brst_size = bs >> DMA_CFG_BURST_SIZE_SHIFT;
@@ -702,7 +712,7 @@ int dma_setup_transfer_sg(unsigned int chan,
 		goto err1;
 	};
 
-	if ((rqtype != DMA_DIRECTION_MEM_TO_MEM) && (!c->is_peri_mapped)) {
+	if ((rqtype != MEMTOMEM) && (!c->is_peri_mapped)) {
 		spin_unlock_irqrestore(&lock, flags);
 		goto err1;
 	}
@@ -722,7 +732,9 @@ int dma_setup_transfer_sg(unsigned int chan,
 	config->src_inc = (cfg & DMA_CFG_SRC_ADDR_INCREMENT) ? 1 : 0;
 	config->dst_inc = (cfg & DMA_CFG_DST_ADDR_INCREMENT) ? 1 : 0;
 	config->peri_flush_start = (cfg & PERIPHERAL_FLUSHP_START) ? 1: 0;
-	config->peri_flush_end = (cfg & PERIPHERAL_FLUSHP_END) ? 1: 0;
+	config->peri_flush_end = (cfg & PERIPHERAL_FLUSHP_END) ? 1 : 0;
+	config->always_burst = (cfg & DMA_PERI_REQ_ALWAYS_BURST) ? 1 : 0;
+	config->end_single_req = (cfg & DMA_PERI_END_SINGLE_REQ) ? 1 : 0;
 
 	/* Burst size */
 	config->brst_size = bs >> DMA_CFG_BURST_SIZE_SHIFT;
@@ -752,10 +764,19 @@ int dma_setup_transfer_sg(unsigned int chan,
 			continue;
 
 		/* checking xfer size alignment */
-		if (sg_dma_len(sg) % (bl * w)) {
-			dev_err(dmac->pi->dev,
-				"LLI xfer size not aligned to burst size x burst len\n");
-			goto err2;
+		if ((rqtype != MEMTOMEM) && (cfg & (DMA_PERI_END_SINGLE_REQ |
+				DMA_PERI_REQ_ALWAYS_BURST)))	{
+			if (sg_dma_len(sg) % w) {
+				dev_err(dmac->pi->dev,
+					"LLI xfer size not aligned to burst size\n");
+				goto err2;
+			}
+		} else	{
+			if (sg_dma_len(sg) % (bl * w)) {
+				dev_err(dmac->pi->dev,
+					"LLI xfer size not aligned to burst size x burst len\n");
+				goto err2;
+			}
 		}
 
 		/* check buffer address alignment */
@@ -919,7 +940,7 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 		goto err1;
 	};
 
-	if ((rqtype != DMA_DIRECTION_MEM_TO_MEM) && (!c->is_peri_mapped)) {
+	if ((rqtype != MEMTOMEM) && (!c->is_peri_mapped)) {
 		spin_unlock_irqrestore(&lock, flags);
 		goto err1;
 	}
@@ -939,7 +960,9 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	config->src_inc = (cfg & DMA_CFG_SRC_ADDR_INCREMENT) ? 1 : 0;
 	config->dst_inc = (cfg & DMA_CFG_DST_ADDR_INCREMENT) ? 1 : 0;
 	config->peri_flush_start = (cfg & PERIPHERAL_FLUSHP_START) ? 1: 0;
-	config->peri_flush_end = (cfg & PERIPHERAL_FLUSHP_END) ? 1: 0;
+	config->peri_flush_end = (cfg & PERIPHERAL_FLUSHP_END) ? 1 : 0;
+	config->always_burst = (cfg & DMA_PERI_REQ_ALWAYS_BURST) ? 1 : 0;
+	config->end_single_req = (cfg & DMA_PERI_END_SINGLE_REQ) ? 1 : 0;
 
 	/* Burst size */
 	config->brst_size = bs >> DMA_CFG_BURST_SIZE_SHIFT;
@@ -968,10 +991,19 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 			continue;
 
 		/* checking xfer size alignment */
-		if (lli->xfer_size % (bl * w)) {
-			dev_err(dmac->pi->dev,
-				"LLI xfer size not aligned to burst size x burst len\n");
-			goto err2;
+		if ((rqtype != MEMTOMEM) && (cfg & (DMA_PERI_END_SINGLE_REQ |
+					DMA_PERI_REQ_ALWAYS_BURST)))	{
+			if (lli->xfer_size % w) {
+				dev_err(dmac->pi->dev,
+					"LLI xfer size not aligned to burst size\n");
+				goto err2;
+			}
+		} else {
+			if (lli->xfer_size % (bl * w)) {
+				dev_err(dmac->pi->dev,
+					"LLI xfer size not aligned to burst size x burst len\n");
+				goto err2;
+			}
 		}
 
 		/* check buffer address alignment */

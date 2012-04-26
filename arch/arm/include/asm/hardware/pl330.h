@@ -118,8 +118,15 @@ struct pl330_reqcfg {
 	enum pl330_srccachectrl scctl;
 	enum pl330_byteswap swap;
 	/* Peripheral flush control */
-	bool peri_flush_start;		/* peripheral needs FLUSHP before DMA start */
-	bool peri_flush_end;		/* peripheral needs FLUSHP afrer transfer */
+	bool peri_flush_start; /* peripheral needs FLUSHP before DMA start */
+	bool peri_flush_end; /* peripheral needs FLUSHP afrer transfer */
+	/*
+	 * peripheral always generates burst requset.
+	 * Support modified burst(unaligned size) transfers
+	 */
+	bool always_burst;
+	/* single DMA requests follows burst req for the last remainder data */
+	bool end_single_req;
 	struct pl330_config *pcfg;
 };
 

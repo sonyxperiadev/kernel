@@ -89,8 +89,18 @@ enum dma_direction {
 #define PERIPHERAL_FLUSHP_START         (0x1 << FLUSHP_CTRL_START_SHIFT)
 #define FLUSHP_CTRL_END_SHIFT           10
 #define PERIPHERAL_FLUSHP_END           (0x1 << FLUSHP_CTRL_END_SHIFT)
-#define PERIPHERAL_FLUSHP_DEFAULT       (PERIPHERAL_FLUSHP_END | \
-                                          PERIPHERAL_FLUSHP_START)
+#define PERIPHERAL_FLUSHP_DEFAULT       PERIPHERAL_FLUSHP_END
+
+/* Unaligned transfer Handling for Peripheral requirements */
+
+/* Peripheral generate single xfer requests for last burst-unaligned data */
+#define DMA_PERI_END_SINGLE_REQ_MASK    11
+#define DMA_PERI_END_SINGLE_REQ         (0x1 << DMA_PERI_END_SINGLE_REQ_MASK)
+/* Peripheral always generate burst requests
+ * Support modified burst transfers for size lesser than a burst.
+ */
+#define DMA_PERI_REQ_ALWAYS_BURST_MASK 12
+#define DMA_PERI_REQ_ALWAYS_BURST      (0x1 << DMA_PERI_REQ_ALWAYS_BURST_MASK)
 
 
 enum pl330_xfer_status {
