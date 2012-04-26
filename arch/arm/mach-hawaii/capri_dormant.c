@@ -54,7 +54,7 @@
 #include "appf_types.h"
 #endif
 
-static int enable_dormant = 1;
+static int enable_dormant = 0;
 module_param_named(enable_dormant, enable_dormant, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #ifdef CONFIG_ROM_SEC_DISPATCHER
@@ -66,6 +66,7 @@ u32 dormant_base_pa;
 
 extern void dormant_start(void);
 extern struct appf_main_table main_table;
+extern void enter_wfi(void);
 
 /* Array of registers that needs to be saved and restored.  Please add to the end if new data
  * needs to be added.  Note that PLL DIV and TRIGGER registers are moved to the top of the list
@@ -588,6 +589,8 @@ void dormant_enter(void)
 				writel(boot_2nd_addr, KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
 			}
 		}
+	} else {	/*!enable_dormant*/
+		enter_wfi();
 	}
 }
 
