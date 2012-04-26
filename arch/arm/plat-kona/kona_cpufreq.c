@@ -331,7 +331,7 @@ static struct kobj_attribute _name##_attr = {	\
 	ssize_t ret = -EINTR;					\
 	unsigned int val;					\
 	if (!get_cpufreq_limit(&val, lmt_typ))			\
-		ret = sprintf(buf, "%u\n", val);		\
+		ret = scnprintf(buf, PAGE_SIZE-1, "%u\n", val);		\
 	return ret;						\
 }
 
@@ -357,9 +357,10 @@ static ssize_t cpufreq_table_show(struct kobject *kobj,
 
 	num = pdata->num_freqs;
 	/*List in descending order*/
-	for (i = num - 1; i >= 0; i--)
-		count += sprintf(&buf[count], "%d ",
+	for (i = num - 1; i >= 0; i--) {
+		count += scnprintf(&buf[count], (PAGE_SIZE - count - 2), "%d ",
 				pdata->freq_tbl[i].cpu_freq);
+	}
 	count += sprintf(&buf[count], "\n");
 	return count;
 }
