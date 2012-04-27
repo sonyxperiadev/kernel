@@ -117,6 +117,17 @@ config BRCM_FUSE_VSP
 	---help---
 	  Broadcom FUSE VSP drivers
 
+config BCM_SIMLOCK
+	bool "Broadcom SIM lock driver"
+	depends on BCM_MODEM
+	default y
+	help
+	  Say Y here to enable the Broadcom back-end for SIM locking.
+	  Otherwise SIM lock will be disabled, unless another mechanism
+	  provides it.
+
+	  If unsure, say N here.
+
 config BCM_IDLE_PROFILER
 	bool "Broadcom Idle Profiler Support"
 	depends on BRCM_CHAR_DRIVERS && ARCH_KONA
@@ -268,7 +279,7 @@ config BCM_RTC_CAL
 
 config BRCM_SIM_SECURE_ENABLE
     boolean "Broadcom SIM Secure Enable"
-    depends on BRCM_CHAR_DRIVERS && BCM_MODEM
+    depends on BCM_SIMLOCK
     default n
     ---help---
     Broadcom SIM Secure Enable

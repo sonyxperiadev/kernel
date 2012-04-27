@@ -300,6 +300,7 @@ Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t *pReqMsg,
 
 #if defined(FUSE_APPS_PROCESSOR)
 
+#ifdef CONFIG_BCM_SIMLOCK
 static SYS_SIM_SECURITY_STATE_t
 convert_security_state(SEC_SimLock_Security_State_t sec_state)
 {
@@ -332,11 +333,13 @@ convert_security_state(SEC_SimLock_Security_State_t sec_state)
 
 	return tmp_state;
 }
+#endif
 
 Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId,
 					 SYS_SIMLOCK_SIM_DATA_t *sim_data,
 					 Boolean is_testsim)
 {
+#ifdef CONFIG_BCM_SIMLOCK
 	Result_t result = RESULT_OK;
 	SYS_ReqRep_t data;
 	sec_simlock_sim_data_t tmp_sim_data;
@@ -412,6 +415,9 @@ Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId,
 
 	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_SIMLOCK_GET_STATUS_RSP, &data);
 	return result;
+#else
+	return RESULT_ERROR;
+#endif
 }
 
 #endif
