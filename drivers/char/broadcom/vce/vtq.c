@@ -176,7 +176,6 @@ struct vtq_vce {
 	 * -- the actual fifo entry will be modulo the fifo size,
 	 * which must therefore be power-of-2 */
 	vtq_job_id_t writeptr;
-	vtq_job_id_t last_acknowledged_job;
 
 	/* currently loaded image. */
 	struct vtq_image *current_image;
@@ -211,6 +210,10 @@ struct vtq_vce {
 	/* this wait queue isn't used... should we keep this for
 	 * debug, or ditch it? TODO! */
 	wait_queue_head_t vce_given_work_wq;
+
+	/* job cleanup / acknowledgement / callbacks -- now uses a separate mutex */
+	struct mutex cleanup_mutex;
+	vtq_job_id_t last_acknowledged_job;
 
 	/* General stuff below needs both mutexes or special gloves */
 	int on; /* yeah - I know it's wrong -- I'll fix
@@ -389,10 +392,12 @@ static int proc_fifo_read(char *buffer, char **start, off_t offset,
 	v = (struct vtq_vce *)priv;
 
 	mutex_lock(&v->host_mutex);
+	mutex_lock(&v->cleanup_mutex);
 	writeptr = v->writeptr;
 	readptr = v->last_known_readptr;
 	ackptr = v->last_acknowledged_job;
 	mutex_unlock(&v->host_mutex);
+	mutex_unlock(&v->cleanup_mutex);
 
 	/* estimate length of buffer req'd */
 	/* required_bytes = 100 + 100 * (writeptr - ackptr); */
@@ -477,6 +482,7 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 	}
 
 	mutex_init(&vtq_pervce_state->host_mutex);
+	mutex_init(&vtq_pervce_state->cleanup_mutex);
 
 	vtq_pervce_state->writeptr = 07734;
 	vtq_pervce_state->last_known_readptr = vtq_pervce_state->writeptr;
@@ -550,6 +556,7 @@ void vtq_pervce_term(struct vtq_vce **vtq_pervce_state_ptr)
 	flush_work(&v->cleanup_work);
 
 	mutex_lock(&v->host_mutex);
+	mutex_lock(&v->cleanup_mutex);
 	if (v->retained_image != NULL) {
 		put_image(v->retained_image);
 		v->retained_image = NULL;
@@ -566,6 +573,9 @@ void vtq_pervce_term(struct vtq_vce **vtq_pervce_state_ptr)
 		hook = nexthook;
 	}
 	mutex_unlock(&v->host_mutex);
+	mutex_destroy(&v->host_mutex);
+	mutex_unlock(&v->cleanup_mutex);
+	mutex_destroy(&v->cleanup_mutex);
 
 	term_procentries(v);
 	kfree(v);
@@ -816,7 +826,7 @@ static void cleanup(struct work_struct *work)
 
 	vce = container_of(work, struct vtq_vce, cleanup_work);
 
-	mutex_lock(&vce->host_mutex);
+	mutex_lock(&vce->cleanup_mutex);
 
 	our_rptr = vce->last_acknowledged_job;
 	their_rptr = vce->last_known_readptr;
@@ -842,7 +852,7 @@ static void cleanup(struct work_struct *work)
 	}
 	vce->last_acknowledged_job = our_rptr;
 
-	mutex_unlock(&vce->host_mutex);
+	mutex_unlock(&vce->cleanup_mutex);
 
 	/* Still needs to be wakeupall, I think, as the first guys
 	 * condition may not be met -- TODO: check this */
