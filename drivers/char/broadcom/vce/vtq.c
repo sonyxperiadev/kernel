@@ -211,7 +211,8 @@ struct vtq_vce {
 	 * debug, or ditch it? TODO! */
 	wait_queue_head_t vce_given_work_wq;
 
-	/* job cleanup / acknowledgement / callbacks -- now uses a separate mutex */
+	/* job cleanup / acknowledgement / callbacks -- now uses a
+	 * separate mutex */
 	struct mutex cleanup_mutex;
 	vtq_job_id_t last_acknowledged_job;
 
