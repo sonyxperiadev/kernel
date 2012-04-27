@@ -906,7 +906,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 {
 	int capacity = 0;
 	int capacity_v = 0;
-	int fg_result;
+	int fg_result = 0;
 	int ret;
 	int calibration = 0;
 	int volt;
