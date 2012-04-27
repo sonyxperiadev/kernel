@@ -1,7 +1,6 @@
-/* sdhci-pltfm-kona.c Support for SDHCI KONA platform devices
- *
- * Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
- * Copyright (C) 2010-2012 Broadcom Corporation
+/*
+ * sdhci-pltfm-kona.c Support for SDHCI KONA platform devices
+ * Copyright (c) 2009 Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,13 +16,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* Portions of this software are Copyright 2012 Broadcom Corporation */
+/* Portions Copyright (c) 2010 - 2012 Broadcom Corporation */
 
 /*
  * Supports:
  * SDHCI platform devices specific for KONA
- *
- * Inspired by sdhci-pci.c, by Pierre Ossman
  */
 
 #include <linux/kernel.h>
@@ -970,7 +967,6 @@ fs_initcall(sdhci_drv_init);
 module_exit(sdhci_drv_exit);
 
 MODULE_DESCRIPTION("SDHCI platform driver for KONA architecture");
-MODULE_AUTHOR("Pierre Ossman <pierre@ossman.eu>");
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:sdhci");
