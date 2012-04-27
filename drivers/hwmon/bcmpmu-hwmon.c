@@ -551,7 +551,7 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 				TestPinMux.func = adcsyngpiomux;
 				pinmux_set_pin_config(&TestPinMux);
 				gpio_request(adcsyngpio, "ADCSYN_GPIO");
-				gpio_direction_output(adcsyngpio, 0);
+				gpio_direction_output(adcsyngpio, 1);
 				/* Use TX for test */
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
 							     padc->
@@ -671,27 +671,21 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 			pr_hwmon(FLOW, "%s: start rtm adc\n", __func__);
 			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
 				/* Set ADC_SYNC to Low */
-				gpio_set_value(adcsyngpio, 1);
+				msleep(20);
+				gpio_set_value(adcsyngpio, 0);
 			}
 			if (wait_event_interruptible_timeout(padc->wait,
 							     req->ready,
 							     timeout) == 0) {
 				pr_hwmon(ERROR, "%s: RTM ADC timeout\n",
 					 __func__);
+				req->raw = 0;
 				ret = -ETIMEDOUT;
 			} else
 				ret = update_adc_result(padc, req);
 			padc->rtmreq = NULL;
 			pr_hwmon(FLOW, "%s: Wait/update_adc_result returned %d",
 				 __func__, ret);
-			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
-				/* Set ADC_SYNC to High */
-				gpio_set_value(adcsyngpio, 0);
-
-				/* Restore */
-				gpio_free(adcsyngpio);
-				pinmux_set_pin_config(&StoredPinmux);
-			}
 			/* Need to disable RTM to avoid interrrupts from
 			   ADC_SYN activated RTM reads */
 			padc->bcmpmu->write_dev_drct(padc->bcmpmu,
@@ -707,6 +701,14 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 						     padc->
 						     ctrlmap[PMU_ADC_RTM_MASK].
 						     mask);
+			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
+				/* Set ADC_SYNC to High */
+				gpio_set_value(adcsyngpio, 1);
+
+				/* Restore */
+				gpio_free(adcsyngpio);
+				pinmux_set_pin_config(&StoredPinmux);
+			}
 			mutex_unlock(&padc->lock);
 			break;
 		case PMU_ADC_TM_MAX:
