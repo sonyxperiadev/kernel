@@ -121,11 +121,6 @@
 #include <linux/broadcom/bcmbt_rfkill.h>
 #endif
 
-#ifdef CONFIG_GPIO_PCA953X
-#define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
-#else
-#define SD_CARDDET_GPIO_PIN      72
-#endif
 #define SD_CARDDET_GPIO_PIN      123
 
 #ifdef CONFIG_BCM_BT_LPM

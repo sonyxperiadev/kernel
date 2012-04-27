@@ -406,6 +406,12 @@ config TOUCHSCREEN_MMS128_COOPERVE
 	  To compile this driver as a module, choose M here: the
 	  module will be called qt602240_ts.
 
+config TOUCHSCREEN_TMA140_LUCAS
+	tristate "Cypress TMA140 i2c touchscreen"
+	depends on I2C
+	help
+	  This enables support for TMA140 driver over I2C based touchscreens.
+
 config TOUCHSCREEN_MMS128_TASSCOOPER
 	tristate "QT602240 I2C Touchscreen"
 	depends on I2C
@@ -430,11 +436,19 @@ config TOUCHSCREEN_TMA340_COOPERVE
 	  To compile this driver as a module, choose M here: the
 	  module will be called qt602240_ts.
 
+config TOUCHSCREEN_TMA340_LUCAS
+	tristate "Cypress I2C Touchscreen"
+        depends on I2C
+        help
+	  Say Y here if you have the TMA340 I2C touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
 config TOUCHSCREEN_BT403_AMAZING
-	tristate "BT403 Touchscreen"
+	tristate "QT602240 I2C Touchscreen"
 	depends on I2C
 	help
-	  Say Y here if you have the BT403 touchscreen
+	  Say Y here if you have the AT42QT602240/ATMXT224 I2C touchscreen
 	  connected to your system.
 
 	  If unsure, say N.

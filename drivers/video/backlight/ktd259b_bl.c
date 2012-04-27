@@ -44,7 +44,6 @@ int current_intensity;
 static int backlight_pin = 95;
 
 static DEFINE_SPINLOCK(bl_ctrl_lock);
-static int lcd_brightness = 0;
 int real_level = 13;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -55,8 +54,7 @@ static int backlight_mode=1;
 
 #define MAX_BRIGHTNESS_IN_BLU	33
 
-//#define DIMMING_VALUE		1
-#define DIMMING_VALUE		2
+#define DIMMING_VALUE		32
 
 #define MAX_BRIGHTNESS_VALUE	255
 #define MIN_BRIGHTNESS_VALUE	30
@@ -83,42 +81,11 @@ struct brt_value{
 	int tune_level;			// Chip Setting values
 };
 
-#if 0
-struct brt_value brt_table_ktd[] = {
-   { MIN_BRIGHTNESS_VALUE,  2 }, // Min pulse 31(33-2) by HW 
-   { 37,  3 },  
-   { 44,  4 }, 
-   { 51,  5 }, 
-   { 58,  6 }, 
-   { 65,  7 }, 
-   { 72,  8 }, 
-   { 79,  9 }, 
-   { 86,  10 }, 
-   { 93,  11 }, 
-   { 100,  12 }, 
-   { 108,  13 }, 
-   { 115,  14 },  
-   { 123,  15 },  
-   { 131,  16 }, 
-   { 139,  17 }, 
-   { 147,  18 },//default value   
-   { 156,  19 },
-   { 165,  20 }, 
-   { 174,  21 }, 
-   { 183,  22 }, 
-   { 192,  23 }, 
-   { 201,  24 },
-   { 210,  25 },
-   { 219,  26 },
-   { 228,  27 },
-   { 237,  28 },
-   { 246,  29 },
-   { MAX_BRIGHTNESS_VALUE,  30 }, // Max pulse 3(33-30) by HW
-};
-#endif
 
 struct brt_value brt_table_ktd[] = {
-   { MIN_BRIGHTNESS_VALUE,  30 }, // Min pulse 31(33-2) by HW 
+   { MIN_BRIGHTNESS_VALUE,  32 }, // Min pulse 32
+   { 32,  31 },
+   { 35,  30 },
    { 37,  29 },  
    { 44,  28 }, 
    { 51,  27 }, 
@@ -131,11 +98,11 @@ struct brt_value brt_table_ktd[] = {
    { 100,  20 }, 
    { 108,  19 }, 
    { 115,  18 },  
-   { 123,  17 },  
-   { 131,  16 }, 
-   { 139,  15 }, 
-   { 147,  14 },//default value   
-   { 156,  13 },
+   { 123,  18 },  
+   { 147,  17 },//default value   
+   { 150,  15 },
+   { 156,  14 },
+   { 160,  13 },
    { 165,  12 }, 
    { 174,  11 }, 
    { 183,  10 }, 
@@ -146,7 +113,8 @@ struct brt_value brt_table_ktd[] = {
    { 228,  5 },
    { 237,  4 },
    { 246,  3 },
-   { MAX_BRIGHTNESS_VALUE,  2 }, // Max pulse 3(33-30) by HW
+   { 250,  2 },
+   { MAX_BRIGHTNESS_VALUE,  1 }, // Max pulse 1
 };
 
 
@@ -161,6 +129,8 @@ static void lcd_backlight_control(int num)
     limit = num;
 
    spin_lock(&bl_ctrl_lock);
+
+	// send num of pulses 
     for(;limit>0;limit--)
     {
        udelay(2);
@@ -175,21 +145,19 @@ static void lcd_backlight_control(int num)
 /* input: intensity in percentage 0% - 100% */
 static int ktd259b_backlight_update_status(struct backlight_device *bd)
 {
-    	struct ktd259b_bl_data *ktd259b= dev_get_drvdata(&bd->dev);
 	int user_intensity = bd->props.brightness;
-    	int tune_level = 0;
+   	int tune_level = 0;
 	int pulse;
-      int i;
+    int i;
 
-        BLDBG("[BACKLIGHT] ktd259b_backlight_update_status ==> user_intensity  : %d\n", user_intensity);
-if(backlight_mode==BACKLIGHT_RESUME)
-{
-//    if(gLcdfbEarlySuspendStopDraw==0)
-    {
-    		if(user_intensity > 0) {
+    BLDBG("[BACKLIGHT] ktd259b_backlight_update_status ==> user_intensity  : %d\n", user_intensity);
+
+//	if(backlight_mode==BACKLIGHT_RESUME)
+	{
+   		if(user_intensity > 0) {
 			if(user_intensity < MIN_BRIGHTNESS_VALUE) {
 				tune_level = DIMMING_VALUE; //DIMMING
-			} else if (user_intensity == MAX_BRIGHTNESS_VALUE) {
+			} else if (user_intensity >= MAX_BRIGHTNESS_VALUE) {
 				tune_level = brt_table_ktd[MAX_BRT_STAGE_KTD-1].tune_level;
 			} else {
 				for(i = 0; i < MAX_BRT_STAGE_KTD; i++) {
@@ -201,52 +169,25 @@ if(backlight_mode==BACKLIGHT_RESUME)
 			}
 		}
 
-        BLDBG("[BACKLIGHT] ktd259b_backlight_update_status ==> tune_level : %d\n", tune_level);
-
-    if (real_level==tune_level)
-    {
-        return 0;
-    }
-    else
-    {
-    if(real_level == 0)
-    {
-	mdelay(200);
-    }
-    
-    if(tune_level<=0)
-    {
-                gpio_set_value(backlight_pin,0);
-                mdelay(3); 
-
-    }
-    else
-    {
-    		if( real_level<=tune_level)
-    		{
-    			pulse = tune_level - real_level;
-    		}
+       	BLDBG("[BACKLIGHT] ktd259b_backlight_update_status ==> tune_level : %d\n", tune_level);
+		if (real_level == 0)  //resume from suspend
+		{
+			gpio_set_value(backlight_pin,0);
+			mdelay(3); 
+			pulse = tune_level; 
+		}
 		else
 		{
-			pulse = 32 - (real_level - tune_level);
+			pulse = (tune_level > real_level)? (tune_level - real_level) : (tune_level + 32 - real_level);
 		}
 
-    		//pulse = MAX_BRIGHTNESS_IN_BLU -tune_level;
-            if (pulse==0)
-            {
-                return 0;
-            }
-		//gpio_set_value(backlight_pin,0);
-		//udelay(80);      
-            lcd_backlight_control(pulse); 
-		//udelay(500);   
-    }
+		lcd_backlight_control(pulse); 
+		
+		real_level = tune_level;
 
-    real_level = tune_level;
-	return 0;
-    }
-    }
-}
+		return 0;
+		
+	}
 }
 
 static int ktd259b_backlight_get_brightness(struct backlight_device *bl)
@@ -264,9 +205,6 @@ static struct backlight_ops ktd259b_backlight_ops = {
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void ktd259b_backlight_earlysuspend(struct early_suspend *desc)
 {
-    struct ktd259b_bl_data *ktd259b = container_of(desc, struct ktd259b_bl_data,
-			early_suspend_desc);
-    struct backlight_device *bl = platform_get_drvdata(ktd259b->pdev);
     struct timespec ts;
     struct rtc_time tm;
  
@@ -275,7 +213,11 @@ static void ktd259b_backlight_earlysuspend(struct early_suspend *desc)
 	getnstimeofday(&ts);
 	rtc_time_to_tm(ts.tv_sec, &tm);
 
-        printk("[%02d:%02d:%02d.%03lu][BACKLIGHT] earlysuspend\n", tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+	printk("[%02d:%02d:%02d.%03lu][BACKLIGHT] earlysuspend\n", tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+
+    gpio_set_value(backlight_pin,0);
+    mdelay(3); 
+	real_level = 0;	
 }
 
 static void ktd259b_backlight_earlyresume(struct early_suspend *desc)
@@ -288,9 +230,11 @@ static void ktd259b_backlight_earlyresume(struct early_suspend *desc)
     
 	getnstimeofday(&ts);
 	rtc_time_to_tm(ts.tv_sec, &tm);
-       backlight_mode=BACKLIGHT_RESUME;
-       printk("[%02d:%02d:%02d.%03lu][BACKLIGHT] earlyresume\n", tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
-       backlight_update_status(bl);
+    backlight_mode=BACKLIGHT_RESUME;
+	real_level = 0;
+	printk("[%02d:%02d:%02d.%03lu][BACKLIGHT] earlyresume\n", tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+    backlight_update_status(bl);
+
 }
 #else
 #ifdef CONFIG_PM
@@ -372,7 +316,6 @@ static int ktd259b_backlight_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, bl);
 
       	ktd259b_backlight_update_status(bl);
-    
 	return 0;
 
 err_bl:

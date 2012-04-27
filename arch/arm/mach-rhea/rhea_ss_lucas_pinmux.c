@@ -131,10 +131,10 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(MMC1DAT5, SSP2DI, 0, OFF, ON, 0, 0, 16MA), 		/* BT_PCM_OUT */
 	PIN_CFG(MMC1DAT4, SSP2SYN, 0, OFF, OFF, 0, 0, 16MA), 		/* BT_PCM_SYNC */
 
-	PIN_CFG(GPIO18, UB2TX, 0, OFF, ON, 0, 0, 8MA),   		/* UB2_BT_UART_TX */
-	PIN_CFG(GPIO19, UB2RX, 0, OFF, ON, 0, 0, 8MA),			/* UB2_BT_UART_RX */
-	PIN_CFG(GPIO20, UB2RTSN, 0, OFF, ON, 0, 0, 8MA),		/* UB2_BT_UART_RTS_N */
-	PIN_CFG(GPIO21, UB2CTSN, 0, OFF, ON, 0, 0, 8MA),		/* UB2_BT_UART_CTS_N */
+	PIN_CFG(GPIO18, UB2TX, 0, OFF, ON, 0, 0, 8MA),   			// UB2_BT_UART_TX
+	PIN_CFG(GPIO19, UB2RX, 0, OFF, ON, 0, 0, 8MA),				// UB2_BT_UART_RX
+	PIN_CFG(GPIO20, UB2RTSN, 0, OFF, ON, 0, 0, 8MA),			// UB2_BT_UART_RTS_N
+	PIN_CFG(GPIO21, UB2CTSN, 0, OFF, ON, 0, 0, 8MA),			// UB2_BT_UART_CTS_N
 
 
 	/* for GPS */
@@ -142,10 +142,10 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(DMIC0DQ, GPIO124, 0, ON, OFF, 0, 0, 8MA), 		/* GPS_HOST_REQ */
 
 	/* GPS - BSC2 */
-	PIN_BSC_CFG(GPIO16, BSC2CLK, 0x20), 				/* GPS_SCL */
-	PIN_BSC_CFG(GPIO17, BSC2DAT, 0x20), 				/* GPS_SDA */
-	PIN_CFG(GPS_PABLANK, GPIO97, 0, ON, OFF, 0, 0, 8MA), 		/* GPS_CAL_REQ */
-	PIN_CFG(GPS_TMARK, GPEN10, 0, ON, OFF, 0, 0, 8MA),		/* GPS_SYNC */
+	PIN_BSC_CFG(GPIO16, BSC2CLK, 0x20), 						// GPS_SCL
+	PIN_BSC_CFG(GPIO17, BSC2DAT, 0x20), 						// GPS_SDA
+	PIN_CFG(GPS_PABLANK, GPIO97, 0, ON, OFF, 0, 0, 8MA), 		// GPS_CAL_REQ
+	PIN_CFG(GPS_TMARK, GPEN10, 0, ON, OFF, 0, 0, 8MA),			// GPS_SYNC
 
 
 	/* WLAN */
@@ -155,9 +155,9 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(MMC1DAT3, MMC1DAT3, 0, OFF, ON, 0, 0, 8MA),		// WLAN_SDIO_DAT3
 	PIN_CFG(MMC1CK, MMC1CK, 0, OFF, ON, 0, 0, 8MA),			// WLAN_SDIO_CLK
 	PIN_CFG(MMC1CMD, MMC1CMD, 0, OFF, ON, 0, 0, 8MA),		// WLAN_SDIO_CMD
-	PIN_CFG(MMC1RST, GPIO70, 0, ON, OFF, 0, 0, 8MA),			// WLAN_REG_ON
-	PIN_CFG(UBCTSN, GPIO48, 0, OFF, ON, 0, 0, 8MA),			// WLAN_HOST_WAKE
-	PIN_CFG(CAMCS1, ANA_SYS_REQ2, 0, OFF, ON, 0, 0, 8MA), 	// WLAN_CLK_REQ
+	PIN_CFG(MMC1RST, GPIO70, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(UBCTSN, GPIO48, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(CAMCS1, ANA_SYS_REQ2, 0, ON, OFF, 0, 0, 8MA),
 
 	/* Touch */	
 	PIN_CFG(SSPSYN, GPIO85, 0, OFF, OFF, 0, 0, 16MA), 			/* TSP_SDA*/
@@ -196,8 +196,14 @@ static struct __init pin_config board_pin_config[] = {
 int __init pinmux_board_init(void)
 {
 	int i;
+	void __iomem *base = g_chip_pin_desc.base;
+
 	for (i=0; i<ARRAY_SIZE(board_pin_config); i++)
 		pinmux_set_pin_config(&board_pin_config[i]);
+
+        // Work around to SIMDAT/SIM2DAT. Once we move to DTS, we don't need this
+        // We cannot use PIN_CFG because bit 12 is used (previously RESERVED)
+        writel(0x00001033, base + PADCTRLREG_SIMDAT_OFFSET);
 
 	return 0;
 }
