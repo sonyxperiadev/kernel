@@ -773,11 +773,12 @@ static int pi_reset(struct pi *pi, int sub_domain)
 					       !pi->pi_info.pd_reset_mask1)))
 		return -EPERM;
 
+	clk = clk_get(NULL, pi->pi_info.reset_mgr_ccu_name);
+	BUG_ON(clk == 0 || IS_ERR(clk));
+
 	spin_lock_irqsave(&pi->lock, flgs);
 	pi_dbg(pi->id, PI_LOG_RESET, "%s:pi:%s reset ccu str:%s\n",
 	       __func__, pi->name, pi->pi_info.reset_mgr_ccu_name);
-	clk = clk_get(NULL, pi->pi_info.reset_mgr_ccu_name);
-	BUG_ON(clk == 0 || IS_ERR(clk));
 
 	ccu_clk = to_ccu_clk(clk);
 
