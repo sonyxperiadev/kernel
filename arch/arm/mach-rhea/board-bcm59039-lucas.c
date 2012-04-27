@@ -43,17 +43,6 @@ static int vlt_tbl_init;
 static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0x01, .val = 0x00, .mask = 0x01},
 	{.map = 0, .addr = 0x0c, .val = 0x1b, .mask = 0xFF},
-#if defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_STONE_EDN2X)
-	{.map = 0, .addr = 0x13, .val = 0x3d, .mask = 0xFF},
-	{.map = 0, .addr = 0x14, .val = 0x79, .mask = 0xFF},
-	{.map = 0, .addr = 0x15, .val = 0x20, .mask = 0xFF},
-#else
-	{.map = 0, .addr = 0x13, .val = 0x43, .mask = 0xFF},
-	{.map = 0, .addr = 0x14, .val = 0x7F, .mask = 0xFF},
-	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
-#endif /* CONFIG_MACH_RHEA_STONE */
-	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
-	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
 	{.map = 0, .addr = 0x40, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x41, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x42, .val = 0xFF, .mask = 0xFF},
@@ -72,10 +61,10 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0xB2, .val = 0x04, .mask = 0xFF},
 	{.map = 0, .addr = 0xB3, .val = 0x23, .mask = 0xFF},	// RFLDOCTRL, VRF_2.7V.
 	{.map = 0, .addr = 0xB4, .val = 0x27, .mask = 0xFF},
-	{.map = 0, .addr = 0xB5, .val = 0x06, .mask = 0xFF},	/*HVLDO3 for VDD_SDIO, 3.0V*/
+	{.map = 0, .addr = 0xB5, .val = 0x05, .mask = 0xFF},
 	{.map = 0, .addr = 0xB6, .val = 0x07, .mask = 0xFF},
 	{.map = 0, .addr = 0xB7, .val = 0x25, .mask = 0xFF},
-	{.map = 0, .addr = 0xB8, .val = 0x06, .mask = 0xFF},	/*HVLDO6 for VDD_SDXC, 3.0V*/
+	{.map = 0, .addr = 0xB8, .val = 0x06, .mask = 0xFF},
 	{.map = 0, .addr = 0xB9, .val = 0x07, .mask = 0xFF},
 	{.map = 0, .addr = 0xBD, .val = 0x21, .mask = 0xFF},
 	
@@ -117,19 +106,10 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	/*CMPCTRL12, Set bits 4, 1 for NTC Sync. Mode*/
 	{.map = 0, .addr = 0x1B, .val = 0x13, .mask = 0xFF},
 
-#ifdef CONFIG_MACH_RHEA_STONE_EDN2X
-	{.map = 0, .addr = 0xD9, .val = 0x1A, .mask = 0xFF},
-#else
-	/*Init ASR LPM to 2.9V - for Rhea EDN10 & EDN00 and 1.8V for EDN2x
-	*/
-	{.map = 0, .addr = 0xD9, .val = 0x1F, .mask = 0xFF},
 	/*Init IOSR NM2 and LPM voltages to 1.8V
 	*/
 	{.map = 0, .addr = 0xC9, .val = 0x1A, .mask = 0xFF},
 	{.map = 0, .addr = 0xCA, .val = 0x1A, .mask = 0xFF},
-#endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
-	/*FGOPMODCTRL, Set bits 4, 1 for FG Sync. Mode*/
-	{.map = 1, .addr = 0x42, .val = 0x15, .mask = 0xFF},
 
 	/* Disable the charging elapsed timer by TCH[2:0]=111b 
 	   OTP default value; TCH[2:0] = 010b (5hrs) ,TTR[2:0] = 011b (45mins)
@@ -536,57 +516,6 @@ static struct regulator_init_data bcm59039_sdsr_lpm_data = {
 	.consumer_supplies = sdsr_lpm_supply,
 };
 
-struct regulator_consumer_supply asr_nm_supply[] = {
-    {.supply = "asr_nm_uc"},
-};
-
-static struct regulator_init_data bcm59039_asr_nm_data = {
-    .constraints = {
-            .name = "asr_nm",
-            .min_uV = 700000,
-            .max_uV = 2900000,
-            .valid_ops_mask =
-            REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-            .always_on = 1,
-            },
-    .num_consumer_supplies = ARRAY_SIZE(asr_nm_supply),
-    .consumer_supplies = asr_nm_supply,
-};
-
-struct regulator_consumer_supply asr_nm2_supply[] = {
-    {.supply = "asr_nm2_uc"},
-};
-
-static struct regulator_init_data bcm59039_asr_nm2_data = {
-    .constraints = {
-            .name = "asr_nm2",
-            .min_uV = 700000,
-            .max_uV = 2900000,
-            .valid_ops_mask =
-            REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-            .always_on = 1,
-            },
-    .num_consumer_supplies = ARRAY_SIZE(asr_nm2_supply),
-    .consumer_supplies = asr_nm2_supply,
-};
-
-struct regulator_consumer_supply asr_lpm_supply[] = {
-    {.supply = "asr_lpm_uc"},
-};
-
-static struct regulator_init_data bcm59039_asr_lpm_data = {
-    .constraints = {
-            .name = "asr_lpm",
-            .min_uV = 700000,
-            .max_uV = 2900000,
-            .valid_ops_mask =
-            REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
-            .always_on = 1,
-            },
-    .num_consumer_supplies = ARRAY_SIZE(asr_lpm_supply),
-    .consumer_supplies = asr_lpm_supply,
-};
-
 struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_RFLDO] = {
 		BCMPMU_REGULATOR_RFLDO, &bcm59039_rfldo_data, 0x01, 0
@@ -595,13 +524,13 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
 	},
 	[BCMPMU_REGULATOR_HV1LDO] =	{	// VDD_AUD_2.9V
-		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x22, BCMPMU_REGL_OFF_IN_DSM
+		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x11, BCMPMU_REGL_LPM_IN_DSM
 	},
 	[BCMPMU_REGULATOR_HV2LDO] =	{	// VDD_USB_3.3V
 		BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x11, BCMPMU_REGL_LPM_IN_DSM
 	},
 	[BCMPMU_REGULATOR_HV3LDO] = {		// VDD_SDIO_3.0V(T-flash)
-		BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0xAA, BCMPMU_REGL_LPM_IN_DSM
+		BCMPMU_REGULATOR_HV3LDO, &bcm59039_hv3ldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
 	},
 	[BCMPMU_REGULATOR_HV4LDO] =	{	// VDD_VIB_2.9V
 		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
@@ -666,22 +595,6 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	[BCMPMU_REGULATOR_SDSR_LPM] = {
 		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0xFF, 0
 	},
-#ifdef CONFIG_MACH_RHEA_STONE_EDN2X
-    [BCMPMU_REGULATOR_ASR_NM] = {
-        BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x01, 0
-    },
-#else
-    [BCMPMU_REGULATOR_ASR_NM] = {
-        BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x11, 0
-    },
-#endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
-
-    [BCMPMU_REGULATOR_ASR_NM2] = {
-        BCMPMU_REGULATOR_ASR_NM2, &bcm59039_asr_nm2_data, 0xFF, 0
-    },
-    [BCMPMU_REGULATOR_ASR_LPM] = {
-        BCMPMU_REGULATOR_ASR_LPM, &bcm59039_asr_lpm_data, 0xFF, 0
-    },
 };
 
 static struct bcmpmu_wd_setting bcm59039_wd_setting = {

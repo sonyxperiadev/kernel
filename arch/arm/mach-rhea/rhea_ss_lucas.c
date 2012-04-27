@@ -75,9 +75,6 @@
 #include <linux/dma-mapping.h>
 #endif
 #include <linux/spi/spi.h>
-#ifdef CONFIG_SPI_AUTHFP
-#include <linux/authfp_dev.h>
-#endif
 #if defined (CONFIG_HAPTIC)
 #include <linux/haptic.h>
 #endif
@@ -124,42 +121,31 @@
 #include <linux/broadcom/bcmbt_rfkill.h>
 #endif
 
+#ifdef CONFIG_GPIO_PCA953X
+#define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
+#else
+#define SD_CARDDET_GPIO_PIN      72
+#endif
 #define SD_CARDDET_GPIO_PIN      123
 
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
-#include <linux/ktd259b_bl.h>
 
 #include <linux/mfd/bcmpmu.h>
 #include <plat/pi_mgr.h>
 
-#include <linux/serial_8250.h>
-#include <linux/serial_reg.h>
-#include <mach/rdb/brcm_rdb_uartb.h>
+#include <linux/ktd259b_bl.h>
 
 #include <media/soc_camera.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <linux/delay.h>
 
-#ifdef CONFIG_WD_TAPPER
-#include <linux/broadcom/wd-tapper.h>
-#endif
-
-#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-
-#include "board-rhea_ss_lucas-wifi.h"
-extern int rhea_wifi_status_register(
-		void (*callback)(int card_present, void *dev_id),
-		void *dev_id);
-
-#endif
-
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
-
+extern bool gCameraInitialized;
 // keypad map
 #define BCM_KEY_ROW_0  0
 #define BCM_KEY_ROW_1  1
@@ -185,11 +171,11 @@ struct regulator_consumer_supply hv6_supply[] = {
 };
 
 struct regulator_consumer_supply hv3_supply[] = {
+	{.supply = "hv3"},
 	{.supply = "vdd_sdio"},
 };
 #endif
 
-extern bool camdrv_ss_power(int cam_id,int bOn);
 #ifdef CONFIG_MFD_BCMPMU
 void __init board_pmu_init(void);
 #endif
@@ -422,7 +408,7 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_2, BCM_KEY_COL_6, "unused_2", 0},
 	{BCM_KEY_ROW_2, BCM_KEY_COL_7, "unused_3", 0},
 	{BCM_KEY_ROW_3, BCM_KEY_COL_0, "L", KEY_L},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "Key Backspace", KEY_BACKSPACE},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "Key up", KEY_UP},
 	{BCM_KEY_ROW_3, BCM_KEY_COL_2, "Shift", KEY_LEFTSHIFT},
 	{BCM_KEY_ROW_3, BCM_KEY_COL_3, "Z", KEY_Z},
 	{BCM_KEY_ROW_3, BCM_KEY_COL_4, "X", KEY_X},
@@ -453,7 +439,7 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "Zoom", KEY_MAIL},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused_10", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused_11", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused_19", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "Key Backspace", KEY_BACKSPACE},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused_12", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused_13", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused_14", 0},
@@ -471,6 +457,18 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 };
 
 #endif
+
+/* Regulator consumers differ across the platforms.
+ * The following definitions will override the weak
+ * consumer definitions in PMIC board files */
+#ifdef CONFIG_MFD_BCMPMU
+ 
+struct regulator_consumer_supply hv10_supply[] = {
+       { .supply = "sim2_vcc"},
+};
+
+#endif
+
 
 
 #ifdef CONFIG_GPIO_PCA953X
@@ -593,6 +591,49 @@ static struct i2c_board_info __initdata pca953x_2_info[] = {
 
 #define TSP_INT_GPIO_PIN      (86)
 
+
+static int tma340_platform_init_hw(void)
+{
+	int rc;
+	rc = gpio_request(TSP_INT_GPIO_PIN, "ts_tma340");
+
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", TSP_INT_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(TSP_INT_GPIO_PIN);
+
+	return 0;
+}
+
+static void tma340_platform_exit_hw(void)
+{
+	gpio_free(TSP_INT_GPIO_PIN);
+}
+
+static struct tma340_platform_data tma340_platform_data = {
+	.i2c_pdata	= { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K), },
+	.x_line		= 15,
+	.y_line		= 11,
+	.x_size		= 1023,
+	.y_size		= 1023,
+	.x_min		= 90,
+	.y_min		= 90,
+	.x_max		= 0x3ff,
+	.y_max		= 0x3ff,
+	.max_area	= 0xff,
+	.blen		= 33,
+	.threshold	= 70,
+	.voltage	= 2700000,              /* 2.8V */
+	.orient		= TMA340_DIAGONAL_COUNTER,
+	.init_platform_hw = tma340_platform_init_hw,
+	.exit_platform_hw = tma340_platform_exit_hw,
+};
+
+
+
+
 static struct i2c_board_info __initdata rhea_ss_i2cgpio0_board_info[] = {
 
 	
@@ -601,12 +642,14 @@ static struct i2c_board_info __initdata rhea_ss_i2cgpio0_board_info[] = {
 		I2C_BOARD_INFO("melfas-mms128", 0x48),
 		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
 	},
-#elif defined(CONFIG_TOUCHSCREEN_TMA140_LUCAS)
+#else
 	{
-		I2C_BOARD_INFO("cypress-tma140", 0x20),
+		I2C_BOARD_INFO("cypress-tma340", 0x20),
+		.platform_data = &tma340_platform_data,
 		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
 	},
 #endif
+
 };
 
 
@@ -901,23 +944,8 @@ static struct platform_device pl330_dmac_device = {
 /*
  * SPI board info for the slaves
  */
-
-#ifdef CONFIG_SPI_AUTHFP
-static struct authfp_platform_data authfp_spi_info = {
-	.sensor_index = 0,
-	.protocol_id = FP_PROTOCOL_0850,
-	.interrupt_gpio = 113,
-	.interrupt_polarity = 1,    //1-rising 0-falling
-        .power_data = 0,	
-	.max_frame_size = 4000,
-	.interface_type = 1,        //1- SPI Slave
-	.interface_speed = 12000000,
-	.support_power_off = 0,
-};
-#endif
-
 static struct spi_board_info spi_slave_board_info[] __initdata = {
-#if 0 //def CONFIG_SPI_SPIDEV
+#ifdef CONFIG_SPI_SPIDEV
 	{
 	 .modalias = "spidev",	/* use spidev generic driver */
 	 .max_speed_hz = 13000000,	/* use max speed */
@@ -929,18 +957,6 @@ static struct spi_board_info spi_slave_board_info[] __initdata = {
 	 },
 #endif
 	/* TODO: adding more slaves here */
-#ifdef CONFIG_SPI_AUTHFP
-	{
-	 .modalias = AUTHFP_NAME,	/* use spidev generic driver */
-	 .max_speed_hz = 13000000, 	/* use max speed */
-	 .bus_num = 0,		/* framework bus number */
-	 .chip_select = 0,	/* for each slave */
-	 .platform_data = &authfp_spi_info,	/* no spi_driver specific */
-	 .irq = -1,		/* IRQ for this device */
-	 .mode = SPI_MODE_1,	/* SPI mode */        
-	 },
-#endif
-
 };
 
 #if defined (CONFIG_HAPTIC_SAMSUNG_PWM)
@@ -966,16 +982,6 @@ struct platform_device haptic_pwm_device = {
 };
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
-
-#ifdef CONFIG_BCM_SS_VIBRA                                                                                                         
-struct platform_device bcm_vibrator_device = {                                                                                     
-  .name = "vibrator",                                                                                                        
-  .id = 0,                                                                                                                   
-  .dev = {                                                                                                                   
-    .platform_data="hv4",                                                                                              
-  },                                                                                                                              
-};                                                                                                                                 
-#endif                              
 
 static struct resource board_sdio1_resource[] = {
 	[0] = {
@@ -1003,6 +1009,7 @@ static struct resource board_sdio2_resource[] = {
 	},
 };
 
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 static struct resource board_sdio3_resource[] = {
 	[0] = {
 		.start = SDIO3_BASE_ADDR,
@@ -1015,6 +1022,22 @@ static struct resource board_sdio3_resource[] = {
 		.flags = IORESOURCE_IRQ,
 	},
 };
+#endif
+
+#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
+static struct resource board_sdio3_resource[] = {
+	[0] = {
+		.start = SDIO3_BASE_ADDR,
+		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_NAND,
+		.end = BCM_INT_ID_SDIO_NAND,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+#endif
 
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2XT
 static struct resource board_sdio4_resource[] = {
@@ -1042,9 +1065,9 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.ahb_clk_name = "sdio1_ahb_clk",
 		.sleep_clk_name = "sdio1_sleep_clk",
 		.peri_clk_rate = 48000000,
-        /* vdd_sdc regulator: needed to support UHS SD cards */
+		/*The SD card regulator*/
 		.vddo_regulator_name = "vdd_sdio",
-		/* vdd_sdxc regulator: needed to support SDHC */
+		/*The SD controller regulator*/
 		.vddsdxc_regulator_name = "vdd_sdxc",
 	},
 	{ /* SDIO2 */
@@ -1058,6 +1081,26 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+	{ /* SDIO3 */
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 70,
+			.reg		= -1,
+			.host_wake	= -1,
+			.shutdown	= -1,
+		},
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+#endif
+
+#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined (CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
 	{ /* SDIO3 */
 		.id = 2,
 		.data_pullup = 0,
@@ -1068,15 +1111,13 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 			.host_wake	= 48,
 			.shutdown	= -1,
 		},
-		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
 		.peri_clk_name = "sdio3_clk",
 		.ahb_clk_name = "sdio3_ahb_clk",
 		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 48000000,
-#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-		.register_status_notify = rhea_wifi_status_register,
-#endif
 	},
+#endif
 };
 
 static struct platform_device board_sdio1_device = {
@@ -1102,8 +1143,14 @@ static struct platform_device board_sdio2_device = {
 static struct platform_device board_sdio3_device = {
 	.name = "sdhci",
 	.id = 2,
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	.resource = board_sdio3_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
+#endif
+#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
+	.resource = board_sdio3_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
+#endif
 	.dev      = {
 		.platform_data = &board_sdio_param[2],
 	},
@@ -1244,6 +1291,111 @@ static struct platform_device tps728xx_vc_device_sim2 = {
 #endif
 #endif /* CONFIG_REGULATOR_TPS728XX*/
 
+#if 0
+#ifdef CONFIG_FB_BRCM_RHEA
+static struct kona_fb_platform_data rhea_ss_dsi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISPDRV_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 2,//2, //@HW
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	//.pixel_format		= XRGB8888,
+};
+
+static struct platform_device rhea_ss_dsi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 0,
+	.dev = {
+		.platform_data		= &rhea_ss_dsi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+
+static struct kona_fb_platform_data nt35582_smi16_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 16,
+};
+
+static struct platform_device nt35582_smi16_display_device = {
+	.name    = "rhea_fb",
+	.id      = 1,
+	.dev = {
+		.platform_data		= &nt35582_smi16_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data nt35582_smi8_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 8,
+};
+
+static struct platform_device nt35582_smi8_display_device = {
+	.name    = "rhea_fb",
+	.id      = 2,
+	.dev = {
+		.platform_data		= &nt35582_smi8_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi16_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 4, 
+	.gpio			= 41,
+	.pixel_format		= RGB565, //XRGB8888, //RGB565, //@HW
+	.bus_width		= 16,
+};
+
+static struct platform_device r61581_smi16_display_device = {
+	.name    = "rhea_fb",
+	.id      = 3,
+	.dev = {
+		.platform_data		= &r61581_smi16_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi8_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 2,
+	.gpio			= 41,
+	.pixel_format		= RGB565,
+	.bus_width		= 8,
+};
+
+static struct platform_device r61581_smi8_display_device = {
+	.name    = "rhea_fb",
+	.id      = 4,
+	.dev = {
+		.platform_data		= &r61581_smi8_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+#endif
+#endif
+
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 
 #define BCMBT_VREG_GPIO       (100)
@@ -1322,7 +1474,6 @@ static struct platform_device gps_hostwake= {
 };
 #endif
 
-#if 0
 //@HW
 #define S5K4ECGX_I2C_ADDRESS (0xAC>>1)
 #define SR030PC50_I2C_ADDRESS (0x60>>1)
@@ -1363,7 +1514,6 @@ static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
 //flash
 //#define	CAM_FLASH_MODE 
 //#define       CAM_FLASH_EN  
-
 
 static int rhea_camera_power_sub(struct device *dev, int on)
 {
@@ -1563,7 +1713,7 @@ static int rhea_camera_reset_sub(struct device *dev)
 	printk(KERN_INFO" %s:camera reset\n", __func__);
 	return 0;
 }
-
+#if 0
 static struct soc_camera_link iclink_ov5640 = {
 	.bus_id		= 0,
 	.board_info	= &rhea_i2c_camera[0],
@@ -1581,7 +1731,7 @@ static struct platform_device rhea_camera = {
 		.platform_data = &iclink_ov5640,
 	},
 };
-
+#else
 
 static struct v4l2_subdev_sensor_interface_parms s5k4ecgx_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
@@ -1648,24 +1798,6 @@ static struct platform_device rhea_camera_sub = {
 };
 #endif
 
-#ifdef CONFIG_WD_TAPPER
-static struct wd_tapper_platform_data wd_tapper_data = {
-  /* Set the count to the time equivalent to the time-out in milliseconds
-   * required to pet the PMU watchdog to overcome the problem of reset in
-   * suspend*/
-  .count = 120000,
-  .ch_num = 1,
-  .name = "aon-timer",
-};
-
-static struct platform_device wd_tapper = {
-  .name = "wd_tapper",
-  .id = 0,
-  .dev = {
-    .platform_data = &wd_tapper_data,
-  },
-};
-#endif
 
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
@@ -1676,9 +1808,7 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 	&headset_device,
 #endif
-#ifdef CONFIG_BCM_SS_VIBRA                                                                                                         
-	&bcm_vibrator_device,
-#endif 
+
 #ifdef CONFIG_DMAC_PL330
 	&pl330_dmac_device,
 #endif
@@ -1708,17 +1838,12 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_BCM_BT_LPM
 	&board_bcmbt_lpm_device,
 #endif
-#if 0	
-        &rhea_camera,
+	&rhea_camera,
 	&rhea_camera_sub,
-#endif
-#ifdef CONFIG_GPS_IRQ
-        &gps_hostwake,
-#endif
-#ifdef CONFIG_WD_TAPPER
-        &wd_tapper
-#endif
 
+#ifdef CONFIG_GPS_IRQ
+        &gps_hostwake
+#endif
 };
 
 /* Add all userspace regulator consumer devices here */
@@ -1799,13 +1924,6 @@ i2c_register_board_info(0x4, rhea_ss_i2cgpio1_board_info,
 
 static int __init rhea_ray_add_lateInit_devices (void)
 {
-#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-
-	printk(KERN_INFO "Calling WLAN_INIT!\n");
-
-	rhea_wlan_init();
-	printk(KERN_INFO "DONE WLAN_INIT!\n");
-#endif
 	board_add_sdio_devices();
 	return 0;
 }
@@ -2004,7 +2122,7 @@ static void __init rhea_ray_add_devices(void)
  */ 
 struct kona_fb_platform_data konafb_devices[] __initdata = {
 	{
-		.dispdrv_name  = "R61531", 
+		.dispdrv_name  = "S6D05A1X31", 
 		.dispdrv_entry = DISPDRV_GetFuncTable,
 		.parms = {
 			.w0 = {
@@ -2015,9 +2133,8 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 					.bus_ch     = RHEA_BUS_CH_0,
 					.bus_width  = 0,
 					.te_input   = RHEA_TE_IN_0_LCD,	  
-				.col_mode_i = RHEA_CM_I_XRGB888,	  
-					.col_mode_o = RHEA_CM_O_RGB888,        
-				
+					.col_mode_i = RHEA_CM_I_RGB565,	  
+					.col_mode_o = RHEA_CM_O_RGB565,        
 				},	
 			},
 			.w1 = {

@@ -287,6 +287,7 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
 	int *irqregs;
+	int i;
 
 	idata = kzalloc(sizeof(struct bcmpmu_irq_data), GFP_KERNEL);
 	if (idata == NULL) {

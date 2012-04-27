@@ -13,31 +13,3 @@ config FB_BRCM_ILI9486
 	help 
 		HVGA LCD panel (ILI9486 controller)
 		
-	  
-config LCD_S6D05A1_SUPPORT
-        tristate "LCD Panel- S6D05A1 controller"
-        default N
-        help
-	  HVGA LCD panel (S6D05A1 controller)
-	  
-config LCD_ILI9486_SUPPORT
-        tristate "LCD Panel- ILI9486 controller"
-        default N
-        help
-	  HVGA LCD panel (ILI9486 controller)
-
-config LCD_R61531_SUPPORT
-        tristate "LCD Panel- R61531 controller"
-        default N
-        help
-	  HVGA LCD panel (R61531 controller)
-config LCD_ILI9341_SUPPORT
-        tristate "LCD Panel- ILI9341 Parralel controller"
-        default N
-        help
-	  QVGA LCD panel (ILI9341 controller)	
-
-config MACH_RHEA_SS_COMMON
-        bool "Support Broadcom Rhea SS project common option"
-	help
-          Support Broadcom Rhea SS project common option.

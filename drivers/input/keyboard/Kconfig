@@ -496,9 +496,9 @@ config KEYBOARD_SH_KEYSC
 	  To compile this driver as a module, choose M here: the
 	  module will be called sh_keysc.
 
-config KEYBOARD_EXPANDER
+config KEYBOARD_STMPE
 	tristate "STMPE keypad support"
-	default y
+	depends on MFD_STMPE
 	help
 	  Say Y here if you want to use the keypad controller on STMPE I/O
 	  expanders.
