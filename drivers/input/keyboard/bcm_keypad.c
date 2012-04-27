@@ -354,7 +354,7 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 
 	bcm_kb->input_dev = input_allocate_device();
 	if (bcm_kb->input_dev == NULL) {
-		free(bcm_kb);
+		kfree(bcm_kb);
 		pr_err("%s(%s:%u)::Failed to allocate input device...\n",
 		       __FUNCTION__, __FILE__, __LINE__);
 		return -ENOMEM;
