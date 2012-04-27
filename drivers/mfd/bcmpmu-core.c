@@ -44,12 +44,12 @@ store_adc_req(struct device *dev, struct device_attribute *attr,
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	sscanf(buf, "%x, %x", &adc.sig, &adc.tm);
 	adc.flags = PMU_ADC_RAW_AND_UNIT;
-	if (bcmpmu->adc_req)
+	if (bcmpmu->adc_req) {
 		bcmpmu->adc_req(bcmpmu, &adc);
-	else
+		printk(KERN_INFO "%s: ADC raw = %d, cal = %d, cnv = %d\n",
+				__func__, adc.raw, adc.cal, adc.cnv);
+	} else
 		printk(KERN_INFO "%s: adc_req failed\n", __func__);
-	printk("%s: ADC raw = %d, cal = %d, cnv = %d\n", __func__,
-	       adc.raw, adc.cal, adc.cnv);
 	return count;
 }
 static ssize_t

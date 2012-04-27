@@ -264,6 +264,7 @@ static int bcmpmureg_set_mode(struct regulator_dev *rdev, unsigned mode)
 		opmode = LDO_RESERVED_SR_NM2;
 	else
 		return -EINVAL;
+	break;
 	default:
 	return -EINVAL;
 	}
@@ -286,7 +287,7 @@ static int bcmpmuldo_list_voltage(struct regulator_dev *rdev, unsigned selector)
 {
 	struct bcmpmu  *bcmpmu = rdev_get_drvdata(rdev);
 	struct bcmpmu_reg_info *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
-	if ((selector < 0) || (selector >= info->num_voltages))
+	if (selector >= info->num_voltages)
 		return -EINVAL;
 	return info->v_table[selector];
 }
@@ -409,11 +410,12 @@ static int bcmpmu_regulator_remove(struct platform_device *pdev)
 	struct bcmpmu  *bcmpmu = platform_get_drvdata(pdev);
 	int             i = 0;
 	while (i < bcmpmu->pdata->num_of_regl) {
-		if (regl[i])
+		if (regl[i]) {
 			regulator_unregister(regl[i]);
+			regl[i] == NULL;
+		}
 		i++;
 	}
-	kfree(regl);
 	return 0;
 }
 
