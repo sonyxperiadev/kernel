@@ -116,6 +116,13 @@ struct dma_transfer_list {
 	struct list_head next;	/* Next item */
 };
 
+/* Multiple sg list  */
+struct dma_transfer_list_sg	{
+	struct scatterlist *sgl;
+	unsigned long sg_len;
+	struct list_head next;
+};
+
 typedef void (*pl330_xfer_callback_t) (void *private_data,
 				       enum pl330_xfer_status status);
 
@@ -131,6 +138,9 @@ int dma_setup_transfer_sg(unsigned int chan,
 			  dma_addr_t hw_addr, int control, int cfg);
 int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 			    int ctrl, int cfg);
+int dma_setup_transfer_list_multi_sg(unsigned int chan,
+			struct list_head *head, dma_addr_t hw_addr,
+			int control, int cfg);
 int dma_start_transfer(unsigned int chan);
 int dma_stop_transfer(unsigned int chan);
 int dma_shutdown_all_chan(void);
