@@ -535,6 +535,7 @@ static int vce_file_release(struct inode *inode, struct file *filp)
 		dbg_print("VCE Low Latency Hack is Off\n");
 		clock_off();
 		cpu_keepawake_dec();
+		module_put(THIS_MODULE);
 	}
 
 	kfree(dev);
@@ -985,6 +986,11 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		{
 			mutex_lock(&dev->low_latency_hack_mutex);
 			if (!dev->low_latency_hack_is_enabled) {
+				if (!try_module_get(THIS_MODULE)) {
+					err_print("Failed to increment module refcount\n");
+					mutex_unlock(&dev->low_latency_hack_mutex);
+					return -EINVAL;
+				}
 				dev->low_latency_hack_is_enabled = 1;
 				mutex_unlock(&dev->low_latency_hack_mutex);
 				cpu_keepawake_inc();
