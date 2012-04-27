@@ -41,7 +41,8 @@ enum __AUDIO_DRIVER_TYPE_t {
 	AUDIO_DRIVER_CAPT_FM,
 	AUDIO_DRIVER_CAPT_BT,
 	AUDIO_DRIVER_VOIP,
-	AUDIO_DRIVER_VOIF
+	AUDIO_DRIVER_VOIF,
+	AUDIO_DRIVER_PTT
 };
 #define AUDIO_DRIVER_TYPE_t enum __AUDIO_DRIVER_TYPE_t
 
@@ -61,7 +62,10 @@ enum __AUDIO_DRIVER_CTRL_t {
 	AUDIO_DRIVER_FREE_BUFFER,
 	AUDIO_DRIVER_SET_VOIP_DL_CB,
 	AUDIO_DRIVER_SET_VOIP_UL_CB,
-	AUDIO_DRIVER_SET_VOIF_CB
+	AUDIO_DRIVER_SET_VOIF_CB,
+	AUDIO_DRIVER_SET_PTT_CB,
+	AUDIO_DRIVER_GET_PTT_BUFFER
+
 };
 #define AUDIO_DRIVER_CTRL_t enum __AUDIO_DRIVER_CTRL_t
 
@@ -87,11 +91,15 @@ typedef void (*AUDIO_DRIVER_InterruptPeriodCB_t) (void *p);
 
 typedef void (*AUDIO_DRIVER_VoipCB_t) (void *p, u8 * pBuf, u32 nsize);
 
+typedef void (*AUDIO_DRIVER_PttCB_t) (void *p, Int16* pBuf, u32 nsize);
+
+
 struct _AUDIO_DRIVER_CallBackParams_t {
 	AUDIO_DRIVER_InterruptPeriodCB_t pfCallBack;
 	void *pPrivateData;
 	AUDIO_DRIVER_VoipCB_t voipULCallback;
 	AUDIO_DRIVER_VoipCB_t voipDLCallback;
+	AUDIO_DRIVER_PttCB_t  pttDLCallback;
 };
 #define AUDIO_DRIVER_CallBackParams_t struct _AUDIO_DRIVER_CallBackParams_t
 

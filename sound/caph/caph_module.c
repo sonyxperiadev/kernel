@@ -136,6 +136,12 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	err = HwdepDeviceNew(card);
 	if (err)
 		goto err;
+	/* HWDEP PTT interface */
+	err = HwdepPttDeviceNew(card);
+	if (err) {
+		aError("cannot create PTT HWDEP device\n");
+		goto err;
+	}
 
 	strcpy(card->driver, "Broadcom");
 	strcpy(card->shortname, "Broadcom ALSA");
