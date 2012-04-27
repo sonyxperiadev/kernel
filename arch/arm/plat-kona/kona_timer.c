@@ -540,6 +540,12 @@ int kona_timer_free(struct kona_timer *kt)
 	 */
 	if (i == NUM_OF_CHANNELS) {
 
+		ktm->cfg_state = CONFIGURED_FREE;
+
+		/* Release the lock before calling clk APIs
+		 * that could sleep
+		 */
+		spin_unlock_irqrestore(&ktm->lock, flags);
 #ifdef CONFIG_HAVE_CLK
 		clk = clk_get(NULL, ktm->clk_name);
 		if (IS_ERR_OR_NULL(clk))
@@ -549,11 +555,12 @@ int kona_timer_free(struct kona_timer *kt)
 		else
 			clk_disable(clk);
 #endif
-		ktm->cfg_state = CONFIGURED_FREE;
+	} else {
+		/* Release the lock, this path would be taken if some of the
+		 * channels in the timer are still busy.
+		 */
+		spin_unlock_irqrestore(&ktm->lock, flags);
 	}
-
-	spin_unlock_irqrestore(&ktm->lock, flags);
-
 	return 0;
 }
 EXPORT_SYMBOL(kona_timer_free);
