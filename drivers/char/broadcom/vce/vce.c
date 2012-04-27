@@ -45,7 +45,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10116
+#define DRIVER_VERSION 10117
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -1054,6 +1054,9 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		case VTQ_IOCTL_QUEUE_JOB:
 			trace_ioctl_return(VTQ_IOCTL_QUEUE_JOB);
+			break;
+		case VTQ_IOCTL_QUEUE_JOB_NOFLAGS:
+			trace_ioctl_return(VTQ_IOCTL_QUEUE_JOB_NOFLAGS);
 			break;
 		case VTQ_IOCTL_AWAIT_JOB:
 			trace_ioctl_return(VTQ_IOCTL_AWAIT_JOB);
