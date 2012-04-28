@@ -18,6 +18,8 @@
 #ifndef _GPS_H_
 #define _GPS_H_
 
+#include "linux/i2c-kona.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif				/* __cplusplus */
@@ -33,6 +35,7 @@ extern "C" {
 #define IOR_GET_SERIAL_PORT_INFO      _IOR(GPS_DRIVER_MAGIC, 19,unsigned long)
 
 	struct gps_platform_data {
+		struct i2c_slave_platform_data i2c_pdata;
 		int gpio_reset;
 		int gpio_power;
 		int gpio_interrupt;
