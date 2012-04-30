@@ -73,79 +73,84 @@ struct gps_irq {
 	struct work_struct write_task;
 };
 
-int cnt=0;
-int cnt2=0;
-int zero_read=0;
+int cnt;
+int cnt2;
+int zero_read;
 
-void write_workqueue(struct work_struct *work) 
+void write_workqueue(struct work_struct *work)
 {
 	struct gps_irq *ac_data =
 		container_of(work, struct gps_irq, write_task);
 	int ret;
 
 	--cnt2;
-	while (ac_data->wbuffer_rp != ac_data->wbuffer_wp)
-	{
-		//printk(KERN_INFO "workqueue write %d %d %d \n",ac_data->txlength[ac_data->wbuffer_rp], ac_data->wbuffer_rp,ac_data->wbuffer_wp);
-		ret=i2c_master_send(ac_data->client, ac_data->wr_buffer[ac_data->wbuffer_rp], ac_data->txlength[ac_data->wbuffer_rp]);
-		ac_data->wbuffer_rp=(ac_data->wbuffer_rp+1) & (TX_SIZE-1);
-	} 
-	//printk(KERN_INFO "read_workqueue 3 \n");
+	while (ac_data->wbuffer_rp != ac_data->wbuffer_wp)	{
+		/* printk(KERN_INFO "workqueue write %d %d %d\n",
+				  ac_data->txlength[ac_data->wbuffer_rp],
+				  ac_data->wbuffer_rp,ac_data->wbuffer_wp);*/
+
+		ret = i2c_master_send(ac_data->client,
+				ac_data->wr_buffer[ac_data->wbuffer_rp],
+				ac_data->txlength[ac_data->wbuffer_rp]);
+
+		ac_data->wbuffer_rp = (ac_data->wbuffer_rp+1) & (TX_SIZE-1);
+	}
+	/*printk(KERN_INFO "read_workqueue 3\n"); */
 }
 
 
-void read_workqueue(struct work_struct *work) 
+void read_workqueue(struct work_struct *work)
 {
 	struct gps_irq *ac_data =
 		container_of(work, struct gps_irq, read_task);
-	int i, counter,ret;
+	int i, counter, ret;
 	int kk;
 
-    //printk(KERN_INFO "read_workqueue 1 \n");
+    /*printk(KERN_INFO "read_workqueue 1\n");*/
 
-    --cnt;
-	kk=0;
+	--cnt;
+	kk = 0;
+	counter = 0;
+	i = gpio_get_value(ac_data->host_req_pin);
+	if (i == 0)
+		return;
 
-	counter=0;
-	i=gpio_get_value(ac_data->host_req_pin);
-	if (i==0) return;
+	do	{
+		ret = i2c_master_recv(ac_data->client,
+			&ac_data->rd_buffer[ac_data->rbuffer_wp],
+			I2C_PACKET_SIZE);
 
-	do 
-	{
-		ret=i2c_master_recv(ac_data->client, &ac_data->rd_buffer[ac_data->rbuffer_wp], I2C_PACKET_SIZE);
-		if (ret != I2C_PACKET_SIZE)
-		{ 
-			printk(KERN_INFO "GPS read error \n");
+		if (ret != I2C_PACKET_SIZE) {
+			printk(KERN_INFO "GPS read error\n");
 			break;
 		}
-		
-		if (ac_data->rd_buffer[ac_data->rbuffer_wp][0]==0) 
-		{
+
+		if (ac_data->rd_buffer[ac_data->rbuffer_wp][0] == 0) {
 			++zero_read;
-			i=gpio_get_value(ac_data->host_req_pin);
+			i = gpio_get_value(ac_data->host_req_pin);
 			continue;
 		}
 
-		//printk(KERN_INFO "read_workqueue 1 %d %d \n",counter,ac_data->rd_buffer[ac_data->rbuffer_wp][0]);
+		/* printk(KERN_INFO "read_workqueue 1 %d %d\n",
+			counter,ac_data->rd_buffer[ac_data->rbuffer_wp][0]); */
 
-		ac_data->rbuffer_wp=(ac_data->rbuffer_wp+1) & (RX_SIZE-1);
+		ac_data->rbuffer_wp = (ac_data->rbuffer_wp+1) & (RX_SIZE-1);
 
-		if (ac_data->rbuffer_wp==ac_data->rbuffer_rp)
-			printk(KERN_INFO "read_workqueue overrun error \n");
+		if (ac_data->rbuffer_wp == ac_data->rbuffer_rp)
+			printk(KERN_INFO "read_workqueue overrun error\n");
 
 		udelay(UDELAY_AFTER_I2C_READ);
 		++counter;
 
-		i=gpio_get_value(ac_data->host_req_pin);
-	}  while ((i==1) && (counter < RX_SIZE));
-	
-	if (counter ==RX_SIZE)
-		printk(KERN_INFO "GPS overrun error \n");
-	else
-	{
-		ac_data->rxlength[ac_data->rxlength_wp]=counter;
-		ac_data->rxlength_wp=(ac_data->rxlength_wp+1) & (RX_SIZE-1);
-		wake_up_interruptible(&ac_data->wait);	
+		i = gpio_get_value(ac_data->host_req_pin);
+	}  while ((i == 1) && (counter < RX_SIZE));
+
+	if (counter == RX_SIZE)
+		printk(KERN_INFO "GPS overrun error\n");
+	else {
+		ac_data->rxlength[ac_data->rxlength_wp] = counter;
+		ac_data->rxlength_wp = (ac_data->rxlength_wp+1) & (RX_SIZE-1);
+		wake_up_interruptible(&ac_data->wait);
 	}
 }
 
@@ -169,19 +174,19 @@ static int gps_irq_open(struct inode *inode, struct file *filp)
 							   misc);
 
 	filp->private_data = ac_data;
-	ac_data->rbuffer_rp=0;
-	ac_data->rbuffer_wp=0;
-	ac_data->rxlength_rp=0;
-	ac_data->rxlength_wp=0;
+	ac_data->rbuffer_rp = 0;
+	ac_data->rbuffer_wp = 0;
+	ac_data->rxlength_rp = 0;
+	ac_data->rxlength_wp = 0;
 
-	ac_data->wbuffer_rp=0;
-	ac_data->wbuffer_wp=0;
+	ac_data->wbuffer_rp = 0;
+	ac_data->wbuffer_wp = 0;
 
-	cnt=0;
-	cnt2=0;
+	cnt = 0;
+	cnt2 = 0;
 
-	zero_read=0;
-	return ret;									
+	zero_read = 0;
+	return ret;
 }
 
 static int gps_irq_release(struct inode *inode, struct file *filp)
@@ -190,8 +195,7 @@ static int gps_irq_release(struct inode *inode, struct file *filp)
 							   struct gps_irq,
 							   misc);
 
-	printk(KERN_INFO "cnt=%d cnt2=%d zero read=%d\n",cnt,cnt2,zero_read);
-	//disable_irq(ac_data->irq);
+	printk(KERN_INFO "cnt=%d cnt2=%d zero read=%d\n", cnt, cnt2, zero_read);
 	return 0;
 }
 
@@ -211,31 +215,35 @@ static ssize_t gps_irq_read(struct file *filp,
 			    char *buffer, size_t length, loff_t * offset)
 {
 	struct gps_irq *ac_data = filp->private_data;
-	int l=0;
+	int l = 0;
 	int i;
 
-	if (ac_data->rxlength_rp != ac_data->rxlength_wp)
-	{
-		i=ac_data->rxlength[ac_data->rxlength_rp];
-		while (i)
-		{
-			memcpy(ac_data->tmp+l,&ac_data->rd_buffer[ac_data->rbuffer_rp],I2C_PACKET_SIZE);
-			ac_data->rbuffer_rp=(ac_data->rbuffer_rp+1) & (RX_SIZE-1);
-			l+=I2C_PACKET_SIZE;
-			if (l >= (RX_BUFFER_LENGTH-I2C_PACKET_SIZE))
-			{
-				printk(KERN_INFO "gps_irq_read ran out of buffer %d \n",l);
-				ac_data->rxlength_rp=(ac_data->rxlength_rp+1) & (RX_SIZE-1);
+	if (ac_data->rxlength_rp != ac_data->rxlength_wp) {
+		i = ac_data->rxlength[ac_data->rxlength_rp];
+		while (i) {
+			memcpy(ac_data->tmp+l,
+				&ac_data->rd_buffer[ac_data->rbuffer_rp],
+				I2C_PACKET_SIZE);
+
+			ac_data->rbuffer_rp =
+				(ac_data->rbuffer_rp+1) & (RX_SIZE-1);
+
+			l += I2C_PACKET_SIZE;
+			if (l >= (RX_BUFFER_LENGTH-I2C_PACKET_SIZE)) {
+				printk(KERN_INFO "gps_irq_read ran out of buffer %d\n"
+					, l);
+				ac_data->rxlength_rp =
+					(ac_data->rxlength_rp+1) & (RX_SIZE-1);
+
 				return 0;
 			}
 			--i;
 		}
 
-		ac_data->rxlength_rp=(ac_data->rxlength_rp+1) & (RX_SIZE-1);
+		ac_data->rxlength_rp = (ac_data->rxlength_rp+1) & (RX_SIZE-1);
 		copy_to_user(buffer, ac_data->tmp, l);
 		return l;
-	}
-	else
+	} else
 		return 0;
 }
 
@@ -247,33 +255,34 @@ static ssize_t gps_irq_write(struct file *filp, const char __user *buffer,
 
 	struct gps_irq *ac_data = filp->private_data;
 
-	if (length < I2C_MAX_SIZE)
-	{
-		if (((ac_data->wbuffer_wp+1) & (TX_SIZE-1))==ac_data->wbuffer_rp)
-		{
+	if (length < I2C_MAX_SIZE) {
+		if (((ac_data->wbuffer_wp+1) & (TX_SIZE-1)) ==
+			ac_data->wbuffer_rp)
 			flush_scheduled_work();
-		} 
 
-		if (!copy_from_user(&ac_data->wr_buffer[ac_data->wbuffer_wp], buffer, length))
-		{
-			//printk(KERN_INFO "gps_irq_write %d %d %d \n",length,ac_data->wbuffer_rp,ac_data->wbuffer_wp);
-			ac_data->txlength[ac_data->wbuffer_wp]=length;
-			ac_data->wbuffer_wp=(ac_data->wbuffer_wp+1) & (TX_SIZE-1);
+		if (!copy_from_user(&ac_data->wr_buffer[ac_data->wbuffer_wp],
+					buffer,
+					length)) {
+			/* printk(KERN_INFO "gps_irq_write %d %d %d\n",
+				length,
+				ac_data->wbuffer_rp,ac_data->wbuffer_wp);*/
 
-			if (ac_data->wbuffer_wp==ac_data->wbuffer_rp)
-				printk(KERN_INFO "gps_irq_write overrun error \n");
+			ac_data->txlength[ac_data->wbuffer_wp] =
+				length;
+
+			ac_data->wbuffer_wp = (ac_data->wbuffer_wp+1)
+				& (TX_SIZE-1);
+
+			if (ac_data->wbuffer_wp == ac_data->wbuffer_rp)
+				printk(KERN_INFO "gps_irq_write overrun error\n");
 
 			schedule_work(&ac_data->write_task);
 			++cnt2;
-		}
-		else
-		{
-			printk(KERN_INFO "gps_irq_write copy error \n");
-		}
+		} else
+			printk(KERN_INFO "gps_irq_write copy error\n");
 
 		return length;
-	}
-	else
+	} else
 		return 0;
 
 }
@@ -287,7 +296,8 @@ static const struct file_operations gps_irq_fops = {
 	.write = gps_irq_write
 };
 
-static int gps_hostwake_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int gps_hostwake_probe(struct i2c_client *client,
+						const struct i2c_device_id *id)
 {
 	struct gps_platform_data *pdata;
 	struct gps_irq *ac_data = kzalloc(sizeof(struct gps_irq), GFP_KERNEL);
@@ -318,8 +328,8 @@ static int gps_hostwake_probe(struct i2c_client *client, const struct i2c_device
 
 	ret = misc_register(&ac_data->misc);
 
-	ac_data->rbuffer_rp=0;
-	ac_data->rbuffer_wp=0;
+	ac_data->rbuffer_rp = 0;
+	ac_data->rbuffer_wp = 0;
 
 	/* request irq.  the irq is set whenever the chip has data available
 	 * for reading.  it is cleared when all data has been read.
