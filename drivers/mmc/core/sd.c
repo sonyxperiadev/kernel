@@ -1213,6 +1213,9 @@ int mmc_attach_sd(struct mmc_host *host)
 	BUG_ON(!host);
 	WARN_ON(!host->claimed);
 
+	mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_330, 0);
+	usleep_range(10000, 10500);
+
 	/* Disable preset value enable if already set since last time */
 	if (host->ops->enable_preset_value)
 		host->ops->enable_preset_value(host, false);
