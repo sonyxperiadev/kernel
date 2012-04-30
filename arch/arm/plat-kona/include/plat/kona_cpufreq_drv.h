@@ -32,6 +32,11 @@ enum {
 	KONA_CPUFREQ_UPDATE_LPJ = 1,
 };
 
+#define DEFAULT_LIMIT   (-1)
+#define MIN_LIMIT       (0)
+#define CURRENT_FREQ    (1)
+#define MAX_LIMIT       (2)
+
 /* Platform data for Kona cpufreq driver */
 struct kona_cpufreq_drv_pdata {
 	/* Number of cpus */
@@ -48,5 +53,10 @@ struct kona_cpufreq_drv_pdata {
 	/*Init callback - can be NULL */
 	void (*cpufreq_init) (void);
 };
+
+int get_cpufreq_limit(unsigned int *val, int limit_type);
+int set_cpufreq_limit(unsigned int val, int limit_type);
+/*Defined in  mach*/
+unsigned int get_cpufreq_from_opp(int opp);
 
 #endif /* BCM_CPUFREQ_DRV_H */

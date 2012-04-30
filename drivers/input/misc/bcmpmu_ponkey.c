@@ -58,12 +58,10 @@ static void bcmpmu_ponkey_isr(enum bcmpmu_irq irq, void *data)
 	switch (irq) {
 	case PMU_IRQ_PONKEYB_F:
 		ponkey->ponkey_state = 1;
-		pr_info("onkey pressed..\n");
 		break;
 
 	case PMU_IRQ_PONKEYB_R:
 		ponkey->ponkey_state = 0;
-		pr_info("onkey released..\n");
 		break;
 
 	default:

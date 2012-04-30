@@ -523,6 +523,11 @@ static struct resource kona_hsotgctrl_platform_resource[] = {
 	       .end = HUB_CLK_BASE_ADDR + SZ_4K - 1,
 	       .flags = IORESOURCE_MEM,
 	       },
+	[3] = {
+	       .start = BCM_INT_ID_RESERVED128,
+	       .end = BCM_INT_ID_RESERVED128,
+	       .flags = IORESOURCE_IRQ,
+	       },
 };
 
 static struct platform_device board_kona_hsotgctrl_platform_device = {
@@ -565,6 +570,21 @@ struct kona_freq_tbl kona_freq_tbl[] = {
 	FTBL_INIT(700000, PI_OPP_TURBO),
 #endif
 };
+
+unsigned int get_cpufreq_from_opp(int opp)
+{
+	int i, num_of_opp;
+	if (opp < 0)
+		return 0;
+	num_of_opp = ARRAY_SIZE(kona_freq_tbl);
+	for (i = 0; i < num_of_opp; i++) {
+		if (kona_freq_tbl[i].opp == opp)
+			return kona_freq_tbl[i].cpu_freq;
+	}
+	pr_debug("%s: Invalid OPP as argument\n", __func__);
+	return -EINVAL;
+}
+EXPORT_SYMBOL(get_cpufreq_from_opp);
 
 void rhea_cpufreq_init(void)
 {

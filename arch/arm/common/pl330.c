@@ -218,6 +218,8 @@
 
 #define BYTE_TO_BURST(b, ccr)  ((b) / BRST_SIZE(ccr) / BRST_LEN(ccr))
 #define BURST_TO_BYTE(c, ccr)  ((c) * BRST_SIZE(ccr) * BRST_LEN(ccr))
+#define REM_UNALIGNED(b, ccr)  ((b) % (BRST_SIZE(ccr) * BRST_LEN(ccr)))
+#define BYTE_TO_SINGLE(b, ccr)  ((b) / BRST_SIZE(ccr))
 
 /*
  * With 256 bytes, we can do more than 2.5MB and 5MB xfers per req
@@ -226,7 +228,12 @@
  * should be enough for P<->M and M<->M respectively.
  */
 /*#define MCODE_BUFF_PER_REQ	256*/
-#define MCODE_BUFF_PER_REQ		512
+
+/*
+ * Scatter-Gather + modified burst xfers consume more microcode space
+ * So we increase microcode quota for all the channels to 2K.
+ */
+#define MCODE_BUFF_PER_REQ		2048
 
 /*
  * Mark a _pl330_req as free.
@@ -245,6 +252,9 @@
 /* Use this _only_ to wait on transient states */
 #define UNTIL(t, s)	while (!(_state(t) & (s)));
 
+/* Uncomment line below to enable Channel Microcode Dump */
+/*#define PL330_DEBUG_MCGEN*/
+
 #ifdef PL330_DEBUG_MCGEN
 static unsigned cmd_line;
 #define PL330_DBGCMD_DUMP(off, x...)	do { \
@@ -260,6 +270,7 @@ static unsigned cmd_line;
 
 struct _xfer_spec {
 	u32 ccr;
+	bool restore_ccr;
 	struct pl330_req *r;
 	struct pl330_xfer *x;
 };
@@ -341,6 +352,13 @@ struct pl330_dmac {
 	/* State of DMAC operation */
 	enum pl330_dmac_state	state;
 };
+
+enum end_xfer_req	{
+	END_XFER_NONE = 0,
+	END_ALWAYS_BURST = 1,
+	END_SINGLE_XFERS = 2,
+};
+
 
 static inline void _callback(struct pl330_req *r, enum pl330_op_err err)
 {
@@ -487,7 +505,7 @@ static inline u32 _emit_LDP(unsigned dry_run, u8 buf[],
 }
 
 static inline u32 _emit_LP(unsigned dry_run, u8 buf[],
-		unsigned loop, u8 cnt)
+		unsigned loop, unsigned cnt)
 {
 	if (dry_run)
 		return SZ_DMALP;
@@ -498,7 +516,7 @@ static inline u32 _emit_LP(unsigned dry_run, u8 buf[],
 		buf[0] |= (1 << 1);
 
 	cnt--; /* DMAC increments by 1 internally */
-	buf[1] = cnt;
+	buf[1] = (u8)cnt;
 
 	PL330_DBGCMD_DUMP(SZ_DMALP, "\tDMALP_%c %u\n", loop ? '1' : '0', cnt);
 
@@ -1034,15 +1052,26 @@ static inline int _ldst_memtomem(unsigned dry_run, u8 buf[],
 }
 
 static inline int _ldst_devtomem(unsigned dry_run, u8 buf[],
-		const struct _xfer_spec *pxs, int cyc)
+		const struct _xfer_spec *pxs, int cyc,
+		bool rem, enum end_xfer_req end_req)
 {
 	int off = 0;
-	enum pl330_cond c = SINGLE;
+	enum pl330_cond c;
 	struct pl330_config *pcfg = pxs->r->cfg->pcfg;
 
-	if (pxs->r->cfg->brst_size)
-		c = BURST;
-
+	/* If modified-burst/single for remainder */
+	if (rem)	{
+		if (end_req == END_ALWAYS_BURST)
+			c = BURST;
+		else
+			c = SINGLE;
+	} else	{
+		/* Regular DMA cfg */
+		if (pxs->r->cfg->brst_len > 1)
+			c = BURST;
+		else
+			c = SINGLE;
+	}
 	/*
 	 * PL330 rev r0p0 needs needs memory barrier instructions(ERRATA 716336)
 	 * This workaround is not nedded for DMAC rev >= r1p0
@@ -1063,15 +1092,26 @@ static inline int _ldst_devtomem(unsigned dry_run, u8 buf[],
 }
 
 static inline int _ldst_memtodev(unsigned dry_run, u8 buf[],
-		const struct _xfer_spec *pxs, int cyc)
+		const struct _xfer_spec *pxs, int cyc,
+		bool rem, enum end_xfer_req end_req)
 {
 	int off = 0;
-	enum pl330_cond c = SINGLE;
+	enum pl330_cond c;
 	struct pl330_config *pcfg = pxs->r->cfg->pcfg;
 
-	if (pxs->r->cfg->brst_size)
-		c = BURST;
-
+	/* If modified-burst/single for remainder */
+	if (rem)	{
+		if (end_req == END_ALWAYS_BURST)
+			c = BURST;
+		else
+			c = SINGLE;
+	} else {
+		/* Regular DMA cfg */
+		if (pxs->r->cfg->brst_len > 1)
+			c = BURST;
+		else
+			c = SINGLE;
+	}
 	/*
 	 * PL330 rev r0p0 needs needs memory barrier instructions(ERRATA 716336)
 	 * This workaround is not nedded for DMAC rev >= r1p0
@@ -1092,16 +1132,19 @@ static inline int _ldst_memtodev(unsigned dry_run, u8 buf[],
 }
 
 static int _bursts(unsigned dry_run, u8 buf[],
-		const struct _xfer_spec *pxs, int cyc)
+		const struct _xfer_spec *pxs, int cyc,
+		bool rem, enum end_xfer_req end_req)
 {
 	int off = 0;
 
 	switch (pxs->r->rqtype) {
 	case MEMTODEV:
-		off += _ldst_memtodev(dry_run, &buf[off], pxs, cyc);
+		off += _ldst_memtodev(dry_run, &buf[off], pxs, cyc,
+					rem, end_req);
 		break;
 	case DEVTOMEM:
-		off += _ldst_devtomem(dry_run, &buf[off], pxs, cyc);
+		off += _ldst_devtomem(dry_run, &buf[off], pxs, cyc,
+					rem, end_req);
 		break;
 	case MEMTOMEM:
 		off += _ldst_memtomem(dry_run, &buf[off], pxs, cyc);
@@ -1115,8 +1158,9 @@ static int _bursts(unsigned dry_run, u8 buf[],
 }
 
 /* Returns bytes consumed and updates bursts */
-static inline int _loop(unsigned dry_run, u8 buf[],
-		unsigned long *bursts, const struct _xfer_spec *pxs)
+static inline int _loop(unsigned dry_run, u8 buf[], unsigned long *bursts,
+		const struct _xfer_spec *pxs, bool rem,
+		enum end_xfer_req end_req)
 {
 	int cyc, cycmax, szlp, szlpend, szbrst, off;
 	unsigned lcnt0, lcnt1, ljmp0, ljmp1;
@@ -1138,7 +1182,7 @@ static inline int _loop(unsigned dry_run, u8 buf[],
 	}
 
 	szlp = _emit_LP(1, buf, 0, 0);
-	szbrst = _bursts(1, buf, pxs, 1);
+	szbrst = _bursts(1, buf, pxs, 1, rem, end_req);
 
 	lpend.cond = ALWAYS;
 	lpend.forever = false;
@@ -1170,7 +1214,7 @@ static inline int _loop(unsigned dry_run, u8 buf[],
 	off += _emit_LP(dry_run, &buf[off], 1, lcnt1);
 	ljmp1 = off;
 
-	off += _bursts(dry_run, &buf[off], pxs, cyc);
+	off += _bursts(dry_run, &buf[off], pxs, cyc, rem, end_req);
 
 	lpend.cond = ALWAYS;
 	lpend.forever = false;
@@ -1194,24 +1238,61 @@ static inline int _loop(unsigned dry_run, u8 buf[],
 }
 
 static inline int _setup_loops(unsigned dry_run, u8 buf[],
-		const struct _xfer_spec *pxs)
+		struct _xfer_spec *pxs)
 {
 	struct pl330_xfer *x = pxs->x;
 	u32 ccr = pxs->ccr;
-	unsigned long c, bursts = BYTE_TO_BURST(x->bytes, ccr);
+	unsigned long c, bursts, rem_bytes, remainder;
 	int off = 0;
+
+	bursts = BYTE_TO_BURST(x->bytes, ccr);
+	/* remaining burst-unaligned bytes */
+	rem_bytes = REM_UNALIGNED(x->bytes, ccr);
+	remainder = BYTE_TO_SINGLE(rem_bytes, ccr);
+
+	/* Restore CCR if modified beat-length for unaligned burst xfer */
+	if (bursts && pxs->restore_ccr)	{
+		off += _emit_MOV(dry_run, &buf[off], CCR, pxs->ccr);
+		pxs->restore_ccr = false;
+	}
 
 	while (bursts) {
 		c = bursts;
-		off += _loop(dry_run, &buf[off], &c, pxs);
+		off += _loop(dry_run, &buf[off], &c, pxs, false, 0);
 		bursts -= c;
 	}
 
+	/* Handle burst unaligned xfers here */
+	if (remainder)	{
+		/* Modified burst xfer */
+		if (pxs->r->cfg->always_burst)	{
+			c = 1;
+			/* CCR: Modify beat length to un-aligned xfer size */
+			ccr &= ~(0xf << CC_SRCBRSTLEN_SHFT);
+			ccr |= (((remainder - 1) & 0xf) << CC_SRCBRSTLEN_SHFT);
+			ccr &= ~(0xf << CC_DSTBRSTLEN_SHFT);
+			ccr |= (((remainder - 1) & 0xf) << CC_DSTBRSTLEN_SHFT);
+			/* DMAMOV CCR, ccr */
+			off += _emit_MOV(dry_run, &buf[off], CCR, ccr);
+			off += _loop(dry_run, &buf[off], &c, pxs, true,
+							END_ALWAYS_BURST);
+			/* Needs to restore CCR if next burst xfer */
+			pxs->restore_ccr = true;
+		} else {
+			/* Peripheral sends single_req for the remainder */
+			if (pxs->r->cfg->end_single_req)	{
+				c = remainder;
+				off += _loop(dry_run, &buf[off], &c, pxs, true,
+							END_SINGLE_XFERS);
+				remainder -= c;
+			}
+		}
+	}
 	return off;
 }
 
 static inline int _setup_xfer(unsigned dry_run, u8 buf[],
-		const struct _xfer_spec *pxs)
+		struct _xfer_spec *pxs)
 {
 	struct pl330_xfer *x = pxs->x;
 	int off = 0;
@@ -1247,12 +1328,20 @@ static int _setup_req(unsigned dry_run, struct pl330_thread *thrd,
 
 	/* DMAMOV CCR, ccr */
 	off += _emit_MOV(dry_run, &buf[off], CCR, pxs->ccr);
+	pxs->restore_ccr = false;
 
 	x = pxs->r->x;
 	do {
 		/* Error if xfer length is not aligned at burst size */
-		if (x->bytes % (BRST_SIZE(pxs->ccr) * BRST_LEN(pxs->ccr)))
-			return -EINVAL;
+		if (pxs->r->cfg->end_single_req ||
+				pxs->r->cfg->always_burst)	{
+			if (x->bytes % (BRST_SIZE(pxs->ccr)))
+				return -EINVAL;
+		} else	{
+			if (x->bytes % (BRST_SIZE(pxs->ccr) *
+					BRST_LEN(pxs->ccr)))
+				return -EINVAL;
+		}
 
 		pxs->x = x;
 		off += _setup_xfer(dry_run, &buf[off], pxs);
@@ -1552,7 +1641,7 @@ int pl330_update(const struct pl330_info *pi)
 			/* clear the inetrrupt */
 			writel(1 << ev, regs + INTCLR);
 #endif
- 
+
 			ret = 1;
 
 			id = pl330->events[ev];

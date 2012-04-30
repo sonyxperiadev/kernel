@@ -426,7 +426,6 @@ extern bool_t xdr_union(XDR *, enum_t *, char *, const struct xdr_discrim *,
 extern bool_t xdr_char(XDR *, char *);
 extern bool_t xdr_u_char(XDR *, u_char *);
 extern bool_t xdr_vector(XDR *, char *, u_int, u_int, xdrproc_t);
-extern bool_t xdr_float(XDR *, float *);
 extern bool_t xdr_double(XDR *, double *);
 extern bool_t xdr_quadruple(XDR *, long double *);
 extern bool_t xdr_reference(XDR *, char **, u_int, xdrproc_t);

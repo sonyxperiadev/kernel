@@ -47,6 +47,7 @@ enum {
 	VTQ_CMD_WHAT_WAS_LAST_QUEUED_JOB,
 	VTQ_CMD_FLUSH, /* flush is equivalent to await(last_queued) */
 	VTQ_CMD_ONLOADHOOK,
+	VTQ_CMD_QUEUE_JOB_MULTIPLE,
 	VTQ_CMD_LAST,
 
 	/* debug */

@@ -43,7 +43,7 @@ struct bcmpmu_batt {
 	struct bcmpmu_batt_state state;
 	wait_queue_head_t wait;
 	struct mutex lock;
-	char model[20];
+	char model[30];
 	int batt_temp_in_celsius;
 };
 
@@ -188,10 +188,6 @@ static int bcmpmu_set_batt_property(struct power_supply *ps,
 		pbatt->state.present = propval->intval;
 		break;
 
-	case POWER_SUPPLY_PROP_MODEL_NAME:
-		strcpy(pbatt->model, propval->strval);
-		break;
-
 	default:
 		ret = -EINVAL;
 		break;
@@ -286,7 +282,7 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	pbatt->batt.set_property = bcmpmu_set_batt_property;
 	pbatt->batt.name = "battery";
 	pbatt->batt.type = POWER_SUPPLY_TYPE_BATTERY;
-	strcpy(pbatt->model, pdata->batt_model);
+	strlcpy(pbatt->model, pdata->batt_model, sizeof(pbatt->model));
 	pbatt->batt_temp_in_celsius = pdata->batt_temp_in_celsius;
 	ret = power_supply_register(&pdev->dev, &pbatt->batt);
 	if (ret)

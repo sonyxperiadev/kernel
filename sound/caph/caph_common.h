@@ -307,6 +307,7 @@ enum	AT_AUD_Handler_t {
 extern int __devinit PcmDeviceNew(struct snd_card *card);
 extern int __devinit ControlDeviceNew(struct snd_card *card);
 int __devinit HwdepDeviceNew(struct snd_card *card);
+int __devinit HwdepPttDeviceNew(struct snd_card *card);
 
 extern int  AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t *pChip,
 	Int32  ParamCount, Int32 *Params); /* at_aud_ctl.c */

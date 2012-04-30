@@ -801,9 +801,6 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 		return -EINVAL;
 	}
 
-	if (pix->bytesperline < 0)
-		return pix->bytesperline;
-
 	pix->sizeimage = pix->height * pix->bytesperline;
 
 	/* limit to sensor capabilities */

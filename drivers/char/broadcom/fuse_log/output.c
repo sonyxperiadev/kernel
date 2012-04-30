@@ -54,7 +54,7 @@ static char g_netconsole_on;
 /* flow control state for ACM, set/reset by flow control callbacks */
 static char g_acm_on = 1;
 
-#define BCMLOG_OUTPUT_FIFO_MAX_BYTES 65536
+#define BCMLOG_OUTPUT_FIFO_MAX_BYTES (4 * 1024 * 1024)
 static BCMLOG_Fifo_t g_fifo;	/* output fifo */
 /* 23MB reserved area for AP/CP crash dump */
 #define MTT_SD_RESERVED (23 * 1024 * 1024)
@@ -670,8 +670,10 @@ int BCMLOG_OutputInit(void)
 
 	fifobuf = kmalloc(BCMLOG_OUTPUT_FIFO_MAX_BYTES, GFP_KERNEL);
 
-	if (!fifobuf)
+	if (!fifobuf) {
+		pr_err("BCMLOG_OutputInit failed to allocate FIFO\n");
 		return -1;
+	}
 
 	BCMLOG_FifoInit(&g_fifo, fifobuf, BCMLOG_OUTPUT_FIFO_MAX_BYTES);
 

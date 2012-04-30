@@ -660,14 +660,8 @@ void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 
 	}
 
-	/***
-	OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
-	omega_voice_parms =
-	AudParmP()[AUDCTRL_GetAudioMode()].omega_voice_parms;
 	audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam,
-		(UInt32)(&(omega_voice_parms[telephony_dl_gain_dB])),
-		0, 0, 0, 0);
-	***/
+	(mode + app * AUDIO_MODE_NUMBER), telephony_dl_gain_dB, 0, 0, 0);
 
 	/* if parm4 (OV_volume_step) is zero, volumectrl.c will calculate
 	   OV volume step based on digital_gain_dB, VOICE_VOLUME_MAX and
@@ -1089,6 +1083,7 @@ void AUDCTRL_SetAudioMode_ForMusicRecord(
 	AUDIO_SOURCE_Enum_t mic;
 	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
+	AudioApp_t app;
 
 	aTrace(LOG_AUDIO_CNTLR, "%s mode = %d\n", __func__, mode);
 
@@ -1115,9 +1110,22 @@ also need to support audio profile (and/or mode) set from user space code
 */
 
 	currAudioMode_record = mode;
+	app = AUDCTRL_GetAudioApp();
 
-	AUDDRV_SetAudioMode_Mic(mode, AUDCTRL_GetAudioApp(),
-		arg_pathID, 0);
+	AUDDRV_SetAudioMode_Mic(mode, app, arg_pathID, 0);
+
+	if (!AUDCTRL_InVoiceCall() && AUDDRV_TuningFlag()) {
+		/*for music tuning, if PCG changed audio mode,
+		   need to pass audio mode to CP in audio_vdriver_caph.c */
+		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+				      (UInt32) mode,
+				      (UInt32) app, 0, 0, 0);
+		/*this command updates mode in audioapi.c. */
+		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
+				      (UInt32) ((int)app *
+						AUDIO_MODE_NUMBER + mode), 0, 0,
+				      0, 0);
+	}
 
 	if (!bClk)
 		csl_caph_ControlHWClock(FALSE);
@@ -2192,6 +2200,8 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 			  AUDIO_SAMPLING_RATE_t sr, unsigned int *pPathID)
 {
 	unsigned int pathID;
+	AudioApp_t app = AUDCTRL_GetAudioApp();
+	AudioMode_t mode = AUDCTRL_GetAudioMode();
 	aTrace(LOG_AUDIO_CNTLR,
 			"%s src 0x%x, sink 0x%x,sr %d",
 			__func__, source, sink, sr);
@@ -2225,7 +2235,20 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 	} else {
 		AUDCTRL_EnableRecordMono(source, sink, numCh, sr, &pathID);
 	}
+
 	*pPathID = pathID;
+	if (!AUDCTRL_InVoiceCall() && AUDDRV_TuningFlag()) {
+		/*for music tuning, if PCG changed audio mode,
+		   need to pass audio mode to CP in audio_vdriver_caph.c */
+		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+				      (UInt32) mode,
+				      (UInt32) app, 0, 0, 0);
+		/*this command updates mode in audioapi.c. */
+		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
+				      (UInt32) ((int)app *
+						AUDIO_MODE_NUMBER + mode), 0, 0,
+				      0, 0);
+	}
 }
 
 /****************************************************************************

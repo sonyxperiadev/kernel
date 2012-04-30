@@ -308,7 +308,7 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	if (irqregs == NULL) {
 		ret = -ENOMEM;
 		dev_err(bcmpmu->dev, "%s: kzalloc failed: %d\n", __func__, ret);
-		return ret;
+		goto err;
 	}
 	idata->irq_regs = irqregs;
 	idata->bcmpmu = bcmpmu;
@@ -319,11 +319,11 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 
 	bcmpmu->irqinfo = idata;
 	ret = request_irq(pdata->irq, bcmpmu_isr,
-			  IRQF_DISABLED | IRQF_TRIGGER_FALLING |
-			  IRQF_NO_SUSPEND, "bcmpmu-irq", idata);
+			IRQF_DISABLED | IRQF_TRIGGER_FALLING |
+			IRQF_NO_SUSPEND, "bcmpmu-irq", idata);
 	if (ret) {
 		pr_irq(ERROR, "%s, failed request irq.\n", __func__);
-		goto err;
+		goto err0;
 	}
 	disable_irq(pdata->irq);
 	bcmpmu_read_irq_regs(idata);
@@ -333,8 +333,10 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_irq_attr_group);
 #endif
 	return 0;
-
-      err:
+err0:
+	kfree(idata->irq_regs);
+err:
+	kfree(idata);
 	return ret;
 }
 
@@ -345,8 +347,7 @@ static int __devexit bcmpmu_irq_remove(struct platform_device *pdev)
 	    (struct bcmpmu_irq_data *)bcmpmu->irqinfo;
 	if (idata->irq)
 		free_irq(bcmpmu->pdata->irq, bcmpmu);
-	if (idata->irq_regs)
-		kzfree(idata->irq_regs);
+	kzfree(idata->irq_regs);
 	kzfree(bcmpmu->irqinfo);
 	return 0;
 

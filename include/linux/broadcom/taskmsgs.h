@@ -6903,6 +6903,10 @@ typedef enum
 	payload is void 
 	**/
 	MSG_MS_SET_ELEMENT_EX_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x6FD,
+	 /** 
+	api is CAPI2_SmsApi_WriteSMSPduToSIMSlotReq 
+	**/
+	MSG_SMS_WRITESMSPDUTOSIMSLOT_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6FE,	///<Payload type {CAPI2_SmsApi_WriteSMSPduToSIMSlotReq_Req_t}
 
 	//MSG_GEN_REQ_END = 0x48FF
 
