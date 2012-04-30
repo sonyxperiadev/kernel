@@ -283,12 +283,18 @@ config CONFIG_DHD_USE_STATIC_BUF
 	help
 	  "Enable SATIC BUFFER SUPPORT for DHD"
 
+config BROADCOM_WIFI_RESERVED_MEM
+	bool "Enable STATIC BUFFER Support for WLAN Driver"
+	help
+	  Enables  STATIC BUFFER Support for WLAN chips
+
 source "drivers/net/wireless/ath/Kconfig"
 source "drivers/net/wireless/b43/Kconfig"
 source "drivers/net/wireless/b43legacy/Kconfig"
 source "drivers/net/wireless/bcmdhd_4334/Kconfig"
 source "drivers/net/wireless/bcmdhd/Kconfig"
 source "drivers/net/wireless/bcmdhd_lnx/Kconfig"
+source "drivers/net/wireless/bcmdhd_43362/Kconfig"
 source "drivers/net/wireless/hostap/Kconfig"
 source "drivers/net/wireless/ipw2x00/Kconfig"
 source "drivers/net/wireless/iwlwifi/Kconfig"
