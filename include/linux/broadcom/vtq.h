@@ -111,4 +111,21 @@ extern vtq_status_t vtq_await_job(struct vtq_context *ctx,
 		vtq_job_id_t job);
 extern vtq_job_id_t vtq_get_read_pointer(struct vtq_context *ctx);
 
+/* multi purpose lock */
+
+/* we have a number of usecases that require functionality that VTQ is
+ * not supposed to provide, but, that the higher level APIs for
+ * providing them don't yet exist.  So, this is just a bag of
+ * workarounds for missing functionality elsewhere.  We'd like to
+ * think we can one day deprecate these, one by one, as the missing
+ * functionality begins to appear */
+
+/* unlock cannot fail. we just do as we are told */
+extern void vtq_unlock_multi(struct vtq_context *ctx,
+		uint32_t locks_to_put);
+/* some locks can block, some locks can fail without blocking.  If a
+ * lock fails, we'll put things back to how we found them */
+extern int vtq_lock_multi(struct vtq_context *ctx,
+		uint32_t locks_to_get);
+
 #endif

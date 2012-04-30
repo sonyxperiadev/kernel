@@ -37,6 +37,9 @@ the GPL, without Broadcom's express prior written consent.
 /* Private configuration stuff -- not part of exposed API */
 #include "vtqinit_priv.h"
 
+/* Internal utility functions */
+#include "vtqutil.h"
+
 typedef uint32_t vtq_datamemoffset_t;
 typedef uint32_t vtq_progmemoffset_t;
 
@@ -172,6 +175,14 @@ struct vtq_vce {
 	/* This mutex must be held while data for arm->vce is used */
 	struct mutex host_mutex;
 
+	/* This counter is the number of vtq_queue_job folk who are
+	 * waiting to acquire the host_mutex (well, strictly, waiting
+	 * for room in the FIFO) so if the FIFO happens to look empty
+	 * because our ISR ran, but we somehow snuck in the cleanup
+	 * job while people were waiting to enqueue their job, we
+	 * won't stupidly turn the VCE off and on again */
+	atomic_t queuerswaiting;
+
 	/* monotonically incrementing index into fifo (wraps at 2^32
 	 * -- the actual fifo entry will be modulo the fifo size,
 	 * which must therefore be power-of-2 */
@@ -221,6 +232,12 @@ struct vtq_vce {
 				it. :) */
 	struct work_struct unload_work;
 	struct work_struct cleanup_work;
+
+	/*
+	  high level locking.  TODO: move to a separate API that sits
+	  above VTQ
+	*/
+	struct vtq_priority_lock *priority_lock;
 
 	/* Debug stuff below: */
 
@@ -484,6 +501,7 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 
 	mutex_init(&vtq_pervce_state->host_mutex);
 	mutex_init(&vtq_pervce_state->cleanup_mutex);
+	atomic_set(&vtq_pervce_state->queuerswaiting, 0);
 
 	vtq_pervce_state->writeptr = 07734;
 	vtq_pervce_state->last_known_readptr = vtq_pervce_state->writeptr;
@@ -530,6 +548,10 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 	if (s != 0)
 		goto err_init_procentries;
 
+	vtq_pervce_state->priority_lock = vtq_util_priority_lock_create();
+	if (vtq_pervce_state->priority_lock == NULL)
+		goto err_init_priority_lock;
+
 	/* success */
 
 	*vtq_pervce_state_out = vtq_pervce_state;
@@ -537,8 +559,14 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 
 	/* error exit paths follow */
 
-	/* term_procentries(vtq_pervce_state); */
+	/* vtq_util_priority_lock_destroy(vtq_pervce_state->priority_lock); */
+err_init_priority_lock:
+
+	term_procentries(vtq_pervce_state);
 err_init_procentries:
+
+	mutex_destroy(&v->host_mutex);
+	mutex_destroy(&v->cleanup_mutex);
 
 	kfree(vtq_pervce_state);
 err_kmalloc_vtq_pervce_state:
@@ -578,6 +606,7 @@ void vtq_pervce_term(struct vtq_vce **vtq_pervce_state_ptr)
 	mutex_unlock(&v->cleanup_mutex);
 	mutex_destroy(&v->cleanup_mutex);
 
+	vtq_util_priority_lock_destroy(v->priority_lock);
 	term_procentries(v);
 	kfree(v);
 }
@@ -811,6 +840,11 @@ static void try_unload_if_empty(struct work_struct *work)
 	/* TODO: check a special flag to abort the shutdown sequence?
 	 * or is that one optimization too far?  Consider. */
 
+	if (atomic_read(&v->queuerswaiting) > 0) {
+		mutex_unlock(&v->host_mutex);
+		return;
+	}
+
 	_unloadloader(v);
 
 	mutex_unlock(&v->host_mutex);
@@ -826,6 +860,9 @@ static void cleanup(struct work_struct *work)
 	struct jobinfo *job;
 
 	vce = container_of(work, struct vtq_vce, cleanup_work);
+
+	if (vce->last_known_readptr - vce->last_acknowledged_job == 0)
+		return;
 
 	mutex_lock(&vce->cleanup_mutex);
 
@@ -1342,6 +1379,7 @@ int vtq_queue_job(struct vtq_context *ctx,
 		return -1;
 	}
 
+	atomic_inc(&ctx->vce->queuerswaiting);
 	s = wait_event_interruptible(ctx->vce->more_room_in_fifo_wq,
 				     got_room_for_job(ctx, task_id));
 	if (s) {
@@ -1350,6 +1388,7 @@ int vtq_queue_job(struct vtq_context *ctx,
 	}
 	/* got room for job will leave the host_mutex acquired when
 	 * the condition is met */
+	atomic_dec(&ctx->vce->queuerswaiting);
 
 	/* spin lock is unlocked so isr can run, but isr won't turn us
 	 * off now (because we said so above) and we are the only ones
@@ -1486,6 +1525,55 @@ int vtq_await_job(struct vtq_context *ctx, vtq_job_id_t job)
 	}
 
 	return 0;
+}
+
+/* MULTI PURPOSE LOCK -- TODO: MOVE TO CLIENT API */
+
+void vtq_unlock_multi(struct vtq_context *ctx,
+		uint32_t locks_to_put)
+{
+	(void)ctx;
+
+	if (locks_to_put & VTQ_LOCK_PRIORITY_LOCK_LOW)
+		vtq_util_priority_unlock(ctx->vce->priority_lock, 0);
+
+	if (locks_to_put & VTQ_LOCK_PRIORITY_LOCK_MED)
+		vtq_util_priority_unlock(ctx->vce->priority_lock, 1);
+}
+
+int vtq_lock_multi(struct vtq_context *ctx,
+		uint32_t locks_to_get)
+{
+	uint32_t locks_got;
+	int s;
+
+	if (locks_to_get & VTQ_LOCK_PRIORITY_LOCK_LOW &&
+	    locks_to_get & VTQ_LOCK_PRIORITY_LOCK_MED)
+		return -1;
+
+	locks_got = 0;
+
+	if (locks_to_get & VTQ_LOCK_PRIORITY_LOCK_LOW) {
+		s = vtq_util_priority_lock(ctx->vce->priority_lock, 0);
+		if (s)
+			goto lock_error;
+		locks_got |= VTQ_LOCK_PRIORITY_LOCK_LOW;
+	}
+
+	if (locks_to_get & VTQ_LOCK_PRIORITY_LOCK_MED) {
+		s = vtq_util_priority_lock(ctx->vce->priority_lock, 1);
+		if (s)
+			goto lock_error;
+		locks_got |= VTQ_LOCK_PRIORITY_LOCK_MED;
+	}
+
+	if (locks_to_get == locks_got)
+		return 0;
+
+lock_error:
+	vtq_unlock_multi(ctx, locks_got);
+
+	return -1;
 }
 
 /* ******************** */

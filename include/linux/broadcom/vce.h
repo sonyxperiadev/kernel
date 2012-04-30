@@ -48,6 +48,7 @@ enum {
 	VTQ_CMD_FLUSH, /* flush is equivalent to await(last_queued) */
 	VTQ_CMD_ONLOADHOOK,
 	VTQ_CMD_QUEUE_JOB_MULTIPLE,
+	VTQ_CMD_MULTIPURPOSE_LOCK,
 	VTQ_CMD_LAST,
 
 	/* debug */
@@ -207,6 +208,47 @@ struct vtq_awaitjob_ioctldata {
 	uint32_t job_id;
 };
 
+/*
+ * reserved
+ */
+#define VTQ_LOCK_ARMLOCK 1
+/*
+ * reserved
+ */
+#define VTQ_LOCK_POWERLOCK 2
+
+/*
+ * low priority lock can be acquired multiple times.  It will always
+ * be granted as long as there is no outstanding request for a medium
+ * priority lock.  Users of low priority lock get shared access.  With
+ * the lock, they acquire the right to enter short-running jobs into
+ * the queue and can be assured that their job will be serviced in a
+ * reasonable time as their will not be a medium priority long-running
+ * job in the way.  Attempts to acquire the lock while there is a
+ * medium priority lock held or requested will fail immediately
+ */
+#define VTQ_LOCK_PRIORITY_LOCK_LOW 0x100
+/*
+ * A medium priority lock will always be granted, but will block until
+ * all low-priority locks have been released.  The owner gains the
+ * right to submit a long running job to the VTQ in the knowledge that
+ * no low-priority jobs shall get in its way */
+#define VTQ_LOCK_PRIORITY_LOCK_MED 0x200
+/*
+ * reserved
+ */
+#define VTQ_LOCK_PRIORITY_LOCK_HIGH 0x400
+
+struct vtq_multipurposelock_ioctldata {
+	/* result */
+	/* uint32_t; */
+
+	/* input */
+	uint32_t locks_to_get;
+	uint32_t locks_to_put;
+	uint32_t flags;
+};
+
 /* TODO: review (these were copy/psted from v3d) */
 #define VCE_IOCTL_WAIT_IRQ      _IO(BCM_VCE_MAGIC, VCE_CMD_WAIT_IRQ)
 #define VCE_IOCTL_EXIT_IRQ_WAIT _IO(BCM_VCE_MAGIC, VCE_CMD_EXIT_IRQ_WAIT)
@@ -247,6 +289,9 @@ struct vtq_awaitjob_ioctldata {
 #define VTQ_IOCTL_ONLOADHOOK _IOWR(BCM_VCE_MAGIC,			\
 				   VTQ_CMD_ONLOADHOOK,			\
 				   struct vtq_onloadhook_ioctldata)
+#define VTQ_IOCTL_MULTIPURPOSE_LOCK _IOW(BCM_VCE_MAGIC,			\
+				      VTQ_CMD_MULTIPURPOSE_LOCK,	\
+				      struct vtq_multipurposelock_ioctldata)
 #define VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS  _IOR(BCM_VCE_MAGIC, VCE_CMD_DEBUG_FETCH_KSTAT_IRQS, unsigned int)
 #define VCE_IOCTL_DEBUG_LOW_LATENCY_HACK  _IO(BCM_VCE_MAGIC, \
 		VCE_CMD_DEBUG_LOW_LATENCY_HACK)

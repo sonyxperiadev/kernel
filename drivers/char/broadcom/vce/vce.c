@@ -45,7 +45,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10117
+#define DRIVER_VERSION 10118
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -741,6 +741,9 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case VCE_IOCTL_DEBUG_LOW_LATENCY_HACK:
 			trace_ioctl_entry(VCE_IOCTL_DEBUG_LOW_LATENCY_HACK);
 			break;
+		case VTQ_IOCTL_MULTIPURPOSE_LOCK:
+			trace_ioctl_entry(VTQ_IOCTL_MULTIPURPOSE_LOCK);
+			break;
 		}
 	}
 
@@ -999,7 +1002,23 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			} else
 				mutex_unlock(&dev->low_latency_hack_mutex);
 		}
+		break;
 #endif
+
+	case VTQ_IOCTL_MULTIPURPOSE_LOCK:
+		{
+			struct vtq_multipurposelock_ioctldata *d;
+
+			d = (struct vtq_multipurposelock_ioctldata *)arg;
+
+			(void)d->flags;
+			vtqb_unlock_multi(dev->vtq_ctx,
+					d->locks_to_put);
+			ret = vtqb_lock_multi(dev->vtq_ctx,
+					d->locks_to_get);
+		}
+		break;
+
 
 	default:
 		{
@@ -1069,6 +1088,9 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		case VCE_IOCTL_DEBUG_LOW_LATENCY_HACK:
 			trace_ioctl_return(VCE_IOCTL_DEBUG_LOW_LATENCY_HACK);
+			break;
+		case VTQ_IOCTL_MULTIPURPOSE_LOCK:
+			trace_ioctl_return(VTQ_IOCTL_MULTIPURPOSE_LOCK);
 			break;
 		}
 	}

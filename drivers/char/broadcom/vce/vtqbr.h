@@ -63,5 +63,9 @@ extern vtq_status_t vtqb_queue_job(struct vtqb_context *ctx,
 		vtq_job_id_t *job_id_out);
 extern vtq_status_t vtqb_await_job(struct vtqb_context *ctx,
 		vtq_job_id_t job);
+extern void vtqb_unlock_multi(struct vtqb_context *ctx,
+		uint32_t locks_to_put);
+extern int vtqb_lock_multi(struct vtqb_context *ctx,
+		uint32_t locks_to_get);
 
 #endif

@@ -53,6 +53,10 @@ struct vtqb_context {
 	/* TODO: lose these arrays */
 	struct vtqb_task *taskmap[VTQ_MAX_TASKS];
 	vtq_job_id_t last_queued_job_id;
+
+	/* multi-lock -- TODO: separate this from VTQ (should be
+	 * separate API) */
+	int lockcount[15];
 };
 
 #define err_print(fmt, arg...) \
@@ -66,6 +70,7 @@ struct vtqb_context *vtqb_create_context(struct vtq_vce *vtq_pervce_state)
 {
 	struct vtq_context *ctx;
 	struct vtqb_context *wrapper;
+	int i;
 
 	ctx = vtq_create_context(vtq_pervce_state);
 	if (ctx == NULL) {
@@ -91,6 +96,9 @@ struct vtqb_context *vtqb_create_context(struct vtq_vce *vtq_pervce_state)
 	memset(&wrapper->imagemap[0], 0, sizeof(wrapper->imagemap));
 	wrapper->last_queued_job_id = vtq_get_read_pointer(ctx);
 
+	for (i = 0; i < 15; i++)
+		wrapper->lockcount[i] = 0;
+
 	/* success */
 	return wrapper;
 
@@ -109,6 +117,7 @@ void vtqb_destroy_context(struct vtqb_context *ctx)
 {
 	int s;
 	int distance;
+	int i;
 
 	mutex_lock(&ctx->mutex);
 	ctx->cleaned = 1;
@@ -155,6 +164,26 @@ void vtqb_destroy_context(struct vtqb_context *ctx)
 			ctx->imagelist->real_image);
 		kfree(ctx->imagelist);
 		ctx->imagelist = next;
+	}
+
+	/*
+	 * This "lock" stuff does not belong in the VTQ API, but the
+	 * higher-level client code to handle this properly does not
+	 * yet exist, and it is at least convenient to be here as we
+	 * can then leverage the goodness of this proxy layer to
+	 * handle the cleanup after a dying client.
+	 */
+
+	for (i = 0; i < 15; i++) {
+		while (ctx->lockcount[i] > 0) {
+			dbg_print("Cleaning up lock %d\n", i);
+			/* slightly inefficient to clear locks one at
+			 * a time, but, as this is a cleanup case
+			 * only, we don't need to care too much */
+			vtq_unlock_multi(ctx->real_context,
+					1<<i);
+			ctx->lockcount[i]--;
+		}
 	}
 
 	vtq_destroy_context(ctx->real_context);
@@ -504,6 +533,53 @@ int vtqb_await_job(struct vtqb_context *ctx, vtq_job_id_t job)
 	}
 
 	s = vtq_await_job(ctx->real_context, job);
+
+	return s;
+}
+
+/* locking */
+
+void vtqb_unlock_multi(struct vtqb_context *ctx,
+		uint32_t locks_to_put)
+{
+	int i;
+
+	mutex_lock(&ctx->mutex);
+	for (i = 0; i < 15; i++) {
+		if ((locks_to_put & (1<<i)) &&
+				(ctx->lockcount[i] == 0)) {
+			dbg_print("attempt to release unowned lock\n");
+			mutex_unlock(&ctx->mutex);
+			return;
+		}
+	}
+	for (i = 0; i < 15; i++) {
+		if (locks_to_put & (1<<i))
+			ctx->lockcount[i]--;
+	}
+	mutex_unlock(&ctx->mutex);
+
+	vtq_unlock_multi(ctx->real_context,
+			locks_to_put);
+}
+
+int vtqb_lock_multi(struct vtqb_context *ctx,
+		uint32_t locks_to_get)
+{
+	int i;
+	int s;
+
+	s = vtq_lock_multi(ctx->real_context,
+			locks_to_get);
+
+	if (s == 0) {
+		mutex_lock(&ctx->mutex);
+		for (i = 0; i < 15; i++) {
+			if (locks_to_get & (1<<i))
+				ctx->lockcount[i]++;
+		}
+		mutex_unlock(&ctx->mutex);
+	}
 
 	return s;
 }
