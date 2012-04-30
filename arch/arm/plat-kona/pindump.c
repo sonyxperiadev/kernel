@@ -32,7 +32,10 @@
 #include <linux/io.h>
 #include <linux/fs.h>
 #include <linux/seq_file.h>
+
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#endif
 
 #include <mach/pinmux.h>
 #include <mach/hardware.h>
@@ -112,10 +115,17 @@ module_init(proc_pindump_init);
 
 static int dtsdump_show(struct seq_file *m, void *v)
 {
+	#ifdef CONFIG_DEBUG_FS
 	int i, sel, gpio, gpio_cnt = 0;
 	uint32_t val, gpctr;
 	uint32_t dt_pinmux;
 	uint32_t dt_pinmux_nr = get_dts_pinmux_nr();
+
+	if(dt_pinmux_nr == 0)
+	{
+		seq_printf(m, "Config option CONFIG_KONA_ATAG_DT has been disabled\n");
+		return EINVAL;
+	}
 
 	/* print pin-mux */
 	for (i = 0; i < dt_pinmux_nr; i++) {
@@ -143,7 +153,7 @@ static int dtsdump_show(struct seq_file *m, void *v)
 		}
 	}
 	seq_printf(m, "Total Pin-mux configured as GPIO= %d\n", gpio_cnt);
-
+	#endif
 	return 0;
 
 }
@@ -162,24 +172,28 @@ static const struct file_operations default_file_operations = {
 
 static int __init debug_dtsdump_init(void)
 {
-
+#ifdef CONFIG_DEBUG_FS
 	root_entry = debugfs_create_dir("dtsdump", NULL);
-	if (!root_entry && IS_ERR(root_entry))
+	 if (IS_ERR_OR_NULL(root_entry)) 
 		return PTR_ERR(root_entry);
 
 	dump_dentry = debugfs_create_file("dtsdump", 0444, root_entry, NULL,
 					  &default_file_operations);
+	#endif
 	return 0;
 }
 
 static void __exit debug_dtsdump_exit(void)
 {
+	#ifdef CONFIG_DEBUG_FS
 	debugfs_remove(dump_dentry);
 	debugfs_remove(root_entry);
+	#endif
 }
 
 module_init(debug_dtsdump_init);
 module_exit(debug_dtsdump_exit);
+
 
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("Dumps the pinmux and GPIO configuration in proc fs.");
