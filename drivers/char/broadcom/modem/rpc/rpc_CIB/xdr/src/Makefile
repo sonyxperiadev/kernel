@@ -23,5 +23,4 @@ obj-y += \
 	xdr.o \
 	xdr_array.o \
 	xdr_mem.o \
-	xdr_float.o \
 	xdr_reference.o\

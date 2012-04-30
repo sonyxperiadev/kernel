@@ -354,6 +354,7 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 
 	bcm_kb->input_dev = input_allocate_device();
 	if (bcm_kb->input_dev == NULL) {
+		kfree(bcm_kb);
 		pr_err("%s(%s:%u)::Failed to allocate input device...\n",
 		       __FUNCTION__, __FILE__, __LINE__);
 		return -ENOMEM;
@@ -459,7 +460,6 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 	return ret;
 
 free_dev:
-	input_unregister_device(bcm_kb->input_dev);
 	input_free_device(bcm_kb->input_dev);
 
 free_irq:
@@ -485,7 +485,6 @@ static int __devexit bcm_keypad_remove(struct platform_device *pdev)
 
 	/* unregister everything */
 	input_unregister_device(bcm_kb->input_dev);
-	input_free_device(bcm_kb->input_dev);
 
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(keypad_root_dir);

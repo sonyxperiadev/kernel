@@ -24,8 +24,27 @@
 #include <linux/platform_device.h>
 #include <linux/broadcom/gps.h>
 #include <mach/pinmux.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/fs.h>
+#include <linux/list.h>
+#include <linux/i2c.h>
+#include <linux/jiffies.h>
+#include <linux/io.h>
+#include <linux/spinlock.h>
+#include <linux/version.h>
+#include <linux/workqueue.h>
+#include <linux/unistd.h>
+
 
 #define GPS_VERSION	"1.00"
+
+#define RX_SIZE					64
+#define TX_SIZE					32
+#define I2C_PACKET_SIZE			128
+#define I2C_MAX_SIZE			256
+#define RX_BUFFER_LENGTH		8192
+#define UDELAY_AFTER_I2C_READ	30
 
 int hostwake_gpio;
 
@@ -33,71 +52,150 @@ struct gps_irq {
 	wait_queue_head_t wait;
 	int irq;
 	int host_req_pin;
+	struct miscdevice misc;
+	struct i2c_client *client;
+
+	unsigned char wr_buffer[TX_SIZE][I2C_MAX_SIZE];
+
+	int wbuffer_rp;
+	int wbuffer_wp;
+	int txlength[TX_SIZE];
+
+	unsigned char rd_buffer[RX_SIZE][I2C_PACKET_SIZE];
+	unsigned char tmp[RX_BUFFER_LENGTH];
+
+	int rbuffer_rp;
+	int rbuffer_wp;
+	int rxlength[RX_SIZE];
+	int rxlength_rp;
+	int rxlength_wp;
+	struct work_struct read_task;
+	struct work_struct write_task;
 };
+
+int cnt;
+int cnt2;
+int zero_read;
+
+void write_workqueue(struct work_struct *work)
+{
+	struct gps_irq *ac_data =
+		container_of(work, struct gps_irq, write_task);
+	int ret;
+
+	--cnt2;
+	while (ac_data->wbuffer_rp != ac_data->wbuffer_wp)	{
+		/* printk(KERN_INFO "workqueue write %d %d %d\n",
+				  ac_data->txlength[ac_data->wbuffer_rp],
+				  ac_data->wbuffer_rp,ac_data->wbuffer_wp);*/
+
+		ret = i2c_master_send(ac_data->client,
+				ac_data->wr_buffer[ac_data->wbuffer_rp],
+				ac_data->txlength[ac_data->wbuffer_rp]);
+
+		ac_data->wbuffer_rp = (ac_data->wbuffer_rp+1) & (TX_SIZE-1);
+	}
+	/*printk(KERN_INFO "read_workqueue 3\n"); */
+}
+
+
+void read_workqueue(struct work_struct *work)
+{
+	struct gps_irq *ac_data =
+		container_of(work, struct gps_irq, read_task);
+	int i, counter, ret;
+	int kk;
+
+    /*printk(KERN_INFO "read_workqueue 1\n");*/
+
+	--cnt;
+	kk = 0;
+	counter = 0;
+	i = gpio_get_value(ac_data->host_req_pin);
+	if (i == 0)
+		return;
+
+	do	{
+		ret = i2c_master_recv(ac_data->client,
+			&ac_data->rd_buffer[ac_data->rbuffer_wp],
+			I2C_PACKET_SIZE);
+
+		if (ret != I2C_PACKET_SIZE) {
+			printk(KERN_INFO "GPS read error\n");
+			break;
+		}
+
+		if (ac_data->rd_buffer[ac_data->rbuffer_wp][0] == 0) {
+			++zero_read;
+			i = gpio_get_value(ac_data->host_req_pin);
+			continue;
+		}
+
+		/* printk(KERN_INFO "read_workqueue 1 %d %d\n",
+			counter,ac_data->rd_buffer[ac_data->rbuffer_wp][0]); */
+
+		ac_data->rbuffer_wp = (ac_data->rbuffer_wp+1) & (RX_SIZE-1);
+
+		if (ac_data->rbuffer_wp == ac_data->rbuffer_rp)
+			printk(KERN_INFO "read_workqueue overrun error\n");
+
+		udelay(UDELAY_AFTER_I2C_READ);
+		++counter;
+
+		i = gpio_get_value(ac_data->host_req_pin);
+	}  while ((i == 1) && (counter < RX_SIZE));
+
+	if (counter == RX_SIZE)
+		printk(KERN_INFO "GPS overrun error\n");
+	else {
+		ac_data->rxlength[ac_data->rxlength_wp] = counter;
+		ac_data->rxlength_wp = (ac_data->rxlength_wp+1) & (RX_SIZE-1);
+		wake_up_interruptible(&ac_data->wait);
+	}
+}
 
 irqreturn_t gps_irq_handler(int irq, void *dev_id)
 {
 	struct gps_irq *ac_data = dev_id;
 
-	wake_up_interruptible(&ac_data->wait);
+	schedule_work(&ac_data->read_task);
+	++cnt;
+
 	return IRQ_HANDLED;
 }
 
 static int gps_irq_open(struct inode *inode, struct file *filp)
 {
-	int ret;
-	int irq;
+	int ret = 0;
+	int i;
 
-	struct gps_irq *ac_data = kzalloc(sizeof(struct gps_irq), GFP_KERNEL);
-	struct pin_config GPIOSetup[] = {PIN_BSC_CFG(GPIO16, BSC2CLK, 0x20),
-		PIN_BSC_CFG(GPIO17, BSC2DAT, 0x20)};
+	struct gps_irq *ac_data = container_of(filp->private_data,
+							   struct gps_irq,
+							   misc);
 
 	filp->private_data = ac_data;
+	ac_data->rbuffer_rp = 0;
+	ac_data->rbuffer_wp = 0;
+	ac_data->rxlength_rp = 0;
+	ac_data->rxlength_wp = 0;
 
-	init_waitqueue_head(&ac_data->wait);
+	ac_data->wbuffer_rp = 0;
+	ac_data->wbuffer_wp = 0;
 
-	/*
-	 * Allocate the IRQ
-	 */
-	if (hostwake_gpio) {
-		gpio_request(hostwake_gpio, "gps_irq");
-		gpio_direction_input(hostwake_gpio);
-		irq = gpio_to_irq(hostwake_gpio);
-		if (irq < 0)
-			return -1;
-		ac_data->irq = irq;
-		ac_data->host_req_pin = hostwake_gpio;
+	cnt = 0;
+	cnt2 = 0;
 
-		ret = request_irq(irq, gps_irq_handler,
-				  IRQF_TRIGGER_RISING, "gps_interrupt",
-				  ac_data);
-	} else
-		return -1;
-
-#if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
-	pinmux_set_pin_config(&GPIOSetup[0]);
-	pinmux_set_pin_config(&GPIOSetup[1]);
-#endif
+	zero_read = 0;
 	return ret;
 }
 
 static int gps_irq_release(struct inode *inode, struct file *filp)
 {
-	struct gps_irq *ac_data = filp->private_data;
-	struct pin_config GPIOSetup[] = {PIN_BSC_CFG(GPIO16, GPIO16, 0x20),
-		PIN_BSC_CFG(GPIO17, GPIO17, 0x20)};
+	struct gps_irq *ac_data = container_of(filp->private_data,
+							   struct gps_irq,
+							   misc);
 
-	/*
-	 * Free the interrupt
-	 */
-	free_irq(ac_data->irq, ac_data);
-	kfree(ac_data);
-	filp->private_data = NULL;
-
-#if defined(CONFIG_MACH_RHEA_SS_AMAZING) || defined(CONFIG_MACH_RHEA_SS_LUCAS)
-	pinmux_set_pin_config(&GPIOSetup[0]);
-	pinmux_set_pin_config(&GPIOSetup[1]);
-#endif
+	printk(KERN_INFO "cnt=%d cnt2=%d zero read=%d\n", cnt, cnt2, zero_read);
 	return 0;
 }
 
@@ -107,7 +205,7 @@ static unsigned int gps_irq_poll(struct file *filp, poll_table * wait)
 
 	poll_wait(filp, &ac_data->wait, wait);
 
-	if (gpio_get_value(ac_data->host_req_pin))
+	if (ac_data->rxlength_wp != ac_data->rxlength_rp)
 		return POLLIN | POLLRDNORM;
 
 	return 0;
@@ -116,58 +214,173 @@ static unsigned int gps_irq_poll(struct file *filp, poll_table * wait)
 static ssize_t gps_irq_read(struct file *filp,
 			    char *buffer, size_t length, loff_t * offset)
 {
-	char gpio_value;
+	struct gps_irq *ac_data = filp->private_data;
+	int l = 0;
+	int i;
+
+	if (ac_data->rxlength_rp != ac_data->rxlength_wp) {
+		i = ac_data->rxlength[ac_data->rxlength_rp];
+		while (i) {
+			memcpy(ac_data->tmp+l,
+				&ac_data->rd_buffer[ac_data->rbuffer_rp],
+				I2C_PACKET_SIZE);
+
+			ac_data->rbuffer_rp =
+				(ac_data->rbuffer_rp+1) & (RX_SIZE-1);
+
+			l += I2C_PACKET_SIZE;
+			if (l >= (RX_BUFFER_LENGTH-I2C_PACKET_SIZE)) {
+				printk(KERN_INFO "gps_irq_read ran out of buffer %d\n"
+					, l);
+				ac_data->rxlength_rp =
+					(ac_data->rxlength_rp+1) & (RX_SIZE-1);
+
+				return 0;
+			}
+			--i;
+		}
+
+		ac_data->rxlength_rp = (ac_data->rxlength_rp+1) & (RX_SIZE-1);
+		copy_to_user(buffer, ac_data->tmp, l);
+		return l;
+	} else
+		return 0;
+}
+
+static ssize_t gps_irq_write(struct file *filp, const char __user *buffer,
+				   size_t length, loff_t *offset)
+{
+	char tmp[I2C_MAX_SIZE];
+	int ret;
+
 	struct gps_irq *ac_data = filp->private_data;
 
-	gpio_value = gpio_get_value(ac_data->host_req_pin);
-	put_user(gpio_value, buffer);
-	return 1;
+	if (length < I2C_MAX_SIZE) {
+		if (((ac_data->wbuffer_wp+1) & (TX_SIZE-1)) ==
+			ac_data->wbuffer_rp)
+			flush_scheduled_work();
+
+		if (!copy_from_user(&ac_data->wr_buffer[ac_data->wbuffer_wp],
+					buffer,
+					length)) {
+			/* printk(KERN_INFO "gps_irq_write %d %d %d\n",
+				length,
+				ac_data->wbuffer_rp,ac_data->wbuffer_wp);*/
+
+			ac_data->txlength[ac_data->wbuffer_wp] =
+				length;
+
+			ac_data->wbuffer_wp = (ac_data->wbuffer_wp+1)
+				& (TX_SIZE-1);
+
+			if (ac_data->wbuffer_wp == ac_data->wbuffer_rp)
+				printk(KERN_INFO "gps_irq_write overrun error\n");
+
+			schedule_work(&ac_data->write_task);
+			++cnt2;
+		} else
+			printk(KERN_INFO "gps_irq_write copy error\n");
+
+		return length;
+	} else
+		return 0;
+
 }
 
 static const struct file_operations gps_irq_fops = {
+	.owner = THIS_MODULE,
 	.open = gps_irq_open,
 	.release = gps_irq_release,
 	.poll = gps_irq_poll,
-	.read = gps_irq_read
+	.read = gps_irq_read,
+	.write = gps_irq_write
 };
 
-static struct miscdevice gps_irq_dev = {
-	.minor = MISC_DYNAMIC_MINOR,
-	.name = "gps_irq",
-	.fops = &gps_irq_fops
-};
-
-static int gps_hostwake_probe(struct platform_device *pdev)
+static int gps_hostwake_probe(struct i2c_client *client,
+						const struct i2c_device_id *id)
 {
 	struct gps_platform_data *pdata;
+	struct gps_irq *ac_data = kzalloc(sizeof(struct gps_irq), GFP_KERNEL);
+	int irq;
+	int ret;
 
-	pdata = pdev->dev.platform_data;
+	pdata = client->dev.platform_data;
 	hostwake_gpio = pdata->gpio_interrupt;
-	printk(KERN_INFO "GPS I2C IRQ is %d\n", hostwake_gpio);
+
+	init_waitqueue_head(&ac_data->wait);
+	gpio_request(hostwake_gpio, "gps_irq");
+	gpio_direction_input(hostwake_gpio);
+
+	irq = gpio_to_irq(hostwake_gpio);
+	if (irq < 0)
+		return -1;
+	ac_data->irq = irq;
+	ac_data->host_req_pin = hostwake_gpio;
+	ret = request_irq(irq, gps_irq_handler,
+		  IRQF_TRIGGER_RISING, "gps_interrupt",
+			  ac_data);
+
+	ac_data->client = client;
+
+	ac_data->misc.minor = MISC_DYNAMIC_MINOR;
+	ac_data->misc.name = "gps_irq";
+	ac_data->misc.fops = &gps_irq_fops;
+
+	ret = misc_register(&ac_data->misc);
+
+	ac_data->rbuffer_rp = 0;
+	ac_data->rbuffer_wp = 0;
+
+	/* request irq.  the irq is set whenever the chip has data available
+	 * for reading.  it is cleared when all data has been read.
+	 */
+	INIT_WORK(&ac_data->read_task, read_workqueue);
+	INIT_WORK(&ac_data->write_task, write_workqueue);
+
+	i2c_set_clientdata(client, ac_data);
 	return 0;
 }
 
-static struct platform_driver gps_hostwake_platform_driver = {
+static int gps_hostwake_remove(struct i2c_client *client)
+{
+	struct gps_platform_data *pdata;
+	struct gps_irq *ac_data;
+
+	pdata = client->dev.platform_data;
+
+	ac_data = i2c_get_clientdata(client);
+	destroy_workqueue(&ac_data->read_task);
+	destroy_workqueue(&ac_data->write_task);
+	free_irq(ac_data->irq, ac_data);
+	misc_deregister(&ac_data->misc);
+	kfree(ac_data);
+	return 0;
+}
+
+static const struct i2c_device_id gpsi2c_id[] = {
+	{"gpsi2c", 0},
+	{}
+};
+
+static struct i2c_driver gps_driver = {
+	.id_table = gpsi2c_id,
 	.probe = gps_hostwake_probe,
+	.remove = gps_hostwake_remove,
 	.driver = {
-		   .name = "gps-hostwake",
 		   .owner = THIS_MODULE,
+		   .name = "gps-i2c",
 		   },
 };
 
 static int gps_irq_init(void)
 {
 	printk(KERN_INFO "Generic GPS IRQ Driver v%s\n", GPS_VERSION);
-	hostwake_gpio = 0;
-	platform_driver_register(&gps_hostwake_platform_driver);
-
-	return misc_register(&gps_irq_dev);
+	return i2c_add_driver(&gps_driver);
 }
 
 static void gps_irq_exit(void)
 {
-	platform_driver_unregister(&gps_hostwake_platform_driver);
-	misc_deregister(&gps_irq_dev);
+	i2c_del_driver(&gps_driver);
 }
 
 module_init(gps_irq_init);

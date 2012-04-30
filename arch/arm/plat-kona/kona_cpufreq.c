@@ -48,11 +48,6 @@ struct kona_freq_map {
 	int opp;		/* Operating point eg: ECONOMY, NORMAL, TURBO */
 };
 
-#define DEFAULT_LIMIT	(-1)
-#define MIN_LIMIT	(0)
-#define CURRENT_FREQ	(1)
-#define MAX_LIMIT	(2)
-
 struct kona_cpufreq {
 	int pi_id;
 	struct pi_mgr_dfs_node dfs_node;
@@ -265,7 +260,8 @@ static int kona_cpufreq_exit(struct cpufreq_policy *policy)
 
 	return 0;
 }
-static int get_cpufreq_limit(unsigned int *val, int limit_type)
+
+int get_cpufreq_limit(unsigned int *val, int limit_type)
 {
 	int ret = 0;
 	int cpu = smp_processor_id();
@@ -291,7 +287,7 @@ static int get_cpufreq_limit(unsigned int *val, int limit_type)
 	return ret;
 }
 
-static int set_cpufreq_limit(unsigned int val, int limit_type)
+int set_cpufreq_limit(unsigned int val, int limit_type)
 {
 	struct cpufreq_policy *policy;
 	int cpu = smp_processor_id();
@@ -335,7 +331,7 @@ static struct kobj_attribute _name##_attr = {	\
 	ssize_t ret = -EINTR;					\
 	unsigned int val;					\
 	if (!get_cpufreq_limit(&val, lmt_typ))			\
-		ret = sprintf(buf, "%u\n", val);		\
+		ret = scnprintf(buf, PAGE_SIZE-1, "%u\n", val);		\
 	return ret;						\
 }
 
@@ -361,9 +357,10 @@ static ssize_t cpufreq_table_show(struct kobject *kobj,
 
 	num = pdata->num_freqs;
 	/*List in descending order*/
-	for (i = num - 1; i >= 0; i--)
-		count += sprintf(&buf[count], "%d ",
+	for (i = num - 1; i >= 0; i--) {
+		count += scnprintf(&buf[count], (PAGE_SIZE - count - 2), "%d ",
 				pdata->freq_tbl[i].cpu_freq);
+	}
 	count += sprintf(&buf[count], "\n");
 	return count;
 }

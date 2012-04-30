@@ -409,12 +409,13 @@ static int bcmpmu_chrgr_set_property(struct power_supply *ps,
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
-	  /* For SS QA test */
-	  if(propval->intval == 1 && (bcmpmu->em_reset))
-	    {
-	      bcmpmu->em_reset(bcmpmu);
-	    }
-	  break;
+		if ((propval->intval == 1) &&
+			(bcmpmu->em_reset))
+			bcmpmu->em_reset(bcmpmu);
+		else
+			ret = -EINVAL;
+
+		break;
 
 	default:
 		ret = -EINVAL;
@@ -603,14 +604,15 @@ static void bcmpmu_chrgr_isr(enum bcmpmu_irq irq, void *data)
 		pchrgr->usb_ov = 0;
 		break;
 	case PMU_IRQ_EOC:
-		if (pdata->piggyback_notify)
-			pdata->piggyback_notify(
-				BCMPMU_CHRGR_EVENT_EOC, 0);
-		blocking_notifier_call_chain(
-			&pchrgr->bcmpmu->event[BCMPMU_CHRGR_EVENT_EOC].
-			notifiers, BCMPMU_CHRGR_EVENT_EOC,
-			NULL);
-
+		if (pdata->support_hw_eoc) {
+			if (pdata->piggyback_notify)
+				pdata->piggyback_notify(
+					BCMPMU_CHRGR_EVENT_EOC, 0);
+			blocking_notifier_call_chain(
+				&pchrgr->bcmpmu->event[BCMPMU_CHRGR_EVENT_EOC].
+				notifiers, BCMPMU_CHRGR_EVENT_EOC,
+				NULL);
+		}
 		break;
 	default:
 		break;

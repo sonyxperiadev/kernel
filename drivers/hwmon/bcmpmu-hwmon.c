@@ -551,7 +551,7 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 				TestPinMux.func = adcsyngpiomux;
 				pinmux_set_pin_config(&TestPinMux);
 				gpio_request(adcsyngpio, "ADCSYN_GPIO");
-				gpio_direction_output(adcsyngpio, 0);
+				gpio_direction_output(adcsyngpio, 1);
 				/* Use TX for test */
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
 							     padc->
@@ -671,27 +671,21 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 			pr_hwmon(FLOW, "%s: start rtm adc\n", __func__);
 			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
 				/* Set ADC_SYNC to Low */
-				gpio_set_value(adcsyngpio, 1);
+				msleep(20);
+				gpio_set_value(adcsyngpio, 0);
 			}
 			if (wait_event_interruptible_timeout(padc->wait,
 							     req->ready,
 							     timeout) == 0) {
 				pr_hwmon(ERROR, "%s: RTM ADC timeout\n",
 					 __func__);
+				req->raw = 0;
 				ret = -ETIMEDOUT;
 			} else
 				ret = update_adc_result(padc, req);
 			padc->rtmreq = NULL;
 			pr_hwmon(FLOW, "%s: Wait/update_adc_result returned %d",
 				 __func__, ret);
-			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
-				/* Set ADC_SYNC to High */
-				gpio_set_value(adcsyngpio, 0);
-
-				/* Restore */
-				gpio_free(adcsyngpio);
-				pinmux_set_pin_config(&StoredPinmux);
-			}
 			/* Need to disable RTM to avoid interrrupts from
 			   ADC_SYN activated RTM reads */
 			padc->bcmpmu->write_dev_drct(padc->bcmpmu,
@@ -707,6 +701,14 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 						     padc->
 						     ctrlmap[PMU_ADC_RTM_MASK].
 						     mask);
+			if (req->tm == PMU_ADC_TM_RTM_SW_TEST) {
+				/* Set ADC_SYNC to High */
+				gpio_set_value(adcsyngpio, 1);
+
+				/* Restore */
+				gpio_free(adcsyngpio);
+				pinmux_set_pin_config(&StoredPinmux);
+			}
 			mutex_unlock(&padc->lock);
 			break;
 		case PMU_ADC_TM_MAX:
@@ -1245,14 +1247,14 @@ static DEVICE_ATTR(fg_status, 0644, fg_status_show, NULL);
 
 static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 {
-	int ret;
+	int ret = -ENOMEM;
 
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
-	struct bcmpmu_adc *padc;
-	struct bcmpmu_env *penv;
-	struct bcmpmu_fg *pfg;
-	int *envregs;
+	struct bcmpmu_adc *padc = NULL;
+	struct bcmpmu_env *penv = NULL;
+	struct bcmpmu_fg *pfg = NULL;
+	int *envregs = NULL;
 
 	pr_hwmon(INIT, "%s: called\n", __func__);
 
@@ -1302,14 +1304,13 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	penv = kzalloc(sizeof(struct bcmpmu_env), GFP_KERNEL);
 	if (penv == NULL) {
 		pr_hwmon(ERROR, "%s failed to alloc mem.\n", __func__);
-		return -ENOMEM;
+		goto err;
 	}
 	penv->envregmap = bcmpmu_get_envregmap(bcmpmu, &penv->env_size);
 	envregs = kzalloc((penv->env_size * sizeof(int)), GFP_KERNEL);
 	if (envregs == NULL) {
 		pr_hwmon(ERROR, "%s failed to alloc mem.\n", __func__);
-		kfree(penv);
-		return -ENOMEM;
+		goto err;
 	}
 	penv->bcmpmu = bcmpmu;
 	penv->env_regs = envregs;
@@ -1321,9 +1322,7 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	pfg = kzalloc(sizeof(struct bcmpmu_fg), GFP_KERNEL);
 	if (pfg == NULL) {
 		pr_hwmon(ERROR, "%s failed to alloc mem.\n", __func__);
-		kfree(penv);
-		kfree(envregs);
-		return -ENOMEM;
+		goto err;
 	}
 	pfg->bcmpmu = bcmpmu;
 	if (pdata->fg_smpl_rate)
@@ -1389,13 +1388,15 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	ret = device_create_file(&pdev->dev, &dev_attr_dbgmsk);
 	ret = device_create_file(&pdev->dev, &dev_attr_fg_status);
 #endif
-	return 0;
+	return ret;
 
 exit_remove_files:
 	sysfs_remove_group(&padc->hwmon_dev->kobj, &bcmpmu_hwmon_attr_group);
+err:
+	kfree(padc);
 	kfree(penv);
-	kfree(envregs);
 	kfree(pfg);
+	kfree(envregs);
 	return ret;
 }
 

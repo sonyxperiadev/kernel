@@ -47,6 +47,8 @@ Copyright 2009 - 2011  Broadcom Corporation
 
 #include "csl_voip.h"
 #include "csl_voif.h"
+#include "csl_dsp.h"
+#include "csl_ptt.h"
 #include "csl_caph_hwctrl.h"
 #include "audio_controller.h"
 #include "audio_trace.h"
@@ -74,6 +76,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 /* make sure not to exceed buffer size */
 #define INIT_CAPTURE_GLITCH_MS  20 /* in ms */
 
+#define PTT_FRAME_SIZE			320
 struct _ARM2SP_PLAYBACK_t {
 	CSL_ARM2SP_PLAYBACK_MODE_t playbackMode;
 	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode;
@@ -99,6 +102,12 @@ struct _VOIP_t {
 	Boolean isVoLTECall;
 };
 #define VOIP_t struct _VOIP_t
+
+struct _PTT_t {
+	void *pPttCBPrivate;
+	AUDIO_DRIVER_PttCB_t pPttDLCallback;
+};
+#define PTT_t struct _PTT_t
 
 struct _AUDDRV_VOIF_t {
 	UInt8 isRunning;
@@ -126,6 +135,7 @@ struct _AUDIO_DDRIVER_t {
 	ARM2SP_PLAYBACK_t arm2sp_config;
 	VOICE_CAPT_t voicecapt_config;
 	VOIP_t voip_config;
+	PTT_t  ptt_config;
 
 };
 #define AUDIO_DDRIVER_t struct _AUDIO_DDRIVER_t
@@ -135,6 +145,7 @@ static AUDIO_DDRIVER_t *audio_render_driver[CSL_CAPH_STREAM_TOTAL];
 /* 2 ARM2SP instances */
 static AUDIO_DDRIVER_t *audio_voice_driver[VORENDER_ARM2SP_INSTANCE_TOTAL];
 static AUDIO_DDRIVER_t *audio_voip_driver; /* init to NULL */
+static AUDIO_DDRIVER_t *audio_ptt_driver; /* init to NULL */
 static AUDIO_DDRIVER_t *audio_capture_driver; /* init to NULL */
 static int index = 1;
 static Boolean endOfBuffer = FALSE;
@@ -176,6 +187,11 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t *aud_drv,
 					    AUDIO_DRIVER_CTRL_t ctrl_cmd,
 					    void *pCtrlStruct);
+
+static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
+						    AUDIO_DRIVER_CTRL_t
+						    ctrl_cmd,
+						    void *pCtrlStruct);
 
 static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 						    AUDIO_DRIVER_CTRL_t
@@ -223,6 +239,8 @@ static Boolean VOIP_DumpUL_CB(
 	UInt32 amrMode	/* AMR codec mode of speech data */
 );
 static Boolean VOIP_FillDL_CB(UInt32 nFrames);
+
+static void Ptt_FillDL_CB(UInt32 buf_index, UInt32 ptt_flag, UInt32 int_rate);
 
 #ifdef VOLTE_SUPPORT
 static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf);
@@ -326,6 +344,11 @@ AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 		audio_voip_driver = aud_drv;
 		break;
 
+	case AUDIO_DRIVER_PTT:
+		audio_ptt_driver = aud_drv;
+		CSL_RegisterPTTStatusHandler(Ptt_FillDL_CB);
+		break;
+
 	default:
 		aTrace(LOG_AUDIO_DRIVER,
 				"AUDIO_DRIVER_Open::Unsupported driver\n");
@@ -365,6 +388,12 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 			audio_voip_driver = NULL;
 			kfree(aud_drv->tmp_buffer);
 			aud_drv->tmp_buffer = NULL;
+		}
+		break;
+	case AUDIO_DRIVER_PTT:
+		{
+			CSL_RegisterPTTStatusHandler(NULL);
+			audio_ptt_driver = NULL;
 		}
 		break;
 	default:
@@ -477,6 +506,13 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 		{
 			result_code =
 			    AUDIO_DRIVER_ProcessVoIFCmd(aud_drv, ctrl_cmd,
+							pCtrlStruct);
+		}
+		break;
+	case AUDIO_DRIVER_PTT:
+		{
+			result_code =
+			    AUDIO_DRIVER_ProcessPttCmd(aud_drv, ctrl_cmd,
 							pCtrlStruct);
 		}
 		break;
@@ -989,6 +1025,81 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 #endif
 	return result_code;
 }
+
+/**
+ *
+ * Function Name: AUDIO_DRIVER_ProcessPttCmd
+ *
+ * Description:   This function is used to process PTT commands
+ *
+ ***************************************************************************/
+static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
+					    AUDIO_DRIVER_CTRL_t ctrl_cmd,
+					    void *pCtrlStruct)
+{
+	Result_t result_code = RESULT_ERROR;
+
+	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_ProcessPttCmd::%d\n",
+			ctrl_cmd);
+
+	switch (ctrl_cmd) {
+	case AUDIO_DRIVER_START:
+	{
+		/* start the PTT */
+		VPRIPCMDQ_PTTEnable(1);
+		result_code = RESULT_OK;
+	}
+	break;
+	case AUDIO_DRIVER_STOP:
+	{
+		/* Stop the PTT */
+		VPRIPCMDQ_PTTEnable(0);
+		result_code = RESULT_OK;
+	}
+	break;
+	case AUDIO_DRIVER_SET_PTT_CB:
+	{
+
+		AUDIO_DRIVER_CallBackParams_t *pCbParams;
+		if (pCtrlStruct == NULL) {
+			aTrace(LOG_AUDIO_DRIVER,
+				"AUDIO_DRIVER_ProcessPttCmd::Invalid Ptr\n");
+			return result_code;
+		}
+		/* assign the call back */
+		pCbParams =
+		    (AUDIO_DRIVER_CallBackParams_t *) pCtrlStruct;
+		aud_drv->ptt_config.pPttDLCallback =
+		    pCbParams->pttDLCallback;
+		aud_drv->ptt_config.pPttCBPrivate = pCbParams->pPrivateData;
+		result_code = RESULT_OK;
+	}
+	break;
+	case AUDIO_DRIVER_GET_PTT_BUFFER:
+	{
+		UInt32 buf_index;
+		Int16  *buf_ptr;
+		if (pCtrlStruct == NULL) {
+			aTrace(LOG_AUDIO_DRIVER,
+				"AUDIO_DRIVER_ProcessPttCmd::Invalid Ptr\n");
+			return result_code;
+		}
+		/* get the buffer pointer */
+		buf_index = *((UInt32 *)pCtrlStruct);
+		buf_ptr = CSL_GetULPTTBuffer(buf_index);
+		*((UInt32 *)pCtrlStruct) = (UInt32) buf_ptr;
+		result_code = RESULT_OK;
+	}
+	break;
+	default:
+		aTrace(LOG_AUDIO_DRIVER,
+			"AUDIO_DRIVER_ProcessVoIPCmd::Unsupported command\n");
+	break;
+	}
+
+	return result_code;
+}
+
 
 /**
  *
@@ -2016,4 +2127,23 @@ static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf)
 	DJB_PutFrame(djbBuf);
 	return TRUE;
 }
+
 #endif
+static void Ptt_FillDL_CB(UInt32 buf_index, UInt32 ptt_flag, UInt32 int_rate)
+{
+	Int16  *buf_ptr;
+	if (buf_index != 0 && buf_index != 1) {
+		aTrace(LOG_AUDIO_DRIVER, "Ptt_FillDL_CB: invalid index\n");
+		return;
+	}
+	if (audio_ptt_driver == NULL) {
+		aTrace(LOG_AUDIO_DRIVER, "Ptt_FillDL_CB: spurious callback\n");
+		return;
+	}
+	aTrace(LOG_AUDIO_DRIVER, "Int rate-%ld\n", int_rate);
+	buf_ptr = CSL_GetULPTTBuffer(buf_index);
+	audio_ptt_driver->ptt_config.pPttDLCallback(
+			audio_ptt_driver->ptt_config.pPttCBPrivate , buf_ptr,
+			PTT_FRAME_SIZE);
+	return;
+}

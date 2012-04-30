@@ -470,11 +470,13 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTC_ALARM, bcmpmu_rtc_isr, rdata);
-	if (unlikely(ret))
+	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTC_ALARM,
+			bcmpmu_rtc_isr, rdata);
+	if (ret)
 		goto err;
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTC_SEC, bcmpmu_rtc_isr, rdata);
-	if (unlikely(ret))
+	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTC_SEC,
+			bcmpmu_rtc_isr, rdata);
+	if (ret)
 		goto err;
 
 #ifdef CONFIG_BCM_RTC_CAL

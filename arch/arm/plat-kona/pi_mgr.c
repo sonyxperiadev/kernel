@@ -89,6 +89,7 @@ enum {
 	PI_LOG_QOS = 1 << 5,
 	PI_LOG_DFS = 1 << 6,
 	PI_LOG_RESET = 1 << 7,
+	PI_LOG_OPP_CHANGE = 1 << 8,
 
 	/* Bit 15-31 are used to define the Domains. */
 };
@@ -914,8 +915,6 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
 		break;
 	}
 	new_val = check_dfs_limit(pi, pi_mgr_dfs_get_opp(dfs));
-	pi_dbg(pi->id, PI_LOG_DFS, "%s:pi_id= %d oldval = %d new val = %d\n",
-	       __func__, pi_id, old_val, new_val);
 
 	if (old_val != new_val) {
 		BUG_ON(new_val >= pi->num_opp);
@@ -924,6 +923,9 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
 		    && ((pi->flags & NO_POLICY_CHANGE) == 0)) {
 			pi_change_notify(pi->id, PI_NOTIFY_DFS_CHANGE, old_val,
 					 new_val, PI_PRECHANGE);
+			pi_dbg(pi->id, PI_LOG_OPP_CHANGE,
+				"%s:pi_id= %d old_opp = %d => new_opp = %d\n",
+				__func__, pi_id, old_val, new_val);
 #ifdef CONFIG_CHANGE_POLICY_FOR_DFS
 			pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy =
 			    pi->pi_opp[0].opp[new_val];

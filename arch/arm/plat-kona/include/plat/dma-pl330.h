@@ -89,8 +89,18 @@ enum dma_direction {
 #define PERIPHERAL_FLUSHP_START         (0x1 << FLUSHP_CTRL_START_SHIFT)
 #define FLUSHP_CTRL_END_SHIFT           10
 #define PERIPHERAL_FLUSHP_END           (0x1 << FLUSHP_CTRL_END_SHIFT)
-#define PERIPHERAL_FLUSHP_DEFAULT       (PERIPHERAL_FLUSHP_END | \
-                                          PERIPHERAL_FLUSHP_START)
+#define PERIPHERAL_FLUSHP_DEFAULT       PERIPHERAL_FLUSHP_END
+
+/* Unaligned transfer Handling for Peripheral requirements */
+
+/* Peripheral generate single xfer requests for last burst-unaligned data */
+#define DMA_PERI_END_SINGLE_REQ_MASK    11
+#define DMA_PERI_END_SINGLE_REQ         (0x1 << DMA_PERI_END_SINGLE_REQ_MASK)
+/* Peripheral always generate burst requests
+ * Support modified burst transfers for size lesser than a burst.
+ */
+#define DMA_PERI_REQ_ALWAYS_BURST_MASK 12
+#define DMA_PERI_REQ_ALWAYS_BURST      (0x1 << DMA_PERI_REQ_ALWAYS_BURST_MASK)
 
 
 enum pl330_xfer_status {
@@ -104,6 +114,13 @@ struct dma_transfer_list {
 	dma_addr_t dstaddr;	/* dst address */
 	unsigned int xfer_size;	/* In bytes */
 	struct list_head next;	/* Next item */
+};
+
+/* Multiple sg list  */
+struct dma_transfer_list_sg	{
+	struct scatterlist *sgl;
+	unsigned long sg_len;
+	struct list_head next;
 };
 
 typedef void (*pl330_xfer_callback_t) (void *private_data,
@@ -121,6 +138,9 @@ int dma_setup_transfer_sg(unsigned int chan,
 			  dma_addr_t hw_addr, int control, int cfg);
 int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 			    int ctrl, int cfg);
+int dma_setup_transfer_list_multi_sg(unsigned int chan,
+			struct list_head *head, dma_addr_t hw_addr,
+			int control, int cfg);
 int dma_start_transfer(unsigned int chan);
 int dma_stop_transfer(unsigned int chan);
 int dma_shutdown_all_chan(void);

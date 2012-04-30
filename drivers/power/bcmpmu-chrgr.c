@@ -49,6 +49,7 @@ struct bcmpmu_chrgr {
 	enum bcmpmu_usb_type_t usbtype;
 	int chrgr_online;
 	int usb_online;
+	int support_hw_eoc;
 };
 
 static char *usb_names[PMU_USB_TYPE_MAX] = {
@@ -526,10 +527,11 @@ static void bcmpmu_chrgr_isr(enum bcmpmu_irq irq, void *data)
 
 	switch (irq) {
 	case PMU_IRQ_EOC:
-		blocking_notifier_call_chain(
-			&pchrgr->bcmpmu->event[BCMPMU_CHRGR_EVENT_EOC].
-			notifiers, BCMPMU_CHRGR_EVENT_EOC,
-			NULL);
+		if (pchrgr->support_hw_eoc)
+			blocking_notifier_call_chain(
+				&pchrgr->bcmpmu->event[BCMPMU_CHRGR_EVENT_EOC].
+				notifiers, BCMPMU_CHRGR_EVENT_EOC,
+				NULL);
 		break;
 	default:
 		pr_chrgr(FLOW, "%s, interrupt not handled%d\n", __func__, irq);
@@ -543,12 +545,13 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_chrgr *pchrgr;
+	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
 
-	printk("bcmpmu_chrgr: chrgr_probe called \n") ;
+	pr_chrgr(INIT, "%s, called\n", __func__);
 
 	pchrgr = kzalloc(sizeof(struct bcmpmu_chrgr), GFP_KERNEL);
 	if (pchrgr == NULL) {
-		printk("bcmpmu_chrgr: failed to alloc mem.\n") ;
+		pr_chrgr(ERROR, "%s, failed at kzalloc.\n", __func__);
 		return -ENOMEM;
 	}
 	pchrgr->bcmpmu = bcmpmu;
@@ -567,9 +570,8 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	bcmpmu->ntcct_rise_set = bcmpmu_ntcct_rise_set;
 	bcmpmu->ntcct_fall_set = bcmpmu_ntcct_fall_set;
 
-
-
 	pchrgr->eoc = 0;
+	pchrgr->support_hw_eoc = pdata->support_hw_eoc;
 
 	pchrgr->chrgr.properties = bcmpmu_chrgr_props;
 	pchrgr->chrgr.num_properties = ARRAY_SIZE(bcmpmu_chrgr_props);

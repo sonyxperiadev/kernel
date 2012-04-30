@@ -1227,7 +1227,6 @@ static int hs_unreginputdev(struct mic_t *p)
 {
 	cancel_delayed_work_sync(&p->button_work);
 	input_unregister_device(p->headset_button_idev);
-	input_free_device(p->headset_button_idev);
 	return 0;
 }
 

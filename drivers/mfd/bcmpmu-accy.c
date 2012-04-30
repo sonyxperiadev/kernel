@@ -857,6 +857,8 @@ static void bc_detection(struct bcmpmu_accy *paccy)
 			 * power-cycling BCDLDO to get proper detection.
 			 */
 			enable_bc_clock(paccy, true);
+			mdelay(1);
+			reset_bc(paccy);
 			wake_lock(&paccy->wake_lock);
 			bcdldo_cycle_power(paccy);
 			paccy->retry_cnt = 0;

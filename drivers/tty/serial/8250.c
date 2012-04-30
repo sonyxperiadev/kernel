@@ -2639,7 +2639,7 @@ uart_fix_clock_rate(struct uart_port *port, struct ktermios *termios)
                    cbaud += 15;
         }
 
-        if(cbaud <= ARRAY_SIZE(uartclk_table))	{
+        if(cbaud < ARRAY_SIZE(uartclk_table))	{
             uart_clk = uartclk_table[cbaud];
         }
         else {

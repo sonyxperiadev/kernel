@@ -39,6 +39,7 @@
 #endif
 #include <linux/broadcom/ipc_server_ifc.h>
 #include <linux/broadcom/ipc_server_ioctl.h>
+#include <plat/kona_reset_reason.h>
 
 #include "lnx_support.h"
 #include "ipc_server_ccb.h"
@@ -256,14 +257,22 @@ void WaitForCpIpc(void *pSmBase)
 
 	IPC_DEBUG(DBG_WARN, "Waiting for CP IPC to init ...\n");
 
-	ret = IPC_IsCpIpcInit(pSmBase, IPC_AP_CPU);
-	while (ret == 0) {
+	/* Debug info to show is_ap_only_boot() status */
+	if (is_ap_only_boot())
+		IPC_DEBUG(DBG_WARN, "AP ONLY BOOT\n");
+	else
+		IPC_DEBUG(DBG_WARN, "NORMAL BOOT\n");
+
+	if (!is_ap_only_boot()) { /* Check for AP_BOOT or NORMAL_BOOT */
+	    ret = IPC_IsCpIpcInit(pSmBase, IPC_AP_CPU);
+	    while (ret == 0) {
 		/* Wait up to 2s for CP to init */
 		if (k++ > 200)
 			break;
 		else
 			msleep(10);
 		ret = IPC_IsCpIpcInit(pSmBase, IPC_AP_CPU);
+	    }
 	}
 
 	if (ret == 1) {
@@ -280,7 +289,9 @@ void WaitForCpIpc(void *pSmBase)
 			  "*                                                                  *\n");
 		IPC_DEBUG(DBG_ERROR,
 			  "********************************************************************\n");
-		BUG_ON(ret == 0);
+		/* SKIP reset is_ap_only_boot() non zero */
+		if (!is_ap_only_boot())
+			BUG_ON(ret == 0);
 	} else if (ret == -1) {
 		IPC_DEBUG(DBG_ERROR,
 			  "********************************************************************\n");

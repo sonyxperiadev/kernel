@@ -335,7 +335,7 @@ NUM_OF_GROUP_HW_SIDETONE];
 	UInt16 multiband_comp_g[DSP_SUBBAND_NLP_FREQ_BINS_WB];
 	UInt16 multiband_comp_p[DSP_SUBBAND_NLP_FREQ_BINS_WB];
 	UInt16 multiband_comp_dt_p[DSP_SUBBAND_NLP_FREQ_BINS_WB];
-	/*UInt16 multiband_comp_alpha[DSP_SUBBAND_NLP_FREQ_BINS_WB];*/
+	UInt16 multiband_comp_alpha[DSP_SUBBAND_NLP_FREQ_BINS_WB];
 	UInt16 multiband_comp_beta[DSP_SUBBAND_NLP_FREQ_BINS_WB];
 
 	/* software eq parameters */
