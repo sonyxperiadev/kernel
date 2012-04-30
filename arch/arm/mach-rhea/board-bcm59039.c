@@ -1269,11 +1269,11 @@ int bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 	*/
 
 	if (bcmpmu->rev_info.dig_rev >= BCM59039_CO_DIG_REV) {
-		bcmpmu->pdata->restart_en = 1;
+		bcmpmu->pdata->restart_en = 0;
 		bcmpmu->pdata->pok_restart_dly = POK_RESTRT_DLY_4SEC;
-		bcmpmu->pdata->pok_restart_deb = POK_RESTRT_DEB_4SEC;
+		bcmpmu->pdata->pok_restart_deb = POK_RESTRT_DEB_10SEC;
 		bcmpmu->pdata->pok_lock = 1;
-		bcmpmu->pdata->hard_reset_en = 0;
+		bcmpmu->pdata->hard_reset_en = 1;
 	} else {
 
 		memset(&csr_vlt_table_ss[A9_FREQ_800_MHZ][SR_TURBO_INX_START],
