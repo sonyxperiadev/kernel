@@ -260,6 +260,11 @@ static void csl_caph_hwctrl_closeAudioH(CSL_CAPH_DEVICE_e dev,
 static void csl_caph_hwctrl_ACIControl(void);
 
 static Boolean csl_caph_hwctrl_allPathsDisabled(void);
+#ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
+static int csl_caph_hwctrl_pathsEnabled(void);
+
+static void csl_caph_ControlForceHWSRC26Clock(bool enable);
+#endif
 static CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void);
 
 static void csl_caph_hwctrl_set_srcmixer_filter(
@@ -2547,7 +2552,6 @@ void csl_caph_ControlHWClock(Boolean enable)
 		enable156MClk = FALSE;
 		enable2P4MClk = FALSE;
 	}
-
 	aTrace(LOG_AUDIO_CSL,
 		"%s: action = %d,"
 		"result = %d\r\n", __func__, enable, sClkCurEnabled);
@@ -3128,6 +3132,23 @@ static Boolean csl_caph_hwctrl_allPathsDisabled(void)
 			"csl_caph_hwctrl_allPathDisabled: TRUE\r\n");
 	return TRUE;
 }
+#ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
+/****************************************************************************
+ *  Function Name: Boolean csl_caph_hwctrl_pathsEnabled(void)
+ *
+ *  Description: Count the number of paths enabled.
+ ****************************************************************************/
+static int csl_caph_hwctrl_pathsEnabled(void)
+{
+	UInt8 i = 0;
+	int pathCount = 0;
+	for (i = 0; i < MAX_AUDIO_PATH; i++) {
+		if (HWConfig_Table[i].pathID != 0)
+			pathCount++;
+	}
+	return pathCount;
+}
+#endif
 
 /************************************************************************
  ****************** START OF PUBLIC FUNCTIONS **************************
@@ -3624,6 +3645,9 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 {
 	CSL_CAPH_PathID pathID = config.pathID;
 	CSL_CAPH_HWConfig_Table_t *path;
+#ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
+	int pathCount = 0;
+#endif	
 
 	/*The use cases that don't allow 26M SRCMixer clock:
 	   - voice related.
@@ -3677,7 +3701,13 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		/*only start the path if it is not streaming with Memeory.*/
 		csl_caph_hwctrl_StartPath(config.pathID);
 	}
-
+#ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
+	pathCount = csl_caph_hwctrl_pathsEnabled();
+	if (pathCount < 2)
+		csl_caph_ControlForceHWSRC26Clock(TRUE);
+	else
+		csl_caph_ControlForceHWSRC26Clock(FALSE);
+#endif
 	return config.pathID;
 }
 
@@ -3691,6 +3721,9 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 {
 	int i, j;
 	CSL_CAPH_HWConfig_Table_t *path;
+#ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
+	int pathCount = 0;
+#endif	
 
 	aTrace(LOG_AUDIO_CSL,
 		"csl_caph_hwctrl_DisablePath:: streamID: %d, pathID %d.\r\n",
@@ -3752,6 +3785,14 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	csl_caph_hwctrl_RemovePathInTable(path->pathID);
 
 	/*shutdown all audio clock if no audio activity, at last*/
+#ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
+	pathCount = csl_caph_hwctrl_pathsEnabled();
+
+	if (pathCount < 2)
+		csl_caph_ControlForceHWSRC26Clock(TRUE);
+	else
+		csl_caph_ControlForceHWSRC26Clock(FALSE);
+#endif
 	if (csl_caph_hwctrl_allPathsDisabled() == TRUE)
 		csl_caph_ControlHWClock(FALSE);
 
@@ -5431,3 +5472,21 @@ void csl_caph_classG_ctrl(struct classg_G_ctrl *pClassG)
 		pClassG->HS_DS_DELAY, pClassG->HS_DS_LAG);
 	chal_audio_hspath_hs_supply_thres(lp_handle, pClassG->HS_DS_THRES);
 }
+#ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
+/****************************************************************************
+*
+*  Function Name: csl_caph_ControlForceHWSRC26Clock
+*
+*  Description: Set SRCMixer clock rate to use 26MHz
+*
+*****************************************************************************/
+static void csl_caph_ControlForceHWSRC26Clock(bool enable)
+{
+	if (clkIDCAPH[CLK_SRCMIXER]) {
+		if (enable)
+			clk_set_rate(clkIDCAPH[CLK_SRCMIXER], 26000000);
+		else
+			clk_set_rate(clkIDCAPH[CLK_SRCMIXER], 78000000);
+	}
+}
+#endif
