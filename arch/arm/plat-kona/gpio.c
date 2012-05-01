@@ -586,4 +586,4 @@ uint32_t get_dts_gpio_value(uint32_t index)
 {
 	return dt_gpio[index];
 }
-#endif
+#endif /* CONFIG_KONA_ATAG_DT */

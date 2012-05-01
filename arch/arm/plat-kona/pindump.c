@@ -162,7 +162,7 @@ static const struct file_operations default_file_operations = {
 static int __init debug_dtsdump_init(void)
 {
 	root_entry = debugfs_create_dir("dtsdump", NULL);
-	 if (IS_ERR_OR_NULL(root_entry)) 
+	if (!root_entry && IS_ERR(root_entry))
 		return PTR_ERR(root_entry);
 
 	dump_dentry = debugfs_create_file("dtsdump", 0444, root_entry, NULL,
@@ -178,7 +178,7 @@ static void __exit debug_dtsdump_exit(void)
 
 module_init(debug_dtsdump_init);
 module_exit(debug_dtsdump_exit);
-#endif
+#endif /* CONFIG_KONA_ATAG_DT */
 
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("Dumps the pinmux and GPIO configuration in proc fs.");

@@ -134,7 +134,9 @@ static inline int is_ball_valid(enum PIN_NAME name)
 int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio,
 		     enum PIN_FUNC *PF_gpio);
 
+#ifdef CONFIG_KONA_ATAG_DT
 uint32_t get_dts_pinmux_value(uint32_t index);
 uint32_t get_dts_pinmux_nr(void);
+#endif /* CONFIG_KONA_ATAG_DT */
 
 #endif /*__PINMUX_H_ */

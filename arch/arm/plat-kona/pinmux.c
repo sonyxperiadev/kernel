@@ -234,4 +234,4 @@ uint32_t get_dts_pinmux_value(uint32_t index)
 {
 	return dt_pinmux[index];
 }
-#endif
+#endif /* CONFIG_KONA_ATAG_DT */
