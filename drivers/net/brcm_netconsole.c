@@ -772,7 +772,7 @@ EXPORT_SYMBOL(brcm_get_netcon_status);
 void brcm_current_netcon_status(unsigned char status)
 {
 	unsigned long flags;
-	struct brcm_netconsole_target *nt;
+	static struct brcm_netconsole_target *nt;
 
 	pr_info("%s\n", __func__);
 
@@ -786,8 +786,7 @@ void brcm_current_netcon_status(unsigned char status)
 		list_add(&nt->list, &target_list);
 		spin_unlock_irqrestore(&target_list_lock, flags);
 	} else {
-		spin_lock_irqsave(&target_list_lock, flags);
-		list_for_each_entry(nt, &target_list, list) {
+		if (nt != NULL) {
 			pr_info("2. setup/cleanup netpoll\n");
 			brcm_netconsole_target_get(nt);
 #ifndef CONFIG_ARCH_ISLAND
@@ -797,9 +796,8 @@ void brcm_current_netcon_status(unsigned char status)
 				netpoll_cleanup(&nt->np);
 #endif
 			brcm_netconsole_target_put(nt);
-
-		}
-		spin_unlock_irqrestore(&target_list_lock, flags);
+		} else
+			pr_warn("nt is NULL!");
 	}
 
 	cur_rndis_status = status;
