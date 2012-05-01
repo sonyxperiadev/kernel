@@ -584,6 +584,6 @@ int __init kona_gpio_init(int num_bank)
 #ifdef CONFIG_KONA_ATAG_DT
 uint32_t get_dts_gpio_value(uint32_t index)
 {
-		return dt_gpio[index];
+	return dt_gpio[index];
 }
 #endif

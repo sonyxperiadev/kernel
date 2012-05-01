@@ -226,12 +226,12 @@ int pinmux_find_gpio(enum PIN_NAME name, unsigned *gpio, enum PIN_FUNC *PF_gpio)
 #ifdef CONFIG_KONA_ATAG_DT
 uint32_t get_dts_pinmux_nr()
 {
-		return dt_pinmux_nr;
+	return dt_pinmux_nr;
 }
 
 
 uint32_t get_dts_pinmux_value(uint32_t index)
 {
-			return dt_pinmux[index];
+	return dt_pinmux[index];
 }
 #endif
