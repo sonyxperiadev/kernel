@@ -1046,7 +1046,7 @@ static void no_gpio_accessory_remove_work_func(struct work_struct *work)
 
 static void __handle_accessory_inserted(struct mic_t *p)
 {
-	pr_debug(" ACCESSORY INSERTED \r\n");
+	pr_info(" ACCESSORY INSERTED \r\n");
 	pr_debug("0. Interrupt status before detecting hs_type 0x%x \r\n",
 		 readl(p->aci_base + ACI_INT_OFFSET));
 
@@ -1133,7 +1133,7 @@ static void __handle_accessory_inserted(struct mic_t *p)
 
 static void __handle_accessory_removed(struct mic_t *p)
 {
-	pr_debug(" ACCESSORY REMOVED \r\n");
+	pr_info(" ACCESSORY REMOVED \r\n");
 	if (p->hs_state == DISCONNECTED) {
 		pr_err("Accessory removed spurious event \r\n");
 	} else {
