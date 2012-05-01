@@ -702,10 +702,10 @@ static struct bcmpmu_adc_setting adc_setting = {
 
 static struct bcmpmu_charge_zone chrg_zone[] = {
 	{.tl = 253, .th = 333, .v = 3000, .fc = 10, .qc = 100},	/* Zone QC */
-	{.tl = 253, .th = 272, .v = 4100, .fc = 50, .qc = 0},	/* Zone LL */
-	{.tl = 273, .th = 282, .v = 4200, .fc = 50, .qc = 0},	/* Zone L */
+	{.tl = 253, .th = 272, .v = 3900, .fc = 50, .qc = 0},	/* Zone LL */
+	{.tl = 273, .th = 282, .v = 4100, .fc = 50, .qc = 0},	/* Zone L */
 	{.tl = 283, .th = 318, .v = 4200, .fc = 100, .qc = 0},	/* Zone N */
-	{.tl = 319, .th = 323, .v = 4200, .fc = 50, .qc = 0},	/* Zone H */
+	{.tl = 319, .th = 323, .v = 4100, .fc = 50, .qc = 0},	/* Zone H */
 	{.tl = 324, .th = 333, .v = 4100, .fc = 50, .qc = 0},	/* Zone HH */
 	{.tl = 253, .th = 333, .v = 0, .fc = 0, .qc = 0},	/* Zone OUT */
 };
