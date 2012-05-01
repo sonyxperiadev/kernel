@@ -162,7 +162,7 @@ static const struct file_operations default_file_operations = {
 static int __init debug_dtsdump_init(void)
 {
 	root_entry = debugfs_create_dir("dtsdump", NULL);
-	if (!root_entry && IS_ERR(root_entry))
+	 if (IS_ERR_OR_NULL(root_entry)) 
 		return PTR_ERR(root_entry);
 
 	dump_dentry = debugfs_create_file("dtsdump", 0444, root_entry, NULL,
