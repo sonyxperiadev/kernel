@@ -248,15 +248,13 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		if (Params[1] == 3) {
 			aTrace(LOG_AUDIO_DRIVER, "Params[2] = %d, "
 				"Params[3] %d, audio mode %d\n",
-				(int)Params[3], (int)Params[2],
+				(int)Params[2], (int)Params[3],
 				AUDCTRL_GetAudioMode());
 			if ((Params[2] == PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
 			|| (Params[2] == PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL)) {
 				if (AUDCTRL_GetAudioMode() == AUDIO_MODE_HEADSET
 					|| AUDCTRL_GetAudioMode() ==
 					AUDIO_MODE_TTY) {
-						extern_ihf_off();
-						extern_hs_on();
 						aTrace(LOG_AUDIO_DRIVER,
 						"%s ext headset "
 						"speaker gain = %d\n",
@@ -272,8 +270,6 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 						AUDIO_HS_RIGHT);
 				} else if (AUDCTRL_GetAudioMode() ==
 					AUDIO_MODE_SPEAKERPHONE) {
-					extern_hs_off();
-					extern_ihf_on();
 					aTrace(LOG_AUDIO_DRIVER, "%s ext IHF "
 						"speaker gain = %d\n",
 						__func__, gain);
@@ -285,7 +281,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			aTrace(LOG_AUDIO_DRIVER,
 				    "Params[2] = %d, Params[3] %d,"
 				     " audio mode %d\n",
-				     (int)Params[3], (int)Params[2],
+				     (int)Params[2], (int)Params[3],
 				     AUDCTRL_GetAudioMode());
 
 			if (Params[2] == PARAM_PMU_HIGH_GAIN_MODE_FLAG) {
