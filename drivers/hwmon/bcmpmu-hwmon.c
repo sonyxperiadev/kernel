@@ -39,6 +39,8 @@
 #define BCMPMU_PRINT_INIT (1U << 1)
 #define BCMPMU_PRINT_FLOW (1U << 2)
 #define BCMPMU_PRINT_DATA (1U << 3)
+#define BCMPMU_PRINT_WARNING (1U << 4)
+
 static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define pr_hwmon(debug_level, args...) \
 	do { \
@@ -677,7 +679,7 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 			if (wait_event_interruptible_timeout(padc->wait,
 							     req->ready,
 							     timeout) == 0) {
-				pr_hwmon(ERROR, "%s: RTM ADC timeout\n",
+				pr_hwmon(WARNING, "%s: RTM ADC timeout\n",
 					 __func__);
 				req->raw = 0;
 				ret = -ETIMEDOUT;
