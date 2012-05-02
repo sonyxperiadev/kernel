@@ -1,34 +1,26 @@
-/*
- *  Driver for 8250/16550-type serial ports
- *
- *  Based on drivers/char/serial.c, by Linus Torvalds, Theodore Ts'o.
- *
- *  Copyright (C) 2001 Russell King.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * A note about mapbase / membase
- *
- *  mapbase is the physical address of the IO port.
- *  membase is an 'ioremapped' cookie.
- */
-
 /*******************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+*  Driver for 8250/16550-type serial ports
 *
-*   @file   drivers/tty/serial/8250.c
+*  Based on drivers/char/serial.c, by Linus Torvalds, Theodore Ts'o.
 *
-* Unless you and Broadcom execute a separate written software license agreement
-* governing use of this software, this software is licensed to you under the
-* terms of the GNU General Public License version 2, available at
-* http://www.gnu.org/copyleft/gpl.html (the "GPL").
+*  Copyright (C) 2001 Russell King.
 *
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a license
-* other than the GPL, without Broadcom's express prior written consent.
+*  This program is free software; you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License, version 2, as
+*  published by the Free Software Foundation (the "GPL").
+*
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*  A copy of the GPL is available at http://www.broadcom.com/licenses/GPLv2.php
+*  or by writing to the Free Software Foundation, Inc., 59 Temple Place - Suite
+*  330, Boston, MA  02111-1307, USA.
+*
+*  A note about mapbase / membase
+*  mapbase is the physical address of the IO port.
+*  membase is an 'ioremapped' cookie.
 *******************************************************************************/
 
 #if defined(CONFIG_SERIAL_8250_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
