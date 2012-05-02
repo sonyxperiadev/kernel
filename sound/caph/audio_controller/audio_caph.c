@@ -1111,8 +1111,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			}
 
 			if (parm_vibra->duration != 0) {
-				ktime = ktime_set(0,
-				(parm_vibra->duration*1000000));
+				ktime = ktime_set(parm_vibra->duration/1000,
+				(parm_vibra->duration%1000)*1000000);
 
 				hrtimer_start(&hr_timer, ktime,
 					HRTIMER_MODE_REL);
