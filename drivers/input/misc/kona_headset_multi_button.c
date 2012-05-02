@@ -1134,41 +1134,41 @@ static void __handle_accessory_inserted(struct mic_t *p)
 static void __handle_accessory_removed(struct mic_t *p)
 {
 	pr_info(" ACCESSORY REMOVED \r\n");
-	if (p->hs_state == DISCONNECTED) {
-		pr_err("Accessory removed spurious event \r\n");
-	} else {
-		/* Inform userland about accessory removal */
-		p->hs_state = DISCONNECTED;
-		p->button_state = BUTTON_RELEASED;
+	/*
+	 * Now that we have moved the state handling to ISR, from the work
+	 * queue no need to check for the current state.
+	 */
+	/* Inform userland about accessory removal */
+	p->hs_state = DISCONNECTED;
+	p->button_state = BUTTON_RELEASED;
 #ifdef CONFIG_SWITCH
-		switch_set_state(&(p->sdev), p->hs_state);
+	switch_set_state(&(p->sdev), p->hs_state);
 #endif
-		/* Clear pending interrupts */
+	/* Clear pending interrupts */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+			    CHAL_ACI_BLOCK_COMP);
+
+	/* Disable the interrupts */
+	if (p->headset_pd->gpio_for_accessory_detection == 1) {
 		chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-				    CHAL_ACI_BLOCK_COMP);
+			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
+			    CHAL_ACI_BLOCK_COMP);
+	} else {
 
-		/* Disable the interrupts */
-		if (p->headset_pd->gpio_for_accessory_detection == 1) {
-			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
-				    CHAL_ACI_BLOCK_COMP);
-		} else {
+		/*
+		 * In case where Non GPIO based detection is used,
+		 * we'll disable the COMP1 that his used for button
+		 * press and COMP2 INV that is used for accessory
+		 * removal
+		 */
+		chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
+			    CHAL_ACI_BLOCK_COMP1);
 
-			/*
-			 * In case where Non GPIO based detection is used,
-			 * we'll disable the COMP1 that his used for button
-			 * press and COMP2 INV that is used for accessory
-			 * removal
-			 */
-			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
-				    CHAL_ACI_BLOCK_COMP1);
-
-			chal_aci_block_ctrl(p->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
-				    CHAL_ACI_BLOCK_COMP2_INV);
-		}
+		chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
+			    CHAL_ACI_BLOCK_COMP2_INV);
 	}
 }
 

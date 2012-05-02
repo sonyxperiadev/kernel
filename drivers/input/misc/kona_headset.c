@@ -831,38 +831,33 @@ static void accessory_detect_work_func(struct work_struct *work)
 
 	} else {
 		pr_info(" ACCESSORY REMOVED \r\n");
-		if (p->hs_state == DISCONNECTED) {
-			pr_err("Accessory removed spurious event \r\n");
-		} else {
+		/*
+		 * Turn OFF MIC Bias. In case of Headphone and
+		 * unsupported Headset, we would have turned it OFF
+		 * earlier
+		 */
+		if (p->hs_state == OPEN_CABLE || p->hs_state == HEADSET)
+			aci_interface_init_micbias_off(p);
 
-			/*
-			 * Turn OFF MIC Bias. In case of Headphone and
-			 * unsupported Headset, we would have turned it OFF
-			 * earlier
-			 */
-			if (p->hs_state == OPEN_CABLE || p->hs_state == HEADSET)
-				aci_interface_init_micbias_off(p);
-
-			/* Inform userland about accessory removal */
-			p->hs_state = DISCONNECTED;
-			p->button_state = BUTTON_RELEASED;
+		/* Inform userland about accessory removal */
+		p->hs_state = DISCONNECTED;
+		p->button_state = BUTTON_RELEASED;
 #ifdef CONFIG_SWITCH
-			switch_set_state(&(p->sdev), p->hs_state);
+		switch_set_state(&(p->sdev), p->hs_state);
 #endif
-			/* Clear pending interrupts */
-			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
-					    CHAL_ACI_BLOCK_COMP);
+		/* Clear pending interrupts */
+		chal_aci_block_ctrl(p->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+				    CHAL_ACI_BLOCK_COMP);
 
-			/* Disable the COMP2, COMP2 INV interrupt */
-			chal_aci_block_ctrl(p->aci_chal_hdl,
-					    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
-					    CHAL_ACI_BLOCK_COMP);
+		/* Disable the COMP2, COMP2 INV interrupt */
+		chal_aci_block_ctrl(p->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_DISABLE,
+				    CHAL_ACI_BLOCK_COMP);
 
-			if ((p->headset_pd->gpio_mic_gnd)
-			    && (gpio_is_valid(p->headset_pd->gpio_mic_gnd)))
-				gpio_set_value(p->headset_pd->gpio_mic_gnd, 0);
-		}
+		if ((p->headset_pd->gpio_mic_gnd)
+		    && (gpio_is_valid(p->headset_pd->gpio_mic_gnd)))
+			gpio_set_value(p->headset_pd->gpio_mic_gnd, 0);
 	}
 }
 
