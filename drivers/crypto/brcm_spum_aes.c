@@ -38,6 +38,9 @@
 #include <mach/rdb/brcm_rdb_spum_axi.h>
 #include "brcm_spum.h"
 
+/* Enable to run in PIO mode */
+/*#define SPUM_PIO_MODE*/
+
 #ifdef DEBUG
 static void hexdump(unsigned char *buf, unsigned int len)
 {
@@ -46,7 +49,7 @@ static void hexdump(unsigned char *buf, unsigned int len)
 }
 #endif
 
-#define WORD_ALIGNED	__attribute__((aligned(sizeof(u32))))
+#define DWORD_ALIGNED	__attribute__((aligned(sizeof(u64))))
 
 #define	FLAGS_BUSY	1
 #define SPUM_AES_QUEUE_LENGTH	10
@@ -85,59 +88,181 @@ struct spum_request_context {
 	u32 rx_len;
 	u32 tx_len;
 	u32 tx_offset;
-	u8 spum_hdr[512] WORD_ALIGNED;
+	struct scatterlist spum_in_cmd_hdr;
+	struct scatterlist spum_out_cmd_hdr;
+	struct scatterlist spum_in_cmd_tweak;
+	struct scatterlist spum_in_cmd_stat;
+	struct scatterlist spum_out_cmd_stat;
+	u8 spum_in_hdr[128] DWORD_ALIGNED;
+	u8 spum_out_hdr[128] DWORD_ALIGNED;
+	u8 spum_in_stat[4] DWORD_ALIGNED;
+	u8 spum_out_stat[4] DWORD_ALIGNED;
 };
 
 static int spum_aes_dma_init(struct spum_aes_device *dd);
 
-static int spum_aes_cpu_xfer(struct spum_aes_device *dd, u32 *in_buff,
-			     u32 *out_buff, u32 length)
+static unsigned int get_sg_list_len(struct scatterlist *sg)
+{
+	struct scatterlist *sgl = sg;
+	unsigned int cnt = 0;
+
+	while (sgl) {
+		sgl = sg_next(sgl);
+		cnt++;
+	}
+	return cnt;
+}
+
+static int spum_map_sgl(struct spum_aes_device *dd,
+		 struct scatterlist *sgl, enum dma_data_direction dir)
+{
+	struct scatterlist *sg = sgl;
+	int len = 0;
+
+	while (sg) {
+		if (!dma_map_sg(dd->dev, sg, 1, dir)) {
+			pr_err("%s: dma_map_sg() error\n", __func__);
+			len = -EINVAL;
+			break;
+		}
+		sg = sg_next(sg);
+		len++;
+	}
+
+	return len;
+}
+
+static void spum_unmap_sgl(struct spum_aes_device *dd,
+		 struct scatterlist *sgl, enum dma_data_direction dir)
+{
+	struct scatterlist *sg = sgl;
+
+	while (sg) {
+		dma_unmap_sg(dd->dev, sg, 1, dir);
+		sg = sg_next(sg);
+	}
+}
+
+#ifdef SPUM_PIO_MODE
+static int spum_aes_cpu_xfer(struct spum_aes_device *dd,
+		struct scatterlist *in_sg, struct scatterlist *out_sg)
 {
 	struct spum_request_context *rctx = ablkcipher_request_ctx(dd->req);
-	u32 i = 0, k = 0, status, out_fifo[32];
+	struct spum_hw_context *spum_cmd =
+				(struct spum_hw_context *)rctx->spum_in_hdr;
+	u32 status, in_len, out_len;
+	u32 *in_buff, *out_buff;
+	int ret = 0, i = 0, j = 0;
 
-	pr_debug("%s entry\n", __func__);
-
-	length /= sizeof(u32);
-	if (!out_buff)
-		out_buff = &out_fifo[0];
 
 	spum_dma_init(dd->io_axi_base);
 
-	while (i < length) {
-		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
-		if (status & SPUM_AXI_FIFO_STAT_IFIFO_RDY_MASK) {
-			writel(*in_buff++,
-			       dd->io_axi_base + SPUM_AXI_FIFO_IN_OFFSET);
+	if (((spum_cmd->crypto_mode&SPUM_CMD_CMODE_MASK) ==
+		SPUM_CRYPTO_MODE_XTS) && (out_sg == NULL)) {
+		/* Copy the parameter i to in FIFO */
+
+		in_buff = (u32 *)sg_virt(in_sg);
+		in_len = (in_sg->length+3)/sizeof(u32);
+
+		while (i < in_len) {
+			status = readl(dd->io_axi_base +
+				SPUM_AXI_FIFO_STAT_OFFSET);
+			if (status & SPUM_AXI_FIFO_STAT_IFIFO_RDY_MASK) {
+				writel(*in_buff++, dd->io_axi_base +
+					SPUM_AXI_FIFO_IN_OFFSET);
+				i++;
+			}
+		}
+
+		status = readl(dd->io_axi_base +
+			SPUM_AXI_FIFO_STAT_OFFSET);
+
+		while (status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) {
+			u32 out;
+			out = readl(dd->io_axi_base +
+				SPUM_AXI_FIFO_OUT_OFFSET);
+		status = readl(dd->io_axi_base +
+			SPUM_AXI_FIFO_STAT_OFFSET);
+		}
+		return ret;
+	}
+
+	in_buff = (u32 *)sg_virt(in_sg);
+	out_buff = (u32 *)sg_virt(out_sg);
+	in_len = (in_sg->length+3)/sizeof(u32);
+	out_len = (out_sg->length+3)/sizeof(u32);
+
+	while (j < out_len) {
+		status = readl(dd->io_axi_base +
+			SPUM_AXI_FIFO_STAT_OFFSET);
+		if ((status & SPUM_AXI_FIFO_STAT_IFIFO_RDY_MASK)
+			&& (i < in_len)) {
+			writel(*in_buff++, dd->io_axi_base +
+				SPUM_AXI_FIFO_IN_OFFSET);
 			i++;
+		}
+		if (status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) {
+				*out_buff++ = readl(dd->io_axi_base +
+				SPUM_AXI_FIFO_OUT_OFFSET);
+			j++;
 		}
 	}
 
-	while (!(readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET)
-		 & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK)) {
-		/* To satisfy checkpatch.pl. sighhh! */
+	return ret;
+}
+
+static int spum_aes_pio_xfer(struct spum_aes_device *dd)
+{
+	struct spum_request_context *rctx = ablkcipher_request_ctx(dd->req);
+	struct spum_hw_context *spum_cmd =
+				(struct spum_hw_context *)rctx->spum_in_hdr;
+	struct scatterlist *in_sg;
+	struct scatterlist *out_sg;
+
+	/* Process header */
+	spum_aes_cpu_xfer(dd, &rctx->spum_in_cmd_hdr,
+			&rctx->spum_out_cmd_hdr);
+
+	/* If xts mode then pass tweak value, Parameter i */
+	if ((spum_cmd->crypto_mode&SPUM_CMD_CMODE_MASK) ==
+		SPUM_CRYPTO_MODE_XTS) {
+		spum_aes_cpu_xfer(dd, &rctx->spum_in_cmd_tweak,
+				NULL);
 	}
 
-	status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
-	while ((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK)) {
-		out_buff[k] = readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
-		k++;
-		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
+	/* Process payload */
+	in_sg = dd->req->src;
+	out_sg = dd->req->dst;
+
+	while (in_sg && out_sg) {
+		spum_aes_cpu_xfer(dd, in_sg, out_sg);
+		in_sg = sg_next(in_sg);
+		out_sg = sg_next(out_sg);
 	}
 
-	rctx->rx_len -= length * sizeof(u32);
-	rctx->tx_len -= k * sizeof(u32);
-	rctx->tx_offset += k * sizeof(u32);
+	/* Process status word */
+	/*spum_aes_cpu_xfer(dd, &rctx->spum_in_cmd_stat,
+			&rctx->spum_out_cmd_stat);
+	*/
 
 	return 0;
 }
+
+#endif
 
 static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 {
 	struct spum_request_context *rctx = ablkcipher_request_ctx(dd->req);
 	struct ablkcipher_request *req = dd->req;
-	u32 cfg_rx, cfg_tx, rx_fifo, tx_fifo, length;
+	u32 cfg_rx, cfg_tx, rx_fifo, tx_fifo;
+	struct list_head head_in, head_out;
 	int err = -EINPROGRESS;
+	struct dma_transfer_list_sg lli_in_hdr, lli_in_tweak;
+	struct dma_transfer_list_sg lli_in_data, lli_in_stat;
+	struct dma_transfer_list_sg lli_out_hdr, lli_out_data, lli_out_stat;
+	struct spum_hw_context *spum_cmd =
+				(struct spum_hw_context *)rctx->spum_in_hdr;
+
 
 	pr_debug("%s: entry\n", __func__);
 
@@ -148,57 +273,88 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 
 	cfg_rx = DMA_CFG_SRC_ADDR_INCREMENT | DMA_CFG_DST_ADDR_FIXED |
 	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16 |
-	    PERIPHERAL_FLUSHP_END;
+	    PERIPHERAL_FLUSHP_END | DMA_PERI_REQ_ALWAYS_BURST;
 	cfg_tx = DMA_CFG_SRC_ADDR_FIXED | DMA_CFG_DST_ADDR_INCREMENT |
 	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16 |
-	    PERIPHERAL_FLUSHP_END;
+	    PERIPHERAL_FLUSHP_END | DMA_PERI_REQ_ALWAYS_BURST;
 
 	rx_fifo =
 	    (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_IN_OFFSET;
 	tx_fifo =
 	    (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_OUT_OFFSET;
 
-	if (!dma_map_sg(dd->dev, req->src, 1, DMA_TO_DEVICE)) {
-		pr_err("%s: dma_map_sg() error\n", __func__);
-		return -EINVAL;
+	INIT_LIST_HEAD(&head_in);
+	INIT_LIST_HEAD(&head_out);
+
+	/* DMA mapping of input/output sg list. */ /* TODO error condition. */
+	spum_map_sgl(dd, &rctx->spum_in_cmd_hdr, DMA_TO_DEVICE);
+	spum_map_sgl(dd, &rctx->spum_out_cmd_hdr, DMA_FROM_DEVICE);
+	spum_map_sgl(dd, &rctx->spum_in_cmd_stat, DMA_TO_DEVICE);
+	spum_map_sgl(dd, &rctx->spum_out_cmd_stat, DMA_FROM_DEVICE);
+	spum_map_sgl(dd, dd->req->src, DMA_TO_DEVICE);
+	spum_map_sgl(dd, dd->req->dst, DMA_FROM_DEVICE);
+
+	/* Create IN lli */
+	/* Header */
+	lli_in_hdr.sgl = &rctx->spum_in_cmd_hdr;
+	lli_in_hdr.sg_len = get_sg_list_len(&rctx->spum_in_cmd_hdr);
+	/* If XTS mode. Set tweak value. */
+	if ((spum_cmd->crypto_mode&SPUM_CMD_CMODE_MASK) ==
+					 SPUM_CRYPTO_MODE_XTS) {
+		lli_in_tweak.sgl = &rctx->spum_in_cmd_tweak;
+		lli_in_tweak.sg_len =
+			 get_sg_list_len(&rctx->spum_in_cmd_tweak);
 	}
+	/* Payload */
+	lli_in_data.sgl = dd->req->src;
+	lli_in_data.sg_len = get_sg_list_len(dd->req->src);
+	/* status */
+	lli_in_stat.sgl = &rctx->spum_in_cmd_stat;
+	lli_in_stat.sg_len = get_sg_list_len(&rctx->spum_in_cmd_stat);
 
-	if (!dma_map_sg(dd->dev, req->dst, 1, DMA_FROM_DEVICE)) {
-		pr_err("%s: dma_map_sg() error\n", __func__);
-		dma_unmap_sg(dd->dev, req->src, 1, DMA_TO_DEVICE);
-		return -EINVAL;
+	/* Create OUT lli */
+	/* Header */
+	lli_out_hdr.sgl = &rctx->spum_out_cmd_hdr;
+	lli_out_hdr.sg_len = get_sg_list_len(&rctx->spum_out_cmd_hdr);
+	/* Payload */
+	lli_out_data.sgl = dd->req->dst;
+	lli_out_data.sg_len = get_sg_list_len(dd->req->dst);
+	/* status */
+	lli_out_stat.sgl = &rctx->spum_out_cmd_stat;
+	lli_out_stat.sg_len = get_sg_list_len(&rctx->spum_out_cmd_stat);
+
+	/*  IN Linked list */
+	list_add_tail(&lli_in_hdr.next, &head_in);
+	if ((spum_cmd->crypto_mode&SPUM_CMD_CMODE_MASK) ==
+					 SPUM_CRYPTO_MODE_XTS) {
+		list_add_tail(&lli_in_tweak.next, &head_in);
 	}
+	list_add_tail(&lli_in_data.next, &head_in);
+	list_add_tail(&lli_in_stat.next, &head_in);
 
-	if ((sg_dma_address(req->src) % 8) || (sg_dma_address(req->dst) % 8))
-		pr_err("%s: src 0x%x dst 0x%x\n",
-		       __func__, sg_dma_address(req->src),
-		       sg_dma_address(req->dst));
-
-	length = min(rctx->rx_len, sg_dma_len(req->src));
-	length = min(length, sg_dma_len(req->dst));
+	/*  OUT Linked List */
+	list_add_tail(&lli_out_hdr.next, &head_out);
+	list_add_tail(&lli_out_data.next, &head_out);
+	list_add_tail(&lli_out_stat.next, &head_out);
 
 	/* Rx setup */
-	if (dma_setup_transfer
-	    (dd->rx_dma_chan, sg_dma_address(req->src), rx_fifo, length,
-	     DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI, cfg_rx)) {
+	if (dma_setup_transfer_list_multi_sg
+			(dd->rx_dma_chan, &head_in, rx_fifo,
+			DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI, cfg_rx)) {
 		pr_err("Rx dma_setup_transfer failed %d\n", err);
 		err = -EIO;
 		goto err_xfer;
 	}
 
 	/* Tx setup */
-	if (dma_setup_transfer
-	    (dd->tx_dma_chan, tx_fifo, sg_dma_address(req->dst), length,
-	     DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI, cfg_tx)) {
+	if (dma_setup_transfer_list_multi_sg
+		(dd->tx_dma_chan, &head_out, tx_fifo,
+		DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI, cfg_tx)) {
 		pr_err("Tx dma_setup_transfer failed %d\n", err);
 		err = -EIO;
 		goto err_xfer;
 	}
 
-	spum_dma_init(dd->io_axi_base);
-
-	rctx->rx_len -= sg_dma_len(req->src);
-	rctx->tx_len -= sg_dma_len(req->dst);
 	rctx->tx_offset += sg_dma_len(req->dst);
 
 	/* Rx start xfer */
@@ -216,12 +372,12 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 		goto err_xfer;
 	}
 
+	spum_dma_init(dd->io_axi_base);
+
 	pr_debug("%s: exit %d\n", __func__, err);
 	return err;
 
 err_xfer:
-	dma_unmap_sg(dd->dev, req->src, 1, DMA_TO_DEVICE);
-	dma_unmap_sg(dd->dev, req->dst, 1, DMA_FROM_DEVICE);
 	return err;
 }
 
@@ -239,53 +395,15 @@ static int spum_aes_finish_req(struct spum_aes_device *dd, int err)
 	return 0;
 }
 
-static int spum_aes_process_data(struct ablkcipher_request *req)
-{
-	struct spum_aes_context *aes_ctx = crypto_tfm_ctx(req->base.tfm);
-	struct spum_request_context *rctx = ablkcipher_request_ctx(req);
-	int ret = 0;
-
-	pr_debug("%s: entry\n", __func__);
-	if (rctx->rx_len <= 64)
-		spum_aes_cpu_xfer(aes_ctx->dd, sg_virt(req->src),
-				  (sg_virt(req->dst) + rctx->tx_offset),
-				  rctx->rx_len);
-
-	/* Do dma_xfer(data) */
-	if (rctx->rx_len)
-		ret = spum_aes_dma_xfer(aes_ctx->dd);
-
-	return ret;
-}
-
 static int spum_aes_process_req(struct ablkcipher_request *req)
 {
 	struct spum_aes_context *aes_ctx = crypto_tfm_ctx(req->base.tfm);
-	struct spum_request_context *rctx = ablkcipher_request_ctx(req);
-	struct spum_aes_device *dd = aes_ctx->dd;
-	struct spum_hw_context *spum_cmd =
-	    (struct spum_hw_context *)rctx->spum_hdr;
 	int ret = 0;
-
-	pr_debug("%s : entry\n", __func__);
-
-	/* Do cpu_xfer(hdr) */
-	if ((spum_cmd->crypto_mode & SPUM_CMD_CMODE_MASK) ==
-	    SPUM_CRYPTO_MODE_XTS) {
-		spum_aes_cpu_xfer(dd, (u32 *)rctx->spum_hdr, NULL,
-				  (rctx->rx_len - 16 - req->nbytes));
-		spum_aes_cpu_xfer(dd, (u32 *)req->info, NULL,
-				  crypto_ablkcipher_ivsize
-				  (crypto_ablkcipher_reqtfm(req)));
-	} else {
-		spum_aes_cpu_xfer(dd, (u32 *)rctx->spum_hdr, NULL,
-				  (rctx->rx_len - req->nbytes));
-	}
-	rctx->tx_offset = 0;
-
-	ret = spum_aes_process_data(req);
-
-	pr_debug("%s : exit %d\n", __func__, ret);
+#ifdef SPUM_PIO_MODE
+	ret = spum_aes_pio_xfer(aes_ctx->dd);
+#else
+	ret = spum_aes_dma_xfer(aes_ctx->dd);
+#endif
 
 	return ret;
 }
@@ -352,7 +470,7 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 	pr_debug("%s : entry\n", __func__);
 
 	memset((void *)&spum_hw_aes_ctx, 0, sizeof(spum_hw_aes_ctx));
-	memset((void *)&rctx->spum_hdr[0], 0, ARRAY_SIZE(rctx->spum_hdr));
+	memset((void *)&rctx->spum_in_hdr[0], 0, ARRAY_SIZE(rctx->spum_in_hdr));
 
 	spum_hw_aes_ctx.operation = op;
 	spum_hw_aes_ctx.crypto_algo = algo;
@@ -401,21 +519,33 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 		return -EPERM;
 	}
 
-	cmd_len_bytes = spum_format_command(&spum_hw_aes_ctx, rctx->spum_hdr);
-
+	cmd_len_bytes = spum_format_command(&spum_hw_aes_ctx,
+						rctx->spum_in_hdr);
 	rctx->rx_len =
 	    cmd_len_bytes + spum_hw_aes_ctx.data_attribute.data_length;
 	rctx->tx_len =
 	    SPUM_OUTPUT_HEADER_LEN +
 	    spum_hw_aes_ctx.data_attribute.data_length + SPUM_OUTPUT_STATUS_LEN;
 
-	pr_debug("%s : exit\n", __func__);
+	/* Preparing sg node for SPUM input/output message commands. */
+	sg_init_one(&rctx->spum_in_cmd_hdr, rctx->spum_in_hdr, cmd_len_bytes);
+	sg_init_one(&rctx->spum_out_cmd_hdr, rctx->spum_out_hdr,
+			 SPUM_OUTPUT_HEADER_LEN);
+	sg_init_one(&rctx->spum_in_cmd_stat, rctx->spum_in_stat, sizeof(u32));
+	sg_init_one(&rctx->spum_out_cmd_stat, rctx->spum_out_stat, sizeof(u32));
+
+	if (mode == SPUM_CRYPTO_MODE_XTS) {
+		sg_init_one(&rctx->spum_in_cmd_tweak, req->info,
+		crypto_ablkcipher_ivsize(crypto_ablkcipher_reqtfm(req)));
+	}
 
 	spin_lock_irqsave(&aes_ctx->dd->lock, flags);
 	ret = ablkcipher_enqueue_request(&aes_ctx->dd->queue, req);
 	spin_unlock_irqrestore(&aes_ctx->dd->lock, flags);
 
 	tasklet_hi_schedule(&aes_ctx->dd->queue_task);
+
+	pr_debug("%s : exit\n", __func__);
 
 	return ret;
 }
@@ -661,14 +791,12 @@ static void spum_aes_done_task(unsigned long data)
 	if (err)
 		pr_err("%s: Tx transfer stop failed %d\n", __func__, err);
 
-	dma_unmap_sg(dd->dev, dd->req->src, 1, DMA_TO_DEVICE);
-	dma_unmap_sg(dd->dev, dd->req->dst, 1, DMA_FROM_DEVICE);
-
-	if (rctx->rx_len && !err) {
-		pr_debug("%s: Still data left\n", __func__);
-		err = spum_aes_process_data(dd->req);
-		return;
-	}
+	spum_unmap_sgl(dd, &rctx->spum_in_cmd_hdr, DMA_TO_DEVICE);
+	spum_unmap_sgl(dd, &rctx->spum_out_cmd_hdr, DMA_FROM_DEVICE);
+	spum_unmap_sgl(dd, &rctx->spum_in_cmd_stat, DMA_TO_DEVICE);
+	spum_unmap_sgl(dd, &rctx->spum_out_cmd_stat, DMA_FROM_DEVICE);
+	spum_unmap_sgl(dd, dd->req->src, DMA_TO_DEVICE);
+	spum_unmap_sgl(dd, dd->req->dst, DMA_FROM_DEVICE);
 
 	spum_aes_finish_req(dd, err);
 
@@ -685,15 +813,13 @@ static void spum_aes_queue_task(unsigned long data)
 static void spum_aes_dma_callback(void *data, enum pl330_xfer_status status)
 {
 	struct spum_aes_device *dd = NULL;
-	u32 *dma_chan = (u32 *)data, qstatus;
+	u32 *dma_chan = (u32 *)data;
 
 	pr_debug("%s: entry %d\n", __func__, *dma_chan);
 
 	list_for_each_entry(dd, &spum_drv_list, list) {
 		break;
 	}
-
-	qstatus = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
 
 	if (*dma_chan == dd->rx_dma_chan)
 		return;
