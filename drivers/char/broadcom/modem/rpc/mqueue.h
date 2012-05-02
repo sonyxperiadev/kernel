@@ -29,7 +29,7 @@ typedef struct tag_MsgQueueHandle_t {
 	struct task_struct *mThread;
 	MsgQueueThreadFn_t mFn;
 	int valid;
-#ifdef CONFIG_HAS_WAKELOCK
+#if defined(CONFIG_HAS_WAKELOCK) && defined(MQUEUE_RPC_WAKELOCK)
 	struct wake_lock mq_wake_lock;
 #endif
 } MsgQueueHandle_t;

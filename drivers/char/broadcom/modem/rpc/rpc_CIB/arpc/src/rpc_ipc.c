@@ -40,6 +40,7 @@
 #endif
 
 #include "rpc_debug.h"
+#include "rpc_wakelock.h"
 
 #if defined(CNEON_COMMON) && defined(FUSE_APPS_PROCESSOR)
 #include "ostask.h"
@@ -132,8 +133,8 @@ static UInt32 rpcVer = BCM_RPC_VER;
 static MsgQueueHandle_t rpcMQhandle;
 #endif
 
-UInt32 recvRpcPkts = 0;
-UInt32 freeRpcPkts = 0;
+UInt32 recvRpcPkts;
+UInt32 freeRpcPkts;
 
 /*******************************************************************************
 			Packet Data API Implementation
@@ -466,7 +467,8 @@ RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle)
 	IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
 
 	RpcDbgUpdatePktState((int)dataBufHandle, PKT_STATE_PKT_FREE);
-
+	rpc_wake_lock_remove((UInt32)dataBufHandle);
+	freeRpcPkts++;
 	return RPC_RESULT_OK;
 }
 
@@ -497,10 +499,13 @@ RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 		       (int)dataBufHandle, (int)rpcClientID, (int)recvRpcPkts,
 		       (int)freeRpcPkts));
 		IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
-		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_PKT_FREE, rpcClientID, PKT_STATE_CID_FREE,  0, 0, 0xFF);
+		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_PKT_FREE,
+				rpcClientID, PKT_STATE_CID_FREE,  0, 0, 0xFF);
+		rpc_wake_lock_remove((UInt32)dataBufHandle);
 	} else {
 
-		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA, rpcClientID, PKT_STATE_CID_FREE,  0, 0, 0xFF);
+		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA,
+			rpcClientID, PKT_STATE_CID_FREE,  0, 0, 0xFF);
 
 		_DBG_(RPC_TRACE
 		      ("k:RPC_PACKET_FreeBufferEx h=%d, ref=%d, cid=%d\r\n",
@@ -641,6 +646,8 @@ static int rpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 
 		RpcDbgUpdatePktState((int)bufHandle, PKT_STATE_PKT_FREE);
 		IPC_FreeBuffer(bufHandle);
+		freeRpcPkts++;
+		rpc_wake_lock_remove((UInt32)bufHandle);
 	}
 
 	return 0;
@@ -657,13 +664,19 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 
 	if (type != -1) {
 		if (type != (Int8) INTERFACE_PACKET) {
+			UInt16 context = (pCid[3] << 8);
+			context |= pCid[2];
 			recvRpcPkts++;
+			rpc_wake_lock_add((UInt32)bufHandle);
 			_DBG_(RPC_TRACE
 			      ("RPC_BufferDelivery NEW h=%d type=%d rcvPkts=%d freePkts=%d\r\n",
 			       (int)bufHandle, (int)type, (int)recvRpcPkts,
 			       (int)freeRpcPkts));
 
-			RpcDbgUpdatePktStateEx((int)bufHandle, PKT_STATE_NEW, 0, PKT_STATE_NA,  0, 0, type);
+			RpcDbgUpdatePktStateEx((int)bufHandle, PKT_STATE_NEW,
+						0, PKT_STATE_NA,  0, 0, type);
+			HISTORY_RPC_LOG("IpcRx", pCid[0], (int)bufHandle, 
+							type, context );
 		}
 
 		if (ipcInfoList[(int)type].pktIndCb != NULL)
@@ -689,10 +702,11 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 						  (void *)bufHandle);
 				if (ret != 0)
 					_DBG_(RPC_TRACE
-					      ("RPC_BufferDelivery FAIL h=%d r=%d\n",
+					      ("RPC_BufferDelivery FAIL	h=%d r=%d\n",
 					       (int)bufHandle, ret));
 				else
-					RpcDbgUpdatePktState((int)bufHandle, PKT_STATE_RPC_POST);
+					RpcDbgUpdatePktState((int)bufHandle,
+					PKT_STATE_RPC_POST);
 
 
 				result = (ret == 0) ? RPC_RESULT_PENDING :
@@ -716,11 +730,13 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 
 	if (result != RPC_RESULT_PENDING) {
 		if (type != (Int8)INTERFACE_PACKET) {
-		    _DBG_(RPC_TRACE
+			_DBG_(RPC_TRACE
 			 ("k:IPC_FreeBuffer (No Handling) h=%d type=%d\r\n",
 			 (int)bufHandle, type));
-		    freeRpcPkts++;
-			RpcDbgUpdatePktState((int)bufHandle, PKT_STATE_PKT_FREE);
+			freeRpcPkts++;
+			RpcDbgUpdatePktState((int)bufHandle,
+					PKT_STATE_PKT_FREE);
+			rpc_wake_lock_remove((UInt32)bufHandle);
 		}
 		IPC_FreeBuffer(bufHandle);
 	}
@@ -987,7 +1003,8 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 	RPC_LOCK_INIT;
 
 #ifdef USE_KTHREAD_HANDOVER
-	ret = MsgQueueInit(&rpcMQhandle, rpcKthreadFn, "RpcKThread", 0, NULL,"krpc_wake_lock");
+	ret = MsgQueueInit(&rpcMQhandle, rpcKthreadFn,
+				"RpcKThread", 0, NULL, "krpc_wake_lock");
 
 	if (ret != 0) {
 		_DBG_(RPC_TRACE("RPC_IPC_Init: MsgQueueInit failed\n"));
@@ -995,5 +1012,8 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 		return RPC_RESULT_ERROR;
 	}
 #endif
+	rpc_wake_lock_init();
+	recvRpcPkts = 0;
+	freeRpcPkts = 0;
 	return RPC_RESULT_OK;
 }

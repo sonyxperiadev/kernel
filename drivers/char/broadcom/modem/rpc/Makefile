@@ -24,6 +24,7 @@ obj-$(CONFIG_BCM_MODEM) += \
 	rpc_CIB/ \
 	rpc_ipc_kernel.o	\
 	mqueue.o	\
+	rpc_wakelock.o	\
 	rpc_debug.o	\
 	rpc_client_msgs.o	\
 	fuse_rpc_main.o

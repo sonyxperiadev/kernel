@@ -332,8 +332,8 @@ int RpcDbgDumpPktState(RpcOutputContext_t *c, int *offset, int maxlimit)
 
 int RpcDbgDumpHdr(RpcOutputContext_t *c)
 {
-	RpcDbgDumpStr(c, "\nRcvCount=%d FreeCount=%d\n", (int)recvRpcPkts,
-		      (int)freeRpcPkts);
+	RpcDbgDumpStr(c, "\nRcvCount=%d FreeCount=%d ts=%u\n", (int)recvRpcPkts,
+		      (int)freeRpcPkts, jiffies_to_msecs(jiffies));
 
 	return 0;
 }
@@ -435,11 +435,7 @@ void RpcDumpTaskCallStack(RpcOutputContext_t *c, struct task_struct *t)
 		sched_show_task(t);
 }
 
-int RpcDbgDumpWakeLockStats(RpcOutputContext_t *c)
-{
-  //TBD
-  return 0;
-}
+
 
 
 

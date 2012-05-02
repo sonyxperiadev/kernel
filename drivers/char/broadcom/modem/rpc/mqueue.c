@@ -13,6 +13,8 @@
 *
 ****************************************************************************/
 
+/*#define MQUEUE_RPC_WAKELOCK*/
+
 #include <linux/sched.h>
 #include <linux/kernel.h>	/* printk() */
 #include <linux/fs.h>		/* everything... */
@@ -34,7 +36,7 @@
 #include <linux/fcntl.h>
 #include <asm/system.h>
 #include <linux/kthread.h>
-#ifdef CONFIG_HAS_WAKELOCK
+#if defined(CONFIG_HAS_WAKELOCK) && defined(MQUEUE_RPC_WAKELOCK)
 #include <linux/wakelock.h>
 #endif
 
@@ -91,7 +93,7 @@ int MsgQueueInit(MsgQueueHandle_t *mHandle, MsgQueueThreadFn_t fn,
 		ret = 0;
 	}
 
-#ifdef CONFIG_HAS_WAKELOCK
+#if defined(CONFIG_HAS_WAKELOCK) && defined(MQUEUE_RPC_WAKELOCK)
 	wake_lock_init(&(mHandle->mq_wake_lock), WAKE_LOCK_SUSPEND, wk_name);
 #endif
 
@@ -221,12 +223,12 @@ static int MQueueKthreadFn(void *param)
 				(int)mHandle, (int)data, ret));
 		if (ret == 0 && data)
 		{
-#ifdef CONFIG_HAS_WAKELOCK
+#if defined(CONFIG_HAS_WAKELOCK) && defined(MQUEUE_RPC_WAKELOCK)
 			wake_lock(&(mHandle->mq_wake_lock));
 #endif
 			/* Call actual handler */
 			mHandle->mFn(mHandle, data);
-#ifdef CONFIG_HAS_WAKELOCK
+#if defined(CONFIG_HAS_WAKELOCK) && defined(MQUEUE_RPC_WAKELOCK)
 			wake_unlock(&(mHandle->mq_wake_lock));
 #endif
 
@@ -252,7 +254,7 @@ int MsgQueueDeInit(MsgQueueHandle_t *mHandle)
 	if (mHandle->mThread)
 		MsgQueueAdd(mHandle, NULL);
 
-#ifdef CONFIG_HAS_WAKELOCK
+#if defined(CONFIG_HAS_WAKELOCK) && defined(MQUEUE_RPC_WAKELOCK)
 	wake_lock_destroy(&(mHandle->mq_wake_lock));
 #endif
 

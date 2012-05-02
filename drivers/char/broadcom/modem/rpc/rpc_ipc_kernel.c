@@ -346,7 +346,7 @@ static int rpcipc_open(struct inode *inode, struct file *file)
 
 static int rpcipc_release(struct inode *inode, struct file *file)
 {
-//	unsigned char k = 0;
+	unsigned char k = 0;
 	RpcIpc_PrivData_t *priv = file->private_data;
 
 	RPC_WRITE_LOCK;
@@ -354,7 +354,7 @@ static int rpcipc_release(struct inode *inode, struct file *file)
 	BUG_ON(!priv);
 
 	HISTORY_RPC_LOG("release", 0, 0, (int)file, (int)current->tgid);
-/*
+
 	for (k = 0; k < 0xFF; k++) {
 		RpcClientInfo_t *cInfo;
 		cInfo = gRpcClientList[k];
@@ -365,7 +365,7 @@ static int rpcipc_release(struct inode *inode, struct file *file)
 			SYS_ReleaseClientID(cInfo->clientId);
 		}
 	}
-*/
+
 
 	_DBG(RPC_TRACE("rpcipc_release ok\n"));
 
@@ -606,10 +606,14 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 
 	_DBG(RPC_TRACE
 	     ("k:RPC_ServerDispatchMsg cInfo=%x h=%d cid=%d elem=%x msgId=%x b=%d\n",
-	      (int)cInfo, (int)dataBufHandle, clientId, (int)elem, (int)msgId, broadcastMsg));
+	      (int)cInfo, (int)dataBufHandle, clientId, (int)elem, 
+		(int)msgId, broadcastMsg));
 
 	/* add to queue */
-	RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA, clientId, PKT_STATE_CID_DISPATCH,  0, (int)msgId, (UInt8)interfaceType);
+	RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA, clientId, 
+			PKT_STATE_CID_DISPATCH,  0, (int)msgId, (UInt8)interfaceType);
+	HISTORY_RPC_LOG("Dispatch", clientId, (int)dataBufHandle, 
+							interfaceType, msgId );
 	spin_lock_bh(&cInfo->mLock);
 	list_add_tail(&elem->mList, &cInfo->mQ.mList);
 	cInfo->availData = 1;
@@ -1621,6 +1625,7 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 		ioc_param.offset = IPC_SmOffset(ioc_param.bufInfo.buffer);
 
 		RpcDbgUpdatePktStateEx((int)Item->dataBufHandle, PKT_STATE_NA, ioc_param.clientId, PKT_STATE_CID_FETCH,  0, 0, 0xFF);
+		HISTORY_RPC_LOG_PKT("rxBufEx", ioc_param.clientId, (int)Item->dataBufHandle);
 
 		_DBG(RPC_TRACE
 		     ("k:handle_pkt_poll_ex_ioc cid=%d item=%x len=%d pkt=%d wait=%d\n", ioc_param.clientId, (int)Item,
