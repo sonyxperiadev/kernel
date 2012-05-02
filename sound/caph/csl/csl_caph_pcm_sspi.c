@@ -865,6 +865,10 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 				      || configTx->loopback_enable)
 		    ? TRUE : FALSE;
 		seq_conf.cs_activate = 1;
+
+		if (devCfg->mode == CSL_PCM_SLAVE_MODE)
+			seq_conf.cs_deactivate = 0;
+		else
 		seq_conf.cs_deactivate = 1;
 		seq_conf.pattern_mode = 0;
 		seq_conf.rep_cnt = 1;
