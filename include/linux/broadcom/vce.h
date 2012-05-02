@@ -213,7 +213,11 @@ struct vtq_awaitjob_ioctldata {
  */
 #define VTQ_LOCK_ARMLOCK 1
 /*
- * reserved
+ * Power Lock stops the unload/release work from running, which has
+ * the effect of keeping VCE powered on, but also reduces contention
+ * for the power mutex (currently, host_mutex, multipurposed) which
+ * will improve performance in the "fifo *just* goes empty, briefly"
+ * usecase.  Do *not* use this lock in any other usecase.
  */
 #define VTQ_LOCK_POWERLOCK 2
 

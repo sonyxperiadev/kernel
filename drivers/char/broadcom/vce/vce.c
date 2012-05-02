@@ -45,7 +45,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10118
+#define DRIVER_VERSION 10119
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -1258,9 +1258,16 @@ int vce_acquire(struct vce *vce,
 	BUG_ON(vce != &vce_state);
 	clock_on();
 
+	/*
+	 * Apparently we are required to do this unconditionally
+	 * whenever VCE is in use to workaround some hw issue.
+	 */
+	cpu_keepawake_inc();
+
 	/* Wait for the VCE HW to become available */
 	if (wait_for_completion_interruptible(&vce_state.acquire_sem)) {
 		err_print("Wait for VCE HW failed\n");
+		cpu_keepawake_dec();
 		clock_off();
 		module_put(THIS_MODULE);
 		return -ERESTARTSYS;
@@ -1276,6 +1283,7 @@ int vce_acquire(struct vce *vce,
 void vce_release(struct vce *vce)
 {
 	complete(&vce_state.acquire_sem);	/* VCE is up for grab */
+	cpu_keepawake_dec();
 	clock_off();
 	module_put(THIS_MODULE);
 }

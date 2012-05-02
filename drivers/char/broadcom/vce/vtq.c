@@ -228,9 +228,27 @@ struct vtq_vce {
 	vtq_job_id_t last_acknowledged_job;
 
 	/* General stuff below needs both mutexes or special gloves */
-	int on; /* yeah - I know it's wrong -- I'll fix
-				it. :) */
+
+	/* We have VCE acquired and the loaderkernel is loaded.  There
+	 * should probably be a separate "power" mutex for this, but
+	 * at the moment we rely on the host mutex only */
+	int on;
+	/* Power Lock Count is a refcount of people who have asked for
+	 * the loader not to be unloaded and the power to remain on
+	 * (See VTQ_LOCK_POWERLOCK) -- a non-zero here means that the
+	 * unload_work does not get scheduled when the FIFO runs dry
+	 * but is instead scheduled after the lock count drops to
+	 * zero */
+	int power_lock_count;
+	/* Unload work runs when the FIFO becomes empty (unless a
+	 * power lock is held) to unload the image and power down the
+	 * VCE and release the exclusive lock on it to permit others
+	 * to use VCE without VTQ */
 	struct work_struct unload_work;
+	/* Cleanup work runs after every job is complete.  It's
+	 * effectively a "bottom half" to the ISR, and is responsible
+	 * (generically) for calling callbacks associated with each
+	 * job. */
 	struct work_struct cleanup_work;
 
 	/*
@@ -429,9 +447,11 @@ static int proc_fifo_read(char *buffer, char **start, off_t offset,
 
 	len = snprintf(buffer, bytes, "%u/%u/%u\n"
 		"%d job(s) queued or running on VCE\n"
-		"%d job(s) completed but not acknowledged\n",
+		"%d job(s) completed but not acknowledged\n"
+		"%d power lock(s) held\n",
 		writeptr, readptr, ackptr,
-		writeptr - readptr, readptr - ackptr);
+			writeptr - readptr, readptr - ackptr,
+			v->power_lock_count);
 
 	/* TODO: be a proper read_proc function */
 	(void)start;
@@ -535,6 +555,7 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 	vtq_pervce_state->onloadhook_list_head = NULL;
 
 	vtq_pervce_state->on = 0;
+	vtq_pervce_state->power_lock_count = 0;
 
 	/* Initialize the work_t for unloading the loader after the
 	 * FIFO is empty */
@@ -595,6 +616,8 @@ void vtq_pervce_term(struct vtq_vce **vtq_pervce_state_ptr)
 		v->current_image = NULL;
 		err_print("Image still current upon unload\n");
 	}
+	if (v->power_lock_count != 0)
+		err_print("Power locks still held upon unload\n");
 	for (hook = v->onloadhook_list_head; hook != NULL;) {
 		struct vtq_hook_list_node *nexthook;
 		nexthook = hook->next;
@@ -664,12 +687,14 @@ int vtq_configure(struct vtq_vce *v,
 	unsigned int i;
 	size_t host_fifo_length;
 
-	/* We make the host fifo the same length, but this doesn't
-	 * have to be the case.  Longer would allow for lazier
-	 * cleanup.  There's no real known benefit to that, but we
-	 * keep the concept separate in case we change our minds
-	 * later. */
-	host_fifo_length = vce_fifo_length;
+	/* We make the host fifo longer than the VCE fifo length to
+	 * allow the cleanup work to run without blocking space in the
+	 * FIFO (as the entry is not removed from the host FIFO until
+	 * it is complete) We really ought to allow this to be
+	 * configured from the vtqinit but as the precise value is not
+	 * important (and the data structure is small) we can just
+	 * approximate and be generous here. */
+	host_fifo_length = vce_fifo_length * 4;
 	jobs = kmalloc(host_fifo_length * sizeof(*jobs),
 			GFP_KERNEL);
 	if (jobs == NULL) {
@@ -930,7 +955,8 @@ irqreturn_t vtq_isr(struct vtq_vce *vce)
 		wake_up_all(&vce->job_complete_wq);
 
 		schedule_work(&vce->cleanup_work);
-		if (their_rptr == vce->writeptr)
+		if (their_rptr == vce->writeptr &&
+				vce->power_lock_count == 0)
 			schedule_work(&vce->unload_work);
 	}
 	spin_unlock_irqrestore(&vce->vce_mutex, flags);
@@ -941,6 +967,26 @@ irqreturn_t vtq_isr(struct vtq_vce *vce)
 	}
 
 	return ret;
+}
+
+static int vtq_lock_unload(struct vtq_vce *v)
+{
+	mutex_lock(&v->host_mutex);
+	v->power_lock_count += 1;
+	mutex_unlock(&v->host_mutex);
+	return 0;
+}
+
+static void vtq_unlock_unload(struct vtq_vce *v)
+{
+	int need_to_run_unload_work;
+
+	mutex_lock(&v->host_mutex);
+	v->power_lock_count -= 1;
+	need_to_run_unload_work = (v->power_lock_count == 0);
+	mutex_unlock(&v->host_mutex);
+	if (need_to_run_unload_work)
+		schedule_work(&v->unload_work);
 }
 
 
@@ -1539,6 +1585,9 @@ void vtq_unlock_multi(struct vtq_context *ctx,
 
 	if (locks_to_put & VTQ_LOCK_PRIORITY_LOCK_MED)
 		vtq_util_priority_unlock(ctx->vce->priority_lock, 1);
+
+	if (locks_to_put & VTQ_LOCK_POWERLOCK)
+		vtq_unlock_unload(ctx->vce);
 }
 
 int vtq_lock_multi(struct vtq_context *ctx,
@@ -1565,6 +1614,13 @@ int vtq_lock_multi(struct vtq_context *ctx,
 		if (s)
 			goto lock_error;
 		locks_got |= VTQ_LOCK_PRIORITY_LOCK_MED;
+	}
+
+	if (locks_to_get & VTQ_LOCK_POWERLOCK) {
+		s = vtq_lock_unload(ctx->vce);
+		if (s)
+			goto lock_error;
+		locks_got |= VTQ_LOCK_POWERLOCK;
 	}
 
 	if (locks_to_get == locks_got)
