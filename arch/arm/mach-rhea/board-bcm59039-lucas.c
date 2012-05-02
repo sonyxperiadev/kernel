@@ -973,6 +973,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.pok_shtdwn_dly = -1,
 	.pok_restart_dly = -1,
 	.pok_restart_deb = -1,
+	.ihf_autoseq_dis = 1,
 	.pok_lock = 1, /*Keep ponkey locked by default*/
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 	.piggyback_chrg = 1,
