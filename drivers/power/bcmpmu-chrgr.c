@@ -50,6 +50,7 @@ struct bcmpmu_chrgr {
 	int chrgr_online;
 	int usb_online;
 	int support_hw_eoc;
+	int disable_charge;
 };
 
 static char *usb_names[PMU_USB_TYPE_MAX] = {
@@ -253,6 +254,10 @@ static int bcmpmu_set_eoc(struct bcmpmu *bcmpmu, int curr)
 static int bcmpmu_chrgr_usb_en(struct bcmpmu *bcmpmu, int en)
 {
 	int ret;
+	struct bcmpmu_chrgr *pchrgr = bcmpmu->chrgrinfo;
+	if (pchrgr->disable_charge == 1)
+		return 0;
+
 	if (en == 0)
 		ret = bcmpmu->write_dev(bcmpmu,
 			PMU_REG_CHRGR_USB_EN,
@@ -493,8 +498,13 @@ bcmpmu_dbg_usb_en(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t n)
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_chrgr *pchrgr = bcmpmu->chrgrinfo;
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	bcmpmu->chrgr_usb_en(bcmpmu, (int)val);
+	if (val == 0)
+		pchrgr->disable_charge = 1;
+	else
+		pchrgr->disable_charge = 0;
 	return n;
 }
 
