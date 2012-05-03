@@ -53,6 +53,11 @@ typedef void (*UserStatusCB_t) (UInt32 param1, UInt32 param2, UInt32 param3);
 typedef void (*AudioLogStatusCB_t) (UInt16 bufferIndex);
 typedef void (*AudioEnableDoneStatusCB_t) (UInt16 enabled_audio_path);
 typedef void (*PTTStatusCB_t) (UInt32 param1, UInt32 param2, UInt32 param3);
+/**
+ * @param enable = 0 = response to stop a call with external modem \BR
+ *               = 1 = response to start a call with external modem
+ */
+typedef void (*ExtModemCallDoneStatusCB_t)(UInt16 enable);
 
 
 extern AP_SharedMem_t *DSPDRV_GetPhysicalSharedMemoryAddress(void);
@@ -208,6 +213,23 @@ void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t
 *
 **********************************************************************/
 void CSL_RegisterPTTStatusHandler(PTTStatusCB_t callbackFunction);
+/*****************************************************************************/
+/**
+*
+* Function Name: CSL_RegisterExtModemCallDoneHandler
+*
+*   @note     CSL_RegisterExtModemCallDoneHandler registers the status handler
+*             routine to service the DSPs response to the
+*             csl_dsp_ext_modem_call. This function registered is called when
+*             AP receives VP_STATUS_EXT_MODEM_CALL_DONE reply from the DSP.
+*
+*   @param    callbackFunction  (in) callback function to register
+*
+*   @return   None
+*
+*****************************************************************************/
+void CSL_RegisterExtModemCallDoneHandler(
+		ExtModemCallDoneStatusCB_t callbackFunction);
 
 /*********************************************************************/
 /**

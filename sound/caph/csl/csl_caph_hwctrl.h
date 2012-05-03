@@ -252,6 +252,8 @@ enum __CAPH_LIST_t {
 	LIST_MIX_SW,
 	LIST_MIX_DMA,
 	LIST_SW_MIX_SW_DMA,
+	LIST_DMA16_CFIFO_SW_SPI_TX,
+	LIST_SPI_RX_SW_CFIFO_DMA15,
 	LIST_NUM,
 }; /*the order must match caph_block_list[] */
 #define CAPH_LIST_t enum __CAPH_LIST_t
@@ -454,6 +456,20 @@ Result_t csl_caph_hwctrl_PausePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 *  @return Result_t status
 *****************************************************************************/
 Result_t csl_caph_hwctrl_ResumePath(CSL_CAPH_HWCTRL_CONFIG_t config);
+
+#if defined(CONFIG_RHEA_PANDA)
+CSL_CAPH_PathID csl_caph_hwctrl_extModem_SetupPath(
+		CSL_CAPH_HWCTRL_CONFIG_t config);
+void csl_caph_hwctrl_extModem_StartPath(CSL_CAPH_PathID pathID_ul,
+		CSL_CAPH_PathID pathID_dl);
+void csl_caph_hwctrl_extModem_StopPath(CSL_CAPH_PathID pathID_ul,
+		CSL_CAPH_PathID pathID_dl);
+
+void csl_caph_hwctrl_extModem_StartPath_step2(CSL_CAPH_PathID pathID_ul,
+		CSL_CAPH_PathID pathID_dl);
+void csl_caph_hwctrl_extModem_StopPath_step1(CSL_CAPH_PathID pathID_ul,
+		CSL_CAPH_PathID pathID_dl);
+#endif
 
 /**
 *

@@ -174,6 +174,8 @@ enum CSL_CAPH_DEVICE_e {
 	CSL_CAPH_DEV_FM_RADIO,	/*FM Radio playback */
 	CSL_CAPH_DEV_MEMORY,	/*DDR memory */
 	CSL_CAPH_DEV_DSP_throughMEM,	/*DSP connection through shared mem */
+	CSL_CAPH_DEV_SSP_RX, /* SSP (PCM mode) to external modem chip */
+	CSL_CAPH_DEV_SSP_TX, /* SSP (PCM mode) to external modem chip */
 	CSL_CAPH_DEV_MAXNUM,
 };
 

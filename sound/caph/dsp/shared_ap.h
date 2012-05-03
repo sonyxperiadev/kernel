@@ -85,10 +85,26 @@
 
 #define NUM_OF_8K_SAMP_PER_INT0_INT     8       // Number of 8kHz samples per INT0 interrupt (for 16kHz * 2)
                                                 // Should be same as in hwregs.inc
-#define NUM_OF_48K_SAMP_PER_INT0_INT    (3*2*8)   // Number of 48kHz samples per INT0 interrupt (for 16kHz * 2)
-                                                // Should be same as in hwregs.inc
-#define NUM_OF_48K_SAMP_PER_LEG_INT0_INT (3)    // Number of 48kHz samples per INT0 interrupt (for 16kHz * 2)
-                                                // Should be same as in hwregs.inc
+#define NUM_OF_48K_SAMP_PER_INT0_INT    (3*2*8)
+ /* Number of 48kHz samples per INT0 interrupt (for 16kHz * 2)
+  Should be same as in hwregs.inc */
+
+#define NUM_OF_48K_SAMP_PER_LEG_INT0_INT (3)
+  /* Number of 48kHz samples per INT0 interrupt (for 16kHz * 2)
+  Should be same as in hwregs.inc */
+
+/**
+ * \defgroup External_Modem_Interface External_Modem_Interface
+ * @{
+ */
+/**
+ * Define for number of samples to be transferred per AADMAC interrupt for
+ * external modem
+ */
+#define NUM_OF_EXT_MODEM_INTERF_SAMP_PER_INT  160
+/**
+ * @}
+ */
 
 #define DJB_BUFFER_SIZE     			600		// 600 words ~ 300ms
 
@@ -1001,8 +1017,19 @@ typedef enum
     *                    0x24
     *  \par Description 
     *       This command enable/disable a call using an external modem.\BR
-    *       This should be sent before the enabling of any audio at the start 
-    *       of a call and after the disabling of any audio at the end of a call.
+    *
+    *       This should be sent before the enabling of any audio at the start
+    *       of a call and after the disabling of any audio at the end of a
+    *       call.\BR
+    *
+    *       For this command, the DSP enables the external modem interface, it
+    *       configures the AADMAC channels for speaker and mic external modem
+    *       paths and then sends a reply VP_STATUS_EXT_MODEM_CALL_DONE to the
+    *       AP with the same argument as the one passed in the command.\BR
+    *
+    *       The Audio clocks should not be shut-off before this command is
+    *       sent, and the response to it has been received from the DSP by
+    *       the AP.
     *
     *              @param  UInt16 arg0 = 1: Enable\BR
     *                                  = 0: Disable
@@ -1493,7 +1520,23 @@ typedef enum
 	    *              @param  None
 	    *
 	    */
-	VP_STATUS_PTT_UL_FRAME_DONE                 // 0x1C ( )
+	VP_STATUS_PTT_UL_FRAME_DONE,                 // 0x1C ( )
+	   /** \HR */
+	   /** \par Module
+	    *                    Audio
+	    *  \par Command Code
+	    *                    0x1D
+	    *  \par Description
+	    *       This reply from the DSP lets the AP know that the DSP has
+	    *       enabled the external modem interface, and configured the
+	    *       AADMAC channels for UL and DL external modem paths The
+	    *       argument is the same as the one passed in the command.
+	    *
+        *              @param  UInt16 arg0 = 1: Enable\BR
+        *                                  = 0: Disable
+ 	    *
+	    */
+	VP_STATUS_EXT_MODEM_CALL_DONE                // 0x1D (0=disable, 1=Enable)
 } VPStatus_t;
 /**
  * @}
@@ -2468,13 +2511,14 @@ EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_48K_SAMP_PER_INT0_INT]             
 /**
  * @}
  */
-
-EXTERN UInt32 shared_UNUSED[NUM_OF_48K_SAMP_PER_INT0_INT*2-1]                 AP_SHARED_SEC_GEN_AUDIO;
-EXTERN UInt16 shared_unused_extra                                             AP_SHARED_SEC_GEN_AUDIO;
-EXTERN UInt16 shared_unused_voif                                              AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
+
+EXTERN UInt32 shared_UNUSED[NUM_OF_48K_SAMP_PER_INT0_INT*2-1]           AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_unused_extra                                             AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_unused_voif                                              AP_SHARED_SEC_GEN_AUDIO;
+
 #ifdef FPGA_AUDIO_HUB_VERIFICATION
 EXTERN UInt16 shared_ap_test_flag_for_sspi4                                 AP_SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_dsp_test_flag_for_sspi4                                AP_SHARED_SEC_GEN_AUDIO;
@@ -2684,6 +2728,31 @@ EXTERN UInt16 shared_rhea_audio_test_select			           				AP_SHARED_SEC_DIAGN
 //#ifdef PTT_SUPPORT	
 EXTERN Int16 shared_PTT_UL_buffer[2][320]	           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  
 //#endif
+
+/** @addtogroup Shared_Audio_Buffers
+ * @{ */
+/**
+ * @addtogroup External_Modem_Interface
+ * @{
+ */
+/**
+ * DDR ping-pong buffer for UL data transfer between Rhea and External modem.
+ * This are the ping-pong buffers from which the AADMAC UL channel would take
+ * the data from to be transmitted to the External modem.
+ */
+EXTERN UInt32 shared_ext_ul_buf[2][NUM_OF_EXT_MODEM_INTERF_SAMP_PER_INT/2]       AP_SHARED_SEC_DIAGNOS;
+/**
+ * DDR ping-pong buffer for DL data transfer between Rhea and External modem.
+ * This are the ping-pong buffers to which the AADMAC DL channel would put
+ * the data received from the External modem.
+ */
+EXTERN UInt32 shared_ext_dl_buf[2][NUM_OF_EXT_MODEM_INTERF_SAMP_PER_INT/2]       AP_SHARED_SEC_DIAGNOS;
+/**
+ * @}
+ */
+/**
+ * @}
+ */
 
 EXTERN UInt32 NOT_USE_shared_memory_end                                     AP_SHARED_SEC_DIAGNOS;
 

@@ -382,4 +382,29 @@ void VPRIPCMDQ_VoLTE_Put_Frame(UInt16 timestamp, UInt8 codecType,
 ******************************************************************************/
 void VPRIPCMDQ_PTTEnable(UInt16 arg0);
 
+/*****************************************************************************/
+/**
+*
+* Function Name: csl_dsp_ext_modem_call
+*
+*   @note   This is the function to call before going into a call with an
+*           external modem or ending of a call using an external modem.\BR
+*           This should be sent before the enabling of any audio at the start
+*           of a call and after the disabling of any audio at the end of a call.
+*           The Audio clocks should not be shut-off before this function is
+*           called, and the response to it has been received from the DSP by
+*           the AP.\BR
+*          This function sends the VP_COMMAND_EXT_MODEM_CALL command to the DSP.
+*           For this command, the DSP enables the external modem interface, it
+*           configures the AADMAC channels for speaker and mic external modem
+*           paths and then sends a reply VP_STATUS_EXT_MODEM_CALL_DONE to the
+*           AP with the same argument as the one passed in the command.
+*
+*   @param  enable = 0 = stop a call with external modem\BR
+*                  = 1 = start a call with external modem
+*   @return None
+*
+*****************************************************************************/
+void csl_dsp_ext_modem_call(UInt16 enable);
+
 #endif /* _CSL_APCMD_H_ */

@@ -45,20 +45,23 @@
 #include <mach/rdb/brcm_rdb_cph_cfifo.h>
 #include <mach/rdb/brcm_rdb_cph_aadmac.h>
 #include <mach/rdb/brcm_rdb_ahintc.h>
+#include <mach/rdb/brcm_rdb_cph_ssasw.h>
+#include <mach/rdb/brcm_rdb_sspil.h>
 
 AP_SharedMem_t *vp_shared_mem;
 
-static VPUCaptureStatusCB_t VPUCaptureStatusHandler = NULL;
-static VPURenderStatusCB_t VPURenderStatusHandler = NULL;
-static USBStatusCB_t USBStatusHandler = NULL;
-static VOIFStatusCB_t VOIFStatusHandler = NULL;
-static ARM2SPRenderStatusCB_t ARM2SPRenderStatusHandler = NULL;
-static ARM2SP2RenderStatusCB_t ARM2SP2RenderStatusHandler = NULL;
-static MainAMRStatusCB_t MainAMRStatusHandler = NULL;
-static VoIPStatusCB_t VoIPStatusHandler = NULL;
-static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
-static AudioEnableDoneStatusCB_t AudioEnableDoneHandler = NULL;
-static PTTStatusCB_t PTTStatusHandler = NULL;
+static VPUCaptureStatusCB_t VPUCaptureStatusHandler;
+static VPURenderStatusCB_t VPURenderStatusHandler;
+static USBStatusCB_t USBStatusHandler;
+static VOIFStatusCB_t VOIFStatusHandler;
+static ARM2SPRenderStatusCB_t ARM2SPRenderStatusHandler;
+static ARM2SP2RenderStatusCB_t ARM2SP2RenderStatusHandler;
+static MainAMRStatusCB_t MainAMRStatusHandler;
+static VoIPStatusCB_t VoIPStatusHandler;
+static AudioLogStatusCB_t AudioLogStatusHandler;
+static AudioEnableDoneStatusCB_t AudioEnableDoneHandler;
+static PTTStatusCB_t PTTStatusHandler;
+static ExtModemCallDoneStatusCB_t ExtModemCallDoneHandler;
 
 static void Dump_Caph_regs(void);
 
@@ -326,6 +329,27 @@ void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t
 
 }
 
+/*****************************************************************************/
+/**
+*
+* Function Name: CSL_RegisterExtModemCallDoneHandler
+*
+*   @note     CSL_RegisterExtModemCallDoneHandler registers the status handler
+*             routine to service the DSPs response to the
+*             csl_dsp_ext_modem_call. This function registered is called when
+*             AP receives VP_STATUS_EXT_MODEM_CALL_DONE reply from the DSP.
+*
+*   @param    callbackFunction  (in) callback function to register
+*
+*   @return   None
+*
+*****************************************************************************/
+void CSL_RegisterExtModemCallDoneHandler(
+		ExtModemCallDoneStatusCB_t callbackFunction)
+{
+	ExtModemCallDoneHandler = callbackFunction;
+}
+
 /*********************************************************************/
 /**
 *
@@ -531,6 +555,20 @@ void AP_ProcessStatus(void)
 				break;
 			}
 
+		case VP_STATUS_EXT_MODEM_CALL_DONE:
+			{
+				if (ExtModemCallDoneHandler != NULL) {
+					ExtModemCallDoneHandler(
+						status_msg.arg0);
+				} else {
+					aTrace(LOG_AUDIO_DSP,
+					       "AP DSP Interrupt:"
+					       "ExtModemCallDoneHandler"
+					       "is not registered");
+				}
+				break;
+			}
+
 		case 0xec26:
 			{
 				volatile unsigned int *base_addr;
@@ -553,6 +591,7 @@ void AP_ProcessStatus(void)
 				if (ec26_err_count > 0) {
 					Dump_Caph_regs();
 					ec26_err_count = 0;
+					BUG();
 				}
 				break;
 			}
@@ -579,6 +618,7 @@ void AP_ProcessStatus(void)
 				if (ec27_err_count > 0) {
 					Dump_Caph_regs();
 					ec27_err_count = 0;
+					BUG();
 				}
 				break;
 			}
@@ -604,9 +644,51 @@ void AP_ProcessStatus(void)
 				if (ec28_err_count > 4) {
 					Dump_Caph_regs();
 					ec28_err_count = 0;
+					BUG();
 				}
 				break;
 			}
+		case 0xec2f:
+			{
+			volatile unsigned int *base_addr;
+			base_addr =
+				(volatile unsigned int *) (
+				HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR));
+			aError("ERROR: External Modem Interface DL AADMAC's");
+			aError("HW_RDY bit not set for right half when ");
+			aError("Ext Modem DL AADMAC int comes.\n");
+			aError("Ext_Mdm_DL_AADMAC_SR_1 = 0x%04x%04x\n",
+				status_msg.arg0, status_msg.arg1);
+			aError("Ext_Mdm_DL Expected SR1 = 0x%04x%04x\n",
+				status_msg.arg2, status_msg.arg3);
+			aError("CPH_AADMAC_CH15_AADMAC_SR_1= 0x%08x\n",
+				base_addr[
+				CPH_AADMAC_CH15_AADMAC_SR_1_OFFSET>>2]);
+			Dump_Caph_regs();
+			BUG();
+			break;
+			}
+		case 0xec30:
+			{
+			volatile unsigned int *base_addr;
+			base_addr =
+				(volatile unsigned int *) (
+				HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR));
+			aError("ERROR: External Modem Interface UL AADMAC's");
+			aError("HW_RDY bit not set for right half when ");
+			aError("Ext Modem DL AADMAC int comes.\n");
+			aError("Ext_Mdm_UL_AADMAC_SR_1 = 0x%04x%04x\n",
+				status_msg.arg0, status_msg.arg1);
+			aError("Ext_Mdm_UL Expected SR1 = 0x%04x%04x\n",
+				status_msg.arg2, status_msg.arg3);
+			aError("CPH_AADMAC_CH16_AADMAC_SR_1= 0x%08x\n",
+				base_addr[
+				CPH_AADMAC_CH16_AADMAC_SR_1_OFFSET>>2]);
+			Dump_Caph_regs();
+			BUG();
+			break;
+			}
+
 
 		default:
 			aTrace(LOG_AUDIO_DSP,
@@ -975,5 +1057,742 @@ void Dump_Caph_regs(void)
 	aError("AHINTC_ENABLE_DSP_ERR_2			= 0x%08x\n",
 		base_addr[AHINTC_ENABLE_DSP_ERR_2_OFFSET>>2]);
 
+	base_addr = ((volatile unsigned int *)
+		(HW_IO_PHYS_TO_VIRT(SSP4_BASE_ADDR)));
+	aError("SSPI4 Regs:\n");
+	aError("===========\n");
+	aError("SSPIL_DSP_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_CONFIGURATION_CHECK			= 0x%08x\n",
+		base_addr[SSPIL_DSP_CONFIGURATION_CHECK_OFFSET>>2]);
+	aError("SSPIL_DSP_INTERRUPT_STATUS			= 0x%08x\n",
+		base_addr[SSPIL_DSP_INTERRUPT_STATUS_OFFSET>>2]);
+	aError("SSPIL_DSP_INTERRUPT_ENABLE			= 0x%08x\n",
+		base_addr[SSPIL_DSP_INTERRUPT_ENABLE_OFFSET>>2]);
+	aError("SSPIL_DSP_DETAIL_INTERRUPT_STATUS		= 0x%08x\n",
+		base_addr[SSPIL_DSP_DETAIL_INTERRUPT_STATUS_OFFSET>>2]);
+	aError("SSPIL_DSP_INTERRUPT_ERROR_ENABLE		= 0x%08x\n",
+		base_addr[SSPIL_DSP_INTERRUPT_ERROR_ENABLE_OFFSET>>2]);
+	aError("SSPIL_DSP_SCHEDULER_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_SCHEDULER_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_SEQUENCE_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_SEQUENCE_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_STATE_MACHINE_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_STATE_MACHINE_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_STATE_MACHINE_TIMEOUT			= 0x%08x\n",
+		base_addr[SSPIL_DSP_STATE_MACHINE_TIMEOUT_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFO_SHARING			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFO_SHARING_OFFSET>>2]);
+	aError("SSPIL_DSP_CLKDIV			= 0x%08x\n",
+		base_addr[SSPIL_DSP_CLKDIV_OFFSET>>2]);
+	aError("SSPIL_DSP_CLKGEN			= 0x%08x\n",
+		base_addr[SSPIL_DSP_CLKGEN_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_0_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_0_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_0_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_0_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_0_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_0_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_0_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_0_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_1_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_1_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_1_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_1_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_1_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_1_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_1_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_1_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_2_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_2_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_2_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_2_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_2_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_2_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_2_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_2_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_3_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_3_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_3_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_3_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_3_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_3_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_3_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_3_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_DMA_RX0_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_DMA_RX0_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_DMA_TX0_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_DMA_TX0_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_DMA_RX1_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_DMA_RX1_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_DMA_TX1_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_DMA_TX1_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_0_PIO_THRESHOLD	= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_0_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_1_PIO_THRESHOLD	= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_1_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_2_PIO_THRESHOLD	= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_2_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFOTX_3_PIO_THRESHOLD	= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFOTX_3_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_0_PIO_THRESHOLD	= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_0_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_1_PIO_THRESHOLD	= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_1_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_2_PIO_THRESHOLD	= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_2_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFORX_3_PIO_THRESHOLD	= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFORX_3_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_0_SCLK			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_0_SCLK_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_0_CS			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_0_CS_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_0_TX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_0_TX_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_0_TXOEN			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_0_TXOEN_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_1_SCLK			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_1_SCLK_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_1_CS			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_1_CS_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_1_TX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_1_TX_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_1_TXOEN			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_1_TXOEN_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_2_SCLK			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_2_SCLK_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_2_CS			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_2_CS_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_2_TX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_2_TX_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_2_TXOEN			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_2_TXOEN_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_3_SCLK			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_3_SCLK_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_3_CS			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_3_CS_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_3_TX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_3_TX_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_3_TXOEN			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_3_TXOEN_OFFSET>>2]);
+	aError("SSPIL_DSP_TASK0_DESC_MSB			= 0x%08x\n",
+		base_addr[SSPIL_DSP_TASK0_DESC_MSB_OFFSET>>2]);
+	aError("SSPIL_DSP_TASK0_DESC_LSB			= 0x%08x\n",
+		base_addr[SSPIL_DSP_TASK0_DESC_LSB_OFFSET>>2]);
+	aError("SSPIL_DSP_TASK1_DESC_MSB			= 0x%08x\n",
+		base_addr[SSPIL_DSP_TASK1_DESC_MSB_OFFSET>>2]);
+	aError("SSPIL_DSP_TASK1_DESC_LSB			= 0x%08x\n",
+		base_addr[SSPIL_DSP_TASK1_DESC_LSB_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_0_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_0_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_1_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_1_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_2_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_2_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_PATTERN_3_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DSP_PATTERN_3_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DSP_SEQUENCE_0			= 0x%08x\n",
+		base_addr[SSPIL_DSP_SEQUENCE_0_OFFSET>>2]);
+	aError("SSPIL_DSP_SEQUENCE_1			= 0x%08x\n",
+		base_addr[SSPIL_DSP_SEQUENCE_1_OFFSET>>2]);
+	aError("SSPIL_DSP_SEQUENCE_2			= 0x%08x\n",
+		base_addr[SSPIL_DSP_SEQUENCE_2_OFFSET>>2]);
+	aError("SSPIL_DSP_SEQUENCE_3			= 0x%08x\n",
+		base_addr[SSPIL_DSP_SEQUENCE_3_OFFSET>>2]);
+	aError("SSPIL_DSP_SEQUENCE_4			= 0x%08x\n",
+		base_addr[SSPIL_DSP_SEQUENCE_4_OFFSET>>2]);
+	aError("SSPIL_DSP_SEQUENCE_5			= 0x%08x\n",
+		base_addr[SSPIL_DSP_SEQUENCE_5_OFFSET>>2]);
+	aError("SSPIL_DSP_SEQUENCE_6			= 0x%08x\n",
+		base_addr[SSPIL_DSP_SEQUENCE_6_OFFSET>>2]);
+	aError("SSPIL_DSP_SEQUENCE_7			= 0x%08x\n",
+		base_addr[SSPIL_DSP_SEQUENCE_7_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME0_CS_IDLE_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME0_CS_IDLE_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME0_SCLK_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME0_SCLK_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME0_TX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME0_TX_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME0_RX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME0_RX_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME1_CS_IDLE_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME1_CS_IDLE_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME1_SCLK_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME1_SCLK_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME1_TX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME1_TX_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME1_RX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME1_RX_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME2_CS_IDLE_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME2_CS_IDLE_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME2_SCLK_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME2_SCLK_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME2_TX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME2_TX_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME2_RX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME2_RX_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME3_CS_IDLE_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME3_CS_IDLE_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME3_SCLK_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME3_SCLK_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME3_TX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME3_TX_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FRAME3_RX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FRAME3_RX_DEF_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFO_ENTRY0TX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFO_ENTRY0TX_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFO_ENTRY1TX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFO_ENTRY1TX_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFO_ENTRY2TX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFO_ENTRY2TX_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFO_ENTRY3TX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFO_ENTRY3TX_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFO_ENTRY0RX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFO_ENTRY0RX_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFO_ENTRY1RX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFO_ENTRY1RX_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFO_ENTRY2RX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFO_ENTRY2RX_OFFSET>>2]);
+	aError("SSPIL_DSP_FIFO_ENTRY3RX			= 0x%08x\n",
+		base_addr[SSPIL_DSP_FIFO_ENTRY3RX_OFFSET>>2]);
+	aError("SSPIL_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_CONTROL_OFFSET>>2]);
+	aError("SSPIL_CONFIGURATION_CHECK			= 0x%08x\n",
+		base_addr[SSPIL_CONFIGURATION_CHECK_OFFSET>>2]);
+	aError("SSPIL_INTERRUPT_STATUS			= 0x%08x\n",
+		base_addr[SSPIL_INTERRUPT_STATUS_OFFSET>>2]);
+	aError("SSPIL_INTERRUPT_ENABLE			= 0x%08x\n",
+		base_addr[SSPIL_INTERRUPT_ENABLE_OFFSET>>2]);
+	aError("SSPIL_DETAIL_INTERRUPT_STATUS			= 0x%08x\n",
+		base_addr[SSPIL_DETAIL_INTERRUPT_STATUS_OFFSET>>2]);
+	aError("SSPIL_INTERRUPT_ERROR_ENABLE			= 0x%08x\n",
+		base_addr[SSPIL_INTERRUPT_ERROR_ENABLE_OFFSET>>2]);
+	aError("SSPIL_SCHEDULER_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_SCHEDULER_CONTROL_OFFSET>>2]);
+	aError("SSPIL_SEQUENCE_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_SEQUENCE_CONTROL_OFFSET>>2]);
+	aError("SSPIL_STATE_MACHINE_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_STATE_MACHINE_CONTROL_OFFSET>>2]);
+	aError("SSPIL_STATE_MACHINE_TIMEOUT			= 0x%08x\n",
+		base_addr[SSPIL_STATE_MACHINE_TIMEOUT_OFFSET>>2]);
+	aError("SSPIL_FIFO_SHARING			= 0x%08x\n",
+		base_addr[SSPIL_FIFO_SHARING_OFFSET>>2]);
+	aError("SSPIL_CLKDIV			= 0x%08x\n",
+		base_addr[SSPIL_CLKDIV_OFFSET>>2]);
+	aError("SSPIL_CLKGEN			= 0x%08x\n",
+		base_addr[SSPIL_CLKGEN_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_0_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_0_CONTROL_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_0_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_0_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFORX_0_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_0_CONTROL_OFFSET>>2]);
+	aError("SSPIL_FIFORX_0_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_0_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_1_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_1_CONTROL_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_1_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_1_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFORX_1_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_1_CONTROL_OFFSET>>2]);
+	aError("SSPIL_FIFORX_1_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_1_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_2_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_2_CONTROL_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_2_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_2_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFORX_2_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_2_CONTROL_OFFSET>>2]);
+	aError("SSPIL_FIFORX_2_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_2_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_3_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_3_CONTROL_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_3_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_3_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFORX_3_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_3_CONTROL_OFFSET>>2]);
+	aError("SSPIL_FIFORX_3_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_3_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_DMA_RX0_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DMA_RX0_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DMA_TX0_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DMA_TX0_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DMA_RX1_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DMA_RX1_CONTROL_OFFSET>>2]);
+	aError("SSPIL_DMA_TX1_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_DMA_TX1_CONTROL_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_0_PIO_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_0_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_1_PIO_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_1_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_2_PIO_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_2_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFOTX_3_PIO_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFOTX_3_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFORX_0_PIO_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_0_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFORX_1_PIO_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_1_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFORX_2_PIO_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_2_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_FIFORX_3_PIO_THRESHOLD			= 0x%08x\n",
+		base_addr[SSPIL_FIFORX_3_PIO_THRESHOLD_OFFSET>>2]);
+	aError("SSPIL_PATTERN_0_SCLK			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_0_SCLK_OFFSET>>2]);
+	aError("SSPIL_PATTERN_0_CS			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_0_CS_OFFSET>>2]);
+	aError("SSPIL_PATTERN_0_TX			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_0_TX_OFFSET>>2]);
+	aError("SSPIL_PATTERN_0_TXOEN			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_0_TXOEN_OFFSET>>2]);
+	aError("SSPIL_PATTERN_1_SCLK			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_1_SCLK_OFFSET>>2]);
+	aError("SSPIL_PATTERN_1_CS			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_1_CS_OFFSET>>2]);
+	aError("SSPIL_PATTERN_1_TX			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_1_TX_OFFSET>>2]);
+	aError("SSPIL_PATTERN_1_TXOEN			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_1_TXOEN_OFFSET>>2]);
+	aError("SSPIL_PATTERN_2_SCLK			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_2_SCLK_OFFSET>>2]);
+	aError("SSPIL_PATTERN_2_CS			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_2_CS_OFFSET>>2]);
+	aError("SSPIL_PATTERN_2_TX			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_2_TX_OFFSET>>2]);
+	aError("SSPIL_PATTERN_2_TXOEN			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_2_TXOEN_OFFSET>>2]);
+	aError("SSPIL_PATTERN_3_SCLK			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_3_SCLK_OFFSET>>2]);
+	aError("SSPIL_PATTERN_3_CS			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_3_CS_OFFSET>>2]);
+	aError("SSPIL_PATTERN_3_TX			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_3_TX_OFFSET>>2]);
+	aError("SSPIL_PATTERN_3_TXOEN			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_3_TXOEN_OFFSET>>2]);
+	aError("SSPIL_TASK0_DESC_MSB			= 0x%08x\n",
+		base_addr[SSPIL_TASK0_DESC_MSB_OFFSET>>2]);
+	aError("SSPIL_TASK0_DESC_LSB			= 0x%08x\n",
+		base_addr[SSPIL_TASK0_DESC_LSB_OFFSET>>2]);
+	aError("SSPIL_TASK1_DESC_MSB			= 0x%08x\n",
+		base_addr[SSPIL_TASK1_DESC_MSB_OFFSET>>2]);
+	aError("SSPIL_TASK1_DESC_LSB			= 0x%08x\n",
+		base_addr[SSPIL_TASK1_DESC_LSB_OFFSET>>2]);
+	aError("SSPIL_PATTERN_0_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_0_CONTROL_OFFSET>>2]);
+	aError("SSPIL_PATTERN_1_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_1_CONTROL_OFFSET>>2]);
+	aError("SSPIL_PATTERN_2_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_2_CONTROL_OFFSET>>2]);
+	aError("SSPIL_PATTERN_3_CONTROL			= 0x%08x\n",
+		base_addr[SSPIL_PATTERN_3_CONTROL_OFFSET>>2]);
+	aError("SSPIL_SEQUENCE_0			= 0x%08x\n",
+		base_addr[SSPIL_SEQUENCE_0_OFFSET>>2]);
+	aError("SSPIL_SEQUENCE_1			= 0x%08x\n",
+		base_addr[SSPIL_SEQUENCE_1_OFFSET>>2]);
+	aError("SSPIL_SEQUENCE_2			= 0x%08x\n",
+		base_addr[SSPIL_SEQUENCE_2_OFFSET>>2]);
+	aError("SSPIL_SEQUENCE_3			= 0x%08x\n",
+		base_addr[SSPIL_SEQUENCE_3_OFFSET>>2]);
+	aError("SSPIL_SEQUENCE_4			= 0x%08x\n",
+		base_addr[SSPIL_SEQUENCE_4_OFFSET>>2]);
+	aError("SSPIL_SEQUENCE_5			= 0x%08x\n",
+		base_addr[SSPIL_SEQUENCE_5_OFFSET>>2]);
+	aError("SSPIL_SEQUENCE_6			= 0x%08x\n",
+		base_addr[SSPIL_SEQUENCE_6_OFFSET>>2]);
+	aError("SSPIL_SEQUENCE_7			= 0x%08x\n",
+		base_addr[SSPIL_SEQUENCE_7_OFFSET>>2]);
+	aError("SSPIL_FRAME0_CS_IDLE_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME0_CS_IDLE_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME0_SCLK_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME0_SCLK_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME0_TX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME0_TX_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME0_RX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME0_RX_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME1_CS_IDLE_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME1_CS_IDLE_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME1_SCLK_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME1_SCLK_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME1_TX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME1_TX_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME1_RX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME1_RX_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME2_CS_IDLE_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME2_CS_IDLE_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME2_SCLK_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME2_SCLK_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME2_TX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME2_TX_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME2_RX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME2_RX_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME3_CS_IDLE_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME3_CS_IDLE_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME3_SCLK_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME3_SCLK_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME3_TX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME3_TX_DEF_OFFSET>>2]);
+	aError("SSPIL_FRAME3_RX_DEF			= 0x%08x\n",
+		base_addr[SSPIL_FRAME3_RX_DEF_OFFSET>>2]);
+	aError("SSPIL_FIFO_ENTRY0TX			= 0x%08x\n",
+		base_addr[SSPIL_FIFO_ENTRY0TX_OFFSET>>2]);
+	aError("SSPIL_FIFO_ENTRY1TX			= 0x%08x\n",
+		base_addr[SSPIL_FIFO_ENTRY1TX_OFFSET>>2]);
+	aError("SSPIL_FIFO_ENTRY2TX			= 0x%08x\n",
+		base_addr[SSPIL_FIFO_ENTRY2TX_OFFSET>>2]);
+	aError("SSPIL_FIFO_ENTRY3TX			= 0x%08x\n",
+		base_addr[SSPIL_FIFO_ENTRY3TX_OFFSET>>2]);
+	aError("SSPIL_FIFO_ENTRY0RX			= 0x%08x\n",
+		base_addr[SSPIL_FIFO_ENTRY0RX_OFFSET>>2]);
+	aError("SSPIL_FIFO_ENTRY1RX			= 0x%08x\n",
+		base_addr[SSPIL_FIFO_ENTRY1RX_OFFSET>>2]);
+	aError("SSPIL_FIFO_ENTRY2RX			= 0x%08x\n",
+		base_addr[SSPIL_FIFO_ENTRY2RX_OFFSET>>2]);
+	aError("SSPIL_FIFO_ENTRY3RX			= 0x%08x\n",
+		base_addr[SSPIL_FIFO_ENTRY3RX_OFFSET>>2]);
 
+
+	base_addr = ((volatile unsigned int *)
+		(HW_IO_PHYS_TO_VIRT(SSASW_BASE_ADDR)));
+	aError("SSASW Regs:\n");
+	aError("===========\n");
+	aError("CPH_SSASW_SSASW_NOC			= 0x%08x\n",
+		base_addr[CPH_SSASW_SSASW_NOC_OFFSET>>2]);
+	aError("CPH_SSASW_SSASW_MN0_DIVIDER			= 0x%08x\n",
+		base_addr[CPH_SSASW_SSASW_MN0_DIVIDER_OFFSET>>2]);
+	aError("CPH_SSASW_SSASW_MN1_DIVIDER			= 0x%08x\n",
+		base_addr[CPH_SSASW_SSASW_MN1_DIVIDER_OFFSET>>2]);
+	aError("CPH_SSASW_CH01_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH01_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH01_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH01_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH01_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH01_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH01_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH01_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH01_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH01_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH02_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH02_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH02_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH02_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH02_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH02_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH02_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH02_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH02_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH02_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH03_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH03_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH03_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH03_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH03_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH03_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH03_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH03_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH03_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH03_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH04_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH04_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH04_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH04_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH04_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH04_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH04_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH04_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH04_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH04_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH05_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH05_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH05_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH05_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH05_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH05_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH05_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH05_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH05_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH05_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH06_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH06_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH06_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH06_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH06_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH06_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH06_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH06_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH06_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH06_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH07_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH07_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH07_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH07_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH07_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH07_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH07_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH07_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH07_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH07_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH08_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH08_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH08_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH08_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH08_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH08_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH08_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH08_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH08_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH08_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH09_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH09_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH09_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH09_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH09_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH09_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH09_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH09_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH09_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH09_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH10_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH10_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH10_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH10_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH10_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH10_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH10_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH10_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH10_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH10_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH11_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH11_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH11_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH11_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH11_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH11_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH11_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH11_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH11_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH11_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH12_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH12_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH12_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH12_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH12_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH12_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH12_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH12_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH12_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH12_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH13_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH13_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH13_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH13_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH13_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH13_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH13_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH13_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH13_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH13_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH14_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH14_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH14_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH14_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH14_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH14_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH14_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH14_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH14_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH14_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH15_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH15_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH15_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH15_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH15_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH15_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH15_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH15_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH15_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH15_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_CH16_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH16_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_CH16_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH16_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_CH16_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH16_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_CH16_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH16_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_CH16_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_CH16_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_PREADY_MAX_TIME			= 0x%08x\n",
+		base_addr[CPH_SSASW_PREADY_MAX_TIME_OFFSET>>2]);
+	aError("CPH_SSASW_SSASW_ERR			= 0x%08x\n",
+		base_addr[CPH_SSASW_SSASW_ERR_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_SSASW_NOC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_SSASW_NOC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_SSASW_MN0_DIVIDER			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_SSASW_MN0_DIVIDER_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_SSASW_MN1_DIVIDER			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_SSASW_MN1_DIVIDER_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH01_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH01_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH01_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH01_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH01_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH01_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH01_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH01_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH01_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH01_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH02_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH02_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH02_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH02_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH02_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH02_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH02_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH02_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH02_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH02_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH03_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH03_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH03_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH03_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH03_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH03_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH03_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH03_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH03_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH03_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH04_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH04_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH04_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH04_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH04_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH04_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH04_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH04_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH04_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH04_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH05_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH05_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH05_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH05_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH05_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH05_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH05_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH05_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH05_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH05_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH06_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH06_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH06_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH06_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH06_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH06_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH06_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH06_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH06_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH06_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH07_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH07_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH07_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH07_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH07_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH07_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH07_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH07_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH07_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH07_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH08_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH08_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH08_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH08_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH08_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH08_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH08_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH08_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH08_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH08_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH09_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH09_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH09_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH09_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH09_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH09_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH09_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH09_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH09_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH09_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH10_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH10_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH10_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH10_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH10_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH10_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH10_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH10_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH10_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH10_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH11_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH11_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH11_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH11_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH11_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH11_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH11_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH11_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH11_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH11_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH12_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH12_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH12_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH12_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH12_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH12_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH12_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH12_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH12_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH12_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH13_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH13_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH13_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH13_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH13_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH13_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH13_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH13_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH13_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH13_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH14_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH14_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH14_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH14_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH14_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH14_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH14_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH14_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH14_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH14_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH15_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH15_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH15_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH15_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH15_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH15_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH15_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH15_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH15_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH15_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH16_SRC			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH16_SRC_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH16_DST1			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH16_DST1_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH16_DST2			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH16_DST2_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH16_DST3			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH16_DST3_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_CH16_DST4			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_CH16_DST4_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_PREADY_MAX_TIME			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_PREADY_MAX_TIME_OFFSET>>2]);
+	aError("CPH_SSASW_DSP_SSASW_ERR			= 0x%08x\n",
+		base_addr[CPH_SSASW_DSP_SSASW_ERR_OFFSET>>2]);
 }

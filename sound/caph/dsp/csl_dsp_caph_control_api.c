@@ -57,8 +57,8 @@
 *   @return   UInt32 *dsp_aadmac_base_addr Base address of the AADMAC buffer.
 *
 *****************************************************************************/
-UInt32 *csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_Audio_Connections_t
-			aadmac_audio_connection)
+UInt32 *csl_dsp_caph_control_get_aadmac_buf_base_addr(
+		DSP_AADMAC_Audio_Connections_t aadmac_audio_connection)
 {
 	UInt32 *base_addr;
 	AP_SharedMem_t *ap_shared_mem_ptr;
@@ -176,3 +176,48 @@ void csl_dsp_caph_control_aadmac_disable_path(UInt16 path)
 	}
 
 }
+
+/*****************************************************************************/
+/**
+*
+* Function Name: csl_dsp_ext_modem_get_aadmac_buf_base_addr
+*
+*   @note     This function returns the physical base address of the AADMAC
+*             buffer\'s base address (pointing to the start of the Low part
+*             of the AADMAC buffer) for external modem interface. AP can use
+*             this address to program the base address in AADMACs CR_1
+*             register.
+*
+*   @param    aadmac_ext_modem_audio_connection
+*             (DSP_AADMAC_Ext_Modem_Connections_t)
+*             Return the base address for which AADMAC buffer (speaker or
+*             microphone path) path (DSP_AADMAC_Audio_Connections_t)
+*
+*   @return   UInt32 *dsp_aadmac_base_addr Base address of the AADMAC buffer.
+*
+*****************************************************************************/
+UInt32 *csl_dsp_ext_modem_get_aadmac_buf_base_addr(
+	DSP_AADMAC_Ext_Modem_Connections_t aadmac_ext_modem_audio_connection)
+{
+	UInt32 *base_addr;
+	AP_SharedMem_t *ap_shared_mem_ptr;
+	ap_shared_mem_ptr = DSPDRV_GetPhysicalSharedMemoryAddress();
+
+	switch (aadmac_ext_modem_audio_connection) {
+	case DSP_AADMAC_EXT_MODEM_UL:
+		base_addr =
+			(UInt32 *)&(ap_shared_mem_ptr->shared_ext_ul_buf[0]);
+		break;
+	case DSP_AADMAC_EXT_MODEM_DL:
+		base_addr =
+			(UInt32 *)&(ap_shared_mem_ptr->shared_ext_dl_buf[0]);
+		break;
+	default:
+		/* Assert */
+		assert(0);
+		break;
+	}
+
+	return base_addr;
+}
+

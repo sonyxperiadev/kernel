@@ -31,6 +31,7 @@ Copyright 2009 - 2012  Broadcom Corporation
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/completion.h>
+#include <linux/jiffies.h>
 #include "mobcom_types.h"
 #include "audio_consts.h"
 
@@ -89,6 +90,9 @@ AUDEN for both voiceIn and voiceOut */
 static Boolean voicePlayOutpathEnabled = FALSE;
 
 static AUDDRV_PathID_t telephonyPathID;
+#if defined(CONFIG_RHEA_PANDA)
+CSL_CAPH_PathID dlExtModemPathID, ulExtModemPathID;
+#endif
 
 static void *sUserCB;
 static CSL_CAPH_DEVICE_e sink = CSL_CAPH_DEV_NONE;
@@ -120,6 +124,13 @@ static Audio_Driver_t sAudDrv = { 0 };
 static audio_codecId_handler_t codecId_handler;
 
 struct completion audioEnableDone;
+
+#if defined(CONFIG_RHEA_PANDA)
+#define AUDIO_ENABLE_RESP_TIMEOUT 50  /* 50ms */
+#define	timeout_jiff msecs_to_jiffies(AUDIO_ENABLE_RESP_TIMEOUT)
+
+struct completion extModemCallDone;
+#endif
 
 /*=============================================================================
 // Private function prototypes
@@ -185,6 +196,15 @@ AudioSysParm_t *AudParmP(void)
 
 static UInt32 *AUDIO_GetIHF48KHzBufferBaseAddress(void);
 
+#if defined(CONFIG_RHEA_PANDA)
+static void AUDDRV_ExtModem_Telephony_Init(AUDIO_SOURCE_Enum_t mic,
+		AUDIO_SINK_Enum_t speaker,
+		AudioMode_t mode, AudioApp_t app,
+		int bDualMic_IsNeeded,
+		int bmuteVoiceCall);
+static void AUDDRV_ExtModem_Telephony_Deinit(void);
+static void AP_ProcessExtModemCallDone(UInt16 enabled_path);
+#endif
 static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 				    AUDIO_SINK_Enum_t speaker,
 				    AUDIO_SAMPLING_RATE_t sample_rate,
@@ -224,30 +244,38 @@ void AUDDRV_Init(void)
 	/* register DSP VPU status processing handlers */
 
 	AUDIO_MODEM(CSL_RegisterVPUCaptureStatusHandler
-		    ((VPUCaptureStatusCB_t) &VPU_Capture_Request);)
+	    ((VPUCaptureStatusCB_t) &VPU_Capture_Request);)
 #if 0		/*These features are not needed in LMP now. */
-	    AUDIO_MODEM(CSL_RegisterVPURenderStatusHandler
-			((VPURenderStatusCB_t) &VPU_Render_Request);)
-	    AUDIO_MODEM(CSL_RegisterUSBStatusHandler
-			((USBStatusCB_t) &AUDDRV_USB_HandleDSPInt);)
+	AUDIO_MODEM(CSL_RegisterVPURenderStatusHandler
+		((VPURenderStatusCB_t) &VPU_Render_Request);)
+	AUDIO_MODEM(CSL_RegisterUSBStatusHandler
+		((USBStatusCB_t) &AUDDRV_USB_HandleDSPInt);)
 #endif
-	    AUDIO_MODEM(CSL_RegisterVoIPStatusHandler
-			((VoIPStatusCB_t) &VOIP_ProcessVOIPDLDone);)
-	    AUDIO_MODEM(CSL_RegisterMainAMRStatusHandler
-			((MainAMRStatusCB_t) &AP_ProcessStatusMainAMRDone);)
-	    AUDIO_MODEM(CSL_RegisterARM2SPRenderStatusHandler
-			((ARM2SPRenderStatusCB_t) &ARM2SP_Render_Request);)
-	    AUDIO_MODEM(CSL_RegisterARM2SP2RenderStatusHandler
-			((ARM2SP2RenderStatusCB_t) &ARM2SP2_Render_Request);)
-	    AUDIO_MODEM(CSL_RegisterAudioLogHandler
-			((AudioLogStatusCB_t) &AUDLOG_ProcessLogChannel);)
-	    AUDIO_MODEM(CSL_RegisterVOIFStatusHandler
-			((VOIFStatusCB_t) &VOIF_Buffer_Request);)
-		AUDIO_MODEM(CSL_RegisterAudioEnableDoneHandler
-			((AudioEnableDoneStatusCB_t)
-			&AP_ProcessAudioEnableDone);)
+	AUDIO_MODEM(CSL_RegisterVoIPStatusHandler
+		((VoIPStatusCB_t) &VOIP_ProcessVOIPDLDone);)
+	AUDIO_MODEM(CSL_RegisterMainAMRStatusHandler
+		((MainAMRStatusCB_t) &AP_ProcessStatusMainAMRDone);)
+	AUDIO_MODEM(CSL_RegisterARM2SPRenderStatusHandler
+		((ARM2SPRenderStatusCB_t) &ARM2SP_Render_Request);)
+	AUDIO_MODEM(CSL_RegisterARM2SP2RenderStatusHandler
+		((ARM2SP2RenderStatusCB_t) &ARM2SP2_Render_Request);)
+	AUDIO_MODEM(CSL_RegisterAudioLogHandler
+		((AudioLogStatusCB_t) &AUDLOG_ProcessLogChannel);)
+	AUDIO_MODEM(CSL_RegisterVOIFStatusHandler
+		((VOIFStatusCB_t) &VOIF_Buffer_Request);)
+	AUDIO_MODEM(CSL_RegisterAudioEnableDoneHandler
+		((AudioEnableDoneStatusCB_t)
+		&AP_ProcessAudioEnableDone);)
 
-	    Audio_InitRpc();
+#if defined(CONFIG_RHEA_PANDA)
+	CSL_RegisterExtModemCallDoneHandler
+		((AudioEnableDoneStatusCB_t)
+		&AP_ProcessExtModemCallDone);
+
+	init_completion(&extModemCallDone);
+#endif
+
+	Audio_InitRpc();
 	sAudDrv.isRunning = TRUE;
 	init_completion(&audioEnableDone);
 }
@@ -286,6 +314,12 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 #endif
 	Boolean ec_enable_from_sysparm = dspECEnable;
 	Boolean ns_enable_from_sysparm = dspNSEnable;
+
+#if defined(CONFIG_RHEA_PANDA)
+	AUDDRV_ExtModem_Telephony_Init(mic, speaker,
+		mode, app, bNeedDualMic,
+		bmuteVoiceCall);
+#endif
 
 	/*-/////////////////////////////////////////////////////////////////
 	// Phone Setup Sequence
@@ -401,6 +435,59 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 
 	return;
 }
+
+#if defined(CONFIG_RHEA_PANDA)
+static void AUDDRV_ExtModem_Telephony_Init(AUDIO_SOURCE_Enum_t mic,
+		AUDIO_SINK_Enum_t speaker,
+		AudioMode_t mode, AudioApp_t app, int bNeedDualMic,
+		int bmuteVoiceCall)
+{
+	CSL_CAPH_HWCTRL_CONFIG_t config;
+	unsigned long jiff_in = 0;
+
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_ExtModem_Telephony_Init\n");
+	csl_caph_ControlHWClock(TRUE); /*enable clock before any DSP command*/
+
+	/* DL */
+	config.streamID = CSL_CAPH_STREAM_NONE;
+	config.pathID = 0;
+	config.source = CSL_CAPH_DEV_SSP_RX;
+	config.sink = CSL_CAPH_DEV_DSP_throughMEM;
+	config.dmaCH = CSL_CAPH_DMA_CH15;
+	config.src_sampleRate = AUDIO_SAMPLING_RATE_8000;
+	config.snk_sampleRate = AUDIO_SAMPLING_RATE_8000;
+	config.chnlNum = AUDIO_CHANNEL_MONO;
+	config.bitPerSample = 16;
+
+	dlExtModemPathID = csl_caph_hwctrl_extModem_SetupPath(config);
+
+	/* UL */
+	config.streamID = CSL_CAPH_STREAM_NONE;
+	config.pathID = 0;
+	config.source = CSL_CAPH_DEV_DSP_throughMEM;
+	config.sink = CSL_CAPH_DEV_SSP_TX;
+	config.dmaCH = CSL_CAPH_DMA_CH16;
+	config.src_sampleRate = AUDIO_SAMPLING_RATE_8000;
+	config.snk_sampleRate = AUDIO_SAMPLING_RATE_8000;
+	config.chnlNum = AUDIO_CHANNEL_MONO;
+	config.bitPerSample = 16;
+
+	ulExtModemPathID = csl_caph_hwctrl_extModem_SetupPath(config);
+
+	csl_caph_hwctrl_extModem_StartPath(ulExtModemPathID, dlExtModemPathID);
+
+	csl_dsp_ext_modem_call(TRUE);
+
+	jiff_in = wait_for_completion_interruptible_timeout(
+		&extModemCallDone,
+		timeout_jiff);
+	if (!jiff_in) {
+		aError("!!!Timeout on COMMAND_EXT_MODEM_CALL"
+			" resp!!!\n");
+		init_completion(&extModemCallDone);
+	}
+}
+#endif
 
 /*=============================================================================
 //
@@ -550,8 +637,42 @@ void AUDDRV_Telephony_Deinit(void)
 	if (voiceRecOn)
 		AUDDRV_EnableDSPInput(voiceInMic, voiceInSr);
 
+
+#if defined(CONFIG_RHEA_PANDA)
+	AUDDRV_ExtModem_Telephony_Deinit();
+#endif
+
 	return;
 }
+
+#if defined(CONFIG_RHEA_PANDA)
+/*=============================================================================
+//
+// Function Name: AUDDRV_ExtModem_Telephony_Deinit
+//
+// Description:   DeInitialize audio system for voice call
+//
+//=============================================================================
+*/
+static void AUDDRV_ExtModem_Telephony_Deinit(void)
+{
+	unsigned long jiff_in = 0;
+
+	csl_dsp_ext_modem_call(FALSE);
+
+	jiff_in = wait_for_completion_interruptible_timeout(
+		&extModemCallDone,
+		timeout_jiff);
+	if (!jiff_in) {
+		aError("!!!Timeout on COMMAND_EXT_MODEM_CALL"
+			" resp!!!\n");
+		init_completion(&extModemCallDone);
+	}
+
+	/*keep clock on until DSP response is back.*/
+	csl_caph_hwctrl_extModem_StopPath(ulExtModemPathID, dlExtModemPathID);
+}
+#endif
 
 /*=============================================================================
 //
@@ -1837,6 +1958,25 @@ static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 	csl_caph_enable_adcpath_by_dsp(enabled_path);
 #endif
 }
+
+#if defined(CONFIG_RHEA_PANDA)
+static void AP_ProcessExtModemCallDone(UInt16 enabled_path)
+{
+	aTrace(LOG_AUDIO_DRIVER,
+			"%s, Got ExtModemCall RESP FROM DSP\n", __func__);
+
+	if (enabled_path)
+		csl_caph_hwctrl_extModem_StartPath_step2(
+			ulExtModemPathID, dlExtModemPathID);
+	else
+		csl_caph_hwctrl_extModem_StopPath_step1(
+			ulExtModemPathID, dlExtModemPathID);
+
+	/* can proceed */
+	complete(&extModemCallDone);
+
+}
+#endif
 
 /****************************************************************************
 *

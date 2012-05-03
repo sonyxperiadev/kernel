@@ -171,6 +171,13 @@ static CAPH_SWITCH_TRIGGER_e pcmRxTrigger = CAPH_SSP3_RX0_TRIGGER;
 static CSL_CAPH_SSP_e sspidPcmUse = CSL_CAPH_SSP_3;
 static CSL_CAPH_SSP_e sspidI2SUse = CSL_CAPH_SSP_4;
 static Boolean sspTDM_enabled = FALSE;
+
+static CSL_HANDLE extModem_pcmHandleSSP;
+/*static CAPH_SWITCH_TRIGGER_e extModem_pcmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
+static CAPH_SWITCH_TRIGGER_e extModem_pcmRxTrigger = CAPH_SSP3_RX0_TRIGGER;*/
+static CAPH_SWITCH_TRIGGER_e extModem_pcmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
+static CAPH_SWITCH_TRIGGER_e extModem_pcmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
+
 /*static void *bmintc_handle = NULL;*/
 static UInt32 dspSharedMemAddr;
 static Boolean isSTIHF = FALSE;
@@ -213,6 +220,11 @@ static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 		CAPH_NONE}, /*LIST_MIX_DMA*/
 	{CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_CFIFO,
 		CAPH_DMA, CAPH_NONE}, /*LIST_SW_MIX_SW_DMA*/
+
+	{CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE},
+		/*LIST_DMA16_CFIFO_SW_SPI_TX*/
+	{CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE},
+		/*LIST_SPI_RX_SW_CFIFO_DMA15*/
 };
 
 /****************************************************************************
@@ -647,6 +659,29 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 	}
 }
 #endif
+
+static void EXTMODEM_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
+{
+	aTrace(LOG_AUDIO_CSL,
+		 "EXTMODEM_DMA_CB:: chnl %d", chnl);
+
+	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) &
+			CSL_CAPH_READY_LOW) == CSL_CAPH_READY_NONE) {
+		/*aTrace(LOG_AUDIO_CSL,
+		 * "EXTMODEM_DMA_CB:: low ch=0x%x \r\n", chnl);
+		 */
+		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_LOW);
+	}
+
+	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) &
+			CSL_CAPH_READY_HIGH) == CSL_CAPH_READY_NONE) {
+		/*aTrace(LOG_AUDIO_CSL,
+		 * "EXTMODEM_DMA_CB:: high ch=0x%x \r\n", chnl);
+		 */
+		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_HIGH);
+	}
+}
+
 
 /*
  * Function Name: csl_caph_hwctrl_PrintPath
@@ -3180,6 +3215,12 @@ void csl_caph_hwctrl_init(void)
 	pcmHandleSSP = (CSL_HANDLE)csl_pcm_init
 		(addr.ssp3_baseAddr, (UInt32)caph_intc_handle);
 #endif
+
+	extModem_pcmHandleSSP = (CSL_HANDLE)csl_pcm_init
+		/*(addr.ssp3_baseAddr, (UInt32)caph_intc_handle);*/
+		(addr.ssp4_baseAddr, (UInt32)caph_intc_handle);
+
+
 	csl_caph_srcmixer_init
 		(addr.srcmixer_baseAddr, (UInt32)caph_intc_handle);
 	lp_handle = csl_caph_audioh_init(addr.audioh_baseAddr,
@@ -3213,6 +3254,11 @@ void csl_caph_hwctrl_deinit(void)
 #if defined(ENABLE_DMA_VOICE)
 	CSL_RegisterAudioEnableDoneHandler(NULL);
 #endif
+
+#if defined(CONFIG_RHEA_PANDA)
+	CSL_RegisterExtModemCallDoneHandler(NULL);
+#endif
+
 	return;
 }
 /****************************************************************************
@@ -3273,7 +3319,8 @@ void csl_caph_hwctrl_toggle_caphclk(void)
 *         sinkNo --    The sink No. allocated for this (source,sink)
 *		configuration.
 ****************************************************************************/
-CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config,
+static CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(
+		CSL_CAPH_HWCTRL_CONFIG_t config,
 		int sinkNo)
 {
 	CAPH_LIST_t list;
@@ -3822,6 +3869,486 @@ Result_t csl_caph_hwctrl_ResumePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 {
 	return RESULT_OK;
 }
+
+#if defined(CONFIG_RHEA_PANDA)
+CSL_CAPH_PathID csl_caph_hwctrl_extModem_SetupPath(
+		CSL_CAPH_HWCTRL_CONFIG_t config)
+{
+	CSL_CAPH_HWConfig_Table_t *path;
+	CAPH_LIST_t list;
+
+	if (config.pathID == 0) {
+		/*The passed in parameters will be
+		 * stored in the table with index pathID
+		 */
+		config.pathID =
+			csl_caph_hwctrl_AddPathInTable(config);
+	}
+
+	path = &HWConfig_Table[config.pathID-1];
+
+	path->sinkCount = 1;
+
+	if (config.source == CSL_CAPH_DEV_SSP_RX
+		&& config.sink == CSL_CAPH_DEV_DSP_throughMEM) {
+
+		/* DL */
+		list = LIST_SPI_RX_SW_CFIFO_DMA15;
+
+		memcpy(path->block[0], caph_block_list[list],
+				sizeof(path->block[0]));
+
+		/*csl_caph_obtain_blocks( );*/
+
+		path->dma[0][0] =
+			csl_caph_dma_obtain_given_channel
+			(CSL_CAPH_DMA_CH15);
+
+		path->cfifo[0][0] =
+			csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CH15);
+
+		path->sw[0][0].chnl =
+			csl_caph_switch_obtain_channel();
+		path->sw[0][0].dataFmt = CSL_CAPH_16BIT_MONO;
+			/*CSL_CAPH_24BIT_MONO*/
+
+		path->block_split_offset = 0;
+
+	} else
+
+	if (config.source == CSL_CAPH_DEV_DSP_throughMEM
+		&& config.sink == CSL_CAPH_DEV_SSP_TX) {
+
+		/* UL */
+		list = LIST_DMA16_CFIFO_SW_SPI_TX;
+
+		memcpy(path->block[0], caph_block_list[list],
+				sizeof(path->block[0]));
+
+		/*csl_caph_obtain_blocks( );*/
+		path->dma[0][0] =
+			csl_caph_dma_obtain_given_channel
+			(CSL_CAPH_DMA_CH16);
+
+		path->cfifo[0][0] =
+			csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CH16);
+
+		path->sw[0][0].chnl =
+			csl_caph_switch_obtain_channel();
+		path->sw[0][0].dataFmt = CSL_CAPH_16BIT_MONO;
+
+		path->block_split_offset = 0;
+	}
+
+	return path->pathID;
+}
+
+#define EXT_MODEM_DMA_BUFFER_SIZE  320
+	/*DSP defines 20 ms for each ping-pong buffer.
+	* 20x8 samples for packed 16 bit mono, 160 16-bit words.
+	320 bytes */
+
+void csl_caph_hwctrl_extModem_StartPath(CSL_CAPH_PathID pathID_ul,
+		CSL_CAPH_PathID pathID_dl)
+{
+	CSL_CAPH_HWConfig_Table_t *path_dl;
+	CSL_CAPH_HWConfig_Table_t *path_ul;
+	CSL_CAPH_CFIFO_FIFO_e fifo;
+	UInt16 threshold;
+	CSL_CAPH_CFIFO_DIRECTION_e direction = CSL_CAPH_CFIFO_IN;
+	CSL_CAPH_SWITCH_CONFIG_t *swCfg;
+
+	CSL_CAPH_DMA_CONFIG_t dmaCfg;
+	CSL_CAPH_ARM_DSP_e owner = CSL_CAPH_DSP;
+
+	int *ul_addr = (int *)csl_dsp_ext_modem_get_aadmac_buf_base_addr(
+		DSP_AADMAC_EXT_MODEM_UL);
+	int *dl_addr = (int *)csl_dsp_ext_modem_get_aadmac_buf_base_addr(
+		DSP_AADMAC_EXT_MODEM_DL);
+
+	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_extModem_StartPath");
+
+	/*csl_caph_config_blocks(path->pathID, 0, offset);*/
+	/*csl_caph_config_dma(pathID_dl, sinkNo, i);*/
+	{
+		memset(&dmaCfg, 0, sizeof(dmaCfg));
+
+		path_dl = &HWConfig_Table[pathID_dl-1];
+
+		dmaCfg.dma_ch = path_dl->dma[0][0];
+		/*physical addressd*/
+		dmaCfg.mem_addr = (UInt8 *)(dl_addr);
+		csl_caph_dma_set_buffer_address(dmaCfg);
+
+		dmaCfg.direction = CSL_CAPH_DMA_OUT;
+			/* modem DL: CFIFO->RAM->DSP */
+		dmaCfg.Tsize = CSL_AADMAC_TSIZE;
+		/*transfer size per request.
+		The value is no of 32 bit data transfer
+			Actual beats transfered is TSIZE_PER_REQ+1 */
+		/*dmaCfg.dmaCB = EXTMODEM_DMA_CB;*/
+		dmaCfg.dmaCB = NULL;
+
+		/*dmaCfg.mem_size = path_dl->size;*/
+		/* need to be 320 samples (640bytes),
+		DMA interrupt for 160 samples.*/
+		dmaCfg.mem_size = EXT_MODEM_DMA_BUFFER_SIZE;
+
+		/* CH1_AADMAC_WRAP
+		Address pointer to base of Channel 1 Ring in DDR */
+		/* number of bytes
+		 this goes to csl_caph_dma_config_channel(),
+		chal_caph_dma_set_buffer( ).
+		chal_caph_dma_set_buffer_address()
+		and chal_caph_dma_set_buffer_size()*/
+
+		/*dma from ddr*/
+		dmaCfg.fifo = path_dl->cfifo[0][0]; /*fifo has to follow dma*/
+			/* Linux Specific - For DMA, we need to pass
+			 * the physical address of AP SM
+			 */
+
+		/*Unless it is for test purpose, DMA 12 - 14 belong to DSP*/
+		owner = CSL_CAPH_DSP;
+
+		/*config dma 12,13,14 per dsp, only DMA
+			  *channel and address are configured
+			  */
+		csl_caph_dma_set_buffer_address(dmaCfg);
+
+		/* Per DSP, even DMA15 is owned by DSP,
+		 * its interrupt is enabled by ARM
+		 */
+		csl_caph_dma_enable_intr(dmaCfg.dma_ch, owner);
+	}
+
+	/*csl_caph_config_dma(pathID_ul, sinkNo, i);*/
+	{
+		memset(&dmaCfg, 0, sizeof(dmaCfg));
+
+		path_ul = &HWConfig_Table[pathID_ul-1];
+
+		dmaCfg.dma_ch = path_ul->dma[0][0];
+		/* Linux Specific - For DMA, we need to pass
+		 * the physical address of AP SM
+		 */
+		dmaCfg.mem_addr = (UInt8 *)(ul_addr);
+		/*dmaCfg.mem_size = path_ul->size;*/
+		/*need to be 320 samples (640bytes),
+		DMA interrupt for 160 samples.*/
+		dmaCfg.mem_size = EXT_MODEM_DMA_BUFFER_SIZE;
+
+		csl_caph_dma_set_buffer_address(dmaCfg);
+
+		dmaCfg.direction = CSL_CAPH_DMA_IN;
+			/* modem UL: DSP->RAM->CFIFO */
+		dmaCfg.Tsize = CSL_AADMAC_TSIZE;
+		/*dmaCfg.dmaCB = EXTMODEM_DMA_CB;*/
+		dmaCfg.dmaCB = NULL;
+
+		/*dma from ddr*/
+		dmaCfg.fifo = path_ul->cfifo[0][0]; /*fifo has to follow dma*/
+
+		/*Unless it is for test purpose, DMA 12 - 14 belong to DSP*/
+		owner = CSL_CAPH_DSP;
+
+		/*config dma 12,13,14 per dsp, only DMA
+			  *channel and address are configured
+			  */
+		csl_caph_dma_set_buffer_address(dmaCfg);
+
+		/* Per DSP, does not need UL intr for SSP' DMA */
+		csl_caph_dma_disable_intr(dmaCfg.dma_ch, owner);
+	}
+
+	/*csl_caph_config_cfifo(pathID, sinkNo, i);*/
+	{
+		path_dl = &HWConfig_Table[pathID_dl-1];
+		fifo = path_dl->cfifo[0][0];
+		threshold = csl_caph_cfifo_get_fifo_thres(fifo);
+
+		direction = CSL_CAPH_CFIFO_OUT; /* modem DL: CFIFO->RAM->DSP */
+		csl_caph_cfifo_config_fifo(fifo, direction, threshold);
+
+		path_ul = &HWConfig_Table[pathID_ul-1];
+		fifo = path_ul->cfifo[0][0];
+		threshold = csl_caph_cfifo_get_fifo_thres(fifo);
+
+		direction = CSL_CAPH_CFIFO_IN; /* modem UL: DSP->RAM->CFIFO */
+		csl_caph_cfifo_config_fifo(fifo, direction, threshold);
+	}
+
+	/*csl_caph_config_sw(pathID, sinkNo, i);*/
+	{
+		swCfg = &path_dl->sw[0][0];
+		fifo = path_dl->cfifo[0][0];
+		swCfg->FIFO_srcAddr =
+			csl_pcm_get_rx0_fifo_data_port(extModem_pcmHandleSSP);
+		swCfg->FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo);
+		swCfg->trigger = extModem_pcmRxTrigger;
+		swCfg->dataFmt = CSL_CAPH_16BIT_MONO;
+		/*csl_caph_switch_add_dst(path_dl->sw[0][0].chnl,
+			swCfg->FIFO_dstAddr);*/
+
+		/*src_path = csl_caph_hwctrl_readHWResource(
+		swCfg->FIFO_srcAddr, pathID_dl);*/
+		swCfg->status = csl_caph_switch_config_channel(*swCfg);
+		csl_caph_hwctrl_addHWResource(swCfg->FIFO_srcAddr, pathID_dl);
+
+		swCfg = &path_ul->sw[0][0];
+		fifo = path_ul->cfifo[0][0];
+		swCfg->FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(fifo);
+		swCfg->FIFO_dstAddr =
+			csl_pcm_get_tx0_fifo_data_port(extModem_pcmHandleSSP);
+		swCfg->trigger = extModem_pcmTxTrigger;
+		swCfg->dataFmt = CSL_CAPH_16BIT_MONO;
+		/*csl_caph_switch_add_dst(path_ul->sw[0][0].chnl,
+			swCfg->FIFO_dstAddr);*/
+
+		/*src_path = csl_caph_hwctrl_readHWResource(
+		swCfg->FIFO_srcAddr, pathID_ul);*/
+		swCfg->status = csl_caph_switch_config_channel(*swCfg);
+		csl_caph_hwctrl_addHWResource(swCfg->FIFO_srcAddr, pathID_ul);
+	}
+
+
+	memset(&pcmCfg, 0, sizeof(pcmCfg));
+	pcmCfg.mode = CSL_PCM_SLAVE_MODE;
+	pcmCfg.protocol = CSL_PCM_PROTOCOL_MONO;
+	pcmCfg.format = CSL_PCM_WORD_LENGTH_PACK_16_BIT;
+
+	pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_8000;
+	/*pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_16000;*/
+	pcmCfg.interleave = TRUE;
+	pcmCfg.ext_bits = 0;
+	pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
+	pcmTxCfg.enable = 1;
+	pcmTxCfg.loopback_enable = FALSE;
+	pcmRxCfg.enable = 1;
+	pcmRxCfg.loopback_enable = 0;
+	csl_pcm_config
+		(extModem_pcmHandleSSP, &pcmCfg, &pcmTxCfg, &pcmRxCfg);
+
+#if 0
+	chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0,
+		  0x1c, 0x3);  /*start threshold, stop threshold */
+	chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0,
+		  0x3, 0x1c);
+#endif
+
+	/*csl_caph_start_blocks(path->pathID, 0, offset);*/
+	{
+		csl_caph_cfifo_start_fifo
+						(path_dl->cfifo[0][0]);
+		csl_caph_switch_start_transfer
+						(path_dl->sw[0][0].chnl);
+
+#if 0 /* do not touch AADMAC_CR_2, DSP will set it. */
+		csl_caph_dma_start_transfer
+							(path_dl->dma[0][0]);
+#endif
+
+		/* DSP does need this interrupt from SSP
+		csl_caph_intc_enable_pcm_intr
+					(CSL_CAPH_DSP, CSL_CAPH_SSP_3); */
+
+#if 0
+		csl_pcm_enable_scheduler(extModem_pcmHandleSSP, TRUE);
+		/* move this to step 2: */
+		csl_pcm_start_rx(extModem_pcmHandleSSP, CSL_PCM_CHAN_RX0);
+#endif
+
+		csl_caph_cfifo_start_fifo
+						(path_ul->cfifo[0][0]);
+		csl_caph_switch_start_transfer
+						(path_ul->sw[0][0].chnl);
+
+#if 0 /* do not touch AADMAC_CR_2, DSP will set it. */
+		csl_caph_dma_start_transfer
+							(path_ul->dma[0][0]);
+#endif
+
+		/* DSP not need this
+		csl_caph_intc_enable_pcm_intr
+					(CSL_CAPH_DSP, sspidPcmUse); */
+
+	/* start the modem UL path: */
+		csl_pcm_enable_scheduler(extModem_pcmHandleSSP, TRUE);
+		csl_pcm_start_tx(extModem_pcmHandleSSP, CSL_PCM_CHAN_TX0);
+	}
+
+	path_dl->status = PATH_OCCUPIED;
+	path_ul->status = PATH_OCCUPIED;
+
+	csl_caph_hwctrl_PrintPath(path_dl);
+	csl_caph_hwctrl_PrintPath(path_ul);
+}
+
+void csl_caph_hwctrl_extModem_StartPath_step2(CSL_CAPH_PathID pathID_ul,
+		CSL_CAPH_PathID pathID_dl)
+{
+	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_extModem_StartPath_step2");
+	/* start the modem DL path: */
+	csl_pcm_start_rx(extModem_pcmHandleSSP, CSL_PCM_CHAN_RX0);
+}
+
+void csl_caph_hwctrl_extModem_StopPath(CSL_CAPH_PathID pathID_ul,
+		CSL_CAPH_PathID pathID_dl)
+{
+	CSL_CAPH_HWConfig_Table_t *path;
+
+	path = &HWConfig_Table[pathID_dl-1];
+
+	path->block_split_offset = 0;
+
+	/*csl_caph_hwctrl_remove_blocks
+				(path->pathID, i, path->block_split_offset);*/
+	{
+	csl_caph_hwctrl_closeDMA
+		(path->dma[0][0], pathID_dl);
+
+	csl_caph_hwctrl_closeCFifo
+		(path->cfifo[0][0], pathID_dl);
+
+	csl_caph_hwctrl_closeSwitchCH
+		(path->sw[0][0], pathID_dl);
+	memset(&path->sw[0][0], 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+
+	csl_pcm_stop_rx(extModem_pcmHandleSSP, CSL_PCM_CHAN_RX0);
+	csl_pcm_enable_scheduler(extModem_pcmHandleSSP, FALSE);
+
+	/* clean up the block list of this sink*/
+	memset(path->block[0], 0, sizeof(path->block[0]));
+	memset(path->blockIdx[0], 0, sizeof(path->blockIdx[0]));
+
+	path->sinkCount = 0;
+	}
+
+	path = &HWConfig_Table[pathID_ul-1];
+
+	path->block_split_offset = 0;
+
+	/*csl_caph_hwctrl_remove_blocks
+				(path->pathID, i, path->block_split_offset);*/
+	{
+	csl_caph_hwctrl_closeDMA
+		(path->dma[0][0], pathID_ul);
+
+	csl_caph_hwctrl_closeCFifo
+		(path->cfifo[0][0], pathID_ul);
+
+	csl_caph_hwctrl_closeSwitchCH
+		(path->sw[0][0], pathID_ul);
+	memset(&path->sw[0][0], 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+
+	csl_pcm_stop_tx(extModem_pcmHandleSSP, CSL_PCM_CHAN_TX0);
+	csl_pcm_enable_scheduler(extModem_pcmHandleSSP, FALSE);
+
+	/* clean up the block list of this sink*/
+	memset(path->block[0], 0, sizeof(path->block[0]));
+	memset(path->blockIdx[0], 0, sizeof(path->blockIdx[0]));
+
+	path->sinkCount = 0;
+	}
+
+	/*csl_caph_hwctrl_closeDMA(path->dma[0][0], path->pathID);*/
+	{
+		CSL_CAPH_ARM_DSP_e owner = CSL_CAPH_DSP;
+		CSL_CAPH_HWConfig_Table_t *path;
+
+		path = &HWConfig_Table[pathID_dl-1];
+
+		csl_caph_dma_clear_intr(path->dma[0][0], owner);
+		csl_caph_dma_disable_intr(path->dma[0][0], owner);
+		csl_caph_dma_stop_transfer(path->dma[0][0]);
+		csl_caph_dma_release_channel(path->dma[0][0]);
+
+		path->dma[0][0] = 0;
+
+		path = &HWConfig_Table[pathID_ul-1];
+
+		csl_caph_dma_clear_intr(path->dma[0][0], owner);
+		csl_caph_dma_disable_intr(path->dma[0][0], owner);
+		csl_caph_dma_stop_transfer(path->dma[0][0]);
+		csl_caph_dma_release_channel(path->dma[0][0]);
+
+		path->dma[0][0] = 0;
+	}
+
+	/*csl_caph_hwctrl_closeCFifo(path->cfifo[0][0], path->pathID);*/
+	{
+		UInt32 fifoAddr = 0;
+		CSL_CAPH_HWConfig_Table_t *path;
+
+		path = &HWConfig_Table[pathID_dl-1];
+
+		fifoAddr = csl_caph_cfifo_get_fifo_addr(path->cfifo[0][0]);
+		csl_caph_hwctrl_removeHWResource(fifoAddr, pathID_dl);
+
+		if (0 == csl_caph_hwctrl_readHWResource(fifoAddr, pathID_dl)) {
+			csl_caph_cfifo_stop_fifo(path->cfifo[0][0]);
+			csl_caph_cfifo_release_fifo(path->cfifo[0][0]);
+		}
+		path->cfifo[0][0] = CSL_CAPH_CFIFO_NONE;
+
+		path = &HWConfig_Table[pathID_ul-1];
+
+		fifoAddr = csl_caph_cfifo_get_fifo_addr(path->cfifo[0][0]);
+		csl_caph_hwctrl_removeHWResource(fifoAddr, pathID_ul);
+
+		if (0 == csl_caph_hwctrl_readHWResource(fifoAddr, pathID_ul)) {
+			csl_caph_cfifo_stop_fifo(path->cfifo[0][0]);
+			csl_caph_cfifo_release_fifo(path->cfifo[0][0]);
+		}
+		path->cfifo[0][0] = CSL_CAPH_CFIFO_NONE;
+	}
+
+	/*csl_caph_hwctrl_closeSwitchCH(path->sw[0][0], path->pathID);*/
+	{
+		CSL_CAPH_HWConfig_Table_t *path;
+
+		path = &HWConfig_Table[pathID_dl-1];
+
+		csl_caph_hwctrl_removeHWResource(
+			path->sw[0][0].FIFO_srcAddr, pathID_dl);
+		csl_caph_hwctrl_removeHWResource(
+			path->sw[0][0].FIFO_dstAddr, pathID_dl);
+
+		csl_caph_switch_stop_transfer(path->sw[0][0].chnl);
+		csl_caph_switch_release_channel(path->sw[0][0].chnl);
+		csl_caph_switch_remove_dst(
+			path->sw[0][0].chnl, path->sw[0][0].FIFO_dstAddr);
+		path->sw[0][0].chnl = CSL_CAPH_SWITCH_NONE;
+
+		path = &HWConfig_Table[pathID_ul-1];
+
+		csl_caph_hwctrl_removeHWResource(
+			path->sw[0][0].FIFO_srcAddr, pathID_ul);
+		csl_caph_hwctrl_removeHWResource(
+			path->sw[0][0].FIFO_dstAddr, pathID_ul);
+
+		csl_caph_switch_stop_transfer(path->sw[0][0].chnl);
+		csl_caph_switch_release_channel(path->sw[0][0].chnl);
+		csl_caph_switch_remove_dst(
+			path->sw[0][0].chnl, path->sw[0][0].FIFO_dstAddr);
+		path->sw[0][0].chnl = CSL_CAPH_SWITCH_NONE;
+	}
+
+	csl_caph_hwctrl_RemovePathInTable(pathID_dl);
+	csl_caph_hwctrl_RemovePathInTable(pathID_ul);
+
+	/*shutdown all audio clock if no audio activity, at last*/
+	if (csl_caph_hwctrl_allPathsDisabled() == TRUE)
+		csl_caph_ControlHWClock(FALSE);
+
+	return;
+}
+
+void csl_caph_hwctrl_extModem_StopPath_step1(CSL_CAPH_PathID pathID_ul,
+		CSL_CAPH_PathID pathID_dl)
+{
+}
+#endif
 
 /****************************************************************************
 *  Function Name: void csl_caph_hwctrl_MuteSink
