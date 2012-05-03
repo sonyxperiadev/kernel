@@ -173,10 +173,12 @@ static CSL_CAPH_SSP_e sspidI2SUse = CSL_CAPH_SSP_4;
 static Boolean sspTDM_enabled = FALSE;
 
 static CSL_HANDLE extModem_pcmHandleSSP;
+#if defined(CONFIG_RHEA_PANDA)
 /*static CAPH_SWITCH_TRIGGER_e extModem_pcmTxTrigger = CAPH_SSP3_TX0_TRIGGER;
 static CAPH_SWITCH_TRIGGER_e extModem_pcmRxTrigger = CAPH_SSP3_RX0_TRIGGER;*/
 static CAPH_SWITCH_TRIGGER_e extModem_pcmTxTrigger = CAPH_SSP4_TX0_TRIGGER;
 static CAPH_SWITCH_TRIGGER_e extModem_pcmRxTrigger = CAPH_SSP4_RX0_TRIGGER;
+#endif
 
 /*static void *bmintc_handle = NULL;*/
 static UInt32 dspSharedMemAddr;
@@ -660,6 +662,7 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 }
 #endif
 
+#if defined(CONFIG_RHEA_PANDA)
 static void EXTMODEM_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 {
 	aTrace(LOG_AUDIO_CSL,
@@ -681,7 +684,7 @@ static void EXTMODEM_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_HIGH);
 	}
 }
-
+#endif
 
 /*
  * Function Name: csl_caph_hwctrl_PrintPath
@@ -1521,8 +1524,7 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 	}
 
 	count_fmrx_path = 0;
-	if (path->source == CSL_CAPH_DEV_FM_RADIO &&
-		path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY)
+	if (path->source == CSL_CAPH_DEV_FM_RADIO)
 		count_fmrx_path =
 		csl_caph_count_path_with_same_source(CSL_CAPH_DEV_FM_RADIO);
 

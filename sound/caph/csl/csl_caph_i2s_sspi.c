@@ -244,6 +244,7 @@ void csl_i2s_start_tx(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
  */
 void csl_i2s_stop_tx(CSL_HANDLE handle)
 {
+	aTrace(LOG_AUDIO_CSL, "%s\n", __func__);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_TX0);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_TX1);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_TX0);
@@ -273,6 +274,7 @@ void csl_i2s_stop_tx(CSL_HANDLE handle)
  */
 void csl_i2s_stop_rx(CSL_HANDLE handle)
 {
+	aTrace(LOG_AUDIO_CSL, "%s\n", __func__);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_RX0);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_RX1);
 	chal_sspi_fifo_reset(handle, SSPI_FIFO_ID_RX0);
