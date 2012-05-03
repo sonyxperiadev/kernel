@@ -768,6 +768,11 @@ int BCMLOG_GetSdFileMax(void)
 	return (int)min(size, int_max);
 }
 
+int BCMLOG_GetSdFileMin(void)
+{
+	return (int)max(MIN_MTT_SD_SIZE * 1024 * 1024, 0);
+}
+
 int BCMLOG_GetCpCrashLogDevice(void)
 {
 	return g_config.cp_crashlog.dev;

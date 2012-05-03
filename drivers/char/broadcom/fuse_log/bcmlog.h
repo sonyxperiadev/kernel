@@ -322,6 +322,7 @@ extern "C" {
  *	Get runtime SD log file size in bytes
  **/
 	int BCMLOG_GetSdFileMax(void);
+	int BCMLOG_GetSdFileMin(void);
 
 	int BCMLOG_GetCpCrashLogDevice(void);
 	int BCMLOG_GetApCrashLogDevice(void);

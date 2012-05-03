@@ -180,7 +180,8 @@ static void WriteToLogDev_SDCARD(void)
 	 *      Attempt to open log file, if not already open
 	 */
 	if (!g_devWrParms.file) {
-		if ((Get_SDCARD_Available()) > MTT_SD_RESERVED) {
+		if ((Get_SDCARD_Available()) >
+			(MTT_SD_RESERVED + BCMLOG_GetSdFileMin())) {
 			GetLogFileName(fname, BCMLOG_GetFileBase(),
 				sizeof(fname));
 
