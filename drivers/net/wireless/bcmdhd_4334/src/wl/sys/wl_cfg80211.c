@@ -3826,7 +3826,7 @@ wl_cfg80211_del_pmksa(struct wiphy *wiphy, struct net_device *dev,
 	struct cfg80211_pmksa *pmksa)
 {
 	struct wl_priv *wl = wiphy_priv(wiphy);
-	struct _pmkid_list pmkid;
+	struct _pmkid_list pmkid = {0};
 	s32 err = 0;
 	int i;
 

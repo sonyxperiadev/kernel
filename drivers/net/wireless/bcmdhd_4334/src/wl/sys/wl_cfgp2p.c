@@ -732,7 +732,7 @@ wl_cfgp2p_escan(struct wl_priv *wl, struct net_device *dev, u16 active,
 	s8 *memblk;
 	wl_p2p_scan_t *p2p_params;
 	wl_escan_params_t *eparams;
-	wlc_ssid_t ssid;
+	wlc_ssid_t ssid = {0};
 	/* Scan parameters */
 #define P2PAPI_SCAN_NPROBES 1
 #define P2PAPI_SCAN_DWELL_TIME_MS 80

@@ -4788,6 +4788,7 @@ dhd_sendup_event(dhd_pub_t *dhdp, wl_event_msg_t *event, void *data)
 		dhd_info_t *dhd;
 		uchar *eth;
 		int ifidx;
+		char *ptrtmp;
 
 		len = ntoh32(event->datalen);
 		pktlen = sizeof(bcm_event_t) + len + 2;
@@ -4826,7 +4827,8 @@ dhd_sendup_event(dhd_pub_t *dhdp, wl_event_msg_t *event, void *data)
 			bcopy(event, p_bcm_event, sizeof(wl_event_msg_t));
 
 			/* copy hci event into sk_buf */
-			bcopy(data, (p_bcm_event + 1), len);
+			ptrtmp = (char*)(p_bcm_event + 1);
+			bcopy(data, ptrtmp, len);
 
 			msg->bcm_hdr.length  = hton16(sizeof(wl_event_msg_t) +
 				ntoh16(msg->bcm_hdr.length));
