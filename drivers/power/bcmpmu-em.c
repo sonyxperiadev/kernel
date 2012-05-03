@@ -47,6 +47,9 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define POLLRATE_POLL		50
 #define POLLRATE_IDLE		500
 
+#define LOWBAT_LVL		3550
+#define FULLBAT_LVL		4150
+
 #define pr_em(debug_level, args...) \
 	do { \
 		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
@@ -193,6 +196,10 @@ struct bcmpmu_em {
 	struct bcmpmu_fg_zone *fg_zone_ptr;
 	int fg_dbg_temp;
 	unsigned long fg_zone_tm;
+	int fg_poll_hbat;
+	int fg_poll_lbat;
+	int fg_lbat_lvl;
+	int fg_fbat_lvl;
 	int piggyback_chrg;
 	void (*pb_notify) (enum bcmpmu_event_t event, int data);
 };
@@ -860,7 +867,7 @@ static int update_eoc(struct bcmpmu_em *pem)
 				}
 				pr_em(FLOW, "%s, pb-hw, eoc_st=%d\n",
 					__func__, pem->eoc_state);
-			} else if ((pem->batt_volt > 4150) &&
+			} else if ((pem->batt_volt > pem->fg_fbat_lvl) &&
 				(pem->batt_curr < pem->eoc) &&
 				(pem->charge_state != CHRG_STATE_MAINT)) {
 					pem->eoc_count++;
@@ -890,7 +897,7 @@ static int update_eoc(struct bcmpmu_em *pem)
 			}
 			pr_em(FLOW, "%s, brcm-hw, eoc_st=%d\n",
 				__func__, pem->eoc_state);
-		} else if ((pem->batt_volt > 4150) &&
+		} else if ((pem->batt_volt > pem->fg_fbat_lvl) &&
 			(pem->batt_curr < pem->eoc) &&
 			(pem->charge_state != CHRG_STATE_MAINT)) {
 				pem->eoc_count++;
@@ -1000,7 +1007,7 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 		} else if ((!is_charger_present(pem)) &&
 			   (pem->fg_lowbatt_cal != 0) &&
 			   (pem->fg_comp_mode == 0) &&
-			   (volt < 3550)) {
+			   (volt < pem->fg_lbat_lvl)) {
 			pem->cal_mode = CAL_MODE_LOWBAT,
 			calibration = 1;
 		} else if ((pem->mode != MODE_TRANSITION) &&
@@ -1024,6 +1031,19 @@ err:
 	pr_em(FLOW, "%s, facc=%d, fcp=%lld, cp=%d, vcp=%d, cl=%d, clm=%d\n",
 		__func__, fg_result, pem->fg_capacity, capacity,
 		capacity_v, calibration, pem->cal_mode);
+
+	if (!is_charger_present(pem)) {
+		if (volt > pem->fg_lbat_lvl)
+			pem->mode = MODE_HIGHBAT;
+		else
+			pem->mode = MODE_LOWBAT;
+	} else {
+		if (pem->charge_state == CHRG_STATE_MAINT)
+			pem->mode = MODE_CHRG_MAINT;
+		else
+			pem->mode = MODE_CHRG;
+	}
+
 	return calibration;
 }
 
@@ -1101,13 +1121,13 @@ static int get_update_rate(struct bcmpmu_em *pem)
 			rate = POLLRATE_CHRG_MAINT;
 			break;
 		case MODE_LOWBAT:
-			rate = POLLRATE_LOWBAT;
+			rate = pem->fg_poll_lbat;
 			break;
 		case MODE_HIGHBAT:
 			if (pem->pollrate < POLLRATE_HIGHBAT)
 				rate = pem->pollrate;
 			else
-				rate = POLLRATE_HIGHBAT;
+				rate = pem->fg_poll_hbat;
 			break;
 		case MODE_POLL:
 			rate = POLLRATE_POLL;
@@ -1447,20 +1467,8 @@ static void em_algorithm(struct work_struct *work)
 		calibration = 0;
 		capacity = pem->batt_capacity;
 		pem->transition = 0;
-	} else {
+	} else
 		calibration = update_batt_capacity(pem, &capacity);
-		if (!is_charger_present(pem)) {
-			if (pem->batt_volt > 3600)
-				pem->mode = MODE_HIGHBAT;
-			else
-				pem->mode = MODE_LOWBAT;
-		} else {
-			if (pem->charge_state == CHRG_STATE_MAINT)
-				pem->mode = MODE_CHRG_MAINT;
-			else
-				pem->mode = MODE_CHRG;
-		}
-	}
 
 	if (calibration != 0) {
 		pem->mode = MODE_POLL;
@@ -1479,10 +1487,12 @@ static void em_algorithm(struct work_struct *work)
 
 	update_power_supply(pem, capacity);
 
-	pem->batt_capacity = capacity;
+	if (pem->batt_capacity != capacity) {
+		pem->batt_capacity = capacity;
+		save_fg_cap(pem->bcmpmu, capacity);
+	}
 	pr_em(REPORT, "%s, update capacity=%d, volt=%d, curr=%d\n",
 		__func__, capacity, pem->batt_volt, pem->batt_curr);
-	save_fg_cap(pem->bcmpmu, capacity);
 
 	schedule_delayed_work(&pem->work,
 		msecs_to_jiffies(get_update_rate(pem)));
@@ -1684,6 +1694,23 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 		pem->fg_tc_up_zone = get_fg_zone(pem, pdata->fg_tc_up_lvl);
 	else
 		pem->fg_tc_up_zone = FG_TMP_ZONE_p10;
+
+	if (pdata->fg_poll_hbat)
+		pem->fg_poll_hbat = pdata->fg_poll_hbat;
+	else
+		pem->fg_poll_hbat = POLLRATE_HIGHBAT;
+	if (pdata->fg_poll_lbat)
+		pem->fg_poll_lbat = pdata->fg_poll_lbat;
+	else
+		pem->fg_poll_lbat = POLLRATE_LOWBAT;
+	if (pdata->fg_lbat_lvl)
+		pem->fg_lbat_lvl = pdata->fg_lbat_lvl;
+	else
+		pem->fg_lbat_lvl = LOWBAT_LVL;
+	if (pdata->fg_fbat_lvl)
+		pem->fg_fbat_lvl = pdata->fg_fbat_lvl;
+	else
+		pem->fg_fbat_lvl = FULLBAT_LVL;
 
 	pem->charge_zone = CHRG_ZONE_QC;
 	pem->fg_zone = FG_TMP_ZONE_MAX;

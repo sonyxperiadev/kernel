@@ -1211,6 +1211,10 @@ struct bcmpmu_platform_data {
 	int fg_tc_up_lvl;
 	int fg_zone_settle_tm;
 	struct bcmpmu_fg_zone *fg_zone_info;
+	int fg_poll_hbat;
+	int fg_poll_lbat;
+	int fg_lbat_lvl;
+	int fg_fbat_lvl;
 	enum bcmpmu_bc_t bc;
 	int rpc_rate;
 	struct bcmpmu_wd_setting *wd_setting;
