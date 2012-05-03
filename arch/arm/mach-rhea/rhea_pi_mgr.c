@@ -42,6 +42,7 @@
 #include <mach/clock.h>
 #include <mach/pi_mgr.h>
 #include <plat/pwr_mgr.h>
+#include <plat/pi_mgr.h>
 
 #include "pm_params.h"
 
@@ -69,6 +70,10 @@
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 extern char *noncache_buf_va;
 #endif
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+static struct clk *ref_8ph_en_pll1_clk;
+#endif
+
 char *armc_core_ccu[] = { KPROC_CCU_CLK_NAME_STR };
 
 struct pi_opp arm_opp = {
@@ -159,6 +164,39 @@ static struct pi_state mm_states[] = {
 	PI_STATE(PI_STATE_SHUTDOWN, SHTDWN_POLICY, 100, PI_STATE_SAVE_CONTEXT),
 };
 
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+static int mm_pi_init_state(struct pi *pi)
+{
+
+	if (JIRA_WA_ENABLED(2490)) {
+		if (ref_8ph_en_pll1_clk == NULL) {
+			ref_8ph_en_pll1_clk = clk_get(NULL,
+				REF_8PHASE_EN_PLL1_CLK_NAME_STR);
+		}
+		BUG_ON(IS_ERR_OR_NULL(ref_8ph_en_pll1_clk));
+	}
+	gen_pi_ops.init_state(pi);
+	return 0;
+}
+
+static int mm_pi_enable(struct pi *pi, int enable)
+{
+	int ret;
+	pi_dbg(pi->id, PI_LOG_EN_DIS, "%s\n", __func__);
+	if (JIRA_WA_ENABLED(2490)) {
+		if (enable && ref_8ph_en_pll1_clk)
+			__clk_enable(ref_8ph_en_pll1_clk);
+	}
+	ret = gen_pi_ops.enable(pi, enable);
+	if (JIRA_WA_ENABLED(2490)) {
+		if (!enable && ref_8ph_en_pll1_clk)
+			__clk_disable(ref_8ph_en_pll1_clk);
+	}
+	return ret;
+}
+struct pi_ops mm_pi_ops;
+#endif
+
 #ifdef CONFIG_KONA_PI_DFS_STATS
 static cputime64_t mm_time_in_state[MM_PI_NUM_OPP];
 static u32 mm_trans_table[MM_PI_NUM_OPP * MM_PI_NUM_OPP];
@@ -220,7 +258,11 @@ static struct pi mm_pi = {
 		.trans_table = mm_trans_table,
 	},
 #endif
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+	.ops = &mm_pi_ops,
+#else
 	.ops = &gen_pi_ops,
+#endif
 };
 
 /*HUB PI CCU Id*/
@@ -561,7 +603,11 @@ void __init rhea_pi_mgr_init()
 		sub_sys_pi.num_dep_pi = 0;
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2276 */
-
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+		mm_pi_ops = gen_pi_ops;
+		mm_pi_ops.enable = mm_pi_enable;
+		mm_pi_ops.init_state = mm_pi_init_state;
+#endif
 	pi_mgr_init();
 
 	for (i = 0; i < ARRAY_SIZE(pi_list); i++) {
