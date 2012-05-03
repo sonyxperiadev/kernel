@@ -42,9 +42,6 @@ static int do_cp_crash(struct notifier_block *this, unsigned long event,
 	/* SD card to trigger cp crash after kernel panic
 	 * is not supported as file operation in atomic context
 	 * is not possible. */
-	if (BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice())
-		goto out;
-
 	if (BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice() && cp_crashed)
 		goto out;
 

@@ -333,6 +333,7 @@ extern "C" {
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 	extern int ap_triggered;
 #endif
+	extern int brcm_klogging(char *data, int length);
 	extern int brcm_retrive_early_printk(void);
 	extern int bcmlog_mtt_on;
 	extern unsigned short bcmlog_log_ulogging_id;
@@ -345,8 +346,9 @@ extern "C" {
 
 /**
  *	printk redirect callback registration
- **/	typedef int (*BrcmRedirectPrintkCbk)(const char* str);
-	void BCMLOG_RegisterPrintkRedirectCbk(int enable, BrcmRedirectPrintkCbk cb);
+ **/	typedef int (*BrcmRedirectPrintkCbk)(const char *str);
+	void BCMLOG_RegisterPrintkRedirectCbk(int enable,
+			BrcmRedirectPrintkCbk cb);
 
 #ifdef __cplusplus
 }

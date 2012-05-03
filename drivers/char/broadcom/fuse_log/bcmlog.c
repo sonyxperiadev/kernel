@@ -123,6 +123,12 @@ struct cpanic_data {
 static unsigned long offs;
 #endif
 
+static void BCMLOG_klogging_crashdump(const char *buf, int size)
+{
+	brcm_klogging((char *)buf, size) ;
+	mdelay(10);
+}
+
 static unsigned int compress_memcpy(char *dest, char *src,
 				    unsigned short nbytes);
 static unsigned short Checksum16(unsigned char *data, unsigned long len);
@@ -1138,8 +1144,7 @@ static void LogSignal_Internal(unsigned int inSigCode,
 	}
 
 	if (CpCrashDumpInProgress()) {
-		if ((BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) ||
-		    (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM))
+		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM)
 			irql = AcquireOutputLock();
 
 		/* crash log, so send directly to SDCARD/MTT */
@@ -1177,8 +1182,7 @@ static void LogSignal_Internal(unsigned int inSigCode,
 			BCMLOG_HandleCpCrashDumpData(frame_end,
 							     frame_end_size);
 		}
-		if ((BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) ||
-		    (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM))
+		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM)
 			ReleaseOutputLock(irql);
 	} else {
 		unsigned long totallen, availlen;
@@ -1603,6 +1607,8 @@ void BCMLOG_HandleCpCrashDumpData(const char *buf, int size)
 		BCMLOG_HandleCpCrashDumpData_Custom_STM(buf, size);
 		break;
 	case BCMLOG_OUTDEV_RNDIS:
+		BCMLOG_klogging_crashdump(buf, size);
+		break;
 	case BCMLOG_OUTDEV_ACM:
 		BCMLOG_Output((unsigned char *)buf, size, 0);
 		break;
@@ -1665,6 +1671,8 @@ void BCMLOG_LogCPCrashDumpString(const char *inLogString)
 						   mttFrameSize);
 			break;
 		case BCMLOG_OUTDEV_RNDIS:
+			BCMLOG_klogging_crashdump(kbuf_mtt, mttFrameSize);
+			break;
 		case BCMLOG_OUTDEV_ACM:
 			irql = AcquireOutputLock();
 			BCMLOG_Output(kbuf_mtt, mttFrameSize, 0);
@@ -1796,13 +1804,6 @@ void BCMLOG_HandleCpCrashMemDumpData(const char *inPhysAddr, int size)
 				 "CP memory dump done %d of %d bytes. Do not stop logging",
 				 (int)(p - (unsigned long)MemDumpVAddr), size);
 			BCMLOG_LogCPCrashDumpString(tmpStr);
-		}
-		/**
-		 * A small sleep to let slower drivers like RNDIS time to dump
-		 **/
-		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS) {
-			set_current_state(TASK_INTERRUPTIBLE);
-			schedule_timeout(1);
 		}
 	}
 }

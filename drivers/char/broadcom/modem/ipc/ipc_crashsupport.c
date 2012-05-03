@@ -139,7 +139,8 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	void __iomem *DumpVAddr;
 
 	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
-		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice())
+		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice() ||
+		BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice())
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 		&& ap_triggered == 0
 #endif
