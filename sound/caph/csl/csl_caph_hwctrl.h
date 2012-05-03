@@ -361,6 +361,16 @@ void csl_caph_hwctrl_init(void);
 *****************************************************************************/
 void csl_caph_hwctrl_deinit(void);
 
+/**
+*
+*  @brief  toggle all srcmixer,Audioh clock
+*
+*  @param  void
+*
+*  @return
+*****************************************************************************/
+void csl_caph_hwctrl_toggle_caphclk(void);
+
 /****************************************************************************
 *
 *  Function Name: Result_t csl_caph_hwctrl_AllocateStreamID()

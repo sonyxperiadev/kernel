@@ -299,6 +299,8 @@ void AUDCTRL_Init(void)
 {
 	int i;
 
+	/*Toggle all SRCMixer/AudioH clk*/
+	csl_caph_hwctrl_toggle_caphclk();
 	AUDDRV_Init();
 	csl_caph_hwctrl_init();
 
