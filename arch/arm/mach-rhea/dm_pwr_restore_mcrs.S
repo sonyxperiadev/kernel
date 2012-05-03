@@ -41,8 +41,9 @@
 
 		MOV	r11,r0               @ preserve a copy of DORMANT_BASE
 
-		MCR p15,0,r0,c7,c5,0     @ invalidate Icache to PoU (this core) ICIALLU
-		MCR p15,0,r0,c7,c5,6     @ invalidate branch predictor (this core) BPIALL
+	/* L1 I & D caches and the branch predictor buffer are not invalidated
+	 * here to reduce dormant exit delay as this is done in ABI-EXT.
+	 */
 		MOV r1, #0x1800
 		MCR p15,0,r1,c1,c0,0     @ enable the Icache and branch prediction (Secure Configuration Register)
 		ISB                      @ (as soon as possible)
@@ -57,11 +58,6 @@
 1001:
 		SETEND	BE
 1000:
-	.endif
-
-PWRUPinv_tst:
-	.if (L1_POWERDOWN)            @ IF L1 Dcache has no retention
-PWRUPinv:	L1_DCISW                 @ invalidate L1 by set/way
 	.endif
 
     /*   IMPLEMENTATION DEFINED - proprietary features: CP15 register 15 etc.

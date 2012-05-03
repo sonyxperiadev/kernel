@@ -21,7 +21,6 @@
 #include <linux/module.h>
 #include <linux/io.h>
 #include <linux/dma-mapping.h>
-#include <asm/cacheflush.h>
 #include <plat/scu.h>
 #include <mach/secure_api.h>
 #include <mach/pm.h>
@@ -112,7 +111,6 @@ static inline u32 smc(u32 service, u32 flags, u32 args)
 
 	/* Flush caches */
 	scu_invalidate_all();
-	flush_cache_all();
 
 #ifdef DORMANT_PROFILE
 	clear_ns_gpio();
