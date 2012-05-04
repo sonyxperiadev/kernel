@@ -497,8 +497,8 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
 			|| config->rx_loopback_ena) ? 1 : 0;
 	seq_conf.rx_enable = (config->rx_ena
 			|| config->tx_loopback_ena) ? 1 : 0;
-	seq_conf.cs_activate = 1;
-	seq_conf.cs_deactivate = 0;
+	seq_conf.cs_activate = 0; /* left channel, CS is LOW */
+	seq_conf.cs_deactivate = 1;
 	seq_conf.pattern_mode = 0;
 	seq_conf.rep_cnt = 0;
 	seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
@@ -515,8 +515,8 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
 			|| config->rx_loopback_ena) ? 1 : 0;
 	seq_conf.rx_enable = (config->rx_ena
 			|| config->tx_loopback_ena) ? 1 : 0;
-	seq_conf.cs_activate = 0;
-	seq_conf.cs_deactivate = 1;
+	seq_conf.cs_activate = 1; /* right channel, CS is HIGH */
+	seq_conf.cs_deactivate = 0;
 	seq_conf.pattern_mode = 0;
 	seq_conf.rep_cnt = 0;
 	seq_conf.opcode = SSPI_SEQ_OPCODE_COND_JUMP;
