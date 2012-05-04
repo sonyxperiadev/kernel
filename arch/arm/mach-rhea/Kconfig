@@ -110,6 +110,26 @@ config MACH_RHEA_SS_AMAZING
 	help
 	  Support for the Broadcom Rhea SS Amazing board.
 
+config MACH_RHEA_SS_ZANIN
+	bool "Support Broadcom Rhea SS Zanin HW 0.3 board"
+	help
+	  Support for the Broadcom Rhea SS Zanin  HW 0.3 board.
+
+config MACH_RHEA_SS_ZANIN_02
+        bool "Support Broadcom Rhea SS Zanin HW 0.2 board"
+        help
+          Support for the Broadcom Rhea SS Zanin  HW 0.2 board.
+
+config MACH_RHEA_SS_ZANIN_04
+        bool "Support Broadcom Rhea SS Zanin HW 0.4 board"
+        help
+          Support for the Broadcom Rhea SS Zanin HW 0.4 board.
+
+config MACH_RHEA_SS_IVORY
+        bool "Support Broadcom Rhea SS Ivory board"
+        help
+          Support for the Broadcom Rhea SS Ivory board.
+
 endchoice
 
 

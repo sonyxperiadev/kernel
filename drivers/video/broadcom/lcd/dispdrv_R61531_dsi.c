@@ -292,7 +292,7 @@ static int DISPDRV_SetMaxRxSize(DISPDRV_HANDLE_T drvH)
 // Description:    
 //
 //*****************************************************************************
-
+/*
 static int DISPDRV_ReadID(DISPDRV_HANDLE_T drvH, UInt8 reg)
 {
 	DISPDRV_PANEL_T *pPanel = (DISPDRV_PANEL_T *)drvH;
@@ -327,7 +327,7 @@ static int DISPDRV_ReadID(DISPDRV_HANDLE_T drvH, UInt8 reg)
 	return (rxBuff[0]);
 
 }				
-
+*/
 //*****************************************************************************
 //
 // Function Name:  DISPDRV_WrSendCmnd

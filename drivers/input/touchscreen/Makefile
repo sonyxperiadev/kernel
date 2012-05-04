@@ -72,4 +72,5 @@ obj-$(CONFIG_TOUCHSCREEN_TMA340_COOPERVE)	+= synaptics_i2c_rmi_tma340_cooperve.o
 obj-$(CONFIG_TOUCHSCREEN_TMA140_LUCAS)	+= tma140_lucas.o tma140_download_lucas.o
 obj-$(CONFIG_TOUCHSCREEN_TMA340)	+= synaptics_i2c_rmi_tma340_tassve.o
 obj-$(CONFIG_TOUCHSCREEN_BT403_AMAZING)	+= zinitix_tsp_bt403_amazing.o
-
+obj-$(CONFIG_TOUCHSCREEN_BT403_ZANIN)	+= zinitix_touch.o
+obj-$(CONFIG_TOUCHSCREEN_F761)	+= silabs_f760.o bl_master.o

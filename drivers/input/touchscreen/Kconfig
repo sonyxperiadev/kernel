@@ -448,6 +448,31 @@ config TOUCHSCREEN_BT403_AMAZING
 	  To compile this driver as a module, choose M here: the
 	  module will be called qt602240_ts.
 
+config TOUCHSCREEN_BT403_ZANIN
+	tristate "BT403 I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have the Zinitix  I2C touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called bt403_ts.
+
+config TOUCHSCREEN_F761
+        tristate "F761 I2C Touchscreen"
+        depends on I2C
+	help
+          Say Y here if you have the Silicon Labs I2C touchscreen
+          connected to your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called F761_ts.
+
+
 config TOUCHSCREEN_MIGOR
 	tristate "Renesas MIGO-R touchscreen"
 	depends on SH_MIGOR && I2C

@@ -25,3 +25,9 @@ config LCD_R61531_SUPPORT
         default N
         help
 	  HVGA LCD panel (R61531 controller)
+
+config LCD_ILI9341_SUPPORT
+        tristate "LCD Panel- ILI9341 controller"
+        default N
+        help
+	  QVGA LCD panel (ILI9341 controller)
