@@ -39,6 +39,7 @@
 /*  #include <linux/broadcom/timer.h> */
 
 #include <linux/timer.h>
+#include <plat/cpu.h>
 #include "i2c-bsc.h"
 
 #define DEFAULT_I2C_BUS_SPEED    BSC_BUS_SPEED_50K
@@ -1648,6 +1649,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* keep clock stretching disabled during probe */
 	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
+	/* Enable/Disable Slew rate */
 	/* high-speed mode */
 	if (dev->high_speed_mode) {
 		pr_debug("disable slew rate  for id = %d\n", pdev->id);
@@ -1658,6 +1660,12 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		i2c_pin_cfg(pdev->id, 1);
 
 	}
+
+	/* Enable the Thigh control */
+	if (!hw_cfg->is_pmu_i2c && cpu_is_rhea_B1())
+		bsc_enable_thigh_ctrl((uint32_t)dev->virt_base, true);
+	else
+		bsc_enable_thigh_ctrl((uint32_t)dev->virt_base, false);
 
 	INIT_WORK(&dev->reset_work, i2c_master_reset);
 	dev->reset_wq = create_workqueue("i2c_master_reset");

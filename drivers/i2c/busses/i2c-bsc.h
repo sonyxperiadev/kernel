@@ -16,6 +16,7 @@
 #include <stdio.h>
 #endif
 #include <mach/rdb/brcm_rdb_i2c_mm_hs.h>
+#include <mach/rdb/brcm_rdb_i2c_mm_hs_slave.h>
 
 /*
  * Map the B0 macros to the appropriate A0 macros to get both the variants
@@ -129,6 +130,7 @@ static inline unsigned char bsc_get_soft_reset_ready(uint32_t baseAddr);
 static inline unsigned char bsc_get_soft_reset(uint32_t baseAddr);
 static inline BSC_MODE_t bsc_set_mode(uint32_t baseAddr, BSC_MODE_t mode);
 static inline void bsc_enable_pad_output(uint32_t baseAddr, bool enable);
+static inline void bsc_enable_thigh_ctrl(uint32_t baseAddr, bool enable);
 
 /**
 *
@@ -1104,4 +1106,26 @@ static inline void bsc_enable_pad_output(uint32_t baseAddr, bool enable)
 		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_PADCTL_OFFSET),
 			I2C_MM_HS_PADCTL_PAD_OUT_EN_MASK,
 			I2C_MM_HS_PADCTL_PAD_OUT_EN_SHIFT, 1);
+}
+
+/**
+*
+*  @brief  Enable/Disable thigh ctrl
+*
+*  @param  baseAddr  (in) mapped address of this BSC instance
+*  @param  enable    (in) state of the thigh ctrl bit
+*
+*  @return none
+*****************************************************************************/
+static inline void bsc_enable_thigh_ctrl(uint32_t baseAddr, bool enable)
+{
+	if (enable)
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_SLAVE_RCM_OFFSET),
+			I2C_MM_HS_SLAVE_RCM_THIGH_CTRL_MASK,
+			I2C_MM_HS_SLAVE_RCM_THIGH_CTRL_SHIFT, 1);
+	else
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_SLAVE_RCM_OFFSET),
+			I2C_MM_HS_SLAVE_RCM_THIGH_CTRL_MASK,
+			I2C_MM_HS_SLAVE_RCM_THIGH_CTRL_SHIFT, 0);
+
 }
