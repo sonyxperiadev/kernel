@@ -1527,7 +1527,7 @@ static int em_event_handler(struct notifier_block *nb,
 
 	case BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT:
 		pem->chrgr_curr = *(int *)para;
-		if (pem->chrgr_curr < PMU_CHRGR_CURR_50)
+		if (pem->chrgr_curr < bcmpmu_min_supported_curr())
 			pem->chrgr_curr = 0;
 		pem->force_update = 1;
 		pr_em(FLOW, "%s, chrgr curr=%d\n", __func__, pem->chrgr_curr);
@@ -1760,7 +1760,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	}
 	pem->chrgr_type = bcmpmu->usb_accy_data.chrgr_type;
 	pem->chrgr_curr = bcmpmu->usb_accy_data.max_curr_chrgr;
-	if (pem->chrgr_curr < PMU_CHRGR_CURR_50)
+	if (pem->chrgr_curr < bcmpmu_min_supported_curr())
 		pem->chrgr_curr = 0;
 	bcmpmu->em_reset = em_reset;
 	bcmpmu->em_reset_status = em_reset_status;

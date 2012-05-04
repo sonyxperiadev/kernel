@@ -1269,6 +1269,7 @@ const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(struct bcmpmu *bcmpmu);
 const struct bcmpmu_env_info *bcmpmu_get_envregmap(struct bcmpmu *bcmpmu,
 								int *len);
 const int *bcmpmu_get_usb_id_map(struct bcmpmu *bcmpmu, int *len);
+const int bcmpmu_min_supported_curr(void);
 
 struct regulator_desc *bcmpmu_rgltr_desc(struct bcmpmu *bcmpmu);
 struct bcmpmu_reg_info *bcmpmu_rgltr_info(struct bcmpmu *bcmpmu);

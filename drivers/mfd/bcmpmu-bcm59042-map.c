@@ -27,6 +27,7 @@
 #define PMU_IRG_REG_MAX		8
 #define PMU_ENV_REG_MAX		7
 #define PMU_USB_ID_LVL_MAX	2
+#define PMU_MIN_CHRG_CURR	50
 
 #define BCM59042_CO_DIG_REV	3
 #define BCM59042_CO_ANA_REV	3
@@ -769,6 +770,12 @@ const int *bcmpmu_get_usb_id_map(struct bcmpmu *bcmpmu, int *len)
 	*len = PMU_USB_ID_LVL_MAX;
 	return bcm59042_usb_id_map;
 }
+
+const int bcmpmu_min_supported_curr(void)
+{
+	return PMU_MIN_CHRG_CURR;
+}
+
 
 int bcmpmu_init_pmurev_info(struct bcmpmu *bcmpmu)
 {

@@ -30,6 +30,7 @@
 
 #define BCM59039_CO_DIG_REV	3
 #define BCM59039_CO_ANA_REV	3
+#define PMU_MIN_CHRG_CURR	50
 
 static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_SMPLCTRL] =		{.map = 0x00, .addr = 0x06, .mask = 0xFF, .ro = 0},
@@ -595,6 +596,11 @@ const int *bcmpmu_get_usb_id_map(struct bcmpmu *bcmpmu, int *len)
 {
 	*len = PMU_USB_ID_LVL_MAX;
 	return bcm59039_usb_id_map;
+}
+
+const int bcmpmu_min_supported_curr(void)
+{
+	return PMU_MIN_CHRG_CURR;
 }
 
 int bcmpmu_init_pmurev_info(struct bcmpmu *bcmpmu)
