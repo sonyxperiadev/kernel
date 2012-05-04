@@ -1144,6 +1144,10 @@ static void composite_disconnect(struct usb_gadget *gadget)
 	if (composite->disconnect)
 		composite->disconnect(cdev);
 	spin_unlock_irqrestore(&cdev->lock, flags);
+
+	if (!gadget_is_otg(gadget))
+		usb_gadget_vbus_draw(gadget, PRE_CONFIG_CURRENT);
+
 }
 
 /*-------------------------------------------------------------------------*/
@@ -1187,7 +1191,6 @@ composite_unbind(struct usb_gadget *gadget)
 	 * state protected by cdev->lock.
 	 */
 	WARN_ON(cdev->config);
-
 	while (!list_empty(&cdev->configs)) {
 		struct usb_configuration	*c;
 		c = list_first_entry(&cdev->configs,
@@ -1384,17 +1387,6 @@ composite_resume(struct usb_gadget *gadget)
 	cdev->suspended = 0;
 }
 
-static void
-composite_reset(struct usb_gadget *gadget)
-{
-	struct usb_composite_dev	*cdev = get_gadget_data(gadget);
-
-	DBG(cdev, "reset\n");
-	usb_gadget_vbus_draw(gadget, PRE_CONFIG_CURRENT);
-
-	if (composite->reset)
-		composite->reset(cdev);
-}
 
 /*-------------------------------------------------------------------------*/
 
@@ -1408,7 +1400,6 @@ static struct usb_gadget_driver composite_driver = {
 
 	.suspend	= composite_suspend,
 	.resume		= composite_resume,
-	.reset		= composite_reset,
 	.driver	= {
 		.owner		= THIS_MODULE,
 	},

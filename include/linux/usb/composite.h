@@ -291,7 +291,6 @@ struct usb_composite_driver {
 	/* global suspend hooks */
 	void			(*suspend)(struct usb_composite_dev *);
 	void			(*resume)(struct usb_composite_dev *);
-	void			(*reset)(struct usb_composite_dev *);
 };
 
 extern int usb_composite_probe(struct usb_composite_driver *driver,

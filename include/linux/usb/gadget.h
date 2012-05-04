@@ -818,7 +818,6 @@ struct usb_gadget_driver {
 	void			(*disconnect)(struct usb_gadget *);
 	void			(*suspend)(struct usb_gadget *);
 	void			(*resume)(struct usb_gadget *);
-	void			(*reset)(struct usb_gadget *);
 	/* FIXME support safe rmmod */
 	struct device_driver	driver;
 };

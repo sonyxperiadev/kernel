@@ -37,6 +37,7 @@
 #ifdef DWC_UTE_CFI
 #include "dwc_otg_cfi.h"
 #endif
+/* #include <linux/usb/ch9.h> */
 
 #ifdef DWC_UTE_PER_IO
 extern void complete_xiso_ep(dwc_otg_pcd_ep_t *ep);
@@ -45,6 +46,7 @@ extern void complete_xiso_ep(dwc_otg_pcd_ep_t *ep);
 
 #define DEBUG_EP0
 static inline void ep0_do_stall(dwc_otg_pcd_t *pcd, const int err_val);
+static int get_device_speed(dwc_otg_core_if_t *core_if);
 
 /**
  * This function updates OTG.
@@ -930,11 +932,14 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	gintsts.b.usbreset = 1;
 	dwc_write_reg32(&core_if->core_global_regs->gintsts, gintsts.d32);
 
-	DWC_SPINUNLOCK(pcd->lock);
-	ret = pcd->fops->reset(pcd);
-	DWC_SPINLOCK(pcd->lock);
-	if (ret < 0)
-		ep0_do_stall(pcd, ret);
+	if (get_device_speed(GET_CORE_IF(pcd)) != 0) {
+
+		DWC_SPINUNLOCK(pcd->lock);
+		pcd->fops->disconnect(pcd);
+		DWC_SPINLOCK(pcd->lock);
+		if (ret < 0)
+				ep0_do_stall(pcd, ret);
+	}
 	return 1;
 }
 

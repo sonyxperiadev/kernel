@@ -1029,11 +1029,6 @@ static int _hnp_changed(dwc_otg_pcd_t *pcd)
 
 static int _reset(dwc_otg_pcd_t *pcd)
 {
-
-	if (gadget_wrapper->gadget.is_otg)
-		return 0;
-	if (gadget_wrapper->driver && gadget_wrapper->driver->reset)
-		gadget_wrapper->driver->reset(&gadget_wrapper->gadget);
 		return 0;
 }
 
