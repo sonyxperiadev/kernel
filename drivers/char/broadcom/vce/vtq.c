@@ -586,8 +586,8 @@ err_init_priority_lock:
 	term_procentries(vtq_pervce_state);
 err_init_procentries:
 
-	mutex_destroy(&v->host_mutex);
-	mutex_destroy(&v->cleanup_mutex);
+	mutex_destroy(&vtq_pervce_state->host_mutex);
+	mutex_destroy(&vtq_pervce_state->cleanup_mutex);
 
 	kfree(vtq_pervce_state);
 err_kmalloc_vtq_pervce_state:
