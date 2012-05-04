@@ -3647,7 +3647,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	CSL_CAPH_HWConfig_Table_t *path;
 #ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
 	int pathCount = 0;
-#endif	
+#endif
 
 	/*The use cases that don't allow 26M SRCMixer clock:
 	   - voice related.
@@ -3723,7 +3723,7 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	CSL_CAPH_HWConfig_Table_t *path;
 #ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
 	int pathCount = 0;
-#endif	
+#endif
 
 	aTrace(LOG_AUDIO_CSL,
 		"csl_caph_hwctrl_DisablePath:: streamID: %d, pathID %d.\r\n",
