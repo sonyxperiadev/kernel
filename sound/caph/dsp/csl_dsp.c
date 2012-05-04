@@ -50,18 +50,18 @@
 
 AP_SharedMem_t *vp_shared_mem;
 
-static VPUCaptureStatusCB_t VPUCaptureStatusHandler;
-static VPURenderStatusCB_t VPURenderStatusHandler;
-static USBStatusCB_t USBStatusHandler;
-static VOIFStatusCB_t VOIFStatusHandler;
-static ARM2SPRenderStatusCB_t ARM2SPRenderStatusHandler;
-static ARM2SP2RenderStatusCB_t ARM2SP2RenderStatusHandler;
-static MainAMRStatusCB_t MainAMRStatusHandler;
-static VoIPStatusCB_t VoIPStatusHandler;
-static AudioLogStatusCB_t AudioLogStatusHandler;
-static AudioEnableDoneStatusCB_t AudioEnableDoneHandler;
-static PTTStatusCB_t PTTStatusHandler;
-static ExtModemCallDoneStatusCB_t ExtModemCallDoneHandler;
+static VPUCaptureStatusCB_t VPUCaptureStatusHandler = NULL;
+static VPURenderStatusCB_t VPURenderStatusHandler = NULL;
+static USBStatusCB_t USBStatusHandler = NULL;
+static VOIFStatusCB_t VOIFStatusHandler = NULL;
+static ARM2SPRenderStatusCB_t ARM2SPRenderStatusHandler = NULL;
+static ARM2SP2RenderStatusCB_t ARM2SP2RenderStatusHandler = NULL;
+static MainAMRStatusCB_t MainAMRStatusHandler = NULL;
+static VoIPStatusCB_t VoIPStatusHandler = NULL;
+static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
+static AudioEnableDoneStatusCB_t AudioEnableDoneHandler = NULL;
+static PTTStatusCB_t PTTStatusHandler = NULL;
+static ExtModemCallDoneStatusCB_t ExtModemCallDoneHandler = NULL;
 
 static void Dump_Caph_regs(void);
 

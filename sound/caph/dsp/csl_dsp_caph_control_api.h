@@ -60,12 +60,10 @@ typedef enum {
 	DSP_AADMAC_LEG_IHF_SPKR_EN = 0x100
 } DSP_AADMAC_Audio_Connections_t;
 
-enum _DSP_A_E_M_C_t {
-	DSP_AADMAC_EXT_MODEM_UL,
-	DSP_AADMAC_EXT_MODEM_DL
-};
-
-#define DSP_AADMAC_Ext_Modem_Connections_t enum _DSP_A_E_M_C_t
+typedef enum {
+    DSP_AADMAC_EXT_MODEM_UL,
+    DSP_AADMAC_EXT_MODEM_DL
+} DSP_AADMAC_Ext_Modem_Connections_t;
 
 /* ---- Function Declarations ----------------------------------------- */
 
