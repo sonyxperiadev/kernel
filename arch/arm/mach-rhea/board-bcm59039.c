@@ -66,20 +66,6 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x50, .val = 0x3B, .mask = 0xFF},
 	{.map = 0, .addr = 0x52, .val = 0x04, .mask = 0x04},
 	{.map = 0, .addr = 0x58, .val = 0x05, .mask = 0x0F},
-	/*
-	* temp workaround for LDOs, to be revisited once final
-		OTP value available
-	*/
-	{.map = 0, .addr = 0xB1, .val = 0x4B, .mask = 0xFF},
-	{.map = 0, .addr = 0xB2, .val = 0x04, .mask = 0xFF},
-	{.map = 0, .addr = 0xB3, .val = 0x25, .mask = 0xFF},
-	{.map = 0, .addr = 0xB4, .val = 0x27, .mask = 0xFF},
-	{.map = 0, .addr = 0xB5, .val = 0x05, .mask = 0xFF},
-	{.map = 0, .addr = 0xB6, .val = 0x07, .mask = 0xFF},
-	{.map = 0, .addr = 0xB7, .val = 0x25, .mask = 0xFF},
-	{.map = 0, .addr = 0xB8, .val = 0x06, .mask = 0xFF},
-	{.map = 0, .addr = 0xB9, .val = 0x07, .mask = 0xFF},
-	{.map = 0, .addr = 0xBD, .val = 0x21, .mask = 0xFF},
 
 	/*Init SDSR NM, NM2 and LPM voltages to 1.24V
 	*/
