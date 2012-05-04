@@ -13,3 +13,15 @@ config FB_BRCM_ILI9486
 	help 
 		HVGA LCD panel (ILI9486 controller)
 		
+	  
+config LCD_ILI9486_SUPPORT
+        tristate "LCD Panel- ILI9486 controller"
+        default N
+        help
+	  HVGA LCD panel (ILI9486 controller)
+
+config LCD_R61531_SUPPORT
+        tristate "LCD Panel- R61531 controller"
+        default N
+        help
+	  HVGA LCD panel (R61531 controller)

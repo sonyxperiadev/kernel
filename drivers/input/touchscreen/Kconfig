@@ -406,6 +406,12 @@ config TOUCHSCREEN_MMS128_COOPERVE
 	  To compile this driver as a module, choose M here: the
 	  module will be called qt602240_ts.
 
+config TOUCHSCREEN_TMA140_LUCAS
+	tristate "Cypress TMA140 i2c touchscreen"
+	depends on I2C
+	help
+	  This enables support for TMA140 driver over I2C based touchscreens.
+
 config TOUCHSCREEN_MMS128_TASSCOOPER
 	tristate "QT602240 I2C Touchscreen"
 	depends on I2C

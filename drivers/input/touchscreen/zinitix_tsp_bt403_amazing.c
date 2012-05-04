@@ -144,9 +144,11 @@
 #define TOUCH_EN 22 //PSJ
 
 #define CONFIG_TREBON_HW01 1
+#if 0
 static struct regulator *touch_regulator = NULL;
 #ifdef CONFIG_TREBON_HW01
 static struct regulator *touch_io_regulator = NULL;
+#endif
 #endif
 
 #define	ZINITIX_DEBUG		1
@@ -402,7 +404,7 @@ void touch_power_control(int on_off)
 		{
 			printk("[TSP] touch_power_control unable to request GPIO pin");
 			//printk(KERN_ERR "unable to request GPIO pin %d\n", TSP_INT_GPIO_PIN);
-			return rc;
+			return;
 		}
 		gpio_direction_output(TOUCH_EN,1);
 		gpio_set_value(TOUCH_EN,1);
@@ -1041,6 +1043,7 @@ static bool ts_read_coord (zinitix_touch_dev * hDevice)
 }
 
 //
+#if 0  //Comment out this function for compile warning
 static void ts_power_control(zinitix_touch_dev *touch_dev, u8 ctl)
 {
 	if(ctl == POWER_OFF) //power off
@@ -1078,7 +1081,7 @@ static void ts_power_control(zinitix_touch_dev *touch_dev, u8 ctl)
 
 
 }
-
+#endif
 static bool ts_mini_init_touch(zinitix_touch_dev * touch_dev)
 {
 	if(touch_dev == NULL)	
@@ -1251,9 +1254,7 @@ u8 ts_upgrade_firmware(zinitix_touch_dev* touch_dev, const u8 *firmware_data, u3
 	u32 i;
 #endif	
 	u8	i2c_buffer[TC_PAGE_SZ+2];
-#if BT4x3_Above_Series
-	u8	*addr_buffer;
-#endif
+
 
 
 	verify_data = (u8*)kzalloc(size, GFP_KERNEL);
@@ -1541,7 +1542,7 @@ bool ts_init_touch(zinitix_touch_dev* touch_dev)
 	u16 chip_firmware_version;
 	u16	chip_reg_data_version;
 	u16	chip_eeprom_info;
-	s16	stmp;
+	
 	int	retry_cnt = 0;
 
 
@@ -2461,7 +2462,7 @@ ssize_t zinitix_set_testmode(struct device *dev, struct device_attribute *attr, 
 static ssize_t zinitix_tkey_reference(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	zinitix_touch_dev *touch_dev = global_touch_dev;    
-	u16 menukey, backkey;
+
 
 	printk(KERN_INFO "[zinitix_touch] %s\r\n", __FUNCTION__);
 
@@ -2490,7 +2491,7 @@ static ssize_t zinitix_tkey_data(struct device *dev, struct device_attribute *at
 	return sprintf(buf, "%d\n%d\n%d\n%d\n", touch_dev->ref_data[ZINITIX_MENU_KEY], touch_dev->cur_data[ZINITIX_MENU_KEY], 
 								touch_dev->ref_data[ZINITIX_BACK_KEY],touch_dev->cur_data[ZINITIX_BACK_KEY]);    
 }
-static int16_t zinitix_raw_data[X_RAW_DATA][Y_RAW_DATA] = {0};
+static int16_t zinitix_raw_data[X_RAW_DATA][Y_RAW_DATA] = {{0,},};
 static ssize_t zinitix_touch_reference(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	int time_out = 0;
@@ -2538,7 +2539,7 @@ static ssize_t zinitix_touch_reference(struct device *dev, struct device_attribu
 				goto fail_read_raw;
 			}
 			memcpy(zinitix_raw_data, raw_data, MAX_TEST_RAW_DATA*2);
-#if ZINITIX_N_TEST
+#ifdef ZINITIX_N_TEST
 			for (j = 0; j < (MAX_TEST_RAW_DATA*2); j++) {
 				printk(KERN_INFO "[zinitix_touch] temp_buff[%d]"
 				"= %5d\r\n", j, zinitix_raw_data[j]);
@@ -2624,6 +2625,7 @@ static ssize_t zinitix_touch_ndata_show(struct device *dev, struct device_attrib
 	}
 	if(written_bytes > 0)
 		return written_bytes;  
+	return -1;
 }
 static ssize_t zinitix_delta(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -2642,6 +2644,7 @@ static ssize_t zinitix_delta(struct device *dev, struct device_attribute *attr, 
 
 	if(written_bytes > 0)
 		return written_bytes;    
+	return -1;
 }
 
 static ssize_t zinitix_scantime(struct device *dev, struct device_attribute *attr, char *buf)
@@ -2972,13 +2975,13 @@ static long ts_misc_fops_ioctl(struct file *filp, unsigned int cmd, unsigned lon
 
 	case TOUCH_IOCTL_VARIFY_UPGRADE_DATA:
 	{
-		int ret = 0;
+	//	int ret = 0;
 		u16	version;
-		unsigned int	version_pos;
+	//	unsigned int	version_pos;
 		if(copy_from_user(&m_firmware_data[2], argp, misc_touch_dev->cap_info.chip_fw_size))	return -1;
 #if	BT4x2_Series
-		version_pos = (unsigned int)((((unsigned int)m_firmware_data[4]<<8)&0xff00)|(m_firmware_data[5]&0xff));			
-		version = (u16)(((u16)m_firmware_data[version_pos+2+2]<<8)|(u16)m_firmware_data[version_pos+2+1]);
+//		version_pos = (unsigned int)((((unsigned int)m_firmware_data[4]<<8)&0xff00)|(m_firmware_data[5]&0xff));			
+//		version = (u16)(((u16)m_firmware_data[version_pos+2+2]<<8)|(u16)m_firmware_data[version_pos+2+1]);
 #endif
 #if	BT4x3_Above_Series 			
 		version = (u16)(((u16)m_firmware_data[FIRMWARE_VERSION_POS+1]<<8)|(u16)m_firmware_data[FIRMWARE_VERSION_POS]);			
@@ -2990,7 +2993,7 @@ static long ts_misc_fops_ioctl(struct file *filp, unsigned int cmd, unsigned lon
 	break;		
 	case TOUCH_IOCTL_START_UPGRADE:
 	{
-		int ret = 0;			
+	//	int ret = 0;			
 
 		disable_irq(misc_touch_dev->irq);				
 		down(&misc_touch_dev->work_proceedure_lock);	
@@ -3091,7 +3094,7 @@ static long ts_misc_fops_ioctl(struct file *filp, unsigned int cmd, unsigned lon
 
 	case TOUCH_IOCTL_HW_CALIBRAION:
 	{
-		int value = 0;
+	//	int value = 0;
 		u16 mode;
 		u16 chip_eeprom_info;
 		int ret = -1;
@@ -3766,7 +3769,7 @@ err_request_irq:
 	input_unregister_device(touch_dev->input_dev);
 err_input_register_device:
 	input_free_device(touch_dev->input_dev);
-err_kthread_create_failed:	
+//err_kthread_create_failed:	
 err_input_allocate_device:	
 	kfree(touch_dev);
 err_alloc_dev_data:	
@@ -3841,9 +3844,9 @@ static void __exit zinitix_touch_exit(void)
 
 static ssize_t firmware_sw_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	int ret;
+//	int ret;
 	u16	sw_version;
-	u16 chip_reg_data_version;
+//	u16 chip_reg_data_version;
 
 	printk("[TSP] %s\n",__func__);
 
@@ -3901,7 +3904,7 @@ static ssize_t tsp_xy_show(struct device *dev, struct device_attribute *attr, ch
 }
 static ssize_t firmware_update(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	int ret = 0;	
+//	int ret = 0;	
 	printk("[TSP] %s\n",__func__);
 	IsfwUpdate = FWUP_ON;
 
@@ -3937,11 +3940,12 @@ static ssize_t firmware_update(struct device *dev, struct device_attribute *attr
 	up(&misc_touch_dev->work_proceedure_lock);	
 	IsfwUpdate = FWUP_OFF;
 	printk("\n[TSP] success firmware_update\n");
+	return 0;
 
 }
 static ssize_t firmware_update_status(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	int ret;
+//	int ret;
 	printk("[TSP] %s\n",__func__);
 
 	return sprintf(buf, "%d\n", IsfwUpdate);

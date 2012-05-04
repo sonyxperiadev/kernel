@@ -132,13 +132,32 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
+#include <linux/ktd259b_bl.h>
+
 #include <linux/mfd/bcmpmu.h>
 #include <plat/pi_mgr.h>
+
+#include <linux/serial_8250.h>
+#include <linux/serial_reg.h>
+#include <mach/rdb/brcm_rdb_uartb.h>
 
 #include <media/soc_camera.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <linux/delay.h>
+
+#ifdef CONFIG_WD_TAPPER
+#include <linux/broadcom/wd-tapper.h>
+#endif
+
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
+#include "board-rhea_ss_amazing-wifi.h"
+extern int rhea_wifi_status_register(
+		void (*callback)(int card_present, void *dev_id),
+		void *dev_id);
+
+#endif
 
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
@@ -170,7 +189,6 @@ struct regulator_consumer_supply hv6_supply[] = {
 };
 
 struct regulator_consumer_supply hv3_supply[] = {
-	{.supply = "hv3"},
 	{.supply = "vdd_sdio"},
 };
 #endif
@@ -857,7 +875,7 @@ static struct kona_headset_pd headset_data = {
 	 * detect accessory insertion/removal _OR_ should the driver use the
 	 * COMP1 for the same.
 	 */
-	.gpio_for_accessory_detection = 0,
+	.gpio_for_accessory_detection = 1,
 
 	/*
 	 * Pass the board specific button detection range 
@@ -980,6 +998,16 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
+#ifdef CONFIG_BCM_SS_VIBRA
+struct platform_device bcm_vibrator_device = {
+	.name = "vibrator", 
+	.id = 0,
+	.dev = {
+		.platform_data="hv4",
+   },
+};
+#endif
+
 static struct resource board_sdio1_resource[] = {
 	[0] = {
 		.start = SDIO1_BASE_ADDR,
@@ -1006,7 +1034,6 @@ static struct resource board_sdio2_resource[] = {
 	},
 };
 
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 static struct resource board_sdio3_resource[] = {
 	[0] = {
 		.start = SDIO3_BASE_ADDR,
@@ -1019,22 +1046,6 @@ static struct resource board_sdio3_resource[] = {
 		.flags = IORESOURCE_IRQ,
 	},
 };
-#endif
-
-#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING)
-static struct resource board_sdio3_resource[] = {
-	[0] = {
-		.start = SDIO3_BASE_ADDR,
-		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO_NAND,
-		.end = BCM_INT_ID_SDIO_NAND,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-#endif
 
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2XT
 static struct resource board_sdio4_resource[] = {
@@ -1062,10 +1073,8 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.ahb_clk_name = "sdio1_ahb_clk",
 		.sleep_clk_name = "sdio1_sleep_clk",
 		.peri_clk_rate = 48000000,
-		/*The SD card regulator*/
+                /* vdd_sdc regulator: needed to support UHS SD cards */
 		.vddo_regulator_name = "vdd_sdio",
-		/*The SD controller regulator*/
-		.vddsdxc_regulator_name = "vdd_sdxc",
 	},
 	{ /* SDIO2 */
 		.id = 1,
@@ -1078,7 +1087,6 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	{ /* SDIO3 */
 		.id = 2,
 		.data_pullup = 0,
@@ -1086,35 +1094,18 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.wifi_gpio = {
 			.reset		= 70,
 			.reg		= -1,
-			.host_wake	= -1,
+			.host_wake	= 48,
 			.shutdown	= -1,
 		},
-		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
 		.peri_clk_name = "sdio3_clk",
 		.ahb_clk_name = "sdio3_ahb_clk",
 		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 48000000,
-	},
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+		.register_status_notify = rhea_wifi_status_register,
 #endif
-
-#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined (CONFIG_MACH_RHEA_SS_AMAZING)
-	{ /* SDIO3 */
-		.id = 2,
-		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_WIFI,
-		.wifi_gpio = {
-			.reset		= 70,
-			.reg		= -1,
-			.host_wake	= 89,
-			.shutdown	= -1,
 		},
-		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-		.peri_clk_name = "sdio3_clk",
-		.ahb_clk_name = "sdio3_ahb_clk",
-		.sleep_clk_name = "sdio3_sleep_clk",
-		.peri_clk_rate = 48000000,
-	},
-#endif
 };
 
 static struct platform_device board_sdio1_device = {
@@ -1140,14 +1131,8 @@ static struct platform_device board_sdio2_device = {
 static struct platform_device board_sdio3_device = {
 	.name = "sdhci",
 	.id = 2,
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	.resource = board_sdio3_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
-#endif
-#if defined(CONFIG_MACH_RHEA_RAY_EDN2X) || defined(CONFIG_MACH_RHEA_SS) || defined(CONFIG_MACH_RHEA_SS_AMAZING)
-	.resource = board_sdio3_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
-#endif
 	.dev      = {
 		.platform_data = &board_sdio_param[2],
 	},
@@ -1186,6 +1171,25 @@ static struct platform_device bcm_backlight_devices = {
 		.platform_data  =       &bcm_backlight_data,
 	},
 };
+
+#else
+static struct platform_ktd259b_backlight_data bcm_ktd259b_backlight_data = {
+	.max_brightness = 255,
+	.dft_brightness = 143,
+	.ctrl_pin = 95,
+};
+
+
+static struct platform_device bcm_backlight_devices = {
+    .name           = "backlight-wire",
+	.id 		= -1,
+	.dev 	= {
+		.platform_data  =       &bcm_ktd259b_backlight_data,
+	},
+	
+};
+
+
 
 #endif /*CONFIG_BACKLIGHT_PWM */
 
@@ -1687,7 +1691,7 @@ static int rhea_camera_power_sub(struct device *dev, int on)
 
 	   if(!camdrv_ss_power(1,on))
 	   {
-		printk("%s,camdrv_ss_power failed for subcam !!!\n");
+		printk("camdrv_ss_power failed for subcam !!!\n");
 		return -1;
 	   }
 
@@ -1884,7 +1888,7 @@ static int rhea_camera_power(struct device *dev, int on)
 
 	if(!camdrv_ss_power(0,on))
 	{
-		printk("%s,camdrv_ss_power failed for MAIN CAM!! \n");
+		printk("camdrv_ss_power failed for MAIN CAM!! \n");
 		return -1;
 	}
 	return 0;
@@ -1934,7 +1938,8 @@ static struct v4l2_subdev_sensor_interface_parms s5k5ccgx_if_params = {
 		.lanes = 1,
 		.channel = 0,
 		.phy_rate = 0,
-		.pix_clk = 0
+		.pix_clk = 0,
+		.hs_term_time = 0x7
 	},
 };
 
@@ -1959,7 +1964,6 @@ static struct platform_device rhea_camera = {
 };
 
 
-
 static struct v4l2_subdev_sensor_interface_parms sr030pc50_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
@@ -1969,7 +1973,8 @@ static struct v4l2_subdev_sensor_interface_parms sr030pc50_if_params = {
 		.lanes = 1,
 		.channel = 1,
 		.phy_rate = 0,
-		.pix_clk = 0
+		.pix_clk = 0,
+		.hs_term_time = 0x7
 	},
 };
 static struct soc_camera_link iclink_sr030pc50 = {
@@ -1993,6 +1998,28 @@ static struct platform_device rhea_camera_sub = {
 #endif
 
 
+#ifdef CONFIG_WD_TAPPER
+#include <linux/broadcom/wd-tapper.h>
+
+static struct wd_tapper_platform_data wd_tapper_data = {
+  /* Set the count to the time equivalent to the time-out in milliseconds
+   * required to pet the PMU watchdog to overcome the problem of reset in
+   * suspend*/
+  .count = 120000,
+  .ch_num = 1,
+  .name = "aon-timer",
+};
+
+static struct platform_device wd_tapper = {
+  .name = "wd_tapper",
+  .id = 0,
+  .dev = {
+    .platform_data = &wd_tapper_data,
+  },
+};
+#endif
+
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -2003,15 +2030,17 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 	&headset_device,
 #endif
 
+#ifdef CONFIG_BCM_SS_VIBRA
+	&bcm_vibrator_device,
+#endif
+
 #ifdef CONFIG_DMAC_PL330
 	&pl330_dmac_device,
 #endif
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
 #endif
-#ifdef CONFIG_BACKLIGHT_PWM
 	&bcm_backlight_devices,
-#endif
 /* TPS728XX device registration */
 #ifdef CONFIG_REGULATOR_TPS728XX
 	&tps728xx_device,
@@ -2034,12 +2063,17 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_BCM_BT_LPM
 	&board_bcmbt_lpm_device,
 #endif
+#if 0
 	&rhea_camera,
 	&rhea_camera_sub,
-
-#ifdef CONFIG_GPS_IRQ
-        &gps_hostwake
 #endif
+#ifdef CONFIG_GPS_IRQ
+        &gps_hostwake,
+#endif
+#ifdef CONFIG_WD_TAPPER
+        &wd_tapper
+#endif
+
 };
 
 /* Add all userspace regulator consumer devices here */
@@ -2121,6 +2155,13 @@ i2c_register_board_info(0x3, rhea_ss_i2cgpio0_board_info,
 
 static int __init rhea_ray_add_lateInit_devices (void)
 {
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
+	printk(KERN_INFO "Calling WLAN_INIT!\n");
+
+	rhea_wlan_init();
+	printk(KERN_INFO "DONE WLAN_INIT!\n");
+#endif
 	board_add_sdio_devices();
 	return 0;
 }
@@ -2307,8 +2348,9 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 					.bus_ch     = RHEA_BUS_CH_0,
 					.bus_width  = 0,
 					.te_input   = RHEA_TE_IN_0_LCD,	  
-					.col_mode_i = RHEA_CM_I_RGB565,	  
-					.col_mode_o = RHEA_CM_O_RGB565_DSI_VM,        
+				.col_mode_i = RHEA_CM_I_XRGB888,	  
+					.col_mode_o = RHEA_CM_O_RGB888,        
+				
 				},	
 			},
 			.w1 = {

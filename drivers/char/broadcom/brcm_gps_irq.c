@@ -167,7 +167,6 @@ irqreturn_t gps_irq_handler(int irq, void *dev_id)
 static int gps_irq_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
-	int i;
 
 	struct gps_irq *ac_data = container_of(filp->private_data,
 							   struct gps_irq,
@@ -250,9 +249,6 @@ static ssize_t gps_irq_read(struct file *filp,
 static ssize_t gps_irq_write(struct file *filp, const char __user *buffer,
 				   size_t length, loff_t *offset)
 {
-	char tmp[I2C_MAX_SIZE];
-	int ret;
-
 	struct gps_irq *ac_data = filp->private_data;
 
 	if (length < I2C_MAX_SIZE) {

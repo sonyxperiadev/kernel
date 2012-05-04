@@ -25,8 +25,8 @@ obj-$(CONFIG_MACH_RHEA_RAY_DEMO) += rhea_ray.o rhea_ray_pinmux.o
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += rhea_ray.o rhea_ray_pinmux.o
 obj-$(CONFIG_MACH_RHEA_RAY_EDN2X) += rhea_ray.o rhea_ray_pinmux.o board-rhea-wifi.o
 obj-$(CONFIG_MACH_RHEA_SS) += rhea_ss.o rhea_ss_pinmux.o
-obj-$(CONFIG_MACH_RHEA_SS_AMAZING) += rhea_ss_amazing.o rhea_ss_amazing_pinmux.o
-obj-$(CONFIG_MACH_RHEA_SS_LUCAS) += rhea_ss_lucas.o rhea_ss_lucas_pinmux.o
+obj-$(CONFIG_MACH_RHEA_SS_AMAZING) += rhea_ss_amazing.o rhea_ss_amazing_pinmux.o board-bcm59039-amazing.o board-rhea_ss_amazing-wifi.o
+obj-$(CONFIG_MACH_RHEA_SS_LUCAS) += rhea_ss_lucas.o rhea_ss_lucas_pinmux.o board-bcm59039-lucas.o board-rhea_ss_lucas-wifi.o
 obj-$(CONFIG_MACH_RHEA_FARADAY_EB10) += rhea_ray.o rhea_faraday_eb10_pinmux.o
 obj-$(CONFIG_MACH_RHEA_FARADAY_EB20) += rhea_faraday.o rhea_faraday_eb20_pinmux.o
 obj-$(CONFIG_MACH_RHEA_BERRI) += rhea_berri.o rhea_berri_pinmux.o
@@ -41,5 +41,7 @@ obj-y += pm_params.o
 obj-$(CONFIG_ROM_SEC_DISPATCHER_LIB) += sec_bridge_tz.i
 obj-$(CONFIG_ROM_SEC_DISPATCHER_SRC) += rhea_smc.o
 obj-$(CONFIG_MFD_BCM59055) += board-bcm59055.o
+ifeq ($(CONFIG_MACH_RHEA_SS_COMMON),)
 obj-$(CONFIG_MFD_BCM59039) += board-bcm59039.o
+endif
 obj-$(CONFIG_MFD_BCM59042) += board-bcm59042.o
