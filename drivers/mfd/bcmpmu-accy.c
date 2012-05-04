@@ -114,12 +114,12 @@ static const char *const chrgr_type_str[] = {
 static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_NONE] = 0,
 	[PMU_CHRGR_TYPE_SDP] = 0,
-	[PMU_CHRGR_TYPE_CDP] = 500,
+	[PMU_CHRGR_TYPE_CDP] = 1500,
 	[PMU_CHRGR_TYPE_DCP] = 1500,
 	[PMU_CHRGR_TYPE_TYPE1] = 1000,
 	[PMU_CHRGR_TYPE_TYPE2] = 1000,
 	[PMU_CHRGR_TYPE_PS2] = 0,
-	[PMU_CHRGR_TYPE_ACA] = 0,
+	[PMU_CHRGR_TYPE_ACA] = 1000,
 };
 
 struct bcmpmu_accy {
