@@ -951,6 +951,20 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					pathID[param_stop->stream-1]);
 			pathID[param_stop->stream-1] = 0;
 			AUDIO_Policy_RestoreState();
+
+			/* If we do start play before we stop rec,we do not
+			allow the app profile change to MUSIC,we should allow
+			App profile change to MUSIC for the playback path
+			once we stop record */
+
+			app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_MUSIC);
+			if (app_profile == AUDIO_APP_MUSIC) {
+				AUDCTRL_SaveAudioApp(app_profile);
+				AUDCTRL_SetAudioMode_ForMusicPlayback(
+					AUDCTRL_GetAudioMode(),
+					pathID[CTL_STREAM_PANEL_PCMOUT1-1],
+					FALSE);
+			}
 		}
 		break;
 	case ACTION_AUD_OpenRecord:
