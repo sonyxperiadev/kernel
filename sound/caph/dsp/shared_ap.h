@@ -85,13 +85,10 @@
 
 #define NUM_OF_8K_SAMP_PER_INT0_INT     8       // Number of 8kHz samples per INT0 interrupt (for 16kHz * 2)
                                                 // Should be same as in hwregs.inc
-#define NUM_OF_48K_SAMP_PER_INT0_INT    (3*2*8)
- /* Number of 48kHz samples per INT0 interrupt (for 16kHz * 2)
-  Should be same as in hwregs.inc */
-
-#define NUM_OF_48K_SAMP_PER_LEG_INT0_INT (3)
-  /* Number of 48kHz samples per INT0 interrupt (for 16kHz * 2)
-  Should be same as in hwregs.inc */
+#define NUM_OF_48K_SAMP_PER_INT0_INT    (3*2*8) // Number of 48kHz samples per INT0 interrupt (for 16kHz * 2)
+                                                // Should be same as in hwregs.inc
+#define NUM_OF_48K_SAMP_PER_LEG_INT0_INT (3)    // Number of 48kHz samples per INT0 interrupt (for 16kHz * 2)
+                                                // Should be same as in hwregs.inc
 
 /**
  * \defgroup External_Modem_Interface External_Modem_Interface
@@ -2740,13 +2737,13 @@ EXTERN Int16 shared_PTT_UL_buffer[2][320]	           				        AP_SHARED_SEC_D
  * This are the ping-pong buffers from which the AADMAC UL channel would take
  * the data from to be transmitted to the External modem.
  */
-EXTERN UInt32 shared_ext_ul_buf[2][NUM_OF_EXT_MODEM_INTERF_SAMP_PER_INT/2]       AP_SHARED_SEC_DIAGNOS;
+EXTERN UInt32 shared_ext_ul_buf[2][ NUM_OF_EXT_MODEM_INTERF_SAMP_PER_INT/2]       AP_SHARED_SEC_DIAGNOS;
 /**
  * DDR ping-pong buffer for DL data transfer between Rhea and External modem.
  * This are the ping-pong buffers to which the AADMAC DL channel would put
  * the data received from the External modem.
  */
-EXTERN UInt32 shared_ext_dl_buf[2][NUM_OF_EXT_MODEM_INTERF_SAMP_PER_INT/2]       AP_SHARED_SEC_DIAGNOS;
+EXTERN UInt32 shared_ext_dl_buf[2][ NUM_OF_EXT_MODEM_INTERF_SAMP_PER_INT/2]       AP_SHARED_SEC_DIAGNOS;
 /**
  * @}
  */
