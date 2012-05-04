@@ -363,7 +363,7 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 	/* card insert */
 	if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
 		bcm_kona_sd_card_emulate(dev, 1);
-	else			/* card removal */
+	else	/* card removal */
 		bcm_kona_sd_card_emulate(dev, 0);
 
 	return IRQ_HANDLED;
