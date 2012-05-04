@@ -77,8 +77,9 @@ static struct bcmpmu_rw_data register_init_data[] = {
 
 	/*Init IOSR NM2 and LPM voltages to 1.8V
 	*/
-	{.map = 0, .addr = 0xC9, .val = 0x1A, .mask = 0xFF},
-	{.map = 0, .addr = 0xCA, .val = 0x1A, .mask = 0xFF},
+	{.map = 0, .addr = 0xD9, .val = 0x1A, .mask = 0xFF},
+	{.map = 0, .addr = 0xDA, .val = 0x1A, .mask = 0xFF},
+
 	{.map = 0, .addr = 0x13, .val = 0x43, .mask = 0xFF},
 	{.map = 0, .addr = 0x14, .val = 0x7F, .mask = 0xFF},
 	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
