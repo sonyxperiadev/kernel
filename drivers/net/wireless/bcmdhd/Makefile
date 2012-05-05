@@ -5,7 +5,7 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Werror -Dlinux -DBCMDRIVER             \
 	-DDHD_BCMEVENTS -DSHOW_EVENTS -DDONGLEOVERLAYS -DBCMDBG               \
 	-DMMC_SDIO_ABORT -DBCMSDIO -DBCMLXSDMMC -DBCMPLATFORM_BUS             \
 	-DNEW_COMPAT_WIRELESS -DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT          \
-	-DKEEP_ALIVE -DPKT_FILTER_SUPPORT                                     \
+	-DKEEP_ALIVE -DPKT_FILTER_SUPPORT -DENABLE_INSMOD_NO_FW_LOAD   \
 	-DEMBEDDED_PLATFORM -DPNO_SUPPORT                                     \
 	-DDHD_BCM_WIFI_HDMI                                                   \
 	-DCUSTOMER_HW3							      \
@@ -70,7 +70,9 @@ endif
 ###ifneq ($(CONFIG_ANDROID_CFG80211),)
 ifneq ($(CONFIG_CFG80211),)
 bcmdhd-objs += wl_cfg80211.o wl_cfgp2p.o dhd_linux_mon.o
-DHDCFLAGS += -DWL_CFG80211 -DWLP2P -DBCMWAPI_WPI -DBCMWAPI_WAI 
+#DHDCFLAGS += -DWL_CFG80211 -DWLP2P -DBCMWAPI_WPI -DBCMWAPI_WAI 
+DHDCFLAGS += -DWL_CFG80211 -DWLP2P 
+#DHDCFLAGS += -DWL_CFG80211 -DWLP2P
 endif
 ###endif 
 

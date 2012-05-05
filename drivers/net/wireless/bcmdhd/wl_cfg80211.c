@@ -103,7 +103,7 @@ u32 wl_dbg_level = WL_DBG_ERR;
 #define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MACSTR "%02x:%02x:%02x:%02x:%02x:%02x"
 #define MAX_WAIT_TIME 1500
-static s8 ioctlbuf[WLC_IOCTL_MAXLEN];
+//static s8 ioctlbuf[WLC_IOCTL_MAXLEN];
 #define WL_SCAN_ACTIVE_TIME	 40
 #define WL_SCAN_PASSIVE_TIME	130
 #define WL_FRAME_LEN			300
