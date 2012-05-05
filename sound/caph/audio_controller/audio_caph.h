@@ -93,6 +93,8 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_RateChange,/* 33 */
 	ACTION_AUD_AMPEnable,
 	ACTION_AUD_DisableByPassVibra_CB,
+	ACTION_AUD_SetCallMode,
+	ACTION_AUD_ConnectDL,
 	ACTION_AUD_TOTAL
 };
 #define BRCM_AUDIO_ACTION_en_t enum __BRCM_AUDIO_ACTION_en_t
@@ -231,6 +233,12 @@ struct __BRCM_AUDIO_Param_SetApp_t {
 };
 #define BRCM_AUDIO_Param_SetApp_t struct __BRCM_AUDIO_Param_SetApp_t
 
+struct __BRCM_AUDIO_Param_CallMode_t {
+	UInt32 callMode;
+
+};
+#define BRCM_AUDIO_Param_CallMode_t struct __BRCM_AUDIO_Param_CallMode_t
+
 union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_Start_t param_start;
 	BRCM_AUDIO_Param_Stop_t param_stop;
@@ -248,6 +256,7 @@ union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_FM_t parm_FM;
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
 	BRCM_AUDIO_Param_SetApp_t parm_setapp;
+	BRCM_AUDIO_Param_CallMode_t parm_callmode;
 
 };
 #define BRCM_AUDIO_Control_Params_un_t union __BRCM_AUDIO_Control_Params_un_t

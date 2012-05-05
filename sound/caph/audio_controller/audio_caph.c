@@ -398,6 +398,9 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 	case ACTION_AUD_AMPEnable:
 		size = sizeof(BRCM_AUDIO_Param_AMPCTL_t);
 		break;
+	case ACTION_AUD_SetCallMode:
+		size = sizeof(BRCM_AUDIO_Param_CallMode_t);
+		break;
 	default:
 		break;
 	}
@@ -920,15 +923,20 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			pathID[param_start->stream-1] = path;
 
 			if (param_start->pdev_prop->c.drv_type ==
-			    AUDIO_DRIVER_CAPT_HQ)
+			    AUDIO_DRIVER_CAPT_HQ) {
 				AUDIO_DRIVER_Ctrl(param_start->drv_handle,
 						  AUDIO_DRIVER_START,
 						  &param_start->pdev_prop->c.
 						  source);
-			else
+			} else {
+				voice_rec_t voiceRecStr;
+				memset(&voiceRecStr, 0, sizeof(voice_rec_t));
+				voiceRecStr.recordMode = param_start->mixMode;
+				voiceRecStr.callMode = param_start->callMode;
 				AUDIO_DRIVER_Ctrl(param_start->drv_handle,
 						  AUDIO_DRIVER_START,
-						  &param_start->mixMode);
+						  &voiceRecStr);
+			}
 
 			AUDIO_Policy_SetState(BRCM_STATE_RECORD);
 		}
@@ -1407,6 +1415,16 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 
 		}
+		break;
+	case ACTION_AUD_SetCallMode:
+		{
+			BRCM_AUDIO_Param_CallMode_t *parm_callmode =
+				(BRCM_AUDIO_Param_CallMode_t *)arg_param;
+			AUDCTRL_SetCallMode(parm_callmode->callMode);
+		}
+		break;
+	case ACTION_AUD_ConnectDL: /* PTT call */
+		AUDCTRL_ConnectDL();
 		break;
 	default:
 		aError("Error AUDIO_Ctrl_Process Invalid action %d\n",

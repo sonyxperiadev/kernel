@@ -94,6 +94,18 @@ struct _VOICE_CAPT_t {
 };
 #define VOICE_CAPT_t struct _VOICE_CAPT_t
 
+struct _VOCAPTURE_start_t {
+	VOCAPTURE_RECORD_MODE_t recordMode;
+	AUDIO_SAMPLING_RATE_t samplingRate;
+	UInt32 speechMode;	/* used by AMRNB and AMRWB */
+	UInt32 dataRate;	/* used by AMRNB and AMRWB */
+	UInt32 numFramesPerInterrupt;
+	Boolean procEnable;
+	Boolean dtxEnable;
+	Boolean pttRec;
+};
+#define VOCAPTURE_start_t struct _VOCAPTURE_start_t
+
 struct _VOIP_t {
 	void *pVoIPCBPrivate;
 	AUDIO_DRIVER_VoipCB_t pVoipULCallback;
@@ -202,13 +214,7 @@ static Result_t ARM2SP_play_start(AUDIO_DDRIVER_t *aud_drv,
 
 static Result_t ARM2SP_play_resume(AUDIO_DDRIVER_t *aud_drv);
 
-static Result_t VPU_record_start(VOCAPTURE_RECORD_MODE_t recordMode,
-	AUDIO_SAMPLING_RATE_t samplingRate,
-	UInt32 speechMode,	/* used by AMRNB and AMRWB */
-	UInt32 dataRate,	/* used by AMRNB and AMRWB */
-	Boolean procEnable,
-	Boolean dtxEnable,
-	UInt32 numFramesPerInterrupt);
+static Result_t VPU_record_start(VOCAPTURE_start_t capt_start);
 
 /*static Boolean VoIP_StartTelephony(
 	VOIPDumpFramesCB_t telephony_dump_cb,
@@ -923,7 +929,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 {
 	Result_t result_code = RESULT_ERROR;
 #if defined(CONFIG_BCM_MODEM)
-	VOCAPTURE_RECORD_MODE_t *recordMode = NULL;
+	voice_rec_t *voiceRecStr;
+	VOCAPTURE_RECORD_MODE_t recordMode;
 
 	aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessCaptureVoiceCmd::%d\n", ctrl_cmd);
@@ -935,10 +942,10 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			UInt32 frame_size;
 			UInt32 num_frames;
 			UInt32 speech_mode = CSL_VP_SPEECH_MODE_LINEAR_PCM_8K;
+			VOCAPTURE_start_t capt_start;
 
 			if (pCtrlStruct != NULL)
-				recordMode =
-				    (VOCAPTURE_RECORD_MODE_t *) pCtrlStruct;
+				voiceRecStr = (voice_rec_t *) pCtrlStruct;
 			else
 				return RESULT_ERROR;
 
@@ -983,16 +990,27 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			aud_drv->voicecapt_config.speech_mode = speech_mode;
 
 			/* VOCAPTURE_RECORD_UL: default capture mode */
-			if (*recordMode == VOCAPTURE_RECORD_NONE)
-				*recordMode = VOCAPTURE_RECORD_UL;
+			if (voiceRecStr->recordMode == VOCAPTURE_RECORD_NONE)
+				recordMode = VOCAPTURE_RECORD_UL;
+			else
+				recordMode = voiceRecStr->recordMode;
 
-			aud_drv->voicecapt_config.recordMode = *recordMode;
+			aud_drv->voicecapt_config.recordMode = recordMode;
 			audio_capture_driver = aud_drv;
 
-			result_code = VPU_record_start(*recordMode,
-				aud_drv->sample_rate,
-				speech_mode, 0,	/* used by AMRNB and AMRWB */
-				1, 0, num_frames);
+			memset(&capt_start, 0, sizeof(VOCAPTURE_start_t));
+			capt_start.recordMode = recordMode;
+			capt_start.samplingRate = aud_drv->sample_rate;
+			capt_start.speechMode = speech_mode;
+			capt_start.dataRate = 0; /* used by AMRNB and AMRWB */
+			capt_start.numFramesPerInterrupt = num_frames;
+			capt_start.procEnable = 1;
+			capt_start.dtxEnable = 0;
+			if (voiceRecStr->callMode == PTT_CALL)
+				capt_start.pttRec = 1;
+			else
+				capt_start.pttRec = 0;
+			result_code = VPU_record_start(capt_start);
 
 			/*voice render shares the audio mode with voice call.*/
 		}
@@ -1515,38 +1533,39 @@ static Result_t ARM2SP_play_resume(AUDIO_DDRIVER_t *aud_drv)
  * Description: Start the data transfer of VPU record
  *
  ***************************************************************************/
-static Result_t VPU_record_start(
-	VOCAPTURE_RECORD_MODE_t recordMode,
-	AUDIO_SAMPLING_RATE_t samplingRate,
-	UInt32 speechMode,	/* used by AMRNB and AMRWB */
-	UInt32 dataRate,	/* used by AMRNB and AMRWB */
-	Boolean procEnable,
-	Boolean dtxEnable,
-	UInt32 numFramesPerInterrupt)
+static Result_t VPU_record_start(VOCAPTURE_start_t capt_start)
 {
-	/* [8|7|6..4|3..0] =
-	[audio_proc_enable|AMR2_dtx|vp_speech_mode|vp_amr_mode]*/
-	UInt16 encodingMode =
-	    (procEnable << 8) |
-	    (dtxEnable << 7) | (speechMode << 4) | (dataRate);
+	/* [9|8|7|6-4|3|2-0] =
+	[PTT_recording|audio_proc_enable|vp_dtx_enable|vp_speech_mode
+	|NA|vp_amr_mode]*/
+	UInt16 encodingMode;
+
+	encodingMode = (capt_start.pttRec << 9) |
+	    (capt_start.procEnable << 8) |
+	    (capt_start.dtxEnable << 7) |
+		(capt_start.speechMode << 4) |
+		(capt_start.dataRate);
 
 	/* restrict numFramesPerInterrupt due to the shared memory size */
-	if (numFramesPerInterrupt > 4)
-		numFramesPerInterrupt = 4;
+	if (capt_start.numFramesPerInterrupt > 4)
+		capt_start.numFramesPerInterrupt = 4;
 
 	aTrace(LOG_AUDIO_DRIVER,
-		" VPU_record_start::Start capture, encodingMode = 0x%x,",
-		encodingMode);
-	aTrace(LOG_AUDIO_DRIVER,
-		" recordMode = 0x%x, procEnable = 0x%x, dtxEnable = 0x%x",
-		recordMode, procEnable, dtxEnable);
-	aTrace(LOG_AUDIO_DRIVER,
-		"speechMode = 0x%lx, dataRate = 0x%lx\n",
-		speechMode, dataRate);
+		" VPU_record_start::\n"
+		"Start capture, encodingMode = 0x%x,"
+		" recordMode = 0x%x, procEnable = 0x%x, dtxEnable = 0x%x\n"
+		"speechMode = 0x%lx, dataRate = 0x%lx, pttRec = 0x%x\n",
+		encodingMode,
+		capt_start.recordMode,
+		capt_start.procEnable,
+		capt_start.dtxEnable,
+		capt_start.speechMode,
+		capt_start.dataRate,
+		capt_start.pttRec);
 
 #if defined(CONFIG_BCM_MODEM)
-	VPRIPCMDQ_StartCallRecording((UInt8) recordMode,
-				     (UInt8) numFramesPerInterrupt,
+	VPRIPCMDQ_StartCallRecording((UInt8) capt_start.recordMode,
+				     (UInt8) capt_start.numFramesPerInterrupt,
 				     (UInt16) encodingMode);
 #else
 	aTrace(LOG_AUDIO_DRIVER, "VPU_record_start  : dummy for AP only");

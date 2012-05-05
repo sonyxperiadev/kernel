@@ -409,7 +409,7 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 		"ALSA-CAPH PcmPlaybackTrigger substream_number=%d, cmd %d\n",
 		substream_number, cmd);
 
-	callMode = chip->iEnablePhoneCall;
+	callMode = chip->iCallMode;
 	drv_handle = substream->runtime->private_data;
 	pSel = chip->streamCtl[substream_number].iLineSelect;
 
@@ -427,7 +427,7 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 		  voice even in call mode*/
 		chip->streamCtl[substream_number].dev_prop.p[0].sink =
 			AUDIO_SINK_LOUDSPK;
-	} else if ((callMode == 1)
+	} else if ((callMode == MODEM_CALL)
 	    && (chip->streamCtl[substream_number].iLineSelect[0]
 		!= AUDIO_SINK_I2S)) {
 		/*call mode & not FM Tx playback */
@@ -581,7 +581,7 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 	int whichbuffer = 1;
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	UInt16 dmaPointer = 0;
-	if ((callMode == 0)
+	if ((callMode == CALL_MODE_NONE)
 	    || (chip->streamCtl[substream->number].iLineSelect[0] ==
 		AUDIO_SINK_VIBRA && AUDCTRL_GetMFDMode())
 	    || (chip->streamCtl[substream->number].iLineSelect[0] ==
@@ -646,7 +646,7 @@ static int PcmCaptureOpen(struct snd_pcm_substream *substream)
 		"ALSA-CAPH PcmCaptureOpen substream->number = %d\n",
 		substream->number);
 
-	callMode = chip->iEnablePhoneCall;
+	callMode = chip->iCallMode;
 
 	if ((substream_number + 1) == CTL_STREAM_PANEL_PCMIN) {
 		chip->streamCtl[substream_number].dev_prop.c.drv_type =
@@ -797,7 +797,7 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 		"ALSA-CAPH %lx:capture_trigger subdevice=%d cmd=%d\n", jiffies,
 		substream_number, cmd);
 
-	callMode = chip->iEnablePhoneCall;
+	callMode = chip->iCallMode;
 	drv_handle = substream->runtime->private_data;
 	pSel = chip->streamCtl[substream_number].iLineSelect;
 
@@ -823,7 +823,7 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 			param_start.channels = runtime->channels;
 			param_start.stream = substream_number;
 
-			if (callMode == 1)
+			if (callMode == MODEM_CALL)
 				/*record Mode */
 				param_start.mixMode =
 				    chip->pi32SpeechMixOption[substream_number];
@@ -971,9 +971,11 @@ static void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 
 	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_GET_DRV_TYPE,
 			  (void *)&drv_type);
+/*
 	aTrace(LOG_ALSA_INTERFACE,
 		"\n %lx:CaptInterruptPeriodCB drv_type=%d,\n",
 		jiffies, (int)drv_type);
+*/
 
 	switch (drv_type) {
 	case AUDIO_DRIVER_CAPT_HQ:
@@ -1077,7 +1079,7 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 	brcm_alsa_chip_t *pChip;
 	struct snd_pcm_substream *substream;
 
-	callMode = 0;
+	callMode = CALL_MODE_NONE;
 	err =
 	    snd_pcm_new(card, "Broadcom CAPH", 0, NUM_PLAYBACK_SUBDEVICE,
 			NUM_CAPTURE_SUBDEVICE, &pcm);

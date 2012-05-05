@@ -137,6 +137,19 @@ enum __VOCAPTURE_VOICE_MIX_MODE_t {
 };
 #define VOCAPTURE_VOICE_MIX_MODE_t enum __VOCAPTURE_VOICE_MIX_MODE_t
 
+enum __VOICE_CALL_MODE_t {
+	CALL_MODE_NONE,
+	MODEM_CALL,
+	PTT_CALL
+};
+#define VOICE_CALL_MODE_t enum __VOICE_CALL_MODE_t
+
+struct _voice_rec_t {
+	VOCAPTURE_RECORD_MODE_t recordMode;
+	VOICE_CALL_MODE_t callMode;
+};
+#define voice_rec_t struct _voice_rec_t
+
 extern UInt32 audio_control_dsp(UInt32 param1, UInt32 param2,
 	UInt32 param3, UInt32 param4, UInt32 param5, UInt32 param6);
 

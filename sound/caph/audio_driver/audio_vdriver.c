@@ -123,6 +123,8 @@ static Audio_Driver_t sAudDrv = { 0 };
 
 static audio_codecId_handler_t codecId_handler;
 
+static Int32 curCallMode = CALL_MODE_NONE;
+
 struct completion audioEnableDone;
 
 #if defined(CONFIG_RHEA_PANDA)
@@ -403,13 +405,18 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 	}
 
-
+	if (curCallMode != PTT_CALL) {
 #if defined(ENABLE_DMA_VOICE)
-	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
+		audio_control_dsp(
+			AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
 #else
-	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE,
-			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
+		audio_control_dsp(
+			AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE,
+			AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
 #endif
+	} else
+		aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Telephony_Init: "
+			"PTT, skip AUDIO_CONNECT_DL\n");
 
 #if defined(ENABLE_DMA_VOICE)
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0);
@@ -1990,4 +1997,22 @@ int AUDDRV_GetULPath(void)
 	int ret = (int)telephonyPathID.ulPathID;
 	aTrace(LOG_AUDIO_DRIVER,  "%s %d\n", __func__, ret);
 	return ret;
+}
+
+void AUDDRV_SetCallMode(Int32 callMode)
+{
+	curCallMode = callMode;
+	aTrace(LOG_AUDIO_DRIVER,  "%s callMode = %d\n",
+		__func__, (int)curCallMode);
+}
+
+void AUDDRV_ConnectDL(void)
+{
+	aTrace(LOG_AUDIO_DRIVER,  "%s PTT CONNECT_DL\n", __func__);
+#if defined(ENABLE_DMA_VOICE)
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
+#else
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE,
+			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
+#endif
 }

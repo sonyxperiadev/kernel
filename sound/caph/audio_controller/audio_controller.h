@@ -835,5 +835,24 @@ void AUDCTRL_EnableHS_SuplyCtrl(UInt8 hs_ds_lag,
 						Boolean hs_ds_polarity,
 						UInt32 hs_ds_thres);
 
+/********************************************************************
+*  @brief  Set call mode (modem call, PTT call, etc)
+*
+*  @param
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_SetCallMode(Int32 callMode);
+
+/********************************************************************
+*  @brief  Connect DSP DL
+*
+*  @param
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_ConnectDL(void);
 
 #endif /* #define __AUDIO_CONTROLLER_H__ */

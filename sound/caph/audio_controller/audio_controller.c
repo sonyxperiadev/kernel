@@ -3707,4 +3707,12 @@ void AUDCTRL_EnableHS_SuplyCtrl(UInt8 hs_ds_lag,
 
 }
 
+void AUDCTRL_SetCallMode(Int32 callMode)
+{
+	AUDDRV_SetCallMode(callMode);
+}
 
+void AUDCTRL_ConnectDL(void)
+{
+	AUDDRV_ConnectDL();
+}

@@ -988,6 +988,13 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		uinfo->value.integer.min = 0;
 		uinfo->value.integer.max = 1;
 		break;
+	case CTL_FUNCTION_CALL_MODE:
+		/* 0:CALL_MODE_NONE;1:MODEM_CALL;2:PTT_CALL */
+		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+		uinfo->count = 1;
+		uinfo->value.integer.min = 0;
+		uinfo->value.integer.max = 2;
+		break;
 	default:
 		aWarn("Unexpected function code %d\n", function);
 		break;
@@ -1098,6 +1105,9 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 	case CTL_FUNCTION_AMP_CTL:
 		ucontrol->value.integer.value[0] = pChip->i32CurAmpState;
 		break;
+	case CTL_FUNCTION_CALL_MODE:
+		ucontrol->value.integer.value[0] = pChip->iCallMode;
+		break;
 	default:
 		aWarn("Unexpected function code %d\n", function);
 		break;
@@ -1145,6 +1155,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	int rtn = 0, cmd, i, indexVal = -1, cnt = 0;
 	BRCM_AUDIO_Param_ECNS_t parm_ecns;
 	BRCM_AUDIO_Param_AMPCTL_t parm_ampctl;
+	BRCM_AUDIO_Param_CallMode_t parm_callmode;
 	struct snd_pcm_substream *pStream = NULL;
 	int sink = 0;
 	struct snd_ctl_elem_info info;
@@ -1185,12 +1196,20 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		parm_call.new_mic = parm_call.cur_mic = pSel[0];
 		parm_call.new_spkr = parm_call.cur_spkr = pSel[1];
 
-		if (!pChip->iEnablePhoneCall)	/* disable voice call */
+		if (!pChip->iEnablePhoneCall) {	/* disable voice call */
 			AUDIO_Ctrl_Trigger(ACTION_AUD_DisableTelephony,
 					   &parm_call, NULL, 0);
-		else		/* enable voice call with sink and source */
-			AUDIO_Ctrl_Trigger(ACTION_AUD_EnableTelephony,
+			pChip->iCallMode = CALL_MODE_NONE;
+		} else {	/* enable voice call with sink and source */
+			if (pChip->iCallMode == PTT_CALL) {
+				AUDIO_Ctrl_Trigger(ACTION_AUD_ConnectDL,
+					   NULL, NULL, 0);
+			} else {
+				AUDIO_Ctrl_Trigger(ACTION_AUD_EnableTelephony,
 					   &parm_call, NULL, 0);
+				pChip->iCallMode = MODEM_CALL;
+			}
+		}
 
 		break;
 	case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
@@ -1234,7 +1253,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		    ucontrol->value.integer.value[0];
 		break;
 	case CTL_FUNCTION_FM_ENABLE:
-		callMode = pChip->iEnablePhoneCall;
+		callMode = pChip->iCallMode;
 		pChip->iEnableFM = ucontrol->value.integer.value[0];
 		pChip->streamCtl[stream - 1].dev_prop.p[0].source =
 		    AUDIO_SOURCE_I2S;
@@ -1597,6 +1616,37 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		AUDIO_Ctrl_Trigger(ACTION_AUD_AMPEnable, &parm_ampctl,
 				   NULL, 0);
 		break;
+	case CTL_FUNCTION_CALL_MODE:
+		if (pChip->iCallMode == PTT_CALL &&
+			ucontrol->value.integer.value[0] == CALL_MODE_NONE) {
+			/* In case telephony path not disabled */
+			parm_call.new_mic = parm_call.cur_mic = pSel[0];
+			parm_call.new_spkr = parm_call.cur_spkr = pSel[1];
+
+			AUDIO_Ctrl_Trigger(ACTION_AUD_DisableTelephony,
+					   &parm_call, NULL, 0);
+		}
+		pChip->iCallMode = ucontrol->value.integer.value[0];
+		aTrace(LOG_ALSA_INTERFACE,
+				"CTL_FUNCTION_CALL_MODE callMode =%d\n",
+				pChip->iCallMode);
+		parm_callmode.callMode = pChip->iCallMode;
+		AUDIO_Ctrl_Trigger(ACTION_AUD_SetCallMode,
+					   &parm_callmode, NULL, 0);
+
+		pSel =
+		    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
+				     1].iLineSelect;
+
+		parm_call.new_mic = parm_call.cur_mic = pSel[0];
+		parm_call.new_spkr = parm_call.cur_spkr = pSel[1];
+
+		/* In PTT call, setup telephony path with DL
+		disconnected */
+		if (pChip->iCallMode == PTT_CALL)
+			AUDIO_Ctrl_Trigger(ACTION_AUD_EnableTelephony,
+				   &parm_call, NULL, 0);
+		break;
 	default:
 		aWarn("Unexpected function code %d\n", function);
 		break;
@@ -1848,6 +1898,9 @@ static struct snd_kcontrol_new sgSndCtrls[] __devinitdata = {
 	BRCM_MIXER_CTRL_MISC(0, 0, "VC-ENC", 0,
 		CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0,
 		CTL_FUNCTION_PHONE_ECNS_ENABLE)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "CALL-MODE", 0,
+		CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0,
+		CTL_FUNCTION_CALL_MODE)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "P1-MIX", 0,
 		CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0,
 		CTL_FUNCTION_SPEECH_MIXING_OPTION)),

@@ -294,5 +294,7 @@ void AUDDRV_NS(Boolean enable);
 void AUDDRV_SetTuningFlag(int flag);
 int AUDDRV_TuningFlag(void);
 int AUDDRV_GetULPath(void);
+void AUDDRV_SetCallMode(Int32);
+void AUDDRV_ConnectDL(void);
 
 #endif				/* __AUDIO_VDRIVER_H__ */
