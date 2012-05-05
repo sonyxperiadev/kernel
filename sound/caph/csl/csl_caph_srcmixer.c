@@ -1551,8 +1551,9 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	/* Map CSL SRCM input channel to cHAL SRC Input channel */
 	chalInChnl =
 	    csl_caph_srcmixer_get_single_chal_inchnl(routeConfig.inChnl);
-	/* Disable the mixer input channel in case this channel is being used */
-	chal_caph_srcmixer_disable_chnl(handle, (UInt16) chalInChnl);
+	/* do not disable mixer input here, it may be used by an ongoing
+	   multicast */
+	/*chal_caph_srcmixer_disable_chnl(handle, (UInt16) chalInChnl);*/
 
 	/* Configure SRC block */
 	chal_caph_srcmixer_set_SRC(handle, chalInChnl, srcSampleRate);
