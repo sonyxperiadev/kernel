@@ -71,8 +71,6 @@
 #ifndef LOG_SIG_CODE_H
 #define LOG_SIG_CODE_H
 
-#ifndef SDTENV
-
 #ifndef UNDER_LINUX
 #include "proc_id.h"
 #endif
@@ -93,7 +91,6 @@
 #define	P_log_l1u			(P_l1u|0x80)
 #define	P_log_mmc			(P_mmc|0x80)
 #define	P_log_rlc			(P_rlc|0x80)
-#if defined(STACK_wedge) && defined(UMTS)
 #define	P_log_umacdl			(P_umacdl|0x80)
 #define	P_log_umacul			(P_umacul|0x80)
 #define	P_log_urabmupdcp		(P_urabmupdcp|0x80)
@@ -101,18 +98,18 @@
 #define	P_log_urlcul			(P_urlcul|0x80)
 #define	P_log_urrcdc			(P_urrcdc|0x80)
 #define	P_log_urrcm			(P_urrcm|0x80)
-#endif /* #if defined(STACK_wedge) && defined(UMTS) */
+
+#define	P_dsp2g				245
+#define	P_dspxc				246
+#define	P_log_group			247
+#define	P_dspfw				248
+#define	P_log_api			249
+#define	P_log_general		250
+#define P_umtsfw			251
+#define	P_itmsg				252
 
 #define	P_no_receiver		253
 #define	P_many_receiver		254
-#endif
-
-#define	P_itmsg				252
-#define P_umtsfw			251
-#define	P_log_general		250
-#define	P_log_api			249
-#define	P_dspfw				248
-#define	P_log_group			247
 
 typedef enum {
 #if defined(STACK_wedge) && defined(UMTS)
@@ -219,23 +216,9 @@ typedef enum {
 	/* Start of log_umacul */
 #ifndef SDTENV
 	UMTS_HS_TX_INFO = ((P_log_umacul << 16) | 1),
-	UMTS_HS_GRANT_INFO = ((P_log_umacul << 16) | 2),
-	MACES_HDR = ((P_log_umacul << 16) | 3),
-	UMAC_LOG_GENERIC = ((P_log_umacul << 16) | 4),
-	MACE_PREEVAL_PERNTX_INFO = ((P_log_umacul << 16) | 5),
-	UMAC_UL_PREEVAL_TFCI_INFO = ((P_log_umacul << 16) | 6),
-	MACIS_HDR = ((P_log_umacul << 16) | 7),
-	UMTS_HS_UL_DTX_INFO = ((P_log_umacul << 16) | 8),
-	UMTS_HS_DL_DRX_INFO = ((P_log_umacul << 16) | 9),
-	UMTS_HS_NODEB_DRX_INFO = ((P_log_umacul << 16) | 10),
-	UMACUL_AMR_UL = ((P_log_umacul << 16) | 11),
-    UMTS_HS_DL_DRX_GRANT_MONITORING = ((P_log_umacul << 16) | 12),
-    UMTS_HS_DL_DRX_GRANT_MONITORING_TIMER = ((P_log_umacul << 16) | 13),
-    UMTS_HS_DL_DRX_L1_MON_TICK_TIMER = ((P_log_umacul << 16) | 14),
-    UMTS_HS_DL_DRX_DATA_AVAILABLE = ((P_log_umacul << 16) | 15),
-    UMTS_HS_UL_DTX_PREAMBLES = ((P_log_umacul << 16) | 16),
 #else
 	UMTS_HS_TX_INFO,
+#endif
 	UMTS_HS_GRANT_INFO,
 	MACES_HDR,
 	UMAC_LOG_GENERIC,
@@ -251,7 +234,6 @@ typedef enum {
     UMTS_HS_DL_DRX_L1_MON_TICK_TIMER,
     UMTS_HS_DL_DRX_DATA_AVAILABLE,
     UMTS_HS_UL_DTX_PREAMBLES,
-#endif
 	/* End of log_umacul */
 #endif /* #if defined(STACK_wedge) && defined(UMTS) */
 
@@ -290,11 +272,10 @@ typedef enum {
 	/* Start of log_urrcdc */
 #ifndef SDTENV
 	URRCDC_TRACE_DB_CFG = ((P_log_urrcdc << 16) | 1),
-	URRC_LOG_GENERIC,
 #else
 	URRCDC_TRACE_DB_CFG,
-	URRC_LOG_GENERIC,
 #endif
+	URRC_LOG_GENERIC,
 	/* End of log_urrcdc */
 #endif /* #if defined(STACK_wedge) && defined(UMTS) */
 
@@ -309,12 +290,27 @@ typedef enum {
 	/* Start of log_rlc */
 #ifndef SDTENV
 	RLC_TRACE_UL_WIN_VARS = ((P_log_rlc << 16) | 1),
-	RLC_TRACE_DL_WIN_VARS,
 #else
 	RLC_TRACE_UL_WIN_VARS,
-	RLC_TRACE_DL_WIN_VARS,
 #endif
+	RLC_TRACE_DL_WIN_VARS,
 	/* End of log_rlc */
+
+	/* Start of dsp2g */
+#ifndef SDTENV
+	DSP2G_LOG_GROUP = ((P_dsp2g << 16) | 1),
+#else
+	DSP2G_LOG_GROUP,
+#endif
+	/* End of dsp2g */
+
+	/* Start of dspxc */
+#ifndef SDTENV
+	DSPXC_LOG_GROUP = ((P_dspxc << 16) | 1),
+#else
+	DSPXC_LOG_GROUP,
+#endif
+	/* End of dspxc */
 
 	/* Start of dspfw */
 	DSP_PROFILE = ((P_dspfw << 16) | 1),
