@@ -905,13 +905,13 @@ static int diag_process_apps_pkt(unsigned char *buf, int len)
 			*(int *)(driver->apps_rsp_buf + 4) = 0x0;
 			if (driver->ch_cntl)
 				diag_send_log_mask_update(driver->ch_cntl,
-								 *(int *)buf);
+								ALL_EQUIP_ID);
 			if (driver->chqdsp_cntl)
 				diag_send_log_mask_update(driver->chqdsp_cntl,
-								 *(int *)buf);
+								ALL_EQUIP_ID);
 			if (driver->ch_wcnss_cntl)
 				diag_send_log_mask_update(driver->ch_wcnss_cntl,
-								 *(int *)buf);
+								ALL_EQUIP_ID);
 			ENCODE_RSP_AND_SEND(7);
 			return 0;
 		} else
