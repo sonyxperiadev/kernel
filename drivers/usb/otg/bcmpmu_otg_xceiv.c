@@ -95,6 +95,31 @@ bool bcmpmu_otg_xceiv_check_id_rid_a(struct bcmpmu_otg_xceiv_data
 	return id_rid_a;
 }
 
+bool bcmpmu_otg_xceiv_check_id_rid_b(struct bcmpmu_otg_xceiv_data
+				  *xceiv_data)
+{
+	unsigned int data = 0;
+	bool id_rid_b = false;
+
+	bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ID_VALUE, &data);
+	id_rid_b = (data == PMU_USB_ID_RID_B);
+
+	return id_rid_b;
+}
+
+
+bool bcmpmu_otg_xceiv_check_id_rid_c(struct bcmpmu_otg_xceiv_data
+				  *xceiv_data)
+{
+	unsigned int data = 0;
+	bool id_rid_c = false;
+
+	bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ID_VALUE, &data);
+	id_rid_c = (data == PMU_USB_ID_RID_C);
+
+	return id_rid_c;
+}
+
 static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
@@ -308,7 +333,9 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 		  bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
 
 	if (!id_default_host) {
-		if (xceiv_data->otg_enabled) {
+		if (xceiv_data->otg_enabled &&
+			(bcmpmu_otg_xceiv_check_id_rid_b(xceiv_data) ==
+			    false)) { /* No SRP if RID_B */
 			/* REVISIT. Shutdown uses sequence for lowest power
 			 * and does not meet timing so don't do that in OTG mode
 			 * for now. Just do SRP for ADP startup */
@@ -596,23 +623,33 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 void bcmpmu_otg_xceiv_do_srp(struct bcmpmu_otg_xceiv_data *xceiv_data)
 {
 #ifdef CONFIG_USB_OTG
-	if (xceiv_data->otg_xceiver.xceiver.gadget
-	    && xceiv_data->otg_xceiver.xceiver.gadget->ops
-	    && xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup
-	    && xceiv_data->otg_enabled) {
+	if (xceiv_data->otg_xceiver.xceiver.gadget &&
+		    xceiv_data->otg_xceiver.xceiver.gadget->ops &&
+		    xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup &&
+		    xceiv_data->otg_enabled) {
 
-		/* Do SRP */
-		xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup(xceiv_data->
-								    otg_xceiver.
-								    xceiver.
-								    gadget);
-		/* Start SRP failure timer to do ADP probes if it expires */
-		xceiv_data->otg_xceiver.srp_failure_timer.expires =
-		    jiffies + msecs_to_jiffies(T_SRP_FAILURE_MAX_IN_MS);
-		add_timer(&xceiv_data->otg_xceiver.srp_failure_timer);
+		bool vbus_status = 0;
 
-		/* SRP initiated. Clear the flag */
-		xceiv_data->otg_xceiver.otg_srp_reqd = false;
+		bcmpmu_usb_get(xceiv_data->bcmpmu,
+			BCMPMU_USB_CTRL_GET_VBUS_STATUS, &vbus_status);
+
+		/* Should do SRP only if Vbus is not valid */
+		if (!vbus_status) {
+			bcm_hsotgctrl_phy_set_non_driving(false);
+			/* Do SRP */
+			xceiv_data->otg_xceiver.xceiver.gadget->
+			    ops->wakeup(xceiv_data->otg_xceiver.xceiver.gadget);
+			/* Start SRP failure timer to do ADP probes
+			 * if it expires
+			 */
+			xceiv_data->otg_xceiver.srp_failure_timer.expires =
+				  jiffies +
+				  msecs_to_jiffies(T_SRP_FAILURE_MAX_IN_MS);
+			add_timer(&xceiv_data->otg_xceiver.srp_failure_timer);
+
+			/* SRP initiated. Clear the flag */
+			xceiv_data->otg_xceiver.otg_srp_reqd = false;
+		}
 	}
 #endif
 }
@@ -641,24 +678,25 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 			 bcm_otg_id_status_change_work);
 	bool id_gnd = false;
 	bool id_rid_a = false;
+	bool id_rid_c = false;
 
 	dev_info(xceiv_data->dev, "ID change detected\n");
-
 	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
 	id_rid_a = bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
+	id_rid_c = bcmpmu_otg_xceiv_check_id_rid_c(xceiv_data);
 
-	bcm_hsotgctrl_phy_set_id_stat(!id_gnd);
+	bcm_hsotgctrl_phy_set_id_stat(!(id_gnd || id_rid_a));
 
-	if (id_gnd)
-		bcmpmu_otg_xceiv_set_vbus(&xceiv_data->otg_xceiver.
-		    xceiver, true); /* Need to turn on Vbus within 200ms */
-	else if (id_rid_a)
-		bcmpmu_otg_xceiv_set_vbus(&xceiv_data->otg_xceiver.
-		    xceiver, false); /* Not to turn on Vbus in RID_A case */
+	/* If ID is gnd, we need to turn on Vbus within 200ms
+	 * If ID is RID_A/B/C/FLOAT then we should not turn it on
+	 */
+	bcmpmu_otg_xceiv_set_vbus(&xceiv_data->otg_xceiver.
+		    xceiver, id_gnd ? true : false);
 
-	msleep(HOST_TO_PERIPHERAL_DELAY_MS);
+	if (!id_rid_c)
+		msleep(HOST_TO_PERIPHERAL_DELAY_MS);
 
-	if (id_gnd || id_rid_a) {
+	if (id_gnd || id_rid_a || id_rid_c) {
 		bcm_hsotgctrl_phy_deinit();
 		xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.

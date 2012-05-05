@@ -69,6 +69,10 @@ bool bcmpmu_otg_xceiv_check_id_gnd(struct bcmpmu_otg_xceiv_data
 	*xceiv_data);
 bool bcmpmu_otg_xceiv_check_id_rid_a(struct bcmpmu_otg_xceiv_data
 	*xceiv_data);
+bool bcmpmu_otg_xceiv_check_id_rid_b(struct bcmpmu_otg_xceiv_data
+	*xceiv_data);
+bool bcmpmu_otg_xceiv_check_id_rid_c(struct bcmpmu_otg_xceiv_data
+	*xceiv_data);
 void bcmpmu_otg_xceiv_do_srp(struct bcmpmu_otg_xceiv_data
 	*xceiv_data);
 #endif /* _BCMPMU_OTG_XCEIV_H */
