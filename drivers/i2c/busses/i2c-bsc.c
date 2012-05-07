@@ -142,7 +142,9 @@ struct bsc_i2c_dev {
 	struct workqueue_struct *reset_wq;
 	struct work_struct reset_work;
 
-	volatile int err_flag;	/* Set if there is a bus error */
+	/* Bit flag to get the interrupt bit set - Use this in the driver to
+	 * check if there was any error when interrupted */
+	volatile int err_flag;
 };
 
 static const __devinitconst char gBanner[] =
@@ -187,6 +189,10 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 	/* get interrupt status */
 	status = bsc_read_intr_status((uint32_t)dev->virt_base);
 
+	/* Use the error flag to determine the errors if any outside the
+	 * interrupt context */
+	dev->err_flag = status;
+
 	/* got nothing, something is wrong */
 	if (!status) {
 		dev_err(dev->device, "interrupt with zero status register!\n");
@@ -207,8 +213,13 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 		 * For Mastercode, NAK is expected as per HS protocol, it's
 		 * not error
 		 */
-		if (dev->high_speed_mode && dev->is_mastercode)
+		if (dev->high_speed_mode && dev->is_mastercode) {
 			dev->is_mastercode = false;
+			/* Since the NACK is expected, reset the error flag */
+			/* We can do this safely since we no for sure that the
+			 * bus error interrupt is not valid in high speed */
+			dev->err_flag &= ~(dev->err_flag);
+		}
 		else
 			dev_err(dev->device, "no ack detected\n");
 	}
@@ -224,7 +235,6 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 	 *master
 	 */
 	if (status & I2C_MM_HS_ISR_ERR_MASK) {
-		dev->err_flag = 1;
 		dev_err(dev->device,
 			"bus error interrupt (timeout) - status = %x\n",
 			status);
@@ -301,11 +311,14 @@ static int bsc_send_cmd(struct bsc_i2c_dev *dev, BSC_CMD_t cmd)
 	time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
 	bsc_disable_intr((uint32_t)dev->virt_base,
 			 I2C_MM_HS_IER_I2C_INT_EN_MASK);
-	if (time_left == 0 || dev->err_flag == 1) {
+	/* Check if there was a bus error seen */
+	if (time_left == 0 || (dev->err_flag & I2C_MM_HS_ISR_ERR_MASK)) {
 		dev_err(dev->device, "controller timed out\n");
 
+		/* Reset the error flag */
+		dev->err_flag &= ~(dev->err_flag);
+
 		/* clear command */
-		dev->err_flag = 0;
 		isl_bsc_send_cmd((uint32_t)dev->virt_base, BSC_CMD_NOACTION);
 
 		return -ETIMEDOUT;
@@ -535,16 +548,18 @@ static int bsc_xfer_write_byte(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 	time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
 	bsc_disable_intr((uint32_t)dev->virt_base,
 			 I2C_MM_HS_IER_I2C_INT_EN_MASK);
-	if (time_left == 0 || dev->err_flag == 1) {
-		dev->err_flag = 0;
-		BSC_DBG(dev, "controller timed out\n");
-		return -ETIMEDOUT;
-	}
-
-	/* unexpected NAK */
-	if (!bsc_get_ack((uint32_t)dev->virt_base) && !nak_ok) {
-		BSC_DBG(dev, "unexpected NAK\n");
-		return -EREMOTEIO;
+	if (time_left == 0 || dev->err_flag) {
+		/* Check if there was a NACK and it was un-expected */
+		if ((dev->err_flag & I2C_MM_HS_ISR_NOACK_MASK) && nak_ok == 0) {
+			dev_err(dev->device, "unexpected NAK\n");
+			return -EREMOTEIO;
+		/* Check if there was a bus error */
+		} else if (dev->err_flag & I2C_MM_HS_ISR_ERR_MASK) {
+			dev_err(dev->device, "controller timed out\n");
+			return -ETIMEDOUT;
+		}
+		/* Reset the error flag */
+		dev->err_flag &= ~(dev->err_flag);
 	}
 
 	return 0;
@@ -575,7 +590,7 @@ static int bsc_xfer_write_data(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 			       uint8_t *buf, unsigned int len)
 {
-	int rc;
+	int rc = 0;
 	unsigned long time_left;
 
 	/* make sure the hareware is ready */
@@ -606,20 +621,39 @@ static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 	bsc_disable_intr((uint32_t)dev->virt_base,
 			 I2C_MM_HS_IER_FIFO_INT_EN_MASK |
 			 I2C_MM_HS_IER_NOACK_EN_MASK);
-	if (time_left == 0) {
-		dev_err(dev->device, "TX FIFO timed out\n");
-		return 0;
+	if (time_left == 0 || dev->err_flag) {
+		/* Check if there was a NACK and it was unexpected */
+		if ((dev->err_flag & I2C_MM_HS_ISR_NOACK_MASK) && nak_ok == 0) {
+			dev_err(dev->device, "unexpected NAK\n");
+			rc = -EREMOTEIO;
+			goto err_fifo;
+		/* Check if there was a bus error */
+		} else if (dev->err_flag & I2C_MM_HS_ISR_ERR_MASK) {
+			dev_err(dev->device, "controller timed out\n");
+			rc = -ETIMEDOUT;
+			goto err_fifo;
+		}
+		/* Reset the error flag */
+		dev->err_flag &= ~(dev->err_flag);
 	}
 
 	/* make sure writing to be finished before disabling TX FIFO */
 	rc = bsc_wait_cmdbusy(dev);
 	if (rc < 0)
-		return rc;
+		goto err_fifo;
 
 	/* disable TX FIFO */
 	bsc_set_tx_fifo((uint32_t)dev->virt_base, 0);
 
 	return len;
+
+err_fifo:
+
+	/* disable TX FIFO */
+	bsc_set_tx_fifo((uint32_t)dev->virt_base, 0);
+
+	return rc;
+
 }
 
 static int bsc_xfer_write(struct i2c_adapter *adapter, struct i2c_msg *msg)
