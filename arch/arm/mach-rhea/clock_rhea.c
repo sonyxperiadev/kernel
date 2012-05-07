@@ -157,6 +157,33 @@ static struct ref_clk CLK_NAME(crystal) = {
  .ccu_clk = &CLK_NAME(root),
 };
 
+/*
+PLL0 clk : 624MHZ (const PLL)
+*/
+static struct ref_clk clk_pll0	=	{
+	.clk	=	{
+		.name = PLL0_REF_CLK_NAME_STR,
+		.clk_type = CLK_TYPE_REF,
+		.rate = FREQ_MHZ(624),
+		.ops = &gen_ref_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(root),
+};
+
+/*
+PLL1 clk : 624MHZ (Root PLL - desensing)
+*/
+static struct ref_clk clk_pll1	=	{
+	.clk	=	{
+		.name = PLL1_REF_CLK_NAME_STR,
+		.clk_type = CLK_TYPE_REF,
+		.rate = FREQ_MHZ(624),
+		.ops = &gen_ref_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(root),
+};
+
+
 static int en_8ph_pll1_clk_init(struct clk *clk)
 {
 	return 0;
@@ -1129,7 +1156,8 @@ struct gen_clk_ops dig_ch_peri_clk_ops;
 Peri clock name DIG_CH0
 */
 /*Source list of digital channels. Common for CH0, CH1, CH2, CH3 */
-static struct clk* dig_ch_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal)/*,CLK_PTR(pll0),CLK_PTR(pll1) */);
+static struct clk *dig_ch_peri_clk_src_list[] =
+	DEFINE_ARRAY_ARGS(CLK_PTR(crystal), CLK_PTR(pll0), CLK_PTR(pll1));
 static struct peri_clk CLK_NAME(dig_ch0) = {
 	.clk =	{
 		.flags = DIG_CH0_PERI_CLK_FLAGS,
@@ -1159,7 +1187,7 @@ static struct peri_clk CLK_NAME(dig_ch0) = {
 		.pll_select_shift= ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT
 	},
 	.src_clk = {
-	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list), /*shoudl be 3 once we add PLL sources*/
+	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list),
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
@@ -1199,7 +1227,7 @@ static struct peri_clk CLK_NAME(dig_ch1) = {
 		.pll_select_shift= ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT
 	},
 	.src_clk = {
-	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list), /*shoudl be 3 once we add PLL sources*/
+	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list),
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
@@ -1239,7 +1267,7 @@ static struct peri_clk CLK_NAME(dig_ch2) = {
 		.pll_select_shift= ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT
 	},
 	.src_clk = {
-	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list), /*shoudl be 3 once we add PLL sources*/
+	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list),
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
@@ -1278,7 +1306,7 @@ static struct peri_clk CLK_NAME(dig_ch3) = {
 		.pll_select_shift= ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT
 	},
 	.src_clk = {
-	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list), /*shoudl be 3 once we add PLL sources*/
+	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list),
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
@@ -7232,7 +7260,7 @@ int __init rhea_clock_init(void)
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
 	dig_ch_peri_clk_ops.init = dig_clk_init;
 
-	en_8ph_pll1_ref_clk_ops = gen_peri_clk_ops;
+	en_8ph_pll1_ref_clk_ops = gen_ref_clk_ops;
 	en_8ph_pll1_ref_clk_ops.init = en_8ph_pll1_clk_init;
 	en_8ph_pll1_ref_clk_ops.enable = en_8ph_pll1_clk_enable;
 

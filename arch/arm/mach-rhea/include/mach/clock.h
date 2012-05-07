@@ -26,6 +26,8 @@
 #define KPROC_CCU_CLK_NAME_STR			"proc_ccu"
 #define ROOT_CCU_CLK_NAME_STR			"root_ccu"
 #define CRYSTAL_REF_CLK_NAME_STR		"crystal"
+#define PLL0_REF_CLK_NAME_STR			"pll0"
+#define PLL1_REF_CLK_NAME_STR			"pll1"
 #define	FRAC_1M_REF_CLK_NAME_STR		"frac_1m_clk"
 #define	REF_96M_VARVDD_REF_CLK_NAME_STR		"ref_96m_varvdd_clk"
 #define	REF_96M_REF_CLK_NAME_STR		"ref_48m_clk"
