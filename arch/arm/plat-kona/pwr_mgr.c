@@ -1870,7 +1870,7 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		reg = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
 				PWRMGR_I2C_READ_DATA_SHIFT);
 		if (reg & 0x1) {
-			pr_debug("PWRMGR: I2C READ NACK\n");
+			pwr_dbg(PWR_LOG_SEQ, "PWRMGR: I2C READ NACK\n");
 			ret = -EAGAIN;
 			goto out_unlock;
 		}
@@ -1932,7 +1932,7 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 		i2c_data = reg & PWRMGR_I2C_READ_DATA_MASK;
 		if (i2c_data & 0x1) {
-			pwr_dbg(PWR_LOG_ERR,
+			pwr_dbg(PWR_LOG_SEQ,
 				"PWRMGR: I2C WRITE NACK from PMU\n");
 			ret = -EAGAIN;
 		}
