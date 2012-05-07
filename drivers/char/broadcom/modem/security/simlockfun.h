@@ -34,6 +34,17 @@
 
 #define DUAL_SIM_SIZE  (SIM_DUAL_SECOND + 1)
 
+/* Number of IMEI digits (14 + check digit)*/
+#define IMEI_DIGITS	15
+
+/* Number of IMEI MMAC digits */
+#define IMEI_MAC_DIGITS	8
+
+/* BCD coded IMEI length: 7 bytes for 14 digits,
+ *but first nibble and last nibble are not used (set to 0)
+ * in our system parameter convention. So total 8 bytes. */
+#define BCD_IMEI_LEN  8
+
 /*------------------------------*/
 /* Data Structure				*/
 /*------------------------------*/
@@ -203,5 +214,8 @@ UInt16 SIMLockGetLockCodeInform(SEC_SimLock_LockType_t lockType,
 
 /* set current SIM data, based on info received from CP */
 void SIMLockSetSimData(sec_simlock_sim_data_t *simData, SimNumber_t simID);
+
+/*store IMEI*/
+Boolean SetImeiData(SimNumber_t SimId, UInt8 *imeiStr);
 
 #endif /* _BCM_KRIL_SIMLOCK_H */

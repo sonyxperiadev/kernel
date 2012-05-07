@@ -35,16 +35,7 @@
 #include "simlockfun.h"
 
 /*For AES*/
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-#include <mach/secure_api.h>
-#endif
-#include <plat/clock.h>
-#include <mach/clock.h>
-#include <linux/dma-mapping.h>
-
-#ifdef CONFIG_BRCM_CKBLOCK_READER
-#include <linux/broadcom/ckblock_reader.h>
-#endif
+#include "crypto_api.h"
 
 /*--------------------------------------*/
 /* Global variables			*/
@@ -52,19 +43,17 @@
 
 sec_simlock_state_t g_CurrentSimLockState[DUAL_SIM_SIZE];
 
-/* **FIXME** MAG - sim data set on receipt of replacement */
-/* of CAPI2_SimLockApi_GetStatus() request from CP */
 sec_simlock_sim_data_t *GetSIMData(SimNumber_t SimId);
 sec_simlock_sim_data_t gCurrSimData[DUAL_SIM_SIZE];
 
-static UInt8 *ReadIMEI(SimNumber_t simid);
+#define isdigit(c) ((c) >= '0' && (c) <= '9')
+UInt8 sImei_Info[DUAL_SIM_SIZE][BCD_IMEI_LEN] = {{0}, {0}, {0} };
 
 /*--------------------------------------*/
 /* Local defines			*/
 /*--------------------------------------*/
 /* Default PH-SIM simlock password */
 #define DEFAULT_PHSIM_LOCK_PWD "0000"
-#define BCD_IMEI_LEN  8
 #define IMSI_DIGITS  15
 
 /* Just a magic number to indicate non-volatile SIMLOCK */
@@ -140,10 +129,6 @@ enum _SIMLOCK_RESULT_t {
 /* The SIM lock data size is fixed to 2400 bytes */
 #define SIM_LOCK_DATA_SIZE   2400
 
-/*AES definition*/
-#define AES_OPERATION_ENCRYPT  1
-#define AES_OPERATION_DECRYPT  0
-#define AES_BLOCK_SIZE        16
 
 /*--------------------------------------*/
 /* Local Function Prototypes		*/
@@ -228,96 +213,6 @@ static const UInt16 crc_table[] = {
 	0x8201, 0x42c0, 0x4380, 0x8341, 0x4100, 0x81c1, 0x8081, 0x4040
 };
 
-/* **FIXME** needs to be implemented */
-static UInt8 *ReadIMEI(SimNumber_t simid)
-{
-	return (UInt8 *)"1234567890";
-}
-
-/******************************************************************************
-// Function Name: EncDec()
-//
-// Input:	  *outDataPtr -  output data.
-//			  *inDataPtr  -  inpit data.
-//            inDataSize  -  input data length.
-//            inEncDec    -  1:Encryption 0:Decryption.
-//
-// Description: Do AES Encryption/Decryption.
-//
-******************************************************************************/
-UInt8 EncDec(UInt8 *outDataPtr, const UInt8 *inDataPtr,
-			UInt32 inDataSize, UInt32 inEncDec)
-{
-#if defined(CONFIG_ROM_SEC_DISPATCHER) &&\
-		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES) &&\
-		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH)
-
-	 struct clk *sec_spum_clk = NULL;
-	 void *aes_buf_vir = NULL;
-	 dma_addr_t aes_buf_phy;
-	 UInt8 *aes_v = NULL;
-	 UInt8 *aes_p = NULL;
-
-	 /* Check for invalid parameters */
-	 if ((outDataPtr == NULL) ||
-		(inDataSize > SZ_1K) ||
-		(inDataSize < AES_BLOCK_SIZE) ||
-		((inDataSize % AES_BLOCK_SIZE) != 0) ||
-		((inEncDec != AES_OPERATION_ENCRYPT) &&
-		(inEncDec != AES_OPERATION_DECRYPT)))	{
-		pr_err("outDataPtr = NULL:%d inDataSize:%d inEncDec:%d Failed!!!\n",
-			(outDataPtr == NULL), (int)inDataSize, (int)inEncDec);
-		return 0;
-	}
-
-	aes_buf_vir = dma_alloc_coherent(NULL, SZ_1K, &aes_buf_phy, GFP_KERNEL);
-	if (aes_buf_vir == NULL) {
-		pr_info("%s: dma buffer alloc for aes failed\n", __func__);
-		return 0;
-	}
-	aes_v = (UInt8 *) aes_buf_vir;
-	aes_p = (UInt8 *) aes_buf_phy;
-
-	memset(aes_v, 0x00, SZ_1K);
-	memcpy(&aes_v[0], inDataPtr, inDataSize);
-
-	sec_spum_clk = clk_get(NULL, "spum_sec");
-	if (!sec_spum_clk) {
-		pr_err("%s: unable to get clock spum_sec\n", __func__);
-		return 0;
-	}
-
-	clk_enable(sec_spum_clk);
-
-	/*hw_sec_pub_dispatcher is the secure service entry point.Caller calls
-	  the API with proper parameters and gets AES results returned.
-	  argument 1 : Application Id.
-	  argument 2 : Flag.default is 0xF.
-	  argument 3 : Pointer to the data to be encrypted or decrypted.
-			It should be physical address.
-	  argument 4 : Length of data
-	  argument 5 : Pointer to output buffer.It should be physical address.
-	  argument 6 : Direction: encrypt or decrypt.
-	*/
-	hw_sec_pub_dispatcher(SEC_API_AES,
-				0x0F,
-				&aes_p[0],
-				inDataSize,
-				&aes_p[inDataSize],
-				inEncDec);
-
-	clk_disable(sec_spum_clk);
-
-	memcpy(outDataPtr, &aes_v[inDataSize], inDataSize);
-
-	if (aes_buf_vir)
-		dma_free_coherent(NULL, PAGE_SIZE, aes_buf_vir, aes_buf_phy);
-#else
-	memcpy(outDataPtr, inDataPtr, inDataSize);
-#endif
-	return 1;
-}
-
 /******************************************************************************
 *
 * Function Name: GetSIMData
@@ -399,6 +294,58 @@ Boolean SIM_NOT_PRESENT(void)
 UInt32 MS_GetSimlockBase(void)
 {
 	return SIMLOCK_BASE;
+}
+
+/******************************************************************************
+// Function Name: SetImeiData()
+//
+// Description:  Convert the IMEI string to the format in our
+//				 system parameter files and storage it.
+//
+// Return:	TRUE - Convert is successful; FALSE - Convert is failed.
+//
+******************************************************************************/
+Boolean SetImeiData(SimNumber_t SimId, UInt8 *imeiStr)
+{
+	int i = 0;
+	UInt8 *imeiVal = NULL;
+
+	imeiVal = sImei_Info[SimId];
+
+	for (i = 0; i < 14; i++) {
+		if (!isdigit(imeiStr[i]))
+			return FALSE;
+	}
+
+	/* Use the format in our system parameter files:
+	 * first nibble and last nibble are not used and
+	 * set to 0, giving rise to a total of 8 bytes.
+	 */
+	imeiVal[0] = (imeiStr[0] - '0')  << 4;
+	imeiVal[1] = ((imeiStr[2] - '0')  << 4)  | (imeiStr[1] - '0');
+	imeiVal[2] = ((imeiStr[4] - '0')  << 4)  | (imeiStr[3] - '0');
+	imeiVal[3] = ((imeiStr[6] - '0')  << 4)  | (imeiStr[5] - '0');
+	imeiVal[4] = ((imeiStr[8] - '0')  << 4)  | (imeiStr[7] - '0');
+	imeiVal[5] = ((imeiStr[10] - '0') << 4)  | (imeiStr[9] - '0');
+	imeiVal[6] = ((imeiStr[12] - '0') << 4)  | (imeiStr[11] - '0');
+	imeiVal[7] = imeiStr[13] - '0';
+
+	return TRUE;
+
+}
+/******************************************************************************
+
+// Function Name: GetImeiData()
+//
+// Description:  Get IMEI information
+//
+// Return:	IMEI Hex data
+//
+//
+******************************************************************************/
+UInt8 *GetImeiData(SimNumber_t simid)
+{
+	return sImei_Info[simid];
 }
 
 /******************************************************************************
@@ -581,7 +528,7 @@ static void KRIL_simlock_NVdata_Init(SIMLOCK_NVDATA_t *simlock_nvdata)
 			      (UInt32) simlock_nvdata);
 	simlock_nvdata->check_sum =
 	    Calculate16BitCrc(simlock_nvdata->check_sum,
-			      ReadIMEI(SIM_DUAL_FIRST), BCD_IMEI_LEN);
+			      GetImeiData(SIM_DUAL_FIRST), BCD_IMEI_LEN);
 
 	simlock_nvdata->phone_lock_setting = PH_SIM_LOCK_OFF;
 	strcpy(simlock_nvdata->phone_lock_pwd, DEFAULT_PHSIM_LOCK_PWD);
@@ -633,7 +580,7 @@ static Boolean GetSimlockNvdata(SIMLOCK_NVDATA_t *simlock_nvdata)
 				      (UInt32) &simlock_nvdata->check_sum -
 				      (UInt32) simlock_nvdata);
 		check_sum =
-		    Calculate16BitCrc(check_sum, ReadIMEI(SIM_DUAL_FIRST),
+		    Calculate16BitCrc(check_sum, GetImeiData(SIM_DUAL_FIRST),
 				      BCD_IMEI_LEN);
 
 		if ((simlock_nvdata->simlock_init_flag !=
@@ -696,7 +643,7 @@ static Boolean WriteSimlockNvdata(SIMLOCK_NVDATA_t *simlock_nvdata)
 			      (UInt32) simlock_nvdata);
 	simlock_nvdata->check_sum =
 	    Calculate16BitCrc(simlock_nvdata->check_sum,
-			      ReadIMEI(SIM_DUAL_FIRST), BCD_IMEI_LEN);
+			      GetImeiData(SIM_DUAL_FIRST), BCD_IMEI_LEN);
 
 	/* Encrypt the SIMLOCK data */
 	if (!EncDec
@@ -725,10 +672,10 @@ static Boolean WriteSimlockNvdata(SIMLOCK_NVDATA_t *simlock_nvdata)
 static SIMLock_CodeFile_t *GetSimlockData(void)
 {
 	if (IsSIMSecureEnable()) {
-#ifdef CONFIG_BRCM_CKBLOCK_READER
+#ifdef CONFIG_BRCM_EMMC_RPMB_SUPPORT
 		UInt8 *simlock_temp_ptr = NULL;
 		UInt8 *simlock_data_ptr = NULL;
-		UInt16 ckdatasize;
+		char Ret = -1;
 		SIMLock_CodeFile_t *simlock_data = NULL;
 		UInt16 chksum;
 		UInt32 simDataSize;
@@ -747,19 +694,13 @@ static SIMLock_CodeFile_t *GetSimlockData(void)
 			kernel_power_off();
 		}
 		/* Get Simlock Data Block data */
-		ckdatasize = readCKDataBlock((char *)simlock_temp_ptr,
+		Ret = readCKDataBlock((char *)simlock_temp_ptr,
 						SIM_LOCK_DATA_SIZE);
-		if (ckdatasize == -1) {
+		if (Ret == -1) {
 			pr_err("readCKDataBlock Failed!!!\n");
 			kernel_power_off();
 		}
 
-		if (SIM_LOCK_DATA_SIZE != ckdatasize) {
-			pr_err
-			    ("ckdatasize:%d != SIM_LOCK_DATA_SIZE. Error!!!\n",
-			     ckdatasize);
-			kernel_power_off();
-		}
 		/* Decrypt SIM lock data */
 		if (!EncDec
 		    (simlock_data_ptr, simlock_temp_ptr, SIM_LOCK_DATA_SIZE,
@@ -798,7 +739,7 @@ static SIMLock_CodeFile_t *GetSimlockData(void)
 				      (UInt8 *) simlock_data +
 				      sizeof(SIMLock_CodeFile_t), simDataSize);
 		chksum =
-		    Calculate16BitCrc(chksum, ReadIMEI(SIM_DUAL_FIRST),
+		    Calculate16BitCrc(chksum, GetImeiData(SIM_DUAL_FIRST),
 				      BCD_IMEI_LEN);
 
 		if (chksum != simlock_data->chksum) {
@@ -811,13 +752,13 @@ static SIMLock_CodeFile_t *GetSimlockData(void)
 
 		return (SIMLock_CodeFile_t *) simlock_data_ptr;
 
-#else /*CONFIG_BRCM_CKBLOCK_READER*/
+#else /*CONFIG_BRCM_EMMC_RPMB_SUPPORT*/
 
 		/* The readCKDataBlock function is disable. */
 		pr_err("readCKDataBlock() not support. Error!!!\n");
 		kernel_power_off();
 		return NULL;
-#endif /*CONFIG_BRCM_CKBLOCK_READER*/
+#endif /*CONFIG_BRCM_EMMC_RPMB_SUPPORT*/
 	} else {
 		return NULL;
 	}

@@ -45,8 +45,11 @@ extern "C" {
 						sec_simlock_state_t)
 #define SEC_SIMLOCK_GET_REMAIN_ATTMPT_IOC  _IOR(BCM_SEC_IOC_MAGIC, 5, \
 						sec_simlock_remain_t)
-#define SEC_SIMLOCK_IOC_MAXNR			    6
+#define SEC_GET_IMEI_IOC	           _IOR(BCM_SEC_IOC_MAGIC, 6, \
+						sec_get_imei_data_t)
+#define SEC_SIMLOCK_IOC_MAXNR			    7
 
+#define MAX_IMEI_DIGITS 15
 #define MAX_IMSI_DIGITS	15
 #define MAX_GID_DIGITS 10
 #define CK_MAX_LENGTH  16
@@ -152,6 +155,13 @@ struct _sec_simlock_sim_data_t {
 	int gid2_len;	/* bytes in "gid2" element */
 };
 #define sec_simlock_sim_data_t struct _sec_simlock_sim_data_t
+
+struct _sec_get_imei_data_t {
+	char imei1_string[MAX_IMEI_DIGITS + 1]; /* NULL term'd IMEI string */
+	char imei2_string[MAX_IMEI_DIGITS + 1]; /* NULL term'd IMEI string */
+};
+
+#define sec_get_imei_data_t struct _sec_get_imei_data_t
 
 int sec_simlock_get_status(sec_simlock_sim_data_t *sim_data,
 				SEC_SimLock_SimNumber_t simID,

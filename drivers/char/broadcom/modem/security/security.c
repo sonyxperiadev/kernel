@@ -28,6 +28,7 @@ the GPL, without Broadcom's express prior written consent
 #include <linux/module.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
+#include <linux/reboot.h>	 /* For kernel_power_off() */
 
 #include <linux/fs.h>
 #include <linux/fcntl.h>
@@ -112,6 +113,9 @@ static long handle_get_lock_state_ioc(struct file *filp, unsigned int cmd,
 static long handle_get_remain_attempt_info_ioc(struct file *filp,
 					       unsigned int cmd,
 					       unsigned long param);
+static long handle_get_imei_ioc(struct file *filp, unsigned int cmd,
+				 unsigned long param);
+static Boolean read_imei(UInt8 *imeiStr1, UInt8 *imeiStr2);
 
 /*****************************************************************/
 
@@ -218,6 +222,12 @@ static long sec_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			    handle_get_remain_attempt_info_ioc(filp, cmd, arg);
 			break;
 		}
+	case SEC_GET_IMEI_IOC:
+		{
+			retVal =
+				handle_get_imei_ioc(filp, cmd, arg);
+			break;
+		}
 	default:
 		retVal = -ENOIOCTLCMD;
 		pr_err("sec_ioctl ERROR unhandled cmd=0x%x\n", cmd);
@@ -240,7 +250,6 @@ static long handle_is_lock_on_ioc(struct file *filp, unsigned int cmd,
 		return -EFAULT;
 	}
 
-	/* **FIXME** need a SIM ID param for SIMLockIsLockOn */
 	bLocked = SIMLockIsLockOn(ioc_param.lock_type, &bFullLock);
 	ioc_param.lock_enabled = bLocked ? 1 : 0;
 	ioc_param.full_lock_enabled = bFullLock ? 1 : 0;
@@ -420,6 +429,95 @@ static long handle_get_remain_attempt_info_ioc(struct file *filp,
 	return 0;
 }
 
+static long handle_get_imei_ioc(struct file *filp, unsigned int cmd,
+						   unsigned long param)
+{
+	sec_get_imei_data_t ioc_param;
+
+	if (copy_from_user(&ioc_param, (sec_get_imei_data_t *) param,
+			   sizeof(sec_get_imei_data_t)) != 0) {
+		pr_err
+		("handle_get_imei_ioc: copy_from_user error\n");
+		return -EFAULT;
+	}
+	memset(&ioc_param, 0x0, sizeof(sec_get_imei_data_t));
+
+
+	if (!read_imei(ioc_param.imei1_string, ioc_param.imei2_string))	{
+#ifdef CONFIG_BRCM_SIM_SECURE_ENABLE
+		kernel_power_off();
+#endif
+		return -EFAULT;
+	}
+#ifdef CONFIG_BRCM_SIM_SECURE_ENABLE
+	if (strlen(ioc_param.imei1_string) == 0) {
+		kernel_power_off();
+		return -EFAULT;
+	}
+
+	if (FALSE == SetImeiData(SEC_SimLock_SIM_DUAL_FIRST,
+		 (UInt8 *)ioc_param.imei1_string)) {
+		pr_err("SetImei IMEI 1:%s Failed!!!",
+				 ioc_param.imei1_string);
+		kernel_power_off();
+		return -EFAULT;
+	}
+#endif
+
+	if (copy_to_user((sec_get_imei_data_t *) param,
+			 &ioc_param, sizeof(sec_get_imei_data_t)) != 0) {
+		pr_err
+		 ("handle_get_imei_ioc: copy_to_user error\n");
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+/***************************************************************************/
+/**
+ *	Function Name: read_imei()
+ *
+ *	Description:  Get IMEI information
+ *
+ *	Return:	IMEI string
+ **/
+
+Boolean read_imei(UInt8 *imeiStr1, UInt8 *imeiStr2)
+{
+#ifdef CONFIG_BRCM_EMMC_RPMB_SUPPORT
+	char imeiMacStr1[IMEI_MAC_DIGITS+1] = {0};
+	char imeiMacStr2[IMEI_MAC_DIGITS+1] = {0};
+
+	char i ;
+
+	if ((imeiStr1 == NULL) || (imeiStr2 == NULL)) {
+		pr_err("ReadIMEIHexData: imeiStr buffer is NULL\n");
+		goto ERROR;
+	}
+
+	if (read_imei1(imeiStr1, imeiMacStr1, IMEI_DIGITS,
+					IMEI_MAC_DIGITS) < 0){
+		pr_err("ReadIMEIHexData: read_imei 1 is fail\n");
+	}
+
+	if (read_imei2(imeiStr2, imeiMacStr2, IMEI_DIGITS,
+					IMEI_MAC_DIGITS) < 0){
+		pr_err("ReadIMEIHexData: read_imei 2 is fail\n");
+	}
+
+	pr_info("%s: IMEI1:%s IMEI 2:%s !!!", __func__, imeiStr1, imeiStr2);
+
+	return TRUE;
+
+ERROR:
+	return FALSE;
+
+#else
+	pr_info("handle_get_imei_ioc: EMMC RPMB is not support\n");
+	return FALSE;
+#endif
+}
 /***************************************************************************/
 /**
  *  Called by CP via sysrpc driver to get current SIM lock state
