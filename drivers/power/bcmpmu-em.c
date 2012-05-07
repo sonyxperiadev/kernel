@@ -36,7 +36,9 @@
 #define BCMPMU_PRINT_DATA (1U << 3)
 #define BCMPMU_PRINT_REPORT (1U << 4)
 
-static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
+static int debug_mask = BCMPMU_PRINT_ERROR |
+			BCMPMU_PRINT_INIT |
+			BCMPMU_PRINT_REPORT;
 
 #define POLL_SAMPLES		8
 #define POLLRATE_TRANSITION	3000
@@ -202,6 +204,7 @@ struct bcmpmu_em {
 	int fg_fbat_lvl;
 	int piggyback_chrg;
 	void (*pb_notify) (enum bcmpmu_event_t event, int data);
+	int batt_temp_in_celsius;
 };
 static struct bcmpmu_em *bcmpmu_em;
 
@@ -1299,6 +1302,12 @@ static void update_power_supply(struct bcmpmu_em *pem, int capacity)
 		psy_changed = 1;
 	pem->batt_present = propval.intval;
 
+	if (pem->batt_temp_in_celsius)
+		propval.intval = pem->batt_temp;
+	else
+		propval.intval = (pem->batt_temp - 273) * 10;
+	ps->set_property(ps, POWER_SUPPLY_PROP_TEMP, &propval);
+
 	if (psy_changed)
 		power_supply_changed(ps);
 }
@@ -1491,8 +1500,8 @@ static void em_algorithm(struct work_struct *work)
 		pem->batt_capacity = capacity;
 		save_fg_cap(pem->bcmpmu, capacity);
 	}
-	pr_em(REPORT, "%s, update capacity=%d, volt=%d, curr=%d\n",
-		__func__, capacity, pem->batt_volt, pem->batt_curr);
+	pr_em(REPORT, "EM: capacity=%d, volt=%d, curr=%d, temp=%d\n",
+		capacity, pem->batt_volt, pem->batt_curr, pem->batt_temp);
 
 	schedule_delayed_work(&pem->work,
 		msecs_to_jiffies(get_update_rate(pem)));
@@ -1711,6 +1720,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 		pem->fg_fbat_lvl = pdata->fg_fbat_lvl;
 	else
 		pem->fg_fbat_lvl = FULLBAT_LVL;
+	pem->batt_temp_in_celsius = pdata->batt_temp_in_celsius;
 
 	pem->charge_zone = CHRG_ZONE_QC;
 	pem->fg_zone = FG_TMP_ZONE_MAX;

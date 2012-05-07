@@ -127,17 +127,7 @@ static int bcmpmu_get_batt_property(struct power_supply *battery,
 		break;
 
 	case POWER_SUPPLY_PROP_TEMP:
-		req.sig = PMU_ADC_NTC;
-		req.tm = PMU_ADC_TM_HK;
-		req.flags = PMU_ADC_RAW_AND_UNIT;
-		if (pbatt->bcmpmu->adc_req) {
-			pbatt->bcmpmu->adc_req(pbatt->bcmpmu, &req);
-			if (pbatt->batt_temp_in_celsius)
-				propval->intval = req.cnv;
-			else
-				propval->intval = (req.cnv - 273) * 10;
-		} else
-			ret = -ENODATA;
+		propval->intval = pbatt->state.temp;
 		break;
 
 	case POWER_SUPPLY_PROP_HEALTH:
@@ -182,6 +172,10 @@ static int bcmpmu_set_batt_property(struct power_supply *ps,
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		pbatt->state.voltage = propval->intval;
+		break;
+
+	case POWER_SUPPLY_PROP_TEMP:
+		pbatt->state.temp = propval->intval;
 		break;
 
 	case POWER_SUPPLY_PROP_PRESENT:
