@@ -2067,7 +2067,7 @@ struct gsm_mux *gsm_alloc_mux(void)
 	gsm->ftype = UIH;
 	gsm->initiator = 0;
 	gsm->adaption = 1;
-	gsm->encoding = 1;
+	gsm->encoding = 0;
 	gsm->mru = 64;	/* Default to encoding 1 so these should be 64 */
 	gsm->mtu = 64;
 	gsm->dead = 1;	/* Avoid early tty opens */
@@ -2249,7 +2249,7 @@ static int gsmld_open(struct tty_struct *tty)
 	tty->receive_room = 65536;
 
 	/* Attach the initial passive connection */
-	gsm->encoding = 1;
+	gsm->encoding = 0;
 	return gsmld_attach_gsm(tty, gsm);
 }
 
@@ -2413,7 +2413,8 @@ static int gsmld_config(struct tty_struct *tty, struct gsm_mux *gsm,
 	gsm->initiator = c->initiator;
 	gsm->mru = c->mru;
 	gsm->mtu = c->mtu;
-	gsm->encoding = c->encapsulation;
+	gsm->encoding = 0;
+	/* c->encapsulation; Reconfigure to basic mode */
 	gsm->adaption = c->adaption;
 	gsm->n2 = c->n2;
 

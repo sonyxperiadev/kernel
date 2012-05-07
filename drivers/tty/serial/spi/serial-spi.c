@@ -55,10 +55,9 @@ the GPL, without Broadcom's express prior written consent.
 #define dbg_print(fmt, arg...)   do { } while (0)
 #endif
 
-/*
-#define RHEA_LOOPBACK_TEST
+/*#define RHEA_LOOPBACK_TEST*/
 #define RHEA_TTY_SPI_DEBUG
-*/
+
 
 /* forward reference */
 static void serial_spi_handle_mdm_rts(struct tty_spi_device *tty_spi_dev);
@@ -75,6 +74,9 @@ static struct device *spi_serial_dev;
 static struct lock_class_key tty_spi_key;
 static int tx_down;
 
+/* Integration Camp 12w16 -- test code to measure sequential packet delivery */
+static unsigned tx_seq_num = 1;
+static unsigned rx_seq_num = 1;
 /**
  *	serial_spi_hangup		-	hang up an TTY SPI device
  *	@tty_spi_dev: our SPI device
@@ -163,7 +165,6 @@ static int serial_spi_tiocmset(struct tty_struct *tty,
 	set_bit(TTY_SPI_UPDATE, &tty_spi_dev->signal_state);
 	return 0;
 }
-
 /**
  *	serial_spi_open	-	called on tty open
  *	@tty: our tty device
@@ -206,17 +207,24 @@ static int serial_spi_decode_spi_header(unsigned char *buffer, int *length,
 					unsigned char *more,
 					unsigned char *received_cts)
 {
-	u16 h1;
-	u16 h2;
+	unsigned char h1;
+	unsigned char h2;
+	unsigned char h3;
+	unsigned char h4;
 
-	h1 = *(u16 *) buffer;
-	h2 = *(u16 *) (buffer + 2);
-	/* dbg_print("h1 %x h2 %x\n",h1,h2); */
-	if (h1 != 0x7E7F || h2 != 0xAA55)
-		return TTY_SPI_HEADER_F;
+	h1 = *buffer;
+	h2 = *(buffer + 1);
+	h3 = *(buffer + 2);
+	h4 = *(buffer + 3);
 	*length = buffer[4] + (buffer[5] << 8);
+	rx_seq_num = buffer[8] + (buffer[9] << 8) +
+			(buffer[10] << 8) + (buffer[11] << 8);
 	*more = 0;
 	*received_cts = 0;
+	dbg_print("RX PKT h1 %x h2 %x h3 %x h4 %x len %x rx_seq_num = %x\n",
+			h1, h2, h3, h4, *length, rx_seq_num);
+	if (h1 != 0x7F || h2 != 0x7E || h3 != 0x55 || h4 != 0xAA)
+		return TTY_SPI_HEADER_F;
 	return 0;
 }
 
@@ -241,8 +249,13 @@ static void serial_spi_setup_spi_header(unsigned char *txbuffer, int tx_count,
 	txbuffer[5] = ((tx_count >> 8)) & 0xFF;
 	txbuffer[6] = 0;
 	txbuffer[7] = 0;
-	*(u32 *) (txbuffer + 8) = 0;
+	tx_seq_num++;
+	*(u32 *) (txbuffer + 8) = tx_seq_num;
 	*(u32 *) (txbuffer + 12) = 0;
+	if (tx_seq_num == 0xffffffff)
+		tx_seq_num = 0;
+	dbg_print("TX PACKET length %x tx_seq_num = %x\n",
+		(txbuffer[4] + txbuffer[5] << 8), tx_seq_num);
 }
 
 /**
@@ -278,47 +291,78 @@ static int serial_spi_prepare_tx_buffer(struct tty_spi_device *tty_spi_dev)
 {
 	int temp_count;
 	int queue_length;
-	int tx_count;
+	int tx_count, i;
 	unsigned char *tx_buffer;
+
+	dbg_print("enter\n");
 
 	tx_buffer = tty_spi_dev->tx_buffer;
 	memset(tx_buffer, 0, TTY_SPI_TRANSFER_SIZE);
+	dbg_print("location of txbuffer = 0x%x\n", tx_buffer);
 
 	/* make room for required SPI header */
 	tx_buffer += TTY_SPI_HEADER_OVERHEAD;
 	tx_count = TTY_SPI_HEADER_OVERHEAD;
+	dbg_print("16 byte header\n");
 
 	/* clear to signal no more data if this turns out to be the
 	 * last buffer sent in a sequence */
 	tty_spi_dev->spi_more = 0;
 
+/*
 	queue_length = kfifo_len(&tty_spi_dev->tx_fifo);
-	/* dbg_print("tx_buffer queue_length=%d\n",queue_length); */
+	dbg_print("tx_buffer queue_length=%d\n",queue_length);
 	if (queue_length != 0) {
+*/
 		/* data to mux -- see if there's room for it */
+/*
 		temp_count = min(queue_length, TTY_SPI_PAYLOAD_SIZE);
+		dbg_print(" buffer queue or max payload size =%d\n",
+				temp_count);
+*/
 		temp_count = kfifo_out_locked(&tty_spi_dev->tx_fifo,
-					      tx_buffer, temp_count,
+/*					      tx_buffer, temp_count,*/
+					      tx_buffer, TTY_SPI_FIFO_SIZE,
 					      &tty_spi_dev->fifo_lock);
-
+		kfifo_reset(&tty_spi_dev->tx_fifo);
+		queue_length = kfifo_len(&tty_spi_dev->tx_fifo);
+		dbg_print("tx_buffer queue_length after reset =%d\n",
+					queue_length);
+		dbg_print("tx_buffer queue_length=%d\n", queue_length);
 		/* update buffer pointer and data count in message */
-		/* dbg_print("temp_count=%d\n",temp_count); */
 		tx_buffer += temp_count;
 		tx_count += temp_count;
-		if (temp_count == queue_length)
+		dbg_print(" total tx count with header =%d\n", tx_count);
+		if (temp_count == queue_length) {
 			/* poke port to get more data */
+			dbg_print(" fifo is empty poke it\n");
 			serial_spi_wakeup_serial(tty_spi_dev);
-		else		/* more data in port, use next SPI message */
+			}
+		else {	/* more data in port, use next SPI message */
 			tty_spi_dev->spi_more = 1;
-	}
+			dbg_print(" fifo is not empty spi_more bit\n");
+		}
+/*	}*/
 	/* have data and info for header -- set up SPI header in buffer */
 	/* spi header needs payload size, not entire buffer size */
+	dbg_print("location of txbuffer after filling in = 0x%x\n",
+				tx_buffer);
+	dbg_print(" data to be transmitted\n");
 	temp_count = tx_count;
 	if (tx_count % 64)
 		tx_count = ((tx_count >> 6) + 1) << 6;	/* 64 bytes alignment */
 	serial_spi_setup_spi_header(tty_spi_dev->tx_buffer,
 				    temp_count - TTY_SPI_HEADER_OVERHEAD,
 				    tty_spi_dev->spi_more);
+#if 0
+	for (i = 0; i < (24/4); i++)
+		dbg_print(" [%d]=0x%x 0x%x 0x%x 0x%x\n", i*4,
+				*(tty_spi_dev->tx_buffer+(i*4)),
+				*(tty_spi_dev->tx_buffer+(i*4)+1),
+				*(tty_spi_dev->tx_buffer+(i*4)+2),
+				*(tty_spi_dev->tx_buffer+(i*4)+3)
+				);
+#endif
 	return tx_count;
 }
 
@@ -353,14 +397,18 @@ static int serial_spi_write(struct tty_struct *tty, const unsigned char *buf,
 	void __iomem *vaddr;
 	int i;
 	int tx_count;
+	int fifo_queue_length;
+	dbg_print("   enter\n");
 	if (!test_bit(TTY_SPI_STATE_PIN_MUX_SET, &(tty_spi_dev->flags))) {
 		/*hack to config pin mux. CP is hardcoding the pin Mux */
+		dbg_print(" serial_spi_write  pin mux is not set\n");
 		vaddr = ioremap(PAD_CTRL, 1024);
 
 		dbg_print("Before setting......\n");
 		for (i = 0; i < 9; i++)
-			dbg_print(" Address %p   %x\n", vaddr + 0xE8 + i * 4,
-				  readl(vaddr + 0xE8 + i * 4));
+			dbg_print(" Address %p   %x\n",
+					vaddr + 0xE8 + i * 4,
+					readl(vaddr + 0xE8 + i * 4));
 		/*write password */
 		writel(0xa5a501, vaddr + 0x7F0);
 		/*unlock config register */
@@ -370,58 +418,63 @@ static int serial_spi_write(struct tty_struct *tty, const unsigned char *buf,
 			writel(0x443, vaddr + 0xE8 + i * 4);
 		dbg_print("After setting......\n");
 		for (i = 0; i < 9; i++) {
-			dbg_print(" Address %p   %x\n", vaddr + 0xE8 + i * 4,
-				  readl(vaddr + 0xE8 + i * 4));
+			dbg_print(" Address %p   %x\n",
+					vaddr + 0xE8 + i * 4,
+					readl(vaddr + 0xE8 + i * 4));
 		}
 		set_bit(TTY_SPI_STATE_PIN_MUX_SET, &(tty_spi_dev->flags));
 #ifdef RHEA_LOOPBACK_TEST
+		dbg_print("Loop back setting AP and mdm alive ......\n");
 		gpio_set_value(tty_spi_dev->gpio.ap_alive, 1);
 		/* simulation of modem rdy */
 		gpio_set_value(tty_spi_dev->gpio.mdm_alive, 1);
 		/* simulation of modem rts */
-		sema_init(&tty_spi_dev->spi_semaphore, 1);
 #endif
+		sema_init(&tty_spi_dev->spi_semaphore, 1);
+
 		serial_spi_print_gpio(tty_spi_dev);
 	}
+	dbg_print("spi_semaphore down\n");
+	/*down(&tty_spi_dev->spi_semaphore);
 
-	/*
-	printk(KERN_ERR"Tx Down semaphore, %d\n",
-		tty_spi_dev->spi_semaphore.count);
-	 */
-	down(&tty_spi_dev->spi_semaphore);
-	/*
-	printk(KERN_ERR"TX down done, %d\n",
-		tty_spi_dev->spi_semaphore.count);
-	 */
-	if (gpio_get_value(tty_spi_dev->gpio.mdm_rdy) &&
-	    gpio_get_value(tty_spi_dev->gpio.mdm_rts)) {
+	condition not needed,
+	semaphore will be blocked
+	if any Tx or Rx transactions is on-going
+
+	if(gpio_get_value(tty_spi_dev->gpio.mdm_rts) &&
+		gpio_get_value(tty_spi_dev->gpio.mdm_rdy))
+*/
+	{
+	    dbg_print("write started\n");
 		tx_down = 1;
-		/* printk(KERN_ERR"schedule send\n"); */
 		set_bit(TTY_SPI_TX_FC, &tty_spi_dev->signal_state);
 		tx_count = kfifo_in_locked(&tty_spi_dev->tx_fifo,
 					   tmp_buf, count,
 					   &tty_spi_dev->fifo_lock);
+		fifo_queue_length = kfifo_len(&tty_spi_dev->tx_fifo);
+		dbg_print("kfifo length after new write is %x ",
+				fifo_queue_length);
 		gpio_set_value(tty_spi_dev->gpio.ap_rts, 1);
 #ifdef RHEA_LOOPBACK_TEST
 		gpio_set_value(tty_spi_dev->gpio.ap_alive, 0);
 		/* For simulation of modem mdm_rdy */
 #endif
+		serial_spi_print_gpio(tty_spi_dev);
+		dbg_print("fifo set and configure the GPIOs for transmit\n");
+		/*up(&tty_spi_dev->spi_semaphore);*/
+		dbg_print("   exit\n");
 		return tx_count;
 	}
-	/*
-	   printk(KERN_ERR"up semaphore for not sending.\n");
-	 */
-	up(&tty_spi_dev->spi_semaphore);
-	/*
-	   printk(KERN_ERR"semaphore, %d\n", tty_spi_dev->spi_semaphore.count);
-	 */
+	dbg_print(" spi_semaphore up/release failure\n");
+	/*up(&tty_spi_dev->spi_semaphore);*/
+	dbg_print("exit no tx count == 0\n");
 	return 0;
 }
 static int serial_spi_read(struct tty_spi_device *tty_spi_dev)
 {
 
 	unsigned char *tx_buffer;
-
+	dbg_print(" serial_spi_read  enter\n");
 	tx_buffer = tty_spi_dev->tx_buffer;
 #ifndef RHEA_LOOPBACK_TEST
 	memset(tx_buffer, 0, TTY_SPI_TRANSFER_SIZE);
@@ -489,7 +542,7 @@ static int tty_spi_port_activate(struct tty_port *port, struct tty_struct *tty)
 	tty->driver_data = tty_spi_dev;
 
 	/* allows flip string push from int context */
-	tty->low_latency = 1;
+	tty->low_latency = 0;
 
 	return 0;
 }
@@ -538,11 +591,15 @@ static void serial_spi_insert_flip_string(struct tty_spi_device *tty_spi_dev,
 					  unsigned char *chars, size_t size)
 {
 	struct tty_struct *tty = tty_port_tty_get(&tty_spi_dev->tty_port);
+	dbg_print("ENTER\n");
 	if (!tty)
 		return;
 	tty_insert_flip_string(tty, chars, size);
+	dbg_print("insert string\n");
 	tty_flip_buffer_push(tty);
+	dbg_print("push\n");
 	tty_kref_put(tty);
+	dbg_print("Exit\n");
 }
 
 /**
@@ -555,8 +612,6 @@ static void serial_spi_insert_flip_string(struct tty_spi_device *tty_spi_dev,
 static void serial_spi_complete(void *spi_dev)
 {
 	struct tty_spi_device *tty_spi_dev = spi_dev;
-	/* struct tty_struct *tty;
-	   struct tty_ldisc *ldisc = NULL; */
 	int length;
 	int actual_length;
 	unsigned char more;
@@ -564,79 +619,72 @@ static void serial_spi_complete(void *spi_dev)
 	int local_write_pending = 0;
 	int queue_length;
 	int decode_result;
-	int rx = 0;
+	int rx = 0, i;
 
-	/* dbg_print("In serial spi complete\n");  */
+	dbg_print("ENTER\n");
 	if (!tty_spi_dev->spi_msg.status && test_bit(TTY_SPI_RX_FC,
 						     &tty_spi_dev->
 						     signal_state)) {
+		dbg_print("RX FC is set\n");
 		rx = 1;
 		/* check header validity, get comm flags */
 		decode_result =
 		    serial_spi_decode_spi_header(tty_spi_dev->rx_buffer,
 						 &length, &more, &cts);
+		for (i = 0; i < 24; i++)
+			dbg_print(" [%d]=0x%x\n", i,
+					*(tty_spi_dev->rx_buffer+(i)));
+		serial_spi_print_gpio(tty_spi_dev);
+
 		if (decode_result == TTY_SPI_HEADER_F) {
-			dev_dbg(&tty_spi_dev->spi_dev->dev,
-				"ignore input: invalid header F");
+			dbg_print(" header decode failed\n");
 			goto complete_exit;
 		}
-
+		/* cts is always zero according to the decode function*/
 		tty_spi_dev->spi_slave_cts = cts;
 		gpio_set_value(tty_spi_dev->gpio.ap_rdy, 0);
 		actual_length = min((unsigned int)length,
 				    tty_spi_dev->spi_msg.actual_length);
+
+#if 1
 		serial_spi_insert_flip_string(tty_spi_dev,
 					      tty_spi_dev->rx_buffer +
 					      TTY_SPI_HEADER_OVERHEAD,
 					      (size_t) actual_length);
+#endif
+		dbg_print(" data saved to tty queue\n");
 #ifdef RHEA_TTY_SPI_DEBUG
 		dbg_print("rx actual length: %d frame length %d\n",
 			  actual_length, length);
 #endif
-		/*
-		   for(srdy=0; srdy<actual_length; srdy++){
-		   dbg_print(" %x ", tty_spi_dev->rx_buffer[srdy+
-		   TTY_SPI_HEADER_OVERHEAD]);
-		   } */
-		if (actual_length < length)
+		if (actual_length < length) {
+			dbg_print("rescheduling work ######");
 			schedule_work(&tty_spi_dev->io_wq);
-		/* tasklet_schedule(&tty_spi_dev->io_work_tasklet); */
+		}
 	} else {
-		dev_dbg(&tty_spi_dev->spi_dev->dev, "SPI transfer error %d",
-			tty_spi_dev->spi_msg.status);
+		dbg_print("serial_spi_complete SPI transfer no RX");
 	}
 
 complete_exit:
+	serial_spi_print_gpio(tty_spi_dev);
 	if (tty_spi_dev->write_pending) {
+		dbg_print("serial_spi_complete :: write pending");
 		tty_spi_dev->write_pending = 0;
 		local_write_pending = 1;
 	}
 
 	clear_bit(TTY_SPI_STATE_IO_IN_PROGRESS, &(tty_spi_dev->flags));
-
-	kfifo_reset(&tty_spi_dev->tx_fifo);
+	dbg_print("serial_spi_complete ::read done ");
+/*	kfifo_reset(&tty_spi_dev->tx_fifo);
 	queue_length = kfifo_len(&tty_spi_dev->tx_fifo);
-	/*
-	dbg_print("complete is done = %d state = %x\n",
-	queue_length, (unsigned int)tty_spi_dev->signal_state);
 
-	   tty = tty_port_tty_get(&tty_spi_dev->tty_port);
-	   if (tty) {
-	   ldisc = tty_ldisc_ref(tty);
-	   if (ldisc) {
-	   ldisc->ops->write_wakeup(tty);
-	   tty_ldisc_deref(ldisc);
-	   }
-	   tty_kref_put(tty);
-	   } */
-
-	/* serial_spi_reset(tty_spi_dev); */
-	if (rx == 0 && tx_down) {
-		/*
-		   printk(KERN_ERR"up semaphore after tx complete\n");
-		   printk(KERN_ERR"semaphore, %d\n",
-			tty_spi_dev->spi_semaphore.count);
-		 */
+	only tx
+*/
+	if (rx == 0) {
+		/* && tx_down) { */
+		dbg_print("serial_spi_complete rx = 0 and tx_down =1");
+		/*kfifo_reset(&tty_spi_dev->tx_fifo);*/
+		queue_length = kfifo_len(&tty_spi_dev->tx_fifo);
 		gpio_set_value(tty_spi_dev->gpio.ap_rts, 0);
 		clear_bit(TTY_SPI_TX_FC, &tty_spi_dev->signal_state);
 #ifdef RHEA_LOOPBACK_TEST
@@ -645,8 +693,12 @@ complete_exit:
 		gpio_set_value(tty_spi_dev->gpio.mdm_alive, 0);
 		/* simulation of modem rts */
 #endif
-		up(&tty_spi_dev->spi_semaphore);
+		/*up(&tty_spi_dev->spi_semaphore); */
+		dbg_print("spi_semaphore cleared");
+
 	} else {
+	/* only rx */
+		dbg_print("if its rx only so clear gpios accordingly ");
 		gpio_set_value(tty_spi_dev->gpio.ap_rdy, 1);
 		clear_bit(TTY_SPI_RX_FC, &tty_spi_dev->signal_state);
 #ifdef RHEA_LOOPBACK_TEST
@@ -655,27 +707,9 @@ complete_exit:
 		gpio_set_value(tty_spi_dev->gpio.mdm_alive, 1);
 		/* simulation of modem rts */
 #endif
+		up(&tty_spi_dev->spi_semaphore);
 	}
-
-	/*
-	   if (test_and_clear_bit(TTY_SPI_STATE_IO_READY, &tty_spi_dev->flags))
-	   tasklet_schedule(&tty_spi_dev->io_work_tasklet);
-	   else {
-	   if (more || tty_spi_dev->spi_more || queue_length > 0 ||
-	   local_write_pending){
-	   tasklet_schedule(&tty_spi_dev->io_work_tasklet);
-	   }else {
-	   tty = tty_port_tty_get(&tty_spi_dev->tty_port);
-	   if (tty) {
-	   ldisc = tty_ldisc_ref(tty);
-	   if (ldisc) {
-	   ldisc->ops->write_wakeup(tty);
-	   tty_ldisc_deref(ldisc);
-	   }
-	   tty_kref_put(tty);
-	   }
-	   }
-	   } */
+	serial_spi_print_gpio(tty_spi_dev);
 }
 
 /**
@@ -690,30 +724,27 @@ static void serial_spi_io_wq(struct work_struct *wq)
 	int retval;
 	struct tty_spi_device *tty_spi_dev =
 	    container_of(wq, struct tty_spi_device, io_wq);
-	/*struct tty_spi_device *tty_spi_dev =
-		(struct tty_spi_device *) data; */
+	dbg_print("Enter\n");
 
 	if (!gpio_get_value(tty_spi_dev->gpio.mdm_rdy)
 	    || !gpio_get_value(tty_spi_dev->gpio.mdm_rts)) {
+
+		/* not sure why this unack srdy init nb is used. */
 		if (tty_spi_dev->gpio.unack_srdy_int_nb > 0)
 			tty_spi_dev->gpio.unack_srdy_int_nb--;
+
 		if (test_bit(TTY_SPI_RX_FC, &tty_spi_dev->signal_state)) {
 			retval = serial_spi_read(tty_spi_dev);
-			/*
-			   printk(KERN_ERR"down semaphore for rx, %d\n",
-			   tty_spi_dev->spi_semaphore.count);
-			 */
 			down(&tty_spi_dev->spi_semaphore);
-			/*
-			   printk(KERN_ERR"down semaphore done for rx, %d\n",
-			   tty_spi_dev->spi_semaphore.count);
-			 */
 		} else {
+			down(&tty_spi_dev->spi_semaphore);
 			retval = serial_spi_prepare_tx_buffer(tty_spi_dev);
 #ifdef RHEA_TTY_SPI_DEBUG
-			dbg_print("Sending %d bytes to modem...\n", retval);
+			dbg_print("Sending %d bytes to modem...\n",
+					retval);
 #endif
 		}
+		dbg_print(" tx buffer done or Rx got\n");
 		spi_message_init(&tty_spi_dev->spi_msg);
 		INIT_LIST_HEAD(&tty_spi_dev->spi_msg.queue);
 
@@ -736,18 +767,11 @@ static void serial_spi_io_wq(struct work_struct *wq)
 				     &tty_spi_dev->spi_msg);
 
 		retval = spi_async(tty_spi_dev->spi_dev, &tty_spi_dev->spi_msg);
-		/*
-		   dbg_print("After spi_async = %d", retval);
-
-		   if (retval) {
-		   clear_bit(TTY_SPI_STATE_IO_IN_PROGRESS,
-		   &tty_spi_dev->flags);
-		   tasklet_schedule(&tty_spi_dev->io_work_tasklet);
-		   return;
-		   }
-		 */
-	} else
+		dbg_print("Exit wq done\n");
+	} else {
+		dbg_print("No active signals detected ???!!!\n");
 		tty_spi_dev->write_pending = 1;
+	}
 }
 
 /**
@@ -813,19 +837,20 @@ error_ret:
  */
 static void serial_spi_handle_mdm_rts(struct tty_spi_device *tty_spi_dev)
 {
+	dbg_print(" Enter\n");
 	if (!gpio_get_value(tty_spi_dev->gpio.mdm_rts)) {
-		/* dbg_print("In Handle mdm rts"); */
+		dbg_print(" Detected Falling Edge\n");
 		set_bit(TTY_SPI_RX_FC, &tty_spi_dev->signal_state);
 		gpio_set_value(tty_spi_dev->gpio.ap_rdy, 0);
 		schedule_work(&tty_spi_dev->io_wq);
 	} else {
+		dbg_print("Detected Rising Edge\n");
+#if 0
 		if (!tx_down)
 			return;
+#endif
 		tx_down = 0;
-		/* printk("up semaphore from mdm rts\n"); */
-		up(&tty_spi_dev->spi_semaphore);
-		/* printk(KERN_ERR"semaphore, %d\n",
-			tty_spi_dev->spi_semaphore.count); */
+		/*up(&tty_spi_dev->spi_semaphore);*/
 		set_bit(TTY_SPI_STATE_IO_READY, &tty_spi_dev->flags);
 	}
 }
@@ -841,11 +866,14 @@ static irqreturn_t spi_mdm_rts_interrupt(int irq, void *dev)
 {
 	struct tty_spi_device *tty_spi_dev = dev;
 	tty_spi_dev->gpio.unack_srdy_int_nb++;
+
+	dbg_print("enter spi_mdm_rts_interrupt\n");
 /*
 	dbg_print("In modem rts ISR\n");
-	dbg_print("Get MDM_RTS gpio%d value =%d\n",tty_spi_dev->gpio.mdm_rts,
+	dbg_print("Get MDM_RTS gpio%d value =%d\n",
+			tty_spi_dev->gpio.mdm_rts,
 		gpio_get_value(tty_spi_dev->gpio.mdm_rts));
-	//int val = gpio_get_value(tty_spi_dev->gpio.mdm_alive);
+	int val = gpio_get_value(tty_spi_dev->gpio.mdm_alive);
 */
 	serial_spi_handle_mdm_rts(tty_spi_dev);
 	return IRQ_HANDLED;
@@ -858,20 +886,19 @@ static irqreturn_t spi_mdm_rts_interrupt(int irq, void *dev)
  */
 static void serial_spi_handle_mdm_rdy(struct tty_spi_device *tty_spi_dev)
 {
+	dbg_print(" Enter\n");
 
 	if (!gpio_get_value(tty_spi_dev->gpio.mdm_rdy)) {
+		dbg_print(" falling edge detected\n");
+		/* we do set tx flow control in
+		write api and shouldnt be repeated here*/
 		set_bit(TTY_SPI_TX_FC, &tty_spi_dev->signal_state);
 		schedule_work(&tty_spi_dev->io_wq);
-	}
-/*
-		if(!test_bit(TTY_SPI_RX_FC, &tty_spi_dev->signal_state)){
-			set_bit(TTY_SPI_TX_FC, &tty_spi_dev->signal_state);
-			dbg_print("In Handle mdm rdy 02");
-			tasklet_schedule(&tty_spi_dev->io_work_tasklet);
-		}
-	}*/
-	else
+	} else {
+		dbg_print(" rising edge detected move to ready state\n");
+		up(&tty_spi_dev->spi_semaphore);
 		set_bit(TTY_SPI_STATE_IO_READY, &tty_spi_dev->flags);
+	}
 }
 
 /**
@@ -886,6 +913,7 @@ static void serial_spi_handle_mdm_rdy(struct tty_spi_device *tty_spi_dev)
 static irqreturn_t spi_mdm_rdy_interrupt(int irq, void *dev)
 {
 	struct tty_spi_device *tty_spi_dev = dev;
+	dbg_print("In modem rdy ISR\n");
 	/*
 	   dbg_print("In modem rdy ISR\n");
 	   dbg_print("Get MDM_RDY gpio%d value =%d\n",
@@ -937,7 +965,8 @@ static int serial_spi_reset(struct tty_spi_device *tty_spi_dev)
 	gpio_set_value(tty_spi_dev->gpio.ap_rts, 0);
 	gpio_set_value(tty_spi_dev->gpio.ap_rdy, 1);
 	/*
-	dbg_print("Aftre Clear AP_RTS pin %d bit=%d",tty_spi_dev->gpio.ap_rts,
+	dbg_print("Aftre Clear AP_RTS pin %d bit=%d",
+			tty_spi_dev->gpio.ap_rts,
 			gpio_get_value(tty_spi_dev->gpio.ap_rts));
 	 */
 	clear_bit(TTY_SPI_TX_FC, &tty_spi_dev->signal_state);
@@ -995,7 +1024,7 @@ static int serial_spi_device_init(struct spi_master *master)
 	struct device *d;
 	int i;
 	void __iomem *vaddr;
-	dbg_print("tty spi device init +++\n");
+	dbg_print("Enter\n");
 
 	if (saved_tty_spi_dev) {
 		dev_dbg(&spi->dev, "ignoring subsequent detection");
@@ -1004,7 +1033,7 @@ static int serial_spi_device_init(struct spi_master *master)
 	d = bus_find_device_by_name(&spi_bus_type, NULL, "spi0.0");
 	if (d) {
 		spi = (struct spi_device *)d;
-		dbg_print("device pointer = %p\n", d);
+		dbg_print("spi_device_handler = 0x%x\n", d);
 	} else {
 		spi = spi_alloc_device(master);
 		if (!spi) {
@@ -1019,6 +1048,8 @@ static int serial_spi_device_init(struct spi_master *master)
 	}
 	/* initialize structure to hold our device variables */
 	tty_spi_dev = kzalloc(sizeof(struct tty_spi_device), GFP_KERNEL);
+		dbg_print("serial_spi_device_init tty_spi_dev  0x%x\n",
+				tty_spi_dev);
 	if (!tty_spi_dev) {
 		dev_err(&spi->dev, "spi device allocation failed");
 		return -ENOMEM;
@@ -1035,10 +1066,10 @@ static int serial_spi_device_init(struct spi_master *master)
 
 	/* initialize spi mode, etc */
 	tty_spi_dev->use_dma = 0;
-	tty_spi_dev->max_hz = 10000000;
+	tty_spi_dev->max_hz = 20000000;
 	spi->max_speed_hz = tty_spi_dev->max_hz;
 	/*spi->mode = TTY_SPI_MODE | (SPI_LOOP & spi->mode);*/
-	spi->mode = SPI_MODE_0;
+	spi->mode = TTY_SPI_MODE;
 	spi->bits_per_word = spi_bpw;
 	ret = spi_setup(spi);
 	if (ret) {
@@ -1224,6 +1255,7 @@ static int serial_spi_device_init(struct spi_master *master)
 	/* no outgoing tty open at this point, this just satisfies the
 	 * modem's read and should reset communication properly
 	 */
+	dbg_print("Exit\n");
 
 	return 0;
 
@@ -1260,7 +1292,10 @@ static int __init serial_spi_init(void)
 {
 	int result;
 	struct spi_master *master;
+	dbg_print("serial_spi_init  Enter\n");
 	tty_spi_drv = alloc_tty_driver(1);
+	dbg_print("serial_spi_init tty_spi_drv pointer 0x%x\n",
+			tty_spi_drv);
 	if (!tty_spi_drv) {
 		pr_err("%s: alloc_tty_driver failed", DRVNAME);
 		return -ENOMEM;
@@ -1278,28 +1313,14 @@ static int __init serial_spi_init(void)
 	tty_spi_drv->init_termios = tty_std_termios;
 
 	tty_set_operations(tty_spi_drv, &tty_spi_serial_ops);
-	dbg_print("***TTY serial spi init ***\n");
 	result = tty_register_driver(tty_spi_drv);
 	if (result) {
 		pr_err("%s: tty_register_driver failed(%d)", DRVNAME, result);
 		put_tty_driver(tty_spi_drv);
 		return result;
 	}
-	/*
-	   dbg_print("serial spi init 02\n");
-	   tty_register_device(tty_spi_drv, 0, spi_serial_dev);
-	   if ( IS_ERR( spi_serial_dev )){
-	   pr_err("spi-serial: %s - tty_register_device failed\n",
-	   __func__);
-	   goto exit_tty;
-	   }
-	   result = spi_register_driver((void *)&tty_spi_driver);
-	   if (result) {
-	   pr_err("%s: spi_register_driver failed(%d)",
-	   DRVNAME, result);
-	   goto exit_tty;
-	   } */
 	master = spi_busnum_to_master(0);
+	dbg_print("serial_spi_init spi_master pointer 0x%x\n", master);
 	/*dbg_print("serial spi master = %p\n",master);*/
 	result = serial_spi_device_init(master);
 	if (result) {

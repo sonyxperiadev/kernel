@@ -18,8 +18,8 @@ the GPL, without Broadcom's express prior written consent.
 #define TTYNAME				"ttySPI"
 
 #define TTY_SPI_MAX_MINORS		1
-#define TTY_SPI_TRANSFER_SIZE	2048	/*4480*/
-#define TTY_SPI_FIFO_SIZE		4096
+#define TTY_SPI_TRANSFER_SIZE		5060/*2048*/	/*4480*/
+#define TTY_SPI_FIFO_SIZE		 8192/*	4096*/
 
 #define TTY_SPI_HEADER_OVERHEAD		16
 #define TTY_RESET_TIMEOUT		msecs_to_jiffies(50)
@@ -59,6 +59,8 @@ the GPL, without Broadcom's express prior written consent.
 #define GPIO_AP_ALIVE		(MDMGPIO_OFFSET + 8)	/* mdmgpio 8 */
 #define GPIO_MDM_RTS		(MDMGPIO_OFFSET + 7)	/* mdmgpio 7 */
 #define GPIO_MDM_RDY		(MDMGPIO_OFFSET + 6)	/* mdmgpio 6 */
+/* Mdm Alive and AP Rdy were flipped during
+integration camp- below are original values*/
 #define GPIO_MDM_ALIVE		(MDMGPIO_OFFSET + 4)	/* mdmgpio 4 */
 #define GPIO_AP_RDY			(MDMGPIO_OFFSET + 2)	/* mdmgpio 2 */
 #define GPIO_AP_RTS			(MDMGPIO_OFFSET + 0)	/* mdmgpio 0 */
