@@ -707,8 +707,8 @@ int vtq_configure(struct vtq_vce *v,
 	mutex_lock(&v->host_mutex);
 
 	if (v->is_configured) {
-		err_print("Attempt to re-configure VCE FIFO.  We "
-			  "don't support that.\n");
+		/* err_print("Attempt to re-configure VCE FIFO.  We " */
+		/* 	  "don't support that.\n"); */
 		mutex_unlock(&v->host_mutex);
 		kfree(jobs);
 		return -1;
