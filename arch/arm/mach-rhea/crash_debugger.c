@@ -652,8 +652,6 @@ static int __init crash_debugger_init(void)
 	/* ready to run */
 	cdebugger_init();
 	setup_log_tx_param();
-	/*Initialize MAGIC */
-	iowrite32(UPLOAD_CAUSE_INIT, cdebugger_mem_base);
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_block);
 	/* Any other relevant init */
 	return 0;
