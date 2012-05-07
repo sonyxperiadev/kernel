@@ -522,33 +522,6 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 
 		handle_sysrq('t');
 
-		ramdump_list[0].mem_size = (num_physpages << PAGE_SHIFT);
-		setup_log_buffer_address();
-
-		log_tx_param[2] = (void *)virt_to_phys((void *)log_buf);
-		log_tx_param[3] = (void *)log_buf_len;
-		log_tx_param[4] = (void *)0;	/* wr index */
-		log_tx_param[5] = (void *)0;	/* rd index */
-		log_tx_param[7] = (void *)virt_to_phys((void *)linkSignature);
-		log_tx_param[11] =
-		    (void *)virt_to_phys((void *)decoder_version);
-		log_tx_param[19] = (void *)virt_to_phys((void *)&mmu_unit_size);
-		log_tx_param[34] =
-		    (void *)virt_to_phys((void *)&cdebugger_fault_status);
-		log_tx_param[57] =
-		    (void *)virt_to_phys((void *)&ramdump_list[0]);
-		log_tx_param[58] =
-		    (void *)virt_to_phys((void *)&num_of_ramdumps);
-		log_tx_param[80] =
-		    (void *)virt_to_phys((void *)&cdebugger_mmu_reg);
-		log_tx_param[84] =
-		    (void *)(cdebugger_mmu_reg.TTBR0 & 0xFFFFC000);
-
-		log_tx_param[87] = (void *)virt_to_phys((void *)&main_log);
-		log_tx_param[88] = (void *)virt_to_phys((void *)&radio_log);
-		log_tx_param[89] = (void *)virt_to_phys((void *)&events_log);
-		log_tx_param[90] = (void *)virt_to_phys((void *)&system_log);
-
 		cdebugger_dump_stack();
 
 		flush_cache_all();
@@ -642,11 +615,43 @@ static struct notifier_block panic_block = {
 	.notifier_call = ramdump_panic,
 };
 
+static void setup_log_tx_param(void)
+{
+	ramdump_list[0].mem_size = (num_physpages << PAGE_SHIFT);
+	setup_log_buffer_address();
+
+	log_tx_param[2] = (void *)virt_to_phys((void *)log_buf);
+	log_tx_param[3] = (void *)log_buf_len;
+	log_tx_param[4] = (void *)0;	/* wr index */
+	log_tx_param[5] = (void *)0;	/* rd index */
+	log_tx_param[7] = (void *)virt_to_phys((void *)linkSignature);
+	log_tx_param[11] =
+	    (void *)virt_to_phys((void *)decoder_version);
+	log_tx_param[19] = (void *)virt_to_phys((void *)&mmu_unit_size);
+	log_tx_param[34] =
+	    (void *)virt_to_phys((void *)&cdebugger_fault_status);
+	log_tx_param[57] =
+	    (void *)virt_to_phys((void *)&ramdump_list[0]);
+	log_tx_param[58] =
+	    (void *)virt_to_phys((void *)&num_of_ramdumps);
+	log_tx_param[80] =
+	    (void *)virt_to_phys((void *)&cdebugger_mmu_reg);
+	log_tx_param[84] =
+	    (void *)(cdebugger_mmu_reg.TTBR0 & 0xFFFFC000);
+
+	log_tx_param[87] = (void *)virt_to_phys((void *)&main_log);
+	log_tx_param[88] = (void *)virt_to_phys((void *)&radio_log);
+	log_tx_param[89] = (void *)virt_to_phys((void *)&events_log);
+	log_tx_param[90] = (void *)virt_to_phys((void *)&system_log);
+
+}
+
 static int __init crash_debugger_init(void)
 {
 	cdebugger_memory_init();
 	/* ready to run */
 	cdebugger_init();
+	setup_log_tx_param();
 	/*Initialize MAGIC */
 	iowrite32(UPLOAD_CAUSE_INIT, cdebugger_mem_base);
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_block);
