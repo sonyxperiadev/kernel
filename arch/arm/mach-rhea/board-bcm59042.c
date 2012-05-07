@@ -80,9 +80,9 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0xD9, .val = 0x1A, .mask = 0xFF},
 	{.map = 0, .addr = 0xDA, .val = 0x1A, .mask = 0xFF},
 
-	{.map = 0, .addr = 0x13, .val = 0x43, .mask = 0xFF},
-	{.map = 0, .addr = 0x14, .val = 0x7F, .mask = 0xFF},
-	{.map = 0, .addr = 0x15, .val = 0x3B, .mask = 0xFF},
+	{.map = 0, .addr = 0x13, .val = 0x3d, .mask = 0xFF},
+	{.map = 0, .addr = 0x14, .val = 0x79, .mask = 0xFF},
+	{.map = 0, .addr = 0x15, .val = 0x20, .mask = 0xFF},
 	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
 	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
 };
