@@ -412,7 +412,7 @@ static int bcmpmu_regulator_remove(struct platform_device *pdev)
 	while (i < bcmpmu->pdata->num_of_regl) {
 		if (regl[i]) {
 			regulator_unregister(regl[i]);
-			regl[i] == NULL;
+			kzfree(regl[i]);
 		}
 		i++;
 	}
