@@ -27,4 +27,11 @@ config BCM_HAPTICS
 	  This options enables support for Broadcom haptic driver, implemented
 	  using HALAUDIO interface
 
+config BCM_SS_VIBRA
+        bool "Samsung Platform Vibrator support"
+	default y
+        depends on MACH_RHEA_SS_COMMON
+        help
+          This option enables support for Vibrator on some Samsung phones.
+
 endif	# HAPTIC
