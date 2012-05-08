@@ -188,7 +188,9 @@ struct _TPcm_Stream_Ctrls {
 	void   *pSubStream;
 	struct completion stopCompletion;
 	struct completion *pStopCompletion;
-
+	s32 xrun_occured;
+	UInt32 playback_prev_time;
+	UInt32 period_ms;
 };
 
 #define	TPcm_Stream_Ctrls	struct _TPcm_Stream_Ctrls
