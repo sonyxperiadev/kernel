@@ -112,6 +112,15 @@ enum __AUDCTRL_WAIT_e {
 };
 #define AUDCTRL_WAIT_e enum __AUDCTRL_WAIT_e
 
+struct _second_dev {
+	AUDIO_SOURCE_Enum_t source;
+	AUDIO_SINK_Enum_t sink;
+	unsigned int pathID;
+	unsigned int substream_number;
+};
+
+#define BRCM_AUDIO_Param_Second_Dev_t struct _second_dev
+
 /**
 *  @brief  This function is the Init entry point for Audio Controller
 *
@@ -374,7 +383,6 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 *
 *  @param  src  (in)  playback source
 *  @param  sink (in)  playback sink
-*  @param  spk  (in)  speaker selection
 *  @param  numCh (in)  stereo, momo
 *  @param  sr    (in)  sample rate
 *  @param  pPathID (in)  to return pathID
@@ -399,6 +407,16 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 ****************************************************************************/
 void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 			 AUDIO_SINK_Enum_t sink, unsigned int pathID);
+
+/**
+*  @brief  Enable a playback path
+*
+*  @param  info  (in)  BRCM_AUDIO_Param_Second_Dev_t
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_SetSecondSink(BRCM_AUDIO_Param_Second_Dev_t info);
 
 /********************************************************************
 *  @brief  start the stream for audio render

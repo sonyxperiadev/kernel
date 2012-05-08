@@ -102,7 +102,7 @@ enum __BRCM_AUDIO_ACTION_en_t {
 struct __BRCM_AUDIO_Param_Start_t {
 	void *drv_handle;
 	TIDChanOfDev *pdev_prop;
-	UInt32 channels;
+	UInt32 channels; /* num_of_channel */
 	UInt32 rate;
 	Int32 vol[2];
 	Int32 mixMode;

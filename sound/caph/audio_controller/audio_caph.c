@@ -725,49 +725,50 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 	case ACTION_AUD_StartPlay:
 		{
-			BRCM_AUDIO_Param_Start_t *param_start =
-			    (BRCM_AUDIO_Param_Start_t *) arg_param;
-			AudioMode_t  newmode = GetAudioModeBySink(
-					param_start->pdev_prop->p[0].sink);
-
-			CAPH_ASSERT(param_start->stream >=
-				    (CTL_STREAM_PANEL_FIRST - 1)
-				    && param_start->stream <
-				    (CTL_STREAM_PANEL_LAST - 1));
-
-			newmode = AUDIO_Policy_Get_Mode( \
+		BRCM_AUDIO_Param_Start_t *param_start =
+		    (BRCM_AUDIO_Param_Start_t *) arg_param;
+		AudioMode_t  newmode = GetAudioModeBySink(
 				param_start->pdev_prop->p[0].sink);
-			app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_MUSIC);
-			AUDCTRL_SaveAudioMode((AudioMode_t)newmode);
-			AUDCTRL_SaveAudioApp((AudioApp_t)app_profile);
 
-			if (param_start->pdev_prop->p[0].drv_type ==
-			    AUDIO_DRIVER_PLAY_AUDIO) {
+		CAPH_ASSERT(param_start->stream >=
+			    (CTL_STREAM_PANEL_FIRST - 1)
+			    && param_start->stream <
+			    (CTL_STREAM_PANEL_LAST - 1));
 
-				/* Enable the playback path */
-				AUDCTRL_EnablePlay(
-					param_start->pdev_prop->p[0].source,
-					param_start->pdev_prop->p[0].sink,
-					param_start->channels,
-					param_start->rate, &path);
-				/* coverity[overrun-local] */
-				pathID[param_start->stream] = path;
+		newmode = AUDIO_Policy_Get_Mode( \
+			param_start->pdev_prop->p[0].sink);
+		app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_MUSIC);
+		AUDCTRL_SaveAudioMode((AudioMode_t)newmode);
+		AUDCTRL_SaveAudioApp((AudioApp_t)app_profile);
 
-				/*
-				 * AUDCTRL_EnablePlay enables HW path, reads
-				 * SYSPARM and sets HW gains as defined in
-				 * SYSPARM.
-				 */
+		if (param_start->pdev_prop->p[0].drv_type ==
+		    AUDIO_DRIVER_PLAY_AUDIO) {
 
-				AUDIO_DRIVER_Ctrl(param_start->drv_handle,
-						  AUDIO_DRIVER_START,
-						  &param_start->pdev_prop->p[0].
-						  sink);
-			} else if (param_start->pdev_prop->p[0].drv_type ==
-				   AUDIO_DRIVER_PLAY_VOICE) {
-				AUDIO_DRIVER_Ctrl(param_start->drv_handle,
-						  AUDIO_DRIVER_START, NULL);
-			}
+			/* Enable the playback path */
+			AUDCTRL_EnablePlay(
+				param_start->pdev_prop->p[0].source,
+				param_start->pdev_prop->p[0].sink,
+				param_start->channels,
+				param_start->rate, &path);
+			/* coverity[overrun-local] */
+			pathID[param_start->stream] = path;
+
+			/*
+			 * AUDCTRL_EnablePlay enables HW path, reads
+			 * SYSPARM and sets HW gains as defined in
+			 * SYSPARM.
+			 */
+
+			AUDIO_DRIVER_Ctrl(param_start->drv_handle,
+					  AUDIO_DRIVER_START,
+					  &param_start->pdev_prop->p[0].
+					  sink);
+		} else if (param_start->pdev_prop->p[0].drv_type ==
+			   AUDIO_DRIVER_PLAY_VOICE) {
+			AUDIO_DRIVER_Ctrl(param_start->drv_handle,
+					  AUDIO_DRIVER_START, NULL);
+		}
+
 		}
 		break;
 	case ACTION_AUD_StopPlay:
@@ -845,29 +846,30 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 	case ACTION_AUD_ResumePlay:
 		{
-			BRCM_AUDIO_Param_Resume_t *param_resume =
-			    (BRCM_AUDIO_Param_Resume_t *) arg_param;
+		BRCM_AUDIO_Param_Resume_t *param_resume =
+		    (BRCM_AUDIO_Param_Resume_t *) arg_param;
 
-			CAPH_ASSERT(param_resume->stream >=
-				    (CTL_STREAM_PANEL_FIRST - 1)
-				    && param_resume->stream <
-				    (CTL_STREAM_PANEL_LAST - 1));
+		CAPH_ASSERT(param_resume->stream >=
+			    (CTL_STREAM_PANEL_FIRST - 1)
+			    && param_resume->stream <
+			    (CTL_STREAM_PANEL_LAST - 1));
 
-			AUDIO_DRIVER_Ctrl(param_resume->drv_handle,
-					  AUDIO_DRIVER_RESUME, NULL);
+		AUDIO_DRIVER_Ctrl(param_resume->drv_handle,
+				  AUDIO_DRIVER_RESUME, NULL);
 
-			if (param_resume->pdev_prop->p[0].drv_type ==
-			    AUDIO_DRIVER_PLAY_AUDIO) {
-				/*  Enable the playback the path */
-				/* coverity[overrun-local] */
-				AUDCTRL_EnablePlay(param_resume->pdev_prop->p[0]
-						   .source,
-						   param_resume->pdev_prop->
-						   p[0].sink,
-						   param_resume->channels,
-						   param_resume->rate, &path);
-				pathID[param_resume->stream] = path;
-			}
+		if (param_resume->pdev_prop->p[0].drv_type ==
+		    AUDIO_DRIVER_PLAY_AUDIO) {
+			/*  Enable the playback the path */
+			/* coverity[overrun-local] */
+			AUDCTRL_EnablePlay(param_resume->pdev_prop->p[0]
+					   .source,
+					   param_resume->pdev_prop->
+					   p[0].sink,
+					   param_resume->channels,
+					   param_resume->rate, &path);
+			pathID[param_resume->stream] = path;
+		}
+
 		}
 		break;
 	case ACTION_AUD_StartRecord:

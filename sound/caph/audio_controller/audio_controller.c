@@ -222,6 +222,8 @@ static int wait_hspmu_on = 10*1000;
 static int wait_ihfpmu_on;
 static int wait_pmu_off = 2*1000;
 
+static BRCM_AUDIO_Param_Second_Dev_t second_dev_info;
+
 static int isDigiMic(AUDIO_SOURCE_Enum_t source);
 static int needDualMic(AudioMode_t mode, AudioApp_t app);
 static AudioMode_t GetAudioModeFromCaptureDev(CSL_CAPH_DEVICE_e source);
@@ -1311,8 +1313,30 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 		powerOnExternalAmp(sink, FmUse,
 				TRUE, FALSE);
 	} else {
-		powerOnExternalAmp(sink, AudioUse,
+		/* music playback */
+
+		if (second_dev_info.sink == AUDIO_SINK_VALID_TOTAL)
+			/* only power on amp in PMU for the first sink */
+			powerOnExternalAmp(sink, AudioUse,
+					TRUE, FALSE);
+		else
+		if (sink != AUDIO_SINK_LOUDSPK && sink != AUDIO_SINK_HEADSET
+		  && sink != AUDIO_SINK_TTY && sink != AUDIO_SINK_HANDSFREE)
+			/* only power on amp in PMU for the second sink */
+			powerOnExternalAmp(second_dev_info.sink, AudioUse,
 				TRUE, FALSE);
+		else {
+			/* power on HS amp and IHF amp in PMU */
+
+			wait_hspmu_on = 0;
+			powerOnExternalAmp(AUDIO_SINK_HEADSET, AudioUse,
+					TRUE, FALSE);
+			powerOnExternalAmp(AUDIO_SINK_LOUDSPK, AudioUse,
+					TRUE, FALSE);
+			wait_hspmu_on = 10*1000;
+
+		}
+
 	}
 
 	if (user_vol_setting[AUDCTRL_GetAudioApp()][mode].valid == FALSE)
@@ -1478,6 +1502,22 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 
 /****************************************************************************
 *
+*  Function Name: AUDCTRL_SetSecondSink
+*
+*  Description: Set the second sink.
+*      Must call this funciton before call AUDCTRL_EnablePlay for this
+*      function to take effect in AUDCTRL_EnablePlay.
+*      AUDCTRL_EnablePlay will power on both HS amp and LoudSpeaker amp
+*      for multicast audio.
+*
+****************************************************************************/
+void AUDCTRL_SetSecondSink(BRCM_AUDIO_Param_Second_Dev_t info)
+{
+	second_dev_info = info;
+}
+
+/****************************************************************************
+*
 *  Function Name: AUDCTRL_StartRender
 *
 *  Description: Start the data transfer of audio path render
@@ -1488,7 +1528,6 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 	AudioMode_t mode = AUDIO_MODE_HANDSET;
 	Result_t res;
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
-	int pathID = 0;
 
 	aTrace(LOG_AUDIO_CNTLR, "%s streamID=0x%x", __func__, streamID);
 
@@ -1511,10 +1550,22 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 	if (mode == AUDIO_MODE_RESERVE)
 		return RESULT_OK;	/*no need to set HW gain for FM TX. */
 
-	if (AUDCTRL_InVoiceCall() && path->srcmRoute[0][0].outChnl)
-		pathID = path->pathID;
 	/*arm2sp may use HW mixer, whose gain should be set */
-	AUDCTRL_SetAudioMode_ForMusicPlayback(mode, pathID, FALSE);
+	AUDCTRL_SetAudioMode_ForMusicPlayback(mode, path->pathID, FALSE);
+
+	if (second_dev_info.sink != AUDIO_SINK_VALID_TOTAL
+		&& second_dev_info.substream_number == streamID) {
+
+		/*Query for MUSIC profile,in case we are not in
+		state normal like FM,Voice,Recording policy will
+		decide,else we will set MUSIC profile*/
+
+		int app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_MUSIC);
+		AUDCTRL_SaveAudioApp(app_profile);
+		AUDCTRL_AddPlaySpk(second_dev_info.source,
+			second_dev_info.sink,
+			path->pathID);
+	}
 
 	return RESULT_OK;
 }
@@ -3388,6 +3439,7 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 	aTrace(LOG_AUDIO_CNTLR, "%s speaker %d, usage_flag %d, use %d,"
 			" force %d\n",
 			__func__, speaker, usage_flag, use, force);
+
 	if (force == TRUE) {
 		if (use == FALSE) {
 			if (IHF_IsOn == TRUE) {
@@ -3419,124 +3471,128 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 			ampControl = TRUE;
 		}
 
-	} else {
-		switch (speaker) {
-		case AUDIO_SINK_HEADSET:
-		case AUDIO_SINK_TTY:
-			switch (usage_flag) {
-			case TelephonyUse:
-				callUseHS = use;
-				if (use)
-					/*only one output channel
-					for voice call */
-					callUseIHF = FALSE;
-				break;
+		return;
 
-			case AudioUse:
-				audioUseHS = use;
-				break;
+	}
 
-			case FmUse:
-				fmUseHS = use;
-				break;
 
-			default:
-				break;
-		}
-		break;
+	switch (speaker) {
+	case AUDIO_SINK_HEADSET:
+	case AUDIO_SINK_TTY:
+		switch (usage_flag) {
+		case TelephonyUse:
+			callUseHS = use;
+			if (use)
+				/*only one output channel
+				for voice call */
+				callUseIHF = FALSE;
+			break;
 
-		case AUDIO_SINK_LOUDSPK:
-			switch (usage_flag) {
-			case TelephonyUse:
-				callUseIHF = use;
-				/*only one output channel for voice call */
-				if (use)
-					callUseHS = FALSE;
+		case AudioUse:
+			audioUseHS = use;
+			break;
 
-				break;
-
-			case AudioUse:
-				audioUseIHF = use;
-				break;
-
-			case FmUse:
-				fmUseIHF = use;
-				break;
-
-			default:
-				break;
-			}
+		case FmUse:
+			fmUseHS = use;
 			break;
 
 		default:
-			return;
+			break;
+	}
+	break;
+
+	case AUDIO_SINK_LOUDSPK:
+		switch (usage_flag) {
+		case TelephonyUse:
+			callUseIHF = use;
+			/*only one output channel for voice call */
+			if (use)
+				callUseHS = FALSE;
+
+			break;
+
+		case AudioUse:
+			audioUseIHF = use;
+			break;
+
+		case FmUse:
+			fmUseIHF = use;
+			break;
+
+		default:
+			break;
+		}
+		break;
+
+	default:
+		return;
+	}
+
+	aTrace(LOG_AUDIO_CNTLR, "fmUseIHF %d, audioUseIHF %d,"
+			" callUseIHF %d,"
+			" fmUseHS %d, audioUseHS %d, callUseHS %d\n",
+			fmUseIHF, audioUseIHF, callUseIHF,
+			fmUseHS, audioUseHS, callUseHS);
+
+	if ((callUseHS == FALSE) && (audioUseHS == FALSE)
+	    && (fmUseHS == FALSE)) {
+		if (HS_IsOn != FALSE) {
+			aTrace(LOG_AUDIO_CNTLR,
+				"power OFF pmu HS amp\n");
+
+			extern_hs_off();
+			audctl_usleep_range(wait_pmu_off,
+				wait_pmu_off+2000);
+		}
+		HS_IsOn = FALSE;
+	} else {
+		if (HS_IsOn != TRUE && ampControl == TRUE) {
+			aTrace(LOG_AUDIO_CNTLR,
+				"powerOnExternalAmp power on HS");
+			audioh_start_hs();
+			extern_hs_on();
+			audctl_usleep_range(wait_hspmu_on,
+				wait_hspmu_on+2000);
 		}
 
-		aTrace(LOG_AUDIO_CNTLR, "fmUseIHF %d, audioUseIHF %d,"
-				" callUseIHF %d,"
-				" fmUseHS %d, audioUseHS %d, callUseHS %d\n",
-				fmUseIHF, audioUseIHF, callUseIHF,
-				fmUseHS, audioUseHS, callUseHS);
-
-		if ((callUseHS == FALSE) && (audioUseHS == FALSE)
-		    && (fmUseHS == FALSE)) {
-			if (HS_IsOn != FALSE) {
-				aTrace(LOG_AUDIO_CNTLR,
-					"power OFF pmu HS amp\n");
-
-				extern_hs_off();
-				audctl_usleep_range(wait_pmu_off,
-					wait_pmu_off+2000);
-			}
-			HS_IsOn = FALSE;
-		} else {
-			if (HS_IsOn != TRUE && ampControl == TRUE) {
-				aTrace(LOG_AUDIO_CNTLR,
-					"powerOnExternalAmp power on HS");
-				audioh_start_hs();
-				extern_hs_on();
-				audctl_usleep_range(wait_hspmu_on,
-					wait_hspmu_on+2000);
-			}
-
-			setExternAudioGain(GetAudioModeBySink(speaker),
-				AUDCTRL_GetAudioApp());
-
-			HS_IsOn = TRUE;
-		}
-
-		if ((callUseIHF == FALSE) && (audioUseIHF == FALSE)
-		    && (fmUseIHF == FALSE)) {
-			if (IHF_IsOn != FALSE) {
-				aTrace(LOG_AUDIO_CNTLR,
-					"power OFF pmu IHF amp\n");
-				if (isStIHF == TRUE)
-					extern_stereo_speaker_off();
-				else
-					extern_ihf_off();
-				audctl_usleep_range(wait_pmu_off,
-					wait_pmu_off+2000);
-			}
-			IHF_IsOn = FALSE;
-		} else {
-			if (IHF_IsOn != TRUE && ampControl == TRUE) {
-				aTrace(LOG_AUDIO_CNTLR,
-					"powerOnExternalAmp power on IHF");
-				audioh_start_ihf();
-				if (isStIHF == TRUE)
-					extern_stereo_speaker_on();
-				else
-					extern_ihf_on();
-				audctl_usleep_range(wait_ihfpmu_on,
-					wait_ihfpmu_on+2000);
-			}
-
-			setExternAudioGain(GetAudioModeBySink(speaker),
+		setExternAudioGain(GetAudioModeBySink(speaker),
 			AUDCTRL_GetAudioApp());
 
-			IHF_IsOn = TRUE;
-		}
+		HS_IsOn = TRUE;
 	}
+
+	if ((callUseIHF == FALSE) && (audioUseIHF == FALSE)
+	    && (fmUseIHF == FALSE)) {
+		if (IHF_IsOn != FALSE) {
+			aTrace(LOG_AUDIO_CNTLR,
+				"power OFF pmu IHF amp\n");
+			if (isStIHF == TRUE)
+				extern_stereo_speaker_off();
+			else
+				extern_ihf_off();
+			audctl_usleep_range(wait_pmu_off,
+				wait_pmu_off+2000);
+		}
+		IHF_IsOn = FALSE;
+	} else {
+		if (IHF_IsOn != TRUE && ampControl == TRUE) {
+			aTrace(LOG_AUDIO_CNTLR,
+				"powerOnExternalAmp power on IHF");
+			audioh_start_ihf();
+			if (isStIHF == TRUE)
+				extern_stereo_speaker_on();
+			else
+				extern_ihf_on();
+			audctl_usleep_range(wait_ihfpmu_on,
+				wait_ihfpmu_on+2000);
+		}
+
+		setExternAudioGain(GetAudioModeBySink(speaker),
+		AUDCTRL_GetAudioApp());
+
+		IHF_IsOn = TRUE;
+	}
+
 }
 
 /****************************************************************************
