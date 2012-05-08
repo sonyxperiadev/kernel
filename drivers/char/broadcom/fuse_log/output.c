@@ -436,8 +436,10 @@ static void WriteToLogDev_ACM(void)
 			      0666);
 
 		if (IS_ERR(g_devWrParms.file)) {
-			pr_info("can not open %s\n", BCMLOG_GetAcmDev());
+			pr_info("WriteToLogDev_ACM can not open %s\n",
+				BCMLOG_GetAcmDev());
 			g_devWrParms.file = 0;
+			set_fs(oldfs);
 			return;
 		}
 
@@ -482,7 +484,9 @@ static void WriteToLogDev_ACM(void)
 						BCMLOG_FifoRemove(&g_fifo,
 								  nWrite);
 
-					if (nWrite < nFifo) {
+					if (nWrite < (int)nFifo) {
+						pr_info("ACM failed to write log error:%d\n",
+							nWrite);
 						nFifo = 0;
 						filp_close(g_devWrParms.file,
 							   NULL);
@@ -491,7 +495,6 @@ static void WriteToLogDev_ACM(void)
 				}
 			} while (nFifo > 0);
 		}
-
 	}
 
 	set_fs(oldfs);
