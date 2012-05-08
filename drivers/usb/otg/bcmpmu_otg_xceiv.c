@@ -590,6 +590,7 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 
 void bcmpmu_otg_xceiv_do_srp(struct bcmpmu_otg_xceiv_data *xceiv_data)
 {
+#ifdef CONFIG_USB_OTG
 	if (xceiv_data->otg_xceiver.xceiver.gadget
 	    && xceiv_data->otg_xceiver.xceiver.gadget->ops
 	    && xceiv_data->otg_xceiver.xceiver.gadget->ops->wakeup
@@ -608,6 +609,7 @@ void bcmpmu_otg_xceiv_do_srp(struct bcmpmu_otg_xceiv_data *xceiv_data)
 		/* SRP initiated. Clear the flag */
 		xceiv_data->otg_xceiver.otg_srp_reqd = false;
 	}
+#endif
 }
 
 static void bcmpmu_otg_xceiv_sess_end_srp_handler(struct work_struct *work)
