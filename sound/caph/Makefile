@@ -27,6 +27,10 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_BT16
 ifdef CONFIG_ARCH_RHEA_BX
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCAPH_48K_MONO_PASSTHRU
 endif
+# enable the SS multicast for Rhea Stone variant builds
+ifneq ($(filter y,$(CONFIG_MACH_RHEA_STONE) $(CONFIG_MACH_RHEA_STONE_EDN2X)),)
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCONFIG_ENABLE_SSMULTICAST
+endif
 
 #Linux header files
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./include/linux/
