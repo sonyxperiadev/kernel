@@ -2260,6 +2260,15 @@ static int ov5640_init(struct i2c_client *client)
 	if (ret)
 		goto out;
 
+#if defined(CONFIG_RHEA_CLOVER_ICS)
+	//Code turn off flash led
+	if (ov5640_reg_write(client, 0x3000, 0x00)) goto out;
+	if (ov5640_reg_write(client, 0x3004, 0xFF)) goto out;
+	if (ov5640_reg_write(client, 0x3016, 0x02)) goto out;
+	if (ov5640_reg_write(client, 0x3b07, 0x0A)) goto out;
+	if (ov5640_reg_write(client, 0x3b00, 0x03)) goto out;
+#endif
+		
 	/* Start Streaming for AF Init*/
 	ret = ov5640_reg_write(client, 0x3008, 0x02);
 	if (ret)

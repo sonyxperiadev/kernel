@@ -309,6 +309,12 @@ config RHEA_PANDA
         help
            For Rhea Panda Project.
 
+config RHEA_CLOVER_ICS
+        bool "Enable CloverICS features"
+        default n
+        help
+           For Rhea CloverICS Project.
+
 config 59055_SIM_EM_SHDWN
 	bool "Enable Emergency SIM shutdown"
 	default n
