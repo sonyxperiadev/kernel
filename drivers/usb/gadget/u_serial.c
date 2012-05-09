@@ -813,7 +813,6 @@ static int gs_open(struct tty_struct *tty, struct file *file)
 	}
 
 	pr_debug("gs_open: ttyGS%d (%p,%p)\n", port->port_num, tty, file);
-
 	status = 0;
 
 exit_unlock_port:
@@ -1310,6 +1309,10 @@ void gserial_disconnect(struct gserial *gser)
 
 	if (!port)
 		return;
+
+	if (port->port_num == ACM_LOGGING_PORT)
+		if (acm_logging_cb->stop)
+			acm_logging_cb->stop();
 
 	/* tell the TTY glue not to do I/O here any more */
 	spin_lock_irqsave(&port->port_lock, flags);

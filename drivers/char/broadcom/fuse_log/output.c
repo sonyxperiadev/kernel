@@ -52,7 +52,7 @@ static char g_netconsole_on;
 
 #endif
 /* flow control state for ACM, set/reset by flow control callbacks */
-static char g_acm_on = 1;
+static char g_acm_on;
 
 #define BCMLOG_OUTPUT_FIFO_MAX_BYTES (4 * 1024 * 1024)
 static BCMLOG_Fifo_t g_fifo;	/* output fifo */
@@ -63,12 +63,46 @@ static BCMLOG_Fifo_t g_fifo;	/* output fifo */
  **/
 static unsigned char g_frame_counter;
 
+/**
+ *	ACM call backs
+**/
+static int acm_start_cb(void);
+static int acm_stop_cb(void);
+
 struct acm_callbacks {
 	/** Start function for role change */
 	int (*start) (void);
 	/** Stop Function for role change */
 	int (*stop) (void);
 };
+
+/* ACM flow control callbacks */
+static struct acm_callbacks _acm_cb = {
+	.start = acm_start_cb,
+	.stop = acm_stop_cb
+};
+
+/**
+ *	flow control callback for ACM (start flow), called when ACM
+ *	available to transport data
+ **/
+static int acm_start_cb(void)
+{
+	g_acm_on = 1;
+	pr_info("BCMLOG: acm logging started\n");
+	return 0;
+}
+
+/**
+ *	flow control callback for ACM (stop flow), called when ACM
+ *	available to transport data
+ **/
+static int acm_stop_cb(void)
+{
+	g_acm_on = 0;
+	pr_info("BCMLOG: acm logging stopped\n");
+	return 0;
+}
 
 struct WriteToLogDevParms_t {
 	struct workqueue_struct *wq;
@@ -698,6 +732,7 @@ int BCMLOG_OutputInit(void)
 	g_netconsole_on = brcm_netconsole_register_callbacks(&_cb);
 
 #endif
+	g_acm_on = acm_logging_register_callbacks(&_acm_cb);
 	return 0;
 
 }
