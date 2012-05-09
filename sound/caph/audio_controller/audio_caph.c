@@ -750,7 +750,11 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				param_start->pdev_prop->p[0].sink,
 				param_start->channels,
 				param_start->rate, &path);
-			/* coverity[overrun-local] */
+
+			/*if pathID is out of bound*/
+			if (param_start->stream >=
+					 CAPH_MAX_PCM_STREAMS)
+				break;
 			pathID[param_start->stream] = path;
 
 			/*
