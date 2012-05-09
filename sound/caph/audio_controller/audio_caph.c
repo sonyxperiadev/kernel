@@ -750,6 +750,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					param_start->pdev_prop->p[0].sink,
 					param_start->channels,
 					param_start->rate, &path);
+				/* coverity[overrun-local] */
 				pathID[param_start->stream] = path;
 
 				/*
@@ -786,6 +787,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			for (i = (MAX_PLAYBACK_DEV - 1); i > 0; i--) {
 				if (param_stop->pdev_prop->p[i].sink !=
 				    AUDIO_SINK_UNDEFINED) {
+					/* coverity[overrun-local] */
 					AUDCTRL_RemovePlaySpk(param_stop->
 							      pdev_prop->p[0]
 							      .source,
@@ -826,6 +828,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			if (param_pause->pdev_prop->p[0].drv_type ==
 			    AUDIO_DRIVER_PLAY_AUDIO) {
 				/* disable the playback path */
+				/* coverity[overrun-local] */
 				AUDCTRL_DisablePlay(param_pause->pdev_prop->p[0]
 						    .source,
 						    param_pause->pdev_prop->
@@ -856,6 +859,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			if (param_resume->pdev_prop->p[0].drv_type ==
 			    AUDIO_DRIVER_PLAY_AUDIO) {
 				/*  Enable the playback the path */
+				/* coverity[overrun-local] */
 				AUDCTRL_EnablePlay(param_resume->pdev_prop->p[0]
 						   .source,
 						   param_resume->pdev_prop->
@@ -920,6 +924,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					     param_start->channels,
 					     param_start->rate, &path);
 
+			/* coverity[overrun-local] */
 			pathID[param_start->stream] = path;
 
 			if (param_start->pdev_prop->c.drv_type ==
@@ -954,6 +959,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDIO_DRIVER_Ctrl(param_stop->drv_handle,
 					  AUDIO_DRIVER_STOP, NULL);
 
+			/* coverity[overrun-local] */
 			AUDCTRL_DisableRecord(param_stop->pdev_prop->c.source,
 					param_stop->pdev_prop->c.sink,
 					pathID[param_stop->stream]);
@@ -1013,6 +1019,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 			app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_MUSIC);
 			AUDCTRL_SaveAudioApp(app_profile);
+			/* coverity[overrun-local] */
 			AUDCTRL_AddPlaySpk(parm_spkr->src, parm_spkr->sink,
 					   pathID[parm_spkr->stream]);
 		}
@@ -1025,6 +1032,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_spkr->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+			/* coverity[overrun-local] */
 			AUDCTRL_RemovePlaySpk(parm_spkr->src, parm_spkr->sink,
 					      pathID[parm_spkr->stream]);
 		}
@@ -1088,6 +1096,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 * currently driver doesnt handle Mute for left/right
 			 * channels
 			 */
+			/* coverity[overrun-local] */
 			AUDCTRL_SetPlayMute(parm_mute->source,
 					    parm_mute->sink,
 					    parm_mute->mute1,
@@ -1102,6 +1111,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_mute->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+			/* coverity[overrun-local] */
 			AUDCTRL_SetRecordMute(parm_mute->source,
 					      parm_mute->mute1,
 					      pathID[parm_mute->stream]);
@@ -1190,6 +1200,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_vol->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+			/* coverity[overrun-local] */
 			AUDCTRL_SetPlayVolume(parm_vol->source, parm_vol->sink,
 					      parm_vol->gain_format,
 					      parm_vol->volume1,
@@ -1205,6 +1216,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_vol->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+			/* coverity[overrun-local] */
 			AUDCTRL_SetRecordGain(parm_vol->source,
 					      AUDIO_GAIN_FORMAT_mB,
 					      parm_vol->volume1,
@@ -1236,6 +1248,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			audio_mode = AUDIO_Policy_Get_Mode(audio_mode);
 			AUDCTRL_SaveAudioMode(audio_mode);
 
+			/* coverity[overrun-local] */
 			AUDCTRL_SwitchPlaySpk(parm_spkr->src, parm_spkr->sink,
 					      pathID[parm_spkr->stream]);
 		}
@@ -1282,6 +1295,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					   AUDIO_CHANNEL_STEREO,
 					   AUDIO_SAMPLING_RATE_48000, &path);
 
+			/* coverity[overrun-local] */
 			pathID[parm_FM->stream] = path;
 			AUDIO_Policy_SetState(BRCM_STATE_FM);
 		}
@@ -1294,6 +1308,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_FM->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+			/* coverity[overrun-local] */
 			AUDCTRL_DisablePlay(parm_FM->source, parm_FM->sink,
 					    pathID[parm_FM->stream]);
 
