@@ -470,7 +470,7 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 		{
 
 		chip->streamCtl[substream->number].playback_prev_time = 0;
-		
+
 		BRCM_AUDIO_Param_Start_t param_start;
 		/*BRCM_AUDIO_Param_Spkr_t param_spkr;*/
 		BRCM_AUDIO_Param_Second_Dev_t param_second_spkr;
@@ -617,9 +617,9 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	UInt16 dmaPointer = 0;
 
-	if (chip->streamCtl[substream->number].xrun_occured) {
+	if (chip->streamCtl[substream->number].xrun_occured)
 		return SNDRV_PCM_POS_XRUN;
-	}
+
 	if ((callMode == CALL_MODE_NONE)
 	    || (chip->streamCtl[substream->number].iLineSelect[0] ==
 		AUDIO_SINK_VIBRA && AUDCTRL_GetMFDMode())
@@ -1091,11 +1091,16 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 
 		/* get the number of periods */
 		if (pChip->streamCtl[substream->number].period_ms)
-			num_periods = int_period/pChip->streamCtl[substream->number].period_ms;
+			num_periods =
+			int_period/pChip->streamCtl[substream->number].
+			period_ms;
+
 		if (num_periods > 1) {
 			pChip->streamCtl[substream->number].xrun_occured = 1;
 			aError("dI-%ld %ld %ld\n",
-				int_period, int_time, pChip->streamCtl[substream->number].playback_prev_time);
+				int_period, int_time,
+				pChip->streamCtl[substream->number].
+				playback_prev_time);
 		}
 	}
 	pChip->streamCtl[substream->number].playback_prev_time = int_time;

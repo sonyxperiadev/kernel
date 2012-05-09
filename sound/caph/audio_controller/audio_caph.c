@@ -788,7 +788,12 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			for (i = (MAX_PLAYBACK_DEV - 1); i > 0; i--) {
 				if (param_stop->pdev_prop->p[i].sink !=
 				    AUDIO_SINK_UNDEFINED) {
-					/* coverity[overrun-local] */
+
+					/*if pathID is out of bound*/
+					if (param_stop->stream >=
+						 CAPH_MAX_PCM_STREAMS)
+						break;
+
 					AUDCTRL_RemovePlaySpk(param_stop->
 							      pdev_prop->p[0]
 							      .source,
