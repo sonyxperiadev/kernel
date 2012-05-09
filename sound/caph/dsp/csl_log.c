@@ -220,3 +220,52 @@ UInt32 CSL_LOG_Read(UInt16 streamNumber, UInt16 readIndex, UInt8 *outBuf,
 		return size;	/* Sample rate is 8kHz */
 
 }				/* CSL_LOG_Read */
+
+/*********************************************************************/
+/**
+*
+*   CSL_LOG_Write write data to shared memory of log point.
+*
+*   @param    streamNumber	(in)	stream number 1:4
+*   @param    writeIndex	(in)	index of ping-pong buffer
+*   @param    outBuf		(out)	output bufferol information
+*   @return   UInt32				number of bytes write to dsp
+*
+**********************************************************************/
+UInt32 CSL_LOG_Write(UInt16 streamNumber, UInt16 writeIndex, UInt8 *outBuf,
+					 UInt32 writeSize)
+{
+	Audio_Logging_Buf_t *ptr;
+
+	switch (streamNumber) {
+	case 1:
+		ptr = (Audio_Logging_Buf_t *)
+		&vp_shared_mem->shared_audio_stream_0[writeIndex].param[0];
+		break;
+
+	case 2:
+		ptr = (Audio_Logging_Buf_t *)
+		&vp_shared_mem->shared_audio_stream_1[writeIndex].param[0];
+
+		break;
+
+	case 3:
+		ptr = (Audio_Logging_Buf_t *)
+		&vp_shared_mem->shared_audio_stream_2[writeIndex].param[0];
+		break;
+
+	case 4:
+		ptr = (Audio_Logging_Buf_t *)
+		&vp_shared_mem->shared_audio_stream_3[writeIndex].param[0];
+		break;
+
+	default:
+		return 0;
+
+	}
+
+	memcpy(ptr, outBuf, writeSize);
+
+	return writeSize;
+
+}				/* CSL_LOG_Write */

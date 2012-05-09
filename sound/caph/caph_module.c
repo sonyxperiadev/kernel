@@ -63,6 +63,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "bcm_audio.h"
 #include "audio_trace.h"
 #include "bcmlog.h"
+#include "csl_log.h"
 
 
 /*  Module declarations. */
@@ -92,6 +93,8 @@ static int read_count;
 
 /* wait queues */
 int audio_data_arrived;
+int audio_data_gone;
+int logpoint_buffer_idx;
 
 /**
  *  DriverProbe: 'probe' call back function
@@ -222,6 +225,7 @@ static int BCMAudLOG_open(struct inode *inode, struct file *file)
 		    kthread_run(process_logmsg, 0, "process_logmsg");
 	}
 	audio_data_arrived = 0;
+	audio_data_gone = 0;
 	return 0;
 }
 
@@ -267,6 +271,25 @@ BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
 		ret = copy_to_user(buf, "read", 4);
 		return DATA_TO_READ;
 	}
+}
+
+static ssize_t
+BCMAudLOG_write(struct file *file, const char __user *buf,
+						size_t count, loff_t *ppos)
+{
+	int number;
+	char buffer[642];
+
+	number = copy_from_user(buffer, buf, count);
+	if (number != 0)
+		aTrace(LOG_ALSA_INTERFACE,
+		"\n %s : only copied %d bytes from user\n",
+		__func__, count - number);
+
+	count--;
+	CSL_LOG_Write(buffer[0], logpoint_buffer_idx, &buffer[1], count);
+
+	return count;
 }
 
 static int BCMAudLOG_release(struct inode *inode, struct file *file)
@@ -340,7 +363,6 @@ static int BCMAudLOG_mmap(struct file *filp, struct vm_area_struct *vma)
 static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 			    unsigned long arg)
 {
-
 	AUDDRV_CFG_LOG_INFO *p_log_info = (AUDDRV_CFG_LOG_INFO *) (arg);
 	int index;
 	int rtn = 0;
@@ -375,6 +397,12 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 		wake_up_interruptible(&bcmlogreadq);
 		break;
 
+	case BCM_LOG_IOCTL_STOPPLAY_CHANNEL:
+		{
+			audio_data_gone = 2;
+			wake_up_interruptible(&bcmlogwriteq);
+		}
+		break;
 	case BCM_LOG_IOCTL_GETMSG_CHANNEL:
 		{
 			STREAM_INFO *p = (STREAM_INFO *) arg;
@@ -405,6 +433,14 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 			} else {
 				rtn = -1;
 			}
+		}
+		break;
+
+	case BCM_LOG_IOCTL_WAITFOR:
+		{
+			if (wait_event_interruptible(bcmlogwriteq,
+				(audio_data_gone != 0)))
+				audio_data_gone = 0;
 		}
 		break;
 
@@ -698,6 +734,7 @@ static const struct file_operations bcmlog_fops = {
 	.owner = THIS_MODULE,
 	.open = BCMAudLOG_open,
 	.read = BCMAudLOG_read,
+	.write = BCMAudLOG_write,
 	.unlocked_ioctl = BCMAudLOG_ioctl,
 	.mmap = BCMAudLOG_mmap,
 	.release = BCMAudLOG_release,
@@ -746,6 +783,7 @@ static int __devinit ALSAModuleInit(void)
 	device_create(audlog_class, NULL, MKDEV(BCM_ALSA_LOG_MAJOR, 0), NULL,
 		      "bcm_audio_log");
 	init_waitqueue_head(&bcmlogreadq);
+	init_waitqueue_head(&bcmlogwriteq);
 	memset(audio_log_cbinfo, 0, sizeof(audio_log_cbinfo));
 
 	return err;

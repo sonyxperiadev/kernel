@@ -126,6 +126,7 @@ typedef void (*AUDLOG_CB_FUNC) (AUDLOG_CB_INFO *);
 struct _AUDLOG_INFO {
 	AUDLOG_CB_FUNC LogMessageCallback; /* save stream frame to flash */
 	AUDLOG_DEST_en_t log_consumer[4]; /* 0:MTT; 1:file sys */
+	UInt32 log_capture_point[4];
 };
 #define AUDLOG_INFO struct _AUDLOG_INFO
 
@@ -169,8 +170,11 @@ struct _LOG_MSG_SAVE_t {
 #define LOG_MSG_SAVE_t struct _LOG_MSG_SAVE_t
 
 extern wait_queue_head_t bcmlogreadq;
+extern wait_queue_head_t bcmlogwriteq;
 extern int *bcmlog_stream_area;
 extern int audio_data_arrived;
+extern int audio_data_gone;
+extern int logpoint_buffer_idx;
 
 /* Initialize driver internal variables and task queue. */
 Result_t AUDDRV_AudLog_Init(void);

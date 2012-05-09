@@ -68,6 +68,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 
 static UInt16 audio_log_inited;
 wait_queue_head_t bcmlogreadq;
+wait_queue_head_t bcmlogwriteq;
 
 void *bcmlog_stream_ptr;
 int *bcmlog_stream_area;
@@ -96,12 +97,16 @@ Result_t AUDDRV_AudLog_Init(void)
 {
 	Int16 n;
 
-	if ((sLogInfo.log_consumer[0] == LOG_TO_FLASH
-	     || sLogInfo.log_consumer[1] == LOG_TO_FLASH
-	     || sLogInfo.log_consumer[2] == LOG_TO_FLASH
-	     || sLogInfo.log_consumer[3] == LOG_TO_FLASH)
-	    && (audio_log_inited == 0)
-	    ) {
+	if (((sLogInfo.log_consumer[0] == LOG_TO_FLASH &&
+	sLogInfo.log_capture_point[0] < 0x8000) ||
+	(sLogInfo.log_consumer[1] == LOG_TO_FLASH &&
+	sLogInfo.log_capture_point[1] < 0x8000) ||
+	(sLogInfo.log_consumer[2] == LOG_TO_FLASH &&
+	sLogInfo.log_capture_point[2] < 0x8000) ||
+	(sLogInfo.log_consumer[3] == LOG_TO_FLASH &&
+	sLogInfo.log_capture_point[3] < 0x8000)) &&
+	audio_log_inited == 0) {
+
 		/* This is for FFS option, create buffer in heap, copy data from
 		shared memory to it and mmap to user space, reserve memory with
 		kmalloc - Allocating Memory in the Kernel. Max we need
@@ -158,61 +163,76 @@ void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 	UInt16 size = 0;	/* number of 16-bit words */
 	UInt16 stream;		/* the stream number: 1, 2, 3, 4 */
 	UInt16 sender = 0;	/* the capture point */
+	int write_msg;
+	write_msg = 1;
 
 	for (n = 0; n < LOG_STREAM_NUMBER; n++) {
 		stream = n + 1;
-
-		if (loggingbuf != NULL) {
-			AUDIO_MODEM(size =
-				    CSL_LOG_Read(stream,
-						 audio_stream_buffer_idx,
-						 (UInt8 *) loggingbuf,
-						 &sender);)
-		}
-		/* check the SHmem ctrl point. */
-		if (sender != 0) {
-			if (sLogInfo.log_consumer[n] == LOG_TO_PC) {
-				/*aTrace(LOG_AUDIO_DRIVER, "AUDLOG: 0x%x
+		if (sLogInfo.log_capture_point[n] >= 0x8000) {
+			if (write_msg) {
+				write_msg = 0;
+				audio_data_gone = stream;
+				logpoint_buffer_idx = audio_stream_buffer_idx;
+				wake_up_interruptible(&bcmlogwriteq);
+			}
+		} else {
+			if (loggingbuf != NULL) {
+				AUDIO_MODEM(size =
+						CSL_LOG_Read(stream,
+						audio_stream_buffer_idx,
+							 (UInt8 *) loggingbuf,
+							 &sender);)
+			}
+			/* check the SHmem ctrl point. */
+			if (sender != 0) {
+				if (sLogInfo.log_consumer[n] == LOG_TO_PC) {
+					/*aTrace(LOG_AUDIO_DRIVER, "AUDLOG: 0x%x
 				addr=0x%p size=%ld stream=%d sender=%d",
 				DSP_DATA, loggingbuf, size, stream, sender);*/
-				if (loggingbuf) {
-					/* send binary data to log port. The
-					size is number of bytes (for MTT). */
-					BCMLOG_LogSignal(DSP_DATA,
-						(UInt16 *)loggingbuf,
-						size, stream, sender);
-				} else {
-					aTrace(LOG_AUDIO_DRIVER,
-						"!!!!!! Err ptr = 0x%p size=%d ",
-						loggingbuf, size);
-					aTrace(LOG_AUDIO_DRIVER,
-						"stream=%d sender=%d\n",
-						stream, sender);
-				}
-			} else if (bcmlog_stream_ptr != NULL) {
-				/* copy 81 bytes of data */
-				/*
-				memcpy(log_cb_info_ks_ptr[n].log_msg,
-					(UInt16 *)loggingbuf, size/2);
+					if (loggingbuf) {
+						/* send binary data to
+						log port. The size is
+						number of bytes (for MTT). */
+						BCMLOG_LogSignal(DSP_DATA,
+							(UInt16 *)loggingbuf,
+							size, stream, sender);
+					} else {
+						aTrace(LOG_AUDIO_DRIVER,
+							"!!!!!! Err ptr = 0x%p size=%d ",
+							loggingbuf, size);
+						aTrace(LOG_AUDIO_DRIVER,
+							"stream=%d sender=%d\n",
+							stream, sender);
+					}
+				} else if (bcmlog_stream_ptr != NULL) {
+					/* copy 81 bytes of data */
+					/*
+					memcpy(log_cb_info_ks_ptr[n].log_msg,
+						(UInt16 *)loggingbuf, size/2);
 			log_cb_info_ks_ptr[n].log_capture_control = sender;
-				log_cb_info_ks_ptr[n].stream_index = stream; */
+			log_cb_info_ks_ptr[n].stream_index = stream; */
+				}
 			}
 		}
 	}
 
-	if (sLogInfo.log_consumer[0] == LOG_TO_FLASH
-	    || sLogInfo.log_consumer[1] == LOG_TO_FLASH
-	    || sLogInfo.log_consumer[2] == LOG_TO_FLASH
-	    || sLogInfo.log_consumer[3] == LOG_TO_FLASH) {
+	if ((sLogInfo.log_consumer[0] == LOG_TO_FLASH &&
+		sLogInfo.log_capture_point[0] < 0x8000) ||
+		(sLogInfo.log_consumer[1] == LOG_TO_FLASH &&
+		sLogInfo.log_capture_point[1] < 0x8000) ||
+	   (sLogInfo.log_consumer[2] == LOG_TO_FLASH &&
+		sLogInfo.log_capture_point[2] < 0x8000) ||
+	   (sLogInfo.log_consumer[3] == LOG_TO_FLASH &&
+		sLogInfo.log_capture_point[3] < 0x8000)) {
 		if (bcmlog_stream_ptr != NULL) {
 			/* Wakeup read in user space to go ahead and do mmap
 			buffer read */
 			audio_data_arrived = 1;
 			wake_up_interruptible(&bcmlogreadq);
 		}
-
 	}
-	/*aTrace(LOG_AUDIO_DRIVER,
+
+		/*aTrace(LOG_AUDIO_DRIVER,
 		"<=== process_Log_Channel done <===\r\n");*/
 }
 
@@ -261,11 +281,13 @@ Result_t AUDDRV_AudLog_Start(UInt32 log_stream,
 	} else if (log_stream > 0 && log_stream <= 4) {
 
 		/* check the capture point number is in reasonable range */
+#if	0
 		if ((log_capture_point <= 0) || (log_capture_point > 0x8000))
 			return RESULT_ERROR;
-
+#endif
 		/* set up logging message consumer */
 		sLogInfo.log_consumer[log_stream - 1] = log_consumer;
+		sLogInfo.log_capture_point[log_stream - 1] = log_capture_point;
 
 		/* call init to check if need to open file and create task */
 		AUDDRV_AudLog_Init();

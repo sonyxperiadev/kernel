@@ -88,6 +88,23 @@ Result_t CSL_LOG_Stop(UInt16 streamNumber, UInt8 *flag);
 UInt32 CSL_LOG_Read(UInt16 streamNumber, UInt16 readIndex, UInt8 *outBuf,
 		    UInt16 *controlInfo);
 
+/*********************************************************************/
+/**
+*
+*   CSL_LOG_Write write data to shared memory of log point.
+*
+*   @param    streamNumber	(in)	stream number 1:4
+*   @param    writeIndex	(in)	index of ping-pong buffer
+*   @param    outBuf		(out)	output bufferol information
+*   @return   UInt32				number of bytes write to dsp
+*
+**********************************************************************/
+
+UInt32 CSL_LOG_Write(UInt16 streamNumber, UInt16 writeIndex, UInt8 *outBuf,
+					 UInt32 writeSize);
+
+
 /** @} */
+
 
 #endif /* _CSL_LOG_H_ */
