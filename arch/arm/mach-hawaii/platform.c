@@ -47,6 +47,7 @@
 #ifdef CAPRI_DORMANT_CHANGE
 #include <mach/io_map.h>
 #include <mach/memory.h>
+#include <mach/sec_api.h>
 #endif
 
 #ifndef MAX_CPUS
@@ -313,7 +314,8 @@ int appf_platform_boottime_init(void)
         cpu_context->vfp_data              = (void *)get_normal_memory(VFP_DATA_SIZE);
         cpu_context->gic_interface_data    = (void *)get_normal_memory(GIC_INTERFACE_DATA_SIZE);
         cpu_context->gic_dist_private_data = (void *)get_normal_memory(GIC_DIST_PRIVATE_DATA_SIZE);
-		cpu_context->secure_api_params     = (void *)get_normal_memory(SECURE_PARAMETERS_SIZE);
+	cpu_context->secure_api_params     =
+		(void *)get_secure_buffer() + get_secure_buffer_size() / 2;
         cpu_context->banked_registers      = (void *)get_normal_memory(BANKED_REGISTERS_SIZE);
         cpu_context->cp15_data             = (void *)get_normal_memory(CP15_DATA_SIZE);
         cpu_context->debug_data            = (void *)get_normal_memory(DEBUG_DATA_SIZE);

@@ -30,6 +30,7 @@
 #include "appf_internals.h"
 #include "appf_platform_api.h"
 #include "appf_helpers.h"
+#include <asm/memory.h>
 
 #define SECTION    (1<<1)
 #define PAGE_TABLE (1<<0)
@@ -287,24 +288,32 @@ int appf_setup_translation_tables(void)
      * One will be changed later to point to the second level table.
      */
          
-    ram_start_mb = main_table.ram_start >> 20;
+	ram_start_mb = main_table.ram_start >> 20;
 #ifdef CAPRI_DORMANT_CHANGE
-    ram_end_mb = ram_start_mb + ( (num_physpages << PAGE_SHIFT) >> 20);
+	ram_start_mb = PHYS_OFFSET >> 20;
+	ram_end_mb = ram_start_mb + ((num_physpages << PAGE_SHIFT) >> 20);
+#define KERN_START_MB (CONFIG_PAGE_OFFSET >> 20)
 #else
-    ram_end_mb = ram_start_mb + (main_table.ram_size >> 20);
+	ram_end_mb = ram_start_mb + (main_table.ram_size >> 20);
 #endif
 
     for (i = 0; i < 4096; ++i)
     {
         if (i >= ram_start_mb && i < ram_end_mb)
         {
-            attr = section_attributes_normal;
+		attr = section_attributes_normal;
+		appf_translation_table1[i] = attr | (i<<20);
         }
         else
         {
-            attr = section_attributes_device;
+		attr = section_attributes_device;
+		appf_translation_table1[i] = attr | (i<<20);
+	}
+	if (i >= KERN_START_MB) {
+		attr = section_attributes_normal;
+		appf_translation_table1[i] = attr |
+		((i-KERN_START_MB+ram_start_mb)<<20);
         }
-        appf_translation_table1[i] = attr | (i<<20);
     }
 
     /*

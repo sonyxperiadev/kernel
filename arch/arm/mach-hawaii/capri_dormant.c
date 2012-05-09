@@ -69,11 +69,31 @@ extern void dormant_start(void);
 extern struct appf_main_table main_table;
 
 /* Array of registers that needs to be saved and restored.  Please add to the end if new data
- * needs to be added.  Note that PLL DIV and TRIGGER registers are moved to the top of the list
- * to minimize issues at 156 mhz.
+ * needs to be added.
+ * The list is organized such that the the PL310, ARM_DIV and ARM_SWITCH div
+ * at at the begining.
  */
 
 static u32 addnl_save_reg_list[][2] = {
+
+	/* 0x3FE00A00 - PL310_DIV */
+	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PL310_DIV_OFFSET), 0},
+	/* 0x3FE00A08 - ARM_SWITCH_DIV */
+	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_ARM_SWITCH_DIV_OFFSET), 0},
+	/* 0x3FE00A10 - APB_DIV */
+	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_APB_DIV_OFFSET), 0},
+	/* 0x3FE00E00 - ARM_DIV */
+	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET), 0},
+
+	/*0x3FE00A04 - PL310_TRIGGER */
+	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PL310_TRIGGER_OFFSET), 0},
+	/* 0x3FE00A0C - ARM_SWITCH_TRIGGER */
+	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_ARM_SWITCH_TRIGGER_OFFSET), 0},
+	/* 0x3FE00A14 - APB_DIV_TRIGGER */
+	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_APB_DIV_TRIGGER_OFFSET), 0},
+
+	/* 0x3FE00E08 - ARM_SEG_TRG_OVERRIDE */
+	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_OFFSET), 0},
 
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET), 0}, //0x3FE00008 - POLICY_FREQ
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET), 0}, //0x3FE0000C - POLICY_CTL
@@ -104,9 +124,6 @@ static u32 addnl_save_reg_list[][2] = {
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PLLARMCTRL4_OFFSET), 0}, //0x3FE00C1C - PLLARMCTRL4
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET), 0}, //0x3FE00C20 - PLLARMCTRL5
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PLLARM_OFFSET_OFFSET), 0}, //0x3FE00C24 - PLLARM_OFFSET
-	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET), 0}, //0x3FE00E00 - ARM_DIV
-	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_ARM_SEG_TRG_OFFSET), 0}, //0x3FE00E04 - ARM_SEG_TRG
-	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_OFFSET), 0}, //0x3FE00E08 - ARM_SEG_TRG_OVERRIDE
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET), 0}, //0x3FE00E10 - PLL_DEBUG
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_ACTIVITY_MON1_OFFSET), 0}, //0x3FE00E20 - ACTIVITY_MON1
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_ACTIVITY_MON2_OFFSET), 0}, //0x3FE00E24 - ACTIVITY_MON2
@@ -114,9 +131,6 @@ static u32 addnl_save_reg_list[][2] = {
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_APB_CLKGATE_DBG1_OFFSET), 0}, //0x3FE00E48 - APB_CLKGATE_DBG1
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_CLKMON_OFFSET), 0}, //0x3FE00E64 - CLKMON
 
-/*	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PL310_DIV_OFFSET), 0}, //0x3FE00A00 - PL310_DIV
-	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_PL310_TRIGGER_OFFSET), 0}, //0x3FE00A04 - PL310_TRIGGER
-*/
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_POLICY_DBG_OFFSET), 0}, //0x3FE00EC0 - POLICY_DBG
 	{ (KONA_PROC_CLK_VA+KPROC_CLK_MGR_REG_TGTMASK_DBG1_OFFSET), 0}, //0x3FE00EC4 - TGTMASK_DBG1
 
@@ -488,6 +502,10 @@ u32 hw_sec_pub_dispatcher(u32 service_id, u32 flags, ...)
 
 #endif
 
+int is_dormant_enabled(void)
+{
+	return enable_dormant;
+}
 
 static void dormant_save_addnl_reg(void)
 {
@@ -517,9 +535,63 @@ static void dormant_restore_addnl_reg(void)
 	writel(0xA5A501,
 		(KONA_PROC_CLK_VA + KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET));
 
+#ifdef CONFIG_BCM_HWCAPRI_1605
+	/* If the issue is not fixed, first step to 312 MHZ before restoring
+	 * all the registers
+	 */
+	writel(0x04040404, KONA_PROC_CLK_VA +
+	KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET);
+
+	/* Write the go bit to trigger the frequency change
+	 */
+	writel(KPROC_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK |
+		KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
+	KONA_PROC_CLK_VA + KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET);
+
+	/* Wait until the new frequency takes effect */
+	do {
+			val1 =  readl(KONA_PROC_CLK_VA +
+				KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET) &
+				KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
+			val2 =  readl(KONA_PROC_CLK_VA +
+				KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET) &
+				KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
+	} while (val1 | val2);
+#endif
+
+
+	/* continue to restore the rest of the registers to get back to
+	 * the frequency that we need to
+	 */
 	for (i = 0; i < ARRAY_SIZE(addnl_save_reg_list); i++) {
 		/* Restore the saved data */
 		writel(addnl_save_reg_list[i][1], addnl_save_reg_list[i][0]);
+
+		if (addnl_save_reg_list[i][0] == (KONA_PROC_CLK_VA
+		+ KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_OFFSET)) {
+			/*
+			 * We just restored the arm_seg_trigger override.
+			 * If it is set, trigger
+			 * so that it would take effect
+			 */
+			if (readl(KONA_PROC_CLK_VA +
+		KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_OFFSET) & 1) {
+				writel(
+			KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK,
+			(KONA_PROC_CLK_VA +
+			KPROC_CLK_MGR_REG_ARM_SEG_TRG_OFFSET));
+
+				/* Wait until the change takes affect */
+				do {
+					val1 =  readl(KONA_PROC_CLK_VA +
+			KPROC_CLK_MGR_REG_ARM_SEG_TRG_OFFSET) &
+			KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK;
+					val2 =  readl(KONA_PROC_CLK_VA +
+			KPROC_CLK_MGR_REG_ARM_SEG_TRG_OFFSET) &
+			KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK;
+				} while (val1 | val2);
+			}
+		}
 
 		if (addnl_save_reg_list[i][0] ==  (KONA_PROC_CLK_VA + KPROC_CLK_MGR_REG_TGTMASK_DBG1_OFFSET)) {
 
@@ -578,14 +650,10 @@ void dormant_enter(void)
 				u32 boot_2nd_addr;
 				dormant_restore_addnl_reg();
 
-				/* We are about to let CORE-1 go start running.
-				 * it's SMP bit is set in rom.  let us clear it's SCU
-				 * power control so we can start using it's SMP values
-				 */
-				writeb(SCU_DORMANT_MODE_OFF_B, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET + 1);
-
 				boot_2nd_addr = readl(KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
 				boot_2nd_addr |= 1;
+
+				/* Let go of the second CPU */
 				writel(boot_2nd_addr, KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
 			}
 		}
