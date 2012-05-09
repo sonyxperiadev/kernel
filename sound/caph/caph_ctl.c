@@ -409,6 +409,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 
 	CAPH_ASSERT(stream >= CTL_STREAM_PANEL_FIRST
 		    && stream < CTL_STREAM_PANEL_LAST);
+
 	/*
 	 * coverity[OVERRUN_STATIC] - false alarm. stream is getting
 	 * decremented by 1 and used
@@ -451,6 +452,11 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 			    streamCtl[stream - 1].pSubStream;
 		else
 			break;	/* stream is not running, return */
+
+		if (pStream->runtime == NULL) {
+			aError("Stream's runtime is NULL and hence returning");
+			return -EINVAL;
+		}
 
 		aTrace(LOG_ALSA_INTERFACE, "SetCtrlput stream state = %d\n",
 				pStream->runtime->status->state);

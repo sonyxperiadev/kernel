@@ -45,7 +45,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10120
+#define DRIVER_VERSION 10122
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -849,7 +849,9 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				d->semaphore_id);
 
 			if (s != 0) {
+#if 0
 				err_print("failed to copy firmware\n");
+#endif
 				kfree(fw);
 				return -EINVAL;
 			}

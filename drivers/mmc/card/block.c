@@ -966,7 +966,8 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 		if (disable_multi && brq.data.blocks > 1)
 			brq.data.blocks = 1;
 
-		if (brq.data.blocks > 1 || do_rel_wr) {
+		if (brq.data.blocks > 1 || do_rel_wr ||
+				md->part_type == EXT_CSD_PART_CONFIG_ACC_RPMB) {
 			/* SPI multiblock writes terminate using a special
 			 * token, not a STOP_TRANSMISSION request.
 			 */
@@ -1408,6 +1409,15 @@ static int mmc_blk_alloc_parts(struct mmc_card *card, struct mmc_blk_data *md)
 		    mmc_blk_alloc_part(card, md, EXT_CSD_PART_CONFIG_ACC_BOOT1,
 				       card->ext_csd.boot_size >> 9, true,
 				       "boot1");
+		if (ret)
+			return ret;
+	}
+
+	if (card->ext_csd.rpmb_size) {
+		ret =
+		    mmc_blk_alloc_part(card, md, EXT_CSD_PART_CONFIG_ACC_RPMB,
+				       card->ext_csd.rpmb_size >> 9, false,
+				       "rpmb");
 		if (ret)
 			return ret;
 	}

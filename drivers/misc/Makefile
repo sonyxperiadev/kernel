@@ -82,3 +82,4 @@ obj-$(CONFIG_BCM_BT_LPM)        += bcmbt_lpm.o
 obj-$(CONFIG_BCMBT_GPS_SELFTEST) += bcmbt_gps_test.o
 obj-$(CONFIG_BCM_USERFAULT_HANDLER) += bcm_userfault_handler.o
 obj-$(CONFIG_BRCM_BTPORT_DRV)   += btport/
+obj-$(CONFIG_BRCM_EMMC_RPMB)	+= emmc_rpmb/

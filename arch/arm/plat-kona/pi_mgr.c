@@ -76,23 +76,7 @@ static char debug_fs_buf[3000];
 
 #endif /*CONFIG_DEBUG_FS */
 
-static int pi_debug;
-
-enum {
-	/* Bits 0-15 control the logging of a feature ex, DFS, QOS etc */
-	/* Logs with PI_LOG_ERR will always be printed out. */
-	PI_LOG_ERR = 1 << 0,
-	PI_LOG_DBGFS = 1 << 1,
-	PI_LOG_INIT = 1 << 2,
-	PI_LOG_EN_DIS = 1 << 3,
-	PI_LOG_POLICY = 1 << 4,
-	PI_LOG_QOS = 1 << 5,
-	PI_LOG_DFS = 1 << 6,
-	PI_LOG_RESET = 1 << 7,
-	PI_LOG_OPP_CHANGE = 1 << 8,
-
-	/* Bit 15-31 are used to define the Domains. */
-};
+int pi_debug;
 
 /*PI init state*/
 enum {

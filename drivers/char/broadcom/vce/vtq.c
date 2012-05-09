@@ -276,12 +276,17 @@ struct jobinfo {
 	struct vtq_image *inflightimage;
 };
 
+/*#define VTQ_DEBUG*/
 #define err_print(fmt, arg...) \
 	printk(KERN_ERR "VTQ: ERROR: %s() %s:%d " fmt, \
 		__func__, "vtq.c", __LINE__, ##arg)
+#ifdef VTQ_DEBUG
 #define dbg_print(fmt, arg...) \
 	printk(KERN_WARNING "VTQ: debug: %s() %s:%d " fmt, \
 		__func__, "vtq.c", __LINE__, ##arg)
+#else
+#define dbg_print(fmt, arg...)	do { } while (0)
+#endif
 
 /*
  * Global (driver) /proc entries for Debug etc
@@ -376,7 +381,13 @@ int vtq_driver_init(struct vtq_global **vtq_global_out,
 	vtq_global->loaderkernel_firstentry = 0;
 
 	vtq_global->debug_fifo = 0;
-	vtq_global->host_push = 0;
+
+	/* host_push was *intended* to be a debug-aid, but it turns
+	 * out we need to work around a hardware issue, so, until we
+	 * have a better workaround, we have to default to 1 at boot.
+	 * TODO: Review h/w issue and make better workaround
+	 */
+	vtq_global->host_push = 1;
 
 	vtq_global->proc_dir = proc_vcedir;
 	s = init_driverprocentries(vtq_global);

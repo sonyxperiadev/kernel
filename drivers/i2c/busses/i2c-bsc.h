@@ -131,6 +131,8 @@ static inline unsigned char bsc_get_soft_reset(uint32_t baseAddr);
 static inline BSC_MODE_t bsc_set_mode(uint32_t baseAddr, BSC_MODE_t mode);
 static inline void bsc_enable_pad_output(uint32_t baseAddr, bool enable);
 static inline void bsc_enable_thigh_ctrl(uint32_t baseAddr, bool enable);
+static inline void bsc_flush_tx_fifo(uint32_t baseAddr);
+static inline unsigned char bsc_get_tx_fifo_count(uint32_t baseAddr);
 
 /**
 *
@@ -289,7 +291,7 @@ static inline void bsc_reset(uint32_t baseAddr)
  *	Hold=1, HighPhase=3, Setup=4,
  *	HS CLK = 26/(1+3+4) = 3.25MHz
  */
-#define BSC_HS_HSMODE_TIMING_26MHZ        0x0000043
+#define BSC_HS_HSMODE_TIMING_26MHZ        0x0000024
 #define BSC_HS_HSMODE_1MHZ                0x000014D
 #define BSC_HS_HSMODE_1625KHZ             0x0000108
 #define BSC_HS_HSMODE_2600KHZ             0x0000064
@@ -516,6 +518,21 @@ static inline void bsc_stop_highspeed(uint32_t baseAddr)
 	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
 			    I2C_MM_HS_HSTIM_HS_MODE_MASK,
 			    I2C_MM_HS_HSTIM_HS_MODE_SHIFT, 0);
+}
+
+/**
+*
+*  @brief  Flush the TX fifo
+*
+*  @param  baseAddr  (in) mapped address of this BSC instance
+*
+*  @return none
+*****************************************************************************/
+static inline void bsc_flush_tx_fifo(uint32_t baseAddr)
+{
+		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_TXFCR_OFFSET),
+				    I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK,
+				    I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT, 1);
 }
 
 /**
@@ -881,6 +898,26 @@ static inline unsigned char bsc_get_bus_status(uint32_t baseAddr)
 	    BSC_READ_REG_FIELD((baseAddr + I2C_MM_HS_TXCOUNT_OFFSET),
 			       I2C_MM_HS_TXCOUNT_STATUS_MASK,
 			       I2C_MM_HS_TXCOUNT_STATUS_SHIFT);
+
+	return temp;
+}
+
+/**
+*
+*  @brief  Get the number of bytes in the TX FIFO
+*
+*  @param  baseAddr  (in) mapped address of this BSC instance
+*
+*  @return Number of bytes present in the TX FIFO
+*****************************************************************************/
+static inline unsigned char bsc_get_tx_fifo_count(uint32_t baseAddr)
+{
+	uint8_t temp;
+
+	temp =
+	    BSC_READ_REG_FIELD((baseAddr + I2C_MM_HS_TXCOUNT_OFFSET),
+			       I2C_MM_HS_TXCOUNT_FIFOCNT_MASK,
+			       I2C_MM_HS_TXCOUNT_FIFOCNT_SHIFT);
 
 	return temp;
 }

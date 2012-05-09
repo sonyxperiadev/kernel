@@ -59,12 +59,17 @@ struct vtqb_context {
 	int lockcount[15];
 };
 
+/*#define VTQ_DEBUG*/
 #define err_print(fmt, arg...) \
 	printk(KERN_ERR "VTQ: ERROR: %s() %s:%d " fmt, \
 		__func__, "vtqbr.c", __LINE__, ##arg)
+#ifdef VTQ_DEBUG
 #define dbg_print(fmt, arg...) \
 	printk(KERN_WARNING "VTQ: debug: %s() %s:%d " fmt, \
 		__func__, "vtqbr.c", __LINE__, ##arg)
+#else
+#define dbg_print(fmt, arg...)	do { } while (0)
+#endif
 
 struct vtqb_context *vtqb_create_context(struct vtq_vce *vtq_pervce_state)
 {

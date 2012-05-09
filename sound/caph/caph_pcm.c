@@ -165,7 +165,7 @@ static struct snd_pcm_hardware brcm_voice_capture_hw = {
 };
 
 static Int32 callMode;
-
+#define MAX_32 0xFFFFFFFF
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++
  *
  *  Function Name: PcmHwParams
@@ -348,6 +348,8 @@ static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 	     runtime->frame_bits, runtime->rate, runtime->channels);
 
 	chip->streamCtl[substream->number].stream_hw_ptr = 0;
+	chip->streamCtl[substream->number].xrun_occured = 0;
+	chip->streamCtl[substream->number].playback_prev_time = 0;
 	parm_prepare.drv_handle = substream->runtime->private_data;
 	parm_prepare.cbParams.pfCallBack = AUDIO_DRIVER_InterruptPeriodCB;
 	parm_prepare.cbParams.pPrivateData = (void *)substream;
@@ -372,6 +374,11 @@ static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 
 	AUDIO_Ctrl_Trigger(ACTION_AUD_SetPrePareParameters, &parm_prepare, NULL,
 			   0);
+	/* calculate period in ms */
+	if (runtime->rate)
+		chip->streamCtl[substream->number].period_ms  =
+			(runtime->period_size * 1000)/runtime->rate;
+
 	/*
 	   DEBUG("\n%lx:playback_prepare period bytes=%d,
 	   periods =%d, buffersize=%d\n",jiffies,
@@ -465,7 +472,7 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 			BRCM_AUDIO_Param_Spkr_t param_spkr;
 
 			struct snd_pcm_runtime *runtime = substream->runtime;
-
+			chip->streamCtl[substream->number].playback_prev_time = 0;
 			param_start.drv_handle = drv_handle;
 			param_start.pdev_prop =
 			    &chip->streamCtl[substream_number].dev_prop;
@@ -581,6 +588,10 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 	int whichbuffer = 1;
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	UInt16 dmaPointer = 0;
+
+	if (chip->streamCtl[substream->number].xrun_occured) {
+		return SNDRV_PCM_POS_XRUN;
+	}
 	if ((callMode == CALL_MODE_NONE)
 	    || (chip->streamCtl[substream->number].iLineSelect[0] ==
 		AUDIO_SINK_VIBRA && AUDCTRL_GetMFDMode())
@@ -1019,6 +1030,16 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 	AUDIO_DRIVER_TYPE_t drv_type;
 	struct snd_pcm_runtime *runtime;
 	brcm_alsa_chip_t *pChip = NULL;
+	UInt32 num_periods = 1;
+	UInt32 int_time;
+	struct timeval tv;
+	Int32 int_period;
+	int whichbuffer = 0;
+
+	do_gettimeofday(&tv);
+
+	/* find in ms */
+	int_time = (tv.tv_sec*1000)+(tv.tv_usec/1000);
 
 	if (!substream) {
 		aError("Invalid substream 0x%p\n", substream);
@@ -1032,6 +1053,31 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 		return;
 	}
 	drv_handle = substream->runtime->private_data;
+
+	if (pChip->streamCtl[substream->number].playback_prev_time != 0) {
+		int_period = int_time -
+			pChip->streamCtl[substream->number].playback_prev_time;
+		/* wrap around */
+		if (int_period < 0)
+			int_period += (MAX_32);
+
+		/* get the number of periods */
+		if (pChip->streamCtl[substream->number].period_ms)
+			num_periods = int_period/pChip->streamCtl[substream->number].period_ms;
+		if (num_periods > 1) {
+			pChip->streamCtl[substream->number].xrun_occured = 1;
+			aError("dI-%ld %ld %ld\n",
+				int_period, int_time, pChip->streamCtl[substream->number].playback_prev_time);
+		}
+	}
+	pChip->streamCtl[substream->number].playback_prev_time = int_time;
+
+	whichbuffer = csl_audio_render_get_current_buffer(
+		StreamIdOfDriver(runtime->private_data));
+	if (whichbuffer == 0) {
+		pChip->streamCtl[substream->number].xrun_occured = 1;
+		aError("whichbuffer-%d\n", whichbuffer);
+	}
 
 	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_GET_DRV_TYPE,
 			  (void *)&drv_type);
