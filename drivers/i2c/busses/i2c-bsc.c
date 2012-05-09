@@ -144,7 +144,7 @@ struct bsc_i2c_dev {
 
 	/* Bit flag to get the interrupt bit set - Use this in the driver to
 	 * check if there was any error when interrupted */
-	volatile int err_flag;
+	unsigned int err_flag;
 };
 
 static const __devinitconst char gBanner[] =
@@ -591,7 +591,8 @@ static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 			       uint8_t *buf, unsigned int len)
 {
 	int rc = 0;
-	unsigned long time_left;
+	unsigned long time_left, i;
+	uint8_t *tmp_buf;
 
 	/* make sure the hareware is ready */
 	rc = bsc_wait_cmdbusy(dev);
@@ -601,40 +602,93 @@ static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 	/* enable TX FIFO */
 	bsc_set_tx_fifo((uint32_t)dev->virt_base, 1);
 
-	/* enable the no ack and TX FIFO empty interrupt */
-	bsc_enable_intr((uint32_t)dev->virt_base,
-			I2C_MM_HS_IER_FIFO_INT_EN_MASK |
-			I2C_MM_HS_IER_NOACK_EN_MASK);
-
 	/* mark as incomplete before sending data to the TX FIFO */
 	INIT_COMPLETION(dev->tx_fifo_empty);
 
-	/* sending data to the TX FIFO */
-	bsc_write_data((uint32_t)dev->virt_base, buf, len);
+	/* pointer to the source buffer */
+	tmp_buf = buf;
 
-	/*
-	 * Block waiting for the transaction to finish. When it's finished
-	 *we'll be signaled by the interrupt
-	 */
-	time_left =
-	    wait_for_completion_timeout(&dev->tx_fifo_empty, SES_TIMEOUT);
-	bsc_disable_intr((uint32_t)dev->virt_base,
-			 I2C_MM_HS_IER_FIFO_INT_EN_MASK |
-			 I2C_MM_HS_IER_NOACK_EN_MASK);
-	if (time_left == 0 || dev->err_flag) {
-		/* Check if there was a NACK and it was unexpected */
-		if ((dev->err_flag & I2C_MM_HS_ISR_NOACK_MASK) && nak_ok == 0) {
-			dev_err(dev->device, "unexpected NAK\n");
-			rc = -EREMOTEIO;
-			goto err_fifo;
-		/* Check if there was a bus error */
-		} else if (dev->err_flag & I2C_MM_HS_ISR_ERR_MASK) {
-			dev_err(dev->device, "controller timed out\n");
-			rc = -ETIMEDOUT;
-			goto err_fifo;
+	/* The DVT test code logic :
+	 * Write 64 bytes to the FIFO and wait for the TX FIFO full interrupt */
+	/* Keep writing 64 bytes of data to the FIFO */
+	for (i = 0 ; i < len/MAX_TX_FIFO_SIZE ; i++) {
+		/* Write 64 bytes of data */
+		bsc_write_data((uint32_t)dev->virt_base, tmp_buf,
+				MAX_TX_FIFO_SIZE);
+
+		/* Enable, check and disable the fifo empty interrupt */
+		bsc_enable_intr((uint32_t)dev->virt_base,
+				I2C_MM_HS_IER_FIFO_INT_EN_MASK |
+				I2C_MM_HS_IER_NOACK_EN_MASK);
+
+		time_left = wait_for_completion_timeout(&dev->tx_fifo_empty,
+							SES_TIMEOUT);
+
+		bsc_disable_intr((uint32_t)dev->virt_base,
+				I2C_MM_HS_IER_FIFO_INT_EN_MASK |
+				I2C_MM_HS_IER_NOACK_EN_MASK);
+
+		/* Check if the write timed-out or NACKed */
+		if (time_left == 0 || dev->err_flag) {
+			/* Check if there was a NACK and it was unexpected */
+			if ((dev->err_flag & I2C_MM_HS_ISR_NOACK_MASK) &&
+			    nak_ok == 0) {
+				dev_err(dev->device, "unexpected NAK\n");
+				rc = -EREMOTEIO;
+				goto err_fifo;
+			/* Check if there was a bus error */
+			} else if (dev->err_flag & I2C_MM_HS_ISR_ERR_MASK) {
+				dev_err(dev->device, "controller timed out\n");
+				rc = -ETIMEDOUT;
+				goto err_fifo;
+			}
+			/* Reset the error flag */
+			dev->err_flag &= ~(dev->err_flag);
 		}
 		/* Reset the error flag */
 		dev->err_flag &= ~(dev->err_flag);
+
+		/* Update the buf to point to the next data */
+		tmp_buf += MAX_TX_FIFO_SIZE;
+	}
+
+	/* Transfer the remainder bytes if the data size is not a multiple of
+	 * 64 */
+	if (len % MAX_TX_FIFO_SIZE != 0) {
+
+		/* Write the remainder bytes */
+		bsc_write_data((uint32_t)dev->virt_base, tmp_buf,
+				(len % MAX_TX_FIFO_SIZE));
+
+		/* Enable, check and disable the fifo empty interrupt */
+		bsc_enable_intr((uint32_t)dev->virt_base,
+				I2C_MM_HS_IER_FIFO_INT_EN_MASK |
+				I2C_MM_HS_IER_NOACK_EN_MASK);
+
+		time_left = wait_for_completion_timeout(&dev->tx_fifo_empty,
+							SES_TIMEOUT);
+
+		bsc_disable_intr((uint32_t)dev->virt_base,
+				I2C_MM_HS_IER_FIFO_INT_EN_MASK |
+				I2C_MM_HS_IER_NOACK_EN_MASK);
+
+		/* Check if the write timed-out or NACKed */
+		if (time_left == 0 || dev->err_flag) {
+			/* Check if there was a NACK and it was unexpected */
+			if ((dev->err_flag & I2C_MM_HS_ISR_NOACK_MASK) &&
+			    nak_ok == 0) {
+				dev_err(dev->device, "unexpected NAK\n");
+				rc = -EREMOTEIO;
+				goto err_fifo;
+			/* Check if there was a bus error */
+			} else if (dev->err_flag & I2C_MM_HS_ISR_ERR_MASK) {
+				dev_err(dev->device, "controller timed out\n");
+				rc = -ETIMEDOUT;
+				goto err_fifo;
+			}
+			/* Reset the error flag */
+			dev->err_flag &= ~(dev->err_flag);
+		}
 	}
 
 	/* make sure writing to be finished before disabling TX FIFO */
@@ -642,10 +696,10 @@ static int bsc_xfer_write_fifo(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 	if (rc < 0)
 		goto err_fifo;
 
-	/* disable TX FIFO */
-	bsc_set_tx_fifo((uint32_t)dev->virt_base, 0);
+	/* The Write was successful. Hence return the length of the data
+	 * transferred */
 
-	return len;
+	rc = len;
 
 err_fifo:
 
@@ -653,7 +707,6 @@ err_fifo:
 	bsc_set_tx_fifo((uint32_t)dev->virt_base, 0);
 
 	return rc;
-
 }
 
 static int bsc_xfer_write(struct i2c_adapter *adapter, struct i2c_msg *msg)
