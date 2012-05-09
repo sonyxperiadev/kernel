@@ -661,6 +661,43 @@ void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
 			ipcInfoList[currIF].filterReadyForCPReset = FALSE;
 		}
 
+	if (inEvent == IPC_CPRESET_COMPLETE) {
+		int index;
+
+		/* reset done, so reset buffer pool pointers */
+		for (currIF = INTERFACE_START;
+			currIF < INTERFACE_TOTAL; currIF++)
+			for (index = 0; index < MAX_CHANNELS; index++)
+				ipcInfoList[currIF].ipc_buf_pool[index] = 0;
+
+		/* re-register our endpoints */
+		/* **FIXME** can't use RPC_IPC_EndPointInit because it resets */
+		/* all of ipcInfoList */
+		/*RPC_IPC_EndPointInit(RPC_APPS);*/
+		IPC_EndpointRegister(IPC_EP_Capi2App, RPC_FlowCntrl,
+				     RPC_BufferDelivery, 4);
+		IPC_EndpointRegister(IPC_EP_DrxAP, RPC_FlowCntrl,
+					RPC_BufferDelivery, 4);
+		IPC_EndpointRegister(IPC_EP_PsAppData, RPC_FlowCntrl,
+				     RPC_BufferDelivery,
+				     4 + PDCP_MAX_HEADER_SIZE);
+		IPC_EndpointRegister(IPC_EP_CsdAppCSDData, RPC_FlowCntrl,
+				     RPC_BufferDelivery, 4);
+		IPC_EndpointRegister(IPC_EP_SerialAP, RPC_FlowCntrl,
+				     RPC_BufferDelivery, 4);
+#ifndef UNDER_LINUX
+#ifndef UNDER_CE		/*modify for WinMo UDP log */
+		IPC_EndpointRegister(IPC_EP_LogApps, RPC_FlowCntrl,
+				     RPC_BufferDelivery, 4);
+#endif
+#ifdef IPC_EP_EemAP
+		IPC_EndpointRegister(IPC_EP_EemAP, RPC_FlowCntrl,
+				     RPC_BufferDelivery, 4);
+#endif
+#endif
+
+	}
+
 	sIsNotifyingCPReset = TRUE;
 
 	rpcEvent = (inEvent == IPC_CPRESET_START) ?
@@ -672,9 +709,6 @@ void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
 	
 	if (inEvent == IPC_CPRESET_START)
 		CheckReadyForCPReset();
-	else
-		/* reset done, so re-register our endpoints */
-		RPC_IPC_EndPointInit(RPC_APPS);
 
 	pr_info("exit RPC_PACKET_CPResetHandler\n");
 }

@@ -113,6 +113,9 @@ typedef struct {
 #define MSP_SIGNATURE_VALUE      0xBABEFACE
 #define MSP_SIGNATURE_OFFSET     0x20
 
+#define CP_IMAGE_SIZE_OFFSET     0x24
+#define LINKER_FLAG_OFFSET_VALUE 0x4b4e494c
+
 /* from kernel/arch/arm/mach-capri/include/mach/comms/platform_mconfig_rhea.h */
 #define CP_RO_RAM_OFFSET             0x200000
 #define CP_RO_RAM_ADDR              (EXT_RAM_BASE_ADDR + CP_RO_RAM_OFFSET)
@@ -261,9 +264,6 @@ int HandleRestartCP(void *data)
 		BUG();
 	}
 
-	/* reload CP */
-	ReloadCP();
-
 	IPC_DEBUG(DBG_ERROR, "resetting CP\n");
 
 	/* reset CP - copy from cp_reset.cmm rxd from CP team */
@@ -302,6 +302,13 @@ int HandleRestartCP(void *data)
 	writel(0x2, cp_bmdm_reset_base+BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
 	writel(0x3, cp_bmdm_reset_base+BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
 
+	/* reload CP */
+	ReloadCP();
+
+	IPC_DEBUG(DBG_ERROR, "reenable IRQ_IPC_C2A\n");
+	/* re-enable CP to AP IRQ */
+	enable_irq(IRQ_IPC_C2A);
+
 	IPC_DEBUG(DBG_ERROR, "rebooting CP\n");
 	/* reboot CP; this will also wipe IPC shared memory */
 	Comms_Start(1);
@@ -313,10 +320,6 @@ int HandleRestartCP(void *data)
 		/* CP didn't re-sync, so crash AP here */
 		BUG();
 	}
-
-	IPC_DEBUG(DBG_ERROR, "reenable IRQ_IPC_C2A\n");
-	/* re-enable CP to AP IRQ */
-	enable_irq(IRQ_IPC_C2A);
 
 	/* notify clients that we're back in business...*/
 	IPC_DEBUG(DBG_ERROR, "notifying clients CP reset is complete\n");
@@ -420,9 +423,8 @@ static int DownloadFirmware(uint16_t len, const uint8_t *p_data, uint32_t addr)
 
 	virtAddr = ioremap_nocache(addr, len);
 	if (NULL == virtAddr) {
-		printk(KERN_INFO "%s: ioremap_nocache failed; copying to addr %p\n",
-				__func__, addr);
-		memcpy(addr, p_data, len);
+		printk(KERN_INFO "%s: ioremap_nocache failed!\n",
+				__func__);
 	} else {
 		printk(KERN_INFO "%s: copying to virtual addr %p\n",
 				__func__, virtAddr);
@@ -449,6 +451,7 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 {
 	const struct firmware *fw;
 	int32_t err;
+	int imgSize;
 
 	printk(KERN_ERR "%s calling request_firmware for %s, device=%p\n",
 			__func__, p_name, p_device);
@@ -470,17 +473,65 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 	else
 		printk(KERN_ERR "%s: fw = NULL!\n", __func__);
 
+	imgSize = fw->size;
 	if (expectedSize == 0) {
+		UInt8 *ptr;
+
 		/* This is the main CP image */
 		if (IsCommsImageValid(fw->data))
 			printk(KERN_ERR "%s verified CP image\n", __func__);
 		else
 			printk(KERN_ERR "%s failed to verify main image\n",
 				__func__);
+
+		ptr = ((UInt8 *) fw->data) + CP_IMAGE_SIZE_OFFSET;
+
+		imgSize = (ptr[3] << 24) |
+					(ptr[2] << 16) |
+					(ptr[1] << 8) |
+					ptr[0];
+		IPC_DEBUG(DBG_ERROR, "calculated CP image size = 0x%x\n",
+			imgSize);
+	} else if (expectedSize != imgSize) {
+		if (imgSize > expectedSize) {
+			IPC_DEBUG(DBG_ERROR,
+					"ERROR: fw->size > expected (0x%x > 0x%x)\n",
+					fw->size, expectedSize);
+			imgSize = expectedSize;
+		} else
+			IPC_DEBUG(DBG_ERROR,
+				"ERROR: fw->size < expected (0x%x < 0x%x)\n",
+				fw->size, expectedSize);
 	}
 
 	/** download to chip **/
-	err = DownloadFirmware(fw->size, fw->data, addr);
+	err = DownloadFirmware(imgSize, fw->data, addr);
+
+	/* Verify CP image @ RAM addr */
+	if (expectedSize == 0) {
+		void __iomem *virtAddr;
+
+		virtAddr = ioremap_nocache(addr, fw->size);
+		if (virtAddr) {
+			int retval;
+			/* This is the main CP image */
+			if (IsCommsImageValid(virtAddr))
+				IPC_DEBUG(DBG_ERROR,
+					"verified CP image @ %p\n", addr);
+			else
+				IPC_DEBUG(DBG_ERROR,
+					"failed to verify main image @ %p\n",
+					addr);
+			retval = memcmp(fw->data, virtAddr, imgSize);
+			IPC_DEBUG(DBG_ERROR, "memcmp(%p, %p, 0x%x) = %d\n",
+				fw->data, virtAddr, imgSize, retval);
+			iounmap(virtAddr);
+		} else {
+			IPC_DEBUG(DBG_ERROR,
+				"ioremap_nocache FAILED for addr %p\n",
+				addr);
+		}
+	}
 
 	/** free kernel structure */
 	release_firmware(fw);
@@ -519,6 +570,7 @@ static UInt32 IsCommsImageValid(const UInt8 *ram_addr)
 {
 	UInt32 msp_signature;
 	static UInt32 cp_loaded;
+	UInt32 linkerFlagOffset;
 
 	printk(KERN_ERR "%s(): addr=%p\r\n", __func__, ram_addr);
 
@@ -528,6 +580,19 @@ static UInt32 IsCommsImageValid(const UInt8 *ram_addr)
 
 	printk(KERN_ERR "MSP Signature: =%x, loaded=%d\r\n",
 			msp_signature, cp_loaded);
+
+	/* also check the linker flag offset:
+		RO_BASE + RESERVED_HEADER + 0x48
+	*/
+	linkerFlagOffset =
+		*((UInt32 *)((UInt8 *)ram_addr + RESERVED_HEADER + 0x48));
+	IPC_DEBUG(DBG_ERROR, "value at LINKER_FLAG_OFFSET (+0x%x): = 0x%x\r\n",
+			RESERVED_HEADER + 0x48, linkerFlagOffset);
+	if (linkerFlagOffset != LINKER_FLAG_OFFSET_VALUE) {
+		IPC_DEBUG(DBG_ERROR, "bad LINKER_FLAG_OFFSET value!!\r\n");
+		cp_loaded = 0;
+	}
+
 	return cp_loaded;
 }
 
