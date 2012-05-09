@@ -164,12 +164,17 @@ enum button_state {
  * Accessory Detecting voltage
  *
  * Voltage defined in mv
+ * The voltage levels below are for Headphone,
+ * Headset, ECI accessory and Video cable detection
+ * based on customer spec.
  */
 #define MIC_CHANGE_DETECTION_THRESHOLD  20
 #define HEADPHONE_DETECT_LEVEL_MIN      0
 #define HEADPHONE_DETECT_LEVEL_MAX      40
-#define HEADPHONE_DETECT_LEVEL2_MIN     91
-#define HEADPHONE_DETECT_LEVEL2_MAX     599
+#define VIDEO_CABLE_DETECT_LEVEL_MIN	41
+#define VIDEO_CABLE_DETECT_LEVEL_MAX	90
+#define ECI_ACCESSORY_DETECT_LEVEL_MIN  91
+#define ECI_ACCESSORY_DETECT_LEVEL_MAX  599
 
 #define OPENCABLE_DETECT_LEVEL_MIN      1900
 #define OPENCABLE_DETECT_LEVEL_MAX      5000
@@ -414,8 +419,11 @@ static int aci_hw_read(int hst)
 		if ((mic_level >= HEADPHONE_DETECT_LEVEL_MIN &&
 		     mic_level <= HEADPHONE_DETECT_LEVEL_MAX)
 		    ||
-		    (mic_level >= HEADPHONE_DETECT_LEVEL2_MIN &&
-		     mic_level <= HEADPHONE_DETECT_LEVEL2_MAX))
+		    (mic_level >= VIDEO_CABLE_DETECT_LEVEL_MIN &&
+		     mic_level <= VIDEO_CABLE_DETECT_LEVEL_MAX)
+			||
+		    (mic_level >= ECI_ACCESSORY_DETECT_LEVEL_MIN &&
+		     mic_level <= ECI_ACCESSORY_DETECT_LEVEL_MAX))
 			status = HEADPHONE;
 		break;
 	case OPEN_CABLE:
