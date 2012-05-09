@@ -155,4 +155,25 @@ void csl_caph_switch_start_transfer(CSL_CAPH_SWITCH_CHNL_e chnl);
 *****************************************************************************/
 void csl_caph_switch_stop_transfer(CSL_CAPH_SWITCH_CHNL_e chnl);
 
+/**
+*
+*  @brief  enable/disable NOC global bit
+*
+*  @param   enable (in) 1 to enable, 0 to disable
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_switch_enable_clock(int enable);
+
+/**
+*
+*  @brief  assign a given CAPH switch channel
+*
+*  @param  chnl (in) requested channel
+*
+*  @return void
+*****************************************************************************/
+CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_obtain_given_channel(
+		CSL_CAPH_SWITCH_CHNL_e chnl);
+
 #endif /* _CSL_CAPH_SWITCH_ */

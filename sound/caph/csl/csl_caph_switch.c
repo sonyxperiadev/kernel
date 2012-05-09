@@ -587,3 +587,41 @@ void csl_caph_switch_stop_transfer(CSL_CAPH_SWITCH_CHNL_e chnl)
 	chal_caph_switch_disable(handle, chal_chnl);
 	return;
 }
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_switch_enable_clock
+*
+*  Description: enable/disable NOC global bit
+*
+****************************************************************************/
+void csl_caph_switch_enable_clock(int enable)
+{
+	aTrace(LOG_AUDIO_CSL, "%s %d\n", __func__, enable);
+	if (enable)
+		chal_caph_switch_enable_clock(handle);
+	else
+		chal_caph_switch_disable_clock(handle);
+	return;
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_switch_obtain_given_channel
+*
+*  Description: assign a given CAPH switch channel
+*
+****************************************************************************/
+CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_obtain_given_channel(
+		CSL_CAPH_SWITCH_CHNL_e chnl)
+{
+	CSL_CAPH_SWITCH_CHNL_e chnl2;
+	CAPH_SWITCH_CHNL_e chal_chnl;
+
+	chal_chnl = csl_caph_switch_get_chalchnl(chnl);
+	chal_chnl = chal_caph_switch_alloc_given_channel(handle, chal_chnl);
+	chnl2 = csl_caph_switch_get_cslchnl(chal_chnl);
+
+	aTrace(LOG_AUDIO_CSL, "%s ask %d get %d\n", __func__, chnl, chnl2);
+	return chnl2;
+}

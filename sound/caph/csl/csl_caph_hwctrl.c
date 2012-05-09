@@ -625,6 +625,8 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 		if (enabled_path)
 			enable = TRUE;
 		csl_caph_audioh_adcpath_global_enable(enable);
+		if (enable)
+			csl_caph_switch_enable_clock(enable);
 	}
 #endif
 }
@@ -1244,8 +1246,6 @@ static void csl_caph_obtain_blocks
 		break;
 
 		case CAPH_SW:
-		sw = csl_caph_switch_obtain_channel();
-
 		if (!path->sw[sinkNo][0].chnl)
 			blockIdx = 0;
 		else if (!path->sw[sinkNo][1].chnl)
@@ -1254,6 +1254,25 @@ static void csl_caph_obtain_blocks
 			blockIdx = 2;
 		else
 			blockIdx = 3;
+
+		/*SW13/15 are for primary mic, SW14/16 for secondary.
+		  Must use adjacent SW channels for MICs and SRCs.
+		*/
+		if (path->sink[0] == CSL_CAPH_DEV_DSP) {
+			if (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R) {
+				if (blockIdx == 0)
+					sw = CSL_CAPH_SWITCH_CH14;
+				else
+					sw = CSL_CAPH_SWITCH_CH16;
+			} else {
+				if (blockIdx == 0)
+					sw = CSL_CAPH_SWITCH_CH13;
+				else
+					sw = CSL_CAPH_SWITCH_CH15;
+			}
+			sw = csl_caph_switch_obtain_given_channel(sw);
+		} else
+			sw = csl_caph_switch_obtain_channel();
 
 		path->sw[sinkNo][blockIdx].chnl = sw;
 		path->sw[sinkNo][blockIdx].dataFmt = dataFormat;
@@ -1936,6 +1955,14 @@ static void csl_caph_config_sw
 		}
 	}
 
+	/*For mic paths, the 2rd sw (after SRC) uses internal trigger*/
+	if (path->sink[0] == CSL_CAPH_DEV_DSP && path->audiohPath[0]
+		&& blockIdx) {
+		swCfg->trigger = CAPH_8KHZ;
+		if (path->snk_sampleRate == AUDIO_SAMPLING_RATE_16000)
+			swCfg->trigger = CAPH_16KHZ;
+	}
+
 	if (!swCfg->trigger) {
 		if (path->block[sinkNo][blockPathIdx-1] == CAPH_CFIFO
 				&& path->block[sinkNo][blockPathIdx+1]
@@ -2082,6 +2109,10 @@ static void csl_caph_config_src
 
 	csl_caph_srcmixer_config_src_route(path->srcmRoute[sinkNo][blockIdx]);
 	csl_caph_hwctrl_set_srcmixer_filter(path);
+	/*wait for src to overflow, src output fifo size is 8 samples,
+	  1ms for 48-to-8 src*/
+	if (path->sink[0] == CSL_CAPH_DEV_DSP)
+		usleep_range(1000, 2000);
 }
 
 /*
@@ -2302,10 +2333,16 @@ static void csl_caph_start_blocks
 	if (path->sinkCount == 1) {
 		if (path->audiohPath[0]) {
 #if defined(ENABLE_DMA_VOICE)
-			if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
+			/*To achieve dualmic synchronization in voice call,
+			  adc global and noc shall be reset before DSP is ready
+			*/
+			if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
 				csl_caph_audioh_adcpath_global_enable(FALSE);
-			else /*o.w. adc global should be set*/
+				csl_caph_switch_enable_clock(0);
+			} else {
 				csl_caph_audioh_adcpath_global_enable(TRUE);
+				csl_caph_switch_enable_clock(1);
+			}
 #endif
 			csl_caph_audioh_start(path->audiohPath[0]);
 		}

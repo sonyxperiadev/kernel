@@ -1254,7 +1254,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 		AUDDRV_VoiceRender_Stop(drvtype, TRUE);
 
 		/* need to give time to dsp to stop. */
-		msleep(3);	/* make sure the path turned on */
+		usleep_range(3000, 10000);/* make sure the path turned on */
 
 		AUDDRV_VoiceRender_Shutdown(drvtype);
 

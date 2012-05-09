@@ -222,7 +222,6 @@ static void AUDDRV_HW_EnableSideTone(AudioMode_t audio_mode);
 static void AUDDRV_HW_DisableSideTone(AudioMode_t audio_mode);
 static void AP_ProcessAudioEnableDone(UInt16 enabled_path);
 
-
 /*=============================================================================
 // Functions
 //=============================================================================
@@ -1659,6 +1658,23 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	telephonyPathID.dlPathID = csl_caph_hwctrl_EnablePath(config);
 
 	/* UL */
+	/* Secondary mic is enabled first*/
+	/* If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used*/
+	if (bNeedDualMic) {
+		config.streamID = CSL_CAPH_STREAM_NONE;
+		config.pathID = 0;
+		config.source = MIC_NOISE_CANCEL;
+		config.sink = CSL_CAPH_DEV_DSP;
+		config.dmaCH = CSL_CAPH_DMA_NONE;
+		config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
+		config.snk_sampleRate = sample_rate;
+		config.chnlNum = AUDIO_CHANNEL_MONO;
+		config.bitPerSample = bits;
+
+		telephonyPathID.ul2PathID = csl_caph_hwctrl_EnablePath(config);
+	}
+
+	/* Primary mic */
 	config.streamID = CSL_CAPH_STREAM_NONE;
 	config.pathID = 0;
 	config.source = AUDDRV_GetDRVDeviceFromMic(mic);
@@ -1685,25 +1701,6 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 		telephonyPathID.ulPathID = pathID;
 	} else
 		telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
-
-	aTrace(LOG_AUDIO_DRIVER,  "%s bNeedDualMic=%d *\n\r",
-			__func__, bNeedDualMic);
-
-	/* If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used
-	   //Here Let us assume it is DMIC3. It can be changed. */
-	if (bNeedDualMic == TRUE) {
-		config.streamID = CSL_CAPH_STREAM_NONE;
-		config.pathID = 0;
-		config.source = MIC_NOISE_CANCEL;
-		config.sink = CSL_CAPH_DEV_DSP;
-		config.dmaCH = CSL_CAPH_DMA_NONE;
-		config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
-		config.snk_sampleRate = sample_rate;
-		config.chnlNum = AUDIO_CHANNEL_MONO;
-		config.bitPerSample = bits;
-
-		telephonyPathID.ul2PathID = csl_caph_hwctrl_EnablePath(config);
-	}
 
 	return;
 }
