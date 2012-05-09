@@ -291,7 +291,7 @@ static inline void bsc_reset(uint32_t baseAddr)
  *	Hold=1, HighPhase=3, Setup=4,
  *	HS CLK = 26/(1+3+4) = 3.25MHz
  */
-#define BSC_HS_HSMODE_TIMING_26MHZ        0x0000043
+#define BSC_HS_HSMODE_TIMING_26MHZ        0x0000024
 #define BSC_HS_HSMODE_1MHZ                0x000014D
 #define BSC_HS_HSMODE_1625KHZ             0x0000108
 #define BSC_HS_HSMODE_2600KHZ             0x0000064
