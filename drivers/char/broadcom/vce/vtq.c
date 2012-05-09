@@ -276,12 +276,17 @@ struct jobinfo {
 	struct vtq_image *inflightimage;
 };
 
+/*#define VTQ_DEBUG*/
 #define err_print(fmt, arg...) \
 	printk(KERN_ERR "VTQ: ERROR: %s() %s:%d " fmt, \
 		__func__, "vtq.c", __LINE__, ##arg)
+#ifdef VTQ_DEBUG
 #define dbg_print(fmt, arg...) \
 	printk(KERN_WARNING "VTQ: debug: %s() %s:%d " fmt, \
 		__func__, "vtq.c", __LINE__, ##arg)
+#else
+#define dbg_print(fmt, arg...)	do { } while (0)
+#endif
 
 /*
  * Global (driver) /proc entries for Debug etc
