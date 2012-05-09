@@ -58,8 +58,9 @@ typedef BWL_PRE_PACKED_STRUCT struct msgtrace_hdr {
  */
 extern bool msgtrace_hbus_trace;
 
-typedef void (*msgtrace_func_send_t) (void *hdl1, void *hdl2, uint8 *hdr,
-				      uint16 hdrlen, uint8 *buf, uint16 buflen);
+typedef void (*msgtrace_func_send_t) (void *hdl1, void *hdl2, uint8 * hdr,
+				      uint16 hdrlen, uint8 * buf,
+				      uint16 buflen);
 extern void msgtrace_start(void);
 extern void msgtrace_stop(void);
 extern void msgtrace_sent(void);

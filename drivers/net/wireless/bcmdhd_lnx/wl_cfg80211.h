@@ -129,12 +129,17 @@ do {									\
 #define IFACE_MAX_CNT 		2
 
 #define WL_SCAN_TIMER_INTERVAL_MS	8000	/* Scan timeout */
-#define WL_CHANNEL_SYNC_RETRY 	5
+#define WL_CHANNEL_SYNC_RETRY 	3
+#define WL_ACT_FRAME_RETRY 4
+
 #define WL_INVALID 		-1
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0) && defined(PNO_SUPPORT) && 0
 #define WL_SCHED_SCAN	1
 #endif
+
+/* Bring down SCB Timeout to 20secs from 60secs default*/
+#define WL_SCB_TIMEOUT	20
 
 /* driver status */
 enum wl_status {
@@ -449,6 +454,7 @@ struct wl_priv {
 #endif				/* WL_SCHED_SCAN */
 	bool sched_scan_running;	/* scheduled scan req status */
 	u16 hostapd_chan;	/* remember chan requested by framework for hostapd  */
+	u16 deauth_reason;	/* Place holder to save deauth/disassoc reasons */
 };
 
 static inline struct wl_bss_info *next_bss(struct wl_scan_results *list,

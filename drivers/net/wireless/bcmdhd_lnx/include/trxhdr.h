@@ -30,12 +30,12 @@
 #include <typedefs.h>
 
 #define TRX_MAGIC	0x30524448	/* "HDR0" */
-#define TRX_VERSION	1	/* Version 1 */
+#define TRX_VERSION	1		/* Version 1 */
 #define TRX_MAX_LEN	0x3B0000	/* Max length */
-#define TRX_NO_HEADER	1	/* Do not write TRX header */
-#define TRX_GZ_FILES	0x2	/* Contains up to TRX_MAX_OFFSET individual gzip files */
-#define TRX_OVERLAYS	0x4	/* Contains an overlay header after the trx header */
-#define TRX_MAX_OFFSET	3	/* Max number of individual files */
+#define TRX_NO_HEADER	1		/* Do not write TRX header */
+#define TRX_GZ_FILES	0x2     /* Contains up to TRX_MAX_OFFSET individual gzip files */
+#define TRX_OVERLAYS	0x4     /* Contains an overlay header after the trx header */
+#define TRX_MAX_OFFSET	3		/* Max number of individual files */
 #define TRX_UNCOMP_IMAGE	0x20	/* Trx contains uncompressed rtecdc.bin image */
 #define TRX_ROMSIM_IMAGE	0x10	/* Trx contains ROM simulation image */
 

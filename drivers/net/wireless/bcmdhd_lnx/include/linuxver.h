@@ -258,7 +258,7 @@ static inline int get_order(unsigned long size)
 }
 
 static inline void *pci_alloc_consistent(struct pci_dev *hwdev, size_t size,
-					 dma_addr_t *dma_handle)
+					 dma_addr_t * dma_handle)
 {
 	void *ret;
 	int gfp = GFP_ATOMIC | GFP_DMA;
@@ -363,7 +363,7 @@ static inline void tasklet_init(struct tasklet_struct *tasklet,
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 4, 6))
-static inline int pci_save_state(struct pci_dev *dev, u32 *buffer)
+static inline int pci_save_state(struct pci_dev *dev, u32 * buffer)
 {
 	int i;
 	if (buffer) {
@@ -373,7 +373,7 @@ static inline int pci_save_state(struct pci_dev *dev, u32 *buffer)
 	return 0;
 }
 
-static inline int pci_restore_state(struct pci_dev *dev, u32 *buffer)
+static inline int pci_restore_state(struct pci_dev *dev, u32 * buffer)
 {
 	int i;
 

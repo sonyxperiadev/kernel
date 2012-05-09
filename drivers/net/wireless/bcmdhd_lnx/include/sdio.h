@@ -28,33 +28,34 @@
 #ifndef	_SDIO_H
 #define	_SDIO_H
 
+
 /* CCCR structure for function 0 */
 typedef volatile struct {
-	uint8 cccr_sdio_rev;	/* RO, cccr and sdio revision */
-	uint8 sd_rev;		/* RO, sd spec revision */
-	uint8 io_en;		/* I/O enable */
-	uint8 io_rdy;		/* I/O ready reg */
-	uint8 intr_ctl;		/* Master and per function interrupt enable control */
-	uint8 intr_status;	/* RO, interrupt pending status */
-	uint8 io_abort;		/* read/write abort or reset all functions */
-	uint8 bus_inter;	/* bus interface control */
-	uint8 capability;	/* RO, card capability */
+	uint8	cccr_sdio_rev;		/* RO, cccr and sdio revision */
+	uint8	sd_rev;			/* RO, sd spec revision */
+	uint8	io_en;			/* I/O enable */
+	uint8	io_rdy;			/* I/O ready reg */
+	uint8	intr_ctl;		/* Master and per function interrupt enable control */
+	uint8	intr_status;		/* RO, interrupt pending status */
+	uint8	io_abort;		/* read/write abort or reset all functions */
+	uint8	bus_inter;		/* bus interface control */
+	uint8	capability;		/* RO, card capability */
 
-	uint8 cis_base_low;	/* 0x9 RO, common CIS base address, LSB */
-	uint8 cis_base_mid;
-	uint8 cis_base_high;	/* 0xB RO, common CIS base address, MSB */
+	uint8	cis_base_low;		/* 0x9 RO, common CIS base address, LSB */
+	uint8	cis_base_mid;
+	uint8	cis_base_high;		/* 0xB RO, common CIS base address, MSB */
 
 	/* suspend/resume registers */
-	uint8 bus_suspend;	/* 0xC */
-	uint8 func_select;	/* 0xD */
-	uint8 exec_flag;	/* 0xE */
-	uint8 ready_flag;	/* 0xF */
+	uint8	bus_suspend;		/* 0xC */
+	uint8	func_select;		/* 0xD */
+	uint8	exec_flag;		/* 0xE */
+	uint8	ready_flag;		/* 0xF */
 
-	uint8 fn0_blk_size[2];	/* 0x10(LSB), 0x11(MSB) */
+	uint8	fn0_blk_size[2];	/* 0x10(LSB), 0x11(MSB) */
 
-	uint8 power_control;	/* 0x12 (SDIO version 1.10) */
+	uint8	power_control;		/* 0x12 (SDIO version 1.10) */
 
-	uint8 speed_control;	/* 0x13 */
+	uint8	speed_control;		/* 0x13 */
 } sdio_regs_t;
 
 /* SDIO Device CCCR offsets */
@@ -170,20 +171,20 @@ typedef volatile struct {
 
 /* FBR structure for function 1-7, FBR addresses and register offsets */
 typedef volatile struct {
-	uint8 devctr;		/* device interface, CSA control */
-	uint8 ext_dev;		/* extended standard I/O device type code */
-	uint8 pwr_sel;		/* power selection support */
-	uint8 PAD[6];		/* reserved */
+	uint8	devctr;			/* device interface, CSA control */
+	uint8	ext_dev;		/* extended standard I/O device type code */
+	uint8	pwr_sel;		/* power selection support */
+	uint8	PAD[6];			/* reserved */
 
-	uint8 cis_low;		/* CIS LSB */
-	uint8 cis_mid;
-	uint8 cis_high;		/* CIS MSB */
-	uint8 csa_low;		/* code storage area, LSB */
-	uint8 csa_mid;
-	uint8 csa_high;		/* code storage area, MSB */
-	uint8 csa_dat_win;	/* data access window to function */
+	uint8	cis_low;		/* CIS LSB */
+	uint8	cis_mid;
+	uint8	cis_high;		/* CIS MSB */
+	uint8	csa_low;		/* code storage area, LSB */
+	uint8	csa_mid;
+	uint8	csa_high;		/* code storage area, MSB */
+	uint8	csa_dat_win;		/* data access window to function */
 
-	uint8 fnx_blk_size[2];	/* block size, little endian */
+	uint8	fnx_blk_size[2];	/* block size, little endian */
 } sdio_fbr_t;
 
 /* Maximum number of I/O funcs */
@@ -266,6 +267,8 @@ typedef volatile struct {
 #define CARDREG_STATUS_BIT_IOCURRENTSTATE0	9
 #define CARDREG_STATUS_BIT_FUN_NUM_ERROR	4
 
+
+
 #define SD_CMD_GO_IDLE_STATE		0	/* mandatory for SDIO */
 #define SD_CMD_SEND_OPCOND		1
 #define SD_CMD_MMC_SET_RCA		3
@@ -303,14 +306,14 @@ typedef volatile struct {
 #define SD_ACMD_SEND_SCR		51
 
 /* argument for SD_CMD_IO_RW_DIRECT and SD_CMD_IO_RW_EXTENDED */
-#define SD_IO_OP_READ		0	/* Read_Write: Read */
-#define SD_IO_OP_WRITE		1	/* Read_Write: Write */
-#define SD_IO_RW_NORMAL		0	/* no RAW */
-#define SD_IO_RW_RAW		1	/* RAW */
-#define SD_IO_BYTE_MODE		0	/* Byte Mode */
-#define SD_IO_BLOCK_MODE	1	/* BlockMode */
-#define SD_IO_FIXED_ADDRESS	0	/* fix Address */
-#define SD_IO_INCREMENT_ADDRESS	1	/* IncrementAddress */
+#define SD_IO_OP_READ		0   /* Read_Write: Read */
+#define SD_IO_OP_WRITE		1   /* Read_Write: Write */
+#define SD_IO_RW_NORMAL		0   /* no RAW */
+#define SD_IO_RW_RAW		1   /* RAW */
+#define SD_IO_BYTE_MODE		0   /* Byte Mode */
+#define SD_IO_BLOCK_MODE	1   /* BlockMode */
+#define SD_IO_FIXED_ADDRESS	0   /* fix Address */
+#define SD_IO_INCREMENT_ADDRESS	1   /* IncrementAddress */
 
 /* build SD_CMD_IO_RW_DIRECT Argument */
 #define SDIO_IO_RW_DIRECT_ARG(rw, raw, func, addr, data) \
@@ -357,6 +360,7 @@ typedef volatile struct {
 #define SD_RSP_R5_OUT_OF_RANGE		0x01
 
 #define SD_RSP_R5_ERRBITS		0xCB
+
 
 /* ------------------------------------------------
  *  SDIO Commands and responses
@@ -417,183 +421,185 @@ typedef volatile struct {
 #define CMD_15_RCA_M		BITFIELD_MASK(16)
 #define CMD_15_RCA_S		16
 
-#define CMD52_DATA_M		BITFIELD_MASK(8)	/* Bits [7:0]    - Write Data/Stuff bits of CMD52
-							 */
+#define CMD52_DATA_M		BITFIELD_MASK(8)  /* Bits [7:0]    - Write Data/Stuff bits of CMD52
+						   */
 #define CMD52_DATA_S		0
-#define CMD52_REG_ADDR_M	BITFIELD_MASK(17)	/* Bits [25:9]   - register address */
+#define CMD52_REG_ADDR_M	BITFIELD_MASK(17) /* Bits [25:9]   - register address */
 #define CMD52_REG_ADDR_S	9
-#define CMD52_RAW_M		BITFIELD_MASK(1)	/* Bit  27       - Read after Write flag */
+#define CMD52_RAW_M		BITFIELD_MASK(1)  /* Bit  27       - Read after Write flag */
 #define CMD52_RAW_S		27
-#define CMD52_FUNCTION_M	BITFIELD_MASK(3)	/* Bits [30:28]  - Function number */
+#define CMD52_FUNCTION_M	BITFIELD_MASK(3)  /* Bits [30:28]  - Function number */
 #define CMD52_FUNCTION_S	28
-#define CMD52_RW_FLAG_M		BITFIELD_MASK(1)	/* Bit  31       - R/W flag */
+#define CMD52_RW_FLAG_M		BITFIELD_MASK(1)  /* Bit  31       - R/W flag */
 #define CMD52_RW_FLAG_S		31
 
-#define CMD53_BYTE_BLK_CNT_M	BITFIELD_MASK(9)	/* Bits [8:0]     - Byte/Block Count of CMD53 */
+
+#define CMD53_BYTE_BLK_CNT_M	BITFIELD_MASK(9) /* Bits [8:0]     - Byte/Block Count of CMD53 */
 #define CMD53_BYTE_BLK_CNT_S	0
-#define CMD53_REG_ADDR_M	BITFIELD_MASK(17)	/* Bits [25:9]   - register address */
+#define CMD53_REG_ADDR_M	BITFIELD_MASK(17) /* Bits [25:9]   - register address */
 #define CMD53_REG_ADDR_S	9
-#define CMD53_OP_CODE_M		BITFIELD_MASK(1)	/* Bit  26       - R/W Operation Code */
+#define CMD53_OP_CODE_M		BITFIELD_MASK(1)  /* Bit  26       - R/W Operation Code */
 #define CMD53_OP_CODE_S		26
-#define CMD53_BLK_MODE_M	BITFIELD_MASK(1)	/* Bit  27       - Block Mode */
+#define CMD53_BLK_MODE_M	BITFIELD_MASK(1)  /* Bit  27       - Block Mode */
 #define CMD53_BLK_MODE_S	27
-#define CMD53_FUNCTION_M	BITFIELD_MASK(3)	/* Bits [30:28]  - Function number */
+#define CMD53_FUNCTION_M	BITFIELD_MASK(3)  /* Bits [30:28]  - Function number */
 #define CMD53_FUNCTION_S	28
-#define CMD53_RW_FLAG_M		BITFIELD_MASK(1)	/* Bit  31       - R/W flag */
+#define CMD53_RW_FLAG_M		BITFIELD_MASK(1)  /* Bit  31       - R/W flag */
 #define CMD53_RW_FLAG_S		31
 
 /* ------------------------------------------------------
  * SDIO Command Response structures for SD1 and SD4 modes
  *  -----------------------------------------------------
  */
-#define RSP4_IO_OCR_M		BITFIELD_MASK(24)	/* Bits [23:0]  - Card's OCR Bits [23:0] */
+#define RSP4_IO_OCR_M		BITFIELD_MASK(24) /* Bits [23:0]  - Card's OCR Bits [23:0] */
 #define RSP4_IO_OCR_S		0
 
-#define RSP4_S18A_M			BITFIELD_MASK(1)	/* Bits [23:0]  - Card's OCR Bits [23:0] */
+#define RSP4_S18A_M			BITFIELD_MASK(1) /* Bits [23:0]  - Card's OCR Bits [23:0] */
 #define RSP4_S18A_S			24
 
-#define RSP4_STUFF_M		BITFIELD_MASK(3)	/* Bits [26:24] - Stuff bits */
+#define RSP4_STUFF_M		BITFIELD_MASK(3)  /* Bits [26:24] - Stuff bits */
 #define RSP4_STUFF_S		24
-#define RSP4_MEM_PRESENT_M	BITFIELD_MASK(1)	/* Bit  27      - Memory present */
+#define RSP4_MEM_PRESENT_M	BITFIELD_MASK(1)  /* Bit  27      - Memory present */
 #define RSP4_MEM_PRESENT_S	27
-#define RSP4_NUM_FUNCS_M	BITFIELD_MASK(3)	/* Bits [30:28] - Number of I/O funcs */
+#define RSP4_NUM_FUNCS_M	BITFIELD_MASK(3)  /* Bits [30:28] - Number of I/O funcs */
 #define RSP4_NUM_FUNCS_S	28
-#define RSP4_CARD_READY_M	BITFIELD_MASK(1)	/* Bit  31      - SDIO card ready */
+#define RSP4_CARD_READY_M	BITFIELD_MASK(1)  /* Bit  31      - SDIO card ready */
 #define RSP4_CARD_READY_S	31
 
-#define RSP6_STATUS_M		BITFIELD_MASK(16)	/* Bits [15:0]  - Card status bits [19,22,23,12:0]
-							 */
+#define RSP6_STATUS_M		BITFIELD_MASK(16) /* Bits [15:0]  - Card status bits [19,22,23,12:0]
+						   */
 #define RSP6_STATUS_S		0
-#define RSP6_IO_RCA_M		BITFIELD_MASK(16)	/* Bits [31:16] - RCA bits[31-16] */
+#define RSP6_IO_RCA_M		BITFIELD_MASK(16) /* Bits [31:16] - RCA bits[31-16] */
 #define RSP6_IO_RCA_S		16
 
-#define RSP1_AKE_SEQ_ERROR_M	BITFIELD_MASK(1)	/* Bit 3       - Authentication seq error */
+#define RSP1_AKE_SEQ_ERROR_M	BITFIELD_MASK(1)  /* Bit 3       - Authentication seq error */
 #define RSP1_AKE_SEQ_ERROR_S	3
-#define RSP1_APP_CMD_M		BITFIELD_MASK(1)	/* Bit 5       - Card expects ACMD */
+#define RSP1_APP_CMD_M		BITFIELD_MASK(1)  /* Bit 5       - Card expects ACMD */
 #define RSP1_APP_CMD_S		5
-#define RSP1_READY_FOR_DATA_M	BITFIELD_MASK(1)	/* Bit 8       - Ready for data (buff empty) */
+#define RSP1_READY_FOR_DATA_M	BITFIELD_MASK(1)  /* Bit 8       - Ready for data (buff empty) */
 #define RSP1_READY_FOR_DATA_S	8
-#define RSP1_CURR_STATE_M	BITFIELD_MASK(4)	/* Bits [12:9] - State of card
-							 * when Cmd was received
-							 */
+#define RSP1_CURR_STATE_M	BITFIELD_MASK(4)  /* Bits [12:9] - State of card
+						   * when Cmd was received
+						   */
 #define RSP1_CURR_STATE_S	9
-#define RSP1_EARSE_RESET_M	BITFIELD_MASK(1)	/* Bit 13   - Erase seq cleared */
+#define RSP1_EARSE_RESET_M	BITFIELD_MASK(1)  /* Bit 13   - Erase seq cleared */
 #define RSP1_EARSE_RESET_S	13
-#define RSP1_CARD_ECC_DISABLE_M	BITFIELD_MASK(1)	/* Bit 14   - Card ECC disabled */
+#define RSP1_CARD_ECC_DISABLE_M	BITFIELD_MASK(1)  /* Bit 14   - Card ECC disabled */
 #define RSP1_CARD_ECC_DISABLE_S	14
-#define RSP1_WP_ERASE_SKIP_M	BITFIELD_MASK(1)	/* Bit 15   - Partial blocks erased due to W/P */
+#define RSP1_WP_ERASE_SKIP_M	BITFIELD_MASK(1)  /* Bit 15   - Partial blocks erased due to W/P */
 #define RSP1_WP_ERASE_SKIP_S	15
-#define RSP1_CID_CSD_OVERW_M	BITFIELD_MASK(1)	/* Bit 16   - Illegal write to CID or R/O bits
-							 * of CSD
-							 */
+#define RSP1_CID_CSD_OVERW_M	BITFIELD_MASK(1)  /* Bit 16   - Illegal write to CID or R/O bits
+						   * of CSD
+						   */
 #define RSP1_CID_CSD_OVERW_S	16
-#define RSP1_ERROR_M		BITFIELD_MASK(1)	/* Bit 19   - General/Unknown error */
+#define RSP1_ERROR_M		BITFIELD_MASK(1)  /* Bit 19   - General/Unknown error */
 #define RSP1_ERROR_S		19
-#define RSP1_CC_ERROR_M		BITFIELD_MASK(1)	/* Bit 20   - Internal Card Control error */
+#define RSP1_CC_ERROR_M		BITFIELD_MASK(1)  /* Bit 20   - Internal Card Control error */
 #define RSP1_CC_ERROR_S		20
-#define RSP1_CARD_ECC_FAILED_M	BITFIELD_MASK(1)	/* Bit 21   - Card internal ECC failed
-							 * to correct data
-							 */
+#define RSP1_CARD_ECC_FAILED_M	BITFIELD_MASK(1)  /* Bit 21   - Card internal ECC failed
+						   * to correct data
+						   */
 #define RSP1_CARD_ECC_FAILED_S	21
-#define RSP1_ILLEGAL_CMD_M	BITFIELD_MASK(1)	/* Bit 22   - Cmd not legal for the card state */
+#define RSP1_ILLEGAL_CMD_M	BITFIELD_MASK(1)  /* Bit 22   - Cmd not legal for the card state */
 #define RSP1_ILLEGAL_CMD_S	22
-#define RSP1_COM_CRC_ERROR_M	BITFIELD_MASK(1)	/* Bit 23   - CRC check of previous command failed
-							 */
+#define RSP1_COM_CRC_ERROR_M	BITFIELD_MASK(1)  /* Bit 23   - CRC check of previous command failed
+						   */
 #define RSP1_COM_CRC_ERROR_S	23
-#define RSP1_LOCK_UNLOCK_FAIL_M	BITFIELD_MASK(1)	/* Bit 24   - Card lock-unlock Cmd Seq error */
+#define RSP1_LOCK_UNLOCK_FAIL_M	BITFIELD_MASK(1)  /* Bit 24   - Card lock-unlock Cmd Seq error */
 #define RSP1_LOCK_UNLOCK_FAIL_S	24
-#define RSP1_CARD_LOCKED_M	BITFIELD_MASK(1)	/* Bit 25   - Card locked by the host */
+#define RSP1_CARD_LOCKED_M	BITFIELD_MASK(1)  /* Bit 25   - Card locked by the host */
 #define RSP1_CARD_LOCKED_S	25
-#define RSP1_WP_VIOLATION_M	BITFIELD_MASK(1)	/* Bit 26   - Attempt to program
-							 * write-protected blocks
-							 */
+#define RSP1_WP_VIOLATION_M	BITFIELD_MASK(1)  /* Bit 26   - Attempt to program
+						   * write-protected blocks
+						   */
 #define RSP1_WP_VIOLATION_S	26
-#define RSP1_ERASE_PARAM_M	BITFIELD_MASK(1)	/* Bit 27   - Invalid erase blocks */
+#define RSP1_ERASE_PARAM_M	BITFIELD_MASK(1)  /* Bit 27   - Invalid erase blocks */
 #define RSP1_ERASE_PARAM_S	27
-#define RSP1_ERASE_SEQ_ERR_M	BITFIELD_MASK(1)	/* Bit 28   - Erase Cmd seq error */
+#define RSP1_ERASE_SEQ_ERR_M	BITFIELD_MASK(1)  /* Bit 28   - Erase Cmd seq error */
 #define RSP1_ERASE_SEQ_ERR_S	28
-#define RSP1_BLK_LEN_ERR_M	BITFIELD_MASK(1)	/* Bit 29   - Block length error */
+#define RSP1_BLK_LEN_ERR_M	BITFIELD_MASK(1)  /* Bit 29   - Block length error */
 #define RSP1_BLK_LEN_ERR_S	29
-#define RSP1_ADDR_ERR_M		BITFIELD_MASK(1)	/* Bit 30   - Misaligned address */
+#define RSP1_ADDR_ERR_M		BITFIELD_MASK(1)  /* Bit 30   - Misaligned address */
 #define RSP1_ADDR_ERR_S		30
-#define RSP1_OUT_OF_RANGE_M	BITFIELD_MASK(1)	/* Bit 31   - Cmd arg was out of range */
+#define RSP1_OUT_OF_RANGE_M	BITFIELD_MASK(1)  /* Bit 31   - Cmd arg was out of range */
 #define RSP1_OUT_OF_RANGE_S	31
 
-#define RSP5_DATA_M		BITFIELD_MASK(8)	/* Bits [0:7]   - data */
+
+#define RSP5_DATA_M		BITFIELD_MASK(8)  /* Bits [0:7]   - data */
 #define RSP5_DATA_S		0
-#define RSP5_FLAGS_M		BITFIELD_MASK(8)	/* Bit  [15:8]  - Rsp flags */
+#define RSP5_FLAGS_M		BITFIELD_MASK(8)  /* Bit  [15:8]  - Rsp flags */
 #define RSP5_FLAGS_S		8
-#define RSP5_STUFF_M		BITFIELD_MASK(16)	/* Bits [31:16] - Stuff bits */
+#define RSP5_STUFF_M		BITFIELD_MASK(16) /* Bits [31:16] - Stuff bits */
 #define RSP5_STUFF_S		16
 
 /* ----------------------------------------------
  * SDIO Command Response structures for SPI mode
  * ----------------------------------------------
  */
-#define SPIRSP4_IO_OCR_M	BITFIELD_MASK(16)	/* Bits [15:0]    - Card's OCR Bits [23:8] */
+#define SPIRSP4_IO_OCR_M	BITFIELD_MASK(16) /* Bits [15:0]    - Card's OCR Bits [23:8] */
 #define SPIRSP4_IO_OCR_S	0
-#define SPIRSP4_STUFF_M		BITFIELD_MASK(3)	/* Bits [18:16]   - Stuff bits */
+#define SPIRSP4_STUFF_M		BITFIELD_MASK(3)  /* Bits [18:16]   - Stuff bits */
 #define SPIRSP4_STUFF_S		16
-#define SPIRSP4_MEM_PRESENT_M	BITFIELD_MASK(1)	/* Bit  19        - Memory present */
+#define SPIRSP4_MEM_PRESENT_M	BITFIELD_MASK(1)  /* Bit  19        - Memory present */
 #define SPIRSP4_MEM_PRESENT_S	19
-#define SPIRSP4_NUM_FUNCS_M	BITFIELD_MASK(3)	/* Bits [22:20]   - Number of I/O funcs */
+#define SPIRSP4_NUM_FUNCS_M	BITFIELD_MASK(3)  /* Bits [22:20]   - Number of I/O funcs */
 #define SPIRSP4_NUM_FUNCS_S	20
-#define SPIRSP4_CARD_READY_M	BITFIELD_MASK(1)	/* Bit  23        - SDIO card ready */
+#define SPIRSP4_CARD_READY_M	BITFIELD_MASK(1)  /* Bit  23        - SDIO card ready */
 #define SPIRSP4_CARD_READY_S	23
-#define SPIRSP4_IDLE_STATE_M	BITFIELD_MASK(1)	/* Bit  24        - idle state */
+#define SPIRSP4_IDLE_STATE_M	BITFIELD_MASK(1)  /* Bit  24        - idle state */
 #define SPIRSP4_IDLE_STATE_S	24
-#define SPIRSP4_ILLEGAL_CMD_M	BITFIELD_MASK(1)	/* Bit  26        - Illegal Cmd error */
+#define SPIRSP4_ILLEGAL_CMD_M	BITFIELD_MASK(1)  /* Bit  26        - Illegal Cmd error */
 #define SPIRSP4_ILLEGAL_CMD_S	26
-#define SPIRSP4_COM_CRC_ERROR_M	BITFIELD_MASK(1)	/* Bit  27        - COM CRC error */
+#define SPIRSP4_COM_CRC_ERROR_M	BITFIELD_MASK(1)  /* Bit  27        - COM CRC error */
 #define SPIRSP4_COM_CRC_ERROR_S	27
-#define SPIRSP4_FUNC_NUM_ERROR_M	BITFIELD_MASK(1)	/* Bit  28        - Function number error
-								 */
+#define SPIRSP4_FUNC_NUM_ERROR_M	BITFIELD_MASK(1)  /* Bit  28        - Function number error
+							   */
 #define SPIRSP4_FUNC_NUM_ERROR_S	28
-#define SPIRSP4_PARAM_ERROR_M	BITFIELD_MASK(1)	/* Bit  30        - Parameter Error Bit */
+#define SPIRSP4_PARAM_ERROR_M	BITFIELD_MASK(1)  /* Bit  30        - Parameter Error Bit */
 #define SPIRSP4_PARAM_ERROR_S	30
-#define SPIRSP4_START_BIT_M	BITFIELD_MASK(1)	/* Bit  31        - Start Bit */
+#define SPIRSP4_START_BIT_M	BITFIELD_MASK(1)  /* Bit  31        - Start Bit */
 #define SPIRSP4_START_BIT_S	31
 
-#define SPIRSP5_DATA_M			BITFIELD_MASK(8)	/* Bits [23:16]   - R/W Data */
+#define SPIRSP5_DATA_M			BITFIELD_MASK(8)  /* Bits [23:16]   - R/W Data */
 #define SPIRSP5_DATA_S			16
-#define SPIRSP5_IDLE_STATE_M		BITFIELD_MASK(1)	/* Bit  24        - Idle state */
+#define SPIRSP5_IDLE_STATE_M		BITFIELD_MASK(1)  /* Bit  24        - Idle state */
 #define SPIRSP5_IDLE_STATE_S		24
-#define SPIRSP5_ILLEGAL_CMD_M		BITFIELD_MASK(1)	/* Bit  26        - Illegal Cmd error */
+#define SPIRSP5_ILLEGAL_CMD_M		BITFIELD_MASK(1)  /* Bit  26        - Illegal Cmd error */
 #define SPIRSP5_ILLEGAL_CMD_S		26
-#define SPIRSP5_COM_CRC_ERROR_M		BITFIELD_MASK(1)	/* Bit  27        - COM CRC error */
+#define SPIRSP5_COM_CRC_ERROR_M		BITFIELD_MASK(1)  /* Bit  27        - COM CRC error */
 #define SPIRSP5_COM_CRC_ERROR_S		27
-#define SPIRSP5_FUNC_NUM_ERROR_M	BITFIELD_MASK(1)	/* Bit  28        - Function number error
-								 */
+#define SPIRSP5_FUNC_NUM_ERROR_M	BITFIELD_MASK(1)  /* Bit  28        - Function number error
+							   */
 #define SPIRSP5_FUNC_NUM_ERROR_S	28
-#define SPIRSP5_PARAM_ERROR_M		BITFIELD_MASK(1)	/* Bit  30        - Parameter Error Bit */
+#define SPIRSP5_PARAM_ERROR_M		BITFIELD_MASK(1)  /* Bit  30        - Parameter Error Bit */
 #define SPIRSP5_PARAM_ERROR_S		30
-#define SPIRSP5_START_BIT_M		BITFIELD_MASK(1)	/* Bit  31        - Start Bit */
+#define SPIRSP5_START_BIT_M		BITFIELD_MASK(1)  /* Bit  31        - Start Bit */
 #define SPIRSP5_START_BIT_S		31
 
 /* RSP6 card status format; Pg 68 Physical Layer spec v 1.10 */
-#define RSP6STAT_AKE_SEQ_ERROR_M	BITFIELD_MASK(1)	/* Bit 3      - Authentication seq error
-								 */
+#define RSP6STAT_AKE_SEQ_ERROR_M	BITFIELD_MASK(1)  /* Bit 3	- Authentication seq error
+							   */
 #define RSP6STAT_AKE_SEQ_ERROR_S	3
-#define RSP6STAT_APP_CMD_M		BITFIELD_MASK(1)	/* Bit 5      - Card expects ACMD */
+#define RSP6STAT_APP_CMD_M		BITFIELD_MASK(1)  /* Bit 5	- Card expects ACMD */
 #define RSP6STAT_APP_CMD_S		5
-#define RSP6STAT_READY_FOR_DATA_M	BITFIELD_MASK(1)	/* Bit 8      - Ready for data
-								 * (buff empty)
-								 */
+#define RSP6STAT_READY_FOR_DATA_M	BITFIELD_MASK(1)  /* Bit 8	- Ready for data
+							   * (buff empty)
+							   */
 #define RSP6STAT_READY_FOR_DATA_S	8
-#define RSP6STAT_CURR_STATE_M		BITFIELD_MASK(4)	/* Bits [12:9] - Card state at
-								 * Cmd reception
-								 */
+#define RSP6STAT_CURR_STATE_M		BITFIELD_MASK(4)  /* Bits [12:9] - Card state at
+							   * Cmd reception
+							   */
 #define RSP6STAT_CURR_STATE_S		9
-#define RSP6STAT_ERROR_M		BITFIELD_MASK(1)	/* Bit 13  - General/Unknown error Bit 19
-								 */
+#define RSP6STAT_ERROR_M		BITFIELD_MASK(1)  /* Bit 13  - General/Unknown error Bit 19
+							   */
 #define RSP6STAT_ERROR_S		13
-#define RSP6STAT_ILLEGAL_CMD_M		BITFIELD_MASK(1)	/* Bit 14  - Illegal cmd for
-								 * card state Bit 22
-								 */
+#define RSP6STAT_ILLEGAL_CMD_M		BITFIELD_MASK(1)  /* Bit 14  - Illegal cmd for
+							   * card state Bit 22
+							   */
 #define RSP6STAT_ILLEGAL_CMD_S		14
-#define RSP6STAT_COM_CRC_ERROR_M	BITFIELD_MASK(1)	/* Bit 15  - CRC previous command
-								 * failed Bit 23
-								 */
+#define RSP6STAT_COM_CRC_ERROR_M	BITFIELD_MASK(1)  /* Bit 15  - CRC previous command
+							   * failed Bit 23
+							   */
 #define RSP6STAT_COM_CRC_ERROR_S	15
 
 #define SDIOH_XFER_TYPE_READ    SD_IO_OP_READ

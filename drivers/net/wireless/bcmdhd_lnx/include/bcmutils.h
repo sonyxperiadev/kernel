@@ -115,7 +115,7 @@ extern "C" {
 
 #define PKTQ_PREC_ITER(pq, prec)        for (prec = (pq)->num_prec - 1; prec >= 0; prec--)
 
-	typedef bool (*ifpkt_cb_t) (void *, int);
+	typedef bool(*ifpkt_cb_t) (void *, int);
 
 #ifdef BCMPKTPOOL
 #define POOL_ENAB(pool)		((pool) && (pool)->inited)
@@ -200,10 +200,10 @@ extern "C" {
 	extern pktpool_t *pktpool_shared;
 #endif
 
-	extern int pktpool_init(osl_t *osh, pktpool_t * pktp, int *pktplen,
+	extern int pktpool_init(osl_t * osh, pktpool_t * pktp, int *pktplen,
 				int plen, bool istx);
-	extern int pktpool_deinit(osl_t *osh, pktpool_t * pktp);
-	extern int pktpool_fill(osl_t *osh, pktpool_t * pktp, bool minimal);
+	extern int pktpool_deinit(osl_t * osh, pktpool_t * pktp);
+	extern int pktpool_fill(osl_t * osh, pktpool_t * pktp, bool minimal);
 	extern void *pktpool_get(pktpool_t * pktp);
 	extern void pktpool_free(pktpool_t * pktp, void *p);
 	extern int pktpool_add(pktpool_t * pktp, void *p);
@@ -213,7 +213,7 @@ extern "C" {
 	extern int pktpool_empty_register(pktpool_t * pktp, pktpool_cb_t cb,
 					  void *arg);
 	extern int pktpool_setmaxlen(pktpool_t * pktp, uint16 maxlen);
-	extern int pktpool_setmaxlen_strict(osl_t *osh, pktpool_t * pktp,
+	extern int pktpool_setmaxlen_strict(osl_t * osh, pktpool_t * pktp,
 					    uint16 maxlen);
 	extern void pktpool_emptycb_disable(pktpool_t * pktp, bool disable);
 	extern bool pktpool_emptycb_disabled(pktpool_t * pktp);
@@ -252,7 +252,7 @@ extern "C" {
 	extern void *pktq_pdeq(struct pktq *pq, int prec);
 	extern void *pktq_pdeq_tail(struct pktq *pq, int prec);
 
-	extern void pktq_pflush(osl_t *osh, struct pktq *pq, int prec,
+	extern void pktq_pflush(osl_t * osh, struct pktq *pq, int prec,
 				bool dir, ifpkt_cb_t fn, int arg);
 
 	extern bool pktq_pdel(struct pktq *pq, void *p, int prec);
@@ -278,16 +278,16 @@ extern "C" {
 	extern void *pktq_deq_tail(struct pktq *pq, int *prec_out);
 	extern void *pktq_peek(struct pktq *pq, int *prec_out);
 	extern void *pktq_peek_tail(struct pktq *pq, int *prec_out);
-	extern void pktq_flush(osl_t *osh, struct pktq *pq, bool dir,
+	extern void pktq_flush(osl_t * osh, struct pktq *pq, bool dir,
 			       ifpkt_cb_t fn, int arg);
 
-	extern uint pktcopy(osl_t *osh, void *p, uint offset, int len,
-			    uchar *buf);
-	extern uint pktfrombuf(osl_t *osh, void *p, uint offset, int len,
-			       uchar *buf);
-	extern uint pkttotlen(osl_t *osh, void *p);
-	extern void *pktlast(osl_t *osh, void *p);
-	extern uint pktsegcnt(osl_t *osh, void *p);
+	extern uint pktcopy(osl_t * osh, void *p, uint offset, int len,
+			    uchar * buf);
+	extern uint pktfrombuf(osl_t * osh, void *p, uint offset, int len,
+			       uchar * buf);
+	extern uint pkttotlen(osl_t * osh, void *p);
+	extern void *pktlast(osl_t * osh, void *p);
+	extern uint pktsegcnt(osl_t * osh, void *p);
 
 	extern uint pktsetprio(void *pkt, bool update_vtag);
 #define	PKTPRIO_VDSCP	0x100
@@ -350,9 +350,9 @@ extern "C" {
 #define IOV_ISSET(actionid)	((actionid & IOV_SET) == IOV_SET)
 #define IOV_ID(actionid)	(actionid >> 1)
 
-	extern const bcm_iovar_t *bcm_iovar_lookup(const bcm_iovar_t *table,
+	extern const bcm_iovar_t *bcm_iovar_lookup(const bcm_iovar_t * table,
 						   const char *name);
-	extern int bcm_iovar_lencheck(const bcm_iovar_t *table, void *arg,
+	extern int bcm_iovar_lencheck(const bcm_iovar_t * table, void *arg,
 				      int len, bool set);
 #if defined(WLTINYDUMP) || defined(WLMSG_INFORM) || defined(WLMSG_ASSOC) || \
 	defined(WLMSG_PRPKT) || defined(WLMSG_WSEC)
@@ -579,7 +579,7 @@ extern "C" {
 #define ETHER_ADDR_STR_LEN	18
 
 	static INLINE void
-	 xor_128bit_block(const uint8 *src1, const uint8 *src2, uint8 *dst) {
+	 xor_128bit_block(const uint8 * src1, const uint8 * src2, uint8 * dst) {
 		if (
 #ifdef __i386__
 			   1 ||
@@ -587,16 +587,16 @@ extern "C" {
 			   (((uintptr) src1 | (uintptr) src2 | (uintptr) dst) &
 			    3) == 0) {
 
-			((uint32 *)dst)[0] =
+			((uint32 *) dst)[0] =
 			    ((const uint32 *)src1)[0] ^ ((const uint32 *)
 							 src2)[0];
-			((uint32 *)dst)[1] =
+			((uint32 *) dst)[1] =
 			    ((const uint32 *)src1)[1] ^ ((const uint32 *)
 							 src2)[1];
-			((uint32 *)dst)[2] =
+			((uint32 *) dst)[2] =
 			    ((const uint32 *)src1)[2] ^ ((const uint32 *)
 							 src2)[2];
-			((uint32 *)dst)[3] =
+			((uint32 *) dst)[3] =
 			    ((const uint32 *)src1)[3] ^ ((const uint32 *)
 							 src2)[3];
 		} else {
@@ -607,13 +607,13 @@ extern "C" {
 		}
 	}
 
-	extern uint8 hndcrc8(uint8 *p, uint nbytes, uint8 crc);
-	extern uint16 hndcrc16(uint8 *p, uint nbytes, uint16 crc);
-	extern uint32 hndcrc32(uint8 *p, uint nbytes, uint32 crc);
+	extern uint8 hndcrc8(uint8 * p, uint nbytes, uint8 crc);
+	extern uint16 hndcrc16(uint8 * p, uint nbytes, uint16 crc);
+	extern uint32 hndcrc32(uint8 * p, uint nbytes, uint32 crc);
 
 #if defined(DHD_DEBUG) || defined(WLMSG_PRHDRS) || defined(WLMSG_PRPKT) || \
 	defined(WLMSG_ASSOC)
-	extern int bcm_format_flags(const bcm_bit_desc_t *bd, uint32 flags,
+	extern int bcm_format_flags(const bcm_bit_desc_t * bd, uint32 flags,
 				    char *buf, int len);
 #endif
 
@@ -626,7 +626,7 @@ extern "C" {
 	extern char *bcm_chipname(uint chipid, char *buf, uint len);
 	extern char *bcm_brev_str(uint32 brev, char *buf);
 	extern void printbig(char *buf);
-	extern void prhex(const char *msg, uchar *buf, uint len);
+	extern void prhex(const char *msg, uchar * buf, uint len);
 
 	extern bcm_tlv_t *bcm_next_tlv(bcm_tlv_t * elt, int *buflen);
 	extern bcm_tlv_t *bcm_parse_tlvs(void *buf, int buflen, uint key);
@@ -652,19 +652,19 @@ extern "C" {
 
 	extern void bcm_binit(struct bcmstrbuf *b, char *buf, uint size);
 	extern int bcm_bprintf(struct bcmstrbuf *b, const char *fmt, ...);
-	extern void bcm_inc_bytes(uchar *num, int num_bytes, uint8 amount);
-	extern int bcm_cmp_bytes(uchar *arg1, uchar *arg2, uint8 nbytes);
-	extern void bcm_print_bytes(char *name, const uchar *cdata, int len);
+	extern void bcm_inc_bytes(uchar * num, int num_bytes, uint8 amount);
+	extern int bcm_cmp_bytes(uchar * arg1, uchar * arg2, uint8 nbytes);
+	extern void bcm_print_bytes(char *name, const uchar * cdata, int len);
 
-	typedef uint32 (*bcmutl_rdreg_rtn) (void *arg0, uint arg1,
-					    uint32 offset);
+	typedef uint32(*bcmutl_rdreg_rtn) (void *arg0, uint arg1,
+					   uint32 offset);
 	extern uint bcmdumpfields(bcmutl_rdreg_rtn func_ptr, void *arg0,
 				  uint arg1, struct fielddesc *str, char *buf,
 				  uint32 bufsize);
 
 	extern uint bcm_mkiovar(char *name, char *data, uint datalen, char *buf,
 				uint len);
-	extern uint bcm_bitcount(uint8 *bitmap, uint bytelength);
+	extern uint bcm_bitcount(uint8 * bitmap, uint bytelength);
 
 #define SSID_FMT_BUF_LEN	((4 * DOT11_MAX_SSID_LEN) + 1)
 

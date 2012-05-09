@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdstd.h 281604 2011-09-02 18:58:49Z $
+ * $Id: bcmsdstd.h 324819 2012-03-30 12:15:19Z $
  */
 #ifndef	_BCM_SD_STD_H
 #define	_BCM_SD_STD_H
@@ -40,8 +40,8 @@
 #define sd_ack_intr(sd)
 #define sd_wakeup(sd);
 /* Allocate/init/free per-OS private data */
-extern int sdstd_osinit(sdioh_info_t *sd);
-extern void sdstd_osfree(sdioh_info_t *sd);
+extern int sdstd_osinit(sdioh_info_t * sd);
+extern void sdstd_osfree(sdioh_info_t * sd);
 
 #define sd_log(x)
 
@@ -178,6 +178,8 @@ struct sdioh_info {
 
 #define DATA_TRANSFER_IDLE 		0
 #define DATA_TRANSFER_ONGOING	1
+#define CHECK_TUNING_PRE_DATA   1
+#define CHECK_TUNING_POST_DATA  2
 
 /************************************************************
  * Internal interfaces: per-port references into bcmsdstd.c
@@ -187,55 +189,57 @@ struct sdioh_info {
 extern uint sd_msglevel;
 
 /* OS-independent interrupt handler */
-extern bool check_client_intr(sdioh_info_t *sd);
+extern bool check_client_intr(sdioh_info_t * sd);
 
 /* Core interrupt enable/disable of device interrupts */
-extern void sdstd_devintr_on(sdioh_info_t *sd);
-extern void sdstd_devintr_off(sdioh_info_t *sd);
+extern void sdstd_devintr_on(sdioh_info_t * sd);
+extern void sdstd_devintr_off(sdioh_info_t * sd);
 
 /* Enable/disable interrupts for local controller events */
-extern void sdstd_intrs_on(sdioh_info_t *sd, uint16 norm, uint16 err);
-extern void sdstd_intrs_off(sdioh_info_t *sd, uint16 norm, uint16 err);
+extern void sdstd_intrs_on(sdioh_info_t * sd, uint16 norm, uint16 err);
+extern void sdstd_intrs_off(sdioh_info_t * sd, uint16 norm, uint16 err);
 
 /* Wait for specified interrupt and error bits to be set */
-extern void sdstd_spinbits(sdioh_info_t *sd, uint16 norm, uint16 err);
+extern void sdstd_spinbits(sdioh_info_t * sd, uint16 norm, uint16 err);
 
 /**************************************************************
  * Internal interfaces: bcmsdstd.c references to per-port code
  */
 
 /* Register mapping routines */
-extern uint32 *sdstd_reg_map(osl_t *osh, int32 addr, int size);
-extern void sdstd_reg_unmap(osl_t *osh, int32 addr, int size);
+extern uint32 *sdstd_reg_map(osl_t * osh, int32 addr, int size);
+extern void sdstd_reg_unmap(osl_t * osh, int32 addr, int size);
 
 /* Interrupt (de)registration routines */
-extern int sdstd_register_irq(sdioh_info_t *sd, uint irq);
-extern void sdstd_free_irq(uint irq, sdioh_info_t *sd);
+extern int sdstd_register_irq(sdioh_info_t * sd, uint irq);
+extern void sdstd_free_irq(uint irq, sdioh_info_t * sd);
 
 /* OS-specific interrupt wrappers (atomic interrupt enable/disable) */
-extern void sdstd_lock(sdioh_info_t *sd);
-extern void sdstd_unlock(sdioh_info_t *sd);
-extern void sdstd_waitlockfree(sdioh_info_t *sd);
+extern void sdstd_lock(sdioh_info_t * sd);
+extern void sdstd_unlock(sdioh_info_t * sd);
+extern void sdstd_waitlockfree(sdioh_info_t * sd);
 
 /* OS-specific wait-for-interrupt-or-status */
-extern int sdstd_waitbits(sdioh_info_t *sd, uint16 norm, uint16 err,
-			  bool yield, uint16 *bits);
+extern int sdstd_waitbits(sdioh_info_t * sd, uint16 norm, uint16 err,
+			  bool yield, uint16 * bits);
 
 /* used by bcmsdstd_linux [implemented in sdstd] */
-extern void sdstd_3_enable_retuning_int(sdioh_info_t *sd);
-extern void sdstd_3_disable_retuning_int(sdioh_info_t *sd);
-extern bool sdstd_3_is_retuning_int_set(sdioh_info_t *sd);
-extern bool sdstd_3_check_and_set_retuning(sdioh_info_t *sd);
-extern int sdstd_3_get_tune_state(sdioh_info_t *sd);
-extern int sdstd_3_get_data_state(sdioh_info_t *sd);
-extern void sdstd_3_set_tune_state(sdioh_info_t *sd, int state);
-extern uint8 sdstd_3_get_tuning_exp(sdioh_info_t *sd);
-extern uint32 sdstd_3_get_uhsi_clkmode(sdioh_info_t *sd);
-extern int sdstd_3_clk_tuning(sdioh_info_t *sd, uint32 sd3ClkMode);
+extern void sdstd_3_enable_retuning_int(sdioh_info_t * sd);
+extern void sdstd_3_disable_retuning_int(sdioh_info_t * sd);
+extern bool sdstd_3_is_retuning_int_set(sdioh_info_t * sd);
+extern void sdstd_3_check_and_do_tuning(sdioh_info_t * sd, int tuning_param);
+extern bool sdstd_3_check_and_set_retuning(sdioh_info_t * sd);
+extern int sdstd_3_get_tune_state(sdioh_info_t * sd);
+extern int sdstd_3_get_data_state(sdioh_info_t * sd);
+extern void sdstd_3_set_tune_state(sdioh_info_t * sd, int state);
+extern void sdstd_3_set_data_state(sdioh_info_t * sd, int state);
+extern uint8 sdstd_3_get_tuning_exp(sdioh_info_t * sd);
+extern uint32 sdstd_3_get_uhsi_clkmode(sdioh_info_t * sd);
+extern int sdstd_3_clk_tuning(sdioh_info_t * sd, uint32 sd3ClkMode);
 
 /* used by sdstd [implemented in bcmsdstd_linux/ndis] */
-extern void sdstd_3_start_tuning(sdioh_info_t *sd);
-extern void sdstd_3_osinit_tuning(sdioh_info_t *sd);
-extern void sdstd_3_osclean_tuning(sdioh_info_t *sd);
+extern void sdstd_3_start_tuning(sdioh_info_t * sd);
+extern void sdstd_3_osinit_tuning(sdioh_info_t * sd);
+extern void sdstd_3_osclean_tuning(sdioh_info_t * sd);
 
 #endif /* _BCM_SD_STD_H */

@@ -144,7 +144,7 @@ typedef void *(*exec_cb_t) (struct exec_parms * args);
 /* Client callbacks registered during dbus_attach() */
 typedef struct dbus_callbacks {
 	void (*send_complete) (void *cbarg, void *info, int status);
-	void (*recv_buf) (void *cbarg, uint8 *buf, int len);
+	void (*recv_buf) (void *cbarg, uint8 * buf, int len);
 	void (*recv_pkt) (void *cbarg, void *pkt);
 	void (*txflowcontrol) (void *cbarg, bool onoff);
 	void (*errhandler) (void *cbarg, int err);
@@ -171,8 +171,8 @@ typedef struct {
 	int (*send_irb) (void *bus, struct dbus_irb_tx * txirb);
 	int (*recv_irb) (void *bus, struct dbus_irb_rx * rxirb);
 	int (*cancel_irb) (void *bus, struct dbus_irb_tx * txirb);
-	int (*send_ctl) (void *bus, uint8 *buf, int len);
-	int (*recv_ctl) (void *bus, uint8 *buf, int len);
+	int (*send_ctl) (void *bus, uint8 * buf, int len);
+	int (*recv_ctl) (void *bus, uint8 * buf, int len);
 	int (*get_stats) (void *bus, dbus_stats_t * stats);
 	int (*get_attrib) (void *bus, dbus_attrib_t * attrib);
 
@@ -193,18 +193,18 @@ typedef struct {
 	int (*set_config) (void *bus, dbus_config_t * config);
 	int (*get_config) (void *bus, dbus_config_t * config);
 
-	bool (*device_exists) (void *bus);
-	bool (*dlneeded) (void *bus);
-	int (*dlstart) (void *bus, uint8 *fw, int len);
+	 bool(*device_exists) (void *bus);
+	 bool(*dlneeded) (void *bus);
+	int (*dlstart) (void *bus, uint8 * fw, int len);
 	int (*dlrun) (void *bus);
-	bool (*recv_needed) (void *bus);
+	 bool(*recv_needed) (void *bus);
 
 	void *(*exec_rxlock) (void *bus, exec_cb_t func,
 			      struct exec_parms * args);
 	void *(*exec_txlock) (void *bus, exec_cb_t func,
 			      struct exec_parms * args);
 	void (*set_revinfo) (void *bus, uint32 chipid, uint32 chiprev);
-	void (*get_revinfo) (void *bus, uint32 *chipid, uint32 *chiprev);
+	void (*get_revinfo) (void *bus, uint32 * chipid, uint32 * chiprev);
 
 	int (*tx_timer_init) (void *bus);
 	int (*tx_timer_start) (void *bus, uint timeout);
@@ -260,11 +260,11 @@ extern int dbus_stop(const dbus_pub_t * pub);
 extern int dbus_shutdown(const dbus_pub_t * pub);
 extern void dbus_flowctrl_rx(const dbus_pub_t * pub, bool on);
 
-extern int dbus_send_buf(const dbus_pub_t * pub, uint8 *buf, int len,
+extern int dbus_send_buf(const dbus_pub_t * pub, uint8 * buf, int len,
 			 void *info);
 extern int dbus_send_pkt(const dbus_pub_t * pub, void *pkt, void *info);
-extern int dbus_send_ctl(const dbus_pub_t * pub, uint8 *buf, int len);
-extern int dbus_recv_ctl(const dbus_pub_t * pub, uint8 *buf, int len);
+extern int dbus_send_ctl(const dbus_pub_t * pub, uint8 * buf, int len);
+extern int dbus_recv_ctl(const dbus_pub_t * pub, uint8 * buf, int len);
 extern int dbus_recv_bulk(const dbus_pub_t * pub, uint32 ep_idx);
 extern int dbus_poll_intr(const dbus_pub_t * pub);
 
@@ -283,8 +283,8 @@ extern int dbus_pnp_resume(const dbus_pub_t * pub, int *fw_reload);
 extern int dbus_pnp_disconnect(const dbus_pub_t * pub);
 extern void dbus_set_revinfo(const dbus_pub_t * pub, uint32 chipid,
 			     uint32 chiprev);
-extern void dbus_get_revinfo(const dbus_pub_t * pub, uint32 *chipid,
-			     uint32 *chiprev);
+extern void dbus_get_revinfo(const dbus_pub_t * pub, uint32 * chipid,
+			     uint32 * chiprev);
 
 extern int dbus_iovar_op(const dbus_pub_t * pub, const char *name,
 			 void *params, int plen, void *arg, int len, bool set);
@@ -336,8 +336,8 @@ typedef struct dbus_intf_callbacks {
 	void (*errhandler) (void *cbarg, int err);
 	void (*ctl_complete) (void *cbarg, int type, int status);
 	void (*state_change) (void *cbarg, int state);
-	bool (*isr) (void *cbarg, bool *wantdpc);
-	bool (*dpc) (void *cbarg, bool bounded);
+	 bool(*isr) (void *cbarg, bool * wantdpc);
+	 bool(*dpc) (void *cbarg, bool bounded);
 	void (*watchdog) (void *cbarg);
 	void *(*pktget) (void *cbarg, uint len, bool send);
 	void (*pktfree) (void *cbarg, void *p, bool send);
@@ -378,6 +378,6 @@ extern int dbus_bus_osl_hw_register(int vid, int pid, probe_cb_t prcb,
 extern int dbus_bus_osl_hw_deregister(void);
 
 extern uint usbdev_bulkin_eps(void);
-extern void *dbus_get_fw(int devid, uint8 **fw, int *fwlen);
+extern void *dbus_get_fw(int devid, uint8 ** fw, int *fwlen);
 extern void dbus_release_fw(void *firmware);
 #endif /* __DBUS_H__ */

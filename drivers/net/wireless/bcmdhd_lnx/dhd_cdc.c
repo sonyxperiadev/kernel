@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_cdc.c 314732 2012-02-14 03:22:42Z $
+ * $Id: dhd_cdc.c 324280 2012-03-28 19:01:17Z $
  *
  * BDC is like CDC, except it includes a header for data packets to convey
  * packet priority over the bus, and flags (e.g. to indicate checksum status
@@ -285,12 +285,23 @@ dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void *buf, int len)
 	dhd_prot_t *prot = dhd->prot;
 	int ret = -1;
 	uint8 action;
-
+#if defined(BCMNDIS6)
+	bool acquired = FALSE;
+#endif /* BCMNDIS6 */
 	if ((dhd->busstate == DHD_BUS_DOWN) || dhd->hang_was_sent) {
 		DHD_ERROR(("%s : bus is down. we have nothing to do\n",
 			   __FUNCTION__));
 		goto done;
 	}
+#if defined(BCMNDIS6)
+	if (dhd_os_proto_block(dhd)) {
+		acquired = TRUE;
+	} else {
+		/* attempt to acquire protocol mutex timed out. */
+		ret = -1;
+		return ret;
+	}
+#endif /* BCMNDIS6 */
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
@@ -340,6 +351,10 @@ dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void *buf, int len)
 	prot->pending = FALSE;
 
 done:
+#if defined(BCMNDIS6)
+	if (acquired)
+		dhd_os_proto_unblock(dhd);
+#endif /* BCMNDIS6 */
 	return ret;
 }
 

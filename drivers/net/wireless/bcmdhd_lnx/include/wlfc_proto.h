@@ -25,48 +25,48 @@
 #define __wlfc_proto_definitions_h__
 
 	/* Use TLV to convey WLFC information.
-	   ---------------------------------------------------------------------------
-	   | Type |  Len | value                    | Description
-	   ---------------------------------------------------------------------------
-	   |  1   |   1  | (handle)                 | MAC OPEN
-	   ---------------------------------------------------------------------------
-	   |  2   |   1  | (handle)                 | MAC CLOSE
-	   ---------------------------------------------------------------------------
-	   |  3   |   2  | (count, handle, prec_bmp)| Set the credit depth for a MAC dstn
-	   ---------------------------------------------------------------------------
-	   |  4   |   4  | see pkttag comments      | TXSTATUS
-	   ---------------------------------------------------------------------------
-	   |  5   |   4  | see pkttag comments      | PKKTTAG [host->firmware]
-	   ---------------------------------------------------------------------------
-	   |  6   |   8  | (handle, ifid, MAC)      | MAC ADD
-	   ---------------------------------------------------------------------------
-	   |  7   |   8  | (handle, ifid, MAC)      | MAC DEL
-	   ---------------------------------------------------------------------------
-	   |  8   |   1  | (rssi)                   | RSSI - RSSI value for the packet.
-	   ---------------------------------------------------------------------------
-	   |  9   |   1  | (interface ID)           | Interface OPEN
-	   ---------------------------------------------------------------------------
-	   |  10  |   1  | (interface ID)           | Interface CLOSE
-	   ---------------------------------------------------------------------------
-	   |  11  |   8  | fifo credit returns map  | FIFO credits back to the host
-	   |      |      |                          |
-	   |      |      |                          | --------------------------------------
-	   |      |      |                          | | ac0 | ac1 | ac2 | ac3 | bcmc | atim |
-	   |      |      |                          | --------------------------------------
-	   |      |      |                          |
-	   ---------------------------------------------------------------------------
-	   |  12  |   2  | MAC handle,              | Host provides a bitmap of pending
-	   |      |      | AC[0-3] traffic bitmap   | unicast traffic for MAC-handle dstn.
-	   |      |      |                          | [host->firmware]
-	   ---------------------------------------------------------------------------
-	   |  13  |   3  | (count, handle, prec_bmp)| One time request for packet to a specific
-	   |      |      |                          | MAC destination.
-	   ---------------------------------------------------------------------------
-	   | 255  |  N/A |  N/A                     | FILLER - This is a special type
-	   |      |      |                          | that has no length or value.
-	   |      |      |                          | Typically used for padding.
-	   ---------------------------------------------------------------------------
-	 */
+	 ---------------------------------------------------------------------------
+	| Type |  Len | value                    | Description
+	 ---------------------------------------------------------------------------
+	|  1   |   1  | (handle)                 | MAC OPEN
+	 ---------------------------------------------------------------------------
+	|  2   |   1  | (handle)                 | MAC CLOSE
+	 ---------------------------------------------------------------------------
+	|  3   |   2  | (count, handle, prec_bmp)| Set the credit depth for a MAC dstn
+	 ---------------------------------------------------------------------------
+	|  4   |   4  | see pkttag comments      | TXSTATUS
+	 ---------------------------------------------------------------------------
+	|  5   |   4  | see pkttag comments      | PKKTTAG [host->firmware]
+	 ---------------------------------------------------------------------------
+	|  6   |   8  | (handle, ifid, MAC)      | MAC ADD
+	 ---------------------------------------------------------------------------
+	|  7   |   8  | (handle, ifid, MAC)      | MAC DEL
+	 ---------------------------------------------------------------------------
+	|  8   |   1  | (rssi)                   | RSSI - RSSI value for the packet.
+	 ---------------------------------------------------------------------------
+	|  9   |   1  | (interface ID)           | Interface OPEN
+	 ---------------------------------------------------------------------------
+	|  10  |   1  | (interface ID)           | Interface CLOSE
+	 ---------------------------------------------------------------------------
+	|  11  |   8  | fifo credit returns map  | FIFO credits back to the host
+	|      |      |                          |
+	|      |      |                          | --------------------------------------
+	|      |      |                          | | ac0 | ac1 | ac2 | ac3 | bcmc | atim |
+	|      |      |                          | --------------------------------------
+	|      |      |                          |
+	 ---------------------------------------------------------------------------
+	|  12  |   2  | MAC handle,              | Host provides a bitmap of pending
+	|      |      | AC[0-3] traffic bitmap   | unicast traffic for MAC-handle dstn.
+	|      |      |                          | [host->firmware]
+	 ---------------------------------------------------------------------------
+	|  13  |   3  | (count, handle, prec_bmp)| One time request for packet to a specific
+	|      |      |                          | MAC destination.
+	 ---------------------------------------------------------------------------
+	| 255  |  N/A |  N/A                     | FILLER - This is a special type
+	|      |      |                          | that has no length or value.
+	|      |      |                          | Typically used for padding.
+	 ---------------------------------------------------------------------------
+	*/
 
 #define WLFC_CTL_TYPE_MAC_OPEN				1
 #define WLFC_CTL_TYPE_MAC_CLOSE				2
@@ -88,7 +88,7 @@
 
 #define WLFC_CTL_TYPE_FILLER				255
 
-#define WLFC_CTL_VALUE_LEN_MACDESC			8	/* handle, interface, MAC */
+#define WLFC_CTL_VALUE_LEN_MACDESC			8 /* handle, interface, MAC */
 
 #define WLFC_CTL_VALUE_LEN_MAC		1	/* MAC-handle */
 #define WLFC_CTL_VALUE_LEN_RSSI		1
@@ -102,8 +102,10 @@
 /* enough space to host all 4 ACs, bc/mc and atim fifo credit */
 #define WLFC_CTL_VALUE_LEN_FIFO_CREDITBACK	6
 
-#define WLFC_CTL_VALUE_LEN_REQUEST_CREDIT 3	/* credit, MAC-handle, prec_bitmap */
-#define WLFC_CTL_VALUE_LEN_REQUEST_PACKET 3	/* credit, MAC-handle, prec_bitmap */
+#define WLFC_CTL_VALUE_LEN_REQUEST_CREDIT 3 /* credit, MAC-handle, prec_bitmap */
+#define WLFC_CTL_VALUE_LEN_REQUEST_PACKET 3 /* credit, MAC-handle, prec_bitmap */
+
+
 
 #define WLFC_PKTID_GEN_MASK		0x80000000
 #define WLFC_PKTID_GEN_SHIFT	31
@@ -115,7 +117,7 @@
 #define WLFC_PKTFLAG_PKTFROMHOST	0x01
 #define WLFC_PKTFLAG_PKT_REQUESTED	0x02
 
-#define WL_TXSTATUS_FLAGS_MASK			0xf	/* allow 4 bits only */
+#define WL_TXSTATUS_FLAGS_MASK			0xf /* allow 4 bits only */
 #define WL_TXSTATUS_FLAGS_SHIFT			27
 
 #define WL_TXSTATUS_SET_FLAGS(x, flags)	((x)  = \
@@ -124,7 +126,7 @@
 #define WL_TXSTATUS_GET_FLAGS(x)		(((x) >> WL_TXSTATUS_FLAGS_SHIFT) & \
 	WL_TXSTATUS_FLAGS_MASK)
 
-#define WL_TXSTATUS_FIFO_MASK			0x7	/* allow 3 bits for FIFO ID */
+#define WL_TXSTATUS_FIFO_MASK			0x7 /* allow 3 bits for FIFO ID */
 #define WL_TXSTATUS_FIFO_SHIFT			24
 
 #define WL_TXSTATUS_SET_FIFO(x, flags)	((x)  = \
@@ -132,7 +134,7 @@
 	(((flags) & WL_TXSTATUS_FIFO_MASK) << WL_TXSTATUS_FIFO_SHIFT))
 #define WL_TXSTATUS_GET_FIFO(x)		(((x) >> WL_TXSTATUS_FIFO_SHIFT) & WL_TXSTATUS_FIFO_MASK)
 
-#define WL_TXSTATUS_PKTID_MASK			0xffffff	/* allow 24 bits */
+#define WL_TXSTATUS_PKTID_MASK			0xffffff /* allow 24 bits */
 #define WL_TXSTATUS_SET_PKTID(x, num)	((x) = \
 	((x) & ~WL_TXSTATUS_PKTID_MASK) | (num))
 #define WL_TXSTATUS_GET_PKTID(x)		((x) & WL_TXSTATUS_PKTID_MASK)

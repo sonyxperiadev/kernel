@@ -72,6 +72,7 @@
 #define	SD_GPIO_OE			0x104
 #define	SD_GPIO_Enable			0x108
 
+
 /* SD specific registers in PCI config space */
 #define SD_SlotInfo	0x40
 
@@ -132,6 +133,7 @@
 #define CAP_64BIT_HOST_S	28
 
 #define SDIO_OCR_READ_FAIL	(2)
+
 
 #define CAP_ASYNCINT_SUP_M	BITFIELD_MASK(1)
 #define CAP_ASYNCINT_SUP_S	29
@@ -227,83 +229,83 @@
 #define CMD_TYPE_RESUME		2
 #define CMD_TYPE_ABORT		3
 
-#define CMD_RESP_TYPE_M		BITFIELD_MASK(2)	/* Bits [0-1]   - Response type */
+#define CMD_RESP_TYPE_M		BITFIELD_MASK(2)	/* Bits [0-1] 	- Response type */
 #define CMD_RESP_TYPE_S		0
-#define CMD_CRC_EN_M		BITFIELD_MASK(1)	/* Bit 3        - CRC enable */
+#define CMD_CRC_EN_M		BITFIELD_MASK(1)	/* Bit 3 	- CRC enable */
 #define CMD_CRC_EN_S		3
-#define CMD_INDEX_EN_M		BITFIELD_MASK(1)	/* Bit 4        - Enable index checking */
+#define CMD_INDEX_EN_M		BITFIELD_MASK(1)	/* Bit 4 	- Enable index checking */
 #define CMD_INDEX_EN_S		4
-#define CMD_DATA_EN_M		BITFIELD_MASK(1)	/* Bit 5        - Using DAT line */
+#define CMD_DATA_EN_M		BITFIELD_MASK(1)	/* Bit 5 	- Using DAT line */
 #define CMD_DATA_EN_S		5
-#define CMD_TYPE_M		BITFIELD_MASK(2)	/* Bit [6-7]    - Normal, abort, resume, etc
+#define CMD_TYPE_M		BITFIELD_MASK(2)	/* Bit [6-7] 	- Normal, abort, resume, etc
 							 */
 #define CMD_TYPE_S		6
-#define CMD_INDEX_M		BITFIELD_MASK(6)	/* Bits [8-13]  - Command number */
+#define CMD_INDEX_M		BITFIELD_MASK(6)	/* Bits [8-13] 	- Command number */
 #define CMD_INDEX_S		8
 
 /* SD_BufferDataPort0	: Offset 0x020, size = 2 or 4 bytes */
 /* SD_BufferDataPort1 	: Offset 0x022, size = 2 bytes */
 /* SD_PresentState	: Offset 0x024, size = 4 bytes */
-#define PRES_CMD_INHIBIT_M	BITFIELD_MASK(1)	/* Bit 0        May use CMD */
+#define PRES_CMD_INHIBIT_M	BITFIELD_MASK(1)	/* Bit 0	May use CMD */
 #define PRES_CMD_INHIBIT_S	0
-#define PRES_DAT_INHIBIT_M	BITFIELD_MASK(1)	/* Bit 1        May use DAT */
+#define PRES_DAT_INHIBIT_M	BITFIELD_MASK(1)	/* Bit 1	May use DAT */
 #define PRES_DAT_INHIBIT_S	1
-#define PRES_DAT_BUSY_M		BITFIELD_MASK(1)	/* Bit 2        DAT is busy */
+#define PRES_DAT_BUSY_M		BITFIELD_MASK(1)	/* Bit 2	DAT is busy */
 #define PRES_DAT_BUSY_S		2
-#define PRES_PRESENT_RSVD_M	BITFIELD_MASK(5)	/* Bit [3-7]    rsvd */
+#define PRES_PRESENT_RSVD_M	BITFIELD_MASK(5)	/* Bit [3-7]	rsvd */
 #define PRES_PRESENT_RSVD_S	3
-#define PRES_WRITE_ACTIVE_M	BITFIELD_MASK(1)	/* Bit 8        Write is active */
+#define PRES_WRITE_ACTIVE_M	BITFIELD_MASK(1)	/* Bit 8	Write is active */
 #define PRES_WRITE_ACTIVE_S	8
-#define PRES_READ_ACTIVE_M	BITFIELD_MASK(1)	/* Bit 9        Read is active */
+#define PRES_READ_ACTIVE_M	BITFIELD_MASK(1)	/* Bit 9	Read is active */
 #define PRES_READ_ACTIVE_S	9
-#define PRES_WRITE_DATA_RDY_M	BITFIELD_MASK(1)	/* Bit 10       Write buf is avail */
+#define PRES_WRITE_DATA_RDY_M	BITFIELD_MASK(1)	/* Bit 10	Write buf is avail */
 #define PRES_WRITE_DATA_RDY_S	10
-#define PRES_READ_DATA_RDY_M	BITFIELD_MASK(1)	/* Bit 11       Read buf data avail */
+#define PRES_READ_DATA_RDY_M	BITFIELD_MASK(1)	/* Bit 11	Read buf data avail */
 #define PRES_READ_DATA_RDY_S	11
-#define PRES_CARD_PRESENT_M	BITFIELD_MASK(1)	/* Bit 16       Card present - debounced */
+#define PRES_CARD_PRESENT_M	BITFIELD_MASK(1)	/* Bit 16	Card present - debounced */
 #define PRES_CARD_PRESENT_S	16
-#define PRES_CARD_STABLE_M	BITFIELD_MASK(1)	/* Bit 17       Debugging */
+#define PRES_CARD_STABLE_M	BITFIELD_MASK(1)	/* Bit 17	Debugging */
 #define PRES_CARD_STABLE_S	17
-#define PRES_CARD_PRESENT_RAW_M	BITFIELD_MASK(1)	/* Bit 18       Not debounced */
+#define PRES_CARD_PRESENT_RAW_M	BITFIELD_MASK(1)	/* Bit 18	Not debounced */
 #define PRES_CARD_PRESENT_RAW_S	18
-#define PRES_WRITE_ENABLED_M	BITFIELD_MASK(1)	/* Bit 19       Write protected? */
+#define PRES_WRITE_ENABLED_M	BITFIELD_MASK(1)	/* Bit 19	Write protected? */
 #define PRES_WRITE_ENABLED_S	19
-#define PRES_DAT_SIGNAL_M	BITFIELD_MASK(4)	/* Bit [20-23]  Debugging */
+#define PRES_DAT_SIGNAL_M	BITFIELD_MASK(4)	/* Bit [20-23]	Debugging */
 #define PRES_DAT_SIGNAL_S	20
-#define PRES_CMD_SIGNAL_M	BITFIELD_MASK(1)	/* Bit 24       Debugging */
+#define PRES_CMD_SIGNAL_M	BITFIELD_MASK(1)	/* Bit 24	Debugging */
 #define PRES_CMD_SIGNAL_S	24
 
 /* SD_HostCntrl: Offset 0x028, size = 1 bytes */
-#define HOST_LED_M		BITFIELD_MASK(1)	/* Bit 0        LED On/Off */
+#define HOST_LED_M		BITFIELD_MASK(1)	/* Bit 0	LED On/Off */
 #define HOST_LED_S		0
-#define HOST_DATA_WIDTH_M	BITFIELD_MASK(1)	/* Bit 1        4 bit enable */
+#define HOST_DATA_WIDTH_M	BITFIELD_MASK(1)	/* Bit 1	4 bit enable */
 #define HOST_DATA_WIDTH_S	1
-#define HOST_HI_SPEED_EN_M	BITFIELD_MASK(1)	/* Bit 2        High speed vs low speed */
+#define HOST_HI_SPEED_EN_M	BITFIELD_MASK(1)	/* Bit 2	High speed vs low speed */
 #define HOST_DMA_SEL_S		3
-#define HOST_DMA_SEL_M		BITFIELD_MASK(2)	/* Bit 4:3      DMA Select */
+#define HOST_DMA_SEL_M		BITFIELD_MASK(2)	/* Bit 4:3	DMA Select */
 #define HOST_HI_SPEED_EN_S	2
 
 /* Host Control2: */
 #define HOSTCtrl2_PRESVAL_EN_M	BITFIELD_MASK(1)	/* 1 bit */
-#define HOSTCtrl2_PRESVAL_EN_S	15	/* bit# */
+#define HOSTCtrl2_PRESVAL_EN_S	15					/* bit# */
 
 #define HOSTCtrl2_ASYINT_EN_M	BITFIELD_MASK(1)	/* 1 bit */
-#define HOSTCtrl2_ASYINT_EN_S	14	/* bit# */
+#define HOSTCtrl2_ASYINT_EN_S	14					/* bit# */
 
 #define HOSTCtrl2_SAMPCLK_SEL_M	BITFIELD_MASK(1)	/* 1 bit */
-#define HOSTCtrl2_SAMPCLK_SEL_S	7	/* bit# */
+#define HOSTCtrl2_SAMPCLK_SEL_S	7					/* bit# */
 
 #define HOSTCtrl2_EXEC_TUNING_M	BITFIELD_MASK(1)	/* 1 bit */
-#define HOSTCtrl2_EXEC_TUNING_S	6	/* bit# */
+#define HOSTCtrl2_EXEC_TUNING_S	6					/* bit# */
 
 #define HOSTCtrl2_DRIVSTRENGTH_SEL_M	BITFIELD_MASK(2)	/* 2 bit */
-#define HOSTCtrl2_DRIVSTRENGTH_SEL_S	4	/* bit# */
+#define HOSTCtrl2_DRIVSTRENGTH_SEL_S	4					/* bit# */
 
 #define HOSTCtrl2_1_8SIG_EN_M	BITFIELD_MASK(1)	/* 1 bit */
-#define HOSTCtrl2_1_8SIG_EN_S	3	/* bit# */
+#define HOSTCtrl2_1_8SIG_EN_S	3					/* bit# */
 
 #define HOSTCtrl2_UHSMODE_SEL_M	BITFIELD_MASK(3)	/* 3 bit */
-#define HOSTCtrl2_UHSMODE_SEL_S	0	/* bit# */
+#define HOSTCtrl2_UHSMODE_SEL_S	0					/* bit# */
 
 #define HOST_CONTR_VER_2		(1)
 #define HOST_CONTR_VER_3		(2)
@@ -313,17 +315,17 @@
 #define SD4_MODE 		0x2	/* SD Host Cntrlr Spec */
 
 /* SD_PwrCntrl: Offset 0x029, size = 1 bytes */
-#define PWR_BUS_EN_M		BITFIELD_MASK(1)	/* Bit 0        Power the bus */
+#define PWR_BUS_EN_M		BITFIELD_MASK(1)	/* Bit 0	Power the bus */
 #define PWR_BUS_EN_S		0
-#define PWR_VOLTS_M		BITFIELD_MASK(3)	/* Bit [1-3]    Voltage Select */
+#define PWR_VOLTS_M		BITFIELD_MASK(3)	/* Bit [1-3]	Voltage Select */
 #define PWR_VOLTS_S		1
 
 /* SD_SoftwareReset: Offset 0x02F, size = 1 byte */
-#define SW_RESET_ALL_M		BITFIELD_MASK(1)	/* Bit 0        Reset All */
+#define SW_RESET_ALL_M		BITFIELD_MASK(1)	/* Bit 0	Reset All */
 #define SW_RESET_ALL_S		0
-#define SW_RESET_CMD_M		BITFIELD_MASK(1)	/* Bit 1        CMD Line Reset */
+#define SW_RESET_CMD_M		BITFIELD_MASK(1)	/* Bit 1	CMD Line Reset */
 #define SW_RESET_CMD_S		1
-#define SW_RESET_DAT_M		BITFIELD_MASK(1)	/* Bit 2        DAT Line Reset */
+#define SW_RESET_DAT_M		BITFIELD_MASK(1)	/* Bit 2	DAT Line Reset */
 #define SW_RESET_DAT_S		2
 
 /* SD_IntrStatus: Offset 0x030, size = 2 bytes */

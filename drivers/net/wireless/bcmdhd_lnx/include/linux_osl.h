@@ -36,7 +36,7 @@ extern void osl_os_close_image(void *image);
 #ifdef BCMDRIVER
 
 extern osl_t *osl_attach(void *pdev, uint bustype, bool pkttag);
-extern void osl_detach(osl_t *osh);
+extern void osl_detach(osl_t * osh);
 
 extern uint32 g_assert_type;
 
@@ -64,20 +64,21 @@ extern void osl_delay(uint usec);
 	osl_pcmcia_read_attr((osh), (offset), (buf), (size))
 #define	OSL_PCMCIA_WRITE_ATTR(osh, offset, buf, size) \
 	osl_pcmcia_write_attr((osh), (offset), (buf), (size))
-extern void osl_pcmcia_read_attr(osl_t *osh, uint offset, void *buf, int size);
-extern void osl_pcmcia_write_attr(osl_t *osh, uint offset, void *buf, int size);
+extern void osl_pcmcia_read_attr(osl_t * osh, uint offset, void *buf, int size);
+extern void osl_pcmcia_write_attr(osl_t * osh, uint offset, void *buf,
+				  int size);
 
 #define	OSL_PCI_READ_CONFIG(osh, offset, size) \
 	osl_pci_read_config((osh), (offset), (size))
 #define	OSL_PCI_WRITE_CONFIG(osh, offset, size, val) \
 	osl_pci_write_config((osh), (offset), (size), (val))
-extern uint32 osl_pci_read_config(osl_t *osh, uint offset, uint size);
-extern void osl_pci_write_config(osl_t *osh, uint offset, uint size, uint val);
+extern uint32 osl_pci_read_config(osl_t * osh, uint offset, uint size);
+extern void osl_pci_write_config(osl_t * osh, uint offset, uint size, uint val);
 
 #define OSL_PCI_BUS(osh)	osl_pci_bus(osh)
 #define OSL_PCI_SLOT(osh)	osl_pci_slot(osh)
-extern uint osl_pci_bus(osl_t *osh);
-extern uint osl_pci_slot(osl_t *osh);
+extern uint osl_pci_bus(osl_t * osh);
+extern uint osl_pci_slot(osl_t * osh);
 
 typedef struct {
 	bool pkttag;
@@ -98,15 +99,15 @@ typedef struct {
 #define MALLOC(osh, size)	osl_malloc((osh), (size))
 #define MFREE(osh, addr, size)	osl_mfree((osh), (addr), (size))
 #define MALLOCED(osh)		osl_malloced((osh))
-extern void *osl_malloc(osl_t *osh, uint size);
-extern void osl_mfree(osl_t *osh, void *addr, uint size);
-extern uint osl_malloced(osl_t *osh);
+extern void *osl_malloc(osl_t * osh, uint size);
+extern void osl_mfree(osl_t * osh, void *addr, uint size);
+extern uint osl_malloced(osl_t * osh);
 
 #define NATIVE_MALLOC(osh, size)		kmalloc(size, GFP_ATOMIC)
 #define NATIVE_MFREE(osh, addr, size)	kfree(addr)
 
 #define	MALLOC_FAILED(osh)	osl_malloc_failed((osh))
-extern uint osl_malloc_failed(osl_t *osh);
+extern uint osl_malloc_failed(osl_t * osh);
 
 #define	DMA_CONSISTENT_ALIGN	osl_dma_consistent_align()
 #define	DMA_ALLOC_CONSISTENT(osh, size, align, tot, pap, dmah) \
@@ -114,9 +115,9 @@ extern uint osl_malloc_failed(osl_t *osh);
 #define	DMA_FREE_CONSISTENT(osh, va, size, pa, dmah) \
 	osl_dma_free_consistent((osh), (void*)(va), (size), (pa))
 extern uint osl_dma_consistent_align(void);
-extern void *osl_dma_alloc_consistent(osl_t *osh, uint size, uint16 align,
+extern void *osl_dma_alloc_consistent(osl_t * osh, uint size, uint16 align,
 				      uint * tot, ulong * pap);
-extern void osl_dma_free_consistent(osl_t *osh, void *va, uint size, ulong pa);
+extern void osl_dma_free_consistent(osl_t * osh, void *va, uint size, ulong pa);
 
 #define	DMA_TX	1
 #define	DMA_RX	2
@@ -125,8 +126,8 @@ extern void osl_dma_free_consistent(osl_t *osh, void *va, uint size, ulong pa);
 	osl_dma_map((osh), (va), (size), (direction))
 #define	DMA_UNMAP(osh, pa, size, direction, p, dmah) \
 	osl_dma_unmap((osh), (pa), (size), (direction))
-extern uint osl_dma_map(osl_t *osh, void *va, uint size, int direction);
-extern void osl_dma_unmap(osl_t *osh, uint pa, uint size, int direction);
+extern uint osl_dma_map(osl_t * osh, void *va, uint size, int direction);
+extern void osl_dma_unmap(osl_t * osh, uint pa, uint size, int direction);
 
 #define OSL_DMADDRWIDTH(osh, addrwidth) do {} while (0)
 
@@ -295,11 +296,11 @@ typedef struct ctfpool {
 #define	CTFPOOLPTR(osh, skb)	(((struct sk_buff*)(skb))->sk)
 #define	CTFPOOLHEAD(osh, skb)	(((ctfpool_t *)((struct sk_buff*)(skb))->sk)->head)
 
-extern void *osl_ctfpool_add(osl_t *osh);
-extern void osl_ctfpool_replenish(osl_t *osh, uint thresh);
-extern int32 osl_ctfpool_init(osl_t *osh, uint numobj, uint size);
-extern void osl_ctfpool_cleanup(osl_t *osh);
-extern void osl_ctfpool_stats(osl_t *osh, void *b);
+extern void *osl_ctfpool_add(osl_t * osh);
+extern void osl_ctfpool_replenish(osl_t * osh, uint thresh);
+extern int32 osl_ctfpool_init(osl_t * osh, uint numobj, uint size);
+extern void osl_ctfpool_cleanup(osl_t * osh);
+extern void osl_ctfpool_stats(osl_t * osh, void *b);
 #endif
 
 #ifdef HNDCTF
@@ -320,12 +321,12 @@ extern void osl_ctfpool_stats(osl_t *osh, void *b);
 #define	PKTSKIPCT(osh, skb)
 #endif
 
-extern void osl_pktfree(osl_t *osh, void *skb, bool send);
-extern void *osl_pktget_static(osl_t *osh, uint len);
-extern void osl_pktfree_static(osl_t *osh, void *skb, bool send);
+extern void osl_pktfree(osl_t * osh, void *skb, bool send);
+extern void *osl_pktget_static(osl_t * osh, uint len);
+extern void osl_pktfree_static(osl_t * osh, void *skb, bool send);
 
-extern void *osl_pktget(osl_t *osh, uint len);
-extern void *osl_pktdup(osl_t *osh, void *skb);
+extern void *osl_pktget(osl_t * osh, uint len);
+extern void *osl_pktdup(osl_t * osh, void *skb);
 
 static INLINE void *osl_pkt_frmnative(osl_pubinfo_t * osh, void *pkt)
 {

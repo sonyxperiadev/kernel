@@ -117,19 +117,19 @@ extern uint sd_msglevel;
  */
 
 /* Register mapping routines */
-extern uint32 *spi_reg_map(osl_t *osh, uintptr addr, int size);
-extern void spi_reg_unmap(osl_t *osh, uintptr addr, int size);
+extern uint32 *spi_reg_map(osl_t * osh, uintptr addr, int size);
+extern void spi_reg_unmap(osl_t * osh, uintptr addr, int size);
 
 /* Interrupt (de)registration routines */
-extern int spi_register_irq(sdioh_info_t *sd, uint irq);
-extern void spi_free_irq(uint irq, sdioh_info_t *sd);
+extern int spi_register_irq(sdioh_info_t * sd, uint irq);
+extern void spi_free_irq(uint irq, sdioh_info_t * sd);
 
 /* OS-specific interrupt wrappers (atomic interrupt enable/disable) */
-extern void spi_lock(sdioh_info_t *sd);
-extern void spi_unlock(sdioh_info_t *sd);
+extern void spi_lock(sdioh_info_t * sd);
+extern void spi_unlock(sdioh_info_t * sd);
 
 /* Allocate/init/free per-OS private data */
-extern int spi_osinit(sdioh_info_t *sd);
-extern void spi_osfree(sdioh_info_t *sd);
+extern int spi_osinit(sdioh_info_t * sd);
+extern void spi_osfree(sdioh_info_t * sd);
 
 #endif /* _BCM_SD_SPI_H */
