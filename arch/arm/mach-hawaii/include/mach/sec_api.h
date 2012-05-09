@@ -41,4 +41,8 @@
 
 extern unsigned secure_api_call(unsigned service_id, unsigned arg0,
 	unsigned arg1, unsigned arg2);
+
+extern unsigned get_secure_buffer(void);
+
+extern unsigned get_secure_buffer_size(void);
 #endif /* SEC_API_H */

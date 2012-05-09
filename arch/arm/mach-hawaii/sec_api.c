@@ -24,6 +24,16 @@ struct sec_api_data {
 	unsigned arg2;
 };
 
+unsigned get_secure_buffer(void)
+{
+	return SEC_BUFFER_ADDR;
+}
+
+unsigned get_secure_buffer_size(void)
+{
+	return SEC_BUFFER_SIZE;
+}
+
 static void smc(struct sec_api_data *data)
 {
 	/* Set Up Registers to pass data to Secure Monitor */
