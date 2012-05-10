@@ -292,7 +292,8 @@ static void __init reserve_memory_for_mempools(void)
 	}
 }
 
-unsigned long __init reserve_memory_for_fmem(unsigned long fmem_size)
+unsigned long __init reserve_memory_for_fmem(unsigned long fmem_size, 
+						unsigned long align)
 {
 	struct membank *mb;
 	int ret;
@@ -302,12 +303,9 @@ unsigned long __init reserve_memory_for_fmem(unsigned long fmem_size)
 		return 0;
 
 	mb = &meminfo.bank[meminfo.nr_banks - 1];
-	/*
-	 * Placing fmem at the top of memory causes multimedia issues.
-	 * Instead, place it 1 page below the top of memory to prevent
-	 * the issues from occurring.
-	 */
-	fmem_phys = mb->start + (mb->size - fmem_size) - PAGE_SIZE;
+	
+	fmem_phys = mb->start + (mb->size - fmem_size);
+	fmem_phys = ALIGN(fmem_phys-align+1, align);
 	ret = memblock_remove(fmem_phys, fmem_size);
 	BUG_ON(ret);
 
