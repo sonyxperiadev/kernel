@@ -597,8 +597,6 @@ static int __ion_iommu_map(struct ion_buffer *buffer,
 	return 0;
 
 out:
-	msm_free_iova_address(data->iova_addr, domain_num, partition_num,
-				buffer->size);
 	kfree(data);
 	return ret;
 }
