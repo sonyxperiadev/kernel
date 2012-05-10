@@ -37,6 +37,11 @@
 /*For AES*/
 #include "crypto_api.h"
 
+#ifdef CONFIG_BRCM_EMMC_RPMB_SUPPORT
+/* For eMMC RPMB access */
+#include <linux/emmc_rpmb.h>
+#endif
+
 /*--------------------------------------*/
 /* Global variables			*/
 /*--------------------------------------*/

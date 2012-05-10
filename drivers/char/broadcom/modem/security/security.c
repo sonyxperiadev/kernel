@@ -63,6 +63,10 @@ the GPL, without Broadcom's express prior written consent
 #include "rpc_api.h"
 #include "sys_common_rpc.h"
 
+#ifdef CONFIG_BRCM_EMMC_RPMB_SUPPORT
+/* For eMMC RPMB access */
+#include <linux/emmc_rpmb.h>
+#endif
 
 MODULE_LICENSE("GPL");
 
@@ -488,8 +492,6 @@ Boolean read_imei(UInt8 *imeiStr1, UInt8 *imeiStr2)
 #ifdef CONFIG_BRCM_EMMC_RPMB_SUPPORT
 	char imeiMacStr1[IMEI_MAC_DIGITS+1] = {0};
 	char imeiMacStr2[IMEI_MAC_DIGITS+1] = {0};
-
-	char i ;
 
 	if ((imeiStr1 == NULL) || (imeiStr2 == NULL)) {
 		pr_err("ReadIMEIHexData: imeiStr buffer is NULL\n");
