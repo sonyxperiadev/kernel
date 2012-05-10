@@ -629,8 +629,8 @@ static int unicam_drv_probe(struct platform_device *pdev)
 
 	unicam_info.reg = regulator_get(unicam_info.dev, "vcc");
 	if (IS_ERR_OR_NULL(unicam_info.reg)) {
-		dev_err(unicam_info.dev, "%s: cannot get regulator: %ld\n", __func__,
-			PTR_ERR(unicam_info.reg));
+		dev_err(unicam_info.dev, "%s: cannot get regulator: %ld\n",
+			__func__, PTR_ERR(unicam_info.reg));
 		unicam_info.reg = NULL;
 	}
 
