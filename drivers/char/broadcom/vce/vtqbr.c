@@ -325,7 +325,7 @@ vtq_task_id_t vtqb_create_task(struct vtqb_context *ctx,
 	vtq_task_id_t task_id;
 	struct vtqb_task *proxy;
 
-	if (image_id < 0 || image_id > VTQ_MAX_PROXY_IMAGES) {
+	if (image_id < 0 || image_id >= VTQ_MAX_PROXY_IMAGES) {
 		dbg_print("bad image ID\n");
 		goto err_badimage1;
 	}
