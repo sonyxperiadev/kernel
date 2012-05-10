@@ -194,7 +194,7 @@ static int mm_pi_enable(struct pi *pi, int enable)
 	}
 	return ret;
 }
-struct pi_ops mm_pi_ops;
+static struct pi_ops mm_pi_ops;
 #endif
 
 #ifdef CONFIG_KONA_PI_DFS_STATS
