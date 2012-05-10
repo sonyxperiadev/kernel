@@ -165,11 +165,14 @@ static int unicam_open(struct inode *inode, struct file *filp)
 		goto err;
 	}
 
-	ret = regulator_enable(unicam_info.reg);
-	if (ret < 0) {
-		dev_err(unicam_info.dev, "%s: cannot enable regulator: %d\n",
-			__func__, ret);
-		goto err;
+	if (unicam_info.reg) {
+		ret = regulator_enable(unicam_info.reg);
+		if (ret < 0) {
+			dev_err(unicam_info.dev,
+				"%s: cannot enable regulator: %d\n",
+				__func__, ret);
+			goto err;
+		}
 	}
 
 	return 0;
@@ -187,9 +190,11 @@ static int unicam_release(struct inode *inode, struct file *filp)
 	disable_irq(IRQ_UNICAM);
 	free_irq(IRQ_UNICAM, dev);
 
-	if (regulator_disable(unicam_info.reg) < 0)
-		dev_err(unicam_info.dev, "%s: cannot disable regulator\n",
-			__func__);
+	if (unicam_info.reg) {
+		if (regulator_disable(unicam_info.reg) < 0)
+			dev_err(unicam_info.dev, "%s: cannot disable regulator\n",
+				__func__);
+	}
 
 	reset_unicam();
 	disable_unicam_clock();
@@ -594,7 +599,9 @@ static void reset_unicam(void)
 
 static int __devexit unicam_drv_remove(struct platform_device *pdev)
 {
-	regulator_put(unicam_info.reg);
+	if (unicam_info.reg)
+		regulator_put(unicam_info.reg);
+
 	pi_mgr_dfs_request_remove(&unicam_dfs_node);
 	unicam_dfs_node.name = NULL;
 	pi_mgr_qos_request_remove(&unicam_qos_node);
@@ -607,32 +614,31 @@ static int unicam_drv_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct kona_unicam_platform_data *pdata = pdev->dev.platform_data;
 
+	unicam_info.dev = &pdev->dev;
+	unicam_info.csi0_unicam_gpio = pdata->csi0_gpio;
+	unicam_info.csi1_unicam_gpio = pdata->csi1_gpio;
+
 	dev_dbg(unicam_info.dev, "%s\n", __func__);
 
 	if (!pdata) {
-		dev_dbg(unicam_info.dev, "%s : invalid paltform data !!\n",
+		dev_err(unicam_info.dev, "%s : invalid platform data !!\n",
 			__func__);
 		ret = -EPERM;
 		goto error;
 	}
 
-	unicam_info.reg = regulator_get(&pdev->dev, "vcc");
-	if (IS_ERR(unicam_info.reg)) {
-		dev_err(&pdev->dev, "%s: cannot get regulator: %d\n", __func__,
-			ret);
-		ret = PTR_ERR(unicam_info.reg);
-		goto error;
+	unicam_info.reg = regulator_get(unicam_info.dev, "vcc");
+	if (IS_ERR_OR_NULL(unicam_info.reg)) {
+		dev_err(unicam_info.dev, "%s: cannot get regulator: %ld\n", __func__,
+			PTR_ERR(unicam_info.reg));
+		unicam_info.reg = NULL;
 	}
-
-	unicam_info.csi0_unicam_gpio = pdata->csi0_gpio;
-	unicam_info.csi1_unicam_gpio = pdata->csi1_gpio;
-	unicam_info.dev = &pdev->dev;
 
 	ret =
 	    pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam", PI_MGR_PI_ID_MM,
 				   PI_MGR_DFS_MIN_VALUE);
 	if (ret) {
-		dev_err(&pdev->dev, "%s: failed to register PI DFS request\n",
+		dev_err(unicam_info.dev, "%s: failed to register PI DFS request\n",
 		       __func__);
 		ret = -EIO;
 		goto dfs_request_fail;
@@ -640,7 +646,7 @@ static int unicam_drv_probe(struct platform_device *pdev)
 	ret = pi_mgr_qos_add_request(&unicam_qos_node, "unicam",
 		PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
 	if (ret) {
-		dev_err(&pdev->dev, "%s: failed to register PI QOS request\n",
+		dev_err(unicam_info.dev, "%s: failed to register PI QOS request\n",
 			__func__);
 		ret = -EIO;
 		goto qos_request_fail;
@@ -651,7 +657,8 @@ static int unicam_drv_probe(struct platform_device *pdev)
 qos_request_fail:
 	pi_mgr_dfs_request_remove(&unicam_dfs_node);
 dfs_request_fail:
-	regulator_put(unicam_info.reg);
+	if (unicam_info.reg)
+		regulator_put(unicam_info.reg);
 error:
 	return ret;
 }
