@@ -1202,6 +1202,125 @@ static void mmc_sd_attach_bus_ops(struct mmc_host *host)
 	mmc_attach_bus(host, bus_ops);
 }
 
+static void mmc_sd_print_card_config(struct mmc_host *host)
+{
+	struct mmc_ios *ios = &host->ios;
+	const unsigned char *param = NULL;
+
+	/* card ios information */
+	printk(KERN_INFO"---------------------------------------\n");
+	printk(KERN_INFO"*        SD card configuration        *\n");
+	printk(KERN_INFO"---------------------------------------\n");
+	/* bus clock */
+	printk(KERN_INFO"Bus clock Frequency  : %dHz\n", host->actual_clock);
+
+	/* signal voltage */
+	switch (ios->signal_voltage)	{
+	default:
+	case MMC_SIGNAL_VOLTAGE_330:
+		param = "3.3V";
+		break;
+	case MMC_SIGNAL_VOLTAGE_180:
+		param = "1.8V";
+		break;
+	case MMC_SIGNAL_VOLTAGE_120:
+		param = "1.2V";
+		break;
+	}
+	printk(KERN_INFO"Signalling Voltage   : %s\n", param);
+
+	/* Bus width */
+	switch (ios->bus_width)	{
+	default:
+	case MMC_BUS_WIDTH_1:
+		param = "1-BIT";
+		break;
+	case MMC_BUS_WIDTH_4:
+		param = "4-BIT";
+		break;
+	case MMC_BUS_WIDTH_8:
+		param = "8-BIT!!";
+		break;
+	}
+	printk(KERN_INFO"Bus Data Width       : %s mode\n", param);
+
+	/* Bus speed Modes */
+	if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330)	{
+		if (host->actual_clock > 25000000)
+			param = "High Speed(HS)";
+		else
+			param = "Default Speed(DS)";
+
+		printk(KERN_INFO"Bus Speed Mode       : %s\n", param);
+
+	} else if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_180)	{
+		/* bus mode */
+		switch (ios->timing)	{
+		default:
+		case MMC_TIMING_UHS_SDR12:
+			param = "SDR12";
+			break;
+		case MMC_TIMING_UHS_SDR25:
+			param = "SDR25";
+			break;
+		case MMC_TIMING_UHS_SDR50:
+			param = "SDR50";
+			break;
+		case MMC_TIMING_UHS_SDR104:
+			param = "SDR104";
+			break;
+		case MMC_TIMING_UHS_DDR50:
+			param = "DDR50";
+			break;
+		}
+		printk(KERN_INFO"UHS Bus Speed Mode   : %s\n", param);
+
+		/* UHS: Driver type */
+		switch (ios->drv_type)	{
+		default:
+		case MMC_SET_DRIVER_TYPE_B:
+			param = "Type B";
+			break;
+		case MMC_SET_DRIVER_TYPE_A:
+			param = "Type A";
+			break;
+		case MMC_SET_DRIVER_TYPE_C:
+			param = "Type C";
+			break;
+		case MMC_SET_DRIVER_TYPE_D:
+			param = "Type D";
+			break;
+		}
+		printk(KERN_INFO"UHS Drive Strength   : %s\n", param);
+
+		/* UHS: current limit */
+		switch (host->card->sw_caps.sd3_curr_limit)	{
+		default:
+		case SD_SET_CURRENT_LIMIT_200:
+			param = "200mA";
+			break;
+		case SD_SET_CURRENT_LIMIT_400:
+			param = "400mA";
+			break;
+		case SD_SET_CURRENT_LIMIT_600:
+			param = "600mA";
+			break;
+		case SD_SET_CURRENT_LIMIT_800:
+			param = "800mA";
+			break;
+		}
+		printk(KERN_INFO"UHS Current Limit    : %s\n", param);
+	}
+	/* Print CID info */
+	printk(KERN_INFO"Card CID Register:\n");
+	printk(KERN_INFO"\tCID[96:127]=0x%x\n", host->card->raw_cid[0]);
+	printk(KERN_INFO"\tCID[64:95]=0x%x\n", host->card->raw_cid[1]);
+	printk(KERN_INFO"\tCID[32:63]=0x%x\n", host->card->raw_cid[2]);
+	printk(KERN_INFO"\tCID[00:31]=0x%x\n", host->card->raw_cid[3]);
+
+	printk(KERN_INFO"-----------------------------------\n");
+}
+
 /*
  * Starting point for SD card init.
  */
@@ -1297,6 +1416,9 @@ int mmc_attach_sd(struct mmc_host *host)
 #endif
 
 	mmc_release_host(host);
+	/* Print card config info */
+	mmc_sd_print_card_config(host);
+
 	err = mmc_add_card(host->card);
 	mmc_claim_host(host);
 	if (err)
