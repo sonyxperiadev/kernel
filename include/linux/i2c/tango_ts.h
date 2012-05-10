@@ -17,6 +17,14 @@
 #include <linux/i2c-kona.h>
 
 #define I2C_TS_DRIVER_NAME			"tango_ts"
+#if defined(CONFIG_RHEA_CLOVER_ICS)
+#include <linux/earlysuspend.h>
+#include <linux/semaphore.h>
+#include <linux/mutex.h>
+#undef	I2C_TS_DRIVER_NAME
+#define I2C_TS_DRIVER_NAME			"FocalTech-Ft5306"
+#endif
+
 #define TANGO_S32_SLAVE_ADDR		0x5C
 #define TANGO_M29_SLAVE_ADDR		0x45
 #define TANGO_S32_LAYOUT			(X_RIGHT_Y_UP)
@@ -71,5 +79,47 @@ struct TANGO_I2C_TS_t {
 	int max_finger_val;
 	int panel_width;	/* LCD panel width in millimeters */
 };
+
+#if defined(CONFIG_RHEA_CLOVER_ICS)
+#define ENABLE_TP_DIAG 0
+
+typedef enum {
+	TS_OFF,
+	TS_ON,
+} ts_power_status;
+
+struct synaptics_rmi4 {
+	struct i2c_client *client;
+	struct input_dev *input_dev;
+	int use_irq;
+	struct hrtimer timer;
+	struct hrtimer penup_det_timer;
+	struct work_struct  work;
+#if ENABLE_TP_DIAG
+	struct hrtimer diag_timer;
+	struct work_struct diag_work;
+#endif
+	struct early_suspend early_suspend;
+
+	__u8 data_reg;
+	__u8 data_length;
+	__u8 *data;
+	struct i2c_msg data_i2c_msg[2];
+	bool hasEgrPinch;
+	bool hasEgrPress;
+	bool hasEgrFlick;
+	bool hasEgrEarlyTap;
+	bool hasEgrDoubleTap;
+	bool hasEgrTapAndHold;
+	bool hasEgrSingleTap;
+	bool hasEgrPalmDetect;
+	int enable;
+	int(*power)(ts_power_status vreg_en);
+};
+
+struct Synaptics_ts_platform_data {
+	int(*power)(ts_power_status vreg_en);
+};
+#endif
 
 #endif /* _TANGO_TS_H_ */
