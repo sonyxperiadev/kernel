@@ -15,8 +15,9 @@ gator-y :=	gator_main.o \
 
 gator-y +=	gator_events_mmaped.o
 
-ifneq ($(GATOR_WITH_MALI_SUPPORT),)
-ifeq ($(GATOR_WITH_MALI_SUPPORT),MALI_T6xx)
+ifeq ($(CONFIG_GATOR_WITH_MALI_SUPPORT),y)
+
+ifeq ($(CONFIG_GATOR_MALI_T6XX),y)
 gator-y +=	gator_events_mali_t6xx.o \
 		gator_events_mali_t6xx_hw.o
 include $(M)/mali_t6xx.mk
@@ -24,10 +25,10 @@ else
 gator-y +=	gator_events_mali_4xx.o
 endif
 gator-y +=	gator_events_mali_common.o
-EXTRA_CFLAGS +=	-DMALI_SUPPORT=$(GATOR_WITH_MALI_SUPPORT)
-ifneq ($(GATOR_MALI_INTERFACE_STYLE),)
-EXTRA_CFLAGS += -DGATOR_MALI_INTERFACE_STYLE=$(GATOR_MALI_INTERFACE_STYLE)
-endif
+
+ccflags-y += -I$(CONFIG_GATOR_MALI_PATH)
+ccflags-$(CONFIG_GATOR_MALI_400MP) += -DMALI_SUPPORT=MALI_400
+ccflags-$(CONFIG_GATOR_MALI_T6XX) += -DMALI_SUPPORT=MALI_T6xx
 endif
 
 # GATOR_TEST controls whether to include (=1) or exclude (=0) test code. 
