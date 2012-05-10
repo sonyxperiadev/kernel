@@ -1321,7 +1321,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 		AUDCTRL_SetAudioMode(mode, AUDIO_APP_LOOPBACK);
 	}
 	/* configure EC and NS for the loopback test */
-#if defined(USE_LOOPBACK_SYSPARM)
+#if defined(USE_LOOPBACK_SYSPARM) && defined(CONFIG_BCM_MODEM)
 	/* use sysparm to configure EC */
 	AUDCTRL_EC((Boolean)(AudParmP()[mode +
 	AUDIO_APP_LOOPBACK * AUDIO_MODE_NUMBER].echo_cancelling_enable),

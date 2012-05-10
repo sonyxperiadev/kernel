@@ -264,9 +264,9 @@ void AUDDRV_Init(void)
 		((AudioLogStatusCB_t) &AUDLOG_ProcessLogChannel);)
 	AUDIO_MODEM(CSL_RegisterVOIFStatusHandler
 		((VOIFStatusCB_t) &VOIF_Buffer_Request);)
-	AUDIO_MODEM(CSL_RegisterAudioEnableDoneHandler
+	CSL_RegisterAudioEnableDoneHandler
 		((AudioEnableDoneStatusCB_t)
-		&AP_ProcessAudioEnableDone);)
+		&AP_ProcessAudioEnableDone);
 
 #if defined(CONFIG_RHEA_PANDA)
 	CSL_RegisterExtModemCallDoneHandler

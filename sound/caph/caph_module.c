@@ -651,8 +651,11 @@ int process_logmsg(void *data)
 				state = 0;
 				sender = P_log_general;
 
+#ifdef CONFIG_BRCM_FUSE_LOG
 				BCMLOG_LogLinkList(sig_code,
 					link_list, 2, state, sender);
+#endif
+
 this_path_done:
 				spin_lock(&audio_log_cbinfo[i].audio_log_lock);
 				audio_log_cbinfo[i].capture_ready = 0;

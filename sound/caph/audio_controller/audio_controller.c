@@ -657,10 +657,14 @@ void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 		if (volume > 14)
 			volume = 14;	/* 15 entries: 0 ~ 14. */
 
+#ifdef CONFIG_BCM_MODEM
 		telephony_dl_gain_dB = p->dsp_voice_vol_tbl[volume];
 		/*values in table are in range of 0 ~ 36 dB.
 		   shift to range of -36 ~ 0 dB in DSP */
 		telephony_dl_gain_dB -= p->voice_volume_max;
+#else
+		telephony_dl_gain_dB = 0;
+#endif
 
 	}
 
@@ -1652,12 +1656,16 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 		   and could be non 0. */
 
 		users_gain[AUDPATH_FM].valid = TRUE;
+#ifdef CONFIG_BCM_MODEM
 		users_gain[AUDPATH_FM].L = p->fm_radio_digital_vol[vol_left];
 		/*users_gain[AUDPATH_FM].R =
 		p->fm_radio_digital_vol[vol_right];*/
 		/*vol_right is always 0. need to fix it in caph_ctl.c*/
 		users_gain[AUDPATH_FM].R = p->fm_radio_digital_vol[vol_left];
-
+#else
+		users_gain[AUDPATH_FM].L = 0;
+		users_gain[AUDPATH_FM].R = 0;
+#endif
 		/*if( fmPlayStarted == FALSE ) */
 		/*if ( path->status != PATH_OCCUPIED ) */
 		if (FALSE == csl_caph_QueryHWClock()) {
@@ -3637,8 +3645,10 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
 		extern_ihf_set_gain(pmu_gain * 25);
 
+#ifdef CONFIG_BCM_MODEM
 		pmu_gain = (int)p->ext_speaker_high_gain_mode_enable;
 		extern_ihf_en_hi_gain_mode(pmu_gain);
+#endif
 
 		break;
 

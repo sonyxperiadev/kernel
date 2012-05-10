@@ -69,4 +69,5 @@ else
 obj-$(CONFIG_BCM_ALSA_SOUND) += chal/A0/src/
 endif
 obj-$(CONFIG_BCM_ALSA_SOUND) += csl/
-obj-$(CONFIG_BCM_MODEM)    += dsp/
+#obj-$(CONFIG_BCM_MODEM)    += dsp/
+obj-$(CONFIG_BCM_ALSA_SOUND) += dsp/
