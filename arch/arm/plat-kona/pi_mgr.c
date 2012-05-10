@@ -469,8 +469,10 @@ static int __pi_init_state(struct pi *pi)
 		spin_lock_irqsave(&pi->lock, flgs);
 		if (pi->ops && pi->ops->init_state) {
 			ret = pi->ops->init_state(pi);
-			if (ret)
+			if (ret) {
+				spin_unlock_irqrestore(&pi->lock, flgs);
 				return ret;
+			}
 		}
 
 		pi->init = PI_INIT_COMPLETE;
