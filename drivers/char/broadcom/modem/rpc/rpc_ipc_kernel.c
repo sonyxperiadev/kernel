@@ -2133,14 +2133,18 @@ static int log_seq_show(struct seq_file *s, void *v)
 	else if (context->counter == 1)
 	    RpcDbgListClientMsgs(&(context->out));
 	else if (context->counter == 2)
-	    RpcDbgDumpWakeLockStats(&context->out);
+	    RpcDbgDumpKthread(&(context->out), 0);
 	else if (context->counter == 3)
-	    ret = RpcDbgDumpPktState(&(context->out), &(context->offset), 10);
+	    RpcDbgDumpKthread(&(context->out), 1);
 	else if (context->counter == 4)
+	    RpcDbgDumpWakeLockStats(&(context->out));
+	else if (context->counter == 5)
+	    ret = RpcDbgDumpPktState(&(context->out), &(context->offset), 10);
+	else if (context->counter == 6)
 	    ret = RbcDbgDumpGenInfo(&(context->out), &(context->offset), 10);
 
 	if (ret == 0) {
-		if (context->counter >= 4)
+		if (context->counter >= 6)
 		{
 			RpcDbgDumpHdr(&(context->out));
 			context->eof = 1;
@@ -2149,8 +2153,6 @@ static int log_seq_show(struct seq_file *s, void *v)
 		context->offset = 0;
 		(context->counter)++;
 	}
-
-
 	return 0;
 }
 
@@ -2208,6 +2210,7 @@ int RpcDbgDumpHistoryLogging(int type, int level)
 	RpcDbgDumpHdr(&outContext);
 	RpcDbgListClientMsgs(&outContext);
 	RpcDbgDumpWakeLockStats(&outContext);
+	RpcDbgDumpKthread(&outContext,2);
 
 	if (level > 0) {
 		RpcDbgDumpPktState(&outContext, &offset, 0);

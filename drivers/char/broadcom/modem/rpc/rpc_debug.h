@@ -85,5 +85,5 @@ int RpcDbgDumpStr(RpcOutputContext_t *c, char *fmt, ...);
 int RpcDbgDumpHistoryLogging(int type, int level);
 int RpcDbgDumpWakeLockStats(RpcOutputContext_t *c);
 void RpcDumpTaskCallStack(RpcOutputContext_t *c, struct task_struct *t);
-
+int RpcDbgDumpKthread(RpcOutputContext_t *c, int option);
 #endif /* _BCM_RPC_DEBUG_H */

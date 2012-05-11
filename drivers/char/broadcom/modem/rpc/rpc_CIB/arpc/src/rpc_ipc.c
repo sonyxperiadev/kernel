@@ -130,7 +130,7 @@ static UInt32 rpcVer = BCM_RPC_VER;
 
 #ifdef USE_KTHREAD_HANDOVER
 /*Tasklet to Kthread handler for IPC*/
-static MsgQueueHandle_t rpcMQhandle;
+MsgQueueHandle_t rpcMQhandle;
 #endif
 
 UInt32 recvRpcPkts;
@@ -664,14 +664,27 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 
 	if (type != -1) {
 		if (type != (Int8) INTERFACE_PACKET) {
+			IPC_U32 uParam;
 			UInt16 context = (pCid[3] << 8);
 			context |= pCid[2];
+
+			uParam = IPC_BufferUserParameterGet (bufHandle);
+			if(uParam == CAPI2_RESERVE_POOL_ID) {
+				/* TBD: Add recovery mechanism */
+				IPC_FreeBuffer(bufHandle);	
+				_DBG_(RPC_TRACE
+				      ("RPC_BufferDelivery RESERVED (Drop) h=%d if=%d rcvPkts=%d freePkts=%d\r\n",
+				       (int)bufHandle, (int)type, 
+					(int)recvRpcPkts,(int)freeRpcPkts));
+				return;
+			}
+
 			recvRpcPkts++;
 			rpc_wake_lock_add((UInt32)bufHandle);
 			_DBG_(RPC_TRACE
-			      ("RPC_BufferDelivery NEW h=%d type=%d rcvPkts=%d freePkts=%d\r\n",
+			      ("RPC_BufferDelivery NEW h=%d type=%d rcvPkts=%d freePkts=%d uparam=%x\r\n",
 			       (int)bufHandle, (int)type, (int)recvRpcPkts,
-			       (int)freeRpcPkts));
+			       (int)freeRpcPkts, (int)uParam));
 
 			RpcDbgUpdatePktStateEx((int)bufHandle, PKT_STATE_NEW,
 						0, PKT_STATE_NA,  0, 0, type);

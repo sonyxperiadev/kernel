@@ -17,6 +17,7 @@
 #define __MQUEUE_H
 
 struct tag_MsgQueueHandle_t;
+#define MAX_NM_LEN 64
 
 typedef int (*MsgQueueThreadFn_t) (struct tag_MsgQueueHandle_t *mHandle,
 				   void *data);
@@ -29,6 +30,7 @@ typedef struct tag_MsgQueueHandle_t {
 	struct task_struct *mThread;
 	MsgQueueThreadFn_t mFn;
 	int valid;
+	char name[MAX_NM_LEN+1];
 #if defined(CONFIG_HAS_WAKELOCK) && defined(MQUEUE_RPC_WAKELOCK)
 	struct wake_lock mq_wake_lock;
 #endif
@@ -45,5 +47,6 @@ int MsgQueueAdd(MsgQueueHandle_t *mHandle, void *data);
 int MsgQueueRemove(MsgQueueHandle_t *mHandle, void **outData);
 int MsgQueueDeInit(MsgQueueHandle_t *mhandle);
 int MsgQueueIsEmpty(MsgQueueHandle_t *mHandle);
+int MsgQueueDebugList(MsgQueueHandle_t *mHandle, RpcOutputContext_t *c);
 
 #endif

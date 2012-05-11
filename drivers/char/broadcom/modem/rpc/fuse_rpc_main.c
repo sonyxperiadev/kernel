@@ -65,7 +65,7 @@
 #define SYSRPC_TRACE(str) {}
 #endif
 
-static MsgQueueHandle_t sysRpcMQhandle;
+MsgQueueHandle_t sysRpcMQhandle;
 
 static int __init bcm_fuse_rpc_init_module(void);
 static void __exit bcm_fuse_rpc_exit_module(void);

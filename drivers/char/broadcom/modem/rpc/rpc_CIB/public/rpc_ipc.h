@@ -458,6 +458,8 @@ RPC_Result_t RPC_SYS_EndPointRegister(RpcProcessorType_t processorType);
 
 #define MAX_CHANNELS	10
 
+#define CAPI2_RESERVE_POOL_ID	0xACACACAC
+
 RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t ptype);
 
 RPC_Result_t RPC_IPC_Init(RpcProcessorType_t ptype);

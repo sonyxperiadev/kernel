@@ -44,6 +44,7 @@
 #include "resultcode.h"
 #include "taskmsgs.h"
 #include "consts.h"
+#include "rpc_debug.h"
 #include "mqueue.h"
 #include "bcmlog.h"
 
@@ -96,7 +97,7 @@ int MsgQueueInit(MsgQueueHandle_t *mHandle, MsgQueueThreadFn_t fn,
 #if defined(CONFIG_HAS_WAKELOCK) && defined(MQUEUE_RPC_WAKELOCK)
 	wake_lock_init(&(mHandle->mq_wake_lock), WAKE_LOCK_SUSPEND, wk_name);
 #endif
-
+	strncpy(mHandle->name, name, MAX_NM_LEN);
 	_DBG(MQ_TRACE("mq: MsgQueueInit mHandle=%x fn=%x nm=%s ret=%d\n",
 		      (int)mHandle, (int)fn, (name) ? name : "", ret));
 	return ret;
@@ -200,6 +201,35 @@ int MsgQueueRemove(MsgQueueHandle_t *mHandle, void **outData)
 
 	_DBG(MQ_TRACE("mq: MsgQueueRemove mHandle=%x, data=%d\n",
 		      (int)mHandle, (int)data));
+
+	return 0;
+}
+
+int MsgQueueDebugList(MsgQueueHandle_t *mHandle, RpcOutputContext_t *c)
+{
+	MsgQueueElement_t *Item = NULL;
+	struct list_head *listptr, *pos;
+
+	if (INVALID_HANDLE(mHandle)) {
+		_DBG(MQ_TRACE("mq: MsgQueueDebugList has Invalid mHandle\n"));
+		return 0;
+	}
+
+	spin_lock_bh(&mHandle->mLock);
+
+	RpcDbgDumpStr(c,  "\tkThread: %s tid:%d Rx:%d\n",
+					mHandle->name, mHandle->mThread->pid, mHandle->mAvailData);
+
+	RpcDumpTaskCallStack(c, mHandle->mThread);
+
+	list_for_each_safe(listptr, pos, &mHandle->mList)
+	{
+		Item = list_entry(listptr, MsgQueueElement_t, mList);
+		RpcDbgDumpStr(c,  "\tQUEUED pkt:%d\n",
+					(int)Item->data);
+	}
+
+	spin_unlock_bh(&mHandle->mLock);
 
 	return 0;
 }

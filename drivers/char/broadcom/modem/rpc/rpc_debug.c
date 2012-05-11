@@ -54,6 +54,7 @@
 #include "rpc_ipc.h"
 #include "rpc_ipc_config.h"
 #include "rpc_debug.h"
+#include "mqueue.h"
 
 #define MAX_CID 10
 
@@ -93,6 +94,8 @@ static RpcDbgPktStatus_t gRpcDbgPktStatusList[MAX_RPC_PACKETS + 1];
 
 extern UInt32 recvRpcPkts;
 extern UInt32 freeRpcPkts;
+extern MsgQueueHandle_t rpcMQhandle;
+extern MsgQueueHandle_t sysRpcMQhandle;
 
 atomic_t gRpcDbgPktGenCurIndex = ATOMIC_INIT(-1);
 atomic_t gRpcGlobalCount = ATOMIC_INIT(0);
@@ -330,6 +333,15 @@ int RpcDbgDumpPktState(RpcOutputContext_t *c, int *offset, int maxlimit)
 	return 0;
 }
 
+int RpcDbgDumpKthread(RpcOutputContext_t *c, int option)
+{
+	if(option == 0 || option == 2)
+		MsgQueueDebugList(&rpcMQhandle, c);
+	if(option == 1 || option == 2)
+		MsgQueueDebugList(&sysRpcMQhandle, c);
+	return 0;
+}
+
 int RpcDbgDumpHdr(RpcOutputContext_t *c)
 {
 	RpcDbgDumpStr(c, "\nRcvCount=%d FreeCount=%d ts=%u\n", (int)recvRpcPkts,
@@ -405,6 +417,14 @@ static void dumpCallStackStr(RpcOutputContext_t *c, char* inStr)
 {
 	char* bstr = inStr;
 	char* tstr = inStr;
+
+	if(c->type != 2)
+	{
+		RpcDbgDumpRawStr(c, bstr);
+		RpcDbgDumpRawStr(c, "\n");
+		return;
+	}
+
 	while(*tstr != '\0')
 	{
 		if(*tstr == '\n')
