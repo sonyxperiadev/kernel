@@ -41,13 +41,22 @@
 
 #if (!defined(CONFIG_BCMPMU_AUDIO))
 
-#define bcmpmu_audio_init() NULL
-#define bcmpmu_hs_set_gain(a, b) NULL
-#define bcmpmu_hs_power(a) NULL
-#define bcmpmu_ihf_set_gain(a) NULL
-#define bcmpmu_ihf_power(a) NULL
-#define bcmpmu_audio_deinit() NULL
-#define bcmpmu_hi_gain_mode_en(a) NULL
+void extern_hs_on(void) {; }
+void extern_hs_off(void) {; }
+void extern_ihf_on(void) {; }
+void extern_ihf_off(void) {; }
+void extern_stereo_speaker_on(void) {; }
+void extern_stereo_speaker_off(void) {; }
+int extern_hs_find_gain(int gain_mB) {return 0; }
+void extern_hs_set_gain(int gain_mB, AUDIO_GAIN_LR_t lr) {; }
+void extern_hs_mute(AUDIO_GAIN_LR_t lr) {; }
+void extern_hs_unmute(AUDIO_GAIN_LR_t lr) {; }
+int extern_ihf_find_gain(int gain_mB) {return 0; }
+void extern_ihf_set_gain(int gain_mB) {; }
+void extern_ihf_mute(void) {; }
+void extern_ihf_unmute(void) {; }
+void extern_ihf_en_hi_gain_mode(int enable) {; }
+
 
 #else
 
