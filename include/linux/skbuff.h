@@ -48,15 +48,11 @@
 #define SKB_NETPOLL_SIGNATURE				0x12345678
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
 #define SKB_UETH_RX_PRE_ALLOC_MEM_SIG	0xfedcba98
-#define SKB_UETH_RX_NO_PRE_ALLOC_MEM_SIG	0x789ABCDE
+#define SKB_UETH_RX_THRESHOLD_SIG	0x789ABCDE
 
 extern atomic_t ueth_rx_skb_ref_count;
 extern unsigned short ueth_rx_skb_size(void);
-extern void ueth_recycle_rx_skbs(struct sk_buff *skb, unsigned char is_cloned);
-extern struct sk_buff *ueth_get_skb_4_clone(void);
-
-struct sk_buff *skb_copy_ueth(const struct sk_buff *skb);
-
+extern void ueth_recycle_rx_skbs(struct sk_buff *skb);
 #endif
 /* A. Checksumming of received packets by device.
  *

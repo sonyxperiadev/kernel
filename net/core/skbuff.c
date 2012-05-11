@@ -438,6 +438,20 @@ static void recycle_skbs_process(struct sk_buff *skb, int skb_size)
 }
 #endif /* #ifdef CONFIG_BRCM_NETCONSOLE */
 
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+static void skb_recycle_ueth(struct sk_buff *skb)
+{
+	if (skb_recycle_check(skb, ueth_rx_skb_size() - NET_SKB_PAD))
+		ueth_recycle_rx_skbs(skb);
+	else {
+		skb->signature = 0;
+		skb_release_all(skb);
+		kfree_skbmem(skb);
+	}
+	atomic_dec(&ueth_rx_skb_ref_count);
+}
+#endif
+
 /**
  *	__kfree_skb - private function
  *	@skb: buffer
@@ -459,20 +473,9 @@ void __kfree_skb(struct sk_buff *skb)
 	} else
 #endif	/* #ifdef CONFIG_BRCM_NETCONSOLE */
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-	 if (skb->signature == SKB_UETH_RX_NO_PRE_ALLOC_MEM_SIG) {
-		skb->signature = 0;
-		skb_release_all(skb);
-		kfree_skbmem(skb);
-		atomic_dec(&ueth_rx_skb_ref_count);
-		/* pr_info("--: ueth_rx_skb_ref_count = %d\n",
-		atomic_read(&ueth_rx_skb_ref_count)); */
-        } else if (skb->signature == SKB_UETH_RX_PRE_ALLOC_MEM_SIG) {
-		unsigned char skb_dataref =
-					atomic_read(&skb_shinfo(skb)->dataref);
-		/*pr_info("skb_dataref=%d\n", cloned_skb);*/
-		recycle_skbs_process(skb,  ueth_rx_skb_size());
-		ueth_recycle_rx_skbs(skb, (skb_dataref > 1));
-        } else 
+	 if (skb->signature == SKB_UETH_RX_THRESHOLD_SIG)
+		skb_recycle_ueth(skb);
+	else
 #endif
 	{
 		skb_release_all(skb);
@@ -630,6 +633,9 @@ static struct sk_buff *__skb_clone(struct sk_buff *n, struct sk_buff *skb)
 	C(head);
 	C(data);
 	C(truesize);
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+	C(signature);
+#endif
 	atomic_set(&n->users, 1);
 
 	atomic_inc(&(skb_shinfo(skb)->dataref));
@@ -674,17 +680,6 @@ struct sk_buff *skb_clone(struct sk_buff *skb, gfp_t gfp_mask)
 {
 	struct sk_buff *n;
 
-#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-	if (skb->signature == SKB_UETH_RX_PRE_ALLOC_MEM_SIG) {
-		n = skb_copy_ueth(skb);
-		if (!n)
-			return NULL;
-		/* Using dataref for skb_clone...*/
-		atomic_inc(&(skb_shinfo(n)->dataref));
-		return n;
-		}
-#endif
-
 	n = skb + 1;
 	if (skb->fclone == SKB_FCLONE_ORIG &&
 	    n->fclone == SKB_FCLONE_UNAVAILABLE) {
@@ -727,35 +722,6 @@ static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	skb_shinfo(new)->gso_segs = skb_shinfo(old)->gso_segs;
 	skb_shinfo(new)->gso_type = skb_shinfo(old)->gso_type;
 }
-
-#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-/**
- *	skb_copy_ueth -	create private copy of an sk_buff c
- *	@skb: buffer to copy (buffer is preallocated in u_ether.c)
- *
- */
-struct sk_buff *skb_copy_ueth(const struct sk_buff *skb)
-{
-	int headerlen = skb_headroom(skb);
-	unsigned int size = (skb_end_pointer(skb) - skb->head) + skb->data_len;
-	struct sk_buff *n;
-
-	n = ueth_get_skb_4_clone();
-	if (!n)
-		return NULL;
-
-	/* Set the data pointer */
-	skb_reserve(n, headerlen);
-	/* Set the tail pointer and length */
-	skb_put(n, skb->len);
-
-	if (skb_copy_bits(skb, -headerlen, n->head, headerlen + skb->len))
-		BUG();
-
-	copy_skb_header(n, skb);
-	return n;
-}
-#endif
 
 /**
  *	skb_copy	-	create private copy of an sk_buff
