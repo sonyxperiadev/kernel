@@ -61,8 +61,8 @@ typedef enum {
 } DSP_AADMAC_Audio_Connections_t;
 
 typedef enum {
-    DSP_AADMAC_EXT_MODEM_UL,
-    DSP_AADMAC_EXT_MODEM_DL
+	DSP_AADMAC_EXT_MODEM_UL,
+	DSP_AADMAC_EXT_MODEM_DL
 } DSP_AADMAC_Ext_Modem_Connections_t;
 
 /* ---- Function Declarations ----------------------------------------- */
