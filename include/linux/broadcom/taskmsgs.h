@@ -6907,6 +6907,14 @@ typedef enum
 	api is CAPI2_SmsApi_WriteSMSPduToSIMSlotReq 
 	**/
 	MSG_SMS_WRITESMSPDUTOSIMSLOT_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6FE,	///<Payload type {CAPI2_SmsApi_WriteSMSPduToSIMSlotReq_Req_t}
+	 /** 
+	api is CAPI2_SYSPARM_SET_TxPhoneState 
+	**/
+	MSG_SYSPARM_SET_TX_PHONE_STATE_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x700,	///<Payload type {CAPI2_SYSPARM_SET_TxPhoneState_Req_t}
+	 /** 
+	payload is void 
+	**/
+	MSG_SYSPARM_SET_TX_PHONE_STATE_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x701,
 
 	//MSG_GEN_REQ_END = 0x48FF
 
