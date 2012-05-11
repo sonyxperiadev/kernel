@@ -452,7 +452,8 @@ static void dormant_save_addnl_reg(void)
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(addnl_save_reg_list); i++)
-		addnl_save_reg_list[i][1] = readl(addnl_save_reg_list[i][0]);
+		addnl_save_reg_list[i][1] = readl_relaxed(
+						addnl_save_reg_list[i][0]);
 }
 
 static void dormant_restore_addnl_reg(void)
@@ -461,12 +462,13 @@ static void dormant_restore_addnl_reg(void)
 	u32 val1, val2;
 
 	/* Allow write access to the CCU registers */
-	writel(0xA5A501, (KONA_PROC_CLK_VA +
+	writel_relaxed(0xA5A501, (KONA_PROC_CLK_VA +
 	       KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET));
 
 	for (i = 0; i < ARRAY_SIZE(addnl_save_reg_list); i++) {
 		/* Restore the saved data */
-		writel(addnl_save_reg_list[i][1], addnl_save_reg_list[i][0]);
+		writel_relaxed(addnl_save_reg_list[i][1],
+			       addnl_save_reg_list[i][0]);
 
 		if (addnl_save_reg_list[i][0] == (KONA_PROC_CLK_VA +
 		    KPROC_CLK_MGR_REG_TGTMASK_DBG1_OFFSET)) {
@@ -475,7 +477,7 @@ static void dormant_restore_addnl_reg(void)
 			 * lock the state machine so writing the GO bit
 			 * would not cause issues with the state machine
 			 */
-			writel(readl(KONA_PROC_CLK_VA +
+			writel_relaxed(readl(KONA_PROC_CLK_VA +
 			       KPROC_CLK_MGR_REG_LVM_EN_OFFSET) |
 			       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK,
 			       KONA_PROC_CLK_VA +
@@ -489,7 +491,7 @@ static void dormant_restore_addnl_reg(void)
 
 			/* Write the go bit to trigger the frequency change
 			 */
-			writel(KPROC_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK |
+			writel_relaxed(KPROC_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK |
 			       KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
 			       KONA_PROC_CLK_VA +
 			       KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET);

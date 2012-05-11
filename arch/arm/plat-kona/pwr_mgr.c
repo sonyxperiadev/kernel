@@ -284,7 +284,7 @@ int pwr_mgr_event_clear_events(u32 event_start, u32 event_end)
 		reg_val = readl(PWR_MGR_REG_ADDR(inx * 4));
 		if (reg_val & PWRMGR_EVENT_CONDITION_ACTIVE_MASK) {
 			reg_val &= ~PWRMGR_EVENT_CONDITION_ACTIVE_MASK;
-			writel(reg_val, PWR_MGR_REG_ADDR(inx * 4));
+			writel_relaxed(reg_val, PWR_MGR_REG_ADDR(inx * 4));
 		}
 	}
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
@@ -338,7 +338,7 @@ int pwr_mgr_event_set(int event_id, int event_state)
 		reg_val |= PWRMGR_EVENT_CONDITION_ACTIVE_MASK;
 	else
 		reg_val &= ~PWRMGR_EVENT_CONDITION_ACTIVE_MASK;
-	writel(reg_val, PWR_MGR_REG_ADDR(event_id * 4));
+	writel_relaxed(reg_val, PWR_MGR_REG_ADDR(event_id * 4));
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return 0;
 }
@@ -408,7 +408,7 @@ int pwr_mgr_event_set_pi_policy(int event_id, int pi_id,
 	pwr_pi_dbg(pi_id, PWR_LOG_PI, "%s:reg val %08x shift val: %08x\n",
 		__func__, reg_val, pi->pi_info.pm_policy_shift);
 
-	writel(reg_val,
+	writel_relaxed(reg_val,
 	       PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, realEventId));
 	pwr_pi_dbg(pi_id, PWR_LOG_PI,
 	"%s : event_id = %d : pi_id = %d, ac : %d,ATL : %d, policy: %d\n",
@@ -1263,7 +1263,8 @@ int pwr_mgr_arm_core_dormant_enable(bool enable)
 	else
 		reg_val |=
 		    PWRMGR_PI_DEFAULT_POWER_STATE_ARM_CORE_DORMANT_DISABLE_MASK;
-	writel(reg_val, PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
+	writel_relaxed(reg_val, PWR_MGR_REG_ADDR(
+		       PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 
 	return 0;
@@ -1468,7 +1469,8 @@ int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event)
 				event_reg = readl(PWR_MGR_REG_ADDR(inx * 4));
 				event_reg &=
 				    ~PWRMGR_EVENT_CONDITION_ACTIVE_MASK;
-				writel(event_reg, PWR_MGR_REG_ADDR(inx * 4));
+				writel_relaxed(event_reg,
+					       PWR_MGR_REG_ADDR(inx * 4));
 			}
 		}
 		bit_pos = (bit_pos + 1) % 32;
@@ -1491,7 +1493,8 @@ int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event)
 								       param);
 			if (clear_event) {
 				reg_val &= ~PWRMGR_EVENT_CONDITION_ACTIVE_MASK;
-				writel(reg_val, PWR_MGR_REG_ADDR(inx * 4));
+				writel_relaxed(reg_val,
+					       PWR_MGR_REG_ADDR(inx * 4));
 
 			}
 		}

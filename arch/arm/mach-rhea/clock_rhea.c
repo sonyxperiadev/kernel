@@ -6687,7 +6687,8 @@ int clk_set_crystal_pwr_on_idle(int enable)
     else
 		reg_val &= ~ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
 
-    writel(reg_val , KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET);
+	writel_relaxed(reg_val , KONA_ROOT_CLK_VA +
+		  ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET);
 	/* disable write access*/
 	ccu_write_access_enable(&CLK_NAME(root), false);
 

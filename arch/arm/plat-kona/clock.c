@@ -1964,7 +1964,7 @@ static int ccu_clk_write_access_enable(struct ccu_clk *ccu_clk, int enable)
 	} else if (ccu_clk->write_access_en_count == 0
 		   || --ccu_clk->write_access_en_count != 0)
 		return 0;
-	writel(reg_val, CCU_WR_ACCESS_REG(ccu_clk));
+	writel_relaxed(reg_val, CCU_WR_ACCESS_REG(ccu_clk));
 
 	return 0;
 }

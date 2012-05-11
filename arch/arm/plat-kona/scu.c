@@ -70,7 +70,7 @@ int scu_invalidate_all(void)
 	if (!scu_base)
 		return -ENODEV;
 
-	writel(0xFFFF, scu_base + SCU_INVALIDATE_ALL_OFFSET);
+	writel_relaxed(0xFFFF, scu_base + SCU_INVALIDATE_ALL_OFFSET);
 
 	return 0;
 }
@@ -96,7 +96,7 @@ int scu_set_power_mode(unsigned int mode)
 
 	val = readb(scu_base + SCU_POWER_STATUS_OFFSET + cpu) & ~0x03;
 	val |= mode;
-	writeb(val, scu_base + SCU_POWER_STATUS_OFFSET + cpu);
+	writeb_relaxed(val, scu_base + SCU_POWER_STATUS_OFFSET + cpu);
 
 	return 0;
 }

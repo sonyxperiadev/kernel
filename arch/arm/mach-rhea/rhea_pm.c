@@ -219,13 +219,13 @@ We may have to move these fucntions to somewhere else later
 static void clear_wakeup_interrupts(void)
 {
 // clear interrupts for COMMON_INT_TO_AC_EVENT
-	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR0_OFFSET);
-	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR1_OFFSET);
-	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR2_OFFSET);
-	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR3_OFFSET);
-	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR4_OFFSET);
-	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR5_OFFSET);
-	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR6_OFFSET);
+	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR0_OFFSET);
+	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR1_OFFSET);
+	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR2_OFFSET);
+	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR3_OFFSET);
+	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR4_OFFSET);
+	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR5_OFFSET);
+	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR6_OFFSET);
 
 }
 
@@ -289,19 +289,19 @@ static void config_wakeup_interrupts(void)
 	if (force_sleep)
 		return;
 
-	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET),
+	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET),
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET0_OFFSET);
-	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET2_OFFSET),
+	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET2_OFFSET),
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET1_OFFSET);
-	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET3_OFFSET),
+	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET3_OFFSET),
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET2_OFFSET);
-	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET4_OFFSET),
+	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET4_OFFSET),
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET3_OFFSET);
-	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET5_OFFSET),
+	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET5_OFFSET),
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET4_OFFSET);
-	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET6_OFFSET),
+	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET6_OFFSET),
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET5_OFFSET);
-	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET7_OFFSET),
+	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET7_OFFSET),
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET6_OFFSET);
 }
 
@@ -336,7 +336,8 @@ static void set_spare_power_status(unsigned int mode)
 	val = readl(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
 	val &= ~(3 << CHIPREG_PERIPH_SPARE_CONTROL2_PWRCTL0_BYPASS_SHIFT);
 	val |= mode << CHIPREG_PERIPH_SPARE_CONTROL2_PWRCTL0_BYPASS_SHIFT;
-	writel(val, KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
+	writel_relaxed(val, KONA_CHIPREG_VA +
+		       CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
 }
 
 int enter_dormant_state(struct kona_idle_state *state)
@@ -353,7 +354,7 @@ int enter_dormant_state(struct kona_idle_state *state)
 		 */
 		v = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
 		v &= ~CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
-		writel(v, CHIPREG_PERIPH_SPARE_CONTROL2);
+		writel_relaxed(v, CHIPREG_PERIPH_SPARE_CONTROL2);
 		set_spare_power_status(SCU_STATUS_DORMANT);
 
 		dormant_enter();
@@ -361,7 +362,7 @@ int enter_dormant_state(struct kona_idle_state *state)
 		set_spare_power_status(SCU_STATUS_NORMAL);
 		v = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
 		v |= CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
-		writel(v, CHIPREG_PERIPH_SPARE_CONTROL2);
+		writel_relaxed(v, CHIPREG_PERIPH_SPARE_CONTROL2);
 		pwr_mgr_arm_core_dormant_enable(false);
 	}
 #endif /* CONFIG_RHEA_DORMANT_MODE */
@@ -451,7 +452,7 @@ int enter_idle_state(struct kona_idle_state *state)
 		the period field contains the device temperature period.
 		The timer operates in the XTAL clock domain. 0cC3500 is the
 		default value, write it back. */
-		 writel(0xC3500,
+		 writel_relaxed(0xC3500,
 			KONA_MEMC0_NS_VA + CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2301*/
@@ -472,7 +473,7 @@ int enter_idle_state(struct kona_idle_state *state)
 			temp_val = *(volatile u32 *)noncache_buf_tmp_va;
 		memc_freq_map = readl(KONA_MEMC0_NS_VA +
 						CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
-		writel(1, KONA_MEMC0_NS_VA +
+		writel_relaxed(1, KONA_MEMC0_NS_VA +
 				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2221*/
@@ -495,13 +496,13 @@ int enter_idle_state(struct kona_idle_state *state)
 	- Disable temp. polling when A9 enters LPM & re-enable on exit from LPM
  */
 	if (JIRA_WA_ENABLED(2301))
-		writel(lpddr2_temp_period, KONA_MEMC0_NS_VA +
+		writel_relaxed(lpddr2_temp_period, KONA_MEMC0_NS_VA +
                         CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
 #endif /*CONFIG_RHEA_WA_HWJIRA_2301*/
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 	if (JIRA_WA_ENABLED(2221))
-		writel(memc_freq_map, KONA_MEMC0_NS_VA +
+		writel_relaxed(memc_freq_map, KONA_MEMC0_NS_VA +
 				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
 #endif
 
