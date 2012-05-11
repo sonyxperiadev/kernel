@@ -1450,6 +1450,14 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
 		val =
 		    val >> bcmpmu->regmap[PMU_REG_ADP_STATUS_ATTACH_DET].shift;
 		break;
+	case BCMPMU_USB_CTRL_GET_ADP_SENSE_TIMER_VALUE:
+		ret = bcmpmu->read_dev(bcmpmu,
+				       PMU_REG_ADP_SNS_TM,
+				       &val,
+				       bcmpmu->
+				       regmap[PMU_REG_ADP_SNS_TM].mask);
+		val = val >> bcmpmu->regmap[PMU_REG_ADP_SNS_TM].shift;
+		break;
 	case BCMPMU_USB_CTRL_GET_ADP_SENSE_STATUS:
 		ret = bcmpmu->read_dev(bcmpmu,
 				       PMU_REG_ADP_STATUS_SNS_DET,

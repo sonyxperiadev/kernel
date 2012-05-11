@@ -265,6 +265,8 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_OTG_ENABLE] =		{.map = 0, .addr = 0, .mask = 0x00, .ro = 0, .shift = 6},
 	[PMU_REG_ADP_SENSE] =		{.map = 0, .addr = 0, .mask = 0x00, .ro = 0, .shift = 4},
 	[PMU_REG_ADP_COMP_DB_TM] =	{.map = 0, .addr = 0, .mask = 0x00, .ro = 0, .shift = 0},
+	[PMU_REG_ADP_SNS_TM] =	{.map = 0, .addr = 0, .mask = 0,
+		.ro = 0, .shift = 0},
 	[PMU_REG_ADP_PRB] =		{.map = 0, .addr = 0, .mask = 0x00, .ro = 0, .shift = 0},
 	[PMU_REG_ADP_CAL_PRB] =		{.map = 0, .addr = 0, .mask = 0x00, .ro = 0, .shift = 0},
 	[PMU_REG_ADP_PRB_MOD] =		{.map = 0, .addr = 0, .mask = 0x00, .ro = 0, .shift = 1},

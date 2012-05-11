@@ -243,6 +243,8 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {	/* revisit 
 #endif
 	[PMU_REG_ADP_COMP_DB_TM] = {.map = 0, .addr = 0x71, .mask = 0x03, .ro =
 				    0, .shift = 0},
+	[PMU_REG_ADP_SNS_TM] =	{.map = 0, .addr = 0, .mask = 0,
+		.ro = 0, .shift = 0},
 	[PMU_REG_ADP_PRB] = {.map = 0, .addr = 0x7A, .mask = 0x01, .ro = 0, .shift =
 			     0},
 	[PMU_REG_ADP_CAL_PRB] = {.map = 0, .addr = 0x0, .mask = 0x0, .ro =

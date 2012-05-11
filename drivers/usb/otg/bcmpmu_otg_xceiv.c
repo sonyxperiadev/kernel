@@ -528,6 +528,11 @@ static void bcmpmu_otg_xceiv_vbus_valid_handler(struct work_struct *work)
 	    container_of(work, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_vbus_valid_work);
 	dev_info(xceiv_data->dev, "Vbus valid\n");
+
+#ifdef CONFIG_USB_OTG
+	del_timer_sync(&xceiv_data->otg_xceiver.srp_failure_timer);
+	del_timer_sync(&xceiv_data->otg_xceiver.sess_end_srp_timer);
+#endif
 }
 
 static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
@@ -627,11 +632,6 @@ static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
 	    container_of(work, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_vbus_a_valid_work);
 	dev_info(xceiv_data->dev, "A session valid\n");
-
-#ifdef CONFIG_USB_OTG
-	del_timer_sync(&xceiv_data->otg_xceiver.srp_failure_timer);
-	del_timer_sync(&xceiv_data->otg_xceiver.sess_end_srp_timer);
-#endif
 }
 
 static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
