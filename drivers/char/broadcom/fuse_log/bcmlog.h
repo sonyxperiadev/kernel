@@ -82,10 +82,6 @@ extern "C" {
 #define BCMLOG_IOC_ENABLE	103
 /* log a signal */
 #define BCMLOG_IOC_LOGSIGNAL	104
-/* save configuration to PS */
-#define BCMLOG_IOC_SAVECONFIG	105
-/* reset configuration in PS to default */
-#define BCMLOG_IOC_RESETCONFIG	106
 
 /**
  *  for ioctl cmd BCMLOG_IOC_LOGSTR, a variable of this type

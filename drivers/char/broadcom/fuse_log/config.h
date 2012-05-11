@@ -19,8 +19,6 @@
 
 #include "bcmlog.h"
 
-/* persistent storage configuration file */
-#define BCMLOG_CONFIG_PS_FILE		"/data/brcm/parm_log.bin"
 /* /proc file to accept configuration changes */
 #define BCMLOG_CONFIG_PROC_FILE		"brcm_logcfg"
 #define BCMLOG_DEFAULT_FILE_BASE "/sdcard/"
@@ -63,14 +61,6 @@ void BCMLOG_EnableLogId(unsigned short inLogId, int inEnable);
  *	@return		1 if enabled; 0 if not enabled or invalid ID
  **/
 int BCMLOG_LogIdIsEnabled(unsigned short inLogId);
-
-/**
- *	Save or reset configuration persistent storage
- *	@param		saveFlag [in] if nonzero save configuration else reset
- *				configuration
- *	@return		0 on success, -1 on error
- **/
-int BCMLOG_SaveConfig(int saveFlag);
 
 /**
  *	Initialize logging configuration.  Schedules a work thread to
