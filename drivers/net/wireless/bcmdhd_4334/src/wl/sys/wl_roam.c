@@ -98,12 +98,11 @@ int get_roam_channel_list(int target_chan, chanspec_t *channels, const wlc_ssid_
 			(memcmp(roam_cache[i].ssid, ssid->SSID, ssid->SSID_len) == 0)) {
 			/* match found, add it */
 			*channels = ch & WL_CHANSPEC_CHAN_MASK;
-			WL_DBG((" %s: %02d\n", __FUNCTION__, *channels));
 			if (*channels <= 14)
 				*channels |= WL_CHANSPEC_BAND_2G | WL_CHANSPEC_BW_20 | WL_CHANSPEC_CTL_SB_NONE;
 			else
 				*channels |= WL_CHANSPEC_BAND_5G | WL_CHANSPEC_BW_20 | WL_CHANSPEC_CTL_SB_NONE;
-
+			WL_DBG((" %s: %02d 0x%04X\n", __FUNCTION__, ch & WL_CHANSPEC_CHAN_MASK, *channels));
 			channels++; n++;
 		}
 	}

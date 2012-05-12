@@ -554,8 +554,7 @@ static int dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata,
 static int dhd_sleep_pm_callback(struct notifier_block *nfb, unsigned long action, void *ignored)
 {
 	int ret = NOTIFY_DONE;
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39)) || \
-	defined(CUSTOMER_HW_SAMSUNG)
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39))
 	switch (action) {
 	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
@@ -2667,9 +2666,6 @@ static int
 dhd_open(struct net_device *net)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(net);
-#ifdef PROP_TXSTATUS
-	uint up = 0;
-#endif
 #ifdef TOE
 	uint32 toe_ol;
 #endif
@@ -4556,12 +4552,13 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 	/* Totally stop the timer */
 	if (!wdtick && dhd->wd_timer_valid == TRUE) {
 		dhd->wd_timer_valid = FALSE;
-#ifdef DHDTHREAD
-		del_timer_sync(&dhd->timer);
-#else
-		del_timer(&dhd->timer);
-#endif /* DHDTHREAD */
 		dhd_os_spin_unlock(pub, flags);
+		if (dhd)
+#ifdef DHDTHREAD
+			del_timer_sync(&dhd->timer);
+#else
+			del_timer(&dhd->timer);
+#endif /* DHDTHREAD */
 		return;
 	}
 
@@ -4788,7 +4785,6 @@ dhd_sendup_event(dhd_pub_t *dhdp, wl_event_msg_t *event, void *data)
 		dhd_info_t *dhd;
 		uchar *eth;
 		int ifidx;
-		char *ptrtmp;
 
 		len = ntoh32(event->datalen);
 		pktlen = sizeof(bcm_event_t) + len + 2;
@@ -4827,8 +4823,7 @@ dhd_sendup_event(dhd_pub_t *dhdp, wl_event_msg_t *event, void *data)
 			bcopy(event, p_bcm_event, sizeof(wl_event_msg_t));
 
 			/* copy hci event into sk_buf */
-			ptrtmp = (char*)(p_bcm_event + 1);
-			bcopy(data, ptrtmp, len);
+			bcopy(data, (p_bcm_event + 1), len);
 
 			msg->bcm_hdr.length  = hton16(sizeof(wl_event_msg_t) +
 				ntoh16(msg->bcm_hdr.length));

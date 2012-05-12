@@ -109,52 +109,59 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 {
 	int ret = 0;
 	static struct sdio_func sdio_func_0;
-	sd_trace(("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__));
-	sd_trace(("sdio_bcmsdh: func->class=%x\n", func->class));
-	sd_trace(("sdio_vendor: 0x%04x\n", func->vendor));
-	sd_trace(("sdio_device: 0x%04x\n", func->device));
-	sd_trace(("Function#: 0x%04x\n", func->num));
 
-	if (func->num == 1) {
-		sdio_func_0.num = 0;
-		sdio_func_0.card = func->card;
-		gInstance->func[0] = &sdio_func_0;
-		if(func->device == 0x4) { /* 4318 */
-			gInstance->func[2] = NULL;
-			sd_trace(("NIC found, calling bcmsdh_probe...\n"));
+	if (func) {
+		sd_trace(("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__));
+		sd_trace(("sdio_bcmsdh: func->class=%x\n", func->class));
+		sd_trace(("sdio_vendor: 0x%04x\n", func->vendor));
+		sd_trace(("sdio_device: 0x%04x\n", func->device));
+		sd_trace(("Function#: 0x%04x\n", func->num));
+
+		if (func->num == 1) {
+			sdio_func_0.num = 0;
+			sdio_func_0.card = func->card;
+			gInstance->func[0] = &sdio_func_0;
+			if(func->device == 0x4) { /* 4318 */
+				gInstance->func[2] = NULL;
+				sd_trace(("NIC found, calling bcmsdh_probe...\n"));
+				ret = bcmsdh_probe(&func->dev);
+			}
+		}
+
+		gInstance->func[func->num] = func;
+
+		if (func->num == 2) {
+#ifdef WL_CFG80211
+			wl_cfg80211_set_parent_dev(&func->dev);
+#endif
+			sd_trace(("F2 found, calling bcmsdh_probe...\n"));
 			ret = bcmsdh_probe(&func->dev);
 		}
+	}else {
+		ret = -ENODEV;
 	}
-
-	gInstance->func[func->num] = func;
-
-	if (func->num == 2) {
-#ifdef WL_CFG80211
-		wl_cfg80211_set_parent_dev(&func->dev);
-#endif
-		sd_trace(("F2 found, calling bcmsdh_probe...\n"));
-		ret = bcmsdh_probe(&func->dev);
-	}
-
+	
 	return ret;
 }
 
 static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 {
-	sd_err(("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__));
-	sd_info(("sdio_bcmsdh: func->class=%x\n", func->class));
-	sd_info(("sdio_vendor: 0x%04x\n", func->vendor));
-	sd_info(("sdio_device: 0x%04x\n", func->device));
-	sd_info(("Function#: 0x%04x\n", func->num));
+	if (func) {
+		sd_err(("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__));
+		sd_info(("sdio_bcmsdh: func->class=%x\n", func->class));
+		sd_info(("sdio_vendor: 0x%04x\n", func->vendor));
+		sd_info(("sdio_device: 0x%04x\n", func->device));
+		sd_info(("Function#: 0x%04x\n", func->num));
 
-	if (func->num == 2) {
-		sd_err(("F2 found, calling bcmsdh_remove...\n"));
-		bcmsdh_remove(&func->dev);
-	} else if (func->num == 1) {
-		sdio_claim_host(func);
-		sdio_disable_func(func);
-		sdio_release_host(func);
-		gInstance->func[1] = NULL;
+		if (func->num == 2) {
+			sd_err(("F2 found, calling bcmsdh_remove...\n"));
+			bcmsdh_remove(&func->dev);
+		} else if (func->num == 1) {
+			sdio_claim_host(func);
+			sdio_disable_func(func);
+			sdio_release_host(func);
+			gInstance->func[1] = NULL;
+		}
 	}
 }
 
@@ -183,13 +190,15 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 	if (func->num != 2)
 		return 0;
 
-	sd_trace(("%s Enter\n", __FUNCTION__));
+	sd_err(("%s Enter\n", __FUNCTION__));
 
 	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
 		return -EBUSY;
+#if !defined(CUSTOMER_HW_SAMSUNG)
 #if defined(OOB_INTR_ONLY)
 	bcmsdh_oob_intr_set(0);
 #endif	/* defined(OOB_INTR_ONLY) */
+#endif /* !CUSTOMER_HW_SAMSUNG */
 	dhd_mmc_suspend = TRUE;
 	smp_mb();
 
@@ -201,12 +210,15 @@ static int bcmsdh_sdmmc_resume(struct device *pdev)
 #if defined(OOB_INTR_ONLY)
 	struct sdio_func *func = dev_to_sdio_func(pdev);
 #endif
-	sd_trace(("%s Enter\n", __FUNCTION__));
+	if (func->num == 2)
+		sd_err(("%s Enter\n", __FUNCTION__));
 	dhd_mmc_suspend = FALSE;
+#if !defined(CUSTOMER_HW_SAMSUNG)
 #if defined(OOB_INTR_ONLY)
 	if ((func->num == 2) && dhd_os_check_if_up(bcmsdh_get_drvdata()))
 		bcmsdh_oob_intr_set(1);
 #endif /* (OOB_INTR_ONLY) */
+#endif /* !CUSTOMER_HW_SAMSUNG */
 
 	smp_mb();
 	return 0;
@@ -257,12 +269,10 @@ static struct sdio_driver bcmsdh_sdmmc_driver = {
 	.remove		= bcmsdh_sdmmc_remove,
 	.name		= "bcmsdh_sdmmc",
 	.id_table	= bcmsdh_sdmmc_ids,
-#if 0
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39)) && defined(CONFIG_PM)
 	.drv = {
 	.pm	= &bcmsdh_sdmmc_pm_ops,
 	},
-#endif /* (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39)) && defined(CONFIG_PM) */
 #endif /* (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39)) && defined(CONFIG_PM) */
 	};
 
@@ -276,6 +286,9 @@ int
 sdioh_sdmmc_osinit(sdioh_info_t *sd)
 {
 	struct sdos_info *sdos;
+
+	if(!sd)
+		return BCME_BADARG;
 
 	sdos = (struct sdos_info*)MALLOC(sd->osh, sizeof(struct sdos_info));
 	sd->sdos_info = (void*)sdos;
@@ -304,6 +317,9 @@ sdioh_interrupt_set(sdioh_info_t *sd, bool enable)
 	ulong flags;
 	struct sdos_info *sdos;
 
+	if(!sd)
+		return BCME_BADARG;
+		
 	sd_trace(("%s: %s\n", __FUNCTION__, enable ? "Enabling" : "Disabling"));
 
 	sdos = (struct sdos_info *)sd->sdos_info;

@@ -500,6 +500,7 @@ typedef struct {
 	(tsk_ctl)->parent = owner; \
 	(tsk_ctl)->terminated = FALSE; \
 	(tsk_ctl)->thr_pid = kernel_thread(thread_func, tsk_ctl, flags); \
+	DBG_THR(("%s thr:%lx created\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \
 	if ((tsk_ctl)->thr_pid > 0) \
 		wait_for_completion(&((tsk_ctl)->completed)); \
 	DBG_THR(("%s thr:%lx started\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \

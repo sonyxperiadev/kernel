@@ -487,7 +487,7 @@ struct wl_priv {
 	u64 send_action_id;
 	u64 last_roc_id;
 	wait_queue_head_t netif_change_event;
-	wait_queue_head_t send_af_done_event;
+	struct completion send_af_done;
 	struct afx_hdl *afx_hdl;
 	struct ap_info *ap_info;
 	struct sta_info *sta_info;
