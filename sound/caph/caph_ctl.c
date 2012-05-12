@@ -1260,7 +1260,14 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		break;
 	case CTL_FUNCTION_FM_ENABLE:
 		callMode = pChip->iCallMode;
+
+		/* if FM listening path is already enabled or disabled,
+		do nothing, return. */
+		if (pChip->iEnableFM == ucontrol->value.integer.value[0])
+			return;
+
 		pChip->iEnableFM = ucontrol->value.integer.value[0];
+
 		pChip->streamCtl[stream - 1].dev_prop.p[0].source =
 		    AUDIO_SOURCE_I2S;
 		pSel = pChip->streamCtl[stream - 1].iLineSelect;
