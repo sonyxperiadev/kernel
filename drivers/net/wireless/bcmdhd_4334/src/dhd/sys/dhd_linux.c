@@ -100,6 +100,18 @@ extern bool ap_cfg_running;
 extern bool ap_fw_loaded;
 #endif
 
+#ifdef CONFIG_KONA_PI_MGR
+#include <mach/pi_mgr.h>
+#include <plat/pi_mgr.h>
+static struct pi_mgr_qos_node wlan_qos_node;
+static int qos_wlan = -1;
+
+
+
+#endif
+
+
+
 /* enable HOSTIP cache update from the host side when an eth0:N is up */
 #define AOE_IP_ALIAS_SUPPORT 1
 
@@ -2961,6 +2973,31 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 		}
 #endif /* BCM4334_CHECK_CHIP_REV */
 
+#ifdef CONFIG_KONA_PI_MGR
+		qos_wlan=-1;
+
+		qos_wlan = pi_mgr_qos_add_request(&wlan_qos_node, "wlan_arm_susbsystem",
+					   PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+					   PI_MGR_QOS_DEFAULT_VALUE);
+		if (qos_wlan < 0) 
+			{
+	
+			printk(KERN_ERR "WIFI  wlan_qosNode addition FAILED\n");
+	
+			}
+		else
+			
+			printk(KERN_ERR "WIFI	wlan_qosNode SUCCESFULL\n");
+	
+	
+	
+	
+	
+	
+	
+#endif
+
+
 	/* updates firmware nvram path if it was provided as module parameters */
 	if ((strlen(firmware_path) != 0) && (firmware_path[0] != '\0'))
 		strcpy(fw_path, firmware_path);
@@ -4248,6 +4285,24 @@ void dhd_detach(dhd_pub_t *dhdp)
 	}
 #endif
 
+#ifdef CONFIG_KONA_PI_MGR
+
+	if (pi_mgr_qos_request_remove(&wlan_qos_node))
+		printk(KERN_ERR "FAIL to unregister wlan qos client\n");
+	else
+		{
+		printk(KERN_ERR "SUCCESS to unregister wlan qos client\n");
+		qos_wlan=-1;
+		}
+
+
+
+
+
+
+	
+#endif
+
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP)
 		unregister_pm_notifier(&dhd_sleep_pm_notifier);
@@ -5275,12 +5330,27 @@ int dhd_os_wake_lock(dhd_pub_t *pub)
 	dhd_info_t *dhd = (dhd_info_t *)(pub->info);
 	unsigned long flags;
 	int ret = 0;
+	int lock=-1;
 
 	if (dhd) {
 		spin_lock_irqsave(&dhd->wakelock_spinlock, flags);
 #ifdef CONFIG_HAS_WAKELOCK
 		if (!dhd->wakelock_counter)
 			wake_lock(&dhd->wl_wifi);
+#ifdef CONFIG_KONA_PI_MGR
+			
+			
+				lock = pi_mgr_qos_request_update(&wlan_qos_node, 0);
+				if (lock == 0)
+			
+				DHD_TRACE(( "WIFI in  retention SUCCESSFUL\n",__FUNCTION__));
+				else
+			
+				DHD_ERROR(( "WIFI retention FAILED\n"));
+		
+#endif
+
+		
 #endif
 		dhd->wakelock_counter++;
 		ret = dhd->wakelock_counter;
@@ -5304,7 +5374,7 @@ int dhd_os_wake_unlock(dhd_pub_t *pub)
 	dhd_info_t *dhd = (dhd_info_t *)(pub->info);
 	unsigned long flags;
 	int ret = 0;
-
+	int lock=-1;
 	dhd_os_wake_lock_timeout(pub);
 	if (dhd) {
 		spin_lock_irqsave(&dhd->wakelock_spinlock, flags);
@@ -5313,6 +5383,19 @@ int dhd_os_wake_unlock(dhd_pub_t *pub)
 #ifdef CONFIG_HAS_WAKELOCK
 			if (!dhd->wakelock_counter)
 				wake_unlock(&dhd->wl_wifi);
+#ifdef CONFIG_KONA_PI_MGR
+			
+			
+				lock = pi_mgr_qos_request_update(&wlan_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+				if (lock == 0)
+			
+				DHD_TRACE(( "WIFI in  retention SUCCESSFUL\n",__FUNCTION__));
+				else
+			
+				DHD_ERROR(( "WIFI retention FAILED\n"));
+			
+#endif
+			
 #endif
 			ret = dhd->wakelock_counter;
 		}
