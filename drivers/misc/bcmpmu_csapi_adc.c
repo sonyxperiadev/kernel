@@ -49,17 +49,18 @@
 #include <linux/csapi_adc.h>
 #include <linux/mfd/bcmpmu.h>
 
-/*#define GLUE_DBG(text, ...)*/
-#define GLUE_DBG(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)
 /*#define pr_debug(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)*/
 /*#define pr_info(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)*/
 
-#if 0
+/*#define CSADCAPI_DEBUG_ENABLED*/
+#ifdef CSADCAPI_DEBUG_ENABLED
  #define csapi_pr_debug(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)
  #define csapi_pr_info(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)
+ #define GLUE_DBG(text, ...)  printk(KERN_INFO text"\n", ## __VA_ARGS__)
 #else
  #define csapi_pr_info pr_info
  #define csapi_pr_debug pr_debug
+ #define GLUE_DBG(text, ...)
 #endif
 
 #define FUELGAUGE_MINIMUM_TIME_BETWEEN_ADC_READS 9
