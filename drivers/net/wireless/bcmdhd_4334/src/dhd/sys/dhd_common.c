@@ -1854,7 +1854,7 @@ exit:
 bool dhd_check_ap_wfd_mode_set(dhd_pub_t *dhd)
 {
 #ifdef  WL_CFG80211
-	if (dhd_concurrent_fw(dhd))
+	if ((dhd->op_mode & CONCURRENT_MASK) == CONCURRENT_MASK)
 		return FALSE;
 	if (((dhd->op_mode & HOSTAPD_MASK) == HOSTAPD_MASK) ||
 		((dhd->op_mode & WFD_MASK) == WFD_MASK))

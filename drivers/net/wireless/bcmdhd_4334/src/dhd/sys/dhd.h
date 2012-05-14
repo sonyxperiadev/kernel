@@ -79,6 +79,7 @@ enum dhd_bus_state {
 #define HOSTAPD_MASK			0x0002
 #define WFD_MASK			0x0004
 #define SOFTAP_FW_MASK			0x0008
+#define CONCURRENT_MASK			(STA_MASK | WFD_MASK)
 
 /* max sequential rxcntl timeouts to set HANG event */
 #define MAX_CNTL_TIMEOUT  2

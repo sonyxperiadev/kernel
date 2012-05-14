@@ -554,7 +554,8 @@ static int dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata,
 static int dhd_sleep_pm_callback(struct notifier_block *nfb, unsigned long action, void *ignored)
 {
 	int ret = NOTIFY_DONE;
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39))
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39)) || \
+	defined(CUSTOMER_HW_SAMSUNG)
 	switch (action) {
 	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
@@ -1960,7 +1961,7 @@ dhd_watchdog_thread(void *data)
 
 			dhd_os_sdlock(&dhd->pub);
 			if (dhd->pub.dongle_reset == FALSE) {
-				DHD_TIMER(("%s:\n", __FUNCTION__));
+//				DHD_TIMER(("%s:\n", __FUNCTION__));
 
 				/* Call the bus module watchdog */
 				dhd_bus_watchdog(&dhd->pub);

@@ -5275,6 +5275,15 @@ clkwait:
 	if (TXCTLOK(bus) && bus->ctrl_frame_stat && (bus->clkstate == CLK_AVAIL))  {
 		int ret, i;
 
+		uint8* frame_seq = bus->ctrl_frame_buf + SDPCM_FRAMETAG_LEN;
+
+		if (*frame_seq != bus->tx_seq) {
+			DHD_INFO(("%s IOCTL frame seq lag detected!"
+				" frm_seq:%d != bus->tx_seq:%d, corrected\n",
+				__FUNCTION__, *frame_seq, bus->tx_seq));
+			*frame_seq = bus->tx_seq;
+		}
+
 		ret = dhd_bcmsdh_send_buf(bus, bcmsdh_cur_sbwad(sdh), SDIO_FUNC_2, F2SYNC,
 		                      (uint8 *)bus->ctrl_frame_buf, (uint32)bus->ctrl_frame_len,
 			NULL, NULL, NULL);
@@ -5707,7 +5716,7 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 {
 	dhd_bus_t *bus;
 
-	DHD_TIMER(("%s: Enter\n", __FUNCTION__));
+//	DHD_TIMER(("%s: Enter\n", __FUNCTION__));
 
 	bus = dhdp->bus;
 
@@ -5796,8 +5805,10 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 				if (bus->dhd_idlecount >= (DHD_IDLE_TIMEOUT_MS/dhd_watchdog_ms)) {
 					DHD_TIMER(("%s: DHD Idle state!!\n", __FUNCTION__));
 
-					if (SLPAUTO_ENAB(bus))
-						dhdsdio_bussleep(bus, TRUE);
+					if (SLPAUTO_ENAB(bus)) {
+						if (dhdsdio_bussleep(bus, TRUE) != BCME_BUSY)
+							dhd_os_wd_timer(bus->dhd, 0);
+					}
 					else
 						dhdsdio_clkctl(bus, CLK_NONE, FALSE);
 
@@ -6122,6 +6133,11 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 		DHD_ERROR(("%s: Net attach failed!!\n", __FUNCTION__));
 		goto fail;
 	}
+
+#ifdef XTAL_PU_TIME_MOD
+	bcmsdh_reg_write(bus->sdh, 0x18000620, 2, 10);
+	bcmsdh_reg_write(bus->sdh, 0x18000628, 2, 0x0000ff01);
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25))
 	mutex_unlock(&_dhd_sdio_mutex_lock_);

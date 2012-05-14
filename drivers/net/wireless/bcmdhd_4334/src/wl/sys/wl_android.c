@@ -1393,6 +1393,10 @@ static int wifi_suspend(struct platform_device *pdev, pm_message_t state)
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39)) && defined(OOB_INTR_ONLY) && 1
 	bcmsdh_oob_intr_set(0);
 #endif /* (OOB_INTR_ONLY) */
+
+	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
+		return -EBUSY;
+
 	return 0;
 }
 
