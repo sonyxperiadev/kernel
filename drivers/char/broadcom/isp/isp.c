@@ -256,7 +256,6 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			dbg_print("Disabling ISP interrupt\n");
 			disable_irq(IRQ_ISP);
 			if (interrupt_irq) {
-				err_print("interrupted irq ioctl\n");
 				return -EIO;
 			}
 		}
