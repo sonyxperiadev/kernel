@@ -50,6 +50,8 @@
 #include "mqueue.h"
 #endif
 
+static Boolean sCPResetting = FALSE;
+
 #ifdef LINUX_RPC_KERNEL
 static spinlock_t mLock;
 #define RPC_LOCK		spin_lock_bh(&mLock)
@@ -227,8 +229,13 @@ RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID,
 
 	if (pCid) {
 		pCid[0] = channel;
-		ipcError = IPC_SendBuffer((IPC_Buffer) dataBufHandle,
-				IPC_PRIORITY_DEFAULT);
+		if (sCPResetting) {
+			printk("RPC_PACKET_SendData: cp resetting, ignore send req\n");
+			ipcError = IPC_ERROR;
+		} else
+			ipcError =
+				IPC_SendBuffer((IPC_Buffer) dataBufHandle,
+						IPC_PRIORITY_DEFAULT);
 	}
 
 	return (ipcError == IPC_OK) ? RPC_RESULT_OK : RPC_RESULT_ERROR;
@@ -651,9 +658,11 @@ void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
 {
 	RPC_CPResetEvent_t rpcEvent;
 	PACKET_InterfaceType_t currIF;
-	
+
 	pr_info("RPC_PACKET_CPResetHandler\n");
-	
+
+	sCPResetting = (inEvent == IPC_CPRESET_START);
+
 	if (inEvent == IPC_CPRESET_START)
 		for (currIF = INTERFACE_START;
 			currIF < INTERFACE_TOTAL; currIF++) {

@@ -240,29 +240,10 @@ void HandleCPResetDone(void)
 	IPC_DEBUG(DBG_ERROR, "DONE notifying cp reset IPC_CPRESET_COMPLETE\n");
 }
 
-int HandleRestartCP(void *data)
+void ResetCP(void)
 {
-	int k = 0;
 	void __iomem *cp_root_reset_base;
 	void __iomem *cp_bmdm_reset_base;
-
-	IPC_DEBUG(DBG_ERROR, "enter\n");
-
-	/* verify that CP is ready to be reset */
-	while (IPC_CP_SILENT_RESET_READY !=
-		SmLocalControl.SmControl->CrashCode) {
-		/* not yet ready, so we'll wait up to 500ms */
-		if (k++ > WAIT_FOR_CP_RESET_READY_ITERATIONS)
-			break;
-		else
-			msleep(WAIT_FOR_CP_RESET_READY_MILLISEC);
-	}
-
-	if (IPC_CP_SILENT_RESET_READY != SmLocalControl.SmControl->CrashCode) {
-		/* CP not responding as ready, so we crash here */
-		IPC_DEBUG(DBG_ERROR, "CP not ready for reset, crashing\n");
-		BUG();
-	}
 
 	IPC_DEBUG(DBG_ERROR, "resetting CP\n");
 
@@ -302,16 +283,34 @@ int HandleRestartCP(void *data)
 	writel(0x2, cp_bmdm_reset_base+BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
 	writel(0x3, cp_bmdm_reset_base+BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
 
-	/* reload CP */
-	ReloadCP();
+	iounmap(cp_root_reset_base);
+	iounmap(cp_bmdm_reset_base);
 
-	IPC_DEBUG(DBG_ERROR, "reenable IRQ_IPC_C2A\n");
-	/* re-enable CP to AP IRQ */
-	enable_irq(IRQ_IPC_C2A);
+}
+
+int HandleRestartCP(void *data)
+{
+	IPC_DEBUG(DBG_ERROR, "enter\n");
+
+	IPC_DEBUG(DBG_ERROR, "call local_irq_disable()\n");
+	local_irq_disable();
+
+	IPC_DEBUG(DBG_ERROR, "resetting CP\n");
+	ResetCP();
+
+	/* reload CP */
+	IPC_DEBUG(DBG_ERROR, "reloading CP\n");
+	ReloadCP();
 
 	IPC_DEBUG(DBG_ERROR, "rebooting CP\n");
 	/* reboot CP; this will also wipe IPC shared memory */
 	Comms_Start(1);
+
+	IPC_DEBUG(DBG_ERROR, "call local_irq_enable()\n");
+	local_irq_enable();
+	enable_irq(IRQ_IPC_C2A);
+
+	msleep(200);
 
 	IPC_DEBUG(DBG_ERROR, "re-init IPC\n");
 	/* reinitialize IPC, and wait for IPC sync with CP */
@@ -325,9 +324,6 @@ int HandleRestartCP(void *data)
 	IPC_DEBUG(DBG_ERROR, "notifying clients CP reset is complete\n");
 	HandleCPResetDone();
 	IPC_DEBUG(DBG_ERROR, "notification done, exiting reset thread\n");
-
-	iounmap(cp_root_reset_base);
-	iounmap(cp_bmdm_reset_base);
 
 	/* done with thread */
 	do_exit(0);
@@ -1076,3 +1072,4 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 	iounmap(RamDumpBlockVAddr);
 
 }
+
