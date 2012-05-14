@@ -526,6 +526,7 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 
 		flush_cache_all();
 		outer_flush_all();
+		dmb();
 
 		cdebugger_hw_reset();
 	}
