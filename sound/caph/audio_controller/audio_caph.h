@@ -95,6 +95,7 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_DisableByPassVibra_CB,
 	ACTION_AUD_SetCallMode,
 	ACTION_AUD_ConnectDL,
+	ACTION_AUD_UpdateUserVolSetting,
 	ACTION_AUD_TOTAL
 };
 #define BRCM_AUDIO_ACTION_en_t enum __BRCM_AUDIO_ACTION_en_t
@@ -164,6 +165,7 @@ struct __BRCM_AUDIO_Param_Volume_t {
 	Int32 volume1;
 	Int32 volume2;
 	int stream;
+	AudioApp_t app;
 	AUDIO_GAIN_FORMAT_t gain_format;
 };
 #define BRCM_AUDIO_Param_Volume_t struct __BRCM_AUDIO_Param_Volume_t

@@ -873,4 +873,18 @@ void AUDCTRL_SetCallMode(Int32 callMode);
 ****************************************************************************/
 void AUDCTRL_ConnectDL(void);
 
+/********************************************************************
+*  @brief  Update user volume setting, used when playback is not on.
+*
+*  @param
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_UpdateUserVolSetting(
+	AUDIO_SINK_Enum_t sink,
+	int vol_left,
+	int vol_right,
+	AudioApp_t app);
+
 #endif /* #define __AUDIO_CONTROLLER_H__ */

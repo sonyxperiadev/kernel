@@ -201,8 +201,18 @@ static int VolumeCtrlPut(struct snd_kcontrol *kcontrol,
 				pStream =
 				    (struct snd_pcm_substream *)pChip->
 				    streamCtl[stream - 1].pSubStream;
-			else
+			else {
+				/* playback not started, only update
+				user volume setting */
+				parm_vol.sink = pCurSel[0];
+				parm_vol.volume1 = pVolume[0];
+				parm_vol.volume2 = pVolume[1];
+				parm_vol.app = AUDIO_APP_MUSIC;
+				AUDIO_Ctrl_Trigger(
+					ACTION_AUD_UpdateUserVolSetting,
+						   &parm_vol, NULL, 0);
 				break;
+			}
 
 			aTrace(LOG_ALSA_INTERFACE,
 					"VolumeCtrlPut stream state = %d\n",

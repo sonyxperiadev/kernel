@@ -375,6 +375,7 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 	case ACTION_AUD_SetPlaybackVolume:
 	case ACTION_AUD_SetRecordGain:
 	case ACTION_AUD_SetTelephonySpkrVolume:
+	case ACTION_AUD_UpdateUserVolSetting:
 		size = sizeof(BRCM_AUDIO_Param_Volume_t);
 		break;
 	case ACTION_AUD_SetHWLoopback:
@@ -1451,6 +1452,17 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		break;
 	case ACTION_AUD_ConnectDL: /* PTT call */
 		AUDCTRL_ConnectDL();
+		break;
+	case ACTION_AUD_UpdateUserVolSetting:
+		{
+			BRCM_AUDIO_Param_Volume_t *parm_vol =
+				(BRCM_AUDIO_Param_Volume_t *) arg_param;
+			AUDCTRL_UpdateUserVolSetting(
+				parm_vol->sink,
+				parm_vol->volume1,
+				parm_vol->volume2,
+				parm_vol->app);
+		}
 		break;
 	default:
 		aError("Error AUDIO_Ctrl_Process Invalid action %d\n",

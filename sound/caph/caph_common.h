@@ -155,7 +155,7 @@ extern int gAudioDebugLevel;
 
 /* Output volume */
 #define	MIN_VOLUME_mB			-5000
-#define	MAX_VOLUME_mB			4200
+#define	MAX_VOLUME_mB			0
 /* Voice volume */
 #define	MIN_VOICE_VOLUME_mB		-3600
 #define	MAX_VOICE_VOLUME_mB		0

@@ -3782,3 +3782,19 @@ void AUDCTRL_ConnectDL(void)
 {
 	AUDDRV_ConnectDL();
 }
+
+void AUDCTRL_UpdateUserVolSetting(
+	AUDIO_SINK_Enum_t sink,
+	int vol_left,
+	int vol_right,
+	AudioApp_t app)
+{
+	AudioMode_t mode;
+
+	mode = GetAudioModeBySink(sink);
+	user_vol_setting[app][mode].L = vol_left;
+	user_vol_setting[app][mode].R = vol_right;
+	user_vol_setting[app][mode].valid = TRUE;
+	aTrace(LOG_AUDIO_CNTLR, "%s app = %d, mode = %d\n",
+		__func__, app, mode);
+}
