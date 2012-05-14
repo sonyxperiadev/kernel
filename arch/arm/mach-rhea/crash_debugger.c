@@ -499,18 +499,6 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 				   unsigned long l, void *buf)
 {
 	if (enable) {
-
-		/* Check for sd card. If not we will skip Ram Dump
-		 * and apanic will handle the crash dump */
-		if (!sdhci_pltfm_is_sdcard_present()) {
-			/* reset the magic number, otherwise bootloader will
-			 * try to dump to sd card */
-			cdebugger_set_upload_magic(0x0);
-			return 0;
-		}
-
-		/* SD card present, let the Ram Dump go ahead */
-
 		cdebugger_set_upload_magic(0x66262564);
 
 		if (!strcmp(buf, "Forced Ramdump !!\n"))

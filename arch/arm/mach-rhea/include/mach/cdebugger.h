@@ -18,7 +18,7 @@
 #if defined(CONFIG_CDEBUGGER)
 
 #define MAGIC_ADDR	(BCM21553_SCRATCHRAM_BASE + 0x7800)
-extern int sdhci_pltfm_is_sdcard_present(void);
+
 extern int cdebugger_init(void);
 extern int cdebugger_dump_stack(void);
 extern void cdebugger_check_crash_key(unsigned int code, int value);

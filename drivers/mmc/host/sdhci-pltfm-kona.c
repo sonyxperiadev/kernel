@@ -1388,12 +1388,3 @@ static int sdhci_pltfm_disable(struct sdhci_host *host, int lazy)
 		return -EINVAL;
 	}
 }
-
-int sdhci_pltfm_is_sdcard_present(void)
-{
-	/* card present */
-	if (gpio_get_value(gDevs[SDIO_DEV_TYPE_SDMMC]->cd_gpio) == 0)
-		return 1;
-	else /* card absent */
-		return 0;
-}
