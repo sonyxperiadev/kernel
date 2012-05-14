@@ -934,13 +934,33 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		rc = -ENOMEM;
 		goto ERROR2;
 	}
-	/* try to access slave addr 0x45 first, if NAKed, TS slave address
-	 *should be 0x5C */
+	/* try to access slave addr 0x5C first, if NAKed, TS slave address
+	 *should be 0x45 or 0x46 */
 	rc = i2c_master_send(p_tango_i2c_dev->dummy_client, gp_buffer, 3);
 	if (rc < 0) {
 		TS_ERR("Detecting slave 0x%x failed\n", TANGO_S32_SLAVE_ADDR);
 		i2c_unregister_device(p_tango_i2c_dev->dummy_client);
-		p_tango_i2c_dev->dummy_client = 0;
+
+		p_tango_i2c_dev->dummy_client = i2c_new_dummy(
+					p_i2c_client->adapter,
+					TANGO_M29_SLAVE_ADDR_1);
+		if (!p_tango_i2c_dev->dummy_client) {
+			TS_ERR("Subclient 0x%x registration failed\n",
+					TANGO_M29_SLAVE_ADDR_1);
+			rc = -ENOMEM;
+			goto ERROR3;
+		}
+		/* try to access slave addr 0x46 first, if NAKed, then
+		 * try 0x45 */
+		rc = i2c_master_send(p_tango_i2c_dev->dummy_client,
+							gp_buffer, 3);
+		if (rc < 0) {
+			TS_ERR("Detecting slave 0x%x failed\n",
+					TANGO_M29_SLAVE_ADDR_1);
+			i2c_unregister_device(p_tango_i2c_dev->dummy_client);
+			p_tango_i2c_dev->dummy_client = 0;
+		}
+
 		gp_i2c_ts->layout = TANGO_M29_LAYOUT;
 	} else
 		gp_i2c_ts->layout = TANGO_S32_LAYOUT;
