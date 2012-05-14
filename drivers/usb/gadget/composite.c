@@ -37,8 +37,9 @@
  */
 
 /* big enough to hold our biggest descriptor */
-#define USB_BUFSIZ	1024
-#define PRE_CONFIG_CURRENT 100
+#define USB_BUFSIZ						1024
+#define USB_PRE_CONFIG_CURRENT		100
+#define USB_OTG_PRE_CONFIG_CURRENT	2
 
 #ifdef CONFIG_USB_LPM
 #define USB_DEVICE_CAPABILITY_20_EXTENSION	0x02
@@ -1145,9 +1146,9 @@ static void composite_disconnect(struct usb_gadget *gadget)
 		composite->disconnect(cdev);
 	spin_unlock_irqrestore(&cdev->lock, flags);
 
-	if (!gadget_is_otg(gadget))
-		usb_gadget_vbus_draw(gadget, PRE_CONFIG_CURRENT);
-
+	usb_gadget_vbus_draw(gadget,
+		gadget_is_otg(gadget) ? USB_OTG_PRE_CONFIG_CURRENT :
+		    USB_PRE_CONFIG_CURRENT);
 }
 
 /*-------------------------------------------------------------------------*/
