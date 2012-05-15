@@ -3082,8 +3082,8 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 	new_rate = peri_clk_calculate_div(peri_clk, rate, &div, &pre_div, &src);
 
 	if (abs(rate - new_rate) > CLK_RATE_MAX_DIFF) {
-		clk_dbg("%s : %s - rate(%d) not supported\n",
-			__func__, clk->name, rate);
+		pr_info("%s : %s - rate(%d) not supported; nearest: %d\n",
+			__func__, clk->name, rate, new_rate);
 		/* Disable clock to compensate enable call before set rate */
 		__peri_clk_disable(clk);
 		return -EINVAL;

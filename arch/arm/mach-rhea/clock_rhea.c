@@ -164,7 +164,7 @@ static struct ref_clk clk_pll0	=	{
 	.clk	=	{
 		.name = PLL0_REF_CLK_NAME_STR,
 		.clk_type = CLK_TYPE_REF,
-		.rate = FREQ_MHZ(624),
+		.rate = FREQ_MHZ(312),
 		.ops = &gen_ref_clk_ops,
 	},
 	.ccu_clk = &CLK_NAME(root),
@@ -177,7 +177,7 @@ static struct ref_clk clk_pll1	=	{
 	.clk	=	{
 		.name = PLL1_REF_CLK_NAME_STR,
 		.clk_type = CLK_TYPE_REF,
-		.rate = FREQ_MHZ(624),
+		.rate = FREQ_MHZ(312),
 		.ops = &gen_ref_clk_ops,
 	},
 	.ccu_clk = &CLK_NAME(root),
@@ -7411,6 +7411,15 @@ int set_clk_monitor_debug(int mon_select, int db_sel)
     printk("in %s monitor select: %d\n", __func__, mon_select);
     switch(mon_select) {
 	case MONITOR_CAMCS_PIN:
+		/*Get pad control write access by rwiting password */
+		writel(0xa5a501, KONA_PAD_CTRL + PADCTRLREG_WR_ACCESS_OFFSET);
+		/* unlock pad control registers */
+		writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK0_OFFSET);
+		writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK1_OFFSET);
+		writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK2_OFFSET);
+		writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK3_OFFSET);
+		writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK4_OFFSET);
+
 		writel(0x303, KONA_PAD_CTRL + PADCTRLREG_CAMCS1_OFFSET);
 		break;
 	case MONITOR_DEBUG_BUS_GPIO:
