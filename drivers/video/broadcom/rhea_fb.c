@@ -109,6 +109,7 @@ struct rhea_fb {
 	int g_stop_drawing;
 	u32 gpio;
 	u32 bus_width;
+	struct proc_dir_entry *proc_entry;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend_level1;
 	struct early_suspend early_suspend_level2;
@@ -120,6 +121,74 @@ struct rhea_fb {
 };
 
 static struct rhea_fb *g_rhea_fb = NULL;
+
+#ifdef CONFIG_FB_BRCM_ASYNC_UPDATE
+static int g_vsync_cnt = 0;
+static volatile struct timeval prev_timeval, curr_timeval;
+#endif
+
+#ifdef RHEA_FB_DEBUG
+#define RHEA_PROF_N_RECORDS 50
+static volatile struct {
+	struct timeval	curr_time;
+	struct timeval	prev_time;
+	int is_late;
+	int use_te;
+} rhea_fb_profile[RHEA_PROF_N_RECORDS];
+
+static volatile u32 rhea_fb_profile_cnt = 0;
+
+void rhea_fb_profile_record(struct timeval prev_timeval,
+		struct timeval curr_timeval, int is_too_late, int do_vsync)
+{
+	rhea_fb_profile[rhea_fb_profile_cnt].curr_time =  curr_timeval;
+	rhea_fb_profile[rhea_fb_profile_cnt].prev_time =  prev_timeval;
+	rhea_fb_profile[rhea_fb_profile_cnt].is_late   = is_too_late;
+	rhea_fb_profile[rhea_fb_profile_cnt].use_te   = do_vsync;
+	rhea_fb_profile_cnt = (rhea_fb_profile_cnt+1) % RHEA_PROF_N_RECORDS;
+}
+
+static int
+proc_write_fb_test(struct file *file, const char __user *buffer,
+			unsigned long count, void *data)
+{
+	int len, cnt, i;
+	char value[20];
+
+	if (count > 19)
+		len = 19;
+	else
+		len = count;
+
+	if (copy_from_user(value, buffer, len))
+		return -EFAULT;
+
+	value[len] = '\0';
+
+	i = rhea_fb_profile_cnt;
+	for (cnt = 0; cnt < RHEA_PROF_N_RECORDS; cnt++) {
+		if (i != 0)
+			printk(KERN_ERR "%8u,%8u,%8u,%8u,%8u,%d, %d",
+			rhea_fb_profile[i].prev_time.tv_sec,
+			rhea_fb_profile[i].prev_time.tv_usec,
+			rhea_fb_profile[i].curr_time.tv_sec,
+			rhea_fb_profile[i].curr_time.tv_usec,
+			(rhea_fb_profile[i].prev_time.tv_sec -
+			 rhea_fb_profile[i-1].curr_time.tv_sec) * 1000000 +
+			(rhea_fb_profile[i].prev_time.tv_usec -
+			 rhea_fb_profile[i-1].curr_time.tv_usec),
+			rhea_fb_profile[i].is_late,
+			rhea_fb_profile[i].use_te);
+		i = (i + 1) % RHEA_PROF_N_RECORDS;
+	}
+
+	return len;
+}
+#else
+#define rhea_fb_profile_record(prev_timeval, curr_timeval, is_too_late, \
+		do_vsync) do { } while (0)
+#define proc_write_fb_test NULL
+#endif /* RHEA_FB_DEBUG */
 
 static inline u32 convert_bitfield(int val, struct fb_bitfield *bf)
 {
@@ -208,6 +277,9 @@ static void rhea_display_done_cb(int status)
 {
 	(void)status;
 	rhea_clock_stop(g_rhea_fb);
+#ifdef CONFIG_FB_BRCM_ASYNC_UPDATE
+	do_gettimeofday((struct timeval *)&prev_timeval);
+#endif
 	complete(&g_rhea_fb->prev_buf_done_sem);
 }
 
@@ -215,6 +287,11 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var,
 			       struct fb_info *info)
 {
 	int ret = 0;
+#ifdef CONFIG_FB_BRCM_ASYNC_UPDATE
+	int is_too_late;
+	s64 frame_gap;
+	static int do_vsync = 0;
+#endif
 	struct rhea_fb *fb = container_of(info, struct rhea_fb, fb);
 	uint32_t buff_idx;
 #ifdef CONFIG_FRAMEBUFFER_FPS
@@ -266,12 +343,41 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var,
 			p_region = NULL;
 		}
 		wait_for_completion(&fb->prev_buf_done_sem);
+
+#ifdef CONFIG_FB_BRCM_ASYNC_UPDATE
+		g_vsync_cnt++;
+		do_gettimeofday((struct timeval *)&curr_timeval);
+		frame_gap = (s64)(curr_timeval.tv_sec - prev_timeval.tv_sec) *
+			1000000 + (s64)(curr_timeval.tv_usec -
+					prev_timeval.tv_usec);
+		if (frame_gap > 1000)
+			is_too_late = 1;
+		else
+			is_too_late = 0;
+
+		if ((g_vsync_cnt == 1) || (!do_vsync) || is_too_late)
+			do_vsync = 1;
+		else
+			do_vsync = 0;
+
+		rhea_fb_profile_record(prev_timeval, curr_timeval,
+					is_too_late, do_vsync);
+
 		rhea_clock_start(fb);
 		ret =
 		    fb->display_ops->update(fb->display_hdl,
 					buff_idx ? fb->buff1 : fb->buff0,
-					0,
+					(DISPDRV_WIN_t *)do_vsync,
 					(DISPDRV_CB_T)rhea_display_done_cb);
+#else
+		rhea_clock_start(fb);
+		ret =
+		    fb->display_ops->update(fb->display_hdl,
+					buff_idx ? fb->buff1 : fb->buff0,
+					NULL,
+					(DISPDRV_CB_T)rhea_display_done_cb);
+
+#endif /* CONFIG_FB_BRCM_ASYNC_UPDATE */
 	}
 skip_drawing:
 	mutex_unlock(&fb->update_sem);
@@ -690,6 +796,16 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->early_suspend_level3.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
 	register_early_suspend(&fb->early_suspend_level3);
 #endif
+
+	fb->proc_entry = create_proc_entry("fb_debug", 0666, NULL);
+
+	if (NULL == fb->proc_entry)
+		printk(KERN_ERR "%s: could not create proc entry.\n", __func__);
+	else {
+		fb->proc_entry->data = NULL;
+		fb->proc_entry->read_proc = NULL;
+		fb->proc_entry->write_proc = proc_write_fb_test;
+	}
 
 	return 0;
 

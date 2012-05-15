@@ -14,24 +14,6 @@
 #ifndef KONA_FB_H_
 #define KONA_FB_H_
 
-#if 0
-typedef	enum {
-	RGB565,
-	XRGB8888,
-	RGB888,
-} pixel_format_t;
-
-struct kona_fb_platform_data {
-	void*	(*get_dispdrv_func_tbl)(void); 
-	u32	screen_width;
-	u32	screen_height;
-	u32	bytes_per_pixel;
-	u32	gpio;
-	pixel_format_t	pixel_format;
-	u32	bus_width;
-};
-#endif
-
 struct kona_fb_platform_data {
 	char			*dispdrv_name;
 	void* 			(*dispdrv_entry) (void);
@@ -46,4 +28,5 @@ extern void* DISP_DRV_R61581_HVGA_SMI_GetFuncTable(void);
 extern void* DISPDRV_ili9486_GetFuncTable(void);
 extern void* DISPDRV_R61531_GetFuncTable(void);
 extern void *DISPDRV_ili9341_GetFuncTable(void);
+extern void *DISPDRV_HX8369_GetFuncTable(void);
 #endif /* KONA_FB_H_ */

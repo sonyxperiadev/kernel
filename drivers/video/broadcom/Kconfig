@@ -7,12 +7,18 @@ config FB_BRCM_RHEA
 	help
 	  This framebuffer device driver is for the Broadcom Rhea platform.
 
+config FB_BRCM_ASYNC_UPDATE
+	bool "FB Async Update"
+	default N
+	help
+	  This is used for asynchronous frame update. If you do not know about
+	  this config, please just say 'N' here.
+
 config FB_BRCM_ILI9486
 	tristate "LCD Panel ILI9486 Controller"
 	default N
 	help 
 		HVGA LCD panel (ILI9486 controller)
-		
 	  
 config LCD_ILI9486_SUPPORT
         tristate "LCD Panel- ILI9486 controller"
@@ -31,3 +37,10 @@ config LCD_ILI9341_SUPPORT
         default N
         help
 	  QVGA LCD panel (ILI9341 controller)
+
+config LCD_HX8369_SUPPORT
+        tristate "LCD Panel- HX8369 controller"
+        default N
+	select FB_BRCM_ASYNC_UPDATE
+        help
+	  WVGA LCD panel (HX8369 controller)

@@ -1639,6 +1639,8 @@ static void __init rhea_stone_add_devices(void)
 /*
  *   KONA FRAME BUFFER DSIPLAY DRIVER PLATFORM CONFIG
  */
+#ifndef CONFIG_LCD_HX8369_SUPPORT
+
 struct kona_fb_platform_data konafb_devices[] __initdata = {
 	{
 		.dispdrv_name  = "LQ043Y1DX01",
@@ -1667,6 +1669,37 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 		},
 	},
 };
+
+#else
+
+struct kona_fb_platform_data konafb_devices[] __initdata = {
+	{
+		.dispdrv_name  = "HX8369",
+		.dispdrv_entry = DISPDRV_HX8369_GetFuncTable,
+		.parms = {
+			.w0 = {
+				.bits = {
+					.boot_mode  = 0,
+					.bus_type   = RHEA_BUS_DSI,
+					.bus_no     = RHEA_BUS_0,
+					.bus_ch     = RHEA_BUS_CH_0,
+					.bus_width  = 0,
+					.te_input   = RHEA_TE_IN_1_DSI0,
+					.col_mode_i = RHEA_CM_I_XRGB888,
+					.col_mode_o = RHEA_CM_O_RGB888,
+				},
+			},
+			.w1 = {
+			.bits = {
+					.api_rev  =  RHEA_LCD_BOOT_API_REV,
+					.lcd_rst0 =  12,
+				},
+			},
+		},
+	},
+};
+
+#endif /* CONFIG_LCD_HX8369_SUPPORT  */
 
 #include "rhea_fb_init.c"
 #endif /* #ifdef CONFIG_FB_BRCM_RHEA */

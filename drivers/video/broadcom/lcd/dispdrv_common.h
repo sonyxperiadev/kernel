@@ -49,6 +49,7 @@ extern "C" {
 		DISPCTRL_WR_CMND_DATA,	///< write command <cmnd> followed by data <data>
 		DISPCTRL_WR_CMND,	///< write command 
 		DISPCTRL_WR_DATA,	///< write data     
+		DISPCTRL_CREATE_LOOK_UP_TABLE,
 		DISPCTRL_SLEEP_MS,	///< SLEEP for <data> msec
 		DISPCTRL_LIST_END	///< END OF COMMAND LIST
 	} DISPCTRL_T;
