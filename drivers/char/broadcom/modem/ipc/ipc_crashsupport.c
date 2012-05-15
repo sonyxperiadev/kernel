@@ -138,8 +138,10 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	IPC_U32 *Dump;
 	void __iomem *DumpVAddr;
 
-	if (BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice() &&
-		enable == 1
+	if (BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice()
+#ifdef CONFIG_CDEBUGGER
+		&& enable == 1
+#endif
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 		&& ap_triggered == 0
 #endif
