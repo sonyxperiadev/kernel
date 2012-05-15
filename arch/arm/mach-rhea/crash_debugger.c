@@ -575,7 +575,8 @@ __init int cdebugger_init(void)
 	return 0;
 }
 
-#define CDEBUGGER_SRAM_MEM_OFFSET	0xBF9C
+/* Use the offset whose content is preserved across PON Key reset */
+#define CDEBUGGER_SRAM_MEM_OFFSET	0xBFBC
 #define INTERNAL_SRAM_BASE_ADDR		0x34040000
 #define SCRATCHRAM_BASE			INTERNAL_SRAM_BASE_ADDR
 
