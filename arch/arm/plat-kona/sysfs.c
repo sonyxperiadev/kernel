@@ -39,6 +39,7 @@ static char *str_reset_reason[] = {
 	"soft_reset",
 	"charging",
 	"ap_only",
+	"bootloader",
 	"unknown"
 };
 
@@ -70,6 +71,14 @@ static unsigned int get_emu_reset_reason(unsigned int const emu)
 
 	return rst;
 }
+
+/* Add reboot to bootloader support */
+void do_set_bootloader_boot(void)
+{
+	pr_info("%s\n", __func__);
+	set_emu_reset_reason(REG_EMU_AREA, BOOTLOADER_BOOT);
+}
+EXPORT_SYMBOL(do_set_bootloader_boot);
 
 void do_set_ap_only_boot(void)
 {
@@ -124,6 +133,9 @@ reset_reason_show(struct device *dev, struct device_attribute *attr, char *buf)
 		break;
 	case 0x4:
 		index = 3;
+		break;
+	case 0x5:
+		index = 4;
 		break;
 	default:
 		index = 0;

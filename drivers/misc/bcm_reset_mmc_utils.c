@@ -273,6 +273,11 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 		do_set_ap_only_boot();
 	}
 
+	if (!strncmp(v, "bootloader", 10)) {
+		pr_info("Rebooting in bootloader mode\n");
+		do_set_bootloader_boot();
+	}
+
       clean_up:
 
 	if (flashblock != NULL)

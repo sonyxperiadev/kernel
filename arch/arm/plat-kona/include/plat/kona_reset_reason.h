@@ -15,7 +15,9 @@
 
 #define REG_EMU_AREA	0x3404BF90
 #define AP_ONLY_BOOT	0x4
+#define BOOTLOADER_BOOT	0x5
 
+void do_set_bootloader_boot(void);
 void do_set_ap_only_boot(void);
 void do_clear_ap_only_boot(void);
 unsigned int is_ap_only_boot(void);
