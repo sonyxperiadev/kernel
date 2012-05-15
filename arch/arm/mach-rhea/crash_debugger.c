@@ -138,7 +138,9 @@ struct cdebugger_fault_status_t {
 };
 
 /* enable cdebugger feature */
-static unsigned enable;
+unsigned enable;
+EXPORT_SYMBOL(enable);
+
 /*SRAM base address*/
 void __iomem *cdebugger_mem_base;
 module_param_named(enable, enable, uint, 0644);
