@@ -468,15 +468,13 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		{
-
-		chip->streamCtl[substream->number].playback_prev_time = 0;
-
 		BRCM_AUDIO_Param_Start_t param_start;
 		/*BRCM_AUDIO_Param_Spkr_t param_spkr;*/
 		BRCM_AUDIO_Param_Second_Dev_t param_second_spkr;
 
 		struct snd_pcm_runtime *runtime = substream->runtime;
 
+		chip->streamCtl[substream->number].playback_prev_time = 0;
 		param_start.drv_handle = drv_handle;
 		param_start.pdev_prop =
 		    &chip->streamCtl[substream_number].dev_prop;

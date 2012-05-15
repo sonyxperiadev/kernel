@@ -1274,7 +1274,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		/* if FM listening path is already enabled or disabled,
 		do nothing, return. */
 		if (pChip->iEnableFM == ucontrol->value.integer.value[0])
-			return;
+			return 0;
 
 		pChip->iEnableFM = ucontrol->value.integer.value[0];
 

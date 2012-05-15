@@ -329,8 +329,7 @@ cVoid chal_caph_srcmixer_disable_chnl(CHAL_HANDLE handle, cUInt16 chnl)
 	if (CAPH_SRCM_CH5 & chnl) {
 		reg_val = BRCM_READ_REG(base, SRCMIXER_SRC_CHANNEL5_CTRL1);
 		reg_val &= ~SRCMIXER_SRC_CHANNEL5_CTRL1_SRC_CHANNEL5_MODE_MASK;
-		/*do not stop src5 to avoid the rare playback noise*/
-		/*BRCM_WRITE_REG(base, SRCMIXER_SRC_CHANNEL5_CTRL1, reg_val);*/
+		BRCM_WRITE_REG(base, SRCMIXER_SRC_CHANNEL5_CTRL1, reg_val);
 	}
 
 	/* Find the 1st stereo passthrough CHNLs we are looking for */
@@ -701,6 +700,20 @@ SRCMIXER_PASSTHROUGH_CHANNEL4_CTRL_PASSTHROUGH_CHANNEL4_FIFO_CLEAR_MASK;
 						   SRCMIXER_SRC_CHANNEL1_CTRL1,
 						   (srcm_cb->ctrl_addr[index] /
 						    sizeof(cUInt32)), reg_val);
+
+			/* Do the additional SRCCH5 OUTFIFO clear as well.
+			   This is the FIFO between SRC and MIXER and is not
+			   visible externally */
+			reg_val = BRCM_READ_REG(srcm_cb->base,
+				SRCMIXER_SRC_CHANNEL5_CTRL2);
+			reg_val |=
+		SRCMIXER_SRC_CHANNEL5_CTRL2_TAPSDOWNFIFO5_CLEAR_MASK;
+			BRCM_WRITE_REG(srcm_cb->base,
+				SRCMIXER_SRC_CHANNEL5_CTRL2, reg_val);
+			reg_val &=
+			~SRCMIXER_SRC_CHANNEL5_CTRL2_TAPSDOWNFIFO5_CLEAR_MASK;
+			BRCM_WRITE_REG(srcm_cb->base,
+				SRCMIXER_SRC_CHANNEL5_CTRL2, reg_val);
 			}
 		}
 	}
