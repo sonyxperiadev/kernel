@@ -12,7 +12,7 @@
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
-/* #define DEBUG 1 */
+/*#define DEBUG 1*/
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/init.h>
@@ -53,7 +53,7 @@
 #define SPUM_HASH_QUEUE_LENGTH	10
 #define SPUM_MAX_PAYLOAD_PER_CMD	(SZ_64K - SZ_64)
 
-#define WORD_ALIGNED	__attribute__((aligned(sizeof(u32))))
+#define DWORD_ALIGNED	__attribute__((aligned(sizeof(u64))))
 
 #define b_host_2_be32(__buf, __size)       \
 do {                                        \
@@ -69,9 +69,8 @@ struct brcm_spum_device {
 	struct device *dev;
 	void __iomem *io_apb_base;
 	void __iomem *io_axi_base;
-	dma_addr_t dma_addr;
-	u32 *dma_virt;
 	u32 dma_len;
+	struct scatterlist *sg;
 	spinlock_t lock;
 	u32 rx_dma_chan;
 	u32 tx_dma_chan;
@@ -82,25 +81,42 @@ struct brcm_spum_device {
 	struct tasklet_struct queue_task;
 };
 
+struct spum_hash_local_buff {
+	u32 bufcnt;
+	u32 buflen;
+	u8 lbuff[PAGE_SIZE] DWORD_ALIGNED;
+};
+
 struct spum_request_context {
 	u32 op;
-	struct scatterlist *sg;
 	u8 *result;
+	u8 index;
 	u32 total;
 	u32 digestsize;
 	u32 flags;
 
-	u32 bufcnt;
-	u32 buflen;
-	u8 buff[PAGE_SIZE] WORD_ALIGNED;
-
-	u8 buffer[512] WORD_ALIGNED;
-	struct scatterlist spum_hdr[3];
 	u32 offset;
 	u32 partial;
 	u32 rx_len;
-	u32 tx_len;
 	u32 blk_cnt;
+
+	u32 tlen;
+	struct scatterlist *tsg;
+
+	struct scatterlist *sg;
+	struct spum_hash_local_buff buff[2];
+
+	struct scatterlist spum_data_sgl[3];
+	struct scatterlist spum_in_cmd_hdr;
+	struct scatterlist spum_out_cmd_hdr;
+	struct scatterlist spum_in_cmd_stat;
+	struct scatterlist spum_out_cmd_stat;
+	struct scatterlist spum_local_data;
+
+	u8 spum_in_hdr[128] DWORD_ALIGNED;
+	u8 spum_out_hdr[128] DWORD_ALIGNED;
+	u8 spum_in_stat[4] DWORD_ALIGNED;
+	u8 spum_out_stat[4] DWORD_ALIGNED;
 };
 
 struct spum_hash_context {
@@ -145,11 +161,69 @@ void show_sglist(struct scatterlist *sg)
 	pr_debug("%s: Show sg list\n", __func__);
 	while (sgl) {
 		pr_debug("length %d\n", sgl->length);
-		sgl = scatterwalk_sg_next(sgl);
+		sgl = sg_next(sgl);
 	}
 
 }
 #endif
+
+static inline void spum_sg_chain(struct scatterlist *prv,
+		 unsigned int prv_nents, struct scatterlist *sgl)
+{
+	/*
+	* offset and length are unused for chain entry.  Clear them.
+	*/
+	prv[prv_nents - 1].offset = 0;
+	prv[prv_nents - 1].length = 0;
+
+	/*
+	* Set lowest bit to indicate a link pointer, and make sure to clear
+	* the termination bit if it happens to be set.
+	*/
+	prv[prv_nents - 1].page_link = ((unsigned long) sgl | 0x01) & ~0x02;
+}
+
+static unsigned int get_sg_list_len(struct scatterlist *sg)
+{
+	struct scatterlist *sgl = sg;
+	unsigned int cnt = 0;
+
+	while (sgl) {
+		sgl = sg_next(sgl);
+		cnt++;
+	}
+	return cnt;
+}
+
+/* API to map/unmap sg nodes. */
+static int spum_map_sgl(struct brcm_spum_device *dd, struct scatterlist *sgl,
+			u32 sg_len, enum dma_data_direction dir)
+{
+	struct scatterlist *sg;
+	int len = 0;
+
+	for_each_sg(sgl, sg, sg_len, len) {
+		if (!dma_map_sg(dd->dev, sg, 1, dir)) {
+			pr_err("%s: dma_map_sg() error\n", __func__);
+			len = -EINVAL;
+			break;
+		}
+	}
+
+	return len;
+}
+
+static void spum_unmap_sgl(struct brcm_spum_device *dd,
+			 struct scatterlist *sgl, u32 sg_len,
+			 enum dma_data_direction dir)
+{
+	struct scatterlist *sg;
+	int len = 0;
+
+	for_each_sg(sgl, sg, sg_len, len) {
+		dma_unmap_sg(dd->dev, sg, 1, dir);
+	}
+}
 
 /* Mark the sg list for DMA xfer. */
 static u32 get_sg_list(struct spum_request_context *rctx,
@@ -158,15 +232,9 @@ static u32 get_sg_list(struct spum_request_context *rctx,
 	struct scatterlist *sg = sgl;
 	u32 count = 0, len = 0, sglen;
 
-	if (rctx->bufcnt) {
-		*length = len;
-		return count;
-	}
-
 	while (sg) {
 		sglen = min(rctx->rx_len, (sg->length - rctx->offset));
-		if (!(sglen % SPUM_HASH_BLOCK_SIZE) &&
-		    (sglen > SPUM_HASH_BLOCK_SIZE) &&
+		if (!(sglen % sizeof(u32)) &&
 		    ((len + sglen) <= rctx->rx_len)) {
 			count++;
 			len += sglen;
@@ -180,6 +248,7 @@ static u32 get_sg_list(struct spum_request_context *rctx,
 
 	return count;
 }
+
 
 /*
  * Get the sg list for update command when total payload
@@ -206,32 +275,30 @@ static u32 get_sg_update(struct scatterlist *sgl)
 	return length;
 }
 
-static u32 spum_append_buffer(struct spum_request_context *rctx,
-			      const u8 *data, u32 length)
-{
-	u32 count = min(length, rctx->buflen - rctx->bufcnt);
 
-	pr_debug("%s: entry\n", __func__);
+static u32 spum_append_buffer(struct spum_request_context *rctx,
+			      const u8 *data, u32 length, u32 index)
+{
+	u32 count = min(length, rctx->buff[index].buflen
+				 - rctx->buff[index].bufcnt);
 
 	count = min(count, rctx->total);
 	if (count <= 0)
 		return 0;
-	memcpy(rctx->buff + rctx->bufcnt, data, count);
-	rctx->bufcnt += count;
 
+	memcpy(rctx->buff[index].lbuff + rctx->buff[index].bufcnt, data, count);
+	rctx->buff[index].bufcnt += count;
 	return count;
 }
 
-static void spum_append_sg(struct spum_request_context *rctx)
+static void spum_append_sg(struct spum_request_context *rctx, u32 index)
 {
 	u32 count;
 
-	pr_debug("%s: entry\n", __func__);
-
 	while (rctx->sg) {
 		count = spum_append_buffer(rctx,
-					   sg_virt(rctx->sg) + rctx->offset,
-					   rctx->sg->length - rctx->offset);
+				sg_virt(rctx->sg) + rctx->offset,
+				rctx->sg->length - rctx->offset, index);
 		if (!count)
 			break;
 		rctx->offset += count;
@@ -244,155 +311,105 @@ static void spum_append_sg(struct spum_request_context *rctx)
 	}
 }
 
-static int spum_cpu_xfer(struct brcm_spum_device *dd, u8 *in_buff, u32 length)
+static int spum_dma_xfer(struct brcm_spum_device *dd,
+			struct scatterlist *sgl, u32 sg_len, u32 length)
 {
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
-	u32 i = 0, status, tx_len, out_fifo[32];
-	static int k;
-	u32 *buff = (u32 *)in_buff;
-
-	pr_debug("%s: entry length %d\n", __func__, length);
-
-	spum_dma_init(dd->io_axi_base);
-
-	length = ((length + 3) / sizeof(u32));
-
-	tx_len = rctx->tx_len / sizeof(u32);
-	i = 0;
-	k = 0;
-	while (i < length) {
-		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
-		if (status & SPUM_AXI_FIFO_STAT_IFIFO_RDY_MASK) {
-			writel(*buff++,
-			       dd->io_axi_base + SPUM_AXI_FIFO_IN_OFFSET);
-			i++;
-		}
-		if ((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) && tx_len) {
-			out_fifo[k % 32] =
-			    readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
-			k++;
-			tx_len--;
-		}
-	}
-	status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
-	while ((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) && tx_len) {
-		out_fifo[k % 32] =
-		    readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
-		k++;
-		tx_len--;
-		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
-	}
-
-	length *= sizeof(u32);
-	if (rctx->rx_len >= length) {
-		rctx->rx_len -= length;
-	} else {
-		pr_err
-		    ("%s: Receive count exhausted rctx->rx_len %d length %d\n",
-		     __func__, rctx->rx_len, length);
-		length -= rctx->rx_len;
-		rctx->blk_cnt += length;
-
-		if (rctx->partial > length)
-			rctx->partial -= length;
-		else
-			rctx->partial = 0;
-
-		rctx->rx_len = 0;
-	}
-	rctx->tx_len -= k * sizeof(u32);
-
-	pr_debug("%s: exit\n", __func__);
-
-	return 0;
-}
-
-static int spum_dma_xfer(struct brcm_spum_device *dd, u32 dma_len, u32 length)
-{
-	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
+	struct list_head head_in, head_out;
+	struct dma_transfer_list_sg lli_in_hdr, lli_in_data, lli_in_stat;
+	struct dma_transfer_list_sg lli_out_hdr, lli_out_data, lli_out_stat;
 	u32 cfg_rx, cfg_tx, rx_fifo, tx_fifo;
 	int err = -EINPROGRESS;
 
-	pr_debug("%s: entry length %d\n", __func__, length);
+	if (!test_bit(FLAGS_BUSY, &dd->flags)) {
+		pr_err("%s: Device is busy!!!", __func__);
+		BUG();
+	}
 
 	/* Only this configuration works. */
 	cfg_rx = DMA_CFG_SRC_ADDR_INCREMENT | DMA_CFG_DST_ADDR_FIXED |
-	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
+		DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16 |
+		PERIPHERAL_FLUSHP_END | DMA_PERI_REQ_ALWAYS_BURST;
 	cfg_tx = DMA_CFG_SRC_ADDR_FIXED | DMA_CFG_DST_ADDR_INCREMENT |
-	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
+		DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16 |
+		PERIPHERAL_FLUSHP_END | DMA_PERI_REQ_ALWAYS_BURST;
 
 	rx_fifo =
-	    (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_IN_OFFSET;
+	(u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_IN_OFFSET;
 	tx_fifo =
-	    (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_OUT_OFFSET;
+	(u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_OUT_OFFSET;
 
-	if (dma_len > 1) {
-		/* Rx setup */
-		if (dma_setup_transfer_sg
-		    (dd->rx_dma_chan, rctx->sg, dma_len, rx_fifo,
-		     DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI, cfg_rx)) {
-			pr_err("%s: Rx dma_setup_transfer failed 0x%x\n",
-			       __func__, (u32)dd->flags);
-			err = -EIO;
-			goto err;
-		}
-		/* Tx setup */
-		if (dma_setup_transfer_sg
-		    (dd->tx_dma_chan, rctx->sg, dma_len, tx_fifo,
-		     DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI, cfg_tx)) {
-			pr_err("%s: Tx dma_setup_transfer failed 0x%x\n",
-			       __func__, (u32)dd->flags);
-			err = -EIO;
-			goto err;
-		}
-	} else {
-		/* Rx setup */
-		if (dma_setup_transfer
-		    (dd->rx_dma_chan, (sg_dma_address(rctx->sg) + rctx->offset),
-		     rx_fifo, length, DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI,
-		     cfg_rx)) {
-			pr_err("Rx dma_setup_transfer failed %d\n", err);
-			err = -EIO;
-			goto err;
-		}
-		/* Tx setup */
-		if (dma_setup_transfer
-		    (dd->tx_dma_chan, tx_fifo,
-		     (sg_dma_address(rctx->sg) + rctx->offset), length,
-		     DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI, cfg_tx)) {
-			pr_err("Tx dma_setup_transfer failed %d\n", err);
-			err = -EIO;
-			goto err;
-		}
-		rctx->offset += length;
+	/* Prepare LLI list for DMA xfer. */
+	INIT_LIST_HEAD(&head_in);
+	INIT_LIST_HEAD(&head_out);
+
+	/* Create IN lli */
+	/* Header */
+	lli_in_hdr.sgl = &rctx->spum_in_cmd_hdr;
+	lli_in_hdr.sg_len = get_sg_list_len(&rctx->spum_in_cmd_hdr);
+	spum_map_sgl(dd, &rctx->spum_in_cmd_hdr, lli_in_hdr.sg_len,
+			 DMA_TO_DEVICE);
+
+	/* Payload */
+	lli_in_data.sgl = sgl;
+	lli_in_data.sg_len = sg_len;
+	spum_map_sgl(dd, sgl, sg_len, DMA_TO_DEVICE);
+
+	/* status */
+	lli_in_stat.sgl = &rctx->spum_in_cmd_stat;
+	lli_in_stat.sg_len = get_sg_list_len(&rctx->spum_in_cmd_stat);
+	spum_map_sgl(dd, &rctx->spum_in_cmd_stat, lli_in_stat.sg_len,
+			 DMA_TO_DEVICE);
+
+	/* Create OUT lli */
+	/* Header */
+	lli_out_hdr.sgl = &rctx->spum_out_cmd_hdr;
+	lli_out_hdr.sg_len = get_sg_list_len(&rctx->spum_out_cmd_hdr);
+	spum_map_sgl(dd, &rctx->spum_out_cmd_hdr, lli_out_hdr.sg_len,
+			 DMA_FROM_DEVICE);
+
+	/* Payload */
+	lli_out_data.sgl = sgl;
+	lli_out_data.sg_len = sg_len;
+	spum_map_sgl(dd, sgl, sg_len, DMA_FROM_DEVICE);
+
+	/* status */
+	lli_out_stat.sgl = &rctx->spum_out_cmd_stat;
+	lli_out_stat.sg_len = get_sg_list_len(&rctx->spum_out_cmd_stat);
+	spum_map_sgl(dd, &rctx->spum_out_cmd_stat, lli_out_stat.sg_len,
+			 DMA_FROM_DEVICE);
+
+	/*  IN Linked list */
+	list_add_tail(&lli_in_hdr.next, &head_in);
+	list_add_tail(&lli_in_data.next, &head_in);
+	list_add_tail(&lli_in_stat.next, &head_in);
+
+	/*  OUT Linked List */
+	list_add_tail(&lli_out_hdr.next, &head_out);
+	list_add_tail(&lli_out_data.next, &head_out);
+	list_add_tail(&lli_out_stat.next, &head_out);
+
+	/* Rx setup */
+	if (dma_setup_transfer_list_multi_sg
+		(dd->rx_dma_chan, &head_in, rx_fifo,
+			DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI, cfg_rx)) {
+		pr_err("Rx dma_setup_transfer failed %d\n", err);
+		err = -EIO;
+		goto err;
 	}
 
-	spum_dma_init(dd->io_axi_base);
+	/* Tx setup */
+	if (dma_setup_transfer_list_multi_sg
+		(dd->tx_dma_chan, &head_out, tx_fifo,
+		DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI, cfg_tx)) {
+		pr_err("Tx dma_setup_transfer failed %d\n", err);
+		err = -EIO;
+		goto err;
+	}
 
+	/* Set the DMA channel busy flags. */
 	set_bit(FLAGS_TBUSY, &dd->flags);
 	set_bit(FLAGS_RBUSY, &dd->flags);
-
-	if (rctx->tx_len >= length)
-		rctx->tx_len -= length;
-	else
-		rctx->tx_len = 0;
-
-	if (rctx->rx_len >= length)
-		rctx->rx_len -= length;
-	else {
-		pr_err
-		    ("%s: Receive count exhausted rctx->rx_len %d length %d\n",
-		     __func__, rctx->rx_len, length);
-
-		length -= rctx->rx_len;
-		rctx->blk_cnt += length;
-
-		if (rctx->partial >= length)
-			rctx->partial -= length;
-		else
-			rctx->partial = 0;
-		rctx->rx_len = 0;
-	}
 
 	/* Rx start xfer */
 	if (dma_start_transfer(dd->rx_dma_chan)) {
@@ -408,190 +425,218 @@ static int spum_dma_xfer(struct brcm_spum_device *dd, u32 dma_len, u32 length)
 		goto err;
 	}
 
+	/* Enable SPUM DMA interface. */
+	spum_dma_init(dd->io_axi_base);
+
 	pr_debug("%s: exit\n", __func__);
 
 err:
 	return err;
 }
 
+/* Generate SPUM header from the given crypto request. */
+static int spum_generate_hdr(struct brcm_spum_device *dd, u32 length)
+{
+	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(dd->req);
+	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
+	struct spum_hw_context spum_hw_hash_ctx;
+	u32 cmd_len_bytes, rx_len, tx_len;
+
+	memset((void *)&spum_hw_hash_ctx, 0, sizeof(spum_hw_hash_ctx));
+
+	spum_hw_hash_ctx.operation = SPUM_CRYPTO_ENCRYPTION;
+	spum_hw_hash_ctx.crypto_algo = SPUM_CRYPTO_ALGO_NULL;
+	spum_hw_hash_ctx.auth_mode = SPUM_AUTH_MODE_HASH;
+	spum_hw_hash_ctx.auth_order = SPUM_CMD_AUTH_FIRST;
+	spum_hw_hash_ctx.key_type = SPUM_KEY_OPEN;
+
+	spum_hw_hash_ctx.data_attribute.mac_length = length;
+	spum_hw_hash_ctx.data_attribute.data_length = length;
+	spum_hw_hash_ctx.data_attribute.mac_offset = 0;
+	spum_hw_hash_ctx.auth_key = ctx->hash_init ? (void *)(&ctx->digest) : 0;
+
+	switch (rctx->digestsize) {
+	case SHA1_DIGEST_SIZE:
+		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA1;
+		spum_hw_hash_ctx.icv_len = (SHA1_DIGEST_SIZE / sizeof(u32));
+		spum_hw_hash_ctx.auth_type =
+			ctx->
+			hash_init ? SPUM_AUTH_TYPE_SHA1_UPDATE :
+			SPUM_AUTH_TYPE_SHA1_INIT;
+		spum_hw_hash_ctx.auth_key_len =
+			ctx->hash_init ? (SHA1_DIGEST_SIZE / sizeof(u32)) : 0;
+		break;
+
+	case SHA224_DIGEST_SIZE:
+		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA224;
+		spum_hw_hash_ctx.icv_len = (SHA224_DIGEST_SIZE / sizeof(u32));
+		spum_hw_hash_ctx.auth_type =
+			ctx->
+			hash_init ? SPUM_AUTH_TYPE_SHA1_UPDATE :
+			SPUM_AUTH_TYPE_SHA1_INIT;
+		spum_hw_hash_ctx.auth_key_len =
+			ctx->hash_init ? (SHA224_DIGEST_SIZE / sizeof(u32)) : 0;
+		break;
+
+	case SHA256_DIGEST_SIZE:
+		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA256;
+		spum_hw_hash_ctx.icv_len = (SHA256_DIGEST_SIZE / sizeof(u32));
+		spum_hw_hash_ctx.auth_type =
+			ctx->
+			hash_init ? SPUM_AUTH_TYPE_SHA1_UPDATE :
+			SPUM_AUTH_TYPE_SHA1_INIT;
+		spum_hw_hash_ctx.auth_key_len =
+			ctx->hash_init ? (SHA256_DIGEST_SIZE / sizeof(u32)) : 0;
+		break;
+
+	case MD5_DIGEST_SIZE:
+		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_MD5;
+		spum_hw_hash_ctx.icv_len = (MD5_DIGEST_SIZE / sizeof(u32));
+		spum_hw_hash_ctx.auth_type =
+			ctx->
+			hash_init ? SPUM_AUTH_TYPE_MD5_UPDATE :
+			SPUM_AUTH_TYPE_MD5_INIT;
+		spum_hw_hash_ctx.auth_key_len =
+			ctx->hash_init ? (MD5_DIGEST_SIZE / sizeof(u32)) : 0;
+		break;
+
+	default:
+		break;
+	}
+
+	if (!ctx->hash_init)
+		ctx->hash_init = 1;
+
+	cmd_len_bytes = spum_format_command(&spum_hw_hash_ctx,
+					 &rctx->spum_in_hdr);
+
+	/* Set sg node for in/out header and status word. */
+	sg_init_one(&rctx->spum_in_cmd_hdr, rctx->spum_in_hdr, cmd_len_bytes);
+	sg_init_one(&rctx->spum_out_cmd_hdr, rctx->spum_out_hdr,
+			SPUM_OUTPUT_HEADER_LEN);
+	sg_init_one(&rctx->spum_in_cmd_stat, rctx->spum_in_stat,
+			SPUM_OUTPUT_STATUS_LEN);
+	sg_init_one(&rctx->spum_out_cmd_stat, rctx->spum_out_stat,
+			(SPUM_OUTPUT_STATUS_LEN +
+			(spum_hw_hash_ctx.icv_len * sizeof(u32))));
+
+	/* Calculate the in/out DMA size and configure into SPUM register. */
+	tx_len = SPUM_OUTPUT_HEADER_LEN +
+		spum_hw_hash_ctx.data_attribute.data_length +
+		(spum_hw_hash_ctx.icv_len * sizeof(u32)) +
+		 SPUM_OUTPUT_STATUS_LEN;
+
+	rx_len = spum_hw_hash_ctx.data_attribute.data_length + cmd_len_bytes;
+
+	spum_set_pkt_length(dd->io_axi_base, rx_len, tx_len);
+
+	return 0;
+}
+
+
 static int spum_hash_update_data(struct brcm_spum_device *dd)
 {
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
 	u32 length;
-	struct scatterlist *sg;
-	int err = 0, sg_cnt;
+	int err = 0;
 
-	pr_debug("%s: entry\n", __func__);
+	pr_debug("%s: entry rctx->rx_len %d\n", __func__, rctx->rx_len);
 
-	if (!(rctx->rx_len + rctx->partial))
+	if (!rctx->rx_len)
 		return 0;
 
-	/* Here check for DMA xfer. */
-	if (rctx->rx_len > SPUM_HASH_BLOCK_SIZE
-	    && (!((u32)sg_virt(rctx->sg) % 8))) {
-		dd->dma_len = get_sg_list(rctx, rctx->sg, &length);
+	/* If current sg node partially processed. */
+	if (rctx->offset) {
+		spum_append_sg(rctx, rctx->index);
+		if (!(rctx->buff[rctx->index].bufcnt%sizeof(u32))) {
+			sg_init_one(&rctx->spum_local_data,
+				rctx->buff[rctx->index].lbuff,
+				rctx->buff[rctx->index].bufcnt);
+			rctx->rx_len -= rctx->buff[rctx->index].bufcnt;
+			dd->sg = &rctx->spum_local_data;
+			dd->dma_len = 1;
+			spum_generate_hdr(dd, rctx->buff[rctx->index].bufcnt);
+			return spum_dma_xfer(dd, &rctx->spum_local_data, 1,
+					 rctx->buff[rctx->index].bufcnt);
+		} else
+			return -ENOSR;
+	}
 
-		if (dd->dma_len > 1) {
-			sg_cnt =
-			    dma_map_sg(dd->dev, rctx->sg, dd->dma_len,
-				       DMA_TO_DEVICE);
-			if (sg_cnt)
-				return spum_dma_xfer(dd, sg_cnt, length);
-			else
-				pr_err("%s:dma map error\n", __func__);
-		} else if (dd->dma_len && (!(length % SPUM_HASH_BLOCK_SIZE)) &&
-			   (!((u32)(sg_virt(rctx->sg) + rctx->offset) % 8))) {
-			sg = rctx->sg;
-			if (sg_is_last(sg)) {
-				if (rctx->bufcnt) {
-					spum_append_sg(rctx);
-					if (rctx->bufcnt == rctx->buflen) {
-						spum_cpu_xfer(dd, rctx->buff,
-							      rctx->bufcnt);
-						rctx->bufcnt = 0;
-					}
-					if (rctx->sg)
-						return
-						    spum_hash_process_request
-						    (dd);
-					else
-						return 0;
-				} else {
-					u32 offset = rctx->offset;
-					rctx->offset += length;
-					spum_append_sg(rctx);
-					rctx->offset = offset;
-					rctx->partial -= rctx->bufcnt;
-					rctx->sg = sg;
-					if (!length)
-						return 0;
-				}
-			}
-			sg_cnt =
-			    dma_map_sg(dd->dev, rctx->sg, dd->dma_len,
-				       DMA_TO_DEVICE);
-			if (sg_cnt)
-				return spum_dma_xfer(dd, sg_cnt, length);
-			else
-				pr_err("%s:dma map error\n", __func__);
+	/* Get the sg list which can be DMA xfer. */
+	dd->dma_len = get_sg_list(rctx, rctx->sg, &length);
+	if (dd->dma_len) {
+		rctx->rx_len -= length;
+		dd->sg = rctx->sg;
+		spum_generate_hdr(dd, length);
+		return spum_dma_xfer(dd, dd->sg, dd->dma_len, length);
+	}
+
+	/* Unaligned size sg node. Handle individually. */
+	if ((rctx->sg->length - rctx->offset)%sizeof(u32)) {
+		if (sg_virt(rctx->sg) == rctx->buff[rctx->index].lbuff) {
+			rctx->sg = sg_next(rctx->sg);
+			spum_append_sg(rctx, rctx->index);
+			if (!(rctx->buff[rctx->index].bufcnt%sizeof(u32))) {
+				sg_init_one(&rctx->spum_local_data,
+					 rctx->buff[rctx->index].lbuff,
+					 rctx->buff[rctx->index].bufcnt);
+				rctx->rx_len -= rctx->buff[rctx->index].bufcnt;
+				dd->sg = &rctx->spum_local_data;
+				dd->dma_len = 1;
+				spum_generate_hdr(dd,
+					 rctx->buff[rctx->index].bufcnt);
+				return spum_dma_xfer(dd, dd->sg, 1,
+					 rctx->buff[rctx->index].bufcnt);
+			} else
+				return -ENOSR;
+		} else {
+			spum_append_sg(rctx, rctx->index);
+			if (!(rctx->buff[rctx->index].bufcnt%sizeof(u32))) {
+				sg_init_one(&rctx->spum_local_data,
+					rctx->buff[rctx->index].lbuff,
+					rctx->buff[rctx->index].bufcnt);
+				rctx->rx_len -= rctx->buff[rctx->index].bufcnt;
+				dd->sg = &rctx->spum_local_data;
+				dd->dma_len = 1;
+				spum_generate_hdr(dd,
+					 rctx->buff[rctx->index].bufcnt);
+				return spum_dma_xfer(dd,
+					 &rctx->spum_local_data, 1,
+					 rctx->buff[rctx->index].bufcnt);
+			} else
+				return -ENOSR;
 		}
 	}
 
-	length =
-	    min((rctx->rx_len + rctx->partial),
-		(rctx->sg->length - rctx->offset));
-	if (!length) {
-		rctx->sg = scatterwalk_sg_next(rctx->sg);
-		rctx->offset = 0;
-		if (!rctx->sg)
-			return 0;
-	}
-	sg = rctx->sg;
-
-	if (sg_virt(sg) != rctx->buffer) {	/* If it's not header. */
-		if (sg_is_last(sg)) {
-			if (rctx->bufcnt) {
-				spum_append_sg(rctx);
-				if (rctx->bufcnt == rctx->buflen) {
-					spum_cpu_xfer(dd, rctx->buff,
-						      rctx->bufcnt);
-					rctx->bufcnt = 0;
-				}
-				if (rctx->sg)
-					return spum_hash_process_request(dd);
-				else
-					return 0;
-			} else {
-				u32 offset = rctx->offset;
-				length -= rctx->partial;
-				rctx->offset += length;
-				spum_append_sg(rctx);
-				rctx->offset = offset;
-				rctx->partial -= rctx->bufcnt;
-				rctx->sg = sg;
-				if (!length)
-					return 0;
-			}
-		} else if ((length % sizeof(u32))
-			   || (length % SPUM_HASH_BLOCK_SIZE)) {
-			if (sg_virt(sg) == rctx->buff) {
-				rctx->sg = scatterwalk_sg_next(rctx->sg);
-				rctx->offset = 0;
-				rctx->bufcnt = length;
-				if (rctx->sg)
-					return spum_hash_process_request(dd);
-				else
-					return 0;
-			} else {
-				spum_append_sg(rctx);
-				if (rctx->bufcnt == rctx->buflen) {
-					err =
-					    spum_cpu_xfer(dd, rctx->buff,
-							  rctx->bufcnt);
-					rctx->bufcnt = 0;
-				}
-				if (rctx->sg)
-					return spum_hash_process_request(dd);
-				else
-					return 0;
-			}
-		} else if (rctx->bufcnt) {
-			spum_append_sg(rctx);
-			if (rctx->bufcnt == rctx->buflen) {
-				err =
-				    spum_cpu_xfer(dd, rctx->buff, rctx->bufcnt);
-				rctx->bufcnt = 0;
-			}
-			if (rctx->sg)
-				return spum_hash_process_request(dd);
-			else
-				return 0;
-		}
-	}
-	spum_cpu_xfer(dd, (sg_virt(sg) + rctx->offset), length);
-	rctx->offset += length;
-	if ((rctx->sg->length == rctx->offset)) {
-		rctx->sg = scatterwalk_sg_next(rctx->sg);
-		rctx->offset = 0;
-	}
-	return spum_hash_process_request(dd);
+	return err;
 }
+
 
 static int spum_hash_update_final(struct brcm_spum_device *dd)
 {
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
 	u32 length;
-	int err = 0;
+	int ret = 0;
 
 	pr_debug("%s: entry\n", __func__);
 
 	if (!rctx->rx_len)
 		return 0;
 
-	length = min(rctx->rx_len, (rctx->sg->length - rctx->offset));
-
-	if ((length <= SPUM_HASH_BLOCK_SIZE) ||
-	    (!IS_ALIGNED(rctx->sg->offset, sizeof(u32)))
-	    || (!(IS_ALIGNED(length, 16)))) {
-		spum_cpu_xfer(dd, (sg_virt(rctx->sg) + rctx->offset), length);
-		rctx->offset += length;
-		if ((rctx->sg->length == rctx->offset)) {
-			rctx->sg = scatterwalk_sg_next(rctx->sg);
-			rctx->offset = 0;
-		}
-		return spum_hash_process_request(dd);
-	} else {
 		dd->dma_len = get_sg_list(rctx, rctx->sg, &length);
 
-		if (!dma_map_sg(dd->dev, rctx->sg, dd->dma_len,
-				DMA_TO_DEVICE)) {
-			pr_err("%s:dma map error\n", __func__);
-			return -EINVAL;
+		if (dd->dma_len) {
+			rctx->rx_len -= length;
+			dd->sg = rctx->sg;
+			spum_generate_hdr(dd, length);
+			ret = spum_dma_xfer(dd, rctx->sg, dd->dma_len, length);
+		} else {
+			pr_err("%s: Invalid FINAL cmd!\n", __func__);
+			ret = -EINVAL;
 		}
-		err = spum_dma_xfer(dd, dd->dma_len, length);
-	}
 
-	return err;
+	return ret;
 }
 
 static int spum_hash_process_request(struct brcm_spum_device *dd)
@@ -647,12 +692,6 @@ static int spum_hash_handle_queue(struct brcm_spum_device *dd,
 
 	clk_enable(dd->spum_open_clk);
 	spum_init_device(dd->io_apb_base, dd->io_axi_base);
-	spum_set_pkt_length(dd->io_axi_base, rctx->rx_len, rctx->tx_len);
-	/*
-	 * Don't want to pop digest and status words from out FIFO.
-	 * finish() routine will do that.
-	 */
-	rctx->tx_len -= (SPUM_OUTPUT_STATUS_LEN + rctx->digestsize);
 
 	ret = spum_hash_process_request(dd);
 
@@ -689,10 +728,8 @@ static int spum_hash_enqueue(struct ahash_request *req, u32 op)
 static int spum_hash_update(struct ahash_request *req)
 {
 	struct spum_request_context *rctx = ahash_request_ctx(req);
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
-	struct spum_hw_context spum_hw_hash_ctx;
-	u32 cmd_len_bytes;
+	struct scatterlist *sg;
+	u32 len = 0;
 
 	if (!req->nbytes)
 		return 0;
@@ -707,100 +744,64 @@ static int spum_hash_update(struct ahash_request *req)
 	rctx->total = req->nbytes;
 	rctx->result = req->result;
 
-	if (rctx->bufcnt + req->nbytes <= rctx->buflen) {
-		spum_append_sg(rctx);
+	if (rctx->buff[rctx->index].bufcnt + req->nbytes
+			 <= SPUM_HASH_BLOCK_SIZE) {
+		spum_append_sg(rctx, rctx->index);
 		return 0;
 	}
-
-	rctx->partial = (rctx->bufcnt + rctx->total) % SPUM_HASH_BLOCK_SIZE;
-	rctx->rx_len = (rctx->bufcnt + rctx->total) - rctx->partial;
+	rctx->partial = (rctx->buff[rctx->index].bufcnt + rctx->total) %
+			 SPUM_HASH_BLOCK_SIZE;
+	rctx->rx_len = (rctx->buff[rctx->index].bufcnt + rctx->total) -
+			 rctx->partial;
 	rctx->blk_cnt += rctx->rx_len;
 
-	memset((void *)&spum_hw_hash_ctx, 0, sizeof(spum_hw_hash_ctx));
-
-	spum_hw_hash_ctx.operation = SPUM_CRYPTO_ENCRYPTION;
-	spum_hw_hash_ctx.crypto_algo = SPUM_CRYPTO_ALGO_NULL;
-	spum_hw_hash_ctx.auth_mode = SPUM_AUTH_MODE_HASH;
-	spum_hw_hash_ctx.auth_order = SPUM_CMD_AUTH_FIRST;
-	spum_hw_hash_ctx.key_type = SPUM_KEY_OPEN;
-
-	spum_hw_hash_ctx.data_attribute.mac_length = rctx->rx_len;
-	spum_hw_hash_ctx.data_attribute.data_length = rctx->rx_len;
-	spum_hw_hash_ctx.data_attribute.mac_offset = 0;
-	spum_hw_hash_ctx.auth_key = ctx->hash_init ? (void *)(&ctx->digest) : 0;
-
-	switch (rctx->digestsize) {
-	case SHA1_DIGEST_SIZE:
-		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA1;
-		spum_hw_hash_ctx.icv_len = (SHA1_DIGEST_SIZE / sizeof(u32));
-		spum_hw_hash_ctx.auth_type =
-		    ctx->
-		    hash_init ? SPUM_AUTH_TYPE_SHA1_UPDATE :
-		    SPUM_AUTH_TYPE_SHA1_INIT;
-		spum_hw_hash_ctx.auth_key_len =
-		    ctx->hash_init ? (SHA1_DIGEST_SIZE / sizeof(u32)) : 0;
-		break;
-
-	case SHA224_DIGEST_SIZE:
-		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA224;
-		spum_hw_hash_ctx.icv_len = (SHA224_DIGEST_SIZE / sizeof(u32));
-		spum_hw_hash_ctx.auth_type =
-		    ctx->
-		    hash_init ? SPUM_AUTH_TYPE_SHA1_UPDATE :
-		    SPUM_AUTH_TYPE_SHA1_INIT;
-		spum_hw_hash_ctx.auth_key_len =
-		    ctx->hash_init ? (SHA224_DIGEST_SIZE / sizeof(u32)) : 0;
-		break;
-
-	case SHA256_DIGEST_SIZE:
-		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA256;
-		spum_hw_hash_ctx.icv_len = (SHA256_DIGEST_SIZE / sizeof(u32));
-		spum_hw_hash_ctx.auth_type =
-		    ctx->
-		    hash_init ? SPUM_AUTH_TYPE_SHA1_UPDATE :
-		    SPUM_AUTH_TYPE_SHA1_INIT;
-		spum_hw_hash_ctx.auth_key_len =
-		    ctx->hash_init ? (SHA256_DIGEST_SIZE / sizeof(u32)) : 0;
-		break;
-
-	case MD5_DIGEST_SIZE:
-		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_MD5;
-		spum_hw_hash_ctx.icv_len = (MD5_DIGEST_SIZE / sizeof(u32));
-		spum_hw_hash_ctx.auth_type =
-		    ctx->
-		    hash_init ? SPUM_AUTH_TYPE_MD5_UPDATE :
-		    SPUM_AUTH_TYPE_MD5_INIT;
-		spum_hw_hash_ctx.auth_key_len =
-		    ctx->hash_init ? (MD5_DIGEST_SIZE / sizeof(u32)) : 0;
-		break;
-
-	default:
-		break;
+	/* Strip the partial length payload from the end
+	*  of the input sglist and copy into local buffer.
+	*/
+	sg = rctx->sg;
+	len += rctx->buff[rctx->index].bufcnt;
+	while ((!sg_is_last(rctx->sg)) &&
+		 ((len+rctx->sg->length) <= rctx->rx_len)) {
+		len += rctx->sg->length;
+		rctx->sg = sg_next(rctx->sg);
 	}
+	if (rctx->partial) {
+		struct scatterlist *sgl;
 
-	if (!ctx->hash_init)
-		ctx->hash_init = 1;
+		if (sg_is_last(rctx->sg))
+			rctx->offset = rctx->sg->length - rctx->partial;
+		else
+			rctx->offset = (req->nbytes +
+					 rctx->buff[rctx->index].bufcnt) -
+					 (len + rctx->partial);
 
-	cmd_len_bytes = spum_format_command(&spum_hw_hash_ctx, &rctx->buffer);
+		/* Note down the sg being modified */
+		sgl = rctx->sg;
+		rctx->tsg = sgl;
+		rctx->tlen = sgl->length;
 
-	sg_init_table(rctx->spum_hdr, (rctx->bufcnt) ? 3 : 2);
-	sg_set_buf(&rctx->spum_hdr[0], &rctx->buffer, cmd_len_bytes);
+		spum_append_sg(rctx, (0x1 ^ rctx->index));
+		if (sg_is_last(sgl))
+			sgl->length -= rctx->partial;
+		else
+			sgl->length = (req->nbytes +
+					 rctx->buff[rctx->index].bufcnt) -
+					 (len + rctx->partial);
 
-	if (rctx->bufcnt) {
-		sg_set_buf(&rctx->spum_hdr[1], &rctx->buff, rctx->bufcnt);
-		scatterwalk_sg_chain(&rctx->spum_hdr[0], 3, req->src);
+		rctx->offset = 0;
+		rctx->sg = sg;
+
 	} else {
-		scatterwalk_sg_chain(&rctx->spum_hdr[0], 2, req->src);
+		rctx->sg = sg;
 	}
 
-	rctx->tx_len = SPUM_OUTPUT_HEADER_LEN +
-	    spum_hw_hash_ctx.data_attribute.data_length +
-	    (spum_hw_hash_ctx.icv_len * sizeof(u32)) + SPUM_OUTPUT_STATUS_LEN;
-
-	rctx->rx_len += cmd_len_bytes;
-
-	rctx->bufcnt = 0;
-	rctx->sg = rctx->spum_hdr;
+	if (rctx->buff[rctx->index].bufcnt) {
+		sg_set_buf(&rctx->spum_data_sgl[0],
+				 &rctx->buff[rctx->index].lbuff,
+				 rctx->buff[rctx->index].bufcnt);
+		spum_sg_chain(&rctx->spum_data_sgl[0], 2, req->src);
+		rctx->sg = &rctx->spum_data_sgl[0];
+	}
 
 	return spum_hash_enqueue(req, OP_UPDATE);
 }
@@ -813,10 +814,7 @@ static int spum_hash_init(struct ahash_request *req)
 	struct brcm_spum_device *dd;
 	unsigned long flags;
 	int err = 0;
-#ifdef TCRYPT_SPEED_TEST
-	struct scatterlist *sg = req->src;
-	u32 nbytes = 0;
-#endif
+
 	pr_debug("%s: entry\n", __func__);
 
 	spin_lock_irqsave(&spum_drv.lock, flags);
@@ -828,37 +826,16 @@ static int spum_hash_init(struct ahash_request *req)
 	}
 	spin_unlock_irqrestore(&spum_drv.lock, flags);
 
-#ifdef TCRYPT_SPEED_TEST
-	if (req->nbytes) {
-		while (sg) {
-			nbytes += sg->length;
-			sg = scatterwalk_sg_next(sg);
-		}
-		if (nbytes != req->nbytes) {
-			struct scatterlist *lsg;
-			nbytes = req->nbytes;
-			lsg = sg = req->src;
-			while (nbytes && sg) {
-				sg->length = min((u32)PAGE_SIZE, nbytes);
-				nbytes -= sg->length;
-				lsg = sg;
-				if (sg_is_last(sg) && nbytes) {
-					sg->page_link &= ~0x02;
-					sg->page_link |= 0x01;
-				}
-				sg = scatterwalk_sg_next(sg);
-			}
-			sg_mark_end(lsg);
-		}
-	}
-#endif
-
 	ctx->hash_init = 0;
-	rctx->bufcnt = 0;
-	rctx->buflen = SPUM_HASH_BLOCK_SIZE;
+
+	rctx->index = 0;
+	rctx->buff[0].bufcnt = 0;
+	rctx->buff[1].bufcnt = 0;
+	rctx->buff[0].buflen = PAGE_SIZE;
+	rctx->buff[1].buflen = PAGE_SIZE;
+
 	rctx->flags = 0;
 	rctx->rx_len = 0;
-	rctx->tx_len = 0;
 	rctx->offset = 0;
 	rctx->blk_cnt = 0;
 	rctx->digestsize = crypto_ahash_digestsize(tfm);
@@ -875,41 +852,18 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(dd->req);
 	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
-	u32 tx_fifo[64] = { 0, }, status, count, tx_len;
-	int i;
 
 	pr_debug("%s: entry\n", __func__);
-
-	tx_len = rctx->tx_len / 4;
-
-	/*
-	 * Should also read previous leftover data on tx fifo.
-	 * max(tx_len+dig, read(fifostate))
-	 */
-	count = (tx_len + (rctx->digestsize / 4));
-	i = 0;
-	while (i < count) {
-		status = readl(dd->io_axi_base + SPUM_AXI_FIFO_STAT_OFFSET);
-		if (status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) {
-			tx_fifo[i] =
-			    readl(dd->io_axi_base + SPUM_AXI_FIFO_OUT_OFFSET);
-			i++;
-		}
-	}
-	rctx->tx_len -= i * 4;
-	/* rctx->tx_len should be <= 0 here. */
-
-	/* Make a local copy of the intemediate hash value. */
-	memcpy(&ctx->digest, (u8 *)&tx_fifo[tx_len], rctx->digestsize);
 
 	clear_bit(FLAGS_BUSY, &dd->flags);
 	clear_bit(FLAGS_RBUSY, &dd->flags);
 	clear_bit(FLAGS_TBUSY, &dd->flags);
 	clk_disable(dd->spum_open_clk);
 
-	if ((rctx->op & OP_FINAL)
+	if (((rctx->op & OP_FINAL)
 	    || ((rctx->op & OP_UPDATE) && (!rctx->flags & FLAGS_FINUP))
-	    || ((rctx->flags & FLAGS_FINUP) && (rctx->bufcnt == 0))) {
+	    || ((rctx->flags & FLAGS_FINUP)
+	    && (rctx->buff[rctx->index].bufcnt == 0)))) {
 
 		/* Copy back hash value to request if buffer pointer provided */
 		if (dd->req->result)
@@ -920,6 +874,8 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 				      rctx->digestsize / sizeof(u32));
 
 		rctx->offset = 0;
+		if (!rctx->buff[rctx->index].bufcnt)
+			rctx->index ^= 0x1;
 		if (total_payload) {
 			dd->req->nbytes = total_payload;
 			dd->req->src = sg_updt;
@@ -936,13 +892,10 @@ static void spum_hash_finish(struct brcm_spum_device *dd, int err)
 
 static int spum_hash_final(struct ahash_request *req)
 {
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
 	struct spum_request_context *rctx = ahash_request_ctx(req);
-	struct spum_hw_context spum_hw_hash_ctx;
-	u32 cmd_len_bytes, index, padlen;
-	int err = 0;
 	static const u8 padding[64] = { 0x80, };
+	u32 index, padlen;
+	int err = 0;
 	__be64 bits;
 
 	pr_debug("%s: entry\n", __func__);
@@ -950,102 +903,37 @@ static int spum_hash_final(struct ahash_request *req)
 	rctx->flags &= ~FLAGS_FINUP;
 	rctx->offset = 0;
 
-	index = rctx->bufcnt;
-	padlen = (index < 56) ? (56 - index) : ((64 + 56) - index);
+	/* Pad the last chunk of payload to make it
+	*  multiple of hash block size.
+	*/
+	index = rctx->buff[rctx->index].bufcnt;
+	padlen = ((index%64) < 56) ? (56 - (index%64)) :
+			 ((64 + 56) - (index%64));
 
 	if (rctx->digestsize == MD5_DIGEST_SIZE) {
-		*(u32 *)&rctx->buff[index + padlen] =
-		    (rctx->bufcnt + rctx->blk_cnt) << 3;
-		*(u32 *)&rctx->buff[index + padlen + 4] =
-		    (rctx->bufcnt + rctx->blk_cnt) >> 29;
+		*(u32 *)&rctx->buff[rctx->index].lbuff[index + padlen] =
+		    (rctx->buff[rctx->index].bufcnt + rctx->blk_cnt) << 3;
+		*(u32 *)&rctx->buff[rctx->index].lbuff[index + padlen + 4] =
+		    (rctx->buff[rctx->index].bufcnt + rctx->blk_cnt) >> 29;
 	} else {
-		bits = cpu_to_be64((rctx->bufcnt + rctx->blk_cnt) << 3);
-		memcpy(&rctx->buff[index + padlen], (const u8 *)&bits,
-		       sizeof(bits));
+		bits = cpu_to_be64((rctx->buff[rctx->index].bufcnt +
+					 rctx->blk_cnt) << 3);
+		memcpy(&rctx->buff[rctx->index].lbuff[index + padlen],
+			 (const u8 *)&bits, sizeof(bits));
 	}
 
-	memcpy(&rctx->buff[index], &padding[0], padlen);
-	rctx->bufcnt = index + padlen + sizeof(bits);
+	memcpy(&rctx->buff[rctx->index].lbuff[index], &padding[0], padlen);
+	rctx->buff[rctx->index].bufcnt = index + padlen + sizeof(bits);
 
-	memset((void *)&spum_hw_hash_ctx, 0, sizeof(spum_hw_hash_ctx));
+	rctx->rx_len = rctx->buff[rctx->index].bufcnt;
 
-	spum_hw_hash_ctx.operation = SPUM_CRYPTO_ENCRYPTION;
-	spum_hw_hash_ctx.crypto_algo = SPUM_CRYPTO_ALGO_NULL;
-	spum_hw_hash_ctx.auth_mode = SPUM_AUTH_MODE_HASH;
-	spum_hw_hash_ctx.auth_order = SPUM_CMD_AUTH_FIRST;
-	spum_hw_hash_ctx.key_type = SPUM_KEY_OPEN;
+	sg_init_one(&rctx->spum_local_data, rctx->buff[rctx->index].lbuff,
+			 rctx->buff[rctx->index].bufcnt);
 
-	spum_hw_hash_ctx.auth_key = ctx->hash_init ? (void *)(&ctx->digest) : 0;
+	rctx->sg = &rctx->spum_local_data;
+	rctx->buff[rctx->index].bufcnt = 0;
 
-	switch (rctx->digestsize) {
-	case SHA1_DIGEST_SIZE:
-		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA1;
-		spum_hw_hash_ctx.icv_len = (SHA1_DIGEST_SIZE / sizeof(u32));
-		spum_hw_hash_ctx.auth_type =
-		    ctx->
-		    hash_init ? SPUM_AUTH_TYPE_SHA1_UPDATE :
-		    SPUM_AUTH_TYPE_SHA1_INIT;
-		spum_hw_hash_ctx.auth_key_len =
-		    ctx->hash_init ? (SHA1_DIGEST_SIZE / sizeof(u32)) : 0;
-		break;
-
-	case SHA224_DIGEST_SIZE:
-		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA224;
-		spum_hw_hash_ctx.icv_len = (SHA224_DIGEST_SIZE / sizeof(u32));
-		spum_hw_hash_ctx.auth_type =
-		    ctx->
-		    hash_init ? SPUM_AUTH_TYPE_SHA1_UPDATE :
-		    SPUM_AUTH_TYPE_SHA1_INIT;
-		spum_hw_hash_ctx.auth_key_len =
-		    ctx->hash_init ? (SHA224_DIGEST_SIZE / sizeof(u32)) : 0;
-		break;
-
-	case SHA256_DIGEST_SIZE:
-		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA256;
-		spum_hw_hash_ctx.icv_len = (SHA256_DIGEST_SIZE / sizeof(u32));
-		spum_hw_hash_ctx.auth_type =
-		    ctx->
-		    hash_init ? SPUM_AUTH_TYPE_SHA1_UPDATE :
-		    SPUM_AUTH_TYPE_SHA1_INIT;
-		spum_hw_hash_ctx.auth_key_len =
-		    ctx->hash_init ? (SHA256_DIGEST_SIZE / sizeof(u32)) : 0;
-		break;
-
-	case MD5_DIGEST_SIZE:
-		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_MD5;
-		spum_hw_hash_ctx.icv_len = (MD5_DIGEST_SIZE / sizeof(u32));
-		spum_hw_hash_ctx.auth_type =
-		    ctx->
-		    hash_init ? SPUM_AUTH_TYPE_MD5_UPDATE :
-		    SPUM_AUTH_TYPE_MD5_INIT;
-		spum_hw_hash_ctx.auth_key_len =
-		    ctx->hash_init ? (MD5_DIGEST_SIZE / sizeof(u32)) : 0;
-		break;
-
-	}
-
-	spum_hw_hash_ctx.data_attribute.mac_offset = 0;
-	spum_hw_hash_ctx.data_attribute.mac_length = rctx->bufcnt;
-	spum_hw_hash_ctx.data_attribute.data_length =
-	    (((rctx->bufcnt + 3) / sizeof(u32)) * sizeof(u32));
-
-	cmd_len_bytes = spum_format_command(&spum_hw_hash_ctx, &rctx->buffer);
-
-	rctx->rx_len =
-	    cmd_len_bytes + spum_hw_hash_ctx.data_attribute.data_length;
-	rctx->tx_len =
-	    SPUM_OUTPUT_HEADER_LEN +
-	    spum_hw_hash_ctx.data_attribute.data_length +
-	    (spum_hw_hash_ctx.icv_len * sizeof(u32)) + SPUM_OUTPUT_STATUS_LEN;
-
-	sg_init_table(rctx->spum_hdr, 2);
-	sg_set_buf(rctx->spum_hdr, &rctx->buffer, cmd_len_bytes);
-	sg_set_buf(&rctx->spum_hdr[1], &rctx->buff,
-		   spum_hw_hash_ctx.data_attribute.data_length);
-
-	rctx->sg = rctx->spum_hdr;
-	rctx->bufcnt = 0;
-
+	/* Queue the crypto request. */
 	err = spum_hash_enqueue(req, OP_FINAL);
 
 	pr_debug("%s: exit\n", __func__);
@@ -1210,7 +1098,10 @@ static void spum_dma_tasklet(unsigned long data)
 {
 	struct brcm_spum_device *dd = (struct brcm_spum_device *)data;
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(dd->req);
+	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
 	int err = -EINPROGRESS;
+	struct scatterlist *sg = dd->req->src;
 
 	pr_debug("%s: entry\n", __func__);
 
@@ -1222,21 +1113,28 @@ static void spum_dma_tasklet(unsigned long data)
 	if (err)
 		pr_err("%s: Rx transfer stop failed %d\n", __func__, err);
 
-	dma_unmap_sg(dd->dev, rctx->sg, dd->dma_len, DMA_TO_DEVICE);
+	/* Unmap the payload and header buffer. */
+	spum_unmap_sgl(dd, dd->sg, dd->dma_len, DMA_TO_DEVICE);
+	spum_unmap_sgl(dd, dd->sg, dd->dma_len, DMA_FROM_DEVICE);
+	spum_unmap_sgl(dd, &rctx->spum_in_cmd_hdr, 1, DMA_TO_DEVICE);
+	spum_unmap_sgl(dd, &rctx->spum_out_cmd_hdr, 1, DMA_FROM_DEVICE);
+	spum_unmap_sgl(dd, &rctx->spum_out_cmd_stat, 1, DMA_FROM_DEVICE);
 
-	if (dd->dma_len) {
-		if (dd->dma_len == 1) {
-			if (rctx->sg->length == rctx->offset) {
-				rctx->sg = scatterwalk_sg_next(rctx->sg);
-				rctx->offset = 0;
-			}
-			dd->dma_len--;
-		} else {
-			while (dd->dma_len) {
-				rctx->sg = scatterwalk_sg_next(rctx->sg);
-				dd->dma_len--;
-			}
+	/* Collect the intermediate hash value. */
+	memcpy(&ctx->digest, (u8 *)sg_virt(&rctx->spum_out_cmd_stat),
+		 rctx->digestsize);
+
+	rctx->buff[rctx->index].bufcnt = 0;
+
+	/* Restore the src sg list. */
+	if ((rctx->rx_len == 0) && (rctx->flags&OP_UPDATE)) {
+		while (!sg_is_last(sg)) {
+			if (sg == rctx->tsg)
+				break;
+			sg = sg_next(sg);
 		}
+
+		sg->length = rctx->tlen;
 	}
 
 	err = spum_hash_process_request(dd);
@@ -1254,6 +1152,8 @@ static void spum_dma_callback(void *data, enum pl330_xfer_status status)
 {
 	struct brcm_spum_device *dd;
 	u32 *dma_chan = (u32 *)data;
+
+	pr_debug("%s: dma_chain %d\n", __func__, *dma_chan);
 
 	if (status != DMA_PL330_XFER_OK)
 		pr_err("%s: DMA failed. err %d", __func__, status);
@@ -1313,7 +1213,6 @@ static int __devinit brcm_spum_probe(struct platform_device *pdev)
 {
 	struct brcm_spum_device *dd;
 	struct resource *res;
-	u32 *page;
 	int ret = 0, i, j;
 
 	pr_debug("%s: entry\n", __func__);
@@ -1338,18 +1237,6 @@ static int __devinit brcm_spum_probe(struct platform_device *pdev)
 
 	if (clk_set_rate(dd->spum_open_clk, FREQ_MHZ(156)))
 		pr_debug("%s: Clock set failed!!!\n", __func__);
-
-	page = (u32 *)__get_free_page(GFP_KERNEL);
-	dd->dma_addr = dma_map_single(dd->dev, page, PAGE_SIZE,
-				      DMA_FROM_DEVICE);
-
-	if (dma_mapping_error(dd->dev, dd->dma_addr)) {
-		pr_err("Failed to get dma addresses\n");
-		free_page((unsigned long)page);
-		kfree(dd);
-		return -ENOMEM;
-	}
-	dd->dma_virt = page;
 
 	/* Get the base address APB space. */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -1422,8 +1309,6 @@ exit_algos:
 	for (j = 0; j < i; j++)
 		crypto_unregister_ahash(&spum_algo[i]);
 exit:
-	dma_unmap_single(dd->dev, dd->dma_addr, PAGE_SIZE, DMA_FROM_DEVICE);
-	free_page((unsigned long)page);
 	kfree(dd);
 	return ret;
 }
@@ -1454,8 +1339,6 @@ static int __devexit brcm_spum_remove(struct platform_device *pdev)
 	tasklet_kill(&dma_tasklet);
 	tasklet_kill(&dd->queue_task);
 
-	dma_unmap_single(dd->dev, dd->dma_addr, PAGE_SIZE, DMA_FROM_DEVICE);
-	free_page((unsigned long)dd->dma_virt);
 	clk_put(dd->spum_open_clk);
 	kfree(dd);
 
