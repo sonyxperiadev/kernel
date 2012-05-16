@@ -73,7 +73,7 @@ static struct map_desc hawaii_io_desc[] __initdata = {
 	IO_DESC(KONA_FUNNEL_VA, SZ_4K),
 	IO_DESC(KONA_GICDIST_VA, SZ_4K),
 	IO_DESC(KONA_GPIO2_VA, SZ_4K),
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_ARCH_HAWAII
 	IO_DESC(KONA_HSI_VA, SZ_4K),
 #endif
 	IO_DESC(KONA_KPM_CLK_VA, SZ_4K),
@@ -83,7 +83,7 @@ static struct map_desc hawaii_io_desc[] __initdata = {
 	IO_DESC(KONA_SLPTIMER_VA, SZ_4K),
 	IO_DESC(KONA_SLV_CLK_VA, SZ_4K),
 	IO_DESC(KONA_L2C_VA, SZ_4K),
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_ARCH_HAWAII
 	IO_DESC(KONA_MPHI_VA, SZ_4K),
 #endif
 	IO_DESC(KONA_MEMC0_NS_VA, SZ_4K),

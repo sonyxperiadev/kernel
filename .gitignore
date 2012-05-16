@@ -104,6 +104,7 @@ bcm-kernel-headers
 #arch/arm/mach-rhea/include/mach/rdb is a soft link
 #the appropriate rdb version. So do not include this in git
 arch/arm/mach-rhea/include/mach/rdb
+arch/arm/mach-hawaii/include/mach/rdb
 
 #----- Start of generated portion
 #

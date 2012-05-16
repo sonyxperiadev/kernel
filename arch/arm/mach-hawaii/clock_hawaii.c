@@ -5513,7 +5513,7 @@ static struct bus_clk CLK_NAME(mphi_ahb) = {
 #ifdef CONFIG_KONA_PI_MGR
  .clk_dfs = &mphi_ahb_clk_dfs,
 #endif
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_ARCH_HAWAII
  .clk_gate_offset  = KPS_CLK_MGR_REG_MPHI_CLKGATE_OFFSET,
  .clk_en_mask = KPS_CLK_MGR_REG_MPHI_CLKGATE_MPHI_AHB_CLK_EN_MASK,
  .gating_sel_mask =
@@ -6101,7 +6101,7 @@ static struct bus_clk CLK_NAME(dsi1_axi) = {
 				.ops = &gen_bus_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(mm),
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_ARCH_HAWAII
  .clk_gate_offset  = MM_CLK_MGR_REG_DSI1_AXI_CLKGATE_OFFSET,
  .clk_en_mask = MM_CLK_MGR_REG_DSI1_AXI_CLKGATE_DSI1_AXI_CLK_EN_MASK,
  .gating_sel_mask = MM_CLK_MGR_REG_DSI1_AXI_CLKGATE_DSI1_AXI_HW_SW_GATING_SEL_MASK,
@@ -6431,7 +6431,7 @@ static struct peri_clk CLK_NAME(dsi1_esc) = {
 	.mask_set = 0,
 	.policy_bit_mask = MM_CLK_MGR_REG_POLICY0_MASK_DSI1_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_ARCH_HAWAII
 	.clk_gate_offset = MM_CLK_MGR_REG_DSI1_ESC_CLKGATE_OFFSET,
 	.clk_en_mask = MM_CLK_MGR_REG_DSI1_ESC_CLKGATE_DSI1_ESC_CLK_EN_MASK,
 	.gating_sel_mask = MM_CLK_MGR_REG_DSI1_ESC_CLKGATE_DSI1_ESC_HW_SW_GATING_SEL_MASK,
@@ -6456,7 +6456,7 @@ static struct peri_clk CLK_NAME(dsi1_esc) = {
 				},
     .clk_sel_val = -1,
     .soft_reset_offset	= MM_RST_MGR_REG_SOFT_RSTN1_OFFSET,
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_ARCH_HAWAII
     .clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN1_DSI1_SOFT_RSTN_MASK,
 #endif
 };

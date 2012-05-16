@@ -42,7 +42,6 @@
 #include <linux/serial_8250.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <mach/sdio_platform.h>
-#include <mach/kona_headset_pd.h>
 #include <mach/kona.h>
 #include <mach/hawaii.h>
 #include <asm/mach/map.h>
@@ -68,10 +67,6 @@
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <linux/delay.h>
-
-#ifdef CONFIG_WD_TAPPER
-#include <linux/broadcom/wd-tapper.h>
-#endif
 
 #define KONA_8250PORT_FPGA(name, clk)				\
 {								\
@@ -139,66 +134,6 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	 .is_pmu_i2c = true,
 	 },
 };
-
-#ifdef CONFIG_KONA_HEADSET
-#define HS_IRQ		gpio_to_irq(71)
-#define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
-#define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
-static struct kona_headset_pd headset_data = {
-	/* GPIO state read is 0 on HS insert and 1 for
-	 * HS remove
-	 */
-
-	.hs_default_state = 1,
-	/*
-	 * Because of the presence of the resistor in the MIC_IN line.
-	 * The actual ground is not 0, but a small offset is added to it.
-	 * This needs to be subtracted from the measured voltage to determine the
-	 * correct value. This will vary for different HW based on the resistor
-	 * values used.
-	 */
-	.phone_ref_offset = 0,
-};
-
-static struct resource board_headset_resource[] = {
-	{			/* For AUXMIC */
-	 .start = AUXMIC_BASE_ADDR,
-	 .end = AUXMIC_BASE_ADDR + SZ_4K - 1,
-	 .flags = IORESOURCE_MEM,
-	 },
-	{			/* For ACI */
-	 .start = ACI_BASE_ADDR,
-	 .end = ACI_BASE_ADDR + SZ_4K - 1,
-	 .flags = IORESOURCE_MEM,
-	 },
-	{			/* For Headset IRQ */
-	 .start = HS_IRQ,
-	 .end = HS_IRQ,
-	 .flags = IORESOURCE_IRQ,
-	 },
-	{			/* For Headset button  press IRQ */
-	 .start = HSB_IRQ,
-	 .end = HSB_IRQ,
-	 .flags = IORESOURCE_IRQ,
-	 },
-	{			/* For Headset button  release IRQ */
-	 .start = HSB_REL_IRQ,
-	 .end = HSB_REL_IRQ,
-	 .flags = IORESOURCE_IRQ,
-	 },
-
-};
-
-struct platform_device headset_device = {
-	.name = "konaaciheadset",
-	.id = -1,
-	.resource = board_headset_resource,
-	.num_resources = ARRAY_SIZE(board_headset_resource),
-	.dev = {
-		.platform_data = &headset_data,
-		},
-};
-#endif /* CONFIG_KONA_HEADSET */
 
 static struct spi_kona_platform_data sspi_spi0_info = {
 #ifdef CONFIG_DMAC_PL330
@@ -284,25 +219,11 @@ static struct resource board_sdio2_resource[] = {
 	       },
 };
 
-#ifdef CONFIG_MACH_HAWAII_RAY
-static struct resource board_sdio3_resource[] = {
-	[0] = {
-	       .start = SDIO3_BASE_ADDR,
-	       .end = SDIO3_BASE_ADDR + SZ_64K - 1,
-	       .flags = IORESOURCE_MEM,
-	       },
-	[1] = {
-	       .start = BCM_INT_ID_SDIO_NAND,
-	       .end = BCM_INT_ID_SDIO_NAND,
-	       .flags = IORESOURCE_IRQ,
-	       },
-};
-#endif
-
 static struct sdio_platform_cfg board_sdio_param[] = {
 	{			/* SDIO1 */
 	 .id = 0,
 	 .data_pullup = 0,
+	 .cd_gpio = -1,
 	 .devtype = SDIO_DEV_TYPE_SDMMC,
 	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
 	 .peri_clk_rate = 400000,
@@ -339,8 +260,8 @@ static struct platform_device board_sdio2_device = {
 
 /* Common devices among all the boards */
 static struct platform_device *board_sdio_plat_devices[] __initdata = {
-	&board_sdio2_device,
 	&board_sdio1_device,
+	&board_sdio2_device,
 };
 
 void __init board_add_sdio_devices(void)
@@ -349,43 +270,25 @@ void __init board_add_sdio_devices(void)
 			     ARRAY_SIZE(board_sdio_plat_devices));
 }
 
-#ifdef CONFIG_WD_TAPPER
-static struct wd_tapper_platform_data wd_tapper_data = {
-	/* Set the count to the time equivalent to the time-out in milliseconds
-	 * required to pet the PMU watchdog to overcome the problem of reset in
-	 * suspend*/
-	.count = 28000,
-	.ch_num = 1,
-	.name = "aon-timer",
-};
-
-static struct platform_device wd_tapper = {
-	.name = "wd_tapper",
-	.id = 0,
-	.dev = {
-		.platform_data = &wd_tapper_data,
-		},
-};
-#endif
-
 /* Hawaii Ray specific platform devices */
 static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 	&board_serial_device,
+#ifdef CONFIG_DMAC_PL330
+	&pl330_dmac_device,
+#endif
+	&kona_sspi_spi0_device,
+#ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH
+	&board_spum_device,
+#endif
+
+#ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_AES
+	&board_spum_aes_device,
+#endif
 #if 0
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
-	&pmu_device,
-	&kona_pwm_device,
-	&kona_sspi_spi0_device,
 	&kona_sspi_spi2_device,
-#ifdef CONFIG_DMAC_PL330
-	&pl330_dmac_device,
-#endif
-#ifdef CONFIG_SENSORS_KONA
-	&tmon_device,
-	&thermal_device,
-#endif
 #ifdef CONFIG_STM_TRACE
 	&kona_stm_device,
 #endif
@@ -396,70 +299,6 @@ static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_USB_DWC_OTG
 	&board_kona_hsotgctrl_platform_device,
 	&board_kona_otg_platform_device,
-#endif
-
-#ifdef CONFIG_KONA_AVS
-	&kona_avs_device,
-#endif
-
-#ifdef CONFIG_KONA_CPU_FREQ_DRV
-	&kona_cpufreq_device,
-#endif
-
-#ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH
-	&board_spum_device,
-#endif
-
-#ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_AES
-	&board_spum_aes_device,
-#endif
-
-#ifdef CONFIG_UNICAM
-	&board_unicam_device,
-#endif
-
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
-	&unicam_camera_device,
-#endif
-
-#ifdef CONFIG_SND_BCM_SOC
-	&caph_i2s_device,
-	&caph_pcm_device,
-#endif
-#ifdef CONFIG_KEYBOARD_BCM
-	&bcm_kp_device,
-#endif
-
-#ifdef CONFIG_KONA_HEADSET
-	&headset_device,
-#endif
-
-#ifdef CONFIG_HAPTIC_SAMSUNG_PWM
-	&haptic_pwm_device,
-#endif
-#ifdef CONFIG_BACKLIGHT_PWM
-	&bcm_backlight_devices,
-#endif
-/* TPS728XX device registration */
-#ifdef CONFIG_REGULATOR_TPS728XX
-	&tps728xx_device,
-#endif
-
-#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-	&board_bcmbt_rfkill_device,
-#endif
-
-#ifdef CONFIG_BCM_BZHW
-	&board_bcm_bzhw_device,
-#endif
-
-#ifdef CONFIG_BCM_BT_LPM
-	&board_bcmbt_lpm_device,
-#endif
-	&hawaii_camera,
-
-#ifdef CONFIG_WD_TAPPER
-	&wd_tapper,
 #endif
 #endif
 };

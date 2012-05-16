@@ -16,7 +16,7 @@ config BCM_ALSA_SOUND
 	select SND_PCM
 	select SND_HWDEP
 	depends on SND
-	depends on (ARCH_RHEA || ARCH_ISLAND)
+	depends on (ARCH_RHEA || ARCH_ISLAND || ARCH_HAWAII)
         default y
         help
           Say Y here to activate an ALSA driver frontend to the BRCM endpoint

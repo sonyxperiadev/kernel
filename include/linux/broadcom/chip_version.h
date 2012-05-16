@@ -49,7 +49,7 @@
 #define ATHENA			0x30
 #define HERA			0x31	/* Need to be replaced with real one */
 #define RHEA			0x32	/* Need to be replaced with real one */
-#define SAMOA			0x33	/* Need to be replaced with real one */
+#define HAWAII			0x33	/* Need to be replaced with real one */
 
 /**
 *	Code generation:  the '!<gensym>! SYMBOL defined' comments
@@ -116,6 +116,8 @@
 
 #elif defined(_SAMOA_)
 #define CHIPID		SAMOA
+#elif defined(_HAWAII_)
+#define CHIPID		HAWAII
 #else
 #error No chip version defined!!!
 #endif

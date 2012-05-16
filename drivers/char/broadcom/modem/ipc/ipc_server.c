@@ -507,7 +507,12 @@ static int __init ipcs_module_init(void)
 
 	IPC_DEBUG(DBG_TRACE, "start ...\n");
 
+	/* The FPGA block does not have the comms module and will hang
+	 * on attempt to access it
+	 */
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	Comms_Start();
+#endif
 
 	g_ipc_info.ipc_state = 0;
 

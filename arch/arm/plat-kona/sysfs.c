@@ -173,6 +173,7 @@ reset_reason_store(struct device *dev, struct device_attribute *attr,
 
 static DEVICE_ATTR(reset_reason, 0664, reset_reason_show, reset_reason_store);
 
+#ifdef CONFIG_MFD_BCMPMU
 static ssize_t
 kona_hard_reset(struct device *dev, struct device_attribute *attr,
 		   const char *buf, size_t n)
@@ -196,6 +197,7 @@ err:
 }
 
 static DEVICE_ATTR(hard_reset, 0600, NULL, kona_hard_reset);
+#endif
 
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS
 static ssize_t
@@ -329,7 +331,9 @@ static struct attribute *bcm_attrs[] = {
 	&dev_attr_timer_stop_test.attr,
 #endif
 	&dev_attr_reset_reason.attr,
+#ifdef CONFIG_MFD_BCMPMU
 	&dev_attr_hard_reset.attr,
+#endif
 	NULL,
 };
 

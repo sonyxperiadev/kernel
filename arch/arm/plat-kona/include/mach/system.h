@@ -159,7 +159,7 @@ static void arch_reset(char mode, const char *cmd)
 
 	val = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_WR_ACCESS_OFFSET);
 	val &= BMDM_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_ARCH_HAWAII
 	val |= (0xA5A5 << BMDM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);	/* set password                        */
 #endif
 	val |= BMDM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK;	/* set access enable           */

@@ -50,8 +50,6 @@
 #include <linux/wakelock.h>
 #endif
 
-#ifdef CONFIG_ARCH_RHEA
-
 /*
  * NOTE: We are using  ARCH specific flag to protect the PI MGR code
  * because this functionality is not fully up on island.
@@ -60,8 +58,6 @@
 #ifdef CONFIG_KONA_PI_MGR
 #include <mach/pi_mgr.h>
 #include <plat/pi_mgr.h>
-#endif
-
 #endif
 
 #include <asm/io.h>
@@ -194,11 +190,9 @@ struct uart_8250_port {
 #define MSR_SAVE_FLAGS UART_MSR_ANY_DELTA
 	unsigned char		msr_saved_flags;
 
-#ifdef CONFIG_ARCH_RHEA
 #if defined(CONFIG_HAS_WAKELOCK)
 	struct wake_lock uart_lock;
 #define WAKELOCK_TIMEOUT_VAL 5000
-#endif
 	/*
 	 * Kona PM - QOS service
 	 */
@@ -2784,10 +2778,10 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	/*
 	 * Ask the core to calculate the divisor for us.
 	 */
-#ifdef CONFIG_ARCH_SAMOA
-       printk("Samoa UART clock is now fixed at %d\n", port->uartclk);
-#else
+#if !defined(CONFIG_ARCH_SAMOA) && !defined(CONFIG_MACH_HAWAII_FPGA)
 	uart_fix_clock_rate(port, termios);
+#else
+	printk("UART clock is now fixed at %d\n", port->uartclk);
 #endif
 
 	baud = uart_get_baud_rate(port, termios, old,
@@ -3665,7 +3659,6 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
 	return NULL;
 }
 
-#ifdef CONFIG_ARCH_RHEA
 static void rx_timeout_handler(unsigned long data)
 {
 	struct uart_8250_port *up = (struct uart_8250_port *)data;
@@ -3688,7 +3681,6 @@ static void rx_timeout_handler(unsigned long data)
 	 */
 	 return;
 }
-#endif
 
 /**
  *	serial8250_register_port - register a serial port
@@ -3717,7 +3709,7 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
 	if (uart) {
 		uart_remove_one_port(&serial8250_reg, &uart->port);
 
-#ifndef CONFIG_ARCH_SAMOA
+#if !defined(CONFIG_ARCH_SAMOA) && !defined(CONFIG_MACH_HAWAII_FPGA)
         uart->clk = clk_get(uart->port.dev, clk_name);
         if (IS_ERR(uart->clk))
             return PTR_ERR(uart->clk);
@@ -3733,7 +3725,6 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
         uart->port.uartclk     = clk_get_rate(uart->clk);
 #endif
 
-#ifdef CONFIG_ARCH_RHEA
 #if defined(CONFIG_HAS_WAKELOCK)
 		wake_lock_init(&uart->uart_lock, WAKE_LOCK_IDLE, "UARTWAKE");
 #endif
@@ -3748,7 +3739,6 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
 		uart->rx_shutoff_timer.expires =
 			jiffies + msecs_to_jiffies(RX_SHUTOFF_DELAY_MSECS);
 		add_timer(&uart->rx_shutoff_timer);
-#endif
 		uart->port.iobase       = port->iobase;
 		uart->port.membase      = port->membase;
 		uart->port.irq          = port->irq;

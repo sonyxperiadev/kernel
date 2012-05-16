@@ -13,6 +13,7 @@
 #*****************************************************************************
 obj-y += chal_keypad.o
 obj-$(CONFIG_ARCH_RHEA) += chal_aci.o
+obj-$(CONFIG_ARCH_HAWAII) += chal_aci.o
 obj-$(CONFIG_FB_BRCM_RHEA) += chal_dsi.o chal_smi.o chal_dma_vc4lite.o \
 	chal_tectl_vc4lite.o chal_spi_vc4lite.o chal_keypad.o
 obj-$(CONFIG_BCM_STM) += chal_trace.o

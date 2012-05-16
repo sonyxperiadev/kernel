@@ -950,6 +950,8 @@ source "arch/arm/mach-kirkwood/Kconfig"
 source "arch/arm/plat-kona/Kconfig"
 source "arch/arm/mach-rhea/Kconfig"
 
+source "arch/arm/mach-hawaii/Kconfig"
+
 source "arch/arm/mach-ks8695/Kconfig"
 
 source "arch/arm/mach-loki/Kconfig"
