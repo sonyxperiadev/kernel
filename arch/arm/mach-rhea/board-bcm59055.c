@@ -81,11 +81,11 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x7C, .val = 0xA7, .mask = 0xFF},
 	{.map = 0, .addr = 0x7D, .val = 0x08, .mask = 0xFF},
 
-	/*Init SDSR NM, NM2 and LPM voltages to 1.24V
+	/*Init SDSR NM, NM2 and LPM voltages to 1.2V
 	*/
-	{.map = 0, .addr = 0xD0, .val = 0x15, .mask = 0xFF},
-	{.map = 0, .addr = 0xD1, .val = 0x15, .mask = 0xFF},
-	{.map = 0, .addr = 0xD2, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD0, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0xD1, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0xD2, .val = 0x13, .mask = 0xFF},
 
 	/*Init CSR LPM  to 0.88 V
 	CSR NM2 to 1.22V
