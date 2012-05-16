@@ -1901,6 +1901,7 @@ i2c_register_board_info(0x4, rhea_ss_i2cgpio1_board_info,
 
 static int __init rhea_ray_add_lateInit_devices (void)
 {
+	board_add_sdio_devices();
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
 	printk(KERN_INFO "Calling WLAN_INIT!\n");
@@ -1908,7 +1909,6 @@ static int __init rhea_ray_add_lateInit_devices (void)
 	rhea_wlan_init();
 	printk(KERN_INFO "DONE WLAN_INIT!\n");
 #endif
-	board_add_sdio_devices();
 	return 0;
 }
 

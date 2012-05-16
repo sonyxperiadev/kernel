@@ -1600,15 +1600,14 @@ static void __init rhea_stone_add_i2c_devices (void)
 
 static int __init rhea_stone_add_lateInit_devices (void)
 {
+	board_add_sdio_devices();
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
-			printk(KERN_ERR "Calling WLAN_INIT!\n");
+	printk(KERN_ERR "Calling WLAN_INIT!\n");
 
-			 rhea_wlan_init();
-				printk(KERN_ERR "DONE WLAN_INIT!\n");
+	rhea_wlan_init();
+	printk(KERN_ERR "DONE WLAN_INIT!\n");
 #endif
-
-	board_add_sdio_devices();
 	return 0;
 }
 
