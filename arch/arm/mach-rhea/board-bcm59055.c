@@ -690,8 +690,8 @@ static struct i2c_board_info pmu_info_map1 = {
 
 static struct bcmpmu_adc_setting adc_setting = {
 	.tx_rx_sel_addr = 0,
-	.tx_delay = 0,
-	.rx_delay = 0,
+	.tx_delay = 2,
+	.rx_delay = 2,
 	.sw_timeout = 100,		/* revisit */
 	.txrx_timeout = 2000,	/* revisit */
 	.compensation_samples = 8,	/* from experiments */
