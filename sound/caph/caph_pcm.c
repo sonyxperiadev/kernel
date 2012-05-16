@@ -469,7 +469,7 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_START:
 		{
 		BRCM_AUDIO_Param_Start_t param_start;
-		/*BRCM_AUDIO_Param_Spkr_t param_spkr;*/
+		BRCM_AUDIO_Param_Spkr_t param_spkr;
 		BRCM_AUDIO_Param_Second_Dev_t param_second_spkr;
 
 		struct snd_pcm_runtime *runtime = substream->runtime;
@@ -492,14 +492,17 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 		param_second_spkr.sink = AUDIO_SINK_VALID_TOTAL;
 		param_second_spkr.pathID = 0;
 		param_second_spkr.substream_number = substream_number;
-		AUDCTRL_SetSecondSink(param_second_spkr);
 
 		/*the for loop starts with p[1], the second channel. */
 
 		for (i = 1; i < MAX_PLAYBACK_DEV; i++) {
-			if (chip->streamCtl[substream_number].dev_prop.
-			    p[i].sink != AUDIO_SINK_UNDEFINED) {
-
+			AUDIO_SINK_Enum_t sink =
+			chip->streamCtl[substream_number].dev_prop.p[i].sink;
+			/*to support short tone to stereo IHF + headset,
+			  only care these sinks*/
+			if (sink == AUDIO_SINK_HEADSET ||
+			    sink == AUDIO_SINK_HEADPHONE ||
+			    sink == AUDIO_SINK_LOUDSPK) {
 				param_second_spkr.source =
 					chip->streamCtl[substream_number].
 					dev_prop.p[i].source;
@@ -507,14 +510,15 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 				param_second_spkr.sink =
 					chip->streamCtl[substream_number].
 					dev_prop.p[i].sink;
+			}
+		}
+		AUDCTRL_SetSecondSink(param_second_spkr);
+		AUDIO_Ctrl_Trigger(ACTION_AUD_StartPlay, &param_start, NULL, 0);
 
-				param_second_spkr.pathID = 0;
-				param_second_spkr.substream_number =
-						substream_number;
+		for (i = 1; i < MAX_PLAYBACK_DEV; i++) {
+			if (chip->streamCtl[substream_number].dev_prop.
+			    p[i].sink != AUDIO_SINK_UNDEFINED) {
 
-				AUDCTRL_SetSecondSink(param_second_spkr);
-
-			    /**
 				param_spkr.src =
 				    chip->streamCtl[substream_number].
 				    dev_prop.p[i].source;
@@ -525,12 +529,8 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 				AUDIO_Ctrl_Trigger
 				    (ACTION_AUD_AddChannel, &param_spkr,
 				     NULL, 0);
-				*/
 			}
 		}
-
-		AUDIO_Ctrl_Trigger(ACTION_AUD_StartPlay, &param_start, NULL, 0);
-
 		}
 		break;
 

@@ -1159,6 +1159,7 @@ void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode,
 	if (AUDCTRL_InVoiceCall())
 		return;	/*don't affect voice call audio mode */
 
+	memset(&sp_struct, 0, sizeof(sp_struct));
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
 	/*enable clock if it is not enabled. */
@@ -1556,21 +1557,6 @@ Result_t AUDCTRL_StartRender(unsigned int streamID)
 
 	/*arm2sp may use HW mixer, whose gain should be set */
 	AUDCTRL_SetAudioMode_ForMusicPlayback(mode, path->pathID, FALSE);
-
-	if (second_dev_info.sink != AUDIO_SINK_VALID_TOTAL
-		&& second_dev_info.substream_number == streamID) {
-
-		/*Query for MUSIC profile,in case we are not in
-		state normal like FM,Voice,Recording policy will
-		decide,else we will set MUSIC profile*/
-
-		int app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_MUSIC);
-		AUDCTRL_SaveAudioApp(app_profile);
-		AUDCTRL_AddPlaySpk(second_dev_info.source,
-			second_dev_info.sink,
-			path->pathID);
-	}
-
 	return RESULT_OK;
 }
 
