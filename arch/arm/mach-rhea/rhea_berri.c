@@ -534,7 +534,7 @@ static struct lm8325_platform_data lm8325_pdata = {
 	 * 100k */
 	.i2c_pdata = {
 		      ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
-		      ENABLE_AUTOSENSE_TIMEOUT(0),
+		      SET_CLIENT_FUNC(TIMEOUT_DISABLE),
 		      },
 	.size_x = 8,
 	.size_y = 8,

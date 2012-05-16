@@ -79,6 +79,9 @@ struct bsc_adap_cfg {
 	int retries;
 };
 
+#define TIMEOUT_DISABLE		(0x1 << 0)
+#define TX_FIFO_ENABLE		(0x1 << 1)
+#define RX_FIFO_ENABLE		(0x1 << 2)
 /*
  * I2C slave platform data, for I2C slaves to specify the bus speed.
  *
@@ -90,24 +93,41 @@ struct i2c_slave_platform_data {
 	/* Magic number to validate dynamic speed */
 	unsigned long spd_magic;
 	enum bsc_bus_speed i2c_speed;
-	/* Magic number to validate the timeout enable */
-	unsigned long timeout_magic;
-	int autosense_timeout_enable;
+	/* Magic number to validate the client specific misc data */
+	unsigned long client_func_magic;
+	/* Adding a bit map to enable/disable client supported
+	 * functionalities
+	 * Currently supported functionalities:
+	 * client_func_map[0] : Autosense timeout disable
+	 * client_func_map[1] : TX FIFO enable
+	 * client_func_map[2] : RX FIFO enable */
+	unsigned int client_func_map;
 };
 
 /* Magic number = "spd" in ascii codes */
 #define SLAVE_SPD_MAGIC_NUM           0x00647073
-/* Magic number = "tout" in ascii codes */
-#define TIMEOUT_MAGIC_NUM             0x746F7574
+/* Magic number = "flag" in ascii codes */
+#define CLIENT_FUNC_MAGIC_NUM		0x666C6167
 
 #define ADD_I2C_SLAVE_SPEED(s)        .spd_magic = SLAVE_SPD_MAGIC_NUM,       \
                                       .i2c_speed = s
 
-#define ENABLE_AUTOSENSE_TIMEOUT(s)   .timeout_magic = TIMEOUT_MAGIC_NUM,       \
-                                      .autosense_timeout_enable = s
+#define SET_CLIENT_FUNC(s)	.client_func_magic = CLIENT_FUNC_MAGIC_NUM,   \
+				.client_func_map = s
 
-#define I2C_SPEED_IS_VALID(x)  (x->spd_magic == SLAVE_SPD_MAGIC_NUM)
+#define i2c_speed_is_valid(x)  (x->spd_magic == SLAVE_SPD_MAGIC_NUM)
 
-#define TIMEOUT_IS_VALID(x)  (x->timeout_magic == TIMEOUT_MAGIC_NUM)
+#define disable_timeout(x)  (x->client_func_magic == CLIENT_FUNC_MAGIC_NUM && \
+				x->client_func_map & TIMEOUT_DISABLE)
+
+#define enable_tx_fifo(x)	(x->client_func_magic == \
+				CLIENT_FUNC_MAGIC_NUM && \
+				(x->client_func_map & \
+				TX_FIFO_ENABLE))
+
+#define enable_rx_fifo(x)	(x->client_func_magic == \
+				CLIENT_FUNC_MAGIC_NUM && \
+				(x->client_func_map & \
+				RX_FIFO_ENABLE))
 
 #endif // _I2C_KONA_H_

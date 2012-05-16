@@ -992,7 +992,7 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 			BSC_DBG(dev, "client addr=0x%x, speed=0x%x\n",
 				client->addr, pd->i2c_speed);
 
-			if (I2C_SPEED_IS_VALID(pd)
+			if (i2c_speed_is_valid(pd)
 			    && (pd->i2c_speed < BSC_BUS_SPEED_MAX)) {
 				set_speed = pd->i2c_speed;
 				BSC_DBG(dev,
@@ -1057,10 +1057,69 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 		 * which it holds the clk line low when busy resulting in bus
 		 * errors. To overcome this problem we need ot enable autosense
 		 * with the timeout disabled */
-		if (pd && TIMEOUT_IS_VALID(pd) && !pd->autosense_timeout_enable)
+		if (pd && disable_timeout(pd))
 			bsc_set_autosense((uint32_t)dev->virt_base, 1, 0);
 		else
 			bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
+	}
+}
+
+/*
+ * Configure the fifo as requested by the client
+ */
+static void client_fifo_configure(struct i2c_adapter *adapter,
+					unsigned short addr, bool enable)
+{
+	struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
+	struct device *d;
+	struct i2c_client *client = NULL;
+	struct i2c_slave_platform_data *pd = NULL;
+
+	/* Get slave fifo configuration */
+	d = bsc_i2c_get_client(adapter, addr);
+	if (d) {
+
+		client = i2c_verify_client(d);
+		pd = (struct i2c_slave_platform_data *)client->
+		    dev.platform_data;
+		if (pd) {
+			if (enable) {
+				/* For the RX FIFO */
+				if (enable_rx_fifo(pd)) {
+					atomic_set(&dev->rx_fifo_support, 1);
+					dev_dbg(dev->device,
+						"Enabled the RX FIFO\n");
+				}
+
+				/* For the TX FIFO */
+				if (enable_tx_fifo(pd)) {
+					atomic_set(&dev->tx_fifo_support, 1);
+					dev_dbg(dev->device,
+						"Enabled the TX FIFO\n");
+				}
+			} else {
+				/* For the RX FIFO */
+				if (enable_rx_fifo(pd)) {
+					atomic_set(&dev->rx_fifo_support, 0);
+					dev_dbg(dev->device,
+						"Disabled the RX FIFO\n");
+				}
+
+				/* For the TX FIFO */
+				if (enable_tx_fifo(pd)) {
+					atomic_set(&dev->tx_fifo_support, 0);
+					dev_dbg(dev->device,
+						"Disabled the TX FIFO\n");
+				}
+
+			}
+		} else {
+			dev_dbg(dev->device,
+				"No platform data found for client addr 0x%x\n",
+				addr);
+		}
+	} else {
+		dev_dbg(dev->device, "no client found with addr 0x%x\n", addr);
 	}
 }
 
@@ -1096,6 +1155,8 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 		}
 	}
 #endif
+	/* Enable the fifos based on the client requirement */
+	client_fifo_configure(adapter, msgs[0].addr, true);
 
 	/* set bus speed & autosense configuration if dynamic speed is set */
 	if (dev->dynamic_speed)
@@ -1199,6 +1260,9 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	else
 		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
+	/* Disable the fifos if previously enabled */
+	client_fifo_configure(adapter, msgs[0].addr, false);
+
 	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
 	bsc_disable_clk(dev);
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
@@ -1224,6 +1288,9 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
  err_ret:
+	/* Disable the fifos if previously enabled */
+	client_fifo_configure(adapter, msgs[0].addr, false);
+
 	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
 	bsc_disable_clk(dev);
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
