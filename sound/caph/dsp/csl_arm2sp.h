@@ -72,6 +72,13 @@ typedef enum CSL_ARM2SP_VOICE_MIX_MODE_t {
 	CSL_ARM2SP_VOICE_MIX_BOTH
 } CSL_ARM2SP_VOICE_MIX_MODE_t;
 
+#define CSL_ARM2SP_DL_AFTER_AUDIO_PROC	1
+#define CSL_ARM2SP_DL_BEFORE_AUDIO_PROC	0
+
+#define CSL_ARM2SP_UL_AFTER_AUDIO_PROC	0
+#define CSL_ARM2SP_UL_BEFORE_AUDIO_PROC	1
+
+
 /* ---- Function Declarations ---------------------------------------*/
 /*********************************************************************/
 /**
@@ -392,18 +399,22 @@ UInt16 csl_dsp_arm2sp2_get_size(UInt32 Rate);
 *			=1, keep output pointer - shared_Arm2SP2_InBuf_out
 *				- unchange.
 *				Used for PAUSE/RESUME the same arm2sp2 session.
+*   @param	UInt16 dl_mix_or_repl_location
+*   @param	UInt16 ul_mix_or_repl_location
 *
 *   @return   None
 *
 **/
 /**********************************************************************/
-void csl_arm2sp_set_arm2sp(UInt32 samplingRate,
-			   CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
-			   CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
-			   UInt32			numFramesPerInterrupt,
-			   UInt8			audMode,
-			   UInt16			Reset_out_ptr_flag
-			   );
+void csl_arm2sp_set_arm2sp(UInt32			samplingRate,
+				CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
+				CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
+				UInt32			numFramesPerInterrupt,
+				UInt8			audMode,
+				UInt16			Reset_out_ptr_flag,
+				UInt16			dl_mix_or_repl_location,
+				UInt16			ul_mix_or_repl_location
+				);
 
 /**********************************************************************/
 /**
@@ -425,18 +436,22 @@ void csl_arm2sp_set_arm2sp(UInt32 samplingRate,
 *			=1, keep output pointer - shared_Arm2SP2_InBuf_out
 *				- unchange.
 *				Used for PAUSE/RESUME the same arm2sp2 session.
+*   @param	UInt16 dl_mix_or_repl_location
+*   @param	UInt16 ul_mix_or_repl_location
 *
 *   @return   None
 *
 **/
 /**********************************************************************/
 void csl_arm2sp_set_arm2sp2(UInt32			samplingRate,
-			   CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
-			   CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
-			   UInt32			numFramesPerInterrupt,
-			   UInt8			audMode,
-			   UInt16			Reset_out_ptr_flag
-			   );
+				CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
+				CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
+				UInt32			numFramesPerInterrupt,
+				UInt8			audMode,
+				UInt16			Reset_out_ptr_flag,
+				UInt16			dl_mix_or_repl_location,
+				UInt16			ul_mix_or_repl_location
+				);
 
 /** @} */
 

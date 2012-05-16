@@ -763,18 +763,22 @@ UInt16 csl_dsp_arm2sp2_get_size(UInt32 rate)
 *			=1, keep output pointer - shared_Arm2SP2_InBuf_out
 *				- unchange.
 *				Used for PAUSE/RESUME the same arm2sp2 session.
+*   @param	UInt16 dl_mix_or_repl_location
+*   @param	UInt16 ul_mix_or_repl_location
 *
 *   @return   None
 *
 **/
 /**********************************************************************/
 void csl_arm2sp_set_arm2sp(UInt32 samplingRate,
-			   CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
-			   CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
-			   UInt32			numFramesPerInterrupt,
-			   UInt8			audMode,
-			   UInt16			Reset_out_ptr_flag
-			   )
+				CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
+				CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
+				UInt32			numFramesPerInterrupt,
+				UInt8			audMode,
+				UInt16			Reset_out_ptr_flag,
+				UInt16			dl_mix_or_repl_location,
+				UInt16			ul_mix_or_repl_location
+				)
 {
 	UInt16 arg0 = 0;
 
@@ -790,6 +794,14 @@ void csl_arm2sp_set_arm2sp(UInt32 samplingRate,
 
 	/* set number of frames per interrupt*/
 	arg0 |= (numFramesPerInterrupt << ARM2SP_FRAME_NUM_BIT_SHIFT);
+
+	/* setting the location of mixing/replacing for DL */
+	arg0 |= (dl_mix_or_repl_location == CSL_ARM2SP_DL_AFTER_AUDIO_PROC)
+		? ARM2SP_DL_AFTER_PROC : 0;
+
+	/* setting the location of mixing/replacing for DL */
+	arg0 |= (ul_mix_or_repl_location == CSL_ARM2SP_UL_BEFORE_AUDIO_PROC)
+		? ARM2SP_UL_BEFORE_PROC : 0;
 
 	/* set ul*/
 	switch (playbackMode) {
@@ -885,18 +897,22 @@ void csl_arm2sp_set_arm2sp(UInt32 samplingRate,
 *			=1, keep output pointer - shared_Arm2SP2_InBuf_out
 *				- unchange.
 *				Used for PAUSE/RESUME the same arm2sp2 session.
+*   @param	UInt16 dl_mix_or_repl_location
+*   @param	UInt16 ul_mix_or_repl_location
 *
 *   @return   None
 *
 **/
 /**********************************************************************/
 void csl_arm2sp_set_arm2sp2(UInt32			samplingRate,
-			   CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
-			   CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
-			   UInt32			numFramesPerInterrupt,
-			   UInt8			audMode,
-			   UInt16			Reset_out_ptr_flag
-			   )
+				CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
+				CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
+				UInt32			numFramesPerInterrupt,
+				UInt8			audMode,
+				UInt16			Reset_out_ptr_flag,
+				UInt16			dl_mix_or_repl_location,
+				UInt16			ul_mix_or_repl_location
+				)
 {
 	UInt16 arg0 = 0;
 
@@ -912,6 +928,14 @@ void csl_arm2sp_set_arm2sp2(UInt32			samplingRate,
 
 	/* set number of frames per interrupt*/
 	arg0 |= (numFramesPerInterrupt << ARM2SP_FRAME_NUM_BIT_SHIFT);
+
+	/* setting the location of mixing/replacing for DL */
+	arg0 |= (dl_mix_or_repl_location == CSL_ARM2SP_DL_AFTER_AUDIO_PROC)
+		? ARM2SP_DL_AFTER_PROC : 0;
+
+	/* setting the location of mixing/replacing for DL */
+	arg0 |= (ul_mix_or_repl_location == CSL_ARM2SP_UL_BEFORE_AUDIO_PROC)
+		? ARM2SP_UL_BEFORE_PROC : 0;
 
 	/* set ul*/
 	switch (playbackMode) {

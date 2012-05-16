@@ -506,7 +506,9 @@ static void csl_caph_start_arm2sp(int i)
 			(CSL_ARM2SP_VOICE_MIX_MODE_t)p_arm2sp->mixMode,
 			p_arm2sp->numFramesPerInterrupt,
 			(p_arm2sp->chNumOut == AUDIO_CHANNEL_STEREO) ? 1 : 0,
-			0);
+			0,
+			CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+			CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	} else {
 		CSL_ARM2SP2_Init();
 		csl_arm2sp_set_arm2sp2((UInt32) p_arm2sp->srOut,
@@ -514,7 +516,9 @@ static void csl_caph_start_arm2sp(int i)
 			(CSL_ARM2SP_VOICE_MIX_MODE_t)p_arm2sp->mixMode,
 			p_arm2sp->numFramesPerInterrupt,
 			(p_arm2sp->chNumOut == AUDIO_CHANNEL_STEREO) ? 1 : 0,
-			0);
+			0,
+			CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+			CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	}
 	p_arm2sp->started = TRUE;
 }
@@ -538,7 +542,9 @@ static void csl_caph_release_arm2sp(int i)
 				p_arm2sp->numFramesPerInterrupt,
 				(p_arm2sp->chNumOut ==
 				 AUDIO_CHANNEL_STEREO) ? 1 : 0,
-				0);
+				0,
+				CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+				CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	else if (i == VORENDER_ARM2SP_INSTANCE2)
 		csl_arm2sp_set_arm2sp2((UInt32) p_arm2sp->srOut,
 				CSL_ARM2SP_PLAYBACK_NONE,
@@ -547,7 +553,9 @@ static void csl_caph_release_arm2sp(int i)
 				p_arm2sp->numFramesPerInterrupt,
 				(p_arm2sp->chNumOut ==
 				 AUDIO_CHANNEL_STEREO) ? 1 : 0,
-				0);
+				0,
+				CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+				CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 
 	memset(&arm2spCfg[i], 0, sizeof(arm2spCfg[0]));
 }

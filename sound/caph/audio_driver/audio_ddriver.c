@@ -750,7 +750,9 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 				aud_drv->arm2sp_config.mixMode,
 				aud_drv->arm2sp_config.numFramesPerInterrupt,
 				aud_drv->arm2sp_config.audMode,
-				0);
+				0,
+				CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+				CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 
 		} else
 		    if (aud_drv->arm2sp_config.instanceID ==
@@ -762,7 +764,9 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 				aud_drv->arm2sp_config.mixMode,
 				aud_drv->arm2sp_config.numFramesPerInterrupt,
 				aud_drv->arm2sp_config.audMode,
-				0);
+				0,
+				CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+				CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 		}
 		index = 1;	/*reset*/
 		endOfBuffer = FALSE;
@@ -784,7 +788,9 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 				aud_drv->arm2sp_config.mixMode,
 				aud_drv->arm2sp_config.numFramesPerInterrupt,
 				aud_drv->arm2sp_config.audMode,
-				1);
+				1,
+				CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+				CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 		else if (aud_drv->arm2sp_config.instanceID ==
 			VORENDER_ARM2SP_INSTANCE2)
 			csl_arm2sp_set_arm2sp2(
@@ -794,7 +800,9 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 				aud_drv->arm2sp_config.mixMode,
 				aud_drv->arm2sp_config.numFramesPerInterrupt,
 				aud_drv->arm2sp_config.audMode,
-				1);
+				1,
+				CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+				CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 
 		break;
 	}
@@ -1455,7 +1463,9 @@ static Result_t ARM2SP_play_start(AUDIO_DDRIVER_t *aud_drv,
 			aud_drv->arm2sp_config.mixMode,
 			aud_drv->arm2sp_config.numFramesPerInterrupt,
 			aud_drv->arm2sp_config.audMode,
-			0);
+			0,
+			CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+			CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	} else if (aud_drv->arm2sp_config.instanceID ==
 		   VORENDER_ARM2SP_INSTANCE2) {
 		/* clean buffer before starting to play */
@@ -1470,7 +1480,9 @@ static Result_t ARM2SP_play_start(AUDIO_DDRIVER_t *aud_drv,
 			aud_drv->arm2sp_config.mixMode,
 			aud_drv->arm2sp_config.numFramesPerInterrupt,
 			aud_drv->arm2sp_config.audMode,
-			0);
+			0,
+			CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+			CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	}
 
 	return RESULT_OK;
@@ -1491,23 +1503,27 @@ static Result_t ARM2SP_play_resume(AUDIO_DDRIVER_t *aud_drv)
 
 	if (aud_drv->arm2sp_config.instanceID == VORENDER_ARM2SP_INSTANCE1)
 		csl_arm2sp_set_arm2sp((UInt32) aud_drv->sample_rate,
-				      (CSL_ARM2SP_PLAYBACK_MODE_t) aud_drv->
-				      arm2sp_config.playbackMode,
-				      (CSL_ARM2SP_VOICE_MIX_MODE_t) aud_drv->
-				      arm2sp_config.mixMode,
-				      aud_drv->arm2sp_config.
-				      numFramesPerInterrupt,
-				      aud_drv->arm2sp_config.audMode, 1);
+					(CSL_ARM2SP_PLAYBACK_MODE_t) aud_drv->
+					arm2sp_config.playbackMode,
+					(CSL_ARM2SP_VOICE_MIX_MODE_t) aud_drv->
+					arm2sp_config.mixMode,
+					aud_drv->arm2sp_config.
+					numFramesPerInterrupt,
+					aud_drv->arm2sp_config.audMode, 1,
+					CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+					CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 
 	else if (aud_drv->arm2sp_config.instanceID == VORENDER_ARM2SP_INSTANCE2)
 		csl_arm2sp_set_arm2sp2((UInt32) aud_drv->sample_rate,
-				       (CSL_ARM2SP_PLAYBACK_MODE_t) aud_drv->
-				       arm2sp_config.playbackMode,
-				       (CSL_ARM2SP_VOICE_MIX_MODE_t) aud_drv->
-				       arm2sp_config.mixMode,
-				       aud_drv->arm2sp_config.
-				       numFramesPerInterrupt,
-				       aud_drv->arm2sp_config.audMode, 1);
+					(CSL_ARM2SP_PLAYBACK_MODE_t) aud_drv->
+					arm2sp_config.playbackMode,
+					(CSL_ARM2SP_VOICE_MIX_MODE_t) aud_drv->
+					arm2sp_config.mixMode,
+					aud_drv->arm2sp_config.
+					numFramesPerInterrupt,
+					aud_drv->arm2sp_config.audMode, 1,
+					CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+					CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	return RESULT_OK;
 }
 
