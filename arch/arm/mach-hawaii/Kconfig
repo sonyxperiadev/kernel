@@ -1,0 +1,23 @@
+menu	"Hawaii SoC based Machine types"
+	depends on ARCH_HAWAII
+
+choice
+	prompt "Choose Hawaii SOC Silicon Version"
+	default ARCH_HAWAII_A0
+
+config  ARCH_HAWAII_A0
+        bool "Hawaii SOC Version - A0"
+
+endchoice
+
+choice
+	prompt "Hawaii SoC based board type"
+	default MACH_HAWAII_RAY
+
+config  MACH_HAWAII_FPGA
+        bool "Hawaii SOC Version - FPGA"
+
+config  MACH_HAWAII_RAY
+        bool "Hawaii SOC Version - RAY"
+endchoice
+endmenu
