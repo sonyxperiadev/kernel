@@ -591,7 +591,6 @@ void AP_ProcessStatus(void)
 				if (ec26_err_count > 0) {
 					Dump_Caph_regs();
 					ec26_err_count = 0;
-					BUG();
 				}
 				break;
 			}
@@ -618,7 +617,6 @@ void AP_ProcessStatus(void)
 				if (ec27_err_count > 0) {
 					Dump_Caph_regs();
 					ec27_err_count = 0;
-					BUG();
 				}
 				break;
 			}
@@ -644,7 +642,6 @@ void AP_ProcessStatus(void)
 				if (ec28_err_count > 4) {
 					Dump_Caph_regs();
 					ec28_err_count = 0;
-					BUG();
 				}
 				break;
 			}
@@ -665,7 +662,6 @@ void AP_ProcessStatus(void)
 				base_addr[
 				CPH_AADMAC_CH15_AADMAC_SR_1_OFFSET>>2]);
 			Dump_Caph_regs();
-			BUG();
 			break;
 			}
 		case 0xec30:
@@ -685,7 +681,6 @@ void AP_ProcessStatus(void)
 				base_addr[
 				CPH_AADMAC_CH16_AADMAC_SR_1_OFFSET>>2]);
 			Dump_Caph_regs();
-			BUG();
 			break;
 			}
 
