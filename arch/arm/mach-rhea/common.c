@@ -177,6 +177,8 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	 .bsc_apb_clk = "bsc1_apb_clk",
 	 .retries = 1,
 	 .is_pmu_i2c = false,
+	 .fs_ref = BSC_BUS_REF_13MHZ,
+	 .hs_ref = BSC_BUS_REF_104MHZ,
 	 },
 	{			/* for BSC1 */
 	 .speed = BSC_BUS_SPEED_400K,
@@ -185,6 +187,8 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	 .bsc_apb_clk = "bsc2_apb_clk",
 	 .retries = 3,
 	 .is_pmu_i2c = false,
+	 .fs_ref = BSC_BUS_REF_13MHZ,
+	 .hs_ref = BSC_BUS_REF_104MHZ,
 	 },
 	{			/* for PMU */
 #ifdef CONFIG_KONA_PMU_BSC_HS_MODE
@@ -208,6 +212,8 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	 .bsc_clk = "pmu_bsc_clk",
 	 .bsc_apb_clk = "pmu_bsc_apb",
 	 .is_pmu_i2c = true,
+	 .fs_ref = BSC_BUS_REF_13MHZ,
+	 .hs_ref = BSC_BUS_REF_26MHZ,
 	 },
 };
 

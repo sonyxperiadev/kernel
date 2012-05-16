@@ -33,7 +33,7 @@
 #define I2C_MM_HS_PADCTL_PAD_SLEW_RATE_MASK     I2C_MM_HS_PADCTL_PULLUP_EN_MASK
 #endif
 
-							  /*#define BSC_HS *//* Athena has HS controller */
+/*#define BSC_HS *//* Athena has HS controller */
 
 #define BSC_WRITE_REG_FIELD(addr, mask, shift, data) (writel((((data << shift) & (mask)) | (readl(addr) & ~mask)) , addr))
 #define BSC_READ_REG_FIELD(addr, mask, shift)       ((readl(addr) & mask) >> shift)
@@ -94,7 +94,8 @@ typedef enum {
 	BSC_CMD_HS_STOP		/*< High speed STOP command */
 } BSC_CMD_t;
 
-static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed);
+static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
+				     enum bsc_ref_clk ref_clk);
 static inline void isl_bsc_init(uint32_t baseAddr);
 static inline void bsc_disable_intr(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_clear_intr_status(uint32_t baseAddr, uint32_t mask);
@@ -292,16 +293,21 @@ static inline void bsc_reset(uint32_t baseAddr)
  *	HS CLK = 26/(1+3+4) = 3.25MHz
  */
 #define BSC_HS_HSMODE_TIMING_26MHZ        0x0000024
-#define BSC_HS_HSMODE_1MHZ                0x000014D
-#define BSC_HS_HSMODE_1625KHZ             0x0000108
-#define BSC_HS_HSMODE_2600KHZ             0x0000064
-#define BSC_HS_HSMODE_2MHZ                0x0000086
+#define BSC_HS_HSMODE_1MHZ_26MHZ          0x000014D
+#define BSC_HS_HSMODE_1625KHZ_26MHZ       0x0000108
+#define BSC_HS_HSMODE_2600KHZ_26MHZ       0x0000064
+#define BSC_HS_HSMODE_2MHZ_26MHZ          0x0000086
 #define BSC_HS_HSMODE_TIMING              0x00000513
+#define BSC_HS_HSMODE_1MHZ                0x00002BC
+#define BSC_HS_HSMODE_1625KHZ             0x0000172
+#define BSC_HS_HSMODE_2600KHZ             0x00000EA
+#define BSC_HS_HSMODE_2MHZ                0x00002BC
 #else
 #define BSC_HS_HSMODE_TIMING              0x00000001
 #endif
 /* HS speed always uses 26MHZ source and FS uses 13MHZ */
-static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed)
+static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
+				     enum bsc_ref_clk ref_clk)
 {
 	uint8_t DIV = 0, M = 0, N = 0, P = 0, NO_DIV = 0, PRESCALE =
 	    I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
@@ -312,90 +318,215 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed)
 	case BSC_SPD_32K:
 		M = 0x01;
 		N = 0x01;
-		DIV = BSCTIM_DIV_812500HZ;
 		P = 0x04;
+		if (ref_clk == BSC_BUS_REF_13MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV16;
+		} else if (ref_clk == BSC_BUS_REF_26MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV2;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV16;
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV8;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV16;
+		}
 		break;
 	case BSC_SPD_50K:
 		M = 0x01;
 		N = 0x01;
-		DIV = BSCTIM_DIV_812500HZ;
 		P = 0x02;
+		if (ref_clk == BSC_BUS_REF_13MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV16;
+		} else if (ref_clk == BSC_BUS_REF_26MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV2;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV16;
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV8;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV16;
+		}
 		break;
 	case BSC_SPD_230K:
 		M = 0x07;
 		N = 0x00;
-		DIV = BSCTIM_DIV_3250000HZ;
 		P = 0x00;
+		if (ref_clk == BSC_BUS_REF_13MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV4;
+		} else if (ref_clk == BSC_BUS_REF_26MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV8;
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV8;
+		}
 		break;
 	case BSC_SPD_380K:
 		M = 0x02;
 		N = 0x04;
-		DIV = BSCTIM_DIV_6500000HZ;
 		P = 0x01;
+		if (ref_clk == BSC_BUS_REF_13MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+		} else if (ref_clk == BSC_BUS_REF_26MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV4;
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV4;
+		}
 		break;
 	case BSC_SPD_400K:
 		M = 0x01;	/* 2; */
 		N = 0x01;	/* 2; */
-		NO_DIV = 1;
-		DIV = BSCTIM_DIV_3250000HZ;	/* BSCTIM_DIV_6500000HZ; */
 		P = 0x06;	/* 0x01; */
+		if (ref_clk == BSC_BUS_REF_13MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 1;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV4;
+		} else if (ref_clk == BSC_BUS_REF_26MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV8;
+		}
 		break;
 	case BSC_SPD_430K:
 		M = 0x03;
 		N = 0x01;
-		DIV = BSCTIM_DIV_6500000HZ;
 		P = 0x01;
+		if (ref_clk == BSC_BUS_REF_13MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+		} else if (ref_clk == BSC_BUS_REF_26MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV4;
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV4;
+		}
 		break;
 	case BSC_SPD_MAXIMUM:
 		M = 0x02;
 		N = 0x01;
-		DIV = BSCTIM_DIV_6500000HZ;
 		P = 0x01;
+		if (ref_clk == BSC_BUS_REF_13MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+		} else if (ref_clk == BSC_BUS_REF_26MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV4;
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV4;
+		}
 		break;
+		/* M, N & P values are not valid for HS mode */
 	case BSC_SPD_HS:
 		M = 0x04;	/* 2; */
 		N = 0x01;	/* 2; */
-		DIV = BSCTIM_DIV_6500000HZ;
-		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
 		P = 0x05;	/* 0x01; */
-		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
-			      BSC_HS_HSMODE_TIMING_26MHZ);
+		DIV = I2C_MM_HS_TIM_DIV_CMD_DIV16;
+		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV1;
+		NO_DIV = 1;
+		if (ref_clk == BSC_BUS_REF_26MHZ)
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_TIMING_26MHZ);
+		else if (ref_clk == BSC_BUS_REF_104MHZ)
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_TIMING);
 		break;
 	case BSC_SPD_HS_1MHZ:
 		M = 0x04;	/* 2; */
 		N = 0x01;	/* 2; */
-		DIV = BSCTIM_DIV_6500000HZ;
-		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
 		P = 0x05;	/* 0x01; */
-		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
-			      BSC_HS_HSMODE_1MHZ);
+		if (ref_clk == BSC_BUS_REF_26MHZ) {
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+			NO_DIV = 0;
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_1MHZ_26MHZ);
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV1;
+			NO_DIV = 0;
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_1MHZ);
+		}
 		break;
 	case BSC_SPD_HS_2MHZ:
 		M = 0x04;	/* 2; */
 		N = 0x01;	/* 2; */
-		DIV = BSCTIM_DIV_6500000HZ;
-		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
 		P = 0x05;	/* 0x01; */
-		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
-			      BSC_HS_HSMODE_2MHZ);
+		if (ref_clk == BSC_BUS_REF_26MHZ) {
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+			NO_DIV = 0;
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_2MHZ_26MHZ);
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV1;
+			NO_DIV = 1;
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_2MHZ);
+		}
 		break;
 	case BSC_SPD_HS_1625KHZ:
 		M = 0x04;	/* 2; */
 		N = 0x01;	/* 2; */
-		DIV = BSCTIM_DIV_6500000HZ;
-		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
 		P = 0x05;	/* 0x01; */
-		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
-			      BSC_HS_HSMODE_1625KHZ);
+		if (ref_clk == BSC_BUS_REF_26MHZ) {
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+			NO_DIV = 0;
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_1625KHZ_26MHZ);
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV1;
+			NO_DIV = 0;
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_1625KHZ);
+		}
 		break;
 	case BSC_SPD_HS_2600KHZ:
 		M = 0x04;	/* 2; */
 		N = 0x01;	/* 2; */
-		DIV = BSCTIM_DIV_6500000HZ;
-		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
 		P = 0x05;	/* 0x01; */
-		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
-			      BSC_HS_HSMODE_2600KHZ);
+		if (ref_clk == BSC_BUS_REF_26MHZ) {
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+			NO_DIV = 0;
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_2600KHZ_26MHZ);
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV1;
+			NO_DIV = 0;
+			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
+				      BSC_HS_HSMODE_2600KHZ);
+		}
 		break;
 		/* master clock is 26MHz for FPGA */
 	case BSC_SPD_100K_FPGA:
@@ -420,14 +551,26 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed)
 		PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
 		P = 0x07;
 		BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
-			      BSC_HS_HSMODE_TIMING_26MHZ);
+			      BSC_HS_HSMODE_TIMING);
 		break;
 	case BSC_SPD_100K:
 	default:
 		M = 0x01;
 		N = 0x01;
-		DIV = BSCTIM_DIV_3250000HZ;	/* BSCTIM_DIV_1625000HZ; */
 		P = 0x06;	/* 2; */
+		if (ref_clk == BSC_BUS_REF_13MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV4;
+		} else if (ref_clk == BSC_BUS_REF_26MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_NODIV;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV8;
+		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
+			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
+			NO_DIV = 0;
+			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV8;
+		}
 		break;
 	}
 
@@ -487,15 +630,15 @@ static inline void bsc_set_tim(uint32_t baseAddr, uint32_t val)
 
 static inline void bsc_start_highspeed(uint32_t baseAddr)
 {
+#ifdef FPGA
 	uint32_t val;
-#ifndef FPGA
-	val = (7 << I2C_MM_HS_TIM_P_SHIFT) | (I2C_MM_HS_TIM_PRESCALE_CMD_NODIV << I2C_MM_HS_TIM_PRESCALE_SHIFT) | (I2C_MM_HS_TIM_NO_DIV_MASK);	/* set to 0x3c; */
-#else
+
 	val = (7 << I2C_MM_HS_TIM_P_SHIFT) |
 	    (I2C_MM_HS_TIM_PRESCALE_CMD_NODIV << I2C_MM_HS_TIM_PRESCALE_SHIFT) |
 	    (I2C_MM_HS_TIM_DIV_CMD_DIV2);
-#endif
+
 	BSC_WRITE_REG((baseAddr + I2C_MM_HS_TIM_OFFSET), val);
+#endif
 
 	/* Configure Hs-mode timing register */
 	BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
@@ -1123,7 +1266,6 @@ static inline unsigned char bsc_get_soft_reset_ready(uint32_t baseAddr)
 		 I2C_MM_HS_SFTRST_SWRST_RDY_SHIFT));
 }
 
-
 /**
 *
 *  @brief  Enable/Disable pad output
@@ -1137,12 +1279,12 @@ static inline void bsc_enable_pad_output(uint32_t baseAddr, bool enable)
 {
 	if (enable)
 		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_PADCTL_OFFSET),
-			I2C_MM_HS_PADCTL_PAD_OUT_EN_MASK,
-			I2C_MM_HS_PADCTL_PAD_OUT_EN_SHIFT, 0);
+				    I2C_MM_HS_PADCTL_PAD_OUT_EN_MASK,
+				    I2C_MM_HS_PADCTL_PAD_OUT_EN_SHIFT, 0);
 	else
 		BSC_WRITE_REG_FIELD((baseAddr + I2C_MM_HS_PADCTL_OFFSET),
-			I2C_MM_HS_PADCTL_PAD_OUT_EN_MASK,
-			I2C_MM_HS_PADCTL_PAD_OUT_EN_SHIFT, 1);
+				    I2C_MM_HS_PADCTL_PAD_OUT_EN_MASK,
+				    I2C_MM_HS_PADCTL_PAD_OUT_EN_SHIFT, 1);
 }
 
 /**

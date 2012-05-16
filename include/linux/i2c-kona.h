@@ -38,6 +38,13 @@ enum bsc_bus_speed {
 	BSC_BUS_SPEED_MAX,
 };
 
+/* Adapter specific reference clock enum */
+enum bsc_ref_clk {
+	BSC_BUS_REF_13MHZ = 13000000,
+	BSC_BUS_REF_26MHZ = 26000000,
+	BSC_BUS_REF_104MHZ = 104000000,
+};
+
 /*
  * Board dependent configuration for the Broadcom Kona BSC (I2C) adapter
  */
@@ -61,6 +68,10 @@ struct bsc_adap_cfg {
 	 * with the Power Manager sequencer.
 	 */
 	bool is_pmu_i2c;
+
+	/* Ref clock selection for HS and FS/SS modes */
+	enum bsc_ref_clk hs_ref;
+	enum bsc_ref_clk fs_ref;
 
 	/* BSC clocks */
 	char *bsc_clk;

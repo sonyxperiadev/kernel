@@ -67,6 +67,7 @@
 
 #define MAX_RETRY_NUMBER        (3-1)
 
+
 struct procfs {
 	char name[MAX_PROC_NAME_SIZE];
 	struct proc_dir_entry *parent;
@@ -120,8 +121,8 @@ struct bsc_i2c_dev {
 	struct completion ses_done;
 
 	/*
-	 *to signal the BSC controller has finished reading and all RX data has
-	 *been stored in the RX FIFO
+	 * to signal the BSC controller has finished reading and all RX data has
+	 * been stored in the RX FIFO
 	 */
 	struct completion rx_ready;
 
@@ -210,8 +211,8 @@ static irqreturn_t bsc_isr(int irq, void *devid)
 		/*  should not clear status until figure out what's going on */
 
 		/*
-		 * For Mastercode, NAK is expected as per HS protocol, it's
-		 * not error
+		 * For Mastercode, NAK is expected as per HS protocol,
+		 * it's not error
 		 */
 		if (dev->high_speed_mode && dev->is_mastercode) {
 			dev->is_mastercode = false;
@@ -854,13 +855,31 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 	int rc = 0;
 	struct bsc_adap_cfg *hw_cfg = NULL;
 
+	/* Get the Bus device platform data */
+	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
+
+	/* Set the TIM/HSTIM values wrt the REF clock selected for HS mode to
+	 * get the bus speed at which the mastercode needs to be sent */
+	bsc_set_bus_speed((uint32_t)dev->virt_base,
+			gBusSpeedTable[hw_cfg->speed],
+			hw_cfg->hs_ref);
+
+	/* Set the REF clock to 104MHZ for BSC1/BSC2 and 26MHZ for PMU BSC
+	 * if the mastercode needs to be sent for busses other than the PMU
+	 * BSC */
+	if (dev->bsc_clk) {
+		clk_disable(dev->bsc_clk);
+		clk_set_rate(dev->bsc_clk, hw_cfg->hs_ref);
+		clk_enable(dev->bsc_clk);
+		dev_info(dev->device, "HS mode clock rate is set to %ld\n",
+			 clk_get_rate(dev->bsc_clk));
+	}
+
 	/*
 	 *mastercode (0000 1000 + #id)
 	 */
 	dev->mastercode = (MASTERCODE | (MASTERCODE_MASK & adapter->nr)) + 1;
 	dev->is_mastercode = true;
-
-	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
 	/* send the master code in F/S mode first */
 	rc = bsc_xfer_write_byte(dev, 1, &dev->mastercode);
@@ -879,22 +898,7 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 		return -EREMOTEIO;
 	}
 
-	/*
-	 * Now save the BSC_TIM register value as it will be modified before the
-	 *master going into high-speed mode. We need to restore the BSC_TIM
-	 *value when the device switches back to fast speed
-	 */
-	dev->tim_val = bsc_get_tim((uint32_t)dev->virt_base);
 
-	/* configure the bsc clock to 26MHz for HS mode */
-	if (dev->bsc_clk) {
-		clk_disable(dev->bsc_clk);
-		/* Use 26MHz source for all HS clients */
-		clk_set_rate(dev->bsc_clk, 26000000);
-		clk_enable(dev->bsc_clk);
-		dev_info(dev->device, "HS mode clock rate is set to %ld\n",
-			 clk_get_rate(dev->bsc_clk));
-	}
 
 	/* Turn-off autosense and Tout interrupt for HS mode */
 	bsc_disable_intr((uint32_t)dev->virt_base,
@@ -903,6 +907,13 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 
 	/* Disable the slew rate for high speed */
 	i2c_pin_cfg(adapter->nr, 0);
+
+	/* Set the TIM/HSTIM values wrt the REF clock selected to get the HS
+	 * speed config */
+	bsc_set_bus_speed((uint32_t)dev->virt_base,
+			gBusSpeedTable[dev->current_speed],
+			hw_cfg->hs_ref);
+
 	/* configure the bus into high-speed mode */
 	bsc_start_highspeed((uint32_t)dev->virt_base);
 	dev_info(dev->device, "Adapter is switched to HS mode\n");
@@ -913,9 +924,16 @@ static int start_high_speed_mode(struct i2c_adapter *adapter)
 static void stop_high_speed_mode(struct i2c_adapter *adapter)
 {
 	struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
+	struct bsc_adap_cfg *hw_cfg = NULL;
+
+	/* Get the Bus device platform data */
+	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
 	/* Restore TIM register value */
-	bsc_set_tim((uint32_t)dev->virt_base, dev->tim_val);
+	bsc_set_bus_speed((uint32_t)dev->virt_base,
+			  gBusSpeedTable[dev->speed],
+			  hw_cfg->fs_ref);
+
 
 	/* Enable the slew rate if setting it back to FS mode */
 	i2c_pin_cfg(adapter->nr, 1);
@@ -923,7 +941,7 @@ static void stop_high_speed_mode(struct i2c_adapter *adapter)
 	/* stop hs clock and switch back to F/S clock source */
 	if (dev->bsc_clk) {
 		clk_disable(dev->bsc_clk);
-		clk_set_rate(dev->bsc_clk, 13000000);
+		clk_set_rate(dev->bsc_clk, hw_cfg->fs_ref);
 		clk_enable(dev->bsc_clk);
 	}
 	bsc_stop_highspeed((uint32_t)dev->virt_base);
@@ -1007,9 +1025,13 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 
 	/* configure the adapter bus speed */
 	if (set_speed != dev->current_speed && set_speed < BSC_BUS_SPEED_MAX) {
-		/* HSTIM is calculated based on 26MHz source */
-		bsc_set_bus_speed((uint32_t)dev->virt_base,
-				  gBusSpeedTable[set_speed]);
+		/* Set the bus speed only for FS/SS modes */
+		if (!dev->high_speed_mode)
+				bsc_set_bus_speed((uint32_t)dev->virt_base,
+					  gBusSpeedTable[set_speed],
+					  hw_cfg->fs_ref);
+		/* For HS the current speed is used to set the bus speed
+		 * params in the start_high_speed_mode */
 		dev->current_speed = set_speed;
 	}
 
@@ -1021,7 +1043,7 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 
 		/*
 		 * Auto-sense allows the slave device to stretch the clock for
-		 * for a long time. Need to turn off auto-sense for high-speed
+		 * a long time. Need to turn off auto-sense for high-speed
 		 * mode
 		 */
 		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
@@ -1043,7 +1065,7 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 }
 
 /*
- * Master tranfer function
+ * Master transfer function
  */
 static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 {
@@ -1082,9 +1104,9 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 		/* set only auto-sense configuration
 		 *
 		 * Enable autosense if adapter is not switched to HS
-		 *during bootup & stay always in HS mode(PMU BSC)
+		 * during bootup & stay always in HS mode(PMU BSC)
 		 */
-	if (hw_cfg && !(hw_cfg->speed != BSC_BUS_SPEED_HS))
+	if (hw_cfg && !(hw_cfg->speed < BSC_BUS_SPEED_HS))
 		bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
 
 	/* send start command, if its not in HS mode */
@@ -1186,7 +1208,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	mutex_unlock(&dev->dev_lock);
 	return (rc < 0) ? rc : num;
 
-hs_ret:
+ hs_ret:
 
 	/* Here we should not code such as rc = bsc_xfer_stop(), since it would
 	 *change the value of rc, which need to be passed to the caller */
@@ -1201,7 +1223,7 @@ hs_ret:
 	else
 		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
-err_ret:
+ err_ret:
 	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
 	bsc_disable_clk(dev);
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
@@ -1347,9 +1369,8 @@ proc_tx_fifo_read(char *buffer, char **start, off_t off, int count,
 		return 0;
 
 	len += sprintf(buffer + len, "TX FIFO is %s\n",
-		       atomic_read(&dev->tx_fifo_support) ? "enabled" :
+		       atomic_read(&dev->rx_fifo_support) ? "enabled" :
 		       "disabled");
-
 	return len;
 }
 
@@ -1456,16 +1477,16 @@ static int proc_init(struct platform_device *pdev)
 
 	return 0;
 
-err_del_tx_fifo:
+ err_del_tx_fifo:
 	remove_proc_entry(PROC_ENTRY_TX_FIFO, proc->parent);
 
-err_del_reset:
+ err_del_reset:
 	remove_proc_entry(PROC_ENTRY_RESET, proc->parent);
 
-err_del_debug:
+ err_del_debug:
 	remove_proc_entry(PROC_ENTRY_DEBUG, proc->parent);
 
-err_del_parent:
+ err_del_parent:
 	remove_proc_entry(proc->name, gProcParent);
 	return rc;
 }
@@ -1668,16 +1689,35 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		rc = bsc_get_clk(dev, hw_cfg);
 		if (rc)
 			goto err_free_dev_mem;
+		/* validate the speed parameter */
+		if (dev->speed >= BSC_BUS_SPEED_MAX) {
+			dev_err(&pdev->dev, "invalid bus speed parameter\n");
+			rc = -EFAULT;
+			goto err_free_clk;
+		}
 
-		/* Set the clock rate to 13MHZ before enabling it */
-		clk_set_rate(dev->bsc_clk, 13000000);
+		/* high speed - For any speed defined between BSC_BUS_SPEED_HS
+		 * & BSC_BUS_SPEED_HS_FPGA */
+		if (dev->speed >= BSC_BUS_SPEED_HS
+			&& dev->speed <= BSC_BUS_SPEED_HS_FPGA)
+			dev->high_speed_mode = 1;
+		else
+			dev->high_speed_mode = 0;
 
+		/* Depending on the mode - HS or FS/SS, set the clock rate */
+		if (dev->high_speed_mode)
+			clk_set_rate(dev->bsc_clk, hw_cfg->hs_ref);
+		else
+			clk_set_rate(dev->bsc_clk, hw_cfg->fs_ref);
+
+		/* Enable the bsc clocks */
 		rc = bsc_enable_clk(dev);
 		if (rc)
 			goto err_free_clk;
 	} else {
 		/* use default speed */
 		dev->speed = DEFAULT_I2C_BUS_SPEED;
+		dev->high_speed_mode = 0;
 		dev->bsc_clk = NULL;
 		dev->bsc_apb_clk = NULL;
 	}
@@ -1685,30 +1725,28 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* Initialize the error flag */
 	dev->err_flag = 0;
 
-	/* validate the speed parameter */
-	if (dev->speed >= BSC_BUS_SPEED_MAX) {
-		dev_err(&pdev->dev, "invalid bus speed parameter\n");
-		rc = -EFAULT;
-		goto err_disable_clk;
-	}
-
-	/* high speed - For any speed defined between BSC_BUS_SPEED_HS
-	 * & BSC_BUS_SPEED_HS_FPGA */
-	if (dev->speed >= BSC_BUS_SPEED_HS
-	    && dev->speed <= BSC_BUS_SPEED_HS_FPGA)
-		dev->high_speed_mode = 1;
-	else
-		dev->high_speed_mode = 0;
-
+	/* Populate the bus dev structure */
 	dev->device = &pdev->dev;
+
+	/* Initialize the mutex */
 	mutex_init(&dev->dev_lock);
+
+	/* Initialize the completion flags */
 	init_completion(&dev->ses_done);
 	init_completion(&dev->rx_ready);
 	init_completion(&dev->tx_fifo_empty);
+
+	/* Disable the FIFO support intially */
 	atomic_set(&dev->tx_fifo_support, 0);
 	atomic_set(&dev->rx_fifo_support, 0);
+
+	/* Disable the debug functionality */
 	dev->debug = 0;
+
+	/* BSC interrupt */
 	dev->irq = irq;
+
+	/* BSC register base */
 	dev->virt_base = ioremap(iomem->start, resource_size(iomem));
 	if (!dev->virt_base) {
 		dev_err(&pdev->dev, "ioremap of register space failed\n");
@@ -1716,13 +1754,27 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		goto err_disable_clk;
 	}
 
+	/* Set the platform data */
 	platform_set_drvdata(pdev, dev);
 
 	/*
 	 * Configure BSC timing registers
-	 * HS timing is calculated based on 26MHz source
+	 * If the platform data is not present set it to default speed using
+	 * the 13MHz reference
 	 */
-	bsc_set_bus_speed((uint32_t)dev->virt_base, gBusSpeedTable[dev->speed]);
+	if (hw_cfg) {
+		if (dev->high_speed_mode)
+			bsc_set_bus_speed((uint32_t)dev->virt_base,
+				  gBusSpeedTable[dev->speed],
+				  hw_cfg->hs_ref);
+		else
+			bsc_set_bus_speed((uint32_t)dev->virt_base,
+				  gBusSpeedTable[dev->speed],
+				  hw_cfg->fs_ref);
+	} else
+		bsc_set_bus_speed((uint32_t)dev->virt_base,
+				  gBusSpeedTable[dev->speed],
+				  BSC_BUS_REF_13MHZ);
 
 	/* curent speed configured */
 	dev->current_speed = dev->speed;
@@ -1733,6 +1785,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* disable and clear interrupts */
 	bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
 	bsc_clear_intr_status((uint32_t)dev->virt_base, 0xFF);
+
 	/* keep clock stretching disabled during probe */
 	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
@@ -1741,14 +1794,15 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	if (dev->high_speed_mode) {
 		pr_debug("disable slew rate  for id = %d\n", pdev->id);
 		i2c_pin_cfg(pdev->id, 0);
-
 	} else {
 		pr_debug("enable slew rate  for id = %d\n", pdev->id);
 		i2c_pin_cfg(pdev->id, 1);
-
 	}
 
 	/* Enable the Thigh control */
+	/* T-high in SS/FS mode varies when the clock gets stretched in the B0
+	 * Variant. The same was fixed in the B1 variant where a bit in the CRC
+	 * main register needs to be set. */
 	if (!hw_cfg->is_pmu_i2c && cpu_is_rhea_B1())
 		bsc_enable_thigh_ctrl((uint32_t)dev->virt_base, true);
 	else
@@ -1769,8 +1823,9 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		goto err_destroy_wq;
 	}
 
-	dev_info(dev->device, "bus %d at speed %d \n", pdev->id, dev->speed);
+	dev_info(dev->device, "bus %d at speed %d\n", pdev->id, dev->speed);
 
+	/* Set the BSC adapter data to be used in the core logic */
 	adap = &dev->adapter;
 	i2c_set_adapdata(adap, dev);
 	adap->owner = THIS_MODULE;
@@ -1781,6 +1836,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	adap->nr = pdev->id;
 	adap->retries = hw_cfg ? hw_cfg->retries : 0;
 
+	/* Initialize the proc entry */
 	rc = proc_init(pdev);
 	if (rc) {
 		dev_err(dev->device, "failed to install procfs\n");
@@ -1789,7 +1845,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
 	/*
 	 * I2C device drivers may be active on return from
-	 *i2c_add_numbered_adapter()
+	 * i2c_add_numbered_adapter()
 	 */
 	rc = i2c_add_numbered_adapter(adap);
 	if (rc) {
@@ -1802,6 +1858,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	 *
 	 * PMU adapter will always be in HS, dont switch back to F/S until
 	 * reboot
+	 *
 	 */
 	if (dev->high_speed_mode && hw_cfg && hw_cfg->is_pmu_i2c) {
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
@@ -1817,40 +1874,46 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		bsc_enable_intr((uint32_t)dev->virt_base,
 				I2C_MM_HS_IER_ERR_INT_EN_MASK);
 		bsc_set_autosense((uint32_t)dev->virt_base, 1, 1);
+
 		/* send start command */
 		if (bsc_xfer_start(adap) < 0) {
 			dev_err(dev->device, "start command failed\n");
 			goto err_hw_sem;
 		}
+
 		/* HS mode handshake for PMU adapter */
 		if (start_high_speed_mode(adap) < 0) {
 			dev_err(dev->device, "failed to switch HS mode\n");
 			goto err_hw_sem;
 		}
+
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 		pwr_mgr_pm_i2c_sem_unlock();
 #endif
 	}
 
 	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
+
+	/* Disable the BSC clocks before returning */
 	bsc_disable_clk(dev);
+
 	return 0;
 
-err_hw_sem:
+ err_hw_sem:
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 	pwr_mgr_pm_i2c_sem_unlock();
 #endif
-err_proc_term:
+ err_proc_term:
 	proc_term(pdev);
 
-err_free_irq:
+ err_free_irq:
 	free_irq(dev->irq, dev);
 
-err_destroy_wq:
+ err_destroy_wq:
 	if (dev->reset_wq)
 		destroy_workqueue(dev->reset_wq);
 
-err_bsc_deinit:
+ err_bsc_deinit:
 	bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 	bsc_deinit((uint32_t)dev->virt_base);
 
@@ -1858,16 +1921,16 @@ err_bsc_deinit:
 
 	platform_set_drvdata(pdev, NULL);
 
-err_disable_clk:
+ err_disable_clk:
 	bsc_disable_clk(dev);
 
-err_free_clk:
+ err_free_clk:
 	bsc_put_clk(dev);
 
-err_free_dev_mem:
+ err_free_dev_mem:
 	kfree(dev);
 
-err_release_mem_region:
+ err_release_mem_region:
 	release_mem_region(iomem->start, resource_size(iomem));
 	dev_err(dev->device, "I2C bus %d probe failed\n", pdev->id);
 	return rc;

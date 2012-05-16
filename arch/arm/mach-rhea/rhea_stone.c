@@ -308,12 +308,12 @@ struct regulator_consumer_supply hv10_supply[] = {
 static int bcmi2cnfc_gpio_setup(void *);
 static int bcmi2cnfc_gpio_clear(void *);
 static struct bcmi2cnfc_i2c_platform_data bcmi2cnfc_pdata = {
+	.i2c_pdata	= {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),},
 	.irq_gpio = 4,
 	.en_gpio = 100,
 	.wake_gpio = 73,
 	.init = bcmi2cnfc_gpio_setup,
 	.reset = bcmi2cnfc_gpio_clear,
-	.i2c_pdata	= {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),},
 };
 
 
