@@ -25,7 +25,8 @@
    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
    POSSIBILITY OF SUCH DAMAGE.
 */
-
+ 
+ 
 /**
  * Lamport's Bakery algorithm for spinlock handling
  *
@@ -43,7 +44,7 @@
  */
 void initialize_spinlock(bakery_t *bakery)
 {
-	appf_memset(bakery, 0, sizeof(bakery_t));
+    appf_memset(bakery, 0, sizeof(bakery_t));
 }
 
 /**
@@ -52,32 +53,37 @@ void initialize_spinlock(bakery_t *bakery)
  */
 void get_spinlock(unsigned cpuid, bakery_t *bakery)
 {
-	unsigned i, max = 0, my_full_number, his_full_number;
+    unsigned i, max=0, my_full_number, his_full_number;
 
-	/* Get a ticket */
-	bakery->entering[cpuid] = TRUE;
-	for (i = 0; i < MAX_CPUS; ++i) {
-		if (bakery->number[i] > max) {
-			max = bakery->number[i];
-		}
-	}
-	++max;
-	bakery->number[cpuid] = max;
-	bakery->entering[cpuid] = FALSE;
+    /* Get a ticket */
+    bakery->entering[cpuid] = TRUE;
+    for (i=0; i<MAX_CPUS; ++i)
+    {
+        if (bakery->number[i] > max)
+        {
+            max = bakery->number[i];
+        }
+    }
+    ++max;
+    bakery->number[cpuid] = max;
+    bakery->entering[cpuid] = FALSE;
 
-	/* Wait for our turn */
-	my_full_number = (max << 8) + cpuid;
-	for (i = 0; i < MAX_CPUS; ++i) {
-		while (bakery->entering[i]) ;	/* Wait */
-		do {
-			his_full_number = bakery->number[i];
-			if (his_full_number) {
-				his_full_number = (his_full_number << 8) + i;
-			}
-		}
-		while (his_full_number && (his_full_number < my_full_number));
-	}
-	dmb();
+    /* Wait for our turn */
+    my_full_number = (max << 8) + cpuid;
+    for (i=0; i<MAX_CPUS; ++i)
+    {
+        while(bakery->entering[i]);  /* Wait */
+        do
+        {
+            his_full_number = bakery->number[i];
+            if (his_full_number)
+            {
+                his_full_number = (his_full_number << 8) + i;
+            }
+        }
+        while(his_full_number && (his_full_number < my_full_number));
+    }
+    dmb();
 }
 
 /**
@@ -85,6 +91,6 @@ void get_spinlock(unsigned cpuid, bakery_t *bakery)
  */
 void release_spinlock(unsigned cpuid, bakery_t *bakery)
 {
-	dmb();
-	bakery->number[cpuid] = 0;
+    dmb();
+    bakery->number[cpuid] = 0;
 }

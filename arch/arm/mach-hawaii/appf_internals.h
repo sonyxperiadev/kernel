@@ -26,6 +26,7 @@
    POSSIBILITY OF SUCH DAMAGE.
 */
 
+ 
 #define TRUE  1
 #define FALSE 0
 
@@ -52,8 +53,8 @@ extern int appf_warm_reset(void);
 /*
  * Context save/restore
  */
-extern int save_cpu_context(struct appf_cluster *cluster, struct appf_cpu *cpu,
-			    unsigned flags);
+extern int save_cpu_context(struct appf_cluster *cluster, struct appf_cpu *cpu, unsigned flags);
+
 
 int appf_setup_translation_tables(void);
 int appf_setup_secure_translation_tables(void);
@@ -65,7 +66,7 @@ int appf_setup_secure_translation_tables(void);
 #define STATUS_STANDBY  1
 #define STATUS_DORMANT  2
 #define STATUS_SHUTDOWN 3
-
+ 
 /*
  * Internal values for flags parameter
  */
@@ -109,10 +110,9 @@ int appf_setup_secure_translation_tables(void);
 /* 
  * Functions in context.c
  */
-extern int appf_restore_context(struct appf_cluster *cluster,
-				struct appf_cpu *cpu, int is_secure);
-extern int appf_save_context(struct appf_cluster *cluster, struct appf_cpu *cpu,
-			     unsigned flags, int is_secure);
+extern int appf_restore_context(struct appf_cluster *cluster, struct appf_cpu *cpu, int is_secure);
+extern int appf_save_context(struct appf_cluster *cluster, struct appf_cpu *cpu, unsigned flags, int is_secure);
+
 
 /*
  * Lamport's Bakery algorithm for spinlock handling
@@ -127,45 +127,50 @@ extern int appf_save_context(struct appf_cluster *cluster, struct appf_cpu *cpu,
  * Bakery structure - declare/allocate one of these for each lock.
  * A pointer to this struct is passed to the lock/unlock functions.
  */
-typedef struct {
-	volatile char entering[MAX_CPUS];
-	volatile unsigned number[MAX_CPUS];
+typedef struct 
+{
+    volatile char entering[MAX_CPUS];
+    volatile unsigned number[MAX_CPUS];
 } bakery_t;
 
 extern void init_bakery_spinlock(bakery_t *bakery);
 extern void get_bakery_spinlock(unsigned cpuid, bakery_t *bakery);
 extern void release_bakery_spinlock(unsigned cpuid, bakery_t *bakery);
 
+
 /*
  * Structures we hide from the OS API
  */
 
-struct appf_cpu_context {
-	appf_u32 flags;
-	appf_u32 saved_items;
-	appf_u32 *control_data;
-	appf_u32 *pmu_data;
-	appf_u32 *timer_data;
-	appf_u32 *global_timer_data;
-	appf_u32 *vfp_data;
-	appf_u32 *gic_interface_data;
-	appf_u32 *gic_dist_private_data;
+struct appf_cpu_context
+{
+    appf_u32 flags;
+    appf_u32 saved_items;
+    appf_u32 *control_data;
+    appf_u32 *pmu_data;
+    appf_u32 *timer_data;
+    appf_u32 *global_timer_data;
+    appf_u32 *vfp_data;
+    appf_u32 *gic_interface_data;
+    appf_u32 *gic_dist_private_data;
 #ifdef CAPRI_DORMANT_CHANGE
 	appf_u32 *secure_api_params;
 #endif
-	appf_u32 *banked_registers;
-	appf_u32 *cp15_data;
-	appf_u32 *debug_data;
-	appf_u32 *mmu_data;
-	appf_u32 *other_data;
+    appf_u32 *banked_registers;
+    appf_u32 *cp15_data;
+    appf_u32 *debug_data;
+    appf_u32 *mmu_data;
+    appf_u32 *other_data;
 #ifdef CAPRI_DORMANT_CHANGE
 	appf_u32 workaround_buffer;
 #endif
 };
 
-struct appf_cluster_context {
-	appf_u32 saved_items;
-	appf_u32 *gic_dist_shared_data;
-	appf_u32 *l2_data;
-	appf_u32 *scu_data;
+struct appf_cluster_context
+{
+    appf_u32 saved_items;
+    appf_u32 *gic_dist_shared_data;
+    appf_u32 *l2_data;
+    appf_u32 *scu_data;
 };
+
