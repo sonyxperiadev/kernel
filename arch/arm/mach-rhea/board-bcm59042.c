@@ -898,9 +898,13 @@ static struct i2c_board_info __initdata pmu_info[] = {
 #define CSR_VAL_ECO_TT_1G	0x8 /*0.98V*/
 #define CSR_VAL_ECO_FF_1G	0x8 /*0.98V*/
 
-#define CSR_VAL_NRML_SS_1G	0x11 /*1.16V*/
-#define CSR_VAL_NRML_TT_1G	0x0b /*1.04V*/
-#define CSR_VAL_NRML_FF_1G	0x8	/*0.98V*/
+/* Temporarily incresed voltage at Normal Mode.
+ * Actual voltage will be updated once ASIC team concludes.
+ * */
+
+#define CSR_VAL_NRML_SS_1G	0x1a /*1.34V*/
+#define CSR_VAL_NRML_TT_1G	0x1a /*1.34V*/
+#define CSR_VAL_NRML_FF_1G	0x14 /*1.22V*/
 
 #define CSR_VAL_TURBO_SS_1G		0x1B /*1.36V*/
 #define B0_CSR_VAL_TURBO_SS_1G	0x19 /*1.32V*/
