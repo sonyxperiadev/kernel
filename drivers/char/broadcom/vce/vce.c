@@ -39,13 +39,14 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/wakelock.h>
 #include <linux/broadcom/vce.h>
 #include <linux/broadcom/vtq.h>
+#include <linux/broadcom/vtq_imageconv.h>
 #include "vtqbr.h"
 
 /* Private configuration stuff -- not part of exposed API */
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10123
+#define DRIVER_VERSION 10132
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -111,6 +112,10 @@ static struct vce {
 	 * change the design to avoid such race, we could get rid of
 	 * this lock. */
 	spinlock_t isrclocks_spin;
+
+	/* Linkage to VTQ imageconv layer -- since it hasn't yet grown
+	 * up enough to warrant its own entry point */
+	struct vtq_imageconv_state *vtq_imageconv;
 } vce_state;
 
 /* Per open handle state: */
@@ -136,6 +141,10 @@ typedef struct {
 	 * this safeguards against a dying process */
 	struct mutex low_latency_hack_mutex;
 	uint32_t low_latency_hack_is_enabled;
+
+	/* Imageconv linkage: */
+	int need_to_wait_for_imageconv;
+	uint32_t last_imageconv_job_id;
 } vce_t;
 
 /* Per mmap handle state: */
@@ -450,6 +459,85 @@ static void clock_off_(int linenum)
 #define clock_off() clock_off_(__LINE__)
 #endif
 
+/* linkage to VTQ Imageconv */
+
+static int _imageconv_enqueue_direct(vce_t *user,
+		struct vce *vce,
+		uint32_t type,
+		uint32_t tformat_baseaddr,
+		uint32_t raster_baseaddr,
+		int32_t signedrasterstride,
+		uint32_t numtiles_wide,
+		uint32_t numtiles_high,
+		uint32_t dmacfg,
+		vtq_job_id_t *job_id_out)
+{
+	int s;
+	vtq_job_id_t job_id;
+
+	if (type != 0 && type != 1)
+		return -1;
+
+	s = vtq_imageconv_enqueue_direct(vce->vtq_imageconv,
+		type,
+		tformat_baseaddr,
+		raster_baseaddr,
+		signedrasterstride,
+		numtiles_wide,
+		numtiles_high,
+		dmacfg,
+		&job_id);
+	if (s == 0) {
+		user->last_imageconv_job_id = job_id;
+		user->need_to_wait_for_imageconv = 1;
+		*job_id_out = job_id;
+	}
+
+	return s;
+}
+
+int _imageconv_await(vce_t *user,
+		struct vce *vce,
+		vtq_job_id_t job_id)
+{
+	int s;
+
+	s = vtq_imageconv_await(vce->vtq_imageconv, job_id);
+	if (s == 0 && user->last_imageconv_job_id == job_id)
+		user->need_to_wait_for_imageconv = 0;
+	return s;
+}
+
+void _imageconv_flush(vce_t *user,
+		      struct vce *vce)
+{
+	int s;
+
+	if (user->need_to_wait_for_imageconv) {
+		dbg_print("Flushing unfinished imageconversions\n");
+		s = vtq_imageconv_await(vce->vtq_imageconv,
+				user->last_imageconv_job_id);
+		if (s == -ERESTARTSYS) {
+			int retried;
+			dbg_print("Wait was interrupted by signal, will poll\n")
+				;
+			/* TODO: might be good to make blocking version of API
+			 */
+			retried = 0;
+			while (s == -ERESTARTSYS && retried++ < 1000) {
+				usleep_range(1000, 20000);
+				s = vtq_imageconv_await(vce->vtq_imageconv,
+						user->last_imageconv_job_id);
+			}
+			dbg_print("After %d tries, s = %d\n", retried, s);
+		}
+
+		if (s != 0)
+			err_print("Failed to flush imageconv -- likely FATAL\n")
+				;
+	}
+}
+
 /******************************************************************
 	VCE driver functions
 *******************************************************************/
@@ -458,6 +546,11 @@ static int vce_open(struct inode *inode, struct file *filp)
 	vce_t *dev;
 
 	(void)inode;		/* ? */
+
+	if (!try_module_get(THIS_MODULE)) {
+		err_print("Failed to increment module refcount\n");
+		return -EINVAL;
+	}
 
 	dev = kmalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev)
@@ -478,6 +571,8 @@ static int vce_open(struct inode *inode, struct file *filp)
 
 	mutex_init(&dev->low_latency_hack_mutex);
 	dev->low_latency_hack_is_enabled = 0;
+
+	dev->need_to_wait_for_imageconv = 0;
 
 	filp->private_data = dev;
 	return 0;
@@ -527,6 +622,8 @@ static int vce_file_release(struct inode *inode, struct file *filp)
 		vtqb_destroy_context(dev->vtq_ctx);
 	}
 
+	_imageconv_flush(dev, &vce_state);
+
 	if (try_wait_for_completion(&dev->irq_sem)) {
 		err_print
 		    ("VCE driver closing with unacknowledged interrupts\n");
@@ -540,6 +637,8 @@ static int vce_file_release(struct inode *inode, struct file *filp)
 	}
 
 	kfree(dev);
+
+	module_put(THIS_MODULE);
 
 	return 0;
 }
@@ -744,6 +843,15 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		case VTQ_IOCTL_MULTIPURPOSE_LOCK:
 			trace_ioctl_entry(VTQ_IOCTL_MULTIPURPOSE_LOCK);
+			break;
+		case VTQ_IMAGECONV_IOCTL_READY:
+			trace_ioctl_entry(VTQ_IMAGECONV_IOCTL_READY);
+			break;
+		case VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT:
+			trace_ioctl_entry(VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT);
+			break;
+		case VTQ_IMAGECONV_IOCTL_AWAIT:
+			trace_ioctl_entry(VTQ_IMAGECONV_IOCTL_AWAIT);
 			break;
 		}
 	}
@@ -1022,6 +1130,55 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
+/* Image Conv linkage: */
+	case VTQ_IMAGECONV_IOCTL_READY:
+		{
+			struct vtq_imageconv_ready_ioctldata *d;
+
+			d = (struct vtq_imageconv_ready_ioctldata *)arg;
+
+			d->isready =
+				vtq_imageconv_ready(vce_state.vtq_imageconv);
+			ret = 0;
+		}
+		break;
+
+	case VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT:
+		{
+			struct vtq_imageconv_enqueue_direct_ioctldata *d;
+			vtq_job_id_t job_id;
+
+			d = (struct vtq_imageconv_enqueue_direct_ioctldata *)arg
+				;
+
+			ret = _imageconv_enqueue_direct(
+				dev,
+				&vce_state,
+				d->type,
+				d->tformat_baseaddr,
+				d->raster_baseaddr,
+				d->signedrasterstride,
+				d->numtiles_wide,
+				d->numtiles_high,
+				d->dmacfg,
+				&job_id);
+			if (ret == 0)
+				d->job_id = job_id;
+		}
+		break;
+
+	case VTQ_IMAGECONV_IOCTL_AWAIT:
+		{
+			struct vtq_imageconv_await_ioctldata *d;
+
+			d = (struct vtq_imageconv_await_ioctldata *)arg;
+
+			ret = _imageconv_await(
+				dev,
+				&vce_state,
+				d->job_id);
+		}
+		break;
 
 	default:
 		{
@@ -1094,6 +1251,15 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		case VTQ_IOCTL_MULTIPURPOSE_LOCK:
 			trace_ioctl_return(VTQ_IOCTL_MULTIPURPOSE_LOCK);
+			break;
+		case VTQ_IMAGECONV_IOCTL_READY:
+			trace_ioctl_return(VTQ_IMAGECONV_IOCTL_READY);
+			break;
+		case VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT:
+			trace_ioctl_return(VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT);
+			break;
+		case VTQ_IMAGECONV_IOCTL_AWAIT:
+			trace_ioctl_return(VTQ_IMAGECONV_IOCTL_AWAIT);
 			break;
 		}
 	}
@@ -1443,14 +1609,28 @@ int __init vce_init(void)
 	}
 
 	ret = vtq_pervce_init(&vce_state.vtq_vce,
-			vce_state.vtq, &vce_state, vce_state.proc_vcedir);
+			vce_state.vtq, &vce_state,
+			vce_state.proc_vcedir);
 	if (ret) {
 		err_print("Failed to initialize VTQ (2)\n");
 		ret = -ENOENT;
 		goto err_vtq_init2;
 	}
 
+	ret = vtq_imageconv_init(&vce_state.vtq_imageconv,
+			vce_state.vtq_vce,
+			THIS_MODULE,
+			device,
+			vce_state.proc_vcedir);
+	if (ret) {
+		err_print("Failed to initialize VTQ imageconv\n");
+		ret = -ENOENT;
+		goto err_vtq_imageconv_init;
+	}
+
 	vce_state.debug_ioctl = 0; /* TODO: proc entry maybe? */
+
+	vce_state.vtq_firmware = NULL;
 
 	return 0;
 
@@ -1458,7 +1638,10 @@ int __init vce_init(void)
 	   error exit paths
 	 */
 
-	/* vtq_pervce_term(&vce_state.vtqvce); */
+	/* vtq_imageconv_term(&vce_state.vtq_imageconv); */
+err_vtq_imageconv_init:
+
+	vtq_pervce_term(&vce_state.vtq_vce);
 err_vtq_init2:
 
 	vtq_driver_term(&vce_state.vtq);
@@ -1518,6 +1701,7 @@ void __exit vce_exit(void)
 	mutex_lock(&vce_state.armctl_sem);
 	BUG_ON(vce_state.clock_enable_count != 0);
 
+	vtq_imageconv_term(&vce_state.vtq_imageconv);
 	vtq_pervce_term(&vce_state.vtq_vce);
 	vtq_driver_term(&vce_state.vtq);
 
