@@ -89,6 +89,8 @@ struct gain_ramp {
 	int dir;          /* GAIN_RAMP_UP, GAIN_RAMP_NIL, GAIN_RAMP_DOWN */
 };
 
+static BCMPMU_Audio_HS_Param headset_param_set_from_audio_driver;
+
 /* Description:
  *     Returns the index of the first step for a ramp-up
  *     or ramp-down sequence. For ramp-up, the start index
@@ -654,6 +656,19 @@ void bcmpmu_hi_gain_mode_en(bool en)
 			  val, bcmpmu->regmap[PMU_REG_HIGH_GAIN_MODE].mask);
 }
 EXPORT_SYMBOL(bcmpmu_hi_gain_mode_en);
+
+BCMPMU_Audio_HS_Param bcmpmu_get_hs_param_from_audio_driver(void)
+{
+	return headset_param_set_from_audio_driver;
+}
+EXPORT_SYMBOL(bcmpmu_get_hs_param_from_audio_driver);
+
+void bcmpmu_audio_driver_set_hs_param(BCMPMU_Audio_HS_Param hs_param)
+{
+	headset_param_set_from_audio_driver = hs_param;
+}
+EXPORT_SYMBOL(bcmpmu_audio_driver_set_hs_param);
+
 
 int bcmpmu_audio_ihf_selftest_stimulus_input(int stimulus)
 {

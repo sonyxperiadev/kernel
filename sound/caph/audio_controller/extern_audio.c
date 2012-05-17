@@ -593,6 +593,8 @@ static struct PMU_AudioGainMapping_t map2pmu_ihf_gain(int arg_gain_mB)
 ****************************************************************************/
 void extern_hs_on(void)
 {
+	BCMPMU_Audio_HS_Param hs_param;
+
 	/*enable the audio PLL before power ON */
 	if (pll_IsOn == 0) {
 		bcmpmu_audio_init();
@@ -611,6 +613,14 @@ void extern_hs_on(void)
 	bcmpmu_hs_power(1);
 
 	hs_IsOn = 1;
+
+	hs_param = bcmpmu_get_hs_param_from_audio_driver();
+	hs_param.hs_power = 1;
+	hs_param.hs_gain_left = PMU_HSGAIN_MUTE;
+	hs_param.hs_gain_right = PMU_HSGAIN_MUTE;
+	hs_param.hs_hi_gain_mode = 0;
+	bcmpmu_audio_driver_set_hs_param(hs_param);
+
 }
 
 /********************************************************************
@@ -622,11 +632,20 @@ void extern_hs_on(void)
 ****************************************************************************/
 void extern_hs_off(void)
 {
+	BCMPMU_Audio_HS_Param hs_param;
+
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH,
 				  PMU_HSGAIN_MUTE),
 	bcmpmu_hs_power(0);
 
 	hs_IsOn = 0;
+
+	hs_param = bcmpmu_get_hs_param_from_audio_driver();
+	hs_param.hs_power = 0;
+	hs_param.hs_gain_left = PMU_HSGAIN_MUTE;
+	hs_param.hs_gain_right = PMU_HSGAIN_MUTE;
+	hs_param.hs_hi_gain_mode = 0;
+	bcmpmu_audio_driver_set_hs_param(hs_param);
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)
 		/*disable the audio PLL after power OFF*/
@@ -751,26 +770,38 @@ int extern_hs_find_gain(int gain_mB)
 ****************************************************************************/
 void extern_hs_set_gain(int gain_mB, AUDIO_GAIN_LR_t lr)
 {
+	BCMPMU_Audio_HS_Param hs_param;
 	struct PMU_AudioGainMapping_t gain_map;
 
 	gain_map = map2pmu_hs_gain(gain_mB);
 	aTrace(LOG_AUDIO_CNTLR, "%s need %d, pmu_gain_enum=0x%x\n",
 			__func__, gain_mB, gain_map.PMU_gain_enum);
 
+	hs_param = bcmpmu_get_hs_param_from_audio_driver();
+
 	if (lr == AUDIO_HS_BOTH) {
 		bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH,
 			gain_map.PMU_gain_enum);
 		hs_gain_l = gain_map.gain_mB;
 		hs_gain_r = gain_map.gain_mB;
+
+		hs_param.hs_gain_left = gain_map.PMU_gain_enum;
+		hs_param.hs_gain_right = gain_map.PMU_gain_enum;
 	} else if (lr == AUDIO_HS_LEFT) {
 		bcmpmu_hs_set_gain(PMU_AUDIO_HS_LEFT,
 			gain_map.PMU_gain_enum);
 		hs_gain_l = gain_map.gain_mB;
+
+		hs_param.hs_gain_left = gain_map.PMU_gain_enum;
 	} else if (lr == AUDIO_HS_RIGHT) {
 		bcmpmu_hs_set_gain(PMU_AUDIO_HS_RIGHT,
 			gain_map.PMU_gain_enum);
 		hs_gain_r = gain_map.gain_mB;
+
+		hs_param.hs_gain_right = gain_map.PMU_gain_enum;
 	}
+
+	bcmpmu_audio_driver_set_hs_param(hs_param);
 }
 
 /********************************************************************
@@ -782,14 +813,30 @@ void extern_hs_set_gain(int gain_mB, AUDIO_GAIN_LR_t lr)
 ****************************************************************************/
 void extern_hs_mute(AUDIO_GAIN_LR_t lr)
 {
-	if (lr == AUDIO_HS_BOTH)
+	BCMPMU_Audio_HS_Param hs_param;
+
+	hs_param = bcmpmu_get_hs_param_from_audio_driver();
+
+	if (lr == AUDIO_HS_BOTH) {
 		bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
+
+		hs_param.hs_gain_left = PMU_HSGAIN_MUTE;
+		hs_param.hs_gain_right = PMU_HSGAIN_MUTE;
+	}
 	else
-	if (lr == AUDIO_HS_LEFT)
+	if (lr == AUDIO_HS_LEFT) {
 		bcmpmu_hs_set_gain(PMU_AUDIO_HS_LEFT, PMU_HSGAIN_MUTE);
+
+		hs_param.hs_gain_left = PMU_HSGAIN_MUTE;
+	}
 	else
-	if (lr == AUDIO_HS_RIGHT)
+	if (lr == AUDIO_HS_RIGHT) {
 		bcmpmu_hs_set_gain(PMU_AUDIO_HS_RIGHT, PMU_HSGAIN_MUTE);
+
+		hs_param.hs_gain_right = PMU_HSGAIN_MUTE;
+	}
+
+	bcmpmu_audio_driver_set_hs_param(hs_param);
 }
 
 /********************************************************************

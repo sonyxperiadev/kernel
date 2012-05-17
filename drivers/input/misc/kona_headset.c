@@ -474,6 +474,12 @@ static int is_accessory_supported(struct mic_t *mic_dev)
 	int mic_level2;
 	int ret;
 
+#if defined(CONFIG_BCMPMU_AUDIO)
+#if defined(CONFIG_MFD_BCM59055)
+	BCMPMU_Audio_HS_Param hs_param;
+#endif
+#endif
+
 	/* Power ON Mic BIAS */
 	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
@@ -507,11 +513,37 @@ static int is_accessory_supported(struct mic_t *mic_dev)
 	pr_debug(" ++ %s(): mic_level1 after calc %d \r\n", __func__,
 		 mic_level1);
 
-	/* Turn On the HP Power Amplifier */
-	bcmpmu_audio_init();
-	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
-	bcmpmu_hs_power((void *)1);
+#if defined(CONFIG_BCMPMU_AUDIO)
+#if defined(CONFIG_MFD_BCM59055)
+	hs_param = bcmpmu_get_hs_param_from_audio_driver();
+	/*if during MP3, plug in headset, accessory manager notifies
+	audio device driver, audio device driver power on HS amp
+	and set up HS gains.*/
+	if (hs_param.hs_power == 1) {
 
+		/*if headset amp is aleady powered on by audio
+		device driver for FM radio or MP3 playback.*/
+		/*allow some time for audio device driver
+		to finish setting HS gains.*/
+		msleep(30);
+
+		/* mute HS output to make HS type detection work.*/
+		bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
+
+	} else {
+#endif
+#endif
+
+		/* Turn On the HP Power Amplifier */
+		bcmpmu_audio_init();
+		bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
+		bcmpmu_hs_power((void *)1);
+
+#if defined(CONFIG_BCMPMU_AUDIO)
+#if defined(CONFIG_MFD_BCM59055)
+	}
+#endif
+#endif
 	msleep(50);
 
 	/* Read mic level again */
@@ -532,9 +564,31 @@ static int is_accessory_supported(struct mic_t *mic_dev)
 		ret = 1;
 	}
 
-	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
-	bcmpmu_hs_power((void *)0);
-	bcmpmu_audio_deinit();
+#if defined(CONFIG_BCMPMU_AUDIO)
+#if defined(CONFIG_MFD_BCM59055)
+
+	if (hs_param.hs_power == 1) {
+
+		/*if headset amp is aleady powered on by audio device driver,
+		for FM radio or MP3 playback.*/
+		msleep(20);
+
+		/*restore the gain which was set by audio device driver */
+		bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, hs_param.hs_gain_left);
+
+	} else {
+#endif
+#endif
+
+		bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
+		bcmpmu_hs_power((void *)0);
+		bcmpmu_audio_deinit();
+
+#if defined(CONFIG_BCMPMU_AUDIO)
+#if defined(CONFIG_MFD_BCM59055)
+	}
+#endif
+#endif
 
 	return ret;
 }

@@ -1860,39 +1860,6 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 					muteInPlay = TRUE;
 			}
 		}
-
-#if defined(CONFIG_BCMPMU_AUDIO)
-#if defined(CONFIG_MFD_BCM59055)
-	/* work around for a problem on Rheaberri.
-
-	plug in headset but FM has no audio.
-	reason is PMU HS amp is powered off by someone.
-
-	when plug in headset Android calls mute, un-mute.
-	Power off then power on HS amp to make it right.
-
-	Ideally this problem should be fixed in PMU driver code.*/
-
-		if (source == AUDIO_SOURCE_I2S
-			&& (sink == AUDIO_SINK_HEADPHONE
-				|| sink == AUDIO_SINK_HEADSET)
-			&& fmPlayStarted
-			) {
-
-			audctl_usleep_range(20000, 22000);
-
-			powerOnExternalAmp(AUDIO_SINK_HEADSET, FmUse,
-				FALSE, FALSE);
-
-			audctl_usleep_range(20000, 22000);
-
-			powerOnExternalAmp(AUDIO_SINK_HEADSET, FmUse,
-				TRUE, FALSE);
-
-		}
-#endif
-#endif
-
 	} else {
 		if (sink == AUDIO_SINK_VIBRA)
 			csl_caph_hwctrl_UnmuteSink(0 /*pathID */ , speaker);

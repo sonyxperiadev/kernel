@@ -214,6 +214,14 @@ enum
 	PMU_HS_SINGLE_ENDED_AC_COUPLED
 };
 
+struct _bcmpmu_audio_param {
+	int hs_power;
+	int hs_gain_left;
+	int hs_gain_right;
+	int hs_hi_gain_mode;
+};
+#define BCMPMU_Audio_HS_Param struct _bcmpmu_audio_param
+
 extern void bcmpmu_audio_init(void);
 extern void bcmpmu_audio_deinit(void);
 extern void bcmpmu_hs_power(bool on);
@@ -222,6 +230,8 @@ extern void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain);
 extern void bcmpmu_hs_shortcircuit_dis(bool disable);
 extern void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain);
 extern void bcmpmu_hi_gain_mode_en(bool en);
+extern BCMPMU_Audio_HS_Param bcmpmu_get_hs_param_from_audio_driver(void);
+extern void bcmpmu_audio_driver_set_hs_param(BCMPMU_Audio_HS_Param hs_param);
 extern int bcmpmu_audio_ihf_selftest_stimulus_input(int stimulus);
 extern int bcmpmu_audio_ihf_selftest_stimulus_output(int stimulus);
 extern void bcmpmu_audio_ihf_selftest_result(u8 *result);
