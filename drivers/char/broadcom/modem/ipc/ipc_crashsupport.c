@@ -138,7 +138,8 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	IPC_U32 *Dump;
 	void __iomem *DumpVAddr;
 
-	if (BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice()
+	if ((BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice() ||
+		BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
 #ifdef CONFIG_CDEBUGGER
 		&& enable == 1
 #endif
@@ -147,7 +148,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 #endif
 		) {
 		/* we kill AP when CP crashes */
-		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
+		IPC_DEBUG(DBG_ERROR, "Crashing AP for Ramdump ...\n\n");
 		abort();
 	}
 	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
