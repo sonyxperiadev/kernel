@@ -15,6 +15,7 @@
 # use $(srctree) for kernel top (see below) and
 # use $(src) in a relative path which points to the directory
 
+KBUILD_CFLAGS += -Werror
 
 #CSL Source Files
 ifdef CONFIG_BCM_ALSA_SOUND

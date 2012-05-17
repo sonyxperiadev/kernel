@@ -475,6 +475,7 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 		struct snd_pcm_runtime *runtime = substream->runtime;
 
 		chip->streamCtl[substream->number].playback_prev_time = 0;
+
 		param_start.drv_handle = drv_handle;
 		param_start.pdev_prop =
 		    &chip->streamCtl[substream_number].dev_prop;
