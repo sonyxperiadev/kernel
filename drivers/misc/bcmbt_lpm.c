@@ -71,8 +71,7 @@ static struct bcmbt_ldisc_data bcmbt_ldisc_saved;
 
 static int bcm_assert_bt_wake(void);
 static int bcm_deassert_bt_wake(void);
-static int bcm_init_bt_wake(struct bcm_bt_lpm_platform_data *gpio_data,
-		bool b_tty);
+static int bcm_init_bt_wake(struct bcm_bt_lpm_platform_data *gpio_data);
 static int bcm_init_hostwake(struct bcm_bt_lpm_platform_data *gpio_data);
 static void clean_bt_wake(struct bcm_bt_lpm_platform_data *pdata, bool b_tty);
 static void clean_host_wake(struct bcm_bt_lpm_platform_data *pdata);
@@ -196,10 +195,11 @@ static int bcmbt_tty_open(struct tty_struct *tty)
 {
 #ifdef BTLPM_LDISC_FREE_RESOURCES
 	struct bcm_bt_lpm_platform_data gpio_data;
+
 	gpio_data.gpio_bt_wake = bcm_bt_lpm_data.gpio_bt_wake;
 	gpio_data.gpio_host_wake = bcm_bt_lpm_data.gpio_host_wake;
 	/* do not init tty ldisc as we are called from ldisc */
-	bcm_init_bt_wake(&gpio_data, false);
+	bcm_init_bt_wake(&gpio_data);
 #endif
 	pr_debug("bcmbt_tty_open()::open(): x%p", bcmbt_ldisc_saved.open);
 #ifdef CONFIG_BCM_BT_GPS_SELFTEST
@@ -331,17 +331,16 @@ static int bcm_init_hostwake(struct bcm_bt_lpm_platform_data *gpio_data)
 
 	ret = request_irq(irq, host_wake_isr,
 			(IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING |
-			IRQF_NO_SUSPEND), "bt_host_wake", (void *)gpio_data);
+			IRQF_NO_SUSPEND), "bt_host_wake",
+			(void *)&bcm_bt_lpm_data);
 
 	pr_info("request_irq returned value=%u\n", ret);
 
 	return ret;
 }
 
-static int bcm_init_bt_wake(struct bcm_bt_lpm_platform_data *gpio_data,
-		bool b_tty)
+static int bcm_init_bt_wake(struct bcm_bt_lpm_platform_data *gpio_data)
 {
-	int rc;
 	if (0 != bcm_bt_lpm_data.bt_wake_installed) {
 		pr_info("bcm_init_bt_wake( gpio_bt_wake: %d )::already "
 			"installed", gpio_data->gpio_bt_wake);
@@ -357,20 +356,6 @@ static int bcm_init_bt_wake(struct bcm_bt_lpm_platform_data *gpio_data,
 	wake_lock_init(&bcm_bt_lpm_data.bt_wake_lock, WAKE_LOCK_SUSPEND,
 			"BTWAKE");
 #endif
-	/* register the tty line discipline driver */
-	if (b_tty) {
-		rc = bcmbt_tty_init();
-		if (rc) {
-			pr_err("%s: bcmbt_tty_init failed\n", __func__);
-#ifdef CONFIG_HAS_WAKELOCK
-			wake_lock_destroy(&bcm_bt_lpm_data.host_wake_lock);
-#endif
-			return -1;
-		}
-	}
-	bcm_bt_lpm_data.polarity = HOST_WAKE_ASSERT;
-	bcm_bt_lpm_data.state = ENABLE_LPM_TYPE_OOB_USER;
-	bcm_bt_lpm_data.timeout = DEFAULT_TO;
 	bcm_bt_lpm_data.bt_wake_installed = 1;
 
 	if (bcm_init_hostwake(gpio_data))
@@ -393,9 +378,9 @@ static void clean_bt_wake(struct bcm_bt_lpm_platform_data *pdata, bool b_tty)
 #endif
 	gpio_free((unsigned)pdata->gpio_bt_wake);
 tty_only:
+	bcm_bt_lpm_data.bt_wake_installed = 0;
 	if (b_tty)
 		bcmbt_tty_cleanup();
-	bcm_bt_lpm_data.bt_wake_installed = 0;
 }
 
 static void clean_host_wake(struct bcm_bt_lpm_platform_data *pdata)
@@ -405,31 +390,40 @@ static void clean_host_wake(struct bcm_bt_lpm_platform_data *pdata)
 			(bcm_bt_lpm_data.host_wake_installed == 0)))
 		return;
 
+	bcm_bt_lpm_data.host_wake_installed = 0;
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&bcm_bt_lpm_data.host_wake_lock);
 #endif
 	irq = gpio_to_irq(pdata->gpio_host_wake);
-	free_irq(irq, (void *)pdata);
+	/* make sure to use the same dev_id as in request_irq */
+	free_irq(irq, (void *)&bcm_bt_lpm_data);
 	pr_debug("freed host wake irq=%d\n", irq);
 	gpio_free((unsigned)pdata->gpio_host_wake);
 	bcmbt_release_peripheral_clock();
-	bcm_bt_lpm_data.host_wake_installed = 0;
 }
 
 static int bcmbt_lpm_probe(struct platform_device *pdev)
 {
 	struct bcm_bt_lpm_platform_data *pdata;
+	int rc;
 
 	pdata = pdev->dev.platform_data;
+	bcm_bt_lpm_data.polarity = HOST_WAKE_ASSERT;
+	bcm_bt_lpm_data.state = ENABLE_LPM_TYPE_OOB_USER;
+	bcm_bt_lpm_data.timeout = DEFAULT_TO;
 #ifdef BTLPM_LDISC_FREE_RESOURCES
 	/* store platform gpio assignement for ldisc use at open */
 	bcm_bt_lpm_data.gpio_bt_wake = pdata->gpio_bt_wake;
 	bcm_bt_lpm_data.gpio_host_wake = pdata->gpio_host_wake;
-	if (bcmbt_tty_init())
-		return -1;
 #else
-	bcm_init_bt_wake(pdata, true);
+	bcm_init_bt_wake(pdata);
 #endif
+	/* register the tty line discipline driver */
+	rc = bcmbt_tty_init();
+	if (rc) {
+		pr_err("%s: bcmbt_tty_init failed\n", __func__);
+		return -1;
+	}
 	return 0;
 }
 
