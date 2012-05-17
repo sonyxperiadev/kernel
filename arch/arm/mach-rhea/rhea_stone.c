@@ -1146,60 +1146,58 @@ static int rhea_camera_power_front(struct device *dev, int on)
 		if (gpio_request_one
 			(SENSOR_1_GPIO_RST, GPIOF_DIR_OUT | GPIOF_INIT_LOW,
 				"Cam1Rst")) {
-			printk(KERN_ERR "SENSOR_1_GPIO_RST failed \n");
+			printk(KERN_ERR "SENSOR_1_GPIO_RST failed\n");
 			return -1;
 		}
 		if (gpio_request_one(SENSOR_1_GPIO_PWRDN, GPIOF_DIR_OUT |
 			GPIOF_INIT_LOW, "Cam1Pwr")) {
-			printk(KERN_ERR "SENSOR_1_GPIO_PWDN failed \n");
+			printk(KERN_ERR "SENSOR_1_GPIO_PWDN failed\n");
 			return -1;
 		}
 	}
 	/* Power on sequence start */
 	clock = clk_get(NULL, SENSOR_1_CLK);
 	if (!clock) {
-		printk(KERN_ERR "SENSOR_1_CLK get failed \n");
+		printk(KERN_ERR "SENSOR_1_CLK get failed\n");
 		return -1;
 	} else {
-		printk("Got clock %s \n", SENSOR_1_CLK);
+		printk(KERN_INFO "Got clock %s\n", SENSOR_1_CLK);
 	}
 	axi_clk = clk_get(NULL, "csi0_axi_clk");
 	if (!axi_clk) {
-		printk(KERN_ERR "unable to get clock csi0_axi_clk \n");
-	return -1;
+		printk(KERN_ERR "unable to get clock csi0_axi_clk\n");
+		return -1;
 	}
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(KERN_ERR " Unicam dfs update failed \n");
+			printk(KERN_ERR "Unicam dfs update failed\n");
 			return -1;
 		}
 		value = clk_enable(axi_clk);
 		if (value) {
-			printk(KERN_ERR " AXI clock enable failed \n");
-		return -1;
+			printk(KERN_ERR "AXI clock enable failed\n");
+			return -1;
 		}
 		clk_disable(clock);
 		/* Actual power up sequence starts here */
-		msleep(1);
+		usleep_range(1000, 2000);
 		gpio_set_value(SENSOR_1_GPIO_RST, 0);
-		printk(" PWDN set to HIGH ********** \n");
+		printk(KERN_INFO "PWDN set to HIGH\n");
 		value = 0;
 		value = clk_set_rate(clock, SENSOR_1_CLK_FREQ);
-		if (value) {
-			printk("front cam clock rate fail %d\n", value);
-		}
+		if (value)
+			printk(KERN_INFO "front cam rate fail %d\n", value);
 		value = clk_enable(clock);
-		if (value) {
-			printk(KERN_ERR"enabling clock for front cam fail \n");
-		} else {
-			printk(KERN_ERR"Enabled clock for front camera \n");
-		}
-		msleep(5);
+		if (value)
+			printk(KERN_ERR "enabling clock for front cam fail\n");
+		else
+			printk(KERN_INFO "Enabled clock for front camera\n");
+		usleep_range(5000, 10000);
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
 		/* clk_set_rate returns the clock in the
 		same state it was in before calling */
 		/* So enable the clock now */
-		msleep(5);
+		usleep_range(5000, 10000);
 		gpio_set_value(SENSOR_1_GPIO_RST, 1);
 	} else {
 		gpio_set_value(SENSOR_1_GPIO_RST, 1);
@@ -1208,7 +1206,7 @@ static int rhea_camera_power_front(struct device *dev, int on)
 		clk_disable(axi_clk);
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 			PI_MGR_DFS_MIN_VALUE)) {
-			printk(KERN_ERR "Unicam dfs update failed \n");
+			printk(KERN_ERR "Unicam dfs update failed\n");
 		}
 	}
 	return 0;
