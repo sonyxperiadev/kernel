@@ -368,21 +368,21 @@ static ssize_t cpufreq_table_show(struct kobject *kobj,
 #define cpufreq_table_store	NULL
 #define cpufreq_cur_store	NULL
 
-kona_cpufreq_show(cpufreq_min, MIN_LIMIT);
+kona_cpufreq_show(cpufreq_min_limit, MIN_LIMIT);
 kona_cpufreq_show(cpufreq_cur, CURRENT_FREQ);
-kona_cpufreq_show(cpufreq_max, MAX_LIMIT);
+kona_cpufreq_show(cpufreq_max_limit, MAX_LIMIT);
 
-kona_cpufreq_store(cpufreq_min, MIN_LIMIT);
-kona_cpufreq_store(cpufreq_max, MAX_LIMIT);
+kona_cpufreq_store(cpufreq_min_limit, MIN_LIMIT);
+kona_cpufreq_store(cpufreq_max_limit, MAX_LIMIT);
 
-kona_cpufreq_power_attr(cpufreq_max, S_IRUGO|S_IWUSR);
-kona_cpufreq_power_attr(cpufreq_min, S_IRUGO|S_IWUSR);
+kona_cpufreq_power_attr(cpufreq_max_limit, S_IRUGO|S_IWUSR);
+kona_cpufreq_power_attr(cpufreq_min_limit, S_IRUGO|S_IWUSR);
 kona_cpufreq_power_attr(cpufreq_cur, S_IRUGO);
 kona_cpufreq_power_attr(cpufreq_table, S_IRUGO);
 
 static struct attribute *_cpufreq_attr[] = {
-	&cpufreq_max_attr.attr,
-	&cpufreq_min_attr.attr,
+	&cpufreq_max_limit_attr.attr,
+	&cpufreq_min_limit_attr.attr,
 	&cpufreq_cur_attr.attr,
 	&cpufreq_table_attr.attr,
 	NULL,
