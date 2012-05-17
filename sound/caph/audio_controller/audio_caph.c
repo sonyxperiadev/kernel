@@ -211,6 +211,11 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 		if (len == 0)	/* FIFO empty sleep */
 			return;
 
+		if (completion_done(&complete_kfifo) == 0) {
+			aTrace(LOG_AUDIO_CNTLR, "Sending complete");
+			complete(&complete_kfifo);
+		}
+
 		n_msg_in++;
 		last_action = msgAudioCtrl.action_code;
 
@@ -219,7 +224,6 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 				   &msgAudioCtrl.param,
 				   msgAudioCtrl.pCallBack, msgAudioCtrl.block);
 		n_msg_out++;
-		complete(&complete_kfifo);
 	}
 
 	return;
@@ -561,7 +565,10 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	    action_code == ACTION_AUD_ResumePlay ||
 	    action_code == ACTION_AUD_StartRecord ||
 	    action_code == ACTION_AUD_StopRecord ||
-	    action_code == ACTION_AUD_RateChange)
+	    action_code == ACTION_AUD_RateChange ||
+	    action_code == ACTION_AUD_AddChannel ||
+	    action_code ==  ACTION_AUD_RemoveChannel)
+
 		is_atomic = 1;
 
 /* Triggers come to audio KFIFO from many threads: HAL, hwdep,
