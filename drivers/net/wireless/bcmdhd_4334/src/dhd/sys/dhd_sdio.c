@@ -6135,8 +6135,8 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	}
 
 #ifdef XTAL_PU_TIME_MOD
-	bcmsdh_reg_write(bus->sdh, 0x18000620, 2, 10);
-	bcmsdh_reg_write(bus->sdh, 0x18000628, 2, 0x0000ff01);
+	bcmsdh_reg_write(bus->sdh, 0x18000620, 2, 11);
+	bcmsdh_reg_write(bus->sdh, 0x18000628, 2, 0x0000A601);
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25))
