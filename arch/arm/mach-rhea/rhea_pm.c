@@ -81,23 +81,6 @@ int enter_suspend_state(struct kona_idle_state* state);
 int enter_dormant_state(struct kona_idle_state *state);
 static void set_spare_power_status(unsigned int mode);
 
-
-enum {
-	RHEA_STATE_C0,
-	RHEA_STATE_C1,
-	RHEA_STATE_C2,
-	RHEA_STATE_C3,
-	RHEA_STATE_C4,
-};
-
-enum {
-	RHEA_STATE_C0_LATENCY = 0,
-	RHEA_STATE_C1_LATENCY = 200,
-	RHEA_STATE_C2_LATENCY = 300,
-	RHEA_STATE_C3_LATENCY = 400,
-	RHEA_STATE_C4_LATENCY = 500,
-};
-
 const char *sleep_prevent_clocks[] =
 		{
 			/*HUB*/
