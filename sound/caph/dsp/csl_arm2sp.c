@@ -71,8 +71,8 @@ UInt32 CSL_ARM2SP_Write(UInt8 *inBuf, UInt32 inSize_inBytes,
 	halfBufSize_inBytes = bufSize_inWords; /* in number of bytes */
 
 	/* beginning of the buffer or the half point in the buffer. */
-	/* offset is in 16bit words */
-	offset = (writeIndex == 0) ? (bufSize_inWords/2) : 0;
+	/* offset is in 32bit long-words */
+	offset = (writeIndex == 0) ? (bufSize_inWords>>2) : 0;
 	if (in48K && audMode == 0)
 		offset >>= 1;
 	/* 48k mono uses only half buffer */
@@ -132,8 +132,8 @@ UInt32 CSL_ARM2SP2_Write(UInt8 *inBuf, UInt32 inSize_inBytes,
 	halfBufSize_inBytes = bufSize_inWords; /* in number of bytes */
 
 	/*beginning of the buffer or the half point in the buffer.*/
-	offset = (writeIndex == 0) ? (bufSize_inWords/2) : 0; /* offset is in
-								16bit words */
+	offset = (writeIndex == 0) ? (bufSize_inWords>>2) : 0; /* offset is in
+							32bit long-words */
 	if (in48K && audMode == 0)
 		offset >>= 1; /* 48k mono uses only half buffer */
 
