@@ -55,7 +55,7 @@
 #include "appf_types.h"
 #endif
 
-static int enable_dormant;
+static int enable_dormant = 1;
 module_param_named(enable_dormant, enable_dormant, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #ifdef CONFIG_ROM_SEC_DISPATCHER
