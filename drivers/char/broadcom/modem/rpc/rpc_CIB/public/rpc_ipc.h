@@ -182,6 +182,10 @@ typedef enum {
 
 	RPC_PROP_AP_VERSION,
 
+	/* more 32bit measurement value */
+	RPC_PROP_ADC_MEASUREMENT_1,
+	RPC_PROP_ADC_MEASUREMENT_2,
+
 	RPC_PROP_END_AP = IPC_PROPERTY_END_AP,
 
 	/* ( CP is Read/Write, AP is Read only ) */
