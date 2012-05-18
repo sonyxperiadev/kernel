@@ -15,6 +15,8 @@
 # use $(srctree) for kernel top (see below) and
 # use $(src) in a relative path which points to the directory
 
+KBUILD_CFLAGS += -Werror
+
 #the options below are used by dsp headers
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DMSP -DFUSE_DUAL_PROCESSOR_ARCHITECTURE -DDEVELOPMENT_ONLY -D_RHEA_
 #the options below are used by capi headers

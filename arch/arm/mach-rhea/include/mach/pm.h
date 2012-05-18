@@ -47,6 +47,28 @@
 #define DORMANT_CTRL_PROG_END       0xE1
 
 #ifndef __ASSEMBLY__
+/**
+ * C State definitions and latencies
+ */
+
+enum {
+	RHEA_STATE_C0, /* suspend */
+	RHEA_STATE_C1, /* suspend-rtn */
+	RHEA_STATE_C2, /* ds-rtn */
+	RHEA_STATE_C3, /* suspend-drmt */
+	RHEA_STATE_C4, /* ds-drmt */
+};
+
+enum {
+	RHEA_STATE_C0_LATENCY = 0,
+	RHEA_STATE_C1_LATENCY = 200,
+	RHEA_STATE_C2_LATENCY = 300,
+	RHEA_STATE_C3_LATENCY = 400,
+	RHEA_STATE_C4_LATENCY = 500,
+};
+#endif
+
+#ifndef __ASSEMBLY__
 extern u32 dormant_start(void);
 
 #ifdef DORMANT_PROFILE

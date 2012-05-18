@@ -36,6 +36,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #endif
+#include <mach/pm.h>
 
 #ifndef PWRMGR_I2C_VAR_DATA_REG
 #define PWRMGR_I2C_VAR_DATA_REG 6
@@ -168,6 +169,7 @@ struct pwr_mgr {
 	struct pwr_mgr_info *info;
 	struct pwr_mgr_event event_cb[PWR_MGR_NUM_EVENTS];
 	struct pi_mgr_qos_node sem_qos_client;
+	struct pi_mgr_qos_node seq_qos_client;
 	bool sem_locked;
 #if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 i2c_seq_trg;
@@ -180,7 +182,6 @@ struct pwr_mgr {
 };
 
 static struct pwr_mgr pwr_mgr;
-
 int pwr_mgr_event_trg_enable(int event_id, int event_trg_type)
 {
 	u32 reg_val = 0;
@@ -1855,6 +1856,8 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	}
 
 	mutex_lock(&seq_mutex);
+	pi_mgr_qos_request_update(&pwr_mgr.seq_qos_client, 0);
+
 	if (pwr_mgr.info->i2c_rd_slv_id_off1 >= 0)
 		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
 					    i2c_rd_slv_id_off1,
@@ -1891,6 +1894,8 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		    PWRMGR_I2C_READ_DATA_SHIFT;
 	}
 out_unlock:
+	pi_mgr_qos_request_update(&pwr_mgr.seq_qos_client,
+			PI_MGR_QOS_DEFAULT_VALUE);
 	mutex_unlock(&seq_mutex);
 	pwr_dbg(PWR_LOG_SEQ,
 		"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x; ret_val:%d\n",
@@ -1914,6 +1919,7 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 	}
 
 	mutex_lock(&seq_mutex);
+	pi_mgr_qos_request_update(&pwr_mgr.seq_qos_client, 0);
 
 	if (pwr_mgr.info->i2c_wr_slv_id_off >= 0)
 		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
@@ -1940,6 +1946,8 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 			ret = -EAGAIN;
 		}
 	}
+	pi_mgr_qos_request_update(&pwr_mgr.seq_qos_client,
+			PI_MGR_QOS_DEFAULT_VALUE);
 	mutex_unlock(&seq_mutex);
 	pwr_dbg(PWR_LOG_SEQ,
 		"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x; ret_val:%d\n",
@@ -1947,7 +1955,6 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 
 	return ret;
 }
-
 EXPORT_SYMBOL(pwr_mgr_pmu_reg_write);
 
 int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start, u8 slave_id, u8 count,
@@ -2141,6 +2148,19 @@ void pwr_mgr_init_sequencer(struct pwr_mgr_info *info)
 			pwr_mgr_set_v0x_specific_i2c_cmd_ptr(v_set,
 					info->i2c_cmd_ptr[v_set]);
 	}
+
+	/**
+	 * Create A9 PM QoS client for SW Sequencer to forbit A9
+	 * to enter into low power state during i2c
+	 * read/write operation. This is needed to reduce the
+	 * interrupt latency for sequencer complete interrupt
+	 */
+	if (!pwr_mgr.seq_qos_client.valid)
+		pi_mgr_qos_add_request(&pwr_mgr.seq_qos_client,
+				"seq_qos",
+				PI_MGR_PI_ID_ARM_CORE,
+				PI_MGR_QOS_DEFAULT_VALUE);
+
 }
 EXPORT_SYMBOL(pwr_mgr_init_sequencer);
 

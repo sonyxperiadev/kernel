@@ -6,10 +6,13 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                     \
         -DCUSTOMER_HW_SAMSUNG -DOOB_INTR_ONLY                                 \
         -DMMC_SDIO_ABORT -DBCMSDIO -DBCMLXSDMMC -DBCMPLATFORM_BUS -DWLP2P     \
         -DNEW_COMPAT_WIRELESS -DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT          \
-        -DKEEP_ALIVE -DCSCAN -DPKT_FILTER_SUPPORT  -DENABLE_INSMOD_NO_FW_LOAD  \
+        -DKEEP_ALIVE -DCSCAN -DPKT_FILTER_SUPPORT  \
         -DEMBEDDED_PLATFORM -DPNO_SUPPORT \
 	 -DCUSTOMER_HW3
-	 
+
+# remove the below flags as not supported on Rhea
+#  -DENABLE_INSMOD_NO_FW_LOAD
+
 # distinguish between the 43xx chip
 ifeq ($(CONFIG_BCM4334),m)
 DHDCFLAGS += -DBCM4334_CHIP -DHW_OOB -DBCM4334_CHECK_CHIP_REV

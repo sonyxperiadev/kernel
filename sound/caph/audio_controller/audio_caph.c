@@ -1098,21 +1098,23 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 	case ACTION_AUD_MutePlayback:
 		{
-			BRCM_AUDIO_Param_Mute_t *parm_mute =
-			    (BRCM_AUDIO_Param_Mute_t *) arg_param;
-			CAPH_ASSERT(parm_mute->stream >=
-				    (CTL_STREAM_PANEL_FIRST - 1)
-				    && parm_mute->stream <
-				    (CTL_STREAM_PANEL_LAST - 1));
-			/*
-			 * currently driver doesnt handle Mute for left/right
-			 * channels
-			 */
-			/* coverity[overrun-local] */
-			AUDCTRL_SetPlayMute(parm_mute->source,
-					    parm_mute->sink,
-					    parm_mute->mute1,
-					    pathID[parm_mute->stream]);
+		BRCM_AUDIO_Param_Mute_t *parm_mute =
+		    (BRCM_AUDIO_Param_Mute_t *) arg_param;
+		CAPH_ASSERT(parm_mute->stream >=
+			    (CTL_STREAM_PANEL_FIRST - 1)
+			    && parm_mute->stream <
+			    (CTL_STREAM_PANEL_LAST - 1));
+		/*
+		 * currently driver doesnt handle Mute for left/right
+		 * channels
+		 */
+
+		if (parm_mute->stream >= CAPH_MAX_PCM_STREAMS)
+			break;
+		AUDCTRL_SetPlayMute(parm_mute->source,
+				    parm_mute->sink,
+				    parm_mute->mute1,
+				    pathID[parm_mute->stream]);
 		}
 		break;
 	case ACTION_AUD_MuteRecord:
