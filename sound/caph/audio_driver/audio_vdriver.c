@@ -626,7 +626,9 @@ void AUDDRV_Telephony_Deinit(void)
 		audio_control_dsp(AUDDRV_DSPCMD_MUTE_DSP_UL, 0, 0, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, FALSE,
 					0, 0, 0, 0);
-
+		/*delay the caph clk disable by additional 50msec
+		to work around back to back MT phone freeze issue*/
+		usleep_range(40000, 50000);
 		AUDDRV_Telephony_DeinitHW();
 	}
 

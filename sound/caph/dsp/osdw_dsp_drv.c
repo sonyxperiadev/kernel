@@ -139,7 +139,8 @@ void DSPDRV_Init()
 	IRQ_Enable_BModem_Interrupt();
 
 	/* Plug in the ISR enables  IRQ198 */
-	rc = request_irq(COMMS_SUBS6_IRQ, rip_isr, IRQF_DISABLED,
+	rc = request_irq(COMMS_SUBS6_IRQ, rip_isr,
+			IRQF_DISABLED | IRQF_NO_SUSPEND,
 			 "bcm215xx-dsp", &(dsp_drv));
 
 	if (rc < 0) {
