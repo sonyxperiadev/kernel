@@ -121,17 +121,15 @@ void rpc_wake_lock_add(UInt32 elem)
 	int firstElem, ret = 0;
 	RpcPktElement_t *pktElem;
 
-	spin_lock_bh(&mLock);
-
-	firstElem = (UInt8)list_empty(&pktHeadQ.mList);
-
 	pktElem = kmalloc(sizeof(RpcPktElement_t), GFP_ATOMIC);
 	if (!pktElem) {
-		spin_unlock_bh(&mLock);
 		_DBG(WK_TRACE
 		     ("w:rpc_wake_lock Allocation error elem=%d\n", elem));
 		return;
 	}
+
+	spin_lock_bh(&mLock);
+	firstElem = (UInt8)list_empty(&pktHeadQ.mList);
 
 	pktElem->elem = elem;
 	list_add_tail(&pktElem->mList, &pktHeadQ.mList);

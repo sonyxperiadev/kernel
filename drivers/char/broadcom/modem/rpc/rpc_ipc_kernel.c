@@ -795,9 +795,11 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 	/*_DBG(RPC_TRACE("k:rpcipc_poll() end wait %x\n", (int)jiffies));*/
 
 	spin_lock_bh(&cInfo->mLock);
-
-	if (!list_empty(&cInfo->mQ.mList))
+	if (!list_empty(&cInfo->mQ.mList)) {
 		mask |= (POLLIN | POLLRDNORM);
+
+	}
+	_DBG(RPC_TRACE("rpcipc_poll: mask = %x\n", (int)mask));
 	
 	cInfo->state = 2;
 	cInfo->ts = jiffies_to_msecs(jiffies);
