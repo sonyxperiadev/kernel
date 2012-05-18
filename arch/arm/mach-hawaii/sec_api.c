@@ -65,24 +65,29 @@ static void smc(struct sec_api_data *data)
 	} while (r12 != SEC_EXIT_NORMAL);
 }
 
+/* Map in the bounce area */
+void secure_api_call_init(void)
+{
+	struct resource *res;
+
+	res = request_mem_region(SEC_BUFFER_ADDR, SEC_BUFFER_SIZE,
+		"secure_bounce");
+	BUG_ON(!res);
+
+	bridge_data.bounce = (u32 *) ioremap_nocache(SEC_BUFFER_ADDR,
+		SEC_BUFFER_SIZE);
+	BUG_ON(!bridge_data.bounce);
+
+	bridge_data.initialized = 1;
+}
+
 /* This function exclusively runs on Core 0 with preemption disabled */
 static void secure_api_call_shim(void *info)
 {
-	struct resource *res;
 	struct sec_api_data *data = (struct sec_api_data *)info;
 
-	/* Map in the bounce area */
-	if (!bridge_data.initialized) {
-		res = request_mem_region(SEC_BUFFER_ADDR, SEC_BUFFER_SIZE,
-			"secure_bounce");
-		BUG_ON(!res);
-
-		bridge_data.bounce = (u32 *) ioremap_nocache(SEC_BUFFER_ADDR,
-			SEC_BUFFER_SIZE);
-		BUG_ON(!bridge_data.bounce);
-
-		bridge_data.initialized = 1;
-	}
+	/* Check map in the bounce area */
+	BUG_ON(!bridge_data.initialized);
 
 	/* Copy one 32 bit word into the bounce area */
 	bridge_data.bounce[0] = data->arg0;
