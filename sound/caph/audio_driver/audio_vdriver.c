@@ -385,10 +385,10 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 		(DSP_AADMAC_IHF_SPKR_EN));
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
-
+		/*shall be called before AUDIO_ENABLE*/
 		AUDIO_MODEM(VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
 			    (TRUE, FALSE, FALSE);)
+		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 	} else {
 #if defined(ENABLE_DMA_VOICE)
 		csl_dsp_caph_control_aadmac_disable_path((UInt16)

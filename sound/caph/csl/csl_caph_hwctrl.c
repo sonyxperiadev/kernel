@@ -630,12 +630,22 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 		/*csl_pcm_start(pcmHandleSSP, &pcmCfg);*/
 	} else {
 		Boolean enable = FALSE;
+		CSL_CAPH_DMA_CHNL_e dma_ch = CSL_CAPH_DMA_CH13;
 		if (enabled_path)
 			enable = TRUE;
 		csl_caph_audioh_adcpath_global_enable(enable);
+		/*cannot disable NOC somehow, leads to system hang*/
 		if (enable)
 			csl_caph_switch_enable_clock(enable);
+
+		/*this is required when internal trigger is used in mic path*/
+		csl_caph_dma_clear_intr(dma_ch, CSL_CAPH_DSP);
+		if (enabled_path)
+			csl_caph_dma_enable_intr(dma_ch, CSL_CAPH_DSP);
+		else
+			csl_caph_dma_disable_intr(dma_ch, CSL_CAPH_DSP);
 	}
+
 #endif
 }
 #endif
@@ -1796,7 +1806,12 @@ static void csl_caph_config_dma(CSL_CAPH_PathID
 		/* Linux Specific - For DMA, we need to pass
 		 * the physical address of AP SM
 		 */
-		dmaCfg.mem_addr = (void *)(csl_dsp_arm2sp_get_phy_base_addr());
+		if (path->arm2sp_instance)
+			dmaCfg.mem_addr =
+			(void *)(csl_dsp_arm2sp2_get_phy_base_addr());
+		else
+			dmaCfg.mem_addr =
+			(void *)(csl_dsp_arm2sp_get_phy_base_addr());
 		dmaCfg.mem_size = arm2spCfg[path->arm2sp_instance].dmaBytes;
 		dmaCfg.dmaCB = AUDIO_DMA_CB2;
 		arm2spCfg[path->arm2sp_instance].dma_ch = dmaCfg.dma_ch;
@@ -1834,10 +1849,14 @@ static void csl_caph_config_dma(CSL_CAPH_PathID
 		csl_caph_dma_set_buffer_address(dmaCfg);
 
 	/* Per DSP, even DMA13 is owned by DSP,
-	 * its interrupt is enabled by ARM
+	   its interrupt is enabled by ARM
+	   To avoid rare persistent DSP errors, do not enable DMA13 interrupt if
+	   internal trigger is used in mic path.
+	   The mic sequence does not work consistently for BT call, so BT call
+	   keeps the same sequence as before.
 	 */
-	if (dmaCfg.dma_ch == CSL_CAPH_DMA_CH13 ||
-			owner == CSL_CAPH_ARM)
+	if ((dmaCfg.dma_ch == CSL_CAPH_DMA_CH13 && pcmRxRunning) ||
+		owner == CSL_CAPH_ARM)
 		csl_caph_dma_enable_intr(dmaCfg.dma_ch, owner);
 }
 
@@ -2306,6 +2325,23 @@ static void csl_caph_start_blocks
 	}
 #endif
 
+	if (path->sinkCount == 1) {
+		if (path->audiohPath[0]) {
+#if defined(ENABLE_DMA_VOICE)
+			/*To achieve dualmic synchronization in voice call,
+			  adc global and noc shall be reset before DSP is ready
+			*/
+			if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
+				csl_caph_audioh_adcpath_global_enable(FALSE);
+				csl_caph_switch_enable_clock(0);
+			} else {
+				csl_caph_audioh_adcpath_global_enable(TRUE);
+				csl_caph_switch_enable_clock(1);
+			}
+#endif
+		}
+	}
+
 	while (1) {
 		block = path->block[sinkNo][i];
 		if (block == CAPH_NONE)
@@ -2338,23 +2374,8 @@ static void csl_caph_start_blocks
 		csl_caph_audioh_start(path->audiohPath[sinkNo+1]);
 
 	/*first sink, start the source also.*/
-	if (path->sinkCount == 1) {
-		if (path->audiohPath[0]) {
-#if defined(ENABLE_DMA_VOICE)
-			/*To achieve dualmic synchronization in voice call,
-			  adc global and noc shall be reset before DSP is ready
-			*/
-			if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-				csl_caph_audioh_adcpath_global_enable(FALSE);
-				csl_caph_switch_enable_clock(0);
-			} else {
-				csl_caph_audioh_adcpath_global_enable(TRUE);
-				csl_caph_switch_enable_clock(1);
-			}
-#endif
-			csl_caph_audioh_start(path->audiohPath[0]);
-		}
-	}
+	if (path->sinkCount == 1 && path->audiohPath[0])
+		csl_caph_audioh_start(path->audiohPath[0]);
 
 	/*have to start dma in the end?*/
 	/*ihf call, dsp starts dma.*/
