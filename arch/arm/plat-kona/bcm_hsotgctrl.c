@@ -349,6 +349,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 		/* Clear non-driving */
 		bcm_hsotgctrl_phy_set_non_driving(false);
 	}
+	bcm_hsotgctrl_phy_wakeup_condition(false);
 
 	return 0;
 
