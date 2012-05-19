@@ -8,7 +8,7 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                     \
         -DNEW_COMPAT_WIRELESS -DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT          \
         -DKEEP_ALIVE -DCSCAN -DPKT_FILTER_SUPPORT  \
         -DEMBEDDED_PLATFORM -DPNO_SUPPORT \
-	 -DCUSTOMER_HW3
+	 -DCUSTOMER_HW3 -DENABLE_INSMOD_NO_FW_LOAD
 
 # remove the below flags as not supported on Rhea
 #  -DENABLE_INSMOD_NO_FW_LOAD
