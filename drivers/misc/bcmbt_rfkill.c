@@ -29,6 +29,7 @@
 #include <linux/broadcom/bcmbt_rfkill.h>
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+#define REG_ON_SLEEP 150
 
 static int bcmbt_rfkill_set_power(void *data, bool blocked)
 {
@@ -80,6 +81,11 @@ static int bcmbt_rfkill_probe(struct platform_device *pdev)
 	       gpio_get_value(pdata->vreg_gpio) ? "High" : "Low");
 	gpio_export(pdata->vreg_gpio, false);
 	gpio_direction_output(pdata->vreg_gpio, BCMBT_VREG_OFF);
+
+	/* JIRA case --> HW4334-336*/
+	gpio_set_value(pdata->vreg_gpio, BCMBT_VREG_ON);
+	msleep(REG_ON_SLEEP);
+	gpio_set_value(pdata->vreg_gpio, BCMBT_VREG_OFF);
 
 	if (BCMBT_UNUSED_GPIO != pdata->n_reset_gpio) {
 		gpio_request(pdata->n_reset_gpio, "rfkill_reset_gpio");
