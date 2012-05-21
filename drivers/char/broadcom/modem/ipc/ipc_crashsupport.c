@@ -138,6 +138,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	IPC_U32 *Dump;
 	void __iomem *DumpVAddr;
 
+#ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 	if ((BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
 #ifdef CONFIG_CDEBUGGER
@@ -162,6 +163,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
 		abort();
 	}
+#endif
 
 	IPC_Dump();
 	RpcDbgDumpHistoryLogging(0, 0);
@@ -243,6 +245,10 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	/* done with "simple" dump, so now pull the full assert
 	 * log from CP and dump out to MTT */
 	DUMP_CP_assert_log();
+#else
+	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
+	    && cp_crashed == 1)
+		abort();
 #endif
 
 cleanUp:
@@ -436,10 +442,6 @@ void DUMP_CP_assert_log(void)
 		sys_sync();
 
 	IPC_DEBUG(DBG_ERROR, "CP crash dump complete\n");
-
-	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
-	    && cp_crashed == 1)
-		abort();
 
 }
 
