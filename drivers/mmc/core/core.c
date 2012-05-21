@@ -1141,10 +1141,9 @@ int mmc_resume_bus(struct mmc_host *host)
 		mmc_power_up(host);
 		BUG_ON(!host->bus_ops->resume);
 		host->bus_ops->resume(host);
+		if (host->bus_ops->detect)
+			host->bus_ops->detect(host);
 	}
-
-	if (host->bus_ops->detect && !host->bus_dead)
-		host->bus_ops->detect(host);
 
 	mmc_bus_put(host);
 	printk("%s: Deferred resume completed\n", mmc_hostname(host));

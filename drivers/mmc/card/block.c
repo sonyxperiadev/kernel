@@ -484,7 +484,8 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 	mmc_release_host(card->host);
 
       cmd_done:
-	mmc_blk_put(md);
+	if (md)
+		mmc_blk_put(md);
 	kfree(idata->buf);
 	kfree(idata);
 	return err;
