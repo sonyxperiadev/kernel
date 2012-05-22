@@ -349,8 +349,13 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 		/* Clear non-driving */
 		bcm_hsotgctrl_phy_set_non_driving(false);
 	}
+#ifdef CONFIG_MFD_BCM59039
+	/* add this call for the CQ216284, we will revisit
+		 this change later when we get better
+		 understand of the wakeup IRQ
+		 behaviors */
 	bcm_hsotgctrl_phy_wakeup_condition(false);
-
+#endif
 	return 0;
 
 }
@@ -386,6 +391,15 @@ int bcm_hsotgctrl_phy_deinit(void)
 
 	/* Power down ALDO */
 	bcm_hsotgctrl_set_aldo_pdn(false);
+
+#ifndef CONFIG_MFD_BCM59039
+		/* Disable wakeup interrupt */
+		/* add this call for the CQ216284, we will revisit
+		     this change later when we get better
+		     understand of the wakeup IRQ
+		     behaviors */
+		bcm_hsotgctrl_phy_wakeup_condition(false);
+#endif
 
 	/* Clear PHY reference clock request */
 	bcm_hsotgctrl_set_phy_clk_request(false);
