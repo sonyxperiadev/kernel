@@ -621,13 +621,9 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 	}
 #else
-	if (pcmRxRunning && enabled_path) {
-		/*if(!sspTDM_enabled)
-		 * csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
-		 */
-		/*csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);*/
-		csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-		/*csl_pcm_start(pcmHandleSSP, &pcmCfg);*/
+	if (pcmRxRunning) {
+		if (enabled_path)
+			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 	} else {
 		Boolean enable = FALSE;
 		CSL_CAPH_DMA_CHNL_e dma_ch = CSL_CAPH_DMA_CH13;
@@ -1565,28 +1561,26 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 		}
 	}
 
+	for (i = startOffset; i < MAX_PATH_LEN; i++) {
+		if (path->block[sinkNo][i] == CAPH_SW) {
+			blockIdx = path->blockIdx[sinkNo][i];
+			if (path->sw[sinkNo][blockIdx].chnl !=
+					CSL_CAPH_SWITCH_NONE) {
+				csl_caph_hwctrl_closeSwitchCH
+				(path->sw
+				 [sinkNo][blockIdx], path->pathID);
+				memset(&path->sw[sinkNo][blockIdx], 0,
+				sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+			}
+		}
+	}
+
 	count_fmrx_path = 0;
 	if (path->source == CSL_CAPH_DEV_FM_RADIO)
 		count_fmrx_path =
 		csl_caph_count_path_with_same_source(CSL_CAPH_DEV_FM_RADIO);
 
 	if (count_fmrx_path <= 1) {
-		/*In case direct playback is on while stopping recording.*/
-		/*do not close switch*/
-		for (i = startOffset; i < MAX_PATH_LEN; i++) {
-			if (path->block[sinkNo][i] == CAPH_SW) {
-				blockIdx = path->blockIdx[sinkNo][i];
-				if (path->sw[sinkNo][blockIdx].chnl !=
-						CSL_CAPH_SWITCH_NONE) {
-					csl_caph_hwctrl_closeSwitchCH
-					(path->sw
-					 [sinkNo][blockIdx], path->pathID);
-					memset(&path->sw[sinkNo][blockIdx], 0,
-					sizeof(CSL_CAPH_SWITCH_CONFIG_t));
-				}
-			}
-		}
-
 		if (fmTxRunning == TRUE &&
 				path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX) {
 			if (sspTDM_enabled)
