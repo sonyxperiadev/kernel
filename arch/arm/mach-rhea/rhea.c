@@ -155,6 +155,8 @@ static void cpu_info_verbose(void)
 		pr_info("Rhea CHIPID-B0\n");
 	if (cpu_is_rhea_B1())
 		pr_info("Rhea CHIPID-B1\n");
+	if (cpu_is_rhea_B2())
+		pr_info("Rhea CHIPID-B2\n");
 }
 
 static int __init rhea_init(void)

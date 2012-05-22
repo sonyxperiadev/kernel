@@ -326,7 +326,7 @@ static void rhea_pm_init_wa_flgs(void)
 	int chip_rev = get_chip_rev_id();
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2531
-	JIRA_WA_FLG_NAME(2531) = chip_rev <= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2531) = chip_rev <= RHEA_CHIP_REV_B2;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
@@ -346,7 +346,7 @@ static void rhea_pm_init_wa_flgs(void)
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2272
-	JIRA_WA_FLG_NAME(2272) = chip_rev <= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2272) = chip_rev <= RHEA_CHIP_REV_B2;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2045
@@ -361,8 +361,8 @@ static void rhea_pm_init_wa_flgs(void)
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
-	/*Workaround not enabled for B1 */
-	JIRA_WA_FLG_NAME(2490) = chip_rev <= RHEA_CHIP_REV_B1;
+	/* Workaround is enabled */
+	JIRA_WA_FLG_NAME(2490) = chip_rev <= RHEA_CHIP_REV_B2;
 #endif
 
 }

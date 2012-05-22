@@ -1870,7 +1870,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* T-high in SS/FS mode varies when the clock gets stretched in the B0
 	 * Variant. The same was fixed in the B1 variant where a bit in the CRC
 	 * main register needs to be set. */
-	if (!hw_cfg->is_pmu_i2c && cpu_is_rhea_B1())
+	if (!hw_cfg->is_pmu_i2c && (get_chip_rev_id() >= RHEA_CHIP_REV_B1))
 		bsc_enable_thigh_ctrl((uint32_t)dev->virt_base, true);
 	else
 		bsc_enable_thigh_ctrl((uint32_t)dev->virt_base, false);

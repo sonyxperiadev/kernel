@@ -923,15 +923,16 @@ static inline unsigned long __get_counter(void __iomem *reg_base)
 	unsigned long prev;
 	unsigned long cur;
 
-	/* If the CPU is Rhea B1 and if the counter read call is for HUB timer
-	 * then we need to read the counter until we get the same value for
-	 * two consecutive reads. That is the Hub timer value may not be
-	 * synchronized especially after WFI. Since on B1 there is a "force
+	/* If the CPU is Rhea B1 and greater, and if the counter read call is
+	 * for HUB timer then we need to read the counter until we get the same
+	 * value for two consecutive reads. That is the Hub timer value may not
+	 * be synchronized especially after WFI. Since on B1 there is a "force
 	 * read" option for this timer we might read while there is a
 	 * transition of counter in progress, so this debouncing is required.
 	 * Refer - HWRHEA2045
 	 */
-	if (cpu_is_rhea_B1() && (reg_base == IOMEM(KONA_TMR_HUB_VA))) {
+	if ((get_chip_rev_id() >= RHEA_CHIP_REV_B1) &&
+			(reg_base == IOMEM(KONA_TMR_HUB_VA))) {
 		prev = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
 		do {
 			cur = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
