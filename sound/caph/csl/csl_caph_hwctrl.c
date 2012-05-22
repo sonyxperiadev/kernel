@@ -1849,7 +1849,8 @@ static void csl_caph_config_dma(CSL_CAPH_PathID
 	   The mic sequence does not work consistently for BT call, so BT call
 	   keeps the same sequence as before.
 	 */
-	if ((dmaCfg.dma_ch == CSL_CAPH_DMA_CH13 && pcmRxRunning) ||
+	if ((dmaCfg.dma_ch == CSL_CAPH_DMA_CH13 &&
+		path->source == CSL_CAPH_DEV_BT_MIC) ||
 		owner == CSL_CAPH_ARM)
 		csl_caph_dma_enable_intr(dmaCfg.dma_ch, owner);
 }
