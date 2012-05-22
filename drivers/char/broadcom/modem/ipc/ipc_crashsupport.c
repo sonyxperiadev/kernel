@@ -166,8 +166,6 @@ static T_CP_IMGS g_cp_imgs[] = {
 };
 
 
-extern struct device *drvdata;  /* RPC device **FixMe** Hack for now */
-
 /* internal helper functions */
 static void DUMP_CP_assert_log(void);
 static void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump);
@@ -195,6 +193,7 @@ static struct timer_list cp_reset_timer;
 
 extern int RpcDbgDumpHistoryLogging(int type, int level);
 extern void Comms_Start(int isReset);
+extern struct device *ipcs_get_drvdata(void);
 extern int ipcs_reinitialize_ipc(void);
 
 /*********************************************************************
@@ -549,7 +548,8 @@ static void ReloadCP(void)
 			__func__, g_cp_imgs[index].img_name,
 			g_cp_imgs[index].ram_addr,
 			g_cp_imgs[index].img_size);
-		ret = LoadFirmware(drvdata, g_cp_imgs[index].img_name,
+		ret = LoadFirmware(ipcs_get_drvdata(),
+				g_cp_imgs[index].img_name,
 				g_cp_imgs[index].ram_addr,
 				g_cp_imgs[index].img_size);
 		printk(KERN_ERR "%s() LoadFirmware for %s returned %d\n",

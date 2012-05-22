@@ -63,13 +63,17 @@
 #define NUM_BMIRQs            56
 #define IRQ_TO_BMIRQ(irq)         ((irq)-FIRST_BMIRQ)
 
+#define BCM_KERNEL_IPC_NAME "bcm_fuse_ipc"
+
 struct ipcs_info_t {
 	int ipc_state;
 	struct tasklet_struct intr_tasklet;
 	struct work_struct cp_crash_dump_wq;
 	struct workqueue_struct *crash_dump_workqueue;
 	void __iomem *apcp_shmem;
-};
+	struct class *mDriverClass;	/* driver class */
+	struct device *drvdata;
+}
 
 static struct ipcs_info_t g_ipc_info = { 0 };
 static Boolean cp_running = 0;	//FALSE;
@@ -483,6 +487,8 @@ void Comms_Start(int isReset)
 }
 arch_initcall(Comms_Start);
 
+
+
 static int ipcs_read_proc(char *page, char **start, off_t off, int count,
 			  int *eof, void *data)
 {
@@ -498,11 +504,17 @@ static int ipcs_read_proc(char *page, char **start, off_t off, int count,
 	return len;
 }
 
+struct device *ipcs_get_drvdata(void)
+{
+	return g_ipc_info.drvdata;
+}
+
 static int __init ipcs_module_init(void)
 {
 	int rc = -1;
 	struct proc_dir_entry *dir;
 
+<<<<<<< HEAD
 	dir =
 	    create_proc_read_entry("driver/bcmipc", 0, NULL, ipcs_read_proc,
 				   NULL);
@@ -511,10 +523,31 @@ static int __init ipcs_module_init(void)
 			  "ipcs_module_init: can't create /proc/driver/bcmipc\n");
 		//return -1;
 	}
+  
+	rc = register_chrdev_region(g_ipc_info.devnum, 1, BCM_KERNEL_IPC_NAME);
+  if (rc < 0) 
+  {
+	IPC_DEBUG(DBG_ERROR, "Error registering the IPC device\n");
+    goto out;
+  }
 
 	IPC_DEBUG(DBG_TRACE, "start ...\n");
 
 	g_ipc_info.ipc_state = 0;
+
+	g_ipc_info.mDriverClass = class_create(THIS_MODULE,
+				BCM_KERNEL_IPC_NAME);
+	if (IS_ERR(g_ipc_info.mDriverClass)) {
+		IPC_DEBUG(DBG_ERROR, "driver class_create failed\n");
+		goto out_unregister;
+	}
+
+	g_ipc_info.drvdata = device_create(g_ipc_info.mDriverClass, NULL,
+				MKDEV(IPC_MAJOR, 0), NULL, BCM_KERNEL_IPC_NAME);
+	if (IS_ERR(g_ipc_info.drvdata)) {
+		IPC_DEBUG(DBG_ERROR, "device_create drvdata failed\n");
+		goto out_unregister;
+	}
 
 	IPC_DEBUG(DBG_TRACE, "Allocate CP crash dump workqueue\n");
 	g_ipc_info.crash_dump_workqueue = alloc_workqueue("dump-wq",
@@ -595,8 +628,11 @@ static void __exit ipcs_module_exit(void)
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&ipc_wake_lock);
 #endif
+	device_destroy(g_ipc_info.mDriverClass, MKDEV(IPC_MAJOR, 0));
+	class_destroy(g_ipc_info.mDriverClass);
 
 	return;
 }
 
 late_initcall(ipcs_module_init);
+module_exit(ipcs_module_exit);

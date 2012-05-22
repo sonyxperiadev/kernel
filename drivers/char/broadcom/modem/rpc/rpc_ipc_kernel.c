@@ -2264,8 +2264,6 @@ int RpcDbgDumpHistoryLogging(int type, int level)
 }
 
 static int major;
-struct device *drvdata;
-
 //***************************************************************************
 /**
  *  Called by Linux I/O system to initialize module.
@@ -2276,6 +2274,7 @@ struct device *drvdata;
 static int __init rpcipc_ModuleInit(void)
 {
 	int k;
+	struct device *drvdata;
 	_DBG(RPC_TRACE("enter rpcipc_ModuleInit()\n"));
 
 	for (k = 0; k < 0xFF; k++)
