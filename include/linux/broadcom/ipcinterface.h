@@ -64,6 +64,14 @@ typedef IPC_U32 IPC_BufferPool;
 *===========================================================*/
 typedef IPC_U32 IPC_SmCPUSleepState_T;
 
+/* silent CP reset support */
+typedef enum {
+        IPC_CPSTATE_CRASHED,
+        IPC_CPSTATE_RUNNING,
+        IPC_CPSTATE_RESET_START,      /* CP Reset starting */
+        IPC_CPSTATE_RESET_COMPLETE    /* CP Reset complete */
+} IPC_CPState_t;
+
 #define IPC_CPUAWake	IPC_FALSE
 #define IPC_CPUASleep	IPC_TRUE
 

@@ -186,6 +186,7 @@ typedef enum {
 	L1DATA_BPM_STATUS,  /* //<Payload type {::BPM_STATUS_LOG_t} */
 	L1DATA_TWIF,		/*//<Payload type {::TWIF_LOG_t} */
 	AUDIO_DATA,
+	L1DATA_RF_LOGGING,
 	/* End of log_gl1s */
 
 #if defined(STACK_wedge) && defined(UMTS)

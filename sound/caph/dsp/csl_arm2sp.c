@@ -657,7 +657,7 @@ UInt16 *csl_dsp_arm2sp_get_phy_base_addr(void)
 	AP_SharedMem_t   *ap_shared_mem_ptr;
 	ap_shared_mem_ptr = DSPDRV_GetPhysicalSharedMemoryAddress();
 
-	return &(ap_shared_mem_ptr->shared_Arm2SP_InBuf[0]);
+	return ((UInt16 *)(&(ap_shared_mem_ptr->shared_Arm2SP_InBuf[0])));
 }
 
 /**********************************************************************/
@@ -680,7 +680,7 @@ UInt16 *csl_dsp_arm2sp2_get_phy_base_addr(void)
 	AP_SharedMem_t   *ap_shared_mem_ptr;
 	ap_shared_mem_ptr = DSPDRV_GetPhysicalSharedMemoryAddress();
 
-	return &(ap_shared_mem_ptr->shared_Arm2SP2_InBuf[0]);
+	return ((UInt16 *)(&(ap_shared_mem_ptr->shared_Arm2SP2_InBuf[0])));
 }
 
 /**********************************************************************/

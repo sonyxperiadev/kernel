@@ -683,13 +683,13 @@ typedef enum
     *       To start ARM2SP: ARM enables ARM2SP by VP_COMMAND_SET_ARM2SP. 
     *       To resume ARM2SP (JunoC0): ARM enables ARM2SP by VP_COMMAND_SET_ARM2SP  with arg1=1. 
     *       
-    *       To control shared_Arm2SP_InBuf[1280]: DSP interrupts ARM with 
+    *       To control shared_Arm2SP_InBuf[]: DSP interrupts ARM with
     *       VP_STATUS_ARM2SP_EMPTY( shared_Arm2SP_done_flag, shared_Arm2SP_InBuf_out, Arm2SP_flag ) 
-    *       whenever finishing every 640 PCM data. shared_Arm2SP_InBuf_out indicates the next index DSP will read. 
+    *       whenever finishing every half PCM data. shared_Arm2SP_InBuf_out indicates the next index DSP will read.
     *
     *       To stop ARM2SP:\BR
     *       Quick stop: ARM disables ARM2SP using VP_COMMAND_SET_ARM2SP (arg0=0).\BR
-    *       \note The ARM2SP will be stopped right away. There may be un-finished PCM data in shared_Arm2SP_InBuf[1280].\BR
+    *       \note The ARM2SP will be stopped right away. There may be un-finished PCM data in shared_Arm2SP_InBuf[].\BR
     *
     *       Finishing stop: After finishing filling the last 4-speech frames for 8kHz or last 2-speech frames for 16kHz PCM data, ARM set shared_Arm2SP_done_flag=1 
     *       to indicate the end of PCM data. DSP ISR finishes the last 2 or 4-speech frames and disables ARM2SP. DSP sends 
@@ -2136,21 +2136,21 @@ EXTERN VR_Frame_AMR_WB_t AP_UL_MainAMR_buf    				   AP_SHARED_SEC_GEN_AUDIO; //
  * The other is mixing of un-equalized music playback (music sharing) to the Uplink. \BR
  *
  * In this interface 4-speech frames worth of data is transferred at a time from
- * ARM to DSP in ping-pong buffers - i.e. ARM fills empty half of shared_Arm2SP_InBuf[1280].
- * When shared_Arm2SP_InBuf_out=0, ARM fills 640words from shared_Arm2SP_InBuf[640].
- * When shared_Arm2SP_InBuf_out=640, ARM fills 640words from shared_Arm2SP_InBuf[0]. \BR
+ * ARM to DSP in ping-pong buffers - i.e. ARM fills empty half of shared_Arm2SP_InBuf[].
+ * When shared_Arm2SP_InBuf_out=0, ARM fills next half number of words from shared_Arm2SP_InBuf[half].
+ * When shared_Arm2SP_InBuf_out=half, ARM fills half number of words from shared_Arm2SP_InBuf[0]. \BR
  *
  * To start ARM2SP: ARM enables ARM2SP by COMMAND_SET_ARM2SP.\BR
  *
  * To resume ARM2SP (JunoC0): ARM enables ARM2SP by COMMAND_SET_ARM2SP  with arg1=1. 
  * 
- * To control shared_Arm2SP_InBuf[1280]: DSP interrupts ARM with 
+ * To control shared_Arm2SP_InBuf[]: DSP interrupts ARM with
  * STATUS_ARM2SP_EMPTY( shared_Arm2SP_done_flag, shared_Arm2SP_InBuf_out, Arm2SP_flag ) 
- * whenever finishing every 640 PCM data. shared_Arm2SP_InBuf_out indicates the next index DSP will read. 
+ * whenever finishing every half PCM data. shared_Arm2SP_InBuf_out indicates the next index DSP will read.
  *
  * To stop ARM2SP:\BR
  * Quick stop: ARM disables ARM2SP using COMMAND_SET_ARM2SP (arg0=0).\BR
- * \note The ARM2SP will be stopped right away. There may be un-finished PCM data in shared_Arm2SP_InBuf[1280].\BR
+ * \note The ARM2SP will be stopped right away. There may be un-finished PCM data in shared_Arm2SP_InBuf[].\BR
  *
  * Finishing stop: After finishing filling the last 2/4-speech frame PCM data, ARM set shared_Arm2SP_done_flag=1 
  * to indicate the end of PCM data. DSP ISR finishes the last 2/4-speech frames and disables ARM2SP. DSP sends 
@@ -2177,18 +2177,18 @@ EXTERN VR_Frame_AMR_WB_t AP_UL_MainAMR_buf    				   AP_SHARED_SEC_GEN_AUDIO; //
  * 
  * @{ */
 /**
- * This buffer is used for mixing PCM data in sharedmem buffer to DL and/or 
- * UL during speech call. One usage is to send warning tone when doing call 
- * recording. The buffer is used as ping-pong buffer, each with 2/4-speech frame 
- * (4*160) or (2*320).
- */ 
-EXTERN UInt16    shared_Arm2SP_InBuf[ARM2SP_INPUT_SIZE_48K]    					AP_SHARED_SEC_GEN_AUDIO;
-/**
  * This flag indicates the end of the transfer of data from the ARM to the DSP.
  * The transfer of data by ARM2SP interface can be disabled by setting 
  * shared_Arm2SP_done_flag=1 after filling the shared_Arm2SP_InBuf[] buffer. 
  * DSP will disable the feature when it reaches the next 2/4-speech frame boundary. */
 EXTERN UInt16    shared_Arm2SP_done_flag                   					AP_SHARED_SEC_GEN_AUDIO;
+/**
+ * This buffer is used for mixing PCM data in sharedmem buffer to DL and/or 
+ * UL during speech call. One usage is to send warning tone when doing call 
+ * recording. The buffer is used as ping-pong buffer, each with 2/4-speech frame 
+ * (4*160) or (2*320).
+ */ 
+EXTERN UInt32    shared_Arm2SP_InBuf[ARM2SP_INPUT_SIZE_48K/2]  				AP_SHARED_SEC_GEN_AUDIO;
 /**
  * This index indicates the next index DSP will read from the shared_Arm2SP_InBuf[] 
  * buffer. 
@@ -2207,18 +2207,18 @@ EXTERN UInt16    shared_Arm2SP_InBuf_out                   					AP_SHARED_SEC_GE
  * @addtogroup ARM2SP2_interface 
  * @{ */
 /**
- * This buffer is used for mixing PCM data in sharedmem buffer to DL and/or 
- * UL during speech call. One usage is to send warning tone when doing call 
- * recording. The buffer is used as ping-pong buffer, each with 2/4-speech frame 
- * (4*160) or (2*320).
- */ 
-EXTERN UInt16 shared_Arm2SP2_InBuf[ARM2SP_INPUT_SIZE_48K]    					AP_SHARED_SEC_GEN_AUDIO;
-/**
  * This flag indicates the end of the transfer of data from the ARM to the DSP.
  * The transfer of data by ARM2SP2 interface can be disabled by setting 
  * shared_Arm2SP2_done_flag=1 after filling the shared_Arm2SP2_InBuf[] buffer. 
  * DSP will disable the feature when it reaches the next 2/4-speech frame boundary. */
 EXTERN UInt16 shared_Arm2SP2_done_flag                   					AP_SHARED_SEC_GEN_AUDIO;
+/**
+ * This buffer is used for mixing PCM data in sharedmem buffer to DL and/or 
+ * UL during speech call. One usage is to send warning tone when doing call 
+ * recording. The buffer is used as ping-pong buffer, each with 2/4-speech frame 
+ * (4*160) or (2*320).
+ */ 
+EXTERN UInt32 shared_Arm2SP2_InBuf[ARM2SP_INPUT_SIZE_48K/2]    				AP_SHARED_SEC_GEN_AUDIO;
 /**
  * This index indicates the next index DSP will read from the shared_Arm2SP2_InBuf[] 
  * buffer. 
@@ -2626,7 +2626,7 @@ EXTERN Int16	shared_arm2speech2_call_gain_ul[5]			 				AP_SHARED_SEC_GEN_AUDIO;
 EXTERN Int16	shared_arm2speech2_call_gain_rec[5]			 				AP_SHARED_SEC_GEN_AUDIO;
 
 /** 
- * The gain factor, shared_arm2speech_call_gain_dl is applied on the shared_Arm2SP_InBuf[1280] PCM data 
+ * The gain factor, shared_arm2speech_call_gain_dl is applied on the shared_Arm2SP_InBuf[] PCM data
  * on the downlink path (does not matter whether the ARM2SP data is added before or after audio processing.\BR
  * 
  * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
@@ -2642,7 +2642,7 @@ EXTERN Int16	shared_arm2speech2_call_gain_rec[5]			 				AP_SHARED_SEC_GEN_AUDIO;
  */
 EXTERN Int16	shared_arm2speech_call_gain_dl[5]			 AP_SHARED_SEC_GEN_AUDIO;
 /** 
- * The gain factor, shared_arm2speech_call_gain_ul is applied on the shared_Arm2SP_InBuf[1280] PCM data 
+ * The gain factor, shared_arm2speech_call_gain_ul is applied on the shared_Arm2SP_InBuf[] PCM data
  * on the uplink path (does not matter whether the ARM2SP data is added before or after audio processing.\BR
  * 
  * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
