@@ -45,8 +45,6 @@ typedef struct {
 } dvts_await_task_args_t;
 /*******************************************/
 
-#ifdef SUPPORT_V3D_WORKLIST
-
 #define MAX_USER_JOBS 4		// Based on number of QPUs
 typedef struct {
 	uint32_t v3d_irq_flags;
@@ -93,7 +91,6 @@ typedef struct {
 	v3d_job_status_e job_status;
 	int32_t timeout;
 } v3d_job_status_t;
-#endif //SUPPORT_V3D_WORKLIST
 
 enum {
 	V3D_CMD_GET_MEMPOOL = 0x80,
@@ -104,14 +101,8 @@ enum {
 	V3D_CMD_RESET,
 	V3D_CMD_ASSERT_IDLE,
 	V3D_CMD_SYNCTRACE,
-#ifdef SUPPORT_V3D_WORKLIST
 	V3D_CMD_POST_JOB,
 	V3D_CMD_WAIT_JOB,
-#else
-	/* just so the enums don't jump around based on this ifdef */
-	V3D_CMD_WORKLIST_RESERVED_1,
-	V3D_CMD_WORKLIST_RESERVED_2,
-#endif
 #ifdef V3D_PERF_SUPPORT
 	V3D_CMD_PERF_COUNTER_ENABLE,
 	V3D_CMD_PERF_COUNTER_DISABLE,
