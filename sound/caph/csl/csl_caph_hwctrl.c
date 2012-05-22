@@ -1753,13 +1753,13 @@ static void csl_caph_config_dma(CSL_CAPH_PathID
 	if (path->streamID) {
 		/*playback, configure the 1st dma*/
 		/*record, configure the last dma*/
-		if (path->source == CSL_CAPH_DEV_MEMORY && !blockIdx) {
+		if (path->source == CSL_CAPH_DEV_MEMORY && !blockPathIdx) {
 			CSL_CAPH_Render_Drv_t *auddrv;
 			auddrv = GetRenderDriverByType(path->streamID);
 			dmaCfg.n_dma_buf = auddrv->numBlocks;
 			dmaCfg.dma_buf_size = auddrv->blockSize;
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_MEMORY &&
-			blockIdx) {
+			blockPathIdx) {
 			CSL_CAPH_Capture_Drv_t *auddrv;
 			auddrv = GetCaptureDriverByType(path->streamID);
 			dmaCfg.n_dma_buf = auddrv->numBlocks;
