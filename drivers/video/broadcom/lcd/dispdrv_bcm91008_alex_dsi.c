@@ -1101,6 +1101,7 @@ static Int32 BCM91008_ALEX_Update(DISPDRV_HANDLE_T drvH,
 	req.lineCount = p_win->h;
 	req.buffBpp = pPanel->disp_info->Bpp;
 	req.timeOut_ms = 100;
+	req.xStrideB = 0;
 
 	printk(KERN_ERR "buf=%08x, linelenp = %lu, linecnt =%lu\n",
 	       (u32)req.buff, req.lineLenP, req.lineCount);
