@@ -119,7 +119,7 @@ enum {
 
 int dhd_write_rdwr_macaddr(struct ether_addr *mac)
 {
-	char *filepath = "/data/.mac.info";
+	char *filepath = "/data/misc/wifi/.mac.info";
 	struct file *fp_mac = NULL;
 	char buf[18]      = {0};
 	mm_segment_t oldfs    = {0};
@@ -167,7 +167,7 @@ int dhd_check_rdwr_macaddr(struct dhd_info *dhd, dhd_pub_t *dhdp,
 	char macbuffer[18]    = {0};
 	char randommac[3]   = {0};
 	char buf[18]      = {0};
-	char *filepath      = "/data/.mac.info";
+	char *filepath      = "/data/misc/wifi/.mac.info";
 #ifdef CONFIG_TARGET_LOCALE_NA
 	char *nvfilepath       = "/data/misc/wifi/.nvmac.info";
 #else
