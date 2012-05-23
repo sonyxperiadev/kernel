@@ -685,13 +685,13 @@ static void button_work_func(struct work_struct *work)
 			usleep_range(80000, 90000);
 			/*
 			 * Store which button is being pressed (KEY_VOLUMEUP,
-			 *	KEY_VOLUMEDOWN, KEY_SEND)
+			 *	KEY_VOLUMEDOWN, KEY_MEDIA)
 			 * in the context structure
 			 */
 			if (p->hs_state != DISCONNECTED) {
 				switch (button_name) {
 				case BUTTON_SEND_END:
-					p->button_pressed = KEY_SEND;
+					p->button_pressed = KEY_MEDIA;
 					break;
 				case BUTTON_VOLUME_UP:
 					p->button_pressed = KEY_VOLUMEUP;
@@ -1248,9 +1248,9 @@ static int hs_inputdev(struct mic_t *p)
 	}
 
 	/* specify key event type and value for it -
-	 * Since we have only one button on headset,value KEY_SEND is sent */
+	 * Since we have only one button on headset,value KEY_MEDIA is sent */
 	set_bit(EV_KEY, p->headset_button_idev->evbit);
-	set_bit(KEY_SEND, p->headset_button_idev->keybit);
+	set_bit(KEY_MEDIA, p->headset_button_idev->keybit);
 	set_bit(KEY_VOLUMEDOWN, p->headset_button_idev->keybit);
 	set_bit(KEY_VOLUMEUP, p->headset_button_idev->keybit);
 

@@ -657,7 +657,7 @@ static void button_press_work_func(struct work_struct *work)
 				p->button_state = BUTTON_PRESSED;
 				pr_info(" Sending Key Press\r\n");
 				input_report_key(p->headset_button_idev,
-					KEY_SEND, 1);
+					KEY_MEDIA, 1);
 				input_sync(p->headset_button_idev);
 			}
 			schedule_delayed_work(&(p->button_press_work),
@@ -665,7 +665,7 @@ static void button_press_work_func(struct work_struct *work)
 		} else {
 			p->button_state = BUTTON_RELEASED;
 			pr_info(" Sending Key Release\r\n");
-			input_report_key(p->headset_button_idev, KEY_SEND, 0);
+			input_report_key(p->headset_button_idev, KEY_MEDIA, 0);
 			input_sync(p->headset_button_idev);
 		}
 	}
@@ -989,9 +989,9 @@ static int hs_inputdev(struct mic_t *p)
 	}
 
 	/* specify key event type and value for it -
-	 * Since we have only one button on headset, value KEY_SEND is sent */
+	 * Since we have only one button on headset, value KEY_MEDIA is sent */
 	set_bit(EV_KEY, p->headset_button_idev->evbit);
-	set_bit(KEY_SEND, p->headset_button_idev->keybit);
+	set_bit(KEY_MEDIA, p->headset_button_idev->keybit);
 	p->headset_button_idev->name = "bcm_headset";
 	p->headset_button_idev->phys = "headset/input0";
 	p->headset_button_idev->id.bustype = BUS_HOST;
