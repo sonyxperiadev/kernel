@@ -627,12 +627,6 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 	} else {
 		Boolean enable = FALSE;
 		CSL_CAPH_DMA_CHNL_e dma_ch = CSL_CAPH_DMA_CH13;
-		if (enabled_path)
-			enable = TRUE;
-		csl_caph_audioh_adcpath_global_enable(enable);
-		/*cannot disable NOC somehow, leads to system hang*/
-		if (enable)
-			csl_caph_switch_enable_clock(enable);
 
 		/*this is required when internal trigger is used in mic path*/
 		csl_caph_dma_clear_intr(dma_ch, CSL_CAPH_DSP);
@@ -640,6 +634,14 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 			csl_caph_dma_enable_intr(dma_ch, CSL_CAPH_DSP);
 		else
 			csl_caph_dma_disable_intr(dma_ch, CSL_CAPH_DSP);
+
+		if (enabled_path)
+			enable = TRUE;
+		csl_caph_audioh_adcpath_global_enable(enable);
+		/*cannot disable NOC somehow, leads to system hang*/
+		if (enable)
+			csl_caph_switch_enable_clock(enable);
+
 	}
 
 #endif
