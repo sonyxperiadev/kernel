@@ -534,6 +534,57 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg)
 	return retVal;
 }
 
+RPC_Result_t RPC_ServerDispatchCPResetMsg(PACKET_InterfaceType_t interfaceType,
+				   	UInt8 clientId, 
+				   	RPC_CPResetEvent_t eventType )
+{
+	RpcCbkElement_t *elem;
+	RpcClientInfo_t *cInfo;
+
+	cInfo = gRpcClientList[clientId];
+
+	if (!cInfo) {
+		_DBG(RPC_TRACE
+		     ("k:RPC_ServerDispatchCPResetMsg invalid clientID = %d\n",
+		      clientId));
+		return RPC_RESULT_ERROR;
+	}
+
+	if (clientId == 0) {
+		_DBG(RPC_TRACE("k:RPC_ServerDispatchCPResetMsg Error !!!\n"));
+		return RPC_RESULT_ERROR;
+	}
+	
+	elem = kmalloc(sizeof(RpcCbkElement_t), in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
+	if (!elem) {
+		_DBG(RPC_TRACE("k:RPC_ServerDispatchCPResetMsg Allocation error\n"));
+		return RPC_RESULT_ERROR;
+	}
+	memset(elem, 0, sizeof(RpcCbkElement_t));
+	elem->type = RPC_SERVER_CBK_CP_RESET;
+	elem->interfaceType = interfaceType;
+	elem->channel = 0;
+	elem->dataBufHandle = 0;
+	elem->event = 0;
+	elem->cpResetEvent = eventType;
+	
+	_DBG(RPC_TRACE
+		("RPC_ServerDispatchCPResetMsg: add to queue for client %d\n",
+		clientId));
+
+	/* add to queue */
+	spin_lock_bh(&cInfo->mLock);
+	list_add_tail(&elem->mList, &cInfo->mQ.mList);
+	spin_unlock_bh(&cInfo->mLock);
+
+	cInfo->availData = 1;
+	wake_up_interruptible(&cInfo->mWaitQ);
+	_DBG(RPC_TRACE
+		("RPC_ServerDispatchCPResetMsg: done if:%d client:%d\n",
+		interfaceType, clientId));
+
+	return RPC_RESULT_OK;
+}				  
 
 
 RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
@@ -723,13 +774,14 @@ void RPC_ServerCPResetCallback(RPC_CPResetEvent_t event,
 {
 	int k;
 
-	pr_info("RPC_ServerCPResetCallback: event %d interface %d\n",
-		  event, interfaceType);
+	_DBG(RPC_TRACE("RPC_ServerCPResetCallback: event %d interface %d\n",
+		  event, interfaceType));
 	
 	/* if we're already in process of resetting, just return */
 	if ( (gCPResetting && (event == RPC_CPRESET_START)) ||
 		(!gCPResetting && (event == RPC_CPRESET_COMPLETE)) ) {
-		pr_info("RPC_ServerCPResetCallback already handling event\n");
+		_DBG(RPC_TRACE
+		  ("RPC_ServerCPResetCallback already handling event\n"));
 		return;
         }
         
@@ -740,7 +792,8 @@ void RPC_ServerCPResetCallback(RPC_CPResetEvent_t event,
 	
 	for (k = 0; k < 0xFF; k++)
 		if ( gRpcClientList[k] ) {
-			pr_info("RPC_ServerCPResetCallback: client %d\n", k);
+			_DBG(RPC_TRACE
+			 ("RPC_ServerCPResetCallback: client %d\n", k));
 			if ( event == RPC_CPRESET_START )
 				gRpcClientList[k]->ackdCPReset = 0;
 			RPC_ServerDispatchCPResetMsg(
@@ -748,7 +801,7 @@ void RPC_ServerCPResetCallback(RPC_CPResetEvent_t event,
 				k, event );
 		}
 	
-	pr_info("RPC_ServerCPResetCallback: done\n");
+	_DBG(RPC_TRACE("RPC_ServerCPResetCallback: done\n"));
 	RPC_READ_UNLOCK;
 }
 
@@ -1647,7 +1700,7 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 
 		spin_unlock_bh(&cInfo->mLock);
 
-		ioc_param.isEmpty = 0;
+		ioc_param.isEmpty = 0;	
 		ioc_param.type = Item->type;
 		ioc_param.event = Item->event;
 		ioc_param.dataIndFuncEx = cInfo->infoEx.dataIndFuncEx;
@@ -1657,16 +1710,19 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 		ioc_param.bufInfo.interfaceType = Item->interfaceType;
 		ioc_param.bufInfo.channel = Item->channel;
 		ioc_param.bufInfo.dataBufHandle = Item->dataBufHandle;
-		ioc_param.bufInfo.bufferLen = RPC_PACKET_GetBufferLength(Item->dataBufHandle);
-		ioc_param.bufInfo.buffer = RPC_PACKET_GetBufferData(Item->dataBufHandle);
-		ioc_param.bufInfo.context1 = RPC_PACKET_GetContext(Item->interfaceType, Item->dataBufHandle);
-		ioc_param.bufInfo.context2 = RPC_PACKET_GetContextEx(Item->interfaceType, Item->dataBufHandle);
-
-		ioc_param.offset = IPC_SmOffset(ioc_param.bufInfo.buffer);
-
-		RpcDbgUpdatePktStateEx((int)Item->dataBufHandle, PKT_STATE_NA, ioc_param.clientId, PKT_STATE_CID_FETCH,  0, 0, 0xFF);
-		HISTORY_RPC_LOG_PKT("rxBufEx", ioc_param.clientId, (int)Item->dataBufHandle);
-
+		if ( Item->dataBufHandle ) {
+			ioc_param.bufInfo.bufferLen = RPC_PACKET_GetBufferLength(Item->dataBufHandle);
+			ioc_param.bufInfo.buffer = RPC_PACKET_GetBufferData(Item->dataBufHandle);
+			ioc_param.bufInfo.context1 = RPC_PACKET_GetContext(Item->interfaceType, Item->dataBufHandle);
+			ioc_param.bufInfo.context2 = RPC_PACKET_GetContextEx(Item->interfaceType, Item->dataBufHandle);
+		
+			ioc_param.offset = IPC_SmOffset(ioc_param.bufInfo.buffer);
+			
+			RpcDbgUpdatePktStateEx((int)Item->dataBufHandle, PKT_STATE_NA, ioc_param.clientId, PKT_STATE_CID_FETCH,  0, 0, 0xFF);
+			HISTORY_RPC_LOG_PKT("rxBufEx", ioc_param.clientId, (int)Item->dataBufHandle);
+		} else {
+			kfree( pktElem );
+		}
 		_DBG(RPC_TRACE
 		     ("k:handle_pkt_poll_ex_ioc cid=%d item=%x len=%d pkt=%d wait=%d\n", ioc_param.clientId, (int)Item,
 		      (int)ioc_param.bufInfo.bufferLen, (int)Item->dataBufHandle, jiffies_to_msecs(jiffies - jiffyBefore)));
@@ -1847,6 +1903,80 @@ static long handle_pkt_reg_msgs_ioc(struct file *filp, unsigned int cmd,
 		(int)ioc_param.msgsSize, readSize, ret));
 
 	return (!ret) ? -EINVAL : 0;
+}
+
+static long handle_pkt_ack_cp_reset_ioc(struct file *filp, unsigned int cmd,
+				       UInt32 param)
+{
+	rpc_pkt_cp_reset_ack_t ioc_param;
+
+	if (copy_from_user
+	    (&ioc_param, (int *) param,
+	     sizeof(rpc_pkt_cp_reset_ack_t)) != 0) {
+		_DBG(RPC_TRACE
+		     ("k:handle_pkt_ack_cp_reset_ioc - copy_from_user() had error\n"));
+		return -EFAULT;
+	}
+	
+	_DBG(RPC_TRACE("handle_pkt_ack_cp_reset_ioc: %d %d\n",
+				ioc_param.rpcClientID,
+				ioc_param.interfaceType));
+				
+	if ( INTERFACE_CAPI2 != ioc_param.interfaceType ) {
+		_DBG(RPC_TRACE("handle_pkt_ack_cp_reset_ioc: ack ifce %d\n",
+			ioc_param.interfaceType));
+		RPC_PACKET_FilterAckReadyForCPReset( ioc_param.rpcClientID, 
+						ioc_param.interfaceType );
+	} else {
+		UInt8 cid = 0;
+		RpcClientInfo_t *cInfo;
+		int k;
+		int bComplete = 1;
+		
+		_DBG(RPC_TRACE("handle_pkt_ack_cp_reset_ioc: capi2 client\n"));
+		
+		/* for capi2 interface, track ack'd status in client info
+		   and only call back to rpc_ipc after all clients have ack'd
+		*/
+		cid = (UInt8)(ioc_param.rpcClientID);
+
+		cInfo = gRpcClientList[cid];
+
+		if (!cInfo) {
+			_DBG(RPC_TRACE
+			("k:handle_pkt_ack_cp_reset_ioc invalid clientID %d\n",
+			cid));
+			return -EINVAL;
+		}
+		
+		cInfo->ackdCPReset = 1;
+		
+		for (k = 0; k < 0xFF; k++) {
+			cInfo = gRpcClientList[k];
+			if (cInfo &&
+			  (cInfo->info.interfaceType == INTERFACE_CAPI2) &&
+			  cInfo->info.cpResetFunc &&
+			  !cInfo->ackdCPReset) {
+				_DBG(RPC_TRACE
+				("k:handle_pkt_ack_cp_reset_ioc not ackd %d\n",
+				k));
+				bComplete = 0;
+				break;
+			}
+		}
+		
+		/* if all capi2 clients have ack'd, info rpc_ipc layer */
+		if ( bComplete ) {
+			_DBG(RPC_TRACE
+			("k:handle_pkt_ack_cp_reset_ioc all ack'd\n"));
+			_DBG(RPC_TRACE("     calling rpc_ipc\n"));
+			RPC_PACKET_FilterAckReadyForCPReset(
+						ioc_param.rpcClientID,
+						ioc_param.interfaceType);
+		}
+	}
+
+	return 0;
 }
 
 void __iomem *rpcipc_shmem;

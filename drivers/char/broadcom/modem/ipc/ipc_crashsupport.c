@@ -413,16 +413,16 @@ static int DownloadFirmware(uint16_t len, const uint8_t *p_data, uint32_t addr)
 {
 	void __iomem *virtAddr;
 
-	printk(KERN_INFO "%s: Downloading %d bytes from %p to address %p\n",
-		__func__, len, (unsigned int)p_data, addr);
+	IPC_DEBUG(DBG_INFO, "Downloading %d bytes from %p to address %p\n",
+		len, (void *)p_data, (void *)addr);
 
 	virtAddr = ioremap_nocache(addr, len);
 	if (NULL == virtAddr) {
 		printk(KERN_INFO "%s: ioremap_nocache failed!\n",
 				__func__);
 	} else {
-		printk(KERN_INFO "%s: copying to virtual addr %p\n",
-				__func__, virtAddr);
+		IPC_DEBUG(DBG_INFO, "copying to virtual addr %p\n",
+				(void *)virtAddr);
 		memcpy(virtAddr, p_data, len);
 		iounmap(virtAddr);
 	}
@@ -511,20 +511,21 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 			int retval;
 			/* This is the main CP image */
 			if (IsCommsImageValid(virtAddr))
-				IPC_DEBUG(DBG_ERROR,
-					"verified CP image @ %p\n", addr);
+				IPC_DEBUG(DBG_INFO,
+				"verified CP image @ %p\n",
+				(void *)addr);
 			else
 				IPC_DEBUG(DBG_ERROR,
 					"failed to verify main image @ %p\n",
-					addr);
+					(void *)addr);
 			retval = memcmp(fw->data, virtAddr, imgSize);
-			IPC_DEBUG(DBG_ERROR, "memcmp(%p, %p, 0x%x) = %d\n",
-				fw->data, virtAddr, imgSize, retval);
+			IPC_DEBUG(DBG_INFO, "memcmp(%p, %p, 0x%x) = %d\n",
+				(void *)fw->data, virtAddr, imgSize, retval);
 			iounmap(virtAddr);
 		} else {
 			IPC_DEBUG(DBG_ERROR,
 				"ioremap_nocache FAILED for addr %p\n",
-				addr);
+				(void *)addr);
 		}
 	}
 
@@ -544,9 +545,9 @@ static void ReloadCP(void)
 	int index;
 
 	for (index = 0; (g_cp_imgs[index].img_name != NULL); index++) {
-		printk(KERN_ERR "%s() LoadFirmware for %s @ %p, size %d\n",
-			__func__, g_cp_imgs[index].img_name,
-			g_cp_imgs[index].ram_addr,
+		IPC_DEBUG(DBG_INFO, "LoadFirmware for %s @ %p, size %d\n",
+			g_cp_imgs[index].img_name,
+			(void *)g_cp_imgs[index].ram_addr,
 			g_cp_imgs[index].img_size);
 		ret = LoadFirmware(ipcs_get_drvdata(),
 				g_cp_imgs[index].img_name,
@@ -574,8 +575,10 @@ static UInt32 IsCommsImageValid(const UInt8 *ram_addr)
 		(UInt8 *)ram_addr + RESERVED_HEADER);
 	cp_loaded = (msp_signature == MSP_SIGNATURE_VALUE);
 
-	printk(KERN_ERR "MSP Signature: =%x, loaded=%d\r\n",
-			msp_signature, cp_loaded);
+	if (!cp_loaded) {
+		IPC_DEBUG(DBG_ERROR, "bad MSP Signature: =0x%x [addr=%p]\r\n",
+			(unsigned int)msp_signature, ram_addr);
+	}
 
 	/* also check the linker flag offset:
 		RO_BASE + RESERVED_HEADER + 0x48
@@ -585,7 +588,9 @@ static UInt32 IsCommsImageValid(const UInt8 *ram_addr)
 	IPC_DEBUG(DBG_ERROR, "value at LINKER_FLAG_OFFSET (+0x%x): = 0x%x\r\n",
 			RESERVED_HEADER + 0x48, linkerFlagOffset);
 	if (linkerFlagOffset != LINKER_FLAG_OFFSET_VALUE) {
-		IPC_DEBUG(DBG_ERROR, "bad LINKER_FLAG_OFFSET value!!\r\n");
+		IPC_DEBUG(DBG_ERROR,
+			"bad linker flag offset value 0x%x [addr=%p]\r\n",
+			(unsigned int)linkerFlagOffset, ram_addr);
 		cp_loaded = 0;
 	}
 

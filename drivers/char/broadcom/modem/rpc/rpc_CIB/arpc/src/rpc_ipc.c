@@ -50,8 +50,6 @@
 #include "mqueue.h"
 #endif
 
-static Boolean sCPResetting = FALSE;
-
 #ifdef LINUX_RPC_KERNEL
 static spinlock_t mLock;
 #define RPC_LOCK		spin_lock_bh(&mLock)
@@ -110,6 +108,9 @@ static RPC_IPCBufInfo_t ipcBufList[INTERFACE_TOTAL] = { { {0} } };
 
 static RpcProcessorType_t gRpcProcType;
 
+static Boolean sCPResetting;
+static Boolean sIsNotifyingCPReset;
+
 /*static function prototypes*/
 static void RPC_CreateBufferPool(PACKET_InterfaceType_t type,
 				 int channel_index);
@@ -119,6 +120,7 @@ static Int8 GetInterfaceType(IPC_EndpointId_T epId);
 static void RPC_FlowCntrl(IPC_BufferPool Pool, IPC_FlowCtrlEvent_T Event);
 static void RPC_BufferDelivery(IPC_Buffer bufHandle);
 Boolean RPC_SetProperty(RPC_PropType_t type, UInt32 value);
+static void RPC_IPC_APEndPointInit(void);
 
 #ifdef FUSE_COMMS_PROCESSOR
 #define RPC_PROP_VER		RPC_PROP_CP_VERSION
@@ -230,7 +232,8 @@ RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID,
 	if (pCid) {
 		pCid[0] = channel;
 		if (sCPResetting) {
-			printk("RPC_PACKET_SendData: cp resetting, ignore send req\n");
+			_DBG_(RPC_TRACE
+			("RPC_PACKET_SendData: cp resetting, ignore send\n"));
 			ipcError = IPC_ERROR;
 		} else
 			ipcError =
@@ -307,6 +310,12 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
 {
 	int index = -1;
 	IPC_Buffer bufHandle = 0;
+
+	if (sCPResetting) {
+		_DBG_(RPC_TRACE
+		("RPC_PACKET_AllocateBufferEx: cp resetting, ignore req\n"));
+		return NULL;
+	}
 
 	/*Determine the pool index for the interface */
 	RPC_LOCK;
@@ -471,7 +480,8 @@ RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle)
 	_DBG_(RPC_TRACE
 	      ("RPC_PACKET_FreeBuffer FREE h=%d\r\n", (int)dataBufHandle));
 
-	IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
+	if (!sCPResetting)
+		IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
 
 	RpcDbgUpdatePktState((int)dataBufHandle, PKT_STATE_PKT_FREE);
 	rpc_wake_lock_remove((UInt32)dataBufHandle);
@@ -482,22 +492,26 @@ RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle)
 RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 				     UInt8 rpcClientID)
 {
-	IPC_U32 refCount;
+	IPC_U32 refCount = 0;
 
 	RPC_LOCK;
 
-	refCount = IPC_BufferUserParameterGet((IPC_Buffer) dataBufHandle);
+	if (!sCPResetting) {
+		refCount = IPC_BufferUserParameterGet(
+				(IPC_Buffer) dataBufHandle);
 
-	if (refCount == 0) {
-		_DBG_(RPC_TRACE
-		      ("k:RPC_PACKET_FreeBufferEx ERROR h=%d, cid=%d\r\n",
-		       (int)dataBufHandle, rpcClientID));
-		RPC_UNLOCK;
-		return RPC_RESULT_ERROR;
+		if (refCount == 0) {
+			_DBG_(RPC_TRACE
+			("k:RPC_PACKET_FreeBufferEx ERROR h=%d, cid=%d\r\n",
+			(int)dataBufHandle, rpcClientID));
+			RPC_UNLOCK;
+			return RPC_RESULT_ERROR;
+		}
+
+		--refCount;
+		IPC_BufferUserParameterSet((IPC_Buffer) dataBufHandle,
+								refCount);
 	}
-
-	--refCount;
-	IPC_BufferUserParameterSet((IPC_Buffer) dataBufHandle, refCount);
 
 	if (refCount == 0) {
 		freeRpcPkts++;
@@ -505,7 +519,8 @@ RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 		      ("k:RPC_PACKET_FreeBufferEx FREE h=%d, cid=%d rcvPkts=%d freePkts=%d\r\n",
 		       (int)dataBufHandle, (int)rpcClientID, (int)recvRpcPkts,
 		       (int)freeRpcPkts));
-		IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
+		if (!sCPResetting)
+			IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
 		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_PKT_FREE,
 				rpcClientID, PKT_STATE_CID_FREE,  0, 0, 0xFF);
 		rpc_wake_lock_remove((UInt32)dataBufHandle);
@@ -598,27 +613,6 @@ static Int8 GetInterfaceType(IPC_EndpointId_T epId)
 	return -1;
 }
 
-
-/*
--> central cp reset callback handler in rpc_ipc.c
-	-> who calls it?
--> central handler init's 'ACK' field in ipcInfoList to "not ack'd"
--> central handler runs all callbacks in ipcInfoList
--> rpc_sys has it's own handler for various interface types
-	-> will handle callbacks for all clients of a given interface type
--> provide 'ack' function in rpc_ipc.c and rpc_sys
-	-> in rpc_sys, handles for all clients of given type; if all ack'd,
-	calls ack in rpc_ipc for that interface type
--> 'ack' function checks if all interfaces have ack'd; if so, notifies IP 
-	that it can reset 
-*/
-
-/* called when client of interfaceType is ready for silent CP reset; expected
-   to be called at some point after client's registered RPC_PACKET_CPResetCallbackFunc_t
-   is called.
-*/
-static Boolean sIsNotifyingCPReset;
-
 void CheckReadyForCPReset(void)
 {
 	PACKET_InterfaceType_t currIF;
@@ -638,19 +632,18 @@ void CheckReadyForCPReset(void)
 			/* haven't all ack'd yet, 
 			   so we're not ready for reset
 			*/
-			pr_info("CheckReadyForCPReset not done IF%d\n",
-									currIF);
+			_DBG_(RPC_TRACE("CheckReadyForCPReset not done IF%d\n",
+								currIF));
 			ready = FALSE;
 			break;
 		}
 	
 	if (ready)
 	{
-		pr_info("CheckReadyForCPReset done\n");
+		_DBG_(RPC_TRACE("CheckReadyForCPReset done\n"));
 		/* ready for start CP reset, so notify IPC here */
 		IPCAP_ReadyForReset( sIPCResetClientId );
 	}
-	pr_info("exit CheckReadyForCPReset\n");
 }
 
 /* callback from IPC to indicate status of CP reset process */
@@ -659,7 +652,7 @@ void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
 	RPC_CPResetEvent_t rpcEvent;
 	PACKET_InterfaceType_t currIF;
 
-	pr_info("RPC_PACKET_CPResetHandler\n");
+	_DBG_(RPC_TRACE("RPC_PACKET_CPResetHandler\n"));
 
 	sCPResetting = (inEvent == IPC_CPRESET_START);
 
@@ -680,31 +673,7 @@ void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
 				ipcInfoList[currIF].ipc_buf_pool[index] = 0;
 
 		/* re-register our endpoints */
-		/* **FIXME** can't use RPC_IPC_EndPointInit because it resets */
-		/* all of ipcInfoList */
-		/*RPC_IPC_EndPointInit(RPC_APPS);*/
-		IPC_EndpointRegister(IPC_EP_Capi2App, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-		IPC_EndpointRegister(IPC_EP_DrxAP, RPC_FlowCntrl,
-					RPC_BufferDelivery, 4);
-		IPC_EndpointRegister(IPC_EP_PsAppData, RPC_FlowCntrl,
-				     RPC_BufferDelivery,
-				     4 + PDCP_MAX_HEADER_SIZE);
-		IPC_EndpointRegister(IPC_EP_CsdAppCSDData, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-		IPC_EndpointRegister(IPC_EP_SerialAP, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-#ifndef UNDER_LINUX
-#ifndef UNDER_CE		/*modify for WinMo UDP log */
-		IPC_EndpointRegister(IPC_EP_LogApps, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-#endif
-#ifdef IPC_EP_EemAP
-		IPC_EndpointRegister(IPC_EP_EemAP, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-#endif
-#endif
-
+		RPC_IPC_APEndPointInit();
 	}
 
 	sIsNotifyingCPReset = TRUE;
@@ -719,7 +688,7 @@ void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
 	if (inEvent == IPC_CPRESET_START)
 		CheckReadyForCPReset();
 
-	pr_info("exit RPC_PACKET_CPResetHandler\n");
+	_DBG_(RPC_TRACE("exit RPC_PACKET_CPResetHandler\n"));
 }
 
 /* called to initiate notification of clients of start of CP reset */
@@ -730,19 +699,27 @@ void RPC_PACKET_HandleNotifyCPReset( RPC_CPResetEvent_t inEvent )
 	for (currIF = INTERFACE_START; currIF < INTERFACE_TOTAL; currIF++)
 		if ( ipcInfoList[currIF].isInit ) {
 			if ( ipcInfoList[currIF].cpResetCb ) {
-				pr_info("RPC_PACKET_HandleNotifyCPReset\n");
-				pr_info("  notify IF %d\n", currIF);
+				_DBG_(RPC_TRACE
+				 ("RPC_PACKET_HandleNotifyCPReset\n"));
+				_DBG_(RPC_TRACE("  notify IF %d\n", currIF));
 				ipcInfoList[currIF].cpResetCb(inEvent, currIF);
 			}
 			if (ipcInfoList[currIF].cpFilterResetCb) {
-				pr_info("RPC_PACKET_HandleNotifyCPReset\n");
-				pr_info("  notify fltr IF %d\n", currIF);
+				_DBG_(RPC_TRACE
+					("RPC_PACKET_HandleNotifyCPReset\n"));
+				_DBG_(RPC_TRACE("  notify fltr IF %d\n",
+								 currIF));
 				ipcInfoList[currIF].cpFilterResetCb(inEvent,
 								    currIF);
 			}
 		}
 }
 
+/*
+ * called when client of interfaceType is ready for silent CP reset;
+ * expected to be called at some point after client's registered
+ * RPC_PACKET_CPResetCallbackFunc_t is called.
+ */
 void RPC_PACKET_AckReadyForCPReset( UInt8 rpcClientID,
 				PACKET_InterfaceType_t interfaceType )
 {
@@ -752,10 +729,11 @@ void RPC_PACKET_AckReadyForCPReset( UInt8 rpcClientID,
 
 	ipcInfoList[interfaceType].readyForCPReset = TRUE;
 	
-	pr_info("RPC_PACKET_AckReadyForCPReset IF:%d\n",interfaceType);
+	_DBG_(RPC_TRACE("RPC_PACKET_AckReadyForCPReset IF:%d\n",
+						interfaceType));
 
-	if ( !sIsNotifyingCPReset )
-		CheckReadyForCPReset( );
+	if (!sIsNotifyingCPReset)
+		CheckReadyForCPReset();
 }
 
 void RPC_PACKET_FilterAckReadyForCPReset( UInt8 rpcClientID,
@@ -767,10 +745,11 @@ void RPC_PACKET_FilterAckReadyForCPReset( UInt8 rpcClientID,
 
 	ipcInfoList[interfaceType].filterReadyForCPReset = TRUE;
 	
-	pr_info("RPC_PACKET_FilterAckReadyForCPReset IF:%d\n",interfaceType);
+	_DBG_(RPC_TRACE("RPC_PACKET_FilterAckReadyForCPReset IF:%d\n",
+							interfaceType));
 	
 	if ( !sIsNotifyingCPReset )
-		CheckReadyForCPReset( );
+		CheckReadyForCPReset();
 }
 
 static void RPC_FlowCntrl(IPC_BufferPool Pool, IPC_FlowCtrlEvent_T Event)
@@ -976,6 +955,31 @@ Boolean RPC_GetProperty(RPC_PropType_t type, UInt32 *value)
 	return IPC_GetProperty(type, (IPC_U32 *) value);
 }
 
+void RPC_IPC_APEndPointInit(void)
+{
+	IPC_EndpointRegister(IPC_EP_Capi2App, RPC_FlowCntrl,
+			     RPC_BufferDelivery, 4);
+	IPC_EndpointRegister(IPC_EP_DrxAP, RPC_FlowCntrl,
+				RPC_BufferDelivery, 4);
+	IPC_EndpointRegister(IPC_EP_PsAppData, RPC_FlowCntrl,
+			     RPC_BufferDelivery,
+			     4 + PDCP_MAX_HEADER_SIZE);
+	IPC_EndpointRegister(IPC_EP_CsdAppCSDData, RPC_FlowCntrl,
+			     RPC_BufferDelivery, 4);
+	IPC_EndpointRegister(IPC_EP_SerialAP, RPC_FlowCntrl,
+			     RPC_BufferDelivery, 4);
+#ifndef UNDER_LINUX
+#ifndef UNDER_CE		/*modify for WinMo UDP log */
+	IPC_EndpointRegister(IPC_EP_LogApps, RPC_FlowCntrl,
+			     RPC_BufferDelivery, 4);
+#endif
+#ifdef IPC_EP_EemAP
+	IPC_EndpointRegister(IPC_EP_EemAP, RPC_FlowCntrl,
+			     RPC_BufferDelivery, 4);
+#endif
+#endif
+}
+
 /*******************************************************************************
 			RPC IPC End Point Init
 *******************************************************************************/
@@ -1003,27 +1007,7 @@ RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t rpcProcType)
 				     RPC_BufferDelivery, 4);
 #endif
 	} else {
-		IPC_EndpointRegister(IPC_EP_Capi2App, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-		IPC_EndpointRegister(IPC_EP_DrxAP, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-		IPC_EndpointRegister(IPC_EP_PsAppData, RPC_FlowCntrl,
-				     RPC_BufferDelivery,
-				     4 + PDCP_MAX_HEADER_SIZE);
-		IPC_EndpointRegister(IPC_EP_CsdAppCSDData, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-		IPC_EndpointRegister(IPC_EP_SerialAP, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-#ifndef UNDER_LINUX
-#ifndef UNDER_CE		/*modify for WinMo UDP log */
-		IPC_EndpointRegister(IPC_EP_LogApps, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-#endif
-#ifdef IPC_EP_EemAP
-		IPC_EndpointRegister(IPC_EP_EemAP, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-#endif
-#endif
+		RPC_IPC_APEndPointInit();
 	}
 
 	return RPC_RESULT_OK;
@@ -1207,6 +1191,12 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 		return RPC_RESULT_ERROR;
 	}
 #endif
+	sCPResetting = FALSE;
+	sIsNotifyingCPReset = FALSE;
+	/* register notification handler for silent CP reset */
+	sIPCResetClientId = IPCAP_RegisterCPResetHandler(
+				RPC_PACKET_CPResetHandler);
+	
 	rpc_wake_lock_init();
 	recvRpcPkts = 0;
 	freeRpcPkts = 0;

@@ -49,6 +49,8 @@ static Boolean gRpcInit = FALSE;
 static RPC_USER_LOCK_DECLARE(gRpcLock);
 RPC_USER_LOCK_DECLARE(gRpcFreeLock);
 
+static Boolean sCpResetting;
+
 /******************************************************************************
 *                              RPC Apps EP Register
 ******************************************************************************/
@@ -66,6 +68,7 @@ Result_t RPC_SYS_Init(RPC_EventCallbackFunc_t eventCb)
 {
 	RPC_Result_t res = RPC_RESULT_OK;
 	stEventCb = eventCb;
+	sCpResetting = FALSE;
 
 	_DBG_(RPC_TRACE("RPC_SYS_Init gRpcInit=%d", gRpcInit));
 
@@ -176,26 +179,21 @@ static void RPC_Handle_CPReset(RPC_CPResetEvent_t event,
 					"RPC_CPRESET_START":
 					"RPC_CPRESET_COMPLETE",
 					interfaceType));
-	pr_info("RPC_Handle_CPReset event %s interface %d",
-					event==RPC_CPRESET_START?
-					"RPC_CPRESET_START":
-					"RPC_CPRESET_COMPLETE",
-					interfaceType);
-	
+
 	sCpResetting = (event==RPC_CPRESET_START);
 	/* notify all clients for given interface */
 	for(i=1;i<=gClientIndex;i++)
 		if (gClientMap[i].cpResetCb != NULL &&
 		    gClientMap[i].iType == interfaceType) {
-			pr_info(
+			_DBG_(RPC_TRACE(
 				"RPC_Handle_CPReset client:%d",
-				gClientIDMap[i]);
+				gClientIDMap[i]));
 			gClientLocalMap[i].ackdCPReset = FALSE;
 			(gClientMap[i].cpResetCb)(event, gClientIDMap[i]);
 		}
 
-	pr_info("RPC_Handle_CPReset done for interface %d",
-					interfaceType);
+	_DBG_(RPC_TRACE("RPC_Handle_CPReset done for interface %d",
+					interfaceType));
 }
 
 void RPC_AckCPReset(UInt8 clientID)
@@ -204,7 +202,8 @@ void RPC_AckCPReset(UInt8 clientID)
 	int i;
 	Boolean bReady = TRUE;
 	
-	pr_info("RPC_AckCPReset client %d index %d\n", clientID, index);
+	_DBG_(RPC_TRACE("RPC_AckCPReset client %d index %d\n",
+					clientID, index));
 
 	if( index <= gClientIndex )
 		gClientLocalMap[index].ackdCPReset = TRUE;
@@ -219,19 +218,25 @@ void RPC_AckCPReset(UInt8 clientID)
 			   interface type has not yet ack'd
 			   so we're not ready yet
 			*/
-			pr_info("RPC_AckCPReset fail index %d\n",i);
+			_DBG_(RPC_TRACE
+				("RPC_AckCPReset fail index %d\n", i));
 			bReady = FALSE;
 			break;
 		}
 		else
 		{
-			pr_info("RPC_AckCPReset %d %d %d %d %d\n",i, index, gClientMap[index].iType, gClientMap[i].iType,gClientLocalMap[i].ackdCPReset);
+			_DBG_(RPC_TRACE("RPC_AckCPReset %d %d %d %d %d\n",
+				i, index, gClientMap[index].iType,
+				gClientMap[i].iType,
+				gClientLocalMap[i].ackdCPReset));
 		}
 	
 	if ( bReady )
 	{
-		pr_info( "RPC_AckCPReset calling RPC_PACKET_AckReadyForCPReset\n");
-		RPC_PACKET_AckReadyForCPReset( 0, (PACKET_InterfaceType_t)gClientMap[index].iType );
+		_DBG_(RPC_TRACE
+		 ("RPC_AckCPReset calling RPC_PACKET_AckReadyForCPReset\n"));
+		RPC_PACKET_AckReadyForCPReset(0,
+			(PACKET_InterfaceType_t)gClientMap[index].iType);
 	}	
 }
 
