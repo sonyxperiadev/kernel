@@ -288,10 +288,10 @@ void WaitForCpIpc(void *pSmBase)
 		/* Wait up to 2s for CP to init */
 		if (k++ > 200)
 			break;
-		else
-			msleep(10);
-		ret = IPC_IsCpIpcInit(pSmBase, IPC_AP_CPU);
-	    }
+        else
+            msleep(10);
+        ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    	}
 	}
 
 	if (ret == 1) {
