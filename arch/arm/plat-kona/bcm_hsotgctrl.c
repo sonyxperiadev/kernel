@@ -134,7 +134,7 @@ int bcm_hsotgctrl_en_clock(bool on)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_en_clock);
 
-#ifdef CONFIG_MFD_BCM59039
+#if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042)
 int bcm_hsotgctrl_phy_Update_MDIO(void)
 {
 	int val;
@@ -182,6 +182,7 @@ int bcm_hsotgctrl_phy_Update_MDIO(void)
 	writel(val, bcm_hsotgctrl_handle->chipregs_base +
 		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
 
+#ifdef CONFIG_MFD_BCM59039
 	/* *******MDIO REG 0::-->
 	 * Write to MDIO0 (to 0x18) as ASIC team suggested
 	 */
@@ -225,6 +226,7 @@ int bcm_hsotgctrl_phy_Update_MDIO(void)
 		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
 	writel(val, bcm_hsotgctrl_handle->chipregs_base +
 		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
+#endif
 
 	/* ******* MDIO REG 3:: -->
 	 * Write to MDIO3 (to 0x2600) as ASIC team suggested
@@ -333,7 +335,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	bcm_hsotgctrl_phy_mdio_init();
 #endif
 
-#ifdef CONFIG_MFD_BCM59039
+#if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042)
 	bcm_hsotgctrl_phy_Update_MDIO();
 #endif
 
