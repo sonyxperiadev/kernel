@@ -203,6 +203,16 @@ config RHEA_WA_HWJIRA_2301
 	 Say Y to enable RHEA JIRA 2301 workaround
 	 Refer JIRA DB for more info on this JIRA
 
+config RHEA_WA_HWJIRA_2877
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2877"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2301 workaround. Refer JIRA DB for more
+	 info on this JIRA. Memc will put dram in bad state if the xtal clock
+	 stops in the middle of say internally triggered ZQ cal or dev temp
+	 polling. This workaround will disable temperature polling in LPM.
+
 config RHEA_WA_HWJIRA_2221
 	depends on ARCH_RHEA
 	bool "Enable workaround for RHEA JIRA 2221"
