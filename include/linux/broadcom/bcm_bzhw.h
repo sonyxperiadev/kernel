@@ -20,6 +20,10 @@
 #include <linux/wakelock.h>
 #endif
 #include <linux/serial_core.h>
+#ifdef CONFIG_KONA_PI_MGR
+#include <mach/pi_mgr.h>
+#include <plat/pi_mgr.h>
+#endif
 
 struct bcm_bzhw_platform_data {
 	unsigned int gpio_bt_wake;	/* HOST -> BCM chip wakeup gpio */
@@ -35,9 +39,24 @@ struct bcm_bzhw_data {
 #endif
 	unsigned int host_irq;
 };
-int bcm_bzhw_assert_bt_wake(void);
-int bcm_bzhw_deassert_bt_wake(void);
-void bcm_bzhw_request_clock_on(struct uart_port *uport);
-void bcm_bzhw_request_clock_off(struct uart_port *uport);
+
+struct bcmbzhw_struct {
+	struct bcm_bzhw_platform_data *pdata;
+	struct bcm_bzhw_data bzhw_data;
+	struct pi_mgr_qos_node qos_node;
+	struct uart_port *uport;
+	struct tty_struct *bcmtty;
+	spinlock_t bzhw_lock;
+	unsigned long bzhw_state;
+	struct timer_list sleep_timer_hw;
+};
+
+int bcm_bzhw_assert_bt_wake(int bt_wake_gpio, struct pi_mgr_qos_node *lqos_node,
+		struct tty_struct *tty);
+int bcm_bzhw_deassert_bt_wake(int bt_wake_gpio, int host_wake_gpio);
+void bcm_bzhw_request_clock_on(struct pi_mgr_qos_node *node);
+void bcm_bzhw_request_clock_off(struct pi_mgr_qos_node *node);
+struct bcmbzhw_struct *bcm_bzhw_start(struct tty_struct *tty);
+void bcm_bzhw_stop(struct bcmbzhw_struct *hw_val);
 
 #endif
