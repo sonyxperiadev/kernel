@@ -1495,6 +1495,46 @@ static struct i2c_board_info __initdata tango_info[] =
 };
 #endif
 
+#ifdef CONFIG_TOUCHSCREEN_FT5306
+static int ts_power(ts_power_status vreg_en)
+{
+	struct regulator *reg = NULL;
+	if (!reg) {
+		reg = regulator_get(NULL, "hv8");
+		if (!reg || IS_ERR(reg)) {
+			printk(KERN_ERR "No Regulator available for ldo_hv8\n");
+			return -1;
+		}
+	}
+	if (reg) {
+		if (vreg_en) {
+			regulator_set_voltage(reg, 3000000, 3000000);
+			printk(KERN_ERR "Turn on TP (ldo_hv8) to 2.8V\n");
+			regulator_enable(reg);
+		} else {
+			printk(KERN_ERR "Turn off TP (ldo_hv8)\n");
+			regulator_disable(reg);
+		}
+	} else {
+		printk(KERN_ERR "TP Regulator Alloc Failed");
+		return -1;
+	}
+	return 0;
+}
+
+static struct Synaptics_ts_platform_data ft5306_plat_data = {
+	.power = ts_power,
+};
+
+static struct i2c_board_info __initdata ft5306_info[] = {
+	{	/* New touch screen i2c slave address. */
+		I2C_BOARD_INFO("FocalTech-Ft5306", (0x70>>1)),
+		.platform_data = &ft5306_plat_data,
+		.irq = gpio_to_irq(TANGO_GPIO_IRQ_PIN),
+	},
+};
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_BCM915500)|| defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 static struct bcm915500_platform_data bcm915500_i2c_param =
 {
@@ -1524,7 +1564,11 @@ static void __init rhea_stone_add_i2c_devices (void)
 		tango_info,
 		ARRAY_SIZE(tango_info));
 #endif
-
+#ifdef CONFIG_TOUCHSCREEN_FT5306
+	i2c_register_board_info(1,
+		ft5306_info,
+		ARRAY_SIZE(ft5306_info));
+#endif
 #if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 #ifdef HW_BCM915500_I2C_BUS_ID /* Temporary: in bcm915500_i2c_ts.h */
 	bcm915500_i2c_param.id = HW_BCM915500_I2C_BUS_ID;
@@ -1603,10 +1647,10 @@ static int __init rhea_stone_add_lateInit_devices (void)
 	board_add_sdio_devices();
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
-	printk(KERN_ERR "Calling WLAN_INIT!\n");
+			printk(KERN_ERR "Calling WLAN_INIT!\n");
 
-	rhea_wlan_init();
-	printk(KERN_ERR "DONE WLAN_INIT!\n");
+			 rhea_wlan_init();
+				printk(KERN_ERR "DONE WLAN_INIT!\n");
 #endif
 	return 0;
 }
@@ -1638,9 +1682,33 @@ static void __init rhea_stone_add_devices(void)
 /*
  *   KONA FRAME BUFFER DSIPLAY DRIVER PLATFORM CONFIG
  */
-#ifndef CONFIG_LCD_HX8369_SUPPORT
-
 struct kona_fb_platform_data konafb_devices[] __initdata = {
+#ifdef CONFIG_LCD_HX8369_SUPPORT
+	{
+		.dispdrv_name  = "HX8369A",
+		.dispdrv_entry = LCD_DISPDRV_GetFuncTable,
+		 .parms = {
+			.w0 = {
+				.bits = {
+					.boot_mode	= 0,
+					.bus_type	= RHEA_BUS_DSI,
+					.bus_no = RHEA_BUS_0,
+					.bus_ch = RHEA_BUS_CH_0,
+					.bus_width	= 0,
+					.te_input	= RHEA_TE_IN_1_DSI0,
+					.col_mode_i = RHEA_CM_I_XRGB888,
+					.col_mode_o = RHEA_CM_O_RGB888,
+				},
+			},
+			.w1 = {
+			.bits = {
+					.api_rev  =  RHEA_LCD_BOOT_API_REV,
+					.lcd_rst0 =  12,
+				},
+			},
+		},
+	},
+#else
 	{
 		.dispdrv_name  = "LQ043Y1DX01",
 		.dispdrv_entry = DISP_DRV_LQ043Y1DX01_GetFuncTable,
@@ -1657,7 +1725,7 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 					.col_mode_o = RHEA_CM_O_RGB565,
 				},
 			},
-		 	.w1 = {
+			.w1 = {
 			.bits = {
 					.api_rev  =  RHEA_LCD_BOOT_API_REV,
 					.lcd_rst0 =  25, /* DSI_BRIDGE_PON   */
@@ -1667,38 +1735,8 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 			},
 		},
 	},
+#endif
 };
-
-#else
-
-struct kona_fb_platform_data konafb_devices[] __initdata = {
-	{
-		.dispdrv_name  = "HX8369",
-		.dispdrv_entry = DISPDRV_HX8369_GetFuncTable,
-		.parms = {
-			.w0 = {
-				.bits = {
-					.boot_mode  = 0,
-					.bus_type   = RHEA_BUS_DSI,
-					.bus_no     = RHEA_BUS_0,
-					.bus_ch     = RHEA_BUS_CH_0,
-					.bus_width  = 0,
-					.te_input   = RHEA_TE_IN_1_DSI0,
-					.col_mode_i = RHEA_CM_I_XRGB888,
-					.col_mode_o = RHEA_CM_O_RGB888,
-				},
-			},
-			.w1 = {
-			.bits = {
-					.api_rev  =  RHEA_LCD_BOOT_API_REV,
-					.lcd_rst0 =  12,
-				},
-			},
-		},
-	},
-};
-
-#endif /* CONFIG_LCD_HX8369_SUPPORT  */
 
 #include "rhea_fb_init.c"
 #endif /* #ifdef CONFIG_FB_BRCM_RHEA */

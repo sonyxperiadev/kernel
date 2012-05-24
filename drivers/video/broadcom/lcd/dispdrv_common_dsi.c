@@ -430,7 +430,7 @@ static void LCD_DISPDRV_ExecCmndList(DISPDRV_HANDLE_T drvH, pDISPCTRL_REC_T cmnd
  *   Description:   Get	Driver Funtion Table
  *
  ***************************************************************************************************/
-DISPDRV_T *DISPDRV_HX8369_GetFuncTable(void)
+DISPDRV_T *LCD_DISPDRV_GetFuncTable(void)
 {
 	return (&LCD_DISPDRV_Drv);
 }
@@ -609,8 +609,6 @@ Int32 LCD_DISPDRV_Open(DISPDRV_HANDLE_T drvH)
 		return -1;
 	}
 
-	LCD_DISPDRV_reset(drvH);
-
 	if (brcm_enable_dsi_pll_clocks(pPanel->busNo,
 			LCD_DISPDRV_dsiCfg.hsBitClk.clkIn_MHz * 1000000,
 			LCD_DISPDRV_dsiCfg.hsBitClk.clkInDiv,
@@ -618,26 +616,25 @@ Int32 LCD_DISPDRV_Open(DISPDRV_HANDLE_T drvH)
 			LCD_DISPDRV_dsiCfg.escClk.clkInDiv)) {
 		LCD_DBG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR to enable the ""pll clock\n",
 			__FUNCTION__);
-		return -1;
 	}
 
 	if (pPanel->isTE && LCD_DISPDRV_TeOn(pPanel) == -1) {
 		LCD_DBG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	"
 			"Failed	To Configure TE	Input\n", __FUNCTION__);
-		goto err_te_on;
+		return -1;
 	}
+
+	LCD_DISPDRV_reset(drvH);
 
 	if (CSL_DSI_Init(pPanel->dsi_cfg) != CSL_LCD_OK) {
 		LCD_DBG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR, DSI CSL Init "
 			"Failed\n", __FUNCTION__);
-		goto err_dsi_init;
 		return -1;
 	}
 
 	if (CSL_DSI_OpenClient(pPanel->busNo, &pPanel->clientH)	!= CSL_LCD_OK) {
 		LCD_DBG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR, "
 			"CSL_DSI_OpenClient Failed\n", __FUNCTION__);
-		goto err_dsi_open_cl;
 		return -1;
 	}
 
@@ -645,17 +642,14 @@ Int32 LCD_DISPDRV_Open(DISPDRV_HANDLE_T drvH)
 			pPanel->cmnd_mode, &pPanel->dsiCmVcHandle) != CSL_LCD_OK) {
 		LCD_DBG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	CSL_DSI_OpenCmVc "
 			"Failed\n", __FUNCTION__);
-		goto err_dsi_open_cm;
 		return -1;
 	}
-#ifdef	__KERNEL__
+
 	if (csl_dma_vc4lite_init() != DMA_VC4LITE_STATUS_SUCCESS) {
 		LCD_DBG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: csl_dma_vc4lite_init "
 			"Failed\n", __FUNCTION__);
-		goto err_dma_init;
 		return -1;
 	}
-#endif
 
 	pPanel->win_dim.l = 0;
 	pPanel->win_dim.r = pPanel->disp_info->width-1;
@@ -669,18 +663,6 @@ Int32 LCD_DISPDRV_Open(DISPDRV_HANDLE_T drvH)
 	LCD_DBG(LCD_DBG_INIT_ID, "[DISPDRV] %s:	OK\n\r", __FUNCTION__);
 
 	return (res);
-
-err_dma_init:
-	CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle);
-err_dsi_open_cm:
-	CSL_DSI_CloseClient(pPanel->clientH);
-err_dsi_open_cl:
-	CSL_DSI_Close(pPanel->busNo);
-err_dsi_init:
-	if (pPanel->isTE)
-		LCD_DISPDRV_TeOff(pPanel);
-err_te_on:
-	return -1;
 }
 
 /******************************************************************************************************
@@ -747,7 +729,6 @@ Int32 LCD_DISPDRV_PowerControl(DISPDRV_HANDLE_T drvH,
 		switch (pPanel->pwrState) {
 		case STATE_PWR_OFF:
 			LCD_DISPDRV_ExecCmndList(drvH, hx8369a_dsi_init);
-//			OSTASK_Sleep(TICKS_IN_MILLISECONDS(120));
 
 			LCD_DISPDRV_WinSet(drvH, TRUE, &pPanel->win_dim);
 
@@ -768,6 +749,7 @@ Int32 LCD_DISPDRV_PowerControl(DISPDRV_HANDLE_T drvH,
 			LCD_DISPDRV_WrCmndP0(drvH, MIPI_DCS_SET_DISPLAY_OFF);
 			LCD_DISPDRV_WrCmndP0(drvH, MIPI_DCS_ENTER_SLEEP_MODE);
 			OSTASK_Sleep(120);
+			LCD_DISPDRV_reset(drvH);
 
 			pPanel->pwrState = STATE_PWR_OFF;
 
@@ -928,7 +910,7 @@ Int32 LCD_DISPDRV_GetDispDrvFeatures(DISPDRV_HANDLE_T drvH,
 	if ((NULL != driver_name)   && (NULL !=	version_major) &&
 	    (NULL != version_minor) && (NULL !=	flags))	{
 
-		*driver_name   = LCD_DISPDRV_panel_name;
+		*driver_name   = *LCD_DISPDRV_panel_name;
 		*version_major = 0;
 		*version_minor = 15;
 		*flags = DISPDRV_SUPPORT_NONE;
@@ -959,12 +941,7 @@ static void LCD_DISPDRV_Cb(CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec)
 			apiRes = DISPDRV_CB_RES_ERR;
 			break;
 		}
-//		if (pCbRec->dispDrvApiCbRev == DISP_DRV_CB_API_REV_1_0) {
-			((DISPDRV_CB_T)pCbRec->dispDrvApiCb) (apiRes);
-//		} else {
-//			((DISPDRV_CB_API_1_1_T) pCbRec->dispDrvApiCb)
-//			(apiRes, pCbRec->dispDrvApiCbP1);
-//		}
+		((DISPDRV_CB_T)pCbRec->dispDrvApiCb) (apiRes);
 	}
 
 	LCD_DBG(LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__);
@@ -1000,7 +977,8 @@ Int32 LCD_DISPDRV_Update(DISPDRV_HANDLE_T drvH,
 	else
 		use_te = TRUE;
 	p_win =	&pPanel->win_dim;
-	/*LCD_DISPDRV_WinSet(drvH, TRUE, p_win); */
+
+	LCD_DISPDRV_WinSet(drvH, TRUE, p_win);
 
 	req.buff = buff;
 	req.lineLenP = p_win->w;

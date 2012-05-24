@@ -679,7 +679,9 @@ int __init rhea_pm_debug_init(void)
 
     INIT_DELAYED_WORK(&uartb_wq, uartb_wq_handler);
 #ifdef CONFIG_UART_FORCE_RETENTION_TST
-	pwr_mgr_register_event_handler(UBRX_EVENT, uartb_pwr_mgr_event_cb, NULL);
+	if (pwr_mgr_register_event_handler(UBRX_EVENT,
+			uartb_pwr_mgr_event_cb, NULL))
+		return -ENOMEM;
 #endif
 	/* create root clock dir /clock */
     dent_rhea_pm_root_dir = debugfs_create_dir("rhea_pm", 0);
