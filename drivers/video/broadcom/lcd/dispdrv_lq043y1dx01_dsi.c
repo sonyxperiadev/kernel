@@ -1940,6 +1940,7 @@ Int32 LQ043Y1DX01_Update(
 	LQ043Y1DX01_PANEL_t	*pPanel	= (LQ043Y1DX01_PANEL_t *)drvH;
 	CSL_LCD_UPD_REQ_T	req;
 	Int32			res  = 0;
+	uint32_t offset;
 
 	LCD_DBG(LCD_DBG_ID, "[DISPDRV]	+%s\r\n", __func__);
 
@@ -1954,12 +1955,16 @@ Int32 LQ043Y1DX01_Update(
 
 	lq043y1dx01_WinSet(drvH, TRUE, p_win);
 
-	req.buff	= buff;
+	offset = (uint32_t)buff;
+	offset += (p_win->t * pPanel->disp_info->width + p_win->l)
+			* pPanel->disp_info->Bpp;
+
+	req.buff        = (uint32_t *)offset;
 	req.lineLenP	= p_win->w;
 	req.lineCount	= p_win->h;
+	req.xStrideB	= pPanel->disp_info->width - p_win->w;
 	req.buffBpp	= pPanel->disp_info->Bpp;
 	req.timeOut_ms	= 100;
-	req.xStrideB	= 0;
 
 	LCD_DBG(LCD_DBG_ID, "%s: buf=%08x, linelenp = %lu, linecnt =%lu\n",
 		__func__, (u32)req.buff, req.lineLenP, req.lineCount);
@@ -1979,6 +1984,7 @@ Int32 LQ043Y1DX01_Update(
 		LCD_DBG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR ret by "
 			"CSL_DSI_UpdateCmVc\n\r", __func__);
 		res = -1;
+		lq043y1dx01_Cb(res, &req.cslLcdCbRec);
 	}
 
 	LCD_DBG(LCD_DBG_ID, "[DISPDRV]	-%s\r\n", __func__);

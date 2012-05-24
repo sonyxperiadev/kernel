@@ -118,6 +118,8 @@
 	(*(volatile unsigned long *)HW_IO_PHYS_TO_VIRT(a) = (v))
 #endif
 
+#define XTRA_INT 0x4003c0
+
 /* DSI Core clk tree configuration / settings */
 typedef struct {
 	UInt32 hsPllReq_MHz;	/* in:  PLL freq requested */
@@ -229,8 +231,13 @@ static void cslDsi0Stat_LISR(void)
 {
 	DSI_HANDLE dsiH = &dsiBus[0];
 
-	chal_dsi_ena_int(dsiH->chalH, 0);
-	chal_dsi_clr_int(dsiH->chalH, 0xFFFFFFFF);
+	uint32_t int_status = chal_dsi_get_int(dsiH->chalH);
+	mb();
+	if (int_status & (1 << 22))
+		pr_info("fifo error 0x%x\n", int_status);
+
+	chal_dsi_ena_int(dsiH->chalH, 0 | XTRA_INT);
+	chal_dsi_clr_int(dsiH->chalH, int_status);
 
 	OSSEMAPHORE_Release(dsiH->semaInt);
 
@@ -564,15 +571,22 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 	CSL_LCD_RES_T result = CSL_LCD_OK;
 
 	DMA_VC4LITE_CHANNEL_INFO_t dmaChInfo;
-	DMA_VC4LITE_XFER_DATA_t dmaData;
+	DMA_VC4LITE_XFER_DATA_t     dmaData1D;
+	DMA_VC4LITE_XFER_2DDATA_t   dmaData2D;
 	Int32 dmaCh;
 	UInt32 width;
 	UInt32 height;
+	UInt32 spare_pix;
+
+	if (updMsg->dsiH->bus)
+		dmaChInfo.dstID = DMA_VC4LITE_CLIENT_DSI1;
+	else
+		dmaChInfo.dstID = DMA_VC4LITE_CLIENT_DSI0;
 
 	/* Reserve Channel */
 	dmaCh =
-	    csl_dma_vc4lite_obtain_channel(DMA_VC4LITE_CLIENT_MEMORY,
-					   DMA_VC4LITE_CLIENT_MEMORY);
+	    csl_dma_vc4lite_obtain_channel(
+		DMA_VC4LITE_CLIENT_MEMORY, dmaChInfo.dstID);
 
 	if (dmaCh == -1) {
 		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: ERR Reserving "
@@ -588,16 +602,11 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 	dmaChInfo.autoFreeChan = 1;
 	dmaChInfo.srcID = DMA_VC4LITE_CLIENT_MEMORY;
 
-	if (updMsg->dsiH->bus)
-		dmaChInfo.dstID = DMA_VC4LITE_CLIENT_DSI1;
-	else
-		dmaChInfo.dstID = DMA_VC4LITE_CLIENT_DSI0;
-
-	/*dmaChInfo.burstLen     = DMA_VC4LITE_BURST_LENGTH_4; */
 	dmaChInfo.burstLen = DMA_VC4LITE_BURST_LENGTH_8;
 	dmaChInfo.xferMode = DMA_VC4LITE_XFER_MODE_LINERA;
 	dmaChInfo.dstStride = 0;
-	dmaChInfo.srcStride = 0;
+	dmaChInfo.srcStride  = (updMsg->updReq.buffBpp *
+				updMsg->updReq.xStrideB);
 	dmaChInfo.waitResponse = 0;
 	dmaChInfo.callback = (DMA_VC4LITE_CALLBACK_t) updMsg->dsiH->dma_cb;
 
@@ -608,15 +617,78 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 		return CSL_LCD_DMA_ERR;
 	}
 
+	/*
+	If the number of pixels is !x2 for 565 or !x4 for 888
+	 1. Create a 1D configuration for remaining bytes of that row
+	 2. Change the window parameters so that we can continue with
+	 remaining pixels in 2D mode as before.
+	*/
+	spare_pix = (updMsg->updReq.lineLenP * updMsg->updReq.lineCount) &
+			(updMsg->updReq.buffBpp  - 1);
+	if (spare_pix) {
+		uint32_t lines_to_skip;
+
+		lines_to_skip = spare_pix / updMsg->updReq.lineLenP;
+		updMsg->updReq.buff = (void *)((UInt32)updMsg->updReq.buff +
+					(updMsg->updReq.buffBpp * lines_to_skip*
+					(updMsg->updReq.lineLenP +
+					updMsg->updReq.xStrideB)));
+		updMsg->updReq.lineCount -= lines_to_skip;
+		spare_pix %= updMsg->updReq.lineLenP;
+
+		if (spare_pix > 0) {
+			if (spare_pix < updMsg->updReq.lineLenP) {
+				/* Add the DMA transfer data */
+				dmaData1D.srcAddr  = (UInt32)updMsg->updReq.buff
+					+ (spare_pix * updMsg->updReq.buffBpp);
+				dmaData1D.dstAddr =
+				chal_dsi_de1_get_dma_address(
+				updMsg->dsiH->chalH);
+				dmaData1D.xferLength  = (updMsg->updReq.lineLenP
+					- spare_pix) * (updMsg->updReq.buffBpp);
+
+				if ((uint32_t)dmaData1D.xferLength & 0x3)
+					pr_info("xferlength unaligned 0x%x\n",
+						dmaData1D.xferLength);
+
+				if (csl_dma_vc4lite_add_data(updMsg->dmaCh,
+					&dmaData1D) !=
+					DMA_VC4LITE_STATUS_SUCCESS) {
+					LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s:"
+					"ERR add 1D DMA transfer data\n",
+					__func__);
+					return CSL_LCD_DMA_ERR;
+				}
+				updMsg->updReq.buff =
+					(void *)((UInt32)updMsg->updReq.buff +
+					(updMsg->updReq.buffBpp *
+					(updMsg->updReq.lineLenP +
+					updMsg->updReq.xStrideB)));
+				updMsg->updReq.lineCount--;
+			} else {
+				pr_info("spare_pix=%d, linelenp=%d\n",
+					spare_pix, updMsg->updReq.lineLenP);
+			}
+		}
+	}
+
 	width = updMsg->updReq.lineLenP * updMsg->updReq.buffBpp;
 	height = updMsg->updReq.lineCount;
+	dmaChInfo.xferMode     = DMA_VC4LITE_XFER_MODE_2D;
 
 	/* Add the DMA transfer data */
-	dmaData.srcAddr = (UInt32)updMsg->updReq.buff;
-	dmaData.dstAddr = chal_dsi_de1_get_dma_address(updMsg->dsiH->chalH);
-	dmaData.xferLength = width * height;
+	dmaData2D.srcAddr     = (UInt32)updMsg->updReq.buff;
+	if ((uint32_t)dmaData2D.srcAddr & 0x3)
+		pr_info("src addr unaligned %d\n", dmaData2D.srcAddr);
+	dmaData2D.dstAddr  = chal_dsi_de1_get_dma_address(updMsg->dsiH->chalH);
+	dmaData2D.xXferLength = width;
+	dmaData2D.yXferLength = height - 1;
 
-	if (csl_dma_vc4lite_add_data(updMsg->dmaCh, &dmaData)
+	if ((uint32_t)dmaData2D.xXferLength & 0x3) {
+		pr_info("xXferLength unaligned 0x%x stride=0x%x\n",
+		dmaData2D.xXferLength, dmaChInfo.srcStride);
+	}
+	if (csl_dma_vc4lite_add_data_ex(updMsg->dmaCh, &dmaData2D)
 	    != DMA_VC4LITE_STATUS_SUCCESS) {
 		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
 			"ERR add DMA transfer data\n ", __func__);
@@ -763,6 +835,7 @@ static void cslDsiClearAllFifos(DSI_HANDLE dsiH)
  */
 static void cslDsiEnaIntEvent(DSI_HANDLE dsiH, UInt32 intEventMask)
 {
+	intEventMask |= XTRA_INT;
 	chal_dsi_ena_int(dsiH->chalH, intEventMask);
 #ifdef UNDER_LINUX
 /*      enable_irq(dsiH->interruptId); */
@@ -1365,6 +1438,8 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	CHAL_DSI_TX_CFG_t txPkt;
 
 	UInt32 frame_size_p,	/* XY size                    [pixels] */
+	spare_pix,       /* When pixel count is (! x2 in 565 mode)
+				or (! x4 in 888 mode) */
 	 wire_size_b,		/* XY wire size               [bytes] */
 	 txNo1_len,		/* TX no 1 - packet size      [bytes] */
 	 txNo1_cfifo_len,	/* TX no 1 - from CMND  FIFO  [bytes] */
@@ -1377,6 +1452,10 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 
 	if (dsiH->ulps)
 		return CSL_LCD_BAD_STATE;
+
+	cslDsiClearAllFifos(dsiH);
+	chal_dsi_clr_status(dsiH->chalH, 0xffffffff);
+	mb();
 
 	txPkt.vc = dsiChH->vc;
 	txPkt.dsiCmnd = dsiChH->dsiCmnd;
@@ -1392,6 +1471,12 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	updMsgCm.updReq.buffBpp = dsiChH->bpp_dma;
 
 	frame_size_p = req->lineLenP * req->lineCount;
+	/* linelength is odd => MMDMA 2D config fails */
+	if ((dsiChH->bpp_dma == 2) && (req->lineLenP & 1)) {
+		pr_info("ERR Pixel Buff Size!");
+		return CSL_LCD_MSG_SIZE;
+	}
+
 	wire_size_b = frame_size_p * dsiChH->bpp_wire;
 
 	txNo2_repeat = wire_size_b / CM_PKT_SIZE_B;
@@ -1405,21 +1490,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	txNo1_pfifo_len = txNo1_len;
 	txNo1_cfifo_len = 0;
 
-	if (dsiChH->bpp_dma == 4) {
-		if (frame_size_p & 0x3) {
-			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-				"ERR Pixel Buff Size!\n",
-				dsiH->bus, __func__);
-			return CSL_LCD_MSG_SIZE;
-		}
-	} else {
-		if (frame_size_p & 0x1) {
-			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-				"ERR Pixel Buff Size!\n",
-				dsiH->bus, __func__);
-			return CSL_LCD_MSG_SIZE;
-		}
-	}
 	if (txNo2_repeat > DSI_PKT_RPT_MAX) {
 		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
 			"ERR Packet Repeat Count!\n", dsiH->bus, __func__);
@@ -1446,29 +1516,58 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	chal_dsi_de1_set_cm(dsiH->chalH, dsiChH->cm);
 	chal_dsi_de1_enable(dsiH->chalH, TRUE);
 
-/*
-	LCD_DBG(LCD_DBG_ID, "[CSL DSI] %s: In X Pixels          [%08d]\n",
-	    __func__, req->lineLenP );
-	LCD_DBG(LCD_DBG_ID, "[CSL DSI] %s: In Y                 [%08d]\n",
-	    __func__, req->lineCount );
-	LCD_DBG(LCD_DBG_ID, "[CSL DSI] %s: In bpp               [%08d]\n",
-	    __func__, req->buffBpp );
-	LCD_DBG(LCD_DBG_ID, "[CSL DSI] %s: In buff              [%08X]\n",
-	    __func__, req->buff );
-	LCD_DBG(LCD_DBG_ID, "[CSL DSI] %s: Packet Size          [%08d]\n",
-	    __func__, CM_PKT_SIZE_B );
-	LCD_DBG(LCD_DBG_ID, "[CSL DSI] %s: Packet Repeat        [%08d]\n",
-	    __func__, txNo2_repeat );
-
-	LCD_DBG(LCD_DBG_ID, "[CSL DSI] %s: First Line CMND FIFO [%08d]\n",
-	    __func__, txNo1_cfifo_len );
-	LCD_DBG(LCD_DBG_ID, "[CSL DSI] %s: First Line PIX  FIFO [%08d]\n",
-	    __func__, txNo1_pfifo_len );
-*/
 	/* BOF TX PKT ENG(s) Set-Up */
 	/* TX No1 - first packet */
 	chal_dsi_wr_cfifo(dsiH->chalH, &dsiChH->dcsCmndStart, 1);
 	txPkt.msgLen = 1 + txNo1_len;
+
+	spare_pix = frame_size_p & (dsiChH->bpp_dma - 1);
+	if (spare_pix) {
+			int offset;
+			/*
+			1. Transfer 1/2/3 to cmd data fifo
+			2. Update the TXPKT1_H.BC_CMDFIFO with no. of bytes to
+				be taken from cmd data fifo
+			3. Do not update the window parameters as they will be
+				needed to create DMA linked lists: 1D + 2D
+			*/
+			txNo1_cfifo_len += spare_pix*dsiChH->bpp_wire;
+			offset = 0;
+			switch (spare_pix) {
+			case 3:
+				chal_dsi_wr_cfifo(dsiH->chalH,
+				(char *)phys_to_virt((uint32_t)req->buff),
+				dsiChH->bpp_wire);
+				if (req->lineLenP >= spare_pix)
+					offset = dsiChH->bpp_dma;
+				else if (req->lineLenP == (spare_pix - 1))
+					offset = dsiChH->bpp_dma;
+				else
+					offset = (req->lineLenP +
+					req->xStrideB) * dsiChH->bpp_dma;
+			case 2:
+				chal_dsi_wr_cfifo(dsiH->chalH,
+				(char *)phys_to_virt((uint32_t)req->buff
+				+ offset), dsiChH->bpp_wire);
+				if (req->lineLenP >= spare_pix)
+					offset += dsiChH->bpp_dma;
+				else {
+					offset += (req->lineLenP +
+					req->xStrideB) * dsiChH->bpp_dma;
+					if ((req->lineLenP == (spare_pix - 1)
+						&& (spare_pix == 3))) {
+						offset -= dsiChH->bpp_dma;
+					}
+				}
+			case 1:
+				chal_dsi_wr_cfifo(dsiH->chalH,
+				(char *)phys_to_virt((uint32_t)req->buff +
+				offset), dsiChH->bpp_wire);
+				break;
+			default:
+				pr_info("ERROR: spare_pix =%d\n", spare_pix);
+			}
+	}
 	txPkt.msgLenCFifo = 1 + txNo1_cfifo_len;
 	txPkt.repeat = 1;
 	txPkt.isTe = dsiChH->usesTe && isTE;
@@ -1502,12 +1601,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
 	mb();
 	/* send rest of the frame */
-
-/*      cslDsiEnaIntEvent( dsiH, (UInt32)( CHAL_DSI_ISTAT_TXPKT1_DONE  | */
-/*                                         CHAL_DSI_ISTAT_ERR_CONT_LP1 | */
-/*                                         CHAL_DSI_ISTAT_ERR_CONT_LP0 | */
-/*                                         CHAL_DSI_ISTAT_ERR_CONTROL  | */
-/*                                         CHAL_DSI_ISTAT_ERR_SYNC_ESC) ); */
 
 	/*--- Start DMA */
 	res = cslDsiDmaStart(&updMsgCm);
@@ -1548,8 +1641,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
 		chal_dsi_de1_enable(dsiH->chalH, FALSE);
-
-		/* cslDsiClearAllFifos ( dsiH ); */
 
 		if (!clientH->hasLock)
 			OSSEMAPHORE_Release(dsiH->semaDsi);

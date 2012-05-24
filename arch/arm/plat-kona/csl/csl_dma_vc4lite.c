@@ -570,10 +570,12 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(DMA_VC4LITE_CHANNEL_t chanID,
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
 
+#if 0
 	if (pdma->chan[chanID].chanInfo.xferMode == DMA_VC4LITE_XFER_MODE_2D) {
 		dprintf(1, "%s: invalid input parameters\n", __func__);
 		return DMA_VC4LITE_STATUS_INVALID_INPUT;
 	}
+#endif
 	/* set the ctrl block information */
 	dmaCtrlBlkInfo.noWideBurst = 0;
 	dmaCtrlBlkInfo.waitCycles = 0;
@@ -691,11 +693,13 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data_ex(DMA_VC4LITE_CHANNEL_t chanID,
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
 
+#if 0
 	if (pdma->chan[chanID].chanInfo.xferMode ==
 	    DMA_VC4LITE_XFER_MODE_LINERA) {
 		dprintf(1, "%s: invalid input parameters\n", __func__);
 		return DMA_VC4LITE_STATUS_INVALID_INPUT;
 	}
+#endif
 	/* set the ctrl block information */
 	dmaCtrlBlkInfo.noWideBurst = 0;
 	dmaCtrlBlkInfo.waitCycles = 0;

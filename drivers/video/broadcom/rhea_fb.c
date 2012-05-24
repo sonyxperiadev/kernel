@@ -340,6 +340,13 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var,
 			region.mode = 0;
 			p_region = &region;
 		} else {
+			region.t	= 0;
+			region.l	= 0;
+			region.b	= fb->fb.var.height - 1;
+			region.r	= fb->fb.var.width - 1;
+			region.w	= fb->fb.var.width;
+			region.h	= fb->fb.var.height;
+			region.mode	= 1;
 			p_region = NULL;
 		}
 		wait_for_completion(&fb->prev_buf_done_sem);
@@ -374,7 +381,7 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var,
 		ret =
 		    fb->display_ops->update(fb->display_hdl,
 					buff_idx ? fb->buff1 : fb->buff0,
-					NULL,
+					p_region,
 					(DISPDRV_CB_T)rhea_display_done_cb);
 
 #endif /* CONFIG_FB_BRCM_ASYNC_UPDATE */
