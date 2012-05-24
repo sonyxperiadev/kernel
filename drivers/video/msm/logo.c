@@ -49,7 +49,7 @@ static void memset32(void *_ptr, unsigned int val, unsigned count)
 }
 
 /* 565RLE image format: [count(2 bytes), rle(2 bytes)] */
-int load_565rle_image(char *filename)
+int load_565rle_image(char *filename, bool bf_supported)
 {
 	struct fb_info *info;
 	int fd, err = 0;
@@ -90,7 +90,7 @@ int load_565rle_image(char *filename)
 	stride = fb_linewidth(info);
 	max = width * fb_height(info);
 	ptr = data;
-	if (info->node == 1 || info->node == 2) {
+	if (bf_supported && (info->node == 1 || info->node == 2)) {
 		err = -EPERM;
 		pr_err("%s:%d no info->creen_base on fb%d!\n",
 		       __func__, __LINE__, info->node);
