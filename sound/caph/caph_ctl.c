@@ -341,10 +341,8 @@ static int SelCtrlInfo(struct snd_kcontrol *kcontrol,
 	CAPH_ASSERT(stream >= CTL_STREAM_PANEL_FIRST
 		    && stream < CTL_STREAM_PANEL_LAST);
 	stream--;
-	/*
-	 * coverity[OVERRUN_STATIC] - false alarm. stream is getting
-	 * decremented by 1 and used
-	 */
+
+	/* coverity[overrun-local] */
 	if (pChip->streamCtl[stream].iFlags & MIXER_STREAM_FLAGS_CAPTURE) {
 		uinfo->value.integer.min = AUDIO_SOURCE_ANALOG_MAIN;
 		uinfo->value.integer.max = MIC_TOTAL_COUNT_FOR_USER;
@@ -420,10 +418,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 	CAPH_ASSERT(stream >= CTL_STREAM_PANEL_FIRST
 		    && stream < CTL_STREAM_PANEL_LAST);
 
-	/*
-	 * coverity[OVERRUN_STATIC] - false alarm. stream is getting
-	 * decremented by 1 and used
-	 */
+	/* coverity[overrun-local] */
 	pSel = pChip->streamCtl[stream - 1].iLineSelect;
 
 	/*
@@ -762,10 +757,8 @@ static int SwitchCtrlPut(struct snd_kcontrol *kcontrol,
 
 	CAPH_ASSERT(stream >= CTL_STREAM_PANEL_FIRST
 		    && stream < CTL_STREAM_PANEL_LAST);
-	/*
-	 * coverity[OVERRUN_STATIC] - false alarm. stream is getting
-	 * decremented by 1 and used
-	 */
+
+	/* coverity[overrun-local] */
 	pMute = pChip->streamCtl[stream - 1].ctlLine[dev].iMute;
 
 	pMute[0] = ucontrol->value.integer.value[0];

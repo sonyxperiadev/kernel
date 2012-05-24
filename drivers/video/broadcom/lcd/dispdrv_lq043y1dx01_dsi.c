@@ -1959,6 +1959,7 @@ Int32 LQ043Y1DX01_Update(
 	req.lineCount	= p_win->h;
 	req.buffBpp	= pPanel->disp_info->Bpp;
 	req.timeOut_ms	= 100;
+	req.xStrideB	= 0;
 
 	LCD_DBG(LCD_DBG_ID, "%s: buf=%08x, linelenp = %lu, linecnt =%lu\n",
 		__func__, (u32)req.buff, req.lineLenP, req.lineCount);

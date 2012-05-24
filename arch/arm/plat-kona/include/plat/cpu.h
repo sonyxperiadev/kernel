@@ -29,11 +29,13 @@
 /* CPU revisions */
 #define RHEA_CHIP_REV_B0	0x1
 #define RHEA_CHIP_REV_B1	0x2
+#define RHEA_CHIP_REV_B2	0x3
 
 /* mach specific implementation */
 int get_chip_rev_id(void);
 
 #define cpu_is_rhea_B0()  (get_chip_rev_id() == RHEA_CHIP_REV_B0 ? 1 : 0)
 #define cpu_is_rhea_B1()  (get_chip_rev_id() == RHEA_CHIP_REV_B1 ? 1 : 0)
+#define cpu_is_rhea_B2()  (get_chip_rev_id() == RHEA_CHIP_REV_B2 ? 1 : 0)
 
 #endif /* __CPU_H__ */

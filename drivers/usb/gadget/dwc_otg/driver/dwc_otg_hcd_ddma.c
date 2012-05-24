@@ -1006,6 +1006,7 @@ static void complete_non_isoc_xfer_ddma(dwc_otg_hcd_t *hcd,
 				hcd->fops->complete(hcd, urb->priv, urb,
 						    urb->status);
 				dwc_otg_hcd_qtd_remove_and_free(hcd, qtd, qh);
+				qtd = NULL;
 
 				if (failed)
 					goto stop_scan;

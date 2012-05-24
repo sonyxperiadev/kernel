@@ -53,14 +53,6 @@
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 
-#ifdef CONFIG_DIGI_MIC
-#ifdef CONFIG_BCMPMU_AUDIO
-#include "pmu.h"
-#include "hal_pmu.h"
-#include "hal_pmu_private.h"
-#endif
-#endif
-
 #include "extern_audio.h"
 #include "voif_handler.h"
 
@@ -80,6 +72,8 @@ Only one loopback path can be enabled at a time.*/
 #define EANBLE_POP_CONTROL
 
 #define VIBRA_LDO_REGULATOR "2v9_vibra"
+#define DIGI_MIC_LDO_REGULATOR "hv7ldo_uc"
+
 /** Private Type and Constant declarations */
 
 enum ExtSpkrUsage_en_t {
@@ -215,6 +209,7 @@ static AudioMode_t currAudioMode_record = AUDIO_MODE_SPEAKERPHONE;
 static AudioMode_t currAudioMode_fm = AUDIO_MODE_HEADSET;
 
 static struct regulator *vibra_reg;
+static struct regulator *digi_mic_reg;
 
 /*wait in us, to avoid hs/ihf pop noise*/
 static int wait_bb_on;
@@ -3263,17 +3258,35 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 void powerOnDigitalMic(Boolean powerOn)
 {
 #ifdef CONFIG_BCMPMU_AUDIO
+	int ret;
 
 	if (powerOn == TRUE) {
-#ifdef CONFIG_DIGI_MIC
 		/* Enable power to digital microphone */
-		PMU_SetLDOMode(PMU_HVLDO7CTRL, 0);
-#endif
-	} else {		/*powerOn == FALSE */
-#ifdef CONFIG_DIGI_MIC
+		if (!digi_mic_reg) {
+			digi_mic_reg =
+			regulator_get(NULL, DIGI_MIC_LDO_REGULATOR);
+
+			if (IS_ERR(digi_mic_reg))
+				aError("Failed to get LDO for Digital Mic\n");
+		}
+		if (digi_mic_reg) {
+			ret = regulator_enable(digi_mic_reg);
+			if (ret != 0)
+				aError("Failed to enable LDO digi Mic: %d\n",
+				ret);
+		}
+
+	} else {	/*powerOn == FALSE */
 		/* Enable power to digital microphone */
-		PMU_SetLDOMode(PMU_HVLDO7CTRL, 1);
-#endif
+		if (digi_mic_reg) {
+			ret = regulator_disable(digi_mic_reg);
+			if (ret != 0)
+				aError("Failed to disable LDO digi Mic: %d\n",
+				ret);
+			regulator_put(digi_mic_reg);
+			digi_mic_reg = NULL;
+		}
+
 	}
 #endif
 }

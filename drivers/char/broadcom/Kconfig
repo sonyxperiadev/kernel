@@ -283,3 +283,9 @@ config BRCM_SIM_SECURE_ENABLE
     default n
     ---help---
     Broadcom SIM Secure Enable
+
+config BCM_LOGRAM_HELPER
+    boolean "Broadcom logram helper"
+    default n
+    ---help---
+    Reserves a page of bootmem and stores ramdump address

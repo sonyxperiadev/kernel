@@ -19,3 +19,4 @@ obj-$(CONFIG_BCM_MDMGPIO)              += mdmgpio/
 endif
 
 obj-$(CONFIG_BCM_RTC_CAL)           += rtc_cal/
+obj-$(CONFIG_BCM_LOGRAM_HELPER) += logram.o

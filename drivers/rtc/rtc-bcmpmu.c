@@ -472,12 +472,18 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 
 	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTC_ALARM,
 			bcmpmu_rtc_isr, rdata);
-	if (ret)
-		goto err;
+	if (ret) {
+		pr_rtc(ERROR, "In %s: Unable to allocate Alarm IRQ: %d.\n",
+						__func__, PMU_IRQ_RTC_ALARM);
+		goto err_irq_alarm;
+	}
 	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTC_SEC,
 			bcmpmu_rtc_isr, rdata);
-	if (ret)
-		goto err;
+	if (ret) {
+		pr_rtc(ERROR, "In %s: Unable to allocate SEC IRQ: %d.\n",
+						__func__, PMU_IRQ_RTC_SEC);
+		goto err_irq_sec;
+	}
 
 #ifdef CONFIG_BCM_RTC_CAL
 	bcm_rtc_cal_init(rdata);
@@ -498,6 +504,10 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 	
 	return 0;
 
+err_irq_sec:
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTC_ALARM);
+err_irq_alarm:
+	rtc_device_unregister(rdata->rtc);
 err:
 	platform_set_drvdata(pdev, NULL);
 	kfree(rdata);
@@ -507,13 +517,16 @@ err:
 static int __devexit bcmpmu_rtc_remove(struct platform_device *pdev)
 {
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
+	struct bcmpmu_rtc *rdata = platform_get_drvdata(pdev);
 
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTC_ALARM);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTC_SEC);
 #ifdef CONFIG_BCM_RTC_CAL
 	rtc_cal_run = false;
 	bcm_rtc_cal_shutdown();
-#endif /*CONFIG_BCM_RTC_CAL*/
+#else /*CONFIG_BCM_RTC_CAL*/
+	rtc_device_unregister(rdata->rtc);
+#endif
 	kfree(bcmpmu->rtcinfo);
 	return 0;
 }

@@ -734,6 +734,23 @@ static struct i2c_board_info __initdata bcmi2cnfc[] = {
 static struct kona_headset_pd headset_data = {
 	.hs_default_state = 1,	/* GPIO state read is 0 on HS insert and 1 for
 				 * HS remove*/
+	/*
+	 * Because of the presence of the resistor in the MIC_IN line.
+	 * The actual ground is not 0, but a small offset is added to it.
+	 * This needs to be subtracted from the measured voltage to determine
+	 * the correct value.
+	 * This will vary for different HW based on the resistor
+	 * values used.
+	 *
+	 * What this means to Rhearay?
+	 * From the schematics looks like there is no such resistor put on
+	 * Rhearay. That means technically there is no need to subtract any
+	 * extra load from the read Voltages. On other HW, if there is a
+	 * resistor present on this line,
+	 * please measure the load value and put it here.
+	 *
+	 */
+	.phone_ref_offset = 100,
 };
 
 static struct resource board_headset_resource[] = {

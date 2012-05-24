@@ -79,7 +79,7 @@
 #include "csl_dsi.h"
 #endif
 
-#define CORE_CLK_MAX_MHZ	125
+#define DSI_CORE_CLK_MAX_MHZ	125000000
 
 #define DSI_INITIALIZED		0x13579BDF
 #define DSI_INST_COUNT		(UInt32)2
@@ -1776,11 +1776,12 @@ static void csl_dsi_set_chal_api_clks(DSI_HANDLE dsiH,
 	dsiH->clkCfg.hsBitClk_MHz = dsiCfg->hsBitClk.clkIn_MHz
 	    / dsiCfg->hsBitClk.clkInDiv;
 
-	if ((UInt32)(dsiH->clkCfg.hsBitClk_MHz / 2) <= CORE_CLK_MAX_MHZ) {
+	if ((dsiH->clkCfg.hsBitClk_MHz * 1000000 / 2) <= DSI_CORE_CLK_MAX_MHZ) {
 		dsiH->clkCfg.coreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_2;
 		LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
 			"DSI CORE CLK SET TO BIT_CLK/2\n", dsiH->bus, __func__);
-	} else if ((dsiH->clkCfg.hsBitClk_MHz / 4) <= CORE_CLK_MAX_MHZ) {
+	} else if ((dsiH->clkCfg.hsBitClk_MHz * 1000000 / 4) <=
+			DSI_CORE_CLK_MAX_MHZ) {
 		dsiH->clkCfg.coreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_4;
 		LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
 			"DSI CORE CLK SET TO BIT_CLK/4\n", dsiH->bus, __func__);

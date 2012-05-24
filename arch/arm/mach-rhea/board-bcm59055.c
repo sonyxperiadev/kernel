@@ -343,7 +343,7 @@ static struct regulator_init_data bcm59055_hv7ldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			.valid_modes_mask =
 			REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY |
 			REGULATOR_MODE_IDLE},
@@ -543,7 +543,7 @@ struct bcmpmu_regulator_init_data bcm59055_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_HV6LDO, &bcm59055_hv6ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV7LDO] = {
-		BCMPMU_REGULATOR_HV7LDO, &bcm59055_hv7ldo_data, 0x22, 0
+		BCMPMU_REGULATOR_HV7LDO, &bcm59055_hv7ldo_data, 0xAA, 0
 	},
 
 /*TODO: We observed that, on Rhearay HW, interrupt from GPIO expander

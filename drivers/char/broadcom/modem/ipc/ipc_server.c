@@ -46,6 +46,7 @@
 #include "ipc_debug.h"
 #include "bcmlog.h"
 #include "ipc_server.h"
+#include "ipcinterface.h"
 
 #include <mach/comms/platform_mconfig.h>
 
@@ -72,6 +73,8 @@ struct ipcs_info_t {
 
 static struct ipcs_info_t g_ipc_info = { 0 };
 static Boolean cp_running = 0;	//FALSE;
+static RAW_NOTIFIER_HEAD(cp_state_notifier_list);
+static DEFINE_SPINLOCK(cp_state_notifier_lock);
 
 #ifdef CONFIG_HAS_WAKELOCK
 struct wake_lock ipc_wake_lock;
@@ -188,6 +191,9 @@ void ipcs_intr_tasklet_handler(unsigned long data)
 	if (IpcCPCrashCheck()) {
 		cp_crashed = 1;
 
+		spin_lock_bh(&cp_state_notifier_lock);
+		raw_notifier_call_chain(&cp_state_notifier_list, IPC_CPSTATE_CRASHED, NULL);
+		spin_unlock_bh(&cp_state_notifier_lock);
 		/* schedule the work on the decidated CP crash dump work queue */
 		queue_work(g_ipc_info.crash_dump_workqueue,
 			   &g_ipc_info.cp_crash_dump_wq);
@@ -277,7 +283,10 @@ void WaitForCpIpc(void *pSmBase)
 
 	if (ret == 1) {
 		IPC_DEBUG(DBG_WARN, "CP IPC initialized\n");
+		spin_lock_bh(&cp_state_notifier_lock);
 		cp_running = 1;	/* TRUE; */
+		raw_notifier_call_chain(&cp_state_notifier_list, IPC_CPSTATE_RUNNING, NULL);
+		spin_unlock_bh(&cp_state_notifier_lock);
 	} else if (ret == 0) {
 		IPC_DEBUG(DBG_ERROR,
 			  "********************************************************************\n");
@@ -317,6 +326,23 @@ void WaitForCpIpc(void *pSmBase)
 			  "********************************************************************\n");
 		//BUG_ON(ret);
 	}
+}
+
+void ipcs_cp_notifier_register(struct notifier_block *nb)
+{
+	/* lock serializes against cp_running value changing */
+	spin_lock_bh(&cp_state_notifier_lock);
+	raw_notifier_chain_register(&cp_state_notifier_list, nb);
+	if (cp_running && nb != NULL)
+		nb->notifier_call(nb, IPC_CPSTATE_RUNNING, NULL);
+	spin_unlock_bh(&cp_state_notifier_lock);
+}
+
+void ipcs_cp_notifier_unregister(struct notifier_block *nb)
+{
+	spin_lock_bh(&cp_state_notifier_lock);
+	raw_notifier_chain_unregister(&cp_state_notifier_list, nb);
+	spin_unlock_bh(&cp_state_notifier_lock);
 }
 
 /**

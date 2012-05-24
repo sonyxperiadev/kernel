@@ -41,14 +41,14 @@ DISPDRV_INFO_T HX8369A_Info = {
 static DISPCTRL_REC_T hx8369a_dsi_init[] = {
 	/* SET EXTC */
 	{DISPCTRL_WR_CMND,  0xB9, 0},
-	{DISPCTRL_WR_DATA,  0, 0xff },
+	{DISPCTRL_WR_DATA,  0, 0xFF },
 	{DISPCTRL_WR_DATA,  0, 0x83 },
 	{DISPCTRL_WR_DATA,  0, 0x69 },
 
 	/* set internal oscillator */
 	{DISPCTRL_WR_CMND,	0xB0, 0},
 	{DISPCTRL_WR_DATA,	0, 0x01},
-	{DISPCTRL_WR_DATA,	0, 0x0B},
+	{DISPCTRL_WR_DATA,	0, 0x0F},
 
 	/* set power */
 	{DISPCTRL_WR_CMND, 0xB1, 0},
@@ -324,7 +324,7 @@ static DISPCTRL_REC_T hx8369a_dsi_init[] = {
 	{DISPCTRL_SLEEP_MS, 0, 10},
 	/* Set_address_mode */
 	{DISPCTRL_WR_CMND, 0x36, 0},		
-	{DISPCTRL_WR_DATA, 0, 0x04}, 		
+	{DISPCTRL_WR_DATA, 0, 0x0},
 	/* Set COLMOD */
 	{DISPCTRL_WR_CMND, 0x3A, 0},		
 	{DISPCTRL_WR_DATA, 0, 0x77},
