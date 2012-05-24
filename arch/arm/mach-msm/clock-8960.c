@@ -5637,6 +5637,9 @@ static void __init reg_init(void)
 	rmwreg(0x1, DSI1_BYTE_NS_REG, 0x7);
 	rmwreg(0x2, DSI2_BYTE_NS_REG, 0x7);
 
+	/* Source the dsi1_esc_clk from the DSI1 PHY PLLs */
+	rmwreg(0x1, DSI1_ESC_NS_REG, 0x7);
+
 	/* Source the sata_phy_ref_clk from PXO */
 	if (cpu_is_apq8064())
 		rmwreg(0, SATA_PHY_REF_CLK_CTL_REG, 0x1);
