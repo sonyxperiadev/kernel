@@ -44,17 +44,12 @@
 #define pixfmtstr(x) (x) & 0xff, ((x) >> 8) & 0xff, ((x) >> 16) & 0xff, \
 	((x) >> 24) & 0xff
 
-enum unicam_cam_memresource {
-	UNICAM_NUM_RSRC,
-};
-
 struct unicam_camera_dev {
 	/* soc and vb3 rleated */
 	struct soc_camera_device *icd;
 	struct vb2_alloc_ctx *alloc_ctx;
 	struct soc_camera_host soc_host;
 	/* generic driver related */
-	struct resource *res[UNICAM_NUM_RSRC];
 	unsigned int irq;
 	struct device *dev;
 	/* h/w specific */
@@ -151,7 +146,6 @@ static int unicam_videobuf_setup(struct vb2_queue *vq,
 static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vb->vb2_queue);
-	struct unicam_camera_buffer *buf;
 	int bytes_per_line = soc_mbus_bytes_per_line(icd->user_width,
 						     icd->
 						     current_fmt->host_fmt);
@@ -160,8 +154,6 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 	dprintk("-enter");
 	if (bytes_per_line < 0)
 		return bytes_per_line;
-
-	buf = to_unicam_camera_vb(vb);
 
 	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p, size=%lu", vb,
 		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_paddr(vb,
@@ -1151,27 +1143,11 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	struct soc_camera_host *soc_host;
 	int irq;
 	int err = 0;
-	int i;
-	struct resource *res[UNICAM_NUM_RSRC];
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		err = -ENODEV;
 		goto edev;
-	}
-
-	for (i = 0; i < UNICAM_NUM_RSRC; i++) {
-		res[i] = platform_get_resource(pdev, IORESOURCE_MEM, i);
-		if (!res[i]) {
-			err = -ENODEV;
-			goto edev;
-		}
-
-		if (!request_mem_region(res[i]->start, resource_size(res[i]),
-					UNICAM_CAM_DRV_NAME)) {
-			err = -EBUSY;
-			goto edev;
-		}
 	}
 
 	unicam_dev = vzalloc(sizeof(*unicam_dev));
@@ -1184,9 +1160,6 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 
 	INIT_LIST_HEAD(&unicam_dev->capture);
 	spin_lock_init(&unicam_dev->lock);
-
-	for (i = 0; i < UNICAM_NUM_RSRC; i++)
-		unicam_dev->res[i] = res[i];
 
 	unicam_dev->dev = &pdev->dev;
 	unicam_dev->irq = irq;
@@ -1214,11 +1187,6 @@ ecamhostreg:
 eallocctx:
 	vfree(unicam_dev);
 ealloc:
-	for (i = 0; i < UNICAM_NUM_RSRC; i++) {
-		if (res[i])
-			release_mem_region(res[i]->start,
-					   resource_size(res[i]));
-	}
 edev:
 	return err;
 }
