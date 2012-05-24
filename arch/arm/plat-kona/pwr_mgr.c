@@ -1892,14 +1892,16 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 #endif
 		*reg_val = (reg & PWRMGR_I2C_READ_DATA_MASK) >>
 		    PWRMGR_I2C_READ_DATA_SHIFT;
+
+		pwr_dbg(PWR_LOG_SEQ,
+		"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x; ret_val:%d\n",
+		__func__, reg_addr, slave_id, *reg_val, ret);
 	}
 out_unlock:
 	pi_mgr_qos_request_update(&pwr_mgr.seq_qos_client,
 			PI_MGR_QOS_DEFAULT_VALUE);
 	mutex_unlock(&seq_mutex);
-	pwr_dbg(PWR_LOG_SEQ,
-		"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x; ret_val:%d\n",
-		__func__, reg_addr, slave_id, *reg_val, ret);
+	pwr_dbg(PWR_LOG_SEQ, "%s : ret = %d\n", __func__, ret);
 	return ret;
 }
 
