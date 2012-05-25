@@ -492,6 +492,7 @@ static int apanic(struct notifier_block *this, unsigned long event,
 
 static struct notifier_block panic_blk = {
 	.notifier_call	= apanic,
+	.priority = 1,
 };
 
 static int panic_dbg_get(void *data, u64 *val)
