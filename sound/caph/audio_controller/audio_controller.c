@@ -72,7 +72,11 @@ Only one loopback path can be enabled at a time.*/
 #define EANBLE_POP_CONTROL
 
 #define VIBRA_LDO_REGULATOR "2v9_vibra"
+#if defined(CONFIG_MFD_BCM59055)
 #define DIGI_MIC_LDO_REGULATOR "hv7ldo_uc"
+#else
+#define DIGI_MIC_LDO_REGULATOR "hv7"
+#endif
 
 /** Private Type and Constant declarations */
 
@@ -3090,9 +3094,9 @@ void AUDCTRL_GetHardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 *  @return  int
 * note
 * this is for test purpose
-*alsa_amixer cset name=HW-CTL 1 0 100 0  (set EP_MIX_IN_GAIN to 100 mB, 1 dB)
-*alsa_amixer cset name=HW-CTL 1 1 2400 0  (set EP_MIX_BITSEL_GAIN to 24 dB)
-*alsa_amixer cset name=HW-CTL 1 2 -600 0  (set EP_MIX_FINE_GAIN to -6 dB)
+*alsa_amixer cset name=HW-CTL,index=21 1 0 100 0 (set EP_MIX_IN_GAIN to 100 mB)
+*alsa_amixer cset name=HW-CTL,index=21 1 1 2400 0 (set EP_MIX_BITSEL_GAIN to 2)
+*alsa_amixer cset name=HW-CTL,index=21 1 2 -600 0 (set EP_MIX_FINE_GAIN to -6)
 *
 ****************************************************************************/
 int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
