@@ -420,16 +420,23 @@ static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] =
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
 
-static unsigned int rheass_button_adc_values [3][2] =
-{
+static unsigned int rheass_button_adc_values[3][2] = {
 	/* SEND/END Min, Max*/
-	{0,	104},
+	{0,	10},
 	/* Volume Up  Min, Max*/
-	{139,	270},
+	{11, 30},
 	/* Volue Down Min, Max*/
-	{330,	680},
+	{30, 680},
 };
 
+static unsigned int rheass_button_adc_values_2_1[3][2] = {
+	/* SEND/END Min, Max*/
+	{0,     104},
+	/* Volume Up  Min, Max*/
+	{139,   270},
+	/* Volue Down Min, Max*/
+	{330,   680},
+};
 static struct kona_headset_pd headset_data = {
 	/* GPIO state read is 0 on HS insert and 1 for
 	 * HS remove
@@ -461,7 +468,12 @@ static struct kona_headset_pd headset_data = {
 	/*
 	 * Pass the board specific button detection range
 	 */
-	.button_adc_values = rheass_button_adc_values,
+	.button_adc_values_low = rheass_button_adc_values,
+
+	/*
+	 * Pass the board specific button detection range
+	 */
+	.button_adc_values_high = rheass_button_adc_values_2_1,
 
 };
 

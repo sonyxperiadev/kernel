@@ -59,6 +59,7 @@
 #include <linux/gpio.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
+#include <linux/clk.h>
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
 #endif
@@ -71,7 +72,6 @@
 #include <mach/rdb/brcm_rdb_auxmic.h>
 #include <mach/rdb/brcm_rdb_audioh.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
-
 #ifdef DEBUG
 #include <linux/sysfs.h>
 #endif
@@ -213,12 +213,13 @@ enum button_state {
  */
 static unsigned int button_adc_values_no_resistor[3][2] = {
 	/* SEND/END Min, Max */
-	{0, 104},
+	{0, 50},
 	/* Volume Up  Min, Max */
 	{139, 270},
 	/* Volue Down Min, Max */
 	{330, 680},
 };
+static unsigned int (*button_adc_values)[2];
 
 /* Accessory Hardware configuration support variables */
 /* ADC */
@@ -274,9 +275,18 @@ static CHAL_ACI_micbias_config_t aci_mic_bias = {
 static CHAL_ACI_micbias_config_t aci_init_mic_bias = {
 	CHAL_ACI_MIC_BIAS_ON,
 	CHAL_ACI_MIC_BIAS_2_1V,
-	CHAL_ACI_MIC_BIAS_PRB_CYC_512MS,
-	CHAL_ACI_MIC_BIAS_MSR_DLY_16MS,
+	CHAL_ACI_MIC_BIAS_PRB_CYC_128MS,
+	CHAL_ACI_MIC_BIAS_MSR_DLY_8MS,
 	CHAL_ACI_MIC_BIAS_MSR_INTVL_64MS,
+	CHAL_ACI_MIC_BIAS_1_MEASUREMENT
+};
+
+static CHAL_ACI_micbias_config_t aci_init_mic_bias_low = {
+	CHAL_ACI_MIC_BIAS_ON,
+	CHAL_ACI_MIC_BIAS_0_45V,
+	CHAL_ACI_MIC_BIAS_PRB_CYC_16MS,
+	CHAL_ACI_MIC_BIAS_MSR_DLY_1MS,
+	CHAL_ACI_MIC_BIAS_MSR_INTVL_8MS,
 	CHAL_ACI_MIC_BIAS_1_MEASUREMENT
 };
 
@@ -288,6 +298,7 @@ static int __headset_hw_init_micbias_off(struct mic_t *p);
 static int __headset_hw_init(struct mic_t *mic);
 static void __handle_accessory_inserted(struct mic_t *p);
 static void __handle_accessory_removed(struct mic_t *p);
+static void __low_power_mode_config(void);
 
 
 /* Function to dump the HW regs */
@@ -448,10 +459,10 @@ static int config_adc_for_bp_detection(void)
 	pr_debug("Configuring ADC for button press detection \r\n");
 
 	/* Setup MIC bias */
-	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+			    CHAL_ACI_BLOCK_GENERIC, &aci_init_mic_bias_low);
+			__low_power_mode_config();
 
 	/* Power up Digital block */
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_ENABLE,
@@ -630,10 +641,8 @@ int detect_button_pressed(struct mic_t *mic_dev)
 	/* Take the table based on what is passed from the board */
 	for (i = BUTTON_SEND_END; i < BUTTON_NAME_MAX; i++) {
 		if ((mic_level >=
-		     mic_dev->headset_pd->
-		     button_adc_values[i][0]) & (mic_level <=
-						 mic_dev->headset_pd->
-						 button_adc_values[i][1]))
+				button_adc_values[i][0]) & (mic_level <=
+				button_adc_values[i][1]))
 			break;
 	}
 
@@ -1461,9 +1470,13 @@ static int __headset_hw_init_micbias_off(struct mic_t *p)
 	chal_aci_set_mic_route(p->aci_chal_hdl, CHAL_ACI_MIC_ROUTE_MIC);
 
 	/* Set the threshold value for button press */
+	/* This value is arrived at by experiments made with
+	 * the available multi-button headset.This should take care of
+	 * most multi-button headsets.But this is in no way a universal
+	 * value for  all singe/multi-button headsets */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-			    CHAL_ACI_BLOCK_COMP1, 600);
+			    CHAL_ACI_BLOCK_COMP1, 80);
 
 	/* Set the threshold value for button press */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -1761,7 +1774,7 @@ static int __headset_hw_init(struct mic_t *p)
 	 */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-			    CHAL_ACI_BLOCK_COMP1, 600);
+			    CHAL_ACI_BLOCK_COMP1, 80);
 
 	pr_debug
 	    ("=== __headset_hw_init:"
@@ -1893,6 +1906,81 @@ static int headset_hw_init(struct mic_t *mic)
 	return status;
 }
 
+int switch_bias_voltage(int mic_status)
+{
+
+	switch (mic_status) {
+	case 1:
+	/*Mic will be used. Boost voltage */
+			/* Set the threshold value for button press */
+		pr_info("Setting Bias to 2.1V\r\n");
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+		    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+		    CHAL_ACI_BLOCK_GENERIC,
+			&aci_init_mic_bias);
+
+	/* Power up Digital block */
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_ENABLE,
+			    CHAL_ACI_BLOCK_DIGITAL);
+
+	/* Power up the ADC */
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_ENABLE,
+			    CHAL_ACI_BLOCK_ADC);
+
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_ADC_RANGE, CHAL_ACI_BLOCK_ADC,
+			    CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE);
+
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
+			    CHAL_ACI_BLOCK_ADC, &aci_filter_adc_config);
+
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+				CHAL_ACI_BLOCK_COMP1, 600);
+		button_adc_values =
+			mic_dev->headset_pd->button_adc_values_high;
+		break;
+	case 0:
+		pr_info("Setting Bias to 0.45V \r\n");
+
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+					    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+					    CHAL_ACI_BLOCK_GENERIC,
+						&aci_init_mic_bias_low);
+			__low_power_mode_config();
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
+				    CHAL_ACI_BLOCK_ADC,
+				    CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE);
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+				CHAL_ACI_BLOCK_COMP1,
+				80);
+		button_adc_values =
+			mic_dev->headset_pd->button_adc_values_low;
+	break;
+
+	default:
+	break;
+	}
+	return 0;
+}
+
+static void __low_power_mode_config(void)
+{
+		/*Use this for lowest
+		 * current consumption & button
+		 * functionality in 0.45V mode
+		 *
+		 * Offset 0x28: Disable weak sleep mode
+		 * Offset 0xC4: Impedance set to low
+		 */
+		writel(1, mic_dev->aci_base + 0xD4);
+		writel(0, mic_dev->aci_base + 0xD8);
+		writel(1, mic_dev->aci_base + 0xc4);
+}
+
 static int hs_remove(struct platform_device *pdev)
 {
 	struct mic_t *mic;
@@ -1984,17 +2072,16 @@ static int __init hs_probe(struct platform_device *pdev)
 	pr_info("%s() GPIO used for accessory insertion %d (1 - yes, 0 - no)",
 		__func__, mic->headset_pd->gpio_for_accessory_detection);
 
-	if (mic->headset_pd->button_adc_values == NULL) {
+	if (mic->headset_pd->button_adc_values_low == NULL) {
 
-		mic->headset_pd->button_adc_values =
+		mic->headset_pd->button_adc_values_low =
 		    button_adc_values_no_resistor;
-
 		pr_info("%s(): WARNING Board specific button adc values are not passed"
 		"using the default one, this may not work correctly for your"
 		"platform \r\n",
 			__func__);
 	}
-
+	button_adc_values = mic->headset_pd->button_adc_values_low;
 	/* COMP2 irq */
 	mic->comp2_irq = platform_get_irq(pdev, irq_resource_num);
 	if (!mic->comp2_irq) {
@@ -2228,6 +2315,7 @@ hs_regwrite_func(struct device *dev, struct device_attribute *attr,
 	writel(val, mic_dev->aci_base + reg_off);
 	return n;
 }
+
 
 static DEVICE_ATTR(hs_regdump, 0666, NULL, hs_regdump_func);
 static DEVICE_ATTR(hs_regwrite, 0666, NULL, hs_regwrite_func);

@@ -14,7 +14,7 @@
 *******************************************************************************/
 
 /* This should be defined before kernel.h is included */
-/* #define DEBUG */
+/*#define DEBUG*/
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -30,6 +30,8 @@
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
+#include <linux/clk.h>
+#include <linux/err.h>
 #include <mach/io_map.h>
 #include <mach/kona_headset_pd.h>
 #include <mach/rdb/brcm_rdb_aci.h>
@@ -77,20 +79,6 @@
   */
 
 /*
- * Enabling this macro puts the MIC BIAS in contnious measurement mode for
- * button press detection. Now to be power optimal, the MIC BIAS is in Low
- * impedence state by default. Its turned ON in discontinuous mode
- * 1) to detect accessory type on an open cable
- * 2) If the accessory is headset for button press detection.
- *
- * In future if we see some instability issues with respect to detecting
- * button press then we can turn this macro ON to enable MIC BIAS in continous
- * mode for accurate detection, but the cost of this would be more power
- * consumption when headset is connected.
- */
-#define KEEP_MIC_BIAS_ON_FOR_BP_DETECTION
-
-/*
  * The gpio_set_debounce expects the debounce argument in micro seconds
  * Previously the kona implementation which is called from gpio_set_debounce
  * was expecting the argument as milliseconds which was incorrect.
@@ -123,6 +111,7 @@ struct mic_t {
 	 */
 	int mic_bias_status;
 };
+
 
 static struct mic_t *mic_dev;
 
@@ -225,8 +214,8 @@ static const CHAL_ACI_filter_config_comp_t comp_values_for_type_det = {
  * ----------               ---------------------
  *
  */
-static CHAL_ACI_micbias_config_t aci_mic_bias = {
-	CHAL_ACI_MIC_BIAS_OFF,
+static CHAL_ACI_micbias_config_t aci_mic_bias_high = {
+	CHAL_ACI_MIC_BIAS_ON,
 	CHAL_ACI_MIC_BIAS_2_1V,
 	CHAL_ACI_MIC_BIAS_PRB_CYC_128MS,
 	CHAL_ACI_MIC_BIAS_MSR_DLY_8MS,
@@ -234,14 +223,32 @@ static CHAL_ACI_micbias_config_t aci_mic_bias = {
 	CHAL_ACI_MIC_BIAS_1_MEASUREMENT
 };
 
+static CHAL_ACI_micbias_config_t aci_mic_bias_low = {
+	CHAL_ACI_MIC_BIAS_DISCONTINUOUS,
+	CHAL_ACI_MIC_BIAS_0_45V,
+	CHAL_ACI_MIC_BIAS_PRB_CYC_32MS,
+	CHAL_ACI_MIC_BIAS_MSR_DLY_4MS,
+	CHAL_ACI_MIC_BIAS_MSR_INTVL_16MS,
+	CHAL_ACI_MIC_BIAS_1_MEASUREMENT
+};
+/* These are two threshold values programmed for the COMP
+ * to generate interrupt. Value @ index 0 is for 0.4V
+ * of MIC Bias and @index 1 is for 2.1V of Mic Bias.
+*/
+static int button_voltage_range[] = {50, 600};
+
 /* Vref */
 static CHAL_ACI_vref_config_t aci_vref_config = { CHAL_ACI_VREF_OFF };
 
 static int aci_interface_init(struct mic_t *mic);
 static int aci_interface_init_micbias_off(struct mic_t *mic);
 
+static void __low_power_mode_config(void);
+
 /* Function to dump the HW regs */
 #ifdef DEBUG
+static struct clk *audioh_apb_clk;
+
 static void dump_hw_regs(struct mic_t *p)
 {
 	int i;
@@ -263,6 +270,24 @@ static void dump_hw_regs(struct mic_t *p)
 		pr_info("Addr: 0x%x  OFFSET: 0x%x Value:0x%x \r\n",
 			p->aci_base + i, i, readl(p->aci_base + i));
 	}
+
+	if (audioh_apb_clk != NULL) {
+		clk_enable(audioh_apb_clk);
+
+		/* AudioH registers */
+		pr_info("Addr: 0x%x  value 0x%x \r\n", KONA_AUDIOH_VA + 0x200,
+			readl(KONA_AUDIOH_VA + 0x200));
+		pr_info("Addr: 0x%x  value 0x%x \r\n", KONA_AUDIOH_VA + 0x208,
+			readl(KONA_AUDIOH_VA + 0x208));
+		pr_info("Addr: 0x%x  value 0x%x \r\n", KONA_AUDIOH_VA + 0x20C,
+			readl(KONA_AUDIOH_VA + 0x20C));
+		pr_info("Addr: 0x%x  value 0x%x \r\n", KONA_AUDIOH_VA + 0x210,
+			readl(KONA_AUDIOH_VA + 0x210));
+
+		clk_disable(audioh_apb_clk);
+	}
+	pr_info("\r\n \r\n");
+
 	pr_info("\r\n \r\n");
 }
 #endif
@@ -287,11 +312,12 @@ static int aci_hw_config(int hst)
 	case HEADPHONE:
 
 		pr_debug("aci_hw_config: Configuring for headphone \r\n");
+		aci_mic_bias_high.mode = CHAL_ACI_MIC_BIAS_ON;
 		/* Setup MIC bias */
-		aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+				    CHAL_ACI_BLOCK_GENERIC,
+					&aci_mic_bias_high);
 		/* TODO: Setup the Interrupt Source, is this required ??? */
 
 		/* Power up Digital block */
@@ -342,10 +368,12 @@ static int aci_hw_config(int hst)
 		pr_debug("aci_hw_config: Configuring for HEADSET \r\n");
 
 		/* Turn OFF MIC Bias */
-		aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_GND;
+		aci_mic_bias_high.mode = CHAL_ACI_MIC_BIAS_GND;
+		/* Setup MIC bias */
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+				    CHAL_ACI_BLOCK_GENERIC,
+					&aci_mic_bias_high);
 
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
@@ -489,10 +517,11 @@ static int is_accessory_supported(struct mic_t *mic_dev)
 #endif
 
 	/* Power ON Mic BIAS */
-	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+			    CHAL_ACI_BLOCK_GENERIC,
+					&aci_mic_bias_high);
+
 
 	/* Power up Digital block */
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
@@ -743,11 +772,10 @@ static void accessory_detect_work_func(struct work_struct *work)
 			 * Put the MIC BIAS in Discontinuous measurement mode
 			 * to detect further accessory insertion
 			 */
-			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
-			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 					    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
 					    CHAL_ACI_BLOCK_GENERIC,
-					    &aci_mic_bias);
+						&aci_mic_bias_low);
 
 			/* Configure the comparator 2 for type detection */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -795,15 +823,13 @@ static void accessory_detect_work_func(struct work_struct *work)
 			 * Put the MIC BIAS in Discontinuous measurement mode
 			 * to detect button press
 			 */
-#ifdef KEEP_MIC_BIAS_ON_FOR_BP_DETECTION
-			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
-#else
-			aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
-#endif
+			aci_mic_bias_low.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
 			chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 					    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
 					    CHAL_ACI_BLOCK_GENERIC,
-					    &aci_mic_bias);
+						&aci_mic_bias_low);
+
+			__low_power_mode_config();
 
 			/* Configure the comparator 2 for button press */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -814,7 +840,8 @@ static void accessory_detect_work_func(struct work_struct *work)
 			/* Set the threshold value for button press */
 			chal_aci_block_ctrl(p->aci_chal_hdl,
 					    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-					    CHAL_ACI_BLOCK_COMP2, 600);
+					    CHAL_ACI_BLOCK_COMP2,
+						button_voltage_range[0]);
 
 			/*
 			 * A settling time is required here. The call to
@@ -898,9 +925,9 @@ static void accessory_detect_work_func(struct work_struct *work)
 		 * unsupported Headset, we would have turned it OFF
 		 * earlier
 		 */
-		if (p->hs_state == OPEN_CABLE || p->hs_state == HEADSET)
+			pr_debug(" ACCESSORY REMOVED... p->hs_state"
+				"is %d \r\n", p->hs_state);
 			aci_interface_init_micbias_off(p);
-
 		/* Inform userland about accessory removal */
 		p->hs_state = DISCONNECTED;
 		p->button_state = BUTTON_RELEASED;
@@ -1027,7 +1054,6 @@ irqreturn_t gpio_isr(int irq, void *dev_id)
 
 	schedule_delayed_work(&(p->accessory_detect_work),
 			      ACCESSORY_INSERTION_REMOVE_SETTLE_TIME);
-
 	return IRQ_HANDLED;
 }
 
@@ -1106,19 +1132,15 @@ static int aci_interface_init_micbias_off(struct mic_t *p)
 	 */
 	chal_aci_set_mic_route(p->aci_chal_hdl, CHAL_ACI_MIC_ROUTE_MIC);
 
-	/* Set the threshold value for button press */
-	chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-			    CHAL_ACI_BLOCK_COMP2, 600);
-
 	aci_vref_config.mode = CHAL_ACI_VREF_OFF;
 	chal_aci_block_ctrl(p->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_VREF,
 			    CHAL_ACI_BLOCK_GENERIC, &aci_vref_config);
 
-	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_OFF;
+		aci_mic_bias_low.mode = CHAL_ACI_MIC_BIAS_OFF;
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+			    CHAL_ACI_BLOCK_GENERIC,
+				&aci_mic_bias_low);
 
 	/* Switch OFF Mic BIAS only if its not already OFF */
 	if (p->mic_bias_status == 1) {
@@ -1189,10 +1211,11 @@ static int aci_interface_init(struct mic_t *p)
 	 *properly. Note that only when the mode is
 	 * CHAL_ACI_MIC_BIAS_DISCONTINUOUS, this is done.
 	 */
-	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
+	aci_mic_bias_low.mode = CHAL_ACI_MIC_BIAS_ON;
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+			    CHAL_ACI_BLOCK_GENERIC,
+				&aci_mic_bias_low);
 
 	pr_debug("=== aci_interface_init: MIC BIAS settings done \r\n");
 
@@ -1226,18 +1249,11 @@ static int aci_interface_init(struct mic_t *p)
 
 	pr_debug("=== aci_interface_init: Configured Vref and ADC \r\n");
 
-	/* Power down the MIC Bias and put in Low impedance */
-	chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
-			    CHAL_ACI_BLOCK_GENERIC, FALSE);
-
-	pr_debug
-	    ("=== powered down MIC BIAS and put in High impedence state \r\n");
-
 	/* Set the threshold value for button press */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-			    CHAL_ACI_BLOCK_COMP2, 600);
+			    CHAL_ACI_BLOCK_COMP2,
+				button_voltage_range[0]);
 
 	pr_debug("=== Configured the threshold value for button press\r\n");
 
@@ -1565,6 +1581,78 @@ static struct platform_driver __refdata headset_driver = {
 		   },
 };
 
+int switch_bias_voltage(int mic_status)
+{
+
+	switch (mic_status) {
+	case 1:
+	/*Mic will be used. Boost voltage */
+			/* Set the threshold value for button press */
+		pr_info("Setting Bias to 2.1V\r\n");
+		aci_mic_bias_high.mode = CHAL_ACI_MIC_BIAS_ON;
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+		    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+		    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias_high);
+		/* Power up Digital block */
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_ENABLE,
+				    CHAL_ACI_BLOCK_DIGITAL);
+
+		/* Power up the ADC */
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_ENABLE,
+				    CHAL_ACI_BLOCK_ADC);
+
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
+				    CHAL_ACI_BLOCK_ADC,
+				    CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE);
+
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
+				CHAL_ACI_BLOCK_ADC, &aci_filter_adc_config);
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+				CHAL_ACI_BLOCK_COMP2,
+				button_voltage_range[1]);
+		break;
+	case 0:
+		pr_info("Setting Bias to 0.45V \r\n");
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
+				    CHAL_ACI_BLOCK_ADC,
+				    CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE);
+		aci_mic_bias_low.mode =
+				CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+				CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias_low);
+			__low_power_mode_config();
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+				CHAL_ACI_BLOCK_COMP2,
+				button_voltage_range[0]);
+	break;
+
+	default:
+	break;
+	}
+	return 0;
+}
+
+static void __low_power_mode_config(void)
+{
+		/*Use this for lowest
+		 * current consumption & button
+		 * functionality in 0.45V mode
+		 *
+		 * Offset 0x28: Disable weak sleep mode
+		 * Offset 0xC4: Impedance set to low
+		 */
+		writel(0, mic_dev->aci_base + 0xD8);
+		writel(1, mic_dev->aci_base + 0xc4);
+}
+
 #ifdef DEBUG
 
 struct kobject *hs_kobj;
@@ -1629,10 +1717,10 @@ hs_read_adc_func(struct device *dev, struct device_attribute *attr,
 	}
 
 	/* Setup MIC bias */
-	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
-	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
+			    CHAL_ACI_BLOCK_GENERIC,
+				&aci_mic_bias_high);
 	/* TODO: Setup the Interrupt Source, is this required ??? */
 
 	/* Power up Digital block */
@@ -1661,16 +1749,34 @@ hs_read_adc_func(struct device *dev, struct device_attribute *attr,
 	return n;
 }
 
+static ssize_t
+hs_switch_func(struct device *dev, struct device_attribute *attr,
+		 const char *buf, size_t n)
+{
+	int val;
+
+	if (sscanf(buf, "%d", &val) != 1) {
+		pr_info
+		    ("Usage: echo [1(high)/2(low)]"
+				"> /sys/hs_debug/hs_switch \r\n");
+		return n;
+	}
+	switch_bias_voltage(val);
+	return n;
+}
+
 static DEVICE_ATTR(hs_regdump, 0666, NULL, hs_regdump_func);
 static DEVICE_ATTR(hs_regwrite, 0666, NULL, hs_regwrite_func);
 static DEVICE_ATTR(hs_config_amp, 0666, NULL, hs_config_amp_func);
 static DEVICE_ATTR(hs_read_adc, 0666, NULL, hs_read_adc_func);
+static DEVICE_ATTR(hs_switch, 0666, NULL, hs_switch_func);
 
 static struct attribute *hs_attrs[] = {
 	&dev_attr_hs_regdump.attr,
 	&dev_attr_hs_regwrite.attr,
 	&dev_attr_hs_config_amp.attr,
 	&dev_attr_hs_read_adc.attr,
+	&dev_attr_hs_switch.attr,
 	NULL,
 };
 

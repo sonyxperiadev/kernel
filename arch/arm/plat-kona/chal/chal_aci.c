@@ -668,9 +668,6 @@ static void chal_aci_block_ctrl_arg(CHAL_HANDLE handle,
 				BRCM_WRITE_REG_FIELD(KONA_ACI_VA,
 					ACI_ADC_CTRL,
 					ADC_ADAPTIVE_EN, 1);
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA,
-					ACI_ADC_CTRL,
-					ADC_ADAPTIVE_EN, 0);
 				break;
 			case CHAL_ACI_BLOCK_ADC_FULL_RANGE:
 			case CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE:
@@ -691,9 +688,6 @@ static void chal_aci_block_ctrl_arg(CHAL_HANDLE handle,
 				BRCM_WRITE_REG_FIELD(KONA_ACI_VA,
 					ACI_ADC_CTRL,
 					ADC_ADAPTIVE_EN, 1);
-				BRCM_WRITE_REG_FIELD(KONA_ACI_VA,
-					ACI_ADC_CTRL,
-					ADC_ADAPTIVE_EN, 0);
 				break;
 			default:
 				CHAL_ASSERT(0);

@@ -35,6 +35,7 @@
 #include "mobcom_types.h"
 
 #include <plat/chal/chal_types.h>
+#include <mach/kona_headset_pd.h>
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "csl_caph.h"
@@ -930,6 +931,7 @@ void csl_caph_audioh_start(int path_id)
 		break;
 
 	case AUDDRV_PATH_HEADSET_INPUT:
+		switch_bias_voltage(TRUE);
 		chal_audio_hs_mic_pwrctrl(handle, TRUE);
 		chal_audio_vinpath_select_primary_mic(handle,
 						      CHAL_AUDIO_ENABLE);
@@ -1090,6 +1092,7 @@ static void csl_caph_audioh_stop_keep_config(int path_id)
 		break;
 
 	case AUDDRV_PATH_HEADSET_INPUT:
+		switch_bias_voltage(FALSE);
 		chal_audio_vinpath_select_primary_mic(handle, 0);
 		chal_audio_hs_mic_pwrctrl(handle, 0);
 		break;

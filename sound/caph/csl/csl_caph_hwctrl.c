@@ -3195,7 +3195,8 @@ static void csl_caph_hwctrl_ACIControl()
 {
 	/*For CNEON, Accessory driver controls the ACI*/
 #if !defined(CNEON_COMMON) && !defined(CNEON_LMP)
-	chal_aci_powerup_auxmic();
+	/*Moved to Headset driver*/
+	/*chal_aci_powerup_auxmic();*/
 #endif
 }
 
