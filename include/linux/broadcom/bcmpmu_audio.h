@@ -43,6 +43,7 @@ the GPL, without Broadcom's express prior written consent.
 #define BCMPMU_IHF_GAIN_MASK	0x3F
 #define BCMPMU_PLL_EN			0x02
 #define BCMPMU_PLL_AUDIO_EN		0x20
+#define BCMPMU_PLLENCLK26MHZ		0x04
 
 /* HSPGA1 */
 #define BCMPMU_HSPGA1_PGA_GAINR		0x80
