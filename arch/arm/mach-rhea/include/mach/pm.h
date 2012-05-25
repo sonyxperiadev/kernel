@@ -70,6 +70,23 @@ enum {
 
 #ifndef __ASSEMBLY__
 extern u32 dormant_start(void);
+extern int dormant_attempt;
+
+/* Set this to 0 to disable retention  mode tracing code */
+#define RETENTION_TRACE_ENABLE        1
+#define RETENTION_ENTRY               0xACACACAC
+#define RETENTION_EXIT                0xABABABAB
+
+/* Set this to 0 to disable wfi mode tracing code */
+#define WFI_TRACE_ENABLE        1
+#define WFI_ENTRY               0xBABABABA
+#define WFI_EXIT                0xBCBCBCBC
+
+enum {
+	TRACE_ENTRY,
+	TRACE_EXIT
+};
+
 
 #ifdef DORMANT_PROFILE
 /* Vars exported by dm_pwr_policy_top.S for dormant profiling */
@@ -89,6 +106,8 @@ extern int rhea_force_sleep(suspend_state_t state);
 extern void request_suspend_state(suspend_state_t state);
 extern void instrument_dormant_entry(void);
 extern void instrument_dormant_exit(void);
+extern void instrument_wfi(int trace_path);
+extern void instrument_retention(int trace_path);
 extern int get_force_sleep_state(void);
 #endif /* __ASSEMBLY__ */
 

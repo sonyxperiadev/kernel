@@ -290,7 +290,14 @@ static void config_wakeup_interrupts(void)
 
 int enter_suspend_state(struct kona_idle_state* state)
 {
+	if (WFI_TRACE_ENABLE)
+		instrument_wfi(TRACE_ENTRY);
+
 	enter_wfi();
+
+	if (WFI_TRACE_ENABLE)
+		instrument_wfi(TRACE_EXIT);
+
 	return -1;
 }
 
@@ -361,8 +368,13 @@ static int enter_retention_state(struct kona_idle_state *state)
 	 * register in SCU.
 	 */
 	set_spare_power_status(SCU_STATUS_DORMANT);
+	if (RETENTION_TRACE_ENABLE)
+		instrument_retention(TRACE_ENTRY);
 
 	enter_wfi();
+
+	if (RETENTION_TRACE_ENABLE)
+		instrument_retention(TRACE_EXIT);
 
 	set_spare_power_status(SCU_STATUS_NORMAL);
 	return 0;
