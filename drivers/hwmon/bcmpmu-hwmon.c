@@ -64,6 +64,8 @@ struct bcmpmu_adc {
 	struct mutex lock;
 	struct mutex cal_lock;
 	struct bcmpmu_adc_req *rtmreq;
+	bool delay_rtm;
+	struct timespec rtm_upp_time;
 };
 
 struct bcmpmu_env {
@@ -500,8 +502,10 @@ static void adc_isr(enum bcmpmu_irq irq, void *data)
 		padc->rtmreq->ready = 1;
 		wake_up(&padc->wait);
 		return;
+	} else if (irq == PMU_IRQ_RTM_UPPER) {
+		padc->delay_rtm = true;
+		padc->rtm_upp_time = CURRENT_TIME;
 	} else if ((irq == PMU_IRQ_RTM_IN_CON_MEAS) ||
-		   (irq == PMU_IRQ_RTM_UPPER) ||
 		   (irq == PMU_IRQ_RTM_IGNORE) ||
 		   (irq == PMU_IRQ_RTM_OVERRIDDEN)) {
 		pr_hwmon(FLOW, "%s: irq %d 'Getting handled'\n", __func__, irq);
@@ -569,6 +573,34 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 							     [PMU_ADC_RTM_DLY].
 							     mask);
 				bcmpmu_sel_adcsync(PMU_ADC_TM_RTM_TX);
+			}
+			/* Handle RTM_UPPER delay - Ensuring Cont. Meas. */
+			if (padc->delay_rtm &&
+			    ((req->tm == PMU_ADC_TM_RTM_RX) ||
+			    (req->tm == PMU_ADC_TM_RTM_TX) ||
+			    (req->tm == PMU_ADC_TM_RTM_SW) ||
+			    (req->tm == PMU_ADC_TM_RTM_SW_TEST))) {
+
+				struct timespec ts_delay, ts_7;
+				ts_delay = timespec_sub(CURRENT_TIME,
+							 padc->rtm_upp_time);
+				set_normalized_timespec(&ts_7, 0,
+							 7 * NSEC_PER_MSEC);
+				pr_hwmon(FLOW, "%s: RTM_UPPER detected\n",
+					 __func__);
+				if (timespec_compare(&ts_7, &ts_delay) > 0) {
+					/* There has to be at least 7 ms delay
+					   after RTM_UPPER to let Cont. Meas.
+					   finish */
+					pr_hwmon(FLOW, "%s: RTM_UPPER "
+						  "delay(%ld)\n", __func__,
+						  (ts_7.tv_nsec-
+						   ts_delay.tv_nsec)
+						/ NSEC_PER_MSEC);
+					msleep((ts_7.tv_nsec-ts_delay.tv_nsec)
+						/ NSEC_PER_MSEC);
+				}
+				padc->delay_rtm = false;
 			}
 			/* config hw for rtm adc */
 			if (req->tm == PMU_ADC_TM_RTM_TX) {
@@ -655,7 +687,7 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 				padc->bcmpmu->write_dev_drct(padc->bcmpmu,
 							     padc->
 							     ctrlmap
-							     [PMU_ADC_RTM_MASK].
+							    [PMU_ADC_RTM_START].
 							     map,
 							     padc->
 							     ctrlmap
@@ -1140,7 +1172,7 @@ static int bcmpmu_get_fg_acc_mas(struct bcmpmu *bcmpmu, int *data)
 
 	if (slpcnt || cnt)
 		pfg->fg_ibat_avg =
-		    (*data * 1000) / (slpcnt * pfg->fg_slp_cnt_tm +
+		    (*data * 1000) / (int) (slpcnt * pfg->fg_slp_cnt_tm +
 				      cnt * pfg->fg_smpl_cnt_tm);
 
 	pr_hwmon(FLOW, "%s: fg acc mAsec = %d\n", __func__, *data);
@@ -1374,15 +1406,15 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 		goto exit_remove_files;
 
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY, adc_isr, padc);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_UPPER, adc_isr, padc);
 	/*bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS, adc_isr, padc);
-	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_UPPER, adc_isr, padc);
 	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IGNORE, adc_isr, padc);
 	 bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN, adc_isr, padc); */
 
 	/*bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC); */
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
 	/*bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
-	   bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
 	   bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
 	   bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN); */
 
@@ -1407,8 +1439,8 @@ static int __devexit bcmpmu_hwmon_remove(struct platform_device *pdev)
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
 	/*bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
-	   bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
 	   bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
 	   bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN); */
 	return 0;
