@@ -173,6 +173,15 @@ config ROM_SEC_DISPATCHER_SRC
 
 endchoice
 
+config RHEA_DELAYED_PM_INIT
+       depends on ARCH_RHEA
+       bool "Enable this support delayed PM init."
+       default n
+       help
+       Say Y if you want to enable support for delayed PM init. Android/user
+       space can complete the PM init by writing to sysfs. Once this trigger
+       is recieved, all the PIs start changing policies, arm can enter LPM and
+       arm dfs is allowed.
 
 config RHEA_B0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA

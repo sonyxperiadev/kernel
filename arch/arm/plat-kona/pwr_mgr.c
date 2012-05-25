@@ -588,7 +588,8 @@ int pwr_mgr_pi_set_wakeup_override(int pi_id, bool clear)
 		reg_val &= ~pi->pi_info.wakeup_overide_mask;
 	else
 		reg_val |= pi->pi_info.wakeup_overide_mask;
-	pr_info("%s:writing to wakeup override for pi: %d\n", __func__, pi_id);
+	pr_info("%s: %s wakeup override for pi: %d\n", __func__,
+				clear ? "CLEAR" : "SET", pi_id);
 	writel(reg_val, PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return 0;
@@ -2873,7 +2874,11 @@ static struct file_operations set_pmu_volt_inx_tbl_fops = {
 
 
 struct dentry *dent_pwr_root_dir = NULL;
+#ifdef CONFIG_RHEA_DELAYED_PM_INIT
+int pwr_mgr_debug_init(u32 bmdm_pwr_base)
+#else
 int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
+#endif
 {
 	struct dentry *dent_event_tbl;
 	struct dentry *dent_pi;

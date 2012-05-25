@@ -76,6 +76,20 @@ static unsigned int get_emu_reset_reason(unsigned int const emu)
 	return rst;
 }
 
+unsigned int is_charging_state(void)
+{
+	unsigned int state;
+
+	state = get_emu_reset_reason(REG_EMU_AREA);
+
+	state = state & 0xf;
+
+	pr_debug("%s\n reset reason = 0x%x", __func__, state);
+	return (state == CHARGING_STATE) ? 1 : 0;
+}
+
+
+
 /* Add reboot to bootloader support */
 void do_set_bootloader_boot(void)
 {
