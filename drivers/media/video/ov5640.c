@@ -2261,14 +2261,19 @@ static int ov5640_init(struct i2c_client *client)
 		goto out;
 
 #if defined(CONFIG_RHEA_CLOVER_ICS)
-	//Code turn off flash led
-	if (ov5640_reg_write(client, 0x3000, 0x00)) goto out;
-	if (ov5640_reg_write(client, 0x3004, 0xFF)) goto out;
-	if (ov5640_reg_write(client, 0x3016, 0x02)) goto out;
-	if (ov5640_reg_write(client, 0x3b07, 0x0A)) goto out;
-	if (ov5640_reg_write(client, 0x3b00, 0x03)) goto out;
+	/*Code turn off flash led */
+	if (ov5640_reg_write(client, 0x3000, 0x00))
+		goto out;
+	if (ov5640_reg_write(client, 0x3004, 0xFF))
+		goto out;
+	if (ov5640_reg_write(client, 0x3016, 0x02))
+		goto out;
+	if (ov5640_reg_write(client, 0x3b07, 0x0A))
+		goto out;
+	if (ov5640_reg_write(client, 0x3b00, 0x03))
+		goto out;
 #endif
-		
+
 	/* Start Streaming for AF Init*/
 	ret = ov5640_reg_write(client, 0x3008, 0x02);
 	if (ret)
@@ -2489,7 +2494,7 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
-	*frames = 3;
+	*frames = 4;
 
 	return 0;
 }

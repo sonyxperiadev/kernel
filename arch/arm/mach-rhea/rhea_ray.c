@@ -122,6 +122,7 @@
 
 #include <mach/rdb/brcm_rdb_keypad.h>
 #include <linux/gpio_event.h>
+#include <linux/gpio.h>
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
@@ -1505,6 +1506,7 @@ static int rhea_camera_power(struct device *dev, int on)
 	struct clk *clock;
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
+	static int do_cam_reset = 1;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -1570,24 +1572,29 @@ static int rhea_camera_power(struct device *dev, int on)
 		msleep(10);
 
 		/* enable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 0);
-		msleep(10);
+		if (do_cam_reset) {
+			gpio_set_value(SENSOR_0_GPIO_RST, 0);
+			msleep(10);
+		}
 
 		/* disable power down gpio */
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 		msleep(5);
 
 		/* disable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 1);
+		if (do_cam_reset) {
+			gpio_set_value(SENSOR_0_GPIO_RST, 1);
+			do_cam_reset = 0;
+		}
 
 		/* wait for sensor to come up */
 		msleep(30);
 
 	} else {
 		/* enable reset gpio */
-		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+	/*	gpio_set_value(SENSOR_0_GPIO_RST, 0);
 		msleep(1);
-
+	*/
 		/* enable power down gpio */
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 
