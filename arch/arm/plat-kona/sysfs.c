@@ -40,6 +40,7 @@ static char *str_reset_reason[] = {
 	"charging",
 	"ap_only",
 	"bootloader",
+	"recovery"
 	"unknown"
 };
 
@@ -80,6 +81,13 @@ void do_set_bootloader_boot(void)
 }
 EXPORT_SYMBOL(do_set_bootloader_boot);
 
+void do_set_recovery_boot(void)
+{
+	pr_info("%s\n", __func__);
+	set_emu_reset_reason(REG_EMU_AREA, RECOVERY_BOOT);
+}
+EXPORT_SYMBOL(do_set_recovery_boot);
+
 void do_set_ap_only_boot(void)
 {
 	pr_debug("%s\n", __func__);
@@ -97,6 +105,7 @@ void do_clear_ap_only_boot(void)
 	set_emu_reset_reason(REG_EMU_AREA, rst);
 }
 EXPORT_SYMBOL(do_clear_ap_only_boot);
+
 
 /**
  * This API checks to see if kernel boot is done for AP_ONLY mode
@@ -136,6 +145,9 @@ reset_reason_show(struct device *dev, struct device_attribute *attr, char *buf)
 		break;
 	case 0x5:
 		index = 4;
+		break;
+	case 0x6:
+		index = 5;
 		break;
 	default:
 		index = 0;
