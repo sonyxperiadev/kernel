@@ -46,6 +46,7 @@ static struct stm_device {
 static struct cdev cdev;
 static struct class *stm_class;
 static int stm_major;
+static struct clk *pti_peri_clk;
 
 #define STM_BUFSIZE    256
 struct channel_data {
@@ -284,13 +285,12 @@ int kona_trace_stm_write(int ch, int ts, size_t len, uint8_t *data)
 
 int pti_enable(int enable)
 {
-	static struct clk *clk;
-	if (!clk)
-		clk = clk_get(NULL, PTI_PERI_CLK_NAME_STR);
-	if (enable)
-		clk_enable(clk);
-	else
-		clk_disable(clk);
+	if (pti_peri_clk) {
+		if (enable)
+			clk_enable(pti_peri_clk);
+		else
+			clk_disable(pti_peri_clk);
+	}
 	return 0;
 }
 
@@ -680,6 +680,10 @@ static int __devinit stm_probe(struct platform_device *pdev)
 	}
 
 	stm.pdata = pdev->dev.platform_data;
+
+	pti_peri_clk = clk_get(NULL, PTI_PERI_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(pti_peri_clk))
+		return -EIO;
 
 	cdev_init(&cdev, &stm_fops);
 	cdev.owner = THIS_MODULE;
