@@ -690,7 +690,9 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 		printk(KERN_INFO "%s: Chip Version = 0x%0X.\n", __func__, val);
 	}
 	bcmpmu_register_init(bcmpmu);
-	misc_register(&bcmpmu_device);
+	ret = misc_register(&bcmpmu_device);
+	if (ret < 0)
+		goto err;
 
 #ifdef CONFIG_DEBUG_FS
 	root_dir = debugfs_create_dir("bcmpmu", 0);
@@ -716,7 +718,7 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 		if (ret != 0) {
 			dev_err(bcmpmu->dev, "Platform init() failed: %d\n",
 				ret);
-			goto err;
+			goto err_pdata_init;
 		}
 	}
 #ifdef CONFIG_MFD_BCMPMU_DBG
@@ -724,7 +726,9 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 #endif
 	return 0;
 
-      err:
+err_pdata_init:
+	misc_deregister(&bcmpmu_device);
+err:
 	return ret;
 }
 
