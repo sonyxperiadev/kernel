@@ -1576,10 +1576,7 @@ field ## _store(struct device *dev, struct device_attribute *attr,	\
 {									\
 	if (size >= sizeof(buffer)) return -EINVAL;			\
 	DONOTHING_FOR_GG_MODE();					\
-	if (sscanf(buf, "%s", buffer) == 1) {				\
-		return size;						\
-	}								\
-	return -1;							\
+	return strlcpy(buffer, buf, sizeof(buffer));			\
 }									\
 static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, field ## _show, field ## _store);
 
