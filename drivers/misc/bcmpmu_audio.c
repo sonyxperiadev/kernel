@@ -989,7 +989,8 @@ void bcmpmu_audio_deinit(void)
 
 		bcmpmu->read_dev(bcmpmu,
 			PMU_REG_PLLCTRL, &reg.val, PMU_BITMASK_ALL);
-		reg.val &= ~(BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN);
+		reg.val &= ~(BCMPMU_PLL_EN | BCMPMU_PLL_AUDIO_EN |
+				BCMPMU_PLLENCLK26MHZ);
 		bcmpmu->write_dev(bcmpmu,
 			PMU_REG_PLLCTRL, reg.val, PMU_BITMASK_ALL);
 		bcmpmu_audio->HS_On = false;
