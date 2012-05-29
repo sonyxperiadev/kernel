@@ -535,14 +535,14 @@ static int __init ipcs_module_init(void)
 	if (!g_ipc_info.apcp_shmem) {
 		rc = -ENOMEM;
 		IPC_DEBUG(DBG_ERROR, "Could not map shmem\n");
-		goto out;
+		goto out_shared_mem_fail;
 	}
 
 	IPC_DEBUG(DBG_TRACE, "ipcs_init\n");
 	if (ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE)) {
 		rc = -1;
 		IPC_DEBUG(DBG_ERROR, "ipcs_init() failed\n");
-		goto out;
+		goto out_ipc_init_fail;
 	}
 
 	IPC_DEBUG(DBG_TRACE, "ok\n");
@@ -557,12 +557,20 @@ static int __init ipcs_module_init(void)
 
 	if (rc) {
 		IPC_DEBUG(DBG_ERROR, "request_irq error\n");
-		goto out;
+		goto out_irq_req_fail;
 	}
 
 	IPC_DEBUG(DBG_TRACE, "IRQ Clear and Enable\n");
 
 	return 0;
+
+out_irq_req_fail:
+	wake_lock_destroy(&ipc_wake_lock);
+out_ipc_init_fail:
+	iounmap(g_ipc_info.apcp_shmem);
+out_shared_mem_fail:
+	flush_workqueue(g_ipc_info.crash_dump_workqueue);
+	destroy_workqueue(g_ipc_info.crash_dump_workqueue);
 
       out:
 	IPC_DEBUG(DBG_ERROR, "IPC Driver Failed to initialise!\n");

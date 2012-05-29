@@ -2261,6 +2261,7 @@ static int __init rpcipc_ModuleInit(void)
 	if (IS_ERR(drvdata)) {
 		_DBG(RPC_TRACE("device_create_drvdata failed\n"));
 		unregister_chrdev(major, BCM_KERNEL_RPC_NAME);
+		class_destroy(sModule.mDriverClass);
 		return PTR_ERR(drvdata);
 	}
 
