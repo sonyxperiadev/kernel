@@ -1892,13 +1892,11 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 	struct uart_8250_port *up;
 	unsigned int iir;
 
-
 	DEBUG_INTR("serial8250_interrupt(%d)...", irq);
 
 	spin_lock(&i->lock);
 
 	l = i->head;
-	up = list_entry(l, struct uart_8250_port, list);
 	do {
 		up = list_entry(l, struct uart_8250_port, list);
 
@@ -2056,6 +2054,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
 		i->head = &up->list;
 		spin_unlock_irq(&i->lock);
 		irq_flags |= up->port.irqflags;
+
 		ret = request_irq(up->port.irq, serial8250_interrupt,
 				  irq_flags, "serial", i);
 		if (ret < 0)
@@ -2343,6 +2342,7 @@ static int serial8250_startup(struct uart_port *port)
 		container_of(port, struct uart_8250_port, port);
 	unsigned long flags;
 	unsigned char lsr, iir;
+	int retry_count = 0;
 	int retval;
 
 	up->port.fifosize = uart_config[up->port.type].fifo_size;
@@ -2485,6 +2485,18 @@ static int serial8250_startup(struct uart_port *port)
 	/*
 	 * Now, initialize the UART
 	 */
+	/* Checking whether UART is busy or NOT.
+	 * Should update the LCR only when UART is NOT busy. */
+	while (serial_in(up, UART_USR) & 0x01) {
+		/* min value is selected for time taken to transfer for #1 byte
+		 * @115200 baud rate. */
+		usleep_range(9, 256);
+		retry_count++;
+		if (retry_count > 256) {
+			WARN(1, "UART is busy and trying to update LCR register");
+			break;
+		}
+	}
 	serial_outp(up, UART_LCR, UART_LCR_WLEN8);
 
 	spin_lock_irqsave(&up->port.lock, flags);
@@ -2576,6 +2588,7 @@ static void serial8250_shutdown(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 	unsigned long flags;
+	int retry_count = 0;
 
 	/*
 	 * Disable interrupts from this port
@@ -2593,6 +2606,19 @@ static void serial8250_shutdown(struct uart_port *port)
 
 	serial8250_set_mctrl(&up->port, up->port.mctrl);
 	spin_unlock_irqrestore(&up->port.lock, flags);
+
+	/* Checking whether UART is busy or NOT.
+	 * Should update the LCR only when UART is NOT busy. */
+	while (serial_in(up, UART_USR) & 0x01) {
+		/* min value is selected for time taken to transfer for #1 byte
+		 * @115200 baud rate. */
+		usleep_range(9, 256);
+		retry_count++;
+		if (retry_count > 256) {
+			WARN(1, "UART is busy and trying to update LCR register");
+			break;
+		}
+	}
 
 	/*
 	 * Disable break condition and FIFOs
@@ -2753,6 +2779,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned char cval, fcr = 0;
 	unsigned long flags;
 	unsigned int baud, quot;
+	int retry_count = 0;
 
 	switch (termios->c_cflag & CSIZE) {
 	case CS5:
@@ -2822,6 +2849,18 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 		    up->port.flags &= ~ASYNC_CTS_FLOW;  /* in case of AFE, needs to be ignored to avoid
 		                                         * lock up in serialcore cts handler */
 			up->mcr |= UART_MCR_AFE;
+		}
+	}
+	/* Checking whether UART is busy or NOT.
+	 * Should update the LCR only when UART is NOT busy. */
+	while (serial_in(up, UART_USR) & 0x01) {
+		/* min value is selected for time taken to transfer for #1 byte
+		 * @115200 baud rate. */
+		usleep_range(9, 256);
+		retry_count++;
+		if (retry_count > 256) {
+			WARN(1, "UART is busy and trying to update LCR register");
+			break;
 		}
 	}
 
