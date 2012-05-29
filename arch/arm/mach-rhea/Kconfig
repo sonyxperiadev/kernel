@@ -132,6 +132,15 @@ config MACH_RHEA_SS_IVORY
 
 endchoice
 
+config RHEA_IGNORE_DAP_POWERUP_REQ
+       bool "Ignore Powerup request from DAP"
+       depends on KONA_POWER_MGR
+       default n
+       help
+         Say Y to ignore powerup request from DAP. So, the power domains will
+	 continue to be in their state. If this is not set, on attaching JTAG
+	 PI policy will change to 7 always. This feature enables the system to
+	 retain the states as is, even after attaching JTAG.
 
 config RHEA_DORMANT_MODE
        bool "Enable dormant mode support for Rhea platform"

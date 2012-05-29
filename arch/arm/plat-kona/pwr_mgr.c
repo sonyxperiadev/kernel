@@ -1366,6 +1366,30 @@ int pwr_mgr_ignore_dap_powerup_request(bool ignore)
 
 EXPORT_SYMBOL(pwr_mgr_ignore_dap_powerup_request);
 
+int pwr_mgr_ignore_mdm_dap_powerup_req(bool ignore)
+{
+	u32 val;
+	unsigned long flgs;
+
+	pwr_dbg(PWR_LOG_CONFIG, "%s :ignore = %d\n", __func__, ignore);
+
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+	val = readl(KONA_BMDM_PWRMGR_VA +
+		BMDM_PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+	if (ignore)
+		val |=
+		BMDM_PWRMGR_PI_DEFAULT_POWER_STATE_IGNORE_DAP_POWERUPREQ_MASK;
+	else
+		val &=
+		~BMDM_PWRMGR_PI_DEFAULT_POWER_STATE_IGNORE_DAP_POWERUPREQ_MASK;
+	writel(val, KONA_BMDM_PWRMGR_VA +
+		BMDM_PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+	return 0;
+}
+EXPORT_SYMBOL(pwr_mgr_ignore_mdm_dap_powerup_req);
+
 int pwr_mgr_register_event_handler(u32 event_id,
 				   void (*pwr_mgr_event_cb) (u32 event_id,
 							     void *param),
@@ -2337,6 +2361,23 @@ static int pwrmgr_debugfs_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
+static int pwr_mgr_dbg_set_ignore_dap(void *data, u64 val)
+{
+	if (val == 1) {
+		pwr_mgr_ignore_dap_powerup_request(true);
+		pwr_mgr_ignore_mdm_dap_powerup_req(true);
+	} else if (val == 0) {
+		pwr_mgr_ignore_dap_powerup_request(false);
+		pwr_mgr_ignore_mdm_dap_powerup_req(false);
+	}
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pwr_mgr_dbg_ignore_dap_fops, NULL,
+			pwr_mgr_dbg_set_ignore_dap, "%llu\n");
+
+
 static ssize_t set_pm_mgr_dbg_bus(struct file *file, char const __user *buf,
 					size_t count, loff_t *offset)
 {
@@ -2792,7 +2833,10 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 	    ("pwr_dbg_mask", S_IWUSR | S_IRUSR, dent_pwr_root_dir,
 	    (int *)&pwr_dbg_mask))
 		return -ENOMEM;
-
+	if (!debugfs_create_file
+	    ("ignore_dap_powerup", S_IWUSR, dent_pwr_root_dir, NULL,
+	     &pwr_mgr_dbg_ignore_dap_fops))
+		return -ENOMEM;
 	if (!debugfs_create_u32
 	    ("flags", S_IWUSR | S_IRUSR, dent_pwr_root_dir,
 	     (int *)&pwr_mgr.info->flags))

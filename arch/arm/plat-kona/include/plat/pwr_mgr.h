@@ -301,6 +301,7 @@ int pwr_mgr_arm_core_dormant_enable(bool enable);
 int pwr_mgr_pi_retn_clamp_enable(int pi_id, bool enable);
 int pwr_mgr_ignore_power_ok_signal(bool ignore);
 int pwr_mgr_ignore_dap_powerup_request(bool ignore);
+int pwr_mgr_ignore_mdm_dap_powerup_req(bool ignore);
 int pwr_mgr_register_event_handler(u32 event_id,
 				   void (*pwr_mgr_event_cb) (u32 event_id,
 							     void *param),

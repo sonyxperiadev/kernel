@@ -40,6 +40,7 @@
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#include <mach/rdb/brcm_rdb_bmdm_pwrmgr.h>
 #ifdef CONFIG_DEBUG_FS
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif
@@ -459,10 +460,6 @@ void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param)
 
 int __init rhea_pwr_mgr_late_init(void)
 {
-#ifdef CONFIG_DEBUG_FS
-	u32 bmdm_pwr_mgr_base =
-	    (u32)ioremap_nocache(BMDM_PWRMGR_BASE_ADDR, SZ_1K);
-#endif
 	int i;
 	struct pi *pi;
 
@@ -480,8 +477,13 @@ int __init rhea_pwr_mgr_late_init(void)
 	pm_mgr_pi_count_clear(1);
 	pm_mgr_pi_count_clear(0);
 
+#ifdef CONFIG_RHEA_IGNORE_DAP_POWERUP_REQ
+	pwr_mgr_ignore_dap_powerup_request(true);
+	pwr_mgr_ignore_mdm_dap_powerup_req(true);
+#endif
+
 #ifdef CONFIG_DEBUG_FS
-	return pwr_mgr_debug_init(bmdm_pwr_mgr_base);
+	return pwr_mgr_debug_init(KONA_BMDM_PWRMGR_VA);
 #else
 	return 0;
 #endif
