@@ -143,7 +143,7 @@ struct kgsl_mem_entry {
 	struct kgsl_memdesc memdesc;
 	int memtype;
 	void *priv_data;
-	struct rb_node node;
+	struct list_head list;
 	uint32_t free_timestamp;
 	/* back pointer to private structure under whose context this
 	* allocation is made */
