@@ -692,6 +692,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	resource = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (NULL == resource) {
+		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
 		kfree(hsotgctrl_drvdata);
 		return -EIO;
 	}
@@ -699,12 +700,15 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	hsotgctrl_drvdata->chipregs_base = ioremap(resource->start, SZ_4K);
 	if (!hsotgctrl_drvdata->chipregs_base) {
 		dev_warn(&pdev->dev, "IO remap failed\n");
+		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
 		kfree(hsotgctrl_drvdata);
 		return -ENOMEM;
 	}
 
 	resource = platform_get_resource(pdev, IORESOURCE_MEM, 2);
 	if (NULL == resource) {
+		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
+		iounmap(hsotgctrl_drvdata->chipregs_base);
 		kfree(hsotgctrl_drvdata);
 		return -EIO;
 	}
@@ -712,6 +716,8 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	hsotgctrl_drvdata->hub_clk_base = ioremap(resource->start, SZ_4K);
 	if (!hsotgctrl_drvdata->hub_clk_base) {
 		dev_warn(&pdev->dev, "IO remap failed\n");
+		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
+		iounmap(hsotgctrl_drvdata->chipregs_base);
 		kfree(hsotgctrl_drvdata);
 		return -ENOMEM;
 	}
@@ -721,6 +727,8 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	if (!hsotgctrl_drvdata->otg_clk) {
 		dev_warn(&pdev->dev, "Clock allocation failed\n");
+		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
+		iounmap(hsotgctrl_drvdata->chipregs_base);
 		kfree(hsotgctrl_drvdata);
 		return -EIO;
 	}
