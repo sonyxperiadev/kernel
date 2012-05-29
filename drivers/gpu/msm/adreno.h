@@ -74,7 +74,6 @@ struct adreno_device {
 	unsigned int wait_timeout;
 	unsigned int istore_size;
 	unsigned int pix_shader_start;
-	unsigned int ib_check_level;
 };
 
 struct adreno_gpudev {
