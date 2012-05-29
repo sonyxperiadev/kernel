@@ -70,7 +70,7 @@ unsigned char EncDec(unsigned char *outDataPtr, const unsigned char *inDataPtr,
 	memcpy(&aes_v[0], inDataPtr, inDataSize);
 
 	sec_spum_clk = clk_get(NULL, "spum_sec");
-	if (!sec_spum_clk) {
+	if (IS_ERR_OR_NULL(sec_spum_clk)) {
 		pr_err("%s: unable to get clock spum_sec\n", __func__);
 		return 0;
 	}

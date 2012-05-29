@@ -69,7 +69,8 @@ int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 	smi_axi = clk_get (NULL, "smi_axi_clk");
 	mm_dma_axi = clk_get(NULL, "mm_dma_axi_clk");
 	smi = clk_get (NULL, "smi_clk");
-	BUG_ON (!smi_axi || !smi || !mm_dma_axi);
+	BUG_ON(IS_ERR_OR_NULL(smi_axi) || IS_ERR_OR_NULL(smi) ||
+			 IS_ERR_OR_NULL(mm_dma_axi));
 
 	if (clk_set_rate(smi, 250000000)) {
 		printk(KERN_ERR "Failed to set the SMI peri clock to 250MHZ");
@@ -103,7 +104,8 @@ int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 	smi_axi = clk_get (NULL, "smi_axi_clk");
 	mm_dma_axi = clk_get (NULL, "mm_dma_axi_clk");
 	smi = clk_get (NULL, "smi_clk");
-	BUG_ON (!smi_axi || !smi || !mm_dma_axi);
+	BUG_ON(IS_ERR_OR_NULL(smi_axi) || IS_ERR_OR_NULL(smi) ||
+			IS_ERR_OR_NULL(mm_dma_axi));
 
 	clk_disable(smi);
 	clk_disable(smi_axi);
@@ -139,7 +141,8 @@ int brcm_enable_dsi_lcd_clocks(
 	mm_dma_axi  = clk_get (NULL, "mm_dma_axi_clk");
 	dsi_axi     = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_axi);
 	dsi_esc     = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_esc);
-	BUG_ON (!mm_dma_axi || !dsi_axi || !dsi_esc);
+	BUG_ON(IS_ERR_OR_NULL(mm_dma_axi) || IS_ERR_OR_NULL(dsi_axi) ||
+			IS_ERR_OR_NULL(dsi_esc));
 
 	if (clk_enable(mm_dma_axi)) {
 		printk(KERN_ERR "Failed to enable the MM DMA bus clock\n");
@@ -183,7 +186,7 @@ int brcm_enable_dsi_pll_clocks(
 
 	dsi_pll     = clk_get (NULL, "dsi_pll");
 	dsi_pll_ch  = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_pll_ch);
-	BUG_ON (!dsi_pll || !dsi_pll_ch);
+	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
        
 	if (clk_set_rate(dsi_pll, dsi_pll_hz)) {
 		printk(KERN_ERR "Failed to set the DSI[%d] PLL to %d Hz\n", 
@@ -239,7 +242,8 @@ int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 	mm_dma_axi = clk_get(NULL, "mm_dma_axi_clk");
 	dsi_axi    = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_axi);
 	dsi_esc    = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_esc);
-	BUG_ON(!mm_dma_axi || !dsi_axi || !dsi_esc);
+	BUG_ON(IS_ERR_OR_NULL(mm_dma_axi) || IS_ERR_OR_NULL(dsi_axi) ||
+		   IS_ERR_OR_NULL(dsi_esc));
 
 	clk_disable(mm_dma_axi);
 	clk_disable(dsi_axi);
@@ -262,7 +266,7 @@ int brcm_disable_dsi_pll_clocks(u32 dsi_bus)
 
 	dsi_pll    = clk_get (NULL, "dsi_pll");
 	dsi_pll_ch = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_pll_ch);
-	BUG_ON(!dsi_pll || !dsi_pll_ch);
+	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
 
         mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel,DSI_NO_CLOCK);
 	clk_disable(dsi_pll_ch);
@@ -289,7 +293,7 @@ int brcm_enable_dsi_lcd_clocks(
 	}
 
 	mm_dma_axi = clk_get (NULL, "mm_dma_axi_clk");
-	BUG_ON (!mm_dma_axi);
+	BUG_ON(IS_ERR_OR_NULL(mm_dma_axi));
 
 	if (clk_enable(mm_dma_axi)) {
 		printk(KERN_ERR "Failed to enable the MM DMA bus clock");
@@ -304,7 +308,7 @@ int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 	struct clk *mm_dma_axi;
 
 	mm_dma_axi = clk_get (NULL, "mm_dma_axi_clk");
-	BUG_ON (!mm_dma_axi);
+	BUG_ON(IS_ERR_OR_NULL(mm_dma_axi));
 
 	clk_disable(mm_dma_axi);
 

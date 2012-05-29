@@ -273,7 +273,7 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		{
 			struct clk *clk;
 			clk = clk_get(NULL, "isp_axi_clk");
-			if (clk) {
+			if (IS_ERR_OR_NULL(clk)) {
 				dbg_print("reset ISP clock\n");
 				clk_reset(clk);
 				/*  sleep for 1ms */
@@ -303,7 +303,7 @@ static int enable_isp_clock(void)
 	int ret;
 
 	isp_clk = clk_get(NULL, "isp_axi_clk");
-	if (!isp_clk) {
+	if (IS_ERR_OR_NULL(isp_clk)) {
 		err_print("%s: error get clock\n", __func__);
 		return -EIO;
 	}
@@ -342,7 +342,7 @@ static int enable_isp_clock(void)
 static void disable_isp_clock(void)
 {
 	isp_clk = clk_get(NULL, "isp_axi_clk");
-	if (!isp_clk)
+	if (IS_ERR_OR_NULL(isp_clk))
 		return;
 
 	clk_disable(isp_clk);

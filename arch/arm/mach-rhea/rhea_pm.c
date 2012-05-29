@@ -619,6 +619,7 @@ static void uartb_wq_handler(struct work_struct *work)
 
 		if(!uartb_clk)
 			uartb_clk = clk_get(NULL,"uartb_clk");
+		BUG_ON(IS_ERR_OR_NULL(uartb_clk));
 		clk_disable(uartb_clk);
 		clk_active = 0;
 	}
@@ -633,6 +634,7 @@ void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 		{
 			if(!uartb_clk)
 				uartb_clk = clk_get(NULL,"uartb_clk");
+			BUG_ON(IS_ERR_OR_NULL(uartb_clk));
 			clk_enable(uartb_clk);
 			clk_active = 1;
 
