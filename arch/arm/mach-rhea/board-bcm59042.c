@@ -506,8 +506,8 @@ struct bcmpmu_regulator_init_data bcm59042_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_HV2LDO, &bcm59042_hv2ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV3LDO] = {
-		BCMPMU_REGULATOR_HV3LDO, &bcm59042_hv3ldo_data, 0x11,
-		BCMPMU_REGL_ON_IN_DSM
+		BCMPMU_REGULATOR_HV3LDO, &bcm59042_hv3ldo_data, 0xAA,
+		BCMPMU_REGL_LPM_IN_DSM
 	},
 	[BCMPMU_REGULATOR_HV4LDO] =	{
 		BCMPMU_REGULATOR_HV4LDO, &bcm59042_hv4ldo_data, 0xAA, 0
@@ -516,7 +516,8 @@ struct bcmpmu_regulator_init_data bcm59042_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_HV5LDO, &bcm59042_hv5ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV6LDO] = {
-		BCMPMU_REGULATOR_HV6LDO, &bcm59042_hv6ldo_data, 0x11, 0
+		BCMPMU_REGULATOR_HV6LDO, &bcm59042_hv6ldo_data, 0xAA,
+		BCMPMU_REGL_LPM_IN_DSM
 	},
 	[BCMPMU_REGULATOR_HV7LDO] = {
 		BCMPMU_REGULATOR_HV7LDO, &bcm59042_hv7ldo_data, 0x22, 0
