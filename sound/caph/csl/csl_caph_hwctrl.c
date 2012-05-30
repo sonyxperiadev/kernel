@@ -2551,6 +2551,12 @@ static void csl_ssp_ControlHWClock(Boolean enable,
  *			KHUB_AUDIOH_2P4M_CLK
  *			KHUB_AUDIOH_APB_CLK
  *			KHUB_AUDIOH_156M_CLK
+ * Enable sequence:
+ *  caph_srcmixer_clk, audioh_2p4m_clk, audioh_26m_clk,  audioh_156m_clk.
+ * Disable Sequence:
+ *  audioh_26m_clk, audioh_2p4m_clk, audioh_156m_clk, caph_srcmixer_clk.
+ * Turn off audio clock first, then wait at least 12us (one 88.2khz clock) to
+ * ensure sample processing has been completed before disabling srcmixer clock.
  */
 void csl_caph_ControlHWClock(Boolean enable)
 {
@@ -2606,12 +2612,18 @@ void csl_caph_ControlHWClock(Boolean enable)
 	} else if (enable == FALSE && sClkCurEnabled == TRUE) {
 		UInt32 count = 0;
 		sClkCurEnabled = FALSE;
+
 		/*disable only CAPH clocks*/
-		for (count = 0; count <  MAX_CAPH_CLOCK_NUM; count++) {
-			/* this api will check the null pointer */
-			clk_disable(clkIDCAPH[count]);
+		/* this api will check the null pointer */
+		clk_disable(clkIDCAPH[CLK_APB]);
+		clk_disable(clkIDCAPH[CLK_2P4M]);
+		clk_disable(clkIDCAPH[CLK_156M]);
+		usleep_range(12, 40);
+		clk_disable(clkIDCAPH[CLK_SRCMIXER]);
+
+		for (count = 0; count <  MAX_CAPH_CLOCK_NUM; count++)
 			clkIDCAPH[count] = NULL;
-		}
+
 		enable156MClk = FALSE;
 		enable2P4MClk = FALSE;
 	}
