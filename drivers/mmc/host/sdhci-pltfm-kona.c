@@ -685,6 +685,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			goto err_free_cd_gpio;
 		}
 
+		/* support SD card detect interrupts for insert/removal */
+		host->mmc->card_detect_cap = true;
+
 		/* Set debounce for SD Card detect to maximum value (128ms)
 		 *
 		 * NOTE-1: If gpio_set_debounce() returns error we still
