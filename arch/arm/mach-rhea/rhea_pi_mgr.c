@@ -608,7 +608,7 @@ void __init rhea_pi_mgr_init()
 EXPORT_SYMBOL(rhea_pi_mgr_init);
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
-int __init rhea_mm_pre_init_state(void)
+static int __init rhea_mm_pre_init_state(void)
 {
 	if (JIRA_WA_ENABLED(2490)) {
 		if (ref_8ph_en_pll1_clk == NULL) {
