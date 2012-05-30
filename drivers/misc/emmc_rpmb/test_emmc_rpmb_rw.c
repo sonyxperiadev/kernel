@@ -85,14 +85,14 @@ static void dump_buffer(const char *cmdbuf, unsigned int size)
 {
 	uint i;
 
-	printk(KERN_INFO "cmdbuf: %p, size: %d\n", cmdbuf, size);
+	pr_info("cmdbuf: %p, size: %d\n", cmdbuf, size);
 
 	for (i = 0; i < size; i++) {
 		if (!(i % 64))
-			printk(KERN_INFO "\n");
-		printk(KERN_INFO "0x%x ", *(cmdbuf + i));
+			pr_info("\n");
+		pr_info("0x%x ", *(cmdbuf + i));
 	}
-	printk(KERN_INFO "\n");
+	pr_info("\n");
 }
 
 static void format_authentication_key_data_packet(
@@ -244,15 +244,11 @@ static int block_read(const char *user_dev_path, /* Path to rpmb device */
 	struct page *page;
 	int end_sect;
 
-	/* TODO: temp hack */
-	if (size > PAGE_SIZE)
-		return -EINVAL;
-
 	bdev = blkdev_get_by_path(user_dev_path,
 				  FMODE_READ, block_read);
 
 	if (IS_ERR(bdev)) {
-		pr_info("failed to get block device %s (%ld)\n",
+		pr_err("failed to get block device %s (%ld)\n",
 		      user_dev_path, PTR_ERR(bdev));
 		return -ENODEV;
 	}
@@ -307,10 +303,6 @@ static int block_write(const char *user_dev_path, /* Path to rpmb device node */
 	struct page *page;
 	int end_sect;
 
-	/* TODO: temp hack */
-	if (size > PAGE_SIZE)
-		return -EINVAL;
-
 	bdev = blkdev_get_by_path(user_dev_path,
 				  FMODE_WRITE, block_write);
 
@@ -354,11 +346,12 @@ static int block_write(const char *user_dev_path, /* Path to rpmb device node */
 
 static int program_authentication_key(void)
 {
-	int ret;
+	int ret = 0;
 	struct rpmb_data_frame data_packet;
 	unsigned char *read_buff;
 	struct rpmb_data_frame *read_data_packet;
 	unsigned short result;
+	int retries = RPMB_ACCESS_RETRY;
 
 #if DEBUG
 	unsigned char *ptr_auth_key = (unsigned char *)&data_packet;
@@ -368,6 +361,7 @@ static int program_authentication_key(void)
 	/* Alloc memory for read_buff */
 	read_buff = kmalloc(RPMB_DATA_FRAME_SIZE, GFP_KERNEL);
 
+key_retry:
 	/* format Authentication Key Data Packet */
 	format_authentication_key_data_packet(&data_packet);
 
@@ -386,8 +380,9 @@ static int program_authentication_key(void)
 				RPMB_DATA_FRAME_SIZE, /* Size of data packet */
 				REQ_META); /* special flags if any */
 	if (ret < 0) {
-		pr_info("Write Authentication Key Data Packet failed: %d\n",
+		pr_err("Write Authentication Key Data Packet failed: %d\n",
 				ret);
+		ret = -EOTHER;
 		goto out;
 	}
 
@@ -410,7 +405,8 @@ static int program_authentication_key(void)
 				RPMB_DATA_FRAME_SIZE, /* Size of data packet */
 				0x0); /* special flags if any */
 	if (ret < 0) {
-		pr_info("Write Result Resgister Data Packet failed: %d\n", ret);
+		pr_err("Write Result Resgister Data Packet failed: %d\n", ret);
+		ret = -EOTHER;
 		goto out;
 	}
 
@@ -419,7 +415,8 @@ static int program_authentication_key(void)
 				&read_buff[0], /* Data buffer */
 				RPMB_DATA_FRAME_SIZE); /* Size of data packet */
 	if (ret < 0) {
-		pr_info("Read Result Resgister Data Packet failed: %d\n", ret);
+		pr_err("Read Result Resgister Data Packet failed: %d\n", ret);
+		ret = -EOTHER;
 		goto out;
 	}
 
@@ -441,30 +438,37 @@ static int program_authentication_key(void)
 
 	/* Check if Authentication is programmed up front and return if NOT */
 	if (result == RESULT_AUTH_KEY_NOT_PROGRAMMED) {
-		pr_info("Authentication Key NOT programmed; result: 0x%x\n",
+		pr_err("Authentication Key NOT programmed; result: 0x%x\n",
 				result);
+		ret = -EKEYNOTPROG;
 		goto out;
+	}
+
+	/* Retry on GENERAL FAILURE */
+	if (result == RESULT_GENERAL_FAILURE) {
+		pr_err("Write Key- GENERAL ERROR. Retrying....\n");
+		if (--retries) {
+			pr_err("Retry count: %d\n", retries);
+			goto key_retry;
+		} else {
+			pr_err("Retried %d times. No success."
+					"Returning error to caller\n",
+					RPMB_ACCESS_RETRY);
+			ret = -EGENERR;
+			goto out;
+		}
 	}
 
 	/* Check for authentication key programming errors */
 	if (read_data_packet->req_resp_code ==
 			RESPONSE_TYPE_AUTH_KEY_PROGRAMMING) {
-
 		if (result == RESULT_WRITE_FAILURE) {
-			pr_info("Write Authentication Key- WRITE ERROR\n");
-			ret = -5; /* -EIO */
-			goto out;
-		}
-
-		if (result == RESULT_GENERAL_FAILURE) {
-			pr_info("Write Authentication Key- GENERAL ERROR\n");
-			ret = -1;
+			pr_err("Write Authentication Key- WRITE ERROR\n");
+			ret = -EWRITEFAIL;
 			goto out;
 		}
 	}
 
-	kfree(read_buff);
-	return 0;
 out:
 	kfree(read_buff);
 	return ret;
@@ -477,7 +481,8 @@ static int read_counter_value(void)
 	unsigned char *read_buff;
 	struct rpmb_data_frame *read_data_packet;
 	unsigned short result;
-
+	unsigned int counter;
+	int retries = RPMB_ACCESS_RETRY;
 
 #if DEBUG
 	unsigned char *ptr_counter_val = (unsigned char *)&data_packet;
@@ -486,6 +491,7 @@ static int read_counter_value(void)
 	/* Alloc memory for read_buff */
 	read_buff = kmalloc(RPMB_DATA_FRAME_SIZE, GFP_KERNEL);
 
+counter_retry:
 	/* Format the Read counter value Data Packet */
 	format_read_counter_val_data_packet(&data_packet);
 
@@ -504,18 +510,18 @@ static int read_counter_value(void)
 				RPMB_DATA_FRAME_SIZE, /* Size of data packet */
 				0x0); /* special flags if any */
 	if (ret < 0) {
-		pr_info("Write Counter Value Data Packet failed: %d\n", ret);
+		pr_err("Write Counter Value Data Packet failed: %d\n", ret);
+		ret = -EOTHER;
 		goto out;
 	}
-
-	mdelay(3000);
 
 	/* Read the Counter Value data packet from RPMB */
 	ret = block_read(RPMB_DEV_NODE_PATH,
 				&read_buff[0], /* Data buffer */
 				RPMB_DATA_FRAME_SIZE); /* Size of data packet */
 	if (ret < 0) {
-		pr_info("Read Counter Value Data Packet failed: %d\n", ret);
+		pr_err("Read Counter Value Data Packet failed: %d\n", ret);
+		ret = -EOTHER;
 		goto out;
 	}
 
@@ -529,18 +535,35 @@ static int read_counter_value(void)
 
 	read_data_packet = (struct rpmb_data_frame *)read_buff;
 
+	result = read_data_packet->result;
+	counter = read_data_packet->write_counter;
+
 #if DEBUG
-	pr_info("Result Register Value: 0x%x \r\n", read_data_packet->result);
-	pr_info("Counter Value: 0x%x \r\n", read_data_packet->write_counter);
+	pr_info("Result Register Value: 0x%x \r\n", result);
+	pr_info("Counter Value: 0x%x \r\n", counter);
 #endif
 
 	/* Check if Authentication is programmed up front and return if NOT */
-	result = read_data_packet->result;
 	if (result == RESULT_AUTH_KEY_NOT_PROGRAMMED) {
-		pr_info("Authentication Key NOT programmed; result: 0x%x\n",
+		pr_err("Authentication Key NOT programmed; result: 0x%x\n",
 				result);
-		ret = -1;
+		ret = -EKEYNOTPROG;
 		goto out;
+	}
+
+	/* Retry on GENERAL FAILURE */
+	if (result == RESULT_GENERAL_FAILURE) {
+		pr_err("Read Counter Value- GENERAL FAILURE. Retrying....\n");
+		if (--retries) {
+			pr_err("%s: Retry count: %d\n", __func__, retries);
+			goto counter_retry;
+		} else {
+			pr_err("%s: Retried %d times. No success."
+					"Returning error to caller\n",
+					__func__, RPMB_ACCESS_RETRY);
+			ret = -EGENERR;
+			goto out;
+		}
 	}
 
 	/* Authenticate Counter value data packet */
@@ -571,6 +594,7 @@ static int read_counter_value(void)
 	if (ret) {
 		pr_err("%s: HMAC-SHA256 check failed. Data may be invalid",
 				__func__);
+		ret = -EDATACHKFAIL;
 		goto out;
 	}
 
@@ -579,26 +603,24 @@ static int read_counter_value(void)
 		RESPONSE_TYPE_READ_WRITE_COUNTER) {
 
 		if (result & RESULT_COUNTER_EXPIRED_FLAG) {
-			pr_info("Write Counter expired\n");
-			ret = -1;
+			pr_err("Write Counter expired\n");
+			ret = -ECOUNTERERR;
 			goto out;
 		} else {
 			if (result == RESULT_READ_FAILURE) {
-				pr_info("Read Counter Value- READ ERROR\n");
-				ret = -1;
-				goto out;
-			}
-
-			if (result == RESULT_GENERAL_FAILURE) {
-				pr_info("Read Counter Value- GENERAL ERROR\n");
-				ret = -1;
+				pr_err("Read Counter Value- READ ERROR\n");
+				ret = -EREADFAIL;
 				goto out;
 			}
 		}
+	} else {
+		pr_err("Read Counter Value- Wrong response type\n");
+		ret = -EOTHER;
+		goto out;
 	}
 
 	kfree(read_buff);
-	return read_data_packet->write_counter;
+	return counter;
 out:
 	kfree(read_buff);
 	return ret;
@@ -614,6 +636,7 @@ static int authenticated_data_write(const char *data, int bytes, int addr)
 	int counter_val;
 	int blkcnt; /* half sector (256B) count */
 	int data_size = bytes;
+	int retries = RPMB_ACCESS_RETRY;
 
 #if DEBUG
 	unsigned char *ptr_auth_write_data = (unsigned char *)&data_packet;
@@ -623,11 +646,12 @@ static int authenticated_data_write(const char *data, int bytes, int addr)
 	/* If (start + (blkcnt * 512)) > rpmb_size, return error */
 	if (((addr << 8) + bytes) > (128*1024)) {
 		pr_err("Cannot write past the RPMB paritition size\n");
-		return -1;
+		return -EOTHER;
 	}
 
 	blkcnt = (bytes % PAYLOAD_SIZE) ?
-				((bytes / PAYLOAD_SIZE) + 1) : (bytes / PAYLOAD_SIZE);
+				((bytes / PAYLOAD_SIZE) + 1) :
+				(bytes / PAYLOAD_SIZE);
 
 #if DEBUG
 	pr_info("data: %p, bytes: %d, blkcnt: %d, addr: %x\n",
@@ -640,22 +664,25 @@ static int authenticated_data_write(const char *data, int bytes, int addr)
 	do {
 		/* Get counter value */
 		counter_val = read_counter_value();
-
 		if (counter_val < 0) {
-			pr_info("Counter value read failed\n");
-			ret = -1;
+			pr_err("Counter value read failed\n");
+			ret = -ECOUNTERERR;
 			goto out;
 		}
 
+write_retry:
 		/* Format Authenticated Write Data Packet */
 		if (blkcnt == 1) /* last half sector data */
 			format_auth_write_data_packet(&data_packet, data,
-						data_size, counter_val, addr);
+					data_size, counter_val, addr);
 		else /* Not the last half sector data */
 			format_auth_write_data_packet(&data_packet, data,
-						PAYLOAD_SIZE, counter_val, addr);
+					PAYLOAD_SIZE, counter_val, addr);
 
-		/* Reverse Data Packet to MSB first byte order as expected by RPMB */
+		/*
+		 * Reverse Data Packet to MSB first byte order as
+		 * expected by RPMB
+		 */
 		reverse_array((unsigned char *)&data_packet,
 					sizeof(struct rpmb_data_frame));
 
@@ -666,19 +693,19 @@ static int authenticated_data_write(const char *data, int bytes, int addr)
 
 		/* Write the Data Packet to RPMB */
 		ret = block_write(RPMB_DEV_NODE_PATH,
-					(char *)&data_packet, /* Data buffer */
-					RPMB_DATA_FRAME_SIZE, /* Size of data packet */
-					REQ_META); /* special flags if any */
+				(char *)&data_packet, /* Data buffer */
+				RPMB_DATA_FRAME_SIZE, /* Size of data packet */
+				REQ_META); /* special flags if any */
 		if (ret < 0) {
-			pr_info("Write Data Packet failed: %d\n", ret);
+			pr_err("Write Data Packet failed: %d\n", ret);
+			ret = -EOTHER;
 			goto out;
 		}
 
-		/* Read Result Register of RPMB area to validate write success */
 		/* Format Read Result Register Data Packet */
 		format_read_result_reg_data_packet(&data_packet);
 
-		/* Reverse Data Packet to MSB first byte order as expected by RPMB */
+		/* Reverse Data Packet to MSB first byte order */
 		reverse_array((unsigned char *)&data_packet,
 					sizeof(struct rpmb_data_frame));
 
@@ -689,20 +716,24 @@ static int authenticated_data_write(const char *data, int bytes, int addr)
 
 		/* Write the Read Result Register data packet to RPMB */
 		ret = block_write(RPMB_DEV_NODE_PATH,
-					(char *)&data_packet, /* Data buffer */
-					RPMB_DATA_FRAME_SIZE, /* Size of data packet */
-					0x0); /* special flags if any */
+				(char *)&data_packet, /* Data buffer */
+				RPMB_DATA_FRAME_SIZE, /* Size of data packet */
+				0x0); /* special flags if any */
 		if (ret < 0) {
-			pr_info("Write Result Resgister Data Packet failed: %d\n", ret);
+			pr_err("Write Result Resgister Data"
+					"Packet failed: %d\n", ret);
+			ret = -EOTHER;
 			goto out;
 		}
 
 		/* Read the Read Result Register data packet from RPMB */
 		ret = block_read(RPMB_DEV_NODE_PATH,
-					&read_buff[0], /* Data buffer */
-					RPMB_DATA_FRAME_SIZE); /* Size of data packet */
+				&read_buff[0], /* Data buffer */
+				RPMB_DATA_FRAME_SIZE); /* Size of data packet */
 		if (ret < 0) {
-			pr_info("Read Result Resgister Data Packet failed: %d\n", ret);
+			pr_err("Read Result Resgister Data"
+					"Packet failed: %d\n", ret);
+			ret = -EOTHER;
 			goto out;
 		}
 
@@ -717,15 +748,32 @@ static int authenticated_data_write(const char *data, int bytes, int addr)
 		read_data_packet = (struct rpmb_data_frame *)read_buff;
 
 #if DEBUG
-		pr_info("Result Register Value: 0x%x \r\n", read_data_packet->result);
+		pr_info("Result Register Value: 0x%x \r\n",
+					read_data_packet->result);
 #endif
 
-		/* Check if Authentication is programmed up front and return if NOT */
+		/* Check if Authentication is programmed and return if NOT */
 		result = read_data_packet->result;
 		if (result == RESULT_AUTH_KEY_NOT_PROGRAMMED) {
-			pr_info("Authentication Key NOT programmed; result: 0x%x\n",
+			pr_err("Authentication Key NOT programmed; result: 0x%x\n",
 					result);
+			ret = -EKEYNOTPROG;
 			goto out;
+		}
+
+		/* Retry on GENERAL FAILURE */
+		if (result == RESULT_GENERAL_FAILURE) {
+			pr_err("Write Data General Failure. Retrying....\n");
+			if (--retries) {
+				pr_err("Retry count: %d\n", retries);
+				goto write_retry;
+			} else {
+				pr_err("Retried %d times. No success."
+						"Returning error to caller\n",
+						RPMB_ACCESS_RETRY);
+				ret = -EGENERR;
+				goto out;
+			}
 		}
 
 		/* Authenticate Counter value data packet */
@@ -750,12 +798,14 @@ static int authenticated_data_write(const char *data, int bytes, int addr)
 		dump_buffer((char *)key_mac_buff, KEY_MAC_SIZE);
 #endif
 
-		/* Compare the computed MAC against the MAC value in the data frame */
+		/* Compare the computed MAC against MAC in data frame */
 		reverse_array(key_mac_buff, KEY_MAC_SIZE);
-		ret = memcmp(key_mac_buff, read_data_packet->key_mac, KEY_MAC_SIZE);
+		ret = memcmp(key_mac_buff, read_data_packet->key_mac,
+						KEY_MAC_SIZE);
 		if (ret) {
 			pr_err("%s: HMAC-SHA256 check failed. Data may be invalid",
 					__func__);
+			ret = -EDATACHKFAIL;
 			goto out;
 		}
 
@@ -764,40 +814,38 @@ static int authenticated_data_write(const char *data, int bytes, int addr)
 			RESPONSE_TYPE_AUTH_DATA_WRITE) {
 
 			if (result & RESULT_COUNTER_EXPIRED_FLAG) {
-				pr_info("Write Counter expired\n");
-				ret = -1;
+				pr_err("Write Counter expired\n");
+				ret = -ECOUNTERERR;
 				goto out;
 			} else {
 				if (result == RESULT_ADDRESS_FAILURE) {
-					pr_info("Write address Error\n");
-					ret = -1;
+					pr_err("Write address Error\n");
+					ret = -EADDRFAIL;
 					goto out;
 				}
 
 				if (result == RESULT_AUTHENTICATION_FAILURE) {
-					pr_info("Write Data Authentication Failure\n");
-					ret = -1;
+					pr_err("Write Data Authentication Failure\n");
+					ret = -EAUTHFAIL;
 					goto out;
 				}
 
 				if (result == RESULT_COUNTER_FAILURE) {
-					pr_info("Write Counter Mismatch Error\n");
-					ret = -1;
+					pr_err("Write Counter Mismatch Error\n");
+					ret = -ECOUNTERERR;
 					goto out;
 				}
 
 				if (result == RESULT_WRITE_FAILURE) {
-					pr_info("Write Data Error\n");
-					ret = -1;
-					goto out;
-				}
-
-				if (result == RESULT_GENERAL_FAILURE) {
-					pr_info("Write Data General Error\n");
-					ret = -1;
+					pr_err("Write Data Error\n");
+					ret = -EWRITEFAIL;
 					goto out;
 				}
 			}
+		} else {
+			pr_err("Write Data- Wrong response type\n");
+			ret = -EOTHER;
+			goto out;
 		}
 
 		data += PAYLOAD_SIZE;
@@ -821,16 +869,22 @@ static int authenticated_data_read(char *buff, int len, int addr)
 	struct rpmb_data_frame *read_data_packet;
 	unsigned short result;
 	int num_half_sec;
+	int retries = RPMB_ACCESS_RETRY;
 
 #if DEBUG
 	unsigned char *ptr_auth_read_data = (unsigned char *)&data_packet;
 #endif
 
-	if (((sec_addr << 8) + len) > 0x20000) { /* 0x20000 = 128K = RPMB size */
-		printk(KERN_INFO "authenticated_data_read:"
+	if (((sec_addr << 8) + len) > 0x20000) { /* 0x20000 = RPMB size */
+		pr_err("authenticated_data_read:"
 						"cannot read past end of RPMB\n");
-		return -1;
+		return -EOTHER;
 	}
+
+#if DEBUG
+	pr_info("%s: buff: %p, len: %d, addr: %x\n",
+				__func__, buff, len, addr);
+#endif
 
 	num_half_sec = (len % PAYLOAD_SIZE) ?
 						((len / PAYLOAD_SIZE) + 1) :
@@ -840,6 +894,7 @@ static int authenticated_data_read(char *buff, int len, int addr)
 	read_buff = kmalloc(RPMB_DATA_FRAME_SIZE, GFP_KERNEL);
 
 	do {
+read_retry:
 		/* Format Authenticated Read Data Packet */
 		format_auth_read_data_packet(&data_packet, sec_addr);
 
@@ -861,8 +916,8 @@ static int authenticated_data_read(char *buff, int len, int addr)
 				RPMB_DATA_FRAME_SIZE, /* Size of data packet */
 				0x0); /* special flags if any */
 		if (ret < 0) {
-			pr_info("Write Data Packet failed: %d\n", ret);
-			ret = -1;
+			pr_err("Write Data Packet failed: %d\n", ret);
+			ret = -EOTHER;
 			goto out;
 		}
 
@@ -873,8 +928,8 @@ static int authenticated_data_read(char *buff, int len, int addr)
 				&read_buff[0], /* Data buffer */
 				RPMB_DATA_FRAME_SIZE); /* Size of data packet */
 		if (ret < 0) {
-			pr_info("Read Data Packet failed: %d\n", ret);
-			ret = -1;
+			pr_err("Read Data Packet failed: %d\n", ret);
+			ret = -EOTHER;
 			goto out;
 		}
 
@@ -896,10 +951,25 @@ static int authenticated_data_read(char *buff, int len, int addr)
 		/* Check if Authentication Key is programmed & return if NOT */
 		result = read_data_packet->result;
 		if (result == RESULT_AUTH_KEY_NOT_PROGRAMMED) {
-			pr_info("Authentication Key NOT programmed; result: 0x%x\n",
+			pr_err("Authentication Key NOT programmed; result: 0x%x\n",
 					result);
-			ret = -1;
+			ret = -EKEYNOTPROG;
 			goto out;
+		}
+
+		/* Retry on GENERAL FAILURE */
+		if (result == RESULT_GENERAL_FAILURE) {
+			pr_err("Read Data General Failure. Retrying....\n");
+			if (--retries) {
+				pr_err("Retry count: %d\n", retries);
+				goto read_retry;
+			} else {
+				pr_err("Retried %d times. No success."
+						"Returning error to caller\n",
+						RPMB_ACCESS_RETRY);
+				ret = -EGENERR;
+				goto out;
+			}
 		}
 
 		/* Authenticate the read data packet */
@@ -931,7 +1001,7 @@ static int authenticated_data_read(char *buff, int len, int addr)
 		if (ret) {
 			pr_err("%s: HMAC-SHA256 check failed. Data could be invalid",
 					__func__);
-			ret = -1;
+			ret = -EDATACHKFAIL;
 			goto out;
 		}
 
@@ -940,28 +1010,26 @@ static int authenticated_data_read(char *buff, int len, int addr)
 			RESPONSE_TYPE_AUTH_DATA_READ) {
 
 			if (result == RESULT_ADDRESS_FAILURE) {
-				pr_info("Write address Error\n");
-				ret = -1;
+				pr_err("Write address Error\n");
+				ret = -EADDRFAIL;
 				goto out;
 			}
 
 			if (result == RESULT_AUTHENTICATION_FAILURE) {
-				pr_info("Read Data Authentication Failure\n");
-				ret = -1;
+				pr_err("Read Data Authentication Failure\n");
+				ret = -EAUTHFAIL;
 				goto out;
 			}
 
 			if (result == RESULT_READ_FAILURE) {
-				pr_info("Read Data Error\n");
-				ret = -1;
+				pr_err("Read Data Error\n");
+				ret = -EREADFAIL;
 				goto out;
 			}
-
-			if (result == RESULT_GENERAL_FAILURE) {
-				pr_info("Read Data General Error\n");
-				ret = -1;
-				goto out;
-			}
+		} else {
+			pr_err("Read Data- Wrong response type\n");
+			ret = -EOTHER;
+			goto out;
 		}
 
 		/* Copy data to user buffer */
@@ -990,14 +1058,13 @@ rpmb_program_key(struct device *dev, struct device_attribute *attr,
 
 	if (sscanf(buf, "%d", &cmd) == 1) {
 		ret = program_authentication_key();
-		if (ret)
-			pr_info("Authentication key Programming Failed. Try again\n");
+		if (ret < 0) /* Any other failure, return error */
+			pr_err("Authentication key Programming Failed\n");
 		else
 			pr_info("Done programming Authentication Key!\n");
-	} else {
+	} else
 		pr_err("Usage: echo [any_number] > "
 				"/sys/emmc_rpmb_test/emmc_rpmb_program_key\n");
-	}
 
 	return n;
 }
@@ -1011,11 +1078,14 @@ rpmb_get_counter(struct device *dev, struct device_attribute *attr,
 
 	if (sscanf(buf, "%d", &cmd) == 1) {
 		write_counter_val = read_counter_value();
-		pr_info("Counter Value: %x\n", write_counter_val);
-	} else {
+		if (write_counter_val < 0)
+			pr_err("%s: Write counter value read failed\n",
+								__func__);
+		else
+			pr_info("Counter Value: %x\n", write_counter_val);
+	} else
 		pr_err("Usage: echo [any_number] > "
 				"/sys/emmc_rpmb_test/emmc_rpmb_get_counter\n");
-	}
 
 	return n;
 }
@@ -1037,11 +1107,12 @@ rpmb_read(struct device *dev, struct device_attribute *attr,
 	rd_buff = kmalloc(bytes, GFP_KERNEL);
 
 	ret = authenticated_data_read(rd_buff, bytes, addr);
-	if (ret) {
-		pr_info("Read Failure. Try again\n");
+	if (ret < 0) {
+		pr_err("Read Failure. Try again\n");
 		kfree(rd_buff);
 		return -1;
 	}
+
 	pr_info("Done Reading Data from RPMB addr: 0x%x\n", addr);
 	dump_buffer((char *)rd_buff, bytes);
 
@@ -1072,10 +1143,13 @@ rpmb_write(struct device *dev, struct device_attribute *attr,
 		*(wr_buff + i) = pattern;
 
 	ret = authenticated_data_write(wr_buff, bytes, addr);
-	if (ret)
-		pr_info("Write Failure. Try again\n");
-	else
-		pr_info("Done Writing Data to RPMB!\n");
+	if (ret < 0) {
+		pr_err("Write Failure. Try again\n");
+		kfree(wr_buff);
+		return -1;
+	}
+
+	pr_info("Done Writing Data to RPMB!\n");
 
 	kfree(wr_buff);
 	return n;
@@ -1101,6 +1175,7 @@ static struct attribute_group emmc_rpmb_test_attr_group = {
 static int __init emmc_rpmb_init(void)
 {
 	bio_buff = (void *)__get_free_page(GFP_KERNEL);
+	pr_info("eMMC RPMB test driver initialized\n");
 	emmc_rpmb_test_kobj = kobject_create_and_add("emmc_rpmb_test", NULL);
 	if (!emmc_rpmb_test_kobj)
 		return -ENOMEM;
