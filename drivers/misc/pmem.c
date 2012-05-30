@@ -74,7 +74,7 @@ struct pmem_data {
 	struct list_head sub_data_list;
 
 	/* mmap refcount */
-	int ref;
+	atomic_t ref;
 };
 
 struct pmem_info {
@@ -366,14 +366,15 @@ static int pmem_map_pfn_range(int id, struct file *file,
 
 	/* If this is the first mmap */
 	if (!(data->flags & PMEM_FLAGS_MASTERMAP)) {
-		BUG_ON(data->ref != 0);
+		BUG_ON(atomic_read(&data->ref) != 0);
 		pmem_update_kernel_mappings(id, file, data, offset, len);
 	}
 
 	if (io_remap_pfn_range(vma, vma->vm_start + offset,
 			       (PMEM_START_ADDR(data) + offset) >> PAGE_SHIFT,
 			       len, vma->vm_page_prot)) {
-		if ((data->flags & PMEM_FLAGS_MMAP_CHANGED) && (data->ref == 0))
+		if ((data->flags & PMEM_FLAGS_MMAP_CHANGED) &&
+				(atomic_read(&data->ref) == 0))
 			pmem_restore_kernel_mappings(id, data, offset, len);
 		return -EAGAIN;
 	}
@@ -1218,18 +1219,11 @@ static void pmem_vma_open(struct vm_area_struct *vma)
 {
 	struct file *file = vma->vm_file;
 	struct pmem_data *data = file->private_data;
-	int id = get_id(file);
-	/* this should never be called as we don't support copying pmem
-	 * ranges via fork */
+
 	BUG_ON(!has_allocation(file));
+
 	down_write(&data->sem);
-	/* remap the garbage pages, forkers don't get access to the data */
-	if (data->pid != task_pid_nr(current->group_leader)) {
-		printk(KERN_WARNING
-		       "Warning! remapping pmem area with garbage page\n");
-		pmem_unmap_pfn_range(id, vma, data, 0,
-				     vma->vm_end - vma->vm_start);
-	}
+	atomic_inc(&data->ref);
 	up_write(&data->sem);
 }
 
@@ -1257,10 +1251,7 @@ static void pmem_vma_close(struct vm_area_struct *vma)
 			data->flags |= PMEM_FLAGS_UNSUBMAP;
 	}
 
-	if (data->flags & PMEM_FLAGS_MASTERMAP) {
-		if (data->ref > 0)
-			data->ref--;
-	}
+	atomic_dec(&data->ref);
 
 	BUG_ON(vma_size != pmem_len(data));
 	/* the kernel is going to free this vma now anyway */
@@ -1294,6 +1285,7 @@ static int pmem_open(struct inode *inode, struct file *file)
 	INIT_LIST_HEAD(&data->list);
 	INIT_LIST_HEAD(&data->sub_data_list);
 	init_rwsem(&data->sem);
+	atomic_set(&data->ref, 0);
 
 	file->private_data = data;
 
@@ -1422,14 +1414,14 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		}
 	}
 
-	data->ref++;
+	atomic_inc(&data->ref);
 	vma->vm_ops = &vm_ops;
 	up_write(&data->sem);
 
 	return ret;
 
 error_free_mem:
-	if (data->ref == 0) {
+	if (atomic_read(&data->ref) == 0) {
 		printk(KERN_ERR "pmem: failed to free allocated memory\n");
 		ret = pmem_free(id, data);
 	}
@@ -1595,7 +1587,7 @@ static int pmem_release(struct inode *inode, struct file *file)
 
 	/* if its not a connected file and it has an allocation, free it */
 	if (!(PMEM_FLAGS_CONNECTED & data->flags) && has_allocation(file)) {
-		WARN_ON(data->ref);
+		WARN_ON(atomic_read(&data->ref));
 		ret = pmem_free(id, data);
 		if (ret)
 			printk(KERN_ERR"pmem: pmem_free failed\n");
@@ -1690,7 +1682,7 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 			size = pmem_len(data);
 
 			n += scnprintf(buffer + n, debug_bufmax - n,
-				       "   %08d", data->ref);
+				       "   %08d", atomic_read(&data->ref));
 			n += scnprintf(buffer + n, debug_bufmax - n,
 				       " 0x%08x", data->flags);
 			n += scnprintf(buffer + n, debug_bufmax - n,

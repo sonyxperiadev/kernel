@@ -42,11 +42,11 @@ struct vm_area_struct *vb2_get_vma(struct vm_area_struct *vma)
 	if (vma_copy == NULL)
 		return NULL;
 
-	if (vma->vm_ops && vma->vm_ops->open)
-		vma->vm_ops->open(vma);
-
 	if (vma->vm_file)
 		get_file(vma->vm_file);
+
+	if (vma->vm_ops && vma->vm_ops->open)
+		vma->vm_ops->open(vma);
 
 	memcpy(vma_copy, vma, sizeof(*vma));
 
@@ -69,11 +69,11 @@ void vb2_put_vma(struct vm_area_struct *vma)
 	if (!vma)
 		return;
 
-	if (vma->vm_file)
-		fput(vma->vm_file);
-
 	if (vma->vm_ops && vma->vm_ops->close)
 		vma->vm_ops->close(vma);
+
+	if (vma->vm_file)
+		fput(vma->vm_file);
 
 	kfree(vma);
 }
