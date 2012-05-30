@@ -1,21 +1,23 @@
 /****************************************************************************
 *
-*     Copyright (c) 2009 Broadcom Corporation
+* Copyright (c) 2009 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license
-*   agreement governing use of this software, this software is licensed to you
-*   under the terms of the GNU General Public License version 2, available
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available
+* at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this
-*   software in any way with any other Broadcom software provided under a
-*   license other than the GPL, without Broadcom's express prior written
-*   consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a
+* license other than the GPL, without Broadcom's express prior written
+* consent.
 *
-*	The below HMAC-SHA256 computation code was taken from-
-*	http://www.ouah.org/ogay/hmac/
-*	I've removed unnecesary code from the original source.I'm also retaining
-*	the original license header from the original source which is below.
+* The below HMAC-SHA256 computation code was taken from-
+* http://www.ouah.org/ogay/hmac/
+* I've removed unnecesary code from the original source and fixed checkpatch
+* errors and warnings.
+* I'm also retaining the original license header from the
+* original source which is below.
 *
 ****************************************************************************/
 
@@ -61,28 +63,28 @@
 extern "C" {
 #endif
 
-typedef struct {
-    sha256_ctx ctx_inside;
-    sha256_ctx ctx_outside;
+struct hmac_sha256_ctx {
+	struct sha256_ctx ctx_inside;
+	struct sha256_ctx ctx_outside;
 
-    /* for hmac_reinit */
-    sha256_ctx ctx_inside_reinit;
-    sha256_ctx ctx_outside_reinit;
+	/* for hmac_reinit */
+	struct sha256_ctx ctx_inside_reinit;
+	struct sha256_ctx ctx_outside_reinit;
 
-    unsigned char block_ipad[SHA256_BLOCK_SIZE];
-    unsigned char block_opad[SHA256_BLOCK_SIZE];
-} hmac_sha256_ctx;
+	unsigned char block_ipad[SHA256_BLOCK_SIZE];
+	unsigned char block_opad[SHA256_BLOCK_SIZE];
+};
 
-void hmac_sha256_init(hmac_sha256_ctx *ctx, const unsigned char *key,
-                      unsigned int key_size);
-void hmac_sha256_reinit(hmac_sha256_ctx *ctx);
-void hmac_sha256_update(hmac_sha256_ctx *ctx, const unsigned char *message,
-                        unsigned int message_len);
-void hmac_sha256_final(hmac_sha256_ctx *ctx, unsigned char *mac,
-                       unsigned int mac_size);
+void hmac_sha256_init(struct hmac_sha256_ctx *ctx,
+			const unsigned char *key, unsigned int key_size);
+void hmac_sha256_reinit(struct hmac_sha256_ctx *ctx);
+void hmac_sha256_update(struct hmac_sha256_ctx *ctx,
+			const unsigned char *message, unsigned int message_len);
+void hmac_sha256_final(struct hmac_sha256_ctx *ctx, unsigned char *mac,
+						unsigned int mac_size);
 void hmac_sha256(const unsigned char *key, unsigned int key_size,
-                 const unsigned char *message, unsigned int message_len,
-                 unsigned char *mac, unsigned mac_size);
+			const unsigned char *message, unsigned int message_len,
+			unsigned char *mac, unsigned mac_size);
 
 #ifdef __cplusplus
 }

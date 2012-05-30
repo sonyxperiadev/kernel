@@ -1,21 +1,23 @@
 /****************************************************************************
 *
-*     Copyright (c) 2009 Broadcom Corporation
+* Copyright (c) 2009 Broadcom Corporation
 *
-*   Unless you and Broadcom execute a separate written software license
-*   agreement governing use of this software, this software is licensed to you
-*   under the terms of the GNU General Public License version 2, available
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available
+* at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*   Notwithstanding the above, under no circumstances may you combine this
-*   software in any way with any other Broadcom software provided under a
-*   license other than the GPL, without Broadcom's express prior written
-*   consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a
+* license other than the GPL, without Broadcom's express prior written
+* consent.
 *
-*	The below HMAC-SHA256 computation code was taken from-
-*	http://www.ouah.org/ogay/hmac/
-*	I've removed unnecesary code from the original source.I'm also retaining
-*	the original license header from the original source which is below.
+* The below HMAC-SHA256 computation code was taken from-
+* http://www.ouah.org/ogay/hmac/
+* I've removed unnecesary code from the original source and fixed
+* checkpatch errors and warnings.
+* I'm also retaining the original license header from the original
+* source which is below.
 *
 ****************************************************************************/
 
@@ -31,13 +33,13 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ *	notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ *	notice, this list of conditions and the following disclaimer in the
+ *	documentation and/or other materials provided with the distribution.
  * 3. Neither the name of the project nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
+ *	may be used to endorse or promote products derived from this software
+ *	without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -55,34 +57,31 @@
 #ifndef SHA2_H
 #define SHA2_H
 
-#define SHA256_DIGEST_SIZE ( 256 / 8)
+#define SHA256_DIGEST_SIZE (256 / 8)
 
-#define SHA256_BLOCK_SIZE  ( 512 / 8)
+#define SHA256_BLOCK_SIZE  (512 / 8)
 
 #ifndef SHA2_TYPES
 #define SHA2_TYPES
-typedef unsigned char uint8;
-typedef unsigned int  uint32;
-typedef unsigned long long uint64;
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct {
-    unsigned int tot_len;
-    unsigned int len;
-    unsigned char block[2 * SHA256_BLOCK_SIZE];
-    uint32 h[8];
-} sha256_ctx;
+struct sha256_ctx {
+	unsigned int tot_len;
+	unsigned int len;
+	unsigned char block[2 * SHA256_BLOCK_SIZE];
+	unsigned int h[8];
+};
 
-void sha256_init(sha256_ctx * ctx);
-void sha256_update(sha256_ctx *ctx, const unsigned char *message,
-                   unsigned int len);
-void sha256_final(sha256_ctx *ctx, unsigned char *digest);
+void sha256_init(struct sha256_ctx *ctx);
+void sha256_update(struct sha256_ctx *ctx, const unsigned char *message,
+				   unsigned int len);
+void sha256_final(struct sha256_ctx *ctx, unsigned char *digest);
 void sha256(const unsigned char *message, unsigned int len,
-            unsigned char *digest);
+			unsigned char *digest);
 
 #ifdef __cplusplus
 }
