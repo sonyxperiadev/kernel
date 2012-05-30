@@ -139,6 +139,7 @@ struct pmem_info {
 #define PMEM_FLAGS_CARVEOUT	(0x1 << 10)
 #define PMEM_FLAGS_ALLOCMASK	(PMEM_FLAGS_KMALLOC | PMEM_FLAGS_CMA \
 					| PMEM_FLAGS_CARVEOUT)
+
 #define PMEM_IS_PAGE_ALIGNED(addr)	(!((addr) & (~PAGE_MASK)))
 #define PMEM_START_PAGE(data)		pfn_to_page(data->pfn)
 #define PMEM_START_ADDR(data)		__pfn_to_phys(data->pfn)
@@ -550,6 +551,7 @@ static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 	return 0;
 }
 
+/* must be called with down_write(data->sem) */
 static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 			 unsigned long len)
 {
@@ -571,14 +573,20 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 	}
 
 	/* if we have a carveout heap and allocation is uncached */
-	if (pmem[id].carveout_base && (file->f_flags & O_SYNC)) {
+	if (pmem[id].carveout_base &&
+		(file->f_flags & O_SYNC) &&
+		(file->f_flags & O_NONBLOCK)) {
+
 		addr = gen_pool_alloc(pmem[id].pool, len);
 		if (addr) {
 			data->flags |= PMEM_FLAGS_CARVEOUT;
 			data->pfn = __phys_to_pfn(addr);
 			data->size = len;
 			return 0;
+		} else {
+			printk(KERN_ALERT"carveout failed: %dkB\n", len/SZ_1K);
 		}
+		/* If we failed, fallback to CMA */
 	}
 
 	if (pmem_cma_allocate(id, len, data))
@@ -1491,7 +1499,6 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case PMEM_GET_TOTAL_SIZE:
 		DLOG("get total size\n");
 		region.offset = 0;
-		get_id(file);
 		region.len = pmem[id].cma.nr_pages << PAGE_SHIFT;
 		if (copy_to_user((void __user *)arg, &region,
 				 sizeof(struct pmem_region)))

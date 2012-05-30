@@ -912,7 +912,7 @@ void __init board_common_reserve(void)
 	cmasize = android_pmem_data.cmasize;
 
 	if (carveout_size) {
-		carveout_base = memblock_alloc(carveout_size, SZ_16M);
+		carveout_base = memblock_alloc(carveout_size, 1);
 		memblock_free(carveout_base, carveout_size);
 		err = memblock_remove(carveout_base, carveout_size);
 		if (!err) {
