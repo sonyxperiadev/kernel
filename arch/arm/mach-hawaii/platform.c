@@ -320,7 +320,7 @@ int appf_platform_boottime_init(void)
         cpu_context->cp15_data             = (void *)get_normal_memory(CP15_DATA_SIZE);
         cpu_context->debug_data            = (void *)get_normal_memory(DEBUG_DATA_SIZE);
         cpu_context->other_data            = (void *)get_normal_memory(OTHER_DATA_SIZE);
-		cpu_context->workaround_buffer     = (void *)get_normal_memory(WORKAROUND_BUFFER_SIZE);
+		cpu_context->workaround_buffer     = (appf_u32)get_normal_memory(WORKAROUND_BUFFER_SIZE);
 #endif
         /*
          * Here we are setting up what context gets saved in each world. It is of course
