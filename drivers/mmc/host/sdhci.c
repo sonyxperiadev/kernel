@@ -2033,8 +2033,9 @@ static void sdhci_tasklet_card(unsigned long param)
 
 	spin_lock_irqsave(&host->lock, flags);
 
-	if (host->mrq &&
-	!(sdhci_readl(host, SDHCI_PRESENT_STATE) & SDHCI_CARD_PRESENT)) {
+	if (host->mrq) {
+		if (!(sdhci_readl(host, SDHCI_PRESENT_STATE) &
+					SDHCI_CARD_PRESENT)) {
 			printk(KERN_ERR "%s: Card removed during transfer!\n",
 				mmc_hostname(host->mmc));
 			printk(KERN_ERR "%s: Resetting controller.\n",
@@ -2046,18 +2047,24 @@ static void sdhci_tasklet_card(unsigned long param)
 			host->mrq->cmd->error = -ENOMEDIUM;
 			tasklet_schedule(&host->finish_tasklet);
 #ifdef CONFIG_MMC_BCM_SD
-		pr_info("SD Card Removed\n");
+			pr_info("SD Card Removed\n");
+		}
 	} else {
-		/*
-		 * Turn ON the SDCLK very early here; We do this
-		 * to handle the case of quick remove-insert.
-		 */
-		unsigned int clock;
-		clock = host->clock;
-		host->clock = 0;
-		sdhci_set_clock(host, clock);
+		if (!(sdhci_readl(host, SDHCI_PRESENT_STATE) &
+					SDHCI_CARD_PRESENT)) {
+			pr_info("SD Card Removed\n");
+		} else {
+			/*
+			 * Turn ON the SDCLK very early here; We do this
+			 * to handle the case of quick remove-insert.
+			 */
+			unsigned int clock;
+			clock = host->clock;
+			host->clock = 0;
+			sdhci_set_clock(host, clock);
 
-		pr_info("SD Card Inserted\n");
+			pr_info("SD Card Inserted\n");
+		}
 #endif
 	}
 
