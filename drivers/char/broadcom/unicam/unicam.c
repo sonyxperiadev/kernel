@@ -34,14 +34,10 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/broadcom/unicam.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
-#include <mach/rdb/brcm_rdb_pwrmgr.h>
+#include <mach/rdb/brcm_rdb_mm_cfg.h>
 #include <mach/rdb/brcm_rdb_cam.h>
 
 #include <mach/memory.h>
-#include <mach/rdb/brcm_rdb_mm_cfg.h>
-#include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>
-#include <mach/rdb/brcm_rdb_padctrlreg.h>
-#include <mach/rdb/brcm_rdb_util.h>
 #include <plat/clock.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
@@ -52,9 +48,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #define RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS	MM_CSI0_BASE_ADDR
 #define RHEA_MM_CFG_BASE_ADDRESS		MM_CFG_BASE_ADDR
-#define RHEA_MM_CLK_BASE_ADDRESS		MM_CLK_BASE_ADDR
-#define RHEA_PAD_CTRL_BASE_ADDRESS		PAD_CTRL_BASE_ADDR
-#define RHEA_CSR_BASE_ADDRESS			MEMC0_OPEN_BASE_ADDR
 
 #define IRQ_UNICAM         (156+32)
 
@@ -70,8 +63,6 @@ static int unicam_major = UNICAM_DEV_MAJOR;
 static struct class *unicam_class;
 static void __iomem *unicam_base;
 static void __iomem *mmcfg_base;
-static void __iomem *mmclk_base;
-static void __iomem *padctl_base;
 static struct pi_mgr_dfs_node unicam_dfs_node = {
 	.valid = 0,
 };
@@ -373,9 +364,10 @@ static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
 	/*  primary sensor */
 	if ((sensor_id == 0) && (unicam_info.csi0_unicam_gpio != 0xffffffff))
 		gpio_set_value(unicam_info.csi0_unicam_gpio, enable);
+
 	/*  secondary sensor */
 	else if ((sensor_id == 1)
-		 && (unicam_info.csi0_unicam_gpio != 0xffffffff))
+		 && (unicam_info.csi1_unicam_gpio != 0xffffffff))
 		gpio_set_value(unicam_info.csi1_unicam_gpio, enable);
 
 	usleep_range(10000, 12000);
@@ -384,162 +376,111 @@ static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
 static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 {
 	unsigned int value, ret;
-	struct clk *dig_chan_clk;
+	struct clk *csi_clk;
+
+	/*  Set Camera CSI0 Phy & Clock Registers, CSI1 use these clocks also*/
+	csi_clk = clk_get(NULL, "csi0_lp_clk");
+	if (!csi_clk)
+		dev_err(unicam_info.dev, "%s: error get lp clock\n",
+			__func__);
+	ret = clk_enable(csi_clk);
+	if (ret)
+		dev_err(unicam_info.dev, "%s: error enable csi lp clock\n",
+			__func__);
+	ret = clk_set_rate(csi_clk, 100000000);
+	if (ret)
+		dev_err(unicam_info.dev, "%s: error set lp clock rate\n",
+			__func__);
 
 	if (port == 0) {
-		/*  Set Camera CSI0 Phy & Clock Registers */
+		mm_ccu_set_pll_select(CSI0_CAMPIX_PLL, CSI_RX0_BCLKHS);
+		mm_ccu_set_pll_select(CSI0_BYTE1_PLL, CSI_RX0_BCLKHS);
+		mm_ccu_set_pll_select(CSI0_BYTE0_PLL, CSI_RX0_BCLKHS);
+		/* Enable CSI0 LDO */
 		reg_write(mmcfg_base, MM_CFG_CSI0_LDO_CTL_OFFSET, 0x5A00000F);
-		/*  enable access */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
-			0xA5A501);
-		/*  csi0_rx0_bclkhs */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_PHY_DIV_OFFSET,
-			0x00000888);
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_DIV_OFFSET,
-			0x00000040);
-		/*  default value */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET,
-			0x00000303);
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET,
-			0x00000303);
-		/*  CSI0 trigger change */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET,
-			(1 << MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_SHIFT));
-
-		/*  Select Camera Phy AFE 0 */
 		/*  AFE 0 Select:  CSI0 has PHY selection. */
-		value =
-		    reg_read(mmcfg_base,
-			     MM_CFG_CSI0_PHY_CTRL_OFFSET) & 0x7fffffff;
-		/*  enable access */
+		value = reg_read(mmcfg_base,
+				MM_CFG_CSI0_PHY_CTRL_OFFSET) & 0x7fffffff;
 		reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);
 	} else {
-		/*  Set Camera CSI1 Phy & Clock Registers */
+		mm_ccu_set_pll_select(CSI1_CAMPIX_PLL, CSI_RX0_BCLKHS);
+		mm_ccu_set_pll_select(CSI1_BYTE1_PLL, CSI_RX0_BCLKHS);
+		mm_ccu_set_pll_select(CSI1_BYTE0_PLL, CSI_RX0_BCLKHS);
+		/* Enable CSI1 LDO */
 		reg_write(mmcfg_base, MM_CFG_CSI1_LDO_CTL_OFFSET, 0x5A00000F);
-		/*  enable access */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
-			0xA5A501);
-		/*  csi1_rx0_bclkhs */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_PHY_DIV_OFFSET,
-			0x00000888);
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_DIV_OFFSET,
-			0x00000040);
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET,
-			0x00000303);
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET,
-			0x00000303);
-		/*  CSI1 trigger change */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET,
-			(1 << MM_CLK_MGR_REG_DIV_TRIG_CSI1_LP_TRIGGER_SHIFT));
-
-		/*  Select Camera Phy AFE 1 */
 		/*  AFE 1 Select:  CSI0 has PHY selection. */
-		value =
-		    reg_read(mmcfg_base,
-			     MM_CFG_CSI0_PHY_CTRL_OFFSET) | 0x80000000;
-		/*  enable access */
+		value = reg_read(mmcfg_base,
+				MM_CFG_CSI0_PHY_CTRL_OFFSET) | 0x80000000;
 		reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);
 	}
 
 	if (clk_src == 0) {
-		/*  Enable DIG0 clock out to sensor */
-		/*  Select DCLK1  (bits 10:8 = 0x000 => DCLK1 , bits 2:0 = 3 =>
-		 *  8 mAmps strength
-		 */
-		value =
-		    reg_read(padctl_base,
-			     PADCTRLREG_DCLK1_OFFSET) &
-		    (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
-		reg_write(padctl_base, PADCTRLREG_DCLK1_OFFSET, value);
-
-		dig_chan_clk = clk_get(NULL, "dig_ch0_clk");
-		if (!dig_chan_clk)
+		csi_clk = clk_get(NULL, "dig_ch0_clk");
+		if (!csi_clk)
 			dev_err(unicam_info.dev, "%s: error get clock\n",
 				__func__);
 
-		ret = clk_enable(dig_chan_clk);
+		ret = clk_enable(csi_clk);
 		if (ret)
 			dev_err(unicam_info.dev, "%s: error enable unicam clock\n",
 				__func__);
 
-		ret = clk_set_rate(dig_chan_clk, 13000000);
+		ret = clk_set_rate(csi_clk, 13000000);
 		if (ret)
 			dev_err(unicam_info.dev, "%s: error changing clock rate\n",
 				__func__);
 
 		dev_dbg(unicam_info.dev, "dig_chan_clk rate %lu\n",
-			  clk_get_rate(dig_chan_clk));
+			  clk_get_rate(csi_clk));
 	} else {		/* if (clk_src == 1) { */
-		/*  Enable DIG1 clock out sensor */
-		/*  Select DCLK2  (bits 10:8 = 0x000 => DCLK2,
-		 *  bits 2:0 = 3 => 8 mAmps strength
-		 */
-		value =
-		    reg_read(padctl_base,
-			     PADCTRLREG_GPIO32_OFFSET) &
-		    (~PADCTRLREG_GPIO32_PINSEL_GPIO32_MASK);
-		value |= (3 << PADCTRLREG_GPIO32_PINSEL_GPIO32_SHIFT);
-		reg_write(padctl_base, PADCTRLREG_GPIO32_OFFSET, value);
-
-		dig_chan_clk = clk_get(NULL, "dig_ch1_clk");
-		if (!dig_chan_clk)
+		csi_clk = clk_get(NULL, "dig_ch1_clk");
+		if (!csi_clk)
 			dev_err(unicam_info.dev, "%s: error get clock\n",
 				__func__);
 
-		ret = clk_enable(dig_chan_clk);
+		ret = clk_enable(csi_clk);
 		if (ret)
 			dev_err(unicam_info.dev, "%s: error enable unicam clock\n",
 				__func__);
 
-		ret = clk_set_rate(dig_chan_clk, 13000000);
+		ret = clk_set_rate(csi_clk, 13000000);
 		if (ret)
 			dev_err(unicam_info.dev, "%s: error changing clock rate\n",
 				__func__);
 
 		dev_dbg(unicam_info.dev, "dig_chan_clk rate %lu\n",
-			  clk_get_rate(dig_chan_clk));
+			  clk_get_rate(csi_clk));
 	}
 }
 
 static void unicam_close_csi(unsigned int port, unsigned int clk_src)
 {
-	struct clk *dig_chan_clk;
+	struct  clk *csi_clk;
 
-	if (port == 0) {
-		/*  Disable Camera CSI0 Phy & Clock Registers */
-		/*  enable access */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
-			0xA5A501);
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET,
-			0x00000302);
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET,
-			0x00000302);
-	} else {
-		/*  Disable Camera CSI1 Phy & Clock Registers */
-		/*  enable access */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
-			0xA5A501);
-		/*  default value */
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET,
-			0x00000302);
-		reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET,
-			0x00000302);
-	}
+	/*  Disable  Camera CSI0 Clock Registers, CSI1 use these clocks also*/
+	csi_clk = clk_get(NULL, "csi0_lp_clk");
+	clk_disable(csi_clk);
+
+	/* Disable CSIx LDO */
+	if (port == 0)
+		reg_write(mmcfg_base, MM_CFG_CSI0_LDO_CTL_OFFSET, 0x5A000000);
+	else
+		reg_write(mmcfg_base, MM_CFG_CSI1_LDO_CTL_OFFSET, 0x5A000000);
 
 	if (clk_src == 0) {
 		/*  Disable Dig Clk0 */
-		dig_chan_clk = clk_get(NULL, "dig_ch0_clk");
-		if (!dig_chan_clk)
+		csi_clk = clk_get(NULL, "dig_ch0_clk");
+		if (!csi_clk)
 			return;
 
-		clk_disable(dig_chan_clk);
+		clk_disable(csi_clk);
 	} else {
 		/*  Disable Dig Clk1 */
-		dig_chan_clk = clk_get(NULL, "dig_ch1_clk");
-		if (!dig_chan_clk)
+		csi_clk = clk_get(NULL, "dig_ch1_clk");
+		if (!csi_clk)
 			return;
 
-		clk_disable(dig_chan_clk);
+		clk_disable(csi_clk);
 	}
 }
 
@@ -704,16 +645,6 @@ int __init unicam_init(void)
 	if (mmcfg_base == NULL)
 		goto err;
 
-	mmclk_base =
-	    (void __iomem *)ioremap_nocache(RHEA_MM_CLK_BASE_ADDRESS, SZ_4K);
-	if (mmclk_base == NULL)
-		goto err;
-
-	padctl_base =
-	    (void __iomem *)ioremap_nocache(RHEA_PAD_CTRL_BASE_ADDRESS, SZ_4K);
-	if (padctl_base == NULL)
-		goto err;
-
 	ret = platform_driver_register(&unicam_drv);
 
 	return ret;
@@ -733,12 +664,6 @@ void __exit unicam_exit(void)
 
 	if (mmcfg_base)
 		iounmap(mmcfg_base);
-
-	if (mmclk_base)
-		iounmap(mmclk_base);
-
-	if (padctl_base)
-		iounmap(padctl_base);
 
 	device_destroy(unicam_class, MKDEV(unicam_major, 0));
 	class_destroy(unicam_class);
