@@ -63,8 +63,8 @@ config BCMPMU_RPC
 
 config BCM_AP_PANIC_ON_CPCRASH
         bool "Support for crashing AP when CP crashes"
-        depends on BRCM_CHAR_DRIVERS && (MACH_RHEA_SS_COMMON)
-        default n
+        depends on BRCM_CHAR_DRIVERS
+        default y
         help
         If you say Y here, a CP crash will result in AP panic.
         Debug tool can be used to extract CP dump later.

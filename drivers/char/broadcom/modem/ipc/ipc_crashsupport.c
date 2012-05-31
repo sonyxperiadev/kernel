@@ -80,9 +80,7 @@ struct T_CRASH_SUMMARY {
 #define	SIM_AP_DEBUG_DATA	0x19000000
 #define	ASSERT_BUF_SIZE	    512
 #define MAX_RAMDUMP_BLOCKS  16
-#ifndef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 static char assert_buf[ASSERT_BUF_SIZE];
-#endif
 static int crashCount;
 static struct T_CRASH_SUMMARY *dumped_crash_summary_ptr = { 0 };
 
@@ -91,11 +89,9 @@ static struct T_CRASH_SUMMARY *dumped_crash_summary_ptr = { 0 };
 #define MAX_CP_DUMP_RETRIES 5
 #define TICKS_ONE_SECOND 1024
 
-#ifndef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 /* internal helper functions */
 static void DUMP_CP_assert_log(void);
 static void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump);
-#endif
 
 static void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf,
 			    UInt32 inStrBufLen);
@@ -241,15 +237,9 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		  dumped_crash_summary_ptr->value,
 		  crashThread, dumped_crash_summary_ptr->time);
 
-#ifndef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 	/* done with "simple" dump, so now pull the full assert
 	 * log from CP and dump out to MTT */
 	DUMP_CP_assert_log();
-#else
-	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
-	    && cp_crashed == 1)
-		abort();
-#endif
 
 cleanUp:
 
@@ -311,7 +301,6 @@ int IpcCPCrashCheck(void)
 	return 0;
 }
 
-#ifndef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 /******************************************************************
 *   Utility function to retrieve full crash log from CP via simple
 *   handshake protocol.
@@ -442,6 +431,12 @@ void DUMP_CP_assert_log(void)
 		sys_sync();
 
 	IPC_DEBUG(DBG_ERROR, "CP crash dump complete\n");
+
+#ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
+		if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
+			&& cp_crashed == 1)
+			abort();
+#endif
 
 }
 
@@ -579,4 +574,3 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 	iounmap(RamDumpBlockVAddr);
 
 }
-#endif /* CONFIG_BCM_AP_PANIC_ON_CPCRASH */
