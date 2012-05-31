@@ -795,11 +795,18 @@ static CSL_LCD_RES_T cslDsiWaitForStatAny_Poll(DSI_HANDLE dsiH,
 {
 	CSL_LCD_RES_T res = CSL_LCD_OK;
 	UInt32 stat = 0;
+	u32 counter = 0;
 
 	stat = chal_dsi_get_status(dsiH->chalH);
 
-	while ((stat & statMask) == 0)
+	while ((stat & statMask) == 0) {
+		if (counter > 100000000) {
+			WARN("%s: DSI gets stuck\n", __func__);
+			break;
+		}
+		counter++;
 		stat = chal_dsi_get_status(dsiH->chalH);
+	}
 
 	if (intStat != NULL)
 		*intStat = stat;
