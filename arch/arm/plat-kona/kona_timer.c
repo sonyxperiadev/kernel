@@ -570,7 +570,7 @@ EXPORT_SYMBOL(kona_timer_free);
  *
  * kt - Timer context to be freed.
  */
-unsigned int kona_timer_get_counter(struct kona_timer *kt)
+unsigned int notrace kona_timer_get_counter(struct kona_timer *kt)
 {
 	struct kona_timer_module *ktm;
 	unsigned int counter;
@@ -918,7 +918,7 @@ static inline void __disable_channel(void __iomem *reg_base, int ch_num)
 	writel(reg, reg_base + KONA_GPTIMER_STCS_OFFSET);
 }
 
-static inline unsigned long __get_counter(void __iomem *reg_base)
+static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 {
 	unsigned long prev;
 	unsigned long cur;

@@ -107,7 +107,7 @@ static void gptimer_set_mode(enum clock_event_mode mode,
 	}
 }
 
-static cycle_t gptimer_clksrc_read(struct clocksource *cs)
+static cycle_t notrace gptimer_clksrc_read(struct clocksource *cs)
 {
 	cycle_t count = 0;
 

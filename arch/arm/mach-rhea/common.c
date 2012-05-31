@@ -944,7 +944,7 @@ void __init board_add_common_devices(void)
 }
 
 /* Return the Rhea chip revision ID */
-int get_chip_rev_id(void)
+int notrace get_chip_rev_id(void)
 {
 	return (readl(KONA_CHIPREG_VA + CHIPREG_CHIPID_REVID_OFFSET) &
 	CHIPREG_CHIPID_REVID_REVID_MASK) >>
