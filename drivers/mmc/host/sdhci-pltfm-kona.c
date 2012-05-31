@@ -489,7 +489,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	    | SDHCI_QUIRK_32BIT_DMA_ADDR
 	    | SDHCI_QUIRK_32BIT_DMA_SIZE | SDHCI_QUIRK_32BIT_ADMA_SIZE;
 
-#ifdef CONFIG_MACH_RHEA_FARADAY_EB20
+#ifdef CONFIG_MACH_RHEA_RAY_EDN3X_EB30
         host->quirks |= SDHCI_QUIRK_NO_MULTIBLOCK;
 #endif
        

@@ -120,6 +120,8 @@
 #include <linux/broadcom/wd-tapper.h>
 #endif
 
+#include <mach/rdb/brcm_rdb_keypad.h>
+#include <linux/gpio_event.h>
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
@@ -211,6 +213,11 @@ static struct regulator_init_data bcm59055_simldo_data = {
 };
 
 struct regulator_consumer_supply h6ldo_supply[] = {
+	{.supply = "vdd_sdxc"},
+};
+
+struct regulator_consumer_supply hv4_supply[] = {
+	{.supply = "hv4ldo_uc"},
 	{.supply = "vdd_sdio"},
 };
 
@@ -359,7 +366,7 @@ static struct i2c_board_info __initdata pmu_info[] = {
 
 #ifdef CONFIG_MFD_BCM59039
 struct regulator_consumer_supply hv6_supply[] = {
-	{.supply = "2v9sdxc"},
+	{.supply = "vdd_sdxc"},
 };
 
 struct regulator_consumer_supply hv4_supply[] = {
@@ -472,6 +479,127 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 	.col_num = 8,
 	.keymap = newKeymap,
 	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
+};
+
+#elif defined CONFIG_INPUT_GPIO
+
+static void bcm_keypad_config_iocr(int row, int col)
+{
+	unsigned row_width, col_width, val;
+
+	/* Calculate the row width and the column width to be programmed */
+	row_width = ((row - 1) << KEYPAD_KPCR_ROWWIDTH_SHIFT) &
+			KEYPAD_KPCR_ROWWIDTH_MASK;
+	col_width = ((col - 1) << KEYPAD_KPCR_COLUMNWIDTH_SHIFT) &
+			KEYPAD_KPCR_COLUMNWIDTH_MASK;
+
+	/* First enable the Keypad Control and then configure the remaining
+	 * values */
+	writel((KEYPAD_KPCR_ENABLE_MASK << KEYPAD_KPCR_ENABLE_SHIFT),
+		KONA_KEYPAD_VA + KEYPAD_KPCR_OFFSET);
+
+	/* set IOMODE(bit 3 ) to enable GPIO mode for Keypad
+	 * Set SwapRowColumn bit in KPCR to enable swap of row/column
+	 * Enable Status Filtering and configure row-width & column width
+	 * (as row -1 & col -1)*/
+	val = readl(KONA_KEYPAD_VA + KEYPAD_KPCR_OFFSET) | row_width | col_width
+			| KEYPAD_KPCR_IOMODE_MASK |
+			KEYPAD_KPCR_STATUSFILTERENABLE_MASK;
+
+	writel(val, KONA_KEYPAD_VA + KEYPAD_KPCR_OFFSET);
+
+	/* Set all the row GPIOs as output and all column GPIOs as input */
+	writel((KEYPAD_KPIOR_ROWOCONTRL_MASK &
+		~(KEYPAD_KPIOR_COLUMNOCONTRL_MASK)),
+		KONA_KEYPAD_VA + KEYPAD_KPIOR_OFFSET);
+}
+
+static unsigned int rhea_row_gpios[] = {0, 1, 2, 3, 4, 5, 6, 7};
+static unsigned int rhea_col_gpios[] = {8, 9, 10, 11, 12, 13, 14, 15};
+#define KEYMAP_INDEX(row, col)	(((col) * ARRAY_SIZE(rhea_col_gpios)) + (row))
+
+static const unsigned short
+	newKeymap[ARRAY_SIZE(rhea_row_gpios) * ARRAY_SIZE(rhea_col_gpios)] = {
+	[KEYMAP_INDEX(BCM_KEY_ROW_0, BCM_KEY_COL_0)] =	KEY_Y,
+	[KEYMAP_INDEX(BCM_KEY_ROW_0, BCM_KEY_COL_1)] =	KEY_T,
+	[KEYMAP_INDEX(BCM_KEY_ROW_0, BCM_KEY_COL_2)] =  KEY_R,
+	[KEYMAP_INDEX(BCM_KEY_ROW_0, BCM_KEY_COL_3)] =	KEY_E,
+	[KEYMAP_INDEX(BCM_KEY_ROW_0, BCM_KEY_COL_4)] =  KEY_W,
+	[KEYMAP_INDEX(BCM_KEY_ROW_0, BCM_KEY_COL_5)] =  KEY_Q,
+	[KEYMAP_INDEX(BCM_KEY_ROW_0, BCM_KEY_COL_6)] =  KEY_RESERVED,
+	[KEYMAP_INDEX(BCM_KEY_ROW_1, BCM_KEY_COL_0)] =	KEY_H,
+	[KEYMAP_INDEX(BCM_KEY_ROW_1, BCM_KEY_COL_1)] =	KEY_G,
+	[KEYMAP_INDEX(BCM_KEY_ROW_1, BCM_KEY_COL_2)] =	KEY_F,
+	[KEYMAP_INDEX(BCM_KEY_ROW_1, BCM_KEY_COL_3)] =	KEY_D,
+	[KEYMAP_INDEX(BCM_KEY_ROW_1, BCM_KEY_COL_4)] =	KEY_S,
+	[KEYMAP_INDEX(BCM_KEY_ROW_1, BCM_KEY_COL_5)] =	KEY_A,
+	[KEYMAP_INDEX(BCM_KEY_ROW_1, BCM_KEY_COL_6)] =	KEY_CAMERA,
+	[KEYMAP_INDEX(BCM_KEY_ROW_2, BCM_KEY_COL_0)] =	KEY_B,
+	[KEYMAP_INDEX(BCM_KEY_ROW_2, BCM_KEY_COL_1)] =	KEY_V,
+	[KEYMAP_INDEX(BCM_KEY_ROW_2, BCM_KEY_COL_2)] =	KEY_C,
+	[KEYMAP_INDEX(BCM_KEY_ROW_2, BCM_KEY_COL_3)] =	KEY_X,
+	[KEYMAP_INDEX(BCM_KEY_ROW_2, BCM_KEY_COL_4)] =	KEY_Z,
+	[KEYMAP_INDEX(BCM_KEY_ROW_2, BCM_KEY_COL_5)] =	KEY_LEFTSHIFT,
+	[KEYMAP_INDEX(BCM_KEY_ROW_2, BCM_KEY_COL_6)] =	KEY_VOLUMEUP,
+	[KEYMAP_INDEX(BCM_KEY_ROW_3, BCM_KEY_COL_0)] =	KEY_RESERVED,
+	[KEYMAP_INDEX(BCM_KEY_ROW_3, BCM_KEY_COL_1)] =	KEY_SPACE,
+	[KEYMAP_INDEX(BCM_KEY_ROW_3, BCM_KEY_COL_2)] =	KEY_SPACE,
+	[KEYMAP_INDEX(BCM_KEY_ROW_3, BCM_KEY_COL_3)] =	KEY_RESERVED,
+	[KEYMAP_INDEX(BCM_KEY_ROW_3, BCM_KEY_COL_4)] =	KEY_MENU,
+	[KEYMAP_INDEX(BCM_KEY_ROW_3, BCM_KEY_COL_5)] =	KEY_HOME,
+	[KEYMAP_INDEX(BCM_KEY_ROW_3, BCM_KEY_COL_6)] =	KEY_VOLUMEDOWN,
+	[KEYMAP_INDEX(BCM_KEY_ROW_4, BCM_KEY_COL_0)] =	KEY_BACK,
+	[KEYMAP_INDEX(BCM_KEY_ROW_4, BCM_KEY_COL_1)] =	KEY_DOT,
+	[KEYMAP_INDEX(BCM_KEY_ROW_4, BCM_KEY_COL_2)] =	KEY_P,
+	[KEYMAP_INDEX(BCM_KEY_ROW_4, BCM_KEY_COL_3)] =	KEY_O,
+	[KEYMAP_INDEX(BCM_KEY_ROW_4, BCM_KEY_COL_4)] =	KEY_I,
+	[KEYMAP_INDEX(BCM_KEY_ROW_4, BCM_KEY_COL_5)] =	KEY_U,
+	[KEYMAP_INDEX(BCM_KEY_ROW_4, BCM_KEY_COL_6)] =  KEY_RESERVED,
+	[KEYMAP_INDEX(BCM_KEY_ROW_5, BCM_KEY_COL_0)] =	KEY_SEND,
+	[KEYMAP_INDEX(BCM_KEY_ROW_5, BCM_KEY_COL_1)] =	KEY_SEMICOLON,
+	[KEYMAP_INDEX(BCM_KEY_ROW_5, BCM_KEY_COL_2)] =	KEY_BACKSPACE,
+	[KEYMAP_INDEX(BCM_KEY_ROW_5, BCM_KEY_COL_3)] =	KEY_L,
+	[KEYMAP_INDEX(BCM_KEY_ROW_5, BCM_KEY_COL_4)] =	KEY_K,
+	[KEYMAP_INDEX(BCM_KEY_ROW_5, BCM_KEY_COL_5)] =	KEY_J,
+	[KEYMAP_INDEX(BCM_KEY_ROW_5, BCM_KEY_COL_6)] =  KEY_RESERVED,
+	[KEYMAP_INDEX(BCM_KEY_ROW_6, BCM_KEY_COL_0)] =	KEY_RESERVED,
+	[KEYMAP_INDEX(BCM_KEY_ROW_6, BCM_KEY_COL_1)] =	KEY_RESERVED,
+	[KEYMAP_INDEX(BCM_KEY_ROW_6, BCM_KEY_COL_2)] =	KEY_ENTER,
+	[KEYMAP_INDEX(BCM_KEY_ROW_6, BCM_KEY_COL_3)] =	KEY_COMMA,
+	[KEYMAP_INDEX(BCM_KEY_ROW_6, BCM_KEY_COL_4)] =	KEY_M,
+	[KEYMAP_INDEX(BCM_KEY_ROW_6, BCM_KEY_COL_5)] =	KEY_N,
+	[KEYMAP_INDEX(BCM_KEY_ROW_6, BCM_KEY_COL_6)] =	KEY_RESERVED,
+};
+
+static struct gpio_event_matrix_info rhea_keypad_matrix_info = {
+	.info.func = gpio_event_matrix_func,
+	.keymap = newKeymap,
+	.output_gpios = rhea_col_gpios,
+	.input_gpios = rhea_row_gpios,
+	.noutputs = ARRAY_SIZE(rhea_col_gpios),
+	.ninputs = ARRAY_SIZE(rhea_row_gpios),
+	.settle_time.tv64 = 40 * NSEC_PER_USEC,
+	.poll_time.tv64 = 20 * NSEC_PER_MSEC,
+	.debounce_delay.tv64 = 5 * NSEC_PER_MSEC,
+	.flags =  GPIOKPF_REMOVE_PHANTOM_KEYS | GPIOKPF_PRINT_MAPPED_KEYS,
+
+};
+static struct gpio_event_info *rhea_keypad_info[] = {
+	&rhea_keypad_matrix_info.info,
+};
+
+static struct gpio_event_platform_data rhea_keypad_data = {
+	.name = "bcm_keypad",
+	.info = rhea_keypad_info,
+	.info_count = ARRAY_SIZE(rhea_keypad_info),
+};
+
+static struct platform_device rhea_keypad_device = {
+	.name = GPIO_EVENT_DEV_NAME,
+	.id = 0,
+	.dev		= {
+		.platform_data	= &rhea_keypad_data,
+	},
 };
 
 #endif
@@ -708,6 +836,7 @@ static struct mpu_platform_data mpu6050_data = {
 			0, 0, -1},
 	.level_shifter = 0,
 
+#ifdef CONFIG_GPIO_PCA953X
 	.accel = {
 		  /*.get_slave_descr = mpu_get_slave_descr, */
 		  .adapt_num = 2,
@@ -726,6 +855,7 @@ static struct mpu_platform_data mpu6050_data = {
 				    1, 0, 0,
 				    0, 0, -1},
 		    },
+#endif /* CONFIG_GPIO_PCA953X */
 };
 
 static struct i2c_board_info __initdata mpu6050_info[] = {
@@ -952,8 +1082,10 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	 .ahb_clk_name = "sdio1_ahb_clk",
 	 .sleep_clk_name = "sdio1_sleep_clk",
 	 .peri_clk_rate = 48000000,
-	 /* vdd_sdc regulator:needed to support UHS SD cards */
+	 /*The SD card regulator*/
 	 .vddo_regulator_name = "vdd_sdio",
+	 /*The SD controller regulator*/
+	 .vddsdxc_regulator_name = "vdd_sdxc",
 	 },
 	{			/* SDIO2 */
 	 .id = 1,
@@ -1121,8 +1253,7 @@ static struct platform_device bcm_backlight_devices = {
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
 #if defined(CONFIG_MACH_RHEA_RAY) || defined(CONFIG_MACH_RHEA_RAY_EDN1X) \
-	|| defined(CONFIG_MACH_RHEA_FARADAY_EB10) \
-	|| defined(CONFIG_MACH_RHEA_FARADAY_EB20) \
+	|| defined(CONFIG_MACH_RHEA_FARADAY_EB10) || defined(CONFIG_MACH_RHEA_RAY_EDN3X_EB30) \
 	|| defined(CONFIG_MACH_RHEA_DALTON) || defined(CONFIG_MACH_RHEA_RAY_EDN2X) \
 	|| defined(CONFIG_MACH_RHEA_RAY_DEMO)
 #define GPIO_SIM2LDO_EN		99
@@ -1368,7 +1499,7 @@ static struct i2c_board_info rhea_i2c_camera[] = {
 
 static int rhea_camera_power(struct device *dev, int on)
 {
-#if 0
+#ifdef CONFIG_GPIO_PCA953X
 	unsigned int value;
 	int ret = -1;
 	struct clk *clock;
@@ -1471,7 +1602,8 @@ static int rhea_camera_power(struct device *dev, int on)
 			       __func__);
 		}
 	}
-#endif
+
+#endif /* CONFIG_GPIO_PCA953X */
 	return 0;
 }
 
@@ -1535,6 +1667,8 @@ static struct platform_device wd_tapper = {
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
 	&bcm_kp_device,
+#elif defined CONFIG_INPUT_GPIO
+	&rhea_keypad_device,
 #endif
 
 #ifdef CONFIG_KONA_HEADSET
@@ -1817,6 +1951,9 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 void __init board_init(void)
 {
 	board_add_common_devices();
+#ifdef CONFIG_INPUT_GPIO
+	bcm_keypad_config_iocr(8, 8);
+#endif
 	rhea_ray_add_devices();
 #if 0
 #ifdef CONFIG_FB_BRCM_RHEA
