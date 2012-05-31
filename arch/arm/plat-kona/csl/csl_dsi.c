@@ -22,7 +22,6 @@
 *
 ****************************************************************************/
 
-#define __CSL_DSI_USE_INT__
 #define UNDER_LINUX
 
 #ifdef UNDER_LINUX
@@ -926,19 +925,22 @@ static CSL_LCD_RES_T cslDsiBtaRecover(DSI_HANDLE dsiH)
  * Description:    Lock DSI Interface For Exclusive Use By a Client
  *
  */
-void CSL_DSI_Lock(CSL_LCD_HANDLE client)
+void CSL_DSI_Lock(CSL_LCD_HANDLE vcH)
 {
-	DSI_CLIENT clientH = (DSI_CLIENT) client;
-	DSI_HANDLE dsiH = (DSI_HANDLE)clientH->lcdH;
+	DSI_HANDLE dsiH;
+	DSI_CLIENT clientH;
+	DSI_CM_HANDLE dsiChH;
+
+	dsiChH = (DSI_CM_HANDLE) vcH;
+	clientH = (DSI_CLIENT) dsiChH->client;
+	dsiH = (DSI_HANDLE)clientH->lcdH;
 
 	if (clientH->hasLock)
 		WARN(TRUE, "[CSL DSI][%d] %s: "
 		     "DSI Client Lock/Unlock Not balanced\n",
 		     dsiH->bus, __func__);
-	else {
-		OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
+	else
 		clientH->hasLock = TRUE;
-	}
 }
 
 /*
@@ -948,19 +950,23 @@ void CSL_DSI_Lock(CSL_LCD_HANDLE client)
  * Description:    Release Client's DSI Interface Lock
  *
  */
-void CSL_DSI_Unlock(CSL_LCD_HANDLE client)
+void CSL_DSI_Unlock(CSL_LCD_HANDLE vcH)
 {
-	DSI_CLIENT clientH = (DSI_CLIENT) client;
-	DSI_HANDLE dsiH = (DSI_HANDLE)clientH->lcdH;
+
+	DSI_HANDLE dsiH;
+	DSI_CLIENT clientH;
+	DSI_CM_HANDLE dsiChH;
+
+	dsiChH = (DSI_CM_HANDLE) vcH;
+	clientH = (DSI_CLIENT) dsiChH->client;
+	dsiH = (DSI_HANDLE)clientH->lcdH;
 
 	if (!clientH->hasLock)
 		WARN(TRUE, "[CSL DSI][%d] %s: "
 		     "DSI Client Lock/Unlock Not balanced\n",
 		     dsiH->bus, __func__);
-	else {
-		OSSEMAPHORE_Release(dsiH->semaDsi);
+	else
 		clientH->hasLock = FALSE;
-	}
 }
 
 /*
@@ -991,17 +997,22 @@ CSL_LCD_RES_T CSL_DSI_SendTrigger(CSL_LCD_HANDLE client, UInt8 trig)
 
 	chal_dsi_clr_status(dsiH->chalH, 0xFFFFFFFF);
 
-#ifdef __CSL_DSI_USE_INT__
-	cslDsiEnaIntEvent(dsiH, (UInt32)CHAL_DSI_ISTAT_TXPKT1_DONE);
-#endif
+	if (!clientH->hasLock)
+		cslDsiEnaIntEvent(dsiH, (UInt32)CHAL_DSI_ISTAT_TXPKT1_DONE);
+
 	chal_dsi_tx_trig(dsiH->chalH, TX_PKT_ENG_1, trig);
 
-#ifdef __CSL_DSI_USE_INT__
-	res = cslDsiWaitForInt(dsiH, 100);
-#else
-	res = cslDsiWaitForStatAny_Poll(dsiH,
+
+	if (!clientH->hasLock)
+		res = cslDsiWaitForInt(dsiH, 100);
+	else {
+		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
+			"In Atomic wait for DSI/DMA finish...\n",
+			dsiH->bus, __func__);
+
+		res = cslDsiWaitForStatAny_Poll(dsiH,
 					CHAL_DSI_STAT_TXPKT1_DONE, NULL, 100);
-#endif
+	}
 
 exit_err:
 	if (!clientH->hasLock)
@@ -1047,8 +1058,9 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 		return CSL_LCD_API_ERR;
 	}
 
-	if (!clientH->hasLock)
+	if (!clientH->hasLock) {
 		OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
+	}
 
 	if (dsiH->ulps) {
 		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
@@ -1072,22 +1084,22 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 
 	chal_dsi_clr_status(dsiH->chalH, 0xFFFFFFFF);
 
-#ifdef __CSL_DSI_USE_INT__
-	if (txPkt.endWithBta) {
-		event = CHAL_DSI_ISTAT_PHY_RX_TRIG
-		    | CHAL_DSI_ISTAT_RX2_PKT | CHAL_DSI_ISTAT_RX1_PKT;
+	if (!clientH->hasLock) {
+		if (txPkt.endWithBta) {
+			event = CHAL_DSI_ISTAT_PHY_RX_TRIG
+			    | CHAL_DSI_ISTAT_RX2_PKT | CHAL_DSI_ISTAT_RX1_PKT;
+		} else {
+			event = CHAL_DSI_ISTAT_TXPKT1_DONE;
+		}
+		cslDsiEnaIntEvent(dsiH, event);
 	} else {
-		event = CHAL_DSI_ISTAT_TXPKT1_DONE;
+		if (txPkt.endWithBta) {
+			event = CHAL_DSI_STAT_PHY_RX_TRIG
+			    | CHAL_DSI_STAT_RX2_PKT | CHAL_DSI_STAT_RX1_PKT;
+		} else {
+			event = CHAL_DSI_STAT_TXPKT1_DONE;
+		}
 	}
-	cslDsiEnaIntEvent(dsiH, event);
-#else
-	if (txPkt.endWithBta) {
-		event = CHAL_DSI_STAT_PHY_RX_TRIG
-		    | CHAL_DSI_STAT_RX2_PKT | CHAL_DSI_STAT_RX1_PKT;
-	} else {
-		event = CHAL_DSI_STAT_TXPKT1_DONE;
-	}
-#endif
 
 	if (txPkt.msgLen <= 2) {
 		LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
@@ -1178,12 +1190,12 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 		}
 	}
 
-#ifdef __CSL_DSI_USE_INT__
-	res = cslDsiWaitForInt(dsiH, 100);
-	stat = chal_dsi_get_status(dsiH->chalH);
-#else
-	res = cslDsiWaitForStatAny_Poll(dsiH, event, &stat, 100);
-#endif
+	if (!clientH->hasLock) {
+		res = cslDsiWaitForInt(dsiH, 100);
+		stat = chal_dsi_get_status(dsiH->chalH);
+	} else {
+		res = cslDsiWaitForStatAny_Poll(dsiH, event, &stat, 100);
+	}
 
 	if (txPkt.endWithBta) {
 		if (res != CSL_LCD_OK) {
@@ -1417,6 +1429,43 @@ CSL_LCD_RES_T CSL_DSI_CloseCmVc(CSL_LCD_HANDLE vcH)
 	return res;
 }
 
+
+/*
+ *
+ * Function Name: CSL_DSI_Force_Stop
+ *
+ */
+void CSL_DSI_Force_Stop(CSL_LCD_HANDLE vcH)
+{
+	DSI_HANDLE dsiH;
+	DSI_CLIENT clientH;
+	DSI_CM_HANDLE dsiChH;
+
+	/* stop DMA transfer */
+	if (csl_dma_vc4lite_stop_transfer(0)
+	    != DMA_VC4LITE_STATUS_SUCCESS) {
+		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
+			"ERR DMA Stop Transfer\n ", __func__);
+	}
+	/* release DMA channel */
+	if (csl_dma_vc4lite_release_channel(0)
+	    != DMA_VC4LITE_STATUS_SUCCESS) {
+		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
+			"ERR ERR DMA Release Channel\n ", __func__);
+	}
+
+	dsiChH = (DSI_CM_HANDLE) vcH;
+	clientH = (DSI_CLIENT) dsiChH->client;
+	dsiH = (DSI_HANDLE)clientH->lcdH;
+
+	chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
+	chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
+	chal_dsi_de1_enable(dsiH->chalH, FALSE);
+
+	cslDsiClearAllFifos(dsiH);
+}
+
+
 /*
  *
  * Function Name: CSL_DSI_UpdateCmVc
@@ -1614,29 +1663,43 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	}
 
 	if (req->cslLcdCb == NULL) {
-		osStat = OSSEMAPHORE_Obtain(dsiH->semaDma,
+		if (!clientH->hasLock) {
+			osStat = OSSEMAPHORE_Obtain(dsiH->semaDma,
 					    TICKS_IN_MILLISECONDS(req->
 								  timeOut_ms));
 
-		if (osStat != OSSTATUS_SUCCESS) {
-			cslDsiDmaStop(&updMsgCm);
-			if (osStat == OSSTATUS_TIMEOUT) {
-				LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
+			if (osStat != OSSTATUS_SUCCESS) {
+				cslDsiDmaStop(&updMsgCm);
+				if (osStat == OSSTATUS_TIMEOUT) {
+					LCD_DBG(LCD_DBG_ERR_ID,
+					"[CSL DSI][%d] %s: "
 					"ERR Timed Out Waiting For EOF DMA!\n",
 					dsiH->bus, __func__);
-				res = CSL_LCD_OS_TOUT;
-			} else {
-				LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
+					res = CSL_LCD_OS_TOUT;
+				} else {
+					LCD_DBG(LCD_DBG_ERR_ID,
+					"[CSL DSI][%d] %s: "
 					"ERR OS Err...\n",
 					dsiH->bus, __func__);
-				res = CSL_LCD_OS_ERR;
+					res = CSL_LCD_OS_ERR;
+				}
 			}
+
+			/*wait for interface to drain */
+			if (res == CSL_LCD_OK)
+				res = cslDsiWaitForInt(dsiH, req->timeOut_ms);
+			else
+				cslDsiWaitForInt(dsiH, 1);
+		} else {
+
+			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
+				"In Atomic wait for DSI/DMA finish...\n",
+				dsiH->bus, __func__);
+
+			csl_dma_poll_int(updMsgCm.dmaCh);
+			res = cslDsiWaitForStatAny_Poll(dsiH,
+					CHAL_DSI_STAT_TXPKT1_DONE, NULL, 100);
 		}
-		/*wait for interface to drain */
-		if (res == CSL_LCD_OK)
-			res = cslDsiWaitForInt(dsiH, req->timeOut_ms);
-		else
-			cslDsiWaitForInt(dsiH, 1);
 
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
@@ -1749,6 +1812,7 @@ CSL_LCD_RES_T CSL_DSI_OpenClient(UInt32 bus, CSL_LCD_HANDLE *clientH)
 			if (!dsiH->client[i].open) {
 				dsiH->client[i].lcdH = &dsiBus[bus];
 				dsiH->client[i].open = TRUE;
+				dsiH->client[i].hasLock = FALSE;
 				*clientH = (CSL_LCD_HANDLE)&dsiH->client[i];
 				break;
 			}

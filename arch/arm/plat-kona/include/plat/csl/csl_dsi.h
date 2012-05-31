@@ -253,6 +253,13 @@ extern "C" {
 					 pCSL_LCD_UPD_REQ req, Boolean isTE);
 
 /**
+ *
+ * Function Name: CSL_DSI_Force_Stop
+ *
+ ****************************************************************************/
+void CSL_DSI_Force_Stop(CSL_LCD_HANDLE vcH);
+
+/**
 *
 *  @brief    Lock DSI Interface for the Client
 *

@@ -67,6 +67,7 @@ struct CslDmaVc4liteChan {
 
 struct CslDmaVc4lite {
 	int initialized;
+	int in_atomic;
 	UInt32 base;
 	Interrupt_t hisr;
 	CHAL_HANDLE handle;
@@ -200,6 +201,7 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
 		}
 #endif
 		pdma->initialized = 1;
+		pdma->in_atomic = 0;
 	}
 
 	return DMA_VC4LITE_STATUS_SUCCESS;
@@ -246,6 +248,21 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_deinit(void)
 	pdma->base = 0;
 
 	return DMA_VC4LITE_STATUS_SUCCESS;
+}
+
+void csl_dma_lock(void)
+{
+	struct CslDmaVc4lite *pdma = (struct CslDmaVc4lite *)&dmac;
+
+	pdma->in_atomic = 1;
+}
+
+
+void csl_dma_unlock(void)
+{
+	struct CslDmaVc4lite *pdma = (struct CslDmaVc4lite *)&dmac;
+
+	pdma->in_atomic = 0;
 }
 
 /*
@@ -299,10 +316,12 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_config_channel(DMA_VC4LITE_CHANNEL_t chanID,
 		return DMA_VC4LITE_STATUS_INVALID_INPUT;
 	}
 
-	OSSEMAPHORE_Obtain(pdma->dmaSema, TICKS_FOREVER);
+	if (!pdma->in_atomic)
+		OSSEMAPHORE_Obtain(pdma->dmaSema, TICKS_FOREVER);
 	memcpy(&pdma->chan[chanID].chanInfo, pChanInfo,
 	       sizeof(DMA_VC4LITE_CHANNEL_INFO_t));
-	OSSEMAPHORE_Release(pdma->dmaSema);
+	if (!pdma->in_atomic)
+		OSSEMAPHORE_Release(pdma->dmaSema);
 
 	return DMA_VC4LITE_STATUS_SUCCESS;
 }
@@ -342,8 +361,10 @@ Int32 csl_dma_vc4lite_obtain_channel(UInt8 srcID, UInt8 dstID)
 		dprintf(1, "%s: invalid input parameters\n", __func__);
 		return -1;
 	}
+
 	/* check the available channel */
-	OSSEMAPHORE_Obtain(pdma->dmaSema, TICKS_FOREVER);
+	if (!pdma->in_atomic)
+		OSSEMAPHORE_Obtain(pdma->dmaSema, TICKS_FOREVER);
 
 	for (i = 0; i < DMA_VC4LITE_TOTAL_CHANNELS; i++) {
 		if (!pdma->chan[i].used) {
@@ -354,7 +375,8 @@ Int32 csl_dma_vc4lite_obtain_channel(UInt8 srcID, UInt8 dstID)
 		}
 	}
 
-	OSSEMAPHORE_Release(pdma->dmaSema);
+	if (!pdma->in_atomic)
+		OSSEMAPHORE_Release(pdma->dmaSema);
 
 	return chan;
 }
@@ -382,7 +404,8 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_release_channel(DMA_VC4LITE_CHANNEL_t chanID)
 		return DMA_VC4LITE_STATUS_INVALID_INPUT;
 	}
 
-	OSSEMAPHORE_Obtain(pdma->dmaSema, TICKS_FOREVER);
+	if (!pdma->in_atomic)
+		OSSEMAPHORE_Obtain(pdma->dmaSema, TICKS_FOREVER);
 
 	if (pdma->chan[chanID].used) {
 		if (chal_dma_vc4lite_reset_channel(pdma->handle, chanID) !=
@@ -398,7 +421,8 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_release_channel(DMA_VC4LITE_CHANNEL_t chanID)
 		       sizeof(DMA_VC4LITE_CHANNEL_INFO_t));
 	}
 
-	OSSEMAPHORE_Release(pdma->dmaSema);
+	if (!pdma->in_atomic)
+		OSSEMAPHORE_Release(pdma->dmaSema);
 
 	return DMA_VC4LITE_STATUS_SUCCESS;
 }

@@ -148,6 +148,11 @@ static Int32 LQ043Y1DX01_PowerControl(
 	DISPDRV_HANDLE_T	drvH,
 	DISPLAY_POWER_STATE_T	state);
 
+static Int32 LQ043Y1DX01_Atomic_Update(
+	DISPDRV_HANDLE_T	drvH,
+	void			*buff,
+	DISPDRV_WIN_t		*p_win);
+
 static Int32 LQ043Y1DX01_Update(
 	 DISPDRV_HANDLE_T	drvH,
 	 void			*buff,
@@ -167,7 +172,7 @@ static DISPDRV_T LQ043Y1DX01_Drv = {
 	&LQ043Y1DX01_Start,		/* start */
 	&LQ043Y1DX01_Stop,		/* stop	*/
 	&LQ043Y1DX01_PowerControl,	/* power_control */
-	NULL,				/* update_no_os	*/
+	&LQ043Y1DX01_Atomic_Update,	/* update_no_os	*/
 	&LQ043Y1DX01_Update,		/* update */
 	NULL,				/* set_brightness */
 	&LQ043Y1DX01_WinReset,		/* reset_win */
@@ -1991,6 +1996,75 @@ Int32 LQ043Y1DX01_Update(
 
 	return res;
 }
+
+/*
+ *
+ *  Function Name: LQ043Y1DX01_Atomic_Update
+ *
+ *  Description:
+ *
+ */
+Int32 LQ043Y1DX01_Atomic_Update(
+	DISPDRV_HANDLE_T	drvH,
+	void			*buff,
+	DISPDRV_WIN_t		*p_win)
+{
+	LQ043Y1DX01_PANEL_t	*pPanel	= (LQ043Y1DX01_PANEL_t *)drvH;
+	CSL_LCD_UPD_REQ_T	req;
+	Int32			res  = 0;
+
+	LCD_DBG(LCD_DBG_ID, "[DISPDRV]	+%s\r\n", __func__);
+
+	if (pPanel->pwrState ==	STATE_PWR_OFF) {
+		LCD_DBG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: Skip Due	To "
+			"Power State\n", __func__);
+		return -1;
+	}
+
+	if (p_win == NULL)
+		p_win =	&pPanel->win_dim;
+
+	CSL_DSI_Force_Stop(pPanel->dsiCmVcHandle);
+
+	CSL_DSI_Lock(pPanel->dsiCmVcHandle);
+
+	csl_dma_lock();
+
+	lq043y1dx01_WinSet(drvH, TRUE, p_win);
+
+	req.buff	= buff;
+	req.lineLenP	= p_win->w;
+	req.lineCount	= p_win->h;
+	req.buffBpp	= pPanel->disp_info->Bpp;
+	req.timeOut_ms	= 100;
+	req.xStrideB	= 0;
+
+	LCD_DBG(LCD_DBG_ID, "%s: buf=%08x, linelenp = %lu, linecnt =%lu\n",
+		__func__, (u32)req.buff, req.lineLenP, req.lineCount);
+
+	req.cslLcdCbRec.cslH		= pPanel->clientH;
+	req.cslLcdCbRec.dispDrvApiCbRev	= DISP_DRV_CB_API_REV_1_0;
+	req.cslLcdCbRec.dispDrvApiCb	= NULL;
+	req.cslLcdCbRec.dispDrvApiCbP1	= NULL;
+
+	req.cslLcdCb = NULL;
+
+	if (CSL_DSI_UpdateCmVc(pPanel->dsiCmVcHandle, &req, pPanel->isTE)
+		!= CSL_LCD_OK)	{
+		LCD_DBG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR ret by "
+			"CSL_DSI_UpdateCmVc\n\r", __func__);
+		res = -1;
+	}
+
+	LCD_DBG(LCD_DBG_ID, "[DISPDRV]	-%s\r\n", __func__);
+
+	csl_dma_unlock();
+
+	CSL_DSI_Unlock(pPanel->dsiCmVcHandle);
+
+	return res;
+}
+
 
 static int __devinit lq043y1dx01_spi_probe(struct spi_device *spi)
 {
