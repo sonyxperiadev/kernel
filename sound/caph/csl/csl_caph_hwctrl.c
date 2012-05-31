@@ -3773,7 +3773,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
 	if (!(config.source == CSL_CAPH_DEV_MEMORY ||
 				config.sink == CSL_CAPH_DEV_MEMORY)) {
-		/*only start the path if it is not streaming with Memeory.*/
+		/*only start the path if it is not streaming with Memory.*/
 		csl_caph_hwctrl_StartPath(config.pathID);
 	}
 #ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK

@@ -2250,10 +2250,18 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 
 	/*in call mode, return the UL path*/
 	if (bInVoiceCall && source != AUDIO_SOURCE_I2S) {
-		*pPathID = AUDDRV_GetULPath();
-		AUDDRV_EnableDSPInput(source, sr);
-		return;
+		if (sr != AUDIO_SAMPLING_RATE_48000) {
+			/*in call mode, return the UL path*/
+			*pPathID = AUDDRV_GetULPath();
+			AUDDRV_EnableDSPInput(source, sr);
+			return;
+		} else {
+			if (sr == AUDIO_SAMPLING_RATE_48000)
+				;
+			/*go ahead to take a new path*/
+		}
 	}
+
 	if (isDigiMic(source)) {
 		/* Enable power to digital microphone */
 		powerOnDigitalMic(TRUE);
