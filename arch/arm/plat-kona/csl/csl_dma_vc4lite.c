@@ -432,8 +432,14 @@ void csl_dma_poll_int(int chanID)
 	struct CslDmaVc4lite *pdma = (struct CslDmaVc4lite *)&dmac;
 
 	int chanNum = chanID;
+	u32 counter = 0;
 
 	do {
+		if (counter > 100000000) {
+			WARN("%s: DMA gets stuck\n", __func__);
+			break;
+		}
+		counter++;
 		printk(KERN_ERR "chan %d CS reg is 0x%08x\n", chanNum,
 		       readl(HW_IO_PHYS_TO_VIRT(DMA_VC4LITE_BASE_ADDR) +
 			     chanNum * 0x100));
