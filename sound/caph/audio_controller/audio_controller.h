@@ -345,6 +345,15 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 					   Boolean inHWlpbk);
 
 #ifdef CONFIG_ENABLE_SSMULTICAST
+/*********************************************************************
+*	Set audio mode for FM radio multicast playback
+*	@param          mode            audio mode
+*	@return         none
+*
+**********************************************************************/
+void AUDCTRL_SetAudioMode_ForFM_Multicast(AudioMode_t mode,
+				   unsigned int arg_pathID, Boolean inHWlpbk);
+
 /**
 *   Set audio mode for music multicast. (no DSP voice)
 *
@@ -354,6 +363,7 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 ****************************************************************************/
 void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode,
 					unsigned int arg_pathID);
+
 #endif
 
 /**
