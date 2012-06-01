@@ -1199,6 +1199,13 @@ static void charging_algorithm(struct bcmpmu_em *pem)
 				}
 			}
 		}
+		if (pem->chrgr_curr == 0) {
+			pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 0);
+			pem->charge_state = CHRG_STATE_IDLE;
+			pr_em(FLOW,
+				"%s, chrgr_curr is 0 and stop charging.\n",
+				__func__);
+		} /* Revisit, this is a temporary fix */
 		charge_zone = -1;
 		while (charge_zone != pem->charge_zone) {
 			charge_zone = pem->charge_zone;
