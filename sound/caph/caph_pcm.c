@@ -78,7 +78,7 @@ the GPL, without Broadcom's express prior written consent.
 #define	PCM_MAX_VOICE_PLAYBACK_PERIOD_BYTES		\
 (PCM_MAX_PLAYBACK_BUF_BYTES/2)
 
-#define	PCM_MAX_CAPTURE_BUF_BYTES       (32 * 1024)
+#define	PCM_MAX_CAPTURE_BUF_BYTES       (16 * 1024)
 #define	PCM_MIN_CAPTURE_PERIOD_BYTES    (4 * 1024)	/*(16 * 1024) */
 #define	PCM_MAX_CAPTURE_PERIOD_BYTES    (PCM_MAX_CAPTURE_BUF_BYTES/2)
 
