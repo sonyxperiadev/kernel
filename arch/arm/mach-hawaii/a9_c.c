@@ -218,10 +218,9 @@ void restore_a9_global_timer(appf_u32 *pointer, unsigned scu_address)
     comparator_ull = ((unsigned long long)context->comparator_hi << 32) + context->comparator_lo;
 
     if ((context->status & A9_GT_EVENT_FLAG) ||
-        (current_ull > comparator_ull) &&
-        ((context->control & (A9_GT_COMPARE_ENABLE | A9_GT_TIMER_ENABLE))
-                 == ((A9_GT_COMPARE_ENABLE | A9_GT_TIMER_ENABLE))))
-    {
+	    ((current_ull > comparator_ull) &&
+	    ((context->control & (A9_GT_COMPARE_ENABLE | A9_GT_TIMER_ENABLE))
+		== ((A9_GT_COMPARE_ENABLE | A9_GT_TIMER_ENABLE))))) {
         /* Set the comparator to the current counter value */
         timer->comparator_hi = current_hi;
         timer->comparator_lo = current_lo;
