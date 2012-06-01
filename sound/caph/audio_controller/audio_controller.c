@@ -875,6 +875,7 @@ void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app)
 
 	aTrace(LOG_AUDIO_CNTLR, "SetAudioMode: mode %d app %d", mode, app);
 	AUDCTRL_SaveAudioMode(mode);
+	AUDCTRL_SaveAudioApp(app);
 
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
