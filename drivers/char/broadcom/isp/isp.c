@@ -111,7 +111,7 @@ static int isp_open(struct inode *inode, struct file *filp)
 		return -ENOMEM;
 
 	filp->private_data = dev;
-	dev->lock = __SPIN_LOCK_UNLOCKED();
+	spin_lock_init(&dev->lock);
 	dev->isp_status.status = 0;
 
 	init_completion(&dev->irq_sem);

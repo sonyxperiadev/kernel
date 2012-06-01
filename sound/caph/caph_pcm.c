@@ -78,7 +78,7 @@ the GPL, without Broadcom's express prior written consent.
 #define	PCM_MAX_VOICE_PLAYBACK_PERIOD_BYTES		\
 (PCM_MAX_PLAYBACK_BUF_BYTES/2)
 
-#define	PCM_MAX_CAPTURE_BUF_BYTES       (32 * 1024)
+#define	PCM_MAX_CAPTURE_BUF_BYTES       (16 * 1024)
 #define	PCM_MIN_CAPTURE_PERIOD_BYTES    (4 * 1024)	/*(16 * 1024) */
 #define	PCM_MAX_CAPTURE_PERIOD_BYTES    (PCM_MAX_CAPTURE_BUF_BYTES/2)
 
@@ -830,6 +830,7 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 	AUDIO_DRIVER_HANDLE_t drv_handle;
 	s32 *pSel;
 	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
+	int ret;
 
 	aTrace(LOG_ALSA_INTERFACE,
 		"ALSA-CAPH %lx:capture_trigger subdevice=%d cmd=%d\n", jiffies,
@@ -851,70 +852,89 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		{
-			BRCM_AUDIO_Param_Start_t param_start;
+		BRCM_AUDIO_Param_Start_t param_start;
 
-			struct snd_pcm_runtime *runtime = substream->runtime;
+		struct snd_pcm_runtime *runtime = substream->runtime;
 
-			param_start.drv_handle = drv_handle;
-			param_start.pdev_prop =
-			    &chip->streamCtl[substream_number].dev_prop;
-			param_start.channels = runtime->channels;
-			param_start.stream = substream_number;
+		param_start.drv_handle = drv_handle;
+		param_start.pdev_prop =
+		    &chip->streamCtl[substream_number].dev_prop;
+		param_start.channels = runtime->channels;
+		param_start.stream = substream_number;
 
-			if (callMode == MODEM_CALL)
-				/*record Mode */
-				param_start.mixMode =
-				    chip->pi32SpeechMixOption[substream_number];
-			else	/* In Idle mode */
-				param_start.mixMode = 0;
+		if (callMode == MODEM_CALL)
+			/*record Mode */
+			param_start.mixMode =
+			    chip->pi32SpeechMixOption[substream_number];
+		else	/* In Idle mode */
+			param_start.mixMode = 0;
 
-			aTrace(LOG_ALSA_INTERFACE, "param_start.mixMode %ld\n",
-					param_start.mixMode);
+		aTrace(LOG_ALSA_INTERFACE, "param_start.mixMode %ld\n",
+				param_start.mixMode);
 
-			param_start.rate = runtime->rate;
-			param_start.callMode = callMode;
+		param_start.rate = runtime->rate;
+		param_start.callMode = callMode;
 
-			if ((substream_number + 1) == CTL_STREAM_PANEL_PCMIN)
-				chip->streamCtl[substream_number].dev_prop.c.
-				    sink = AUDIO_SINK_MEM;
-			else if ((substream_number + 1) ==
-				 CTL_STREAM_PANEL_SPEECHIN)
-				chip->streamCtl[substream_number].dev_prop.c.
-				    sink = AUDIO_SINK_DSP;
+		if ((substream_number + 1) == CTL_STREAM_PANEL_PCMIN)
+			chip->streamCtl[substream_number].dev_prop.c.
+			    sink = AUDIO_SINK_MEM;
+		else if ((substream_number + 1) ==
+			 CTL_STREAM_PANEL_SPEECHIN)
+			chip->streamCtl[substream_number].dev_prop.c.
+			    sink = AUDIO_SINK_DSP;
 
-			param_start.vol[0] =
-			    chip->streamCtl[substream_number].ctlLine[pSel[0]].
-			    iVolume[0];
-			param_start.vol[1] =
-			    chip->streamCtl[substream_number].ctlLine[pSel[0]].
-			    iVolume[1];
+		param_start.vol[0] =
+		    chip->streamCtl[substream_number].ctlLine[pSel[0]].
+		    iVolume[0];
+		param_start.vol[1] =
+		    chip->streamCtl[substream_number].ctlLine[pSel[0]].
+		    iVolume[1];
 
-			AUDIO_Ctrl_Trigger(ACTION_AUD_StartRecord, &param_start,
-					   NULL, 0);
+		ret = AUDIO_Ctrl_Trigger(ACTION_AUD_StartRecord, &param_start,
+				   NULL, 0);
+
+		if (ret == RESULT_ERROR) {
+
+			if (chip->streamCtl[substream_number].
+			pStopCompletion)
+				complete(
+				chip->streamCtl[substream_number].
+				pStopCompletion);
+
+			chip->streamCtl[substream_number].pStopCompletion
+			= NULL;
+
+			return -1;
+		}
 
 		}
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
 		{
-			BRCM_AUDIO_Param_Stop_t param_stop;
-			struct completion *compl_ptr;
+		BRCM_AUDIO_Param_Stop_t param_stop;
+		struct completion *compl_ptr;
 
-			param_stop.drv_handle = drv_handle;
-			param_stop.pdev_prop =
-			    &chip->streamCtl[substream_number].dev_prop;
-			param_stop.stream = substream_number;
+		param_stop.drv_handle = drv_handle;
+		param_stop.pdev_prop =
+		    &chip->streamCtl[substream_number].dev_prop;
+		param_stop.stream = substream_number;
 
-			param_stop.callMode = callMode;
+		param_stop.callMode = callMode;
 
-			compl_ptr = &chip->streamCtl[substream_number]
-				.stopCompletion;
-			init_completion(compl_ptr);
+		compl_ptr = &chip->streamCtl[substream_number]
+			.stopCompletion;
+		init_completion(compl_ptr);
+		chip->streamCtl[substream_number].pStopCompletion
+			= compl_ptr;
+		ret = AUDIO_Ctrl_Trigger(ACTION_AUD_StopRecord, &param_stop,
+				   CtrlStopCB, (int)compl_ptr);
+
+		if (ret == RESULT_ERROR) {
+			complete(compl_ptr);
 			chip->streamCtl[substream_number].pStopCompletion
-				= compl_ptr;
-
-			AUDIO_Ctrl_Trigger(ACTION_AUD_StopRecord, &param_stop,
-					   CtrlStopCB, (int)compl_ptr);
+			= NULL;
+		}
 
 		}
 		break;

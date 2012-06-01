@@ -110,24 +110,6 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.state = RHEA_STATE_C0,
 		.enter = enter_suspend_state,
 	},
-	{
-		.name = "C1",
-		.desc = "suspend-rtn", /*suspend-retention (XTAL ON)*/
-		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
-		.latency = RHEA_STATE_C1_LATENCY,
-		.target_residency = 200,
-		.state = RHEA_STATE_C1,
-		.enter = enter_idle_state,
-	},
-	{
-		.name = "C2",
-		.desc = "ds-retn", /*deepsleep-retention (XTAL OFF)*/
-		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = RHEA_STATE_C2_LATENCY,
-		.target_residency = 300,
-		.state = RHEA_STATE_C2,
-		.enter = enter_idle_state,
-	},
 #ifdef CONFIG_RHEA_DORMANT_MODE
 	{
 		.name = "C3",
@@ -201,14 +183,21 @@ We may have to move these fucntions to somewhere else later
 */
 static void clear_wakeup_interrupts(void)
 {
-// clear interrupts for COMMON_INT_TO_AC_EVENT
-	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR0_OFFSET);
-	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR1_OFFSET);
-	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR2_OFFSET);
-	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR3_OFFSET);
-	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR4_OFFSET);
-	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR5_OFFSET);
-	writel_relaxed(0, KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR6_OFFSET);
+	/* clear interrupts for COMMON_INT_TO_AC_EVENT */
+	writel_relaxed(0xFFFFFFFF,
+			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR0_OFFSET);
+	writel_relaxed(0xFFFFFFFF,
+			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR1_OFFSET);
+	writel_relaxed(0xFFFFFFFF,
+			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR2_OFFSET);
+	writel_relaxed(0xFFFFFFFF,
+			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR3_OFFSET);
+	writel_relaxed(0xFFFFFFFF,
+			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR4_OFFSET);
+	writel_relaxed(0xFFFFFFFF,
+			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR5_OFFSET);
+	writel_relaxed(0xFFFFFFFF,
+			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR6_OFFSET);
 
 }
 
@@ -290,7 +279,14 @@ static void config_wakeup_interrupts(void)
 
 int enter_suspend_state(struct kona_idle_state* state)
 {
+	if (WFI_TRACE_ENABLE)
+		instrument_wfi(TRACE_ENTRY);
+
 	enter_wfi();
+
+	if (WFI_TRACE_ENABLE)
+		instrument_wfi(TRACE_EXIT);
+
 	return -1;
 }
 
@@ -361,8 +357,13 @@ static int enter_retention_state(struct kona_idle_state *state)
 	 * register in SCU.
 	 */
 	set_spare_power_status(SCU_STATUS_DORMANT);
+	if (RETENTION_TRACE_ENABLE)
+		instrument_retention(TRACE_ENTRY);
 
 	enter_wfi();
+
+	if (RETENTION_TRACE_ENABLE)
+		instrument_retention(TRACE_EXIT);
 
 	set_spare_power_status(SCU_STATUS_NORMAL);
 	return 0;

@@ -165,6 +165,8 @@ int __init smc_init(void)
 
 	smc_buf_v = (u32 *) v;
 	smc_buf_p = (u32 *) p;
+	pr_info("%s: smc_buf_v:0x%x; smc_buf_p :0x%x\n", __func__,
+				(u32)smc_buf_v, (u32)smc_buf_p);
 
 	return 0;
 }

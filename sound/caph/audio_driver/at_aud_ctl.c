@@ -223,6 +223,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			if (AUDCTRL_InVoiceCall() == FALSE) {
 				AUDCTRL_SwitchPlaySpk_forTuning(mode);
 				AUDCTRL_SaveAudioMode(mode);
+				AUDCTRL_SaveAudioApp(app);
 			}
 		} else if (app > AUDIO_APP_MUSIC) {
 			AUDCTRL_SetAudioMode(mode, app);

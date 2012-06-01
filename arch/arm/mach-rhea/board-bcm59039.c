@@ -66,6 +66,8 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x50, .val = 0x3B, .mask = 0xFF},
 	{.map = 0, .addr = 0x52, .val = 0x04, .mask = 0x04},
 	{.map = 0, .addr = 0x58, .val = 0x05, .mask = 0x0F},
+	/* USB_FC_OPTION needed to be 1, in order to charge from SDP */
+	{.map = 0, .addr = 0x5E, .val = 0x30, .mask = 0xFF},
 
 	/*Init SDSR NM, NM2 and LPM voltages to 1.2V
 	*/

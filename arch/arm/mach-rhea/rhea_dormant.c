@@ -519,7 +519,7 @@ static int dormant_fail;
 module_param_named(dormant_fail, dormant_fail, int,
 		   S_IRUGO | S_IWUSR | S_IWGRP);
 
-static int dormant_attempt;
+int dormant_attempt;
 module_param_named(dormant_attempt, dormant_attempt, int,
 		   S_IRUGO | S_IWUSR | S_IWGRP);
 

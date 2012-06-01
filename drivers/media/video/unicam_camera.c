@@ -652,14 +652,12 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 		/* CSL_CAM_CAPTURE_MODE_NORMAL */
 		if (csl_cam_set_frame_control(
 			unicam_dev->cslCamHandle, &cslCamFrame)) {
-			  dev_err(unicam_dev->dev,
-			  "csl_cam_set_frame_control(): FAILED\n");
-			  return -1;
+			dev_err(unicam_dev->dev,
+			"csl_cam_set_frame_control(): FAILED\n");
+			return -1;
 		}
 
 	}
-
-
 	unicam_dev->streaming = 1;
 	dprintk("-exit");
 	return 0;
@@ -1133,7 +1131,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
 				ret = unicam_camera_capture(unicam_dev);
 				if (ret)
-					dprintk(KERN_INFO "error triggering capture");
+					dprintk(KERN_INFO "error triggering\n");
 			}
 
 			spin_unlock(&unicam_dev->lock);

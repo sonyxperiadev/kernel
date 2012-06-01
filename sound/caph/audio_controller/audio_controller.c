@@ -875,6 +875,7 @@ void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app)
 
 	aTrace(LOG_AUDIO_CNTLR, "SetAudioMode: mode %d app %d", mode, app);
 	AUDCTRL_SaveAudioMode(mode);
+	AUDCTRL_SaveAudioApp(app);
 
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
@@ -1073,6 +1074,99 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 	/*disable clock if it is enabled by this function. */
 }
 
+#ifdef CONFIG_ENABLE_SSMULTICAST
+/*********************************************************************
+*	Set audio mode for FM radio multicast playback
+*	@param          mode            audio mode
+*	@return         none
+*
+**********************************************************************/
+void AUDCTRL_SetAudioMode_ForFM_Multicast(AudioMode_t mode,
+				   unsigned int arg_pathID, Boolean inHWlpbk)
+{
+	Boolean bClk = csl_caph_QueryHWClock();
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	SetAudioMode_Sp_t sp_struct;
+	AudioApp_t app;
+
+	aTrace(LOG_AUDIO_CNTLR,
+			"%s mode %d, pathID %d", __func__, mode, arg_pathID);
+
+	path = csl_caph_FindPath(arg_pathID);
+
+	if (AUDCTRL_InVoiceCall()) {
+		if (!path)
+			return;	/*don't affect voice call audio mode */
+		if (!path->srcmRoute[0][0].outChnl)
+			return;
+		/*if arm2sp does not use HW mixer, no need to set gain */
+	}
+
+	if (!bClk)
+		csl_caph_ControlHWClock(TRUE);
+	/*enable clock if it is not enabled. */
+
+	currAudioMode_fm = AUDIO_MODE_SPEAKERPHONE;
+
+	app = AUDCTRL_GetAudioApp();
+	sp_struct.mode = AUDIO_MODE_SPEAKERPHONE;
+	sp_struct.app = app;
+	sp_struct.pathID = arg_pathID;
+	sp_struct.inHWlpbk = inHWlpbk;
+	sp_struct.mixOutGain_mB = GAIN_SYSPARM;
+	sp_struct.mixOutGainR_mB = GAIN_SYSPARM;
+	if (users_gain[AUDPATH_FM].valid) {
+		/*do not apply FM mixer input gain to music*/
+		if (path->source == CSL_CAPH_DEV_MEMORY) {
+			sp_struct.mixInGain_mB = GAIN_SYSPARM;
+			sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+		} else {
+			sp_struct.mixInGain_mB = users_gain[AUDPATH_FM].L;
+			sp_struct.mixInGainR_mB = users_gain[AUDPATH_FM].R;
+		}
+	} else {
+		if (muteInPlay) {
+			sp_struct.mixInGain_mB = GAIN_NA;
+			sp_struct.mixInGainR_mB = GAIN_NA;
+		} else {
+			sp_struct.mixInGain_mB = GAIN_SYSPARM;
+			sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+		}
+	}
+	if (user_vol_setting[app][mode].valid == FALSE)
+		fillUserVolSetting(mode, app);
+	sp_struct.mixOutGain_mB = user_vol_setting[app][mode].L;
+	sp_struct.mixOutGainR_mB = user_vol_setting[app][mode].R;
+
+	/*Reload HS and IHF parametes from mode SPEAKERPHONE
+	and HS ext-amp gain from mode RESERVED,app MUSIC */
+
+	AUDDRV_SetAudioMode_Multicast(sp_struct);
+	sp_struct.mode = AUDIO_MODE_HEADSET;
+	AUDDRV_SetAudioMode_Multicast(sp_struct);
+
+	setExternAudioGain(AUDIO_MODE_RESERVE, AUDIO_APP_MUSIC);
+	AUDCTRL_SaveAudioMode(AUDIO_MODE_SPEAKERPHONE);
+
+	if (!AUDCTRL_InVoiceCall() && AUDDRV_TuningFlag()) {
+		/*for music tuning, if PCG changed audio mode,
+		   need to pass audio mode to CP in audio_vdriver_caph.c */
+		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+				      (UInt32) mode,
+				      (UInt32) app, 0, 0, 0);
+		/*this command updates mode in audioapi.c. */
+		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
+				      (UInt32) ((int)app *
+						AUDIO_MODE_NUMBER + mode), 0, 0,
+				      0, 0);
+	}
+
+	if (!bClk)
+		csl_caph_ControlHWClock(FALSE);
+	/*disable clock if it is enabled by this function. */
+}
+
+#endif
 
 /*********************************************************************
 *	Set audio mode for music record
@@ -2044,9 +2138,15 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 			sink == AUDIO_SINK_HANDSET)
 			AUDCTRL_SetAudioMode_ForFM(
 				AUDIO_MODE_SPEAKERPHONE, pathID, FALSE);
-		else
+		else {
+#ifndef CONFIG_ENABLE_SSMULTICAST
 			AUDCTRL_SetAudioMode_ForFM(
 				GetAudioModeBySink(sink), pathID, FALSE);
+#else
+			AUDCTRL_SetAudioMode_ForFM_Multicast(
+				GetAudioModeBySink(sink), pathID, FALSE);
+#endif
+		}
 	} else {
 		if (isStIHF &&
 			currAudioMode_playback == AUDIO_MODE_SPEAKERPHONE &&
@@ -2104,7 +2204,8 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 #ifdef CONFIG_ENABLE_SSMULTICAST
 		/*If IHF removed reload HS params with mode HEADSET*/
 		if (sink == AUDIO_SINK_LOUDSPK &&
-			currAudioMode_playback == AUDIO_MODE_SPEAKERPHONE) {
+			(currAudioMode_playback == AUDIO_MODE_SPEAKERPHONE ||
+			currAudioMode_fm == AUDIO_MODE_SPEAKERPHONE)) {
 			int i, j;
 			sp_struct.mode = AUDIO_MODE_HEADSET;
 			sp_struct.app = AUDCTRL_GetAudioApp();
@@ -2120,9 +2221,15 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 			sp_struct.mixOutGain_mB = user_vol_setting[i][j].L;
 			sp_struct.mixOutGainR_mB = user_vol_setting[i][j].R;
 
-			AUDDRV_SetAudioMode_Speaker(sp_struct);
-			setExternAudioGain(AUDIO_MODE_HEADSET,
+			if (sp_struct.app == AUDIO_APP_FM) {
+				AUDCTRL_SetAudioMode_ForFM(
+				AUDIO_MODE_HEADSET, pathID, FALSE);
+			} else {
+				AUDDRV_SetAudioMode_Speaker(sp_struct);
+				setExternAudioGain(AUDIO_MODE_HEADSET,
 					AUDCTRL_GetAudioApp());
+			}
+
 			AUDCTRL_SaveAudioMode(AUDIO_MODE_HEADSET);
 		}
 #endif
@@ -2250,10 +2357,18 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 
 	/*in call mode, return the UL path*/
 	if (bInVoiceCall && source != AUDIO_SOURCE_I2S) {
-		*pPathID = AUDDRV_GetULPath();
-		AUDDRV_EnableDSPInput(source, sr);
-		return;
+		if (sr != AUDIO_SAMPLING_RATE_48000) {
+			/*in call mode, return the UL path*/
+			*pPathID = AUDDRV_GetULPath();
+			AUDDRV_EnableDSPInput(source, sr);
+			return;
+		} else {
+			if (sr == AUDIO_SAMPLING_RATE_48000)
+				;
+			/*go ahead to take a new path*/
+		}
 	}
+
 	if (isDigiMic(source)) {
 		/* Enable power to digital microphone */
 		powerOnDigitalMic(TRUE);

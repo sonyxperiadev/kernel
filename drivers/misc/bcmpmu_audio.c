@@ -442,10 +442,6 @@ static void bcmpmu_ihf_manual_power(bool on)
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFPWRDRV_PUP,
 				  bcmpmu->regmap[PMU_REG_IHFPWRDRV_PUP].mask,
 				  bcmpmu->regmap[PMU_REG_IHFPWRDRV_PUP].mask);
-		/* Enable  IHF Noise Gate pup */
-		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFNG_PUP,
-				  bcmpmu->regmap[PMU_REG_IHFNG_PUP].mask,
-				  bcmpmu->regmap[PMU_REG_IHFNG_PUP].mask);
 		/* Enable  IHF POP */
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFPOP_EN,
 				  bcmpmu->regmap[PMU_REG_IHFPOP_EN].mask,
