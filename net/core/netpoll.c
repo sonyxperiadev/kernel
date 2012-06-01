@@ -81,6 +81,9 @@ static void arp_reply(struct sk_buff *skb);
 static unsigned int carrier_timeout = 4;
 module_param(carrier_timeout, uint, 0644);
 
+static DEFINE_SPINLOCK(txq_lock);
+static struct workqueue_struct *brcm_tx_work_q;
+
 static void queue_process(struct work_struct *work)
 {
 	struct netpoll_info *npinfo =
@@ -88,6 +91,7 @@ static void queue_process(struct work_struct *work)
 	struct sk_buff *skb;
 	unsigned long flags;
 
+	spin_lock(&txq_lock);
 	while ((skb = skb_dequeue(&npinfo->txq))) {
 		struct net_device *dev = skb->dev;
 		const struct net_device_ops *ops = dev->netdev_ops;
@@ -107,13 +111,15 @@ static void queue_process(struct work_struct *work)
 			skb_queue_head(&npinfo->txq, skb);
 			__netif_tx_unlock(txq);
 			local_irq_restore(flags);
-			/* Max 3 Mb/s */
-			schedule_delayed_work(&npinfo->tx_work, 0);
+			spin_unlock(&txq_lock);
+			queue_delayed_work(brcm_tx_work_q,
+				&npinfo->tx_work, HZ/10);
 			return;
 		}
 		__netif_tx_unlock(txq);
 		local_irq_restore(flags);
 	}
+	spin_unlock(&txq_lock);
 }
 
 static __sum16 checksum_udp(struct sk_buff *skb, struct udphdr *uh,
@@ -397,6 +403,11 @@ void netpoll_send_skb_on_dev(struct netpoll *np, struct sk_buff *skb,
 		struct netdev_queue *txq;
 		unsigned long flags;
 
+		if (spin_is_locked(&txq_lock)) {
+			skb_queue_tail(&npinfo->txq, skb);
+			return;
+		}
+
 		txq = netdev_get_tx_queue(dev, skb_get_queue_mapping(skb));
 
 		local_irq_save(flags);
@@ -431,7 +442,8 @@ void netpoll_send_skb_on_dev(struct netpoll *np, struct sk_buff *skb,
 
 	if (status != NETDEV_TX_OK) {
 		skb_queue_tail(&npinfo->txq, skb);
-		schedule_delayed_work(&npinfo->tx_work,0);
+		if (!spin_is_locked(&txq_lock))
+			queue_delayed_work(brcm_tx_work_q, &npinfo->tx_work, 0);
 	}
 }
 EXPORT_SYMBOL(netpoll_send_skb_on_dev);
@@ -820,6 +832,7 @@ int __netpoll_setup(struct netpoll *np)
 	unsigned long flags;
 	int err;
 
+
 	if ((ndev->priv_flags & IFF_DISABLE_NETPOLL) ||
 	    !ndev->netdev_ops->ndo_poll_controller) {
 		printk(KERN_ERR "%s: %s doesn't support polling, aborting.\n",
@@ -842,6 +855,10 @@ int __netpoll_setup(struct netpoll *np)
 		skb_queue_head_init(&npinfo->arp_tx);
 		skb_queue_head_init(&npinfo->txq);
 		INIT_DELAYED_WORK(&npinfo->tx_work, queue_process);
+		brcm_tx_work_q = create_workqueue("netpoll-txq");
+
+		if (brcm_tx_work_q == NULL)
+			pr_err("brcm_tx_work_q is failed to be created!");
 
 		atomic_set(&npinfo->refcnt, 1);
 
@@ -1017,9 +1034,11 @@ void __netpoll_cleanup(struct netpoll *np)
 		skb_queue_purge(&npinfo->arp_tx);
 		skb_queue_purge(&npinfo->txq);
 		cancel_delayed_work_sync(&npinfo->tx_work);
-
+		flush_workqueue(brcm_tx_work_q);
+		destroy_workqueue(brcm_tx_work_q);
 		/* clean after last, unfinished work */
 		__skb_queue_purge(&npinfo->txq);
+
 		kfree(npinfo);
 	}
 }
