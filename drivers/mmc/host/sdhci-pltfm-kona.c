@@ -232,6 +232,9 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
 #ifndef CONFIG_ARCH_ISLAND
 	sdhci_pltfm_clk_enable(host, 1);
 #endif
+	/* Ensure SD bus scanning to detect media change */
+	host->mmc->rescan_disable = 0;
+
 	/* Back-to-Back register write needs a delay of min 10uS.
 	 * We keep 20uS
 	 */
@@ -851,18 +854,7 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
 
-#if 0
-	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0)
-		free_irq(gpio_to_irq(dev->cd_gpio), dev);
-#endif
-
-	ret = sdhci_suspend_host(host, state);
-	if (ret) {
-		dev_err(&pdev->dev, "Unable to suspend sdhci host err=%d\n",
-			ret);
-		return ret;
-	}
-
+	flush_work_sync(&host->wait_erase_work);
 	ret = sdhci_kona_anystate_to_off(dev);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Unable to Turn OFF regulator err=%d\n",
@@ -876,51 +868,8 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int sdhci_pltfm_resume(struct platform_device *pdev)
 {
-	int ret;
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
-	struct sdhci_host *host = dev->host;
 
-	ret = sdhci_kona_off_to_enabled(dev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Unable to Turn ON regulator err=%d\n",
-			ret);
-		return ret;
-	}
-
-	ret = sdhci_resume_host(host);
-	if (ret) {
-		dev_err(&pdev->dev, "Unable to resume sdhci host err=%d\n",
-			ret);
-		return ret;
-	}
-#if 0
-	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
-		ret =
-		    request_irq(gpio_to_irq(dev->cd_gpio),
-				sdhci_pltfm_cd_interrupt,
-				IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
-				"sdio cd", dev);
-		if (ret) {
-			dev_err(&pdev->dev, "Unable to request card detection "
-				"irq=%d for gpio=%d\n",
-				gpio_to_irq(dev->cd_gpio), dev->cd_gpio);
-			return ret;
-		}
-	}
-#endif
-
-#ifndef CONFIG_MMC_UNSAFE_RESUME
-	/*
-	 * card state might have been changed during system suspend.
-	 * Need to sync up only if MMC_UNSAFE_RESUME is not enabled
-	 */
-	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
-		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
-			bcm_kona_sd_card_emulate(dev, 1);
-		else
-			bcm_kona_sd_card_emulate(dev, 0);
-	}
-#endif
 	dev->suspended = 0;
 	return 0;
 }
@@ -1381,6 +1330,9 @@ static int sdhci_pltfm_disable(struct sdhci_host *host, int lazy)
 		return sdchi_kona_enabled_to_disabled(dev);
 	case DISABLED:
 		return sdchi_kona_disabled_to_off(dev);
+	case OFF:
+		dev_dbg(dev->dev, "Already disabled \r\n");
+		return 0;
 	default:
 		dev_dbg(dev->dev, "Invalid Current State is %d \r\n",
 			dev->dpm_state);
