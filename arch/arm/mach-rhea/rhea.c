@@ -45,6 +45,7 @@
 #include <mach/secure_api.h>
 #endif
 #include <plat/cpu.h>
+#include <plat/kona_reset_reason.h>
 
 static void rhea_poweroff(void)
 {
@@ -63,7 +64,10 @@ static void rhea_poweroff(void)
 
 static void rhea_restart(char mode, const char *cmd)
 {
-	arm_machine_restart('h', cmd);
+	if (hard_reset_reason)
+		bcmpmu_client_hard_reset(hard_reset_reason);
+	else
+		arm_machine_restart('h', cmd);
 }
 
 #ifdef CONFIG_CACHE_L2X0

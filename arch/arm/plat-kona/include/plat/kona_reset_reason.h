@@ -23,4 +23,5 @@ void do_set_recovery_boot(void);
 void do_set_ap_only_boot(void);
 void do_clear_ap_only_boot(void);
 unsigned int is_ap_only_boot(void);
+extern unsigned int hard_reset_reason;
 #endif
