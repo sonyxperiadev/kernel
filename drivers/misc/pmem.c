@@ -804,7 +804,8 @@ end:
 	up_read(&data->sem);
 }
 
-void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
+void flush_pmem_file(struct file *file, unsigned long offset,
+		unsigned long len, int flush_all_flag)
 {
 	struct pmem_data *data;
 	int id;
@@ -826,6 +827,13 @@ void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
 	down_read(&data->sem);
 	paddr = PMEM_START_ADDR(data);
 	vaddr = PMEM_START_VADDR(data);
+
+	if (flush_all_flag) {
+		__cpuc_flush_kern_all();
+		outer_flush_all();
+		goto end;
+	}
+
 	/* if this isn't a submmapped file, flush the whole thing */
 	if (!(data->flags & PMEM_FLAGS_CONNECTED)) {
 		dmac_flush_range(vaddr, vaddr + pmem_len(data));
@@ -1525,7 +1533,19 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 		DLOG("flush with offset=0x%08lx len=0x%08lx\n", region.offset,
 		     region.len);
-		flush_pmem_file(file, region.offset, region.len);
+		flush_pmem_file(file, region.offset, region.len, 0);
+
+		break;
+	case PMEM_CACHE_FLUSH_ALL:
+		data = (struct pmem_data *)file->private_data;
+
+		if (copy_from_user(&region, (void __user *)arg,
+				   sizeof(struct pmem_region)))
+			return -EFAULT;
+
+		DLOG("flush all with offset=0x%08lx len=0x%08lx\n",
+				region.offset, region.len);
+		flush_pmem_file(file, region.offset, region.len, 1);
 
 		break;
 	case PMEM_CACHE_INVALIDATE:
