@@ -495,8 +495,9 @@ restore_generic_timer:          .func
         bx	lr   
         .endfunc    
         
-        @ This function disables L1 data caching, then cleans and invalidates 
+        @ This function disables L1 data caching, then cleans and invalidates
         @ the whole L1 data cache.
+
 disable_clean_inv_dcache_v7_l1:         .func   
         push	{r4, lr}   
         

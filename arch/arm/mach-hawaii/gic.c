@@ -25,10 +25,14 @@
    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
    POSSIBILITY OF SUCH DAMAGE.
 */
+/****************************************************************************
+* The contents of the original source code is minimally modified to suit
+* the needs of the environment in which this code is being used.
+*****************************************************************************/
  
-#include "appf_types.h"
-#include "appf_internals.h"
-#include "appf_helpers.h"
+#include <mach/appf_types.h>
+#include <mach/appf_internals.h>
+#include <mach/appf_helpers.h>
 
 /* This macro sets either the NS or S enable bit in the GIC distributor control register */
 #define GIC_DIST_ENABLE      0x00000001

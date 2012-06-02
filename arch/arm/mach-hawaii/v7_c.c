@@ -25,6 +25,10 @@
    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
    POSSIBILITY OF SUCH DAMAGE.
 */
+/****************************************************************************
+* The contents of the original source code is minimally modified to suit
+* the needs of the environment in which this code is being used.
+*****************************************************************************/
  
 /*
  * The code to save and restore debug context uses the memory-mapped interface.
@@ -32,9 +36,9 @@
  * but a different approach should be taken with an external debugger (cp14).
  */
 
-#include "appf_types.h"
-#include "appf_internals.h"
-#include "appf_helpers.h"
+#include <mach/appf_types.h>
+#include <mach/appf_internals.h>
+#include <mach/appf_helpers.h>
 
 #define DIDR_VERSION_SHIFT 16
 #define DIDR_VERSION_MASK  0xF

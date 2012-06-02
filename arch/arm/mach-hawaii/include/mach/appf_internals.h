@@ -96,7 +96,7 @@ int appf_setup_secure_translation_tables(void);
 #define OTHER_DATA_SIZE              32
 #define CONTROL_DATA_SIZE            64
 
-#ifdef CAPRI_DORMANT_CHANGE
+#ifdef CONFIG_CAPRI_DORMANT_MODE
 /* cpu0, cpu1, work-around ddr address */
 #define SECURE_PARAMETERS_SIZE       12
 #define WORKAROUND_BUFFER_SIZE       512
@@ -153,7 +153,7 @@ struct appf_cpu_context
     appf_u32 *vfp_data;
     appf_u32 *gic_interface_data;
     appf_u32 *gic_dist_private_data;
-#ifdef CAPRI_DORMANT_CHANGE
+#ifdef CONFIG_CAPRI_DORMANT_MODE
 	appf_u32 *secure_api_params;
 #endif
     appf_u32 *banked_registers;
@@ -161,7 +161,7 @@ struct appf_cpu_context
     appf_u32 *debug_data;
     appf_u32 *mmu_data;
     appf_u32 *other_data;
-#ifdef CAPRI_DORMANT_CHANGE
+#ifdef CONFIG_CAPRI_DORMANT_MODE
 	appf_u32 workaround_buffer;
 #endif
 };
