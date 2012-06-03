@@ -25,6 +25,7 @@ extern uint32 mdp_intr_mask;
 extern spinlock_t mdp_spin_lock;
 extern struct mdp4_statistic mdp4_stat;
 extern uint32 mdp4_extn_disp;
+extern spinlock_t dsi_clk_lock;
 
 #define MDP4_OVERLAYPROC0_BASE	0x10000
 #define MDP4_OVERLAYPROC1_BASE	0x18000
@@ -686,6 +687,14 @@ void mdp4_overlay_dsi_video_vsync_push(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe);
 void mdp4_dsi_cmd_overlay_restore(void);
 void mdp_dsi_cmd_overlay_suspend(struct msm_fb_data_type *mfd);
+#ifdef CONFIG_FB_MSM_MDP303
+static inline void mdp4_dsi_cmd_del_timer(void)
+{
+	/* empty */
+}
+#else
+void mdp4_dsi_cmd_del_timer(void);
+#endif
 #else
 static inline void mdp4_dsi_cmd_dma_busy_wait(struct msm_fb_data_type *mfd)
 {
