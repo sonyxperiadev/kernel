@@ -815,19 +815,72 @@ static int rpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 }
 #endif
 
+Int32 RPC_PACKET_IsReservedPkt(PACKET_BufHandle_t dataBufHandle)
+{
+	IPC_U32 val = IPC_BufferPoolUserParameter((IPC_Buffer)dataBufHandle);
+	return (val == CAPI2_RESERVE_POOL_ID) ? 1 : 0;
+}
+void rpcLogNewPacket(PACKET_BufHandle_t pktBufHandle, 
+			PACKET_InterfaceType_t interfaceType,
+			RPC_IPCInfo_t* pInfo,
+			UInt8 *pCid,
+			Int32 isReservedPkt)
+{
+	UInt16 context;
+	if(interfaceType == INTERFACE_PACKET)
+		return;
+	context = (pCid[3] << 8);
+	context |= pCid[2];
+	recvRpcPkts++;
+	rpc_wake_lock_add((UInt32)pktBufHandle);
+	_DBG_(RPC_TRACE
+	   ("RPC_BufferDelivery NEW h=%d if=%d rcvPkts=%d freePkts=%d rz=%x\n",
+	   (int)pktBufHandle, (int)interfaceType, (int)recvRpcPkts,
+	   (int)freeRpcPkts, (int)isReservedPkt));
+	RpcDbgUpdatePktStateEx((int)pktBufHandle, PKT_STATE_NEW,
+					0, PKT_STATE_NA,  0, 0, interfaceType);
+	HISTORY_RPC_LOG((isReservedPkt)?"IpcRzRx":"IpcRx", pCid[0], 
+				(int)pktBufHandle, interfaceType, context );
+}
+void rpcLogFreePacket(PACKET_InterfaceType_t interfaceType,
+			PACKET_BufHandle_t dataBufHandle)
+{
+	if(interfaceType == INTERFACE_PACKET)
+		return;
+	freeRpcPkts++;
+	RpcDbgUpdatePktState((int)dataBufHandle, PKT_STATE_PKT_FREE);
+	rpc_wake_lock_remove((UInt32)dataBufHandle);
+}
 static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 {
+	PACKET_InterfaceType_t ifType;
+	RPC_IPCInfo_t* pInfo;
+	Int32 isReservedPkt = 0;
+	int ret;
 	RPC_Result_t result = RPC_RESULT_ERROR;
 	UInt8 *pCid = (UInt8 *) IPC_BufferHeaderPointer(bufHandle);
 	IPC_EndpointId_T destId = IPC_BufferDestinationEndpointId(bufHandle);
-	Int8 type = GetInterfaceType(destId);
-	Boolean sysrpcHandled = 0, userSpacehandled = 0;
+	int type = GetInterfaceType(destId);
+	PACKET_BufHandle_t  pktBufHandle = (PACKET_BufHandle_t)bufHandle;
 
-	if (type != -1) {
-		if (type != (Int8) INTERFACE_PACKET) {
+	if (type == -1 || pCid == NULL) {
+		IPC_FreeBuffer(bufHandle);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery FAIL pkt=%d t=%d cid=%d", 
+				pktBufHandle, type, pCid));
+		return;	
+	}
+	pInfo = &ipcInfoList[type];
+	ifType = (PACKET_InterfaceType_t)type;
+	if (pInfo->pktIndCb == NULL && pInfo->filterPktIndCb == NULL ) {
+		IPC_FreeBuffer(bufHandle);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery FAIL No Cbk pkt=%d\r\n", 
+			pktBufHandle));
+		return;	
+	}
+	if(ifType != INTERFACE_PACKET)
+	{
 			IPC_U32 uParam;
-			UInt16 context = (pCid[3] << 8);
-			context |= pCid[2];
+		/*For bckward compatibility, remove in future release */
 
 			uParam = IPC_BufferUserParameterGet (bufHandle);
 			if(uParam == CAPI2_RESERVE_POOL_ID) {
@@ -840,81 +893,74 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 				return;
 			}
 
-			recvRpcPkts++;
-			rpc_wake_lock_add((UInt32)bufHandle);
-			_DBG_(RPC_TRACE
-			      ("RPC_BufferDelivery NEW h=%d type=%d rcvPkts=%d freePkts=%d uparam=%x\r\n",
-			       (int)bufHandle, (int)type, (int)recvRpcPkts,
-			       (int)freeRpcPkts, (int)uParam));
+		isReservedPkt = RPC_PACKET_IsReservedPkt(pktBufHandle);
+		/* Log incoming packet */
+		rpcLogNewPacket(pktBufHandle,ifType, pInfo, pCid,isReservedPkt);
 
-			RpcDbgUpdatePktStateEx((int)bufHandle, PKT_STATE_NEW,
-						0, PKT_STATE_NA,  0, 0, type);
-			HISTORY_RPC_LOG("IpcRx", pCid[0], (int)bufHandle, 
-							type, context );
 		}
 
-		if (ipcInfoList[(int)type].pktIndCb != NULL)
-			result =
-			    ipcInfoList[(int)type].
-			    pktIndCb((PACKET_InterfaceType_t) type,
-				     (UInt8) pCid[0],
-				     (PACKET_BufHandle_t) bufHandle);
-		else
-			_DBG_(RPC_TRACE
-			      ("RPC_BufferDelivery(%c) FAIL destId=%d intf=%d handle=%x",
-			       (gRpcProcType == RPC_COMMS) ? 'C' : 'A', destId,
-			       type, bufHandle));
+	if (pInfo->pktIndCb != NULL && isReservedPkt == 0)
+		result = pInfo->pktIndCb((PACKET_InterfaceType_t)type,
+			     			(UInt8) pCid[0],pktBufHandle);
 
-		if (result != RPC_RESULT_PENDING) {
-			if (ipcInfoList[(int)type].filterPktIndCb != NULL) {
+	if (result == RPC_RESULT_PENDING)
+		return;/* Sysrpc packet come here */
+		
+	if (pInfo->filterPktIndCb == NULL) {
+		IPC_FreeBuffer(bufHandle);
+		rpcLogFreePacket((PACKET_InterfaceType_t)type, pktBufHandle);
+		return;	/* net or vt interface pkt come here */		 
+	}
 #ifdef USE_KTHREAD_HANDOVER
-				int ret;
-/*				_DBG_(RPC_TRACE
-				      ("RPC_BufferDelivery POST h=%d\n\n",
-				       (int)bufHandle));*/
-				ret = MsgQueueAdd(&rpcMQhandle,
-						  (void *)bufHandle);
+	if(isReservedPkt && 
+		MsgQueueCount(&rpcMQhandle) >= CFG_RPC_CMD_MAX_PACKETS)
+	{
+		IPC_FreeBuffer(bufHandle);
+		rpcLogFreePacket((PACKET_InterfaceType_t)type, pktBufHandle);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery(rz) RpcQ FULL h=%d c=%d\n",
+		       (int)bufHandle, MsgQueueCount(&rpcMQhandle)));
+		return;
+	}
+	
+	/* Post it to RPC Thread */
+	ret = MsgQueueAdd(&rpcMQhandle, (void *)bufHandle);
+	
 				if (ret != 0)
-					_DBG_(RPC_TRACE
-					      ("RPC_BufferDelivery FAIL	h=%d r=%d\n",
+	{
+		IPC_FreeBuffer(bufHandle);
+		rpcLogFreePacket((PACKET_InterfaceType_t)type, pktBufHandle);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery Queue FAIL h=%d r=%d\n",
 					       (int)bufHandle, ret));
-				else
-					RpcDbgUpdatePktState((int)bufHandle,
-					PKT_STATE_RPC_POST);
+		return;
+	}
+	RpcDbgUpdatePktState((int)bufHandle,PKT_STATE_RPC_POST);
 
 
-				result = (ret == 0) ? RPC_RESULT_PENDING :
-				    RPC_RESULT_ERROR;
+	result = RPC_RESULT_PENDING;
 #else
-				result =
-				    ipcInfoList[(int)type].
-				    filterPktIndCb((PACKET_InterfaceType_t)
-						   type, (UInt8) pCid[0],
+	/* If using workerqueue instead of tasklet,
+		filterPktIndCb can be called directly */
+	result = pInfo->filterPktIndCb((PACKET_InterfaceType_t)type, 
+						(UInt8) pCid[0],
 						   (PACKET_BufHandle_t)
 						   bufHandle);
 #endif
-				userSpacehandled =
-				    (result == RPC_RESULT_PENDING) ? 1 : 0;
-			} else
-				result = RPC_RESULT_ERROR;
-		} else
-			sysrpcHandled = TRUE;
 
-	}
+	/* If Packet not consumed by secondary client then return*/			       
 
-	if (result != RPC_RESULT_PENDING) {
-		if (type != (Int8)INTERFACE_PACKET) {
-			_DBG_(RPC_TRACE
-			 ("k:IPC_FreeBuffer (No Handling) h=%d type=%d\r\n",
-			 (int)bufHandle, type));
-			freeRpcPkts++;
-			RpcDbgUpdatePktState((int)bufHandle,
-					PKT_STATE_PKT_FREE);
-			rpc_wake_lock_remove((UInt32)bufHandle);
-		}
+	if (result != RPC_RESULT_PENDING)
+		{
+		/* Packet was never consumed */
 		IPC_FreeBuffer(bufHandle);
+		rpcLogFreePacket((PACKET_InterfaceType_t)type, pktBufHandle);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery filterCb FAIL h=%d r=%d\n",
+		       (int)bufHandle, ret));
+		return;
 	}
 
+	_DBG_(RPC_TRACE("RPC_BufferDelivery filterCb OK h=%d\n",
+			(int)bufHandle));
+	return;
 }
 
 /******************************************************************************

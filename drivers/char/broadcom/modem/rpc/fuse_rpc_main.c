@@ -119,6 +119,22 @@ static int sysRpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 static void sysRpcHandlerCbk(void *eventHandle)
 {
 	int ret;
+	Int32 isReservedPkt = RPC_PACKET_IsReservedPkt(eventHandle);
+	if(isReservedPkt)
+	{
+		if(!MsgQueueIsEmpty(&sysRpcMQhandle))
+		{
+			void* data;
+			data = MsgQueueGet(&sysRpcMQhandle);
+			while( data )
+			{
+				RPC_PACKET_FreeBufferEx(data, 0);
+				data = MsgQueueGet(&sysRpcMQhandle);
+			}
+		}
+		RPC_PACKET_FreeBufferEx(eventHandle, 0);
+		return;
+	}
 	_DBG(SYSRPC_TRACE(
 		"RPC_BufferDelivery POST sysrpc h=%d\n\n", (int)eventHandle));
 	ret = MsgQueueAdd(&sysRpcMQhandle, eventHandle);

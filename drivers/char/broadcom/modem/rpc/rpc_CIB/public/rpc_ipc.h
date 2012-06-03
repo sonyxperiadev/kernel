@@ -516,6 +516,19 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx2(PACKET_InterfaceType_t interface
 
 RPC_Result_t RPC_PACKET_SendDataEx(RpcPktBufferInfo_t *pktBufInfo);
 
+/* called to initiate notification of clients of start of CP reset */
+void RPC_PACKET_HandleNotifyCPReset(RPC_CPResetEvent_t inEvent);
+
+/* called when client of interfaceType is ready for silent CP reset; expected
+   to be called at some point after client's registered RPC_PACKET_CPResetCallbackFunc_t
+   is called.
+*/
+void RPC_PACKET_AckReadyForCPReset(UInt8 rpcClientID,
+				PACKET_InterfaceType_t interfaceType);
+void RPC_PACKET_FilterAckReadyForCPReset(UInt8 rpcClientID,
+				PACKET_InterfaceType_t interfaceType);
+
+Int32 RPC_PACKET_IsReservedPkt(PACKET_BufHandle_t dataBufHandle);
 /** \endcond   */
 
 #endif /* __RPC_IPC */

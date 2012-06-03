@@ -156,7 +156,7 @@ static RPC_InitParams_t gClientMap[MAX_RPC_CLIENTS];
 static RPC_InitLocalParams_t gClientLocalMap[MAX_RPC_CLIENTS]={{0}};
 static UInt8 gClientIDMap[MAX_RPC_CLIENTS]={0};
 
-UInt8 gClientIDs[255]={0};
+UInt8 gClientIDs[256]={0};
 
 /* cp silent reset callback for async rpc layer; called from rpc_ipc layer */
 static void RPC_Handle_CPReset(RPC_CPResetEvent_t event,
