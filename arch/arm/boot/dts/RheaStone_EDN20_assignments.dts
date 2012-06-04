@@ -1,3 +1,13 @@
+/dts-v1/;
+
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	model = "RheaStone_EDN20_assignments";
+	compatible = "21654B0";
+	/*  timestamp = "v13.0, 5/23/2012 5:29:03 PM";*/
+	
 	/*Version	Date	Person Responisble	Change Description	*/
 	/*13	5/23/2012	Jeff Huang	Enable pull-up on SPI0RXD(GPIO92) to fix display auto-detection problem.
 (MobC00213248)
@@ -20,6 +30,9 @@ Change pulls on both PCM and I2S lines to pull-downs.
 	/*2.0	2/21/2012	Aswath Oruganti	Pull up disabled (GPIO39) HeadSet_Det as external pull up exists.	*/
 	/*1.0	2/20/2012	Aswath Oruganti	Enabled SlewRate control for SIMDAT and SDInterface signals - Eirlys & Vikram	*/
 	/*0.0	2/17/2012	Aswath Oruganti	Initial Release	*/
+
+	chosen {
+	};
 
 	pinmux {
 		timestamp = "v13.0, 5/23/2012 5:29:03 PM";
@@ -225,3 +238,4 @@ Change pulls on both PCM and I2S lines to pull-downs.
 			122    0x00000002 /* 1: Drive High  0: Output */
 		>;
 	};
+};
