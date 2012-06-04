@@ -1079,14 +1079,12 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 	brcm_alsa_chip_t *pChip = NULL;
 	UInt32 num_periods = 1;
 	UInt32 int_time;
-	struct timeval tv;
 	Int32 int_period;
 	int whichbuffer = 0;
 
-	do_gettimeofday(&tv);
 
 	/* find in ms */
-	int_time = (tv.tv_sec*1000)+(tv.tv_usec/1000);
+	int_time = jiffies_to_msecs(jiffies);
 
 	if (!substream) {
 		aError("Invalid substream 0x%p\n", substream);
