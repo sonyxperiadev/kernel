@@ -1201,3 +1201,15 @@ UInt32 csl_caph_dma_read_timestamp(CSL_CAPH_DMA_CHNL_e chnl)
 	return chal_caph_dma_read_timestamp(handle,
 					    csl_caph_dma_get_chal_chnl(chnl));
 }
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CHNL_e chnl)
+*
+*  Description: check if a given dma channel is obtained
+*
+****************************************************************************/
+Boolean csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CHNL_e chnl)
+{
+	return dmaCH_ctrl[chnl].bUsed;
+}

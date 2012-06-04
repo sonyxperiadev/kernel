@@ -702,7 +702,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_SPKR_EN));
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  DSP_AADMAC_SPKR_EN, 0, 0, 0, 0);
+				  1, 0, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0,
 				  0, 0);
 #else
@@ -718,7 +718,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_SPKR_EN));
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  DSP_AADMAC_SPKR_EN, 0, 0, 0, 0);
+				  1, 0, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0,
 				  0, 0);
 #else
@@ -803,7 +803,7 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_PRI_MIC_EN));
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0);
+				  1, 0, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 0, 0,
 				  0, 0);
 	/* AUDDRV_DSPCMD_AUDIO_CONNECT should be called after
@@ -821,7 +821,7 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_PRI_MIC_EN));
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  DSP_AADMAC_PRI_MIC_EN, 1, 0, 0, 0);
+				  1, 1, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 1, 0,
 				  0, 0);
 #else
@@ -1656,8 +1656,23 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 
 	telephonyPathID.dlPathID = csl_caph_hwctrl_EnablePath(config);
 
+
 	/* UL */
-	/* Secondary mic is enabled first*/
+	pathID = csl_caph_FindPathID(CSL_CAPH_DEV_DSP,
+		AUDDRV_GetDRVDeviceFromMic(mic), 0);
+	if (pathID) {
+		/* If voice recording is ongoing, no need to set up UL path.
+		 * Unable to handle this case: record and call use different
+		 * mics.
+		 */
+		aTrace(LOG_AUDIO_DRIVER, "%s UL path %d exists\n",
+			__func__, pathID);
+		AUDDRV_DisableDSPInput(0);
+		/*do not set ulPathID before AUDDRV_DisableDSPInput*/
+		telephonyPathID.ulPathID = pathID;
+	}
+
+	/* Secondary mic */
 	/* If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used*/
 	if (bNeedDualMic) {
 		config.streamID = CSL_CAPH_STREAM_NONE;
@@ -1687,18 +1702,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	if (voiceRecOn && voiceInMic != mic)
 		aError("%s voice record (%d) and call (%d) different mics\n",
 			__func__, voiceInMic, mic);
-	pathID = csl_caph_FindPathID(config.sink, config.source, 0);
-	if (pathID) {
-		/* If voice recording is ongoing, no need to set up UL path.
-		 * Unable to handle this case: record and call use different
-		 * mics.
-		 */
-		aTrace(LOG_AUDIO_DRIVER, "%s UL path %d exists\n",
-			__func__, pathID);
-		AUDDRV_DisableDSPInput(0);
-		/*do not set ulPathID before AUDDRV_DisableDSPInput*/
-		telephonyPathID.ulPathID = pathID;
-	} else
+	if (!pathID)
 		telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
 
 	return;

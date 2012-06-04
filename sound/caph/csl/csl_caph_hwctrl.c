@@ -188,6 +188,7 @@ static Boolean sClkCurEnabled = FALSE;
 static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 static CHAL_HANDLE lp_handle;
 static int en_lpbk_pcm, en_lpbk_i2s;
+static int sec_mic_1st;
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -629,7 +630,14 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 		CSL_CAPH_DMA_CHNL_e dma_ch = CSL_CAPH_DMA_CH13;
 
 		/*this is required when internal trigger is used in mic path*/
-		csl_caph_dma_clear_intr(dma_ch, CSL_CAPH_DSP);
+		/*in voice record + dualmic call, primary mic is up before
+		  sec mic, do not clear interrupt. In other cases, clear it*/
+		if ((!sec_mic_1st && (enabled_path & DSP_AADMAC_SEC_MIC_EN))
+			|| (enabled_path == DSP_AADMAC_PRI_MIC_EN))
+			;
+		else
+			csl_caph_dma_clear_intr(dma_ch, CSL_CAPH_DSP);
+
 		if (enabled_path)
 			csl_caph_dma_enable_intr(dma_ch, CSL_CAPH_DSP);
 		else
@@ -1176,6 +1184,9 @@ static void csl_caph_obtain_blocks
 				"caph dsp sec buf@ %p\r\n", path->pBuf);
 #endif
 		} else {
+			sec_mic_1st = 0;
+			if (csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CH14))
+				sec_mic_1st = 1;
 			dmaCH = CSL_CAPH_DMA_CH13;
 #if defined(ENABLE_DMA_VOICE)
 			path->pBuf =

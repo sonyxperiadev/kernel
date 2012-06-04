@@ -395,4 +395,14 @@ UInt16 csl_caph_dma_check_dmabuffer(CSL_CAPH_DMA_CHNL_e chnl);
 *****************************************************************************/
 
 UInt32 csl_caph_dma_read_timestamp(CSL_CAPH_DMA_CHNL_e chnl);
+
+/**
+*
+*  @brief  check if a given dma channel is obtained
+*
+*  @param   chnl  (in) caph dma channel
+*
+*  @return obtain status
+*****************************************************************************/
+Boolean csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CHNL_e chnl);
 #endif /* _CSL_CAPH_DMA_ */
