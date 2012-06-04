@@ -471,55 +471,55 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 	switch (aud_drv->drv_type) {
 	case AUDIO_DRIVER_PLAY_VOICE:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessVoiceRenderCmd(aud_drv,
-							       ctrl_cmd,
-							       pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessVoiceRenderCmd(aud_drv,
+						       ctrl_cmd,
+						       pCtrlStruct);
 		}
 		break;
 	case AUDIO_DRIVER_PLAY_AUDIO:
 	case AUDIO_DRIVER_PLAY_RINGER:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessRenderCmd(aud_drv, ctrl_cmd,
-							  pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessRenderCmd(aud_drv, ctrl_cmd,
+						  pCtrlStruct);
 		}
 		break;
 	case AUDIO_DRIVER_CAPT_HQ:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessCaptureCmd(aud_drv, ctrl_cmd,
-							   pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessCaptureCmd(aud_drv, ctrl_cmd,
+						   pCtrlStruct);
 		}
 		break;
 	case AUDIO_DRIVER_CAPT_VOICE:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessCaptureVoiceCmd(aud_drv,
-								ctrl_cmd,
-								pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessCaptureVoiceCmd(aud_drv,
+							ctrl_cmd,
+							pCtrlStruct);
 		}
 		break;
 
 	case AUDIO_DRIVER_VOIP:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessVoIPCmd(aud_drv, ctrl_cmd,
-							pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessVoIPCmd(aud_drv, ctrl_cmd,
+						pCtrlStruct);
 		}
 		break;
 	case AUDIO_DRIVER_VOIF:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessVoIFCmd(aud_drv, ctrl_cmd,
-							pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessVoIFCmd(aud_drv, ctrl_cmd,
+						pCtrlStruct);
 		}
 		break;
 	case AUDIO_DRIVER_PTT:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessPttCmd(aud_drv, ctrl_cmd,
-							pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessPttCmd(aud_drv, ctrl_cmd,
+						pCtrlStruct);
 		}
 		break;
 	default:
@@ -530,8 +530,8 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 
 	if (result_code == RESULT_ERROR) {
 		aTrace(LOG_AUDIO_DRIVER,
-				"AUDIO_DRIVER_Ctrl::command processing failed aud_drv->drv_type %d ctrl_cmd %d\n",
-				aud_drv->drv_type, ctrl_cmd);
+			"AUDIO_DRIVER_Ctrl::command processing failed aud_drv->drv_type %d ctrl_cmd %d\n",
+			aud_drv->drv_type, ctrl_cmd);
 	}
 	return;
 }
@@ -620,6 +620,9 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 					AUDIO_DRIVER_RenderDmaCallback,
 				aud_drv->stream_id,
 				aud_drv->arm2sp_config.mixMode);
+
+			if (result_code != RESULT_OK)
+				return result_code;
 
 			/*start render*/
 			result_code = AUDCTRL_StartRender(aud_drv->stream_id);
@@ -881,6 +884,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t *aud_drv,
 			num_blocks, block_size,
 			(CSL_AUDCAPTURE_CB)AUDIO_DRIVER_CaptureDmaCallback,
 			aud_drv->stream_id);
+
+		if (result_code != RESULT_OK)
+			return result_code;
 
 		/*start capture*/
 		result_code = AUDCTRL_StartCapture(aud_drv->stream_id);
