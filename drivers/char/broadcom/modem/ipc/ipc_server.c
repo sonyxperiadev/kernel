@@ -435,7 +435,7 @@ static int CP_Boot(void)
 }
 #endif
 
-void Comms_Start(void)
+static int __init Comms_Start(void)
 {
 	void __iomem *apcp_shmem;
 	void __iomem *cp_boot_base;
@@ -450,7 +450,7 @@ void Comms_Start(void)
 		IPC_DEBUG(DBG_ERROR, "IPC_BASE=0x%x, IPC_SIZE=0x%x\n",
 			  IPC_BASE, IPC_SIZE);
 		IPC_DEBUG(DBG_ERROR, "ioremap shmem failed\n");
-		return;
+		return -1;
 	}
 	/* clear first (9) 32-bit words in shared memory */
 	memset(apcp_shmem, 0, IPC_SIZE);
@@ -465,7 +465,7 @@ void Comms_Start(void)
 			  MODEM_DTCM_ADDRESS,
 			  INIT_ADDRESS_OFFSET + RESERVED_HEADER);
 		IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_base error\n");
-		return;
+		return -1;
 	}
 
 	/* Start the CP */
@@ -474,7 +474,9 @@ void Comms_Start(void)
 
 	iounmap(cp_boot_base);
 	IPC_DEBUG(DBG_TRACE, "modem (R4 COMMS) started ...\n");
+	return 0;
 }
+arch_initcall(Comms_Start);
 
 static int ipcs_read_proc(char *page, char **start, off_t off, int count,
 			  int *eof, void *data)
@@ -506,8 +508,6 @@ static int __init ipcs_module_init(void)
 	}
 
 	IPC_DEBUG(DBG_TRACE, "start ...\n");
-
-	Comms_Start();
 
 	g_ipc_info.ipc_state = 0;
 
