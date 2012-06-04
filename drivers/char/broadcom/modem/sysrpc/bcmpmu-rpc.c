@@ -19,6 +19,8 @@
 #include <linux/delay.h>
 #include <linux/sched.h>
 #include <linux/workqueue.h>
+#include <linux/mutex.h>
+#include <linux/kthread.h>
 
 #include <linux/mfd/bcmpmu.h>
 #include <linux/broadcom/ipcproperties.h>
@@ -48,8 +50,18 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 struct bcmpmu_rpc {
 	struct bcmpmu *bcmpmu;
 	struct delayed_work work;
+	struct delayed_work tx_synch_work;
+/* since we now split tx synched VMBAT readings from the rest,
+   we need to remember last readings,
+   so we always have some valid values at hand */
+	struct mutex cached_lock;
+	unsigned int cached_volt;
+	unsigned int cached_t_pa;
+	unsigned int cached_t_32k;
+	unsigned int cached_result;
 	unsigned long time;
 	int rate;
+	struct task_struct *pTxThread;
 };
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
@@ -104,16 +116,71 @@ static const struct attribute_group bcmpmu_rpc_attr_group = {
 };
 #endif
 
+/* this function handles TX_SYNC readings of VMBATT
+   this is a temporary solution until the ADC sync is working */
+static int rpc_tx_synched_thread(struct bcmpmu_rpc *prpc)
+{
+	struct bcmpmu *bcmpmu = prpc->bcmpmu;
+	struct bcmpmu_adc_req req;
+	unsigned int result;
+
+	pr_rpc(FLOW, "%s, Started\n", __func__);
+
+	msleep(prpc->rate * 1000);
+
+	while (1) {
+		pr_rpc(FLOW, "%s, running\n", __func__);
+		req.flags = PMU_ADC_RAW_ONLY;
+		if (bcmpmu->adc_req) {
+			req.sig = PMU_ADC_VMBATT;
+			req.tm = PMU_ADC_TM_RTM_TX;
+			if (bcmpmu->adc_req(bcmpmu, &req) != -ETIMEDOUT)
+				/*value is valid*/
+				prpc->cached_volt = req.raw;
+			else {
+				/* we had a tx sync timeout,
+				   use housekeeping instead*/
+				req.sig = PMU_ADC_VMBATT;
+				req.tm = PMU_ADC_TM_HK;
+				bcmpmu->adc_req(bcmpmu, &req);
+				prpc->cached_volt = req.raw;
+			}
+
+			mutex_lock(&prpc->cached_lock);
+			result = ((prpc->cached_volt & 0x3FF) << 20) |
+			    ((prpc->cached_t_pa & 0x3FF) << 10) |
+				(prpc->cached_t_32k & 0x3FF);
+			RPC_SetProperty(RPC_PROP_ADC_MEASUREMENT, result);
+			mutex_unlock(&prpc->cached_lock);
+
+			pr_rpc(FLOW, "%s, Got data\n", __func__);
+			pr_rpc(DATA,
+			       "%s, ADC readings result=0x%X, volt=0x%X,"
+			       " t_pa=0x%X, t_32k=0x%X\n",
+					__func__,
+				    result,
+				    prpc->cached_volt,
+				    prpc->cached_t_pa,
+				    prpc->cached_t_32k);
+		} else
+			pr_rpc(ERROR, "%s, bcmpmu adc driver not ready\n",
+			       __func__);
+
+		msleep(prpc->rate * 1000);
+		prpc->time = get_seconds();
+	}
+	return 0;
+}
+
+
+
 static void rpc_work(struct work_struct *work)
 {
 	struct bcmpmu_rpc *prpc =
-	    container_of(work, struct bcmpmu_rpc, work.work);
+		container_of(work, struct bcmpmu_rpc, work.work);
 	struct bcmpmu *bcmpmu = prpc->bcmpmu;
-	struct bcmpmu_adc_req req;
-	unsigned int volt = 0;
-	unsigned int t_pa = 0;
-	unsigned int t_32k = 0;
-	unsigned int result = 0;
+	struct bcmpmu_adc_req	req;
+	unsigned int result;
 
 	pr_rpc(FLOW, "%s, called\n", __func__);
 	req.flags = PMU_ADC_RAW_ONLY;
@@ -121,24 +188,27 @@ static void rpc_work(struct work_struct *work)
 		req.sig = PMU_ADC_PATEMP;
 		req.tm = PMU_ADC_TM_HK;
 		bcmpmu->adc_req(bcmpmu, &req);
-		t_pa = req.raw;
-		req.sig = PMU_ADC_VMBATT;
-		req.tm = PMU_ADC_TM_HK;
-		bcmpmu->adc_req(bcmpmu, &req);
-		volt = req.raw;
+		prpc->cached_t_pa = req.raw;
 		req.sig = PMU_ADC_32KTEMP;
 		req.tm = PMU_ADC_TM_HK;
 		bcmpmu->adc_req(bcmpmu, &req);
-		t_32k = req.raw;
+		prpc->cached_t_32k = req.raw;
 	} else
 		pr_rpc(ERROR, "%s, bcmpmu adc driver not ready\n", __func__);
 
-	result = ((volt & 0x3FF) << 20) |
-	    ((t_pa & 0x3FF) << 10) | (t_32k & 0x3FF);
+	mutex_lock(&prpc->cached_lock);
+	result = ((prpc->cached_volt & 0x3FF) << 20) |
+	    ((prpc->cached_t_pa & 0x3FF) << 10) | (prpc->cached_t_32k & 0x3FF);
 	RPC_SetProperty(RPC_PROP_ADC_MEASUREMENT, result);
+	mutex_unlock(&prpc->cached_lock);
+
 	pr_rpc(DATA,
 	       "%s, ADC readings result = 0x%X, volt=0x%X, t_pa=0x%X, t_32k=0x%X\n",
-	       __func__, result, volt, t_pa, t_32k);
+	       __func__,
+		   result,
+		   prpc->cached_volt,
+		   prpc->cached_t_pa,
+		   prpc->cached_t_32k);
 
 	schedule_delayed_work(&prpc->work, msecs_to_jiffies(prpc->rate * 1000));
 	prpc->time = get_seconds();
@@ -185,12 +255,15 @@ static int __devinit bcmpmu_rpc_probe(struct platform_device *pdev)
 		   where the data not yet finalized */
 		prpc->rate = 10;
 
+	mutex_init(&prpc->cached_lock);
 	INIT_DELAYED_WORK(&prpc->work, rpc_work);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_rpc_attr_group);
 #endif
 	schedule_delayed_work(&prpc->work, msecs_to_jiffies(prpc->rate * 1000));
+	prpc->pTxThread = kthread_run((int (*)(void *))rpc_tx_synched_thread,
+				      (void *)prpc, "bcmpmu_rpc KThread");
 	return 0;
 
 err:
@@ -203,6 +276,11 @@ static int __devexit bcmpmu_rpc_remove(struct platform_device *pdev)
 	struct bcmpmu_rpc *prpc = bcmpmu->rpcinfo;
 
 	cancel_delayed_work_sync(&prpc->work);
+
+	if (prpc->pTxThread != NULL) {
+		kthread_stop(prpc->pTxThread);
+		prpc->pTxThread = NULL;
+	}
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_rpc_attr_group);
