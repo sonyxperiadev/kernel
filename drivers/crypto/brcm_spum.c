@@ -17,9 +17,14 @@
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/scatterlist.h>
+#include <mach/dma.h>
 #include <mach/rdb/brcm_rdb_spum_apb.h>
 #include <mach/rdb/brcm_rdb_spum_axi.h>
+#include <crypto/hash.h>
+#include <crypto/internal/hash.h>
 #include "brcm_spum.h"
+
+struct brcm_spum_device *spum_dev;
 
 void spum_init_device(void __iomem *io_apb_base, void __iomem *io_axi_base)
 {
@@ -163,4 +168,85 @@ int spum_format_command(struct spum_hw_context *spum_ctx,
 	return ((void*)data_attr + (sizeof(u32)*4)) - spum_cmd;
 }
 
+void spum_queue_task(unsigned long data)
+{
+	struct crypto_async_request *async_req = NULL, *backlog = NULL;
+	unsigned long flags;
 
+	spin_lock_irqsave(&spum_dev->lock, flags);
+	if (test_bit(FLAGS_BUSY, &spum_dev->flags)) {
+		spin_unlock_irqrestore(&spum_dev->lock, flags);
+		return;
+	}
+
+	backlog = crypto_get_backlog(&spum_dev->spum_queue);
+	async_req = crypto_dequeue_request(&spum_dev->spum_queue);
+	if (async_req)
+		set_bit(FLAGS_BUSY, &spum_dev->flags);
+	spin_unlock_irqrestore(&spum_dev->lock, flags);
+
+	if (!async_req)
+		return;
+
+	if (backlog)
+		backlog->complete(backlog, -EINPROGRESS);
+
+	if (async_req->tfm->__crt_alg->cra_type == &crypto_ahash_type) {
+		spum_dev->hash_dev->req = ahash_request_cast(async_req);
+#if defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH)
+		spum_hash_process_request(spum_dev->hash_dev);
+#endif
+	} else if (async_req->tfm->__crt_alg->cra_type ==
+					&crypto_ablkcipher_type) {
+		spum_dev->aes_dev->req = ablkcipher_request_cast(async_req);
+#if defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES)
+		spum_aes_process_request(spum_dev->aes_dev);
+#endif
+	} else {
+		pr_err("%s: Invalid crypto request!\n", __func__);
+		return;
+	}
+
+	return;
+}
+
+int spum_enqueue_request(struct crypto_async_request *req)
+{
+	int ret = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&spum_dev->lock, flags);
+	ret = crypto_enqueue_request(&spum_dev->spum_queue, req);
+	spin_unlock_irqrestore(&spum_dev->lock, flags);
+
+	return ret;
+}
+
+static int __init brcm_spum_init(void)
+{
+	spum_dev = (struct brcm_spum_device *)
+		kzalloc(sizeof(struct brcm_spum_device), GFP_KERNEL);
+
+	spin_lock_init(&spum_dev->lock);
+	spum_dev->flags = 0;
+
+	/* Aquire DMA channels */
+	if (dma_request_chan(&spum_dev->rx_dma_chan, "SPUM_OpenA") != 0) {
+		pr_err("%s: Rx dma_request_chan failed\n", __func__);
+		return -1;
+	}
+	if (dma_request_chan(&spum_dev->tx_dma_chan, "SPUM_OpenB") != 0) {
+		pr_err("%s: Tx dma_request_chan failed\n", __func__);
+		goto err;
+	}
+
+	pr_info("%s: DMA channel aquired rx %d tx %d\n", __func__,
+			spum_dev->rx_dma_chan, spum_dev->tx_dma_chan);
+
+	return 0;
+err:
+	dma_free_chan(spum_dev->rx_dma_chan);
+	return -EIO;
+}
+
+arch_initcall(brcm_spum_init);
