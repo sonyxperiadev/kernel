@@ -922,7 +922,7 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 	}
 
 	if (!path) {
-		aTrace(LOG_AUDIO_CNTLR,
+		aWarn(
 			"%s mode %d, pathID %d no path",
 			__func__, mode, arg_pathID);
 		return; /*don't know which mixer input */
@@ -1356,7 +1356,7 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 		break;
 
 	default:
-		aTrace(LOG_AUDIO_CNTLR,
+		aWarn(
 				"AUDCTRL_GetSrcSinkByMode()"
 				"mode %d is out of range\n",
 				mode);
@@ -3476,7 +3476,7 @@ AudioMode_t GetAudioModeBySink(AUDIO_SINK_Enum_t sink)
 	case AUDIO_SINK_I2S:
 	case AUDIO_SINK_VIBRA:
 	default:
-		aTrace(LOG_AUDIO_CNTLR,
+		aWarn(
 				"%s can not find mode %d\n", __func__, sink);
 		return AUDIO_MODE_INVALID;
 	}

@@ -152,7 +152,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		if (((loopback_input > 6) && (loopback_input != 11)) ||
 		    ((loopback_output > 2) && (loopback_output != 9) &&
 		     (loopback_output != 4))) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aError(
 					"%s srr/sink exceeds its range.\n",
 					__func__);
 			rtn = -1;
@@ -185,7 +185,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		break;
 
 	case 13:		/* at*maudmode=13  --> Get call ID */
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"%s get call ID is not supported\n", __func__);
 		rtn = -1;
 		break;
@@ -302,7 +302,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		break;
 
 	default:
-		aTrace(LOG_AUDIO_DRIVER, "%s Unsupported cmd %ld\n", __func__,
+		aWarn("%s Unsupported cmd %ld\n", __func__,
 				Params[0]);
 		rtn = -1;
 		break;
@@ -349,7 +349,7 @@ int AtMaudLog(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		    AUDDRV_AudLog_Start(Params[1], Params[2], Params[3],
 					(char *)NULL);
 		if (rtn < 0) {
-			aTrace(LOG_AUDIO_DRIVER, "\n Couldnt setup channel\n");
+			aError("\n Couldnt setup channel\n");
 			rtn = -1;
 		}
 		aTrace(LOG_AUDIO_DRIVER, "%s start log on stream %ld, "
@@ -1161,7 +1161,7 @@ int AtMaudVol(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		return 0;
 
 	default:
-		aTrace(LOG_AUDIO_DRIVER, "%s Unsupported cmd %ld\n", __func__,
+		aWarn("%s Unsupported cmd %ld\n", __func__,
 				Params[0]);
 		break;
 	}
@@ -1228,7 +1228,7 @@ int AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t *pChip,
 		rtn = AtMaudLoopback(pChip, ParamCount - 1, &Params[1]);
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"%s Unsupported handler %ld\n", __func__,
 				Params[0]);
 		rtn = -1;
@@ -1300,7 +1300,7 @@ int AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t *pChip,
 		rtn = AtMaudLoopback(pChip, ParamCount - 1, &Params[1]);
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"%s Unsupported handler %ld\n", __func__,
 				Params[0]);
 		rtn = -1;

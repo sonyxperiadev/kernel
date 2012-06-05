@@ -263,13 +263,13 @@ UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h)
 static int SetPlaybackStreamHandle(AUDIO_DDRIVER_t *h)
 {
 	if (h->stream_id >= CSL_CAPH_STREAM_TOTAL) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"Error: SetPlaybackStreamHandle invalid stream id=%ld\n",
 				h->stream_id);
 		return -1;
 	}
 	if (audio_render_driver[h->stream_id] != NULL)
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"Warnning: SetPlaybackStreamHandle handle of stream id=%ld is overwritten pre=%p, after=%p\n",
 				h->stream_id, audio_render_driver[h->stream_id],
 				h);
@@ -282,7 +282,7 @@ static int SetPlaybackStreamHandle(AUDIO_DDRIVER_t *h)
 static AUDIO_DDRIVER_t *GetPlaybackStreamHandle(UInt32 streamID)
 {
 	if (audio_render_driver[streamID] == NULL)
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"Error: GetPlaybackStreamHandle invalid handle for id %ld\n",
 				streamID);
 	return audio_render_driver[streamID];
@@ -292,7 +292,7 @@ static int ResetPlaybackStreamHandle(UInt32 streamID)
 {
 
 	if (audio_render_driver[streamID] == NULL)
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"Warning: ResetPlaybackStreamHandle invalid handle for id %ld\n",
 				streamID);
 	audio_render_driver[streamID] = NULL;
@@ -356,7 +356,7 @@ AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 		break;
 
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_Open::Unsupported driver\n");
 		break;
 	}
@@ -376,7 +376,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_Close\n");
 
 	if (aud_drv == NULL) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"AUDIO_DRIVER_Close::Invalid Handle\n");
 		return;
 	}
@@ -403,7 +403,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 		}
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_Close::Unsupported driver\n");
 		break;
 	}
@@ -456,7 +456,7 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 	Result_t result_code = RESULT_ERROR;
 
 	if (aud_drv == NULL) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"AUDIO_DRIVER_Ctrl::Invalid Handle\n");
 		return;
 	}
@@ -523,14 +523,15 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 		}
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_Ctrl::Unsupported driver\n");
 		break;
 	}
 
 	if (result_code == RESULT_ERROR) {
-		aTrace(LOG_AUDIO_DRIVER,
-			"AUDIO_DRIVER_Ctrl::command processing failed aud_drv->drv_type %d ctrl_cmd %d\n",
+		aError(
+			"AUDIO_DRIVER_Ctrl::command processing"
+			"failed aud_drv->drv_type %d ctrl_cmd %d\n",
 			aud_drv->drv_type, ctrl_cmd);
 	}
 	return;
@@ -588,7 +589,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 			    (aud_drv->ring_buffer == NULL) ||
 			    (aud_drv->ring_buffer_size == 0)
 			    ) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aWarn(
 						"AUDIO_DRIVER_ProcessRenderCmd::All Configuration is not set yet\n");
 				return result_code;
 			}
@@ -653,7 +654,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 		}
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_ProcessRenderCmd::Unsupported command\n");
 		break;
 	}
@@ -692,7 +693,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 		    (aud_drv->ring_buffer == NULL) ||
 		    (aud_drv->ring_buffer_size == 0)
 		    ) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aWarn(
 				"AUDIO_DRIVER_ProcessVoiceRenderCmd::All cfg is not set yet\n");
 			return result_code;
 		}
@@ -818,7 +819,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 	}
 	break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessVoiceRenderCmd::Unsupported command\n");
 	break;
 	}
@@ -859,7 +860,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t *aud_drv,
 		    (aud_drv->ring_buffer == NULL) ||
 		    (aud_drv->ring_buffer_size == 0)
 		    ) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aWarn(
 			"AUDIO_DRIVER_ProcessCaptureCmd::All Config is not set yet\n");
 			return result_code;
 		}
@@ -917,7 +918,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t *aud_drv,
 	}
 	break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessCaptureCmd::Unsupported command\n");
 	break;
 	}
@@ -967,9 +968,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			    (aud_drv->ring_buffer == NULL) ||
 			    (aud_drv->ring_buffer_size == 0)
 			    ) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aWarn(
 					"AUDIO_DRIVER_ProcessCaptureCmd::");
-				aTrace(LOG_AUDIO_DRIVER,
+				aWarn(
 					"All Configuration is not set yet\n");
 				return result_code;
 			}
@@ -1042,7 +1043,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_RESUME:
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessCaptureVoiceCmd::Invalid command\n");
 		break;
 	}
@@ -1086,7 +1087,7 @@ static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
 
 		AUDIO_DRIVER_CallBackParams_t *pCbParams;
 		if (pCtrlStruct == NULL) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aError(
 				"AUDIO_DRIVER_ProcessPttCmd::Invalid Ptr\n");
 			return result_code;
 		}
@@ -1104,7 +1105,7 @@ static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
 		UInt32 buf_index;
 		Int16  *buf_ptr;
 		if (pCtrlStruct == NULL) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aError(
 				"AUDIO_DRIVER_ProcessPttCmd::Invalid Ptr\n");
 			return result_code;
 		}
@@ -1116,7 +1117,7 @@ static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
 	}
 	break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessVoIPCmd::Unsupported command\n");
 	break;
 	}
@@ -1169,7 +1170,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 			aud_drv->voip_config.codec_type =
 			    VOIP_AMR_WB_MODE_7k;
 		else {
-			aTrace(LOG_AUDIO_DRIVER,
+			aWarn(
 				"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n");
 			break;
 		}
@@ -1200,7 +1201,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 					"==> VoLTE call starts, codec_type=%x\n",
 					aud_drv->voip_config.codec_type);
 			} else {
-				aTrace(LOG_AUDIO_DRIVER,
+				aWarn(
 					"==> Codec Type not supported in VoLTE\n");
 				return result_code;
 			}
@@ -1222,7 +1223,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 
 		AUDIO_DRIVER_CallBackParams_t *pCbParams;
 		if (pCtrlStruct == NULL) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aError(
 				"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr\n");
 			return result_code;
 		}
@@ -1240,7 +1241,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 	{
 		AUDIO_DRIVER_CallBackParams_t *pCbParams;
 		if (pCtrlStruct == NULL) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aError(
 				"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr\n");
 			return result_code;
 		}
@@ -1255,7 +1256,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 	}
 	break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessVoIPCmd::Unsupported command\n");
 	break;
 	}
@@ -1310,7 +1311,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t *aud_drv,
 		}
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessVoIFCmd::Unsupported command\n");
 		break;
 	}
@@ -1340,7 +1341,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 			AUDIO_DRIVER_CONFIG_t *pAudioConfig =
 			    (AUDIO_DRIVER_CONFIG_t *) pCtrlStruct;
 			if (pCtrlStruct == NULL) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aError(
 						"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1361,7 +1362,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 		{
 			AUDIO_DRIVER_CallBackParams_t *pCbParams;
 			if (pCtrlStruct == NULL) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aError(
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1376,7 +1377,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_SET_INT_PERIOD:
 		{
 			if (pCtrlStruct == NULL) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aError(
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1389,7 +1390,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 			AUDIO_DRIVER_BUFFER_t *pAudioBuffer =
 			    (AUDIO_DRIVER_BUFFER_t *) pCtrlStruct;
 			if (pCtrlStruct == NULL) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aError(
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1405,7 +1406,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 			AUDIO_DRIVER_TYPE_t *pDriverType =
 			    (AUDIO_DRIVER_TYPE_t *) pCtrlStruct;
 			if (pCtrlStruct == NULL) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aError(
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1718,7 +1719,7 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
 		stream_id);*/
 
 	if ((pAudDrv == NULL)) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"AUDIO_DRIVER_RenderDmaCallback::"
 				"Spurious call back\n");
 		return;
@@ -1726,7 +1727,7 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
 	if (pAudDrv->pCallback != NULL) {
 		pAudDrv->pCallback(pAudDrv->pCBPrivate);
 	} else
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_RenderDmaCallback::"
 				"No callback registerd\n");
 
@@ -1842,7 +1843,7 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
 	/*aTrace(LOG_AUDIO_DRIVER,"AUDIO_DRIVER_CaptureDmaCallback::\n");*/
 
 	if ((audio_capture_driver == NULL)) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"AUDIO_DRIVER_CaptureDmaCallback:: Spurious call back\n");
 		return;
 	}
@@ -1850,7 +1851,7 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
 		audio_capture_driver->pCallback(audio_capture_driver->
 						pCBPrivate);
 	} else
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_CaptureDmaCallback:: No callback registerd\n");
 
 	return;
@@ -1874,7 +1875,7 @@ void VPU_Capture_Request(UInt16 buf_index)
 	aud_drv = audio_capture_driver;
 
 	if ((aud_drv == NULL)) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 			"VPU_Capture_Request:: Spurious call back\n");
 		return;
 	}
@@ -2023,7 +2024,7 @@ static Boolean VOIP_DumpUL_CB(UInt8 *pSrc, UInt32 amrMode)
 
 	aud_drv = audio_voip_driver;
 	if ((aud_drv == NULL)) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 			"VOIP_DumpUL_CB:: Spurious call back\n");
 		return TRUE;
 	}
@@ -2031,7 +2032,7 @@ static Boolean VOIP_DumpUL_CB(UInt8 *pSrc, UInt32 amrMode)
 	codecType = voipBufPtr->voip_vocoder;
 	index = (codecType & 0xf000) >> 12;
 	if (index >= 7)
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"VOIP_DumpUL_CB :: Invalid codecType = 0x%x\n",
 				codecType);
 	else {
@@ -2064,7 +2065,7 @@ static Boolean VOIP_FillDL_CB(UInt32 nFrames)
 
 	aud_drv = audio_voip_driver;
 	if (aud_drv == NULL) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"VOIP_FillDL_CB:: Spurious call back\n");
 		return TRUE;
 	}
@@ -2104,7 +2105,7 @@ static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf)
 	UInt16 *dataPtr = pBuf;
 
 	if (djbBuf == NULL) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"VoLTE_WriteDLData, missing VoLTE init ...\n");
 		return FALSE;
 	}
@@ -2116,7 +2117,7 @@ static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf)
 		 && decode_mode <= VOIP_AMR_WB_MODE_24k)
 		isAMRWB = TRUE;
 	else {
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"VoLTE_WriteDLData, unsupported codec type.\n");
 		return FALSE;
 	}
@@ -2155,11 +2156,11 @@ static void Ptt_FillDL_CB(UInt32 buf_index, UInt32 ptt_flag, UInt32 int_rate)
 {
 	Int16  *buf_ptr;
 	if (buf_index != 0 && buf_index != 1) {
-		aTrace(LOG_AUDIO_DRIVER, "Ptt_FillDL_CB: invalid index\n");
+		aWarn("Ptt_FillDL_CB: invalid index\n");
 		return;
 	}
 	if (audio_ptt_driver == NULL) {
-		aTrace(LOG_AUDIO_DRIVER, "Ptt_FillDL_CB: spurious callback\n");
+		aError("Ptt_FillDL_CB: spurious callback\n");
 		return;
 	}
 	aTrace(LOG_AUDIO_DRIVER, "Int rate-%ld\n", int_rate);
