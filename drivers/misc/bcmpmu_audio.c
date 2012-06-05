@@ -29,6 +29,19 @@
 #include <linux/mfd/bcmpmu.h>
 #include <linux/broadcom/bcmpmu_audio.h>
 
+#define BCMPMU_PRINT_ERROR (1U << 0)
+#define BCMPMU_PRINT_INIT (1U << 1)
+#define BCMPMU_PRINT_FLOW (1U << 2)
+#define BCMPMU_PRINT_DATA (1U << 3)
+
+static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
+module_param_named(dbgmsk, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
+#define pr_audio(debug_level, args...) \
+	do { \
+		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
+			pr_info(args); \
+		} \
+	} while (0)
 /*
  * Steps to increment IHF/HS gain exponentially
  */
@@ -177,7 +190,7 @@ static void _bcmpmu_set_gain(u32 reg, u32 gain)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 
-	pr_debug("%s: reg = 0x%x, gain = 0x%x\n", __func__, reg, gain);
+	pr_audio(FLOW, "%s: reg = 0x%x, gain = 0x%x\n", __func__, reg, gain);
 
 	bcmpmu->write_dev(bcmpmu, reg, gain, bcmpmu->regmap[reg].mask);
 	udelay(50);
@@ -221,7 +234,7 @@ void bcmpmu_hs_power(bool on)
 {
 	unsigned int val;
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
-	pr_debug(KERN_WARNING "%s:  ######### ON = %d\n", __func__, on);
+	pr_audio(FLOW,  "%s:  ######### ON = %d\n", __func__, on);
 	mutex_lock(&bcmpmu_audio->lock);
 
 	if (on) {
@@ -257,7 +270,7 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 	int data1, data2, data3;
 	int ret = 0;
 	int HSwasEn = 0;
-	pr_debug("Inside %s, HSgain %d, HSInputmode %d\n",
+	pr_audio(FLOW,  "Inside %s, HSgain %d, HSInputmode %d\n",
 		__func__, HSgain, HSInputmode);
 
 	mutex_lock(&bcmpmu_audio->lock);
@@ -368,7 +381,7 @@ void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, u32 gain)
 		.table = hs_gain_steps,
 		.size = hs_gain_nsteps,
 	};
-	pr_debug("%s: path = %d, gain = %d\n", __func__, path, gain);
+	pr_audio(FLOW,  "%s: path = %d, gain = %d\n", __func__, path, gain);
 
 	mutex_lock(&bcmpmu_audio->lock);
 
@@ -385,7 +398,7 @@ EXPORT_SYMBOL(bcmpmu_hs_set_gain);
 static void bcmpmu_ihf_manual_power(bool on)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
-	pr_debug("%s:  ######### ON = %d\n", __func__, on);
+	pr_audio(FLOW, "%s:  ######### ON = %d\n", __func__, on);
 
 	mutex_lock(&bcmpmu_audio->lock);
 	if (on) {
@@ -552,7 +565,7 @@ void bcmpmu_ihf_power(bool on)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	struct bcmpmu_rw_data reg;
-	pr_debug("%s:  ######### ON = %d\n", __func__, on);
+	pr_audio(FLOW, "%s:  ######### ON = %d\n", __func__, on);
 	if (bcmpmu_audio->ihf_autoseq_dis) {
 		bcmpmu_ihf_manual_power(on);
 		return;
@@ -635,7 +648,7 @@ void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain)
 		.table = ihf_gain_steps,
 		.size = ihf_gain_nsteps,
 	};
-	pr_debug("%s: gain = %d\n", __func__, gain);
+	pr_audio(FLOW, "%s: gain = %d\n", __func__, gain);
 
 	mutex_lock(&bcmpmu_audio->lock);
 	bcmpmu_set_gain(&ramp, PMU_REG_IHFPGA2_GAIN, gain);
@@ -647,6 +660,7 @@ void bcmpmu_hi_gain_mode_en(bool en)
 {
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
 	u8 val = en << bcmpmu->regmap[PMU_REG_HIGH_GAIN_MODE].shift;
+	pr_audio(FLOW, "%s: hi gain enabled = %d\n", __func__, en);
 
 	bcmpmu->write_dev(bcmpmu, PMU_REG_HIGH_GAIN_MODE,
 			  val, bcmpmu->regmap[PMU_REG_HIGH_GAIN_MODE].mask);
@@ -907,7 +921,7 @@ void bcmpmu_audio_init(void)
 {
 	struct bcmpmu_rw_data reg;
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
-	pr_debug("%s: ###### - pll_use_count = %u\n",
+	pr_audio(FLOW, "%s: ###### - pll_use_count = %u\n",
 		__func__, bcmpmu_audio->pll_use_count);
 	mutex_lock(&bcmpmu_audio->lock);
 	if (bcmpmu_audio->pll_use_count++ == 0)	{
@@ -959,7 +973,7 @@ void bcmpmu_audio_deinit(void)
 {
 	struct bcmpmu_rw_data reg;
 	struct bcmpmu *bcmpmu = bcmpmu_audio->bcmpmu;
-	pr_debug("%s: ###### - pll_use_count = %u\n",
+	pr_audio(FLOW, "%s: ###### - pll_use_count = %u\n",
 		__func__, bcmpmu_audio->pll_use_count);
 	mutex_lock(&bcmpmu_audio->lock);
 	if (bcmpmu_audio->pll_use_count &&
@@ -1000,7 +1014,7 @@ static void bcmpmu_audio_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu *bcmpmu = ((struct bcmpmu_audio *)data)->bcmpmu;
 	unsigned int mask;
-	pr_debug("%s: Interrupt for %s\n", __func__,
+	pr_audio(FLOW, "%s: Interrupt for %s\n", __func__,
 			(irq == PMU_IRQ_AUD_HSAB_SHCKT) ? "HS SC" : "IHF SC");
 	switch (irq) {
 	case PMU_IRQ_AUD_HSAB_SHCKT:
