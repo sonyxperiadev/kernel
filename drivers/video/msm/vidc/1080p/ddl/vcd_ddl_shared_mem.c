@@ -208,6 +208,10 @@
 
 #define VIDC_SM_NUM_STUFF_BYTES_CONSUME_ADDR    0X01ac
 
+#define VIDC_SM_TIMEOUT_VALUE_ADDR        0x0158
+#define VIDC_SM_TIMEOUT_VALUE_BMSK        0xffffffff
+#define VIDC_SM_TIMEOUT_VALUE_SHFT        0
+
 #define VIDC_SM_ENC_EXT_CTRL_CLOSED_GOP_ENABLE_BMSK	0x40
 #define VIDC_SM_ENC_EXT_CTRL_CLOSED_GOP_ENABLE_SHFT	6
 
@@ -739,5 +743,12 @@ void vidc_sm_set_decoder_stuff_bytes_consumption(
 {
 	DDL_MEM_WRITE_32(shared_mem, VIDC_SM_NUM_STUFF_BYTES_CONSUME_ADDR,
 			consume_info);
+}
+
+void vidc_sm_set_video_core_timeout_value(struct ddl_buf_addr *shared_mem,
+	u32 timeout)
+{
+	DDL_MEM_WRITE_32(shared_mem, VIDC_SM_TIMEOUT_VALUE_ADDR,
+			timeout);
 }
 

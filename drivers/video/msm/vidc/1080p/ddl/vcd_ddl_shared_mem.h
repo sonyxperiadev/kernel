@@ -177,4 +177,6 @@ void vidc_sm_get_decoder_sei_enable(struct ddl_buf_addr *shared_mem,
 void vidc_sm_set_decoder_stuff_bytes_consumption(
 	struct ddl_buf_addr *shared_mem,
 	enum vidc_sm_num_stuff_bytes_consume_info consume_info);
+void vidc_sm_set_video_core_timeout_value(struct ddl_buf_addr *shared_mem,
+	u32 timeout);
 #endif
