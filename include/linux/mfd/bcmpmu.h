@@ -1088,6 +1088,8 @@ struct bcmpmu {
 			      unsigned int *val, int len);
 	int (*write_dev_bulk) (struct bcmpmu *bcmpmu, int map, int addr,
 			       unsigned int *val, int len);
+	/* Set PMU Bus read/write mode - Interrupt or polled */
+	int (*set_dev_mode) (struct bcmpmu *bcmpmu, int poll);
 	const struct bcmpmu_reg_map *regmap;
 	/* irq */
 	int (*register_irq) (struct bcmpmu *pmu, enum bcmpmu_irq irq,

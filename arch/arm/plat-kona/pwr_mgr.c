@@ -133,14 +133,20 @@ static char *pwr_mgr_event2str(int event)
 #define PWR_MGR_I2C_CMD_OFF_TO_CMD_DATA_MASK(x) ((((x) % 2) == 0) ? \
 												I2C_CMD0_DATA_MASK : I2C_CMD1_DATA_MASK)
 
-#define PWR_MGR_INTR_MASK(x)     (1 << (x))
-#define PWR_MGR_SEQ_RETRIES		(10)
+#define PWR_MGR_INTR_MASK(x)			(1 << (x))
+#define PWR_MGR_SEQ_RETRIES			(10)
+#define PWR_MGR_SEQ_INTR_POLL_TIMEOUT_US	(200)
 
 /* I2C SW seq operations*/
 enum {
 	I2C_SEQ_READ,
 	I2C_SEQ_WRITE,
 	I2C_SEQ_READ_FIFO,
+};
+
+enum {
+	PWR_MGR_I2C_MODE_IRQ,
+	PWR_MGR_I2C_MODE_POLL,
 };
 
 #endif
@@ -176,6 +182,7 @@ struct pwr_mgr {
 #ifdef CONFIG_RHEA_WA_HWJIRA_2747
 	int pc_status;
 #endif
+	int i2c_mode;
 	struct completion i2c_seq_done;
 	struct work_struct pwrmgr_work;
 #endif
@@ -1604,6 +1611,29 @@ static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 	       PWR_MGR_REG_ADDR(PWR_MGR_I2C_CMD_OFF_TO_REG_OFF(cmd_offset)));
 
 }
+int pwr_mgr_set_i2c_mode(int poll)
+{
+	unsigned long flag;
+	spin_lock_irqsave(&pwr_mgr_lock, flag);
+	if (poll)
+		pwr_mgr.i2c_mode = PWR_MGR_I2C_MODE_POLL;
+	else
+		pwr_mgr.i2c_mode = PWR_MGR_I2C_MODE_IRQ;
+	spin_unlock_irqrestore(&pwr_mgr_lock, flag);
+	return 0;
+}
+EXPORT_SYMBOL(pwr_mgr_set_i2c_mode);
+
+static int pwr_mgr_get_i2c_mode(void)
+{
+	unsigned long flag;
+	int mode;
+	spin_lock_irqsave(&pwr_mgr_lock, flag);
+	mode = pwr_mgr.i2c_mode;
+	spin_unlock_irqrestore(&pwr_mgr_lock, flag);
+	return mode;
+}
+
 #ifdef CONFIG_RHEA_WA_HWJIRA_2747
 static void pwr_mgr_seq_set_pc_pin_cmd(u32 offset, int pc_pin, int set)
 {
@@ -1647,6 +1677,8 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	u32 sw_start_off = 0;
 	unsigned long flag = 0;
 	unsigned long timeout;
+	unsigned long poll_timeout = PWR_MGR_SEQ_INTR_POLL_TIMEOUT_US;
+	int poll_delay = 30;
 	int retry = PWR_MGR_SEQ_RETRIES;
 	int pc_status;
 	int i;
@@ -1674,7 +1706,8 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	}
 
 	for (i = 0; i < retry; i++) {
-		INIT_COMPLETION(pwr_mgr.i2c_seq_done);
+		if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL)
+			INIT_COMPLETION(pwr_mgr.i2c_seq_done);
 		reg_val = readl(PWR_MGR_REG_ADDR(
 					PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 		reg_val &= ~(PWRMGR_I2C_REQ_TRG_MASK |
@@ -1732,29 +1765,58 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 
 			reg = readl(PWR_MGR_REG_ADDR(PWRMGR_INTR_MASK_OFFSET));
 			reg |= PWR_MGR_INTR_MASK(PWRMGR_INTR_I2C_SW_SEQ);
-			writel(reg, PWR_MGR_REG_ADDR(PWRMGR_INTR_MASK_OFFSET));
 			spin_unlock_irqrestore(&pwr_mgr_lock, flag);
+			if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL)
+				writel(reg, PWR_MGR_REG_ADDR(
+							PWRMGR_INTR_MASK_OFFSET)
+						);
 		} else {
-			pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ, false);
+			if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL)
+				pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ,
+						false);
 			writel(reg_val, PWR_MGR_REG_ADDR(
 						PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 		}
-		timeout = wait_for_completion_timeout(&pwr_mgr.i2c_seq_done,
-				msecs_to_jiffies(
-					pwr_mgr.info->i2c_seq_timeout));
+		if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL) {
+			timeout = wait_for_completion_timeout(
+					&pwr_mgr.i2c_seq_done,
+					msecs_to_jiffies(
+						pwr_mgr.info->i2c_seq_timeout));
 
-		if (!timeout) {
-			pwr_dbg(PWR_LOG_SEQ, "%s seq timedout !!\n", __func__);
-			continue;
-		} else {
-			if (action != I2C_SEQ_READ_FIFO) {
-				pc_status = pm_get_pc_value(
-						PWRMGR_SW_SEQ_PC_PIN);
-				if ((pwr_mgr.pc_status && !pc_status) ||
-					(!pwr_mgr.pc_status && pc_status))
+			if (!timeout) {
+				pwr_dbg(PWR_LOG_SEQ, "%s seq timedout !!\n",
+						__func__);
+				continue;
+			} else {
+				if (action != I2C_SEQ_READ_FIFO) {
+					pc_status = pm_get_pc_value(
+							PWRMGR_SW_SEQ_PC_PIN);
+					if ((pwr_mgr.pc_status && !pc_status) ||
+							(!pwr_mgr.pc_status &&
+							 pc_status))
+						break;
+				} else
 					break;
-			} else
-				break;
+			}
+		} else {
+			while (poll_timeout) {
+				if (!pwr_mgr_get_intr_status(
+							PWRMGR_INTR_I2C_SW_SEQ))
+					continue;
+				pwr_mgr_clr_intr_status(PWRMGR_INTR_I2C_SW_SEQ);
+				if (action != I2C_SEQ_READ_FIFO) {
+					pc_status = pm_get_pc_value(
+							PWRMGR_SW_SEQ_PC_PIN);
+					if ((pwr_mgr.pc_status && !pc_status) ||
+							(!pwr_mgr.pc_status &&
+							 pc_status))
+						goto exit;
+				} else
+					goto exit;
+
+				udelay(poll_delay);
+				poll_timeout -= poll_delay;
+			}
 		}
 		/**
 		 * We are here because actual sequence did not run.
@@ -1769,6 +1831,7 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 		 */
 		usleep_range(60, 120);
 	}
+exit:
 	if (i == retry) {
 		pwr_dbg(PWR_LOG_ERR, "%s: max tries\n", __func__);
 		ret = -EAGAIN;

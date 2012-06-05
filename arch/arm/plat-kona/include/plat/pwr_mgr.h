@@ -321,6 +321,7 @@ int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start, u8 slave_id,
 			     u8 count, u8 * reg_val);
 int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start, u8 slave_id,
 			      u8 count, u8 * reg_val);
+int pwr_mgr_set_i2c_mode(int poll);
 #endif /*CONFIG_KONA_PWRMGR_REV2 */
 
 #ifdef CONFIG_DEBUG_FS

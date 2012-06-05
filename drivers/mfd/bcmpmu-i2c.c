@@ -621,6 +621,15 @@ static int bcmpmu_i2c_pwrmgr_write_direct_bulk(struct bcmpmu *bcmpmu,
 }
 #endif /* #if defined(CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER) */
 
+int bcmpmu_i2c_set_dev_mode(struct bcmpmu *bcmpmu, int poll)
+{
+#if defined(CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER)
+	return pwr_mgr_set_i2c_mode(1);
+#else
+	return -EPERM;
+#endif
+}
+
 static struct platform_device bcmpmu_core_device = {
 	.name = "bcmpmu_core",
 	.id = -1,
@@ -681,6 +690,7 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	bcmpmu->write_dev_drct = bcmpmu_i2c_pwrmgr_write_direct;
 	bcmpmu->read_dev_bulk = bcmpmu_i2c_pwrmgr_read_direct_bulk;
 	bcmpmu->write_dev_bulk = bcmpmu_i2c_pwrmgr_write_direct_bulk;
+	bcmpmu->set_dev_mode = bcmpmu_i2c_set_dev_mode;
 	pr_info("%s:PWRMGR I2C Sequencer\n", __func__);
 #else
 	bcmpmu->read_dev = bcmpmu_i2c_read_device;
@@ -689,6 +699,7 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	bcmpmu->write_dev_drct = bcmpmu_i2c_write_device_direct;
 	bcmpmu->read_dev_bulk = bcmpmu_i2c_read_device_direct_bulk;
 	bcmpmu->write_dev_bulk = bcmpmu_i2c_write_device_direct_bulk;
+	bcmpmu->set_dev_mode = bcmpmu_i2c_set_dev_mode;
 #endif
 	bcmpmu->pdata = pdata;
 	bcmpmu_i2c->pagesize = pdata->i2c_pagesize;
