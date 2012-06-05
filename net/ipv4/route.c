@@ -148,6 +148,15 @@ static int rt_garbage_collect(struct dst_ops *ops);
 static void ipv4_dst_ifdown(struct dst_entry *dst, struct net_device *dev,
 			    int how)
 {
+	struct rtable *rt = (struct rtable *) dst;
+
+	if (!how)
+		return;
+
+	if (rt->fi) {
+		fib_info_put(rt->fi);
+		rt->fi = NULL;
+	}
 }
 
 static u32 *ipv4_cow_metrics(struct dst_entry *dst, unsigned long old)
