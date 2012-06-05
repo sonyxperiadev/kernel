@@ -1651,7 +1651,7 @@ static int __init pl330_init(void)
 	return platform_driver_register(&pl330_driver);
 }
 
-arch_initcall(pl330_init);
+module_init(pl330_init);
 
 static void __exit pl330_exit(void)
 {

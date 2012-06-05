@@ -13,8 +13,6 @@
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
-#include <crypto/algapi.h>
-
 #ifndef _BRCM_SPUM_H_
 #define _BRCM_SPUM_H_
 
@@ -290,59 +288,13 @@ struct spum_hw_context {
 	spum_data_attrib data_attribute;	/* Data attribute */
 };
 
-#define FLAGS_BUSY		1
-#define FLAGS_RBUSY		2
-#define FLAGS_TBUSY		4
-#define SPUM_QUEUE_LENGTH       300
-
-struct spum_hash_device {
-	struct list_head list;
-	struct device *dev;
-	void __iomem *io_apb_base;
-	void __iomem *io_axi_base;
-	u32 dma_len;
-	struct scatterlist *sg;
-	spinlock_t lock;
-	struct ahash_request *req;
-	struct clk *spum_open_clk;
-};
-
-struct spum_aes_device {
-	spinlock_t lock;
-	void __iomem *io_apb_base;
-	void __iomem *io_axi_base;
-	struct list_head list;
-	struct device *dev;
-	struct clk *spum_open_clk;
-	struct tasklet_struct done_task;
-	struct ablkcipher_request *req;
-};
-
-struct brcm_spum_device {
-	ulong flags;
-	spinlock_t lock;
-	u32 rx_dma_chan;
-	u32 tx_dma_chan;
-	struct spum_hash_device *hash_dev;
-	struct spum_aes_device *aes_dev;
-	struct crypto_queue spum_queue;
-	struct tasklet_struct spum_queue_task;
-};
-
-extern struct brcm_spum_device *spum_dev;
-
-extern void spum_queue_task(unsigned long data);
-
 extern void spum_dma_init(void __iomem *io_axi_base);
 extern int spum_format_command(struct spum_hw_context *spum_ctx,
-				void *spum_cmd);
+			       void *spum_cmd);
 extern void spum_set_pkt_length(void __iomem *io_axi_base,
 				u32 rx_len, u32 tx_len);
 extern int spum_processing_done(void __iomem *io_axi_base);
 extern void spum_init_device(void __iomem *io_apb_base,
-				void __iomem *io_axi_base);
-extern int spum_hash_process_request(struct spum_hash_device *dd);
-extern int spum_aes_process_request(struct spum_aes_device *dd);
-extern int spum_enqueue_request(struct crypto_async_request *req);
+			     void __iomem *io_axi_base);
 
 #endif /* _BRCM_SPUM_H_ */
