@@ -440,7 +440,8 @@ static int bcmpmu_chrgr_get_property(struct power_supply *ps,
 		break;
 
 	case POWER_SUPPLY_PROP_TYPE:
-		if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_NONE)
+		if ((pchrgr->chrgrtype == PMU_CHRGR_TYPE_NONE) ||
+			(pchrgr->chrgrtype >= PMU_CHRGR_TYPE_MAX))
 			propval->intval = POWER_SUPPLY_TYPE_BATTERY;
 		else if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_SDP)
 			propval->intval = POWER_SUPPLY_TYPE_USB;
@@ -524,7 +525,8 @@ static int bcmpmu_chrgr_event_handler(struct notifier_block *nb,
 		pr_chrgr(FLOW, "%s, chrgr type=%d\n",
 			__func__, pchrgr->chrgrtype);
 
-		if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_NONE)
+		if ((pchrgr->chrgrtype == PMU_CHRGR_TYPE_NONE) ||
+			(pchrgr->chrgrtype >= PMU_CHRGR_TYPE_MAX))
 			data = POWER_SUPPLY_TYPE_BATTERY;
 		else if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_SDP)
 			data = POWER_SUPPLY_TYPE_USB;
