@@ -251,12 +251,9 @@ cleanUp:
 #endif
 
 #ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
-	IPC_DEBUG(DBG_ERROR, "CP crashed, crashing AP now..\n");
 
 #ifdef CONFIG_SEC_DEBUG
 	cp_abort();
-#else
-	abort();
 #endif /* CONFIG_SEC_DEBUG */
 
 #endif /* CONFIG_AP_PANIC_ON_CPCRASH */
