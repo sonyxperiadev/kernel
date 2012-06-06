@@ -47,6 +47,7 @@
 #include <mach/rdb/brcm_rdb_ahintc.h>
 #include <mach/rdb/brcm_rdb_cph_ssasw.h>
 #include <mach/rdb/brcm_rdb_sspil.h>
+#include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 
 AP_SharedMem_t *vp_shared_mem;
 
@@ -681,6 +682,26 @@ void AP_ProcessStatus(void)
 				base_addr[
 				CPH_AADMAC_CH16_AADMAC_SR_1_OFFSET>>2]);
 			Dump_Caph_regs();
+			break;
+			}
+		case 0xec31:
+			{
+			volatile unsigned int *base_addr;
+			base_addr =
+				(volatile unsigned int *) (
+				HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR));
+			aError("ERROR: Audio driver has not turned ON ");
+			aError("CAPH clk before sending COMMAND_AUDIO_ENABLE");
+			aError(" to the DSP.\n");
+			aError("AUDIOH_CLKGATE_REG (DSP side) = 0x%04x%04x\n",
+				status_msg.arg0, status_msg.arg1);
+			aError("COMMAND_AUDIO_ENABLE arg0 = 0x%04x\n",
+				status_msg.arg2);
+			aError("shared_aadmac_aud_enable (DSP side) = 0x%04x\n",
+				status_msg.arg3);
+			aError("AUDIOH_CLKGATE_REG from AP side = 0x%08x\n",
+				base_addr[
+				KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET>>2]);
 			break;
 			}
 
