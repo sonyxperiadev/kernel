@@ -600,7 +600,8 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_HV9LDO, &bcm59039_hv9ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV10LDO] = {
-		BCMPMU_REGULATOR_HV10LDO, &bcm59039_hv10ldo_data, 0xAA, 0
+		BCMPMU_REGULATOR_HV10LDO, &bcm59039_hv10ldo_data, 0xAA,
+			BCMPMU_REGL_LPM_IN_DSM
 	},
 
 /*TODO: We observed that, on Rhearay HW, interrupt from GPIO expander
