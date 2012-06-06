@@ -175,7 +175,7 @@ endchoice
 
 config RHEA_DELAYED_PM_INIT
        depends on ARCH_RHEA
-       bool "Enable this support delayed PM init."
+       bool "Enable support for delayed PM init."
        default n
        help
        Say Y if you want to enable support for delayed PM init. Android/user
