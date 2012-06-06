@@ -988,8 +988,6 @@ static void unicam_camera_remove_device(struct soc_camera_device *icd)
 
 	BUG_ON(icd != unicam_dev->icd);
 
-	unicam_dev->icd = NULL;
-
 	if (unicam_dev->streaming) {
 		/* stop streaming */
 		/* we should call streamoff from queue operations */
@@ -998,9 +996,10 @@ static void unicam_camera_remove_device(struct soc_camera_device *icd)
 
 	free_irq(unicam_dev->irq, unicam_dev);
 
+	unicam_dev->icd = NULL;
+
 	dev_info(icd->dev.parent,
 		 "Unicam Camera driver detached from camera %d\n", icd->devnum);
-
 }
 
 static struct soc_camera_host_ops unicam_soc_camera_host_ops = {
@@ -1041,6 +1040,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
 		if ((status & CSL_CAM_INT_FRAME_END) ||
 			(status & CSL_CAM_INT_LINE_COUNT)) {
+			spin_lock(&unicam_dev->lock);
 			struct vb2_buffer *vb = unicam_dev->active;
 			fps++;
 
@@ -1060,7 +1060,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				goto out;
 			/* mark  the buffer done */
 			/* queue another buffer and trigger capture */
-			spin_lock(&unicam_dev->lock);
 			if (likely(unicam_dev->skip_frames <= 0)) {
 
 				list_del_init(&to_unicam_camera_vb(vb)->queue);
