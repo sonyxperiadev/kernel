@@ -46,7 +46,7 @@ struct wd_tapper_data *wd_tapper_data;
 int wd_tapper_callback(void *dev)
 {
 	/* Pet the PMU Watchdog */
-	pr_info("petting the pmu wd\n");
+	pr_info("AP wakeup: HUB wakeup timer\n");
 	return 0;
 }
 
