@@ -370,9 +370,12 @@ static struct bcmpmu_reg_map bcm59042_reg_map[PMU_REG_MAX] = {
 		.mask = 0xFF, .ro = 0, .shift = 0},
 
 	/* usb status */
-	[PMU_REG_USB_STATUS_ID_CODE] = 		{.map = 0, .addr = 0xE3, .mask = 0x10, .ro = 0, .shift = 4},
-	[PMU_REG_OTG_STATUS_VBUS] =		{.map = 0, .addr = 0xE3, .mask = 0x02, .ro = 0, .shift = 1},
-	[PMU_REG_OTG_STATUS_SESS] =		{.map = 0, .addr = 0xE3, .mask = 0x01, .ro = 0, .shift = 0},
+	[PMU_REG_USB_STATUS_ID_CODE] = {.map = 0, .addr = 0xE3,
+		.mask = 0x10, .ro = 0, .shift = 4},
+	[PMU_REG_OTG_STATUS_VBUS] =	{.map = 0, .addr = 0xE3,
+		.mask = 0x02, .ro = 0, .shift = 1},
+	[PMU_REG_OTG_STATUS_SESS] =	{.map = 0, .addr = 0xE3,
+		.mask = 0x01, .ro = 0, .shift = 0},
 
 	/* BC ctrl and status */
 	[PMU_REG_BC_DET_EN] =		{.map = 0, .addr = 0x61,
@@ -676,6 +679,7 @@ const unsigned int bcmpmu_chrgr_icc_fc_settings[PMU_CHRGR_CURR_MAX] = {
 	[PMU_CHRGR_CURR_900] = 0x1D,
 	[PMU_CHRGR_CURR_950] = 0x1E,
 	[PMU_CHRGR_CURR_1000] = 0x1F,
+	[PMU_CHRGR_CURR_90] = 0x04,
 };
 
 const unsigned int bcmpmu_chrgr_icc_qc_settings[PMU_CHRGR_QC_CURR_MAX] = {

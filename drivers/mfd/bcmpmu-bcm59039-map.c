@@ -326,7 +326,7 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 		.mask = 0x1C, .ro = 0, .shift = 2},
 	[PMU_REG_UASCTRL3] =		{.map = 0x00, .addr = 0x72,
 		.mask = 0xFF, .ro = 0},
-	[PMU_REG_UASCTRL4] ={		.map = 0x00, .addr = 0x73,
+	[PMU_REG_UASCTRL4] =		{.map = 0x00, .addr = 0x73,
 		.mask = 0xFF, .ro = 0},
 
 };
@@ -473,6 +473,7 @@ const unsigned int bcmpmu_chrgr_icc_fc_settings[PMU_CHRGR_CURR_MAX] = {
 	[PMU_CHRGR_CURR_900] = 0x1D,
 	[PMU_CHRGR_CURR_950] = 0x1E,
 	[PMU_CHRGR_CURR_1000] = 0x1F,
+	[PMU_CHRGR_CURR_90] = 0x04,
 };
 
 const unsigned int bcmpmu_chrgr_icc_qc_settings[PMU_CHRGR_QC_CURR_MAX] = {

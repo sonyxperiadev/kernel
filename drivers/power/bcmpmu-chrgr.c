@@ -117,7 +117,7 @@ static int bcmpmu_chrgr_get_property(struct power_supply *ps,
 	int ret = 0;
 	struct bcmpmu_chrgr *pchrgr = container_of(ps,
 		struct bcmpmu_chrgr, chrgr);
-	switch(prop) {
+	switch (prop) {
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = pchrgr->chrgr_online;
 		break;
@@ -164,7 +164,7 @@ static int bcmpmu_usb_get_property(struct power_supply *ps,
 	int ret = 0;
 	struct bcmpmu_chrgr *pchrgr = container_of(ps,
 		struct bcmpmu_chrgr, usb);
-	switch(prop) {
+	switch (prop) {
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = pchrgr->usb_online;
 		break;
@@ -205,12 +205,14 @@ static int bcmpmu_set_icc_fc(struct bcmpmu *bcmpmu, int curr)
 		setting = PMU_CHRGR_CURR_50;
 	else if (curr > 1000)
 		setting = PMU_CHRGR_CURR_1000;
+	else if (curr == 100)
+		setting = PMU_CHRGR_CURR_90;
 	else
 		setting = (curr - 50)/50;
 	ret = bcmpmu->write_dev(bcmpmu,
-				PMU_REG_CHRGR_ICC_FC,
-				bcmpmu_chrgr_icc_fc_settings[setting],
-				PMU_BITMASK_ALL);
+			PMU_REG_CHRGR_ICC_FC,
+			bcmpmu_chrgr_icc_fc_settings[setting],
+			PMU_BITMASK_ALL);
 	return ret;
 }
 

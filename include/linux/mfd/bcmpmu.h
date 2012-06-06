@@ -570,6 +570,7 @@ enum bcmpmu_chrgr_fc_curr_t {
 	PMU_CHRGR_CURR_900,
 	PMU_CHRGR_CURR_950,
 	PMU_CHRGR_CURR_1000,
+	PMU_CHRGR_CURR_90,
 	PMU_CHRGR_CURR_MAX,
 };
 
@@ -827,7 +828,7 @@ enum bcmpmu_ioctl {
 #define PMU_EM_ADC_LOAD_CAL _IOW(0, PMU_EM_IOCTL_ADC_LOAD_CAL, u8*)
 #define PMU_EM_ENV_STATUS _IOR(0, PMU_EM_IOCTL_ENV_STATUS, unsigned long*)
 
-struct bcmpmu_rw_data_ltp{
+struct bcmpmu_rw_data_ltp {
 	unsigned int map;
 	unsigned int addr;
 	unsigned int val[16];
@@ -1101,8 +1102,10 @@ struct bcmpmu {
 
 	/* adc */
 	int (*adc_req)(struct bcmpmu *pmu, struct bcmpmu_adc_req *req);
-	int (*unit_get)(struct bcmpmu *pmu, enum bcmpmu_adc_sig sig, struct bcmpmu_adc_unit *unit);
-	int (*unit_set)(struct bcmpmu *pmu, enum bcmpmu_adc_sig sig, struct bcmpmu_adc_unit *unit);
+	int (*unit_get)(struct bcmpmu *pmu, enum bcmpmu_adc_sig sig,
+		struct bcmpmu_adc_unit *unit);
+	int (*unit_set)(struct bcmpmu *pmu, enum bcmpmu_adc_sig sig,
+		struct bcmpmu_adc_unit *unit);
 
 	/* env */
 	void (*update_env_status) (struct bcmpmu *pmu, unsigned long *env);

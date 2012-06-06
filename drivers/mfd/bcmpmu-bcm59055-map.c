@@ -121,7 +121,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {	/* revisit 
 	[PMU_REG_ENV8] = {.map = 0x00, .addr = 0xE7, .mask = 0xFF, .ro = 1},
 	[PMU_REG_ENV9] = {.map = 0x00, .addr = 0xE8, .mask = 0xFF, .ro = 1},
 	[PMU_REG_IHFTOP_IHF_IDDQ] = {.map = 0x01, .addr = 0x80, .mask = 0x01,
-		.ro =0},
+		.ro = 0},
 	[PMU_REG_IHFTOP_BYPASS] = {.map = 0x01, .addr = 0x80, .mask = 0x40,
 		.ro = 0, .shift = 6},
 	[PMU_REG_IHFLDO_PUP] = {.map = 0x01, .addr = 0x82, .mask = 0x01,
@@ -492,7 +492,7 @@ static const struct bcmpmu_env_info bcm59055_env_reg_map[PMU_ENV_MAX] = {	/* rev
 	[PMU_ENV_USB_VALID] = {.regmap = {
 			       .addr = 0xE1, .mask = 0x80, .shift = 7, .ro =
 				1}, .bitmask = PMU_ENV_BITMASK_USB_VALID},
-	[PMU_ENV_P_UBPD_INT] = 	{.regmap = {
+	[PMU_ENV_P_UBPD_INT] =	{.regmap = {
 				.addr = 0xE1, .mask = 0x08, .shift = 3, .ro =
 				 1}, .bitmask = PMU_ENV_BITMASK_P_UBPD_INT},
 	[PMU_ENV_P_CGPD_CHG] = {.regmap = {
@@ -654,6 +654,7 @@ const unsigned int bcmpmu_chrgr_icc_fc_settings[PMU_CHRGR_CURR_MAX] = {
 	[PMU_CHRGR_CURR_900] = 0x05,
 	[PMU_CHRGR_CURR_950] = 0x05,
 	[PMU_CHRGR_CURR_1000] = 0x05,
+	[PMU_CHRGR_CURR_90] = 0x00,
 };
 
 const unsigned int bcmpmu_chrgr_icc_qc_settings[PMU_CHRGR_QC_CURR_MAX] = {
