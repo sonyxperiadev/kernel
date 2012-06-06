@@ -8,13 +8,6 @@ menuconfig BRCM_CHAR_DRIVERS
 	help
 	  Broadcom's char drivers
 
-config BRCM_CP_CRASH_DUMP_EMMC
-	bool "cp crash dump to eMMC"
-	depends on APANIC_ON_MMC
-        default y
-        ---help---
-        Say Y to enable the cp crash dump to eMMC support
-
 config V3D
 	tristate "V3D Driver"
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
@@ -97,9 +90,17 @@ config BCM_GPS_UART
 config BCM_MODEM
         bool "Broadcom Modem Driver"
         depends on BRCM_CHAR_DRIVERS && NET
+	select BRCM_FUSE_LOG
         default n
         help
           Broadcom Modem IPC drivers
+
+config BRCM_CP_CRASH_DUMP_EMMC
+	bool "cp crash dump to eMMC"
+	depends on BCM_MODEM && APANIC_ON_MMC
+        default y
+        --help---
+          Say Y to enable the cp crash dump to eMMC support.
 
 config BCM_MODEM_DEFER_CP_START
         bool "Release CP from reset from main image (deferred)"

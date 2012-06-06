@@ -500,6 +500,7 @@ static int csl_caph_obtain_arm2sp(void)
 	return i;
 }
 
+#if defined(CONFIG_BCM_MODEM)
 static void csl_caph_start_arm2sp(int i)
 {
 	ARM2SP_CONFIG_t *p_arm2sp = &arm2spCfg[i];
@@ -567,6 +568,7 @@ static void csl_caph_release_arm2sp(int i)
 
 	memset(&arm2spCfg[i], 0, sizeof(arm2spCfg[0]));
 }
+#endif
 
 /****************************************************************************
 *

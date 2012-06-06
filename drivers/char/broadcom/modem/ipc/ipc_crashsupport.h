@@ -16,7 +16,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifdef CONFIG_APANIC_ON_MMC
 	extern int ap_triggered;
+#endif
 	extern int cp_crashed;
 	extern void abort(void);
 #ifdef CONFIG_CDEBUGGER

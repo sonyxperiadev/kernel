@@ -146,7 +146,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 #ifdef CONFIG_CDEBUGGER
 		&& enable == 1
 #endif
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+#ifdef CONFIG_APANIC_ON_MMC
 		&& ap_triggered == 0
 #endif
 		) {
@@ -158,7 +158,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice())
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+#ifdef CONFIG_APANIC_ON_MMC
 		&& ap_triggered == 0
 #endif
 	    ) {
