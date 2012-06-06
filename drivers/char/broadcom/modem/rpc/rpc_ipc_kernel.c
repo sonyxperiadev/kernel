@@ -62,6 +62,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "rpc_ipc.h"
 #include "rpc_client_msgs.h"
+#include "rpc_wakelock.h"
 #include "rpc_debug.h"
 
 #include <linux/broadcom/rpc_ipc_kernel.h>

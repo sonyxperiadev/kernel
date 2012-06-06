@@ -282,7 +282,7 @@ void rpc_timer_function(unsigned long data)
 	rpc_wake_lock_reset();
 }
 
-int RpcDbgDumpWakeLockStats(RpcOutputContext_t *c)
+void RpcDbgDumpWakeLockStats(RpcOutputContext_t *c)
 {
 	int av;
 
@@ -310,7 +310,7 @@ int RpcDbgDumpWakeLockStats(RpcOutputContext_t *c)
 		      (int)rpcLockStats.ts_max_unlock, av);
 
 	RpcDbgDumpStr(c, "\n===== RPC Wake Lock dump End =====");
-	return 0;
+	return;
 }
 
 #endif
