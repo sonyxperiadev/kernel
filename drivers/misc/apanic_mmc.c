@@ -42,6 +42,9 @@
 #include <linux/mmc-poll/mmc_poll.h>
 #include <linux/mmc-poll/mmc_poll_stack.h>
 #include "apanic_mmc.h"
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+#include <video/kona_fb_image_dump.h>
+#endif
 
 #define DRVNAME	 "apanic "
 #define APANIC_BLK_PATH "/dev/block"
@@ -488,6 +491,9 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	pr_debug("kona_mmc_poll_write: bock_read returned %d \r\n", rc);
 
 	pr_info("apanic: Panic dump successfully written to flash \r\n");
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+	rhea_display_crash_image(CP_CRASH_DUMP_END);
+#endif
 
  out:
 #ifdef CONFIG_PREEMPT

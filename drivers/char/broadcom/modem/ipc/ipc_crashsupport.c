@@ -36,6 +36,9 @@
 #include "ipc_stubs.h"
 #include "bcmlog.h"
 #include "ipc_crashsupport.h"
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+#include <video/kona_fb_image_dump.h>
+#endif
 
 /* CP crash recovery action */
 #define   RECOVERY_ACTION_NONE                      0
@@ -134,9 +137,12 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	IPC_U32 *Dump;
 	void __iomem *DumpVAddr;
 
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+	rhea_display_crash_image(CP_CRASH_DUMP_START);
+#endif
+
 #ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
-	if ((BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice() ||
-		BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
+	if (BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice()
 #ifdef CONFIG_CDEBUGGER
 		&& enable == 1
 #endif
@@ -148,7 +154,8 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		IPC_DEBUG(DBG_ERROR, "Crashing AP for Ramdump ...\n\n");
 		abort();
 	}
-	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
+	if ((BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice() ||
+		BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice())
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
@@ -423,6 +430,10 @@ void DUMP_CP_assert_log(void)
 	IPC_DEBUG(DBG_ERROR, "CP RAM dump complete\n");
 	/* resume normal logging activities... */
 	BCMLOG_EndCpCrashDump();
+
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+	rhea_display_crash_image(CP_CRASH_DUMP_END);
+#endif
 
 	if (BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
 		sys_sync();
