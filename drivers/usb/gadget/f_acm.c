@@ -271,20 +271,6 @@ static struct usb_gadget_strings *acm_strings[] = {
 	NULL,
 };
 
-/**
-* This function is called to register the callback functions for logging modules.
-*
-* @return    1: ready to send to logging data; 0: not ready to send the logging data.
-*
-*/
-char acm_logging_register_callbacks(struct acm_logging_callbacks *_cb)
-{
-	pr_info("%s\n", __func__);
-	acm_logging_cb = _cb;
-	return 0;	/* logging is not ready to send */
-}
-EXPORT_SYMBOL(acm_logging_register_callbacks);
-
 /*-------------------------------------------------------------------------*/
 
 /* ACM control ... data handling is delegated to tty library code.
@@ -560,9 +546,11 @@ static void acm_connect(struct gserial *port)
 
 	acm->serial_state |= ACM_CTRL_DSR | ACM_CTRL_DCD;
 	acm_notify_serial_state(acm);
+#ifdef CONFIG_BRCM_FUSE_LOG
 	if (acm->port_num == ACM_LOGGING_PORT)
 		if (acm_logging_cb->start)
 			acm_logging_cb->start();
+#endif
 }
 
 static void acm_disconnect(struct gserial *port)
@@ -570,10 +558,11 @@ static void acm_disconnect(struct gserial *port)
 	struct f_acm		*acm = port_to_acm(port);
 
 	pr_info("%s", __func__);
-
+#ifdef CONFIG_BRCM_FUSE_LOG
 	if (acm->port_num == ACM_LOGGING_PORT)
 		if (acm_logging_cb->stop)
 			acm_logging_cb->stop();
+#endif
 	acm->serial_state &= ~(ACM_CTRL_DSR | ACM_CTRL_DCD);
 	acm_notify_serial_state(acm);
 }
@@ -693,6 +682,9 @@ acm_bind(struct usb_configuration *c, struct usb_function *f)
 			gadget_is_dualspeed(c->cdev->gadget) ? "dual" : "full",
 			acm->port.in->name, acm->port.out->name,
 			acm->notify->name);
+#ifdef CONFIG_BRCM_FUSE_LOG
+	acm_logging_cb = get_acm_callback_func();
+#endif
 	return 0;
 
 fail:

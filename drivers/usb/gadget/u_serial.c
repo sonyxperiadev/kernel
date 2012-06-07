@@ -1337,11 +1337,11 @@ void gserial_disconnect(struct gserial *gser)
 
 	if (!port)
 		return;
-
+#ifdef CONFIG_BRCM_FUSE_LOG
 	if (port->port_num == ACM_LOGGING_PORT)
 		if (acm_logging_cb->stop)
 			acm_logging_cb->stop();
-
+#endif
 	/* tell the TTY glue not to do I/O here any more */
 	spin_lock_irqsave(&port->port_lock, flags);
 

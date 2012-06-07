@@ -104,6 +104,12 @@ static int acm_stop_cb(void)
 	return 0;
 }
 
+struct acm_logging_callbacks *get_acm_callback_func(void)
+{
+	return &_acm_cb;
+}
+EXPORT_SYMBOL(get_acm_callback_func);
+
 struct WriteToLogDevParms_t {
 	struct workqueue_struct *wq;
 	struct work_struct work;
@@ -732,9 +738,7 @@ int BCMLOG_OutputInit(void)
 	g_netconsole_on = brcm_netconsole_register_callbacks(&_cb);
 
 #endif
-#ifdef CONFIG_USB_G_ANDROID_ACM
-	g_acm_on = acm_logging_register_callbacks(&_acm_cb);
-#endif
+
 	return 0;
 
 }
