@@ -600,6 +600,8 @@ static int ramdump_panic(struct notifier_block *this, unsigned long event,
 {
 	if (enable)
 		panic_timeout = 2;
+	else
+		iowrite32(0x0, cdebugger_mem_base);
 	return NOTIFY_DONE;
 }
 
