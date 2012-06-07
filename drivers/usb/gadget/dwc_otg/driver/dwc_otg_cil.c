@@ -126,8 +126,7 @@ void w_shutdown_core(void *p)
 {
 	dwc_otg_core_if_t *core_if = p;
 
-	if ((core_if->op_state == B_PERIPHERAL) &&
-		    core_if->xceiver->state != OTG_STATE_UNDEFINED) {
+	if (core_if->op_state == B_PERIPHERAL) {
 		if (dwc_otg_is_device_mode(core_if)) {
 			core_if->lx_state = DWC_OTG_L0;
 			cil_pcd_stop(core_if);
