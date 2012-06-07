@@ -597,7 +597,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	dev->clk_hz = clk_get_rate(dev->peri_clk);
 #endif
 
-	dev->dpm_state = DISABLED;
 	dev->suspended = 0;
 
 	if (hw_cfg->vddo_regulator_name) {
@@ -617,12 +616,11 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	}
 
 	/*
-	 * Note that we are truning ON the regulators in the above code block.
-	 * So we should mark our state as enabled. In case when we want to
-	 * handle clock too here, based on the state of the clocks that is
-	 * left in the "probe" function, we'll have to update the below state.
+	 * Regulators are NOT turned ON in the above functions.
+	 * So leave them in OFF state and they'll be handled
+	 * appropriately in enable path.
 	 */
-	dev->dpm_state = ENABLED;
+	dev->dpm_state = OFF;
 
 	ret = bcm_kona_sd_reset(dev);
 	if (ret)
@@ -813,11 +811,17 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	}
 
 	if (dev->vddo_sd_regulator) {
-		regulator_disable(dev->vddo_sd_regulator);
+		/* Playing safe- if regulator is enabled, disable it first */
+		if (regulator_is_enabled(dev->vddo_sd_regulator) > 0)
+			regulator_disable(dev->vddo_sd_regulator);
+
 		regulator_put(dev->vddo_sd_regulator);
 	}
 	if (dev->vdd_sdxc_regulator) {
-		regulator_disable(dev->vdd_sdxc_regulator);
+		/* Playing safe- if regulator is enabled, disable it first */
+		if (regulator_is_enabled(dev->vdd_sdxc_regulator) > 0)
+			regulator_disable(dev->vdd_sdxc_regulator);
+
 		regulator_put(dev->vdd_sdxc_regulator);
 	}
 
@@ -1010,24 +1014,17 @@ static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev, char *reg_name)
 	dev->vdd_sdxc_regulator = regulator_get(NULL, reg_name);
 
 	if (!IS_ERR(dev->vdd_sdxc_regulator)) {
-		ret = regulator_enable(dev->vdd_sdxc_regulator);
+		/* Configure 3.3V default */
+		ret = regulator_set_voltage(dev->vdd_sdxc_regulator,
+						3300000, 3300000);
 		if (ret < 0) {
-			pr_err("%s: can't Enable sdxc controller regulator\n",
-			       reg_name);
+			pr_err("%s: can't set 3.3V\n",
+				   reg_name);
 			ret = -1;
 		} else {
-			/* Configure 3.3V default */
-			ret = regulator_set_voltage(dev->vdd_sdxc_regulator,
-						    3300000, 3300000);
-			if (ret < 0) {
-				pr_err("%s: can't set 3.3V\n",
-				       reg_name);
-				ret = -1;
-			} else {
-				pr_info("%s: set to 3.3V\n",
-					reg_name);
-				ret = 0;
-			}
+			pr_debug("%s: set to 3.3V\n",
+				reg_name);
+			ret = 0;
 		}
 	} else {
 		pr_err("%s: could not get sdxc regulator\n", reg_name);
@@ -1047,24 +1044,17 @@ static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name)
 	dev->vddo_sd_regulator = regulator_get(NULL, reg_name);
 
 	if (!IS_ERR(dev->vddo_sd_regulator)) {
-		ret = regulator_enable(dev->vddo_sd_regulator);
+		/* Configure 2.9V default */
+		ret = regulator_set_voltage(dev->vddo_sd_regulator,
+						2900000, 2900000);
 		if (ret < 0) {
-			pr_err("%s: can't Enable sd card regulator\n",
-			       reg_name);
+			pr_err("%s: can't set 2.9V\n",
+				   reg_name);
 			ret = -1;
 		} else {
-			/* Configure 2.9V default */
-			ret = regulator_set_voltage(dev->vddo_sd_regulator,
-						    2900000, 2900000);
-			if (ret < 0) {
-				pr_err("%s: can't set 2.9V\n",
-				       reg_name);
-				ret = -1;
-			} else {
-				pr_info("%s: set to 2.9V\n",
-					reg_name);
-				ret = 0;
-			}
+			pr_debug("%s: set to 2.9V\n",
+				reg_name);
+			ret = 0;
 		}
 	} else {
 		pr_err("%s: could not get sd card regulator\n", reg_name);
@@ -1212,7 +1202,7 @@ static int sdhci_kona_off_to_enabled(struct sdio_dev *dev)
 	return 0;
 }
 
-static int sdchi_kona_enabled_to_disabled(struct sdio_dev *dev)
+static int sdhci_kona_enabled_to_disabled(struct sdio_dev *dev)
 {
 	/*
 	 * TODO: Switch OFF the clock from here and remove clock mgmt calls
@@ -1226,6 +1216,20 @@ static int sdchi_kona_enabled_to_disabled(struct sdio_dev *dev)
 	dev_dbg(dev->dev, "Enabled --> Disabled \r\n");
 
 	/*
+	 * **NOTE**: Removing below check.
+	 * The reason for this change is- If dpm_state is
+	 * ENABLED and we remove the card, the higher layers in
+	 * the stack would mark ios.power_mode as MMC_POWER_OFF
+	 * and call mmc_release_host() which would land up in
+	 * this function because our regulators are initially
+	 * ENABLED. Now because of the below check, we would
+	 * return 0 from here after marking dpm_state as
+	 * DISABLED and never turn OFF the regulators.
+	 *
+	 * Revisit needed if any issues are seen because of this.
+	 */
+#if 0
+	/*
 	 * This is called when mmc_power_off is already called
 	 * from suspend path. If we don't return 0, the caller
 	 * mmc_host_do_disable would schedule the work queue.
@@ -1233,12 +1237,13 @@ static int sdchi_kona_enabled_to_disabled(struct sdio_dev *dev)
 	 */
 	if (dev->host->mmc->ios.power_mode == MMC_POWER_OFF)
 		return 0;
+#endif
 
 	return KONA_SDMMC_OFF_TIMEOUT;
 
 }
 
-static int sdchi_kona_disabled_to_off(struct sdio_dev *dev)
+static int sdhci_kona_disabled_to_off(struct sdio_dev *dev)
 {
 	/*
 	 * We have already turned OFF the clocks, now
@@ -1327,11 +1332,11 @@ static int sdhci_pltfm_disable(struct sdhci_host *host, int lazy)
 
 	switch (dev->dpm_state) {
 	case ENABLED:
-		return sdchi_kona_enabled_to_disabled(dev);
+		return sdhci_kona_enabled_to_disabled(dev);
 	case DISABLED:
-		return sdchi_kona_disabled_to_off(dev);
+		return sdhci_kona_disabled_to_off(dev);
 	case OFF:
-		dev_dbg(dev->dev, "Already disabled \r\n");
+		dev_dbg(dev->dev, "Already OFF \r\n");
 		return 0;
 	default:
 		dev_dbg(dev->dev, "Invalid Current State is %d \r\n",
