@@ -824,6 +824,8 @@ static struct kona_headset_pd headset_data = {
 	 */
 	.button_adc_values = rheass_button_adc_values,
 
+	/* ldo for MICBIAS */
+	.ldo_id = "micbias",
 };
 
 static struct resource board_headset_resource[] = {

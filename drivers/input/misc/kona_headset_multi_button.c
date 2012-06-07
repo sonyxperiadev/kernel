@@ -60,6 +60,7 @@
 #include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/regulator/consumer.h>
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
 #endif
@@ -89,6 +90,9 @@
 #define KEY_PRESS_REF_TIME	msecs_to_jiffies(100)
 #define KEY_DETECT_DELAY	msecs_to_jiffies(128)
 #define ACCESSORY_INSERTION_REMOVE_SETTLE_TIME	msecs_to_jiffies(500)
+#ifdef CONFIG_HS_PERFORM_AUDIOH_SETTINGS
+static struct clk *audioh_apb_clk;
+#endif
 
 /*
  * After configuring the ADC, it takes different 'time' for the
@@ -181,6 +185,8 @@ struct mic_t {
 	 */
 	struct wake_lock accessory_wklock;
 #endif
+	/* 2V9_AUD LDO */
+	struct regulator *ldo;
 };
 
 static struct mic_t *mic_dev;
@@ -835,8 +841,7 @@ static void accessory_detect_work_func(struct work_struct *work)
 			__headset_hw_init_micbias_off(p);
 	} else {
 		/* Turn Off, MIC BIAS */
-		if ((p->hs_state == OPEN_CABLE) || (p->hs_state == HEADSET))
-			__headset_hw_init_micbias_off(p);
+		__headset_hw_init_micbias_off(p);
 
 		__handle_accessory_removed(p);
 
@@ -1497,6 +1502,13 @@ static int __headset_hw_init_micbias_off(struct mic_t *p)
 		kona_mic_bias_off();
 		p->mic_bias_status = 0;
 	}
+	/* Turning MICBIAS LDO off */
+	if (p->ldo) {
+		if (regulator_disable(p->ldo))
+			pr_info("%s: Can not disable micbias LDO\n", __func__);
+		regulator_put(p->ldo);
+		p->ldo = NULL;
+	}
 
 	return 0;
 }
@@ -1505,6 +1517,21 @@ static int __headset_hw_init_micbias_on(struct mic_t *p)
 {
 	if (p == NULL)
 		return -1;
+	/* Enable MICBIAS LDO from PMU */
+	if (!p->headset_pd->ldo_id)
+		pr_info("%s: No LDO id. Assuming LDO is already turned ON\n",
+				__func__);
+	else {
+		p->ldo = regulator_get(NULL, p->headset_pd->ldo_id);
+		if (IS_ERR_OR_NULL(p->ldo)) {
+			pr_info("%s: Can not get MICBIAS LDO\n", __func__);
+			return -ENOENT;
+		}
+		if (regulator_enable(p->ldo)) {
+			pr_info("%s: Can not enable micbias LDO\n", __func__);
+			return -EIO;
+		}
+	}
 /*
  * IMPORTANT
  *---------
@@ -1524,18 +1551,42 @@ static int __headset_hw_init_micbias_on(struct mic_t *p)
  */
 #ifdef CONFIG_HS_PERFORM_AUDIOH_SETTINGS
 	/* AUDIO settings */
+	if (audioh_apb_clk != NULL) {
+		audioh_apb_clk = clk_get(NULL, "audioh_apb_clk");
+		if (IS_ERR_OR_NULL(audioh_apb_clk)) {
+			pr_err("%s(): clk_get of audioh_apb_clk failed \r\n",
+					__func__);
+			audioh_apb_clk = NULL;
+			return -EIO;
+		}
+	}
+	clk_enable(audioh_apb_clk);
 	writel(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_SEL_MIC1B_MIC2_MASK,
 	       KONA_AUDIOH_VA + AUDIOH_AUDIORX_VRX1_OFFSET);
 	writel(0x0, KONA_AUDIOH_VA + AUDIOH_AUDIORX_VRX2_OFFSET);
 	writel((AUDIOH_AUDIORX_VREF_AUDIORX_VREF_POWERCYCLE_MASK |
 		AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK),
 	       KONA_AUDIOH_VA + AUDIOH_AUDIORX_VREF_OFFSET);
-	writel((AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK |
+	writel((AUDIOH_AUDIORX_VMIC_AUDIORX_VAUXMIC_CTRL_MASK |
 		AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK),
 	       KONA_AUDIOH_VA + AUDIOH_AUDIORX_VMIC_OFFSET);
 	writel(AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK,
 	       KONA_AUDIOH_VA + AUDIOH_AUDIORX_BIAS_OFFSET);
+	clk_disable(audioh_apb_clk);
 #endif
+	/* Fast power up the Vref of ADC block */
+	/*
+	 * NOTE:
+	 * This chal call was failing becuase internally this call
+	 *was configuring AUDIOH registers as well. We have commmented
+	 *configuring AUDIOH reigsrs in CHAL and it works OK
+	 */
+	aci_vref_config.mode = CHAL_ACI_VREF_FAST_ON;
+	chal_aci_block_ctrl(p->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_VREF,
+			    CHAL_ACI_BLOCK_GENERIC, &aci_vref_config);
+
+	pr_debug("=== %s: Configured Vref and ADC \r\n", __func__);
+
 
 	/* First disable all the interrupts */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -1549,6 +1600,10 @@ static int __headset_hw_init_micbias_on(struct mic_t *p)
 
 	pr_debug("=== aci_interface_init:"
 				" Interrupts disabled \r\n");
+	/* Power up the COMP blocks */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+		    CHAL_ACI_BLOCK_ACTION_ENABLE,
+		    CHAL_ACI_BLOCK_COMP);
 
 	/* Turn ON only if its not already ON */
 	if (p->mic_bias_status == 0) {
@@ -1587,18 +1642,10 @@ static int __headset_hw_init_micbias_on(struct mic_t *p)
 
 	pr_debug("=== %s: Configured MIC route \r\n", __func__);
 
-	/* Fast power up the Vref of ADC block */
-	/*
-	 * NOTE:
-	 * This chal call was failing becuase internally this call
-	 *was configuring AUDIOH registers as well. We have commmented
-	 *configuring AUDIOH reigsrs in CHAL and it works OK
-	 */
-	aci_vref_config.mode = CHAL_ACI_VREF_FAST_ON;
-	chal_aci_block_ctrl(p->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_VREF,
-			    CHAL_ACI_BLOCK_GENERIC, &aci_vref_config);
-
-	pr_debug("=== %s: Configured Vref and ADC \r\n", __func__);
+	/* Set the threshold value for button press */
+	chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+			    CHAL_ACI_BLOCK_COMP1, 600);
 
 	/* Set the threshold value for accessory type detection */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -2068,6 +2115,8 @@ static int __init hs_probe(struct platform_device *pdev)
 	 * turn this OFF and put it in known state.
 	 */
 	mic->mic_bias_status = 1;
+	/* setting ldo to NULL till we call regulator_get() */
+	mic->ldo = NULL;
 
 	pr_info("%s() GPIO used for accessory insertion %d (1 - yes, 0 - no)",
 		__func__, mic->headset_pd->gpio_for_accessory_detection);
