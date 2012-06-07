@@ -931,11 +931,11 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 	int capacity = 0;
 	int capacity_v = 0;
 	int fg_result = 0;
-	int ret;
+	int ret = 0;
 	int calibration = 0;
-	int volt;
+	int volt = 0;
 	int zone = pem->fg_zone;
-	s64 capacity64;
+	s64 capacity64 = 0;
 
 	if (pem->fg_dbg_temp != 0)
 		pem->batt_temp = pem->fg_dbg_temp;
