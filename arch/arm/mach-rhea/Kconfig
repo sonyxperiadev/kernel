@@ -35,10 +35,10 @@ config MACH_RHEA_RAY_EDN2X
 	help
 	  Support for the Broadcom Rhea Ray EDN2X board.
 
-config MACH_RHEA_RAY_EDN3X_EB30
-	bool "Support Nokia Faraday EB30 board"
+config MACH_RHEA_DALTON2_EB30
+	bool "Support Nokia Dalton2 EB30 board"
 	help
-	  Support for the Nokia Faraday EB30 board.
+	  Support for the Nokia Dalton2 EB30 board.
 
 config MACH_RHEA_SS_COMMON
 	bool "Support Broadcom Rhea SS project common option"

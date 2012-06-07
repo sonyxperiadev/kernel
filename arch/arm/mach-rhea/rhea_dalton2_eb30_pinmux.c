@@ -1,27 +1,31 @@
-/************************************************************************************************/
-/*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
-/*                                                                                              */
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
+/*****************************************************************************/
+/*                                                                           */
+/*  Copyright 2011  Broadcom Corporation                                     */
+/*                                                                           */
+/*     Unless you and Broadcom execute a separate written software license   */
+/*     agreement governing use of this software, this software is licensed   */
+/*     to you under the terms of the GNU                                     */
+/*     General Public License version 2 (the GPL), available at              */
+/*                                                                           */
+/*          http://www.broadcom.com/licenses/GPLv2.php                       */
+/*                                                                           */
+/*     with the following added to such license:                             */
+/*                                                                           */
+/*     As a special exception, the copyright holders of this software give   */
+/*     you permission to link this software with independent modules, and to */
+/*     copy and distribute the resulting executable under terms of your      */
+/*     choice, provided that you also meet, for each linked independent      */
+/*     module, the terms and conditions of the license of that module.       */
+/*     An independent module is a module which is not derived from this      */
+/*     software.  The special exception does not apply to any modifications  */
+/*     of the software.                                                      */
+/*                                                                           */
+/*     Notwithstanding the above, under no circumstances may you combine     */
+/*     this software in any way with any other Broadcom software provided    */
+/*     under a license other than the GPL, without Broadcom's express prior  */
+/*     written consent.                                                      */
+/*                                                                           */
+/*****************************************************************************/
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include "mach/pinmux.h"
@@ -87,7 +91,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO15, GPIO15, 0, OFF, OFF, 0, 0, 8MA),
 	
 	/* WLAN */
-	//PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
+	/* PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA), */
 	PIN_CFG(MMC1DAT7, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(MMC1DAT6, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(MMC1DAT5, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
@@ -100,7 +104,7 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* LCD */
 	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(LCDRES, GPIO41, 0, OFF, ON, 0, 0, 8MA), //default
+	PIN_CFG(LCDRES, GPIO41, 0, OFF, ON, 0, 0, 8MA), /* default */
 
 	/* STM trace - PTI */
 	PIN_CFG(TRACECLK, PTI_CLK, 0, OFF, ON, 0, 0, 8MA),
@@ -131,10 +135,10 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
 	PIN_CFG(GPS_CALREQ, GPIO99, 0, OFF, ON, 0, 0, 8MA),
-
-        /* Bluetooth related GPIOS */
-        PIN_CFG(MMC1CK, GPIO68, 0, ON, OFF, 0, 0, 8MA),
-        PIN_CFG(DCLKREQ1, GPIO111, 0, OFF, ON, 0, 1, 8MA),
+	
+	/* Bluetooth related GPIOS */
+	PIN_CFG(MMC1CK, GPIO68, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(DCLKREQ1, GPIO111, 0, OFF, ON, 0, 1, 8MA),
 
 };
 
@@ -142,7 +146,7 @@ static struct __init pin_config board_pin_config[] = {
 int __init pinmux_board_init(void)
 {
 	int i;
-	for (i=0; i<ARRAY_SIZE(board_pin_config); i++)
+	for (i = 0; i<ARRAY_SIZE(board_pin_config); i++)
 		pinmux_set_pin_config(&board_pin_config[i]);
 
 	return 0;
