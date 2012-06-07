@@ -1014,15 +1014,15 @@ static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev, char *reg_name)
 	dev->vdd_sdxc_regulator = regulator_get(NULL, reg_name);
 
 	if (!IS_ERR(dev->vdd_sdxc_regulator)) {
-		/* Configure 3.3V default */
+		/* Configure 3.0V default */
 		ret = regulator_set_voltage(dev->vdd_sdxc_regulator,
-						3300000, 3300000);
+						3000000, 3000000);
 		if (ret < 0) {
-			pr_err("%s: can't set 3.3V\n",
+			pr_err("%s: can't set 3.0V\n",
 				   reg_name);
 			ret = -1;
 		} else {
-			pr_debug("%s: set to 3.3V\n",
+			pr_debug("%s: set to 3.0V\n",
 				reg_name);
 			ret = 0;
 		}
@@ -1044,15 +1044,15 @@ static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name)
 	dev->vddo_sd_regulator = regulator_get(NULL, reg_name);
 
 	if (!IS_ERR(dev->vddo_sd_regulator)) {
-		/* Configure 2.9V default */
+		/* Configure 3.0V default */
 		ret = regulator_set_voltage(dev->vddo_sd_regulator,
-						2900000, 2900000);
+						3000000, 3000000);
 		if (ret < 0) {
-			pr_err("%s: can't set 2.9V\n",
+			pr_err("%s: can't set 3.0V\n",
 				   reg_name);
 			ret = -1;
 		} else {
-			pr_debug("%s: set to 2.9V\n",
+			pr_debug("%s: set to 3.0V\n",
 				reg_name);
 			ret = 0;
 		}
@@ -1084,12 +1084,12 @@ static int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host)
 
 	if (dev->vdd_sdxc_regulator) {
 		ret =
-		    regulator_set_voltage(dev->vdd_sdxc_regulator, 3300000,
-					  3300000);
+		    regulator_set_voltage(dev->vdd_sdxc_regulator, 3000000,
+					  3000000);
 		if (ret < 0)
-			dev_err(dev->dev, "cant set vddo regulator to 3.3V!\n");
+			dev_err(dev->dev, "cant set vddo regulator to 3.0V!\n");
 		else
-			dev_dbg(dev->dev, "vddo regulator is set to 3.3V\n");
+			dev_dbg(dev->dev, "vddo regulator is set to 3.0V\n");
 	}
 	return ret;
 }
