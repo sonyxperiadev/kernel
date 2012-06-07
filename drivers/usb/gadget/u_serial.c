@@ -109,7 +109,11 @@ struct gs_port {
 	int read_allocated;
 	struct list_head	read_queue;
 	unsigned		n_read;
+#ifdef CONFIG_BRCM_WQ_PUSH
 	struct work_struct      push;
+#else
+	struct tasklet_struct	push;
+#endif
 
 	struct list_head	write_pool;
 	int write_started;
@@ -477,9 +481,15 @@ __acquires(&port->port_lock)
  * So QUEUE_SIZE packets plus however many the FIFO holds (usually two)
  * can be buffered before the TTY layer's buffers (currently 64 KB).
  */
+#ifdef CONFIG_BRCM_WQ_PUSH
 static void gs_rx_push(struct work_struct *work)
 {
 	struct gs_port          *port = container_of(work, struct gs_port, push);
+#else
+static void gs_rx_push(unsigned long _port)
+{
+	struct gs_port		*port = (void *)_port;
+#endif
 	struct tty_struct	*tty;
 	struct list_head	*queue = &port->read_queue;
 	bool			disconnect = false;
@@ -568,7 +578,11 @@ recycle:
 	if (!list_empty(queue) && tty) {
 		if (!test_bit(TTY_THROTTLED, &tty->flags)) {
 			if (do_push)
+#ifdef CONFIG_BRCM_WQ_PUSH
 				schedule_work(&port->push);
+#else
+				tasklet_schedule(&port->push);
+#endif
 			else
 				pr_warning(PREFIX "%d: RX not scheduled?\n",
 					port->port_num);
@@ -589,7 +603,11 @@ static void gs_read_complete(struct usb_ep *ep, struct usb_request *req)
 	/* Queue all received data until the tty layer is ready for it. */
 	spin_lock(&port->port_lock);
 	list_add_tail(&req->list, &port->read_queue);
+#ifdef CONFIG_BRCM_WQ_PUSH
 	schedule_work(&port->push);
+#else
+	tasklet_schedule(&port->push);
+#endif
 	spin_unlock(&port->port_lock);
 }
 
@@ -987,7 +1005,11 @@ static void gs_unthrottle(struct tty_struct *tty)
 		 * rts/cts, or other handshaking with the host, but if the
 		 * read queue backs up enough we'll be NAKing OUT packets.
 		 */
+#ifdef CONFIG_BRCM_WQ_PUSH
 		schedule_work(&port->push);
+#else
+		tasklet_schedule(&port->push);
+#endif
 		pr_vdebug(PREFIX "%d: unthrottle\n", port->port_num);
 	}
 	spin_unlock_irqrestore(&port->port_lock, flags);
@@ -1039,8 +1061,11 @@ gs_port_alloc(unsigned port_num, struct usb_cdc_line_coding *coding)
 	spin_lock_init(&port->port_lock);
 	init_waitqueue_head(&port->close_wait);
 	init_waitqueue_head(&port->drain_wait);
-
+#ifdef CONFIG_BRCM_WQ_PUSH
 	INIT_WORK(&port->push, gs_rx_push);
+#else
+	tasklet_init(&port->push, gs_rx_push, (unsigned long) port);
+#endif
 
 	INIT_LIST_HEAD(&port->read_pool);
 	INIT_LIST_HEAD(&port->read_queue);
@@ -1193,8 +1218,11 @@ void gserial_cleanup(void)
 		port = ports[i].port;
 		ports[i].port = NULL;
 		mutex_unlock(&ports[i].lock);
-
-		flush_scheduled_work();
+#ifdef CONFIG_BRCM_WQ_PUSH
+		flush_work_sync(&port->push);
+#else
+		tasklet_kill(&port->push);
+#endif
 
 		/* wait for old opens to finish */
 		wait_event(port->close_wait, gs_closed(port));
