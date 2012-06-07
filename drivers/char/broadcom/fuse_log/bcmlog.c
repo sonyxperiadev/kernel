@@ -349,150 +349,107 @@ static int BCMLOG_Open(struct inode *inode, struct file *filp)
  **/
 static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	int rc;
+	void __user *p = (void __user *)arg;
 
 	switch (cmd) {
 		/**
 		 *	log a null-terminated string from user space
 		 **/
-	case BCMLOG_IOC_LOGSTR:
-		{
-			struct BCMLOG_IoctlLogStr_t *lcl =
-			    (struct BCMLOG_IoctlLogStr_t *)arg;
+	case BCMLOG_IOC_LOGSTR: {
+		struct BCMLOG_IoctlLogStr_t lcl;
+		char *kbuf_str;
 
-			if (!CpCrashDumpInProgress()) {
-				char *kbuf_str = 0;
+		if (CpCrashDumpInProgress())
+			return -EBUSY;
+		if (copy_from_user(&lcl, p, sizeof(lcl)))
+			return -EFAULT;
+		if (lcl.size == 0)
+			return -EINVAL;
+		if (!BCMLOG_LogIdIsEnabled(lcl.sender))
+			return -ENXIO;
 
-				if (!lcl || !lcl->str || !lcl->size) {
-					rc = -1;
-					break;
-				}
-
-				if (!BCMLOG_LogIdIsEnabled(lcl->sender)) {
-					rc = -1;
-					break;
-				}
-
-				kbuf_str = kmalloc(lcl->size + 1, GFP_ATOMIC);
-
-				if (!kbuf_str) {
-					BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
-					BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
-						      "allocation error\n");
-					rc = -1;
-					break;
-				}
-
-				if (copy_from_user
-				    (kbuf_str, lcl->str, lcl->size)) {
-					BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
-						      "bad userspace pointer\n");
-					kfree(kbuf_str);
-					rc = -1;
-					break;
-				}
-				/* this ensures the string is null terminated */
-				kbuf_str[lcl->size] = 0;
-
-				LogString_Internal(kbuf_str, lcl->sender);
-
-				kfree(kbuf_str);
-			}
-
-			rc = 0;
-
-			break;
+		kbuf_str = kmalloc(lcl.size + 1, GFP_KERNEL);
+		if (kbuf_str == NULL) {
+			BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
+			BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+					"allocation error\n");
+			return -ENOMEM;
 		}
 
-	case BCMLOG_IOC_ENABLE:
-		{
-			struct BCMLOG_IoctlEnable_t *lcl =
-			    (struct BCMLOG_IoctlEnable_t *)arg;
-
-			if (!lcl || lcl->id >= BCMLOG_MAX_LOG_ID) {
-				rc = -1;
-				break;
-			}
-
-			if (lcl->set)
-				BCMLOG_EnableLogId(lcl->id, lcl->enable);
-
-			else
-				lcl->enable = BCMLOG_LogIdIsEnabled(lcl->id);
-
-			rc = 0;
-			break;
-
+		if (copy_from_user(kbuf_str, lcl.str, lcl.size)) {
+			BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+					"bad userspace pointer\n");
+			kfree(kbuf_str);
+			return -EFAULT;
 		}
 
-	case BCMLOG_IOC_LOGSIGNAL:
-		{
-			/* request to log binary signal from user space */
-			struct BCMLOG_IoctlLogSignal_t *lcl =
-			    (struct BCMLOG_IoctlLogSignal_t *)arg;
-
-			if (!CpCrashDumpInProgress()) {
-				void *kernelSigBuf = NULL;
-
-				/* sanity check... */
-				if (!lcl) {
-					rc = -1;
-					break;
-				}
-
-				if (!BCMLOG_LogIdIsEnabled(lcl->sender)) {
-					rc = -1;
-					break;
-				}
-				if (lcl->sigPtr && (lcl->sigBufSize > 0)) {
-					/**
-					 * allocate buffer for kernel space
-					 * signal
-					 **/
-					kernelSigBuf =
-					    kmalloc(lcl->sigBufSize,
-						    GFP_ATOMIC);
-
-					if (!kernelSigBuf) {
-						BCMLOG_RecordLogError
-						    (MEMORY_FULL_ONCE);
-						BCMLOG_PRINTF
-						    (BCMLOG_CONSOLE_MSG_ERROR,
-						     "allocation error\n");
-						return -1;
-					}
-					/**
-					 * copy the signal from user space to
-					 * kernel space
-					 **/
-					if (copy_from_user
-					    (kernelSigBuf, lcl->sigPtr,
-					     lcl->sigBufSize)) {
-						kfree(kernelSigBuf);
-						rc = -1;
-						break;
-					}
-				}
-				/* internal api for signal logging */
-				LogSignal_Internal(lcl->sigCode, kernelSigBuf,
-						   lcl->sigBufSize, lcl->state,
-						   lcl->sender,
-						   LOGSIGNAL_COMPRESS);
-
-				kfree(kernelSigBuf);
-			}
-
-			rc = 0;
-
-			break;
-		}
-
-	default:
-		rc = -1;
-		break;
+		/* this ensures the string is null terminated */
+		kbuf_str[lcl.size] = 0;
+		LogString_Internal(kbuf_str, lcl.sender);
+		kfree(kbuf_str);
+		return 0;
 	}
 
-	return rc;
+	case BCMLOG_IOC_ENABLE: {
+		struct BCMLOG_IoctlEnable_t lcl;
+
+		if (copy_from_user(&lcl, p, sizeof(lcl)))
+			return -EFAULT;
+		if (lcl.id >= BCMLOG_MAX_LOG_ID)
+			return -EINVAL;
+		if (lcl.set)
+			BCMLOG_EnableLogId(lcl.id, lcl.enable);
+		else
+			lcl.enable = BCMLOG_LogIdIsEnabled(lcl.id);
+
+		if (copy_to_user(p, &lcl, sizeof(lcl)))
+			return -EFAULT;
+		return 0;
+	}
+
+	case BCMLOG_IOC_LOGSIGNAL: {
+		/* request to log binary signal from user space */
+		struct BCMLOG_IoctlLogSignal_t lcl;
+
+		if (CpCrashDumpInProgress())
+			return -EBUSY;
+		if (copy_from_user(&lcl, p, sizeof(lcl)))
+			return -EFAULT;
+		if (!BCMLOG_LogIdIsEnabled(lcl.sender))
+			return -ENXIO;
+		if (lcl.sigBufSize > 0) {
+			void *kernelSigBuf;
+
+			/**
+			 * allocate buffer for kernel space signal
+			 **/
+			kernelSigBuf = kmalloc(lcl.sigBufSize, GFP_KERNEL);
+			if (kernelSigBuf == NULL) {
+				BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
+				BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+						"allocation error\n");
+				return -ENOMEM;
+			}
+			/**
+			 * copy the signal from user space to kernel space
+			 **/
+			if (copy_from_user(kernelSigBuf, lcl.sigPtr,
+						lcl.sigBufSize)) {
+				kfree(kernelSigBuf);
+				return -EFAULT;
+			}
+			/* internal api for signal logging */
+			LogSignal_Internal(lcl.sigCode, kernelSigBuf,
+						lcl.sigBufSize, lcl.state,
+						lcl.sender,
+						LOGSIGNAL_COMPRESS);
+			kfree(kernelSigBuf);
+		}
+		return 0;
+	}
+	}
+
+	return -ENOIOCTLCMD;
 }
 
 /**
