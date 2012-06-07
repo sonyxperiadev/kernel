@@ -59,7 +59,7 @@ static inline bool migrate_async_suitable(int migratetype)
 static unsigned long isolate_freepages_block(unsigned long blockpfn,
 				unsigned long end_pfn,
 				struct list_head *freelist,
-				bool strict)
+				bool strict, bool pgblock_isolated)
 {
 	int nr_scanned = 0, total_isolated = 0;
 	struct page *cursor;
@@ -84,8 +84,12 @@ static unsigned long isolate_freepages_block(unsigned long blockpfn,
 			continue;
 		}
 
-		/* Found a free page, break it into order-0 pages */
-		isolated = split_free_page(page);
+		/* Found a free page, break it into order-0 pages
+		 * Pass on the "pgblock_isolated", so split doesnt
+		 * count for free CMA pages in case the pageblock
+		 * is already isolated
+		 */
+		isolated = split_free_page(page, pgblock_isolated);
 		if (!isolated && strict)
 			return 0;
 		total_isolated += isolated;
@@ -117,6 +121,11 @@ static unsigned long isolate_freepages_block(unsigned long blockpfn,
  * Otherwise, function returns one-past-the-last PFN of isolated page
  * (which may be greater then end_pfn if end fell in a middle of
  * a free page).
+ *
+ * Moreover, the pageblocks within start-end have already been marked
+ * MIGRATE_ISOLATE, so, split_free_pages() should not account for
+ * free CMA pages. Hence, the pgblock_isolate argument for
+ * isolate_freepages_block() is always "true" when called from here.
  */
 unsigned long
 isolate_freepages_range(unsigned long start_pfn, unsigned long end_pfn)
@@ -141,7 +150,7 @@ isolate_freepages_range(unsigned long start_pfn, unsigned long end_pfn)
 
 		spin_lock_irqsave(&zone->lock, flags);
 		isolated = isolate_freepages_block(pfn, block_end_pfn,
-						   &freelist, true);
+						   &freelist, true, true);
 		spin_unlock_irqrestore(&zone->lock, flags);
 
 		/*
@@ -364,6 +373,7 @@ static void isolate_freepages(struct zone *zone,
 	unsigned long flags;
 	int nr_freepages = cc->nr_freepages;
 	struct list_head *freelist = &cc->freepages;
+	bool pgblock_isolated;
 
 	/*
 	 * Initialise the free scanner. The starting point is where we last
@@ -419,8 +429,11 @@ static void isolate_freepages(struct zone *zone,
 		spin_lock_irqsave(&zone->lock, flags);
 		if (suitable_migration_target(page)) {
 			end_pfn = min(pfn + pageblock_nr_pages, zone_end_pfn);
+			pgblock_isolated = (get_pageblock_migratetype(page) ==
+						MIGRATE_ISOLATE);
 			isolated = isolate_freepages_block(pfn, end_pfn,
-							   freelist, false);
+							   freelist, false,
+							   pgblock_isolated);
 			nr_freepages += isolated;
 		}
 		spin_unlock_irqrestore(&zone->lock, flags);

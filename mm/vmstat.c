@@ -720,6 +720,12 @@ const char * const vmstat_text[] = {
 	"numa_local",
 	"numa_other",
 #endif
+#ifdef CONFIG_CMA
+	"cmafree",
+	"cmaanon",
+	"cmafile",
+	"contigalloc",
+#endif
 	"nr_anon_transparent_hugepages",
 	"nr_dirty_threshold",
 	"nr_dirty_background_threshold",

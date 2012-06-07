@@ -1192,8 +1192,17 @@ static unsigned long clear_active_flags(struct list_head *page_list,
 			ClearPageActive(page);
 			nr_active += numpages;
 		}
-		if (count)
+		if (count) {
 			count[lru] += numpages;
+			if (PageCma(page)) {
+				if (is_file_lru(lru))
+					count[LRU_CMA_FILE] += numpages;
+				else if (!is_unevictable_lru(lru))
+					count[LRU_CMA_ANON] += numpages;
+				else
+					WARN_ON(1);
+			}
+		}
 	}
 
 	return nr_active;
@@ -1329,7 +1338,7 @@ static noinline_for_stack void update_isolated_counts(struct zone *zone,
 					struct list_head *isolated_list)
 {
 	unsigned long nr_active;
-	unsigned int count[NR_LRU_LISTS] = { 0, };
+	unsigned int count[NR_LRU_LISTS + NR_LRU_CMA_COUNTS] = { 0, };
 	struct zone_reclaim_stat *reclaim_stat = get_reclaim_stat(zone, sc);
 
 	nr_active = clear_active_flags(isolated_list, count);
@@ -1343,6 +1352,10 @@ static noinline_for_stack void update_isolated_counts(struct zone *zone,
 			      -count[LRU_ACTIVE_ANON]);
 	__mod_zone_page_state(zone, NR_INACTIVE_ANON,
 			      -count[LRU_INACTIVE_ANON]);
+	if (NR_LRU_CMA_COUNTS) {
+		__mod_zone_page_state(zone, NR_CMA_ANON, -count[LRU_CMA_ANON]);
+		__mod_zone_page_state(zone, NR_CMA_FILE, -count[LRU_CMA_FILE]);
+	}
 
 	*nr_anon = count[LRU_ACTIVE_ANON] + count[LRU_INACTIVE_ANON];
 	*nr_file = count[LRU_ACTIVE_FILE] + count[LRU_INACTIVE_FILE];

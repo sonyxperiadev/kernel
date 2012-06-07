@@ -655,6 +655,7 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 {
 	unsigned long mask, pfn, pageno;
 	struct cma *cma = dev_get_cma_area(dev);
+	struct page *page;
 	int ret;
 #ifdef CONFIG_CMA_BEST_FIT
 	struct cma_range best_fit;
@@ -794,17 +795,19 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 
 #endif /* !CONFIG_CMA_BEST_FIT */
 
-	update_alloc_list(dev, cma, pfn, count, align, 1);
-
+	page = pfn_to_page(pfn);
+	__mod_zone_page_state(page_zone(page), NR_CONTIG_PAGES, count);
 	recalculate_cma_region_stats(cma);
+
+	update_alloc_list(dev, cma, pfn, count, align, 1);
 
 	mutex_unlock(&cma_mutex);
 
-	pr_debug("%s(): returned %p\n", __func__, pfn_to_page(pfn));
+	pr_debug("%s(): returned %p\n", __func__, page);
 
 	trace_cma_alloc_end_success(cma, pfn, count);
 
-	return pfn_to_page(pfn);
+	return page;
 error:
 	trace_cma_alloc_end_failed(cma, count);
 	mutex_unlock(&cma_mutex);
@@ -845,6 +848,7 @@ bool dma_release_from_contiguous(struct device *dev, struct page *pages,
 	bitmap_clear(cma->bitmap, pfn - cma->base_pfn, count);
 	free_contig_range(pfn, count);
 	update_alloc_list(dev, cma, pfn, count, 0, 0);
+	__mod_zone_page_state(page_zone(pages), NR_CONTIG_PAGES, -count);
 	recalculate_cma_region_stats(cma);
 	mutex_unlock(&cma_mutex);
 

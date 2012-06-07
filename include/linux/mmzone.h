@@ -140,6 +140,12 @@ enum zone_stat_item {
 	NUMA_LOCAL,		/* allocation from local node */
 	NUMA_OTHER,		/* allocation from other node */
 #endif
+#ifdef CONFIG_CMA
+	NR_FREE_CMA_PAGES,
+	NR_CMA_ANON,
+	NR_CMA_FILE,
+	NR_CONTIG_PAGES,
+#endif
 	NR_ANON_TRANSPARENT_HUGEPAGES,
 	NR_VM_ZONE_STAT_ITEMS };
 
@@ -164,6 +170,20 @@ enum lru_list {
 	LRU_UNEVICTABLE,
 	NR_LRU_LISTS
 };
+
+#ifdef CONFIG_CMA
+
+enum lru_cma_count {
+	LRU_CMA_ANON = NR_LRU_LISTS,
+	LRU_CMA_FILE = NR_LRU_LISTS + 1,
+	NR_LRU_CMA_COUNTS
+};
+
+#else
+
+#define NR_LRU_CMA_COUNTS (0)
+
+#endif
 
 #define for_each_lru(l) for (l = 0; l < NR_LRU_LISTS; l++)
 

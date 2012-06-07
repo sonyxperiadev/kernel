@@ -107,6 +107,9 @@ enum pageflags {
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	PG_compound_lock,
 #endif
+#ifdef CONFIG_CMA
+	PG_cma,			/* Sticky flag to track CMA pages */
+#endif
 	__NR_PAGEFLAGS,
 
 	/* Filesystems */
@@ -276,6 +279,14 @@ TESTSCFLAG(HWPoison, hwpoison)
 #else
 PAGEFLAG_FALSE(HWPoison)
 #define __PG_HWPOISON 0
+#endif
+
+#ifdef CONFIG_CMA
+PAGEFLAG(Cma, cma)
+#else
+PAGEFLAG_FALSE(Cma)
+SETPAGEFLAG_NOOP(Cma)
+CLEARPAGEFLAG_NOOP(Cma)
 #endif
 
 u64 stable_page_flags(struct page *page);
@@ -466,7 +477,12 @@ static inline int PageTransCompound(struct page *page)
  * Pages being prepped should not have any flags set.  It they are set,
  * there has been a kernel bug or struct page corruption.
  */
+#ifdef CONFIG_CMA
+#define PAGE_FLAGS_CHECK_AT_PREP	(((1 << NR_PAGEFLAGS) - 1) & \
+						~(1 << PG_cma))
+#else
 #define PAGE_FLAGS_CHECK_AT_PREP	((1 << NR_PAGEFLAGS) - 1)
+#endif
 
 #define PAGE_FLAGS_PRIVATE				\
 	(1 << PG_private | 1 << PG_private_2)
