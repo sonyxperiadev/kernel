@@ -1998,6 +1998,7 @@ static long handle_pkt_ack_cp_reset_ioc(struct file *filp, unsigned int cmd,
 {
 	rpc_pkt_cp_reset_ack_t ioc_param;
 
+	/* Coverity [TAINTED_SCALAR]   */
 	if (copy_from_user
 	    (&ioc_param, (int *) param,
 	     sizeof(rpc_pkt_cp_reset_ack_t)) != 0) {
@@ -2013,8 +2014,9 @@ static long handle_pkt_ack_cp_reset_ioc(struct file *filp, unsigned int cmd,
 	if ( INTERFACE_CAPI2 != ioc_param.interfaceType ) {
 		_DBG(RPC_TRACE("handle_pkt_ack_cp_reset_ioc: ack ifce %d\n",
 			ioc_param.interfaceType));
-		RPC_PACKET_FilterAckReadyForCPReset( ioc_param.rpcClientID, 
-						ioc_param.interfaceType );
+		/* Coverity [TAINTED_SCALAR]   */
+		RPC_PACKET_FilterAckReadyForCPReset(ioc_param.rpcClientID,
+						ioc_param.interfaceType);
 	} else {
 		UInt8 cid = 0;
 		RpcClientInfo_t *cInfo;

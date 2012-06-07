@@ -464,9 +464,12 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 	}
 
 	if (fw)
-		printk(KERN_ERR "%s fw->size=%d\n", __func__, fw->size);
-	else
-		printk(KERN_ERR "%s: fw = NULL!\n", __func__);
+		IPC_DEBUG(DBG_INFO, "fw->size=%d\n", fw->size);
+	else {
+		/*Coverity Complaint: FORWARD_NULL */
+		IPC_DEBUG(DBG_INFO, "fw = NULL!\n");
+		return err;
+	}
 
 	imgSize = fw->size;
 	if (expectedSize == 0) {

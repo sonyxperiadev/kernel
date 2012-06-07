@@ -276,55 +276,55 @@ static long handle_set_lock_ioc(struct file *filp, unsigned int cmd,
 	SYS_SIMLOCK_STATE_t sys_lock_status = { 0 };
 
 	/* Coverity [TAINTED_SCALAR] */
-	if (copy_from_user
-	    (&ioc_param, (sec_simlock_set_lock_t *) param,
-	     sizeof(sec_simlock_set_lock_t)) != 0) {
-		pr_err("handle_set_lock_ioc - copy_from_user() had error\n");
-		return -EFAULT;
-	}
+    if (copy_from_user
+        (&ioc_param, (sec_simlock_set_lock_t *) param,
+         sizeof(sec_simlock_set_lock_t)) != 0) {
+        pr_err("handle_set_lock_ioc - copy_from_user() had error\n");
+        return -EFAULT;
+    }
 
-	/* try setting lock */
-	ioc_param.set_lock_status = SIMLockSetLock(ioc_param.sim_id,
-						   (UInt8) ioc_param.action,
-						   ioc_param.
-						   full_lock_on ? TRUE : FALSE,
-						   ioc_param.lock_type,
-						   ioc_param.key);
-	ioc_param.remain_attempt = (int)SIMLockGetRemainAttempt(ioc_param.
-						   sim_id);
+    /* try setting lock */
+    ioc_param.set_lock_status = SIMLockSetLock(ioc_param.sim_id,
+                           (UInt8) ioc_param.action,
+                           ioc_param.
+                           full_lock_on ? TRUE : FALSE,
+                           ioc_param.lock_type,
+                           ioc_param.key);
+    ioc_param.remain_attempt = (int)SIMLockGetRemainAttempt(ioc_param.
+                           sim_id);
 
-	/* Coverity [TAINTED_SCALAR] */
-	SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
+    /* Coverity [TAINTED_SCALAR] */
+    SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
 
-	sys_lock_status.network_lock_enabled =
-				sec_lock_state.network_lock_enabled;
-	sys_lock_status.network_subset_lock_enabled =
-				sec_lock_state.network_subset_lock_enabled;
-	sys_lock_status.service_provider_lock_enabled =
-				sec_lock_state.service_provider_lock_enabled;
-	sys_lock_status.corporate_lock_enabled =
-				sec_lock_state.corporate_lock_enabled;
-	sys_lock_status.phone_lock_enabled =
-				sec_lock_state.phone_lock_enabled;
-	sys_lock_status.network_lock =
-				sec_lock_state.network_lock;
-	sys_lock_status.network_subset_lock =
-				sec_lock_state.network_subset_lock;
-	sys_lock_status.service_provider_lock =
-				sec_lock_state.service_provider_lock;
-	sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
-	sys_lock_status.phone_lock = sec_lock_state.phone_lock;
+    sys_lock_status.network_lock_enabled =
+                sec_lock_state.network_lock_enabled;
+    sys_lock_status.network_subset_lock_enabled =
+                sec_lock_state.network_subset_lock_enabled;
+    sys_lock_status.service_provider_lock_enabled =
+                sec_lock_state.service_provider_lock_enabled;
+    sys_lock_status.corporate_lock_enabled =
+                sec_lock_state.corporate_lock_enabled;
+    sys_lock_status.phone_lock_enabled =
+                sec_lock_state.phone_lock_enabled;
+    sys_lock_status.network_lock =
+                sec_lock_state.network_lock;
+    sys_lock_status.network_subset_lock =
+                sec_lock_state.network_subset_lock;
+    sys_lock_status.service_provider_lock =
+                sec_lock_state.service_provider_lock;
+    sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
+    sys_lock_status.phone_lock = sec_lock_state.phone_lock;
 
-	SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
+    SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
 
-	if (copy_to_user
-	    ((sec_simlock_set_lock_t *) param, &ioc_param,
-	     sizeof(sec_simlock_set_lock_t)) != 0) {
-		pr_err("handle_set_lock_ioc - copy_to_user() had error\n");
-		return -EFAULT;
-	}
+    if (copy_to_user
+        ((sec_simlock_set_lock_t *) param, &ioc_param,
+         sizeof(sec_simlock_set_lock_t)) != 0) {
+        pr_err("handle_set_lock_ioc - copy_to_user() had error\n");
+        return -EFAULT;
+    }
 
-	return 0;
+    return 0;
 }
 
 static long handle_unlock_sim_ioc(struct file *filp, unsigned int cmd,
@@ -335,52 +335,52 @@ static long handle_unlock_sim_ioc(struct file *filp, unsigned int cmd,
 	SYS_SIMLOCK_STATE_t sys_lock_status = { 0 };
 
 	/* Coverity [TAINTED_SCALAR] */
-	if (copy_from_user
-	    (&ioc_param, (sec_simlock_unlock_t *) param,
-	     sizeof(sec_simlock_unlock_t)) != 0) {
-		pr_err("handle_unlock_sim_ioc - copy_from_user() had error\n");
-		return -EFAULT;
-	}
+    if (copy_from_user
+        (&ioc_param, (sec_simlock_unlock_t *) param,
+         sizeof(sec_simlock_unlock_t)) != 0) {
+        pr_err("handle_unlock_sim_ioc - copy_from_user() had error\n");
+        return -EFAULT;
+    }
 
-	/* try to unlock here, and set ioc_param result fields appropriately */
-	ioc_param.unlock_status = SIMLockUnlockSIM(ioc_param.sim_id,
-						   ioc_param.lock_type,
-						   ioc_param.password);
+    /* try to unlock here, and set ioc_param result fields appropriately */
+    ioc_param.unlock_status = SIMLockUnlockSIM(ioc_param.sim_id,
+                           ioc_param.lock_type,
+                           ioc_param.password);
 
-	ioc_param.remain_attempt = (int)SIMLockGetRemainAttempt(ioc_param.
-						   sim_id);
-	/* Coverity [TAINTED_SCALAR] */
-	SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
+    ioc_param.remain_attempt = (int)SIMLockGetRemainAttempt(ioc_param.
+                           sim_id);
+    /* Coverity [TAINTED_SCALAR] */
+    SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
 
-	sys_lock_status.network_lock_enabled =
-				sec_lock_state.network_lock_enabled;
-	sys_lock_status.network_subset_lock_enabled =
-				sec_lock_state.network_subset_lock_enabled;
-	sys_lock_status.service_provider_lock_enabled =
-				sec_lock_state.service_provider_lock_enabled;
-	sys_lock_status.corporate_lock_enabled =
-				sec_lock_state.corporate_lock_enabled;
-	sys_lock_status.phone_lock_enabled =
-				sec_lock_state.phone_lock_enabled;
-	sys_lock_status.network_lock =
-				sec_lock_state.network_lock;
-	sys_lock_status.network_subset_lock =
-				sec_lock_state.network_subset_lock;
-	sys_lock_status.service_provider_lock =
-				sec_lock_state.service_provider_lock;
-	sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
-	sys_lock_status.phone_lock = sec_lock_state.phone_lock;
+    sys_lock_status.network_lock_enabled =
+                sec_lock_state.network_lock_enabled;
+    sys_lock_status.network_subset_lock_enabled =
+                sec_lock_state.network_subset_lock_enabled;
+    sys_lock_status.service_provider_lock_enabled =
+                sec_lock_state.service_provider_lock_enabled;
+    sys_lock_status.corporate_lock_enabled =
+                sec_lock_state.corporate_lock_enabled;
+    sys_lock_status.phone_lock_enabled =
+                sec_lock_state.phone_lock_enabled;
+    sys_lock_status.network_lock =
+                sec_lock_state.network_lock;
+    sys_lock_status.network_subset_lock =
+                sec_lock_state.network_subset_lock;
+    sys_lock_status.service_provider_lock =
+                sec_lock_state.service_provider_lock;
+    sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
+    sys_lock_status.phone_lock = sec_lock_state.phone_lock;
 
-	SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
+    SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
 
-	if (copy_to_user
-	    ((sec_simlock_unlock_t *) param, &ioc_param,
-	     sizeof(sec_simlock_unlock_t)) != 0) {
-		pr_err("handle_unlock_sim_ioc - copy_to_user() had error\n");
-		return -EFAULT;
-	}
+    if (copy_to_user
+        ((sec_simlock_unlock_t *) param, &ioc_param,
+         sizeof(sec_simlock_unlock_t)) != 0) {
+        pr_err("handle_unlock_sim_ioc - copy_to_user() had error\n");
+        return -EFAULT;
+    }
 
-	return 0;
+    return 0;
 }
 
 static long handle_get_lock_state_ioc(struct file *filp, unsigned int cmd,
@@ -389,27 +389,27 @@ static long handle_get_lock_state_ioc(struct file *filp, unsigned int cmd,
 	sec_simlock_state_t ioc_param = { 0 };
 
 	/* Coverity [TAINTED_SCALAR] */
-	if (copy_from_user
-	    (&ioc_param, (sec_simlock_state_t *) param,
-	     sizeof(sec_simlock_state_t)) != 0) {
-		pr_err
-		("handle_get_lock_state_ioc - copy_from_user() had error\n");
-		return -EFAULT;
-	}
+    if (copy_from_user
+        (&ioc_param, (sec_simlock_state_t *) param,
+         sizeof(sec_simlock_state_t)) != 0) {
+        pr_err
+        ("handle_get_lock_state_ioc - copy_from_user() had error\n");
+        return -EFAULT;
+    }
 
-	/* retrieve current lock state */
-	/* Coverity [TAINTED_SCALAR]   */
-	SIMLockGetSIMLockState(ioc_param.sim_id, &ioc_param);
+    /* retrieve current lock state */
+    /* Coverity [TAINTED_SCALAR]   */
+    SIMLockGetSIMLockState(ioc_param.sim_id, &ioc_param);
 
-	if (copy_to_user
-	    ((sec_simlock_state_t *) param, &ioc_param,
-	     sizeof(sec_simlock_state_t)) != 0) {
-		pr_err
-		("handle_get_lock_state_ioc - copy_to_user() had error\n");
-		return -EFAULT;
-	}
+    if (copy_to_user
+        ((sec_simlock_state_t *) param, &ioc_param,
+         sizeof(sec_simlock_state_t)) != 0) {
+        pr_err
+        ("handle_get_lock_state_ioc - copy_to_user() had error\n");
+        return -EFAULT;
+    }
 
-	return 0;
+    return 0;
 }
 
 static long handle_get_remain_attempt_info_ioc(struct file *filp,
