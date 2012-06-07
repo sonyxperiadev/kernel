@@ -73,8 +73,11 @@ task_notify_func(struct notifier_block *self, unsigned long val, void *data)
 {
 	struct task_struct *task = data;
 
-	if (task == lowmem_deathpending)
+	if (task == lowmem_deathpending) {
+		lowmem_print(2, "lowmem_shrink %s/%d is dead!\n",
+				task->comm, task->pid);
 		lowmem_deathpending = NULL;
+	}
 
 	return NOTIFY_OK;
 }
@@ -93,6 +96,16 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int other_free = global_page_state(NR_FREE_PAGES);
 	int other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM);
+
+	/*
+	 * If CMA is enabled, then do not count free pages
+	 * from CMA region and also ignore CMA pages that are
+	 * allocated for files.
+	 */
+#ifdef CONFIG_CMA
+	other_free -= global_page_state(NR_FREE_CMA_PAGES);
+	other_file -= global_page_state(NR_CMA_FILE);
+#endif
 
 	/*
 	 * If we already have a death outstanding, then
@@ -124,6 +137,16 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		global_page_state(NR_ACTIVE_FILE) +
 		global_page_state(NR_INACTIVE_ANON) +
 		global_page_state(NR_INACTIVE_FILE);
+	/*
+	 * If CMA is enabled, We will also free up contiguous
+	 * allocations done by processes (We cannot free up DMA
+	 * allocations that go from CMA region, but we can't count
+	 * DMA and PMEM allocations separately right now, so we take
+	 * the total.
+	 */
+#ifdef CONFIG_CMA
+	rem += global_page_state(NR_CONTIG_PAGES);
+#endif
 	if (sc->nr_to_scan <= 0 || min_adj == OOM_ADJUST_MAX + 1) {
 		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
 			     sc->nr_to_scan, sc->gfp_mask, rem);
