@@ -87,6 +87,8 @@
 #define UART_UBABCNTR		(0x45) /* UART UBABCNTR Auto Baud Detection
 					  Control and State Register */
 
+#define UART_IIR_TIME_OUT	(0x0C) /* Timeout indication interrupt */
+
 /*
  * Configuration:
  *   share_irqs - whether we pass IRQF_SHARED to request_irq().  This option
@@ -1585,9 +1587,12 @@ receive_chars(struct uart_8250_port *up, unsigned int *status)
 	/* Check whether Auto Flow control is enable in Modem control register */
 	mcr = serial_inp(up, UART_MCR);
 	if (mcr & UART_MCR_AFE) {
-		afe_status = 1;
-		/* Disabling Auto flow control */
-		serial_outp(up, UART_MCR, mcr & (~UART_MCR_AFE));
+		/* If Time out interrupt, Do not disable AFE */
+		if (!(up->iir & UART_IIR_TIME_OUT)) {
+			afe_status = 1;
+			/* Disabling Auto flow control */
+			serial_outp(up, UART_MCR, mcr & (~UART_MCR_AFE));
+		}
 	}
 
 
@@ -1713,8 +1718,6 @@ receive_chars(struct uart_8250_port *up, unsigned int *status)
 ignore_char:
 		lsr = serial_inp(up, UART_LSR);
 	} while ((lsr & (UART_LSR_DR | UART_LSR_BI)) && (max_count-- > 0));
-	spin_unlock(&up->port.lock);
-
 
 	/* Keep the Auto flow control to its pervious state.*/
 	if (afe_status) {
@@ -1722,6 +1725,7 @@ ignore_char:
 		mcr = serial_inp(up, UART_MCR);
 		serial_outp(up, UART_MCR, mcr | (UART_MCR_AFE));
 	}
+	spin_unlock(&up->port.lock);
 
 	tty_flip_buffer_push(tty);
 	spin_lock(&up->port.lock);
