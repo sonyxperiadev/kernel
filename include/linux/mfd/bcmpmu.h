@@ -1143,6 +1143,7 @@ struct bcmpmu {
 	void (*em_reset) (struct bcmpmu *pmu);
 	int (*em_reset_status) (struct bcmpmu *pmu);
 	int (*fg_get_capacity) (struct bcmpmu *bcmpmu);
+	void (*fg_set_eoc) (struct bcmpmu *bcmpmu, int eoc);
 
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;

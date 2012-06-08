@@ -757,6 +757,16 @@ fg_temp_set(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
+static ssize_t fg_eoc_show(struct device *dev,
+				  struct device_attribute *attr,
+				  char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	return sprintf(buf, "support_hw_eoc=%d, fg_eoc=%d\n",
+			pem->support_hw_eoc, pem->eoc);
+}
+
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_set);
 static DEVICE_ATTR(pollrate, 0644, pollrate_show, pollrate_set);
 static DEVICE_ATTR(fgcal, 0644, fgcal_show, fgcal_set);
@@ -766,6 +776,7 @@ static DEVICE_ATTR(fg_tcstatus, 0644, fg_tcstatus_show, NULL);
 static DEVICE_ATTR(fg_tczone_info, 0644, fg_tczone_info_show, NULL);
 static DEVICE_ATTR(fg_tczone_map, 0644, fg_tczone_map_show, NULL);
 static DEVICE_ATTR(fg_room_map, 0644, fg_room_map_show, NULL);
+static DEVICE_ATTR(eoc, 0644, fg_eoc_show, NULL);
 static struct attribute *bcmpmu_em_attrs[] = {
 	&dev_attr_dbgmsk.attr,
 	&dev_attr_pollrate.attr,
@@ -776,6 +787,7 @@ static struct attribute *bcmpmu_em_attrs[] = {
 	&dev_attr_fg_tczone_info.attr,
 	&dev_attr_fg_tczone_map.attr,
 	&dev_attr_fg_room_map.attr,
+	&dev_attr_eoc.attr,
 	NULL
 };
 
@@ -1162,6 +1174,13 @@ static int bcmpmu_get_capacity(struct bcmpmu *bcmpmu)
 {
 	struct bcmpmu_em *pem = bcmpmu->eminfo;
 	return pem->batt_capacity;
+}
+
+
+static void bcmpmu_set_eoc(struct bcmpmu *bcmpmu, int eoc)
+{
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	pem->eoc = eoc;
 }
 
 static void charging_algorithm(struct bcmpmu_em *pem)
@@ -1622,6 +1641,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	mutex_init(&pem->lock);
 	pem->bcmpmu = bcmpmu;
 	bcmpmu->fg_get_capacity = bcmpmu_get_capacity;
+	bcmpmu->fg_set_eoc = bcmpmu_set_eoc;
 	bcmpmu->eminfo = pem;
 	bcmpmu_em = pem;
 	pem->chrgr_curr = 0;

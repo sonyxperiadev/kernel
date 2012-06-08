@@ -384,6 +384,7 @@ static int bcmpmu_chrgr_set_property(struct power_supply *ps,
 	struct bcmpmu_chrgr *pchrgr = container_of(ps,
 		struct bcmpmu_chrgr, chrgr);
 	struct bcmpmu *bcmpmu = pchrgr->bcmpmu;
+	struct bcmpmu_platform_data *pdata = pchrgr->bcmpmu->pdata;
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -405,7 +406,12 @@ static int bcmpmu_chrgr_set_property(struct power_supply *ps,
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 		pchrgr->eoc = propval->intval;
-		bcmpmu_set_eoc(bcmpmu, (int)propval->intval);
+		if (pdata->support_hw_eoc)
+			bcmpmu_set_eoc(bcmpmu, (int)propval->intval);
+		else if (bcmpmu->fg_set_eoc)
+			bcmpmu->fg_set_eoc(bcmpmu, pchrgr->eoc);
+		else
+			ret = -ENODATA;
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
