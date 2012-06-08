@@ -1629,18 +1629,19 @@ static bool __zone_watermark_ok(struct zone *z, int order, unsigned long mark,
 
 			if (free_pages <= min)
 				return false;
-		} else {
+		}
 #ifdef CONFIG_CMA
+		else if (alloc_flags & ALLOC_UNMOVABLE) {
 			/* If cma is enabled, ignore free pages from
 			 * MIGRATE_CMA list for watermark checks
 			 */
 			free_pages -= (z->nr_cma_free[o] << o);
 			if (free_pages <= min)
 				return false;
-#else
-			break;
-#endif
 		}
+#else
+		break;
+#endif
 	}
 
 	return true;
@@ -1842,6 +1843,8 @@ zonelist_scan:
 			int ret;
 
 			mark = zone->watermark[alloc_flags & ALLOC_WMARK_MASK];
+			if (!(gfp_mask & __GFP_MOVABLE))
+				alloc_flags |= ALLOC_UNMOVABLE;
 			if (zone_watermark_ok(zone, order, mark,
 				    classzone_idx, alloc_flags))
 				goto try_this_zone;

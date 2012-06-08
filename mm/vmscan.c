@@ -975,10 +975,17 @@ keep_lumpy:
 int __isolate_lru_page(struct page *page, int mode, int file)
 {
 	int ret = -EINVAL;
+	bool isolate_cma = ((mode & ISOLATE_CMA) == 0);
 
 	/* Only take pages on the LRU. */
 	if (!PageLRU(page))
 		return ret;
+
+	/*
+	 * Remove CMA isolation if it was set so the following
+	 * algorithm works unchanged
+	 */
+	mode &= ~ISOLATE_CMA;
 
 	/*
 	 * When checking the active state, we need to be sure we are
@@ -1000,6 +1007,10 @@ int __isolate_lru_page(struct page *page, int mode, int file)
 		return ret;
 
 	ret = -EBUSY;
+
+	/* check if we don't want to isolate cma pages */
+	if (!isolate_cma && PageCma(page))
+		return ret;
 
 	if (likely(get_page_unless_zero(page))) {
 		/*
@@ -1421,6 +1432,7 @@ shrink_inactive_list(unsigned long nr_to_scan, struct zone *zone,
 	unsigned long nr_taken;
 	unsigned long nr_anon;
 	unsigned long nr_file;
+	int mode;
 
 	while (unlikely(too_many_isolated(zone, file, sc))) {
 		congestion_wait(BLK_RW_ASYNC, HZ/10);
@@ -1431,15 +1443,17 @@ shrink_inactive_list(unsigned long nr_to_scan, struct zone *zone,
 	}
 
 	set_reclaim_mode(priority, sc, false);
+	mode = sc->reclaim_mode & RECLAIM_MODE_LUMPYRECLAIM ?
+				ISOLATE_BOTH : ISOLATE_INACTIVE;
+	if (sc->gfp_mask & __GFP_MOVABLE)
+		mode |= ISOLATE_CMA;
 	lru_add_drain();
 	spin_lock_irq(&zone->lru_lock);
 
 	if (scanning_global_lru(sc)) {
 		nr_taken = isolate_pages_global(nr_to_scan,
 			&page_list, &nr_scanned, sc->order,
-			sc->reclaim_mode & RECLAIM_MODE_LUMPYRECLAIM ?
-					ISOLATE_BOTH : ISOLATE_INACTIVE,
-			zone, 0, file);
+			mode, zone, 0, file);
 		zone->pages_scanned += nr_scanned;
 		if (current_is_kswapd())
 			__count_zone_vm_events(PGSCAN_KSWAPD, zone,
@@ -1450,9 +1464,7 @@ shrink_inactive_list(unsigned long nr_to_scan, struct zone *zone,
 	} else {
 		nr_taken = mem_cgroup_isolate_pages(nr_to_scan,
 			&page_list, &nr_scanned, sc->order,
-			sc->reclaim_mode & RECLAIM_MODE_LUMPYRECLAIM ?
-					ISOLATE_BOTH : ISOLATE_INACTIVE,
-			zone, sc->mem_cgroup,
+			mode, zone, sc->mem_cgroup,
 			0, file);
 		/*
 		 * mem_cgroup_isolate_pages() keeps track of
@@ -1555,19 +1567,23 @@ static void shrink_active_list(unsigned long nr_pages, struct zone *zone,
 	struct page *page;
 	struct zone_reclaim_stat *reclaim_stat = get_reclaim_stat(zone, sc);
 	unsigned long nr_rotated = 0;
+	int mode = ISOLATE_ACTIVE;
+
+	if (sc->gfp_mask & __GFP_MOVABLE)
+		mode |= ISOLATE_CMA;
 
 	lru_add_drain();
 	spin_lock_irq(&zone->lru_lock);
 	if (scanning_global_lru(sc)) {
 		nr_taken = isolate_pages_global(nr_pages, &l_hold,
 						&pgscanned, sc->order,
-						ISOLATE_ACTIVE, zone,
+						mode, zone,
 						1, file);
 		zone->pages_scanned += pgscanned;
 	} else {
 		nr_taken = mem_cgroup_isolate_pages(nr_pages, &l_hold,
 						&pgscanned, sc->order,
-						ISOLATE_ACTIVE, zone,
+						mode, zone,
 						sc->mem_cgroup, 1, file);
 		/*
 		 * mem_cgroup_isolate_pages() keeps track of
@@ -1769,6 +1785,11 @@ static void get_scan_count(struct zone *zone, struct scan_control *sc,
 	file  = zone_nr_lru_pages(zone, sc, LRU_ACTIVE_FILE) +
 		zone_nr_lru_pages(zone, sc, LRU_INACTIVE_FILE);
 
+	if (NR_LRU_CMA_COUNTS && !(sc->gfp_mask & __GFP_MOVABLE)) {
+		anon -= zone_page_state(zone, LRU_CMA_ANON);
+		file -= zone_page_state(zone, LRU_CMA_FILE);
+	}
+
 	if (((anon + file) >> priority) < SWAP_CLUSTER_MAX) {
 		/* kswapd does zone balancing and need to scan this zone */
 		if (scanning_global_lru(sc) && current_is_kswapd())
@@ -1791,6 +1812,8 @@ static void get_scan_count(struct zone *zone, struct scan_control *sc,
 
 	if (scanning_global_lru(sc)) {
 		free  = zone_page_state(zone, NR_FREE_PAGES);
+		if (!(sc->gfp_mask & __GFP_MOVABLE))
+			free -= zone_page_state(zone, NR_FREE_CMA_PAGES);
 		/* If we have very few page cache pages,
 		   force-scan anon pages. */
 		if (unlikely(file + free <= high_wmark_pages(zone))) {
@@ -1858,6 +1881,9 @@ out:
 		unsigned long scan;
 
 		scan = zone_nr_lru_pages(zone, sc, l);
+		if (!(sc->gfp_mask & __GFP_MOVABLE))
+			scan -= zone_page_state(zone, LRU_CMA_ANON + file);
+
 		if (priority || noswap) {
 			scan >>= priority;
 			scan = div64_u64(scan * fraction[file], denominator);
