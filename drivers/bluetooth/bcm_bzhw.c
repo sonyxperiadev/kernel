@@ -106,6 +106,7 @@ void bcm_bzhw_timer_bt_wake(unsigned long data)
 		pi_mgr_qos_request_update(&priv->qos_node,
 				      PI_MGR_QOS_DEFAULT_VALUE);
 		priv->bzhw_state = BZHW_ASLEEP;
+		del_timer(&sleep_timer_bw);
 #ifdef CONFIG_HAS_WAKELOCK
 	if (wake_lock_active(&priv_g->bzhw_data.bt_wake_lock))
 		wake_unlock(&priv_g->bzhw_data.bt_wake_lock);
@@ -155,6 +156,7 @@ void bcm_bzhw_timer_host_wake(unsigned long data)
 			pi_mgr_qos_request_update(&priv->qos_node,
 				      PI_MGR_QOS_DEFAULT_VALUE);
 			priv->bzhw_state = BZHW_ASLEEP;
+			del_timer(&priv->sleep_timer_hw);
 			#ifdef CONFIG_HAS_WAKELOCK
 			if (wake_lock_active(&priv->bzhw_data.host_wake_lock))
 				wake_unlock(&priv->bzhw_data.host_wake_lock);
@@ -194,6 +196,7 @@ void bcm_bzhw_timer_host_wake(unsigned long data)
 		}
 		pi_mgr_qos_request_update(&priv->qos_node,
 			PI_MGR_QOS_DEFAULT_VALUE);
+		del_timer(&priv->sleep_timer_hw);
 		#ifdef CONFIG_HAS_WAKELOCK
 			if (wake_lock_active(&priv->bzhw_data.host_wake_lock))
 				wake_unlock(&priv->bzhw_data.host_wake_lock);
@@ -426,7 +429,7 @@ static irqreturn_t bcm_bzhw_host_wake_isr(int irq, void *dev)
 		} else {
 			priv->bzhw_state = BZHW_AWAKE_TO_ASLEEP;
 			mod_timer(&priv->sleep_timer_hw,
-				jiffies + 2*TIMER_PERIOD*HZ);
+				jiffies + TIMER_PERIOD*HZ);
 		spin_unlock_irqrestore(&priv->bzhw_lock, flags);
 		}
 	}
@@ -490,20 +493,18 @@ struct bcmbzhw_struct *bcm_bzhw_start(struct tty_struct* tty)
 		   goto exit_lock_host_wake;
 		}
 		priv_g->bzhw_data.host_irq = rc;
+		priv_g->bzhw_state = BZHW_AWAKE;
 		init_timer(&priv_g->sleep_timer_hw);
 		priv_g->sleep_timer_hw.expires =
 				jiffies + 2*TIMER_PERIOD*HZ;
 		priv_g->sleep_timer_hw.data = (unsigned long)priv_g;
 		priv_g->sleep_timer_hw.function = bcm_bzhw_timer_host_wake;
-		add_timer(&priv_g->sleep_timer_hw);
 
 		init_timer(&sleep_timer_bw);
 		sleep_timer_bw.expires =
 			jiffies + 3*TIMER_PERIOD*HZ;
 		sleep_timer_bw.data = (unsigned long)priv_g;
 		sleep_timer_bw.function = bcm_bzhw_timer_bt_wake;
-		add_timer(&sleep_timer_bw);
-
 		pr_debug("%s: BLUETOOTH: request_irq host_irq=%d\n",
 			__func__, priv_g->bzhw_data.host_irq);
 		rc = request_irq(
@@ -537,8 +538,11 @@ void bcm_bzhw_stop(struct bcmbzhw_struct *hw_val)
 		return;
 	pr_debug("%s: BLUETOOTH: hw_val->bzhw_data.host_irq=%d\n",
 		__func__, hw_val->bzhw_data.host_irq);
+	hw_val->bzhw_state = BZHW_ASLEEP;
 	del_timer(&hw_val->sleep_timer_hw);
 	del_timer(&sleep_timer_bw);
+	pi_mgr_qos_request_update(&hw_val->qos_node,
+				    PI_MGR_QOS_DEFAULT_VALUE);
 	if (wake_lock_active(&hw_val->bzhw_data.host_wake_lock))
 		wake_unlock(&hw_val->bzhw_data.host_wake_lock);
 
