@@ -922,7 +922,7 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 	}
 
 	if (!path) {
-		aWarn(
+		aTrace(LOG_AUDIO_CNTLR,
 			"%s mode %d, pathID %d no path",
 			__func__, mode, arg_pathID);
 		return; /*don't know which mixer input */

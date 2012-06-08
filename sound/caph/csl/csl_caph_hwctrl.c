@@ -188,7 +188,7 @@ static Boolean sClkCurEnabled = FALSE;
 static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 static CHAL_HANDLE lp_handle;
 static int en_lpbk_pcm, en_lpbk_i2s;
-static int sec_mic_1st;
+static int rec_pre_call;
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -299,6 +299,7 @@ struct ARM2SP_CONFIG_t {
 	Boolean started;
 	Boolean used;
 	CSL_CAPH_DMA_CHNL_e dma_ch;
+	int dl_proc;
 };
 
 #define ARM2SP_CONFIG_t struct ARM2SP_CONFIG_t
@@ -382,6 +383,12 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 	p_arm2sp->dmaBytes = csl_dsp_arm2sp_get_size(AUDIO_SAMPLING_RATE_8000);
 	p_arm2sp->srOut = path->src_sampleRate;
 	p_arm2sp->chNumOut = path->chnlNum;
+	p_arm2sp->dl_proc = CSL_ARM2SP_DL_BEFORE_AUDIO_PROC;
+	/*AFTER_AUDIO_PROC gives saturation for some music, disable it now*/
+	/*if (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000
+		|| path->src_sampleRate == AUDIO_SAMPLING_RATE_44100)
+		p_arm2sp->dl_proc = CSL_ARM2SP_DL_AFTER_AUDIO_PROC;*/
+
 	if (path->arm2sp_path == LIST_DMA_DMA
 		|| path->arm2sp_path == LIST_SW_DMA) {
 		if (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000) {
@@ -508,7 +515,7 @@ static void csl_caph_start_arm2sp(int i)
 			p_arm2sp->numFramesPerInterrupt,
 			(p_arm2sp->chNumOut == AUDIO_CHANNEL_STEREO) ? 1 : 0,
 			0,
-			CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+			p_arm2sp->dl_proc,
 			CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	} else {
 		CSL_ARM2SP2_Init();
@@ -518,7 +525,7 @@ static void csl_caph_start_arm2sp(int i)
 			p_arm2sp->numFramesPerInterrupt,
 			(p_arm2sp->chNumOut == AUDIO_CHANNEL_STEREO) ? 1 : 0,
 			0,
-			CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+			p_arm2sp->dl_proc,
 			CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	}
 	p_arm2sp->started = TRUE;
@@ -544,7 +551,7 @@ static void csl_caph_release_arm2sp(int i)
 				(p_arm2sp->chNumOut ==
 				 AUDIO_CHANNEL_STEREO) ? 1 : 0,
 				0,
-				CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+				p_arm2sp->dl_proc,
 				CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	else if (i == VORENDER_ARM2SP_INSTANCE2)
 		csl_arm2sp_set_arm2sp2((UInt32) p_arm2sp->srOut,
@@ -555,7 +562,7 @@ static void csl_caph_release_arm2sp(int i)
 				(p_arm2sp->chNumOut ==
 				 AUDIO_CHANNEL_STEREO) ? 1 : 0,
 				0,
-				CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+				p_arm2sp->dl_proc,
 				CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 
 	memset(&arm2spCfg[i], 0, sizeof(arm2spCfg[0]));
@@ -630,10 +637,9 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 		CSL_CAPH_DMA_CHNL_e dma_ch = CSL_CAPH_DMA_CH13;
 
 		/*this is required when internal trigger is used in mic path*/
-		/*in voice record + dualmic call, primary mic is up before
-		  sec mic, do not clear interrupt. In other cases, clear it*/
-		if ((!sec_mic_1st && (enabled_path & DSP_AADMAC_SEC_MIC_EN))
-			|| (enabled_path == DSP_AADMAC_PRI_MIC_EN))
+		/*if primary mic is up before speaker,
+		  do not clear interrupt. In other cases, clear it*/
+		if (rec_pre_call || (enabled_path == DSP_AADMAC_PRI_MIC_EN))
 			;
 		else
 			csl_caph_dma_clear_intr(dma_ch, CSL_CAPH_DSP);
@@ -1184,9 +1190,6 @@ static void csl_caph_obtain_blocks
 				"caph dsp sec buf@ %p\r\n", path->pBuf);
 #endif
 		} else {
-			sec_mic_1st = 0;
-			if (csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CH14))
-				sec_mic_1st = 1;
 			dmaCH = CSL_CAPH_DMA_CH13;
 #if defined(ENABLE_DMA_VOICE)
 			path->pBuf =
@@ -1211,6 +1214,12 @@ static void csl_caph_obtain_blocks
 		path->dmaCB = AUDIO_DMA_CB2;
 		dmaCH = CSL_CAPH_DMA_NONE;
 #endif
+		}
+
+		if (dmaCH == CSL_CAPH_DMA_CH12) {
+			rec_pre_call = 0;
+			if (csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CH13))
+				rec_pre_call = 1;
 		}
 
 		blockIdx = 0;
