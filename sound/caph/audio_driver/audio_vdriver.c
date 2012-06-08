@@ -330,7 +330,9 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 		Send VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
 	////////////////////////////////////////////////////////////////-*/
 
-	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Telephony_Init\n");
+	aTrace(LOG_AUDIO_DRIVER,
+		"AUDDRV_Telephony_Init app %d, mode %d, bNeedDualMic %d\n",
+		app, mode, bNeedDualMic);
 	csl_caph_ControlHWClock(TRUE); /*enable clock before any DSP command*/
 
 	currVoiceMic = mic;
