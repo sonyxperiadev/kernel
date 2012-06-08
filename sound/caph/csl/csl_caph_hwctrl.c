@@ -33,7 +33,6 @@
  *
  ****************************************************************************/
 #include <linux/io.h>
-#include <linux/regulator/consumer.h>
 #include "resultcode.h"
 #include "mobcom_types.h"
 #include "msconsts.h"
@@ -145,7 +144,6 @@ enum CAPH_CLK_ID {
 	CLK_156M, /* KHUB_AUDIOH_156M_CLK */
 };
 
-static struct regulator *ldo;
 /* static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM] = {NULL,NULL}; */
 
 /****************************************************************************
@@ -2574,18 +2572,6 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 void csl_caph_ControlHWClock(Boolean enable)
 {
 	if (enable == TRUE) {
-		/* Turn on 2v9_AUD LDO */
-		if (!ldo) {
-			ldo = regulator_get(NULL, "hv1");
-			if (IS_ERR_OR_NULL(ldo)) {
-				aError("%s: Can not get 2v9_aud LDO\n",
-						__func__);
-			}
-			if (regulator_enable(ldo)) {
-				aError("%s: Can not enable 2v9_aud LDO\n",
-						__func__);
-			}
-		}
 		if (sClkCurEnabled == FALSE) {
 			sClkCurEnabled = TRUE;
 
@@ -2648,13 +2634,7 @@ void csl_caph_ControlHWClock(Boolean enable)
 
 		for (count = 0; count <  MAX_CAPH_CLOCK_NUM; count++)
 			clkIDCAPH[count] = NULL;
-		if (ldo) {
-			if (regulator_disable(ldo))
-				aError("%s: Can not disable micbias LDO\n",
-						__func__);
-			regulator_put(ldo);
-			ldo = NULL;
-		}
+
 		enable156MClk = FALSE;
 		enable2P4MClk = FALSE;
 	}

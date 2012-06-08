@@ -161,7 +161,6 @@ static struct regulator_init_data bcm59042_camldo_data = {
 
 __weak struct regulator_consumer_supply hv1_supply[] = {
 	{.supply = "hv1"},
-	{.supply = "micbias"},
 };
 static struct regulator_init_data bcm59042_hv1ldo_data = {
 	.constraints = {
@@ -171,7 +170,7 @@ static struct regulator_init_data bcm59042_hv1ldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 0,
+			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv1_supply),
 	.consumer_supplies = hv1_supply,
@@ -501,8 +500,7 @@ struct bcmpmu_regulator_init_data bcm59042_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_CAMLDO, &bcm59042_camldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV1LDO] =	{
-		BCMPMU_REGULATOR_HV1LDO, &bcm59042_hv1ldo_data, 0xAA,
-		BCMPMU_REGL_LPM_IN_DSM
+		BCMPMU_REGULATOR_HV1LDO, &bcm59042_hv1ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV2LDO] =	{
 		BCMPMU_REGULATOR_HV2LDO, &bcm59042_hv2ldo_data, 0x11, 0
