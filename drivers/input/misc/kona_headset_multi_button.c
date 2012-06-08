@@ -155,6 +155,7 @@ struct mic_t {
 	int hs_state;
 	int button_state;
 	int button_pressed;
+	int low_voltage_mode;
 	/*
 	 * 1 - mic bias is ON
 	 * 0 - mic bias is OFF
@@ -219,7 +220,7 @@ enum button_state {
  */
 static unsigned int button_adc_values_no_resistor[3][2] = {
 	/* SEND/END Min, Max */
-	{0, 50},
+	{0, 104},
 	/* Volume Up  Min, Max */
 	{139, 270},
 	/* Volue Down Min, Max */
@@ -281,8 +282,8 @@ static CHAL_ACI_micbias_config_t aci_mic_bias = {
 static CHAL_ACI_micbias_config_t aci_init_mic_bias = {
 	CHAL_ACI_MIC_BIAS_ON,
 	CHAL_ACI_MIC_BIAS_2_1V,
-	CHAL_ACI_MIC_BIAS_PRB_CYC_128MS,
-	CHAL_ACI_MIC_BIAS_MSR_DLY_8MS,
+	CHAL_ACI_MIC_BIAS_PRB_CYC_512MS,
+	CHAL_ACI_MIC_BIAS_MSR_DLY_16MS,
 	CHAL_ACI_MIC_BIAS_MSR_INTVL_64MS,
 	CHAL_ACI_MIC_BIAS_1_MEASUREMENT
 };
@@ -465,11 +466,16 @@ static int config_adc_for_bp_detection(void)
 	pr_debug("Configuring ADC for button press detection \r\n");
 
 	/* Setup MIC bias */
-	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+	if (mic_dev->low_voltage_mode) {
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
 			    CHAL_ACI_BLOCK_GENERIC, &aci_init_mic_bias_low);
-			__low_power_mode_config();
-
+		__low_power_mode_config();
+	} else {
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
+			    CHAL_ACI_BLOCK_GENERIC, &aci_init_mic_bias);
+	}
 	/* Power up Digital block */
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_ENABLE,
 			    CHAL_ACI_BLOCK_DIGITAL);
@@ -935,7 +941,6 @@ static void no_gpio_accessory_insert_work_func(struct work_struct *work)
 #else
 		aci_init_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
 #endif
-		aci_init_mic_bias.voltage = CHAL_ACI_MIC_BIAS_0_45V;
 
 		chal_aci_block_ctrl(p->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
@@ -1479,9 +1484,14 @@ static int __headset_hw_init_micbias_off(struct mic_t *p)
 	 * the available multi-button headset.This should take care of
 	 * most multi-button headsets.But this is in no way a universal
 	 * value for  all singe/multi-button headsets */
-	chal_aci_block_ctrl(p->aci_chal_hdl,
+	if (p->low_voltage_mode)
+		chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
 			    CHAL_ACI_BLOCK_COMP1, 80);
+	else
+		chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+			    CHAL_ACI_BLOCK_COMP1, 600);
 
 	/* Set the threshold value for button press */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -1819,9 +1829,14 @@ static int __headset_hw_init(struct mic_t *p)
 	 * OK.Note that this would trigger continus COMP1 Interrupts if enabled.
 	 * But since we don't enable COMP1 until we identify a Headset its OK.
 	 */
-	chal_aci_block_ctrl(p->aci_chal_hdl,
+	if (p->low_voltage_mode)
+		chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
 			    CHAL_ACI_BLOCK_COMP1, 80);
+	else
+		chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+			    CHAL_ACI_BLOCK_COMP1, 600);
 
 	pr_debug
 	    ("=== __headset_hw_init:"
@@ -1955,6 +1970,11 @@ static int headset_hw_init(struct mic_t *mic)
 
 int switch_bias_voltage(int mic_status)
 {
+	/* Force high bias for platforms not
+	 * supporting 0.45V mode
+	 */
+	if (!mic_dev->low_voltage_mode)
+		mic_status = 1;
 
 	switch (mic_status) {
 	case 1:
@@ -2121,16 +2141,22 @@ static int __init hs_probe(struct platform_device *pdev)
 	pr_info("%s() GPIO used for accessory insertion %d (1 - yes, 0 - no)",
 		__func__, mic->headset_pd->gpio_for_accessory_detection);
 
-	if (mic->headset_pd->button_adc_values_low == NULL) {
-
-		mic->headset_pd->button_adc_values_low =
-		    button_adc_values_no_resistor;
+	if (mic->headset_pd->button_adc_values_low != NULL) {
+		button_adc_values =
+				mic->headset_pd->button_adc_values_low;
+		mic_dev->low_voltage_mode = true;
+	} else if (mic->headset_pd->button_adc_values_high != NULL) {
+		button_adc_values =
+				mic->headset_pd->button_adc_values_high;
+		mic_dev->low_voltage_mode = false;
+	} else {
 		pr_info("%s(): WARNING Board specific button adc values are not passed"
 		"using the default one, this may not work correctly for your"
 		"platform \r\n",
 			__func__);
+		button_adc_values =
+				button_adc_values_no_resistor;
 	}
-	button_adc_values = mic->headset_pd->button_adc_values_low;
 	/* COMP2 irq */
 	mic->comp2_irq = platform_get_irq(pdev, irq_resource_num);
 	if (!mic->comp2_irq) {

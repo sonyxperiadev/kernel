@@ -825,7 +825,7 @@ static struct kona_headset_pd headset_data = {
 	/*
 	 * Pass the board specific button detection range 
 	 */
-	.button_adc_values = rheass_button_adc_values,
+	.button_adc_values_high = rheass_button_adc_values,
 
 	/* ldo for MICBIAS */
 	.ldo_id = "micbias",
