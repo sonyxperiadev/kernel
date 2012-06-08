@@ -906,6 +906,12 @@ config SOC_CAMERA_OV5640
 	help
 	  This is a ov5640 camera driver
 
+config SOC_CAMERA_OV7692
+	tristate "ov7692 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a ov7692 camera driver
+
 config SOC_CAMERA_OV6650
 	tristate "ov6650 sensor support"
 	depends on SOC_CAMERA && I2C
