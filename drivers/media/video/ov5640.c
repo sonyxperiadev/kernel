@@ -71,11 +71,9 @@ static const struct ov5640_datafmt ov5640_fmts[] = {
 enum ov5640_size {
 	OV5640_SIZE_QVGA,	/*  320 x 240 */
 	OV5640_SIZE_VGA,	/*  640 x 480 */
-	OV5640_SIZE_XGA,	/*  1024 x 768  */
 	OV5640_SIZE_720P,
 	OV5640_SIZE_1280x960,	/*  1280 x 960 (1.2M) */
 	OV5640_SIZE_UXGA,	/*  1600 x 1200 (2M) */
-	OV5640_SIZE_1080P,
 	OV5640_SIZE_QXGA,	/*  2048 x 1536 (3M) */
 	OV5640_SIZE_5MP,
 	OV5640_SIZE_LAST,
@@ -85,11 +83,9 @@ enum ov5640_size {
 static const struct v4l2_frmsize_discrete ov5640_frmsizes[OV5640_SIZE_LAST] = {
 	{320, 240},
 	{640, 480},
-	{1024, 768},
 	{1280, 720},
 	{1280, 960},
 	{1600, 1200},
-	{1920, 1080},
 	{2048, 1536},
 	{2560, 1920},
 };
@@ -98,11 +94,9 @@ static const struct v4l2_frmsize_discrete ov5640_frmsizes[OV5640_SIZE_LAST] = {
 static const struct ov5640_af_zone_scale af_zone_scale[OV5640_SIZE_LAST] = {
 	{4, 4},
 	{8, 8},
-	{12, 12},
 	{16, 12},
 	{16, 16},
 	{20, 20},
-	{24, 18},
 	{26, 26},
 	{32, 32},
 };
@@ -223,30 +217,6 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			       },
-	[OV5640_SIZE_XGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 1024,
-			      .v_output_size = 768,
-			/*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
-			      .isp_h_offset = 8,
-			      .isp_v_offset = 6,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2200,
-			      .v_total_size = 1280,
-			/*  Sensor Read Binning Enabled */
-			      .h_odd_ss_inc = 3,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 3,
-			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x07,
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x11,
-			       },
 	[OV5640_SIZE_720P] = {
 			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
@@ -319,30 +289,6 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sclk_dividers = 0x02,
 			      .sys_mipi_clk = 0x12,
 			      },
-	[OV5640_SIZE_1080P] = {
-			/*  Timing control  2624 x 1952 --> 1952 x 1088 */
-			      .x_addr_start = 336,
-			      .y_addr_start = 434,
-			      .x_addr_end = 2287,
-			      .y_addr_end = 1521,
-			/*  Output image size */
-			      .h_output_size = 1920,
-			      .v_output_size = 1080,
-			/*  ISP Windowing size  1952 x 1088 --> 1920 x 1080 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 4,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2500,
-			      .v_total_size = 1120,
-			/*  Sensor Read Binning Disabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x06,
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x11,
-			       },
 	[OV5640_SIZE_QXGA] = {
 			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
@@ -442,30 +388,6 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x12,
 			       },
-	[OV5640_SIZE_XGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 1024,
-			      .v_output_size = 768,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2844,
-			      .v_total_size = 1968,
-			/*  Sensor Read Binning Disabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x12,
-			       },
 	[OV5640_SIZE_720P] = {
 			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
@@ -523,30 +445,6 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			/*  Output image size */
 			      .h_output_size = 1600,
 			      .v_output_size = 1200,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2844,
-			      .v_total_size = 1968,
-			/*  Sensor Read Binning Disabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x12,
-			       },
-	[OV5640_SIZE_1080P] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 1920,
-			      .v_output_size = 1080,
 			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
 			      .isp_h_offset = 16,
 			      .isp_v_offset = 12,
@@ -792,7 +690,9 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Framerate control",
 	 .minimum = FRAME_RATE_AUTO,
-	 .maximum = FRAME_RATE_30,
+	 .maximum = (1 << FRAME_RATE_AUTO | 1 << FRAME_RATE_5 |
+			 1 << FRAME_RATE_10 | 1 << FRAME_RATE_15 |
+			 1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),
 	 .step = 1,
 	 .default_value = FRAME_RATE_AUTO,
 	 },
@@ -2407,14 +2307,12 @@ static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.denominator = 15;
 		break;
 	case OV5640_SIZE_QXGA:
-	case OV5640_SIZE_1080P:
 	case OV5640_SIZE_UXGA:
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 15;
 		break;
 	case OV5640_SIZE_1280x960:
 	case OV5640_SIZE_720P:
-	case OV5640_SIZE_XGA:
 	case OV5640_SIZE_VGA:
 	case OV5640_SIZE_QVGA:
 	default:
@@ -2452,14 +2350,12 @@ static int ov5640_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 		cparm->timeperframe.denominator = 15;
 		break;
 	case OV5640_SIZE_QXGA:
-	case OV5640_SIZE_1080P:
 	case OV5640_SIZE_UXGA:
 		cparm->timeperframe.numerator = 1;
 		cparm->timeperframe.denominator = 15;
 		break;
 	case OV5640_SIZE_1280x960:
 	case OV5640_SIZE_720P:
-	case OV5640_SIZE_XGA:
 	case OV5640_SIZE_VGA:
 	case OV5640_SIZE_QVGA:
 	default:
@@ -2524,6 +2420,23 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 		parms->parms.serial.hs_term_time = 0x01;
 	else
 		parms->parms.serial.hs_term_time = 0x08;
+
+	switch (ov5640->framerate) {
+	case FRAME_RATE_5:
+		parms->parms.serial.hs_settle_time = 9;
+		break;
+	case FRAME_RATE_7:
+		parms->parms.serial.hs_settle_time = 6;
+		break;
+	case FRAME_RATE_10:
+	case FRAME_RATE_15:
+	case FRAME_RATE_25:
+	case FRAME_RATE_30:
+	case FRAME_RATE_AUTO:
+	default:
+		parms->parms.serial.hs_settle_time = 2;
+		break;
+	}
 
 	return 0;
 }
