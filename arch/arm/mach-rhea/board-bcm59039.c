@@ -901,6 +901,11 @@ static void notify_spa(enum bcmpmu_event_t event, int data)
 		spa_event_handler(SPA_EVT_EOC, 0);
 		*/
 		break;
+	case BCMPMU_CHRGR_EVENT_CAPACITY:
+		/* notify SPA driver
+		spa_event_handler(SPA_EVT_CAPACITY, (void *)data);
+		*/
+		break;
 	default:
 		break;
 	}

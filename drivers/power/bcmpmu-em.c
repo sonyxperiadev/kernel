@@ -1234,6 +1234,7 @@ static void update_power_supply(struct bcmpmu_em *pem, int capacity)
 	int psy_changed = 0;
 
 	if (pem->piggyback_chrg) {
+		pem->pb_notify(BCMPMU_CHRGR_EVENT_CAPACITY, capacity);
 		if ((is_charger_present(pem)) &&
 			(!pem->support_hw_eoc) &&
 			(capacity == 100) &&
