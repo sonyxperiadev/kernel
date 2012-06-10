@@ -7605,6 +7605,7 @@ static int wl_construct_reginfo(struct wl_priv *wl, s32 bw_cap)
 s32 wl_update_wiphybands(struct wl_priv *wl)
 {
 	struct wiphy *wiphy;
+	struct net_device *dev;
 	u32 bandlist[3];
 	u32 nband = 0;
 	u32 i = 0;
@@ -7614,26 +7615,25 @@ s32 wl_update_wiphybands(struct wl_priv *wl)
 	int index = 0;
 
 	WL_DBG(("Entry"));
+
+	if (wl == NULL)
+		wl = wlcfg_drv_priv;
+	dev = wl_to_prmry_ndev(wl);
+
 	memset(bandlist, 0, sizeof(bandlist));
-	err = wldev_ioctl(wl_to_prmry_ndev(wl), WLC_GET_BANDLIST, bandlist,
+	err = wldev_ioctl(dev, WLC_GET_BANDLIST, bandlist,
 			  sizeof(bandlist), false);
 	if (unlikely(err)) {
 		WL_ERR(("error read bandlist (%d)\n", err));
 		return err;
 	}
-	wiphy = wl_to_wiphy(wl);
-	nband = bandlist[0];
-	wiphy->bands[IEEE80211_BAND_2GHZ] = &__wl_band_2ghz;
-	wiphy->bands[IEEE80211_BAND_5GHZ] = NULL;
 
-	err = wldev_iovar_getint(wl_to_prmry_ndev(wl), "nmode", &nmode);
+	err = wldev_iovar_getint(dev, "nmode", &nmode);
 	if (unlikely(err)) {
 		WL_ERR(("error reading nmode (%d)\n", err));
 	} else {
 		/* For nmodeonly  check bw cap */
-		err =
-		    wldev_iovar_getint(wl_to_prmry_ndev(wl), "mimo_bw_cap",
-				       &bw_cap);
+		err = wldev_iovar_getint(dev, "mimo_bw_cap", &bw_cap);
 		if (unlikely(err)) {
 			WL_ERR(("error get mimo_bw_cap (%d)\n", err));
 		}
@@ -7644,7 +7644,10 @@ s32 wl_update_wiphybands(struct wl_priv *wl)
 		WL_ERR(("wl_construct_reginfo() fails err=%d\n", err));
 		return err;
 	}
-
+	wiphy = wl_to_wiphy(wl);
+	nband = bandlist[0];
+	wiphy->bands[IEEE80211_BAND_2GHZ] = NULL;
+	wiphy->bands[IEEE80211_BAND_5GHZ] = NULL;
 	for (i = 1; i <= nband && i < sizeof(bandlist) / sizeof(u32); i++) {
 		index = -1;
 		if (bandlist[i] == WLC_BAND_5G) {
@@ -7664,8 +7667,8 @@ s32 wl_update_wiphybands(struct wl_priv *wl)
 
 		if ((index >= 0) && nmode) {
 			wiphy->bands[index]->ht_cap.cap |=
-			    IEEE80211_HT_CAP_SGI_20 | IEEE80211_HT_CAP_DSSSCCK40
-			    | IEEE80211_HT_CAP_MAX_AMSDU;
+			    IEEE80211_HT_CAP_SGI_20 |
+			    IEEE80211_HT_CAP_DSSSCCK40;
 			wiphy->bands[index]->ht_cap.ht_supported = TRUE;
 			wiphy->bands[index]->ht_cap.ampdu_factor =
 			    IEEE80211_HT_MAX_AMPDU_64K;
