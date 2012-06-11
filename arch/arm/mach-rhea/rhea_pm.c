@@ -41,6 +41,13 @@
 static int keep_xtl_on;
 module_param_named(keep_xtl_on, keep_xtl_on, int, S_IRUGO|S_IWUSR|S_IWGRP);
 
+/**
+ * Run time flag to debug the Rhea clocks preventing deepsleep
+ */
+static int clk_dbg_dsm;
+module_param_named(clk_dbg_dsm, clk_dbg_dsm, int, S_IRUGO|S_IWUSR|S_IWGRP);
+
+
 /* Rhea PM log values */
 enum {
 
@@ -402,6 +409,7 @@ int rhea_force_sleep(suspend_state_t state)
 int enter_idle_state(struct kona_idle_state *state)
 {
 	struct pi* pi = NULL;
+
 #if defined(CONFIG_RHEA_WA_HWJIRA_2301) || defined(CONFIG_RHEA_WA_HWJIRA_2877)
 	u32 lpddr2_temp_period = 0;
 #endif
@@ -461,6 +469,9 @@ int enter_idle_state(struct kona_idle_state *state)
 				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2221*/
+	if (clk_dbg_dsm)
+		if (state->flags & CPUIDLE_ENTER_SUSPEND)
+			rhea_clock_print_act_clks();
 
 	switch (state->state) {
 	case RHEA_STATE_C1:

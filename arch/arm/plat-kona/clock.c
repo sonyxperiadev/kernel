@@ -1950,6 +1950,51 @@ int ccu_get_dbg_bus_sel(struct ccu_clk *ccu_clk)
 }
 EXPORT_SYMBOL(ccu_get_dbg_bus_sel);
 
+int ccu_print_sleep_prevent_clks(struct clk *clk)
+{
+	struct ccu_clk *ccu_clk;
+	struct clk *clk_iter;
+	int use_cnt;
+	int sleep_prevent = 0;
+
+	if (!clk || (clk->clk_type != CLK_TYPE_CCU))
+		return -EINVAL;
+	ccu_clk = to_ccu_clk(clk);
+	list_for_each_entry(clk_iter, &ccu_clk->clk_list, list) {
+		use_cnt = clk_get_usage(clk_iter);
+		switch (clk_iter->clk_type) {
+		case CLK_TYPE_REF:
+			/**
+			 * ignore reference clks as they dont prevent
+			 * retention
+			 */
+			sleep_prevent = 0;
+			break;
+		case CLK_TYPE_PLL:
+		case CLK_TYPE_PLL_CHNL:
+		case CLK_TYPE_CORE:
+			if (use_cnt && !CLK_FLG_ENABLED(clk_iter, AUTO_GATE))
+				sleep_prevent = 1;
+			break;
+		case CLK_TYPE_BUS:
+			sleep_prevent = (CLK_FLG_ENABLED(clk_iter,
+					NOTIFY_STATUS_TO_CCU) &&
+				!CLK_FLG_ENABLED(clk_iter, AUTO_GATE));
+			break;
+		case CLK_TYPE_PERI:
+			sleep_prevent = !CLK_FLG_ENABLED(clk_iter,
+					DONOT_NOTIFY_STATUS_TO_CCU);
+			break;
+		default:
+			break;
+		}
+		if (use_cnt && sleep_prevent)
+			pr_info("%20s %10d", clk_iter->name, clk_iter->use_cnt);
+	}
+	return 0;
+}
+EXPORT_SYMBOL(ccu_print_sleep_prevent_clks);
+
 /*CCU access functions */
 static int ccu_clk_write_access_enable(struct ccu_clk *ccu_clk, int enable)
 {
