@@ -41,7 +41,7 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_PONKEYCTRL2] =		{.map = 0x00, .addr = 0x0D, .mask = 0xFF, .ro = 0},
 	[PMU_REG_PONKEYCTRL3] =		{.map = 0x00, .addr = 0x0E, .mask = 0xFF, .ro = 0},
 	/* PONKEY Shutdown/Hard Reset/Restart Registers */
-	[PMU_REG_HOSTCTRL1] = {.map = 0x00, .addr = 0x01, .mask = 0xFF,
+	[PMU_REG_SW_SHDWN] = {.map = 0x00, .addr = 0x01, .mask = 0x04,
 		.ro = 0},
 	[PMU_REG_KEY_PAD_LOCK] =	{.map = 0x00, .addr = 0x0C,
 		.mask = 0x80, .ro = 0, .shift = 7},
