@@ -1955,10 +1955,16 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 		else {
 			if (mixInCh != CSL_CAPH_SRCM_INCHNL_NONE) {
 				/*set CAPH gain, Q13p2 dB */
+				if (source == AUDIO_SOURCE_I2S) {
+					mixInGain = users_gain[AUDPATH_FM].L;
+					mixInGainR = users_gain[AUDPATH_FM].R;
+				} else {
 				mixInGain = (short)p->srcmixer_input_gain_l;
 				mixInGain = mixInGain * 25; /* into mB */
 				mixInGainR = (short)p->srcmixer_input_gain_r;
 				mixInGainR = mixInGainR * 25; /* into mB */
+				}
+
 				csl_srcmixer_setMixInGain(mixInCh, mixer,
 					mixInGain, mixInGainR);
 				if (source != AUDIO_SOURCE_I2S)
