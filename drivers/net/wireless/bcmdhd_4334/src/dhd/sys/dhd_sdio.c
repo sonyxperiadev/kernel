@@ -125,6 +125,9 @@
 #define PMU_MAX_TRANSITION_DLY 1000000
 #endif
 
+
+
+
 /* Value for ChipClockCSR during initial setup */
 #define DHD_INIT_CLKCTL1	(SBSDIO_FORCE_HW_CLKREQ_OFF | SBSDIO_ALP_AVAIL_REQ)
 #define DHD_INIT_CLKCTL2	(SBSDIO_FORCE_HW_CLKREQ_OFF | SBSDIO_FORCE_ALP)
@@ -503,6 +506,13 @@ do { \
 #define HOSTINTMASK		(I_HMB_SW_MASK | I_CHIPACTIVE)
 
 #define GSPI_PR55150_BAILOUT
+
+
+
+void Set_XTAL_PM_Delay(void);
+bcmsdh_info_t *bus_ptr;
+
+
 
 #ifdef SDTEST
 static void dhdsdio_testrcv(dhd_bus_t *bus, void *pkt, uint seq);
@@ -5966,6 +5976,8 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	struct ether_addr ea_addr;
 #endif /* GET_CUSTOM_MAC_ENABLE */
 
+	DHD_ERROR(("%s : ENTRY\n", __FUNCTION__));
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25))
 
 	if (mutex_is_locked(&_dhd_sdio_mutex_lock_) == 0) {
@@ -6069,7 +6081,9 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	bus->bus = DHD_BUS;
 	bus->tx_seq = SDPCM_SEQUENCE_WRAP - 1;
 	bus->usebufpool = FALSE; /* Use bufpool if allocated, else use locally malloced rxbuf */
-
+	
+	DHD_ERROR(("%s : INITIAIIZE LOCAL PTR FOR BUS \n", __FUNCTION__));
+	bus_ptr=(bcmsdh_info_t*)bus->sdh;
 	/* attach the common module */
 	dhd_common_init(osh);
 
@@ -6136,9 +6150,12 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	}
 
 #ifdef XTAL_PU_TIME_MOD
+	DHD_ERROR(("%s: SET_XTAL_TIME!!\n", __FUNCTION__));
+
 	bcmsdh_reg_write(bus->sdh, 0x18000620, 2, 11);
-	bcmsdh_reg_write(bus->sdh, 0x18000628, 4, 0x00A60001);
-//	bcmsdh_reg_write(bus->sdh, 0x18000628, 2, 0x0000A601);
+	bcmsdh_reg_write(bus->sdh, 0x18000628, 4, 0x00F80001);
+	DHD_ERROR(("%s: DONE SET_XTAL_TIME!!\n", __FUNCTION__));
+
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25))
@@ -7015,6 +7032,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 	dhd_bus_t *bus;
 
 	bus = dhdp->bus;
+	printk(KERN_ERR "%s ENTRY\n",__FUNCTION__);
 
 	if (flag == TRUE) {
 		if (!bus->dhd->dongle_reset) {
@@ -7083,6 +7101,13 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 						dhd_os_wd_timer(dhdp, dhd_watchdog_ms);
 
 						DHD_TRACE(("%s: WLAN ON DONE\n", __FUNCTION__));
+#ifdef XTAL_PU_TIME_MOD
+						printk(KERN_ERR "%s Set XTAL_TIMEOUT AFTER RELOED\n",__FUNCTION__);
+							bcmsdh_reg_write(bus->sdh, 0x18000620, 2, 11);
+							bcmsdh_reg_write(bus->sdh, 0x18000628, 4, 0x00F80001);
+							printk(KERN_ERR "%s DONE XTAL_TIMEOUT AFTER RELOEAD\n",__FUNCTION__);
+					
+#endif							
 					} else {
 						dhd_bus_stop(bus, FALSE);
 						dhdsdio_release_dongle(bus, bus->dhd->osh,
@@ -7105,6 +7130,20 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 			if ((bcmerror = dhd_bus_start(dhdp)) != 0)
 				DHD_ERROR(("%s: dhd_bus_start fail with %d\n",
 					__FUNCTION__, bcmerror));
+						else
+							{
+#ifdef XTAL_PU_TIME_MOD
+							msleep(1000);
+						printk(KERN_ERR "%s Set XTAL_TIMEOUT\n",__FUNCTION__);
+							bcmsdh_reg_write(bus->sdh, 0x18000620, 2, 11);
+							bcmsdh_reg_write(bus->sdh, 0x18000628, 4, 0x00F80001);
+							printk(KERN_ERR "%s DONE XTAL_TIMEOUT\n",__FUNCTION__);
+					
+#endif				
+								printk(KERN_ERR "%s DONE dhd_bus_start_done\n",__FUNCTION__);
+							}
+
+			
 		}
 	}
 	return bcmerror;
@@ -7118,3 +7157,17 @@ dhd_bus_membytes(dhd_pub_t *dhdp, bool set, uint32 address, uint8 *data, uint si
 	bus = dhdp->bus;
 	return dhdsdio_membytes(bus, set, address, data, size);
 }
+
+void Set_XTAL_PM_Delay()
+{
+
+							printk(KERN_ERR "%s Set XTAL_TIMEOUT IN DUMMY FUNCTION\n",__FUNCTION__);
+								bcmsdh_reg_write(bus_ptr, 0x18000620, 2, 11);
+								bcmsdh_reg_write(bus_ptr, 0x18000628, 4, 0x00F80001);
+								printk(KERN_ERR "%s DONE Set XTAL_TIMEOUT IN DUMMY FUNCTION\n",__FUNCTION__);
+
+						
+
+}
+EXPORT_SYMBOL(Set_XTAL_PM_Delay);
+

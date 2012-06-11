@@ -126,6 +126,10 @@ static int qos_wlan = -1;
 
 #include <wl_android.h>
 
+extern void Set_XTAL_PM_Delay(void);
+
+
+
 #ifdef ARP_OFFLOAD_SUPPORT
 void aoe_update_host_ipv4_table(dhd_pub_t *dhd_pub, u32 ipa, bool add);
 static int dhd_device_event(struct notifier_block *this,
@@ -3824,6 +3828,16 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	}
 
 done:
+#ifdef XTAL_PU_TIME_MOD
+		printk("%s:***** CALL SET_PMY_DELAY\n", __FUNCTION__);
+
+
+
+		Set_XTAL_PM_Delay();
+
+		printk("%s:***** CALL DONE SET_PMY_DELAY\n", __FUNCTION__);
+
+#endif		
 	return ret;
 }
 
