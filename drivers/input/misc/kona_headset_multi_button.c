@@ -841,7 +841,8 @@ static void accessory_detect_work_func(struct work_struct *work)
 			__headset_hw_init_micbias_off(p);
 	} else {
 		/* Turn Off, MIC BIAS */
-		__headset_hw_init_micbias_off(p);
+		if ((p->hs_state == OPEN_CABLE) || (p->hs_state == HEADSET))
+			__headset_hw_init_micbias_off(p);
 
 		__handle_accessory_removed(p);
 
