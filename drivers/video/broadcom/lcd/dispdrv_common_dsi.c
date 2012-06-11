@@ -962,6 +962,7 @@ Int32 LCD_DISPDRV_Update(DISPDRV_HANDLE_T drvH,
 	LCD_DISPDRV_PANEL_t	*pPanel	= (LCD_DISPDRV_PANEL_t *)drvH;
 	CSL_LCD_UPD_REQ_T req;
 	Int32 res  = 0;
+	uint32_t offset;
 	Boolean use_te;
 
 	LCD_DBG(LCD_DBG_ID, "[DISPDRV]	+%s\r\n", __FUNCTION__);
@@ -980,9 +981,13 @@ Int32 LCD_DISPDRV_Update(DISPDRV_HANDLE_T drvH,
 
 	LCD_DISPDRV_WinSet(drvH, TRUE, p_win);
 
-	req.buff = buff;
+	offset = (uint32_t)buff;
+	offset += (p_win->t * pPanel->disp_info->width + p_win->l)
+			* pPanel->disp_info->Bpp;
+	req.buff = (uint32_t *)offset;
 	req.lineLenP = p_win->w;
 	req.lineCount = p_win->h;
+	req.xStrideB = pPanel->disp_info->width - p_win->w;
 	req.buffBpp = pPanel->disp_info->Bpp;
 	req.timeOut_ms = 100;
 
@@ -1004,6 +1009,7 @@ Int32 LCD_DISPDRV_Update(DISPDRV_HANDLE_T drvH,
 		LCD_DBG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR ret by "
 			"CSL_DSI_UpdateCmVc\n\r", __FUNCTION__);
 		res = -1;
+		LCD_DISPDRV_Cb(res, &req.cslLcdCbRec);
 	}
 
 	LCD_DBG(LCD_DBG_ID, "[DISPDRV]	-%s\r\n", __FUNCTION__);
