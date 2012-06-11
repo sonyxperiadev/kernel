@@ -252,7 +252,7 @@ bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t(void *xdrs,
 Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
 {
 	Result_t result = RESULT_OK;
-	switch (pReqMsg->msgId) {
+	switch ((unsigned)pReqMsg->msgId) {
 
 #if defined(FUSE_APPS_PROCESSOR)
 	case MSG_PMU_IS_SIM_READY_REQ:
@@ -347,7 +347,7 @@ Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
 void SYS_GenGetPayloadInfo(void *dataBuf, MsgType_t msgType, void **ppBuf,
 			   UInt32 *len)
 {
-	switch (msgType) {
+	switch ((unsigned)msgType) {
 	case MSG_CPPS_CONTROL_RSP:
 		{
 			CAPI2_CPPS_Control_Rsp_t *pVal =
