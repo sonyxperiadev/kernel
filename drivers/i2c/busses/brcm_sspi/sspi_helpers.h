@@ -1,17 +1,16 @@
 /****************************************************************************
 *
-*     Copyright (c) 2009 Broadcom Corporation
-*           All Rights Reserved
+*	Copyright (c) 2009-2012 Broadcom Corporation
 *
-*     No portions of this material may be reproduced in any form without the
-*     written permission of:
+*   Unless you and Broadcom execute a separate written software license
+*   agreement governing use of this software, this software is licensed to you
+*   under the terms of the GNU General Public License version 2, available
+*   at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-*           Broadcom Corporation
-*           5300 California Ave
-*           Irvine, California 92617
-*
-*     All information contained in this document is Broadcom Corporation
-*     company private, proprietary, and trade secret.
+*   Notwithstanding the above, under no circumstances may you combine this
+*   software in any way with any other Broadcom software provided under a
+*   license other than the GPL, without Broadcom's express prior written
+*   consent.
 *
 ****************************************************************************/
 #ifndef _SSPI_HELPERS_H_
