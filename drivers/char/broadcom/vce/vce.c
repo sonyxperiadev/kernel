@@ -46,7 +46,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10132
+#define DRIVER_VERSION 10133
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -844,6 +844,9 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case VTQ_IOCTL_MULTIPURPOSE_LOCK:
 			trace_ioctl_entry(VTQ_IOCTL_MULTIPURPOSE_LOCK);
 			break;
+		case VTQ_IOCTL_REGISTER_IMAGE_BLOB:
+			trace_ioctl_entry(VTQ_IOCTL_REGISTER_IMAGE_BLOB);
+			break;
 		case VTQ_IMAGECONV_IOCTL_READY:
 			trace_ioctl_entry(VTQ_IMAGECONV_IOCTL_READY);
 			break;
@@ -968,6 +971,43 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			/* we squirrel this away so we don't leak
 			 * memory at driver unload time */
 			vce_state.vtq_firmware = fw;
+		}
+		break;
+
+	case VTQ_IOCTL_REGISTER_IMAGE_BLOB:
+		{
+			struct vtq_registerimage_blob_ioctldata *d;
+			uint32_t *scratch; /* TODO: fix this! */
+			unsigned int c;
+
+			d = (struct vtq_registerimage_blob_ioctldata *)arg;
+			if (d->blobid != VTQ_BLOB_ID_IMAGECONV) {
+				/* This ioctl may be repurposed in
+				 * future, so this is just a check
+				 * against dodginess from userspace */
+				err_print("bad blob id\n");
+				return -EINVAL;
+			}
+
+			scratch = kmalloc(d->blobsz, GFP_KERNEL);
+			if (scratch == NULL) {
+				err_print("kmalloc failed\n");
+				return -EINVAL;
+			}
+
+			c = copy_from_user(scratch, d->blob, d->blobsz);
+			if (c != 0) {
+				dbg_print("bad user buffer\n");
+				kfree(scratch);
+				return -EINVAL;
+			}
+
+			d->result =
+				vtq_imageconv_supply_blob_via_vtqinit(
+					vce_state.vtq_imageconv,
+					d->blob, d->blobsz);
+
+			kfree(scratch);
 		}
 		break;
 
@@ -1252,6 +1292,9 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case VTQ_IOCTL_MULTIPURPOSE_LOCK:
 			trace_ioctl_return(VTQ_IOCTL_MULTIPURPOSE_LOCK);
 			break;
+		case VTQ_IOCTL_REGISTER_IMAGE_BLOB:
+			trace_ioctl_return(VTQ_IOCTL_REGISTER_IMAGE_BLOB);
+			break;
 		case VTQ_IMAGECONV_IOCTL_READY:
 			trace_ioctl_return(VTQ_IMAGECONV_IOCTL_READY);
 			break;
@@ -1452,6 +1495,10 @@ int vce_acquire(struct vce *vce,
 
 void vce_release(struct vce *vce)
 {
+	/* At the moment we support only one VCE, and the
+	 * clock_on()/clock_off() functions assume it */
+	BUG_ON(vce != &vce_state);
+
 	complete(&vce_state.acquire_sem);	/* VCE is up for grab */
 	cpu_keepawake_dec();
 	clock_off();
@@ -1469,6 +1516,9 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 			       unsigned long event, void *data)
 {
 	struct pi_notify_param *p = data;
+
+	/* TODO: could do containerof to get parent structure */
+	(void)self;
 
 	if (p->pi_id == PI_MGR_PI_ID_MM &&
 			IS_SHUTDOWN_POLICY(p->new_value) &&
@@ -1603,7 +1653,7 @@ int __init vce_init(void)
 	ret = vtq_driver_init(&vce_state.vtq,
 			&vce_state, vce_state.proc_vcedir);
 	if (ret) {
-		err_print("Failed to initialize VTQ (0)\n");
+		err_print("Failed to initialize VTQ (driver)\n");
 		ret = -ENOENT;
 		goto err_vtq_init0;
 	}
@@ -1612,7 +1662,7 @@ int __init vce_init(void)
 			vce_state.vtq, &vce_state,
 			vce_state.proc_vcedir);
 	if (ret) {
-		err_print("Failed to initialize VTQ (2)\n");
+		err_print("Failed to initialize VTQ (VCE instance)\n");
 		ret = -ENOENT;
 		goto err_vtq_init2;
 	}

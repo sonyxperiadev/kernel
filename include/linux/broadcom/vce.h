@@ -53,6 +53,7 @@ enum {
 	VTQ_CMD_IMAGECONV_READY,
 	VTQ_CMD_IMAGECONV_ENQUEUE_DIRECT,
 	VTQ_CMD_IMAGECONV_AWAIT,
+	VTQ_CMD_REGISTER_IMAGE_BLOB,
 	VTQ_CMD_LAST,
 
 	/* debug */
@@ -212,6 +213,17 @@ struct vtq_awaitjob_ioctldata {
 	uint32_t job_id;
 };
 
+#define VTQ_BLOB_ID_IMAGECONV 0
+struct vtq_registerimage_blob_ioctldata {
+	/* result */
+	int result;
+
+	/* inputs */
+	int blobid;
+	const uint32_t *blob;
+	size_t blobsz;
+};
+
 struct vtq_imageconv_gettasks_ioctldata {
 	/* result */
 	int task_direct;
@@ -333,6 +345,9 @@ struct vtq_multipurposelock_ioctldata {
 #define VTQ_IOCTL_MULTIPURPOSE_LOCK _IOW(BCM_VCE_MAGIC,			\
 				      VTQ_CMD_MULTIPURPOSE_LOCK,	\
 				      struct vtq_multipurposelock_ioctldata)
+#define VTQ_IOCTL_REGISTER_IMAGE_BLOB _IOWR(BCM_VCE_MAGIC,		\
+				       VTQ_CMD_REGISTER_IMAGE_BLOB,	\
+				       struct vtq_registerimage_blob_ioctldata)
 /* TODO: the imageconv ioctls don't really belong among the rest of
  * the VTQ ioctls, but as we have a bit of a hybrid interface to this
  * at the moment, it will do for now */

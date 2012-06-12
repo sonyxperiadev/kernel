@@ -300,6 +300,8 @@ static int proc_debug_write(struct file *file,
 	char request[100];
 	int s;
 
+	(void) file;
+
 	g = (struct vtq_global *)priv;
 
 	if (nbytes > sizeof(request) - 1)
@@ -369,6 +371,10 @@ int vtq_driver_init(struct vtq_global **vtq_global_out,
 	struct vtq_global *vtq_global;
 	int s;
 
+	/* This is per-driver stuff, so struct vce doesn't even belong
+	 * on this API */
+	(void) vce;
+
 	vtq_global = kmalloc(sizeof(*vtq_global), GFP_KERNEL);
 	if (vtq_global == NULL) {
 		err_print("kmalloc failure\n");
@@ -387,10 +393,12 @@ int vtq_driver_init(struct vtq_global **vtq_global_out,
 
 	/* host_push was *intended* to be a debug-aid, but it turns
 	 * out we need to work around a hardware issue, so, until we
-	 * have a better workaround, we have to default to 1 at boot.
-	 * TODO: Review h/w issue and make better workaround
+	 * have a better workaround, we have to default to 1 at boot,
+	 * or restrict image size to 8kB.  As we currently have no
+	 * users with images above 8kB, we can leave this turned off
+	 * for now.  TODO: Review h/w issue and make better workaround
 	 */
-	vtq_global->host_push = 1;
+	vtq_global->host_push = 0;
 
 	vtq_global->proc_dir = proc_vcedir;
 	s = init_driverprocentries(vtq_global);

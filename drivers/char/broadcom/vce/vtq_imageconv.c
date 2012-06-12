@@ -27,6 +27,7 @@ the GPL, without Broadcom's express prior written consent.
 struct vtq_imageconv_state {
 	struct vtq_context *vtq;
 	struct vtq_image *image;
+	int want_image_via_vtqinit;
 	vtq_task_id_t task_direct;
 	vtq_task_id_t task_bgr24;
 	atomic_t task_get_count;
@@ -119,8 +120,26 @@ static void _fw_cont(const struct firmware *fw, void *priv)
 		if (s != 0)
 			err_print("Failed to install VTQ image for imageconv\n")
 				;
-	} else
+	} else {
 		dbg_print("No VTQ image found for imageconv\n");
+		common->want_image_via_vtqinit = 1;
+	}
+}
+
+int vtq_imageconv_supply_blob_via_vtqinit(
+		struct vtq_imageconv_state *common,
+		const uint32_t *blob, int blobsz)
+{
+	int s;
+
+	/* silently ignore if we already have it */
+	if (!common->want_image_via_vtqinit)
+		return 0;
+
+	s = vtq_imageconv_install_blob(common, blob, blobsz);
+	if (s == 0)
+		common->want_image_via_vtqinit = 0;
+	return s;
 }
 
 int vtq_imageconv_init(struct vtq_imageconv_state **vtq_imageconv_out,
@@ -131,6 +150,8 @@ int vtq_imageconv_init(struct vtq_imageconv_state **vtq_imageconv_out,
 {
 	struct vtq_imageconv_state *out;
 	int s;
+
+	(void) proc_vcedir;
 
 	out = kmalloc(sizeof(*out), GFP_KERNEL);
 	if (out == NULL) {
@@ -147,6 +168,7 @@ int vtq_imageconv_init(struct vtq_imageconv_state **vtq_imageconv_out,
 	/* Mark that we haven't received the blob (via
 	 * request_firmware) yet */
 	out->image = NULL;
+	out->want_image_via_vtqinit = 0;
 	atomic_set(&out->task_get_count, 0);
 
 	out->device = device;

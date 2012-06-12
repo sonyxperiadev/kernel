@@ -36,6 +36,12 @@ extern int vtq_imageconv_init(
 extern void vtq_imageconv_term(
 		struct vtq_imageconv_state **vtq_imageconv_state_ptr);
 
+/* This is a hacky way to load the firmware via ioctl... the init
+ * method is preferred */
+extern int vtq_imageconv_supply_blob_via_vtqinit(
+		struct vtq_imageconv_state *common,
+		const uint32_t *blob, int blobsz);
+
 /*
  * vtq_imageconv_ready:
  *
