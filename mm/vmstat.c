@@ -552,7 +552,12 @@ static void fill_contig_page_info(struct zone *zone,
 
 	for (order = 0; order < MAX_ORDER; order++) {
 		unsigned long blocks;
-
+#ifdef CONFIG_CMA
+		/* dont account for free CMA blocks when
+		 * couting frag index
+		 */
+		blocks -= zone->nr_cma_free[order];
+#endif
 		/* Count number of free blocks */
 		blocks = zone->free_area[order].nr_free;
 		info->free_blocks_total += blocks;

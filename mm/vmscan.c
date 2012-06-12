@@ -1953,6 +1953,14 @@ static inline bool should_continue_reclaim(struct zone *zone,
 	pages_for_compaction = (2UL << sc->order);
 	inactive_lru_pages = zone_nr_lru_pages(zone, sc, LRU_INACTIVE_ANON) +
 				zone_nr_lru_pages(zone, sc, LRU_INACTIVE_FILE);
+	if (NR_LRU_CMA_COUNTS && !(sc->gfp_mask & __GFP_MOVABLE)) {
+		/*
+		 * FIXME: do we need active/inactive CMA lists ?
+		 * We cannot substract the CMA pages on LRU here as we dont
+		 * know if they belong to 'active' or 'inactive' lists
+		 */
+	}
+
 	if (sc->nr_reclaimed < pages_for_compaction &&
 			inactive_lru_pages > pages_for_compaction)
 		return true;
