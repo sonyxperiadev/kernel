@@ -1294,7 +1294,8 @@ wl_cfgp2p_cancel_listen(struct wl_priv *wl, struct net_device *ndev,
 			cfg80211_remain_on_channel_expired(ndev,
 							   wl->last_roc_id,
 							   &wl->remain_on_chan,
-							   wl->remain_on_chan_type,
+							   wl->
+							   remain_on_chan_type,
 							   GFP_KERNEL);
 	}
 
@@ -1635,9 +1636,8 @@ s32 wl_cfgp2p_down(struct wl_priv *wl)
 {
 
 	wl_cfgp2p_cancel_listen(wl,
-				wl->
-				p2p_net ? wl->p2p_net : wl_to_prmry_ndev(wl),
-				TRUE);
+				wl->p2p_net ? wl->
+				p2p_net : wl_to_prmry_ndev(wl), TRUE);
 
 	wl_cfgp2p_deinit_priv(wl);
 	return 0;

@@ -330,14 +330,13 @@ static s32 wl_dongle_filter(struct net_device *ndev, u32 filter_mode)
 
 	/* Parse pattern filter mask. */
 	mask_size = htod32(wl_pattern_atoh("0xff",
-					   (char *)pkt_filterp->u.pattern.
-					   mask_and_pattern));
+					   (char *)pkt_filterp->u.
+					   pattern.mask_and_pattern));
 
 	/* Parse pattern filter pattern. */
 	pattern_size = htod32(wl_pattern_atoh("0x00",
-					      (char *)&pkt_filterp->u.
-					      pattern.mask_and_pattern
-					      [mask_size]));
+					      (char *)&pkt_filterp->u.pattern.
+					      mask_and_pattern[mask_size]));
 
 	if (mask_size != pattern_size) {
 		WL_ERR(("Mask and pattern not the same size\n"));

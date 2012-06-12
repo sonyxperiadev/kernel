@@ -58,6 +58,19 @@
 #define ROOT_CCU_GPIO_DBG_BUS_SEL 0xF
 #define ROOT_CCU_SDDAT_DBG_BUS_SEL 0x8
 #endif
+
+static const char * const ccu_clks[] = {
+	KPROC_CCU_CLK_NAME_STR,
+	ROOT_CCU_CLK_NAME_STR,
+	KHUB_CCU_CLK_NAME_STR,
+	KHUBAON_CCU_CLK_NAME_STR,
+	KPM_CCU_CLK_NAME_STR,
+	KPS_CCU_CLK_NAME_STR,
+	MM_CCU_CLK_NAME_STR,
+	BMDM_CCU_CLK_NAME_STR,
+	DSP_CCU_CLK_NAME_STR,
+};
+
 unsigned long clock_get_xtal(void)
 {
 	return FREQ_MHZ(26);
@@ -7287,6 +7300,24 @@ int __init rhea_clock_init(void)
     return 0;
 }
 
+/**
+ * log active clocks during suspend
+ */
+
+int rhea_clock_print_act_clks(void)
+{
+	int i;
+
+	pr_info("\n*** ACTIVE CLKS DURING SUSPEND ***\n");
+	pr_info("\tCLK \t\t USE_COUNT\n");
+
+	for (i = 0; i < ARRAY_SIZE(ccu_clks); i++)
+		ccu_print_sleep_prevent_clks(clk_get(NULL, ccu_clks[i]));
+
+	pr_info("**********************************\n");
+	return 0;
+}
+EXPORT_SYMBOL(rhea_clock_print_act_clks);
 
 #ifdef CONFIG_DEBUG_FS
 int debug_bus_mux_sel(int mux_sel, int mux_param)

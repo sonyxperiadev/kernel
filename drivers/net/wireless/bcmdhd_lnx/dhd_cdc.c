@@ -564,29 +564,29 @@ void dhd_wlfc_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf)
 		for (i = 0; i < WLFC_MAC_DESC_TABLE_SIZE; i++) {
 			if (wlfc->destination_entries.nodes[i].occupied) {
 				request_cr_sent +=
-				    wlfc->destination_entries.
-				    nodes[i].dstncredit_sent_packets;
+				    wlfc->destination_entries.nodes[i].
+				    dstncredit_sent_packets;
 			}
 		}
 		for (i = 0; i < WLFC_MAX_IFNUM; i++) {
 			if (wlfc->destination_entries.interfaces[i].occupied) {
 				request_cr_sent +=
-				    wlfc->destination_entries.
-				    interfaces[i].dstncredit_sent_packets;
+				    wlfc->destination_entries.interfaces[i].
+				    dstncredit_sent_packets;
 			}
 		}
 		for (i = 0; i < WLFC_MAC_DESC_TABLE_SIZE; i++) {
 			if (wlfc->destination_entries.nodes[i].occupied) {
 				request_cr_ack +=
-				    wlfc->destination_entries.
-				    nodes[i].dstncredit_acks;
+				    wlfc->destination_entries.nodes[i].
+				    dstncredit_acks;
 			}
 		}
 		for (i = 0; i < WLFC_MAX_IFNUM; i++) {
 			if (wlfc->destination_entries.interfaces[i].occupied) {
 				request_cr_ack +=
-				    wlfc->destination_entries.
-				    interfaces[i].dstncredit_acks;
+				    wlfc->destination_entries.interfaces[i].
+				    dstncredit_acks;
 			}
 		}
 		bcm_bprintf(strbuf,
@@ -996,7 +996,8 @@ _dhd_wlfc_traffic_pending_check(athost_wl_status_info_t *ctx,
 		    entry->traffic_pending_bmp) {
 			entry->send_tim_signal = 1;
 			_dhd_wlfc_send_signalonly_packet(ctx, entry,
-							 entry->traffic_pending_bmp);
+							 entry->
+							 traffic_pending_bmp);
 			entry->traffic_lastreported_bmp =
 			    entry->traffic_pending_bmp;
 			entry->send_tim_signal = 0;
@@ -1103,8 +1104,8 @@ _dhd_wlfc_pretx_pktprocess(athost_wl_status_info_t *ctx,
 				WLFC_INCR_SEQCOUNT(entry,
 						   DHD_PKTTAG_FIFO(PKTTAG(p)));
 #ifdef PROP_TXSTATUS_DEBUG
-				((wlfc_hanger_t *) (ctx->hanger))->
-				    items[hslot].push_time = OSL_SYSUPTIME();
+				((wlfc_hanger_t *) (ctx->hanger))->items[hslot].
+				    push_time = OSL_SYSUPTIME();
 #endif
 			} else {
 				WLFC_DBGMESG(("%s() hanger_pushpkt() failed, rc: %d\n", __FUNCTION__, rc));
@@ -1199,7 +1200,8 @@ static void *_dhd_wlfc_deque_delayedq(athost_wl_status_info_t *ctx,
 					if (entry->requested_credit > 0) {
 						entry->requested_credit--;
 #ifdef PROP_TXSTATUS_DEBUG
-						entry->dstncredit_sent_packets++;
+						entry->
+						    dstncredit_sent_packets++;
 #endif
 						/*
 						   if the packet was pulled out while destination is in
@@ -1225,7 +1227,8 @@ static void *_dhd_wlfc_deque_delayedq(athost_wl_status_info_t *ctx,
 					    (token_pos + i + 1) % total_entries;
 					*entry_out = entry;
 					_dhd_wlfc_flow_control_check(ctx,
-								     &entry->psq,
+								     &entry->
+								     psq,
 								     DHD_PKTTAG_IF
 								     (PKTTAG
 								      (p)));
@@ -1527,11 +1530,12 @@ dhd_wlfc_commit_packets(void *state, f_commitpkt_t fcommit, void *commit_ctx)
 		for (credit = 0; credit < ctx->FIFO_credit[ac];) {
 			commit_info.p = _dhd_wlfc_deque_delayedq(ctx, ac,
 								 &
-								 (commit_info.ac_fifo_credit_spent),
-								 &
-								 (commit_info.needs_hdr),
-								 &
-								 (commit_info.mac_entry));
+								 (commit_info.
+								  ac_fifo_credit_spent),
+								 &(commit_info.
+								   needs_hdr),
+								 &(commit_info.
+								   mac_entry));
 
 			if (commit_info.p == NULL)
 				break;
@@ -1570,7 +1574,8 @@ dhd_wlfc_commit_packets(void *state, f_commitpkt_t fcommit, void *commit_ctx)
 		for (credit = 0; credit < ctx->FIFO_credit[ac];) {
 			commit_info.p = _dhd_wlfc_deque_sendq(ctx, ac,
 							      &
-							      (commit_info.ac_fifo_credit_spent));
+							      (commit_info.
+							       ac_fifo_credit_spent));
 			if (commit_info.p == NULL)
 				break;
 
@@ -1651,11 +1656,12 @@ dhd_wlfc_commit_packets(void *state, f_commitpkt_t fcommit, void *commit_ctx)
 
 		commit_info.p = _dhd_wlfc_deque_delayedq(ctx, ac,
 							 &
-							 (commit_info.ac_fifo_credit_spent),
-							 &
-							 (commit_info.needs_hdr),
-							 &
-							 (commit_info.mac_entry));
+							 (commit_info.
+							  ac_fifo_credit_spent),
+							 &(commit_info.
+							   needs_hdr),
+							 &(commit_info.
+							   mac_entry));
 		if (commit_info.p == NULL)
 			break;
 
@@ -1691,7 +1697,8 @@ dhd_wlfc_commit_packets(void *state, f_commitpkt_t fcommit, void *commit_ctx)
 
 		commit_info.p = _dhd_wlfc_deque_sendq(ctx, ac,
 						      &
-						      (commit_info.ac_fifo_credit_spent));
+						      (commit_info.
+						       ac_fifo_credit_spent));
 		if (commit_info.p == NULL)
 			break;
 
@@ -1720,8 +1727,8 @@ dhd_wlfc_commit_packets(void *state, f_commitpkt_t fcommit, void *commit_ctx)
 static uint8 dhd_wlfc_find_mac_desc_id_from_mac(dhd_pub_t *dhdp, uint8 *ea)
 {
 	wlfc_mac_descriptor_t *table =
-	    ((athost_wl_status_info_t *)dhdp->wlfc_state)->
-	    destination_entries.nodes;
+	    ((athost_wl_status_info_t *)dhdp->wlfc_state)->destination_entries.
+	    nodes;
 	uint8 table_index;
 
 	if (ea != NULL) {
@@ -1844,9 +1851,8 @@ static int dhd_wlfc_txstatus_update(dhd_pub_t *dhd, uint8 *pkt_info)
 		uint32 old_t;
 		uint32 delta;
 		old_t =
-		    ((wlfc_hanger_t *) (wlfc->
-					hanger))->items[WLFC_PKTID_HSLOT_GET
-							(status)].push_time;
+		    ((wlfc_hanger_t *) (wlfc->hanger))->
+		    items[WLFC_PKTID_HSLOT_GET(status)].push_time;
 
 		wlfc->stats.latency_sample_count++;
 		if (new_t > old_t)
@@ -2008,7 +2014,9 @@ static int dhd_wlfc_mac_table_update(dhd_pub_t *dhd, uint8 *value, uint8 type)
 								[table_index],
 								eWLFC_MAC_ENTRY_ACTION_ADD,
 								ifid,
-								wlfc->destination_entries.interfaces
+								wlfc->
+								destination_entries.
+								interfaces
 								[ifid].iftype,
 								ea);
 			} else {
@@ -2035,8 +2043,10 @@ static int dhd_wlfc_mac_table_update(dhd_pub_t *dhd, uint8 *value, uint8 type)
 							&table[table_index],
 							eWLFC_MAC_ENTRY_ACTION_DEL,
 							ifid,
-							wlfc->destination_entries.interfaces
-							[ifid].iftype, ea);
+							wlfc->
+							destination_entries.
+							interfaces[ifid].iftype,
+							ea);
 		} else {
 			/* the space should have been occupied, but it's not */
 			wlfc->stats.mac_update_failed++;
@@ -2471,8 +2481,8 @@ int dhd_prot_hdrpull(dhd_pub_t *dhd, int *ifidx, void *pktbuf)
 		 */
 		dhd_os_wlfc_block(dhd);
 		dhd_wlfc_parse_header_info(dhd, pktbuf, (h->dataOffset << 2));
-		((athost_wl_status_info_t *)dhd->wlfc_state)->
-		    stats.dhd_hdrpulls++;
+		((athost_wl_status_info_t *)dhd->wlfc_state)->stats.
+		    dhd_hdrpulls++;
 		dhd_wlfc_commit_packets(dhd->wlfc_state,
 					(f_commitpkt_t) dhd_bus_txdata,
 					(void *)dhd->bus);

@@ -1181,7 +1181,7 @@ static int enable_v3d_clock(void)
 	}
 
 	v3d_clk = clk_get(NULL, "v3d_axi_clk");
-	if (!v3d_clk) {
+	if (IS_ERR_OR_NULL(v3d_clk)) {
 		KLOG_E("%s: error get clock\n", __func__);
 		return -EIO;
 	}
@@ -1200,7 +1200,7 @@ static int disable_v3d_clock(void)
 	int rc = 0;
 
 	v3d_clk = clk_get(NULL, "v3d_axi_clk");
-	if (!v3d_clk) {
+	if (IS_ERR_OR_NULL(v3d_clk)) {
 		KLOG_E("%s: error get clock\n", __func__);
 		return -EIO;
 	}

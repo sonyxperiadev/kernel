@@ -33,8 +33,6 @@ struct regulator_init_data;
 /* LDO or Switcher def */
 #define BCMPMU_LDO    0x10
 #define BCMPMU_SR     0x11
-/* HOSTCTRL1 def*/
-#define BCMPMU_SW_SHDWN 0x04
 
 /* WRPREN def */
 #define BCMPMU_DIS_WR_PRO       (1<<0)
@@ -387,7 +385,7 @@ enum bcmpmu_reg {
 	PMU_REG_PMUID,
 	PMU_REG_PMUREV,
 	PMU_REG_PLLCTRL,
-	PMU_REG_HOSTCTRL1,
+	PMU_REG_SW_SHDWN,
 	PMU_REG_HOSTCTRL3,
 	PMU_REG_MBCCTRL5_USB_DET_LDO_EN,
 	PMU_REG_MBCCTRL5_CHARGE_DET,

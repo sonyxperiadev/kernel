@@ -1279,8 +1279,8 @@ int dhd_sendpkt(dhd_pub_t *dhdp, int ifidx, void *pktbuf)
 #endif
 #ifdef PROP_TXSTATUS
 	if (dhdp->wlfc_state
-	    && ((athost_wl_status_info_t *)dhdp->
-		wlfc_state)->proptxstatus_mode != WLFC_FCMODE_NONE) {
+	    && ((athost_wl_status_info_t *)dhdp->wlfc_state)->
+	    proptxstatus_mode != WLFC_FCMODE_NONE) {
 		dhd_os_wlfc_block(dhdp);
 		ret =
 		    dhd_wlfc_enque_sendq(dhdp->wlfc_state,
@@ -1289,10 +1289,10 @@ int dhd_sendpkt(dhd_pub_t *dhdp, int ifidx, void *pktbuf)
 		dhd_wlfc_commit_packets(dhdp->wlfc_state,
 					(f_commitpkt_t) dhd_bus_txdata,
 					dhdp->bus);
-		if (((athost_wl_status_info_t *)dhdp->
-		     wlfc_state)->toggle_host_if) {
-			((athost_wl_status_info_t *)dhdp->
-			 wlfc_state)->toggle_host_if = 0;
+		if (((athost_wl_status_info_t *)dhdp->wlfc_state)->
+		    toggle_host_if) {
+			((athost_wl_status_info_t *)dhdp->wlfc_state)->
+			    toggle_host_if = 0;
 		}
 		dhd_os_wlfc_unblock(dhdp);
 	} else
@@ -1501,8 +1501,8 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 			   there is an urgent message but no packet to
 			   piggy-back on
 			 */
-			((athost_wl_status_info_t *)dhdp->wlfc_state)->
-			    stats.wlfc_header_only_pkt++;
+			((athost_wl_status_info_t *)dhdp->wlfc_state)->stats.
+			    wlfc_header_only_pkt++;
 			PKTFREE(dhdp->osh, pktbuf, TRUE);
 			DHD_TRACE(("RX: wlfc header \n"));
 			continue;

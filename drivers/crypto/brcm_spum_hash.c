@@ -1085,7 +1085,7 @@ static int __devinit spum_hash_probe(struct platform_device *pdev)
 
 	/* Initializing the clock. */
 	dd->spum_open_clk = clk_get(NULL, "spum_open");
-	if (!dd->spum_open_clk) {
+	if (IS_ERR_OR_NULL(dd->spum_open_clk)) {
 		pr_err("%s: Clock intialization failed.\n", __func__);
 		kfree(dd);
 		return -ENOMEM;

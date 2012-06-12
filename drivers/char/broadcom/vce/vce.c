@@ -292,7 +292,7 @@ static int _clock_on(void)
 	BUG_ON(vce_clk != NULL);
 
 	vce_clk = clk_get(NULL, "vce_axi_clk");
-	if (IS_ERR(vce_clk)) {
+	if (IS_ERR_OR_NULL(vce_clk)) {
 		err_print("%s: error get clock\n", __func__);
 		vce_clk = NULL;
 		return -EIO;

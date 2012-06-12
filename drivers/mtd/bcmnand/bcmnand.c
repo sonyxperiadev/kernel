@@ -1332,6 +1332,8 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 	chal_nand_info_t *pni;
 
 	clk = clk_get(&pdev->dev, "nand_clk");
+	if (IS_ERR_OR_NULL(clk))
+		return -ENODEV;
 	clk_enable(clk);
 
 	info = kzalloc(sizeof(*info), GFP_KERNEL);
