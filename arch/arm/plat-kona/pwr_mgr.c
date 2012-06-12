@@ -2937,8 +2937,10 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 		dent_event =
 		    debugfs_create_dir(PWRMGR_EVENT_ID_TO_STR(event),
 				       dent_event_tbl);
-		if (!dent_event)
+		if (!dent_event) {
+			debugfs_remove(dent_event_tbl);
 			return -ENOMEM;
+		}
 		if (!debugfs_create_file
 		    ("active", S_IWUSR | S_IRUSR, dent_event, (void *)event,
 		     &pwr_mgr_dbg_active_fops))
