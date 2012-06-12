@@ -451,6 +451,23 @@ static int config_adc_for_bp_detection(void)
 		pr_err("%s(): Invalid CHAL handle \r\n", __func__);
 		return -EFAULT;
 	}
+	/* Set the threshold value for button press */
+	/*
+	 * Got the feedback from the system design team that the button press
+	 * threshold to programmed should be 0.12V as well.
+	 * With this only send/end button works, so made this 600 i.e 0.6V.
+	 * With the threshold level set to 0.6V all the 3 button press works
+	 * OK.Note that this would trigger continus COMP1 Interrupts if enabled.
+	 * But since we don't enable COMP1 until we identify a Headset its OK.
+	 */
+	if (mic_dev->low_voltage_mode)
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+			    CHAL_ACI_BLOCK_COMP1, 80);
+	else
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
+			    CHAL_ACI_BLOCK_COMP1, 600);
 
 	/*
 	 * TODO: As of now this function uses the same MIC BIAS settings
@@ -841,7 +858,6 @@ static void accessory_detect_work_func(struct work_struct *work)
 			__headset_hw_init_micbias_off(p);
 	} else {
 		/* Turn Off, MIC BIAS */
-		if ((p->hs_state == OPEN_CABLE) || (p->hs_state == HEADSET))
 			__headset_hw_init_micbias_off(p);
 
 		__handle_accessory_removed(p);
@@ -1458,49 +1474,20 @@ static int __headset_hw_init_micbias_off(struct mic_t *p)
 			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
 			    CHAL_ACI_BLOCK_COMP);
 
-	/* Configure the comparator 1 for button press */
-	chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
-			    CHAL_ACI_BLOCK_COMP1,
-			    &comp_values_for_button_press);
-
-	/* Configure the comparator 2 for accessory detection */
-	chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
-			    CHAL_ACI_BLOCK_COMP2, &comp_values_for_type_det);
 	/*
 	 * Connect P_MIC_DATA_IN to P_MIC_OUT  and P_MIC_OUT to COMP2
 	 * Note that one API can do this.
 	 */
 	chal_aci_set_mic_route(p->aci_chal_hdl, CHAL_ACI_MIC_ROUTE_MIC);
 
-	/* Set the threshold value for button press */
-	/* This value is arrived at by experiments made with
-	 * the available multi-button headset.This should take care of
-	 * most multi-button headsets.But this is in no way a universal
-	 * value for  all singe/multi-button headsets */
-	if (p->low_voltage_mode)
+		/* Power down the COMP blocks */
 		chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-			    CHAL_ACI_BLOCK_COMP1, 80);
-	else
-		chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-			    CHAL_ACI_BLOCK_COMP1, 600);
-
-	/* Set the threshold value for button press */
-	chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
-			    CHAL_ACI_BLOCK_COMP2, 1900);
+		    CHAL_ACI_BLOCK_ACTION_DISABLE,
+		    CHAL_ACI_BLOCK_COMP);
 
 	aci_vref_config.mode = CHAL_ACI_VREF_OFF;
 	chal_aci_block_ctrl(p->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_VREF,
 			    CHAL_ACI_BLOCK_GENERIC, &aci_vref_config);
-
-	aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_OFF;
-	chal_aci_block_ctrl(p->aci_chal_hdl,
-			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-			    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
 
 	/* Switch OFF Mic BIAS only if its not already OFF */
 	if (p->mic_bias_status == 1) {
@@ -1546,6 +1533,10 @@ static int __headset_hw_init_micbias_on(struct mic_t *p)
 	writel(AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK,
 	       KONA_AUDIOH_VA + AUDIOH_AUDIORX_BIAS_OFFSET);
 #endif
+		/* Power up the COMP blocks */
+		chal_aci_block_ctrl(p->aci_chal_hdl,
+			    CHAL_ACI_BLOCK_ACTION_ENABLE,
+			    CHAL_ACI_BLOCK_COMP);
 
 	/* First disable all the interrupts */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -1899,7 +1890,6 @@ static int headset_hw_init(struct mic_t *mic)
 			return status;
 		}
 
-		__headset_hw_init_micbias_off(mic);
 		pr_info("headset_hw_init: gpio config done \r\n");
 	} else {
 
