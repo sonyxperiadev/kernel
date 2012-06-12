@@ -969,6 +969,7 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 
 	if (result != RPC_RESULT_PENDING) {
 		/* Packet was never consumed */
+		// coverity [dead_error_line]
 		IPC_FreeBuffer(bufHandle);
 		rpcLogFreePacket((PACKET_InterfaceType_t)type, pktBufHandle);
 		_DBG_(RPC_TRACE("RPC_BufferDelivery filterCb FAIL h=%d r=%d\n",
