@@ -405,7 +405,7 @@ static unsigned int kgsl_gpummu_pt_get_flags(struct kgsl_pagetable *pt,
 	gpummu_pt = pt->priv;
 
 	spin_lock(&pt->lock);
-	if (gpummu_pt->tlb_flags && (1<<id)) {
+	if (gpummu_pt->tlb_flags & (1<<id)) {
 		result = KGSL_MMUFLAGS_TLBFLUSH;
 		gpummu_pt->tlb_flags &= ~(1<<id);
 	}
