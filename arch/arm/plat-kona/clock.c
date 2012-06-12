@@ -5218,7 +5218,8 @@ static int print_peri_clock_params(struct seq_file *seq, struct clk *temp_clk)
 		enable_bit = -1;
 	sleep_prev = !CLK_FLG_ENABLED(temp_clk, DONOT_NOTIFY_STATUS_TO_CCU);
 	seq_printf(seq,
-		   "Peri clock:%20s\t\tenable_bit:%d\t\tStatus:%d\t\tuse count:%d\t\tGating:%d\t\tprevents_retn:%s\n",
+		   "Peri clock:%20s\t\tenable_bit:%d\t\tStatus:%d \
+		   use count:%d\t\tGating:%d\t\tcan_prevent_retn:%s\n",
 		   temp_clk->name, enable_bit, status, temp_clk->use_cnt,
 		   auto_gate, sleep_prev ? "YES" : "NO");
 
@@ -5243,7 +5244,8 @@ static int print_bus_clock_params(struct seq_file *seq, struct clk *temp_clk)
 	sleep_prev = CLK_FLG_ENABLED(temp_clk, NOTIFY_STATUS_TO_CCU)
 	    && !CLK_FLG_ENABLED(temp_clk, AUTO_GATE);
 	seq_printf(seq,
-		   "Bus clock:%20s\t\tenable_bit:%d\t\tStatus:%d\t\tuse count:%d\t\tGating:%d\t\tprevents_retn:%s\n",
+		   "Bus clock:%20s\t\tenable_bit:%d\t\tStatus:%d \
+		   use count:%d\t\tGating:%d\t\tcan_prevent_retn:%s\n",
 		   temp_clk->name, enable_bit, status, temp_clk->use_cnt,
 		   auto_gate, sleep_prev ? "YES" : "NO");
 
