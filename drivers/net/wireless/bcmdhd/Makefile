@@ -10,6 +10,7 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Werror -Dlinux -DBCMDRIVER             \
 	-DDHD_BCM_WIFI_HDMI                                                   \
 	-DCUSTOMER_HW3							      \
 	-DOEMANDROID                                                          \
+	-DGET_CUSTOM_MAC_ENABLE                                               \
 	-Idrivers/net/wireless/bcmdhd -Idrivers/net/wireless/bcmdhd/include
 
 
