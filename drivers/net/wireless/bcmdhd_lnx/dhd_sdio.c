@@ -2151,7 +2151,8 @@ static int dhdsdio_checkdied(dhd_bus_t * bus, char *data, uint size)
 			if (sdpcm_shared.assert_exp_addr != 0) {
 				str[0] = '\0';
 				if ((bcmerror = dhdsdio_membytes(bus, FALSE,
-								 sdpcm_shared.assert_exp_addr,
+								 sdpcm_shared.
+								 assert_exp_addr,
 								 (uint8 *)str,
 								 maxstrlen)) <
 				    0)
@@ -2164,7 +2165,8 @@ static int dhdsdio_checkdied(dhd_bus_t * bus, char *data, uint size)
 			if (sdpcm_shared.assert_file_addr != 0) {
 				str[0] = '\0';
 				if ((bcmerror = dhdsdio_membytes(bus, FALSE,
-								 sdpcm_shared.assert_file_addr,
+								 sdpcm_shared.
+								 assert_file_addr,
 								 (uint8 *)str,
 								 maxstrlen)) <
 				    0)
@@ -6775,8 +6777,8 @@ int dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 					} else {
 						dhd_bus_stop(bus, FALSE);
 						dhdsdio_release_dongle(bus,
-								       bus->dhd->
-								       osh,
+								       bus->
+								       dhd->osh,
 								       TRUE,
 								       FALSE);
 					}

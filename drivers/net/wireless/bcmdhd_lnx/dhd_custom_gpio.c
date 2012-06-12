@@ -112,7 +112,7 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 #if defined(CUSTOMER_HW2) || !defined(CUSTOM_OOB_GPIO_NUM)
 #if !defined(CONFIG_WIFI_CONTROL_FUNC)
 	host_oob_irq = wifi_get_irq_number(irq_flags_ptr);
-#endif   /* !CONFIG_WIFI_CONTROL_FUNC */
+#endif /* !CONFIG_WIFI_CONTROL_FUNC */
 #else
 #if defined(CUSTOM_OOB_GPIO_NUM)
 	if (dhd_oob_gpio_num < 0) {
@@ -126,7 +126,7 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 	}
 
 	WL_ERROR(("%s: customer specific Host GPIO number is (%d)\n",
-		__FUNCTION__, dhd_oob_gpio_num));
+		  __FUNCTION__, dhd_oob_gpio_num));
 
 #if defined CUSTOMER_HW
 	host_oob_irq = MSM_GPIO_TO_INT(dhd_oob_gpio_num);
