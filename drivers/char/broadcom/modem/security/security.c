@@ -275,6 +275,7 @@ static long handle_set_lock_ioc(struct file *filp, unsigned int cmd,
 	sec_simlock_state_t sec_lock_state = { 0 };
 	SYS_SIMLOCK_STATE_t sys_lock_status = { 0 };
 
+	/* Coverity [TAINTED_SCALAR] */
 	if (copy_from_user
 	    (&ioc_param, (sec_simlock_set_lock_t *) param,
 	     sizeof(sec_simlock_set_lock_t)) != 0) {
@@ -292,6 +293,7 @@ static long handle_set_lock_ioc(struct file *filp, unsigned int cmd,
 	ioc_param.remain_attempt = (int)SIMLockGetRemainAttempt(ioc_param.
 						   sim_id);
 
+	/* Coverity [TAINTED_SCALAR] */
 	SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
 
 	sys_lock_status.network_lock_enabled =
@@ -332,6 +334,7 @@ static long handle_unlock_sim_ioc(struct file *filp, unsigned int cmd,
 	sec_simlock_state_t sec_lock_state = { 0 };
 	SYS_SIMLOCK_STATE_t sys_lock_status = { 0 };
 
+	/* Coverity [TAINTED_SCALAR] */
 	if (copy_from_user
 	    (&ioc_param, (sec_simlock_unlock_t *) param,
 	     sizeof(sec_simlock_unlock_t)) != 0) {
@@ -346,6 +349,7 @@ static long handle_unlock_sim_ioc(struct file *filp, unsigned int cmd,
 
 	ioc_param.remain_attempt = (int)SIMLockGetRemainAttempt(ioc_param.
 						   sim_id);
+	/* Coverity [TAINTED_SCALAR] */
 	SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
 
 	sys_lock_status.network_lock_enabled =
@@ -384,6 +388,7 @@ static long handle_get_lock_state_ioc(struct file *filp, unsigned int cmd,
 {
 	sec_simlock_state_t ioc_param = { 0 };
 
+	/* Coverity [TAINTED_SCALAR] */
 	if (copy_from_user
 	    (&ioc_param, (sec_simlock_state_t *) param,
 	     sizeof(sec_simlock_state_t)) != 0) {
@@ -393,6 +398,7 @@ static long handle_get_lock_state_ioc(struct file *filp, unsigned int cmd,
 	}
 
 	/* retrieve current lock state */
+	/* Coverity [TAINTED_SCALAR]   */
 	SIMLockGetSIMLockState(ioc_param.sim_id, &ioc_param);
 
 	if (copy_to_user
