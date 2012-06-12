@@ -916,7 +916,7 @@ static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_MIXER_e
 		chalOutChnl = CAPH_M1_Right;
 		break;
 
-	case (CSL_CAPH_SRCM_STEREO_CH2_L | CSL_CAPH_SRCM_STEREO_CH2_R):
+	case CSL_CAPH_SRCM_STEREO_CH2:
 		chalOutChnl = CAPH_M1_Left | CAPH_M1_Right;
 		break;
 
