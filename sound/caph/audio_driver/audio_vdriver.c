@@ -631,10 +631,8 @@ void AUDDRV_Telephony_Deinit(void)
 		AUDDRV_Telephony_DeinitHW();
 	}
 
-	/*if voice recording, voice playback and voice call do not use PCM
-	interface, turn PCM off*/
-	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode())
-		AUDDRV_SetPCMOnOff(0);
+	/*always turn PCM off*/
+	AUDDRV_SetPCMOnOff(0);
 
 	if (!inCallRateChange) {
 		currVoiceMic = AUDIO_SOURCE_UNDEFINED;
