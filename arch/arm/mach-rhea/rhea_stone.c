@@ -1169,14 +1169,14 @@ static int rhea_camera_power_front(struct device *dev, int on)
 	}
 	/* Power on sequence start */
 	clock = clk_get(NULL, SENSOR_1_CLK);
-	if (IS_ERR_OR_NULL(clock) {
+	if (IS_ERR_OR_NULL(clock)) {
 		printk(KERN_ERR "SENSOR_1_CLK get failed\n");
 		return -1;
 	} else {
 		printk(KERN_INFO "Got clock %s\n", SENSOR_1_CLK);
 	}
 	axi_clk = clk_get(NULL, "csi0_axi_clk");
-	if (IS_ERR_OR_NULL(axi_clk) {
+	if (IS_ERR_OR_NULL(axi_clk)) {
 		printk(KERN_ERR "unable to get clock csi0_axi_clk\n");
 		return -1;
 	}
