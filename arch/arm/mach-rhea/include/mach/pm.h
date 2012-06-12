@@ -52,19 +52,27 @@
  */
 
 enum {
-	RHEA_STATE_C0, /* suspend */
-	RHEA_STATE_C1, /* suspend-rtn */
-	RHEA_STATE_C2, /* ds-rtn */
-	RHEA_STATE_C3, /* suspend-drmt */
-	RHEA_STATE_C4, /* ds-drmt */
+	RHEA_STATE_C1, /* suspend */
+	RHEA_STATE_C2, /* suspend-rtn */
+	RHEA_STATE_C3, /* ds-rtn */
+	RHEA_STATE_C4, /* suspend-drmt */
+	RHEA_STATE_C5, /* ds-drmt */
 };
 
 enum {
-	RHEA_STATE_C0_LATENCY = 0,
-	RHEA_STATE_C1_LATENCY = 200,
-	RHEA_STATE_C2_LATENCY = 300,
-	RHEA_STATE_C3_LATENCY = 400,
-	RHEA_STATE_C4_LATENCY = 500,
+	RHEA_C1_EXIT_LATENCY = 0,
+	RHEA_C2_EXIT_LATENCY = 200,
+	RHEA_C3_EXIT_LATENCY = 300,
+	RHEA_C4_EXIT_LATENCY = 2000,	/* Worst case dormant sequence delay */
+	RHEA_C5_EXIT_LATENCY = 10000,	/* 8ms crystal warmup + c4 latency */
+};
+
+enum {
+	RHEA_C1_TARGET_RESIDENCY = 0,
+	RHEA_C2_TARGET_RESIDENCY = 200,
+	RHEA_C3_TARGET_RESIDENCY = 300,
+	RHEA_C4_TARGET_RESIDENCY = RHEA_C4_EXIT_LATENCY + 2000,
+	RHEA_C5_TARGET_RESIDENCY = RHEA_C5_EXIT_LATENCY + 5000,
 };
 #endif
 
