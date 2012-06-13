@@ -22,7 +22,7 @@ extern "C" {
 	extern int cp_crashed;
 	extern void abort(void);
 #ifdef CONFIG_CDEBUGGER
-	extern unsigned enable;
+	extern unsigned ramdump_enable;
 #endif
 
 #if defined(CONFIG_BCM_AP_PANIC_ON_CPCRASH) && defined(CONFIG_SEC_DEBUG)

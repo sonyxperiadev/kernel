@@ -144,7 +144,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 #ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 	if (BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice()
 #ifdef CONFIG_CDEBUGGER
-		&& enable == 1
+		&& ramdump_enable == 1
 #endif
 #ifdef CONFIG_APANIC_ON_MMC
 		&& ap_triggered == 0

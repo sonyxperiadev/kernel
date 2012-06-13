@@ -30,6 +30,7 @@
 #include <mach/cdebugger.h>
 #include <linux/fs.h>
 
+static void cdebugger_set_upload_magic(unsigned magic);
 enum cdebugger_upload_cause_t {
 	UPLOAD_CAUSE_INIT = 0xCAFEBABE,
 	UPLOAD_CAUSE_KERNEL_PANIC = 0x000000C8,
@@ -138,12 +139,33 @@ struct cdebugger_fault_status_t {
 };
 
 /* enable cdebugger feature */
-unsigned enable;
-EXPORT_SYMBOL(enable);
+unsigned ramdump_enable;
+EXPORT_SYMBOL(ramdump_enable);
 
 /*SRAM base address*/
 void __iomem *cdebugger_mem_base;
-module_param_named(enable, enable, uint, 0644);
+
+/* Returns 0, or -errno.  arg is in kp->arg. */
+static int param_set_ramdump_enable(const char *val,
+				const struct kernel_param *kp)
+{
+
+	int ret = param_set_bool(val, kp);
+	printk(KERN_INFO "%s ramdump_enable = %d\n", __func__, ramdump_enable);
+
+	if (ramdump_enable)
+		cdebugger_set_upload_magic(0xDEAFABCD);
+	else
+		cdebugger_set_upload_magic(0);
+
+	return ret;
+}
+
+static struct kernel_param_ops params_ops_ramdump_enable = {
+	.set = param_set_ramdump_enable,
+	.get = param_get_uint,
+};
+module_param_cb(enable, &params_ops_ramdump_enable, &ramdump_enable, 0644);
 
 static const char * const gkernel_cdebugger_build_info_date_time[] = {
 	__DATE__,
@@ -305,7 +327,7 @@ EXPORT_SYMBOL(log_tx_param);
 
 static int __init setup_crash_ramdump(char *p)
 {
-	get_option(&p, &enable);
+	get_option(&p, &ramdump_enable);
 	return 0;
 }
 
@@ -500,7 +522,7 @@ static void setup_log_buffer_address(void)
 static int cdebugger_panic_handler(struct notifier_block *nb,
 				   unsigned long l, void *buf)
 {
-	if (enable) {
+	if (ramdump_enable) {
 		cdebugger_set_upload_magic(0x66262564);
 
 		if (!strcmp(buf, "Forced Ramdump !!\n"))
@@ -530,7 +552,7 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
  */
 int cdebugger_dump_stack(void)
 {
-	if (!enable)
+	if (!ramdump_enable)
 		return -1;
 
 	cdebugger_save_context();
@@ -565,7 +587,9 @@ __init int cdebugger_init(void)
 {
 	cdebugger_set_build_info();
 
-	cdebugger_set_upload_magic(0xDEAFABCD);
+	if (ramdump_enable)
+		cdebugger_set_upload_magic(0xDEAFABCD);
+
 	cdebugger_set_upload_cause(UPLOAD_CAUSE_INIT);
 
 	register_reboot_notifier(&nb_reboot_block);
@@ -598,7 +622,7 @@ unsigned int cdebugger_memory_init(void)
 static int ramdump_panic(struct notifier_block *this, unsigned long event,
 			 void *ptr)
 {
-	if (enable)
+	if (ramdump_enable)
 		panic_timeout = 2;
 	else
 		iowrite32(0x0, cdebugger_mem_base);
