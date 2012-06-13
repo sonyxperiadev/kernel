@@ -75,6 +75,7 @@
 #include "audio_caph.h"
 #include "caph_common.h"
 #include "voif_handler.h"
+#include "audctrl_policy.h"
 
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
@@ -87,6 +88,7 @@
 #ifdef CONFIG_ARM2SP_PLAYBACK
 #include "audio_vdriver_voice_play.h"
 #endif
+
 
 static UInt8 *samplePCM16_inaudiotest;
 static UInt16 *record_test_buf;
@@ -1289,6 +1291,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	AUDIO_SINK_Enum_t spk = (AUDIO_SINK_Enum_t) Val3;	/* speaker */
 	UInt32 delayMs = Val4;	/* delay in milliseconds */
 	voip_data_t voip_codec;
+	int app_profile;
 
 	if (record_test_buf == NULL)
 		record_test_buf = kzalloc(1024 * 1024, GFP_KERNEL);
@@ -1312,14 +1315,35 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 
 	aTrace(LOG_AUDIO_DRIVER, "\n AUDTST_VoIP codecVal %ld\n", codecVal);
 	/* VOIP_PCM_16K or VOIP_AMR_WB */
+
+	/* Query App policy for App prof LOOPBACK
+	If allowed save app prof and transition to INCALL state
+	Actual param loading for slected APP and mode will be done from
+	enable telephony */
+
 	if ((codecVal == 4) || (codecVal == 5)) {
 		/* WB has to use AUDIO_APP_VOICE_CALL_WB */
-		AUDCTRL_SaveAudioApp(AUDIO_APP_VOICE_CALL_WB);
-		AUDCTRL_SetAudioMode(mode, AUDIO_APP_VOICE_CALL_WB);
+		app_profile = AUDIO_Policy_Get_Profile(
+					AUDIO_APP_VOICE_CALL_WB);
+		if (app_profile != AUDIO_APP_VOICE_CALL_WB) {
+			aWarn("App policy does not allow change to"
+				"AUDIO_APP_VOICE_CALL_WB\n");
+		}
 	} else { /* NB VoIP case */
-		AUDCTRL_SaveAudioApp(AUDIO_APP_LOOPBACK);
-		AUDCTRL_SetAudioMode(mode, AUDIO_APP_LOOPBACK);
+		app_profile = AUDIO_Policy_Get_Profile(
+					AUDIO_APP_LOOPBACK);
+		if (app_profile != AUDIO_APP_LOOPBACK) {
+			aWarn("App policy does not allow change to"
+				"AUDIO_APP_LOOPBACK\n");
+		}
 	}
+
+	AUDCTRL_SaveAudioApp((AudioApp_t)app_profile);
+	AUDCTRL_SaveAudioMode(mode);
+	/*change state to INCALL now to avoid any undesired app profile
+	changes after we start the LOOPBACK */
+	AUDIO_Policy_SetState(BRCM_STATE_INCALL);
+
 	/* configure EC and NS for the loopback test */
 #if defined(USE_LOOPBACK_SYSPARM) && defined(CONFIG_BCM_MODEM)
 	/* use sysparm to configure EC */
@@ -1382,9 +1406,9 @@ void AUDTST_VoIP_Stop(void)
 
 		/* disable the hw */
 		AUDCTRL_DisableTelephony();
-		/* VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k */
-		if ((cur_codecVal == 4) || (cur_codecVal == 5))
-			AUDCTRL_SetAudioMode(cur_mode, AUDIO_APP_LOOPBACK);
+		/*Restore the App policy state*/
+		AUDIO_Policy_RestoreState();
+
 		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
 		OSSEMAPHORE_Destroy(sVtQueue_Sema);
 		AUDQUE_Destroy(sVtQueue);
