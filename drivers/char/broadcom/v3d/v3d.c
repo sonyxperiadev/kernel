@@ -30,6 +30,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <linux/workqueue.h>
+#include <linux/platform_device.h>
 
 #include <linux/broadcom/v3d.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
@@ -292,11 +293,13 @@ static u32 v3d_id = 1;
 static volatile int v3d_flags;
 v3d_job_t *v3d_job_head;
 volatile v3d_job_t *v3d_job_curr;
+volatile int suspend_pending;
 
 /* Semaphore to lock between ioctl and thread for shared variable access
  * WaitQue on which thread will block for job post or isr_completion or timeout
  */
 struct mutex v3d_sem;
+struct mutex suspend_sem;
 wait_queue_head_t v3d_start_q, v3d_isr_done_q;
 
 /* Debug count variables for job activities */
@@ -448,9 +451,9 @@ static void v3d_job_add(struct file *filp, v3d_job_t *p_v3d_job, int pos)
 		v3d_job_head = p_v3d_job;
 	} else {
 		tmp_job = v3d_job_head;
-		while (tmp_job->next != NULL) {
+		while (tmp_job->next != NULL)
 			tmp_job = tmp_job->next;
-		}
+
 		KLOG_V("Adding job[0x%08x] to tail[0x%08x]", (u32)p_v3d_job,
 		       (u32)tmp_job);
 		tmp_job->next = p_v3d_job;
@@ -519,9 +522,9 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 					       (u32)last_match_job, dev->id);
 				}
 				kfree(last_match_job);
-				if (last_match_job == p_v3d_wait_job) {
+				if (last_match_job == p_v3d_wait_job)
 					break;
-				}
+
 			} else {
 				parent_job = tmp_job;
 				tmp_job = tmp_job->next;
@@ -720,11 +723,18 @@ static int v3d_thread(void *data)
 
 			while (v3d_job_curr == NULL) {
 				mutex_unlock(&v3d_sem);
+				/* Stop processing more requets if the suspend is pending */
+				mutex_unlock(&suspend_sem);
 				if (wait_event_interruptible
 				    (v3d_start_q, (v3d_job_curr != NULL))) {
 					KLOG_E("wait interrupted");
 					do_exit(-1);
 				}
+				if (mutex_lock_interruptible(&suspend_sem)) {
+					KLOG_E("suspend lock acquire failed");
+					do_exit(-1);
+				}
+
 				if (mutex_lock_interruptible(&v3d_sem)) {
 					KLOG_E("lock acquire failed");
 					do_exit(-1);
@@ -771,9 +781,8 @@ static int v3d_thread(void *data)
 				do_exit(-1);
 			}
 
-			if (v3d_job_curr == NULL) {
+			if (v3d_job_curr == NULL)
 				continue;
-			}
 
 			if (v3d_in_use == 0) {
 				/* Job completed or fatal oom happened or current job was killed as part of app close */
@@ -927,8 +936,7 @@ static int v3d_job_post(struct file *filp, v3d_job_post_t * p_job_post)
 	return ret;
 
 err:
-	if (p_v3d_job)
-		kfree(p_v3d_job);
+	kfree(p_v3d_job);
 	return ret;
 }
 
@@ -1030,7 +1038,7 @@ static void v3d_print_info(void)
 		ident2 = v3d_read(V3D_IDENT2_OFFSET);
 
 		printk
-		    ("V3D Rev.=%d, NSLC=%d, QPUs=%d, TUPs=%d, NSEM=%d, HDRT=%d, VPMSZ=%d \n",
+		    ("V3D Rev.=%d, NSLC=%d, QPUs=%d, TUPs=%d, NSEM=%d, HDRT=%d, VPMSZ=%d\n",
 		     (ident1 & V3D_IDENT1_REV_MASK) >> V3D_IDENT1_REV_SHIFT,
 		     (ident1 & V3D_IDENT1_NSLC_MASK) >> V3D_IDENT1_NSLC_SHIFT,
 		     (ident1 & V3D_IDENT1_QUPS_MASK) >> V3D_IDENT1_QUPS_SHIFT,
@@ -1077,7 +1085,7 @@ static void v3d_print_status(void)
 		     v3d_read(V3D_BFC_OFFSET), v3d_read(V3D_RFC_OFFSET),
 		     v3d_read(V3D_BPOA_OFFSET), v3d_read(V3D_BPOS_OFFSET));
 		printk
-		    ("v3d reg: ct0cs[0x%08x] ct1cs[0x%08x] bpca[0x%08x] bpcs[0x%08x] \n",
+		    ("v3d reg: ct0cs[0x%08x] ct1cs[0x%08x] bpca[0x%08x] bpcs[0x%08x]\n",
 		     v3d_read(V3D_CT0CS_OFFSET), v3d_read(V3D_CT1CS_OFFSET),
 		     v3d_read(V3D_BPCA_OFFSET), v3d_read(V3D_BPCS_OFFSET));
 		printk
@@ -1684,7 +1692,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	return ret;
 }
 
-static struct file_operations v3d_fops = {
+static const struct file_operations v3d_fops = {
 	.open = v3d_open,
 	.release = v3d_release,
 	.mmap = v3d_mmap,
@@ -1842,6 +1850,47 @@ err1:
 	return ret;
 }
 
+#ifdef CONFIG_PM
+static int v3d_suspend(struct platform_device *pdev, pm_message_t message)
+{
+
+	if (v3d_in_use)
+		KLOG_D("wait for v3d job to complete\n");
+	if (mutex_lock_interruptible(&suspend_sem)) {
+		KLOG_E("suspend lock acquire failed");
+		return -EFAULT;
+	}
+	return 0;
+}
+
+static int v3d_resume(struct platform_device *pdev)
+{
+	mutex_unlock(&suspend_sem);
+	return 0;
+}
+
+#else
+
+#define	v3d_suspend	NULL
+#define	v3d_resume	NULL
+
+#endif
+
+static struct platform_driver v3d_platform_driver = {
+	.driver		= {
+		.name = "V3D_PLATFORM"
+	},
+#ifdef CONFIG_PM
+	.suspend	= v3d_suspend,
+	.resume		= v3d_resume
+#endif
+};
+
+static struct platform_device v3d_platform_device = {
+	.name = "V3D_PLATFORM",
+	.id = -1,
+};
+
 int __init v3d_init(void)
 {
 	int ret = -1;
@@ -1914,6 +1963,20 @@ int __init v3d_init(void)
 	}
 
 	mutex_init(&v3d_sem);
+
+	mutex_init(&suspend_sem);
+	suspend_pending = 0;
+	ret = platform_device_register(&v3d_platform_device);
+	if (ret) {
+		KLOG_E("Failed to register platform device\n");
+		goto err2;
+	}
+
+	ret = platform_driver_register(&v3d_platform_driver);
+	if (ret) {
+		KLOG_E("Failed to register platform driver\n");
+		goto err2;
+	}
 
 	init_waitqueue_head(&v3d_isr_done_q);
 	init_waitqueue_head(&v3d_start_q);

@@ -36,7 +36,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <plat/scu.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_vce.h>
-
+#include <linux/wakelock.h>
 #include <linux/broadcom/vce.h>
 #include <linux/broadcom/vtq.h>
 #include "vtqbr.h"
@@ -92,6 +92,7 @@ static struct vce {
 	uint32_t arm_keepawake_count;
 	struct vtq_global *vtq;
 	struct vtq_vce *vtq_vce;
+	struct wake_lock suspend_wakelock;
 	bool debug_ioctl;
 	uint32_t *vtq_firmware;
 
@@ -1258,6 +1259,7 @@ int vce_acquire(struct vce *vce,
 	/* At the moment we support only one VCE, and the
 	 * clock_on()/clock_off() functions assume it */
 	BUG_ON(vce != &vce_state);
+	wake_lock(&vce->suspend_wakelock);
 	clock_on();
 
 	/*
@@ -1287,6 +1289,7 @@ void vce_release(struct vce *vce)
 	complete(&vce_state.acquire_sem);	/* VCE is up for grab */
 	cpu_keepawake_dec();
 	clock_off();
+	wake_unlock(&vce->suspend_wakelock);
 	module_put(THIS_MODULE);
 }
 
@@ -1352,6 +1355,7 @@ int __init vce_init(void)
 	mutex_init(&vce_state.clockctl_sem);
 	mutex_init(&vce_state.armctl_sem);
 	spin_lock_init(&vce_state.isrclocks_spin);
+	wake_lock_init(&vce_state.suspend_wakelock, WAKE_LOCK_SUSPEND, "vce_driver");
 
 	/* We map the registers -- even though the power to the domain
 	 *remains off... TODO: consider whether that's dangerous?  It
@@ -1482,7 +1486,7 @@ err2a:
 	iounmap(vce_base);
 	vce_base = NULL;
 err:
-
+	wake_lock_destroy(&vce_state.suspend_wakelock);
 	device_destroy(vce_state.vce_class, MKDEV(vce_major, 0));
 errC:
 
@@ -1524,6 +1528,8 @@ void __exit vce_exit(void)
 
 	/* free interrupts */
 	drop_interrupt_handler();
+
+	wake_lock_destroy(&vce_state.suspend_wakelock);
 
 	/* Unmap addresses */
 	if (vce_base)
