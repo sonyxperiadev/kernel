@@ -21,6 +21,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/interrupt.h>
+#include <linux/jiffies.h>
 #include <linux/kernel_stat.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
@@ -46,7 +47,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10133
+#define DRIVER_VERSION 10134
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -85,6 +86,7 @@ static struct vce {
 	struct proc_dir_entry *proc_vcedir;
 	struct proc_dir_entry *proc_version;
 	struct proc_dir_entry *proc_status;
+	struct proc_dir_entry *proc_utilization;
 	struct class *vce_class;
 	uint32_t isr_installed;
 	struct pi_mgr_dfs_node dfs_node;
@@ -116,6 +118,12 @@ static struct vce {
 	/* Linkage to VTQ imageconv layer -- since it hasn't yet grown
 	 * up enough to warrant its own entry point */
 	struct vtq_imageconv_state *vtq_imageconv;
+
+	/* Utilization statistics... records time at power on/off
+	 * events, that is extracted and parsed by user space app */
+	uint32_t powertrace_idxmask;
+	uint32_t powertrace_idx;
+	unsigned long *powertrace;
 } vce_state;
 
 /* Per open handle state: */
@@ -364,9 +372,14 @@ err_request_irq_failed:
 static void power_on_and_start_clock(void)
 {
 	int s;
+	uint32_t idx;
 
 	/* Assume clock control mutex is already acquired, and that block is currently off */
 	BUG_ON(vce_state.clock_enable_count != 0);
+
+	idx = vce_state.powertrace_idx++ & vce_state.powertrace_idxmask;
+	if (vce_state.powertrace != NULL)
+		vce_state.powertrace[idx] = jiffies;
 
 	_power_on();		/* TODO: error handling */
 	_clock_on();		/* TODO: error handling */
@@ -381,6 +394,8 @@ static void power_on_and_start_clock(void)
 
 static void stop_clock_and_power_off(void)
 {
+	uint32_t idx;
+
 	/* Assume clock control mutex is already acquired, and that block is currently off */
 	BUG_ON(vce_state.clock_enable_count != 0);
 
@@ -396,6 +411,10 @@ static void stop_clock_and_power_off(void)
 
 	_clock_off();
 	_power_off();
+
+	idx = vce_state.powertrace_idx++ & vce_state.powertrace_idxmask;
+	if (vce_state.powertrace != NULL)
+		vce_state.powertrace[idx] = jiffies;
 }
 
 static void clock_on(void)
@@ -1451,6 +1470,82 @@ e0:
 	return ret;
 }
 
+static int proc_utilization_read(char *buffer, char **start, off_t offset,
+		int bytes, int *eof, void *priv)
+{
+	struct vce *v;
+	int ret;
+	int len, written, space_left;
+	char *cursor;
+	uint32_t trace_index;
+	unsigned long current_jiffies, last_jiffies, next_jiffies;
+	uint32_t numsofar;
+
+	ret = 0;
+
+	v = (struct vce *)priv;
+
+	trace_index = v->powertrace_idx;
+	current_jiffies = jiffies;
+
+	/* We just dump as much data as we can without interpretation
+	 * and leave the complexity to the userspace app */
+
+	space_left = bytes;
+	if (space_left < 250) {
+		ret = -1;
+		goto err_too_small;
+	}
+	cursor = buffer;
+	written = 0;
+
+	len = snprintf(cursor, space_left, "%lu %u %lu\n",
+			current_jiffies,
+			trace_index,
+			msecs_to_jiffies(1000));
+	written += len;
+	cursor += len;
+	space_left -= len;
+	numsofar = 0;
+
+	last_jiffies = current_jiffies;
+	trace_index = trace_index - 1 & v->powertrace_idxmask;
+	next_jiffies = v->powertrace[trace_index];
+
+	while (!((signed long)(last_jiffies - next_jiffies) < 0 ||
+				space_left < 50) &&
+			numsofar <= v->powertrace_idxmask) {
+		len = snprintf(cursor, space_left, "%lu\n",
+				next_jiffies);
+		written += len;
+		cursor += len;
+		space_left -= len;
+		last_jiffies = next_jiffies;
+		trace_index = trace_index - 1 & v->powertrace_idxmask;
+		next_jiffies = v->powertrace[trace_index];
+		numsofar += 1;
+	}
+
+	/* TODO: be a proper read_proc function */
+	(void)start;
+	(void)offset;
+	(void)eof;
+
+	ret = written;
+
+	BUG_ON(ret > bytes);
+	BUG_ON(ret < 0);
+	return ret;
+
+	/*
+	   error exit paths follow
+	 */
+
+err_too_small:
+	BUG_ON(ret >= 0);
+	return ret;
+}
+
 void __iomem *vce_get_base_address(struct vce *vce)
 {
 	(void) vce;
@@ -1539,6 +1634,7 @@ int __init vce_init(void)
 {
 	int ret;
 	struct device *device;
+	size_t powertrace_buffer_size;
 
 	dbg_print("VCE driver Init\n");
 
@@ -1613,7 +1709,7 @@ int __init vce_init(void)
 	if (vce_state.proc_version == NULL) {
 		err_print("Failed to create vce proc entry\n");
 		ret = -ENOENT;
-		goto err3;
+		goto err_proc_version;
 	}
 	vce_state.proc_version->read_proc = proc_version_read;
 
@@ -1623,9 +1719,20 @@ int __init vce_init(void)
 	if (vce_state.proc_status == NULL) {
 		err_print("Failed to create vce proc entry\n");
 		ret = -ENOENT;
-		goto err4;
+		goto err_proc_status;
 	}
 	vce_state.proc_status->read_proc = proc_status_read;
+
+	vce_state.proc_utilization = create_proc_entry("utilization",
+						   (S_IRUSR | S_IRGRP),
+						   vce_state.proc_vcedir);
+	if (vce_state.proc_utilization == NULL) {
+		err_print("Failed to create vce proc entry\n");
+		ret = -ENOENT;
+		goto err_proc_utilization;
+	}
+	vce_state.proc_utilization->data = &vce_state;
+	vce_state.proc_utilization->read_proc = proc_utilization_read;
 
 	/* We need a QOS node for the CPU in order to do the ACP keep alive thing (simple wfi) */
 	ret =
@@ -1649,6 +1756,22 @@ int __init vce_init(void)
 		goto err_reg_notifier;
 	}
 	vce_state.acquirer = VCE_ACQUIRER_NONE;
+
+	/* One entry per on/off event -- we want about a seconds
+	 * worth... the exact number isn't too important.  It must be
+	 * a power of two, however.  The mask is one less than the
+	 * number of entries */
+
+	vce_state.powertrace_idxmask = 255;
+	vce_state.powertrace_idx = 0;
+	powertrace_buffer_size = sizeof(*vce_state.powertrace) *
+			(vce_state.powertrace_idxmask + 1);
+	vce_state.powertrace = kmalloc(powertrace_buffer_size, GFP_KERNEL);
+	if (vce_state.powertrace == NULL) {
+		err_print("Failed to allocate power trace buffer\n");
+		ret = -ENOENT;
+		goto err_kmalloc_powertrace;
+	}
 
 	ret = vtq_driver_init(&vce_state.vtq,
 			&vce_state, vce_state.proc_vcedir);
@@ -1697,6 +1820,9 @@ err_vtq_init2:
 	vtq_driver_term(&vce_state.vtq);
 err_vtq_init0:
 
+	kfree(vce_state.powertrace);
+err_kmalloc_powertrace:
+
 	pi_mgr_unregister_notifier(PI_MGR_PI_ID_MM,
 			&mm_pol_chg_notify_blk,
 			PI_NOTIFY_POLICY_CHANGE);
@@ -1705,11 +1831,14 @@ err_reg_notifier:
 	pi_mgr_qos_request_remove(&vce_state.cpu_qos_node);
 err5:
 
+	remove_proc_entry("utilization", vce_state.proc_vcedir);
+err_proc_utilization:
+
 	remove_proc_entry("status", vce_state.proc_vcedir);
-err4:
+err_proc_status:
 
 	remove_proc_entry("version", vce_state.proc_vcedir);
-err3:
+err_proc_version:
 	remove_proc_entry(VCE_DEV_NAME, NULL);
 err2:
 
@@ -1755,7 +1884,10 @@ void __exit vce_exit(void)
 	vtq_pervce_term(&vce_state.vtq_vce);
 	vtq_driver_term(&vce_state.vtq);
 
+	kfree(vce_state.powertrace);
+
 	/* remove proc entries */
+	remove_proc_entry("utilization", vce_state.proc_vcedir);
 	remove_proc_entry("status", vce_state.proc_vcedir);
 	remove_proc_entry("version", vce_state.proc_vcedir);
 	remove_proc_entry(VCE_DEV_NAME, NULL);
