@@ -1004,13 +1004,6 @@ config USB_G_ANDROID_ACM
 	help
 	  Provides ACM serial function for android gadget driver.
 
-config BRCM_WQ_PUSH
-	bool "USB Serial push work queue"
-	depends on USB_G_ANDROID_ACM
-	help
-	 If you say "y" here, the push tasklet will be replaced with
-	 the push work queue.
-
 config USB_G_ANDROID_ADB
 	boolean "Android gadget adb function"
 	depends on USB_G_ANDROID
