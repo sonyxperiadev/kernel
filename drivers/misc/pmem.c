@@ -108,7 +108,6 @@ struct pmem_info {
 	/* carved out memory for us */
 	phys_addr_t carveout_base;
 	phys_addr_t carveout_size;
-	unsigned long carveout_vbase;
 	/* genpool to manage carved out memory */
 	struct gen_pool *pool;
 };
@@ -144,15 +143,6 @@ struct pmem_info {
 #define PMEM_START_PAGE(data)		pfn_to_page(data->pfn)
 #define PMEM_START_ADDR(data)		__pfn_to_phys(data->pfn)
 #define PMEM_START_VADDR(data)		phys_to_virt(PMEM_START_ADDR(data))
-
-/* macros for carveout allocations */
-#define PMEM_CARVEOUT_START_VADDR(id, data) \
-	(pmem[id].carveout_vbase + \
-	 (PMEM_START_ADDR(data) - pmem[id].carveout_base))
-#define PMEM_CARVEOUT_VIRT_TO_PHYS(id, addr) \
-	(pmem[id].carveout_base + (addr - pmem[id].carveout_vbase))
-#define PMEM_CARVEOUT_PHYS_TO_VIRT(id, addr) \
-	(pmem[id].carveout_vbase + (addr - pmem[id].carveout_pbase))
 
 #define PMEM_IS_SUBMAP(data) \
 	((data->flags & PMEM_FLAGS_SUBMAP) && \
@@ -572,9 +562,8 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 		}
 	}
 
-	/* if we have a carveout heap and allocation is uncached */
+	/* if we have a carveout heap and allocation is cached/uncached */
 	if (pmem[id].carveout_base &&
-		(file->f_flags & O_SYNC) &&
 		(file->f_flags & O_NONBLOCK)) {
 
 		addr = gen_pool_alloc(pmem[id].pool, len);
@@ -582,6 +571,7 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 			data->flags |= PMEM_FLAGS_CARVEOUT;
 			data->pfn = __phys_to_pfn(addr);
 			data->size = len;
+			outer_inv_range(addr, addr+len);
 			return 0;
 		} else {
 			printk(KERN_ALERT"carveout failed: %dkB\n", len/SZ_1K);
@@ -665,7 +655,7 @@ int get_pmem_addr(struct file *file, unsigned long *start,
 	*start = PMEM_START_ADDR(data);
 	*len = pmem_len(data);
 	if (data->flags & PMEM_FLAGS_CARVEOUT)
-		*vstart = (unsigned long)PMEM_CARVEOUT_START_VADDR(id, data);
+		*vstart = 0; /* carveout has no kernel vaddr */
 	else
 		*vstart = (unsigned long)PMEM_START_VADDR(data);
 	up_read(&data->sem);
@@ -772,7 +762,7 @@ void invalidate_pmem_file(struct file *file, unsigned long offset,
 
 	id = get_id(file);
 	data = (struct pmem_data *)file->private_data;
-	if (file->f_flags & O_SYNC)
+	if ((file->f_flags & O_SYNC) || (file->f_flags & O_NONBLOCK))
 		return;
 
 	down_read(&data->sem);
@@ -821,7 +811,8 @@ void flush_pmem_file(struct file *file, unsigned long offset,
 
 	id = get_id(file);
 	data = (struct pmem_data *)file->private_data;
-	if (file->f_flags & O_SYNC || file->f_flags & FASYNC)
+	if (file->f_flags & O_SYNC || file->f_flags & FASYNC ||
+			(file->f_flags & O_NONBLOCK))
 		return;
 
 	down_read(&data->sem);
@@ -1837,24 +1828,16 @@ static int pmem_setup(struct platform_device *pdev,
 
 	if (pdata->carveout_base && pdata->carveout_size) {
 		BUG_ON(pdata->carveout_size & (PAGE_SIZE - 1));
-		pmem[id].carveout_vbase =
-		    (unsigned long)ioremap_nocache(pdata->carveout_base,
-						   pdata->carveout_size);
-		if (!pmem[id].carveout_vbase) {
-			printk(KERN_ERR "pmem: ioremap failed\n");
+		pmem[id].pool = gen_pool_create(12, -1);
+		if (!pmem[id].pool) {
+			printk(KERN_ERR
+					"pmem: genpool_create failed\n");
 		} else {
-			pmem[id].pool = gen_pool_create(12, -1);
-			if (!pmem[id].pool) {
-				printk(KERN_ERR
-				       "pmem: genpool_create failed\n");
-				iounmap((void *)pmem[id].carveout_vbase);
-			} else {
-				gen_pool_add(pmem[id].pool,
-					     pdata->carveout_base,
-					     pdata->carveout_size, -1);
-				pmem[id].carveout_base = pdata->carveout_base;
-				pmem[id].carveout_size = pdata->carveout_size;
-			}
+			gen_pool_add(pmem[id].pool,
+					pdata->carveout_base,
+					pdata->carveout_size, -1);
+			pmem[id].carveout_base = pdata->carveout_base;
+			pmem[id].carveout_size = pdata->carveout_size;
 		}
 	}
 
@@ -1895,8 +1878,6 @@ err_cant_register_device:
 error:
 	if (pmem[id].pool)
 		gen_pool_destroy(pmem[id].pool);
-	if (pmem[id].carveout_vbase)
-		iounmap((void __iomem *)pmem[id].carveout_vbase);
 	return err;
 }
 
@@ -1926,8 +1907,6 @@ static int pmem_remove(struct platform_device *pdev)
 	__free_page(pfn_to_page(pmem[id].garbage_pfn));
 	if (pmem[id].pool)
 		gen_pool_destroy(pmem[id].pool);
-	if (pmem[id].carveout_vbase)
-		iounmap((void __iomem *)pmem[id].carveout_vbase);
 
 	misc_deregister(&pmem[id].dev);
 	mutex_unlock(&pmem[id].data_list_lock);
