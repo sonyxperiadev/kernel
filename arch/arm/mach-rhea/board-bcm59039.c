@@ -38,7 +38,6 @@
 #define PMU_DEVICE_I2C_ADDR1	0x0C
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 2
-static int vlt_tbl_init;
 
 static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x01, .val = 0x00, .mask = 0x01},
@@ -983,82 +982,6 @@ static struct i2c_board_info __initdata pmu_info[] = {
 };
 
 
-/*800 Mhz CSR voltage definitions....*/
-
-#define CSR_VAL_RETN_SS_800M	0x3 /*0.88V*/
-#define CSR_VAL_RETN_TT_800M	0x3 /*0.88V*/
-#define CSR_VAL_RETN_FF_800M	0x3 /*0.88V*/
-
-#define CSR_VAL_ECO_SS_800M		0xd /*1.08V*/
-#define CSR_VAL_ECO_TT_800M		0x8 /*0.98V*/
-#define CSR_VAL_ECO_FF_800M		0x8 /*0.98V*/
-
-#define CSR_VAL_NRML_SS_800M	0x11 /*1.16V*/
-#define CSR_VAL_NRML_TT_800M	0x0b /*1.04V*/
-#define CSR_VAL_NRML_FF_800M	0x8 /*0.98V*/
-
-#define CSR_VAL_TURBO_SS_800M		0x1A /*1.34V*/
-#define B0_CSR_VAL_TURBO_SS_800M	0x19 /*1.32V*/
-#define CSR_VAL_TURBO_TT_800M		0x14 /*1.22V*/
-#define CSR_VAL_TURBO_FF_800M		0x0F /*1.12V*/
-
-
-
-#define PMU_CSR_VLT_TBL_SS_800M	ARRAY_LIST(\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_ECO_SS_800M,\
-					CSR_VAL_ECO_SS_800M,\
-					CSR_VAL_ECO_SS_800M,\
-					CSR_VAL_NRML_SS_800M,\
-					CSR_VAL_NRML_SS_800M,\
-					CSR_VAL_NRML_SS_800M,\
-					CSR_VAL_TURBO_SS_800M,\
-					CSR_VAL_TURBO_SS_800M)
-
-
-#define PMU_CSR_VLT_TBL_TT_800M	ARRAY_LIST(\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_ECO_TT_800M,\
-					CSR_VAL_ECO_TT_800M,\
-					CSR_VAL_ECO_TT_800M,\
-					CSR_VAL_NRML_TT_800M,\
-					CSR_VAL_NRML_TT_800M,\
-					CSR_VAL_NRML_TT_800M,\
-					CSR_VAL_TURBO_TT_800M,\
-					CSR_VAL_TURBO_TT_800M)
-
-#define PMU_CSR_VLT_TBL_FF_800M	ARRAY_LIST(\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_ECO_FF_800M,\
-					CSR_VAL_ECO_FF_800M,\
-					CSR_VAL_ECO_FF_800M,\
-					CSR_VAL_NRML_FF_800M,\
-					CSR_VAL_NRML_FF_800M,\
-					CSR_VAL_NRML_FF_800M,\
-					CSR_VAL_TURBO_FF_800M,\
-					CSR_VAL_TURBO_FF_800M)
-
 
 /*850 Mhz CSR voltage definitions....*/
 
@@ -1066,18 +989,17 @@ static struct i2c_board_info __initdata pmu_info[] = {
 #define CSR_VAL_RETN_TT_850M	0x3 /*0.88V*/
 #define CSR_VAL_RETN_FF_850M	0x3 /*0.88V*/
 
-#define CSR_VAL_ECO_SS_850M		0xd /*1.08V*/
-#define CSR_VAL_ECO_TT_850M		0x8 /*0.98V*/
-#define CSR_VAL_ECO_FF_850M		0x8 /*0.98V*/
+#define CSR_VAL_ECO_SS_850M	0xd /*1.08V*/
+#define CSR_VAL_ECO_TT_850M	0x8 /*0.98V*/
+#define CSR_VAL_ECO_FF_850M	0x8 /*0.98V*/
 
-#define CSR_VAL_NRML_SS_850M	0x11 /*1.16V*/
-#define CSR_VAL_NRML_TT_850M	0x0b /*1.04V*/
-#define CSR_VAL_NRML_FF_850M	0x8 /*0.98V*/
+#define CSR_VAL_NRML_SS_850M	0x10 /*1.14V*/
+#define CSR_VAL_NRML_TT_850M	0x0E /*1.10V*/
+#define CSR_VAL_NRML_FF_850M	0xA  /*1.02V*/
 
-#define CSR_VAL_TURBO_SS_850M		0x1B /*1.36V*/
-#define B0_CSR_VAL_TURBO_SS_850M	0x19 /*1.32V*/
-#define CSR_VAL_TURBO_TT_850M		0x15 /*1.24V*/
-#define CSR_VAL_TURBO_FF_850M		0x10 /*1.14V*/
+#define CSR_VAL_TURBO_SS_850M	0x1B /*1.36V*/
+#define CSR_VAL_TURBO_TT_850M	0x17 /*1.28V*/
+#define CSR_VAL_TURBO_FF_850M	0x11 /*1.16V*/
 
 
 
@@ -1136,99 +1058,11 @@ static struct i2c_board_info __initdata pmu_info[] = {
 						CSR_VAL_TURBO_FF_850M,\
 						CSR_VAL_TURBO_FF_850M)
 
-/*1 Ghz CSR voltage definitions....*/
 
-#define CSR_VAL_RETN_SS_1G	0x3 /*0.88V*/
-#define CSR_VAL_RETN_TT_1G	0x3 /*0.88V*/
-#define CSR_VAL_RETN_FF_1G	0x3 /*0.88V*/
+u8 csr_vlt_table_ss[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_SS_850M;
+u8 csr_vlt_table_tt[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_TT_850M;
+u8 csr_vlt_table_ff[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_FF_850M;
 
-#define CSR_VAL_ECO_SS_1G	0xd /*1.08V*/
-#define CSR_VAL_ECO_TT_1G	0x8 /*0.98V*/
-#define CSR_VAL_ECO_FF_1G	0x8 /*0.98V*/
-
-#define CSR_VAL_NRML_SS_1G	0x11 /*1.16V*/
-#define CSR_VAL_NRML_TT_1G	0x0b /*1.04V*/
-#define CSR_VAL_NRML_FF_1G	0x8	/*0.98V*/
-
-#define CSR_VAL_TURBO_SS_1G		0x1B /*1.36V*/
-#define B0_CSR_VAL_TURBO_SS_1G	0x19 /*1.32V*/
-#define CSR_VAL_TURBO_TT_1G		0x1B /*1.36V*/
-#define B0_CSR_VAL_TURBO_TT_1G	0x19 /*1.32V*/
-#define CSR_VAL_TURBO_FF_1G		0x15 /*1.24V*/
-
-
-
-#define PMU_CSR_VLT_TBL_SS_1G	ARRAY_LIST(\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_ECO_SS_1G,\
-						CSR_VAL_ECO_SS_1G,\
-						CSR_VAL_ECO_SS_1G,\
-						CSR_VAL_NRML_SS_1G,\
-						CSR_VAL_NRML_SS_1G,\
-						CSR_VAL_NRML_SS_1G,\
-						CSR_VAL_TURBO_SS_1G,\
-						CSR_VAL_TURBO_SS_1G)
-
-#define PMU_CSR_VLT_TBL_TT_1G	ARRAY_LIST(\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_ECO_TT_1G,\
-						CSR_VAL_ECO_TT_1G,\
-						CSR_VAL_ECO_TT_1G,\
-						CSR_VAL_NRML_TT_1G,\
-						CSR_VAL_NRML_TT_1G,\
-						CSR_VAL_NRML_TT_1G,\
-						CSR_VAL_TURBO_TT_1G,\
-						CSR_VAL_TURBO_TT_1G)
-
-#define PMU_CSR_VLT_TBL_FF_1G	ARRAY_LIST(\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_ECO_FF_1G,\
-						CSR_VAL_ECO_FF_1G,\
-						CSR_VAL_ECO_FF_1G,\
-						CSR_VAL_NRML_FF_1G,\
-						CSR_VAL_NRML_FF_1G,\
-						CSR_VAL_NRML_FF_1G,\
-						CSR_VAL_TURBO_FF_1G,\
-						CSR_VAL_TURBO_FF_1G)
-
-u8 csr_vlt_table_ss[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
-	[A9_FREQ_800_MHZ]	= PMU_CSR_VLT_TBL_SS_800M,
-	[A9_FREQ_850_MHZ]	= PMU_CSR_VLT_TBL_SS_850M,
-	[A9_FREQ_1_GHZ]		= PMU_CSR_VLT_TBL_SS_1G,
-};
-
-u8 csr_vlt_table_tt[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
-	[A9_FREQ_800_MHZ]	= PMU_CSR_VLT_TBL_TT_800M,
-	[A9_FREQ_850_MHZ]	= PMU_CSR_VLT_TBL_TT_850M,
-	[A9_FREQ_1_GHZ]		= PMU_CSR_VLT_TBL_TT_1G,
-};
-
-u8 csr_vlt_table_ff[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
-	[A9_FREQ_800_MHZ]	= PMU_CSR_VLT_TBL_FF_800M,
-	[A9_FREQ_850_MHZ]	= PMU_CSR_VLT_TBL_FF_850M,
-	[A9_FREQ_1_GHZ]		= PMU_CSR_VLT_TBL_FF_1G,
-};
 
 const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
 						u32 silicon_type)
@@ -1237,25 +1071,24 @@ const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
 			"silicon_type = %d\n", __func__,
 			sr, freq_inx, silicon_type);
 
-	BUG_ON(!vlt_tbl_init ||
-		freq_inx > A9_FREQ_1_GHZ);
+	BUG_ON(freq_inx != A9_FREQ_850_MHZ);
 
 #ifdef CONFIG_KONA_AVS
 	switch (silicon_type) {
 	case SILICON_TYPE_SLOW:
-		return csr_vlt_table_ss[freq_inx];
+		return csr_vlt_table_ss;
 
 	case SILICON_TYPE_TYPICAL:
-		return csr_vlt_table_tt[freq_inx];
+		return csr_vlt_table_tt;
 
 	case SILICON_TYPE_FAST:
-		return csr_vlt_table_ff[freq_inx];
+		return csr_vlt_table_ff;
 
 	default:
 		BUG();
 	}
 #else
-	return csr_vlt_table_ss[freq_inx];
+	return csr_vlt_table_ss;
 #endif
 }
 
@@ -1274,27 +1107,7 @@ int bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 		bcmpmu->pdata->pok_restart_deb = POK_RESTRT_DEB_10SEC;
 		bcmpmu->pdata->pok_lock = 1;
 		bcmpmu->pdata->hard_reset_en = 1;
-	} else {
-
-		memset(&csr_vlt_table_ss[A9_FREQ_800_MHZ][SR_TURBO_INX_START],
-			B0_CSR_VAL_TURBO_SS_800M,
-			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
-
-		memset(&csr_vlt_table_ss[A9_FREQ_850_MHZ][SR_TURBO_INX_START],
-			B0_CSR_VAL_TURBO_SS_850M,
-			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
-
-		memset(&csr_vlt_table_ss[A9_FREQ_1_GHZ][SR_TURBO_INX_START],
-			B0_CSR_VAL_TURBO_SS_1G,
-			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
-
-		memset(&csr_vlt_table_tt[A9_FREQ_1_GHZ][SR_TURBO_INX_START],
-			B0_CSR_VAL_TURBO_TT_1G,
-			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
-
 	}
-
-	vlt_tbl_init = 1;
 
 	for (i = 0; i < ARRAY_SIZE(bcmpmu_client_devices); i++)
 		bcmpmu_client_devices[i]->dev.platform_data = bcmpmu;
