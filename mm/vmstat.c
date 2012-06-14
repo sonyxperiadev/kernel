@@ -729,6 +729,7 @@ const char * const vmstat_text[] = {
 	"cmafree",
 	"cmaanon",
 	"cmafile",
+	"cmaunevictable",
 	"contigalloc",
 #endif
 	"nr_anon_transparent_hugepages",

@@ -975,7 +975,7 @@ keep_lumpy:
 int __isolate_lru_page(struct page *page, int mode, int file)
 {
 	int ret = -EINVAL;
-	bool isolate_cma = ((mode & ISOLATE_CMA) == 0);
+	bool isolate_cma = ((mode & ISOLATE_CMA) == ISOLATE_CMA);
 
 	/* Only take pages on the LRU. */
 	if (!PageLRU(page))

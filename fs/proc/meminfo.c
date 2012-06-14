@@ -60,6 +60,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		"CmaFree:        %8lu kB\n"
 		"CmaAnon:        %8lu kB\n"
 		"CmaFile:        %8lu kB\n"
+		"CmaUnevictable: %8lu kB\n"
 		"ContigAlloc:    %8lu kB\n"
 #endif
 		"Cached:         %8lu kB\n"
@@ -118,6 +119,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		K(global_page_state(NR_FREE_CMA_PAGES)),
 		K(global_page_state(NR_CMA_ANON)),
 		K(global_page_state(NR_CMA_FILE)),
+		K(global_page_state(NR_CMA_UNEVICTABLE)),
 		K(global_page_state(NR_CONTIG_PAGES)),
 #endif
 		K(cached),
