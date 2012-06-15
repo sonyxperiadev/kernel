@@ -3266,7 +3266,9 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 	case AUDCTRL_HW_CFG_WAIT:
 		AUDCTRL_ConfigWait(arg1, arg2);
 		break;
-
+	case AUDCTRL_HW_CFG_DSPMUTE:
+		AUDCTRL_SetTelephonySpkrMute(AUDIO_SINK_RESERVED4, arg1);
+		break;
 	case AUDCTRL_HW_WRITE_GAIN:
 
 		/*arg2 is gain in milli Bel */
