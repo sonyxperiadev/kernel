@@ -499,12 +499,12 @@ int enter_idle_state(struct kona_idle_state *state)
 			rhea_clock_print_act_clks();
 
 	switch (state->state) {
-	case RHEA_STATE_C1:
 	case RHEA_STATE_C2:
+	case RHEA_STATE_C3:
 		enter_retention_state(state);
 		break;
-	case RHEA_STATE_C3:
 	case RHEA_STATE_C4:
+	case RHEA_STATE_C5:
 		enter_dormant_state(state);
 		break;
 	}
