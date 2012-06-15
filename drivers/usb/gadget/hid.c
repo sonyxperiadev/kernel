@@ -84,22 +84,6 @@ static struct usb_device_descriptor device_desc = {
 	.bNumConfigurations =	1,
 };
 
-static struct usb_otg_descriptor otg_descriptor = {
-	.bLength =		sizeof otg_descriptor,
-	.bDescriptorType =	USB_DT_OTG,
-
-	/* REVISIT SRP-only hardware is possible, although
-	 * it would not be called "OTG" ...
-	 */
-	.bmAttributes =		USB_OTG_SRP | USB_OTG_HNP,
-};
-
-static const struct usb_descriptor_header *otg_desc[] = {
-	(struct usb_descriptor_header *) &otg_descriptor,
-	NULL,
-};
-
-
 /* string IDs are assigned dynamically */
 
 #define STRING_MANUFACTURER_IDX		0
@@ -131,11 +115,6 @@ static int __init do_config(struct usb_configuration *c)
 {
 	struct hidg_func_node *e;
 	int func = 0, status = 0;
-
-	if (gadget_is_otg(c->cdev->gadget)) {
-		c->descriptors = otg_desc;
-		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
-	}
 
 	list_for_each_entry(e, &hidg_func_list, node) {
 		status = hidg_bind_config(c, e->func, func++);
