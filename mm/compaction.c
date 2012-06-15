@@ -84,12 +84,7 @@ static unsigned long isolate_freepages_block(unsigned long blockpfn,
 			continue;
 		}
 
-		/* Found a free page, break it into order-0 pages
-		 * Pass on the "pgblock_isolated", so split doesnt
-		 * count for free CMA pages in case the pageblock
-		 * is already isolated
-		 */
-		isolated = split_free_page(page, pgblock_isolated);
+		isolated = split_free_page(page);
 		if (!isolated && strict)
 			return 0;
 		total_isolated += isolated;
@@ -122,10 +117,6 @@ static unsigned long isolate_freepages_block(unsigned long blockpfn,
  * (which may be greater then end_pfn if end fell in a middle of
  * a free page).
  *
- * Moreover, the pageblocks within start-end have already been marked
- * MIGRATE_ISOLATE, so, split_free_pages() should not account for
- * free CMA pages. Hence, the pgblock_isolate argument for
- * isolate_freepages_block() is always "true" when called from here.
  */
 unsigned long
 isolate_freepages_range(unsigned long start_pfn, unsigned long end_pfn)
