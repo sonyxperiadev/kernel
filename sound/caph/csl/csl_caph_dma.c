@@ -996,8 +996,8 @@ void csl_caph_dma_clear_intr(CSL_CAPH_DMA_CHNL_e chnl,
 	CAPH_DMA_CHANNEL_e chal_chnl = CAPH_DMA_CH_VOID;
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	aTrace(LOG_AUDIO_CSL, "%s: chnl=0x%x "
-		"owner=%d\n", __func__, chnl, csl_owner);
+	/*aTrace(LOG_AUDIO_CSL, "%s: chnl=0x%x "
+		"owner=%d\n", __func__, chnl, csl_owner);*/
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;

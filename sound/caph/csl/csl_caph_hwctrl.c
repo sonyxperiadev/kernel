@@ -736,13 +736,15 @@ static void csl_caph_hwctrl_PrintPath(CSL_CAPH_HWConfig_Table_t *path)
 
 	if (!path)
 		return;
-
+	if (!path->pathID)
+		return;
 	aTrace(LOG_AUDIO_CSL,
-			"csl_caph_hwctrl_PrintPath:: path %d", path->pathID);
+		"csl_caph_hwctrl_PrintPath:: path %d source %d",
+		path->pathID, path->source);
 	for (i = 0; i < MAX_SINK_NUM; i++) {
-		if (path->sink[i] != CSL_CAPH_DEV_NONE) {
+		if (path->sink[i] != CSL_CAPH_DEV_NONE || !i) {
 			aTrace(LOG_AUDIO_CSL,
-					"\n\tblock list %d: ", i);
+				"\n\tblock list %d sink %d:", i, path->sink[i]);
 			for (j = 0; j < MAX_PATH_LEN; j++) {
 				k =  path->blockIdx[i][j];
 
@@ -1745,8 +1747,14 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 	}
 
 	/* clean up the block list of this sink*/
-	memset(path->block[sinkNo], 0, sizeof(path->block[sinkNo]));
-	memset(path->blockIdx[sinkNo], 0, sizeof(path->blockIdx[sinkNo]));
+	/*for the last sink, do not clear the remaining blocks*/
+	i = 0;
+	if (path->sinkCount == 1)
+		i = startOffset;
+	memset(&path->block[sinkNo][i], 0, sizeof(path->block[0]) -
+		startOffset*sizeof(path->block[0][0]));
+	memset(&path->blockIdx[sinkNo][i], 0, sizeof(path->blockIdx[0]) -
+		startOffset*sizeof(path->blockIdx[0][0]));
 }
 
 
@@ -2086,9 +2094,11 @@ static void csl_caph_config_sw
 			src_path, j);
 	}
 
-	if (!swCfg->cloned)
+	if (!swCfg->cloned) {
 		swCfg->status = csl_caph_switch_config_channel(*swCfg);
-	else if (is_broadcast) {
+		if (swCfg->status)
+			csl_caph_hwctrl_PrintAllPaths();
+	} else if (is_broadcast) {
 		csl_caph_switch_add_dst(swCfg->chnl, swCfg->FIFO_dstAddr);
 		aTrace(LOG_AUDIO_CSL, "broadcast sw %d 0x%x --> 0x%x\n",
 			swCfg->chnl, (u32)swCfg->FIFO_srcAddr,
@@ -3914,15 +3924,22 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID,
 
 	/*use an available sink storage for this new sink.*/
 	for (i = 0; i < MAX_SINK_NUM; i++) {
+		if (path->sink[i] == config.sink) {
+			aError("%s::pathID %d, sink %d already on\n",
+			__func__, pathID, config.sink);
+			return RESULT_OK;
+		}
 		if (path->sink[i] == CSL_CAPH_DEV_NONE) {
 			sinkNo = i;
 			path->sink[sinkNo] = config.sink;
 			break;
 		}
 	}
+
+	offset = path->block_split_offset;
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_AddPath::"
-				"pathID %d, sinkCount %d, sinkNo %d.\r\n",
-				pathID, path->sinkCount, sinkNo);
+		"pathID %d, sinkCount %d, sinkNo %d, offset %d\n",
+		pathID, path->sinkCount, sinkNo, offset);
 
 	/*use the current pathID*/
 	config.pathID = path->pathID;
@@ -3930,9 +3947,6 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID,
 	path->sinkCount++;
 
 	csl_caph_hwctrl_SetupPath(config, sinkNo);
-
-	if (path->sinkCount > 1)
-		offset = path->block_split_offset;
 
 	if (path->sink[sinkNo] != CSL_CAPH_DEV_NONE) {
 		csl_caph_config_blocks(path->pathID, sinkNo, offset);
@@ -3975,8 +3989,20 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID,
 	}
 
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_RemovePath::"
-				"pathID %d, sinkCount %d, sinkNo %d.\r\n",
-				pathID, path->sinkCount, sinkNo);
+		"pathID %d, sinkCount %d, sinkNo %d sink %d:%d\n",
+		pathID, path->sinkCount, sinkNo, config.sink,
+		path->sink[sinkNo]);
+
+	if (path->sink[sinkNo] != config.sink) {
+		aError("%s::pathID %d, sink %d is not found\n",
+		__func__, pathID, config.sink);
+		return RESULT_OK;
+	}
+
+	if (path->sinkCount == 1) {
+		aError("%s::pathID %d, last sink %d is removed\n",
+		__func__, pathID, path->sink[sinkNo]);
+	}
 
 	csl_caph_hwctrl_remove_blocks(pathID, sinkNo, path->block_split_offset);
 
@@ -5588,3 +5614,23 @@ static void csl_caph_ControlForceHWSRC26Clock(bool enable)
 	}
 }
 #endif
+
+/****************************************************************************
+*
+*  Description: dump all paths
+*
+*****************************************************************************/
+void csl_caph_hwctrl_PrintAllPaths(void)
+{
+	int i;
+	CSL_CAPH_HWConfig_Table_t *path;
+	int dbg_level = gAudioDebugLevel;
+
+	gAudioDebugLevel |= LOG_AUDIO_CSL;
+	for (i = 0; i < MAX_AUDIO_PATH; i++) {
+		path = &HWConfig_Table[i];
+		if (path->pathID)
+			csl_caph_hwctrl_PrintPath(path);
+	}
+	gAudioDebugLevel = dbg_level;
+}

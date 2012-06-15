@@ -1356,6 +1356,9 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 		break;
 
 	default:
+		/*must set a default, o.w. it would be used uninitialized*/
+		*pMic = AUDIO_SOURCE_UNDEFINED;
+		*pSpk = AUDIO_SINK_UNDEFINED;
 		aWarn(
 				"AUDCTRL_GetSrcSinkByMode()"
 				"mode %d is out of range\n",
@@ -1998,6 +2001,12 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 		audio_xassert(0, pathID);
 		return;
 	}
+
+	if (sink >= AUDIO_SINK_UNDEFINED) {
+		audio_xassert(0, sink);
+		return;
+	}
+
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
 	curr_spk = csl_caph_FindSinkDevice(pathID);
