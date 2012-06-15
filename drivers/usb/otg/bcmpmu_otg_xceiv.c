@@ -145,6 +145,21 @@ static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
 	}
 }
 
+static void bcmpmu_otg_xceiv_set_def_state(
+	struct bcmpmu_otg_xceiv_data *xceiv_data, bool default_host)
+{
+
+	if (xceiv_data) {
+		if (default_host)
+			xceiv_data->otg_xceiver.xceiver.state =
+				    OTG_STATE_A_IDLE;
+		else
+			xceiv_data->otg_xceiver.xceiver.state =
+				    OTG_STATE_B_IDLE;
+	}
+
+}
+
 static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
@@ -165,12 +180,10 @@ static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
 			bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
 		/* Initialize OTG core and PHY */
 		bcm_hsotgctrl_phy_init(!id_default_host);
-		if (id_default_host)
-			xceiv_data->otg_xceiver.xceiver.state =
-			    OTG_STATE_A_IDLE;
-		else
-			xceiv_data->otg_xceiver.xceiver.state =
-			    OTG_STATE_B_IDLE;
+
+		bcmpmu_otg_xceiv_set_def_state(xceiv_data,
+			id_default_host);
+
 	} else
 		return -EINVAL;
 
@@ -877,6 +890,9 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->otg_xceiver.xceiver.default_a =
 	    bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
 	    bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
+
+	bcmpmu_otg_xceiv_set_def_state(xceiv_data,
+		xceiv_data->otg_xceiver.xceiver.default_a);
 
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
