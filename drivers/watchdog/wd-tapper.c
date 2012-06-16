@@ -104,7 +104,7 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
 	}
 
 	/* Get the time out period */
-	wd_tapper_data->count = msec_to_ticks(pltfm_data->count);
+	wd_tapper_data->count = sec_to_ticks(pltfm_data->count);
 	if (wd_tapper_data->count == 0) {
 		dev_err(&pdev->dev, "count value set is 0 - INVALID\n");
 		goto out;

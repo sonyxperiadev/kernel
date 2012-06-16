@@ -1388,10 +1388,10 @@ late_initcall(rhea_stone_camera_init);
 
 #ifdef CONFIG_WD_TAPPER
 static struct wd_tapper_platform_data wd_tapper_data = {
-	/* Set the count to the time equivalent to the time-out in milliseconds
+	/* Set the count to the time equivalent to the time-out in seconds
 	 * required to pet the PMU watchdog to overcome the problem of reset in
 	 * suspend*/
-	.count = 120000,
+	.count = 120,
 	.ch_num = 1,
 	.name = "aon-timer",
 };
