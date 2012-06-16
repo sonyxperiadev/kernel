@@ -264,6 +264,11 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 	CSL_CAPH_PathID ul2PathID,
 	CSL_CAPH_PathID dlPathID);
 
+void AUDDRV_SetAudioMode_voicerecord(AudioMode_t audio_mode,
+	AudioApp_t audio_app,
+	CSL_CAPH_PathID ulPathID,
+	CSL_CAPH_PathID ul2PathID);
+
 void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param);
 
 #ifdef CONFIG_ENABLE_SSMULTICAST

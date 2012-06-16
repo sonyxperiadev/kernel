@@ -2341,9 +2341,9 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 		if (!AUDCTRL_InVoiceCall()) {
 			/* without setting mic gains (such as PGA),
 			   idle mode recording gives low volume */
-			AUDDRV_SetAudioMode(
+			AUDDRV_SetAudioMode_voicerecord(
 				AUDCTRL_GetAudioMode(),
-				AUDCTRL_GetAudioApp(), pathID, 0, 0);
+				AUDCTRL_GetAudioApp(), pathID, 0);
 		}
 
 		AUDDRV_EnableDSPInput(source, sr);
