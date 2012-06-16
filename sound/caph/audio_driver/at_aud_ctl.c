@@ -407,6 +407,7 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		if (voip_running) {
 			AUDTST_VoIP_Stop();
 			voip_running = FALSE;
+			pChip->iCallMode = CALL_MODE_NONE;
 		}
 		break;
 
@@ -421,6 +422,11 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 			AUDTST_VoIP(Params[1],
 				    Params[2], Params[3], Params[4], Params[5]);
 			voip_running = TRUE;
+		/*In Loopback mode all playback should go to one sink
+		setting the iCallMode to MODEM will make the tone playback
+		on same sync as Voicecall
+		(Set in PCMPlaybackTrigger() method) */
+			pChip->iCallMode = MODEM_CALL;
 		}
 		break;
 
