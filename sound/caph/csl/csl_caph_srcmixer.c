@@ -1177,7 +1177,7 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
 		AUDIO_SAMPLING_RATE_t
 		srOut)
 {
-	u8 ch = 0;
+	int ch = 0;
 	CSL_CAPH_SRCM_INCHNL_e neededChnl = CSL_CAPH_SRCM_INCHNL_NONE;
 
 	aTrace
@@ -1209,7 +1209,6 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
 	else
 		neededChnl = CSL_CAPH_SRCM_MONO_CH;
 
-
 	for (ch = MAX_INCHNLS - 1; ch >= 0; ch--) {
 		if (inChnlStatus[ch].inChnl & neededChnl) {
 			if (inChnlStatus[ch].alloc_status == FALSE) {
@@ -1240,8 +1239,18 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
 				return inChnlStatus[ch].inChnl;
 			}
 		}
+
+		/* at the end of this loop, prevent endless looping */
+		if (ch == 0)
+			break;
+
 	}
+
 	/* No free channel available */
+	aError("csl_caph_srcmixer_obtain_inchnl::"
+	       "neededChnl = %x can NOT be found!\n",
+	       neededChnl);
+
 	return CSL_CAPH_SRCM_INCHNL_NONE;
 }
 

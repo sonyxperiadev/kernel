@@ -171,8 +171,8 @@ enum CSL_CAPH_DEVICE_e {
 	CSL_CAPH_DEV_ANALOG_MIC,	/*Phone analog mic */
 	CSL_CAPH_DEV_HS_MIC,	/*Headset mic */
 	CSL_CAPH_DEV_BT_MIC,	/*Bluetooth headset mic */
-	CSL_CAPH_DEV_FM_RADIO,	/*FM Radio playback */
-	CSL_CAPH_DEV_MEMORY,	/*DDR memory */
+	CSL_CAPH_DEV_FM_RADIO,	/*19  FM Radio playback */
+	CSL_CAPH_DEV_MEMORY,	/*20  DDR memory */
 	CSL_CAPH_DEV_DSP_throughMEM,	/*DSP connection through shared mem */
 	CSL_CAPH_DEV_SSP_RX, /* SSP (PCM mode) to external modem chip */
 	CSL_CAPH_DEV_SSP_TX, /* SSP (PCM mode) to external modem chip */
