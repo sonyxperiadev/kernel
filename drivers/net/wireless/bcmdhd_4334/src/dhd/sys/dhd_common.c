@@ -267,36 +267,13 @@ int
 dhd_wl_ioctl_cmd(dhd_pub_t *dhd_pub, int cmd, void *arg, int len, uint8 set, int ifindex)
 {
 	wl_ioctl_t ioc;
-#ifdef CUSTOMER_HW_SAMSUNG
-	int ret;
-#endif /* CUSTOMER_HW_SAMSUNG */
 
 	ioc.cmd = cmd;
 	ioc.buf = arg;
 	ioc.len = len;
 	ioc.set = set;
 
-#ifdef CUSTOMER_HW_SAMSUNG
-	ret = dhd_wl_ioctl(dhd_pub, ifindex, &ioc, arg, len);
-	if (ret < 0) {
-		if (ioc.cmd == WLC_GET_VAR) {
-			DHD_ERROR(("%s: WLC_GET_VAR: %s, error = %d\n",
-				__FUNCTION__, (char *)ioc.buf, ret));
-		} else if (ioc.cmd == WLC_SET_VAR) {
-			char pkt_filter[] = "pkt_filter_add";
-			if (strncmp(pkt_filter, ioc.buf, sizeof(pkt_filter)) != 0) {
-				DHD_ERROR(("%s: WLC_SET_VAR: %s, error = %d\n",
-					__FUNCTION__, (char *)ioc.buf, ret));
-			}
-		} else {
-			DHD_ERROR(("%s: WLC_IOCTL: cmd:%d, error = %d\n",
-					__FUNCTION__, ioc.cmd, ret));
-		}
-	}
-	return ret;
-#else
 	return dhd_wl_ioctl(dhd_pub, ifindex, &ioc, arg, len);
-#endif /* CUSTOMER_HW_SAMSUNG */
 }
 
 
@@ -308,10 +285,28 @@ dhd_wl_ioctl(dhd_pub_t *dhd_pub, int ifindex, wl_ioctl_t *ioc, void *buf, int le
 	dhd_os_proto_block(dhd_pub);
 
 	ret = dhd_prot_ioctl(dhd_pub, ifindex, ioc, buf, len);
-	if (!ret || ret == -ETIMEDOUT)
-		dhd_os_check_hang(dhd_pub, ifindex, ret);
+	if (!ret || ret == -ETIMEDOUT) {
+		/* Send hang event only if dhd_open() was success */
+		if (dhd_pub->up)
+			dhd_os_check_hang(dhd_pub, ifindex, ret);
+	}
 
 	dhd_os_proto_unblock(dhd_pub);
+
+#ifdef CUSTOMER_HW_SAMSUNG
+	if (ret < 0) {
+		if (ioc->cmd == WLC_GET_VAR)
+			DHD_ERROR(("%s: WLC_GET_VAR: %s, error = %d\n",
+						__FUNCTION__, (char *)ioc->buf, ret));
+		else if (ioc->cmd == WLC_SET_VAR)
+			DHD_ERROR(("%s: WLC_SET_VAR: %s, error = %d\n",
+						__FUNCTION__, (char *)ioc->buf, ret));
+		else
+			DHD_ERROR(("%s: WLC_IOCTL: cmd: %d, error = %d\n",
+						__FUNCTION__, ioc->cmd, ret));
+	}
+#endif /* CUSTOMER_HW_SAMSUNG */
+
 	return ret;
 }
 

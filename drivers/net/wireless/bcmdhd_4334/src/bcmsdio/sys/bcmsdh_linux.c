@@ -49,6 +49,11 @@ extern void dhdsdio_isr(void * args);
 #include <dhd.h>
 #endif /* defined(OOB_INTR_ONLY) */
 
+#if defined(CONFIG_PM_SLEEP) && defined(CUSTOMER_HW_SLP)
+/*SLP_wakelock_alternative_code*/
+struct device *pm_dev; 
+#endif /* CONFIG_PM_SLEEP && CUSTOMER_HW_SLP */
+
 /**
  * SDIO Host Controller info
  */
@@ -162,6 +167,13 @@ int bcmsdh_probe(struct device *dev)
 	int irq = 0;
 	uint32 vendevid;
 	unsigned long irq_flags = 0;
+#if defined(CONFIG_PM_SLEEP) && defined(CUSTOMER_HW_SLP)
+	int ret = 0;
+#endif /* CONFIG_PM_SLEEP && CUSTOMER_HW_SLP */
+
+
+	printk(KERN_ERR "%s ENTER \n",__FUNCTION__);
+
 
 #if !defined(BCMLXSDMMC) && defined(BCMPLATFORM_BUS)
 	pdev = to_platform_device(dev);
@@ -178,6 +190,8 @@ int bcmsdh_probe(struct device *dev)
 #else
 	 irq_flags = IRQF_TRIGGER_FALLING|IRQF_NO_SUSPEND;
 #endif /* HW_OOB */
+
+	printk(KERN_ERR "%s IRQ_FLAGS_VALUE=%x\n",__FUNCTION__,irq_flags);
 
 	/* Get customer specific OOB IRQ parametres: IRQ number as IRQ type */
 	irq = dhd_customer_oob_irq_map(&irq_flags);
@@ -228,6 +242,13 @@ int bcmsdh_probe(struct device *dev)
 	sdhc->next = sdhcinfo;
 	sdhcinfo = sdhc;
 
+#if defined(CONFIG_PM_SLEEP) && defined(CUSTOMER_HW_SLP)
+	/*SLP_wakelock_alternative_code*/
+	pm_dev=sdhc->dev; 
+	ret = device_init_wakeup(pm_dev, 1);
+	printf("%s : device_init_wakeup(pm_dev) enable, ret = %d\n", __func__, ret);
+#endif /* CONFIG_PM_SLEEP && CUSTOMER_HW_SLP */
+
 	/* Read the vendor/device ID from the CIS */
 	vendevid = bcmsdh_query_device(sdh);
 	/* try to attach to the target device */
@@ -261,6 +282,11 @@ int bcmsdh_remove(struct device *dev)
 	osl_t *osh;
 
 	sdhc = sdhcinfo;
+#if defined(CONFIG_PM_SLEEP) && defined(CUSTOMER_HW_SLP)
+	/*SLP_wakelock_alternative_code*/
+	device_init_wakeup(pm_dev, 0);
+	printf("%s : device_init_wakeup(pm_dev) disable\n", __func__);
+#endif /* CONFIG_PM_SLEEP && CUSTOMER_HW_SLP */
 	drvinfo.detach(sdhc->ch);
 	bcmsdh_detach(sdhc->osh, sdhc->sdh);
 
@@ -616,6 +642,7 @@ int bcmsdh_register_oob_intr(void * dhdp)
 	int error = 0;
 
 	SDLX_MSG(("%s Enter \n", __FUNCTION__));
+	printk(KERN_ERR "%s ENTER\n",__FUNCTION__);
 
 	/* IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE; */
 
@@ -625,6 +652,7 @@ int bcmsdh_register_oob_intr(void * dhdp)
 		SDLX_MSG(("%s IRQ=%d Type=%X \n", __FUNCTION__,
 			(int)sdhcinfo->oob_irq, (int)sdhcinfo->oob_flags));
 		/* Refer to customer Host IRQ docs about proper irqflags definition */
+		sdhcinfo->oob_flags |= IRQF_NO_SUSPEND;
 		error = request_irq(sdhcinfo->oob_irq, wlan_oob_irq, sdhcinfo->oob_flags,
 			"bcmsdh_sdmmc", NULL);
 		if (error)
@@ -634,6 +662,7 @@ int bcmsdh_register_oob_intr(void * dhdp)
 		sdhcinfo->oob_irq_registered = TRUE;
 		sdhcinfo->oob_irq_enable_flag = TRUE;
 	}
+	printk(KERN_ERR "%s IRQ_FLAGS=%x\n",__FUNCTION__,sdhcinfo->oob_flags);
 
 	return 0;
 }
@@ -644,11 +673,15 @@ void bcmsdh_set_irq(int flag)
 		SDLX_MSG(("%s Flag = %d", __FUNCTION__, flag));
 		sdhcinfo->oob_irq_enable_flag = flag;
 		if (flag) {
+
 			enable_irq(sdhcinfo->oob_irq);
 			enable_irq_wake(sdhcinfo->oob_irq);
+			printk(KERN_ERR "%s - ENABLE ISR: \n",__FUNCTION__);
 		} else {
+
 			disable_irq_wake(sdhcinfo->oob_irq);
 			disable_irq(sdhcinfo->oob_irq);
+			printk(KERN_ERR "%s - DISBALE ISR: \n",__FUNCTION__);			
 		}
 	}
 }
