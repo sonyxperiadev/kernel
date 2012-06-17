@@ -99,7 +99,7 @@ static histo_t vi_d1, vi_d2, vi_d3, vi_d4;
 extern bool ap_cfg_running;
 extern bool ap_fw_loaded;
 #endif
-
+#if 0
 #ifdef CONFIG_KONA_PI_MGR
 #include <mach/pi_mgr.h>
 #include <plat/pi_mgr.h>
@@ -109,7 +109,7 @@ static int qos_wlan = -1;
 
 
 #endif
-
+#endif
 
 
 /* enable HOSTIP cache update from the host side when an eth0:N is up */
@@ -3029,6 +3029,7 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 		}
 #endif /* BCM4334_CHECK_CHIP_REV */
 
+#if 0
 #ifdef CONFIG_KONA_PI_MGR
 		qos_wlan=-1;
 
@@ -3052,7 +3053,7 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	
 	
 #endif
-
+#endif
 
 	/* updates firmware nvram path if it was provided as module parameters */
 	if ((strlen(firmware_path) != 0) && (firmware_path[0] != '\0'))
@@ -4370,7 +4371,7 @@ void dhd_detach(dhd_pub_t *dhdp)
 		dhd_monitor_uninit();
 	}
 #endif
-
+#if 0
 #ifdef CONFIG_KONA_PI_MGR
 
 	if (pi_mgr_qos_request_remove(&wlan_qos_node))
@@ -4388,7 +4389,7 @@ void dhd_detach(dhd_pub_t *dhdp)
 
 	
 #endif
-
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP)
 		unregister_pm_notifier(&dhd_sleep_pm_notifier);
@@ -5425,13 +5426,14 @@ int dhd_os_wake_lock(dhd_pub_t *pub)
 	dhd_info_t *dhd = (dhd_info_t *)(pub->info);
 	unsigned long flags;
 	int ret = 0;
-	int lock=-1;
+//	int lock=-1;
 
 	if (dhd) {
 		spin_lock_irqsave(&dhd->wakelock_spinlock, flags);
 #ifdef CONFIG_HAS_WAKELOCK
 		if (!dhd->wakelock_counter)
 			wake_lock(&dhd->wl_wifi);
+#if 0
 #ifdef CONFIG_KONA_PI_MGR
 			
 			
@@ -5444,7 +5446,7 @@ int dhd_os_wake_lock(dhd_pub_t *pub)
 				DHD_ERROR(( "WIFI retention FAILED\n"));
 		
 #endif
-
+#endif
 		
 #elif defined(CONFIG_PM_SLEEP) && defined(CUSTOMER_HW_SLP)
 		/*SLP_wakelock_alternative_code*/
@@ -5473,7 +5475,7 @@ int dhd_os_wake_unlock(dhd_pub_t *pub)
 	dhd_info_t *dhd = (dhd_info_t *)(pub->info);
 	unsigned long flags;
 	int ret = 0;
-	int lock=-1;
+//	int lock=-1;
 	dhd_os_wake_lock_timeout(pub);
 	if (dhd) {
 		spin_lock_irqsave(&dhd->wakelock_spinlock, flags);
@@ -5482,6 +5484,7 @@ int dhd_os_wake_unlock(dhd_pub_t *pub)
 #ifdef CONFIG_HAS_WAKELOCK
 			if (!dhd->wakelock_counter)
 				wake_unlock(&dhd->wl_wifi);
+#if 0			
 #ifdef CONFIG_KONA_PI_MGR
 			
 			
@@ -5494,7 +5497,8 @@ int dhd_os_wake_unlock(dhd_pub_t *pub)
 				DHD_ERROR(( "WIFI retention FAILED\n"));
 			
 #endif
-			
+#endif
+
 #elif defined(CONFIG_PM_SLEEP) && defined(CUSTOMER_HW_SLP)
 			/*SLP_wakelock_alternative_code*/
 			pm_relax(pm_dev);		
