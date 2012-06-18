@@ -147,6 +147,7 @@ MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] = {
 
 static AUDIO_SINK_Enum_t voiceCallSpkr = AUDIO_SINK_UNDEFINED;
 static AUDIO_SOURCE_Enum_t voiceCallMic = AUDIO_SOURCE_UNDEFINED;
+static int bNeedDualMic = FALSE;
 
 static int telephony_dl_gain_dB;
 static int telephony_ul_gain_dB;
@@ -335,7 +336,6 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 {
 	AudioMode_t mode;
 	AudioApp_t app = AUDCTRL_GetAudioApp();
-	int bNeedDualMic = FALSE;
 
 	aTrace(LOG_AUDIO_CNTLR, "%s sink %d, mic %d\n", __func__, sink, source);
 
@@ -353,7 +353,7 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 		return;
 	}
 
-	if (isDigiMic(source)) {
+	if (isDigiMic(source) || bNeedDualMic) {
 		/* Enable PMU power to digital microphone */
 		powerOnDigitalMic(TRUE);
 	}
@@ -416,12 +416,15 @@ void AUDCTRL_DisableTelephony(void)
 		voiceCallSampleRate = AUDIO_SAMPLING_RATE_8000;
 
 		/* Disable power to digital microphone */
-		if (isDigiMic(voiceCallMic))
+		if (isDigiMic(voiceCallMic) || bNeedDualMic)
 			powerOnDigitalMic(FALSE);
 
 		voiceCallSpkr = AUDIO_SINK_UNDEFINED;
 		voiceCallMic = AUDIO_SOURCE_UNDEFINED;
 	}
+
+	bNeedDualMic = FALSE;
+
 	return;
 }
 
@@ -437,7 +440,7 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate)
 {
 	AudioMode_t mode;
 	AudioApp_t app = AUDCTRL_GetAudioApp();
-	int bNeedDualMic;
+
 	aTrace(LOG_AUDIO_CNTLR, "%s sample_rate %d-->%d",
 		__func__, voiceCallSampleRate, sample_rate);
 
@@ -539,7 +542,6 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 {
 	AudioMode_t mode;
 	AudioApp_t app = AUDIO_APP_VOICE_CALL;
-	int bNeedDualMic = FALSE;
 
 	aTrace(LOG_AUDIO_CNTLR, "%s sink %d, mic %d\n", __func__, sink, source);
 
@@ -581,14 +583,14 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	if (voiceCallSpkr != sink)
 		powerOnExternalAmp(voiceCallSpkr, TelephonyUse,
 				FALSE, FALSE);
-	if (voiceCallMic != source) {
+	if (voiceCallMic != source || bNeedDualMic) {
 		if (isDigiMic(voiceCallMic)) {
 			/* Disable power to digital microphone */
 			powerOnDigitalMic(FALSE);
 		}
 	}
 
-	if (voiceCallMic != source) {
+	if (voiceCallMic != source || bNeedDualMic) {
 		if (isDigiMic(source)) {
 			/* Enable power to digital microphone */
 			powerOnDigitalMic(TRUE);
