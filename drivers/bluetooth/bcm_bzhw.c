@@ -59,8 +59,6 @@ enum bzhw_states_e {
 struct bcmbzhw_struct *priv_g;
 struct timer_list sleep_timer_bw;
 
-void serial8250_togglerts(struct uart_port *port, unsigned int flowon);
-
 static int bcm_bzhw_init_clock(struct bcmbzhw_struct *priv)
 {
 	int ret;
@@ -95,14 +93,7 @@ void bcm_bzhw_timer_bt_wake(unsigned long data)
 		pr_debug
 		("%s BLUETOOTH:DEASSERT BT_WAKE off RTS shut UART clk\n",
 		__func__);
-		if (priv->uport != NULL) {
-			pr_debug("%s BLUETOOTH: uport is not null toggle RTS off\n",
-				__func__);
-			serial8250_togglerts(priv->uport, 0);
-		} else {
-			pr_debug("%s BLUETOOTH: uport null toggle RTS is not toggled off\n",
-				__func__);
-		}
+
 		pi_mgr_qos_request_update(&priv->qos_node,
 				      PI_MGR_QOS_DEFAULT_VALUE);
 		priv->bzhw_state = BZHW_ASLEEP;
@@ -145,14 +136,6 @@ void bcm_bzhw_timer_host_wake(unsigned long data)
 		hostwake = gpio_get_value(priv->bzhw_data.gpio_host_wake);
 		if (hostwake == BZHW_HOST_WAKE_DEASSERT) {
 			pr_debug("%s BLUETOOTH: Asleep\n", __func__);
-			if (priv->uport != NULL) {
-				pr_debug("%s BLUETOOTH: uport is not null toggle RTS off\n",
-					__func__);
-				serial8250_togglerts(priv->uport, 0);
-			} else {
-				pr_debug("%s BLUETOOTH: uport null RTS not toggled\n",
-					__func__);
-			}
 			pi_mgr_qos_request_update(&priv->qos_node,
 				      PI_MGR_QOS_DEFAULT_VALUE);
 			priv->bzhw_state = BZHW_ASLEEP;
@@ -186,14 +169,6 @@ void bcm_bzhw_timer_host_wake(unsigned long data)
 	} else if (priv->bzhw_state == BZHW_ASLEEP) {
 		pr_debug("%s BLUETOOTH: Already sleeping make sure qos node is released\n",
 			__func__);
-		if (priv->uport != NULL) {
-			pr_debug("%s BLUETOOTH: uport is not null toggle RTS off\n",
-				__func__);
-			serial8250_togglerts(priv->uport, 0);
-		} else {
-			pr_debug("%s BLUETOOTH: uport null RTS not toggled\n",
-				__func__);
-		}
 		pi_mgr_qos_request_update(&priv->qos_node,
 			PI_MGR_QOS_DEFAULT_VALUE);
 		del_timer(&priv->sleep_timer_hw);
@@ -232,14 +207,6 @@ void bcm_bzhw_timer_host_wake(unsigned long data)
 		#endif
 			pi_mgr_qos_request_update(&priv->qos_node,
 				      0);
-			if (priv->uport != NULL) {
-				pr_debug("%s BLUETOOTH: state change now Awake\n",
-					__func__);
-				serial8250_togglerts(priv->uport, 1);
-			} else {
-				pr_debug("%s BLUETOOTH: uport null RTS not toggled\n",
-					__func__);
-			}
 			priv->bzhw_state = BZHW_AWAKE;
 		} else {
 			pr_debug("%s BLUETOOTH: Timer restarted\n", __func__);
@@ -314,8 +281,6 @@ int bcm_bzhw_assert_bt_wake(int bt_wake_gpio, struct pi_mgr_qos_node *lqos_node,
 	gpio_set_value(bt_wake_gpio, BZHW_BT_WAKE_ASSERT);
 	pr_debug("%s BLUETOOTH:ASSERT BT_WAKE\n", __func__);
 	rc = pi_mgr_qos_request_update(lqos_node, 0);
-	if (rc == 0)
-		serial8250_togglerts(port, 1);
 #ifdef CONFIG_HAS_WAKELOCK
 	if (priv_g != NULL) {
 		if (!wake_lock_active(&priv_g->bzhw_data.bt_wake_lock))
@@ -418,8 +383,6 @@ static irqreturn_t bcm_bzhw_host_wake_isr(int irq, void *dev)
 		wake_lock(&priv->bzhw_data.host_wake_lock);
 #endif
 		ret = pi_mgr_qos_request_update(&priv->qos_node, 0);
-		if (priv->uport != NULL)
-			serial8250_togglerts(priv->uport, 1);
 		priv->bzhw_state = BZHW_AWAKE;
 		spin_unlock_irqrestore(&priv->bzhw_lock, flags);
 	} else {
@@ -602,9 +565,24 @@ static int bcm_bzhw_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int bcm_bzhw_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	serial8250_togglerts_afe(priv_g->uport, 0);
+	return 0;
+}
+
+static int bcm_bzhw_resume(struct platform_device *pdev)
+{
+	serial8250_togglerts_afe(priv_g->uport, 1);
+	return 0;
+}
+
+
 static struct platform_driver bcm_bzhw_platform_driver = {
 	.probe = bcm_bzhw_probe,
 	.remove = bcm_bzhw_remove,
+	.suspend = bcm_bzhw_suspend,
+	.resume = bcm_bzhw_resume,
 	.driver = {
 		   .name = "bcm_bzhw",
 		   .owner = THIS_MODULE,

@@ -106,7 +106,6 @@ static int serial_index(struct uart_port *port)
 }
 
 static unsigned int skip_txen_test; /* force skip of txen test at init time */
-
 /*
  * Debugging.
  */
@@ -2593,7 +2592,9 @@ static void serial8250_shutdown(struct uart_port *port)
 		container_of(port, struct uart_8250_port, port);
 	unsigned long flags;
 	int retry_count = 0;
+	int mcr = 0;
 
+	pi_mgr_qos_request_update(&up->qos_rx_node, 0);
 	/*
 	 * Disable interrupts from this port
 	 */
@@ -2609,6 +2610,14 @@ static void serial8250_shutdown(struct uart_port *port)
 		up->port.mctrl &= ~TIOCM_OUT2;
 
 	serial8250_set_mctrl(&up->port, up->port.mctrl);
+
+	if (up->mcr & UART_MCR_AFE) {
+		mcr = serial_inp(up, UART_MCR);
+		mcr &= ~(UART_MCR_AFE);
+		serial_outp(up, UART_MCR, mcr);
+		serial_outp(up, UART_MCR, mcr & (~UART_MCR_RTS));
+	}
+
 	spin_unlock_irqrestore(&up->port.lock, flags);
 
 	/* Checking whether UART is busy or NOT.
@@ -2647,6 +2656,7 @@ static void serial8250_shutdown(struct uart_port *port)
 	up->timer.function = serial8250_timeout;
 	if (is_real_interrupt(up->port.irq))
 		serial_unlink_irq_chain(up);
+	pi_mgr_qos_request_update(&up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
 }
 
 /*
@@ -2753,26 +2763,28 @@ static unsigned int serial8250_get_divisor(struct uart_port *port, unsigned int 
 	return quot;
 }
 
-void serial8250_togglerts(struct uart_port *port, unsigned int flowon)
+void serial8250_togglerts_afe(struct uart_port *port, unsigned int flowon)
 {
 
 	unsigned char old_mcr;
         struct uart_8250_port *up = (struct uart_8250_port *)port;
 
-       /*if(port->mcr & UART_MCR_AFE){*/
-	 if(flowon)
-	  {
-		old_mcr = serial_in(up, UART_MCR);
-		old_mcr |= UART_MCR_RTS;
+	old_mcr = serial_in(up, UART_MCR);
+	if (flowon) {
+		/* Enable AFE */
+		old_mcr |= (UART_MCR_AFE | UART_MCR_RTS);
 		serial_outp(up, UART_MCR, old_mcr);
-	  }else {
-             old_mcr = serial_in(up, UART_MCR);
-             old_mcr &= ~UART_MCR_RTS;
-             serial_outp(up, UART_MCR, old_mcr);
-	
-       }
-
+	} else {
+		/* In case of flow_off, Disable AFE and pull the RTS line high.
+		 * This will make sure BT will NOT send data. */
+		old_mcr &= ~(UART_MCR_AFE);
+		serial_outp(up, UART_MCR, old_mcr);
+		/* Writing MCR[1] = 0, make RTS line to go high */
+		old_mcr &= ~(UART_MCR_RTS);
+		serial_outp(up, UART_MCR, old_mcr);
+	}
 }
+EXPORT_SYMBOL(serial8250_togglerts_afe);
 
 void
 serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
