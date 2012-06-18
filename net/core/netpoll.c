@@ -113,7 +113,7 @@ static void queue_process(struct work_struct *work)
 			local_irq_restore(flags);
 			spin_unlock(&txq_lock);
 			queue_delayed_work(brcm_tx_work_q,
-				&npinfo->tx_work, HZ/10);
+				&npinfo->tx_work, 0);
 			return;
 		}
 		__netif_tx_unlock(txq);
