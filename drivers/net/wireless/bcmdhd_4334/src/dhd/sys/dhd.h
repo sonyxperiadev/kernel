@@ -82,7 +82,11 @@ enum dhd_bus_state {
 #define CONCURRENT_MASK			(STA_MASK | WFD_MASK)
 
 /* max sequential rxcntl timeouts to set HANG event */
+#ifdef BCM4334_CHIP
+#define MAX_CNTL_TIMEOUT  1
+#else
 #define MAX_CNTL_TIMEOUT  2
+#endif
 
 #define DHD_SCAN_ACTIVE_TIME	 40 /* ms : Embedded default Active setting from DHD Driver */
 #define DHD_SCAN_PASSIVE_TIME	130 /* ms: Embedded default Passive setting from DHD Driver */
@@ -634,7 +638,11 @@ extern uint dhd_radio_up;
 
 /* Initial idletime ticks (may be -1 for immediate idle, 0 for no idle) */
 extern int dhd_idletime;
+#ifdef DHD_USE_IDLECOUNT
+#define DHD_IDLETIME_TICKS 5
+#else
 #define DHD_IDLETIME_TICKS 1
+#endif /* DHD_USE_IDLECOUNT */
 
 /* SDIO Drive Strength */
 extern uint dhd_sdiod_drive_strength;

@@ -443,8 +443,9 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 			pSel[2] = AUDIO_SINK_HANDSET;
 	}
 
-	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH %s stream %d, pSel %d:%d:%d\n",
-		__func__, stream, pSel[0], pSel[1], pSel[2]);
+	aTrace(LOG_ALSA_INTERFACE,
+		"ALSA-CAPH SelCtrlPut stream %d, pSel %d:%d:%d\n",
+		stream, pSel[0], pSel[1], pSel[2]);
 
 	switch (stream) {
 	case CTL_STREAM_PANEL_PCMOUT1:	/* pcmout 1 */

@@ -125,9 +125,6 @@
 #define PMU_MAX_TRANSITION_DLY 1000000
 #endif
 
-
-
-
 /* Value for ChipClockCSR during initial setup */
 #define DHD_INIT_CLKCTL1	(SBSDIO_FORCE_HW_CLKREQ_OFF | SBSDIO_ALP_AVAIL_REQ)
 #define DHD_INIT_CLKCTL2	(SBSDIO_FORCE_HW_CLKREQ_OFF | SBSDIO_FORCE_ALP)
@@ -268,9 +265,6 @@ typedef struct dhd_bus {
 	bool		activity;		/* Activity flag for clock down */
 	int32		idletime;		/* Control for activity timeout */
 	int32		idlecount;		/* Activity timeout counter */
-#ifdef DHD_USE_IDLECOUNT
-	int32		dhd_idlecount;		/* DHD idle count */
-#endif /* DHD_USE_IDLECOUNT */
 	int32		idleclock;		/* How to set bus driver when idle */
 	int32		sd_divisor;		/* Speed control to bus driver */
 	int32		sd_mode;		/* Mode control to bus driver */
@@ -1044,7 +1038,7 @@ dhdsdio_htclk(dhd_bus_t *bus, bool on, bool pendok)
 
 		bus->activity = TRUE;
 #ifdef DHD_USE_IDLECOUNT
-		bus->dhd_idlecount = 0;
+		bus->idlecount = 0;
 #endif /* DHD_USE_IDLECOUNT */
 	} else {
 		clkreq = 0;
@@ -1172,7 +1166,7 @@ dhdsdio_clkctl(dhd_bus_t *bus, uint target, bool pendok)
 			dhd_os_wd_timer(bus->dhd, dhd_watchdog_ms);
 			bus->activity = TRUE;
 #ifdef DHD_USE_IDLECOUNT
-			bus->dhd_idlecount = 0;
+			bus->idlecount = 0;
 #endif /* DHD_USE_IDLECOUNT */
 		}
 		return ret;
@@ -1189,7 +1183,7 @@ dhdsdio_clkctl(dhd_bus_t *bus, uint target, bool pendok)
 			dhd_os_wd_timer(bus->dhd, dhd_watchdog_ms);
 			bus->activity = TRUE;
 #ifdef DHD_USE_IDLECOUNT
-			bus->dhd_idlecount = 0;
+			bus->idlecount = 0;
 #endif /* DHD_USE_IDLECOUNT */
 		}
 		break;
@@ -1838,8 +1832,13 @@ dhd_bus_txctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 		/* Send from dpc */
 		bus->ctrl_frame_buf = frame;
 		bus->ctrl_frame_len = len;
-
-		dhd_wait_for_event(bus->dhd, &bus->ctrl_frame_stat);
+		if(!bus->dpc_sched) {
+			bus->dpc_sched = TRUE;
+			dhd_sched_dpc(bus->dhd);
+		}
+		if (bus->ctrl_frame_stat) {
+			dhd_wait_for_event(bus->dhd, &bus->ctrl_frame_stat);
+		}
 
 		if (bus->ctrl_frame_stat == FALSE) {
 			DHD_INFO(("%s: ctrl_frame_stat == FALSE\n", __FUNCTION__));
@@ -5397,6 +5396,7 @@ dhdsdio_isr(void *arg)
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
+
 	if (!bus) {
 		DHD_ERROR(("%s : bus is null pointer , exit \n", __FUNCTION__));
 		return;
@@ -5718,10 +5718,6 @@ dhd_disable_intr(dhd_pub_t *dhdp)
 	bcmsdh_intr_disable(bus->sdh);
 }
 
-#ifdef DHD_USE_IDLECOUNT
-#define DHD_IDLE_TIMEOUT_MS (50)
-#endif /* DHD_USE_IDLECOUNT */
-
 extern bool
 dhd_bus_watchdog(dhd_pub_t *dhdp)
 {
@@ -5785,7 +5781,7 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 			if (SLPAUTO_ENAB(bus))
 				dhdsdio_bussleep(bus, FALSE);
 			else
-			dhdsdio_clkctl(bus, CLK_AVAIL, FALSE);
+				dhdsdio_clkctl(bus, CLK_AVAIL, FALSE);
 			if (dhdsdio_readconsole(bus) < 0)
 				dhd_console_ms = 0;	/* On error, stop trying */
 		}
@@ -5803,31 +5799,26 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 #endif
 
 	/* On idle timeout clear activity flag and/or turn off clock */
-	if ((bus->idletime > 0) && (bus->clkstate == CLK_AVAIL)) {
 #ifdef DHD_USE_IDLECOUNT
-		if (++bus->idlecount >= bus->idletime) {
-			bus->idlecount = 0;
+	if (bus->activity)
+		bus->activity = FALSE;
+	else {
+		bus->idlecount++;
 
-			if (bus->activity)
-				bus->activity = FALSE;
-			else {
-				bus->dhd_idlecount++;
+		if (bus->idlecount >= bus->idletime) {
+			DHD_TIMER(("%s: DHD Idle state!!\n", __FUNCTION__));
 
-				if (bus->dhd_idlecount >= (DHD_IDLE_TIMEOUT_MS/dhd_watchdog_ms)) {
-					DHD_TIMER(("%s: DHD Idle state!!\n", __FUNCTION__));
+			if (SLPAUTO_ENAB(bus)) {
+				if (dhdsdio_bussleep(bus, TRUE) != BCME_BUSY)
+					dhd_os_wd_timer(bus->dhd, 0);
+			} else
+				dhdsdio_clkctl(bus, CLK_NONE, FALSE);
 
-					if (SLPAUTO_ENAB(bus)) {
-						if (dhdsdio_bussleep(bus, TRUE) != BCME_BUSY)
-							dhd_os_wd_timer(bus->dhd, 0);
-					}
-					else
-						dhdsdio_clkctl(bus, CLK_NONE, FALSE);
-
-					bus->dhd_idlecount = 0;	
-				}
-			}
+			bus->idlecount = 0;	
 		}
+	}
 #else
+	if ((bus->idletime > 0) && (bus->clkstate == CLK_AVAIL)) {
 		if (++bus->idlecount >= bus->idletime) {
 			bus->idlecount = 0;
 			if (bus->activity) {
@@ -5838,8 +5829,8 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 					dhdsdio_clkctl(bus, CLK_NONE, FALSE);
 			}
 		}
-#endif /* DHD_USE_IDLECOUNT */
 	}
+#endif /* DHD_USE_IDLECOUNT */
 
 	return bus->ipend;
 }
@@ -5975,8 +5966,6 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 #ifdef GET_CUSTOM_MAC_ENABLE
 	struct ether_addr ea_addr;
 #endif /* GET_CUSTOM_MAC_ENABLE */
-
-	DHD_ERROR(("%s : ENTRY\n", __FUNCTION__));
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25))
 

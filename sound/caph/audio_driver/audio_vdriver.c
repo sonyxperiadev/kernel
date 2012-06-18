@@ -879,6 +879,62 @@ void AUDDRV_DisableDSPInput(int stop)
 
 /*=============================================================================
 //
+// Function Name: AUDDRV_SetAudioMode_voicerecord
+//
+// Description:   set audio mode for voice call.
+//
+//=============================================================================
+*/
+void AUDDRV_SetAudioMode_voicerecord(AudioMode_t audio_mode,
+					AudioApp_t audio_app,
+					CSL_CAPH_PathID ulPathID,
+					CSL_CAPH_PathID ul2PathID)
+{
+	aTrace(LOG_AUDIO_DRIVER,
+			"%s mode==%d, app=%d\n\r", __func__,
+			audio_mode, audio_app);
+
+	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+			      (UInt32) audio_mode, (UInt32) audio_app, 0, 0, 0);
+	audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
+			      (UInt32) (audio_mode +
+					audio_app * AUDIO_MODE_NUMBER),
+			      (UInt32) audio_app, 0, 0, 0);
+
+/*load speaker EQ filter and Mic EQ filter from sysparm to DSP*/
+/* It means mic1, mic2, speaker */
+	if (userEQOn == FALSE) {
+		/* Use the old code, before CP function
+		   audio_control_BuildDSPUlCompfilterCoef() is updated to
+		   handle the mode properly.*/
+		if (audio_app == AUDIO_APP_VOICE_CALL_WB)
+			audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + AUDIO_MODE_NUMBER, 7, 0, 0, 0);
+		else
+			audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode % AUDIO_MODE_NUMBER, 7, 0, 0, 0);
+		/*
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app*AUDIO_MODE_NUMBER,
+				7, 0, 0, 0);
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app * AUDIO_MODE_NUMBER,
+				1, 0, 0, 0);
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app * AUDIO_MODE_NUMBER,
+				2, 0, 0, 0);
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app * AUDIO_MODE_NUMBER,
+				4, 0, 0, 0);
+		*/
+	}
+
+	AUDDRV_SetAudioMode_Mic(audio_mode, audio_app, ulPathID, ul2PathID);
+}
+
+
+/*=============================================================================
+//
 // Function Name: AUDDRV_SetAudioMode
 //
 // Description:   set audio mode for voice call.
