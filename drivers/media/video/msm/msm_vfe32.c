@@ -3381,7 +3381,7 @@ static void vfe32_do_tasklet(unsigned long data)
 			return;
 		}
 
-		list_del(&qcmd->list);
+		list_del_init(&qcmd->list);
 		spin_unlock_irqrestore(&vfe32_ctrl->tasklet_lock,
 			flags);
 

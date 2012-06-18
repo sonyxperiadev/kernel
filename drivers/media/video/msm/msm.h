@@ -298,6 +298,7 @@ struct msm_cam_v4l2_dev_inst {
 	int is_mem_map_inst;
 	struct img_plane_info plane_info;
 	int vbqueue_initialized;
+	struct mutex inst_lock;
 };
 
 struct msm_cam_mctl_node {
@@ -410,6 +411,7 @@ struct msm_cam_server_dev {
 	/* info of MCTL nodes successfully probed*/
 	struct msm_mctl_node_info mctl_node_info;
 	struct mutex server_lock;
+	uint32_t server_evt_id;
 };
 
 /* camera server related functions */
