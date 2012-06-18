@@ -16,6 +16,15 @@ choice
 
 config  MACH_HAWAII_FPGA
         bool "Hawaii SOC Version - FPGA"
+	help
+	   "This config option will enable support
+	    for FPGA platform like Chip-it where CCU is absent." 
+
+config  MACH_HAWAII_FPGA_E
+        bool "Hawaii SOC Version - FPGA_E"
+	help
+	   "This config option will enable support for
+	    FPGA platform like Eve where CCU is present."
 
 config  MACH_HAWAII_RAY
         bool "Hawaii SOC Version - RAY"

@@ -126,6 +126,8 @@ static void __init wakeup_secondary(void)
 
 	chipRegBase = IOMEM(KONA_CHIPREG_VA);
 
+	/* Chip-it FPGA has problems writing to this address hence
+	 * workaround */
 #ifdef CONFIG_MACH_HAWAII_FPGA
 	writel((virt_to_phys(kona_secondary_startup) & (~0x3))|0x1, chipRegBase + 0x1C4);
 #else

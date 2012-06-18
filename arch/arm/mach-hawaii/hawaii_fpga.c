@@ -73,7 +73,7 @@
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
 	.irq	    = BCM_INT_ID_##name,			\
-	.uartclk    = 13000000,					\
+	.uartclk    = 26000000,					\
 	.regshift   = 2,				\
 	.iotype	    = UPIO_DWAPB,			\
 	.type	    = PORT_16550A,			\
@@ -310,7 +310,9 @@ static void __init hawaii_ray_add_i2c_devices(void)
 
 static int __init hawaii_ray_add_lateInit_devices(void)
 {
+#ifdef CONFIG_MMC
 	board_add_sdio_devices();
+#endif
 	return 0;
 }
 
@@ -357,7 +359,7 @@ void __init board_map_io(void)
 
 late_initcall(hawaii_ray_add_lateInit_devices);
 
-MACHINE_START(HAWAII, "HawaiiRay")
+MACHINE_START(HAWAII, "HawaiiFPGA")
     .map_io = board_map_io,
     .init_irq = kona_init_irq,
     .timer = &kona_timer,

@@ -16,5 +16,6 @@ obj-y := io_map.o hawaii.o devices.o hawaii_ray_pinmux.o hawaii_pinmux.o
 obj-$(CONFIG_ARCH_HAWAII) += clock_hawaii.o
 obj-$(CONFIG_MACH_HAWAII_RAY) += hawaii_ray.o
 obj-$(CONFIG_MACH_HAWAII_FPGA) += hawaii_fpga.o
+obj-$(CONFIG_MACH_HAWAII_FPGA_E) += hawaii_fpga.o
 obj-$(CONFIG_CDEBUGGER) += crash_debugger.o
 obj-$(CONFIG_MFD_BCM59039) += board-bcm59039.o

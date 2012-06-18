@@ -83,9 +83,9 @@ static void __init hawaii_l2x0_init(void)
 #endif
 
 	/*
-	 * 32KB way size, 8-way associativity
+	 * 32KB way size, 16-way associativity
 	 */
-	l2x0_init(l2cache_base, 0x00040000, 0xfff0ffff);
+	l2x0_init(l2cache_base, 0x00050000, 0xfff0ffff);
 }
 #endif
 
