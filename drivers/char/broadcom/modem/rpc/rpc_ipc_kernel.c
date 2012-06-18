@@ -1737,7 +1737,7 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 	int jiffyBefore = jiffies;
 	RpcPktkElement_t *pktElem = NULL;
 
-	// coverity[ -tainted_data_argument : arg-0 ]
+	/* coverity[ -tainted_data_argument : arg-0 ] */
 	if (copy_from_user
 	    (&ioc_param, (rpc_pkt_rx_buf_ex_t *) param,
 	     sizeof(rpc_pkt_rx_buf_ex_t)) != 0) {
@@ -1880,7 +1880,7 @@ static long handle_pkt_alloc_buffer_ptr_ioc(struct file *filp, unsigned int cmd,
 {
 	rpc_pkt_alloc_buf_ptr_t ioc_param = { 0 };
 
-	// coverity[ -tainted_data_argument : arg-0 ]
+	/* coverity[ -tainted_data_argument : arg-0 ] */
 	if (copy_from_user
 	    (&ioc_param, (rpc_pkt_alloc_buf_ptr_t *) param,
 	     sizeof(rpc_pkt_alloc_buf_ptr_t)) != 0) {

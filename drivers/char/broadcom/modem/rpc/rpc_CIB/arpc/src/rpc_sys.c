@@ -185,7 +185,8 @@ static void RPC_Handle_CPReset(RPC_CPResetEvent_t event,
 	/* notify all clients for given interface */
 	for (i = 1; i <= gClientIndex; i++)
 		if (gClientMap[i].cpResetCb != NULL &&
-		    gClientMap[i].iType == interfaceType) {
+			(PACKET_InterfaceType_t)gClientMap[i].iType ==
+				interfaceType) {
 			_DBG_(RPC_TRACE(
 				"RPC_Handle_CPReset client:%d",
 				gClientIDMap[i]));
