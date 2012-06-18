@@ -125,7 +125,7 @@ void rpc_wake_lock_add(UInt32 elem)
 
 	firstElem = (UInt8)list_empty(&pktHeadQ.mList);
 
-	pktElem = kmalloc(sizeof(RpcPktElement_t), GFP_KERNEL);
+	pktElem = kmalloc(sizeof(RpcPktElement_t), GFP_ATOMIC);
 	if (!pktElem) {
 		spin_unlock_bh(&mLock);
 		_DBG(WK_TRACE
