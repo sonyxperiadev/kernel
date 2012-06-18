@@ -567,13 +567,19 @@ static int bcm_bzhw_remove(struct platform_device *pdev)
 
 static int bcm_bzhw_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	serial8250_togglerts_afe(priv_g->uport, 0);
+	if (priv_g == NULL)
+		return 0;
+	if (priv_g->uport != NULL)
+		serial8250_togglerts_afe(priv_g->uport, 0);
 	return 0;
 }
 
 static int bcm_bzhw_resume(struct platform_device *pdev)
 {
-	serial8250_togglerts_afe(priv_g->uport, 1);
+	if (priv_g == NULL)
+		return 0;
+	if (priv_g->uport != NULL)
+		serial8250_togglerts_afe(priv_g->uport, 1);
 	return 0;
 }
 
