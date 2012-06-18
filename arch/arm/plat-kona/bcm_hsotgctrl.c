@@ -351,13 +351,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 		/* Clear non-driving */
 		bcm_hsotgctrl_phy_set_non_driving(false);
 	}
-#ifdef CONFIG_MFD_BCM59039
-	/* add this call for the CQ216284, we will revisit
-		 this change later when we get better
-		 understand of the wakeup IRQ
-		 behaviors */
-	bcm_hsotgctrl_phy_wakeup_condition(false);
-#endif
+
 	return 0;
 
 }
@@ -370,16 +364,6 @@ int bcm_hsotgctrl_phy_deinit(void)
 
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
-
-#ifdef CONFIG_USB_SUSPEND_MODE_POWER_SAVINGS
-	if (bcm_hsotgctrl_handle->irq_enabled) {
-		/* We are shutting down USB so ensure wake IRQ
-		 * is disabled
-		 */
-		disable_irq_nosync(bcm_hsotgctrl_handle->hsotgctrl_irq);
-		bcm_hsotgctrl_handle->irq_enabled = false;
-	}
-#endif
 
 	/* Stay disconnected */
 	bcm_hsotgctrl_phy_set_non_driving(true);
@@ -396,24 +380,25 @@ int bcm_hsotgctrl_phy_deinit(void)
 	/* Power down ALDO */
 	bcm_hsotgctrl_set_aldo_pdn(false);
 
-#ifndef CONFIG_MFD_BCM59039
-		/* Disable wakeup interrupt */
-		/* add this call for the CQ216284, we will revisit
-		     this change later when we get better
-		     understand of the wakeup IRQ
-		     behaviors */
-		bcm_hsotgctrl_phy_wakeup_condition(false);
-#endif
-
 	/* Clear PHY reference clock request */
 	bcm_hsotgctrl_set_phy_clk_request(false);
 
 	/* Clear Vbus valid state */
 	bcm_hsotgctrl_phy_set_vbus_stat(false);
 
+	/* Disable wakeup interrupt */
+	bcm_hsotgctrl_phy_wakeup_condition(false);
+
+	if (bcm_hsotgctrl_handle->irq_enabled) {
+		/* We are shutting down USB so ensure wake IRQ
+		 * is disabled
+		 */
+		disable_irq(bcm_hsotgctrl_handle->hsotgctrl_irq);
+		bcm_hsotgctrl_handle->irq_enabled = false;
+	}
+
 	/* Disable the OTG core AHB clock */
 	bcm_hsotgctrl_en_clock(false);
-
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_deinit);
@@ -595,34 +580,32 @@ int bcm_hsotgctrl_bc_vdp_src_off(void)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_vdp_src_off);
 
-#ifdef CONFIG_USB_SUSPEND_MODE_POWER_SAVINGS
 static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 {
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
-		return -EIO;
+		return IRQ_NONE;
 
 	if (bcm_hsotgctrl_handle->irq_enabled) {
 		disable_irq_nosync(bcm_hsotgctrl_handle->hsotgctrl_irq);
 		bcm_hsotgctrl_handle->irq_enabled = false;
+
+		if (!clk_get_usage(bcm_hsotgctrl_handle->otg_clk)) {
+			/* Enable OTG AHB clock */
+			bcm_hsotgctrl_en_clock(true);
+		}
+
+		/* Disable wakeup interrupt */
+		bcm_hsotgctrl_phy_wakeup_condition(false);
+
+		/* Request PHY clock */
+		bcm_hsotgctrl_set_phy_clk_request(true);
 	}
-
-	if (!clk_get_usage(bcm_hsotgctrl_handle->otg_clk)) {
-		/* Enable OTG AHB clock */
-		bcm_hsotgctrl_en_clock(true);
-	}
-
-	/* Disable wakeup interrupt */
-	bcm_hsotgctrl_phy_wakeup_condition(false);
-
-	/* Request PHY clock */
-	bcm_hsotgctrl_set_phy_clk_request(true);
 
 	return IRQ_HANDLED;
 }
-#endif
 
 int bcm_hsotgctrl_get_clk_count(void)
 {
@@ -639,18 +622,23 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_get_clk_count);
 
 int bcm_hsotgctrl_handle_bus_suspend(void)
 {
-#ifdef CONFIG_USB_SUSPEND_MODE_POWER_SAVINGS
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-	/* Clear PHY clock request */
-	bcm_hsotgctrl_set_phy_clk_request(false);
+	if (bcm_hsotgctrl_handle->irq_enabled == false) {
+		/* Enable wake IRQ */
+		bcm_hsotgctrl_handle->irq_enabled = true;
+		enable_irq(bcm_hsotgctrl_handle->hsotgctrl_irq);
+	}
 
 	/* Enable wakeup interrupt */
 	bcm_hsotgctrl_phy_wakeup_condition(true);
+
+	/* Clear PHY clock request */
+	bcm_hsotgctrl_set_phy_clk_request(false);
 
 	/* REVISIT: Disable OTG AHB clock. This step needs
 	 * more investigation. For now, don't do it as it has
@@ -658,14 +646,6 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 	 * USB driver components
 	bcm_hsotgctrl_en_clock(false);
 	*/
-
-	if (bcm_hsotgctrl_handle->irq_enabled == false) {
-		/* Enable wake IRQ */
-		enable_irq(bcm_hsotgctrl_handle->hsotgctrl_irq);
-		bcm_hsotgctrl_handle->irq_enabled = true;
-	}
-#endif
-
 
 	return 0;
 }
@@ -816,18 +796,17 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	hsotgctrl_drvdata->hsotgctrl_irq = platform_get_irq(pdev, 0);
 
-#ifdef CONFIG_USB_SUSPEND_MODE_POWER_SAVINGS
+	/* request_irq enables irq */
+	hsotgctrl_drvdata->irq_enabled = true;
 	error = request_irq(hsotgctrl_drvdata->hsotgctrl_irq,
 			bcm_hsotgctrl_wake_irq,
 			IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
 			"bcm_hsotgctrl", (void *)hsotgctrl_drvdata);
 	if (error) {
+		hsotgctrl_drvdata->irq_enabled = false;
 		hsotgctrl_drvdata->hsotgctrl_irq = 0;
 		dev_warn(&pdev->dev, "Failed to request IRQ for wakeup\n");
-	} else {
-		hsotgctrl_drvdata->irq_enabled = true;
 	}
-#endif
 
 	return 0;
 
