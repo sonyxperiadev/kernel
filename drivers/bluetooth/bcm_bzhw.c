@@ -479,6 +479,9 @@ struct bcmbzhw_struct *bcm_bzhw_start(struct tty_struct* tty)
 		("%s: failed to configure BT Host Mgmt:request_irq err=%d\n",
 			     __func__, rc);
 		}
+		if (priv_g->uport != NULL)
+			serial8250_togglerts_afe(priv_g->uport, 1);
+
 		return priv_g;
 	} else {
 		pr_err("%s: BLUETOOTH:data pointer null, NOT initialized\n",
