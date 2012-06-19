@@ -1071,7 +1071,7 @@ const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
 			"silicon_type = %d\n", __func__,
 			sr, freq_inx, silicon_type);
 
-	BUG_ON(freq_inx != A9_FREQ_850_MHZ);
+	BUG_ON(freq_inx > A9_FREQ_850_MHZ);
 
 #ifdef CONFIG_KONA_AVS
 	switch (silicon_type) {
