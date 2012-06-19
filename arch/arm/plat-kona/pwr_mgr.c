@@ -883,8 +883,9 @@ int pwr_mgr_pm_i2c_sem_lock()
 	BUG_ON(pwr_mgr.sem_locked);
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
-		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
-		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+		cpu_freq = get_cpu_freq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+		if (cpu_freq != 0)
+			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
 #endif
 		if (!pwr_mgr.sem_qos_client.valid)
 			ret =
@@ -932,8 +933,10 @@ int pwr_mgr_pm_i2c_sem_unlock()
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
-		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
-		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+		cpu_freq =
+			get_cpu_freq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
+		if (cpu_freq != 0)
+			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
 #endif
 		pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
 					  PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY);
@@ -964,8 +967,9 @@ int pwr_mgr_pm_i2c_sem_lock()
 
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
-		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
-		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+		cpu_freq = get_cpu_freq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+		if (cpu_freq != 0)
+			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
 #endif
 		if (!pwr_mgr.sem_qos_client.valid)
 			ret =
@@ -1036,8 +1040,10 @@ int pwr_mgr_pm_i2c_sem_unlock()
 
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
-		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
-		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+		cpu_freq =
+			get_cpu_freq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
+		if (cpu_freq != 0)
+			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
 #endif
 		pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
 					  PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY);
