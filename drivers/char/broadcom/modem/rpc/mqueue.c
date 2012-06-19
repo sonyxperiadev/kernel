@@ -247,7 +247,7 @@ int MsgQueueCount(MsgQueueHandle_t *mHandle)
 	spin_unlock_bh(&mHandle->mLock);
 	return count;
 }
-void* MsgQueueGet(MsgQueueHandle_t *mHandle)
+void *MsgQueueGet(MsgQueueHandle_t *mHandle)
 {
 	struct list_head *entry;
 	MsgQueueElement_t *Item = NULL;
@@ -259,8 +259,7 @@ void* MsgQueueGet(MsgQueueHandle_t *mHandle)
 	}
 	spin_lock_bh(&mHandle->mLock);
 	isEmpty = (Boolean)list_empty(&mHandle->mList);
-	if (isEmpty) 
-	{
+	if (isEmpty) {
 		mHandle->mAvailData = 0;
 		spin_unlock_bh(&mHandle->mLock);
 		return NULL;

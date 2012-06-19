@@ -45,6 +45,7 @@ Copyright 2009 - 2012  Broadcom Corporation
 #include "resultcode.h"
 #include "csl_caph_hwctrl.h"
 #include "audio_vdriver.h"
+#include "audio_rpc.h"
 #include <mach/comms/platform_mconfig.h>
 #include "io.h"
 #include "csl_dsp_cneon_api.h"
@@ -122,7 +123,7 @@ struct _Audio_Driver_t {
 static Audio_Driver_t sAudDrv = { 0 };
 
 static audio_codecId_handler_t codecId_handler;
-
+static audio_handleCPReset_handler_t cpReset_handler;
 static Int32 curCallMode = CALL_MODE_NONE;
 
 struct completion audioEnableDone;
@@ -534,6 +535,22 @@ void AUDDRV_RegisterRateChangeCallback(audio_codecId_handler_t codecId_cb)
 
 /*********************************************************************
 //
+//       Registers callback for handling cp reset
+//
+//      @param     callback function
+//      @return         void
+//       @note
+**********************************************************************/
+
+void AUDDRV_RegisterHandleCPResetCB(
+	audio_handleCPReset_handler_t cpReset_cb)
+{
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_RegisterHandleCPResetCB");
+	cpReset_handler = cpReset_cb;
+}
+
+/*********************************************************************
+//
 // Function Name: AUDDRV_EC
 //
 // Description:   DSP Echo cancellation ON/OFF
@@ -568,6 +585,20 @@ void AUDDRV_Telephone_RequestRateChange(int codecID)
 {
 	if (codecId_handler != NULL)
 		codecId_handler(codecID);
+}
+
+/*********************************************************************
+//
+//       Post cp reset message
+//
+//      @param          none
+//      @return         void
+//       @note
+**********************************************************************/
+void AUDDRV_HandleCPReset(Boolean cp_reset_start)
+{
+	if (cpReset_handler != NULL)
+		cpReset_handler(cp_reset_start);
 }
 
 /*=============================================================================
@@ -2071,4 +2102,23 @@ void AUDDRV_ConnectDL(void)
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE,
 			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
 #endif
+}
+
+void AUDDRV_CPResetCleanup(void)
+{
+	currVoiceMic = AUDIO_SOURCE_UNDEFINED;
+	currVoiceSpkr = AUDIO_SINK_UNDEFINED;
+	voiceRecOn = FALSE;
+	voicePlayOutpathEnabled = FALSE;
+	dspECEnable = TRUE;
+	dspNSEnable = TRUE;
+	inCallRateChange = FALSE;
+	sink = CSL_CAPH_DEV_NONE;
+	telephonyPathID.ulPathID = 0;
+	telephonyPathID.ul2PathID = 0;
+	telephonyPathID.dlPathID = 0;
+	voiceInMic = AUDIO_SOURCE_UNDEFINED;
+	voiceInSr = 0;
+	curCallMode = CALL_MODE_NONE;
+	init_completion(&audioEnableDone);
 }

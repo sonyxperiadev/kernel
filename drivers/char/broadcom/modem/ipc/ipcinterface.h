@@ -32,14 +32,18 @@
 extern "C" {
 #endif	/* __cplusplus */
 
-//============================================================
-// Switch for direct IPC buffer allocate/send
-//#define DIRECT_IPC_BUFFERING
 
-//============================================================
-// Switch To turn on IPC sanity checking code
-// Undefine for better performance
-//#define IPC_DEBUG
+/*============================================================
+ * Switch for direct IPC buffer allocate/send
+ *============================================================*/
+/* #define DIRECT_IPC_BUFFERING */
+
+
+/*============================================================
+ * Switch To turn on IPC sanity checking code
+ * Undefine for better performance
+ *============================================================*/
+/* #define IPC_DEBUG  */
 
 /*============================================================
 * Types
@@ -303,10 +307,11 @@ typedef void (*IPCCPCrashCbFptr_T) (IPC_CrashCode_T);
 
 /**************************************************/
 typedef struct IPC_PlatformSpecificPowerSavingInfo_S {
-	IPCvoidReturnvoidFPtr_T				SemaphoreAccessDelayFPtr_T;
-	IPCvoidReturnvoidFPtr_T				EnableHWDeepSleepFPtr_T;
-	IPCvoidReturnvoidFPtr_T				DisableHWDeepSleepFPtr_T;
-	IPCPSCheckDeepSleepAllowedFPtr_T	CheckDeepSleepAllowedFPtr_T;
+	IPCvoidReturnvoidFPtr_T	SemaphoreAccessDelayFPtr_T;
+	IPCvoidReturnvoidFPtr_T	EnableHWDeepSleepFPtr_T;
+	IPCvoidReturnvoidFPtr_T	DisableHWDeepSleepFPtr_T;
+	IPCPSCheckDeepSleepAllowedFPtr_T
+			CheckDeepSleepAllowedFPtr_T;
 } IPC_PlatformSpecificPowerSavingInfo_T;
 
 /**************************************************/
@@ -657,12 +662,12 @@ void IPCAP_ClearCrashData(void);
 
 /* silent CP reset support */
 typedef enum {
-	IPC_CPRESET_START,	///< CP Reset starting
-	IPC_CPRESET_COMPLETE	///< CP Reset complete
+	IPC_CPRESET_START,	/* < CP Reset starting */
+	IPC_CPRESET_COMPLETE	/* < CP Reset complete */
 } IPC_CPResetEvent_t;
 typedef void(*IPCAP_CPResetHandler_T)(IPC_CPResetEvent_t inEvent);
 int IPCAP_RegisterCPResetHandler(IPCAP_CPResetHandler_T inResetHandler);
-void IPCAP_ReadyForReset( int inClientID );
+void IPCAP_ReadyForReset(int inClientID);
 /* Crash handling functions CP side */
 
 /****************************************/

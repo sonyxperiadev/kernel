@@ -48,6 +48,7 @@ Copyright 2009 - 2012  Broadcom Corporation
 */
 
 typedef void (*audio_codecId_handler_t) (int codecId);
+typedef void (*audio_handleCPReset_handler_t) (Boolean cpReset);
 
 /* Define the other mic which is used for Noise Cancellation.
 	It is product-dependent. */
@@ -230,6 +231,16 @@ void AUDDRV_RegisterRateChangeCallback(audio_codecId_handler_t
 			codecId_cb);
 
 /**
+*
+*  @brief  Register callback for handling cp reset
+*
+*  @param  none
+*
+*  @return none
+*****************************************************************************/
+void AUDDRV_RegisterHandleCPResetCB(audio_handleCPReset_handler_t cpReset_cb);
+
+/**
 *  @brief  the rate change request function called by CAPI message listener
 *
 *  @param  codecID		(in) voice call speech codec ID
@@ -238,6 +249,16 @@ void AUDDRV_RegisterRateChangeCallback(audio_codecId_handler_t
 *
 ****************************************************************************/
 void AUDDRV_Telephone_RequestRateChange(int codecID);
+
+/**
+*  @brief  the rate change request function called by CAPI message listener
+*
+*  @param  codecID		(in) voice call speech codec ID
+*
+*  @return none
+*
+****************************************************************************/
+void AUDDRV_HandleCPReset(Boolean cp_reset_start);
 
 /* the control sequence for ending telephony audio.
  this func let DSP to turn off voice path, if need to resume apps operation
@@ -301,5 +322,6 @@ int AUDDRV_TuningFlag(void);
 int AUDDRV_GetULPath(void);
 void AUDDRV_SetCallMode(Int32);
 void AUDDRV_ConnectDL(void);
+void AUDDRV_CPResetCleanup(void);
 
 #endif				/* __AUDIO_VDRIVER_H__ */

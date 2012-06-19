@@ -208,33 +208,23 @@ typedef Boolean(RPC_MainXDRCallback_t) (XDR * xdrs, void **data,
 **/
 typedef void (RPC_EventCallbackFunc_t) (void *eventHandle);
 
-//***************************************************************************************
+/*********************************************************************/
 /**
     Function callback to pass events for CP reset
-	@param		event (in ) RPC_CPRESET_START to indicate CP reset process
-			is starting; RPC_CPRESET_COMPLETE to indicate CP reset is
-			complete and normal RPC operations may resume
+	@param		event (in ) RPC_CPRESET_START to indicate
+			CP reset process is starting; RPC_CPRESET_COMPLETE
+			to indicate CP reset is	complete and normal RPC
+			operations may resume
+
 	@param		client ID callback is intended for
 	@return		None
 	@note
-		This callback is registered via RPC_SYS_RegisterClient for RPC commands
+			This callback is registered via RPC_SYS_RegisterClient
+			for RPC commands
 
 **/
 typedef void (RPC_CPResetCallbackFunc_t) (RPC_CPResetEvent_t event,
 					  UInt8 clientID);
-
-//***************************************************************************************
-/**
-    Function callback to pass events for CP reset
-	@param		event (in ) RPC_CPRESET_START to indicate CP reset process
-			is starting; RPC_CPRESET_COMPLETE to indicate CP reset is
-			complete and normal RPC operations may resum
-	@return		None
-	@note
-		This callback is registered via RPC_SYS_RegisterClient for RPC commands
-
-**/
-typedef void (RPC_CPResetCallbackFunc_t) (RPC_CPResetEvent_t event);
 
 /**
 RPC Init params
@@ -254,7 +244,7 @@ typedef struct {
 
 	/* CP reset control callback */
 	RPC_CPResetCallbackFunc_t *cpResetCb;
-	
+
 	/* Interface type */
 	RPC_InterfaceType_t iType;
 
@@ -454,7 +444,7 @@ Boolean RPC_IsRegisteredClient(UInt8 channel,
 			       PACKET_BufHandle_t dataBufHandle);
 
 void	RPC_AckCPReset(UInt8 clientID);
-	
+
 #ifdef __cplusplus
 }
 #endif

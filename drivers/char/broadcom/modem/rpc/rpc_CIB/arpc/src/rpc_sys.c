@@ -145,46 +145,45 @@ static RPC_Result_t RPC_BufferDelivery(PACKET_InterfaceType_t interfaceType,
 	return RPC_RESULT_ERROR;
 }
 
-typedef struct
-{
+typedef struct {
 	Boolean notifyUnsolicited;
 	Boolean ackdCPReset;
-}RPC_InitLocalParams_t;
+} RPC_InitLocalParams_t;
 
 Int8 gClientIndex = 0;		/* Client Index zero is reserved */
 
 #define MAX_RPC_CLIENTS 25
 static RPC_InitParams_t gClientMap[MAX_RPC_CLIENTS];
-static RPC_InitLocalParams_t gClientLocalMap[MAX_RPC_CLIENTS]={{0}};
-static UInt8 gClientIDMap[MAX_RPC_CLIENTS]={0};
+static RPC_InitLocalParams_t gClientLocalMap[MAX_RPC_CLIENTS] = {{0} };
+static UInt8 gClientIDMap[MAX_RPC_CLIENTS] = {0};
 
-UInt8 gClientIDs[256]={0};
+UInt8 gClientIDs[256] = {0};
 
 /* cp silent reset callback for async rpc layer; called from rpc_ipc layer */
 static void RPC_Handle_CPReset(RPC_CPResetEvent_t event,
 				PACKET_InterfaceType_t interfaceType)
 {
 	int i;
-	
-	if ( (sCpResetting && event==RPC_CPRESET_START) ||
-		(!sCpResetting && event==RPC_CPRESET_COMPLETE) ) {
+
+	if ((sCpResetting && event == RPC_CPRESET_START) ||
+		(!sCpResetting && event == RPC_CPRESET_COMPLETE)) {
 		/* already resetting, so just return */
 		_DBG_(RPC_TRACE("RPC_Handle_CPReset already processing %s",
-						sCpResetting?
-						"RPC_CPRESET_START":
+						sCpResetting ?
+						"RPC_CPRESET_START" :
 						"RPC_CPRESET_COMPLETE"));
 		return;
 	}
-	
+
 	_DBG_(RPC_TRACE("RPC_Handle_CPReset event %s interface %d",
-					event==RPC_CPRESET_START?
-					"RPC_CPRESET_START":
+					event == RPC_CPRESET_START ?
+					"RPC_CPRESET_START" :
 					"RPC_CPRESET_COMPLETE",
 					interfaceType));
 
-	sCpResetting = (event==RPC_CPRESET_START);
+	sCpResetting = (event == RPC_CPRESET_START);
 	/* notify all clients for given interface */
-	for(i=1;i<=gClientIndex;i++)
+	for (i = 1; i <= gClientIndex; i++)
 		if (gClientMap[i].cpResetCb != NULL &&
 		    gClientMap[i].iType == interfaceType) {
 			_DBG_(RPC_TRACE(
@@ -203,20 +202,20 @@ void RPC_AckCPReset(UInt8 clientID)
 	UInt8 index = RPC_SYS_GetClientHandle(clientID);
 	int i;
 	Boolean bReady = TRUE;
-	
+
 	_DBG_(RPC_TRACE("RPC_AckCPReset client %d index %d\n",
 					clientID, index));
 
-	if( index <= gClientIndex )
+	if (index <= gClientIndex)
 		gClientLocalMap[index].ackdCPReset = TRUE;
-		
-	/* check if all for given PACKET_InterfaceType_t have ack'd;
+
+	/* check if all for given PACKET_InterfaceType_t have ack'd
 	   if so, ack to rpc_ipc layer
 	*/
-	for(i=1;i<=gClientIndex;i++)
-		if ( gClientMap[index].iType == gClientMap[i].iType &&
-				!gClientLocalMap[i].ackdCPReset ) {
-			/* at least one client for given 
+	for (i = 1; i <= gClientIndex; i++)
+		if (gClientMap[index].iType == gClientMap[i].iType &&
+				!gClientLocalMap[i].ackdCPReset) {
+			/* at least one client for given
 			   interface type has not yet ack'd
 			   so we're not ready yet
 			*/
@@ -225,21 +224,19 @@ void RPC_AckCPReset(UInt8 clientID)
 			bReady = FALSE;
 			break;
 		}
-		else
-		{
+		else {
 			_DBG_(RPC_TRACE("RPC_AckCPReset %d %d %d %d %d\n",
 				i, index, gClientMap[index].iType,
 				gClientMap[i].iType,
 				gClientLocalMap[i].ackdCPReset));
 		}
-	
-	if ( bReady )
-	{
+
+	if (bReady) {
 		_DBG_(RPC_TRACE
 		 ("RPC_AckCPReset calling RPC_PACKET_AckReadyForCPReset\n"));
 		RPC_PACKET_AckReadyForCPReset(0,
 			(PACKET_InterfaceType_t)gClientMap[index].iType);
-	}	
+	}
 }
 
 Boolean RPC_SYS_BindClientID(RPC_Handle_t handle, UInt8 userClientID)
@@ -297,9 +294,8 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params)
 	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient gRpcInit=%d tblSize=%d",
 		gRpcInit, params->table_size));
 
-	if (!gRpcInit) {
+	if (!gRpcInit)
 		RPC_SYS_Init(NULL);
-	}
 
 	RPC_USER_LOCK(gRpcLock);
 

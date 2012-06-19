@@ -32,11 +32,8 @@
 #include <linux/fs.h>
 #include <linux/file.h>
 #include <linux/uaccess.h>
-#include <linux/interrupt.h>
-#include <linux/broadcom/ipcinterface.h>
 #include <linux/syscalls.h>
-
-#include <linux/interrupt.h> 
+#include <linux/interrupt.h>
 #include <linux/broadcom/ipcinterface.h>
 #include <linux/firmware.h>
 #include <linux/slab.h>
@@ -47,6 +44,7 @@
 #include "ipc_debug.h"
 #include "ipc_stubs.h"
 #include "bcmlog.h"
+#include "ipc_crashsupport.h"
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 #include <video/kona_fb_image_dump.h>
 #endif
@@ -105,7 +103,7 @@ static struct T_CRASH_SUMMARY *dumped_crash_summary_ptr = { 0 };
 
 typedef struct {
 	const char *img_name;	/* CP image filename */
-	int ram_addr;			/* RAM address */
+	int ram_addr;		/* RAM address */
 	int img_size;	/* CP image size. 0 means the size is calculated. */
 } T_CP_IMGS;
 
@@ -192,7 +190,7 @@ static struct timer_list cp_reset_timer;
 #define WAIT_FOR_CP_RESET_READY_ITERATIONS	25
 
 extern int RpcDbgDumpHistoryLogging(int type, int level);
-extern void Comms_Start(int isReset);
+extern int cpStart(int isReset);
 extern struct device *ipcs_get_drvdata(void);
 extern int ipcs_reinitialize_ipc(void);
 
@@ -219,7 +217,7 @@ void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf, UInt32 inStrBufLen)
 	inStrBuf[inStrBufLen - 1] = '\0', iounmap(virtAddr);
 }
 
-static IPCAP_CPResetHandler_T sCPResetHandler = NULL;
+static IPCAP_CPResetHandler_T sCPResetHandler;
 
 /* registers client callback to be used for passing silent CP reset events */
 int IPCAP_RegisterCPResetHandler(IPCAP_CPResetHandler_T inResetHandler)
@@ -303,7 +301,7 @@ int HandleRestartCP(void *data)
 
 	IPC_DEBUG(DBG_INFO, "rebooting CP\n");
 	/* reboot CP; this will also wipe IPC shared memory */
-	Comms_Start(1);
+	cpStart(1);
 
 	IPC_DEBUG(DBG_INFO, "call local_irq_enable()\n");
 	local_irq_enable();
@@ -332,7 +330,7 @@ int HandleRestartCP(void *data)
 }
 
 /* callback from client indicating it is ready for CP reset */
-void IPCAP_ReadyForReset( int inClientID )
+void IPCAP_ReadyForReset(int inClientID)
 {
 	IPC_DEBUG(DBG_INFO, "ready for reset\n");
 
@@ -360,17 +358,22 @@ void HandleCPResetStart(void)
 		- ack the silent cp reset notification from CP
 		- exit low power mode
 		- disable AP interrupts except CAPI HW int
-			- is this right? all interrupts? Check with Derek
-		- do reset notification to clients 
+		- is this right? all interrupts? Check with Derek
+		- do reset notification to clients
 		- audio/dsp interface reset (assume this is done in audio
 		  driver during reset notification process)
-	    
+
 	    Should also start timer here, and if reset notification process
-	    isn't complete in X seconds, 
+	    isn't complete in X seconds,
 	*/
 
 	/* ACK start of silent reset to CP */
-	SmLocalControl.SmControl->CrashCode = IPC_AP_ACK_CP_RESET_START;
+	/* **FIXME** not required, according to CP team; CP will only
+	 * report IPC_CP_SILENT_RESET_READY when it is ready for restart;
+	 * there will be no IPC_CP_SILENT_RESET_START that we must ack
+	 * with  IPC_AP_ACK_CP_RESET_START
+	 */
+	/* SmLocalControl.SmControl->CrashCode = IPC_AP_ACK_CP_RESET_START;*/
 
 	/* exit low power mode:
 	 * ipc_wake_lock acquired on IPC interrupt that triggered this
@@ -415,14 +418,15 @@ void HandleCPResetStart(void)
 static int DownloadFirmware(uint32_t len, const uint8_t *p_data, uint32_t addr)
 {
 	void __iomem *virtAddr;
+	int ret = 0;
 
 	IPC_DEBUG(DBG_INFO, "Downloading %d bytes from %p to address %p\n",
 		len, (void *)p_data, (void *)addr);
 
 	virtAddr = ioremap_nocache(addr, len);
 	if (NULL == virtAddr) {
-		printk(KERN_INFO "%s: ioremap_nocache failed!\n",
-				__func__);
+		IPC_DEBUG(DBG_ERROR, "ioremap_nocache failed\n");
+		ret = -1;
 	} else {
 		IPC_DEBUG(DBG_INFO, "copying to virtual addr %p\n",
 				(void *)virtAddr);
@@ -430,7 +434,7 @@ static int DownloadFirmware(uint32_t len, const uint8_t *p_data, uint32_t addr)
 		iounmap(virtAddr);
 	}
 
-	return 0;
+	return ret;
 }
 
 /**
@@ -461,8 +465,8 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 	*/
 	err = request_firmware(&fw, p_name, p_device);
 	if (err) {
-		printk(KERN_ERR "%s: Firmware request failed (%d)\n",
-			__func__, err);
+		IPC_DEBUG(DBG_ERROR, "firmware request failed (%d)\n",
+			err);
 		return err;
 	}
 

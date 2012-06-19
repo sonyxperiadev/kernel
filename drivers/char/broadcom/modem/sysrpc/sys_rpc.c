@@ -80,7 +80,7 @@ static void HandleSysEventRspCb(RPC_Msg_t *pMsg,
 static void HandleSysCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
 {
 	pr_info("HandleSysCPResetCb: event %s client %d\n",
-		RPC_CPRESET_START==event?
+		RPC_CPRESET_START == event ?
 		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
 		clientID);
 
@@ -91,11 +91,12 @@ static void HandleSysCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
 	}
 
 	/* for now, just ack that we're ready for CP reset... */
-	if ( RPC_CPRESET_START == event )
+	if (RPC_CPRESET_START == event)
 		RPC_AckCPReset(clientID);
 }
 
-static void SYS_GetPayloadInfo(SYS_ReqRep_t* reqRep, MsgType_t msgId, void** ppBuf, UInt32* len)
+static void SYS_GetPayloadInfo(SYS_ReqRep_t *reqRep,
+			MsgType_t msgId, void **ppBuf, UInt32 *len)
 {
 	*ppBuf = NULL;
 	*len = 0;
@@ -153,7 +154,7 @@ void SYS_InitRpc(void)
 		params.maxDataBufSize = sizeof(SYS_ReqRep_t);
 
 		syncParams.copyCb = SysCopyPayload;
-		sRPCHandle = RPC_SyncRegisterClient(&params,&syncParams);
+		sRPCHandle = RPC_SyncRegisterClient(&params, &syncParams);
 
 		BCMLOG_EnableLogId(BCMLOG_RPC_KERNEL_BASIC, 1);
 

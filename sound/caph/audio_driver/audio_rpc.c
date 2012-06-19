@@ -290,7 +290,7 @@ void HandleAudioEventReqCb(RPC_Msg_t *pMsg,
 static void HandleAudioCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
 {
 	pr_info("HandleAudioCPResetCb: event %s client ID %d\n",
-		RPC_CPRESET_START==event?
+		RPC_CPRESET_START == event ?
 		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
 		clientID);
 

@@ -484,8 +484,8 @@ void CSD_CPResetCB(RPC_CPResetEvent_t event,
 				(int)event, (int)interface);
 
 	/* for now, just ack... */
-	if ( RPC_CPRESET_START == event )
-		RPC_PACKET_AckReadyForCPReset( 0, INTERFACE_CSD );
+	if (RPC_CPRESET_START == event)
+		RPC_PACKET_AckReadyForCPReset(0, INTERFACE_CSD);
 }
 
 /*******************************************************************************

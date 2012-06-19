@@ -317,7 +317,7 @@ static void HandleRTCSCCPResetCb(RPC_CPResetEvent_t event,
 {
 	/* **FIXME** MAG - what is needed to do here ? */
 	pr_info("HandleRTCSCCPResetCb: event %s client %d\n",
-		RPC_CPRESET_START==event?
+		RPC_CPRESET_START == event ?
 		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
 		clientID);
 
@@ -329,7 +329,7 @@ static void HandleRTCSCCPResetCb(RPC_CPResetEvent_t event,
 	}
 
 	/* for now, just ack that we're ready... */
-	if ( RPC_CPRESET_START == event )
+	if (RPC_CPRESET_START == event)
 		RPC_AckCPReset(RTCSCClientId);
 }
 

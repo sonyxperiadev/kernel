@@ -120,14 +120,11 @@ static void sysRpcHandlerCbk(void *eventHandle)
 {
 	int ret;
 	Int32 isReservedPkt = RPC_PACKET_IsReservedPkt(eventHandle);
-	if(isReservedPkt)
-	{
-		if(!MsgQueueIsEmpty(&sysRpcMQhandle))
-		{
-			void* data;
+	if (isReservedPkt) {
+		if (!MsgQueueIsEmpty(&sysRpcMQhandle)) {
+			void *data;
 			data = MsgQueueGet(&sysRpcMQhandle);
-			while( data )
-			{
+			while (data) {
 				RPC_PACKET_FreeBufferEx(data, 0);
 				data = MsgQueueGet(&sysRpcMQhandle);
 			}
