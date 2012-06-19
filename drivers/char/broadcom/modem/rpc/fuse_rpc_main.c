@@ -157,7 +157,7 @@ UInt32 RPC_Init(void)
 	int ret;
 
 	ret = MsgQueueInit(&sysRpcMQhandle, sysRpcKthreadFn,
-				"SysRpcKThread", 0, NULL,"sysrpc_wake_lock");
+				"SysRpcKThread", 0, NULL, "sysrpc_wake_lock");
 
 	if (ret != 0) {
 		RPC_DEBUG(DBG_ERROR, "sysrpc: MsgQueueInit fail...!\n");

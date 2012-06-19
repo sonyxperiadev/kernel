@@ -7,9 +7,9 @@
 *   under the terms of the GNU General Public License version 2, available
 *    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a license
-* other than the GPL, without Broadcom's express prior written consent.
+*   Notwithstanding the above, under no circumstances may you combine this
+*   software in any way with any other Broadcom software provided under a license
+*   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
@@ -23,8 +23,8 @@
 #define DBG_DATA    0x10
 #define DBG_DATA2   0x20
 
-/*#define DBG_DEFAULT_LEVEL (DBG_ERROR) */
-/*#define DBG_DEFAULT_LEVEL (DBG_ERROR|DBG_INFO|DBG_TRACE|DBG_TRACE2) */
+/*#define DBG_DEFAULT_LEVEL (DBG_ERROR)*/
+/*#define DBG_DEFAULT_LEVEL (DBG_ERROR|DBG_INFO|DBG_TRACE|DBG_TRACE2)*/
 #define DBG_DEFAULT_LEVEL (DBG_ERROR|DBG_INFO)
 
 /*static int logLevel = DBG_DEFAULT_LEVEL;*/
@@ -75,7 +75,7 @@ typedef struct {
 	int type; /* 0 is printk, 1 is seq_file, 2 is bcm log, 3 is crash dump*/
 	struct seq_file *seq;
 	char buffer[MAX_BUF_LEN];
-	/*int len;*/
+/*	int len;*/
 } RpcOutputContext_t;
 
 int RpcDbgDumpHdr(RpcOutputContext_t *c);

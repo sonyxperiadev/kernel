@@ -1,15 +1,15 @@
 /****************************************************************************
 *
-*     Copyright (c) 2007-2008 Broadcom Corporation
+*   Copyright (c) 2007-2008 Broadcom Corporation
 *
 *   Unless you and Broadcom execute a separate written software license
 *   agreement governing use of this software, this software is licensed to you
 *   under the terms of the GNU General Public License version 2, available
-*    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
+*   at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a license
-* other than the GPL, without Broadcom's express prior written consent.
+*   Notwithstanding the above, under no circumstances may you combine this
+*   software in any way with any other Broadcom software provided under a license
+*   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
@@ -89,8 +89,8 @@ typedef struct {
 #define RPC_DBG_GEN_MAX  1024
 #define MAX_RPC_PACKETS (CFG_RPC_CMD_MAX_PACKETS + CFG_RPC_CMD_MAX_PACKETS2 + CFG_RPC_CMD_MAX_PACKETS3 + CFG_RPC_SERIALDATA_MAX_PACKETS + CFG_RPC_SERIALDATA_MAX_PACKETS2 + CFG_RPC_CSDDATA_MAX_PACKETS)
 
-static RpcDbgLogInfo_t gRpcDbgGenInfoList[RPC_DBG_GEN_MAX + 1];
-static RpcDbgPktStatus_t gRpcDbgPktStatusList[MAX_RPC_PACKETS + 1];
+RpcDbgLogInfo_t *gRpcDbgGenInfoList;
+RpcDbgPktStatus_t *gRpcDbgPktStatusList;
 
 extern UInt32 recvRpcPkts;
 extern UInt32 freeRpcPkts;
@@ -99,14 +99,18 @@ extern MsgQueueHandle_t sysRpcMQhandle;
 
 atomic_t gRpcDbgPktGenCurIndex = ATOMIC_INIT(-1);
 atomic_t gRpcGlobalCount = ATOMIC_INIT(0);
-/*atomic_t gRpcTotalRcvPkts = ATOMIC_INIT(0); */
-/*atomic_t gRpcTotalFreePkts = ATOMIC_INIT(0); */
+/*atomic_t gRpcTotalRcvPkts = ATOMIC_INIT(0);*/
+/*atomic_t gRpcTotalFreePkts = ATOMIC_INIT(0);*/
 atomic_t gLastGoodIndex = ATOMIC_INIT(0);
 
 void RpcDbgLogGenInfo(char *logStr, UInt8 cid, UInt32 pktHandle, UInt32 cmd1,
 		      UInt32 cmd2)
 {
 	int curIndex = 0;
+
+	if (!gRpcDbgGenInfoList)
+		return;
+
 	curIndex = atomic_add_return(1, &gRpcDbgPktGenCurIndex);
 
 	if (curIndex >= RPC_DBG_GEN_MAX) {
@@ -116,7 +120,7 @@ void RpcDbgLogGenInfo(char *logStr, UInt8 cid, UInt32 pktHandle, UInt32 cmd1,
 
 	gRpcDbgGenInfoList[curIndex].type = 1;
 	gRpcDbgGenInfoList[curIndex].count =
-	    atomic_add_return(1, &gRpcGlobalCount);
+	atomic_add_return(1, &gRpcGlobalCount);
 	gRpcDbgGenInfoList[curIndex].cid = cid;
 	gRpcDbgGenInfoList[curIndex].cmd1 = cmd1;
 	gRpcDbgGenInfoList[curIndex].cmd2 = cmd2;
@@ -134,18 +138,21 @@ void RpcDbgUpdatePktStateEx(UInt32 pktHandle, UInt32 pktstatus, UInt8 cid,
 {
 	int i, k;
 
-	/*cache read */
+	if (!gRpcDbgPktStatusList)
+		return;
+
+	/* cache read */
 	i = atomic_read(&gLastGoodIndex);
 
-	/*no hit? */
+	/* no hit? */
 	if (gRpcDbgPktStatusList[i].pktHandle != pktHandle) {
-		/*Look for existing */
+		/* Look for existing */
 		for (i = 0; i < MAX_RPC_PACKETS; i++) {
 			if (gRpcDbgPktStatusList[i].pktHandle == pktHandle)
 				break;
 		}
 
-		/*Look for unused  */
+		/* Look for unused */
 		if (i == MAX_RPC_PACKETS) {
 			for (i = 0; i < MAX_RPC_PACKETS; i++) {
 				if (gRpcDbgPktStatusList[i].pktHandle == 0) {
@@ -157,7 +164,7 @@ void RpcDbgUpdatePktStateEx(UInt32 pktHandle, UInt32 pktstatus, UInt8 cid,
 		}
 
 	}
-	/*Set Data */
+	/* Set Data */
 	if (i < MAX_RPC_PACKETS) {
 		if (gRpcDbgPktStatusList[i].pktHandle == pktHandle) {
 			gRpcDbgPktStatusList[i].ts = jiffies_to_msecs(jiffies);
@@ -235,7 +242,7 @@ int RbcDbgDumpGenInfo(RpcOutputContext_t *c, int *offset, int maxlimit)
 {
 	int i, ret = 0, limit = 0;
 
-	if (!offset || *offset >= MAX_RPC_PACKETS || *offset < 0)
+	if (!offset || *offset >= MAX_RPC_PACKETS || *offset < 0 || !gRpcDbgGenInfoList)
 		return 0;
 
 	if (*offset == 0) {
@@ -273,7 +280,7 @@ int RpcDbgDumpPktState(RpcOutputContext_t *c, int *offset, int maxlimit)
 {
 	int i, k, ret = 0, limit = 0;
 
-	if (!offset || *offset >= MAX_RPC_PACKETS || *offset < 0)
+	if (!offset || *offset >= MAX_RPC_PACKETS || *offset < 0 || !gRpcDbgPktStatusList)
 		return 0;
 
 	if (*offset == 0) {
@@ -335,9 +342,9 @@ int RpcDbgDumpPktState(RpcOutputContext_t *c, int *offset, int maxlimit)
 
 int RpcDbgDumpKthread(RpcOutputContext_t *c, int option)
 {
-	if(option == 0 || option == 2)
+	if (option == 0 || option == 2)
 		MsgQueueDebugList(&rpcMQhandle, c);
-	if(option == 1 || option == 2)
+	if (option == 1 || option == 2)
 		MsgQueueDebugList(&sysRpcMQhandle, c);
 	return 0;
 }
@@ -352,8 +359,13 @@ int RpcDbgDumpHdr(RpcOutputContext_t *c)
 
 void RpcDbgInit(void)
 {
-	memset(&gRpcDbgGenInfoList[0], 0, sizeof(gRpcDbgGenInfoList));
-	memset(&gRpcDbgPktStatusList[0], 0, sizeof(gRpcDbgPktStatusList));
+	gRpcDbgGenInfoList = kmalloc((RPC_DBG_GEN_MAX + 1) * sizeof(RpcDbgLogInfo_t), GFP_ATOMIC);
+	if (gRpcDbgGenInfoList)
+		memset(gRpcDbgGenInfoList, 0, (RPC_DBG_GEN_MAX + 1) * sizeof(*gRpcDbgGenInfoList));
+
+	gRpcDbgPktStatusList = kmalloc((MAX_RPC_PACKETS + 1) * sizeof(RpcDbgPktStatus_t), GFP_ATOMIC);
+	if (gRpcDbgPktStatusList)
+		memset(gRpcDbgPktStatusList, 0, (MAX_RPC_PACKETS + 1) * sizeof(*gRpcDbgPktStatusList));
 }
 
 int RpcDbgDumpStr(RpcOutputContext_t *c, char *fmt, ...)
@@ -396,18 +408,18 @@ int RpcDbgDumpRawStr(RpcOutputContext_t *c, char *str)
 }
 
 #define MAX_BUF_STR_LEN 1024
-static char sCallStackBuffer[MAX_BUF_STR_LEN+1]={0};
+static char sCallStackBuffer[MAX_BUF_STR_LEN+1] = {0};
 static pid_t sTid = 0;
 
 /*
 Just copy the buffer and DO NOT CALL any kernel system calls OR acquire spin locks
 */
-int RpcDumpPrintkCb(const char* str)
+int RpcDumpPrintkCb(const char *str)
 {
-	if(sTid == current->pid) {
+	if (sTid == current->pid) {
 		int remLen;
 		remLen = MAX_BUF_STR_LEN - strlen(sCallStackBuffer);
-		if(remLen > 0)
+		if (remLen > 0)
 			strncat(sCallStackBuffer, str, remLen);
 	}
 	return 0;
@@ -415,20 +427,17 @@ int RpcDumpPrintkCb(const char* str)
 
 static void dumpCallStackStr(RpcOutputContext_t *c, char* inStr)
 {
-	char* bstr = inStr;
-	char* tstr = inStr;
+	char *bstr = inStr;
+	char *tstr = inStr;
 
-	if(c->type != 2)
-	{
+	if (c->type != 2) {
 		RpcDbgDumpRawStr(c, bstr);
 		RpcDbgDumpRawStr(c, "\n");
 		return;
 	}
 
-	while(*tstr != '\0')
-	{
-		if(*tstr == '\n')
-		{
+	while (*tstr != '\0') {
+		if (*tstr == '\n') {
 			*tstr = '\0';
 			RpcDbgDumpRawStr(c, bstr);
 			bstr = tstr+1;
@@ -440,8 +449,7 @@ static void dumpCallStackStr(RpcOutputContext_t *c, char* inStr)
 
 void RpcDumpTaskCallStack(RpcOutputContext_t *c, struct task_struct *t)
 {
-	if(c->type != 0)/* out to proc or crash dump */
-	{
+	if (c->type != 0) {   /* out to proc or crash dump */
 		memset(sCallStackBuffer, 0, (MAX_BUF_STR_LEN+1));
 		sTid = current->pid;
 		BCMLOG_RegisterPrintkRedirectCbk(1, RpcDumpPrintkCb);
@@ -450,8 +458,7 @@ void RpcDumpTaskCallStack(RpcOutputContext_t *c, struct task_struct *t)
 
 		BCMLOG_RegisterPrintkRedirectCbk(0, NULL);
 		dumpCallStackStr(c, sCallStackBuffer);
-	}
-	else
+	} else
 		sched_show_task(t);
 }
 
