@@ -212,6 +212,17 @@ static int is_master_owner(struct file *file)
 	return ret;
 }
 
+/* called from cma free to modify task cma rss only if the task
+ * is the original allocator
+ */
+static inline bool task_is_allocator(struct pmem_data *data)
+{
+	if (current->group_leader && current->group_leader->mm)
+		return (data->pid == task_pid_nr(current->group_leader));
+
+	return false;
+}
+
 /* Must be called with data->sem held */
 static inline bool is_cma_allocation(struct pmem_data *data)
 {
@@ -533,7 +544,6 @@ static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 
 	BUG_ON(!current->group_leader->mm);
 	add_mm_counter(current->group_leader->mm, MM_CMAPAGES, nr_pages);
-
 	data->pfn = page_to_pfn(page);
 	data->size = len;
 	data->flags |= PMEM_FLAGS_CMA;
@@ -574,7 +584,7 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 			outer_inv_range(addr, addr+len);
 			return 0;
 		} else {
-			printk(KERN_ALERT"carveout failed: %dkB\n", len/SZ_1K);
+			printk(KERN_ALERT"carveout failed: %ldkB\n", len/SZ_1K);
 		}
 		/* If we failed, fallback to CMA */
 	}
@@ -1006,10 +1016,9 @@ static int pmem_cma_free(int id, struct pmem_data *data)
 	ret = dma_release_from_contiguous(&pmem[id].pdev->dev, page, nr_pages);
 	BUG_ON(ret == 0);
 
-	if (current->group_leader && current->group_leader->mm) {
+	if (task_is_allocator(data))
 		add_mm_counter(current->group_leader->mm,
 			       MM_CMAPAGES, -nr_pages);
-	}
 
 	data->flags &= ~PMEM_FLAGS_CMA;
 
@@ -1261,6 +1270,7 @@ static void pmem_vma_close(struct vm_area_struct *vma)
 	atomic_dec(&data->ref);
 
 	BUG_ON(vma_size != pmem_len(data));
+
 	/* the kernel is going to free this vma now anyway */
 	up_write(&data->sem);
 }
@@ -1434,7 +1444,6 @@ error_free_mem:
 	}
 error_up_write:
 	up_write(&data->sem);
-	return ret;
 error:
 	return ret;
 
@@ -1664,7 +1673,7 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 			return -ENOMEM;
 
 		n = scnprintf(buffer, debug_bufmax,
-			      "process (pid #) : ref | flags | size | range | mapped regions (start, end) (start, end)...\n");
+			      "process (pid #) : rss | ref | flags | size | range | mapped regions (start, end) (start, end)...\n");
 
 		mutex_lock(&pmem[id].data_list_lock);
 		list_for_each(elt, &pmem[id].data_list) {
@@ -1688,13 +1697,17 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 				n += scnprintf(buffer + n, debug_bufmax - n,
 					       "%-16s (%6u) :",
 					       task->comm, data->pid);
+
+				n += scnprintf(buffer + n, debug_bufmax - n,
+					       "  %08ld", get_mm_cma(task->mm));
 				task_unlock(task);
 				put_task_struct(task);
 			} else {
 				n += scnprintf(buffer + n, debug_bufmax - n,
 					       "%-25s :",
 					       "non-allocating task");
-				up_read(&data->sem);
+				n += scnprintf(buffer + n, debug_bufmax - n,
+					       "        %s", "N/A");
 			}
 
 			size = pmem_len(data);
@@ -1710,6 +1723,7 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 				       " (0x%08x-0x%08lx)",
 				       PMEM_START_ADDR(data),
 				       PMEM_START_ADDR(data) + size);
+
 
 			list_for_each(elt2, &data->region_list) {
 				region_node = list_entry(elt2, struct
@@ -1863,7 +1877,7 @@ static int pmem_setup(struct platform_device *pdev,
 		goto err_cant_register_device;
 	}
 
-	debugfs_create_file(pdata->name, S_IFREG | S_IRUGO, NULL, (void *)id,
+	debugfs_create_file(pdata->name, S_IFREG | S_IRUSR, NULL, (void *)id,
 			    &debug_fops);
 
 	/* register task free notifier */
