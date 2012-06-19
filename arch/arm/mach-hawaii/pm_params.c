@@ -49,6 +49,10 @@ DEFINE_JIRA_WA_RO_FLG(2531, 1);
 DEFINE_JIRA_WA_FLG(2301, 1);
 #endif
 
+#ifdef CONFIG_RHEA_WA_HWJIRA_2877
+DEFINE_JIRA_WA_FLG(2877, 1);
+#endif
+
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 DEFINE_JIRA_WA_FLG(2221, 1);
 #endif
@@ -97,6 +101,12 @@ extern int __jira_wa_enabled(u32 jira)
 #ifdef CONFIG_RHEA_WA_HWJIRA_2301
 	case 2301:
 		enabled = JIRA_WA_FLG_NAME(2301);
+		break;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2877
+	case 2877:
+		enabled = JIRA_WA_FLG_NAME(2877);
 		break;
 #endif
 
@@ -170,6 +180,14 @@ extern int __jira_wa_enabled(u32 jira)
 #define BSC_PAD_OUT_PULLUP_EN			(0x1<<3)
 #define BSC_PAD_OUT_EN				(0x0)
 #define BSC_PAD_OUT_DIS				(0x1<<2)
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#define SET_PC_PIN_CMD(pc_pin)			\
+	(SET_PC_PIN_CMD_##pc_pin##_PIN_VALUE_MASK|\
+	 SET_PC_PIN_CMD_##pc_pin##_PIN_OVERRIDE_MASK)
+
+#define PC_PIN_DEFAULT_STATE		SET_PC_PIN_CMD(PC3)
+#endif
 
 static struct i2c_cmd i2c_cmd[] = {
 	{REG_ADDR, 0},		/* 0:NOP */
@@ -263,11 +281,16 @@ static struct i2c_cmd i2c_cmd[] = {
 	{REG_ADDR, 0},		/* 56: NOP */
 	{REG_ADDR, 0},		/* 57: NOP */
 #endif
-	{END, 0},		/* 58: End sequence (write/read) */
-	{SET_PC_PINS, 0x30},	/* 59: set2_ptr */
-	{END, 0},		/* 60: End sequence (SET2) */
-	{SET_PC_PINS, 0x31},	/* 61: set1_ptr */
-	{END, 0},		/* 62: End sequence (SET1) */
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+	{SET_PC_PINS, PC_PIN_DEFAULT_STATE},	/* 58: set PC3 high */
+#else
+	{REG_ADDR, 0},		/* 58: nop */
+#endif
+	{END, 0},		/* 59: End sequence (write/read) */
+	{SET_PC_PINS, 0x30},	/* 60: set2_ptr */
+	{END, 0},		/* 61: End sequence (SET2) */
+	{SET_PC_PINS, 0x31},	/* 62: set1_ptr */
+	{END, 0},		/* 63: End sequence (SET1) */
 };
 
 /*Default voltage lookup table
@@ -277,10 +300,10 @@ Need to move this to board-file
 static struct v0x_spec_i2c_cmd_ptr v0_ptr = {
 	.other_ptr = 2,
 	.set2_val = 1,		/*Retention voltage inx */
-	.set2_ptr = 59,
+	.set2_ptr = 60,
 	.set1_val = 2,		/*wakeup from retention voltage inx */
-	.set1_ptr = 61,
-	.zerov_ptr = 59,	/*Not used for Rhea */
+	.set1_ptr = 62,
+	.zerov_ptr = 60,	/*Not used for Rhea */
 };
 
 struct pwrmgr_init_param pwrmgr_init_param = {
@@ -300,6 +323,9 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 	.i2c_wr_reg_addr_off = 49,
 	.i2c_wr_val_addr_off = 51,
 	.i2c_seq_timeout = 100,
+#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+	.pc_toggle_off = 58,
+#endif
 #endif
 };
 
@@ -310,7 +336,7 @@ static void rhea_pm_init_wa_flgs(void)
 	int chip_rev = get_chip_rev_id();
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2531
-	JIRA_WA_FLG_NAME(2531) = chip_rev <= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2531) = chip_rev <= RHEA_CHIP_REV_B2;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
@@ -319,6 +345,10 @@ static void rhea_pm_init_wa_flgs(void)
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2301
 	JIRA_WA_FLG_NAME(2301) = chip_rev < RHEA_CHIP_REV_B1;
+#endif
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2877
+	JIRA_WA_FLG_NAME(2877) = chip_rev >= RHEA_CHIP_REV_B1;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2489
@@ -330,7 +360,7 @@ static void rhea_pm_init_wa_flgs(void)
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2272
-	JIRA_WA_FLG_NAME(2272) = chip_rev <= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2272) = chip_rev <= RHEA_CHIP_REV_B2;
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2045
@@ -345,8 +375,8 @@ static void rhea_pm_init_wa_flgs(void)
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
-	/*Workaround not enabled for B1 */
-	JIRA_WA_FLG_NAME(2490) = chip_rev <= RHEA_CHIP_REV_B1;
+	/* Workaround is enabled */
+	JIRA_WA_FLG_NAME(2490) = chip_rev <= RHEA_CHIP_REV_B2;
 #endif
 
 }
@@ -365,6 +395,7 @@ static const u32 a9_freq_list[A9_FREQ_MAX] = {
 
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 {
+#ifdef CONFIG_MACH_HAWAII_FPGA
 #define RATE_ADJ 10
 	struct clk *a9_pll_chnl1;
 	int inx;
@@ -393,6 +424,9 @@ int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
 		csr_vlt_table[inx] = vlt_table[inx];
 	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
+#else
+	return 0;
+#endif
 }
 
 int __init rhea_pm_params_init(void)
