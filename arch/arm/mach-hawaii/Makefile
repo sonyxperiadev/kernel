@@ -19,3 +19,7 @@ obj-$(CONFIG_MACH_HAWAII_FPGA) += hawaii_fpga.o
 obj-$(CONFIG_MACH_HAWAII_FPGA_E) += hawaii_fpga.o
 obj-$(CONFIG_CDEBUGGER) += crash_debugger.o
 obj-$(CONFIG_MFD_BCM59039) += board-bcm59039.o
+obj-$(CONFIG_KONA_POWER_MGR) += rhea_pwr_mgr.o rhea_mm_workarounds.o
+obj-$(CONFIG_KONA_PI_MGR) += rhea_pi_mgr.o
+obj-$(CONFIG_KONA_CPU_PM_HANDLER) += rhea_pm.o rhea_wfi.o rhea_pm_dbg.o
+obj-y += pm_params.o
