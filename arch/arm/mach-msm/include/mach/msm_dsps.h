@@ -75,6 +75,7 @@ struct dsps_regulator_info {
  * @regs_num - number of regulators.
  * @dsps_pwr_ctl_en - to enable DSPS to do power control if set 1
  *  otherwise the apps will do power control
+ * @ppss_pause_reg - Offset to the PPSS_PAUSE register
  * @signature - signature for validity check.
  */
 struct msm_dsps_platform_data {
@@ -87,6 +88,7 @@ struct msm_dsps_platform_data {
 	int regs_num;
 	int dsps_pwr_ctl_en;
 	void (*init)(struct msm_dsps_platform_data *data);
+	int ppss_pause_reg;
 	u32 signature;
 };
 
