@@ -732,7 +732,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	hsotgctrl_drvdata->dev = &pdev->dev;
 	hsotgctrl_drvdata->otg_clk = clk_get(NULL, "usb_otg_clk");
 
-	if (!hsotgctrl_drvdata->otg_clk) {
+	if (IS_ERR_OR_NULL(hsotgctrl_drvdata->otg_clk)) {
 		dev_warn(&pdev->dev, "Clock allocation failed\n");
 		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
 		iounmap(hsotgctrl_drvdata->chipregs_base);

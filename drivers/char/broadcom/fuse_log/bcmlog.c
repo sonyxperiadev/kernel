@@ -1460,7 +1460,7 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile)
 	 * atomic context. So we switch the port to emmc and save cp dump
 	 */
 	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+#ifdef CONFIG_APANIC_ON_MMC
 	    && ap_triggered
 #endif
 	    ) {

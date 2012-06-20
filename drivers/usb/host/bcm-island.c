@@ -99,7 +99,7 @@ static int usbh_clk_ctrl(struct usbh_priv *drv_data, int enable)
 		/* peripheral clock */
 		if (hw_cfg->peri_clk_name) {
 			drv_data->peri_clk = clk_get(drv_data->dev, hw_cfg->peri_clk_name);
-			if (!drv_data->peri_clk)
+			if (IS_ERR_OR_NULL(drv_data->peri_clk))
 				return -EINVAL;
 			ret = clk_enable(drv_data->peri_clk);
 			if (ret)
@@ -109,7 +109,7 @@ static int usbh_clk_ctrl(struct usbh_priv *drv_data, int enable)
 		/* AHB clock */
 		if (hw_cfg->ahb_clk_name) {
 			drv_data->ahb_clk = clk_get(drv_data->dev, hw_cfg->ahb_clk_name);
-			if (!drv_data->ahb_clk) {
+			if (IS_ERR_OR_NULL(drv_data->ahb_clk)) {
 				ret = EINVAL;
 				goto err_disable_peri_clk;
 			}
@@ -121,7 +121,7 @@ static int usbh_clk_ctrl(struct usbh_priv *drv_data, int enable)
 		/* optional clock (in the USB host case, that's the 12 MHz clock */
 		if (hw_cfg->opt_clk_name) {
 			drv_data->opt_clk = clk_get(drv_data->dev, hw_cfg->opt_clk_name);
-			if (!drv_data->opt_clk) {
+			if (IS_ERR_OR_NULL(drv_data->opt_clk)) {
 				ret = -EINVAL;
 				goto err_disable_ahb_clk;
 			}

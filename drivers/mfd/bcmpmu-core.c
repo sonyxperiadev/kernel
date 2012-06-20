@@ -146,11 +146,12 @@ static const struct attribute_group bcmpmu_core_attr_group = {
 void bcmpmu_client_power_off(void)
 {
 	BUG_ON(!bcmpmu_core);
-	bcmpmu_reg_write_unlock(bcmpmu_core);
-	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_HOSTCTRL1, BCMPMU_SW_SHDWN,
-			       BCMPMU_SW_SHDWN);
-}
 
+	bcmpmu_reg_write_unlock(bcmpmu_core);
+	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_SW_SHDWN,
+			bcmpmu_core->regmap[PMU_REG_SW_SHDWN].mask,
+			bcmpmu_core->regmap[PMU_REG_SW_SHDWN].mask);
+}
 EXPORT_SYMBOL(bcmpmu_client_power_off);
 
 int bcmpmu_client_hard_reset(unsigned char reset_reason)

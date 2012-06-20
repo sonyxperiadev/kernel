@@ -17,6 +17,7 @@
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/module.h>
+#include <linux/device.h>
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/fcntl.h>
@@ -63,12 +64,17 @@
 #define NUM_BMIRQs            56
 #define IRQ_TO_BMIRQ(irq)         ((irq)-FIRST_BMIRQ)
 
+#define IPC_MAJOR (204)
+#define BCM_KERNEL_IPC_NAME "bcm_fuse_ipc"
+
 struct ipcs_info_t {
 	int ipc_state;
 	struct tasklet_struct intr_tasklet;
 	struct work_struct cp_crash_dump_wq;
 	struct workqueue_struct *crash_dump_workqueue;
 	void __iomem *apcp_shmem;
+	struct class *mDriverClass;	/* driver class */
+	struct device *drvdata;
 };
 
 static struct ipcs_info_t g_ipc_info = { 0 };
@@ -80,6 +86,15 @@ static DEFINE_SPINLOCK(cp_state_notifier_lock);
 struct wake_lock ipc_wake_lock;
 #endif
 static IPC_PlatformSpecificPowerSavingInfo_T ipc_ps;
+
+extern int IpcCPCrashCheck(void);
+extern void ProcessCPCrashedDump(struct work_struct *work);
+
+#if defined(CONFIG_BCM215X_PM) && defined(CONFIG_ARCH_BCM2153)
+extern void pm_ipc_power_saving_init(
+	IPC_PlatformSpecificPowerSavingInfo_T *ipc_ps);
+#endif
+
 
 struct IPC_Evt_t {
 	wait_queue_head_t evt_wait;
@@ -115,7 +130,6 @@ static IPC_ReturnCode_T EventSet(void *Event)
 
 static IPC_ReturnCode_T EventClear(void *Event)
 {
-
 	struct IPC_Evt_t *ipcEvt = (struct IPC_Evt_t *)Event;
 
 	/* **FIXME** need to protect access to this? */
@@ -271,6 +285,7 @@ void WaitForCpIpc(void *pSmBase)
 
 	if (!is_ap_only_boot()) { /* Check for AP_BOOT or NORMAL_BOOT */
 	    ret = IPC_IsCpIpcInit(pSmBase, IPC_AP_CPU);
+		IPC_DEBUG(DBG_WARN, "back from IPC_IsCpIpcInit\n");
 	    while (ret == 0) {
 		/* Wait up to 2s for CP to init */
 		if (k++ > 200)
@@ -278,7 +293,7 @@ void WaitForCpIpc(void *pSmBase)
 		else
 			msleep(10);
 		ret = IPC_IsCpIpcInit(pSmBase, IPC_AP_CPU);
-	    }
+		}
 	}
 
 	if (ret == 1) {
@@ -348,12 +363,15 @@ void ipcs_cp_notifier_unregister(struct notifier_block *nb)
 /**
    static int ipcs_init(void *smbase, unsigned int size)
  */
-static int __init ipcs_init(void *smbase, unsigned int size)
+static int ipcs_init(void *smbase, unsigned int size, int isReset)
 {
 	int rc = 0;
 
+	IPC_DEBUG(DBG_TRACE, "WaitForCpIpc\n");
+
 	/* Wait for CP to initialize */
 	WaitForCpIpc(smbase);
+	IPC_DEBUG(DBG_TRACE, "WaitForCpIpc done\n");
 
 	/* Initialize OS specific callbacks with the IPC lib */
 	rc = ipc_ipc_init(smbase, size);
@@ -361,12 +379,16 @@ static int __init ipcs_init(void *smbase, unsigned int size)
 		IPC_DEBUG(DBG_ERROR, "ipc_ipc_init() failed, ret[%d]\n", rc);
 		return rc;
 	}
-	/* Register Endpoints  */
-	rc = ipcs_ccb_init();
+	IPC_DEBUG(DBG_TRACE, "ipc_ipc_init done\n");
+
+	/* Register Endpoints */
+	rc = ipcs_ccb_init(isReset);
 	if (rc) {
 		IPC_DEBUG(DBG_ERROR, "ipcs_ccb_init() failed, ret[%d]\n", rc);
 		return rc;
 	}
+
+	IPC_DEBUG(DBG_TRACE, "ipcs_ccb_init done\n");
 	/* Let CP know that we are done registering endpoints */
 	IPC_Configured();
 
@@ -376,7 +398,12 @@ static int __init ipcs_init(void *smbase, unsigned int size)
 	return 0;
 }
 
-#ifdef CONFIG_BCM_MODEM_DEFER_CP_START
+int ipcs_reinitialize_ipc(void)
+{
+	IPC_DEBUG(DBG_INFO, "calling ipcs_init\n");
+	return ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE, 1);
+}
+
 static int CP_Boot(void)
 {
 	int started = 0;
@@ -387,13 +414,14 @@ static int CP_Boot(void)
 
 #define BMODEM_SYSCFG_R4_CFG0  0x3a004000
 #define CP_SYSCFG_BASE_SIZE    0x8
-#define CP_ITCM_BASE_SIZE      0x1000	/* 1 4k page */
+#define CP_ITCM_BASE_SIZE      0x1000     /* 1 4k page */
 
+	IPC_DEBUG(DBG_TRACE, "enter\n");
 	cp_bmodem_r4cfg = ioremap(BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
 	if (!cp_bmodem_r4cfg) {
 		IPC_DEBUG(DBG_ERROR,
-			  "BMODEM_SYSCFG_R4_CFG0=0x%x, CP_SYSCFG_BASE_SIZE=0x%x\n",
-			  BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
+		"BMODEM_SYSCFG_R4_CFG0=0x%x, CP_SYSCFG_BASE_SIZE=0x%x\n",
+			BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
 		IPC_DEBUG(DBG_ERROR, "ioremap cp_bmodem_r4cfg failed\n");
 		return started;
 	}
@@ -410,39 +438,56 @@ static int CP_Boot(void)
 		cp_boot_itcm = ioremap(MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
 		if (!cp_boot_itcm) {
 			IPC_DEBUG(DBG_ERROR,
-				  "MODEM_ITCM_ADDRESS=0x%x, CP_ITCM_BASE_SIZE=0x%x\n",
-				  MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
+			"MODEM_ITCM_ADDRESS=0x%x, CP_ITCM_BASE_SIZE=0x%x\n",
+			MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
 			IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_itcm failed\n");
 			return 0;
 		}
+		/* generate instruction for reset vector that jumps to start of
+		 * cp_boot.img at 0x20400
+		 */
 		jump_instruction |=
 		    (0x00FFFFFFUL & (((0x10000 + RESERVED_HEADER) / 4) - 2));
+
+		IPC_DEBUG(DBG_TRACE, "cp_boot_itcm 0x%x jump_instruction 0x%x\n",
+				(unsigned int)cp_boot_itcm,
+				jump_instruction);
+		/* write jump instruction to cp reset vector */
 		*(unsigned int *)(cp_boot_itcm) = jump_instruction;
 
 		iounmap(cp_boot_itcm);
 
-		/* boot CP */
+		/* start CP - should jump to 0x20400 and spin there */
 		*(unsigned int *)(cp_bmodem_r4cfg) = 0x5;
-	} else {
+	}
+	else {
 		IPC_DEBUG(DBG_TRACE,
-			  "(R4 COMMS) already started - init code 0x%x ...\n",
-			  r4init);
+			"(R4 COMMS) already started - init code 0x%x ...\n",
+			r4init);
 	}
 
 	iounmap(cp_bmodem_r4cfg);
+	IPC_DEBUG(DBG_TRACE, "exit\n");
 
 	return started;
 }
-#endif
 
-static int __init Comms_Start(void)
+
+int cpStart(int isReset)
 {
 	void __iomem *apcp_shmem;
 	void __iomem *cp_boot_base;
 	u32 reg_val;
 
+	IPC_DEBUG(DBG_TRACE, "enter\n");
+
 #ifdef CONFIG_BCM_MODEM_DEFER_CP_START
 	CP_Boot();
+#else
+	if (isReset) {
+		IPC_DEBUG(DBG_INFO, "call CP_Boot\n");
+		CP_Boot();
+	}
 #endif
 
 	apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
@@ -455,6 +500,7 @@ static int __init Comms_Start(void)
 	/* clear first (9) 32-bit words in shared memory */
 	memset(apcp_shmem, 0, IPC_SIZE);
 	iounmap(apcp_shmem);
+	IPC_DEBUG(DBG_TRACE, "cleared sh mem\n");
 
 	cp_boot_base = ioremap_nocache(MODEM_DTCM_ADDRESS,
 				       INIT_ADDRESS_OFFSET + RESERVED_HEADER);
@@ -468,15 +514,31 @@ static int __init Comms_Start(void)
 		return -1;
 	}
 
-	/* Start the CP */
-	reg_val = readl(cp_boot_base + MAIN_ADDRESS_OFFSET + RESERVED_HEADER);
-	writel(reg_val, cp_boot_base + INIT_ADDRESS_OFFSET + RESERVED_HEADER);
+	/* Start the CP:
+	 *	- read main address
+	 *	- write to init address
+	 */
+	reg_val = readl(cp_boot_base+MAIN_ADDRESS_OFFSET+RESERVED_HEADER);
+	IPC_DEBUG(DBG_TRACE, "main addr 0x%x\n", reg_val);
+	writel(reg_val, cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER);
 
 	iounmap(cp_boot_base);
 	IPC_DEBUG(DBG_TRACE, "modem (R4 COMMS) started ...\n");
 	return 0;
 }
+
+
+static int __init Comms_Start(void)
+{
+	return cpStart(0);   /* Normal Comms_Start */
+}
 arch_initcall(Comms_Start);
+
+
+struct device *ipcs_get_drvdata(void)
+{
+	return g_ipc_info.drvdata;
+}
 
 static int ipcs_read_proc(char *page, char **start, off_t off, int count,
 			  int *eof, void *data)
@@ -511,6 +573,20 @@ static int __init ipcs_module_init(void)
 
 	g_ipc_info.ipc_state = 0;
 
+	g_ipc_info.mDriverClass = class_create(THIS_MODULE,
+				BCM_KERNEL_IPC_NAME);
+	if (IS_ERR(g_ipc_info.mDriverClass)) {
+		IPC_DEBUG(DBG_ERROR, "driver class_create failed\n");
+		goto out;
+	}
+
+	g_ipc_info.drvdata = device_create(g_ipc_info.mDriverClass, NULL,
+				MKDEV(IPC_MAJOR, 0), NULL, BCM_KERNEL_IPC_NAME);
+	if (IS_ERR(g_ipc_info.drvdata)) {
+		IPC_DEBUG(DBG_ERROR, "device_create drvdata failed\n");
+		goto out;
+	}
+
 	IPC_DEBUG(DBG_TRACE, "Allocate CP crash dump workqueue\n");
 	g_ipc_info.crash_dump_workqueue = alloc_workqueue("dump-wq",
 							  WQ_FREEZABLE |
@@ -539,7 +615,7 @@ static int __init ipcs_module_init(void)
 	}
 
 	IPC_DEBUG(DBG_TRACE, "ipcs_init\n");
-	if (ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE)) {
+	if (ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE, 0)) {
 		rc = -1;
 		IPC_DEBUG(DBG_ERROR, "ipcs_init() failed\n");
 		goto out_ipc_init_fail;
@@ -566,13 +642,15 @@ static int __init ipcs_module_init(void)
 
 out_irq_req_fail:
 	wake_lock_destroy(&ipc_wake_lock);
+
 out_ipc_init_fail:
 	iounmap(g_ipc_info.apcp_shmem);
+
 out_shared_mem_fail:
 	flush_workqueue(g_ipc_info.crash_dump_workqueue);
 	destroy_workqueue(g_ipc_info.crash_dump_workqueue);
 
-      out:
+out:
 	IPC_DEBUG(DBG_ERROR, "IPC Driver Failed to initialise!\n");
 	return rc;
 }
@@ -590,8 +668,11 @@ static void __exit ipcs_module_exit(void)
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&ipc_wake_lock);
 #endif
+	device_destroy(g_ipc_info.mDriverClass, MKDEV(IPC_MAJOR, 0));
+	class_destroy(g_ipc_info.mDriverClass);
 
 	return;
 }
 
 late_initcall(ipcs_module_init);
+module_exit(ipcs_module_exit);

@@ -37,7 +37,6 @@
 #include <linux/module.h>
 #include <linux/ioport.h>
 #include <linux/delay.h>
-#include <linux/ioctl.h>
 #include <linux/uaccess.h>
 #include <linux/err.h>
 #include <linux/delay.h>
@@ -905,13 +904,6 @@ int bcmpmu_adc_chipset_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static long bcmpmu_adc_chipset_ioctl(struct file *file, unsigned int cmd,
-				     unsigned long arg)
-{
-	/* TODO: */
-	return 0;
-}
-
 #define MAX_USER_INPUT_LEN      256
 #define MAX_ARGS 25
 
@@ -1169,7 +1161,6 @@ static ssize_t bcmpmu_adc_chipset_write(struct file *file,
 
 static const struct file_operations bcmpmu_adc_chipset_ops = {
 	.open = bcmpmu_adc_chipset_open,
-	.unlocked_ioctl = bcmpmu_adc_chipset_ioctl,
 	.write = bcmpmu_adc_chipset_write,
 	.release = bcmpmu_adc_chipset_release,
 	.owner = THIS_MODULE,
@@ -1200,7 +1191,7 @@ static int __devinit bcmpmu_adc_chipset_api_probe(struct platform_device *pdev)
 
 	/*bcmpmu->fg_enable (bcmpmu, 1);*/
 
-	proc_create_data("adc_chipset_api", S_IRWXUGO, NULL,
+	proc_create_data("adc_chipset_api", S_IWUSR, NULL,
 			 &bcmpmu_adc_chipset_ops, bcmpmu_adc_chipset_api);
 
 	return 0;

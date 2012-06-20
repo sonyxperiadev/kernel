@@ -46,6 +46,8 @@
 #define _D(a) a
 #endif
 
+static RPC_Handle_t sRPCHandle;
+
 /********************** REGISTER CBK HANDLERS *******************************************/
 
 static void HandleSysReqMsg(RPC_Msg_t *pMsg,
@@ -75,8 +77,26 @@ static void HandleSysEventRspCb(RPC_Msg_t *pMsg,
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 }
 
-static void SYS_GetPayloadInfo(SYS_ReqRep_t *reqRep, MsgType_t msgId,
-			       void **ppBuf, UInt32 *len)
+static void HandleSysCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
+{
+	pr_info("HandleSysCPResetCb: event %s client %d\n",
+		RPC_CPRESET_START == event ?
+		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
+		clientID);
+
+	if (RPC_SYS_GetClientID(sRPCHandle) != clientID) {
+		pr_err("HandleSysCPResetCb:\n");
+		pr_err("   wrong cid expected %d got %d\n",
+			RPC_SYS_GetClientID(sRPCHandle), clientID);
+	}
+
+	/* for now, just ack that we're ready for CP reset... */
+	if (RPC_CPRESET_START == event)
+		RPC_AckCPReset(clientID);
+}
+
+static void SYS_GetPayloadInfo(SYS_ReqRep_t *reqRep,
+			MsgType_t msgId, void **ppBuf, UInt32 *len)
 {
 	*ppBuf = NULL;
 	*len = 0;
@@ -128,12 +148,13 @@ void SYS_InitRpc(void)
 		params.iType = INTERFACE_RPC_DEFAULT;
 		params.respCb = HandleSysEventRspCb;
 		params.reqCb = HandleSysReqMsg;
+		params.cpResetCb = HandleSysCPResetCb;
 		params.mainProc = (xdrproc_t) xdr_SYS_ReqRep_t;
 		sysGetXdrStruct(&(params.xdrtbl), &(params.table_size));
 		params.maxDataBufSize = sizeof(SYS_ReqRep_t);
 
 		syncParams.copyCb = SysCopyPayload;
-		RPC_SyncRegisterClient(&params, &syncParams);
+		sRPCHandle = RPC_SyncRegisterClient(&params, &syncParams);
 
 		BCMLOG_EnableLogId(BCMLOG_RPC_KERNEL_BASIC, 1);
 

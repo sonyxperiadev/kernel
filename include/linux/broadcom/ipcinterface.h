@@ -237,23 +237,26 @@ typedef IPC_U32 IPC_Channel_E;
 * make sure that this is in sync with IpcAPtimeOutCode
 *************************************************/
 
-#define	IPC_CP_NOT_CRASHED		0
-#define	IPC_CP_ANALYSING_CRASH		1
-#define	IPC_CP_UNKNOWN_CRASH		2
-#define	IPC_CP_ASSERT			3
-#define	IPC_CP_DATA_ABORT		4
-#define	IPC_CP_PREFETCH_FAILURE		5
-#define	IPC_CP_UNDEFINED_INSTRUCTION	6
-#define	IPC_CP_DIVIDED_BY_ZERO		7
-#define	IPC_CP_NULL_FUNCTION_POINTER	8
-#define	IPC_CP_STACK_OVERFLOW		9
-#define	IPC_AP_RESET			10
-#define	IPC_CP_RAISE_CALLED		11
-#define	IPC_CP_EXIT_CALLED		12
-#define	IPC_AP_ASSERT			13
-#define	IPC_CP_CRASHED_BY_AP		14
-#define	IPC_AP_CLEAR_TO_SEND		15
-#define	IPC_CP_MAX_CRASH_CODE		16
+#define	IPC_CP_NOT_CRASHED              0
+#define	IPC_CP_ANALYSING_CRASH          1
+#define	IPC_CP_UNKNOWN_CRASH            2
+#define	IPC_CP_ASSERT                   3
+#define	IPC_CP_DATA_ABORT               4
+#define	IPC_CP_PREFETCH_FAILURE         5
+#define	IPC_CP_UNDEFINED_INSTRUCTION    6
+#define	IPC_CP_DIVIDED_BY_ZERO          7
+#define	IPC_CP_NULL_FUNCTION_POINTER    8
+#define	IPC_CP_STACK_OVERFLOW			9
+#define	IPC_AP_RESET                    10
+#define	IPC_CP_RAISE_CALLED             11
+#define	IPC_CP_EXIT_CALLED              12
+#define	IPC_AP_ASSERT					13
+#define	IPC_CP_CRASHED_BY_AP			14
+#define	IPC_AP_CLEAR_TO_SEND			15
+#define IPC_CP_SILENT_RESET_START		16
+#define IPC_AP_ACK_CP_RESET_START		17
+#define IPC_CP_SILENT_RESET_READY		18
+#define	IPC_CP_MAX_CRASH_CODE           19
 
 typedef IPC_U32 IPC_CrashCode_T;
 
@@ -659,6 +662,14 @@ void IPCAP_GetCrashData(IPC_CrashCode_T *CrashCode, void **Dump);
 /****************************************/
 void IPCAP_ClearCrashData(void);
 
+/* silent CP reset support */
+typedef enum {
+	IPC_CPRESET_START,	/* CP Reset starting */
+	IPC_CPRESET_COMPLETE	/* CP Reset complete */
+} IPC_CPResetEvent_t;
+typedef void(*IPCAP_CPResetHandler_T)(IPC_CPResetEvent_t inEvent);
+int IPCAP_RegisterCPResetHandler(IPCAP_CPResetHandler_T inResetHandler);
+void IPCAP_ReadyForReset(int inClientID);
 /* Crash handling functions CP side */
 
 /****************************************/

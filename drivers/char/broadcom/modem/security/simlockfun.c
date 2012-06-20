@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*     Copyright (c) 2009 Broadcom Corporation
+*   Copyright (c) 2009 Broadcom Corporation
 *
 *   Unless you and Broadcom execute a separate written software license
 *   agreement governing use of this software, this software is licensed to you
@@ -1310,6 +1310,7 @@ static SEC_SimLock_Status_t SIMLockSetLockOneType(SimNumber_t SimId,
 				*  add for fixing compile warning.
 				*/
 				case SEC_SIMLOCK_PHONE_LOCK:
+				/* Coverity [DEADCODE] */
 				case SEC_SIMLOCK_INVALID_LOCK:
 				default:
 					break;

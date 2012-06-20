@@ -460,11 +460,11 @@ static int __pi_init_state(struct pi *pi)
 		/*PI_STATE_SAVE_CONTEXT should not be defined for
 			active state*/
 		BUG_ON(pi->pi_state[PI_MGR_ACTIVE_STATE_INX].flags &
-		       PI_STATE_SAVE_CONTEXT);
+			   PI_STATE_SAVE_CONTEXT);
 		BUG_ON(pi->num_ccu_id > MAX_CCU_PER_PI);
 		for (inx = 0; inx < pi->num_ccu_id; inx++) {
 			pi->pi_ccu[inx] = clk_get(NULL, pi->ccu_id[inx]);
-			BUG_ON(pi->pi_ccu[inx] == 0 || IS_ERR(pi->pi_ccu[inx]));
+			BUG_ON(IS_ERR_OR_NULL(pi->pi_ccu[inx]));
 		}
 		spin_lock_irqsave(&pi->lock, flgs);
 		if (pi->ops && pi->ops->init_state) {
@@ -760,7 +760,7 @@ static int pi_reset(struct pi *pi, int sub_domain)
 		return -EPERM;
 
 	clk = clk_get(NULL, pi->pi_info.reset_mgr_ccu_name);
-	BUG_ON(clk == 0 || IS_ERR(clk));
+	BUG_ON(IS_ERR_OR_NULL(clk));
 
 	spin_lock_irqsave(&pi->lock, flgs);
 	pi_dbg(pi->id, PI_LOG_RESET, "%s:pi:%s reset ccu str:%s\n",

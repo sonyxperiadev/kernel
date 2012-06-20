@@ -380,7 +380,7 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 
 	/*  Set Camera CSI0 Phy & Clock Registers, CSI1 use these clocks also*/
 	csi_clk = clk_get(NULL, "csi0_lp_clk");
-	if (!csi_clk)
+	if (IS_ERR_OR_NULL(csi_clk))
 		dev_err(unicam_info.dev, "%s: error get lp clock\n",
 			__func__);
 	ret = clk_enable(csi_clk);
@@ -416,7 +416,7 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 
 	if (clk_src == 0) {
 		csi_clk = clk_get(NULL, "dig_ch0_clk");
-		if (!csi_clk)
+		if (IS_ERR_OR_NULL(csi_clk))
 			dev_err(unicam_info.dev, "%s: error get clock\n",
 				__func__);
 
@@ -434,7 +434,7 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 			  clk_get_rate(csi_clk));
 	} else {		/* if (clk_src == 1) { */
 		csi_clk = clk_get(NULL, "dig_ch1_clk");
-		if (!csi_clk)
+		if (IS_ERR_OR_NULL(csi_clk))
 			dev_err(unicam_info.dev, "%s: error get clock\n",
 				__func__);
 
@@ -470,14 +470,14 @@ static void unicam_close_csi(unsigned int port, unsigned int clk_src)
 	if (clk_src == 0) {
 		/*  Disable Dig Clk0 */
 		csi_clk = clk_get(NULL, "dig_ch0_clk");
-		if (!csi_clk)
+		if (IS_ERR_OR_NULL(csi_clk))
 			return;
 
 		clk_disable(csi_clk);
 	} else {
 		/*  Disable Dig Clk1 */
 		csi_clk = clk_get(NULL, "dig_ch1_clk");
-		if (!csi_clk)
+		if (IS_ERR_OR_NULL(csi_clk))
 			return;
 
 		clk_disable(csi_clk);
@@ -491,7 +491,7 @@ static int enable_unicam_clock(void)
 	struct clk *unicam_clk;
 
 	unicam_clk = clk_get(NULL, "csi0_axi_clk");
-	if (!unicam_clk) {
+	if (IS_ERR_OR_NULL(unicam_clk)) {
 		dev_err(unicam_info.dev, "%s: error get clock\n", __func__);
 		return -EIO;
 	}
@@ -521,7 +521,7 @@ static void disable_unicam_clock(void)
 	struct clk *unicam_clk;
 
 	unicam_clk = clk_get(NULL, "csi0_axi_clk");
-	if (!unicam_clk)
+	if (IS_ERR_OR_NULL(unicam_clk))
 		return;
 	clk_disable(unicam_clk);
 }
@@ -532,7 +532,7 @@ static void reset_unicam(void)
 
 	/* Reset UNICAM interface */
 	unicam_clk = clk_get(NULL, "csi0_axi_clk");
-	if (!unicam_clk)
+	if (IS_ERR_OR_NULL(unicam_clk))
 		return;
 	/* Should clear and set CSI0_SOFT_RSTN_MASK */
 	clk_reset(unicam_clk);
@@ -678,3 +678,4 @@ module_exit(unicam_exit);
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("unicam device driver");
 MODULE_LICENSE("GPL");
+

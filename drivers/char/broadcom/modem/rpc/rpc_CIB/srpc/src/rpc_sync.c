@@ -82,6 +82,9 @@
 /*---------------------------------------------------------------------
 * Local variables
 *--------------------------------------------------------------------*/
+#define SYNC_RPC_TRACE(fmt, args...) pr_info(fmt, ##args)
+/*#define SYNC_RPC_TRACE(fmt, args...) RPC_TRACE(fmt, ##args)*/
+
 static UInt32 sCurrTID = 1;
 
 /* semaphore to manage access to array of task/req structs */
@@ -97,6 +100,13 @@ static UInt8 sClientId = INVALID_CLIENT_ID;
 /* number of ticks to sleep while waiting for RPC to initialize */
 #define		RPC_INIT_SLEEP_TICKS	50
 
+typedef enum {
+	RPC_SYNC_STATE_WAITING_FOR_ACK,	/* waiting for ack */
+	RPC_SYNC_STATE_WAITING_FOR_RSP,	/* waiting for response */
+	RPC_SYNC_STATE_DONE			/* done with transaction */
+
+} RPC_SyncState_t;
+
 typedef struct {
 	UInt32 sig;
 	UInt32 val;
@@ -109,6 +119,9 @@ typedef struct {
 
 	/* transaction ID of request */
 	UInt32 tid;
+
+	/* state of transaction */
+	RPC_SyncState_t state;
 
 	/* semaphore used to wait/signal request ack */
 	Semaphore_t ackSema;
@@ -130,7 +143,6 @@ typedef struct {
 
 	/* pointer to data buffer from response (may be null) */
 	void *data;
-
 	/* size of response data buffer */
 	Int32 dataLen;
 
@@ -168,6 +180,10 @@ void RPC_SyncHandleResponse(RPC_Msg_t *pMsg,
 
 void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ackResult,
 		       UInt32 ackData);
+static void RPC_SyncCPResetCb(RPC_CPResetEvent_t event,
+								UInt8 clientID);
+
+extern UInt32 RPC_GetUserData(UInt8 clientIndex);
 
 /******************************************************************************/
 /**
@@ -214,13 +230,16 @@ RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t *initParams,
 		panic("RPC_SyncRegisterClient: OSHEAP_Alloc failed");
 		return 0;
 	}
-
+	/* **FIXME** MAG - need special CP reset handler in here? Release all
+	   semaphores for pending requests?
+	*/
 	internalParam->clientParams = *initParams;
 	internalParam->SyncRpcParams = *initParams;
 
 	internalParam->SyncRpcParams.respCb = RPC_SyncHandleResponse;
 	internalParam->SyncRpcParams.ackCb = RPC_SyncHandleAck;
 	internalParam->SyncRpcParams.userData = (UInt32) internalParam;
+	internalParam->SyncRpcParams.cpResetCb = RPC_SyncCPResetCb;
 
 	internalParam->syncInitParams = *syncInitParams;
 
@@ -263,6 +282,7 @@ TaskRequestMap_t *RPC_SyncInitTaskMap(void)
 
 	taskMap->tid = 0;
 	taskMap->ack = ACK_FAILED;
+	taskMap->state = RPC_SYNC_STATE_WAITING_FOR_ACK;
 	taskMap->isResultPending = FALSE;
 	taskMap->result = RESULT_ERROR;
 	taskMap->data = NULL;
@@ -367,6 +387,7 @@ Result_t RPC_SyncWaitForResponse(UInt32 tid, UInt8 cid, RPC_ACK_Result_t *ack,
 			/*
 			  yes, so wait to be signalled that response is ready
 			*/
+			taskMap->state = RPC_SYNC_STATE_WAITING_FOR_RSP;
 			semaStatus =
 			    OSSEMAPHORE_Obtain(taskMap->rspSema,
 					       RPC_SEMAPHORE_TIMEOUT);
@@ -392,15 +413,22 @@ Result_t RPC_SyncWaitForResponse(UInt32 tid, UInt8 cid, RPC_ACK_Result_t *ack,
 		} else {
 
 		}
+		taskMap->state = RPC_SYNC_STATE_DONE;
+	} else if (ACK_CRITICAL_ERROR == taskMap->ack) {
+		/* CP reset */
+		taskMap->state = RPC_SYNC_STATE_DONE;
+		result = RESULT_ERROR;
 	} else {
 		xassert(FALSE, taskMap->ack);
 	}
 
-	_DBG_(RPC_TRACE
-	      ("RPC_SyncWaitForResponse tid=%d cid=%d msg=%d ack=%d pend=%d sz=%d rs=%d task=0x%x \r\n",
-	       tid, cid, taskMap->msgType, taskMap->ack,
-	       taskMap->isResultPending, taskMap->rspSize, result,
-	       (UInt32) OSTASK_GetCurrentTask()));
+	_DBG_(SYNC_RPC_TRACE
+		("RPC_SyncWaitForResponse tid=%d cid=%d msg=%d ack=%d\r\n",
+		(int)tid, cid, taskMap->msgType, taskMap->ack));
+	_DBG_(SYNC_RPC_TRACE
+		("RPC_SyncWaitForResponse pend=%d sz=%d rs=%d task=%p \r\n",
+		taskMap->isResultPending, (int)taskMap->rspSize,
+		result, (void *) OSTASK_GetCurrentTask()));
 
 	return result;
 }
@@ -451,6 +479,7 @@ Result_t RPC_SyncWaitForResponseTimer(UInt32 tid, UInt8 cid,
 			/*
 			 yes, so wait to be signalled that response is ready
 			*/
+			taskMap->state = RPC_SYNC_STATE_WAITING_FOR_RSP;
 			semaStatus =
 			    OSSEMAPHORE_Obtain(taskMap->rspSema,
 					       (Ticks_t) timeout);
@@ -475,15 +504,19 @@ Result_t RPC_SyncWaitForResponseTimer(UInt32 tid, UInt8 cid,
 		} else {
 
 		}
+		taskMap->state = RPC_SYNC_STATE_DONE;
 	} else {
+		taskMap->state = RPC_SYNC_STATE_DONE;
 		return RESULT_ERROR;
 	}
 
-	_DBG_(RPC_TRACE
-	      ("RPC_SyncWaitForResponseTimer tid=%d cid=%d msg=%d ack=%d pend=%d sz=%d rs=%d task=0x%x \r\n",
-	       tid, cid, taskMap->msgType, taskMap->ack,
-	       taskMap->isResultPending, taskMap->rspSize, result,
-	       (UInt32) OSTASK_GetCurrentTask()));
+	_DBG_(SYNC_RPC_TRACE(
+		"RPC_SyncWaitForResponseTimer tid=%d cid=%d msg=%d ack=%d\r\n",
+		(int)tid, cid, taskMap->msgType, taskMap->ack));
+	_DBG_(SYNC_RPC_TRACE(
+		"RPC_SyncWaitForResponseTimer pend=%d sz=%d rs=%d task=0x%p\r\n",
+		taskMap->isResultPending, (int)taskMap->rspSize,
+		result, (void *) OSTASK_GetCurrentTask()));
 
 	return result;
 }
@@ -504,9 +537,9 @@ void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ack,
 	Boolean isResultPending = (ackData) ? TRUE : FALSE;
 
 	if (tid == 0) {
-		_DBG_(RPC_TRACE
+		_DBG_(SYNC_RPC_TRACE
 		      ("RPC_SyncHandleAck Ignored tid %d ack %d pending %d\r\n",
-		       tid, ack, isResultPending));
+		       (int)tid, ack, isResultPending));
 		return;
 	}
 
@@ -518,9 +551,9 @@ void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ack,
 		taskMap->ack = ack;
 		taskMap->isResultPending = isResultPending;
 
-		_DBG_(RPC_TRACE
-		      ("RPC_SyncHandleAck tid %d ack %d pending %d\r\n", tid,
-		       ack, isResultPending));
+		_DBG_(SYNC_RPC_TRACE
+			("RPC_SyncHandleAck tid %d ack %d pending %d\r\n",
+			(int)tid, ack, isResultPending));
 
 		/**
 		    since there won't be anybody waiting on it (ie. it will
@@ -532,13 +565,15 @@ void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ack,
 		/* notify calling task of receipt of ack */
 		semaStatus = OSSEMAPHORE_Release(taskMap->ackSema);
 		if (semaStatus != OSSTATUS_SUCCESS) {
-			_DBG_(RPC_TRACE
-			      ("WARNING!!!! RPC_SyncHandleAck: Semaphore release failed\r\n"));
+			_DBG_(SYNC_RPC_TRACE
+				("WARNING!!!! RPC_SyncHandleAck: \
+				Semaphore release failed\r\n"));
 		}
 	} else {
-		_DBG_(RPC_TRACE
-		      ("WARNING!!!! RPC_SyncHandleAck No Task map found tid %d ack %d pending %d\r\n",
-		       tid, ack, isResultPending));
+		_DBG_(SYNC_RPC_TRACE
+		      ("WARNING!!!! RPC_SyncHandleAck No Task map found \
+			tid %d ack %d pending %d\r\n",
+		       (int)tid, ack, isResultPending));
 	}
 }
 
@@ -588,9 +623,12 @@ void RPC_SyncHandleResponse(RPC_Msg_t *pMsg,
 						     data : NULL, &dataLength,
 						     &result);
 
-	_DBG_(RPC_TRACE
-	      ("RPC_SyncHandleResponse tid=%d cid=%d msg=%d res=%d tlen=%d tmap=%d len=%d \r\n",
-	       tid, clientID, msgType, result, (taskMap) ? taskMap->dataLen : 0,
+	_DBG_(SYNC_RPC_TRACE(
+	      "RPC_SyncHandleResponse tid=%d cid=%d msg=%d res=%d\r\n",
+	       (int)tid, clientID, msgType, result));
+	_DBG_(SYNC_RPC_TRACE
+	      ("RPC_SyncHandleResponse tlen=%d tmap=%d len=%ld \r\n",
+	       (taskMap) ? (int)taskMap->dataLen : 0,
 	       (taskMap) ? 1 : 0, dataLength));
 
 	/* did we find a pending request with this transaction id? */
@@ -611,14 +649,14 @@ void RPC_SyncHandleResponse(RPC_Msg_t *pMsg,
 		/* notify calling task of receipt of response */
 		semaStatus = OSSEMAPHORE_Release(taskMap->rspSema);
 		if (semaStatus != OSSTATUS_SUCCESS) {
-			_DBG_(RPC_TRACE
+			_DBG_(SYNC_RPC_TRACE
 			      ("WARNING!!!! RPC_SyncHandleResponse: Semaphore release failed\r\n"));
 		}
 	} else {	/* Dispatch unsolicited notifications to the client */
 		if (RESULT_OK != result) {
-			_DBG_(RPC_TRACE
+			_DBG_(SYNC_RPC_TRACE
 			      ("WARNING!!!! RPC_SyncHandleResponse tid %d cid %d result=%d noTaskMap \r\n",
-			       tid, clientID, result, dataLength));
+			       (int)tid, clientID, result));
 		}
 
 		internalParam = (RPC_SyncParams_t *) (void *)userContextData;
@@ -713,8 +751,8 @@ TaskRequestMap_t *GetNewMapForCurrentTask()
 	OSSEMAPHORE_Obtain(semaTaskReq, TICKS_FOREVER);
 
 	for (i = 0; i < MAX_TASKS_NUM; i++) {
-		_DBG_(RPC_TRACE
-		      ("GetNewMapForCurrentTask detail task %x index = %d\r\n",
+		_DBG_(SYNC_RPC_TRACE
+		      ("GetNewMapForCurrentTask detail task %lx index = %d\r\n",
 		       (UInt32) ((sTaskRequestMap + i)->task), i));
 
 		if (NULL == (sTaskRequestMap + i)->task) {
@@ -727,8 +765,8 @@ TaskRequestMap_t *GetNewMapForCurrentTask()
 
 	if (MAX_TASKS_NUM == i) {
 		for (i = 0; i < MAX_TASKS_NUM; i++) {
-			_DBG_(RPC_TRACE
-			      ("GetNewMapForCurrentTask 2nd loop task %x index = %d\r\n",
+			_DBG_(SYNC_RPC_TRACE("GetNewMapForCurrentTask \
+				2nd loop task %lx index = %d\r\n",
 			       (UInt32) ((sTaskRequestMap + i)->task), i));
 
 			if (FALSE ==
@@ -744,8 +782,8 @@ TaskRequestMap_t *GetNewMapForCurrentTask()
 
 	OSSEMAPHORE_Release(semaTaskReq);
 
-	_DBG_(RPC_TRACE
-	      ("GetNewMapForCurrentTask task %x index= %d\r\n",
+	_DBG_(SYNC_RPC_TRACE
+	      ("GetNewMapForCurrentTask task %lx index= %d\r\n",
 	       (UInt32) OSTASK_GetCurrentTask(), i));
 
 	return taskMap;
@@ -784,9 +822,9 @@ UInt32 RPC_SyncAddCbkToTid(UInt32 val)
 	ctx->sig = 0xBABEFACE;
 	ctx->val = val;
 
-	_DBG_(RPC_TRACE
-	      ("RPC_SyncAddCbkToTid oldTid=%d newTid=%d TaskID=%x\r\n",
-	       taskMap->tid, (UInt32) ctx, taskMap->task));
+	_DBG_(SYNC_RPC_TRACE
+	      ("RPC_SyncAddCbkToTid oldTid=%d newTid=%ld TaskID=%p\r\n",
+	       (int)taskMap->tid, (UInt32) ctx, taskMap->task));
 
 	taskMap->tid = (UInt32) ctx;
 
@@ -806,15 +844,16 @@ UInt32 RPC_SyncGetCbkFromTid(UInt32 tid)
 
 	assert(ctx != NULL);
 
-	_DBG_(RPC_TRACE
-	      ("RPC_SyncGetCbkFromTid tid %d sig=%x \r\n", tid, ctx->sig));
+	_DBG_(SYNC_RPC_TRACE
+	      ("RPC_SyncGetCbkFromTid tid %d sig=%lx \r\n",
+		(int)tid, ctx->sig));
 
 	if (ctx->sig == 0xBABEFACE && ctx->val != 0) {
 		val = ctx->val;
 	} else {
-		_DBG_(RPC_TRACE
-		      ("RPC_SyncGetCbkFromTid ERROR tid %d sig=%x \r\n", tid,
-		       ctx->sig));
+		_DBG_(SYNC_RPC_TRACE("RPC_SyncGetCbkFromTid \
+		ERROR tid %d sig=%lx \r\n", (int)tid, ctx->sig));
+
 		xassert(0, tid);
 	}
 	return val;
@@ -832,17 +871,86 @@ void RPC_SyncDeleteCbkFromTid(UInt32 tid)
 
 	assert(ctx != NULL);
 
-	_DBG_(RPC_TRACE
-	      ("RPC_SyncDeleteCbkFromTid tid %d sig=%x \r\n", tid, ctx->sig));
+	_DBG_(SYNC_RPC_TRACE
+	      ("RPC_SyncDeleteCbkFromTid tid %d sig=%lx \r\n",
+		(int)tid, ctx->sig));
 
 	if (ctx->sig == 0xBABEFACE && ctx->val != 0) {
 		ctx->sig = 0;
 		ctx->val = 0;
 		OSHEAP_Delete(ctx);
 	} else {
-		_DBG_(RPC_TRACE
-		      ("RPC_SyncDeleteCbkFromTid ERROR tid %d sig=%x \r\n", tid,
-		       ctx->sig));
+		_DBG_(SYNC_RPC_TRACE("RPC_SyncDeleteCbkFromTid \
+		ERROR tid %d sig=%lx \r\n", (int)tid, ctx->sig));
 		xassert(0, tid);
+	}
+}
+
+/* cp silent reset callback for sync rpc layer */
+static void RPC_SyncCPResetCb(RPC_CPResetEvent_t event,
+							UInt8 clientID)
+{
+	TaskRequestMap_t *taskMap = (TaskRequestMap_t *) NULL;
+	UInt8 i;
+	RPC_SyncParams_t *internalParam;
+	UInt8 clientIndex;
+
+	_DBG_(SYNC_RPC_TRACE("RPC_SyncCPResetCb event %s",
+					event == RPC_CPRESET_START ?
+					"RPC_CPRESET_START" :
+					"RPC_CPRESET_COMPLETE"));
+	for (i = 0; i < MAX_TASKS_NUM; i++) {
+		taskMap = (sTaskRequestMap + i);
+
+		if (taskMap != NULL &&
+			taskMap->task != NULL) {
+			_DBG_(SYNC_RPC_TRACE(
+				"RPC_SyncCPResetCb i=%d tid=%d msg=%d ack=%d\r\n",
+				i, (int)taskMap->tid, (int)taskMap->msgType,
+				taskMap->ack));
+			_DBG_(SYNC_RPC_TRACE(
+				"RPC_SyncCPResetCb pend=%d sz=%d rs=%d task=0x%p\r\n",
+				taskMap->isResultPending,
+				(int)taskMap->rspSize,
+				(int)taskMap->result,
+				(void *)taskMap->task));
+
+			if (event == RPC_CPRESET_START) {
+				switch (taskMap->state) {
+				case RPC_SYNC_STATE_WAITING_FOR_ACK:
+					_DBG_(SYNC_RPC_TRACE
+					("RPC_SyncCPResetCb RPC_SYNC_STATE_WAITING_FOR_ACK\n"));
+					taskMap->ack = ACK_CRITICAL_ERROR;
+					taskMap->state = RPC_SYNC_STATE_DONE;
+					if (taskMap->ackSema)
+						OSSEMAPHORE_Release(
+							taskMap->ackSema);
+					_DBG_(SYNC_RPC_TRACE("RPC_SyncCPResetCb \
+						after OSSEMAPHORE_Release\n"));
+					break;
+				case RPC_SYNC_STATE_WAITING_FOR_RSP:
+					_DBG_(SYNC_RPC_TRACE
+					("RPC_SyncCPResetCb RPC_SYNC_STATE_WAITING_FOR_RSP\n"));
+					taskMap->result = RESULT_ERROR;
+					taskMap->tid = 0;
+					taskMap->state = RPC_SYNC_STATE_DONE;
+					OSSEMAPHORE_Release(taskMap->rspSema);
+					break;
+				default:
+					_DBG_(SYNC_RPC_TRACE(
+					"RPC_SyncCPResetCb state=%d\n", taskMap->state));
+					break;
+				}
+			} else {
+			}
+		}
+	}
+
+	clientIndex = RPC_SYS_GetClientHandle(clientID);
+	internalParam = (RPC_SyncParams_t *)
+		RPC_GetUserData(clientIndex);
+	if (internalParam &&
+		internalParam->clientParams.cpResetCb) {
+		internalParam->clientParams.cpResetCb(event, clientID);
 	}
 }

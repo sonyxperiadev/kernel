@@ -412,7 +412,7 @@ static int unicam_get_clocks(struct unicam_device *unicam)
 	}
 
 	unicam->csi2_axi_clk = clk_get(unicam->dev, "csi0_axi_clk");
-	if (IS_ERR(unicam->csi2_axi_clk)) {
+	if (IS_ERR_OR_NULL(unicam->csi2_axi_clk)) {
 		dev_err(unicam->dev, "unable to get clock csi0_axi_clk\n");
 		unicam_put_clocks(unicam);
 		return PTR_ERR(unicam->csi2_axi_clk);

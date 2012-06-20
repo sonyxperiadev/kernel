@@ -49,6 +49,8 @@ static Boolean gRpcInit = FALSE;
 static RPC_USER_LOCK_DECLARE(gRpcLock);
 RPC_USER_LOCK_DECLARE(gRpcFreeLock);
 
+static Boolean sCpResetting = FALSE;
+
 /******************************************************************************
 *                              RPC Apps EP Register
 ******************************************************************************/
@@ -66,6 +68,7 @@ Result_t RPC_SYS_Init(RPC_EventCallbackFunc_t eventCb)
 {
 	RPC_Result_t res = RPC_RESULT_OK;
 	stEventCb = eventCb;
+	sCpResetting = FALSE;
 
 	_DBG_(RPC_TRACE("RPC_SYS_Init gRpcInit=%d", gRpcInit));
 
@@ -144,16 +147,97 @@ static RPC_Result_t RPC_BufferDelivery(PACKET_InterfaceType_t interfaceType,
 
 typedef struct {
 	Boolean notifyUnsolicited;
+	Boolean ackdCPReset;
 } RPC_InitLocalParams_t;
 
 Int8 gClientIndex = 0;		/* Client Index zero is reserved */
 
 #define MAX_RPC_CLIENTS 25
 static RPC_InitParams_t gClientMap[MAX_RPC_CLIENTS];
-static RPC_InitLocalParams_t gClientLocalMap[MAX_RPC_CLIENTS] = { {0} };
-static UInt8 gClientIDMap[MAX_RPC_CLIENTS] = { 0 };
+static RPC_InitLocalParams_t gClientLocalMap[MAX_RPC_CLIENTS] = {{0} };
+static UInt8 gClientIDMap[MAX_RPC_CLIENTS] = {0};
 
-UInt8 gClientIDs[255] = { 0 };
+UInt8 gClientIDs[256] = {0};
+
+/* cp silent reset callback for async rpc layer; called from rpc_ipc layer */
+static void RPC_Handle_CPReset(RPC_CPResetEvent_t event,
+				PACKET_InterfaceType_t interfaceType)
+{
+	int i;
+
+	if ((sCpResetting && event == RPC_CPRESET_START) ||
+		(!sCpResetting && event == RPC_CPRESET_COMPLETE)) {
+		/* already resetting, so just return */
+		_DBG_(RPC_TRACE("RPC_Handle_CPReset already processing %s",
+						sCpResetting ?
+						"RPC_CPRESET_START" :
+						"RPC_CPRESET_COMPLETE"));
+		return;
+	}
+
+	_DBG_(RPC_TRACE("RPC_Handle_CPReset event %s interface %d",
+					event == RPC_CPRESET_START ?
+					"RPC_CPRESET_START" :
+					"RPC_CPRESET_COMPLETE",
+					interfaceType));
+
+	sCpResetting = (event == RPC_CPRESET_START);
+	/* notify all clients for given interface */
+	for (i = 1; i <= gClientIndex; i++)
+		if (gClientMap[i].cpResetCb != NULL &&
+		    gClientMap[i].iType == interfaceType) {
+			_DBG_(RPC_TRACE(
+				"RPC_Handle_CPReset client:%d",
+				gClientIDMap[i]));
+			gClientLocalMap[i].ackdCPReset = FALSE;
+			(gClientMap[i].cpResetCb)(event, gClientIDMap[i]);
+		}
+
+	_DBG_(RPC_TRACE("RPC_Handle_CPReset done for interface %d",
+					interfaceType));
+}
+
+void RPC_AckCPReset(UInt8 clientID)
+{
+	UInt8 index = RPC_SYS_GetClientHandle(clientID);
+	int i;
+	Boolean bReady = TRUE;
+
+	_DBG_(RPC_TRACE("RPC_AckCPReset client %d index %d\n",
+					clientID, index));
+
+	if (index <= gClientIndex)
+		gClientLocalMap[index].ackdCPReset = TRUE;
+
+	/* check if all for given PACKET_InterfaceType_t have ack'd
+	   if so, ack to rpc_ipc layer
+	*/
+	for (i = 1; i <= gClientIndex; i++)
+		if (gClientMap[index].iType == gClientMap[i].iType &&
+				!gClientLocalMap[i].ackdCPReset) {
+			/* at least one client for given
+			   interface type has not yet ack'd
+			   so we're not ready yet
+			*/
+			_DBG_(RPC_TRACE
+				("RPC_AckCPReset fail index %d\n", i));
+			bReady = FALSE;
+			break;
+		}
+		else {
+			_DBG_(RPC_TRACE("RPC_AckCPReset %d %d %d %d %d\n",
+				i, index, gClientMap[index].iType,
+				gClientMap[i].iType,
+				gClientLocalMap[i].ackdCPReset));
+		}
+
+	if (bReady) {
+		_DBG_(RPC_TRACE
+		 ("RPC_AckCPReset calling RPC_PACKET_AckReadyForCPReset\n"));
+		RPC_PACKET_AckReadyForCPReset(0,
+			(PACKET_InterfaceType_t)gClientMap[index].iType);
+	}
+}
 
 Boolean RPC_SYS_BindClientID(RPC_Handle_t handle, UInt8 userClientID)
 {
@@ -241,10 +325,8 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params)
 	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient index=%d userClientID=%d gClientIndex=%d", clientIndex, userClientID, gClientIndex));
 
 	RPC_PACKET_RegisterDataInd(userClientID,
-				   (PACKET_InterfaceType_t) (gClientMap
-							     [clientIndex].
-							     iType),
-				   RPC_BufferDelivery, params->flowCb);
+		(PACKET_InterfaceType_t)(gClientMap[clientIndex].iType),
+		RPC_BufferDelivery, params->flowCb, RPC_Handle_CPReset);
 
 	rpc_internal_xdr_init();
 	rpc_register_xdr(clientIndex, params->xdrtbl, params->table_size);
@@ -252,6 +334,7 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params)
 	gClientIDs[userClientID] = clientIndex;
 	gClientIDMap[clientIndex] = userClientID;
 	gClientLocalMap[clientIndex].notifyUnsolicited = FALSE;
+	gClientLocalMap[clientIndex].ackdCPReset = FALSE;
 
 	RPC_USER_UNLOCK(gRpcLock);
 	return (RPC_Handle_t)clientIndex;

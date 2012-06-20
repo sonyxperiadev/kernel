@@ -153,6 +153,7 @@ typedef struct {
 	UInt8 channel;
 	PACKET_BufHandle_t dataBufHandle;
 	RPC_FlowCtrlEvent_t event;
+	RPC_CPResetEvent_t cpResetEvent;
 } RpcCbkElement_t;
 
 typedef struct {
@@ -164,6 +165,7 @@ typedef struct {
 	UInt32 ts;
 	UInt8 state;
 	UInt8 clientId;
+	int notresponding;
 	rpc_pkt_reg_ind_t info;
 	rpc_pkt_reg_ind_ex_t infoEx;
 	struct file *filep;
@@ -176,12 +178,13 @@ typedef struct {
 	spinlock_t mLock;
 	wait_queue_head_t mWaitQ;
 	RpcPktkElement_t pktQ;
+	int ackdCPReset;
 } RpcClientInfo_t;
 
 RpcClientInfo_t *gRpcClientList[0xFF] = { 0 };
 static int gNumActiveClients = 0;
 static int gEnableKprint = 0;
-
+static int gCPResetting = 0;
 /**
  *  module status
  */
@@ -221,6 +224,8 @@ struct page *rpcipc_vma_nopage(struct vm_area_struct *vma,
 			       unsigned long address, int *type);
 
 /*****************************************************************/
+static void RPC_ServerCPResetCallback(RPC_CPResetEvent_t event,
+				PACKET_InterfaceType_t interfaceType);
 RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 			     UInt8 channel, PACKET_BufHandle_t dataBufHandle);
 static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
@@ -244,6 +249,7 @@ static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd,
 static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 				UInt32 param);
 static void RpcListCleanup(UInt8 clientId);
+static int free_client_queued_pkts(UInt8 clientId);
 
 static long handle_pkt_deregister_data_ind_ioc(struct file *filp,
 					     unsigned int cmd, UInt32 param);
@@ -258,7 +264,9 @@ static long handle_pkt_send_buffer_ex_ioc(struct file *filp, unsigned int cmd,
 				       UInt32 param);
 static long handle_pkt_reg_msgs_ioc(struct file *filp, unsigned int cmd,
 				       UInt32 param);
-static long free_client_all_pkts(UInt8 clientId);
+static long handle_pkt_ack_cp_reset_ioc(struct file *filp, unsigned int cmd,
+				       UInt32 param);
+static long free_client_unfreed_pkts(UInt8 clientId);
 static int RpcIsTaskValid(pid_t tid);
 
 /*****************************************************************/
@@ -361,7 +369,7 @@ static int rpcipc_release(struct inode *inode, struct file *file)
 		cInfo = gRpcClientList[k];
 
 		if (cInfo && (cInfo->filep == file)) {
-			free_client_all_pkts(cInfo->clientId);
+			free_client_unfreed_pkts(cInfo->clientId);
 			RpcListCleanup(cInfo->clientId);
 			SYS_ReleaseClientID(cInfo->clientId);
 		}
@@ -521,6 +529,13 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg)
 			RPC_READ_UNLOCK;
 			break;
 		}
+	case RPC_PKT_ACK_CP_RESET_IOC:
+		{
+			RPC_WRITE_LOCK;
+			retVal = handle_pkt_ack_cp_reset_ioc(filp, cmd, arg);
+			RPC_WRITE_UNLOCK;
+			break;
+		}
 	default:
 		retVal = -ENOIOCTLCMD;
 		_DBG(RPC_TRACE
@@ -532,6 +547,116 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg)
 	return retVal;
 }
 
+RPC_Result_t RPC_ServerDispatchCPResetMsg(PACKET_InterfaceType_t interfaceType,
+					UInt8 clientId,
+					RPC_CPResetEvent_t eventType)
+{
+	RpcCbkElement_t *elem;
+	RpcClientInfo_t *cInfo;
+
+	cInfo = gRpcClientList[clientId];
+
+	if (!cInfo) {
+		_DBG(RPC_TRACE
+		     ("k:RPC_ServerDispatchCPResetMsg invalid clientID = %d\n",
+		      clientId));
+		return RPC_RESULT_ERROR;
+	}
+
+	if (clientId == 0) {
+		_DBG(RPC_TRACE("k:RPC_ServerDispatchCPResetMsg Error !!!\n"));
+		return RPC_RESULT_ERROR;
+	}
+
+	elem = kmalloc(sizeof(RpcCbkElement_t), in_interrupt() ?
+			GFP_ATOMIC : GFP_KERNEL);
+	if (!elem) {
+		_DBG(RPC_TRACE(
+			"k:RPC_ServerDispatchCPResetMsg Allocation error\n"));
+		return RPC_RESULT_ERROR;
+	}
+	memset(elem, 0, sizeof(RpcCbkElement_t));
+	elem->type = RPC_SERVER_CBK_CP_RESET;
+	elem->interfaceType = interfaceType;
+	elem->channel = 0;
+	elem->dataBufHandle = 0;
+	elem->event = 0;
+	elem->cpResetEvent = eventType;
+
+	_DBG(RPC_TRACE
+		("RPC_ServerDispatchCPResetMsg: add to queue for client %d\n",
+		clientId));
+
+	/* add to queue */
+	spin_lock_bh(&cInfo->mLock);
+	list_add_tail(&elem->mList, &cInfo->mQ.mList);
+	spin_unlock_bh(&cInfo->mLock);
+
+	cInfo->availData = 1;
+	wake_up_interruptible(&cInfo->mWaitQ);
+	_DBG(RPC_TRACE
+		("RPC_ServerDispatchCPResetMsg: done if:%d client:%d\n",
+		interfaceType, clientId));
+
+	return RPC_RESULT_OK;
+}
+
+void RPC_ServerRecoverUnfreedMsgsForClient(UInt8 clientId)
+{
+	RpcClientInfo_t *cInfo;
+	struct list_head *pos;
+	int queuedMsgs, unfreedMsgs;
+
+	cInfo = gRpcClientList[clientId];
+
+	if (!cInfo) {
+		_DBG(RPC_TRACE
+		     ("k:RPC_RPC_ServerRecoverUnfreedMsgsForClient \
+			invalid clientID = %d \n", clientId));
+		return;
+	}
+
+	spin_lock_bh(&cInfo->mLock);
+
+	queuedMsgs = 0;
+	unfreedMsgs = 0;
+	list_for_each(pos, &cInfo->mQ.mList)queuedMsgs++;
+	list_for_each(pos, &cInfo->pktQ.mList)unfreedMsgs++;
+	cInfo->notresponding = (queuedMsgs > 0 || unfreedMsgs > 0) ? 1 : 0;
+
+	spin_unlock_bh(&cInfo->mLock);
+
+	if (queuedMsgs > 0)
+		free_client_queued_pkts(cInfo->clientId);
+
+	/* Do not free unfreedMsgs ( dequeued ) as they client may still
+	using it. Just free queued packets*/
+/*	if(unfreedMsgs > 0)
+		free_client_unfreed_pkts(cInfo->clientId);*/
+
+	if (queuedMsgs > 0 || unfreedMsgs > 0) {
+		_DBG(RPC_TRACE("k:RPC_ServerRecoverUnfreedMsgsForClient  \
+		FORCE Free Msgs tid %d cid %d, pid %d name %s qp=%d up=%d\n",
+		cInfo->tid, clientId, cInfo->pid, cInfo->pidName,
+		queuedMsgs, unfreedMsgs));
+	}
+	else {
+		_DBG(RPC_TRACE("k:RPC_RPC_ServerRecoverUnfreedMsgsForClient \
+			clientID = %d OK\n", clientId));
+	}
+}
+
+
+void RPC_ServerRecoverUnfreedMsgs(PACKET_InterfaceType_t interfaceType)
+{
+	int k;
+	for (k = 0; k < 0xFF; k++) {
+		if (gRpcClientList[k] &&
+		(gRpcClientList[k]->info.interfaceType == interfaceType &&
+		gRpcClientList[k]->notresponding == 0))
+			RPC_ServerRecoverUnfreedMsgsForClient(k);
+	}
+}
 
 
 RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
@@ -553,7 +678,8 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 	}
 
 	if (clientId == 0) {
-		printk("k:RPC_ServerDispatchMsg Error !!!\n");
+		_DBG(RPC_TRACE
+		     ("k:RPC_ServerDispatchMsg Error !!!  clientID zero\n"));
 		return RPC_RESULT_ERROR;
 	}
 
@@ -570,19 +696,18 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 	}
 
 	/*Find out if the process of client is dead*/
-	if(cInfo->tid && RpcIsTaskValid(cInfo->tid) == -ESRCH)
-	{
-		HISTORY_RPC_LOG("zombie", clientId, (int)dataBufHandle, 
-						(int)cInfo->tid, (int)cInfo->pid);
+	if (cInfo->tid && RpcIsTaskValid(cInfo->tid) == -ESRCH) {
+		HISTORY_RPC_LOG("zombie", clientId, (int)dataBufHandle,
+			(int)cInfo->tid, (int)cInfo->pid);
 
-		_DBG(RPC_TRACE("k:RPC_ServerDispatchMsg ERROR(	\
-				Invalid tid %d) cid %d, pid %d name %s\n",	
-			cInfo->tid, clientId, cInfo->pid, cInfo->pidName));
+		_DBG(RPC_TRACE("k:RPC_ServerDispatchMsg ERROR(Invalid tid %d) \
+			 cid %d, pid %d name %s\n",
+			 cInfo->tid, clientId, cInfo->pid, cInfo->pidName));
 		/*Switch to write lock and back to read lock*/
 		RPC_READ_UNLOCK;
 
 		RPC_WRITE_LOCK;
-		free_client_all_pkts(cInfo->clientId);
+		free_client_unfreed_pkts(cInfo->clientId);
 		RpcListCleanup(cInfo->clientId);
 		/*SYS_ReleaseClientID(cInfo->clientId);*/
 		RPC_WRITE_UNLOCK;
@@ -592,7 +717,20 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 		return RPC_RESULT_ERROR;
 	}	
 
-	elem = kmalloc(sizeof(RpcCbkElement_t), in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
+	if (cInfo->notresponding) {
+		int empty;
+		spin_lock_bh(&cInfo->mLock);
+		empty = list_empty(&cInfo->mQ.mList);
+		spin_unlock_bh(&cInfo->mLock);
+		if (!empty) {
+			_DBG(RPC_TRACE("k:RPC_ServerDispatchMsg ERROR(\
+			 NOT RESPONDING tid %d) cid %d, pid %d name %s\n",
+			cInfo->tid, clientId, cInfo->pid, cInfo->pidName));
+			return RPC_RESULT_ERROR;
+		}
+	}
+	elem = kmalloc(sizeof(RpcCbkElement_t), in_interrupt() ?
+			GFP_ATOMIC : GFP_KERNEL);
 	if (!elem) {
 		_DBG(RPC_TRACE("k:RPC_ServerDispatchMsg Allocation error\n"));
 		return RPC_RESULT_ERROR;
@@ -606,9 +744,9 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 	RPC_PACKET_IncrementBufferRef(dataBufHandle, clientId);
 
 	_DBG(RPC_TRACE
-	     ("k:RPC_ServerDispatchMsg cInfo=%x h=%d cid=%d elem=%x msgId=%x b=%d\n",
+	     ("k:RPC_ServerDispatchMsg cInfo=%x h=%d cid=%d elem=%x msgId=%x b=%d nr=%d\n",
 	      (int)cInfo, (int)dataBufHandle, clientId, (int)elem, 
-		(int)msgId, broadcastMsg));
+		(int)msgId, broadcastMsg, cInfo->notresponding));
 
 	/* add to queue */
 	RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA, clientId, 
@@ -636,13 +774,20 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 
 	RPC_READ_LOCK;
 
+	if (RPC_PACKET_IsReservedPkt(dataBufHandle)) {
+		RPC_ServerRecoverUnfreedMsgs(interfaceType);
+		RPC_READ_UNLOCK;
+		return RPC_RESULT_OK;
+	}
 	if (interfaceType == INTERFACE_CAPI2) {
 		if (channel == 0xCD)
 			channel = 0;
 
 		/* All response from CP will pass clientID in channel */
 		clientId = channel;
-	} else {	/*For non-telephony clients, match by interface type */
+	}
+	/*For non-telephony clients, match by interface type */
+	else {
 		clientId = 0;
 
 		for (k = 0; k < 0xFF; k++) {
@@ -658,7 +803,7 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 	}
 
 	_DBG(RPC_TRACE
-	     ("k:RPC_ServerRxCbk if=%d pkt=%d ch=%d clientId=%d found=%d numClients=%d\n",
+	     ("k:RPC_ServerRxCbk if=%d pkt=%d ch=%d cid=%d found=%d numClients=%d\n",
 	      (int)interfaceType, (int)dataBufHandle, channel, (int)clientId,
 	      (int)bFound, gNumActiveClients));
 
@@ -699,7 +844,6 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 								  msgId, 1);
 					if (ret2 == RPC_RESULT_PENDING)
 						bSent = 1;
-
 				}
 			}
 			/* unlock buffer */
@@ -713,6 +857,43 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 	_DBG(RPC_TRACE("k:RPC_ServerRxCbk ret=%d\n", ret));
 
 	return ret;
+}
+
+/* handle notifcations of CP reset from rpc_ipc layer */
+void RPC_ServerCPResetCallback(RPC_CPResetEvent_t event,
+				PACKET_InterfaceType_t interfaceType)
+{
+	int k;
+
+	_DBG(RPC_TRACE("RPC_ServerCPResetCallback: event %d interface %d\n",
+		  event, interfaceType));
+
+	/* if we're already in process of resetting, just return */
+	if ((gCPResetting && (event == RPC_CPRESET_START)) ||
+		(!gCPResetting && (event == RPC_CPRESET_COMPLETE))) {
+		_DBG(RPC_TRACE
+		  ("RPC_ServerCPResetCallback already handling event\n"));
+		return;
+	}
+
+	RPC_READ_LOCK;
+
+	/* start of CP reset process; notify all user space clients */
+	gCPResetting = (event == RPC_CPRESET_START);
+
+	for (k = 0; k < 0xFF; k++)
+		if (gRpcClientList[k]) {
+			_DBG(RPC_TRACE
+			 ("RPC_ServerCPResetCallback: client %d\n", k));
+			if (event == RPC_CPRESET_START)
+				gRpcClientList[k]->ackdCPReset = 0;
+			RPC_ServerDispatchCPResetMsg(
+			      gRpcClientList[k]->info.interfaceType,
+				k, event);
+		}
+
+	_DBG(RPC_TRACE("RPC_ServerCPResetCallback: done\n"));
+	RPC_READ_UNLOCK;
 }
 
 static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
@@ -758,9 +939,10 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 	/*_DBG(RPC_TRACE("k:rpcipc_poll() end wait %x\n", (int)jiffies));*/
 
 	spin_lock_bh(&cInfo->mLock);
-
 	if (!list_empty(&cInfo->mQ.mList))
 		mask |= (POLLIN | POLLRDNORM);
+
+	_DBG(RPC_TRACE("rpcipc_poll: mask = %x\n", (int)mask));
 	
 	cInfo->state = 2;
 	cInfo->ts = jiffies_to_msecs(jiffies);
@@ -846,9 +1028,14 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 			sizeof(rpc_pkt_avail_t));
 	if (copyRc != 0) {
 		_DBG(RPC_TRACE
-			("k:handle_pkt_poll_ioc - copy_to_user() FAILS! RC=%d\n", copyRc));
+			("k:handle_pkt_poll_ioc - copy_to_user() FAILS! \
+				RC=%d\n", copyRc));
 		_DBG(RPC_TRACE
-			("  clientId:%d, isEmpty:%d, waitTime:%d\n", (int)ioc_param.clientId,
+			("  src addr=%x, dest addr=%x, size=%d\n",
+				(int)&ioc_param, (int)param, sizeof(rpc_pkt_avail_t)));
+		_DBG(RPC_TRACE
+			("  clientId:%d, isEmpty:%d, waitTime:%d\n",
+				(int)ioc_param.clientId,
 				(int)ioc_param.isEmpty, (int)ioc_param.waitTime));
 		return -EFAULT;
 	}
@@ -911,6 +1098,7 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
 
 	cInfo->state = 2;
 	cInfo->ts = jiffies_to_msecs(jiffies);
+	cInfo->notresponding = 0;
 
 	spin_unlock_bh(&cInfo->mLock);
 
@@ -1168,7 +1356,7 @@ static long free_client_pkt(struct file *filp, UInt8 clientId, PACKET_BufHandle_
 	return ret;
 }
 
-static long free_client_all_pkts(UInt8 clientId)
+static long free_client_unfreed_pkts(UInt8 clientId)
 {
 	RpcClientInfo_t *cInfo;
 	RpcPktkElement_t *Item = NULL;
@@ -1188,7 +1376,7 @@ static long free_client_all_pkts(UInt8 clientId)
 		list_del(listptr);
 		res = RPC_PACKET_FreeBufferEx(Item->dataBufHandle, clientId);
 		_DBG(RPC_TRACE
-		     ("k:free_client_all_pkts FREE clientID %d pkt %d res %d\n", (int)clientId,
+		     ("k:free_client_unfreed_pkts FREE clientID %d pkt %d res %d\n", (int)clientId,
 		      (int)Item->dataBufHandle, (int)res));
 		kfree(Item);
 		ret = (res == RPC_RESULT_OK) ? 0 : -EFAULT;
@@ -1377,16 +1565,18 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 	cInfo->infoEx.interfaceType = cInfo->info.interfaceType;
 	cInfo->infoEx.dataIndFuncEx = NULL;
 	cInfo->infoEx.flowIndFunc = cInfo->info.flowIndFunc;
+	cInfo->infoEx.cpResetFunc = cInfo->info.cpResetFunc;
 
 	cInfo->clientId = clientId;
 	cInfo->filep = filp;
-
-	/* Init module  queue */
 
 	cInfo->pid = current->tgid;
 	cInfo->tid = 0;
 	strncpy(cInfo->pidName, current->comm, TASK_COMM_LEN);
 
+	cInfo->ackdCPReset = 0;
+
+	/* Init module  queue */
 	INIT_LIST_HEAD(&cInfo->mQ.mList);
 	INIT_LIST_HEAD(&cInfo->pktQ.mList);
 	spin_lock_init(&cInfo->mLock);
@@ -1396,7 +1586,9 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 	HISTORY_RPC_LOG("Register", clientId, 0, current->tgid, cInfo->info.interfaceType);
 
 	RPC_PACKET_RegisterFilterCbk(ioc_param.rpcClientID,
-				     ioc_param.interfaceType, RPC_ServerRxCbk);
+				ioc_param.interfaceType,
+				RPC_ServerRxCbk,
+				RPC_ServerCPResetCallback);
 
 	return 0;
 }
@@ -1508,6 +1700,7 @@ static long handle_pkt_register_data_ind_ex_ioc(struct file *filp,
 	cInfo->info.interfaceType = cInfo->infoEx.interfaceType;
 	cInfo->info.dataIndFunc = NULL;
 	cInfo->info.flowIndFunc = cInfo->infoEx.flowIndFunc;
+	cInfo->info.cpResetFunc = cInfo->infoEx.cpResetFunc;
 
 	cInfo->clientId = clientId;
 	cInfo->filep = filp;
@@ -1515,6 +1708,8 @@ static long handle_pkt_register_data_ind_ex_ioc(struct file *filp,
 	cInfo->pid = current->tgid;
 	cInfo->tid = 0;
 	strncpy(cInfo->pidName, current->comm, TASK_COMM_LEN);
+
+	cInfo->ackdCPReset = 0;
 	/* Init module  queue */
 	INIT_LIST_HEAD(&cInfo->mQ.mList);
 	INIT_LIST_HEAD(&cInfo->pktQ.mList);
@@ -1525,7 +1720,9 @@ static long handle_pkt_register_data_ind_ex_ioc(struct file *filp,
 	HISTORY_RPC_LOG("RegisterEx", clientId, 0, current->tgid, cInfo->info.interfaceType);
 
 	RPC_PACKET_RegisterFilterCbk(ioc_param_ex.rpcClientID,
-				     ioc_param_ex.interfaceType, RPC_ServerRxCbk);
+				ioc_param_ex.interfaceType,
+				RPC_ServerRxCbk,
+				RPC_ServerCPResetCallback);
 
 	return 0;
 }
@@ -1538,7 +1735,7 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 	RpcCbkElement_t *Item = NULL;
 	rpc_pkt_rx_buf_ex_t ioc_param;
 	int jiffyBefore = jiffies;
-	RpcPktkElement_t *pktElem;
+	RpcPktkElement_t *pktElem = NULL;
 
 	if (copy_from_user
 	    (&ioc_param, (rpc_pkt_rx_buf_ex_t *) param,
@@ -1603,38 +1800,64 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 		Item = list_entry(entry, RpcCbkElement_t, mList);
 		list_del(entry);
 		/* Add to free List */
-		pktElem->dataBufHandle = Item->dataBufHandle;
-		list_add_tail(&pktElem->mList, &cInfo->pktQ.mList);
+		if (Item->dataBufHandle) {
+			pktElem->dataBufHandle = Item->dataBufHandle;
+			list_add_tail(&pktElem->mList, &cInfo->pktQ.mList);
+		}
+		cInfo->notresponding = 0;
 
 		spin_unlock_bh(&cInfo->mLock);
 
 		ioc_param.isEmpty = 0;
 		ioc_param.type = Item->type;
 		ioc_param.event = Item->event;
+		ioc_param.cpResetEvent = Item->cpResetEvent;
 		ioc_param.dataIndFuncEx = cInfo->infoEx.dataIndFuncEx;
 		ioc_param.dataIndFunc = cInfo->info.dataIndFunc;
-		ioc_param.flowIndFunc = (cInfo->infoEx.flowIndFunc) ? cInfo->infoEx.flowIndFunc : cInfo->info.flowIndFunc;
-
+		ioc_param.flowIndFunc = (cInfo->infoEx.flowIndFunc) ?
+			cInfo->infoEx.flowIndFunc :
+			cInfo->info.flowIndFunc;
+		ioc_param.cpResetFunc = (cInfo->infoEx.cpResetFunc) ?
+			cInfo->infoEx.cpResetFunc :
+			cInfo->info.cpResetFunc;
 		ioc_param.bufInfo.interfaceType = Item->interfaceType;
 		ioc_param.bufInfo.channel = Item->channel;
 		ioc_param.bufInfo.dataBufHandle = Item->dataBufHandle;
-		ioc_param.bufInfo.bufferLen = RPC_PACKET_GetBufferLength(Item->dataBufHandle);
-		ioc_param.bufInfo.buffer = RPC_PACKET_GetBufferData(Item->dataBufHandle);
-		ioc_param.bufInfo.context1 = RPC_PACKET_GetContext(Item->interfaceType, Item->dataBufHandle);
-		ioc_param.bufInfo.context2 = RPC_PACKET_GetContextEx(Item->interfaceType, Item->dataBufHandle);
+		if (Item->dataBufHandle) {
+			ioc_param.bufInfo.bufferLen =
+				RPC_PACKET_GetBufferLength(
+					Item->dataBufHandle);
+			ioc_param.bufInfo.buffer =
+				RPC_PACKET_GetBufferData(Item->dataBufHandle);
+			ioc_param.bufInfo.context1 =
+				RPC_PACKET_GetContext(Item->interfaceType,
+					Item->dataBufHandle);
+			ioc_param.bufInfo.context2 =
+				RPC_PACKET_GetContextEx(Item->interfaceType,
+					Item->dataBufHandle);
 
-		ioc_param.offset = IPC_SmOffset(ioc_param.bufInfo.buffer);
+			ioc_param.offset = IPC_SmOffset(
+			ioc_param.bufInfo.buffer);
 
-		RpcDbgUpdatePktStateEx((int)Item->dataBufHandle, PKT_STATE_NA, ioc_param.clientId, PKT_STATE_CID_FETCH,  0, 0, 0xFF);
-		HISTORY_RPC_LOG_PKT("rxBufEx", ioc_param.clientId, (int)Item->dataBufHandle);
-
-		_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ex_ioc cid=%d item=%x len=%d pkt=%d wait=%d\n", ioc_param.clientId, (int)Item,
-		      (int)ioc_param.bufInfo.bufferLen, (int)Item->dataBufHandle, jiffies_to_msecs(jiffies - jiffyBefore)));
+			RpcDbgUpdatePktStateEx((int)Item->dataBufHandle,
+					PKT_STATE_NA, ioc_param.clientId,
+					PKT_STATE_CID_FETCH,  0, 0, 0xFF);
+			HISTORY_RPC_LOG_PKT("rxBufEx", ioc_param.clientId,
+				(int)Item->dataBufHandle);
+		} else {
+			kfree(pktElem);
+		}
+		_DBG(RPC_TRACE("k:handle_pkt_poll_ex_ioc cid=%d item=%x \
+				len=%d pkt=%d wait=%d\n",
+			ioc_param.clientId, (int)Item,
+			(int)ioc_param.bufInfo.bufferLen,
+			(int)Item->dataBufHandle,
+			jiffies_to_msecs(jiffies - jiffyBefore)));
 
 		kfree(entry);
 
-	} else {
+	}
+	else {
 		_DBG(RPC_TRACE
 		     ("k:handle_pkt_poll_ex_ioc EMPTY cid=%d wait=%d\n",
 		      (int)ioc_param.clientId, jiffies_to_msecs(jiffies - jiffyBefore)));
@@ -1810,6 +2033,82 @@ static long handle_pkt_reg_msgs_ioc(struct file *filp, unsigned int cmd,
 	return (!ret) ? -EINVAL : 0;
 }
 
+static long handle_pkt_ack_cp_reset_ioc(struct file *filp, unsigned int cmd,
+				       UInt32 param)
+{
+	rpc_pkt_cp_reset_ack_t ioc_param;
+
+	/* Coverity [TAINTED_SCALAR]   */
+	if (copy_from_user
+	    (&ioc_param, (int *) param,
+	     sizeof(rpc_pkt_cp_reset_ack_t)) != 0) {
+		_DBG(RPC_TRACE("k:handle_pkt_ack_cp_reset_ioc - \
+			 copy_from_user() had error\n"));
+		return -EFAULT;
+	}
+	
+	_DBG(RPC_TRACE("handle_pkt_ack_cp_reset_ioc: %d %d\n",
+				ioc_param.rpcClientID,
+				ioc_param.interfaceType));
+
+	if (INTERFACE_CAPI2 != ioc_param.interfaceType) {
+		_DBG(RPC_TRACE("handle_pkt_ack_cp_reset_ioc: ack ifce %d\n",
+			ioc_param.interfaceType));
+		/* Coverity [TAINTED_SCALAR]   */
+		RPC_PACKET_FilterAckReadyForCPReset(ioc_param.rpcClientID,
+						ioc_param.interfaceType);
+	} else {
+		UInt8 cid = 0;
+		RpcClientInfo_t *cInfo;
+		int k;
+		int bComplete = 1;
+
+		_DBG(RPC_TRACE("handle_pkt_ack_cp_reset_ioc: capi2 client\n"));
+
+		/* for capi2 interface, track ack'd status in client info
+		   and only call back to rpc_ipc after all clients have ack'd
+		*/
+		cid = (UInt8)(ioc_param.rpcClientID);
+
+		cInfo = gRpcClientList[cid];
+
+		if (!cInfo) {
+			_DBG(RPC_TRACE
+			("k:handle_pkt_ack_cp_reset_ioc invalid clientID %d\n",
+			cid));
+			return -EINVAL;
+		}
+
+		cInfo->ackdCPReset = 1;
+
+		for (k = 0; k < 0xFF; k++) {
+			cInfo = gRpcClientList[k];
+			if (cInfo &&
+			  (cInfo->info.interfaceType == INTERFACE_CAPI2) &&
+			  cInfo->info.cpResetFunc &&
+			  !cInfo->ackdCPReset) {
+				_DBG(RPC_TRACE
+				("k:handle_pkt_ack_cp_reset_ioc not ackd %d\n",
+				k));
+				bComplete = 0;
+				break;
+			}
+		}
+
+		/* if all capi2 clients have ack'd, info rpc_ipc layer */
+		if (bComplete) {
+			_DBG(RPC_TRACE
+			("k:handle_pkt_ack_cp_reset_ioc all ack'd\n"));
+			_DBG(RPC_TRACE("     calling rpc_ipc\n"));
+			RPC_PACKET_FilterAckReadyForCPReset(
+						ioc_param.rpcClientID,
+						ioc_param.interfaceType);
+		}
+	}
+
+	return 0;
+}
+
 void __iomem *rpcipc_shmem;
 
 static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd,
@@ -1868,15 +2167,16 @@ static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd,
 /****************************************************************************/
 /****************************************************************************/
 
-static void RpcListCleanup(UInt8 clientId)
+static int free_client_queued_pkts(UInt8 clientId)
 {
 	struct list_head *listptr, *pos;
 	RpcClientInfo_t *cInfo;
 	RpcCbkElement_t *Item = NULL;
+	int num = 0;
 
 	cInfo = gRpcClientList[clientId];
 	if (!cInfo)
-		return;
+		return 0;
 
 	spin_lock_bh(&cInfo->mLock);
 	list_for_each_safe(listptr, pos, &cInfo->mQ.mList) {
@@ -1887,13 +2187,20 @@ static void RpcListCleanup(UInt8 clientId)
 		RPC_PACKET_FreeBufferEx(Item->dataBufHandle, clientId);
 
 		_DBG(RPC_TRACE
-		     ("k:RpcListCleanup index=%d item=%x\n", clientId,
+		     ("k:free_client_queued_pkts index=%d item=%x\n", clientId,
 		      (int)Item));
 		kfree(Item);
+		num++;
 		spin_lock_bh(&cInfo->mLock);
 	}
 	spin_unlock_bh(&cInfo->mLock);
 
+	return num;
+}
+
+static void RpcListCleanup(UInt8 clientId)
+{
+	free_client_queued_pkts(clientId);
 	gRpcClientList[clientId] = NULL;
 	gNumActiveClients--;
 
@@ -1905,6 +2212,7 @@ static void RpcServerCleanup(void)
 
 	for (k = 0; k < 0xFF; k++)
 		RpcListCleanup(k);
+
 }
 
 /* mmap() requirements for ipcdev.
@@ -2033,13 +2341,15 @@ int RpcDbgListClientMsgs(RpcOutputContext_t *c)
 		if (!cInfo)
 			continue;
 
-		RpcDbgDumpStr(c, "%s cid:%d state:%s ts:%u RxData:%d if:%d\n",
-					cInfo->pidName,
-					(int)clientId,
-					(cInfo->state == 1) ? "Wait" : "Active",
-					(unsigned int)cInfo->ts,
-					(int)cInfo->availData,
-					(int)cInfo->info.interfaceType);
+		RpcDbgDumpStr(c, "%s cid:%d state:%s ts:%u \
+				RxData:%d Active:%d if:%d\n",
+				cInfo->pidName,
+				(int)clientId,
+				(cInfo->state == 1) ? "Wait" : "Active",
+				(unsigned int)cInfo->ts,
+				(int)cInfo->availData,
+				(int)cInfo->notresponding,
+				(int)cInfo->info.interfaceType);
 
 		RpcDumpTaskState(c, cInfo->tid, cInfo->pid);
 
@@ -2225,7 +2535,7 @@ int RpcDbgDumpHistoryLogging(int type, int level)
 }
 
 static int major;
-/***************************************************************************/
+/**************************************************************************/
 /**
  *  Called by Linux I/O system to initialize module.
  *  @return int     0 if success, -1 if error

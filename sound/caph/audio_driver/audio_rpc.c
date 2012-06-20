@@ -41,7 +41,8 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "csl_apcmd.h"
 #include "audio_trace.h"
 
-#define AUDIO_ENABLE_RESP_TIMEOUT 50  /* 50ms */
+/*when system is busy, 50ms is not enough*/
+#define AUDIO_ENABLE_RESP_TIMEOUT 1000
 #define	timeout_jiff msecs_to_jiffies(AUDIO_ENABLE_RESP_TIMEOUT)
 
 /* If this struct is changed then please change xdr_Audio_Params_t() also. */
@@ -286,6 +287,27 @@ void HandleAudioEventReqCb(RPC_Msg_t *pMsg,
 #endif
 }
 
+static void HandleAudioCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
+{
+	pr_info("HandleAudioCPResetCb: event %s client ID %d\n",
+		RPC_CPRESET_START == event ?
+		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
+		clientID);
+
+	if (audioClientId != clientID)
+		pr_err("HandleAudioCPResetCb wrong cid expected %d got %d\n",
+			audioClientId, clientID);
+
+	/* for now, just ack that we're ready for reset */
+	if (RPC_CPRESET_START == event) {
+		AUDDRV_HandleCPReset(TRUE);
+		RPC_AckCPReset(audioClientId);
+	} else if (RPC_CPRESET_COMPLETE == event) {
+		AUDDRV_HandleCPReset(FALSE);
+		RPC_AckCPReset(audioClientId);
+	}
+}
+
 /*  AUDIO API CODE */
 #if defined(CONFIG_BCM_MODEM)
 void Audio_InitRpc(void)
@@ -301,6 +323,7 @@ void Audio_InitRpc(void)
 		params.xdrtbl = AUDIO_Prim_dscrm;
 		params.respCb = HandleAudioEventrespCb;
 		params.reqCb = HandleAudioEventReqCb;
+		params.cpResetCb = HandleAudioCPResetCb;
 		syncParams.copyCb = AudioCopyPayload;
 
 		handle = RPC_SyncRegisterClient(&params, &syncParams);

@@ -1340,8 +1340,8 @@ static void wl_scan_prep(struct wl_scan_params *params,
 			else
 				chanspec |= WL_CHANSPEC_BAND_5G;
 
-			if (request->
-			    channels[i]->flags & IEEE80211_CHAN_NO_HT40) {
+			if (request->channels[i]->
+			    flags & IEEE80211_CHAN_NO_HT40) {
 				chanspec |= WL_CHANSPEC_BW_20;
 				chanspec |= WL_CHANSPEC_CTL_SB_NONE;
 			} else {
@@ -1578,8 +1578,8 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 				n_valid_chan = dtoh32(list->count);
 				for (i = 0; i < num_chans; i++) {
 					_freq =
-					    scan_request->
-					    channels[i]->center_freq;
+					    scan_request->channels[i]->
+					    center_freq;
 					channel =
 					    ieee80211_frequency_to_channel
 					    (_freq);
@@ -1818,7 +1818,8 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 
 				err = wl_cfgp2p_enable_discovery(wl, ndev,
 								 request->ie,
-								 request->ie_len);
+								 request->
+								 ie_len);
 
 				if (unlikely(err)) {
 					goto scan_out;
@@ -2101,8 +2102,8 @@ wl_cfg80211_join_ibss(struct wiphy *wiphy, struct net_device *dev,
 		u32 target_channel;
 
 		target_channel =
-		    ieee80211_frequency_to_channel(params->
-						   channel->center_freq);
+		    ieee80211_frequency_to_channel(params->channel->
+						   center_freq);
 		if (params->channel_fixed) {
 			/* adding chanspec */
 			wl_ch_to_chanspec(target_channel,
@@ -2590,16 +2591,18 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 						    wl_cfgp2p_find_idx(wl, dev),
 						    VNDR_IE_PRBREQ_FLAG,
 						    wl_to_p2p_bss_saved_ie(wl,
-									   P2PAPI_BSSCFG_DEVICE).p2p_probe_req_ie,
+									   P2PAPI_BSSCFG_DEVICE).
+						    p2p_probe_req_ie,
 						    wl_to_p2p_bss_saved_ie(wl,
-									   P2PAPI_BSSCFG_DEVICE).p2p_probe_req_ie_len);
+									   P2PAPI_BSSCFG_DEVICE).
+						    p2p_probe_req_ie_len);
 			wl_cfgp2p_set_management_ie(wl, dev,
 						    wl_cfgp2p_find_idx(wl, dev),
 						    VNDR_IE_ASSOCREQ_FLAG,
 						    sme->ie, sme->ie_len);
 		} else if (p2p_is_on(wl)
-			   && (sme->
-			       crypto.wpa_versions & NL80211_WPA_VERSION_2)) {
+			   && (sme->crypto.
+			       wpa_versions & NL80211_WPA_VERSION_2)) {
 			/* This is the connect req after WPS is done [credentials exchanged]
 			 * currently identified with WPA_VERSION_2 .
 			 * Update the previously set IEs with
@@ -3742,8 +3745,8 @@ static s32 wl_cfg80211_send_pending_tx_act_frm(struct wl_priv *wl)
 		tx_act_frm->channel = wl->afx_hdl->peer_chan;
 		wl->afx_hdl->ack_recv = (wl_cfgp2p_tx_action_frame(wl, dev,
 								   tx_act_frm,
-								   wl->
-								   afx_hdl->bssidx))
+								   wl->afx_hdl->
+								   bssidx))
 		    ? false : true;
 	}
 	return 0;
@@ -4023,8 +4026,8 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 	    (IS_P2P_PUB_ACT_REQ(act_frm, &act_frm->elts[0], action_frame->len)
 	     || IS_GAS_REQ(sd_act_frm, action_frame->len))
 	    && wl_to_p2p_bss_saved_ie(wl,
-				      P2PAPI_BSSCFG_DEVICE).p2p_probe_req_ie_len)
-	{
+				      P2PAPI_BSSCFG_DEVICE).
+	    p2p_probe_req_ie_len) {
 		/* channel offload require P2P IE for Probe request
 		 * otherwise, we will use wl_cfgp2p_tx_action_frame directly.
 		 * channel offload for action request frame
@@ -4587,16 +4590,16 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 					/* WPAIE */
 					wl->ap_info->rsn_ie = NULL;
 					wl->ap_info->wpa_ie = kmemdup(wpa_ie,
-								      wpa_ie->length
-								      +
+								      wpa_ie->
+								      length +
 								      WPA_RSN_IE_TAG_FIXED_LEN,
 								      GFP_KERNEL);
 				} else {
 					/* RSNIE */
 					wl->ap_info->wpa_ie = NULL;
 					wl->ap_info->rsn_ie = kmemdup(wpa2_ie,
-								      wpa2_ie->len
-								      +
+								      wpa2_ie->
+								      len +
 								      WPA_RSN_IE_TAG_FIXED_LEN,
 								      GFP_KERNEL);
 				}
@@ -5529,7 +5532,8 @@ wl_notify_connect_status(struct wl_priv *wl, struct net_device *ndev,
 					WL_ERR(("link down, calling cfg80211_disconnected with deauth_reason:%d\n", wl->deauth_reason));
 					if (!wl_is_ibssmode(wl, ndev))
 						cfg80211_disconnected(ndev,
-								      wl->deauth_reason,
+								      wl->
+								      deauth_reason,
 								      NULL, 0,
 								      GFP_KERNEL);
 					wl_link_down(wl);

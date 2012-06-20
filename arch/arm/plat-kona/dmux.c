@@ -33,6 +33,7 @@
 #include <linux/types.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/err.h>
 
 #include <mach/rdb/brcm_rdb_dmux.h>
 #include <mach/io_map.h>
@@ -295,7 +296,7 @@ int dmux_init(void)
 
 	/* get the clocks going */
 	dmux.dmux_clk = clk_get(NULL, "dmac_mux_apb_clk");
-	if (!dmux.dmux_clk) {
+	if (IS_ERR_OR_NULL(dmux.dmux_clk)) {
 		printk(KERN_ERR "Failed to get the dmac_mux_apb_clk!!!\n");
 		return -1;
 	}

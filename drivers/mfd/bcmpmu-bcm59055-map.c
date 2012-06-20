@@ -308,7 +308,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {	/* revisit 
 	[PMU_REG_PMUID] = {.map = 0x01, .addr = 0xF7, .mask = 0xFF, .ro = 0},
 	[PMU_REG_PMUREV] = {.map = 0x01, .addr = 0xF8, .mask = 0xFF, .ro = 0},
 	[PMU_REG_PLLCTRL] = {.map = 0x00, .addr = 0x0b, .mask = 0xFF, .ro = 0},
-	[PMU_REG_HOSTCTRL1] = {.map = 0x00, .addr = 0x01, .mask = 0xFF, .ro = 0},
+	[PMU_REG_SW_SHDWN] = {.map = 0x00, .addr = 0x01, .mask = 0x04, .ro = 0},
 	[PMU_REG_HOSTCTRL3] = {.map = 0x00, .addr = 0x03, .mask = 0xFF, .ro = 0},
 	[PMU_REG_MBCCTRL5_USB_DET_LDO_EN] = {.map = 0x00, .addr = 0x54, .mask =
 					     0x04, .ro = 0, .shift = 2},

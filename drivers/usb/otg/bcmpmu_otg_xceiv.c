@@ -40,6 +40,7 @@
 
 #define HOST_TO_PERIPHERAL_DELAY_MS 1000
 #define PERIPHERAL_TO_HOST_DELAY_MS 100
+#define USBLDO_RAMP_UP_DELAY_IN_MS 2
 
 static int bcmpmu_otg_xceiv_set_vbus(struct otg_transceiver *otg, bool enabled)
 {
@@ -134,15 +135,32 @@ static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
 				wake_unlock(&xceiv_data->otg_xceiver.
 					    xceiver_wake_lock);
 
-			if (xceiv_data->bcm_hsotg_regulator) {
+			if (xceiv_data->bcm_hsotg_regulator &&
+				    xceiv_data->regulator_enabled) {
 				/* This should have no effect for most of
 				 * our platforms as "always on" parameter is set
 				 */
 				regulator_disable(xceiv_data->
 					    bcm_hsotg_regulator);
+				xceiv_data->regulator_enabled = false;
 			}
 		}
 	}
+}
+
+static void bcmpmu_otg_xceiv_set_def_state(
+	struct bcmpmu_otg_xceiv_data *xceiv_data, bool default_host)
+{
+
+	if (xceiv_data) {
+		if (default_host)
+			xceiv_data->otg_xceiver.xceiver.state =
+				    OTG_STATE_A_IDLE;
+		else
+			xceiv_data->otg_xceiver.xceiver.state =
+				    OTG_STATE_B_IDLE;
+	}
+
 }
 
 static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
@@ -155,9 +173,13 @@ static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
 		if (!xceiv_data->otg_enabled) {
 			wake_lock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
 
-			if (xceiv_data->bcm_hsotg_regulator) {
+			if (xceiv_data->bcm_hsotg_regulator &&
+				    !xceiv_data->regulator_enabled) {
 				regulator_enable(xceiv_data->
 					    bcm_hsotg_regulator);
+				/* Give 2ms to ramp up USBLDO */
+				mdelay(USBLDO_RAMP_UP_DELAY_IN_MS);
+				xceiv_data->regulator_enabled = true;
 			}
 		}
 
@@ -165,12 +187,10 @@ static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
 			bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
 		/* Initialize OTG core and PHY */
 		bcm_hsotgctrl_phy_init(!id_default_host);
-		if (id_default_host)
-			xceiv_data->otg_xceiver.xceiver.state =
-			    OTG_STATE_A_IDLE;
-		else
-			xceiv_data->otg_xceiver.xceiver.state =
-			    OTG_STATE_B_IDLE;
+
+		bcmpmu_otg_xceiv_set_def_state(xceiv_data,
+			id_default_host);
+
 	} else
 		return -EINVAL;
 
@@ -728,6 +748,16 @@ static void bcmpmu_otg_xceiv_chg_detect_handler(struct work_struct *work)
 	}
 }
 
+static void bcmpmu_otg_free_regulator(struct bcmpmu_otg_xceiv_data *xceiv_data)
+{
+	if (xceiv_data && xceiv_data->bcm_hsotg_regulator &&
+		    xceiv_data->regulator_enabled) {
+		regulator_disable(xceiv_data->bcm_hsotg_regulator);
+		xceiv_data->regulator_enabled = false;
+		regulator_put(xceiv_data->bcm_hsotg_regulator);
+	}
+}
+
 static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 {
 	int error = 0;
@@ -756,6 +786,9 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 
 	/* Enable USB LDO */
 	regulator_enable(xceiv_data->bcm_hsotg_regulator);
+	/* Give 2ms to ramp up USBLDO */
+	mdelay(USBLDO_RAMP_UP_DELAY_IN_MS);
+	xceiv_data->regulator_enabled = true;
 
 	xceiv_data->dev = &pdev->dev;
 	xceiv_data->bcmpmu = bcmpmu;
@@ -769,8 +802,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	if (xceiv_data->bcm_otg_work_queue == NULL) {
 		dev_warn(&pdev->dev,
 			 "BCM OTG events work queue creation failed\n");
-		regulator_disable(xceiv_data->bcm_hsotg_regulator);
-		regulator_put(xceiv_data->bcm_hsotg_regulator);
+		bcmpmu_otg_free_regulator(xceiv_data);
 		kfree(xceiv_data);
 		return -ENOMEM;
 	}
@@ -878,6 +910,9 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	    bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
 	    bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
 
+	bcmpmu_otg_xceiv_set_def_state(xceiv_data,
+		xceiv_data->otg_xceiver.xceiver.default_a);
+
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 
@@ -894,8 +929,7 @@ error_attr_vbus:
 error_attr_host:
 	wake_lock_destroy(&xceiv_data->otg_xceiver.xceiver_wake_lock);
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
-	regulator_disable(xceiv_data->bcm_hsotg_regulator);
-	regulator_put(xceiv_data->bcm_hsotg_regulator);
+	bcmpmu_otg_free_regulator(xceiv_data);
 	kfree(xceiv_data);
 	return error;
 }
@@ -927,8 +961,7 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 			       &xceiv_data->bcm_otg_chg_detection_notifier);
 
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
-	regulator_disable(xceiv_data->bcm_hsotg_regulator);
-	regulator_put(xceiv_data->bcm_hsotg_regulator);
+	bcmpmu_otg_free_regulator(xceiv_data);
 	kfree(xceiv_data);
 	bcm_hsotgctrl_phy_deinit();
 

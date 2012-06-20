@@ -59,7 +59,7 @@ static inline bool migrate_async_suitable(int migratetype)
 static unsigned long isolate_freepages_block(unsigned long blockpfn,
 				unsigned long end_pfn,
 				struct list_head *freelist,
-				bool strict)
+				bool strict, bool pgblock_isolated)
 {
 	int nr_scanned = 0, total_isolated = 0;
 	struct page *cursor;
@@ -84,7 +84,6 @@ static unsigned long isolate_freepages_block(unsigned long blockpfn,
 			continue;
 		}
 
-		/* Found a free page, break it into order-0 pages */
 		isolated = split_free_page(page);
 		if (!isolated && strict)
 			return 0;
@@ -117,6 +116,7 @@ static unsigned long isolate_freepages_block(unsigned long blockpfn,
  * Otherwise, function returns one-past-the-last PFN of isolated page
  * (which may be greater then end_pfn if end fell in a middle of
  * a free page).
+ *
  */
 unsigned long
 isolate_freepages_range(unsigned long start_pfn, unsigned long end_pfn)
@@ -141,7 +141,7 @@ isolate_freepages_range(unsigned long start_pfn, unsigned long end_pfn)
 
 		spin_lock_irqsave(&zone->lock, flags);
 		isolated = isolate_freepages_block(pfn, block_end_pfn,
-						   &freelist, true);
+						   &freelist, true, true);
 		spin_unlock_irqrestore(&zone->lock, flags);
 
 		/*
@@ -302,7 +302,7 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 		}
 
 		/* Try isolate the page */
-		if (__isolate_lru_page(page, ISOLATE_BOTH, 0) != 0)
+		if (__isolate_lru_page(page, ISOLATE_BOTH | ISOLATE_CMA, 0))
 			continue;
 
 		VM_BUG_ON(PageTransCompound(page));
@@ -364,6 +364,7 @@ static void isolate_freepages(struct zone *zone,
 	unsigned long flags;
 	int nr_freepages = cc->nr_freepages;
 	struct list_head *freelist = &cc->freepages;
+	bool pgblock_isolated;
 
 	/*
 	 * Initialise the free scanner. The starting point is where we last
@@ -419,8 +420,11 @@ static void isolate_freepages(struct zone *zone,
 		spin_lock_irqsave(&zone->lock, flags);
 		if (suitable_migration_target(page)) {
 			end_pfn = min(pfn + pageblock_nr_pages, zone_end_pfn);
+			pgblock_isolated = (get_pageblock_migratetype(page) ==
+						MIGRATE_ISOLATE);
 			isolated = isolate_freepages_block(pfn, end_pfn,
-							   freelist, false);
+							   freelist, false,
+							   pgblock_isolated);
 			nr_freepages += isolated;
 		}
 		spin_unlock_irqrestore(&zone->lock, flags);
@@ -530,6 +534,8 @@ static int compact_finished(struct zone *zone,
 {
 	unsigned int order;
 	unsigned long watermark;
+	int alloc_flags = (cc->migratetype == MIGRATE_MOVABLE) ? 0
+					: ALLOC_UNMOVABLE;
 
 	if (fatal_signal_pending(current))
 		return COMPACT_PARTIAL;
@@ -549,7 +555,7 @@ static int compact_finished(struct zone *zone,
 	watermark = low_wmark_pages(zone);
 	watermark += (1 << cc->order);
 
-	if (!zone_watermark_ok(zone, cc->order, watermark, 0, 0))
+	if (!zone_watermark_ok(zone, cc->order, watermark, 0, alloc_flags))
 		return COMPACT_CONTINUE;
 
 	/* Direct compactor: Is a suitable page free? */
@@ -609,8 +615,13 @@ unsigned long compaction_suitable(struct zone *zone, int order)
 	if (fragindex >= 0 && fragindex <= sysctl_extfrag_threshold)
 		return COMPACT_SKIPPED;
 
+	/*
+	 * Always make sure watermarks are checked against ALLOC_UNMOVABLE
+	 * other wise we will never end up running COMPACTION at all and will
+	 * be stuck in indefinite loop
+	 */
 	if (fragindex == -1000 && zone_watermark_ok(zone, order, watermark,
-	    0, 0))
+	    0, ALLOC_UNMOVABLE))
 		return COMPACT_PARTIAL;
 
 	return COMPACT_CONTINUE;
@@ -722,6 +733,7 @@ unsigned long try_to_compact_pages(struct zonelist *zonelist,
 	struct zoneref *z;
 	struct zone *zone;
 	int rc = COMPACT_SKIPPED;
+	int alloc_flags = (gfp_mask & __GFP_MOVABLE) ? 0 : ALLOC_UNMOVABLE;
 
 	/*
 	 * Check whether it is worth even starting compaction. The order check is
@@ -742,7 +754,8 @@ unsigned long try_to_compact_pages(struct zonelist *zonelist,
 		rc = max(status, rc);
 
 		/* If a normal allocation would succeed, stop compacting */
-		if (zone_watermark_ok(zone, order, low_wmark_pages(zone), 0, 0))
+		if (zone_watermark_ok(zone, order, low_wmark_pages(zone),
+					0, alloc_flags))
 			break;
 	}
 

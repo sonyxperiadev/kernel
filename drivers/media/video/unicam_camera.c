@@ -1040,7 +1040,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
 		if ((status & CSL_CAM_INT_FRAME_END) ||
 			(status & CSL_CAM_INT_LINE_COUNT)) {
-			spin_lock(&unicam_dev->lock);
 			struct vb2_buffer *vb = unicam_dev->active;
 			fps++;
 
@@ -1133,7 +1132,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 					dprintk(KERN_INFO "error triggering\n");
 			}
 
-			spin_unlock(&unicam_dev->lock);
 		}
 
 		else

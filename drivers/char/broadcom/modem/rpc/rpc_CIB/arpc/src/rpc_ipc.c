@@ -89,8 +89,20 @@ typedef struct {
 	/* Flow control callback */
 	RPC_FlowControlCallbackFunc_t *flowControlCb;
 
-	/* Callback for interface buffer delivery */
+	/* Callback for CP reset process */
+	RPC_PACKET_CPResetCallbackFunc_t *cpResetCb;
+
+	/* is client ready for CP reset? */
+	Boolean readyForCPReset;
+
+	/* Callback for	interface buffer delivery */
 	RPC_PACKET_DataIndCallBackFunc_t *filterPktIndCb;
+
+	/* Callback for CP reset process */
+	RPC_PACKET_CPResetCallbackFunc_t *cpFilterResetCb;
+
+	/* is client ready for CP reset? */
+	Boolean filterReadyForCPReset;
 } RPC_IPCInfo_t;
 
 typedef struct {
@@ -108,6 +120,9 @@ static RPC_IPCBufInfo_t ipcBufList[INTERFACE_TOTAL] = { { {0} } };
 
 static RpcProcessorType_t gRpcProcType;
 
+static Boolean sCPResetting;
+static Boolean sIsNotifyingCPReset;
+
 /*static function prototypes*/
 static void RPC_CreateBufferPool(PACKET_InterfaceType_t type,
 				 int channel_index);
@@ -117,6 +132,7 @@ static Int8 GetInterfaceType(IPC_EndpointId_T epId);
 static void RPC_FlowCntrl(IPC_BufferPool Pool, IPC_FlowCtrlEvent_T Event);
 static void RPC_BufferDelivery(IPC_Buffer bufHandle);
 Boolean RPC_SetProperty(RPC_PropType_t type, UInt32 value);
+static void RPC_IPC_APEndPointInit(void);
 
 #ifdef FUSE_COMMS_PROCESSOR
 #define RPC_PROP_VER		RPC_PROP_CP_VERSION
@@ -136,6 +152,8 @@ MsgQueueHandle_t rpcMQhandle;
 UInt32 recvRpcPkts;
 UInt32 freeRpcPkts;
 
+static int sIPCResetClientId;
+
 /*******************************************************************************
 			Packet Data API Implementation
 ******************************************************************************/
@@ -145,7 +163,9 @@ RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
 					RPC_PACKET_DataIndCallBackFunc_t
 					dataIndFunc,
 					RPC_FlowControlCallbackFunc_t
-					flowControlCb)
+					flowControlCb,
+					RPC_PACKET_CPResetCallbackFunc_t
+					cpResetCb)
 {
 	if (rpcClientID) {
 		/* Do nothing */
@@ -159,17 +179,18 @@ RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
 		ipcInfoList[interfaceType].isInit = TRUE;
 		ipcInfoList[interfaceType].flowControlCb = flowControlCb;
 		ipcInfoList[interfaceType].pktIndCb = dataIndFunc;
+		ipcInfoList[interfaceType].cpResetCb = cpResetCb;
 		RPC_UNLOCK;
-
 		return RPC_RESULT_OK;
 	}
 	return RPC_RESULT_ERROR;
 }
 
 RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
-					  PACKET_InterfaceType_t interfaceType,
-					  RPC_PACKET_DataIndCallBackFunc_t
-					  dataIndFunc)
+			PACKET_InterfaceType_t interfaceType,
+			RPC_PACKET_DataIndCallBackFunc_t
+			dataIndFunc,
+			RPC_PACKET_CPResetCallbackFunc_t cpResetCb)
 {
 	if (rpcClientID) {
 		/* Do nothing */
@@ -180,8 +201,8 @@ RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
 		RPC_LOCK;
 		ipcInfoList[interfaceType].isInit = TRUE;
 		ipcInfoList[interfaceType].filterPktIndCb = dataIndFunc;
+		ipcInfoList[interfaceType].cpFilterResetCb = cpResetCb;
 		RPC_UNLOCK;
-
 		return RPC_RESULT_OK;
 	}
 
@@ -227,8 +248,14 @@ RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID,
 
 	if (pCid) {
 		pCid[0] = channel;
-		ipcError = IPC_SendBuffer((IPC_Buffer) dataBufHandle,
-				IPC_PRIORITY_DEFAULT);
+		if (sCPResetting) {
+			_DBG_(RPC_TRACE
+			("RPC_PACKET_SendData: cp resetting, ignore send\n"));
+			ipcError = IPC_ERROR;
+		} else
+			ipcError =
+				IPC_SendBuffer((IPC_Buffer) dataBufHandle,
+						IPC_PRIORITY_DEFAULT);
 	}
 
 	return (ipcError == IPC_OK) ? RPC_RESULT_OK : RPC_RESULT_ERROR;
@@ -301,6 +328,12 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
 	int index = -1;
 	IPC_Buffer bufHandle = 0;
 
+	if (sCPResetting) {
+		_DBG_(RPC_TRACE
+		("RPC_PACKET_AllocateBufferEx: cp resetting, ignore req\n"));
+		return NULL;
+	}
+
 	/*Determine the pool index for the interface */
 	RPC_LOCK;
 	if (interfaceType == INTERFACE_PACKET) {
@@ -312,7 +345,8 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
 				break;
 		}
 		if (index >= MAX_CHANNELS) {
-			_DBG_(RPC_TRACE("RPC_PACKET_AllocateBuffer itype=%d invalid channel %d\r\n", interfaceType, index));
+			_DBG_(RPC_TRACE("RPC_PACKET_AllocateBuffer itype=%d \
+				invalid channel %d\r\n", interfaceType, index));
 			RPC_UNLOCK;
 			return NULL;
 		}
@@ -464,7 +498,8 @@ RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle)
 	_DBG_(RPC_TRACE
 	      ("RPC_PACKET_FreeBuffer FREE h=%d\r\n", (int)dataBufHandle));
 
-	IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
+	if (!sCPResetting)
+		IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
 
 	RpcDbgUpdatePktState((int)dataBufHandle, PKT_STATE_PKT_FREE);
 	rpc_wake_lock_remove((UInt32)dataBufHandle);
@@ -475,22 +510,26 @@ RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle)
 RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 				     UInt8 rpcClientID)
 {
-	IPC_U32 refCount;
+	IPC_U32 refCount = 0;
 
 	RPC_LOCK;
 
-	refCount = IPC_BufferUserParameterGet((IPC_Buffer) dataBufHandle);
+	if (!sCPResetting) {
+		refCount = IPC_BufferUserParameterGet(
+				(IPC_Buffer) dataBufHandle);
 
-	if (refCount == 0) {
-		_DBG_(RPC_TRACE
-		      ("k:RPC_PACKET_FreeBufferEx ERROR h=%d, cid=%d\r\n",
-		       (int)dataBufHandle, rpcClientID));
-		RPC_UNLOCK;
-		return RPC_RESULT_ERROR;
+		if (refCount == 0) {
+			_DBG_(RPC_TRACE
+			("k:RPC_PACKET_FreeBufferEx ERROR h=%d, cid=%d\r\n",
+			(int)dataBufHandle, rpcClientID));
+			RPC_UNLOCK;
+			return RPC_RESULT_ERROR;
+		}
+
+		--refCount;
+		IPC_BufferUserParameterSet((IPC_Buffer) dataBufHandle,
+								refCount);
 	}
-
-	--refCount;
-	IPC_BufferUserParameterSet((IPC_Buffer) dataBufHandle, refCount);
 
 	if (refCount == 0) {
 		freeRpcPkts++;
@@ -498,7 +537,8 @@ RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 		      ("k:RPC_PACKET_FreeBufferEx FREE h=%d, cid=%d rcvPkts=%d freePkts=%d\r\n",
 		       (int)dataBufHandle, (int)rpcClientID, (int)recvRpcPkts,
 		       (int)freeRpcPkts));
-		IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
+		if (!sCPResetting)
+			IPC_FreeBuffer((IPC_Buffer) dataBufHandle);
 		RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_PKT_FREE,
 				rpcClientID, PKT_STATE_CID_FREE,  0, 0, 0xFF);
 		rpc_wake_lock_remove((UInt32)dataBufHandle);
@@ -591,6 +631,145 @@ static Int8 GetInterfaceType(IPC_EndpointId_T epId)
 	return -1;
 }
 
+void CheckReadyForCPReset(void)
+{
+	PACKET_InterfaceType_t currIF;
+	Boolean ready = TRUE;
+
+	/* check if all init'd entries in ipcInfoList[] have ack'd
+	   if so, tell IPC CP can be reset; otherwise wait
+	   (IPC should set timer; if it expires before RPC says ready
+	   for reset, IPC should just crash AP as well)
+	*/
+	for (currIF = INTERFACE_START; currIF < INTERFACE_TOTAL; currIF++)
+		if (ipcInfoList[currIF].isInit &&
+			((ipcInfoList[currIF].pktIndCb &&
+			!ipcInfoList[currIF].readyForCPReset) ||
+			 (ipcInfoList[currIF].filterPktIndCb &&
+			!ipcInfoList[currIF].filterReadyForCPReset))) {
+			/* haven't all ack'd yet,
+			   so we're not ready for reset
+			*/
+			_DBG_(RPC_TRACE("CheckReadyForCPReset not done IF%d\n",
+								currIF));
+			ready = FALSE;
+			break;
+		}
+
+	if (ready) {
+		_DBG_(RPC_TRACE("CheckReadyForCPReset done\n"));
+		/* ready for start CP reset, so notify IPC here */
+		IPCAP_ReadyForReset(sIPCResetClientId);
+	}
+}
+
+/* callback from IPC to indicate status of CP reset process */
+void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
+{
+	RPC_CPResetEvent_t rpcEvent;
+	PACKET_InterfaceType_t currIF;
+
+	_DBG_(RPC_TRACE("RPC_PACKET_CPResetHandler\n"));
+
+	sCPResetting = (inEvent == IPC_CPRESET_START);
+
+	if (inEvent == IPC_CPRESET_START)
+		for (currIF = INTERFACE_START;
+			currIF < INTERFACE_TOTAL; currIF++) {
+			ipcInfoList[currIF].readyForCPReset = FALSE;
+			ipcInfoList[currIF].filterReadyForCPReset = FALSE;
+		}
+
+	if (inEvent == IPC_CPRESET_COMPLETE) {
+		int index;
+
+		/* reset done, so reset buffer pool pointers */
+		for (currIF = INTERFACE_START;
+			currIF < INTERFACE_TOTAL; currIF++)
+			for (index = 0; index < MAX_CHANNELS; index++)
+				ipcInfoList[currIF].ipc_buf_pool[index] = 0;
+
+		/* re-register our endpoints */
+		RPC_IPC_APEndPointInit();
+	}
+
+	sIsNotifyingCPReset = TRUE;
+
+	rpcEvent = (inEvent == IPC_CPRESET_START) ?
+			RPC_CPRESET_START :
+			RPC_CPRESET_COMPLETE;
+	RPC_PACKET_HandleNotifyCPReset(rpcEvent);
+
+	sIsNotifyingCPReset = FALSE;
+
+	if (inEvent == IPC_CPRESET_START)
+		CheckReadyForCPReset();
+
+	_DBG_(RPC_TRACE("exit RPC_PACKET_CPResetHandler\n"));
+}
+
+/* called to initiate notification of clients of start of CP reset */
+void RPC_PACKET_HandleNotifyCPReset(RPC_CPResetEvent_t inEvent)
+{
+	PACKET_InterfaceType_t currIF;
+
+	for (currIF = INTERFACE_START; currIF < INTERFACE_TOTAL; currIF++)
+		if (ipcInfoList[currIF].isInit) {
+			if (ipcInfoList[currIF].cpResetCb) {
+				_DBG_(RPC_TRACE
+				 ("RPC_PACKET_HandleNotifyCPReset\n"));
+				_DBG_(RPC_TRACE("  notify IF %d\n", currIF));
+				ipcInfoList[currIF].cpResetCb(inEvent, currIF);
+			}
+			if (ipcInfoList[currIF].cpFilterResetCb) {
+				_DBG_(RPC_TRACE
+					("RPC_PACKET_HandleNotifyCPReset\n"));
+				_DBG_(RPC_TRACE("  notify fltr IF %d\n",
+								 currIF));
+				ipcInfoList[currIF].cpFilterResetCb(inEvent,
+								    currIF);
+			}
+		}
+}
+
+/*
+ * called when client of interfaceType is ready for silent CP reset;
+ * expected to be called at some point after client's registered
+ * RPC_PACKET_CPResetCallbackFunc_t is called.
+ */
+void RPC_PACKET_AckReadyForCPReset(UInt8 rpcClientID,
+				PACKET_InterfaceType_t interfaceType)
+{
+	if (rpcClientID) {
+	}
+
+	/*fixes compiler warnings */
+
+	ipcInfoList[interfaceType].readyForCPReset = TRUE;
+
+	_DBG_(RPC_TRACE("RPC_PACKET_AckReadyForCPReset IF:%d\n",
+						interfaceType));
+
+	if (!sIsNotifyingCPReset)
+		CheckReadyForCPReset();
+}
+
+void RPC_PACKET_FilterAckReadyForCPReset(UInt8 rpcClientID,
+					PACKET_InterfaceType_t interfaceType)
+{
+	if (rpcClientID) {
+	}
+	/*fixes compiler warnings */
+
+	ipcInfoList[interfaceType].filterReadyForCPReset = TRUE;
+
+	_DBG_(RPC_TRACE("RPC_PACKET_FilterAckReadyForCPReset IF:%d\n",
+							interfaceType));
+
+	if (!sIsNotifyingCPReset)
+		CheckReadyForCPReset();
+}
+
 static void RPC_FlowCntrl(IPC_BufferPool Pool, IPC_FlowCtrlEvent_T Event)
 {
 	IPC_EndpointId_T epId = IPC_PoolSourceEndpointId(Pool);
@@ -654,106 +833,152 @@ static int rpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 }
 #endif
 
+Int32 RPC_PACKET_IsReservedPkt(PACKET_BufHandle_t dataBufHandle)
+{
+	IPC_U32 val = IPC_BufferPoolUserParameter((IPC_Buffer)dataBufHandle);
+	return (val == CAPI2_RESERVE_POOL_ID) ? 1 : 0;
+}
+
+void rpcLogNewPacket(PACKET_BufHandle_t pktBufHandle,
+			PACKET_InterfaceType_t interfaceType,
+			RPC_IPCInfo_t *pInfo,
+			UInt8 *pCid,
+			Int32 isReservedPkt)
+{
+	UInt16 context;
+	if (interfaceType == INTERFACE_PACKET)
+		return;
+	context = (pCid[3] << 8);
+	context |= pCid[2];
+	recvRpcPkts++;
+	rpc_wake_lock_add((UInt32)pktBufHandle);
+	_DBG_(RPC_TRACE
+	   ("RPC_BufferDelivery NEW h=%d if=%d rcvPkts=%d freePkts=%d rz=%x\n",
+	   (int)pktBufHandle, (int)interfaceType, (int)recvRpcPkts,
+	   (int)freeRpcPkts, (int)isReservedPkt));
+	RpcDbgUpdatePktStateEx((int)pktBufHandle, PKT_STATE_NEW,
+					0, PKT_STATE_NA,  0, 0, interfaceType);
+	HISTORY_RPC_LOG((isReservedPkt) ? "IpcRzRx" : "IpcRx", pCid[0],
+				(int)pktBufHandle, interfaceType, context);
+}
+
+void rpcLogFreePacket(PACKET_InterfaceType_t interfaceType,
+			PACKET_BufHandle_t dataBufHandle)
+{
+	if (interfaceType == INTERFACE_PACKET)
+		return;
+	freeRpcPkts++;
+	RpcDbgUpdatePktState((int)dataBufHandle, PKT_STATE_PKT_FREE);
+	rpc_wake_lock_remove((UInt32)dataBufHandle);
+}
+
 static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 {
+	PACKET_InterfaceType_t ifType;
+	RPC_IPCInfo_t *pInfo;
+	Int32 isReservedPkt = 0;
+	int ret;
 	RPC_Result_t result = RPC_RESULT_ERROR;
 	UInt8 *pCid = (UInt8 *) IPC_BufferHeaderPointer(bufHandle);
 	IPC_EndpointId_T destId = IPC_BufferDestinationEndpointId(bufHandle);
-	Int8 type = GetInterfaceType(destId);
-	Boolean sysrpcHandled = 0, userSpacehandled = 0;
+	int type = GetInterfaceType(destId);
+	PACKET_BufHandle_t  pktBufHandle = (PACKET_BufHandle_t)bufHandle;
 
-	if (type != -1) {
-		if (type != (Int8) INTERFACE_PACKET) {
-			IPC_U32 uParam;
-			UInt16 context = (pCid[3] << 8);
-			context |= pCid[2];
+	if (type == -1 || pCid == NULL) {
+		IPC_FreeBuffer(bufHandle);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery FAIL pkt=%d t=%d cid=%d",
+				pktBufHandle, type, pCid));
+		return;
+	}
+	pInfo = &ipcInfoList[type];
+	ifType = (PACKET_InterfaceType_t)type;
+	if (pInfo->pktIndCb == NULL && pInfo->filterPktIndCb == NULL) {
+		IPC_FreeBuffer(bufHandle);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery FAIL No Cbk pkt=%d\r\n",
+			pktBufHandle));
+		return;
+	}
+	if (ifType != INTERFACE_PACKET) {
+		IPC_U32 uParam;
+		/*For bckward compatibility, remove in future release */
 
-			uParam = IPC_BufferUserParameterGet (bufHandle);
-			if(uParam == CAPI2_RESERVE_POOL_ID) {
-				/* TBD: Add recovery mechanism */
-				IPC_FreeBuffer(bufHandle);	
-				_DBG_(RPC_TRACE
-				      ("RPC_BufferDelivery RESERVED (Drop) h=%d if=%d rcvPkts=%d freePkts=%d\r\n",
-				       (int)bufHandle, (int)type, 
-					(int)recvRpcPkts,(int)freeRpcPkts));
-				return;
-			}
-
-			recvRpcPkts++;
-			rpc_wake_lock_add((UInt32)bufHandle);
+		uParam = IPC_BufferUserParameterGet(bufHandle);
+		if (uParam == CAPI2_RESERVE_POOL_ID) {
+			/* TBD: Add recovery mechanism */
+			IPC_FreeBuffer(bufHandle);
 			_DBG_(RPC_TRACE
-			      ("RPC_BufferDelivery NEW h=%d type=%d rcvPkts=%d freePkts=%d uparam=%x\r\n",
-			       (int)bufHandle, (int)type, (int)recvRpcPkts,
-			       (int)freeRpcPkts, (int)uParam));
-
-			RpcDbgUpdatePktStateEx((int)bufHandle, PKT_STATE_NEW,
-						0, PKT_STATE_NA,  0, 0, type);
-			HISTORY_RPC_LOG("IpcRx", pCid[0], (int)bufHandle, 
-							type, context );
+			("RPC_BufferDelivery RESERVED (Drop) h=%d if=%d \
+				rcvPkts=%d freePkts=%d\r\n",
+				(int)bufHandle, (int)type, 
+				(int)recvRpcPkts, (int)freeRpcPkts));
+			return;
 		}
 
-		if (ipcInfoList[(int)type].pktIndCb != NULL)
-			result =
-			    ipcInfoList[(int)type].
-			    pktIndCb((PACKET_InterfaceType_t) type,
-				     (UInt8) pCid[0],
-				     (PACKET_BufHandle_t) bufHandle);
-		else
-			_DBG_(RPC_TRACE
-			      ("RPC_BufferDelivery(%c) FAIL destId=%d intf=%d handle=%x",
-			       (gRpcProcType == RPC_COMMS) ? 'C' : 'A', destId,
-			       type, bufHandle));
-
-		if (result != RPC_RESULT_PENDING) {
-			if (ipcInfoList[(int)type].filterPktIndCb != NULL) {
-#ifdef USE_KTHREAD_HANDOVER
-				int ret;
-/*				_DBG_(RPC_TRACE
-				      ("RPC_BufferDelivery POST h=%d\n\n",
-				       (int)bufHandle));*/
-				ret = MsgQueueAdd(&rpcMQhandle,
-						  (void *)bufHandle);
-				if (ret != 0)
-					_DBG_(RPC_TRACE
-					      ("RPC_BufferDelivery FAIL	h=%d r=%d\n",
-					       (int)bufHandle, ret));
-				else
-					RpcDbgUpdatePktState((int)bufHandle,
-					PKT_STATE_RPC_POST);
-
-
-				result = (ret == 0) ? RPC_RESULT_PENDING :
-				    RPC_RESULT_ERROR;
-#else
-				result =
-				    ipcInfoList[(int)type].
-				    filterPktIndCb((PACKET_InterfaceType_t)
-						   type, (UInt8) pCid[0],
-						   (PACKET_BufHandle_t)
-						   bufHandle);
-#endif
-				userSpacehandled =
-				    (result == RPC_RESULT_PENDING) ? 1 : 0;
-			} else
-				result = RPC_RESULT_ERROR;
-		} else
-			sysrpcHandled = TRUE;
+		isReservedPkt = RPC_PACKET_IsReservedPkt(pktBufHandle);
+		/* Log incoming packet */
+		rpcLogNewPacket(pktBufHandle, ifType, pInfo, pCid, isReservedPkt);
 
 	}
+
+	if (pInfo->pktIndCb != NULL && isReservedPkt == 0)
+		result = pInfo->pktIndCb((PACKET_InterfaceType_t)type,
+					(UInt8) pCid[0], pktBufHandle);
+
+	if (result == RPC_RESULT_PENDING)
+		return;/* Sysrpc packet come here */
+
+	if (pInfo->filterPktIndCb == NULL) {
+		IPC_FreeBuffer(bufHandle);
+		rpcLogFreePacket((PACKET_InterfaceType_t)type, pktBufHandle);
+		return;	/* net or vt interface pkt come here */
+	}
+#ifdef USE_KTHREAD_HANDOVER
+	if (isReservedPkt &&
+		MsgQueueCount(&rpcMQhandle) >= CFG_RPC_CMD_MAX_PACKETS) {
+		IPC_FreeBuffer(bufHandle);
+		rpcLogFreePacket((PACKET_InterfaceType_t)type, pktBufHandle);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery(rz) RpcQ FULL h=%d c=%d\n",
+		       (int)bufHandle, MsgQueueCount(&rpcMQhandle)));
+		return;
+	}
+
+	/* Post it to RPC Thread */
+	ret = MsgQueueAdd(&rpcMQhandle, (void *)bufHandle);
+
+	if (ret != 0) {
+		IPC_FreeBuffer(bufHandle);
+		rpcLogFreePacket((PACKET_InterfaceType_t)type, pktBufHandle);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery Queue FAIL h=%d r=%d\n",
+					       (int)bufHandle, ret));
+		return;
+	}
+	RpcDbgUpdatePktState((int)bufHandle, PKT_STATE_RPC_POST);
+
+
+	result = RPC_RESULT_PENDING;
+#else
+	/* If using workerqueue instead of tasklet,
+	filterPktIndCb can be called directly */
+	result = pInfo->filterPktIndCb((PACKET_InterfaceType_t)type,
+					(UInt8) pCid[0],
+					(PACKET_BufHandle_t)
+					bufHandle);
+#endif
+
+	/* If Packet not consumed by secondary client then return */
 
 	if (result != RPC_RESULT_PENDING) {
-		if (type != (Int8)INTERFACE_PACKET) {
-			_DBG_(RPC_TRACE
-			 ("k:IPC_FreeBuffer (No Handling) h=%d type=%d\r\n",
-			 (int)bufHandle, type));
-			freeRpcPkts++;
-			RpcDbgUpdatePktState((int)bufHandle,
-					PKT_STATE_PKT_FREE);
-			rpc_wake_lock_remove((UInt32)bufHandle);
-		}
+		/* Packet was never consumed */
 		IPC_FreeBuffer(bufHandle);
+		rpcLogFreePacket((PACKET_InterfaceType_t)type, pktBufHandle);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery filterCb FAIL h=%d r=%d\n",
+		       (int)bufHandle, ret));
+		return;
 	}
 
+	_DBG_(RPC_TRACE("RPC_BufferDelivery filterCb OK h=%d\n",
+			(int)bufHandle));
+	return;
 }
 
 /******************************************************************************
@@ -794,6 +1019,31 @@ Boolean RPC_GetProperty(RPC_PropType_t type, UInt32 *value)
 	return IPC_GetProperty(type, (IPC_U32 *) value);
 }
 
+void RPC_IPC_APEndPointInit(void)
+{
+	IPC_EndpointRegister(IPC_EP_Capi2App, RPC_FlowCntrl,
+			     RPC_BufferDelivery, 4);
+	IPC_EndpointRegister(IPC_EP_DrxAP, RPC_FlowCntrl,
+				RPC_BufferDelivery, 4);
+	IPC_EndpointRegister(IPC_EP_PsAppData, RPC_FlowCntrl,
+			     RPC_BufferDelivery,
+			     4 + PDCP_MAX_HEADER_SIZE);
+	IPC_EndpointRegister(IPC_EP_CsdAppCSDData, RPC_FlowCntrl,
+			     RPC_BufferDelivery, 4);
+	IPC_EndpointRegister(IPC_EP_SerialAP, RPC_FlowCntrl,
+			     RPC_BufferDelivery, 4);
+#ifndef UNDER_LINUX
+#ifndef UNDER_CE		/*modify for WinMo UDP log */
+	IPC_EndpointRegister(IPC_EP_LogApps, RPC_FlowCntrl,
+			     RPC_BufferDelivery, 4);
+#endif
+#ifdef IPC_EP_EemAP
+	IPC_EndpointRegister(IPC_EP_EemAP, RPC_FlowCntrl,
+			     RPC_BufferDelivery, 4);
+#endif
+#endif
+}
+
 /*******************************************************************************
 			RPC IPC End Point Init
 *******************************************************************************/
@@ -821,27 +1071,7 @@ RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t rpcProcType)
 				     RPC_BufferDelivery, 4);
 #endif
 	} else {
-		IPC_EndpointRegister(IPC_EP_Capi2App, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-		IPC_EndpointRegister(IPC_EP_DrxAP, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-		IPC_EndpointRegister(IPC_EP_PsAppData, RPC_FlowCntrl,
-				     RPC_BufferDelivery,
-				     4 + PDCP_MAX_HEADER_SIZE);
-		IPC_EndpointRegister(IPC_EP_CsdAppCSDData, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-		IPC_EndpointRegister(IPC_EP_SerialAP, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-#ifndef UNDER_LINUX
-#ifndef UNDER_CE		/*modify for WinMo UDP log */
-		IPC_EndpointRegister(IPC_EP_LogApps, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-#endif
-#ifdef IPC_EP_EemAP
-		IPC_EndpointRegister(IPC_EP_EemAP, RPC_FlowCntrl,
-				     RPC_BufferDelivery, 4);
-#endif
-#endif
+		RPC_IPC_APEndPointInit();
 	}
 
 	return RPC_RESULT_OK;
@@ -852,166 +1082,170 @@ RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t rpcProcType)
 *******************************************************************************/
 RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 {
-	PACKET_InterfaceType_t itype;
-	Int8 index;
-	int ret;
+PACKET_InterfaceType_t itype;
+Int8 index;
+int ret;
 
-	memset(ipcBufList, 0, sizeof(ipcBufList));
+memset(ipcBufList, 0, sizeof(ipcBufList));
 
-	for (itype = INTERFACE_START; itype < INTERFACE_TOTAL; itype++) {
+for (itype = INTERFACE_START; itype < INTERFACE_TOTAL; itype++) {
 
-		if (itype >= INTERFACE_CAPI2 && itype < INTERFACE_PACKET) {
-			ipcBufList[itype].max_pkts[0] = CFG_RPC_CMD_MAX_PACKETS;
-			ipcBufList[itype].max_pkts[1] =
-			    CFG_RPC_CMD_MAX_PACKETS2;
-			ipcBufList[itype].max_pkts[2] =
-			    CFG_RPC_CMD_MAX_PACKETS3;
+	if (itype >= INTERFACE_CAPI2 && itype < INTERFACE_PACKET) {
+		ipcBufList[itype].max_pkts[0] = CFG_RPC_CMD_MAX_PACKETS;
+		ipcBufList[itype].max_pkts[1] = CFG_RPC_CMD_MAX_PACKETS2;
+		ipcBufList[itype].max_pkts[2] = CFG_RPC_CMD_MAX_PACKETS3;
 
-			ipcBufList[itype].pkt_size[0] = CFG_RPC_CMD_PKT_SIZE;
-			ipcBufList[itype].pkt_size[1] = CFG_RPC_CMD_PKT_SIZE2;
-			ipcBufList[itype].pkt_size[2] = CFG_RPC_CMD_PKT_SIZE3;
+		ipcBufList[itype].pkt_size[0] = CFG_RPC_CMD_PKT_SIZE;
+		ipcBufList[itype].pkt_size[1] = CFG_RPC_CMD_PKT_SIZE2;
+		ipcBufList[itype].pkt_size[2] = CFG_RPC_CMD_PKT_SIZE3;
 
-			ipcBufList[itype].start_threshold =
-			    CFG_RPC_CMD_START_THRESHOLD;
-			ipcBufList[itype].end_threshold =
-			    CFG_RPC_CMD_END_THRESHOLD;
+		ipcBufList[itype].start_threshold =
+				CFG_RPC_CMD_START_THRESHOLD;
+		ipcBufList[itype].end_threshold =
+				CFG_RPC_CMD_END_THRESHOLD;
 
-			ipcBufList[itype].srcEpId =
+		ipcBufList[itype].srcEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_Capi2Cp : IPC_EP_Capi2App;
-			ipcBufList[itype].destEpId =
+		ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_Capi2App : IPC_EP_Capi2Cp;
-		}
+	}
 
-		else if (itype == INTERFACE_DRX) {
-			ipcBufList[itype].max_pkts[0] = CFG_RPC_DRX_MAX_PACKETS;
-			ipcBufList[itype].pkt_size[0] = CFG_RPC_DRX_PKT_SIZE;
+	else if (itype == INTERFACE_DRX) {
+		ipcBufList[itype].max_pkts[0] = CFG_RPC_DRX_MAX_PACKETS;
+		ipcBufList[itype].pkt_size[0] = CFG_RPC_DRX_PKT_SIZE;
 
-			ipcBufList[itype].start_threshold =
+		ipcBufList[itype].start_threshold =
 			    CFG_RPC_DRX_START_THRESHOLD;
-			ipcBufList[itype].end_threshold =
+		ipcBufList[itype].end_threshold =
 			    CFG_RPC_DRX_END_THRESHOLD;
 
-			ipcBufList[itype].srcEpId =
+		ipcBufList[itype].srcEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_DrxCP : IPC_EP_DrxAP;
-			ipcBufList[itype].destEpId =
+		ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_DrxAP : IPC_EP_DrxCP;
-		}
+	}
 
-		else if (itype == INTERFACE_PACKET) {
-			for (index = 0; index < MAX_CHANNELS; index++) {
-				ipcBufList[itype].pkt_size[(int)index] =
+	else if (itype == INTERFACE_PACKET) {
+		for (index = 0; index < MAX_CHANNELS; index++) {
+			ipcBufList[itype].pkt_size[(int)index] =
 				    CFG_RPC_PKTDATA_PKT_SIZE;
-				ipcBufList[itype].max_pkts[(int)index] =
+			ipcBufList[itype].max_pkts[(int)index] =
 				    (rpcProcType ==
 				     RPC_COMMS) ?
 				    CFG_RPC_PKTDATA_MAX_NW2TE_PACKETS :
 				    CFG_RPC_PKTDATA_MAX_TE2NW_PACKETS;
-			}
-			ipcBufList[itype].start_threshold =
+		}
+		ipcBufList[itype].start_threshold =
 			    CFG_RPC_PKT_START_THRESHOLD;
-			ipcBufList[itype].end_threshold =
+		ipcBufList[itype].end_threshold =
 			    CFG_RPC_PKT_END_THRESHOLD;
 
-			ipcBufList[itype].srcEpId =
+		ipcBufList[itype].srcEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_PsCpData : IPC_EP_PsAppData;
 			ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_PsAppData : IPC_EP_PsCpData;
-		}
+	}
 
-		else if (itype == INTERFACE_USB_EEM) {
-			for (index = 0; index < MAX_CHANNELS; index++) {
-				ipcBufList[itype].pkt_size[(int)index] =
+	else if (itype == INTERFACE_USB_EEM) {
+		for (index = 0; index < MAX_CHANNELS; index++) {
+			ipcBufList[itype].pkt_size[(int)index] =
 				    CFG_RPC_EEMDATA_PKT_SIZE;
-				ipcBufList[itype].max_pkts[(int)index] =
+			ipcBufList[itype].max_pkts[(int)index] =
 				    CFG_RPC_EEMDATA_MAX_PACKETS;
-			}
-			ipcBufList[itype].start_threshold =
-			    CFG_RPC_EEM_START_THRESHOLD;
-			ipcBufList[itype].end_threshold =
+		}
+		ipcBufList[itype].start_threshold =
+			CFG_RPC_EEM_START_THRESHOLD;
+		ipcBufList[itype].end_threshold =
 			    CFG_RPC_EEM_END_THRESHOLD;
 
 #ifdef IPC_EP_EemAP
-			ipcBufList[itype].srcEpId =
+		ipcBufList[itype].srcEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_EemCP : IPC_EP_EemAP;
-			ipcBufList[itype].destEpId =
+		ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_EemAP : IPC_EP_EemCP;
 #endif
-		} else if (itype == INTERFACE_CSD) {
-			for (index = 0; index < MAX_CHANNELS; index++) {
-				ipcBufList[itype].pkt_size[(int)index] =
+	}
+
+	else if (itype == INTERFACE_CSD) {
+		for (index = 0; index < MAX_CHANNELS; index++) {
+			ipcBufList[itype].pkt_size[(int)index] =
 				    CFG_RPC_CSDDATA_PKT_SIZE;
-				ipcBufList[itype].max_pkts[(int)index] =
+			ipcBufList[itype].max_pkts[(int)index] =
 				    CFG_RPC_CSDDATA_MAX_PACKETS;
-			}
-			ipcBufList[itype].start_threshold =
+		}
+		ipcBufList[itype].start_threshold =
 			    CFG_RPC_CSD_START_THRESHOLD;
-			ipcBufList[itype].end_threshold =
+		ipcBufList[itype].end_threshold =
 			    CFG_RPC_CSD_END_THRESHOLD;
 
-			ipcBufList[itype].srcEpId =
+		ipcBufList[itype].srcEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_CsdCpCSDData :
 			    IPC_EP_CsdAppCSDData;
-			ipcBufList[itype].destEpId =
+		ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_CsdAppCSDData :
 			    IPC_EP_CsdCpCSDData;
-		}
+	}
 
-		else if (itype == INTERFACE_LOGGING) {
+	else if (itype == INTERFACE_LOGGING) {
 #if !defined(UNDER_CE) &&  !defined(UNDER_LINUX)	/*modify for UDP log */
-			for (index = 0; index < MAX_CHANNELS; index++) {
-				ipcBufList[itype].pkt_size[index] =
+		for (index = 0; index < MAX_CHANNELS; index++) {
+			ipcBufList[itype].pkt_size[index] =
 				    CFG_RPC_LOG_PKT_SIZE;
-				ipcBufList[itype].max_pkts[index] =
+			ipcBufList[itype].max_pkts[index] =
 				    CFG_RPC_LOG_MAX_PACKETS;
-			}
-			ipcBufList[itype].start_threshold =
+		}
+		ipcBufList[itype].start_threshold =
 			    CFG_RPC_LOG_START_THRESHOLD;
-			ipcBufList[itype].end_threshold =
+		ipcBufList[itype].end_threshold =
 			    CFG_RPC_LOG_END_THRESHOLD;
 
-			ipcBufList[itype].srcEpId =
+		ipcBufList[itype].srcEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_LogCp : IPC_EP_LogApps;
-			ipcBufList[itype].destEpId =
+		ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_LogApps : IPC_EP_LogCp;
 #endif
-		} else if (itype == INTERFACE_SERIAL) {
-			ipcBufList[itype].max_pkts[0] =
+	}
+
+	else if (itype == INTERFACE_SERIAL) {
+		ipcBufList[itype].max_pkts[0] =
 			    CFG_RPC_SERIALDATA_MAX_PACKETS;
-			ipcBufList[itype].max_pkts[1] =
+		ipcBufList[itype].max_pkts[1] =
 			    CFG_RPC_SERIALDATA_MAX_PACKETS2;
 
-			ipcBufList[itype].pkt_size[0] =
+		ipcBufList[itype].pkt_size[0] =
 			    CFG_RPC_SERIALDATA_PKT_SIZE;
-			ipcBufList[itype].pkt_size[1] =
+		ipcBufList[itype].pkt_size[1] =
 			    CFG_RPC_SERIALDATA_PKT_SIZE2;
 
-			ipcBufList[itype].start_threshold =
+		ipcBufList[itype].start_threshold =
 			    CFG_RPC_SERIAL_START_THRESHOLD;
-			ipcBufList[itype].end_threshold =
+		ipcBufList[itype].end_threshold =
 			    CFG_RPC_SERIAL_END_THRESHOLD;
 
-			ipcBufList[itype].srcEpId =
+		ipcBufList[itype].srcEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_SerialCP : IPC_EP_SerialAP;
-			ipcBufList[itype].destEpId =
+		ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_SerialAP : IPC_EP_SerialCP;
-		} else
-			xassert(0, itype);
-
 	}
+
+	else
+		xassert(0, itype);
+
+	} /* end for */
 
 	RPC_LOCK_INIT;
 
@@ -1025,6 +1259,12 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 		return RPC_RESULT_ERROR;
 	}
 #endif
+	sCPResetting = FALSE;
+	sIsNotifyingCPReset = FALSE;
+	/* register notification handler for silent CP reset */
+	sIPCResetClientId = IPCAP_RegisterCPResetHandler(
+				RPC_PACKET_CPResetHandler);
+
 	rpc_wake_lock_init();
 	recvRpcPkts = 0;
 	freeRpcPkts = 0;

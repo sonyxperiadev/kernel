@@ -36,7 +36,7 @@
 
     @ingroup  IPC_PROXY_SERVER
 */
-int ipcs_ccb_init(void);
+int ipcs_ccb_init(int isReset);
 
 /*--------------------------------------------------*/
 /**

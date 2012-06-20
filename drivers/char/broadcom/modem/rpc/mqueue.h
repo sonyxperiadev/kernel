@@ -48,5 +48,6 @@ int MsgQueueRemove(MsgQueueHandle_t *mHandle, void **outData);
 int MsgQueueDeInit(MsgQueueHandle_t *mhandle);
 int MsgQueueIsEmpty(MsgQueueHandle_t *mHandle);
 int MsgQueueDebugList(MsgQueueHandle_t *mHandle, RpcOutputContext_t *c);
-
+void *MsgQueueGet(MsgQueueHandle_t *mHandle);
+int MsgQueueCount(MsgQueueHandle_t *mHandle);
 #endif

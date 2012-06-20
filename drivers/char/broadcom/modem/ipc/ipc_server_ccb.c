@@ -69,9 +69,9 @@ static bcm_ipcs_ccb_t g_clnt_info_tbl[MAX_AP_ENDPOINTS] = {
 };
 
 /**
-   @fn int ipcs_ccb_init(void)
+   @fn int ipcs_ccb_init(int)
 */
-int ipcs_ccb_init(void)
+int ipcs_ccb_init(int isReset)
 {
 	int i;
 
@@ -82,7 +82,8 @@ int ipcs_ccb_init(void)
 				     g_clnt_info_tbl[i].header_sz);
 	}
 
-	spin_lock_init(&g_tbl_lock);
+	if (!isReset)
+		spin_lock_init(&g_tbl_lock);
 
 	return 0;
 }
@@ -108,7 +109,7 @@ void ipcs_capi2app_bd(IPC_Buffer ipc_buffer)
 	IPC_DEBUG(DBG_TRACE, ">>\n");
 
 	if (g_clnt_info_tbl[EpCapi2App].buffer_delivery_cb != ipcs_capi2app_bd)
-		(*g_clnt_info_tbl[EpCapi2App].buffer_delivery_cb) (ipc_buffer);
+		(*g_clnt_info_tbl[EpCapi2App].buffer_delivery_cb)(ipc_buffer);
 	else
 		IPC_FreeBuffer(ipc_buffer);
 

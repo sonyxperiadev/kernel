@@ -475,6 +475,18 @@ void CSD_FlowCtrlCB(RPC_FlowCtrlEvent_t event, UInt8 channel)
 	return;
 }
 
+/* callback for CP silent reset events */
+void CSD_CPResetCB(RPC_CPResetEvent_t event,
+			PACKET_InterfaceType_t interface)
+{
+	/* **FIXME** what needs to be done here */
+	VSP_DEBUG(DBG_INFO, "CP Reset event %d interface %d\n",
+				(int)event, (int)interface);
+
+	/* for now, just ack... */
+	if (RPC_CPRESET_START == event)
+		RPC_PACKET_AckReadyForCPReset(0, INTERFACE_CSD);
+}
 
 /*******************************************************************************
 
@@ -495,7 +507,8 @@ static int vsp_open(struct inode *inode, struct file *filp)
 		if (RPC_RESULT_OK != RPC_PACKET_RegisterDataInd(g_CsdClientId
 				, INTERFACE_CSD
 				, CSD_DataIndCB
-				, CSD_FlowCtrlCB)) {
+				, CSD_FlowCtrlCB
+				, CSD_CPResetCB)) {
 			VSP_DEBUG(DBG_ERROR, "vsp: RPC Register failed!!!\n");
 			return 1;
 		}

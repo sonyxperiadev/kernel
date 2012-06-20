@@ -59,4 +59,6 @@ void bcm_bzhw_request_clock_off(struct pi_mgr_qos_node *node);
 struct bcmbzhw_struct *bcm_bzhw_start(struct tty_struct *tty);
 void bcm_bzhw_stop(struct bcmbzhw_struct *hw_val);
 
+extern void serial8250_togglerts_afe(struct uart_port *port,
+		unsigned int flowon);
 #endif

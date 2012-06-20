@@ -16,11 +16,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifdef CONFIG_APANIC_ON_MMC
 	extern int ap_triggered;
+#endif
 	extern int cp_crashed;
 	extern void abort(void);
 #ifdef CONFIG_CDEBUGGER
-	extern unsigned enable;
+	extern unsigned ramdump_enable;
 #endif
 
 #if defined(CONFIG_BCM_AP_PANIC_ON_CPCRASH) && defined(CONFIG_SEC_DEBUG)

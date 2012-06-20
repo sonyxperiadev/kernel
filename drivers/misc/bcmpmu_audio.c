@@ -543,9 +543,10 @@ static void bcmpmu_ihf_manual_power(bool on)
 		/* Disable  IHF Power Driver pup */
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFPWRDRV_PUP, false,
 				  bcmpmu->regmap[PMU_REG_IHFPWRDRV_PUP].mask);
-		/* Disable  IHF Noise Gate pup */
-		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFNG_PUP, false,
-				  bcmpmu->regmap[PMU_REG_IHFNG_PUP].mask);
+		/* Enable IHF Noise Gate pup */
+		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFNG_PUP,
+				bcmpmu->regmap[PMU_REG_IHFNG_PUP].mask,
+				bcmpmu->regmap[PMU_REG_IHFNG_PUP].mask);
 		/* wait for 0.5ms */
 		usleep_range(500, 1000);
 		/* Disable  IHF POP */
@@ -964,6 +965,12 @@ void bcmpmu_audio_init(void)
 		bcmpmu->write_dev(bcmpmu,
 			       PMU_REG_IHFPOP_POPTIME_CTL, 0x2,
 			       bcmpmu->regmap[PMU_REG_IHFPOP_POPTIME_CTL].mask);
+
+		/* Set IHF noise threshold */
+		bcmpmu->write_dev(bcmpmu,
+			       PMU_REG_IHF_NGTHRESH, 0x2,
+			       bcmpmu->regmap[PMU_REG_IHF_NGTHRESH].mask);
+
 	}
 	mutex_unlock(&bcmpmu_audio->lock);
 }

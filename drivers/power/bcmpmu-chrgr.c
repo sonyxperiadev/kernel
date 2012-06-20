@@ -207,6 +207,8 @@ static int bcmpmu_set_icc_fc(struct bcmpmu *bcmpmu, int curr)
 		setting = PMU_CHRGR_CURR_1000;
 	else if (curr == 100)
 		setting = PMU_CHRGR_CURR_90;
+	else if (curr == 500)
+		setting = PMU_CHRGR_CURR_450;
 	else
 		setting = (curr - 50)/50;
 	ret = bcmpmu->write_dev(bcmpmu,

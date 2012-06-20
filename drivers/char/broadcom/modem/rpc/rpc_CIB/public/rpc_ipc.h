@@ -151,6 +151,22 @@ typedef enum {
 } RPC_FlowCtrlEvent_t;
 
 /**
+RPC CP Reset Control Events
+RPC_CPRESET_START:	sent when CP reset process has been
+			initiated; indicates that CP has
+			crashed and client should
+			- clean up and pending RPC operations
+			- ack that it is ready for reset by
+			calling XXX api
+			- suspend further RPC operations until
+			receiving RPC_CPRESET_COMPLETE event
+**/
+typedef enum {
+	RPC_CPRESET_START,	/* CP Reset starting */
+	RPC_CPRESET_COMPLETE	/* CP Reset complete */
+} RPC_CPResetEvent_t;
+
+/**
 RPC Error codes
 **/
 typedef enum {
@@ -223,15 +239,35 @@ typedef struct {
 	UInt16 msgs[MAX_REG_MSGS]; /*copy only what is necessary ( 2 stage ) */
 } RpcPktRegMsgIds_t;
 
-/******************************************************************************/
+/*****************************************************************/
 /**
-    Function callback to handle Flow control for RPC commands
-	@param		event (in ) RPC_FLOW_START to resume flow control and RPC_FLOW_STOP to stop
-	@param		channel (in) Context id for INTERFACE_PACKET OR Call Index for INTERFACE_CSD
+    Function callback to pass events for CP reset
+	@param		event (in ) RPC_CPRESET_START to indicate
+			CP reset process is starting;
+			RPC_CPRESET_COMPLETE to indicat CP reset is
+			complete and normal RPC operations may resume
+	@param		interface (in) interface type callback is for
 	@return		None
 	@note
-		This callback is registered via RPC_SYS_RegisterClient for RPC commands and
-		RPC_PACKET_RegisterDataInd for Packet Data.
+			This callback is registered via
+			RPC_PACKET_RegisterDataInd for Packet Data.
+
+**/
+typedef void (RPC_PACKET_CPResetCallbackFunc_t) (RPC_CPResetEvent_t event,
+					PACKET_InterfaceType_t interface);
+
+/******************************************************************/
+/**
+    Function callback to handle Flow control for RPC commands
+	@param		event (in ) RPC_FLOW_START to resume
+			flow control and RPC_FLOW_STOP to stop
+	@param		channel (in) Context id for INTERFACE_PACKET
+			OR Call Index for INTERFACE_CSD
+	@return		None
+	@note
+			This callback is registered via
+			RPC_SYS_RegisterClient for RPC commands and
+			RPC_PACKET_RegisterDataInd for Packet Data.
 
 **/
 typedef void (RPC_FlowControlCallbackFunc_t) (RPC_FlowCtrlEvent_t event,
@@ -278,11 +314,10 @@ typedef RPC_Result_t(RPC_PACKET_DataIndCallBackFuncEx_t) (RpcPktBufferInfo_t *bu
 		to distinguish between different Primary PDP context sessions.
 **/
 RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
-					PACKET_InterfaceType_t interfaceType,
-					RPC_PACKET_DataIndCallBackFunc_t
-					dataIndFunc,
-					RPC_FlowControlCallbackFunc_t
-					flowControlCb);
+			PACKET_InterfaceType_t interfaceType,
+			RPC_PACKET_DataIndCallBackFunc_t  dataIndFunc,
+			RPC_FlowControlCallbackFunc_t flowControlCb,
+			RPC_PACKET_CPResetCallbackFunc_t cpResetCb);
 
 /******************************************************************************/
 /**
@@ -308,10 +343,11 @@ RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID,
 
 	@return		valid buffer handle OR NULL
 	@note
-				Client need to call RPC_PACKET_GetBufferData to get the actual buffer pointer
+Client need to call RPC_PACKET_GetBufferData to get the actual buffer pointer
 **/
 PACKET_BufHandle_t RPC_PACKET_AllocateBuffer(PACKET_InterfaceType_t
-					     interfaceType, UInt32 requiredSize,
+						interfaceType,
+					     UInt32 requiredSize,
 					     UInt8 channel);
 
 /******************************************************************************/
@@ -324,10 +360,9 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBuffer(PACKET_InterfaceType_t
 
 	@return		valid buffer handle OR NULL
 	@note
-				Client need to call RPC_PACKET_GetBufferData to get the actual buffer pointer
+Client need to call RPC_PACKET_GetBufferData to get the actual buffer pointer
 **/
-PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t
-					       interfaceType,
+PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t  interfaceType,
 					       UInt32 requiredSize,
 					       UInt8 channel, UInt32 waitTime);
 
@@ -478,9 +513,11 @@ UInt16 RPC_PACKET_GetContextEx(PACKET_InterfaceType_t interfaceType,
 			       PACKET_BufHandle_t dataBufHandle);
 
 RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
-					  PACKET_InterfaceType_t interfaceType,
-					  RPC_PACKET_DataIndCallBackFunc_t
-					  dataIndFunc);
+			PACKET_InterfaceType_t interfaceType,
+			RPC_PACKET_DataIndCallBackFunc_t
+				dataIndFunc,
+			RPC_PACKET_CPResetCallbackFunc_t
+				cpResetCb);
 
 RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle,
 				     UInt8 rpcClientID);
@@ -489,9 +526,10 @@ UInt32 RPC_PACKET_IncrementBufferRef(PACKET_BufHandle_t dataBufHandle,
 				     UInt8 rpcClientID);
 
 RPC_Result_t RPC_PACKET_RegisterDataIndEx(UInt8 rpcClientID,
-				PACKET_InterfaceType_t interfaceType,
-				RPC_PACKET_DataIndCallBackFuncEx_t dataIndFunc,
-				RPC_FlowControlCallbackFunc_t	flowControlCb);
+			PACKET_InterfaceType_t interfaceType,
+			RPC_PACKET_DataIndCallBackFuncEx_t dataIndFunc,
+			RPC_FlowControlCallbackFunc_t	flowControlCb,
+			RPC_PACKET_CPResetCallbackFunc_t cpResetCb);
 
 PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx2(PACKET_InterfaceType_t interfaceType,
 						UInt32 requiredSize,
@@ -501,6 +539,19 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx2(PACKET_InterfaceType_t interface
 
 RPC_Result_t RPC_PACKET_SendDataEx(RpcPktBufferInfo_t *pktBufInfo);
 
+/* called to initiate notification of clients of start of CP reset */
+void RPC_PACKET_HandleNotifyCPReset(RPC_CPResetEvent_t inEvent);
+
+/* called when client of interfaceType is ready for silent CP reset; expected
+   to be called at some point after client's registered RPC_PACKET_CPResetCallbackFunc_t
+   is called.
+*/
+void RPC_PACKET_AckReadyForCPReset(UInt8 rpcClientID,
+				PACKET_InterfaceType_t interfaceType);
+void RPC_PACKET_FilterAckReadyForCPReset(UInt8 rpcClientID,
+				PACKET_InterfaceType_t interfaceType);
+
+Int32 RPC_PACKET_IsReservedPkt(PACKET_BufHandle_t dataBufHandle);
 /** \endcond   */
 
 #endif /* __RPC_IPC */

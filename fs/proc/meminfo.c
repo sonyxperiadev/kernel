@@ -56,6 +56,13 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		"MemTotal:       %8lu kB\n"
 		"MemFree:        %8lu kB\n"
 		"Buffers:        %8lu kB\n"
+#ifdef CONFIG_CMA
+		"CmaFree:        %8lu kB\n"
+		"CmaAnon:        %8lu kB\n"
+		"CmaFile:        %8lu kB\n"
+		"CmaUnevictable: %8lu kB\n"
+		"ContigAlloc:    %8lu kB\n"
+#endif
 		"Cached:         %8lu kB\n"
 		"SwapCached:     %8lu kB\n"
 		"Active:         %8lu kB\n"
@@ -108,6 +115,13 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		K(i.totalram),
 		K(i.freeram),
 		K(i.bufferram),
+#ifdef CONFIG_CMA
+		K(global_page_state(NR_FREE_CMA_PAGES)),
+		K(global_page_state(NR_CMA_ANON)),
+		K(global_page_state(NR_CMA_FILE)),
+		K(global_page_state(NR_CMA_UNEVICTABLE)),
+		K(global_page_state(NR_CONTIG_PAGES)),
+#endif
 		K(cached),
 		K(total_swapcache_pages),
 		K(pages[LRU_ACTIVE_ANON]   + pages[LRU_ACTIVE_FILE]),

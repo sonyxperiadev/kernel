@@ -25,8 +25,10 @@
 
 #ifndef __LINUX_WD_TAPPER_H
 #define __LINUX_WD_TAPPER_H
+#include <mach/timex.h>
 
-#define msec_to_ticks(x) (x*1000)/32
+/* Seconds to ticks conversion */
+#define sec_to_ticks(x) ((x)*CLOCK_TICK_RATE)
 
 struct wd_tapper_platform_data {
 	unsigned int count;

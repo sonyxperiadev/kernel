@@ -41,6 +41,13 @@
 static int keep_xtl_on;
 module_param_named(keep_xtl_on, keep_xtl_on, int, S_IRUGO|S_IWUSR|S_IWGRP);
 
+/**
+ * Run time flag to debug the Rhea clocks preventing deepsleep
+ */
+static int clk_dbg_dsm;
+module_param_named(clk_dbg_dsm, clk_dbg_dsm, int, S_IRUGO|S_IWUSR|S_IWGRP);
+
+
 /* Rhea PM log values */
 enum {
 
@@ -100,37 +107,62 @@ const char *sleep_prevent_clocks[] =
 			"smi_axi_clk"
 		};
 
+
 static struct kona_idle_state rhea_cpu_states[] = {
 	{
-		.name = "C0",
+		.name = "C1",
 		.desc = "suspend",
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = RHEA_STATE_C0_LATENCY,
-		.target_residency = 0,
-		.state = RHEA_STATE_C0,
+		.latency = RHEA_C1_EXIT_LATENCY,
+		.target_residency = RHEA_C1_TARGET_RESIDENCY,
+		.state = RHEA_STATE_C1,
 		.enter = enter_suspend_state,
 	},
-#ifdef CONFIG_RHEA_DORMANT_MODE
+#ifdef CONFIG_RHEA_A9_RETENTION_CSTATE
 	{
-		.name = "C3",
-		.desc = "suspend-drmnt", /* suspend-dormant */
+		.name = "C2",
+		.desc = "suspend-rtn", /*suspend-retention (XTAL ON)*/
 		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
-		.latency = RHEA_STATE_C3_LATENCY,
-		.target_residency = 400,
-		.state = RHEA_STATE_C3,
+		.latency = RHEA_C2_EXIT_LATENCY,
+		.target_residency = RHEA_C2_TARGET_RESIDENCY,
+		.state = RHEA_STATE_C2,
 		.enter = enter_idle_state,
 	}, {
+		.name = "C3",
+		.desc = "ds-retn", /*deepsleep-retention (XTAL OFF)*/
+		.flags = CPUIDLE_FLAG_TIME_VALID,
+		.latency = RHEA_C3_EXIT_LATENCY,
+		.target_residency = RHEA_C3_TARGET_RESIDENCY,
+		.state = RHEA_STATE_C3,
+		.enter = enter_idle_state,
+	},
+#endif
+#ifdef CONFIG_RHEA_DORMANT_MODE
+	{
 		.name = "C4",
+		.desc = "suspend-drmnt", /* suspend-dormant */
+		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
+		.latency = RHEA_C4_EXIT_LATENCY,
+		.target_residency = RHEA_C4_TARGET_RESIDENCY,
+		.state = RHEA_STATE_C4,
+		.enter = enter_idle_state,
+	}, {
+		.name = "C5",
 		.desc = "ds-drmnt", /* deepsleep-dormant(XTAL OFF) */
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = RHEA_STATE_C4_LATENCY,
-		.target_residency = 500,
-		.state = RHEA_STATE_C4,
+		.latency = RHEA_C5_EXIT_LATENCY,
+		.target_residency = RHEA_C5_TARGET_RESIDENCY,
+		.state = RHEA_STATE_C5,
 		.enter = enter_idle_state,
 	},
 #endif
 };
 
+#ifdef CONFIG_RHEA_A9_RETENTION_CSTATE
+#define NON_DORMANT_MAX_EXIT_LATENCY	RHEA_C3_EXIT_LATENCY
+#else
+#define NON_DORMANT_MAX_EXIT_LATENCY	RHEA_C1_EXIT_LATENCY
+#endif
 
 static int pm_enable_self_refresh(bool enable)
 {
@@ -402,6 +434,7 @@ int rhea_force_sleep(suspend_state_t state)
 int enter_idle_state(struct kona_idle_state *state)
 {
 	struct pi* pi = NULL;
+
 #if defined(CONFIG_RHEA_WA_HWJIRA_2301) || defined(CONFIG_RHEA_WA_HWJIRA_2877)
 	u32 lpddr2_temp_period = 0;
 #endif
@@ -461,14 +494,17 @@ int enter_idle_state(struct kona_idle_state *state)
 				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2221*/
+	if (clk_dbg_dsm)
+		if (state->flags & CPUIDLE_ENTER_SUSPEND)
+			rhea_clock_print_act_clks();
 
 	switch (state->state) {
-	case RHEA_STATE_C1:
 	case RHEA_STATE_C2:
+	case RHEA_STATE_C3:
 		enter_retention_state(state);
 		break;
-	case RHEA_STATE_C3:
 	case RHEA_STATE_C4:
+	case RHEA_STATE_C5:
 		enter_dormant_state(state);
 		break;
 	}
@@ -619,6 +655,7 @@ static void uartb_wq_handler(struct work_struct *work)
 
 		if(!uartb_clk)
 			uartb_clk = clk_get(NULL,"uartb_clk");
+		BUG_ON(IS_ERR_OR_NULL(uartb_clk));
 		clk_disable(uartb_clk);
 		clk_active = 0;
 	}
@@ -633,6 +670,7 @@ void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 		{
 			if(!uartb_clk)
 				uartb_clk = clk_get(NULL,"uartb_clk");
+			BUG_ON(IS_ERR_OR_NULL(uartb_clk));
 			clk_enable(uartb_clk);
 			clk_active = 1;
 
@@ -663,7 +701,8 @@ static int dormant_enable_set(void *data, u64 val)
 		dormant_enable = 1;
 		pi_mgr_qos_request_update(&arm_qos, PI_MGR_QOS_DEFAULT_VALUE);
 	} else {
-		pi_mgr_qos_request_update(&arm_qos, RHEA_STATE_C2_LATENCY);
+		pi_mgr_qos_request_update(&arm_qos,
+					  NON_DORMANT_MAX_EXIT_LATENCY);
 		dormant_enable = 0;
 	}
 
@@ -712,7 +751,8 @@ int __init rhea_pm_debug_init(void)
 	 * from entering into dormant C-states.
 	 */
 	if (dormant_enable == 0)
-		pi_mgr_qos_request_update(&arm_qos, RHEA_STATE_C2_LATENCY);
+		pi_mgr_qos_request_update(&arm_qos,
+					  NON_DORMANT_MAX_EXIT_LATENCY);
 
 	/* Interface to enable disable dormant mode at runtime */
 	if (!debugfs_create_file("dormant_enable", S_IRUGO | S_IWUSR,

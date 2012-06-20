@@ -106,7 +106,6 @@ static int serial_index(struct uart_port *port)
 }
 
 static unsigned int skip_txen_test; /* force skip of txen test at init time */
-
 /*
  * Debugging.
  */
@@ -1587,12 +1586,9 @@ receive_chars(struct uart_8250_port *up, unsigned int *status)
 	/* Check whether Auto Flow control is enable in Modem control register */
 	mcr = serial_inp(up, UART_MCR);
 	if (mcr & UART_MCR_AFE) {
-		/* If Time out interrupt, Do not disable AFE */
-		if (!(up->iir & UART_IIR_TIME_OUT)) {
-			afe_status = 1;
-			/* Disabling Auto flow control */
-			serial_outp(up, UART_MCR, mcr & (~UART_MCR_AFE));
-		}
+		afe_status = 1;
+		/* Disabling Auto flow control */
+		serial_outp(up, UART_MCR, mcr & (~UART_MCR_AFE));
 	}
 
 
@@ -1635,7 +1631,17 @@ receive_chars(struct uart_8250_port *up, unsigned int *status)
 #endif
 
 	do {
+		/* Jira-1744 UART Line Status Register's Data Ready bit is not
+		 * updated sometime when data is received in fifo and a Rx
+		 * interrupt is generated.
+		 * UART RX interrupt happened but in LSR Data Ready is not set.
+		 * This fix is to take the decission based on iir also. */
+#ifdef CONFIG_RHEA_UART_RX_FIX
+		if (likely((lsr & UART_LSR_DR) ||
+			(up->iir & UART_IIR_TIME_OUT)))
+#else
 		if (likely(lsr & UART_LSR_DR))
+#endif
 			ch = serial_inp(up, UART_RX);
 		else
 			/*
@@ -2593,7 +2599,9 @@ static void serial8250_shutdown(struct uart_port *port)
 		container_of(port, struct uart_8250_port, port);
 	unsigned long flags;
 	int retry_count = 0;
+	int mcr = 0;
 
+	pi_mgr_qos_request_update(&up->qos_rx_node, 0);
 	/*
 	 * Disable interrupts from this port
 	 */
@@ -2609,6 +2617,14 @@ static void serial8250_shutdown(struct uart_port *port)
 		up->port.mctrl &= ~TIOCM_OUT2;
 
 	serial8250_set_mctrl(&up->port, up->port.mctrl);
+
+	if (up->mcr & UART_MCR_AFE) {
+		mcr = serial_inp(up, UART_MCR);
+		mcr &= ~(UART_MCR_AFE);
+		serial_outp(up, UART_MCR, mcr);
+		serial_outp(up, UART_MCR, mcr & (~UART_MCR_RTS));
+	}
+
 	spin_unlock_irqrestore(&up->port.lock, flags);
 
 	/* Checking whether UART is busy or NOT.
@@ -2647,6 +2663,7 @@ static void serial8250_shutdown(struct uart_port *port)
 	up->timer.function = serial8250_timeout;
 	if (is_real_interrupt(up->port.irq))
 		serial_unlink_irq_chain(up);
+	pi_mgr_qos_request_update(&up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
 }
 
 /*
@@ -2753,26 +2770,28 @@ static unsigned int serial8250_get_divisor(struct uart_port *port, unsigned int 
 	return quot;
 }
 
-void serial8250_togglerts(struct uart_port *port, unsigned int flowon)
+void serial8250_togglerts_afe(struct uart_port *port, unsigned int flowon)
 {
 
 	unsigned char old_mcr;
         struct uart_8250_port *up = (struct uart_8250_port *)port;
 
-       /*if(port->mcr & UART_MCR_AFE){*/
-	 if(flowon)
-	  {
-		old_mcr = serial_in(up, UART_MCR);
-		old_mcr |= UART_MCR_RTS;
+	old_mcr = serial_in(up, UART_MCR);
+	if (flowon) {
+		/* Enable AFE */
+		old_mcr |= (UART_MCR_AFE | UART_MCR_RTS);
 		serial_outp(up, UART_MCR, old_mcr);
-	  }else {
-             old_mcr = serial_in(up, UART_MCR);
-             old_mcr &= ~UART_MCR_RTS;
-             serial_outp(up, UART_MCR, old_mcr);
-	
-       }
-
+	} else {
+		/* In case of flow_off, Disable AFE and pull the RTS line high.
+		 * This will make sure BT will NOT send data. */
+		old_mcr &= ~(UART_MCR_AFE);
+		serial_outp(up, UART_MCR, old_mcr);
+		/* Writing MCR[1] = 0, make RTS line to go high */
+		old_mcr &= ~(UART_MCR_RTS);
+		serial_outp(up, UART_MCR, old_mcr);
+	}
 }
+EXPORT_SYMBOL(serial8250_togglerts_afe);
 
 void
 serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,

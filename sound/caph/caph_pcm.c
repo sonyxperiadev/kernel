@@ -1114,7 +1114,7 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 
 		if (num_periods > 1) {
 			pChip->streamCtl[substream->number].xrun_occured = 1;
-			aError("dI-%ld %ld %ld\n",
+			aWarn("dI-%ld %ld %ld\n",
 				int_period, int_time,
 				pChip->streamCtl[substream->number].
 				playback_prev_time);
@@ -1126,7 +1126,7 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 		StreamIdOfDriver(runtime->private_data));
 	if (whichbuffer == 0) {
 		pChip->streamCtl[substream->number].xrun_occured = 1;
-		aError("whichbuffer-%d\n", whichbuffer);
+		aWarn("whichbuffer-%d\n", whichbuffer);
 	}
 
 	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_GET_DRV_TYPE,

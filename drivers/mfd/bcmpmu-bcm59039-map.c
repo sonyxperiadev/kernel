@@ -41,7 +41,7 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_PONKEYCTRL2] =		{.map = 0x00, .addr = 0x0D, .mask = 0xFF, .ro = 0},
 	[PMU_REG_PONKEYCTRL3] =		{.map = 0x00, .addr = 0x0E, .mask = 0xFF, .ro = 0},
 	/* PONKEY Shutdown/Hard Reset/Restart Registers */
-	[PMU_REG_HOSTCTRL1] = {.map = 0x00, .addr = 0x01, .mask = 0xFF,
+	[PMU_REG_SW_SHDWN] = {.map = 0x00, .addr = 0x01, .mask = 0x04,
 		.ro = 0},
 	[PMU_REG_KEY_PAD_LOCK] =	{.map = 0x00, .addr = 0x0C,
 		.mask = 0x80, .ro = 0, .shift = 7},
@@ -222,6 +222,8 @@ static struct bcmpmu_reg_map bcm59039_reg_map[PMU_REG_MAX] = {
 				 .ro = 0, .shift = 0},
 	[PMU_REG_IHFPWRDRV_PUP] = {.map = 0x01, .addr = 0x91, .mask = 0x01,
 				   .ro = 0, .shift = 0},
+	[PMU_REG_IHF_NGTHRESH] = {.map = 0x01, .addr = 0x9A, .mask = 0x07,
+				 .ro = 0, .shift = 0},
 	[PMU_REG_IHFNG_PUP] =	{.map = 0x01, .addr = 0x9B, .mask = 0x08,
 				 .ro = 0, .shift = 3},
 	[PMU_REG_IHFPOP_EN] =	{.map = 0x01, .addr = 0x83, .mask = 0x04,

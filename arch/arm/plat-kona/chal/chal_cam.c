@@ -404,10 +404,8 @@ CHAL_CAM_STATUS_CODES chal_cam_cfg_intf(CHAL_HANDLE handle, CHAL_CAM_CFG_INTF_st
 // Analog PHY Setup
     // Analog Power Up, Reset & wait for Phy to settle
         BRCM_WRITE_REG(pCamDevice->baseAddr,CAM_ANA,( (1 << CAM_ANA_AR_SHIFT) | (0 << CAM_ANA_DDL_SHIFT) | (0x07<<CAM_ANA_CTATADJ_SHIFT) | (0x07<<CAM_ANA_PTATADJ_SHIFT) ));
-        CHAL_DELAY_MS(100);  
     // Disable Analog Reset
         BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_ANA,AR,0);
-        CHAL_DELAY_MS(10);  
 
     // Set Cam Interface
         chal_status |= chal_cam_set_intf(handle, cfg);
@@ -2232,16 +2230,13 @@ CHAL_CAM_STATUS_CODES chal_cam_reset(CHAL_HANDLE handle, CHAL_CAM_PARAM_st_t* pa
     if (param->param & CHAL_CAM_RESET_RX)
     {
         BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_CTL,CPR,1);
-        CHAL_DELAY_MS(1);        
         BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_CTL,CPR,0);
     }
 // Analog Reset
     if (param->param & CHAL_CAM_RESET_ARST)
     {
         BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_ANA,AR,1);
-        CHAL_DELAY_MS(1);  
         BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_ANA,AR,0);
-        CHAL_DELAY_MS(1);  
     }
 // Image Pointers
     if (param->param & CHAL_CAM_RESET_IMAGE)
@@ -2502,8 +2497,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
         // Disable Dig Clk1
             base_addr = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR);
             BRCM_WRITE_REG_FIELD( base_addr, ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_CLK_EN, 0);
-        // give it time to stop
-            CHAL_DELAY_MS(10);        
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_STPRSTS ) != 0 )  
             { 
                 DBG_OUT( chal_dprintf( CDBG_INFO, "%s(): DIGITAL_CH1_STPRSTS: Clk not Stopped \n", __FUNCTION__) ); 
@@ -2512,8 +2505,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
             BRCM_WRITE_REG( base_addr , ROOT_CLK_MGR_REG_DIG1_DIV, divider);
         // Enable Dig Clk 1
             BRCM_WRITE_REG_FIELD( base_addr, ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_CLK_EN, 1);
-        // give it time to settle
-            CHAL_DELAY_MS(10);        
         // Check Clock started
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_STPRSTS ) != 1 )  
             { 
@@ -2529,8 +2520,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
         // Disable Dig Clk0
             base_addr = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR);
             BRCM_WRITE_REG_FIELD( base_addr, ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_CLK_EN, 0);
-        // give it time to stop
-            CHAL_DELAY_MS(10);        
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_STPRSTS ) != 0 )  
             { 
                 DBG_OUT( chal_dprintf( CDBG_INFO, "%s(): DIGITAL_CH0_STPRSTS: Clk not Stopped \n", __FUNCTION__) ); 
@@ -2541,8 +2530,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
             BRCM_WRITE_REG( base_addr, ROOT_CLK_MGR_REG_DIG0_DIV, divider);
         // Start Dig Clk0
             BRCM_WRITE_REG_FIELD( base_addr, ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_CLK_EN, 1);
-        // give it time to settle
-            CHAL_DELAY_MS(10);        
         // Check Clock running
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_STPRSTS ) != 1 )  
             { 
@@ -2558,8 +2545,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
         if (clk_select == 1)
         {
             BRCM_WRITE_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_CLK_EN, 0);
-        // give it time to stop
-            CHAL_DELAY_MS(10);        
         // Check Clock setting
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_STPRSTS ) != 0 )  
             { 
@@ -2571,8 +2556,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
         {
     // Disable Clock Select 0
             BRCM_WRITE_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_CLK_EN, 0);
-        // give it time to settle
-            CHAL_DELAY_MS(10);        
         // Check Clock setting
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_STPRSTS ) != 0 )  
             { 
