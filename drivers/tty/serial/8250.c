@@ -1586,12 +1586,9 @@ receive_chars(struct uart_8250_port *up, unsigned int *status)
 	/* Check whether Auto Flow control is enable in Modem control register */
 	mcr = serial_inp(up, UART_MCR);
 	if (mcr & UART_MCR_AFE) {
-		/* If Time out interrupt, Do not disable AFE */
-		if (!(up->iir & UART_IIR_TIME_OUT)) {
-			afe_status = 1;
-			/* Disabling Auto flow control */
-			serial_outp(up, UART_MCR, mcr & (~UART_MCR_AFE));
-		}
+		afe_status = 1;
+		/* Disabling Auto flow control */
+		serial_outp(up, UART_MCR, mcr & (~UART_MCR_AFE));
 	}
 
 
@@ -1634,7 +1631,17 @@ receive_chars(struct uart_8250_port *up, unsigned int *status)
 #endif
 
 	do {
+		/* Jira-1744 UART Line Status Register's Data Ready bit is not
+		 * updated sometime when data is received in fifo and a Rx
+		 * interrupt is generated.
+		 * UART RX interrupt happened but in LSR Data Ready is not set.
+		 * This fix is to take the decission based on iir also. */
+#ifdef CONFIG_RHEA_UART_RX_FIX
+		if (likely((lsr & UART_LSR_DR) ||
+			(up->iir & UART_IIR_TIME_OUT)))
+#else
 		if (likely(lsr & UART_LSR_DR))
+#endif
 			ch = serial_inp(up, UART_RX);
 		else
 			/*
