@@ -1858,6 +1858,10 @@ static int __devexit bcmpmu_em_remove(struct platform_device *pdev)
 
 static int bcmpmu_em_suspend(struct platform_device *pdev, pm_message_t state)
 {
+	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+
+	cancel_delayed_work_sync(&pem->work);
 	return 0;
 }
 
@@ -1868,10 +1872,8 @@ static int bcmpmu_em_resume(struct platform_device *pdev)
 	unsigned long time;
 	time = get_seconds();
 
-	if ((time - pem->time) * 1000 > get_update_rate(pem)) {
-		cancel_delayed_work_sync(&pem->work);
+	if ((time - pem->time) * 1000 > get_update_rate(pem))
 		schedule_delayed_work(&pem->work, 0);
-	}
 	return 0;
 }
 
