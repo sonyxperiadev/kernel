@@ -12,7 +12,7 @@ endchoice
 
 choice
 	prompt "Hawaii SoC based board type"
-	default MACH_HAWAII_RAY
+	default MACH_HAWAII_FPGA
 
 config  MACH_HAWAII_FPGA
         bool "Hawaii SOC Version - FPGA"
@@ -21,7 +21,7 @@ config  MACH_HAWAII_FPGA
 	    for FPGA platform like Chip-it where CCU is absent." 
 
 config  MACH_HAWAII_FPGA_E
-        bool "Hawaii SOC Version - FPGA_E"
+        bool "Hawaii SOC Version - FPGA Eve"
 	help
 	   "This config option will enable support for
 	    FPGA platform like Eve where CCU is present."
@@ -29,6 +29,29 @@ config  MACH_HAWAII_FPGA_E
 config  MACH_HAWAII_RAY
         bool "Hawaii SOC Version - RAY"
 endchoice
+
+choice
+	prompt "Hawaii FPGA type"
+	depends on MACH_HAWAII_FPGA || MACH_HAWAII_FPGA_E
+	default MACH_HAWAII_FPGA_PERI_V1
+
+config MACH_HAWAII_FPGA_PERI_V1
+	bool "Support Hawaii BSP FPGA Image with dual A9"
+	help
+	   "Support Following BSP FPGA Images :
+	   HAWAII_Peri_v1.0.0
+	   HAWAII_Peri_v1.0.1
+	   Hawaii_PERI_FREEZE_1p52_16APR2012_v2.0.0"
+
+config MACH_HAWAII_FPGA_MM_V1
+	bool "Support Hawaii MM FPGA Image without M4U & AXI-PV"
+	help
+	   "Support Following MM FPGA Images :
+	   HAWAII_MM_v1.0.0
+	   HAWAII_MM_v2.0.0
+	   HAWAII_MM_v2.0.0_fix"
+endchoice
+
 
 config RHEA_B0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA
