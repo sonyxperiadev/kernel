@@ -68,12 +68,18 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <linux/delay.h>
 
+#ifdef CONFIG_MACH_HAWAII_FPGA
+#define UART_CLK_HZ 13000000
+#else
+#define UART_CLK_HZ 26000000
+#endif
+
 #define KONA_8250PORT_FPGA(name, clk)				\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
 	.irq	    = BCM_INT_ID_##name,			\
-	.uartclk    = 26000000,					\
+	.uartclk    = UART_CLK_HZ,				\
 	.regshift   = 2,				\
 	.iotype	    = UPIO_DWAPB,			\
 	.type	    = PORT_16550A,			\
@@ -261,7 +267,9 @@ static struct platform_device board_sdio2_device = {
 /* Common devices among all the boards */
 static struct platform_device *board_sdio_plat_devices[] __initdata = {
 	&board_sdio1_device,
+#ifndef CONFIG_MACH_HAWAII_FPGA_MM_V1
 	&board_sdio2_device,
+#endif
 };
 
 void __init board_add_sdio_devices(void)
