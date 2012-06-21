@@ -24,6 +24,7 @@
 #include <mach/rdb/brcm_rdb_scu.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
+#include <plat/pi_mgr.h>
 
 /* Control variable to enable/disable dormant */
 static u32 dormant_disable;
@@ -311,6 +312,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 {
 	u32 dormant_return;
 	u32 reg_val;
+	struct pi *pi = NULL;
 
 	if (dormant_disable || fake_dormant) {
 		/* Dis-allow entering dormant */
@@ -432,6 +434,10 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 
 	save_mmu((void *)__get_cpu_var(mmu_data));
 
+	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
+	BUG_ON(NULL == pi);
+	pi_enable(pi, 0);
+
 	dormant_return = dormant_enter_prepare(0, PHYS_OFFSET - PAGE_OFFSET);
 
 	if (service == CAPRI_DORMANT_CLUSTER_DOWN) {
@@ -540,6 +546,9 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 
 		restore_performance_monitors((void *)__get_cpu_var(pmu_data));
 	}
+	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
+	BUG_ON(NULL == pi);
+	pi_enable(pi, 1);
 
 }
 
