@@ -169,13 +169,30 @@ void dvts_destroy_serializer(dvts_object_t obj)
 void dvts_finish(dvts_object_t obj)
 {
 	atomic_inc(&obj->finished);
-	wake_up_interruptible(&obj->wq);
+	/* TODO: make it wake_up_interruptible_all if/when we can
+	 * demise dvts_wait() call */
+	wake_up_all(&obj->wq);
 }
 
 void dvts_wait(dvts_object_t obj, dvts_target_t target)
 {
-	wait_event_interruptible(obj->wq, dvts_reached_target(obj, target));
-	/* TODO: handle interruption... */
+	/* This version cannot be interrupted -- use
+	 * dvts_wait_interruptible in preference where possible in
+	 * order to avoid uninterruptible sleep */
+	wait_event(obj->wq,
+			dvts_reached_target(obj, target));
+}
+
+int dvts_wait_interruptible(dvts_object_t obj, dvts_target_t target)
+{
+	int s;
+
+	s = wait_event_interruptible(obj->wq,
+			dvts_reached_target(obj, target));
+
+	/* We'll return 0 if the dvts target was reached, and
+	 * -ERESTARTSYS if the wait was interrupted by a signal */
+	return s;
 }
 
 /******************************************************************
@@ -1641,8 +1658,9 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			}
 			if (await_task_args.id != 777)
 				ret = -ENOENT;
-			dvts_wait(dev->shared_dvts_object,
-				  await_task_args.target);
+			ret = dvts_wait_interruptible(
+					dev->shared_dvts_object,
+					await_task_args.target);
 		}
 		break;
 #ifdef V3D_PERF_SUPPORT

@@ -23,6 +23,10 @@
 #include <linux/mfd/bcmpmu.h>
 #include <mach/pwr_mgr.h>
 #include <plat/pwr_mgr.h>
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+#endif
+
 
 #define PWRMGR_I2C_RDWR_MAX_TRIES	(10)
 #define PWRMGR_I2C_RETRY_DELAY_US	(10)
@@ -41,10 +45,31 @@ enum {
 struct bcmpmu_i2c {
 	struct bcmpmu *bcmpmu;
 	struct mutex i2c_mutex;
+#ifdef CONFIG_HAS_WAKELOCK
+	struct wake_lock i2c_lock;
+#endif
 	struct i2c_client *i2c_client;
 	struct i2c_client *i2c_client1;
 	int pagesize;
 };
+
+
+static inline void bcmpmu_i2c_lock(struct bcmpmu_i2c *i2c)
+{
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&i2c->i2c_lock);
+#endif
+	mutex_lock(&i2c->i2c_mutex);
+}
+
+static inline void bcmpmu_i2c_unlock(struct bcmpmu_i2c *i2c)
+{
+	mutex_unlock(&i2c->i2c_mutex);
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_unlock(&i2c->i2c_lock);
+#endif
+}
+
 
 #if defined(CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER)
 int last_i2c_trans = I2C_TRANS_NONE;
@@ -69,14 +94,14 @@ static int bcmpmu_i2c_read_device(struct bcmpmu *bcmpmu, int reg,
 	if ((map.addr == 0) && (map.mask == 0))
 		return -ENXIO;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 	if (map.map == 0)
 		err = i2c_smbus_read_byte_data(acc->i2c_client, map.addr);
 	else if (map.map == 1)
 		err = i2c_smbus_read_byte_data(acc->i2c_client1, map.addr);
 	else
 		err = -EIO;
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 
 	if (err < 0)
 		return err;
@@ -100,7 +125,7 @@ static int bcmpmu_i2c_write_device(struct bcmpmu *bcmpmu, int reg,
 	if ((map.addr == 0) && (map.mask == 0))
 		return -ENXIO;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 	if (map.map == 0)
 		err = i2c_smbus_read_byte_data(acc->i2c_client, map.addr);
 	else if (map.map == 1)
@@ -124,7 +149,7 @@ static int bcmpmu_i2c_write_device(struct bcmpmu *bcmpmu, int reg,
 	else
 		err = -EIO;
       err:
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 	return err;
 }
 
@@ -137,14 +162,14 @@ static int bcmpmu_i2c_read_device_direct(struct bcmpmu *bcmpmu, int map,
 	if ((addr == 0) && (msk == 0))
 		return -ENODEV;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 	if (map == 0)
 		err = i2c_smbus_read_byte_data(acc->i2c_client, addr);
 	else if (map == 1)
 		err = i2c_smbus_read_byte_data(acc->i2c_client1, addr);
 	else
 		err = -EIO;
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 
 	if (err < 0)
 		return err;
@@ -163,7 +188,7 @@ static int bcmpmu_i2c_write_device_direct(struct bcmpmu *bcmpmu, int map,
 	if ((addr == 0) && (msk == 0))
 		return -ENODEV;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 	if (map == 0)
 		err = i2c_smbus_read_byte_data(acc->i2c_client, addr);
 	else if (map == 1)
@@ -183,7 +208,7 @@ static int bcmpmu_i2c_write_device_direct(struct bcmpmu *bcmpmu, int map,
 	else
 		err = -EIO;
       err:
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 	return err;
 }
 
@@ -199,7 +224,7 @@ static int bcmpmu_i2c_read_device_direct_bulk(struct bcmpmu *bcmpmu, int map,
 	if (addr + len > acc->pagesize)
 		return -ENODEV;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 	if (map == 0)
 		err =
 		    i2c_smbus_read_i2c_block_data(acc->i2c_client, addr, len,
@@ -210,7 +235,7 @@ static int bcmpmu_i2c_read_device_direct_bulk(struct bcmpmu *bcmpmu, int map,
 						  uval);
 	else
 		err = -EIO;
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 
 	for (i = len; i > 0; i--)
 		val[i - 1] = (unsigned int)uval[i - 1];
@@ -235,7 +260,7 @@ static int bcmpmu_i2c_write_device_direct_bulk(struct bcmpmu *bcmpmu, int map,
 	for (i = 0; i < len; i++)
 		uval[i] = (u8) val[i];
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 	if (map == 0)
 		err =
 		    i2c_smbus_write_i2c_block_data(acc->i2c_client, addr, len,
@@ -246,7 +271,7 @@ static int bcmpmu_i2c_write_device_direct_bulk(struct bcmpmu *bcmpmu, int map,
 						   uval);
 	else
 		err = -EIO;
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 
 	if (err < 0)
 		return err;
@@ -393,7 +418,7 @@ static int bcmpmu_i2c_pwrmgr_read(struct bcmpmu *bcmpmu, int reg,
 	if ((map.addr == 0) && (map.mask == 0))
 		return -ENXIO;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 
 	pr_debug("%s\n", __func__);
 
@@ -413,7 +438,7 @@ static int bcmpmu_i2c_pwrmgr_read(struct bcmpmu *bcmpmu, int reg,
 	temp &= map.mask;
 	*val = temp;
       out_unlock:
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 	return err;
 }
 
@@ -432,7 +457,7 @@ static int bcmpmu_i2c_pwrmgr_write(struct bcmpmu *bcmpmu, int reg,
 	if ((map.addr == 0) && (map.mask == 0))
 		return -ENXIO;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 
 	pr_debug("%s\n", __func__);
 
@@ -463,7 +488,7 @@ static int bcmpmu_i2c_pwrmgr_write(struct bcmpmu *bcmpmu, int reg,
 	else
 		err = -ENODEV;
       out_unlock:
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 	return err;
 }
 
@@ -477,7 +502,7 @@ static int bcmpmu_i2c_pwrmgr_read_direct(struct bcmpmu *bcmpmu,
 	if ((addr == 0) && (msk == 0))
 		return -ENODEV;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 
 	pr_debug("%s\n", __func__);
 
@@ -496,7 +521,7 @@ static int bcmpmu_i2c_pwrmgr_read_direct(struct bcmpmu *bcmpmu,
 	temp &= msk;
 	*val = temp;
       out_unlock:
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 	return err;
 
 }
@@ -513,7 +538,7 @@ static int bcmpmu_i2c_pwrmgr_write_direct(struct bcmpmu *bcmpmu, int map,
 	if ((addr == 0) && (msk == 0))
 		return -ENODEV;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 
 	pr_debug("%s\n", __func__);
 
@@ -541,7 +566,7 @@ static int bcmpmu_i2c_pwrmgr_write_direct(struct bcmpmu *bcmpmu, int map,
 	else
 		err = -EIO;
       out_unlock:
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 	return err;
 }
 
@@ -560,7 +585,7 @@ static int bcmpmu_i2c_pwrmgr_read_direct_bulk(struct bcmpmu *bcmpmu,
 	if ((map != 0) && (map != 1))
 		return -EIO;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 	pr_debug("%s\n", __func__);
 
 	for (i = 0; i < len; i++) {
@@ -578,7 +603,7 @@ static int bcmpmu_i2c_pwrmgr_read_direct_bulk(struct bcmpmu *bcmpmu,
 		val[i] = temp;
 	}
 
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 	return err;
 }
 
@@ -597,7 +622,7 @@ static int bcmpmu_i2c_pwrmgr_write_direct_bulk(struct bcmpmu *bcmpmu,
 	if ((map != 0) && (map != 1))
 		return -EIO;
 
-	mutex_lock(&acc->i2c_mutex);
+	bcmpmu_i2c_lock(acc);
 
 	pr_debug("%s\n", __func__);
 
@@ -616,7 +641,7 @@ static int bcmpmu_i2c_pwrmgr_write_direct_bulk(struct bcmpmu *bcmpmu,
 			break;
 	}
 
-	mutex_unlock(&acc->i2c_mutex);
+	bcmpmu_i2c_unlock(acc);
 	return err;
 }
 #endif /* #if defined(CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER) */
@@ -678,6 +703,10 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	clt->dev.platform_data = pdata;
 	bcmpmu_i2c->i2c_client1 = clt;
 	mutex_init(&bcmpmu_i2c->i2c_mutex);
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&bcmpmu_i2c->i2c_lock, WAKE_LOCK_SUSPEND,
+		"bcmpmu_i2c");
+#endif
 
 #if defined(CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER)
 	/**

@@ -43,7 +43,7 @@ static int do_cp_crash(struct notifier_block *this, unsigned long event,
 	 * is not supported as file operation in atomic context
 	 * is not possible. */
 	if (BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice() && cp_crashed)
-		goto out;
+		return NOTIFY_DONE;
 
 #ifdef CONFIG_PREEMPT
 	/* Ensure that cond_resched() won't try to preempt anybody */
@@ -71,7 +71,8 @@ out:
 }
 
 static struct notifier_block cp_crash_blk = {
-	.notifier_call = do_cp_crash
+	.notifier_call = do_cp_crash,
+	.priority = 1,
 };
 
 static int __init cp_crash_init(void)

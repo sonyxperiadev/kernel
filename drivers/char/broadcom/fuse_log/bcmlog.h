@@ -333,6 +333,7 @@ extern "C" {
 	extern int brcm_klogging(char *data, int length);
 	extern int brcm_retrive_early_printk(void);
 	extern int bcmlog_mtt_on;
+	extern unsigned ramdump_enable;
 	extern unsigned short bcmlog_log_ulogging_id;
 	extern unsigned long BCMLOG_GetFreeSize(void);
 	extern int BCMLOG_CallHandler(char log_type, const char *p_src,
