@@ -810,7 +810,7 @@ try_again:
 	 */
 	if (!mmc_host_is_spi(host) && rocr &&
 	   ((*rocr & 0x41000000) == 0x41000000)) {
-		printk(KERN_INFO"S18A received, SD card is UHS capable!\n");
+		printk(KERN_DEBUG"S18A received, SD card is UHS capable!\n");
 		err = mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_180, true);
 		if (err) {
 			ocr &= ~SD_OCR_S18R;

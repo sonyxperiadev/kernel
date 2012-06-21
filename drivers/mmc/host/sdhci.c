@@ -1715,7 +1715,7 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 								SDHCI_PRESENT_STATE);
 					if ((present_state & SDHCI_DATA_LVL_MASK) ==
 							SDHCI_DATA_LVL_MASK)	{
-						printk(KERN_INFO DRIVER_NAME
+						printk(KERN_DEBUG DRIVER_NAME
 								": SD core switched to 1.8V signalling\n");
 						ret = 0;
 						goto clk_dis_ret;
