@@ -1458,7 +1458,7 @@ static int __init adc_init(void)
 	return platform_driver_register(&bcmpmu_adc_driver);
 }
 
-module_init(adc_init);
+subsys_initcall(adc_init);
 
 static void __exit adc_exit(void)
 {
