@@ -14,6 +14,13 @@ config FB_BRCM_ASYNC_UPDATE
 	  This is used for asynchronous frame update. If you do not know about
 	  this config, please just say 'N' here.
 
+config FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+	bool "CP Crash Dump Image Support"
+	default N
+	help
+	  This is used for LCD to show that cp goes into crahs dump state.
+	  If you do not know about this config, please just say 'N' here.
+
 config FB_BRCM_ILI9486
 	tristate "LCD Panel ILI9486 Controller"
 	default N

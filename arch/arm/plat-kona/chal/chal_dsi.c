@@ -1041,6 +1041,8 @@ CHAL_DSI_RES_t chal_dsi_tx_long(CHAL_HANDLE handle,
 	else
 		BRCM_WRITE_REG(pDev->baseAddr, DSI1_TXPKT1_H, pkth);
 
+	mb();
+
 /*  chal_dprintf ( CDBG_ERRO, "[cHAL DSI] %s: PKTC[0x%08X] PKTH[0x%08X]\n", */
 /*      __FUNCTION__, pktc  , pktc  ); */
 

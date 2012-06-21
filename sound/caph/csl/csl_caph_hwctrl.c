@@ -188,6 +188,7 @@ static Boolean sClkCurEnabled = FALSE;
 static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 static CHAL_HANDLE lp_handle;
 static int en_lpbk_pcm, en_lpbk_i2s;
+static int rec_pre_call;
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -298,6 +299,7 @@ struct ARM2SP_CONFIG_t {
 	Boolean started;
 	Boolean used;
 	CSL_CAPH_DMA_CHNL_e dma_ch;
+	int dl_proc;
 };
 
 #define ARM2SP_CONFIG_t struct ARM2SP_CONFIG_t
@@ -381,6 +383,12 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 	p_arm2sp->dmaBytes = csl_dsp_arm2sp_get_size(AUDIO_SAMPLING_RATE_8000);
 	p_arm2sp->srOut = path->src_sampleRate;
 	p_arm2sp->chNumOut = path->chnlNum;
+	p_arm2sp->dl_proc = CSL_ARM2SP_DL_BEFORE_AUDIO_PROC;
+	/*AFTER_AUDIO_PROC gives saturation for some music, disable it now*/
+	/*if (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000
+		|| path->src_sampleRate == AUDIO_SAMPLING_RATE_44100)
+		p_arm2sp->dl_proc = CSL_ARM2SP_DL_AFTER_AUDIO_PROC;*/
+
 	if (path->arm2sp_path == LIST_DMA_DMA
 		|| path->arm2sp_path == LIST_SW_DMA) {
 		if (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000) {
@@ -492,6 +500,7 @@ static int csl_caph_obtain_arm2sp(void)
 	return i;
 }
 
+#if defined(CONFIG_BCM_MODEM)
 static void csl_caph_start_arm2sp(int i)
 {
 	ARM2SP_CONFIG_t *p_arm2sp = &arm2spCfg[i];
@@ -507,7 +516,7 @@ static void csl_caph_start_arm2sp(int i)
 			p_arm2sp->numFramesPerInterrupt,
 			(p_arm2sp->chNumOut == AUDIO_CHANNEL_STEREO) ? 1 : 0,
 			0,
-			CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+			p_arm2sp->dl_proc,
 			CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	} else {
 		CSL_ARM2SP2_Init();
@@ -517,7 +526,7 @@ static void csl_caph_start_arm2sp(int i)
 			p_arm2sp->numFramesPerInterrupt,
 			(p_arm2sp->chNumOut == AUDIO_CHANNEL_STEREO) ? 1 : 0,
 			0,
-			CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+			p_arm2sp->dl_proc,
 			CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	}
 	p_arm2sp->started = TRUE;
@@ -543,7 +552,7 @@ static void csl_caph_release_arm2sp(int i)
 				(p_arm2sp->chNumOut ==
 				 AUDIO_CHANNEL_STEREO) ? 1 : 0,
 				0,
-				CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+				p_arm2sp->dl_proc,
 				CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 	else if (i == VORENDER_ARM2SP_INSTANCE2)
 		csl_arm2sp_set_arm2sp2((UInt32) p_arm2sp->srOut,
@@ -554,11 +563,12 @@ static void csl_caph_release_arm2sp(int i)
 				(p_arm2sp->chNumOut ==
 				 AUDIO_CHANNEL_STEREO) ? 1 : 0,
 				0,
-				CSL_ARM2SP_DL_BEFORE_AUDIO_PROC,
+				p_arm2sp->dl_proc,
 				CSL_ARM2SP_UL_AFTER_AUDIO_PROC);
 
 	memset(&arm2spCfg[i], 0, sizeof(arm2spCfg[0]));
 }
+#endif
 
 /****************************************************************************
 *
@@ -629,7 +639,13 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 		CSL_CAPH_DMA_CHNL_e dma_ch = CSL_CAPH_DMA_CH13;
 
 		/*this is required when internal trigger is used in mic path*/
-		csl_caph_dma_clear_intr(dma_ch, CSL_CAPH_DSP);
+		/*if primary mic is up before speaker,
+		  do not clear interrupt. In other cases, clear it*/
+		if (rec_pre_call || (enabled_path == DSP_AADMAC_PRI_MIC_EN))
+			;
+		else
+			csl_caph_dma_clear_intr(dma_ch, CSL_CAPH_DSP);
+
 		if (enabled_path)
 			csl_caph_dma_enable_intr(dma_ch, CSL_CAPH_DSP);
 		else
@@ -720,13 +736,15 @@ static void csl_caph_hwctrl_PrintPath(CSL_CAPH_HWConfig_Table_t *path)
 
 	if (!path)
 		return;
-
+	if (!path->pathID)
+		return;
 	aTrace(LOG_AUDIO_CSL,
-			"csl_caph_hwctrl_PrintPath:: path %d", path->pathID);
+		"csl_caph_hwctrl_PrintPath:: path %d source %d",
+		path->pathID, path->source);
 	for (i = 0; i < MAX_SINK_NUM; i++) {
-		if (path->sink[i] != CSL_CAPH_DEV_NONE) {
+		if (path->sink[i] != CSL_CAPH_DEV_NONE || !i) {
 			aTrace(LOG_AUDIO_CSL,
-					"\n\tblock list %d: ", i);
+				"\n\tblock list %d sink %d:", i, path->sink[i]);
 			for (j = 0; j < MAX_PATH_LEN; j++) {
 				k =  path->blockIdx[i][j];
 
@@ -1200,6 +1218,12 @@ static void csl_caph_obtain_blocks
 		path->dmaCB = AUDIO_DMA_CB2;
 		dmaCH = CSL_CAPH_DMA_NONE;
 #endif
+		}
+
+		if (dmaCH == CSL_CAPH_DMA_CH12) {
+			rec_pre_call = 0;
+			if (csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CH13))
+				rec_pre_call = 1;
 		}
 
 		blockIdx = 0;
@@ -1723,8 +1747,14 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 	}
 
 	/* clean up the block list of this sink*/
-	memset(path->block[sinkNo], 0, sizeof(path->block[sinkNo]));
-	memset(path->blockIdx[sinkNo], 0, sizeof(path->blockIdx[sinkNo]));
+	/*for the last sink, do not clear the remaining blocks*/
+	i = 0;
+	if (path->sinkCount == 1)
+		i = startOffset;
+	memset(&path->block[sinkNo][i], 0, sizeof(path->block[0]) -
+		startOffset*sizeof(path->block[0][0]));
+	memset(&path->blockIdx[sinkNo][i], 0, sizeof(path->blockIdx[0]) -
+		startOffset*sizeof(path->blockIdx[0][0]));
 }
 
 
@@ -2064,9 +2094,11 @@ static void csl_caph_config_sw
 			src_path, j);
 	}
 
-	if (!swCfg->cloned)
+	if (!swCfg->cloned) {
 		swCfg->status = csl_caph_switch_config_channel(*swCfg);
-	else if (is_broadcast) {
+		if (swCfg->status)
+			csl_caph_hwctrl_PrintAllPaths();
+	} else if (is_broadcast) {
 		csl_caph_switch_add_dst(swCfg->chnl, swCfg->FIFO_dstAddr);
 		aTrace(LOG_AUDIO_CSL, "broadcast sw %d 0x%x --> 0x%x\n",
 			swCfg->chnl, (u32)swCfg->FIFO_srcAddr,
@@ -2551,6 +2583,12 @@ static void csl_ssp_ControlHWClock(Boolean enable,
  *			KHUB_AUDIOH_2P4M_CLK
  *			KHUB_AUDIOH_APB_CLK
  *			KHUB_AUDIOH_156M_CLK
+ * Enable sequence:
+ *  caph_srcmixer_clk, audioh_2p4m_clk, audioh_26m_clk,  audioh_156m_clk.
+ * Disable Sequence:
+ *  audioh_26m_clk, audioh_2p4m_clk, audioh_156m_clk, caph_srcmixer_clk.
+ * Turn off audio clock first, then wait at least 12us (one 88.2khz clock) to
+ * ensure sample processing has been completed before disabling srcmixer clock.
  */
 void csl_caph_ControlHWClock(Boolean enable)
 {
@@ -2606,12 +2644,18 @@ void csl_caph_ControlHWClock(Boolean enable)
 	} else if (enable == FALSE && sClkCurEnabled == TRUE) {
 		UInt32 count = 0;
 		sClkCurEnabled = FALSE;
+
 		/*disable only CAPH clocks*/
-		for (count = 0; count <  MAX_CAPH_CLOCK_NUM; count++) {
-			/* this api will check the null pointer */
-			clk_disable(clkIDCAPH[count]);
+		/* this api will check the null pointer */
+		clk_disable(clkIDCAPH[CLK_APB]);
+		clk_disable(clkIDCAPH[CLK_2P4M]);
+		clk_disable(clkIDCAPH[CLK_156M]);
+		usleep_range(12, 40);
+		clk_disable(clkIDCAPH[CLK_SRCMIXER]);
+
+		for (count = 0; count <  MAX_CAPH_CLOCK_NUM; count++)
 			clkIDCAPH[count] = NULL;
-		}
+
 		enable156MClk = FALSE;
 		enable2P4MClk = FALSE;
 	}
@@ -3172,7 +3216,8 @@ static void csl_caph_hwctrl_ACIControl()
 {
 	/*For CNEON, Accessory driver controls the ACI*/
 #if !defined(CNEON_COMMON) && !defined(CNEON_LMP)
-	chal_aci_powerup_auxmic();
+	/*Moved to Headset driver*/
+	/*chal_aci_powerup_auxmic();*/
 #endif
 }
 
@@ -3761,7 +3806,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
 	if (!(config.source == CSL_CAPH_DEV_MEMORY ||
 				config.sink == CSL_CAPH_DEV_MEMORY)) {
-		/*only start the path if it is not streaming with Memeory.*/
+		/*only start the path if it is not streaming with Memory.*/
 		csl_caph_hwctrl_StartPath(config.pathID);
 	}
 #ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
@@ -3879,15 +3924,22 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID,
 
 	/*use an available sink storage for this new sink.*/
 	for (i = 0; i < MAX_SINK_NUM; i++) {
+		if (path->sink[i] == config.sink) {
+			aError("%s::pathID %d, sink %d already on\n",
+			__func__, pathID, config.sink);
+			return RESULT_OK;
+		}
 		if (path->sink[i] == CSL_CAPH_DEV_NONE) {
 			sinkNo = i;
 			path->sink[sinkNo] = config.sink;
 			break;
 		}
 	}
+
+	offset = path->block_split_offset;
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_AddPath::"
-				"pathID %d, sinkCount %d, sinkNo %d.\r\n",
-				pathID, path->sinkCount, sinkNo);
+		"pathID %d, sinkCount %d, sinkNo %d, offset %d\n",
+		pathID, path->sinkCount, sinkNo, offset);
 
 	/*use the current pathID*/
 	config.pathID = path->pathID;
@@ -3895,9 +3947,6 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID,
 	path->sinkCount++;
 
 	csl_caph_hwctrl_SetupPath(config, sinkNo);
-
-	if (path->sinkCount > 1)
-		offset = path->block_split_offset;
 
 	if (path->sink[sinkNo] != CSL_CAPH_DEV_NONE) {
 		csl_caph_config_blocks(path->pathID, sinkNo, offset);
@@ -3940,8 +3989,20 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID,
 	}
 
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_RemovePath::"
-				"pathID %d, sinkCount %d, sinkNo %d.\r\n",
-				pathID, path->sinkCount, sinkNo);
+		"pathID %d, sinkCount %d, sinkNo %d sink %d:%d\n",
+		pathID, path->sinkCount, sinkNo, config.sink,
+		path->sink[sinkNo]);
+
+	if (path->sink[sinkNo] != config.sink) {
+		aError("%s::pathID %d, sink %d is not found\n",
+		__func__, pathID, config.sink);
+		return RESULT_OK;
+	}
+
+	if (path->sinkCount == 1) {
+		aError("%s::pathID %d, last sink %d is removed\n",
+		__func__, pathID, path->sink[sinkNo]);
+	}
 
 	csl_caph_hwctrl_remove_blocks(pathID, sinkNo, path->block_split_offset);
 
@@ -5553,3 +5614,23 @@ static void csl_caph_ControlForceHWSRC26Clock(bool enable)
 	}
 }
 #endif
+
+/****************************************************************************
+*
+*  Description: dump all paths
+*
+*****************************************************************************/
+void csl_caph_hwctrl_PrintAllPaths(void)
+{
+	int i;
+	CSL_CAPH_HWConfig_Table_t *path;
+	int dbg_level = gAudioDebugLevel;
+
+	gAudioDebugLevel |= LOG_AUDIO_CSL;
+	for (i = 0; i < MAX_AUDIO_PATH; i++) {
+		path = &HWConfig_Table[i];
+		if (path->pathID)
+			csl_caph_hwctrl_PrintPath(path);
+	}
+	gAudioDebugLevel = dbg_level;
+}

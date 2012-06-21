@@ -792,7 +792,6 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	int i = 0;
 	gintsts_data_t gintsts;
 	pcgcctl_data_t power = {.d32 = 0 };
-	int ret = 0;
 
 #ifdef CONFIG_USB_OTG
 	DWC_TIMER_CANCEL(core_if->bidl_adisconn_timer);
@@ -933,12 +932,9 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	dwc_write_reg32(&core_if->core_global_regs->gintsts, gintsts.d32);
 
 	if (get_device_speed(GET_CORE_IF(pcd)) != 0) {
-
 		DWC_SPINUNLOCK(pcd->lock);
 		pcd->fops->disconnect(pcd);
 		DWC_SPINLOCK(pcd->lock);
-		if (ret < 0)
-				ep0_do_stall(pcd, ret);
 	}
 	return 1;
 }

@@ -420,16 +420,23 @@ static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] =
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
 
-static unsigned int rheass_button_adc_values [3][2] =
-{
+static unsigned int rheass_button_adc_values[3][2] = {
 	/* SEND/END Min, Max*/
-	{0,	104},
+	{0,	10},
 	/* Volume Up  Min, Max*/
-	{139,	270},
+	{11, 30},
 	/* Volue Down Min, Max*/
-	{330,	680},
+	{30, 680},
 };
 
+static unsigned int rheass_button_adc_values_2_1[3][2] = {
+	/* SEND/END Min, Max*/
+	{0,     104},
+	/* Volume Up  Min, Max*/
+	{139,   270},
+	/* Volue Down Min, Max*/
+	{330,   680},
+};
 static struct kona_headset_pd headset_data = {
 	/* GPIO state read is 0 on HS insert and 1 for
 	 * HS remove
@@ -461,7 +468,12 @@ static struct kona_headset_pd headset_data = {
 	/*
 	 * Pass the board specific button detection range
 	 */
-	.button_adc_values = rheass_button_adc_values,
+	.button_adc_values_low = rheass_button_adc_values,
+
+	/*
+	 * Pass the board specific button detection range
+	 */
+	.button_adc_values_high = rheass_button_adc_values_2_1,
 
 };
 
@@ -1000,14 +1012,14 @@ static int rhea_camera_power(struct device *dev, int on)
 	}
 
 	clock = clk_get(NULL, SENSOR_0_CLK);
-	if (!clock) {
+	if (IS_ERR_OR_NULL(clock)) {
 		printk(KERN_ERR "%s: unable to get clock %s\n", __func__,
 		       SENSOR_0_CLK);
 		return -1;
 	}
 
 	axi_clk = clk_get(NULL, "csi0_axi_clk");
-	if (!axi_clk) {
+	if (IS_ERR_OR_NULL(axi_clk)) {
 		printk(KERN_ERR "%s:unable to get clock csi0_axi_clk\n",
 		       __func__);
 		return -1;
@@ -1146,60 +1158,58 @@ static int rhea_camera_power_front(struct device *dev, int on)
 		if (gpio_request_one
 			(SENSOR_1_GPIO_RST, GPIOF_DIR_OUT | GPIOF_INIT_LOW,
 				"Cam1Rst")) {
-			printk(KERN_ERR "SENSOR_1_GPIO_RST failed \n");
+			printk(KERN_ERR "SENSOR_1_GPIO_RST failed\n");
 			return -1;
 		}
 		if (gpio_request_one(SENSOR_1_GPIO_PWRDN, GPIOF_DIR_OUT |
 			GPIOF_INIT_LOW, "Cam1Pwr")) {
-			printk(KERN_ERR "SENSOR_1_GPIO_PWDN failed \n");
+			printk(KERN_ERR "SENSOR_1_GPIO_PWDN failed\n");
 			return -1;
 		}
 	}
 	/* Power on sequence start */
 	clock = clk_get(NULL, SENSOR_1_CLK);
-	if (!clock) {
-		printk(KERN_ERR "SENSOR_1_CLK get failed \n");
+	if (IS_ERR_OR_NULL(clock)) {
+		printk(KERN_ERR "SENSOR_1_CLK get failed\n");
 		return -1;
 	} else {
-		printk("Got clock %s \n", SENSOR_1_CLK);
+		printk(KERN_INFO "Got clock %s\n", SENSOR_1_CLK);
 	}
 	axi_clk = clk_get(NULL, "csi0_axi_clk");
-	if (!axi_clk) {
-		printk(KERN_ERR "unable to get clock csi0_axi_clk \n");
-	return -1;
+	if (IS_ERR_OR_NULL(axi_clk)) {
+		printk(KERN_ERR "unable to get clock csi0_axi_clk\n");
+		return -1;
 	}
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(KERN_ERR " Unicam dfs update failed \n");
+			printk(KERN_ERR "Unicam dfs update failed\n");
 			return -1;
 		}
 		value = clk_enable(axi_clk);
 		if (value) {
-			printk(KERN_ERR " AXI clock enable failed \n");
-		return -1;
+			printk(KERN_ERR "AXI clock enable failed\n");
+			return -1;
 		}
 		clk_disable(clock);
 		/* Actual power up sequence starts here */
-		msleep(1);
+		usleep_range(1000, 2000);
 		gpio_set_value(SENSOR_1_GPIO_RST, 0);
-		printk(" PWDN set to HIGH ********** \n");
+		printk(KERN_INFO "PWDN set to HIGH\n");
 		value = 0;
 		value = clk_set_rate(clock, SENSOR_1_CLK_FREQ);
-		if (value) {
-			printk("front cam clock rate fail %d\n", value);
-		}
+		if (value)
+			printk(KERN_INFO "front cam rate fail %d\n", value);
 		value = clk_enable(clock);
-		if (value) {
-			printk(KERN_ERR"enabling clock for front cam fail \n");
-		} else {
-			printk(KERN_ERR"Enabled clock for front camera \n");
-		}
-		msleep(5);
+		if (value)
+			printk(KERN_ERR "enabling clock for front cam fail\n");
+		else
+			printk(KERN_INFO "Enabled clock for front camera\n");
+		usleep_range(5000, 10000);
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
 		/* clk_set_rate returns the clock in the
 		same state it was in before calling */
 		/* So enable the clock now */
-		msleep(5);
+		usleep_range(5000, 10000);
 		gpio_set_value(SENSOR_1_GPIO_RST, 1);
 	} else {
 		gpio_set_value(SENSOR_1_GPIO_RST, 1);
@@ -1208,7 +1218,7 @@ static int rhea_camera_power_front(struct device *dev, int on)
 		clk_disable(axi_clk);
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 			PI_MGR_DFS_MIN_VALUE)) {
-			printk(KERN_ERR "Unicam dfs update failed \n");
+			printk(KERN_ERR "Unicam dfs update failed\n");
 		}
 	}
 	return 0;
@@ -1346,7 +1356,7 @@ static struct platform_device rhea_stone_unicam_device = {
 static int __init rhea_stone_camera_init(void)
 {
 	dig_ch0_clk = clk_get(NULL, "dig_ch0_clk");
-	if (IS_ERR(dig_ch0_clk)) {
+	if (IS_ERR_OR_NULL(dig_ch0_clk)) {
 		printk(KERN_ERR "unable to get dig_ch0_clk\n");
 		return -EINVAL;
 	}
@@ -1378,10 +1388,10 @@ late_initcall(rhea_stone_camera_init);
 
 #ifdef CONFIG_WD_TAPPER
 static struct wd_tapper_platform_data wd_tapper_data = {
-	/* Set the count to the time equivalent to the time-out in milliseconds
+	/* Set the count to the time equivalent to the time-out in seconds
 	 * required to pet the PMU watchdog to overcome the problem of reset in
 	 * suspend*/
-	.count = 120000,
+	.count = 120,
 	.ch_num = 1,
 	.name = "aon-timer",
 };

@@ -26,10 +26,10 @@ void rpc_wake_lock_remove(UInt32 elem);
 void rpc_wake_lock_reset(void);
 
 #else
-static inline void rpc_wake_lock_init(void) {}
-static inline rpc_wake_lock_add(UInt32 elem) {}
-static inline rpc_wake_lock_remove(UInt32 elem) {}
-static inline rpc_wake_lock_reset(void) {}
+static inline void rpc_wake_lock_init(void) {};
+static inline void rpc_wake_lock_add(UInt32 elem) {};
+static inline void rpc_wake_lock_remove(UInt32 elem) {};
+static inline void rpc_wake_lock_reset(void) {};
 
 #endif
 

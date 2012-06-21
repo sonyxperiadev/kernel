@@ -62,7 +62,7 @@ extern int gAudioDebugLevel;
 
 #define aWarn(format, args...) \
 	do { \
-		pr_warning(pr_fmt(format), ##args);\
+		pr_warning(pr_fmt("AUD_WRN:"format), ##args);\
 	} while (0)
 
 #define aTrace(trace_module, format, args...) \

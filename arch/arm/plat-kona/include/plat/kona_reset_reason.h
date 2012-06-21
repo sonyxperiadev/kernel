@@ -15,10 +15,15 @@
 
 #define REG_EMU_AREA	0x3404BF90
 #define AP_ONLY_BOOT	0x4
+#define CHARGING_STATE	0x3
 #define BOOTLOADER_BOOT	0x5
+#define RECOVERY_BOOT   0x6
 
 void do_set_bootloader_boot(void);
+void do_set_recovery_boot(void);
 void do_set_ap_only_boot(void);
 void do_clear_ap_only_boot(void);
 unsigned int is_ap_only_boot(void);
+extern unsigned int hard_reset_reason;
+unsigned int is_charging_state(void);
 #endif

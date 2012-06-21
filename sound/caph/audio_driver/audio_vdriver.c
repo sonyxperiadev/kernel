@@ -45,6 +45,7 @@ Copyright 2009 - 2012  Broadcom Corporation
 #include "resultcode.h"
 #include "csl_caph_hwctrl.h"
 #include "audio_vdriver.h"
+#include "audio_rpc.h"
 #include <mach/comms/platform_mconfig.h>
 #include "io.h"
 #include "csl_dsp_cneon_api.h"
@@ -122,7 +123,7 @@ struct _Audio_Driver_t {
 static Audio_Driver_t sAudDrv = { 0 };
 
 static audio_codecId_handler_t codecId_handler;
-
+static audio_handleCPReset_handler_t cpReset_handler;
 static Int32 curCallMode = CALL_MODE_NONE;
 
 struct completion audioEnableDone;
@@ -330,7 +331,9 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 		Send VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
 	////////////////////////////////////////////////////////////////-*/
 
-	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Telephony_Init\n");
+	aTrace(LOG_AUDIO_DRIVER,
+		"AUDDRV_Telephony_Init app %d, mode %d, bNeedDualMic %d\n",
+		app, mode, bNeedDualMic);
 	csl_caph_ControlHWClock(TRUE); /*enable clock before any DSP command*/
 
 	currVoiceMic = mic;
@@ -532,6 +535,22 @@ void AUDDRV_RegisterRateChangeCallback(audio_codecId_handler_t codecId_cb)
 
 /*********************************************************************
 //
+//       Registers callback for handling cp reset
+//
+//      @param     callback function
+//      @return         void
+//       @note
+**********************************************************************/
+
+void AUDDRV_RegisterHandleCPResetCB(
+	audio_handleCPReset_handler_t cpReset_cb)
+{
+	aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_RegisterHandleCPResetCB");
+	cpReset_handler = cpReset_cb;
+}
+
+/*********************************************************************
+//
 // Function Name: AUDDRV_EC
 //
 // Description:   DSP Echo cancellation ON/OFF
@@ -566,6 +585,20 @@ void AUDDRV_Telephone_RequestRateChange(int codecID)
 {
 	if (codecId_handler != NULL)
 		codecId_handler(codecID);
+}
+
+/*********************************************************************
+//
+//       Post cp reset message
+//
+//      @param          none
+//      @return         void
+//       @note
+**********************************************************************/
+void AUDDRV_HandleCPReset(Boolean cp_reset_start)
+{
+	if (cpReset_handler != NULL)
+		cpReset_handler(cp_reset_start);
 }
 
 /*=============================================================================
@@ -629,10 +662,8 @@ void AUDDRV_Telephony_Deinit(void)
 		AUDDRV_Telephony_DeinitHW();
 	}
 
-	/*if voice recording, voice playback and voice call do not use PCM
-	interface, turn PCM off*/
-	if (AUDIO_MODE_BLUETOOTH == AUDCTRL_GetAudioMode())
-		AUDDRV_SetPCMOnOff(0);
+	/*always turn PCM off*/
+	AUDDRV_SetPCMOnOff(0);
 
 	if (!inCallRateChange) {
 		currVoiceMic = AUDIO_SOURCE_UNDEFINED;
@@ -702,7 +733,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_SPKR_EN));
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  DSP_AADMAC_SPKR_EN, 0, 0, 0, 0);
+				  1, 0, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0,
 				  0, 0);
 #else
@@ -718,7 +749,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_SPKR_EN));
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  DSP_AADMAC_SPKR_EN, 0, 0, 0, 0);
+				  1, 0, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0,
 				  0, 0);
 #else
@@ -803,7 +834,7 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_PRI_MIC_EN));
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0);
+				  1, 0, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 0, 0,
 				  0, 0);
 	/* AUDDRV_DSPCMD_AUDIO_CONNECT should be called after
@@ -821,7 +852,7 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 		csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_PRI_MIC_EN));
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  DSP_AADMAC_PRI_MIC_EN, 1, 0, 0, 0);
+				  1, 1, 0, 0, 0);
 		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 1, 0,
 				  0, 0);
 #else
@@ -874,6 +905,62 @@ void AUDDRV_DisableDSPInput(int stop)
 	if (currVoiceMic == AUDIO_SOURCE_BTM)
 		AUDDRV_SetPCMOnOff(0);
 	currVoiceMic = AUDIO_SOURCE_UNDEFINED;
+}
+
+
+/*=============================================================================
+//
+// Function Name: AUDDRV_SetAudioMode_voicerecord
+//
+// Description:   set audio mode for voice call.
+//
+//=============================================================================
+*/
+void AUDDRV_SetAudioMode_voicerecord(AudioMode_t audio_mode,
+					AudioApp_t audio_app,
+					CSL_CAPH_PathID ulPathID,
+					CSL_CAPH_PathID ul2PathID)
+{
+	aTrace(LOG_AUDIO_DRIVER,
+			"%s mode==%d, app=%d\n\r", __func__,
+			audio_mode, audio_app);
+
+	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+			      (UInt32) audio_mode, (UInt32) audio_app, 0, 0, 0);
+	audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
+			      (UInt32) (audio_mode +
+					audio_app * AUDIO_MODE_NUMBER),
+			      (UInt32) audio_app, 0, 0, 0);
+
+/*load speaker EQ filter and Mic EQ filter from sysparm to DSP*/
+/* It means mic1, mic2, speaker */
+	if (userEQOn == FALSE) {
+		/* Use the old code, before CP function
+		   audio_control_BuildDSPUlCompfilterCoef() is updated to
+		   handle the mode properly.*/
+		if (audio_app == AUDIO_APP_VOICE_CALL_WB)
+			audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + AUDIO_MODE_NUMBER, 7, 0, 0, 0);
+		else
+			audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode % AUDIO_MODE_NUMBER, 7, 0, 0, 0);
+		/*
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app*AUDIO_MODE_NUMBER,
+				7, 0, 0, 0);
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app * AUDIO_MODE_NUMBER,
+				1, 0, 0, 0);
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app * AUDIO_MODE_NUMBER,
+				2, 0, 0, 0);
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app * AUDIO_MODE_NUMBER,
+				4, 0, 0, 0);
+		*/
+	}
+
+	AUDDRV_SetAudioMode_Mic(audio_mode, audio_app, ulPathID, ul2PathID);
 }
 
 
@@ -1656,8 +1743,23 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 
 	telephonyPathID.dlPathID = csl_caph_hwctrl_EnablePath(config);
 
+
 	/* UL */
-	/* Secondary mic is enabled first*/
+	pathID = csl_caph_FindPathID(CSL_CAPH_DEV_DSP,
+		AUDDRV_GetDRVDeviceFromMic(mic), 0);
+	if (pathID) {
+		/* If voice recording is ongoing, no need to set up UL path.
+		 * Unable to handle this case: record and call use different
+		 * mics.
+		 */
+		aTrace(LOG_AUDIO_DRIVER, "%s UL path %d exists\n",
+			__func__, pathID);
+		AUDDRV_DisableDSPInput(0);
+		/*do not set ulPathID before AUDDRV_DisableDSPInput*/
+		telephonyPathID.ulPathID = pathID;
+	}
+
+	/* Secondary mic */
 	/* If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used*/
 	if (bNeedDualMic) {
 		config.streamID = CSL_CAPH_STREAM_NONE;
@@ -1687,18 +1789,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	if (voiceRecOn && voiceInMic != mic)
 		aError("%s voice record (%d) and call (%d) different mics\n",
 			__func__, voiceInMic, mic);
-	pathID = csl_caph_FindPathID(config.sink, config.source, 0);
-	if (pathID) {
-		/* If voice recording is ongoing, no need to set up UL path.
-		 * Unable to handle this case: record and call use different
-		 * mics.
-		 */
-		aTrace(LOG_AUDIO_DRIVER, "%s UL path %d exists\n",
-			__func__, pathID);
-		AUDDRV_DisableDSPInput(0);
-		/*do not set ulPathID before AUDDRV_DisableDSPInput*/
-		telephonyPathID.ulPathID = pathID;
-	} else
+	if (!pathID)
 		telephonyPathID.ulPathID = csl_caph_hwctrl_EnablePath(config);
 
 	return;
@@ -2011,4 +2102,23 @@ void AUDDRV_ConnectDL(void)
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE,
 			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
 #endif
+}
+
+void AUDDRV_CPResetCleanup(void)
+{
+	currVoiceMic = AUDIO_SOURCE_UNDEFINED;
+	currVoiceSpkr = AUDIO_SINK_UNDEFINED;
+	voiceRecOn = FALSE;
+	voicePlayOutpathEnabled = FALSE;
+	dspECEnable = TRUE;
+	dspNSEnable = TRUE;
+	inCallRateChange = FALSE;
+	sink = CSL_CAPH_DEV_NONE;
+	telephonyPathID.ulPathID = 0;
+	telephonyPathID.ul2PathID = 0;
+	telephonyPathID.dlPathID = 0;
+	voiceInMic = AUDIO_SOURCE_UNDEFINED;
+	voiceInSr = 0;
+	curCallMode = CALL_MODE_NONE;
+	init_completion(&audioEnableDone);
 }

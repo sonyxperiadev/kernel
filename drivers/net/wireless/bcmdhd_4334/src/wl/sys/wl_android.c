@@ -134,6 +134,11 @@ typedef struct cmd_tlv {
 #define CMD_AMPDU_MPDU "AMPDU_MPDU"
 #endif /* CUSTOMER_HW_SAMSUNG */
 
+#ifdef VSDB
+#define CMD_CHANGE_RL 	"CHANGE_RL"
+#define CMD_RESTORE_RL  "RESTORE_RL"
+#endif /* VSDB */
+
 typedef struct android_wifi_priv_cmd {
 	char *buf;
 	int used_len;
@@ -781,10 +786,10 @@ wl_android_set_auto_channel(struct net_device *dev, const char* string_num,
 	}
 
 done:
-	snprintf(command, total_len, "%d", channel);
+	snprintf(command, 4, "%d", channel);
 	DHD_INFO(("%s: command result is %s\n", __FUNCTION__, command));
 
-	return 1;
+	return 4;
 }
 
 static int
@@ -898,6 +903,31 @@ wl_android_okc_enable(struct net_device *dev, char *command, int total_len)
 }
 
 #endif /* OKC_ SUPPORT */
+#ifdef VSDB
+static int
+wl_android_ch_res_rl(struct net_device *dev, bool change)
+{
+	int error = 0;
+	s32 srl = 7;
+	s32 lrl = 4;
+	printk("%s enter\n", __FUNCTION__);
+	if (change) {
+		srl = 4;
+		lrl = 2;
+	}	
+	error = wldev_ioctl(dev, WLC_SET_SRL, &srl,
+			sizeof(s32), true);
+	if (error) {
+		DHD_ERROR(("Failed to set SRL, error = %d\n", error));
+	}
+	error = wldev_ioctl(dev, WLC_SET_LRL, &lrl,
+			sizeof(s32), true);
+	if (error) {
+		DHD_ERROR(("Failed to set LRL, error = %d\n", error));
+	}
+	return error;
+}
+#endif
 
 #ifdef CUSTOMER_HW_SAMSUNG
 /* CMD_AMPDU_MPDU */
@@ -1016,12 +1046,14 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		/* TBD: BTCOEXSCAN-STOP */
 	}
 	else if (strnicmp(command, CMD_BTCOEXMODE, strlen(CMD_BTCOEXMODE)) == 0) {
+#if !defined(CUSTOMER_HW_SAMSUNG)
 		uint mode = *(command + strlen(CMD_BTCOEXMODE) + 1) - '0';
 
 		if (mode == 1)
 			net_os_set_packet_filter(net, 0); /* DHCP starts */
 		else
 			net_os_set_packet_filter(net, 1); /* DHCP ends */
+#endif
 #ifdef WL_CFG80211
 		bytes_written = wl_cfg80211_set_btcoex_dhcp(net, command);
 #endif
@@ -1118,7 +1150,7 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	else if (strnicmp(command, CMD_SET_HAPD_AUTO_CHANNEL,
 				strlen(CMD_SET_HAPD_AUTO_CHANNEL)) == 0) {
 		int skip = strlen(CMD_SET_HAPD_AUTO_CHANNEL) + 3;
-		wl_android_set_auto_channel(net, (const char*)command+skip, command,
+		bytes_written = wl_android_set_auto_channel(net, (const char*)command+skip, command,
 									priv_cmd.total_len);
 	}
 	else if (strnicmp(command, CMD_SET_HAPD_MAX_NUM_STA,
@@ -1165,6 +1197,12 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		bytes_written = wl_android_set_ampdu_mpdu(net, (const char*)command+skip);
 	}
 #endif /* CUSTOMER_HW_SAMSUNG */
+#ifdef VSDB
+	else if (strnicmp(command, CMD_CHANGE_RL, strlen(CMD_CHANGE_RL)) == 0)
+		bytes_written = wl_android_ch_res_rl(net, true);
+	else if (strnicmp(command, CMD_RESTORE_RL, strlen(CMD_RESTORE_RL)) == 0)
+		bytes_written = wl_android_ch_res_rl(net, false);
+#endif /* VSDB */	
 	else {
 		if ((strnicmp(command, CMD_START, strlen(CMD_START)) != 0) &&
 			(strnicmp(command, CMD_SETFWPATH, strlen(CMD_SETFWPATH)) != 0))
@@ -1393,10 +1431,6 @@ static int wifi_suspend(struct platform_device *pdev, pm_message_t state)
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39)) && defined(OOB_INTR_ONLY) && 1
 	bcmsdh_oob_intr_set(0);
 #endif /* (OOB_INTR_ONLY) */
-
-	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
-		return -EBUSY;
-
 	return 0;
 }
 

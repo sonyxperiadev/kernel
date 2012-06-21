@@ -133,14 +133,20 @@ static char *pwr_mgr_event2str(int event)
 #define PWR_MGR_I2C_CMD_OFF_TO_CMD_DATA_MASK(x) ((((x) % 2) == 0) ? \
 												I2C_CMD0_DATA_MASK : I2C_CMD1_DATA_MASK)
 
-#define PWR_MGR_INTR_MASK(x)     (1 << (x))
-#define PWR_MGR_SEQ_RETRIES		(10)
+#define PWR_MGR_INTR_MASK(x)			(1 << (x))
+#define PWR_MGR_SEQ_RETRIES			(10)
+#define PWR_MGR_SEQ_INTR_POLL_TIMEOUT_US	(200)
 
 /* I2C SW seq operations*/
 enum {
 	I2C_SEQ_READ,
 	I2C_SEQ_WRITE,
 	I2C_SEQ_READ_FIFO,
+};
+
+enum {
+	PWR_MGR_I2C_MODE_IRQ,
+	PWR_MGR_I2C_MODE_POLL,
 };
 
 #endif
@@ -176,6 +182,7 @@ struct pwr_mgr {
 #ifdef CONFIG_RHEA_WA_HWJIRA_2747
 	int pc_status;
 #endif
+	int i2c_mode;
 	struct completion i2c_seq_done;
 	struct work_struct pwrmgr_work;
 #endif
@@ -581,7 +588,8 @@ int pwr_mgr_pi_set_wakeup_override(int pi_id, bool clear)
 		reg_val &= ~pi->pi_info.wakeup_overide_mask;
 	else
 		reg_val |= pi->pi_info.wakeup_overide_mask;
-	pr_info("%s:writing to wakeup override for pi: %d\n", __func__, pi_id);
+	pr_info("%s: %s wakeup override for pi: %d\n", __func__,
+				clear ? "CLEAR" : "SET", pi_id);
 	writel(reg_val, PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return 0;
@@ -875,8 +883,9 @@ int pwr_mgr_pm_i2c_sem_lock()
 	BUG_ON(pwr_mgr.sem_locked);
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
-		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
-		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+		cpu_freq = get_cpu_freq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+		if (cpu_freq != 0)
+			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
 #endif
 		if (!pwr_mgr.sem_qos_client.valid)
 			ret =
@@ -924,8 +933,10 @@ int pwr_mgr_pm_i2c_sem_unlock()
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
-		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
-		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+		cpu_freq =
+			get_cpu_freq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
+		if (cpu_freq != 0)
+			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
 #endif
 		pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
 					  PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY);
@@ -956,8 +967,9 @@ int pwr_mgr_pm_i2c_sem_lock()
 
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
-		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
-		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+		cpu_freq = get_cpu_freq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
+		if (cpu_freq != 0)
+			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
 #endif
 		if (!pwr_mgr.sem_qos_client.valid)
 			ret =
@@ -1028,8 +1040,10 @@ int pwr_mgr_pm_i2c_sem_unlock()
 
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
-		cpu_freq = get_cpufreq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
-		set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+		cpu_freq =
+			get_cpu_freq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
+		if (cpu_freq != 0)
+			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
 #endif
 		pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
 					  PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY);
@@ -1366,6 +1380,30 @@ int pwr_mgr_ignore_dap_powerup_request(bool ignore)
 
 EXPORT_SYMBOL(pwr_mgr_ignore_dap_powerup_request);
 
+int pwr_mgr_ignore_mdm_dap_powerup_req(bool ignore)
+{
+	u32 val;
+	unsigned long flgs;
+
+	pwr_dbg(PWR_LOG_CONFIG, "%s :ignore = %d\n", __func__, ignore);
+
+	spin_lock_irqsave(&pwr_mgr_lock, flgs);
+	val = readl(KONA_BMDM_PWRMGR_VA +
+		BMDM_PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+	if (ignore)
+		val |=
+		BMDM_PWRMGR_PI_DEFAULT_POWER_STATE_IGNORE_DAP_POWERUPREQ_MASK;
+	else
+		val &=
+		~BMDM_PWRMGR_PI_DEFAULT_POWER_STATE_IGNORE_DAP_POWERUPREQ_MASK;
+	writel(val, KONA_BMDM_PWRMGR_VA +
+		BMDM_PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+
+	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
+	return 0;
+}
+EXPORT_SYMBOL(pwr_mgr_ignore_mdm_dap_powerup_req);
+
 int pwr_mgr_register_event_handler(u32 event_id,
 				   void (*pwr_mgr_event_cb) (u32 event_id,
 							     void *param),
@@ -1580,6 +1618,29 @@ static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 	       PWR_MGR_REG_ADDR(PWR_MGR_I2C_CMD_OFF_TO_REG_OFF(cmd_offset)));
 
 }
+int pwr_mgr_set_i2c_mode(int poll)
+{
+	unsigned long flag;
+	spin_lock_irqsave(&pwr_mgr_lock, flag);
+	if (poll)
+		pwr_mgr.i2c_mode = PWR_MGR_I2C_MODE_POLL;
+	else
+		pwr_mgr.i2c_mode = PWR_MGR_I2C_MODE_IRQ;
+	spin_unlock_irqrestore(&pwr_mgr_lock, flag);
+	return 0;
+}
+EXPORT_SYMBOL(pwr_mgr_set_i2c_mode);
+
+static int pwr_mgr_get_i2c_mode(void)
+{
+	unsigned long flag;
+	int mode;
+	spin_lock_irqsave(&pwr_mgr_lock, flag);
+	mode = pwr_mgr.i2c_mode;
+	spin_unlock_irqrestore(&pwr_mgr_lock, flag);
+	return mode;
+}
+
 #ifdef CONFIG_RHEA_WA_HWJIRA_2747
 static void pwr_mgr_seq_set_pc_pin_cmd(u32 offset, int pc_pin, int set)
 {
@@ -1623,6 +1684,8 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	u32 sw_start_off = 0;
 	unsigned long flag = 0;
 	unsigned long timeout;
+	unsigned long poll_timeout = PWR_MGR_SEQ_INTR_POLL_TIMEOUT_US;
+	int poll_delay = 30;
 	int retry = PWR_MGR_SEQ_RETRIES;
 	int pc_status;
 	int i;
@@ -1650,7 +1713,8 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	}
 
 	for (i = 0; i < retry; i++) {
-		INIT_COMPLETION(pwr_mgr.i2c_seq_done);
+		if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL)
+			INIT_COMPLETION(pwr_mgr.i2c_seq_done);
 		reg_val = readl(PWR_MGR_REG_ADDR(
 					PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 		reg_val &= ~(PWRMGR_I2C_REQ_TRG_MASK |
@@ -1708,29 +1772,58 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 
 			reg = readl(PWR_MGR_REG_ADDR(PWRMGR_INTR_MASK_OFFSET));
 			reg |= PWR_MGR_INTR_MASK(PWRMGR_INTR_I2C_SW_SEQ);
-			writel(reg, PWR_MGR_REG_ADDR(PWRMGR_INTR_MASK_OFFSET));
 			spin_unlock_irqrestore(&pwr_mgr_lock, flag);
+			if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL)
+				writel(reg, PWR_MGR_REG_ADDR(
+							PWRMGR_INTR_MASK_OFFSET)
+						);
 		} else {
-			pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ, false);
+			if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL)
+				pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ,
+						false);
 			writel(reg_val, PWR_MGR_REG_ADDR(
 						PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 		}
-		timeout = wait_for_completion_timeout(&pwr_mgr.i2c_seq_done,
-				msecs_to_jiffies(
-					pwr_mgr.info->i2c_seq_timeout));
+		if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL) {
+			timeout = wait_for_completion_timeout(
+					&pwr_mgr.i2c_seq_done,
+					msecs_to_jiffies(
+						pwr_mgr.info->i2c_seq_timeout));
 
-		if (!timeout) {
-			pwr_dbg(PWR_LOG_SEQ, "%s seq timedout !!\n", __func__);
-			continue;
-		} else {
-			if (action != I2C_SEQ_READ_FIFO) {
-				pc_status = pm_get_pc_value(
-						PWRMGR_SW_SEQ_PC_PIN);
-				if ((pwr_mgr.pc_status && !pc_status) ||
-					(!pwr_mgr.pc_status && pc_status))
+			if (!timeout) {
+				pwr_dbg(PWR_LOG_SEQ, "%s seq timedout !!\n",
+						__func__);
+				continue;
+			} else {
+				if (action != I2C_SEQ_READ_FIFO) {
+					pc_status = pm_get_pc_value(
+							PWRMGR_SW_SEQ_PC_PIN);
+					if ((pwr_mgr.pc_status && !pc_status) ||
+							(!pwr_mgr.pc_status &&
+							 pc_status))
+						break;
+				} else
 					break;
-			} else
-				break;
+			}
+		} else {
+			while (poll_timeout) {
+				if (!pwr_mgr_get_intr_status(
+							PWRMGR_INTR_I2C_SW_SEQ))
+					continue;
+				pwr_mgr_clr_intr_status(PWRMGR_INTR_I2C_SW_SEQ);
+				if (action != I2C_SEQ_READ_FIFO) {
+					pc_status = pm_get_pc_value(
+							PWRMGR_SW_SEQ_PC_PIN);
+					if ((pwr_mgr.pc_status && !pc_status) ||
+							(!pwr_mgr.pc_status &&
+							 pc_status))
+						goto exit;
+				} else
+					goto exit;
+
+				udelay(poll_delay);
+				poll_timeout -= poll_delay;
+			}
 		}
 		/**
 		 * We are here because actual sequence did not run.
@@ -1745,6 +1838,7 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 		 */
 		usleep_range(60, 120);
 	}
+exit:
 	if (i == retry) {
 		pwr_dbg(PWR_LOG_ERR, "%s: max tries\n", __func__);
 		ret = -EAGAIN;
@@ -2337,6 +2431,23 @@ static int pwrmgr_debugfs_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
+static int pwr_mgr_dbg_set_ignore_dap(void *data, u64 val)
+{
+	if (val == 1) {
+		pwr_mgr_ignore_dap_powerup_request(true);
+		pwr_mgr_ignore_mdm_dap_powerup_req(true);
+	} else if (val == 0) {
+		pwr_mgr_ignore_dap_powerup_request(false);
+		pwr_mgr_ignore_mdm_dap_powerup_req(false);
+	}
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pwr_mgr_dbg_ignore_dap_fops, NULL,
+			pwr_mgr_dbg_set_ignore_dap, "%llu\n");
+
+
 static ssize_t set_pm_mgr_dbg_bus(struct file *file, char const __user *buf,
 					size_t count, loff_t *offset)
 {
@@ -2769,7 +2880,11 @@ static struct file_operations set_pmu_volt_inx_tbl_fops = {
 
 
 struct dentry *dent_pwr_root_dir = NULL;
+#ifdef CONFIG_RHEA_DELAYED_PM_INIT
+int pwr_mgr_debug_init(u32 bmdm_pwr_base)
+#else
 int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
+#endif
 {
 	struct dentry *dent_event_tbl;
 	struct dentry *dent_pi;
@@ -2792,7 +2907,10 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 	    ("pwr_dbg_mask", S_IWUSR | S_IRUSR, dent_pwr_root_dir,
 	    (int *)&pwr_dbg_mask))
 		return -ENOMEM;
-
+	if (!debugfs_create_file
+	    ("ignore_dap_powerup", S_IWUSR, dent_pwr_root_dir, NULL,
+	     &pwr_mgr_dbg_ignore_dap_fops))
+		return -ENOMEM;
 	if (!debugfs_create_u32
 	    ("flags", S_IWUSR | S_IRUSR, dent_pwr_root_dir,
 	     (int *)&pwr_mgr.info->flags))
@@ -2825,8 +2943,10 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 		dent_event =
 		    debugfs_create_dir(PWRMGR_EVENT_ID_TO_STR(event),
 				       dent_event_tbl);
-		if (!dent_event)
+		if (!dent_event) {
+			debugfs_remove(dent_event_tbl);
 			return -ENOMEM;
+		}
 		if (!debugfs_create_file
 		    ("active", S_IWUSR | S_IRUSR, dent_event, (void *)event,
 		     &pwr_mgr_dbg_active_fops))

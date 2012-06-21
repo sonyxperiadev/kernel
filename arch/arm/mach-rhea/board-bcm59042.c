@@ -506,17 +506,18 @@ struct bcmpmu_regulator_init_data bcm59042_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_HV2LDO, &bcm59042_hv2ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV3LDO] = {
-		BCMPMU_REGULATOR_HV3LDO, &bcm59042_hv3ldo_data, 0x11,
-		BCMPMU_REGL_ON_IN_DSM
+		BCMPMU_REGULATOR_HV3LDO, &bcm59042_hv3ldo_data, 0xAA,
+		BCMPMU_REGL_LPM_IN_DSM
 	},
 	[BCMPMU_REGULATOR_HV4LDO] =	{
 		BCMPMU_REGULATOR_HV4LDO, &bcm59042_hv4ldo_data, 0xAA, 0
 	},
 	[BCMPMU_REGULATOR_HV5LDO] = {
-		BCMPMU_REGULATOR_HV5LDO, &bcm59042_hv5ldo_data, 0x22, 0
+		BCMPMU_REGULATOR_HV5LDO, &bcm59042_hv5ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV6LDO] = {
-		BCMPMU_REGULATOR_HV6LDO, &bcm59042_hv6ldo_data, 0x11, 0
+		BCMPMU_REGULATOR_HV6LDO, &bcm59042_hv6ldo_data, 0xAA,
+		BCMPMU_REGL_LPM_IN_DSM
 	},
 	[BCMPMU_REGULATOR_HV7LDO] = {
 		BCMPMU_REGULATOR_HV7LDO, &bcm59042_hv7ldo_data, 0x22, 0
@@ -528,7 +529,8 @@ struct bcmpmu_regulator_init_data bcm59042_regulators[BCMPMU_REGULATOR_MAX] = {
 			BCMPMU_REGULATOR_HV9LDO, &bcm59042_hv9ldo_data, 0x00, 0
 	},
 	[BCMPMU_REGULATOR_HV10LDO] = {
-		BCMPMU_REGULATOR_HV10LDO, &bcm59042_hv10ldo_data, 0xAA, 0
+		BCMPMU_REGULATOR_HV10LDO, &bcm59042_hv10ldo_data, 0xAA,
+		BCMPMU_REGL_LPM_IN_DSM
 	},
 
 /*TODO: We observed that, on Rhearay HW, interrupt from GPIO expander
@@ -724,6 +726,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.pok_restart_dly = -1,
 	.pok_restart_deb = -1,
 	.pok_lock = 1, /*Keep ponkey locked by default*/
+	.ihf_autoseq_dis = 1,
 };
 
 static struct i2c_board_info __initdata pmu_info[] = {

@@ -38,6 +38,7 @@
 #define PMEM_CACHE_FLUSH	_IOW(PMEM_IOCTL_MAGIC, 8, unsigned int)
 #define PMEM_CACHE_INVALIDATE	_IOW(PMEM_IOCTL_MAGIC, 9, unsigned int)
 #define PMEM_CLEANER_WAIT	_IO(PMEM_IOCTL_MAGIC, 10)
+#define PMEM_CACHE_FLUSH_ALL		_IOW(PMEM_IOCTL_MAGIC, 11, unsigned int)
 
 struct android_pmem_platform_data
 {
@@ -61,7 +62,8 @@ int get_pmem_file(int fd, unsigned long *start, unsigned long *vstart,
 int get_pmem_user_addr(struct file *file, unsigned long *start,
 		       unsigned long *end);
 void put_pmem_file(struct file* file);
-void flush_pmem_file(struct file *file, unsigned long start, unsigned long len);
+void flush_pmem_file(struct file *file, unsigned long start,
+		unsigned long len, int flush_all_flag);
 void flush_pmem_process_file(struct file *file, void *virt_base,
 			     unsigned long offset);
 #else
@@ -73,7 +75,7 @@ static inline int get_pmem_user_addr(struct file *file, unsigned long *start,
 				     unsigned long *end) { return -ENOSYS; }
 static inline void put_pmem_file(struct file* file) { return; }
 static inline void flush_pmem_file(struct file *file, unsigned long start,
-				   unsigned long len) { return; }
+			unsigned long len, int flush_all_flag) { return; }
 void flush_pmem_process_file(struct file *file, void *virt_base,
 			     unsigned long offset) { return; }
 #endif

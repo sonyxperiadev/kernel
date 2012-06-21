@@ -140,7 +140,7 @@ CSL_PCM_HANDLE csl_pcm_init(UInt32 baseAddr, UInt32 caphIntcHandle)
 	handle = chal_sspi_init(baseAddr);
 	pDevice = (CSL_PCM_HANDLE_t *) handle;
 	if (handle == NULL) {
-		aTrace(LOG_AUDIO_CSL, "csl_pcm_init failed\r\n");
+		aError("csl_pcm_init failed\r\n");
 		return NULL;
 	}
 
@@ -169,7 +169,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_deinit(CSL_PCM_HANDLE handle)
 	aTrace(LOG_AUDIO_CSL, "+csl_pcm_deinit\r\n");
 
 	if (handle == NULL) {
-		aTrace(LOG_AUDIO_CSL, "csl_pcm_deinit failed\r\n");
+		aError("csl_pcm_deinit failed\r\n");
 		return CSL_PCM_ERR_HANDLE;
 	}
 
@@ -451,7 +451,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	       configRx->loopback_enable);
 
 	if (handle == NULL) {
-		aTrace(LOG_AUDIO_CSL, "csl_pcm_config failed\r\n");
+		aError("csl_pcm_config failed\r\n");
 		return CSL_PCM_ERR_HANDLE;
 	}
 
@@ -529,7 +529,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 
 	/*set sspi at idle state */
 	if (chal_sspi_set_idle_state(pDevice, protocol)) {
-		aTrace(LOG_AUDIO_CSL, "csl_pcm_config failed \r\n");
+		aError("csl_pcm_config failed \r\n");
 		return CSL_PCM_ERROR;
 	}
 

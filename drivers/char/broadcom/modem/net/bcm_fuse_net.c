@@ -318,6 +318,53 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType,
 	return RPC_RESULT_OK;
 }
 
+/* callback for CP silent reset events */
+void bcm_fuse_net_cp_reset_cb(RPC_CPResetEvent_t event,
+			PACKET_InterfaceType_t interface)
+{
+	int i;
+	struct net_device *dev_ptr = NULL;
+
+	BNET_DEBUG(DBG_INFO, "event %s interface %d\n",
+		RPC_CPRESET_START == event ?
+		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
+		interface);
+
+	/* should just need to stop outgoing packet flow here
+	   until we get RPC_CPRESET_COMPLETE
+	*/
+	if (event == RPC_CPRESET_START) {
+		for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
+			if (g_net_dev_tbl[i].entry_stat == EInUse) {
+				dev_ptr = g_net_dev_tbl[i].dev_ptr;
+				netif_stop_queue(dev_ptr);
+				BNET_DEBUG(DBG_INFO,
+					"stopping interface %d\n", i);
+			}
+
+		/* for now, just ack... */
+		RPC_PACKET_AckReadyForCPReset(0, INTERFACE_PACKET);
+	} else if (event == RPC_CPRESET_COMPLETE) {
+		for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
+			if (g_net_dev_tbl[i].entry_stat == EInUse) {
+				dev_ptr = g_net_dev_tbl[i].dev_ptr;
+				if (netif_queue_stopped(dev_ptr)) {
+					netif_wake_queue(dev_ptr);
+					BNET_DEBUG(DBG_INFO,
+					"waking interface %d\n", i);
+				}
+			}
+	} else
+		BNET_DEBUG(DBG_INFO, "unexpected event %d\n", (int)event);
+
+	/* **FIXME** MAG - net interfaces should be brought down as
+	   part of CP reset (for Android, RIL or DUN will do this). Are
+	   there other situations where somebody else will need to bring
+	   down the interface?
+	*/
+	return;
+}
+
 static int bcm_fuse_net_open(struct net_device *dev)
 {
 	int i;
@@ -334,10 +381,11 @@ static int bcm_fuse_net_open(struct net_device *dev)
     */
 	if (0 == IsFirstCall) {
 		g_NetClientId = SYS_GenClientID();
-		ret =
-		    RPC_PACKET_RegisterDataInd(g_NetClientId, INTERFACE_PACKET,
-					       bcm_fuse_net_bd_cb,
-					       bcm_fuse_net_fc_cb);
+		ret = RPC_PACKET_RegisterDataInd(g_NetClientId,
+						INTERFACE_PACKET,
+						bcm_fuse_net_bd_cb,
+						bcm_fuse_net_fc_cb,
+						bcm_fuse_net_cp_reset_cb);
 		if (RPC_RESULT_OK != ret) {
 			BNET_DEBUG(DBG_ERROR,
 				   "%s: first call client ID[%d] FAIL\n",
@@ -351,17 +399,17 @@ static int bcm_fuse_net_open(struct net_device *dev)
 
 	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
 		BNET_DEBUG(DBG_INFO,
-			   "%s: g_net_dev_tbl[%d]=0x%x,dev_ptr 0x%x, dev 0x%x, 0x%x\n",
-			   __FUNCTION__, i, (unsigned int)(&g_net_dev_tbl[i]),
-			   (unsigned int)(g_net_dev_tbl[i].dev_ptr),
-			   (unsigned int)dev, (unsigned int)(&ndrvr_info_ptr));
+			"%s: g_net_dev_tbl[%d]=0x%x,dev_ptr 0x%x, dev 0x%x, 0x%x\n",
+			__FUNCTION__, i, (unsigned int)(&g_net_dev_tbl[i]),
+			(unsigned int)(g_net_dev_tbl[i].dev_ptr),
+			(unsigned int)dev, (unsigned int)(&ndrvr_info_ptr));
 	}
 
 	idx = bcm_fuse_net_find_entry(&ndrvr_info_ptr);
 	if (idx == BCM_NET_MAX_PDP_CNTXS) {
 		BNET_DEBUG(DBG_ERROR,
-			   "%s: No free device interface to assign for pdp_cid[%d]\n",
-			   __FUNCTION__, idx);
+			"%s: No free device interface to assign for pdp_cid[%d]\n",
+			__FUNCTION__, idx);
 		return -EISCONN;
 	}
 

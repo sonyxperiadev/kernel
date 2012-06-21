@@ -272,9 +272,9 @@ CHAL_DMA_VC4LITE_STATUS_t chal_dma_vc4lite_prepare_transfer(CHAL_HANDLE handle,
 	if (pDmaDev->intEnableFlag[channel]) {
 		/* search to the last control block */
 		while (pCtrlBlkList->nextCtrlBlk)
-			pCtrlBlkList =
+			pCtrlBlkList = phys_to_virt(
 			    (ChalDmaVc4liteCtrlBlk_t *) pCtrlBlkList->
-			    nextCtrlBlk;
+			    nextCtrlBlk);
 		pCtrlBlkList->intEnable = CHAL_DMA_VC4LITE_ENABLE;
 	}
 	mb();
@@ -663,7 +663,7 @@ CHAL_DMA_VC4LITE_STATUS_t
 						  1) *
 						 sizeof
 						 (ChalDmaVc4liteCtrlBlk_t));
-		pPrvCtrlBlk->nextCtrlBlk = (cUInt32) (pCurCtrlBlk);
+		pPrvCtrlBlk->nextCtrlBlk = (cUInt32)(virt_to_phys(pCurCtrlBlk));
 	}
 
 	return CHAL_DMA_VC4LITE_STATUS_SUCCESS;

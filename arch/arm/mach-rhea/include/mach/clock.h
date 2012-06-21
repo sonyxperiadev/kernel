@@ -557,7 +557,8 @@ JIRA flag is turned off
 #define CAPH_SRCMIXER_PERI_CLK_FLAGS		(DISABLE_ON_INIT|\
 							HYST_ENABLE|HYST_HIGH)
 #define DAP_SWITCH_PERI_CLK_FLAGS		(RATE_FIXED|HYST_ENABLE| \
-							HYST_HIGH)
+							HYST_HIGH| \
+						DONOT_NOTIFY_STATUS_TO_CCU)
 #define BROM_PERI_CLK_FLAGS 			AUTO_GATE|HYST_ENABLE|HYST_HIGH
 #define MDIOMASTER_PERI_CLK_FLAGS 		HYST_ENABLE|HYST_HIGH
 #define KHUBAON_CCU_CLK_FLAGS 			CCU_TARGET_AC
@@ -709,6 +710,7 @@ int mm_ccu_set_pll_select(u32 clk_id, u32 value);
 int clk_set_pll_pwr_on_idle(int pll_id, int enable);
 int clk_set_crystal_pwr_on_idle(int enable);
 int rhea_clock_init(void);
+int rhea_clock_print_act_clks(void);
 int rhea_chip_reset(void);
 #ifdef CONFIG_DEBUG_FS
 int debug_bus_mux_sel(int mux_sel, int mux_param);

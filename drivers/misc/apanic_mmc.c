@@ -42,6 +42,9 @@
 #include <linux/mmc-poll/mmc_poll.h>
 #include <linux/mmc-poll/mmc_poll_stack.h>
 #include "apanic_mmc.h"
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+#include <video/kona_fb_image_dump.h>
+#endif
 
 #define DRVNAME	 "apanic "
 #define APANIC_BLK_PATH "/dev/block"
@@ -127,10 +130,12 @@ static int apanic_proc_read(char *buffer, char **start, off_t offset,
 		file_length = ctx->curr.console_length;
 		file_offset = ctx->curr.console_offset;
 		break;
+#ifndef CONFIG_CDEBUGGER
 	case 2:
 		file_length = ctx->curr.threads_length;
 		file_offset = ctx->curr.threads_offset;
 		break;
+#endif
 	default:
 		pr_err("bad apanic source (%d)\n", (int) dat);
 		mutex_unlock(&drv_mutex);
@@ -379,8 +384,10 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	struct panic_header *hdr = (struct panic_header *) ctx->bounce;
 	int console_offset = 0;
 	int console_len = 0;
+#ifndef CONFIG_CDEBUGGER
 	int threads_offset = 0;
 	int threads_len = 0;
+#endif
 	int rc;
 	unsigned long blk;
 
@@ -425,6 +432,8 @@ static int apanic(struct notifier_block *this, unsigned long event,
 			console_len);
 		console_len = 0;
 	}
+
+#ifndef CONFIG_CDEBUGGER
 	/*
 	 * Write out all threads
 	 */
@@ -443,7 +452,7 @@ static int apanic(struct notifier_block *this, unsigned long event,
 		       threads_len);
 		threads_len = 0;
 	}
-
+#endif
 	/*
 	 * Finally write the panic header at the first block of the partition
 	 */
@@ -466,9 +475,10 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	hdr->console_offset = (console_offset-blk)*ctx->mmc->write_bl_len;
 	hdr->console_length = (console_len)*ctx->mmc->write_bl_len;
 
+#ifndef CONFIG_CDEBUGGER
 	hdr->threads_offset = (threads_offset-blk)*ctx->mmc->write_bl_len;
 	hdr->threads_length = (threads_len)*ctx->mmc->write_bl_len;
-
+#endif
 	pr_debug("apanic: writing the header at block %ld\n", blk);
 
 	rc = ctx->mmc->block_dev.block_write(ctx->mmc_poll_dev_num,
@@ -481,6 +491,9 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	pr_debug("kona_mmc_poll_write: bock_read returned %d \r\n", rc);
 
 	pr_info("apanic: Panic dump successfully written to flash \r\n");
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+	rhea_display_crash_image(CP_CRASH_DUMP_END);
+#endif
 
  out:
 #ifdef CONFIG_PREEMPT
@@ -492,6 +505,7 @@ static int apanic(struct notifier_block *this, unsigned long event,
 
 static struct notifier_block panic_blk = {
 	.notifier_call	= apanic,
+	.priority = 1,
 };
 
 static int panic_dbg_get(void *data, u64 *val)
@@ -633,6 +647,7 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 		}
 	}
 
+#ifndef CONFIG_CDEBUGGER
 	if (hdr->threads_length) {
 		ctx->apanic_threads = create_proc_entry("apanic_threads",
 						       S_IFREG | S_IRUGO, NULL);
@@ -645,6 +660,7 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 			ctx->apanic_threads->data = (void *)2;
 		}
 	}
+#endif
 
 	ret = count;
 out:

@@ -507,8 +507,8 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid,
 			athost_wl_status_info_t *wlfc =
 			    (athost_wl_status_info_t *)dhd_pub->wlfc_state;
 			int_val =
-			    dhd_pub->
-			    wlfc_state ? (int32) wlfc->proptxstatus_mode : 0;
+			    dhd_pub->wlfc_state ? (int32) wlfc->
+			    proptxstatus_mode : 0;
 			bcopy(&int_val, arg, val_size);
 			break;
 		}
@@ -1406,8 +1406,8 @@ void dhd_pktfilter_offload_set(dhd_pub_t *dhd, char *arg)
 	/* Parse pattern filter pattern. */
 	pattern_size =
 	    htod32(wl_pattern_atoh(argv[i],
-				   (char *)&pkt_filterp->u.
-				   pattern.mask_and_pattern[mask_size]));
+				   (char *)&pkt_filterp->u.pattern.
+				   mask_and_pattern[mask_size]));
 
 	if (mask_size != pattern_size) {
 		DHD_ERROR(("Mask and pattern not the same size\n"));

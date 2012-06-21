@@ -265,9 +265,6 @@ typedef struct dhd_bus {
 	bool		activity;		/* Activity flag for clock down */
 	int32		idletime;		/* Control for activity timeout */
 	int32		idlecount;		/* Activity timeout counter */
-#ifdef DHD_USE_IDLECOUNT
-	int32		dhd_idlecount;		/* DHD idle count */
-#endif /* DHD_USE_IDLECOUNT */
 	int32		idleclock;		/* How to set bus driver when idle */
 	int32		sd_divisor;		/* Speed control to bus driver */
 	int32		sd_mode;		/* Mode control to bus driver */
@@ -503,6 +500,13 @@ do { \
 #define HOSTINTMASK		(I_HMB_SW_MASK | I_CHIPACTIVE)
 
 #define GSPI_PR55150_BAILOUT
+
+
+
+void Set_XTAL_PM_Delay(void);
+bcmsdh_info_t *bus_ptr;
+
+
 
 #ifdef SDTEST
 static void dhdsdio_testrcv(dhd_bus_t *bus, void *pkt, uint seq);
@@ -1034,7 +1038,7 @@ dhdsdio_htclk(dhd_bus_t *bus, bool on, bool pendok)
 
 		bus->activity = TRUE;
 #ifdef DHD_USE_IDLECOUNT
-		bus->dhd_idlecount = 0;
+		bus->idlecount = 0;
 #endif /* DHD_USE_IDLECOUNT */
 	} else {
 		clkreq = 0;
@@ -1162,7 +1166,7 @@ dhdsdio_clkctl(dhd_bus_t *bus, uint target, bool pendok)
 			dhd_os_wd_timer(bus->dhd, dhd_watchdog_ms);
 			bus->activity = TRUE;
 #ifdef DHD_USE_IDLECOUNT
-			bus->dhd_idlecount = 0;
+			bus->idlecount = 0;
 #endif /* DHD_USE_IDLECOUNT */
 		}
 		return ret;
@@ -1179,7 +1183,7 @@ dhdsdio_clkctl(dhd_bus_t *bus, uint target, bool pendok)
 			dhd_os_wd_timer(bus->dhd, dhd_watchdog_ms);
 			bus->activity = TRUE;
 #ifdef DHD_USE_IDLECOUNT
-			bus->dhd_idlecount = 0;
+			bus->idlecount = 0;
 #endif /* DHD_USE_IDLECOUNT */
 		}
 		break;
@@ -1828,8 +1832,13 @@ dhd_bus_txctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 		/* Send from dpc */
 		bus->ctrl_frame_buf = frame;
 		bus->ctrl_frame_len = len;
-
-		dhd_wait_for_event(bus->dhd, &bus->ctrl_frame_stat);
+		if(!bus->dpc_sched) {
+			bus->dpc_sched = TRUE;
+			dhd_sched_dpc(bus->dhd);
+		}
+		if (bus->ctrl_frame_stat) {
+			dhd_wait_for_event(bus->dhd, &bus->ctrl_frame_stat);
+		}
 
 		if (bus->ctrl_frame_stat == FALSE) {
 			DHD_INFO(("%s: ctrl_frame_stat == FALSE\n", __FUNCTION__));
@@ -5387,6 +5396,7 @@ dhdsdio_isr(void *arg)
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
+
 	if (!bus) {
 		DHD_ERROR(("%s : bus is null pointer , exit \n", __FUNCTION__));
 		return;
@@ -5708,10 +5718,6 @@ dhd_disable_intr(dhd_pub_t *dhdp)
 	bcmsdh_intr_disable(bus->sdh);
 }
 
-#ifdef DHD_USE_IDLECOUNT
-#define DHD_IDLE_TIMEOUT_MS (50)
-#endif /* DHD_USE_IDLECOUNT */
-
 extern bool
 dhd_bus_watchdog(dhd_pub_t *dhdp)
 {
@@ -5775,7 +5781,7 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 			if (SLPAUTO_ENAB(bus))
 				dhdsdio_bussleep(bus, FALSE);
 			else
-			dhdsdio_clkctl(bus, CLK_AVAIL, FALSE);
+				dhdsdio_clkctl(bus, CLK_AVAIL, FALSE);
 			if (dhdsdio_readconsole(bus) < 0)
 				dhd_console_ms = 0;	/* On error, stop trying */
 		}
@@ -5793,31 +5799,26 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 #endif
 
 	/* On idle timeout clear activity flag and/or turn off clock */
-	if ((bus->idletime > 0) && (bus->clkstate == CLK_AVAIL)) {
 #ifdef DHD_USE_IDLECOUNT
-		if (++bus->idlecount >= bus->idletime) {
-			bus->idlecount = 0;
+	if (bus->activity)
+		bus->activity = FALSE;
+	else {
+		bus->idlecount++;
 
-			if (bus->activity)
-				bus->activity = FALSE;
-			else {
-				bus->dhd_idlecount++;
+		if (bus->idlecount >= bus->idletime) {
+			DHD_TIMER(("%s: DHD Idle state!!\n", __FUNCTION__));
 
-				if (bus->dhd_idlecount >= (DHD_IDLE_TIMEOUT_MS/dhd_watchdog_ms)) {
-					DHD_TIMER(("%s: DHD Idle state!!\n", __FUNCTION__));
+			if (SLPAUTO_ENAB(bus)) {
+				if (dhdsdio_bussleep(bus, TRUE) != BCME_BUSY)
+					dhd_os_wd_timer(bus->dhd, 0);
+			} else
+				dhdsdio_clkctl(bus, CLK_NONE, FALSE);
 
-					if (SLPAUTO_ENAB(bus)) {
-						if (dhdsdio_bussleep(bus, TRUE) != BCME_BUSY)
-							dhd_os_wd_timer(bus->dhd, 0);
-					}
-					else
-						dhdsdio_clkctl(bus, CLK_NONE, FALSE);
-
-					bus->dhd_idlecount = 0;	
-				}
-			}
+			bus->idlecount = 0;	
 		}
+	}
 #else
+	if ((bus->idletime > 0) && (bus->clkstate == CLK_AVAIL)) {
 		if (++bus->idlecount >= bus->idletime) {
 			bus->idlecount = 0;
 			if (bus->activity) {
@@ -5828,8 +5829,8 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 					dhdsdio_clkctl(bus, CLK_NONE, FALSE);
 			}
 		}
-#endif /* DHD_USE_IDLECOUNT */
 	}
+#endif /* DHD_USE_IDLECOUNT */
 
 	return bus->ipend;
 }
@@ -6069,7 +6070,9 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	bus->bus = DHD_BUS;
 	bus->tx_seq = SDPCM_SEQUENCE_WRAP - 1;
 	bus->usebufpool = FALSE; /* Use bufpool if allocated, else use locally malloced rxbuf */
-
+	
+	DHD_ERROR(("%s : INITIAIIZE LOCAL PTR FOR BUS \n", __FUNCTION__));
+	bus_ptr=(bcmsdh_info_t*)bus->sdh;
 	/* attach the common module */
 	dhd_common_init(osh);
 
@@ -6136,8 +6139,12 @@ dhdsdio_probe(uint16 venid, uint16 devid, uint16 bus_no, uint16 slot,
 	}
 
 #ifdef XTAL_PU_TIME_MOD
+	DHD_ERROR(("%s: SET_XTAL_TIME!!\n", __FUNCTION__));
+
 	bcmsdh_reg_write(bus->sdh, 0x18000620, 2, 11);
-	bcmsdh_reg_write(bus->sdh, 0x18000628, 2, 0x0000A601);
+	bcmsdh_reg_write(bus->sdh, 0x18000628, 4, 0x00F80001);
+	DHD_ERROR(("%s: DONE SET_XTAL_TIME!!\n", __FUNCTION__));
+
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25))
@@ -7014,6 +7021,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 	dhd_bus_t *bus;
 
 	bus = dhdp->bus;
+	printk(KERN_ERR "%s ENTRY\n",__FUNCTION__);
 
 	if (flag == TRUE) {
 		if (!bus->dhd->dongle_reset) {
@@ -7082,6 +7090,13 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 						dhd_os_wd_timer(dhdp, dhd_watchdog_ms);
 
 						DHD_TRACE(("%s: WLAN ON DONE\n", __FUNCTION__));
+#ifdef XTAL_PU_TIME_MOD
+						printk(KERN_ERR "%s Set XTAL_TIMEOUT AFTER RELOED\n",__FUNCTION__);
+							bcmsdh_reg_write(bus->sdh, 0x18000620, 2, 11);
+							bcmsdh_reg_write(bus->sdh, 0x18000628, 4, 0x00F80001);
+							printk(KERN_ERR "%s DONE XTAL_TIMEOUT AFTER RELOEAD\n",__FUNCTION__);
+					
+#endif							
 					} else {
 						dhd_bus_stop(bus, FALSE);
 						dhdsdio_release_dongle(bus, bus->dhd->osh,
@@ -7104,6 +7119,20 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 			if ((bcmerror = dhd_bus_start(dhdp)) != 0)
 				DHD_ERROR(("%s: dhd_bus_start fail with %d\n",
 					__FUNCTION__, bcmerror));
+						else
+							{
+#ifdef XTAL_PU_TIME_MOD
+							msleep(1000);
+						printk(KERN_ERR "%s Set XTAL_TIMEOUT\n",__FUNCTION__);
+							bcmsdh_reg_write(bus->sdh, 0x18000620, 2, 11);
+							bcmsdh_reg_write(bus->sdh, 0x18000628, 4, 0x00F80001);
+							printk(KERN_ERR "%s DONE XTAL_TIMEOUT\n",__FUNCTION__);
+					
+#endif				
+								printk(KERN_ERR "%s DONE dhd_bus_start_done\n",__FUNCTION__);
+							}
+
+			
 		}
 	}
 	return bcmerror;
@@ -7117,3 +7146,17 @@ dhd_bus_membytes(dhd_pub_t *dhdp, bool set, uint32 address, uint8 *data, uint si
 	bus = dhdp->bus;
 	return dhdsdio_membytes(bus, set, address, data, size);
 }
+
+void Set_XTAL_PM_Delay()
+{
+
+							printk(KERN_ERR "%s Set XTAL_TIMEOUT IN DUMMY FUNCTION\n",__FUNCTION__);
+								bcmsdh_reg_write(bus_ptr, 0x18000620, 2, 11);
+								bcmsdh_reg_write(bus_ptr, 0x18000628, 4, 0x00F80001);
+								printk(KERN_ERR "%s DONE Set XTAL_TIMEOUT IN DUMMY FUNCTION\n",__FUNCTION__);
+
+						
+
+}
+EXPORT_SYMBOL(Set_XTAL_PM_Delay);
+

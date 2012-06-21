@@ -234,6 +234,46 @@ int MsgQueueDebugList(MsgQueueHandle_t *mHandle, RpcOutputContext_t *c)
 	return 0;
 }
 
+int MsgQueueCount(MsgQueueHandle_t *mHandle)
+{
+	int count = 0;
+	struct list_head *pos;
+	if (INVALID_HANDLE(mHandle)) {
+		_DBG(MQ_TRACE("mq: MsgQueueDebugList has Invalid mHandle\n"));
+		return -1;
+	}
+	spin_lock_bh(&mHandle->mLock);
+	list_for_each(pos, &mHandle->mList) count++;
+	spin_unlock_bh(&mHandle->mLock);
+	return count;
+}
+void *MsgQueueGet(MsgQueueHandle_t *mHandle)
+{
+	struct list_head *entry;
+	MsgQueueElement_t *Item = NULL;
+	void *data = NULL;
+	int isEmpty = 1;
+	if (INVALID_HANDLE(mHandle)) {
+		_DBG(MQ_TRACE("mq: MsgQueueGet has Invalid mHandle\n"));
+		return NULL;
+	}
+	spin_lock_bh(&mHandle->mLock);
+	isEmpty = (Boolean)list_empty(&mHandle->mList);
+	if (isEmpty) {
+		mHandle->mAvailData = 0;
+		spin_unlock_bh(&mHandle->mLock);
+		return NULL;
+	}
+	entry = mHandle->mList.next;
+	Item = list_entry(entry, MsgQueueElement_t, mList);
+	data = Item->data;
+	list_del(entry);
+	spin_unlock_bh(&mHandle->mLock);
+	kfree(Item);
+	_DBG(MQ_TRACE("mq: MsgQueueGet mHandle=%x, data=%d\n",
+		      (int)mHandle, (int)data));
+	return data;
+}
 static int MQueueKthreadFn(void *param)
 {
 	void *data;

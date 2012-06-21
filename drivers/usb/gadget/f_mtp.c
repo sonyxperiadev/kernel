@@ -1188,24 +1188,6 @@ static int mtp_bind_config(struct usb_configuration *c, bool ptp_config)
 
 	printk(KERN_INFO "mtp_bind_config\n");
 
-#ifdef CONFIG_USB_OTG
-	if (gadget_is_otg(c->cdev->gadget)) {
-		c->descriptors = otg_desc;
-		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
-
-		if (gadget_is_otg2(c->cdev->gadget)) {
-			otg_descriptor.bcdOTG = __constant_cpu_to_le16(0x0200);
-			otg_descriptor.bmAttributes |= USB_OTG_ADP;
-		}
-	}
-#endif
-
-#ifdef CONFIG_USB_LPM
-	if (gadget_is_lpm(c->cdev->gadget))
-		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
-#endif
-
-
 	/* allocate a string ID for our interface */
 	if (mtp_string_defs[INTERFACE_STRING_INDEX].id == 0) {
 		ret = usb_string_id(c->cdev);

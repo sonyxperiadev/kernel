@@ -236,18 +236,18 @@ static int kona_tmon_probe(struct platform_device *pdev)
 
         /* Enable clocks */
         pdata->tmon_apb_clk = clk_get(NULL, "tmon_apb_clk");
-        if (!pdata->tmon_apb_clk) {
-                dev_err(&pdev->dev, "couldn't get tmon_apb_clk\n");
-                rc = -ENODEV;
-                goto err_free_dev_mem;
+		if (IS_ERR_OR_NULL(pdata->tmon_apb_clk)) {
+			dev_err(&pdev->dev, "couldn't get tmon_apb_clk\n");
+			rc = -ENODEV;
+			goto err_free_dev_mem;
         }
         clk_enable(pdata->tmon_apb_clk);
 
         pdata->tmon_1m_clk = clk_get(NULL, "tmon_1m_clk");
-        if (!pdata->tmon_1m_clk) {
-                dev_err(&pdev->dev, "couldn't get tmon_1m_clk\n");
-                rc = -ENODEV;
-                goto err_disable_apb_clk;
+		if (IS_ERR_OR_NULL(pdata->tmon_1m_clk)) {
+			dev_err(&pdev->dev, "couldn't get tmon_1m_clk\n");
+			rc = -ENODEV;
+			goto err_disable_apb_clk;
         }
         if (clk_set_rate(pdata->tmon_1m_clk, 1000000))
         {

@@ -125,4 +125,18 @@ struct rpmb_data_frame {
 #define KEY_MAC_SIZE 32				/* 32 bytes */
 #define NONCE_SIZE	16				/* 16 bytes */
 
+/* Special error return values */
+#define EGENERR			0x1
+#define EAUTHFAIL		0x2
+#define ECOUNTERERR		0x3
+#define EADDRFAIL		0x4
+#define EWRITEFAIL		0x5
+#define EREADFAIL		0x6
+#define EKEYNOTPROG		0x7
+#define EDATACHKFAIL	0x8
+#define EOTHER			0x9
+
+/* Number of retries before returning error to caller */
+#define RPMB_ACCESS_RETRY	20
+
 #endif /* EMMC_RPMB_RW_H */

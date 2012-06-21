@@ -126,7 +126,7 @@ static bool bcmpmu_get_irq_index(struct bcmpmu_irq_data *idata,
 
 void bcmpmu_irq_handler(struct work_struct *work)
 {
-	bool ret = true;
+	bool ret;
 	enum bcmpmu_irq index;
 	struct bcmpmu_irq_data *idata;
 	struct bcmpmu *bcmpmu;
@@ -135,6 +135,7 @@ void bcmpmu_irq_handler(struct work_struct *work)
 	bcmpmu = idata->bcmpmu;
 	irq = bcmpmu->pdata->irq;
 	do {
+		ret = true;
 		bcmpmu_read_irq_regs(idata);
 		mutex_lock(&idata->ilock);
 		while (ret) {

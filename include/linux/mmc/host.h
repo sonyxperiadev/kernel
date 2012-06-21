@@ -307,6 +307,7 @@ struct mmc_host {
 	} embedded_sdio_data;
 #endif
 	unsigned int            actual_clock;   /* Actual HC clock rate */
+	bool		card_detect_cap;	/* supports card detection */
 
 	unsigned long		private[0] ____cacheline_aligned;
 };

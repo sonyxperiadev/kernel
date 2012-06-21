@@ -294,7 +294,7 @@ config CRYPTO_DEV_S5P
 
 config CRYPTO_DEV_BRCM_SPUM_HASH
 	tristate "Support for BRCM SPUM HASH accelerator."
-	depends on ARCH_KONA
+	depends on ARCH_KONA && DMAC_PL330
 	select CRYPTO_SHA1
 	select CRYPTO_SHA256
 	select CRYPTO_MD5
@@ -303,7 +303,7 @@ config CRYPTO_DEV_BRCM_SPUM_HASH
 
 config CRYPTO_DEV_BRCM_SPUM_AES
 	tristate "Support for BRCM SPUM AES accelerator."
-	depends on ARCH_KONA
+	depends on ARCH_KONA && DMAC_PL330
 	select CRYPTO_AES
 	select CRYPTO_CTR
 	select CRYPTO_XTS

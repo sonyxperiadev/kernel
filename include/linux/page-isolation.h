@@ -30,7 +30,7 @@ int test_pages_isolated(unsigned long start_pfn, unsigned long end_pfn);
 /*
  * Internal functions. Changes pageblock's migrate type.
  */
-extern int set_migratetype_isolate(struct page *page, unsigned old_mt);
+extern int set_migratetype_isolate(struct page *page);
 extern void unset_migratetype_isolate(struct page *page, unsigned migratetype);
 
 

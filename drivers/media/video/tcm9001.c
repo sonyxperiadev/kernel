@@ -211,7 +211,7 @@ static int tcm9001_s_stream(struct v4l2_subdev *sd, int enable)
 			tcm9001_reg_write(client, 0x22, 0x03);
 		}
 	} else {
-		printk(KERN_INFO "Disabling !!!!! STREAM from TCM9001 client \n\n");
+		printk(KERN_INFO "Disabling !!!!! STREAM from TCM9001 client\n");
 		/* Nothing to do */
 	}
 	return ret;
@@ -455,12 +455,12 @@ static struct soc_camera_ops tcm9001_ops = {
 };
 
 /* Init section */
-typedef struct {
+struct tcm9001_set {
 	u8 addr;
 	u8 val;
-} tcm9001_set;
+};
 
-static tcm9001_set tcm9001_init_regset[] = {
+static struct tcm9001_set tcm9001_init_regset[] = {
 	{0x00, 0x48},
 	{0x01, 0x10},
 	{0x02, 0xD8},		/*alcint_sekiout[7:0];*/
@@ -730,11 +730,10 @@ static tcm9001_set tcm9001_init_regset[] = {
 
 static int tcm9001_init(struct i2c_client *client)
 {
-	struct tcm9001 *tcm9001 = to_tcm9001(client);
 	int ret = 0;
 	int i;
 	u32 count = 0;
-	tcm9001_set *set;
+	struct tcm9001_set *set;
 	for (i = 0; i < ARRAY_SIZE(tcm9001_init_regset); i++) {
 		set = &tcm9001_init_regset[i];
 		count += i;
@@ -880,8 +879,6 @@ static int tcm9001_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 }
 static int tcm9001_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct tcm9001 *tcm9001 = to_tcm9001(client);
 	struct v4l2_captureparm *cparm;
 
 	if (param->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)

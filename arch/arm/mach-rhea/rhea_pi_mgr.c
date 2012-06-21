@@ -87,7 +87,9 @@ struct pi_opp arm_opp = {
 static struct pi_state arm_core_states[] = {
 	PI_STATE(ARM_CORE_STATE_ACTIVE, RUN_POLICY, 0, 0),
 	PI_STATE(ARM_CORE_STATE_SUSPEND, RUN_POLICY, 0, 0),
+#ifdef CONFIG_RHEA_A9_RETENTION_CSTATE
 	PI_STATE(ARM_CORE_STATE_RETENTION, RETN_POLICY, 100, 0),
+#endif
 	PI_STATE(ARM_CORE_STATE_DORMANT, RETN_POLICY, 10000, 0),
 
 };
@@ -165,19 +167,6 @@ static struct pi_state mm_states[] = {
 };
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
-static int mm_pi_init_state(struct pi *pi)
-{
-
-	if (JIRA_WA_ENABLED(2490)) {
-		if (ref_8ph_en_pll1_clk == NULL) {
-			ref_8ph_en_pll1_clk = clk_get(NULL,
-				REF_8PHASE_EN_PLL1_CLK_NAME_STR);
-		}
-		BUG_ON(IS_ERR_OR_NULL(ref_8ph_en_pll1_clk));
-	}
-	gen_pi_ops.init_state(pi);
-	return 0;
-}
 
 static int mm_pi_enable(struct pi *pi, int enable)
 {
@@ -606,7 +595,6 @@ void __init rhea_pi_mgr_init()
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
 		mm_pi_ops = gen_pi_ops;
 		mm_pi_ops.enable = mm_pi_enable;
-		mm_pi_ops.init_state = mm_pi_init_state;
 #endif
 	pi_mgr_init();
 
@@ -620,6 +608,22 @@ void __init rhea_pi_mgr_init()
 }
 
 EXPORT_SYMBOL(rhea_pi_mgr_init);
+
+#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+static int __init rhea_mm_pre_init_state(void)
+{
+	if (JIRA_WA_ENABLED(2490)) {
+		if (ref_8ph_en_pll1_clk == NULL) {
+			ref_8ph_en_pll1_clk = clk_get(NULL,
+				REF_8PHASE_EN_PLL1_CLK_NAME_STR);
+		}
+		BUG_ON(IS_ERR_OR_NULL(ref_8ph_en_pll1_clk));
+	}
+
+	return 0;
+}
+arch_initcall(rhea_mm_pre_init_state);
+#endif
 
 int __init pi_mgr_late_init(void)
 {

@@ -74,7 +74,7 @@ struct pmem_data {
 	struct list_head sub_data_list;
 
 	/* mmap refcount */
-	int ref;
+	atomic_t ref;
 };
 
 struct pmem_info {
@@ -108,7 +108,6 @@ struct pmem_info {
 	/* carved out memory for us */
 	phys_addr_t carveout_base;
 	phys_addr_t carveout_size;
-	unsigned long carveout_vbase;
 	/* genpool to manage carved out memory */
 	struct gen_pool *pool;
 };
@@ -139,19 +138,11 @@ struct pmem_info {
 #define PMEM_FLAGS_CARVEOUT	(0x1 << 10)
 #define PMEM_FLAGS_ALLOCMASK	(PMEM_FLAGS_KMALLOC | PMEM_FLAGS_CMA \
 					| PMEM_FLAGS_CARVEOUT)
+
 #define PMEM_IS_PAGE_ALIGNED(addr)	(!((addr) & (~PAGE_MASK)))
 #define PMEM_START_PAGE(data)		pfn_to_page(data->pfn)
 #define PMEM_START_ADDR(data)		__pfn_to_phys(data->pfn)
 #define PMEM_START_VADDR(data)		phys_to_virt(PMEM_START_ADDR(data))
-
-/* macros for carveout allocations */
-#define PMEM_CARVEOUT_START_VADDR(id, data) \
-	(pmem[id].carveout_vbase + \
-	 (PMEM_START_ADDR(data) - pmem[id].carveout_base))
-#define PMEM_CARVEOUT_VIRT_TO_PHYS(id, addr) \
-	(pmem[id].carveout_base + (addr - pmem[id].carveout_vbase))
-#define PMEM_CARVEOUT_PHYS_TO_VIRT(id, addr) \
-	(pmem[id].carveout_vbase + (addr - pmem[id].carveout_pbase))
 
 #define PMEM_IS_SUBMAP(data) \
 	((data->flags & PMEM_FLAGS_SUBMAP) && \
@@ -219,6 +210,17 @@ static int is_master_owner(struct file *file)
 		ret = 1;
 	fput_light(master_file, put_needed);
 	return ret;
+}
+
+/* called from cma free to modify task cma rss only if the task
+ * is the original allocator
+ */
+static inline bool task_is_allocator(struct pmem_data *data)
+{
+	if (current->group_leader && current->group_leader->mm)
+		return (data->pid == task_pid_nr(current->group_leader));
+
+	return false;
 }
 
 /* Must be called with data->sem held */
@@ -366,14 +368,15 @@ static int pmem_map_pfn_range(int id, struct file *file,
 
 	/* If this is the first mmap */
 	if (!(data->flags & PMEM_FLAGS_MASTERMAP)) {
-		BUG_ON(data->ref != 0);
+		BUG_ON(atomic_read(&data->ref) != 0);
 		pmem_update_kernel_mappings(id, file, data, offset, len);
 	}
 
 	if (io_remap_pfn_range(vma, vma->vm_start + offset,
 			       (PMEM_START_ADDR(data) + offset) >> PAGE_SHIFT,
 			       len, vma->vm_page_prot)) {
-		if ((data->flags & PMEM_FLAGS_MMAP_CHANGED) && (data->ref == 0))
+		if ((data->flags & PMEM_FLAGS_MMAP_CHANGED) &&
+				(atomic_read(&data->ref) == 0))
 			pmem_restore_kernel_mappings(id, data, offset, len);
 		return -EAGAIN;
 	}
@@ -541,7 +544,6 @@ static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 
 	BUG_ON(!current->group_leader->mm);
 	add_mm_counter(current->group_leader->mm, MM_CMAPAGES, nr_pages);
-
 	data->pfn = page_to_pfn(page);
 	data->size = len;
 	data->flags |= PMEM_FLAGS_CMA;
@@ -549,6 +551,7 @@ static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 	return 0;
 }
 
+/* must be called with down_write(data->sem) */
 static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 			 unsigned long len)
 {
@@ -569,15 +572,21 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 		}
 	}
 
-	/* if we have a carveout heap and allocation is uncached */
-	if (pmem[id].carveout_base && (file->f_flags & O_SYNC)) {
+	/* if we have a carveout heap and allocation is cached/uncached */
+	if (pmem[id].carveout_base &&
+		(file->f_flags & O_NONBLOCK)) {
+
 		addr = gen_pool_alloc(pmem[id].pool, len);
 		if (addr) {
 			data->flags |= PMEM_FLAGS_CARVEOUT;
 			data->pfn = __phys_to_pfn(addr);
 			data->size = len;
+			outer_inv_range(addr, addr+len);
 			return 0;
+		} else {
+			printk(KERN_ALERT"carveout failed: %ldkB\n", len/SZ_1K);
 		}
+		/* If we failed, fallback to CMA */
 	}
 
 	if (pmem_cma_allocate(id, len, data))
@@ -656,7 +665,7 @@ int get_pmem_addr(struct file *file, unsigned long *start,
 	*start = PMEM_START_ADDR(data);
 	*len = pmem_len(data);
 	if (data->flags & PMEM_FLAGS_CARVEOUT)
-		*vstart = (unsigned long)PMEM_CARVEOUT_START_VADDR(id, data);
+		*vstart = 0; /* carveout has no kernel vaddr */
 	else
 		*vstart = (unsigned long)PMEM_START_VADDR(data);
 	up_read(&data->sem);
@@ -763,7 +772,7 @@ void invalidate_pmem_file(struct file *file, unsigned long offset,
 
 	id = get_id(file);
 	data = (struct pmem_data *)file->private_data;
-	if (file->f_flags & O_SYNC)
+	if ((file->f_flags & O_SYNC) || (file->f_flags & O_NONBLOCK))
 		return;
 
 	down_read(&data->sem);
@@ -795,7 +804,8 @@ end:
 	up_read(&data->sem);
 }
 
-void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
+void flush_pmem_file(struct file *file, unsigned long offset,
+		unsigned long len, int flush_all_flag)
 {
 	struct pmem_data *data;
 	int id;
@@ -811,12 +821,20 @@ void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
 
 	id = get_id(file);
 	data = (struct pmem_data *)file->private_data;
-	if (file->f_flags & O_SYNC || file->f_flags & FASYNC)
+	if (file->f_flags & O_SYNC || file->f_flags & FASYNC ||
+			(file->f_flags & O_NONBLOCK))
 		return;
 
 	down_read(&data->sem);
 	paddr = PMEM_START_ADDR(data);
 	vaddr = PMEM_START_VADDR(data);
+
+	if (flush_all_flag) {
+		__cpuc_flush_kern_all();
+		outer_flush_all();
+		goto end;
+	}
+
 	/* if this isn't a submmapped file, flush the whole thing */
 	if (!(data->flags & PMEM_FLAGS_CONNECTED)) {
 		dmac_flush_range(vaddr, vaddr + pmem_len(data));
@@ -998,10 +1016,9 @@ static int pmem_cma_free(int id, struct pmem_data *data)
 	ret = dma_release_from_contiguous(&pmem[id].pdev->dev, page, nr_pages);
 	BUG_ON(ret == 0);
 
-	if (current->group_leader && current->group_leader->mm) {
+	if (task_is_allocator(data))
 		add_mm_counter(current->group_leader->mm,
 			       MM_CMAPAGES, -nr_pages);
-	}
 
 	data->flags &= ~PMEM_FLAGS_CMA;
 
@@ -1218,18 +1235,11 @@ static void pmem_vma_open(struct vm_area_struct *vma)
 {
 	struct file *file = vma->vm_file;
 	struct pmem_data *data = file->private_data;
-	int id = get_id(file);
-	/* this should never be called as we don't support copying pmem
-	 * ranges via fork */
+
 	BUG_ON(!has_allocation(file));
+
 	down_write(&data->sem);
-	/* remap the garbage pages, forkers don't get access to the data */
-	if (data->pid != task_pid_nr(current->group_leader)) {
-		printk(KERN_WARNING
-		       "Warning! remapping pmem area with garbage page\n");
-		pmem_unmap_pfn_range(id, vma, data, 0,
-				     vma->vm_end - vma->vm_start);
-	}
+	atomic_inc(&data->ref);
 	up_write(&data->sem);
 }
 
@@ -1257,12 +1267,10 @@ static void pmem_vma_close(struct vm_area_struct *vma)
 			data->flags |= PMEM_FLAGS_UNSUBMAP;
 	}
 
-	if (data->flags & PMEM_FLAGS_MASTERMAP) {
-		if (data->ref > 0)
-			data->ref--;
-	}
+	atomic_dec(&data->ref);
 
 	BUG_ON(vma_size != pmem_len(data));
+
 	/* the kernel is going to free this vma now anyway */
 	up_write(&data->sem);
 }
@@ -1294,6 +1302,7 @@ static int pmem_open(struct inode *inode, struct file *file)
 	INIT_LIST_HEAD(&data->list);
 	INIT_LIST_HEAD(&data->sub_data_list);
 	init_rwsem(&data->sem);
+	atomic_set(&data->ref, 0);
 
 	file->private_data = data;
 
@@ -1422,20 +1431,19 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		}
 	}
 
-	data->ref++;
+	atomic_inc(&data->ref);
 	vma->vm_ops = &vm_ops;
 	up_write(&data->sem);
 
 	return ret;
 
 error_free_mem:
-	if (data->ref == 0) {
+	if (atomic_read(&data->ref) == 0) {
 		printk(KERN_ERR "pmem: failed to free allocated memory\n");
 		ret = pmem_free(id, data);
 	}
 error_up_write:
 	up_write(&data->sem);
-	return ret;
 error:
 	return ret;
 
@@ -1499,7 +1507,6 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case PMEM_GET_TOTAL_SIZE:
 		DLOG("get total size\n");
 		region.offset = 0;
-		get_id(file);
 		region.len = pmem[id].cma.nr_pages << PAGE_SHIFT;
 		if (copy_to_user((void __user *)arg, &region,
 				 sizeof(struct pmem_region)))
@@ -1526,7 +1533,19 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 		DLOG("flush with offset=0x%08lx len=0x%08lx\n", region.offset,
 		     region.len);
-		flush_pmem_file(file, region.offset, region.len);
+		flush_pmem_file(file, region.offset, region.len, 0);
+
+		break;
+	case PMEM_CACHE_FLUSH_ALL:
+		data = (struct pmem_data *)file->private_data;
+
+		if (copy_from_user(&region, (void __user *)arg,
+				   sizeof(struct pmem_region)))
+			return -EFAULT;
+
+		DLOG("flush all with offset=0x%08lx len=0x%08lx\n",
+				region.offset, region.len);
+		flush_pmem_file(file, region.offset, region.len, 1);
 
 		break;
 	case PMEM_CACHE_INVALIDATE:
@@ -1595,7 +1614,7 @@ static int pmem_release(struct inode *inode, struct file *file)
 
 	/* if its not a connected file and it has an allocation, free it */
 	if (!(PMEM_FLAGS_CONNECTED & data->flags) && has_allocation(file)) {
-		WARN_ON(data->ref);
+		WARN_ON(atomic_read(&data->ref));
 		ret = pmem_free(id, data);
 		if (ret)
 			printk(KERN_ERR"pmem: pmem_free failed\n");
@@ -1654,7 +1673,7 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 			return -ENOMEM;
 
 		n = scnprintf(buffer, debug_bufmax,
-			      "process (pid #) : ref | flags | size | range | mapped regions (start, end) (start, end)...\n");
+			      "process (pid #) : rss | ref | flags | size | range | mapped regions (start, end) (start, end)...\n");
 
 		mutex_lock(&pmem[id].data_list_lock);
 		list_for_each(elt, &pmem[id].data_list) {
@@ -1678,19 +1697,23 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 				n += scnprintf(buffer + n, debug_bufmax - n,
 					       "%-16s (%6u) :",
 					       task->comm, data->pid);
+
+				n += scnprintf(buffer + n, debug_bufmax - n,
+					       "  %08ld", get_mm_cma(task->mm));
 				task_unlock(task);
 				put_task_struct(task);
 			} else {
 				n += scnprintf(buffer + n, debug_bufmax - n,
 					       "%-25s :",
 					       "non-allocating task");
-				up_read(&data->sem);
+				n += scnprintf(buffer + n, debug_bufmax - n,
+					       "        %s", "N/A");
 			}
 
 			size = pmem_len(data);
 
 			n += scnprintf(buffer + n, debug_bufmax - n,
-				       "   %08d", data->ref);
+				       "   %08d", atomic_read(&data->ref));
 			n += scnprintf(buffer + n, debug_bufmax - n,
 				       " 0x%08x", data->flags);
 			n += scnprintf(buffer + n, debug_bufmax - n,
@@ -1700,6 +1723,7 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 				       " (0x%08x-0x%08lx)",
 				       PMEM_START_ADDR(data),
 				       PMEM_START_ADDR(data) + size);
+
 
 			list_for_each(elt2, &data->region_list) {
 				region_node = list_entry(elt2, struct
@@ -1818,24 +1842,16 @@ static int pmem_setup(struct platform_device *pdev,
 
 	if (pdata->carveout_base && pdata->carveout_size) {
 		BUG_ON(pdata->carveout_size & (PAGE_SIZE - 1));
-		pmem[id].carveout_vbase =
-		    (unsigned long)ioremap_nocache(pdata->carveout_base,
-						   pdata->carveout_size);
-		if (!pmem[id].carveout_vbase) {
-			printk(KERN_ERR "pmem: ioremap failed\n");
+		pmem[id].pool = gen_pool_create(12, -1);
+		if (!pmem[id].pool) {
+			printk(KERN_ERR
+					"pmem: genpool_create failed\n");
 		} else {
-			pmem[id].pool = gen_pool_create(12, -1);
-			if (!pmem[id].pool) {
-				printk(KERN_ERR
-				       "pmem: genpool_create failed\n");
-				iounmap((void *)pmem[id].carveout_vbase);
-			} else {
-				gen_pool_add(pmem[id].pool,
-					     pdata->carveout_base,
-					     pdata->carveout_size, -1);
-				pmem[id].carveout_base = pdata->carveout_base;
-				pmem[id].carveout_size = pdata->carveout_size;
-			}
+			gen_pool_add(pmem[id].pool,
+					pdata->carveout_base,
+					pdata->carveout_size, -1);
+			pmem[id].carveout_base = pdata->carveout_base;
+			pmem[id].carveout_size = pdata->carveout_size;
 		}
 	}
 
@@ -1861,7 +1877,7 @@ static int pmem_setup(struct platform_device *pdev,
 		goto err_cant_register_device;
 	}
 
-	debugfs_create_file(pdata->name, S_IFREG | S_IRUGO, NULL, (void *)id,
+	debugfs_create_file(pdata->name, S_IFREG | S_IRUSR, NULL, (void *)id,
 			    &debug_fops);
 
 	/* register task free notifier */
@@ -1876,8 +1892,6 @@ err_cant_register_device:
 error:
 	if (pmem[id].pool)
 		gen_pool_destroy(pmem[id].pool);
-	if (pmem[id].carveout_vbase)
-		iounmap((void __iomem *)pmem[id].carveout_vbase);
 	return err;
 }
 
@@ -1907,8 +1921,6 @@ static int pmem_remove(struct platform_device *pdev)
 	__free_page(pfn_to_page(pmem[id].garbage_pfn));
 	if (pmem[id].pool)
 		gen_pool_destroy(pmem[id].pool);
-	if (pmem[id].carveout_vbase)
-		iounmap((void __iomem *)pmem[id].carveout_vbase);
 
 	misc_deregister(&pmem[id].dev);
 	mutex_unlock(&pmem[id].data_list_lock);

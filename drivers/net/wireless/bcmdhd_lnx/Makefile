@@ -13,7 +13,8 @@ DHDCFLAGS += -DPNO_SUPPORT
 DHDCFLAGS += -Wall -Wstrict-prototypes -Werror
 
 #NOTE: change the gpio # below to reflect your HW design
-DHDCFLAGS += -DCUSTOMER_HW3 -DCUSTOM_OOB_GPIO_NUM=74
+# DHDCFLAGS += -DCUSTOMER_HW3 -DCUSTOM_OOB_GPIO_NUM=74
+DHDCFLAGS += -DCUSTOMER_HW3
 
 # WAPI support (enable with nl80211 patch)
 #DHDCFLAGS += -DBCMWAPI_WPI -DBCMWAPI_WAI

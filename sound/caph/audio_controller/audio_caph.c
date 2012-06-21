@@ -143,6 +143,7 @@ static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 static unsigned int n_msg_in, n_msg_out, last_action;
 static struct completion complete_kfifo;
 static struct TAudioHalThreadData sgThreadData;
+static int telephonyIsEnabled;
 
 #define KFIFO_SIZE		2048
 #define BLOCK_WAITTIME_MS	60000
@@ -544,6 +545,56 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	unsigned long t_flag;
 	int is_atomic;
 	int is_cb = 0;
+
+
+
+	/** BEGIN: not support 48KHz recording during voice call */
+	static int record48K_in_call_is_blocked;
+	if (action_code == ACTION_AUD_StartRecord) {
+
+		BRCM_AUDIO_Param_Start_t param_start;
+		memcpy((void *)&param_start, arg_param,
+			sizeof(BRCM_AUDIO_Param_Start_t));
+
+		if (param_start.callMode == MODEM_CALL
+			&& param_start.rate == AUDIO_SAMPLING_RATE_48000
+			&& param_start.pdev_prop->c.source != AUDIO_SOURCE_I2S
+			&& param_start.pdev_prop->c.drv_type
+				== AUDIO_DRIVER_CAPT_HQ
+			/*FM recording is supported*/
+			&& telephonyIsEnabled == TRUE) {
+
+			aError("StartRecord failed.	48KHz in call");
+			record48K_in_call_is_blocked = 1;
+			return RESULT_ERROR;
+		}
+	}
+
+	if (action_code == ACTION_AUD_StopRecord) {
+
+		BRCM_AUDIO_Param_Stop_t param_stop;
+		memcpy((void *)&param_stop, arg_param,
+			sizeof(BRCM_AUDIO_Param_Stop_t));
+
+		if (param_stop.callMode == MODEM_CALL
+			&& param_stop.pdev_prop->c.source != AUDIO_SOURCE_I2S
+			&& param_stop.pdev_prop->c.drv_type
+				== AUDIO_DRIVER_CAPT_HQ
+			/*FM recording is supported*/
+			&& telephonyIsEnabled == TRUE
+			&& record48K_in_call_is_blocked == 1
+			/* if start recording from digi mic in idle mode,
+			then start voice call,
+			when stop recording the path shall be disabled.
+			*/
+			) {
+
+			record48K_in_call_is_blocked = 0;
+			return RESULT_ERROR;
+		}
+	}
+	/** EDN: not support 48KHz recording during voice call.*/
+
 
 	if (action_code == ACTION_AUD_DisableByPassVibra_CB) {
 		action_code = ACTION_AUD_DisableByPassVibra;
@@ -1064,6 +1115,9 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AudioMode_t  audio_mode = AUDIO_MODE_SPEAKERPHONE;
 			audio_mode = GetAudioModeBySink(parm_call->new_spkr);
 			app_profile = AUDIO_APP_VOICE_CALL;
+
+			telephonyIsEnabled = TRUE; /*DSP is using mic path */
+
 			/*Consider VT-NB case*/
 			if (AUDIO_APP_VT_CALL == AUDCTRL_GetUserAudioApp())
 				app_profile = AUDIO_APP_VT_CALL;
@@ -1088,6 +1142,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 	case ACTION_AUD_DisableTelephony:
 		AUDCTRL_DisableTelephony();
 		AUDIO_Policy_RestoreState();
+		telephonyIsEnabled = FALSE;
 		break;
 
 	case ACTION_AUD_SetTelephonyMicSpkr:

@@ -371,6 +371,7 @@ int bcm_hsotgctrl_phy_deinit(void)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
+#ifdef CONFIG_USB_SUSPEND_MODE_POWER_SAVINGS
 	if (bcm_hsotgctrl_handle->irq_enabled) {
 		/* We are shutting down USB so ensure wake IRQ
 		 * is disabled
@@ -378,6 +379,7 @@ int bcm_hsotgctrl_phy_deinit(void)
 		disable_irq_nosync(bcm_hsotgctrl_handle->hsotgctrl_irq);
 		bcm_hsotgctrl_handle->irq_enabled = false;
 	}
+#endif
 
 	/* Stay disconnected */
 	bcm_hsotgctrl_phy_set_non_driving(true);
@@ -593,6 +595,7 @@ int bcm_hsotgctrl_bc_vdp_src_off(void)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_vdp_src_off);
 
+#ifdef CONFIG_USB_SUSPEND_MODE_POWER_SAVINGS
 static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 {
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
@@ -619,6 +622,7 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 
 	return IRQ_HANDLED;
 }
+#endif
 
 int bcm_hsotgctrl_get_clk_count(void)
 {
@@ -635,6 +639,7 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_get_clk_count);
 
 int bcm_hsotgctrl_handle_bus_suspend(void)
 {
+#ifdef CONFIG_USB_SUSPEND_MODE_POWER_SAVINGS
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
@@ -659,6 +664,8 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 		enable_irq(bcm_hsotgctrl_handle->hsotgctrl_irq);
 		bcm_hsotgctrl_handle->irq_enabled = true;
 	}
+#endif
+
 
 	return 0;
 }
@@ -692,6 +699,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	resource = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (NULL == resource) {
+		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
 		kfree(hsotgctrl_drvdata);
 		return -EIO;
 	}
@@ -699,12 +707,15 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	hsotgctrl_drvdata->chipregs_base = ioremap(resource->start, SZ_4K);
 	if (!hsotgctrl_drvdata->chipregs_base) {
 		dev_warn(&pdev->dev, "IO remap failed\n");
+		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
 		kfree(hsotgctrl_drvdata);
 		return -ENOMEM;
 	}
 
 	resource = platform_get_resource(pdev, IORESOURCE_MEM, 2);
 	if (NULL == resource) {
+		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
+		iounmap(hsotgctrl_drvdata->chipregs_base);
 		kfree(hsotgctrl_drvdata);
 		return -EIO;
 	}
@@ -712,6 +723,8 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	hsotgctrl_drvdata->hub_clk_base = ioremap(resource->start, SZ_4K);
 	if (!hsotgctrl_drvdata->hub_clk_base) {
 		dev_warn(&pdev->dev, "IO remap failed\n");
+		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
+		iounmap(hsotgctrl_drvdata->chipregs_base);
 		kfree(hsotgctrl_drvdata);
 		return -ENOMEM;
 	}
@@ -719,8 +732,10 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	hsotgctrl_drvdata->dev = &pdev->dev;
 	hsotgctrl_drvdata->otg_clk = clk_get(NULL, "usb_otg_clk");
 
-	if (!hsotgctrl_drvdata->otg_clk) {
+	if (IS_ERR_OR_NULL(hsotgctrl_drvdata->otg_clk)) {
 		dev_warn(&pdev->dev, "Clock allocation failed\n");
+		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
+		iounmap(hsotgctrl_drvdata->chipregs_base);
 		kfree(hsotgctrl_drvdata);
 		return -EIO;
 	}
@@ -801,6 +816,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	hsotgctrl_drvdata->hsotgctrl_irq = platform_get_irq(pdev, 0);
 
+#ifdef CONFIG_USB_SUSPEND_MODE_POWER_SAVINGS
 	error = request_irq(hsotgctrl_drvdata->hsotgctrl_irq,
 			bcm_hsotgctrl_wake_irq,
 			IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
@@ -811,6 +827,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	} else {
 		hsotgctrl_drvdata->irq_enabled = true;
 	}
+#endif
 
 	return 0;
 

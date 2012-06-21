@@ -822,15 +822,11 @@ void extern_hs_mute(AUDIO_GAIN_LR_t lr)
 
 		hs_param.hs_gain_left = PMU_HSGAIN_MUTE;
 		hs_param.hs_gain_right = PMU_HSGAIN_MUTE;
-	}
-	else
-	if (lr == AUDIO_HS_LEFT) {
+	} else if (lr == AUDIO_HS_LEFT) {
 		bcmpmu_hs_set_gain(PMU_AUDIO_HS_LEFT, PMU_HSGAIN_MUTE);
 
 		hs_param.hs_gain_left = PMU_HSGAIN_MUTE;
-	}
-	else
-	if (lr == AUDIO_HS_RIGHT) {
+	} else if (lr == AUDIO_HS_RIGHT) {
 		bcmpmu_hs_set_gain(PMU_AUDIO_HS_RIGHT, PMU_HSGAIN_MUTE);
 
 		hs_param.hs_gain_right = PMU_HSGAIN_MUTE;

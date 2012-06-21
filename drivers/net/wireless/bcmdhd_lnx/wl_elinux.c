@@ -56,6 +56,7 @@
 #define DRV_CMD_RXFILTER_REMOVE	"RXFILTER-REMOVE"
 #define DRV_CMD_RSSI				"RSSI"
 #define DRV_CMD_LINKSPEED			"LINKSPEED"
+#define DRV_CMD_MSGLEVEL			"MSGLEVEL"
 
 #ifdef PNO_SUPPORT
 #define DRV_CMD_PNO_SSIDCLR			"PNO-SSIDCLR"
@@ -571,7 +572,16 @@ int wl_elinux_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	}
 #endif /* PNO_SET_DEBUG */
 #endif
-	else {
+	else if (strnicmp(command, DRV_CMD_MSGLEVEL, strlen(DRV_CMD_MSGLEVEL))
+		 == 0) {
+		int msglevel;
+		msglevel =
+		    bcm_strtoul(command + strlen(DRV_CMD_MSGLEVEL) + 1, NULL,
+				0);
+		DHD_ERROR(("%s: msg level: 0x%x -> 0x%x\n", __func__,
+			   dhd_msg_level, msglevel));
+		dhd_msg_level = msglevel;
+	} else {
 		DHD_ERROR(("Unknown PRIVATE command %s - ignored\n", command));
 		snprintf(command, 3, "OK");
 		bytes_written = strlen("OK");

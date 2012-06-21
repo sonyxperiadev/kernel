@@ -1569,7 +1569,7 @@ static int pl330_probe(struct platform_device *pdev)
 #ifndef CONFIG_MACH_HAWAII_FPGA
 	/* Get the clock struct */
 	pd->clk = clk_get(NULL, DMAC_MUX_APB_BUS_CLK_NAME_STR);
-	if (pd->clk == NULL) {
+	if (IS_ERR_OR_NULL(pd->clk)) {
 		ret = -ENOENT;
 		goto probe_err4;
 	}
@@ -1661,7 +1661,7 @@ static int __init pl330_init(void)
 	return platform_driver_register(&pl330_driver);
 }
 
-module_init(pl330_init);
+arch_initcall(pl330_init);
 
 static void __exit pl330_exit(void)
 {

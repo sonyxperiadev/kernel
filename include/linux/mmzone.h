@@ -140,6 +140,13 @@ enum zone_stat_item {
 	NUMA_LOCAL,		/* allocation from local node */
 	NUMA_OTHER,		/* allocation from other node */
 #endif
+#ifdef CONFIG_CMA
+	NR_FREE_CMA_PAGES,
+	NR_CMA_ANON,
+	NR_CMA_FILE,
+	NR_CMA_UNEVICTABLE,
+	NR_CONTIG_PAGES,
+#endif
 	NR_ANON_TRANSPARENT_HUGEPAGES,
 	NR_VM_ZONE_STAT_ITEMS };
 
@@ -164,6 +171,20 @@ enum lru_list {
 	LRU_UNEVICTABLE,
 	NR_LRU_LISTS
 };
+
+#ifdef CONFIG_CMA
+
+enum lru_cma_count {
+	LRU_CMA_ANON = NR_LRU_LISTS,
+	LRU_CMA_FILE = NR_LRU_LISTS + 1,
+	NR_LRU_CMA_COUNTS
+};
+
+#else
+
+#define NR_LRU_CMA_COUNTS (0)
+
+#endif
 
 #define for_each_lru(l) for (l = 0; l < NR_LRU_LISTS; l++)
 
@@ -194,6 +215,21 @@ enum zone_watermarks {
 #define min_wmark_pages(z) (z->watermark[WMARK_MIN])
 #define low_wmark_pages(z) (z->watermark[WMARK_LOW])
 #define high_wmark_pages(z) (z->watermark[WMARK_HIGH])
+
+/*
+ * Allow reclaim/compaction to check watermarks for unmovable allocations when
+ * CMA is enabled.
+ *
+ * This is a bit problematic, as ALLOC_* flags are actually only ever
+ * used by page_alloc.c, so we *must* keep up with page_alloc.c changes
+ * to make sure this alloc_flags doens't conflict
+ **/
+
+#ifdef CONFIG_CMA
+#define ALLOC_UNMOVABLE		(0x80)
+#else
+#define ALLOC_UNMOVABLE		(0)
+#endif
 
 struct per_cpu_pages {
 	int count;		/* number of pages in the list */

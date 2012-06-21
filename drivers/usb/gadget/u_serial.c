@@ -1194,7 +1194,7 @@ void gserial_cleanup(void)
 		ports[i].port = NULL;
 		mutex_unlock(&ports[i].lock);
 
-		flush_scheduled_work();
+		flush_work_sync(&port->push);
 
 		/* wait for old opens to finish */
 		wait_event(port->close_wait, gs_closed(port));
@@ -1309,11 +1309,11 @@ void gserial_disconnect(struct gserial *gser)
 
 	if (!port)
 		return;
-
+#ifdef CONFIG_BRCM_FUSE_LOG
 	if (port->port_num == ACM_LOGGING_PORT)
 		if (acm_logging_cb->stop)
 			acm_logging_cb->stop();
-
+#endif
 	/* tell the TTY glue not to do I/O here any more */
 	spin_lock_irqsave(&port->port_lock, flags);
 

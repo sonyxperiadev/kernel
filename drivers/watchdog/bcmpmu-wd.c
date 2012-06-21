@@ -345,6 +345,24 @@ int bcmpmu_watchdog_pet(void)
 }
 EXPORT_SYMBOL_GPL(bcmpmu_watchdog_pet);
 
+/**
+ * API to pet watchdog from kernel space
+ * in i2c polling mode
+ */
+int bcmpmu_wdog_pet_polled(void)
+{
+	int err = 0;
+
+	if (wddog) {
+		err = wddog->bcmpmu->set_dev_mode(wddog->bcmpmu, 1);
+		if (!err)
+			err = bcmpmu_wdog_reset(wddog);
+	} else
+		pr_err("%s: Failed to device in poll mode\n", __func__);
+	return err;
+}
+EXPORT_SYMBOL(bcmpmu_wdog_pet_polled);
+
 static int __devinit bcmpmu_wdog_probe(struct platform_device *pdev)
 {
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;

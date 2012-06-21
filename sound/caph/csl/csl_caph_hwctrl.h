@@ -829,4 +829,14 @@ void csl_caph_classG_ctrl(struct classg_G_ctrl *pClassG);
 *****************************************************************************/
 void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path);
 #endif
+
+/****************************************************************************
+*  @brief  Dump all paths
+*
+*  @param  none
+*
+*  @return none
+*
+*****************************************************************************/
+void csl_caph_hwctrl_PrintAllPaths(void);
 #endif

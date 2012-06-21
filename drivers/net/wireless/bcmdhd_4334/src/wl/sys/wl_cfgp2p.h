@@ -123,21 +123,21 @@ enum wl_cfgp2p_status {
 #define CFGP2P_ERR(args)									\
 	do {										\
 		if (wl_dbg_level & WL_DBG_ERR) {				\
-			printk(KERN_ERR "CFGP2P-ERROR) %s : ", __func__);	\
+			printk(KERN_INFO "CFGP2P-ERROR) %s : ", __func__);	\
 			printk args;						\
 		}									\
 	} while (0)
 #define	CFGP2P_INFO(args)									\
 	do {										\
 		if (wl_dbg_level & WL_DBG_INFO) {				\
-			printk(KERN_ERR "CFGP2P-INFO) %s : ", __func__);	\
+			printk(KERN_INFO "CFGP2P-INFO) %s : ", __func__);	\
 			printk args;						\
 		}									\
 	} while (0)
 #define	CFGP2P_DBG(args)								\
 	do {									\
 		if (wl_dbg_level & WL_DBG_DBG) {			\
-			printk(KERN_ERR "CFGP2P-DEBUG) %s :", __func__);	\
+			printk(KERN_DEBUG "CFGP2P-DEBUG) %s :", __func__);	\
 			printk args;							\
 		}									\
 	} while (0)
@@ -219,6 +219,8 @@ wl_cfgp2p_clear_management_ie(struct wl_priv *wl, s32 bssidx);
 extern s32
 wl_cfgp2p_find_idx(struct wl_priv *wl, struct net_device *ndev);
 
+extern s32
+wl_cfgp2p_p2p_listen_suspend(void);
 
 extern s32
 wl_cfgp2p_listen_complete(struct wl_priv *wl, struct net_device *ndev,

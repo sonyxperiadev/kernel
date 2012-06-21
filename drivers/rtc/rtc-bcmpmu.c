@@ -93,6 +93,23 @@ static void bcmpmu_rtc_isr(enum bcmpmu_irq irq, void *data)
 	}
 }
 
+static int bcmpmu_alarm_irq_enable(struct device *dev,
+		unsigned int enabled)
+{
+	struct bcmpmu_rtc *rdata = dev_get_drvdata(dev);
+	int ret = 0;
+	if (enabled)
+		ret = rdata->bcmpmu->unmask_irq(rdata->bcmpmu,
+							PMU_IRQ_RTC_ALARM);
+	else
+		ret = rdata->bcmpmu->mask_irq(rdata->bcmpmu, PMU_IRQ_RTC_ALARM);
+	if (unlikely(ret))
+		goto err;
+	rdata->alarm_irq_enabled = enabled;
+err:
+	return ret;
+}
+
 static int bcmpmu_read_time(struct device *dev, struct rtc_time *tm)
 {
 	struct bcmpmu_rtc *rdata = dev_get_drvdata(dev);
@@ -392,6 +409,8 @@ static int bcmpmu_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 				alarm->time.tm_sec, PMU_BITMASK_ALL);
 	if (unlikely(ret))
 		goto err;
+
+	bcmpmu_alarm_irq_enable(dev, alarm->enabled);
 err:
 	mutex_unlock(&rdata->lock);
 	return ret;
@@ -415,21 +434,6 @@ err:
 }
 */
 
-static int bcmpmu_alarm_irq_enable(struct device *dev,
-		unsigned int enabled)
-{
-	struct bcmpmu_rtc *rdata = dev_get_drvdata(dev);
-	int ret = 0;
-	if (enabled)
-		ret = rdata->bcmpmu->unmask_irq(rdata->bcmpmu, PMU_IRQ_RTC_ALARM);
-	else
-		ret = rdata->bcmpmu->mask_irq(rdata->bcmpmu, PMU_IRQ_RTC_ALARM);
-	if (unlikely(ret))
-		goto err;
-	rdata->alarm_irq_enabled = enabled;
-err:
-	return ret;
-}
 
 static struct rtc_class_ops bcmpmu_rtc_ops = {
 	.read_time		= bcmpmu_read_time,

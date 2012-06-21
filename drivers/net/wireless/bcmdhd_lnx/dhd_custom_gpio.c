@@ -80,6 +80,10 @@ void *wifi_get_country_code(char *ccode)
 extern int sdioh_mmc_irq(int irq);
 #endif /* (BCMLXSDMMC)  */
 
+#if !defined(CUSTOM_OOB_GPIO_NUM) && !defined(CONFIG_WIFI_CONTROL_FUNC)
+extern int wifi_get_irq_number(unsigned long *irq_flags_ptr);
+#endif /* !CUSTOM_OOB_GPIO_NUM && !CONFIG_WIFI_CONTROL_FUNC */
+
 #ifdef CUSTOMER_HW3
 #include <mach/gpio.h>
 #endif
@@ -105,18 +109,19 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 {
 	int host_oob_irq = 0;
 
-#ifdef CUSTOMER_HW2
+#if defined(CUSTOMER_HW2) || !defined(CUSTOM_OOB_GPIO_NUM)
+#if !defined(CONFIG_WIFI_CONTROL_FUNC)
 	host_oob_irq = wifi_get_irq_number(irq_flags_ptr);
-
+#endif /* !CONFIG_WIFI_CONTROL_FUNC */
 #else
 #if defined(CUSTOM_OOB_GPIO_NUM)
 	if (dhd_oob_gpio_num < 0) {
 		dhd_oob_gpio_num = CUSTOM_OOB_GPIO_NUM;
 	}
-#endif /* CUSTOMER_HW2 */
+#endif /* CUSTOM_OOB_GPIO_NUM */
 
 	if (dhd_oob_gpio_num < 0) {
-		WL_ERROR(("%s: ERROR customer specific Host GPIO is NOT defined \n", __FUNCTION__));
+		WL_ERROR(("%s: ERROR customer specific Host GPIO is NOT defined\n", __FUNCTION__));
 		return (dhd_oob_gpio_num);
 	}
 

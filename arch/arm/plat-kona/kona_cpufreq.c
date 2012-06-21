@@ -261,6 +261,27 @@ static int kona_cpufreq_exit(struct cpufreq_policy *policy)
 	return 0;
 }
 
+u32 get_cpu_freq_from_opp(int opp)
+{
+	int i, ret = 0;
+	int cpu = smp_processor_id();
+	struct cpufreq_policy policy;
+
+	ret = cpufreq_get_policy(&policy, cpu);
+	if (ret) {
+		pr_err("%s:cpufreq not initialized yet\n", __func__);
+		return 0;
+	}
+	if (opp < 0)
+		return 0;
+	for (i = 0; i < kona_cpufreq->no_of_opps; i++) {
+		if (kona_cpufreq->freq_map[i].opp == opp)
+			return kona_cpufreq->freq_map[i].cpu_freq;
+	}
+
+	return 0;
+}
+
 int get_cpufreq_limit(unsigned int *val, int limit_type)
 {
 	int ret = 0;
@@ -295,8 +316,12 @@ int set_cpufreq_limit(unsigned int val, int limit_type)
 	if (limit_type != MAX_LIMIT && limit_type != MIN_LIMIT)
 		return -EINVAL;
 	policy = cpufreq_cpu_get(cpu);
-	if (!policy)
+	if (!policy) {
+		pr_err("%s:cpufreq not initialized yet\n", __func__);
 		return -EINVAL;
+	}
+	kcf_dbg("%s: val:%u  limit_type: %s\n", __func__, val,
+				limit_type ? "Max" : "Min");
 	if (limit_type == MAX_LIMIT) {
 		if (val == DEFAULT_LIMIT)
 			val = (long)policy->cpuinfo.max_freq;
@@ -486,8 +511,9 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 		return ret;
 	}
 #endif
-	return cpufreq_register_driver(&kona_cpufreq_driver);
+	ret = cpufreq_register_driver(&kona_cpufreq_driver);
 
+	return ret;
 }
 
 static int __devexit cpufreq_drv_remove(struct platform_device *pdev)

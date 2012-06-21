@@ -532,7 +532,7 @@ static int __devinit keypad_probe(struct platform_device *pdev)
 	}
 
 	blkp->clock = clk_get(&pdev->dev, datap->clock);
-	if (blkp->clock < 0) {
+	if (IS_ERR_OR_NULL(blkp->clock)) {
 		rc = -ENXIO;
 		goto err_keypad_shutdown;
 	}

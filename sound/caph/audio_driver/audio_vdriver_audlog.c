@@ -197,10 +197,10 @@ void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 							(UInt16 *)loggingbuf,
 							size, stream, sender);
 					} else {
-						aTrace(LOG_AUDIO_DRIVER,
+						aError(
 							"!!!!!! Err ptr = 0x%p size=%d ",
 							loggingbuf, size);
-						aTrace(LOG_AUDIO_DRIVER,
+						aError(
 							"stream=%d sender=%d\n",
 							stream, sender);
 					}

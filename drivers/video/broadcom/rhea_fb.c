@@ -53,6 +53,12 @@
 #include "rhea_fb.h"
 #include "lcd/display_drv.h"
 
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+#include <video/kona_fb_image_dump.h>
+#include "lcd/cp_crash_start_565.h"
+#include "lcd/cp_crash_end_565.h"
+#endif
+
 //#define RHEA_FB_DEBUG 
 //#define PARTIAL_UPDATE_SUPPORT
 #define RHEA_FB_ENABLE_DYNAMIC_CLOCK	1
@@ -61,27 +67,8 @@
 
 static struct pi_mgr_qos_node g_mm_qos_node;
 
-#ifdef CONFIG_CDEBUGGER
-struct struct_frame_buf_mark {
-	u32 special_mark_1;
-	u32 special_mark_2;
-	u32 special_mark_3;
-	u32 special_mark_4;
-	void *p_fb;		/* it must be physical address */
-	u32 resX;
-	u32 resY;
-	u32 bpp;		/* color depth : 16 or 24 */
-	u32 frames;		/* frame buffer count : 2 */
-};
-
-static struct struct_frame_buf_mark frame_buf_mark = {
-	.special_mark_1 = (('*' << 24) | ('^' << 16) | ('^' << 8) | ('*' << 0)),
-	.special_mark_2 = (('I' << 24) | ('n' << 16) | ('f' << 8) | ('o' << 0)),
-	.special_mark_3 = (('H' << 24) | ('e' << 16) | ('r' << 8) | ('e' << 0)),
-	.special_mark_4 = (('f' << 24) | ('b' << 16) | ('u' << 8) | ('f' << 0)),
-	.p_fb = 0,
-	.frames = 1
-};
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+static DEFINE_SPINLOCK(g_fb_crash_spin_lock);
 #endif
 
 struct rhea_fb {
@@ -117,6 +104,7 @@ struct rhea_fb {
 #endif
 	void *buff0;
 	void *buff1;
+	atomic_t force_update;
 	struct dispdrv_init_parms lcd_drv_parms;
 };
 
@@ -152,7 +140,7 @@ static int
 proc_write_fb_test(struct file *file, const char __user *buffer,
 			unsigned long count, void *data)
 {
-	int len, cnt, i;
+	int len, cnt, i, num;
 	char value[20];
 
 	if (count > 19)
@@ -164,6 +152,13 @@ proc_write_fb_test(struct file *file, const char __user *buffer,
 		return -EFAULT;
 
 	value[len] = '\0';
+
+	num = simple_strtoul(value, NULL, 0);
+
+	if (num == 1)
+		rhea_display_crash_image(0);
+	else
+		rhea_display_crash_image(1);
 
 	i = rhea_fb_profile_cnt;
 	for (cnt = 0; cnt < RHEA_PROF_N_RECORDS; cnt++) {
@@ -273,6 +268,52 @@ static inline void rhea_clock_stop(struct rhea_fb *fb)
 #endif
 }
 
+
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+void rhea_display_crash_image(enum crash_dump_image_idx image_idx)
+{
+	int ret = 0;
+	unsigned long flags, image_size, pos, count, index;
+	u16 *image_buf, *lcd_buf, len, bytes_565;
+
+	atomic_set(&g_rhea_fb->force_update, 1);
+	spin_lock_irqsave(&g_fb_crash_spin_lock, flags);
+	rhea_clock_start(g_rhea_fb);
+
+	if (image_idx == CP_CRASH_DUMP_START) {
+		image_buf = (u16 *)&cp_crash_start_565_rle[0];
+		image_size = sizeof(cp_crash_start_565_rle);
+	} else {
+		image_buf = (u16 *)&cp_crash_end_565_rle[0];
+		image_size = sizeof(cp_crash_end_565_rle);
+	}
+
+	lcd_buf   = (u16 *)g_rhea_fb->fb.screen_base;
+	pos = 0;
+	if (image_size % 4)
+		printk(KERN_ERR "Wrong image source!");
+	for (count = 0; count < image_size/2; count += 2) {
+		len = image_buf[count];
+		bytes_565 = image_buf[count+1];
+		for (index = 0; index < len; index++) {
+			lcd_buf[pos++] = bytes_565;
+			if (pos >  g_rhea_fb->fb.fix.smem_len / 4)
+				printk(KERN_ERR "Wrong image size!");
+		}
+	}
+
+	if (g_rhea_fb->display_ops->update_no_os) {
+		ret =
+		g_rhea_fb->display_ops->update_no_os(g_rhea_fb->display_hdl,
+				g_rhea_fb->buff0,
+				NULL);
+	}
+
+	g_rhea_fb->g_stop_drawing = 1;
+	spin_unlock_irqrestore(&g_fb_crash_spin_lock, flags);
+}
+#endif
+
 static void rhea_display_done_cb(int status)
 {
 	(void)status;
@@ -340,6 +381,13 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var,
 			region.mode = 0;
 			p_region = &region;
 		} else {
+			region.t	= 0;
+			region.l	= 0;
+			region.b	= fb->fb.var.height - 1;
+			region.r	= fb->fb.var.width - 1;
+			region.w	= fb->fb.var.width;
+			region.h	= fb->fb.var.height;
+			region.mode	= 1;
 			p_region = NULL;
 		}
 		wait_for_completion(&fb->prev_buf_done_sem);
@@ -374,7 +422,7 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var,
 		ret =
 		    fb->display_ops->update(fb->display_hdl,
 					buff_idx ? fb->buff1 : fb->buff0,
-					NULL,
+					p_region,
 					(DISPDRV_CB_T)rhea_display_done_cb);
 
 #endif /* CONFIG_FB_BRCM_ASYNC_UPDATE */
@@ -547,6 +595,10 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 			rheafb_error
 			    ("Failed to unblank this display device!\n");
 		rhea_clock_stop(fb);
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+		if (atomic_read(&g_rhea_fb->force_update))
+			rhea_display_crash_image(CP_CRASH_DUMP_START);
+#endif
 		break;
 
 	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
@@ -630,6 +682,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	mutex_init(&fb->update_sem);
 	atomic_set(&fb->buff_idx, 0);
 	atomic_set(&fb->is_fb_registered, 0);
+	atomic_set(&fb->force_update, 0);
 	init_completion(&fb->prev_buf_done_sem);
 	complete(&fb->prev_buf_done_sem);
 	atomic_set(&fb->is_graphics_started, 0);
@@ -687,14 +740,6 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.var.activate = FB_ACTIVATE_NOW;
 	fb->fb.var.height = fb->display_info->phys_height;
 	fb->fb.var.width = fb->display_info->phys_width;
-
-#ifdef CONFIG_CDEBUGGER
-	/* it has dependency on h/w */
-	frame_buf_mark.p_fb = (void *)(fb->phys_fbbase - PHYS_OFFSET);
-	frame_buf_mark.resX = fb->fb.var.xres;
-	frame_buf_mark.resY = fb->fb.var.yres;
-	frame_buf_mark.bpp = fb->fb.var.bits_per_pixel;
-#endif
 
 	switch (fb->display_info->input_format) {
 	case DISPDRV_FB_FORMAT_RGB565:

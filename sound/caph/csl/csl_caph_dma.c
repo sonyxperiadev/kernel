@@ -996,9 +996,9 @@ void csl_caph_dma_clear_intr(CSL_CAPH_DMA_CHNL_e chnl,
 	CAPH_DMA_CHANNEL_e chal_chnl = CAPH_DMA_CH_VOID;
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	/* aTrace(LOG_AUDIO_CSL, "%s: chnl=0x%x
-	   owner=0x%x \n", __func__, chnl, csl_owner);
-	 */
+	/*aTrace(LOG_AUDIO_CSL, "%s: chnl=0x%x "
+		"owner=%d\n", __func__, chnl, csl_owner);*/
+
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
 
@@ -1200,4 +1200,16 @@ UInt32 csl_caph_dma_read_timestamp(CSL_CAPH_DMA_CHNL_e chnl)
 {
 	return chal_caph_dma_read_timestamp(handle,
 					    csl_caph_dma_get_chal_chnl(chnl));
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CHNL_e chnl)
+*
+*  Description: check if a given dma channel is obtained
+*
+****************************************************************************/
+Boolean csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CHNL_e chnl)
+{
+	return dmaCH_ctrl[chnl].bUsed;
 }

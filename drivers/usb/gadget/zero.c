@@ -132,23 +132,6 @@ static struct usb_device_descriptor device_desc = {
 	.bNumConfigurations =	2,
 };
 
-#ifdef CONFIG_USB_OTG
-static struct usb_otg_descriptor otg_descriptor = {
-	.bLength =		sizeof otg_descriptor,
-	.bDescriptorType =	USB_DT_OTG,
-
-	/* REVISIT SRP-only hardware is possible, although
-	 * it would not be called "OTG" ...
-	 */
-	.bmAttributes =		USB_OTG_SRP | USB_OTG_HNP,
-};
-
-const struct usb_descriptor_header *otg_desc[] = {
-	(struct usb_descriptor_header *) &otg_descriptor,
-	NULL,
-};
-#endif
-
 /* string IDs are assigned dynamically */
 
 #define STRING_MANUFACTURER_IDX		0

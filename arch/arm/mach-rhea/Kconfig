@@ -35,6 +35,11 @@ config MACH_RHEA_RAY_EDN2X
 	help
 	  Support for the Broadcom Rhea Ray EDN2X board.
 
+config MACH_RHEA_DALTON2_EB30
+	bool "Support Nokia Dalton2 EB30 board"
+	help
+	  Support for the Nokia Dalton2 EB30 board.
+
 config MACH_RHEA_SS_COMMON
 	bool "Support Broadcom Rhea SS project common option"
 	help
@@ -132,6 +137,15 @@ config MACH_RHEA_SS_IVORY
 
 endchoice
 
+config RHEA_IGNORE_DAP_POWERUP_REQ
+       bool "Ignore Powerup request from DAP"
+       depends on KONA_POWER_MGR
+       default n
+       help
+         Say Y to ignore powerup request from DAP. So, the power domains will
+	 continue to be in their state. If this is not set, on attaching JTAG
+	 PI policy will change to 7 always. This feature enables the system to
+	 retain the states as is, even after attaching JTAG.
 
 config RHEA_DORMANT_MODE
        bool "Enable dormant mode support for Rhea platform"
@@ -164,6 +178,15 @@ config ROM_SEC_DISPATCHER_SRC
 
 endchoice
 
+config RHEA_DELAYED_PM_INIT
+       depends on ARCH_RHEA
+       bool "Enable support for delayed PM init."
+       default n
+       help
+       Say Y if you want to enable support for delayed PM init. Android/user
+       space can complete the PM init by writing to sysfs. Once this trigger
+       is recieved, all the PIs start changing policies, arm can enter LPM and
+       arm dfs is allowed.
 
 config RHEA_B0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA

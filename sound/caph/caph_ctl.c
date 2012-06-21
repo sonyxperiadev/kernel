@@ -443,8 +443,9 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 			pSel[2] = AUDIO_SINK_HANDSET;
 	}
 
-	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH %s stream %d, pSel %d:%d:%d\n",
-		__func__, stream, pSel[0], pSel[1], pSel[2]);
+	aTrace(LOG_ALSA_INTERFACE,
+		"ALSA-CAPH SelCtrlPut stream %d, pSel %d:%d:%d\n",
+		stream, pSel[0], pSel[1], pSel[2]);
 
 	switch (stream) {
 	case CTL_STREAM_PANEL_PCMOUT1:	/* pcmout 1 */
@@ -1970,6 +1971,8 @@ static struct snd_kcontrol_new sgSndCtrls[] __devinitdata = {
 	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_CLK,
 		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_WAIT,
+		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_DSPMUTE,
 		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_READ_GAIN,
 		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),

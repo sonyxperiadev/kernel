@@ -104,14 +104,14 @@ static void dump_buffer(const char *cmdbuf, unsigned int size)
 {
 	uint i;
 
-	printk(KERN_INFO "cmdbuf: %p, size: %d\n", cmdbuf, size);
+	pr_info("cmdbuf: %p, size: %d\n", cmdbuf, size);
 
 	for (i = 0; i < size; i++) {
 		if (!(i % 64))
-			printk(KERN_INFO "\n");
-		printk(KERN_INFO "0x%x ", *(cmdbuf + i));
+			pr_info("\n");
+		pr_info("0x%x ", *(cmdbuf + i));
 	}
-	printk(KERN_INFO "\n");
+	pr_info("\n");
 }
 #endif
 
@@ -150,15 +150,11 @@ static int block_read(const char *user_dev_path, /* Path to rpmb device */
 	struct page *page;
 	int end_sect;
 
-	/* TODO: temp hack */
-	if (size > PAGE_SIZE)
-		return -EINVAL;
-
 	bdev = blkdev_get_by_path(user_dev_path,
 				  FMODE_READ, block_read);
 
 	if (IS_ERR(bdev)) {
-		pr_info("failed to get block device %s (%ld)\n",
+		pr_err("failed to get block device %s (%ld)\n",
 		      user_dev_path, PTR_ERR(bdev));
 		return -ENODEV;
 	}
@@ -213,15 +209,11 @@ static int block_write(const char *user_dev_path, /* Path to rpmb device node */
 	struct page *page;
 	int end_sect;
 
-	/* TODO: temp hack */
-	if (size > PAGE_SIZE)
-		return -EINVAL;
-
 	bdev = blkdev_get_by_path(user_dev_path,
 				  FMODE_WRITE, block_write);
 
 	if (IS_ERR(bdev)) {
-		pr_info("failed to get block device %s (%ld)\n",
+		pr_err("failed to get block device %s (%ld)\n",
 		      user_dev_path, PTR_ERR(bdev));
 		return -ENODEV;
 	}
@@ -268,16 +260,23 @@ static int authenticated_data_read(char *buff, int len, int addr)
 	struct rpmb_data_frame *read_data_packet;
 	unsigned short result;
 	int num_half_sec;
+	int retries = RPMB_ACCESS_RETRY;
 
 #if DEBUG
 	unsigned char *ptr_auth_read_data = (unsigned char *)&data_packet;
 #endif
 
-	if (((sec_addr << 8) + len) > 0x20000) { /* 0x20000 = 128K = RPMB size */
-		printk(KERN_INFO "authenticated_data_read:"
+	/* 0x20000 = 128K = RPMB size */
+	if (((sec_addr << 8) + len) > 0x20000) {
+		pr_err("authenticated_data_read:"
 						"cannot read past end of RPMB\n");
-		return -1;
+		return -EOTHER;
 	}
+
+#if DEBUG
+	pr_info("%s: buff: %p, len: %d, addr: %x\n",
+				__func__, buff, len, addr);
+#endif
 
 	num_half_sec = (len % PAYLOAD_SIZE) ?
 						((len / PAYLOAD_SIZE) + 1) :
@@ -287,6 +286,7 @@ static int authenticated_data_read(char *buff, int len, int addr)
 	read_buff = kmalloc(RPMB_DATA_FRAME_SIZE, GFP_KERNEL);
 
 	do {
+read_retry:
 		/* Format Authenticated Read Data Packet */
 		format_auth_read_data_packet(&data_packet, sec_addr);
 
@@ -308,8 +308,8 @@ static int authenticated_data_read(char *buff, int len, int addr)
 				RPMB_DATA_FRAME_SIZE, /* Size of data packet */
 				0x0); /* special flags if any */
 		if (ret < 0) {
-			pr_info("Write Data Packet failed: %d\n", ret);
-			ret = -1;
+			pr_err("Write Data Packet failed: %d\n", ret);
+			ret = -EOTHER;
 			goto out;
 		}
 
@@ -320,8 +320,8 @@ static int authenticated_data_read(char *buff, int len, int addr)
 				&read_buff[0], /* Data buffer */
 				RPMB_DATA_FRAME_SIZE); /* Size of data packet */
 		if (ret < 0) {
-			pr_info("Read Data Packet failed: %d\n", ret);
-			ret = -1;
+			pr_err("Read Data Packet failed: %d\n", ret);
+			ret = -EOTHER;
 			goto out;
 		}
 
@@ -345,8 +345,60 @@ static int authenticated_data_read(char *buff, int len, int addr)
 		if (result == RESULT_AUTH_KEY_NOT_PROGRAMMED) {
 			pr_info("Authentication Key NOT programmed; result: 0x%x\n",
 					result);
-			ret = -1;
+			ret = -EKEYNOTPROG;
 			goto out;
+		}
+
+		/*
+		* Retry on GENERAL FAILURE
+		*
+		* "Short Story" on why this retry mechanism is needed:
+		* On "Micron eMMC parts", when RPMB transaction session is in
+		* progress, if a new (read/write) request is issued to a
+		* NON-RPMB (user data) partition on the eMMC, and then we
+		* continue the previous RPMB access transaction, the RPMB
+		* access returns GENERAL FAILURE.
+		*
+		* Below log snapshot will help explain this better:
+		* -------> START RPMB TRANSACTION <-- (session 1)
+		*		--> RPMB CMD6 - Switch to RPMB partition
+		*		--> RPMB CMD23 - Set BLK_CNT
+		*		--> RPMB CMD25 - Issue a Mult Blk Write
+		*		--> RPMB CMD13 - Issue Status CMD and
+		*			check Write completion
+		* -------> RPMB TRANSACTION ABORTED BY NON-RPMB ACCESS
+		*		--> NON-RPMB CMD6 - Switch to Userdata partition
+		*		--> NON-RPMB CMD23 - Set BLK_CNT
+		*		--> NON-RPMB CMD25 - Issue Mutl Blk Write
+		*		--> NON-RPMB CMD12 - Issue Status CMD and
+		*			check completion
+		* -------> SWITCH BACK TO RPMB PARTITION <--
+		*				(Continue session 1)
+		*		--> RPMB CMD6 - Switch back to RPMB partition
+		*		--> RPMB CMD23 - Set BLK_CNT
+		*		--> RPMB CMD18 - Issue a Mult Blk Read
+		* The RPMB device returns GENERAL FAILURE in the Read data
+		* Packet.
+		*
+		* When we get into this scenario (GENERAL FAILURE), we simply
+		* retry for 20 times and hope that we succeed atleast once.
+		*
+		* Refer to Sec: 7.6.16.4 in JESD84-A441.pdf on why this
+		* needs to be done here.
+		*/
+		/* General Failure, retry */
+		if (result == RESULT_GENERAL_FAILURE) {
+			pr_err("RPMB Read Data General Error. Retrying...\n");
+			if (--retries) {
+				pr_err("Retry count: %d\n", retries);
+				goto read_retry;
+			} else { /* Retries exhausted, return error */
+				pr_err("Retried %d times. No success."
+						"Returning error to caller\n",
+						RPMB_ACCESS_RETRY);
+				ret = -EGENERR;
+				goto out;
+			}
 		}
 
 		/* Authenticate the read data packet */
@@ -378,7 +430,7 @@ static int authenticated_data_read(char *buff, int len, int addr)
 		if (ret) {
 			pr_err("%s: HMAC-SHA256 check failed. Data could be invalid",
 					__func__);
-			ret = -1;
+			ret = -EDATACHKFAIL;
 			goto out;
 		}
 
@@ -387,28 +439,26 @@ static int authenticated_data_read(char *buff, int len, int addr)
 			RESPONSE_TYPE_AUTH_DATA_READ) {
 
 			if (result == RESULT_ADDRESS_FAILURE) {
-				pr_info("Write address Error\n");
-				ret = -1;
+				pr_err("Write address Error\n");
+				ret = -EADDRFAIL;
 				goto out;
 			}
 
 			if (result == RESULT_AUTHENTICATION_FAILURE) {
-				pr_info("Read Data Authentication Failure\n");
-				ret = -1;
+				pr_err("Read Data Authentication Failure\n");
+				ret = -EAUTHFAIL;
 				goto out;
 			}
 
 			if (result == RESULT_READ_FAILURE) {
-				pr_info("Read Data Error\n");
-				ret = -1;
+				pr_err("Read Data Error\n");
+				ret = -EREADFAIL;
 				goto out;
 			}
-
-			if (result == RESULT_GENERAL_FAILURE) {
-				pr_info("Read Data General Error\n");
-				ret = -1;
-				goto out;
-			}
+		} else {
+			pr_err("Read Data- Wrong response type\n");
+			ret = -EOTHER;
+			goto out;
 		}
 
 		/* Copy data to user buffer */
@@ -432,7 +482,7 @@ out:
  * @brief	readCKDataBlock : Reads the CK Data block from the eMMC RPMB partition.
  * @param	buff	: Kernel Space buffer to which the data will be read.
  * @param	len     : number of bytes to read.
- * @return	Returns -1 on error and 0 on success
+ * @return	Returns -ve number on error and 0 on success
  *
  * @description	This function reads the CK data block from the RPMB partition.
  */
@@ -441,24 +491,24 @@ int readCKDataBlock(char *buff, int len)
 	int ret = 0;
 
 	if ((NULL == buff) || (0 == len)) {
-		printk("readCKDataBlock: buffer or length invalid \r\n");
+		pr_err("readCKDataBlock: buffer or length invalid \r\n");
 		return -1;
 	}
 
 	if (len > CKDATA_RPMB_LEN) {
-		printk(KERN_ERR "Cannot read more than CKData block size\n");
+		pr_err("Cannot read more than CKData block size\n");
 		return -1;
 	}
 
 	mutex_lock(&rpmb_mutex);
 
 	ret = authenticated_data_read(buff, len, CKDATA_RPMB_START_ADDR);
-	if (ret) {
-		printk(KERN_ERR "CKData Block read failure\n");
+	if (ret < 0) {
+		pr_err("CKData Block read failure\n");
 		goto err_out;
-	} else {
-		printk(KERN_INFO "Done Reading CKData from RPMB!\n");
 	}
+
+	pr_info("Done Reading %d bytes of CKData from RPMB\n", len);
 
 err_out:
 	mutex_unlock(&rpmb_mutex);
@@ -485,13 +535,13 @@ int read_imei1(char *imei1, char *imei_mac1, int imei1_len, int imei_mac1_len)
 
 	if ((NULL == imei1) || (0 == imei1_len) ||
 		(NULL == imei_mac1) || (0 == imei_mac1_len)) {
-		printk(KERN_ERR "read_imei1: buffer or length invalid \r\n");
+		pr_err("read_imei1: buffer or length invalid \r\n");
 		return -1;
 	}
 
 	if ((imei1_len > IMEI1_RPMB_LEN) ||
 		(imei_mac1_len > IMEIMAC1_RPMB_LEN)) {
-		printk(KERN_ERR "Cannot read more than IMEI1/IMEIMAC1 block size\n");
+		pr_err("Cannot read more than IMEI1/IMEIMAC1 block size\n");
 		return -1;
 	}
 
@@ -499,21 +549,22 @@ int read_imei1(char *imei1, char *imei_mac1, int imei1_len, int imei_mac1_len)
 
 	ret1 = authenticated_data_read(imei1, imei1_len,
 						IMEI1_RPMB_START_ADDR);
-	if (ret1) {
-		printk(KERN_ERR "IMEI1 read Failure\n");
+	if (ret1 < 0) {
+		pr_err("IMEI1 read failure\n");
 		goto err_out;
-	} else {
-		printk(KERN_INFO "Done Reading IMEI1 from RPMB!\n");
 	}
+
+	pr_info("Done Reading %d bytes of IMEI1 from RPMB\n", imei1_len);
 
 	ret2 = authenticated_data_read(imei_mac1, imei_mac1_len,
 						IMEIMAC1_RPMB_START_ADDR);
-	if (ret2) {
-		printk(KERN_ERR "IMEI MAC1 read Failure\n");
+	if (ret2 < 0) {
+		pr_err("IMEI MAC1 read Failure\n");
 		goto err_out;
-	} else {
-		printk(KERN_INFO "Done Reading IMEI MAC1 from RPMB!\n");
 	}
+
+	pr_info("Done Reading %d bytes of IMEI MAC1 from RPMB\n",
+							imei_mac1_len);
 
 err_out:
 	mutex_unlock(&rpmb_mutex);
@@ -543,13 +594,13 @@ int read_imei2(char *imei2, char *imei_mac2, int imei2_len, int imei_mac2_len)
 
 	if ((NULL == imei2) || (0 == imei2_len) ||
 		(NULL == imei_mac2) || (0 == imei_mac2_len)) {
-		printk(KERN_ERR "read_imei2: buffer or length invalid \r\n");
+		pr_err("read_imei2: buffer or length invalid \r\n");
 		return -1;
 	}
 
 	if ((imei2_len > IMEI2_RPMB_LEN) ||
 		(imei_mac2_len > IMEIMAC2_RPMB_LEN)) {
-		printk(KERN_ERR "Cannot read more than IMEI2/IMEIMAC2 block size\n");
+		pr_err("Cannot read more than IMEI2/IMEIMAC2 block size\n");
 		return -1;
 	}
 
@@ -557,21 +608,22 @@ int read_imei2(char *imei2, char *imei_mac2, int imei2_len, int imei_mac2_len)
 
 	ret1 = authenticated_data_read(imei2, imei2_len,
 						IMEI2_RPMB_START_ADDR);
-	if (ret1) {
-		printk(KERN_ERR "IMEI2 read Failure\n");
+	if (ret1 < 0) {
+		pr_err("IMEI2 read Failure\n");
 		goto err_out;
-	} else {
-		printk(KERN_INFO "Done Reading IMEI2 from RPMB!\n");
 	}
+
+	pr_info("Done Reading %d bytes of IMEI2 from RPMB!\n", imei2_len);
 
 	ret2 = authenticated_data_read(imei_mac2, imei_mac2_len,
 						IMEIMAC2_RPMB_START_ADDR);
-	if (ret2) {
-		printk(KERN_ERR "IMEI MAC2 read Failure\n");
+	if (ret2 < 0) {
+		pr_err("IMEI MAC2 read Failure\n");
 		goto err_out;
-	} else {
-		printk(KERN_INFO "Done Reading IMEI MAC2 from RPMB!\n");
 	}
+
+	pr_info("Done Reading %d bytes of IMEI MAC2 from RPMB!\n",
+							imei_mac2_len);
 
 err_out:
 	mutex_unlock(&rpmb_mutex);
@@ -581,3 +633,15 @@ err_out:
 		return 0;
 }
 EXPORT_SYMBOL(read_imei2);
+
+/* Init routine */
+int __init emmc_rpmb_rw_init(void)
+{
+	/* Allocate 1-page memory for BIO */
+	bio_buff = (void *)__get_free_page(GFP_KERNEL);
+	pr_info("eMMC RPMB rw driver initialized\n");
+
+	return 0;
+}
+
+module_init(emmc_rpmb_rw_init);

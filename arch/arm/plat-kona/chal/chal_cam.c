@@ -166,21 +166,32 @@ CHAL_CAM_STATUS_CODES chal_cam_register_display(CHAL_HANDLE handle, CHAL_CAM_PAR
         dbctl = BRCM_READ_REG ( pCamDevice->baseAddr, CAM_DBCTL );
         misc = BRCM_READ_REG ( pCamDevice->baseAddr, CAM_MISC );
 
-        chal_dprintf(CDBG_INFO2, "chal_cam_status() REGISTERS:\r\n");
-        chal_dprintf(CDBG_INFO2, "CTL=0x%x STA=0x%x ANA=0x%x PRI=0x%x \r\n", ctl, sta, ana, pri);
-        chal_dprintf(CDBG_INFO2, "CLK=0x%x CLT=0x%x DAT0=0x%x DAT1=0x%x DLT=0x%x\r\n", clk, clt, dat0, dat1, dlt);
-        chal_dprintf(CDBG_INFO2, "CMP0=0x%x CMP1=0x%x CAP0=0x%x CAP1=0x%x\r\n", cmp0, cmp1, cap0, cap1);
-        chal_dprintf(CDBG_INFO2, "DBG0=0x%x DBG1=0x%x DBG2=0x%x DBG3=0x%x\r\n",dbg0,dbg1,dbg2,dbg3 );
-        chal_dprintf(CDBG_INFO2, "ICTL=0x%x ISTA=0x%x IDI=0x%x IPIPE=0x%x \r\n", ictl, ista, idi,ipipe);
-        chal_dprintf(CDBG_INFO2, "IBSA=0x%x IBEA=0x%x IBLS=0x%x \r\n", ibsa, ibea, ibls);
-        chal_dprintf(CDBG_INFO2, "IBSA1=0x%x IBEA1=0x%x IDI1=0x%x\r\n", ibsa1, ibea1, idi1);
-        chal_dprintf(CDBG_INFO2, "IBWP=0x%x IHWIN=0x%x IHSTA=0x%x IVWIN=0x%x IVSTA=0x%x\r\n", ibwp, ihwin, ihsta, ivwin, ivsta);
-        chal_dprintf(CDBG_INFO2, "DCS=0x%x DBSA=0x%x DBEA=0x%x DBWP=0x%x \r\n", dcs, dbsa, dbea, dbwp);
-        chal_dprintf(CDBG_INFO2, "DBSA1=0x%x DBEA1=0x%x DBCTL=0x%x\r\n", dbsa1, dbea1, dbctl);
-        chal_dprintf(CDBG_INFO2, "ICC=0x%x ICS=0x%x IDC=0x%x IDPO=0x%x IDCA=0x%x IDCD=0x%x IDS=0x%x\r\n", icc, ics, idc, idpo, idca, idcd, ids);
-        chal_dprintf(CDBG_INFO2, "MISC=0x%x\r\n", misc);
-        chal_dprintf(CDBG_INFO2, "\r\n");
-    return chal_status;
+	chal_dprintf(CDBG_INFO2,
+		"CTL=0x%x STA=0x%x ANA=0x%x PRI=0x%x "
+		"CLK=0x%x CLT=0x%x DAT0=0x%x DAT1=0x%x DLT=0x%x\r\n",
+		ctl, sta, ana, pri, clk, clt, dat0, dat1, dlt);
+	chal_dprintf(CDBG_INFO2,
+		"CMP0=0x%x CMP1=0x%x CAP0=0x%x CAP1=0x%x "
+		"DBG0=0x%x DBG1=0x%x DBG2=0x%x DBG3=0x%x\r\n",
+		cmp0, cmp1, cap0, cap1, dbg0, dbg1, dbg2, dbg3);
+	chal_dprintf(CDBG_INFO2,
+		"ICTL=0x%x ISTA=0x%x IDI=0x%x IPIPE=0x%x "
+		"IBSA=0x%x IBEA=0x%x IBLS=0x%x\r\n",
+		ictl, ista, idi, ipipe, ibsa, ibea, ibls);
+	chal_dprintf(CDBG_INFO2,
+		"IBSA1=0x%x IBEA1=0x%x IDI1=0x%x "
+		"IBWP=0x%x IHWIN=0x%x IHSTA=0x%x IVWIN=0x%x IVSTA=0x%x\r\n",
+		ibsa1, ibea1, idi1, ibwp, ihwin, ihsta, ivwin, ivsta);
+	chal_dprintf(CDBG_INFO2,
+		"DCS=0x%x DBSA=0x%x DBEA=0x%x DBWP=0x%x "
+		"DBSA1=0x%x DBEA1=0x%x DBCTL=0x%x\r\n",
+		dcs, dbsa, dbea, dbwp, dbsa1, dbea1, dbctl);
+	chal_dprintf(CDBG_INFO2,
+		"ICC=0x%x ICS=0x%x IDC=0x%x IDPO=0x%x IDCA=0x%x "
+		"IDCD=0x%x IDS=0x%x MISC=0x%x\r\n\r\n",
+		icc, ics, idc, idpo, idca, idcd, ids, misc);
+
+	return chal_status;
 }
 
 //***************************************************************************
@@ -393,10 +404,8 @@ CHAL_CAM_STATUS_CODES chal_cam_cfg_intf(CHAL_HANDLE handle, CHAL_CAM_CFG_INTF_st
 // Analog PHY Setup
     // Analog Power Up, Reset & wait for Phy to settle
         BRCM_WRITE_REG(pCamDevice->baseAddr,CAM_ANA,( (1 << CAM_ANA_AR_SHIFT) | (0 << CAM_ANA_DDL_SHIFT) | (0x07<<CAM_ANA_CTATADJ_SHIFT) | (0x07<<CAM_ANA_PTATADJ_SHIFT) ));
-        CHAL_DELAY_MS(100);  
     // Disable Analog Reset
         BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_ANA,AR,0);
-        CHAL_DELAY_MS(10);  
 
     // Set Cam Interface
         chal_status |= chal_cam_set_intf(handle, cfg);
@@ -2221,16 +2230,13 @@ CHAL_CAM_STATUS_CODES chal_cam_reset(CHAL_HANDLE handle, CHAL_CAM_PARAM_st_t* pa
     if (param->param & CHAL_CAM_RESET_RX)
     {
         BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_CTL,CPR,1);
-        CHAL_DELAY_MS(1);        
         BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_CTL,CPR,0);
     }
 // Analog Reset
     if (param->param & CHAL_CAM_RESET_ARST)
     {
         BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_ANA,AR,1);
-        CHAL_DELAY_MS(1);  
         BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_ANA,AR,0);
-        CHAL_DELAY_MS(1);  
     }
 // Image Pointers
     if (param->param & CHAL_CAM_RESET_IMAGE)
@@ -2491,8 +2497,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
         // Disable Dig Clk1
             base_addr = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR);
             BRCM_WRITE_REG_FIELD( base_addr, ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_CLK_EN, 0);
-        // give it time to stop
-            CHAL_DELAY_MS(10);        
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_STPRSTS ) != 0 )  
             { 
                 DBG_OUT( chal_dprintf( CDBG_INFO, "%s(): DIGITAL_CH1_STPRSTS: Clk not Stopped \n", __FUNCTION__) ); 
@@ -2501,8 +2505,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
             BRCM_WRITE_REG( base_addr , ROOT_CLK_MGR_REG_DIG1_DIV, divider);
         // Enable Dig Clk 1
             BRCM_WRITE_REG_FIELD( base_addr, ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_CLK_EN, 1);
-        // give it time to settle
-            CHAL_DELAY_MS(10);        
         // Check Clock started
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_STPRSTS ) != 1 )  
             { 
@@ -2518,8 +2520,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
         // Disable Dig Clk0
             base_addr = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR);
             BRCM_WRITE_REG_FIELD( base_addr, ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_CLK_EN, 0);
-        // give it time to stop
-            CHAL_DELAY_MS(10);        
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_STPRSTS ) != 0 )  
             { 
                 DBG_OUT( chal_dprintf( CDBG_INFO, "%s(): DIGITAL_CH0_STPRSTS: Clk not Stopped \n", __FUNCTION__) ); 
@@ -2530,8 +2530,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
             BRCM_WRITE_REG( base_addr, ROOT_CLK_MGR_REG_DIG0_DIV, divider);
         // Start Dig Clk0
             BRCM_WRITE_REG_FIELD( base_addr, ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_CLK_EN, 1);
-        // give it time to settle
-            CHAL_DELAY_MS(10);        
         // Check Clock running
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_STPRSTS ) != 1 )  
             { 
@@ -2547,8 +2545,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
         if (clk_select == 1)
         {
             BRCM_WRITE_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_CLK_EN, 0);
-        // give it time to stop
-            CHAL_DELAY_MS(10);        
         // Check Clock setting
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH1_STPRSTS ) != 0 )  
             { 
@@ -2560,8 +2556,6 @@ CHAL_CAM_STATUS_CODES chal_cam_clock(CHAL_HANDLE handle, cUInt32 clk_select, cUI
         {
     // Disable Clock Select 0
             BRCM_WRITE_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_CLK_EN, 0);
-        // give it time to settle
-            CHAL_DELAY_MS(10);        
         // Check Clock setting
             if ( BRCM_READ_REG_FIELD( base_addr , ROOT_CLK_MGR_REG_DIG_CLKGATE, DIGITAL_CH0_STPRSTS ) != 0 )  
             { 

@@ -878,9 +878,9 @@ static struct kona_headset_pd headset_data = {
 	.gpio_for_accessory_detection = 1,
 
 	/*
-	 * Pass the board specific button detection range 
+	 * Pass the board specific button detection range
 	 */
-	.button_adc_values = rheass_button_adc_values,
+	.button_adc_values_high = rheass_button_adc_values,
 
 };
 
@@ -1518,12 +1518,12 @@ static int rhea_camera_power_sub(struct device *dev, int on)
 		}
         }
 	clock = clk_get(NULL, SENSOR_0_CLK);
-	if (!clock) {
+	if (IS_ERR_OR_NULL(clock)) {
 		printk(KERN_ERR "%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
 		return -1;
 	}
 	axi_clk = clk_get(NULL, "csi0_axi_clk");
-	if (!axi_clk) {
+	if (IS_ERR_OR_NULL(axi_clk)) {
 		printk(KERN_ERR "%s:unable to get clock csi0_axi_clk\n", __func__);
 		return -1;
 	}
@@ -1721,12 +1721,12 @@ static int rhea_camera_power(struct device *dev, int on)
 	}
 
 	clock = clk_get(NULL, SENSOR_0_CLK);
-	if (!clock) {
+	if (IS_ERR_OR_NULL((clock)) {
 		printk(KERN_ERR "%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
 		return -1;
 	}
 	axi_clk = clk_get(NULL, "csi0_axi_clk");
-	if (!axi_clk) {
+	if (IS_ERR_OR_NULL(axi_clk)) {
 		printk(KERN_ERR "%s:unable to get clock csi0_axi_clk\n", __func__);
 		return -1;
 	}

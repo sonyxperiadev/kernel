@@ -111,7 +111,7 @@ static int isp_open(struct inode *inode, struct file *filp)
 		return -ENOMEM;
 
 	filp->private_data = dev;
-	dev->lock = __SPIN_LOCK_UNLOCKED();
+	spin_lock_init(&dev->lock);
 	dev->isp_status.status = 0;
 
 	init_completion(&dev->irq_sem);
@@ -273,7 +273,7 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		{
 			struct clk *clk;
 			clk = clk_get(NULL, "isp_axi_clk");
-			if (clk) {
+			if (!IS_ERR_OR_NULL(clk)) {
 				dbg_print("reset ISP clock\n");
 				clk_reset(clk);
 				/*  sleep for 1ms */
@@ -303,7 +303,7 @@ static int enable_isp_clock(void)
 	int ret;
 
 	isp_clk = clk_get(NULL, "isp_axi_clk");
-	if (!isp_clk) {
+	if (IS_ERR_OR_NULL(isp_clk)) {
 		err_print("%s: error get clock\n", __func__);
 		return -EIO;
 	}
@@ -342,7 +342,7 @@ static int enable_isp_clock(void)
 static void disable_isp_clock(void)
 {
 	isp_clk = clk_get(NULL, "isp_axi_clk");
-	if (!isp_clk)
+	if (IS_ERR_OR_NULL(isp_clk))
 		return;
 
 	clk_disable(isp_clk);
@@ -366,6 +366,7 @@ static inline void reg_write(void __iomem *base_addr, unsigned int reg,
 int __init isp_init(void)
 {
 	int ret;
+	struct device *isp_dev;
 
 	dbg_print("ISP driver Init\n");
 
@@ -382,25 +383,35 @@ int __init isp_init(void)
 		return PTR_ERR(isp_class);
 	}
 
-	device_create(isp_class, NULL, MKDEV(isp_major, 0), NULL, ISP_DEV_NAME);
+	isp_dev = device_create(isp_class, NULL, MKDEV(isp_major, 0),
+			NULL, ISP_DEV_NAME);
+	if (IS_ERR(isp_dev)) {
+		err_print("Failed to create ISP device\n");
+		goto err;
+	}
 
 	/* Map the ISP registers */
 	isp_base =
 	    (void __iomem *)ioremap_nocache(RHEA_ISP_BASE_PERIPHERAL_ADDRESS,
 					    SZ_512K);
 	if (isp_base == NULL)
-		goto err;
+		goto err2;
 
 	/* Map the MM CLK registers */
 	mmclk_base =
 	    (void __iomem *)ioremap_nocache(RHEA_MM_CLK_BASE_ADDRESS, SZ_4K);
 	if (mmclk_base == NULL)
-		goto err;
+		goto err3;
 
 	return 0;
 
-      err:
+err3:
+	iounmap(isp_base);
+err2:
 	err_print("Failed to MAP the ISP IO space\n");
+	device_destroy(isp_class, MKDEV(isp_major,0));
+err:
+	class_destroy(isp_class);
 	unregister_chrdev(isp_major, ISP_DEV_NAME);
 	return ret;
 }

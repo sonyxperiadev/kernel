@@ -1,3 +1,17 @@
+/*****************************************************************************
+* Copyright 2011 Broadcom Corporation.  All rights reserved.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a
+* license other than the GPL, without Broadcom's express prior written
+* consent.
+*****************************************************************************/
+
 /*
  * Broadcom specific v4l2 extension
  * This file should replace the contents in videodev2_samsung.h
@@ -460,15 +474,15 @@ enum v4l2_caf_start_stop {
 #define V4L2_CID_CAMERA_FRAME_RATE		(V4L2_CID_PRIVATE_BASE + 106)
 enum v4l2_frame_rate {
 	FRAME_RATE_AUTO	= 0,
-	FRAME_RATE_5	= 5,
-	FRAME_RATE_7	= 7,
-	FRAME_RATE_10   = 10,
-	FRAME_RATE_15	= 15,
-	FRAME_RATE_20	= 20,
-	FRAME_RATE_25	= 25,
-	FRAME_RATE_30	= 30,
-	FRAME_RATE_60	= 60,
-	FRAME_RATE_120	= 120,
+	FRAME_RATE_5,
+	FRAME_RATE_7,
+	FRAME_RATE_10,
+	FRAME_RATE_15,
+	FRAME_RATE_20,
+	FRAME_RATE_25,
+	FRAME_RATE_30,
+	FRAME_RATE_60,
+	FRAME_RATE_120,
 	FRAME_RATE_MAX
 };
 

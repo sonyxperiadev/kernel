@@ -41,6 +41,19 @@
 #define USB_PRE_CONFIG_CURRENT		100
 #define USB_OTG_PRE_CONFIG_CURRENT	2
 
+#ifdef CONFIG_USB_OTG
+static struct usb_otg_descriptor otg_descriptor = {
+	.bLength =		sizeof otg_descriptor,
+	.bDescriptorType =	USB_DT_OTG,
+	.bmAttributes =	USB_OTG_SRP | USB_OTG_HNP,
+};
+
+static const struct usb_descriptor_header *otg_desc[] = {
+	(struct usb_descriptor_header *) &otg_descriptor,
+	NULL,
+};
+#endif
+
 #ifdef CONFIG_USB_LPM
 #define USB_DEVICE_CAPABILITY_20_EXTENSION	0x02
 #define USB_20_EXT_LPM				0x02
@@ -575,7 +588,26 @@ int usb_add_config(struct usb_composite_dev *cdev,
 	}
 
 	config->cdev = cdev;
+
 	list_add_tail(&config->list, &cdev->configs);
+
+#ifdef CONFIG_USB_OTG
+	if (gadget_is_otg(cdev->gadget)) {
+
+		config->descriptors = otg_desc;
+		config->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
+
+		if (gadget_is_otg2(cdev->gadget)) {
+			otg_descriptor.bcdOTG = __constant_cpu_to_le16(0x0200);
+			otg_descriptor.bmAttributes |= USB_OTG_ADP;
+		}
+	}
+#endif
+
+#ifdef CONFIG_USB_LPM
+	if (gadget_is_lpm(cdev->gadget))
+		config->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
+#endif
 
 	INIT_LIST_HEAD(&config->functions);
 	config->next_interface_id = 0;

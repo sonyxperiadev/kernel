@@ -145,6 +145,13 @@ struct _csl_caph_Mic_Gain_t {
 };
 #define csl_caph_Mic_Gain_t struct _csl_caph_Mic_Gain_t
 
+struct _csl_caph_Sidetone_Gain_t {
+	short gain;  /*In Q13.2 */
+	UInt16 sidetoneGain_Linear;
+	UInt16 sidetoneGain_Log;
+};
+#define csl_caph_Sidetone_Gain_t struct _csl_caph_Sidetone_Gain_t
+
 void *csl_caph_audioh_init(UInt32 baseAddr, UInt32 sdtBaseAddr);
 void csl_caph_audioh_deinit(void);
 void csl_caph_audioh_config(int path_id, void *pcfg);

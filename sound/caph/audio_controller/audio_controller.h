@@ -60,6 +60,7 @@ enum __AUDCTRL_HW_ACCESS_TYPE_en_t {
 	AUDCTRL_HW_CFG_MFD,
 	AUDCTRL_HW_CFG_CLK,
 	AUDCTRL_HW_CFG_WAIT,
+	AUDCTRL_HW_CFG_DSPMUTE,
 	/* below are for internal purposes */
 	AUDCTRL_HW_READ_GAIN = 20,
 	AUDCTRL_HW_WRITE_GAIN,
@@ -345,6 +346,15 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 					   Boolean inHWlpbk);
 
 #ifdef CONFIG_ENABLE_SSMULTICAST
+/*********************************************************************
+*	Set audio mode for FM radio multicast playback
+*	@param          mode            audio mode
+*	@return         none
+*
+**********************************************************************/
+void AUDCTRL_SetAudioMode_ForFM_Multicast(AudioMode_t mode,
+				   unsigned int arg_pathID, Boolean inHWlpbk);
+
 /**
 *   Set audio mode for music multicast. (no DSP voice)
 *
@@ -354,6 +364,7 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 ****************************************************************************/
 void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode,
 					unsigned int arg_pathID);
+
 #endif
 
 /**

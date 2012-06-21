@@ -152,15 +152,15 @@
 			0x00000020   /* 0x3500_4A04: TDI: TDI: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
 			0x00000043   /* 0x3500_4A08: TDO: TDO: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000040   /* 0x3500_4A0C: TESTMODE: TESTMODE: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
-			0x00000123   /* 0x3500_4A10: TRACECLK: PTI_CLK: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
-			0x00000123   /* 0x3500_4A14: TRACEDT00: PTI_DAT0: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
-			0x00000123   /* 0x3500_4A18: TRACEDT01: PTI_DAT1: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
-			0x00000123   /* 0x3500_4A1C: TRACEDT02: PTI_DAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
-			0x00000123   /* 0x3500_4A20: TRACEDT03: PTI_DAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
+			0x00000103   /* 0x3500_4A10: TRACECLK: PTI_CLK: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
+			0x00000103   /* 0x3500_4A14: TRACEDT00: PTI_DAT0: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
+			0x00000103   /* 0x3500_4A18: TRACEDT01: PTI_DAT1: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
+			0x00000103   /* 0x3500_4A1C: TRACEDT02: PTI_DAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
+			0x00000103   /* 0x3500_4A20: TRACEDT03: PTI_DAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
 			0x00000040   /* 0x3500_4A24: TRACEDT04: TRACEDT04: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
 			0x00000040   /* 0x3500_4A28: TRACEDT05: TRACEDT05: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
 			0x00000040   /* 0x3500_4A2C: TRACEDT06: TRACEDT06: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 1/4 drive */
-			0x00000123   /* 0x3500_4A30: TRACEDT07: RXD: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
+			0x00000103   /* 0x3500_4A30: TRACEDT07: RXD: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: full drive */
 			0x00000040   /* 0x3500_4A34: TRSTB: TRSTB: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
 			0x00000003   /* 0x3500_4A38: TXDATA3G0: TXDATA3G0: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
 			0x00000023   /* 0x3500_4A3C: UBCTSN: UBCTSN: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */

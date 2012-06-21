@@ -33,8 +33,6 @@ struct regulator_init_data;
 /* LDO or Switcher def */
 #define BCMPMU_LDO    0x10
 #define BCMPMU_SR     0x11
-/* HOSTCTRL1 def*/
-#define BCMPMU_SW_SHDWN 0x04
 
 /* WRPREN def */
 #define BCMPMU_DIS_WR_PRO       (1<<0)
@@ -297,6 +295,7 @@ enum bcmpmu_reg {
 	PMU_REG_IHFFB_PUP,
 	PMU_REG_IHFPWRDRV_PUP,
 	PMU_REG_IHFNG_PUP,
+	PMU_REG_IHF_NGTHRESH,
 	PMU_REG_IHFPOP_EN,
 	PMU_REG_IHFDRVCLAMP_DIS,
 	PMU_REG_IHFCAL_SEL,
@@ -387,7 +386,7 @@ enum bcmpmu_reg {
 	PMU_REG_PMUID,
 	PMU_REG_PMUREV,
 	PMU_REG_PLLCTRL,
-	PMU_REG_HOSTCTRL1,
+	PMU_REG_SW_SHDWN,
 	PMU_REG_HOSTCTRL3,
 	PMU_REG_MBCCTRL5_USB_DET_LDO_EN,
 	PMU_REG_MBCCTRL5_CHARGE_DET,
@@ -570,6 +569,7 @@ enum bcmpmu_chrgr_fc_curr_t {
 	PMU_CHRGR_CURR_900,
 	PMU_CHRGR_CURR_950,
 	PMU_CHRGR_CURR_1000,
+	PMU_CHRGR_CURR_90,
 	PMU_CHRGR_CURR_MAX,
 };
 
@@ -827,7 +827,7 @@ enum bcmpmu_ioctl {
 #define PMU_EM_ADC_LOAD_CAL _IOW(0, PMU_EM_IOCTL_ADC_LOAD_CAL, u8*)
 #define PMU_EM_ENV_STATUS _IOR(0, PMU_EM_IOCTL_ENV_STATUS, unsigned long*)
 
-struct bcmpmu_rw_data_ltp{
+struct bcmpmu_rw_data_ltp {
 	unsigned int map;
 	unsigned int addr;
 	unsigned int val[16];
@@ -919,6 +919,7 @@ enum bcmpmu_event_t {
 	BCMPMU_CHRGR_EVENT_MBTEMP,
 	BCMPMU_CHRGR_EVENT_EOC,
 	BCMPMU_CHRGR_EVENT_CHRG_STATUS,
+	BCMPMU_CHRGR_EVENT_CAPACITY,
 	/* events for fuel gauge */
 	BCMPMU_FG_EVENT_FGC,
 	/*Events for JIG*/
@@ -1088,6 +1089,8 @@ struct bcmpmu {
 			      unsigned int *val, int len);
 	int (*write_dev_bulk) (struct bcmpmu *bcmpmu, int map, int addr,
 			       unsigned int *val, int len);
+	/* Set PMU Bus read/write mode - Interrupt or polled */
+	int (*set_dev_mode) (struct bcmpmu *bcmpmu, int poll);
 	const struct bcmpmu_reg_map *regmap;
 	/* irq */
 	int (*register_irq) (struct bcmpmu *pmu, enum bcmpmu_irq irq,
@@ -1099,8 +1102,10 @@ struct bcmpmu {
 
 	/* adc */
 	int (*adc_req)(struct bcmpmu *pmu, struct bcmpmu_adc_req *req);
-	int (*unit_get)(struct bcmpmu *pmu, enum bcmpmu_adc_sig sig, struct bcmpmu_adc_unit *unit);
-	int (*unit_set)(struct bcmpmu *pmu, enum bcmpmu_adc_sig sig, struct bcmpmu_adc_unit *unit);
+	int (*unit_get)(struct bcmpmu *pmu, enum bcmpmu_adc_sig sig,
+		struct bcmpmu_adc_unit *unit);
+	int (*unit_set)(struct bcmpmu *pmu, enum bcmpmu_adc_sig sig,
+		struct bcmpmu_adc_unit *unit);
 
 	/* env */
 	void (*update_env_status) (struct bcmpmu *pmu, unsigned long *env);
@@ -1137,6 +1142,7 @@ struct bcmpmu {
 	void (*em_reset) (struct bcmpmu *pmu);
 	int (*em_reset_status) (struct bcmpmu *pmu);
 	int (*fg_get_capacity) (struct bcmpmu *bcmpmu);
+	void (*fg_set_eoc) (struct bcmpmu *bcmpmu, int eoc);
 
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;

@@ -236,6 +236,9 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
 #ifndef CONFIG_ARCH_ISLAND
 	sdhci_pltfm_clk_enable(host, 1);
 #endif
+	/* Ensure SD bus scanning to detect media change */
+	host->mmc->rescan_disable = 0;
+
 	/* Back-to-Back register write needs a delay of min 10uS.
 	 * We keep 20uS
 	 */
@@ -490,7 +493,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	    | SDHCI_QUIRK_32BIT_DMA_ADDR
 	    | SDHCI_QUIRK_32BIT_DMA_SIZE | SDHCI_QUIRK_32BIT_ADMA_SIZE;
 
-#ifdef CONFIG_MACH_RHEA_FARADAY_EB20
+#ifdef CONFIG_MACH_RHEA_DALTON2_EB30
         host->quirks |= SDHCI_QUIRK_NO_MULTIBLOCK;
 #endif
        
@@ -600,7 +603,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	dev->clk_hz = clk_get_rate(dev->peri_clk);
 #endif
 
-	dev->dpm_state = DISABLED;
 	dev->suspended = 0;
 
 	if (hw_cfg->vddo_regulator_name) {
@@ -620,12 +622,11 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	}
 
 	/*
-	 * Note that we are truning ON the regulators in the above code block.
-	 * So we should mark our state as enabled. In case when we want to
-	 * handle clock too here, based on the state of the clocks that is
-	 * left in the "probe" function, we'll have to update the below state.
+	 * Regulators are NOT turned ON in the above functions.
+	 * So leave them in OFF state and they'll be handled
+	 * appropriately in enable path.
 	 */
-	dev->dpm_state = ENABLED;
+	dev->dpm_state = OFF;
 
 	ret = bcm_kona_sd_reset(dev);
 	if (ret)
@@ -703,6 +704,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 				gpio_to_irq(dev->cd_gpio), dev->cd_gpio);
 			goto err_free_cd_gpio;
 		}
+
+		/* support SD card detect interrupts for insert/removal */
+		host->mmc->card_detect_cap = true;
 
 		/* Set debounce for SD Card detect to maximum value (128ms)
 		 *
@@ -818,11 +822,17 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	}
 
 	if (dev->vddo_sd_regulator) {
-		regulator_disable(dev->vddo_sd_regulator);
+		/* Playing safe- if regulator is enabled, disable it first */
+		if (regulator_is_enabled(dev->vddo_sd_regulator) > 0)
+			regulator_disable(dev->vddo_sd_regulator);
+
 		regulator_put(dev->vddo_sd_regulator);
 	}
 	if (dev->vdd_sdxc_regulator) {
-		regulator_disable(dev->vdd_sdxc_regulator);
+		/* Playing safe- if regulator is enabled, disable it first */
+		if (regulator_is_enabled(dev->vdd_sdxc_regulator) > 0)
+			regulator_disable(dev->vdd_sdxc_regulator);
+
 		regulator_put(dev->vdd_sdxc_regulator);
 	}
 
@@ -859,18 +869,7 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
 
-#if 0
-	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0)
-		free_irq(gpio_to_irq(dev->cd_gpio), dev);
-#endif
-
-	ret = sdhci_suspend_host(host, state);
-	if (ret) {
-		dev_err(&pdev->dev, "Unable to suspend sdhci host err=%d\n",
-			ret);
-		return ret;
-	}
-
+	flush_work_sync(&host->wait_erase_work);
 	ret = sdhci_kona_anystate_to_off(dev);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Unable to Turn OFF regulator err=%d\n",
@@ -884,51 +883,8 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int sdhci_pltfm_resume(struct platform_device *pdev)
 {
-	int ret;
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
-	struct sdhci_host *host = dev->host;
 
-	ret = sdhci_kona_off_to_enabled(dev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Unable to Turn ON regulator err=%d\n",
-			ret);
-		return ret;
-	}
-
-	ret = sdhci_resume_host(host);
-	if (ret) {
-		dev_err(&pdev->dev, "Unable to resume sdhci host err=%d\n",
-			ret);
-		return ret;
-	}
-#if 0
-	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
-		ret =
-		    request_irq(gpio_to_irq(dev->cd_gpio),
-				sdhci_pltfm_cd_interrupt,
-				IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
-				"sdio cd", dev);
-		if (ret) {
-			dev_err(&pdev->dev, "Unable to request card detection "
-				"irq=%d for gpio=%d\n",
-				gpio_to_irq(dev->cd_gpio), dev->cd_gpio);
-			return ret;
-		}
-	}
-#endif
-
-#ifndef CONFIG_MMC_UNSAFE_RESUME
-	/*
-	 * card state might have been changed during system suspend.
-	 * Need to sync up only if MMC_UNSAFE_RESUME is not enabled
-	 */
-	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
-		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
-			bcm_kona_sd_card_emulate(dev, 1);
-		else
-			bcm_kona_sd_card_emulate(dev, 0);
-	}
-#endif
 	dev->suspended = 0;
 	return 0;
 }
@@ -1069,24 +1025,17 @@ static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev, char *reg_name)
 	dev->vdd_sdxc_regulator = regulator_get(NULL, reg_name);
 
 	if (!IS_ERR(dev->vdd_sdxc_regulator)) {
-		ret = regulator_enable(dev->vdd_sdxc_regulator);
+		/* Configure 3.0V default */
+		ret = regulator_set_voltage(dev->vdd_sdxc_regulator,
+						3000000, 3000000);
 		if (ret < 0) {
-			pr_err("%s: can't Enable sdxc controller regulator\n",
-			       reg_name);
+			pr_err("%s: can't set 3.0V\n",
+				   reg_name);
 			ret = -1;
 		} else {
-			/* Configure 3.3V default */
-			ret = regulator_set_voltage(dev->vdd_sdxc_regulator,
-						    3300000, 3300000);
-			if (ret < 0) {
-				pr_err("%s: can't set 3.3V\n",
-				       reg_name);
-				ret = -1;
-			} else {
-				pr_info("%s: set to 3.3V\n",
-					reg_name);
-				ret = 0;
-			}
+			pr_debug("%s: set to 3.0V\n",
+				reg_name);
+			ret = 0;
 		}
 	} else {
 		pr_err("%s: could not get sdxc regulator\n", reg_name);
@@ -1106,24 +1055,17 @@ static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name)
 	dev->vddo_sd_regulator = regulator_get(NULL, reg_name);
 
 	if (!IS_ERR(dev->vddo_sd_regulator)) {
-		ret = regulator_enable(dev->vddo_sd_regulator);
+		/* Configure 3.0V default */
+		ret = regulator_set_voltage(dev->vddo_sd_regulator,
+						3000000, 3000000);
 		if (ret < 0) {
-			pr_err("%s: can't Enable sd card regulator\n",
-			       reg_name);
+			pr_err("%s: can't set 3.0V\n",
+				   reg_name);
 			ret = -1;
 		} else {
-			/* Configure 2.9V default */
-			ret = regulator_set_voltage(dev->vddo_sd_regulator,
-						    2900000, 2900000);
-			if (ret < 0) {
-				pr_err("%s: can't set 2.9V\n",
-				       reg_name);
-				ret = -1;
-			} else {
-				pr_info("%s: set to 2.9V\n",
-					reg_name);
-				ret = 0;
-			}
+			pr_debug("%s: set to 3.0V\n",
+				reg_name);
+			ret = 0;
 		}
 	} else {
 		pr_err("%s: could not get sd card regulator\n", reg_name);
@@ -1153,12 +1095,12 @@ static int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host)
 
 	if (dev->vdd_sdxc_regulator) {
 		ret =
-		    regulator_set_voltage(dev->vdd_sdxc_regulator, 3300000,
-					  3300000);
+		    regulator_set_voltage(dev->vdd_sdxc_regulator, 3000000,
+					  3000000);
 		if (ret < 0)
-			dev_err(dev->dev, "cant set vddo regulator to 3.3V!\n");
+			dev_err(dev->dev, "cant set vddo regulator to 3.0V!\n");
 		else
-			dev_dbg(dev->dev, "vddo regulator is set to 3.3V\n");
+			dev_dbg(dev->dev, "vddo regulator is set to 3.0V\n");
 	}
 	return ret;
 }
@@ -1271,7 +1213,7 @@ static int sdhci_kona_off_to_enabled(struct sdio_dev *dev)
 	return 0;
 }
 
-static int sdchi_kona_enabled_to_disabled(struct sdio_dev *dev)
+static int sdhci_kona_enabled_to_disabled(struct sdio_dev *dev)
 {
 	/*
 	 * TODO: Switch OFF the clock from here and remove clock mgmt calls
@@ -1285,6 +1227,20 @@ static int sdchi_kona_enabled_to_disabled(struct sdio_dev *dev)
 	dev_dbg(dev->dev, "Enabled --> Disabled \r\n");
 
 	/*
+	 * **NOTE**: Removing below check.
+	 * The reason for this change is- If dpm_state is
+	 * ENABLED and we remove the card, the higher layers in
+	 * the stack would mark ios.power_mode as MMC_POWER_OFF
+	 * and call mmc_release_host() which would land up in
+	 * this function because our regulators are initially
+	 * ENABLED. Now because of the below check, we would
+	 * return 0 from here after marking dpm_state as
+	 * DISABLED and never turn OFF the regulators.
+	 *
+	 * Revisit needed if any issues are seen because of this.
+	 */
+#if 0
+	/*
 	 * This is called when mmc_power_off is already called
 	 * from suspend path. If we don't return 0, the caller
 	 * mmc_host_do_disable would schedule the work queue.
@@ -1292,12 +1248,13 @@ static int sdchi_kona_enabled_to_disabled(struct sdio_dev *dev)
 	 */
 	if (dev->host->mmc->ios.power_mode == MMC_POWER_OFF)
 		return 0;
+#endif
 
 	return KONA_SDMMC_OFF_TIMEOUT;
 
 }
 
-static int sdchi_kona_disabled_to_off(struct sdio_dev *dev)
+static int sdhci_kona_disabled_to_off(struct sdio_dev *dev)
 {
 	/*
 	 * We have already turned OFF the clocks, now
@@ -1386,12 +1343,55 @@ static int sdhci_pltfm_disable(struct sdhci_host *host, int lazy)
 
 	switch (dev->dpm_state) {
 	case ENABLED:
-		return sdchi_kona_enabled_to_disabled(dev);
+		return sdhci_kona_enabled_to_disabled(dev);
 	case DISABLED:
-		return sdchi_kona_disabled_to_off(dev);
+		return sdhci_kona_disabled_to_off(dev);
+	case OFF:
+		dev_dbg(dev->dev, "Already OFF \r\n");
+		return 0;
 	default:
 		dev_dbg(dev->dev, "Invalid Current State is %d \r\n",
 			dev->dpm_state);
 		return -EINVAL;
 	}
 }
+
+#if !defined(CONFIG_WIFI_CONTROL_FUNC)
+/*********************************************************
+ * Description:
+ * This function is used to return the host wake irq needed
+ * by WLAN driver
+ *
+ * Input:
+ * irq_flags_ptr (not used)
+ *
+ * Returns:
+ * IRQ number corresponding to the host wake int, or
+ * error code if this is not set
+ *
+ */
+
+int wifi_get_irq_number(unsigned long *irq_flags_ptr)
+{
+	int rc;
+	struct sdio_wifi_gpio_cfg *wifi_gpio_ptr;
+	int host_wake_irq_num;
+
+	rc = sdio_dev_is_initialized(SDIO_DEV_TYPE_WIFI);
+	if (rc < 0)
+		return rc;
+
+	wifi_gpio_ptr = sdio_get_wifi_gpio(SDIO_DEV_TYPE_WIFI);
+	if (wifi_gpio_ptr == NULL) {
+		pr_err("Wifi GPIO not allocated!\n");
+		return -EINVAL;
+
+	}
+
+	host_wake_irq_num = gpio_to_irq(wifi_gpio_ptr->host_wake);
+
+	return host_wake_irq_num;
+
+}
+EXPORT_SYMBOL(wifi_get_irq_number);
+#endif

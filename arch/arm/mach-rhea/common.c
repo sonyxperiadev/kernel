@@ -577,21 +577,6 @@ struct kona_freq_tbl kona_freq_tbl[] = {
 #endif
 };
 
-unsigned int get_cpufreq_from_opp(int opp)
-{
-	int i, num_of_opp;
-	if (opp < 0)
-		return 0;
-	num_of_opp = ARRAY_SIZE(kona_freq_tbl);
-	for (i = 0; i < num_of_opp; i++) {
-		if (kona_freq_tbl[i].opp == opp)
-			return kona_freq_tbl[i].cpu_freq;
-	}
-	pr_debug("%s: Invalid OPP as argument\n", __func__);
-	return -EINVAL;
-}
-EXPORT_SYMBOL(get_cpufreq_from_opp);
-
 void rhea_cpufreq_init(void)
 {
 	struct clk *a9_pll_chnl0;
@@ -912,7 +897,7 @@ void __init board_common_reserve(void)
 	cmasize = android_pmem_data.cmasize;
 
 	if (carveout_size) {
-		carveout_base = memblock_alloc(carveout_size, SZ_16M);
+		carveout_base = memblock_alloc(carveout_size, 1);
 		memblock_free(carveout_base, carveout_size);
 		err = memblock_remove(carveout_base, carveout_size);
 		if (!err) {
@@ -944,7 +929,7 @@ void __init board_add_common_devices(void)
 }
 
 /* Return the Rhea chip revision ID */
-int get_chip_rev_id(void)
+int notrace get_chip_rev_id(void)
 {
 	return (readl(KONA_CHIPREG_VA + CHIPREG_CHIPID_REVID_OFFSET) &
 	CHIPREG_CHIPID_REVID_REVID_MASK) >>

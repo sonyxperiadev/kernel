@@ -146,11 +146,12 @@ static const struct attribute_group bcmpmu_core_attr_group = {
 void bcmpmu_client_power_off(void)
 {
 	BUG_ON(!bcmpmu_core);
-	bcmpmu_reg_write_unlock(bcmpmu_core);
-	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_HOSTCTRL1, BCMPMU_SW_SHDWN,
-			       BCMPMU_SW_SHDWN);
-}
 
+	bcmpmu_reg_write_unlock(bcmpmu_core);
+	bcmpmu_core->write_dev(bcmpmu_core, PMU_REG_SW_SHDWN,
+			bcmpmu_core->regmap[PMU_REG_SW_SHDWN].mask,
+			bcmpmu_core->regmap[PMU_REG_SW_SHDWN].mask);
+}
 EXPORT_SYMBOL(bcmpmu_client_power_off);
 
 int bcmpmu_client_hard_reset(unsigned char reset_reason)
@@ -690,7 +691,9 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 		printk(KERN_INFO "%s: Chip Version = 0x%0X.\n", __func__, val);
 	}
 	bcmpmu_register_init(bcmpmu);
-	misc_register(&bcmpmu_device);
+	ret = misc_register(&bcmpmu_device);
+	if (ret < 0)
+		goto err;
 
 #ifdef CONFIG_DEBUG_FS
 	root_dir = debugfs_create_dir("bcmpmu", 0);
@@ -716,7 +719,7 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 		if (ret != 0) {
 			dev_err(bcmpmu->dev, "Platform init() failed: %d\n",
 				ret);
-			goto err;
+			goto err_pdata_init;
 		}
 	}
 #ifdef CONFIG_MFD_BCMPMU_DBG
@@ -724,7 +727,9 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 #endif
 	return 0;
 
-      err:
+err_pdata_init:
+	misc_deregister(&bcmpmu_device);
+err:
 	return ret;
 }
 

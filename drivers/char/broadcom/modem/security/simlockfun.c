@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*     Copyright (c) 2009 Broadcom Corporation
+*   Copyright (c) 2009 Broadcom Corporation
 *
 *   Unless you and Broadcom execute a separate written software license
 *   agreement governing use of this software, this software is licensed to you
@@ -1310,6 +1310,7 @@ static SEC_SimLock_Status_t SIMLockSetLockOneType(SimNumber_t SimId,
 				*  add for fixing compile warning.
 				*/
 				case SEC_SIMLOCK_PHONE_LOCK:
+				/* Coverity [DEADCODE] */
 				case SEC_SIMLOCK_INVALID_LOCK:
 				default:
 					break;
@@ -1622,8 +1623,7 @@ Boolean SIMLockCheckAllLocks(SimNumber_t SimId, UInt8 *imsi, UInt8 *gid1,
 		* not need to unlock again. Just keep the original
 		* "SEC_SIMLOCK_SECURITY_VERIFIED" status.
 		 */
-		if (Network_Lock_Status[SimId] !=
-				SEC_SIMLOCK_SECURITY_VERIFIED) {
+		if (Network_Lock_Status[SimId] != SIMLOCK_VERIFIED) {
 			if (!simlock_nvdata.network_lock_ind ||
 			    ((imsi != NULL)
 			     && SIMLockCheckNetworkLock(SimId, imsi))) {
@@ -1634,8 +1634,7 @@ Boolean SIMLockCheckAllLocks(SimNumber_t SimId, UInt8 *imsi, UInt8 *gid1,
 			}
 		}
 
-		if (Network_Subset_Lock_Status[SimId] !=
-		    SEC_SIMLOCK_SECURITY_VERIFIED) {
+		if (Network_Subset_Lock_Status[SimId] != SIMLOCK_VERIFIED) {
 			if (!simlock_nvdata.network_subset_lock_ind
 			    || ((imsi != NULL)
 				&& SIMLockCheckNetSubsetLock(SimId, imsi))) {
@@ -1648,8 +1647,7 @@ Boolean SIMLockCheckAllLocks(SimNumber_t SimId, UInt8 *imsi, UInt8 *gid1,
 			}
 		}
 
-		if (Service_Provider_Lock_Status[SimId] !=
-		    SEC_SIMLOCK_SECURITY_VERIFIED) {
+		if (Service_Provider_Lock_Status[SimId] != SIMLOCK_VERIFIED) {
 			if (!simlock_nvdata.service_provider_lock_ind
 			    || ((imsi != NULL) && (gid1 != NULL)
 				&& SIMLockCheckProviderLock(SimId, imsi,
@@ -1663,8 +1661,7 @@ Boolean SIMLockCheckAllLocks(SimNumber_t SimId, UInt8 *imsi, UInt8 *gid1,
 			}
 		}
 
-		if (Corporate_Lock_Status[SimId] !=
-		    SEC_SIMLOCK_SECURITY_VERIFIED) {
+		if (Corporate_Lock_Status[SimId] != SIMLOCK_VERIFIED) {
 			if (!simlock_nvdata.corporate_lock_ind
 			    || ((imsi != NULL) && (gid1 != NULL)
 				&& (gid2 != NULL)

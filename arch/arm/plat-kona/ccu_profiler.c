@@ -53,7 +53,7 @@ static int ccu_prof_check_params(struct ccu_profiler *ccu_profiler)
 	int policy;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -127,7 +127,7 @@ static int ccu_prof_init(struct profiler *profiler)
 	if (!ccu_profiler)
 		return -EINVAL;
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -155,7 +155,7 @@ static int ccu_prof_start(struct profiler *profiler, int start)
 		return -EINVAL;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -191,7 +191,7 @@ static int ccu_prof_status(struct profiler *profiler)
 	if (!ccu_profiler)
 		return -EINVAL;
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -216,7 +216,7 @@ static int ccu_prof_get_counter(struct profiler *profiler,
 	if (!ccu_profiler)
 		return -EINVAL;
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -277,7 +277,7 @@ int ccu_prof_set_prof_type(struct ccu_profiler *ccu_profiler,
 		return -EINVAL;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -307,7 +307,7 @@ int ccu_prof_get_prof_type(struct ccu_profiler *ccu_profiler)
 		return -EINVAL;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -338,7 +338,7 @@ int ccu_prof_set_policy(struct ccu_profiler *ccu_profiler,
 		return -EINVAL;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -368,7 +368,7 @@ int ccu_prof_get_policy(struct ccu_profiler *ccu_profiler)
 		return -EINVAL;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -395,7 +395,7 @@ int ccu_prof_set_autogate_sel(struct ccu_profiler *ccu_profiler,
 		return -EINVAL;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -443,7 +443,7 @@ int ccu_prof_get_autogate_sel(struct ccu_profiler *ccu_profiler,
 		return -EINVAL;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -485,7 +485,7 @@ int ccu_prof_set_clkreq_sel(struct ccu_profiler *ccu_profiler,
 		return -EINVAL;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}
@@ -533,7 +533,7 @@ int ccu_prof_get_clkreq_sel(struct ccu_profiler *ccu_profiler,
 		return -EINVAL;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (!clk) {
+	if (IS_ERR_OR_NULL(clk)) {
 		profiler_dbg("%s: clk_get failed\n", __func__);
 		return -ENODEV;
 	}

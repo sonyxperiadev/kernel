@@ -56,7 +56,6 @@ struct kona_cpufreq_drv_pdata {
 
 int get_cpufreq_limit(unsigned int *val, int limit_type);
 int set_cpufreq_limit(unsigned int val, int limit_type);
-/*Defined in  mach*/
-unsigned int get_cpufreq_from_opp(int opp);
+u32 get_cpu_freq_from_opp(int opp);
 
 #endif /* BCM_CPUFREQ_DRV_H */

@@ -213,6 +213,33 @@ static int mmc_decode_scr(struct mmc_card *card)
 	return 0;
 }
 
+static void print_card_speed_class(unsigned int class_code, unsigned int pm)
+{
+	const unsigned char *param = NULL;
+	/* Card speed class grading */
+	switch (class_code)	{
+	case 0:
+		param = "class 0";
+		break;
+	case 1:
+		param = "class 2";
+		break;
+	case 2:
+		param = "class 4";
+		break;
+	case 3:
+		param = "class 6";
+		break;
+	case 4:
+		param = "class 10";
+		break;
+	default:
+		param = "reserved!";
+		break;
+	}
+	pr_info("SD card speed class:%s,Performace Move:%d\n", param, pm);
+}
+
 /*
  * Fetch and process SD Status register.
  */
@@ -243,6 +270,10 @@ static int mmc_read_ssr(struct mmc_card *card)
 	for (i = 0; i < 16; i++)
 		ssr[i] = be32_to_cpu(ssr[i]);
 
+	printk(KERN_INFO "SD_STATUS[511:384]=%08x%08x%08x%08x\n",
+		ssr[0], ssr[1], ssr[2], ssr[3]);
+	print_card_speed_class(UNSTUFF_BITS(ssr, 440 - 384, 8),
+		UNSTUFF_BITS(ssr, 432 - 384, 8));
 	/*
 	 * UNSTUFF_BITS only works with four u32s so we have to offset the
 	 * bitfield positions accordingly.
@@ -779,6 +810,7 @@ try_again:
 	 */
 	if (!mmc_host_is_spi(host) && rocr &&
 	   ((*rocr & 0x41000000) == 0x41000000)) {
+		printk(KERN_INFO"S18A received, SD card is UHS capable!\n");
 		err = mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_180, true);
 		if (err) {
 			ocr &= ~SD_OCR_S18R;
@@ -1311,13 +1343,18 @@ static void mmc_sd_print_card_config(struct mmc_host *host)
 		}
 		printk(KERN_INFO"UHS Current Limit    : %s\n", param);
 	}
-	/* Print CID info */
-	printk(KERN_INFO"Card CID Register:\n");
-	printk(KERN_INFO"\tCID[96:127]=0x%x\n", host->card->raw_cid[0]);
-	printk(KERN_INFO"\tCID[64:95]=0x%x\n", host->card->raw_cid[1]);
-	printk(KERN_INFO"\tCID[32:63]=0x%x\n", host->card->raw_cid[2]);
-	printk(KERN_INFO"\tCID[00:31]=0x%x\n", host->card->raw_cid[3]);
 
+	/* Print SD card registers */
+	printk(KERN_INFO"SD Card Registers:\n");
+	printk(KERN_INFO"\tCID=%08x%08x%08x%08x\n", host->card->raw_cid[0],
+			host->card->raw_cid[1], host->card->raw_cid[2],
+			host->card->raw_cid[3]);
+	printk(KERN_INFO"\tCSD=%08x%08x%08x%08x\n", host->card->raw_csd[0],
+			host->card->raw_csd[1], host->card->raw_csd[2],
+			host->card->raw_csd[3]);
+	printk(KERN_INFO"\tRCA=%08x\n", host->card->rca);
+	printk(KERN_INFO"\tSCR=%08x%08x\n", host->card->raw_scr[0],
+			host->card->raw_scr[1]);
 	printk(KERN_INFO"-----------------------------------\n");
 }
 

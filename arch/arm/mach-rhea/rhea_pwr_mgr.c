@@ -40,6 +40,9 @@
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#include <mach/rdb/brcm_rdb_bmdm_pwrmgr.h>
+#include <plat/kona_cpufreq_drv.h>
+#include <plat/kona_reset_reason.h>
 #ifdef CONFIG_DEBUG_FS
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif
@@ -61,6 +64,31 @@
 #define PM_RET		1
 #define	PM_ECO		4
 #define	PM_DFS		5
+
+static int delayed_init_complete;
+
+#ifdef CONFIG_RHEA_DELAYED_PM_INIT
+struct pi_mgr_qos_node delay_arm_lpm;
+
+struct pm_late_init {
+	int dummy;
+};
+
+#define __param_check_pm_late_init(name, p, type) \
+	static inline struct type *__check_##name(void) { return (p); }
+
+#define param_check_pm_late_init(name, p) \
+	__param_check_pm_late_init(name, p, pm_late_init)
+
+static int param_set_pm_late_init(const char *val,
+		const struct kernel_param *kp);
+static struct kernel_param_ops param_ops_pm_late_init = {
+	.set = param_set_pm_late_init,
+};
+static struct pm_late_init pm_late_init;
+module_param_named(pm_late_init, pm_late_init, pm_late_init,
+				S_IWUSR | S_IWGRP);
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 const char *_rhea__event2str[] = {
@@ -457,12 +485,9 @@ void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param)
 
 #endif /*CONFIG_DEBUG_FS */
 
-int __init rhea_pwr_mgr_late_init(void)
+
+int rhea_pwr_mgr_delayed_init(void)
 {
-#ifdef CONFIG_DEBUG_FS
-	u32 bmdm_pwr_mgr_base =
-	    (u32)ioremap_nocache(BMDM_PWRMGR_BASE_ADDR, SZ_1K);
-#endif
 	int i;
 	struct pi *pi;
 
@@ -480,11 +505,59 @@ int __init rhea_pwr_mgr_late_init(void)
 	pm_mgr_pi_count_clear(1);
 	pm_mgr_pi_count_clear(0);
 
+#ifdef CONFIG_RHEA_IGNORE_DAP_POWERUP_REQ
+	pwr_mgr_ignore_dap_powerup_request(true);
+	pwr_mgr_ignore_mdm_dap_powerup_req(true);
+#endif
+	delayed_init_complete = 1;
 #ifdef CONFIG_DEBUG_FS
-	return pwr_mgr_debug_init(bmdm_pwr_mgr_base);
+	return pwr_mgr_debug_init(KONA_BMDM_PWRMGR_VA);
 #else
 	return 0;
 #endif
+}
+
+#ifdef CONFIG_RHEA_DELAYED_PM_INIT
+static int param_set_pm_late_init(const char *val,
+			const struct kernel_param *kp)
+{
+	int ret = -1;
+	int pm_delayed_init = 0;
+
+	pr_info("%s\n", __func__);
+	if (delayed_init_complete)
+		return 0;
+	if (!val)
+		return -EINVAL;
+
+	ret = sscanf(val, "%d", &pm_delayed_init);
+	pr_info("%s, pm_delayed_init:%d\n", __func__, pm_delayed_init);
+	if (pm_delayed_init == 1)
+		rhea_pwr_mgr_delayed_init();
+
+	if (delay_arm_lpm.valid)
+		pi_mgr_qos_request_remove(&delay_arm_lpm);
+
+	return 0;
+}
+#endif
+
+int __init rhea_pwr_mgr_late_init(void)
+{
+#ifdef CONFIG_RHEA_DELAYED_PM_INIT
+	int ret;
+	if (is_charging_state()) {
+		pr_info("%s: power off charging, complete int here\n",
+						__func__);
+		rhea_pwr_mgr_delayed_init();
+	} else {
+		ret = pi_mgr_qos_add_request(&delay_arm_lpm, "delay_arm_lpm",
+				PI_MGR_PI_ID_ARM_CORE, 0);
+	}
+#else
+	rhea_pwr_mgr_delayed_init();
+#endif
+	return 0;
 }
 
 late_initcall(rhea_pwr_mgr_late_init);

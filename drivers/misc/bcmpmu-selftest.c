@@ -1872,16 +1872,6 @@ static const struct attribute_group bcmpmu_selftest_attr_group = {
 	.attrs = bcmpmu_selftest_attrs,
 };
 
-const struct file_operations selftest_fops = {
-	.owner = THIS_MODULE,
-};
-
-struct miscdevice selftestpmu_miscdevice = {
-	.minor = MISC_DYNAMIC_MINOR,
-	.name = BCMPMU_ST_DRIVER_NAME,
-	.fops = &selftest_fops
-};
-
 /********************************************************************/
 /* Selftest Drivers Stuff */
 /********************************************************************/
@@ -1902,8 +1892,6 @@ static int __devinit selftest_pmu_probe(struct platform_device *pdev)
 
 	ST_DBG("bcmpmu_selftest: probe called\n");
 
-	misc_register(&selftestpmu_miscdevice);
-
 	/* Static data setup */
 	pselftest = kzalloc(sizeof(struct bcmpmu_selftest), GFP_KERNEL);
 	if (pselftest == NULL) {
@@ -1923,7 +1911,6 @@ static int __devinit selftest_pmu_probe(struct platform_device *pdev)
 
 static int __devexit selftest_pmu_remove(struct platform_device *pdev)
 {
-	misc_deregister(&selftestpmu_miscdevice);
 	sysfs_remove_group(&bcmpmu_selftest->pdev->dev.kobj,
 			   &bcmpmu_selftest_attr_group);
 	kfree(bcmpmu_selftest);

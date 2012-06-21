@@ -757,6 +757,16 @@ fg_temp_set(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
+static ssize_t fg_eoc_show(struct device *dev,
+				  struct device_attribute *attr,
+				  char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	return sprintf(buf, "support_hw_eoc=%d, fg_eoc=%d\n",
+			pem->support_hw_eoc, pem->eoc);
+}
+
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_set);
 static DEVICE_ATTR(pollrate, 0644, pollrate_show, pollrate_set);
 static DEVICE_ATTR(fgcal, 0644, fgcal_show, fgcal_set);
@@ -766,6 +776,7 @@ static DEVICE_ATTR(fg_tcstatus, 0644, fg_tcstatus_show, NULL);
 static DEVICE_ATTR(fg_tczone_info, 0644, fg_tczone_info_show, NULL);
 static DEVICE_ATTR(fg_tczone_map, 0644, fg_tczone_map_show, NULL);
 static DEVICE_ATTR(fg_room_map, 0644, fg_room_map_show, NULL);
+static DEVICE_ATTR(eoc, 0644, fg_eoc_show, NULL);
 static struct attribute *bcmpmu_em_attrs[] = {
 	&dev_attr_dbgmsk.attr,
 	&dev_attr_pollrate.attr,
@@ -776,6 +787,7 @@ static struct attribute *bcmpmu_em_attrs[] = {
 	&dev_attr_fg_tczone_info.attr,
 	&dev_attr_fg_tczone_map.attr,
 	&dev_attr_fg_room_map.attr,
+	&dev_attr_eoc.attr,
 	NULL
 };
 
@@ -931,11 +943,11 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 	int capacity = 0;
 	int capacity_v = 0;
 	int fg_result = 0;
-	int ret;
+	int ret = 0;
 	int calibration = 0;
-	int volt;
+	int volt = 0;
 	int zone = pem->fg_zone;
-	s64 capacity64;
+	s64 capacity64 = 0;
 
 	if (pem->fg_dbg_temp != 0)
 		pem->batt_temp = pem->fg_dbg_temp;
@@ -1164,6 +1176,13 @@ static int bcmpmu_get_capacity(struct bcmpmu *bcmpmu)
 	return pem->batt_capacity;
 }
 
+
+static void bcmpmu_set_eoc(struct bcmpmu *bcmpmu, int eoc)
+{
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	pem->eoc = eoc;
+}
+
 static void charging_algorithm(struct bcmpmu_em *pem)
 {
 	int charge_zone;
@@ -1199,6 +1218,13 @@ static void charging_algorithm(struct bcmpmu_em *pem)
 				}
 			}
 		}
+		if (pem->chrgr_curr == 0) {
+			pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 0);
+			pem->charge_state = CHRG_STATE_IDLE;
+			pr_em(FLOW,
+				"%s, chrgr_curr is 0 and stop charging.\n",
+				__func__);
+		} /* Revisit, this is a temporary fix */
 		charge_zone = -1;
 		while (charge_zone != pem->charge_zone) {
 			charge_zone = pem->charge_zone;
@@ -1227,6 +1253,7 @@ static void update_power_supply(struct bcmpmu_em *pem, int capacity)
 	int psy_changed = 0;
 
 	if (pem->piggyback_chrg) {
+		pem->pb_notify(BCMPMU_CHRGR_EVENT_CAPACITY, capacity);
 		if ((is_charger_present(pem)) &&
 			(!pem->support_hw_eoc) &&
 			(capacity == 100) &&
@@ -1614,6 +1641,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	mutex_init(&pem->lock);
 	pem->bcmpmu = bcmpmu;
 	bcmpmu->fg_get_capacity = bcmpmu_get_capacity;
+	bcmpmu->fg_set_eoc = bcmpmu_set_eoc;
 	bcmpmu->eminfo = pem;
 	bcmpmu_em = pem;
 	pem->chrgr_curr = 0;
@@ -1830,6 +1858,10 @@ static int __devexit bcmpmu_em_remove(struct platform_device *pdev)
 
 static int bcmpmu_em_suspend(struct platform_device *pdev, pm_message_t state)
 {
+	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+
+	cancel_delayed_work_sync(&pem->work);
 	return 0;
 }
 
@@ -1840,10 +1872,8 @@ static int bcmpmu_em_resume(struct platform_device *pdev)
 	unsigned long time;
 	time = get_seconds();
 
-	if ((time - pem->time) * 1000 > get_update_rate(pem)) {
-		cancel_delayed_work_sync(&pem->work);
+	if ((time - pem->time) * 1000 > get_update_rate(pem))
 		schedule_delayed_work(&pem->work, 0);
-	}
 	return 0;
 }
 

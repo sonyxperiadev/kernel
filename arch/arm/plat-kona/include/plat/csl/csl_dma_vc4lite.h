@@ -288,6 +288,25 @@ extern "C" {
 						       chanID,
 						       DMA_VC4LITE_XFER_2DDATA_t
 						       * pData);
+/**
+ * This function locks the DMA interface.
+ *
+ ****************************************************************************/
+void csl_dma_lock(void);
+
+
+/**
+ * This function unlocks the DMA interface.
+ *
+ ****************************************************************************/
+void csl_dma_unlock(void);
+
+
+/**
+ * This function polls the DMA interrupt status
+ *
+ ****************************************************************************/
+void csl_dma_poll_int(int chanID);
 
 #ifdef __cplusplus
 }

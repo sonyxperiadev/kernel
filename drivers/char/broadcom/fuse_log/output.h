@@ -51,7 +51,9 @@ void BCMLOG_OutputExit(void);
 extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks
 					       *_cb);
 #endif
+#ifdef CONFIG_USB_G_ANDROID_ACM
 extern char acm_logging_register_callbacks(struct acm_logging_callbacks *_cb);
+#endif
 extern void stm_trace_buffer_start(int channel);
 extern void stm_trace_buffer_end(int channel);
 extern int stm_trace_buffer_data(int channel,

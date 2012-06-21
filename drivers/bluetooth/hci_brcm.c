@@ -65,14 +65,15 @@
 #define TIMER_PERIOD 100	/* 100 ms */
 #define HOST_CONTROLLER_IDLE_TSH 500	/* 4 s */
 
-void assert_bt_wake(void)
+void assert_bt_wake(int bt_wake, struct pi_mgr_qos_node *lqos_node,
+			struct tty_struct *tty)
 {
-	bcm_bzhw_assert_bt_wake();
+	bcm_bzhw_assert_bt_wake(bt_wake, lqos_node, tty);
 }
 
-void deassert_bt_wake(void)
+void deassert_bt_wake(int bt_wake, int host_wake)
 {
-	bcm_bzhw_deassert_bt_wake();
+	bcm_bzhw_deassert_bt_wake(bt_wake, host_wake);
 
 }
 
@@ -98,9 +99,14 @@ struct brcm_struct {
 	unsigned short is_there_activity;
 	unsigned short inactive_period;
 	struct sk_buff_head tx_wait_q;	/* HCIBRCM wait queue   */
+	int btwake_gpio;
+	int hostwake_gpio;
+	struct pi_mgr_qos_node *lqos_node;
 };
 
 static struct timer_list sleep_timer;
+struct bcmbzhw_struct *hw_struct;
+
 /**
  * timeout handler
 */
@@ -118,7 +124,8 @@ void sleep_timer_function(unsigned long data)
 			BT_DBG("Deassert wake signal, moves to ASLEEP");
 			lbrcm->hcibrcm_state = HCIBRCM_ASLEEP;
 			lbrcm->inactive_period = 0;
-			deassert_bt_wake();
+			deassert_bt_wake(lbrcm->btwake_gpio,
+			lbrcm->hostwake_gpio);
 		}
 		/*}*/
 	}
@@ -129,20 +136,17 @@ void sleep_timer_function(unsigned long data)
 }
 
 
-static void __brcm_bcm_serial_clock_on(struct tty_struct *tty)
-{
-	struct uart_state *state = tty->driver_data;
-	struct uart_port *port = state->uart_port;
 
-	bcm_bzhw_request_clock_on(port);
+static void __brcm_bcm_serial_clock_on(struct hci_uart *hu)
+{
+	struct brcm_struct *brcm = hu->priv;
+	bcm_bzhw_request_clock_on(brcm->lqos_node);
 }
 
-static void __brcm_bcm_serial_clock_request_off(struct tty_struct *tty)
+static void __brcm_bcm_serial_clock_request_off(struct hci_uart *hu)
 {
-	struct uart_state *state = tty->driver_data;
-	struct uart_port *port = state->uart_port;
-
-	bcm_bzhw_request_clock_off(port);
+	struct brcm_struct *brcm = hu->priv;
+	bcm_bzhw_request_clock_off(brcm->lqos_node);
 }
 
 
@@ -182,7 +186,6 @@ out:
 static int brcm_open(struct hci_uart *hu)
 {
 	struct brcm_struct *brcm;
-
 	BT_DBG("hu %p", hu);
 
 	brcm = kzalloc(sizeof(*brcm), GFP_ATOMIC);
@@ -194,17 +197,25 @@ static int brcm_open(struct hci_uart *hu)
 	spin_lock_init(&brcm->hcibrcm_lock);
 
 	brcm->hcibrcm_state = HCIBRCM_AWAKE;
-	__brcm_bcm_serial_clock_on(hu->tty);
-	assert_bt_wake();
-	init_timer(&sleep_timer);
-	sleep_timer.expires = jiffies + msecs_to_jiffies(TIMER_PERIOD);
-	sleep_timer.data = (unsigned long)brcm;
-	sleep_timer.function = sleep_timer_function;
-	add_timer(&sleep_timer);
-
-	brcm->is_there_activity = 0;
-	hu->priv = brcm;
-
+	hw_struct = kzalloc(sizeof(*hw_struct), GFP_ATOMIC);
+	if (!hw_struct)
+		return -ENOMEM;
+	hw_struct = bcm_bzhw_start(hu->tty);
+	if (hw_struct != NULL) {
+		brcm->btwake_gpio = hw_struct->pdata->gpio_bt_wake;
+		brcm->hostwake_gpio = hw_struct->pdata->gpio_host_wake;
+		brcm->lqos_node = &hw_struct->qos_node;
+		init_timer(&sleep_timer);
+		brcm->is_there_activity = 0;
+		hu->priv = brcm;
+		sleep_timer.expires = jiffies + msecs_to_jiffies(TIMER_PERIOD);
+		sleep_timer.data = (unsigned long)brcm;
+		sleep_timer.function = sleep_timer_function;
+		add_timer(&sleep_timer);
+		__brcm_bcm_serial_clock_on(hu);
+		assert_bt_wake(brcm->btwake_gpio, brcm->lqos_node, hu->tty);
+	} else
+		return -EFAULT;
 	return 0;
 }
 
@@ -231,13 +242,17 @@ static int brcm_close(struct hci_uart *hu)
 	skb_queue_purge(&brcm->txq);
 	brcm->hcibrcm_state = HCIBRCM_ASLEEP;
 	del_timer(&sleep_timer);
-	deassert_bt_wake();
-	__brcm_bcm_serial_clock_request_off(hu->tty);
+	deassert_bt_wake(brcm->btwake_gpio, brcm->hostwake_gpio);
+	__brcm_bcm_serial_clock_request_off(hu);
 	if (brcm->rx_skb)
 		kfree_skb(brcm->rx_skb);
 
+	if (hw_struct) {
+		bcm_bzhw_stop(hw_struct);
+		hw_struct = NULL;
+		kfree(hw_struct);
+	}
 	hu->priv = NULL;
-
 	kfree(brcm);
 
 	return 0;
@@ -291,7 +306,7 @@ static void brcm_device_want_to_wakeup(struct hci_uart *hu)
 		/* Make sure clock is on - we may have turned clock off since
 		 * receiving the wake up indicator
 		 */
-		__brcm_bcm_serial_clock_on(hu->tty);
+		__brcm_bcm_serial_clock_on(hu);
 		/* acknowledge device wake up */
 		if (send_hcibrcm_cmd(HCIBRCM_WAKE_UP_ACK, hu) < 0) {
 			BT_ERR("cannot acknowledge device wake up");
@@ -350,7 +365,7 @@ out:
 
 	spin_lock_irqsave(&brcm->hcibrcm_lock, flags);
 	if (brcm->hcibrcm_state == HCIBRCM_ASLEEP)
-		__brcm_bcm_serial_clock_request_off(hu->tty);
+		__brcm_bcm_serial_clock_request_off(hu);
 	spin_unlock_irqrestore(&brcm->hcibrcm_lock, flags);
 }
 
@@ -403,7 +418,7 @@ static int brcm_enqueue(struct hci_uart *hu, struct sk_buff *skb)
 		break;
 	case HCIBRCM_ASLEEP:
 		BT_DBG("device asleep, waking up and queueing packet");
-		__brcm_bcm_serial_clock_on(hu->tty);
+		__brcm_bcm_serial_clock_on(hu);
 		/* save packet for later */
 		skb_queue_tail(&brcm->tx_wait_q, skb);
 		/* awake device */
@@ -434,7 +449,7 @@ static int brcm_enqueue(struct hci_uart *hu, struct sk_buff *skb)
 	if (brcm->hcibrcm_state == HCIBRCM_ASLEEP) {
 		BT_DBG("Asserting wake signal, moves to AWAKE");
 		/* assert BT_WAKE signal */
-		assert_bt_wake();
+		assert_bt_wake(brcm->btwake_gpio, brcm->lqos_node, hu->tty);
 		brcm->hcibrcm_state = HCIBRCM_AWAKE;
 		mod_timer(&sleep_timer,
 			  jiffies + msecs_to_jiffies(TIMER_PERIOD));
@@ -485,7 +500,7 @@ static int brcm_recv(struct hci_uart *hu, void *data, int count)
 	if (brcm->hcibrcm_state == HCIBRCM_ASLEEP) {
 		BT_DBG("Assert wake signal, moves to AWAKE");
 		/* assert BT_WAKE signal */
-		assert_bt_wake();
+		assert_bt_wake(brcm->btwake_gpio, brcm->lqos_node, hu->tty);
 		brcm->hcibrcm_state = HCIBRCM_AWAKE;
 		mod_timer(&sleep_timer,
 			  jiffies + msecs_to_jiffies(TIMER_PERIOD));

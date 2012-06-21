@@ -763,6 +763,7 @@ int ccu_save_state(struct ccu_clk *ccu_clk, int save);
 int ccu_get_dbg_bus_status(struct ccu_clk *ccu_clk);
 int ccu_set_dbg_bus_sel(struct ccu_clk *ccu_clk, u32 sel);
 int ccu_get_dbg_bus_sel(struct ccu_clk *ccu_clk);
+int ccu_print_sleep_prevent_clks(struct clk *clk);
 
 /*These clock API should only be called after
 * appropriate locks are acquired*/
