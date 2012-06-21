@@ -43,7 +43,7 @@
  * handlers, for e.g. ramdump, which
  * does an arch reset in panic notifier
  * handler.*/
-#define BMDM_WD_MN_PANIC_NOTIFY_PRIO	(1)
+#define BMDM_WD_MN_PANIC_NOTIFY_PRIO	(3)
 
 static int bmdm_wd_mn_panic_handler(struct notifier_block *nb,
 				unsigned long l, void *buf);

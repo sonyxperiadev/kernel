@@ -1455,6 +1455,19 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile)
 	g_module.dumping_cp_crash_log = 1;
 	sDumpFile = inDumpFile;
 
+#ifdef CONFIG_CDEBUGGER
+	/* if ramdump is enabled, saving cp crash dump here
+	   is redundant, so set it to none */
+	if ((BCMLOG_OUTDEV_NONE != BCMLOG_GetCpCrashLogDevice())
+		&& ramdump_enable
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+	    && ap_triggered
+#endif
+	    ) {
+		dump_port = BCMLOG_OUTDEV_NONE;
+		BCMLOG_SetCpCrashLogDevice(dump_port);
+	}
+#endif
 	/* We don't support SD card crash dump when AP kernel crash is
 	 * triggered first because file operations are not allowed in
 	 * atomic context. So we switch the port to emmc and save cp dump
