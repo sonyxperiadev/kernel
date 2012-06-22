@@ -304,6 +304,43 @@ cVoid chal_caph_dma_free_channel(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e channel)
 	return;
 }
 
+
+/****************************************************************************
+*
+*  Function Name: cVoid chal_caph_dma_clear_register(CHAL_HANDLE handle,
+*                   CAPH_DMA_CHANNEL_e channel)
+*
+*  Description: Clear CR1 and CR2 registers before starting configuration
+*
+****************************************************************************/
+cVoid chal_caph_dma_clear_register(CHAL_HANDLE handle,
+				  CAPH_DMA_CHANNEL_e channel)
+{
+	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
+	cUInt8 index;
+	cUInt32 cr = 0;
+
+	/* Find the channel we are looking for */
+	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
+		if ((1UL << index) & channel) {
+
+			/* Apply the settings in the hardware */
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_2,
+					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
+					   cr);
+
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_1,
+					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
+					   cr);
+			break;
+		}
+
+	}
+
+	return;
+}
+
+
 /****************************************************************************
 *
 *  Function Name: cVoid chal_caph_dma_set_direction(CHAL_HANDLE handle,

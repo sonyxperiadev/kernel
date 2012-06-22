@@ -164,6 +164,22 @@ CAPH_DMA_CHANNEL_e chal_caph_dma_alloc_given_channel(CHAL_HANDLE handle,
 cVoid chal_caph_dma_free_channel(CHAL_HANDLE handle,
 				 CAPH_DMA_CHANNEL_e channel);
 
+
+/**
+*
+*  @brief  free caph dma channel
+*
+*  @param  handle  (in) handle of the caph dma block
+*  @param  channel  (in) channel id of the caph dma block
+*
+*  @return cVoid
+*
+****************************************************************************/
+
+cVoid chal_caph_dma_clear_register(CHAL_HANDLE handle,
+				  CAPH_DMA_CHANNEL_e channel);
+
+
 /**
 *
 *  @brief  Set caph dma channel data direction
