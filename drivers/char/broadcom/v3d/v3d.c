@@ -589,17 +589,6 @@ static int v3d_job_start(void)
 
 	p_v3d_job = (v3d_job_t *)v3d_job_curr;
 
-	/*
-	 *
-	 * This should probably go into v3d_thread...  so that we can
-	 * skip jobs that are not ready, but that's a future
-	 * optimization.  For now, we simply stall here to wait for
-	 * the job dependencies to be met.
-	 *
-	 */
-	if (p_v3d_job->dvts_object != NULL)
-		dvts_wait(p_v3d_job->dvts_object, p_v3d_job->dvts_target);
-
 	if (v3d_in_use != 0) {
 		KLOG_E("v3d not free for starting job[0x%08x]", (u32)p_v3d_job);
 		v3d_print_all_jobs(2);
