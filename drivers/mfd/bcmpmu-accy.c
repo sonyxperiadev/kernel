@@ -856,7 +856,13 @@ static void bc_detection(struct bcmpmu_accy *paccy)
 			 * gets enabled here. Hence, restart BC by
 			 * power-cycling BCDLDO to get proper detection.
 			 */
-			enable_bc_clock(paccy, true);
+
+			/* In some cases, this state machine comes back to
+			 * USB_IDLE state when clocks are already enabled
+			 */
+			if (!paccy->clock_en)
+				enable_bc_clock(paccy, true);
+
 			wake_lock(&paccy->wake_lock);
 			bcdldo_cycle_power(paccy);
 			reset_bc(paccy);
