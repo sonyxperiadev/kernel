@@ -73,6 +73,12 @@ static ssize_t dump_hsotgctrl(struct device *dev,
 	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata = dev_get_drvdata(dev);
 	void __iomem *hsotg_ctrl_base = hsotgctrl_drvdata->hsotg_ctrl_base;
 
+	/* This could be done after USB is unplugged
+	 * Turn on AHB clock so registers
+	 * can be read even when USB is unplugged
+	 */
+	bcm_hsotgctrl_en_clock(true);
+
 	pr_info("\nusbotgcontrol: 0x%08X",
 		readl(hsotg_ctrl_base +
 		    HSOTG_CTRL_USBOTGCONTROL_OFFSET));
@@ -103,6 +109,9 @@ static ssize_t dump_hsotgctrl(struct device *dev,
 	pr_info("\nusbproben: 0x%08X",
 		readl(hsotg_ctrl_base +
 		    HSOTG_CTRL_USBPROBEN_OFFSET));
+
+	/* We turned on the clock so turn it off */
+	bcm_hsotgctrl_en_clock(false);
 
 	return sprintf(buf, "hsotgctrl register dump\n");
 }
