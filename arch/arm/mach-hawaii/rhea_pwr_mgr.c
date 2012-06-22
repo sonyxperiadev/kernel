@@ -356,6 +356,75 @@ static struct i2c_cmd i2c_dummy_seq_cmd[] = {
 
 };
 
+#ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ
+
+#define I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_0_SHIFT \
+PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_0_SHIFT
+#define I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_1_SHIFT \
+PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_1_SHIFT
+
+static int dummy_pm_init(void)
+{
+	u32 val = 0;
+	u32 i2c_cmd_data = 0;
+	u32 v0_ptr_data = 0;
+	int i = 0;
+
+	pr_info("dummy sequencer init\n");
+
+	/* dummy i2c sequencer */
+	v0_ptr_data = (
+		0x1 << PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_SET2_VALUE_SHIFT |
+		0xA << PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_SET2_SHIFT | 0x2 <<
+		PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_SET1_VALUE_SHIFT | 0xA <<
+		PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_SET1_SHIFT | 0xA <<
+		PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_ZEROV_SHIFT | 0x2 <<
+		PWRMGR_VO_SPECIFIC_I2C_COMMAND_POINTER_SHIFT);
+
+	/* set both VO0 & VO1 pointer to the same offset */
+	writel(v0_ptr_data, KONA_PWRMGR_VA +
+	       PWRMGR_VO0_SPECIFIC_I2C_COMMAND_POINTER_OFFSET);
+	writel(v0_ptr_data, KONA_PWRMGR_VA +
+	       PWRMGR_VO1_SPECIFIC_I2C_COMMAND_POINTER_OFFSET);
+
+	/* NOP and JUMP_VOLTAGE */
+	i2c_cmd_data |= (JUMP_VOLTAGE <<
+			 I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_1_SHIFT);
+	writel(i2c_cmd_data, (KONA_PWRMGR_VA +
+	       PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_OFFSET));
+
+	/* NOP NOP */
+	writel(0x0, (KONA_PWRMGR_VA +
+	       PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_02_OFFSET));
+
+	/* END END */
+	i2c_cmd_data = (END << I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_1_SHIFT)
+		| (END << I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_0_SHIFT);
+
+	/* write END instruction in the rest of the locations */
+	for (i = 2; i < 32; i++) {
+		writel(i2c_cmd_data, (KONA_PWRMGR_VA +
+		    PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_OFFSET +
+		    i * 4));
+	}
+
+	for (i = 0; i < 32; i++) {
+		writel(i2c_cmd_data, (KONA_PWRMGR_VA +
+		    PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_33_OFFSET +
+		    i * 4));
+	}
+
+	/*
+	 * enable power manger I2C so that CCU policy engine will not be stuck
+	 */
+	val = readl(KONA_PWRMGR_VA + PWRMGR_POWER_MANAGER_I2C_ENABLE_OFFSET);
+	val |= PWRMGR_POWER_MANAGER_I2C_ENABLE_POWER_MANAGER_I2C_ENABLE_MASK;
+	writel(val, KONA_PWRMGR_VA + PWRMGR_POWER_MANAGER_I2C_ENABLE_OFFSET);
+
+	return 0;
+}
+#endif /* #ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ */
+
 struct pm_special_event_range rhea_special_event_list[] = {
 	{GPIO29_A_EVENT, GPIO93_A_EVENT},
 	{GPIO18_B_EVENT, GPIO111_B_EVENT},
@@ -407,6 +476,11 @@ int __init rhea_pwr_mgr_init()
 
 	pwr_mgr_init(&rhea_pwr_mgr_info);
 	rhea_pi_mgr_init();
+
+#ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ
+	dummy_pm_init();
+#endif
+
 #ifdef CONFIG_RHEA_WA_HWJIRA_2272
 /*For B0, it was observed that if MM CCU is switched to and
 	from shutdown state, it would break the DDR self refresh.
