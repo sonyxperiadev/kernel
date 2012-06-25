@@ -430,10 +430,13 @@ static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] =
 #define HS_IRQ		gpio_to_irq(39)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
-
+/* Do not use lowest value as 0
+ * This way we can prevent spurious
+ * button events to an extent.
+ */
 static unsigned int rheass_button_adc_values[3][2] = {
 	/* SEND/END Min, Max*/
-	{0,	10},
+	{1,	10},
 	/* Volume Up  Min, Max*/
 	{11, 30},
 	/* Volue Down Min, Max*/
@@ -442,7 +445,7 @@ static unsigned int rheass_button_adc_values[3][2] = {
 
 static unsigned int rheass_button_adc_values_2_1[3][2] = {
 	/* SEND/END Min, Max*/
-	{0,     104},
+	{1,     104},
 	/* Volume Up  Min, Max*/
 	{139,   270},
 	/* Volue Down Min, Max*/
