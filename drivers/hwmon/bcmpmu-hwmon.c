@@ -466,7 +466,7 @@ static int update_adc_result(struct bcmpmu_adc *padc,
 			     struct bcmpmu_adc_req *req)
 {
 	int ret;
-
+	int insurance = 100;
 	req->raw = -EINVAL;
 	if (req->sig == PMU_ADC_FG_CURRSMPL || req->sig == PMU_ADC_FG_RAW) {
 		ret = padc->bcmpmu->write_dev(padc->bcmpmu,
@@ -478,12 +478,17 @@ static int update_adc_result(struct bcmpmu_adc *padc,
 		if (ret != 0)
 			return ret;
 	}
-	while (req->raw == -EINVAL) {
+	/*FG ADC channel can return negative value and -22 (-EINVAL) is a
+		valid value for FG*/
+	do {
 		ret = read_adc_result(padc, req);/* Here we get the raw value */
 		if (ret != 0)
 			return ret;
-	};
+		insurance--;
+	} while (req->raw == -EINVAL && insurance &&
+			req->sig != PMU_ADC_FG_CURRSMPL);
 
+	BUG_ON(insurance == 0 && req->raw == -EINVAL);
 	return 0;
 }
 
