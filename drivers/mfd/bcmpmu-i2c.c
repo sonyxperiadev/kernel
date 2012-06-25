@@ -22,6 +22,7 @@
 #include <linux/delay.h>
 #include <linux/mfd/bcmpmu.h>
 #include <mach/pwr_mgr.h>
+#include <linux/spinlock.h>
 #include <plat/pwr_mgr.h>
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
@@ -47,17 +48,30 @@ struct bcmpmu_i2c {
 	struct mutex i2c_mutex;
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock i2c_lock;
+	u32 ref_count;
 #endif
 	struct i2c_client *i2c_client;
 	struct i2c_client *i2c_client1;
 	int pagesize;
 };
 
+#ifdef CONFIG_HAS_WAKELOCK
+static DEFINE_SPINLOCK(wl_lock);
+#endif
 
 static inline void bcmpmu_i2c_lock(struct bcmpmu_i2c *i2c)
 {
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_lock(&i2c->i2c_lock);
+	/*Any thread can lock/unlock a wake lock.
+	Since PMU I2C APIs can be invoked from mutiple threads,
+	ref counting is added to manage PMU I2C wake lock.
+	I2C wake lock will the aquired by the first threading entering
+	I2C read/write function and the wake lock will be released
+	only by the last thread returning from the read/write function.*/
+	spin_lock(&wl_lock);
+	if (i2c->ref_count++ == 0)
+		wake_lock(&i2c->i2c_lock);
+	spin_unlock(&wl_lock);
 #endif
 	mutex_lock(&i2c->i2c_mutex);
 }
@@ -66,7 +80,11 @@ static inline void bcmpmu_i2c_unlock(struct bcmpmu_i2c *i2c)
 {
 	mutex_unlock(&i2c->i2c_mutex);
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_unlock(&i2c->i2c_lock);
+	spin_lock(&wl_lock);
+	BUG_ON(i2c->ref_count == 0);
+	if (--i2c->ref_count == 0)
+		wake_unlock(&i2c->i2c_lock);
+	spin_unlock(&wl_lock);
 #endif
 }
 
@@ -706,6 +724,7 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&bcmpmu_i2c->i2c_lock, WAKE_LOCK_SUSPEND,
 		"bcmpmu_i2c");
+	bcmpmu_i2c->ref_count = 0;
 #endif
 
 #if defined(CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER)
