@@ -535,12 +535,31 @@ static int __devexit bcmpmu_rtc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int bcmpmu_rtc_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	/* no action required */
+	pr_rtc(FLOW, "%s: ####\n", __func__);
+	return 0;
+}
+
+static int bcmpmu_rtc_resume(struct platform_device *pdev)
+{
+	/* disable the RTC ALRM interrupt
+	 * as android will take care of it now.
+	*/
+	pr_rtc(FLOW, "%s: ####\n", __func__);
+	bcmpmu_alarm_irq_enable(&pdev->dev, false);
+	return 0;
+}
+
 static struct platform_driver bcmpmu_rtc_driver = {
 	.driver = {
 		.name = "bcmpmu_rtc",
 	},
 	.probe = bcmpmu_rtc_probe,
 	.remove = __devexit_p(bcmpmu_rtc_remove),
+	.suspend = bcmpmu_rtc_suspend,
+	.resume = bcmpmu_rtc_resume,
 };
 
 static int __init bcmpmu_rtc_init(void)
