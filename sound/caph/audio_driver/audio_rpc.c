@@ -73,6 +73,8 @@ static bool_t xdr_AudioCompfilter_t(void *xdrs, AudioCompfilter_t *rsp);
 static bool_t xdr_AudioTuningParamInd_st(void *xdrs,
 			struct AudioTuningParamInd_st *rsp);
 
+static Boolean audioRpc_vcall_released_by_modem = FALSE;
+
 #define _T(a) a
 static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 /* Add phonebook message serialize/deserialize routine map */
@@ -101,6 +103,9 @@ static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 	(xdrproc_t)xdr_AudioTuningParamInd_st,
 	sizeof(struct AudioTuningParamInd_st), 0 },
 
+	{MSG_AUDIO_VCALL_REL_IND, _T("MSG_AUDIO_VCALL_REL_IND"),
+	 (xdrproc_t) xdr_UInt32, sizeof(UInt32), 0},
+
 	{(MsgType_t) __dontcare__, "", NULL_xdrproc_t, 0, 0}
 };
 
@@ -120,6 +125,14 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 
 		if ((*codecID) != 0)	/* Make sure codeid is not 0 */
 			AUDDRV_Telephone_RequestRateChange((UInt8) (*codecID));
+	}
+
+	if (MSG_AUDIO_VCALL_REL_IND == pMsg->msgId) {
+
+		aTrace(LOG_AUDIO_DRIVER,
+				"HandleAudioEventrespCb : MSG_AUDIO_VCALL_REL_IND \r\n");
+
+		audioRpc_vcall_released_by_modem = TRUE;
 	}
 
 	if (MSG_AUDIO_START_TUNING_IND == pMsg->msgId) {
@@ -666,6 +679,16 @@ UInt32 audio_cmf_filter(AudioCompfilter_t *cf)
 	*/
 
 	return val;
+}
+
+Boolean audio_rpc_read_flag_vc_rel_by_modem(void)
+{
+	return audioRpc_vcall_released_by_modem;
+}
+
+void audio_rpc_clear_flag_vc_rel_by_modem(void)
+{
+	audioRpc_vcall_released_by_modem = FALSE;
 }
 
 #else /* CONFIG_BCM_MODEM */

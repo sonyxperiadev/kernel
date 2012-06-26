@@ -193,6 +193,10 @@ UInt32 audio_control_dsp(UInt32 param1,
 
 UInt32 audio_cmf_filter(AudioCompfilter_t *cf);
 
+Boolean audio_rpc_read_flag_vc_rel_by_modem(void);
+void audio_rpc_clear_flag_vc_rel_by_modem(void);
+
+
 /* Description:   Inititialize audio driver */
 void AUDDRV_Init(void);
 

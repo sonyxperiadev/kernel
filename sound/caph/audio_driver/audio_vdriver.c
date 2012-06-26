@@ -317,6 +317,8 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	Boolean ec_enable_from_sysparm = dspECEnable;
 	Boolean ns_enable_from_sysparm = dspNSEnable;
 
+	audio_rpc_clear_flag_vc_rel_by_modem();
+
 #if defined(CONFIG_RHEA_PANDA)
 	AUDDRV_ExtModem_Telephony_Init(mic, speaker,
 		mode, app, bNeedDualMic,
@@ -677,6 +679,8 @@ void AUDDRV_Telephony_Deinit(void)
 #if defined(CONFIG_RHEA_PANDA)
 	AUDDRV_ExtModem_Telephony_Deinit();
 #endif
+
+	audio_rpc_clear_flag_vc_rel_by_modem();
 
 	return;
 }

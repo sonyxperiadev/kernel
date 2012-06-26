@@ -434,20 +434,42 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 		  voice even in call mode*/
 		chip->streamCtl[substream_number].dev_prop.p[0].sink =
 			AUDIO_SINK_LOUDSPK;
-	} else if ((callMode == MODEM_CALL)
+
+	} else if (
+		(callMode == MODEM_CALL
+			/*&& (audio_rpc_read_flag_vc_rel_by_modem() == FALSE)*/)
 	    && (chip->streamCtl[substream_number].iLineSelect[0]
 		!= AUDIO_SINK_I2S)) {
 		/*call mode & not FM Tx playback */
+		/*
+		during voice call, audio is played throught DSP to CAPH so that
+		DSP has the audio data for echo cancellation reference.
+
+		but, for the short time window between the time voice call
+		is already released by modem and the time user app tells
+		kernel driver to end voice call audio path,
+		audio playback is directly to CAPH. (not through DSP)
+		This avoids the 1 frame (20ms) audio glitch in speaker output.
+		*/
+
 		chip->streamCtl[substream_number].dev_prop.p[0].source =
 		    AUDIO_SOURCE_MEM;
 		chip->streamCtl[substream_number].dev_prop.p[0].sink =
 		    AUDIO_SINK_DSP;
+
+		aTrace(LOG_ALSA_INTERFACE,
+			"ALSA-CAPH PcmPlaybackTrigger to DSP MEM\n");
+
 	} else {
 		for (i = 0; i < MAX_PLAYBACK_DEV; i++) {
 			if (pSel[i] >= AUDIO_SINK_HANDSET
 			    && pSel[i] < AUDIO_SINK_VALID_TOTAL) {
 				chip->streamCtl[substream_number].dev_prop.p[i].
 				    sink = pSel[i];
+
+				aTrace(LOG_ALSA_INTERFACE,
+					"ALSA-CAPH PcmPlaybackTrigger to CAPH\n");
+
 			} else {
 				/* No valid device in the list to do a playback,
 				 * return error

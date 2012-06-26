@@ -3467,10 +3467,10 @@ static CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(
 
 	list = LIST_NUM;
 	if ((path->source == CSL_CAPH_DEV_MEMORY)
-	&& ((path->sink[sinkNo] == CSL_CAPH_DEV_EP)
-	|| (path->sink[sinkNo] == CSL_CAPH_DEV_HS)
-	|| (path->sink[sinkNo] == CSL_CAPH_DEV_IHF)
-	|| (path->sink[sinkNo] == CSL_CAPH_DEV_VIBRA))) {
+		&& ((path->sink[sinkNo] == CSL_CAPH_DEV_EP)
+		|| (path->sink[sinkNo] == CSL_CAPH_DEV_HS)
+		|| (path->sink[sinkNo] == CSL_CAPH_DEV_IHF)
+		|| (path->sink[sinkNo] == CSL_CAPH_DEV_VIBRA))) {
 		list = LIST_DMA_MIX_SW;
 
 		/*vibra does not go thru mixer*/
@@ -3552,9 +3552,20 @@ static CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(
 		list = LIST_DMA_MIX_SW;
 	} else if ((path->source == CSL_CAPH_DEV_DSP)/*DSP-->SRC-->SW-->AUDIOH*/
 		&& ((path->sink[sinkNo] == CSL_CAPH_DEV_EP)
-		|| (path->sink[sinkNo] == CSL_CAPH_DEV_HS))) {
+		|| (path->sink[sinkNo] == CSL_CAPH_DEV_HS)
+		|| (path->sink[sinkNo] == CSL_CAPH_DEV_IHF))) {
+		/*
+		if source==CSL_CAPH_DEV_DSP and sink==CSL_CAPH_DEV_IHF
+		then 8KHz voice call to loud speaker.
+
+		in audio_vdriver.c, for voice call to IHF, it sets
+		source = CSL_CAPH_DEV_DSP_throughMEM;
+		src_sampleRate = AUDIO_SAMPLING_RATE_48000;
+		therefore voice call to loud speaker at 48KHz
+		does not come inside this if statement.
+		*/
 		aTrace(LOG_AUDIO_CSL,
-			"Voice DL: DSP->AUDIOH(EP/HS)\r\n");
+			"Voice DL: DSP->AUDIOH(EP/HS/IHF)\r\n");
 #if defined(ENABLE_DMA_VOICE)
 		list = LIST_DMA_MIX_SW;
 #else
