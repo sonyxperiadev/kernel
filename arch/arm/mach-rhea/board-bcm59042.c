@@ -526,7 +526,7 @@ struct bcmpmu_regulator_init_data bcm59042_regulators[BCMPMU_REGULATOR_MAX] = {
 			BCMPMU_REGULATOR_HV8LDO, &bcm59042_hv8ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV9LDO] = {
-			BCMPMU_REGULATOR_HV9LDO, &bcm59042_hv9ldo_data, 0x00, 0
+			BCMPMU_REGULATOR_HV9LDO, &bcm59042_hv9ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV10LDO] = {
 		BCMPMU_REGULATOR_HV10LDO, &bcm59042_hv10ldo_data, 0xAA,
