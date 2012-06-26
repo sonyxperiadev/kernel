@@ -825,6 +825,7 @@ void Log_BinaryLoggingUncompressedWithDeref(UInt16 log_id, UInt32 sig_code, void
 //***************************************************************************************
 /**
     Function to log a binary logging message described by a link list
+	@param		log_id (in) logic id controlling whether this binary logging is generated
 	@param		sig_code (in) binary logging code
 	@param		*link_list (in) starting address of a link list
 	@param		list_size_size (in) size of the link list, in number of list items
@@ -839,11 +840,12 @@ void Log_BinaryBlocksUncompressed(UInt16 log_id, UInt32 sig_code, log_link_list_
 //***************************************************************************************
 /**
     Function to log a binary logging message described by a link list with a dereference link list
+	@param		log_id (in) logic id controlling whether this binary logging is generated
 	@param		sig_code (in) binary logging code
 	@param		*link_list (in) starting address of a link list
-	@param		list_size_size (in) size of the link list, in number of list items
+	@param		list_size (in) size of the link list, in number of list items
 	@param		*link_list2 (in) starting address of a dereference link list
-	@param		list2_size_size (in) size of the dereference link list, in number of list items
+	@param		list2_size (in) size of the dereference link list, in number of list items
 	@note
 	This function is provided to assist Log_BinaryLogging() in case the binary logging is
 	assembled from different memories, where a link list can avoid unnecessary memcpy.
@@ -919,38 +921,10 @@ void Log_DebugLinkList(UInt32 sig_code, log_link_list_t* link_list, UInt32 list_
 void Log_DebugLinkListUncompressed(UInt32 sig_code, log_link_list_t* link_list, UInt32 list_size_size, UInt16 state, UInt16 sender);
 
 //***************************************************************************************
+
 /**
-    Function to log a low-level logging message in a binary signal
-	@note
-	This group of functions are provided to assist Log_DebugSignal() in case it is needed
-	to group many low-level, simple "Tag = Value/Array" logging messages inside a binary
-	signal in order to reduce MTT framing overhead.
-
-	In the group, a "Tag=Value/Array" logging message is packed as one of the following formats
-		TagType(4 bit) + TagID(11-12 bit) + Value(size determined by TagType)
-		TagType(4 bit) + TagTypeExt(4 bit) + TagID(15-16 bit) + Value/Array(size determined by TagTypeExt)
-
-	In details, the following TagType and TagTypeExt are supported
-		0001 + TagID(11 bit) + 1-bit Value							// carried out by Log_Grouped1bitValue()
-		0010 + TagID(12 bit) + 8-bit Value							// carried out by Log_Grouped8bitValue()
-		0100 + TagID(12 bit) + 16-bit Value							// carried out by Log_Grouped16bitValue()
-		1000 + TagID(12 bit) + 32-bit Value							// carried out by Log_Grouped32bitValue()
-		0011 + 0001 + TagID(15 bit) + 1-bit Value					// carried out by Log_Grouped1bitValue()
-		0011 + 0010 + TagID(16 bit) + 8-bit Value					// carried out by Log_Grouped8bitValue()
-		0011 + 0100 + TagID(16 bit) + 16-bit Value					// carried out by Log_Grouped16bitValue()
-		0011 + 1000 + TagID(16 bit) + 32-bit Value					// carried out by Log_Grouped32bitValue()
-		0011 + 0011 + TagID(16 bit) + Length(8 bit) + 8-bit Array	// carried out by Log_Grouped8bitArray()
-		0011 + 0101 + TagID(16 bit) + Length(8 bit) + 16-bit Array	// carried out by Log_Grouped16bitArray()
-		0011 + 1001 + TagID(16 bit) + Length(8 bit) + 32-bit Array	// carried out by Log_Grouped32bitArray()
-		0011 + 0111 + TagID(16 bit) + ASCIIZ string					// carried out by Log_GroupedString()
-
-	The accumulated logging messages are sent to logging circular buffer using Log_BinaryLogging() when any of
-	the following conditions is met
-	(1)	The accumulated size of "Tag=Value" logging messages exceeds 1kB
-	(2) The time threshold is no longer met (default 0, meaning time stamps must be identical, i.e., within 1ms)
-	(3) By Log_FlushGroup().
+	Definitions of the size of the log value to be logged
 **/	
-
 #define		LLG_LOG_TAG_TYPE_1BIT_VALUE			1
 #define		LLG_LOG_TAG_TYPE_8BIT_VALUE			2
 #define		LLG_LOG_TAG_TYPE_16BIT_VALUE		4
@@ -966,6 +940,42 @@ void Log_DebugLinkListUncompressed(UInt32 sig_code, log_link_list_t* link_list, 
 #define		LLG_LOG_TAG_TYPE_EXT_ASCIIZ			0x37
 
 #define		LLG_LOG_TAG_TIMESTAMP				0	// reserved tag ID for 32bit time stamp as first LLG log in a grouped binary logging
+
+/**
+    Function to log a low-level logging message in a binary signal
+	@note
+	This group of functions are provided to assist Log_DebugSignal() in case it is needed
+	to group many low-level, simple "Tag = Value/Array" logging messages inside a binary
+	signal in order to reduce MTT framing overhead.
+
+	In the group, a "Tag=Value/Array" logging message is packed as one of the following formats
+@code 
+		TagType(4 bit) + TagID(11-12 bit) + Value(size determined by TagType)
+		TagType(4 bit) + TagTypeExt(4 bit) + TagID(15-16 bit) + Value/Array(size determined by TagTypeExt)
+@endcode
+
+	In details, the following TagType and TagTypeExt are supported
+@code 
+		0001 + TagID(11 bit) + 1-bit Value							// carried out by Log_Grouped1bitValue()
+		0010 + TagID(12 bit) + 8-bit Value							// carried out by Log_Grouped8bitValue()
+		0100 + TagID(12 bit) + 16-bit Value							// carried out by Log_Grouped16bitValue()
+		1000 + TagID(12 bit) + 32-bit Value							// carried out by Log_Grouped32bitValue()
+		0011 + 0001 + TagID(15 bit) + 1-bit Value					// carried out by Log_Grouped1bitValue()
+		0011 + 0010 + TagID(16 bit) + 8-bit Value					// carried out by Log_Grouped8bitValue()
+		0011 + 0100 + TagID(16 bit) + 16-bit Value					// carried out by Log_Grouped16bitValue()
+		0011 + 1000 + TagID(16 bit) + 32-bit Value					// carried out by Log_Grouped32bitValue()
+		0011 + 0011 + TagID(16 bit) + Length(8 bit) + 8-bit Array	// carried out by Log_Grouped8bitArray()
+		0011 + 0101 + TagID(16 bit) + Length(8 bit) + 16-bit Array	// carried out by Log_Grouped16bitArray()
+		0011 + 1001 + TagID(16 bit) + Length(8 bit) + 32-bit Array	// carried out by Log_Grouped32bitArray()
+		0011 + 0111 + TagID(16 bit) + ASCIIZ string					// carried out by Log_GroupedString()
+@endcode
+
+	The accumulated logging messages are sent to logging circular buffer using Log_BinaryLogging() when any of
+	the following conditions is met<BR>
+	(1)	The accumulated size of "Tag=Value" logging messages exceeds 1kB<BR>
+	(2) The time threshold is no longer met (default 0, meaning time stamps must be identical, i.e., within 1ms)<BR>
+	(3) By Log_FlushGroup().<BR>
+**/	
 
 void Log_Grouped1bitValue	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt8 value);
 void Log_Grouped8bitValue	(UInt16 log_id, UInt32 sig_code, UInt32 tag_id, UInt8 value);

@@ -664,12 +664,12 @@ void IPCAP_ClearCrashData(void);
 
 /* silent CP reset support */
 typedef enum {
-	IPC_CPRESET_START,	/* CP Reset starting */
-	IPC_CPRESET_COMPLETE	/* CP Reset complete */
+	IPC_CPRESET_START,	///< CP Reset starting
+	IPC_CPRESET_COMPLETE	///< CP Reset complete
 } IPC_CPResetEvent_t;
 typedef void(*IPCAP_CPResetHandler_T)(IPC_CPResetEvent_t inEvent);
 int IPCAP_RegisterCPResetHandler(IPCAP_CPResetHandler_T inResetHandler);
-void IPCAP_ReadyForReset(int inClientID);
+void IPCAP_ReadyForReset( int inClientID );
 /* Crash handling functions CP side */
 
 /****************************************/
