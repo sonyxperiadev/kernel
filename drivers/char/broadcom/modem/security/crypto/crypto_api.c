@@ -37,8 +37,7 @@ unsigned char EncDec(unsigned char *outDataPtr, const unsigned char *inDataPtr,
 			unsigned int inDataSize, unsigned int inEncDec)
 {
 #if defined(CONFIG_ROM_SEC_DISPATCHER) &&\
-		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES) &&\
-		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH)
+		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES)
 
 	 struct clk *sec_spum_clk = NULL;
 	 void *aes_buf_vir = NULL;
@@ -48,7 +47,6 @@ unsigned char EncDec(unsigned char *outDataPtr, const unsigned char *inDataPtr,
 
 	 /* Check for invalid parameters */
 	 if ((outDataPtr == NULL) ||
-		(inDataSize > SZ_1K) ||
 		(inDataSize < AES_BLOCK_SIZE) ||
 		((inDataSize % AES_BLOCK_SIZE) != 0) ||
 		((inEncDec != AES_OPERATION_ENCRYPT) &&
