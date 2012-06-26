@@ -1447,6 +1447,10 @@ shrink_inactive_list(unsigned long nr_to_scan, struct zone *zone,
 				ISOLATE_BOTH : ISOLATE_INACTIVE;
 	if (sc->gfp_mask & __GFP_MOVABLE)
 		mode |= ISOLATE_CMA;
+
+	if (priority > (DEF_PRIORITY - 2))
+		mode |= ISOLATE_CMA;
+
 	lru_add_drain();
 	spin_lock_irq(&zone->lru_lock);
 
@@ -1570,6 +1574,9 @@ static void shrink_active_list(unsigned long nr_pages, struct zone *zone,
 	int mode = ISOLATE_ACTIVE;
 
 	if (sc->gfp_mask & __GFP_MOVABLE)
+		mode |= ISOLATE_CMA;
+
+	if (priority > (DEF_PRIORITY - 2))
 		mode |= ISOLATE_CMA;
 
 	lru_add_drain();
@@ -1881,8 +1888,6 @@ out:
 		unsigned long scan;
 
 		scan = zone_nr_lru_pages(zone, sc, l);
-		if (!(sc->gfp_mask & __GFP_MOVABLE))
-			scan -= zone_page_state(zone, LRU_CMA_ANON + file);
 
 		if (priority || noswap) {
 			scan >>= priority;
@@ -1996,8 +2001,32 @@ restart:
 					nr[LRU_INACTIVE_FILE]) {
 		for_each_evictable_lru(l) {
 			if (nr[l]) {
+				unsigned long prio_scan = 0;
 				nr_to_scan = min_t(unsigned long,
 						   nr[l], SWAP_CLUSTER_MAX);
+				/*
+				 * Scan more pages, depending on the priority
+				 * and gfp_mask.
+				 * In the shink_list() we start doing
+				 * targetted reclaim when priority drops
+				 * below 10. So make sure we scan more and more
+				 * pages so that the targetted reclaim have
+				 * more chance to succeed
+				 *
+				 * printks below are deleberate to track
+				 * occurences of such events. They will be
+				 * removed later
+				 */
+				if (!(sc->gfp_mask & __GFP_MOVABLE)) {
+					if (priority < (DEF_PRIORITY - 8))
+						prio_scan = nr[l];
+					else if (priority < (DEF_PRIORITY - 2))
+						prio_scan = (nr[l] >> 1);
+
+					nr_to_scan = max_t(unsigned long,
+							prio_scan, nr_to_scan);
+				}
+
 				nr[l] -= nr_to_scan;
 
 				nr_reclaimed += shrink_list(l, nr_to_scan,
