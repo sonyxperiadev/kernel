@@ -232,6 +232,7 @@ int __init kona_pm_init()
 {
 #ifdef CONFIG_CPU_IDLE
 	int i, num_states;
+	unsigned int cpu;
 	struct cpuidle_device *dev;
 	struct cpuidle_state *state;
 	struct kona_idle_state *idle_states = NULL;
@@ -242,7 +243,9 @@ int __init kona_pm_init()
 	       num_states <= 0 || idle_states == NULL);
 	cpuidle_register_driver(&kona_idle_driver);
 
-	dev = &per_cpu(kona_idle_dev, smp_processor_id());
+	for_each_possible_cpu(cpu) {
+	dev = &per_cpu(kona_idle_dev, cpu);
+	dev->cpu = cpu;
 
 	for (i = 0; i < num_states; i++) {
 		state = &dev->states[i];
@@ -268,6 +271,7 @@ int __init kona_pm_init()
 		       __func__);
 		cpuidle_unregister_driver(&kona_idle_driver);
 		return -EIO;
+	}
 	}
 #endif /*CONFIG_CPU_IDLE */
 
