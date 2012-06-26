@@ -95,6 +95,10 @@
 #include <linux/bcmi2cnfc.h>
 #endif
 
+#if defined(CONFIG_SENSORS_BMA222)
+#include <linux/bma222.h>
+#endif
+
 #if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 #include <linux/bmp18x.h>
 #include <mach/rheastone/bmp18x_i2c_settings.h>
@@ -382,6 +386,13 @@ static struct i2c_board_info __initdata i2c_al3006_info[] = {
 	{
 		I2C_BOARD_INFO("al3006", AL3006_I2C_ADDRESS),
 	},
+};
+#endif
+
+#if defined(CONFIG_SENSORS_BMA222)
+static struct bma222_accl_platform_data bma_pdata = {
+	.orientation = BMA_ROT_90,
+	.invert = false,//true,
 };
 #endif
 
@@ -1505,6 +1516,15 @@ static struct i2c_board_info __initdata tango_info[] =
 };
 #endif
 
+#if defined(CONFIG_SENSORS_BMA222)
+static struct i2c_board_info __initdata bma222_accl_info[] =
+	{
+		I2C_BOARD_INFO("bma222_accl", 0x08),
+		.irq = -1,
+		.platform_data = &bma_pdata, 
+	},
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_FT5306
 static int ts_power(ts_power_status vreg_en)
 {
@@ -1578,6 +1598,11 @@ static void __init rhea_stone_add_i2c_devices (void)
 	i2c_register_board_info(1,
 		ft5306_info,
 		ARRAY_SIZE(ft5306_info));
+#endif
+#ifdef  CONFIG_SENSORS_BMA222
+        i2c_register_board_info(1,
+                 bma222_accl_info,
+                 ARRAY_SIZE(bma222_accl_info));
 #endif
 #if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 #ifdef HW_BCM915500_I2C_BUS_ID /* Temporary: in bcm915500_i2c_ts.h */
