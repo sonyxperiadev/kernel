@@ -301,8 +301,10 @@ static int param_get_debug(char *buffer, const struct kernel_param *kp)
 void instrument_dormant_entry(void)
 {
 	if (dormant_trace_v) {
+#ifdef CONFIG_RHEA_DORMANT_MODE
 		*dormant_trace_v = DORMANT_ENTRY;
 		*(dormant_trace_v + COUNTER_OFFSET) = dormant_attempt + 1;
+#endif
 	}
 
 	dormant_profile_entry();
@@ -446,15 +448,12 @@ void instrument_wfi(int trace_path)
 
 int __init rhea_pmdbg_init(void)
 {
-#ifdef CONFIG_RHEA_DORMANT_MODE
 	void *v = NULL;
 	dma_addr_t p;
-#endif
 
 	snapshot_table_register(snapshot, ARRAY_SIZE(snapshot));
 	dormant_profile_config(0, 0, 0, 0);
 
-#ifdef CONFIG_RHEA_DORMANT_MODE
 	v = dma_alloc_coherent(NULL, SZ_4K, &p, GFP_ATOMIC);
 	if (v == NULL) {
 		pr_info("%s: tracer dma buffer alloc failed\n", __func__);
@@ -471,7 +470,6 @@ int __init rhea_pmdbg_init(void)
 				(u32)ret_trace_v, (u32)wfi_trace_v);
 
 	pr_info("dormant trace v:0x%x, p:0x%x\n", (u32)v, (u32)p);
-#endif
 
 	return 0;
 }
