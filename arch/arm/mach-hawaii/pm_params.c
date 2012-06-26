@@ -395,7 +395,7 @@ static const u32 a9_freq_list[A9_FREQ_MAX] = {
 
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 {
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_HAWAII_RAY
 #define RATE_ADJ 10
 	struct clk *a9_pll_chnl1;
 	int inx;
