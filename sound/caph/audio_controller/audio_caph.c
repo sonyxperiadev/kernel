@@ -352,6 +352,9 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 	case ACTION_AUD_SetPrePareParameters:
 		size = sizeof(BRCM_AUDIO_Param_Prepare_t);
 		break;
+	case ACTION_AUD_BufferReady:
+		size = sizeof(BRCM_AUDIO_Param_BufferReady_t);
+		break;
 	case ACTION_AUD_AddChannel:
 	case ACTION_AUD_RemoveChannel:
 	case ACTION_AUD_SwitchSpkr:
@@ -883,6 +886,28 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			aTrace(LOG_AUDIO_CNTLR,
 					"AUDIO_Ctrl_Process Stop Playback"
 					" completed\n");
+		}
+		break;
+	case ACTION_AUD_BufferReady:
+		{
+			BRCM_AUDIO_Param_BufferReady_t *param_bufferready =
+			    (BRCM_AUDIO_Param_BufferReady_t *) arg_param;
+
+			/*aTrace(LOG_AUDIO_CNTLR,
+			       "\n %lx:AUDIO_Ctrl_Process-"
+			       "ACTION_AUD_BufferReady. stream=%d\n",
+			       jiffies, param_bufferready->stream);*/
+			CAPH_ASSERT(param_bufferready->stream >=
+				    (CTL_STREAM_PANEL_FIRST - 1)
+				    && param_bufferready->stream <
+				    (CTL_STREAM_PANEL_LAST - 1));
+
+			AUDIO_DRIVER_Ctrl(param_bufferready->drv_handle,
+					  AUDIO_DRIVER_BUFFER_READY, NULL);
+
+			/*aTrace(LOG_AUDIO_CNTLR,
+			"AUDIO_Ctrl_Process ACTION_AUD_BufferReady"
+			" completed. stream=%d\n", param_bufferready->stream);*/
 		}
 		break;
 	case ACTION_AUD_PausePlay:

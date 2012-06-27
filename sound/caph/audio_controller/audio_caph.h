@@ -96,6 +96,7 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_SetCallMode,
 	ACTION_AUD_ConnectDL,
 	ACTION_AUD_UpdateUserVolSetting,
+	ACTION_AUD_BufferReady,
 	ACTION_AUD_TOTAL
 };
 #define BRCM_AUDIO_ACTION_en_t enum __BRCM_AUDIO_ACTION_en_t
@@ -158,6 +159,13 @@ struct __BRCM_AUDIO_Param_Prepare_t {
 	AUDIO_DRIVER_CallBackParams_t cbParams;
 };
 #define BRCM_AUDIO_Param_Prepare_t struct __BRCM_AUDIO_Param_Prepare_t
+
+struct __BRCM_AUDIO_Param_BufferReady_t {
+	AUDIO_DRIVER_HANDLE_t drv_handle;
+	TIDChanOfDev *pdev_prop;
+	int stream;
+};
+#define BRCM_AUDIO_Param_BufferReady_t struct __BRCM_AUDIO_Param_BufferReady_t
 
 struct __BRCM_AUDIO_Param_Volume_t {
 	Int32 source;

@@ -24,6 +24,7 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DUNDER_LINUX -DUNDER_LINUX_MODEM -DL
 #the options below are used by audio
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_DMA_VOICE
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_BT16
+#subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DDYNAMIC_DMA_PLAYBACK
 #subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DVOLTE_SUPPORT
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCONFIG_CAPH_DYNAMIC_SRC_CLK
 ifdef CONFIG_ARCH_RHEA_BX
