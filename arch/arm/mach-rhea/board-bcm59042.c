@@ -85,6 +85,9 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x15, .val = 0x20, .mask = 0xFF},
 	{.map = 0, .addr = 0x16, .val = 0xF8, .mask = 0xFF},
 	{.map = 0, .addr = 0x1D, .val = 0x09, .mask = 0xFF},
+
+	/*FGOPMODCTRL, Set bits 4, 1 for FG Sync. Mode*/
+	{.map = 1, .addr = 0x42, .val = 0x15, .mask = 0xFF},
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {
