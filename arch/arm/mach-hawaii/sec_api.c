@@ -97,8 +97,8 @@ static void secure_api_call_shim(void *info)
 	/* Flush caches for input data passed to Secure Monitor */
 	flush_cache_all();
 
-	printk(KERN_NOTICE "About to trap into Secure Monitor on CPU %d\n",
-		raw_smp_processor_id());
+	/*printk(KERN_NOTICE "About to trap into Secure Monitor on CPU %d\n",
+		raw_smp_processor_id());*/
 
 	/* Trap into Secure Monitor */
 	smc(data);
