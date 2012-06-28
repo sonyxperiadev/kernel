@@ -18,6 +18,11 @@ config VCE
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
 	default n
 
+config BCM_MMUTIL
+	tristate "BCM MM Util Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+	default n
+
 config BRCM_FUSE_LOG
 	tristate "Broadcom FUSE LOG drivers"
 	depends on BRCM_CHAR_DRIVERS
