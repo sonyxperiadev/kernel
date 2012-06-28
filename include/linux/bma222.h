@@ -22,7 +22,6 @@
 #include <sys/ioctl.h>
 #endif
 
-//#include <plat/bcm_i2c.h>
 
 #ifdef __KERNEL__
 #include <linux/i2c-kona.h>

@@ -392,7 +392,7 @@ static struct i2c_board_info __initdata i2c_al3006_info[] = {
 #if defined(CONFIG_SENSORS_BMA222)
 static struct bma222_accl_platform_data bma_pdata = {
 	.orientation = BMA_ROT_90,
-	.invert = false,//true,
+	.invert = false,
 };
 #endif
 
@@ -1520,12 +1520,13 @@ static struct i2c_board_info __initdata tango_info[] =
 #endif
 
 #if defined(CONFIG_SENSORS_BMA222)
-static struct i2c_board_info __initdata bma222_accl_info[] =
+static struct i2c_board_info __initdata bma222_accl_info[] = {
 	{
 		I2C_BOARD_INFO("bma222_accl", 0x08),
 		.irq = -1,
 		.platform_data = &bma_pdata, 
 	},
+};
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_FT5306

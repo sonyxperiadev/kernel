@@ -47,8 +47,6 @@
 #define ANY_MOTION_THRES		1
 #define ANY_MOTION_CT			1
 
-MODULE_LICENSE("GPL v2");
-MODULE_ALIAS("bma222");
 
 struct drv_data {
 #ifdef BMA222_INPUT_DEVICE
@@ -91,7 +89,7 @@ enum bma222_accl_modes {
 	SENSOR_DELAY_NORMAL = 200
 };
 
-//add for lock i2c read/write when camera power up/down
+/*add for lock i2c read/write when camera power up/down*/
 #ifdef CONFIG_BMA222_WORKAROUND
 extern void sensor_power_switch_lock(void);
 extern void sensor_power_switch_unlock(void);
@@ -358,9 +356,6 @@ static int bma222_read_accel_xyz(bma_acc_t *acc)
     acc->x = (signed char)data[0];
     acc->y = (signed char)data[2];
     acc->z = (signed char)data[4];
-
-  //printk("get acc xyz [%d][%d][%d] \n",acc->x, acc->y, acc->z);
-
     return comres;
 }
 
@@ -742,3 +737,10 @@ static void __exit bma222_accl_exit(void)
 }
 
 module_exit(bma222_accl_exit);
+
+MODULE_LICENSE("GPL v2");
+MODULE_ALIAS("bma222");
+
+MODULE_AUTHOR("yongqiang wang");
+MODULE_DESCRIPTION("BMA222 driver");
+MODULE_LICENSE("GPL");
