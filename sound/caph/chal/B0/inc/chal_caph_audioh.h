@@ -1028,6 +1028,46 @@ extern void chal_audio_hspath_sdm_set_dither_seed(CHAL_HANDLE handle,
 						  cUInt32 hs_dither_seed_L,
 						  cUInt32 hs_dither_seed_R);
 
+
+/*============================================================================
+*
+* Function Name: cVoid chal_audio_hspath_sdm_set_dither_strength(
+* CHAL_HANDLE handle,
+* cUInt16 dither_streng_L,
+* cUInt16 dither_streng_R);
+*
+* Description:  set the dither strength to sigma delta module on headset path
+*
+* Parameters:   handle - audio chal handle.
+*                 dither_streng_L - Stereo Left Path Dither Stength
+*                 dither_streng_R - Stereo Right Path Dither Stength
+*
+* Return:       None.
+*
+*============================================================================*/
+
+cVoid chal_audio_hspath_sdm_set_dither_strength(CHAL_HANDLE handle,
+						cUInt16 dither_streng_L,
+						cUInt16 dither_streng_R);
+
+/*============================================================================
+*
+* Function Name: chal_audio_hspath_sdm_enable_dither(CHAL_HANDLE handle,
+* cUInt16 enable)
+*
+* Description:  enable dither to sigma delta module on headset path
+*                 set/clear on SDM_DITHER_CTL : Bit0 /Bit4
+*
+* Parameters:   handle - audio chal handle.
+*               enable - gain_enable : bit 1 for right channel enable/disbale
+*               enable - gain_enable : bit 0 for left channel enable/disbale
+*
+* Return:       None.
+*
+*============================================================================*/
+
+cVoid chal_audio_hspath_sdm_enable_dither(CHAL_HANDLE handle, cUInt16 enable);
+
 /**
 *
 *  @brief  Set Head Set Driver Supply Indicator control parameters

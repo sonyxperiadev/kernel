@@ -816,8 +816,14 @@ void csl_caph_audioh_start(int path_id)
 			audioh_hs_on = 1;
 			chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
 			chal_audio_hspath_set_gain(handle, 0);
+				/*enable dither*/
+			chal_audio_hspath_sdm_set_dither_seed(handle, 1, 1);
+			chal_audio_hspath_sdm_set_dither_poly(handle,
+							0x48000000,
+							0x41000000);
+			chal_audio_hspath_sdm_set_dither_strength(handle, 3, 3);
+			chal_audio_hspath_sdm_enable_dither(handle, 0x3);
 		}
-
 		chal_audio_hspath_enable(handle, chnl_enable);
 		break;
 
@@ -985,6 +991,7 @@ static void csl_caph_audioh_stop_keep_config(int path_id)
 		chal_audio_hspath_int_enable(handle, FALSE, FALSE);
 		chal_audio_hspath_enable(handle, 0);
 		chal_audio_hspath_set_dac_pwr(handle, 0);
+		chal_audio_hspath_sdm_enable_dither(handle, 0);
 		break;
 
 	case AUDDRV_PATH_IHF_OUTPUT:
@@ -2607,6 +2614,12 @@ void csl_caph_audioh_start_hs(void)
 
 	chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
 	chal_audio_hspath_set_gain(handle, 0);
+	/*enable dither*/
+	chal_audio_hspath_sdm_set_dither_seed(handle, 1, 1);
+	chal_audio_hspath_sdm_set_dither_poly(handle, 0x48000000,
+					0x41000000);
+	chal_audio_hspath_sdm_set_dither_strength(handle, 3, 3);
+	chal_audio_hspath_sdm_enable_dither(handle, 0x3);
 	/*chal_audio_hspath_enable(handle, chnl_enable);*/
 }
 
@@ -2658,6 +2671,7 @@ void csl_caph_audioh_stop_hs(void)
 	chal_audio_hspath_int_enable(handle, FALSE, FALSE);
 	chal_audio_hspath_enable(handle, 0);
 	chal_audio_hspath_set_dac_pwr(handle, 0);
+	chal_audio_hspath_sdm_enable_dither(handle, 0);
 }
 
 /****************************************************************************
