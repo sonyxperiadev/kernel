@@ -161,6 +161,7 @@ static Boolean is26MClk = FALSE;
 static Boolean muteInPlay = FALSE;
 static Boolean isStIHF = FALSE;
 
+static Boolean isFmMuted = FALSE;
 /*
 static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 static unsigned int recordGainR[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
@@ -1031,24 +1032,34 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 	sp_struct.inHWlpbk = inHWlpbk;
 	sp_struct.mixOutGain_mB = GAIN_SYSPARM;
 	sp_struct.mixOutGainR_mB = GAIN_SYSPARM;
-	if (users_gain[AUDPATH_FM].valid) {
-		/*do not apply FM mixer input gain to music*/
-		if (path->source == CSL_CAPH_DEV_MEMORY) {
-			sp_struct.mixInGain_mB = GAIN_SYSPARM;
-			sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+	if (isFmMuted == FALSE) {
+		if (users_gain[AUDPATH_FM].valid) {
+			/*do not apply FM mixer input gain to music*/
+			if (path->source == CSL_CAPH_DEV_MEMORY) {
+				sp_struct.mixInGain_mB = GAIN_SYSPARM;
+				sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+			} else {
+				sp_struct.mixInGain_mB =
+					users_gain[AUDPATH_FM].L;
+				sp_struct.mixInGainR_mB =
+					users_gain[AUDPATH_FM].R;
+			}
 		} else {
-			sp_struct.mixInGain_mB = users_gain[AUDPATH_FM].L;
-			sp_struct.mixInGainR_mB = users_gain[AUDPATH_FM].R;
+			if (muteInPlay) {
+				sp_struct.mixInGain_mB = GAIN_NA;
+				sp_struct.mixInGainR_mB = GAIN_NA;
+			} else {
+				sp_struct.mixInGain_mB = GAIN_SYSPARM;
+				sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+			}
 		}
 	} else {
-		if (muteInPlay) {
-			sp_struct.mixInGain_mB = GAIN_NA;
-			sp_struct.mixInGainR_mB = GAIN_NA;
-		} else {
-			sp_struct.mixInGain_mB = GAIN_SYSPARM;
-			sp_struct.mixInGainR_mB = GAIN_SYSPARM;
-		}
+		aTrace(LOG_AUDIO_CNTLR,
+			"FM IS MUTED APPLY GAIN_NA\n");
+		sp_struct.mixInGain_mB = GAIN_NA;
+		sp_struct.mixInGainR_mB = GAIN_NA;
 	}
+
 	if (user_vol_setting[app][mode].valid == FALSE)
 		fillUserVolSetting(mode, app);
 	sp_struct.mixOutGain_mB = user_vol_setting[app][mode].L;
@@ -1952,6 +1963,8 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 				/*do not mute music even FM is muted*/
 				if (source != AUDIO_SOURCE_I2S)
 					muteInPlay = TRUE;
+				else
+					isFmMuted = TRUE;
 			}
 		}
 	} else {
@@ -1974,6 +1987,8 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 					mixInGain, mixInGainR);
 				if (source != AUDIO_SOURCE_I2S)
 					muteInPlay = FALSE;
+				else
+					isFmMuted = FALSE;
 			}
 		}
 	}
