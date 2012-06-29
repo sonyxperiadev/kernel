@@ -1167,6 +1167,10 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 	case ACTION_AUD_DisableTelephony:
 		AUDCTRL_DisableTelephony();
 		AUDIO_Policy_RestoreState();
+		/*VT app profile is set from User space
+		when VT call disable set user-app prof to default MUSIC */
+		if (AUDIO_APP_VT_CALL == AUDCTRL_GetUserAudioApp())
+			AUDCTRL_SetUserAudioApp(AUDIO_APP_MUSIC);
 		telephonyIsEnabled = FALSE;
 		break;
 
