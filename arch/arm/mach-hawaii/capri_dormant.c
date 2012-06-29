@@ -25,6 +25,7 @@
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
 #include <plat/pi_mgr.h>
+#include <mach/chipregHw_inline.h>
 
 /* Control variable to enable/disable dormant */
 static u32 dormant_disable;
@@ -67,9 +68,12 @@ module_param_named(turn_off_l2_memory, turn_off_l2_memory,
 #define	SCU_DORMANT_MODE_B			0x02
 #define	SCU_DORMANT_MODE_OFF_B		0x00
 
-#define	USE_SCU_PWR_CTRL			0x100
-#define	PWRCTRL_DORMANT				0x080
-#define	PWRCTRL_DORMANT_L2_OFF		0x0C0
+#define	USE_SCU_PWR_CTRL					0x100
+#define	PWRCTRL_DORMANT_CORE_0				0x80
+#define	PWRCTRL_DORMANT_L2_OFF_CORE_0		0xC0
+
+#define	PWRCTRL_DORMANT_CORE_1				0x02000000
+#define	PWRCTRL_DORMANT_L2_OFF_CORE_1		0x03000000
 
 #define	UNLOCK_PROC_CLK				0xA5A501
 #define FREQ_312_MHZ_ID				0x04040404
@@ -343,9 +347,6 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		 * of the needed register settings
 		 */
 		if (service == CAPRI_DORMANT_CLUSTER_DOWN) {
-			writel_relaxed(USE_SCU_PWR_CTRL,
-				       KONA_CHIPREG_VA +
-				       CHIPREG_PERIPH_MISC_REG3_OFFSET);
 
 			writel_relaxed(SCU_DORMANT_MODE,
 				       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
@@ -357,10 +358,6 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		wfi();
 
 		if (service == CAPRI_DORMANT_CLUSTER_DOWN) {
-
-			writel_relaxed(0,
-				       KONA_CHIPREG_VA +
-				       CHIPREG_PERIPH_MISC_REG3_OFFSET);
 
 			writel_relaxed(SCU_DORMANT_MODE_OFF, KONA_SCU_VA
 				       + SCU_POWER_STATUS_OFFSET);
@@ -413,14 +410,14 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 			/* indicate that 0x3 be seen by the external power
 			 * controller
 			 */
-			writel_relaxed(PWRCTRL_DORMANT_L2_OFF,
+			writel_relaxed(PWRCTRL_DORMANT_L2_OFF_CORE_0,
 				       KONA_CHIPREG_VA +
 				       CHIPREG_PERIPH_MISC_REG3_OFFSET);
 		} else {
 			/* indicate that 0x2 be seen by the external power
 			 * controller
 			 */
-			writel_relaxed(PWRCTRL_DORMANT,
+			writel_relaxed(PWRCTRL_DORMANT_CORE_0,
 				       KONA_CHIPREG_VA +
 				       CHIPREG_PERIPH_MISC_REG3_OFFSET);
 		}
@@ -597,6 +594,8 @@ int __init capri_dormant_init(void)
 {
 	struct resource *res;
 
+	u32 core1_pwrctrl_reg;
+
 	res = request_mem_region(SEC_BUFFER_ADDR, SEC_BUFFER_SIZE,
 				 "secure_params");
 	BUG_ON(!res);
@@ -608,6 +607,21 @@ int __init capri_dormant_init(void)
 	BUG_ON(!secure_params);
 
 	writel_relaxed(UNLOCK_PROC_CLK, KONA_PROC_CLK_VA);
+
+	if (chipregHw_getChipIdRev() > 0xA1) {
+		/* Indicate that core-1 is always willing to enter dormnt
+		 * so the final decision is actually done by core-0's
+		 * pwrctrl value can change each core writing as needed
+		 * in independent path.
+		 */
+		core1_pwrctrl_reg = readl_relaxed(KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_MISC_REG2_OFFSET);
+
+		core1_pwrctrl_reg |= PWRCTRL_DORMANT_L2_OFF_CORE_1;
+
+		writel_relaxed(core1_pwrctrl_reg, KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_MISC_REG2_OFFSET);
+	}
 
 	return 0;
 }
