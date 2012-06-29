@@ -515,6 +515,24 @@ phys_addr_t __init memblock_alloc(phys_addr_t size, phys_addr_t align)
 }
 
 
+phys_addr_t __init memblock_alloc_new(phys_addr_t size, phys_addr_t align, phys_addr_t min_addr, phys_addr_t max_addr)
+{
+	phys_addr_t found;
+
+	/* We align the size to limit fragmentation. Without this, a lot of
+	 * small allocs quickly eat up the whole reserve array on sparc
+	 */
+	size = memblock_align_up(size, align);
+
+	found = memblock_find_base(size, align, min_addr, max_addr);
+	if (found != MEMBLOCK_ERROR &&
+	    !memblock_add_region(&memblock.reserved, found, size))
+		return found;
+
+	return 0;
+}
+
+
 /*
  * Additional node-local allocators. Search for node memory is bottom up
  * and walks memblock regions within that node bottom-up as well, but allocation
