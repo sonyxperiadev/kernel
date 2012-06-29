@@ -63,6 +63,7 @@ static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 static AudioEnableDoneStatusCB_t AudioEnableDoneHandler = NULL;
 static PTTStatusCB_t PTTStatusHandler = NULL;
 static ExtModemCallDoneStatusCB_t ExtModemCallDoneHandler = NULL;
+static int dsp_error_already_reported = 0;
 
 static void Dump_Caph_regs(void);
 
@@ -517,6 +518,7 @@ void AP_ProcessStatus(void)
 				ec26_err_count = 0;
 				ec27_err_count = 0;
 				ec28_err_count = 0;
+				dsp_error_already_reported = 0;
 				if (AudioEnableDoneHandler != NULL) {
 					AudioEnableDoneHandler(status_msg.arg0);
 				} else {
@@ -532,11 +534,11 @@ void AP_ProcessStatus(void)
 			{
 				{
 					aTrace(LOG_AUDIO_DSP,
-					       "AP DSP Interrupt:"
-					       "PTT_STATUS = 0x%x, 0x%x, 0x%x",
-						    status_msg.arg0,
-						    status_msg.arg1,
-						    status_msg.arg2);
+						"AP DSP Interrupt:"
+						"PTT_STATUS = 0x%x, 0x%x, 0x%x",
+						status_msg.arg0,
+						status_msg.arg1,
+						status_msg.arg2);
 				}
 				break;
 			}
@@ -549,9 +551,9 @@ void AP_ProcessStatus(void)
 							  status_msg.arg2);
 				} else {
 					aTrace(LOG_AUDIO_DSP,
-					       "AP DSP Interrupt:"
-					       "PTTStatusHandler"
-					       "is not registered");
+						"AP DSP Interrupt:"
+						"PTTStatusHandler"
+						"is not registered");
 				}
 				break;
 			}
@@ -563,9 +565,9 @@ void AP_ProcessStatus(void)
 						status_msg.arg0);
 				} else {
 					aTrace(LOG_AUDIO_DSP,
-					       "AP DSP Interrupt:"
-					       "ExtModemCallDoneHandler"
-					       "is not registered");
+						"AP DSP Interrupt:"
+						"ExtModemCallDoneHandler"
+						"is not registered");
 				}
 				break;
 			}
@@ -576,22 +578,33 @@ void AP_ProcessStatus(void)
 				base_addr =
 					(volatile unsigned int *) (
 					HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR));
-				aError("ERROR: Pri Mic AADMAC's HW_RDY bit ");
-				aError("not set for right half when ");
-				aError("Pri Mic AADMAC int comes.\n");
-				aError("Pri_Mic_AADMAC_SR_1 = 0x%04x%04x\n",
-					status_msg.arg0, status_msg.arg1);
-				aError("Pri_Mic Expected SR1 = 0x%04x%04x\n",
-					status_msg.arg2, status_msg.arg3);
-				aError("CPH_AADMAC_CH13_AADMAC_SR_1= 0x%08x\n",
-					base_addr[
-					CPH_AADMAC_CH13_AADMAC_SR_1_OFFSET>>2]);
-				aError("shared_aadmac_aud_enable = 0x%04x\n",
-				vp_shared_mem->shared_aadmac_aud_enable);
-				ec26_err_count++;
-				if (ec26_err_count > 0) {
-					Dump_Caph_regs();
-					ec26_err_count = 0;
+				if (dsp_error_already_reported == 0) {
+					aError("ERROR: Pri Mic AADMAC's "
+						"HW_RDY bit not set for "
+						"right half when Pri Mic "
+						"AADMAC int comes.\n");
+					aError("Pri_Mic_AADMAC_SR_1 = "
+						"0x%04x%04x\n",
+						status_msg.arg0,
+						status_msg.arg1);
+					aError("Pri_Mic Expected SR1 = "
+						"0x%04x%04x\n",
+						status_msg.arg2,
+						status_msg.arg3);
+					aError("CPH_AADMAC_CH13_AADMAC_SR_1="
+						"	0x%08x\n",
+						base_addr[
+					CPH_AADMAC_CH13_AADMAC_SR_1_OFFSET
+					>>2]);
+					aError("shared_aadmac_aud_enable"
+						"	= 0x%04x\n",
+						vp_shared_mem->
+						shared_aadmac_aud_enable);
+					ec26_err_count++;
+					if (ec26_err_count > 0) {
+						Dump_Caph_regs();
+						ec26_err_count = 0;
+					}
 				}
 				break;
 			}
@@ -602,22 +615,33 @@ void AP_ProcessStatus(void)
 				base_addr =
 					(volatile unsigned int *) (
 					HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR));
-				aError("ERROR: Sec Mic AADMAC's HW_RDY bit ");
-				aError("not set for right half when ");
-				aError("Sec Mic AADMAC int comes.\n");
-				aError("Sec_Mic_AADMAC_SR_1 = 0x%04x%04x\n",
-					status_msg.arg0, status_msg.arg1);
-				aError("Sec_Mic Expected SR1 = 0x%04x%04x\n",
-					status_msg.arg2, status_msg.arg3);
-				aError("CPH_AADMAC_CH14_AADMAC_SR_1= 0x%08x\n",
-					base_addr[
-					CPH_AADMAC_CH14_AADMAC_SR_1_OFFSET>>2]);
-				aError("shared_aadmac_aud_enable = 0x%04x\n",
-				vp_shared_mem->shared_aadmac_aud_enable);
-				ec27_err_count++;
-				if (ec27_err_count > 0) {
-					Dump_Caph_regs();
-					ec27_err_count = 0;
+				if (dsp_error_already_reported == 0) {
+					aError("ERROR: Sec Mic AADMAC's HW_RDY"
+						" bit not set for right half "
+						"when Sec Mic AADMAC int "
+						"comes.\n");
+					aError("Sec_Mic_AADMAC_SR_1 = "
+						"0x%04x%04x\n",
+						status_msg.arg0,
+						status_msg.arg1);
+					aError("Sec_Mic Expected SR1 = "
+						"0x%04x%04x\n",
+						status_msg.arg2,
+						status_msg.arg3);
+					aError("CPH_AADMAC_CH14_AADMAC_SR_1="
+						" 0x%08x\n",
+						base_addr[
+					CPH_AADMAC_CH14_AADMAC_SR_1_OFFSET
+						>>2]);
+					aError("shared_aadmac_aud_enable ="
+						" 0x%04x\n",
+						vp_shared_mem->
+						shared_aadmac_aud_enable);
+					ec27_err_count++;
+					if (ec27_err_count > 0) {
+						Dump_Caph_regs();
+						ec27_err_count = 0;
+					}
 				}
 				break;
 			}
@@ -628,21 +652,32 @@ void AP_ProcessStatus(void)
 				base_addr =
 					(volatile unsigned int *) (
 					HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR));
-				aError("ERROR: Spkr AADMAC's HW_RDY bit not ");
-				aError("set when Mic AADMAC int comes.\n");
-				aError("Spkr_AADMAC_SR_1 = 0x%04x%04x\n",
-					status_msg.arg0, status_msg.arg1);
-				aError("Spkr_AADMAC_CR_2 = 0x%04x%04x\n",
-					status_msg.arg2, status_msg.arg3);
-				aError("CPH_AADMAC_CH12_AADMAC_SR_1= 0x%08x\n",
-					base_addr[
-					CPH_AADMAC_CH12_AADMAC_SR_1_OFFSET>>2]);
-				aError("shared_aadmac_aud_enable = 0x%04x\n",
-				vp_shared_mem->shared_aadmac_aud_enable);
-				ec28_err_count++;
-				if (ec28_err_count > 4) {
-					Dump_Caph_regs();
-					ec28_err_count = 0;
+				if (dsp_error_already_reported == 0) {
+					aError("ERROR: Spkr AADMAC's HW_RDY "
+						"bit not set when Mic AADMAC"
+						" int comes.\n");
+					aError("Spkr_AADMAC_SR_1 = "
+						"0x%04x%04x\n",
+						status_msg.arg0,
+						status_msg.arg1);
+					aError("Spkr_AADMAC_CR_2 = "
+						"0x%04x%04x\n",
+						status_msg.arg2,
+						status_msg.arg3);
+					aError("CPH_AADMAC_CH12_AADMAC_SR_1= "
+						"0x%08x\n",
+						base_addr[
+					CPH_AADMAC_CH12_AADMAC_SR_1_OFFSET
+						>>2]);
+					aError("shared_aadmac_aud_enable = "
+						"0x%04x\n",
+						vp_shared_mem->
+						shared_aadmac_aud_enable);
+					ec28_err_count++;
+					if (ec28_err_count > 4) {
+						Dump_Caph_regs();
+						ec28_err_count = 0;
+					}
 				}
 				break;
 			}
@@ -652,17 +687,22 @@ void AP_ProcessStatus(void)
 			base_addr =
 				(volatile unsigned int *) (
 				HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR));
-			aError("ERROR: External Modem Interface DL AADMAC's");
-			aError("HW_RDY bit not set for right half when ");
-			aError("Ext Modem DL AADMAC int comes.\n");
-			aError("Ext_Mdm_DL_AADMAC_SR_1 = 0x%04x%04x\n",
-				status_msg.arg0, status_msg.arg1);
-			aError("Ext_Mdm_DL Expected SR1 = 0x%04x%04x\n",
-				status_msg.arg2, status_msg.arg3);
-			aError("CPH_AADMAC_CH15_AADMAC_SR_1= 0x%08x\n",
-				base_addr[
-				CPH_AADMAC_CH15_AADMAC_SR_1_OFFSET>>2]);
-			Dump_Caph_regs();
+			if (dsp_error_already_reported == 0) {
+				aError("ERROR: External Modem Interface DL "
+					"AADMAC's HW_RDY bit not set for "
+					"right half when Ext Modem DL AADMAC "
+					"int comes.\n");
+				aError("Ext_Mdm_DL_AADMAC_SR_1 = 0x%04x%04x\n",
+					status_msg.arg0, status_msg.arg1);
+				aError("Ext_Mdm_DL Expected SR1 = "
+					"0x%04x%04x\n",
+					status_msg.arg2, status_msg.arg3);
+				aError("CPH_AADMAC_CH15_AADMAC_SR_1= 0x%08x\n",
+					base_addr[
+					CPH_AADMAC_CH15_AADMAC_SR_1_OFFSET
+					>>2]);
+				Dump_Caph_regs();
+			}
 			break;
 			}
 		case 0xec30:
@@ -671,17 +711,22 @@ void AP_ProcessStatus(void)
 			base_addr =
 				(volatile unsigned int *) (
 				HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR));
-			aError("ERROR: External Modem Interface UL AADMAC's");
-			aError("HW_RDY bit not set for right half when ");
-			aError("Ext Modem DL AADMAC int comes.\n");
-			aError("Ext_Mdm_UL_AADMAC_SR_1 = 0x%04x%04x\n",
-				status_msg.arg0, status_msg.arg1);
-			aError("Ext_Mdm_UL Expected SR1 = 0x%04x%04x\n",
-				status_msg.arg2, status_msg.arg3);
-			aError("CPH_AADMAC_CH16_AADMAC_SR_1= 0x%08x\n",
-				base_addr[
-				CPH_AADMAC_CH16_AADMAC_SR_1_OFFSET>>2]);
-			Dump_Caph_regs();
+			if (dsp_error_already_reported == 0) {
+				aError("ERROR: External Modem Interface UL"
+					" AADMAC's HW_RDY bit not set for "
+					"right half when Ext Modem DL AADMAC "
+					"int comes.\n");
+				aError("Ext_Mdm_UL_AADMAC_SR_1 = 0x%04x%04x\n",
+					status_msg.arg0, status_msg.arg1);
+				aError("Ext_Mdm_UL Expected SR1 = "
+					"0x%04x%04x\n",
+					status_msg.arg2, status_msg.arg3);
+				aError("CPH_AADMAC_CH16_AADMAC_SR_1= 0x%08x\n",
+					base_addr[
+					CPH_AADMAC_CH16_AADMAC_SR_1_OFFSET
+					>>2]);
+				Dump_Caph_regs();
+			}
 			break;
 			}
 		case 0xec31:
@@ -690,18 +735,24 @@ void AP_ProcessStatus(void)
 			base_addr =
 				(volatile unsigned int *) (
 				HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR));
-			aError("ERROR: Audio driver has not turned ON ");
-			aError("CAPH clk before sending COMMAND_AUDIO_ENABLE");
-			aError(" to the DSP.\n");
-			aError("AUDIOH_CLKGATE_REG (DSP side) = 0x%04x%04x\n",
-				status_msg.arg0, status_msg.arg1);
-			aError("COMMAND_AUDIO_ENABLE arg0 = 0x%04x\n",
-				status_msg.arg2);
-			aError("shared_aadmac_aud_enable (DSP side) = 0x%04x\n",
-				status_msg.arg3);
-			aError("AUDIOH_CLKGATE_REG from AP side = 0x%08x\n",
-				base_addr[
-				KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET>>2]);
+			if (dsp_error_already_reported == 0) {
+				aError("ERROR: Audio driver has not turned ON"
+					" CAPH clk before sending "
+					"COMMAND_AUDIO_ENABLE to the DSP.\n");
+				aError("AUDIOH_CLKGATE_REG (DSP side) = "
+					"0x%04x%04x\n",
+					status_msg.arg0, status_msg.arg1);
+				aError("COMMAND_AUDIO_ENABLE arg0 = 0x%04x\n",
+					status_msg.arg2);
+				aError("shared_aadmac_aud_enable (DSP side) ="
+					"0x%04x\n",
+					status_msg.arg3);
+				aError("AUDIOH_CLKGATE_REG from AP side = "
+					"0x%08x\n",
+					base_addr[
+					KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET
+					>>2]);
+			}
 			break;
 			}
 
@@ -800,6 +851,7 @@ void Dump_Caph_regs(void)
 		base_addr[CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH3_OFFSET>>2]);
 	aError("CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH4	= 0x%08x\n",
 		base_addr[CPH_CFIFO_CPH_CFIFO_TIMESTAMP_CH4_OFFSET>>2]);
+#if 0
 	aError("CPH_CFIFO_DSP_CH12_PADDR		= 0x%08x\n",
 		base_addr[CPH_CFIFO_DSP_CH12_PADDR_OFFSET>>2]);
 	aError("CPH_CFIFO_DSP_CH13_PADDR		= 0x%08x\n",
@@ -850,7 +902,7 @@ void Dump_Caph_regs(void)
 		base_addr[CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH3_OFFSET>>2]);
 	aError("CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH4	= 0x%08x\n",
 		base_addr[CPH_CFIFO_DSP_CPH_CFIFO_TIMESTAMP_CH4_OFFSET>>2]);
-
+#endif
 	base_addr = ((volatile unsigned int *)
 		(HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR)));
 	aError("AADMAC Regs:\n");
@@ -907,7 +959,7 @@ void Dump_Caph_regs(void)
 		base_addr[CPH_AADMAC_CH16_AADMAC_CR_3_OFFSET>>2]);
 	aError("CPH_AADMAC_AADMAC_GCR_1			= 0x%08x\n",
 		base_addr[CPH_AADMAC_AADMAC_GCR_1_OFFSET>>2]);
-
+#if 0
 	base_addr = ((volatile unsigned int *)
 		(HW_IO_PHYS_TO_VIRT(AHINTC_BASE_ADDR)));
 	aError("AHINTC Regs:\n");
@@ -1811,4 +1863,6 @@ void Dump_Caph_regs(void)
 		base_addr[CPH_SSASW_DSP_PREADY_MAX_TIME_OFFSET>>2]);
 	aError("CPH_SSASW_DSP_SSASW_ERR			= 0x%08x\n",
 		base_addr[CPH_SSASW_DSP_SSASW_ERR_OFFSET>>2]);
+#endif
+	dsp_error_already_reported = 1;
 }

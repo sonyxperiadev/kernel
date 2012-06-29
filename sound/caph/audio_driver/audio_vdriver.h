@@ -310,7 +310,6 @@ int AUDDRV_User_CtrlDSP(AudioDrvUserCtrl_t UserCtrlType,
 
 void AUDDRV_User_HandleDSPInt(UInt32 param1, UInt32 param2,
 				      UInt32 param3);
-void AUDDRV_SetPCMOnOff(Boolean on_off);
 
 void AUDDRV_ControlFlagFor_CustomGain(Boolean on_off);
 
