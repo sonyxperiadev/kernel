@@ -1421,6 +1421,9 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		u16 clk, ctrl_2;
 		unsigned int clock;
 
+		/* MM Chipit FPGA does not seem to run with High speed bit enabled. Peri image runs
+		 * fine. Hence disable if its MM image */
+#ifndef CONFIG_MACH_HAWAII_FPGA_MM_V1
 		/* In case of UHS-I modes, set High Speed Enable */
 		if ((ios->timing == MMC_TIMING_UHS_SDR50) ||
 		    (ios->timing == MMC_TIMING_UHS_SDR104) ||
@@ -1428,6 +1431,10 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		    (ios->timing == MMC_TIMING_UHS_SDR25) ||
 		    (ios->timing == MMC_TIMING_UHS_SDR12))
 			ctrl |= SDHCI_CTRL_HISPD;
+#else
+
+		ctrl &= ~SDHCI_CTRL_HISPD;
+#endif
 
 		ctrl_2 = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 		if (!(ctrl_2 & SDHCI_CTRL_PRESET_VAL_ENABLE)) {
