@@ -736,14 +736,16 @@ u32 ddl_allocate_dec_hw_buffers(struct ddl_client_context *ddl)
 		if (!ptr)
 			status = VCD_ERR_ALLOC_FAIL;
 		else {
-			if (!res_trk_check_for_sec_session())
+			if (!res_trk_check_for_sec_session()) {
 				memset(dec_bufs->desc.align_virtual_addr,
 					0, buf_size.sz_desc);
-			msm_ion_do_cache_op(ddl_context->video_ion_client,
-						dec_bufs->desc.alloc_handle,
-						dec_bufs->desc.alloc_handle,
-						dec_bufs->desc.buffer_size,
-						ION_IOC_CLEAN_INV_CACHES);
+				msm_ion_do_cache_op(
+					ddl_context->video_ion_client,
+					dec_bufs->desc.alloc_handle,
+					dec_bufs->desc.virtual_base_addr,
+					dec_bufs->desc.buffer_size,
+					ION_IOC_CLEAN_INV_CACHES);
+			}
 		}
 	}
 	if (status)
