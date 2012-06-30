@@ -139,6 +139,7 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 		"AmpEnable"
 };
 
+extern brcm_alsa_chip_t *sgpCaph_chip;
 static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 static unsigned int n_msg_in, n_msg_out, last_action;
 static struct completion complete_kfifo;
@@ -796,6 +797,9 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    (CTL_STREAM_PANEL_FIRST - 1)
 			    && param_start->stream <
 			    (CTL_STREAM_PANEL_LAST - 1));
+
+		sgpCaph_chip->streamCtl[param_start->stream].playback_prev_time
+			= 0;
 
 		newmode = AUDIO_Policy_Get_Mode( \
 			param_start->pdev_prop->p[0].sink);
