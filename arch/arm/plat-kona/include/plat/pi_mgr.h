@@ -303,7 +303,7 @@ static inline int pi_mgr_disable_policy_change(int pi_id, int disable)
 	return 0;
 }
 
-static inline int pi_mgr_dfs_add_request(struct pi_mgr_qos_node *node,
+static inline int pi_mgr_dfs_add_request(struct pi_mgr_dfs_node *node,
 					 char *client_name, u32 pi_id, u32 opp)
 {
 	return 0;
