@@ -10,7 +10,7 @@ menuconfig BRCM_CHAR_DRIVERS
 
 config V3D
 	tristate "V3D Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
 	default n
 
 config VCE
@@ -37,7 +37,7 @@ config BCM_CPDUMP_INIRQ
 
 config ISP
 	tristate "ISP Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
 	default n
 
 config UNICAM
