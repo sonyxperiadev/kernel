@@ -97,6 +97,7 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_ConnectDL,
 	ACTION_AUD_UpdateUserVolSetting,
 	ACTION_AUD_BufferReady,
+	ACTION_AUD_AtCtl,
 	ACTION_AUD_TOTAL
 };
 #define BRCM_AUDIO_ACTION_en_t enum __BRCM_AUDIO_ACTION_en_t
@@ -249,6 +250,15 @@ struct __BRCM_AUDIO_Param_CallMode_t {
 };
 #define BRCM_AUDIO_Param_CallMode_t struct __BRCM_AUDIO_Param_CallMode_t
 
+struct __BRCM_AUDIO_Param_AtCtl_t {
+	Int32 cmdIndex;
+	void *pChip;
+	Int32 ParamCount;
+	Int32 isGet;
+	Int32 Params[7];
+};
+#define BRCM_AUDIO_Param_AtCtl_t struct __BRCM_AUDIO_Param_AtCtl_t
+
 union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_Start_t param_start;
 	BRCM_AUDIO_Param_Stop_t param_stop;
@@ -267,6 +277,7 @@ union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
 	BRCM_AUDIO_Param_SetApp_t parm_setapp;
 	BRCM_AUDIO_Param_CallMode_t parm_callmode;
+	BRCM_AUDIO_Param_AtCtl_t parm_atctl;
 
 };
 #define BRCM_AUDIO_Control_Params_un_t union __BRCM_AUDIO_Control_Params_un_t
