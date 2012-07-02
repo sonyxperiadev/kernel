@@ -140,7 +140,8 @@
 #define KONA_BINTC_BASE_ADDR        HW_IO_PHYS_TO_VIRT( BINTC_BASE_ADDR )	/* BModem Int Ctrlr Base Address */
 
 #define KONA_DSI0_VA		    HW_IO_PHYS_TO_VIRT( DSI0_BASE_ADDR )	/* DSI0 Interface */
-#define KONA_DSI1_VA		    HW_IO_PHYS_TO_VIRT( DSI1_BASE_ADDR )	/* DSI1 Interface */
+#define KONA_PIXELVALVE_VA          HW_IO_PHYS_TO_VIRT(PIXELVALVE_BASE_ADDR)
+#define KONA_AXIPV_VA		    HW_IO_PHYS_TO_VIRT(AXIPV_BASE_ADDR)
 
 #define KONA_SMI_VA		    HW_IO_PHYS_TO_VIRT( SMI_BASE_ADDR )	/* SMI Interface */
 
