@@ -216,7 +216,8 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		    iLineSelect[1] = spk;
 
 		AUDCTRL_SetUserAudioApp(app);	/* for PCG to set new app */
-		if (app <= AUDIO_APP_VOICE_CALL_WB) {
+		if ((app <= AUDIO_APP_VOICE_CALL_WB) ||
+		(app == AUDIO_APP_VT_CALL || app == AUDIO_APP_VT_CALL_WB)) {
 			AUDCTRL_SetTelephonyMicSpkr(mic, spk);
 			AUDCTRL_SetAudioMode(mode, app);
 		} else if (app == AUDIO_APP_MUSIC) {
