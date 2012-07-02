@@ -12,10 +12,6 @@ OBJ :=  v3d.o
 obj-$(CONFIG_V3D) := v3d-driver.o
 	v3d-driver-objs := $(OBJ)
 
-$(info ++++++++++++++++++++++)
-$(info CONFIG_V3D = $(CONFIG_V3D))
-$(info obj = $(obj))
-
 all:
 	$(MAKE) -C $(KERNEL_DIR) SUBDIRS=$(PWD) modules
 
