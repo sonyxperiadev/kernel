@@ -5926,6 +5926,36 @@ static struct ref_clk CLK_NAME(test_debug) = {
 };
 
 /*
+Peri clock name PIXELV
+*/
+/* Pixelv clock is derived as follows:
+ *   dsi0_pixel_clk ---> gate ---> pixelv_clk
+ *       |                              |
+ *       |                              |
+ *       V                              V
+ *    Goes to DSI0              Goes to pixel valve
+ * Since this clock has only enable gate, only the enable member
+ * of gen_clk_ops is initalized here.
+ */
+
+static struct gen_clk_ops pixelv_clk_ops;
+
+static struct peri_clk clk_pixelv = {
+	.clk = {
+		.flags = PIXELV_PERI_CLK_FLAGS,
+		.clk_type = CLK_TYPE_PERI,
+		.id = CLK_PIXELV_PERI_CLK_ID,
+		.name = PIXELV_PERI_CLK_NAME_STR,
+		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+		.ops = &pixelv_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(mm),
+	.clk_en_mask = MM_CLK_MGR_REG_PIXELV_EN_PIXELV_CLKEN_MASK,
+	.clk_gate_offset = MM_CLK_MGR_REG_PIXELV_EN_OFFSET,
+	.stprsts_mask = MM_CLK_MGR_REG_PIXELV_EN_PIXELV_CLKEN_MASK,
+};
+
+/*
 Peri clock name mm_switch_axi
 */
 /*peri clk src list*/
@@ -6162,6 +6192,37 @@ static struct bus_clk CLK_NAME(mm_apb) = {
 };
 
 /*
+Bus clock name PIXELV_APB
+*/
+static struct bus_clk clk_pixelv_apb = {
+	.clk =	{
+		.flags = PIXELV_APB_BUS_CLK_FLAGS,
+		.clk_type = CLK_TYPE_BUS,
+		.id = CLK_PIXELV_APB_BUS_CLK_ID,
+		.name = PIXELV_APB_BUS_CLK_NAME_STR,
+		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+		.ops = &gen_bus_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(mm),
+	.clk_gate_offset = MM_CLK_MGR_REG_PIXELV_APB_CLKGATE_OFFSET,
+	.clk_en_mask = MM_CLK_MGR_REG_PIXELV_APB_CLKGATE_PIXELV_APB_CLK_EN_MASK,
+	.gating_sel_mask =
+	    MM_CLK_MGR_REG_PIXELV_APB_CLKGATE_PIXELV_APB_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask =
+	    MM_CLK_MGR_REG_PIXELV_APB_CLKGATE_PIXELV_APB_HYST_VAL_MASK,
+	.hyst_en_mask =
+	    MM_CLK_MGR_REG_PIXELV_APB_CLKGATE_PIXELV_APB_HYST_EN_MASK,
+	.stprsts_mask =
+	    MM_CLK_MGR_REG_PIXELV_APB_CLKGATE_PIXELV_APB_STPRSTS_MASK,
+	.freq_tbl_index = 1,
+	.src_clk = NULL,
+	.clk_sel_val = -1,
+	.soft_reset_offset = MM_RST_MGR_REG_SOFT_RSTN1_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN1_PIXELV_SOFT_RSTN_MASK,
+};
+
+
+/*
 Bus clock name SPI_APB
 */
 static struct bus_clk CLK_NAME(spi_apb) = {
@@ -6215,6 +6276,61 @@ static struct bus_clk CLK_NAME(mm_dma_axi) = {
 	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_MM_DMA_SOFT_RSTN_MASK,
 
 };
+
+/*
+Bus clock name H264_AXI
+*/
+static struct bus_clk clk_h264_axi = {
+	.clk =	{
+		.flags = H264_AXI_BUS_CLK_FLAGS,
+		.clk_type = CLK_TYPE_BUS,
+		.id = CLK_H264_AXI_BUS_CLK_ID,
+		.name = H264_AXI_BUS_CLK_NAME_STR,
+		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+		.ops = &gen_bus_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(mm),
+	.clk_gate_offset  = MM_CLK_MGR_REG_H264_CLKGATE_OFFSET,
+	.clk_en_mask = MM_CLK_MGR_REG_H264_CLKGATE_H264_AXI_CLK_EN_MASK,
+	.gating_sel_mask =
+		MM_CLK_MGR_REG_H264_CLKGATE_H264_AXI_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask = MM_CLK_MGR_REG_H264_CLKGATE_H264_AXI_HYST_VAL_MASK,
+	.hyst_en_mask = MM_CLK_MGR_REG_H264_CLKGATE_H264_AXI_HYST_EN_MASK,
+	.stprsts_mask = MM_CLK_MGR_REG_H264_CLKGATE_H264_AXI_STPRSTS_MASK,
+	.freq_tbl_index = -1,
+	.src_clk = CLK_PTR(mm_switch_axi),
+	.clk_sel_val = -1,
+	.soft_reset_offset = MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_H264_SOFT_RSTN_MASK,
+};
+
+/*
+Bus clock name AXIPV_AXI
+*/
+static struct bus_clk clk_axipv_axi = {
+	.clk =	{
+		.flags = AXIPV_AXI_BUS_CLK_FLAGS,
+		.clk_type = CLK_TYPE_BUS,
+		.id = CLK_AXIPV_AXI_BUS_CLK_ID,
+		.name = AXIPV_AXI_BUS_CLK_NAME_STR,
+		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+		.ops = &gen_bus_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(mm),
+	.clk_gate_offset  = MM_CLK_MGR_REG_AXIPV_CLKGATE_OFFSET,
+	.clk_en_mask = MM_CLK_MGR_REG_AXIPV_CLKGATE_AXIPV_AXI_CLK_EN_MASK,
+	.gating_sel_mask =
+		MM_CLK_MGR_REG_AXIPV_CLKGATE_AXIPV_AXI_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask = MM_CLK_MGR_REG_AXIPV_CLKGATE_AXIPV_AXI_HYST_VAL_MASK,
+	.hyst_en_mask = MM_CLK_MGR_REG_AXIPV_CLKGATE_AXIPV_AXI_HYST_EN_MASK,
+	.stprsts_mask = MM_CLK_MGR_REG_AXIPV_CLKGATE_AXIPV_AXI_STPRSTS_MASK,
+	.freq_tbl_index = -1,
+	.src_clk = CLK_PTR(mm_switch_axi),
+	.clk_sel_val = -1,
+	.soft_reset_offset = MM_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM_RST_MGR_REG_SOFT_RSTN0_AXIPV_SOFT_RSTN_MASK,
+};
+
 
 /*
 Bus clock name V3D_AXI
@@ -7051,6 +7167,7 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(VCE_AXI_BUS_CLK_NAME_STR,NULL,vce_axi),
 	BRCM_REGISTER_CLK(DSI0_AXI_BUS_CLK_NAME_STR,NULL,dsi0_axi),
 	BRCM_REGISTER_CLK(MM_APB_BUS_CLK_NAME_STR,NULL,mm_apb),
+	BRCM_REGISTER_CLK(PIXELV_APB_BUS_CLK_NAME_STR, NULL, pixelv_apb),
 	BRCM_REGISTER_CLK(SPI_APB_BUS_CLK_NAME_STR,NULL,spi_apb),
 	BRCM_REGISTER_CLK(MM_DMA_AXI_BUS_CLK_NAME_STR,NULL,mm_dma_axi),
 	BRCM_REGISTER_CLK(V3D_AXI_BUS_CLK_NAME_STR,NULL,v3d_axi),
@@ -7058,6 +7175,8 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(CSI1_LP_PERI_CLK_NAME_STR,NULL,csi1_lp),
 	BRCM_REGISTER_CLK(SMI_PERI_CLK_NAME_STR,NULL,smi),
 	BRCM_REGISTER_CLK(DSI0_ESC_PERI_CLK_NAME_STR,NULL,dsi0_esc),
+	BRCM_REGISTER_CLK(H264_AXI_BUS_CLK_NAME_STR, NULL, h264_axi),
+	BRCM_REGISTER_CLK(AXIPV_AXI_BUS_CLK_NAME_STR, NULL, axipv_axi),
 	BRCM_REGISTER_CLK(DSI_PLL_O_DSI_PLL_PERI_CLK_NAME_STR,NULL,dsi_pll_o_dsi_pll),
 	BRCM_REGISTER_CLK(DSI_PLL_CLK_NAME_STR,NULL,dsi_pll),
 	BRCM_REGISTER_CLK(DSI_PLL_CHNL0_CLK_NAME_STR,NULL,dsi_pll_chnl0),
@@ -7072,6 +7191,7 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(DSI0_PIX_PHY_REF_CLK_NAME_STR,NULL,dsi0_pix_phy),
 	BRCM_REGISTER_CLK(DSI1_PIX_PHY_REF_CLK_NAME_STR,NULL,dsi1_pix_phy),
 	BRCM_REGISTER_CLK(TEST_DEBUG_REF_CLK_NAME_STR,NULL,test_debug),
+	BRCM_REGISTER_CLK(PIXELV_PERI_CLK_NAME_STR, NULL, pixelv),
 	/*mm_switch_axi clk should be the last clock to be auto gated in MM CCU*/
 	BRCM_REGISTER_CLK(MM_SWITCH_AXI_PERI_CLK_NAME_STR,NULL,mm_switch_axi),
 };
@@ -7168,7 +7288,7 @@ int __init rhea_clock_init(void)
 	en_8ph_pll1_ref_clk_ops.init = en_8ph_pll1_clk_init;
 	en_8ph_pll1_ref_clk_ops.enable = en_8ph_pll1_clk_enable;
 
-
+	pixelv_clk_ops.enable = gen_peri_clk_ops.enable;
 
 /*Update arm_switch flag based on runtime settings*/
 #ifdef CONFIG_RHEA_WA_HWJIRA_2531
