@@ -106,9 +106,6 @@ __test_page_isolated_in_pageblock(unsigned long pfn, unsigned long end_pfn)
 				page_private(page) == MIGRATE_ISOLATE) {
 			pfn += 1;
 		} else {
-			printk(KERN_WARNING"!!! Found orphan page(pfn=%lx), (count=%d), (isBuddy=%s), (private=0x%08lx), (flags=0x%08lx), (_mapcount=%d) !!!\n",
-					pfn, page_count(page), PageBuddy(page)?"yes":"no",
-					page_private(page), page->flags, page_mapcount(page));
 			break;
 		}
 	}
