@@ -1522,12 +1522,26 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 * AUDIO_ID_CALL16k
 			 * 0x06 indicates AMR NB
 			 */
+
+			/*Consider VT-NB/WB case*/
 			if (AUDCTRL_InVoiceCall()) {
 				if (param_rate_change->codecID == 0x0A) {
-					app_profile = AUDIO_APP_VOICE_CALL_WB;
+					if (AUDIO_APP_VT_CALL ==
+						AUDCTRL_GetUserAudioApp())
+						app_profile =
+							AUDIO_APP_VT_CALL_WB;
+					else
+						app_profile =
+							AUDIO_APP_VOICE_CALL_WB;
 				} else if (param_rate_change->codecID == 0x06) {
-					app_profile = AUDIO_APP_VOICE_CALL;
-					} else {
+					if (AUDIO_APP_VT_CALL ==
+						AUDCTRL_GetUserAudioApp())
+						app_profile =
+							AUDIO_APP_VT_CALL;
+					else
+						app_profile =
+							AUDIO_APP_VOICE_CALL;
+				} else {
 					aError("Invalid Telephony CodecID %d\n",
 						param_rate_change->codecID);
 						break;
