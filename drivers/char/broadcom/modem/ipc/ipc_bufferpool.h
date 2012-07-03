@@ -61,6 +61,7 @@ typedef volatile struct IPC_BufferPool_S {
 	volatile IPC_U32 FlowStopCalls;
 	volatile IPC_U32 BytesSent;
 	volatile void *EmptyEvent;
+	volatile void *Lock;
 } IPC_BufferPool_T;
 
 /*============================================================

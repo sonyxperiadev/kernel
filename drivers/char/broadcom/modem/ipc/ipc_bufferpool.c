@@ -185,6 +185,7 @@ IPC_BufferPool IPC_CreateBufferPoolWithDescriptor(
 	PoolPtr->FlowStartCalls = 0;
 
 	PoolPtr->EmptyEvent = IPC_EVENT_CREATE;
+	PoolPtr->Lock = CRITICAL_REIGON_CREATE();
 
 	IPC_QInitialise(IPC_SmOffset(&PoolPtr->FreeBufferQ), Pool);
 	IPC_QInitialise(IPC_SmOffset(&PoolPtr->AllocatedBufferQ), Pool);
@@ -412,12 +413,16 @@ void IPC_ReportFlowControlEvent(IPC_BufferPool_T *PoolPtr,
 		return;
 	}
 
-	CRITICAL_REIGON_ENTER if (Event != PoolPtr->FlowControlState) {
+	CRITICAL_REIGON_ENTER(PoolPtr->Lock);
+	if (Event != PoolPtr->FlowControlState) {
 		/* State has already changed back - do not report change */
 		PoolPtr->FlowControlCallPending = IPC_FALSE;
-		CRITICAL_REIGON_LEAVE return;
+		CRITICAL_REIGON_LEAVE(PoolPtr->Lock);
+		return;
 	}
-	CRITICAL_REIGON_LEAVE ReportedFlowControlState = Event;
+	CRITICAL_REIGON_LEAVE(PoolPtr->Lock);
+
+	ReportedFlowControlState = Event;
 
 	while (1) {
 		/* Update Statistics */
@@ -448,7 +453,7 @@ void IPC_ReportFlowControlEvent(IPC_BufferPool_T *PoolPtr,
 #ifndef UNDER_LINUX
 		(*SourceEp->FlowControlFunction) (Pool,
 						  ReportedFlowControlState);
-		CRITICAL_REIGON_ENTER
+		CRITICAL_REIGON_ENTER(PoolPtr->Lock);
 #else
 		/*
 		   Linux Issue:
@@ -461,19 +466,21 @@ void IPC_ReportFlowControlEvent(IPC_BufferPool_T *PoolPtr,
 		   ==> Enter Critical region before calling cbk ( IPC_FLOW_START ). The critical region disables Net IRQ
 		   ==> PoolPtr->FlowControlCallPending is set to FALSE and then the Critical region exits which then triggers Net IRQ.
 		 */
-		CRITICAL_REIGON_ENTER
+		CRITICAL_REIGON_ENTER(PoolPtr->Lock);
 		    (*SourceEp->FlowControlFunction) (Pool,
 						      ReportedFlowControlState);
 #endif
 
 		if (ReportedFlowControlState == PoolPtr->FlowControlState) {
 			PoolPtr->FlowControlCallPending = IPC_FALSE;
-			CRITICAL_REIGON_LEAVE return;
+			CRITICAL_REIGON_LEAVE(PoolPtr->Lock);
+			return;
 		}
 
 		ReportedFlowControlState = PoolPtr->FlowControlState;
 
-	CRITICAL_REIGON_LEAVE}
+	CRITICAL_REIGON_LEAVE(PoolPtr->Lock);
+	}
 }
 
 /**************************************************/
@@ -491,12 +498,14 @@ IPC_Buffer IPC_AllocateBuffer(IPC_BufferPool Pool)
 		return 0;
 	}
 
-	CRITICAL_REIGON_ENTER QElement = IPC_QGetFirst(IPC_POOLFreeQ(Pool));
+	CRITICAL_REIGON_ENTER(PoolPtr->Lock);
+
+	QElement = IPC_QGetFirst(IPC_POOLFreeQ(Pool));
 
 	if (!QElement) {
 		PoolPtr->FlowControlState = IPC_FLOW_STOP;
 		PoolPtr->AllocationFailures++;
-		CRITICAL_REIGON_LEAVE
+		CRITICAL_REIGON_LEAVE(PoolPtr->Lock);
 		    if (PoolPtr->DestinationEndpointId != IPC_EP_LogApps) {
 			IPC_TRACE(IPC_Channel_FlowControl,
 				  "IPC_ReportFlowControlEvent",
@@ -515,7 +524,8 @@ IPC_Buffer IPC_AllocateBuffer(IPC_BufferPool Pool)
 	if (BufferCount == PoolPtr->FlowStopLimit)
 		CHECK_FLOW_STATE(PoolPtr, IPC_FLOW_STOP, FlowControlCallNeeded)
 
-	CRITICAL_REIGON_LEAVE if (FlowControlCallNeeded)
+	CRITICAL_REIGON_LEAVE(PoolPtr->Lock);
+	if (FlowControlCallNeeded)
 		IPC_ReportFlowControlEvent(PoolPtr, IPC_FLOW_STOP);
 
 	Buffer = IPC_QEntryPtr(QElement)->Item;
@@ -643,7 +653,8 @@ void IPC_BufferReturnToPool(IPC_Buffer Buffer, IPC_BufferPool Pool)
 		      "Buffer %d (%08X), now %d in pool", IPC_BufferId(Buffer),
 		      Buffer, PoolPtr->FreeBuffers + 1, 0);
 
-	CRITICAL_REIGON_ENTER BufferCount = ++PoolPtr->FreeBuffers;
+	CRITICAL_REIGON_ENTER(PoolPtr->Lock);
+	BufferCount = ++PoolPtr->FreeBuffers;
 
 #ifdef IPC_DEBUG
 	IPC_QRemove(IPC_BufferQueue(Buffer));
@@ -656,7 +667,8 @@ void IPC_BufferReturnToPool(IPC_Buffer Buffer, IPC_BufferPool Pool)
 		CHECK_FLOW_STATE(PoolPtr, IPC_FLOW_START, FlowControlCallNeeded)
 	}
 
-	CRITICAL_REIGON_LEAVE if (FlowControlCallNeeded) {
+	CRITICAL_REIGON_LEAVE(PoolPtr->Lock);
+	if (FlowControlCallNeeded) {
 		IPC_ReportFlowControlEvent(PoolPtr, IPC_FLOW_START);
 	}
 	/* Last ditch check - should never happen */

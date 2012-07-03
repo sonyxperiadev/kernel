@@ -251,8 +251,9 @@ int ipc_ipc_init(void *smbase, unsigned int size)
 	memset(&ipc_control, 0, sizeof(IPC_ControlInfo_T));
 
 	ipc_control.RaiseEventFptr = bcm_raise_cp_int;
-	ipc_control.EnableReEntrancyFPtr = bcm_enable_reentrancy;
-	ipc_control.DisableReEntrancyFPtr = bcm_disable_reentrancy;
+	ipc_control.LockFunctions.CreateLock = bcm_create_lock;
+	ipc_control.LockFunctions.AcquireLock = bcm_aquire_lock;
+	ipc_control.LockFunctions.ReleaseLock = bcm_release_lock;
 	ipc_control.PhyToOSAddrFPtr = bcm_map_phys_to_virt;
 	ipc_control.OSToPhyAddrFPtr = bcm_map_virt_to_phys;
 	ipc_control.EventFunctions.Create = EventCreate;

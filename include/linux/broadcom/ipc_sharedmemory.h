@@ -154,8 +154,7 @@ typedef struct IPC_SmLocalControl_S {
 	IPC_CPU_ID_T CpuId;
 	IPC_SmControl SmControl;
 	IPC_RaiseInterruptFPtr_T RaiseInterrupt;
-	IPC_EnableReEntrancyFPtr_T EnableReentrancy;
-	IPC_DisableReEntrancyFPtr_T DisableReentrancy;
+	IPC_LockFunctions_T LockFunctions;
 	IPC_PhyAddrToOSAddrFPtr_T PhyToOSAddress;
 	IPC_OSAddrToPhyAddrFPtr_T OsToPhyAddress;
 	IPC_EventFunctions_T Event;
@@ -177,8 +176,9 @@ extern IPC_SmLocalControl_T SmLocalControl;
 
 /* Macros for critical region protection */
 #define CRITICAL_REIGON_SETUP
-#define CRITICAL_REIGON_ENTER	(*SmLocalControl.DisableReentrancy) ();
-#define CRITICAL_REIGON_LEAVE	(*SmLocalControl.EnableReentrancy)  ();
+#define CRITICAL_REIGON_CREATE()	(*SmLocalControl.LockFunctions.CreateLock)()
+#define CRITICAL_REIGON_ENTER(lock)	(*SmLocalControl.LockFunctions.AcquireLock) ((void *) lock)
+#define CRITICAL_REIGON_LEAVE(lock)	(*SmLocalControl.LockFunctions.ReleaseLock) ((void *) lock)
 
 /* Macros for Event Flags */
 #define IPC_EVENT_CREATE					 	  SmLocalControl.Event.Create ? (*SmLocalControl.Event.Create) () : 0

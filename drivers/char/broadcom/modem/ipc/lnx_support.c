@@ -15,6 +15,8 @@
 
 #include <linux/preempt.h>
 #include <linux/types.h>
+#include <linux/slab.h>
+#include <linux/spinlock.h>
 #include <asm/io.h>
 #include <asm/memory.h>
 
@@ -89,39 +91,61 @@ void bcm_raise_cp_int(void)
 	intc_trigger_softirq(IRQ_IPC_A2C);
 }
 
-/**
- * void bcm_enable_reentrancy(void);
- */
-void bcm_enable_reentrancy(void)
+void *bcm_create_lock(void)
 {
-	/**
-	 * should we use a spinlock??
-	 * we can't use spinlocks here because this is a function call from the
-	 * IPC lib and the spinlock call usually are implemented as macros as
-	 * they muck with a local flags stack variable.
-	 *
-	 * Also, spinlocks is not required here as long as we can provide
-	 * reentrancy just
-	 *
-	 * for the IPC calls, i.e. no need to disable interrupts etc.
-	 */
-	preempt_enable();
-
-	local_irq_enable();
-	if (intr_tasklet_ptr_g)
-		tasklet_enable(intr_tasklet_ptr_g);
+	void *lock;
+	lock = kmalloc(sizeof(spinlock_t), GFP_ATOMIC);
+	if (!lock)
+	{
+		IPC_DEBUG(DBG_ERROR, "IPC: failed to create spinlock\n");
+	}
+	else
+	{
+		spin_lock_init((spinlock_t *)lock);
+		IPC_DEBUG(DBG_TRACE, "IPC: spinlock initialized\n");
+	}
+	return lock;
 }
 
 /**
- *   void bcm_disable_reentrancy(void);
- */
-void bcm_disable_reentrancy(void)
-{
-	preempt_disable();
-	local_irq_disable();
+   void bcm_release_lock(void *);
+*/
+void bcm_release_lock(void * lock)
+{ 
+	if (lock)
+	{
+		spin_unlock_bh((spinlock_t *)lock);
+	}
+	else
+	{	
+		preempt_enable();   
 
-	if (intr_tasklet_ptr_g)
-		tasklet_disable(intr_tasklet_ptr_g);
-
-	return;
+		local_irq_enable();
+		if (intr_tasklet_ptr_g)
+		{
+			tasklet_enable(intr_tasklet_ptr_g);
+		}
+	}
 }
+
+/**
+   void bcm_aquire_lock(void *);
+*/
+void bcm_aquire_lock(void * lock)
+{
+	if (lock)
+	{
+		spin_lock_bh((spinlock_t *)lock);
+	}
+	else
+	{
+		preempt_disable();
+		local_irq_disable();
+
+		if (intr_tasklet_ptr_g)
+		{
+			tasklet_disable(intr_tasklet_ptr_g);
+		}
+	}
+}
+

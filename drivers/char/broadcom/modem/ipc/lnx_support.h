@@ -28,8 +28,10 @@ void *bcm_map_phys_to_virt(unsigned int virt_addr);
 
 void bcm_raise_cp_int(void);
 
-void bcm_enable_reentrancy(void);
+void *bcm_create_lock(void);
 
-void bcm_disable_reentrancy(void);
+void bcm_aquire_lock(void * lock);
+
+void bcm_release_lock(void * lock);
 
 #endif /* _BCM_FUSE_LNX_IF_H_ */

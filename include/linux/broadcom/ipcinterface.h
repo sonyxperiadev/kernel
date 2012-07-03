@@ -295,8 +295,9 @@ typedef IPC_U32 IPC_CrashCode_T;
 typedef void (*IPC_RaiseInterruptFPtr_T) (void);
 
 /**************************************************/
-typedef void (*IPC_EnableReEntrancyFPtr_T) (void);
-typedef void (*IPC_DisableReEntrancyFPtr_T) (void);
+typedef void * (*IPC_CreateLockFPtr_T) (void);
+typedef void (*IPC_AquireLockFPtr_T) (void * lock);
+typedef void (*IPC_ReleaseLockFPtr_T) (void * lock);
 
 /**************************************************/
 typedef void *(*IPC_PhyAddrToOSAddrFPtr_T) (IPC_U32 PhysicalAddr);
@@ -350,10 +351,17 @@ typedef struct IPC_EventFunctions_S {
 } IPC_EventFunctions_T;
 
 /**************************************************/
+typedef struct IPC_LockFunctions_S
+{
+	IPC_CreateLockFPtr_T CreateLock;
+	IPC_AquireLockFPtr_T AcquireLock;
+	IPC_ReleaseLockFPtr_T ReleaseLock;
+}IPC_LockFunctions_T;
+
+/**************************************************/
 typedef struct IPC_ControlInfo_S {
 	IPC_RaiseInterruptFPtr_T RaiseEventFptr;
-	IPC_EnableReEntrancyFPtr_T EnableReEntrancyFPtr;
-	IPC_DisableReEntrancyFPtr_T DisableReEntrancyFPtr;
+	IPC_LockFunctions_T LockFunctions;
 	IPC_PhyAddrToOSAddrFPtr_T PhyToOSAddrFPtr;
 	IPC_OSAddrToPhyAddrFPtr_T OSToPhyAddrFPtr;
 	IPC_EventFunctions_T EventFunctions;
