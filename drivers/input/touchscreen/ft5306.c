@@ -411,7 +411,7 @@ FTS_DWRD fts_ctpm_auto_clb(void)
 {
 	FTS_BYTE uc_temp;
 	FTS_BYTE i ;
-	printk(KERN_INO"[FTS] start auto CLB.\n");
+	printk(KERN_INFO"[FTS] start auto CLB.\n");
 	delay_qt_ms(200);
 	ft520x_write_reg(0, 0x40);
 	/*make sure already enter factory mode*/
