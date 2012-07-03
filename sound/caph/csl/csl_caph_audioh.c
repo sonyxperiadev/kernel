@@ -392,6 +392,7 @@ void csl_caph_audioh_unconfig(int path_id)
 	path[path_id].sample_mode = 0;
 	path[path_id].eanc_input = 0;
 	path[path_id].eanc_output = 0;
+	path[path_id].started = 0;
 	return;
 }
 
@@ -410,6 +411,10 @@ void csl_caph_audioh_unconfig(int path_id)
 void csl_caph_audioh_config(int path_id, void *p)
 {
 	audio_config_t *pcfg = (void *)p;
+
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL)
+		if (path[path_id].started)
+			return;
 	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_config:: path %d sr %d bits %d chNum %d pack %d eanc %d:%d.\r\n",
@@ -787,8 +792,15 @@ void csl_caph_audioh_start(int path_id)
 {
 	UInt16 chnl_enable = 0x0;
 
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL) {
+		if (path[path_id].started)
+			return;
+		else
+			path[path_id].started = 1;
+	}
 	aTrace
 	      (LOG_AUDIO_CSL, "csl_caph_audioh_start:: %d.\r\n", path_id);
+
 	switch (path_id) {
 	case AUDDRV_PATH_VIBRA_OUTPUT:
 
@@ -1826,6 +1838,9 @@ void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl)
 
 void csl_caph_audioh_set_linear_filter(int path_id)
 {
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL)
+		if (path[path_id].started)
+			return;
 	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_set_linear_filter.\r\n");
@@ -1886,10 +1901,12 @@ void csl_caph_audioh_set_linear_filter(int path_id)
 
 void csl_caph_audioh_set_minimum_filter(int path_id)
 {
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL)
+		if (path[path_id].started)
+			return;
 	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_set_minimum_filter.\r\n");
-
 	switch (path_id) {
 	case AUDDRV_PATH_VIBRA_OUTPUT:
 		chal_audio_vibra_set_filter(handle,

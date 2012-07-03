@@ -68,11 +68,17 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	/* USB_FC_OPTION needed to be 1, in order to charge from SDP */
 	{.map = 0, .addr = 0x5E, .val = 0x30, .mask = 0xFF},
 
-	/*Init SDSR NM, NM2 and LPM voltages to 1.2V
+	/**
+	 * Switchers initializations
+	 * If you modifying SDSR/ASR/IOSR/CSR values, please make sure
+	 * to update rheastone-edn20-pmu-59039.dtsi file also
+	 */
+
+	/*Init SDSR NM, NM2 and LPM voltages to 1.24V
 	*/
-	{.map = 0, .addr = 0xD0, .val = 0x13, .mask = 0xFF},
-	{.map = 0, .addr = 0xD1, .val = 0x13, .mask = 0xFF},
-	{.map = 0, .addr = 0xD2, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0xD0, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD1, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD2, .val = 0x15, .mask = 0xFF},
 
 	/*Init CSR LPM  to 0.88 V
 	CSR NM2 to 1.22V

@@ -21,6 +21,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/interrupt.h>
+#include <linux/jiffies.h>
 #include <linux/kernel_stat.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
@@ -39,13 +40,14 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/wakelock.h>
 #include <linux/broadcom/vce.h>
 #include <linux/broadcom/vtq.h>
+#include <linux/broadcom/vtq_imageconv.h>
 #include "vtqbr.h"
 
 /* Private configuration stuff -- not part of exposed API */
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10123
+#define DRIVER_VERSION 10134
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -84,6 +86,7 @@ static struct vce {
 	struct proc_dir_entry *proc_vcedir;
 	struct proc_dir_entry *proc_version;
 	struct proc_dir_entry *proc_status;
+	struct proc_dir_entry *proc_utilization;
 	struct class *vce_class;
 	uint32_t isr_installed;
 	struct pi_mgr_dfs_node dfs_node;
@@ -111,6 +114,16 @@ static struct vce {
 	 * change the design to avoid such race, we could get rid of
 	 * this lock. */
 	spinlock_t isrclocks_spin;
+
+	/* Linkage to VTQ imageconv layer -- since it hasn't yet grown
+	 * up enough to warrant its own entry point */
+	struct vtq_imageconv_state *vtq_imageconv;
+
+	/* Utilization statistics... records time at power on/off
+	 * events, that is extracted and parsed by user space app */
+	uint32_t powertrace_idxmask;
+	uint32_t powertrace_idx;
+	unsigned long *powertrace;
 } vce_state;
 
 /* Per open handle state: */
@@ -136,6 +149,10 @@ typedef struct {
 	 * this safeguards against a dying process */
 	struct mutex low_latency_hack_mutex;
 	uint32_t low_latency_hack_is_enabled;
+
+	/* Imageconv linkage: */
+	int need_to_wait_for_imageconv;
+	uint32_t last_imageconv_job_id;
 } vce_t;
 
 /* Per mmap handle state: */
@@ -355,9 +372,14 @@ err_request_irq_failed:
 static void power_on_and_start_clock(void)
 {
 	int s;
+	uint32_t idx;
 
 	/* Assume clock control mutex is already acquired, and that block is currently off */
 	BUG_ON(vce_state.clock_enable_count != 0);
+
+	idx = vce_state.powertrace_idx++ & vce_state.powertrace_idxmask;
+	if (vce_state.powertrace != NULL)
+		vce_state.powertrace[idx] = jiffies;
 
 	_power_on();		/* TODO: error handling */
 	_clock_on();		/* TODO: error handling */
@@ -372,6 +394,8 @@ static void power_on_and_start_clock(void)
 
 static void stop_clock_and_power_off(void)
 {
+	uint32_t idx;
+
 	/* Assume clock control mutex is already acquired, and that block is currently off */
 	BUG_ON(vce_state.clock_enable_count != 0);
 
@@ -387,6 +411,10 @@ static void stop_clock_and_power_off(void)
 
 	_clock_off();
 	_power_off();
+
+	idx = vce_state.powertrace_idx++ & vce_state.powertrace_idxmask;
+	if (vce_state.powertrace != NULL)
+		vce_state.powertrace[idx] = jiffies;
 }
 
 static void clock_on(void)
@@ -450,6 +478,85 @@ static void clock_off_(int linenum)
 #define clock_off() clock_off_(__LINE__)
 #endif
 
+/* linkage to VTQ Imageconv */
+
+static int _imageconv_enqueue_direct(vce_t *user,
+		struct vce *vce,
+		uint32_t type,
+		uint32_t tformat_baseaddr,
+		uint32_t raster_baseaddr,
+		int32_t signedrasterstride,
+		uint32_t numtiles_wide,
+		uint32_t numtiles_high,
+		uint32_t dmacfg,
+		vtq_job_id_t *job_id_out)
+{
+	int s;
+	vtq_job_id_t job_id;
+
+	if (type != 0 && type != 1)
+		return -1;
+
+	s = vtq_imageconv_enqueue_direct(vce->vtq_imageconv,
+		type,
+		tformat_baseaddr,
+		raster_baseaddr,
+		signedrasterstride,
+		numtiles_wide,
+		numtiles_high,
+		dmacfg,
+		&job_id);
+	if (s == 0) {
+		user->last_imageconv_job_id = job_id;
+		user->need_to_wait_for_imageconv = 1;
+		*job_id_out = job_id;
+	}
+
+	return s;
+}
+
+int _imageconv_await(vce_t *user,
+		struct vce *vce,
+		vtq_job_id_t job_id)
+{
+	int s;
+
+	s = vtq_imageconv_await(vce->vtq_imageconv, job_id);
+	if (s == 0 && user->last_imageconv_job_id == job_id)
+		user->need_to_wait_for_imageconv = 0;
+	return s;
+}
+
+void _imageconv_flush(vce_t *user,
+		      struct vce *vce)
+{
+	int s;
+
+	if (user->need_to_wait_for_imageconv) {
+		dbg_print("Flushing unfinished imageconversions\n");
+		s = vtq_imageconv_await(vce->vtq_imageconv,
+				user->last_imageconv_job_id);
+		if (s == -ERESTARTSYS) {
+			int retried;
+			dbg_print("Wait was interrupted by signal, will poll\n")
+				;
+			/* TODO: might be good to make blocking version of API
+			 */
+			retried = 0;
+			while (s == -ERESTARTSYS && retried++ < 1000) {
+				usleep_range(1000, 20000);
+				s = vtq_imageconv_await(vce->vtq_imageconv,
+						user->last_imageconv_job_id);
+			}
+			dbg_print("After %d tries, s = %d\n", retried, s);
+		}
+
+		if (s != 0)
+			err_print("Failed to flush imageconv -- likely FATAL\n")
+				;
+	}
+}
+
 /******************************************************************
 	VCE driver functions
 *******************************************************************/
@@ -458,6 +565,11 @@ static int vce_open(struct inode *inode, struct file *filp)
 	vce_t *dev;
 
 	(void)inode;		/* ? */
+
+	if (!try_module_get(THIS_MODULE)) {
+		err_print("Failed to increment module refcount\n");
+		return -EINVAL;
+	}
 
 	dev = kmalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev)
@@ -478,6 +590,8 @@ static int vce_open(struct inode *inode, struct file *filp)
 
 	mutex_init(&dev->low_latency_hack_mutex);
 	dev->low_latency_hack_is_enabled = 0;
+
+	dev->need_to_wait_for_imageconv = 0;
 
 	filp->private_data = dev;
 	return 0;
@@ -527,6 +641,8 @@ static int vce_file_release(struct inode *inode, struct file *filp)
 		vtqb_destroy_context(dev->vtq_ctx);
 	}
 
+	_imageconv_flush(dev, &vce_state);
+
 	if (try_wait_for_completion(&dev->irq_sem)) {
 		err_print
 		    ("VCE driver closing with unacknowledged interrupts\n");
@@ -540,6 +656,8 @@ static int vce_file_release(struct inode *inode, struct file *filp)
 	}
 
 	kfree(dev);
+
+	module_put(THIS_MODULE);
 
 	return 0;
 }
@@ -745,6 +863,18 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case VTQ_IOCTL_MULTIPURPOSE_LOCK:
 			trace_ioctl_entry(VTQ_IOCTL_MULTIPURPOSE_LOCK);
 			break;
+		case VTQ_IOCTL_REGISTER_IMAGE_BLOB:
+			trace_ioctl_entry(VTQ_IOCTL_REGISTER_IMAGE_BLOB);
+			break;
+		case VTQ_IMAGECONV_IOCTL_READY:
+			trace_ioctl_entry(VTQ_IMAGECONV_IOCTL_READY);
+			break;
+		case VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT:
+			trace_ioctl_entry(VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT);
+			break;
+		case VTQ_IMAGECONV_IOCTL_AWAIT:
+			trace_ioctl_entry(VTQ_IMAGECONV_IOCTL_AWAIT);
+			break;
 		}
 	}
 
@@ -860,6 +990,43 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			/* we squirrel this away so we don't leak
 			 * memory at driver unload time */
 			vce_state.vtq_firmware = fw;
+		}
+		break;
+
+	case VTQ_IOCTL_REGISTER_IMAGE_BLOB:
+		{
+			struct vtq_registerimage_blob_ioctldata *d;
+			uint32_t *scratch; /* TODO: fix this! */
+			unsigned int c;
+
+			d = (struct vtq_registerimage_blob_ioctldata *)arg;
+			if (d->blobid != VTQ_BLOB_ID_IMAGECONV) {
+				/* This ioctl may be repurposed in
+				 * future, so this is just a check
+				 * against dodginess from userspace */
+				err_print("bad blob id\n");
+				return -EINVAL;
+			}
+
+			scratch = kmalloc(d->blobsz, GFP_KERNEL);
+			if (scratch == NULL) {
+				err_print("kmalloc failed\n");
+				return -EINVAL;
+			}
+
+			c = copy_from_user(scratch, d->blob, d->blobsz);
+			if (c != 0) {
+				dbg_print("bad user buffer\n");
+				kfree(scratch);
+				return -EINVAL;
+			}
+
+			d->result =
+				vtq_imageconv_supply_blob_via_vtqinit(
+					vce_state.vtq_imageconv,
+					d->blob, d->blobsz);
+
+			kfree(scratch);
 		}
 		break;
 
@@ -1022,6 +1189,55 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
+/* Image Conv linkage: */
+	case VTQ_IMAGECONV_IOCTL_READY:
+		{
+			struct vtq_imageconv_ready_ioctldata *d;
+
+			d = (struct vtq_imageconv_ready_ioctldata *)arg;
+
+			d->isready =
+				vtq_imageconv_ready(vce_state.vtq_imageconv);
+			ret = 0;
+		}
+		break;
+
+	case VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT:
+		{
+			struct vtq_imageconv_enqueue_direct_ioctldata *d;
+			vtq_job_id_t job_id;
+
+			d = (struct vtq_imageconv_enqueue_direct_ioctldata *)arg
+				;
+
+			ret = _imageconv_enqueue_direct(
+				dev,
+				&vce_state,
+				d->type,
+				d->tformat_baseaddr,
+				d->raster_baseaddr,
+				d->signedrasterstride,
+				d->numtiles_wide,
+				d->numtiles_high,
+				d->dmacfg,
+				&job_id);
+			if (ret == 0)
+				d->job_id = job_id;
+		}
+		break;
+
+	case VTQ_IMAGECONV_IOCTL_AWAIT:
+		{
+			struct vtq_imageconv_await_ioctldata *d;
+
+			d = (struct vtq_imageconv_await_ioctldata *)arg;
+
+			ret = _imageconv_await(
+				dev,
+				&vce_state,
+				d->job_id);
+		}
+		break;
 
 	default:
 		{
@@ -1094,6 +1310,18 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			break;
 		case VTQ_IOCTL_MULTIPURPOSE_LOCK:
 			trace_ioctl_return(VTQ_IOCTL_MULTIPURPOSE_LOCK);
+			break;
+		case VTQ_IOCTL_REGISTER_IMAGE_BLOB:
+			trace_ioctl_return(VTQ_IOCTL_REGISTER_IMAGE_BLOB);
+			break;
+		case VTQ_IMAGECONV_IOCTL_READY:
+			trace_ioctl_return(VTQ_IMAGECONV_IOCTL_READY);
+			break;
+		case VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT:
+			trace_ioctl_return(VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT);
+			break;
+		case VTQ_IMAGECONV_IOCTL_AWAIT:
+			trace_ioctl_return(VTQ_IMAGECONV_IOCTL_AWAIT);
 			break;
 		}
 	}
@@ -1242,6 +1470,82 @@ e0:
 	return ret;
 }
 
+static int proc_utilization_read(char *buffer, char **start, off_t offset,
+		int bytes, int *eof, void *priv)
+{
+	struct vce *v;
+	int ret;
+	int len, written, space_left;
+	char *cursor;
+	uint32_t trace_index;
+	unsigned long current_jiffies, last_jiffies, next_jiffies;
+	uint32_t numsofar;
+
+	ret = 0;
+
+	v = (struct vce *)priv;
+
+	trace_index = v->powertrace_idx;
+	current_jiffies = jiffies;
+
+	/* We just dump as much data as we can without interpretation
+	 * and leave the complexity to the userspace app */
+
+	space_left = bytes;
+	if (space_left < 250) {
+		ret = -1;
+		goto err_too_small;
+	}
+	cursor = buffer;
+	written = 0;
+
+	len = snprintf(cursor, space_left, "%lu %u %lu\n",
+			current_jiffies,
+			trace_index,
+			msecs_to_jiffies(1000));
+	written += len;
+	cursor += len;
+	space_left -= len;
+	numsofar = 0;
+
+	last_jiffies = current_jiffies;
+	trace_index = trace_index - 1 & v->powertrace_idxmask;
+	next_jiffies = v->powertrace[trace_index];
+
+	while (!((signed long)(last_jiffies - next_jiffies) < 0 ||
+				space_left < 50) &&
+			numsofar <= v->powertrace_idxmask) {
+		len = snprintf(cursor, space_left, "%lu\n",
+				next_jiffies);
+		written += len;
+		cursor += len;
+		space_left -= len;
+		last_jiffies = next_jiffies;
+		trace_index = trace_index - 1 & v->powertrace_idxmask;
+		next_jiffies = v->powertrace[trace_index];
+		numsofar += 1;
+	}
+
+	/* TODO: be a proper read_proc function */
+	(void)start;
+	(void)offset;
+	(void)eof;
+
+	ret = written;
+
+	BUG_ON(ret > bytes);
+	BUG_ON(ret < 0);
+	return ret;
+
+	/*
+	   error exit paths follow
+	 */
+
+err_too_small:
+	BUG_ON(ret >= 0);
+	return ret;
+}
+
 void __iomem *vce_get_base_address(struct vce *vce)
 {
 	(void) vce;
@@ -1286,6 +1590,10 @@ int vce_acquire(struct vce *vce,
 
 void vce_release(struct vce *vce)
 {
+	/* At the moment we support only one VCE, and the
+	 * clock_on()/clock_off() functions assume it */
+	BUG_ON(vce != &vce_state);
+
 	complete(&vce_state.acquire_sem);	/* VCE is up for grab */
 	cpu_keepawake_dec();
 	clock_off();
@@ -1303,6 +1611,9 @@ static int mm_pol_chg_notifier(struct notifier_block *self,
 			       unsigned long event, void *data)
 {
 	struct pi_notify_param *p = data;
+
+	/* TODO: could do containerof to get parent structure */
+	(void)self;
 
 	if (p->pi_id == PI_MGR_PI_ID_MM &&
 			IS_SHUTDOWN_POLICY(p->new_value) &&
@@ -1323,6 +1634,7 @@ int __init vce_init(void)
 {
 	int ret;
 	struct device *device;
+	size_t powertrace_buffer_size;
 
 	dbg_print("VCE driver Init\n");
 
@@ -1397,7 +1709,7 @@ int __init vce_init(void)
 	if (vce_state.proc_version == NULL) {
 		err_print("Failed to create vce proc entry\n");
 		ret = -ENOENT;
-		goto err3;
+		goto err_proc_version;
 	}
 	vce_state.proc_version->read_proc = proc_version_read;
 
@@ -1407,9 +1719,20 @@ int __init vce_init(void)
 	if (vce_state.proc_status == NULL) {
 		err_print("Failed to create vce proc entry\n");
 		ret = -ENOENT;
-		goto err4;
+		goto err_proc_status;
 	}
 	vce_state.proc_status->read_proc = proc_status_read;
+
+	vce_state.proc_utilization = create_proc_entry("utilization",
+						   (S_IRUSR | S_IRGRP),
+						   vce_state.proc_vcedir);
+	if (vce_state.proc_utilization == NULL) {
+		err_print("Failed to create vce proc entry\n");
+		ret = -ENOENT;
+		goto err_proc_utilization;
+	}
+	vce_state.proc_utilization->data = &vce_state;
+	vce_state.proc_utilization->read_proc = proc_utilization_read;
 
 	/* We need a QOS node for the CPU in order to do the ACP keep alive thing (simple wfi) */
 	ret =
@@ -1434,23 +1757,53 @@ int __init vce_init(void)
 	}
 	vce_state.acquirer = VCE_ACQUIRER_NONE;
 
+	/* One entry per on/off event -- we want about a seconds
+	 * worth... the exact number isn't too important.  It must be
+	 * a power of two, however.  The mask is one less than the
+	 * number of entries */
+
+	vce_state.powertrace_idxmask = 255;
+	vce_state.powertrace_idx = 0;
+	powertrace_buffer_size = sizeof(*vce_state.powertrace) *
+			(vce_state.powertrace_idxmask + 1);
+	vce_state.powertrace = kmalloc(powertrace_buffer_size, GFP_KERNEL);
+	if (vce_state.powertrace == NULL) {
+		err_print("Failed to allocate power trace buffer\n");
+		ret = -ENOENT;
+		goto err_kmalloc_powertrace;
+	}
+
 	ret = vtq_driver_init(&vce_state.vtq,
 			&vce_state, vce_state.proc_vcedir);
 	if (ret) {
-		err_print("Failed to initialize VTQ (0)\n");
+		err_print("Failed to initialize VTQ (driver)\n");
 		ret = -ENOENT;
 		goto err_vtq_init0;
 	}
 
 	ret = vtq_pervce_init(&vce_state.vtq_vce,
-			vce_state.vtq, &vce_state, vce_state.proc_vcedir);
+			vce_state.vtq, &vce_state,
+			vce_state.proc_vcedir);
 	if (ret) {
-		err_print("Failed to initialize VTQ (2)\n");
+		err_print("Failed to initialize VTQ (VCE instance)\n");
 		ret = -ENOENT;
 		goto err_vtq_init2;
 	}
 
+	ret = vtq_imageconv_init(&vce_state.vtq_imageconv,
+			vce_state.vtq_vce,
+			THIS_MODULE,
+			device,
+			vce_state.proc_vcedir);
+	if (ret) {
+		err_print("Failed to initialize VTQ imageconv\n");
+		ret = -ENOENT;
+		goto err_vtq_imageconv_init;
+	}
+
 	vce_state.debug_ioctl = 0; /* TODO: proc entry maybe? */
+
+	vce_state.vtq_firmware = NULL;
 
 	return 0;
 
@@ -1458,11 +1811,17 @@ int __init vce_init(void)
 	   error exit paths
 	 */
 
-	/* vtq_pervce_term(&vce_state.vtqvce); */
+	/* vtq_imageconv_term(&vce_state.vtq_imageconv); */
+err_vtq_imageconv_init:
+
+	vtq_pervce_term(&vce_state.vtq_vce);
 err_vtq_init2:
 
 	vtq_driver_term(&vce_state.vtq);
 err_vtq_init0:
+
+	kfree(vce_state.powertrace);
+err_kmalloc_powertrace:
 
 	pi_mgr_unregister_notifier(PI_MGR_PI_ID_MM,
 			&mm_pol_chg_notify_blk,
@@ -1472,11 +1831,14 @@ err_reg_notifier:
 	pi_mgr_qos_request_remove(&vce_state.cpu_qos_node);
 err5:
 
+	remove_proc_entry("utilization", vce_state.proc_vcedir);
+err_proc_utilization:
+
 	remove_proc_entry("status", vce_state.proc_vcedir);
-err4:
+err_proc_status:
 
 	remove_proc_entry("version", vce_state.proc_vcedir);
-err3:
+err_proc_version:
 	remove_proc_entry(VCE_DEV_NAME, NULL);
 err2:
 
@@ -1518,10 +1880,14 @@ void __exit vce_exit(void)
 	mutex_lock(&vce_state.armctl_sem);
 	BUG_ON(vce_state.clock_enable_count != 0);
 
+	vtq_imageconv_term(&vce_state.vtq_imageconv);
 	vtq_pervce_term(&vce_state.vtq_vce);
 	vtq_driver_term(&vce_state.vtq);
 
+	kfree(vce_state.powertrace);
+
 	/* remove proc entries */
+	remove_proc_entry("utilization", vce_state.proc_vcedir);
 	remove_proc_entry("status", vce_state.proc_vcedir);
 	remove_proc_entry("version", vce_state.proc_vcedir);
 	remove_proc_entry(VCE_DEV_NAME, NULL);

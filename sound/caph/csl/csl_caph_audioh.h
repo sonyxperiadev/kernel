@@ -90,6 +90,7 @@ struct _CSL_CAPH_AUDIOH_Path_t {
 	int sample_pack;
 	int eanc_input;
 	int eanc_output;
+	int started;
 };
 #define CSL_CAPH_AUDIOH_Path_t struct _CSL_CAPH_AUDIOH_Path_t
 

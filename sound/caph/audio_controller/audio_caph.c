@@ -136,7 +136,13 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 		"DisableFMPlay",
 		"SetARM2SPInst",
 		"RateChange", /*33 */
-		"AmpEnable"
+		"AmpEnable",
+		"DisableByPassVibra_CB",
+		"SetCallMode",
+		"ConnectDL",
+		"UpdateUserVolSetting",
+		"BufferReady",
+		"AtCtl",
 };
 
 extern brcm_alsa_chip_t *sgpCaph_chip;
@@ -145,6 +151,7 @@ static unsigned int n_msg_in, n_msg_out, last_action;
 static struct completion complete_kfifo;
 static struct TAudioHalThreadData sgThreadData;
 static int telephonyIsEnabled;
+static DEFINE_MUTEX(mutexBlock);
 
 #define KFIFO_SIZE		2048
 #define BLOCK_WAITTIME_MS	60000
@@ -411,6 +418,9 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 	case ACTION_AUD_SetCallMode:
 		size = sizeof(BRCM_AUDIO_Param_CallMode_t);
 		break;
+	case ACTION_AUD_AtCtl:
+		size = sizeof(BRCM_AUDIO_Param_AtCtl_t);
+		break;
 	default:
 		break;
 	}
@@ -599,6 +609,13 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	}
 	/** EDN: not support 48KHz recording during voice call.*/
 
+	/*When multi blocking triggers (such as OpenPlay and ClosePlay) arrive
+	  at the same time, each would compete for action_complete semaphore,
+	  which may be intended for other trigger. As a result, incorrect
+	  parameters are returned.
+	*/
+	if (block & 1)
+		mutex_lock(&mutexBlock);
 
 	if (action_code == ACTION_AUD_DisableByPassVibra_CB) {
 		action_code = ACTION_AUD_DisableByPassVibra;
@@ -737,11 +754,12 @@ AUDIO_Ctrl_Trigger_Wait:
 			 *      sgThreadData.m_pkfifo_out.out);
 			 */
 			if (len == 0)	/* FIFO empty sleep */
-				return status;
+				break;
 			if (arg_param)
 				memcpy(arg_param, &msgAudioCtrl.param,
 				       params_size);
 		}
+		mutex_unlock(&mutexBlock);
 	}
 
 	return status;
@@ -1559,6 +1577,24 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				parm_vol->volume1,
 				parm_vol->volume2,
 				parm_vol->app);
+		}
+		break;
+	case ACTION_AUD_AtCtl:
+		{
+			BRCM_AUDIO_Param_AtCtl_t parm_atctl;
+
+			memcpy((void *)&parm_atctl, arg_param,
+				sizeof(BRCM_AUDIO_Param_AtCtl_t));
+			if (parm_atctl.isGet)
+				AtAudCtlHandler_get(parm_atctl.cmdIndex,
+				parm_atctl.pChip,
+				parm_atctl.ParamCount,
+				parm_atctl.Params);
+			else
+				AtAudCtlHandler_put(parm_atctl.cmdIndex,
+				parm_atctl.pChip,
+				parm_atctl.ParamCount,
+				parm_atctl.Params);
 		}
 		break;
 	default:
