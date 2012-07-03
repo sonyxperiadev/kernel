@@ -94,7 +94,6 @@ struct synaptics_rmi4 {
 	struct input_dev *input_dev;
 	int use_irq;
 	struct hrtimer timer;
-	struct hrtimer penup_det_timer;
 	struct work_struct  work;
 #if ENABLE_TP_DIAG
 	struct hrtimer diag_timer;
