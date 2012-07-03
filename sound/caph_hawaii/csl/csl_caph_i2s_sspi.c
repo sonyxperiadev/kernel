@@ -39,7 +39,8 @@
 #include <string.h>
 #include "mobcom_types.h"
 #include "chal_types.h"
-#include <plat/chal/chal_sspi.h>
+//#include <plat/chal/chal_sspi.h>  //Kishore add Capri SSPI files
+#include "chal_sspi_hawaii.h"
 #include "csl_caph_i2s_sspi.h"
 #include "brcm_rdb_sspil.h"
 #include "brcm_rdb_padctrlreg.h"
@@ -394,7 +395,7 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
 	chal_sspi_enable(handle, 1);
 	
 	// Kishore - add Rhea code here or get Capri SSP
-	//chal_sspi_get_max_fifo_size(handle, &dword_sz);
+	chal_sspi_get_max_fifo_size(handle, &dword_sz);
 	dword_sz >>= 2; /* change to size in DWord */
 	if (config->interleave) {
 		chal_sspi_set_fifo_size(handle,
@@ -559,8 +560,8 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
 	frm_conf.tx_padval = config->tx_padval;
 
 	// Kishore - add Rhea code here or get Capri SSP
-	//if (chal_sspi_set_i2s_frame(handle, &frmMask, prot, frm_conf))
-		//return SSPI_HW_ERR_FRAME;
+	if (chal_sspi_set_i2s_frame(handle, &frmMask, prot, frm_conf))
+		return SSPI_HW_ERR_FRAME;
 
 	return SSPI_HW_NOERR;
 }

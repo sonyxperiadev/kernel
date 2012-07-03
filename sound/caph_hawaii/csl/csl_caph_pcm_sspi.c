@@ -37,7 +37,8 @@
 #include "mobcom_types.h"
 #include "chal_types.h"
 #include "chal_caph.h"
-#include <plat/chal/chal_sspi.h>
+//#include <plat/chal/chal_sspi.h>
+#include "chal_sspi_hawaii.h"
 #include "chal_caph_intc.h"
 #include "csl_caph.h"
 #include "csl_caph_pcm_sspi.h"
@@ -709,7 +710,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		set_fifo_pack(handle, i, devCfg->ch_info[i].tx_len,
 				devCfg->ch_info[i].tx_pack, 0);
 	}
-	//chal_sspi_set_caph_clk(handle, rate, sample_len);
+	chal_sspi_set_caph_clk(handle, rate, sample_len);
 	// Kishore - add Rhea code or get capri SSP code
 	
 	
@@ -720,7 +721,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	
 	// Kishore - add Rhea code here or get Capri SSP
 
-	//chal_sspi_get_max_fifo_size(handle, &dword_sz);
+	chal_sspi_get_max_fifo_size(handle, &dword_sz);
 	dword_sz >>= 2; /* change to size in DWord */
 
 	if (devCfg->num_ch_info == 1) {
@@ -866,7 +867,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		return CSL_PCM_ERR_SEQUENCE;
 
 		// Kishore - add Rhea code here or get Capri SSP
-#if 0		
+#if 1		
 	if (chal_sspi_set_pcm_frame(handle, &frmMask, frm_arr))
 		return CSL_PCM_ERR_FRAME;
 #endif

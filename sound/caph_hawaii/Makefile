@@ -34,13 +34,13 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./include/linux/broadcom
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/misc/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/public/soc/debug/public
 #Audio Controller header files
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph -I./sound/caph/include
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph/audio_controller
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph/audio_driver/
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph_hawaii -I./sound/caph_hawaii/include
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph_hawaii/audio_controller
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph_hawaii/audio_driver/
 
 #CSL header files
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph/csl/
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph/dsp/
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph_hawaii/csl/
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./sound/caph_hawaii/dsp/
 #CHAL header files
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I$(src)/chal/capri/inc/
 

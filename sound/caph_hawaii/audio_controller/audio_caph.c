@@ -100,7 +100,7 @@ struct TAudioHalThreadData {
 	struct kfifo m_pkfifo_out;
 	spinlock_t m_lock_out;
 };
-
+#if 0
 static char action_names[ACTION_AUD_TOTAL][40] = {
 	"OpenPlay",
 	"ClosePlay",
@@ -138,7 +138,7 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 	"RateChange",		/*33 */
 	"AmpEnable"
 };
-
+#endif
 static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 static unsigned int n_msg_in, n_msg_out, last_action;
 static struct completion complete_kfifo;
@@ -1531,7 +1531,8 @@ static void PCM_Vibra_Gen_Start(void)
 
 	AUDIO_DRIVER_Ctrl(pcm_vibra_drv_handle, AUDIO_DRIVER_CONFIG,
 			  (void *)&drv_config);
-
+			  
+			 
 	/* set the interrupt period */
 	period_bytes = PERIOD_BYTES;
 	num_blocks = 2;

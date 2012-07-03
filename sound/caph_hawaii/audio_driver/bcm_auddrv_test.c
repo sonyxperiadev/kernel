@@ -146,7 +146,7 @@ static Semaphore_t sVtQueue_Sema;
 static const UInt16 sVoIPDataLen[] = { 0, 322, 160, 38, 166, 642, 70 };
 
 static void AudDrv_VOIP_DumpUL_CB(void *pPrivate, u8 * pSrc, u32 nSize);
-static void AudDrv_VOIP_FillDL_CB(void *pPrivate, u8 * pDst, u32 nSize);
+static void AudDrv_VOIP_FillDL_CB(void *pPrivate, u8 * pDst, u32 nSize,u32 *timestamp);
 
 /* static UInt8 sVoIPAMRSilenceFrame[1] = {0x000f}; */
 static UInt32 delay_count;	/* 20ms each count */
@@ -160,7 +160,7 @@ static void AudDrv_VOIP_DumpUL_CB(void *pPrivate, u8 * pSrc, u32 nSize)
 	/* OSSEMAPHORE_Release(sVtQueue_Sema); */
 }
 
-static void AudDrv_VOIP_FillDL_CB(void *pPrivate, u8 * pDst, u32 nSize)
+static void AudDrv_VOIP_FillDL_CB(void *pPrivate, u8 * pDst, u32 nSize,u32 *timestamp)
 {
 	UInt32 copied = 0;
 	if (delay_count > 0) {

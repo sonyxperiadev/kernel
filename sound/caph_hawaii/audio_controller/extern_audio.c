@@ -42,14 +42,14 @@
 #if (!defined(CONFIG_BCMPMU_AUDIO))
 
 #include <linux/broadcom/bcmpmu_audio.h>
-#define AUDIO_PMU_INIT() NULL
-#define AUDIO_PMU_HS_SET_GAIN(a, b) NULL
-#define AUDIO_PMU_HS_POWER(a) NULL
-#define AUDIO_PMU_IHF_SET_GAIN(a) NULL
-#define AUDIO_PMU_IHF_POWER(a) NULL
-#define AUDIO_PMU_DEINIT() NULL
-#define AUDIO_PMU_HS_HI_GAIN_MODE_EN(a, b) NULL
-#define AUDIO_PMU_IHF_HI_GAIN_MODE_EN(a) NULL
+#define AUDIO_PMU_INIT() 
+#define AUDIO_PMU_HS_SET_GAIN(a, b) 
+#define AUDIO_PMU_HS_POWER(a) 
+#define AUDIO_PMU_IHF_SET_GAIN(a) 
+#define AUDIO_PMU_IHF_POWER(a) 
+#define AUDIO_PMU_DEINIT() 
+#define AUDIO_PMU_HS_HI_GAIN_MODE_EN(a, b) 
+#define AUDIO_PMU_IHF_HI_GAIN_MODE_EN(a) 
 
 #else
 
@@ -349,7 +349,7 @@ void extern_hs_on(void)
 	}
 
 	AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
-				  PMU_HSGAIN_MUTE),
+				  PMU_HSGAIN_MUTE);
 
 	/*
 	./drivers/misc/bcm59055-audio.c:int bcm59055_hs_power(bool on)
@@ -372,7 +372,7 @@ void extern_hs_on(void)
 void extern_hs_off(void)
 {
 	AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
-				  PMU_HSGAIN_MUTE),
+				  PMU_HSGAIN_MUTE);
 	AUDIO_PMU_HS_POWER(0);
 
 	hs_IsOn = 0;
@@ -404,7 +404,7 @@ void extern_ihf_on(void)
 		pll_IsOn = 1;
 	}
 
-	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
+	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE);
 	AUDIO_PMU_IHF_POWER(1);
 #endif
 	ihf_IsOn = 1;
@@ -423,7 +423,7 @@ void extern_ihf_off(void)
 #if defined(CONFIG_IHF_EXT_AMPLIFIER)
 	audio_gpio_output(GPIO_IHF_EXT_AMP, 0);
 #else
-	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
+	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE);
 	AUDIO_PMU_IHF_POWER(0);
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)
