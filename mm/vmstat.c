@@ -728,8 +728,10 @@ const char * const vmstat_text[] = {
 #endif
 #ifdef CONFIG_CMA
 	"cmafree",
-	"cmaanon",
-	"cmafile",
+	"cmaanon_inactive",
+	"cmaanon_active",
+	"cmafile_inactive",
+	"cmafile_active",
 	"cmaunevictable",
 	"contigalloc",
 #endif

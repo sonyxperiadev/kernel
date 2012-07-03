@@ -103,8 +103,14 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	 * allocated for files.
 	 */
 #ifdef CONFIG_CMA
-	other_free -= global_page_state(NR_FREE_CMA_PAGES);
-	other_file -= global_page_state(NR_CMA_FILE);
+	int cma_free, cma_file;
+
+	cma_free = global_page_state(NR_FREE_CMA_PAGES);
+	cma_file = global_page_state(NR_CMA_INACTIVE_FILE)
+			+ global_page_state(NR_CMA_ACTIVE_FILE);
+
+	other_free -= cma_free;
+	other_file -= cma_file;
 #endif
 
 	/*
@@ -190,9 +196,12 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     p->pid, p->comm, oom_adj, tasksize);
 	}
 	if (selected) {
-		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d\n",
+		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d"
+				" with ofree %d %d, cfree %d %d ma %d\n",
 			     selected->pid, selected->comm,
-			     selected_oom_adj, selected_tasksize);
+			     selected_oom_adj, selected_tasksize,
+			     other_free, other_file, cma_free, cma_file,
+			     min_adj);
 		lowmem_deathpending = selected;
 		lowmem_deathpending_timeout = jiffies + HZ;
 		force_sig(SIGKILL, selected);
