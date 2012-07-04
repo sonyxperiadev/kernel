@@ -62,7 +62,9 @@ static struct bcmpmu_reg_map bcm59042_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_PONKEY_RESTART_DLY] = {.map = 0x00, .addr = 0x0E,
 		.mask = 0x07, .ro = 0, .shift = 0},
 	[PMU_REG_AUXCTRL] =		{.map = 0x00, .addr = 0x0F,
-		.mask = 0xFF, .ro = 0},
+		.mask = 0x1F, .ro = 0},
+	[PMU_REG_PONKEY_ONHOLD_DEB] = {.map = 0x00, .addr = 0x0F,
+		.mask = 0xE0, .ro = 0, .shift = 5},
 
 /* Comparators control reg */
 	[PMU_REG_NTCHT_RISE_LO] = {.map = 0x00, .addr = 0x13,

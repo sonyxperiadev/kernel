@@ -138,8 +138,8 @@ enum bcmpmu_reg {
 	PMU_REG_PONKEY_RESTART_EN,
 	PMU_REG_PONKEY_RESTART_DEB,
 	PMU_REG_PONKEY_RESTART_DLY,
-
 	PMU_REG_AUXCTRL,
+	PMU_REG_PONKEY_ONHOLD_DEB,
 
 	PMU_REG_NTCHT_RISE_LO,
 	PMU_REG_NTCHT_RISE_HI,
@@ -991,6 +991,15 @@ enum bcmpmu_uas_sw_grp {
 	UAS_SW_GRP_OFF
 };
 
+enum bcmpmu_ponkeyonhold_deb {
+	PONKEYONHOLD_0_DEB,
+	PONKEYONHOLD_50MS_DEB,
+	PONKEYONHOLD_100MS_DEB,
+	PONKEYONHOLD_500MS_DEB,
+	PONKEYONHOLD_1SEC_DEB,
+	PONKEYONHOLD_2SEC_DEB,
+	PONKEYONHOLD_3SEC_DEB
+};
 
 #define	PMU_ENV_BITMASK_MBWV_DELTA		(1<<0)
 #define	PMU_ENV_BITMASK_CGPD_ENV		(1<<1)
@@ -1237,6 +1246,7 @@ struct bcmpmu_platform_data {
 	int pok_restart_dly;
 	int pok_restart_deb;
 	int pok_lock;
+	int pok_turn_on_deb;
 	/* IHF power up/down auto seq */
 	int ihf_autoseq_dis;
 	int piggyback_chrg;

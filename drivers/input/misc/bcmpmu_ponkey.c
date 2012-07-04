@@ -161,6 +161,16 @@ static int __devinit bcmpmu_ponkey_probe(struct platform_device *pdev)
 				  bcmpmu->regmap[PMU_REG_PONKEY_RESTART_DEB].
 				  mask);
 	}
+	if (pdata->pok_turn_on_deb >= 0) {
+		pdata->pok_turn_on_deb <<=
+		    bcmpmu->regmap[PMU_REG_PONKEY_ONHOLD_DEB].shift;
+		pdata->pok_turn_on_deb &=
+		    bcmpmu->regmap[PMU_REG_PONKEY_ONHOLD_DEB].mask;
+		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEY_ONHOLD_DEB,
+				  pdata->pok_turn_on_deb,
+				  bcmpmu->regmap[PMU_REG_PONKEY_ONHOLD_DEB].
+				  mask);
+	}
 	/* set KEY_PAD_LOCK */
 	if (pdata->pok_lock == 0 || pdata->pok_lock == 1) {
 		pdata->pok_lock <<= bcmpmu->regmap[PMU_REG_KEY_PAD_LOCK].shift;

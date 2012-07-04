@@ -103,7 +103,6 @@ static int bcmpmu_get_batt_property(struct power_supply *battery,
 	int ret = 0;
 	struct bcmpmu_batt *pbatt =
 		container_of(battery, struct bcmpmu_batt, batt);
-	struct bcmpmu_adc_req req;
 
 	switch (property) {
 	case POWER_SUPPLY_PROP_STATUS:
