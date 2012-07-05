@@ -1065,6 +1065,26 @@ struct event_notifier {
 	struct blocking_notifier_head notifiers;
 };
 
+/* referencing ACCY */
+enum {
+	SS_ACCY_GET_BC_STATUS = 1,
+};
+
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+#define BCMPMU_SPA_EVENT_FIFO_LENGTH	16
+#define SPA_FIFO_EMPTY(fifo)	((fifo.head == fifo.tail) && !fifo.fifo_full)
+#define SPA_FIFO_HEAD(fifo)	(fifo.head = ((fifo.head+1) & (fifo.length-1)))
+#define SPA_FIFO_TAIL(fifo)	(fifo.tail = ((fifo.tail+1) & (fifo.length-1)))
+struct bcmpmu_spa_event_fifo {
+	unsigned char		head;
+	unsigned char		tail;
+	unsigned char		length;
+	bool			fifo_full;
+	enum bcmpmu_event_t	event[BCMPMU_SPA_EVENT_FIFO_LENGTH];
+	int			data[BCMPMU_SPA_EVENT_FIFO_LENGTH];
+};
+#endif
+
 struct bcmpmu_platform_data;
 struct bcmpmu {
 	struct device *dev;
@@ -1138,6 +1158,8 @@ struct bcmpmu {
 	int (*ntcct_rise_set) (struct bcmpmu *pmu, int val);
 	int (*ntcct_fall_set) (struct bcmpmu *pmu, int val);
 
+	/* referencing accy */
+	int (*accy_info_get)(struct bcmpmu *bcmpmu, unsigned int req);
 
 	/* fg */
 	int (*fg_currsmpl) (struct bcmpmu *pmu, int *data);
@@ -1249,9 +1271,16 @@ struct bcmpmu_platform_data {
 	int pok_turn_on_deb;
 	/* IHF power up/down auto seq */
 	int ihf_autoseq_dis;
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
 	int piggyback_chrg;
 	char *piggyback_chrg_name;
 	void (*piggyback_notify) (enum bcmpmu_event_t event, int data);
+	struct delayed_work *piggyback_work;
+	struct bcmpmu_spa_event_fifo *spafifo;
+	struct mutex *spalock;
+#endif
+	int non_pse_charging;
+	int max_vfloat;
 };
 
 struct bcmpmu_fg {
@@ -1294,6 +1323,7 @@ struct bcmpmu_reg_info *bcmpmu_rgltr_info(struct bcmpmu *bcmpmu);
 
 void bcmpmu_reg_dev_init(struct bcmpmu *bcmpmu);
 void bcmpmu_reg_dev_exit(struct bcmpmu *bcmpmu);
+void bcmpmu_remove_JIG_force(void);
 int bcmpmu_add_notifier(u32, struct notifier_block *);
 int bcmpmu_remove_notifier(u32, struct notifier_block *);
 int bcmpmu_usb_set(struct bcmpmu *bcmpmu, enum bcmpmu_usb_ctrl_t ctrl,

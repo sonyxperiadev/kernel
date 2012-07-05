@@ -29,6 +29,10 @@
 
 /* Seconds to ticks conversion */
 #define sec_to_ticks(x) ((x)*CLOCK_TICK_RATE)
+#define ticks_to_sec(x) ((x)/CLOCK_TICK_RATE)
+
+int wd_tapper_set_timeout(unsigned int timeout_in_sec);
+int wd_tapper_get_timeout(void);
 
 struct wd_tapper_platform_data {
 	unsigned int count;

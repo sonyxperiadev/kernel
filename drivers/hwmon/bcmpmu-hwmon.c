@@ -1169,7 +1169,7 @@ static int bcmpmu_get_fg_acc_mas(struct bcmpmu *bcmpmu, int *data)
 	slpacc = slpacc * pfg->fg_slp_curr_ua;
 	pr_hwmon(DATA, "%s: actacc=%lld, actcnt=%d, slpacc=%lld, slpcnt=%d\n",
 		 __func__, actacc, cnt, slpacc, slpcnt);
-	actacc = actacc + slpacc;
+	actacc = actacc - slpacc;
 	actacc = div_s64(actacc, 1000000);
 	*data = (int)actacc;
 	pfg->fg_columb_cnt += *data;

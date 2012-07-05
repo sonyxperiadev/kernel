@@ -33,6 +33,9 @@
 #include <plat/kona_avs.h>
 #endif
 #include "pm_params.h"
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
+#include <linux/spa_power.h>
+#endif
 
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0C
@@ -793,6 +796,10 @@ static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 20 */
 };
 
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+static void notify_spa(enum bcmpmu_event_t event, int data);
+#endif
+
 static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), },
 	.init = bcmpmu_init_platform_hw,
@@ -809,19 +816,22 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.regulator_init_data = &bcm59039_regulators[0],
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,
-	.fg_slp_curr_ua = 1000,
+	.fg_slp_curr_ua = 1220,
 	.fg_factor = 976,
 	.fg_sns_res = 10,
 	.batt_voltcap_map = &batt_voltcap_map[0],
 	.batt_voltcap_map_len = ARRAY_SIZE(batt_voltcap_map),
 	.batt_impedence = 140,
-	.chrg_1c_rate = 1300,
-	.chrg_eoc = 65,
+	.sys_impedence = 35,
+	.chrg_1c_rate = 1200,
+	.chrg_eoc = 100,
+	.support_hw_eoc = 0,
 	.chrg_zone_map = &chrg_zone[0],
 	.fg_capacity_full = 1300 * 3600,
 	.support_fg = 1,
 	.support_chrg_maint = 1,
 	.chrg_resume_lvl = 4150,
+	.chrg_resume_lvl = 4152,
 	.wd_setting = &bcm59039_wd_setting,
 	.fg_support_tc = 1,
 	.fg_tc_dn_lvl = 278,
@@ -839,7 +849,48 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.pok_restart_dly = -1,
 	.pok_restart_deb = -1,
 	.ihf_autoseq_dis = 1,
+	.pok_lock = 1,
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+	.piggyback_chrg = 1,
+	.piggyback_chrg_name = "bcm59039_charger",
+	.piggyback_notify = notify_spa,
+	.piggyback_work = NULL,
+	.spafifo = NULL,
+	.spalock = NULL,
+#endif
 };
+
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+static void notify_spa(enum bcmpmu_event_t event, int data)
+{
+	if (bcmpmu_plat_data.spafifo) {
+		mutex_lock(bcmpmu_plat_data.spalock);
+		if (!bcmpmu_plat_data.spafifo->fifo_full) {
+			bcmpmu_plat_data.spafifo->
+			event[bcmpmu_plat_data.spafifo->head] =
+						event;
+			bcmpmu_plat_data.spafifo->
+			data[bcmpmu_plat_data.spafifo->head] =
+						data;
+			bcmpmu_plat_data.spafifo->head =
+			((bcmpmu_plat_data.spafifo->head+1)
+			 & (bcmpmu_plat_data.spafifo->length-1));
+
+			if (bcmpmu_plat_data.spafifo->head ==
+				bcmpmu_plat_data.spafifo->tail)
+				bcmpmu_plat_data.spafifo->fifo_full = true;
+				mutex_unlock(bcmpmu_plat_data.spalock);
+
+	if (bcmpmu_plat_data.piggyback_work)
+		schedule_delayed_work(bcmpmu_plat_data.piggyback_work, 0);
+		} else {
+			printk(KERN_INFO "%s: fifo full.\n", __func__);
+			mutex_unlock(bcmpmu_plat_data.spalock);
+		}
+	}
+}
+#endif
+
 
 static struct i2c_board_info __initdata pmu_info[] = {
 	{
@@ -1136,9 +1187,8 @@ int bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 	*/
 
 	if (bcmpmu->rev_info.dig_rev >= BCM59039_CO_DIG_REV) {
-		bcmpmu->pdata->restart_en = 1;
-		bcmpmu->pdata->pok_restart_dly = POK_RESTRT_DLY_4SEC;
-		bcmpmu->pdata->pok_restart_deb = POK_RESTRT_DEB_4SEC;
+		bcmpmu->pdata->pok_restart_dly = POK_RESTRT_DLY_1SEC;
+		bcmpmu->pdata->pok_restart_deb = POK_RESTRT_DEB_8SEC;
 		bcmpmu->pdata->pok_lock = 1;
 		bcmpmu->pdata->hard_reset_en = 0;
 	} else {
