@@ -293,3 +293,10 @@ config USB_QCOM_MDM_BRIDGE
 	  driver for dial up network and RMNET.
 	  To compile this driver as a module, choose M here: the module
 	  will be called mdm_bridge. If unsure, choose N.
+
+config USB_NCP373
+	bool "ON Semiconductor Load switch NCP373 support"
+	depends on USB
+	default n
+	help
+	  Say Y here if your device uses NCP373.

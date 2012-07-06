@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1082,6 +1083,9 @@ struct vfe31_ctrl_type {
 	uint32_t output2Period;
 	uint32_t vfeFrameSkipCount;
 	uint32_t vfeFrameSkipPeriod;
+#if defined(CONFIG_SEMC_CAM_MAIN) || defined(CONFIG_SEMC_CAM_SUB)
+	uint32_t rolloff_update;
+#endif
 	uint32_t status_bits;
 	struct vfe_stats_control afStatsControl;
 	struct vfe_stats_control awbStatsControl;

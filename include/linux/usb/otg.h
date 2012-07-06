@@ -33,6 +33,10 @@ enum usb_otg_state {
 	OTG_STATE_A_PERIPHERAL,
 	OTG_STATE_A_WAIT_VFALL,
 	OTG_STATE_A_VBUS_ERR,
+
+	/* MHL */
+	OTG_STATE_MHL_DETECTED,
+	OTG_STATE_MHL_CONNECTED,
 };
 
 enum usb_otg_event {
@@ -143,6 +147,12 @@ struct otg_transceiver {
 	int	(*send_event)(struct otg_transceiver *otg,
 			enum usb_otg_event event);
 
+	/* start to recheck charger type to avoid miss detection */
+	void	(*start_recheck_chgtype)(struct otg_transceiver *otg,
+			unsigned long delay);
+
+	/* stop to recheck charger type */
+	void	(*stop_recheck_chgtype)(struct otg_transceiver *otg);
 };
 
 
@@ -284,6 +294,19 @@ static inline void
 otg_unregister_notifier(struct otg_transceiver *otg, struct notifier_block *nb)
 {
 	atomic_notifier_chain_unregister(&otg->notifier, nb);
+}
+
+/* workaround for charger type miss detection */
+static inline void
+otg_start_recheck_chgtype(struct otg_transceiver *otg, unsigned long delay)
+{
+	return otg->start_recheck_chgtype(otg, delay);
+}
+
+static inline void
+otg_stop_recheck_chgtype(struct otg_transceiver *otg)
+{
+	return otg->stop_recheck_chgtype(otg);
 }
 
 /* for OTG controller drivers (and maybe other stuff) */

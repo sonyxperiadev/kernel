@@ -1,4 +1,5 @@
-/* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,6 +11,7 @@
  * GNU General Public License for more details.
  *
  */
+
 #ifndef __LINUX_MSM_CAMERA_H
 #define __LINUX_MSM_CAMERA_H
 
@@ -767,7 +769,16 @@ struct msm_snapshot_pp_status {
 #define CFG_GET_EEPROM_DATA		33
 #define CFG_SET_ACTUATOR_INFO		34
 #define CFG_GET_ACTUATOR_INFO		35
-#define CFG_MAX			36
+
+/* extension begin */
+#define CFG_SET_GPIO_CTRL		36
+#define CFG_SET_WRITE_CMD		37
+#define CFG_SET_READ_CMD		38
+#define CFG_SET_CSI_CTRL		39
+#define CFG_GET_ROM			40
+/* extension end */
+
+#define CFG_MAX			41
 
 
 #define MOVE_NEAR	0
@@ -974,6 +985,76 @@ struct wb_info_cfg {
 	uint16_t green_gain;
 	uint16_t blue_gain;
 };
+
+/* extension begin */
+enum sensor_gpio_ctrl_type {
+	SENSOR_GPIO_CTRL_RESET,
+	SENSOR_GPIO_CTRL_STANBY,
+};
+
+struct sensor_gpio_ctrl {
+	enum sensor_gpio_ctrl_type gpio;
+	int value;
+};
+
+enum sensor_i2c_addr_type {
+	SENSOR_I2C_ADDR_0BYTE = 0,
+	SENSOR_I2C_ADDR_1BYTE = 1,
+	SENSOR_I2C_ADDR_2BYTE = 2,
+	SENSOR_I2C_ADDR_4BYTE = 4,
+};
+
+struct sensor_i2c_io {
+	uint8_t slave_addr;
+	uint32_t address;
+	enum sensor_i2c_addr_type address_type;
+	uint8_t length;
+	uint8_t __user *data;
+};
+
+struct sensor_csid_vc_cfg {
+	uint8_t cid;
+	uint8_t dt;
+	uint8_t decode_format;
+};
+
+struct sensor_csid_lut_params {
+	uint8_t num_cid;
+	struct sensor_csid_vc_cfg *vc_cfg;
+};
+
+struct sensor_csid_params {
+	uint8_t lane_cnt;
+	uint8_t lane_assign;
+	struct sensor_csid_lut_params lut_params;
+};
+
+struct sensor_csiphy_params {
+	uint8_t lane_cnt;
+	uint8_t settle_cnt;
+};
+
+#define SENSOR_CSI_EMBED_DATA	0x12
+#define SENSOR_CSI_RAW8		0x2A
+#define SENSOR_CSI_RAW10	0x2B
+#define SENSOR_CSI_RAW12	0x2C
+
+#define SENSOR_CSI_DECODE_6BIT	0
+#define SENSOR_CSI_DECODE_8BIT	1
+#define SENSOR_CSI_DECODE_10BIT	2
+
+struct sensor_csi2_params {
+	struct sensor_csid_params csid_params;
+	struct sensor_csiphy_params csiphy_params;
+};
+
+struct sensor_rom_in {
+	uint16_t address;
+	uint16_t length;
+	uint8_t __user *data;
+};
+/* extension end */
+
 struct sensor_3d_exp_cfg {
 	uint16_t gain;
 	uint32_t line;
@@ -1106,6 +1187,12 @@ struct sensor_cfg_data {
 		struct cord aec_cord;
 		int is_autoflash;
 		struct mirror_flip mirror_flip;
+		/* extension begin */
+		struct sensor_gpio_ctrl gpio_ctrl;
+		struct sensor_i2c_io i2c_io;
+		struct sensor_csi2_params csi_ctrl;
+		struct sensor_rom_in rom_in;
+		/* extension end */
 	} cfg;
 };
 

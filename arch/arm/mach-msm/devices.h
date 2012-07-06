@@ -2,6 +2,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2011-2012 Sony Ericsson Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -45,12 +46,20 @@ extern struct platform_device msm_device_uart3;
 extern struct platform_device msm_device_uart_dm1;
 extern struct platform_device msm_device_uart_dm2;
 extern struct platform_device msm_device_uart_dm3;
+extern struct platform_device msm_device_uart_dm7;
 extern struct platform_device msm_device_uart_dm12;
+extern struct platform_device msm_device_uart_gsbi5;
 extern struct platform_device *msm_device_uart_gsbi9;
 extern struct platform_device msm_device_uart_dm6;
+extern struct platform_device msm_device_uart_dm10;
 
 extern struct platform_device msm8960_device_uart_gsbi2;
 extern struct platform_device msm8960_device_uart_gsbi5;
+extern struct platform_device msm8960_device_uart_gsbi8;
+#ifdef CONFIG_MSM_GSBI12_UART
+extern struct platform_device msm8960_device_uart_gsbi12;
+#endif
+extern struct platform_device msm8960_device_ssbi_pm8921;
 extern struct platform_device msm8960_device_ssbi_pmic;
 extern struct platform_device msm8960_device_qup_i2c_gsbi3;
 extern struct platform_device msm8960_device_qup_i2c_gsbi4;
@@ -114,6 +123,7 @@ extern struct platform_device msm_gsbi0_qup_i2c_device;
 extern struct platform_device msm_gsbi1_qup_i2c_device;
 extern struct platform_device msm_gsbi3_qup_i2c_device;
 extern struct platform_device msm_gsbi4_qup_i2c_device;
+extern struct platform_device msm_gsbi5_qup_i2c_device;
 extern struct platform_device msm_gsbi7_qup_i2c_device;
 extern struct platform_device msm_gsbi8_qup_i2c_device;
 extern struct platform_device msm_gsbi9_qup_i2c_device;

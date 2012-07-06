@@ -259,6 +259,7 @@ char *mipi_dsi_buf_reserve_hdr(struct dsi_buf *dp, int hlen);
 char *mipi_dsi_buf_init(struct dsi_buf *dp);
 void mipi_dsi_init(void);
 int mipi_dsi_buf_alloc(struct dsi_buf *, int size);
+void mipi_dsi_buf_release(struct dsi_buf *dp);
 int mipi_dsi_cmd_dma_add(struct dsi_buf *dp, struct dsi_cmd_desc *cm);
 int mipi_dsi_cmds_tx(struct msm_fb_data_type *mfd,
 		struct dsi_buf *dp, struct dsi_cmd_desc *cmds, int cnt);

@@ -312,6 +312,28 @@ config BATTERY_BQ27520
 	help
 	  Say Y here to enable support for batteries with BQ27520 (I2C) chips.
 
+config BATTERY_BQ27520_SEAL_FW
+	tristate "Seal the frimware of BQ27520"
+	depends on BATTERY_BQ27520
+	help
+	  Say Y to seal the firmware of fuel gauge
+
+config CHARGER_BQ24185
+	tristate "TI BQ24185 Switch-Mode One-Cell Li-Ion charger"
+	depends on I2C
+	default n
+	help
+	  Say Y here to enable Support for the TI BQ24185 Battery Charger.
+	  The driver is configured to operate with a single lithium cell.
+
+config CHARGER_BQ24160
+	tristate "TI BQ24160 Dual-Input, Single Cell Switch-Mode Li-Ion charger"
+	depends on I2C
+	default n
+	help
+	  Say Y here to enable Support for the TI BQ24160 Battery Charger.
+	  The driver is configured to operate with a single lithium cell.
+
 config BATTERY_BQ27541
 	tristate "BQ27541 battery driver"
 	depends on I2C
@@ -351,5 +373,27 @@ config PM8921_BMS
 	depends on MFD_PM8921_CORE
 	help
 	  Say Y here to enable support for pm8921 chip bms subdevice
+
+config BATTERY_CHARGALG
+	bool "Battery charging algorithm"
+	default n
+	help
+	  Say Y to enable charging algorithm for batteries.
+
+config BATTERY_CHARGALG_ENABLE_STEP_CHARGING
+	bool "Enable step charging"
+	depends on BATTERY_CHARGALG
+	default n
+	help
+	  Say Y to enable step charging. Step charging controls the maximum
+	  charging current relative to the actual battery voltage.
+
+config BATTERY_SEMC_ARCH
+	bool "SEMC battery data handling"
+	depends on ARCH_MSM
+	default n
+	help
+	  Say Y to enable support for SEMC battery data handling in the
+	  platform.
 
 endif # POWER_SUPPLY

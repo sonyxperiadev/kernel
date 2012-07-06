@@ -683,3 +683,14 @@ config MMC_USHC
 
 	  Note: These controllers only support SDIO cards and do not
 	  support MMC or SD memory cards.
+
+config MACH_BCM_DRIVER
+	bool "Broadcom driver support"
+	depends on (MMC_MSM)
+	default n
+
+config MACH_SDCC_BCM_DRIVER
+	bool "Modify a Qualcomm SDCC Controller issue on Broadcom driver"
+	depends on (MMC_MSM || MMC_MSM7X00A)
+	default n
+

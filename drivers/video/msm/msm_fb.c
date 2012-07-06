@@ -47,11 +47,8 @@
 #include "tvenc.h"
 #include "mdp.h"
 #include "mdp4.h"
+#include "external_common.h"
 
-#ifdef CONFIG_FB_MSM_LOGO
-#define INIT_IMAGE_FILE "/initlogo.rle"
-extern int load_565rle_image(char *filename);
-#endif
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MSM_FB_NUM	3
@@ -60,6 +57,7 @@ extern int load_565rle_image(char *filename);
 static unsigned char *fbram;
 static unsigned char *fbram_phys;
 static int fbram_size;
+bool device_suspended = FALSE;
 
 static struct platform_device *pdev_list[MSM_FB_MAX_DEV_LIST];
 static int pdev_list_cnt;
@@ -158,6 +156,7 @@ int msm_fb_cursor(struct fb_info *info, struct fb_cursor *cursor)
 
 static int msm_fb_resource_initialized;
 
+#if !defined(CONFIG_LEDS_AS3676) && !defined(CONFIG_LEDS_AS3676_SEMC)
 #ifndef CONFIG_FB_BACKLIGHT
 static int lcd_backlight_registered;
 
@@ -186,6 +185,7 @@ static struct led_classdev backlight_led = {
 	.brightness	= MAX_BACKLIGHT_BRIGHTNESS,
 	.brightness_set	= msm_fb_set_bl_brightness,
 };
+#endif
 #endif
 
 static struct msm_fb_platform_data *msm_fb_pdata;
@@ -370,6 +370,7 @@ static int msm_fb_probe(struct platform_device *pdev)
 	if (err < 0)
 		printk(KERN_ERR "pm_runtime: fail to set active.\n");
 	pm_runtime_enable(mfd->fbi->dev);
+#if !defined(CONFIG_LEDS_AS3676) && !defined(CONFIG_LEDS_AS3676_SEMC)
 #ifdef CONFIG_FB_BACKLIGHT
 	msm_fb_config_backlight(mfd);
 #else
@@ -380,6 +381,7 @@ static int msm_fb_probe(struct platform_device *pdev)
 		else
 			lcd_backlight_registered = 1;
 	}
+#endif
 #endif
 
 	pdev_list[pdev_list_cnt++] = pdev;
@@ -430,7 +432,7 @@ static int msm_fb_remove(struct platform_device *pdev)
 
 	/* remove /dev/fb* */
 	unregister_framebuffer(mfd->fbi);
-
+#if !defined(CONFIG_LEDS_AS3676) && !defined(CONFIG_LEDS_AS3676_SEMC)
 #ifdef CONFIG_FB_BACKLIGHT
 	/* remove /sys/class/backlight */
 	backlight_device_unregister(mfd->fbi->bl_dev);
@@ -439,6 +441,7 @@ static int msm_fb_remove(struct platform_device *pdev)
 		lcd_backlight_registered = 0;
 		led_classdev_unregister(&backlight_led);
 	}
+#endif
 #endif
 
 #ifdef MSM_FB_ENABLE_DBGFS
@@ -479,6 +482,28 @@ static int msm_fb_suspend(struct platform_device *pdev, pm_message_t state)
 #else
 #define msm_fb_suspend NULL
 #endif
+
+static void msm_fb_shutdown(struct platform_device *pdev)
+{
+	struct msm_fb_data_type *mfd;
+	int ret = 0;
+	MSM_FB_DEBUG("msm_fb_shutdown\n");
+
+	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
+	if (mfd) {
+		if (mfd->op_enable) {
+			ret = msm_fb_blank_sub(FB_BLANK_POWERDOWN, mfd->fbi,
+					     mfd->op_enable);
+		}
+
+		if (ret)
+			MSM_FB_INFO
+				("msm_fb_shutdown: can't turn off display!\n");
+
+		mfd->op_enable = FALSE;
+		mdp_pipe_ctrl(MDP_MASTER_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+	}
+}
 
 static int msm_fb_suspend_sub(struct msm_fb_data_type *mfd)
 {
@@ -623,8 +648,10 @@ static int msm_fb_ext_suspend(struct device *dev)
 		return 0;
 
 	if (mfd->panel_info.type == HDMI_PANEL ||
-		mfd->panel_info.type == DTV_PANEL)
+		mfd->panel_info.type == DTV_PANEL) {
+		device_suspended = TRUE;
 		ret = msm_fb_suspend_sub(mfd);
+	}
 
 	return ret;
 }
@@ -638,8 +665,10 @@ static int msm_fb_ext_resume(struct device *dev)
 		return 0;
 
 	if (mfd->panel_info.type == HDMI_PANEL ||
-		mfd->panel_info.type == DTV_PANEL)
+		mfd->panel_info.type == DTV_PANEL) {
 		ret = msm_fb_resume_sub(mfd);
+		device_suspended = FALSE;
+	}
 
 	return ret;
 }
@@ -659,7 +688,7 @@ static struct platform_driver msm_fb_driver = {
 	.suspend = msm_fb_suspend,
 	.resume = msm_fb_resume,
 #endif
-	.shutdown = NULL,
+	.shutdown = msm_fb_shutdown,
 	.driver = {
 		   /* Driver name must match the device name added in platform.c. */
 		   .name = "msm_fb",
@@ -757,6 +786,8 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 	case FB_BLANK_UNBLANK:
 		if (!mfd->panel_power_on) {
 			msleep(16);
+			if (pdata->controller_on_panel_on)
+				pdata->power_on_panel_at_pan = 1;
 			ret = pdata->on(mfd->pdev);
 			if (ret == 0) {
 				mfd->panel_power_on = TRUE;
@@ -994,16 +1025,26 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	fix->mmio_len = 0;	/* No MMIO Address */
 	fix->accel = FB_ACCEL_NONE;/* FB_ACCEL_MSM needes to be added in fb.h */
 
-	var->xoffset = 0,	/* Offset from virtual to visible */
-	var->yoffset = 0,	/* resolution */
-	var->grayscale = 0,	/* No graylevels */
-	var->nonstd = 0,	/* standard pixel format */
-	var->activate = FB_ACTIVATE_VBL,	/* activate it at vsync */
-	var->height = -1,	/* height of picture in mm */
-	var->width = -1,	/* width of picture in mm */
-	var->accel_flags = 0,	/* acceleration flags */
-	var->sync = 0,	/* see FB_SYNC_* */
-	var->rotate = 0,	/* angle we rotate counter clockwise */
+	var->xoffset = 0;	/* Offset from virtual to visible */
+	var->yoffset = 0;	/* resolution */
+	var->grayscale = 0;	/* No graylevels */
+	var->nonstd = 0;	/* standard pixel format */
+	var->activate = FB_ACTIVATE_VBL;	/* activate it at vsync */
+	/* height of picture in mm */
+	if (panel_info && panel_info->height)
+		var->height = panel_info->height;
+	else
+		var->height = -1;
+
+	/* width of picture in mm */
+	if (panel_info && panel_info->width)
+		var->width = panel_info->width;
+	else
+		var->width = -1;
+
+	var->accel_flags = 0;	/* acceleration flags */
+	var->sync = 0;	/* see FB_SYNC_* */
+	var->rotate = 0;	/* angle we rotate counter clockwise */
 	mfd->op_enable = FALSE;
 
 	switch (mfd->fb_imgType) {
@@ -1255,9 +1296,6 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	    ("FrameBuffer[%d] %dx%d size=%d bytes is registered successfully!\n",
 	     mfd->index, fbi->var.xres, fbi->var.yres, fbi->fix.smem_len);
 
-#ifdef CONFIG_FB_MSM_LOGO
-	if (!load_565rle_image(INIT_IMAGE_FILE)) ;	/* Flip buffer */
-#endif
 	ret = 0;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -1268,6 +1306,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		register_early_suspend(&mfd->early_suspend);
 	}
 #endif
+
 
 #ifdef MSM_FB_ENABLE_DBGFS
 	{
@@ -1462,7 +1501,8 @@ static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 	struct mdp_dirty_region dirty;
 	struct mdp_dirty_region *dirtyPtr = NULL;
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
-	struct msm_fb_panel_data *pdata;
+	struct msm_fb_panel_data *pdata =
+		(struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
 
 	if (info->node != 0 || mfd->cont_splash_done)	/* primary */
 		if ((!mfd->op_enable) || (!mfd->panel_power_on))
@@ -1533,11 +1573,21 @@ static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 			return -EINVAL;
 		}
 	}
-
-	mdp_set_dma_pan_info(info, dirtyPtr,
-			     (var->activate == FB_ACTIVATE_VBL));
+	if (pdata->power_on_panel_at_pan) {
+		/* No vsync allowed at first pan since it will hang
+		   during dma transfer */
+		mdp_set_dma_pan_info(info, dirtyPtr, FALSE);
+	} else {
+		mdp_set_dma_pan_info(info, dirtyPtr,
+					(var->activate == FB_ACTIVATE_VBL));
+	}
 	mdp_dma_pan_update(info);
 	up(&msm_fb_pan_sem);
+
+	if (pdata->power_on_panel_at_pan && pdata->on) {
+		(void)pdata->controller_on_panel_on(mfd->pdev);
+		pdata->power_on_panel_at_pan = 0;
+	}
 
 	if (unset_bl_level && !bl_updated) {
 		pdata = (struct msm_fb_panel_data *)mfd->pdev->
@@ -1663,8 +1713,10 @@ static int msm_fb_set_par(struct fb_info *info)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	struct fb_var_screeninfo *var = &info->var;
+	struct msm_fb_panel_data *pdata = NULL;
 	int old_imgType;
 	int blank = 0;
+	static __u32 video_resolution = HDMI_VFRMT_1920x1080p30_16_9;
 
 	old_imgType = mfd->fb_imgType;
 	switch (var->bits_per_pixel) {
@@ -1705,6 +1757,18 @@ static int msm_fb_set_par(struct fb_info *info)
 		mfd->var_yres = var->yres;
 		mfd->var_pixclock = var->pixclock;
 		blank = 1;
+	}
+
+	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
+	if (pdata && pdata->panel_info.pdest == DISPLAY_2) {
+		if (var->reserved[3] &&
+			(var->reserved[3] != video_resolution)) {
+			video_resolution = var->reserved[3];
+			mfd->var_xres = var->xres;
+			mfd->var_yres = var->yres;
+			mfd->var_pixclock = var->pixclock;
+			blank = 1;
+		}
 	}
 	mfd->fbi->fix.line_length = msm_fb_line_length(mfd->index, var->xres,
 						       var->bits_per_pixel/8);
@@ -3462,6 +3526,9 @@ struct platform_device *msm_fb_add_device(struct platform_device *pdev)
 #endif
 	/* link to the latest pdev */
 	mfd->pdev = this_dev;
+
+	/* link to the panel pdev */
+	mfd->panel_pdev = pdev;
 
 	mfd_list[mfd_list_index++] = mfd;
 	fbi_list[fbi_list_index++] = fbi;

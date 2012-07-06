@@ -5,6 +5,7 @@
  *  SD support Copyright (C) 2004 Ian Molton, All Rights Reserved.
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
  *  MMCv4 support Copyright (C) 2006 Philip Langdale, All Rights Reserved.
+ *  Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -311,13 +312,23 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 	mult = mmc_card_sd(card) ? 100 : 10;
 
 	/*
+	 * eMMC also uses a 100 multiplier because timeout is seen
+	 * with specific eMMC devices.
+	 */
+	if (mmc_card_mmc(card))
+		mult = 100;
+
+	/*
 	 * Scale up the multiplier (and therefore the timeout) by
 	 * the r2w factor for writes.
 	 */
 	if (data->flags & MMC_DATA_WRITE)
 		mult <<= card->csd.r2w_factor;
 
-	data->timeout_ns = card->csd.tacc_ns * mult;
+	if ((unsigned long long)card->csd.tacc_ns * mult > UINT_MAX)
+		data->timeout_ns = UINT_MAX;
+	else
+		data->timeout_ns = card->csd.tacc_ns * mult;
 	data->timeout_clks = card->csd.tacc_clks * mult;
 
 	/*
@@ -1959,9 +1970,17 @@ int mmc_suspend_host(struct mmc_host *host)
 	}
 	mmc_bus_put(host);
 
+#ifndef CONFIG_MACH_SDCC_BCM_DRIVER
 	if (!err && !mmc_card_keep_power(host))
 		mmc_power_off(host);
-
+#else
+	if (!err) {
+		if (!mmc_card_keep_power(host))
+			mmc_power_off(host);
+		else
+			mmc_pm_keeppwr_control(host, 0);
+	}
+#endif
 	return err;
 }
 
@@ -1999,6 +2018,10 @@ int mmc_resume_host(struct mmc_host *host)
 				pm_runtime_enable(&host->card->dev);
 			}
 		}
+#ifdef CONFIG_MACH_SDCC_BCM_DRIVER
+		else
+			mmc_pm_keeppwr_control(host, 1);
+#endif
 		BUG_ON(!host->bus_ops->resume);
 		err = host->bus_ops->resume(host);
 		if (err) {

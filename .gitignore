@@ -76,6 +76,13 @@ GRTAGS
 GSYMS
 GTAGS
 
+# generated caf
+arch/arm/mach-msm/smd_rpc_sym.c
+
+# xz compress
+arch/arm/boot/compressed/ashldi3.S
+arch/arm/boot/compressed/piggy.xzkern
+
 *.orig
 *~
 \#*#

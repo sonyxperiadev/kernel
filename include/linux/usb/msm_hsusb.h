@@ -3,6 +3,8 @@
  * Copyright (C) 2008 Google, Inc.
  * Author: Brian Swetland <swetland@google.com>
  * Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Ericsson Mobile Communications AB.
+ * Copyright (C) 2012 Sony Mobile Communications AB
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -88,6 +90,9 @@ enum msm_usb_phy_type {
  * USB_CHG_STATE_SECONDARY_DONE	Secondary detection is completed (Detects
  *                              between DCP and CDP).
  * USB_CHG_STATE_DETECTED	USB charger type is determined.
+ * USB_CHG_STATE_RECHECK	DCP can be miss-detected as SDP when user
+ *				insert USB cable very slowly. Rechecking chager
+ *				type after a while.
  *
  */
 enum usb_chg_state {
@@ -97,6 +102,7 @@ enum usb_chg_state {
 	USB_CHG_STATE_PRIMARY_DONE,
 	USB_CHG_STATE_SECONDARY_DONE,
 	USB_CHG_STATE_DETECTED,
+	USB_CHG_STATE_RECHECK,
 };
 
 /**
@@ -181,6 +187,7 @@ struct msm_otg_platform_data {
 	u32 swfi_latency;
 	bool enable_dcd;
 	struct msm_bus_scale_pdata *bus_scale_table;
+	const char *mhl_dev_name;
 };
 
 /**
@@ -203,6 +210,8 @@ struct msm_otg_platform_data {
  * @chg_type: The type of charger attached.
  * @dcd_retires: The retry count used to track Data contact
  *               detection process.
+ * @chg_recheck_stop_work: Work to stop rechecking charger type
+ * @chg_recheck_retries: The retry count used to recheck charger type
  * @wlock: Wake lock struct to prevent system suspend when
  *               USB is active.
  * @usbdev_nb: The notifier block used to know about the B-device
@@ -214,6 +223,8 @@ struct msm_otg_platform_data {
  * @id_timer: The timer used for polling ID line to detect ACA states.
  * @xo_handle: TCXO buffer handle
  * @bus_perf_client: Bus performance client handle to request BUS bandwidth
+ * @id_wok: PMIC ID pin checking work.
+ * @wq: Work queue for sm_work, chg_work and id_work.
  */
 struct msm_otg {
 	struct otg_transceiver otg;
@@ -229,6 +240,8 @@ struct msm_otg {
 #define ID_A		2
 #define ID_B		3
 #define ID_C		4
+#define VBUS_DROP_DET	5
+#define MHL		6
 	unsigned long inputs;
 	struct work_struct sm_work;
 	atomic_t in_lpm;
@@ -238,6 +251,8 @@ struct msm_otg {
 	enum usb_chg_state chg_state;
 	enum usb_chg_type chg_type;
 	u8 dcd_retries;
+	struct work_struct chg_recheck_stop_work;
+	u8 chg_recheck_retries;
 	struct wake_lock wlock;
 	struct notifier_block usbdev_nb;
 	unsigned mA_port;
@@ -269,6 +284,8 @@ struct msm_otg {
 #define PHY_OTG_COMP_DISABLED		BIT(2)
 	struct pm_qos_request_list pm_qos_req_dma;
 	int reset_counter;
+	struct delayed_work id_work;
+	struct workqueue_struct *wq;
 };
 
 struct msm_hsic_host_platform_data {
@@ -294,4 +311,7 @@ struct msm_usb_bam_platform_data {
 	unsigned long usb_bam_phy_size;
 	int usb_bam_num_pipes;
 };
+
+void msm_otg_notify_vbus_drop(void);
+
 #endif

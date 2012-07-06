@@ -143,6 +143,7 @@ struct pm8xxx_adc {
 	struct device				*hwmon;
 	struct wake_lock			adc_wakelock;
 	int					msm_suspend_check;
+	atomic_t				suspend_lock;
 	struct pm8xxx_adc_amux_properties	*conv;
 	struct pm8xxx_adc_arb_btm_param		batt[0];
 	struct sensor_device_attribute		sens_attr[0];
@@ -684,6 +685,11 @@ uint32_t pm8xxx_adc_read(enum pm8xxx_adc_channels channel,
 	}
 
 	mutex_lock(&adc_pmic->adc_lock);
+	if (atomic_cmpxchg(&adc_pmic->suspend_lock, 0, 1)) {
+		pr_err("error: now suspend_lock = 1\n");
+		rc = -EBUSY;
+		goto fail_unlock;
+	}
 
 	for (i = 0; i < adc_pmic->adc_num_board_channel; i++) {
 		if (channel == adc_pmic->adc_channel[i].channel_name)
@@ -693,7 +699,7 @@ uint32_t pm8xxx_adc_read(enum pm8xxx_adc_channels channel,
 	if (i == adc_pmic->adc_num_board_channel ||
 		(pm8xxx_adc_check_channel_valid(channel) != 0)) {
 		rc = -EBADF;
-		goto fail_unlock;
+		goto fail_atomic_clear;
 	}
 
 	if (channel < PM8XXX_CHANNEL_MPP_SCALE1_IDX) {
@@ -723,7 +729,7 @@ uint32_t pm8xxx_adc_read(enum pm8xxx_adc_channels channel,
 	rc = pm8xxx_adc_channel_power_enable(channel, true);
 	if (rc) {
 		rc = -EINVAL;
-		goto fail_unlock;
+		goto fail_atomic_clear;
 	}
 
 	rc = pm8xxx_adc_configure(adc_pmic->conv);
@@ -752,9 +758,10 @@ uint32_t pm8xxx_adc_read(enum pm8xxx_adc_channels channel,
 	rc = pm8xxx_adc_channel_power_enable(channel, false);
 	if (rc) {
 		rc = -EINVAL;
-		goto fail_unlock;
+		goto fail_atomic_clear;
 	}
 
+	atomic_set(&adc_pmic->suspend_lock, 0);
 	mutex_unlock(&adc_pmic->adc_lock);
 
 	return 0;
@@ -762,6 +769,8 @@ fail:
 	rc_fail = pm8xxx_adc_channel_power_enable(channel, false);
 	if (rc_fail)
 		pr_err("pm8xxx adc power disable failed\n");
+fail_atomic_clear:
+	atomic_set(&adc_pmic->suspend_lock, 0);
 fail_unlock:
 	mutex_unlock(&adc_pmic->adc_lock);
 	pr_err("pm8xxx adc error with %d\n", rc);
@@ -1133,9 +1142,30 @@ static int pm8xxx_adc_resume_noirq(struct device *dev)
 	return 0;
 }
 
+static int pm8xxx_adc_suspend(struct device *dev)
+{
+	struct pm8xxx_adc *adc_pmic = pmic_adc;
+
+	if (atomic_cmpxchg(&adc_pmic->suspend_lock, 0, 1)) {
+		pr_err("error: now suspend_lock = 1\n");
+		return -EAGAIN;
+	}
+	return 0;
+}
+
+static int pm8xxx_adc_resume(struct device *dev)
+{
+	struct pm8xxx_adc *adc_pmic = pmic_adc;
+
+	atomic_set(&adc_pmic->suspend_lock, 0);
+	return 0;
+}
+
 static const struct dev_pm_ops pm8xxx_adc_dev_pm_ops = {
 	.suspend_noirq = pm8xxx_adc_suspend_noirq,
 	.resume_noirq = pm8xxx_adc_resume_noirq,
+	.suspend = pm8xxx_adc_suspend,
+	.resume = pm8xxx_adc_resume,
 };
 
 #define PM8XXX_ADC_DEV_PM_OPS	(&pm8xxx_adc_dev_pm_ops)

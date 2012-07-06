@@ -3210,6 +3210,7 @@ static DEFINE_CLK_VOTER(dfab_sdc3_clk, &dfab_clk.c);
 static DEFINE_CLK_VOTER(dfab_sdc4_clk, &dfab_clk.c);
 static DEFINE_CLK_VOTER(dfab_sdc5_clk, &dfab_clk.c);
 static DEFINE_CLK_VOTER(dfab_scm_clk, &dfab_clk.c);
+static DEFINE_CLK_VOTER(dfab_tzcom_clk, &dfab_clk.c);
 
 static DEFINE_CLK_VOTER(ebi1_msmbus_clk, &ebi1_clk.c);
 static DEFINE_CLK_VOTER(ebi1_adm0_clk,   &ebi1_clk.c);
@@ -3603,9 +3604,9 @@ static struct clk_lookup msm_clocks_8x60[] = {
 	CLK_LOOKUP("core_clk",		gsbi2_uart_clk.c,	NULL),
 	CLK_LOOKUP("core_clk",		gsbi3_uart_clk.c, "msm_serial_hsl.2"),
 	CLK_LOOKUP("core_clk",		gsbi4_uart_clk.c,	NULL),
-	CLK_LOOKUP("core_clk",		gsbi5_uart_clk.c,	NULL),
+	CLK_LOOKUP("core_clk",		gsbi5_uart_clk.c, "msm_serial_hsl.3"),
 	CLK_LOOKUP("core_clk",		gsbi6_uart_clk.c, "msm_serial_hs.0"),
-	CLK_LOOKUP("core_clk",		gsbi7_uart_clk.c,	NULL),
+	CLK_LOOKUP("core_clk",		gsbi7_uart_clk.c, "msm_serial_hs.1"),
 	CLK_LOOKUP("core_clk",		gsbi8_uart_clk.c,	NULL),
 	CLK_LOOKUP("core_clk",		gsbi9_uart_clk.c, "msm_serial_hsl.1"),
 	CLK_LOOKUP("core_clk",		gsbi10_uart_clk.c,	NULL),
@@ -3615,7 +3616,7 @@ static struct clk_lookup msm_clocks_8x60[] = {
 	CLK_LOOKUP("core_clk",		gsbi2_qup_clk.c,	NULL),
 	CLK_LOOKUP("core_clk",		gsbi3_qup_clk.c,	"qup_i2c.0"),
 	CLK_LOOKUP("core_clk",		gsbi4_qup_clk.c,	"qup_i2c.1"),
-	CLK_LOOKUP("core_clk",		gsbi5_qup_clk.c,	NULL),
+	CLK_LOOKUP("core_clk",		gsbi5_qup_clk.c,	"qup_i2c.9"),
 	CLK_LOOKUP("core_clk",		gsbi6_qup_clk.c,	NULL),
 	CLK_LOOKUP("core_clk",		gsbi7_qup_clk.c,	"qup_i2c.4"),
 	CLK_LOOKUP("core_clk",		gsbi8_qup_clk.c,	"qup_i2c.3"),
@@ -3650,8 +3651,10 @@ static struct clk_lookup msm_clocks_8x60[] = {
 	CLK_LOOKUP("iface_clk",		gsbi3_p_clk.c, "msm_serial_hsl.2"),
 	CLK_LOOKUP("iface_clk",		gsbi3_p_clk.c,		"qup_i2c.0"),
 	CLK_LOOKUP("iface_clk",		gsbi4_p_clk.c,		"qup_i2c.1"),
-	CLK_LOOKUP("iface_clk",		gsbi5_p_clk.c,		NULL),
+	CLK_LOOKUP("iface_clk",		gsbi5_p_clk.c, "msm_serial_hsl.3"),
+	CLK_LOOKUP("iface_clk",		gsbi5_p_clk.c,		"qup_i2c.9"),
 	CLK_LOOKUP("iface_clk",		gsbi6_p_clk.c, "msm_serial_hs.0"),
+	CLK_LOOKUP("iface_clk",		gsbi7_p_clk.c, "msm_serial_hs.1"),
 	CLK_LOOKUP("iface_clk",		gsbi7_p_clk.c,		"qup_i2c.4"),
 	CLK_LOOKUP("iface_clk",		gsbi8_p_clk.c,		"qup_i2c.3"),
 	CLK_LOOKUP("iface_clk",		gsbi9_p_clk.c, "msm_serial_hsl.1"),
@@ -3689,8 +3692,13 @@ static struct clk_lookup msm_clocks_8x60[] = {
 	CLK_LOOKUP("cam_clk",		cam_clk.c,		"1-001a"),
 	CLK_LOOKUP("csi_clk",		csi0_clk.c,		NULL),
 	CLK_LOOKUP("csi_clk",		csi0_clk.c,		"msm_csic.0"),
+#ifdef CONFIG_SEMC_CAM_SUB
+	CLK_LOOKUP("csi_clk",		csi1_clk.c,
+					"msm_camera_semc_sensor_sub.0"),
+#else
 	CLK_LOOKUP("csi_clk",		csi1_clk.c, "msm_camera_ov7692.0"),
 	CLK_LOOKUP("csi_clk",		csi1_clk.c, "msm_camera_ov9726.0"),
+#endif
 	CLK_LOOKUP("csi_clk",		csi1_clk.c, "msm_csic.1"),
 	CLK_LOOKUP("csi_src_clk",	csi_src_clk.c,		NULL),
 	CLK_LOOKUP("csi_src_clk",	csi_src_clk.c,		"msm_csic.0"),
@@ -3730,8 +3738,13 @@ static struct clk_lookup msm_clocks_8x60[] = {
 	CLK_LOOKUP("vpe_clk",		vpe_clk.c,		"msm_vpe.0"),
 	CLK_LOOKUP("core_clk",		vpe_clk.c,	"footswitch-8x60.9"),
 	CLK_LOOKUP("csi_vfe_clk",	csi0_vfe_clk.c,		NULL),
+#ifdef CONFIG_SEMC_CAM_SUB
+	CLK_LOOKUP("csi_vfe_clk",	csi1_vfe_clk.c,
+					"msm_camera_semc_sensor_sub.0"),
+#else
 	CLK_LOOKUP("csi_vfe_clk",	csi1_vfe_clk.c, "msm_camera_ov7692.0"),
 	CLK_LOOKUP("csi_vfe_clk",	csi1_vfe_clk.c, "msm_camera_ov9726.0"),
+#endif
 	CLK_LOOKUP("csi_vfe_clk",	csi0_vfe_clk.c, "msm_csic.0"),
 	CLK_LOOKUP("csi_vfe_clk",	csi1_vfe_clk.c, "msm_csic.1"),
 	CLK_LOOKUP("vfe_clk",		vfe_clk.c,		NULL),
@@ -3747,8 +3760,13 @@ static struct clk_lookup msm_clocks_8x60[] = {
 	CLK_LOOKUP("amp_pclk",		amp_p_clk.c,		NULL),
 	CLK_LOOKUP("csi_pclk",		csi0_p_clk.c,		NULL),
 	CLK_LOOKUP("csi_pclk",		csi0_p_clk.c,		"msm_csic.0"),
+#ifdef CONFIG_SEMC_CAM_SUB
+	CLK_LOOKUP("csi_pclk",		csi1_p_clk.c,
+					"msm_camera_semc_sensor_sub.0"),
+#else
 	CLK_LOOKUP("csi_pclk",		csi1_p_clk.c, "msm_camera_ov7692.0"),
 	CLK_LOOKUP("csi_pclk",		csi1_p_clk.c, "msm_camera_ov9726.0"),
+#endif
 	CLK_LOOKUP("csi_pclk",		csi1_p_clk.c,		"msm_csic.1"),
 	CLK_LOOKUP("dsi_m_pclk",	dsi_m_p_clk.c,		NULL),
 	CLK_LOOKUP("dsi_s_pclk",	dsi_s_p_clk.c,		NULL),
@@ -3814,6 +3832,7 @@ static struct clk_lookup msm_clocks_8x60[] = {
 	CLK_LOOKUP("bus_clk",		dfab_sdc4_clk.c, "msm_sdcc.4"),
 	CLK_LOOKUP("bus_clk",		dfab_sdc5_clk.c, "msm_sdcc.5"),
 	CLK_LOOKUP("bus_clk",		dfab_scm_clk.c,	"scm"),
+	CLK_LOOKUP("bus_clk",		dfab_tzcom_clk.c,	"tzcom"),
 
 	CLK_LOOKUP("mem_clk",		ebi1_adm0_clk.c, "msm_dmov.0"),
 	CLK_LOOKUP("mem_clk",		ebi1_adm1_clk.c, "msm_dmov.1"),
@@ -3860,7 +3879,7 @@ static void __init reg_init(void)
 	 * gating for all clocks. Also set VFE_AHB's FORCE_CORE_ON bit to
 	 * prevent its memory from being collapsed when the clock is halted.
 	 * The sleep and wake-up delays are set to safe values. */
-	rmwreg(0x00000003, AHB_EN_REG,  0x6C000003);
+	rmwreg(0x00000003, AHB_EN_REG,  0x6C040203);
 	writel_relaxed(0x000007F9, AHB_EN2_REG);
 
 	/* Deassert all locally-owned MM AHB resets. */

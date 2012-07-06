@@ -44,6 +44,7 @@ struct pm8901_platform_data {
 	struct pm8xxx_misc_platform_data	*misc_pdata;
 	struct pm8901_vreg_pdata		*regulator_pdatas;
 	int					num_regulators;
+	int					pm_dVdd_unstable;
 };
 
 #endif /* __PMIC8901_H__ */

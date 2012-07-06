@@ -223,6 +223,47 @@ config QUP_EXCLUSIVE_TO_CAMERA
 	  by QUP in the board file as QUP is used by
 	  applications other than camera.
 
+config SEMC_CAM_MAIN_V4L2
+	bool "SEMC specific camera (Main camera)"
+	depends on MSM_CAMERA && ARCH_MSM8960 && MSM_CAMERA_V4L2
+	default n
+	---help---
+	  SEMC specific camera module for main camera
+
+config SEMC_CAM_MAIN
+	bool "SEMC specific camera (Main camera)"
+	depends on MSM_CAMERA && ARCH_MSM8X60 && !MSM_CAMERA_V4L2
+	default n
+	---help---
+	  SEMC specific camera module for main camera
+
+config SEMC_CAM_SUB_V4L2
+	bool "SEMC specific camera (Sub camera)"
+	depends on MSM_CAMERA && ARCH_MSM8960 && MSM_CAMERA_V4L2
+	default n
+	---help---
+	  SEMC specific camera module for sub camera
+
+config SEMC_CAM_SUB
+	bool "SEMC specific camera (Sub camera)"
+	depends on MSM_CAMERA && ARCH_MSM8X60 && !MSM_CAMERA_V4L2
+	default n
+	---help---
+	  SEMC specific camera module for sub camera
+
+config SEMC_VPE
+	tristate "Qualcomm MSM Video Pre-processing Engine support"
+	depends on MSM_CAMERA && ARCH_MSM8960
+	default n
+	---help---
+	  Enable support for Video Pre-processing Engine
+
+config SEMC_VPE1
+	tristate "Qualcomm MSM Video Pre-processing Engine support"
+	depends on MSM_CAMERA && ARCH_MSM8X60
+	default n
+	---help---
+	  Enable support for Video Pre-processing Engine
 config S5K3L1YX
 	bool "Sensor S5K3L1YX (BAYER 12M)"
 	depends on MSM_CAMERA

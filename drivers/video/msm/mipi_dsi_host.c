@@ -285,6 +285,16 @@ int mipi_dsi_buf_alloc(struct dsi_buf *dp, int size)
 	return size;
 }
 
+void mipi_dsi_buf_release(struct dsi_buf *dp)
+{
+	kfree(dp->start);
+	dp->start = NULL;
+	dp->end = NULL;
+	dp->data = NULL;
+	dp->size = 0;
+	dp->len = 0;
+}
+
 /*
  * mipi dsi gerneric long write
  */
@@ -928,10 +938,10 @@ void mipi_dsi_controller_cfg(int enable)
 	uint32 status;
 	int cnt;
 
-	cnt = 16;
+	cnt = 32;
 	while (cnt--) {
 		status = MIPI_INP(MIPI_DSI_BASE + 0x0004);
-		status &= 0x02;		/* CMD_MODE_DMA_BUSY */
+		status &= 0x0A;		/* CMD and VIDEO MODE_ENGINE_BUSY */
 		if (status == 0)
 			break;
 		usleep(1000);
@@ -970,7 +980,7 @@ void mipi_dsi_op_mode_config(int mode)
 	dsi_ctrl &= ~0x07;
 	if (mode == DSI_VIDEO_MODE) {
 		dsi_ctrl |= 0x03;
-		intr_ctrl = DSI_INTR_CMD_DMA_DONE_MASK;
+		intr_ctrl = DSI_INTR_CMD_DMA_DONE_MASK | DSI_INTR_ERROR_MASK;
 	} else {		/* command mode */
 		dsi_ctrl |= 0x05;
 		intr_ctrl = DSI_INTR_CMD_DMA_DONE_MASK | DSI_INTR_ERROR_MASK |
@@ -1126,6 +1136,7 @@ int mipi_dsi_cmds_tx(struct msm_fb_data_type *mfd,
 		if (mfd->panel_info.type == MIPI_CMD_PANEL) {
 #ifndef CONFIG_FB_MSM_MDP303
 			mdp4_dsi_cmd_dma_busy_wait(mfd);
+			mipi_dsi_mdp_busy_wait(mfd);
 #else
 			mdp3_dsi_cmd_dma_busy_wait(mfd);
 #endif
@@ -1203,16 +1214,6 @@ int mipi_dsi_cmds_rx(struct msm_fb_data_type *mfd,
 		if (len > MIPI_DSI_LEN)
 			len = MIPI_DSI_LEN;	/* 8 bytes at most */
 
-		len = (len + 3) & ~0x03; /* len 4 bytes align */
-		diff = len - rlen;
-		/*
-		 * add extra 2 bytes to len to have overall
-		 * packet size is multipe by 4. This also make
-		 * sure 4 bytes dcs headerlocates within a
-		 * 32 bits register after shift in.
-		 * after all, len should be either 6 or 10.
-		 */
-		len += 2;
 		cnt = len + 6; /* 4 bytes header + 2 bytes crc */
 	}
 
@@ -1220,6 +1221,7 @@ int mipi_dsi_cmds_rx(struct msm_fb_data_type *mfd,
 		/* make sure mdp dma is not txing pixel data */
 #ifndef CONFIG_FB_MSM_MDP303
 			mdp4_dsi_cmd_dma_busy_wait(mfd);
+			mipi_dsi_mdp_busy_wait(mfd);
 #else
 			mdp3_dsi_cmd_dma_busy_wait(mfd);
 #endif
@@ -1260,6 +1262,8 @@ int mipi_dsi_cmds_rx(struct msm_fb_data_type *mfd,
 
 	mipi_dsi_cmd_dma_rx(rp, cnt);
 
+	diff = rp->len - cnt;
+	rp->data += diff;
 	spin_lock_irqsave(&dsi_mdp_lock, flag);
 	dsi_mdp_busy = FALSE;
 	mipi_dsi_disable_irq();
@@ -1293,8 +1297,6 @@ int mipi_dsi_cmds_rx(struct msm_fb_data_type *mfd,
 	case DTYPE_GEN_LREAD_RESP:
 	case DTYPE_DCS_LREAD_RESP:
 		mipi_dsi_long_read_resp(rp);
-		rp->len -= 2; /* extra 2 bytes added */
-		rp->len -= diff; /* align bytes */
 		break;
 	default:
 		break;

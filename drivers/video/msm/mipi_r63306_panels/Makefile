@@ -1,0 +1,12 @@
+obj-$(CONFIG_FB_MSM_MIPI_R63306_PANEL_TMD_MDW30) += mipi_tmd_mdw30.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_PANEL_TMD_MDX80) += mipi_tmd_mdx80.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_PANEL_TMD_MDV20) += mipi_tmd_video_wxga_mdv20.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_PANEL_TMD_MDV22) += mipi_tmd_video_wxga_mdv22.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_PANEL_TMD_MDW30F) += mipi_tmd_video_wxga_mdw30.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_PANEL_HITACHI_DX12D900VM) += mipi_hitachi_dx12d900vm.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_PANEL_SHARP_LS046K3SX01) += mipi_sharp_ls046k3sx01.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_PANEL_SHARP_LS043K3SX01) += mipi_sharp_ls043k3sx01.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_PANEL_SHARP_LS043K3SX04) += mipi_sharp_ls043k3sx04.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_PANEL_SHARP_LS043K3SX01F) += mipi_sharp_video_wxga_ls043k3sx01.o
+
+EXTRA_CFLAGS += -Idrivers/video/msm

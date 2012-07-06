@@ -2,6 +2,7 @@
  *
  * Copyright (C) 2007 Google, Inc.
  * Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -368,6 +369,15 @@ struct mddi_platform_data {
 	int (*mddi_client_power)(u32 client_id);
 };
 
+struct panel_id;
+
+struct lcd_panel_platform_data {
+	const struct panel_id **default_panels;
+	const struct panel_id **panels;
+	int (*lcd_power)(int on);
+	int (*lcd_reset)(int on);
+};
+
 struct mipi_dsi_platform_data {
 	int vsync_gpio;
 	int (*dsi_power_save)(int on);
@@ -409,6 +419,7 @@ struct msm_fb_platform_data {
 
 struct msm_hdmi_platform_data {
 	int irq;
+	const char *coupled_mhl_device;
 	int (*cable_detect)(int insert);
 	int (*comm_power)(int on, int show);
 	int (*enable_5v)(int on);

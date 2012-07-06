@@ -17,6 +17,7 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/wakelock.h>
+#include <linux/nmi.h>
 #include "power.h"
 
 /* 
@@ -132,8 +133,10 @@ static int try_to_freeze_tasks(bool sig_only)
 		do_each_thread(g, p) {
 			task_lock(p);
 			if (freezing(p) && !freezer_should_skip(p) &&
-				elapsed_csecs > 100)
+				elapsed_csecs > 100) {
+				touch_nmi_watchdog();
 				sched_show_task(p);
+			}
 			cancel_freezing(p);
 			task_unlock(p);
 		} while_each_thread(g, p);

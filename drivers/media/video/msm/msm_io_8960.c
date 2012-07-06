@@ -1,4 +1,5 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+AAANLYA1031
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,6 +27,20 @@
 #include <mach/msm_bus_board.h>
 
 #define BUFF_SIZE_128 128
+
+#define CAM_VAF_MINUV                 2800000
+#define CAM_VAF_MAXUV                 2800000
+#define CAM_VDIG_MINUV                    1200000
+#define CAM_VDIG_MAXUV                    1200000
+#define CAM_VANA_MINUV                    2800000
+#define CAM_VANA_MAXUV                    2850000
+#define CAM_CSI_VDD_MINUV                  1200000
+#define CAM_CSI_VDD_MAXUV                  1200000
+
+#define CAM_VAF_LOAD_UA               300000
+#define CAM_VDIG_LOAD_UA                  105000
+#define CAM_VANA_LOAD_UA                  85600
+#define CAM_CSI_LOAD_UA                    20000
 
 static struct clk *camio_jpeg_clk;
 static struct clk *camio_jpeg_pclk;

@@ -54,3 +54,7 @@ obj-$(CONFIG_MT9D112) += mt9d112.o mt9d112_reg.o
 
 obj-$(CONFIG_MT9D113) += mt9d113.o mt9d113_reg.o
 obj-$(CONFIG_FB_MSM_WRITEBACK_MSM_PANEL) += wfd/
+obj-$(CONFIG_SEMC_CAM_MAIN) += semc_sensor_main.o
+obj-$(CONFIG_SEMC_CAM_SUB) += semc_sensor_sub.o
+obj-$(CONFIG_SEMC_VPE) += semc_vpe.o
+obj-$(CONFIG_SEMC_VPE1) += semc_vpe1.o

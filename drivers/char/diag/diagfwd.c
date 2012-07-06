@@ -1272,7 +1272,7 @@ int diagfwd_write_complete(struct diag_request *diag_write_ptr)
 #ifdef CONFIG_DIAG_SDIO_PIPE
 	else if (buf == (void *)driver->buf_in_sdio)
 		if (machine_is_msm8x60_fusion() ||
-			 machine_is_msm8x60_fusn_ffa())
+					machine_is_msm8x60_fusn_ffa())
 			diagfwd_write_complete_sdio();
 		else
 			pr_err("diag: Incorrect buffer pointer while WRITE");
@@ -1314,7 +1314,7 @@ int diagfwd_read_complete(struct diag_request *diag_read_ptr)
 #ifdef CONFIG_DIAG_SDIO_PIPE
 	else if (buf == (void *)driver->usb_buf_mdm_out) {
 		if (machine_is_msm8x60_fusion() ||
-				 machine_is_msm8x60_fusn_ffa()) {
+			machine_is_msm8x60_fusn_ffa()) {
 			driver->read_len_mdm = diag_read_ptr->actual;
 			diagfwd_read_complete_sdio();
 		} else

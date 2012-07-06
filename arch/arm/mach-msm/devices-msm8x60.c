@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -91,6 +92,10 @@
 #define MSM_UART2DM_PHYS    0x19C40000
 #define MSM_UART3DM_PHYS    (MSM_GSBI3_PHYS + 0x40000)
 #define INT_UART3DM_IRQ     GSBI3_UARTDM_IRQ
+#define MSM_UART5DM_PHYS    (MSM_GSBI5_PHYS + 0x40000)
+#define INT_UART5DM_IRQ     GSBI5_UARTDM_IRQ
+#define MSM_UART7DM_PHYS    (MSM_GSBI7_PHYS + 0x40000)
+#define INT_UART7DM_IRQ     GSBI7_UARTDM_IRQ
 #define TCSR_BASE_PHYS      0x16b00000
 
 /* PRNG device */
@@ -288,6 +293,75 @@ struct platform_device msm_device_uart_dm3 = {
 	.resource = msm_uart3_dm_resources,
 };
 
+#ifdef CONFIG_MSM_GSBI5_UART
+static struct resource uart_gsbi5_resources[] = {
+	{
+		.start = MSM_UART5DM_PHYS,
+		.end   = MSM_UART5DM_PHYS + PAGE_SIZE - 1,
+		.name  = "uartdm_resource",
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = INT_UART5DM_IRQ,
+		.end   = INT_UART5DM_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.start = MSM_GSBI5_PHYS,
+		.end   = MSM_GSBI5_PHYS + PAGE_SIZE - 1,
+		.name  = "gsbi_resource",
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device msm_device_uart_gsbi5 = {
+	.name = "msm_serial_hsl",
+	.id = 3,
+	.num_resources = ARRAY_SIZE(uart_gsbi5_resources),
+	.resource = uart_gsbi5_resources,
+};
+#endif
+
+#ifdef CONFIG_MSM_GSBI7_UART
+static struct resource msm_uart7_dm_resources[] = {
+	{
+		.start = MSM_UART7DM_PHYS,
+		.end   = MSM_UART7DM_PHYS + PAGE_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = INT_UART7DM_IRQ,
+		.end   = INT_UART7DM_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.start = 24,
+		.end   = 25,
+		.name  = "uartdm_channels",
+		.flags = IORESOURCE_DMA,
+	},
+	{
+		.start = 10,
+		.end   = 11,
+		.name  = "uartdm_crci",
+		.flags = IORESOURCE_DMA,
+	},
+};
+
+static u64 msm_uart_dm7_dma_mask = DMA_BIT_MASK(32);
+
+struct platform_device msm_device_uart_dm7 = {
+	.name = "msm_serial_hs",
+	.id = 1,
+	.num_resources = ARRAY_SIZE(msm_uart7_dm_resources),
+	.resource = msm_uart7_dm_resources,
+	.dev            = {
+		.dma_mask = &msm_uart_dm7_dma_mask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
+};
+#endif
+
 static struct resource msm_uart12_dm_resources[] = {
 	{
 		.start = MSM_UART2DM_PHYS,
@@ -407,6 +481,29 @@ static struct resource gsbi4_qup_i2c_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 };
+
+#ifdef CONFIG_MSM_GSBI5_I2C
+static struct resource gsbi5_qup_i2c_resources[] = {
+	{
+		.name	= "qup_phys_addr",
+		.start	= MSM_GSBI5_QUP_PHYS,
+		.end	= MSM_GSBI5_QUP_PHYS + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "gsbi_qup_i2c_addr",
+		.start	= MSM_GSBI5_PHYS,
+		.end	= MSM_GSBI5_PHYS + 4 - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "qup_err_intr",
+		.start	= GSBI5_QUP_IRQ,
+		.end	= GSBI5_QUP_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+#endif
 
 static struct resource gsbi7_qup_i2c_resources[] = {
 	{
@@ -884,6 +981,16 @@ struct platform_device msm_gsbi12_qup_i2c_device = {
 	.num_resources	= ARRAY_SIZE(gsbi12_qup_i2c_resources),
 	.resource	= gsbi12_qup_i2c_resources,
 };
+
+#ifdef CONFIG_MSM_GSBI5_I2C
+/* Use GSBI5 QUP for /dev/i2c-9 */
+struct platform_device msm_gsbi5_qup_i2c_device = {
+	.name		= "qup_i2c",
+	.id		= MSM_GSBI5_QUP_I2C_BUS_ID,
+	.num_resources	= ARRAY_SIZE(gsbi5_qup_i2c_resources),
+	.resource	= gsbi5_qup_i2c_resources,
+};
+#endif
 
 #ifdef CONFIG_MSM_SSBI
 #define MSM_SSBI_PMIC1_PHYS	0x00500000
@@ -1795,45 +1902,37 @@ int msm_add_host(unsigned int host, struct msm_usb_host_platform_data *plat)
 }
 #endif
 
+#if defined(CONFIG_TSIF) || defined(CONFIG_TSIF_MODULE)
 #define MSM_TSIF0_PHYS       (0x18200000)
 #define MSM_TSIF1_PHYS       (0x18201000)
 #define MSM_TSIF_SIZE        (0x200)
 #define TCSR_ADM_0_A_CRCI_MUX_SEL 0x0070
 
 #define TSIF_0_CLK       GPIO_CFG(93, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
+	GPIO_CFG_NO_PULL, GPIO_CFG_2MA)
 #define TSIF_0_EN        GPIO_CFG(94, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
+	GPIO_CFG_NO_PULL, GPIO_CFG_2MA)
 #define TSIF_0_DATA      GPIO_CFG(95, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
-#define TSIF_0_SYNC      GPIO_CFG(96, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
+	GPIO_CFG_NO_PULL, GPIO_CFG_2MA)
+
 #define TSIF_1_CLK       GPIO_CFG(97, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
+	GPIO_CFG_NO_PULL, GPIO_CFG_2MA)
 #define TSIF_1_EN        GPIO_CFG(98, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
+	GPIO_CFG_NO_PULL, GPIO_CFG_2MA)
 #define TSIF_1_DATA      GPIO_CFG(99, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
-#define TSIF_1_SYNC      GPIO_CFG(100, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
+	GPIO_CFG_NO_PULL, GPIO_CFG_2MA)
 
 static const struct msm_gpio tsif0_gpios[] = {
 	{ .gpio_cfg = TSIF_0_CLK,  .label =  "tsif_clk", },
 	{ .gpio_cfg = TSIF_0_EN,   .label =  "tsif_en", },
 	{ .gpio_cfg = TSIF_0_DATA, .label =  "tsif_data", },
-	{ .gpio_cfg = TSIF_0_SYNC, .label =  "tsif_sync", },
 };
 
 static const struct msm_gpio tsif1_gpios[] = {
 	{ .gpio_cfg = TSIF_1_CLK,  .label =  "tsif_clk", },
 	{ .gpio_cfg = TSIF_1_EN,   .label =  "tsif_en", },
 	{ .gpio_cfg = TSIF_1_DATA, .label =  "tsif_data", },
-	{ .gpio_cfg = TSIF_1_SYNC, .label =  "tsif_sync", },
 };
-
-static void tsif_release(struct device *dev)
-{
-}
 
 static void tsif_init1(struct msm_tsif_platform_data *data)
 {
@@ -1845,7 +1944,7 @@ static void tsif_init1(struct msm_tsif_platform_data *data)
 	secure_writel(val, MSM_TCSR_BASE + TCSR_ADM_0_A_CRCI_MUX_SEL);
 }
 
-struct msm_tsif_platform_data tsif1_platform_data = {
+static struct msm_tsif_platform_data tsif1_platform_data = {
 	.num_gpios = ARRAY_SIZE(tsif1_gpios),
 	.gpios = tsif1_gpios,
 	.tsif_pclk = "iface_clk",
@@ -1853,7 +1952,7 @@ struct msm_tsif_platform_data tsif1_platform_data = {
 	.init = tsif_init1
 };
 
-struct resource tsif1_resources[] = {
+static struct resource tsif1_resources[] = {
 	[0] = {
 		.flags = IORESOURCE_IRQ,
 		.start = TSIF2_IRQ,
@@ -1881,14 +1980,15 @@ static void tsif_init0(struct msm_tsif_platform_data *data)
 	secure_writel(val, MSM_TCSR_BASE + TCSR_ADM_0_A_CRCI_MUX_SEL);
 }
 
-struct msm_tsif_platform_data tsif0_platform_data = {
+static struct msm_tsif_platform_data tsif0_platform_data = {
 	.num_gpios = ARRAY_SIZE(tsif0_gpios),
 	.gpios = tsif0_gpios,
 	.tsif_pclk = "iface_clk",
 	.tsif_ref_clk = "ref_clk",
 	.init = tsif_init0
 };
-struct resource tsif0_resources[] = {
+
+static struct resource tsif0_resources[] = {
 	[0] = {
 		.flags = IORESOURCE_IRQ,
 		.start = TSIF1_IRQ,
@@ -1913,7 +2013,6 @@ struct platform_device msm_device_tsif[2] = {
 		.num_resources = ARRAY_SIZE(tsif0_resources),
 		.resource      = tsif0_resources,
 		.dev = {
-			.release       = tsif_release,
 			.platform_data = &tsif0_platform_data
 		},
 	},
@@ -1923,11 +2022,11 @@ struct platform_device msm_device_tsif[2] = {
 		.num_resources = ARRAY_SIZE(tsif1_resources),
 		.resource      = tsif1_resources,
 		.dev = {
-			.release       = tsif_release,
 			.platform_data = &tsif1_platform_data
 		},
 	}
 };
+#endif
 
 struct platform_device msm_device_smd = {
 	.name           = "msm_smd",

@@ -1,4 +1,5 @@
 /* Copyright (c) 2002,2007-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012 Sony Mobile Communications AB
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 #include <linux/uaccess.h>
 
@@ -157,13 +160,6 @@ static struct z180_device device_2d0 = {
 		.active_cnt = 0,
 		.iomemname = KGSL_2D0_REG_MEMORY,
 		.ftbl = &z180_functable,
-#ifdef CONFIG_HAS_EARLYSUSPEND
-		.display_off = {
-			.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING,
-			.suspend = kgsl_early_suspend_driver,
-			.resume = kgsl_late_resume_driver,
-		},
-#endif
 	},
 };
 
@@ -195,13 +191,6 @@ static struct z180_device device_2d1 = {
 		.active_cnt = 0,
 		.iomemname = KGSL_2D1_REG_MEMORY,
 		.ftbl = &z180_functable,
-		.display_off = {
-#ifdef CONFIG_HAS_EARLYSUSPEND
-			.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING,
-			.suspend = kgsl_early_suspend_driver,
-			.resume = kgsl_late_resume_driver,
-#endif
-		},
 	},
 };
 

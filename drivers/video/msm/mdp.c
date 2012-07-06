@@ -2116,6 +2116,7 @@ static int mdp_probe(struct platform_device *pdev)
 	struct msm_fb_panel_data *pdata = NULL;
 	int rc;
 	resource_size_t  size ;
+	struct msm_panel_info *pinfo = NULL;
 #ifdef CONFIG_FB_MSM_MDP40
 	int intf, if_no;
 #else
@@ -2488,6 +2489,28 @@ static int mdp_probe(struct platform_device *pdev)
 
 	/* set driver data */
 	platform_set_drvdata(msm_fb_dev, mfd);
+
+	/* panel detection */
+	MSM_FB_INFO("mdp_probe: panel_detect function\n");
+	if (pdata && pdata->panel_detect && pdata->update_panel) {
+		rc = panel_next_on(msm_fb_dev);
+		if (!rc) {
+			pinfo = pdata->panel_detect(mfd);
+			rc = panel_next_off(msm_fb_dev);
+			}
+		if (!rc && pinfo)
+			mfd->panel_info = *pinfo;
+		pdata->update_panel(pdev);
+#ifdef CONFIG_FB_MSM_MDP40
+		if (mfd->panel.type == MIPI_CMD_PANEL) {
+			mipi = &mfd->panel_info.mipi;
+			configure_mdp_core_clk_table(
+				(mipi->dsi_pclk_rate) * 3 / 2);
+		}
+#endif
+	} else {
+		MSM_FB_INFO("mdp_probe: no panel_detect function\n");
+	}
 
 	rc = platform_device_add(msm_fb_dev);
 	if (rc) {

@@ -1,6 +1,7 @@
 /*
  *  linux/include/linux/mmc/host.h
  *
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -367,8 +368,10 @@ extern void mmc_request_done(struct mmc_host *, struct mmc_request *);
 
 static inline void mmc_signal_sdio_irq(struct mmc_host *host)
 {
-	host->ops->enable_sdio_irq(host, 0);
-	wake_up_process(host->sdio_irq_thread);
+	if (host->sdio_irq_thread) {
+		host->ops->enable_sdio_irq(host, 0);
+		wake_up_process(host->sdio_irq_thread);
+	}
 }
 
 struct regulator;
@@ -461,3 +464,6 @@ static inline unsigned int mmc_host_clk_rate(struct mmc_host *host)
 #endif
 #endif
 
+#ifdef CONFIG_MACH_SDCC_BCM_DRIVER
+extern void mmc_pm_keeppwr_control(struct mmc_host *mmc, int pwr);
+#endif

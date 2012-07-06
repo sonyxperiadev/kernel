@@ -1,4 +1,5 @@
 /* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -148,6 +149,10 @@ uint32 mdp4_overlay_panel_list(void)
 	return ctrl->panel_mode;
 }
 
+#ifdef HDMI_VIDEO_QUANTIZATION_ISSUE
+extern void video_quantization_setting(void);
+#endif
+
 void mdp4_overlay_dmae_cfg(struct msm_fb_data_type *mfd, int atv)
 {
 	uint32	dmae_cfg_reg;
@@ -187,10 +192,9 @@ void mdp4_overlay_dmae_cfg(struct msm_fb_data_type *mfd, int atv)
 		MDP_OUTP(MDP_BASE + 0xb3014, 0x1000080);
 		MDP_OUTP(MDP_BASE + 0xb4004, 0x67686970);
 	} else {
-		mdp_vid_quant_set();
-		MDP_OUTP(MDP_BASE + 0xb0070, 0xff0000);
-		MDP_OUTP(MDP_BASE + 0xb0074, 0xff0000);
-		MDP_OUTP(MDP_BASE + 0xb0078, 0xff0000);
+#ifdef HDMI_VIDEO_QUANTIZATION_ISSUE
+		video_quantization_setting();
+#endif
 	}
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
@@ -1489,6 +1493,8 @@ void mdp4_mixer_blend_setup(struct mdp4_overlay_pipe *pipe)
 		if (pipe->pipe_type == OVERLAY_TYPE_VIDEO &&
 		    (pipe->dst_w < pipe->src_w || pipe->dst_h < pipe->src_h))
 			fg_alpha = 0;
+		else if (pipe->mixer_num == MDP4_MIXER1)
+			fg_alpha = 0;
 		else
 			fg_alpha = 1;
 	}
@@ -1540,8 +1546,10 @@ void mdp4_mixer_blend_setup(struct mdp4_overlay_pipe *pipe)
 		}
 	} else if (fg_alpha) {
 		blend_op = (MDP4_BLEND_BG_ALPHA_FG_PIXEL |
+			    MDP4_BLEND_FG_ALPHA_FG_CONST |
 			    MDP4_BLEND_BG_INV_ALPHA);
 		fg_color3_out = 1; /* keep fg alpha */
+		outpdw(overlay_base + off + 0x108, 0xff);
 	} else if (bg_alpha) {
 		blend_op = (MDP4_BLEND_BG_ALPHA_BG_PIXEL |
 			    MDP4_BLEND_FG_ALPHA_BG_PIXEL |
@@ -1692,7 +1700,6 @@ static int mdp4_overlay_validate_downscale(struct mdp_overlay *req,
 		req->src_rect.w, req->src_rect.h, req->dst_rect.w,
 		req->dst_rect.h);
 
-
 	panel_clk_khz = pclk_rate/1000;
 	mdp_clk_hz = mdp_perf_level2clk_rate(perf_level);
 
@@ -1784,7 +1791,6 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 	if (req->dst_rect.h > (req->src_rect.h * 8)) {	/* too much */
 		mdp4_stat.err_scale++;
 		pr_err("%s: scale up, too much (h)!\n", __func__);
-		return -ERANGE;
 	}
 
 	if (req->src_rect.h > (req->dst_rect.h * 8)) {	/* too little */
@@ -1796,7 +1802,6 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 	if (req->dst_rect.w > (req->src_rect.w * 8)) {	/* too much */
 		mdp4_stat.err_scale++;
 		pr_err("%s: scale up, too much (w)!\n", __func__);
-		return -ERANGE;
 	}
 
 	if (req->src_rect.w > (req->dst_rect.w * 8)) {	/* too little */
@@ -2511,6 +2516,11 @@ int mdp4_overlay_play_wait(struct fb_info *info, struct msmfb_overlay_data *req)
 
 	pipe = mdp4_overlay_ndx2pipe(req->id);
 
+	if (!pipe) {
+		mdp4_stat.err_play++;
+		return -ENODEV;
+	}
+
 	if (mutex_lock_interruptible(&mfd->dma->ov_mutex))
 		return -EINTR;
 
@@ -2668,7 +2678,7 @@ int mdp4_overlay_play(struct fb_info *info, struct msmfb_overlay_data *req)
 		mdp4_overlay_vg_setup(pipe);	/* video/graphic pipe */
 	} else {
 		if (pipe->flags & MDP_SHARPENING) {
-			pr_warn(
+			pr_debug(
 			"%s: Sharpening/Smoothing not supported on RGB pipe\n",
 								     __func__);
 			pipe->flags &= ~MDP_SHARPENING;

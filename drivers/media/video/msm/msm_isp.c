@@ -1,4 +1,5 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -484,12 +485,14 @@ static int msm_isp_open(struct v4l2_subdev *sd,
 		pr_err("%s: vfe_init failed at %d\n",
 					__func__, rc);
 	}
+#if !defined(CONFIG_SEMC_VPE)
 	D("%s: init vpe subdev", __func__);
 	rc = msm_vpe_subdev_init(sd_vpe, sync, sync->pdev);
 	if (rc < 0) {
 		pr_err("%s: vpe_init failed at %d\n",
 					__func__, rc);
 	}
+#endif
 	return rc;
 }
 
@@ -498,7 +501,9 @@ static void msm_isp_release(struct msm_sync *psync,
 {
 	D("%s\n", __func__);
 	msm_vfe_subdev_release(psync->pdev);
+#if !defined(CONFIG_SEMC_VPE)
 	msm_vpe_subdev_release(psync->pdev);
+#endif
 }
 
 static int msm_config_vfe(struct v4l2_subdev *sd,

@@ -1,8 +1,19 @@
 obj-y += rtac.o
 
+ifdef CONFIG_MACH_SEMC_NOZOMI
+obj-y += board-semc_fuji-audio.o
+else ifdef CONFIG_MACH_SEMC_NOZOMI_DCM
+obj-y += board-semc_fuji-audio.o
+else ifdef CONFIG_MACH_SEMC_HIKARI
+obj-y += board-semc_fuji-audio.o
+else ifdef CONFIG_MACH_SEMC_HAYATE
+obj-y += board-semc_fuji-audio.o
+else
+obj-y += board-msm8x60-audio.o
+endif
+
 ifdef CONFIG_ARCH_MSM8X60
 obj-y += audio_dev_ctl.o
-obj-y += board-msm8x60-audio.o
 obj-$(CONFIG_TIMPANI_CODEC) += snddev_icodec.o
 obj-y += snddev_ecodec.o snddev_mi2s.o snddev_virtual.o
 obj-y += pcm_out.o pcm_in.o fm.o

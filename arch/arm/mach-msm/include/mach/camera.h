@@ -1,4 +1,5 @@
 /* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -416,6 +417,7 @@ struct msm_sync {
 	struct msm_strobe_flash_ctrl sfctrl;
 	struct msm_actuator_ctrl actctrl;
 	struct wake_lock wake_lock;
+	struct wake_lock suspend_lock;
 	struct platform_device *pdev;
 	int16_t ignore_qcmd_type;
 	uint8_t ignore_qcmd;

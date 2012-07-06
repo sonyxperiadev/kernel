@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -111,6 +112,7 @@ bool tabla_lock_sleep(struct tabla *tabla);
 void tabla_unlock_sleep(struct tabla *tabla);
 enum tabla_pm_state tabla_pm_cmpxchg(struct tabla *tabla, enum tabla_pm_state o,
 				     enum tabla_pm_state n);
+int tabla_codec_hp_amp_enable(u8 enable);
 
 static inline int tabla_request_irq(struct tabla *tabla, int irq,
 				     irq_handler_t handler, const char *name,

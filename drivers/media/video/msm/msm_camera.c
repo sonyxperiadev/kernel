@@ -1,4 +1,5 @@
 /* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -3084,6 +3085,7 @@ static int __msm_release(struct msm_sync *sync)
 		msm_queue_drain(&sync->pict_q, list_pict);
 		msm_queue_drain(&sync->event_q, list_config);
 
+		wake_unlock(&sync->suspend_lock);
 		wake_unlock(&sync->wake_lock);
 		sync->apps_id = NULL;
 		sync->core_powered_on = 0;
@@ -3744,6 +3746,7 @@ static int __msm_open(struct msm_cam_device *pmsm, const char *const apps_id,
 	sync->apps_id = apps_id;
 
 	if (!sync->core_powered_on && !is_controlnode) {
+		wake_lock(&sync->suspend_lock);
 		wake_lock(&sync->wake_lock);
 
 		msm_camvfe_fn_init(&sync->vfefn, sync);
@@ -3959,6 +3962,8 @@ static int msm_sync_init(struct msm_sync *sync,
 	msm_queue_init(&sync->vpe_q, "vpe");
 
 	wake_lock_init(&sync->wake_lock, WAKE_LOCK_IDLE, "msm_camera");
+	wake_lock_init(&sync->suspend_lock, WAKE_LOCK_SUSPEND,
+					"msm_camera_suspend");
 
 	rc = msm_camio_probe_on(pdev);
 	if (rc < 0) {
@@ -3975,6 +3980,7 @@ static int msm_sync_init(struct msm_sync *sync,
 		pr_err("%s: failed to initialize %s\n",
 			__func__,
 			sync->sdata->sensor_name);
+		wake_lock_destroy(&sync->suspend_lock);
 		wake_lock_destroy(&sync->wake_lock);
 		return rc;
 	}
@@ -3994,6 +4000,7 @@ static int msm_sync_init(struct msm_sync *sync,
 
 static int msm_sync_destroy(struct msm_sync *sync)
 {
+	wake_lock_destroy(&sync->suspend_lock);
 	wake_lock_destroy(&sync->wake_lock);
 	return 0;
 }

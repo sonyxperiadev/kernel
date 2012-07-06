@@ -1,4 +1,6 @@
 /* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012, Sony Ericsson Mobile Communications AB
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2704,6 +2706,7 @@ struct adie_codec_state {
 	struct marimba *pdrv_ptr;
 	struct marimba_codec_platform_data *codec_pdata;
 	struct mutex lock;
+	struct mutex pwr_up_lock;
 };
 
 static struct adie_codec_state adie_codec;
@@ -3112,6 +3115,7 @@ static int timpani_adie_codec_proceed_stage(struct adie_codec_path *path_ptr,
 
 static void timpani_codec_bring_up(void)
 {
+	pr_debug("%s: timpani codec bringup !\n", __func__);
 	/* Codec power up sequence */
 	adie_codec_write(0xFF, 0xFF, 0x08);
 	adie_codec_write(0xFF, 0xFF, 0x0A);
@@ -3131,11 +3135,73 @@ static void timpani_codec_bring_up(void)
 
 static void timpani_codec_bring_down(void)
 {
+	pr_debug("%s: timpani codec bringdown !\n", __func__);
 	adie_codec_write(TIMPANI_A_MREF, 0xFF, TIMPANI_MREF_POR);
 	adie_codec_write(0xFF, 0xFF, 0x07);
 	adie_codec_write(0xFF, 0xFF, 0x06);
 	adie_codec_write(0xFF, 0xFF, 0x0E);
 	adie_codec_write(0xFF, 0xFF, 0x08);
+}
+
+int timpani_codec_powerup(u8 enable)
+{
+	int rc = 0;
+
+	mutex_lock(&adie_codec.pwr_up_lock);
+	pr_debug("%s: adie_codec.ref_cnt = %d\n", __func__,
+		adie_codec.ref_cnt);
+	if (!!enable) {
+		if (!adie_codec.ref_cnt) {
+			if (adie_codec.codec_pdata &&
+			    adie_codec.codec_pdata->marimba_codec_power) {
+
+				rc = adie_codec.
+					codec_pdata->marimba_codec_power(1);
+				if (rc) {
+					pr_err("%s: could not power up "
+						"timpani codec\n", __func__);
+					goto error;
+				}
+				timpani_codec_bring_up();
+			} else {
+				pr_err("%s: [powerup]couldn't detect timpani "
+					"codec\n", __func__);
+				rc = -ENODEV;
+				goto error;
+			}
+		}
+		adie_codec.ref_cnt++;
+	} else {
+		BUG_ON(!adie_codec.ref_cnt);
+
+		adie_codec.ref_cnt--;
+
+		if (!adie_codec.ref_cnt) {
+			timpani_codec_bring_down();
+
+			if (adie_codec.codec_pdata &&
+			    adie_codec.codec_pdata->marimba_codec_power) {
+				rc = adie_codec.
+					codec_pdata->marimba_codec_power(0);
+				if (rc) {
+					pr_err("%s: could not power down "
+						"timpani codec\n", __func__);
+					goto error;
+				}
+			} else {
+				pr_err("%s: [powerdown]couldn't detect timpani "
+					"codec\n", __func__);
+				rc = -ENODEV;
+				goto error;
+			}
+		}
+	}
+
+error:
+	pr_debug("%s: adie_codec.ref_cnt = %d; rc =%d\n", __func__,
+		adie_codec.ref_cnt, rc);
+	mutex_unlock(&adie_codec.pwr_up_lock);
+	return rc;
 }
 
 static int timpani_adie_codec_open(struct adie_codec_dev_profile *profile,
@@ -3155,33 +3221,18 @@ static int timpani_adie_codec_open(struct adie_codec_dev_profile *profile,
 		goto error;
 	}
 
-	if (!adie_codec.ref_cnt) {
-
-		if (adie_codec.codec_pdata &&
-				adie_codec.codec_pdata->marimba_codec_power) {
-
-			rc = adie_codec.codec_pdata->marimba_codec_power(1);
-			if (rc) {
-				pr_err("%s: could not power up timpani "
-						"codec\n", __func__);
-				goto error;
-			}
-			timpani_codec_bring_up();
-		} else {
-			pr_err("%s: couldn't detect timpani codec\n", __func__);
-			rc = -ENODEV;
-			goto error;
-		}
-
+	rc = timpani_codec_powerup(1);
+	if (rc) {
+		pr_err("%s: could not power up timpani "
+			"codec\n", __func__);
+		goto error;
 	}
 
 	adie_codec.path[profile->path_type].profile = profile;
 	*path_pptr = (void *) &adie_codec.path[profile->path_type];
-	adie_codec.ref_cnt++;
 	adie_codec.path[profile->path_type].hwsetting_idx = 0;
 	adie_codec.path[profile->path_type].curr_stage = ADIE_CODEC_DIGITAL_OFF;
 	adie_codec.path[profile->path_type].stage_idx = 0;
-
 
 error:
 	mutex_unlock(&adie_codec.lock);
@@ -3201,25 +3252,12 @@ static int timpani_adie_codec_close(struct adie_codec_path *path_ptr)
 	if (path_ptr->curr_stage != ADIE_CODEC_DIGITAL_OFF)
 		adie_codec_proceed_stage(path_ptr, ADIE_CODEC_DIGITAL_OFF);
 
-	BUG_ON(!adie_codec.ref_cnt);
-
 	path_ptr->profile = NULL;
-	adie_codec.ref_cnt--;
-
-	if (!adie_codec.ref_cnt) {
-		/* Timpani CDC power down sequence */
-		timpani_codec_bring_down();
-
-		if (adie_codec.codec_pdata &&
-				adie_codec.codec_pdata->marimba_codec_power) {
-
-			rc = adie_codec.codec_pdata->marimba_codec_power(0);
-			if (rc) {
-				pr_err("%s: could not power down timpani "
-						"codec\n", __func__);
-				goto error;
-			}
-		}
+	rc = timpani_codec_powerup(0);
+	if (rc) {
+		pr_err("%s: could not power down timpani "
+			"codec\n", __func__);
+		goto error;
 	}
 
 error:
@@ -3433,6 +3471,7 @@ static const struct adie_codec_operations timpani_adie_ops = {
 		timpani_adie_codec_set_device_analog_volume,
 	.codec_set_device_digital_volume =
 		timpani_adie_codec_set_device_digital_volume,
+	.codec_powerup = timpani_codec_powerup,
 };
 
 static void timpani_codec_populate_shadow_registers(void)
@@ -3636,6 +3675,7 @@ static int __init timpani_codec_init(void)
 	adie_codec.path[ADIE_CODEC_RX].reg_owner = RA_OWNER_PATH_RX1;
 	adie_codec.path[ADIE_CODEC_LB].reg_owner = RA_OWNER_PATH_LB;
 	mutex_init(&adie_codec.lock);
+	mutex_init(&adie_codec.pwr_up_lock);
 error:
 	return rc;
 }

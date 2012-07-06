@@ -3,6 +3,7 @@
    Copyright (c) 2000-2001, 2010-2012 Code Aurora Forum.  All rights reserved.
    Copyright (C) 2009-2010 Gustavo F. Padovan <gustavo@padovan.org>
    Copyright (C) 2010 Google Inc.
+   Copyright (C) 2012 Sony Mobile Communications AB.
 
    Written 2000,2001 by Maxim Krasnyansky <maxk@qualcomm.com>
 
@@ -81,6 +82,8 @@ static void l2cap_amp_move_setup(struct sock *sk);
 static void l2cap_amp_move_success(struct sock *sk);
 static void l2cap_amp_move_revert(struct sock *sk);
 
+static void l2cap_ertm_retransmit_all(struct sock *sk,
+				struct bt_l2cap_control *control);
 static int l2cap_ertm_rx_queued_iframes(struct sock *sk);
 
 static struct sk_buff *l2cap_build_cmd(struct l2cap_conn *conn,
@@ -2045,8 +2048,11 @@ static void l2cap_ertm_send_i_or_rr_or_rnr(struct sock *sk)
 	}
 
 	if ((pi->conn_state & L2CAP_CONN_REMOTE_BUSY) &&
-		(pi->unacked_frames > 0))
+			(pi->unacked_frames > 0)) {
+		pi->conn_state &= ~L2CAP_CONN_REMOTE_BUSY;
+		l2cap_ertm_retransmit_all(sk, &control);
 		l2cap_ertm_start_retrans_timer(pi);
+	}
 
 	pi->conn_state &= ~L2CAP_CONN_REMOTE_BUSY;
 

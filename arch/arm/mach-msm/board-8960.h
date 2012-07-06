@@ -20,6 +20,7 @@
 #include <mach/irqs.h>
 #include <mach/rpm-regulator.h>
 #include <mach/msm_memtypes.h>
+#include <linux/regulator/gpio-regulator.h>
 
 /* Macros assume PMIC GPIOs and MPPs start at 1 */
 #define PM8921_GPIO_BASE		NR_GPIO_IRQS

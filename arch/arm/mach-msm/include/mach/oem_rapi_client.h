@@ -28,8 +28,40 @@ enum {
 	 * list of oem rapi client events
 	 */
 
+	/* constants used by charger driver */
+	OEM_RAPI_CLIENT_EVENT_BATT_MV_GET,
+	OEM_RAPI_CLIENT_EVENT_BATT_MA_GET,
+	OEM_RAPI_CLIENT_EVENT_BATT_ID_GET,
+	OEM_RAPI_CLIENT_EVENT_BATT_ID_TYPE1_GET,
+	OEM_RAPI_CLIENT_EVENT_BATT_ID_TYPE2_GET,
+	OEM_RAPI_CLIENT_EVENT_CUTOFF_LEVEL_CB_REGISTER,
+	OEM_RAPI_CLIENT_EVENT_CUTOFF_LEVEL_CB_UNREGISTER_SET,
+	OEM_RAPI_CLIENT_EVENT_NOTIFY_PLATFORM_SET,
+	OEM_RAPI_CLIENT_EVENT_NOTIFY_BDATA_CB_REGISTER_SET,
+	OEM_RAPI_CLIENT_EVENT_NOTIFY_BDATA_CB_UNREGISTER_SET,
+	OEM_RAPI_CLIENT_EVENT_PM_BATT_FET_SWITCH_SET,
+	/* end of constants used by charger driver */
+
 	OEM_RAPI_CLIENT_EVENT_MAX
 
+};
+
+/*
+ * This enum lists the events that the server can notify the client of.
+ */
+enum {
+	OEM_RAPI_SERVER_EVENT_NONE = 0,
+
+	/*
+	 * list of oem rapi server events
+	 */
+
+	/* constants used by charger driver */
+	OEM_RAPI_SERVER_EVENT_CUTOFF_CB_EVENT,
+	OEM_RAPI_SERVER_EVENT_NOTIFY_BDATA_CB_EVENT,
+	/* end of constants used by charger driver */
+
+	OEM_RAPI_SERVER_EVENT_MAX
 };
 
 struct oem_rapi_client_streaming_func_cb_arg {

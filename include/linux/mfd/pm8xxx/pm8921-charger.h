@@ -61,6 +61,8 @@ enum pm8921_usb_debounce_time {
  *			system operates at
  * @resume_voltage_delta:	the (mV) drop to wait for before resume charging
  *				after the battery has been fully charged
+ * @resume_soc:		the state of charge (%) to wait for resume charging
+ *			after the battery has been fully charged
  * @term_current:	the charger current (mA) at which EOC happens
  * @cool_temp:		the temperature (degC) at which the battery is
  *			considered cool charging current and voltage is reduced.
@@ -71,6 +73,7 @@ enum pm8921_usb_debounce_time {
  * @temp_check_period:	The polling interval in seconds to check battery
  *			temeperature if it has gone to cool or warm temperature
  *			area
+ * @safe_current:		writeable value of max charge current in mA
  * @max_bat_chg_current:	Max charge current of the battery in mA
  *				Usually 70% of full charge capacity
  * @cool_bat_chg_current:	chg current (mA) when the battery is cool
@@ -109,10 +112,15 @@ struct pm8921_charger_platform_data {
 	unsigned int			max_voltage;
 	unsigned int			min_voltage;
 	unsigned int			resume_voltage_delta;
+	unsigned int			resume_soc;
 	unsigned int			term_current;
+	int				cold_temp;
 	int				cool_temp;
 	int				warm_temp;
+	int				hot_temp;
+	int				hysterisis_temp;
 	unsigned int			temp_check_period;
+	unsigned int			safe_current;
 	unsigned int			max_bat_chg_current;
 	unsigned int			cool_bat_chg_current;
 	unsigned int			warm_bat_chg_current;
@@ -143,16 +151,6 @@ enum pm8921_charger_source {
 void pm8921_charger_vbus_draw(unsigned int mA);
 int pm8921_charger_register_vbus_sn(void (*callback)(int));
 void pm8921_charger_unregister_vbus_sn(void (*callback)(int));
-/**
- * pm8921_charger_enable -
- *
- * @enable: 1 means enable charging, 0 means disable
- *
- * Enable/Disable battery charging current, the device will still draw current
- * from the charging source
- */
-int pm8921_charger_enable(bool enable);
-
 /**
  * pm8921_is_usb_chg_plugged_in - is usb plugged in
  *
@@ -269,10 +267,6 @@ static inline int pm8921_charger_register_vbus_sn(void (*callback)(int))
 }
 static inline void pm8921_charger_unregister_vbus_sn(void (*callback)(int))
 {
-}
-static inline int pm8921_charger_enable(bool enable)
-{
-	return -ENXIO;
 }
 static inline int pm8921_is_usb_chg_plugged_in(void)
 {

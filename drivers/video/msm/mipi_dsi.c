@@ -96,6 +96,9 @@ static int mipi_dsi_off(struct platform_device *pdev)
 		mipi_dsi_controller_cfg(0);
 	}
 
+	if (mfd->panel_info.type == MIPI_VIDEO_PANEL)
+		mipi_dsi_controller_cfg(0);
+
 	/*
 	 * Desctiption: change to DSI_CMD_MODE since it needed to
 	 * tx DCS dsiplay off comamnd to panel

@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1492,6 +1493,7 @@ static int msm_open(struct file *f)
 				__func__, rc);
 			goto err;
 		}
+#if !defined(CONFIG_SEMC_VPE)
 		if (pcam->mctl.isp_sdev->sd_vpe) {
 			rc = v4l2_device_register_subdev(&pcam->v4l2_dev,
 						pcam->mctl.isp_sdev->sd_vpe);
@@ -1499,6 +1501,7 @@ static int msm_open(struct file *f)
 				goto err;
 			}
 		}
+#endif
 		rc = msm_setup_v4l2_event_queue(&pcam_inst->eventHandle,
 							pcam->pvdev);
 		if (rc < 0) {
@@ -1642,7 +1645,9 @@ static int msm_close(struct file *f)
 
 	if (pcam->use_count == 0) {
 		v4l2_device_unregister_subdev(pcam->mctl.isp_sdev->sd);
+#if !defined(CONFIG_SEMC_VPE)
 		v4l2_device_unregister_subdev(pcam->mctl.isp_sdev->sd_vpe);
+#endif
 		rc = msm_cam_server_close_session(&g_server_dev, pcam);
 		if (rc < 0)
 			pr_err("msm_cam_server_close_session fails %d\n", rc);
@@ -2466,6 +2471,7 @@ static int msm_sync_destroy(struct msm_sync *sync)
 {
 	if (sync) {
 		mutex_destroy(&sync->lock);
+		wake_lock_destroy(&sync->suspend_lock);
 		wake_lock_destroy(&sync->wake_lock);
 	}
 	return 0;
@@ -2521,6 +2527,8 @@ static int msm_sync_init(struct msm_sync *sync,
 {
 	int rc = 0;
 	wake_lock_init(&sync->wake_lock, WAKE_LOCK_IDLE, "msm_camera");
+	wake_lock_init(&sync->suspend_lock, WAKE_LOCK_SUSPEND,
+			"msm_camera_suspend");
 	sync->opencnt = 0;
 	mutex_init(&sync->lock);
 	return rc;

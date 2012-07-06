@@ -77,4 +77,8 @@
 #define FIRST_GPIO_IRQ MSM_GPIO_TO_INT(0)
 #define MSM_INT_TO_REG(base, irq) (base + irq / 32)
 
+#if defined(CONFIG_MSM_WATCHDOG)
+#define ARCH_HAS_NMI_WATCHDOG
+#endif
+
 #endif

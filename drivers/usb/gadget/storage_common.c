@@ -4,6 +4,8 @@
  * Copyright (C) 2003-2008 Alan Stern
  * Copyeight (C) 2009 Samsung Electronics
  * Author: Michal Nazarewicz (m.nazarewicz@samsung.com)
+ * Copyright (C) 2011-2012 Sony Ericsson Mobile Communications AB.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -225,14 +227,26 @@ struct interrupt_data {
 #define ASC(x)		((u8) ((x) >> 8))
 #define ASCQ(x)		((u8) (x))
 
+#define RANDOM_WRITE_COUNT_TO_BE_FLUSHED (10)
+
+/* VPD(Vital product data) Page Name */
+#define VPD_SUPPORTED_VPD_PAGES		0x00
+#define VPD_UNIT_SERIAL_NUMBER		0x80
+#define VPD_DEVICE_IDENTIFICATION	0x83
 
 /*-------------------------------------------------------------------------*/
 
+#ifdef CONFIG_USB_KDDI_SCSI_EXTENSIONS
+struct kddi_data;
+#endif
 
 struct fsg_lun {
 	struct file	*filp;
 	loff_t		file_length;
 	loff_t		num_sectors;
+
+	u8		random_write_count;
+	loff_t		last_offset;
 
 	unsigned int	initially_ro:1;
 	unsigned int	ro:1;
@@ -243,11 +257,14 @@ struct fsg_lun {
 	unsigned int	info_valid:1;
 	unsigned int	nofua:1;
 
+	u8		shift_size;
+
 	u32		sense_data;
 	u32		sense_data_info;
 	u32		unit_attention_data;
 
 	struct device	dev;
+	char		*lun_filename;
 #ifdef CONFIG_USB_MSC_PROFILING
 	spinlock_t	lock;
 	struct {
@@ -258,6 +275,9 @@ struct fsg_lun {
 		ktime_t wtime;
 	} perf;
 
+#endif
+#ifdef CONFIG_USB_KDDI_SCSI_EXTENSIONS
+	struct kddi_data *kddi_data;
 #endif
 };
 
@@ -596,13 +616,13 @@ static int fsg_lun_open(struct fsg_lun *curlun, const char *filename)
 		rc = (int) size;
 		goto out;
 	}
-	num_sectors = size >> 9;	/* File size in 512-byte blocks */
+	/* File size in 512 or 2048(cdrom) -byte blocks */
+	num_sectors = size >> curlun->shift_size;
 	min_sectors = 1;
 	if (curlun->cdrom) {
-		num_sectors &= ~3;	/* Reduce to a multiple of 2048 */
-		min_sectors = 300*4;	/* Smallest track is 300 frames */
-		if (num_sectors >= 256*60*75*4) {
-			num_sectors = (256*60*75 - 1) * 4;
+		min_sectors = 300;	/* Smallest track is 300 frames */
+		if (num_sectors >= 256*60*75) {
+			num_sectors = 256*60*75 - 1;
 			LINFO(curlun, "file too big: %s\n", filename);
 			LINFO(curlun, "using only first %d blocks\n",
 					(int) num_sectors);
@@ -631,6 +651,9 @@ out:
 static void fsg_lun_close(struct fsg_lun *curlun)
 {
 	if (curlun->filp) {
+		curlun->last_offset = 0;
+		curlun->random_write_count = 0;
+
 		LDBG(curlun, "close backing file\n");
 		fput(curlun->filp);
 		curlun->filp = NULL;
@@ -647,10 +670,18 @@ static void fsg_lun_close(struct fsg_lun *curlun)
 static int fsg_lun_fsync_sub(struct fsg_lun *curlun)
 {
 	struct file	*filp = curlun->filp;
+	int rc = 0;
 
 	if (curlun->ro || !filp)
 		return 0;
-	return vfs_fsync(filp, 1);
+
+	rc = vfs_fsync(filp, 1);
+	if (!rc) {
+		curlun->last_offset = 0;
+		curlun->random_write_count = 0;
+	}
+
+	return rc;
 }
 
 static void store_cdrom_address(u8 *dest, int msf, u32 addr)
@@ -836,14 +867,28 @@ static ssize_t fsg_store_file(struct device *dev, struct device_attribute *attr,
 	if (fsg_lun_is_open(curlun)) {
 		fsg_lun_close(curlun);
 		curlun->unit_attention_data = SS_MEDIUM_NOT_PRESENT;
+		kfree(curlun->lun_filename);
+		curlun->lun_filename = NULL;
 	}
 
 	/* Load new medium */
 	if (count > 0 && buf[0]) {
 		rc = fsg_lun_open(curlun, buf);
-		if (rc == 0)
-			curlun->unit_attention_data =
+		if (rc == 0) {
+			kfree(curlun->lun_filename);
+			curlun->lun_filename = kmalloc(count+1, GFP_KERNEL);
+			if (!curlun->lun_filename) {
+				rc = -ENOMEM;
+				fsg_lun_close(curlun);
+				curlun->unit_attention_data =
+					SS_MEDIUM_NOT_PRESENT;
+			} else {
+				memcpy(curlun->lun_filename, buf, count);
+				curlun->lun_filename[count] = '\0';
+				curlun->unit_attention_data =
 					SS_NOT_READY_TO_READY_TRANSITION;
+			}
+		}
 	}
 	up_write(filesem);
 	return (rc < 0 ? rc : count);

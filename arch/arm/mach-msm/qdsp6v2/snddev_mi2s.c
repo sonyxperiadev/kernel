@@ -36,7 +36,6 @@ struct snddev_mi2s_drv_state {
 	struct clk *tx_osrclk;
 	struct clk *tx_bitclk;
 	int mi2s_ws;
-	int mi2s_mclk;
 	int mi2s_sclk;
 	int fm_mi2s_sd;
 };
@@ -63,22 +62,12 @@ static int mi2s_gpios_request(void)
 		return rc;
 	}
 
-	rc = gpio_request(snddev_mi2s_drv.mi2s_mclk, "MI2S_MCLK");
-	if (rc < 0) {
-		pr_err("%s: GPIO request for MI2S_MCLK failed\n",
-			__func__);
-		gpio_free(snddev_mi2s_drv.mi2s_ws);
-		gpio_free(snddev_mi2s_drv.mi2s_sclk);
-		return rc;
-	}
-
 	rc = gpio_request(snddev_mi2s_drv.fm_mi2s_sd, "FM_MI2S_SD");
 	if (rc < 0) {
 		pr_err("%s: GPIO request for FM_MI2S_SD failed\n",
 			__func__);
 		gpio_free(snddev_mi2s_drv.mi2s_ws);
 		gpio_free(snddev_mi2s_drv.mi2s_sclk);
-		gpio_free(snddev_mi2s_drv.mi2s_mclk);
 		return rc;
 	}
 
@@ -90,7 +79,6 @@ static void mi2s_gpios_free(void)
 	pr_debug("%s\n", __func__);
 	gpio_free(snddev_mi2s_drv.mi2s_ws);
 	gpio_free(snddev_mi2s_drv.mi2s_sclk);
-	gpio_free(snddev_mi2s_drv.mi2s_mclk);
 	gpio_free(snddev_mi2s_drv.fm_mi2s_sd);
 }
 
@@ -115,15 +103,6 @@ static int mi2s_get_gpios(struct platform_device *pdev)
 	}
 
 	snddev_mi2s_drv.mi2s_sclk = res->start;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_IO,
-					   "mi2s_mclk");
-	if (!res) {
-		pr_err("%s: failed to get gpio MI2S_MCLK\n", __func__);
-		return -ENODEV;
-	}
-
-	snddev_mi2s_drv.mi2s_mclk = res->start;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_IO,
 					   "fm_mi2s_sd");

@@ -30,6 +30,7 @@
 #include <linux/delay.h>
 #include <asm/uaccess.h>
 #include <asm/pgtable.h>
+#include <asm/mach-types.h>
 #include <mach/msm_rpcrouter.h>
 #ifdef CONFIG_MSM_SDIO_SMEM
 #include <mach/sdio_smem.h>
@@ -177,6 +178,8 @@ static struct dentry *stats_dentry;
 #define RAMFS_SSD_STORAGE_ID		0x00535344
 #define RAMFS_SHARED_SSD_RAM_BASE	0x42E00000
 #define RAMFS_SHARED_SSD_RAM_SIZE	0x2000
+
+#define MAX_NUM_SYNC_STATE_CHECK	100
 
 static struct rmt_storage_client *rmt_storage_get_client(uint32_t handle)
 {
@@ -1579,9 +1582,28 @@ static void rmt_storage_client_shutdown(struct platform_device *pdev)
 {
 	struct rpcsvr_platform_device *dev;
 	struct rmt_storage_srv *srv;
+	int rc = 0;
 
 	dev = container_of(pdev, struct rpcsvr_platform_device, base);
 	srv = rmt_storage_get_srv(dev->prog);
+	if (dev->prog ==  MDM_RMT_STORAGE_APIPROG) {
+		if (!!srv) {
+			rc = rmt_storage_force_sync(srv->rpc_client);
+			if (rc) {
+				pr_err("%s: force sync failed: %d\n",
+				__func__, rc);
+			} else {
+				/* wait for sync_status from modem */
+				int count = 0;
+				do {
+					msleep(100);
+					count++;
+				} while (!rmt_storage_get_sync_status
+					(srv->rpc_client) &&
+					count < MAX_NUM_SYNC_STATE_CHECK);
+			}
+		}
+	}
 	rmt_storage_set_client_status(srv, 0);
 }
 

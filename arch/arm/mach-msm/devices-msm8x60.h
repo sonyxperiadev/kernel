@@ -22,6 +22,7 @@
 #define MSM_SSBI1_I2C_BUS_ID     6
 #define MSM_SSBI2_I2C_BUS_ID     7
 #define MSM_SSBI3_I2C_BUS_ID     8
+#define MSM_GSBI5_QUP_I2C_BUS_ID 9
 
 #ifdef CONFIG_SND_SOC_MSM8660_APQ
 extern struct platform_device msm_pcm;

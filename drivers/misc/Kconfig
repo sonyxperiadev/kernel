@@ -594,6 +594,14 @@ config PMIC8XXX_VIBRATOR
 	  on the PM8XXX chips. The vibrator is controlled using the
 	  timed output class.
 
+config VIBRATOR_LC898300
+	tristate "VIBRATOR Support for LC898300 I2C chips"
+	depends on ANDROID_TIMED_OUTPUT && I2C
+	default n
+	help
+	  This option enables device driver support for the vibrator
+	  on the LC898300 chips accessed via the I2C bus.
+
 config PMIC8XXX_NFC
 	tristate "Qualcomm PM8XXX support for Near Field Communication"
 	depends on MFD_PM8XXX
@@ -610,6 +618,12 @@ config PMIC8XXX_UPL
 	  simple truth table based logic via a set of control registers. I/O may
 	  be routed in and out of the UPL module via GPIO or DTEST pins.
 
+config SEMC_FELICA_SUPPORT
+	bool "Enable FeliCa support"
+	default n
+	help
+	  This option enables support for FeliCa.
+
 config PMIC8058_XOADC
 	tristate "Qualcomm PM8058 XOADC driver"
 	depends on PMIC8058
@@ -618,6 +632,22 @@ config PMIC8058_XOADC
 	  Enables User processor ADC reads over the XOADC module of Qualcomm's
 	  PMIC8058. Driver interface to program registers of the ADC over
 	  AMUX channels, devices on programmable MPP's and xotherm.
+
+config LM3560
+	tristate "LED driver for LM3560"
+	default n
+	depends on I2C
+	help
+	  This option enables support for LM3560
+	  led controller.
+
+config LM3561
+	tristate "LED driver for LM3561"
+	default n
+	depends on I2C
+	help
+	  This option enables support for LM3561
+	  led controller.
 
 config TZCOM
 	tristate "Trustzone Communicator driver"
@@ -642,6 +672,28 @@ config QFP_FUSE
 	  to the fuse block. Currently this is supported only
 	  on FSM targets.
 
+config NFC_PN544
+	tristate "NFC driver for PN544"
+	default n
+	depends on I2C
+	help
+	  This option enables support for PN544.
+
+config RAMDUMP_CRASH_LOGS
+	bool "ramdumpinfo and amsslog as proc entries"
+	default n
+	depends on ARCH_MSM
+	help
+	  This will enable /proc/ramdumpinfo and /proc/last_amsslog
+	  on a reboot after crash.
+
+config SEMC_ONESEG_TUNER_PM
+	tristate "SEMC Oneseg tuner pm driver for SMT-VJ180"
+	default n
+	depends on GENERIC_GPIO
+	help
+	  Select this module to enable SEMC Oneseg Tuner PM Driver.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -649,5 +701,7 @@ source "drivers/misc/iwmc3200top/Kconfig"
 source "drivers/misc/ti-st/Kconfig"
 source "drivers/misc/lis3lv02d/Kconfig"
 source "drivers/misc/carma/Kconfig"
+source "drivers/misc/mpu3050/Kconfig"
+source "drivers/misc/mpu6050/Kconfig"
 
 endif # MISC_DEVICES

@@ -930,7 +930,7 @@ static int tzcom_open(struct inode *inode, struct file *file)
 	if (pil == NULL) {
 		pil = pil_get("tzapps");
 		if (IS_ERR(pil)) {
-			PERR("Playready PIL image load failed");
+			PERR("TZApps PIL image load failed");
 			pil_error = PTR_ERR(pil);
 			pil = NULL;
 			return pil_error;
