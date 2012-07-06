@@ -168,6 +168,27 @@ static struct volt_cutoff_lvl cutoff_cal_map[] = {
 	{3400, 0, 0},
 };
 
+struct eoc_curr_map {
+	int curr;
+	int cap;
+	int state;
+};
+
+static struct eoc_curr_map eoc_cal_map[] = {
+	{290, 90, 0},
+	{270, 91, 0},
+	{250, 92, 0},
+	{228, 93, 0},
+	{208, 94, 0},
+	{185, 95, 0},
+	{165, 96, 0},
+	{145, 97, 0},
+	{125, 98, 0},
+	{105, 99, 0},
+	{85, 100, 0},
+	{0, 100, 0},
+};
+
 struct bcmpmu_em {
 	struct bcmpmu *bcmpmu;
 	wait_queue_head_t wait;
@@ -183,6 +204,9 @@ struct bcmpmu_em {
 	int support_hw_eoc;
 	int eoc_count;
 	int eoc_cap;
+	int eoc_cal_index;
+	int eoc_factor;
+	int eoc_factor_max;
 	int esr;
 	int cutoff_volt;
 	int cutoff_count;
@@ -1054,6 +1078,52 @@ static int update_adc_readings(struct bcmpmu_em *pem)
 	return ret;
 }
 
+static void pre_eoc_check(struct bcmpmu_em *pem)
+{
+	int index = -1;
+	int i;
+	int capacity = pem->batt_capacity;
+	struct bcmpmu *bcmpmu = pem->bcmpmu;
+
+	pr_em(FLOW, "%s, capacity=%d, curr=%d\n",
+		__func__, pem->batt_capacity, pem->batt_curr);
+
+	if ((pem->batt_capacity < 90) ||
+		(pem->batt_volt < pem->fg_fbat_lvl) ||
+		(pem->batt_curr > 300) ||
+		(pem->batt_curr < 0)) {
+		pem->eoc_factor = 0;
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(eoc_cal_map) - 1; i++) {
+		if ((pem->batt_curr <= eoc_cal_map[i].curr) &&
+			(pem->batt_curr > eoc_cal_map[i+1].curr)) {
+			index = i;
+			break;
+		}
+	}
+	if (index >= 0)
+		capacity = eoc_cal_map[index].cap;
+	else
+		capacity = pem->batt_capacity;
+
+	if (capacity == pem->batt_capacity)
+		pem->eoc_factor = 0;
+	else if (pem->batt_capacity != 100)
+		pem->eoc_factor =
+			((capacity - pem->batt_capacity) * 100) /
+				(pem->batt_capacity - 100);
+	if (pem->eoc_factor > pem->eoc_factor_max)
+		pem->eoc_factor = pem->eoc_factor_max;
+	else if (pem->eoc_factor < -pem->eoc_factor_max)
+		pem->eoc_factor = -pem->eoc_factor_max;
+
+	pr_em(FLOW, "%s, capacity=%d, index=%d, factor=%d\n",
+		__func__, capacity, index, pem->eoc_factor);
+	return;
+}
+
 static int update_eoc(struct bcmpmu_em *pem)
 {
 	int capacity = 0;
@@ -1063,7 +1133,7 @@ static int update_eoc(struct bcmpmu_em *pem)
 		return capacity;
 	}
 
-
+	pre_eoc_check(pem);
 
 	if (pem->piggyback_chrg) {
 			if (pem->support_hw_eoc) {
@@ -1144,6 +1214,12 @@ static void clear_cal_state(struct bcmpmu_em *pem)
 	pem->cutoff_delta = 0;
 	pem->capacity_cutoff = -1;
 
+	for (i = 0; i < ARRAY_SIZE(eoc_cal_map); i++)
+		eoc_cal_map[i].state = 0;
+	pem->eoc_count = 0;
+	pem->high_cal_factor = 0;
+	pem->low_cal_factor = 0;
+	pem->eoc_factor = 0;
 }
 
 static int pre_cutoff_check(struct bcmpmu_em *pem)
@@ -1271,6 +1347,11 @@ static int update_batt_capacity(struct bcmpmu_em *pem, int *cap)
 			factor = pem->high_cal_factor;
 		else
 			factor = pem->low_cal_factor;
+
+		if (pem->charge_state == CHRG_STATE_CHRG)
+			factor = pem->eoc_factor;
+			pr_em(FLOW, "%s, eoc_factor=%d\n",
+			__func__, pem->eoc_factor);
 
 		fg_result_adjusted = fg_result - (fg_result * factor / 100);
 		pem->fg_capacity += fg_result_adjusted;
@@ -2037,9 +2118,6 @@ static int em_event_handler(struct notifier_block *nb,
 			pem->fg_lowbatt_cal = 1;
 		pem->force_update = 1;
 		pem->transition = 1;
-		pem->eoc_count = 0;
-		pem->high_cal_factor = 0;
-		pem->low_cal_factor = 0;
 		clear_cal_state(pem);
 		pr_em(FLOW, "%s, chrgr type=%d\n", __func__, pem->chrgr_type);
 		break;
@@ -2099,7 +2177,7 @@ static int em_event_handler(struct notifier_block *nb,
 
 		} else
 			pr_em(ERROR, "%s, no data avail.\n", __func__);
-		pem->eoc_count = 0;
+		clear_cal_state(pem);
 		pr_em(FLOW, "%s, chrg sts event, data=%d, state=%d\n",
 			__func__, data, pem->charge_state);
 		break;
@@ -2195,6 +2273,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 		pem->cutoff_count_max = pdata->cutoff_count_max;
 	else
 		pem->cutoff_count_max = 3;
+	pem->eoc_factor_max = 50;
 
 	if (pdata->support_chrg_maint)
 		pem->support_chrg_maint = pdata->support_chrg_maint;
