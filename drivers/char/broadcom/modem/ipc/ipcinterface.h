@@ -588,7 +588,7 @@ IPC_Boolean IPC_BufferUserParameterSet(IPC_Buffer Buffer,
 
 /****************************************/
 /* not used, use deep sleep API instead */
-void IPC_ApSleepModeSet(IPC_Boolean Setting);
+void IPC_ApSleepModeSet(IPC_Boolean inSleep);
 
 /****************************************/
 IPC_Boolean IPC_ApSleepModeGet(void);
@@ -622,8 +622,11 @@ void IPC_Dump(void);
 
 /****************************************/
 #ifdef UNDER_LINUX
-	int IPC_DumpStatus(char *buf);
+	int IPC_DumpStatus(char *buf, IPC_U32 bufSize);
 #endif
+
+/****************************************/
+void IPC_UpdateIrqStats(void);
 
 /*============================================================*/
 
@@ -639,7 +642,7 @@ void IPC_Dump(void);
 * Mainly 64K of GPS LTO data + 8K General GPS Data + a bit
 * a room for otehr small persistent data
 ****************************************/
-#define IPC_PERSISTENT_DATA_SIZE (0x4000 + 0x800 + 256)
+#define IPC_PERSISTENT_DATA_SIZE (0x4000 + 0x800)
 
 /****************************************/
 typedef struct IPC_PersistentDataStore_s {

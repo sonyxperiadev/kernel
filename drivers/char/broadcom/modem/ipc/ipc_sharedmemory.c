@@ -22,9 +22,12 @@
 #include <linux/broadcom/csl_types.h>
 #include <linux/broadcom/ipcproperties.h>
 #include <linux/printk.h>
+#include <linux/slab.h>
+#include "ipc_stubs.h"
 #else
 #include "mobcom_types.h"
 #include "ipcproperties.h"
+#include "timer.h"
 #endif /* UNDER_LINUX */
 
 #include "ipc_buffer.h"
@@ -99,11 +102,20 @@ volatile IPC_SmControl SmView;
 *===========================================================*/
 
 /**************************************************/
-#define RAISE_INTERRUPT	\
-	do {	\
-		(*SmLocalControl.RaiseInterrupt)();	\
-		SmLocalControl.SmControl->Interrupts[IPC_CPU_ID_INDEX(IPC_SM_CURRENT_CPU)].InterruptRaised++;	\
-	} while (0)
+#define RAISE_INTERRUPT IPC_RaiseInterrupt()
+
+static void IPC_RaiseInterrupt(void)
+{
+	IPC_U32 Cpu = IPC_CPU_ID_INDEX(IPC_SM_CURRENT_CPU);
+	IPC_U32	IrqRaised = SmLocalControl.SmControl->IrqCounts[Cpu].IrqRaised; 
+
+	SmLocalControl.SmControl->IrqTime[Cpu][IrqRaised % 4].IrqRaiseTime
+		 = TIMER_GetValue();
+	SmLocalControl.SmControl->IrqCounts[Cpu].IrqRaised++; 
+
+	(*SmLocalControl.RaiseInterrupt)();
+}
+
 
 /**************************************************/
 void IPC_SmFifoWrite(IPC_Fifo Fifo, IPC_Buffer Message)
@@ -456,9 +468,6 @@ void IPC_ProcessEvents(void)
 	IPC_TRACE(IPC_Channel_Hisr, "IPC_ProcessEvents", "CPU %02X", Cpu, 0, 0,
 		  0);
 
-	SmLocalControl.SmControl->Interrupts[IPC_CPU_ID_INDEX(Cpu)].
-	    InterruptHandled++;
-
 	if (!SmLocalControl.ConfiguredReported) {
 
 		if ((SmLocalControl.SmControl->
@@ -680,11 +689,13 @@ void IPC_Initialise(void *Sm_BaseAddress,
 
 	SmControl->Version[CpuIndex] = IPC_Version;
 
-	SmControl->Interrupts[CpuIndex].InterruptRaised = 0;
-	SmControl->Interrupts[CpuIndex].InterruptHandled = 0;
+	SmControl->IrqCounts[CpuIndex].IrqRaised = 0;
+	SmControl->IrqCounts[CpuIndex].IrqHandled = 0;
 
 	SmControl->Initialised[CpuIndex] = IPC_SmInitialised;
 
+	// align IPC timestamp with CPU clock
+	IPC_AlignTime();
 }
 
 #ifdef UNDER_LINUX
@@ -761,12 +772,29 @@ void IPC_Configured(void)
 *===========================================================*/
 
 /**************************************************/
-void IPC_ApSleepModeSet(IPC_Boolean Setting)
+void IPC_ApSleepModeSet(IPC_Boolean inSleep)
 {
-	IPC_TRACE(IPC_Channel_Error, "IPC_ApSleepModeSet",
-		  "DONOT USE THIS FUNCTION, USE DEEPSLEEP API INSTEAD", 0, 0, 0,
-		  0);
+	static IPC_U32	sleepCount = 0; 
+	static IPC_U32	resumeCount = 0; 
+
+	if (!inSleep)
+	{
+		IPC_AlignTime();
+		SmLocalControl.SmControl->ApSleepTime[resumeCount % 4].ResumeTime 
+			= TIMER_GetValue();
+		resumeCount ++;
+	}
+	else
+	{
+		SmLocalControl.SmControl->ApSleepTime[sleepCount % 4].SleepTime 
+			= TIMER_GetValue();
+		sleepCount ++;
+	}
+	IPC_TRACE(IPC_Channel_General, "IPC_ApSleepModeSet",
+		"state %d time %u", 
+		inSleep, TIMER_GetValue(), 0, 0);
 }
+
 
 /**************************************************/
 IPC_Boolean IPC_ApSleepModeGet(void)
@@ -847,210 +875,198 @@ extern char *GetFuncNameByAddr(IPC_U32, IPC_U32, IPC_U32 *);
 void IPC_Dump(void)
 {
 	IPC_SmControl SmControl = SmLocalControl.SmControl;
-	//IPC_U32 EpIndex;
-	IPC_U32 CpuIndex;
+	unsigned char *buf;
 
-	IPC_TRACE(IPC_Channel_General, "\n===== IPC Dump =====\n", "", 0, 0, 0,
-		  0);
-
-	CpuIndex = IPC_CPU_ID_INDEX(IPC_AP_CPU);
-	IPC_TRACE(IPC_Channel_General, "IPC_AP_Dump",
-		  "CpuId %d, Init %08X, Alloc %d, Buffers %d",
-		  IPC_AP_CPU,
-		  SmControl->Initialised[CpuIndex],
-		  SmControl->Allocated[CpuIndex],
-		  SmControl->CurrentBuffers[CpuIndex]);
-	IPC_TRACE(IPC_Channel_General, "           ",
-		  "Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d;",
-		  SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
-		  SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
-		  SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
-		  SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
-
-	IPC_TRACE(IPC_Channel_General, "           ",
-		  "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d",
-		  SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
-		  SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
-		  SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
-		  SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
-
-	IPC_TRACE(IPC_Channel_General, "           ",
-		  "Version %08X, InterruptRaised %d, InterruptHandled %d",
-		  SmControl->Version[CpuIndex],
-		  SmControl->Interrupts[CpuIndex].InterruptRaised,
-		  SmControl->Interrupts[CpuIndex].InterruptHandled, 0);
-
-	CpuIndex = IPC_CPU_ID_INDEX(IPC_CP_CPU);
-	IPC_TRACE(IPC_Channel_General, "IPC_CP_Dump",
-		  "CpuId %d, Init %08X, Alloc %d, Buffers %d",
-		  IPC_CP_CPU,
-		  SmControl->Initialised[CpuIndex],
-		  SmControl->Allocated[CpuIndex],
-		  SmControl->CurrentBuffers[CpuIndex]);
-	IPC_TRACE(IPC_Channel_General, "           ",
-		  "Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d",
-		  SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
-		  SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
-		  SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
-		  SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
-
-	IPC_TRACE(IPC_Channel_General, "           ",
-		  "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d",
-		  SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
-		  SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
-		  SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
-		  SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
-
-	IPC_TRACE(IPC_Channel_General, "           ",
-		  "Version %08X, InterruptRaised %d, InterruptHandled %d",
-		  SmControl->Version[CpuIndex],
-		  SmControl->Interrupts[CpuIndex].InterruptRaised,
-		  SmControl->Interrupts[CpuIndex].InterruptHandled, 0);
-
-#if 0
-	for (EpIndex = IPC_EP_None + 1; EpIndex < IPC_EndpointId_Count;
-	     EpIndex++) {
-		IPC_Endpoint EpPtr =
-		    &SmLocalControl.SmControl->Endpoints[EpIndex];
-
-		EpPtr = EpPtr;	/* Compiler warning */
-
-		IPC_TRACE(IPC_Channel_General, "IPC_Ep_Dump",
-			  "Ep Name %-12.12s, Id %d, CPU %s, HeaderSize %d",
-			  (IPC_U32) IPC_GetEndPointName(EpIndex),
-			  EpIndex,
-			  (IPC_U32) IPC_GetCpuName(EpPtr->Cpu),
-			  EpPtr->MaxHeaderSize);
-
-#if defined(FUSE_COMMS_PROCESSOR)
-		if (EpPtr->DeliveryFunction && EpPtr->Cpu == IPC_CP_CPU) {
-			IPC_TRACE(IPC_Channel_General, "           ",
-				  "DeliveryFunction %08X %s",
-				  (IPC_U32) EpPtr->DeliveryFunction,
-				  (IPC_U32) GetFuncNameByAddr((IPC_U32) EpPtr->
-							      DeliveryFunction,
-							      0x4000, NULL), 0,
-				  0);
-		} else {
-			IPC_TRACE(IPC_Channel_General, "           ",
-				  "DeliveryFunction %08X",
-				  (IPC_U32) EpPtr->DeliveryFunction, 0, 0, 0);
-		}
-		if (EpPtr->FlowControlFunction && EpPtr->Cpu == IPC_CP_CPU) {
-			IPC_TRACE(IPC_Channel_General, "           ",
-				  "FlowControlFunction %08X %s",
-				  (IPC_U32) EpPtr->FlowControlFunction,
-				  (IPC_U32) GetFuncNameByAddr((IPC_U32) EpPtr->
-							      FlowControlFunction,
-							      0x4000, NULL), 0,
-				  0);
-		} else {
-			IPC_TRACE(IPC_Channel_General, "           ",
-				  "FlowControlFunction %08X",
-				  (IPC_U32) EpPtr->FlowControlFunction,
-				  0, 0, 0);
-		}
-#elif defined(FUSE_APPS_PROCESSOR) && !defined(UNDER_CE) && !defined(UNDER_LINUX)
-		if (EpPtr->DeliveryFunction && EpPtr->Cpu == IPC_AP_CPU) {
-			IPC_TRACE(IPC_Channel_General, "           ",
-				  "DeliveryFunction %08X %s",
-				  (IPC_U32) EpPtr->DeliveryFunction,
-				  (IPC_U32) GetFuncNameByAddr((IPC_U32) EpPtr->
-							      DeliveryFunction,
-							      0x4000, NULL), 0,
-				  0);
-		} else {
-			IPC_TRACE(IPC_Channel_General, "           ",
-				  "DeliveryFunction %08X",
-				  (IPC_U32) EpPtr->DeliveryFunction, 0, 0, 0);
-		}
-		if (EpPtr->FlowControlFunction && EpPtr->Cpu == IPC_AP_CPU) {
-			IPC_TRACE(IPC_Channel_General, "           ",
-				  "FlowControlFunction %08X %s",
-				  (IPC_U32) EpPtr->FlowControlFunction,
-				  (IPC_U32) GetFuncNameByAddr((IPC_U32) EpPtr->
-							      FlowControlFunction,
-							      0x4000, NULL), 0,
-				  0);
-		} else {
-			IPC_TRACE(IPC_Channel_General, "           ",
-				  "FlowControlFunction %08X",
-				  (IPC_U32) EpPtr->FlowControlFunction,
-				  0, 0, 0);
-		}
-#else
-		IPC_TRACE(IPC_Channel_General, "           ",
-			  "DeliveryFunction %08X, FcFunction %08X",
-			  (IPC_U32) EpPtr->DeliveryFunction,
-			  (IPC_U32) EpPtr->FlowControlFunction, 0, 0);
-#endif
-
+	buf = (unsigned char *)kmalloc(1024, GFP_ATOMIC);
+	if (buf)
+	{
+		int len;
+		memset(buf, 0, 1024);
+		len = IPC_DumpStatus(buf, 1024);
+		if (len > 0)
+			printk(buf);
+		kfree(buf);
 	}
-#endif
-
+	else
+	{
+		printk("IPC_Dump: fail to alloc log buffer\n");
+	}
+	
 	IPC_PoolDumpAll(SmControl->FirstPool);
 }
 
-int IPC_DumpStatus(char *buf)
+
+#define IPC_SNPRINTF(buf, size, offset, format, ...)	\
+		if (size > offset)	\
+		{	\
+ 			int n = snprintf(buf + offset, size - offset, format, ## __VA_ARGS__);	\
+			if (n > -1 && n < size - offset)	\
+				offset += n;	\
+			else	\
+				return offset;	\
+		}
+
+int IPC_DumpStatus(char *buf, IPC_U32 bufSize)
 {
-	char *p = buf;
+	IPC_U32 bufOffset = 0;
+	IPC_U32 IrqHandledId, IrqRaisedId; 
 
 	IPC_SmControl SmControl = SmLocalControl.SmControl;
 	IPC_U32 CpuIndex;
 
-	p += sprintf(p, "\n===== IPC Dump =====\n");
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+			"\n===== IPC Dump =====\n");
 
 	CpuIndex = IPC_CPU_ID_INDEX(IPC_AP_CPU);
-	p += sprintf(p,
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
 		     "IPC_AP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d\n",
-		     IPC_AP_CPU, SmControl->Initialised[CpuIndex],
+		     IPC_AP_CPU, 
+		     SmControl->Initialised[CpuIndex],
 		     SmControl->Allocated[CpuIndex],
 		     SmControl->CurrentBuffers[CpuIndex]);
 
-	p += sprintf(p, "Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d;",
-		     SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
-		     SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
-		     SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
-		     SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+			"Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d\n",
+			SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
+			SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
+			SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
+			SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
 
-	p += sprintf(p,
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
 		     "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d\n",
 		     SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
 		     SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
 		     SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
 		     SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
 
-	p += sprintf(p,
-		     "Version %08X, InterruptRaised %d, InterruptHandled %d\n",
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+		     "Version %08X, IrqRaised %d, IrqHandled %d\n",
 		     SmControl->Version[CpuIndex],
-		     SmControl->Interrupts[CpuIndex].InterruptRaised,
-		     SmControl->Interrupts[CpuIndex].InterruptHandled);
+		     SmControl->IrqCounts[CpuIndex].IrqRaised,
+		     SmControl->IrqCounts[CpuIndex].IrqHandled);
+
+	// print the interrupt raise time of the last 4 AP->CP interrupts
+	IrqRaisedId = SmLocalControl.SmControl->IrqCounts[CpuIndex].IrqRaised;
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+		  "IrqRaiseTime %u %u %u %u \n",
+		  SmControl->IrqTime[CpuIndex][IrqRaisedId % 4].IrqRaiseTime,
+		  SmControl->IrqTime[CpuIndex][(IrqRaisedId + 1) % 4].IrqRaiseTime,
+		  SmControl->IrqTime[CpuIndex][(IrqRaisedId + 2) % 4].IrqRaiseTime,
+		  SmControl->IrqTime[CpuIndex][(IrqRaisedId + 3) % 4].IrqRaiseTime);
+
+	// print the interrupt raise and handle time of the last 4 CP->AP interrupts 
+	// that are handled by AP
+	// We can detect interrupt loss from these info
+	IrqHandledId = SmLocalControl.SmControl->IrqCounts[CpuIndex].IrqHandled;
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+		  "CP IrqRaiseTime %u %u %u %u \n",
+		  SmControl->IrqTime[CpuIndex][IrqHandledId % 4].IrqRaiseTimeCopy,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 1) % 4].IrqRaiseTimeCopy,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 2) % 4].IrqRaiseTimeCopy,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 3) % 4].IrqRaiseTimeCopy);
+
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+		  "IrqHandleTime %u %u %u %u \n",
+		  SmControl->IrqTime[CpuIndex][IrqHandledId % 4].IrqHandleTime,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 1) % 4].IrqHandleTime,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 2) % 4].IrqHandleTime,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 3) % 4].IrqHandleTime);
+
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+		  "SleepTime %u %u %u %u \n",
+		  SmControl->ApSleepTime[0].SleepTime,
+		  SmControl->ApSleepTime[1].SleepTime,
+		  SmControl->ApSleepTime[2].SleepTime,
+		  SmControl->ApSleepTime[3].SleepTime);
+
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+		  "ResumeTime %u %u %u %u \n",
+		  SmControl->ApSleepTime[0].ResumeTime,
+		  SmControl->ApSleepTime[1].ResumeTime,
+		  SmControl->ApSleepTime[2].ResumeTime,
+		  SmControl->ApSleepTime[3].ResumeTime);
 
 	CpuIndex = IPC_CPU_ID_INDEX(IPC_CP_CPU);
-	p += sprintf(p,
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
 		     "IPC_CP_Dump : CpuId %d, Init %08X, Alloc %d, Buffers %d\n",
-		     IPC_CP_CPU, SmControl->Initialised[CpuIndex],
+		     IPC_CP_CPU,
+		     SmControl->Initialised[CpuIndex],
 		     SmControl->Allocated[CpuIndex],
 		     SmControl->CurrentBuffers[CpuIndex]);
 
-	p += sprintf(p, "Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d\n",
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+			"Send: RdIx %d, WrIx %d; Free: RdIx %d, WrIx %d\n",
 		     SmControl->Fifos[CpuIndex].SendFifo.ReadIndex,
 		     SmControl->Fifos[CpuIndex].SendFifo.WriteIndex,
 		     SmControl->Fifos[CpuIndex].FreeFifo.ReadIndex,
 		     SmControl->Fifos[CpuIndex].FreeFifo.WriteIndex);
 
-	p += sprintf(p,
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
 		     "Send: WaterMark %d, Free: WaterMark %d; Send: WriteCount %d, Free: WriteCount %d\n",
 		     SmControl->Fifos[CpuIndex].SendFifo.HighWaterMark,
 		     SmControl->Fifos[CpuIndex].FreeFifo.HighWaterMark,
 		     SmControl->Fifos[CpuIndex].SendFifo.WriteCount,
 		     SmControl->Fifos[CpuIndex].FreeFifo.WriteCount);
 
-	p += sprintf(p,
-		     "Version %08X, InterruptRaised %d, InterruptHandled %d\n",
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+		     "Version %08X, IrqRaised %d, IrqHandled %d\n",
 		     SmControl->Version[CpuIndex],
-		     SmControl->Interrupts[CpuIndex].InterruptRaised,
-		     SmControl->Interrupts[CpuIndex].InterruptHandled);
+		     SmControl->IrqCounts[CpuIndex].IrqRaised,
+		     SmControl->IrqCounts[CpuIndex].IrqHandled);
 
-	return p - buf;
+	// print the interrupt raise time of the last 4 CP->AP interrupts
+	IrqRaisedId = SmLocalControl.SmControl->IrqCounts[CpuIndex].IrqRaised;
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+		  "IrqRaiseTime %u %u %u %u \n",
+		  SmControl->IrqTime[CpuIndex][IrqRaisedId % 4].IrqRaiseTime,
+		  SmControl->IrqTime[CpuIndex][(IrqRaisedId + 1) % 4].IrqRaiseTime,
+		  SmControl->IrqTime[CpuIndex][(IrqRaisedId + 2) % 4].IrqRaiseTime,
+		  SmControl->IrqTime[CpuIndex][(IrqRaisedId + 3) % 4].IrqRaiseTime);
+
+	// print the interrupt raise and handle time of the last 4 AP->CP interrupts 
+	// that are handled by CP
+	// We can detect interrupt loss from these info
+	IrqHandledId = SmLocalControl.SmControl->IrqCounts[CpuIndex].IrqHandled;
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+		  "AP IrqRaiseTime %u %u %u %u \n",
+		  SmControl->IrqTime[CpuIndex][IrqHandledId % 4].IrqRaiseTimeCopy,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 1) % 4].IrqRaiseTimeCopy,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 2) % 4].IrqRaiseTimeCopy,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 3) % 4].IrqRaiseTimeCopy);
+
+	IPC_SNPRINTF(buf, bufSize, bufOffset, 
+		  "IrqHandleTime %u %u %u %u \n",
+		  SmControl->IrqTime[CpuIndex][IrqHandledId % 4].IrqHandleTime,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 1) % 4].IrqHandleTime,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 2) % 4].IrqHandleTime,
+		  SmControl->IrqTime[CpuIndex][(IrqHandledId + 3) % 4].IrqHandleTime);
+
+	return bufOffset;
 }
+
+
+void IPC_UpdateIrqStats(void)
+{
+	IPC_U32 Cpu, PeerCpu;
+	IPC_U32	IrqHandled, PeerIrqRaised; 
+	
+	Cpu = IPC_CPU_ID_INDEX(IPC_SM_CURRENT_CPU);
+	if (IPC_SM_CURRENT_CPU == IPC_AP_CPU) {
+		PeerCpu = IPC_CPU_ID_INDEX(IPC_CP_CPU);
+	} else {
+		PeerCpu = IPC_CPU_ID_INDEX(IPC_AP_CPU);
+	}
+
+	IrqHandled = SmLocalControl.SmControl->IrqCounts[Cpu].IrqHandled; 
+	PeerIrqRaised = SmLocalControl.SmControl->IrqCounts[PeerCpu].IrqRaised; 
+
+	SmLocalControl.SmControl->IrqTime[Cpu][IrqHandled % 4].IrqHandleTime
+		= TIMER_GetValue();
+
+	// save a copy of IRQ raise time to compare with IRQ handle time 
+	SmLocalControl.SmControl->IrqTime[Cpu][IrqHandled % 4].IrqRaiseTimeCopy
+		= SmLocalControl.SmControl->IrqTime[PeerCpu][(PeerIrqRaised + 3) % 4].IrqRaiseTime;
+
+	SmLocalControl.SmControl->IrqCounts[Cpu].IrqHandled++;
+}
+
