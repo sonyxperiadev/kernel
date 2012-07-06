@@ -1,13 +1,14 @@
 /*
 * Customer code to add GPIO control during WLAN start/stop
 * Copyright (C) 1999-2011, Broadcom Corporation
-* 
+* Copyright (C) 2012 Sony Mobile Communications AB.
+*
 *         Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2 (the "GPL"),
 * available at http://www.broadcom.com/licenses/GPLv2.php, with the
 * following added to such license:
-* 
+*
 *      As a special exception, the copyright holders of this software give you
 * permission to link this software with independent modules, and to copy and
 * distribute the resulting executable under terms of your choice, provided that
@@ -15,12 +16,17 @@
 * the license of that module.  An independent module is a module which is not
 * derived from this software.  The special exception does not apply to any
 * modifications of the software.
-* 
+*
 *      Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *
-* $Id: dhd_custom_gpio.c,v 1.2.42.1 2010-10-19 00:41:09 Exp $
+* $Id: dhd_custom_gpio.c 275786 2011-08-04 22:42:42Z $
+*
+* NOTE: This file has been modified by Sony Mobile Communications AB.
+* Modifications are licensed under the Sony Mobile Communications AB.
+* End User License Agreement ("EULA"). Any use of the modifications is subject
+* to the terms of the EULA.
 */
 
 #include <typedefs.h>
@@ -33,27 +39,23 @@
 
 #include <wlioctl.h>
 #include <wl_iw.h>
+#include <wl_android.h>
+
+#include <asm/gpio.h>
 
 #define WL_ERROR(x) printf x
 #define WL_TRACE(x)
 
+#ifdef GET_CUSTOM_MAC_ENABLE
+#define MAC_LEN 6
+#define MACADDR_BUF_LEN            64
+#define MACADDR_PATH "/data/etc/wifi/fw"
+#endif /* GET_CUSTOM_MAC_ENABLE */
+
 #ifdef CUSTOMER_HW
-extern  void bcm_wlan_power_off(int);
-extern  void bcm_wlan_power_on(int);
-#endif /* CUSTOMER_HW */
-#if defined(CUSTOMER_HW2)
-#ifdef CONFIG_WIFI_CONTROL_FUNC
-int wifi_set_power(int on, unsigned long msec);
-int wifi_get_irq_number(unsigned long *irq_flags_ptr);
-int wifi_get_mac_addr(unsigned char *buf);
-void *wifi_get_country_code(char *ccode);
-#else
-int wifi_set_power(int on, unsigned long msec) { return -1; }
-int wifi_get_irq_number(unsigned long *irq_flags_ptr) { return -1; }
-int wifi_get_mac_addr(unsigned char *buf) { return -1; }
-void *wifi_get_country_code(char *ccode) { return NULL; }
-#endif /* CONFIG_WIFI_CONTROL_FUNC */
-#endif /* CUSTOMER_HW2 */
+#define WL_RST_N (130)
+int wifi_set_carddetect(int on);
+#endif
 
 #if defined(OOB_INTR_ONLY)
 
@@ -86,15 +88,11 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 {
 	int  host_oob_irq = 0;
 
-#ifdef CUSTOMER_HW2
-	host_oob_irq = wifi_get_irq_number(irq_flags_ptr);
-
-#else
 #if defined(CUSTOM_OOB_GPIO_NUM)
 	if (dhd_oob_gpio_num < 0) {
 		dhd_oob_gpio_num = CUSTOM_OOB_GPIO_NUM;
 	}
-#endif /* CUSTOMER_HW2 */
+#endif
 
 	if (dhd_oob_gpio_num < 0) {
 		WL_ERROR(("%s: ERROR customer specific Host GPIO is NOT defined \n",
@@ -106,13 +104,10 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 	         __FUNCTION__, dhd_oob_gpio_num));
 
 #if defined CUSTOMER_HW
+	gpio_request(dhd_oob_gpio_num, "WL_HOST_WAKEUP");
 	host_oob_irq = MSM_GPIO_TO_INT(dhd_oob_gpio_num);
-#elif defined CUSTOMER_HW3
-	gpio_request(dhd_oob_gpio_num, "oob irq");
-	host_oob_irq = gpio_to_irq(dhd_oob_gpio_num);
 	gpio_direction_input(dhd_oob_gpio_num);
 #endif /* CUSTOMER_HW */
-#endif /* CUSTOMER_HW2 */
 
 	return (host_oob_irq);
 }
@@ -124,34 +119,28 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 {
 	switch (onoff) {
 		case WLAN_RESET_OFF:
-			WL_TRACE(("%s: call customer specific GPIO to insert WLAN RESET\n",
+			WL_TRACE(("%s: call customer specific GPIO to insert WLAN RESET_OFF\n",
 				__FUNCTION__));
 #ifdef CUSTOMER_HW
-			bcm_wlan_power_off(2);
+			gpio_set_value(WL_RST_N, 0);
 #endif /* CUSTOMER_HW */
-#ifdef CUSTOMER_HW2
-			wifi_set_power(0, 0);
-#endif
-			WL_ERROR(("=========== WLAN placed in RESET ========\n"));
+			WL_TRACE(("=========== WLAN placed in RESET ========\n"));
 		break;
 
 		case WLAN_RESET_ON:
-			WL_TRACE(("%s: callc customer specific GPIO to remove WLAN RESET\n",
+			WL_TRACE(("%s: callc customer specific GPIO to remove WLAN RESET_ON\n",
 				__FUNCTION__));
 #ifdef CUSTOMER_HW
-			bcm_wlan_power_on(2);
+			gpio_set_value(WL_RST_N, 1);
 #endif /* CUSTOMER_HW */
-#ifdef CUSTOMER_HW2
-			wifi_set_power(1, 0);
-#endif
-			WL_ERROR(("=========== WLAN going back to live  ========\n"));
+			WL_TRACE(("=========== WLAN going back to live  ========\n"));
 		break;
 
 		case WLAN_POWER_OFF:
-			WL_TRACE(("%s: call customer specific GPIO to turn off WL_REG_ON\n",
+			WL_TRACE(("%s: call customer specific GPIO to turn off WL_REG_OFF\n",
 				__FUNCTION__));
 #ifdef CUSTOMER_HW
-			bcm_wlan_power_off(1);
+			gpio_set_value(WL_RST_N, 0);
 #endif /* CUSTOMER_HW */
 		break;
 
@@ -159,12 +148,14 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 			WL_TRACE(("%s: call customer specific GPIO to turn on WL_REG_ON\n",
 				__FUNCTION__));
 #ifdef CUSTOMER_HW
-			bcm_wlan_power_on(1);
-			/* Lets customer power to get stable */
-			OSL_DELAY(200);
+			gpio_set_value(WL_RST_N, 1);
 #endif /* CUSTOMER_HW */
 		break;
 	}
+
+	/* Lets customer power to get stable */
+	OSL_DELAY(200);
+
 }
 
 #ifdef GET_CUSTOM_MAC_ENABLE
@@ -173,25 +164,111 @@ int
 dhd_custom_get_mac_address(unsigned char *buf)
 {
 	int ret = 0;
+	int length;
+	mm_segment_t oldfs;
+	struct file *filp;
+	struct inode *inode = NULL;
+	unsigned char macaddr_buf[MACADDR_BUF_LEN];
 
 	WL_TRACE(("%s Enter\n", __FUNCTION__));
 	if (!buf)
 		return -EINVAL;
 
-	/* Customer access to MAC address stored outside of DHD driver */
-#if defined(CUSTOMER_HW2) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
-	ret = wifi_get_mac_addr(buf);
-#endif
+	oldfs = get_fs();
+	set_fs(KERNEL_DS);
 
-#ifdef EXAMPLE_GET_MAC
-	/* EXAMPLE code */
-	{
-		struct ether_addr ea_example = {{0x00, 0x11, 0x22, 0x33, 0x44, 0xFF}};
-		bcopy((char *)&ea_example, buf, sizeof(struct ether_addr));
+	filp = filp_open(MACADDR_PATH, O_RDONLY, S_IRUSR);
+	if (IS_ERR(filp)) {
+		WL_ERROR(("%s: file filp_open error\n", __FUNCTION__));
+		set_fs(oldfs);
+		return -1;
 	}
-#endif /* EXAMPLE_GET_MAC */
+	if (!filp->f_op) {
+		WL_ERROR(("%s: File Operation Method Error\n", __FUNCTION__));
+		filp_close(filp, NULL);
+		set_fs(oldfs);
+		return -1;
+	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
+	inode = filp->f_path.dentry->d_inode;
+#else
+	inode = filp->f_dentry->d_inode;
+#endif
+	if (!inode) {
+		WL_ERROR(("%s: Get inode from filp failed\n", __FUNCTION__));
+		filp_close(filp, NULL);
+		set_fs(oldfs);
+		return -1;
+	}
+
+	/* check file size */
+	length = i_size_read(inode->i_mapping->host);
+	if (length+1 > MACADDR_BUF_LEN) {
+		WL_ERROR(("%s: MAC file's size is not as expected\n", __FUNCTION__));
+		filp_close(filp, NULL);
+		set_fs(oldfs);
+		return -1;
+	}
+
+	/* read mac address */
+	if (filp->f_op->read(filp, macaddr_buf, length, &filp->f_pos) != length) {
+		WL_ERROR(("%s: file read error\n", __FUNCTION__));
+		filp_close(filp, NULL);
+		set_fs(oldfs);
+		return -1;
+	}
+	macaddr_buf[length] = '\0';
+
+	/* read mac address success */
+	filp_close(filp, NULL);
+	set_fs(oldfs);
+
+	/* convert mac address */
+	if (!dhd_ether_aton(macaddr_buf, length, buf)) {
+		WL_ERROR(("%s: convert mac value fail\n", __FUNCTION__));
+		return -1;
+	}
 
 	return ret;
+}
+
+int
+dhd_ether_aton(const char *orig, size_t len, unsigned char *eth)
+{
+	const char *bufp;
+	int i;
+
+	i = 0;
+	for(bufp = orig; bufp!=orig+len && *bufp; ++bufp) {
+		unsigned int val;
+		unsigned char c = *bufp++;
+
+		if (c >= '0' && c <= '9') val = c - '0';
+		else if (c >= 'a' && c <= 'f') val = c - 'a' + 10;
+		else if (c >= 'A' && c <= 'F') val = c - 'A' + 10;
+		else {
+			WL_ERROR(("%s: MAC value is invalid\n", __FUNCTION__));
+			break;
+		}
+
+		val <<= 4;
+		c = *bufp++;
+		if (c >= '0' && c <= '9') val |= c - '0';
+		else if (c >= 'a' && c <= 'f') val |= c - 'a' + 10;
+		else if (c >= 'A' && c <= 'F') val |= c - 'A' + 10;
+		else {
+			WL_ERROR(("%s: MAC value is invalid\n", __FUNCTION__));
+			break;
+		}
+
+		eth[i] = (unsigned char) (val & 0377);
+		if(++i == MAC_LEN) {
+			return 1;
+		}
+		if (*bufp != ':')
+			break;
+	}
+	return 0;
 }
 #endif /* GET_CUSTOM_MAC_ENABLE */
 
@@ -289,5 +366,5 @@ void get_customized_country_code(char *country_iso_code, wl_country_t *cspec)
 	cspec->rev = translate_custom_table[0].custom_locale_rev;
 #endif /* EXMAPLE_TABLE */
 	return;
-#endif /* defined(CUSTOMER_HW2) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)) */
+#endif /* defined(CUSTOMER_HW2) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)) */
 }

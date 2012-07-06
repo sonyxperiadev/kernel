@@ -3,13 +3,13 @@
  * of the SiliconBackplane-based Broadcom chips.
  *
  * Copyright (C) 1999-2011, Broadcom Corporation
- * 
+ *
  *         Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -17,12 +17,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: aiutils.c,v 1.26.2.1 2010-03-09 18:41:21 Exp $
+ * $Id: aiutils.c 275693 2011-08-04 19:59:34Z $
  */
 
 
@@ -85,7 +85,7 @@ get_asd(si_t *sih, uint32 **eromptr, uint sp, uint ad, uint st, uint32 *addrl, u
 	if (((asd & ER_TAG1) != ER_ADD) ||
 	    (((asd & AD_SP_MASK) >> AD_SP_SHIFT) != sp) ||
 	    ((asd & AD_ST_MASK) != st)) {
-		
+
 		(*eromptr)--;
 		return 0;
 	}
@@ -131,10 +131,10 @@ ai_scan(si_t *sih, void *regs, uint devid)
 		break;
 
 	case PCI_BUS:
-		
+
 		sii->curwrap = (void *)((uintptr)regs + SI_CORE_SIZE);
 
-		
+
 		OSL_PCI_WRITE_CONFIG(sii->osh, PCI_BAR0_WIN, 4, erombase);
 		eromptr = regs;
 		break;
@@ -163,7 +163,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 
 		br = FALSE;
 
-		
+
 		cia = get_erom_ent(sih, &eromptr, ER_TAG, ER_CI);
 		if (cia == (ER_END | ER_VALID)) {
 			SI_VMSG(("Found END of erom after %d cores\n", sii->numcores));
@@ -193,7 +193,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 		if (((mfg == MFGID_ARM) && (cid == DEF_AI_COMP)) || (nsp == 0))
 			continue;
 		if ((nmw + nsw == 0)) {
-			
+
 			if (cid == OOB_ROUTER_CORE_ID) {
 				asd = get_asd(sih, &eromptr, 0, 0, AD_ST_SLAVE,
 					&addrl, &addrh, &sizel, &sizeh);
@@ -221,10 +221,10 @@ ai_scan(si_t *sih, void *regs, uint devid)
 			         (mpd & MPD_MUI_MASK) >> MPD_MUI_SHIFT));
 		}
 
-		
+
 		asd = get_asd(sih, &eromptr, 0, 0, AD_ST_SLAVE, &addrl, &addrh, &sizel, &sizeh);
 		if (asd == 0) {
-			
+
 			asd = get_asd(sih, &eromptr, 0, 0, AD_ST_BRIDGE, &addrl, &addrh,
 			              &sizel, &sizeh);
 			if (asd != 0)
@@ -238,7 +238,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 		}
 		sii->coresba[idx] = addrl;
 		sii->coresba_size[idx] = sizel;
-		
+
 		j = 1;
 		do {
 			asd = get_asd(sih, &eromptr, 0, j, AD_ST_SLAVE, &addrl, &addrh,
@@ -250,7 +250,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 			j++;
 		} while (asd != 0);
 
-		
+
 		for (i = 1; i < nsp; i++) {
 			j = 0;
 			do {
@@ -263,7 +263,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 			}
 		}
 
-		
+
 		for (i = 0; i < nmw; i++) {
 			asd = get_asd(sih, &eromptr, i, 0, AD_ST_MWRAP, &addrl, &addrh,
 			              &sizel, &sizeh);
@@ -279,7 +279,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 				sii->wrapba[idx] = addrl;
 		}
 
-		
+
 		for (i = 0; i < nsw; i++) {
 			uint fwp = (nsp == 1) ? 0 : 1;
 			asd = get_asd(sih, &eromptr, fwp + i, 0, AD_ST_SWRAP, &addrl, &addrh,
@@ -296,11 +296,11 @@ ai_scan(si_t *sih, void *regs, uint devid)
 				sii->wrapba[idx] = addrl;
 		}
 
-		
+
 		if (br)
 			continue;
 
-		
+
 		sii->numcores++;
 	}
 
@@ -323,12 +323,12 @@ ai_setcoreidx(si_t *sih, uint coreidx)
 	if (coreidx >= sii->numcores)
 		return (NULL);
 
-	
+
 	ASSERT((sii->intrsenabled_fn == NULL) || !(*(sii)->intrsenabled_fn)((sii)->intr_arg));
 
 	switch (BUSTYPE(sih->bustype)) {
 	case SI_BUS:
-		
+
 		if (!sii->regs[coreidx]) {
 			sii->regs[coreidx] = REG_MAP(addr, SI_CORE_SIZE);
 			ASSERT(GOODREGS(sii->regs[coreidx]));
@@ -499,9 +499,9 @@ ai_corereg(si_t *sih, uint coreidx, uint regoff, uint mask, uint val)
 		return 0;
 
 	if (BUSTYPE(sih->bustype) == SI_BUS) {
-		
+
 		fast = TRUE;
-		
+
 		if (!sii->regs[coreidx]) {
 			sii->regs[coreidx] = REG_MAP(sii->coresba[coreidx],
 			                            SI_CORE_SIZE);
@@ -509,15 +509,15 @@ ai_corereg(si_t *sih, uint coreidx, uint regoff, uint mask, uint val)
 		}
 		r = (uint32 *)((uchar *)sii->regs[coreidx] + regoff);
 	} else if (BUSTYPE(sih->bustype) == PCI_BUS) {
-		
+
 
 		if ((sii->coreid[coreidx] == CC_CORE_ID) && SI_FAST(sii)) {
-			
+
 
 			fast = TRUE;
 			r = (uint32 *)((char *)sii->curmap + PCI_16KB0_CCREGS_OFFSET + regoff);
 		} else if (sii->pub.buscoreidx == coreidx) {
-			
+
 			fast = TRUE;
 			if (SI_FAST(sii))
 				r = (uint32 *)((char *)sii->curmap +
@@ -533,25 +533,25 @@ ai_corereg(si_t *sih, uint coreidx, uint regoff, uint mask, uint val)
 	if (!fast) {
 		INTR_OFF(sii, intr_val);
 
-		
+
 		origidx = si_coreidx(&sii->pub);
 
-		
+
 		r = (uint32*) ((uchar*) ai_setcoreidx(&sii->pub, coreidx) + regoff);
 	}
 	ASSERT(r != NULL);
 
-	
+
 	if (mask || val) {
 		w = (R_REG(sii->osh, r) & ~mask) | val;
 		W_REG(sii->osh, r, w);
 	}
 
-	
+
 	w = R_REG(sii->osh, r);
 
 	if (!fast) {
-		
+
 		if (origidx != coreidx)
 			ai_setcoreidx(&sii->pub, origidx);
 
@@ -573,7 +573,7 @@ ai_core_disable(si_t *sih, uint32 bits)
 	ASSERT(GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 
-	
+
 	if (R_REG(sii->osh, &ai->resetctrl) & AIRC_RESET)
 		return;
 
@@ -597,10 +597,10 @@ ai_core_reset(si_t *sih, uint32 bits, uint32 resetbits)
 	ASSERT(GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 
-	
+
 	ai_core_disable(sih, (bits | resetbits));
 
-	
+
 	W_REG(sii->osh, &ai->ioctrl, (bits | SICF_FGC | SICF_CLOCK_EN));
 	dummy = R_REG(sii->osh, &ai->ioctrl);
 	W_REG(sii->osh, &ai->resetctrl, 0);

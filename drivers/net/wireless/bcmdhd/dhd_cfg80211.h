@@ -1,5 +1,5 @@
 /*
- * Performance counters software interface.
+ * Linux cfg80211 driver - Dongle Host Driver (DHD) related
  *
  * Copyright (C) 1999-2011, Broadcom Corporation
  *
@@ -21,16 +21,22 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmperf.h 275703 2011-08-04 20:20:27Z $
+ * $Id: wl_cfg80211.c,v 1.1.4.1.2.14 2011/02/09 01:40:07 Exp $
  */
-/* essai */
-#ifndef _BCMPERF_H_
-#define _BCMPERF_H_
-/* get cache hits and misses */
-#define BCMPERF_ENABLE_INSTRCOUNT()
-#define BCMPERF_ENABLE_ICACHE_MISS()
-#define BCMPERF_ENABLE_ICACHE_HIT()
-#define	BCMPERF_GETICACHE_MISS(x)	((x) = 0)
-#define	BCMPERF_GETICACHE_HIT(x)	((x) = 0)
-#define	BCMPERF_GETINSTRCOUNT(x)	((x) = 0)
-#endif /* _BCMPERF_H_ */
+
+
+#ifndef __DHD_CFG80211__
+#define __DHD_CFG80211__
+
+#include <wl_cfg80211.h>
+#include <wl_cfgp2p.h>
+
+s32 dhd_cfg80211_init(struct wl_priv *wl);
+s32 dhd_cfg80211_deinit(struct wl_priv *wl);
+s32 dhd_cfg80211_down(struct wl_priv *wl);
+s32 dhd_config_dongle(struct wl_priv *wl, bool need_lock);
+
+int wl_cfg80211_btcoex_init(struct wl_priv *wl);
+void wl_cfg80211_btcoex_deinit(struct wl_priv *wl);
+
+#endif /* __DHD_CFG80211__ */

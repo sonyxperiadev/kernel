@@ -2,13 +2,13 @@
  * Byte order utilities
  *
  * Copyright (C) 1999-2011, Broadcom Corporation
- * 
+ *
  *         Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,12 +16,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- *  $Id: bcmendian.h,v 1.36 2009-11-09 05:29:43 Exp $
+ *  $Id: bcmendian.h 275703 2011-08-04 20:20:27Z $
  *
  * This file by default provides proper behavior on little-endian architectures.
  * On big-endian architectures, IL_BIGENDIAN should be defined.
@@ -68,7 +68,7 @@
 #define htol16(i) (i)
 #define HTOL32(i) (i)
 #define htol32(i) (i)
-#endif 
+#endif
 
 #define ltoh16_buf(buf, i)
 #define htol16_buf(buf, i)
@@ -176,7 +176,7 @@
 	_NTOH32_UA(_bytes); \
 })
 
-#else 
+#else
 
 
 static INLINE uint16
@@ -275,5 +275,5 @@ ntoh32_ua(const void *bytes)
 	return _NTOH32_UA((const uint8 *)bytes);
 }
 
-#endif 
-#endif 
+#endif
+#endif

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_linux_mon.c,v 1.131.2.55 2011-02-09 05:31:56 Exp $
+ * $Id: wl_linux_mon.c 299401 2011-11-30 00:33:54Z $
  */
 
 #include <linux/string.h>
@@ -96,16 +96,30 @@ static const struct net_device_ops dhd_mon_if_ops = {
 static struct net_device* lookup_real_netdev(char *name)
 {
 	int i;
+	int len = 0;
 	int last_name_len = 0;
 	struct net_device *ndev;
 	struct net_device *ndev_found = NULL;
 
-	/* We want to find interface "p2p-eth0-0" for monitor interface "mon.p2p-eth0-0", so
-	 * we skip "eth0" even if "mon.p2p-eth0-0" contains "eth0"
+	/* We need to find interface "p2p-p2p-0" corresponding to monitor interface "mon-p2p-0",
+	 * Once mon iface name reaches IFNAMSIZ, it is reset to p2p0-0 and corresponding mon
+	 * iface would be mon-p2p0-0.
 	 */
 	for (i = 0; i < DHD_MAX_IFS; i++) {
 		ndev = dhd_idx2net(g_monitor.dhd_pub, i);
-		if (ndev && strstr(name, ndev->name)) {
+
+		/* Skip "p2p" and look for "-p2p0-x" in monitor interface name. If it
+		 * it matches, then this netdev is the corresponding real_netdev.
+		 */
+		if (ndev && strstr(ndev->name, "p2p-p2p0")) {
+			len = strlen("p2p");
+		} else {
+		/* if p2p- is not present, then the IFNAMSIZ have reached and name
+		 * would have got reset. In this casse,look for p2p0-x in mon-p2p0-x
+		 */
+			len = 0;
+		}
+		if (ndev && strstr(name, (ndev->name + len))) {
 			if (strlen(ndev->name) > last_name_len) {
 				ndev_found = ndev;
 				last_name_len = strlen(ndev->name);
@@ -225,9 +239,10 @@ static void dhd_mon_if_set_multicast_list(struct net_device *ndev)
 	mon_if = ndev_to_monif(ndev);
 	if (mon_if == NULL || mon_if->real_ndev == NULL) {
 		MON_PRINT(" cannot find matched net dev, skip the packet\n");
+	} else {
+		MON_PRINT("enter, if name: %s, matched if name %s\n",
+		ndev->name, mon_if->real_ndev->name);
 	}
-
-	MON_PRINT("enter, if name: %s, matched if name %s\n", ndev->name, mon_if->real_ndev->name);
 }
 
 static int dhd_mon_if_change_mac(struct net_device *ndev, void *addr)
@@ -238,9 +253,10 @@ static int dhd_mon_if_change_mac(struct net_device *ndev, void *addr)
 	mon_if = ndev_to_monif(ndev);
 	if (mon_if == NULL || mon_if->real_ndev == NULL) {
 		MON_PRINT(" cannot find matched net dev, skip the packet\n");
+	} else {
+		MON_PRINT("enter, if name: %s, matched if name %s\n",
+		ndev->name, mon_if->real_ndev->name);
 	}
-
-	MON_PRINT("enter, if name: %s, matched if name %s\n", ndev->name, mon_if->real_ndev->name);
 	return ret;
 }
 

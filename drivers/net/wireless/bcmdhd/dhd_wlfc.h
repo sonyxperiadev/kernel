@@ -1,12 +1,12 @@
 /*
 * Copyright (C) 1999-2011, Broadcom Corporation
-* 
+*
 *         Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2 (the "GPL"),
 * available at http://www.broadcom.com/licenses/GPLv2.php, with the
 * following added to such license:
-* 
+*
 *      As a special exception, the copyright holders of this software give you
 * permission to link this software with independent modules, and to copy and
 * distribute the resulting executable under terms of your choice, provided that
@@ -14,11 +14,11 @@
 * the license of that module.  An independent module is a module which is not
 * derived from this software.  The special exception does not apply to any
 * modifications of the software.
-* 
+*
 *      Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
-* $Id: dhd_wlfc.h,v 1.1.8.1 2010-09-09 22:41:08 Exp $
+* $Id: dhd_wlfc.h 280556 2011-08-30 01:59:16Z $
 *
 */
 #ifndef __wlfc_host_driver_definitions_h__
@@ -201,6 +201,7 @@ typedef struct athost_wl_stat_counters {
 #define WLFC_FCMODE_IMPLIED_CREDIT		1
 #define WLFC_FCMODE_EXPLICIT_CREDIT		2
 
+/* How long to defer borrowing in milliseconds */
 #define WLFC_BORROW_DEFER_PERIOD_MS 100
 
 /* Mask to represent available ACs (note: BC/MC is ignored */
@@ -261,6 +262,7 @@ typedef struct athost_wl_status_info {
 
 	/* Timestamp to compute how long to defer borrowing for */
 	uint32  borrow_defer_timestamp;
+
 } athost_wl_status_info_t;
 
 #endif /* __wlfc_host_driver_definitions_h__ */

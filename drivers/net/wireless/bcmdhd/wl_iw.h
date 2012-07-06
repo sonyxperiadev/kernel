@@ -2,13 +2,13 @@
  * Linux Wireless Extensions support
  *
  * Copyright (C) 1999-2011, Broadcom Corporation
- * 
+ *
  *         Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,12 +16,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_iw.h,v 1.15.80.6 2010-12-23 01:13:23 Exp $
+ * $Id: wl_iw.h,v 1.15.80.6 2010-12-23 01:13:23 $
  */
 
 
@@ -50,7 +50,7 @@
 #define SETSUSPEND_CMD				"SETSUSPENDOPT"
 #define PNOSSIDCLR_SET_CMD			"PNOSSIDCLR"
 
-#define PNOSETUP_SET_CMD			"PNOSETUP " 
+#define PNOSETUP_SET_CMD			"PNOSETUP "
 #define PNOENABLE_SET_CMD			"PNOFORCE"
 #define PNODEBUG_SET_CMD			"PNODEBUG"
 #define TXPOWER_SET_CMD			"TXPOWER"
@@ -60,24 +60,24 @@
 
 
 typedef struct wl_iw_extra_params {
-	int 	target_channel; 
+	int 	target_channel;
 } wl_iw_extra_params_t;
 
 struct cntry_locales_custom {
-	char iso_abbrev[WLC_CNTRY_BUF_SZ];	
-	char custom_locale[WLC_CNTRY_BUF_SZ];	
-	int32 custom_locale_rev;		
+	char iso_abbrev[WLC_CNTRY_BUF_SZ];
+	char custom_locale[WLC_CNTRY_BUF_SZ];
+	int32 custom_locale_rev;
 };
 
 
-#define	WL_IW_RSSI_MINVAL		-200	
-#define	WL_IW_RSSI_NO_SIGNAL	-91	
-#define	WL_IW_RSSI_VERY_LOW	-80	
-#define	WL_IW_RSSI_LOW		-70	
-#define	WL_IW_RSSI_GOOD		-68	
-#define	WL_IW_RSSI_VERY_GOOD	-58	
-#define	WL_IW_RSSI_EXCELLENT	-57	
-#define	WL_IW_RSSI_INVALID	 0	
+#define	WL_IW_RSSI_MINVAL		-200
+#define	WL_IW_RSSI_NO_SIGNAL	-91
+#define	WL_IW_RSSI_VERY_LOW	-80
+#define	WL_IW_RSSI_LOW		-70
+#define	WL_IW_RSSI_GOOD		-68
+#define	WL_IW_RSSI_VERY_GOOD	-58
+#define	WL_IW_RSSI_EXCELLENT	-57
+#define	WL_IW_RSSI_INVALID	 0
 #define MAX_WX_STRING 80
 #define isprint(c) bcm_isprint(c)
 #define WL_IW_SET_ACTIVE_SCAN	(SIOCIWFIRSTPRIV+1)
@@ -117,10 +117,10 @@ typedef struct wl_iw {
 	struct iw_statistics wstats;
 
 	int spy_num;
-	int wpaversion;			
-	int pcipher;			
-	int gcipher;			
-	int privacy_invoked; 		
+	int wpaversion;
+	int pcipher;
+	int gcipher;
+	int privacy_invoked;
 
 	struct ether_addr spy_addr[IW_MAX_SPY];
 	struct iw_quality spy_qual[IW_MAX_SPY];
@@ -144,13 +144,13 @@ typedef struct wl_iw_ss_cache {
 } wl_iw_ss_cache_t;
 
 typedef struct wl_iw_ss_cache_ctrl {
-	wl_iw_ss_cache_t *m_cache_head;	
-	int m_link_down;		
-	int m_timer_expired;		
-	char m_active_bssid[ETHER_ADDR_LEN];	
-	uint m_prev_scan_mode;	
-	uint m_cons_br_scan_cnt;	
-	struct timer_list *m_timer;	
+	wl_iw_ss_cache_t *m_cache_head;
+	int m_link_down;
+	int m_timer_expired;
+	char m_active_bssid[ETHER_ADDR_LEN];
+	uint m_prev_scan_mode;
+	uint m_cons_br_scan_cnt;
+	struct timer_list *m_timer;
 } wl_iw_ss_cache_ctrl_t;
 
 typedef enum broadcast_first_scan {
@@ -168,10 +168,10 @@ struct ap_profile {
 	uint8	ssid[SSID_LEN];
 	uint8	sec[SEC_LEN];
 	uint8	key[KEY_LEN];
-	uint32	channel; 
+	uint32	channel;
 	uint32	preamble;
-	uint32	max_scb;	
-	uint32  closednet;  
+	uint32	max_scb;
+	uint32  closednet;
 	char country_code[WLC_CNTRY_BUF_SZ];
 };
 
@@ -187,12 +187,12 @@ struct mac_list_set {
 	uint32	mode;
 	struct mflist mac_list;
 };
-#endif   
+#endif
 
 #if WIRELESS_EXT > 12
 #include <net/iw_handler.h>
 extern const struct iw_handler_def wl_iw_handler_def;
-#endif 
+#endif
 
 extern int wl_iw_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
 extern void wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data);
@@ -279,7 +279,7 @@ typedef struct cscan_tlv {
 #define TLV_TYPE_SECUR				'E'
 #define TLV_TYPE_KEY				'K'
 #define TLV_TYPE_CHANNEL			'C'
-#endif 
+#endif
 
 extern int wl_iw_parse_channel_list_tlv(char** list_str, uint16* channel_list,
 	int channel_num, int *bytes_left);
@@ -297,10 +297,8 @@ extern int wl_iw_parse_channel_list(char** list_str, uint16* channel_list, int c
 
 #define NETDEV_PRIV(dev)	(*(wl_iw_t **)netdev_priv(dev))
 
-#ifdef CONFIG_WPS2
 #define WPS_ADD_PROBE_REQ_IE_CMD "ADD_WPS_PROBE_REQ_IE "
 #define WPS_DEL_PROBE_REQ_IE_CMD "DEL_WPS_PROBE_REQ_IE "
 #define WPS_PROBE_REQ_IE_CMD_LENGTH 21
-#endif
 
-#endif 
+#endif
