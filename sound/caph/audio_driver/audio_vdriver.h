@@ -50,10 +50,6 @@ Copyright 2009 - 2012  Broadcom Corporation
 typedef void (*audio_codecId_handler_t) (int codecId);
 typedef void (*audio_handleCPReset_handler_t) (Boolean cpReset);
 
-/* Define the other mic which is used for Noise Cancellation.
-	It is product-dependent. */
-#define MIC_NOISE_CANCEL CSL_CAPH_DEV_EANC_DIGI_MIC_R
-
 enum _AUDDRV_REQUEST_ID_t {
 	AUDDRV_RATE_CHANGE_REQ,	/* 0x00 */
 	AUDDRV_REQUEST_ID_TOTAL_COUNT

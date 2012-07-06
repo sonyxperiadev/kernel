@@ -1779,7 +1779,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	if (bNeedDualMic) {
 		config.streamID = CSL_CAPH_STREAM_NONE;
 		config.pathID = 0;
-		config.source = MIC_NOISE_CANCEL;
+		config.source = DUALMICS_NOISE_REF_MIC;
 		config.sink = CSL_CAPH_DEV_DSP;
 		config.dmaCH = CSL_CAPH_DMA_NONE;
 		config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;

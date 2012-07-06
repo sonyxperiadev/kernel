@@ -229,6 +229,7 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 		last_action = msgAudioCtrl.action_code;
 
 		/* process the operation */
+		/* This is message consumer of sgThreadData.m_pkfifo */
 		AUDIO_Ctrl_Process(msgAudioCtrl.action_code,
 				   &msgAudioCtrl.param,
 				   msgAudioCtrl.pCallBack, msgAudioCtrl.block);
@@ -545,6 +546,8 @@ void AUDIO_Ctrl_SetUserAudioApp(AudioApp_t app)
   *     we reserve bit 0 to indicate block mode.
   *
   * Return 0 for success, non-zero for error code
+  *
+  * This is message producer to sgThreadData.m_pkfifo
   */
 Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 			    void *arg_param, void *callback, int block)
@@ -765,6 +768,7 @@ AUDIO_Ctrl_Trigger_Wait:
 	return status;
 }
 
+/* This is message consumer of sgThreadData.m_pkfifo */
 static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			void *arg_param, void *callback, int block)
 {

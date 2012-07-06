@@ -181,4 +181,14 @@ enum CSL_CAPH_DEVICE_e {
 
 #define CSL_CAPH_DEVICE_e enum CSL_CAPH_DEVICE_e
 
+/* Define the other mic which is used for Noise Cancellation.
+	It is product-dependent. */
+#if defined(CONFIG_RHEA_CLOVER_ICS) || defined(CONFIG_MACH_RHEA_STONE_EDN2X)
+	/* for Rheastone phone: */
+#define DUALMICS_NOISE_REF_MIC CSL_CAPH_DEV_DIGI_MIC_R
+#else
+	/* for RheaRay board, RheaBerri phone: */
+#define DUALMICS_NOISE_REF_MIC CSL_CAPH_DEV_EANC_DIGI_MIC_R
+#endif
+
 #endif /* _CSL_CAPH_ */
