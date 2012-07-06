@@ -838,6 +838,7 @@ int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 	insurance = 0;
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 	do {
+		udelay(1);
 		reg_val1 = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
 		reg_val2 = readl(PWR_MGR_PI_ADDR(counter_reg_offset));
 		if ((reg_val2 >= reg_val1) &&
