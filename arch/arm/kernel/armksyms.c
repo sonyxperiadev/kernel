@@ -51,8 +51,7 @@ extern void __aeabi_uldivmod(void); // added for uldivmod in DWC OTG USB driver
 extern void fpundefinstr(void);
 
 	/* platform dependent support */
-EXPORT_SYMBOL(__udelay);
-EXPORT_SYMBOL(__const_udelay);
+EXPORT_SYMBOL(arm_delay_ops);
 
 	/* networking */
 EXPORT_SYMBOL(csum_partial);
