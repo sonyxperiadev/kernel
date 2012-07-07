@@ -602,7 +602,7 @@ void extern_hs_on(void)
 	}
 
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH,
-				  PMU_HSGAIN_MUTE),
+				  PMU_HSGAIN_MUTE);
 
 	/*
 	./drivers/misc/bcm59055-audio.c:int bcm59055_hs_power(bool on)
@@ -634,8 +634,10 @@ void extern_hs_off(void)
 {
 	BCMPMU_Audio_HS_Param hs_param;
 
+	/*BCM59039 PMU HW ramps down HS gain when powers off HS amp.
+	no need for software to ramp down HS gain.
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH,
-				  PMU_HSGAIN_MUTE),
+				  PMU_HSGAIN_MUTE);*/
 	bcmpmu_hs_power(0);
 
 	hs_IsOn = 0;
@@ -674,7 +676,7 @@ void extern_ihf_on(void)
 		pll_IsOn = 1;
 	}
 
-	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE),
+	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE);
 	bcmpmu_ihf_power(1);
 #endif
 	ihf_IsOn = 1;
@@ -693,7 +695,7 @@ void extern_ihf_off(void)
 #if defined(CONFIG_IHF_EXT_AMPLIFIER)
 	audio_gpio_output(GPIO_IHF_EXT_AMP, 0);
 #else
-	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE),
+	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE);
 	bcmpmu_ihf_power(0);
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)

@@ -3703,6 +3703,8 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 				"power OFF pmu HS amp\n");
 
 			extern_hs_off();
+/*			audctl_usleep_range(20000,
+				22000); no pop noise */
 			audctl_usleep_range(wait_pmu_off,
 				wait_pmu_off+2000);
 		}
