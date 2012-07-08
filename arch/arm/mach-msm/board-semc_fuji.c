@@ -4268,7 +4268,9 @@ static void __init size_pmem_devices(void)
 		pmem_sf_size = MSM_HDMI_PRIM_PMEM_SF_SIZE;
 	android_pmem_pdata.size = pmem_sf_size;
 	android_pmem_camera_pdata.size = pmem_camera_size;
+#ifndef CONFIG_SWIQI_NONE
 	android_pmem_swiqi_pdata.size = pmem_swiqi_size;
+#endif
 #endif
 	android_pmem_audio_pdata.size = MSM_PMEM_AUDIO_SIZE;
 #endif
@@ -4287,7 +4289,9 @@ static void __init reserve_pmem_memory(void)
 	reserve_memory_for(&android_pmem_smipool_pdata);
 	reserve_memory_for(&android_pmem_pdata);
 	reserve_memory_for(&android_pmem_camera_pdata);
+#ifndef CONFIG_SWIQI_NONE
 	reserve_memory_for(&android_pmem_swiqi_pdata);
+#endif
 #endif
 	reserve_memory_for(&android_pmem_audio_pdata);
 	msm8x60_reserve_table[MEMTYPE_EBI1].size += pmem_kernel_ebi1_size;
