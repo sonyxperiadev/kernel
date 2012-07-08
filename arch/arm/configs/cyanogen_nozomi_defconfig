@@ -252,6 +252,9 @@ CONFIG_NETDEVICES=y
 CONFIG_DUMMY=y
 # CONFIG_NETDEV_1000 is not set
 # CONFIG_NETDEV_10000 is not set
+CONFIG_BCMDHD=m
+CONFIG_BCMDHD_FW_PATH="/vendor/firmware/fw_bcmdhd.bin"
+CONFIG_BCMDHD_NVRAM_PATH="/system/etc/wifi/calibration"
 CONFIG_IFB=y
 CONFIG_TUN=y
 CONFIG_PPP=y
