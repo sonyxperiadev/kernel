@@ -1077,6 +1077,12 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		memcpy(&parm_atctl.Params, ucontrol->value.integer.value,
 			sizeof(parm_atctl.Params));
 		AUDIO_Ctrl_Trigger(ACTION_AUD_AtCtl, &parm_atctl, NULL, 1);
+
+		/*copy values back to ucontrol value[] */
+		memcpy((void *)&(ucontrol->value.integer.value),
+			(void *)&parm_atctl.Params,
+			sizeof(parm_atctl.Params));
+
 		break;
 	case CTL_FUNCTION_BYPASS_VIBRA:
 		ucontrol->value.integer.value[0] =

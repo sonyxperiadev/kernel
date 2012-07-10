@@ -1603,6 +1603,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 			memcpy((void *)&parm_atctl, arg_param,
 				sizeof(BRCM_AUDIO_Param_AtCtl_t));
+
 			if (parm_atctl.isGet)
 				AtAudCtlHandler_get(parm_atctl.cmdIndex,
 				parm_atctl.pChip,
@@ -1613,6 +1614,10 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				parm_atctl.pChip,
 				parm_atctl.ParamCount,
 				parm_atctl.Params);
+
+			/*copy values back to arg_param */
+			memcpy((void *)arg_param, (void *)&parm_atctl,
+				sizeof(BRCM_AUDIO_Param_AtCtl_t));
 		}
 		break;
 	default:
