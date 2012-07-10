@@ -1887,6 +1887,11 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 	vol_right 0x%x\n", vol_left, vol_right);
 	*/
 
+	/*if the CAPH clock is not turned on.
+	do not set HW audio gain.*/
+	if (FALSE == csl_caph_QueryHWClock())
+		return;
+
 	speaker = getDeviceFromSink(sink);
 	mixer = csl_caph_FindMixer(speaker, pathID);
 	/*determine which mixer input to apply the gains to */
