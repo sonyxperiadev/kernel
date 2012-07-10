@@ -223,6 +223,7 @@ static struct {
 	unsigned long free_time;
 	unsigned long v3d_usage;
 	bool show_v3d_usage;
+	spinlock_t v3d_spinlock;
 } v3d_state;
 
 typedef struct {
@@ -504,6 +505,7 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 	v3d_job_t *tmp_job, *parent_job;
 	v3d_job_t *last_match_job = NULL;
 	int curr_job_killed = 0;
+	unsigned long flags;
 
 	dev = (v3d_t *)(filp->private_data);
 
@@ -524,13 +526,18 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 				parent_job->next = tmp_job;
 				if (last_match_job == v3d_job_curr) {
 					/* Kill the job, free the job, return error if waiting ?? */
-					KLOG_V
+					KLOG_D
 					    ("Trying to free current job[0x%08x]",
 					     (u32)last_match_job);
+					//Reset V3D to stop executing current job
+					v3d_reset();
 					v3d_job_kill((v3d_job_t *)v3d_job_curr,
 						     V3D_JOB_STATUS_ERROR);
 					curr_job_killed = 1;
+					//Flush interrupt before marking job done
+					spin_lock_irqsave(&v3d_state.v3d_spinlock, flags);
 					v3d_job_curr = v3d_job_curr->next;
+					spin_unlock_irqrestore(&v3d_state.v3d_spinlock, flags);
 				}
 				KLOG_V("Free job[0x%08x] for hdl[%d]: ",
 				       (u32)last_match_job, dev->id);
@@ -553,13 +560,16 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 			last_match_job = v3d_job_head;
 			if (last_match_job == v3d_job_curr) {
 				/* Kill the job, free the job, return error if waiting ?? */
-				KLOG_V
+				KLOG_D
 				    ("Trying to free current job - head[0x%08x]",
 				     (u32)last_match_job);
+				v3d_reset();
 				v3d_job_kill((v3d_job_t *)v3d_job_curr,
 					     V3D_JOB_STATUS_ERROR);
 				curr_job_killed = 1;
+				spin_lock_irqsave(&v3d_state.v3d_spinlock, flags);
 				v3d_job_curr = v3d_job_curr->next;
+				spin_unlock_irqrestore(&v3d_state.v3d_spinlock, flags);
 			}
 			v3d_job_head = v3d_job_head->next;
 			KLOG_V
@@ -578,6 +588,9 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 		KLOG_D
 		    ("v3d activity reset as part of freeing jobs for dev_id[%d]",
 		     dev->id);
+		if (v3d_job_curr != NULL)
+			v3d_job_curr->job_intern_state = 4;
+
 		wake_up_interruptible(&v3d_isr_done_q);
 		v3d_print_all_jobs(0);
 	}
@@ -787,8 +800,15 @@ static int v3d_thread(void *data)
 				do_exit(-1);
 			}
 
+			//Current job was killed and no more job in queue
 			if (v3d_job_curr == NULL)
 				continue;
+
+			//Current job was killed and was replaced by next in queue
+			if (v3d_job_curr->job_intern_state == 4) {
+				v3d_job_curr->job_intern_state = 0;
+				continue;
+			}
 
 			if (v3d_in_use == 0) {
 				/* Job completed or fatal oom happened or current job was killed as part of app close */
@@ -1809,7 +1829,7 @@ static int proc_v3d_create(void)
 
 	v3d_state.proc_usage = create_proc_entry("usage",
 						(S_IWUSR | S_IWGRP | S_IRUSR |
-						 S_IRGRP), v3d_state.proc_dir);
+						 S_IRGRP | S_IROTH), v3d_state.proc_dir);
 
 	if (!v3d_state.proc_usage) {
 		KLOG_E("failed to create v3d proc usage entry\n");
@@ -1987,8 +2007,7 @@ int __init v3d_init(void)
 
 	init_waitqueue_head(&v3d_isr_done_q);
 	init_waitqueue_head(&v3d_start_q);
-	v3d_job_head = NULL;
-	v3d_job_curr = NULL;
+	spin_lock_init(&v3d_state.v3d_spinlock);
 
 	/* Start the thread to process work queue */
 	v3d_thread_task = kthread_run(&v3d_thread, v3d_dev, "v3d_thread");
