@@ -30,7 +30,8 @@
 #define BCMPMU_PRINT_FLOW (1U << 2)
 #define BCMPMU_PRINT_DATA (1U << 3)
 
-static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
+/* static int debug_mask =
+BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT; */
 static int debug_mask = 0xFF;
 #define pr_chrgr(debug_level, args...) \
 	do { \
@@ -391,7 +392,6 @@ static int bcmpmu_chrgr_set_property(struct power_supply *ps,
 	struct bcmpmu_chrgr *pchrgr = container_of(ps,
 		struct bcmpmu_chrgr, chrgr);
 	struct bcmpmu *bcmpmu = pchrgr->bcmpmu;
-	struct bcmpmu_platform_data *pdata = pchrgr->bcmpmu->pdata;
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -413,12 +413,7 @@ static int bcmpmu_chrgr_set_property(struct power_supply *ps,
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 		pchrgr->eoc = propval->intval;
-		if (pdata->support_hw_eoc)
 			bcmpmu_set_eoc(bcmpmu, (int)propval->intval);
-		else if (bcmpmu->fg_set_eoc)
-			bcmpmu->fg_set_eoc(bcmpmu, pchrgr->eoc);
-		else
-			ret = -ENODATA;
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
@@ -453,15 +448,6 @@ static int bcmpmu_chrgr_get_property(struct power_supply *ps,
 		break;
 
 	case POWER_SUPPLY_PROP_TYPE:
-		if ((pchrgr->chrgrtype == PMU_CHRGR_TYPE_NONE) ||
-			(pchrgr->chrgrtype >= PMU_CHRGR_TYPE_MAX))
-			propval->intval = POWER_SUPPLY_TYPE_BATTERY;
-		else if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_SDP)
-			propval->intval = POWER_SUPPLY_TYPE_USB;
-		else if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_CDP)
-			propval->intval = POWER_SUPPLY_TYPE_USB_CDP;
-		else
-			propval->intval = POWER_SUPPLY_TYPE_USB_DCP;
 		if ((pchrgr->chrgrtype == PMU_CHRGR_TYPE_NONE) ||
 			(pchrgr->chrgrtype >= PMU_CHRGR_TYPE_MAX))
 			propval->intval = POWER_SUPPLY_TYPE_BATTERY;
@@ -550,15 +536,6 @@ static int bcmpmu_chrgr_event_handler(struct notifier_block *nb,
 		pr_chrgr(FLOW, "%s, chrgr type=%d\n",
 			__func__, pchrgr->chrgrtype);
 
-		if ((pchrgr->chrgrtype == PMU_CHRGR_TYPE_NONE) ||
-			(pchrgr->chrgrtype >= PMU_CHRGR_TYPE_MAX))
-			data = POWER_SUPPLY_TYPE_BATTERY;
-		else if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_SDP)
-			data = POWER_SUPPLY_TYPE_USB;
-		else if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_CDP)
-			data = POWER_SUPPLY_TYPE_USB_CDP;
-		else
-			data = POWER_SUPPLY_TYPE_USB_DCP;
 		if ((pchrgr->chrgrtype == PMU_CHRGR_TYPE_NONE) ||
 			(pchrgr->chrgrtype >= PMU_CHRGR_TYPE_MAX))
 			data = POWER_SUPPLY_TYPE_BATTERY;
@@ -687,8 +664,7 @@ static void bcmpmu_chrgr_spa_evt(struct work_struct *work)
 
 		if (event == BCMPMU_CHRGR_EVENT_CHGR_DETECTION)
 			pchrgr_on =
-		(data !=
-		POWER_SUPPLY_TYPE_BATTERY) ? true : false;
+			(data != POWER_SUPPLY_TYPE_BATTERY) ? true : false;
 
 		if (!pchrgr_on && (event == BCMPMU_CHRGR_EVENT_EOC))
 			event = BCMPMU_EVENT_MAX;

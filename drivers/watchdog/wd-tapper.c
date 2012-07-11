@@ -70,7 +70,7 @@ EXPORT_SYMBOL(wd_tapper_get_timeout);
 int wd_tapper_callback(void *dev)
 {
 	/* Pet the PMU Watchdog */
-	pr_info("AP wakeup: HUB wakeup timer\n");
+	pr_info("petting the pmu wd\n");
 	return 0;
 }
 

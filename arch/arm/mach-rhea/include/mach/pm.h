@@ -38,6 +38,7 @@
 #define DORMANT_ENTRY               0xF0F0F0F0
 #define DORMANT_EXIT                0xE0E0E0E0
 #define DEEP_SLEEP_LATENCY     8000 /*latency due to xtal warm up delay*/
+
 /* Following macro values should be loadable via a single
  * mov instruction.
  */

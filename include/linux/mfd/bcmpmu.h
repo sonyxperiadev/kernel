@@ -33,6 +33,8 @@ struct regulator_init_data;
 /* LDO or Switcher def */
 #define BCMPMU_LDO    0x10
 #define BCMPMU_SR     0x11
+/* HOSTCTRL1 def*/
+#define BCMPMU_SW_SHDWN 0x04
 
 /* WRPREN def */
 #define BCMPMU_DIS_WR_PRO       (1<<0)
@@ -138,6 +140,7 @@ enum bcmpmu_reg {
 	PMU_REG_PONKEY_RESTART_EN,
 	PMU_REG_PONKEY_RESTART_DEB,
 	PMU_REG_PONKEY_RESTART_DLY,
+
 	PMU_REG_AUXCTRL,
 	PMU_REG_PONKEY_ONHOLD_DEB,
 
@@ -1240,6 +1243,7 @@ struct bcmpmu_platform_data {
 	int chrg_eoc;
 	int support_hw_eoc;
 	int batt_impedence;
+	int sys_impedence;
 	struct bcmpmu_charge_zone *chrg_zone_map;
 	int fg_capacity_full;
 	int support_fg;
@@ -1254,6 +1258,7 @@ struct bcmpmu_platform_data {
 	int fg_poll_lbat;
 	int fg_lbat_lvl;
 	int fg_fbat_lvl;
+	int fg_low_cal_lvl;
 	enum bcmpmu_bc_t bc;
 	int rpc_rate;
 	struct bcmpmu_wd_setting *wd_setting;
