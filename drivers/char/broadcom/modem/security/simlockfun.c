@@ -536,7 +536,8 @@ static void KRIL_simlock_NVdata_Init(SIMLOCK_NVDATA_t *simlock_nvdata)
 			      GetImeiData(SIM_DUAL_FIRST), BCD_IMEI_LEN);
 
 	simlock_nvdata->phone_lock_setting = PH_SIM_LOCK_OFF;
-	strcpy(simlock_nvdata->phone_lock_pwd, DEFAULT_PHSIM_LOCK_PWD);
+	strncpy(simlock_nvdata->phone_lock_pwd, DEFAULT_PHSIM_LOCK_PWD,
+		sizeof(DEFAULT_PHSIM_LOCK_PWD));
 }
 
 /******************************************************************************
@@ -1310,7 +1311,6 @@ static SEC_SimLock_Status_t SIMLockSetLockOneType(SimNumber_t SimId,
 				*  add for fixing compile warning.
 				*/
 				case SEC_SIMLOCK_PHONE_LOCK:
-				/* Coverity [DEADCODE] */
 				case SEC_SIMLOCK_INVALID_LOCK:
 				default:
 					break;
