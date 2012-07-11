@@ -99,8 +99,6 @@ struct pmem_info {
 	wait_queue_head_t deatheaters;
 	/* Stats for the CMA region for this device */
 	struct dev_cma_info cma;
-	/* high water mark in pages for this pmem space */
-	unsigned short hwm;
 	/* protects data list */
 	struct mutex data_list_lock;
 	/* total size of the pmem space */
@@ -460,68 +458,56 @@ lock_mm:
 	return ret;
 }
 
-#ifdef CONFIG_ANDROID_PMEM_LOW_MEMORY_KILLER
+#if 0
 static bool pmem_watermark_ok(struct pmem_info *p_info)
 {
 	get_dev_cma_info(&p_info->pdev->dev, &p_info->cma);
-
 	return (p_info->cma.max_free_block >= p_info->hwm);
 }
+#else
+static bool pmem_watermark_ok(struct pmem_info *p_info)
+{
+	return true;
+}
+#endif
 
+#ifdef CONFIG_ANDROID_PMEM_LOW_MEMORY_KILLER
 static bool should_retry_allocation(int id, struct pmem_data *data)
 {
 	long ret;
-	bool answer;
+	bool answer = false;
 
 	up_write(&data->sem);
 
-	if (signal_pending(current)) {
-		answer = false;
+	if (fatal_signal_pending(current))
 		goto out;
-	}
 
 	/* if the work was idle, we rescheule with force_kill = 1
 	 * if it wasn't idle, then just retry the allocation
 	 * as the pending work must have killed someone
 	 */
 	if (flush_work_sync(&pmem[id].pmem_shrinker)) {
-		answer = true;
+		if (!fatal_signal_pending(current))
+			answer = true;
 		goto out;
 	}
 
 	pmem[id].force_kill = 1;
 	schedule_work(&pmem[id].pmem_shrinker);
-	printk(KERN_INFO"pmem:%s:%d Waiting for a process to get killed\n",
-	       current->group_leader->comm, current->pid);
-	ret = wait_event_interruptible_timeout(pmem[id].deatheaters,
-					       (pmem[id].force_kill == 0),
-					       HZ * 2);
-	/* if we got a signal or timed out, dont retry */
-	if (ret == 0 || ret == -ERESTARTSYS) {
-		printk(KERN_INFO
-		       "pmem:%s:%d Waiting for death timed out(%ld)\n",
-		       current->group_leader->comm, current->pid, ret);
-		answer = false;
+	ret = wait_event_interruptible(pmem[id].deatheaters,
+					(pmem[id].force_kill == 0));
+	/* if we got a signal, dont retry */
+	if (ret == -ERESTARTSYS)
 		goto out;
-	}
 
 	answer = true;
 
 out:
-	if (answer) {
-		printk(KERN_INFO"pmem:%s:%d Wait done, now retry\n",
-		       current->group_leader->comm, current->pid);
-	}
 	down_write(&data->sem);
 	return answer;
 }
 
 #else
-
-static bool pmem_watermark_ok(struct pmem_info *p_info)
-{
-	return true;
-}
 
 static bool should_retry_allocation(int id, struct pmem_data *data)
 {
@@ -584,7 +570,7 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 			outer_inv_range(addr, addr+len);
 			return 0;
 		} else {
-			printk(KERN_ALERT"carveout failed: %ldkB\n", len/SZ_1K);
+			printk(KERN_ALERT"carveout failed: %lukB\n", len/SZ_1K);
 		}
 		/* If we failed, fallback to CMA */
 	}
@@ -1107,9 +1093,6 @@ pmem_task_notify_func(struct notifier_block *self,
 
 	for (id = 0; id < PMEM_MAX_DEVICES; id++) {
 		if (task == pmem[id].deathpending) {
-			printk(KERN_INFO
-			       "%s: %s(%d) pmem deathpending killed\n",
-			       __func__, task->comm, task->pid);
 			pmem[id].deathpending = NULL;
 			up(&pmem[id].shrinker_sem);
 		}
@@ -1168,19 +1151,7 @@ static void pmem_shrink(struct work_struct *work)
 
 		oom_adj = task->signal->oom_adj;
 		/* The task is too important to kill */
-		if (oom_adj <= 0) {
-			task_unlock(task);
-			put_task_struct(task);
-			continue;
-		}
-
-		/* dont kill anything below PREVIOUS_APP_ADJ as
-		 * that can have impact on interactivity. However
-		 * if force_kill is set, we have an allocation
-		 * failure, and in that case, we need to kill whaterver
-		 * we can
-		 */
-		if ((oom_adj <= 7) && (!p_info->force_kill)) {
+		if (oom_adj < 0) {
 			task_unlock(task);
 			put_task_struct(task);
 			continue;
@@ -1211,24 +1182,19 @@ static void pmem_shrink(struct work_struct *work)
 
 	if (selected) {
 		printk(KERN_INFO
-		       "pmem: killing (%s/%d),adj %d,size %lu pages\n",
-		       selected->comm, selected->pid, selected_oom_adj,
-		       selected_task_cmasize);
+			"send sigkill (%s/%d),adj %d, %lu pages\n",
+			selected->comm, selected->pid,
+			selected_oom_adj, selected_task_cmasize);
 		p_info->deathpending = selected;
 		force_sig(SIGKILL, selected);
 		/* wait for process to die .... */
 		down(&p_info->shrinker_sem);
-	} else {
-		printk(KERN_ALERT"pmem: didn't find suitable task to kill\n");
 	}
 
 out:
 	mutex_unlock(&p_info->shrinker_lock);
-	if (p_info->force_kill) {
-		p_info->force_kill = 0;
-		printk(KERN_INFO"Waking up deatheaters\n");
-		wake_up_all(&p_info->deatheaters);
-	}
+	p_info->force_kill = 0;
+	wake_up_all(&p_info->deatheaters);
 }
 
 static void pmem_vma_open(struct vm_area_struct *vma)
@@ -1356,14 +1322,30 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 					    vma->vm_end - vma->vm_start);
 			if (ret == 0)
 				break;
-			if (++pass >= 10)
+
+			if (fatal_signal_pending(current)) {
+				ret = -EINTR;
+				goto error_up_write;
+			}
+
+			if ((++pass % 10) == 0) {
+				printk(KERN_INFO"pmem: %s/%d tried %u times"
+						"to allocate %lu pages\n",
+						current->group_leader->comm,
+						current->pid, pass,
+						(vma_size >> PAGE_SHIFT));
+			}
+
+			if (pass > 50)
 				break;
 		} while (should_retry_allocation(id, data));
 
-		if (is_cma_allocation(data) && !pmem_watermark_ok(&pmem[id])) {
-			schedule_work(&pmem[id].pmem_shrinker);
+		if (unlikely(fatal_signal_pending(current)))
+			goto error_up_write;
+
+		if (is_cma_allocation(data) &&
+			!pmem_watermark_ok(&pmem[id]))
 			wake_up_all(&cleaners);
-		}
 	}
 
 	if (pmem_len(data) != vma_size) {
@@ -1768,10 +1750,6 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 
 		mutex_unlock(&pmem[id].data_list_lock);
 
-		n += scnprintf(buffer + n, debug_bufmax - n,
-			       "HWM     : %u pages, %08ukB\n",
-			       pmem[id].hwm,
-			       (pmem[id].hwm << PAGE_SHIFT) / SZ_1K);
 		n++;
 
 		if (n >= debug_bufmax) {
@@ -1831,11 +1809,6 @@ static int pmem_setup(struct platform_device *pdev,
 		sema_init(&pmem[id].shrinker_sem, 1);
 		init_waitqueue_head(&pmem[id].deatheaters);
 		pmem[id].deathpending = NULL;
-		/*
-		 * High watermark is set so we have atleast 10MB of
-		 * contiguous block free in our CMA region
-		 */
-		pmem[id].hwm = (4 * SZ_1M) / PAGE_SIZE;
 	} else {
 		memset(&pmem[id].cma, 0, sizeof(pmem[id].cma));
 	}
@@ -1883,8 +1856,8 @@ static int pmem_setup(struct platform_device *pdev,
 	/* register task free notifier */
 	task_free_register(&pmem_task_nb);
 
-	printk(KERN_INFO "Pmem initialised with %lu CMA & %hu hwm pages\n",
-	       pmem[id].cma.nr_pages, pmem[id].hwm);
+	printk(KERN_INFO"Pmem initialised with %lu CMA pages\n",
+			pmem[id].cma.nr_pages);
 	return 0;
 
 err_cant_register_device:
