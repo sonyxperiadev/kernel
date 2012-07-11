@@ -2,7 +2,7 @@
  *
  * Driver for sr030pc50 (VGA Camera) from Siliconfile
  *
- * Copyright (C) 2010, SAMSUNG ELECTRONICS
+ * Copyright (C) 2012, SAMSUNG ELECTRONICS
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,13 +10,23 @@
  * (at your option) any later version.
  */
 
+
+/* ========== version info ==========*/
+//ver _ 14 May 2012 _#1
+/* ============================*/
+
+
 #ifndef __CAMDRV_SS_SR030PC50_H__
 #define __CAMDRV_SS_SR030PC50_H__
 
 
-static regs_t sr030pc50_init_regs[] = {
+//#define START_BURST_MODE 0x0F12
+//#define DELAY_SEQ 0xFF
+
+// Frame Auto
+const regs_t sr030pc50_init_regs[]={
 0x0300,
-0x0171,	/* reset op. */
+0x0171,
 0x0173,
 0x0171,
 
@@ -25,20 +35,20 @@ static regs_t sr030pc50_init_regs[] = {
 0x0322,
 0x107b,
 
-/* PLL Setting */
-0x0300,
+// PLL Setting 
+0x0300,                                     
 
-0x080f,	/* Parallel NO Output_PAD Out */
-0x1000,	/* VDOCTL1 */
-0x1180,	/* VDOCTL2 , 90 : FFR off, 94 : FFR on */
-0x1200,	/* CLK_CTL */
+0x080f, //Parallel NO Output_PAD Out
+0x1000,
+0x1190,
+0x1200,
 0x1488,
 
-0xc095,
-0xc118,
-0xc291,
-0xc300,
-0xc401,
+0xc095,                                     
+0xc118,                                     
+0xc291,                                     
+0xc300,                                     
+0xc401,   
 
 0x0300,
 0x1200,
@@ -47,40 +57,40 @@ static regs_t sr030pc50_init_regs[] = {
 0x2200,
 0x2304,
 
-0x4001, /* Hblank 344 */
+0x4001, //Hblank 344
 0x4158,
-0x4201, /* Vblank 410 */
-0x439a,
+0x4200, //Vblank 154
+0x439a, 
 
-/* BLC */
-0x802e, /* don't touch */
-0x817e, /* don't touch */
-0x8290, /* don't touch */
-0x8330, /* don't touch */
-0x842c, /* don't touch */
-0x854b, /* don't touch */
-0x8601, /* don't touch */
-0x8847, /* don't touch */
-/* 0x8948,*/ /* BLC hold */
+//BLC
+0x802e, //don't touch
+0x817e, //don't touch
+0x8290, //don't touch
+0x8330, //don't touch
+0x842c, //don't touch
+0x854b, //don't touch
+0x8601, //don't touch
+0x8847, //don't touch
+//0x8948,//BLC hold
 
-0x900a, /* BLC_TIME_TH_ON */
-0x910a, /* BLC_TIME_TH_OFF */
-0x9278, /* BLC_AG_TH_ON */
-0x9370, /* BLC_AG_TH_OFF */
+0x900c, //BLC_TIME_TH_ON
+0x910c, //BLC_TIME_TH_OFF 
+0x92a8, //BLC_AG_TH_ON
+0x93a0, //BLC_AG_TH_OFF
 
-0x9838, /* don't touch */
-0x9940, /* Out BLC */
-0xa040, /* Dark BLC */
-0xa842, /* Normal BLC 44 */
+0x9838, //don't touch
+0x9940, //Out BLC
+0xa040, //Dark BLC
+0xa842, //Normal BLC 44
 
-/* Page2 Last Update 12_01_20 */
+//Page2 Last Update 12_01_20
 0x0302,
 0x1000,
 0x1100,
-0x1340,
-0x1404,
+0x1340, 
+0x1404, 
 0x181c,
-0x1900, /* 01 */
+0x1900, //01
 0x1a00,
 0x1b08,
 0x1c9c,
@@ -97,9 +107,9 @@ static regs_t sr030pc50_init_regs[] = {
 0x3300,
 0x343c,
 0x350d,
-0x3b60, /* 80 */
+0x3b60, //80
 
-/* timing control 1 */ /* don't touch*/
+//timing control 1 // //don't touch
 0x5021,
 0x511c,
 0x52aa,
@@ -110,7 +120,7 @@ static regs_t sr030pc50_init_regs[] = {
 0x5800,
 0x590f,
 
-/* timing control 2 */ /* don't touch */
+//timing control 2 // //don't touch
 0x6034,
 0x613a,
 0x6234,
@@ -164,176 +174,178 @@ static regs_t sr030pc50_init_regs[] = {
 0xd033,
 0xd13f,
 
-/* Page 10 */
+//Page 10
 0x0310,
-0x1001, /* 03, */ /* ISPCTL1, YUV ORDER(FIX) */
+0x1001, //03, //ISPCTL1, YUV ORDER(FIX)
 0x1143,
-0x1230, /* Y offet, dy offseet enable */
+0x1230, //Y offet, dy offseet enable
 0x4080,
-0x4102, /* 00 DYOFS  00->10  _100318 */
-0x4880, /* Contrast  88->84  _100318 */
-0x5048, /* AGBRT */
+0x4102, //00 DYOFS  00->10  _100318
+0x4885, //Contrast  88->84  _100318
+0x5048, //AGBRT
 
-0x6001, /* 7f */ /* 7c */
-0x6100, /* Use default */
-0x627c, /* SATB  (1.4x) */
-0x637c, /* SATR  (1.2x) */
-0x6448, /* AGSAT */
-0x6690, /* wht_th2 */
-0x6736, /* wht_gain  Dark (0.4x), Normal (0.75x) */
+0x6001, //7f //7c
+0x6100, //Use default
+0x6280, //SATB_B  (1.4x)
+0x6380, //SATR_R  (1.2x)
+0x6448, //AGSAT
+0x6690, //wht_th2
+0x6736, //wht_gain  Dark (0.4x), Normal (0.75x)
 
-/* Page 11 */
-/* LPF */
+0x8000,
+
+//Page 11
+//LPF
 0x0311,
-0x1025,	/* LPF_CTL1 */ /* 0x01 */
-0x1107,	/* 06 */
-0x2000,	/* LPF_AUTO_CTL */
-0x2160,	/* LPF_PGA_TH */
-0x230a,	/* LPF_TIME_TH */
-0x6013,	/* ZARA_SIGMA_TH */ /* 40->10 */
+0x1025,
+0x1107,
+0x2000,
+0x2160,
+0x230a,
+0x6013,
 0x6185,
-0x6200,	/* ZARA_HLVL_CTL */
-0x6300,	/* ZARA_LLVL_CTL */
-0x6400,	/* ZARA_DY_CTL */
+0x6200,
+0x6300,
+0x6400,
 
-0x6770,	/* f0 */     /* Dark */
-0x6804,	/* Change 100402 */     /* Middle */
-0x6904,	/* High */
+0x6770,
+0x6824,
+0x6904,
 
-/* Page 12 */
-/* 2D */
+//Page 12
+//2D
 0x0312,
-0x40cb,	/* YC2D_LPF_CTL1 */
-0x4109,	/* YC2D_LPF_CTL2 */
-0x5018,	/* Test Setting */
-0x5124,	/* Test Setting */
-0x701f,	/* GBGR_CTL1 */ /* 1f */
-0x7100,	/* Test Setting */
-0x7200,	/* Test Setting */
-0x7300,	/* Test Setting */
-0x7412,	/* GBGR_G_UNIT_TH//12 */
-0x7512,	/* GBGR_RB_UNIT_TH//12 */
-0x7620,	/* GBGR_EDGE_TH */
-0x7780,	/* GBGR_HLVL_TH */
-0x7888,	/* GBGR_HLVL_COMP */
-0x7918,	/* Test Setting */
+0x40d3,
+0x4109,
+0x5018,
+0x5124,
+0x701f,
+0x7100,
+0x7200,
+0x7300,
+0x7412,
+0x7512,
+0x7620,
+0x7780,
+0x7888,
+0x7918,
 
-/******************************/
+///////////////////////
 0x903d,
 0x9134,
 0x9928,
-0x9c05, /* 14 For defect */
-0x9d08, /* 15 For defect */
+0x9c05, //14 For defect
+0x9d08, //15 For defect
 0x9e28,
 0x9f28,
 
-0xb07d, /* 75 White Defect */
+0xb07d, //75 White Defect
 0xb544,
 0xb682,
 0xb752,
 0xb844,
 0xb915,
-/******************************/
+///////////////////////
 
-/* Edge */
+//Edge
 0x0313,
 0x1001,
 0x1189,
 0x1214,
 0x1319,
-0x1408,	/* Test Setting */
-0x2003,	/* SHARP_Negative */
-0x2104,	/* SHARP_Positive */
-0x2325,	/* SHARP_DY_CTL  */
-0x2421,	/* 40->33 */
-0x2508,	/* SHARP_PGA_TH */
-0x2640,	/* Test Setting */
-0x2700,	/* Test Setting */
-0x2808,	/* Test Setting */
-0x2950,	/* AG_TH */
-0x2ae0,	/* region ratio */
-0x2b10,	/* Test Setting */
-0x2c28,	/* Test Setting */
-0x2d40,	/* Test Setting */
-0x2e00,	/* Test Setting */
-0x2f00,	/* Test Setting */
-0x3011,	/* Test Setting */
-0x8005,	/* SHARP2D_CTL */
-0x8107,	/* Test Setting */
-0x9004,	/* SHARP2D_SLOPE */
-0x9105,	/* SHARP2D_DIFF_CTL */
-0x9200,	/* SHARP2D_HI_CLIP */
-0x9330,	/* SHARP2D_DY_CTL */
-0x9430,	/* Test Setting */
-0x9510,	/* Test Setting */
+0x1408,
+0x2003,
+0x2104,
+0x2325,
+0x2421,
+0x2508,
+0x2640,
+0x2700,
+0x2808,
+0x2950,
+0x2ae0,
+0x2b10,
+0x2c28,
+0x2d40,
+0x2e00,
+0x2f00,
+0x3011,
+0x8005,
+0x8107,
+0x9004,
+0x9105,
+0x9200,
+0x9330,
+0x9430,
+0x9510,
 
 0x0314,
 0x1001,
 
-0x2242,
-0x2332,
-0x2430,
+0x2254,
+0x2341,
+0x2440, //30
 
-0x2794, /* RXCEN */
-0x2880, /* RYCEN */
-0x2994, /* GXCEN */
-0x2a80, /* GYCEN */
-0x2b94, /* BXCEN */
-0x2c80, /* BYCEN */
+0x2794, //RXCEN
+0x2880, //RYCEN
+0x2994, //GXCEN
+0x2a80, //GYCEN
+0x2b94, //BXCEN
+0x2c80, //BYCEN
 
-/* 15page////////////////////////// */
+//15page//////////////////////////
 0x0315,
 0x1003,
 
-0x144a,	/* CMCOFSGM  */
-0x163e,	/* CMCOFSGL */
-0x172f,	/* CMC SIGN */
+0x1452,
+0x163a,
+0x172f,
 
-/* CMC */
-0x30cb,
-0x3161,
-0x3216,
-0x331e,
-0x34ce,
-0x3530,
-0x3600,
-0x3730,
-0x3870,
+//CMC
+0x30f1,
+0x3171,
+0x3200,
+0x331f,
+0x34e1,
+0x3542,
+0x3601,
+0x3731,
+0x3872,
+//CMC OFS
+0x4090,
+0x4182,
+0x4212,
+0x4386,
+0x4492,
+0x4518,
+0x4684,
+0x4702,
+0x4802,
 
-/* CMC OFS */
-0x401c,
-0x4195,
-0x4285,
-0x4394,
-0x4498,
-0x452c,
-0x4690,
-0x4708,
-0x4808,
-
-0x0316,/* amma   0.44 */ /* S_32 */
+0x0316,
+0x1001,
 0x3000,
-0x310e,/* 0x0d */
-0x321a,/* 0x18 */
-0x332f,/* 0x2c */
-0x3453,
-0x3576,
-0x3693,
-0x37ac,
-0x38c0,
-0x39d0,
-0x3adc,
-0x3bed,
-0x3cf4, /* f7 */
-0x3df6, /* fc */
-0x3efa, /* ff */
+0x310c,
+0x3220,
+0x3335,
+0x3458,
+0x3575,
+0x368e,
+0x37a3,
+0x38b4,
+0x39c3,
+0x3acf,
+0x3be2,
+0x3cf0,
+0x3df9,
+0x3eff,
 
-/* Page 17 AE  */
+//Page 17 AE 
 0x0317,
 0xc43c,
 0xc532,
 
-/* Page 20 AE  */
+//Page 20 AE 
 0x0320,
 0x101c,
 0x1104,
@@ -343,81 +355,86 @@ static regs_t sr030pc50_init_regs[] = {
 0x29a1,
 
 0x2af0,
-0x2b34, /* f4 */
-0x2c2b, /* 23->2b 2010_04_06 hhzin */
+0x2bf4,
+0x2c2b, 
 
-0x3078, /* f8 */
+0x30f8,
 
 0x3b22,
 0x3cde,
 
 0x3922,
 0x3ade,
-0x3b22, /* 23->22 _10_04_06 hhzin */
+0x3b22, //23->22 _10_04_06 hhzin
 0x3cde,
 
-0x6070, /* 70 */
-0x6120, /* 11 */ /* 22 */
+0x6071, //70
+0x6100, //11 //22
 
-0x6270,
-0x6320, /* 11 */ /* 22 */
+0x6271,
+0x6300, //11 //22
 
-0x683c,
-0x6964,
-0x6A28,
-0x6Bc8,
+0x6830,// x no Flip 34
+0x696a,// x no Flip 66
+0x6A27,
+0x6Bbb,
 
-0x7034,/* Y Targe 32 */
+0x7036,//Y Targe 32
 
-0x7611, /* Unlock bnd1 */
-0x7772, /* Unlock bnd2 02->a2 _10_04_06 hhzin */
+0x7611, //Unlock bnd1
+0x7772, //Unlock bnd2 02->a2 _10_04_06 hhzin
 
-0x7812, /* Yth 1 */
-0x791f, /* Yth 2 26->27 _10_04_06 hhzin */
-0x7a23, /* Yth 3 */
+0x7812, //Yth 1
+0x7926, //Yth 2 //1f
+0x7a23, //Yth 3
 
-0x7c17, /* 1c->1d _10_04_06 hhzin */
+0x7c17, //1c->1d _10_04_06 hhzin
 0x7d22,
 
-/* 50Hz */
-0x8300, /* EXP Normal 33.33 fps  */
-0x84be,
-0x856e,
+//50Hz
+0x8300, //EXP Normal 33.33 fps 
+0x84be, 
+0x856e, 
 
-0x8600,/* ExpMin */
+0x8600,//ExpMin
 0x87fa,
 
-/* 50Hz_10fps */
-0x8802, /* EXP Max 10.00 fps  */
-0x897a,
-0x8ac4,
+//60Hz_8fps
+0x8803, //EXP Max 8.00 fps 
+0x8917, 
+0x8a04, 
 
-0x8b3f,/* Exp100 */
+//50Hz_8fps
+0xa002, //EXP Max(100Hz) 8.33 fps 
+0xa1f9, 
+0xa2b8, 
+
+0x8b3f,//Exp100
 0x8c7a,
 
-0x8d34,/* Exp120 */
+0x8d34,//Exp120
 0x8ebc,
 
-0x9100,	/*  fix30 02 */
-0x92c3,	/*  dc */
-0x93b4,	/*  6c */
+0x9100,	// fix30 02
+0x92c3,	// dc
+0x93b4,	// 6c
 
-0x9401, /* fix_step */
+0x9401, //fix_step
 0x95b7,
 0x9674,
 
 0x988C,
 0x9923,
 
-0x9c06, /* EXP Limit 928.57 fps  */
-0x9dd6,
-0x9e00, /* EXP Unit  */
+0x9c05, //EXP Limit 1083.33 fps 
+0x9ddc, 
+0x9e00, //EXP Unit 
 0x9ffa,
 
 0xb01d,
 0xb114,
-0xb290, /* 80 */
-0xb310,
+0xb2b0, //80
+0xb317, //AGLVL //17
 0xb417,
 0xb53e,
 0xb62b,
@@ -433,62 +450,64 @@ static regs_t sr030pc50_init_regs[] = {
 0xc348,
 0xc448,
 
-/* Page 22 AWB */
+//Page 22 AWB
 0x0322,
 0x10e2,
-0x112e, /* 2e */
+0x112e, //2e
+0x2041, //01 //69
 0x2140,
+0x24fe,
 
-0x3080,
-0x3180, /* 7f */
-0x3812,
+0x3080, //Cb
+0x3180, //Cr
+0x3812, //Lock Boundary //13
 0x3933,
-0x40f3, /* f0 */
-0x4132,
-0x4222,
+0x40f3, //f0
+0x4132, //32-->33
+0x4222, //22
 0x43f3,
-0x4455,
-0x4544,
-0x4602,
+0x4444, //88
+0x4566, //
+0x4608, //02
 
-0x803a,/* 3f */
+0x803d, //3a //3c
 0x8120,
-0x823a,/* 3f */
+0x8240,
 
-0x835a, /* RMAX 5a */
-0x841e, /* RMIN 20 */
-0x8554, /* BMAX 53 */
-0x8620, /* BMIN  */
+0x835a, //RMAX
+0x8422, //(0216_kjh20>>23) RMIN
+0x8553, //(0216_kjh5c>>5a) BMAX //51
+0x8624, //BMIN //20
 
-0x874a, /* 42 */
-0x883e,
-0x8930, /* 36 */ /* 2d */
-0x8a24, /* 2e */ /* 24 */
+0x873d,
+0x8833, //3a
+0x893c, //3e //40
+0x8a34, //32
 
-0x8b00, /* OUT TH */
-0x8d22, /* 21 */
-0x8e61, /* 41 */
+0x8b03, //OUT TH
+0x8d22, //21 //22
+0x8e21, //41
 
-0x8f63,
-0x9062, /* 60 */ /* 62 */
-0x915e, /* 5c */ /* 5e */
-0x9256,
-0x9350, /* 52  */ /* 50 */
-0x9444, /* 48 */ /* 46 */
-0x9537, /* 36 */ /* 3c */
-0x9631, /* 31 */ /* 31 */
-0x972c,
-0x982a,
-0x9928, /* 29 */
-0x9a26,
-0x9b09,
+0x8f55,
+0x9052, //
+0x914e, //
+0x9248, //56
+0x9343, //4c
+0x943d, //3e
+0x9537, //37
+0x9632, //30
+0x972f, //2c
+0x982b, //2a
+0x9929, //28
+0x9a27, //26
+0x9b06, //
 
-
-/* /////////////////////////// Page 48	- MIPI		//// */
+                  
+///////////////////////////// Page 48
 0x0348,
 
 0x1005,
-0x1100, /* async_fifo off */
+0x1100, //async_fifo off
 0x1200,
 
 0x16c4,
@@ -512,15 +531,13 @@ static regs_t sr030pc50_init_regs[] = {
 0x3601,
 0x3703,
 0x3800,
-0x394a,
+0x394a, 
 0x3c00,
 0x3dfa,
 0x3f10,
 0x4000,
 0x4120,
 0x4200,
-
-/*   0x5081, */
 
 0x0322,
 0x10fb,
@@ -529,722 +546,1666 @@ static regs_t sr030pc50_init_regs[] = {
 0x109c,
 
 0x0170,
-};
-
 
-
-static const u16 sr030pc50_init_reg2[] = {
 };
 
-static const u16 sr030pc50_DTP_init[] = {
+const regs_t sr030pc50_preview_camera_regs[] =
+{
 };
-
-static const u16 sr030pc50_DTP_stop[] = {
+const regs_t sr030pc50_snapshot_normal_regs[] =
+{
 };
-
-/* ========================================================== */
-/* FPS() */
-/* ========================================================== */
-
-static const u16 sr030pc50_FPS_Auto[] = {
+const regs_t sr030pc50_snapshot_lowlight_regs[] =
+{
 };
-
-
-static const u16 sr030pc50_FPS_5[] = {
+const regs_t sr030pc50_snapshot_highlight_regs[] =
+{
 };
-
-static const u16 sr030pc50_FPS_7[] = {
+const regs_t sr030pc50_snapshot_nightmode_regs[] =
+{
 };
-
-static const u16 sr030pc50_FPS_10[] = {
+const regs_t sr030pc50_snapshot_flash_on_regs[] =
+{
 };
-
-static const u16 sr030pc50_FPS_15[] = {
+const regs_t sr030pc50_snapshot_af_preflash_on_regs[] =
+{
 };
-
-static const u16 sr030pc50_FPS_20[] = {
+const regs_t sr030pc50_snapshot_af_preflash_off_regs[] =
+{
 };
 
-static const u16 sr030pc50_FPS_30[] = {
+const regs_t sr030pc50_single_af_start_regs[] =
+{
+};
+const regs_t sr030pc50_get_1st_af_search_status[] = 
+{
+};
+const regs_t sr030pc50_get_2nd_af_search_status[] = 
+{
 };
-
-
-static const u16 sr030pc50_FPS_60[] = {
-
+const regs_t sr030pc50_single_af_stop_regs[] =
+{
+};
+//==========================================================
+//  EFFECT(6)
+//==========================================================
+
+const regs_t sr030pc50_effect_normal_regs[] =
+{
+0x0310,
+0x1103,
+0x1230,
+0x0313,
+0x103b,
+0x2002,
+};
+const regs_t sr030pc50_effect_negative_regs[] =
+{
+0x0310,
+0x1103,
+0x1238,
+0x0313,
+0x103b,
+0x2002,
+};
+const regs_t sr030pc50_effect_sepia_regs[] =
+{
+0x0310,
+0x1103,
+0x1233,
+0x4470,
+0x4598,
+0x0313,
+0x103b,
+0x2002,
+};
+const regs_t sr030pc50_effect_mono_regs[] =
+{
+0x0310,
+0x1103,
+0x1233,
+0x0313,
+0x103b,
+0x2002,
+};
+const regs_t sr030pc50_effect_aqua_regs[] =
+{
+};
+const regs_t sr030pc50_effect_sharpen_regs[] =
+{
+};
+const regs_t sr030pc50_effect_solarization_regs[] =
+{
+};
+const regs_t sr030pc50_effect_black_white_regs[] =
+{
+};
+//==========================================================
+//  EFFECT(6)  -END
+//==========================================================
+
+
+
+//==========================================================
+// WB(5) -START
+//==========================================================
+
+
+const regs_t sr030pc50_wb_auto_regs[] =
+{
+0x0322,
+0x10e2,
+0x112e,
+0x803d, //3a //3c
+0x8120, 
+0x8240,
+0x835a, //RMAX
+0x8422, //(0216_kjh20>>23) RMIN
+0x8553, //(0216_kjh5c>>5a) BMAX //51
+0x8624, //BMIN //20
+0x10fb,
+};
+
+const regs_t sr030pc50_wb_daylight_regs[] =
+{
+0x0322,
+0x107b,
+0x1126,
+0x8048, 
+0x8120, 
+0x8230, 
+0x8353, 
+0x8444, 
+0x8532, 
+0x8626, 
+0x10fb,
+};
+
+const regs_t sr030pc50_wb_cloudy_regs[] =
+{
+0x0322,
+0x107b,
+0x1126,
+0x806d,
+0x8120,
+0x8220,
+0x836e, //7f 7d
+0x846c, //7d 7d 7f RMIN
+0x8521, //1c 1e 1a 21 BMAX
+0x861f, //10 1e 
+0x10fb,
+};
+const regs_t sr030pc50_wb_incandescent_regs[] =
+{
+0x0322,
+0x107b,
+0x1126,
+0x8023, 
+0x8120, 
+0x8252, 
+0x8321, 
+0x841d, 
+0x8559, 
+0x8656, 
+0x10fb,
+};
+
+const regs_t sr030pc50_wb_fluorescent_regs[] =
+{
+0x0322,
+0x107b,
+0x1126,
+0x803a,
+0x8120,
+0x8248,
+0x833d, //4c 4e RMAX
+0x8433, //40
+0x854c, //58
+0x8642, //48 4a BMIN
+0x10fb,
+};
+
+//==========================================================
+// WB(5)  --END
+//==========================================================
+
+
+
+//==========================================================
+//METERING()
+//==========================================================
+
+const regs_t sr030pc50_metering_matrix_regs[] =
+{
+0x0320,
+0x6011,
+0x6111,
+0x6211,
+0x6311, 
+};
+
+const regs_t sr030pc50_metering_center_regs[] =
+{
+0x0320,
+0x6071, //70
+0x6100, //11 //22
+0x6271,
+0x6300, //11 //22
+};
+
+const regs_t sr030pc50_metering_spot_regs[] =
+{
+0x0320,
+0x6070,
+0x6100,
+0x6270,
+0x6300, 
+};
+//==========================================================
+//METERING() - END
+//==========================================================
+
+
+//==========================================================
+// BRIGHTNES(9) - START
+//==========================================================
+
+const regs_t sr030pc50_ev_minus_4_regs[] =
+{
+ 0x0310,
+ 0x40c0,	
 };
 
-static const u16 sr030pc50_FPS_120[] = {
-
+const regs_t sr030pc50_ev_minus_3_regs[] =
+{
+ 0x0310,
+ 0x40b0,
 };
-
-
-/* ========================================================== */
-/*   EFFECT(6) */
-/* ========================================================== */
 
-static const u16 sr030pc50_Effect_Normal[] = {
+const regs_t sr030pc50_ev_minus_2_regs[] =
+{
+ 0x0310,
+ 0x40a0,
 };
 
-static const u16 sr030pc50_Effect_Black_White[] = {
+const regs_t sr030pc50_ev_minus_1_regs[] =
+{
+ 0x0310,
+ 0x4090,
 };
 
-static const u16 sr030pc50_Effect_Solarization[] = {
+const regs_t sr030pc50_ev_default_regs[] =
+{
+ 0x0310,
+ 0x4080,
 };
 
-static const u16 sr030pc50_Effect_Negative[] = {
+const regs_t sr030pc50_ev_plus_1_regs[] =
+{
+ 0x0310,
+ 0x4010,
 };
 
-static const u16 sr030pc50_Effect_Sepia[] = {
+const regs_t sr030pc50_ev_plus_2_regs[] =
+{
+ 0x0310,
+ 0x4020,
 };
-
-
-
 
+const regs_t sr030pc50_ev_plus_3_regs[] =
+{
+ 0x0310,
+ 0x4030,
+};
 
-/* ========================================================== */
-/*  MWB(5) */
-/* ========================================================== */
+const regs_t sr030pc50_ev_plus_4_regs[] =
+{
+ 0x0310,
+ 0x4050,
+};
+// ==========================================================
+// BRIGHTNES(9) - END
+//==========================================================
 
+//==========================================================
+// contrast(5) - START
+//==========================================================
 
-static const u16 sr030pc50_WB_Auto[] = {
+const regs_t sr030pc50_contrast_minus_2_regs[] =
+{
+0x0310,
+0x48a0,
 };
 
-static const u16 sr030pc50_WB_Sunny[] = {
+const regs_t sr030pc50_contrast_minus_1_regs[] =
+{
+0x0310,
+0x4890,
 };
 
-static const u16 sr030pc50_WB_Cloudy[] = {
+const regs_t sr030pc50_contrast_default_regs[] =
+{
+0x0310,
+0x4885,
 };
 
-static const u16 sr030pc50_WB_Fluorescent[] = {
+const regs_t sr030pc50_contrast_plus_1_regs[] =
+{
+0x0310,
+0x4870,
 };
 
-static const u16 sr030pc50_WB_Tungsten[] = {
+const regs_t sr030pc50_contrast_plus_2_regs[] =
+{
+0x0310,
+0x4860,
 };
 
+//==========================================================
+// contrast(5) - END
+//==========================================================
 
-static const u16 sr030pc50_WB_CWF[] = { /*  DO NOT USE IT SEHF_CHECK_IT */
-};
 
 
-/* ========================================================== */
-/* ISO() */
-/* ========================================================== */
+//==========================================================
+// sharpness(5) -START
+//==========================================================
 
-static const u16 sr030pc50_ISO_Auto[] = {
-};
 
-static const u16 sr030pc50_ISO_Sport[] = {
-};
 
-static const u16 sr030pc50_ISO_Night[] = {
-};
+//==========================================================
+// sharpness(5) -END
+//==========================================================
 
-static const u16 sr030pc50_ISO_50[] = {
-};
 
-static const u16 sr030pc50_ISO_100[] = {
-};
+//==========================================================
+// saturation(5) - START
+//==========================================================
 
-static const u16 sr030pc50_ISO_200[] = {
-};
 
-static const u16 sr030pc50_ISO_400[] = {
-};
+//==========================================================
+// saturation(5) - END
+//==========================================================
 
 
 
-static const u16 sr030pc50_WDR_on[] = {
-};
 
-static const u16 sr030pc50_WDR_off[] = {
-};
 
+//==========================================================
+// ZOOM - START
+//==========================================================
 
 
+//==========================================================
+// ZOOM - END
+//==========================================================
 
 
 
+//==========================================================
+// SCENEMODE -START
+//==========================================================
 
 
-/* ========================================================== */
-/* METERING() */
-/* ========================================================== */
 
-static const u16 sr030pc50_Metering_Matrix[] = {
-};
+// ==========================================================
+// 	CAMERA_SCENE_PORTRAIT (Auto/Center/Br0/Auto/Sharp-1/Sat0)
+// ==========================================================
 
-static const u16 sr030pc50_Metering_Center[] = {
-};
 
-static const u16 sr030pc50_Metering_Spot[] = {
-};
+// ==========================================================
+// 	CAMERA_SCENE_NIGHT (Night/Center/Br0/Auto/Sharp0/Sat0)
+// ==========================================================
 
 
+// ==========================================================
+// 	CAMERA_SCENE_AGAINSTLIGHT (Auto/Spot(flash) or Center(no flash)/Br0/Auto/Sharp0/Sat0)
+// ==========================================================
 
+// ==========================================================
+// 	CAMERA_SCENE_LANDSCAPE (Auto/Matrix/Br0/Auto/Sharp+1/Sat+1)
+// ==========================================================
 
 
+// ==========================================================
+// 	CAMERA_SCENE_SPORTS (Sport/Center/Br0/Auto/Sharp0/Sat0)
+// ==========================================================
 
+// ==========================================================
+// 	CAMERA_SCENE_PARTYINDOOR (ISO200/Center/Br0/Auto/Sharp0/Sat+1)
+// ==========================================================
 
 
+// ==========================================================
+// 	CAMERA_SCENE_BEACHSNOW (ISO50/Center/Br+1/Auto/Sharp0/Sat+1)
+// ==========================================================
 
-/* ========================================================== */
-/*  BRIGHTNES(9) */
-/* ========================================================== */
+// ==========================================================
+// 	CAMERA_SCENE_SUNSET (Auto/Center/Br0/Daylight/Sharp0/Sat0)
+// ==========================================================
 
-static const u16 sr030pc50_EV_Minus_4[] = {
-	0xffff,
-};
+// ==========================================================
+// 	CAMERA_SCENE_DAWN (Auto/Center/Br0/CWF/Sharp0/Sat0)
+// ==========================================================
 
-static const u16 sr030pc50_EV_Minus_3[] = {
-};
 
-static const u16 sr030pc50_EV_Minus_2[] = {
-};
+// ==========================================================
+// 	CAMERA_SCENE_FALLCOLOR (Auto/Center/Br0/Auto/Sharp0/Sat+2)
+// ==========================================================
 
-static const u16 sr030pc50_EV_Minus_1[] = {
-};
 
-static const u16 sr030pc50_EV_Default[] = {
-};
+// ==========================================================
+// 	CAMERA_SCENE_FIREWORK (ISO50/Center/Br0/Auto/Sharp0/Sat0)
+// ==========================================================
 
-static const u16 sr030pc50_EV_Plus_1[] = {
-};
 
-static const u16 sr030pc50_EV_Plus_2[] = {
-};
+// ==========================================================
+// 	CAMERA_SCEBE_CANDLELIGHT (Auto/Center/Br0/Daylight/Sharp0/Sat0)
+// ==========================================================
 
-static const u16 sr030pc50_EV_Plus_3[] = {
-};
 
-static const u16 sr030pc50_EV_Plus_4[] = {
-};
+// ==========================================================
+// 	CAMERA_SCENE_TEXT (Auto/Center/Br0/Auto/Sharp+2/Sat0)
+// ==========================================================
 
+//==========================================================
+// SCENEMODE -END
+//==========================================================
 
 
 
-/* ========================================================== */
-/*  BRIGHTNES(9) Camcorder */
-/* ========================================================== */
+//==========================================================
+//FPS()  - START
+//==========================================================
 
-static const u16 sr030pc50_EV_Camcorder_Minus_4[] = {
-};
 
-static const u16 sr030pc50_EV_Camcorder_Minus_3[] = {
+const regs_t sr030pc50_sharpness_minus_3_regs[] = 
+{
 };
-
-static const u16 sr030pc50_EV_Camcorder_Minus_2[] = {
+const regs_t sr030pc50_sharpness_minus_2_regs[] =
+{
 };
-
-static const u16 sr030pc50_EV_Camcorder_Minus_1[] = {
+const regs_t sr030pc50_sharpness_minus_1_regs[] =
+{
 };
-
-static const u16 sr030pc50_EV_Camcorder_Default[] = {
+const regs_t sr030pc50_sharpness_default_regs[] =
+{
 };
-
-static const u16 sr030pc50_EV_Camcorder_Plus_1[] = {
+const regs_t sr030pc50_sharpness_plus_1_regs[] =
+{
 };
-
-static const u16 sr030pc50_EV_Camcorder_Plus_2[] = {
+const regs_t sr030pc50_sharpness_plus_2_regs[] =
+{
 };
-
-static const u16 sr030pc50_EV_Camcorder_Plus_3[] = {
+const regs_t sr030pc50_sharpness_plus_3_regs[] =
+{
 };
 
-static const u16 sr030pc50_EV_Camcorder_Plus_4[] = {
+const regs_t sr030pc50_saturation_minus_2_regs[] =
+{
 };
-
-
-
-
-
-/* ========================================================== */
-/*  contrast(5) - // DO NOT USE IT SEHF_CHECK_IT */
-/* ========================================================== */
-
-static const u16 sr030pc50_Contrast_Minus_4[] = {
+const regs_t sr030pc50_saturation_minus_1_regs[] =
+{
 };
-
-static const u16 sr030pc50_Contrast_Minus_3[] = {
+const regs_t sr030pc50_saturation_default_regs[] =
+{
 };
-
-static const u16 sr030pc50_Contrast_Minus_2[] = {
+const regs_t sr030pc50_saturation_plus_1_regs[] =
+{
 };
-
-static const u16 sr030pc50_Contrast_Minus_1[] = {
+const regs_t sr030pc50_saturation_plus_2_regs[] =
+{
 };
-
-static const u16 sr030pc50_Contrast_Default[] = {
+const regs_t sr030pc50_zoom_00_regs[] =
+{
 };
-
-static const u16 sr030pc50_Contrast_Plus_1[] = {
+const regs_t sr030pc50_zoom_01_regs[] =
+{
 };
-
-static const u16 sr030pc50_Contrast_Plus_2[] = {
+const regs_t sr030pc50_zoom_02_regs[] =
+{
 };
-
-
-
-/* ========================================================== */
-/*  sharpness(5) - // DO NOT USE IT SEHF_CHECK_IT */
-/* ========================================================== */
-
-static const u16 sr030pc50_Sharpness_Minus_2[] = {
+const regs_t sr030pc50_zoom_03_regs[] =
+{
 };
-
-static const u16 sr030pc50_Sharpness_Minus_1[] = {
+const regs_t sr030pc50_zoom_04_regs[] =
+{
 };
-
-static const u16 sr030pc50_Sharpness_Default[] = {
+const regs_t sr030pc50_zoom_05_regs[] =
+{
 };
-
-static const u16 sr030pc50_Sharpness_Plus_1[] = {
+const regs_t sr030pc50_zoom_06_regs[] =
+{
 };
-
-static const u16 sr030pc50_Sharpness_Plus_2[] = {
+const regs_t sr030pc50_zoom_07_regs[] =
+{
 };
-
-
-
-
-
-
-
-/* ========================================================== */
-/*  saturation(5) - // DO NOT USE IT SEHF_CHECK_IT */
-/* ========================================================== */
-
-static const u16 sr030pc50_Saturation_Minus_2[] = {
+const regs_t sr030pc50_zoom_08_regs[] =
+{
 };
-
-static const u16 sr030pc50_Saturation_Minus_1[] = {
+const regs_t sr030pc50_scene_none_regs[] =
+{
 };
-
-static const u16 sr030pc50_Saturation_Default[] = {
+const regs_t sr030pc50_scene_portrait_regs[] =
+{
 };
-
-static const u16 sr030pc50_Saturation_Plus_1[] = {
+const regs_t sr030pc50_scene_nightshot_regs[] =
+{
 };
-
-static const u16 sr030pc50_Saturation_Plus_2[] = {
+const regs_t sr030pc50_scene_backlight_regs[] =
+{
 };
-
-
-
-
-
-
-/* ========================================================== */
-/*  WDR Auto Contrast */
-/* ========================================================== */
-
-static const u16 sr030pc50_Auto_Contrast_ON[] = {
+const regs_t sr030pc50_scene_landscape_regs[] =
+{
 };
-
-static const u16 sr030pc50_Auto_Contrast_OFF[] = {
+const regs_t sr030pc50_scene_sports_regs[] =
+{
 };
-
-
-
-
-
-
-
-
-
-/* ========================================================== */
-/*  JPEG QUALITY - // DO NOT USE IT SEHF_CHECK_IT */
-/* ========================================================== */
-
-static const u16 sr030pc50_Jpeg_Quality_High[] = {
+const regs_t sr030pc50_scene_party_indoor_regs[] =
+{
 };
-
-static const u16 sr030pc50_Jpeg_Quality_Normal[] = {
+// ==========================================================
+const regs_t sr030pc50_scene_beach_snow_regs[] =
+{
 };
-
-static const u16 sr030pc50_Jpeg_Quality_Low[] = {
+const regs_t sr030pc50_scene_sunset_regs[] =
+{
 };
-
-/* ========================================================== */
-/* SCENE() */
-/* ========================================================== */
-
-static const u16 sr030pc50_Scene_Default[] = {
+const regs_t sr030pc50_scene_duskdawn_regs[] =
+{
 };
-
-/*========================================================== */
-/*	CAMERA_SCENE_PORTRAIT (Auto/Center/Br0/Auto/Sharp-1/Sat0) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Portrait[] = {
+const regs_t sr030pc50_scene_fall_color_regs[] =
+{
 };
-
-/*========================================================== */
-/*	CAMERA_SCENE_NIGHT (Night/Center/Br0/Auto/Sharp0/Sat0) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Nightshot[] = {
+const regs_t sr030pc50_scene_fireworks_regs[] =
+{
 };
-
-/*========================================================== */
-/*	CAMERA_SCENE_AGAINSTLIGHT (Auto/Spot(flash)
-		or Center(no flash)/Br0/Auto/Sharp0/Sat0) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Backlight[] = {
+const regs_t sr030pc50_scene_candle_light_regs[] =
+{
 };
-
-/*========================================================== */
-/*	CAMERA_SCENE_LANDSCAPE (Auto/Matrix/Br0/Auto/Sharp+1/Sat+1) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Landscape[] = {
+const regs_t sr030pc50_scene_text_regs[] =
+{
 };
-
-/*========================================================== */
-/*	CAMERA_SCENE_SPORTS (Sport/Center/Br0/Auto/Sharp0/Sat0) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Sports[] = {
+const regs_t sr030pc50_fps_auto_regs[] =
+{
 };
+//==========================================================
+//FPS()
+//==========================================================
 
-/*========================================================== */
-/*	CAMERA_SCENE_PARTYINDOOR (ISO200/Center/Br0/Auto/Sharp0/Sat+1) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Party_Indoor[] = {
-};
+const regs_t sr030pc50_fps_5_regs[] = 
+{
+0x0300,
+0x0171,
+0x1190,
+0x4000, //Hblank 144
+0x4190, 
+0x4200, //Vblank 104
+0x4368, 
 
-/*========================================================== */
-/*	CAMERA_SCENE_BEACHSNOW (ISO50/Center/Br+1/Auto/Sharp0/Sat+1) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Beach_Snow[] = {
-};
+0x0320, //Page 20
+0x101c,
 
-/*========================================================== */
-/*	CAMERA_SCENE_SUNSET (Auto/Center/Br0/Daylight/Sharp0/Sat0) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Sunset[] = {
-};
+0x8300, //EXP Normal 33.33 fps 
+0x84bd, 
+0x85d8, 
 
-/*========================================================== */
-/*	CAMERA_SCENE_DAWN (Auto/Center/Br0/CWF/Sharp0/Sat0) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Duskdawn[] = {
-};
+0xa003, //EXP Max 7.14 fps 
+0xa175, 
+0xa2f0,
 
-/*========================================================== */
-/*	CAMERA_SCENE_FALLCOLOR (Auto/Center/Br0/Auto/Sharp0/Sat+2) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Fall_Color[] = {
-};
+0x9104, //EXP Fix 5.00 fps
+0x92f5, 
+0x9388, 
 
-/*========================================================== */
-/*	CAMERA_SCENE_FIREWORK (ISO50/Center/Br0/Auto/Sharp0/Sat0) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Fireworks[] = {
+0x109c,
+0x0300,
+0x1194,
+0x0170,
 };
+const regs_t sr030pc50_fps_7_regs[] =
+{
+0x0300,
+0x0171,
+0x1190,
+0x4000, //Hblank 144
+0x4190, 
+0x4200, //Vblank 104
+0x4368, 
 
-/*========================================================== */
-/*	CAMERA_SCENE_TEXT (Auto/Center/Br0/Auto/Sharp+2/Sat0) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Text[] = {
-};
+0x0320, //Page 20
+0x101c,
 
-/*========================================================== */
-/*	CAMERA_SCEBE_CANDLELIGHT (Auto/Center/Br0/Daylight/Sharp0/Sat0) */
-/*========================================================== */
-static const u16 sr030pc50_Scene_Candle_Light[] = {
-};
+0x8300, //EXP Normal 33.33 fps 
+0x84bd, 
+0x85d8, 
 
-/*========================================================== */
-/*	AF() - SEHF_AF_CHECK */
-/*========================================================== */
+0xa003, //EXP Max 7.14 fps 
+0xa175, 
+0xa2f0,
 
-static const u16 sr030pc50_AF_Return_Inf_pos[] = {
-};
+0x9103, //EXP Fix 7.00 fps
+0x928a, 
+0x93a4, 
 
-static const u16 sr030pc50_AF_Return_Macro_pos[] = {
+0x109c,
+0x0300,
+0x1194,
+0x0170,
 };
 
-static const u16 sr030pc50_AF_Normal_mode_1[] = {
-};
 
-static const u16 sr030pc50_AF_Normal_mode_2[] = {
-};
 
-static const u16 sr030pc50_AF_Normal_mode_3[] = {
-};
 
-static const u16 sr030pc50_AF_Macro_mode_1[] = {
-};
+const regs_t sr030pc50_fps_10_regs[] = 
+{
+0x0300,
+0x0171,
+0x1190,
+0x4000, //Hblank 144
+0x4190, 
+0x4200, //Vblank 104
+0x4368, 
 
-static const u16 sr030pc50_AF_Macro_mode_2[] = {
-};
+0x0320, //Page 20
+0x101c,
 
-static const u16 sr030pc50_AF_Macro_mode_3[] = {
-};
+0x8300, //EXP Normal 33.33 fps 
+0x84bd, 
+0x85d8, 
 
-static const u16 sr030pc50_AF_Low_Light_normal_mode_1[] = {
-};
+0xa002, //EXP Max 10.00 fps 
+0xa178, 
+0xa2d0,
 
-static const u16 sr030pc50_AF_Low_Light_normal_mode_2[] = {
-};
-static const u16 sr030pc50_AF_Low_Light_normal_mode_3[] = {
-};
+0x9102, //EXP Fix 10.00 fps
+0x927a, 
+0x93c4, 
 
-static const u16 sr030pc50_AF_Low_Light_Macro_mode_1[] = {
+0x109c,
+0x0300,
+0x1194,
+0x0170,
 };
 
-static const u16 sr030pc50_AF_Low_Light_Macro_mode_2[] = {
-};
+const regs_t sr030pc50_fps_15_regs[] =
+{
+0x0300,
+0x0171,
+0x1190,
+0x4000, //Hblank 144
+0x4190, 
+0x4200, //Vblank 104
+0x4368, 
 
-static const u16 sr030pc50_AF_Low_Light_Macro_mode_3[] = {
-};
+0x0320, //Page 20
+0x101c,
 
-static const u16 sr030pc50_Single_AF_Start[] = {
-};
+0x8300, //EXP Normal 33.33 fps 
+0x84bd, 
+0x85d8, 
 
-static const u16 sr030pc50_Single_AF_Off_1[] = {
-};
+0xa001, //EXP Max 16.67 fps 
+0xa17b, 
+0xa2b0,
 
-static const u16 sr030pc50_Low_Cap_On[] = {
-};
+0x9101, //EXP Fix 15.00 fps
+0x92a7, 
+0x930c, 
 
-static const u16 sr030pc50_Low_Cap_Off[] = {
+0x109c,
+0x0300,
+0x1194,
+0x0170,
 };
 
-static const u16 sr030pc50_Capture_Start[] = {
-};
+const regs_t sr030pc50_fps_20_regs[] =
+{
+0x0300,
+0x0171,
+0x1190,
+0x4000, //Hblank 144
+0x4190, 
+0x4200, //Vblank 104
+0x4368, 
 
-static const u16 sr030pc50_Preview_Return[] = {
-};
+0x0320, //Page 20
+0x101c,
 
-static const u16 sr030pc50_Flash_init[] = {
-};
+0x8300, //EXP Normal 33.33 fps 
+0x84bd, 
+0x85d8, 
 
-static const u16 sr030pc50_Pre_Flash_On[] = {
-};
+0xa001, //EXP Max 20 fps 
+0xa13c, 
+0xa268,
 
-static const u16 sr030pc50_Pre_Flash_Off[] = {
-};
+0x9101, //EXP Fix 20.00 fps
+0x923d, 
+0x9330, 
 
-static const u16 sr030pc50_Main_Flash_On[] = {
+0x109c,
+0x0300,
+0x1194,
+0x0170,
 };
+const regs_t sr030pc50_fps_25_regs[] =
+{
+0x0300,
+0x0171,
+0x1190,
+0x4000, //Hblank 144
+0x4190, 
+0x4200, //Vblank 104
+0x4368, 
 
-static const u16 sr030pc50_Main_Flash_Off[] = {
-};
+0x0320, //Page 20
+0x101c,
 
-/* ========================================================== */
-/* Capture size(Width_Height) */
-/* ========================================================== */
+0x8300, //EXP Normal 33.33 fps 
+0x84bd, 
+0x85d8, 
 
-static const u16 sr030pc50_5M_Capture[] = {
-};
+0xa003, //EXP Max 25.00 fps 
+0xa1fd, 
+0xa220,
 
-static const u16 sr030pc50_W4M_Capture[] = {
-};
+0x9100, //EXP Fix 25.00 fps
+0x92fd, 
+0x93e8, 
 
-static const u16 sr030pc50_3M_Capture[] = {
+0x109c,
+0x0300,
+0x1194,
+0x0170,
 };
 
-static const u16 sr030pc50_W2M_Capture[] = {
-};
+const regs_t sr030pc50_fps_30_regs[] =
+{
+0x0300,
+0x0171,
+0x1190,
+0x4000, //Hblank 144
+0x4190, 
+0x4200, //Vblank 45
+0x432d, 
 
-static const u16 sr030pc50_VGA_Capture[] = {
-};
+0x0320, //Page 20
+0x101c,
 
-static const u16 sr030pc50_WVGA_Capture[] = {
-};
+0x8300, //EXP Normal 33.33 fps 
+0x84bd, 
+0x85d8, 
 
-/* ========================================================== */
-/* preivew size() */
-/* ========================================================== */
+0xa000, //EXP Max 33.33 fps 
+0xa1bd, 
+0xa2d8,
 
-static const u16 sr030pc50_800_Preview[] = {
-};
+0x9100, //EXP Fix 30.04 fps
+0x92d3, 
+0x9354, 
 
-static const u16 sr030pc50_720_Preview[] = {
+0x109c,
+0x0300,
+0x1194,
+0x0170,
 };
-
-static const u16 sr030pc50_640_Preview[] = {
+    
+const regs_t sr030pc50_fps_60_regs[] =
+{
 };
+const regs_t sr030pc50_fps_120_regs[] =
+{
+};    
 
-static const u16 sr030pc50_352_Preview[] = {
-};
+//==========================================================
+//FPS()  - END
+//==========================================================
+//==========================================================
+// JPEG QUALITY - // DO NOT USE IT SEHF_CHECK_IT
+//==========================================================
 
+//==========================================================
+// JPEG QUALITY -END
+//==========================================================
+//==========================================================
+//preivew size() - START
+//==========================================================
 
+//==========================================================
+//PREVIEW SIZE - END
+//==========================================================
 
-static const u16 sr030pc50_320_Preview[] = {
-};
 
 
+//==========================================================
+//CAPTURE START
+//==========================================================
 
+//==========================================================
+//CAPTURE SIZE - END
+//==========================================================
 
-static const u16 sr030pc50_176_Preview[] = {
+const regs_t sr030pc50_quality_superfine_regs[] =
+{
 };
-
-static const u16 sr030pc50_Preview_flip[] = {
+const regs_t sr030pc50_quality_fine_regs[] =
+{
 };
 
-static const u16 sr030pc50_Preview_Mirror[] = {
+const regs_t sr030pc50_quality_normal_regs[] =
+{
 };
 
-
-
-static const u16 sr030pc50_recording_720p[] = {
+const regs_t sr030pc50_quality_economy_regs[] =
+{
 };
-
-static const u16 sr030pc50_recording_720x480[] = {
+const regs_t sr030pc50_preview_size_176x144_regs[] =
+{	//176x144
 };
-
-static const u16 sr030pc50_recording_640x480[] = {
+const regs_t sr030pc50_preview_size_320x240_regs[]=
+{
 };
-
-
-
-static const u16 sr030pc50_recording_320x240[] = {
+const regs_t sr030pc50_preview_size_352x288_regs[] =
+{	//352x288
 };
-
-static const u16 sr030pc50_recording_176x144[] = {
+const regs_t sr030pc50_preview_size_640x480_regs[] =
+{
 };
 
-static const u16 sr030pc50_recording_720p_return[] = {
+const regs_t sr030pc50_preview_size_704x576_regs[] =
+{
 };
-
-/* ========================================================== */
-/* AE_AWE_LOCK(2) */
-/* ========================================================== */
-static const u16 sr030pc50_ae_lock[] = {
+const regs_t sr030pc50_preview_size_720x480_regs[] =
+{	//72 0x480
 };
-
-/*  AE unLock */
-static const u16 sr030pc50_ae_unlock[] = {
+const regs_t sr030pc50_preview_size_800x480_regs[] =
+{	//800x480
 };
-
-/*  AWB Lock */
-static const u16 sr030pc50_awb_lock[] = {
+const regs_t sr030pc50_preview_size_800x600_regs[] =
+{
 };
-
-/*  AWB u16 */
-static const u32 sr030pc50_awb_unlock[] = {
+const regs_t sr030pc50_preview_size_1024x600_regs[] =
+{
 };
-
-/*  TOUCH AF */
-static const u16 sr030pc50_touchaf[] =  {
+const regs_t sr030pc50_preview_size_1024x768_regs[] =
+{
 };
-
-
-
-
-
-/*****************************************
-ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-THE FOLLOWING ARE NOT DEFINED IN THE FILE THAT WE RECIEVED FROM SAMSUNG
-NEED TO CHECK IN FUTURE
-******************************************/
-	/*****************************************
-	ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	THE FOLLOWING ARE NOT DEFINED IN THE FILE THAT WE RECIEVED FROM SAMSUNG
-	NEED TO CHECK IN FUTURE
-	******************************************/
-
-
-static const u16 sr030pc50_Night_Capture[] = {
+const regs_t sr030pc50_preview_size_1280x960_regs[] =
+{
 };
-static const u16 sr030pc50_AF_Low_Light_Mode_On[] = {
+const regs_t sr030pc50_preview_size_1600x960_regs[] =
+{
 };
-static const u16 sr030pc50_AF_Low_Light_Mode_Off[] = {
+const regs_t sr030pc50_preview_size_1600x1200_regs[] =
+{
 };
-static const u16 sr030pc50_Single_AF_Off_2[] = {
+const regs_t sr030pc50_preview_size_2048x1232_regs[] =
+{
 };
-static const u16 sr030pc50_Single_AF_Off_3[] = {
+const regs_t sr030pc50_preview_size_2048x1536_regs[] =
+{	//2048x1536
 };
-
-static const u16 sr030pc50_Face_Detection_On[] = {
+const regs_t sr030pc50_preview_size_2560x1920_regs[] =
+{
+};
+const regs_t sr030pc50_capture_size_640x480_regs[] =
+{	//640x480
 };
-static const u16 sr030pc50_Face_Detection_Off[] = {
+    
+const regs_t sr030pc50_capture_size_720x480_regs[] =
+{	
 };
+    
+const regs_t sr030pc50_capture_size_800x480_regs[] =
+{	
+};
 
-static const u16 sr030pc50_Pre_Flash_Start[] = {
+const regs_t sr030pc50_capture_size_800x486_regs[] =
+{	//800x480
 };
-static const u16 sr030pc50_Pre_Flash_End[] = {
+const regs_t sr030pc50_capture_size_800x600_regs[] =
+{	
 };
-static const u16 sr030pc50_Flash_Start[] = {
+const regs_t sr030pc50_capture_size_1024x600_regs[] =
+{	
 };
-static const u16 sr030pc50_Flash_End[] = {
+const regs_t sr030pc50_capture_size_1024x768_regs[] =
+{	
 };
 
+const regs_t sr030pc50_capture_size_1280x960_regs[] = 
+{
+};
+const regs_t sr030pc50_capture_size_1600x960_regs[] =
+{	
+};
 
 /* 1600 x 1200 */
-static const u16 sr030pc50_2M_Capture[] = {
-};
-/* 1280 x 960 */
-static const u16 sr030pc50_1M_Capture[] = {
-};
-static const u16 sr030pc50_AE_AWB_Lock_On[] = {
+const regs_t sr030pc50_capture_size_1600x1200_regs[] = 
+{
 };
 
-static const u16 sr030pc50_AE_AWB_Lock_Off[] = {
+const regs_t sr030pc50_capture_size_2048x1232_regs[] =
+{	//2048x1232
 };
 
-static const u16 sr030pc50_Get_AE_Stable_Status[] = {
+const regs_t sr030pc50_capture_size_2048x1536_regs[] =
+{	//2048x1536
+};
+const regs_t sr030pc50_capture_size_2560x1536_regs[] =
+{
+};
+const regs_t sr030pc50_capture_size_2560x1920_regs[] =
+{	// 5M
+};
+//==========================================================
+//TEST PATTERN- START
+//==========================================================
+
+const regs_t sr030pc50_pattern_on_regs[] =
+{
+0x0300,
+0x5005, //Test Pattern
+0x0310,
+0x1200,
+0x0311,
+0x1020,
+0x0312,
+0x40e8,
+0x701e,
+0x0313,
+0x1000,
+0x8002,
+0x0314,
+0x1000,
+0x0315,
+0x1002,
+0x0316,
+0x1000,
+0x0320,
+0x101c,
+0x0322,
+0x107b,
 };
 
-static const u16 sr030pc50_Get_Light_Level[] = {
+const regs_t sr030pc50_pattern_off_regs[] = 
+{
+0x0300,
+0x5000, //Test Pattern
+0x0310,
+0x1230,
+0x0311,
+0x1008,
+0x0312,
+0x4025,
+0x70eb,
+0x0313,
+0x1001,
+0x8003,
+0x0314,
+0x1001,
+0x0315,
+0x1003,
+0x0316,
+0x1001,
+0x0320,
+0x109c,
+0x0322,
+0x10fb,
 };
-
-static const u16 sr030pc50_get_1st_af_search_status[] = {
-};
-
-static const u16 sr030pc50_get_2nd_af_search_status[] = {
-};
-
-static const u16 sr030pc50_get_capture_status[] = {
-};
-
-static const u16 sr030pc50_get_esd_status[] = {
-};
-
-static const u16 sr030pc50_get_iso_reg[] = {
-};
-
-static const u16 sr030pc50_get_shutterspeed_reg[] = {
-};
-
-
-static const u16 sr030pc50_Sharpness_Minus_3[] = {
-};
-
-static const u16 sr030pc50_Sharpness_Plus_3[] = {
-};
-/* restores crop settings to full resolution */
-static const u16 sr030pc50_Reset_Crop[] = {
-};
-
-static const u16 sr030pc50_zoom_0[] = {
-};
-static const u16 sr030pc50_zoom_1[] = {
-};
-static const u16 sr030pc50_zoom_2[] = {
-};
-static const u16 sr030pc50_zoom_3[] = {
-};
-static const u16 sr030pc50_zoom_4[] = {
-};
-static const u16 sr030pc50_zoom_5[] = {
-};
-static const u16 sr030pc50_zoom_6[] = {
-};
-static const u16 sr030pc50_zoom_7[] = {
-};
+//==========================================================
+//TEST PATTERN- END
+//==========================================================
 
 
-/*****************************************
-ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-THE ABOVE ARE NOT DEFINED IN THE FILE THAT WE RECIEVED FROM SAMSUNG
-NEED TO CHECK IN FUTURE
-******************************************/
-#endif /* __CAMDRV_SS_SR030PC50_H__ */
+
+//==========================================================
+//AE - START
+//==========================================================
+
+static regs_t sr030pc50_ae_lock_regs[] =
+{
+};
+static regs_t sr030pc50_ae_unlock_regs[] =
+{
+};
+
+//==========================================================
+//AE - END
+//==========================================================
+
+
+
+//==========================================================
+//AWB - START
+//==========================================================
+
+static regs_t sr030pc50_awb_lock_regs[] =
+{
+};
+static regs_t sr030pc50_awb_unlock_regs[] =
+{
+};
+
+//==========================================================
+//AWB - END
+//==========================================================
+
+
+const regs_t sr030pc50_iso_auto_regs[] =
+{
+};
+
+const regs_t sr030pc50_iso_50_regs[] =
+{
+};
+
+const regs_t sr030pc50_iso_100_regs[] =
+{
+};
+
+const regs_t sr030pc50_iso_200_regs[] =
+{
+};
+
+const regs_t sr030pc50_iso_400_regs[] =
+{
+};
+
+
+//==========================================================
+//WDR - START
+//==========================================================
+
+const regs_t sr030pc50_wdr_on_regs[] = {
+};
+
+const regs_t sr030pc50_wdr_off_regs[] = {
+};
+
+//==========================================================
+//WDR - END
+//==========================================================
+
+
+//==========================================================
+// BRIGHTNES(9) Camcorder
+//==========================================================
+
+const regs_t sr030pc50_ev_camcorder_minus_4_regs[] =
+{
+};
+
+const regs_t sr030pc50_ev_camcorder_minus_3_regs[] =
+{
+};
+
+const regs_t sr030pc50_ev_camcorder_minus_2_regs[] =
+{
+};
+
+const regs_t sr030pc50_ev_camcorder_minus_1_regs[] =
+{
+};
+
+const regs_t sr030pc50_ev_camcorder_default_regs[] =
+{
+};
+
+const regs_t sr030pc50_ev_camcorder_plus_1_regs[] =
+{
+};
+
+const regs_t sr030pc50_ev_camcorder_plus_2_regs[] =
+{
+};
+
+const regs_t sr030pc50_ev_camcorder_plus_3_regs[] =
+{
+};
+
+const regs_t sr030pc50_ev_camcorder_plus_4_regs[] =
+{
+};
+
+
+//==========================================================
+// Auto Contrast
+//==========================================================
+
+const regs_t sr030pc50_auto_contrast_on_regs[] =
+{
+};
+
+const regs_t sr030pc50_auto_contrast_off_regs[] =
+{
+};
+
+
+
+//==========================================================
+//AF() - SEHF_AF_CHECK
+//==========================================================
+
+const regs_t sr030pc50_af_return_inf_pos[] =
+{
+};
+
+const regs_t sr030pc50_af_return_macro_pos[] =
+{
+};
+
+const regs_t sr030pc50_focus_mode_auto_regs[] =
+{
+};
+
+
+const regs_t sr030pc50_focus_mode_macro_regs[] =
+{
+};
+
+
+
+// Frame Fixed
+const regs_t sr030pc50_vt_mode_regs[] = 
+{
+#if 0
+0x0171,	// reset op.
+0x0173,
+0x0171,
+
+// Peting 
+0x0300,                                     
+
+0x080f, //Parallel NO Output_PAD Out
+0x1000,	// VDOCTL1
+0x1180,	// VDOCTL2 , 90 : FFR off, 94 : FFR on
+0x1200,	// CLK_CTL
+0x1488,
+                                             
+0xc095,                                     
+0xc118,                                     
+0xc291,
+0xc300,                                     
+0xc401,   
+
+0x0300,
+0x1200,
+0x2000,
+0x2104,
+0x2200,
+0x2304,
+
+0x4000, //Hblank 144
+0x4190, 
+0x4200, //Vblank 104
+0x4368, 
+
+//BLC
+0x802e, //don't touch
+0x817e, //don't touch
+0x8290, //don't touch
+0x8330, //don't touch
+0x842c, //don't touch
+0x854b, //don't touch
+0x8601, //don't touch
+0x8847, //don't touch
+//{0x0x8},//BLC hold
+
+0x900b,//TIME_IN  12/100  _100318
+0x910b,//TIME_OUT 12/100  _100318
+0x9248,//AG_IN
+0x9348,//AG_OUT
+
+0x9838, //don't touch
+0x9940, //Out BLC
+0xa040, //Dark BLC
+0xa842, //Normal BLC 44
+
+//Pagas Update 12_01_20
+0x0302,
+0x1000,
+0x1100,
+0x1340,
+0x1404,
+0x181c,
+0x1900, //01
+0x1a00,
+0x1b08,
+0x1c9c,
+0x1d03,
+0x2033,
+0x2177,
+0x22a7,
+0x2332,
+0x2433,
+0x2b40,
+0x2d32,
+0x3199,
+0x3200,
+0x3300,
+0x343c,
+0x350d,
+0x3b60, //80
+
+//timcotrol 1 // //don't touch
+0x5021,
+0x511c,
+0x52aa,
+0x535a,
+0x5430,
+0x5510,
+0x560c,
+0x5800,
+0x590f,
+
+//timcotrol 2 // //don't touch
+0x6034,
+0x613a,
+0x6234,
+0x6339,
+0x6434,
+0x6539,
+0x7235,
+0x7338,
+0x7435,
+0x7538,
+0x8002,
+0x812e,
+0x820d,
+0x8310,
+0x840d,
+0x8510,
+0x921d,
+0x9320,
+0x941d,
+0x9520,
+0xa003,
+0xa12d,
+0xa42d,
+0xa503,
+0xa812,
+0xa91b,
+0xaa22,
+0xab2b,
+0xac10,
+0xad0e,
+0xb833,
+0xb935,
+0xbc0c,
+0xbd0e,
+0xc03a,
+0xc13f,
+0xc23a,
+0xc33f,
+0xc43a,
+0xc53e,
+0xc63a,
+0xc73e,
+0xc83a,
+0xc93e,
+0xca3a,
+0xcb3e,
+0xcc3b,
+0xcd3d,
+0xce3b,
+0xcf3d,
+0xd033,
+0xd13f,
+
+//Page10
+0x0310,
+0x1003, //03, //ISPCTL1, YUV ORDER(FIX)
+0x1143,
+0x1230, //Y offet, dy offseet enable
+0x4080,
+0x4102, //00 DYOFS  00->10  _100318
+0x4880, //Contrast  88->84  _100318
+0x5048, //AGBRT
+
+0x6001, //7f //7c
+0x6100, //Use default
+0x6278, //SATB_B  (1.4x)
+0x6378, //SATR_R  (1.2x) //78
+0x6448, //AGSAT
+0x6690, //wht_th2
+0x6736, //wht_gain  Dark (0.4x), Normal (0.75x)
+
+0x8000,
+
+//Page11
+//LPF
+0x0311,
+0x1025,	//LPF_CTL1 //0x01
+0x1107,	//06
+0x2000,	//LPF_AUTO_CTL
+0x2160,	//LPF_PGA_TH
+0x230a,	//LPF_TIME_TH
+0x6013,	//ZARA_SIGMA_TH //40->10
+0x6185,
+0x6200,	//ZARA_HLVL_CTL
+0x6300,	//ZARA_LLVL_CTL
+0x6400,	//ZARA_DY_CTL
+
+0x6770,	//Dark //f0
+0x6824,	//Middle //04 //34
+0x6904,	//High //04
+
+//Page12
+//2D
+0x0312,
+0x40d3,	//YC2D_LPF_CTL1 //bc
+0x4109,	//YC2D_LPF_CTL2
+0x5018,	//Test Setting
+0x5124,	//Test Setting
+0x701f,	//GBGR_CTL1 //0x1f
+0x7100,	//Test Setting
+0x7200,	//Test Setting
+0x7300,	//Test Setting
+0x7412,	//GBGR_G_UNIT_TH//12
+0x7512,	//GBGR_RB_UNIT_TH//12
+0x7620,	//GBGR_EDGE_TH
+0x7780,	//GBGR_HLVL_TH
+0x7888,	//GBGR_HLVL_COMP
+0x7918,	//Test Setting
+
+/////////////////
+0x903d,
+0x9134,
+0x9928,
+0x9c05, //14 For defect
+0x9d08, //15 For defect
+0x9e28,
+0x9f28,
+
+0xb07d, //75 White Defect
+0xb544,
+0xb682,
+0xb752,
+0xb844,
+0xb915,
+/////////////////
+
+//Edg
+0x0313,
+0x1001,	
+0x1189,	
+0x1214,	
+0x1319,	
+0x1408,	//Test Setting
+0x2003,	//SHARP_Negative
+0x2104,	//SHARP_Positive
+0x2325,	//SHARP_DY_CTL 
+0x2421,	//40->33
+0x2508,	//SHARP_PGA_TH
+0x2640,	//Test Setting
+0x2700,	//Test Setting
+0x2808,	//Test Setting
+0x2950,	//AG_TH
+0x2ae0,	//region ratio
+0x2b10,	//Test Setting
+0x2c28,	//Test Setting
+0x2d40,	//Test Setting
+0x2e00,	//Test Setting
+0x2f00,	//Test Setting
+0x3011,	//Test Setting
+0x8005,	//SHARP2D_CTL
+0x8107,	//Test Setting
+0x9004,	//SHARP2D_SLOPE
+0x9105,	//SHARP2D_DIFF_CTL
+0x9200,	//SHARP2D_HI_CLIP
+0x9330,	//SHARP2D_DY_CTL
+0x9430,	//Test Setting
+0x9510,	//Test Setting
+
+/////////////////////
+//LSCin
+0x0314,
+0x1001,
+
+0x2242,
+0x2332,
+0x2430, //30
+
+0x27b0,      //RXCEN  
+0x2880,      //RYCEN
+0x29b0,      //GXCEN
+0x2a80,      //GYCEN
+0x2bb0,      //BXCEN
+0x2c80,       //BYCEN
+
+
+//15p////////////////////////
+0x0315, 
+0x1003,
+
+0x1448,	//CMCOFSGM 
+0x163e,	//CMCOFSGL
+0x172d,	//CMC SIGN
+
+//CMC
+0x30cb,
+0x314b,
+0x3200,
+0x3323,
+0x34ce,
+0x352b,
+0x3600,
+0x3735,
+0x3875,
+
+//CMC_Dff_19.8
+//{0x0x0},
+//{0x0x0},
+//{0x0x0},
+//{0x0x8},
+//{0x0x8},
+//{0x0x0},
+//{0x0x0},
+//{0x0x0},
+//{0x0x0},
+
+//CMC
+0x4000,
+0x4100,
+0x4200,
+0x430e,
+0x448b,
+0x4583,
+0x4600,
+0x4700,
+0x4800,
+
+0x0316,//gamma   0.44 //S_32
+0x3000,
+0x3108,//0x0d //0e
+0x321c,//(0216_kjh_0x1b-->1c) 0x18 //1a
+0x332f,//0x2c //2f
+0x3453,
+0x3576,
+0x3693,
+0x37ac,
+0x38c0,
+0x39d0,
+0x3adc,
+0x3bed,
+0x3cf4, //f7
+0x3df6, //fc
+0x3efa, //ff
+
+//Pag A 
+0x0317,
+0xc43c,
+0xc532,
+
+//Pag AE 
+0x0320,
+0x101c,
+0x1104,
+
+0x2001,
+0x2827,
+0x29a1,
+
+0x2af0,
+0x2b34,
+0x2c2b, //23->2b 2010_04_06 hhzin
+
+0x3078,
+
+0x3b22,
+0x3cde,
+
+0x3922,
+0x3ade,
+0x3b22, //23->22 _10_04_06 hhzin
+0x3cde,
+
+0x6070, //70
+0x6112, //11 //22
+
+0x6270,
+0x6320, //11 //22
+
+0x683c,
+0x6964,
+0x6A28,
+0x6Bc8,
+
+0x7034,//Y Targe 32
+
+0x7611, //Unlock bnd1
+0x7772, //Unlock bnd2 02->a2 _10_04_06 hhzin
+
+0x7812, //Yth 1
+0x7926, //Yth 2 //1f
+0x7a23, //Yth 3
+
+0x7c17, //1c->1d _10_04_06 hhzin
+0x7d22,
+
+//50H
+0x8300, //EXP Normal 33.33 fps 
+0x84af, 
+0x85c8, 
+
+0x8600, //EXPMin 7500.00 fps
+0x87c8, 
+
+0xa001, //EXP Max 16.67 fps 
+0xa17b, 
+0xa2b0, 
+
+0x8B3f, //EXP100 
+0x8C48, 
+0x8D34, //EXP120 
+0x8Ebc, 
+
+0x9101, //EXP Fix 15.00 fps
+0x92a7, 
+0x930c, 
+
+0x988C, //Outdoor th1
+0x9923, //Outdoor th2
+
+0x9c05, //EXP Limit 1071.43 fps 
+0x9d78, 
+0x9e00, //EXP Unit 
+0x9fc8, 
+
+0xb01d,
+0xb114, //14
+0xb2a0, //80 //90
+0xb317, //AGLVL //17
+0xb417,
+0xb53e,
+0xb62b,
+0xb724,
+0xb821,
+0xb91f,
+0xba1e,
+0xbb1d,
+0xbc1c,
+0xbd1b,
+
+0xc01a,
+0xc348,
+0xc448,
+
+//Pag AWB
+0x0322,
+0x10e2,
+0x112e, //2e
+0x2041, //01 //69
+0x2140,
+
+0x3080, //Cb
+0x3180, //Cr
+0x3812, //Lock Boundary //13
+0x3933,
+0x40f3, //f0
+0x4133, //32
+0x4222,
+0x43f3,
+0x4488, //
+0x4566, //
+0x4608, //02
+
+0x803d, //3a //3c
+0x8120,
+0x8240, //3a
+
+//Cb_Cr85 ÇÑµµ
+0x835a, //RMAX
+0x8423, //(0216_kjh20>>23) RMIN
+0x855a, //(0216_kjh5c>>5a) BMAX //51
+0x8624, //BMIN //20
+
+0x874a,
+0x883a,
+0x8940, //3e
+0x8a34, //32
+
+0x8b00, //OUT TH
+0x8d24, //21 //22
+0x8e61, //41
+
+0x8f63, //
+0x9062, //
+0x915e, //
+0x925a, //56
+0x9350, //4c
+0x9442, //3e
+0x953b, //37
+0x9634, //30
+0x972d, //2c
+0x982b, //2a
+0x9929, //28
+0x9a27, //26
+0x9b0b, //
+
+            
+/////////////////////// Page 48	- MIPI		////
+0x0348,
+
+0x1005,
+0x1100, //async_fifo off
+0x1200,
+
+0x16c4,
+0x1700,
+0x1900,
+
+//MIPmig Setting//////////////////////////
+0x1a06, //Phone set
+
+0x1c02,
+0x1d04,
+
+0x1e07,
+0x1f04, //Phone set
+
+0x2000,
+0x21b8,
+0x2200,
+0x2301,
+
+0x3005,
+0x3100,
+
+0x3206,
+0x3401, //Phone set
+0x3502, //Phone set
+
+//////////////////////////////////////////
+
+0x3601,
+0x3703,
+0x3800,
+0x394a, 
+0x3c00,
+0x3dfa,
+0x3f10,
+0x4000,
+0x4120,
+0x4200,
+
+//  {, 0x81},
+
+0x0322,
+0x10fb,
+
+0x0320,
+0x109c,
+
+0x0300,
+0x1184,
+
+0x0170,     
+#endif
+};
+
+
+#endif /* __CAMDRV_SS_sr030pc50_H__ */
+
