@@ -71,6 +71,10 @@ struct ion_buffer {
 	void *vaddr;
 	int dmap_cnt;
 	struct scatterlist *sglist;
+#ifdef CONFIG_ION_KONA
+	unsigned int custom_flags;
+	int custom_update_count;
+#endif
 };
 
 /**
