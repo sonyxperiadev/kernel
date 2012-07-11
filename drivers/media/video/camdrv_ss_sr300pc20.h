@@ -6298,3 +6298,3838 @@ const regs_t sr300pc20_init_regs[]
 
 
 };
+
+const regs_t sr300pc20_preview_camera_regs[] =
+{
+ 
+	0x0300,
+	0x01f1, /*Sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x0300,
+	0xff01, /*Delay 10ms*/
+	0x0330,
+	0x3629, /*Capture Function - Capture*/
+	0x0300,
+	0xff01, /*Delay 10ms*/
+	0x0319, /*Scaler On*/
+	0x1007,
+	0x0300,
+	0x1041, /*Binning + Pre1*/
+	0x1190, /*Fix Frame Off*/
+	0x1380,
+	0x1430,
+	0x1704, /*CLK 1/1*/
+	0x0302,
+	0x2102,
+	0x0300,
+	0xff01, /*Delay 10ms  */
+	0x2000,
+	0x2100, /*preview row START set*/
+	0x2200,
+	0x2300, /*preview col start set*/
+	0x5200, /*Vblank 33*/
+	0x5321,
+	0x0315, /*Shading*/
+	0x1081,
+	0x2007, /*Shading Width 2048*/
+	0x21f8,
+	0x2202, /*Shading Height 768*/
+	0x23fc,
+	0x0348,
+	0x101C, /*MIPI On*/
+	0x1604,
+	0x3000, /*640 * 2*/
+	0x3105,
+	0x0320,
+	0x2403, /*EXP Max 1.00 fps*/
+	0x2537,
+	0x26F9,
+	0x2780,
+	0x03d5,
+	0x4189,
+	0x0330,
+	0x3628, /*Capture Function - Preview*/
+	0x0300,
+	0xff01, /*Delay 10ms  */
+	0x03c4,
+	0x10ef, /*AE On*/
+	0x0300,
+	0xff01, /*Delay 10ms  */
+	0x03c5,
+	0x10b0, /*AWB en*/
+	0x0314,
+	0x1000,
+	0x0300,
+	0x01f0, /*sleep off*/
+	0x03cf, /*Adative en*/
+	0x10af, /*Yoffset, Contrast Off*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+	0xff05,	
+	  
+   
+   
+ } ;
+ const regs_t sr300pc20_snapshot_normal_regs[] =
+ { 
+  0x0300,
+	0x01f1, /*Sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4, /*AE Off*/
+	0x106e,
+	0x03c5, /*AWB off*/
+	0x1000,
+	0x03D5,
+	0x1199,
+	0x03d6, /*AG Offset control*/
+	0x1700,
+	0x0319, /*Scaler Off*/
+	0x1000,
+	0x0300,
+	0x1000, /*Full*/
+	0x1180, /*Frame skip 0*/
+	0x1430,
+	0x1705, /*CLK 1/2*/
+	0x0302,
+	0x2101,
+	0x0300,
+	0xff01, /*delay 10ms*/
+	0x2000, /*Start Height*/
+	0x2104,
+	0x2200, /*Start Width*/
+	0x230a,
+	0x0315, /*Shading*/
+	0x1083,
+	0x2007, /*Shading Width 2048*/
+	0x21f8,
+	0x2205, /*Shading Height 1536*/
+	0x23f8,
+	0x0348, /*MIPI Setting*/
+	0x101C,
+	0x1604,
+	0x3000, /*2048 * 2*/
+	0x3110,
+	0x0320,
+	0x2800, /*EXPMin*/
+	0x2909,
+	0x2ac4,
+	0x0330,
+	0x3629, /*Capture*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+	0x0314,
+	0x1027,
+	0x0300,
+	0x01f0, /*sleep off*/  
+   
+ } ;
+   
+ const regs_t sr300pc20_snapshot_lowlight_regs[] =
+ { 
+ } ;
+ const regs_t sr300pc20_snapshot_highlight_regs[] =
+ { 
+ } ;
+ const regs_t sr300pc20_snapshot_nightmode_regs[] =
+ { 
+  	0x0300,
+	0x01f1, /*Sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03D5,
+	0x1198,
+	0x03d6, /*AG Offset control*/
+	0x1701,
+	0x0319, /*Scaler Off*/
+	0x1000,
+	0x0300,
+	0x1000, /*Full*/
+	0x1180, /*Frame skip 0*/
+	0x1430,
+	0x1705, /*CLK 1/2*/
+	0x0302,
+	0x2101,
+	0x0300,
+	0xff01, /*delay 10ms*/
+	0x2000, /*Start Width*/
+	0x2104,
+	0x2200, /*Start Height*/
+	0x230a,
+	0x0315, /*Shading*/
+	0x1083,
+	0x2007, /*Shading Width 2048*/
+	0x21f8,
+	0x2205, /*Shading Height 1536*/
+	0x23f8,
+	0x0348, /*MIPI Setting*/
+	0x101C,
+	0x1604,
+	0x3000, /*2048 * 2*/
+	0x3110,
+	0x0320,
+	0x2800, /*EXPMin*/
+	0x2909,
+	0x2ac4,
+	0x0330,
+	0x3629, /*Capture*/
+	0x0300,
+	0xff02, /*Delay 20ms */
+	0x0314,
+	0x1027,
+	0x0300,
+	0x01f0, /*sleep off*/
+   
+ } ;
+ const regs_t sr300pc20_snapshot_flash_on_regs[] =
+ { 
+ } ;
+ const regs_t sr300pc20_snapshot_af_preflash_on_regs[] =
+ { 
+ } ;
+ const regs_t sr300pc20_snapshot_af_preflash_off_regs[] =
+ { 
+ } ;
+   
+   
+ const regs_t sr300pc20_single_af_start_regs[] =
+ {
+ } ;
+   
+ const regs_t sr300pc20_get_1st_af_search_status[] = 
+ { 
+ } ;
+   
+ const regs_t sr300pc20_get_2nd_af_search_status[] = 
+ {   
+ } ;
+   
+ const regs_t sr300pc20_single_af_stop_regs[] =
+ { 
+ } ;
+   
+   
+
+
+//==========================================================
+//  EFFECT(6)
+//==========================================================
+
+const regs_t sr300pc20_effect_normal_regs[] =
+{
+  0x0310,
+	0x1103,
+	0x12f0,
+	0x4200,
+	0x4300,
+	0x4480,
+	0x4580,
+	0x0314,
+	0x8020,
+
+};
+const regs_t sr300pc20_effect_negative_regs[] =
+{
+  0x0310,
+	0x1103,
+	0x12f8,
+	0x4200,
+	0x4300,
+	0x4480,
+	0x4580,
+	0x0314,
+	0x8020,
+};
+const regs_t sr300pc20_effect_sepia_regs[] =
+{
+ 	0x0310,
+	0x1103,
+	0x12f3,
+	0x4200,
+	0x4300,
+	0x4460,
+	0x45a3,
+	0x0314,
+	0x8020,
+
+};
+const regs_t sr300pc20_effect_mono_regs[] =
+{
+  0x0310,
+	0x1103,
+	0x12f3,
+	0x4200,
+	0x4300,
+	0x4480,
+	0x4580,
+	0x0314,
+	0x8020,
+};
+const regs_t sr300pc20_effect_aqua_regs[] =
+{
+};
+const regs_t sr300pc20_effect_sharpen_regs[] =
+{
+};
+const regs_t sr300pc20_effect_solarization_regs[] =
+{
+ 
+};
+const regs_t sr300pc20_effect_black_white_regs[] =
+{
+
+};
+//==========================================================
+//  EFFECT(6)  -END
+//==========================================================
+
+
+
+//==========================================================
+// WB(5) -START
+//==========================================================
+
+
+const regs_t sr300pc20_wb_auto_regs[] =
+{
+  /*WB Auto*/
+	0x03c5, /*Page c5*/
+	0x11a4, /*adaptive on*/
+	0x1293, /*adaptive on*/
+	0x03c6, /*Page c6*/
+	0x1846, /*RgainMin*/
+	0x1990, /*RgainMax*/
+	0x1a40, /*BgainMin*/
+	0x1ba6, /*BgainMax*/
+	0x03c5,
+	0x10b1,
+};
+
+const regs_t sr300pc20_wb_daylight_regs[] =
+{
+/*WB Daylight*/
+	0x03c5, /*Page c5*/
+	0x11a0, /*adaptive off*/
+	0x1203, /*adaptive off*/
+	0x03c6, /*Page c6*/
+	0x1875, /*indoor R gain Min*/
+	0x1976, /*indoor R gain Max*/
+	0x1a6a, /*indoor B gain Min*/
+	0x1b6b, /*indoor B gain Max*/
+	0x03c5,
+	0x10b1,
+  
+};
+
+const regs_t sr300pc20_wb_cloudy_regs[] =
+{
+/*WB Cloudy*/
+	0x03c5, /*Page c5*/
+	0x11a0, /*adaptive off*/
+	0x1203, /*adaptive off*/
+	0x03c6, /*Page c6*/
+	0x1890, /*indoor R gain Min*/
+	0x1992, /*indoor R gain Max*/
+	0x1a5f, /*indoor B gain Min*/
+	0x1b61, /*indoor B gain Max*/
+	0x03c5,
+	0x10b1, 
+
+};
+const regs_t sr300pc20_wb_incandescent_regs[] =
+{
+/*WB Incandescent*/
+	0x03c5, /*Page c5*/
+	0x11a0, /*adaptive off*/
+	0x1203, /*adaptive off*/
+	0x03c6, /*Page c6*/
+	0x1847, /*indoor R gain Min*/
+	0x1948, /*indoor R gain Max*/
+	0x1aa4, /*indoor B gain Min*/
+	0x1ba5, /*indoor B gain Max*/
+	0x03c5,
+	0x10b1,
+};
+
+const regs_t sr300pc20_wb_fluorescent_regs[] =
+{
+ /*WB Fluorescent*/
+	0x03c5, /*Page c5*/
+	0x11a0, /*adaptive off*/
+	0x1203, /*adaptive off*/
+	0x03c6, /*Page c6*/
+	0x185d, /*indoor R gain Min*/
+	0x195e, /*indoor R gain Max*/
+	0x1a94, /*indoor B gain Min*/
+	0x1b95, /*indoor B gain Max*/
+	0x03c5,
+	0x10b1,
+};
+
+//==========================================================
+// WB(5)  --END
+//==========================================================
+
+
+
+//==========================================================
+//METERING()
+//==========================================================
+
+const regs_t sr300pc20_metering_matrix_regs[] =
+{
+ /*Matrix*/
+	0x03c3,
+	0x7011,
+	0x7111,
+	0x7211,
+	0x7311,
+	0x7411,
+	0x7511,
+	0x7611,
+	0x7711,
+	0x7811,
+	0x7911,
+	0x7A11,
+	0x7B11,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8311,
+	0x8411,
+	0x8511,
+	0x8611,
+	0x8711,
+	0x8811,
+	0x8911,
+	0x8A11,
+	0x8B11,
+	0x8C11,
+	0x8D11,
+	0x8E11,
+	0x8F11,
+	0x9011,
+	0x9111,
+	0x9211,
+	0x9311,
+	0x9411,
+	0x9511,
+	0x9611,
+	0x9711,
+	0x9811,
+	0x9911,
+	0x9A11,
+	0x9B11,
+	0x9C11,
+	0x9D11,
+	0x9E11,
+	0x9F11,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+};
+
+const regs_t sr300pc20_metering_center_regs[] =
+{
+/*Metering - Center*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+
+
+};
+
+const regs_t sr300pc20_metering_spot_regs[] =
+{
+/*Spot*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C00,
+	0x7D10,
+	0x7E11,
+	0x7F11,
+	0x8001,
+	0x8100,
+	0x8200,
+	0x8310,
+	0x84ff,
+	0x85ff,
+	0x8601,
+	0x8700,
+	0x8800,
+	0x8910,
+	0x8Aff,
+	0x8Bff,
+	0x8C01,
+	0x8D00,
+	0x8E00,
+	0x8F10,
+	0x90ff,
+	0x91ff,
+	0x9201,
+	0x9300,
+	0x9400,
+	0x9510,
+	0x9611,
+	0x9711,
+	0x9801,
+	0x9900,
+	0x9A00,
+	0x9B00,
+	0x9C00,
+	0x9D00,
+	0x9E00,
+	0x9F00,
+	0xA000,
+	0xA100,
+	0xA200,
+	0xA300,
+	0xA400,
+	0xA500,
+
+
+};
+//==========================================================
+//METERING() - END
+//==========================================================
+
+
+//==========================================================
+// BRIGHTNES(9) - START
+//==========================================================
+
+const regs_t sr300pc20_ev_minus_4_regs[] =
+{
+ 	0x03d9,
+	0x17d0,
+
+};
+
+const regs_t sr300pc20_ev_minus_3_regs[] =
+{
+	0x03d9,
+	0x17c0,
+};
+
+const regs_t sr300pc20_ev_minus_2_regs[] =
+{
+	0x03d9,
+	0x17b0,  
+};
+
+const regs_t sr300pc20_ev_minus_1_regs[] =
+{
+ 	0x03d9,
+ 	0x17a0,
+};
+
+const regs_t sr300pc20_ev_default_regs[] =
+{
+0x03d9,  
+	0x1700,
+};
+
+const regs_t sr300pc20_ev_plus_1_regs[] =
+{
+ 	0x03d9,
+ 	0x1714,
+};
+
+const regs_t sr300pc20_ev_plus_2_regs[] =
+{
+ 	0x03d9,
+	0x1728,
+};	
+
+const regs_t sr300pc20_ev_plus_3_regs[] =
+{
+  	0x03d9,
+	0x173c,
+};
+
+const regs_t sr300pc20_ev_plus_4_regs[] =
+{
+ 	0x03d9,
+ 	0x1750,
+};
+// ==========================================================
+// BRIGHTNES(9) - END
+//==========================================================
+
+//==========================================================
+// contrast(5) - START
+//==========================================================
+
+
+const regs_t sr300pc20_contrast_minus_2_regs[] =
+{
+ 
+};
+
+const regs_t sr300pc20_contrast_minus_1_regs[] =
+{
+ 
+};
+
+const regs_t sr300pc20_contrast_default_regs[] =
+{
+ 
+
+};
+
+const regs_t sr300pc20_contrast_plus_1_regs[] =
+{
+ 
+};
+
+const regs_t sr300pc20_contrast_plus_2_regs[] =
+{
+ 
+};
+
+//==========================================================
+// contrast(5) - END
+//==========================================================
+
+
+
+//==========================================================
+// sharpness(5) -START
+//==========================================================
+
+const regs_t sr300pc20_sharpness_minus_3_regs[] = 
+{
+
+};
+
+const regs_t sr300pc20_sharpness_minus_2_regs[] =
+{
+ 
+
+};
+
+const regs_t sr300pc20_sharpness_minus_1_regs[] =
+{
+ 
+};
+
+const regs_t sr300pc20_sharpness_default_regs[] =
+{
+ 
+};
+
+const regs_t sr300pc20_sharpness_plus_1_regs[] =
+{
+  
+};
+
+const regs_t sr300pc20_sharpness_plus_2_regs[] =
+{
+ 
+};
+
+const regs_t sr300pc20_sharpness_plus_3_regs[] =
+{
+	
+};
+
+
+//==========================================================
+// sharpness(5) -END
+//==========================================================
+
+
+//==========================================================
+// saturation(5) - START
+//==========================================================
+
+const regs_t sr300pc20_saturation_minus_2_regs[] =
+{
+ 
+};
+
+const regs_t sr300pc20_saturation_minus_1_regs[] =
+{
+ 
+};
+
+const regs_t sr300pc20_saturation_default_regs[] =
+{
+ 
+};
+
+const regs_t sr300pc20_saturation_plus_1_regs[] =
+{
+
+};
+
+const regs_t sr300pc20_saturation_plus_2_regs[] =
+{
+ 
+
+};
+//==========================================================
+// saturation(5) - END
+//==========================================================
+
+
+
+
+
+//==========================================================
+// ZOOM - START
+//==========================================================
+const regs_t sr300pc20_zoom_00_regs[] =
+{
+
+};
+const regs_t sr300pc20_zoom_01_regs[] =
+{
+
+	
+};
+const regs_t sr300pc20_zoom_02_regs[] =
+{
+
+	
+};
+const regs_t sr300pc20_zoom_03_regs[] =
+{
+
+};
+const regs_t sr300pc20_zoom_04_regs[] =
+{
+
+	
+};
+const regs_t sr300pc20_zoom_05_regs[] =
+{
+	
+};
+const regs_t sr300pc20_zoom_06_regs[] =
+{
+
+};
+const regs_t sr300pc20_zoom_07_regs[] =
+{
+
+};
+const regs_t sr300pc20_zoom_08_regs[] =
+{
+
+};
+
+
+//==========================================================
+// ZOOM - END
+//==========================================================
+
+
+
+//==========================================================
+// SCENEMODE -START
+//==========================================================
+
+const regs_t sr300pc20_scene_none_regs[] =
+{
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0xff19, /*delay 250ms*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x0300,
+	0x1180, /*Frame skip 0*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf040,
+	0x0310,
+	0x410a,/*DY OFFSET*/
+/*FPS Auto*/
+	0x0320,
+	0x126d,
+	0x2400, /*EXP Max 8.33 fps*/
+	0x255f,
+	0x2637,
+	0x2700,
+/*ISO AUTO*/
+	0x51f0, /*pga_max_total*/
+	0x5224, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x193c, /*Band1 Gain 33.33fps*/
+	0x1a46, /*Band2 Gain 20fps*/
+	0x1b5c, /*Band3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+	0x0300,
+	0x92a0, /*BLC_AG_TH_ON*/
+	0x9390, /*BLC_AG_TH_OFF*/
+	0xa387, /*odd_adj_dark*/
+	0xa787, /*even_adj_dark*/
+/*AE_CenterWeighted*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Auto*/
+	0x03c5, /*Page c5*/
+	0x11a4, /*adaptive on*/
+	0x1293, /*adaptive on*/
+	0x03c6, /*Page c6*/
+	0x1846, /*RgainMin*/
+	0x1990, /*RgainMax*/
+	0x1a40, /*BgainMin*/
+	0x1ba6, /*BgainMax*/
+/*Saturation 0*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2b88, /*SATB_00*/
+	0x2c88, /*SATB_01*/
+	0x2d88, /*SATB_02*/
+	0x2e88, /*SATB_03*/
+	0x2f88, /*SATB_04*/
+	0x308c, /*SATB_05*/
+	0x3198, /*SATB_06*/
+	0x3298, /*SATB_07*/
+	0x3398, /*SATB_08*/
+	0x3498, /*SATB_09*/
+	0x3598, /*SATB_10*/
+	0x3698, /*SATB_11*/
+/*SATR*/
+	0x3780, /*SATR_00*/
+	0x3880, /*SATR_01*/
+	0x3980, /*SATR_02*/
+	0x3a78, /*SATR_03*/
+	0x3b88, /*SATR_04*/
+	0x3c84, /*SATR_05*/
+	0x3d8c, /*SATR_06*/
+	0x3e8c, /*SATR_07*/
+	0x3f8c, /*SATR_08*/
+	0x408c, /*SATR_09*/
+	0x418c, /*SATR_10*/
+	0x428c, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10af, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE125, /*Outdoor AG Max*/
+	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+   
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_PORTRAIT (Auto/Center/Br0/Auto/Sharp-1/Sat0)
+   // ==========================================================
+   const regs_t sr300pc20_scene_portrait_regs[] =
+   {
+    
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_NIGHT (Night/Center/Br0/Auto/Sharp0/Sat0)
+   // ==========================================================
+   const regs_t sr300pc20_scene_nightshot_regs[] =
+   {
+    /*Scene Night (FPS Night/ISO Auto/Center/Br0/AWB Auto/Sat0/Sharp0)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x1066, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf040,
+/*FPS 4.00fps*/
+	0x0320,
+	0x8030,
+	0x126d,
+	0x2400, /*EXP Max 4.00 fps */
+	0x25c6,
+	0x265d,
+	0x2740,
+/*ISO AUTO*/
+	0x51ff, /*pga_max_total*/
+	0x5224, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x193c, /*Band1 Gain 33.33fps*/
+	0x1a46, /*Band2 Gain 20fps*/
+	0x1b5c, /*Band3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+/*AE_CenterWeighted*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Auto*/
+	0x03c5, /*Page c5*/
+	0x11a4, /*adaptive on*/
+	0x1213, /*adaptive on*/
+	0x03c6, /*Page c6*/
+	0x1846, /*RgainMin*/
+	0x1990, /*RgainMax*/
+	0x1a40, /*BgainMin*/
+	0x1ba6, /*BgainMax*/
+/*Saturation 0*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2b88, /*SATB_00*/
+	0x2c88, /*SATB_01*/
+	0x2d88, /*SATB_02*/
+	0x2e88, /*SATB_03*/
+	0x2f88, /*SATB_04*/
+	0x308c, /*SATB_05*/
+	0x3198, /*SATB_06*/
+	0x3298, /*SATB_07*/
+	0x3398, /*SATB_08*/
+	0x3498, /*SATB_09*/
+	0x3598, /*SATB_10*/
+	0x3698, /*SATB_11*/
+/*SATR*/
+	0x3780, /*SATR_00*/
+	0x3880, /*SATR_01*/
+	0x3980, /*SATR_02*/
+	0x3a78, /*SATR_03*/
+	0x3b88, /*SATR_04*/
+	0x3c84, /*SATR_05*/
+	0x3d8c, /*SATR_06*/
+	0x3e8c, /*SATR_07*/
+	0x3f8c, /*SATR_08*/
+	0x408c, /*SATR_09*/
+	0x418c, /*SATR_10*/
+	0x428c, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE125, /*Outdoor AG Max*/
+	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff19, /*Delay 250ms*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_AGAINSTLIGHT (Auto/Spot(flash) or Center(no flash)/Br0/Auto/Sharp0/Sat0)
+   // ==========================================================
+   const regs_t sr300pc20_scene_backlight_regs[] =
+   {
+    /*Scene Against (FPS Auto/ISO Auto/Spot/Br0/AWB Auto/Sat0/Sharp0)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf040,
+/*FPS Auto*/
+	0x0320,
+	0x8030,
+	0x126d,
+	0x2400, /*EXP Max 8.33 fps*/
+	0x255f,
+	0x2637,
+	0x2700,
+/*ISO AUTO*/
+	0x51f0, /*pga_max_total*/
+	0x5224, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x193c, /*Band1 Gain 33.33fps*/
+	0x1a46, /*Bnd2 Gain 20fps*/
+	0x1b5c, /*Bnd3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+/*Spot*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C00,
+	0x7D10,
+	0x7E11,
+	0x7F11,
+	0x8001,
+	0x8100,
+	0x8200,
+	0x8310,
+	0x84ff,
+	0x85ff,
+	0x8601,
+	0x8700,
+	0x8800,
+	0x8910,
+	0x8Aff,
+	0x8Bff,
+	0x8C01,
+	0x8D00,
+	0x8E00,
+	0x8F10,
+	0x90ff,
+	0x91ff,
+	0x9201,
+	0x9300,
+	0x9400,
+	0x9510,
+	0x9611,
+	0x9711,
+	0x9801,
+	0x9900,
+	0x9A00,
+	0x9B00,
+	0x9C00,
+	0x9D00,
+	0x9E00,
+	0x9F00,
+	0xA000,
+	0xA100,
+	0xA200,
+	0xA300,
+	0xA400,
+	0xA500,
+/*WB Auto*/
+	0x03c5, /*Page c5*/
+	0x11a4, /*adaptive on*/
+	0x1213, /*adaptive on*/
+	0x03c6, /*Page c6*/
+	0x1846, /*RgainMin*/
+	0x1990, /*RgainMax*/
+	0x1a40, /*BgainMin*/
+	0x1ba6, /*BgainMax*/
+/*Saturation 0*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2b88, /*SATB_00*/
+	0x2c88, /*SATB_01*/
+	0x2d88, /*SATB_02*/
+	0x2e88, /*SATB_03*/
+	0x2f88, /*SATB_04*/
+	0x308c, /*SATB_05*/
+	0x3198, /*SATB_06*/
+	0x3298, /*SATB_07*/
+	0x3398, /*SATB_08*/
+	0x3498, /*SATB_09*/
+	0x3598, /*SATB_10*/
+	0x3698, /*SATB_11*/
+/*SATR*/
+	0x3780, /*SATR_00*/
+	0x3880, /*SATR_01*/
+	0x3980, /*SATR_02*/
+	0x3a78, /*SATR_03*/
+	0x3b88, /*SATR_04*/
+	0x3c84, /*SATR_05*/
+	0x3d8c, /*SATR_06*/
+	0x3e8c, /*SATR_07*/
+	0x3f8c, /*SATR_08*/
+	0x408c, /*SATR_09*/
+	0x418c, /*SATR_10*/
+	0x428c, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE125, /*Outdoor AG Max*/
+	0x03c4,
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff1a, /*Delay 260ms*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+
+   
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_LANDSCAPE (Auto/Matrix/Br0/Auto/Sharp+1/Sat+1)
+   // ==========================================================
+   const regs_t sr300pc20_scene_landscape_regs[] =
+   {
+    /*Scene Landscapte (FPS Auto/ISO Auto/Maxtrix/Br0/AWB Auto/Sat1/Sharp1)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf040,
+/*FPS Auto*/
+	0x0320,
+	0x8030,
+	0x126D,
+	0x2400, /*EXP Max 8.33 fps*/
+	0x255f,
+	0x2637,
+	0x2700,
+/*ISO AUTO*/
+	0x51f0, /*pga_max_total*/
+	0x5224, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x193c, /*Band1 Gain 33.33fps*/
+	0x1a46, /*Band2 Gain 20fps*/
+	0x1b5c, /*Band3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+/*Metering - Matrix*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8311,
+	0x8411,
+	0x8511,
+	0x8611,
+	0x8711,
+	0x8811,
+	0x8911,
+	0x8A11,
+	0x8B11,
+	0x8C11,
+	0x8D11,
+	0x8E11,
+	0x8F11,
+	0x9011,
+	0x9111,
+	0x9211,
+	0x9311,
+	0x9411,
+	0x9511,
+	0x9611,
+	0x9711,
+	0x9811,
+	0x9911,
+	0x9A11,
+	0x9B11,
+	0x9C11,
+	0x9D11,
+	0x9E11,
+	0x9F11,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Auto*/
+	0x03c5, /*Page c5*/
+	0x11a4, /*adaptive on*/
+	0x1213, /*adaptive on*/
+	0x03c6, /*Page c6*/
+	0x1846, /*RgainMin*/
+	0x1990, /*RgainMax*/
+	0x1a40, /*BgainMin*/
+	0x1ba6, /*BgainMax*/
+/*Saturation 1*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2ba8, /*SATB_00*/
+	0x2ca8, /*SATB_01*/
+	0x2da8, /*SATB_02*/
+	0x2ea8, /*SATB_03*/
+	0x2fa8, /*SATB_04*/
+	0x30ac, /*SATB_05*/
+	0x31b8, /*SATB_06*/
+	0x32b8, /*SATB_07*/
+	0x33b8, /*SATB_08*/
+	0x34b8, /*SATB_09*/
+	0x35b8, /*SATB_10*/
+	0x36b8, /*SATB_11*/
+/*SATR*/
+	0x37a0, /*SATR_00*/
+	0x38a0, /*SATR_01*/
+	0x39a0, /*SATR_02*/
+	0x3a98, /*SATR_03*/
+	0x3ba8, /*SATR_04*/
+	0x3ca4, /*SATR_05*/
+	0x3dac, /*SATR_06*/
+	0x3eac, /*SATR_07*/
+	0x3fac, /*SATR_08*/
+	0x40ac, /*SATR_09*/
+	0x41ac, /*SATR_10*/
+	0x42ac, /*SATR_11*/
+/*Sharpness 1*/
+	0x03db,	 /*Outdoor*/
+	0xbb50, /*Pos_H*/
+	0xbd50, /*Pos_M*/
+	0xbf50, /*Pos_L*/
+	0xc184, /*Neg_H*/
+	0xc384, /*Neg_M*/
+	0xc570, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb50, /*Pos_H*/
+	0xbd50, /*Pos_M*/
+	0xbf50, /*Pos_L*/
+	0xc188, /*Neg_H*/
+	0xc390, /*Neg_M*/
+	0xc590, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb50, /*Pos_H*/
+	0xbd50, /*Pos_M*/
+	0xbf50, /*Pos_L*/
+	0xc168, /*Neg_H*/
+	0xc370, /*Neg_M*/
+	0xc570, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb20, /*Pos_H*/
+	0xbd20, /*Pos_M*/
+	0xbf20, /*Pos_L*/
+	0xc140, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE125, /*Outdoor AG Max*/
+ 	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff19, /*Delay 250ms*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+   
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_SPORTS (Sport/Center/Br0/Auto/Sharp0/Sat0)
+   // ==========================================================
+   const regs_t sr300pc20_scene_sports_regs[] =
+   {
+    /*Sports (FPS Sports/ISO Auto/Center/Br0/AWB Auto/Sat0/Sharp0)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf04b,
+	0x0310,
+	0x4100, /*DY OFFSET*/
+/*FPS Auto*/
+	0x0320,
+	0x8030,
+	0x126d,
+	0x2400, /*EXP Max 8.33 fps*/
+	0x255f,
+	0x2637,
+	0x2700,
+/*ISO AUTO*/
+	0x51f0, /*pga_max_total*/
+	0x5248, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x1948, /*Band1 Gain 33.33fps*/
+	0x1a50, /*Band2 Gain 20fps*/
+	0x1b5c, /*Band3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+/*AE_CenterWeighted*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Auto*/
+	0x03c5, /*Page c5*/
+	0x11a4, /*adaptive on*/
+	0x1213, /*adaptive on*/
+	0x03c6, /*Page c6*/
+	0x1846, /*RgainMin*/
+	0x1990, /*RgainMax*/
+	0x1a40, /*BgainMin*/
+	0x1ba6, /*BgainMax*/
+/*Saturation 0*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2b88, /*SATB_00*/
+	0x2c88, /*SATB_01*/
+	0x2d88, /*SATB_02*/
+	0x2e88, /*SATB_03*/
+	0x2f88, /*SATB_04*/
+	0x308c, /*SATB_05*/
+	0x3198, /*SATB_06*/
+	0x3298, /*SATB_07*/
+	0x3398, /*SATB_08*/
+	0x3498, /*SATB_09*/
+	0x3598, /*SATB_10*/
+	0x3698, /*SATB_11*/
+/*SATR*/
+	0x3780, /*SATR_00*/
+	0x3880, /*SATR_01*/
+	0x3980, /*SATR_02*/
+	0x3a78, /*SATR_03*/
+	0x3b88, /*SATR_04*/
+	0x3c84, /*SATR_05*/
+	0x3d8c, /*SATR_06*/
+	0x3e8c, /*SATR_07*/
+	0x3f8c, /*SATR_08*/
+	0x408c, /*SATR_09*/
+	0x418c, /*SATR_10*/
+	0x428c, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE149, /*Outdoor AG Max*/
+	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff1a, /*Delay 260ms*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+   
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_PARTYINDOOR (ISO200/Center/Br0/Auto/Sharp0/Sat+1)
+   // ==========================================================
+   const regs_t sr300pc20_scene_party_indoor_regs[] =
+   {
+    /*Party/Indoor (FPS Auto/ISO 200/Center/Br0/AWB Auto/Sat1/Sharp0)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf040,
+	0x0310,
+	0x4100, /*DY OFFSET*/
+/*FPS Auto*/
+	0x0320,
+	0x8030,
+	0x126d,
+	0x2400, /*EXP Max 8.33 fps*/
+	0x255f,
+	0x2637,
+	0x2700,
+/*ISO 200*/
+	0x518b, /*Max Gain(8a)*/
+	0x525c, /*Min Gain*/
+	0x03c4,
+	0x195c, /*Bnd0 Gain*/
+	0x1a5c, /*Bnd1 Gain*/
+	0x1b5c, /*Bnd2 Gain*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+/*AE_CenterWeighted*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Auto*/
+	0x03c5, /*Page c5*/
+	0x11a4, /*adaptive on*/
+	0x1213, /*adaptive on*/
+	0x03c6, /*Page c6*/
+	0x1846, /*RgainMin*/
+	0x1990, /*RgainMax*/
+	0x1a40, /*BgainMin*/
+	0x1ba6, /*BgainMax*/
+/*Saturation 1*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2ba8, /*SATB_00*/
+	0x2ca8, /*SATB_01*/
+	0x2da8, /*SATB_02*/
+	0x2ea8, /*SATB_03*/
+	0x2fa8, /*SATB_04*/
+	0x30ac, /*SATB_05*/
+	0x31b8, /*SATB_06*/
+	0x32b8, /*SATB_07*/
+	0x33b8, /*SATB_08*/
+	0x34b8, /*SATB_09*/
+	0x35b8, /*SATB_10*/
+	0x36b8, /*SATB_11*/
+/*SATR*/
+	0x37a0, /*SATR_00*/
+	0x38a0, /*SATR_01*/
+	0x39a0, /*SATR_02*/
+	0x3a98, /*SATR_03*/
+	0x3ba8, /*SATR_04*/
+	0x3ca4, /*SATR_05*/
+	0x3dac, /*SATR_06*/
+	0x3eac, /*SATR_07*/
+	0x3fac, /*SATR_08*/
+	0x40ac, /*SATR_09*/
+	0x41ac, /*SATR_10*/
+	0x42ac, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE15d, /*Outdoor AG Max*/
+	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff1a, /*Delay 260ms*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_BEACHSNOW (ISO50/Center/Br+1/Auto/Sharp0/Sat+1)
+   // ==========================================================
+   const regs_t sr300pc20_scene_beach_snow_regs[] =
+   {
+    /*Beach(FPS Auto/ISO 50/Center/Br1/AWB Auto/Sat1/Sharp0)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1710,
+	0x0311,
+	0xf04b,
+	0x0310,
+	0x4100, /*DY OFFSET*/
+/*FPS Auto*/
+	0x0320,
+	0x8030,
+	0x1269,
+	0x8030,
+	0x2400, /*EXP Max 8.33 fps*/
+	0x255f,
+	0x2637,
+	0x2700,
+/*ISO 50*/
+	0x5170, /*pga_max_total*/
+	0x5224, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x193c, /*Band1 Gain 33.33fps*/
+	0x1a46, /*Band2 Gain 20fps*/
+	0x1b5c, /*Band3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+/*AE_CenterWeighted*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Auto*/
+	0x03c5, /*Page c5*/
+	0x11a4, /*adaptive on*/
+	0x1213, /*adaptive on*/
+	0x03c6, /*Page c6*/
+	0x1846, /*RgainMin*/
+	0x1990, /*RgainMax*/
+	0x1a40, /*BgainMin*/
+	0x1ba6, /*BgainMax*/
+/*Saturation 1*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2ba8, /*SATB_00*/
+	0x2ca8, /*SATB_01*/
+	0x2da8, /*SATB_02*/
+	0x2ea8, /*SATB_03*/
+	0x2fa8, /*SATB_04*/
+	0x30ac, /*SATB_05*/
+	0x31b8, /*SATB_06*/
+	0x32b8, /*SATB_07*/
+	0x33b8, /*SATB_08*/
+	0x34b8, /*SATB_09*/
+	0x35b8, /*SATB_10*/
+	0x36b8, /*SATB_11*/
+/*SATR*/
+	0x37a0, /*SATR_00*/
+	0x38a0, /*SATR_01*/
+	0x39a0, /*SATR_02*/
+	0x3a98, /*SATR_03*/
+	0x3ba8, /*SATR_04*/
+	0x3ca4, /*SATR_05*/
+	0x3dac, /*SATR_06*/
+	0x3eac, /*SATR_07*/
+	0x3fac, /*SATR_08*/
+	0x40ac, /*SATR_09*/
+	0x41ac, /*SATR_10*/
+	0x42ac, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE125, /*Outdoor AG Max*/
+	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff1a, /*Delay 260ms*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+
+   
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_SUNSET (Auto/Center/Br0/Daylight/Sharp0/Sat0)
+   // ==========================================================
+   const regs_t sr300pc20_scene_sunset_regs[] =
+   {
+    /*Scene Sunset (FPS Auto/ISO Auto/Center/Br0/AWB Day/Sat0/Sharp0)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf040,
+/*FPS Auto*/
+	0x0320,
+	0x8030,
+	0x126d,
+	0x2400, /*EXP Max 8.33 fps*/
+	0x255f,
+	0x2637,
+	0x2700,
+/*ISO AUTO*/
+	0x51f0, /*pga_max_total*/
+	0x5224, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x193c, /*Band1 Gain 33.33fps*/
+	0x1a46, /*Band2 Gain 20fps*/
+	0x1b5c, /*Band3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+/*AE_CenterWeighted*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Daylight*/
+	0x03c5, /*Page c5*/
+	0x11a0, /*adaptive off*/
+	0x1203, /*adaptive off*/
+	0x03c6, /*Page c6*/
+	0x1875, /*indoor R gain Min*/
+	0x1976, /*indoor R gain Max*/
+	0x1a6a, /*indoor B gain Min*/
+	0x1b6b, /*indoor B gain Max*/
+/*Saturation 0*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2b88, /*SATB_00*/
+	0x2c88, /*SATB_01*/
+	0x2d88, /*SATB_02*/
+	0x2e88, /*SATB_03*/
+	0x2f88, /*SATB_04*/
+	0x308c, /*SATB_05*/
+	0x3198, /*SATB_06*/
+	0x3298, /*SATB_07*/
+	0x3398, /*SATB_08*/
+	0x3498, /*SATB_09*/
+	0x3598, /*SATB_10*/
+	0x3698, /*SATB_11*/
+/*SATR*/
+	0x3780, /*SATR_00*/
+	0x3880, /*SATR_01*/
+	0x3980, /*SATR_02*/
+	0x3a78, /*SATR_03*/
+	0x3b88, /*SATR_04*/
+	0x3c84, /*SATR_05*/
+	0x3d8c, /*SATR_06*/
+	0x3e8c, /*SATR_07*/
+	0x3f8c, /*SATR_08*/
+	0x408c, /*SATR_09*/
+	0x418c, /*SATR_10*/
+	0x428c, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE125, /*Outdoor AG Max*/
+	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff19, /*Delay 250ms*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+
+   
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_DAWN (Auto/Center/Br0/CWF/Sharp0/Sat0)
+   // ==========================================================
+   const regs_t sr300pc20_scene_duskdawn_regs[] =
+   {
+   /*Scene sunrise Dawn (FPS Auto/ISO Auto/Center/Br0/AWB CWF/Sat0/Sharp0)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf040,
+/*FPS Auto*/
+	0x0320,
+	0x8030,
+	0x126d,
+	0x2400, /*EXP Max 8.33 fps*/
+	0x255f,
+	0x2637,
+	0x2700,
+/*ISO AUTO*/
+	0x51f0, /*pga_max_total*/
+	0x5224, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x193c, /*Band1 Gain 33.33fps*/
+	0x1a46, /*Band2 Gain 20fps*/
+	0x1b5c, /*Band3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+/*AE_CenterWeighted*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Dawn - Flure*/
+	0x03c5, /*Page c5*/
+	0x11a0, /*adaptive off*/
+	0x1203, /*adaptive off*/
+	0x03c6, /*Page c6*/
+	0x185d, /*indoor R gain Min*/
+	0x195e, /*indoor R gain Max*/
+	0x1a94, /*indoor B gain Min*/
+	0x1b95, /*indoor B gain Max*/
+/*Saturation 0*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2b88, /*SATB_00*/
+	0x2c88, /*SATB_01*/
+	0x2d88, /*SATB_02*/
+	0x2e88, /*SATB_03*/
+	0x2f88, /*SATB_04*/
+	0x308c, /*SATB_05*/
+	0x3198, /*SATB_06*/
+	0x3298, /*SATB_07*/
+	0x3398, /*SATB_08*/
+	0x3498, /*SATB_09*/
+	0x3598, /*SATB_10*/
+	0x3698, /*SATB_11*/
+/*SATR*/
+	0x3780, /*SATR_00*/
+	0x3880, /*SATR_01*/
+	0x3980, /*SATR_02*/
+	0x3a78, /*SATR_03*/
+	0x3b88, /*SATR_04*/
+	0x3c84, /*SATR_05*/
+	0x3d8c, /*SATR_06*/
+	0x3e8c, /*SATR_07*/
+	0x3f8c, /*SATR_08*/
+	0x408c, /*SATR_09*/
+	0x418c, /*SATR_10*/
+	0x428c, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE125, /*Outdoor AG Max*/
+	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff19, /*Delay 250ms*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+ 
+   
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_FALLCOLOR (Auto/Center/Br0/Auto/Sharp0/Sat+2)
+   // ==========================================================
+   const regs_t sr300pc20_scene_fall_color_regs[] =
+   {
+    /*Scene Fall (FPS Auto/ISO Auto/Center/Br0/AWB Auto/Sat2/Sharp0)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf040,
+/*FPS Auto*/
+	0x0320,
+	0x8030,
+	0x126d,
+	0x2400, /*EXP Max 8.33 fps*/
+	0x255f,
+	0x2637,
+	0x2700,
+/*ISO AUTO*/
+	0x51f0, /*pga_max_total*/
+	0x5224, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x193c, /*Band1 Gain 33.33fps*/
+	0x1a46, /*Band2 Gain 20fps*/
+	0x1b5c, /*Band3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+/*AE_CenterWeighted*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Auto*/
+	0x03c5, /*Page c5*/
+	0x11a4, /*adaptive on*/
+	0x1213, /*adaptive on*/
+	0x03c6, /*Page c6*/
+	0x1846, /*RgainMin*/
+	0x1990, /*RgainMax*/
+	0x1a40, /*BgainMin*/
+	0x1ba6, /*BgainMax*/
+/*Saturation 2*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2bc8, /*SATB_00*/
+	0x2cc8, /*SATB_01*/
+	0x2dc8, /*SATB_02*/
+	0x2ec8, /*SATB_03*/
+	0x2fc8, /*SATB_04*/
+	0x30cc, /*SATB_05*/
+	0x31d8, /*SATB_06*/
+	0x32d8, /*SATB_07*/
+	0x33d8, /*SATB_08*/
+	0x34d8, /*SATB_09*/
+	0x35d8, /*SATB_10*/
+	0x36d8, /*SATB_11*/
+/*SATR*/
+	0x37c0, /*SATR_00*/
+	0x38c0, /*SATR_01*/
+	0x39c0, /*SATR_02*/
+	0x3ab8, /*SATR_03*/
+	0x3bc8, /*SATR_04*/
+	0x3cc4, /*SATR_05*/
+	0x3dcc, /*SATR_06*/
+	0x3ecc, /*SATR_07*/
+	0x3fcc, /*SATR_08*/
+	0x40cc, /*SATR_09*/
+	0x41cc, /*SATR_10*/
+	0x42cc, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE125, /*Outdoor AG Max*/
+	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff19, /*Delay 250ms*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_FIREWORK (ISO50/Center/Br0/Auto/Sharp0/Sat0)
+   // ==========================================================
+   const regs_t sr300pc20_scene_fireworks_regs[] =
+   {
+    /*Firework (FPS Fire/ISO 50/Center/Br0/AWB Auto/Sat0/Sharp0)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf04b,
+/*FPS 4.00fps*/
+	0x0320,
+	0x8030,
+	0x1269,
+	0x2400, /*EXP Max 4.00 fps */
+	0x25c6,
+	0x265d,
+	0x2740,
+/*ISO 50*/
+	0x5148, /*pga_max_total*/
+	0x5224, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x193c, /*Band1 Gain 33.33fps*/
+	0x1a40, /*Band2 Gain 20fps*/
+	0x1b46, /*Band3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+	0x0300,
+	0x9247, /*BLC_AG_TH_ON*/
+	0x9340, /*BLC_AG_TH_OFF*/
+	0xa385, /*odd_adj_dark*/
+	0xa785, /*even_adj_dark*/
+/*AE_CenterWeighted*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Auto*/
+	0x03c5, /*Page c5*/
+	0x11a4, /*adaptive on*/
+	0x1213, /*adaptive on*/
+	0x03c6, /*Page c6*/
+	0x1846, /*RgainMin*/
+	0x1990, /*RgainMax*/
+	0x1a40, /*BgainMin*/
+	0x1ba6, /*BgainMax*/
+/*Saturation 0*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2b88, /*SATB_00*/
+	0x2c88, /*SATB_01*/
+	0x2d88, /*SATB_02*/
+	0x2e88, /*SATB_03*/
+	0x2f88, /*SATB_04*/
+	0x308c, /*SATB_05*/
+	0x3198, /*SATB_06*/
+	0x3298, /*SATB_07*/
+	0x3398, /*SATB_08*/
+	0x3498, /*SATB_09*/
+	0x3598, /*SATB_10*/
+	0x3698, /*SATB_11*/
+/*SATR*/
+	0x3780, /*SATR_00*/
+	0x3880, /*SATR_01*/
+	0x3980, /*SATR_02*/
+	0x3a78, /*SATR_03*/
+	0x3b88, /*SATR_04*/
+	0x3c84, /*SATR_05*/
+	0x3d8c, /*SATR_06*/
+	0x3e8c, /*SATR_07*/
+	0x3f8c, /*SATR_08*/
+	0x408c, /*SATR_09*/
+	0x418c, /*SATR_10*/
+	0x428c, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE125, /*Outdoor AG Max*/
+	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff19, /*delay 250*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCEBE_CANDLELIGHT (Auto/Center/Br0/Daylight/Sharp0/Sat0)
+   // ==========================================================
+   const regs_t sr300pc20_scene_candle_light_regs[] =
+   {
+    /*Scene candle (FPS Auto/ISO Auto/Center/Br0/AWB Day/Sat0/Sharp0)*/
+	0x0300,
+	0x0cf1, /*sleep on*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x03d9,
+	0x1700,
+	0x0311,
+	0xf040,
+/*FPS Auto*/
+	0x0320,
+	0x8030,
+	0x126d,
+	0x2400, /*EXP Max 8.33 fps*/
+	0x255f,
+	0x2637,
+	0x2700,
+/*ISO AUTO*/
+	0x51f0, /*pga_max_total*/
+	0x5224, /*pga_min_total*/
+/*Shutter Setting*/
+	0x03c4,
+	0x193c, /*Band1 Gain 33.33fps*/
+	0x1a46, /*Band2 Gain 20fps*/
+	0x1b5c, /*Band3 Gain 12.5fps*/
+/*Shutter Setting*/
+	0x2200, /*Bnd2*/
+	0x2327,
+	0x24ac,
+	0x2540,
+	0x2600, /*Bnd3*/
+	0x273f,
+	0x287a,
+	0x2900,
+/*AE_CenterWeighted*/
+	0x03c3,
+	0x7000,
+	0x7100,
+	0x7200,
+	0x7300,
+	0x7400,
+	0x7500,
+	0x7600,
+	0x7700,
+	0x7800,
+	0x7900,
+	0x7A00,
+	0x7B00,
+	0x7C11,
+	0x7D11,
+	0x7E11,
+	0x7F11,
+	0x8011,
+	0x8111,
+	0x8211,
+	0x8321,
+	0x8444,
+	0x8544,
+	0x8612,
+	0x8711,
+	0x8811,
+	0x8922,
+	0x8A64,
+	0x8B46,
+	0x8C22,
+	0x8D11,
+	0x8E21,
+	0x8F33,
+	0x9064,
+	0x9146,
+	0x9233,
+	0x9312,
+	0x9421,
+	0x9533,
+	0x9644,
+	0x9744,
+	0x9833,
+	0x9912,
+	0x9A21,
+	0x9B33,
+	0x9C33,
+	0x9D33,
+	0x9E33,
+	0x9F12,
+	0xA011,
+	0xA111,
+	0xA211,
+	0xA311,
+	0xA411,
+	0xA511,
+/*WB Daylight*/
+	0x03c5, /*Page c5*/
+	0x11a0, /*adaptive off*/
+	0x1203, /*adaptive off*/
+	0x03c6, /*Page c6*/
+	0x1875, /*indoor R gain Min*/
+	0x1976, /*indoor R gain Max*/
+	0x1a6a, /*indoor B gain Min*/
+	0x1b6b, /*indoor B gain Max*/
+/*Saturation 0*/
+	0x03d1, /*page D1(Adaptive)*/
+/*SATB*/
+	0x2b88, /*SATB_00*/
+	0x2c88, /*SATB_01*/
+	0x2d88, /*SATB_02*/
+	0x2e88, /*SATB_03*/
+	0x2f88, /*SATB_04*/
+	0x308c, /*SATB_05*/
+	0x3198, /*SATB_06*/
+	0x3298, /*SATB_07*/
+	0x3398, /*SATB_08*/
+	0x3498, /*SATB_09*/
+	0x3598, /*SATB_10*/
+	0x3698, /*SATB_11*/
+/*SATR*/
+	0x3780, /*SATR_00*/
+	0x3880, /*SATR_01*/
+	0x3980, /*SATR_02*/
+	0x3a78, /*SATR_03*/
+	0x3b88, /*SATR_04*/
+	0x3c84, /*SATR_05*/
+	0x3d8c, /*SATR_06*/
+	0x3e8c, /*SATR_07*/
+	0x3f8c, /*SATR_08*/
+	0x408c, /*SATR_09*/
+	0x418c, /*SATR_10*/
+	0x428c, /*SATR_11*/
+/*Sharpness 0*/
+	0x03db,	 /*Outdoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc154, /*Neg_H*/
+	0xc354, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03de,	 /*Indoor*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc158, /*Neg_H*/
+	0xc360, /*Neg_M*/
+	0xc560, /*Neg_L*/
+	0x03e1,	 /*Dark1*/
+	0xbb30, /*Pos_H*/
+	0xbd30, /*Pos_M*/
+	0xbf30, /*Pos_L*/
+	0xc138, /*Neg_H*/
+	0xc340, /*Neg_M*/
+	0xc540, /*Neg_L*/
+	0x03e4,	 /*Dark2*/
+	0xbb00, /*Pos_H*/
+	0xbd00, /*Pos_M*/
+	0xbf00, /*Pos_L*/
+	0xc110, /*Neg_H*/
+	0xc310, /*Neg_M*/
+	0xc510, /*Neg_L*/
+/*Adaptive*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+/*AE On*/
+	0x03c3,
+	0xE125, /*Outdoor AG Max*/
+	0x03c4,
+	0x6608, /*ae stat*/
+	0x6700, /*ae stat*/
+	0x10ff, /*ae on & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+/*AWB On*/
+	0x03c5,
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0xff19, /*Delay 250ms*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+
+   };
+   
+   // ==========================================================
+   // 	CAMERA_SCENE_TEXT (Auto/Center/Br0/Auto/Sharp+2/Sat0)
+   // ==========================================================
+   const regs_t sr300pc20_scene_text_regs[] =
+   {
+    
+   
+   };
+   //==========================================================
+   // SCENEMODE -END
+   //==========================================================
+   
+   
+   
+   //==========================================================
+   //FPS()  - START
+   //==========================================================
+   
+   
+   //==========================================================
+   //FPS()
+   //==========================================================
+   
+   const regs_t sr300pc20_fps_auto_regs[] =
+   {
+     
+   };
+   
+   
+   const regs_t sr300pc20_fps_5_regs[] = 
+   {
+   
+   };
+   const regs_t sr300pc20_fps_7_regs[] =
+   {
+    
+   };
+   
+   
+   
+   
+   const regs_t sr300pc20_fps_10_regs[] = 
+   {
+   
+   };
+   
+   const regs_t sr300pc20_fps_15_regs[] =
+   {
+   	0x0300,
+   	0x0cf1, /*sleep on*/
+   	0xff0a, /*Delay 100ms*/
+   	0x0330,
+   	0x36A3, /*DMA off*/
+   	0x0330,
+   	0x0330,
+   	0x0330,
+   	0x36A3, /*DMA off*/
+   	0x03c4,
+   	0x106e, /*AE Off*/
+   	0x03c5,
+   	0x1000, /*AWB off*/
+   	0x0300,
+   	0x1430,
+   	0x0302,/*page 2*/
+   	0xa608,
+   	0xa726,
+   	0xa801,
+   	0xa9c4,
+   	0xaa02,
+   	0xabde,
+   	0xac03,
+   	0xad3b,
+   	0xae05,
+   	0xaf0c,
+   	0xb800,
+   	0xb976,
+   	0xba00,
+   	0xbbe6,
+   	0xbc00,
+   	0xbd2d,
+   	0xbe01,
+   	0xbfb8,
+   	0xc800,
+   	0xc976,
+   	0xca00,
+   	0xcbe8,
+   	0xcc00,
+	0xcd2d,
+	0xce01,
+	0xcfba,
+	0x0303, /*page 3*/
+	0x3204,
+	0x33e9,
+	0x3604,
+	0x37e9,
+	0x3800,
+	0x3901,
+	0x3a01,
+	0x3bc8,
+	0x3c00,
+	0x3d01,
+	0x3e01,
+	0x3fc8,
+	0xf000,
+	0xf173,
+	0x0310,
+	0x4100, /*DY Offset Off*/
+	0x03c5,
+	0x1213, /*adaptive on_nearBP off*/
+	0x0300,
+	0xff0D, /*Delay 125ms*/
+	0x0300,
+	0x1190,
+	0x5000, /*Hblank 20*/
+	0x5114,
+	0x5200, /*Vblank 33*/
+	0x5321,
+	0x03c3,
+	0x1080,
+	0x0320, /*Page 20*/
+	0x7180,
+	0x3007, /*EXP100*/
+	0x31ec,
+	0x3220,
+	0x3306, /*EXP120*/
+	0x3494,
+	0x3560,
+	0x2400, /*EXP Max 33.33 fps*/
+	0x2517,
+	0x26c4,
+	0x2760,
+	0x3c00, /*EXP Fix 15.00 fps*/
+	0x3d34,
+	0x3edf,
+	0x3f28,
+	0x8030, /*Ae target*/
+	0x03c4,
+	0x192c, /*Bnd0 Gain*/
+	0x1e00, /*Bnd0 100fps*/
+	0x1f07,
+	0x20ec,
+	0x2120,
+	0x1a34, /*Bnd1 Gain*/
+	0x2200, /*Bnd1 50fps*/
+	0x230f,
+	0x24d8,
+	0x2540,
+	0x1b3c, /*Bnd2 Gain*/
+	0x2600, /*Bnd2 33.3fps*/
+	0x2717,
+	0x28c4,
+	0x2960,
+	0x0300,
+	0x13a8, /*Fix AE Set On*/
+	0x1194, /*Fix Frame On*/
+	0x0311,
+	0xf2ae, /*LPF_AG_TH_ON*/
+	0xf3a4, /*LPF_AG_TH_OFF*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+	0x03c4,
+	0x10af, /*AE en & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+	0x03c5, /*AWB en*/
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/ 
+
+};
+
+const regs_t sr300pc20_fps_20_regs[] =
+{
+ 
+
+};
+
+const regs_t sr300pc20_fps_25_regs[] =
+{
+ 
+
+};
+
+const regs_t sr300pc20_fps_30_regs[] =
+{
+  /* 24fix */
+  0x0300,
+	0x0cf1, /*sleep on*/
+	0xff0a, /*Delay 100ms*/
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x0330,
+	0x0330,
+	0x0330,
+	0x36A3, /*DMA off*/
+	0x03c4,
+	0x106e, /*AE Off*/
+	0x03c5,
+	0x1000, /*AWB off*/
+	0x0300,
+	0x1430,
+	0x0302,/*page 2*/
+	0xa608,
+	0xa726,
+	0xa801,
+	0xa9c4,
+	0xaa02,
+	0xabde,
+	0xac03,
+	0xad3b,
+	0xae05,
+	0xaf0c,
+	0xb800,
+	0xb976,
+	0xba00,
+	0xbbe6,
+	0xbc00,
+	0xbd2d,
+	0xbe01,
+	0xbfb8,
+	0xc800,
+	0xc976,
+	0xca00,
+	0xcbe8,
+	0xcc00,
+	0xcd2d,
+	0xce01,
+	0xcfba,
+	0x0303, /*page 3*/
+	0x3204,
+	0x33e9,
+	0x3604,
+	0x37e9,
+	0x3800,
+	0x3901,
+	0x3a01,
+	0x3bc8,
+	0x3c00,
+	0x3d01,
+	0x3e01,
+	0x3fc8,
+	0xf000,
+	0xf173,
+	0x0310,
+	0x4100, /*DY Offset Off*/
+	0x03c5,
+	0x1213, /*adaptive on_nearBP off*/
+	0x0300,
+	0xff0d, /*Delay 125ms*/
+	0x0300,
+	0x1190,
+	0x5000, /*Hblank 20*/
+	0x5114,
+	0x5200, /*Vblank 14*/
+	0x530e,
+	0x03c3,
+	0x1080,
+	0x0320, /*Page 20*/
+	0x7180,
+	0x3007, /*EXP100*/
+	0x31ec,
+	0x3220,
+	0x3306, /*EXP120*/
+	0x3494,
+	0x3560,
+	0x2400, /*EXP Max 33.33 fps*/
+	0x2517,
+	0x26c4,
+	0x2760,
+	0x3c00, /*EXP Fix 30.00 fps*/
+	0x3d1c,
+	0x3e55,
+	0x3f20,
+	0x8030,
+	0x03c4,
+	0x192c, /*Bnd0 Gain*/
+	0x1e00, /*Bnd0 100fps*/
+	0x1f07,
+	0x20ec,
+	0x2120,
+	0x1a34, /*Bnd1 Gain*/
+	0x2200, /*Bnd1 50fps*/
+	0x230f,
+	0x24d8,
+	0x2540,
+	0x1b3c, /*Bnd2 Gain*/
+	0x2600, /*Bnd2 33.3fps*/
+	0x2717,
+	0x28c4,
+	0x2960,
+	0x0300,
+	0x13a8, /*Fix AE Set On*/
+	0x1194, /*Fix Frame On*/
+	0x0311,
+	0xf2ae, /*LPF_AG_TH_ON*/
+	0xf3a4, /*LPF_AG_TH_OFF*/
+	0x03cf, /*Adative en*/
+	0x10a7, /*Yoffset, Contrast Off*/
+	0x03c4,
+	0x10af, /*AE en & reset*/
+	0x0300,
+	0xff02, /*Delay 20ms*/
+	0x03c5, /*AWB en*/
+	0x10b1,
+	0x0300,
+	0x0cf0, /*sleep off*/
+	0x03c0,
+	0x3300,
+	0x3201, /*DMA On*/
+
+  
+};
+
+
+const regs_t sr300pc20_fps_60_regs[] =
+{
+
+};
+
+const regs_t sr300pc20_fps_120_regs[] =
+{
+
+};
+    
+
+//==========================================================
+//FPS()  - END
+//==========================================================
+//==========================================================
+// JPEG QUALITY - // DO NOT USE IT SEHF_CHECK_IT
+//==========================================================
+const regs_t sr300pc20_quality_superfine_regs[] =
+{
+};
+
+const regs_t sr300pc20_quality_fine_regs[] =
+{
+ 
+};
+
+const regs_t sr300pc20_quality_normal_regs[] =
+{
+ 
+
+};
+
+const regs_t sr300pc20_quality_economy_regs[] =
+{
+
+
+};
+//==========================================================
+// JPEG QUALITY -END
+//==========================================================
+//==========================================================
+//preivew size() - START
+//==========================================================
+const regs_t sr300pc20_preview_size_176x144_regs[] =
+{
+
+};
+const regs_t sr300pc20_preview_size_320x240_regs[]=
+{
+	
+	
+};
+const regs_t sr300pc20_preview_size_352x288_regs[] =
+{
+	
+};
+const regs_t sr300pc20_preview_size_640x480_regs[] =
+{
+
+  
+};
+
+const regs_t sr300pc20_preview_size_704x576_regs[] =
+{
+};
+const regs_t sr300pc20_preview_size_720x480_regs[] =
+{	
+	
+
+};
+const regs_t sr300pc20_preview_size_800x480_regs[] =
+{	
+};
+const regs_t sr300pc20_preview_size_800x600_regs[] =
+{
+};
+const regs_t sr300pc20_preview_size_1024x600_regs[] =
+{
+};
+const regs_t sr300pc20_preview_size_1024x768_regs[] =
+{
+};
+const regs_t sr300pc20_preview_size_1280x960_regs[] =
+{
+};
+const regs_t sr300pc20_preview_size_1600x960_regs[] =
+{
+};
+const regs_t sr300pc20_preview_size_1600x1200_regs[] =
+{
+
+};
+const regs_t sr300pc20_preview_size_2048x1232_regs[] =
+{
+};
+const regs_t sr300pc20_preview_size_2048x1536_regs[] =
+{
+};
+const regs_t sr300pc20_preview_size_2560x1920_regs[] =
+{	
+ 
+
+};
+
+//==========================================================
+//PREVIEW SIZE - END
+//==========================================================
+
+
+
+//==========================================================
+//CAPTURE START
+//==========================================================
+const regs_t sr300pc20_capture_size_640x480_regs[] =
+{	
+
+};
+    
+const regs_t sr300pc20_capture_size_720x480_regs[] =
+{	
+};
+    
+const regs_t sr300pc20_capture_size_800x480_regs[] =
+{	
+};
+
+const regs_t sr300pc20_capture_size_800x486_regs[] =
+{	
+
+};
+const regs_t sr300pc20_capture_size_800x600_regs[] =
+{	
+};
+const regs_t sr300pc20_capture_size_1024x600_regs[] =
+{	
+};
+const regs_t sr300pc20_capture_size_1024x768_regs[] =
+{	
+};
+
+const regs_t sr300pc20_capture_size_1280x960_regs[] = 
+{
+
+};
+const regs_t sr300pc20_capture_size_1600x960_regs[] =
+{	
+};
+
+/* 1600 x 1200 */
+const regs_t sr300pc20_capture_size_1600x1200_regs[] = 
+{
+
+
+};
+
+const regs_t sr300pc20_capture_size_2048x1232_regs[] =
+{
+
+  
+
+};
+
+const regs_t sr300pc20_capture_size_2048x1536_regs[] =
+{
+};
+
+const regs_t sr300pc20_capture_size_2560x1536_regs[] =
+{	
+
+};
+
+
+const regs_t sr300pc20_capture_size_2560x1920_regs[] =
+{
+  
+};
+//==========================================================
+//CAPTURE SIZE - END
+//==========================================================
+
+
+//==========================================================
+//TEST PATTERN- START
+//==========================================================
+
+const regs_t sr300pc20_pattern_on_regs[] =
+{
+	
+};
+
+const regs_t sr300pc20_pattern_off_regs[] = 
+{
+	 
+};
+//==========================================================
+//TEST PATTERN- END
+//==========================================================
+
+
+
+//==========================================================
+//AE - START
+//==========================================================
+
+
+static regs_t sr300pc20_ae_lock_regs[] =
+{
+	
+};
+
+// AE unLock
+static regs_t sr300pc20_ae_unlock_regs[] =
+{
+  
+};
+
+//==========================================================
+//AE - END
+//==========================================================
+
+
+
+//==========================================================
+//AWB - START
+//==========================================================
+
+
+// AWB Lock
+static regs_t sr300pc20_awb_lock_regs[] =
+{
+ 
+};
+
+
+// AWB unLock
+static regs_t sr300pc20_awb_unlock_regs[] =
+{
+	
+
+};
+
+
+//==========================================================
+//AWB - END
+//==========================================================
+
+//==========================================================
+//WDR - START
+//==========================================================
+
+const regs_t sr300pc20_wdr_on_regs[] = {
+};
+
+const regs_t sr300pc20_wdr_off_regs[] = {
+};
+
+//==========================================================
+//WDR - END
+//==========================================================
+
+const regs_t sr300pc20_iso_auto_regs[] =
+{
+};
+
+const regs_t sr300pc20_iso_50_regs[] =
+{
+};
+
+const regs_t sr300pc20_iso_100_regs[] =
+{
+};
+
+const regs_t sr300pc20_iso_200_regs[] =
+{
+};
+
+const regs_t sr300pc20_iso_400_regs[] =
+{
+};
+
+//==========================================================
+// BRIGHTNES(9) Camcorder
+//==========================================================
+
+const regs_t sr300pc20_ev_camcorder_minus_4_regs[] =
+{
+};
+
+const regs_t sr300pc20_ev_camcorder_minus_3_regs[] =
+{
+};
+
+const regs_t sr300pc20_ev_camcorder_minus_2_regs[] =
+{
+};
+
+const regs_t sr300pc20_ev_camcorder_minus_1_regs[] =
+{
+};
+
+const regs_t sr300pc20_ev_camcorder_default_regs[] =
+{
+};
+
+const regs_t sr300pc20_ev_camcorder_plus_1_regs[] =
+{
+};
+
+const regs_t sr300pc20_ev_camcorder_plus_2_regs[] =
+{
+};
+
+const regs_t sr300pc20_ev_camcorder_plus_3_regs[] =
+{
+};
+
+const regs_t sr300pc20_ev_camcorder_plus_4_regs[] =
+{
+};
+
+
+//==========================================================
+// Auto Contrast
+//==========================================================
+
+const regs_t sr300pc20_auto_contrast_on_regs[] =
+{
+};
+
+const regs_t sr300pc20_auto_contrast_off_regs[] =
+{
+};
+
+
+
+//==========================================================
+//AF() - SEHF_AF_CHECK
+//==========================================================
+
+const regs_t sr300pc20_af_return_inf_pos[] =
+{
+};
+
+const regs_t sr300pc20_af_return_macro_pos[] =
+{
+};
+
+const regs_t sr300pc20_focus_mode_auto_regs[] =
+{
+};
+
+
+const regs_t sr300pc20_focus_mode_macro_regs[] =
+{
+};
+
+
+
+// Frame Fixed
+const regs_t sr300pc20_vt_mode_regs[] = 
+{
+};
+
+
+
+#endif /* __CAMDRV_SS_sr300pc20_H__ */
