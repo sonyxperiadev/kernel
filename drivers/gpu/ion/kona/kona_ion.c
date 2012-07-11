@@ -24,10 +24,105 @@
 #include <linux/slab.h>
 #include "../ion_priv.h"
 #include <linux/uaccess.h>
+#include <linux/mutex.h>
+
+/* NISHANTH_TODO: The following two structures should ideally be defined
+ * in ion_priv.h for custom ioctls to use them.
+ * Duplicating it here to minimise modifications to mainline ion code.
+ * These would be removed when mainline moves them to header file.
+ */
+/**
+ * struct ion_client - a process/hw block local address space
+ * @ref:		for reference counting the client
+ * @node:		node in the tree of all clients
+ * @dev:		backpointer to ion device
+ * @handles:		an rb tree of all the handles in this client
+ * @lock:		lock protecting the tree of handles
+ * @heap_mask:		mask of all supported heaps
+ * @name:		used for debugging
+ * @task:		used for debugging
+ *
+ * A client represents a list of buffers this client may access.
+ * The mutex stored here is used to protect both handles tree
+ * as well as the handles themselves, and should be held while modifying either.
+ */
+struct ion_client {
+	struct kref ref;
+	struct rb_node node;
+	struct ion_device *dev;
+	struct rb_root handles;
+	struct mutex lock;
+	unsigned int heap_mask;
+	const char *name;
+	struct task_struct *task;
+	pid_t pid;
+	struct dentry *debug_root;
+};
+
+/**
+ * ion_handle - a client local reference to a buffer
+ * @ref:		reference count
+ * @client:		back pointer to the client the buffer resides in
+ * @buffer:		pointer to the buffer
+ * @node:		node in the client's handle rbtree
+ * @kmap_cnt:		count of times this client has mapped to kernel
+ * @dmap_cnt:		count of times this client has mapped for dma
+ * @usermap_cnt:	count of times this client has mapped for userspace
+ *
+ * Modifications to node, map_cnt or mapping should be protected by the
+ * lock in the client.  Other fields are never changed after initialization.
+ */
+struct ion_handle {
+	struct kref ref;
+	struct ion_client *client;
+	struct ion_buffer *buffer;
+	struct rb_node node;
+	unsigned int kmap_cnt;
+	unsigned int dmap_cnt;
+	unsigned int usermap_cnt;
+};
+
+static bool ion_handle_validate(struct ion_client *client, struct ion_handle *handle)
+{
+	struct rb_node *n = client->handles.rb_node;
+
+	while (n) {
+		struct ion_handle *handle_node = rb_entry(n, struct ion_handle,
+							  node);
+		if (handle < handle_node)
+			n = n->rb_left;
+		else if (handle > handle_node)
+			n = n->rb_right;
+		else
+			return true;
+	}
+	return false;
+}
 
 static struct ion_device *idev;
 static int num_heaps;
 static struct ion_heap **heaps;
+
+struct ion_buffer* kona_ion_acquire_buffer(struct ion_client *client, struct ion_handle *handle)
+{
+	struct ion_buffer *buffer = NULL;
+
+	mutex_lock(&client->lock);
+	if (!ion_handle_validate(client, handle)) {
+		pr_err("Invalid handle passed to custom ioctl.\n");
+		mutex_unlock(&client->lock);
+		return NULL;
+	}
+	buffer = handle->buffer;
+	mutex_lock(&buffer->lock);
+	return buffer;
+}
+
+void kona_ion_release_buffer(struct ion_client *client, struct ion_buffer *buffer)
+{
+	mutex_unlock(&buffer->lock);
+	mutex_unlock(&client->lock);
+}
 
 void kona_ion_map_dma(struct ion_client *client, struct ion_custom_dma_map_data *data)
 {
@@ -41,6 +136,58 @@ void kona_ion_map_dma(struct ion_client *client, struct ion_custom_dma_map_data 
 	if (!IS_ERR_OR_NULL(sglist) && sg_is_last(sglist))
 		data->dma_addr = sg_phys(sglist);
 #endif
+}
+
+int kona_ion_set_prop(struct ion_client *client, struct ion_custom_property *data)
+{
+	struct ion_buffer *buffer;
+
+	buffer = kona_ion_acquire_buffer(client, data->handle);
+	if (buffer) {
+		buffer->custom_flags = (data->value & data->mask);
+		kona_ion_release_buffer(client, buffer);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+int kona_ion_get_prop(struct ion_client *client, struct ion_custom_property *data)
+{
+	struct ion_buffer *buffer;
+
+	buffer = kona_ion_acquire_buffer(client, data->handle);
+	if (buffer) {
+		data->value = (buffer->custom_flags & data->mask);
+		kona_ion_release_buffer(client, buffer);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+int kona_ion_update_count(struct ion_client *client, struct ion_handle *handle)
+{
+	struct ion_buffer *buffer;
+
+	buffer = kona_ion_acquire_buffer(client, handle);
+	if (buffer) {
+		buffer->custom_update_count++;
+		kona_ion_release_buffer(client, buffer);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+int kona_ion_get_update_count(struct ion_client *client, struct ion_custom_update_count *data)
+{
+	struct ion_buffer *buffer;
+
+	buffer = kona_ion_acquire_buffer(client, data->handle);
+	if (buffer) {
+		data->count = buffer->custom_update_count;
+		kona_ion_release_buffer(client, buffer);
+		return 0;
+	}
+	return -EINVAL;
 }
 
 static long kona_ion_custom_ioctl (struct ion_client *client,
@@ -71,6 +218,63 @@ static long kona_ion_custom_ioctl (struct ion_client *client,
 				client, handle);
 		ion_unmap_dma(client, handle);
 
+		break;
+	}
+	case ION_IOC_CUSTOM_SET_PROP:
+	{
+		struct ion_custom_property data;
+
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+
+		pr_debug("ION_IOC_CUSTOM_SET_PROP client(%p) handle(%p) value(%x) mask(%x)\n",
+				client, data.handle, data.value, data.mask);
+		if (kona_ion_set_prop(client, &data))
+			return -EINVAL;
+
+		break;
+	}
+	case ION_IOC_CUSTOM_GET_PROP:
+	{
+		struct ion_custom_property data;
+
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+
+		pr_debug("ION_IOC_CUSTOM_GET_PROP client(%p) handle(%p) mask(%x)\n",
+				client, data.handle, data.mask);
+		if (kona_ion_get_prop(client, &data))
+			return -EINVAL;
+
+		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+			return -EFAULT;
+		break;
+	}
+	case ION_IOC_CUSTOM_UPDATE:
+	{
+		struct ion_handle *handle = (struct ion_handle*)arg;
+
+		pr_debug("ION_IOC_CUSTOM_UPDATE client(%p) handle(%p)\n",
+				client, handle);
+		if (kona_ion_update_count(client, handle))
+			return -EINVAL;
+
+		break;
+	}
+	case ION_IOC_CUSTOM_GET_UPDATE_COUNT:
+	{
+		struct ion_custom_update_count data;
+
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+
+		pr_debug("ION_IOC_CUSTOM_GET_UPDATE_COUNT client(%p) handle(%p)\n",
+				client, data.handle);
+		if (kona_ion_get_update_count(client, &data))
+			return -EINVAL;
+
+		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+			return -EFAULT;
 		break;
 	}
 	case ION_IOC_CUSTOM_TP:
