@@ -437,7 +437,7 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 
 	} else if (
 		(callMode == MODEM_CALL
-			&& (audio_rpc_read_flag_vc_rel_by_modem() == FALSE))
+			/*&& (audio_rpc_read_flag_vc_rel_by_modem() == FALSE)*/)
 	    && (chip->streamCtl[substream_number].iLineSelect[0]
 		!= AUDIO_SINK_I2S)) {
 		/*call mode & not FM Tx playback */
