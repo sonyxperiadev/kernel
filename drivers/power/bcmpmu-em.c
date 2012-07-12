@@ -51,6 +51,8 @@ static int debug_mask = 0xff; /*BCMPMU_PRINT_ERROR |
 #define POLLRATE_LOWBAT		5000
 #define POLLRATE_HIGHBAT	60000
 #define POLLRATE_POLL		50
+#define POLLRATE_POLL_INIT	20
+#define POLLRATE_IDLE_INIT	160
 #define POLLRATE_IDLE		500
 #define POLLRATE_RETRY		500
 #define POLLRATE_ADC		20
@@ -70,6 +72,10 @@ static int debug_mask = 0xff; /*BCMPMU_PRINT_ERROR |
 #define HICAL_FACT		50
 #define LOCAL_FACT		80
 
+#define FG_CIC_2HZ		0x00
+#define FG_CIC_4HZ		0x01
+#define FG_CIC_8HZ		0x02
+#define FG_CIC_16HZ		0x03
 
 #define pr_em(debug_level, args...) \
 	do { \
@@ -283,6 +289,7 @@ struct bcmpmu_em {
 	int low_cal_factor;
 	int high_cal_factor;
 	int adc_retry;
+	int init_poll;
 };
 static struct bcmpmu_em *bcmpmu_em;
 
@@ -405,6 +412,35 @@ static int get_fg_cap(struct bcmpmu *bcmpmu, int *cap)
 	}
 	*cap = (int)temp;
 	pr_em(FLOW, "%s, fg cap read: %d, 0x%X\n", __func__, *cap, data);
+	return ret;
+}
+
+static int fg_offset_cal(struct bcmpmu *bcmpmu)
+{
+	int ret;
+	ret = bcmpmu->write_dev(bcmpmu,
+				PMU_REG_FG_CAL,
+				1 << bcmpmu->regmap[PMU_REG_FG_CAL].shift,
+				bcmpmu->regmap[PMU_REG_FG_CAL].mask);
+	if (ret != 0)
+		pr_em(ERROR, "%s failed to write device.\n", __func__);
+	return ret;
+}
+
+static int fg_set_default_rate(struct bcmpmu *bcmpmu)
+{
+	int ret = -1;
+	int retry_cnt = 0;
+	while ((ret != 0) && (retry_cnt < 20)) {
+		ret = bcmpmu->write_dev(bcmpmu,
+				PMU_REG_FG_CIC,
+				FG_CIC_2HZ,
+				bcmpmu->regmap[PMU_REG_FG_CIC].mask);
+		if (ret != 0)
+			pr_em(ERROR, "%s, failed set fg clock, retry=%d\n",
+			__func__, retry_cnt);
+		retry_cnt++;
+	}
 	return ret;
 }
 
@@ -929,11 +965,11 @@ fg_cap_show(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "%lld\n", pem->fg_capacity);
 }
 
-static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_set);
+static DEVICE_ATTR(dbgmsk, 0666, dbgmsk_show, dbgmsk_set);
 static DEVICE_ATTR(pollrate, 0644, pollrate_show, pollrate_set);
 static DEVICE_ATTR(fgcal, 0644, fgcal_show, fgcal_set);
 static DEVICE_ATTR(fgdelta, 0644, fgdelta_show, fgdelta_set);
-static DEVICE_ATTR(fg_dbg_temp, 0644, fg_temp_show, fg_temp_set);
+static DEVICE_ATTR(fg_dbg_temp, 0666, fg_temp_show, fg_temp_set);
 static DEVICE_ATTR(fg_tcstatus, 0644, fg_tcstatus_show, NULL);
 static DEVICE_ATTR(fg_tczone_info, 0644, fg_tczone_info_show, NULL);
 static DEVICE_ATTR(fg_tczone_map, 0644, fg_tczone_map_show, NULL);
@@ -1549,10 +1585,16 @@ static int get_update_rate(struct bcmpmu_em *pem)
 				rate = pem->fg_poll_hbat;
 			break;
 		case MODE_POLL:
-			rate = POLLRATE_POLL;
+			if (pem->init_poll == 1)
+				rate = POLLRATE_POLL_INIT;
+			else
+				rate = POLLRATE_POLL;
 			break;
 		case MODE_IDLE:
-			rate = POLLRATE_IDLE;
+			if (pem->init_poll == 1)
+				rate = POLLRATE_IDLE_INIT;
+			else
+				rate = POLLRATE_IDLE;
 			break;
 		case MODE_RETRY:
 			rate = POLLRATE_RETRY;
@@ -1779,7 +1821,6 @@ static void em_algorithm(struct work_struct *work)
 	static int cap_poll_count;
 	static int vbatt_poll[POLL_SAMPLES];
 	static int cap_poll[CAP_POLL_SAMPLES];
-	static int init_poll = 0;
 	int ret;
 	int retry_cnt = 0;
 	int vbus_status = 0;
@@ -1788,6 +1829,11 @@ static void em_algorithm(struct work_struct *work)
 		bcmpmu->fg_enable(bcmpmu, 1);
 		bcmpmu->fg_reset(bcmpmu);
 
+		ret = bcmpmu->read_dev(bcmpmu,
+				PMU_REG_FG_CIC,
+				&fg_result,
+				bcmpmu->regmap[PMU_REG_FG_CIC].mask);
+		pr_em(INIT, "%s, Init CIC=0x%X\n", __func__, fg_result);
 
 		req.sig = PMU_ADC_VMBATT;
 		req.tm = PMU_ADC_TM_HK;
@@ -1841,7 +1887,7 @@ static void em_algorithm(struct work_struct *work)
 
 		poll_count = POLL_SAMPLES;
 		pem->mode = MODE_POLL;
-		init_poll = 1;
+		pem->init_poll = 1;
 		cap_poll_count = CAP_POLL_SAMPLES;
 
 		first_run = 1;
@@ -1856,6 +1902,7 @@ static void em_algorithm(struct work_struct *work)
 		req.flags = PMU_ADC_RAW_AND_UNIT;
 		bcmpmu->adc_req(bcmpmu, &req);
 		vbatt_poll[poll_count - 1] = req.cnv;
+
 		pem->mode = MODE_POLL;
 		poll_count--;
 		if (pem->cal_mode == CAL_MODE_CUTOFF)
@@ -1898,23 +1945,29 @@ static void em_algorithm(struct work_struct *work)
 
 		capacity = em_batt_get_capacity(pem,
 			pem->batt_volt, pem->batt_curr);
-		cap_poll[cap_poll_count - 1] = capacity;
-		cap_poll_count--;
-		pr_em(INIT, "%s, Init capacity=%d, count=%d\n",
-			__func__, capacity, cap_poll_count);
-		if (cap_poll_count > 0) {
-			pem->mode = MODE_IDLE;
-			poll_count = POLL_SAMPLES;
-			pr_em(FLOW, "%s, restart capacity poll.\n", __func__);
-			schedule_delayed_work(&pem->work,
-				msecs_to_jiffies(get_update_rate(pem)));
-			return;
-		};
-		sort(cap_poll, CAP_POLL_SAMPLES, sizeof(int), &cmp, NULL);
-		capacity = average(cap_poll, CAP_POLL_SAMPLES, 1);
-		pr_em(INIT, "%s, Avg Init capacity=%d\n", __func__, capacity);
 
-		if (init_poll == 1) {
+		if (cap_poll_count > 0) {
+			cap_poll[cap_poll_count - 1] = capacity;
+			cap_poll_count--;
+			pr_em(INIT, "%s, Init capacity=%d, count=%d\n",
+				__func__, capacity, cap_poll_count);
+			if (cap_poll_count > 0) {
+				pem->mode = MODE_IDLE;
+				poll_count = POLL_SAMPLES;
+				pr_em(FLOW, "%s,
+					restart capacity poll.\n", __func__);
+				schedule_delayed_work(&pem->work,
+					msecs_to_jiffies(get_update_rate(pem)));
+				return;
+			};
+			sort(cap_poll,
+				CAP_POLL_SAMPLES, sizeof(int), &cmp, NULL);
+			capacity = average(cap_poll, CAP_POLL_SAMPLES, 1);
+			pr_em(INIT,
+			"%s, Avg Init capacity=%d\n", __func__, capacity);
+		}
+
+		if (pem->init_poll == 1) {
 			if ((pem->cap_init > 0) &&
 				(pem->cap_init <= 100) &&
 			    (abs(capacity - pem->cap_init) < 30)) {
@@ -1924,9 +1977,11 @@ static void em_algorithm(struct work_struct *work)
 			}
 			update_fg_capacity(pem, capacity);
 			pem->batt_capacity = capacity;
-
+			update_power_supply(pem, capacity);
 			if (capacity >= 30)
 				pem->fg_lowbatt_cal = 1;
+			fg_set_default_rate(bcmpmu);
+			fg_offset_cal(bcmpmu);
 		} else {
 			if (pem->cal_mode == CAL_MODE_CUTOFF) {
 				pr_em(FLOW, "%s, Cutoff cal, count = %d\n",
@@ -1991,7 +2046,7 @@ static void em_algorithm(struct work_struct *work)
 		pem->cal_mode = CAL_MODE_NONE;
 		pem->mode = MODE_IDLE;
 		poll_count = 0;
-		init_poll = 0;
+		pem->init_poll = 0;
 		pr_em(FLOW, "%s, poll run complete.\n", __func__);
 		schedule_delayed_work(&pem->work,
 			msecs_to_jiffies(get_update_rate(pem)));
@@ -2184,6 +2239,8 @@ static int em_event_handler(struct notifier_block *nb,
 	default:
 		break;
 	}
+	if (pem->mode == MODE_POLL)
+		return 0;
 	cancel_delayed_work_sync(&pem->work);
 	schedule_delayed_work(&pem->work, 0);
 	return 0;
