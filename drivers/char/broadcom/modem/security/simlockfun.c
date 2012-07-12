@@ -1311,6 +1311,7 @@ static SEC_SimLock_Status_t SIMLockSetLockOneType(SimNumber_t SimId,
 				*  add for fixing compile warning.
 				*/
 				case SEC_SIMLOCK_PHONE_LOCK:
+				/* Coverity [DEADCODE] */
 				case SEC_SIMLOCK_INVALID_LOCK:
 				default:
 					break;
