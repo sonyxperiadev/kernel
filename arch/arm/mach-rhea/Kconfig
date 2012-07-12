@@ -153,6 +153,15 @@ config RHEA_DORMANT_MODE
        help
          Say Y if you want to enable dormant mode support for Rhea platform
 
+config RHEA_L2X0_PREFETCH
+	bool "Enable L2 cache prefetching for Rhea platform"
+	default n
+	help
+		Say Y if you want to enable L2 cache prefetching
+		for the Rhea platform. This enables both, data and
+		instruction prefetching that have been shown to improve
+		performance especially in multimedia use cases.
+
 config ROM_SEC_DISPATCHER
        bool "Enable secure calls to ROM"
        default n
