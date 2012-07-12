@@ -18,14 +18,21 @@
 #include <mach/capri_dormant.h>
 #include <asm/proc-fns.h>
 #include <asm/memory.h>
+#include <linux/dma-mapping.h>
+#include <linux/spinlock.h>
 
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_scu.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_pl310.h>
+
 #include <plat/pi_mgr.h>
+#include <plat/pwr_mgr.h>
 #include <mach/chipregHw_inline.h>
+
+#include <asm/hardware/cache-l2x0.h>
 
 /* Control variable to enable/disable dormant */
 static u32 dormant_disable;
@@ -49,6 +56,26 @@ static int turn_off_l2_memory = 1;
 module_param_named(turn_off_l2_memory, turn_off_l2_memory,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
+/* Control variable to control periodic dump of counters */
+static int dbg_msg_counters;
+module_param_named(dbg_msg_counters, dbg_msg_counters,
+		   int, S_IRUGO | S_IWUSR | S_IWGRP);
+
+/* Control variable to control the peridicity of the dump of counters */
+static int dbg_periodic_cnt = 500;
+module_param_named(dbg_periodic_cnt, dbg_periodic_cnt,
+		   int, S_IRUGO | S_IWUSR | S_IWGRP);
+
+/* Variables to maintain counters */
+static int cnt_attempts;
+module_param_named(cnt_attempts, cnt_attempts,
+		   int, S_IRUGO | S_IWUSR | S_IWGRP);
+
+static int cnt_success;
+module_param_named(cnt_success, cnt_success, int, S_IRUGO | S_IWUSR | S_IWGRP);
+
+static int cnt_failure;
+module_param_named(cnt_failure, cnt_failure, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 /* Buffer to pass parameters to secure rom */
 #define	SEC_BUFFER_ADDR				0x3404C400	/* SRAM */
@@ -63,8 +90,11 @@ module_param_named(turn_off_l2_memory, turn_off_l2_memory,
 /* CORE-0 is the master core for boot-up */
 #define MASTER_CORE					0
 
+#define	SCU_DORMANT_L2_OFF_MODE		0x03030303
 #define	SCU_DORMANT_MODE			0x03030202
 #define	SCU_DORMANT_MODE_OFF		0x03030000
+
+#define	SCU_DORMANT_L2_OFF_B		0x03
 #define	SCU_DORMANT_MODE_B			0x02
 #define	SCU_DORMANT_MODE_OFF_B		0x00
 
@@ -95,10 +125,20 @@ DEFINE_PER_CPU(u8[CONTROL_DATA_SIZE], control_data);
 DEFINE_PER_CPU(u8[MMU_DATA_SIZE], mmu_data);
 
 /* Data for the entire cluster */
+static DEFINE_SPINLOCK(dormant_entry_lock);
+
+/* Counts the numner of cores that are in the process of
+ * entering dormant
+ */
+u32 num_cores_in_dormant;
+
 u8 gic_dist_shared_data[GIC_DIST_SHARED_DATA_SIZE];
 
-#define PROC_CLK_REG_ADDR(reg_name)		(KONA_PROC_CLK_VA + \
-		(KPROC_CLK_MGR_REG_##reg_name##_OFFSET))
+/* un-cached memory for dormant stack */
+u32 un_cached_stack_ptr;
+
+#define PROC_CLK_REG_ADDR(reg_name)		((u32)(KONA_PROC_CLK_VA + \
+		(KPROC_CLK_MGR_REG_##reg_name##_OFFSET)))
 
 #define PROC_CLK_ITEM_DEFINE(reg_name)	{PROC_CLK_REG_ADDR(reg_name), 0}
 
@@ -150,34 +190,94 @@ static u32 proc_clk_regs[][2] = {
 	PROC_CLK_ITEM_DEFINE(APB_CLKGATE_DBG1),
 	PROC_CLK_ITEM_DEFINE(CLKMON),
 	PROC_CLK_ITEM_DEFINE(POLICY_DBG),
-	PROC_CLK_ITEM_DEFINE(ARM_SYS_IDLE_DLY),
+	/*PROC_CLK_ITEM_DEFINE(ARM_SYS_IDLE_DLY),*/
 	PROC_CLK_ITEM_DEFINE(TGTMASK_DBG1)
 };
 
 #define PROC_CLK_ITEM_ADDR(index)	(proc_clk_regs[(index)][0])
 #define PROC_CLK_ITEM_VALUE(index)	(proc_clk_regs[(index)][1])
 
+#define LOG_BUFFER_SIZE (SEC_BUFFER_SIZE -\
+		(MAX_SECURE_BUFFER_SIZE +\
+			sizeof(u32)*NUM_API_PARAMETERS +\
+			sizeof(u32)*1))
+
+/* Structure of the parameters passed in the buffer to secure side */
 struct secure_params_t {
 	u32 core0_reset_address;
 	u32 core1_reset_address;
+	/* Remaining part of the buffer space */
 	u8 buffer[MAX_SECURE_BUFFER_SIZE - 8];
+
+	/* We use this address to pass in the parameters */
 	u32 api_params[NUM_API_PARAMETERS];
+
+	/* Remaining space un-used
+	 * SEC_BUFFER_SIZE -
+	 * MAX_SECURE_BUFFER_SIZE + sizeof(u32)*NUM_API_PARAMETERS)
+	 */
+	u32 log_index;
+	u8 log_buffer[LOG_BUFFER_SIZE];
+};
+
+enum DORMANT_LOG_TYPE {
+	DORMNAT_ENTRY_LOG = 1,
+	DORMANT_EXIT_LOG,
+	DORMANT_BEFORE_L2_FLUSH_LOG,
+	DORMANT_AFTER_L2_FLUSH_LOG,
+	DORMANT_EXIT_SUCCESS_LOG = 0x75,
+	DORMANT_EXIT_FAILURE_LOG = 0x7F
 };
 
 static struct secure_params_t *secure_params;
 
-
 /*********** Local Functions *************/
+
+static inline void print_dbg_counters(void)
+{
+	if (dbg_msg_counters && cnt_attempts &&
+	    (cnt_attempts % dbg_periodic_cnt) == 0) {
+		pr_info("Dormant Stats: Try:%d Win:%d Loss:%d\n", cnt_attempts,
+		       cnt_success, cnt_failure);
+	}
+}
+
+static inline void log_dormant_event(enum DORMANT_LOG_TYPE log)
+{
+	u32 processor_id = (read_mpidr() & 0xff);
+	if (secure_params->log_index == LOG_BUFFER_SIZE)
+		secure_params->log_index = 0;
+	secure_params->log_buffer[secure_params->log_index++] =
+	    (log | processor_id << 7);
+}
 
 /*
  * Function to save proc_clk registers that are
- * lost upon dormant entry
- */
+ * lost upon dormant entry */
 static void save_proc_clk_regs(void)
 {
 	int i;
 	for (i = 0; i < ARRAY_SIZE(proc_clk_regs); i++)
 		PROC_CLK_ITEM_VALUE(i) = readl_relaxed(PROC_CLK_ITEM_ADDR(i));
+}
+
+/*
+ * Function to return the number of CPUs
+ */
+static u32 num_cpus(void)
+{
+	return (readl(KONA_SCU_VA + SCU_CONFIG_OFFSET) &
+		 SCU_CONFIG_NUM_CPUS_MASK) + 1;
+}
+
+/*
+ * Function to identify weather l2 controller is off
+ */
+static u32 is_l2_disabled(void)
+{
+	u32 aux;
+	aux = readl_relaxed(KONA_L2C_VA + L2X0_CTRL);
+	return !(aux & 1);
 }
 
 /*
@@ -201,16 +301,16 @@ static void restore_proc_clk_regs(void)
 	/* Write the go bit to trigger the frequency change
 	 */
 	writel_relaxed(KPROC_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK |
-		KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
-		PROC_CLK_REG_ADDR(POLICY_CTL));
+		       KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
+		       PROC_CLK_REG_ADDR(POLICY_CTL));
 
 	/* Wait until the new frequency takes effect */
 	do {
-			val1 =  readl_relaxed(PROC_CLK_REG_ADDR(POLICY_CTL)) &
-				KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
+		val1 = readl_relaxed(PROC_CLK_REG_ADDR(POLICY_CTL)) &
+		    KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
 
-			val2 =  readl_relaxed(PROC_CLK_REG_ADDR(POLICY_CTL)) &
-				KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
+		val2 = readl_relaxed(PROC_CLK_REG_ADDR(POLICY_CTL)) &
+		    KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
 	} while (val1 | val2);
 #endif
 
@@ -219,8 +319,8 @@ static void restore_proc_clk_regs(void)
 		writel_relaxed(PROC_CLK_ITEM_VALUE(i), PROC_CLK_ITEM_ADDR(i));
 
 		if ((PROC_CLK_ITEM_ADDR(i) ==
-				PROC_CLK_REG_ADDR(ARM_SEG_TRG_OVERRIDE)) &&
-			(PROC_CLK_ITEM_VALUE(i) & 1)) {
+		     PROC_CLK_REG_ADDR(ARM_SEG_TRG_OVERRIDE)) &&
+		    (PROC_CLK_ITEM_VALUE(i) & 1)) {
 
 			/* We just restored arm_seg_trigger override
 			 * and the override was set before.  trigger
@@ -228,11 +328,13 @@ static void restore_proc_clk_regs(void)
 			 */
 			do {
 				val1 =
-				readl_relaxed(PROC_CLK_REG_ADDR(ARM_SEG_TRG)) &
+				    readl_relaxed(PROC_CLK_REG_ADDR
+							(ARM_SEG_TRG)) &
 				KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK;
 
 				val2 =
-				readl_relaxed(PROC_CLK_REG_ADDR(ARM_SEG_TRG)) &
+				    readl_relaxed(PROC_CLK_REG_ADDR
+							(ARM_SEG_TRG)) &
 				KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK;
 			} while (val1 | val2);
 		}
@@ -242,17 +344,17 @@ static void restore_proc_clk_regs(void)
 	 * lock the state machine and write the go bit
 	 */
 	writel_relaxed(readl_relaxed(PROC_CLK_REG_ADDR(LVM_EN)) |
-		KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK,
-		PROC_CLK_REG_ADDR(LVM_EN));
+		       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK,
+		       PROC_CLK_REG_ADDR(LVM_EN));
 
 	while (readl_relaxed(PROC_CLK_REG_ADDR(LVM_EN)) &
-		KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK)
+	       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK)
 		;
 
 	/* Write the GO bit */
 	writel_relaxed(KPROC_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK |
-		KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
-	PROC_CLK_REG_ADDR(POLICY_CTL));
+		       KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
+		       PROC_CLK_REG_ADDR(POLICY_CTL));
 }
 
 /*
@@ -262,7 +364,7 @@ static void restore_proc_clk_regs(void)
  */
 
 static void local_secure_api(unsigned service_id,
-				 unsigned arg0, unsigned arg1, unsigned arg2)
+			     unsigned arg0, unsigned arg1, unsigned arg2)
 {
 	/* Set Up Registers to pass data to Secure Monitor */
 	register u32 r4 asm("r4");
@@ -282,20 +384,19 @@ static void local_secure_api(unsigned service_id,
 
 		/* Secure Monitor Call */
 		asm volatile (
-			__asmeq("%0", "ip")
-			__asmeq("%1", "r4")
-			__asmeq("%2", "r5")
-			__asmeq("%3", "r6")
+				__asmeq("%0", "ip")
+				__asmeq("%1", "r4")
+				__asmeq("%2", "r5")
+				__asmeq("%3", "r6")
 #ifdef REQUIRES_SEC
-			".arch_extension sec\n"
+				".arch_extension sec\n"
 #endif
-			"smc	#0	@ switch to secure world\n"
-			: "+r" (r12), "+r" (r4), "+r" (r5), "+r" (r6)
-			:
-			: "r0", "r1", "r2", "r3", "r7", "r8", "r14");
+				"smc	#0	@ switch to secure world\n"
+				: "+r" (r12), "+r"(r4), "+r"(r5), "+r"(r6)
+				:
+				: "r0", "r1", "r2", "r3", "r7", "r8", "r14");
 	} while (r12 != SEC_EXIT_NORMAL);
 }
-
 
 /******************* Public Functions ***************/
 
@@ -314,9 +415,10 @@ u32 is_dormant_enabled(void)
  */
 void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 {
+	unsigned long flgs;
+	u32 boot_2nd_addr;
 	u32 dormant_return;
 	u32 reg_val;
-	struct pi *pi = NULL;
 
 	if (dormant_disable || fake_dormant) {
 		/* Dis-allow entering dormant */
@@ -337,7 +439,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		~PWRMGR_PI_DEFAULT_POWER_STATE_ARM_CORE_DORMANT_DISABLE_MASK;
 
 		writel_relaxed(reg_val, KONA_PWRMGR_VA +
-			       PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+				PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
 	}
 
 	if (dormant_disable) {
@@ -374,19 +476,19 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 
 	save_performance_monitors((void *)__get_cpu_var(pmu_data));
 
-	save_a9_timers((void *)__get_cpu_var(timer_data), KONA_SCU_VA);
+	save_a9_timers((void *)__get_cpu_var(timer_data), (u32)KONA_SCU_VA);
 
 	save_a9_global_timer((void *)__get_cpu_var(global_timer_data),
-			     KONA_SCU_VA);
+			     (u32)KONA_SCU_VA);
 
 	save_vfp((void *)__get_cpu_var(vfp_data));
 
 	save_gic_interface((void *)__get_cpu_var(gic_interface_data),
-			   KONA_GICDIST_VA, false);
+			   (u32)KONA_GICCPU_VA, false);
 
 	save_gic_distributor_private((void *)
 				     __get_cpu_var(gic_dist_private_data),
-				     KONA_GICDIST_VA, false);
+				     (u32)KONA_GICDIST_VA, false);
 
 	save_banked_registers((void *)__get_cpu_var(banked_registers));
 
@@ -396,67 +498,133 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 
 	save_v7_debug((void *)__get_cpu_var(debug_data));
 
-	if (service == CAPRI_DORMANT_CLUSTER_DOWN) {
-
-		save_gic_distributor_shared((void *)gic_dist_shared_data,
-					    KONA_GICDIST_VA, false);
-
-		/* HW-CAPRI-1396. ARM_SYS_IDLE_DLY is also saved */
-		save_proc_clk_regs();
-
-		if (turn_off_l2_memory) {
-			local_secure_api(SSAPI_DISABLE_L2_CACHE, 0, 0, 0);
-
-			/* indicate that 0x3 be seen by the external power
-			 * controller
-			 */
-			writel_relaxed(PWRCTRL_DORMANT_L2_OFF_CORE_0,
-				       KONA_CHIPREG_VA +
-				       CHIPREG_PERIPH_MISC_REG3_OFFSET);
-		} else {
-			/* indicate that 0x2 be seen by the external power
-			 * controller
-			 */
-			writel_relaxed(PWRCTRL_DORMANT_CORE_0,
-				       KONA_CHIPREG_VA +
-				       CHIPREG_PERIPH_MISC_REG3_OFFSET);
-		}
-
-		/* HWCAPRI-1396 */
-		writel_relaxed(1, PROC_CLK_REG_ADDR(ARM_SYS_IDLE_DLY));
-
-	}
-
 	save_control_registers((void *)__get_cpu_var(control_data), false);
 
 	save_mmu((void *)__get_cpu_var(mmu_data));
 
-	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
-	BUG_ON(NULL == pi);
-	pi_enable(pi, 0);
+	if ((service == CAPRI_DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
+			local_secure_api(SSAPI_DISABLE_L2_CACHE, 0, 0, 0);
 
-	dormant_return = dormant_enter_prepare(0, PHYS_OFFSET - PAGE_OFFSET);
+	spin_lock_irqsave(&dormant_entry_lock, flgs);
+	num_cores_in_dormant++;
+	log_dormant_event(DORMNAT_ENTRY_LOG);
+	if (num_cores_in_dormant == num_cpus()) {
+		/* This is the last core going down */
+		cnt_attempts++;
 
-	if (service == CAPRI_DORMANT_CLUSTER_DOWN) {
+		print_dbg_counters();
 
-		/* unlock proc clock for writing */
+		save_gic_distributor_shared((void *)gic_dist_shared_data,
+					    (u32)KONA_GICDIST_VA, false);
+
+		/* save all proc registers except arm_sys_idle_dly */
+		save_proc_clk_regs();
+
+		if (fake_dormant)
+			writel_relaxed(0, PROC_CLK_REG_ADDR(ARM_SYS_IDLE_DLY));
+		else
+			writel_relaxed(1, PROC_CLK_REG_ADDR(ARM_SYS_IDLE_DLY));
+
+		/* Indicate 3 to the external power controller to turn off
+		 * the L2 memory.  Fake dormant is like retention so just
+		 * indicate a 2.
+		 */
+		if (is_l2_disabled() && !fake_dormant) {
+			writel_relaxed(PWRCTRL_DORMANT_L2_OFF_CORE_0,
+					   KONA_CHIPREG_VA +
+					   CHIPREG_PERIPH_MISC_REG3_OFFSET);
+
+		} else {
+			writel_relaxed(PWRCTRL_DORMANT_CORE_0,
+					   KONA_CHIPREG_VA +
+					   CHIPREG_PERIPH_MISC_REG3_OFFSET);
+		}
+
+		/*
+		 * Code to flush L2 and wait till done if needed
+		 * log_dormant_event(DORMANT_BEFORE_L2_FLUSH_LOG);
+		 * outer_flush_all();
+		 * log_dormant_event(DORMANT_AFTER_L2_FLUSH_LOG);
+		 * Wait till PL310 has no background stuff letf
+		 * while (readl(KONA_L2C_VA + PL310_INV_PA_OFFSET ) &
+		 * PL310_INV_PA_C_1_MASK);
+		 * while (readl(KONA_L2C_VA + PL310_CLEAN_PA_OFFSET) &
+		 * PL310_CLEAN_PA_C_2_MASK);
+		 * while (readl(KONA_L2C_VA + PL310_CLEAN_INDEX_WAY_OFFSET) &
+		 * PL310_CLEAN_INDEX_WAY_C_3_MASK);
+		 * while (readl(KONA_L2C_VA + PL310_C_I_PA_OFFSET) &
+		 * PL310_C_I_PA_C_4_MASK);
+		 * while (readl(KONA_L2C_VA + PL310_C_I_INDEX_WAY_OFFSET) &
+		 * PL310_C_I_INDEX_WAY_C_5_MASK);
+		 */
+	}
+	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
+
+	dormant_return = dormant_enter_prepare(un_cached_stack_ptr + SZ_1K +
+					       SZ_1K * smp_processor_id(),
+					       PHYS_OFFSET - PAGE_OFFSET);
+
+	/* We are here after either a failed dormant or a successful
+	 * dormant
+	 */
+
+	/* Indicate that this core has the SCU in Normal mode */
+	writeb_relaxed(SCU_DORMANT_MODE_OFF_B,
+		       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET +
+		       smp_processor_id());
+
+	if ((service == CAPRI_DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
+			local_secure_api(SSAPI_ENABLE_L2_CACHE, 0, 0, 0);
+
+	/* if we failed to enter dormant, restore
+	 * only what might have changed when dormant fails
+	 */
+	if (!dormant_return) {
+		/* restore only what we lost without entering
+		 * dormant and return
+		 */
+		restore_control_registers((void *)__get_cpu_var(control_data),
+					  false);
+
+		restore_a9_timers((void *)__get_cpu_var(timer_data),
+				  (u32)KONA_SCU_VA);
+
+		restore_performance_monitors((void *)__get_cpu_var(pmu_data));
+	}
+
+	spin_lock_irqsave(&dormant_entry_lock, flgs);
+
+	if (!dormant_return)
+		log_dormant_event(DORMANT_EXIT_FAILURE_LOG);
+	else
+		log_dormant_event(DORMANT_EXIT_SUCCESS_LOG);
+
+	if (num_cores_in_dormant == num_cpus()) {
+
+		/* This is the first core trying to come out of dormant */
+
+		/* Did we enter retention or dormant */
+		if (!pwr_mgr_is_event_active(SOFTWARE_2_EVENT))
+			cnt_success++;
+		else
+			cnt_failure++;
+
 		writel_relaxed(UNLOCK_PROC_CLK, KONA_PROC_CLK_VA);
 
-		/* HWCAPRI-1396 */
+		/* Let ARM_SYS_IDLE_DLY be set to 0 for non dormant cases */
 		writel_relaxed(0, PROC_CLK_REG_ADDR(ARM_SYS_IDLE_DLY));
 
-		/* Clear the SCU power control bits */
-		writel_relaxed(SCU_DORMANT_MODE_OFF,
-			       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
-
+		/* Use the SCU bits not the bypass bits for non dormant cases */
 		writel_relaxed(USE_SCU_PWR_CTRL,
 			       KONA_CHIPREG_VA +
 			       CHIPREG_PERIPH_MISC_REG3_OFFSET);
 
-		/* if we turned off l2, turn it back on */
-		if (turn_off_l2_memory)
-			local_secure_api(SSAPI_ENABLE_L2_CACHE, 0, 0, 0);
 	}
+
+	if (num_cores_in_dormant)
+		num_cores_in_dormant--;
+
+	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
 
 	/* If dormant exit is successful, restore context */
 	if (dormant_return) {
@@ -476,15 +644,21 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 
 		restore_v7_debug((void *)__get_cpu_var(debug_data));
 
-		if (service == CAPRI_DORMANT_CLUSTER_DOWN) {
+		/*
+		 * If we are the master core, and this is a true dormant exit,
+		 * we should restore the common gic related registers
+		 */
+		if (smp_processor_id() == MASTER_CORE) {
 
-			gic_distributor_set_enabled(false, KONA_GICDIST_VA);
+			gic_distributor_set_enabled(false,
+						    (u32)KONA_GICDIST_VA);
 
 			restore_gic_distributor_shared((void *)
 						       gic_dist_shared_data,
-						       KONA_GICDIST_VA, false);
+						       (u32)KONA_GICDIST_VA,
+						       false);
 
-			gic_distributor_set_enabled(true, KONA_GICDIST_VA);
+			gic_distributor_set_enabled(true, (u32)KONA_GICDIST_VA);
 
 		}
 
@@ -492,10 +666,10 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		restore_gic_distributor_private((void *)
 						__get_cpu_var
 						(gic_dist_private_data),
-						KONA_GICDIST_VA, false);
+						(u32)KONA_GICDIST_VA, false);
 
 		restore_gic_interface((void *)__get_cpu_var(gic_interface_data),
-				      KONA_GICDIST_VA, false);
+				      (u32)KONA_GICCPU_VA, false);
 
 		restore_a9_other((void *)__get_cpu_var(other_data), false);
 
@@ -507,46 +681,40 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		restore_vfp((void *)__get_cpu_var(vfp_data));
 
 		restore_a9_timers((void *)__get_cpu_var(timer_data),
-				  KONA_SCU_VA);
+				  (u32)KONA_SCU_VA);
 
 		restore_a9_global_timer((void *)
 					__get_cpu_var(global_timer_data),
-					KONA_SCU_VA);
+					(u32)KONA_SCU_VA);
 
 		restore_performance_monitors((void *)__get_cpu_var(pmu_data));
 
-		/*
-		 * sample code to let go of CORE-1.
-		 * we currently do it in platsmp.c
-		 * have sample code here if needed later
-		 *  if (smp_processor_id() == MASTER_CORE) {
-		 *  u32 boot_2nd_addr;
-		 *  boot_2nd_addr = readl_relaxed(KONA_CHIPREG_VA+
-		 *  CHIPREG_BOOT_2ND_ADDR_OFFSET);
-		 *  boot_2nd_addr |=1;
-		 *  writel_relaxed(boot_2nd_addr,
-		 *  KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
-		 *  while ( readl_relaxed(KONA_CHIPREG_VA+
-		 *  CHIPREG_BOOT_2ND_ADDR_OFFSET)
-		 *  & 1 );
-		 *  }
-		 */
-	} else {
-		/* restore only what we lost without entering
-		 * dormant and return
-		 */
-		restore_control_registers((void *)__get_cpu_var(control_data),
-					  false);
-
-		restore_a9_timers((void *)__get_cpu_var(timer_data),
-				  KONA_SCU_VA);
-
-		restore_performance_monitors((void *)__get_cpu_var(pmu_data));
-	}
-	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
-	BUG_ON(NULL == pi);
-	pi_enable(pi, 1);
-
+		if (smp_processor_id() == MASTER_CORE) {
+			/*
+			 * Here we got out of idle do we let the core-0
+			 * continue to run
+			 */
+			if (service == CAPRI_DORMANT_CORE_DOWN) {
+				/* It was not a cluster down but still,
+				 * we exited dormant. Let go of CORE-1
+				 */
+				boot_2nd_addr =
+				    readl_relaxed(KONA_CHIPREG_VA +
+						  CHIPREG_BOOT_2ND_ADDR_OFFSET);
+				boot_2nd_addr |= 1;
+				writel_relaxed(boot_2nd_addr,
+					       KONA_CHIPREG_VA +
+					       CHIPREG_BOOT_2ND_ADDR_OFFSET);
+				dsb_sev();
+				/* Wait for core-0 to acknowledge the wake-up */
+				do {
+					boot_2nd_addr =
+					    readl_relaxed(KONA_CHIPREG_VA +
+						CHIPREG_BOOT_2ND_ADDR_OFFSET);
+				} while (boot_2nd_addr & 1);
+			} /* core down */
+		} /* Master core */
+	} /* Success dormant return */
 }
 
 /*
@@ -555,29 +723,46 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
  */
 void dormant_enter_continue(void)
 {
-	/* Get the processor id.  If core-0 call the secure API */
-	if (smp_processor_id() == MASTER_CORE) {
+	u32 processor_id;
+	processor_id = (read_mpidr() & 0xff);
+
+	disable_clean_inv_dcache_v7_l1();
+	write_actlr(read_actlr() & ~(0x40));
+
+	/* Let us always indicate the dormant mode to the SCU
+	 * the external power-controller sees what is in the bypass
+	 * register any way
+	 */
+	writeb_relaxed(SCU_DORMANT_MODE_B,
+		       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET + processor_id);
+
+
+	if (processor_id == MASTER_CORE) {
 
 		secure_params->core0_reset_address = virt_to_phys(cpu_resume);
 
 		secure_params->core1_reset_address = virt_to_phys(cpu_resume);
 
-		/* or must be the last core out */
-		/* here is the big one */
-		writel_relaxed(SCU_DORMANT_MODE,
-			       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
 
-		if (turn_off_l2_memory) {
+		/* Check if L2 controller is off  or if this is a fake dormant
+		 * if it is, do not bother saving/restoring L2 controlelr
+		 * in the secure side.  For fake dormant, we do not want
+		 * to save and restore the L2 controller since it would not
+		 * be turned off.
+		 */
+
+		if (is_l2_disabled() || fake_dormant) {
 			local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
-					     (u32)SEC_BUFFER_ADDR,
-					     (u32)SEC_BUFFER_ADDR +
-					     MAX_SECURE_BUFFER_SIZE, 3);
+					 (u32)SEC_BUFFER_ADDR,
+					 (u32)SEC_BUFFER_ADDR +
+					 MAX_SECURE_BUFFER_SIZE, 3);
 		} else {
 			local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
-					     (u32)SEC_BUFFER_ADDR,
-					     (u32)SEC_BUFFER_ADDR +
-					     MAX_SECURE_BUFFER_SIZE, 2);
+					 (u32)SEC_BUFFER_ADDR,
+					 (u32)SEC_BUFFER_ADDR +
+					 MAX_SECURE_BUFFER_SIZE, 2);
 		}
+
 	} else {
 		/* Write the address where we want core-1 to boot */
 		writel_relaxed(virt_to_phys(cpu_resume),
@@ -585,8 +770,8 @@ void dormant_enter_continue(void)
 
 		/* Directly execute WFI for non core-0 cores */
 		wfi();
-	}
 
+	}
 }
 
 /* Initialization function for dormant module */
@@ -595,6 +780,19 @@ int __init capri_dormant_init(void)
 	struct resource *res;
 
 	u32 core1_pwrctrl_reg;
+	void *vptr = NULL;
+
+	dma_addr_t drmt_buf_phy;
+
+	vptr = dma_alloc_coherent(NULL, SZ_1K * num_cpus(),
+				  &drmt_buf_phy, GFP_ATOMIC);
+
+	if (vptr == NULL) {
+		pr_info("%s: dormant dma buffer alloc failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	un_cached_stack_ptr = (u32)vptr;
 
 	res = request_mem_region(SEC_BUFFER_ADDR, SEC_BUFFER_SIZE,
 				 "secure_params");
@@ -606,6 +804,8 @@ int __init capri_dormant_init(void)
 
 	BUG_ON(!secure_params);
 
+	secure_params->log_index = 0;
+
 	writel_relaxed(UNLOCK_PROC_CLK, KONA_PROC_CLK_VA);
 
 	if (chipregHw_getChipIdRev() > 0xA1) {
@@ -614,13 +814,14 @@ int __init capri_dormant_init(void)
 		 * pwrctrl value can change each core writing as needed
 		 * in independent path.
 		 */
-		core1_pwrctrl_reg = readl_relaxed(KONA_CHIPREG_VA +
-				CHIPREG_PERIPH_MISC_REG2_OFFSET);
+		core1_pwrctrl_reg =
+			readl_relaxed(KONA_CHIPREG_VA +
+			CHIPREG_PERIPH_MISC_REG2_OFFSET);
 
 		core1_pwrctrl_reg |= PWRCTRL_DORMANT_L2_OFF_CORE_1;
 
 		writel_relaxed(core1_pwrctrl_reg, KONA_CHIPREG_VA +
-				CHIPREG_PERIPH_MISC_REG2_OFFSET);
+			       CHIPREG_PERIPH_MISC_REG2_OFFSET);
 	}
 
 	return 0;

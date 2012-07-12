@@ -34,23 +34,15 @@ ENTRY(dormant_enter_prepare)
 	str	sp, [r3]	@ save the virtual stack pointer
 #endif
 
+	/* Push the current SP to the un-cached stack and use the
+	un-cached stack from now on */
+	stmfd r0!, {sp}
+	mov sp, r0
+
 	ldr	r3, =restore_and_return
 	bl	cpu_suspend	@ set-up to be ready to suspend
 
 	/* Just returned from cleaning the cache */
-
-	/* Disable D cache */
-	dsb
-	mrc	p15,0,r0,c1,c0,0
-	bic	r0, #4					@ Clear C bit
-	mcr	p15,0,r0,c1,c0,0
-	dsb
-
-	/* Turn off Coherency  */
-	mrc	p15, 0, r0, c1, c0, 1
-	bic	r0, r0, #0x40
-	mcr	p15, 0, r0, c1, c0, 1
-
 	bl dormant_enter_continue
 
 	/*
@@ -58,18 +50,6 @@ ENTRY(dormant_enter_prepare)
  	 * have been if we came back through cpu_resume and continue
  	 * execution.
  	 */
-
-	/* Enable D cache */
-	dsb
-	mrc	p15,0,r3,c1,c0,0
-	orr r3, r3, #4				@ set C bit
-	mcr	p15,0,r3,c1,c0,0
-	dsb
-
-	/* Turn ON Coherency  */
-	mrc	p15, 0, r0, c1, c0, 1
-	orr	r0, r0, #0x40
-	mcr	p15, 0, r0, c1, c0, 1
 
 	ldr	r3, =saved_virtual_sp
 #ifdef CONFIG_SMP
@@ -99,6 +79,8 @@ infinite_loop:
 	@beq infinite_loop
 
 	mov	r0, #DORMANT_ENTERED
+	ldmfd	sp!, {r0}
+	mov		sp, r0
 	ldmfd	sp!, { r4 - r12, pc}
 
 	.data
