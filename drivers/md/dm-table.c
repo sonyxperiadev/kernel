@@ -1179,14 +1179,15 @@ combine_limits:
 static void dm_table_set_integrity(struct dm_table *t)
 {
 	struct gendisk *template_disk = NULL;
+	int rc;
 
 	if (!blk_get_integrity(dm_disk(t->md)))
 		return;
 
 	template_disk = dm_table_get_integrity_disk(t, true);
 	if (template_disk)
-		blk_integrity_register(dm_disk(t->md),
-				       blk_get_integrity(template_disk));
+		rc = blk_integrity_register(dm_disk(t->md),
+					    blk_get_integrity(template_disk));
 	else if (blk_integrity_is_initialized(dm_disk(t->md)))
 		DMWARN("%s: device no longer has a valid integrity profile",
 		       dm_device_name(t->md));
