@@ -100,7 +100,12 @@ static const struct file_operations pindump_proc_fops = {
 
 static int __init proc_pindump_init(void)
 {
-	proc_create("pinmux", 0, NULL, &pindump_proc_fops);
+	struct proc_dir_entry *entry;
+	entry = proc_create("pinmux", 0, NULL, &pindump_proc_fops);
+	if (!entry) {
+		printk(KERN_ERR "Failed to create proc entry for pindump\n");
+		return -ENOMEM;
+	}
 	return 0;
 }
 
