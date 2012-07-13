@@ -470,6 +470,7 @@ static int update_adc_result(struct bcmpmu_adc *padc,
 			     struct bcmpmu_adc_req *req)
 {
 	int ret;
+	int insurance = 100;
 
 	req->raw = -EINVAL;
 	if (req->sig == PMU_ADC_FG_CURRSMPL || req->sig == PMU_ADC_FG_RAW) {
@@ -482,12 +483,18 @@ static int update_adc_result(struct bcmpmu_adc *padc,
 		if (ret != 0)
 			return ret;
 	}
-	while (req->raw == -EINVAL) {
-		ret = read_adc_result(padc, req);/* Here we get the raw value */
+	/* FG ADC channel can return negative value
+	and -22 (-EINVAL) is a valid value for FG */
+	do {
+		ret = read_adc_result(padc, req);
+		/* Here we get the raw value */
 		if (ret != 0)
 			return ret;
-	};
+		insurance--;
+	} while (req->raw ==
+		-EINVAL && insurance && req->sig != PMU_ADC_FG_CURRSMPL);
 
+	BUG_ON(insurance == 0 && req->raw == -EINVAL);
 	return 0;
 }
 
@@ -1248,8 +1255,26 @@ static ssize_t fg_status_show(struct device *dev, struct device_attribute *attr,
 		       pfg->fg_sns_res, pfg->fg_factor);
 }
 
-static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_store);
+static ssize_t fg_factor_show(struct device *dev, struct device_attribute *attr,
+			char *buf)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_fg *pfg = bcmpmu->fginfo;
+	return sprintf(buf, "fg_factor=%d\n", pfg->fg_factor);
+}
+static ssize_t fg_factor_store(struct device *dev,
+			struct device_attribute *attr,
+			    const char *buf, size_t count)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	struct bcmpmu_fg *pfg = bcmpmu->fginfo;
+	sscanf(buf, "%d", &pfg->fg_factor);
+	return count;
+}
+
+static DEVICE_ATTR(dbgmsk, 0666, dbgmsk_show, dbgmsk_store);
 static DEVICE_ATTR(fg_status, 0644, fg_status_show, NULL);
+static DEVICE_ATTR(fg_factor, 0666, fg_factor_show, fg_factor_store);
 #endif
 
 static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
@@ -1394,6 +1419,7 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = device_create_file(&pdev->dev, &dev_attr_dbgmsk);
 	ret = device_create_file(&pdev->dev, &dev_attr_fg_status);
+	ret = device_create_file(&pdev->dev, &dev_attr_fg_factor);
 #endif
 	return ret;
 

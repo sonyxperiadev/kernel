@@ -140,7 +140,7 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 #endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
 	/*FGOPMODCTRL, Set bits 4, 1 for FG Sync. Mode*/
 	{.map = 1, .addr = 0x42, .val = 0x15, .mask = 0xFF},
-
+	{.map = 1, .addr = 0x43, .val = 0x02, .mask = 0xFF},
 	/* Disable the charging elapsed timer by TCH[2:0]=111b 
 	   OTP default value; TCH[2:0] = 010b (5hrs) ,TTR[2:0] = 011b (45mins)
         */

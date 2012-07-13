@@ -86,7 +86,7 @@
  * to change to the correct way of passing the time in microseconds resolution.
  */
 #define DEBOUNCE_TIME	(64000)
-#define KEY_PRESS_REF_TIME	msecs_to_jiffies(50)
+#define KEY_PRESS_REF_TIME	msecs_to_jiffies(10)
 #define KEY_DETECT_DELAY	msecs_to_jiffies(90)
 #define ACCESSORY_INSERTION_REMOVE_SETTLE_TIME	msecs_to_jiffies(500)
 
@@ -702,6 +702,24 @@ static void button_work_func(struct work_struct *work)
 			 *	KEY_VOLUMEDOWN, KEY_MEDIA)
 			 * in the context structure
 			 */
+		/* We observe that when Headset is plugged out from the
+		* connector, sometimes we get COMP1 interrupts indicating
+		* button press/release. While removing the headset,
+		* there is some disturbance on the MIC line and if
+		* it happens to match the threshold programmed for
+		* button press/release the interrupt is fired.
+		* So practically we cannot avoid this situation.
+		* To handle this, we update the state of the accessory
+		* (connected / unconnected)in gpio_isr(). Once the button ISR
+		* happens, we read the ADC values etc immediately but we
+		* delay notifying this to the upper layers by
+		* 250 msec(this value is arrived at by experiment)
+		* So that if this is a spurious
+		* notification, the GPIO ISR would be fired by this time
+		* and would have updated the accessory state as disconnected.
+		* In such cases the upper layer is not notified.
+		*/
+			msleep(250);
 			if (p->hs_state != DISCONNECTED) {
 				switch (button_name) {
 				case BUTTON_SEND_END:
@@ -725,7 +743,6 @@ static void button_work_func(struct work_struct *work)
 
 				if (err)
 					goto out;
-
 				/* Notify the same to input sub-system */
 				p->button_state = BUTTON_PRESSED;
 				pr_info(" Sending Key Press\r\n");
@@ -1347,7 +1364,7 @@ irqreturn_t comp1_isr(int irq, void *dev_id)
 	pr_debug("COMP1 After clearing 0x%x ... \r\n",
 		 readl(p->aci_chal_hdl + ACI_INT_OFFSET));
 
-	schedule_delayed_work(&(p->button_work), KEY_DETECT_DELAY);
+	schedule_delayed_work(&(p->button_work), 0);
 
 	/* Re-enable COMP1 Interrupts */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
