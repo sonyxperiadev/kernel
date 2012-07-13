@@ -155,18 +155,28 @@ extern int __jira_wa_enabled(u32 jira)
 }
 
 #ifdef CONFIG_KONA_POWER_MGR
-
-#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
+#if defined(CONFIG_KONA_PMU_BSC_HS_MODE) /* 3.25MHZ */
 #define START_CMD			0xb
 #define START_DELAY			6
 #define WRITE_DELAY			6
 #define VLT_CHANGE_DELAY		0x25
-#else
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1MHZ) /* 1MHZ */
+#define START_CMD			0xb
+#define START_DELAY			6
+#define WRITE_DELAY			12
+#define VLT_CHANGE_DELAY		0x25
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1625KHZ) /* 1.65MHZ */
+#define START_CMD			0xb
+#define START_DELAY			6
+#define WRITE_DELAY			9
+#define VLT_CHANGE_DELAY		0x25
+#else /* FS mode */
 #define START_CMD			0x3
 #define START_DELAY			0x10
 #define WRITE_DELAY			0x80
 #define VLT_CHANGE_DELAY		0x80
-#endif /*CONFIG_KONA_PMU_BSC_HS_MODE */
+#endif
+
 #define PMU_SLAVE_ID				0x8
 #define PMU_CSR_REG_ADDR			0xC0
 #define READ_DELAY				0x20

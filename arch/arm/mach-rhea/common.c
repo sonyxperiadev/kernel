@@ -192,7 +192,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	 .hs_ref = BSC_BUS_REF_104MHZ,
 	 },
 	{			/* for PMU */
-#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
+#if defined(CONFIG_KONA_PMU_BSC_HS_MODE)
 	 .speed = BSC_BUS_SPEED_HS,
 	 /* No dynamic speed in HS mode */
 	 .dynamic_speed = 0,
@@ -204,6 +204,14 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	  * PMU reads until the writes are through. PMU need more
 	  * retry counts in HS mode to handle this.
 	  */
+	 .retries = 5,
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1MHZ)
+	 .speed = BSC_BUS_SPEED_HS_1MHZ,
+	 .dynamic_speed = 0,
+	 .retries = 5,
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1625KHZ)
+	 .speed = BSC_BUS_SPEED_HS_1625KHZ,
+	 .dynamic_speed = 0,
 	 .retries = 5,
 #else
 	 .speed = BSC_BUS_SPEED_50K,
