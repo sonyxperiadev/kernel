@@ -26,7 +26,6 @@
 #include <linux/clk.h>
 #include <linux/pm_runtime.h>
 #include <linux/io.h>
-#include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
@@ -56,9 +55,9 @@
 struct bcm_hsotgctrl_drv_data {
 	struct device *dev;
 	struct clk *otg_clk;
+	struct clk *mdio_master_clk;
 	void *hsotg_ctrl_base;
 	void *chipregs_base;
-	void *hub_clk_base;
 	int hsotgctrl_irq;
 	bool irq_enabled;
 	bool allow_suspend;
@@ -151,38 +150,18 @@ int bcm_hsotgctrl_phy_Update_MDIO(void)
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+	if ((!bcm_hsotgctrl_handle->mdio_master_clk) ||
+		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-	/* Enable mdio */
-	/*	1. &mdiomaster_stprsts=Data.Long(EAHB:0x3400030C)&0x00010000 */
-	val = readl(bcm_hsotgctrl_handle->hub_clk_base +
-		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
-	val |= KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_STPRSTS_MASK;
-	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
-			KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-	/*	2. data.set EAHB:0x34000000 %long 0x00A5A501 */
-	val = MDIO_ACCESS_KEY;
-	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
-			KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-
-	/*3.  data.set EAHB:0x3400030C %long
-	 * Data.Long(EAHB:0x3400030C)|0x00000303
+	/* Enable mdio. Just enable clk. Assume all other steps
+	 * are already done during clk init
 	 */
-	val = readl(bcm_hsotgctrl_handle->hub_clk_base +
-		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
-	val |= KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_CLK_EN_MASK|
-	  KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_HW_SW_GATING_SEL_MASK |
-	  KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_HYST_VAL_MASK |
-	  KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_HYST_EN_MASK;
-	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
-		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	clk_enable(bcm_hsotgctrl_handle->mdio_master_clk);
 	msleep_interruptible(PHY_PM_DELAY_IN_MS);
 
 	/* Program necessary values */
-	/* 5.data.set EAHB:0x3500403C %long 0x29000000 */
+	/* data.set EAHB:0x3500403C %long 0x29000000 */
 	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
 		(USB_PHY_MDIO_ID <<
 		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
@@ -274,11 +253,7 @@ int bcm_hsotgctrl_phy_Update_MDIO(void)
 		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
 
 	/* Disable mdio */
-	val = readl(bcm_hsotgctrl_handle->hub_clk_base +
-		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
-	val &= ~KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_CLK_EN_MASK;
-	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
-		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	clk_disable(bcm_hsotgctrl_handle->mdio_master_clk);
 
 	return 0;
 
@@ -418,16 +393,12 @@ int bcm_hsotgctrl_phy_mdio_init(void)
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) ||
+	if ((!bcm_hsotgctrl_handle->mdio_master_clk) ||
 		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
 	/* Enable mdio */
-	val = readl(bcm_hsotgctrl_handle->hub_clk_base +
-		KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
-	val |= KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_CLK_EN_MASK;
-	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
-			KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	clk_enable(bcm_hsotgctrl_handle->mdio_master_clk);
 
 	/* Program necessary values */
 	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
@@ -480,11 +451,7 @@ int bcm_hsotgctrl_phy_mdio_init(void)
 	msleep_interruptible(PHY_PM_DELAY_IN_MS);
 
 	/* Disable mdio */
-	val = readl(bcm_hsotgctrl_handle->hub_clk_base +
-			KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
-	val &= ~KHUB_CLK_MGR_REG_MDIO_CLKGATE_MDIOMASTER_CLK_EN_MASK;
-	writel(val, bcm_hsotgctrl_handle->hub_clk_base +
-			KHUB_CLK_MGR_REG_MDIO_CLKGATE_OFFSET);
+	clk_disable(bcm_hsotgctrl_handle->mdio_master_clk);
 
 	return 0;
 }
@@ -495,7 +462,8 @@ int bcm_hsotgctrl_bc_reset(void)
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+	if ((!bcm_hsotgctrl_handle->otg_clk) ||
+		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
@@ -556,7 +524,8 @@ int bcm_hsotgctrl_bc_vdp_src_off(void)
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+	if ((!bcm_hsotgctrl_handle->otg_clk) ||
+		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
@@ -635,7 +604,8 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+	if ((!bcm_hsotgctrl_handle->otg_clk) ||
+		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
 	if (bcm_hsotgctrl_handle->irq_enabled == false) {
@@ -664,12 +634,9 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 {
 	int error = 0;
 	int val;
-	struct resource *resource;
 	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata;
-
-	resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (NULL == resource)
-		return -EIO;
+	struct bcm_hsotgctrl_platform_data *plat_data =
+	  (struct bcm_hsotgctrl_platform_data *)pdev->dev.platform_data;
 
 	hsotgctrl_drvdata = kzalloc(sizeof(*hsotgctrl_drvdata), GFP_KERNEL);
 	if (!hsotgctrl_drvdata) {
@@ -679,52 +646,37 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	local_hsotgctrl_handle = hsotgctrl_drvdata;
 
-	hsotgctrl_drvdata->hsotg_ctrl_base = ioremap(resource->start, SZ_4K);
+	hsotgctrl_drvdata->hsotg_ctrl_base =
+		(void *)plat_data->hsotgctrl_virtual_mem_base;
 	if (!hsotgctrl_drvdata->hsotg_ctrl_base) {
-		dev_warn(&pdev->dev, "IO remap failed\n");
+		dev_warn(&pdev->dev, "No vaddr for HSOTGCTRL!\n");
 		kfree(hsotgctrl_drvdata);
 		return -ENOMEM;
 	}
 
-	resource = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (NULL == resource) {
-		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
-		kfree(hsotgctrl_drvdata);
-		return -EIO;
-	}
-
-	hsotgctrl_drvdata->chipregs_base = ioremap(resource->start, SZ_4K);
+	hsotgctrl_drvdata->chipregs_base =
+		(void *)plat_data->chipreg_virtual_mem_base;
 	if (!hsotgctrl_drvdata->chipregs_base) {
-		dev_warn(&pdev->dev, "IO remap failed\n");
-		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
-		kfree(hsotgctrl_drvdata);
-		return -ENOMEM;
-	}
-
-	resource = platform_get_resource(pdev, IORESOURCE_MEM, 2);
-	if (NULL == resource) {
-		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
-		iounmap(hsotgctrl_drvdata->chipregs_base);
-		kfree(hsotgctrl_drvdata);
-		return -EIO;
-	}
-
-	hsotgctrl_drvdata->hub_clk_base = ioremap(resource->start, SZ_4K);
-	if (!hsotgctrl_drvdata->hub_clk_base) {
-		dev_warn(&pdev->dev, "IO remap failed\n");
-		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
-		iounmap(hsotgctrl_drvdata->chipregs_base);
+		dev_warn(&pdev->dev, "No vaddr for CHIPREG!\n");
 		kfree(hsotgctrl_drvdata);
 		return -ENOMEM;
 	}
 
 	hsotgctrl_drvdata->dev = &pdev->dev;
-	hsotgctrl_drvdata->otg_clk = clk_get(NULL, "usb_otg_clk");
+	hsotgctrl_drvdata->otg_clk = clk_get(NULL,
+		plat_data->usb_ahb_clk_name);
 
 	if (IS_ERR_OR_NULL(hsotgctrl_drvdata->otg_clk)) {
-		dev_warn(&pdev->dev, "Clock allocation failed\n");
-		iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
-		iounmap(hsotgctrl_drvdata->chipregs_base);
+		dev_warn(&pdev->dev, "OTG clock allocation failed\n");
+		kfree(hsotgctrl_drvdata);
+		return -EIO;
+	}
+
+	hsotgctrl_drvdata->mdio_master_clk = clk_get(NULL,
+		plat_data->mdio_mstr_clk_name);
+
+	if (IS_ERR_OR_NULL(hsotgctrl_drvdata->mdio_master_clk)) {
+		dev_warn(&pdev->dev, "MDIO Mst clk alloc failed\n");
 		kfree(hsotgctrl_drvdata);
 		return -EIO;
 	}
@@ -820,10 +772,8 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	return 0;
 
 Error_bcm_hsotgctrl_probe:
-	iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
-	iounmap(hsotgctrl_drvdata->chipregs_base);
-	iounmap(hsotgctrl_drvdata->hub_clk_base);
 	clk_put(hsotgctrl_drvdata->otg_clk);
+	clk_put(hsotgctrl_drvdata->mdio_master_clk);
 	kfree(hsotgctrl_drvdata);
 	return error;
 }
@@ -839,11 +789,9 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 		free_irq(hsotgctrl_drvdata->hsotgctrl_irq,
 		    (void *)hsotgctrl_drvdata);
 
-	iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
-	iounmap(hsotgctrl_drvdata->chipregs_base);
-	iounmap(hsotgctrl_drvdata->hub_clk_base);
 	pm_runtime_disable(&pdev->dev);
 	clk_put(hsotgctrl_drvdata->otg_clk);
+	clk_put(hsotgctrl_drvdata->mdio_master_clk);
 	local_hsotgctrl_handle = NULL;
 	kfree(hsotgctrl_drvdata);
 

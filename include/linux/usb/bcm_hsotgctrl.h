@@ -12,6 +12,14 @@
 *  consent.
 *
 *****************************************************************************/
+struct bcm_hsotgctrl_platform_data {
+	unsigned long hsotgctrl_virtual_mem_base;
+	unsigned long chipreg_virtual_mem_base;
+	int irq;
+	const unsigned char *usb_ahb_clk_name;
+	const unsigned char *mdio_mstr_clk_name;
+};
+
 int bcm_hsotgctrl_phy_set_vbus_stat(bool on);
 int bcm_hsotgctrl_phy_set_non_driving(bool on);
 int bcm_hsotgctrl_set_phy_off(bool on);

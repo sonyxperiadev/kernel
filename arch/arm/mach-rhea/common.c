@@ -83,6 +83,7 @@
 #include <linux/mfd/bcmpmu.h>
 #endif
 #endif
+#include <linux/usb/bcm_hsotgctrl.h>
 
 /* dynamic ETM support */
 unsigned int etm_on;
@@ -536,11 +537,22 @@ static struct resource kona_hsotgctrl_platform_resource[] = {
 	       },
 };
 
+static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
+	.hsotgctrl_virtual_mem_base = KONA_USB_HSOTG_CTRL_VA,
+	.chipreg_virtual_mem_base = KONA_CHIPREG_VA,
+	.irq = BCM_INT_ID_RESERVED128,
+	.usb_ahb_clk_name = USB_OTG_AHB_BUS_CLK_NAME_STR,
+	.mdio_mstr_clk_name = MDIOMASTER_PERI_CLK_NAME_STR,
+};
+
 static struct platform_device board_kona_hsotgctrl_platform_device = {
 	.name = "bcm_hsotgctrl",
 	.id = -1,
 	.resource = kona_hsotgctrl_platform_resource,
 	.num_resources = ARRAY_SIZE(kona_hsotgctrl_platform_resource),
+	.dev = {
+		.platform_data = &hsotgctrl_plat_data,
+		},
 };
 
 static struct resource kona_otg_platform_resource[] = {
