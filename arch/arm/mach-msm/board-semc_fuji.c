@@ -2439,8 +2439,7 @@ unsigned char hdmi_is_primary;
 #endif  /* CONFIG_FB_MSM_OVERLAY1_WRITEBACK */
 
 #define MSM_PMEM_KERNEL_EBI1_SIZE  0x600000
-#define MSM_PMEM_ADSP_SIZE         0x2000000
-#define MSM_PMEM_CAMERA_SIZE       0x5000000
+#define MSM_PMEM_ADSP_SIZE         0x5000000
 #define MSM_PMEM_AUDIO_SIZE        0x28B000
 #define MSM_PMEM_SWIQI_SIZE        0x2000000
 
@@ -2504,15 +2503,6 @@ static int __init pmem_adsp_size_setup(char *p)
 	return 0;
 }
 early_param("pmem_adsp_size", pmem_adsp_size_setup);
-
-static unsigned pmem_camera_size = MSM_PMEM_CAMERA_SIZE;
-
-static int __init pmem_camera_size_setup(char *p)
-{
-	pmem_camera_size = memparse(p, NULL);
-	return 0;
-}
-early_param("pmem_camera_size", pmem_camera_size_setup);
 
 static unsigned pmem_audio_size = MSM_PMEM_AUDIO_SIZE;
 
@@ -2620,20 +2610,6 @@ static struct platform_device android_pmem_adsp_device = {
 	.name = "android_pmem",
 	.id = 2,
 	.dev = { .platform_data = &android_pmem_adsp_pdata },
-};
-
-static struct android_pmem_platform_data android_pmem_camera_pdata = {
-	.name = "pmem_camera",
-	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
-	.cached = 1,
-	.memory_type = MEMTYPE_EBI1,
-	.map_on_demand = 1,
-};
-
-static struct platform_device android_pmem_camera_device = {
-	.name = "android_pmem",
-	.id = 3,
-	.dev = { .platform_data = &android_pmem_camera_pdata },
 };
 #endif
 
@@ -3976,7 +3952,6 @@ static struct platform_device *fuji_devices[] __initdata = {
 #ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
 	&android_pmem_device,
 	&android_pmem_adsp_device,
-	&android_pmem_camera_device,
 	&android_pmem_smipool_device,
 #ifdef CONFIG_SEMC_SWIQI
 	&android_pmem_swiqi_device,
@@ -4267,7 +4242,6 @@ static void __init size_pmem_devices(void)
 	if (hdmi_is_primary)
 		pmem_sf_size = MSM_HDMI_PRIM_PMEM_SF_SIZE;
 	android_pmem_pdata.size = pmem_sf_size;
-	android_pmem_camera_pdata.size = pmem_camera_size;
 #ifndef CONFIG_SWIQI_NONE
 	android_pmem_swiqi_pdata.size = pmem_swiqi_size;
 #endif
@@ -4288,7 +4262,6 @@ static void __init reserve_pmem_memory(void)
 	reserve_memory_for(&android_pmem_adsp_pdata);
 	reserve_memory_for(&android_pmem_smipool_pdata);
 	reserve_memory_for(&android_pmem_pdata);
-	reserve_memory_for(&android_pmem_camera_pdata);
 #ifndef CONFIG_SWIQI_NONE
 	reserve_memory_for(&android_pmem_swiqi_pdata);
 #endif
