@@ -95,19 +95,16 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 	int             id = rdev_get_id(rdev);
 	struct bcmpmu_reg_info *info = bcmpmu->rgltr_info + id;
 	struct bcmpmu_regulator_init_data *bcmpmu_regulators =
-			bcmpmu->pdata->regulator_init_data;
-	struct bcmpmu_reg_map map;
+	bcmpmu->pdata->regulator_init_data;
+
 	unsigned int    val;
+	int             ret;
 
-	map = bcmpmu->regmap[info->reg_addr];
-	if ((map.addr == 0) && (map.mask == 0))
-		return -ENXIO;
-
-	val = (bcmpmu_regulators + id)->default_opmode;
-
+	ret = bcmpmu->read_dev(bcmpmu, info->reg_addr, &val, info->mode_mask);
+	if (ret != 0)
+		return ret;
 	val &= ~((LDO_MODE_MASK << PM1_SHIFT) | (LDO_MODE_MASK << PM3_SHIFT));
 	val |= ((LDO_NORMAL << PM1_SHIFT) | (LDO_NORMAL << PM3_SHIFT));
-
 	switch ((bcmpmu_regulators + id)->dsm_mode) {
 	case BCMPMU_REGL_OFF_IN_DSM:
 	/*
@@ -136,8 +133,7 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 	}
 	pr_debug("%s: id = %d reg_addr = %x reg_val = %x\n", __func__, id,
 		info->reg_addr, val);
-	return bcmpmu->write_dev_bulk(bcmpmu, map.map, map.addr, &val, 1);
-
+	return bcmpmu->write_dev(bcmpmu, info->reg_addr, val, info->mode_mask);
 }
 
 /*
@@ -147,14 +143,10 @@ static int bcmpmureg_disable(struct regulator_dev *rdev)
 {
 	struct bcmpmu  *bcmpmu = rdev_get_drvdata(rdev);
 	struct bcmpmu_reg_info *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
-	struct bcmpmu_reg_map map = bcmpmu->regmap[info->reg_addr];
 
-	int rc = LDO_OFF << PM0_SHIFT | LDO_OFF << PM1_SHIFT |
-		LDO_OFF << PM2_SHIFT | LDO_OFF << PM3_SHIFT;
-
-	if ((map.addr == 0) && (map.mask == 0))
-		return -ENXIO;
-	return bcmpmu->write_dev_bulk(bcmpmu, map.map, map.addr, &rc, 1);
+	int             rc = LDO_OFF << PM0_SHIFT | LDO_OFF << PM1_SHIFT |
+	LDO_OFF << PM2_SHIFT | LDO_OFF << PM3_SHIFT;
+	return bcmpmu->write_dev(bcmpmu, info->reg_addr, rc, info->mode_mask);
 }
 
 /*
