@@ -1119,7 +1119,6 @@ static void pre_eoc_check(struct bcmpmu_em *pem)
 	int index = -1;
 	int i;
 	int capacity = pem->batt_capacity;
-	struct bcmpmu *bcmpmu = pem->bcmpmu;
 
 	pr_em(FLOW, "%s, capacity=%d, curr=%d\n",
 		__func__, pem->batt_capacity, pem->batt_curr);
@@ -1823,7 +1822,6 @@ static void em_algorithm(struct work_struct *work)
 	static int cap_poll[CAP_POLL_SAMPLES];
 	int ret;
 	int retry_cnt = 0;
-	int vbus_status = 0;
 
 	if (first_run == 0) {
 		bcmpmu->fg_enable(bcmpmu, 1);
@@ -1954,8 +1952,8 @@ static void em_algorithm(struct work_struct *work)
 			if (cap_poll_count > 0) {
 				pem->mode = MODE_IDLE;
 				poll_count = POLL_SAMPLES;
-				pr_em(FLOW, "%s,
-					restart capacity poll.\n", __func__);
+				pr_em(FLOW, "%s, restart capacity poll.\n",
+					__func__);
 				schedule_delayed_work(&pem->work,
 					msecs_to_jiffies(get_update_rate(pem)));
 				return;
