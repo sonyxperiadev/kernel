@@ -36,6 +36,7 @@ static DEFINE_SPINLOCK(tapper_lock);
 struct wd_tapper_data {
 	struct kona_timer *kt;
 	unsigned int count;
+	unsigned int def_count;
 };
 
 struct wd_tapper_data *wd_tapper_data;
@@ -45,7 +46,10 @@ int wd_tapper_set_timeout(unsigned int timeout_in_sec)
 	int ret = -EINVAL;
 	if (wd_tapper_data) {
 		spin_lock(&tapper_lock);
-		wd_tapper_data->count = sec_to_ticks(timeout_in_sec);
+		if (timeout_in_sec == TAPPER_DEFAULT_TIMEOUT)
+			wd_tapper_data->count = wd_tapper_data->def_count;
+		else
+			wd_tapper_data->count = sec_to_ticks(timeout_in_sec);
 		spin_unlock(&tapper_lock);
 		ret = 0;
 	}
@@ -53,7 +57,7 @@ int wd_tapper_set_timeout(unsigned int timeout_in_sec)
 }
 EXPORT_SYMBOL(wd_tapper_set_timeout);
 
-int wd_tapper_get_timeout(void)
+unsigned int wd_tapper_get_timeout(void)
 {
 	if (wd_tapper_data)
 		return ticks_to_sec(wd_tapper_data->count);
@@ -129,6 +133,8 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
 
 	/* Get the time out period */
 	wd_tapper_data->count = sec_to_ticks(pltfm_data->count);
+	wd_tapper_data->def_count = wd_tapper_data->count;
+
 	if (wd_tapper_data->count == 0) {
 		dev_err(&pdev->dev, "count value set is 0 - INVALID\n");
 		goto out;
