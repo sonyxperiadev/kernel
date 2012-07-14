@@ -162,14 +162,14 @@
         0x00000403   /* 0x3500_4A40: UBRTSN: GPIO47: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000023   /* 0x3500_4A44: UBRX: UBRX: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000023   /* 0x3500_4A48: UBTX: UBTX: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-        
+
           >;
   };
 
   /* gpio node must be consistent with pinmux node */
   gpio {
       compatible = "21654B0-gpio";
-      reg = <0x35003000 18>;      /* base address and # of exposed GPIOs */
+      reg = <0x35003000 17>;      /* base address and # of exposed GPIOs */
       data = <
             22    0x00000000 /* 0: Output  0: Drive Low */
             23    0x00000000 /* 0: Output  0: Drive Low */
@@ -185,10 +185,10 @@
             88    0x00000000 /* 0: Output  0: Drive Low */
             95    0x00000000 /* 0: Output  0: Drive Low */
             97    0x00000000 /* 0: Output  0: Drive Low */
-            98    0x00000002 /* 1: Input  0: Drive Low */
             100    0x00000000 /* 0: Output  0: Drive Low */
             111    0x00000000 /* 0: Output  0: Drive Low */
             121    0x00000000 /* 0: Output  0: Drive Low */
           >;
   };
 };
+
