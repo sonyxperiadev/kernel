@@ -39,8 +39,8 @@
 #define BCMPMU_PRINT_INIT (1U << 1)
 #define BCMPMU_PRINT_FLOW (1U << 2)
 #define BCMPMU_PRINT_DATA (1U << 3)
-static int debug_mask = 0xff;
-/* static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT; */
+/* static int debug_mask = 0xff; */
+static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define pr_hwmon(debug_level, args...) \
 	do { \
 		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
