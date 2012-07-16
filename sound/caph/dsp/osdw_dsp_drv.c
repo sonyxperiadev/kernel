@@ -86,6 +86,10 @@ static void IRQ_EnableRIPInt(void)
 		aTrace(LOG_AUDIO_DSP, "\n\r\t*IRQ_EnableRIPInt: New Int*\n\r");
 		writel((1<<CHIPREG_OUTPUT12),
 			(base + BINTC_IMR0_15_SET_OFFSET));
+
+		/* Programming AP2DSP as WakeUp Event for Power Manager */
+		writel((1<<CHIPREG_OUTPUT12), (base + BINTC_IMR0_9_SET_OFFSET));
+
 		x = readl(chipreg_base + CHIPREG_MDM_SW_INTR_SEL_OFFSET);
 		x |= (1<<CHIPREG_OUTPUT12);
 		writel(x, (chipreg_base + CHIPREG_MDM_SW_INTR_SEL_OFFSET));
