@@ -839,4 +839,5 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path);
 *
 *****************************************************************************/
 void csl_caph_hwctrl_PrintAllPaths(void);
+void csl_caph_dspcb(int path);
 #endif

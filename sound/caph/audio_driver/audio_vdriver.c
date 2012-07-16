@@ -2059,14 +2059,10 @@ static UInt32 *AUDIO_GetIHF48KHzBufferBaseAddress(void)
 static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 {
 	aTrace(LOG_AUDIO_DRIVER,
-			"%s, Got AUDIO ENABLE RESP FROM DSP\n", __func__);
+	"%s, Got AUDIO ENABLE RESP FROM DSP 0x%x\n", __func__, enabled_path);
 
+	csl_caph_dspcb(enabled_path & ~((UInt16)DSP_AADMAC_RETIRE_DS_CMD));
 	complete(&audioEnableDone);
-
-#if defined(CONFIG_BCM_MODEM)
-	csl_caph_enable_adcpath_by_dsp(enabled_path &
-		(~((UInt16)DSP_AADMAC_RETIRE_DS_CMD)));
-#endif
 }
 
 #if defined(CONFIG_RHEA_PANDA)

@@ -40,6 +40,9 @@ Copyright 2009 - 2011  Broadcom Corporation
 
 #include "csl_apcmd.h"
 #include "audio_trace.h"
+#if defined(ENABLE_DMA_VOICE)
+#include "csl_dsp_caph_control_api.h"
+#endif
 
 /*when system is busy, 50ms is not enough*/
 #define AUDIO_ENABLE_RESP_TIMEOUT 1000
@@ -642,14 +645,22 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 					&msgType, NULL);
 		*/
 		if (param1 == AUDDRV_DSPCMD_AUDIO_ENABLE) {
+			init_completion(&audioEnableDone);
 			jiff_in = wait_for_completion_interruptible_timeout(
 				&audioEnableDone,
 				timeout_jiff);
 			if (!jiff_in) {
 				aError("!!!Timeout on COMMAND_AUDIO_ENABLE"
 					" resp!!!\n");
-				init_completion(&audioEnableDone);
 			}
+#if defined(ENABLE_DMA_VOICE)
+			{
+				UInt16 dsp_path;
+				dsp_path =
+				csl_dsp_caph_control_aadmac_get_enable_path();
+				csl_caph_enable_adcpath_by_dsp(dsp_path);
+			}
+#endif
 		}
 
 		break;

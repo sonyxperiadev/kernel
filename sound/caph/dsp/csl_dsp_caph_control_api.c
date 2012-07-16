@@ -42,7 +42,6 @@
 #include "csl_dsp_caph_control_api.h"
 #include "audio_trace.h"
 
-
 /*****************************************************************************/
 /**
 *
@@ -231,3 +230,21 @@ UInt32 *csl_dsp_ext_modem_get_aadmac_buf_base_addr(
 	return base_addr;
 }
 
+/*****************************************************************************/
+/**
+*
+* Function Name: csl_dsp_caph_control_aadmac_get_enable_path
+*
+*   @note     This function informs driver about which hardware path is disabled
+*             or enabled
+*
+*   @param    None
+*
+*   @return   path (DSP_AADMAC_Audio_Connections_t)
+*
+*****************************************************************************/
+UInt16 csl_dsp_caph_control_aadmac_get_enable_path()
+{
+	return (UInt16)(vp_shared_mem->shared_aadmac_aud_enable &
+		~((UInt16)DSP_AADMAC_RETIRE_DS_CMD));
+}

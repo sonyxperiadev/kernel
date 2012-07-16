@@ -189,6 +189,7 @@ static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 static CHAL_HANDLE lp_handle;
 static int en_lpbk_pcm, en_lpbk_i2s;
 static int rec_pre_call;
+static int dsp_path;
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -599,6 +600,15 @@ void csl_caph_arm2sp_set_fm_mixmode(int mix_mode)
 		__func__, fm_mix_mode, mix_mode);
 
 	fm_mix_mode = mix_mode;
+}
+
+
+/*
+ * if DSP does not give cb, do not turn off clock
+ */
+void csl_caph_dspcb(int path)
+{
+	dsp_path = path;
 }
 
 /*
@@ -2646,7 +2656,7 @@ void csl_caph_ControlHWClock(Boolean enable)
 			if (clkIDCAPH[CLK_156M]->use_cnt == 0)
 				clk_enable(clkIDCAPH[CLK_156M]);
 		}
-	} else if (enable == FALSE && sClkCurEnabled == TRUE) {
+	} else if (enable == FALSE && sClkCurEnabled == TRUE && dsp_path == 0) {
 		UInt32 count = 0;
 		sClkCurEnabled = FALSE;
 
@@ -2664,6 +2674,12 @@ void csl_caph_ControlHWClock(Boolean enable)
 		enable156MClk = FALSE;
 		enable2P4MClk = FALSE;
 	}
+
+	if (enable == FALSE && sClkCurEnabled == TRUE && dsp_path != 0) {
+		aError("%s: CAPH clock remains ON due to DSP response does not "
+		"come. dsp_path 0x%x\n", __func__, dsp_path);
+	}
+
 	aTrace(LOG_AUDIO_CSL,
 		"%s: action = %d,"
 		"result = %d\r\n", __func__, enable, sClkCurEnabled);
