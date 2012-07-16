@@ -1130,7 +1130,12 @@ static void v3d_print_status(void)
 
 static void v3d_reg_init(void)
 {
+#ifdef CONFIG_ARCH_RHEA
 	v3d_write(2, V3D_L2CACTL_OFFSET);
+#else
+	v3d_write(1, V3D_L2CACTL_OFFSET);
+	v3d_write(4, V3D_L2CACTL_OFFSET);
+#endif
 	v3d_write(0x8000, V3D_CT0CS_OFFSET);
 	v3d_write(0x8000, V3D_CT1CS_OFFSET);
 	v3d_write(1, V3D_RFC_OFFSET);
