@@ -41,6 +41,9 @@ struct regulator_init_data;
 #define BCMPMU_PMU_UNLOCK       (1<<1)
 #define BCMPMU_WRLOCKKEY_VAL    0x38
 
+/* Regulator OPMODE Donot Care*/
+#define BCMPMU_REGU_OPMODE_DC 0xFF
+
 int bcmpmu_register_regulator(struct bcmpmu *bcmpmu, int reg,
 			      struct regulator_init_data *initdata);
 
