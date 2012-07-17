@@ -258,4 +258,9 @@ void AP_ProcessStatus(void);
 ****************************************************************************/
 UInt32 *AUDIO_Return_IHF_48kHz_buffer_base_address(void);
 
+void Dump_AllCaph_regs(void);
+
+void Dsp_Shared_memDump(void);
+
+
 #endif /* _CSL_DSP_H_ */

@@ -62,6 +62,7 @@
 #include <linux/err.h>
 #include <linux/regulator/consumer.h>
 
+#include "csl_dsp.h"
 /**There are two loopback paths available in AudioH.
 One is 6.5MHz analog microphone loopback path. It does not support digital mics.
 The other one is HW sidetone path. It supports all the mics. This is prefered.
@@ -3293,6 +3294,10 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 		break;
 	case AUDCTRL_HW_PRINT_PATH:
 		csl_caph_hwctrl_PrintAllPaths();
+		if (arg1 == 1) {
+			Dump_AllCaph_regs();
+			Dsp_Shared_memDump();
+		}
 		break;
 	case AUDCTRL_HW_WRITE_GAIN:
 
