@@ -4839,6 +4839,29 @@ static struct bus_clk CLK_NAME(ssp0_apb) = {
 };
 
 /*
+Bus clock name SSP1_APB
+*/
+static struct bus_clk clk_ssp1_apb = {
+	.clk =	{
+		.flags = SSP1_APB_BUS_CLK_FLAGS,
+		.clk_type = CLK_TYPE_BUS,
+		.id	= CLK_SSP1_APB_BUS_CLK_ID,
+		.name = SSP1_APB_BUS_CLK_NAME_STR,
+		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+		.ops = &gen_bus_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(kps),
+	.clk_gate_offset  = KPS_CLK_MGR_REG_SSP1_CLKGATE_OFFSET,
+	.clk_en_mask = KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_APB_CLK_EN_MASK,
+	.gating_sel_mask =
+		KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_APB_HW_SW_GATING_SEL_MASK,
+	.stprsts_mask = KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_APB_STPRSTS_MASK,
+	.freq_tbl_index = 1,
+	.src_clk = NULL,
+	.clk_sel_val = 53,
+};
+
+/*
 Bus clock name SWITCH_AXI
 */
 static struct bus_clk CLK_NAME(switch_axi) = {
@@ -5292,6 +5315,60 @@ static struct peri_clk CLK_NAME(ssp0_audio) = {
 };
 
 /*
+Peri clock name SSP1_AUDIO
+*/
+/*peri clk src list*/
+static struct clk *ssp1_audio_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(
+							CLK_PTR(crystal),
+							CLK_PTR(ref_312m),
+							CLK_PTR(ref_cx40));
+static struct peri_clk clk_ssp1_audio = {
+	.clk =	{
+		.flags = SSP1_AUDIO_PERI_CLK_FLAGS,
+		.clk_type = CLK_TYPE_PERI,
+		.id = CLK_SSP1_AUDIO_PERI_CLK_ID,
+		.name = SSP1_AUDIO_PERI_CLK_NAME_STR,
+		.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(ssp1_apb), NULL),
+		.ops = &gen_peri_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(kps),
+	.mask_set = 0,
+	.policy_bit_mask = KPS_CLK_MGR_REG_POLICY0_MASK_SSP1_POLICY0_MASK_MASK,
+	.policy_mask_init = DEFINE_ARRAY_ARGS(1, 1, 1, 1),
+	.clk_gate_offset = KPS_CLK_MGR_REG_SSP1_CLKGATE_OFFSET,
+	.clk_en_mask = KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_AUDIO_CLK_EN_MASK,
+	.gating_sel_mask =
+		KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_AUDIO_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask = KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_AUDIO_HYST_VAL_MASK,
+	.hyst_en_mask = KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_AUDIO_HYST_EN_MASK,
+	.stprsts_mask = KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_AUDIO_STPRSTS_MASK,
+	.volt_lvl_mask = KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_VOLTAGE_LEVEL_MASK,
+	.clk_div = {
+		.div_offset = KPS_CLK_MGR_REG_SSP1_DIV_OFFSET,
+		.div_mask = KPS_CLK_MGR_REG_SSP1_DIV_SSP1_DIV_MASK,
+		.div_shift = KPS_CLK_MGR_REG_SSP1_DIV_SSP1_DIV_SHIFT,
+		.div_trig_offset = KPS_CLK_MGR_REG_DIV_TRIG_OFFSET,
+		.div_trig_mask =
+			KPS_CLK_MGR_REG_DIV_TRIG_SSP1_AUDIO_TRIGGER_MASK,
+		.prediv_trig_offset = KPS_CLK_MGR_REG_DIV_TRIG_OFFSET,
+		.prediv_trig_mask =
+			KPS_CLK_MGR_REG_DIV_TRIG_SSP1_AUDIO_PRE_TRIGGER_MASK,
+		.pll_select_offset = KPS_CLK_MGR_REG_SSP1_DIV_OFFSET,
+		.pll_select_mask =
+			KPS_CLK_MGR_REG_SSP1_DIV_SSP1_PLL_SELECT_MASK,
+		.pll_select_shift =
+			KPS_CLK_MGR_REG_SSP1_DIV_SSP1_PLL_SELECT_SHIFT,
+	},
+	.src_clk = {
+		.count = ARRAY_SIZE(ssp1_audio_peri_clk_src_list),
+		.src_inx = 0,
+		.clk = ssp1_audio_peri_clk_src_list,
+	},
+	.clk_sel_val = 59,
+};
+
+
+/*
 Peri clock name BSC1
 */
 /*peri clk src list*/
@@ -5561,6 +5638,71 @@ static struct peri_clk CLK_NAME(ssp0) = {
     .clk_sel_val = 27,
 	.soft_reset_offset	= KPS_RST_MGR_REG_APB1_SOFTRST_OFFSET,
 	.clk_reset_mask		= KPS_RST_MGR_REG_APB1_SOFTRST_SSP0_SOFT_RSTN_MASK,
+};
+
+/*
+Peri clock name SSP1
+*/
+#ifdef CONFIG_KONA_PI_MGR
+static struct clk_dfs ssp1_dfs = {
+	.dfs_policy = CLK_DFS_POLICY_STATE,
+	.policy_param = PI_OPP_ECONOMY,
+	.opp_weightage = {
+		[PI_OPP_ECONOMY] = 25,
+		[PI_OPP_NORMAL] = 0,
+	},
+};
+#endif
+
+/*peri clk src list*/
+static struct clk *ssp1_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(
+						CLK_PTR(crystal),
+						CLK_PTR(var_104m),
+						CLK_PTR(ref_104m),
+						CLK_PTR(var_96m),
+						CLK_PTR(ref_96m));
+static struct peri_clk clk_ssp1 = {
+	.clk =	{
+		.flags = SSP1_PERI_CLK_FLAGS,
+		.clk_type = CLK_TYPE_PERI,
+		.id = CLK_SSP1_PERI_CLK_ID,
+		.name = SSP1_PERI_CLK_NAME_STR,
+		.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(ssp1_apb), NULL),
+		.ops = &gen_peri_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(kps),
+	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
+	.clk_dfs = &ssp1_dfs,
+#endif
+	.policy_bit_mask = KPS_CLK_MGR_REG_POLICY0_MASK_SSP1_POLICY0_MASK_MASK,
+	.policy_mask_init = DEFINE_ARRAY_ARGS(1, 1, 1, 1),
+	.clk_gate_offset = KPS_CLK_MGR_REG_SSP1_CLKGATE_OFFSET,
+	.clk_en_mask = KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_CLK_EN_MASK,
+	.gating_sel_mask =
+		KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_HW_SW_GATING_SEL_MASK,
+	.stprsts_mask = KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_STPRSTS_MASK,
+	.volt_lvl_mask = KPS_CLK_MGR_REG_SSP1_CLKGATE_SSP1_VOLTAGE_LEVEL_MASK,
+	.clk_div = {
+		.div_offset = KPS_CLK_MGR_REG_SSP1_DIV_OFFSET,
+		.div_mask = KPS_CLK_MGR_REG_SSP1_DIV_SSP1_DIV_MASK,
+		.div_shift = KPS_CLK_MGR_REG_SSP1_DIV_SSP1_DIV_SHIFT,
+		.div_trig_offset = KPS_CLK_MGR_REG_DIV_TRIG_OFFSET,
+		.div_trig_mask = KPS_CLK_MGR_REG_DIV_TRIG_SSP1_TRIGGER_MASK,
+		.pll_select_offset = KPS_CLK_MGR_REG_SSP1_DIV_OFFSET,
+		.pll_select_mask =
+			KPS_CLK_MGR_REG_SSP1_DIV_SSP1_PLL_SELECT_MASK,
+		.pll_select_shift =
+			KPS_CLK_MGR_REG_SSP1_DIV_SSP1_PLL_SELECT_SHIFT,
+	},
+	.src_clk = {
+		.count = ARRAY_SIZE(ssp1_peri_clk_src_list),
+		.src_inx = 0,
+		.clk = ssp1_peri_clk_src_list,
+	},
+	.clk_sel_val = 58,
+	.soft_reset_offset = KPS_RST_MGR_REG_APB1_SOFTRST_OFFSET,
+	.clk_reset_mask = KPS_RST_MGR_REG_APB1_SOFTRST_SSP1_SOFT_RSTN_MASK,
 };
 
 /*
@@ -7347,6 +7489,9 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(BSC3_PERI_CLK_NAME_STR, NULL, bsc3),
 	BRCM_REGISTER_CLK(BSC4_APB_BUS_CLK_NAME_STR, NULL, bsc4_apb),
 	BRCM_REGISTER_CLK(BSC4_PERI_CLK_NAME_STR, NULL, bsc4),
+	BRCM_REGISTER_CLK(SSP1_APB_BUS_CLK_NAME_STR, NULL, ssp1_apb),
+	BRCM_REGISTER_CLK(SSP1_PERI_CLK_NAME_STR, NULL, ssp1),
+	BRCM_REGISTER_CLK(SSP1_AUDIO_PERI_CLK_NAME_STR, NULL, ssp1_audio),
 	/*mm_switch_axi clk should be the last clock to be auto gated in MM CCU*/
 	BRCM_REGISTER_CLK(MM_SWITCH_AXI_PERI_CLK_NAME_STR,NULL,mm_switch_axi),
 };
