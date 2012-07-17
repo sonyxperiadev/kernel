@@ -196,7 +196,7 @@ void bcmpmu_update_pdata_dt_batt(struct bcmpmu_platform_data *pdata)
 	if (wid * len != battdata.voltcap_map_size)
 		printk(KERN_INFO "%s: batt v-c tbl err, w=0x%X, l=0x%X, size=%ld\n",
 			__func__, wid, len, battdata.voltcap_map_size);
-	else if (len != pdata->batt_voltcap_map_len) 
+	else if (len != pdata->batt_voltcap_map_len)
 		printk(KERN_INFO "%s: battery vcmap-size incorrect\n", __func__);
 	else {
 		for (i=0; i<len; i++) {
@@ -208,7 +208,8 @@ void bcmpmu_update_pdata_dt_batt(struct bcmpmu_platform_data *pdata)
 
 void bcmpmu_update_pdata_dt_pmu(struct bcmpmu_platform_data *pdata)
 {
-	uint32_t *p, *p1, *tbl;
+	uint32_t *p, *p1;
+	struct bcmpmu_rw_data *tbl;
 	uint32_t len = 0, wid = 0;
 	int i;
 
@@ -242,10 +243,10 @@ void bcmpmu_update_pdata_dt_pmu(struct bcmpmu_platform_data *pdata)
 		else {
 			pdata->init_max = len;
 			p = pmudata.reginit_data;
-			p1 = tbl;
+			p1 = (uint32_t *)tbl;
 			for (i = 0; i < pmudata.reginit_size; i++)
 				*p1++ = be32_to_cpu(*p++);
-			pdata->init_data = (struct bcmpmu_rw_data *)tbl;
+			pdata->init_data = tbl;
 		}
 	}
 }
