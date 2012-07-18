@@ -301,6 +301,23 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		}		/* case 100 */
 
 		break;
+	case 121:
+		{
+			int param_id;
+			int param_value;
+			param_id = Params[1];
+			param_value = Params[2]; /*gain*/
+			/*Params[3] => right or left channel for headset gain*/
+
+			setExternalParameter(param_id, param_value, Params[3]);
+			aTrace(LOG_AUDIO_DRIVER,
+					"Tuning Dialog PMU "
+					"param_id = %d ,"
+					"param_value = %d ,"
+					"channel = %d\n",
+					param_id, param_value, (int)Params[3]);
+			}
+		break;
 
 	default:
 		aWarn("%s Unsupported cmd %ld\n", __func__,

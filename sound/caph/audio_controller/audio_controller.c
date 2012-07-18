@@ -3785,6 +3785,12 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 #else
 	AudioSysParm_t *p;
 #endif
+	/*#define can be removed after the sysparam is updated
+	with these new params*/
+
+#ifdef NEW_PARAMS_TP_PMU
+	Int16 param_value;
+#endif
 
 	p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
 
@@ -3805,11 +3811,44 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 		pmu_gain = (short)p->ext_speaker_pga_r;	/* Q13p2 dB */
 		extern_hs_set_gain(pmu_gain * 25, AUDIO_HS_RIGHT);
 
+		/*#define can be removed after the sysparam is updated
+		   with these new params*/
+
+#ifdef NEW_PARAMS_TP_PMU
+		param_value = p->ext_speaker_preamp_pga;
+
+		extern_set_hs_preamp_gain(param_value);
+
+		param_value = p->ext_speaker_param1;
+
+		extern_set_hs_noise_gate(param_value);
+#endif
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
+
 		extern_ihf_set_gain(pmu_gain * 25);
+		/*#define can be removed after the sysparam is updated
+		with these new params*/
+
+#ifdef NEW_PARAMS_TP_PMU
+		param_value = p->ext_speaker_preamp_pga;
+
+		extern_set_ihf_preamp_gain(param_value);
+
+		param_value = p->ext_speaker_param1;
+
+		extern_set_ihf_noise_gate(param_value);
+
+		param_value = p->ext_speaker_param2;
+
+		extern_set_ihf_none_clip(param_value);
+
+		param_value = p->ext_speaker_param3;
+
+		extern_set_ihf_pwr(param_value);
+#endif
 
 #ifdef CONFIG_BCM_MODEM
 		pmu_gain = (int)p->ext_speaker_high_gain_mode_enable;
@@ -3964,3 +4003,78 @@ void AUDCTRL_UpdateUserVolSetting(
 	aTrace(LOG_AUDIO_CNTLR, "%s app = %d, mode = %d\n",
 		__func__, app, mode);
 }
+
+
+void setExternalParameter(Int16 param_id, Int16 param_value, int channel)
+{
+	AudioMode_t mode;
+	mode = AUDCTRL_GetAudioMode();
+
+	aTrace(LOG_AUDIO_CNTLR, "%s param_id =%d,param_value =%d\n",
+		__func__, param_id, param_value);
+
+	switch (param_id) {
+	case 0:
+		{
+			aTrace(LOG_AUDIO_CNTLR, "IHF/HS:Gain  =%d ,"
+				"mode =%d\n", param_value, mode);
+			if (mode == AUDIO_MODE_HANDSET ||
+					mode == AUDIO_MODE_SPEAKERPHONE)
+				extern_ihf_set_gain(param_value);
+			else
+				if (channel ==
+					PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+					extern_hs_set_gain(param_value,
+								AUDIO_HS_LEFT);
+				else if (channel ==
+					PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+					extern_hs_set_gain(param_value,
+								AUDIO_HS_RIGHT);
+
+		}
+		break;
+	case 1:
+		{
+			aTrace(LOG_AUDIO_CNTLR, "IHF/HS:PreAmpGain  =%d,"
+				"mode =%d\n", param_value, mode);
+			if (mode == AUDIO_MODE_HANDSET ||
+					mode == AUDIO_MODE_SPEAKERPHONE)
+				extern_set_ihf_preamp_gain(param_value);
+			else
+				extern_set_hs_preamp_gain(param_value);
+		}
+		break;
+	case 2:
+		{
+			aTrace(LOG_AUDIO_CNTLR, "IHF/HS:NoiseGate  =%d,"
+				"mode =%d\n", param_value, mode);
+			if (mode == AUDIO_MODE_HANDSET ||
+				mode == AUDIO_MODE_SPEAKERPHONE)
+				extern_set_ihf_noise_gate(param_value);
+			else
+				extern_set_hs_noise_gate(param_value);
+		}
+		break;
+	case 3:
+		{
+			aTrace(LOG_AUDIO_CNTLR, "IHF:NoneClip  =%d\n",
+						param_value);
+			extern_set_ihf_none_clip(param_value);
+		}
+		break;
+	case 4:
+		{
+			aTrace(LOG_AUDIO_CNTLR, "IHF:PWR  =%d\n",
+						param_value);
+			extern_set_ihf_pwr(param_value);
+		}
+		break;
+	default:
+		break;
+	}
+
+	return;
+}
+
+
+

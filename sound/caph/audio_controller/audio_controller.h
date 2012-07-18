@@ -899,4 +899,16 @@ void AUDCTRL_UpdateUserVolSetting(
 	int vol_right,
 	AudioApp_t app);
 
+/********************************************************************
+*  @brief  Update tuning parameter for dialog pmu.
+*
+*  @param
+*
+*  @return none
+*
+****************************************************************************/
+
+void setExternalParameter(Int16 param_id, Int16 param_value, int channel);
+
+
 #endif /* #define __AUDIO_CONTROLLER_H__ */
