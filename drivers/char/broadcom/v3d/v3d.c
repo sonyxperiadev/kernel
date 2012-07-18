@@ -246,12 +246,6 @@ typedef struct {
 #define V3D_ISR_TIMEOUT_IN_MS	(1500)
 #define V3D_JOB_TIMEOUT_IN_MS	(V3D_ISR_TIMEOUT_IN_MS)
 
-/* Enable the macro to retry the job on timeout, else will skip the job */
-/* #define V3D_JOB_RETRY_ON_TIMEOUT */
-#ifdef V3D_JOB_RETRY_ON_TIMEOUT
-#define V3D_JOB_MAX_RETRIES (1)
-#endif
-
 v3d_t *v3d_dev;
 
 typedef struct v3d_job_t_ {
@@ -270,8 +264,6 @@ typedef struct v3d_job_t_ {
 	uint32_t v3d_srqpc[MAX_USER_JOBS];
 	uint32_t v3d_srqua[MAX_USER_JOBS];
 	uint32_t v3d_srqul[MAX_USER_JOBS];
-	u32 cache_retry_cnt;
-	u32 retry_cnt;
 	volatile v3d_job_status_e job_status;
 	u32 job_intern_state;
 	u32 job_wait_state;
@@ -371,12 +363,12 @@ static void v3d_print_all_jobs(int bp)
 		       (u32)v3d_job_curr);
 		tmp_job = v3d_job_head;
 		while (tmp_job != NULL) {
-			KLOG_D
-			    ("\t job[%d] : [0x%08x] dev_id[%d] job_id[%d] type[%d] status[%d] intern[%d] wait[%d] retry[%d][%d]",
-			     n, (u32)tmp_job, tmp_job->dev_id, tmp_job->job_id,
-			     tmp_job->job_type, tmp_job->job_status,
-			     tmp_job->job_intern_state, tmp_job->job_wait_state,
-			     tmp_job->cache_retry_cnt, tmp_job->retry_cnt);
+			KLOG_D("\t job[%d] : [0x%08x] dev_id[%d] job_id[%d]"
+				"type[%d] status[%d] intern[%d] wait[%d]",
+				n, (u32)tmp_job, tmp_job->dev_id,
+				tmp_job->job_id, tmp_job->job_type,
+				tmp_job->job_status, tmp_job->job_intern_state,
+				tmp_job->job_wait_state);
 			tmp_job = tmp_job->next;
 			n++;
 		}
@@ -443,8 +435,6 @@ static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t * p_job_post)
 	p_v3d_job->job_status = V3D_JOB_STATUS_READY;
 	p_v3d_job->job_intern_state = 0;
 	p_v3d_job->job_wait_state = 0;
-	p_v3d_job->cache_retry_cnt = 0;
-	p_v3d_job->retry_cnt = 0;
 	p_v3d_job->next = NULL;
 
 	KLOG_V
@@ -705,19 +695,6 @@ static void v3d_job_kill(v3d_job_t *p_v3d_job, v3d_job_status_e job_status)
 		wake_up_interruptible(&p_v3d_job->v3d_job_done_q);
 }
 
-#ifdef V3D_JOB_RETRY_ON_TIMEOUT
-static void v3d_job_reset(v3d_job_t *p_v3d_job)
-{
-	KLOG_V("Reset job[0x%08x]: ", (u32)p_v3d_job);
-
-	v3d_reset();
-
-	p_v3d_job->job_status = V3D_JOB_STATUS_READY;
-	p_v3d_job->job_intern_state = 0;
-	p_v3d_job->cache_retry_cnt = 0;
-}
-#endif
-
 static int v3d_thread(void *data)
 {
 	int ret;
@@ -897,16 +874,6 @@ static int v3d_thread(void *data)
 				KLOG_E("wait timed out [%d]ms",
 				       V3D_JOB_TIMEOUT_IN_MS);
 				v3d_print_status();
-#ifdef V3D_JOB_RETRY_ON_TIMEOUT
-				KLOG_E("Resumbit job\n");
-				v3d_job_reset((v3d_job_t *)v3d_job_curr);
-				v3d_job_curr->retry_cnt++;
-				if (v3d_job_curr->retry_cnt <=
-				    V3D_JOB_MAX_RETRIES) {
-					ret = v3d_job_start();
-					continue;
-				}
-#endif
 				v3d_job_kill((v3d_job_t *)v3d_job_curr,
 					     V3D_JOB_STATUS_TIMED_OUT);
 				v3d_job_curr = v3d_job_curr->next;
