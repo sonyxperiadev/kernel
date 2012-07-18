@@ -1120,6 +1120,7 @@ static void pmem_shrink(struct work_struct *work)
 
 	/* Scan the list and find the task with minimum oom_adj value */
 	mutex_lock(&p_info->data_list_lock);
+	read_lock(&tasklist_lock);
 	list_for_each(itr, &p_info->data_list) {
 		int oom_adj;
 		data = list_entry(itr, struct pmem_data, list);
@@ -1187,10 +1188,12 @@ static void pmem_shrink(struct work_struct *work)
 			selected_oom_adj, selected_task_cmasize);
 		p_info->deathpending = selected;
 		force_sig(SIGKILL, selected);
-		/* wait for process to die .... */
-		down(&p_info->shrinker_sem);
 	}
 
+	read_unlock(&tasklist_lock);
+	/* wait for process to die .... */
+	if (selected)
+		down(&p_info->shrinker_sem);
 out:
 	mutex_unlock(&p_info->shrinker_lock);
 	p_info->force_kill = 0;
