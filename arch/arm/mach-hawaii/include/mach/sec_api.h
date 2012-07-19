@@ -1,3 +1,17 @@
+/*****************************************************************************
+* Copyright 2012 Broadcom Corporation.  All rights reserved.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a
+* license other than the GPL, without Broadcom's express prior written
+* consent.
+*****************************************************************************/
+
 #ifndef SEC_API_H
 #define SEC_API_H
 
@@ -39,10 +53,13 @@
 #define SSAPI_WRITE_SCU_STATUS                            0x01000004
 #define SSAPI_WRITE_PWR_GATE                              0x01000005
 
+#define SSAPI_ROW_AES			0x0E000006
+#define SSAPI_BRCM_START_VC_CORE	0x0E000008
+
 extern void secure_api_call_init(void);
 
 extern unsigned secure_api_call(unsigned service_id, unsigned arg0,
-	unsigned arg1, unsigned arg2);
+	unsigned arg1, unsigned arg2, unsigned arg3);
 
 extern unsigned get_secure_buffer(void);
 
