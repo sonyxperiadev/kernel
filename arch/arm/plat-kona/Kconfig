@@ -249,5 +249,17 @@ config KONA_CSL_CAMERA
 config KONA_CHAL_CAMERA
 	tristate
 
+config KONA_DSI
+	tristate
+
+config KONA_SMI
+	tristate
+
+config KONA_VC4LITE
+	tristate
+
+config KONA_KEYPAD
+	tristate
+
 endmenu
 
