@@ -820,6 +820,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    && param_start->stream <
 			    (CTL_STREAM_PANEL_LAST - 1));
 
+		sgpCaph_chip->streamCtl[param_start->stream].playback_stop = 0;
+
 		sgpCaph_chip->streamCtl[param_start->stream].playback_prev_time
 			= 0;
 
@@ -872,6 +874,9 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && param_stop->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+
+			sgpCaph_chip->
+				streamCtl[param_stop->stream].playback_stop = 1;
 
 			AUDIO_DRIVER_Ctrl(param_stop->drv_handle,
 					  AUDIO_DRIVER_STOP, NULL);
