@@ -130,9 +130,16 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 #ifdef CONFIG_MACH_RHEA_STONE_EDN2X
 	{.map = 0, .addr = 0xD9, .val = 0x1A, .mask = 0xFF},
 #else
+#if defined(CONFIG_MACH_RHEA_SS_EMMC_EXTLDO)
+	/* ASR NM - 1.2V to VCAMC_1.2V*/
+	{.map = 0, .addr = 0xD8, .val = 0x13, .mask = 0xFF},
+	/* ASR LPM - Supply lowest voltage to VCAMC_1.2V*/
+	{.map = 0, .addr = 0xD9, .val = 0x00, .mask = 0xFF},
+#else
 	/*Init ASR LPM to 2.9V - for Rhea EDN10 & EDN00 and 1.8V for EDN2x
 	*/
 	{.map = 0, .addr = 0xD9, .val = 0x1F, .mask = 0xFF},
+#endif /*CONFIG_MACH_RHEA_SS_EMMC_EXTLDO*/
 	/*Init IOSR NM2 and LPM voltages to 1.8V
 	*/
 	{.map = 0, .addr = 0xC9, .val = 0x1A, .mask = 0xFF},

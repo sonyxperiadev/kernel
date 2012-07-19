@@ -363,6 +363,12 @@ config 59055_SIM_EM_SHDWN
 	help
 	   For 59055 supported emergency sim shutdown
 
+config MACH_RHEA_SS_EMMC_EXTLDO
+	bool "Enable SS EMMC external LDO"
+	default y
+	help
+	   For SS EMMC memory external LDO
+
 endmenu
 
 
