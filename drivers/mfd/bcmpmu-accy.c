@@ -1082,6 +1082,8 @@ static void usb_det_work(struct work_struct *work)
 			usb_type = PMU_USB_TYPE_NONE;
 			chrgr_type = PMU_CHRGR_TYPE_NONE;
 			paccy->det_state = USB_IDLE;
+			if (chrgr_type == PMU_CHRGR_TYPE_DCP)
+				bc_det_sts_clear(paccy);
 		} else {
 			usb_type = bcmpmu->usb_accy_data.usb_type;
 			chrgr_type = bcmpmu->usb_accy_data.chrgr_type;
@@ -1094,7 +1096,7 @@ static void usb_det_work(struct work_struct *work)
 	pr_accy(FLOW, "%s, exit state=%d, usb=%d, chrgr=%d\n",
 		__func__, paccy->det_state, usb_type, chrgr_type);
 
-	if (usb_type != PMU_USB_TYPE_NONE)
+	if (usb_type != PMU_USB_TYPE_NONE && chrgr_type != PMU_CHRGR_TYPE_DCP)
 		bc_det_sts_clear(paccy);
 
 	if (paccy->det_state == USB_IDLE &&
@@ -1118,7 +1120,8 @@ static void usb_det_work(struct work_struct *work)
 	 *of the condition <(paccy->clock_en != 0)>,
 	 *this condition not meet and the BC_DET_EN
 	 *never get called */
-	bc_det_sts_clear(paccy);
+	if (chrgr_type != PMU_CHRGR_TYPE_DCP)
+		bc_det_sts_clear(paccy);
 
 	if (paccy->clock_en != 0) {
 		enable_bc_clock(paccy, false);
