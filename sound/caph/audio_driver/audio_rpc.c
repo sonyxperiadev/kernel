@@ -44,6 +44,8 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "csl_dsp_caph_control_api.h"
 #endif
 
+#include "ipcinterface.h"
+
 /*when system is busy, 50ms is not enough*/
 #define AUDIO_ENABLE_RESP_TIMEOUT 1000
 #define	timeout_jiff msecs_to_jiffies(AUDIO_ENABLE_RESP_TIMEOUT)
@@ -639,19 +641,34 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 		tid = s_sid++; /* RPC_SyncCreateTID(&val, sizeof(UInt32)); */
 		aTrace(LOG_AUDIO_DRIVER,
 			"audio_control_dsp tid=%ld,param1=%ld\n", tid, param1);
+
+		/** init completion before send this DSP command */
+		if (param1 == AUDDRV_DSPCMD_AUDIO_ENABLE) {
+			/*aError("i_c");*/
+			init_completion(&audioEnableDone);
+			/*aError("i_d");*/
+		}
+
 		CAPI2_audio_control_dsp(tid, audioClientId, &audioParam);
 		/*
 		RPC_SyncWaitForResponse(tid, audioClientId, &ackResult,
 					&msgType, NULL);
 		*/
 		if (param1 == AUDDRV_DSPCMD_AUDIO_ENABLE) {
-			init_completion(&audioEnableDone);
-			jiff_in = wait_for_completion_interruptible_timeout(
+
+			/** wait for response from DSP for this command.
+			Response usually comes back very fast, less than 10ms  */
+			jiff_in = wait_for_completion_timeout(
 				&audioEnableDone,
 				timeout_jiff);
 			if (!jiff_in) {
-				aError("!!!Timeout on COMMAND_AUDIO_ENABLE"
-					" resp!!!\n");
+				aError("!!!Timeout on COMMAND_AUDIO_ENABLE %d"
+					" resp!!!\n", (int)param2);
+				/**
+				IPCCP_SetCPCrashedStatus(IPC_AP_ASSERT);
+				BUG_ON(1);
+				panic("COMMAND_AUDIO_ENABLE timeout");
+				*/
 			}
 #if defined(ENABLE_DMA_VOICE)
 			{
