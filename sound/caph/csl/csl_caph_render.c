@@ -465,6 +465,27 @@ UInt16 csl_audio_render_get_current_position(UInt32 streamID)
 	else
 		return 0;
 
+	if (audDrv == NULL) {
+		aError(
+			"csl_audio_render_get_current_position audDrv %x, streamID %d",
+			(int)audDrv, (int)streamID);
+		return 0;
+	}
+	if ((audDrv->dmaCH < CSL_CAPH_DMA_CH1)
+		|| (audDrv->dmaCH > CSL_CAPH_DMA_CH16)) {
+		aError(
+			"csl_audio_render_get_current_position audDrv %x, streamID %d, audDrv->dmaCH %d ",
+			(int)audDrv, (int)streamID, audDrv->dmaCH);
+		return 0;
+	}
+	if (FALSE == csl_caph_QueryHWClock()) {
+		/*the CAPH clock may be not turned on.*/
+		aError(
+		"csl_audio_render_get_current_position caph clock is not ON!! audDrv %x, streamID %d, audDrv->dmaCH %d ",
+			(int)audDrv, (int)streamID, audDrv->dmaCH);
+		return 0;
+	}
+
 	if (audDrv->dmaCH != CSL_CAPH_DMA_NONE)
 		return csl_caph_dma_read_currmempointer(audDrv->dmaCH);
 	else
@@ -486,6 +507,27 @@ UInt16 csl_audio_render_get_current_buffer(UInt32 streamID)
 		audDrv = &sRenderDrv[streamID];
 	else
 		return 0;
+
+	if (audDrv == NULL) {
+		aError(
+			"csl_audio_render_get_current_buffer audDrv %x, streamID %d",
+			(int)audDrv, (int)streamID);
+		return 0;
+	}
+	if ((audDrv->dmaCH < CSL_CAPH_DMA_CH1)
+		|| (audDrv->dmaCH > CSL_CAPH_DMA_CH16)) {
+		aError(
+			"csl_audio_render_get_current_buffer audDrv %x, streamID %d, audDrv->dmaCH %d ",
+			(int)audDrv, (int)streamID, audDrv->dmaCH);
+		return 0;
+	}
+	if (FALSE == csl_caph_QueryHWClock()) {
+		/*the CAPH clock may be not turned on.*/
+		aError(
+		"csl_audio_render_get_current_position caph clock is not ON!! audDrv %x, streamID %d, audDrv->dmaCH %d ",
+			(int)audDrv, (int)streamID, audDrv->dmaCH);
+		return 0;
+	}
 
 	if (audDrv->dmaCH != CSL_CAPH_DMA_NONE)
 		return csl_caph_dma_check_dmabuffer(audDrv->dmaCH);
