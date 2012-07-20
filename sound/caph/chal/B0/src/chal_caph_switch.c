@@ -661,11 +661,19 @@ cVoid chal_caph_switch_select_trigger(CHAL_HANDLE handle,
 *
 *  Description: CAPH ASW enable clock for data tx
 *
+*  - set M0_RATIO=value
+*  - wait
+*  - set SSASW_NOC_EN=1
 ****************************************************************************/
 cVoid chal_caph_switch_enable_clock(CHAL_HANDLE handle)
 {
 	cUInt32 base = ((chal_caph_swwitch_cb_t *) handle)->base;
-	cUInt32 reg_val;
+	cUInt32 reg_val, loop;
+
+	chal_caph_switch_set_clock0(handle, 0x6, 0x659);
+
+	for (loop = 5; loop != 0; loop--)
+		reg_val = BRCM_READ_REG(base, CPH_SSASW_SSASW_NOC);
 
 	reg_val = BRCM_READ_REG(base, CPH_SSASW_SSASW_NOC);
 	reg_val |= (CPH_SSASW_SSASW_NOC_SSASW_NOC_EN_MASK);
@@ -679,12 +687,22 @@ cVoid chal_caph_switch_enable_clock(CHAL_HANDLE handle)
 *  Function Name: cVoid chal_caph_switch_disable_clock(CHAL_HANDLE handle)
 *
 *  Description: CAPH ASW disable clock
-*
+*  - set M0_RATIO=0
+*  - wait a 3 CK26MHz clocks (CK96KHZ_en should never go high again)
+*  - set SSASW_NOC_EN=0
+*  - could also set M0_RATIO value here
 ****************************************************************************/
 cVoid chal_caph_switch_disable_clock(CHAL_HANDLE handle)
 {
 	cUInt32 base = ((chal_caph_swwitch_cb_t *) handle)->base;
-	cUInt32 reg_val;
+	cUInt32 reg_val, loop;
+
+	reg_val = BRCM_READ_REG(base, CPH_SSASW_SSASW_MN0_DIVIDER);
+	reg_val &= ~CPH_SSASW_SSASW_MN0_DIVIDER_M0_RATIO_MASK;
+	BRCM_WRITE_REG(base, CPH_SSASW_SSASW_MN0_DIVIDER, reg_val);
+
+	for (loop = 5; loop != 0; loop--)
+		reg_val = BRCM_READ_REG(base, CPH_SSASW_SSASW_NOC);
 
 	reg_val = BRCM_READ_REG(base, CPH_SSASW_SSASW_NOC);
 	reg_val &= ~(CPH_SSASW_SSASW_NOC_SSASW_NOC_EN_MASK);
