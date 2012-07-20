@@ -666,8 +666,7 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 			whichbuffer = 1;
 		}
 
-		if (runtime->status->state == SNDRV_PCM_STATE_RUNNING
-		    || runtime->status->state == SNDRV_PCM_STATE_DRAINING)
+		if (runtime->status->state == SNDRV_PCM_STATE_RUNNING)
 			pos = (whichbuffer - 1)*runtime->period_size;
 		else
 			pos = chip->streamCtl[substream->number].stream_hw_ptr;
@@ -1250,44 +1249,10 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 
 			pChip->streamCtl[substream->number].stream_hw_ptr +=
 			    runtime->period_size;
-			if (pChip->streamCtl[substream->number].stream_hw_ptr
-				> runtime->boundary)
+			if (pChip->streamCtl[substream->number].stream_hw_ptr >
+			    runtime->boundary)
 				pChip->streamCtl[substream->number].
-				stream_hw_ptr -= runtime->boundary;
-
-			if (runtime->status->state ==
-			    SNDRV_PCM_STATE_DRAINING)
-				/* No more user space data is coming */
-			    if (pChip->streamCtl[substream->number].
-				stream_hw_ptr <
-				runtime->control->appl_ptr) {
-				snd_pcm_uframes_t validFrames =
-				runtime->control->appl_ptr
-				- pChip->streamCtl[substream->number].
-				stream_hw_ptr;
-				snd_pcm_uframes_t framesToClean =
-				runtime->buffer_size - validFrames;
-				snd_pcm_uframes_t writeOffset =
-				runtime->control->appl_ptr%
-				runtime->buffer_size;
-
-				if ((writeOffset + framesToClean) >
-				    runtime->buffer_size) {
-					snd_pcm_uframes_t partialSize =
-					runtime->buffer_size - writeOffset;
-					memset(runtime->dma_area
-					+ frames_to_bytes(runtime, writeOffset),
-					0, frames_to_bytes(runtime,
-					partialSize));
-					framesToClean -= partialSize;
-					memset(runtime->dma_area, 0,
-					frames_to_bytes(runtime,
-					framesToClean));
-				} else
-					memset(runtime->dma_area, 0,
-					frames_to_bytes(runtime,
-					framesToClean));
-			    }
+				    stream_hw_ptr -= runtime->boundary;
 			/* send the period elapsed */
 			snd_pcm_period_elapsed(substream);
 
