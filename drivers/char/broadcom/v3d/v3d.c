@@ -574,7 +574,7 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 		if (v3d_job_curr != NULL)
 			v3d_job_curr->job_intern_state = 4;
 
-		wake_up_interruptible(&v3d_isr_done_q);
+		wake_up(&v3d_isr_done_q);
 		v3d_print_all_jobs(0);
 	}
 }
@@ -691,15 +691,11 @@ static void v3d_job_kill(v3d_job_t *p_v3d_job, v3d_job_status_e job_status)
 static int v3d_thread(void *data)
 {
 	int ret;
-	int timeout;
 	int inited = 0;
-	static int timout_min = 1000;
+	long time, time_min = msecs_to_jiffies(V3D_ISR_TIMEOUT_IN_MS);
 
 	KLOG_D("v3d_thread launched");
-	if (mutex_lock_interruptible(&v3d_sem)) {
-		KLOG_E("lock acquire failed");
-		do_exit(-1);
-	}
+	mutex_lock(&v3d_sem);
 
 	while (1) {
 		if (v3d_job_curr == NULL) {
@@ -714,20 +710,9 @@ static int v3d_thread(void *data)
 				mutex_unlock(&v3d_sem);
 				/* Stop processing more requets if the suspend is pending */
 				mutex_unlock(&suspend_sem);
-				if (wait_event_interruptible
-				    (v3d_start_q, (v3d_job_curr != NULL))) {
-					KLOG_E("wait interrupted");
-					do_exit(-1);
-				}
-				if (mutex_lock_interruptible(&suspend_sem)) {
-					KLOG_E("suspend lock acquire failed");
-					do_exit(-1);
-				}
-
-				if (mutex_lock_interruptible(&v3d_sem)) {
-					KLOG_E("lock acquire failed");
-					do_exit(-1);
-				}
+				wait_event(v3d_start_q, (v3d_job_curr != NULL));
+				mutex_lock(&suspend_sem);
+				mutex_lock(&v3d_sem);
 			}
 			/* Launch the job pointed by v3d_job_curr */
 			KLOG_V("Signal received to launch job");
@@ -746,29 +731,18 @@ static int v3d_thread(void *data)
 			     v3d_job_curr->job_intern_state);
 			mutex_unlock(&v3d_sem);
 
-			timeout =
-			    wait_event_interruptible_timeout(v3d_isr_done_q,
-							     (v3d_in_use == 0),
-							     msecs_to_jiffies
-							     (V3D_ISR_TIMEOUT_IN_MS));
-			if (timeout && (timeout < timout_min)) {
-				timout_min = timeout;
+			time = wait_event_timeout(v3d_isr_done_q,
+				(v3d_in_use == 0),
+				msecs_to_jiffies(V3D_ISR_TIMEOUT_IN_MS));
+			if (time && (time < time_min)) {
+				time_min = time;
 				KLOG_V
 				    ("Minimum jiffies before timeout[%d]. Actual timeout set in jiffies[%d]",
-				     timout_min, (u32)
+				     time_min, (u32)
 				     msecs_to_jiffies(V3D_ISR_TIMEOUT_IN_MS));
 			}
 
-			if ((timeout != 0) && (v3d_in_use != 0)) {
-				KLOG_E
-				    ("wait interrupted, v3d_in_use[%d], timeout[%d]",
-				     v3d_in_use, timeout);
-				do_exit(-1);
-			}
-			if (mutex_lock_interruptible(&v3d_sem)) {
-				KLOG_E("lock acquire failed");
-				do_exit(-1);
-			}
+			mutex_lock(&v3d_sem);
 
 			//Current job was killed and no more job in queue
 			if (v3d_job_curr == NULL)
@@ -856,12 +830,6 @@ static int v3d_thread(void *data)
 					    ("Assert: v3d thread wait exited as 'done' or 'killed' but job state not valid");
 				}
 			} else {
-				/* V3D timed out */
-				if (timeout != 0) {
-					KLOG_E
-					    ("Assert: v3d thread wait exited as timeout but timeout value[%d] is non-zero",
-					     timeout);
-				}
 				/* Timeout of job happend */
 				dbg_job_timeout_cnt++;
 				KLOG_E("wait timed out [%d]ms",
@@ -873,6 +841,8 @@ static int v3d_thread(void *data)
 			}
 		}
 	}
+
+	return 0;
 }
 
 static int v3d_job_post(struct file *filp, v3d_job_post_t * p_job_post)
@@ -913,7 +883,7 @@ static int v3d_job_post(struct file *filp, v3d_job_post_t * p_job_post)
 	if (NULL == v3d_job_curr) {
 		KLOG_V("Signal to v3d thread about post");
 		v3d_job_curr = p_v3d_job;
-		wake_up_interruptible(&v3d_start_q);
+		wake_up(&v3d_start_q);
 	}
 
 	/* Unlock the code */
@@ -1423,7 +1393,7 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 		    ) {
 			v3d_in_use = 0;
 			v3d_oom_block_used = 0;
-			wake_up_interruptible(&v3d_isr_done_q);
+			wake_up(&v3d_isr_done_q);
 		}
 	}
 
