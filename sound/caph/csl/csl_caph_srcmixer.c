@@ -675,7 +675,7 @@ csl_caph_srcmixer_get_single_chal_inchnl(CSL_CAPH_SRCM_INCHNL_e inChnl)
 		chalChnl = CAPH_SRCM_PASSCH4;
 		break;
 	default:
-		audio_xassert(0, chalChnl);
+		audio_xassert(0, inChnl);
 	}
 	return chalChnl;
 }
@@ -882,6 +882,9 @@ csl_caph_srcmixer_get_inchnl_trigger(CSL_CAPH_SRCM_INCHNL_e inChnl)
 		inChnlTrig = CAPH_PASSTHROUGH_CH4_FIFO_THRESMET;
 		break;
 	default:
+		aError("csl_caph_srcmixer_get_inchnl_trigger inChnl %d",
+		inChnl);
+
 		audio_xassert(0, inChnl);
 	}
 	return inChnlTrig;
