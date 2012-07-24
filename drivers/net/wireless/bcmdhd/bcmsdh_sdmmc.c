@@ -1,9 +1,9 @@
 /*
  * BCMSDH Function Driver for the native SDIO/MMC driver in the Linux Kernel
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -63,7 +63,7 @@ extern int sdio_reset_comm(struct mmc_card *card);
 extern PBCMSDH_SDMMC_INSTANCE gInstance;
 
 uint sd_sdmode = SDIOH_MODE_SD4;	/* Use SD4 mode by default */
-uint sd_f2_blocksize = 64;		/* Default blocksize */
+uint sd_f2_blocksize = 512;		/* Default blocksize */
 
 uint sd_divisor = 2;			/* Default 48MHz/2 = 24MHz */
 

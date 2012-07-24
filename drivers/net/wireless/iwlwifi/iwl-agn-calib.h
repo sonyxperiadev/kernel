@@ -5,7 +5,7 @@
  *
  * GPL LICENSE SUMMARY
  *
- * Copyright(c) 2008 - 2011 Intel Corporation. All rights reserved.
+ * Copyright(c) 2008 - 2012 Intel Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -30,7 +30,7 @@
  *
  * BSD LICENSE
  *
- * Copyright(c) 2005 - 2011 Intel Corporation. All rights reserved.
+ * Copyright(c) 2005 - 2012 Intel Corporation. All rights reserved.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -71,16 +71,5 @@ void iwl_sensitivity_calibration(struct iwl_priv *priv);
 
 void iwl_init_sensitivity(struct iwl_priv *priv);
 void iwl_reset_run_time_calib(struct iwl_priv *priv);
-static inline void iwl_chain_noise_reset(struct iwl_priv *priv)
-{
-
-	if (!priv->disable_chain_noise_cal &&
-	    priv->cfg->ops->utils->chain_noise_reset)
-		priv->cfg->ops->utils->chain_noise_reset(priv);
-}
-
-int iwl_send_calib_results(struct iwl_priv *priv);
-int iwl_calib_set(struct iwl_calib_result *res, const u8 *buf, int len);
-void iwl_calib_free_results(struct iwl_priv *priv);
 
 #endif /* __iwl_calib_h__ */

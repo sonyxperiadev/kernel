@@ -212,7 +212,7 @@ static ssize_t set_in(struct device *dev, struct device_attribute *devattr,
 	long val;
 	u8 reg;
 
-	err = strict_strtol(buf, 10, &val);
+	err = kstrtol(buf, 10, &val);
 	if (err < 0)
 		return err;
 
@@ -249,7 +249,7 @@ static ssize_t set_temp(struct device *dev, struct device_attribute *devattr,
 	long val;
 	u8 reg;
 
-	err = strict_strtol(buf, 10, &val);
+	err = kstrtol(buf, 10, &val);
 	if (err < 0)
 		return err;
 
@@ -291,7 +291,7 @@ static ssize_t set_fan(struct device *dev, struct device_attribute *devattr,
 	int err;
 	unsigned long val;
 
-	err = strict_strtoul(buf, 10, &val);
+	err = kstrtoul(buf, 10, &val);
 	if (err < 0)
 		return err;
 
@@ -552,17 +552,7 @@ static struct i2c_driver emc6w201_driver = {
 	.address_list	= normal_i2c,
 };
 
-static int __init sensors_emc6w201_init(void)
-{
-	return i2c_add_driver(&emc6w201_driver);
-}
-module_init(sensors_emc6w201_init);
-
-static void __exit sensors_emc6w201_exit(void)
-{
-	i2c_del_driver(&emc6w201_driver);
-}
-module_exit(sensors_emc6w201_exit);
+module_i2c_driver(emc6w201_driver);
 
 MODULE_AUTHOR("Jean Delvare <khali@linux-fr.org>");
 MODULE_DESCRIPTION("SMSC EMC6W201 hardware monitoring driver");

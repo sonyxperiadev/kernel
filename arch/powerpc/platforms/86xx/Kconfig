@@ -4,6 +4,7 @@ menuconfig PPC_86xx
 	depends on 6xx
 	select FSL_SOC
 	select ALTIVEC
+	select ARCH_WANT_OPTIONAL_GPIOLIB
 	help
 	  The Freescale E600 SoCs have 74xx cores.
 
@@ -38,6 +39,7 @@ config GEF_PPC9A
 	select MMIO_NVRAM
 	select GENERIC_GPIO
 	select ARCH_REQUIRE_GPIOLIB
+	select GE_FPGA
 	help
 	  This option enables support for the GE PPC9A.
 
@@ -47,6 +49,7 @@ config GEF_SBC310
 	select MMIO_NVRAM
 	select GENERIC_GPIO
 	select ARCH_REQUIRE_GPIOLIB
+	select GE_FPGA
 	help
 	  This option enables support for the GE SBC310.
 
@@ -56,6 +59,7 @@ config GEF_SBC610
 	select MMIO_NVRAM
 	select GENERIC_GPIO
 	select ARCH_REQUIRE_GPIOLIB
+	select GE_FPGA
 	select HAS_RAPIDIO
 	help
 	  This option enables support for the GE SBC610.

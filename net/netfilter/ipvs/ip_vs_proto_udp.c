@@ -454,21 +454,20 @@ static const char * udp_state_name(int state)
 	return udp_state_name_table[state] ? udp_state_name_table[state] : "?";
 }
 
-static int
+static void
 udp_state_transition(struct ip_vs_conn *cp, int direction,
 		     const struct sk_buff *skb,
 		     struct ip_vs_proto_data *pd)
 {
 	if (unlikely(!pd)) {
 		pr_err("UDP no ns data\n");
-		return 0;
+		return;
 	}
 
 	cp->timeout = pd->timeout_table[IP_VS_UDP_S_NORMAL];
-	return 1;
 }
 
-static void __udp_init(struct net *net, struct ip_vs_proto_data *pd)
+static int __udp_init(struct net *net, struct ip_vs_proto_data *pd)
 {
 	struct netns_ipvs *ipvs = net_ipvs(net);
 
@@ -476,6 +475,9 @@ static void __udp_init(struct net *net, struct ip_vs_proto_data *pd)
 	spin_lock_init(&ipvs->udp_app_lock);
 	pd->timeout_table = ip_vs_create_timeout_table((int *)udp_timeouts,
 							sizeof(udp_timeouts));
+	if (!pd->timeout_table)
+		return -ENOMEM;
+	return 0;
 }
 
 static void __udp_exit(struct net *net, struct ip_vs_proto_data *pd)

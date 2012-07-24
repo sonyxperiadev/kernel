@@ -41,11 +41,14 @@
 #include <mach/kona.h>
 #include <mach/timer.h>
 #include <mach/profile_timer.h>
+#include <linux/reboot.h>
+#include <asm/system_misc.h>
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 #include <mach/secure_api.h>
 #endif
 #include <plat/cpu.h>
 #include <plat/kona_reset_reason.h>
+#include <mach/memory.h>
 
 static void rhea_poweroff(void)
 {
@@ -67,7 +70,7 @@ static void rhea_restart(char mode, const char *cmd)
 	if (hard_reset_reason)
 		bcmpmu_client_hard_reset(hard_reset_reason);
 	else
-		arm_machine_restart('h', cmd);
+		machine_restart(cmd);
 }
 
 #ifdef CONFIG_CACHE_L2X0
@@ -97,6 +100,7 @@ static int __init rhea_arch_init(void)
 {
 	int ret = 0;
 
+	pr_info("rhea_arch_init.....\n");
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 	ret = smc_init();
 	if (ret < 0)

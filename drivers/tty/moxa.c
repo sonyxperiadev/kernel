@@ -44,8 +44,8 @@
 #include <linux/init.h>
 #include <linux/bitops.h>
 #include <linux/slab.h>
+#include <linux/ratelimit.h>
 
-#include <asm/system.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
 
@@ -242,8 +242,8 @@ static void moxa_wait_finish(void __iomem *ofsAddr)
 	while (readw(ofsAddr + FuncCode) != 0)
 		if (time_after(jiffies, end))
 			return;
-	if (readw(ofsAddr + FuncCode) != 0 && printk_ratelimit())
-		printk(KERN_WARNING "moxa function expired\n");
+	if (readw(ofsAddr + FuncCode) != 0)
+		printk_ratelimited(KERN_WARNING "moxa function expired\n");
 }
 
 static void moxafunc(void __iomem *ofsAddr, u16 cmd, u16 arg)
@@ -1035,7 +1035,6 @@ static int __init moxa_init(void)
 	if (!moxaDriver)
 		return -ENOMEM;
 
-	moxaDriver->owner = THIS_MODULE;
 	moxaDriver->name = "ttyMX";
 	moxaDriver->major = ttymajor;
 	moxaDriver->minor_start = 0;
@@ -1330,7 +1329,7 @@ static void moxa_start(struct tty_struct *tty)
 	if (ch == NULL)
 		return;
 
-	if (!(ch->statusflags & TXSTOPPED))
+	if (!test_bit(TXSTOPPED, &ch->statusflags))
 		return;
 
 	MoxaPortTxEnable(ch);

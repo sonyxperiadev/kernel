@@ -14,7 +14,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/io.h>
-#include <linux/sysdev.h>
+#include <linux/device.h>
 #include <linux/gpio.h>
 
 #include <asm/hardware/vic.h>
@@ -200,7 +200,7 @@ static struct irq_chip s5p_irq_vic_eint = {
 #endif
 };
 
-int __init s5p_init_irq_eint(void)
+static int __init s5p_init_irq_eint(void)
 {
 	int irq;
 

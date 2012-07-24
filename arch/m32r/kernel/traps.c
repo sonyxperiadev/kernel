@@ -18,10 +18,9 @@
 #include <asm/page.h>
 #include <asm/processor.h>
 
-#include <asm/system.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 
 #include <asm/smp.h>
 

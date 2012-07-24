@@ -38,7 +38,7 @@ extern int eth_header(struct sk_buff *skb, struct net_device *dev,
 		      const void *daddr, const void *saddr, unsigned len);
 extern int eth_rebuild_header(struct sk_buff *skb);
 extern int eth_header_parse(const struct sk_buff *skb, unsigned char *haddr);
-extern int eth_header_cache(const struct neighbour *neigh, struct hh_cache *hh);
+extern int eth_header_cache(const struct neighbour *neigh, struct hh_cache *hh, __be16 type);
 extern void eth_header_cache_update(struct hh_cache *hh,
 				    const struct net_device *dev,
 				    const unsigned char *haddr);
@@ -140,17 +140,18 @@ static inline void random_ether_addr(u8 *addr)
 }
 
 /**
- * dev_hw_addr_random - Create random MAC and set device flag
+ * eth_hw_addr_random - Generate software assigned random Ethernet and
+ * set device flag
  * @dev: pointer to net_device structure
- * @hwaddr: Pointer to a six-byte array containing the Ethernet address
  *
- * Generate random MAC to be used by a device and set addr_assign_type
- * so the state can be read by sysfs and be used by udev.
+ * Generate a random Ethernet address (MAC) to be used by a net device
+ * and set addr_assign_type so the state can be read by sysfs and be
+ * used by userspace.
  */
-static inline void dev_hw_addr_random(struct net_device *dev, u8 *hwaddr)
+static inline void eth_hw_addr_random(struct net_device *dev)
 {
 	dev->addr_assign_type |= NET_ADDR_RANDOM;
-	random_ether_addr(hwaddr);
+	random_ether_addr(dev->dev_addr);
 }
 
 /**

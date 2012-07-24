@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2009-2010  Realtek Corporation.
+ * Copyright(c) 2009-2012  Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -33,8 +33,7 @@
 #define MAX_SW_LPS_SLEEP_INTV	5
 
 bool rtl_ps_set_rf_state(struct ieee80211_hw *hw,
-			 enum rf_pwrstate state_toset, u32 changesource,
-			 bool protect_or_not);
+			 enum rf_pwrstate state_toset, u32 changesource);
 bool rtl_ps_enable_nic(struct ieee80211_hw *hw);
 bool rtl_ps_disable_nic(struct ieee80211_hw *hw);
 void rtl_ips_nic_off(struct ieee80211_hw *hw);

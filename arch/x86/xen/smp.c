@@ -59,7 +59,7 @@ static irqreturn_t xen_reschedule_interrupt(int irq, void *dev_id)
 
 static void __cpuinit cpu_bringup(void)
 {
-	int cpu = smp_processor_id();
+	int cpu;
 
 	cpu_init();
 	touch_softlockup_watchdog();
@@ -75,8 +75,14 @@ static void __cpuinit cpu_bringup(void)
 
 	xen_setup_cpu_clockevents();
 
+	notify_cpu_starting(cpu);
+
+	ipi_call_lock();
 	set_cpu_online(cpu, true);
-	percpu_write(cpu_state, CPU_ONLINE);
+	ipi_call_unlock();
+
+	this_cpu_write(cpu_state, CPU_ONLINE);
+
 	wmb();
 
 	/* We can take interrupts now: we're officially "up". */
@@ -172,6 +178,7 @@ static void __init xen_fill_possible_map(void)
 static void __init xen_filter_cpu_maps(void)
 {
 	int i, rc;
+	unsigned int subtract = 0;
 
 	if (!xen_initial_domain())
 		return;
@@ -186,8 +193,22 @@ static void __init xen_filter_cpu_maps(void)
 		} else {
 			set_cpu_possible(i, false);
 			set_cpu_present(i, false);
+			subtract++;
 		}
 	}
+#ifdef CONFIG_HOTPLUG_CPU
+	/* This is akin to using 'nr_cpus' on the Linux command line.
+	 * Which is OK as when we use 'dom0_max_vcpus=X' we can only
+	 * have up to X, while nr_cpu_ids is greater than X. This
+	 * normally is not a problem, except when CPU hotplugging
+	 * is involved and then there might be more than X CPUs
+	 * in the guest - which will not work as there is no
+	 * hypercall to expand the max number of VCPUs an already
+	 * running guest has. So cap it up to X. */
+	if (subtract)
+		nr_cpu_ids = nr_cpu_ids - subtract;
+#endif
+
 }
 
 static void __init xen_smp_prepare_boot_cpu(void)
@@ -409,6 +430,13 @@ static void __cpuinit xen_play_dead(void) /* used only with HOTPLUG_CPU */
 	play_dead_common();
 	HYPERVISOR_vcpu_op(VCPUOP_down, smp_processor_id(), NULL);
 	cpu_bringup();
+	/*
+	 * Balance out the preempt calls - as we are running in cpu_idle
+	 * loop which has been called at bootup from cpu_bringup_and_idle.
+	 * The cpucpu_bringup_and_idle called cpu_bringup which made a
+	 * preempt_disable() So this preempt_enable will balance it out.
+	 */
+	preempt_enable();
 }
 
 #else /* !CONFIG_HOTPLUG_CPU */
@@ -532,7 +560,6 @@ static void __init xen_hvm_smp_prepare_cpus(unsigned int max_cpus)
 	WARN_ON(xen_smp_intr_init(0));
 
 	xen_init_lock_cpu(0);
-	xen_init_spinlocks();
 }
 
 static int __cpuinit xen_hvm_cpu_up(unsigned int cpu)

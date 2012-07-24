@@ -158,7 +158,7 @@ xfs_uuid_mount(
 
  out_duplicate:
 	mutex_unlock(&xfs_uuid_table_mutex);
-	xfs_warn(mp, "Filesystem has duplicate UUID - can't mount");
+	xfs_warn(mp, "Filesystem has duplicate UUID %pU - can't mount", uuid);
 	return XFS_ERROR(EINVAL);
 }
 
@@ -345,7 +345,7 @@ xfs_mount_validate_sb(
 	}
 
 	/*
-	 * More sanity checking. These were stolen directly from
+	 * More sanity checking.  Most of these were stolen directly from
 	 * xfs_repair.
 	 */
 	if (unlikely(
@@ -368,23 +368,13 @@ xfs_mount_validate_sb(
 	    (sbp->sb_blocklog - sbp->sb_inodelog != sbp->sb_inopblog)	||
 	    (sbp->sb_rextsize * sbp->sb_blocksize > XFS_MAX_RTEXTSIZE)	||
 	    (sbp->sb_rextsize * sbp->sb_blocksize < XFS_MIN_RTEXTSIZE)	||
-	    (sbp->sb_imax_pct > 100 /* zero sb_imax_pct is valid */))) {
+	    (sbp->sb_imax_pct > 100 /* zero sb_imax_pct is valid */)	||
+	    sbp->sb_dblocks == 0					||
+	    sbp->sb_dblocks > XFS_MAX_DBLOCKS(sbp)			||
+	    sbp->sb_dblocks < XFS_MIN_DBLOCKS(sbp))) {
 		if (loud)
-			xfs_warn(mp, "SB sanity check 1 failed");
-		return XFS_ERROR(EFSCORRUPTED);
-	}
-
-	/*
-	 * Sanity check AG count, size fields against data size field
-	 */
-	if (unlikely(
-	    sbp->sb_dblocks == 0 ||
-	    sbp->sb_dblocks >
-	     (xfs_drfsbno_t)sbp->sb_agcount * sbp->sb_agblocks ||
-	    sbp->sb_dblocks < (xfs_drfsbno_t)(sbp->sb_agcount - 1) *
-			      sbp->sb_agblocks + XFS_MIN_AG_BLOCKS)) {
-		if (loud)
-			xfs_warn(mp, "SB sanity check 2 failed");
+			XFS_CORRUPTION_ERROR("SB sanity check failed",
+				XFS_ERRLEVEL_LOW, mp, sbp);
 		return XFS_ERROR(EFSCORRUPTED);
 	}
 
@@ -563,9 +553,11 @@ out_unwind:
 
 void
 xfs_sb_from_disk(
-	xfs_sb_t	*to,
+	struct xfs_mount	*mp,
 	xfs_dsb_t	*from)
 {
+	struct xfs_sb *to = &mp->m_sb;
+
 	to->sb_magicnum = be32_to_cpu(from->sb_magicnum);
 	to->sb_blocksize = be32_to_cpu(from->sb_blocksize);
 	to->sb_dblocks = be64_to_cpu(from->sb_dblocks);
@@ -703,7 +695,7 @@ reread:
 	 * Initialize the mount structure from the superblock.
 	 * But first do some basic consistency checking.
 	 */
-	xfs_sb_from_disk(&mp->m_sb, XFS_BUF_TO_SBP(bp));
+	xfs_sb_from_disk(mp, XFS_BUF_TO_SBP(bp));
 	error = xfs_mount_validate_sb(mp, &(mp->m_sb), flags);
 	if (error) {
 		if (loud)
@@ -861,7 +853,8 @@ xfs_update_alignment(xfs_mount_t *mp)
 		if ((BBTOB(mp->m_dalign) & mp->m_blockmask) ||
 		    (BBTOB(mp->m_swidth) & mp->m_blockmask)) {
 			if (mp->m_flags & XFS_MOUNT_RETERR) {
-				xfs_warn(mp, "alignment check 1 failed");
+				xfs_warn(mp, "alignment check failed: "
+					 "(sunit/swidth vs. blocksize)");
 				return XFS_ERROR(EINVAL);
 			}
 			mp->m_dalign = mp->m_swidth = 0;
@@ -872,6 +865,8 @@ xfs_update_alignment(xfs_mount_t *mp)
 			mp->m_dalign = XFS_BB_TO_FSBT(mp, mp->m_dalign);
 			if (mp->m_dalign && (sbp->sb_agblocks % mp->m_dalign)) {
 				if (mp->m_flags & XFS_MOUNT_RETERR) {
+					xfs_warn(mp, "alignment check failed: "
+						 "(sunit/swidth vs. ag size)");
 					return XFS_ERROR(EINVAL);
 				}
 				xfs_warn(mp,
@@ -886,8 +881,8 @@ xfs_update_alignment(xfs_mount_t *mp)
 				mp->m_swidth = XFS_BB_TO_FSBT(mp, mp->m_swidth);
 			} else {
 				if (mp->m_flags & XFS_MOUNT_RETERR) {
-					xfs_warn(mp,
-		"stripe alignment turned off: sunit(%d) less than bsize(%d)",
+					xfs_warn(mp, "alignment check failed: "
+						"sunit(%d) less than bsize(%d)",
 						mp->m_dalign,
 						mp->m_blockmask +1);
 					return XFS_ERROR(EINVAL);
@@ -1092,10 +1087,6 @@ xfs_mount_reset_sbqflags(
 	 */
 	if (mp->m_flags & XFS_MOUNT_RDONLY)
 		return 0;
-
-#ifdef QUOTADEBUG
-	xfs_notice(mp, "Writing superblock quota changes");
-#endif
 
 	tp = xfs_trans_alloc(mp, XFS_TRANS_QM_SBCHANGE);
 	error = xfs_trans_reserve(tp, 0, mp->m_sb.sb_sectsize + 128, 0, 0,
@@ -1339,7 +1330,7 @@ xfs_mountfs(
 
 	ASSERT(rip != NULL);
 
-	if (unlikely((rip->i_d.di_mode & S_IFMT) != S_IFDIR)) {
+	if (unlikely(!S_ISDIR(rip->i_d.di_mode))) {
 		xfs_warn(mp, "corrupted root inode %llu: not a directory",
 			(unsigned long long)rip->i_ino);
 		xfs_iunlock(rip, XFS_ILOCK_EXCL);
@@ -1492,7 +1483,7 @@ xfs_unmountfs(
 	 * state as much as possible.
 	 */
 	xfs_reclaim_inodes(mp, 0);
-	XFS_bflush(mp->m_ddev_targp);
+	xfs_flush_buftarg(mp->m_ddev_targp, 1);
 	xfs_reclaim_inodes(mp, SYNC_WAIT);
 
 	xfs_qm_unmount(mp);
@@ -1524,7 +1515,7 @@ xfs_unmountfs(
 		xfs_warn(mp, "Unable to free reserved block pool. "
 				"Freespace may not be correct on next mount.");
 
-	error = xfs_log_sbcount(mp, 1);
+	error = xfs_log_sbcount(mp);
 	if (error)
 		xfs_warn(mp, "Unable to update superblock counters. "
 				"Freespace may not be correct on next mount.");
@@ -1559,18 +1550,14 @@ xfs_fs_writable(xfs_mount_t *mp)
 /*
  * xfs_log_sbcount
  *
- * Called either periodically to keep the on disk superblock values
- * roughly up to date or from unmount to make sure the values are
- * correct on a clean unmount.
+ * Sync the superblock counters to disk.
  *
  * Note this code can be called during the process of freezing, so
- * we may need to use the transaction allocator which does not not
+ * we may need to use the transaction allocator which does not
  * block when the transaction subsystem is in its frozen state.
  */
 int
-xfs_log_sbcount(
-	xfs_mount_t	*mp,
-	uint		sync)
+xfs_log_sbcount(xfs_mount_t *mp)
 {
 	xfs_trans_t	*tp;
 	int		error;
@@ -1596,8 +1583,7 @@ xfs_log_sbcount(
 	}
 
 	xfs_mod_sb(tp, XFS_SB_IFREE | XFS_SB_ICOUNT | XFS_SB_FDBLOCKS);
-	if (sync)
-		xfs_trans_set_sync(tp);
+	xfs_trans_set_sync(tp);
 	error = xfs_trans_commit(tp, 0);
 	return error;
 }
@@ -1619,15 +1605,14 @@ xfs_unmountfs_writesb(xfs_mount_t *mp)
 
 		XFS_BUF_UNDONE(sbp);
 		XFS_BUF_UNREAD(sbp);
-		XFS_BUF_UNDELAYWRITE(sbp);
+		xfs_buf_delwri_dequeue(sbp);
 		XFS_BUF_WRITE(sbp);
 		XFS_BUF_UNASYNC(sbp);
-		ASSERT(XFS_BUF_TARGET(sbp) == mp->m_ddev_targp);
+		ASSERT(sbp->b_target == mp->m_ddev_targp);
 		xfsbdstrat(mp, sbp);
 		error = xfs_buf_iowait(sbp);
 		if (error)
-			xfs_ioerror_alert("xfs_unmountfs_writesb",
-					  mp, sbp, XFS_BUF_ADDR(sbp));
+			xfs_buf_ioerror_alert(sbp, __func__);
 		xfs_buf_relse(sbp);
 	}
 	return error;
@@ -1932,23 +1917,20 @@ unwind:
  * the superblock buffer if it can be locked without sleeping.
  * If it can't then we'll return NULL.
  */
-xfs_buf_t *
+struct xfs_buf *
 xfs_getsb(
-	xfs_mount_t	*mp,
-	int		flags)
+	struct xfs_mount	*mp,
+	int			flags)
 {
-	xfs_buf_t	*bp;
+	struct xfs_buf		*bp = mp->m_sb_bp;
 
-	ASSERT(mp->m_sb_bp != NULL);
-	bp = mp->m_sb_bp;
-	if (flags & XBF_TRYLOCK) {
-		if (!XFS_BUF_CPSEMA(bp)) {
+	if (!xfs_buf_trylock(bp)) {
+		if (flags & XBF_TRYLOCK)
 			return NULL;
-		}
-	} else {
-		XFS_BUF_PSEMA(bp, PRIBIO);
+		xfs_buf_lock(bp);
 	}
-	XFS_BUF_HOLD(bp);
+
+	xfs_buf_hold(bp);
 	ASSERT(XFS_BUF_ISDONE(bp));
 	return bp;
 }

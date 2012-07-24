@@ -16,6 +16,8 @@
 #include "annotate.h"
 #include <pthread.h>
 
+const char 	*disassembler_style;
+
 int symbol__annotate_init(struct map *map __used, struct symbol *sym)
 {
 	struct annotation *notes = symbol__annotation(sym);
@@ -23,17 +25,17 @@ int symbol__annotate_init(struct map *map __used, struct symbol *sym)
 	return 0;
 }
 
-int symbol__alloc_hist(struct symbol *sym, int nevents)
+int symbol__alloc_hist(struct symbol *sym)
 {
 	struct annotation *notes = symbol__annotation(sym);
-	size_t sizeof_sym_hist = (sizeof(struct sym_hist) +
-				  (sym->end - sym->start) * sizeof(u64));
+	const size_t size = sym->end - sym->start + 1;
+	size_t sizeof_sym_hist = (sizeof(struct sym_hist) + size * sizeof(u64));
 
-	notes->src = zalloc(sizeof(*notes->src) + nevents * sizeof_sym_hist);
+	notes->src = zalloc(sizeof(*notes->src) + symbol_conf.nr_events * sizeof_sym_hist);
 	if (notes->src == NULL)
 		return -1;
 	notes->src->sizeof_sym_hist = sizeof_sym_hist;
-	notes->src->nr_histograms   = nevents;
+	notes->src->nr_histograms   = symbol_conf.nr_events;
 	INIT_LIST_HEAD(&notes->src->source);
 	return 0;
 }
@@ -62,8 +64,8 @@ int symbol__inc_addr_samples(struct symbol *sym, struct map *map,
 
 	pr_debug3("%s: addr=%#" PRIx64 "\n", __func__, map->unmap_ip(map, addr));
 
-	if (addr >= sym->end)
-		return 0;
+	if (addr < sym->start || addr > sym->end)
+		return -ERANGE;
 
 	offset = addr - sym->start;
 	h = annotation__histogram(notes, evidx);
@@ -308,9 +310,12 @@ fallback:
 		}
 		err = -ENOENT;
 		dso->annotate_warned = 1;
-		pr_err("Can't annotate %s: No vmlinux file%s was found in the "
-		       "path.\nPlease use 'perf buildid-cache -av vmlinux' or "
-		       "--vmlinux vmlinux.\n",
+		pr_err("Can't annotate %s:\n\n"
+		       "No vmlinux file%s\nwas found in the path.\n\n"
+		       "Please use:\n\n"
+		       "  perf buildid-cache -av vmlinux\n\n"
+		       "or:\n\n"
+		       "  --vmlinux vmlinux\n",
 		       sym->name, build_id_msg ?: "");
 		goto out_free_filename;
 	}
@@ -323,10 +328,15 @@ fallback:
 		 dso, dso->long_name, sym, sym->name);
 
 	snprintf(command, sizeof(command),
-		 "objdump --start-address=0x%016" PRIx64
-		 " --stop-address=0x%016" PRIx64 " -dS -C %s|grep -v %s|expand",
+		 "objdump %s%s --start-address=0x%016" PRIx64
+		 " --stop-address=0x%016" PRIx64
+		 " -d %s %s -C %s|grep -v %s|expand",
+		 disassembler_style ? "-M " : "",
+		 disassembler_style ? disassembler_style : "",
 		 map__rip_2objdump(map, sym->start),
-		 map__rip_2objdump(map, sym->end),
+		 map__rip_2objdump(map, sym->end+1),
+		 symbol_conf.annotate_asm_raw ? "" : "--no-show-raw",
+		 symbol_conf.annotate_src ? "-S" : "",
 		 symfs_filename, filename);
 
 	pr_debug("Executing: %s\n", command);
@@ -398,7 +408,7 @@ static int symbol__get_source_line(struct symbol *sym, struct map *map,
 	if (!notes->src->lines)
 		return -1;
 
-	start = map->unmap_ip(map, sym->start);
+	start = map__rip_2objdump(map, sym->start);
 
 	for (i = 0; i < len; i++) {
 		char *path = NULL;
@@ -551,16 +561,12 @@ void symbol__annotate_decay_histogram(struct symbol *sym, int evidx)
 {
 	struct annotation *notes = symbol__annotation(sym);
 	struct sym_hist *h = annotation__histogram(notes, evidx);
-	struct objdump_line *pos;
-	int len = sym->end - sym->start;
+	int len = sym->end - sym->start, offset;
 
 	h->sum = 0;
-
-	list_for_each_entry(pos, &notes->src->source, node) {
-		if (pos->offset != -1 && pos->offset < len) {
-			h->addr[pos->offset] = h->addr[pos->offset] * 7 / 8;
-			h->sum += h->addr[pos->offset];
-		}
+	for (offset = 0; offset < len; ++offset) {
+		h->addr[offset] = h->addr[offset] * 7 / 8;
+		h->sum += h->addr[offset];
 	}
 }
 

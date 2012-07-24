@@ -37,8 +37,11 @@
 #include <plat/led.h>
 #include <plat/usb.h>
 #include <plat/board.h>
-#include <plat/common.h>
+#include "common.h"
 #include <plat/gpmc.h>
+
+#include <video/omapdss.h>
+#include <video/omap-panel-generic-dpi.h>
 
 #include "mux.h"
 #include "control.h"
@@ -133,8 +136,6 @@ static struct resource apollon_smc91x_resources[] = {
 		.flags  = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start	= OMAP_GPIO_IRQ(APOLLON_ETHR_GPIO_IRQ),
-		.end	= OMAP_GPIO_IRQ(APOLLON_ETHR_GPIO_IRQ),
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
 	},
 };
@@ -147,11 +148,6 @@ static struct platform_device apollon_smc91x_device = {
 	},
 	.num_resources	= ARRAY_SIZE(apollon_smc91x_resources),
 	.resource	= apollon_smc91x_resources,
-};
-
-static struct platform_device apollon_lcd_device = {
-	.name		= "apollon_lcd",
-	.id		= -1,
 };
 
 static struct omap_led_config apollon_led_config[] = {
@@ -191,7 +187,6 @@ static struct platform_device apollon_led_device = {
 static struct platform_device *apollon_devices[] __initdata = {
 	&apollon_onenand_device,
 	&apollon_smc91x_device,
-	&apollon_lcd_device,
 	&apollon_led_device,
 };
 
@@ -265,19 +260,27 @@ static struct omap_usb_config apollon_usb_config __initdata = {
 	.pins[0]	= 6,
 };
 
-static struct omap_lcd_config apollon_lcd_config __initdata = {
-	.ctrl_name	= "internal",
+static struct panel_generic_dpi_data apollon_panel_data = {
+	.name			= "apollon",
 };
 
-static struct omap_board_config_kernel apollon_config[] __initdata = {
-	{ OMAP_TAG_LCD,		&apollon_lcd_config },
+static struct omap_dss_device apollon_lcd_device = {
+	.name			= "lcd",
+	.driver_name		= "generic_dpi_panel",
+	.type			= OMAP_DISPLAY_TYPE_DPI,
+	.phy.dpi.data_lines	= 18,
+	.data			= &apollon_panel_data,
 };
 
-static void __init omap_apollon_init_early(void)
-{
-	omap2_init_common_infrastructure();
-	omap2_init_common_devices(NULL, NULL);
-}
+static struct omap_dss_device *apollon_dss_devices[] = {
+	&apollon_lcd_device,
+};
+
+static struct omap_dss_board_info apollon_dss_data = {
+	.num_devices	= ARRAY_SIZE(apollon_dss_devices),
+	.devices	= apollon_dss_devices,
+	.default_device	= &apollon_lcd_device,
+};
 
 static struct gpio apollon_gpio_leds[] __initdata = {
 	{ LED0_GPIO13, GPIOF_OUT_INIT_LOW, "LED0" }, /* LED0 - AA10 */
@@ -314,8 +317,6 @@ static void __init omap_apollon_init(void)
 	u32 v;
 
 	omap2420_mux_init(board_mux, OMAP_PACKAGE_ZAC);
-	omap_board_config = apollon_config;
-	omap_board_config_size = ARRAY_SIZE(apollon_config);
 
 	apollon_init_smc91x();
 	apollon_led_init();
@@ -338,23 +339,23 @@ static void __init omap_apollon_init(void)
 	 * You have to mux them off in device drivers later on
 	 * if not needed.
 	 */
+	apollon_smc91x_resources[1].start = gpio_to_irq(APOLLON_ETHR_GPIO_IRQ);
+	apollon_smc91x_resources[1].end = gpio_to_irq(APOLLON_ETHR_GPIO_IRQ);
 	platform_add_devices(apollon_devices, ARRAY_SIZE(apollon_devices));
 	omap_serial_init();
-}
-
-static void __init omap_apollon_map_io(void)
-{
-	omap2_set_globals_242x();
-	omap242x_map_common_io();
+	omap_sdrc_init(NULL, NULL);
+	omap_display_init(&apollon_dss_data);
 }
 
 MACHINE_START(OMAP_APOLLON, "OMAP24xx Apollon")
 	/* Maintainer: Kyungmin Park <kyungmin.park@samsung.com> */
-	.boot_params	= 0x80000100,
+	.atag_offset	= 0x100,
 	.reserve	= omap_reserve,
-	.map_io		= omap_apollon_map_io,
-	.init_early	= omap_apollon_init_early,
-	.init_irq	= omap_init_irq,
+	.map_io		= omap242x_map_io,
+	.init_early	= omap2420_init_early,
+	.init_irq	= omap2_init_irq,
+	.handle_irq	= omap2_intc_handle_irq,
 	.init_machine	= omap_apollon_init,
-	.timer		= &omap_timer,
+	.timer		= &omap2_timer,
+	.restart	= omap_prcm_restart,
 MACHINE_END

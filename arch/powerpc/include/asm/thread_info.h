@@ -109,9 +109,7 @@ static inline struct thread_info *current_thread_info(void)
 #define TIF_RESTOREALL		11	/* Restore all regs (implies NOERROR) */
 #define TIF_NOERROR		12	/* Force successful syscall return */
 #define TIF_NOTIFY_RESUME	13	/* callback before returning to user */
-#define TIF_FREEZE		14	/* Freezing for suspend */
 #define TIF_SYSCALL_TRACEPOINT	15	/* syscall tracepoint instrumentation */
-#define TIF_RUNLATCH		16	/* Is the runlatch enabled? */
 
 /* as above, but as bit values */
 #define _TIF_SYSCALL_TRACE	(1<<TIF_SYSCALL_TRACE)
@@ -127,7 +125,6 @@ static inline struct thread_info *current_thread_info(void)
 #define _TIF_RESTOREALL		(1<<TIF_RESTOREALL)
 #define _TIF_NOERROR		(1<<TIF_NOERROR)
 #define _TIF_NOTIFY_RESUME	(1<<TIF_NOTIFY_RESUME)
-#define _TIF_FREEZE		(1<<TIF_FREEZE)
 #define _TIF_SYSCALL_TRACEPOINT	(1<<TIF_SYSCALL_TRACEPOINT)
 #define _TIF_RUNLATCH		(1<<TIF_RUNLATCH)
 #define _TIF_SYSCALL_T_OR_A	(_TIF_SYSCALL_TRACE | _TIF_SYSCALL_AUDIT | \
@@ -143,11 +140,13 @@ static inline struct thread_info *current_thread_info(void)
 #define TLF_SLEEPING		1	/* suspend code enabled SLEEP mode */
 #define TLF_RESTORE_SIGMASK	2	/* Restore signal mask in do_signal */
 #define TLF_LAZY_MMU		3	/* tlb_batch is active */
+#define TLF_RUNLATCH		4	/* Is the runlatch enabled? */
 
 #define _TLF_NAPPING		(1 << TLF_NAPPING)
 #define _TLF_SLEEPING		(1 << TLF_SLEEPING)
 #define _TLF_RESTORE_SIGMASK	(1 << TLF_RESTORE_SIGMASK)
 #define _TLF_LAZY_MMU		(1 << TLF_LAZY_MMU)
+#define _TLF_RUNLATCH		(1 << TLF_RUNLATCH)
 
 #ifndef __ASSEMBLY__
 #define HAVE_SET_RESTORE_SIGMASK	1
@@ -156,6 +155,12 @@ static inline void set_restore_sigmask(void)
 	struct thread_info *ti = current_thread_info();
 	ti->local_flags |= _TLF_RESTORE_SIGMASK;
 	set_bit(TIF_SIGPENDING, &ti->flags);
+}
+
+static inline bool test_thread_local_flags(unsigned int flags)
+{
+	struct thread_info *ti = current_thread_info();
+	return (ti->local_flags & flags) != 0;
 }
 
 #ifdef CONFIG_PPC64

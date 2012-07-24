@@ -95,6 +95,117 @@ struct platform_device lpc32xx_i2c2_device = {
 	},
 };
 
+/* TSC (Touch Screen Controller) */
+
+static struct resource lpc32xx_tsc_resources[] = {
+	{
+		.start = LPC32XX_ADC_BASE,
+		.end = LPC32XX_ADC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_LPC32XX_TS_IRQ,
+		.end = IRQ_LPC32XX_TS_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device lpc32xx_tsc_device = {
+	.name =  "ts-lpc32xx",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(lpc32xx_tsc_resources),
+	.resource = lpc32xx_tsc_resources,
+};
+
+/* RTC */
+
+static struct resource lpc32xx_rtc_resources[] = {
+	{
+		.start = LPC32XX_RTC_BASE,
+		.end = LPC32XX_RTC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},{
+		.start = IRQ_LPC32XX_RTC,
+		.end = IRQ_LPC32XX_RTC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device lpc32xx_rtc_device = {
+	.name =  "rtc-lpc32xx",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(lpc32xx_rtc_resources),
+	.resource = lpc32xx_rtc_resources,
+};
+
+/*
+ * ADC support
+ */
+static struct resource adc_resources[] = {
+	{
+		.start = LPC32XX_ADC_BASE,
+		.end = LPC32XX_ADC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_LPC32XX_TS_IRQ,
+		.end = IRQ_LPC32XX_TS_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device lpc32xx_adc_device = {
+	.name =  "lpc32xx-adc",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(adc_resources),
+	.resource = adc_resources,
+};
+
+/*
+ * USB support
+ */
+/* The dmamask must be set for OHCI to work */
+static u64 ohci_dmamask = ~(u32) 0;
+static struct resource ohci_resources[] = {
+	{
+		.start = IO_ADDRESS(LPC32XX_USB_BASE),
+		.end = IO_ADDRESS(LPC32XX_USB_BASE + 0x100 - 1),
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_LPC32XX_USB_HOST,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+struct platform_device lpc32xx_ohci_device = {
+	.name = "usb-ohci",
+	.id = -1,
+	.dev = {
+		.dma_mask = &ohci_dmamask,
+		.coherent_dma_mask = 0xFFFFFFFF,
+	},
+	.num_resources = ARRAY_SIZE(ohci_resources),
+	.resource = ohci_resources,
+};
+
+/*
+ * Network Support
+ */
+static struct resource net_resources[] = {
+	[0] = DEFINE_RES_MEM(LPC32XX_ETHERNET_BASE, SZ_4K),
+	[1] = DEFINE_RES_MEM(LPC32XX_IRAM_BASE, SZ_128K),
+	[2] = DEFINE_RES_IRQ(IRQ_LPC32XX_ETHERNET),
+};
+
+static u64 lpc32xx_mac_dma_mask = 0xffffffffUL;
+struct platform_device lpc32xx_net_device = {
+	.name = "lpc-eth",
+	.id = 0,
+	.dev = {
+		.dma_mask = &lpc32xx_mac_dma_mask,
+		.coherent_dma_mask = 0xffffffffUL,
+	},
+	.num_resources = ARRAY_SIZE(net_resources),
+	.resource = net_resources,
+};
+
 /*
  * Returns the unique ID for the device
  */
@@ -122,7 +233,7 @@ int clk_is_sysclk_mainosc(void)
 /*
  * System reset via the watchdog timer
  */
-void lpc32xx_watchdog_reset(void)
+static void lpc32xx_watchdog_reset(void)
 {
 	/* Make sure WDT clocks are enabled */
 	__raw_writel(LPC32XX_CLKPWR_PWMCLK_WDOG_EN,
@@ -268,4 +379,22 @@ static struct map_desc lpc32xx_io_desc[] __initdata = {
 void __init lpc32xx_map_io(void)
 {
 	iotable_init(lpc32xx_io_desc, ARRAY_SIZE(lpc32xx_io_desc));
+}
+
+void lpc23xx_restart(char mode, const char *cmd)
+{
+	switch (mode) {
+	case 's':
+	case 'h':
+		lpc32xx_watchdog_reset();
+		break;
+
+	default:
+		/* Do nothing */
+		break;
+	}
+
+	/* Wait for watchdog to reset system */
+	while (1)
+		;
 }

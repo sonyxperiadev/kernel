@@ -173,7 +173,6 @@ static struct inode *ext2_alloc_inode(struct super_block *sb)
 static void ext2_i_callback(struct rcu_head *head)
 {
 	struct inode *inode = container_of(head, struct inode, i_rcu);
-	INIT_LIST_HEAD(&inode->i_dentry);
 	kmem_cache_free(ext2_inode_cachep, EXT2_I(inode));
 }
 
@@ -211,9 +210,9 @@ static void destroy_inodecache(void)
 	kmem_cache_destroy(ext2_inode_cachep);
 }
 
-static int ext2_show_options(struct seq_file *seq, struct vfsmount *vfs)
+static int ext2_show_options(struct seq_file *seq, struct dentry *root)
 {
-	struct super_block *sb = vfs->mnt_sb;
+	struct super_block *sb = root->d_sb;
 	struct ext2_sb_info *sbi = EXT2_SB(sb);
 	struct ext2_super_block *es = sbi->s_es;
 	unsigned long def_mount_opts;
@@ -327,10 +326,10 @@ static struct inode *ext2_nfs_get_inode(struct super_block *sb,
 	if (ino > le32_to_cpu(EXT2_SB(sb)->s_es->s_inodes_count))
 		return ERR_PTR(-ESTALE);
 
-	/* iget isn't really right if the inode is currently unallocated!!
-	 * ext2_read_inode currently does appropriate checks, but
-	 * it might be "neater" to call ext2_get_inode first and check
-	 * if the inode is valid.....
+	/*
+	 * ext2_iget isn't quite right if the inode is currently unallocated!
+	 * However ext2_iget currently does appropriate checks to handle stale
+	 * inodes so everything is OK.
 	 */
 	inode = ext2_iget(sb, ino);
 	if (IS_ERR(inode))
@@ -920,6 +919,7 @@ static int ext2_fill_super(struct super_block *sb, void *data, int silent)
 	}
 
 	sb->s_maxbytes = ext2_max_size(sb->s_blocksize_bits);
+	sb->s_max_links = EXT2_LINK_MAX;
 
 	if (le32_to_cpu(es->s_rev_level) == EXT2_GOOD_OLD_REV) {
 		sbi->s_inode_size = EXT2_GOOD_OLD_INODE_SIZE;
@@ -1088,9 +1088,8 @@ static int ext2_fill_super(struct super_block *sb, void *data, int silent)
 		goto failed_mount3;
 	}
 
-	sb->s_root = d_alloc_root(root);
+	sb->s_root = d_make_root(root);
 	if (!sb->s_root) {
-		iput(root);
 		ext2_msg(sb, KERN_ERR, "error: get root inode failed");
 		ret = -ENOMEM;
 		goto failed_mount3;
@@ -1521,5 +1520,8 @@ static void __exit exit_ext2_fs(void)
 	exit_ext2_xattr();
 }
 
+MODULE_AUTHOR("Remy Card and others");
+MODULE_DESCRIPTION("Second Extended Filesystem");
+MODULE_LICENSE("GPL");
 module_init(init_ext2_fs)
 module_exit(exit_ext2_fs)

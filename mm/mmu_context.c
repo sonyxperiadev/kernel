@@ -5,7 +5,7 @@
 
 #include <linux/mm.h>
 #include <linux/mmu_context.h>
-#include <linux/module.h>
+#include <linux/export.h>
 #include <linux/sched.h>
 
 #include <asm/mmu_context.h>
@@ -53,7 +53,7 @@ void unuse_mm(struct mm_struct *mm)
 	struct task_struct *tsk = current;
 
 	task_lock(tsk);
-	sync_mm_rss(tsk, mm);
+	sync_mm_rss(mm);
 	tsk->mm = NULL;
 	/* active_mm is still 'mm' */
 	enter_lazy_tlb(mm, tsk);

@@ -1,6 +1,4 @@
 /*
- * drivers/input/touchscreen/tps6507x_ts.c
- *
  * Touchscreen driver for the tps6507x chip.
  *
  * Copyright (c) 2009 RidgeRun (todd.fischer@ridgerun.com)
@@ -371,20 +369,9 @@ static struct platform_driver tps6507x_ts_driver = {
 	.probe = tps6507x_ts_probe,
 	.remove = __devexit_p(tps6507x_ts_remove),
 };
-
-static int __init tps6507x_ts_init(void)
-{
-	return platform_driver_register(&tps6507x_ts_driver);
-}
-module_init(tps6507x_ts_init);
-
-static void __exit tps6507x_ts_exit(void)
-{
-	platform_driver_unregister(&tps6507x_ts_driver);
-}
-module_exit(tps6507x_ts_exit);
+module_platform_driver(tps6507x_ts_driver);
 
 MODULE_AUTHOR("Todd Fischer <todd.fischer@ridgerun.com>");
 MODULE_DESCRIPTION("TPS6507x - TouchScreen driver");
 MODULE_LICENSE("GPL v2");
-MODULE_ALIAS("platform:tps6507x-tsc");
+MODULE_ALIAS("platform:tps6507x-ts");

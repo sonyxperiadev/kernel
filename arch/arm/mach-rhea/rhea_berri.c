@@ -30,7 +30,6 @@
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/kernel_stat.h>
@@ -39,7 +38,6 @@
 #include <mach/hardware.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
-#include <linux/gpio.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
 #include <linux/gpio.h>
@@ -63,6 +61,7 @@
 #include <linux/broadcom/bcm59055-power.h>
 #include <linux/clk.h>
 #include <linux/bootmem.h>
+#include <asm/hardware/gic.h>
 #include "common.h"
 #include <mach/sdio_platform.h>
 
@@ -962,7 +961,7 @@ static struct haptic_platform_data haptic_control_data = {
 	/* Haptic device name: can be device-specific name like ISA1000 */
 	.name = "pwm_vibra",
 	/* PWM interface name to request */
-	.pwm_name = "kona_pwmc:4",
+	.pwm_id = 1,
 	/* Invalid gpio for now, pass valid gpio number if connected */
 	.gpio = ARCH_NR_GPIOS,
 	.setup_pin = haptic_gpio_setup,
@@ -1160,10 +1159,9 @@ void __init board_add_sdio_devices(void)
 
 static struct platform_pwm_backlight_data bcm_backlight_data = {
 /* backlight */
-	.pwm_name = "kona_pwmc:4",
+	.pwm_id = 2,
 	.max_brightness = 32,	/* Android calibrates to 32 levels */
 	.dft_brightness = 32,
-	.polarity = 1,		/* Inverted polarity */
 	.pwm_period_ns = 5000000,
 };
 
@@ -1509,6 +1507,7 @@ static int rhea_camera_reset(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_SOC_CAMERA_OV5642
 static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
@@ -1539,6 +1538,7 @@ static struct platform_device rhea_camera = {
 		.platform_data = &iclink_ov5640,
 		},
 };
+#endif
 
 #ifdef CONFIG_WD_TAPPER
 static struct wd_tapper_platform_data wd_tapper_data = {
@@ -1606,7 +1606,9 @@ static struct platform_device *rhea_berri_plat_devices[] __initdata = {
 #ifdef CONFIG_BCM_BT_LPM
 	&board_bcmbt_lpm_device,
 #endif
+#ifdef CONFIG_SOC_CAMERA_OV5642
 	&rhea_camera,
+#endif
 
 #ifdef CONFIG_WD_TAPPER
 	&wd_tapper,
@@ -1874,6 +1876,7 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 
 void __init board_init(void)
 {
+	pr_err("%s .....\n", __func__);
 	board_add_common_devices();
 	rhea_berri_add_devices();
 #ifdef CONFIG_FB_BRCM_RHEA
@@ -1885,6 +1888,7 @@ void __init board_init(void)
 
 void __init board_map_io(void)
 {
+	pr_err("%s .....\n", __func__);
 	/*Map machine specific iodesc here */
 	rhea_map_io();
 }
@@ -1892,8 +1896,10 @@ void __init board_map_io(void)
 late_initcall(rhea_berri_add_lateInit_devices);
 
 MACHINE_START(RHEA_BERRI, "RheaBerri")
+	.atag_offset = 0x100,
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
+	.handle_irq = gic_handle_irq,
 	.timer = &kona_timer,
 	.init_machine = board_init,
 	.reserve = rhea_berri_reserve

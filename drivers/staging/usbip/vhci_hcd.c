@@ -92,14 +92,28 @@ static const char * const bit_desc[] = {
 	"R31",			/*31*/
 };
 
-static void dump_port_status(u32 status)
+static void dump_port_status_diff(u32 prev_status, u32 new_status)
 {
 	int i = 0;
+	u32 bit = 1;
 
-	pr_debug("status %08x:", status);
-	for (i = 0; i < 32; i++) {
-		if (status & (1 << i))
-			pr_debug(" %s", bit_desc[i]);
+	pr_debug("status prev -> new: %08x -> %08x\n", prev_status, new_status);
+	while (bit) {
+		u32 prev = prev_status & bit;
+		u32 new = new_status & bit;
+		char change;
+
+		if (!prev && new)
+			change = '+';
+		else if (prev && !new)
+			change = '-';
+		else
+			change = ' ';
+
+		if (prev || new)
+			pr_debug(" %c%s\n", change, bit_desc[i]);
+		bit <<= 1;
+		i++;
 	}
 	pr_debug("\n");
 }
@@ -273,9 +287,8 @@ static int vhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 
 	/* store old status and compare now and old later */
 	if (usbip_dbg_flag_vhci_rh) {
-		int i = 0;
-		for (i = 0; i < VHCI_NPORTS; i++)
-			prev_port_status[i] = dum->port_status[i];
+		memcpy(prev_port_status, dum->port_status,
+			sizeof(prev_port_status));
 	}
 
 	switch (typeReq) {
@@ -344,9 +357,9 @@ static int vhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 		 *                                   */
 		if (dum->resuming && time_after(jiffies, dum->re_timeout)) {
 			dum->port_status[rhport] |=
-					(1 << USB_PORT_FEAT_C_SUSPEND);
+				(1 << USB_PORT_FEAT_C_SUSPEND);
 			dum->port_status[rhport] &=
-					~(1 << USB_PORT_FEAT_SUSPEND);
+				~(1 << USB_PORT_FEAT_SUSPEND);
 			dum->resuming = 0;
 			dum->re_timeout = 0;
 			/* if (dum->driver && dum->driver->resume) {
@@ -373,29 +386,6 @@ static int vhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 				dum->port_status[rhport] |=
 					USB_PORT_STAT_ENABLE;
 			}
-#if 0
-			if (dum->driver) {
-				dum->port_status[rhport] |=
-					USB_PORT_STAT_ENABLE;
-				/* give it the best speed we agree on */
-				dum->gadget.speed = dum->driver->speed;
-				dum->gadget.ep0->maxpacket = 64;
-				switch (dum->gadget.speed) {
-				case USB_SPEED_HIGH:
-					dum->port_status[rhport] |=
-						USB_PORT_STAT_HIGH_SPEED;
-					break;
-				case USB_SPEED_LOW:
-					dum->gadget.ep0->maxpacket = 8;
-					dum->port_status[rhport] |=
-						USB_PORT_STAT_LOW_SPEED;
-					break;
-				default:
-					dum->gadget.speed = USB_SPEED_FULL;
-					break;
-				}
-			}
-#endif
 		}
 		((u16 *) buf)[0] = cpu_to_le16(dum->port_status[rhport]);
 		((u16 *) buf)[1] = cpu_to_le16(dum->port_status[rhport] >> 16);
@@ -412,15 +402,6 @@ static int vhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 		case USB_PORT_FEAT_SUSPEND:
 			usbip_dbg_vhci_rh(" SetPortFeature: "
 					  "USB_PORT_FEAT_SUSPEND\n");
-#if 0
-			dum->port_status[rhport] |=
-				(1 << USB_PORT_FEAT_SUSPEND);
-			if (dum->driver->suspend) {
-				spin_unlock(&dum->lock);
-				dum->driver->suspend(&dum->gadget);
-				spin_lock(&dum->lock);
-			}
-#endif
 			break;
 		case USB_PORT_FEAT_RESET:
 			usbip_dbg_vhci_rh(" SetPortFeature: "
@@ -431,13 +412,6 @@ static int vhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 					~(USB_PORT_STAT_ENABLE |
 					  USB_PORT_STAT_LOW_SPEED |
 					  USB_PORT_STAT_HIGH_SPEED);
-#if 0
-				if (dum->driver) {
-					dev_dbg(hardware, "disconnect\n");
-					stop_activity(dum, dum->driver);
-				}
-#endif
-
 				/* FIXME test that code path! */
 			}
 			/* 50msec reset signaling */
@@ -464,8 +438,11 @@ static int vhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 
 	if (usbip_dbg_flag_vhci_rh) {
 		pr_debug("port %d\n", rhport);
-		dump_port_status(prev_port_status[rhport]);
-		dump_port_status(dum->port_status[rhport]);
+		/* Only dump valid port status */
+		if (rhport >= 0) {
+			dump_port_status_diff(prev_port_status[rhport],
+					      dum->port_status[rhport]);
+		}
 	}
 	usbip_dbg_vhci_rh(" bye\n");
 
@@ -639,9 +616,7 @@ no_need_xmit:
 	usb_hcd_unlink_urb_from_ep(hcd, urb);
 no_need_unlink:
 	spin_unlock_irqrestore(&the_controller->lock, flags);
-
 	usb_hcd_giveback_urb(vhci_to_hcd(the_controller), urb, urb->status);
-
 	return ret;
 }
 
@@ -920,14 +895,12 @@ static void vhci_device_init(struct vhci_device *vdev)
 
 	vdev->ud.side   = USBIP_VHCI;
 	vdev->ud.status = VDEV_ST_NULL;
-	/* vdev->ud.lock   = SPIN_LOCK_UNLOCKED; */
 	spin_lock_init(&vdev->ud.lock);
 
 	INIT_LIST_HEAD(&vdev->priv_rx);
 	INIT_LIST_HEAD(&vdev->priv_tx);
 	INIT_LIST_HEAD(&vdev->unlink_tx);
 	INIT_LIST_HEAD(&vdev->unlink_rx);
-	/* vdev->priv_lock = SPIN_LOCK_UNLOCKED; */
 	spin_lock_init(&vdev->priv_lock);
 
 	init_waitqueue_head(&vdev->waitq_tx);
@@ -1033,9 +1006,8 @@ static int vhci_bus_resume(struct usb_hcd *hcd)
 		hcd->state = HC_STATE_RUNNING;
 	}
 	spin_unlock_irq(&vhci->lock);
-	return rc;
 
-	return 0;
+	return rc;
 }
 
 #else
@@ -1212,7 +1184,7 @@ static struct platform_device the_pdev = {
 	},
 };
 
-static int __init vhci_init(void)
+static int __init vhci_hcd_init(void)
 {
 	int ret;
 
@@ -1236,14 +1208,14 @@ err_driver_register:
 	return ret;
 }
 
-static void __exit vhci_cleanup(void)
+static void __exit vhci_hcd_exit(void)
 {
 	platform_device_unregister(&the_pdev);
 	platform_driver_unregister(&vhci_driver);
 }
 
-module_init(vhci_init);
-module_exit(vhci_cleanup);
+module_init(vhci_hcd_init);
+module_exit(vhci_hcd_exit);
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);

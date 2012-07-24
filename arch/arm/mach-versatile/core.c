@@ -22,8 +22,10 @@
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
 #include <linux/interrupt.h>
+#include <linux/irqdomain.h>
+#include <linux/of_address.h>
+#include <linux/of_platform.h>
 #include <linux/amba/bus.h>
 #include <linux/amba/clcd.h>
 #include <linux/amba/pl061.h>
@@ -34,7 +36,6 @@
 #include <linux/clkdev.h>
 #include <linux/mtd/physmap.h>
 
-#include <asm/system.h>
 #include <asm/irq.h>
 #include <asm/leds.h>
 #include <asm/hardware/arm_timer.h>
@@ -83,13 +84,29 @@ static struct fpga_irq_data sic_irq = {
 #define PIC_MASK	0
 #endif
 
+/* Lookup table for finding a DT node that represents the vic instance */
+static const struct of_device_id vic_of_match[] __initconst = {
+	{ .compatible = "arm,versatile-vic", },
+	{}
+};
+
+static const struct of_device_id sic_of_match[] __initconst = {
+	{ .compatible = "arm,versatile-sic", },
+	{}
+};
+
 void __init versatile_init_irq(void)
 {
-	vic_init(VA_VIC_BASE, IRQ_VIC_START, ~0, 0);
+	struct device_node *np;
+
+	np = of_find_matching_node_by_address(NULL, vic_of_match,
+					      VERSATILE_VIC_BASE);
+	__vic_init(VA_VIC_BASE, IRQ_VIC_START, ~0, 0, np);
 
 	writel(~0, VA_SIC_BASE + SIC_IRQ_ENABLE_CLEAR);
 
 	fpga_irq_init(IRQ_VICSOURCE31, ~PIC_MASK, &sic_irq);
+	irq_domain_generate_simple(sic_of_match, VERSATILE_SIC_BASE, IRQ_SIC_START);
 
 	/*
 	 * Interrupts on secondary controller from 0 to 8 are routed to
@@ -125,11 +142,6 @@ static struct map_desc versatile_io_desc[] __initdata = {
 	},
 #ifdef CONFIG_MACH_VERSATILE_AB
  	{
-		.virtual	=  IO_ADDRESS(VERSATILE_GPIO0_BASE),
-		.pfn		= __phys_to_pfn(VERSATILE_GPIO0_BASE),
-		.length		= SZ_4K,
-		.type		= MT_DEVICE
-	}, {
 		.virtual	=  IO_ADDRESS(VERSATILE_IB2_BASE),
 		.pfn		= __phys_to_pfn(VERSATILE_IB2_BASE),
 		.length		= SZ_64M,
@@ -572,58 +584,58 @@ static struct pl022_ssp_controller ssp0_plat_data = {
 	.num_chipselect = 1,
 };
 
-#define AACI_IRQ	{ IRQ_AACI, NO_IRQ }
+#define AACI_IRQ	{ IRQ_AACI }
 #define MMCI0_IRQ	{ IRQ_MMCI0A,IRQ_SIC_MMCI0B }
-#define KMI0_IRQ	{ IRQ_SIC_KMI0, NO_IRQ }
-#define KMI1_IRQ	{ IRQ_SIC_KMI1, NO_IRQ }
+#define KMI0_IRQ	{ IRQ_SIC_KMI0 }
+#define KMI1_IRQ	{ IRQ_SIC_KMI1 }
 
 /*
  * These devices are connected directly to the multi-layer AHB switch
  */
-#define SMC_IRQ		{ NO_IRQ, NO_IRQ }
-#define MPMC_IRQ	{ NO_IRQ, NO_IRQ }
-#define CLCD_IRQ	{ IRQ_CLCDINT, NO_IRQ }
-#define DMAC_IRQ	{ IRQ_DMAINT, NO_IRQ }
+#define SMC_IRQ		{ }
+#define MPMC_IRQ	{ }
+#define CLCD_IRQ	{ IRQ_CLCDINT }
+#define DMAC_IRQ	{ IRQ_DMAINT }
 
 /*
  * These devices are connected via the core APB bridge
  */
-#define SCTL_IRQ	{ NO_IRQ, NO_IRQ }
-#define WATCHDOG_IRQ	{ IRQ_WDOGINT, NO_IRQ }
-#define GPIO0_IRQ	{ IRQ_GPIOINT0, NO_IRQ }
-#define GPIO1_IRQ	{ IRQ_GPIOINT1, NO_IRQ }
-#define RTC_IRQ		{ IRQ_RTCINT, NO_IRQ }
+#define SCTL_IRQ	{ }
+#define WATCHDOG_IRQ	{ IRQ_WDOGINT }
+#define GPIO0_IRQ	{ IRQ_GPIOINT0 }
+#define GPIO1_IRQ	{ IRQ_GPIOINT1 }
+#define RTC_IRQ		{ IRQ_RTCINT }
 
 /*
  * These devices are connected via the DMA APB bridge
  */
-#define SCI_IRQ		{ IRQ_SCIINT, NO_IRQ }
-#define UART0_IRQ	{ IRQ_UARTINT0, NO_IRQ }
-#define UART1_IRQ	{ IRQ_UARTINT1, NO_IRQ }
-#define UART2_IRQ	{ IRQ_UARTINT2, NO_IRQ }
-#define SSP_IRQ		{ IRQ_SSPINT, NO_IRQ }
+#define SCI_IRQ		{ IRQ_SCIINT }
+#define UART0_IRQ	{ IRQ_UARTINT0 }
+#define UART1_IRQ	{ IRQ_UARTINT1 }
+#define UART2_IRQ	{ IRQ_UARTINT2 }
+#define SSP_IRQ		{ IRQ_SSPINT }
 
 /* FPGA Primecells */
-AMBA_DEVICE(aaci,  "fpga:04", AACI,     NULL);
-AMBA_DEVICE(mmc0,  "fpga:05", MMCI0,    &mmc0_plat_data);
-AMBA_DEVICE(kmi0,  "fpga:06", KMI0,     NULL);
-AMBA_DEVICE(kmi1,  "fpga:07", KMI1,     NULL);
+APB_DEVICE(aaci,  "fpga:04", AACI,     NULL);
+APB_DEVICE(mmc0,  "fpga:05", MMCI0,    &mmc0_plat_data);
+APB_DEVICE(kmi0,  "fpga:06", KMI0,     NULL);
+APB_DEVICE(kmi1,  "fpga:07", KMI1,     NULL);
 
 /* DevChip Primecells */
-AMBA_DEVICE(smc,   "dev:00",  SMC,      NULL);
-AMBA_DEVICE(mpmc,  "dev:10",  MPMC,     NULL);
-AMBA_DEVICE(clcd,  "dev:20",  CLCD,     &clcd_plat_data);
-AMBA_DEVICE(dmac,  "dev:30",  DMAC,     NULL);
-AMBA_DEVICE(sctl,  "dev:e0",  SCTL,     NULL);
-AMBA_DEVICE(wdog,  "dev:e1",  WATCHDOG, NULL);
-AMBA_DEVICE(gpio0, "dev:e4",  GPIO0,    &gpio0_plat_data);
-AMBA_DEVICE(gpio1, "dev:e5",  GPIO1,    &gpio1_plat_data);
-AMBA_DEVICE(rtc,   "dev:e8",  RTC,      NULL);
-AMBA_DEVICE(sci0,  "dev:f0",  SCI,      NULL);
-AMBA_DEVICE(uart0, "dev:f1",  UART0,    NULL);
-AMBA_DEVICE(uart1, "dev:f2",  UART1,    NULL);
-AMBA_DEVICE(uart2, "dev:f3",  UART2,    NULL);
-AMBA_DEVICE(ssp0,  "dev:f4",  SSP,      &ssp0_plat_data);
+AHB_DEVICE(smc,   "dev:00",  SMC,      NULL);
+AHB_DEVICE(mpmc,  "dev:10",  MPMC,     NULL);
+AHB_DEVICE(clcd,  "dev:20",  CLCD,     &clcd_plat_data);
+AHB_DEVICE(dmac,  "dev:30",  DMAC,     NULL);
+APB_DEVICE(sctl,  "dev:e0",  SCTL,     NULL);
+APB_DEVICE(wdog,  "dev:e1",  WATCHDOG, NULL);
+APB_DEVICE(gpio0, "dev:e4",  GPIO0,    &gpio0_plat_data);
+APB_DEVICE(gpio1, "dev:e5",  GPIO1,    &gpio1_plat_data);
+APB_DEVICE(rtc,   "dev:e8",  RTC,      NULL);
+APB_DEVICE(sci0,  "dev:f0",  SCI,      NULL);
+APB_DEVICE(uart0, "dev:f1",  UART0,    NULL);
+APB_DEVICE(uart1, "dev:f2",  UART1,    NULL);
+APB_DEVICE(uart2, "dev:f3",  UART2,    NULL);
+APB_DEVICE(ssp0,  "dev:f4",  SSP,      &ssp0_plat_data);
 
 static struct amba_device *amba_devs[] __initdata = {
 	&dmac_device,
@@ -645,6 +657,52 @@ static struct amba_device *amba_devs[] __initdata = {
 	&kmi0_device,
 	&kmi1_device,
 };
+
+#ifdef CONFIG_OF
+/*
+ * Lookup table for attaching a specific name and platform_data pointer to
+ * devices as they get created by of_platform_populate().  Ideally this table
+ * would not exist, but the current clock implementation depends on some devices
+ * having a specific name.
+ */
+struct of_dev_auxdata versatile_auxdata_lookup[] __initdata = {
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_MMCI0_BASE, "fpga:05", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_KMI0_BASE, "fpga:06", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_KMI1_BASE, "fpga:07", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_UART3_BASE, "fpga:09", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_MMCI1_BASE, "fpga:0b", NULL),
+
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_CLCD_BASE, "dev:20", &clcd_plat_data),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_UART0_BASE, "dev:f1", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_UART1_BASE, "dev:f2", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_UART2_BASE, "dev:f3", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_SSP_BASE, "dev:f4", NULL),
+
+#if 0
+	/*
+	 * These entries are unnecessary because no clocks referencing
+	 * them.  I've left them in for now as place holders in case
+	 * any of them need to be added back, but they should be
+	 * removed before actually committing this patch.  --gcl
+	 */
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_AACI_BASE, "fpga:04", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_SCI1_BASE, "fpga:0a", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_SMC_BASE, "dev:00", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_MPMC_BASE, "dev:10", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_DMAC_BASE, "dev:30", NULL),
+
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_SCTL_BASE, "dev:e0", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_WATCHDOG_BASE, "dev:e1", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_GPIO0_BASE, "dev:e4", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_GPIO1_BASE, "dev:e5", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_GPIO2_BASE, "dev:e6", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_GPIO3_BASE, "dev:e7", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_RTC_BASE, "dev:e8", NULL),
+	OF_DEV_AUXDATA("arm,primecell", VERSATILE_SCI_BASE, "dev:f0", NULL),
+#endif
+	{}
+};
+#endif
 
 #ifdef CONFIG_LEDS
 #define VA_LEDS_BASE (__io_address(VERSATILE_SYS_BASE) + VERSATILE_SYS_LED_OFFSET)
@@ -682,6 +740,19 @@ static void versatile_leds_event(led_event_t ledevt)
 	local_irq_restore(flags);
 }
 #endif	/* CONFIG_LEDS */
+
+void versatile_restart(char mode, const char *cmd)
+{
+	void __iomem *sys = __io_address(VERSATILE_SYS_BASE);
+	u32 val;
+
+	val = __raw_readl(sys + VERSATILE_SYS_RESETCTL_OFFSET);
+	val |= 0x105;
+
+	__raw_writel(0xa05f, sys + VERSATILE_SYS_LOCK_OFFSET);
+	__raw_writel(val, sys + VERSATILE_SYS_RESETCTL_OFFSET);
+	__raw_writel(0, sys + VERSATILE_SYS_LOCK_OFFSET);
+}
 
 /* Early initializations */
 void __init versatile_init_early(void)

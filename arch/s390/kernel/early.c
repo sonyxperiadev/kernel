@@ -29,6 +29,7 @@
 #include <asm/sysinfo.h>
 #include <asm/cpcmd.h>
 #include <asm/sclp.h>
+#include <asm/facility.h>
 #include "entry.h"
 
 /*
@@ -252,7 +253,7 @@ static noinline __init void setup_lowcore_early(void)
 {
 	psw_t psw;
 
-	psw.mask = PSW_BASE_BITS | PSW_DEFAULT_KEY;
+	psw.mask = PSW_MASK_BASE | PSW_DEFAULT_KEY | PSW_MASK_EA | PSW_MASK_BA;
 	psw.addr = PSW_ADDR_AMODE | (unsigned long) s390_base_ext_handler;
 	S390_lowcore.external_new_psw = psw;
 	psw.addr = PSW_ADDR_AMODE | (unsigned long) s390_base_pgm_handler;
@@ -262,25 +263,8 @@ static noinline __init void setup_lowcore_early(void)
 
 static noinline __init void setup_facility_list(void)
 {
-	unsigned long nr;
-
-	S390_lowcore.stfl_fac_list = 0;
-	asm volatile(
-		"	.insn	s,0xb2b10000,0(0)\n" /* stfl */
-		"0:\n"
-		EX_TABLE(0b,0b) : "=m" (S390_lowcore.stfl_fac_list));
-	memcpy(&S390_lowcore.stfle_fac_list, &S390_lowcore.stfl_fac_list, 4);
-	nr = 4;				/* # bytes stored by stfl */
-	if (test_facility(7)) {
-		/* More facility bits available with stfle */
-		register unsigned long reg0 asm("0") = MAX_FACILITY_BIT/64 - 1;
-		asm volatile(".insn s,0xb2b00000,%0" /* stfle */
-			     : "=m" (S390_lowcore.stfle_fac_list), "+d" (reg0)
-			     : : "cc");
-		nr = (reg0 + 1) * 8;	/* # bytes stored by stfle */
-	}
-	memset((char *) S390_lowcore.stfle_fac_list + nr, 0,
-	       MAX_FACILITY_BIT/8 - nr);
+	stfle(S390_lowcore.stfle_fac_list,
+	      ARRAY_SIZE(S390_lowcore.stfle_fac_list));
 }
 
 static noinline __init void setup_hpage(void)
@@ -390,23 +374,27 @@ static __init void detect_machine_facilities(void)
 		S390_lowcore.machine_flags |= MACHINE_FLAG_MVCOS;
 	if (test_facility(40))
 		S390_lowcore.machine_flags |= MACHINE_FLAG_SPP;
+	if (test_facility(25))
+		S390_lowcore.machine_flags |= MACHINE_FLAG_STCKF;
 #endif
 }
 
 static __init void rescue_initrd(void)
 {
 #ifdef CONFIG_BLK_DEV_INITRD
+	unsigned long min_initrd_addr = (unsigned long) _end + (4UL << 20);
 	/*
-	 * Move the initrd right behind the bss section in case it starts
-	 * within the bss section. So we don't overwrite it when the bss
-	 * section gets cleared.
+	 * Just like in case of IPL from VM reader we make sure there is a
+	 * gap of 4MB between end of kernel and start of initrd.
+	 * That way we can also be sure that saving an NSS will succeed,
+	 * which however only requires different segments.
 	 */
 	if (!INITRD_START || !INITRD_SIZE)
 		return;
-	if (INITRD_START >= (unsigned long) __bss_stop)
+	if (INITRD_START >= min_initrd_addr)
 		return;
-	memmove(__bss_stop, (void *) INITRD_START, INITRD_SIZE);
-	INITRD_START = (unsigned long) __bss_stop;
+	memmove((void *) min_initrd_addr, (void *) INITRD_START, INITRD_SIZE);
+	INITRD_START = min_initrd_addr;
 #endif
 }
 
@@ -430,18 +418,22 @@ static void __init append_to_cmdline(size_t (*ipl_data)(char *, size_t))
 	}
 }
 
-static void __init setup_boot_command_line(void)
+static inline int has_ebcdic_char(const char *str)
 {
 	int i;
 
-	/* convert arch command line to ascii */
-	for (i = 0; i < ARCH_COMMAND_LINE_SIZE; i++)
-		if (COMMAND_LINE[i] & 0x80)
-			break;
-	if (i < ARCH_COMMAND_LINE_SIZE)
-		EBCASC(COMMAND_LINE, ARCH_COMMAND_LINE_SIZE);
-	COMMAND_LINE[ARCH_COMMAND_LINE_SIZE-1] = 0;
+	for (i = 0; str[i]; i++)
+		if (str[i] & 0x80)
+			return 1;
+	return 0;
+}
 
+static void __init setup_boot_command_line(void)
+{
+	COMMAND_LINE[ARCH_COMMAND_LINE_SIZE - 1] = 0;
+	/* convert arch command line to ascii if necessary */
+	if (has_ebcdic_char(COMMAND_LINE))
+		EBCASC(COMMAND_LINE, ARCH_COMMAND_LINE_SIZE);
 	/* copy arch command line */
 	strlcpy(boot_command_line, strstrip(COMMAND_LINE),
 		ARCH_COMMAND_LINE_SIZE);

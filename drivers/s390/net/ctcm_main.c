@@ -24,7 +24,6 @@
 #define KMSG_COMPONENT "ctcm"
 #define pr_fmt(fmt) KMSG_COMPONENT ": " fmt
 
-#include <linux/kernel_stat.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -563,6 +562,9 @@ static int ctcm_transmit_skb(struct channel *ch, struct sk_buff *skb)
 		skb_queue_tail(&ch->io_queue, skb);
 		ccw_idx = 3;
 	}
+	if (do_debug_ccw)
+		ctcmpc_dumpit((char *)&ch->ccw[ccw_idx],
+					sizeof(struct ccw1) * 3);
 	ch->retry = 0;
 	fsm_newstate(ch->fsm, CTC_STATE_TX);
 	fsm_addtimer(&ch->timer, CTCM_TIME_5_SEC, CTC_EVENT_TIMER, ch);
@@ -1203,7 +1205,6 @@ static void ctcm_irq_handler(struct ccw_device *cdev,
 	int cstat;
 	int dstat;
 
-	kstat_cpu(smp_processor_id()).irqs[IOINT_CTC]++;
 	CTCM_DBF_TEXT_(TRACE, CTC_DBF_DEBUG,
 		"Enter %s(%s)", CTCM_FUNTAIL, dev_name(&cdev->dev));
 
@@ -1769,6 +1770,7 @@ static struct ccw_driver ctcm_ccw_driver = {
 	.ids	= ctcm_ids,
 	.probe	= ccwgroup_probe_ccwdev,
 	.remove	= ccwgroup_remove_ccwdev,
+	.int_class = IOINT_CTC,
 };
 
 static struct ccwgroup_driver ctcm_group_driver = {

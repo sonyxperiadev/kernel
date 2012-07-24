@@ -74,9 +74,10 @@ static cycle_t kvm_clock_read(void)
 	struct pvclock_vcpu_time_info *src;
 	cycle_t ret;
 
-	src = &get_cpu_var(hv_clock);
+	preempt_disable_notrace();
+	src = &__get_cpu_var(hv_clock);
 	ret = pvclock_clocksource_read(src);
-	put_cpu_var(hv_clock);
+	preempt_enable_notrace();
 	return ret;
 }
 
@@ -135,6 +136,15 @@ int kvm_register_clock(char *txt)
 	return ret;
 }
 
+static void kvm_save_sched_clock_state(void)
+{
+}
+
+static void kvm_restore_sched_clock_state(void)
+{
+	kvm_register_clock("primary cpu clock, resume");
+}
+
 #ifdef CONFIG_X86_LOCAL_APIC
 static void __cpuinit kvm_setup_secondary_clock(void)
 {
@@ -143,8 +153,6 @@ static void __cpuinit kvm_setup_secondary_clock(void)
 	 * we shouldn't fail.
 	 */
 	WARN_ON(kvm_register_clock("secondary cpu clock"));
-	/* ok, done with our trickery, call native */
-	setup_secondary_APIC_clock();
 }
 #endif
 
@@ -160,6 +168,7 @@ static void __cpuinit kvm_setup_secondary_clock(void)
 static void kvm_crash_shutdown(struct pt_regs *regs)
 {
 	native_write_msr(msr_kvm_system_time, 0, 0);
+	kvm_disable_steal_time();
 	native_machine_crash_shutdown(regs);
 }
 #endif
@@ -167,6 +176,7 @@ static void kvm_crash_shutdown(struct pt_regs *regs)
 static void kvm_shutdown(void)
 {
 	native_write_msr(msr_kvm_system_time, 0, 0);
+	kvm_disable_steal_time();
 	native_machine_shutdown();
 }
 
@@ -191,9 +201,11 @@ void __init kvmclock_init(void)
 	x86_platform.get_wallclock = kvm_get_wallclock;
 	x86_platform.set_wallclock = kvm_set_wallclock;
 #ifdef CONFIG_X86_LOCAL_APIC
-	x86_cpuinit.setup_percpu_clockev =
+	x86_cpuinit.early_percpu_clock_init =
 		kvm_setup_secondary_clock;
 #endif
+	x86_platform.save_sched_clock_state = kvm_save_sched_clock_state;
+	x86_platform.restore_sched_clock_state = kvm_restore_sched_clock_state;
 	machine_ops.shutdown  = kvm_shutdown;
 #ifdef CONFIG_KEXEC
 	machine_ops.crash_shutdown  = kvm_crash_shutdown;

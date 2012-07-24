@@ -50,6 +50,13 @@ specify the GFP_ flags (see kmalloc) for the allocation (the
 implementation may choose to ignore flags that affect the location of
 the returned memory, like GFP_DMA).
 
+void *
+dma_zalloc_coherent(struct device *dev, size_t size,
+			     dma_addr_t *dma_handle, gfp_t flag)
+
+Wraps dma_alloc_coherent() and also zeroes the returned memory if the
+allocation attempt succeeded.
+
 void
 dma_free_coherent(struct device *dev, size_t size, void *cpu_addr,
 			   dma_addr_t dma_handle)
@@ -144,16 +151,6 @@ Returns: 0 if successful and a negative error if not.
 
 int
 dma_set_coherent_mask(struct device *dev, u64 mask)
-
-Checks to see if the mask is possible and updates the device
-parameters if it is.
-
-Returns: 0 if successful and a negative error if not.
-
-int
-dma_set_coherent_mask(struct device *dev, u64 mask)
-int
-pci_set_consistent_dma_mask(struct pci_device *dev, u64 mask)
 
 Checks to see if the mask is possible and updates the device
 parameters if it is.

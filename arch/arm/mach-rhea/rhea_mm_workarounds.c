@@ -25,13 +25,13 @@
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/device.h>
-#include <linux/sysdev.h>
 #include <linux/interrupt.h>
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_csr.h>
+#include <mach/memory.h>
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <plat/clock.h>

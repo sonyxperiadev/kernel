@@ -10,7 +10,7 @@
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/security.h>
-#include <linux/module.h>
+#include <linux/export.h>
 #include <linux/uaccess.h>
 #include <linux/writeback.h>
 #include <linux/buffer_head.h>
@@ -42,7 +42,7 @@ static long vfs_ioctl(struct file *filp, unsigned int cmd,
 
 	error = filp->f_op->unlocked_ioctl(filp, cmd, arg);
 	if (error == -ENOIOCTLCMD)
-		error = -EINVAL;
+		error = -ENOTTY;
  out:
 	return error;
 }

@@ -14,12 +14,12 @@
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
-#include <linux/gpio.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/max8649.h>
 #include <linux/mfd/max8925.h>
 #include <linux/interrupt.h>
 
+#include <mach/irqs.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <mach/addr-map.h>
@@ -28,7 +28,7 @@
 
 #include "common.h"
 
-#define JASPER_NR_IRQS		(IRQ_BOARD_START + 48)
+#define JASPER_NR_IRQS		(MMP_NR_IRQS + 48)
 
 static unsigned long jasper_pin_config[] __initdata = {
 	/* UART1 */
@@ -136,7 +136,7 @@ static struct max8925_power_pdata jasper_power_data = {
 static struct max8925_platform_data jasper_max8925_info = {
 	.backlight		= &jasper_backlight_data,
 	.power			= &jasper_power_data,
-	.irq_base		= IRQ_BOARD_START,
+	.irq_base		= MMP_NR_IRQS,
 };
 
 static struct i2c_board_info jasper_twsi1_info[] = {
@@ -154,7 +154,7 @@ static struct i2c_board_info jasper_twsi1_info[] = {
 };
 
 static struct sdhci_pxa_platdata mmp2_sdh_platdata_mmc0 = {
-	.max_speed	= 25000000,
+	.clk_delay_cycles = 0x1f,
 };
 
 static void __init jasper_init(void)
@@ -176,4 +176,5 @@ MACHINE_START(MARVELL_JASPER, "Jasper Development Platform")
 	.init_irq       = mmp2_init_irq,
 	.timer          = &mmp2_timer,
 	.init_machine   = jasper_init,
+	.restart	= mmp_restart,
 MACHINE_END

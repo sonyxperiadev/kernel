@@ -869,7 +869,7 @@ static int acpi_bus_get_power_flags(struct acpi_device *device)
 	/*
 	 * Enumerate supported power management states
 	 */
-	for (i = ACPI_STATE_D0; i <= ACPI_STATE_D3; i++) {
+	for (i = ACPI_STATE_D0; i <= ACPI_STATE_D3_HOT; i++) {
 		struct acpi_device_power_state *ps = &device->power.states[i];
 		char object_name[5] = { '_', 'P', 'R', '0' + i, '\0' };
 
@@ -880,7 +880,6 @@ static int acpi_bus_get_power_flags(struct acpi_device *device)
 			int j;
 
 			device->power.flags.power_resources = 1;
-			ps->flags.valid = 1;
 			for (j = 0; j < ps->resources.count; j++)
 				acpi_bus_add_power_resource(ps->resources.handles[j]);
 		}
@@ -888,13 +887,15 @@ static int acpi_bus_get_power_flags(struct acpi_device *device)
 		/* Evaluate "_PSx" to see if we can do explicit sets */
 		object_name[2] = 'S';
 		status = acpi_get_handle(device->handle, object_name, &handle);
-		if (ACPI_SUCCESS(status)) {
+		if (ACPI_SUCCESS(status))
 			ps->flags.explicit_set = 1;
-			ps->flags.valid = 1;
-		}
 
-		/* State is valid if we have some power control */
-		if (ps->resources.count || ps->flags.explicit_set)
+		/*
+		 * State is valid if there are means to put the device into it.
+		 * D3hot is only valid if _PR3 present.
+		 */
+		if (ps->resources.count ||
+		    (ps->flags.explicit_set && i < ACPI_STATE_D3_HOT))
 			ps->flags.valid = 1;
 
 		ps->power = -1;	/* Unknown - driver assigned */
@@ -1062,13 +1063,12 @@ static void acpi_add_id(struct acpi_device *device, const char *dev_id)
 	if (!id)
 		return;
 
-	id->id = kmalloc(strlen(dev_id) + 1, GFP_KERNEL);
+	id->id = kstrdup(dev_id, GFP_KERNEL);
 	if (!id->id) {
 		kfree(id);
 		return;
 	}
 
-	strcpy(id->id, dev_id);
 	list_add_tail(&id->list, &device->pnp.ids);
 }
 

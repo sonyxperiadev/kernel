@@ -25,8 +25,8 @@
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/io.h>
-#include <linux/sysdev.h>
 #include <linux/device.h>
+#include <linux/module.h>
 
 #include <asm/mach/irq.h>
 #include <mach/irqs.h>

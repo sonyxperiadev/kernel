@@ -28,7 +28,6 @@
 #include <linux/bcd.h>
 
 #include <asm/bootinfo.h>
-#include <asm/system.h>
 #include <asm/pgtable.h>
 #include <asm/setup.h>
 #include <asm/irq.h>
@@ -86,7 +85,7 @@ static void bvme6000_get_model(char *model)
  */
 static void __init bvme6000_init_IRQ(void)
 {
-	m68k_setup_user_interrupt(VEC_USER, 192, NULL);
+	m68k_setup_user_interrupt(VEC_USER, 192);
 }
 
 void __init config_bvme6000(void)

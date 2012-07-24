@@ -152,7 +152,7 @@ static inline struct lp5523_chip *led_to_lp5523(struct lp5523_led *led)
 
 static int lp5523_set_mode(struct lp5523_engine *engine, u8 mode);
 static int lp5523_set_engine_mode(struct lp5523_engine *engine, u8 mode);
-static int lp5523_load_program(struct lp5523_engine *engine, u8 *pattern);
+static int lp5523_load_program(struct lp5523_engine *engine, const u8 *pattern);
 
 static void lp5523_led_brightness_work(struct work_struct *work);
 
@@ -196,7 +196,7 @@ static int lp5523_configure(struct i2c_client *client)
 	u8 status;
 
 	/* one pattern per engine setting led mux start and stop addresses */
-	u8 pattern[][LP5523_PROGRAM_LENGTH] =  {
+	static const u8 pattern[][LP5523_PROGRAM_LENGTH] =  {
 		{ 0x9c, 0x30, 0x9c, 0xb0, 0x9d, 0x80, 0xd8, 0x00, 0},
 		{ 0x9c, 0x40, 0x9c, 0xc0, 0x9d, 0x80, 0xd8, 0x00, 0},
 		{ 0x9c, 0x50, 0x9c, 0xd0, 0x9d, 0x80, 0xd8, 0x00, 0},
@@ -301,7 +301,7 @@ static int lp5523_load_mux(struct lp5523_engine *engine, u16 mux)
 	return ret;
 }
 
-static int lp5523_load_program(struct lp5523_engine *engine, u8 *pattern)
+static int lp5523_load_program(struct lp5523_engine *engine, const u8 *pattern)
 {
 	struct lp5523_chip *chip = engine_to_lp5523(engine);
 	struct i2c_client *client = chip->client;
@@ -870,8 +870,6 @@ static int __devinit lp5523_init_led(struct lp5523_led *led, struct device *dev,
 	return 0;
 }
 
-static struct i2c_driver lp5523_driver;
-
 static int __devinit lp5523_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
@@ -1021,25 +1019,7 @@ static struct i2c_driver lp5523_driver = {
 	.id_table	= lp5523_id,
 };
 
-static int __init lp5523_init(void)
-{
-	int ret;
-
-	ret = i2c_add_driver(&lp5523_driver);
-
-	if (ret < 0)
-		printk(KERN_ALERT "Adding lp5523 driver failed\n");
-
-	return ret;
-}
-
-static void __exit lp5523_exit(void)
-{
-	i2c_del_driver(&lp5523_driver);
-}
-
-module_init(lp5523_init);
-module_exit(lp5523_exit);
+module_i2c_driver(lp5523_driver);
 
 MODULE_AUTHOR("Mathias Nyman <mathias.nyman@nokia.com>");
 MODULE_DESCRIPTION("LP5523 LED engine");

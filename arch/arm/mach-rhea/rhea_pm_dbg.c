@@ -20,6 +20,7 @@
 #include <mach/pm.h>
 #include <mach/pwr_mgr.h>
 #include <mach/pi_mgr.h>
+#include <mach/memory.h>
 #ifdef CONFIG_KONA_PROFILER
 #include <plat/profiler.h>
 #endif

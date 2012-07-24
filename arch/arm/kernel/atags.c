@@ -26,9 +26,8 @@ read_buffer(char* page, char** start, off_t off, int count,
 
 	return count;
 }
-/*This size need to be increased if size of the device Tree is furher increased 
-*/
-#define BOOT_PARAMS_SIZE 	3072
+
+#define BOOT_PARAMS_SIZE 1536
 static char __initdata atags_copy[BOOT_PARAMS_SIZE];
 
 void __init save_atags(const struct tag *tags)
@@ -52,9 +51,8 @@ static int __init init_atags_procfs(void)
 		return -EINVAL;
 	}
 
-	for (; tag->hdr.size; tag = tag_next(tag)){
-		printk (KERN_INFO "%s, tag header size =%d\n",__func__, tag->hdr.size);
-	}
+	for (; tag->hdr.size; tag = tag_next(tag))
+		;
 
 	/* include the terminating ATAG_NONE */
 	size = (char *)tag - atags_copy + sizeof(struct tag_header);

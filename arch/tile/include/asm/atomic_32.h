@@ -11,17 +11,18 @@
  *   NON INFRINGEMENT.  See the GNU General Public License for
  *   more details.
  *
- * Do not include directly; use <asm/atomic.h>.
+ * Do not include directly; use <linux/atomic.h>.
  */
 
 #ifndef _ASM_TILE_ATOMIC_32_H
 #define _ASM_TILE_ATOMIC_32_H
 
+#include <asm/barrier.h>
 #include <arch/chip.h>
 
 #ifndef __ASSEMBLY__
 
-/* Tile-specific routines to support <asm/atomic.h>. */
+/* Tile-specific routines to support <linux/atomic.h>. */
 int _atomic_xchg(atomic_t *v, int n);
 int _atomic_xchg_add(atomic_t *v, int i);
 int _atomic_xchg_add_unless(atomic_t *v, int a, int u);
@@ -81,18 +82,18 @@ static inline int atomic_add_return(int i, atomic_t *v)
 }
 
 /**
- * atomic_add_unless - add unless the number is already a given value
+ * __atomic_add_unless - add unless the number is already a given value
  * @v: pointer of type atomic_t
  * @a: the amount to add to v...
  * @u: ...unless v is equal to u.
  *
  * Atomically adds @a to @v, so long as @v was not already @u.
- * Returns non-zero if @v was not @u, and zero otherwise.
+ * Returns the old value of @v.
  */
-static inline int atomic_add_unless(atomic_t *v, int a, int u)
+static inline int __atomic_add_unless(atomic_t *v, int a, int u)
 {
 	smp_mb();  /* barrier for proper semantics */
-	return _atomic_xchg_add_unless(v, a, u) != u;
+	return _atomic_xchg_add_unless(v, a, u);
 }
 
 /**

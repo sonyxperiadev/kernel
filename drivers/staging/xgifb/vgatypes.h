@@ -2,6 +2,9 @@
 #define _VGATYPES_
 
 #include <linux/ioctl.h>
+#include <linux/fb.h>	/* for struct fb_var_screeninfo for sis.h */
+#include "../../video/sis/vgatypes.h"
+#include "../../video/sis/sis.h"		/* for LCD_TYPE */
 
 #ifndef XGI_VB_CHIP_TYPE
 enum XGI_VB_CHIP_TYPE {
@@ -19,6 +22,12 @@ enum XGI_VB_CHIP_TYPE {
 };
 #endif
 
+
+#define XGI_LCD_TYPE
+/* Since the merge with video/sis the LCD_TYPEs are used from
+ drivers/video/sis/sis.h . Nevertheless we keep this (for the moment) for
+ future reference until the code is merged completely and we are sure
+ nothing of this should be added to the sis.h header */
 #ifndef XGI_LCD_TYPE
 enum XGI_LCD_TYPE {
 	LCD_INVALID = 0,
@@ -47,18 +56,11 @@ enum XGI_LCD_TYPE {
 };
 #endif
 
-struct XGI_DSReg {
-	unsigned char jIdx;
-	unsigned char jVal;
-};
-
 struct xgi_hw_device_info {
 	unsigned long ulExternalChip; /* NO VB or other video bridge*/
 				      /* if ujVBChipID = VB_CHIP_UNKNOWN, */
 
-	unsigned char *pjVirtualRomBase; /* ROM image */
-
-	unsigned char *pjVideoMemoryAddress;/* base virtual memory address */
+	void __iomem *pjVideoMemoryAddress;/* base virtual memory address */
 					    /* of Linear VGA memory */
 
 	unsigned long ulVideoMemorySize; /* size, in bytes, of the
@@ -78,10 +80,6 @@ struct xgi_hw_device_info {
 				  /* "XGI_VB_CHIP_TYPE" */
 
 	unsigned long ulCRT2LCDType; /* defined in the data structure type */
-
-	unsigned char(*pQueryVGAConfigSpace)(struct xgi_hw_device_info *,
-					    unsigned long, unsigned long,
-					    unsigned long *);
 };
 
 /* Additional IOCTL for communication xgifb <> X driver        */

@@ -229,11 +229,10 @@
 #include <linux/jiffies.h>
 #include <linux/acpi.h>
 #include <linux/syscore_ops.h>
+#include <linux/i8253.h>
 
-#include <asm/system.h>
 #include <asm/uaccess.h>
 #include <asm/desc.h>
-#include <asm/i8253.h>
 #include <asm/olpc.h>
 #include <asm/paravirt.h>
 #include <asm/reboot.h>
@@ -249,8 +248,6 @@ extern int (*console_blank_hook)(int);
 #define	APM_MINOR_DEV	134
 
 /*
- * See Documentation/Config.help for the configuration options.
- *
  * Various options can be changed at boot time as follows:
  * (We allow underscores for compatibility with the modules code)
  *	apm=on/off			enable/disable APM
@@ -385,21 +382,21 @@ static int ignore_sys_suspend;
 static int ignore_normal_resume;
 static int bounce_interval __read_mostly = DEFAULT_BOUNCE_INTERVAL;
 
-static int debug __read_mostly;
-static int smp __read_mostly;
+static bool debug __read_mostly;
+static bool smp __read_mostly;
 static int apm_disabled = -1;
 #ifdef CONFIG_SMP
-static int power_off;
+static bool power_off;
 #else
-static int power_off = 1;
+static bool power_off = 1;
 #endif
-static int realmode_power_off;
+static bool realmode_power_off;
 #ifdef CONFIG_APM_ALLOW_INTS
-static int allow_ints = 1;
+static bool allow_ints = 1;
 #else
-static int allow_ints;
+static bool allow_ints;
 #endif
-static int broken_psr;
+static bool broken_psr;
 
 static DECLARE_WAIT_QUEUE_HEAD(apm_waitqueue);
 static DECLARE_WAIT_QUEUE_HEAD(apm_suspend_waitqueue);
@@ -1220,11 +1217,11 @@ static void reinit_timer(void)
 
 	raw_spin_lock_irqsave(&i8253_lock, flags);
 	/* set the clock to HZ */
-	outb_pit(0x34, PIT_MODE);		/* binary, mode 2, LSB/MSB, ch 0 */
+	outb_p(0x34, PIT_MODE);		/* binary, mode 2, LSB/MSB, ch 0 */
 	udelay(10);
-	outb_pit(LATCH & 0xff, PIT_CH0);	/* LSB */
+	outb_p(LATCH & 0xff, PIT_CH0);	/* LSB */
 	udelay(10);
-	outb_pit(LATCH >> 8, PIT_CH0);	/* MSB */
+	outb_p(LATCH >> 8, PIT_CH0);	/* MSB */
 	udelay(10);
 	raw_spin_unlock_irqrestore(&i8253_lock, flags);
 #endif
@@ -1236,8 +1233,7 @@ static int suspend(int vetoable)
 	struct apm_user	*as;
 
 	dpm_suspend_start(PMSG_SUSPEND);
-
-	dpm_suspend_noirq(PMSG_SUSPEND);
+	dpm_suspend_end(PMSG_SUSPEND);
 
 	local_irq_disable();
 	syscore_suspend();
@@ -1261,9 +1257,9 @@ static int suspend(int vetoable)
 	syscore_resume();
 	local_irq_enable();
 
-	dpm_resume_noirq(PMSG_RESUME);
-
+	dpm_resume_start(PMSG_RESUME);
 	dpm_resume_end(PMSG_RESUME);
+
 	queue_event(APM_NORMAL_RESUME, NULL);
 	spin_lock(&user_list_lock);
 	for (as = user_list; as != NULL; as = as->next) {
@@ -1279,7 +1275,7 @@ static void standby(void)
 {
 	int err;
 
-	dpm_suspend_noirq(PMSG_SUSPEND);
+	dpm_suspend_end(PMSG_SUSPEND);
 
 	local_irq_disable();
 	syscore_suspend();
@@ -1293,7 +1289,7 @@ static void standby(void)
 	syscore_resume();
 	local_irq_enable();
 
-	dpm_resume_noirq(PMSG_RESUME);
+	dpm_resume_start(PMSG_RESUME);
 }
 
 static apm_event_t get_event(void)

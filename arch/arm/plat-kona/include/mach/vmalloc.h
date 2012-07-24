@@ -30,6 +30,10 @@
  * vmalloc ends at 0xf0000000, io_base starts at 0xf0000000, io_size 192MB
  */
 
+/*
+#ifndef VMALLOC_END
 #define VMALLOC_END (PAGE_OFFSET + 0x28000000)
+#endif
+*/
 
 #endif /* __PLAT_KONA_VMALLOC_H */

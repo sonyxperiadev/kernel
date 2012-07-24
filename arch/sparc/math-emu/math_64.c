@@ -16,6 +16,7 @@
 #include <asm/fpumacro.h>
 #include <asm/ptrace.h>
 #include <asm/uaccess.h>
+#include <asm/cacheflush.h>
 
 #include "sfp-util_64.h"
 #include <math-emu/soft-fp.h>
@@ -184,7 +185,7 @@ int do_mathemu(struct pt_regs *regs, struct fpustate *f)
 
 	if (tstate & TSTATE_PRIV)
 		die_if_kernel("unfinished/unimplemented FPop from kernel", regs);
-	perf_sw_event(PERF_COUNT_SW_EMULATION_FAULTS, 1, 0, regs, 0);
+	perf_sw_event(PERF_COUNT_SW_EMULATION_FAULTS, 1, regs, 0);
 	if (test_thread_flag(TIF_32BIT))
 		pc = (u32)pc;
 	if (get_user(insn, (u32 __user *) pc) != -EFAULT) {

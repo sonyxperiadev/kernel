@@ -4,6 +4,14 @@ menu "Core Netfilter Configuration"
 config NETFILTER_NETLINK
 	tristate
 
+config NETFILTER_NETLINK_ACCT
+tristate "Netfilter NFACCT over NFNETLINK interface"
+	depends on NETFILTER_ADVANCED
+	select NETFILTER_NETLINK
+	help
+	  If this option is enabled, the kernel will include support
+	  for extended accounting via NFNETLINK.
+
 config NETFILTER_NETLINK_QUEUE
 	tristate "Netfilter NFQUEUE over NFNETLINK interface"
 	depends on NETFILTER_ADVANCED
@@ -75,6 +83,16 @@ config NF_CONNTRACK_ZONES
 
 	  If unsure, say `N'.
 
+config NF_CONNTRACK_PROCFS
+	bool "Supply CT list in procfs (OBSOLETE)"
+	default y
+	depends on PROC_FS
+	---help---
+	This option enables for the list of known conntrack entries
+	to be shown in procfs under net/netfilter/nf_conntrack. This
+	is considered obsolete in favor of using the conntrack(8)
+	tool which uses Netlink.
+
 config NF_CONNTRACK_EVENTS
 	bool "Connection tracking events"
 	depends on NETFILTER_ADVANCED
@@ -82,6 +100,16 @@ config NF_CONNTRACK_EVENTS
 	  If this option is enabled, the connection tracking code will
 	  provide a notifier chain that can be used by other kernel code
 	  to get notified about changes in the connection tracking state.
+
+	  If unsure, say `N'.
+
+config NF_CONNTRACK_TIMEOUT
+	bool  'Connection tracking timeout'
+	depends on NETFILTER_ADVANCED
+	help
+	  This option enables support for connection tracking timeout
+	  extension. This allows you to attach timeout policies to flow
+	  via the CT target.
 
 	  If unsure, say `N'.
 
@@ -201,7 +229,6 @@ config NF_CONNTRACK_BROADCAST
 
 config NF_CONNTRACK_NETBIOS_NS
 	tristate "NetBIOS name service protocol support"
-	depends on NETFILTER_ADVANCED
 	select NF_CONNTRACK_BROADCAST
 	help
 	  NetBIOS name service requests are sent as broadcast messages from an
@@ -296,6 +323,17 @@ config NF_CT_NETLINK
 	default m if NETFILTER_ADVANCED=n
 	help
 	  This option enables support for a netlink-based userspace interface
+
+config NF_CT_NETLINK_TIMEOUT
+	tristate  'Connection tracking timeout tuning via Netlink'
+	select NETFILTER_NETLINK
+	depends on NETFILTER_ADVANCED
+	help
+	  This option enables support for connection tracking timeout
+	  fine-grain tuning. This allows you to attach specific timeout
+	  policies to flows, instead of using the global timeout policy.
+
+	  If unsure, say `N'.
 
 endif # NF_CONNTRACK
 
@@ -505,7 +543,16 @@ config NETFILTER_XT_TARGET_LED
 	    echo netfilter-ssh > /sys/class/leds/<ledname>/trigger
 
 	  For more information on the LEDs available on your system, see
-	  Documentation/leds-class.txt
+	  Documentation/leds/leds-class.txt
+
+config NETFILTER_XT_TARGET_LOG
+	tristate "LOG target support"
+	default m if NETFILTER_ADVANCED=n
+	help
+	  This option adds a `LOG' target, which allows you to create rules in
+	  any iptables table which records the packet header to the syslog.
+
+	  To compile it as a module, choose M here.  If unsure, say N.
 
 config NETFILTER_XT_TARGET_MARK
 	tristate '"MARK" target support'
@@ -542,7 +589,6 @@ config NETFILTER_XT_TARGET_NOTRACK
 	tristate  '"NOTRACK" target support'
 	depends on IP_NF_RAW || IP6_NF_RAW
 	depends on NF_CONNTRACK
-	depends on NETFILTER_ADVANCED
 	help
 	  The NOTRACK target allows a select rule to specify
 	  which packets *not* to enter the conntrack/NAT
@@ -772,6 +818,15 @@ config NETFILTER_XT_MATCH_DSCP
 
 	  To compile it as a module, choose M here.  If unsure, say N.
 
+config NETFILTER_XT_MATCH_ECN
+	tristate '"ecn" match support'
+	depends on NETFILTER_ADVANCED
+	---help---
+	This option adds an "ECN" match, which allows you to match against
+	the IPv4 and TCP header ECN fields.
+
+	To compile it as a module, choose M here. If unsure, say N.
+
 config NETFILTER_XT_MATCH_ESP
 	tristate '"esp" match support'
 	depends on NETFILTER_ADVANCED
@@ -878,6 +933,16 @@ config NETFILTER_XT_MATCH_MULTIPORT
 	  Multiport matching allows you to match TCP or UDP packets based on
 	  a series of source or destination ports: normally a rule can only
 	  match a single range of ports.
+
+	  To compile it as a module, choose M here.  If unsure, say N.
+
+config NETFILTER_XT_MATCH_NFACCT
+	tristate '"nfacct" match support'
+	depends on NETFILTER_ADVANCED
+	select NETFILTER_NETLINK_ACCT
+	help
+	  This option allows you to use the extended accounting through
+	  nfnetlink_acct.
 
 	  To compile it as a module, choose M here.  If unsure, say N.
 

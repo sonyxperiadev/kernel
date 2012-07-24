@@ -20,6 +20,7 @@
 #include <crypto/gf128mul.h>
 #include <crypto/internal/hash.h>
 #include <asm/i387.h>
+#include <asm/cpu_device_id.h>
 
 #define GHASH_BLOCK_SIZE	16
 #define GHASH_DIGEST_SIZE	16
@@ -245,7 +246,7 @@ static int ghash_async_setkey(struct crypto_ahash *tfm, const u8 *key,
 	crypto_ahash_set_flags(tfm, crypto_ahash_get_flags(child)
 			       & CRYPTO_TFM_RES_MASK);
 
-	return 0;
+	return err;
 }
 
 static int ghash_async_init_tfm(struct crypto_tfm *tfm)
@@ -294,15 +295,18 @@ static struct ahash_alg ghash_async_alg = {
 	},
 };
 
+static const struct x86_cpu_id pcmul_cpu_id[] = {
+	X86_FEATURE_MATCH(X86_FEATURE_PCLMULQDQ), /* Pickle-Mickle-Duck */
+	{}
+};
+MODULE_DEVICE_TABLE(x86cpu, pcmul_cpu_id);
+
 static int __init ghash_pclmulqdqni_mod_init(void)
 {
 	int err;
 
-	if (!cpu_has_pclmulqdq) {
-		printk(KERN_INFO "Intel PCLMULQDQ-NI instructions are not"
-		       " detected.\n");
+	if (!x86_match_cpu(pcmul_cpu_id))
 		return -ENODEV;
-	}
 
 	err = crypto_register_shash(&ghash_alg);
 	if (err)

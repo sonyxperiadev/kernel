@@ -1,8 +1,8 @@
 /*
  * Samsung S5P/EXYNOS4 SoC series MIPI-CSI receiver driver
  *
- * Copyright (C) 2011 Samsung Electronics Co., Ltd.
- * Contact: Sylwester Nawrocki, <s.nawrocki@samsung.com>
+ * Copyright (C) 2011 - 2012 Samsung Electronics Co., Ltd.
+ * Sylwester Nawrocki, <s.nawrocki@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -81,6 +81,12 @@ static char *csi_clock_name[] = {
 };
 #define NUM_CSIS_CLOCKS	ARRAY_SIZE(csi_clock_name)
 
+static const char * const csis_supply_name[] = {
+	"vdd11", /* 1.1V or 1.2V (s5pc100) MIPI CSI suppply */
+	"vdd18", /* VDD 1.8V and MIPI CSI PLL supply */
+};
+#define CSIS_NUM_SUPPLIES ARRAY_SIZE(csis_supply_name)
+
 enum {
 	ST_POWERED	= 1,
 	ST_STREAMING	= 2,
@@ -94,7 +100,6 @@ enum {
  * @pads: CSIS pads array
  * @sd: v4l2_subdev associated with CSIS device instance
  * @pdev: CSIS platform device
- * @regs_res: requested I/O register memory resource
  * @regs: mmaped I/O registers memory
  * @clock: CSIS clocks
  * @irq: requested s5p-mipi-csis irq number
@@ -107,11 +112,10 @@ struct csis_state {
 	struct media_pad pads[CSIS_PADS_NUM];
 	struct v4l2_subdev sd;
 	struct platform_device *pdev;
-	struct resource *regs_res;
 	void __iomem *regs;
+	struct regulator_bulk_data supplies[CSIS_NUM_SUPPLIES];
 	struct clk *clock[NUM_CSIS_CLOCKS];
 	int irq;
-	struct regulator *supply;
 	u32 flags;
 	const struct csis_pix_format *csis_fmt;
 	struct v4l2_mbus_framefmt format;
@@ -252,26 +256,36 @@ static void s5pcsis_clk_put(struct csis_state *state)
 {
 	int i;
 
-	for (i = 0; i < NUM_CSIS_CLOCKS; i++)
-		if (!IS_ERR_OR_NULL(state->clock[i]))
-			clk_put(state->clock[i]);
+	for (i = 0; i < NUM_CSIS_CLOCKS; i++) {
+		if (IS_ERR_OR_NULL(state->clock[i]))
+			continue;
+		clk_unprepare(state->clock[i]);
+		clk_put(state->clock[i]);
+		state->clock[i] = NULL;
+	}
 }
 
 static int s5pcsis_clk_get(struct csis_state *state)
 {
 	struct device *dev = &state->pdev->dev;
-	int i;
+	int i, ret;
 
 	for (i = 0; i < NUM_CSIS_CLOCKS; i++) {
 		state->clock[i] = clk_get(dev, csi_clock_name[i]);
-		if (IS_ERR(state->clock[i])) {
-			s5pcsis_clk_put(state);
-			dev_err(dev, "failed to get clock: %s\n",
-				csi_clock_name[i]);
-			return -ENXIO;
+		if (IS_ERR(state->clock[i]))
+			goto err;
+		ret = clk_prepare(state->clock[i]);
+		if (ret < 0) {
+			clk_put(state->clock[i]);
+			state->clock[i] = NULL;
+			goto err;
 		}
 	}
 	return 0;
+err:
+	s5pcsis_clk_put(state);
+	dev_err(dev, "failed to get clock: %s\n", csi_clock_name[i]);
+	return -ENXIO;
 }
 
 static int s5pcsis_s_power(struct v4l2_subdev *sd, int on)
@@ -421,6 +435,23 @@ static int s5pcsis_get_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 	return 0;
 }
 
+static int s5pcsis_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	struct v4l2_mbus_framefmt *format = v4l2_subdev_get_try_format(fh, 0);
+
+	format->colorspace = V4L2_COLORSPACE_JPEG;
+	format->code = s5pcsis_formats[0].code;
+	format->width = S5PCSIS_DEF_PIX_WIDTH;
+	format->height = S5PCSIS_DEF_PIX_HEIGHT;
+	format->field = V4L2_FIELD_NONE;
+
+	return 0;
+}
+
+static const struct v4l2_subdev_internal_ops s5pcsis_sd_internal_ops = {
+	.open = s5pcsis_open,
+};
+
 static struct v4l2_subdev_core_ops s5pcsis_core_ops = {
 	.s_power = s5pcsis_s_power,
 };
@@ -457,11 +488,11 @@ static int __devinit s5pcsis_probe(struct platform_device *pdev)
 {
 	struct s5p_platform_mipi_csis *pdata;
 	struct resource *mem_res;
-	struct resource *regs_res;
 	struct csis_state *state;
 	int ret = -ENOMEM;
+	int i;
 
-	state = kzalloc(sizeof(*state), GFP_KERNEL);
+	state = devm_kzalloc(&pdev->dev, sizeof(*state), GFP_KERNEL);
 	if (!state)
 		return -ENOMEM;
 
@@ -471,40 +502,40 @@ static int __devinit s5pcsis_probe(struct platform_device *pdev)
 	pdata = pdev->dev.platform_data;
 	if (pdata == NULL || pdata->phy_enable == NULL) {
 		dev_err(&pdev->dev, "Platform data not fully specified\n");
-		goto e_free;
+		return -EINVAL;
 	}
 
 	if ((pdev->id == 1 && pdata->lanes > CSIS1_MAX_LANES) ||
 	    pdata->lanes > CSIS0_MAX_LANES) {
-		ret = -EINVAL;
 		dev_err(&pdev->dev, "Unsupported number of data lanes: %d\n",
 			pdata->lanes);
-		goto e_free;
+		return -EINVAL;
 	}
 
 	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!mem_res) {
-		dev_err(&pdev->dev, "Failed to get IO memory region\n");
-		goto e_free;
+	state->regs = devm_request_and_ioremap(&pdev->dev, mem_res);
+	if (state->regs == NULL) {
+		dev_err(&pdev->dev, "Failed to request and remap io memory\n");
+		return -ENXIO;
 	}
 
-	regs_res = request_mem_region(mem_res->start, resource_size(mem_res),
-				      pdev->name);
-	if (!regs_res) {
-		dev_err(&pdev->dev, "Failed to request IO memory region\n");
-		goto e_free;
+	state->irq = platform_get_irq(pdev, 0);
+	if (state->irq < 0) {
+		dev_err(&pdev->dev, "Failed to get irq\n");
+		return state->irq;
 	}
-	state->regs_res = regs_res;
 
-	state->regs = ioremap(mem_res->start, resource_size(mem_res));
-	if (!state->regs) {
-		dev_err(&pdev->dev, "Failed to remap IO region\n");
-		goto e_reqmem;
-	}
+	for (i = 0; i < CSIS_NUM_SUPPLIES; i++)
+		state->supplies[i].supply = csis_supply_name[i];
+
+	ret = regulator_bulk_get(&pdev->dev, CSIS_NUM_SUPPLIES,
+				 state->supplies);
+	if (ret)
+		return ret;
 
 	ret = s5pcsis_clk_get(state);
 	if (ret)
-		goto e_unmap;
+		goto e_clkput;
 
 	clk_enable(state->clock[CSIS_CLK_MUX]);
 	if (pdata->clk_rate)
@@ -512,40 +543,29 @@ static int __devinit s5pcsis_probe(struct platform_device *pdev)
 	else
 		dev_WARN(&pdev->dev, "No clock frequency specified!\n");
 
-	state->irq = platform_get_irq(pdev, 0);
-	if (state->irq < 0) {
-		ret = state->irq;
-		dev_err(&pdev->dev, "Failed to get irq\n");
-		goto e_clkput;
-	}
-
-	if (!pdata->fixed_phy_vdd) {
-		state->supply = regulator_get(&pdev->dev, "vdd");
-		if (IS_ERR(state->supply)) {
-			ret = PTR_ERR(state->supply);
-			state->supply = NULL;
-			goto e_clkput;
-		}
-	}
-
-	ret = request_irq(state->irq, s5pcsis_irq_handler, 0,
-			  dev_name(&pdev->dev), state);
+	ret = devm_request_irq(&pdev->dev, state->irq, s5pcsis_irq_handler,
+			       0, dev_name(&pdev->dev), state);
 	if (ret) {
-		dev_err(&pdev->dev, "request_irq failed\n");
+		dev_err(&pdev->dev, "Interrupt request failed\n");
 		goto e_regput;
 	}
 
 	v4l2_subdev_init(&state->sd, &s5pcsis_subdev_ops);
 	state->sd.owner = THIS_MODULE;
 	strlcpy(state->sd.name, dev_name(&pdev->dev), sizeof(state->sd.name));
+	state->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	state->csis_fmt = &s5pcsis_formats[0];
+
+	state->format.code = s5pcsis_formats[0].code;
+	state->format.width = S5PCSIS_DEF_PIX_WIDTH;
+	state->format.height = S5PCSIS_DEF_PIX_HEIGHT;
 
 	state->pads[CSIS_PAD_SINK].flags = MEDIA_PAD_FL_SINK;
 	state->pads[CSIS_PAD_SOURCE].flags = MEDIA_PAD_FL_SOURCE;
 	ret = media_entity_init(&state->sd.entity,
 				CSIS_PADS_NUM, state->pads, 0);
 	if (ret < 0)
-		goto e_irqfree;
+		goto e_clkput;
 
 	/* This allows to retrieve the platform device id by the host driver */
 	v4l2_set_subdevdata(&state->sd, pdev);
@@ -553,29 +573,18 @@ static int __devinit s5pcsis_probe(struct platform_device *pdev)
 	/* .. and a pointer to the subdev. */
 	platform_set_drvdata(pdev, &state->sd);
 
-	state->flags = ST_SUSPENDED;
 	pm_runtime_enable(&pdev->dev);
-
 	return 0;
 
-e_irqfree:
-	free_irq(state->irq, state);
 e_regput:
-	if (state->supply)
-		regulator_put(state->supply);
+	regulator_bulk_free(CSIS_NUM_SUPPLIES, state->supplies);
 e_clkput:
 	clk_disable(state->clock[CSIS_CLK_MUX]);
 	s5pcsis_clk_put(state);
-e_unmap:
-	iounmap(state->regs);
-e_reqmem:
-	release_mem_region(regs_res->start, resource_size(regs_res));
-e_free:
-	kfree(state);
 	return ret;
 }
 
-static int s5pcsis_suspend(struct device *dev)
+static int s5pcsis_pm_suspend(struct device *dev, bool runtime)
 {
 	struct s5p_platform_mipi_csis *pdata = dev->platform_data;
 	struct platform_device *pdev = to_platform_device(dev);
@@ -592,21 +601,21 @@ static int s5pcsis_suspend(struct device *dev)
 		ret = pdata->phy_enable(state->pdev, false);
 		if (ret)
 			goto unlock;
-		if (state->supply) {
-			ret = regulator_disable(state->supply);
-			if (ret)
-				goto unlock;
-		}
+		ret = regulator_bulk_disable(CSIS_NUM_SUPPLIES,
+					     state->supplies);
+		if (ret)
+			goto unlock;
 		clk_disable(state->clock[CSIS_CLK_GATE]);
 		state->flags &= ~ST_POWERED;
+		if (!runtime)
+			state->flags |= ST_SUSPENDED;
 	}
-	state->flags |= ST_SUSPENDED;
  unlock:
 	mutex_unlock(&state->lock);
 	return ret ? -EAGAIN : 0;
 }
 
-static int s5pcsis_resume(struct device *dev)
+static int s5pcsis_pm_resume(struct device *dev, bool runtime)
 {
 	struct s5p_platform_mipi_csis *pdata = dev->platform_data;
 	struct platform_device *pdev = to_platform_device(dev);
@@ -618,20 +627,20 @@ static int s5pcsis_resume(struct device *dev)
 		 __func__, state->flags);
 
 	mutex_lock(&state->lock);
-	if (!(state->flags & ST_SUSPENDED))
+	if (!runtime && !(state->flags & ST_SUSPENDED))
 		goto unlock;
 
 	if (!(state->flags & ST_POWERED)) {
-		if (state->supply)
-			ret = regulator_enable(state->supply);
+		ret = regulator_bulk_enable(CSIS_NUM_SUPPLIES,
+					    state->supplies);
 		if (ret)
 			goto unlock;
-
 		ret = pdata->phy_enable(state->pdev, true);
 		if (!ret) {
 			state->flags |= ST_POWERED;
-		} else if (state->supply) {
-			regulator_disable(state->supply);
+		} else {
+			regulator_bulk_disable(CSIS_NUM_SUPPLIES,
+					       state->supplies);
 			goto unlock;
 		}
 		clk_enable(state->clock[CSIS_CLK_GATE]);
@@ -646,24 +655,26 @@ static int s5pcsis_resume(struct device *dev)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int s5pcsis_pm_suspend(struct device *dev)
+static int s5pcsis_suspend(struct device *dev)
 {
-	return s5pcsis_suspend(dev);
+	return s5pcsis_pm_suspend(dev, false);
 }
 
-static int s5pcsis_pm_resume(struct device *dev)
+static int s5pcsis_resume(struct device *dev)
 {
-	int ret;
+	return s5pcsis_pm_resume(dev, false);
+}
+#endif
 
-	ret = s5pcsis_resume(dev);
+#ifdef CONFIG_PM_RUNTIME
+static int s5pcsis_runtime_suspend(struct device *dev)
+{
+	return s5pcsis_pm_suspend(dev, true);
+}
 
-	if (!ret) {
-		pm_runtime_disable(dev);
-		ret = pm_runtime_set_active(dev);
-		pm_runtime_enable(dev);
-	}
-
-	return ret;
+static int s5pcsis_runtime_resume(struct device *dev)
+{
+	return s5pcsis_pm_resume(dev, true);
 }
 #endif
 
@@ -671,29 +682,23 @@ static int __devexit s5pcsis_remove(struct platform_device *pdev)
 {
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct csis_state *state = sd_to_csis_state(sd);
-	struct resource *res = state->regs_res;
 
 	pm_runtime_disable(&pdev->dev);
-	s5pcsis_suspend(&pdev->dev);
+	s5pcsis_pm_suspend(&pdev->dev, false);
 	clk_disable(state->clock[CSIS_CLK_MUX]);
 	pm_runtime_set_suspended(&pdev->dev);
-
 	s5pcsis_clk_put(state);
-	if (state->supply)
-		regulator_put(state->supply);
+	regulator_bulk_free(CSIS_NUM_SUPPLIES, state->supplies);
 
 	media_entity_cleanup(&state->sd.entity);
-	free_irq(state->irq, state);
-	iounmap(state->regs);
-	release_mem_region(res->start, resource_size(res));
-	kfree(state);
 
 	return 0;
 }
 
 static const struct dev_pm_ops s5pcsis_pm_ops = {
-	SET_RUNTIME_PM_OPS(s5pcsis_suspend, s5pcsis_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(s5pcsis_pm_suspend, s5pcsis_pm_resume)
+	SET_RUNTIME_PM_OPS(s5pcsis_runtime_suspend, s5pcsis_runtime_resume,
+			   NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(s5pcsis_suspend, s5pcsis_resume)
 };
 
 static struct platform_driver s5pcsis_driver = {

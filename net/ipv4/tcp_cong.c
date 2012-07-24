@@ -6,6 +6,8 @@
  * Copyright (C) 2005 Stephen Hemminger <shemminger@osdl.org>
  */
 
+#define pr_fmt(fmt) "TCP: " fmt
+
 #include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/types.h>
@@ -41,18 +43,17 @@ int tcp_register_congestion_control(struct tcp_congestion_ops *ca)
 
 	/* all algorithms must implement ssthresh and cong_avoid ops */
 	if (!ca->ssthresh || !ca->cong_avoid) {
-		printk(KERN_ERR "TCP %s does not implement required ops\n",
-		       ca->name);
+		pr_err("%s does not implement required ops\n", ca->name);
 		return -EINVAL;
 	}
 
 	spin_lock(&tcp_cong_list_lock);
 	if (tcp_ca_find(ca->name)) {
-		printk(KERN_NOTICE "TCP %s already registered\n", ca->name);
+		pr_notice("%s already registered\n", ca->name);
 		ret = -EEXIST;
 	} else {
 		list_add_tail_rcu(&ca->list, &tcp_cong_list);
-		printk(KERN_INFO "TCP %s registered\n", ca->name);
+		pr_info("%s registered\n", ca->name);
 	}
 	spin_unlock(&tcp_cong_list_lock);
 
@@ -292,7 +293,7 @@ int tcp_is_cwnd_limited(const struct sock *sk, u32 in_flight)
 	    left * sysctl_tcp_tso_win_divisor < tp->snd_cwnd &&
 	    left * tp->mss_cache < sk->sk_gso_max_size)
 		return 1;
-	return left <= tcp_max_burst(tp);
+	return left <= tcp_max_tso_deferred_mss(tp);
 }
 EXPORT_SYMBOL_GPL(tcp_is_cwnd_limited);
 

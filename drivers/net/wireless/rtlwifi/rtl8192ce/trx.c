@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2009-2010  Realtek Corporation.
+ * Copyright(c) 2009-2012  Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -46,104 +46,6 @@ static u8 _rtl92ce_map_hwqueue_to_fwqueue(struct sk_buff *skb, u8 hw_queue)
 		return QSLT_MGNT;
 
 	return skb->priority;
-}
-
-static int _rtl92ce_rate_mapping(bool isht, u8 desc_rate, bool first_ampdu)
-{
-	int rate_idx;
-
-	if (first_ampdu) {
-		if (false == isht) {
-			switch (desc_rate) {
-			case DESC92C_RATE1M:
-				rate_idx = 0;
-				break;
-			case DESC92C_RATE2M:
-				rate_idx = 1;
-				break;
-			case DESC92C_RATE5_5M:
-				rate_idx = 2;
-				break;
-			case DESC92C_RATE11M:
-				rate_idx = 3;
-				break;
-			case DESC92C_RATE6M:
-				rate_idx = 4;
-				break;
-			case DESC92C_RATE9M:
-				rate_idx = 5;
-				break;
-			case DESC92C_RATE12M:
-				rate_idx = 6;
-				break;
-			case DESC92C_RATE18M:
-				rate_idx = 7;
-				break;
-			case DESC92C_RATE24M:
-				rate_idx = 8;
-				break;
-			case DESC92C_RATE36M:
-				rate_idx = 9;
-				break;
-			case DESC92C_RATE48M:
-				rate_idx = 10;
-				break;
-			case DESC92C_RATE54M:
-				rate_idx = 11;
-				break;
-			default:
-				rate_idx = 0;
-				break;
-			}
-		} else {
-			rate_idx = 11;
-		}
-
-		return rate_idx;
-	}
-
-	switch (desc_rate) {
-	case DESC92C_RATE1M:
-		rate_idx = 0;
-		break;
-	case DESC92C_RATE2M:
-		rate_idx = 1;
-		break;
-	case DESC92C_RATE5_5M:
-		rate_idx = 2;
-		break;
-	case DESC92C_RATE11M:
-		rate_idx = 3;
-		break;
-	case DESC92C_RATE6M:
-		rate_idx = 4;
-		break;
-	case DESC92C_RATE9M:
-		rate_idx = 5;
-		break;
-	case DESC92C_RATE12M:
-		rate_idx = 6;
-		break;
-	case DESC92C_RATE18M:
-		rate_idx = 7;
-		break;
-	case DESC92C_RATE24M:
-		rate_idx = 8;
-		break;
-	case DESC92C_RATE36M:
-		rate_idx = 9;
-		break;
-	case DESC92C_RATE48M:
-		rate_idx = 10;
-		break;
-	case DESC92C_RATE54M:
-		rate_idx = 11;
-		break;
-	default:
-		rate_idx = 11;
-		break;
-	}
-	return rate_idx;
 }
 
 static u8 _rtl92c_query_rxpwrpercentage(char antpower)
@@ -225,7 +127,7 @@ static void _rtl92ce_query_rxphystatus(struct ieee80211_hw *hw,
 {
 	struct rtl_priv *rtlpriv = rtl_priv(hw);
 	struct phy_sts_cck_8192s_t *cck_buf;
-	s8 rx_pwr_all, rx_pwr[4];
+	s8 rx_pwr_all = 0, rx_pwr[4];
 	u8 evm, pwdb_all, rf_rx_num = 0;
 	u8 i, max_spatial_stream;
 	u32 rssi, total_rssi = 0;
@@ -336,8 +238,8 @@ static void _rtl92ce_query_rxphystatus(struct ieee80211_hw *hw,
 		pstats->rxpower = rx_pwr_all;
 		pstats->recvsignalpower = rx_pwr_all;
 
-		if (pdesc->rxht && pdesc->rxmcs >= DESC92C_RATEMCS8 &&
-		    pdesc->rxmcs <= DESC92C_RATEMCS15)
+		if (pdesc->rxht && pdesc->rxmcs >= DESC92_RATEMCS8 &&
+		    pdesc->rxmcs <= DESC92_RATEMCS15)
 			max_spatial_stream = 2;
 		else
 			max_spatial_stream = 1;
@@ -592,7 +494,6 @@ static void _rtl92ce_translate_rx_signal_stuff(struct ieee80211_hw *hw,
 	struct ieee80211_hdr *hdr;
 	u8 *tmp_buf;
 	u8 *praddr;
-	u8 *psaddr;
 	__le16 fc;
 	u16 type, c_fc;
 	bool packet_matchbssid, packet_toself, packet_beacon;
@@ -604,7 +505,6 @@ static void _rtl92ce_translate_rx_signal_stuff(struct ieee80211_hw *hw,
 	c_fc = le16_to_cpu(fc);
 	type = WLAN_FC_GET_TYPE(fc);
 	praddr = hdr->addr1;
-	psaddr = hdr->addr2;
 
 	packet_matchbssid =
 	    ((IEEE80211_FTYPE_CTL != type) &&
@@ -672,15 +572,13 @@ bool rtl92ce_rx_query_desc(struct ieee80211_hw *hw,
 	if (stats->decrypted)
 		rx_status->flag |= RX_FLAG_DECRYPTED;
 
-	rx_status->rate_idx = _rtl92ce_rate_mapping((bool)
-						    GET_RX_DESC_RXHT(pdesc),
-						    (u8)
-						    GET_RX_DESC_RXMCS(pdesc),
-						    (bool)
-						    GET_RX_DESC_PAGGR(pdesc));
+	rx_status->rate_idx = rtlwifi_rate_mapping(hw,
+				(bool)GET_RX_DESC_RXHT(pdesc),
+				(u8)GET_RX_DESC_RXMCS(pdesc),
+				(bool)GET_RX_DESC_PAGGR(pdesc));
 
 	rx_status->mactime = GET_RX_DESC_TSFL(pdesc);
-	if (phystatus == true) {
+	if (phystatus) {
 		p_drvinfo = (struct rx_fwinfo_92c *)(skb->data +
 						     stats->rx_bufshift);
 
@@ -770,7 +668,7 @@ void rtl92ce_tx_fill_desc(struct ieee80211_hw *hw,
 		SET_TX_DESC_RTS_BW(pdesc, 0);
 		SET_TX_DESC_RTS_SC(pdesc, tcb_desc->rts_sc);
 		SET_TX_DESC_RTS_SHORT(pdesc,
-				      ((tcb_desc->rts_rate <= DESC92C_RATE54M) ?
+				      ((tcb_desc->rts_rate <= DESC92_RATE54M) ?
 				       (tcb_desc->rts_use_shortpreamble ? 1 : 0)
 				       : (tcb_desc->rts_use_shortgi ? 1 : 0)));
 
@@ -827,7 +725,7 @@ void rtl92ce_tx_fill_desc(struct ieee80211_hw *hw,
 		if (ieee80211_is_data_qos(fc)) {
 			if (mac->rdg_en) {
 				RT_TRACE(rtlpriv, COMP_SEND, DBG_TRACE,
-					 ("Enable RDG function.\n"));
+					 "Enable RDG function\n");
 				SET_TX_DESC_RDG_ENABLE(pdesc, 1);
 				SET_TX_DESC_HTC(pdesc, 1);
 			}
@@ -865,7 +763,7 @@ void rtl92ce_tx_fill_desc(struct ieee80211_hw *hw,
 		SET_TX_DESC_BMC(pdesc, 1);
 	}
 
-	RT_TRACE(rtlpriv, COMP_SEND, DBG_TRACE, ("\n"));
+	RT_TRACE(rtlpriv, COMP_SEND, DBG_TRACE, "\n");
 }
 
 void rtl92ce_tx_fill_cmddesc(struct ieee80211_hw *hw,
@@ -888,7 +786,7 @@ void rtl92ce_tx_fill_cmddesc(struct ieee80211_hw *hw,
 	if (firstseg)
 		SET_TX_DESC_OFFSET(pdesc, USB_HWDESC_HEADER_LEN);
 
-	SET_TX_DESC_TX_RATE(pdesc, DESC92C_RATE1M);
+	SET_TX_DESC_TX_RATE(pdesc, DESC92_RATE1M);
 
 	SET_TX_DESC_SEQ(pdesc, 0);
 
@@ -923,28 +821,29 @@ void rtl92ce_tx_fill_cmddesc(struct ieee80211_hw *hw,
 	}
 
 	RT_PRINT_DATA(rtlpriv, COMP_CMD, DBG_LOUD,
-		      "H2C Tx Cmd Content\n",
-		      pdesc, TX_DESC_SIZE);
+		      "H2C Tx Cmd Content", pdesc, TX_DESC_SIZE);
 }
 
 void rtl92ce_set_desc(u8 *pdesc, bool istx, u8 desc_name, u8 *val)
 {
-	if (istx == true) {
+	if (istx) {
 		switch (desc_name) {
 		case HW_DESC_OWN:
+			wmb();
 			SET_TX_DESC_OWN(pdesc, 1);
 			break;
 		case HW_DESC_TX_NEXTDESC_ADDR:
 			SET_TX_DESC_NEXT_DESC_ADDRESS(pdesc, *(u32 *) val);
 			break;
 		default:
-			RT_ASSERT(false, ("ERR txdesc :%d"
-					  " not process\n", desc_name));
+			RT_ASSERT(false, "ERR txdesc :%d not process\n",
+				  desc_name);
 			break;
 		}
 	} else {
 		switch (desc_name) {
 		case HW_DESC_RXOWN:
+			wmb();
 			SET_RX_DESC_OWN(pdesc, 1);
 			break;
 		case HW_DESC_RXBUFF_ADDR:
@@ -957,8 +856,8 @@ void rtl92ce_set_desc(u8 *pdesc, bool istx, u8 desc_name, u8 *val)
 			SET_RX_DESC_EOR(pdesc, 1);
 			break;
 		default:
-			RT_ASSERT(false, ("ERR rxdesc :%d "
-					  "not process\n", desc_name));
+			RT_ASSERT(false, "ERR rxdesc :%d not process\n",
+				  desc_name);
 			break;
 		}
 	}
@@ -968,7 +867,7 @@ u32 rtl92ce_get_desc(u8 *p_desc, bool istx, u8 desc_name)
 {
 	u32 ret = 0;
 
-	if (istx == true) {
+	if (istx) {
 		switch (desc_name) {
 		case HW_DESC_OWN:
 			ret = GET_TX_DESC_OWN(p_desc);
@@ -977,8 +876,8 @@ u32 rtl92ce_get_desc(u8 *p_desc, bool istx, u8 desc_name)
 			ret = GET_TX_DESC_TX_BUFFER_ADDRESS(p_desc);
 			break;
 		default:
-			RT_ASSERT(false, ("ERR txdesc :%d "
-					  "not process\n", desc_name));
+			RT_ASSERT(false, "ERR txdesc :%d not process\n",
+				  desc_name);
 			break;
 		}
 	} else {
@@ -991,8 +890,8 @@ u32 rtl92ce_get_desc(u8 *p_desc, bool istx, u8 desc_name)
 			ret = GET_RX_DESC_PKT_LEN(pdesc);
 			break;
 		default:
-			RT_ASSERT(false, ("ERR rxdesc :%d "
-					  "not process\n", desc_name));
+			RT_ASSERT(false, "ERR rxdesc :%d not process\n",
+				  desc_name);
 			break;
 		}
 	}

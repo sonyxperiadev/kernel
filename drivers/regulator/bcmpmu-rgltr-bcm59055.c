@@ -16,6 +16,7 @@
 #include <linux/regulator/driver.h>
 
 #include <linux/mfd/bcmpmu.h>
+#include <linux/module.h>
 
 /** Voltage in micro volts */
 u32 bcm59055_ldo_v_table[] = {

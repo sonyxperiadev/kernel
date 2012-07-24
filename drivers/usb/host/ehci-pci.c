@@ -144,6 +144,14 @@ static int ehci_pci_setup(struct usb_hcd *hcd)
 			hcd->has_tt = 1;
 			tdi_reset(ehci);
 		}
+		if (pdev->subsystem_vendor == PCI_VENDOR_ID_ASUSTEK) {
+			/* EHCI #1 or #2 on 6 Series/C200 Series chipset */
+			if (pdev->device == 0x1c26 || pdev->device == 0x1c2d) {
+				ehci_info(ehci, "broken D3 during system sleep on ASUS\n");
+				hcd->broken_pci_sleep = 1;
+				device_set_wakeup_capable(&pdev->dev, false);
+			}
+		}
 		break;
 	case PCI_VENDOR_ID_TDI:
 		if (pdev->device == PCI_DEVICE_ID_TDI_EHCI) {
@@ -276,6 +284,9 @@ static int ehci_pci_setup(struct usb_hcd *hcd)
 
 	/* Serial Bus Release Number is at PCI 0x60 offset */
 	pci_read_config_byte(pdev, 0x60, &ehci->sbrn);
+	if (pdev->vendor == PCI_VENDOR_ID_STMICRO
+	    && pdev->device == PCI_DEVICE_ID_STMICRO_USB_HOST)
+		ehci->sbrn = 0x20; /* ConneXT has no sbrn register */
 
 	/* Keep this around for a while just in case some EHCI
 	 * implementation uses legacy PCI PM support.  This test
@@ -444,7 +455,7 @@ static int ehci_pci_resume(struct usb_hcd *hcd, bool hibernated)
 	/* here we "know" root ports should always stay powered */
 	ehci_port_power(ehci, 1);
 
-	hcd->state = HC_STATE_SUSPENDED;
+	ehci->rh_state = EHCI_RH_SUSPENDED;
 	return 0;
 }
 #endif
@@ -526,6 +537,9 @@ static const struct pci_device_id pci_ids [] = { {
 	/* handle any USB 2.0 EHCI controller */
 	PCI_DEVICE_CLASS(PCI_CLASS_SERIAL_USB_EHCI, ~0),
 	.driver_data =	(unsigned long) &ehci_pci_hc_driver,
+	}, {
+	PCI_VDEVICE(STMICRO, PCI_DEVICE_ID_STMICRO_USB_HOST),
+	.driver_data = (unsigned long) &ehci_pci_hc_driver,
 	},
 	{ /* end: all zeroes */ }
 };

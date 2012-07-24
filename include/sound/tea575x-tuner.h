@@ -23,8 +23,9 @@
  */
 
 #include <linux/videodev2.h>
+#include <media/v4l2-ctrls.h>
 #include <media/v4l2-dev.h>
-#include <media/v4l2-ioctl.h>
+#include <media/v4l2-device.h>
 
 #define TEA575X_FMIF	10700
 
@@ -42,18 +43,23 @@ struct snd_tea575x_ops {
 };
 
 struct snd_tea575x {
-	struct video_device *vd;	/* video device */
+	struct v4l2_device *v4l2_dev;
+	struct video_device vd;		/* video device */
+	int radio_nr;			/* radio_nr */
 	bool tea5759;			/* 5759 chip is present */
+	bool cannot_read_data;		/* Device cannot read the data pin */
 	bool mute;			/* Device is muted? */
 	bool stereo;			/* receiving stereo */
 	bool tuned;			/* tuned to a station */
 	unsigned int val;		/* hw value */
-	unsigned long freq;		/* frequency */
-	unsigned long in_use;		/* set if the device is in use */
+	u32 freq;			/* frequency */
+	struct mutex mutex;
 	struct snd_tea575x_ops *ops;
 	void *private_data;
 	u8 card[32];
 	u8 bus_info[32];
+	struct v4l2_ctrl_handler ctrl_handler;
+	int (*ext_init)(struct snd_tea575x *tea);
 };
 
 int snd_tea575x_init(struct snd_tea575x *tea);

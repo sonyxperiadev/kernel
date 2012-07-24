@@ -89,10 +89,12 @@ static ssize_t trackpoint_set_int_attr(struct psmouse *psmouse, void *data,
 	struct trackpoint_data *tp = psmouse->private;
 	struct trackpoint_attr_data *attr = data;
 	unsigned char *field = (unsigned char *)((char *)tp + attr->field_offset);
-	unsigned long value;
+	unsigned char value;
+	int err;
 
-	if (strict_strtoul(buf, 10, &value) || value > 255)
-		return -EINVAL;
+	err = kstrtou8(buf, 10, &value);
+	if (err)
+		return err;
 
 	*field = value;
 	trackpoint_write(&psmouse->ps2dev, attr->command, value);
@@ -115,9 +117,14 @@ static ssize_t trackpoint_set_bit_attr(struct psmouse *psmouse, void *data,
 	struct trackpoint_data *tp = psmouse->private;
 	struct trackpoint_attr_data *attr = data;
 	unsigned char *field = (unsigned char *)((char *)tp + attr->field_offset);
-	unsigned long value;
+	unsigned int value;
+	int err;
 
-	if (strict_strtoul(buf, 10, &value) || value > 1)
+	err = kstrtouint(buf, 10, &value);
+	if (err)
+		return err;
+
+	if (value > 1)
 		return -EINVAL;
 
 	if (attr->inverted)
@@ -297,7 +304,7 @@ int trackpoint_detect(struct psmouse *psmouse, bool set_properties)
 		return 0;
 
 	if (trackpoint_read(&psmouse->ps2dev, TP_EXT_BTN, &button_info)) {
-		printk(KERN_WARNING "trackpoint.c: failed to get extended button data\n");
+		psmouse_warn(psmouse, "failed to get extended button data\n");
 		button_info = 0;
 	}
 
@@ -319,16 +326,18 @@ int trackpoint_detect(struct psmouse *psmouse, bool set_properties)
 
 	error = sysfs_create_group(&ps2dev->serio->dev.kobj, &trackpoint_attr_group);
 	if (error) {
-		printk(KERN_ERR
-			"trackpoint.c: failed to create sysfs attributes, error: %d\n",
-			error);
+		psmouse_err(psmouse,
+			    "failed to create sysfs attributes, error: %d\n",
+			    error);
 		kfree(psmouse->private);
 		psmouse->private = NULL;
 		return -1;
 	}
 
-	printk(KERN_INFO "IBM TrackPoint firmware: 0x%02x, buttons: %d/%d\n",
-		firmware_id, (button_info & 0xf0) >> 4, button_info & 0x0f);
+	psmouse_info(psmouse,
+		     "IBM TrackPoint firmware: 0x%02x, buttons: %d/%d\n",
+		     firmware_id,
+		     (button_info & 0xf0) >> 4, button_info & 0x0f);
 
 	return 0;
 }

@@ -23,7 +23,6 @@
 */
 
 #include <linux/kernel.h>
-#include <linux/version.h>
 #include <linux/vt.h>
 #include <linux/tty.h>
 #include <linux/mm.h>		/* __get_free_page() and friends */
@@ -1732,15 +1731,15 @@ static void do_handle_spec(struct vc_data *vc, u_char value, char up_flag)
 	switch (value) {
 	case KVAL(K_CAPS):
 		label = msg_get(MSG_KEYNAME_CAPSLOCK);
-		on_off = (vc_kbd_led(kbd_table + vc->vc_num, VC_CAPSLOCK));
+		on_off = vt_get_leds(fg_console, VC_CAPSLOCK);
 		break;
 	case KVAL(K_NUM):
 		label = msg_get(MSG_KEYNAME_NUMLOCK);
-		on_off = (vc_kbd_led(kbd_table + vc->vc_num, VC_NUMLOCK));
+		on_off = vt_get_leds(fg_console, VC_NUMLOCK);
 		break;
 	case KVAL(K_HOLD):
 		label = msg_get(MSG_KEYNAME_SCROLLLOCK);
-		on_off = (vc_kbd_led(kbd_table + vc->vc_num, VC_SCROLLOCK));
+		on_off = vt_get_leds(fg_console, VC_SCROLLOCK);
 		if (speakup_console[vc->vc_num])
 			speakup_console[vc->vc_num]->tty_stopped = on_off;
 		break;
@@ -2021,7 +2020,7 @@ speakup_key(struct vc_data *vc, int shift_state, int keycode, u_short keysym,
 	if (type >= 0xf0)
 		type -= 0xf0;
 	if (type == KT_PAD
-		&& (vc_kbd_led(kbd_table + fg_console, VC_NUMLOCK))) {
+		&& (vt_get_leds(fg_console, VC_NUMLOCK))) {
 		if (up_flag) {
 			spk_keydown = 0;
 			goto out;
@@ -2269,8 +2268,6 @@ static int __init speakup_init(void)
 		set_mask_bits(0, i, 2);
 
 	set_key_info(key_defaults, key_buf);
-	if (quiet_boot)
-		spk_shut_up |= 0x01;
 
 	/* From here on out, initializations can fail. */
 	err = speakup_add_virtual_keyboard();
@@ -2292,6 +2289,9 @@ static int __init speakup_init(void)
 			if (err)
 				goto error_kobjects;
 		}
+
+	if (quiet_boot)
+		spk_shut_up |= 0x01;
 
 	err = speakup_kobj_init();
 	if (err)

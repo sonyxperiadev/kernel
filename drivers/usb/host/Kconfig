@@ -19,13 +19,17 @@ config USB_C67X00_HCD
 
 config USB_XHCI_HCD
 	tristate "xHCI HCD (USB 3.0) support (EXPERIMENTAL)"
-	depends on USB && PCI && EXPERIMENTAL
+	depends on USB && USB_ARCH_HAS_XHCI && EXPERIMENTAL
 	---help---
 	  The eXtensible Host Controller Interface (xHCI) is standard for USB 3.0
 	  "SuperSpeed" host controller hardware.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called xhci-hcd.
+
+config USB_XHCI_PLATFORM
+	tristate
+	depends on USB_XHCI_HCD
 
 config USB_XHCI_HCD_DEBUGGING
 	bool "Debugging for the xHCI host controller"
@@ -130,7 +134,7 @@ config USB_FSL_MPH_DR_OF
 	tristate
 
 config USB_EHCI_FSL
-	bool "Support for Freescale on-chip EHCI USB controller"
+	bool "Support for Freescale PPC on-chip EHCI USB controller"
 	depends on USB_EHCI_HCD && FSL_SOC
 	select USB_EHCI_ROOT_HUB_TT
 	select USB_FSL_MPH_DR_OF if OF
@@ -152,7 +156,7 @@ config USB_EHCI_BCM
 	  SOCs.
 
 config USB_EHCI_MXC
-	bool "Support for Freescale on-chip EHCI USB controller"
+	bool "Support for Freescale i.MX on-chip EHCI USB controller"
 	depends on USB_EHCI_HCD && ARCH_MXC
 	select USB_EHCI_ROOT_HUB_TT
 	---help---
@@ -208,6 +212,15 @@ config USB_EHCI_S5P
        help
 	 Enable support for the S5P SOC's on-chip EHCI controller.
 
+config USB_EHCI_MV
+	bool "EHCI support for Marvell on-chip controller"
+	depends on USB_EHCI_HCD && (ARCH_PXA || ARCH_MMP)
+	select USB_EHCI_ROOT_HUB_TT
+	---help---
+	  Enables support for Marvell (including PXA and MMP series) on-chip
+	  USB SPH and OTG controller. SPH is a single port host, and it can
+	  only be EHCI host. OTG is controller that can switch to host mode.
+
 config USB_W90X900_EHCI
 	bool "W90X900(W90P910) EHCI support"
 	depends on USB_EHCI_HCD && ARCH_W90X900
@@ -223,11 +236,15 @@ config USB_CNS3XXX_EHCI
 	  support.
 
 config USB_EHCI_ATH79
-	bool "EHCI support for AR7XXX/AR9XXX SoCs"
-	depends on USB_EHCI_HCD && (SOC_AR71XX || SOC_AR724X || SOC_AR913X)
+	bool "EHCI support for AR7XXX/AR9XXX SoCs (DEPRECATED)"
+	depends on USB_EHCI_HCD && (SOC_AR71XX || SOC_AR724X || SOC_AR913X || SOC_AR933X)
 	select USB_EHCI_ROOT_HUB_TT
+	select USB_EHCI_HCD_PLATFORM
 	default y
 	---help---
+	  This option is deprecated now and the driver was removed, use
+	  USB_EHCI_HCD_PLATFORM instead.
+
 	  Enables support for the built-in EHCI controller present
 	  on the Atheros AR7XXX/AR9XXX SoCs.
 
@@ -317,10 +334,14 @@ config USB_OHCI_HCD_OMAP3
 	  OMAP3 and later chips.
 
 config USB_OHCI_ATH79
-	bool "USB OHCI support for the Atheros AR71XX/AR7240 SoCs"
+	bool "USB OHCI support for the Atheros AR71XX/AR7240 SoCs (DEPRECATED)"
 	depends on USB_OHCI_HCD && (SOC_AR71XX || SOC_AR724X)
+	select USB_OHCI_HCD_PLATFORM
 	default y
 	help
+	  This option is deprecated now and the driver was removed, use
+	  USB_OHCI_HCD_PLATFORM instead.
+
 	  Enables support for the built-in OHCI controller present on the
 	  Atheros AR71XX/AR7240 SoCs.
 
@@ -385,6 +406,12 @@ config USB_OHCI_SH
 	  Enables support for the on-chip OHCI controller on the SuperH.
 	  If you use the PCI OHCI controller, this option is not necessary.
 
+config USB_OHCI_EXYNOS
+	boolean "OHCI support for Samsung EXYNOS SoC Series"
+	depends on USB_OHCI_HCD && ARCH_EXYNOS
+	help
+	 Enable support for the Samsung Exynos SOC's on-chip OHCI controller.
+
 config USB_CNS3XXX_OHCI
 	bool "Cavium CNS3XXX OHCI Module"
 	depends on USB_OHCI_HCD && ARCH_CNS3XXX
@@ -398,6 +425,26 @@ config USB_OHCI_BCM
         ---help---
           Enables OHCI support for USB host controller on some Broadcom
           SOCs.
+
+config USB_OHCI_HCD_PLATFORM
+	bool "Generic OHCI driver for a platform device"
+	depends on USB_OHCI_HCD && EXPERIMENTAL
+	default n
+	---help---
+	  Adds an OHCI host driver for a generic platform device, which
+	  provieds a memory space and an irq.
+
+	  If unsure, say N.
+
+config USB_EHCI_HCD_PLATFORM
+	bool "Generic EHCI driver for a platform device"
+	depends on USB_EHCI_HCD && EXPERIMENTAL
+	default n
+	---help---
+	  Adds an EHCI host driver for a generic platform device, which
+	  provieds a memory space and an irq.
+
+	  If unsure, say N.
 
 config USB_OHCI_BIG_ENDIAN_DESC
 	bool
@@ -536,10 +583,23 @@ config USB_R8A66597_HCD
 	  To compile this driver as a module, choose M here: the
 	  module will be called r8a66597-hcd.
 
+config USB_RENESAS_USBHS_HCD
+	tristate "Renesas USBHS HCD support"
+	depends on USB
+	depends on USB_RENESAS_USBHS
+	help
+	  The Renesas USBHS is a USB 2.0 host and peripheral controller.
+
+	  Enable this option if your board has this chip, and you want
+	  to use it as a host controller.  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called renesas-usbhs.
+
 config USB_WHCI_HCD
 	tristate "Wireless USB Host Controller Interface (WHCI) driver (EXPERIMENTAL)"
 	depends on EXPERIMENTAL
-	depends on PCI && USB
+	depends on PCI && USB && UWB
 	select USB_WUSB
 	select UWB_WHCI
 	help
@@ -552,7 +612,7 @@ config USB_WHCI_HCD
 config USB_HWA_HCD
 	tristate "Host Wire Adapter (HWA) driver (EXPERIMENTAL)"
 	depends on EXPERIMENTAL
-	depends on USB
+	depends on USB && UWB
 	select USB_WUSB
 	select UWB_HWA
 	help
@@ -564,6 +624,15 @@ config USB_HWA_HCD
 	  To compile this driver a module, choose M here: the module
 	  will be called "hwa-hc".
 
+config USB_IMX21_HCD
+       tristate "i.MX21 HCD support"
+       depends on USB && ARM && ARCH_MXC
+       help
+         This driver enables support for the on-chip USB host in the
+         i.MX21 processor.
+
+         To compile this driver as a module, choose M here: the
+         module will be called "imx21-hcd".
 
 config USB_OCTEON_EHCI
 	bool "Octeon on-chip EHCI support"
@@ -590,23 +659,3 @@ config USB_OCTEON_OHCI
 config USB_OCTEON2_COMMON
 	bool
 	default y if USB_OCTEON_EHCI || USB_OCTEON_OHCI
-
-config USB_DWCOTG
-	tristate "Synopsis DWC host support"
-	depends on USB
-	help
-	  The Synopsis DWC controller is a dual-role
-	  host/peripheral/OTG ("On The Go") USB controllers.
-
-	  Enable this option to support this IP in host controller mode.
-	  If unsure, say N.
-
-	  To compile this driver as a module, choose M here: the
-	  modules built will be called dwc_otg and dwc_common_port.
-
-config DWCOTG_ROOT
-	string "Path to DWC OTG modules source directory"
-	default "../../../../hardware/broadcom/bcm2835/kernel/DWC_otg/"
-	depends on USB_DWCOTG
-	help
-        This is required to tell the kernel where to build DWC OTG driver from

@@ -21,6 +21,7 @@
 #include <linux/ion.h>
 #include <linux/list.h>
 #include <linux/miscdevice.h>
+#include <linux/export.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
 #include <linux/rbtree.h>

@@ -20,15 +20,15 @@
 #include <linux/regset.h>
 #include <linux/tracehook.h>
 #include <linux/seccomp.h>
+#include <linux/compat.h>
 #include <trace/syscall.h>
-#include <asm/compat.h>
 #include <asm/segment.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
-#include <asm/system.h>
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
+#include <asm/switch_to.h>
 #include "entry.h"
 
 #ifdef CONFIG_COMPAT
@@ -42,6 +42,7 @@ enum s390_regset {
 	REGSET_GENERAL,
 	REGSET_FP,
 	REGSET_LAST_BREAK,
+	REGSET_SYSTEM_CALL,
 	REGSET_GENERAL_EXTENDED,
 };
 
@@ -168,8 +169,8 @@ static unsigned long __peek_user(struct task_struct *child, addr_t addr)
 		 */
 		tmp = *(addr_t *)((addr_t) &task_pt_regs(child)->psw + addr);
 		if (addr == (addr_t) &dummy->regs.psw.mask)
-			/* Remove per bit from user psw. */
-			tmp &= ~PSW_MASK_PER;
+			/* Return a clean psw mask. */
+			tmp = psw_user_bits | (tmp & PSW_MASK_USER);
 
 	} else if (addr < (addr_t) &dummy->regs.orig_gpr2) {
 		/*
@@ -291,18 +292,10 @@ static int __poke_user(struct task_struct *child, addr_t addr, addr_t data)
 		 * psw and gprs are stored on the stack
 		 */
 		if (addr == (addr_t) &dummy->regs.psw.mask &&
-#ifdef CONFIG_COMPAT
-		    data != PSW_MASK_MERGE(psw_user32_bits, data) &&
-#endif
-		    data != PSW_MASK_MERGE(psw_user_bits, data))
+		    ((data & ~PSW_MASK_USER) != psw_user_bits ||
+		     ((data & PSW_MASK_EA) && !(data & PSW_MASK_BA))))
 			/* Invalid psw mask. */
 			return -EINVAL;
-#ifndef CONFIG_64BIT
-		if (addr == (addr_t) &dummy->regs.psw.addr)
-			/* I'd like to reject addresses without the
-			   high order bit but older gdb's rely on it */
-			data |= PSW_ADDR_AMODE;
-#endif
 		*(addr_t *)((addr_t) &task_pt_regs(child)->psw + addr) = data;
 
 	} else if (addr < (addr_t) (&dummy->regs.orig_gpr2)) {
@@ -497,21 +490,21 @@ static u32 __peek_user_compat(struct task_struct *child, addr_t addr)
 	__u32 tmp;
 
 	if (addr < (addr_t) &dummy32->regs.acrs) {
+		struct pt_regs *regs = task_pt_regs(child);
 		/*
 		 * psw and gprs are stored on the stack
 		 */
 		if (addr == (addr_t) &dummy32->regs.psw.mask) {
 			/* Fake a 31 bit psw mask. */
-			tmp = (__u32)(task_pt_regs(child)->psw.mask >> 32);
-			tmp = PSW32_MASK_MERGE(psw32_user_bits, tmp);
+			tmp = (__u32)(regs->psw.mask >> 32);
+			tmp = psw32_user_bits | (tmp & PSW32_MASK_USER);
 		} else if (addr == (addr_t) &dummy32->regs.psw.addr) {
 			/* Fake a 31 bit psw address. */
-			tmp = (__u32) task_pt_regs(child)->psw.addr |
-				PSW32_ADDR_AMODE31;
+			tmp = (__u32) regs->psw.addr |
+				(__u32)(regs->psw.mask & PSW_MASK_BA);
 		} else {
 			/* gpr 0-15 */
-			tmp = *(__u32 *)((addr_t) &task_pt_regs(child)->psw +
-					 addr*2 + 4);
+			tmp = *(__u32 *)((addr_t) &regs->psw + addr*2 + 4);
 		}
 	} else if (addr < (addr_t) (&dummy32->regs.orig_gpr2)) {
 		/*
@@ -596,24 +589,27 @@ static int __poke_user_compat(struct task_struct *child,
 	addr_t offset;
 
 	if (addr < (addr_t) &dummy32->regs.acrs) {
+		struct pt_regs *regs = task_pt_regs(child);
 		/*
 		 * psw, gprs, acrs and orig_gpr2 are stored on the stack
 		 */
 		if (addr == (addr_t) &dummy32->regs.psw.mask) {
 			/* Build a 64 bit psw mask from 31 bit mask. */
-			if (tmp != PSW32_MASK_MERGE(psw32_user_bits, tmp))
+			if ((tmp & ~PSW32_MASK_USER) != psw32_user_bits)
 				/* Invalid psw mask. */
 				return -EINVAL;
-			task_pt_regs(child)->psw.mask =
-				PSW_MASK_MERGE(psw_user32_bits, (__u64) tmp << 32);
+			regs->psw.mask = (regs->psw.mask & ~PSW_MASK_USER) |
+				(regs->psw.mask & PSW_MASK_BA) |
+				(__u64)(tmp & PSW32_MASK_USER) << 32;
 		} else if (addr == (addr_t) &dummy32->regs.psw.addr) {
 			/* Build a 64 bit psw address from 31 bit address. */
-			task_pt_regs(child)->psw.addr =
-				(__u64) tmp & PSW32_ADDR_INSN;
+			regs->psw.addr = (__u64) tmp & PSW32_ADDR_INSN;
+			/* Transfer 31 bit amode bit to psw mask. */
+			regs->psw.mask = (regs->psw.mask & ~PSW_MASK_BA) |
+				(__u64)(tmp & PSW32_ADDR_AMODE);
 		} else {
 			/* gpr 0-15 */
-			*(__u32*)((addr_t) &task_pt_regs(child)->psw
-				  + addr*2 + 4) = tmp;
+			*(__u32*)((addr_t) &regs->psw + addr*2 + 4) = tmp;
 		}
 	} else if (addr < (addr_t) (&dummy32->regs.orig_gpr2)) {
 		/*
@@ -737,27 +733,24 @@ asmlinkage long do_syscall_trace_enter(struct pt_regs *regs)
 		 * debugger stored an invalid system call number. Skip
 		 * the system call and the system call restart handling.
 		 */
-		regs->svcnr = 0;
+		clear_thread_flag(TIF_SYSCALL);
 		ret = -1;
 	}
 
 	if (unlikely(test_thread_flag(TIF_SYSCALL_TRACEPOINT)))
 		trace_sys_enter(regs, regs->gprs[2]);
 
-	if (unlikely(current->audit_context))
-		audit_syscall_entry(is_compat_task() ?
-					AUDIT_ARCH_S390 : AUDIT_ARCH_S390X,
-				    regs->gprs[2], regs->orig_gpr2,
-				    regs->gprs[3], regs->gprs[4],
-				    regs->gprs[5]);
+	audit_syscall_entry(is_compat_task() ?
+				AUDIT_ARCH_S390 : AUDIT_ARCH_S390X,
+			    regs->gprs[2], regs->orig_gpr2,
+			    regs->gprs[3], regs->gprs[4],
+			    regs->gprs[5]);
 	return ret ?: regs->gprs[2];
 }
 
 asmlinkage void do_syscall_trace_exit(struct pt_regs *regs)
 {
-	if (unlikely(current->audit_context))
-		audit_syscall_exit(AUDITSC_RESULT(regs->gprs[2]),
-				   regs->gprs[2]);
+	audit_syscall_exit(regs);
 
 	if (unlikely(test_thread_flag(TIF_SYSCALL_TRACEPOINT)))
 		trace_sys_exit(regs, regs->gprs[2]);
@@ -907,6 +900,26 @@ static int s390_last_break_set(struct task_struct *target,
 
 #endif
 
+static int s390_system_call_get(struct task_struct *target,
+				const struct user_regset *regset,
+				unsigned int pos, unsigned int count,
+				void *kbuf, void __user *ubuf)
+{
+	unsigned int *data = &task_thread_info(target)->system_call;
+	return user_regset_copyout(&pos, &count, &kbuf, &ubuf,
+				   data, 0, sizeof(unsigned int));
+}
+
+static int s390_system_call_set(struct task_struct *target,
+				const struct user_regset *regset,
+				unsigned int pos, unsigned int count,
+				const void *kbuf, const void __user *ubuf)
+{
+	unsigned int *data = &task_thread_info(target)->system_call;
+	return user_regset_copyin(&pos, &count, &kbuf, &ubuf,
+				  data, 0, sizeof(unsigned int));
+}
+
 static const struct user_regset s390_regsets[] = {
 	[REGSET_GENERAL] = {
 		.core_note_type = NT_PRSTATUS,
@@ -934,6 +947,14 @@ static const struct user_regset s390_regsets[] = {
 		.set = s390_last_break_set,
 	},
 #endif
+	[REGSET_SYSTEM_CALL] = {
+		.core_note_type = NT_S390_SYSTEM_CALL,
+		.n = 1,
+		.size = sizeof(unsigned int),
+		.align = sizeof(unsigned int),
+		.get = s390_system_call_get,
+		.set = s390_system_call_set,
+	},
 };
 
 static const struct user_regset_view user_s390_view = {
@@ -1121,6 +1142,14 @@ static const struct user_regset s390_compat_regsets[] = {
 		.align = sizeof(long),
 		.get = s390_compat_last_break_get,
 		.set = s390_compat_last_break_set,
+	},
+	[REGSET_SYSTEM_CALL] = {
+		.core_note_type = NT_S390_SYSTEM_CALL,
+		.n = 1,
+		.size = sizeof(compat_uint_t),
+		.align = sizeof(compat_uint_t),
+		.get = s390_system_call_get,
+		.set = s390_system_call_set,
 	},
 	[REGSET_GENERAL_EXTENDED] = {
 		.core_note_type = NT_S390_HIGH_GPRS,

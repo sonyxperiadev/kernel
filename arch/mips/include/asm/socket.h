@@ -82,6 +82,13 @@ To add: #define SO_REUSEPORT 0x0200	/* Allow local address and port reuse.  */
 
 #define SO_RXQ_OVFL             40
 
+#define SO_WIFI_STATUS		41
+#define SCM_WIFI_STATUS		SO_WIFI_STATUS
+#define SO_PEEK_OFF		42
+
+/* Instruct lower device to use last 4-bytes of skb data as FCS */
+#define SO_NOFCS		43
+
 #ifdef __KERNEL__
 
 /** sock_type - Socket types

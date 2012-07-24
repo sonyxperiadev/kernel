@@ -26,7 +26,7 @@
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
+//#include <linux/sysdev.h>
 #include <linux/ioport.h>
 #include <linux/serial_8250.h>
 

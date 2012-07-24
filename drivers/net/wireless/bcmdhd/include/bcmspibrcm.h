@@ -1,7 +1,7 @@
 /*
  * SD-SPI Protocol Conversion - BCMSDH->gSPI Translation Layer
  *
- * Copyright (C) 2011, Broadcom Corporation
+ * Copyright (C) 2012, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: bcmspibrcm.h 275703 2011-08-04 20:20:27Z $
+ * $Id: bcmspibrcm.h 241182 2011-02-17 21:50:03Z $
  */
 #ifndef	_BCM_SPI_BRCM_H
 #define	_BCM_SPI_BRCM_H

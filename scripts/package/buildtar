@@ -68,6 +68,7 @@ cp -v -- "${objtree}/System.map" "${tmpdir}/boot/System.map-${KERNELRELEASE}"
 cp -v -- "${objtree}/.config" "${tmpdir}/boot/config-${KERNELRELEASE}"
 cp -v -- "${objtree}/vmlinux" "${tmpdir}/boot/vmlinux-${KERNELRELEASE}"
 
+
 #
 # Install arch-specific kernel image(s)
 #
@@ -85,9 +86,6 @@ case "${ARCH}" in
 	vax)
 		[ -f "${objtree}/vmlinux.SYS" ] && cp -v -- "${objtree}/vmlinux.SYS" "${tmpdir}/boot/vmlinux-${KERNELRELEASE}.SYS"
 		[ -f "${objtree}/vmlinux.dsk" ] && cp -v -- "${objtree}/vmlinux.dsk" "${tmpdir}/boot/vmlinux-${KERNELRELEASE}.dsk"
-		;;
-	arm)
-		[ -f "${objtree}/arch/arm/boot/uImage" ] && cp -v -- "${objtree}/arch/arm/boot/uImage" "${tmpdir}/boot/uImage"
 		;;
 	*)
 		[ -f "${KBUILD_IMAGE}" ] && cp -v -- "${KBUILD_IMAGE}" "${tmpdir}/boot/vmlinux-kbuild-${KERNELRELEASE}"

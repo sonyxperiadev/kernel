@@ -275,6 +275,7 @@ typedef struct journal_superblock_s
 
 #include <linux/fs.h>
 #include <linux/sched.h>
+#include <linux/jbd_common.h>
 
 #define J_ASSERT(assert)	BUG_ON(!(assert))
 
@@ -301,70 +302,6 @@ typedef struct journal_superblock_s
 #define J_EXPECT_BH(bh, expr, why...)	__journal_expect(expr, ## why)
 #define J_EXPECT_JH(jh, expr, why...)	__journal_expect(expr, ## why)
 #endif
-
-enum jbd_state_bits {
-	BH_JBD			/* Has an attached ext3 journal_head */
-	  = BH_PrivateStart,
-	BH_JWrite,		/* Being written to log (@@@ DEBUGGING) */
-	BH_Freed,		/* Has been freed (truncated) */
-	BH_Revoked,		/* Has been revoked from the log */
-	BH_RevokeValid,		/* Revoked flag is valid */
-	BH_JBDDirty,		/* Is dirty but journaled */
-	BH_State,		/* Pins most journal_head state */
-	BH_JournalHead,		/* Pins bh->b_private and jh->b_bh */
-	BH_Unshadow,		/* Dummy bit, for BJ_Shadow wakeup filtering */
-	BH_JBDPrivateStart,	/* First bit available for private use by FS */
-};
-
-BUFFER_FNS(JBD, jbd)
-BUFFER_FNS(JWrite, jwrite)
-BUFFER_FNS(JBDDirty, jbddirty)
-TAS_BUFFER_FNS(JBDDirty, jbddirty)
-BUFFER_FNS(Revoked, revoked)
-TAS_BUFFER_FNS(Revoked, revoked)
-BUFFER_FNS(RevokeValid, revokevalid)
-TAS_BUFFER_FNS(RevokeValid, revokevalid)
-BUFFER_FNS(Freed, freed)
-
-static inline struct buffer_head *jh2bh(struct journal_head *jh)
-{
-	return jh->b_bh;
-}
-
-static inline struct journal_head *bh2jh(struct buffer_head *bh)
-{
-	return bh->b_private;
-}
-
-static inline void jbd_lock_bh_state(struct buffer_head *bh)
-{
-	bit_spin_lock(BH_State, &bh->b_state);
-}
-
-static inline int jbd_trylock_bh_state(struct buffer_head *bh)
-{
-	return bit_spin_trylock(BH_State, &bh->b_state);
-}
-
-static inline int jbd_is_locked_bh_state(struct buffer_head *bh)
-{
-	return bit_spin_is_locked(BH_State, &bh->b_state);
-}
-
-static inline void jbd_unlock_bh_state(struct buffer_head *bh)
-{
-	bit_spin_unlock(BH_State, &bh->b_state);
-}
-
-static inline void jbd_lock_bh_journal_head(struct buffer_head *bh)
-{
-	bit_spin_lock(BH_JournalHead, &bh->b_state);
-}
-
-static inline void jbd_unlock_bh_journal_head(struct buffer_head *bh)
-{
-	bit_spin_unlock(BH_JournalHead, &bh->b_state);
-}
 
 /* Flags in jbd_inode->i_flags */
 #define __JI_COMMIT_RUNNING 0
@@ -1034,6 +971,10 @@ extern void __journal_clean_data_list(transaction_t *transaction);
 /* Log buffer allocation */
 extern struct journal_head * jbd2_journal_get_descriptor_buffer(journal_t *);
 int jbd2_journal_next_log_block(journal_t *, unsigned long long *);
+int jbd2_journal_get_log_tail(journal_t *journal, tid_t *tid,
+			      unsigned long *block);
+void __jbd2_update_log_tail(journal_t *journal, tid_t tid, unsigned long block);
+void jbd2_update_log_tail(journal_t *journal, tid_t tid, unsigned long block);
 
 /* Commit management */
 extern void jbd2_journal_commit_transaction(journal_t *);
@@ -1083,6 +1024,11 @@ jbd2_journal_write_metadata_buffer(transaction_t	  *transaction,
 /* Transaction locking */
 extern void		__wait_on_journal (journal_t *);
 
+/* Transaction cache support */
+extern void jbd2_journal_destroy_transaction_cache(void);
+extern int  jbd2_journal_init_transaction_cache(void);
+extern void jbd2_journal_free_transaction(transaction_t *);
+
 /*
  * Journal locking.
  *
@@ -1106,9 +1052,9 @@ static inline handle_t *journal_current_handle(void)
  */
 
 extern handle_t *jbd2_journal_start(journal_t *, int nblocks);
-extern handle_t *jbd2__journal_start(journal_t *, int nblocks, int gfp_mask);
+extern handle_t *jbd2__journal_start(journal_t *, int nblocks, gfp_t gfp_mask);
 extern int	 jbd2_journal_restart(handle_t *, int nblocks);
-extern int	 jbd2__journal_restart(handle_t *, int nblocks, int gfp_mask);
+extern int	 jbd2__journal_restart(handle_t *, int nblocks, gfp_t gfp_mask);
 extern int	 jbd2_journal_extend (handle_t *, int nblocks);
 extern int	 jbd2_journal_get_write_access(handle_t *, struct buffer_head *);
 extern int	 jbd2_journal_get_create_access (handle_t *, struct buffer_head *);
@@ -1145,7 +1091,8 @@ extern int	   jbd2_journal_destroy    (journal_t *);
 extern int	   jbd2_journal_recover    (journal_t *journal);
 extern int	   jbd2_journal_wipe       (journal_t *, int);
 extern int	   jbd2_journal_skip_recovery	(journal_t *);
-extern void	   jbd2_journal_update_superblock	(journal_t *, int);
+extern void	   jbd2_journal_update_sb_log_tail	(journal_t *, tid_t,
+				unsigned long, int);
 extern void	   __jbd2_journal_abort_hard	(journal_t *);
 extern void	   jbd2_journal_abort      (journal_t *, int);
 extern int	   jbd2_journal_errno      (journal_t *);
@@ -1214,6 +1161,7 @@ extern int	jbd2_journal_set_revoke(journal_t *, unsigned long long, tid_t);
 extern int	jbd2_journal_test_revoke(journal_t *, unsigned long long, tid_t);
 extern void	jbd2_journal_clear_revoke(journal_t *);
 extern void	jbd2_journal_switch_revoke_table(journal_t *journal);
+extern void	jbd2_clear_buffer_revoked_flags(journal_t *journal);
 
 /*
  * The log thread user interface:
@@ -1328,12 +1276,6 @@ extern int jbd_blocks_per_page(struct inode *inode);
 #define BUFFER_TRACE(bh, info)	do {} while (0)
 #define BUFFER_TRACE2(bh, bh2, info)	do {} while (0)
 #define JBUFFER_TRACE(jh, info)	do {} while (0)
-
-/* 
- * jbd2_dev_to_name is a utility function used by the jbd2 and ext4 
- * tracing infrastructure to map a dev_t to a device name.
- */
-extern const char *jbd2_dev_to_name(dev_t device);
 
 #endif	/* __KERNEL__ */
 

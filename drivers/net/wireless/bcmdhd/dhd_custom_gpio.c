@@ -1,8 +1,8 @@
 /*
 * Customer code to add GPIO control during WLAN start/stop
-* Copyright (C) 1999-2011, Broadcom Corporation
+* Copyright (C) 1999-2012, Broadcom Corporation
 * 
-*         Unless you and Broadcom execute a separate written software license
+*      Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2 (the "GPL"),
 * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -20,7 +20,7 @@
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *
-* $Id: dhd_custom_gpio.c 275786 2011-08-04 22:42:42Z $
+* $Id: dhd_custom_gpio.c 291086 2011-10-21 01:17:24Z $
 */
 
 #include <typedefs.h>
@@ -41,7 +41,7 @@
 extern  void bcm_wlan_power_off(int);
 extern  void bcm_wlan_power_on(int);
 #endif /* CUSTOMER_HW */
-#if defined(CUSTOMER_HW2) || defined (CUSTOMER_HW3)
+#if defined(CUSTOMER_HW2)
 #ifdef CONFIG_WIFI_CONTROL_FUNC
 int wifi_set_power(int on, unsigned long msec);
 int wifi_get_irq_number(unsigned long *irq_flags_ptr);
@@ -98,7 +98,7 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 
 	if (dhd_oob_gpio_num < 0) {
 		WL_ERROR(("%s: ERROR customer specific Host GPIO is NOT defined \n",
-			__FUNCTION__));
+		__FUNCTION__));
 		return (dhd_oob_gpio_num);
 	}
 
@@ -129,7 +129,7 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_off(2);
 #endif /* CUSTOMER_HW */
-#if defined CUSTOMER_HW2 || defined CUSTOMER_HW3
+#ifdef CUSTOMER_HW2
 			wifi_set_power(0, 0);
 #endif
 			WL_ERROR(("=========== WLAN placed in RESET ========\n"));
@@ -141,7 +141,7 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_on(2);
 #endif /* CUSTOMER_HW */
-#if defined CUSTOMER_HW2 || defined CUSTOMER_HW3
+#ifdef CUSTOMER_HW2
 			wifi_set_power(1, 0);
 #endif
 			WL_ERROR(("=========== WLAN going back to live  ========\n"));
@@ -168,139 +168,31 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 }
 
 #ifdef GET_CUSTOM_MAC_ENABLE
-
-enum {
-	MACADDR_NONE =0 ,	// Initial state (nothing done yet)
-	MACADDR_MOD_RANDOM,	// Mac address randomization final 3 octets and rewrite
-	MACADDR_MOD_NONE	// Mac address already set from file (no need to rewrite)
-};
-
-static int g_iMacFlag = MACADDR_NONE;
-
-int CheckRDWR_Macaddr(struct ether_addr *mac)
-{
-	struct file *fp_mac	= NULL;
-	char buf[18]			= {0};
-	char* filepath			= "/data/misc/wifi/.mac.info";
-	mm_segment_t oldfs		= {0};
-
-	int ret = -1;
-
-	fp_mac = filp_open(filepath, O_RDONLY, 0);
-
-	if(IS_ERR(fp_mac)) {
-	/***************************************************************************
-	 * No .macinfo file, initialize to dummy values
-	 */
-		mac->octet[0] = 0x00;
-		mac->octet[1] = 0x90;
-		mac->octet[2] = 0x4c;
-		g_iMacFlag = MACADDR_MOD_RANDOM;
-	}
-	else {
-	/***************************************************************************
-	 * File .macinfo found. If zero, it is invalid and the "default" value should be used
-	 * and randomized. Otherwise, use that value "as-is" in the .macinfo file
-	 */
-		int is_zeromac;
-		int temp_mac[6];
-
-		ret = kernel_read(fp_mac, 0, buf, 18);
-		filp_close(fp_mac, NULL);
-		buf[17] ='\0';
-
-		is_zeromac = strncmp(buf, "00:00:00:00:00:00", 17);
-		WL_ERROR(("MAC (FILE): [%s] [%d] \r\n" , buf, is_zeromac));
-
-		if (is_zeromac == 0) {
-			WL_ERROR(("Zero MAC detected. Trying Random MAC.\n"));
-			mac->octet[0] = 0x00;
-			mac->octet[1] = 0x90;
-			mac->octet[2] = 0x4c;
-			g_iMacFlag = MACADDR_MOD_RANDOM;
-		} else {
-			sscanf(buf,"%02X:%02X:%02X:%02X:%02X:%02X",
-			   &(temp_mac[0]), &(temp_mac[1]), &(temp_mac[2]),
-			   &(temp_mac[3]), &(temp_mac[4]), &(temp_mac[5]));
-			mac->octet[0] = (char) temp_mac[0];
-			mac->octet[1] = temp_mac[1];
-			mac->octet[2] = temp_mac[2];
-			mac->octet[3] = temp_mac[3];
-			mac->octet[4] = temp_mac[4];
-			mac->octet[5] = temp_mac[5];
-			g_iMacFlag = MACADDR_MOD_NONE;
-		}
-	}
-
-	if(g_iMacFlag == MACADDR_MOD_RANDOM) {
-		unsigned long int rand_mac;
-		srandom32((uint)jiffies);	/* Seed the random part of mac */
-		rand_mac = random32();
-		mac->octet[3] = (unsigned char)(rand_mac & 0x0F) | 0xF0;
-		mac->octet[4] = (unsigned char)(rand_mac >> 8);
-		mac->octet[5] = (unsigned char)(rand_mac >> 16);
-
-		WL_ERROR(("MAC (Randomized) : [%02X:%02X:%02X:%02X:%02X:%02X] \r\n" ,
-		  mac->octet[0],mac->octet[1],mac->octet[2],mac->octet[3],mac->octet[4],mac->octet[5]));
-	}
-
-	if (g_iMacFlag == MACADDR_MOD_NONE) {
-		return 0;	// File is already there (no need to rewrite)
-	}
-	else if (g_iMacFlag == MACADDR_NONE) {
-		WL_ERROR(("Logical error in CheckRDWR_Macaddr()!\n"));
-		return -1;	// Should not get here!
-	}
-	else {
-	/**************************************************
-	 * Write back the randomized value into a the .mac.info file
-	 */
-		sprintf(buf,"%02X:%02X:%02X:%02X:%02X:%02X\n",
-			mac->octet[0],mac->octet[1],mac->octet[2],
-			mac->octet[3],mac->octet[4],mac->octet[5]);
-
-		fp_mac = filp_open(filepath, O_RDWR | O_CREAT, 0666); // File is always created.
-		if(IS_ERR(fp_mac)) {
-			WL_ERROR(("[WIFI] %s: File open error\n", filepath));
-			return -1;
-		}
-		else {
-			oldfs = get_fs();
-			set_fs(get_ds());
-
-			if(fp_mac->f_mode & FMODE_WRITE) {
-				ret = fp_mac->f_op->write(fp_mac, (const char *)buf, sizeof(buf), &fp_mac->f_pos);
-				if(ret < 0)
-					WL_ERROR(("[WIFI] Mac address [%s] Failed to write into File: %s\n", buf, filepath));
-				else
-					WL_TRACE(("[WIFI] Mac address [%s] written into File: %s\n", buf, filepath));
-			}
-			set_fs(oldfs);
-			filp_close(fp_mac, NULL);
-		}
-	}
-
-	return 0;
-}
-
-
+/* Function to get custom MAC address */
 int
 dhd_custom_get_mac_address(unsigned char *buf)
 {
+	int ret = 0;
 
-	WL_ERROR(("%s Enter\n", __FUNCTION__));
+	WL_TRACE(("%s Enter\n", __FUNCTION__));
 	if (!buf)
 		return -EINVAL;
 
-/**********************************************
- * Custom code written to randomly generate only once per phone power up.
- *
- */
-	return (CheckRDWR_Macaddr((struct ether_addr *) buf));
+	/* Customer access to MAC address stored outside of DHD driver */
+#if defined(CUSTOMER_HW2) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
+	ret = wifi_get_mac_addr(buf);
+#endif
 
+#ifdef EXAMPLE_GET_MAC
+	/* EXAMPLE code */
+	{
+		struct ether_addr ea_example = {{0x00, 0x11, 0x22, 0x33, 0x44, 0xFF}};
+		bcopy((char *)&ea_example, buf, sizeof(struct ether_addr));
+	}
+#endif /* EXAMPLE_GET_MAC */
 
+	return ret;
 }
-
 #endif /* GET_CUSTOM_MAC_ENABLE */
 
 /* Customized Locale table : OPTIONAL feature */

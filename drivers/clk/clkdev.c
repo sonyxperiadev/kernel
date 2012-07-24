@@ -170,6 +170,6 @@ void clkdev_drop(struct clk_lookup *cl)
 	mutex_lock(&clocks_mutex);
 	list_del(&cl->node);
 	mutex_unlock(&clocks_mutex);
-	kfree(container_of(cl, struct clk_lookup_alloc, cl));
+	kfree(cl);
 }
 EXPORT_SYMBOL(clkdev_drop);

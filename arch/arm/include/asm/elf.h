@@ -52,11 +52,6 @@ typedef struct user_fp elf_fpregset_t;
 #define R_ARM_ABS32		2
 #define R_ARM_CALL		28
 #define R_ARM_JUMP24		29
-
-#ifdef CONFIG_GCOV_KERNEL
-#define R_ARM_TARGET1		38
-#endif /*CONFIG_GCOV_KERNEL*/
-
 #define R_ARM_V4BX		40
 #define R_ARM_PREL31		42
 #define R_ARM_MOVW_ABS_NC	43
@@ -134,9 +129,5 @@ extern void elf_set_personality(const struct elf32_hdr *);
 struct mm_struct;
 extern unsigned long arch_randomize_brk(struct mm_struct *mm);
 #define arch_randomize_brk arch_randomize_brk
-
-extern int vectors_user_mapping(void);
-#define arch_setup_additional_pages(bprm, uses_interp) vectors_user_mapping()
-#define ARCH_HAS_SETUP_ADDITIONAL_PAGES
 
 #endif

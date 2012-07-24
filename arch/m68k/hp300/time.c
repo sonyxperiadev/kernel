@@ -15,7 +15,6 @@
 #include <asm/machdep.h>
 #include <asm/irq.h>
 #include <asm/io.h>
-#include <asm/system.h>
 #include <asm/traps.h>
 #include <asm/blinken.h>
 
@@ -70,7 +69,7 @@ void __init hp300_sched_init(irq_handler_t vector)
 
   asm volatile(" movpw %0,%1@(5)" : : "d" (INTVAL), "a" (CLOCKBASE));
 
-  if (request_irq(IRQ_AUTO_6, hp300_tick, IRQ_FLG_STD, "timer tick", vector))
+  if (request_irq(IRQ_AUTO_6, hp300_tick, 0, "timer tick", vector))
     pr_err("Couldn't register timer interrupt\n");
 
   out_8(CLOCKBASE + CLKCR2, 0x1);		/* select CR1 */

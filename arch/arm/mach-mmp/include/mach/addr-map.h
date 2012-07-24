@@ -18,11 +18,11 @@
  * peripherals on APB, let's count it into the ABP mapping area.
  */
 #define APB_PHYS_BASE		0xd4000000
-#define APB_VIRT_BASE		0xfe000000
+#define APB_VIRT_BASE		IOMEM(0xfe000000)
 #define APB_PHYS_SIZE		0x00200000
 
 #define AXI_PHYS_BASE		0xd4200000
-#define AXI_VIRT_BASE		0xfe200000
+#define AXI_VIRT_BASE		IOMEM(0xfe200000)
 #define AXI_PHYS_SIZE		0x00200000
 
 /* Static Memory Controller - Chip Select 0 and 1 */

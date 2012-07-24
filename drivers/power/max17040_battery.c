@@ -21,10 +21,6 @@
 #include <linux/max17040_battery.h>
 #include <linux/slab.h>
 
-#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-#include <linux/broadcom/cmp_battery_multi.h>
-#endif
-
 #define MAX17040_VCELL_MSB	0x02
 #define MAX17040_VCELL_LSB	0x03
 #define MAX17040_SOC_MSB	0x04
@@ -38,7 +34,7 @@
 #define MAX17040_CMD_MSB	0xFE
 #define MAX17040_CMD_LSB	0xFF
 
-#define MAX17040_DELAY		(10*HZ)
+#define MAX17040_DELAY		1000
 #define MAX17040_BATTERY_FULL	95
 
 struct max17040_chip {
@@ -107,18 +103,10 @@ static int max17040_read_reg(struct i2c_client *client, int reg)
 	return ret;
 }
 
-static int max17040_reset(struct i2c_client *client)
+static void max17040_reset(struct i2c_client *client)
 {
-	int ret;
-   
-	ret = max17040_write_reg(client, MAX17040_CMD_MSB, 0x54);
-   
-	if (ret < 0)
-	{
-	       return ret;
-	}    
-	ret = max17040_write_reg(client, MAX17040_CMD_LSB, 0x00);
-	return ret;
+	max17040_write_reg(client, MAX17040_CMD_MSB, 0x54);
+	max17040_write_reg(client, MAX17040_CMD_LSB, 0x00);
 }
 
 static void max17040_get_vcell(struct i2c_client *client)
@@ -188,60 +176,6 @@ static void max17040_get_status(struct i2c_client *client)
 		chip->status = POWER_SUPPLY_STATUS_FULL;
 }
 
-#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-int max17040_get_battery_voltage(void *p_data)
-{
-	struct max17040_chip *chip;
-        struct i2c_client *client;
-	int battery_value;
-
-	if (p_data == NULL) {
-		printk("%s() error, p_data == NULL\n", __FUNCTION__);
-		return -1;
-	}   
-   
-	client = (struct i2c_client *)p_data;      
-	max17040_get_vcell(client);
-	chip = i2c_get_clientdata(client);
-
-	if (chip == NULL) {
-		printk("%s() error, chip == NULL\n", __FUNCTION__);
-		return -1;
-	}
-       
-	/* adjust the returned value */
-	battery_value = chip->vcell;
-	if (battery_value > 0) {
-		battery_value = 2*battery_value + 1700;
-	}
-	else {  
-		/* At startup takes a bit of time to get the battery monitor voltage.*/
-		battery_value = chip->pdata->battery_max_voltage;
-		printk("%s() monitor not ready, setting voltage to %d\n",
-		       __FUNCTION__, battery_value);
-	}         
-	return battery_value;
-}
-
-int max17040_get_battery_charge (void *p_data)
-{
-	struct max17040_chip *chip;
-	struct i2c_client    *client;
-   
-	if (p_data == NULL) {
-		printk("%s() error, p_data == NULL\n", __FUNCTION__);
-		return -1;
-	}
-   
-	client = (struct i2c_client *)p_data;
-   
-	max17040_get_soc(client);
-	chip = i2c_get_clientdata(client);
-	return chip->soc;
-}
-
-#endif
-
 static void max17040_work(struct work_struct *work)
 {
 	struct max17040_chip *chip;
@@ -253,10 +187,6 @@ static void max17040_work(struct work_struct *work)
 	max17040_get_online(chip->client);
 	max17040_get_status(chip->client);
 
-#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-#else
-	power_supply_changed(&chip->battery); 
-#endif   
 	schedule_delayed_work(&chip->work, MAX17040_DELAY);
 }
 
@@ -273,9 +203,6 @@ static int __devinit max17040_probe(struct i2c_client *client,
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
 	struct max17040_chip *chip;
 	int ret;
-#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-	struct battery_monitor *p_monitor;
-#endif   
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE))
 		return -EIO;
@@ -284,55 +211,29 @@ static int __devinit max17040_probe(struct i2c_client *client,
 	if (!chip)
 		return -ENOMEM;
 
-	if (max17040_reset(client) < 0)
-	{
-		kfree(chip);
-		return -1;
-	}
-      
 	chip->client = client;
 	chip->pdata = client->dev.platform_data;
 
 	i2c_set_clientdata(client, chip);
-	max17040_get_version(client);
 
 	chip->battery.name		= "battery";
 	chip->battery.type		= POWER_SUPPLY_TYPE_BATTERY;
 	chip->battery.get_property	= max17040_get_property;
 	chip->battery.properties	= max17040_battery_props;
 	chip->battery.num_properties	= ARRAY_SIZE(max17040_battery_props);
-   
-#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-	p_monitor = kzalloc(sizeof(struct battery_monitor), GFP_KERNEL); 
-   
-	if (p_monitor == NULL) {
-		return -ENOMEM;
-	}
 
-	p_monitor->name           = "max17040";
-	p_monitor->get_voltage_fn = max17040_get_battery_voltage;
-	p_monitor->get_charge_fn = max17040_get_battery_charge;
-	p_monitor->gpio_ac_power = chip->pdata->gpio_ac_power;
-	p_monitor->ac_power_on_level = chip->pdata->ac_power_on_level;
-	p_monitor->gpio_charger = chip->pdata->gpio_charger;
-	ret = register_battery_monitor(p_monitor, client);
-	if(ret < 0) {
-		dev_err(&client->dev, "failed: battery monitir register\n");
-		kfree(p_monitor);
-		kfree(chip);
-		return ret;
-	}
-#else   
 	ret = power_supply_register(&client->dev, &chip->battery);
 	if (ret) {
 		dev_err(&client->dev, "failed: power supply register\n");
 		kfree(chip);
 		return ret;
 	}
-   
+
+	max17040_reset(client);
+	max17040_get_version(client);
+
 	INIT_DELAYED_WORK_DEFERRABLE(&chip->work, max17040_work);
 	schedule_delayed_work(&chip->work, MAX17040_DELAY);
-#endif
 
 	return 0;
 }
@@ -341,11 +242,8 @@ static int __devexit max17040_remove(struct i2c_client *client)
 {
 	struct max17040_chip *chip = i2c_get_clientdata(client);
 
-#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-#else
 	power_supply_unregister(&chip->battery);
 	cancel_delayed_work(&chip->work);
-#endif   
 	kfree(chip);
 	return 0;
 }
@@ -384,7 +282,7 @@ MODULE_DEVICE_TABLE(i2c, max17040_id);
 
 static struct i2c_driver max17040_i2c_driver = {
 	.driver	= {
-        .name	= HW_MAX17040_DRIVER_NAME,
+		.name	= "max17040",
 	},
 	.probe		= max17040_probe,
 	.remove		= __devexit_p(max17040_remove),
@@ -392,18 +290,7 @@ static struct i2c_driver max17040_i2c_driver = {
 	.resume		= max17040_resume,
 	.id_table	= max17040_id,
 };
-
-static int __init max17040_init(void)
-{
-	return i2c_add_driver(&max17040_i2c_driver);
-}
-module_init(max17040_init);
-
-static void __exit max17040_exit(void)
-{
-	i2c_del_driver(&max17040_i2c_driver);
-}
-module_exit(max17040_exit);
+module_i2c_driver(max17040_i2c_driver);
 
 MODULE_AUTHOR("Minkyu Kang <mk7.kang@samsung.com>");
 MODULE_DESCRIPTION("MAX17040 Fuel Gauge");

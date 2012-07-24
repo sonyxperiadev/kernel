@@ -36,6 +36,193 @@
 #include "nouveau_crtc.h"
 #include "nv50_display.h"
 
+static u32
+nv50_sor_dp_lane_map(struct drm_device *dev, struct dcb_entry *dcb, u8 lane)
+{
+	struct drm_nouveau_private *dev_priv = dev->dev_private;
+	static const u8 nvaf[] = { 24, 16, 8, 0 }; /* thanks, apple.. */
+	static const u8 nv50[] = { 16, 8, 0, 24 };
+	if (dev_priv->chipset == 0xaf)
+		return nvaf[lane];
+	return nv50[lane];
+}
+
+static void
+nv50_sor_dp_train_set(struct drm_device *dev, struct dcb_entry *dcb, u8 pattern)
+{
+	u32 or = ffs(dcb->or) - 1, link = !(dcb->sorconf.link & 1);
+	nv_mask(dev, NV50_SOR_DP_CTRL(or, link), 0x0f000000, pattern << 24);
+}
+
+static void
+nv50_sor_dp_train_adj(struct drm_device *dev, struct dcb_entry *dcb,
+		      u8 lane, u8 swing, u8 preem)
+{
+	u32 or = ffs(dcb->or) - 1, link = !(dcb->sorconf.link & 1);
+	u32 shift = nv50_sor_dp_lane_map(dev, dcb, lane);
+	u32 mask = 0x000000ff << shift;
+	u8 *table, *entry, *config;
+
+	table = nouveau_dp_bios_data(dev, dcb, &entry);
+	if (!table || (table[0] != 0x20 && table[0] != 0x21)) {
+		NV_ERROR(dev, "PDISP: unsupported DP table for chipset\n");
+		return;
+	}
+
+	config = entry + table[4];
+	while (config[0] != swing || config[1] != preem) {
+		config += table[5];
+		if (config >= entry + table[4] + entry[4] * table[5])
+			return;
+	}
+
+	nv_mask(dev, NV50_SOR_DP_UNK118(or, link), mask, config[2] << shift);
+	nv_mask(dev, NV50_SOR_DP_UNK120(or, link), mask, config[3] << shift);
+	nv_mask(dev, NV50_SOR_DP_UNK130(or, link), 0x0000ff00, config[4] << 8);
+}
+
+static void
+nv50_sor_dp_link_set(struct drm_device *dev, struct dcb_entry *dcb, int crtc,
+		     int link_nr, u32 link_bw, bool enhframe)
+{
+	u32 or = ffs(dcb->or) - 1, link = !(dcb->sorconf.link & 1);
+	u32 dpctrl = nv_rd32(dev, NV50_SOR_DP_CTRL(or, link)) & ~0x001f4000;
+	u32 clksor = nv_rd32(dev, 0x614300 + (or * 0x800)) & ~0x000c0000;
+	u8 *table, *entry, mask;
+	int i;
+
+	table = nouveau_dp_bios_data(dev, dcb, &entry);
+	if (!table || (table[0] != 0x20 && table[0] != 0x21)) {
+		NV_ERROR(dev, "PDISP: unsupported DP table for chipset\n");
+		return;
+	}
+
+	entry = ROMPTR(dev, entry[10]);
+	if (entry) {
+		while (link_bw < ROM16(entry[0]) * 10)
+			entry += 4;
+
+		nouveau_bios_run_init_table(dev, ROM16(entry[2]), dcb, crtc);
+	}
+
+	dpctrl |= ((1 << link_nr) - 1) << 16;
+	if (enhframe)
+		dpctrl |= 0x00004000;
+
+	if (link_bw > 162000)
+		clksor |= 0x00040000;
+
+	nv_wr32(dev, 0x614300 + (or * 0x800), clksor);
+	nv_wr32(dev, NV50_SOR_DP_CTRL(or, link), dpctrl);
+
+	mask = 0;
+	for (i = 0; i < link_nr; i++)
+		mask |= 1 << (nv50_sor_dp_lane_map(dev, dcb, i) >> 3);
+	nv_mask(dev, NV50_SOR_DP_UNK130(or, link), 0x0000000f, mask);
+}
+
+static void
+nv50_sor_dp_link_get(struct drm_device *dev, u32 or, u32 link, u32 *nr, u32 *bw)
+{
+	u32 dpctrl = nv_rd32(dev, NV50_SOR_DP_CTRL(or, link)) & 0x000f0000;
+	u32 clksor = nv_rd32(dev, 0x614300 + (or * 0x800));
+	if (clksor & 0x000c0000)
+		*bw = 270000;
+	else
+		*bw = 162000;
+
+	if      (dpctrl > 0x00030000) *nr = 4;
+	else if (dpctrl > 0x00010000) *nr = 2;
+	else			      *nr = 1;
+}
+
+void
+nv50_sor_dp_calc_tu(struct drm_device *dev, int or, int link, u32 clk, u32 bpp)
+{
+	const u32 symbol = 100000;
+	int bestTU = 0, bestVTUi = 0, bestVTUf = 0, bestVTUa = 0;
+	int TU, VTUi, VTUf, VTUa;
+	u64 link_data_rate, link_ratio, unk;
+	u32 best_diff = 64 * symbol;
+	u32 link_nr, link_bw, r;
+
+	/* calculate packed data rate for each lane */
+	nv50_sor_dp_link_get(dev, or, link, &link_nr, &link_bw);
+	link_data_rate = (clk * bpp / 8) / link_nr;
+
+	/* calculate ratio of packed data rate to link symbol rate */
+	link_ratio = link_data_rate * symbol;
+	r = do_div(link_ratio, link_bw);
+
+	for (TU = 64; TU >= 32; TU--) {
+		/* calculate average number of valid symbols in each TU */
+		u32 tu_valid = link_ratio * TU;
+		u32 calc, diff;
+
+		/* find a hw representation for the fraction.. */
+		VTUi = tu_valid / symbol;
+		calc = VTUi * symbol;
+		diff = tu_valid - calc;
+		if (diff) {
+			if (diff >= (symbol / 2)) {
+				VTUf = symbol / (symbol - diff);
+				if (symbol - (VTUf * diff))
+					VTUf++;
+
+				if (VTUf <= 15) {
+					VTUa  = 1;
+					calc += symbol - (symbol / VTUf);
+				} else {
+					VTUa  = 0;
+					VTUf  = 1;
+					calc += symbol;
+				}
+			} else {
+				VTUa  = 0;
+				VTUf  = min((int)(symbol / diff), 15);
+				calc += symbol / VTUf;
+			}
+
+			diff = calc - tu_valid;
+		} else {
+			/* no remainder, but the hw doesn't like the fractional
+			 * part to be zero.  decrement the integer part and
+			 * have the fraction add a whole symbol back
+			 */
+			VTUa = 0;
+			VTUf = 1;
+			VTUi--;
+		}
+
+		if (diff < best_diff) {
+			best_diff = diff;
+			bestTU = TU;
+			bestVTUa = VTUa;
+			bestVTUf = VTUf;
+			bestVTUi = VTUi;
+			if (diff == 0)
+				break;
+		}
+	}
+
+	if (!bestTU) {
+		NV_ERROR(dev, "DP: unable to find suitable config\n");
+		return;
+	}
+
+	/* XXX close to vbios numbers, but not right */
+	unk  = (symbol - link_ratio) * bestTU;
+	unk *= link_ratio;
+	r = do_div(unk, symbol);
+	r = do_div(unk, symbol);
+	unk += 6;
+
+	nv_mask(dev, NV50_SOR_DP_CTRL(or, link), 0x000001fc, bestTU << 2);
+	nv_mask(dev, NV50_SOR_DP_SCFG(or, link), 0x010f7f3f, bestVTUa << 24 |
+							     bestVTUf << 16 |
+							     bestVTUi << 8 |
+							     unk);
+}
 static void
 nv50_sor_disconnect(struct drm_encoder *encoder)
 {
@@ -59,6 +246,8 @@ nv50_sor_disconnect(struct drm_encoder *encoder)
 	OUT_RING  (evo, 0);
 	BEGIN_RING(evo, 0, NV50_EVO_UPDATE, 1);
 	OUT_RING  (evo, 0);
+
+	nouveau_hdmi_mode_set(encoder, NULL);
 
 	nv_encoder->crtc = NULL;
 	nv_encoder->last_dpms = DRM_MODE_DPMS_OFF;
@@ -115,20 +304,13 @@ nv50_sor_dpms(struct drm_encoder *encoder, int mode)
 	}
 
 	if (nv_encoder->dcb->type == OUTPUT_DP) {
-		struct nouveau_i2c_chan *auxch;
+		struct dp_train_func func = {
+			.link_set = nv50_sor_dp_link_set,
+			.train_set = nv50_sor_dp_train_set,
+			.train_adj = nv50_sor_dp_train_adj
+		};
 
-		auxch = nouveau_i2c_find(dev, nv_encoder->dcb->i2c_index);
-		if (!auxch)
-			return;
-
-		if (mode == DRM_MODE_DPMS_ON) {
-			u8 status = DP_SET_POWER_D0;
-			nouveau_dp_auxch(auxch, 8, DP_SET_POWER, &status, 1);
-			nouveau_dp_link_train(encoder);
-		} else {
-			u8 status = DP_SET_POWER_D3;
-			nouveau_dp_auxch(auxch, 8, DP_SET_POWER, &status, 1);
-		}
+		nouveau_dp_dpms(encoder, mode, nv_encoder->dp.datarate, &func);
 	}
 }
 
@@ -160,11 +342,8 @@ nv50_sor_mode_fixup(struct drm_encoder *encoder, struct drm_display_mode *mode,
 	}
 
 	if (connector->scaling_mode != DRM_MODE_SCALE_NONE &&
-	     connector->native_mode) {
-		int id = adjusted_mode->base.id;
-		*adjusted_mode = *connector->native_mode;
-		adjusted_mode->base.id = id;
-	}
+	     connector->native_mode)
+		drm_mode_copy(adjusted_mode, connector->native_mode);
 
 	return true;
 }
@@ -172,6 +351,12 @@ nv50_sor_mode_fixup(struct drm_encoder *encoder, struct drm_display_mode *mode,
 static void
 nv50_sor_prepare(struct drm_encoder *encoder)
 {
+	struct nouveau_encoder *nv_encoder = nouveau_encoder(encoder);
+	nv50_sor_disconnect(encoder);
+	if (nv_encoder->dcb->type == OUTPUT_DP) {
+		/* avoid race between link training and supervisor intr */
+		nv50_display_sync(encoder->dev);
+	}
 }
 
 static void
@@ -180,33 +365,43 @@ nv50_sor_commit(struct drm_encoder *encoder)
 }
 
 static void
-nv50_sor_mode_set(struct drm_encoder *encoder, struct drm_display_mode *mode,
-		  struct drm_display_mode *adjusted_mode)
+nv50_sor_mode_set(struct drm_encoder *encoder, struct drm_display_mode *umode,
+		  struct drm_display_mode *mode)
 {
 	struct nouveau_channel *evo = nv50_display(encoder->dev)->master;
 	struct nouveau_encoder *nv_encoder = nouveau_encoder(encoder);
 	struct drm_device *dev = encoder->dev;
 	struct nouveau_crtc *crtc = nouveau_crtc(encoder->crtc);
+	struct nouveau_connector *nv_connector;
 	uint32_t mode_ctl = 0;
 	int ret;
 
 	NV_DEBUG_KMS(dev, "or %d type %d -> crtc %d\n",
 		     nv_encoder->or, nv_encoder->dcb->type, crtc->index);
-
-	nv50_sor_dpms(encoder, DRM_MODE_DPMS_ON);
+	nv_encoder->crtc = encoder->crtc;
 
 	switch (nv_encoder->dcb->type) {
 	case OUTPUT_TMDS:
 		if (nv_encoder->dcb->sorconf.link & 1) {
-			if (adjusted_mode->clock < 165000)
+			if (mode->clock < 165000)
 				mode_ctl = 0x0100;
 			else
 				mode_ctl = 0x0500;
 		} else
 			mode_ctl = 0x0200;
+
+		nouveau_hdmi_mode_set(encoder, mode);
 		break;
 	case OUTPUT_DP:
-		mode_ctl |= (nv_encoder->dp.mc_unknown << 16);
+		nv_connector = nouveau_encoder_connector_get(nv_encoder);
+		if (nv_connector && nv_connector->base.display_info.bpc == 6) {
+			nv_encoder->dp.datarate = mode->clock * 18 / 8;
+			mode_ctl |= 0x00020000;
+		} else {
+			nv_encoder->dp.datarate = mode->clock * 24 / 8;
+			mode_ctl |= 0x00050000;
+		}
+
 		if (nv_encoder->dcb->sorconf.link & 1)
 			mode_ctl |= 0x00000800;
 		else
@@ -221,21 +416,22 @@ nv50_sor_mode_set(struct drm_encoder *encoder, struct drm_display_mode *mode,
 	else
 		mode_ctl |= NV50_EVO_SOR_MODE_CTRL_CRTC0;
 
-	if (adjusted_mode->flags & DRM_MODE_FLAG_NHSYNC)
+	if (mode->flags & DRM_MODE_FLAG_NHSYNC)
 		mode_ctl |= NV50_EVO_SOR_MODE_CTRL_NHSYNC;
 
-	if (adjusted_mode->flags & DRM_MODE_FLAG_NVSYNC)
+	if (mode->flags & DRM_MODE_FLAG_NVSYNC)
 		mode_ctl |= NV50_EVO_SOR_MODE_CTRL_NVSYNC;
+
+	nv50_sor_dpms(encoder, DRM_MODE_DPMS_ON);
 
 	ret = RING_SPACE(evo, 2);
 	if (ret) {
 		NV_ERROR(dev, "no space while connecting SOR\n");
+		nv_encoder->crtc = NULL;
 		return;
 	}
 	BEGIN_RING(evo, 0, NV50_EVO_SOR(nv_encoder->or, MODE_CTRL), 1);
 	OUT_RING(evo, mode_ctl);
-
-	nv_encoder->crtc = encoder->crtc;
 }
 
 static struct drm_crtc *
@@ -312,29 +508,6 @@ nv50_sor_create(struct drm_connector *connector, struct dcb_entry *entry)
 
 	encoder->possible_crtcs = entry->heads;
 	encoder->possible_clones = 0;
-
-	if (nv_encoder->dcb->type == OUTPUT_DP) {
-		int or = nv_encoder->or, link = !(entry->dpconf.sor.link & 1);
-		uint32_t tmp;
-
-		tmp = nv_rd32(dev, 0x61c700 + (or * 0x800));
-
-		switch ((tmp & 0x00000f00) >> 8) {
-		case 8:
-		case 9:
-			nv_encoder->dp.mc_unknown = (tmp & 0x000f0000) >> 16;
-			tmp = nv_rd32(dev, NV50_SOR_DP_CTRL(or, link));
-			nv_encoder->dp.unk0 = tmp & 0x000001fc;
-			tmp = nv_rd32(dev, NV50_SOR_DP_UNK128(or, link));
-			nv_encoder->dp.unk1 = tmp & 0x010f7f3f;
-			break;
-		default:
-			break;
-		}
-
-		if (!nv_encoder->dp.mc_unknown)
-			nv_encoder->dp.mc_unknown = 5;
-	}
 
 	drm_mode_connector_attach_encoder(connector, encoder);
 	return 0;

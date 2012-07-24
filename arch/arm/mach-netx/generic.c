@@ -168,7 +168,7 @@ void __init netx_init_irq(void)
 {
 	int irq;
 
-	vic_init(__io(io_p2v(NETX_PA_VIC)), 0, ~0, 0);
+	vic_init(io_p2v(NETX_PA_VIC), 0, ~0, 0);
 
 	for (irq = NETX_IRQ_HIF_CHAINED(0); irq <= NETX_IRQ_HIF_LAST; irq++) {
 		irq_set_chip_and_handler(irq, &netx_hif_chip,
@@ -187,3 +187,8 @@ static int __init netx_init(void)
 
 subsys_initcall(netx_init);
 
+void netx_restart(char mode, const char *cmd)
+{
+	writel(NETX_SYSTEM_RES_CR_FIRMW_RES_EN | NETX_SYSTEM_RES_CR_FIRMW_RES,
+	       NETX_SYSTEM_RES_CR);
+}

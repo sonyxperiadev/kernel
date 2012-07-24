@@ -1346,6 +1346,7 @@ static void denali_hw_init(struct denali_nand_info *denali)
 	 * */
 	denali->bbtskipbytes = ioread32(denali->flash_reg +
 						SPARE_AREA_SKIP_BYTES);
+	detect_max_banks(denali);
 	denali_nand_reset(denali);
 	iowrite32(0x0F, denali->flash_reg + RB_PIN_ENABLED);
 	iowrite32(CHIP_EN_DONT_CARE__FLAG,
@@ -1356,7 +1357,6 @@ static void denali_hw_init(struct denali_nand_info *denali)
 	/* Should set value for these registers when init */
 	iowrite32(0, denali->flash_reg + TWO_ROW_ADDR_CYCLES);
 	iowrite32(1, denali->flash_reg + ECC_ENABLE);
-	detect_max_banks(denali);
 	denali_nand_timing_set(denali);
 	denali_irq_init(denali);
 }
@@ -1577,7 +1577,8 @@ static int denali_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	denali->nand.bbt_md = &bbt_mirror_descr;
 
 	/* skip the scan for now until we have OOB read and write support */
-	denali->nand.options |= NAND_USE_FLASH_BBT | NAND_SKIP_BBTSCAN;
+	denali->nand.bbt_options |= NAND_BBT_USE_FLASH;
+	denali->nand.options |= NAND_SKIP_BBTSCAN;
 	denali->nand.ecc.mode = NAND_ECC_HW_SYNDROME;
 
 	/* Denali Controller only support 15bit and 8bit ECC in MRST,
@@ -1589,6 +1590,7 @@ static int denali_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 			ECC_15BITS * (denali->mtd.writesize /
 			ECC_SECTOR_SIZE)))) {
 		/* if MLC OOB size is large enough, use 15bit ECC*/
+		denali->nand.ecc.strength = 15;
 		denali->nand.ecc.layout = &nand_15bit_oob;
 		denali->nand.ecc.bytes = ECC_15BITS;
 		iowrite32(15, denali->flash_reg + ECC_CORRECTION);
@@ -1599,12 +1601,14 @@ static int denali_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 				" contain 8bit ECC correction codes");
 		goto failed_req_irq;
 	} else {
+		denali->nand.ecc.strength = 8;
 		denali->nand.ecc.layout = &nand_8bit_oob;
 		denali->nand.ecc.bytes = ECC_8BITS;
 		iowrite32(8, denali->flash_reg + ECC_CORRECTION);
 	}
 
 	denali->nand.ecc.bytes *= denali->devnum;
+	denali->nand.ecc.strength *= denali->devnum;
 	denali->nand.ecc.layout->eccbytes *=
 		denali->mtd.writesize / ECC_SECTOR_SIZE;
 	denali->nand.ecc.layout->oobfree[0].offset =
@@ -1676,7 +1680,6 @@ static void denali_pci_remove(struct pci_dev *dev)
 	struct denali_nand_info *denali = pci_get_drvdata(dev);
 
 	nand_release(&denali->mtd);
-	mtd_device_unregister(&denali->mtd);
 
 	denali_irq_cleanup(dev->irq, denali);
 

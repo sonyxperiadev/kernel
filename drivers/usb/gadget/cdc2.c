@@ -8,19 +8,11 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <linux/kernel.h>
 #include <linux/utsname.h>
+#include <linux/module.h>
 
 #include "u_ether.h"
 #include "u_serial.h"
@@ -83,6 +75,21 @@ static struct usb_device_descriptor device_desc = {
 	.bNumConfigurations =	1,
 };
 
+static struct usb_otg_descriptor otg_descriptor = {
+	.bLength =		sizeof otg_descriptor,
+	.bDescriptorType =	USB_DT_OTG,
+
+	/* REVISIT SRP-only hardware is possible, although
+	 * it would not be called "OTG" ...
+	 */
+	.bmAttributes =		USB_OTG_SRP | USB_OTG_HNP,
+};
+
+static const struct usb_descriptor_header *otg_desc[] = {
+	(struct usb_descriptor_header *) &otg_descriptor,
+	NULL,
+};
+
 
 /* string IDs are assigned dynamically */
 
@@ -117,6 +124,11 @@ static u8 hostaddr[ETH_ALEN];
 static int __init cdc_do_config(struct usb_configuration *c)
 {
 	int	status;
+
+	if (gadget_is_otg(c->cdev->gadget)) {
+		c->descriptors = otg_desc;
+		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
+	}
 
 	status = ecm_bind_config(c, hostaddr);
 	if (status < 0)
@@ -224,6 +236,7 @@ static struct usb_composite_driver cdc_driver = {
 	.name		= "g_cdc",
 	.dev		= &device_desc,
 	.strings	= dev_strings,
+	.max_speed	= USB_SPEED_HIGH,
 	.unbind		= __exit_p(cdc_unbind),
 };
 

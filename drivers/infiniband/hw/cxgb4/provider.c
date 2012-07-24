@@ -58,13 +58,6 @@ static int fastreg_support = 1;
 module_param(fastreg_support, int, 0644);
 MODULE_PARM_DESC(fastreg_support, "Advertise fastreg support (default=1)");
 
-static int c4iw_modify_port(struct ib_device *ibdev,
-			    u8 port, int port_modify_mask,
-			    struct ib_port_modify *props)
-{
-	return -ENOSYS;
-}
-
 static struct ib_ah *c4iw_ah_create(struct ib_pd *pd,
 				    struct ib_ah_attr *ah_attr)
 {
@@ -336,7 +329,7 @@ static int c4iw_query_port(struct ib_device *ibdev, u8 port,
 	props->gid_tbl_len = 1;
 	props->pkey_tbl_len = 1;
 	props->active_width = 2;
-	props->active_speed = 2;
+	props->active_speed = IB_SPEED_DDR;
 	props->max_msg_sz = -1;
 
 	return 0;
@@ -456,7 +449,6 @@ int c4iw_register_device(struct c4iw_dev *dev)
 	dev->ibdev.dma_device = &(dev->rdev.lldi.pdev->dev);
 	dev->ibdev.query_device = c4iw_query_device;
 	dev->ibdev.query_port = c4iw_query_port;
-	dev->ibdev.modify_port = c4iw_modify_port;
 	dev->ibdev.query_pkey = c4iw_query_pkey;
 	dev->ibdev.query_gid = c4iw_query_gid;
 	dev->ibdev.alloc_ucontext = c4iw_alloc_ucontext;

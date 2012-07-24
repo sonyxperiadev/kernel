@@ -13,16 +13,6 @@
 #define MCI_PWR_ON		0x03
 #define MCI_OD			(1 << 6)
 #define MCI_ROD			(1 << 7)
-/*
- * The ST Micro version does not have ROD and reuse the voltage registers
- * for direction settings
- */
-#define MCI_ST_DATA2DIREN	(1 << 2)
-#define MCI_ST_CMDDIREN		(1 << 3)
-#define MCI_ST_DATA0DIREN	(1 << 4)
-#define MCI_ST_DATA31DIREN	(1 << 5)
-#define MCI_ST_FBCLKEN		(1 << 7)
-#define MCI_ST_DATA74DIREN	(1 << 8)
 
 #define MMCICLOCK		0x004
 #define MCI_CLK_ENABLE		(1 << 8)
@@ -160,11 +150,17 @@
 	(MCI_RXFIFOHALFFULLMASK | MCI_RXDATAAVLBLMASK | \
 	 MCI_TXFIFOHALFEMPTYMASK)
 
-#define NR_SG		16
+#define NR_SG		128
 
 struct clk;
 struct variant_data;
 struct dma_chan;
+
+struct mmci_host_next {
+	struct dma_async_tx_descriptor	*dma_desc;
+	struct dma_chan			*dma_chan;
+	s32				cookie;
+};
 
 struct mmci_host {
 	phys_addr_t		phybase;
@@ -183,7 +179,8 @@ struct mmci_host {
 
 	unsigned int		mclk;
 	unsigned int		cclk;
-	u32			pwr;
+	u32			pwr_reg;
+	u32			clk_reg;
 	struct mmci_platform_data *plat;
 	struct variant_data	*variant;
 
@@ -203,6 +200,8 @@ struct mmci_host {
 	struct dma_chan		*dma_current;
 	struct dma_chan		*dma_rx_channel;
 	struct dma_chan		*dma_tx_channel;
+	struct dma_async_tx_descriptor	*dma_desc_current;
+	struct mmci_host_next	next_data;
 
 #define dma_inprogress(host)	((host)->dma_current)
 #else

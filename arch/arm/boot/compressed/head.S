@@ -21,7 +21,7 @@
 
 #if defined(CONFIG_DEBUG_ICEDCC)
 
-#if defined(CONFIG_CPU_V6) || defined(CONFIG_CPU_V6K) || defined(CONFIG_CPU_V7) && !defined(CONFIG_KONA_DCACHE_INVALIDATION))
+#if defined(CONFIG_CPU_V6) || defined(CONFIG_CPU_V6K) || defined(CONFIG_CPU_V7)
 		.macro	loadsp, rb, tmp
 		.endm
 		.macro	writeb, ch, rb
@@ -58,7 +58,7 @@
 		add	\rb, \rb, #0x00010000	@ Ser1
 #endif
 		.endm
-#elif defined(CONFIG_ARCH_S3C2410)
+#elif defined(CONFIG_ARCH_S3C24XX)
 		.macro loadsp, rb, tmp
 		mov	\rb, #0x50000000
 		add	\rb, \rb, #0x4000 * CONFIG_S3C_LOWLEVEL_UART_PORT
@@ -216,6 +216,104 @@ restart:	adr	r0, LC0
 		mov	r10, r6
 #endif
 
+		mov	r5, #0			@ init dtb size to 0
+#ifdef CONFIG_ARM_APPENDED_DTB
+/*
+ *   r0  = delta
+ *   r2  = BSS start
+ *   r3  = BSS end
+ *   r4  = final kernel address
+ *   r5  = appended dtb size (still unknown)
+ *   r6  = _edata
+ *   r7  = architecture ID
+ *   r8  = atags/device tree pointer
+ *   r9  = size of decompressed image
+ *   r10 = end of this image, including  bss/stack/malloc space if non XIP
+ *   r11 = GOT start
+ *   r12 = GOT end
+ *   sp  = stack pointer
+ *
+ * if there are device trees (dtb) appended to zImage, advance r10 so that the
+ * dtb data will get relocated along with the kernel if necessary.
+ */
+
+		ldr	lr, [r6, #0]
+#ifndef __ARMEB__
+		ldr	r1, =0xedfe0dd0		@ sig is 0xd00dfeed big endian
+#else
+		ldr	r1, =0xd00dfeed
+#endif
+		cmp	lr, r1
+		bne	dtb_check_done		@ not found
+
+#ifdef CONFIG_ARM_ATAG_DTB_COMPAT
+		/*
+		 * OK... Let's do some funky business here.
+		 * If we do have a DTB appended to zImage, and we do have
+		 * an ATAG list around, we want the later to be translated
+		 * and folded into the former here.  To be on the safe side,
+		 * let's temporarily move  the stack away into the malloc
+		 * area.  No GOT fixup has occurred yet, but none of the
+		 * code we're about to call uses any global variable.
+		*/
+		add	sp, sp, #0x10000
+		stmfd	sp!, {r0-r3, ip, lr}
+		mov	r0, r8
+		mov	r1, r6
+		sub	r2, sp, r6
+		bl	atags_to_fdt
+
+		/*
+		 * If returned value is 1, there is no ATAG at the location
+		 * pointed by r8.  Try the typical 0x100 offset from start
+		 * of RAM and hope for the best.
+		 */
+		cmp	r0, #1
+		sub	r0, r4, #TEXT_OFFSET
+		add	r0, r0, #0x100
+		mov	r1, r6
+		sub	r2, sp, r6
+		bleq	atags_to_fdt
+
+		ldmfd	sp!, {r0-r3, ip, lr}
+		sub	sp, sp, #0x10000
+#endif
+
+		mov	r8, r6			@ use the appended device tree
+
+		/*
+		 * Make sure that the DTB doesn't end up in the final
+		 * kernel's .bss area. To do so, we adjust the decompressed
+		 * kernel size to compensate if that .bss size is larger
+		 * than the relocated code.
+		 */
+		ldr	r5, =_kernel_bss_size
+		adr	r1, wont_overwrite
+		sub	r1, r6, r1
+		subs	r1, r5, r1
+		addhi	r9, r9, r1
+
+		/* Get the dtb's size */
+		ldr	r5, [r6, #4]
+#ifndef __ARMEB__
+		/* convert r5 (dtb size) to little endian */
+		eor	r1, r5, r5, ror #16
+		bic	r1, r1, #0x00ff0000
+		mov	r5, r5, ror #8
+		eor	r5, r5, r1, lsr #8
+#endif
+
+		/* preserve 64-bit alignment */
+		add	r5, r5, #7
+		bic	r5, r5, #7
+
+		/* relocate some pointers past the appended dtb */
+		add	r6, r6, r5
+		add	r10, r10, r5
+		add	sp, sp, r5
+dtb_check_done:
+#endif
+
 /*
  * Check to see if we will overwrite ourselves.
  *   r4  = final kernel address
@@ -223,15 +321,14 @@ restart:	adr	r0, LC0
  *   r10 = end of this image, including  bss/stack/malloc space if non XIP
  * We basically want:
  *   r4 - 16k page directory >= r10 -> OK
- *   r4 + image length <= current position (pc) -> OK
+ *   r4 + image length <= address of wont_overwrite -> OK
  */
 		add	r10, r10, #16384
 		cmp	r4, r10
 		bhs	wont_overwrite
 		add	r10, r4, r9
-   ARM(		cmp	r10, pc		)
- THUMB(		mov	lr, pc		)
- THUMB(		cmp	r10, lr		)
+		adr	r9, wont_overwrite
+		cmp	r10, r9
 		bls	wont_overwrite
 
 /*
@@ -285,14 +382,16 @@ wont_overwrite:
  *   r2  = BSS start
  *   r3  = BSS end
  *   r4  = kernel execution address
+ *   r5  = appended dtb size (0 if not present)
  *   r7  = architecture ID
  *   r8  = atags pointer
  *   r11 = GOT start
  *   r12 = GOT end
  *   sp  = stack pointer
  */
-		teq	r0, #0
+		orrs	r1, r0, r5
 		beq	not_relocated
+
 		add	r11, r11, r0
 		add	r12, r12, r0
 
@@ -307,12 +406,21 @@ wont_overwrite:
 
 		/*
 		 * Relocate all entries in the GOT table.
+		 * Bump bss entries to _edata + dtb size
 		 */
 1:		ldr	r1, [r11, #0]		@ relocate entries in the GOT
-		add	r1, r1, r0		@ table.  This fixes up the
-		str	r1, [r11], #4		@ C references.
+		add	r1, r1, r0		@ This fixes up C references
+		cmp	r1, r2			@ if entry >= bss_start &&
+		cmphs	r3, r1			@       bss_end > entry
+		addhi	r1, r1, r5		@    entry += dtb size
+		str	r1, [r11], #4		@ next entry
 		cmp	r11, r12
 		blo	1b
+
+		/* bump our bss pointers too */
+		add	r2, r2, r5
+		add	r3, r3, r5
+
 #else
 
 		/*
@@ -353,7 +461,8 @@ not_relocated:	mov	r0, #0
 		mov	r0, #0			@ must be zero
 		mov	r1, r7			@ restore architecture number
 		mov	r2, r8			@ restore atags pointer
-		mov	pc, r4			@ call kernel
+ ARM(		mov	pc, r4	)		@ call kernel
+ THUMB(		bx	r4	)		@ entry point is always ARM
 
 		.align	2
 		.type	LC0, #object
@@ -526,70 +635,9 @@ __armv4_mmu_cache_on:
 		mcr	p15, 0, r0, c8, c7, 0	@ flush I,D TLBs
 #endif
 		mov	pc, r12
-#ifdef CONFIG_KONA_DCACHE_INVALIDATION 
-__armv7_mmu_dcache_inv:
-		mrc   p15, 0, r0, c0, c0, 0   @ read MIDR
-		ldr   r1, =0xff0ffff0
-		and   r0, r1                  @ extract pertinent CPUID bits
-		ldr   r1, =0x410fc090
-		cmp   r0, r1                  @ check against ARM Cortex-A9
-		movne pc, lr                  @ exit if not equal
-		mrc      p15, 0, r0, c0, c1, 5   @ read ID_MMFR1
-		tst      r0, #0xf << 16          @ hierarchical cache (ARMv7)
-		movne    pc, lr                  @   - not hierarchical, return
-		dmb
-		mov   r10, #0                 @ init cache level to 0
-		mov   r11, #0                 @   - level offset bit to 0
-__armv7_mmu_dcache_inv_level_loop:
-		mrc      p15, 1, r0, c0, c0, 1   @ read clidr
-		ldr   r1, =0x1fffff
-		and   r0, r0, r1              @ extract all valid CtypeX bits
-		lsr   r0, r0, r11             @ right-align to current level
-		ands  r0, r0, #0x7            @ extract CtypeX bits for current level
-		moveq pc, lr                  @   - exit if no cache
-		cmp   r0, #2                  @ require min d-cache or unified cache
-		addlo r10, #1                 @   - increment level
-		addlo r11, #3                 @   - increment level bit offset
-		blo   __armv7_mmu_dcache_inv_level_loop
-__armv7_mmu_dcache_inv_cont:
-		mov   r0, r10, lsl #1         @ select d- or unified-cache
-		mcr   p15, 2, r0, c0, c0, 0   @ select current cache level in csselr
-		isb                           @ sync updated csselr & csidr
-		mrc   p15, 1, r0, c0, c0, 0   @ read the new csidr
-		ldr   r1, =0x0fffe000
-		and   r1, r1, r0              @ extract the max number of sets (r1)
-		lsr   r1, r1, #13
-		ldr   r2, =0x00001ff8
-		and   r2, r2, r0              @ extract the max way associativity (r2)
-		lsr   r2, r2, #3
-		clz   r3, r2                  @ r3 = way shift bits
-		and   r0, r0, #0x7            @ extract the line size
-		add   r0, r0, #4              @ r0 = set shift bits
-__armv7_mmu_dcache_inv_way_set_loop:
-		mov   r9, r10, lsl #1         @ factor level into r9
-		orr   r9, r1, lsl r0          @ factor set into r9
-		orr   r9, r2, lsl r3          @ factor way into r9
-		mcr   p15, 0, r9, c7, c6, 2   @ invalidate by set/way
-		cmp   r1, #0                  @ check for end of set count
-		subne r1, r1, #1              @ decrement set, if not zero
-		bne   __armv7_mmu_dcache_inv_way_set_loop
-		cmp   r2, #0                  @ check for end of way count
-		addeq r10, #1                 @   - end, increment level
-		addeq r11, #3                 @   - end, increment level shift
-		beq   __armv7_mmu_dcache_inv_level_loop
-		sub   r2, r2, #1              @ decrement way
-		mrc      p15, 1, r9, c0, c0, 0   @ re-read the csidr
-		ldr   r1, =0x0fffe000
-		and     r1, r1, r9              @ extract the max number of sets (r1)
-		lsr   r1, r1, #13
-		b     __armv7_mmu_dcache_inv_way_set_loop
-#endif
 
 __armv7_mmu_cache_on:
 		mov	r12, lr
-#ifdef CONFIG_KONA_DCACHE_INVALIDATION 
-		bl    __armv7_mmu_dcache_inv
-#endif
 #ifdef CONFIG_MMU
 		mrc	p15, 0, r11, c0, c1, 4	@ read ID_MMFR0
 		tst	r11, #0xf		@ VMSA
@@ -611,6 +659,7 @@ __armv7_mmu_cache_on:
 		mcrne	p15, 0, r3, c2, c0, 0	@ load page table pointer
 		mcrne	p15, 0, r1, c3, c0, 0	@ load domain access control
 #endif
+		mcr	p15, 0, r0, c7, c5, 4	@ ISB
 		mcr	p15, 0, r0, c1, c0, 0	@ load control register
 		mrc	p15, 0, r0, c1, c0, 0	@ and read it back
 		mov	r0, #0

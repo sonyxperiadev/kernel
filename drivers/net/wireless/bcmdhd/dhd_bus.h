@@ -4,9 +4,9 @@
  * Provides type definitions and function prototypes used to link the
  * DHD OS, bus, and protocol modules.
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_bus.h 285377 2011-09-21 17:57:59Z $
+ * $Id: dhd_bus.h 313456 2012-02-07 22:03:40Z $
  */
 
 #ifndef _dhd_bus_h_
@@ -96,5 +96,14 @@ extern void dhd_bus_set_nvram_params(struct dhd_bus * bus, const char *nvram_par
 extern void *dhd_bus_pub(struct dhd_bus *bus);
 extern void *dhd_bus_txq(struct dhd_bus *bus);
 extern uint dhd_bus_hdrlen(struct dhd_bus *bus);
+
+
+#define DHD_SET_BUS_STATE_DOWN(_bus)  do { \
+	(_bus)->dhd->busstate = DHD_BUS_DOWN; \
+} while (0)
+
+/* Register a dummy SDIO client driver in order to be notified of new SDIO device */
+extern int dhd_bus_reg_sdio_notify(void* semaphore);
+extern void dhd_bus_unreg_sdio_notify(void);
 
 #endif /* _dhd_bus_h_ */

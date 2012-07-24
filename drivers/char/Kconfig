@@ -79,21 +79,6 @@ config TTY_PRINTK
 
 	  If unsure, say N.
 
-config BRIQ_PANEL
-	tristate 'Total Impact briQ front panel driver'
-	depends on PPC_CHRP
-	---help---
-	  The briQ is a small footprint CHRP computer with a frontpanel VFD, a
-	  tristate led and two switches. It is the size of a CDROM drive.
-
-	  If you have such one and want anything showing on the VFD then you
-	  must answer Y here.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called briq_panel.
-
-	  It's safe to say N here.
-
 config BFIN_OTP
 	tristate "Blackfin On-Chip OTP Memory Support"
 	depends on BLACKFIN && (BF51x || BF52x || BF54x)
@@ -311,7 +296,7 @@ if RTC_LIB=n
 config RTC
 	tristate "Enhanced Real Time Clock Support (legacy PC RTC driver)"
 	depends on !PPC && !PARISC && !IA64 && !M68K && !SPARC && !FRV \
-			&& !ARM && !SUPERH && !S390 && !AVR32 && !BLACKFIN
+			&& !ARM && !SUPERH && !S390 && !AVR32 && !BLACKFIN && !UML
 	---help---
 	  If you say Y here and create a character special file /dev/rtc with
 	  major number 10 and minor number 135 using mknod ("man mknod"), you
@@ -359,7 +344,7 @@ config JS_RTC
 
 config GEN_RTC
 	tristate "Generic /dev/rtc emulation"
-	depends on RTC!=y && !IA64 && !ARM && !M32R && !MIPS && !SPARC && !FRV && !S390 && !SUPERH && !AVR32 && !BLACKFIN
+	depends on RTC!=y && !IA64 && !ARM && !M32R && !MIPS && !SPARC && !FRV && !S390 && !SUPERH && !AVR32 && !BLACKFIN && !UML
 	---help---
 	  If you say Y here and create a character special file /dev/rtc with
 	  major number 10 and minor number 135 using mknod ("man mknod"), you
@@ -503,7 +488,7 @@ config SCx200_GPIO
 
 config PC8736x_GPIO
 	tristate "NatSemi PC8736x GPIO Support"
-	depends on X86_32
+	depends on X86_32 && !UML
 	default SCx200_GPIO	# mostly N
 	select NSC_GPIO		# needed for support routines
 	help
@@ -616,7 +601,6 @@ config DCC_TTY
 	depends on ARM
 
 source "drivers/s390/char/Kconfig"
-
 source "drivers/char/broadcom/Kconfig"
 
 config RAMOOPS
@@ -641,6 +625,17 @@ config BCM_GPS
 	---help---
 	  Select this to include GPS support for BCMHANA
 	  If unsure, say N.
+
+config TILE_SROM
+	bool "Character-device access via hypervisor to the Tilera SPI ROM"
+	depends on TILE
+	default y
+	---help---
+	  This device provides character-level read-write access
+	  to the SROM, typically via the "0", "1", and "2" devices
+	  in /dev/srom/.  The Tilera hypervisor makes the flash
+	  device appear much like a simple EEPROM, and knows
+	  how to partition a single ROM for multiple purposes.
 
 endmenu
 

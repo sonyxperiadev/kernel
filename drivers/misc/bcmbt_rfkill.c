@@ -26,6 +26,7 @@
 #include <linux/delay.h>
 #include <linux/rfkill.h>
 #include <linux/gpio.h>
+#include <linux/module.h>
 #include <linux/broadcom/bcmbt_rfkill.h>
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))

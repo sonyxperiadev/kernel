@@ -59,7 +59,6 @@
 #include <asm/sections.h>
 #include <asm/setup.h>
 #include <asm/smp.h>
-#include <asm/system.h>
 #include <asm/tlbflush.h>
 #include <asm/unistd.h>
 #include <asm/hpsim.h>
@@ -220,6 +219,23 @@ sort_regions (struct rsvd_region *rsvd_region, int max)
 	}
 }
 
+/* merge overlaps */
+static int __init
+merge_regions (struct rsvd_region *rsvd_region, int max)
+{
+	int i;
+	for (i = 1; i < max; ++i) {
+		if (rsvd_region[i].start >= rsvd_region[i-1].end)
+			continue;
+		if (rsvd_region[i].end > rsvd_region[i-1].end)
+			rsvd_region[i-1].end = rsvd_region[i].end;
+		--max;
+		memmove(&rsvd_region[i], &rsvd_region[i+1],
+			(max - i) * sizeof(struct rsvd_region));
+	}
+	return max;
+}
+
 /*
  * Request address space for all standard resources
  */
@@ -270,6 +286,7 @@ static void __init setup_crashkernel(unsigned long total, int *n)
 	if (ret == 0 && size > 0) {
 		if (!base) {
 			sort_regions(rsvd_region, *n);
+			*n = merge_regions(rsvd_region, *n);
 			base = kdump_find_rsvd_region(size,
 					rsvd_region, *n);
 		}
@@ -373,6 +390,7 @@ reserve_memory (void)
 	BUG_ON(IA64_MAX_RSVD_REGIONS + 1 < n);
 
 	sort_regions(rsvd_region, num_rsvd_regions);
+	num_rsvd_regions = merge_regions(rsvd_region, num_rsvd_regions);
 }
 
 
@@ -467,7 +485,7 @@ mark_bsp_online (void)
 {
 #ifdef CONFIG_SMP
 	/* If we register an early console, allow CPU 0 to printk */
-	cpu_set(smp_processor_id(), cpu_online_map);
+	set_cpu_online(smp_processor_id(), true);
 #endif
 }
 

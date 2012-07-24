@@ -1,9 +1,9 @@
 /*
  * DHD Protocol Module for CDC and BDC.
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_cdc.c 301807 2011-12-08 21:27:37Z $
+ * $Id: dhd_cdc.c 325074 2012-03-31 21:24:57Z $
  *
  * BDC is like CDC, except it includes a header for data packets to convey
  * packet priority over the bus, and flags (e.g. to indicate checksum status
@@ -108,7 +108,7 @@ static int
 dhdcdc_cmplt(dhd_pub_t *dhd, uint32 id, uint32 len)
 {
 	int ret;
-	int cdc_len = len+sizeof(cdc_ioctl_t);
+	int cdc_len = len + sizeof(cdc_ioctl_t);
 	dhd_prot_t *prot = dhd->prot;
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
@@ -166,7 +166,7 @@ dhdcdc_query_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len, uin
 
 	if ((ret = dhdcdc_msg(dhd)) < 0) {
 		if (!dhd->hang_was_sent)
-			DHD_ERROR(("dhdcdc_query_ioctl: dhdcdc_msg failed w/status %d\n", ret));
+		DHD_ERROR(("dhdcdc_query_ioctl: dhdcdc_msg failed w/status %d\n", ret));
 		goto done;
 	}
 
@@ -284,11 +284,26 @@ dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void * buf, int len)
 	dhd_prot_t *prot = dhd->prot;
 	int ret = -1;
 	uint8 action;
+#if defined(NDIS630)
+	bool acquired = FALSE;
+#endif
 
 	if ((dhd->busstate == DHD_BUS_DOWN) || dhd->hang_was_sent) {
 		DHD_ERROR(("%s : bus is down. we have nothing to do\n", __FUNCTION__));
 		goto done;
 	}
+#if defined(NDIS630)
+	if (dhd_os_proto_block(dhd))
+	{
+		acquired = TRUE;
+	}
+	else
+	{
+		/* attempt to acquire protocol mutex timed out. */
+		ret = -1;
+		return ret;
+	}
+#endif /* NDIS630 */
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
@@ -339,6 +354,10 @@ dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void * buf, int len)
 	prot->pending = FALSE;
 
 done:
+#if defined(NDIS630)
+	if (acquired)
+	   dhd_os_proto_unblock(dhd);
+#endif
 	return ret;
 }
 
@@ -795,7 +814,6 @@ _dhd_wlfc_find_table_entry(athost_wl_status_info_t* ctx, void* p)
 	uint8 ifid = DHD_PKTTAG_IF(PKTTAG(p));
 	uint8* dstn = DHD_PKTTAG_DSTN(PKTTAG(p));
 
-	/* no lookup necessary, only if this packet belongs to STA interface */
 	if (((ctx->destination_entries.interfaces[ifid].iftype == WLC_E_IF_ROLE_STA) ||
 		ETHER_ISMULTI(dstn) ||
 		(ctx->destination_entries.interfaces[ifid].iftype == WLC_E_IF_ROLE_P2P_CLIENT)) &&
@@ -1299,6 +1317,17 @@ _dhd_wlfc_mac_entry_update(athost_wl_status_info_t* ctx, wlfc_mac_descriptor_t* 
 		if (ea != NULL)
 			memcpy(&entry->ea[0], ea, ETHER_ADDR_LEN);
 		pktq_init(&entry->psq, WLFC_PSQ_PREC_COUNT, WLFC_PSQ_LEN);
+	}
+	else if (action == eWLFC_MAC_ENTRY_ACTION_UPDATE) {
+		entry->occupied = 1;
+		entry->state = WLFC_STATE_OPEN;
+		entry->requested_credit = 0;
+		entry->interface_id = ifid;
+		entry->iftype = iftype;
+		entry->ac_bitmap = 0xff; /* update this when handling APSD */
+		/* for an interface entry we may not care about the MAC address */
+		if (ea != NULL)
+			memcpy(&entry->ea[0], ea, ETHER_ADDR_LEN);
 	}
 	else if (action == eWLFC_MAC_ENTRY_ACTION_DEL) {
 		entry->occupied = 0;
@@ -1983,6 +2012,7 @@ dhd_wlfc_mac_table_update(dhd_pub_t *dhd, uint8* value, uint8 type)
 			wlfc->stats.mac_update_failed++;
 		}
 	}
+	BCM_REFERENCE(rc);
 	return BCME_OK;
 }
 
@@ -2103,8 +2133,22 @@ dhd_wlfc_packet_request(dhd_pub_t *dhd, uint8* value)
 	return BCME_OK;
 }
 
+static void
+dhd_wlfc_reorderinfo_indicate(uint8 *val, uint8 len, uchar *info_buf, uint *info_len)
+{
+	if (info_len) {
+		if (info_buf) {
+			bcopy(val, info_buf, len);
+			*info_len = len;
+		}
+		else
+			*info_len = 0;
+	}
+}
+
 static int
-dhd_wlfc_parse_header_info(dhd_pub_t *dhd, void* pktbuf, int tlv_hdr_len)
+dhd_wlfc_parse_header_info(dhd_pub_t *dhd, void* pktbuf, int tlv_hdr_len, uchar *reorder_info_buf,
+	uint *reorder_info_len)
 {
 	uint8 type, len;
 	uint8* value;
@@ -2134,6 +2178,9 @@ dhd_wlfc_parse_header_info(dhd_pub_t *dhd, void* pktbuf, int tlv_hdr_len)
 			if (type == WLFC_CTL_TYPE_TXSTATUS)
 				dhd_wlfc_txstatus_update(dhd, value);
 
+			else if (type == WLFC_CTL_TYPE_HOST_REORDER_RXPKTS)
+				dhd_wlfc_reorderinfo_indicate(value, len, reorder_info_buf,
+					reorder_info_len);
 			else if (type == WLFC_CTL_TYPE_FIFO_CREDITBACK)
 				dhd_wlfc_fifocreditback_indicate(dhd, value);
 
@@ -2176,7 +2223,8 @@ dhd_wlfc_init(dhd_pub_t *dhd)
 		WLFC_FLAGS_RSSI_SIGNALS |
 		WLFC_FLAGS_XONXOFF_SIGNALS |
 		WLFC_FLAGS_CREDIT_STATUS_SIGNALS |
-		WLFC_FLAGS_HOST_PROPTXSTATUS_ACTIVE : 0;
+		WLFC_FLAGS_HOST_RXRERODER_ACTIVE : 0;
+		/* WLFC_FLAGS_HOST_PROPTXSTATUS_ACTIVE | WLFC_FLAGS_HOST_RXRERODER_ACTIVE : 0; */
 
 
 	/*
@@ -2368,7 +2416,8 @@ dhd_prot_hdrpush(dhd_pub_t *dhd, int ifidx, void *pktbuf)
 }
 
 int
-dhd_prot_hdrpull(dhd_pub_t *dhd, int *ifidx, void *pktbuf)
+dhd_prot_hdrpull(dhd_pub_t *dhd, int *ifidx, void *pktbuf, uchar *reorder_buf_info,
+	uint *reorder_info_len)
 {
 #ifdef BDC
 	struct bdc_header *h;
@@ -2377,6 +2426,8 @@ dhd_prot_hdrpull(dhd_pub_t *dhd, int *ifidx, void *pktbuf)
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
 #ifdef BDC
+	if (reorder_info_len)
+		*reorder_info_len = 0;
 	/* Pop BDC header used to convey priority for buses that don't */
 
 	if (PKTLEN(dhd->osh, pktbuf) < BDC_HEADER_LEN) {
@@ -2393,13 +2444,16 @@ dhd_prot_hdrpull(dhd_pub_t *dhd, int *ifidx, void *pktbuf)
 		return BCME_ERROR;
 	}
 
+#if defined(NDIS630)
+	h->dataOffset = 0;
+#endif
 	if (((h->flags & BDC_FLAG_VER_MASK) >> BDC_FLAG_VER_SHIFT) != BDC_PROTO_VER) {
 		DHD_ERROR(("%s: non-BDC packet received, flags = 0x%x\n",
 		           dhd_ifname(dhd, *ifidx), h->flags));
 		if (((h->flags & BDC_FLAG_VER_MASK) >> BDC_FLAG_VER_SHIFT) == BDC_PROTO_VER_1)
 			h->dataOffset = 0;
 		else
-			return BCME_ERROR;
+		return BCME_ERROR;
 	}
 
 	if (h->flags & BDC_FLAG_SUM_GOOD) {
@@ -2412,12 +2466,13 @@ dhd_prot_hdrpull(dhd_pub_t *dhd, int *ifidx, void *pktbuf)
 	PKTPULL(dhd->osh, pktbuf, BDC_HEADER_LEN);
 #endif /* BDC */
 
+#if !defined(NDIS630)
 	if (PKTLEN(dhd->osh, pktbuf) < (uint32) (h->dataOffset << 2)) {
 		DHD_ERROR(("%s: rx data too short (%d < %d)\n", __FUNCTION__,
 		           PKTLEN(dhd->osh, pktbuf), (h->dataOffset * 4)));
 		return BCME_ERROR;
 	}
-
+#endif
 #ifdef PROP_TXSTATUS
 	if (dhd->wlfc_state &&
 		((athost_wl_status_info_t*)dhd->wlfc_state)->proptxstatus_mode
@@ -2427,14 +2482,17 @@ dhd_prot_hdrpull(dhd_pub_t *dhd, int *ifidx, void *pktbuf)
 		- parse txstatus only for packets that came from the firmware
 		*/
 		dhd_os_wlfc_block(dhd);
-		dhd_wlfc_parse_header_info(dhd, pktbuf, (h->dataOffset << 2));
+		dhd_wlfc_parse_header_info(dhd, pktbuf, (h->dataOffset << 2),
+			reorder_buf_info, reorder_info_len);
 		((athost_wl_status_info_t*)dhd->wlfc_state)->stats.dhd_hdrpulls++;
 		dhd_wlfc_commit_packets(dhd->wlfc_state, (f_commitpkt_t)dhd_bus_txdata,
 			(void *)dhd->bus);
 		dhd_os_wlfc_unblock(dhd);
 	}
 #endif /* PROP_TXSTATUS */
-	PKTPULL(dhd->osh, pktbuf, (h->dataOffset << 2));
+#if !defined(NDIS630)
+		PKTPULL(dhd->osh, pktbuf, (h->dataOffset << 2));
+#endif
 	return 0;
 }
 
@@ -2445,9 +2503,9 @@ dhd_prot_attach(dhd_pub_t *dhd)
 
 	if (!(cdc = (dhd_prot_t *)DHD_OS_PREALLOC(dhd->osh, DHD_PREALLOC_PROT,
 		sizeof(dhd_prot_t)))) {
-		DHD_ERROR(("%s: kmalloc failed\n", __FUNCTION__));
-		goto fail;
-	}
+			DHD_ERROR(("%s: kmalloc failed\n", __FUNCTION__));
+			goto fail;
+		}
 	memset(cdc, 0, sizeof(dhd_prot_t));
 
 	/* ensure that the msg buf directly follows the cdc msg struct */
@@ -2532,4 +2590,262 @@ void
 dhd_prot_stop(dhd_pub_t *dhd)
 {
 	/* Nothing to do for CDC */
+}
+
+
+static void
+dhd_get_hostreorder_pkts(void *osh, struct reorder_info *ptr, void **pkt,
+	uint32 *pkt_count, void **pplast, uint8 start, uint8 end)
+{
+	uint i;
+	void *plast = NULL, *p;
+	uint32 pkt_cnt = 0;
+
+	if (ptr->pend_pkts == 0) {
+		DHD_REORDER(("%s: no packets in reorder queue \n", __FUNCTION__));
+		*pplast = NULL;
+		*pkt_count = 0;
+		*pkt = NULL;
+		return;
+	}
+	if (start == end)
+		i = ptr->max_idx + 1;
+	else {
+		if (start > end)
+			i = (ptr->max_idx - end) + start;
+		else
+			i = end - start;
+	}
+	while (i) {
+		p = (void *)(ptr->p[start]);
+		ptr->p[start] = NULL;
+
+		if (p != NULL) {
+			if (plast == NULL)
+				*pkt = p;
+			else
+				PKTSETNEXT(osh, plast, p);
+
+			plast = p;
+			pkt_cnt++;
+		}
+		i--;
+		if (start++ == ptr->max_idx)
+			start = 0;
+	}
+	*pplast = plast;
+	*pkt_count = (uint32)pkt_cnt;
+}
+
+int
+dhd_process_pkt_reorder_info(dhd_pub_t *dhd, uchar *reorder_info_buf, uint reorder_info_len,
+	void **pkt, uint32 *pkt_count)
+{
+	uint8 flow_id, max_idx, cur_idx, exp_idx;
+	struct reorder_info *ptr;
+	uint8 flags;
+	void *cur_pkt, *plast = NULL;
+	uint32 cnt = 0;
+
+	if (pkt == NULL) {
+		if (pkt_count != NULL)
+			*pkt_count = 0;
+		return 0;
+	}
+	cur_pkt = *pkt;
+	*pkt = NULL;
+
+	flow_id = reorder_info_buf[WLHOST_REORDERDATA_FLOWID_OFFSET];
+	flags = reorder_info_buf[WLHOST_REORDERDATA_FLAGS_OFFSET];
+
+	DHD_REORDER(("flow_id %d, flags 0x%02x, idx(%d, %d, %d)\n", flow_id, flags,
+		reorder_info_buf[WLHOST_REORDERDATA_CURIDX_OFFSET],
+		reorder_info_buf[WLHOST_REORDERDATA_EXPIDX_OFFSET],
+		reorder_info_buf[WLHOST_REORDERDATA_MAXIDX_OFFSET]));
+
+	/* validate flags and flow id */
+	if (flags == 0xFF) {
+		DHD_ERROR(("%s: invalid flags...so ignore this packet\n", __FUNCTION__));
+		*pkt_count = 1;
+		return 0;
+	}
+
+	ptr = dhd->reorder_bufs[flow_id];
+	if (flags & WLHOST_REORDERDATA_DEL_FLOW) {
+		uint32 buf_size = sizeof(struct reorder_info);
+
+		DHD_REORDER(("%s: Flags indicating to delete a flow id %d\n",
+			__FUNCTION__, flow_id));
+
+		if (ptr == NULL) {
+			DHD_ERROR(("%s: received flags to cleanup, but no flow (%d) yet\n",
+				__FUNCTION__, flow_id));
+			*pkt_count = 1;
+			return 0;
+		}
+
+		dhd_get_hostreorder_pkts(dhd->osh, ptr, pkt, &cnt, &plast,
+			ptr->exp_idx, ptr->exp_idx);
+		/* set it to the last packet */
+		if (plast) {
+			PKTSETNEXT(dhd->osh, plast, cur_pkt);
+			cnt++;
+		}
+		else {
+			if (cnt != 0) {
+				DHD_ERROR(("%s: del flow: something fishy, pending packets %d\n",
+					__FUNCTION__, cnt));
+			}
+			*pkt = cur_pkt;
+			cnt = 1;
+		}
+		buf_size += ((ptr->max_idx + 1) * sizeof(void *));
+		MFREE(dhd->osh, ptr, buf_size);
+		dhd->reorder_bufs[flow_id] = NULL;
+		*pkt_count = cnt;
+		return 0;
+	}
+	/* all the other cases depend on the existance of the reorder struct for that flow id */
+	if (ptr == NULL) {
+		uint32 buf_size_alloc = sizeof(reorder_info_t);
+		max_idx = reorder_info_buf[WLHOST_REORDERDATA_MAXIDX_OFFSET];
+
+		buf_size_alloc += ((max_idx + 1) * sizeof(void*));
+		/* allocate space to hold the buffers, index etc */
+
+		DHD_REORDER(("%s: alloc buffer of size %d size, reorder info id %d, maxidx %d\n",
+			__FUNCTION__, buf_size_alloc, flow_id, max_idx));
+		ptr = (struct reorder_info *)MALLOC(dhd->osh, buf_size_alloc);
+		if (ptr == NULL) {
+			DHD_ERROR(("%s: Malloc failed to alloc buffer\n", __FUNCTION__));
+			*pkt_count = 1;
+			return 0;
+		}
+		bzero(ptr, buf_size_alloc);
+		dhd->reorder_bufs[flow_id] = ptr;
+		ptr->p = (void *)(ptr+1);
+		ptr->max_idx = max_idx;
+	}
+	if (flags & WLHOST_REORDERDATA_NEW_HOLE)  {
+		DHD_REORDER(("%s: new hole, so cleanup pending buffers\n", __FUNCTION__));
+		if (ptr->pend_pkts) {
+			dhd_get_hostreorder_pkts(dhd->osh, ptr, pkt, &cnt, &plast,
+				ptr->exp_idx, ptr->exp_idx);
+			ptr->pend_pkts = 0;
+		}
+		ptr->cur_idx = reorder_info_buf[WLHOST_REORDERDATA_CURIDX_OFFSET];
+		ptr->exp_idx = reorder_info_buf[WLHOST_REORDERDATA_EXPIDX_OFFSET];
+		ptr->max_idx = reorder_info_buf[WLHOST_REORDERDATA_MAXIDX_OFFSET];
+		ptr->p[ptr->cur_idx] = cur_pkt;
+		ptr->pend_pkts++;
+		*pkt_count = cnt;
+	}
+	else if (flags & WLHOST_REORDERDATA_CURIDX_VALID) {
+		cur_idx = reorder_info_buf[WLHOST_REORDERDATA_CURIDX_OFFSET];
+		exp_idx = reorder_info_buf[WLHOST_REORDERDATA_EXPIDX_OFFSET];
+
+
+		if ((exp_idx == ptr->exp_idx) && (cur_idx != ptr->exp_idx)) {
+			/* still in the current hole */
+			/* enqueue the current on the buffer chain */
+			if (ptr->p[cur_idx] != NULL) {
+				DHD_REORDER(("%s: HOLE: ERROR buffer pending..free it\n",
+					__FUNCTION__));
+				PKTFREE(dhd->osh, ptr->p[cur_idx], TRUE);
+				ptr->p[cur_idx] = NULL;
+			}
+			ptr->p[cur_idx] = cur_pkt;
+			ptr->pend_pkts++;
+			ptr->cur_idx = cur_idx;
+			DHD_REORDER(("%s: fill up a hole..pending packets is %d\n",
+				__FUNCTION__, ptr->pend_pkts));
+			*pkt_count = 0;
+			*pkt = NULL;
+		}
+		else if (ptr->exp_idx == cur_idx) {
+			/* got the right one ..flush from cur to exp and update exp */
+			DHD_REORDER(("%s: got the right one now, cur_idx is %d\n",
+				__FUNCTION__, cur_idx));
+			if (ptr->p[cur_idx] != NULL) {
+				DHD_REORDER(("%s: Error buffer pending..free it\n",
+					__FUNCTION__));
+				PKTFREE(dhd->osh, ptr->p[cur_idx], TRUE);
+				ptr->p[cur_idx] = NULL;
+			}
+			ptr->p[cur_idx] = cur_pkt;
+			ptr->pend_pkts++;
+
+			ptr->cur_idx = cur_idx;
+			ptr->exp_idx = exp_idx;
+
+			dhd_get_hostreorder_pkts(dhd->osh, ptr, pkt, &cnt, &plast,
+				cur_idx, exp_idx);
+			ptr->pend_pkts -= (uint8)cnt;
+			*pkt_count = cnt;
+			DHD_REORDER(("%s: freeing up buffers %d, still pending %d\n",
+				__FUNCTION__, cnt, ptr->pend_pkts));
+		}
+		else {
+			uint8 end_idx;
+			bool flush_current = FALSE;
+			/* both cur and exp are moved now .. */
+			DHD_REORDER(("%s:, flow %d, both moved, cur %d(%d), exp %d(%d)\n",
+				__FUNCTION__, flow_id, ptr->cur_idx, cur_idx,
+				ptr->exp_idx, exp_idx));
+			if (flags & WLHOST_REORDERDATA_FLUSH_ALL)
+				end_idx = ptr->exp_idx;
+			else
+				end_idx = exp_idx;
+
+			/* flush pkts first */
+			dhd_get_hostreorder_pkts(dhd->osh, ptr, pkt, &cnt, &plast,
+				ptr->exp_idx, end_idx);
+
+			if (cur_idx == ptr->max_idx) {
+				if (exp_idx == 0)
+					flush_current = TRUE;
+			} else {
+				if (exp_idx == cur_idx + 1)
+					flush_current = TRUE;
+			}
+			if (flush_current) {
+				if (plast)
+					PKTSETNEXT(dhd->osh, plast, cur_pkt);
+				else
+					*pkt = cur_pkt;
+				cnt++;
+			}
+			else {
+				ptr->p[cur_idx] = cur_pkt;
+				ptr->pend_pkts++;
+			}
+			ptr->exp_idx = exp_idx;
+			ptr->cur_idx = cur_idx;
+			*pkt_count = cnt;
+		}
+	}
+	else {
+		uint8 end_idx;
+		/* no real packet but update to exp_seq...that means explicit window move */
+		exp_idx = reorder_info_buf[WLHOST_REORDERDATA_EXPIDX_OFFSET];
+
+		DHD_REORDER(("%s: move the window, cur_idx is %d, exp is %d, new exp is %d\n",
+			__FUNCTION__, ptr->cur_idx, ptr->exp_idx, exp_idx));
+		if (flags & WLHOST_REORDERDATA_FLUSH_ALL)
+			end_idx =  ptr->exp_idx;
+		else
+			end_idx =  exp_idx;
+
+		dhd_get_hostreorder_pkts(dhd->osh, ptr, pkt, &cnt, &plast, ptr->exp_idx, end_idx);
+		ptr->pend_pkts -= (uint8)cnt;
+		if (plast)
+			PKTSETNEXT(dhd->osh, plast, cur_pkt);
+		else
+			*pkt = cur_pkt;
+		cnt++;
+		*pkt_count = cnt;
+		/* set the new expected idx */
+		ptr->exp_idx = exp_idx;
+	}
+	return 0;
 }

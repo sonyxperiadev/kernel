@@ -10,7 +10,7 @@
 #include <linux/seq_file.h>
 #include <linux/swap.h>
 #include <linux/vmstat.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
 #include "internal.h"
@@ -56,13 +56,6 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		"MemTotal:       %8lu kB\n"
 		"MemFree:        %8lu kB\n"
 		"Buffers:        %8lu kB\n"
-#ifdef CONFIG_CMA
-		"CmaFree:        %8lu kB\n"
-		"CmaAnon:        %8lu kB\n"
-		"CmaFile:        %8lu kB\n"
-		"CmaUnevictable: %8lu kB\n"
-		"ContigAlloc:    %8lu kB\n"
-#endif
 		"Cached:         %8lu kB\n"
 		"SwapCached:     %8lu kB\n"
 		"Active:         %8lu kB\n"
@@ -111,17 +104,19 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 		"AnonHugePages:  %8lu kB\n"
 #endif
+#ifdef CONFIG_CMA
+		"CmaFree:        %8lu kB\n"
+		"CmaA(active):   %8lu kB\n"
+		"CmaA(inactive): %8lu kB\n"
+		"CmaF(active):   %8lu kB\n"
+		"CmaF(inactive): %8lu kB\n"
+		"CmaUnevictable: %8lu kB\n"
+		"ContigAlloc:    %8lu kB\n"
+#endif
 		,
 		K(i.totalram),
 		K(i.freeram),
 		K(i.bufferram),
-#ifdef CONFIG_CMA
-		K(global_page_state(NR_FREE_CMA_PAGES)),
-		K(global_page_state(NR_CMA_ANON)),
-		K(global_page_state(NR_CMA_FILE)),
-		K(global_page_state(NR_CMA_UNEVICTABLE)),
-		K(global_page_state(NR_CONTIG_PAGES)),
-#endif
 		K(cached),
 		K(total_swapcache_pages),
 		K(pages[LRU_ACTIVE_ANON]   + pages[LRU_ACTIVE_FILE]),
@@ -177,6 +172,15 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 		,K(global_page_state(NR_ANON_TRANSPARENT_HUGEPAGES) *
 		   HPAGE_PMD_NR)
+#endif
+#ifdef CONFIG_CMA
+		,K(global_page_state(NR_FREE_CMA_PAGES))
+		,K(global_page_state(NR_CMA_ACTIVE_ANON))
+		,K(global_page_state(NR_CMA_INACTIVE_ANON))
+		,K(global_page_state(NR_CMA_ACTIVE_FILE))
+		,K(global_page_state(NR_CMA_INACTIVE_FILE))
+		,K(global_page_state(NR_CMA_UNEVICTABLE))
+		,K(global_page_state(NR_CONTIG_PAGES))
 #endif
 		);
 

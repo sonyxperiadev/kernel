@@ -14,6 +14,7 @@
 *****************************************************************************/
 
 #include <linux/regulator/driver.h>
+#include <linux/module.h>
 
 #include <linux/mfd/bcmpmu.h>
 

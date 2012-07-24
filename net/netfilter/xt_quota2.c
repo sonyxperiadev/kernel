@@ -12,6 +12,7 @@
  *	version 2 of the License, as published by the Free Software Foundation.
  */
 #include <linux/list.h>
+#include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/skbuff.h>
 #include <linux/spinlock.h>

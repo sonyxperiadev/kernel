@@ -33,6 +33,22 @@
 #include "rt2x00lib.h"
 
 /*
+ * Utility functions.
+ */
+u32 rt2x00lib_get_bssidx(struct rt2x00_dev *rt2x00dev,
+			 struct ieee80211_vif *vif)
+{
+	/*
+	 * When in STA mode, bssidx is always 0 otherwise local_address[5]
+	 * contains the bss number, see BSS_ID_MASK comments for details.
+	 */
+	if (rt2x00dev->intf_sta_count)
+		return 0;
+	return vif->addr[5] & (rt2x00dev->ops->max_ap_intf - 1);
+}
+EXPORT_SYMBOL_GPL(rt2x00lib_get_bssidx);
+
+/*
  * Radio control handlers.
  */
 int rt2x00lib_enable_radio(struct rt2x00_dev *rt2x00dev)
@@ -72,6 +88,8 @@ int rt2x00lib_enable_radio(struct rt2x00_dev *rt2x00dev)
 	rt2x00queue_start_queues(rt2x00dev);
 	rt2x00link_start_tuner(rt2x00dev);
 	rt2x00link_start_agc(rt2x00dev);
+	if (test_bit(CAPABILITY_VCO_RECALIBRATION, &rt2x00dev->cap_flags))
+		rt2x00link_start_vcocal(rt2x00dev);
 
 	/*
 	 * Start watchdog monitoring.
@@ -95,6 +113,8 @@ void rt2x00lib_disable_radio(struct rt2x00_dev *rt2x00dev)
 	 * Stop all queues
 	 */
 	rt2x00link_stop_agc(rt2x00dev);
+	if (test_bit(CAPABILITY_VCO_RECALIBRATION, &rt2x00dev->cap_flags))
+		rt2x00link_stop_vcocal(rt2x00dev);
 	rt2x00link_stop_tuner(rt2x00dev);
 	rt2x00queue_stop_queues(rt2x00dev);
 	rt2x00queue_flush_queues(rt2x00dev, true);
@@ -410,10 +430,14 @@ void rt2x00lib_txdone(struct queue_entry *entry,
 	/*
 	 * If the data queue was below the threshold before the txdone
 	 * handler we must make sure the packet queue in the mac80211 stack
-	 * is reenabled when the txdone handler has finished.
+	 * is reenabled when the txdone handler has finished. This has to be
+	 * serialized with rt2x00mac_tx(), otherwise we can wake up queue
+	 * before it was stopped.
 	 */
+	spin_lock_bh(&entry->queue->tx_lock);
 	if (!rt2x00queue_threshold(entry->queue))
 		rt2x00queue_unpause_queue(entry->queue);
+	spin_unlock_bh(&entry->queue->tx_lock);
 }
 EXPORT_SYMBOL_GPL(rt2x00lib_txdone);
 
@@ -599,6 +623,18 @@ void rt2x00lib_rxdone(struct queue_entry *entry)
 	rt2x00dev->ops->lib->fill_rxdone(entry, &rxdesc);
 
 	/*
+	 * Check for valid size in case we get corrupted descriptor from
+	 * hardware.
+	 */
+	if (unlikely(rxdesc.size == 0 ||
+		     rxdesc.size > entry->queue->data_size)) {
+		WARNING(rt2x00dev, "Wrong frame size %d max %d.\n",
+			rxdesc.size, entry->queue->data_size);
+		dev_kfree_skb(entry->skb);
+		goto renew_skb;
+	}
+
+	/*
 	 * The data behind the ieee80211 header must be
 	 * aligned on a 4 byte boundary.
 	 */
@@ -658,6 +694,7 @@ void rt2x00lib_rxdone(struct queue_entry *entry)
 
 	ieee80211_rx_ni(rt2x00dev->hw, entry->skb);
 
+renew_skb:
 	/*
 	 * Replace the skb with the freshly allocated one.
 	 */
@@ -802,11 +839,11 @@ static int rt2x00lib_probe_hw_modes(struct rt2x00_dev *rt2x00dev,
 	if (spec->supported_rates & SUPPORT_RATE_OFDM)
 		num_rates += 8;
 
-	channels = kzalloc(sizeof(*channels) * spec->num_channels, GFP_KERNEL);
+	channels = kcalloc(spec->num_channels, sizeof(*channels), GFP_KERNEL);
 	if (!channels)
 		return -ENOMEM;
 
-	rates = kzalloc(sizeof(*rates) * num_rates, GFP_KERNEL);
+	rates = kcalloc(num_rates, sizeof(*rates), GFP_KERNEL);
 	if (!rates)
 		goto exit_free_channels;
 
@@ -918,6 +955,11 @@ static int rt2x00lib_probe_hw(struct rt2x00_dev *rt2x00dev)
 		rt2x00dev->hw->extra_tx_headroom += RT2X00_ALIGN_SIZE;
 
 	/*
+	 * Tell mac80211 about the size of our private STA structure.
+	 */
+	rt2x00dev->hw->sta_data_size = sizeof(struct rt2x00_sta);
+
+	/*
 	 * Allocate tx status FIFO for driver use.
 	 */
 	if (test_bit(REQUIRE_TXSTATUS_FIFO, &rt2x00dev->cap_flags)) {
@@ -949,7 +991,6 @@ static int rt2x00lib_probe_hw(struct rt2x00_dev *rt2x00dev)
 		tasklet_init(&rt2x00dev->taskletname, \
 			     rt2x00dev->ops->lib->taskletname, \
 			     (unsigned long)rt2x00dev); \
-		tasklet_disable(&rt2x00dev->taskletname); \
 	}
 
 	RT2X00_TASKLET_INIT(txstatus_tasklet);
@@ -1021,11 +1062,6 @@ static int rt2x00lib_initialize(struct rt2x00_dev *rt2x00dev)
 
 	set_bit(DEVICE_STATE_INITIALIZED, &rt2x00dev->flags);
 
-	/*
-	 * Register the extra components.
-	 */
-	rt2x00rfkill_register(rt2x00dev);
-
 	return 0;
 }
 
@@ -1087,6 +1123,18 @@ void rt2x00lib_stop(struct rt2x00_dev *rt2x00dev)
 int rt2x00lib_probe_dev(struct rt2x00_dev *rt2x00dev)
 {
 	int retval = -ENOMEM;
+
+	/*
+	 * Allocate the driver data memory, if necessary.
+	 */
+	if (rt2x00dev->ops->drv_data_size > 0) {
+		rt2x00dev->drv_data = kzalloc(rt2x00dev->ops->drv_data_size,
+			                      GFP_KERNEL);
+		if (!rt2x00dev->drv_data) {
+			retval = -ENOMEM;
+			goto exit;
+		}
+	}
 
 	spin_lock_init(&rt2x00dev->irqmask_lock);
 	mutex_init(&rt2x00dev->csr_mutex);
@@ -1157,6 +1205,7 @@ int rt2x00lib_probe_dev(struct rt2x00_dev *rt2x00dev)
 	rt2x00link_register(rt2x00dev);
 	rt2x00leds_register(rt2x00dev);
 	rt2x00debug_register(rt2x00dev);
+	rt2x00rfkill_register(rt2x00dev);
 
 	return 0;
 
@@ -1183,11 +1232,12 @@ void rt2x00lib_remove_dev(struct rt2x00_dev *rt2x00dev)
 	cancel_delayed_work_sync(&rt2x00dev->autowakeup_work);
 	cancel_work_sync(&rt2x00dev->sleep_work);
 	if (rt2x00_is_usb(rt2x00dev)) {
-		del_timer_sync(&rt2x00dev->txstatus_timer);
+		hrtimer_cancel(&rt2x00dev->txstatus_timer);
 		cancel_work_sync(&rt2x00dev->rxdone_work);
 		cancel_work_sync(&rt2x00dev->txdone_work);
 	}
-	destroy_workqueue(rt2x00dev->workqueue);
+	if (rt2x00dev->workqueue)
+		destroy_workqueue(rt2x00dev->workqueue);
 
 	/*
 	 * Free the tx status fifo.
@@ -1228,6 +1278,12 @@ void rt2x00lib_remove_dev(struct rt2x00_dev *rt2x00dev)
 	 * Free queue structures.
 	 */
 	rt2x00queue_free(rt2x00dev);
+
+	/*
+	 * Free the driver data.
+	 */
+	if (rt2x00dev->drv_data)
+		kfree(rt2x00dev->drv_data);
 }
 EXPORT_SYMBOL_GPL(rt2x00lib_remove_dev);
 

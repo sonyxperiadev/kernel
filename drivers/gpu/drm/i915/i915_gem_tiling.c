@@ -92,7 +92,25 @@ i915_gem_detect_bit_6_swizzle(struct drm_device *dev)
 	uint32_t swizzle_x = I915_BIT_6_SWIZZLE_UNKNOWN;
 	uint32_t swizzle_y = I915_BIT_6_SWIZZLE_UNKNOWN;
 
-	if (INTEL_INFO(dev)->gen >= 5) {
+	if (INTEL_INFO(dev)->gen >= 6) {
+		uint32_t dimm_c0, dimm_c1;
+		dimm_c0 = I915_READ(MAD_DIMM_C0);
+		dimm_c1 = I915_READ(MAD_DIMM_C1);
+		dimm_c0 &= MAD_DIMM_A_SIZE_MASK | MAD_DIMM_B_SIZE_MASK;
+		dimm_c1 &= MAD_DIMM_A_SIZE_MASK | MAD_DIMM_B_SIZE_MASK;
+		/* Enable swizzling when the channels are populated with
+		 * identically sized dimms. We don't need to check the 3rd
+		 * channel because no cpu with gpu attached ships in that
+		 * configuration. Also, swizzling only makes sense for 2
+		 * channels anyway. */
+		if (dimm_c0 == dimm_c1) {
+			swizzle_x = I915_BIT_6_SWIZZLE_9_10;
+			swizzle_y = I915_BIT_6_SWIZZLE_9;
+		} else {
+			swizzle_x = I915_BIT_6_SWIZZLE_NONE;
+			swizzle_y = I915_BIT_6_SWIZZLE_NONE;
+		}
+	} else if (IS_GEN5(dev)) {
 		/* On Ironlake whatever DRAM config, GPU always do
 		 * same swizzling setup.
 		 */
@@ -104,10 +122,10 @@ i915_gem_detect_bit_6_swizzle(struct drm_device *dev)
 		 */
 		swizzle_x = I915_BIT_6_SWIZZLE_NONE;
 		swizzle_y = I915_BIT_6_SWIZZLE_NONE;
-	} else if (IS_MOBILE(dev)) {
+	} else if (IS_MOBILE(dev) || (IS_GEN3(dev) && !IS_G33(dev))) {
 		uint32_t dcc;
 
-		/* On mobile 9xx chipsets, channel interleave by the CPU is
+		/* On 9xx chipsets, channel interleave by the CPU is
 		 * determined by DCC.  For single-channel, neither the CPU
 		 * nor the GPU do swizzling.  For dual channel interleaved,
 		 * the GPU's interleave is bit 9 and 10 for X tiled, and bit
@@ -440,13 +458,8 @@ i915_gem_swizzle_page(struct page *page)
 void
 i915_gem_object_do_bit_17_swizzle(struct drm_i915_gem_object *obj)
 {
-	struct drm_device *dev = obj->base.dev;
-	drm_i915_private_t *dev_priv = dev->dev_private;
 	int page_count = obj->base.size >> PAGE_SHIFT;
 	int i;
-
-	if (dev_priv->mm.bit_6_swizzle_x != I915_BIT_6_SWIZZLE_9_10_17)
-		return;
 
 	if (obj->bit_17 == NULL)
 		return;
@@ -464,13 +477,8 @@ i915_gem_object_do_bit_17_swizzle(struct drm_i915_gem_object *obj)
 void
 i915_gem_object_save_bit_17_swizzle(struct drm_i915_gem_object *obj)
 {
-	struct drm_device *dev = obj->base.dev;
-	drm_i915_private_t *dev_priv = dev->dev_private;
 	int page_count = obj->base.size >> PAGE_SHIFT;
 	int i;
-
-	if (dev_priv->mm.bit_6_swizzle_x != I915_BIT_6_SWIZZLE_9_10_17)
-		return;
 
 	if (obj->bit_17 == NULL) {
 		obj->bit_17 = kmalloc(BITS_TO_LONGS(page_count) *
