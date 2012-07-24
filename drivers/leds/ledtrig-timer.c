@@ -77,8 +77,8 @@ static ssize_t led_delay_off_store(struct device *dev,
 	return ret;
 }
 
-static DEVICE_ATTR(delay_on, 0644, led_delay_on_show, led_delay_on_store);
-static DEVICE_ATTR(delay_off, 0644, led_delay_off_show, led_delay_off_store);
+static DEVICE_ATTR(delay_on, 0666, led_delay_on_show, led_delay_on_store);
+static DEVICE_ATTR(delay_off, 0666, led_delay_off_show, led_delay_off_store);
 
 static void timer_trig_activate(struct led_classdev *led_cdev)
 {
