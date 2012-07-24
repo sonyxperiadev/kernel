@@ -316,7 +316,7 @@ static int em_open(struct inode *inode, struct file *file)
 
 static int em_release(struct inode *inode, struct file *file)
 {
-	file->private_data = NULL; 
+	file->private_data = NULL;
 	return 0;
 }
 
@@ -339,7 +339,8 @@ static int save_fg_delta(struct bcmpmu *bcmpmu, int data)
 			PMU_REG_FG_DELTA,
 			data,
 			bcmpmu->regmap[PMU_REG_FG_DELTA].mask);
-	pr_em(FLOW, "%s, fg delta write: ret=%d, data=0x%X\n", __func__, ret, data);
+	pr_em(FLOW, "%s, fg delta write: ret=%d, data=0x%X\n",
+		__func__, ret, data);
 	return ret;
 }
 
@@ -386,7 +387,8 @@ static int save_fg_cap(struct bcmpmu *bcmpmu, int data)
 		PMU_REG_FG_CAP,
 		data,
 		bcmpmu->regmap[PMU_REG_FG_CAP].mask);
-	pr_em(FLOW, "%s, fg cap write: ret=%d, data=0x%X\n", __func__, ret, data);
+	pr_em(FLOW, "%s, fg cap write: ret=%d, data=0x%X\n",
+		__func__, ret, data);
 	return ret;
 }
 
@@ -1045,7 +1047,7 @@ static int em_batt_get_capacity(struct bcmpmu_em *pem, int pvolt, int curr)
 	int volt = pvolt;
 	int len;
 	struct bcmpmu_voltcap_map *vcmap = get_fg_vcmap(pem, &len);
-	
+
 	volt = pvolt - (pem->esr * curr)/1000;
 
 	if (volt >= vcmap[0].volt)
@@ -1496,15 +1498,16 @@ err:
 	return calibration;
 }
 
-static unsigned char em_batt_get_capacity_lvl(struct bcmpmu_em *pem, int capacity)
+static unsigned char em_batt_get_capacity_lvl(struct bcmpmu_em *pem,
+	int capacity)
 {	int capacity_lvl;
 	if (capacity < 5)
 		capacity_lvl = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
-	else if (capacity < 15) 
+	else if (capacity < 15)
 		capacity_lvl = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
-	else if (capacity < 75) 
+	else if (capacity < 75)
 		capacity_lvl = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
-	else if (capacity < 95) 
+	else if (capacity < 95)
 		capacity_lvl = POWER_SUPPLY_CAPACITY_LEVEL_HIGH;
 	else
 		capacity_lvl = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
@@ -1562,47 +1565,47 @@ static int get_update_rate(struct bcmpmu_em *pem)
 	int rate = POLLRATE_HIGHBAT;
 
 	switch (pem->mode) {
-		case MODE_TRANSITION:
-			rate = POLLRATE_TRANSITION;
-			break;
-		case MODE_CHRG:
-			rate = POLLRATE_CHRG;
-			break;
-		case MODE_CHRG_MAINT:
-			rate = POLLRATE_CHRG_MAINT;
-			break;
-		case MODE_CUTOFF:
-			rate = POLLRATE_CUTOFF;
-			break;
-		case MODE_LOWBAT:
-			rate = pem->fg_poll_lbat;
-			break;
-		case MODE_HIGHBAT:
-			if (pem->pollrate < POLLRATE_HIGHBAT)
-				rate = pem->pollrate;
-			else
-				rate = pem->fg_poll_hbat;
-			break;
-		case MODE_POLL:
-			if (pem->init_poll == 1)
-				rate = POLLRATE_POLL_INIT;
-			else
-				rate = POLLRATE_POLL;
-			break;
-		case MODE_IDLE:
-			if (pem->init_poll == 1)
-				rate = POLLRATE_IDLE_INIT;
-			else
-				rate = POLLRATE_IDLE;
-			break;
-		case MODE_RETRY:
-			rate = POLLRATE_RETRY;
-			break;
-		case MODE_ADC:
-			rate = POLLRATE_ADC;
-			break;
-		default:
-			break;
+	case MODE_TRANSITION:
+		rate = POLLRATE_TRANSITION;
+		break;
+	case MODE_CHRG:
+		rate = POLLRATE_CHRG;
+		break;
+	case MODE_CHRG_MAINT:
+		rate = POLLRATE_CHRG_MAINT;
+		break;
+	case MODE_CUTOFF:
+		rate = POLLRATE_CUTOFF;
+		break;
+	case MODE_LOWBAT:
+		rate = pem->fg_poll_lbat;
+		break;
+	case MODE_HIGHBAT:
+		if (pem->pollrate < POLLRATE_HIGHBAT)
+			rate = pem->pollrate;
+		else
+			rate = pem->fg_poll_hbat;
+		break;
+	case MODE_POLL:
+		if (pem->init_poll == 1)
+			rate = POLLRATE_POLL_INIT;
+		else
+			rate = POLLRATE_POLL;
+		break;
+	case MODE_IDLE:
+		if (pem->init_poll == 1)
+			rate = POLLRATE_IDLE_INIT;
+		else
+			rate = POLLRATE_IDLE;
+		break;
+	case MODE_RETRY:
+		rate = POLLRATE_RETRY;
+		break;
+	case MODE_ADC:
+		rate = POLLRATE_ADC;
+		break;
+	default:
+		break;
 	}
 #ifdef CONFIG_WD_TAPPER
 	if (pem->mode == MODE_CUTOFF)
@@ -1680,6 +1683,14 @@ static void charging_algorithm(struct bcmpmu_em *pem)
 				}
 			}
 		}
+
+		if (pem->chrgr_curr == 0) {
+			pem->bcmpmu->chrgr_usb_en(pem->bcmpmu, 0);
+			pem->charge_state = CHRG_STATE_IDLE;
+			pr_em(FLOW,
+			"%s, chrgr_curr is 0 and stop charging.\n",
+			__func__);
+		} /* Revisit, this is a temporary fix */
 		charge_zone = -1;
 		while (charge_zone != pem->charge_zone) {
 			charge_zone = pem->charge_zone;
@@ -1815,8 +1826,8 @@ static void em_algorithm(struct work_struct *work)
 	int calibration;
 	int fg_result;
 
-	static int first_run = 0;
-	static int poll_count = 0;
+	static int first_run;
+	static int poll_count;
 	static int cap_poll_count;
 	static int vbatt_poll[POLL_SAMPLES];
 	static int cap_poll[CAP_POLL_SAMPLES];
@@ -1997,7 +2008,8 @@ static void em_algorithm(struct work_struct *work)
 						capacity - pem->batt_capacity;
 					ret = save_fg_delta(pem->bcmpmu,
 						pem->cap_delta);
-					if (ret != 0) pem->cap_delta = 0;
+					if (ret != 0)
+						pem->cap_delta = 0;
 					update_fg_delta(pem);
 					pem->fg_cap_cal = 0;
 				}
@@ -2148,8 +2160,8 @@ static int em_event_handler(struct notifier_block *nb,
 	int capacity_v;
 	struct bcmpmu_adc_req req;
 	int data = 0;
-	
-	switch(event) {
+
+	switch (event) {
 	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
 		pem->chrgr_type = *(enum bcmpmu_chrgr_type_t *)para;
 
@@ -2189,7 +2201,7 @@ static int em_event_handler(struct notifier_block *nb,
 		req.tm = PMU_ADC_TM_HK;
 		req.flags = PMU_ADC_RAW_AND_UNIT;
 		pem->bcmpmu->adc_req(pem->bcmpmu, &req);
-		
+
 		capacity_v = em_batt_get_capacity(pem, req.cnv, 0);
 		if ((pem->batt_capacity > (capacity_v + 10)) ||
 			((pem->batt_capacity + 10) < (capacity_v))) {
@@ -2251,7 +2263,7 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_em *pem;
 	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
-	
+
 	printk(KERN_INFO "%s: called.\n", __func__);
 
 	pem = kzalloc(sizeof(struct bcmpmu_em), GFP_KERNEL);
