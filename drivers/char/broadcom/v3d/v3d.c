@@ -43,6 +43,9 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/dma-mapping.h>
 #include <linux/kthread.h>
 #include <mach/io_map.h>
+#ifdef CONFIG_ION
+#include <linux/broadcom/kona_ion.h>
+#endif
 
 #define V3D_DEV_NAME	"v3d"
 #define V3D_DEV_MAJOR	0
@@ -280,8 +283,13 @@ typedef struct v3d_job_t_ {
 #define MAX_BIN_BLOCKS  5
 #define BIN_MEM_SIZE    (2 * 1024 * 1024)
 static struct {
-	int oom_block;
+#ifdef CONFIG_ION
+	struct ion_handle *oom_handle;
+	unsigned int oom_block;
+#else
 	void *oom_cpuaddr;
+	int oom_block;
+#endif
 	bool used;
 	bool ready;
 	u32 dev_id;
@@ -291,9 +299,15 @@ static struct {
 struct task_struct *v3d_thread_task = (struct task_struct *)-ENOMEM;
 
 /* Stuff to supply more bin memory */
-static int v3d_bin_oom_block;
 static int v3d_bin_oom_size = BIN_MEM_SIZE;
+#ifdef CONFIG_ION
+static struct ion_client *v3d_bin_oom_client;
+static struct ion_handle *v3d_bin_oom_handle;
+static unsigned int v3d_bin_oom_block;
+#else
 static void *v3d_bin_oom_cpuaddr;
+static int v3d_bin_oom_block;
+#endif
 static volatile int v3d_oom_block_used;
 static void allocate_bin_mem(struct work_struct *work);
 static void free_bin_mem(uint32_t dev_id);
@@ -1339,13 +1353,24 @@ static void allocate_bin_mem(struct work_struct *work)
 		goto err1;
 
 	if (bin_mem[i].ready == 0) {
+#ifdef CONFIG_ION
+		bin_mem[i].oom_handle = ion_alloc(v3d_bin_oom_client,
+				v3d_bin_oom_size, SZ_4K, ION_DEFAULT_HEAP);
+		bin_mem[i].oom_block = kona_ion_map_dma(v3d_bin_oom_client,
+				bin_mem[i].oom_handle);
+#else
 		bin_mem[i].oom_cpuaddr =
 		    dma_alloc_coherent(v3d_state.v3d_device, v3d_bin_oom_size,
 				       &bin_mem[i].oom_block, GFP_DMA);
+#endif
 		bin_mem[i].ready = 1;
 	}
 
+#ifdef CONFIG_ION
+	if (bin_mem[i].oom_block != 0) {
+#else
 	if (bin_mem[i].oom_cpuaddr != NULL) {
+#endif
 		mutex_lock(&v3d_state.work_lock);
 		if (v3d_is_on) {
 			uint32_t flags = v3d_read(V3D_INTENA_OFFSET);
@@ -1381,10 +1406,15 @@ static void free_bin_mem(uint32_t dev_id)
 			/* Memory is getting released as part of process closing */
 			bin_mem[i].ready = 0;
 			bin_mem[i].used = 0;
+#ifdef CONFIG_ION
+			ion_unmap_dma(v3d_bin_oom_client, bin_mem[i].oom_handle);
+			ion_free(v3d_bin_oom_client, bin_mem[i].oom_handle);
+#else
 			dma_free_coherent(v3d_state.v3d_device,
 					  v3d_bin_oom_size,
 					  bin_mem[i].oom_cpuaddr,
 					  bin_mem[i].oom_block);
+#endif
 		}
 	}
 	mutex_unlock(&v3d_state.work_lock);
@@ -1949,6 +1979,26 @@ int __init v3d_init(void)
 		KLOG_E("failed to register PI DFS request\n");
 
 	/* Allocate the binning overspill memory upfront */
+#ifdef CONFIG_ION
+	v3d_bin_oom_client = ion_client_create(idev, ION_DEFAULT_HEAP, "v3d");
+	if (v3d_bin_oom_client == NULL) {
+		ret = -ENOMEM;
+		goto err2;
+	}
+	v3d_bin_oom_handle = ion_alloc(v3d_bin_oom_client,
+			v3d_bin_oom_size, SZ_4K, ION_DEFAULT_HEAP);
+	v3d_bin_oom_block = kona_ion_map_dma(v3d_bin_oom_client,
+			v3d_bin_oom_handle);
+	if (v3d_bin_oom_block == 0) {
+		KLOG_E("ion alloc failed for v3d oom block size[0x%x]",
+		       v3d_bin_oom_size);
+		v3d_bin_oom_size = 0;
+		ret = -ENOMEM;
+		goto err2;
+	}
+	pr_info("v3d bin oom dma[0x%08x], size[0x%08x] \n",
+	       v3d_bin_oom_block, v3d_bin_oom_size);
+#else
 	v3d_bin_oom_cpuaddr =
 	    dma_alloc_coherent(v3d_state.v3d_device, v3d_bin_oom_size,
 			       &v3d_bin_oom_block, GFP_DMA);
@@ -1962,6 +2012,7 @@ int __init v3d_init(void)
 	}
 	KLOG_D("v3d bin oom phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
 	       v3d_bin_oom_block, v3d_bin_oom_size, (int)v3d_bin_oom_cpuaddr);
+#endif
 
 	oom_wq = create_singlethread_workqueue("oom_work");
 	if (!oom_wq) {
@@ -2034,9 +2085,21 @@ err3:
 err2:
 	if ((int)v3d_thread_task != -ENOMEM)
 		kthread_stop(v3d_thread_task);
+#ifdef CONFIG_ION
+	if (v3d_bin_oom_block)
+		ion_unmap_dma(v3d_bin_oom_client, v3d_bin_oom_handle);
+	if (v3d_bin_oom_handle)
+		ion_free(v3d_bin_oom_client, v3d_bin_oom_handle);
+	if (v3d_bin_oom_client)
+		ion_client_destroy(v3d_bin_oom_client);
+	v3d_bin_oom_block = 0;
+	v3d_bin_oom_handle = NULL;
+	v3d_bin_oom_client = NULL;
+#else
 	if (v3d_bin_oom_cpuaddr)
 		dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size,
 				  v3d_bin_oom_cpuaddr, v3d_bin_oom_block);
+#endif
 	iounmap(v3d_base);
 err:
 	KLOG_E("V3D init error\n");
@@ -2063,9 +2126,21 @@ void __exit v3d_exit(void)
 
 	if ((int)v3d_thread_task != -ENOMEM)
 		kthread_stop(v3d_thread_task);
+#ifdef CONFIG_ION
+	if (v3d_bin_oom_block)
+		ion_unmap_dma(v3d_bin_oom_client, v3d_bin_oom_handle);
+	if (v3d_bin_oom_handle)
+		ion_free(v3d_bin_oom_client, v3d_bin_oom_handle);
+	if (v3d_bin_oom_client)
+		ion_client_destroy(v3d_bin_oom_client);
+	v3d_bin_oom_block = 0;
+	v3d_bin_oom_handle = NULL;
+	v3d_bin_oom_client = NULL;
+#else
 	if (v3d_bin_oom_cpuaddr)
 		dma_free_coherent(v3d_state.v3d_device, v3d_bin_oom_size,
 				  v3d_bin_oom_cpuaddr, v3d_bin_oom_block);
+#endif
 
 	/* Unmap addresses */
 	if (v3d_base)
