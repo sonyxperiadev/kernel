@@ -127,14 +127,14 @@ static void kona_ion_release_buffer(struct ion_client *client, struct ion_buffer
 unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *handle)
 {
 	unsigned int dma_addr = 0;
-	struct scatterlist *sglist;
+	struct sg_table *sg_table;
 
-	sglist = ion_map_dma(client, handle);
+	sg_table = ion_map_dma(client, handle);
 #if 1
 	/* NISH_TODO: Move to heap implementation and use sg_dma */
 	/* Do not have IOMMU to map multiple scatterlist entries to contiguous dma address */
-	if (!IS_ERR_OR_NULL(sglist) && sg_is_last(sglist))
-		dma_addr = sg_phys(sglist);
+	if (!IS_ERR_OR_NULL(sg_table) && (sg_table->nents == 1))
+		dma_addr = sg_phys(sg_table->sgl);
 #endif
 	return dma_addr;
 }

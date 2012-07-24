@@ -88,22 +88,28 @@ static void ion_carveout_heap_free(struct ion_buffer *buffer)
 	}
 }
 
-struct scatterlist *ion_carveout_heap_map_dma(struct ion_heap *heap,
+struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 					      struct ion_buffer *buffer)
 {
-	struct scatterlist *sglist;
+	struct sg_table *table;
+	int ret;
 
 	pr_debug("dma map heap(%s)(%d) buffer(%p) \n",
 			heap->name, heap->id, buffer);
 	if (buffer->priv_phys == ION_CARVEOUT_ALLOCATE_FAIL) {
 		return NULL;
 	} else {
-		sglist = vmalloc(sizeof(struct scatterlist));
-		if (!sglist)
+		table = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+		if (!table)
 			return ERR_PTR(-ENOMEM);
-		sg_init_table(sglist, 1);
-		sg_set_page(sglist, phys_to_page(buffer->priv_phys), buffer->size, 0);
-		return sglist;
+		ret = sg_alloc_table(table, 1, GFP_KERNEL);
+		if (ret) {
+			kfree(table);
+			return ERR_PTR(ret);
+		}
+		sg_set_page(table->sgl, phys_to_page(buffer->priv_phys), buffer->size,
+				0);
+		return table;
 	}
 }
 
@@ -112,9 +118,10 @@ void ion_carveout_heap_unmap_dma(struct ion_heap *heap,
 {
 	pr_debug("dma unmap heap(%s)(%d) buffer(%p) \n",
 			heap->name, heap->id, buffer);
-	if (buffer->sglist) {
-		vfree(buffer->sglist);
-		buffer->sglist = NULL;
+	if (buffer->sg_table) {
+		sg_free_table(buffer->sg_table);
+		kfree(buffer->sg_table);
+		buffer->sg_table = NULL;
 	}
 
 	return;
