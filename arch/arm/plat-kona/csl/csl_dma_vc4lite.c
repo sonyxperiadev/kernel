@@ -21,6 +21,7 @@
 *  @note
 ****************************************************************************/
 #define UNDER_LINUX
+#define pr_fmt(fmt) "dma vc4lite csl: " fmt
 
 #include "linux/broadcom/mobcom_types.h"
 #include "plat/chal/chal_types.h"
@@ -32,6 +33,9 @@
 #include "plat/osdal_os.h"
 #include "linux/dma-mapping.h"
 #include <mach/memory.h>
+#ifdef CONFIG_ION
+#include <linux/broadcom/kona_ion.h>
+#endif
 
 #if defined(CONFIG_HAVE_CLK) && !defined(CONFIG_MACH_HAWAII_FPGA) \
 	&& defined(UNDER_LINUX)
@@ -54,6 +58,10 @@
 #define DEBUG
 static UInt32 *dmaCtrlBlkList; /* Virtual address of DMA memory region */
 static UInt32 *dmaCtrlBlkListPhys;
+#ifdef CONFIG_ION
+static struct ion_client *dmaCtrlBlkListClient;
+static struct ion_handle *dmaCtrlBlkListHandle;
+#endif
 #else
 #pragma arm section zidata = "uncacheable"
 __align(32)
@@ -102,8 +110,6 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id);
 static void dma_vc4lite_hisr(void);
 static UInt8 dma_vc4lite_per_map(UInt8);
 
-#define printk(fmt, ...) do {} while (0)
-
 #ifdef MMDMA_HAS_CLK
 static inline void csl_dma_enable_axi_clk(struct CslDmaVc4lite *pdma)
 {
@@ -141,22 +147,40 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
 	struct CslDmaVc4lite *pdma = (struct CslDmaVc4lite *)&dmac;
 	int i;
 	char name[16];
+	int size = DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE *
+		DMA_VC4LITE_TOTAL_CHANNELS;
 
 	if (!pdma->initialized) {
 #ifdef UNDER_LINUX
 		/* Allocate dma memory */
 
+#ifdef CONFIG_ION
+		dmaCtrlBlkListClient = ion_client_create(idev, ION_DEFAULT_HEAP, "mmdma");
+		if (dmaCtrlBlkListClient == NULL) {
+			pr_err("ion client creation failed \n");
+			return -ENOMEM;
+		}
+		dmaCtrlBlkListHandle = ion_alloc(dmaCtrlBlkListClient,
+				size, SZ_4K, ION_DEFAULT_HEAP);
+		dmaCtrlBlkList = ion_map_kernel(dmaCtrlBlkListClient,
+				dmaCtrlBlkListHandle);
+		dmaCtrlBlkListPhys = (UInt32*)kona_ion_map_dma(dmaCtrlBlkListClient,
+				dmaCtrlBlkListHandle);
+		if ((dmaCtrlBlkList == NULL) || (dmaCtrlBlkListPhys == 0)) {
+			ion_client_destroy(dmaCtrlBlkListClient);
+			pr_err("ion alloc failed for ctrl block size[0x%x]", size);
+			return -ENOMEM;
+		}
+#else
 		dmaCtrlBlkList =
-		    dma_alloc_coherent(NULL, DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE *
-			    DMA_VC4LITE_TOTAL_CHANNELS, (dma_addr_t*)&dmaCtrlBlkListPhys, GFP_KERNEL);
+		    dma_alloc_coherent(NULL, size, (dma_addr_t*)&dmaCtrlBlkListPhys, GFP_KERNEL);
 		if ((void *)dmaCtrlBlkList == NULL) {
 			pr_info("DMA driver: failed to allocate DMA memory\n");
 			return -ENOMEM;
 		}
-
-		printk(KERN_ERR
-		       "the virt addr=0x%08x phy addr=0x%08x \n",
-		       dmaCtrlBlkList, dmaCtrlBlkListPhys);
+#endif
+		pr_info("Ctrl Blk va(%p) da(%p) size(0x%x) \n",
+				dmaCtrlBlkList, dmaCtrlBlkListPhys, size);
 
 #ifdef MMDMA_HAS_CLK
 		pdma->mm_dma_axi_clk = clk_get(NULL, MM_DMA_AXI_BUS_CLK_NAME_STR);
@@ -483,12 +507,12 @@ void csl_dma_poll_int(int chanID)
 			break;
 		}
 		counter++;
-		printk(KERN_ERR "chan %d CS reg is 0x%08x\n", chanNum,
+		pr_debug("chan %d CS reg is 0x%08x\n", chanNum,
 		       readl(pdma->base+ chanNum * 0x100));
 		chal_dma_vc4lite_get_int_status(pdma->handle, chanNum,
 						&pdma->chan[chanNum].irqStatus);
 	} while (pdma->chan[chanNum].irqStatus == 0);
-	printk(KERN_ERR "chan %d CS reg is 0x%08x\n", chanNum,
+	pr_debug("chan %d CS reg is 0x%08x\n", chanNum,
 	       readl(pdma->base + chanNum * 0x100));
 
 	chal_dma_vc4lite_clear_int_status(pdma->handle, chanNum);
@@ -716,7 +740,7 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(DMA_VC4LITE_CHANNEL_t chanID,
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
 
-	printk(KERN_ERR "ctl blk item num = %d, ctl blk info"
+	pr_debug("ctl blk item num = %d, ctl blk info"
 	       "0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
 	       pdma->chan[chanID].dmaChanCtrlBlkItemNum,
 	       ((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[0],
@@ -829,7 +853,7 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data_ex(DMA_VC4LITE_CHANNEL_t chanID,
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
 
-	printk(KERN_ERR "DMA_Ex ctl blk item num = %d, ctl blk info"
+	pr_debug("DMA_Ex ctl blk item num = %d, ctl blk info"
 	       "0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
 	       pdma->chan[chanID].dmaChanCtrlBlkItemNum,
 	       ((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[0],
@@ -860,7 +884,7 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
 	struct CslDmaVc4lite *pdma = (struct CslDmaVc4lite *)&dmac;
 	UInt8 chanNum;
 
-	printk(KERN_ERR "DMA int hapened for irq =%d\n", irq);
+	pr_debug("DMA int hapened for irq =%d\n", irq);
 #ifndef UNDER_LINUX
 	/* disable the dma channel 1 interrupt */
 	IRQ_Disable(MM_DMA_CHAN1_IRQ);
@@ -891,14 +915,14 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
 	for (chanNum = 0; chanNum < 1; chanNum++) {
 		pdma->chan[chanNum].chanState =
 		    chal_dma_vc4lite_get_channel_state(pdma->handle, chanNum);
-		printk(KERN_ERR "chan %d CS reg is 0x%08x\n", chanNum,
+		pr_debug("chan %d CS reg is 0x%08x\n", chanNum,
 		       readl(pdma->base + chanNum * 0x100));
 		if (chal_dma_vc4lite_get_int_status
 		    (pdma->handle, chanNum,
 		     &pdma->chan[chanNum].irqStatus) ==
 		    CHAL_DMA_VC4LITE_STATUS_SUCCESS) {
 			if (pdma->chan[chanNum].irqStatus != 0) {
-				printk(KERN_ERR
+				pr_debug(
 				       "ISR is happening for channel = %d",
 				       chanNum);
 
@@ -906,13 +930,12 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
 								  chanNum);
 				pdma->chan[chanNum].dmaChanCtrlBlkItemNum = 0;
 			} else
-				printk(KERN_ERR
+				pr_debug(
 				       "channel = %d has no irq status",
 				       chanNum);
 
 		} else
-			printk(KERN_ERR
-			       "failed to read irq status for channel = %d",
+			pr_debug("failed to read irq status for channel = %d",
 			       chanNum);
 
 	}
@@ -940,7 +963,7 @@ static void dma_vc4lite_hisr(void)
 	/* process the callback function */
 	for (chanNum = 0; chanNum < 1; chanNum++) {
 		if (pdma->chan[chanNum].irqStatus != 0) {
-			printk(KERN_ERR "callback for channel = %d", chanNum);
+			pr_debug("callback for channel = %d", chanNum);
 			if (pdma->chan[chanNum].chanInfo.callback) {
 				if ((pdma->chan[chanNum].chanState !=
 				     CHAL_DMA_VC4LITE_STATE_INVALID)
