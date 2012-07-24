@@ -1583,19 +1583,24 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	/* Clear Input FIFO */
 	chal_caph_srcmixer_clr_fifo(handle, fifo);
 
-	/* Get Output Channel FIFO */
-	fifo = csl_caph_srcmixer_get_outchnl_fifo(routeConfig.outChnl);
-	/* Get Output Data Format */
-	dataFmt =
-	    csl_caph_srcmixer_get_chal_dataformat(handle,
-						  routeConfig.outDataFmt);
-	/* Set output FIFO data format */
-	chal_caph_srcmixer_set_fifo_datafmt(handle, fifo, dataFmt);
-	/* Set output FIFO threshold */
-	chal_caph_srcmixer_set_fifo_thres(handle, fifo, routeConfig.outThres,
-					  (UInt8) srcmixer_fifo_thres2);
-	/* Clear output FIFO */
-	chal_caph_srcmixer_clr_fifo(handle, fifo);
+	inChnls = csl_caph_srcmixer_read_outchnltable(routeConfig.outChnl);
+	/*config only if output is not active*/
+	if (inChnls == 0) {
+		/* Get Output Channel FIFO */
+		fifo = csl_caph_srcmixer_get_outchnl_fifo(routeConfig.outChnl);
+		/* Get Output Data Format */
+		dataFmt = csl_caph_srcmixer_get_chal_dataformat(handle,
+			routeConfig.outDataFmt);
+
+		/* Set output FIFO data format */
+		chal_caph_srcmixer_set_fifo_datafmt(handle, fifo, dataFmt);
+		/* Set output FIFO threshold */
+		chal_caph_srcmixer_set_fifo_thres(handle, fifo,
+			routeConfig.outThres,
+			(UInt8) srcmixer_fifo_thres2);
+		/* Clear output FIFO */
+		chal_caph_srcmixer_clr_fifo(handle, fifo);
+	}
 	/* Enable the mixer input channel */
 	chal_caph_srcmixer_enable_chnl(handle, (UInt16) chalInChnl);
 	/* Update the output channel usage table */

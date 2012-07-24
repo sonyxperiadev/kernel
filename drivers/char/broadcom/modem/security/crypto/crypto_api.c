@@ -37,8 +37,7 @@ unsigned char EncDec(unsigned char *outDataPtr, const unsigned char *inDataPtr,
 			unsigned int inDataSize, unsigned int inEncDec)
 {
 #if defined(CONFIG_ROM_SEC_DISPATCHER) &&\
-		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES) &&\
-		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH)
+		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES)
 
 	 struct clk *sec_spum_clk = NULL;
 	 void *aes_buf_vir = NULL;
@@ -48,7 +47,7 @@ unsigned char EncDec(unsigned char *outDataPtr, const unsigned char *inDataPtr,
 
 	 /* Check for invalid parameters */
 	 if ((outDataPtr == NULL) ||
-		(inDataSize > SZ_1K) ||
+		(inDataSize > SZ_4K) ||
 		(inDataSize < AES_BLOCK_SIZE) ||
 		((inDataSize % AES_BLOCK_SIZE) != 0) ||
 		((inEncDec != AES_OPERATION_ENCRYPT) &&
@@ -58,7 +57,7 @@ unsigned char EncDec(unsigned char *outDataPtr, const unsigned char *inDataPtr,
 		return 0;
 	}
 
-	aes_buf_vir = dma_alloc_coherent(NULL, SZ_1K, &aes_buf_phy, GFP_KERNEL);
+	aes_buf_vir = dma_alloc_coherent(NULL, SZ_4K, &aes_buf_phy, GFP_KERNEL);
 	if (aes_buf_vir == NULL) {
 		pr_info("%s: dma buffer alloc for aes failed\n", __func__);
 		return 0;
@@ -66,7 +65,7 @@ unsigned char EncDec(unsigned char *outDataPtr, const unsigned char *inDataPtr,
 	aes_v = (unsigned char *) aes_buf_vir;
 	aes_p = (unsigned char *) aes_buf_phy;
 
-	memset(aes_v, 0x00, SZ_1K);
+	memset(aes_v, 0x00, SZ_4K);
 	memcpy(&aes_v[0], inDataPtr, inDataSize);
 
 	sec_spum_clk = clk_get(NULL, "spum_sec");
@@ -99,7 +98,7 @@ unsigned char EncDec(unsigned char *outDataPtr, const unsigned char *inDataPtr,
 	memcpy(outDataPtr, &aes_v[inDataSize], inDataSize);
 
 	if (aes_buf_vir)
-		dma_free_coherent(NULL, PAGE_SIZE, aes_buf_vir, aes_buf_phy);
+		dma_free_coherent(NULL, SZ_4K, aes_buf_vir, aes_buf_phy);
 
 	return 1;
 #else

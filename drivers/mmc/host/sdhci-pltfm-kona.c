@@ -870,12 +870,33 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 	struct sdhci_host *host = dev->host;
 
 	flush_work_sync(&host->wait_erase_work);
-	ret = sdhci_kona_anystate_to_off(dev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Unable to Turn OFF regulator err=%d\n",
-			ret);
-		return ret;
-	}
+	/*
+	 *   Move Dynamic Power Management State machine to OFF state to
+	 *   ensure the SD card regulators are turned-off during suspend.
+	 *
+	 * State Machine:
+	 *
+	 *   ENABLED -> DISABLED ->  OFF
+	 *     ^___________|          |
+	 *     |______________________|
+	 *
+	 *  Delayed workqueue host->mmc->disable (mmc_host_deeper_disable) is
+	 *  scheduled twice:
+	 *  mmc_host_lazy_disable queues host->mmc->disable for 100ms delay
+	 *  1st Entry(after 100ms):  work function(mmc_host_deeper_disable)
+	 *  moves the DPM state: ENABLED -> DISABLED [lazy disable] and
+	 *  and queues the workqueue host->mmc->disable again for 8s delay
+	 *
+	 * 2nd Entry(after 8s): work function(mmc_host_deeper_disable) moves
+	 * the DPM state: DISABLED ->  OFF [deeper disable] this time to
+	 * turn-off the SD card/IO regulators.
+	 *
+	 * We need to call flush_delayed_work_sync twice to ensure the SD card
+	 * DPM is moved to OFF state.
+	 *
+	 */
+	flush_delayed_work_sync(&host->mmc->disable);
+	flush_delayed_work_sync(&host->mmc->disable);
 
 	dev->suspended = 1;
 	return 0;

@@ -1700,6 +1700,12 @@ static bool __zone_watermark_ok(struct zone *z, int order, unsigned long mark,
 	if (alloc_flags & ALLOC_HARDER)
 		min -= min / 4;
 
+	if (alloc_flags & ALLOC_UNMOVABLE) {
+		if ((free_pages - zone_page_state(z, NR_FREE_CMA_PAGES)) <=
+				(min + z->lowmem_reserve[classzone_idx]))
+			return false;
+	}
+
 	if (free_pages <= min + z->lowmem_reserve[classzone_idx])
 		return false;
 	for (o = 0; o < MAX_ORDER; o++) {
@@ -6045,14 +6051,9 @@ static int __reclaim_pages(struct zone *zone, gfp_t gfp_mask, int count)
 	int did_some_progress = 0;
 	int order = 1;
 
-	/*
-	 * Increase level of watermarks to force kswapd do his job
-	 * to stabilise at new watermark level.
-	 */
-	__update_cma_watermarks(zone, count);
-
 	/* Obey watermarks as if the page was being allocated */
-	while (!zone_watermark_ok(zone, 0, low_wmark_pages(zone), 0, 0)) {
+	while (!fatal_signal_pending(current) &&
+		!zone_watermark_ok(zone, 0, low_wmark_pages(zone), 0, 0)) {
 		wake_all_kswapd(order, zonelist, high_zoneidx, zone_idx(zone));
 
 		did_some_progress = __perform_reclaim(gfp_mask, order, zonelist,
@@ -6062,9 +6063,6 @@ static int __reclaim_pages(struct zone *zone, gfp_t gfp_mask, int count)
 			out_of_memory(zonelist, gfp_mask, order, NULL);
 		}
 	}
-
-	/* Restore original watermark levels. */
-	__update_cma_watermarks(zone, -count);
 
 	return count;
 }
@@ -6161,8 +6159,6 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 
 	/* Make sure the range is really isolated. */
 	if (test_pages_isolated(outer_start, end)) {
-		pr_warn("alloc_contig_range test_pages_isolated(%lx, %lx) failed\n",
-		       outer_start, end);
 		ret = -EBUSY;
 		goto done;
 	}

@@ -7,7 +7,6 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Werror -Dlinux -DBCMDRIVER             \
 	-DNEW_COMPAT_WIRELESS -DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT          \
 	-DKEEP_ALIVE -DPKT_FILTER_SUPPORT -DENABLE_INSMOD_NO_FW_LOAD   \
 	-DEMBEDDED_PLATFORM -DPNO_SUPPORT                                     \
-	-DDHD_BCM_WIFI_HDMI                                                   \
 	-DCUSTOMER_HW3							      \
 	-DOEMANDROID                                                          \
 	-DGET_CUSTOM_MAC_ENABLE                                               \

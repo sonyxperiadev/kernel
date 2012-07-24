@@ -86,8 +86,8 @@
  * to change to the correct way of passing the time in microseconds resolution.
  */
 #define DEBOUNCE_TIME	(64000)
-#define KEY_PRESS_REF_TIME	msecs_to_jiffies(100)
-#define KEY_DETECT_DELAY	msecs_to_jiffies(128)
+#define KEY_PRESS_REF_TIME	msecs_to_jiffies(10)
+#define KEY_DETECT_DELAY	msecs_to_jiffies(90)
 #define ACCESSORY_INSERTION_REMOVE_SETTLE_TIME	msecs_to_jiffies(500)
 
 /*
@@ -682,7 +682,7 @@ static void button_work_func(struct work_struct *work)
 	if (p->hs_state != HEADSET) {
 		pr_err
 		    ("%s() ..scheduled while acessory is not Headset"
-				" spurious \r\n", __func__);
+				" or spurious \r\n", __func__);
 #ifdef CONFIG_HAS_WAKELOCK
 		wake_unlock(&p->accessory_wklock);
 #endif
@@ -697,29 +697,29 @@ static void button_work_func(struct work_struct *work)
 			* by reading the ADC values */
 			button_name = detect_button_pressed(p);
 
-		/* We observe that when Headset is plugged out from the
-		 * connector, sometimes we get COMP1 interrupts indicating
-		 * button press/release. While removing the headset,
-		 * there is some disturbance on the MIC line and if
-		 * it happens to match the threshold programmed for
-		 * button press/release the interrupt is fired.
-		 * So practically we cannot avoid this situation.
-		 * To handle this, we update the state of the accessory
-		 * (connected / unconnected)in gpio_isr(). Once the button ISR
-		 * happens, we read the ADC values etc immediately but we
-		 * delay notifying this to the upper layers by
-		 * 80 msec(this value is arrived at by experiment)
-		 * So that if this is a spurious
-		 * notification, the GPIO ISR would be fired by this time
-		 * and would have updated the accessory state as disconnected.
-		 * In such cases the upper layer is not notified.
-		 */
-			usleep_range(80000, 90000);
 			/*
 			 * Store which button is being pressed (KEY_VOLUMEUP,
 			 *	KEY_VOLUMEDOWN, KEY_MEDIA)
 			 * in the context structure
 			 */
+		/* We observe that when Headset is plugged out from the
+		* connector, sometimes we get COMP1 interrupts indicating
+		* button press/release. While removing the headset,
+		* there is some disturbance on the MIC line and if
+		* it happens to match the threshold programmed for
+		* button press/release the interrupt is fired.
+		* So practically we cannot avoid this situation.
+		* To handle this, we update the state of the accessory
+		* (connected / unconnected)in gpio_isr(). Once the button ISR
+		* happens, we read the ADC values etc immediately but we
+		* delay notifying this to the upper layers by
+		* 250 msec(this value is arrived at by experiment)
+		* So that if this is a spurious
+		* notification, the GPIO ISR would be fired by this time
+		* and would have updated the accessory state as disconnected.
+		* In such cases the upper layer is not notified.
+		*/
+			msleep(250);
 			if (p->hs_state != DISCONNECTED) {
 				switch (button_name) {
 				case BUTTON_SEND_END:
@@ -732,7 +732,8 @@ static void button_work_func(struct work_struct *work)
 					p->button_pressed = KEY_VOLUMEDOWN;
 					break;
 				default:
-					pr_err("Button type not supported \r\n");
+					pr_err("Button type not supported or"
+								" spurious \r\n");
 					err = 1;
 #ifdef CONFIG_HAS_WAKELOCK
 					wake_unlock(&p->accessory_wklock);
@@ -742,7 +743,6 @@ static void button_work_func(struct work_struct *work)
 
 				if (err)
 					goto out;
-
 				/* Notify the same to input sub-system */
 				p->button_state = BUTTON_PRESSED;
 				pr_info(" Sending Key Press\r\n");
@@ -1170,7 +1170,14 @@ static void __handle_accessory_removed(struct mic_t *p)
 	 */
 	/* Inform userland about accessory removal */
 	p->hs_state = DISCONNECTED;
-	p->button_state = BUTTON_RELEASED;
+	if (p->button_state == BUTTON_PRESSED) {
+			p->button_state = BUTTON_RELEASED;
+			input_report_key(p->headset_button_idev,
+					 p->button_pressed, 0);
+			input_sync(p->headset_button_idev);
+	} else
+			p->button_state = BUTTON_RELEASED;
+
 #ifdef CONFIG_SWITCH
 	switch_set_state(&(p->sdev), p->hs_state);
 #endif
@@ -1357,9 +1364,6 @@ irqreturn_t comp1_isr(int irq, void *dev_id)
 	pr_debug("COMP1 After clearing 0x%x ... \r\n",
 		 readl(p->aci_chal_hdl + ACI_INT_OFFSET));
 
-	/*
-	 * Schedule the button work to get exectued immediately.
-	 */
 	schedule_delayed_work(&(p->button_work), 0);
 
 	/* Re-enable COMP1 Interrupts */

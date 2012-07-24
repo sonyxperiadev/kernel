@@ -280,7 +280,7 @@ static long handle_set_lock_ioc(struct file *filp, unsigned int cmd,
 	(&ioc_param, (sec_simlock_set_lock_t *) param,
 	sizeof(sec_simlock_set_lock_t)) != 0) {
 		pr_err("handle_set_lock_ioc - copy_from_user() had error\n");
-	        return -EFAULT;
+		return -EFAULT;
 	}
 
 	/* try setting lock */
@@ -298,25 +298,23 @@ static long handle_set_lock_ioc(struct file *filp, unsigned int cmd,
 	SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
 
 	sys_lock_status.network_lock_enabled =
-                sec_lock_state.network_lock_enabled;
+				sec_lock_state.network_lock_enabled;
 	sys_lock_status.network_subset_lock_enabled =
-                sec_lock_state.network_subset_lock_enabled;
+				sec_lock_state.network_subset_lock_enabled;
 	sys_lock_status.service_provider_lock_enabled =
-                sec_lock_state.service_provider_lock_enabled;
+				sec_lock_state.service_provider_lock_enabled;
 	sys_lock_status.corporate_lock_enabled =
-                sec_lock_state.corporate_lock_enabled;
+				sec_lock_state.corporate_lock_enabled;
 	sys_lock_status.phone_lock_enabled =
-                sec_lock_state.phone_lock_enabled;
+				sec_lock_state.phone_lock_enabled;
 	sys_lock_status.network_lock =
-                sec_lock_state.network_lock;
+				sec_lock_state.network_lock;
 	sys_lock_status.network_subset_lock =
-                sec_lock_state.network_subset_lock;
+				sec_lock_state.network_subset_lock;
 	sys_lock_status.service_provider_lock =
-                sec_lock_state.service_provider_lock;
-	sys_lock_status.corporate_lock =
-		sec_lock_state.corporate_lock;
-	sys_lock_status.phone_lock =
-		sec_lock_state.phone_lock;
+				sec_lock_state.service_provider_lock;
+	sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
+	sys_lock_status.phone_lock = sec_lock_state.phone_lock;
 
 	SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
 
@@ -347,30 +345,30 @@ static long handle_unlock_sim_ioc(struct file *filp, unsigned int cmd,
 
 	/* try to unlock here, and set ioc_param result fields appropriately */
 	ioc_param.unlock_status = SIMLockUnlockSIM(ioc_param.sim_id,
-                           ioc_param.lock_type,
-                           ioc_param.password);
+							ioc_param.lock_type,
+							ioc_param.password);
 
-	ioc_param.remain_attempt = (int)SIMLockGetRemainAttempt(ioc_param.
-                           sim_id);
+	ioc_param.remain_attempt =
+		(int)SIMLockGetRemainAttempt(ioc_param.sim_id);
 	/* Coverity [TAINTED_SCALAR] */
 	SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
 
 	sys_lock_status.network_lock_enabled =
-                sec_lock_state.network_lock_enabled;
+		sec_lock_state.network_lock_enabled;
 	sys_lock_status.network_subset_lock_enabled =
-                sec_lock_state.network_subset_lock_enabled;
+		sec_lock_state.network_subset_lock_enabled;
 	sys_lock_status.service_provider_lock_enabled =
-                sec_lock_state.service_provider_lock_enabled;
+		sec_lock_state.service_provider_lock_enabled;
 	sys_lock_status.corporate_lock_enabled =
-                sec_lock_state.corporate_lock_enabled;
+		sec_lock_state.corporate_lock_enabled;
 	sys_lock_status.phone_lock_enabled =
-                sec_lock_state.phone_lock_enabled;
+		sec_lock_state.phone_lock_enabled;
 	sys_lock_status.network_lock =
-                sec_lock_state.network_lock;
+		sec_lock_state.network_lock;
 	sys_lock_status.network_subset_lock =
-                sec_lock_state.network_subset_lock;
+		sec_lock_state.network_subset_lock;
 	sys_lock_status.service_provider_lock =
-                sec_lock_state.service_provider_lock;
+		sec_lock_state.service_provider_lock;
 	sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
 	sys_lock_status.phone_lock = sec_lock_state.phone_lock;
 
@@ -464,6 +462,7 @@ static long handle_get_imei_ioc(struct file *filp, unsigned int cmd,
 	}
 #ifdef CONFIG_BRCM_SIM_SECURE_ENABLE
 	if (strlen(ioc_param.imei1_string) == 0) {
+		pr_err("%s: IMEI_1 is empty or not programmed !!!", __func__);
 		kernel_power_off();
 		return -EFAULT;
 	}
@@ -545,9 +544,8 @@ int sec_simlock_get_status(sec_simlock_sim_data_t *sim_data,
 			   sec_simlock_state_t *sim_lock_state)
 {
 	int result = 0;
-	pr_err("%s:SIM%d; IMSI=%s; is_test_sim = %d\n", __func__,
-						simID, sim_data->imsi_string,
-						is_test_sim);
+	pr_err("%s:SIM%d; is_test_sim = %d\n", __func__,
+						simID, is_test_sim);
 	if (!sim_data || !sim_lock_state) {
 		pr_err("%s: invalid sim_data or sim_lock_state ptrs, exit\n",
 								__func__);

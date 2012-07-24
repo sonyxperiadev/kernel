@@ -3181,6 +3181,7 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 				    clk_div->div_trig_offset));
 		insurance = 0;
 		do {
+			udelay(1);
 			reg_val =
 			    readl(CCU_REG_ADDR
 				  (peri_clk->ccu_clk,
@@ -3208,6 +3209,7 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 				    clk_div->prediv_trig_offset));
 		insurance = 0;
 		do {
+			udelay(1);
 			reg_val =
 			    readl(CCU_REG_ADDR
 				  (peri_clk->ccu_clk,
@@ -3622,6 +3624,7 @@ static int bus_clk_enable(struct clk *clk, int enable)
 	insurance = 0;
 	if (enable) {
 		do {
+			udelay(1);
 			reg_val =
 			    readl(CCU_REG_ADDR
 				  (bus_clk->ccu_clk, bus_clk->clk_gate_offset));
@@ -3631,6 +3634,7 @@ static int bus_clk_enable(struct clk *clk, int enable)
 
 	} else {
 		do {
+			udelay(1);
 			reg_val =
 			    readl(CCU_REG_ADDR
 				  (bus_clk->ccu_clk, bus_clk->clk_gate_offset));

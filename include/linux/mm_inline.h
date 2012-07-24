@@ -27,18 +27,9 @@ __add_page_to_lru_list(struct zone *zone, struct page *page, enum lru_list l,
 {
 	list_add(&page->lru, head);
 	__mod_zone_page_state(zone, NR_LRU_BASE + l, hpage_nr_pages(page));
-	if (PageCma(page)) {
-		if (is_file_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_FILE,
-						hpage_nr_pages(page));
-		} else if (!is_unevictable_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_ANON,
-					hpage_nr_pages(page));
-		} else {
-			__mod_zone_page_state(zone, NR_CMA_UNEVICTABLE,
-					hpage_nr_pages(page));
-		}
-	}
+	if (PageCma(page))
+		__mod_zone_page_state(zone, NR_LRU_CMA_BASE + l,
+				hpage_nr_pages(page));
 
 	mem_cgroup_add_lru_list(page, l);
 }
@@ -54,19 +45,9 @@ del_page_from_lru_list(struct zone *zone, struct page *page, enum lru_list l)
 {
 	list_del(&page->lru);
 	__mod_zone_page_state(zone, NR_LRU_BASE + l, -hpage_nr_pages(page));
-	if (PageCma(page)) {
-		if (is_file_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_FILE,
+	if (PageCma(page))
+		__mod_zone_page_state(zone, NR_LRU_CMA_BASE + l,
 						-hpage_nr_pages(page));
-		} else if (!is_unevictable_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_ANON,
-						-hpage_nr_pages(page));
-		} else {
-			__mod_zone_page_state(zone, NR_CMA_UNEVICTABLE,
-						-hpage_nr_pages(page));
-		}
-	}
-
 	mem_cgroup_del_lru_list(page, l);
 }
 
@@ -102,19 +83,9 @@ del_page_from_lru(struct zone *zone, struct page *page)
 		}
 	}
 	__mod_zone_page_state(zone, NR_LRU_BASE + l, -hpage_nr_pages(page));
-	if (PageCma(page)) {
-		if (is_file_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_FILE,
+	if (PageCma(page))
+		__mod_zone_page_state(zone, NR_LRU_CMA_BASE + l,
 						-hpage_nr_pages(page));
-		} else if (!is_unevictable_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_ANON,
-						-hpage_nr_pages(page));
-		} else {
-			__mod_zone_page_state(zone, NR_CMA_UNEVICTABLE,
-						-hpage_nr_pages(page));
-		}
-	}
-
 	mem_cgroup_del_lru_list(page, l);
 }
 

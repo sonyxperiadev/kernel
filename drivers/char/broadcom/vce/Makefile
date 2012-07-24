@@ -8,7 +8,7 @@ EXTRA_CFLAGS  += -Wno-parentheses
 EXTRA_CFLAGS  += -D__KERNEL__
 EXTRA_CFLAGS  += -D__linux__
 
-OBJ :=  vce.o vtqbr.o vtq.o vtqutil.o
+OBJ :=  vce.o vtqbr.o vtq.o vtqutil.o vtq_imageconv.o
 
 obj-$(CONFIG_VCE) := vce-driver.o
 	vce-driver-objs := $(OBJ)

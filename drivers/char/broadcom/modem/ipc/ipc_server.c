@@ -54,6 +54,10 @@
 #include <mach/io_map.h>
 /* for BINTC register offsets */
 #include <mach/rdb/brcm_rdb_bintc.h>
+
+
+
+
 #include <mach/irqs.h>
 
 /* definitions for Rhea/BI BModem IRQ's
@@ -82,6 +86,7 @@ static Boolean cp_running = 0;	//FALSE;
 static RAW_NOTIFIER_HEAD(cp_state_notifier_list);
 static DEFINE_SPINLOCK(cp_state_notifier_lock);
 
+extern void ipc_set_interrupt_mask(void);
 #ifdef CONFIG_HAS_WAKELOCK
 struct wake_lock ipc_wake_lock;
 #endif
@@ -273,7 +278,9 @@ int __init ipc_ipc_init(void *smbase, unsigned int size)
 void WaitForCpIpc(void *pSmBase)
 {
 	int k = 0, ret = 0;
+
 	cp_running = 0;
+
 
 	IPC_DEBUG(DBG_WARN, "Waiting for CP IPC to init ...\n");
 
@@ -300,6 +307,11 @@ void WaitForCpIpc(void *pSmBase)
 		IPC_DEBUG(DBG_WARN, "CP IPC initialized\n");
 		spin_lock_bh(&cp_state_notifier_lock);
 		cp_running = 1;	/* TRUE; */
+
+
+			
+
+
 		raw_notifier_call_chain(&cp_state_notifier_list, IPC_CPSTATE_RUNNING, NULL);
 		spin_unlock_bh(&cp_state_notifier_lock);
 	} else if (ret == 0) {
@@ -372,6 +384,11 @@ static int ipcs_init(void *smbase, unsigned int size, int isReset)
 	/* Wait for CP to initialize */
 	WaitForCpIpc(smbase);
 	IPC_DEBUG(DBG_TRACE, "WaitForCpIpc done\n");
+
+	IPC_DEBUG(DBG_TRACE, "Calling ipc_set_interrupt_mask()\n");
+	ipc_set_interrupt_mask();
+	IPC_DEBUG(DBG_TRACE, "Done ipc_set_interrupt_mask()\n");
+
 
 	/* Initialize OS specific callbacks with the IPC lib */
 	rc = ipc_ipc_init(smbase, size);
@@ -680,6 +697,11 @@ static void __exit ipcs_module_exit(void)
 
 	return;
 }
+
+
+
+
+
 
 late_initcall(ipcs_module_init);
 module_exit(ipcs_module_exit);

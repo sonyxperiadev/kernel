@@ -213,6 +213,26 @@ typedef enum
 	MSG_MEASURE_REPORT_PARAM_IND	= MSG_GRP_INT_UTIL+0x00,	///<Payload type {::MS_RxTestParam_t}
 	MSG_MS_LOCAL_ELEM_NOTIFY_IND = MSG_GRP_UTIL+0x10,			///<Payload type {::MS_LocalElemNotifyInd_t}
 
+	 /** 
+	CP->AP request message for writing CP persistent storage data to AP file system
+	**/
+	MSG_CPPS_WRITE_REQ  = MSG_GRP_UTIL + 0x20,	///<Payload type {::CAPI2_CPPS_Write_Req_t}
+
+	 /** 
+	AP->CP response message for writing CP persistent storage data to AP file system
+	**/
+	MSG_CPPS_WRITE_RSP  = MSG_GRP_UTIL + 0x21,	///<Payload type {::CAPI2_CPPS_Write_Rsp_t}
+
+	 /** 
+	CP->AP request message for reading CP persistent storage data from AP file system
+	**/
+	MSG_CPPS_READ_REQ  = MSG_GRP_UTIL + 0x22,	///<Payload type {::CAPI2_CPPS_Read_Req_t}
+
+	 /** 
+	CP->AP response message for reading CP persistent storage data from AP file system
+	**/
+	MSG_CPPS_READ_RSP  = MSG_GRP_UTIL + 0x23,	///<Payload type {::CAPI2_CPPS_Read_Rsp_t}
+
 	// End of MSG_GRP_UTIL (0x0100)
 
 	//---------------------------------------------------------------
@@ -451,6 +471,8 @@ typedef enum
 	**/
 	MSG_MNCC_CLIENT_FACILITY_IND	= MSG_GRP_CC+0x53,	///<Payload type {::CC_FacilityInd_t}
 
+
+	MSG_LAST_CALL_DROP_INFO  = MSG_GRP_CC+0x54,	///<Payload type {::CcCallDropInfo_t}
 	// End of MSG_GRP_CC (0x0300)
 
 	//---------------------------------------------------------------
@@ -2184,6 +2206,7 @@ typedef enum
 	MSG_AUDIO_START_TUNING_IND			= MSG_GRP_DEV+0x30,
 	MSG_AUDIO_STOP_TUNING_IND			= MSG_GRP_DEV+0x31,
 	MSG_AUDIO_TUNING_SETPARM_IND			= MSG_GRP_DEV+0x32,
+	MSG_AUDIO_VCALL_REL_IND				= MSG_GRP_DEV+0x33, /* voice call is released by modem */
 
 	// End of MSG_GRP_DEV, (0x0700)
 

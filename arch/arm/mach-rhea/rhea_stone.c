@@ -95,6 +95,10 @@
 #include <linux/bcmi2cnfc.h>
 #endif
 
+#if defined(CONFIG_SENSORS_BMA222)
+#include <linux/bma222.h>
+#endif
+
 #if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 #include <linux/bmp18x.h>
 #include <mach/rheastone/bmp18x_i2c_settings.h>
@@ -308,7 +312,8 @@ struct regulator_consumer_supply hv10_supply[] = {
 static int bcmi2cnfc_gpio_setup(void *);
 static int bcmi2cnfc_gpio_clear(void *);
 static struct bcmi2cnfc_i2c_platform_data bcmi2cnfc_pdata = {
-	.i2c_pdata	= {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),},
+	.i2c_pdata	= {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
+		SET_CLIENT_FUNC(TX_FIFO_ENABLE | RX_FIFO_ENABLE)},
 	.irq_gpio = 4,
 	.en_gpio = 100,
 	.wake_gpio = 73,
@@ -385,6 +390,13 @@ static struct i2c_board_info __initdata i2c_al3006_info[] = {
 };
 #endif
 
+#if defined(CONFIG_SENSORS_BMA222)
+static struct bma222_accl_platform_data bma_pdata = {
+	.orientation = BMA_ROT_90,
+	.invert = false,
+};
+#endif
+
 #if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
 
 static struct mpu_platform_data mpu6050_platform_data =
@@ -419,7 +431,6 @@ static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] =
 #define HS_IRQ		gpio_to_irq(39)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
-
 static unsigned int rheass_button_adc_values[3][2] = {
 	/* SEND/END Min, Max*/
 	{0,	10},
@@ -455,6 +466,7 @@ static struct kona_headset_pd headset_data = {
 	 * Rhearay. That means technically there is no need to subtract any extra load
 	 * from the read Voltages. On other HW, if there is a resistor present
 	 * on this line, please measure the load value and put it here.
+	 *
 	 */
 	.phone_ref_offset = 0,
 
@@ -1505,6 +1517,16 @@ static struct i2c_board_info __initdata tango_info[] =
 };
 #endif
 
+#if defined(CONFIG_SENSORS_BMA222)
+static struct i2c_board_info __initdata bma222_accl_info[] = {
+	{
+		I2C_BOARD_INFO("bma222_accl", 0x08),
+		.irq = -1,
+		.platform_data = &bma_pdata, 
+	},
+};
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_FT5306
 static int ts_power(ts_power_status vreg_en)
 {
@@ -1578,6 +1600,11 @@ static void __init rhea_stone_add_i2c_devices (void)
 	i2c_register_board_info(1,
 		ft5306_info,
 		ARRAY_SIZE(ft5306_info));
+#endif
+#ifdef  CONFIG_SENSORS_BMA222
+        i2c_register_board_info(1,
+                 bma222_accl_info,
+                 ARRAY_SIZE(bma222_accl_info));
 #endif
 #if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 #ifdef HW_BCM915500_I2C_BUS_ID /* Temporary: in bcm915500_i2c_ts.h */

@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*     Copyright (c) 2009 Broadcom Corporation
+*   Copyright (c) 2009 Broadcom Corporation
 *
 *   Unless you and Broadcom execute a separate written software license
 *   agreement governing use of this software, this software is licensed to you
@@ -8,7 +8,7 @@
 *    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
 *   Notwithstanding the above, under no circumstances may you combine this
-*software in any way with any other Broadcom software provided under a license
+*   software in any way with any other Broadcom software provided under a license
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
@@ -48,7 +48,7 @@
 #include "mqueue.h"
 #include "bcmlog.h"
 
-/*#define MQ_TRACE_TRACE_ON */
+/*#define MQ_TRACE_TRACE_ON*/
 
 #ifdef MQ_TRACE_TRACE_ON
 #define _DBG(a) a
@@ -242,11 +242,13 @@ int MsgQueueCount(MsgQueueHandle_t *mHandle)
 		_DBG(MQ_TRACE("mq: MsgQueueDebugList has Invalid mHandle\n"));
 		return -1;
 	}
+
 	spin_lock_bh(&mHandle->mLock);
 	list_for_each(pos, &mHandle->mList) count++;
 	spin_unlock_bh(&mHandle->mLock);
 	return count;
 }
+
 void *MsgQueueGet(MsgQueueHandle_t *mHandle)
 {
 	struct list_head *entry;
@@ -257,6 +259,7 @@ void *MsgQueueGet(MsgQueueHandle_t *mHandle)
 		_DBG(MQ_TRACE("mq: MsgQueueGet has Invalid mHandle\n"));
 		return NULL;
 	}
+
 	spin_lock_bh(&mHandle->mLock);
 	isEmpty = (Boolean)list_empty(&mHandle->mList);
 	if (isEmpty) {
@@ -264,6 +267,7 @@ void *MsgQueueGet(MsgQueueHandle_t *mHandle)
 		spin_unlock_bh(&mHandle->mLock);
 		return NULL;
 	}
+
 	entry = mHandle->mList.next;
 	Item = list_entry(entry, MsgQueueElement_t, mList);
 	data = Item->data;
@@ -291,8 +295,7 @@ static int MQueueKthreadFn(void *param)
 		_DBG(MQ_TRACE("mq: MQueueKthreadFn Dispatch \
 				mHandle=%x data=%d ret=%d\n",
 				(int)mHandle, (int)data, ret));
-		if (ret == 0 && data)
-		{
+		if (ret == 0 && data) {
 #if defined(CONFIG_HAS_WAKELOCK) && defined(MQUEUE_RPC_WAKELOCK)
 			wake_lock(&(mHandle->mq_wake_lock));
 #endif
@@ -302,8 +305,7 @@ static int MQueueKthreadFn(void *param)
 			wake_unlock(&(mHandle->mq_wake_lock));
 #endif
 
-		}
-		else
+		} else
 			break;
 	}
 	_DBG(MQ_TRACE("mq: MQueueKthreadFn QUIT mHandle=%x\n", (int)mHandle));

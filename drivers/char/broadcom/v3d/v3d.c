@@ -223,6 +223,7 @@ static struct {
 	unsigned long free_time;
 	unsigned long v3d_usage;
 	bool show_v3d_usage;
+	spinlock_t v3d_spinlock;
 } v3d_state;
 
 typedef struct {
@@ -249,12 +250,6 @@ typedef struct {
 #endif
 #define V3D_JOB_TIMEOUT_IN_MS	(V3D_ISR_TIMEOUT_IN_MS)
 
-/* Enable the macro to retry the job on timeout, else will skip the job */
-/* #define V3D_JOB_RETRY_ON_TIMEOUT */
-#ifdef V3D_JOB_RETRY_ON_TIMEOUT
-#define V3D_JOB_MAX_RETRIES (1)
-#endif
-
 v3d_t *v3d_dev;
 
 typedef struct v3d_job_t_ {
@@ -273,8 +268,6 @@ typedef struct v3d_job_t_ {
 	uint32_t v3d_srqpc[MAX_USER_JOBS];
 	uint32_t v3d_srqua[MAX_USER_JOBS];
 	uint32_t v3d_srqul[MAX_USER_JOBS];
-	u32 cache_retry_cnt;
-	u32 retry_cnt;
 	volatile v3d_job_status_e job_status;
 	u32 job_intern_state;
 	u32 job_wait_state;
@@ -374,12 +367,12 @@ static void v3d_print_all_jobs(int bp)
 		       (u32)v3d_job_curr);
 		tmp_job = v3d_job_head;
 		while (tmp_job != NULL) {
-			KLOG_D
-			    ("\t job[%d] : [0x%08x] dev_id[%d] job_id[%d] type[%d] status[%d] intern[%d] wait[%d] retry[%d][%d]",
-			     n, (u32)tmp_job, tmp_job->dev_id, tmp_job->job_id,
-			     tmp_job->job_type, tmp_job->job_status,
-			     tmp_job->job_intern_state, tmp_job->job_wait_state,
-			     tmp_job->cache_retry_cnt, tmp_job->retry_cnt);
+			KLOG_D("\t job[%d] : [0x%08x] dev_id[%d] job_id[%d]"
+				"type[%d] status[%d] intern[%d] wait[%d]",
+				n, (u32)tmp_job, tmp_job->dev_id,
+				tmp_job->job_id, tmp_job->job_type,
+				tmp_job->job_status, tmp_job->job_intern_state,
+				tmp_job->job_wait_state);
 			tmp_job = tmp_job->next;
 			n++;
 		}
@@ -446,8 +439,6 @@ static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t * p_job_post)
 	p_v3d_job->job_status = V3D_JOB_STATUS_READY;
 	p_v3d_job->job_intern_state = 0;
 	p_v3d_job->job_wait_state = 0;
-	p_v3d_job->cache_retry_cnt = 0;
-	p_v3d_job->retry_cnt = 0;
 	p_v3d_job->next = NULL;
 
 	KLOG_V
@@ -508,6 +499,7 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 	v3d_job_t *tmp_job, *parent_job;
 	v3d_job_t *last_match_job = NULL;
 	int curr_job_killed = 0;
+	unsigned long flags;
 
 	dev = (v3d_t *)(filp->private_data);
 
@@ -528,13 +520,18 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 				parent_job->next = tmp_job;
 				if (last_match_job == v3d_job_curr) {
 					/* Kill the job, free the job, return error if waiting ?? */
-					KLOG_V
+					KLOG_D
 					    ("Trying to free current job[0x%08x]",
 					     (u32)last_match_job);
+					//Reset V3D to stop executing current job
+					v3d_reset();
 					v3d_job_kill((v3d_job_t *)v3d_job_curr,
 						     V3D_JOB_STATUS_ERROR);
 					curr_job_killed = 1;
+					//Flush interrupt before marking job done
+					spin_lock_irqsave(&v3d_state.v3d_spinlock, flags);
 					v3d_job_curr = v3d_job_curr->next;
+					spin_unlock_irqrestore(&v3d_state.v3d_spinlock, flags);
 				}
 				KLOG_V("Free job[0x%08x] for hdl[%d]: ",
 				       (u32)last_match_job, dev->id);
@@ -557,13 +554,16 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 			last_match_job = v3d_job_head;
 			if (last_match_job == v3d_job_curr) {
 				/* Kill the job, free the job, return error if waiting ?? */
-				KLOG_V
+				KLOG_D
 				    ("Trying to free current job - head[0x%08x]",
 				     (u32)last_match_job);
+				v3d_reset();
 				v3d_job_kill((v3d_job_t *)v3d_job_curr,
 					     V3D_JOB_STATUS_ERROR);
 				curr_job_killed = 1;
+				spin_lock_irqsave(&v3d_state.v3d_spinlock, flags);
 				v3d_job_curr = v3d_job_curr->next;
+				spin_unlock_irqrestore(&v3d_state.v3d_spinlock, flags);
 			}
 			v3d_job_head = v3d_job_head->next;
 			KLOG_V
@@ -582,6 +582,9 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 		KLOG_D
 		    ("v3d activity reset as part of freeing jobs for dev_id[%d]",
 		     dev->id);
+		if (v3d_job_curr != NULL)
+			v3d_job_curr->job_intern_state = 4;
+
 		wake_up_interruptible(&v3d_isr_done_q);
 		v3d_print_all_jobs(0);
 	}
@@ -592,17 +595,6 @@ static int v3d_job_start(void)
 	v3d_job_t *p_v3d_job;
 
 	p_v3d_job = (v3d_job_t *)v3d_job_curr;
-
-	/*
-	 *
-	 * This should probably go into v3d_thread...  so that we can
-	 * skip jobs that are not ready, but that's a future
-	 * optimization.  For now, we simply stall here to wait for
-	 * the job dependencies to be met.
-	 *
-	 */
-	if (p_v3d_job->dvts_object != NULL)
-		dvts_wait(p_v3d_job->dvts_object, p_v3d_job->dvts_target);
 
 	if (v3d_in_use != 0) {
 		KLOG_E("v3d not free for starting job[0x%08x]", (u32)p_v3d_job);
@@ -707,19 +699,6 @@ static void v3d_job_kill(v3d_job_t *p_v3d_job, v3d_job_status_e job_status)
 		wake_up_interruptible(&p_v3d_job->v3d_job_done_q);
 }
 
-#ifdef V3D_JOB_RETRY_ON_TIMEOUT
-static void v3d_job_reset(v3d_job_t *p_v3d_job)
-{
-	KLOG_V("Reset job[0x%08x]: ", (u32)p_v3d_job);
-
-	v3d_reset();
-
-	p_v3d_job->job_status = V3D_JOB_STATUS_READY;
-	p_v3d_job->job_intern_state = 0;
-	p_v3d_job->cache_retry_cnt = 0;
-}
-#endif
-
 static int v3d_thread(void *data)
 {
 	int ret;
@@ -802,8 +781,15 @@ static int v3d_thread(void *data)
 				do_exit(-1);
 			}
 
+			//Current job was killed and no more job in queue
 			if (v3d_job_curr == NULL)
 				continue;
+
+			//Current job was killed and was replaced by next in queue
+			if (v3d_job_curr->job_intern_state == 4) {
+				v3d_job_curr->job_intern_state = 0;
+				continue;
+			}
 
 			if (v3d_in_use == 0) {
 				/* Job completed or fatal oom happened or current job was killed as part of app close */
@@ -892,16 +878,6 @@ static int v3d_thread(void *data)
 				KLOG_E("wait timed out [%d]ms",
 				       V3D_JOB_TIMEOUT_IN_MS);
 				v3d_print_status();
-#ifdef V3D_JOB_RETRY_ON_TIMEOUT
-				KLOG_E("Resumbit job\n");
-				v3d_job_reset((v3d_job_t *)v3d_job_curr);
-				v3d_job_curr->retry_cnt++;
-				if (v3d_job_curr->retry_cnt <=
-				    V3D_JOB_MAX_RETRIES) {
-					ret = v3d_job_start();
-					continue;
-				}
-#endif
 				v3d_job_kill((v3d_job_t *)v3d_job_curr,
 					     V3D_JOB_STATUS_TIMED_OUT);
 				v3d_job_curr = v3d_job_curr->next;
@@ -1833,7 +1809,7 @@ static int proc_v3d_create(void)
 
 	v3d_state.proc_usage = create_proc_entry("usage",
 						(S_IWUSR | S_IWGRP | S_IRUSR |
-						 S_IRGRP), v3d_state.proc_dir);
+						 S_IRGRP | S_IROTH), v3d_state.proc_dir);
 
 	if (!v3d_state.proc_usage) {
 		KLOG_E("failed to create v3d proc usage entry\n");
@@ -2011,8 +1987,7 @@ int __init v3d_init(void)
 
 	init_waitqueue_head(&v3d_isr_done_q);
 	init_waitqueue_head(&v3d_start_q);
-	v3d_job_head = NULL;
-	v3d_job_curr = NULL;
+	spin_lock_init(&v3d_state.v3d_spinlock);
 
 	/* Start the thread to process work queue */
 	v3d_thread_task = kthread_run(&v3d_thread, v3d_dev, "v3d_thread");

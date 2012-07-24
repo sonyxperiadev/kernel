@@ -175,5 +175,69 @@ void extern_ihf_unmute(void);
 ****************************************************************************/
 void extern_ihf_en_hi_gain_mode(int enable);
 
+/********************************************************************
+*  @brief  Set IHF Noise gate parameter
+*
+*  @param  IHF Noise parameter
+*  @return  none
+*
+****************************************************************************/
+
+
+void extern_set_ihf_noise_gate(int param_value);
+
+
+/********************************************************************
+*  @brief  Set HS Noise gate parameter
+*
+*  @param  HS Noise parameter
+*  @return  none
+*
+****************************************************************************/
+
+
+void extern_set_hs_noise_gate(int param_value);
+
+/********************************************************************
+*  @brief  Set IHF None Clip parameter
+*
+*  @param  None Clip parameter
+*  @return  none
+*
+****************************************************************************/
+
+void extern_set_ihf_none_clip(int param_value);
+
+
+/********************************************************************
+*  @brief  Set IHF pwr parameter
+*
+*  @param  pwr parameter
+*  @return  none
+*
+****************************************************************************/
+
+void extern_set_ihf_pwr(int param_value);
+
+/********************************************************************
+*  @brief  Set IHF preamp gain
+*
+*  @param  gain_mB	requested IHF preamp gain
+*  @return  none
+*
+****************************************************************************/
+
+void extern_set_ihf_preamp_gain(int gain_mB);
+
+/********************************************************************
+*  @brief  Set HS preamp gain
+*
+*  @param  gain_mB	requested HS preamp gain
+*  @return  none
+*
+****************************************************************************/
+
+void extern_set_hs_preamp_gain(int gain_mB);
+
 
 #endif

@@ -68,11 +68,17 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	/* USB_FC_OPTION needed to be 1, in order to charge from SDP */
 	{.map = 0, .addr = 0x5E, .val = 0x30, .mask = 0xFF},
 
-	/*Init SDSR NM, NM2 and LPM voltages to 1.2V
+	/**
+	 * Switchers initializations
+	 * If you modifying SDSR/ASR/IOSR/CSR values, please make sure
+	 * to update rheastone-edn20-pmu-59039.dtsi file also
+	 */
+
+	/*Init SDSR NM, NM2 and LPM voltages to 1.24V
 	*/
-	{.map = 0, .addr = 0xD0, .val = 0x13, .mask = 0xFF},
-	{.map = 0, .addr = 0xD1, .val = 0x13, .mask = 0xFF},
-	{.map = 0, .addr = 0xD2, .val = 0x13, .mask = 0xFF},
+	{.map = 0, .addr = 0xD0, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD1, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD2, .val = 0x15, .mask = 0xFF},
 
 	/*Init CSR LPM  to 0.88 V
 	CSR NM2 to 1.22V
@@ -622,10 +628,12 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 		BCMPMU_REGULATOR_CSR_NM, &bcm59039_csr_nm_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_CSR_NM2] = {
-		BCMPMU_REGULATOR_CSR_NM2, &bcm59039_csr_nm2_data, 0xFF, 0
+		BCMPMU_REGULATOR_CSR_NM2, &bcm59039_csr_nm2_data,
+		BCMPMU_REGU_OPMODE_DC, 0
 	},
 	[BCMPMU_REGULATOR_CSR_LPM] = {
-		BCMPMU_REGULATOR_CSR_LPM, &bcm59039_csr_lpm_data, 0xFF, 0
+		BCMPMU_REGULATOR_CSR_LPM, &bcm59039_csr_lpm_data,
+		BCMPMU_REGU_OPMODE_DC, 0
 	},
 #ifdef CONFIG_MACH_RHEA_STONE_EDN2X
 	/*EDN2x does not use IOSR*/
@@ -638,19 +646,23 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 	},
 #endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
 	[BCMPMU_REGULATOR_IOSR_NM2] = {
-		BCMPMU_REGULATOR_IOSR_NM2, &bcm59039_iosr_nm2_data, 0xFF, 0
+		BCMPMU_REGULATOR_IOSR_NM2, &bcm59039_iosr_nm2_data,
+		BCMPMU_REGU_OPMODE_DC, 0
 	},
 	[BCMPMU_REGULATOR_IOSR_LPM] = {
-		BCMPMU_REGULATOR_IOSR_LPM, &bcm59039_iosr_lpm_data, 0xFF, 0
+		BCMPMU_REGULATOR_IOSR_LPM, &bcm59039_iosr_lpm_data,
+		BCMPMU_REGU_OPMODE_DC, 0
 	},
 	[BCMPMU_REGULATOR_SDSR_NM] = {
 		BCMPMU_REGULATOR_SDSR_NM, &bcm59039_sdsr_nm_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_SDSR_NM2] = {
-		BCMPMU_REGULATOR_SDSR_NM2, &bcm59039_sdsr_nm2_data, 0xFF, 0
+		BCMPMU_REGULATOR_SDSR_NM2, &bcm59039_sdsr_nm2_data,
+		BCMPMU_REGU_OPMODE_DC, 0
 	},
 	[BCMPMU_REGULATOR_SDSR_LPM] = {
-		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data, 0xFF, 0
+		BCMPMU_REGULATOR_SDSR_LPM, &bcm59039_sdsr_lpm_data,
+		BCMPMU_REGU_OPMODE_DC, 0
 	},
 #ifdef CONFIG_MACH_RHEA_STONE_EDN2X
 	[BCMPMU_REGULATOR_ASR_NM] = {
@@ -663,10 +675,12 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 #endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
 
 	[BCMPMU_REGULATOR_ASR_NM2] = {
-		BCMPMU_REGULATOR_ASR_NM2, &bcm59039_asr_nm2_data, 0xFF, 0
+		BCMPMU_REGULATOR_ASR_NM2, &bcm59039_asr_nm2_data,
+		BCMPMU_REGU_OPMODE_DC, 0
 	},
 	[BCMPMU_REGULATOR_ASR_LPM] = {
-		BCMPMU_REGULATOR_ASR_LPM, &bcm59039_asr_lpm_data, 0xFF, 0
+		BCMPMU_REGULATOR_ASR_LPM, &bcm59039_asr_lpm_data,
+		BCMPMU_REGU_OPMODE_DC, 0
 	},
 };
 
@@ -965,6 +979,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.pok_restart_dly = -1,
 	.pok_restart_deb = -1,
 	.pok_lock = 1, /*Keep ponkey locked by default*/
+	.pok_turn_on_deb = -1,
 	.ihf_autoseq_dis = 1,
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 	.piggyback_chrg = 1,

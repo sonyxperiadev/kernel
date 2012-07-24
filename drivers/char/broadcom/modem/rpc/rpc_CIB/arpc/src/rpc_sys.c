@@ -81,7 +81,7 @@ Result_t RPC_SYS_Init(RPC_EventCallbackFunc_t eventCb)
 		RPC_USER_LOCK_INIT(gRpcFreeLock);
 
 	}
-	/*xdr_main_init(); */
+	/*xdr_main_init();*/
 
 	return (res == RPC_RESULT_OK) ? RESULT_OK : RESULT_ERROR;
 }
@@ -150,11 +150,12 @@ typedef struct {
 	Boolean ackdCPReset;
 } RPC_InitLocalParams_t;
 
-Int8 gClientIndex = 0;		/* Client Index zero is reserved */
+
+Int8 gClientIndex = 0; /*Client Index zero is reserved */
 
 #define MAX_RPC_CLIENTS 25
 static RPC_InitParams_t gClientMap[MAX_RPC_CLIENTS];
-static RPC_InitLocalParams_t gClientLocalMap[MAX_RPC_CLIENTS] = {{0} };
+static RPC_InitLocalParams_t gClientLocalMap[MAX_RPC_CLIENTS] = { {0} };
 static UInt8 gClientIDMap[MAX_RPC_CLIENTS] = {0};
 
 UInt8 gClientIDs[256] = {0};
@@ -185,7 +186,8 @@ static void RPC_Handle_CPReset(RPC_CPResetEvent_t event,
 	/* notify all clients for given interface */
 	for (i = 1; i <= gClientIndex; i++)
 		if (gClientMap[i].cpResetCb != NULL &&
-		    gClientMap[i].iType == interfaceType) {
+			(PACKET_InterfaceType_t)gClientMap[i].iType ==
+				interfaceType) {
 			_DBG_(RPC_TRACE(
 				"RPC_Handle_CPReset client:%d",
 				gClientIDMap[i]));
@@ -450,18 +452,18 @@ Boolean RPC_IsRegisteredClient(UInt8 channel, PACKET_BufHandle_t dataBufHandle)
 UInt8 GetClientIndex(ResultDataBuffer_t *pDataBuf, Boolean *isUnsolicited)
 {
 	RPC_Msg_t *pMsg = &(pDataBuf->rsp.rootMsg);
-	/*coverity[var_decl], entry will be initialized in the function rpc_fast_lookup() below */
+	/*coverity[var_decl], entry will be initialized in the function rpc_fast_lookup() below*/
 	RPC_InternalXdrInfo_t entry;
 	bool_t ret = 0;
 	UInt8 index;
 
 	*isUnsolicited = FALSE;
 
-	/*Check if message is unsolicited */
+	/*Check if message is unsolicited*/
 	if (pDataBuf->rsp.rootMsg.msgId != MSG_CAPI2_ACK_RSP) {
 		ret =
 		    rpc_fast_lookup((UInt16) pDataBuf->rsp.rootMsg.msgId,
-				    &entry);
+					&entry);
 		if (ret) {
 			*isUnsolicited =
 			    (entry.
@@ -486,7 +488,7 @@ UInt8 GetClientIndex(ResultDataBuffer_t *pDataBuf, Boolean *isUnsolicited)
 	if (pDataBuf->rsp.rootMsg.msgId == MSG_CAPI2_ACK_RSP) {
 		index = pDataBuf->rsp.clientIndex;
 	} else {
-		/*Lookup clientIndex based on XDR table registered client */
+		/*Lookup clientIndex based on XDR table registered client*/
 		if (ret && entry.clientIndex < MAX_RPC_CLIENTS)
 			index = entry.clientIndex;
 	}
@@ -500,11 +502,11 @@ void RPC_DispatchMsg(ResultDataBuffer_t *pDataBuf)
 	RPC_Msg_t *pMsg = &(pDataBuf->rsp.rootMsg);
 	int i;
 
-	pDataBuf->refCount = 1;	/*set */
+	pDataBuf->refCount = 1; /* set */
 
-	/*Handle Ack first */
+	/* Handle Ack first */
 	if (pMsg->msgId == MSG_CAPI2_ACK_RSP) {
-		RPC_Ack_t *ackRsp = (RPC_Ack_t *) pMsg->dataBuf;
+		RPC_Ack_t *ackRsp = (RPC_Ack_t *)pMsg->dataBuf;
 		clientIndex = GetClientIndex(pDataBuf, &isUnsolicited);
 
 		if (gClientMap[clientIndex].ackCb) {
@@ -559,7 +561,7 @@ void RPC_DispatchMsg(ResultDataBuffer_t *pDataBuf)
 				}
 
 				numClients = pDataBuf->refCount;
-				/*Broadcast the message */
+				/* Broadcast the message */
 				for (i = 1; i <= gClientIndex; i++) {
 					if (gClientMap[i].respCb != NULL
 					    && (gClientLocalMap[i].
@@ -592,7 +594,7 @@ void RPC_DispatchMsg(ResultDataBuffer_t *pDataBuf)
 
 				}
 
-				/*No clients handle this message? */
+				/* No clients handle this message? */
 				if (numClients == 0) {
 					_DBG_(RPC_TRACE_INFO
 					      ("RPC_DispatchMsg Broadcast Ignored msgId=0x%x cIndex=%d tid=%d cid=%d unsol=%d regUnsol=%d",
@@ -619,7 +621,7 @@ PACKET_InterfaceType_t RPC_GetInterfaceType(UInt8 clientIndex)
 {
 	xassert(clientIndex < MAX_RPC_CLIENTS, clientIndex);
 
-	/*coverity[overrun-local], clientIndex has checked in above xassert function, so it will not overrun of array gClientMap. */
+	/*coverity[overrun-local], clientIndex has checked in above xassert function, so it will not overrun of array gClientMap.*/
 	return (PACKET_InterfaceType_t) (gClientMap[clientIndex].iType);
 }
 
@@ -627,6 +629,6 @@ UInt32 RPC_GetUserData(UInt8 clientIndex)
 {
 	xassert(clientIndex < MAX_RPC_CLIENTS, clientIndex);
 
-	/*coverity[overrun-buffer-val], clientIndex has checked in above xassert function, so it will not overrun of array gClientMap. */
+	/*coverity[overrun-local], clientIndex has checked in above xassert function, so it will not overrun of array gClientMap.*/
 	return gClientMap[clientIndex].userData;
 }

@@ -39,11 +39,11 @@
 
 #define GPS_VERSION	"1.00"
 
-#define RX_SIZE					64
+#define RX_SIZE					128
 #define TX_SIZE					32
 #define I2C_PACKET_SIZE			128
 #define I2C_MAX_SIZE			256
-#define RX_BUFFER_LENGTH		8192
+#define RX_BUFFER_LENGTH		16384
 #define UDELAY_AFTER_I2C_READ	30
 
 int hostwake_gpio;
@@ -122,7 +122,8 @@ void read_workqueue(struct work_struct *work)
 
 		if (ret != I2C_PACKET_SIZE) {
 			printk(KERN_INFO "GPS read error\n");
-			break;
+			i = gpio_get_value(ac_data->host_req_pin);
+			continue;
 		}
 
 		if (ac_data->rd_buffer[ac_data->rbuffer_wp][0] == 0) {
@@ -134,24 +135,30 @@ void read_workqueue(struct work_struct *work)
 		/* printk(KERN_INFO "read_workqueue 1 %d %d\n",
 			counter,ac_data->rd_buffer[ac_data->rbuffer_wp][0]); */
 
-		ac_data->rbuffer_wp = (ac_data->rbuffer_wp+1) & (RX_SIZE-1);
+		if (counter < RX_SIZE)	{
+			ac_data->rbuffer_wp = (ac_data->rbuffer_wp+1)
+				& (RX_SIZE-1);
 
-		if (ac_data->rbuffer_wp == ac_data->rbuffer_rp)
-			printk(KERN_INFO "read_workqueue overrun error\n");
+			if (ac_data->rbuffer_wp == ac_data->rbuffer_rp)
+				printk(KERN_INFO "read_workqueue overrun error\n");
+		}
 
 		udelay(UDELAY_AFTER_I2C_READ);
 		++counter;
 
 		i = gpio_get_value(ac_data->host_req_pin);
-	}  while ((i == 1) && (counter < RX_SIZE));
+	}  while (i == 1);
 
-	if (counter == RX_SIZE)
+	if (counter >= RX_SIZE)	{
 		printk(KERN_INFO "GPS overrun error\n");
-	else {
+		ac_data->rxlength[ac_data->rxlength_wp] = RX_SIZE;
+	} else {
 		ac_data->rxlength[ac_data->rxlength_wp] = counter;
-		ac_data->rxlength_wp = (ac_data->rxlength_wp+1) & (RX_SIZE-1);
 		wake_up_interruptible(&ac_data->wait);
 	}
+
+	ac_data->rxlength_wp = (ac_data->rxlength_wp+1) & (RX_SIZE-1);
+	wake_up_interruptible(&ac_data->wait);
 }
 
 irqreturn_t gps_irq_handler(int irq, void *dev_id)

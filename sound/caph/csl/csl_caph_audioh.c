@@ -392,6 +392,7 @@ void csl_caph_audioh_unconfig(int path_id)
 	path[path_id].sample_mode = 0;
 	path[path_id].eanc_input = 0;
 	path[path_id].eanc_output = 0;
+	path[path_id].started = 0;
 	return;
 }
 
@@ -410,6 +411,10 @@ void csl_caph_audioh_unconfig(int path_id)
 void csl_caph_audioh_config(int path_id, void *p)
 {
 	audio_config_t *pcfg = (void *)p;
+
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL)
+		if (path[path_id].started)
+			return;
 	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_config:: path %d sr %d bits %d chNum %d pack %d eanc %d:%d.\r\n",
@@ -787,8 +792,15 @@ void csl_caph_audioh_start(int path_id)
 {
 	UInt16 chnl_enable = 0x0;
 
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL) {
+		if (path[path_id].started)
+			return;
+		else
+			path[path_id].started = 1;
+	}
 	aTrace
 	      (LOG_AUDIO_CSL, "csl_caph_audioh_start:: %d.\r\n", path_id);
+
 	switch (path_id) {
 	case AUDDRV_PATH_VIBRA_OUTPUT:
 
@@ -816,8 +828,14 @@ void csl_caph_audioh_start(int path_id)
 			audioh_hs_on = 1;
 			chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
 			chal_audio_hspath_set_gain(handle, 0);
+				/*enable dither*/
+			chal_audio_hspath_sdm_set_dither_seed(handle, 1, 1);
+			chal_audio_hspath_sdm_set_dither_poly(handle,
+							0x48000000,
+							0x41000000);
+			chal_audio_hspath_sdm_set_dither_strength(handle, 3, 3);
+			chal_audio_hspath_sdm_enable_dither(handle, 0x3);
 		}
-
 		chal_audio_hspath_enable(handle, chnl_enable);
 		break;
 
@@ -985,6 +1003,7 @@ static void csl_caph_audioh_stop_keep_config(int path_id)
 		chal_audio_hspath_int_enable(handle, FALSE, FALSE);
 		chal_audio_hspath_enable(handle, 0);
 		chal_audio_hspath_set_dac_pwr(handle, 0);
+		chal_audio_hspath_sdm_enable_dither(handle, 0);
 		break;
 
 	case AUDDRV_PATH_IHF_OUTPUT:
@@ -1819,6 +1838,9 @@ void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl)
 
 void csl_caph_audioh_set_linear_filter(int path_id)
 {
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL)
+		if (path[path_id].started)
+			return;
 	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_set_linear_filter.\r\n");
@@ -1879,10 +1901,12 @@ void csl_caph_audioh_set_linear_filter(int path_id)
 
 void csl_caph_audioh_set_minimum_filter(int path_id)
 {
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL)
+		if (path[path_id].started)
+			return;
 	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_set_minimum_filter.\r\n");
-
 	switch (path_id) {
 	case AUDDRV_PATH_VIBRA_OUTPUT:
 		chal_audio_vibra_set_filter(handle,
@@ -2607,6 +2631,12 @@ void csl_caph_audioh_start_hs(void)
 
 	chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
 	chal_audio_hspath_set_gain(handle, 0);
+	/*enable dither*/
+	chal_audio_hspath_sdm_set_dither_seed(handle, 1, 1);
+	chal_audio_hspath_sdm_set_dither_poly(handle, 0x48000000,
+					0x41000000);
+	chal_audio_hspath_sdm_set_dither_strength(handle, 3, 3);
+	chal_audio_hspath_sdm_enable_dither(handle, 0x3);
 	/*chal_audio_hspath_enable(handle, chnl_enable);*/
 }
 
@@ -2658,6 +2688,7 @@ void csl_caph_audioh_stop_hs(void)
 	chal_audio_hspath_int_enable(handle, FALSE, FALSE);
 	chal_audio_hspath_enable(handle, 0);
 	chal_audio_hspath_set_dac_pwr(handle, 0);
+	chal_audio_hspath_sdm_enable_dither(handle, 0);
 }
 
 /****************************************************************************

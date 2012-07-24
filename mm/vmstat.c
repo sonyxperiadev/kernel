@@ -552,14 +552,15 @@ static void fill_contig_page_info(struct zone *zone,
 
 	for (order = 0; order < MAX_ORDER; order++) {
 		unsigned long blocks;
+		/* Count number of free blocks */
+		blocks = zone->free_area[order].nr_free;
 #ifdef CONFIG_CMA
 		/* dont account for free CMA blocks when
 		 * couting frag index
 		 */
 		blocks -= zone->nr_cma_free[order];
+		WARN_ON((long)blocks < 0);
 #endif
-		/* Count number of free blocks */
-		blocks = zone->free_area[order].nr_free;
 		info->free_blocks_total += blocks;
 
 		/* Count free base pages */
@@ -727,8 +728,10 @@ const char * const vmstat_text[] = {
 #endif
 #ifdef CONFIG_CMA
 	"cmafree",
-	"cmaanon",
-	"cmafile",
+	"cmaanon_inactive",
+	"cmaanon_active",
+	"cmafile_inactive",
+	"cmafile_active",
 	"cmaunevictable",
 	"contigalloc",
 #endif

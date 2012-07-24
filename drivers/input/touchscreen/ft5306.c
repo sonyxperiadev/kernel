@@ -1,10 +1,19 @@
-/* drivers/input/touchscreen/ft5306.c
- *
- * Copyright (C) 2011 Gozone, Inc.
- *
- * Author: Chengl
- *
- */
+/*****************************************************************************
+* Copyright 2012 Broadcom Corporation.  All rights reserved.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a
+* license other than the GPL, without Broadcom's express prior written
+* consent.
+*****************************************************************************/
+
+/* ---- Include Files ---------------------------------------------------- */
+
 
 #include <linux/module.h>
 #include <linux/input.h>
@@ -13,7 +22,7 @@
 #include <linux/platform_device.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
-#include <linux/i2c/tango_ts.h>//#include <linux/synaptics_t1021.h>
+#include <linux/i2c/tango_ts.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
 #include <linux/earlysuspend.h>
@@ -137,8 +146,6 @@ static struct i2c_client *ft5306_i2c_client;
 static ST_TOUCH_INFO ft5306_touch_info;
 static ST_TOUCH_POINT ft5306_touch_point[FTS_MAX_FINGER];
 static int min_gap = TP_MIN_GAP;
- ///////////////////////////////////////////////////////////////////////////////////////
- ///////////////////////////////////////////////////////////////////////////////////////
 enum ft520x_ts_regs {
 	FT520X_REG_THGROUP					= 0x80,
 	FT520X_REG_THPEAK						= 0x81,
@@ -185,7 +192,7 @@ enum ft520x_ts_regs {
 	FT520X_REG_CLB						= 0xaa,
 };
 
-//FT5X0X_REG_PMODE
+/*FT5X0X_REG_PMODE*/
 #define PMODE_ACTIVE        0x00
 #define PMODE_MONITOR       0x01
 #define PMODE_STANDBY       0x02
@@ -210,7 +217,6 @@ static int ft520x_i2c_rxdata(char *rxdata, int length)
 		},
 	};
 
-    //msleep(1);
 	ret = i2c_transfer(ft5306_i2c_client->adapter, msgs, 2);
 	if (ret < 0)
 		printk(KERN_ERR "msg %s i2c read error: %d\n", __func__, ret);
@@ -239,7 +245,6 @@ static int ft520x_read_reg(u8 addr, u8 *pdata)
 		},
 	};
 
-    //msleep(1);
 	ret = i2c_transfer(ft5306_i2c_client->adapter, msgs, 2);
 	if (ret < 0)
 		printk(KERN_ERR "msg %s i2c read error: %d\n", __func__, ret);
@@ -262,7 +267,6 @@ static int ft520x_i2c_txdata(char *txdata, int length)
 		},
 	};
 
-   	//msleep(1);
 	ret = i2c_transfer(ft5306_i2c_client->adapter, msg, 1);
 	if (ret < 0)
 		printk(KERN_ERR "%s i2c write error: %d\n", __func__, ret);
@@ -294,13 +298,20 @@ static unsigned char ft520x_read_fw_ver(void)
 }
 
 static int ft520x_shutdown()
-{	
+{
 	int ret;
 	ret = ft520x_write_reg(FT520X_REG_PMODE, PMODE_HIBERNATE);
-	if(ret != 0)
-	{
+	if (ret != 0)
 		printk(" --- ft520x_shutdown -- error!\r\n");
-	}
+	return ret;
+}
+
+static int ft520x_turnon()
+{
+	int ret;
+	ret = ft520x_write_reg(FT520X_REG_PMODE, PMODE_MONITOR);
+	if (ret != 0)
+		printk(KERN_INFO" --- ft520x_turnon -- error!\r\n");
 	return ret;
 }
 
@@ -347,8 +358,7 @@ FTS_BOOL i2c_read_interface(FTS_BYTE bt_ctpm_addr, FTS_BYTE* pbt_buf, FTS_DWRD d
 
 	ret=i2c_master_recv(ft5306_i2c_client, pbt_buf, dw_lenth);
 
-	if(ret<=0)
-	{
+	if (ret <= 0) {
 		printk("[FT520X]i2c_read_interface error\n");
 		return FTS_FALSE;
 	}
@@ -360,8 +370,7 @@ FTS_BOOL i2c_write_interface(FTS_BYTE bt_ctpm_addr, FTS_BYTE* pbt_buf, FTS_DWRD 
 {
 	int ret;
 	ret=i2c_master_send(ft5306_i2c_client, pbt_buf, dw_lenth);
-	if(ret<=0)
-	{
+	if (ret <= 0) {
 		printk("[FT520X]i2c_write_interface error line = %d, ret = %d\n", __LINE__, ret);
 		return FTS_FALSE;
 	}
@@ -400,37 +409,37 @@ static unsigned char CTPM_FW[]=
 
 FTS_DWRD fts_ctpm_auto_clb(void)
 {
-    FTS_BYTE uc_temp;
-    FTS_BYTE i ;
-
-    printk("[FTS] start auto CLB.\n");
-    delay_qt_ms(200);
-    ft520x_write_reg(0, 0x40);  
-    delay_qt_ms(100);   //make sure already enter factory mode
-    ft520x_write_reg(2, 0x4);  //write command to start calibration
-    delay_qt_ms(300);
-    for(i=0;i<100;i++)
-    {
-        ft520x_read_reg(0,&uc_temp);
-        if ( ((uc_temp&0x70)>>4) == 0x0)  //return to normal mode, calibration finish
-        {
-            break;
-        }
-        delay_qt_ms(200);
-        printk("[FTS] waiting calibration %d\n",i);
-        
-    }
-    printk("[FTS] calibration OK.\n");
-    
-    delay_qt_ms(300);
-    ft520x_write_reg(0, 0x40);  //goto factory mode
-    delay_qt_ms(100);   //make sure already enter factory mode
-    ft520x_write_reg(2, 0x5);  //store CLB result
-    delay_qt_ms(300);
-    ft520x_write_reg(0, 0x0); //return to normal mode 
-    delay_qt_ms(300);
-    printk("[FTS] store CLB result OK.\n");
-    return 0;
+	FTS_BYTE uc_temp;
+	FTS_BYTE i ;
+	printk(KERN_INFO"[FTS] start auto CLB.\n");
+	delay_qt_ms(200);
+	ft520x_write_reg(0, 0x40);
+	/*make sure already enter factory mode*/
+	delay_qt_ms(100);
+	/*write command to start calibration */
+	ft520x_write_reg(2, 0x4);
+	delay_qt_ms(300);
+	for (i = 0; i < 100; i++) {
+		ft520x_read_reg(0, &uc_temp);
+		if (((uc_temp&0x70)>>4) == 0x0)
+			break;
+		delay_qt_ms(200);
+		printk(KERN_INFO"[FTS] waiting calibration %d\n", i);
+	}
+	printk(KERN_INFO"[FTS] calibration OK.\n");
+	delay_qt_ms(300);
+	/*goto factory mode*/
+	ft520x_write_reg(0, 0x40);
+	/*make sure already enter factory mode*/
+	delay_qt_ms(100);
+	/*store CLB result*/
+	ft520x_write_reg(2, 0x5);
+	delay_qt_ms(300);
+	/*return to normal mode*/
+	ft520x_write_reg(0, 0x0);
+	delay_qt_ms(300);
+	printk(KERN_INFO"[FTS] store CLB result OK.\n");
+	return 0;
 }
 
 
@@ -448,79 +457,57 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_lenth)
 	FTS_BYTE bt_ecc;
 	int      i_ret;
 
-	/*********Step 1:Reset  CTPM *****/
 	/*write 0xaa to register 0xfc*/
-	ft520x_write_reg(0xfc,0xaa);
+	ft520x_write_reg(0xfc, 0xaa);
 	delay_qt_ms(50);
-	/*write 0x55 to register 0xfc*/
-	ft520x_write_reg(0xfc,0x55);
+	ft520x_write_reg(0xfc, 0x55);
 	printk("[FT520X] Step 1: Reset CTPM test\n");
 
 	delay_qt_ms(30);   
 
-	/*********Step 2:Enter upgrade mode *****/
 	auc_i2c_write_buf[0] = 0x55;
 	auc_i2c_write_buf[1] = 0xaa;
-	do
-	{
+	do {
 		i ++;
 		i_ret = ft520x_i2c_txdata(auc_i2c_write_buf, 2);
 		delay_qt_ms(5);
-	}while(i_ret <= 0 && i < 5 );
-	printk("[FT520X] Step 2: Enter upgrade mode\n");
+	} while (i_ret <= 0 && i < 5);
 
-	/*********Step 3:check READ-ID***********************/        
 	cmd_write(0x90,0x00,0x00,0x00,4);
 	byte_read(reg_val,2);
 	if (reg_val[0] == 0x79 && reg_val[1] == 0x3)
-	{
-		printk("[FT520X] Step 3: CTPM ID,ID1 = 0x%x,ID2 = 0x%x\n",reg_val[0],reg_val[1]);
-	}
-	else
-	{
-		printk("[FT520X] Step 3:  readid error\n");
+		printk(KERN_INFO"[FT520X]  CTPM ID,ID1 = 0x%x,ID2 = 0x%x\n",
+			reg_val[0], reg_val[1]);
+	else {
+		printk(KERN_INFO"[FT520X] Step 3:  readid error\n");
 		return ERR_READID;
-		//i_is_new_protocol = 1;
 	}
-
-	/*********Step 4:erase app*******************************/
-	cmd_write(0x61,0x00,0x00,0x00,1);
-
+	cmd_write(0x61, 0x00, 0x00, 0x00, 1);
 	delay_qt_ms(1500);
-	printk("[FT520X] Step 4: erase. \n");
-
-	/*********Step 5:write firmware(FW) to ctpm flash*********/
 	bt_ecc = 0;
-	printk("[FT520X] Step 5: start upgrade. \n");
 	dw_lenth = dw_lenth - 8;
 	packet_number = (dw_lenth) / FTS_PACKET_LENGTH;
 	packet_buf[0] = 0xbf;
 	packet_buf[1] = 0x00;
-	for (j=0;j<packet_number;j++)
-	{
+	for (j = 0; j < packet_number; j++) {
 		temp = j * FTS_PACKET_LENGTH;
 		packet_buf[2] = (FTS_BYTE)(temp>>8);
 		packet_buf[3] = (FTS_BYTE)temp;
 		lenght = FTS_PACKET_LENGTH;
 		packet_buf[4] = (FTS_BYTE)(lenght>>8);
 		packet_buf[5] = (FTS_BYTE)lenght;
-
-		for (i=0;i<FTS_PACKET_LENGTH;i++)
-		{
-			packet_buf[6+i] = pbt_buf[j*FTS_PACKET_LENGTH + i]; 
+		for (i = 0; i < FTS_PACKET_LENGTH; i++) {
+			packet_buf[6+i] = pbt_buf[j*FTS_PACKET_LENGTH + i];
 			bt_ecc ^= packet_buf[6+i];
 		}
 
 		byte_write(&packet_buf[0],FTS_PACKET_LENGTH + 6);
 		delay_qt_ms(FTS_PACKET_LENGTH/6 + 1);
 		if ((j * FTS_PACKET_LENGTH % 1024) == 0)
-		{
-			printk("[FT520X] upgrade the 0x%x th byte.\n", ((unsigned int)j) * FTS_PACKET_LENGTH);
-		}
+			printk(KERN_INFO"[FT520X] upgrade the 0x%x th byte.\n",
+					((unsigned int)j) * FTS_PACKET_LENGTH);
 	}
-
-	if ((dw_lenth) % FTS_PACKET_LENGTH > 0)
-	{
+	if ((dw_lenth) % FTS_PACKET_LENGTH > 0) {
 		temp = packet_number * FTS_PACKET_LENGTH;
 		packet_buf[2] = (FTS_BYTE)(temp>>8);
 		packet_buf[3] = (FTS_BYTE)temp;
@@ -529,19 +516,15 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_lenth)
 		packet_buf[4] = (FTS_BYTE)(temp>>8);
 		packet_buf[5] = (FTS_BYTE)temp;
 
-		for (i=0;i<temp;i++)
-		{
+		for (i = 0; i < temp; i++) {
 			packet_buf[6+i] = pbt_buf[ packet_number*FTS_PACKET_LENGTH + i]; 
 			bt_ecc ^= packet_buf[6+i];
 		}
-
-		byte_write(&packet_buf[0],temp+6);    
+		byte_write(&packet_buf[0], temp+6);
 		delay_qt_ms(20);
 	}
 
-	//send the last six byte
-	for (i = 0; i<6; i++)
-	{
+	for (i = 0; i < 6; i++) {
 		temp = 0x6ffa + i;
 		packet_buf[2] = (FTS_BYTE)(temp>>8);
 		packet_buf[3] = (FTS_BYTE)temp;
@@ -554,41 +537,15 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_lenth)
 		byte_write(&packet_buf[0],7);  
 		delay_qt_ms(20);
 	}
-
-	/*********Step 6: read out checksum***********************/
 	/*send the opration head*/
-	cmd_write(0xcc,0x00,0x00,0x00,1);
+	cmd_write(0xcc, 0x00, 0x00, 0x00, 1);
 	byte_read(reg_val,1);
-	printk("[FT520X] Step 6:  ecc read 0x%x, new firmware 0x%x. \n", reg_val[0], bt_ecc);
-	if(reg_val[0] != bt_ecc)
-	{
-		printk("[FT520X] Step 6:  ecc error\n");
+	if (reg_val[0] != bt_ecc) {
+		printk(KERN_INFO"[FT520X]  ecc error\n");
 		return ERR_ECC;
 	}
-
-	/*********Step 7: reset the new FW***********************/
-	cmd_write(0x07,0x00,0x00,0x00,1);
-
-#if 0	
-	/*********Step 8: calibration TP ***********************/
-	delay_qt_ms(100);          //\u5ef6\u65f6100ms
-	ft520x_read_reg(0xfc, &reg_val);
-	if (reg_val[0] == 1)
-	{
-           ft520x_write_reg(0xfc, 4);
-           delay_qt_ms(2500);      //\u5ef6\u65f62500ms
-           
-           do
-           {
-			ft520x_read_reg(0xfc, &reg_val);
-			delay_qt_ms(100);          //\u5ef6\u65f6100ms
-           }while (reg_val[0] != 1);            
-	}
-	ft520x_write_reg(0x00, 0x00);
-#endif
-
-	delay_qt_ms(300);  //make sure CTP startup normally
-	
+	cmd_write(0x07, 0x00, 0x00, 0x00, 1);
+	delay_qt_ms(300);
 	return ERR_OK;
 }
 
@@ -602,17 +559,13 @@ int fts_ctpm_fw_upgrade_with_i_file(void)
 	pbt_buf = CTPM_FW;
 	/*call the upgrade function*/
 	i_ret =  fts_ctpm_fw_upgrade(pbt_buf,sizeof(CTPM_FW));
-	if (i_ret != 0)
-	{
+	if (i_ret != 0) {
 		printk("FT520x upgrade firmware is failed! \r\n");
 		return i_ret;
-	}
-	else
-	{
+	} else	{
 		printk("[FTS] upgrade successfully.\n");
-		 fts_ctpm_auto_clb();  //start auto CLB
+		fts_ctpm_auto_clb();
 	}
-	
 	return i_ret;
 }
 
@@ -621,14 +574,9 @@ unsigned char fts_ctpm_get_upg_ver(void)
 	unsigned int ui_sz;
 	ui_sz = sizeof(CTPM_FW);
 	if (ui_sz > 2)
-	{
 		return CTPM_FW[ui_sz - 2];
-	}
 	else
-	{
-		//TBD, error handling?
-		return 0xff; //default value
-	}
+		return 0xff;
 }
 
 unsigned char fts_ctpm_get_vendor_id(void)
@@ -639,8 +587,7 @@ unsigned char fts_ctpm_get_vendor_id(void)
 	return vendor_id;
 }
 #endif
-///////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////
+
 int fts_upgrade_firmware(void)
 {
 	if (fts_ctpm_get_vendor_id() == 0x53) {
@@ -671,8 +618,6 @@ FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_to
 	FTS_BYTE ecc		= 0;
 
 	/*check the pointer*/
-	//POINTER_CHECK(pbt_buf);
-	//POINTER_CHECK(pst_touch_info);
 
 	/*check the length of the protocol data*/
 	if(bt_len < PROTOCOL_LEN) {
@@ -736,8 +681,9 @@ void DumpFtsRegContext(FTS_BYTE *buf, int size)
 {
 	int i;
 	
-	for (i=0; i<size; i+=3)
-	printk(KERN_INFO "Addr: %x: %x, %x, %x\n", i, *(buf+i), *(buf+i+1), *(buf+i+2));
+	for (i = 0; i < size; i += 3)
+		printk(KERN_INFO "Addr: %x: %x, %x, %x\n", i, *(buf+i),
+						*(buf+i+1), *(buf+i+2));
 }
 
 FTS_BYTE fts_ctpm_get_touch_info(struct synaptics_rmi4 *ts, ST_TOUCH_INFO* pst_touch_info)
@@ -774,9 +720,7 @@ static void Ft5306_Enter_Sleep(void)
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
 	ft520x_shutdown();
 #elif (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_WAKEUP)
-	gpio_request(TP_CNTRL_WAKEUP_PIN, "tp_wakeup");
-	gpio_direction_output(TP_CNTRL_WAKEUP_PIN,0);
-	gpio_free(TP_CNTRL_WAKEUP_PIN);
+	ft520x_shutdown();
 #else
 #error NO TP CNTRL TYPE SPECIFIED!!!
 #endif
@@ -786,7 +730,11 @@ static void Ft5306_Exit_Sleep(void)
 {
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_WAKEUP)
 	gpio_request(TP_CNTRL_WAKEUP_PIN, "tp_wakeup");
-	gpio_direction_output(TP_CNTRL_WAKEUP_PIN,1);
+	gpio_direction_output(TP_CNTRL_WAKEUP_PIN, 0);
+	gpio_set_value(TP_CNTRL_WAKEUP_PIN, 0);
+	mdelay(5);
+	gpio_set_value(TP_CNTRL_WAKEUP_PIN, 1);
+	mdelay(200);
 	gpio_free(TP_CNTRL_WAKEUP_PIN);
 #endif
 }
@@ -795,11 +743,12 @@ static void Ft5306_Exit_Sleep(void)
 void Ft5306_Hw_Reset(void)
 {
 	gpio_request(TP_CNTRL_RESET_PIN, "tp_reset");
-	gpio_direction_output(TP_CNTRL_RESET_PIN,1);
+	gpio_direction_output(TP_CNTRL_RESET_PIN, 1);
+	gpio_set_value(TP_CNTRL_RESET_PIN, 1);
 	mdelay(10);
-	gpio_direction_output(TP_CNTRL_RESET_PIN,0);
+	gpio_set_value(TP_CNTRL_RESET_PIN, 0);
 	mdelay(10);
-	gpio_direction_output(TP_CNTRL_RESET_PIN,1);
+	gpio_set_value(TP_CNTRL_RESET_PIN, 1);
 	gpio_free(TP_CNTRL_RESET_PIN);
 	mdelay(10);
 }
@@ -847,8 +796,8 @@ void InitFingersQueue(void)
 {
 	int i,j;
 	
-	for (i=0; i<FTS_MAX_FINGER; i++) {
-		for (j=0; j<POINT_HISTORY_DEPTH; j++) {
+	for (i = 0; i < FTS_MAX_FINGER; i++) {
+		for (j = 0; j < POINT_HISTORY_DEPTH; j++) {
 			g_CurFingers[j].points_num = 0;
 			g_CurFingers[j].points[i].x = 0;
 			g_CurFingers[j].points[i].y = 0;
@@ -862,7 +811,7 @@ void InvalidateFingerSlot(struct FingersQueue *slot)
 {
 	int i;
 	slot->points_num = 0;
-	for (i=0; i<FTS_MAX_FINGER; i++) {
+	for (i = 0; i < FTS_MAX_FINGER; i++) {
 		slot->points[i].state = FINGER_UP;
 		/*slot->points[i].x = 0;
 		slot->points[i].y = 0;*/
@@ -882,7 +831,7 @@ void UpdateFingerQueue(ST_TOUCH_INFO *touch_info)
 	InvalidateFingerSlot(pFinger);
 	pFinger->points_num = touch_info->bt_tp_num;
 	//printk(KERN_INFO "[tp] pnum=%d slot=%d", pFinger->points_num, Finger_Cur_Slot());
-	for (i=0; i<pFinger->points_num; i++) {
+	for (i = 0; i < pFinger->points_num; i++) {
 		if (touch_info->pst_point_info[i].bt_tp_id >= FTS_MAX_FINGER) {
 			printk(KERN_INFO "[tp err]: invalid pt id %d", touch_info->pst_point_info[i].bt_tp_id);
 			pFinger->points_num --;//Invalid point remove  it
@@ -921,7 +870,7 @@ void ReportFingers(struct synaptics_rmi4 *ts, ST_TOUCH_INFO *touch_info)
 	UpdateFingerQueue(touch_info);
 	cur_info = &g_CurFingers[Finger_Cur_Slot()];
 	last_info = &g_CurFingers[Finger_Last_Slot()];
-	for (i=0; i<FTS_MAX_FINGER; i++) {
+	for (i = 0; i < FTS_MAX_FINGER; i++) {
 		if (cur_info->points[i].state < FINGER_STALE) {
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_X, cur_info->points[i].x);
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, cur_info->points[i].y);
@@ -952,11 +901,9 @@ void ReportFingers(struct synaptics_rmi4 *ts, ST_TOUCH_INFO *touch_info)
 		//queue_work(synaptics_wq, &ts->work);
 		/*if (ts->use_irq) //Using int trigger can make the tp points more smooth
 			enable_irq(ts->client->irq);*/
-
-		//hrtimer_start(&ts->penup_det_timer, ktime_set(0, 30000000), HRTIMER_MODE_REL); //chenglong for fup det
 	} else {
 		//printk(KERN_INFO "[tp]: no finger down\n");
-		for (i=0; i<FTS_MAX_FINGER; i++) {
+		for (i = 0; i < FTS_MAX_FINGER; i++) {
 			if ((cur_info->points[i].state >= FINGER_STALE) && (last_info->points[i].state < FINGER_UP)) {
 				//input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0);
 				input_report_key(ts->input_dev, BTN_TOUCH, 0);
@@ -965,7 +912,7 @@ void ReportFingers(struct synaptics_rmi4 *ts, ST_TOUCH_INFO *touch_info)
 				//printk(KERN_INFO "[tp]: p(%d) up\n", i);
 			}
 
-			for (j=0; j<POINT_HISTORY_DEPTH; j++) {
+			for (j = 0; j < POINT_HISTORY_DEPTH; j++) {
 				//InvalidateFingerSlot(g_CurFingers[j].points[i].state == FINGER_IDLE);
 				g_CurFingers[j].points[i].state = FINGER_IDLE;
 			}
@@ -973,8 +920,6 @@ void ReportFingers(struct synaptics_rmi4 *ts, ST_TOUCH_INFO *touch_info)
 		if (reported)
 			input_sync(ts->input_dev);
 
-		//hrtimer_cancel(&ts->penup_det_timer);
-		
 		/*if (ts->use_irq)
 				enable_irq(ts->client->irq);*/
 	}
@@ -985,7 +930,7 @@ static void DebugTpStatus(void)
 	int i;
 	
 	printk(KERN_INFO "point Num: %d, gesture: %d", ft5306_touch_info.bt_tp_num, ft5306_touch_info.bt_gesture);
-	for (i=0; i<ft5306_touch_info.bt_tp_num; i++) {
+	for (i = 0; i < ft5306_touch_info.bt_tp_num; i++) {
 		printk(KERN_INFO "P[%d] property: %d, x: %d, y:%d", ft5306_touch_info.pst_point_info[i].bt_tp_id,
 			                                                 ft5306_touch_info.pst_point_info[i].bt_tp_property,
 			                                                 ft5306_touch_info.pst_point_info[i].w_tp_x,
@@ -1015,66 +960,10 @@ static void focaltech_ft5306_work_func(struct work_struct *work)
 	//ReportFingers(ts, &ft5306_touch_info);
 }
 
-#if ENABLE_TP_DIAG
-static void focaltech_ft5306_diag_work_func(struct work_struct *work)
-{
-	struct synaptics_rmi4 *ts = container_of(work,
-					struct synaptics_rmi4, work);
-	u8 regVal = 0;
-	int ret = -1;
-
-	if (!ts) return ;
-	
-	ret = ft520x_read_reg(0x88, &regVal);
-	printk(KERN_INFO "@TP diag: %x\n", regVal);
-	if (regVal < 4 || regVal > 9 || ret < 0) {
-		printk(KERN_INFO "@TP diag captured exception, reseting tp...\n");
-		//ft5306_i2c_client = ts->client;
-		focaltech_ft5306_turnOff(ft5306_i2c_client);
-		mdelay(5);
-		focaltech_ft5306_turnOn(ft5306_i2c_client);
-	}
-}
-
-static enum hrtimer_restart focaltech_ft5306_diag_timer_func(struct hrtimer *timer)
-{
-	struct synaptics_rmi4 *ts = container_of(timer, \
-					struct synaptics_rmi4, diag_timer);
-
-	queue_work(synaptics_wq, &ts->diag_work);
-	hrtimer_start(&ts->diag_timer, ktime_set(3, 0), HRTIMER_MODE_REL);
-	return HRTIMER_NORESTART;
-}
-#endif
-
-static enum hrtimer_restart focaltech_ft5306_penup_det_timer_func(struct hrtimer *timer)
-{
-	struct synaptics_rmi4 *ts = container_of(timer, \
-					struct synaptics_rmi4, penup_det_timer);
-
-	queue_work(synaptics_wq, &ts->work);
-	//hrtimer_start(&ts->penup_det_timer, ktime_set(0, 30000000), HRTIMER_MODE_REL);
-	return HRTIMER_NORESTART;
-}
-
-static enum hrtimer_restart focaltech_ft5306_timer_func(struct hrtimer *timer)
-{
-	struct synaptics_rmi4 *ts = container_of(timer, \
-					struct synaptics_rmi4, timer);
-
-	queue_work(synaptics_wq, &ts->work);
-
-	//hrtimer_start(&ts->timer, ktime_set(0, 12 * NSEC_PER_MSEC), HRTIMER_MODE_REL);
-	hrtimer_start(&ts->timer, ktime_set(0, 15 * NSEC_PER_MSEC), HRTIMER_MODE_REL);
-
-	return HRTIMER_NORESTART;
-}
 
 irqreturn_t focaltech_ft5306_irq_handler(int irq, void *dev_id)
 {
 	struct synaptics_rmi4 *ts = dev_id;
-	//printk(KERN_INFO "@TP INT\n");
-	//disable_irq_nosync(ts->client->irq);
 	queue_work(synaptics_wq, &ts->work);
 
 	return IRQ_HANDLED;
@@ -1086,12 +975,7 @@ static void focaltech_ft5306_enable(struct synaptics_rmi4 *ts)
 
 	if (ts->use_irq)
 		enable_irq(ts->client->irq);
-	else
-		hrtimer_start(&ts->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
 	
-#if ENABLE_TP_DIAG
-	hrtimer_start(&ts->diag_timer, ktime_set(3, 0), HRTIMER_MODE_REL);
-#endif
 	ts->enable = 1;
 }
 
@@ -1101,13 +985,6 @@ static void focaltech_ft5306_disable(struct synaptics_rmi4 *ts)
 
 	if (ts->use_irq)
 		disable_irq_nosync(ts->client->irq);
-	else
-		hrtimer_cancel(&ts->timer);
-
-	//cancel_work_sync(&ts->work);
-#if ENABLE_TP_DIAG
-	hrtimer_cancel(&ts->diag_timer);
-#endif
 
 	ts->enable = 0;
 }
@@ -1119,15 +996,6 @@ static int focaltech_ft5306_turnOff(struct i2c_client *client)
 	if (!client) return -1;
 	
 	ts = i2c_get_clientdata(client);
-
-	if (!ts->use_irq)
-		hrtimer_cancel(&ts->timer);
-	
-//#if ENABLE_TP_DIAG
-		//hrtimer_cancel(&ts->diag_timer);
-//#endif
-
-	//cancel_work_sync(&ts->work);
 	focaltech_ft5306_disable(ts);
 	Ft5306_Enter_Sleep();
 	mdelay(10);
@@ -1302,20 +1170,15 @@ static struct kobj_attribute ft5306_vendor_attr = {
 static ssize_t ft5306_virtual_keys_show(struct kobject *kobj,
 				   struct kobj_attribute *attr, char *buf)
 {
-#if 1//chenglong for S801 tp
-		return sprintf(buf,
-			__stringify(EV_KEY) ":" __stringify(KEY_BACK)  ":70:850:90:70"
-		   ":" __stringify(EV_KEY) ":" __stringify(KEY_MENU)   ":240:850:90:70"
-		   ":" __stringify(EV_KEY) ":" __stringify(KEY_HOME)   ":410:850:90:70"
-		   "\n");
-#else
-	return sprintf(buf,
-			__stringify(EV_KEY) ":" __stringify(KEY_MENU)  ":60:840:90:60"
-		   ":" __stringify(EV_KEY) ":" __stringify(KEY_HOME)   ":180:840:90:60"
-		   ":" __stringify(EV_KEY) ":" __stringify(KEY_BACK)   ":300:840:90:60"
-		   ":" __stringify(EV_KEY) ":" __stringify(KEY_SEARCH)   ":420:840:90:60"
-		   "\n");
-#endif
+	return sprintf(buf, __stringify(EV_KEY) ":"
+		__stringify(KEY_MENU)  ":60:850:90:90"
+			":" __stringify(EV_KEY) ":"
+		__stringify(KEY_HOME)   ":180:850:90:90"
+			":" __stringify(EV_KEY) ":"
+		__stringify(KEY_BACK)   ":300:850:90:90"
+			":" __stringify(EV_KEY) ":"
+		__stringify(KEY_SEARCH)   ":420:850:90:90"
+			"\n");
 } 
 static struct kobj_attribute ft5306_virtual_keys_attr = {
 	.attr = {
@@ -1395,7 +1258,7 @@ static int focaltech_ft5306_probe(
 		goto err_alloc_dev_failed;
 	}
 	
-#if 1//(TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)	
+#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
 	if (ts->power) {
 		ts->power(TS_ON);
 		ts->power(TS_OFF);
@@ -1406,9 +1269,11 @@ static int focaltech_ft5306_probe(
 	ft5306_focaltech_init_platform_hw();
 	
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_WAKEUP)
-	//Wakeup TP
 	gpio_request(TP_CNTRL_WAKEUP_PIN, "tp_wakeup");
-	gpio_direction_output(TP_CNTRL_WAKEUP_PIN,1);
+	gpio_direction_output(TP_CNTRL_WAKEUP_PIN, 1);
+	gpio_set_value(TP_CNTRL_WAKEUP_PIN, 0);
+	mdelay(5);
+	gpio_set_value(TP_CNTRL_WAKEUP_PIN, 1);
 	gpio_free(TP_CNTRL_WAKEUP_PIN);
 	mdelay(200);
 #endif
@@ -1430,17 +1295,18 @@ static int focaltech_ft5306_probe(
 	ts->input_dev->phys = client->name;
 	set_bit(EV_ABS, ts->input_dev->evbit);
 	set_bit(EV_SYN, ts->input_dev->evbit);
-	//set_bit(EV_KEY, ts->input_dev->evbit);
 	set_bit(BTN_TOUCH, ts->input_dev->keybit);
-	//set_bit(KEY_MENU,ts->input_dev->keybit);
-	//set_bit(KEY_HOME,ts->input_dev->keybit);
-	//set_bit(KEY_BACK,ts->input_dev->keybit);
+
+	set_bit(KEY_MENU, ts->input_dev->keybit);
+	set_bit(KEY_HOME, ts->input_dev->keybit);
+	set_bit(KEY_BACK, ts->input_dev->keybit);
+	set_bit(KEY_SEARCH, ts->input_dev->keybit);
+
         set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
 
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, 479, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, 799, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 8, 0, 0);
-	//input_set_abs_params(ts->input_dev, ABS_MT_WIDTH_MAJOR, 0, 1, 0, 0);
 
 	InitFingersQueue();
 	if (client->irq) {
@@ -1449,16 +1315,14 @@ static int focaltech_ft5306_probe(
 		printk(KERN_INFO "%s: request tp int ret: %d\n", __func__, ret);
 		
 		gpio_direction_input(TP_HW_INT_PIN);
-		//set_irq_type(GPIO_TO_IRQ(TP_HW_INT_PIN), IRQF_TRIGGER_FALLING);
-		//disable_irq(GPIO_TO_IRQ(TP_HW_INT_PIN));//Disable TP INT
 		printk("Requesting IRQ...\n");
 
 		if (request_irq(GPIO_TO_IRQ(TP_HW_INT_PIN), focaltech_ft5306_irq_handler,
 				IRQF_TRIGGER_FALLING, client->name, ts) >= 0) {
 			printk("Requested IRQ\n");
 			ts->use_irq = 1;
-			enable_irq(client->irq);
-			printk(KERN_INFO "[ft5306]GPIO_%d INT: %d", TP_HW_INT_PIN, GPIO_TO_IRQ(TP_HW_INT_PIN));
+			printk(KERN_INFO "GPIO_%d INT: %d", TP_HW_INT_PIN,
+						GPIO_TO_IRQ(TP_HW_INT_PIN));
 			/*if ((ret = set_irq_wake(client->irq, 1)) < 0) {
 				printk(KERN_ERR "failed to set IRQ wake: %d\n", ret);
 			}*/
@@ -1469,9 +1333,6 @@ static int focaltech_ft5306_probe(
 
 	if (!ts->use_irq) {
 		printk(KERN_ERR "Synaptics RMI4 device %s in polling mode\n", client->name);
-		hrtimer_init(&ts->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-		ts->timer.function = focaltech_ft5306_timer_func;
-		hrtimer_start(&ts->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
 	}
 
 	/*
@@ -1500,21 +1361,7 @@ static int focaltech_ft5306_probe(
 	register_early_suspend(&ts->early_suspend);
 	#endif
 
-	//fts_upgrade_firmware();
 	
-#if ENABLE_TP_DIAG
-	printk(KERN_ERR "Synaptics RMI4 device %s in polling mode\n", client->name);
-	hrtimer_init(&ts->diag_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	ts->diag_timer.function = focaltech_ft5306_diag_timer_func;
-	hrtimer_start(&ts->diag_timer, ktime_set(3, 0), HRTIMER_MODE_REL);
-#endif
-
-	printk(KERN_INFO "FocalTech Ft5306 init up det timer\n");
-	hrtimer_init(&ts->penup_det_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	ts->penup_det_timer.function = focaltech_ft5306_penup_det_timer_func;
-	
-	//disable_irq(client->irq);
-	//enable_irq(client->irq);//Enable TP INT
 	
 	printk("Tp Probe Done!!!");
 	
@@ -1537,12 +1384,7 @@ struct synaptics_rmi4 *ts = i2c_get_clientdata(client);
 	unregister_early_suspend(&ts->early_suspend);
 	if (ts->use_irq)
 		free_irq(client->irq, ts);
-	else
-		hrtimer_cancel(&ts->timer);
 	
-#if ENABLE_TP_DIAG
-	hrtimer_cancel(&ts->diag_timer);
-#endif
 	input_unregister_device(ts->input_dev);
 	kfree(ts);
 	return 0;
@@ -1552,10 +1394,7 @@ static int focaltech_ft5306_suspend(struct i2c_client *client, pm_message_t mesg
 {
 	struct synaptics_rmi4 *ts = i2c_get_clientdata(client);
 
-	if (!ts->use_irq)
-		hrtimer_cancel(&ts->timer);
 
-	//cancel_work_sync(&ts->work);
 	focaltech_ft5306_disable(ts);
 	Ft5306_Enter_Sleep();
 	mdelay(10);
@@ -1571,9 +1410,8 @@ static int focaltech_ft5306_resume(struct i2c_client *client)
 
 	Ft5306_Exit_Sleep();
 	mdelay(20);
-	if (ts->power) {
-		 ts->power(TS_ON);
-	}
+	if (ts->power)
+		ts->power(TS_ON);
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
 	Ft5306_Hw_Reset();
 #endif
@@ -1587,17 +1425,17 @@ static int focaltech_ft5306_resume(struct i2c_client *client)
 static void focaltech_ft5306_early_suspend(struct early_suspend *h)
 {
 	struct synaptics_rmi4 *ts;
-//	printk(KERN_INFO "call %s\n",__func__);
-//	ts = container_of(h, struct synaptics_rmi4, early_suspend);
-//	focaltech_ft5306_suspend(ts->client, PMSG_SUSPEND);
+	printk(KERN_INFO "call %s\n", __func__);
+	ts = container_of(h, struct synaptics_rmi4, early_suspend);
+	focaltech_ft5306_suspend(ts->client, PMSG_SUSPEND);
 }
 
 static void focaltech_ft5306_late_resume(struct early_suspend *h)
 {
 	struct synaptics_rmi4 *ts;
-	printk(KERN_INFO "call %s\n",__func__);
-//	ts = container_of(h, struct synaptics_rmi4, early_suspend);
-//	focaltech_ft5306_resume(ts->client);
+	printk(KERN_INFO "call %s\n", __func__);
+	ts = container_of(h, struct synaptics_rmi4, early_suspend);
+	focaltech_ft5306_resume(ts->client);
 }
 #endif
 
@@ -1619,8 +1457,7 @@ static int __devinit focaltech_ft5306_init(void)
 	printk(KERN_INFO "Synaptics I2C RMI4 driver init");
 
 	synaptics_wq = create_singlethread_workqueue("synaptics_wq");
-	if (!synaptics_wq)
-	{
+	if (!synaptics_wq) {
 		printk(KERN_ERR "Could not create work queue synaptics_wq: no memory");
 		return -ENOMEM;
 	}

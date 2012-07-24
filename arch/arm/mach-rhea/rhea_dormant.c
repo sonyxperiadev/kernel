@@ -11,6 +11,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
 #include <asm/io.h>
+#include <linux/delay.h>
 
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_scu.h>
@@ -459,7 +460,8 @@ static void dormant_save_addnl_reg(void)
 static void dormant_restore_addnl_reg(void)
 {
 	int i;
-	u32 val1, val2;
+	u32 reg_val, val1, val2;
+	u32 insurance = 0;
 
 	/* Allow write access to the CCU registers */
 	writel_relaxed(0xA5A501, (KONA_PROC_CLK_VA +
@@ -484,10 +486,15 @@ static void dormant_restore_addnl_reg(void)
 			       KPROC_CLK_MGR_REG_LVM_EN_OFFSET);
 
 			/* Wait for HW confirmation of policy lock */
-			while (readl(KONA_PROC_CLK_VA +
-			       KPROC_CLK_MGR_REG_LVM_EN_OFFSET) &
-			       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK)
-				;
+			do {
+				udelay(1);
+				reg_val = readl(KONA_PROC_CLK_VA +
+					KPROC_CLK_MGR_REG_LVM_EN_OFFSET);
+				insurance++;
+			} while ((reg_val &
+			KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK) &&
+			insurance < 10000);
+			WARN_ON(insurance >= 10000);
 
 			/* Write the go bit to trigger the frequency change
 			 */
@@ -500,6 +507,7 @@ static void dormant_restore_addnl_reg(void)
 
 	/* Wait until the new frequency takes effect */
 	do {
+		udelay(1);
 		val1 =
 		    readl(KONA_PROC_CLK_VA +
 			  KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET) &
@@ -509,6 +517,10 @@ static void dormant_restore_addnl_reg(void)
 			  KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET) &
 			  KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
 	} while (val1 | val2);
+	/* Lock CCU registers */
+	writel_relaxed(0xA5A500, (KONA_PROC_CLK_VA +
+	       KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET));
+
 }
 
 static int dormant_pass;

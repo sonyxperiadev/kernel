@@ -11,7 +11,7 @@ in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
-/***************************************************************************/
+/****************************************************************************/
 /**
 *
 * @file   rpc_ipc_kernel.c
@@ -69,7 +69,7 @@ the GPL, without Broadcom's express prior written consent.
 
 MODULE_LICENSE("GPL");
 
-/*********************************************/
+/******************************************/
 extern void kRpcDebugPrintf(char *fmt, ...);
 extern Boolean RPC_SetProperty(UInt32 type, UInt32 value);
 extern Boolean RPC_GetProperty(UInt32 type, UInt32 *value);
@@ -77,7 +77,7 @@ extern Boolean RPC_GetProperty(UInt32 type, UInt32 *value);
 #define RPC_TRACE_TRACE_ON
 #ifdef RPC_TRACE_TRACE_ON
 #define _DBG(a) a
-/*#define RPC_TRACE(fmt,args...) printk (fmt, ##args) */
+/*#define RPC_TRACE(fmt,args...) printk (fmt, ##args)*/
 #define RPC_TRACE(fmt, args...) \
 	BCMLOG_Printf(BCMLOG_RPC_KERNEL_BASIC, fmt, ##args)
 #else
@@ -136,7 +136,7 @@ struct rw_semaphore gRpcLock;
 
 #endif
 
-/*#define USE_INTERNAL_BUFFER */
+/*#define USE_INTERNAL_BUFFER*/
 
 /**
  *  module data
@@ -204,9 +204,9 @@ typedef struct {
 	UInt8 clientId;
 } RpcIpc_PrivData_t;
 
-/*local function protos */
+/* local function protos */
 
-/*forward declarations used in 'struct file_operations'  */
+/* forward declarations used in 'struct file_operations' */
 
 static int rpcipc_open(struct inode *inode, struct file *file);
 static int rpcipc_release(struct inode *inode, struct file *file);
@@ -639,8 +639,7 @@ void RPC_ServerRecoverUnfreedMsgsForClient(UInt8 clientId)
 		FORCE Free Msgs tid %d cid %d, pid %d name %s qp=%d up=%d\n",
 		cInfo->tid, clientId, cInfo->pid, cInfo->pidName,
 		queuedMsgs, unfreedMsgs));
-	}
-	else {
+	} else {
 		_DBG(RPC_TRACE("k:RPC_RPC_ServerRecoverUnfreedMsgsForClient \
 			clientID = %d OK\n", clientId));
 	}
@@ -715,7 +714,7 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 		RPC_READ_LOCK;
 
 		return RPC_RESULT_ERROR;
-	}	
+	}
 
 	if (cInfo->notresponding) {
 		int empty;
@@ -745,14 +744,14 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType,
 
 	_DBG(RPC_TRACE
 	     ("k:RPC_ServerDispatchMsg cInfo=%x h=%d cid=%d elem=%x msgId=%x b=%d nr=%d\n",
-	      (int)cInfo, (int)dataBufHandle, clientId, (int)elem, 
+	      (int)cInfo, (int)dataBufHandle, clientId, (int)elem,
 		(int)msgId, broadcastMsg, cInfo->notresponding));
 
 	/* add to queue */
-	RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA, clientId, 
+	RpcDbgUpdatePktStateEx((int)dataBufHandle, PKT_STATE_NA, clientId,
 			PKT_STATE_CID_DISPATCH,  0, (int)msgId, (UInt8)interfaceType);
-	HISTORY_RPC_LOG("Dispatch", clientId, (int)dataBufHandle, 
-							interfaceType, msgId );
+	HISTORY_RPC_LOG("Dispatch", clientId, (int)dataBufHandle,
+							interfaceType, msgId);
 	spin_lock_bh(&cInfo->mLock);
 	list_add_tail(&elem->mList, &cInfo->mQ.mList);
 	cInfo->availData = 1;
@@ -943,7 +942,7 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 		mask |= (POLLIN | POLLRDNORM);
 
 	_DBG(RPC_TRACE("rpcipc_poll: mask = %x\n", (int)mask));
-	
+
 	cInfo->state = 2;
 	cInfo->ts = jiffies_to_msecs(jiffies);
 	cInfo->availData = 0;
@@ -986,7 +985,7 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 
 	if (ioc_param.isEmpty)
 		cInfo->availData = 0;
-	
+
 	cInfo->ts = jiffies_to_msecs(jiffies);
 	cInfo->state = 1;
 	cInfo->tid = current->pid;
@@ -1021,8 +1020,8 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 	}
 
 	_DBG(RPC_TRACE
-	     ("k:handle_pkt_poll_ioc clientId=%d empty=%d\n",
-	      (int)ioc_param.clientId, (int)ioc_param.isEmpty));
+	    ("k:handle_pkt_poll_ioc clientId=%d empty=%d\n",
+	    (int)ioc_param.clientId, (int)ioc_param.isEmpty));
 
 	copyRc = copy_to_user((rpc_pkt_avail_t *) param, &ioc_param,
 			sizeof(rpc_pkt_avail_t));
@@ -1253,7 +1252,7 @@ static long handle_pkt_send_buffer_ioc(struct file *filp, unsigned int cmd,
 		      srcBuf[4]));
 	}
 #endif
-	/*fixme: Handle return value? */
+	/*fixme: Handle return value?*/
 	{
 		RPC_READ_UNLOCK;
 		RPC_PACKET_SendData(ioc_param.clientId, ioc_param.interfaceType,
@@ -1559,7 +1558,7 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 	     ("k:handle_pkt_register_data_ind_ioc client=%d numclients=%d\n",
 	      ioc_param.rpcClientID, gNumActiveClients));
 
-	/*fill up */
+	/*fill up*/
 	cInfo->info = ioc_param;
 	cInfo->infoEx.rpcClientID = cInfo->info.rpcClientID;
 	cInfo->infoEx.interfaceType = cInfo->info.interfaceType;
@@ -1737,6 +1736,7 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 	int jiffyBefore = jiffies;
 	RpcPktkElement_t *pktElem = NULL;
 
+	/* coverity[ -tainted_data_argument : arg-0 ] */
 	if (copy_from_user
 	    (&ioc_param, (rpc_pkt_rx_buf_ex_t *) param,
 	     sizeof(rpc_pkt_rx_buf_ex_t)) != 0) {
@@ -1856,11 +1856,10 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 
 		kfree(entry);
 
-	}
-	else {
+	} else {
 		_DBG(RPC_TRACE
-		     ("k:handle_pkt_poll_ex_ioc EMPTY cid=%d wait=%d\n",
-		      (int)ioc_param.clientId, jiffies_to_msecs(jiffies - jiffyBefore)));
+		    ("k:handle_pkt_poll_ex_ioc EMPTY cid=%d wait=%d\n",
+		    (int)ioc_param.clientId, jiffies_to_msecs(jiffies - jiffyBefore)));
 	}
 
 	if (copy_to_user
@@ -1879,6 +1878,7 @@ static long handle_pkt_alloc_buffer_ptr_ioc(struct file *filp, unsigned int cmd,
 {
 	rpc_pkt_alloc_buf_ptr_t ioc_param = { 0 };
 
+	/* coverity[ -tainted_data_argument : arg-0 ] */
 	if (copy_from_user
 	    (&ioc_param, (rpc_pkt_alloc_buf_ptr_t *) param,
 	     sizeof(rpc_pkt_alloc_buf_ptr_t)) != 0) {
@@ -1957,7 +1957,7 @@ static long handle_pkt_send_buffer_ex_ioc(struct file *filp, unsigned int cmd,
 		      srcBuf[4]));
 	}
 #endif
-	/*fixme: Handle return value? */
+	/*fixme: Handle return value?*/
 	{
 		RPC_PACKET_SetBufferLength(ioc_param.txBuf.dataBufHandle, ioc_param.txBuf.bufferLen);
 
@@ -2212,7 +2212,6 @@ static void RpcServerCleanup(void)
 
 	for (k = 0; k < 0xFF; k++)
 		RpcListCleanup(k);
-
 }
 
 /* mmap() requirements for ipcdev.
@@ -2308,7 +2307,7 @@ int RpcIsTaskValid(pid_t inTid)
 void RpcDumpTaskState(RpcOutputContext_t *c, pid_t inTid, pid_t inPid)
 {
 	struct task_struct *t;
-	
+
 	rcu_read_lock();
 	t = find_task_by_vpid(inTid);
 	rcu_read_unlock();
@@ -2318,9 +2317,8 @@ void RpcDumpTaskState(RpcOutputContext_t *c, pid_t inTid, pid_t inPid)
 			      t->comm, inPid, inTid, (int)t->state, (int)t->flags);
 
 		RpcDumpTaskCallStack(c, t);
-	}
-	else
-		RpcDbgDumpStr(c,"\tError!!!(Process not found) pid:%d tid:%d\n",
+	} else
+		RpcDbgDumpStr(c, "\tError!!!(Process not found) pid:%d tid:%d\n",
 						inPid, inTid);
 }
 
@@ -2455,8 +2453,7 @@ static int log_seq_show(struct seq_file *s, void *v)
 	    ret = RbcDbgDumpGenInfo(&(context->out), &(context->offset), 10);
 
 	if (ret == 0) {
-		if (context->counter >= 6)
-		{
+		if (context->counter >= 6) {
 			RpcDbgDumpHdr(&(context->out));
 			context->eof = 1;
 		}
@@ -2521,7 +2518,7 @@ int RpcDbgDumpHistoryLogging(int type, int level)
 	RpcDbgDumpHdr(&outContext);
 	RpcDbgListClientMsgs(&outContext);
 	RpcDbgDumpWakeLockStats(&outContext);
-	RpcDbgDumpKthread(&outContext,2);
+	RpcDbgDumpKthread(&outContext, 2);
 
 	if (level > 0) {
 		RpcDbgDumpPktState(&outContext, &offset, 0);

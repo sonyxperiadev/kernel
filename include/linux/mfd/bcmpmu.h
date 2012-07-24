@@ -33,11 +33,16 @@ struct regulator_init_data;
 /* LDO or Switcher def */
 #define BCMPMU_LDO    0x10
 #define BCMPMU_SR     0x11
+/* HOSTCTRL1 def*/
+#define BCMPMU_SW_SHDWN 0x04
 
 /* WRPREN def */
 #define BCMPMU_DIS_WR_PRO       (1<<0)
 #define BCMPMU_PMU_UNLOCK       (1<<1)
 #define BCMPMU_WRLOCKKEY_VAL    0x38
+
+/* Regulator OPMODE Donot Care*/
+#define BCMPMU_REGU_OPMODE_DC 0xFF
 
 int bcmpmu_register_regulator(struct bcmpmu *bcmpmu, int reg,
 			      struct regulator_init_data *initdata);
@@ -140,6 +145,7 @@ enum bcmpmu_reg {
 	PMU_REG_PONKEY_RESTART_DLY,
 
 	PMU_REG_AUXCTRL,
+	PMU_REG_PONKEY_ONHOLD_DEB,
 
 	PMU_REG_NTCHT_RISE_LO,
 	PMU_REG_NTCHT_RISE_HI,
@@ -330,6 +336,7 @@ enum bcmpmu_reg {
 	PMU_REG_FG_GAINTRIM,
 	PMU_REG_FG_DELTA,
 	PMU_REG_FG_CAP,
+	PMU_REG_FG_CIC,
 	/* usb control */
 	PMU_REG_OTG_VBUS_PULSE,
 	PMU_REG_OTG_VBUS_BOOST,
@@ -991,6 +998,15 @@ enum bcmpmu_uas_sw_grp {
 	UAS_SW_GRP_OFF
 };
 
+enum bcmpmu_ponkeyonhold_deb {
+	PONKEYONHOLD_0_DEB,
+	PONKEYONHOLD_50MS_DEB,
+	PONKEYONHOLD_100MS_DEB,
+	PONKEYONHOLD_500MS_DEB,
+	PONKEYONHOLD_1SEC_DEB,
+	PONKEYONHOLD_2SEC_DEB,
+	PONKEYONHOLD_3SEC_DEB
+};
 
 #define	PMU_ENV_BITMASK_MBWV_DELTA		(1<<0)
 #define	PMU_ENV_BITMASK_CGPD_ENV		(1<<1)
@@ -1055,6 +1071,26 @@ struct event_notifier {
 	u32 event_id;
 	struct blocking_notifier_head notifiers;
 };
+
+/* referencing ACCY */
+enum {
+	SS_ACCY_GET_BC_STATUS = 1,
+};
+
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+#define BCMPMU_SPA_EVENT_FIFO_LENGTH	16
+#define SPA_FIFO_EMPTY(fifo)	((fifo.head == fifo.tail) && !fifo.fifo_full)
+#define SPA_FIFO_HEAD(fifo)	(fifo.head = ((fifo.head+1) & (fifo.length-1)))
+#define SPA_FIFO_TAIL(fifo)	(fifo.tail = ((fifo.tail+1) & (fifo.length-1)))
+struct bcmpmu_spa_event_fifo {
+	unsigned char		head;
+	unsigned char		tail;
+	unsigned char		length;
+	bool			fifo_full;
+	enum bcmpmu_event_t	event[BCMPMU_SPA_EVENT_FIFO_LENGTH];
+	int			data[BCMPMU_SPA_EVENT_FIFO_LENGTH];
+};
+#endif
 
 struct bcmpmu_platform_data;
 struct bcmpmu {
@@ -1129,6 +1165,8 @@ struct bcmpmu {
 	int (*ntcct_rise_set) (struct bcmpmu *pmu, int val);
 	int (*ntcct_fall_set) (struct bcmpmu *pmu, int val);
 
+	/* referencing accy */
+	int (*accy_info_get)(struct bcmpmu *bcmpmu, unsigned int req);
 
 	/* fg */
 	int (*fg_currsmpl) (struct bcmpmu *pmu, int *data);
@@ -1209,6 +1247,7 @@ struct bcmpmu_platform_data {
 	int chrg_eoc;
 	int support_hw_eoc;
 	int batt_impedence;
+	int sys_impedence;
 	struct bcmpmu_charge_zone *chrg_zone_map;
 	int fg_capacity_full;
 	int support_fg;
@@ -1223,6 +1262,7 @@ struct bcmpmu_platform_data {
 	int fg_poll_lbat;
 	int fg_lbat_lvl;
 	int fg_fbat_lvl;
+	int fg_low_cal_lvl;
 	enum bcmpmu_bc_t bc;
 	int rpc_rate;
 	struct bcmpmu_wd_setting *wd_setting;
@@ -1237,11 +1277,19 @@ struct bcmpmu_platform_data {
 	int pok_restart_dly;
 	int pok_restart_deb;
 	int pok_lock;
+	int pok_turn_on_deb;
 	/* IHF power up/down auto seq */
 	int ihf_autoseq_dis;
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
 	int piggyback_chrg;
 	char *piggyback_chrg_name;
 	void (*piggyback_notify) (enum bcmpmu_event_t event, int data);
+	struct delayed_work *piggyback_work;
+	struct bcmpmu_spa_event_fifo *spafifo;
+	struct mutex *spalock;
+#endif
+	int non_pse_charging;
+	int max_vfloat;
 };
 
 struct bcmpmu_fg {
@@ -1284,6 +1332,7 @@ struct bcmpmu_reg_info *bcmpmu_rgltr_info(struct bcmpmu *bcmpmu);
 
 void bcmpmu_reg_dev_init(struct bcmpmu *bcmpmu);
 void bcmpmu_reg_dev_exit(struct bcmpmu *bcmpmu);
+void bcmpmu_remove_JIG_force(void);
 int bcmpmu_add_notifier(u32, struct notifier_block *);
 int bcmpmu_remove_notifier(u32, struct notifier_block *);
 int bcmpmu_usb_set(struct bcmpmu *bcmpmu, enum bcmpmu_usb_ctrl_t ctrl,
