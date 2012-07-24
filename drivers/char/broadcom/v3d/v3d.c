@@ -173,15 +173,6 @@ void dvts_finish(dvts_object_t obj)
 	wake_up_all(&obj->wq);
 }
 
-void dvts_wait(dvts_object_t obj, dvts_target_t target)
-{
-	/* This version cannot be interrupted -- use
-	 * dvts_wait_interruptible in preference where possible in
-	 * order to avoid uninterruptible sleep */
-	wait_event(obj->wq,
-			dvts_reached_target(obj, target));
-}
-
 int dvts_wait_interruptible(dvts_object_t obj, dvts_target_t target)
 {
 	int s;
@@ -263,8 +254,6 @@ typedef struct v3d_job_t_ {
 	u32 job_intern_state;
 	u32 job_wait_state;
 	wait_queue_head_t v3d_job_done_q;
-	dvts_object_t dvts_object;
-	dvts_target_t dvts_target;
 	struct v3d_job_t_ *next;
 } v3d_job_t;
 
@@ -382,16 +371,6 @@ static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t * p_job_post)
 	}
 	p_v3d_job->job_id = p_job_post->job_id;
 	p_v3d_job->dev = dev;
-
-	/* eventually we may wish to generalize this sync stuff, but
-	 * for now, we hard-code it such that per open
-	 * file-descriptor, there can be at most *one* deferred v3d
-	 * task serializer */
-	if (p_job_post->dvts_id == 777) {
-		p_v3d_job->dvts_object = dev->shared_dvts_object;
-		p_v3d_job->dvts_target = p_job_post->dvts_target;
-	} else
-		p_v3d_job->dvts_object = NULL;
 
 	if (p_job_post->job_type != V3D_JOB_USER) {
 		/* Ignore this job type as we'll determine it ourself */
