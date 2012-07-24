@@ -31,12 +31,18 @@
 
 #define ION_CARVEOUT0_SIZE		(16*1024*1024)
 
+extern struct ion_device *idev;
+extern unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *handle);
+
 #endif
 
 /**
  * DOC: Kona Ion Heap Types for user space to select at alloc time
  */
 #define ION_DEFAULT_HEAP	(0xFFFF)
+#define ION_CONTIG_HEAP		(0x1000)
+#define ION_SG_HEAP			(0x4000)
+#define ION_BANK1_HEAP		(0x2)
 
 /**
  * DOC: Buffer property flags and masks

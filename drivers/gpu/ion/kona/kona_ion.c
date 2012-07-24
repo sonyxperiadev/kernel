@@ -99,11 +99,11 @@ static bool ion_handle_validate(struct ion_client *client, struct ion_handle *ha
 	return false;
 }
 
-static struct ion_device *idev;
+struct ion_device *idev;
 static int num_heaps;
 static struct ion_heap **heaps;
 
-struct ion_buffer* kona_ion_acquire_buffer(struct ion_client *client, struct ion_handle *handle)
+static struct ion_buffer* kona_ion_acquire_buffer(struct ion_client *client, struct ion_handle *handle)
 {
 	struct ion_buffer *buffer = NULL;
 
@@ -118,27 +118,29 @@ struct ion_buffer* kona_ion_acquire_buffer(struct ion_client *client, struct ion
 	return buffer;
 }
 
-void kona_ion_release_buffer(struct ion_client *client, struct ion_buffer *buffer)
+static void kona_ion_release_buffer(struct ion_client *client, struct ion_buffer *buffer)
 {
 	mutex_unlock(&buffer->lock);
 	mutex_unlock(&client->lock);
 }
 
-void kona_ion_map_dma(struct ion_client *client, struct ion_custom_dma_map_data *data)
+unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *handle)
 {
+	unsigned int dma_addr = 0;
 	struct scatterlist *sglist;
 
-	sglist = ion_map_dma(client, data->handle);
-	data->dma_addr = 0;
+	sglist = ion_map_dma(client, handle);
 #if 1
 	/* NISH_TODO: Move to heap implementation and use sg_dma */
 	/* Do not have IOMMU to map multiple scatterlist entries to contiguous dma address */
 	if (!IS_ERR_OR_NULL(sglist) && sg_is_last(sglist))
-		data->dma_addr = sg_phys(sglist);
+		dma_addr = sg_phys(sglist);
 #endif
+	return dma_addr;
 }
+EXPORT_SYMBOL(kona_ion_map_dma);
 
-int kona_ion_set_prop(struct ion_client *client, struct ion_custom_property *data)
+static int kona_ion_set_prop(struct ion_client *client, struct ion_custom_property *data)
 {
 	struct ion_buffer *buffer;
 
@@ -151,7 +153,7 @@ int kona_ion_set_prop(struct ion_client *client, struct ion_custom_property *dat
 	return -EINVAL;
 }
 
-int kona_ion_get_prop(struct ion_client *client, struct ion_custom_property *data)
+static int kona_ion_get_prop(struct ion_client *client, struct ion_custom_property *data)
 {
 	struct ion_buffer *buffer;
 
@@ -164,7 +166,7 @@ int kona_ion_get_prop(struct ion_client *client, struct ion_custom_property *dat
 	return -EINVAL;
 }
 
-int kona_ion_update_count(struct ion_client *client, struct ion_handle *handle)
+static int kona_ion_update_count(struct ion_client *client, struct ion_handle *handle)
 {
 	struct ion_buffer *buffer;
 
@@ -177,7 +179,7 @@ int kona_ion_update_count(struct ion_client *client, struct ion_handle *handle)
 	return -EINVAL;
 }
 
-int kona_ion_get_update_count(struct ion_client *client, struct ion_custom_update_count *data)
+static int kona_ion_get_update_count(struct ion_client *client, struct ion_custom_update_count *data)
 {
 	struct ion_buffer *buffer;
 
@@ -204,7 +206,7 @@ static long kona_ion_custom_ioctl (struct ion_client *client,
 
 		pr_debug("ION_IOC_CUSTOM_DMA_MAP client(%p) handle(%p) \n",
 				client, data.handle);
-		kona_ion_map_dma(client, &data);
+		data.dma_addr = kona_ion_map_dma(client, data.handle);
 
 		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
 			return -EFAULT;
@@ -371,6 +373,6 @@ static void __exit ion_exit(void)
 	platform_driver_unregister(&ion_driver);
 }
 
-module_init(ion_init);
+subsys_initcall(ion_init);
 module_exit(ion_exit);
 
