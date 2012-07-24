@@ -32,6 +32,16 @@
 #include "plat/osdal_os.h"
 #include "linux/dma-mapping.h"
 
+#if defined(CONFIG_HAVE_CLK) && !defined(CONFIG_MACH_HAWAII_FPGA) \
+	&& defined(UNDER_LINUX)
+#define MMDMA_HAS_CLK
+#endif
+
+#ifdef MMDMA_HAS_CLK
+#include <mach/clock.h>
+#include <linux/clk.h>
+#endif
+
 /*
  * Local Definitions
  */
@@ -73,7 +83,11 @@ struct CslDmaVc4lite {
 	CHAL_HANDLE handle;
 	Semaphore_t dmaSema;
 	struct CslDmaVc4liteChan chan[DMA_VC4LITE_TOTAL_CHANNELS];
+#ifdef MMDMA_HAS_CLK
+	struct clk *mm_dma_axi_clk;
+#endif
 };
+
 static struct CslDmaVc4lite dmac;
 
 /*
@@ -88,6 +102,27 @@ static void dma_vc4lite_hisr(void);
 static UInt8 dma_vc4lite_per_map(UInt8);
 
 #define printk(fmt, ...) do {} while (0)
+
+#ifdef MMDMA_HAS_CLK
+static inline void csl_dma_enable_axi_clk(struct CslDmaVc4lite *pdma)
+{
+	if(clk_enable(pdma->mm_dma_axi_clk))
+		pr_info("MMDMA: failed to enable clk\n");
+}
+
+static inline void csl_dma_disable_axi_clk(struct CslDmaVc4lite *pdma)
+{
+	clk_disable(pdma->mm_dma_axi_clk);
+}
+#else
+static inline void csl_dma_enable_axi_clk(struct CslDmaVc4lite *pdma)
+{
+}
+
+static inline void csl_dma_disable_axi_clk(struct CslDmaVc4lite *pdma)
+{
+}
+#endif
 
 /*
  * Function Definition
@@ -121,6 +156,11 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
 		printk(KERN_ERR
 		       "the virt addr=0x%08x phy addr=0x%08x \n",
 		       dmaCtrlBlkList, dmaCtrlBlkListPhys);
+
+#ifdef MMDMA_HAS_CLK
+		pdma->mm_dma_axi_clk = clk_get(NULL, MM_DMA_AXI_BUS_CLK_NAME_STR);
+		BUG_ON(IS_ERR_OR_NULL(pdma->mm_dma_axi_clk));
+#endif /* MMDMA_HAS_CLK */
 #endif
 
 #ifdef UNDER_LINUX
@@ -405,13 +445,16 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_release_channel(DMA_VC4LITE_CHANNEL_t chanID)
 	if (!pdma->in_atomic)
 		OSSEMAPHORE_Obtain(pdma->dmaSema, TICKS_FOREVER);
 
+
 	if (pdma->chan[chanID].used) {
+		csl_dma_enable_axi_clk(pdma);
 		if (chal_dma_vc4lite_reset_channel(pdma->handle, chanID) !=
 		    CHAL_DMA_VC4LITE_STATUS_SUCCESS) {
 			dprintf(1, "%s: shutdown DMA channel error\n",
 				__func__);
 			return DMA_VC4LITE_STATUS_FAILURE;
 		}
+		csl_dma_disable_axi_clk(pdma);
 
 		pdma->chan[chanID].used = FALSE;
 		pdma->chan[chanID].dmaChanCtrlBlkItemNum = 0;
@@ -432,6 +475,7 @@ void csl_dma_poll_int(int chanID)
 	int chanNum = chanID;
 	u32 counter = 0;
 
+	csl_dma_enable_axi_clk(pdma);
 	do {
 		if (counter > 100000000) {
 			WARN("%s: DMA gets stuck\n", __func__);
@@ -439,21 +483,15 @@ void csl_dma_poll_int(int chanID)
 		}
 		counter++;
 		printk(KERN_ERR "chan %d CS reg is 0x%08x\n", chanNum,
-		       readl(HW_IO_PHYS_TO_VIRT(DMA_VC4LITE_BASE_ADDR) +
-			     chanNum * 0x100));
+		       readl(pdma->base+ chanNum * 0x100));
 		chal_dma_vc4lite_get_int_status(pdma->handle, chanNum,
 						&pdma->chan[chanNum].irqStatus);
 	} while (pdma->chan[chanNum].irqStatus == 0);
 	printk(KERN_ERR "chan %d CS reg is 0x%08x\n", chanNum,
-	       readl(HW_IO_PHYS_TO_VIRT(DMA_VC4LITE_BASE_ADDR) +
-		     chanNum * 0x100));
+	       readl(pdma->base + chanNum * 0x100));
 
 	chal_dma_vc4lite_clear_int_status(pdma->handle, chanNum);
 	pdma->chan[chanNum].dmaChanCtrlBlkItemNum = 0;
-	dma_unmap_single(NULL,
-			 (dma_addr_t)pdma->chan[chanNum].
-			 pDmaChanCtrlBlkListPHYS,
-			 DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE, DMA_TO_DEVICE);
 
 	if (pdma->chan[chanNum].chanInfo.autoFreeChan) {
 		if (chal_dma_vc4lite_reset_channel(pdma->handle, chanNum) !=
@@ -467,7 +505,7 @@ void csl_dma_poll_int(int chanID)
 		memset(&pdma->chan[chanNum].chanInfo, 0,
 		       sizeof(DMA_VC4LITE_CHANNEL_INFO_t));
 	}
-
+	csl_dma_disable_axi_clk(pdma);
 }
 
 /*
@@ -480,7 +518,6 @@ void csl_dma_poll_int(int chanID)
 DMA_VC4LITE_STATUS csl_dma_vc4lite_start_transfer(DMA_VC4LITE_CHANNEL_t chanID)
 {
 	struct CslDmaVc4lite *pdma = (struct CslDmaVc4lite *)&dmac;
-	dma_addr_t temp;
 
 	/* sanity check */
 	if (!pdma->initialized) {
@@ -495,10 +532,12 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_start_transfer(DMA_VC4LITE_CHANNEL_t chanID)
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
 
+	csl_dma_enable_axi_clk(pdma);
 	if (chal_dma_vc4lite_enable_int(pdma->handle, chanID) !=
 	    CHAL_DMA_VC4LITE_STATUS_SUCCESS) {
 		dprintf(1, "%s: enable channel interrupt failure\n",
 			__func__);
+		csl_dma_disable_axi_clk(pdma);
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
 
@@ -514,19 +553,14 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_start_transfer(DMA_VC4LITE_CHANNEL_t chanID)
 #endif
 	    != CHAL_DMA_VC4LITE_STATUS_SUCCESS) {
 		dprintf(1, "%s: prepare data transfer failure\n", __func__);
+		csl_dma_disable_axi_clk(pdma);
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
-
-	temp = dma_map_single(NULL,
-			      pdma->chan[chanID].pDmaChanCtrlBlkList,
-			      DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE,
-			      DMA_TO_DEVICE);
-	printk(KERN_ERR "the temp dma addr=0x%08x and the phys addr=0x%08x\n",
-	       temp, pdma->chan[chanID].pDmaChanCtrlBlkListPHYS);
 
 	if (chal_dma_vc4lite_enable_channel(pdma->handle, chanID) !=
 	    CHAL_DMA_VC4LITE_STATUS_SUCCESS) {
 		dprintf(1, "%s: start channel failure\n", __func__);
+		csl_dma_disable_axi_clk(pdma);
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
 
@@ -551,18 +585,22 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_stop_transfer(DMA_VC4LITE_CHANNEL_t chanID)
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
 
+	csl_dma_enable_axi_clk(pdma);
 	if (chal_dma_vc4lite_abort_transfer(pdma->handle, chanID) !=
 	    CHAL_DMA_VC4LITE_STATUS_SUCCESS) {
 		dprintf(1, "%s: abort the current transfer failure\n",
 			__func__);
+		csl_dma_disable_axi_clk(pdma);
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
 
 	if (chal_dma_vc4lite_reset_channel(pdma->handle, chanID) !=
 	    CHAL_DMA_VC4LITE_STATUS_SUCCESS) {
 		dprintf(1, "%s: reset channel failure\n", __func__);
+		csl_dma_disable_axi_clk(pdma);
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
+	csl_dma_disable_axi_clk(pdma);
 
 	return DMA_VC4LITE_STATUS_SUCCESS;
 }
@@ -661,6 +699,8 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(DMA_VC4LITE_CHANNEL_t chanID,
 	if (chal_dma_vc4lite_build_ctrlblk_list(pdma->handle,
 						pdma->chan[chanID].
 						pDmaChanCtrlBlkList,
+						pdma->chan[chanID].
+						pDmaChanCtrlBlkListPHYS,
 						pdma->chan[chanID].
 						dmaChanCtrlBlkItemNum,
 						pdma->chan[chanID].
@@ -770,6 +810,8 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data_ex(DMA_VC4LITE_CHANNEL_t chanID,
 						pdma->chan[chanID].
 						pDmaChanCtrlBlkList,
 						pdma->chan[chanID].
+						pDmaChanCtrlBlkListPHYS,
+						pdma->chan[chanID].
 						dmaChanCtrlBlkItemNum,
 						pdma->chan[chanID].
 						dmaChanCtrlBlkMemSize,
@@ -843,8 +885,7 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
 		pdma->chan[chanNum].chanState =
 		    chal_dma_vc4lite_get_channel_state(pdma->handle, chanNum);
 		printk(KERN_ERR "chan %d CS reg is 0x%08x\n", chanNum,
-		       readl(HW_IO_PHYS_TO_VIRT(DMA_VC4LITE_BASE_ADDR) +
-			     chanNum * 0x100));
+		       readl(pdma->base + chanNum * 0x100));
 		if (chal_dma_vc4lite_get_int_status
 		    (pdma->handle, chanNum,
 		     &pdma->chan[chanNum].irqStatus) ==
@@ -857,12 +898,6 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
 				chal_dma_vc4lite_clear_int_status(pdma->handle,
 								  chanNum);
 				pdma->chan[chanNum].dmaChanCtrlBlkItemNum = 0;
-				dma_unmap_single(NULL,
-					(dma_addr_t)pdma->
-					chan[chanNum].
-					pDmaChanCtrlBlkListPHYS,
-					DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE,
-					DMA_TO_DEVICE);
 			} else
 				printk(KERN_ERR
 				       "channel = %d has no irq status",
@@ -894,6 +929,7 @@ static void dma_vc4lite_hisr(void)
 	struct CslDmaVc4lite *pdma = (struct CslDmaVc4lite *)&dmac;
 	UInt8 chanNum;
 
+	csl_dma_disable_axi_clk(pdma);
 	/* process the callback function */
 	for (chanNum = 0; chanNum < 1; chanNum++) {
 		if (pdma->chan[chanNum].irqStatus != 0) {

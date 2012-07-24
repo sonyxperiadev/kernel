@@ -311,6 +311,7 @@ extern "C" {
 	CHAL_DMA_VC4LITE_STATUS_t
 	    chal_dma_vc4lite_build_ctrlblk_list(CHAL_HANDLE handle,
 						cVoid * ctlBlkList,
+						cVoid * ctlBlkListPhys,
 						cUInt32 ctlBlkItemNum,
 						cUInt32 ctlBlkMemSize,
 						ChalDmaCtrlBlkInfo_t *
