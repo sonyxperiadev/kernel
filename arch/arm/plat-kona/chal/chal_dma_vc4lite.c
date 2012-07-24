@@ -276,10 +276,13 @@ CHAL_DMA_VC4LITE_STATUS_t chal_dma_vc4lite_prepare_transfer(CHAL_HANDLE handle,
 	/* enable the interrupt bit for the last control block */
 	if (pDmaDev->intEnableFlag[channel]) {
 		/* search to the last control block */
-		while (pCtrlBlkList->nextCtrlBlk)
-			pCtrlBlkList = phys_to_virt(
-			    (ChalDmaVc4liteCtrlBlk_t *) pCtrlBlkList->
-			    nextCtrlBlk);
+		while (pCtrlBlkList->nextCtrlBlk) {
+			int offset, nxtCtlBlrList;
+			offset = (int)pCtrlBlkList->nextCtrlBlk;
+			offset -= (int)ctrlBlkListPHYS;
+			nxtCtlBlrList = (int)ctrlBlkList + offset;
+			pCtrlBlkList = (ChalDmaVc4liteCtrlBlk_t *)nxtCtlBlrList;
+		}
 		pCtrlBlkList->intEnable = CHAL_DMA_VC4LITE_ENABLE;
 	}
 	mb();
@@ -553,6 +556,8 @@ CHAL_DMA_VC4LITE_STATUS_t
 					    handle,
 					    cVoid *
 					    ctlBlkList,
+					    cVoid *
+					    ctlBlkListPhys,
 					    cUInt32
 					    ctlBlkItemNum,
 					    cUInt32
@@ -562,6 +567,10 @@ CHAL_DMA_VC4LITE_STATUS_t
 {
 	ChalDmaVc4liteCtrlBlk_t *pCurCtrlBlk =
 	    (ChalDmaVc4liteCtrlBlk_t *) ((cUInt32) ctlBlkList +
+					 ctlBlkItemNum *
+					 sizeof(ChalDmaVc4liteCtrlBlk_t));
+	ChalDmaVc4liteCtrlBlk_t *pCurCtrlBlkPhys =
+	    (ChalDmaVc4liteCtrlBlk_t *) ((cUInt32) ctlBlkListPhys +
 					 ctlBlkItemNum *
 					 sizeof(ChalDmaVc4liteCtrlBlk_t));
 	ChalDmaVc4liteCtrlBlk_t *pPrvCtrlBlk;
@@ -671,7 +680,7 @@ CHAL_DMA_VC4LITE_STATUS_t
 						  1) *
 						 sizeof
 						 (ChalDmaVc4liteCtrlBlk_t));
-		pPrvCtrlBlk->nextCtrlBlk = (cUInt32)(virt_to_phys(pCurCtrlBlk));
+		pPrvCtrlBlk->nextCtrlBlk = (cUInt32)(pCurCtrlBlkPhys);
 	}
 
 	return CHAL_DMA_VC4LITE_STATUS_SUCCESS;
