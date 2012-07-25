@@ -25,6 +25,9 @@
 #include "../ion_priv.h"
 #include <linux/uaccess.h>
 #include <linux/mutex.h>
+#ifdef CONFIG_M4U
+#include <linux/broadcom/m4u.h>
+#endif
 
 /* NISHANTH_TODO: The following two structures should ideally be defined
  * in ion_priv.h for custom ioctls to use them.
@@ -126,12 +129,19 @@ static void kona_ion_release_buffer(struct ion_client *client, struct ion_buffer
 
 unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *handle)
 {
+	struct ion_buffer *buffer;
 	unsigned int dma_addr = 0;
 	struct sg_table *sg_table;
 
 	sg_table = ion_map_dma(client, handle);
-#if 1
-	/* NISH_TODO: Move to heap implementation and use sg_dma */
+#ifdef CONFIG_M4U
+	buffer = kona_ion_acquire_buffer(client, handle);
+	if (!buffer->dma_addr) {
+		buffer->dma_addr = m4u_map(g_mdev, sg_table, buffer->size, buffer->align);
+	}
+	dma_addr = buffer->dma_addr;
+	kona_ion_release_buffer(client, buffer);
+#else
 	/* Do not have IOMMU to map multiple scatterlist entries to contiguous dma address */
 	if (!IS_ERR_OR_NULL(sg_table) && (sg_table->nents == 1))
 		dma_addr = sg_phys(sg_table->sgl);

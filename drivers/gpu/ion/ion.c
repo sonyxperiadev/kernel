@@ -30,6 +30,9 @@
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
+#ifdef CONFIG_M4U
+#include <linux/broadcom/m4u.h>
+#endif
 
 #include "ion_priv.h"
 #define DEBUG
@@ -522,6 +525,10 @@ void ion_unmap_dma(struct ion_client *client, struct ion_handle *handle)
 	if (_ion_unmap(&buffer->dmap_cnt, &handle->dmap_cnt)) {
 		buffer->heap->ops->unmap_dma(buffer->heap, buffer);
 		buffer->sg_table = NULL;
+#ifdef CONFIG_M4U
+		m4u_unmap(g_mdev, buffer->dma_addr, buffer->size);
+		buffer->dma_addr = 0;
+#endif
 	}
 	mutex_unlock(&buffer->lock);
 	mutex_unlock(&client->lock);
