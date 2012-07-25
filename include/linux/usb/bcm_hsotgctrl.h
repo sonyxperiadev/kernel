@@ -12,6 +12,8 @@
 *  consent.
 *
 *****************************************************************************/
+#define BCM_HSOTGCTRL_WAKEUP_PROCESSING_DELAY 5
+
 struct bcm_hsotgctrl_platform_data {
 	unsigned long hsotgctrl_virtual_mem_base;
 	unsigned long chipreg_virtual_mem_base;
