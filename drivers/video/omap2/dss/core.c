@@ -50,7 +50,7 @@ module_param_named(def_disp, def_disp_name, charp, 0);
 MODULE_PARM_DESC(def_disp, "default display name");
 
 #ifdef DEBUG
-unsigned int dss_debug;
+bool dss_debug;
 module_param_named(debug, dss_debug, bool, 0644);
 #endif
 
@@ -145,6 +145,10 @@ static int dss_initialize_debugfs(void)
 	debugfs_create_file("venc", S_IRUGO, dss_debugfs_dir,
 			&venc_dump_regs, &dss_debug_fops);
 #endif
+#ifdef CONFIG_OMAP4_DSS_HDMI
+	debugfs_create_file("hdmi", S_IRUGO, dss_debugfs_dir,
+			&hdmi_dump_regs, &dss_debug_fops);
+#endif
 	return 0;
 }
 
@@ -174,47 +178,10 @@ static int omap_dss_probe(struct platform_device *pdev)
 
 	dss_features_init();
 
+	dss_apply_init();
+
 	dss_init_overlay_managers(pdev);
 	dss_init_overlays(pdev);
-
-	r = dss_init_platform_driver();
-	if (r) {
-		DSSERR("Failed to initialize DSS platform driver\n");
-		goto err_dss;
-	}
-
-	/* keep clocks enabled to prevent context saves/restores during init */
-	dss_clk_enable(DSS_CLK_ICK | DSS_CLK_FCK);
-
-	r = rfbi_init_platform_driver();
-	if (r) {
-		DSSERR("Failed to initialize rfbi platform driver\n");
-		goto err_rfbi;
-	}
-
-	r = dispc_init_platform_driver();
-	if (r) {
-		DSSERR("Failed to initialize dispc platform driver\n");
-		goto err_dispc;
-	}
-
-	r = venc_init_platform_driver();
-	if (r) {
-		DSSERR("Failed to initialize venc platform driver\n");
-		goto err_venc;
-	}
-
-	r = dsi_init_platform_driver();
-	if (r) {
-		DSSERR("Failed to initialize DSI platform driver\n");
-		goto err_dsi;
-	}
-
-	r = hdmi_init_platform_driver();
-	if (r) {
-		DSSERR("Failed to initialize hdmi\n");
-		goto err_hdmi;
-	}
 
 	r = dss_initialize_debugfs();
 	if (r)
@@ -238,25 +205,11 @@ static int omap_dss_probe(struct platform_device *pdev)
 			pdata->default_device = dssdev;
 	}
 
-	dss_clk_disable(DSS_CLK_ICK | DSS_CLK_FCK);
-
 	return 0;
 
 err_register:
 	dss_uninitialize_debugfs();
 err_debugfs:
-	hdmi_uninit_platform_driver();
-err_hdmi:
-	dsi_uninit_platform_driver();
-err_dsi:
-	venc_uninit_platform_driver();
-err_venc:
-	dispc_uninit_platform_driver();
-err_dispc:
-	rfbi_uninit_platform_driver();
-err_rfbi:
-	dss_uninit_platform_driver();
-err_dss:
 
 	return r;
 }
@@ -267,13 +220,6 @@ static int omap_dss_remove(struct platform_device *pdev)
 	int i;
 
 	dss_uninitialize_debugfs();
-
-	venc_uninit_platform_driver();
-	dispc_uninit_platform_driver();
-	rfbi_uninit_platform_driver();
-	dsi_uninit_platform_driver();
-	hdmi_uninit_platform_driver();
-	dss_uninit_platform_driver();
 
 	dss_uninit_overlays(pdev);
 	dss_uninit_overlay_managers(pdev);
@@ -524,6 +470,80 @@ static int omap_dss_bus_register(void)
 
 /* INIT */
 
+static int __init omap_dss_register_drivers(void)
+{
+	int r;
+
+	r = platform_driver_register(&omap_dss_driver);
+	if (r)
+		return r;
+
+	r = dss_init_platform_driver();
+	if (r) {
+		DSSERR("Failed to initialize DSS platform driver\n");
+		goto err_dss;
+	}
+
+	r = dispc_init_platform_driver();
+	if (r) {
+		DSSERR("Failed to initialize dispc platform driver\n");
+		goto err_dispc;
+	}
+
+	r = rfbi_init_platform_driver();
+	if (r) {
+		DSSERR("Failed to initialize rfbi platform driver\n");
+		goto err_rfbi;
+	}
+
+	r = venc_init_platform_driver();
+	if (r) {
+		DSSERR("Failed to initialize venc platform driver\n");
+		goto err_venc;
+	}
+
+	r = dsi_init_platform_driver();
+	if (r) {
+		DSSERR("Failed to initialize DSI platform driver\n");
+		goto err_dsi;
+	}
+
+	r = hdmi_init_platform_driver();
+	if (r) {
+		DSSERR("Failed to initialize hdmi\n");
+		goto err_hdmi;
+	}
+
+	return 0;
+
+err_hdmi:
+	dsi_uninit_platform_driver();
+err_dsi:
+	venc_uninit_platform_driver();
+err_venc:
+	rfbi_uninit_platform_driver();
+err_rfbi:
+	dispc_uninit_platform_driver();
+err_dispc:
+	dss_uninit_platform_driver();
+err_dss:
+	platform_driver_unregister(&omap_dss_driver);
+
+	return r;
+}
+
+static void __exit omap_dss_unregister_drivers(void)
+{
+	hdmi_uninit_platform_driver();
+	dsi_uninit_platform_driver();
+	venc_uninit_platform_driver();
+	rfbi_uninit_platform_driver();
+	dispc_uninit_platform_driver();
+	dss_uninit_platform_driver();
+
+	platform_driver_unregister(&omap_dss_driver);
+}
+
 #ifdef CONFIG_OMAP2_DSS_MODULE
 static void omap_dss_bus_unregister(void)
 {
@@ -540,7 +560,7 @@ static int __init omap_dss_init(void)
 	if (r)
 		return r;
 
-	r = platform_driver_register(&omap_dss_driver);
+	r = omap_dss_register_drivers();
 	if (r) {
 		omap_dss_bus_unregister();
 		return r;
@@ -561,7 +581,7 @@ static void __exit omap_dss_exit(void)
 		core.vdds_sdi_reg = NULL;
 	}
 
-	platform_driver_unregister(&omap_dss_driver);
+	omap_dss_unregister_drivers();
 
 	omap_dss_bus_unregister();
 }
@@ -576,7 +596,7 @@ static int __init omap_dss_init(void)
 
 static int __init omap_dss_init2(void)
 {
-	return platform_driver_register(&omap_dss_driver);
+	return omap_dss_register_drivers();
 }
 
 core_initcall(omap_dss_init);

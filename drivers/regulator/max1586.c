@@ -76,8 +76,8 @@ static int max1586_v3_set(struct regulator_dev *rdev, int min_uV, int max_uV,
 	if (min_uV < max1586->min_uV)
 		min_uV = max1586->min_uV;
 
-	*selector = ((min_uV - max1586->min_uV) * MAX1586_V3_MAX_VSEL +
-			range_uV - 1) / range_uV;
+	*selector = DIV_ROUND_UP((min_uV - max1586->min_uV) *
+				 MAX1586_V3_MAX_VSEL, range_uV);
 	if (max1586_v3_calc_voltage(max1586, *selector) > max_uV)
 		return -EINVAL;
 
@@ -214,7 +214,7 @@ static int __devinit max1586_pmic_probe(struct i2c_client *client,
 		}
 		rdev[i] = regulator_register(&max1586_reg[id], &client->dev,
 					     pdata->subdevs[i].platform_data,
-					     max1586);
+					     max1586, NULL);
 		if (IS_ERR(rdev[i])) {
 			ret = PTR_ERR(rdev[i]);
 			dev_err(&client->dev, "failed to register %s\n",

@@ -1,9 +1,9 @@
 /*
  * 802.1Q VLAN protocol definitions
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -23,7 +23,6 @@
  *
  * $Id: vlan.h,v 9.7 2009-03-13 01:11:50 $
  */
-
 
 #ifndef _vlan_h_
 #define _vlan_h_

@@ -13,8 +13,6 @@
 #define BITMAP_MAJOR_HI 4
 #define	BITMAP_MAJOR_HOSTENDIAN 3
 
-#define BITMAP_MINOR 39
-
 /*
  * in-memory bitmap:
  *
@@ -101,21 +99,7 @@ typedef __u16 bitmap_counter_t;
 /* same, except a mask value for more efficient bitops */
 #define PAGE_COUNTER_MASK  (PAGE_COUNTER_RATIO - 1)
 
-#define BITMAP_BLOCK_SIZE 512
 #define BITMAP_BLOCK_SHIFT 9
-
-/* how many blocks per chunk? (this is variable) */
-#define CHUNK_BLOCK_RATIO(bitmap) ((bitmap)->mddev->bitmap_info.chunksize >> BITMAP_BLOCK_SHIFT)
-#define CHUNK_BLOCK_SHIFT(bitmap) ((bitmap)->chunkshift - BITMAP_BLOCK_SHIFT)
-#define CHUNK_BLOCK_MASK(bitmap) (CHUNK_BLOCK_RATIO(bitmap) - 1)
-
-/* when hijacked, the counters and bits represent even larger "chunks" */
-/* there will be 1024 chunks represented by each counter in the page pointers */
-#define PAGEPTR_BLOCK_RATIO(bitmap) \
-			(CHUNK_BLOCK_RATIO(bitmap) << PAGE_COUNTER_SHIFT >> 1)
-#define PAGEPTR_BLOCK_SHIFT(bitmap) \
-			(CHUNK_BLOCK_SHIFT(bitmap) + PAGE_COUNTER_SHIFT - 1)
-#define PAGEPTR_BLOCK_MASK(bitmap) (PAGEPTR_BLOCK_RATIO(bitmap) - 1)
 
 #endif
 
@@ -181,22 +165,16 @@ struct bitmap_page {
 	unsigned int  count:31;
 };
 
-/* keep track of bitmap file pages that have pending writes on them */
-struct page_list {
-	struct list_head list;
-	struct page *page;
-};
-
 /* the main bitmap structure - one per mddev */
 struct bitmap {
 	struct bitmap_page *bp;
 	unsigned long pages; /* total number of pages in the bitmap */
 	unsigned long missing_pages; /* number of pages not yet allocated */
 
-	mddev_t *mddev; /* the md device that the bitmap is for */
+	struct mddev *mddev; /* the md device that the bitmap is for */
 
 	/* bitmap chunksize -- how much data does each bit represent? */
-	unsigned long chunkshift; /* chunksize = 2^chunkshift (for bitops) */
+	unsigned long chunkshift; /* chunksize = 2^(chunkshift+9) (for bitops) */
 	unsigned long chunks; /* total number of data chunks for the array */
 
 	__u64	events_cleared;
@@ -211,10 +189,6 @@ struct bitmap {
 	unsigned long *filemap_attr; /* attributes associated w/ filemap pages */
 	unsigned long file_pages; /* number of pages in the file */
 	int last_page_size; /* bytes in the last page */
-
-	unsigned long logattrs; /* used when filemap_attr doesn't exist
-				 * because we are working with a dirty_log
-				 */
 
 	unsigned long flags;
 
@@ -237,19 +211,19 @@ struct bitmap {
 	wait_queue_head_t behind_wait;
 
 	struct sysfs_dirent *sysfs_can_clear;
-
 };
 
 /* the bitmap API */
 
 /* these are used only by md/bitmap */
-int  bitmap_create(mddev_t *mddev);
-int bitmap_load(mddev_t *mddev);
-void bitmap_flush(mddev_t *mddev);
-void bitmap_destroy(mddev_t *mddev);
+int  bitmap_create(struct mddev *mddev);
+int bitmap_load(struct mddev *mddev);
+void bitmap_flush(struct mddev *mddev);
+void bitmap_destroy(struct mddev *mddev);
 
 void bitmap_print_sb(struct bitmap *bitmap);
 void bitmap_update_sb(struct bitmap *bitmap);
+void bitmap_status(struct seq_file *seq, struct bitmap *bitmap);
 
 int  bitmap_setallbits(struct bitmap *bitmap);
 void bitmap_write_all(struct bitmap *bitmap);
@@ -267,7 +241,7 @@ void bitmap_close_sync(struct bitmap *bitmap);
 void bitmap_cond_end_sync(struct bitmap *bitmap, sector_t sector);
 
 void bitmap_unplug(struct bitmap *bitmap);
-void bitmap_daemon_work(mddev_t *mddev);
+void bitmap_daemon_work(struct mddev *mddev);
 #endif
 
 #endif

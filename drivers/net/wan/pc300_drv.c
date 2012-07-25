@@ -212,6 +212,8 @@ static const char rcsid[] =
  *
  */
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
@@ -297,7 +299,6 @@ void cpc_tty_init(pc300dev_t * dev);
 void cpc_tty_unregister_service(pc300dev_t * pc300dev);
 void cpc_tty_receive(pc300dev_t * pc300dev);
 void cpc_tty_trigger_poll(pc300dev_t * pc300dev);
-void cpc_tty_reset_var(void);
 #endif
 
 /************************/
@@ -3230,7 +3231,7 @@ static void plx_init(pc300_t * card)
 
 }
 
-static inline void show_version(void)
+static void show_version(void)
 {
 	char *rcsvers, *rcsdate, *tmp;
 
@@ -3242,7 +3243,7 @@ static inline void show_version(void)
 	rcsdate++;
 	tmp = strrchr(rcsdate, ' ');
 	*tmp = '\0';
-	printk(KERN_INFO "Cyclades-PC300 driver %s %s\n", rcsvers, rcsdate);
+	pr_info("Cyclades-PC300 driver %s %s\n", rcsvers, rcsdate);
 }				/* show_version */
 
 static const struct net_device_ops cpc_netdev_ops = {
@@ -3411,18 +3412,9 @@ static void cpc_init_card(pc300_t * card)
 static int __devinit
 cpc_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
-	static int first_time = 1;
 	int err, eeprom_outdated = 0;
 	u16 device_id;
 	pc300_t *card;
-
-	if (first_time) {
-		first_time = 0;
-		show_version();
-#ifdef CONFIG_PC300_MLPPP
-		cpc_tty_reset_var();
-#endif
-	}
 
 	if ((err = pci_enable_device(pdev)) < 0)
 		return err;
@@ -3659,6 +3651,7 @@ static struct pci_driver cpc_driver = {
 
 static int __init cpc_init(void)
 {
+	show_version();
 	return pci_register_driver(&cpc_driver);
 }
 

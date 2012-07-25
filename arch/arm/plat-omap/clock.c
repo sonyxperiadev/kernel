@@ -14,12 +14,12 @@
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/errno.h>
+#include <linux/export.h>
 #include <linux/err.h>
 #include <linux/string.h>
 #include <linux/clk.h>
 #include <linux/mutex.h>
 #include <linux/cpufreq.h>
-#include <linux/debugfs.h>
 #include <linux/io.h>
 
 #include <plat/clock.h>
@@ -398,32 +398,6 @@ struct clk dummy_ck = {
 	.ops	= &clkops_null,
 };
 
-#ifdef CONFIG_CPU_FREQ
-void clk_init_cpufreq_table(struct cpufreq_frequency_table **table)
-{
-	unsigned long flags;
-
-	if (!arch_clock || !arch_clock->clk_init_cpufreq_table)
-		return;
-
-	spin_lock_irqsave(&clockfw_lock, flags);
-	arch_clock->clk_init_cpufreq_table(table);
-	spin_unlock_irqrestore(&clockfw_lock, flags);
-}
-
-void clk_exit_cpufreq_table(struct cpufreq_frequency_table **table)
-{
-	unsigned long flags;
-
-	if (!arch_clock || !arch_clock->clk_exit_cpufreq_table)
-		return;
-
-	spin_lock_irqsave(&clockfw_lock, flags);
-	arch_clock->clk_exit_cpufreq_table(table);
-	spin_unlock_irqrestore(&clockfw_lock, flags);
-}
-#endif
-
 /*
  *
  */
@@ -441,6 +415,8 @@ static int __init clk_disable_unused(void)
 		return 0;
 
 	pr_info("clock: disabling unused clocks to save power\n");
+
+	spin_lock_irqsave(&clockfw_lock, flags);
 	list_for_each_entry(ck, &clocks, node) {
 		if (ck->ops == &clkops_null)
 			continue;
@@ -448,10 +424,9 @@ static int __init clk_disable_unused(void)
 		if (ck->usecount > 0 || !ck->enable_reg)
 			continue;
 
-		spin_lock_irqsave(&clockfw_lock, flags);
 		arch_clock->clk_disable_unused(ck);
-		spin_unlock_irqrestore(&clockfw_lock, flags);
 	}
+	spin_unlock_irqrestore(&clockfw_lock, flags);
 
 	return 0;
 }
@@ -475,18 +450,48 @@ int __init clk_init(struct clk_functions * custom_clocks)
 /*
  *	debugfs support to trace clock tree hierarchy and attributes
  */
+
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+
 static struct dentry *clk_debugfs_root;
+
+static int clk_dbg_show_summary(struct seq_file *s, void *unused)
+{
+	struct clk *c;
+	struct clk *pa;
+
+	seq_printf(s, "%-30s %-30s %-10s %s\n",
+		"clock-name", "parent-name", "rate", "use-count");
+
+	list_for_each_entry(c, &clocks, node) {
+		pa = c->parent;
+		seq_printf(s, "%-30s %-30s %-10lu %d\n",
+			c->name, pa ? pa->name : "none", c->rate, c->usecount);
+	}
+
+	return 0;
+}
+
+static int clk_dbg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, clk_dbg_show_summary, inode->i_private);
+}
+
+static const struct file_operations debug_clock_fops = {
+	.open           = clk_dbg_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
 
 static int clk_debugfs_register_one(struct clk *c)
 {
 	int err;
-	struct dentry *d, *child, *child_tmp;
+	struct dentry *d;
 	struct clk *pa = c->parent;
-	char s[255];
-	char *p = s;
 
-	p += sprintf(p, "%s", c->name);
-	d = debugfs_create_dir(s, pa ? pa->dent : clk_debugfs_root);
+	d = debugfs_create_dir(c->name, pa ? pa->dent : clk_debugfs_root);
 	if (!d)
 		return -ENOMEM;
 	c->dent = d;
@@ -509,10 +514,7 @@ static int clk_debugfs_register_one(struct clk *c)
 	return 0;
 
 err_out:
-	d = c->dent;
-	list_for_each_entry_safe(child, child_tmp, &d->d_subdirs, d_u.d_child)
-		debugfs_remove(child);
-	debugfs_remove(c->dent);
+	debugfs_remove_recursive(c->dent);
 	return err;
 }
 
@@ -551,6 +553,12 @@ static int __init clk_debugfs_init(void)
 		if (err)
 			goto err_out;
 	}
+
+	d = debugfs_create_file("summary", S_IRUGO,
+		d, NULL, &debug_clock_fops);
+	if (!d)
+		return -ENOMEM;
+
 	return 0;
 err_out:
 	debugfs_remove_recursive(clk_debugfs_root);

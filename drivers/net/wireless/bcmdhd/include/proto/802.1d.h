@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -23,7 +23,6 @@
  *
  * $Id: 802.1d.h,v 9.3 2007-04-10 21:33:06 $
  */
-
 
 #ifndef _802_1_D_
 #define _802_1_D_

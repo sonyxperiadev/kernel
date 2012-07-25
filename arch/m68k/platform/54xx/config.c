@@ -13,72 +13,31 @@
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/mm.h>
+#include <linux/bootmem.h>
+#include <asm/pgalloc.h>
 #include <asm/machdep.h>
 #include <asm/coldfire.h>
 #include <asm/m54xxsim.h>
 #include <asm/mcfuart.h>
 #include <asm/m54xxgpt.h>
+#ifdef CONFIG_MMU
+#include <asm/mmu_context.h>
+#endif
 
 /***************************************************************************/
-
-static struct mcf_platform_uart m54xx_uart_platform[] = {
-	{
-		.mapbase	= MCF_MBAR + MCFUART_BASE1,
-		.irq		= 64 + 35,
-	},
-	{
-		.mapbase	= MCF_MBAR + MCFUART_BASE2,
-		.irq		= 64 + 34,
-	},
-	{
-		.mapbase	= MCF_MBAR + MCFUART_BASE3,
-		.irq		= 64 + 33,
-	},
-	{
-		.mapbase	= MCF_MBAR + MCFUART_BASE4,
-		.irq		= 64 + 32,
-	},
-};
-
-static struct platform_device m54xx_uart = {
-	.name			= "mcfuart",
-	.id			= 0,
-	.dev.platform_data	= m54xx_uart_platform,
-};
-
-static struct platform_device *m54xx_devices[] __initdata = {
-	&m54xx_uart,
-};
-
-
-/***************************************************************************/
-
-static void __init m54xx_uart_init_line(int line, int irq)
-{
-	int rts_cts;
-
-	/* enable io pins */
-	switch (line) {
-	case 0:
-		rts_cts = 0; break;
-	case 1:
-		rts_cts = MCF_PAR_PSC_RTS_RTS; break;
-	case 2:
-		rts_cts = MCF_PAR_PSC_RTS_RTS | MCF_PAR_PSC_CTS_CTS; break;
-	case 3:
-		rts_cts = 0; break;
-	}
-	__raw_writeb(MCF_PAR_PSC_TXD | rts_cts | MCF_PAR_PSC_RXD,
-						MCF_MBAR + MCF_PAR_PSC(line));
-}
 
 static void __init m54xx_uarts_init(void)
 {
-	const int nrlines = ARRAY_SIZE(m54xx_uart_platform);
-	int line;
-
-	for (line = 0; (line < nrlines); line++)
-		m54xx_uart_init_line(line, m54xx_uart_platform[line].irq);
+	/* enable io pins */
+	__raw_writeb(MCF_PAR_PSC_TXD | MCF_PAR_PSC_RXD,
+		MCF_MBAR + MCF_PAR_PSC(0));
+	__raw_writeb(MCF_PAR_PSC_TXD | MCF_PAR_PSC_RXD | MCF_PAR_PSC_RTS_RTS,
+		MCF_MBAR + MCF_PAR_PSC(1));
+	__raw_writeb(MCF_PAR_PSC_TXD | MCF_PAR_PSC_RXD | MCF_PAR_PSC_RTS_RTS |
+		MCF_PAR_PSC_CTS_CTS, MCF_MBAR + MCF_PAR_PSC(2));
+	__raw_writeb(MCF_PAR_PSC_TXD | MCF_PAR_PSC_RXD,
+		MCF_MBAR + MCF_PAR_PSC(3));
 }
 
 /***************************************************************************/
@@ -95,21 +54,52 @@ static void mcf54xx_reset(void)
 
 /***************************************************************************/
 
-void __init config_BSP(char *commandp, int size)
+#ifdef CONFIG_MMU
+
+unsigned long num_pages;
+
+static void __init mcf54xx_bootmem_alloc(void)
 {
-	mach_reset = mcf54xx_reset;
-	m54xx_uarts_init();
+	unsigned long start_pfn;
+	unsigned long memstart;
+
+	/* _rambase and _ramend will be naturally page aligned */
+	m68k_memory[0].addr = _rambase;
+	m68k_memory[0].size = _ramend - _rambase;
+
+	/* compute total pages in system */
+	num_pages = (_ramend - _rambase) >> PAGE_SHIFT;
+
+	/* page numbers */
+	memstart = PAGE_ALIGN(_ramstart);
+	min_low_pfn = _rambase >> PAGE_SHIFT;
+	start_pfn = memstart >> PAGE_SHIFT;
+	max_low_pfn = _ramend >> PAGE_SHIFT;
+	high_memory = (void *)_ramend;
+
+	m68k_virt_to_node_shift = fls(_ramend - _rambase - 1) - 6;
+	module_fixup(NULL, __start_fixup, __stop_fixup);
+
+	/* setup bootmem data */
+	m68k_setup_node(0);
+	memstart += init_bootmem_node(NODE_DATA(0), start_pfn,
+		min_low_pfn, max_low_pfn);
+	free_bootmem_node(NODE_DATA(0), memstart, _ramend - memstart);
 }
+
+#endif /* CONFIG_MMU */
 
 /***************************************************************************/
 
-static int __init init_BSP(void)
+void __init config_BSP(char *commandp, int size)
 {
-
-	platform_add_devices(m54xx_devices, ARRAY_SIZE(m54xx_devices));
-	return 0;
+#ifdef CONFIG_MMU
+	mcf54xx_bootmem_alloc();
+	mmu_context_init();
+#endif
+	mach_reset = mcf54xx_reset;
+	mach_sched_init = hw_timer_init;
+	m54xx_uarts_init();
 }
-
-arch_initcall(init_BSP);
 
 /***************************************************************************/

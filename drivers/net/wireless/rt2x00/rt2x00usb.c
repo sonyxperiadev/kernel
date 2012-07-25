@@ -298,11 +298,21 @@ static bool rt2x00usb_kick_tx_entry(struct queue_entry *entry, void* data)
 		return false;
 
 	/*
-	 * USB devices cannot blindly pass the skb->len as the
-	 * length of the data to usb_fill_bulk_urb. Pass the skb
-	 * to the driver to determine what the length should be.
+	 * USB devices require certain padding at the end of each frame
+	 * and urb. Those paddings are not included in skbs. Pass entry
+	 * to the driver to determine what the overall length should be.
 	 */
 	length = rt2x00dev->ops->lib->get_tx_data_len(entry);
+
+	status = skb_padto(entry->skb, length);
+	if (unlikely(status)) {
+		/* TODO: report something more appropriate than IO_FAILED. */
+		WARNING(rt2x00dev, "TX SKB padding error, out of memory\n");
+		set_bit(ENTRY_DATA_IO_FAILED, &entry->flags);
+		rt2x00lib_dmadone(entry);
+
+		return false;
+	}
 
 	usb_fill_bulk_urb(entry_priv->urb, usb_dev,
 			  usb_sndbulkpipe(usb_dev, entry->queue->usb_endpoint),
@@ -516,22 +526,6 @@ static void rt2x00usb_watchdog_tx_dma(struct data_queue *queue)
 	rt2x00queue_flush_queue(queue, true);
 }
 
-static void rt2x00usb_watchdog_tx_status(struct data_queue *queue)
-{
-	WARNING(queue->rt2x00dev, "TX queue %d status timed out,"
-		" invoke forced tx handler\n", queue->qid);
-
-	queue_work(queue->rt2x00dev->workqueue, &queue->rt2x00dev->txdone_work);
-}
-
-static int rt2x00usb_status_timeout(struct data_queue *queue)
-{
-	struct queue_entry *entry;
-
-	entry = rt2x00queue_get_entry(queue, Q_INDEX_DONE);
-	return rt2x00queue_status_timeout(entry);
-}
-
 static int rt2x00usb_dma_timeout(struct data_queue *queue)
 {
 	struct queue_entry *entry;
@@ -548,8 +542,6 @@ void rt2x00usb_watchdog(struct rt2x00_dev *rt2x00dev)
 		if (!rt2x00queue_empty(queue)) {
 			if (rt2x00usb_dma_timeout(queue))
 				rt2x00usb_watchdog_tx_dma(queue);
-			if (rt2x00usb_status_timeout(queue))
-				rt2x00usb_watchdog_tx_status(queue);
 		}
 	}
 }
@@ -799,6 +791,7 @@ int rt2x00usb_probe(struct usb_interface *usb_intf,
 	int retval;
 
 	usb_dev = usb_get_dev(usb_dev);
+	usb_reset_device(usb_dev);
 
 	hw = ieee80211_alloc_hw(sizeof(struct rt2x00_dev), ops->hw);
 	if (!hw) {
@@ -818,7 +811,8 @@ int rt2x00usb_probe(struct usb_interface *usb_intf,
 
 	INIT_WORK(&rt2x00dev->rxdone_work, rt2x00usb_work_rxdone);
 	INIT_WORK(&rt2x00dev->txdone_work, rt2x00usb_work_txdone);
-	init_timer(&rt2x00dev->txstatus_timer);
+	hrtimer_init(&rt2x00dev->txstatus_timer, CLOCK_MONOTONIC,
+		     HRTIMER_MODE_REL);
 
 	retval = rt2x00usb_alloc_reg(rt2x00dev);
 	if (retval)

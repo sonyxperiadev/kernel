@@ -546,24 +546,18 @@ static int nvt_set_tx_carrier(struct rc_dev *dev, u32 carrier)
  * number may larger than TXFCONT (0xff). So in interrupt_handler, it has to
  * set TXFCONT as 0xff, until buf_count less than 0xff.
  */
-static int nvt_tx_ir(struct rc_dev *dev, int *txbuf, u32 n)
+static int nvt_tx_ir(struct rc_dev *dev, unsigned *txbuf, unsigned n)
 {
 	struct nvt_dev *nvt = dev->priv;
 	unsigned long flags;
-	size_t cur_count;
 	unsigned int i;
 	u8 iren;
 	int ret;
 
 	spin_lock_irqsave(&nvt->tx.lock, flags);
 
-	if (n >= TX_BUF_LEN) {
-		nvt->tx.buf_count = cur_count = TX_BUF_LEN;
-		ret = TX_BUF_LEN;
-	} else {
-		nvt->tx.buf_count = cur_count = n;
-		ret = n;
-	}
+	ret = min((unsigned)(TX_BUF_LEN / sizeof(unsigned)), n);
+	nvt->tx.buf_count = (ret * sizeof(unsigned));
 
 	memcpy(nvt->tx.buf, txbuf, nvt->tx.buf_count);
 
@@ -1027,24 +1021,6 @@ static int nvt_probe(struct pnp_dev *pdev, const struct pnp_device_id *dev_id)
 	spin_lock_init(&nvt->nvt_lock);
 	spin_lock_init(&nvt->tx.lock);
 
-	ret = -EBUSY;
-	/* now claim resources */
-	if (!request_region(nvt->cir_addr,
-			    CIR_IOREG_LENGTH, NVT_DRIVER_NAME))
-		goto failure;
-
-	if (request_irq(nvt->cir_irq, nvt_cir_isr, IRQF_SHARED,
-			NVT_DRIVER_NAME, (void *)nvt))
-		goto failure;
-
-	if (!request_region(nvt->cir_wake_addr,
-			    CIR_IOREG_LENGTH, NVT_DRIVER_NAME))
-		goto failure;
-
-	if (request_irq(nvt->cir_wake_irq, nvt_cir_wake_isr, IRQF_SHARED,
-			NVT_DRIVER_NAME, (void *)nvt))
-		goto failure;
-
 	pnp_set_drvdata(pdev, nvt);
 	nvt->pdev = pdev;
 
@@ -1090,6 +1066,24 @@ static int nvt_probe(struct pnp_dev *pdev, const struct pnp_device_id *dev_id)
 	/* tx bits */
 	rdev->tx_resolution = XYZ;
 #endif
+
+	ret = -EBUSY;
+	/* now claim resources */
+	if (!request_region(nvt->cir_addr,
+			    CIR_IOREG_LENGTH, NVT_DRIVER_NAME))
+		goto failure;
+
+	if (request_irq(nvt->cir_irq, nvt_cir_isr, IRQF_SHARED,
+			NVT_DRIVER_NAME, (void *)nvt))
+		goto failure;
+
+	if (!request_region(nvt->cir_wake_addr,
+			    CIR_IOREG_LENGTH, NVT_DRIVER_NAME))
+		goto failure;
+
+	if (request_irq(nvt->cir_wake_irq, nvt_cir_wake_isr, IRQF_SHARED,
+			NVT_DRIVER_NAME, (void *)nvt))
+		goto failure;
 
 	ret = rc_register_device(rdev);
 	if (ret)

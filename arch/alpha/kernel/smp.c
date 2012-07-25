@@ -31,7 +31,7 @@
 
 #include <asm/hwrpb.h>
 #include <asm/ptrace.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 
 #include <asm/io.h>
 #include <asm/irq.h>
@@ -450,7 +450,7 @@ setup_smp(void)
 		smp_num_probed = 1;
 	}
 
-	printk(KERN_INFO "SMP: %d CPUs probed -- cpu_present_map = %lx\n",
+	printk(KERN_INFO "SMP: %d CPUs probed -- cpu_present_mask = %lx\n",
 	       smp_num_probed, cpumask_bits(cpu_present_mask)[0]);
 }
 

@@ -28,7 +28,7 @@ struct buffer_head *omfs_bread(struct super_block *sb, sector_t block)
 	return sb_bread(sb, clus_to_blk(sbi, block));
 }
 
-struct inode *omfs_new_inode(struct inode *dir, int mode)
+struct inode *omfs_new_inode(struct inode *dir, umode_t mode)
 {
 	struct inode *inode;
 	u64 new_block;
@@ -539,11 +539,9 @@ static int omfs_fill_super(struct super_block *sb, void *data, int silent)
 		goto out_brelse_bh2;
 	}
 
-	sb->s_root = d_alloc_root(root);
-	if (!sb->s_root) {
-		iput(root);
+	sb->s_root = d_make_root(root);
+	if (!sb->s_root)
 		goto out_brelse_bh2;
-	}
 	printk(KERN_DEBUG "omfs: Mounted volume %s\n", omfs_rb->r_name);
 
 	ret = 0;

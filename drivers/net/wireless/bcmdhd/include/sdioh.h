@@ -2,9 +2,9 @@
  * SDIO Host Controller Spec header file
  * Register map and definitions for the Standard Host Controller
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -71,7 +71,6 @@
 #define	SD_GPIO_Reg			0x100
 #define	SD_GPIO_OE			0x104
 #define	SD_GPIO_Enable			0x108
-
 
 /* SD specific registers in PCI config space */
 #define SD_SlotInfo	0x40

@@ -87,7 +87,6 @@ static int zylonite_wm9713_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_enable_pin(dapm, "Headphone");
 	snd_soc_dapm_enable_pin(dapm, "Headset Earpiece");
 
-	snd_soc_dapm_sync(dapm);
 	return 0;
 }
 
@@ -250,6 +249,7 @@ static int zylonite_resume_pre(struct snd_soc_card *card)
 
 static struct snd_soc_card zylonite = {
 	.name = "Zylonite",
+	.owner = THIS_MODULE,
 	.probe = &zylonite_probe,
 	.remove = &zylonite_remove,
 	.suspend_post = &zylonite_suspend_post,

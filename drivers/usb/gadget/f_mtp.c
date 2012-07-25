@@ -1071,7 +1071,7 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 		cdev->req->length = value;
 		rc = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
 		if (rc < 0)
-			ERROR(cdev, "%s setup response queue error\n", __func__);
+			ERROR(cdev, "%s: response queue error\n", __func__);
 	}
 	return value;
 }
@@ -1137,21 +1137,30 @@ static int mtp_function_set_alt(struct usb_function *f,
 	int ret;
 
 	DBG(cdev, "mtp_function_set_alt intf: %d alt: %d\n", intf, alt);
-	ret = usb_ep_enable(dev->ep_in,
-			ep_choose(cdev->gadget,
-				&mtp_highspeed_in_desc,
-				&mtp_fullspeed_in_desc));
+
+	ret = config_ep_by_speed(cdev->gadget, f, dev->ep_in);
 	if (ret)
 		return ret;
-	ret = usb_ep_enable(dev->ep_out,
-			ep_choose(cdev->gadget,
-				&mtp_highspeed_out_desc,
-				&mtp_fullspeed_out_desc));
+
+	ret = usb_ep_enable(dev->ep_in);
+	if (ret)
+		return ret;
+
+	ret = config_ep_by_speed(cdev->gadget, f, dev->ep_out);
+	if (ret)
+		return ret;
+
+	ret = usb_ep_enable(dev->ep_out);
 	if (ret) {
 		usb_ep_disable(dev->ep_in);
 		return ret;
 	}
-	ret = usb_ep_enable(dev->ep_intr, &mtp_intr_desc);
+
+	ret = config_ep_by_speed(cdev->gadget, f, dev->ep_intr);
+	if (ret)
+		return ret;
+
+	ret = usb_ep_enable(dev->ep_intr);
 	if (ret) {
 		usb_ep_disable(dev->ep_out);
 		usb_ep_disable(dev->ep_in);

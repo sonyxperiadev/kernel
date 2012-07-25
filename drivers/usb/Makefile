@@ -6,6 +6,10 @@
 
 obj-$(CONFIG_USB)		+= core/
 
+obj-$(CONFIG_USB_OTG_UTILS)	+= otg/
+
+obj-$(CONFIG_USB_DWC3)		+= dwc3/
+
 obj-$(CONFIG_USB_MON)		+= mon/
 
 obj-$(CONFIG_PCI)		+= host/
@@ -55,3 +59,5 @@ obj-$(CONFIG_USB_OTG_UTILS)	+= otg/
 obj-$(CONFIG_KONA_OTG_CP)       += otg/
 obj-$(CONFIG_USB_DWC_OTG)	+= otg/
 obj-$(CONFIG_USB_GADGET)	+= gadget/
+
+obj-$(CONFIG_USB_COMMON)	+= usb-common.o

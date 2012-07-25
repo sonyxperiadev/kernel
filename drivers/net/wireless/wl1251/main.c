@@ -479,6 +479,7 @@ static void wl1251_op_stop(struct ieee80211_hw *hw)
 	cancel_work_sync(&wl->irq_work);
 	cancel_work_sync(&wl->tx_work);
 	cancel_work_sync(&wl->filter_work);
+	cancel_delayed_work_sync(&wl->elp_work);
 
 	mutex_lock(&wl->mutex);
 
@@ -513,6 +514,9 @@ static int wl1251_op_add_interface(struct ieee80211_hw *hw,
 {
 	struct wl1251 *wl = hw->priv;
 	int ret = 0;
+
+	vif->driver_flags |= IEEE80211_VIF_BEACON_FILTER |
+			     IEEE80211_VIF_SUPPORTS_CQM_RSSI;
 
 	wl1251_debug(DEBUG_MAC80211, "mac80211 add interface type %d mac %pM",
 		     vif->type, vif->addr);
@@ -1158,7 +1162,8 @@ static struct ieee80211_channel wl1251_channels[] = {
 	{ .hw_value = 13, .center_freq = 2472},
 };
 
-static int wl1251_op_conf_tx(struct ieee80211_hw *hw, u16 queue,
+static int wl1251_op_conf_tx(struct ieee80211_hw *hw,
+			     struct ieee80211_vif *vif, u16 queue,
 			     const struct ieee80211_tx_queue_params *params)
 {
 	enum wl1251_acx_ps_scheme ps_scheme;
@@ -1337,9 +1342,7 @@ int wl1251_init_ieee80211(struct wl1251 *wl)
 
 	wl->hw->flags = IEEE80211_HW_SIGNAL_DBM |
 		IEEE80211_HW_SUPPORTS_PS |
-		IEEE80211_HW_BEACON_FILTER |
-		IEEE80211_HW_SUPPORTS_UAPSD |
-		IEEE80211_HW_SUPPORTS_CQM_RSSI;
+		IEEE80211_HW_SUPPORTS_UAPSD;
 
 	wl->hw->wiphy->interface_modes = BIT(NL80211_IFTYPE_STATION) |
 					 BIT(NL80211_IFTYPE_ADHOC);

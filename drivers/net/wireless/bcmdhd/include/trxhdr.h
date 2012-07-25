@@ -1,9 +1,9 @@
 /*
  * TRX image file header format.
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -24,8 +24,8 @@
  * $Id: trxhdr.h 275703 2011-08-04 20:20:27Z $
  */
 
-#ifndef	_TRX_HDR_H_
-#define	_TRX_HDR_H_
+#ifndef _TRX_HDR_H
+#define _TRX_HDR_H
 
 #include <typedefs.h>
 
@@ -49,4 +49,4 @@ struct trx_header {
 /* Compatibility */
 typedef struct trx_header TRXHDR, *PTRXHDR;
 
-#endif /* _TRX_HDR_H_ */
+#endif /* _TRX_HDR_H */

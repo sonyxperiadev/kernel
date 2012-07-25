@@ -64,12 +64,12 @@ int __init omap_init_opp_table(struct omap_opp_def *opp_def,
 		}
 		oh = omap_hwmod_lookup(opp_def->hwmod_name);
 		if (!oh || !oh->od) {
-			pr_warn("%s: no hwmod or odev for %s, [%d] "
+			pr_debug("%s: no hwmod or odev for %s, [%d] "
 				"cannot add OPPs.\n", __func__,
 				opp_def->hwmod_name, i);
-			return -EINVAL;
+			continue;
 		}
-		dev = &oh->od->pdev.dev;
+		dev = &oh->od->pdev->dev;
 
 		r = opp_add(dev, opp_def->freq, opp_def->u_volt);
 		if (r) {

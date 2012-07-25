@@ -7,7 +7,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-#include <linux/module.h>
+#include <linux/export.h>
 #include <linux/sched.h>
 #include <linux/string.h>
 #include <linux/cryptohash.h>
@@ -18,7 +18,6 @@
 #include <linux/io.h>
 
 #include <asm/checksum.h>
-#include <asm/system.h>
 #include <asm/ftrace.h>
 
 /*
@@ -50,9 +49,6 @@ extern void __aeabi_ldivmod(void);  // added for uldivmod in DWC OTG USB driver
 extern void __aeabi_uldivmod(void); // added for uldivmod in DWC OTG USB driver
 
 extern void fpundefinstr(void);
-
-
-EXPORT_SYMBOL(__backtrace);
 
 	/* platform dependent support */
 EXPORT_SYMBOL(__udelay);
@@ -113,9 +109,6 @@ EXPORT_SYMBOL(__put_user_2);
 EXPORT_SYMBOL(__put_user_4);
 EXPORT_SYMBOL(__put_user_8);
 #endif
-
-	/* crypto hash */
-EXPORT_SYMBOL(sha_transform);
 
 	/* gcc lib functions */
 EXPORT_SYMBOL(__ashldi3);

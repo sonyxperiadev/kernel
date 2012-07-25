@@ -51,7 +51,7 @@ DHDCFLAGS += -DSDIO_ISR_THREAD
 endif
 
 DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o   \
-	dhd_linux_sched.o bcmwifi.o dhd_sdio.o bcmevent.o dhd_bta.o hndpmu.o  \
+	dhd_linux_sched.o dhd_sdio.o bcmwifi_channels.o bcmevent.o hndpmu.o   \
 	bcmsdh.o dhd_cdc.o bcmsdh_linux.o dhd_common.o linux_osl.o            \
 	bcmsdh_sdmmc.o dhd_custom_gpio.o sbutils.o wldev_common.o wl_android.o \
 	dhd_cfg80211.o
@@ -63,7 +63,7 @@ obj-$(CONFIG_BCMDHD) += bcmdhd.o
 bcmdhd-objs += $(DHDOFILES)
 ifneq ($(CONFIG_WIRELESS_EXT),)
 bcmdhd-objs += wl_iw.o
-DHDCFLAGS += -DSOFTAP
+DHDCFLAGS += -DSOFTAP -DUSE_IW
 endif
 
 # Use CFG80211 for Android ICS only.

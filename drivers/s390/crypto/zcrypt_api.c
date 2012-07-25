@@ -36,7 +36,7 @@
 #include <linux/seq_file.h>
 #include <linux/compat.h>
 #include <linux/slab.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 #include <asm/uaccess.h>
 #include <linux/hw_random.h>
 
@@ -1220,7 +1220,5 @@ void zcrypt_api_exit(void)
 	misc_deregister(&zcrypt_misc_device);
 }
 
-#ifndef CONFIG_ZCRYPT_MONOLITHIC
 module_init(zcrypt_api_init);
 module_exit(zcrypt_api_exit);
-#endif

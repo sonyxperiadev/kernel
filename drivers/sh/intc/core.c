@@ -2,7 +2,7 @@
  * Shared interrupt handling code for IPR and INTC2 types of IRQs.
  *
  * Copyright (C) 2007, 2008 Magnus Damm
- * Copyright (C) 2009, 2010 Paul Mundt
+ * Copyright (C) 2009 - 2012 Paul Mundt
  *
  * Based on intc2.c and ipr.c
  *
@@ -22,25 +22,28 @@
 #include <linux/irq.h>
 #include <linux/io.h>
 #include <linux/slab.h>
+#include <linux/stat.h>
 #include <linux/interrupt.h>
 #include <linux/sh_intc.h>
-#include <linux/sysdev.h>
+#include <linux/device.h>
 #include <linux/syscore_ops.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
 #include <linux/radix-tree.h>
+#include <linux/export.h>
+#include <linux/sort.h>
 #include "internals.h"
 
 LIST_HEAD(intc_list);
 DEFINE_RAW_SPINLOCK(intc_big_lock);
-unsigned int nr_intc_controllers;
+static unsigned int nr_intc_controllers;
 
 /*
  * Default priority level
  * - this needs to be at least 2 for 5-bit priorities on 7780
  */
 static unsigned int default_prio_level = 2;	/* 2 - 16 */
-static unsigned int intc_prio_level[NR_IRQS];	/* for now */
+static unsigned int intc_prio_level[INTC_NR_IRQS];	/* for now */
 
 unsigned int intc_get_dfl_prio_level(void)
 {
@@ -265,6 +268,9 @@ int __init register_intc_controller(struct intc_desc *desc)
 			k += save_reg(d, k, hw->prio_regs[i].set_reg, smp);
 			k += save_reg(d, k, hw->prio_regs[i].clr_reg, smp);
 		}
+
+		sort(d->prio, hw->nr_prio_regs, sizeof(*d->prio),
+		     intc_handle_int_cmp, NULL);
 	}
 
 	if (hw->sense_regs) {
@@ -275,6 +281,9 @@ int __init register_intc_controller(struct intc_desc *desc)
 
 		for (i = 0; i < hw->nr_sense_regs; i++)
 			k += save_reg(d, k, hw->sense_regs[i].reg, 0);
+
+		sort(d->sense, hw->nr_sense_regs, sizeof(*d->sense),
+		     intc_handle_int_cmp, NULL);
 	}
 
 	if (hw->subgroups)
@@ -352,6 +361,8 @@ int __init register_intc_controller(struct intc_desc *desc)
 	if (desc->force_enable)
 		intc_enable_disable_enum(desc, d, desc->force_enable, 1);
 
+	d->skip_suspend = desc->skip_syscore_suspend;
+
 	nr_intc_controllers++;
 
 	return 0;
@@ -384,6 +395,9 @@ static int intc_suspend(void)
 	list_for_each_entry(d, &intc_list, list) {
 		int irq;
 
+		if (d->skip_suspend)
+			continue;
+
 		/* enable wakeup irqs belonging to this intc controller */
 		for_each_active_irq(irq) {
 			struct irq_data *data;
@@ -406,6 +420,9 @@ static void intc_resume(void)
 
 	list_for_each_entry(d, &intc_list, list) {
 		int irq;
+
+		if (d->skip_suspend)
+			continue;
 
 		for_each_active_irq(irq) {
 			struct irq_data *data;
@@ -432,46 +449,47 @@ struct syscore_ops intc_syscore_ops = {
 	.resume		= intc_resume,
 };
 
-struct sysdev_class intc_sysdev_class = {
+struct bus_type intc_subsys = {
 	.name		= "intc",
+	.dev_name	= "intc",
 };
 
 static ssize_t
-show_intc_name(struct sys_device *dev, struct sysdev_attribute *attr, char *buf)
+show_intc_name(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct intc_desc_int *d;
 
-	d = container_of(dev, struct intc_desc_int, sysdev);
+	d = container_of(dev, struct intc_desc_int, dev);
 
 	return sprintf(buf, "%s\n", d->chip.name);
 }
 
-static SYSDEV_ATTR(name, S_IRUGO, show_intc_name, NULL);
+static DEVICE_ATTR(name, S_IRUGO, show_intc_name, NULL);
 
-static int __init register_intc_sysdevs(void)
+static int __init register_intc_devs(void)
 {
 	struct intc_desc_int *d;
 	int error;
 
 	register_syscore_ops(&intc_syscore_ops);
 
-	error = sysdev_class_register(&intc_sysdev_class);
+	error = subsys_system_register(&intc_subsys, NULL);
 	if (!error) {
 		list_for_each_entry(d, &intc_list, list) {
-			d->sysdev.id = d->index;
-			d->sysdev.cls = &intc_sysdev_class;
-			error = sysdev_register(&d->sysdev);
+			d->dev.id = d->index;
+			d->dev.bus = &intc_subsys;
+			error = device_register(&d->dev);
 			if (error == 0)
-				error = sysdev_create_file(&d->sysdev,
-							   &attr_name);
+				error = device_create_file(&d->dev,
+							   &dev_attr_name);
 			if (error)
 				break;
 		}
 	}
 
 	if (error)
-		pr_err("sysdev registration error\n");
+		pr_err("device registration error\n");
 
 	return error;
 }
-device_initcall(register_intc_sysdevs);
+device_initcall(register_intc_devs);

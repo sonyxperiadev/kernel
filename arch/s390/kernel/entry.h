@@ -4,13 +4,28 @@
 #include <linux/types.h>
 #include <linux/signal.h>
 #include <asm/ptrace.h>
+#include <asm/cputime.h>
+#include <asm/timer.h>
 
-typedef void pgm_check_handler_t(struct pt_regs *, long, unsigned long);
-extern pgm_check_handler_t *pgm_check_table[128];
-pgm_check_handler_t do_protection_exception;
-pgm_check_handler_t do_dat_exception;
+extern void (*pgm_check_table[128])(struct pt_regs *);
+extern void *restart_stack;
 
-extern int sysctl_userprocess_debug;
+void system_call(void);
+void pgm_check_handler(void);
+void ext_int_handler(void);
+void io_int_handler(void);
+void mcck_int_handler(void);
+void restart_int_handler(void);
+void restart_call_handler(void);
+void psw_idle(struct s390_idle_data *, struct vtimer_queue *,
+	      unsigned long, int);
+
+asmlinkage long do_syscall_trace_enter(struct pt_regs *regs);
+asmlinkage void do_syscall_trace_exit(struct pt_regs *regs);
+
+void do_protection_exception(struct pt_regs *regs);
+void do_dat_exception(struct pt_regs *regs);
+void do_asce_exception(struct pt_regs *regs);
 
 void do_per_trap(struct pt_regs *regs);
 void syscall_trace(struct pt_regs *regs, int entryexit);
@@ -18,11 +33,15 @@ void kernel_stack_overflow(struct pt_regs * regs);
 void do_signal(struct pt_regs *regs);
 int handle_signal32(unsigned long sig, struct k_sigaction *ka,
 		    siginfo_t *info, sigset_t *oldset, struct pt_regs *regs);
+void do_notify_resume(struct pt_regs *regs);
 
-void do_extint(struct pt_regs *regs, unsigned int, unsigned int, unsigned long);
-int __cpuinit start_secondary(void *cpuvoid);
+struct ext_code;
+void do_extint(struct pt_regs *regs, struct ext_code, unsigned int, unsigned long);
+void do_restart(void);
 void __init startup_init(void);
-void die(const char * str, struct pt_regs * regs, long err);
+void die(struct pt_regs *regs, const char *str);
+
+void __init time_init(void);
 
 struct s390_mmap_arg_struct;
 struct fadvise64_64_args;

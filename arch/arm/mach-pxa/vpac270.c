@@ -395,8 +395,8 @@ static struct resource vpac270_dm9000_resources[] = {
 		.flags	= IORESOURCE_MEM,
 	},
 	[2] = {
-		.start	= IRQ_GPIO(GPIO114_VPAC270_ETH_IRQ),
-		.end	= IRQ_GPIO(GPIO114_VPAC270_ETH_IRQ),
+		.start	= PXA_GPIO_TO_IRQ(GPIO114_VPAC270_ETH_IRQ),
+		.end	= PXA_GPIO_TO_IRQ(GPIO114_VPAC270_ETH_IRQ),
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
 	},
 };
@@ -433,7 +433,7 @@ static pxa2xx_audio_ops_t vpac270_ac97_pdata = {
 };
 
 static struct ucb1400_pdata vpac270_ucb1400_pdata = {
-	.irq		= IRQ_GPIO(GPIO113_VPAC270_TS_IRQ),
+	.irq		= PXA_GPIO_TO_IRQ(GPIO113_VPAC270_TS_IRQ),
 };
 
 static struct platform_device vpac270_ucb1400_device = {
@@ -610,8 +610,8 @@ static struct resource vpac270_ide_resources[] = {
 	       .flags	= IORESOURCE_DMA
 	},
 	[3] = {	/* IDE IRQ pin */
-	       .start	= gpio_to_irq(GPIO36_VPAC270_IDE_IRQ),
-	       .end	= gpio_to_irq(GPIO36_VPAC270_IDE_IRQ),
+	       .start	= PXA_GPIO_TO_IRQ(GPIO36_VPAC270_IDE_IRQ),
+	       .end	= PXA_GPIO_TO_IRQ(GPIO36_VPAC270_IDE_IRQ),
 	       .flags	= IORESOURCE_IRQ
 	}
 };
@@ -716,9 +716,12 @@ static void __init vpac270_init(void)
 }
 
 MACHINE_START(VPAC270, "Voipac PXA270")
-	.boot_params	= 0xa0000100,
+	.atag_offset	= 0x100,
 	.map_io		= pxa27x_map_io,
+	.nr_irqs	= PXA_NR_IRQS,
 	.init_irq	= pxa27x_init_irq,
+	.handle_irq	= pxa27x_handle_irq,
 	.timer		= &pxa_timer,
-	.init_machine	= vpac270_init
+	.init_machine	= vpac270_init,
+	.restart	= pxa_restart,
 MACHINE_END

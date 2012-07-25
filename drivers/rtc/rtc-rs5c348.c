@@ -23,6 +23,7 @@
 #include <linux/rtc.h>
 #include <linux/workqueue.h>
 #include <linux/spi/spi.h>
+#include <linux/module.h>
 
 #define DRV_VERSION "0.2"
 
@@ -228,25 +229,13 @@ static int __devexit rs5c348_remove(struct spi_device *spi)
 static struct spi_driver rs5c348_driver = {
 	.driver = {
 		.name	= "rtc-rs5c348",
-		.bus	= &spi_bus_type,
 		.owner	= THIS_MODULE,
 	},
 	.probe	= rs5c348_probe,
 	.remove	= __devexit_p(rs5c348_remove),
 };
 
-static __init int rs5c348_init(void)
-{
-	return spi_register_driver(&rs5c348_driver);
-}
-
-static __exit void rs5c348_exit(void)
-{
-	spi_unregister_driver(&rs5c348_driver);
-}
-
-module_init(rs5c348_init);
-module_exit(rs5c348_exit);
+module_spi_driver(rs5c348_driver);
 
 MODULE_AUTHOR("Atsushi Nemoto <anemo@mba.ocn.ne.jp>");
 MODULE_DESCRIPTION("Ricoh RS5C348 RTC driver");

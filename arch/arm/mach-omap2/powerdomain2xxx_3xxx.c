@@ -1,7 +1,7 @@
 /*
  * OMAP2 and OMAP3 powerdomain control
  *
- * Copyright (C) 2009-2010 Texas Instruments, Inc.
+ * Copyright (C) 2009-2011 Texas Instruments, Inc.
  * Copyright (C) 2007-2009 Nokia Corporation
  *
  * Derived from mach-omap2/powerdomain.c written by Paul Walmsley
@@ -15,6 +15,7 @@
 #include <linux/io.h>
 #include <linux/errno.h>
 #include <linux/delay.h>
+#include <linux/bug.h>
 
 #include <plat/prcm.h>
 

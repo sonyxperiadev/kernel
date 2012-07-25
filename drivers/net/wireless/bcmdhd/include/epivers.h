@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -23,13 +23,12 @@
  *
 */
 
-
 #ifndef _epivers_h_
 #define _epivers_h_
 
-#define	EPI_MAJOR_VERSION	5
+#define	EPI_MAJOR_VERSION	1
 
-#define	EPI_MINOR_VERSION	90
+#define	EPI_MINOR_VERSION	27
 
 #define	EPI_RC_NUMBER		125
 

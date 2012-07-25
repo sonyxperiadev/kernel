@@ -1695,14 +1695,17 @@ static int tvaudio_s_ctrl(struct v4l2_subdev *sd,
 	case V4L2_CID_AUDIO_BALANCE:
 	{
 		int volume, balance;
+
 		if (!(desc->flags & CHIP_HAS_VOLUME))
 			break;
 
-		volume = max(chip->left,chip->right);
+		volume = max(chip->left, chip->right);
 		balance = ctrl->value;
+		chip->left = (min(65536 - balance, 32768) * volume) / 32768;
+		chip->right = (min(balance, volume * (__u16)32768)) / 32768;
 
-		chip_write(chip,desc->leftreg,desc->volfunc(chip->left));
-		chip_write(chip,desc->rightreg,desc->volfunc(chip->right));
+		chip_write(chip, desc->leftreg, desc->volfunc(chip->left));
+		chip_write(chip, desc->rightreg, desc->volfunc(chip->right));
 
 		return 0;
 	}
@@ -2075,15 +2078,4 @@ static struct i2c_driver tvaudio_driver = {
 	.id_table	= tvaudio_id,
 };
 
-static __init int init_tvaudio(void)
-{
-	return i2c_add_driver(&tvaudio_driver);
-}
-
-static __exit void exit_tvaudio(void)
-{
-	i2c_del_driver(&tvaudio_driver);
-}
-
-module_init(init_tvaudio);
-module_exit(exit_tvaudio);
+module_i2c_driver(tvaudio_driver);

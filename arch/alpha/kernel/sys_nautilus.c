@@ -35,7 +35,6 @@
 #include <linux/bitops.h>
 
 #include <asm/ptrace.h>
-#include <asm/system.h>
 #include <asm/dma.h>
 #include <asm/irq.h>
 #include <asm/mmu_context.h>
@@ -65,7 +64,7 @@ nautilus_init_irq(void)
 }
 
 static int __init
-nautilus_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
+nautilus_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 {
 	/* Preserve the IRQ set up by the console.  */
 

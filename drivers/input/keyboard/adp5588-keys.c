@@ -9,7 +9,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/version.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
@@ -551,7 +550,7 @@ static int __devinit adp5588_probe(struct i2c_client *client,
 	}
 
 	error = request_irq(client->irq, adp5588_irq,
-			    IRQF_TRIGGER_FALLING | IRQF_DISABLED,
+			    IRQF_TRIGGER_FALLING,
 			    client->dev.driver->name, kpad);
 	if (error) {
 		dev_err(&client->dev, "irq %d busy?\n", client->irq);
@@ -654,19 +653,8 @@ static struct i2c_driver adp5588_driver = {
 	.id_table = adp5588_id,
 };
 
-static int __init adp5588_init(void)
-{
-	return i2c_add_driver(&adp5588_driver);
-}
-module_init(adp5588_init);
-
-static void __exit adp5588_exit(void)
-{
-	i2c_del_driver(&adp5588_driver);
-}
-module_exit(adp5588_exit);
+module_i2c_driver(adp5588_driver);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Michael Hennerich <hennerich@blackfin.uclinux.org>");
 MODULE_DESCRIPTION("ADP5588/87 Keypad driver");
-MODULE_ALIAS("platform:adp5588-keys");

@@ -25,7 +25,7 @@
 #include <linux/module.h>
 
 #include <asm/proc-fns.h>
-#include <asm/system.h>
+#include <asm/system_misc.h>
 
 #include <mach/mxs.h>
 #include <mach/common.h>
@@ -37,12 +37,14 @@
 #define MXS_MODULE_CLKGATE		(1 << 30)
 #define MXS_MODULE_SFTRST		(1 << 31)
 
+#define CLKCTRL_TIMEOUT		10	/* 10 ms */
+
 static void __iomem *mxs_clkctrl_reset_addr;
 
 /*
  * Reset the system. It is called by machine_restart().
  */
-void arch_reset(char mode, const char *cmd)
+void mxs_restart(char mode, const char *cmd)
 {
 	/* reset the chip */
 	__mxs_setl(MXS_CLKCTRL_RESET_CHIP, mxs_clkctrl_reset_addr);
@@ -53,7 +55,7 @@ void arch_reset(char mode, const char *cmd)
 	mdelay(50);
 
 	/* We'll take a jump through zero as a poor second */
-	cpu_reset(0);
+	soft_restart(0);
 }
 
 static int __init mxs_arch_reset_init(void)
@@ -66,7 +68,7 @@ static int __init mxs_arch_reset_init(void)
 
 	clk = clk_get_sys("rtc", NULL);
 	if (!IS_ERR(clk))
-		clk_enable(clk);
+		clk_prepare_enable(clk);
 
 	return 0;
 }
@@ -137,3 +139,17 @@ error:
 	return -ETIMEDOUT;
 }
 EXPORT_SYMBOL(mxs_reset_block);
+
+int mxs_clkctrl_timeout(unsigned int reg_offset, unsigned int mask)
+{
+	unsigned long timeout = jiffies + msecs_to_jiffies(CLKCTRL_TIMEOUT);
+	while (readl_relaxed(MXS_IO_ADDRESS(MXS_CLKCTRL_BASE_ADDR)
+						+ reg_offset) & mask) {
+		if (time_after(jiffies, timeout)) {
+			pr_err("Timeout at CLKCTRL + 0x%x\n", reg_offset);
+			return -ETIMEDOUT;
+		}
+	}
+
+	return 0;
+}

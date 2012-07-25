@@ -1,9 +1,9 @@
 /*
  * bcmevent read-only data shared by kernel or app layers
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -83,7 +83,9 @@ const bcmevent_name_t bcmevent_names[] = {
 	{ WLC_E_UNICAST_DECODE_ERROR, "UNICAST_DECODE_ERROR" },
 	{ WLC_E_MULTICAST_DECODE_ERROR, "MULTICAST_DECODE_ERROR" },
 	{ WLC_E_TRACE, "TRACE" },
+#ifdef WLBTAMP
 	{ WLC_E_BTA_HCI_EVENT, "BTA_HCI_EVENT" },
+#endif
 	{ WLC_E_IF, "IF" },
 #ifdef WLP2P
 	{ WLC_E_P2P_DISC_LISTEN_COMPLETE, "WLC_E_P2P_DISC_LISTEN_COMPLETE" },
@@ -116,7 +118,7 @@ const bcmevent_name_t bcmevent_names[] = {
 	{ WLC_E_HTSFSYNC, "HTSF_SYNC_EVENT" },
 #endif
 	{ WLC_E_OVERLAY_REQ, "OVERLAY_REQ_EVENT" },
-	{ WLC_E_CSA_COMPLETE_IND, "WLC_E_CSA_COMPLETE_IND" },
+	{ WLC_E_CSA_COMPLETE_IND, "WLC_E_CSA_COMPLETE_IND"},
 	{ WLC_E_EXCESS_PM_WAKE_EVENT, "EXCESS_PM_WAKE_EVENT" },
 	{ WLC_E_PFN_SCAN_NONE, "PFN_SCAN_NONE" },
 	{ WLC_E_PFN_SCAN_ALLGONE, "PFN_SCAN_ALLGONE" },
@@ -124,6 +126,5 @@ const bcmevent_name_t bcmevent_names[] = {
 	{ WLC_E_GTK_PLUMBED, "GTK_PLUMBED" }
 #endif
 };
-
 
 const int bcmevent_names_size = ARRAYSIZE(bcmevent_names);

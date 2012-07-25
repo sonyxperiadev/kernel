@@ -264,7 +264,7 @@ void *trace_seq_reserve(struct trace_seq *s, size_t len)
 	return ret;
 }
 
-int trace_seq_path(struct trace_seq *s, struct path *path)
+int trace_seq_path(struct trace_seq *s, const struct path *path)
 {
 	unsigned char *p;
 
@@ -300,7 +300,7 @@ ftrace_print_flags_seq(struct trace_seq *p, const char *delim,
 	unsigned long mask;
 	const char *str;
 	const char *ret = p->buffer + p->len;
-	int i;
+	int i, first = 1;
 
 	for (i = 0;  flag_array[i].name && flags; i++) {
 
@@ -310,14 +310,16 @@ ftrace_print_flags_seq(struct trace_seq *p, const char *delim,
 
 		str = flag_array[i].name;
 		flags &= ~mask;
-		if (p->len && delim)
+		if (!first && delim)
 			trace_seq_puts(p, delim);
+		else
+			first = 0;
 		trace_seq_puts(p, str);
 	}
 
 	/* check for left over flags */
 	if (flags) {
-		if (p->len && delim)
+		if (!first && delim)
 			trace_seq_puts(p, delim);
 		trace_seq_printf(p, "0x%lx", flags);
 	}
@@ -344,7 +346,7 @@ ftrace_print_symbols_seq(struct trace_seq *p, unsigned long val,
 		break;
 	}
 
-	if (!p->len)
+	if (ret == (const char *)(p->buffer + p->len))
 		trace_seq_printf(p, "0x%lx", val);
 		
 	trace_seq_putc(p, 0);
@@ -370,7 +372,7 @@ ftrace_print_symbols_seq_u64(struct trace_seq *p, unsigned long long val,
 		break;
 	}
 
-	if (!p->len)
+	if (ret == (const char *)(p->buffer + p->len))
 		trace_seq_printf(p, "0x%llx", val);
 
 	trace_seq_putc(p, 0);
@@ -627,17 +629,31 @@ int trace_print_context(struct trace_iterator *iter)
 	unsigned long usec_rem = do_div(t, USEC_PER_SEC);
 	unsigned long secs = (unsigned long)t;
 	char comm[TASK_COMM_LEN];
+	int ret;
 
 	trace_find_cmdline(entry->pid, comm);
 
-	return trace_seq_printf(s, "%16s-%-5d [%03d] %5lu.%06lu: ",
-				comm, entry->pid, iter->cpu, secs, usec_rem);
+	ret = trace_seq_printf(s, "%16s-%-5d [%03d] ",
+			       comm, entry->pid, iter->cpu);
+	if (!ret)
+		return 0;
+
+	if (trace_flags & TRACE_ITER_IRQ_INFO) {
+		ret = trace_print_lat_fmt(s, entry);
+		if (!ret)
+			return 0;
+	}
+
+	return trace_seq_printf(s, " %5lu.%06lu: ",
+				secs, usec_rem);
 }
 
 int trace_print_lat_context(struct trace_iterator *iter)
 {
 	u64 next_ts;
 	int ret;
+	/* trace_find_next_entry will reset ent_size */
+	int ent_size = iter->ent_size;
 	struct trace_seq *s = &iter->seq;
 	struct trace_entry *entry = iter->ent,
 			   *next_entry = trace_find_next_entry(iter, NULL,
@@ -645,6 +661,9 @@ int trace_print_lat_context(struct trace_iterator *iter)
 	unsigned long verbose = (trace_flags & TRACE_ITER_VERBOSE);
 	unsigned long abs_usecs = ns2usecs(iter->ts - iter->tr->time_start);
 	unsigned long rel_usecs;
+
+	/* Restore the original ent_size */
+	iter->ent_size = ent_size;
 
 	if (!next_entry)
 		next_ts = iter->ts;
@@ -1107,19 +1126,20 @@ static enum print_line_t trace_stack_print(struct trace_iterator *iter,
 {
 	struct stack_entry *field;
 	struct trace_seq *s = &iter->seq;
-	int i;
+	unsigned long *p;
+	unsigned long *end;
 
 	trace_assign_type(field, iter->ent);
+	end = (unsigned long *)((long)iter->ent + iter->ent_size);
 
 	if (!trace_seq_puts(s, "<stack trace>\n"))
 		goto partial;
-	for (i = 0; i < FTRACE_STACK_ENTRIES; i++) {
-		if (!field->caller[i] || (field->caller[i] == ULONG_MAX))
-			break;
+
+	for (p = field->caller; p && *p != ULONG_MAX && p < end; p++) {
 		if (!trace_seq_puts(s, " => "))
 			goto partial;
 
-		if (!seq_print_ip_sym(s, field->caller[i], flags))
+		if (!seq_print_ip_sym(s, *p, flags))
 			goto partial;
 		if (!trace_seq_puts(s, "\n"))
 			goto partial;

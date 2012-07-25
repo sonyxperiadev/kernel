@@ -17,7 +17,6 @@
 #include <asm/cpm2.h>
 #include <asm/io.h>
 #include <asm/pci-bridge.h>
-#include <asm/system.h>
 
 #include <platforms/82xx/pq2.h>
 
@@ -53,7 +52,7 @@ static void __init pq2_pci_add_bridge(struct device_node *np)
 	if (of_address_to_resource(np, 0, &r) || r.end - r.start < 0x10b)
 		goto err;
 
-	ppc_pci_add_flags(PPC_PCI_REASSIGN_ALL_BUS);
+	pci_add_flags(PCI_REASSIGN_ALL_BUS);
 
 	hose = pcibios_alloc_controller(np);
 	if (!hose)

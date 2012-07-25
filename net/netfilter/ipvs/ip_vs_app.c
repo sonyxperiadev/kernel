@@ -31,7 +31,6 @@
 #include <net/net_namespace.h>
 #include <net/protocol.h>
 #include <net/tcp.h>
-#include <asm/system.h>
 #include <linux/stat.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
@@ -576,7 +575,7 @@ static const struct file_operations ip_vs_app_fops = {
 };
 #endif
 
-int __net_init __ip_vs_app_init(struct net *net)
+int __net_init ip_vs_app_net_init(struct net *net)
 {
 	struct netns_ipvs *ipvs = net_ipvs(net);
 
@@ -585,17 +584,7 @@ int __net_init __ip_vs_app_init(struct net *net)
 	return 0;
 }
 
-void __net_exit __ip_vs_app_cleanup(struct net *net)
+void __net_exit ip_vs_app_net_cleanup(struct net *net)
 {
 	proc_net_remove(net, "ip_vs_app");
-}
-
-int __init ip_vs_app_init(void)
-{
-	return 0;
-}
-
-
-void ip_vs_app_cleanup(void)
-{
 }

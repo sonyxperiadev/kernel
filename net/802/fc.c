@@ -11,7 +11,6 @@
  */
 
 #include <asm/uaccess.h>
-#include <asm/system.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
@@ -27,6 +26,7 @@
 #include <linux/net.h>
 #include <linux/proc_fs.h>
 #include <linux/init.h>
+#include <linux/export.h>
 #include <net/arp.h>
 
 /*

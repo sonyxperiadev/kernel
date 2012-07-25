@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 B.A.T.M.A.N. contributors:
+ * Copyright (C) 2009-2012 B.A.T.M.A.N. contributors:
  *
  * Marek Lindner, Simon Wunderlich
  *
@@ -35,6 +35,14 @@ static void start_purge_timer(struct bat_priv *bat_priv)
 {
 	INIT_DELAYED_WORK(&bat_priv->orig_work, purge_orig);
 	queue_delayed_work(bat_event_workqueue, &bat_priv->orig_work, 1 * HZ);
+}
+
+/* returns 1 if they are the same originator */
+static int compare_orig(const struct hlist_node *node, const void *data2)
+{
+	const void *data1 = container_of(node, struct orig_node, hash_entry);
+
+	return (memcmp(data1, data2, ETH_ALEN) == 0 ? 1 : 0);
 }
 
 int originator_init(struct bat_priv *bat_priv)
@@ -77,7 +85,7 @@ struct neigh_node *orig_node_get_router(struct orig_node *orig_node)
 
 struct neigh_node *create_neighbor(struct orig_node *orig_node,
 				   struct orig_node *orig_neigh_node,
-				   uint8_t *neigh,
+				   const uint8_t *neigh,
 				   struct hard_iface *if_incoming)
 {
 	struct bat_priv *bat_priv = netdev_priv(if_incoming->soft_iface);
@@ -86,7 +94,7 @@ struct neigh_node *create_neighbor(struct orig_node *orig_node,
 	bat_dbg(DBG_BATMAN, bat_priv,
 		"Creating new last-hop neighbor of originator\n");
 
-	neigh_node = kzalloc(sizeof(struct neigh_node), GFP_ATOMIC);
+	neigh_node = kzalloc(sizeof(*neigh_node), GFP_ATOMIC);
 	if (!neigh_node)
 		return NULL;
 
@@ -135,8 +143,9 @@ static void orig_node_free_rcu(struct rcu_head *rcu)
 
 	frag_list_free(&orig_node->frag_list);
 	tt_global_del_orig(orig_node->bat_priv, orig_node,
-			    "originator timed out");
+			   "originator timed out");
 
+	kfree(orig_node->tt_buff);
 	kfree(orig_node->bcast_own);
 	kfree(orig_node->bcast_own_sum);
 	kfree(orig_node);
@@ -155,7 +164,7 @@ void originator_free(struct bat_priv *bat_priv)
 	struct hlist_head *head;
 	spinlock_t *list_lock; /* spinlock to protect write access */
 	struct orig_node *orig_node;
-	int i;
+	uint32_t i;
 
 	if (!hash)
 		return;
@@ -183,7 +192,7 @@ void originator_free(struct bat_priv *bat_priv)
 
 /* this function finds or creates an originator entry for the given
  * address if it does not exits */
-struct orig_node *get_orig_node(struct bat_priv *bat_priv, uint8_t *addr)
+struct orig_node *get_orig_node(struct bat_priv *bat_priv, const uint8_t *addr)
 {
 	struct orig_node *orig_node;
 	int size;
@@ -196,7 +205,7 @@ struct orig_node *get_orig_node(struct bat_priv *bat_priv, uint8_t *addr)
 	bat_dbg(DBG_BATMAN, bat_priv,
 		"Creating new originator: %pM\n", addr);
 
-	orig_node = kzalloc(sizeof(struct orig_node), GFP_ATOMIC);
+	orig_node = kzalloc(sizeof(*orig_node), GFP_ATOMIC);
 	if (!orig_node)
 		return NULL;
 
@@ -205,14 +214,21 @@ struct orig_node *get_orig_node(struct bat_priv *bat_priv, uint8_t *addr)
 	spin_lock_init(&orig_node->ogm_cnt_lock);
 	spin_lock_init(&orig_node->bcast_seqno_lock);
 	spin_lock_init(&orig_node->neigh_list_lock);
+	spin_lock_init(&orig_node->tt_buff_lock);
 
 	/* extra reference for return */
 	atomic_set(&orig_node->refcount, 2);
 
+	orig_node->tt_initialised = false;
+	orig_node->tt_poss_change = false;
 	orig_node->bat_priv = bat_priv;
 	memcpy(orig_node->orig, addr, ETH_ALEN);
 	orig_node->router = NULL;
+	orig_node->tt_crc = 0;
+	atomic_set(&orig_node->last_ttvn, 0);
 	orig_node->tt_buff = NULL;
+	orig_node->tt_buff_len = 0;
+	atomic_set(&orig_node->tt_size, 0);
 	orig_node->bcast_seqno_reset = jiffies - 1
 					- msecs_to_jiffies(RESET_PROTECTION_MS);
 	orig_node->batman_seqno_reset = jiffies - 1
@@ -237,7 +253,7 @@ struct orig_node *get_orig_node(struct bat_priv *bat_priv, uint8_t *addr)
 
 	hash_added = hash_add(bat_priv->orig_hash, compare_orig,
 			      choose_orig, orig_node, &orig_node->hash_entry);
-	if (hash_added < 0)
+	if (hash_added != 0)
 		goto free_bcast_own_sum;
 
 	return orig_node;
@@ -266,8 +282,7 @@ static bool purge_orig_neighbors(struct bat_priv *bat_priv,
 	hlist_for_each_entry_safe(neigh_node, node, node_tmp,
 				  &orig_node->neigh_list, list) {
 
-		if ((time_after(jiffies,
-			neigh_node->last_valid + PURGE_TIMEOUT * HZ)) ||
+		if ((has_timed_out(neigh_node->last_valid, PURGE_TIMEOUT)) ||
 		    (neigh_node->if_incoming->if_status == IF_INACTIVE) ||
 		    (neigh_node->if_incoming->if_status == IF_NOT_IN_USE) ||
 		    (neigh_node->if_incoming->if_status == IF_TO_BE_REMOVED)) {
@@ -279,14 +294,12 @@ static bool purge_orig_neighbors(struct bat_priv *bat_priv,
 			    (neigh_node->if_incoming->if_status ==
 							IF_TO_BE_REMOVED))
 				bat_dbg(DBG_BATMAN, bat_priv,
-					"neighbor purge: originator %pM, "
-					"neighbor: %pM, iface: %s\n",
+					"neighbor purge: originator %pM, neighbor: %pM, iface: %s\n",
 					orig_node->orig, neigh_node->addr,
 					neigh_node->if_incoming->net_dev->name);
 			else
 				bat_dbg(DBG_BATMAN, bat_priv,
-					"neighbor timeout: originator %pM, "
-					"neighbor: %pM, last_valid: %lu\n",
+					"neighbor timeout: originator %pM, neighbor: %pM, last_valid: %lu\n",
 					orig_node->orig, neigh_node->addr,
 					(neigh_node->last_valid / HZ));
 
@@ -311,21 +324,15 @@ static bool purge_orig_node(struct bat_priv *bat_priv,
 {
 	struct neigh_node *best_neigh_node;
 
-	if (time_after(jiffies,
-		orig_node->last_valid + 2 * PURGE_TIMEOUT * HZ)) {
-
+	if (has_timed_out(orig_node->last_valid, 2 * PURGE_TIMEOUT)) {
 		bat_dbg(DBG_BATMAN, bat_priv,
 			"Originator timeout: originator %pM, last_valid %lu\n",
 			orig_node->orig, (orig_node->last_valid / HZ));
 		return true;
 	} else {
 		if (purge_orig_neighbors(bat_priv, orig_node,
-							&best_neigh_node)) {
-			update_routes(bat_priv, orig_node,
-				      best_neigh_node,
-				      orig_node->tt_buff,
-				      orig_node->tt_buff_len);
-		}
+					 &best_neigh_node))
+			update_route(bat_priv, orig_node, best_neigh_node);
 	}
 
 	return false;
@@ -338,7 +345,7 @@ static void _purge_orig(struct bat_priv *bat_priv)
 	struct hlist_head *head;
 	spinlock_t *list_lock; /* spinlock to protect write access */
 	struct orig_node *orig_node;
-	int i;
+	uint32_t i;
 
 	if (!hash)
 		return;
@@ -359,8 +366,8 @@ static void _purge_orig(struct bat_priv *bat_priv)
 				continue;
 			}
 
-			if (time_after(jiffies, orig_node->last_frag_packet +
-						msecs_to_jiffies(FRAG_TIMEOUT)))
+			if (has_timed_out(orig_node->last_frag_packet,
+					  FRAG_TIMEOUT))
 				frag_list_free(&orig_node->frag_list);
 		}
 		spin_unlock_bh(list_lock);
@@ -401,27 +408,27 @@ int orig_seq_print_text(struct seq_file *seq, void *offset)
 	int batman_count = 0;
 	int last_seen_secs;
 	int last_seen_msecs;
-	int i, ret = 0;
+	uint32_t i;
+	int ret = 0;
 
 	primary_if = primary_if_get_selected(bat_priv);
 
 	if (!primary_if) {
-		ret = seq_printf(seq, "BATMAN mesh %s disabled - "
-				 "please specify interfaces to enable it\n",
+		ret = seq_printf(seq,
+				 "BATMAN mesh %s disabled - please specify interfaces to enable it\n",
 				 net_dev->name);
 		goto out;
 	}
 
 	if (primary_if->if_status != IF_ACTIVE) {
-		ret = seq_printf(seq, "BATMAN mesh %s "
-				 "disabled - primary interface not active\n",
+		ret = seq_printf(seq,
+				 "BATMAN mesh %s disabled - primary interface not active\n",
 				 net_dev->name);
 		goto out;
 	}
 
-	seq_printf(seq, "[B.A.T.M.A.N. adv %s%s, MainIF/MAC: %s/%pM (%s)]\n",
-		   SOURCE_VERSION, REVISION_VERSION_STR,
-		   primary_if->net_dev->name,
+	seq_printf(seq, "[B.A.T.M.A.N. adv %s, MainIF/MAC: %s/%pM (%s)]\n",
+		   SOURCE_VERSION, primary_if->net_dev->name,
 		   primary_if->net_dev->dev_addr, net_dev->name);
 	seq_printf(seq, "  %-15s %s (%s/%i) %17s [%10s]: %20s ...\n",
 		   "Originator", "last-seen", "#", TQ_MAX_VALUE, "Nexthop",
@@ -481,10 +488,8 @@ static int orig_node_add_if(struct orig_node *orig_node, int max_if_num)
 
 	data_ptr = kmalloc(max_if_num * sizeof(unsigned long) * NUM_WORDS,
 			   GFP_ATOMIC);
-	if (!data_ptr) {
-		pr_err("Can't resize orig: out of memory\n");
+	if (!data_ptr)
 		return -1;
-	}
 
 	memcpy(data_ptr, orig_node->bcast_own,
 	       (max_if_num - 1) * sizeof(unsigned long) * NUM_WORDS);
@@ -492,10 +497,8 @@ static int orig_node_add_if(struct orig_node *orig_node, int max_if_num)
 	orig_node->bcast_own = data_ptr;
 
 	data_ptr = kmalloc(max_if_num * sizeof(uint8_t), GFP_ATOMIC);
-	if (!data_ptr) {
-		pr_err("Can't resize orig: out of memory\n");
+	if (!data_ptr)
 		return -1;
-	}
 
 	memcpy(data_ptr, orig_node->bcast_own_sum,
 	       (max_if_num - 1) * sizeof(uint8_t));
@@ -512,7 +515,8 @@ int orig_hash_add_if(struct hard_iface *hard_iface, int max_if_num)
 	struct hlist_node *node;
 	struct hlist_head *head;
 	struct orig_node *orig_node;
-	int i, ret;
+	uint32_t i;
+	int ret;
 
 	/* resize all orig nodes because orig_node->bcast_own(_sum) depend on
 	 * if_num */
@@ -550,16 +554,14 @@ static int orig_node_del_if(struct orig_node *orig_node,
 
 	chunk_size = sizeof(unsigned long) * NUM_WORDS;
 	data_ptr = kmalloc(max_if_num * chunk_size, GFP_ATOMIC);
-	if (!data_ptr) {
-		pr_err("Can't resize orig: out of memory\n");
+	if (!data_ptr)
 		return -1;
-	}
 
 	/* copy first part */
 	memcpy(data_ptr, orig_node->bcast_own, del_if_num * chunk_size);
 
 	/* copy second part */
-	memcpy(data_ptr + del_if_num * chunk_size,
+	memcpy((char *)data_ptr + del_if_num * chunk_size,
 	       orig_node->bcast_own + ((del_if_num + 1) * chunk_size),
 	       (max_if_num - del_if_num) * chunk_size);
 
@@ -571,15 +573,13 @@ free_bcast_own:
 		goto free_own_sum;
 
 	data_ptr = kmalloc(max_if_num * sizeof(uint8_t), GFP_ATOMIC);
-	if (!data_ptr) {
-		pr_err("Can't resize orig: out of memory\n");
+	if (!data_ptr)
 		return -1;
-	}
 
 	memcpy(data_ptr, orig_node->bcast_own_sum,
 	       del_if_num * sizeof(uint8_t));
 
-	memcpy(data_ptr + del_if_num * sizeof(uint8_t),
+	memcpy((char *)data_ptr + del_if_num * sizeof(uint8_t),
 	       orig_node->bcast_own_sum + ((del_if_num + 1) * sizeof(uint8_t)),
 	       (max_if_num - del_if_num) * sizeof(uint8_t));
 
@@ -598,7 +598,8 @@ int orig_hash_del_if(struct hard_iface *hard_iface, int max_if_num)
 	struct hlist_head *head;
 	struct hard_iface *hard_iface_tmp;
 	struct orig_node *orig_node;
-	int i, ret;
+	uint32_t i;
+	int ret;
 
 	/* resize all orig nodes because orig_node->bcast_own(_sum) depend on
 	 * if_num */

@@ -46,6 +46,7 @@
 #include <linux/sched.h>
 #include <linux/gfp.h>
 #include <linux/errno.h>
+#include <linux/export.h>
 
 #include <linux/usb/quirks.h>
 
@@ -1070,7 +1071,8 @@ int usb_stor_Bulk_transport(struct scsi_cmnd *srb, struct us_data *us)
 	/* set up the command wrapper */
 	bcb->Signature = cpu_to_le32(US_BULK_CB_SIGN);
 	bcb->DataTransferLength = cpu_to_le32(transfer_length);
-	bcb->Flags = srb->sc_data_direction == DMA_FROM_DEVICE ? 1 << 7 : 0;
+	bcb->Flags = srb->sc_data_direction == DMA_FROM_DEVICE ?
+		US_BULK_FLAG_IN : 0;
 	bcb->Tag = ++us->tag;
 	bcb->Lun = srb->device->lun;
 	if (us->fflags & US_FL_SCM_MULT_TARG)

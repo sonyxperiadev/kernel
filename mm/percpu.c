@@ -67,6 +67,7 @@
 #include <linux/spinlock.h>
 #include <linux/vmalloc.h>
 #include <linux/workqueue.h>
+#include <linux/kmemleak.h>
 
 #include <asm/cacheflush.h>
 #include <asm/sections.h>
@@ -273,11 +274,11 @@ static void __maybe_unused pcpu_next_pop(struct pcpu_chunk *chunk,
 	     (rs) = (re) + 1, pcpu_next_pop((chunk), &(rs), &(re), (end)))
 
 /**
- * pcpu_mem_alloc - allocate memory
+ * pcpu_mem_zalloc - allocate memory
  * @size: bytes to allocate
  *
  * Allocate @size bytes.  If @size is smaller than PAGE_SIZE,
- * kzalloc() is used; otherwise, vmalloc() is used.  The returned
+ * kzalloc() is used; otherwise, vzalloc() is used.  The returned
  * memory is always zeroed.
  *
  * CONTEXT:
@@ -286,7 +287,7 @@ static void __maybe_unused pcpu_next_pop(struct pcpu_chunk *chunk,
  * RETURNS:
  * Pointer to the allocated area on success, NULL on failure.
  */
-static void *pcpu_mem_alloc(size_t size)
+static void *pcpu_mem_zalloc(size_t size)
 {
 	if (WARN_ON_ONCE(!slab_is_available()))
 		return NULL;
@@ -302,7 +303,7 @@ static void *pcpu_mem_alloc(size_t size)
  * @ptr: memory to free
  * @size: size of the area
  *
- * Free @ptr.  @ptr should have been allocated using pcpu_mem_alloc().
+ * Free @ptr.  @ptr should have been allocated using pcpu_mem_zalloc().
  */
 static void pcpu_mem_free(void *ptr, size_t size)
 {
@@ -384,7 +385,7 @@ static int pcpu_extend_area_map(struct pcpu_chunk *chunk, int new_alloc)
 	size_t old_size = 0, new_size = new_alloc * sizeof(new[0]);
 	unsigned long flags;
 
-	new = pcpu_mem_alloc(new_size);
+	new = pcpu_mem_zalloc(new_size);
 	if (!new)
 		return -ENOMEM;
 
@@ -604,11 +605,12 @@ static struct pcpu_chunk *pcpu_alloc_chunk(void)
 {
 	struct pcpu_chunk *chunk;
 
-	chunk = pcpu_mem_alloc(pcpu_chunk_struct_size);
+	chunk = pcpu_mem_zalloc(pcpu_chunk_struct_size);
 	if (!chunk)
 		return NULL;
 
-	chunk->map = pcpu_mem_alloc(PCPU_DFL_MAP_ALLOC * sizeof(chunk->map[0]));
+	chunk->map = pcpu_mem_zalloc(PCPU_DFL_MAP_ALLOC *
+						sizeof(chunk->map[0]));
 	if (!chunk->map) {
 		kfree(chunk);
 		return NULL;
@@ -709,6 +711,7 @@ static void __percpu *pcpu_alloc(size_t size, size_t align, bool reserved)
 	const char *err;
 	int slot, off, new_alloc;
 	unsigned long flags;
+	void __percpu *ptr;
 
 	if (unlikely(!size || size > PCPU_MIN_UNIT_SIZE || align > PAGE_SIZE)) {
 		WARN(true, "illegal size (%zu) or align (%zu) for "
@@ -801,7 +804,9 @@ area_found:
 	mutex_unlock(&pcpu_alloc_mutex);
 
 	/* return address relative to base address */
-	return __addr_to_pcpu_ptr(chunk->base_addr + off);
+	ptr = __addr_to_pcpu_ptr(chunk->base_addr + off);
+	kmemleak_alloc_percpu(ptr, size);
+	return ptr;
 
 fail_unlock:
 	spin_unlock_irqrestore(&pcpu_lock, flags);
@@ -915,6 +920,8 @@ void free_percpu(void __percpu *ptr)
 	if (!ptr)
 		return;
 
+	kmemleak_free_percpu(ptr);
+
 	addr = __pcpu_ptr_to_addr(ptr);
 
 	spin_lock_irqsave(&pcpu_lock, flags);
@@ -977,6 +984,17 @@ bool is_kernel_percpu_address(unsigned long addr)
  * address.  The caller is responsible for ensuring @addr stays valid
  * until this function finishes.
  *
+ * percpu allocator has special setup for the first chunk, which currently
+ * supports either embedding in linear address space or vmalloc mapping,
+ * and, from the second one, the backing allocator (currently either vm or
+ * km) provides translation.
+ *
+ * The addr can be tranlated simply without checking if it falls into the
+ * first chunk. But the current code reflects better how percpu allocator
+ * actually works, and the verification can discover both bugs in percpu
+ * allocator itself and per_cpu_ptr_to_phys() callers. So we keep current
+ * code.
+ *
  * RETURNS:
  * The physical address for @addr.
  */
@@ -1011,9 +1029,11 @@ phys_addr_t per_cpu_ptr_to_phys(void *addr)
 		if (!is_vmalloc_addr(addr))
 			return __pa(addr);
 		else
-			return page_to_phys(vmalloc_to_page(addr));
+			return page_to_phys(vmalloc_to_page(addr)) +
+			       offset_in_page(addr);
 	} else
-		return page_to_phys(pcpu_addr_to_page(addr));
+		return page_to_phys(pcpu_addr_to_page(addr)) +
+		       offset_in_page(addr);
 }
 
 /**
@@ -1112,20 +1132,20 @@ static void pcpu_dump_alloc_info(const char *lvl,
 		for (alloc_end += gi->nr_units / upa;
 		     alloc < alloc_end; alloc++) {
 			if (!(alloc % apl)) {
-				printk("\n");
+				printk(KERN_CONT "\n");
 				printk("%spcpu-alloc: ", lvl);
 			}
-			printk("[%0*d] ", group_width, group);
+			printk(KERN_CONT "[%0*d] ", group_width, group);
 
 			for (unit_end += upa; unit < unit_end; unit++)
 				if (gi->cpu_map[unit] != NR_CPUS)
-					printk("%0*d ", cpu_width,
+					printk(KERN_CONT "%0*d ", cpu_width,
 					       gi->cpu_map[unit]);
 				else
-					printk("%s ", empty_str);
+					printk(KERN_CONT "%s ", empty_str);
 		}
 	}
-	printk("\n");
+	printk(KERN_CONT "\n");
 }
 
 /**
@@ -1625,9 +1645,21 @@ int __init pcpu_embed_first_chunk(size_t reserved_size, size_t dyn_size,
 			rc = -ENOMEM;
 			goto out_free_areas;
 		}
+		/* kmemleak tracks the percpu allocations separately */
+		kmemleak_free(ptr);
 		areas[group] = ptr;
 
 		base = min(ptr, base);
+	}
+
+	/*
+	 * Copy data and free unused parts.  This should happen after all
+	 * allocations are complete; otherwise, we may end up with
+	 * overlapping groups.
+	 */
+	for (group = 0; group < ai->nr_groups; group++) {
+		struct pcpu_group_info *gi = &ai->groups[group];
+		void *ptr = areas[group];
 
 		for (i = 0; i < gi->nr_units; i++, ptr += ai->unit_size) {
 			if (gi->cpu_map[i] == NR_CPUS) {
@@ -1739,6 +1771,8 @@ int __init pcpu_page_first_chunk(size_t reserved_size,
 					   "for cpu%u\n", psize_str, cpu);
 				goto enomem;
 			}
+			/* kmemleak tracks the percpu allocations separately */
+			kmemleak_free(ptr);
 			pages[j++] = virt_to_page(ptr);
 		}
 
@@ -1861,6 +1895,8 @@ void __init setup_per_cpu_areas(void)
 	fc = __alloc_bootmem(unit_size, PAGE_SIZE, __pa(MAX_DMA_ADDRESS));
 	if (!ai || !fc)
 		panic("Failed to allocate memory for percpu areas.");
+	/* kmemleak tracks the percpu allocations separately */
+	kmemleak_free(fc);
 
 	ai->dyn_size = unit_size;
 	ai->unit_size = unit_size;
@@ -1895,7 +1931,7 @@ void __init percpu_init_late(void)
 
 		BUILD_BUG_ON(size > PAGE_SIZE);
 
-		map = pcpu_mem_alloc(size);
+		map = pcpu_mem_zalloc(size);
 		BUG_ON(!map);
 
 		spin_lock_irqsave(&pcpu_lock, flags);

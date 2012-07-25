@@ -27,10 +27,11 @@
 #include <linux/sysfs.h>
 #include <linux/uaccess.h>
 #include <linux/perf_event.h>
-#include <asm/system.h>
 #include <asm/alignment.h>
 #include <asm/fpu.h>
 #include <asm/kprobes.h>
+#include <asm/traps.h>
+#include <asm/bl_bit.h>
 
 #ifdef CONFIG_CPU_SH2
 # define TRAP_RESERVED_INST	4
@@ -316,6 +317,35 @@ static int handle_unaligned_ins(insn_size_t instruction, struct pt_regs *regs,
 			break;
 		}
 		break;
+
+	case 9: /* mov.w @(disp,PC),Rn */
+		srcu = (unsigned char __user *)regs->pc;
+		srcu += 4;
+		srcu += (instruction & 0x00FF) << 1;
+		dst = (unsigned char *)rn;
+		*(unsigned long *)dst = 0;
+
+#if !defined(__LITTLE_ENDIAN__)
+		dst += 2;
+#endif
+
+		if (ma->from(dst, srcu, 2))
+			goto fetch_fault;
+		sign_extend(2, dst);
+		ret = 0;
+		break;
+
+	case 0xd: /* mov.l @(disp,PC),Rn */
+		srcu = (unsigned char __user *)(regs->pc & ~0x3);
+		srcu += 4;
+		srcu += (instruction & 0x00FF) << 2;
+		dst = (unsigned char *)rn;
+		*(unsigned long *)dst = 0;
+
+		if (ma->from(dst, srcu, 4))
+			goto fetch_fault;
+		ret = 0;
+		break;
 	}
 	return ret;
 
@@ -393,7 +423,7 @@ int handle_unaligned_access(insn_size_t instruction, struct pt_regs *regs,
 	 */
 	if (!expected) {
 		unaligned_fixups_notify(current, instruction, regs);
-		perf_sw_event(PERF_COUNT_SW_ALIGNMENT_FAULTS, 1, 0,
+		perf_sw_event(PERF_COUNT_SW_ALIGNMENT_FAULTS, 1,
 			      regs, address);
 	}
 
@@ -466,6 +496,7 @@ int handle_unaligned_access(insn_size_t instruction, struct pt_regs *regs,
 		case 0x0500: /* mov.w @(disp,Rm),R0 */
 			goto simple;
 		case 0x0B00: /* bf   lab - no delayslot*/
+			ret = 0;
 			break;
 		case 0x0F00: /* bf/s lab */
 			ret = handle_delayslot(regs, instruction, ma);
@@ -479,6 +510,7 @@ int handle_unaligned_access(insn_size_t instruction, struct pt_regs *regs,
 			}
 			break;
 		case 0x0900: /* bt   lab - no delayslot */
+			ret = 0;
 			break;
 		case 0x0D00: /* bt/s lab */
 			ret = handle_delayslot(regs, instruction, ma);
@@ -494,6 +526,9 @@ int handle_unaligned_access(insn_size_t instruction, struct pt_regs *regs,
 		}
 		break;
 
+	case 0x9000: /* mov.w @(disp,Rm),Rn */
+		goto simple;
+
 	case 0xA000: /* bra label */
 		ret = handle_delayslot(regs, instruction, ma);
 		if (ret==0)
@@ -507,6 +542,9 @@ int handle_unaligned_access(insn_size_t instruction, struct pt_regs *regs,
 			regs->pc += SH_PC_12BIT_OFFSET(instruction);
 		}
 		break;
+
+	case 0xD000: /* mov.l @(disp,Rm),Rn */
+		goto simple;
 	}
 	return ret;
 

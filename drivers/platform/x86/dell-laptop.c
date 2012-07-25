@@ -60,6 +60,22 @@ struct calling_interface_structure {
 	struct calling_interface_token tokens[];
 } __packed;
 
+struct quirk_entry {
+	u8 touchpad_led;
+};
+
+static struct quirk_entry *quirks;
+
+static struct quirk_entry quirk_dell_vostro_v130 = {
+	.touchpad_led = 1,
+};
+
+static int dmi_matched(const struct dmi_system_id *dmi)
+{
+	quirks = dmi->driver_data;
+	return 1;
+}
+
 static int da_command_address;
 static int da_command_code;
 static int da_num_tokens;
@@ -101,6 +117,7 @@ static const struct dmi_system_id __initdata dell_device_table[] = {
 	},
 	{ }
 };
+MODULE_DEVICE_TABLE(dmi, dell_device_table);
 
 static struct dmi_system_id __devinitdata dell_blacklist[] = {
 	/* Supported by compal-laptop */
@@ -147,6 +164,55 @@ static struct dmi_system_id __devinitdata dell_blacklist[] = {
 		},
 	},
 	{}
+};
+
+static struct dmi_system_id __devinitdata dell_quirks[] = {
+	{
+		.callback = dmi_matched,
+		.ident = "Dell Vostro V130",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
+			DMI_MATCH(DMI_PRODUCT_NAME, "Vostro V130"),
+		},
+		.driver_data = &quirk_dell_vostro_v130,
+	},
+	{
+		.callback = dmi_matched,
+		.ident = "Dell Vostro V131",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
+			DMI_MATCH(DMI_PRODUCT_NAME, "Vostro V131"),
+		},
+		.driver_data = &quirk_dell_vostro_v130,
+	},
+	{
+		.callback = dmi_matched,
+		.ident = "Dell Vostro 3555",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
+			DMI_MATCH(DMI_PRODUCT_NAME, "Vostro 3555"),
+		},
+		.driver_data = &quirk_dell_vostro_v130,
+	},
+	{
+		.callback = dmi_matched,
+		.ident = "Dell Inspiron N311z",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
+			DMI_MATCH(DMI_PRODUCT_NAME, "Inspiron N311z"),
+		},
+		.driver_data = &quirk_dell_vostro_v130,
+	},
+	{
+		.callback = dmi_matched,
+		.ident = "Dell Inspiron M5110",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc."),
+			DMI_MATCH(DMI_PRODUCT_NAME, "Inspiron M5110"),
+		},
+		.driver_data = &quirk_dell_vostro_v130,
+	},
+	{ }
 };
 
 static struct calling_interface_buffer *buffer;
@@ -199,9 +265,7 @@ static void __init find_tokens(const struct dmi_header *dm, void *dummy)
 {
 	switch (dm->type) {
 	case 0xd4: /* Indexed IO */
-		break;
 	case 0xd5: /* Protected Area Type 1 */
-		break;
 	case 0xd6: /* Protected Area Type 2 */
 		break;
 	case 0xda: /* Calling interface */
@@ -552,6 +616,45 @@ static const struct backlight_ops dell_ops = {
 	.update_status  = dell_send_intensity,
 };
 
+static void touchpad_led_on(void)
+{
+	int command = 0x97;
+	char data = 1;
+	i8042_command(&data, command | 1 << 12);
+}
+
+static void touchpad_led_off(void)
+{
+	int command = 0x97;
+	char data = 2;
+	i8042_command(&data, command | 1 << 12);
+}
+
+static void touchpad_led_set(struct led_classdev *led_cdev,
+	enum led_brightness value)
+{
+	if (value > 0)
+		touchpad_led_on();
+	else
+		touchpad_led_off();
+}
+
+static struct led_classdev touchpad_led = {
+	.name = "dell-laptop::touchpad",
+	.brightness_set = touchpad_led_set,
+	.flags = LED_CORE_SUSPENDRESUME,
+};
+
+static int __devinit touchpad_led_init(struct device *dev)
+{
+	return led_classdev_register(dev, &touchpad_led);
+}
+
+static void touchpad_led_exit(void)
+{
+	led_classdev_unregister(&touchpad_led);
+}
+
 static bool dell_laptop_i8042_filter(unsigned char data, unsigned char str,
 			      struct serio *port)
 {
@@ -584,6 +687,10 @@ static int __init dell_init(void)
 	if (!dmi_check_system(dell_device_table))
 		return -ENODEV;
 
+	quirks = NULL;
+	/* find if this machine support other functions */
+	dmi_check_system(dell_quirks);
+
 	dmi_walk(find_tokens, NULL);
 
 	if (!da_tokens)  {
@@ -612,7 +719,6 @@ static int __init dell_init(void)
 	if (!bufferpage)
 		goto fail_buffer;
 	buffer = page_address(bufferpage);
-	mutex_init(&buffer_mutex);
 
 	ret = dell_setup_rfkill();
 
@@ -626,6 +732,9 @@ static int __init dell_init(void)
 		pr_warn("Unable to install key filter\n");
 		goto fail_filter;
 	}
+
+	if (quirks && quirks->touchpad_led)
+		touchpad_led_init(&platform_device->dev);
 
 	dell_laptop_dir = debugfs_create_dir("dell_laptop", NULL);
 	if (dell_laptop_dir != NULL)
@@ -693,6 +802,8 @@ fail_platform_driver:
 static void __exit dell_exit(void)
 {
 	debugfs_remove_recursive(dell_laptop_dir);
+	if (quirks && quirks->touchpad_led)
+		touchpad_led_exit();
 	i8042_remove_filter(dell_laptop_i8042_filter);
 	cancel_delayed_work_sync(&dell_rfkill_work);
 	backlight_device_unregister(dell_backlight_device);
@@ -711,6 +822,3 @@ module_exit(dell_exit);
 MODULE_AUTHOR("Matthew Garrett <mjg@redhat.com>");
 MODULE_DESCRIPTION("Dell laptop driver");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("dmi:*svnDellInc.:*:ct8:*");
-MODULE_ALIAS("dmi:*svnDellInc.:*:ct9:*");
-MODULE_ALIAS("dmi:*svnDellComputerCorporation.:*:ct8:*");

@@ -17,6 +17,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/clk.h>
 #include <linux/io.h>
@@ -25,7 +26,7 @@
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
 
-#include <plat/common.h>
+#include "common.h"
 
 #include "pm.h"
 #include "smartreflex.h"
@@ -35,6 +36,12 @@
 #define SR_DISABLE_TIMEOUT	200
 
 struct omap_sr {
+	struct list_head		node;
+	struct platform_device		*pdev;
+	struct omap_sr_nvalue_table	*nvalue_table;
+	struct voltagedomain		*voltdm;
+	struct dentry			*dbg_dir;
+	unsigned int			irq;
 	int				srid;
 	int				ip_type;
 	int				nvalue_count;
@@ -48,13 +55,7 @@ struct omap_sr {
 	u32				senp_avgweight;
 	u32				senp_mod;
 	u32				senn_mod;
-	unsigned int			irq;
 	void __iomem			*base;
-	struct platform_device		*pdev;
-	struct list_head		node;
-	struct omap_sr_nvalue_table	*nvalue_table;
-	struct voltagedomain		*voltdm;
-	struct dentry			*dbg_dir;
 };
 
 /* sr_list contains all the instances of smartreflex module */
@@ -62,6 +63,7 @@ static LIST_HEAD(sr_list);
 
 static struct omap_sr_class_data *sr_class;
 static struct omap_sr_pmic_data *sr_pmic_data;
+static struct dentry		*sr_dbg_dir;
 
 static inline void sr_write_reg(struct omap_sr *sr, unsigned offset, u32 value)
 {
@@ -72,10 +74,6 @@ static inline void sr_modify_reg(struct omap_sr *sr, unsigned offset, u32 mask,
 					u32 value)
 {
 	u32 reg_val;
-	u32 errconfig_offs = 0, errconfig_mask = 0;
-
-	reg_val = __raw_readl(sr->base + offset);
-	reg_val &= ~mask;
 
 	/*
 	 * Smartreflex error config register is special as it contains
@@ -86,16 +84,15 @@ static inline void sr_modify_reg(struct omap_sr *sr, unsigned offset, u32 mask,
 	 * if they are currently set, but does allow the caller to write
 	 * those bits.
 	 */
-	if (sr->ip_type == SR_TYPE_V1) {
-		errconfig_offs = ERRCONFIG_V1;
-		errconfig_mask = ERRCONFIG_STATUS_V1_MASK;
-	} else if (sr->ip_type == SR_TYPE_V2) {
-		errconfig_offs = ERRCONFIG_V2;
-		errconfig_mask = ERRCONFIG_VPBOUNDINTST_V2;
-	}
+	if (sr->ip_type == SR_TYPE_V1 && offset == ERRCONFIG_V1)
+		mask |= ERRCONFIG_STATUS_V1_MASK;
+	else if (sr->ip_type == SR_TYPE_V2 && offset == ERRCONFIG_V2)
+		mask |= ERRCONFIG_VPBOUNDINTST_V2;
 
-	if (offset == errconfig_offs)
-		reg_val &= ~errconfig_mask;
+	reg_val = __raw_readl(sr->base + offset);
+	reg_val &= ~mask;
+
+	value &= mask;
 
 	reg_val |= value;
 
@@ -126,24 +123,31 @@ static struct omap_sr *_sr_lookup(struct voltagedomain *voltdm)
 
 static irqreturn_t sr_interrupt(int irq, void *data)
 {
-	struct omap_sr *sr_info = (struct omap_sr *)data;
+	struct omap_sr *sr_info = data;
 	u32 status = 0;
 
-	if (sr_info->ip_type == SR_TYPE_V1) {
+	switch (sr_info->ip_type) {
+	case SR_TYPE_V1:
 		/* Read the status bits */
 		status = sr_read_reg(sr_info, ERRCONFIG_V1);
 
 		/* Clear them by writing back */
 		sr_write_reg(sr_info, ERRCONFIG_V1, status);
-	} else if (sr_info->ip_type == SR_TYPE_V2) {
+		break;
+	case SR_TYPE_V2:
 		/* Read the status bits */
 		status = sr_read_reg(sr_info, IRQSTATUS);
 
 		/* Clear them by writing back */
 		sr_write_reg(sr_info, IRQSTATUS, status);
+		break;
+	default:
+		dev_err(&sr_info->pdev->dev, "UNKNOWN IP type %d\n",
+			sr_info->ip_type);
+		return IRQ_NONE;
 	}
 
-	if (sr_class->class_type == SR_CLASS2 && sr_class->notify)
+	if (sr_class->notify)
 		sr_class->notify(sr_info->voltdm, status);
 
 	return IRQ_HANDLED;
@@ -164,6 +168,7 @@ static void sr_set_clk_length(struct omap_sr *sr)
 			__func__);
 		return;
 	}
+
 	sys_clk_speed = clk_get_rate(sys_ck);
 	clk_put(sys_ck);
 
@@ -247,7 +252,7 @@ static void sr_stop_vddautocomp(struct omap_sr *sr)
  * driver register and sr device intializtion API's. Only one call
  * will ultimately succeed.
  *
- * Currently this function registers interrrupt handler for a particular SR
+ * Currently this function registers interrupt handler for a particular SR
  * if smartreflex class driver is already registered and has
  * requested for interrupts and the SR interrupt line in present.
  */
@@ -258,18 +263,17 @@ static int sr_late_init(struct omap_sr *sr_info)
 	struct resource *mem;
 	int ret = 0;
 
-	if (sr_class->class_type == SR_CLASS2 &&
-		sr_class->notify_flags && sr_info->irq) {
-
+	if (sr_class->notify && sr_class->notify_flags && sr_info->irq) {
 		name = kasprintf(GFP_KERNEL, "sr_%s", sr_info->voltdm->name);
 		if (name == NULL) {
 			ret = -ENOMEM;
 			goto error;
 		}
 		ret = request_irq(sr_info->irq, sr_interrupt,
-				0, name, (void *)sr_info);
+				0, name, sr_info);
 		if (ret)
 			goto error;
+		disable_irq(sr_info->irq);
 	}
 
 	if (pdata && pdata->enable_on_init)
@@ -278,21 +282,24 @@ static int sr_late_init(struct omap_sr *sr_info)
 	return ret;
 
 error:
-		iounmap(sr_info->base);
-		mem = platform_get_resource(sr_info->pdev, IORESOURCE_MEM, 0);
-		release_mem_region(mem->start, resource_size(mem));
-		list_del(&sr_info->node);
-		dev_err(&sr_info->pdev->dev, "%s: ERROR in registering"
-			"interrupt handler. Smartreflex will"
-			"not function as desired\n", __func__);
-		kfree(name);
-		kfree(sr_info);
-		return ret;
+	iounmap(sr_info->base);
+	mem = platform_get_resource(sr_info->pdev, IORESOURCE_MEM, 0);
+	release_mem_region(mem->start, resource_size(mem));
+	list_del(&sr_info->node);
+	dev_err(&sr_info->pdev->dev, "%s: ERROR in registering"
+		"interrupt handler. Smartreflex will"
+		"not function as desired\n", __func__);
+	kfree(name);
+	kfree(sr_info);
+
+	return ret;
 }
 
 static void sr_v1_disable(struct omap_sr *sr)
 {
 	int timeout = 0;
+	int errconf_val = ERRCONFIG_MCUACCUMINTST | ERRCONFIG_MCUVALIDINTST |
+			ERRCONFIG_MCUBOUNDINTST;
 
 	/* Enable MCUDisableAcknowledge interrupt */
 	sr_modify_reg(sr, ERRCONFIG_V1,
@@ -301,13 +308,13 @@ static void sr_v1_disable(struct omap_sr *sr)
 	/* SRCONFIG - disable SR */
 	sr_modify_reg(sr, SRCONFIG, SRCONFIG_SRENABLE, 0x0);
 
-	/* Disable all other SR interrupts and clear the status */
+	/* Disable all other SR interrupts and clear the status as needed */
+	if (sr_read_reg(sr, ERRCONFIG_V1) & ERRCONFIG_VPBOUNDINTST_V1)
+		errconf_val |= ERRCONFIG_VPBOUNDINTST_V1;
 	sr_modify_reg(sr, ERRCONFIG_V1,
 			(ERRCONFIG_MCUACCUMINTEN | ERRCONFIG_MCUVALIDINTEN |
 			ERRCONFIG_MCUBOUNDINTEN | ERRCONFIG_VPBOUNDINTEN_V1),
-			(ERRCONFIG_MCUACCUMINTST | ERRCONFIG_MCUVALIDINTST |
-			ERRCONFIG_MCUBOUNDINTST |
-			ERRCONFIG_VPBOUNDINTST_V1));
+			errconf_val);
 
 	/*
 	 * Wait for SR to be disabled.
@@ -336,9 +343,17 @@ static void sr_v2_disable(struct omap_sr *sr)
 	/* SRCONFIG - disable SR */
 	sr_modify_reg(sr, SRCONFIG, SRCONFIG_SRENABLE, 0x0);
 
-	/* Disable all other SR interrupts and clear the status */
-	sr_modify_reg(sr, ERRCONFIG_V2, ERRCONFIG_VPBOUNDINTEN_V2,
+	/*
+	 * Disable all other SR interrupts and clear the status
+	 * write to status register ONLY on need basis - only if status
+	 * is set.
+	 */
+	if (sr_read_reg(sr, ERRCONFIG_V2) & ERRCONFIG_VPBOUNDINTST_V2)
+		sr_modify_reg(sr, ERRCONFIG_V2, ERRCONFIG_VPBOUNDINTEN_V2,
 			ERRCONFIG_VPBOUNDINTST_V2);
+	else
+		sr_modify_reg(sr, ERRCONFIG_V2, ERRCONFIG_VPBOUNDINTEN_V2,
+				0x0);
 	sr_write_reg(sr, IRQENABLE_CLR, (IRQENABLE_MCUACCUMINT |
 			IRQENABLE_MCUVALIDINT |
 			IRQENABLE_MCUBOUNDSINT));
@@ -397,15 +412,16 @@ static u32 sr_retrieve_nvalue(struct omap_sr *sr, u32 efuse_offs)
  */
 int sr_configure_errgen(struct voltagedomain *voltdm)
 {
-	u32 sr_config, sr_errconfig, errconfig_offs, vpboundint_en;
-	u32 vpboundint_st, senp_en = 0, senn_en = 0;
+	u32 sr_config, sr_errconfig, errconfig_offs;
+	u32 vpboundint_en, vpboundint_st;
+	u32 senp_en = 0, senn_en = 0;
 	u8 senp_shift, senn_shift;
 	struct omap_sr *sr = _sr_lookup(voltdm);
 
 	if (IS_ERR(sr)) {
 		pr_warning("%s: omap_sr struct for sr_%s not found\n",
 			__func__, voltdm->name);
-		return -EINVAL;
+		return PTR_ERR(sr);
 	}
 
 	if (!sr->clk_length)
@@ -417,20 +433,23 @@ int sr_configure_errgen(struct voltagedomain *voltdm)
 	sr_config = (sr->clk_length << SRCONFIG_SRCLKLENGTH_SHIFT) |
 		SRCONFIG_SENENABLE | SRCONFIG_ERRGEN_EN;
 
-	if (sr->ip_type == SR_TYPE_V1) {
+	switch (sr->ip_type) {
+	case SR_TYPE_V1:
 		sr_config |= SRCONFIG_DELAYCTRL;
 		senn_shift = SRCONFIG_SENNENABLE_V1_SHIFT;
 		senp_shift = SRCONFIG_SENPENABLE_V1_SHIFT;
 		errconfig_offs = ERRCONFIG_V1;
 		vpboundint_en = ERRCONFIG_VPBOUNDINTEN_V1;
 		vpboundint_st = ERRCONFIG_VPBOUNDINTST_V1;
-	} else if (sr->ip_type == SR_TYPE_V2) {
+		break;
+	case SR_TYPE_V2:
 		senn_shift = SRCONFIG_SENNENABLE_V2_SHIFT;
 		senp_shift = SRCONFIG_SENPENABLE_V2_SHIFT;
 		errconfig_offs = ERRCONFIG_V2;
 		vpboundint_en = ERRCONFIG_VPBOUNDINTEN_V2;
 		vpboundint_st = ERRCONFIG_VPBOUNDINTST_V2;
-	} else {
+		break;
+	default:
 		dev_err(&sr->pdev->dev, "%s: Trying to Configure smartreflex"
 			"module without specifying the ip\n", __func__);
 		return -EINVAL;
@@ -446,8 +465,55 @@ int sr_configure_errgen(struct voltagedomain *voltdm)
 		sr_errconfig);
 
 	/* Enabling the interrupts if the ERROR module is used */
-	sr_modify_reg(sr, errconfig_offs,
-		vpboundint_en, (vpboundint_en | vpboundint_st));
+	sr_modify_reg(sr, errconfig_offs, (vpboundint_en | vpboundint_st),
+		      vpboundint_en);
+
+	return 0;
+}
+
+/**
+ * sr_disable_errgen() - Disables SmartReflex AVS module's errgen component
+ * @voltdm:	VDD pointer to which the SR module to be configured belongs to.
+ *
+ * This API is to be called from the smartreflex class driver to
+ * disable the error generator module inside the smartreflex module.
+ *
+ * Returns 0 on success and error value in case of failure.
+ */
+int sr_disable_errgen(struct voltagedomain *voltdm)
+{
+	u32 errconfig_offs;
+	u32 vpboundint_en, vpboundint_st;
+	struct omap_sr *sr = _sr_lookup(voltdm);
+
+	if (IS_ERR(sr)) {
+		pr_warning("%s: omap_sr struct for sr_%s not found\n",
+			__func__, voltdm->name);
+		return PTR_ERR(sr);
+	}
+
+	switch (sr->ip_type) {
+	case SR_TYPE_V1:
+		errconfig_offs = ERRCONFIG_V1;
+		vpboundint_en = ERRCONFIG_VPBOUNDINTEN_V1;
+		vpboundint_st = ERRCONFIG_VPBOUNDINTST_V1;
+		break;
+	case SR_TYPE_V2:
+		errconfig_offs = ERRCONFIG_V2;
+		vpboundint_en = ERRCONFIG_VPBOUNDINTEN_V2;
+		vpboundint_st = ERRCONFIG_VPBOUNDINTST_V2;
+		break;
+	default:
+		dev_err(&sr->pdev->dev, "%s: Trying to Configure smartreflex"
+			"module without specifying the ip\n", __func__);
+		return -EINVAL;
+	}
+
+	/* Disable the interrupts of ERROR module */
+	sr_modify_reg(sr, errconfig_offs, vpboundint_en | vpboundint_st, 0);
+
+	/* Disable the Sensor and errorgen */
+	sr_modify_reg(sr, SRCONFIG, SRCONFIG_SENENABLE | SRCONFIG_ERRGEN_EN, 0);
 
 	return 0;
 }
@@ -474,7 +540,7 @@ int sr_configure_minmax(struct voltagedomain *voltdm)
 	if (IS_ERR(sr)) {
 		pr_warning("%s: omap_sr struct for sr_%s not found\n",
 			__func__, voltdm->name);
-		return -EINVAL;
+		return PTR_ERR(sr);
 	}
 
 	if (!sr->clk_length)
@@ -487,14 +553,17 @@ int sr_configure_minmax(struct voltagedomain *voltdm)
 		SRCONFIG_SENENABLE |
 		(sr->accum_data << SRCONFIG_ACCUMDATA_SHIFT);
 
-	if (sr->ip_type == SR_TYPE_V1) {
+	switch (sr->ip_type) {
+	case SR_TYPE_V1:
 		sr_config |= SRCONFIG_DELAYCTRL;
 		senn_shift = SRCONFIG_SENNENABLE_V1_SHIFT;
 		senp_shift = SRCONFIG_SENPENABLE_V1_SHIFT;
-	} else if (sr->ip_type == SR_TYPE_V2) {
+		break;
+	case SR_TYPE_V2:
 		senn_shift = SRCONFIG_SENNENABLE_V2_SHIFT;
 		senp_shift = SRCONFIG_SENPENABLE_V2_SHIFT;
-	} else {
+		break;
+	default:
 		dev_err(&sr->pdev->dev, "%s: Trying to Configure smartreflex"
 			"module without specifying the ip\n", __func__);
 		return -EINVAL;
@@ -510,20 +579,27 @@ int sr_configure_minmax(struct voltagedomain *voltdm)
 	 * Enabling the interrupts if MINMAXAVG module is used.
 	 * TODO: check if all the interrupts are mandatory
 	 */
-	if (sr->ip_type == SR_TYPE_V1) {
+	switch (sr->ip_type) {
+	case SR_TYPE_V1:
 		sr_modify_reg(sr, ERRCONFIG_V1,
 			(ERRCONFIG_MCUACCUMINTEN | ERRCONFIG_MCUVALIDINTEN |
 			ERRCONFIG_MCUBOUNDINTEN),
 			(ERRCONFIG_MCUACCUMINTEN | ERRCONFIG_MCUACCUMINTST |
 			 ERRCONFIG_MCUVALIDINTEN | ERRCONFIG_MCUVALIDINTST |
 			 ERRCONFIG_MCUBOUNDINTEN | ERRCONFIG_MCUBOUNDINTST));
-	} else if (sr->ip_type == SR_TYPE_V2) {
+		break;
+	case SR_TYPE_V2:
 		sr_write_reg(sr, IRQSTATUS,
 			IRQSTATUS_MCUACCUMINT | IRQSTATUS_MCVALIDINT |
 			IRQSTATUS_MCBOUNDSINT | IRQSTATUS_MCUDISABLEACKINT);
 		sr_write_reg(sr, IRQENABLE_SET,
 			IRQENABLE_MCUACCUMINT | IRQENABLE_MCUVALIDINT |
 			IRQENABLE_MCUBOUNDSINT | IRQENABLE_MCUDISABLEACKINT);
+		break;
+	default:
+		dev_err(&sr->pdev->dev, "%s: Trying to Configure smartreflex"
+			"module without specifying the ip\n", __func__);
+		return -EINVAL;
 	}
 
 	return 0;
@@ -542,15 +618,15 @@ int sr_configure_minmax(struct voltagedomain *voltdm)
  */
 int sr_enable(struct voltagedomain *voltdm, unsigned long volt)
 {
-	u32 nvalue_reciprocal;
 	struct omap_volt_data *volt_data;
 	struct omap_sr *sr = _sr_lookup(voltdm);
+	u32 nvalue_reciprocal;
 	int ret;
 
 	if (IS_ERR(sr)) {
 		pr_warning("%s: omap_sr struct for sr_%s not found\n",
 			__func__, voltdm->name);
-		return -EINVAL;
+		return PTR_ERR(sr);
 	}
 
 	volt_data = omap_voltage_get_voltdata(sr->voltdm, volt);
@@ -558,7 +634,7 @@ int sr_enable(struct voltagedomain *voltdm, unsigned long volt)
 	if (IS_ERR(volt_data)) {
 		dev_warn(&sr->pdev->dev, "%s: Unable to get voltage table"
 			"for nominal voltage %ld\n", __func__, volt);
-		return -ENODATA;
+		return PTR_ERR(volt_data);
 	}
 
 	nvalue_reciprocal = sr_retrieve_nvalue(sr, volt_data->sr_efuse_offs);
@@ -616,13 +692,20 @@ void sr_disable(struct voltagedomain *voltdm)
 	 * disable the clocks.
 	 */
 	if (sr_read_reg(sr, SRCONFIG) & SRCONFIG_SRENABLE) {
-		if (sr->ip_type == SR_TYPE_V1)
+		switch (sr->ip_type) {
+		case SR_TYPE_V1:
 			sr_v1_disable(sr);
-		else if (sr->ip_type == SR_TYPE_V2)
+			break;
+		case SR_TYPE_V2:
 			sr_v2_disable(sr);
+			break;
+		default:
+			dev_err(&sr->pdev->dev, "UNKNOWN IP type %d\n",
+				sr->ip_type);
+		}
 	}
 
-	pm_runtime_put_sync(&sr->pdev->dev);
+	pm_runtime_put_sync_suspend(&sr->pdev->dev);
 }
 
 /**
@@ -778,10 +861,10 @@ void omap_sr_register_pmic(struct omap_sr_pmic_data *pmic_data)
 	sr_pmic_data = pmic_data;
 }
 
-/* PM Debug Fs enteries to enable disable smartreflex. */
+/* PM Debug FS entries to enable and disable smartreflex. */
 static int omap_sr_autocomp_show(void *data, u64 *val)
 {
-	struct omap_sr *sr_info = (struct omap_sr *) data;
+	struct omap_sr *sr_info = data;
 
 	if (!sr_info) {
 		pr_warning("%s: omap_sr struct not found\n", __func__);
@@ -795,7 +878,7 @@ static int omap_sr_autocomp_show(void *data, u64 *val)
 
 static int omap_sr_autocomp_store(void *data, u64 val)
 {
-	struct omap_sr *sr_info = (struct omap_sr *) data;
+	struct omap_sr *sr_info = data;
 
 	if (!sr_info) {
 		pr_warning("%s: omap_sr struct not found\n", __func__);
@@ -803,36 +886,43 @@ static int omap_sr_autocomp_store(void *data, u64 val)
 	}
 
 	/* Sanity check */
-	if (val && (val != 1)) {
+	if (val > 1) {
 		pr_warning("%s: Invalid argument %lld\n", __func__, val);
 		return -EINVAL;
 	}
 
-	if (!val)
-		sr_stop_vddautocomp(sr_info);
-	else
-		sr_start_vddautocomp(sr_info);
+	/* control enable/disable only if there is a delta in value */
+	if (sr_info->autocomp_active != val) {
+		if (!val)
+			sr_stop_vddautocomp(sr_info);
+		else
+			sr_start_vddautocomp(sr_info);
+	}
 
 	return 0;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(pm_sr_fops, omap_sr_autocomp_show,
-		omap_sr_autocomp_store, "%llu\n");
+			omap_sr_autocomp_store, "%llu\n");
 
 static int __init omap_sr_probe(struct platform_device *pdev)
 {
-	struct omap_sr *sr_info = kzalloc(sizeof(struct omap_sr), GFP_KERNEL);
+	struct omap_sr *sr_info;
 	struct omap_sr_data *pdata = pdev->dev.platform_data;
 	struct resource *mem, *irq;
-	struct dentry *vdd_dbg_dir, *nvalue_dir;
+	struct dentry *nvalue_dir;
 	struct omap_volt_data *volt_data;
 	int i, ret = 0;
+	char *name;
 
+	sr_info = kzalloc(sizeof(struct omap_sr), GFP_KERNEL);
 	if (!sr_info) {
 		dev_err(&pdev->dev, "%s: unable to allocate sr_info\n",
 			__func__);
 		return -ENOMEM;
 	}
+
+	platform_set_drvdata(pdev, sr_info);
 
 	if (!pdata) {
 		dev_err(&pdev->dev, "%s: platform data missing\n", __func__);
@@ -858,6 +948,7 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 
 	pm_runtime_enable(&pdev->dev);
+	pm_runtime_irq_safe(&pdev->dev);
 
 	sr_info->pdev = pdev;
 	sr_info->srid = pdev->id;
@@ -891,24 +982,31 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 		ret = sr_late_init(sr_info);
 		if (ret) {
 			pr_warning("%s: Error in SR late init\n", __func__);
-			return ret;
+			goto err_iounmap;
 		}
 	}
 
 	dev_info(&pdev->dev, "%s: SmartReflex driver initialized\n", __func__);
-
-	/*
-	 * If the voltage domain debugfs directory is not created, do
-	 * not try to create rest of the debugfs entries.
-	 */
-	vdd_dbg_dir = omap_voltage_get_dbgdir(sr_info->voltdm);
-	if (!vdd_dbg_dir) {
-		ret = -EINVAL;
-		goto err_iounmap;
+	if (!sr_dbg_dir) {
+		sr_dbg_dir = debugfs_create_dir("smartreflex", NULL);
+		if (IS_ERR_OR_NULL(sr_dbg_dir)) {
+			ret = PTR_ERR(sr_dbg_dir);
+			pr_err("%s:sr debugfs dir creation failed(%d)\n",
+				__func__, ret);
+			goto err_iounmap;
+		}
 	}
 
-	sr_info->dbg_dir = debugfs_create_dir("smartreflex", vdd_dbg_dir);
-	if (IS_ERR(sr_info->dbg_dir)) {
+	name = kasprintf(GFP_KERNEL, "sr_%s", sr_info->voltdm->name);
+	if (!name) {
+		dev_err(&pdev->dev, "%s: Unable to alloc debugfs name\n",
+			__func__);
+		ret = -ENOMEM;
+		goto err_iounmap;
+	}
+	sr_info->dbg_dir = debugfs_create_dir(name, sr_dbg_dir);
+	kfree(name);
+	if (IS_ERR_OR_NULL(sr_info->dbg_dir)) {
 		dev_err(&pdev->dev, "%s: Unable to create debugfs directory\n",
 			__func__);
 		ret = PTR_ERR(sr_info->dbg_dir);
@@ -925,7 +1023,7 @@ static int __init omap_sr_probe(struct platform_device *pdev)
 			&sr_info->err_minlimit);
 
 	nvalue_dir = debugfs_create_dir("nvalue", sr_info->dbg_dir);
-	if (IS_ERR(nvalue_dir)) {
+	if (IS_ERR_OR_NULL(nvalue_dir)) {
 		dev_err(&pdev->dev, "%s: Unable to create debugfs directory"
 			"for n-values\n", __func__);
 		ret = PTR_ERR(nvalue_dir);
@@ -981,7 +1079,7 @@ static int __devexit omap_sr_remove(struct platform_device *pdev)
 	if (IS_ERR(sr_info)) {
 		dev_warn(&pdev->dev, "%s: omap_sr struct not found\n",
 			__func__);
-		return -EINVAL;
+		return PTR_ERR(sr_info);
 	}
 
 	if (sr_info->autocomp_active)
@@ -998,8 +1096,32 @@ static int __devexit omap_sr_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void __devexit omap_sr_shutdown(struct platform_device *pdev)
+{
+	struct omap_sr_data *pdata = pdev->dev.platform_data;
+	struct omap_sr *sr_info;
+
+	if (!pdata) {
+		dev_err(&pdev->dev, "%s: platform data missing\n", __func__);
+		return;
+	}
+
+	sr_info = _sr_lookup(pdata->voltdm);
+	if (IS_ERR(sr_info)) {
+		dev_warn(&pdev->dev, "%s: omap_sr struct not found\n",
+			__func__);
+		return;
+	}
+
+	if (sr_info->autocomp_active)
+		sr_stop_vddautocomp(sr_info);
+
+	return;
+}
+
 static struct platform_driver smartreflex_driver = {
-	.remove         = omap_sr_remove,
+	.remove         = __devexit_p(omap_sr_remove),
+	.shutdown	= __devexit_p(omap_sr_shutdown),
 	.driver		= {
 		.name	= "smartreflex",
 	},
@@ -1029,12 +1151,12 @@ static int __init sr_init(void)
 
 	return 0;
 }
+late_initcall(sr_init);
 
 static void __exit sr_exit(void)
 {
 	platform_driver_unregister(&smartreflex_driver);
 }
-late_initcall(sr_init);
 module_exit(sr_exit);
 
 MODULE_DESCRIPTION("OMAP Smartreflex Driver");

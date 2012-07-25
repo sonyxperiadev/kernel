@@ -1,9 +1,9 @@
 /*
  * Broadcom SiliconBackplane hardware register definitions.
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -23,7 +23,6 @@
  *
  * $Id: sbconfig.h 275703 2011-08-04 20:20:27Z $
  */
-
 
 #ifndef	_SBCONFIG_H
 #define	_SBCONFIG_H

@@ -26,7 +26,9 @@
 
 struct clock_event_device;
 
-extern void __iomem *twd_base;
+struct twd_local_timer {
+	struct resource	res[2];
+};
 
 int twd_timer_ack(void);
 void twd_timer_setup(struct clock_event_device *);

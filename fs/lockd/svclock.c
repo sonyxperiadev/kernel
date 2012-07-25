@@ -46,13 +46,41 @@ static void	nlmsvc_remove_block(struct nlm_block *block);
 static int nlmsvc_setgrantargs(struct nlm_rqst *call, struct nlm_lock *lock);
 static void nlmsvc_freegrantargs(struct nlm_rqst *call);
 static const struct rpc_call_ops nlmsvc_grant_ops;
-static const char *nlmdbg_cookie2a(const struct nlm_cookie *cookie);
 
 /*
  * The list of blocked locks to retry
  */
 static LIST_HEAD(nlm_blocked);
 static DEFINE_SPINLOCK(nlm_blocked_lock);
+
+#ifdef LOCKD_DEBUG
+static const char *nlmdbg_cookie2a(const struct nlm_cookie *cookie)
+{
+	/*
+	 * We can get away with a static buffer because we're only
+	 * called with BKL held.
+	 */
+	static char buf[2*NLM_MAXCOOKIELEN+1];
+	unsigned int i, len = sizeof(buf);
+	char *p = buf;
+
+	len--;	/* allow for trailing \0 */
+	if (len < 3)
+		return "???";
+	for (i = 0 ; i < cookie->len ; i++) {
+		if (len < 2) {
+			strcpy(p-3, "...");
+			break;
+		}
+		sprintf(p, "%02x", cookie->data[i]);
+		p += 2;
+		len -= 2;
+	}
+	*p = '\0';
+
+	return buf;
+}
+#endif
 
 /*
  * Insert a blocked lock into the global list
@@ -632,7 +660,7 @@ nlmsvc_cancel_blocked(struct nlm_file *file, struct nlm_lock *lock)
 
 /*
  * This is a callback from the filesystem for VFS file lock requests.
- * It will be used if fl_grant is defined and the filesystem can not
+ * It will be used if lm_grant is defined and the filesystem can not
  * respond to the request immediately.
  * For GETLK request it will copy the reply to the nlm_block.
  * For SETLK or SETLKW request it will get the local posix lock.
@@ -719,9 +747,9 @@ static int nlmsvc_same_owner(struct file_lock *fl1, struct file_lock *fl2)
 }
 
 const struct lock_manager_operations nlmsvc_lock_operations = {
-	.fl_compare_owner = nlmsvc_same_owner,
-	.fl_notify = nlmsvc_notify_blocked,
-	.fl_grant = nlmsvc_grant_deferred,
+	.lm_compare_owner = nlmsvc_same_owner,
+	.lm_notify = nlmsvc_notify_blocked,
+	.lm_grant = nlmsvc_grant_deferred,
 };
 
 /*
@@ -935,32 +963,3 @@ nlmsvc_retry_blocked(void)
 
 	return timeout;
 }
-
-#ifdef RPC_DEBUG
-static const char *nlmdbg_cookie2a(const struct nlm_cookie *cookie)
-{
-	/*
-	 * We can get away with a static buffer because we're only
-	 * called with BKL held.
-	 */
-	static char buf[2*NLM_MAXCOOKIELEN+1];
-	unsigned int i, len = sizeof(buf);
-	char *p = buf;
-
-	len--;	/* allow for trailing \0 */
-	if (len < 3)
-		return "???";
-	for (i = 0 ; i < cookie->len ; i++) {
-		if (len < 2) {
-			strcpy(p-3, "...");
-			break;
-		}
-		sprintf(p, "%02x", cookie->data[i]);
-		p += 2;
-		len -= 2;
-	}
-	*p = '\0';
-
-	return buf;
-}
-#endif

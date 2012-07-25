@@ -19,10 +19,10 @@
 #include <linux/module.h>
 #include <linux/bitops.h>
 #include <linux/mutex.h>
+#include <linux/compat.h>
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
-#include <asm/system.h>
 
 #undef TTY_DEBUG_WAIT_UNTIL_SENT
 
@@ -1179,3 +1179,19 @@ int n_tty_ioctl_helper(struct tty_struct *tty, struct file *file,
 	}
 }
 EXPORT_SYMBOL(n_tty_ioctl_helper);
+
+#ifdef CONFIG_COMPAT
+long n_tty_compat_ioctl_helper(struct tty_struct *tty, struct file *file,
+					unsigned int cmd, unsigned long arg)
+{
+	switch (cmd) {
+	case TIOCGLCKTRMIOS:
+	case TIOCSLCKTRMIOS:
+		return tty_mode_ioctl(tty, file, cmd, (unsigned long) compat_ptr(arg));
+	default:
+		return -ENOIOCTLCMD;
+	}
+}
+EXPORT_SYMBOL(n_tty_compat_ioctl_helper);
+#endif
+

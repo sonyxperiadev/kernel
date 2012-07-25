@@ -13,6 +13,8 @@
 #include <linux/smp.h>
 
 #include <asm/cacheflush.h>
+#include <asm/cp15.h>
+#include <asm/smp_plat.h>
 
 extern volatile int pen_release;
 
@@ -69,7 +71,7 @@ static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 		    :
 		    : "memory", "cc");
 
-		if (pen_release == cpu) {
+		if (pen_release == cpu_logical_map(cpu)) {
 			/*
 			 * OK, proper wakeup, we're done
 			 */

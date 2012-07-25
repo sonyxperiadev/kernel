@@ -10,6 +10,7 @@
  *  32-bit debugging code
  */
 #include <linux/linkage.h>
+#include <asm/assembler.h>
 
 		.text
 
@@ -22,7 +23,7 @@
 #if defined(CONFIG_DEBUG_ICEDCC)
 		@@ debug using ARM EmbeddedICE DCC channel
 
-		.macro	addruart, rp, rv
+		.macro	addruart, rp, rv, tmp
 		.endm
 
 #if defined(CONFIG_CPU_V6) || defined(CONFIG_CPU_V6K) || defined(CONFIG_CPU_V7)
@@ -100,13 +101,13 @@
 
 #endif	/* CONFIG_CPU_V6 */
 
-#else
+#elif !defined(CONFIG_DEBUG_SEMIHOSTING)
 #include <mach/debug-macro.S>
 #endif	/* CONFIG_DEBUG_ICEDCC */
 
 #ifdef CONFIG_MMU
 		.macro	addruart_current, rx, tmp1, tmp2
-		addruart	\tmp1, \tmp2
+		addruart	\tmp1, \tmp2, \rx
 		mrc		p15, 0, \rx, c1, c0
 		tst		\rx, #1
 		moveq		\rx, \tmp1
@@ -151,7 +152,11 @@ printhex:	adr	r2, hexbuf
 		b	printascii
 ENDPROC(printhex2)
 
+hexbuf:		.space 16
+
 		.ltorg
+
+#ifndef CONFIG_DEBUG_SEMIHOSTING
 
 ENTRY(printascii)
 		addruart_current r3, r1, r2
@@ -176,4 +181,23 @@ ENTRY(printch)
 		b	1b
 ENDPROC(printch)
 
-hexbuf:		.space 16
+#else
+
+ENTRY(printascii)
+		mov	r1, r0
+		mov	r0, #0x04		@ SYS_WRITE0
+	ARM(	svc	#0x123456	)
+	THUMB(	svc	#0xab		)
+		mov	pc, lr
+ENDPROC(printascii)
+
+ENTRY(printch)
+		adr	r1, hexbuf
+		strb	r0, [r1]
+		mov	r0, #0x03		@ SYS_WRITEC
+	ARM(	svc	#0x123456	)
+	THUMB(	svc	#0xab		)
+		mov	pc, lr
+ENDPROC(printch)
+
+#endif

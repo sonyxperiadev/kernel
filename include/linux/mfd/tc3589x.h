@@ -7,7 +7,7 @@
 #ifndef __LINUX_MFD_TC3589x_H
 #define __LINUX_MFD_TC3589x_H
 
-#include <linux/device.h>
+struct device;
 
 #define TC3589x_RSTCTRL_IRQRST	(1 << 4)
 #define TC3589x_RSTCTRL_TIMRST	(1 << 3)

@@ -32,7 +32,6 @@
 #include <mach/common.h>
 #include <mach/iomux-mx27.h>
 #include <mach/hardware.h>
-#include <mach/audmux.h>
 
 #include "devices-imx27.h"
 
@@ -112,7 +111,7 @@ eukrea_mbimx27_keymap_data __initconst = {
 	.keymap_size    = ARRAY_SIZE(eukrea_mbimx27_keymap),
 };
 
-static struct gpio_led gpio_leds[] = {
+static const struct gpio_led eukrea_mbimx27_gpio_leds[] __initconst = {
 	{
 		.name			= "led1",
 		.default_trigger	= "heartbeat",
@@ -127,17 +126,10 @@ static struct gpio_led gpio_leds[] = {
 	},
 };
 
-static struct gpio_led_platform_data gpio_led_info = {
-	.leds		= gpio_leds,
-	.num_leds	= ARRAY_SIZE(gpio_leds),
-};
-
-static struct platform_device leds_gpio = {
-	.name	= "leds-gpio",
-	.id	= -1,
-	.dev	= {
-		.platform_data	= &gpio_led_info,
-	},
+static const struct gpio_led_platform_data
+		eukrea_mbimx27_gpio_led_info __initconst = {
+	.leds		= eukrea_mbimx27_gpio_leds,
+	.num_leds	= ARRAY_SIZE(eukrea_mbimx27_gpio_leds),
 };
 
 static struct imx_fb_videomode eukrea_mbimx27_modes[] = {
@@ -293,10 +285,6 @@ static struct i2c_board_info eukrea_mbimx27_i2c_devices[] = {
 	},
 };
 
-static struct platform_device *platform_devices[] __initdata = {
-	&leds_gpio,
-};
-
 static const struct imxmmc_platform_data sdhc_pdata __initconst = {
 	.dat3_card_detect = 1,
 };
@@ -316,25 +304,6 @@ void __init eukrea_mbimx27_baseboard_init(void)
 {
 	mxc_gpio_setup_multiple_pins(eukrea_mbimx27_pins,
 		ARRAY_SIZE(eukrea_mbimx27_pins), "MBIMX27");
-
-#if defined(CONFIG_SND_SOC_EUKREA_TLV320) \
-	|| defined(CONFIG_SND_SOC_EUKREA_TLV320_MODULE)
-	/* SSI unit master I2S codec connected to SSI_PINS_4*/
-	mxc_audmux_v1_configure_port(MX27_AUDMUX_HPCR1_SSI0,
-			MXC_AUDMUX_V1_PCR_SYN |
-			MXC_AUDMUX_V1_PCR_TFSDIR |
-			MXC_AUDMUX_V1_PCR_TCLKDIR |
-			MXC_AUDMUX_V1_PCR_RFSDIR |
-			MXC_AUDMUX_V1_PCR_RCLKDIR |
-			MXC_AUDMUX_V1_PCR_TFCSEL(MX27_AUDMUX_HPCR3_SSI_PINS_4) |
-			MXC_AUDMUX_V1_PCR_RFCSEL(MX27_AUDMUX_HPCR3_SSI_PINS_4) |
-			MXC_AUDMUX_V1_PCR_RXDSEL(MX27_AUDMUX_HPCR3_SSI_PINS_4)
-	);
-	mxc_audmux_v1_configure_port(MX27_AUDMUX_HPCR3_SSI_PINS_4,
-			MXC_AUDMUX_V1_PCR_SYN |
-			MXC_AUDMUX_V1_PCR_RXDSEL(MX27_AUDMUX_HPCR1_SSI0)
-	);
-#endif
 
 	imx27_add_imx_uart1(&uart_pdata);
 	imx27_add_imx_uart2(&uart_pdata);
@@ -377,5 +346,5 @@ void __init eukrea_mbimx27_baseboard_init(void)
 
 	imx27_add_imx_keypad(&eukrea_mbimx27_keymap_data);
 
-	platform_add_devices(platform_devices, ARRAY_SIZE(platform_devices));
+	gpio_led_register_device(-1, &eukrea_mbimx27_gpio_led_info);
 }

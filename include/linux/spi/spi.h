@@ -22,6 +22,7 @@
 #include <linux/device.h>
 #include <linux/mod_devicetable.h>
 #include <linux/slab.h>
+#include <linux/kthread.h>
 
 /*
  * INTERFACES between SPI master-side drivers and SPI infrastructure.
@@ -200,6 +201,17 @@ static inline void spi_unregister_driver(struct spi_driver *sdrv)
 		driver_unregister(&sdrv->driver);
 }
 
+/**
+ * module_spi_driver() - Helper macro for registering a SPI driver
+ * @__spi_driver: spi_driver struct
+ *
+ * Helper macro for SPI drivers which do not do anything special in module
+ * init/exit. This eliminates a lot of boilerplate. Each module may only
+ * use this macro once, and calling it replaces module_init() and module_exit()
+ */
+#define module_spi_driver(__spi_driver) \
+	module_driver(__spi_driver, spi_register_driver, \
+			spi_unregister_driver)
 
 /**
  * struct spi_master - interface to SPI master controller
@@ -224,6 +236,27 @@ static inline void spi_unregister_driver(struct spi_driver *sdrv)
  *	the device whose settings are being modified.
  * @transfer: adds a message to the controller's transfer queue.
  * @cleanup: frees controller-specific state
+ * @queued: whether this master is providing an internal message queue
+ * @kworker: thread struct for message pump
+ * @kworker_task: pointer to task for message pump kworker thread
+ * @pump_messages: work struct for scheduling work to the message pump
+ * @queue_lock: spinlock to syncronise access to message queue
+ * @queue: message queue
+ * @cur_msg: the currently in-flight message
+ * @busy: message pump is busy
+ * @running: message pump is running
+ * @rt: whether this queue is set to run as a realtime task
+ * @prepare_transfer_hardware: a message will soon arrive from the queue
+ *	so the subsystem requests the driver to prepare the transfer hardware
+ *	by issuing this call
+ * @transfer_one_message: the subsystem calls the driver to transfer a single
+ *	message while queuing transfers that arrive in the meantime. When the
+ *	driver is finished with this message, it must call
+ *	spi_finalize_current_message() so the subsystem can issue the next
+ *	transfer
+ * @unprepare_transfer_hardware: there are currently no more messages on the
+ *	queue so the subsystem notifies the driver that it may relax the
+ *	hardware by issuing this call
  *
  * Each SPI master controller can communicate with one or more @spi_device
  * children.  These make a small bus, sharing MOSI, MISO and SCK signals
@@ -307,6 +340,28 @@ struct spi_master {
 
 	/* called on release() to free memory provided by spi_master */
 	void			(*cleanup)(struct spi_device *spi);
+
+	/*
+	 * These hooks are for drivers that want to use the generic
+	 * master transfer queueing mechanism. If these are used, the
+	 * transfer() function above must NOT be specified by the driver.
+	 * Over time we expect SPI drivers to be phased over to this API.
+	 */
+	bool				queued;
+	struct kthread_worker		kworker;
+	struct task_struct		*kworker_task;
+	struct kthread_work		pump_messages;
+	spinlock_t			queue_lock;
+	struct list_head		queue;
+	struct spi_message		*cur_msg;
+	bool				busy;
+	bool				running;
+	bool				rt;
+
+	int (*prepare_transfer_hardware)(struct spi_master *master);
+	int (*transfer_one_message)(struct spi_master *master,
+				    struct spi_message *mesg);
+	int (*unprepare_transfer_hardware)(struct spi_master *master);
 };
 
 static inline void *spi_master_get_devdata(struct spi_master *master)
@@ -332,6 +387,13 @@ static inline void spi_master_put(struct spi_master *master)
 		put_device(&master->dev);
 }
 
+/* PM calls that need to be issued by the driver */
+extern int spi_master_suspend(struct spi_master *master);
+extern int spi_master_resume(struct spi_master *master);
+
+/* Calls the driver make to interact with the message queue */
+extern struct spi_message *spi_get_next_queued_message(struct spi_master *master);
+extern void spi_finalize_current_message(struct spi_master *master);
 
 /* the spi driver core manages memory for the spi_master classdev */
 extern struct spi_master *
@@ -538,7 +600,7 @@ static inline struct spi_message *spi_message_alloc(unsigned ntrans, gfp_t flags
 			+ ntrans * sizeof(struct spi_transfer),
 			flags);
 	if (m) {
-		int i;
+		unsigned i;
 		struct spi_transfer *t = (struct spi_transfer *)(m + 1);
 
 		INIT_LIST_HEAD(&m->transfers);

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -20,7 +20,6 @@
  * other than the GPL, without Broadcom's express prior written consent.
  * $Id: typedefs.h 275703 2011-08-04 20:20:27Z $
  */
-
 
 #ifndef _TYPEDEFS_H_
 #define _TYPEDEFS_H_
@@ -62,7 +61,6 @@ typedef unsigned long long int uintptr;
 #if defined(_NEED_SIZE_T_)
 typedef long unsigned int size_t;
 #endif
-
 
 
 
@@ -260,7 +258,7 @@ typedef float64 float_t;
 
 
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__lint)
 	#define BWL_COMPILER_GNU
 #elif defined(__CC_ARM) && __CC_ARM
 	#define BWL_COMPILER_ARMCC

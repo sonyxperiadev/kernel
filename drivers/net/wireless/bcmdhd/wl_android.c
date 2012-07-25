@@ -1,9 +1,9 @@
 /*
  * Linux cfg80211 driver - Android related functions
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_android.c,v 1.1.4.1.2.14 2011/02/09 01:40:07 Exp $
+ * $Id: wl_android.c 323797 2012-03-27 01:27:20Z $
  */
 
 #include <linux/module.h>
@@ -128,6 +128,10 @@ int wl_cfg80211_set_p2p_ps(struct net_device *net, char* buf, int len)
 #endif
 extern int dhd_os_check_if_up(void *dhdp);
 extern void *bcmsdh_get_drvdata(void);
+#ifdef PROP_TXSTATUS
+extern int dhd_wlfc_init(dhd_pub_t *dhd);
+extern void dhd_wlfc_deinit(dhd_pub_t *dhd);
+#endif
 
 extern bool ap_fw_loaded;
 #ifdef CUSTOMER_HW3
@@ -352,6 +356,7 @@ static int wl_android_get_p2p_dev_addr(struct net_device *ndev, char *command, i
 int wl_android_wifi_on(struct net_device *dev)
 {
 	int ret = 0;
+	int retry = POWERUP_MAX_RETRY;
 
 	printk("%s in\n", __FUNCTION__);
 	if (!dev) {
@@ -361,13 +366,26 @@ int wl_android_wifi_on(struct net_device *dev)
 
 	dhd_net_if_lock(dev);
 	if (!g_wifi_on) {
-		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
-		sdioh_start(NULL, 0);
+		do {
+			dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
+			ret = sdioh_start(NULL, 0);
+			if (ret == 0)
+				break;
+			DHD_ERROR(("\nfailed to power up wifi chip, retry again (%d left) **\n\n",
+				retry+1));
+			dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
+		} while (retry-- >= 0);
+		if (ret != 0) {
+			DHD_ERROR(("\nfailed to power up wifi chip, max retry reached **\n\n"));
+			goto exit;
+		}
 		ret = dhd_dev_reset(dev, FALSE);
 		sdioh_start(NULL, 1);
 		dhd_dev_init_ioctl(dev);
 		g_wifi_on = 1;
 	}
+
+exit:
 	dhd_net_if_unlock(dev);
 
 	return ret;
@@ -388,7 +406,7 @@ int wl_android_wifi_off(struct net_device *dev)
 		dhd_dev_reset(dev, 1);
 		sdioh_stop(NULL);
 		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
-		g_wifi_on = 0;
+		g_wifi_on = FALSE;
 	}
 	dhd_net_if_unlock(dev);
 
@@ -590,7 +608,6 @@ int wl_android_init(void)
 {
 	int ret = 0;
 
-	dhd_msg_level = DHD_ERROR_VAL;
 #ifdef ENABLE_INSMOD_NO_FW_LOAD
 	dhd_download_fw_on_driverload = FALSE;
 #endif /* ENABLE_INSMOD_NO_FW_LOAD */
@@ -741,13 +758,11 @@ static int wifi_probe(struct platform_device *pdev)
 	struct wifi_platform_data *wifi_ctrl =
 		(struct wifi_platform_data *)(pdev->dev.platform_data);
 
-	DHD_ERROR(("## %s\n", __FUNCTION__));
 	wifi_irqres = platform_get_resource_byname(pdev, IORESOURCE_IRQ, "bcmdhd_wlan_irq");
 	if (wifi_irqres == NULL)
 		wifi_irqres = platform_get_resource_byname(pdev,
 			IORESOURCE_IRQ, "bcm4329_wlan_irq");
 	wifi_control_data = wifi_ctrl;
-
 	wifi_set_power(1, 0);	/* Power On */
 	wifi_set_carddetect(1);	/* CardDetect (0->1) */
 

@@ -19,7 +19,7 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/module.h>
+#include <linux/export.h>
 #include <linux/memory_hotplug.h>
 #include <linux/memblock.h>
 #include <linux/slab.h>
@@ -29,6 +29,7 @@
 #include <asm/prom.h>
 #include <asm/udbg.h>
 #include <asm/lv1call.h>
+#include <asm/setup.h>
 
 #include "platform.h"
 
@@ -319,7 +320,6 @@ static int __init ps3_mm_add_memory(void)
 	}
 
 	memblock_add(start_addr, map.r1.size);
-	memblock_analyze();
 
 	result = online_pages(start_pfn, nr_pages);
 

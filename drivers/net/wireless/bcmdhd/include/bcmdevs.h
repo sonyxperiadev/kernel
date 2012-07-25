@@ -1,9 +1,9 @@
 /*
  * Broadcom device-specific manifest constants.
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -23,7 +23,6 @@
  *
  * $Id: bcmdevs.h 298516 2011-11-24 01:06:30Z $
  */
-
 
 #ifndef	_BCMDEVS_H
 #define	_BCMDEVS_H
@@ -60,7 +59,11 @@
 #define BCM_DNGL_BL_PID_43236   0xbd17
 #define BCM_DNGL_BL_PID_4332	0xbd18
 #define BCM_DNGL_BL_PID_4330	0xbd19
+#define BCM_DNGL_BL_PID_4334	0xbd1a
 #define BCM_DNGL_BL_PID_43239   0xbd1b
+#define BCM_DNGL_BL_PID_4324	0xbd1c
+#define BCM_DNGL_BL_PID_4360	0xbd1d
+
 #define BCM_DNGL_BDC_PID	0x0bdc
 #define BCM_DNGL_JTAG_PID	0x4a44
 
@@ -134,7 +137,7 @@
 #define BCM43237_D11N_ID	0x4355		
 #define BCM43237_D11N5G_ID	0x4356		
 #define BCM43227_D11N2G_ID	0x4358		
-#define BCM43228_D11N_ID		0x4359		
+#define BCM43228_D11N_ID	0x4359		
 #define BCM43228_D11N5G_ID	0x435a		
 #define BCM43362_D11N_ID	0x4363		
 #define BCM43239_D11N_ID	0x4370		
@@ -220,6 +223,7 @@
 #define	BCM43421_CHIP_ID	43421		
 #define	BCM43428_CHIP_ID	43428		
 #define	BCM43431_CHIP_ID	43431		
+#define	BCM43460_CHIP_ID	43460		
 #define	BCM4325_CHIP_ID		0x4325		
 #define	BCM4328_CHIP_ID		0x4328		
 #define	BCM4329_CHIP_ID		0x4329		
@@ -234,6 +238,7 @@
 #define	BCM4342_CHIP_ID		4342		
 #define	BCM4402_CHIP_ID		0x4402		
 #define	BCM4704_CHIP_ID		0x4704		
+#define	BCM4706_CHIP_ID		0x5300		
 #define	BCM4710_CHIP_ID		0x4710		
 #define	BCM4712_CHIP_ID		0x4712		
 #define	BCM4716_CHIP_ID		0x4716		
@@ -272,11 +277,14 @@
 #define BCM5357_PKG_ID		11		
 #define BCM5356U_PKG_ID		12		
 #define BCM53572_PKG_ID		8		
+#define BCM5357C0_PKG_ID	8		
 #define BCM47188_PKG_ID		9		
+#define BCM5358C0_PKG_ID	0xa		
+#define BCM5356C0_PKG_ID	0xb		
 #define BCM4331TT_PKG_ID        8		
 #define BCM4331TN_PKG_ID        9		
 #define BCM4331TNA0_PKG_ID     0xb		
-
+#define	BCM4706L_PKG_ID		1		
 
 #define HDLSIM5350_PKG_ID	1		
 #define HDLSIM_PKG_ID		14		
@@ -295,14 +303,13 @@
 #define	BFL_PACTRL		0x00000002  
 #define BFL_AIRLINEMODE	0x00000004  
 #define	BFL_ADCDIV		0x00000008  
+#define	BFL_RFPLL	        0x00000008  
 #define	BFL_ENETROBO		0x00000010  
 #define	BFL_NOPLLDOWN		0x00000020  
 #define	BFL_CCKHIPWR		0x00000040  
 #define	BFL_ENETADM		0x00000080  
 #define	BFL_ENETVLAN		0x00000100  
-#ifdef WLAFTERBURNER
-#define	BFL_AFTERBURNER		0x00000200  
-#endif 
+#define	BFL_UNUSED		0x00000200
 #define BFL_NOPCI		0x00000400  
 #define BFL_FEM			0x00000800  
 #define BFL_EXTLNA		0x00001000  
@@ -350,6 +357,9 @@
 #define BFL2_IPALVLSHIFT_3P3    0x00020000
 #define BFL2_INTERNDET_TXIQCAL  0x00040000  
 #define BFL2_XTALBUFOUTEN       0x00080000  
+				
+				
+
 #define BFL2_ANAPACTRL_2G	0x00100000  
 #define BFL2_ANAPACTRL_5G	0x00200000  
 #define BFL2_ELNACTRL_TRSW_2G	0x00400000  
@@ -357,10 +367,11 @@
 #define BFL2_TEMPSENSE_HIGHER	0x01000000  
 #define BFL2_BTC3WIREONLY       0x02000000  
 #define BFL2_PWR_NOMINAL	0x04000000  
-#define BFL2_EXTLNA_TX		0x08000000  
+#define BFL2_EXTLNA_PWRSAVE	0x08000000  
 						
 #define BFL2_4313_RADIOREG	0x10000000
 									   
+#define BFL2_SDR_EN		0x20000000	
 
 
 
@@ -377,7 +388,8 @@
 #define BOARD_GPIO_BTC4_BT	0x2000	
 #define BOARD_GPIO_BTC4_STAT	0x4000	
 #define BOARD_GPIO_BTC4_WLAN	0x8000	
-#define	BOARD_GPIO_1_WLAN_PWR	0x2	
+#define	BOARD_GPIO_1_WLAN_PWR	0x02	
+#define	BOARD_GPIO_3_WLAN_PWR	0x08	
 #define	BOARD_GPIO_4_WLAN_PWR	0x10	
 
 #define GPIO_BTC4W_OUT_4312  0x010  
@@ -386,6 +398,7 @@
 #define GPIO_BTC4W_OUT_43225  0x0e0  
 #define GPIO_BTC4W_OUT_43421  0x020  
 #define GPIO_BTC4W_OUT_4313  0x060  
+#define GPIO_BTC4W_OUT_4331_SHARED  0x010  
 
 #define	PCI_CFG_GPIO_SCS	0x10	
 #define PCI_CFG_GPIO_HWRAD	0x20	
@@ -726,8 +739,22 @@
 
 #define MUXENAB_UART		0x00000001
 #define MUXENAB_GPIO		0x00000002
-#define MUXENAB_ERCX		0x00000004
+#define MUXENAB_ERCX		0x00000004	
 #define MUXENAB_JTAG		0x00000008
-#define MUXENAB_HOST_WAKE	0x00000010
+#define MUXENAB_HOST_WAKE	0x00000010	
+#define MUXENAB_I2S_EN		0x00000020
+#define MUXENAB_I2S_MASTER	0x00000040
+#define MUXENAB_I2S_FULL	0x00000080
+#define MUXENAB_SFLASH		0x00000100
+#define MUXENAB_RFSWCTRL0	0x00000200
+#define MUXENAB_RFSWCTRL1	0x00000400
+#define MUXENAB_RFSWCTRL2	0x00000800
+#define MUXENAB_SECI		0x00001000
+#define MUXENAB_BT_LEGACY	0x00002000
+#define MUXENAB_HOST_WAKE1	0x00004000	
+
+
+#define FLASH_KERNEL_NFLASH	0x00000001
+#define FLASH_BOOT_NFLASH	0x00000002
 
 #endif 

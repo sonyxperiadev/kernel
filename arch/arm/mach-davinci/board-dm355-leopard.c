@@ -23,12 +23,13 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 
-#include <mach/dm355.h>
 #include <mach/i2c.h>
 #include <mach/serial.h>
 #include <mach/nand.h>
 #include <mach/mmc.h>
 #include <mach/usb.h>
+
+#include "davinci.h"
 
 /* NOTE:  this is geared for the standard config, with a socketed
  * 2 GByte Micron NAND (MT29F16G08FAA) using 128KB sectors.  If you
@@ -74,7 +75,7 @@ static struct davinci_nand_pdata davinci_nand_data = {
 	.parts			= davinci_nand_partitions,
 	.nr_parts		= ARRAY_SIZE(davinci_nand_partitions),
 	.ecc_mode		= NAND_ECC_HW_SYNDROME,
-	.options		= NAND_USE_FLASH_BBT,
+	.bbt_options		= NAND_BBT_USE_FLASH,
 };
 
 static struct resource davinci_nand_resources[] = {
@@ -270,9 +271,11 @@ static __init void dm355_leopard_init(void)
 }
 
 MACHINE_START(DM355_LEOPARD, "DaVinci DM355 leopard")
-	.boot_params  = (0x80000100),
+	.atag_offset  = 0x100,
 	.map_io	      = dm355_leopard_map_io,
 	.init_irq     = davinci_irq_init,
 	.timer	      = &davinci_timer,
 	.init_machine = dm355_leopard_init,
+	.dma_zone_size	= SZ_128M,
+	.restart	= davinci_restart,
 MACHINE_END

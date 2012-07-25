@@ -22,7 +22,7 @@
 #include <linux/cpumask.h>
 #include <linux/mutex.h>
 #include <net/flow.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 #include <linux/security.h>
 
 struct flow_cache_entry {
@@ -30,6 +30,7 @@ struct flow_cache_entry {
 		struct hlist_node	hlist;
 		struct list_head	gc_list;
 	} u;
+	struct net			*net;
 	u16				family;
 	u8				dir;
 	u32				genid;
@@ -235,7 +236,8 @@ flow_cache_lookup(struct net *net, const struct flowi *key, u16 family, u8 dir,
 
 	hash = flow_hash_code(fc, fcp, key, keysize);
 	hlist_for_each_entry(tfle, entry, &fcp->hash_table[hash], u.hlist) {
-		if (tfle->family == family &&
+		if (tfle->net == net &&
+		    tfle->family == family &&
 		    tfle->dir == dir &&
 		    flow_key_compare(key, &tfle->key, keysize) == 0) {
 			fle = tfle;
@@ -249,6 +251,7 @@ flow_cache_lookup(struct net *net, const struct flowi *key, u16 family, u8 dir,
 
 		fle = kmem_cache_alloc(flow_cachep, GFP_ATOMIC);
 		if (fle) {
+			fle->net = net;
 			fle->family = family;
 			fle->dir = dir;
 			memcpy(&fle->key, key, keysize * sizeof(flow_compare_t));
@@ -355,6 +358,18 @@ void flow_cache_flush(void)
 	put_online_cpus();
 }
 
+static void flow_cache_flush_task(struct work_struct *work)
+{
+	flow_cache_flush();
+}
+
+static DECLARE_WORK(flow_cache_flush_work, flow_cache_flush_task);
+
+void flow_cache_flush_deferred(void)
+{
+	schedule_work(&flow_cache_flush_work);
+}
+
 static int __cpuinit flow_cache_cpu_prepare(struct flow_cache *fc, int cpu)
 {
 	struct flow_cache_percpu *fcp = per_cpu_ptr(fc->percpu, cpu);
@@ -410,7 +425,7 @@ static int __init flow_cache_init(struct flow_cache *fc)
 
 	for_each_online_cpu(i) {
 		if (flow_cache_cpu_prepare(fc, i))
-			return -ENOMEM;
+			goto err;
 	}
 	fc->hotcpu_notifier = (struct notifier_block){
 		.notifier_call = flow_cache_cpu,
@@ -423,6 +438,18 @@ static int __init flow_cache_init(struct flow_cache *fc)
 	add_timer(&fc->rnd_timer);
 
 	return 0;
+
+err:
+	for_each_possible_cpu(i) {
+		struct flow_cache_percpu *fcp = per_cpu_ptr(fc->percpu, i);
+		kfree(fcp->hash_table);
+		fcp->hash_table = NULL;
+	}
+
+	free_percpu(fc->percpu);
+	fc->percpu = NULL;
+
+	return -ENOMEM;
 }
 
 static int __init flow_cache_init_global(void)

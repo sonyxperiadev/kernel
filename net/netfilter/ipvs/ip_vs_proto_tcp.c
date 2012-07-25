@@ -546,7 +546,7 @@ set_tcp_state(struct ip_vs_proto_data *pd, struct ip_vs_conn *cp,
 /*
  *	Handle state transitions
  */
-static int
+static void
 tcp_state_transition(struct ip_vs_conn *cp, int direction,
 		     const struct sk_buff *skb,
 		     struct ip_vs_proto_data *pd)
@@ -561,13 +561,11 @@ tcp_state_transition(struct ip_vs_conn *cp, int direction,
 
 	th = skb_header_pointer(skb, ihl, sizeof(_tcph), &_tcph);
 	if (th == NULL)
-		return 0;
+		return;
 
 	spin_lock(&cp->lock);
 	set_tcp_state(pd, cp, direction, th);
 	spin_unlock(&cp->lock);
-
-	return 1;
 }
 
 static inline __u16 tcp_app_hashkey(__be16 port)
@@ -679,7 +677,7 @@ void ip_vs_tcp_conn_listen(struct net *net, struct ip_vs_conn *cp)
  *   timeouts is netns related now.
  * ---------------------------------------------
  */
-static void __ip_vs_tcp_init(struct net *net, struct ip_vs_proto_data *pd)
+static int __ip_vs_tcp_init(struct net *net, struct ip_vs_proto_data *pd)
 {
 	struct netns_ipvs *ipvs = net_ipvs(net);
 
@@ -687,7 +685,10 @@ static void __ip_vs_tcp_init(struct net *net, struct ip_vs_proto_data *pd)
 	spin_lock_init(&ipvs->tcp_app_lock);
 	pd->timeout_table = ip_vs_create_timeout_table((int *)tcp_timeouts,
 							sizeof(tcp_timeouts));
+	if (!pd->timeout_table)
+		return -ENOMEM;
 	pd->tcp_state_table =  tcp_states;
+	return 0;
 }
 
 static void __ip_vs_tcp_exit(struct net *net, struct ip_vs_proto_data *pd)

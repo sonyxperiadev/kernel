@@ -187,12 +187,7 @@
 
 #include <linux/dmaengine.h>
 #include <mach/dma.h>
-
-struct imx_pcm_dma_params {
-	int dma;
-	unsigned long dma_addr;
-	int burstsize;
-};
+#include "imx-pcm.h"
 
 struct imx_ssi {
 	struct platform_device *ac97_dev;
@@ -217,21 +212,5 @@ struct imx_ssi {
 	struct platform_device *soc_platform_pdev;
 	struct platform_device *soc_platform_pdev_fiq;
 };
-
-struct snd_soc_platform *imx_ssi_fiq_init(struct platform_device *pdev,
-		struct imx_ssi *ssi);
-void imx_ssi_fiq_exit(struct platform_device *pdev, struct imx_ssi *ssi);
-struct snd_soc_platform *imx_ssi_dma_mx2_init(struct platform_device *pdev,
-		struct imx_ssi *ssi);
-
-int snd_imx_pcm_mmap(struct snd_pcm_substream *substream, struct vm_area_struct *vma);
-int imx_pcm_new(struct snd_card *card, struct snd_soc_dai *dai,
-	struct snd_pcm *pcm);
-void imx_pcm_free(struct snd_pcm *pcm);
-
-/*
- * Do not change this as the FIQ handler depends on this size
- */
-#define IMX_SSI_DMABUF_SIZE	(64 * 1024)
 
 #endif /* _IMX_SSI_H */

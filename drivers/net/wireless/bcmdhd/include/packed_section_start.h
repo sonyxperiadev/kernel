@@ -15,9 +15,9 @@
  * #include <packed_section_end.h>
  *
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -39,7 +39,6 @@
 
 
 
-
 #ifdef BWL_PACKED_SECTION
 	#error "BWL_PACKED_SECTION is already defined!"
 #else
@@ -50,7 +49,7 @@
 
 
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__lint)
 	#define	BWL_PRE_PACKED_STRUCT
 	#define	BWL_POST_PACKED_STRUCT	__attribute__ ((packed))
 #elif defined(__CC_ARM)

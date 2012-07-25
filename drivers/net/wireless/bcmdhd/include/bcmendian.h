@@ -1,9 +1,9 @@
 /*
  * Byte order utilities
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -26,7 +26,6 @@
  * This file by default provides proper behavior on little-endian architectures.
  * On big-endian architectures, IL_BIGENDIAN should be defined.
  */
-
 
 #ifndef _BCMENDIAN_H_
 #define _BCMENDIAN_H_

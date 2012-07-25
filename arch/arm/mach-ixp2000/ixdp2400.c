@@ -29,7 +29,6 @@
 #include <asm/irq.h>
 #include <asm/pgtable.h>
 #include <asm/page.h>
-#include <asm/system.h>
 #include <mach/hardware.h>
 #include <asm/mach-types.h>
 
@@ -78,7 +77,8 @@ int ixdp2400_pci_setup(int nr, struct pci_sys_data *sys)
 	return 1;
 }
 
-static int __init ixdp2400_pci_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
+static int __init ixdp2400_pci_map_irq(const struct pci_dev *dev, u8 slot,
+	u8 pin)
 {
 	if (ixdp2x00_master_npu()) {
 
@@ -133,11 +133,11 @@ static void ixdp2400_pci_postinit(void)
 
 	if (ixdp2x00_master_npu()) {
 		dev = pci_get_bus_and_slot(1, IXDP2400_SLAVE_ENET_DEVFN);
-		pci_remove_bus_device(dev);
+		pci_stop_and_remove_bus_device(dev);
 		pci_dev_put(dev);
 	} else {
 		dev = pci_get_bus_and_slot(1, IXDP2400_MASTER_ENET_DEVFN);
-		pci_remove_bus_device(dev);
+		pci_stop_and_remove_bus_device(dev);
 		pci_dev_put(dev);
 
 		ixdp2x00_slave_pci_postinit();
@@ -170,10 +170,11 @@ void __init ixdp2400_init_irq(void)
 
 MACHINE_START(IXDP2400, "Intel IXDP2400 Development Platform")
 	/* Maintainer: MontaVista Software, Inc. */
-	.boot_params	= 0x00000100,
+	.atag_offset	= 0x100,
 	.map_io		= ixdp2x00_map_io,
 	.init_irq	= ixdp2400_init_irq,
 	.timer		= &ixdp2400_timer,
 	.init_machine	= ixdp2x00_init_machine,
+	.restart	= ixp2000_restart,
 MACHINE_END
 

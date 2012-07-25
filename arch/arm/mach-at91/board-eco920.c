@@ -26,6 +26,7 @@
 
 #include <mach/board.h>
 #include <mach/at91rm9200_mc.h>
+#include <mach/at91_ramc.h>
 #include <mach/cpu.h>
 
 #include "generic.h"
@@ -35,7 +36,7 @@ static void __init eco920_init_early(void)
 	/* Set cpu type: PQFP */
 	at91rm9200_set_type(ARCH_REVISON_9200_PQFP);
 
-	at91rm9200_initialize(18432000);
+	at91_initialize(18432000);
 
 	/* Setup the LEDs */
 	at91_init_leds(AT91_PIN_PB0, AT91_PIN_PB1);
@@ -47,18 +48,15 @@ static void __init eco920_init_early(void)
 	at91_set_serial_console(0);
 }
 
-static void __init eco920_init_irq(void)
-{
-	at91rm9200_init_interrupts(NULL);
-}
-
-static struct at91_eth_data __initdata eco920_eth_data = {
+static struct macb_platform_data __initdata eco920_eth_data = {
 	.phy_irq_pin	= AT91_PIN_PC2,
 	.is_rmii	= 1,
 };
 
 static struct at91_usbh_data __initdata eco920_usbh_data = {
 	.ports		= 1,
+	.vbus_pin	= {-EINVAL, -EINVAL},
+	.overcurrent_pin= {-EINVAL, -EINVAL},
 };
 
 static struct at91_udc_data __initdata eco920_udc_data = {
@@ -69,6 +67,9 @@ static struct at91_udc_data __initdata eco920_udc_data = {
 static struct at91_mmc_data __initdata eco920_mmc_data = {
 	.slot_b		= 0,
 	.wire4		= 0,
+	.det_pin	= -EINVAL,
+	.wp_pin		= -EINVAL,
+	.vcc_pin	= -EINVAL,
 };
 
 static struct physmap_flash_data eco920_flash_data = {
@@ -110,7 +111,7 @@ static void __init eco920_board_init(void)
 	at91_add_device_mmc(0, &eco920_mmc_data);
 	platform_device_register(&eco920_flash);
 
-	at91_sys_write(AT91_SMC_CSR(7),	AT91_SMC_RWHOLD_(1)
+	at91_ramc_write(0, AT91_SMC_CSR(7),	AT91_SMC_RWHOLD_(1)
 				| AT91_SMC_RWSETUP_(1)
 				| AT91_SMC_DBW_8
 				| AT91_SMC_WSEN
@@ -122,7 +123,7 @@ static void __init eco920_board_init(void)
 	at91_set_deglitch(AT91_PIN_PA23, 1);
 
 /* Initialization of the Static Memory Controller for Chip Select 3 */
-	at91_sys_write(AT91_SMC_CSR(3),
+	at91_ramc_write(0, AT91_SMC_CSR(3),
 		AT91_SMC_DBW_16  |	/* 16 bit */
 		AT91_SMC_WSEN    |
 		AT91_SMC_NWS_(5) |	/* wait states */
@@ -135,8 +136,8 @@ static void __init eco920_board_init(void)
 MACHINE_START(ECO920, "eco920")
 	/* Maintainer: Sascha Hauer */
 	.timer		= &at91rm9200_timer,
-	.map_io		= at91rm9200_map_io,
+	.map_io		= at91_map_io,
 	.init_early	= eco920_init_early,
-	.init_irq	= eco920_init_irq,
+	.init_irq	= at91_init_irq_default,
 	.init_machine	= eco920_board_init,
 MACHINE_END

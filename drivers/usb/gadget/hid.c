@@ -9,15 +9,6 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 
@@ -69,9 +60,9 @@ static struct usb_device_descriptor device_desc = {
 	/* .bDeviceClass =		USB_CLASS_COMM, */
 	/* .bDeviceSubClass =	0, */
 	/* .bDeviceProtocol =	0, */
-	.bDeviceClass =		0xEF,
-	.bDeviceSubClass =	2,
-	.bDeviceProtocol =	1,
+	.bDeviceClass =		USB_CLASS_PER_INTERFACE,
+	.bDeviceSubClass =	0,
+	.bDeviceProtocol =	0,
 	/* .bMaxPacketSize0 = f(hardware) */
 
 	/* Vendor and product id can be overridden by module parameters.  */
@@ -234,6 +225,7 @@ static struct usb_composite_driver hidg_driver = {
 	.name		= "g_hid",
 	.dev		= &device_desc,
 	.strings	= dev_strings,
+	.max_speed	= USB_SPEED_HIGH,
 	.unbind		= __exit_p(hid_unbind),
 };
 

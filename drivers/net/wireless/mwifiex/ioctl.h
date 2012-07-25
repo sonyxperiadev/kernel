@@ -50,7 +50,7 @@ struct mwifiex_chan_freq {
 };
 
 struct mwifiex_ssid_bssid {
-	struct mwifiex_802_11_ssid ssid;
+	struct cfg80211_ssid ssid;
 	u8 bssid[ETH_ALEN];
 };
 
@@ -60,17 +60,6 @@ enum {
 	BAND_A = 4,
 	BAND_GN = 8,
 	BAND_AN = 16,
-};
-
-#define NO_SEC_CHANNEL               0
-#define SEC_CHANNEL_ABOVE            1
-#define SEC_CHANNEL_BELOW            3
-
-struct mwifiex_ds_band_cfg {
-	u32 config_bands;
-	u32 adhoc_start_band;
-	u32 adhoc_channel;
-	u32 sec_chan_offset;
 };
 
 enum {
@@ -133,8 +122,7 @@ struct mwifiex_ver_ext {
 
 struct mwifiex_bss_info {
 	u32 bss_mode;
-	struct mwifiex_802_11_ssid ssid;
-	u32 scan_table_idx;
+	struct cfg80211_ssid ssid;
 	u32 bss_chan;
 	u32 region_code;
 	u32 media_connected;
@@ -249,6 +237,7 @@ struct mwifiex_ds_hs_cfg {
 };
 
 #define DEEP_SLEEP_ON  1
+#define DEEP_SLEEP_OFF 0
 #define DEEP_SLEEP_IDLE_TIME	100
 #define PS_MODE_AUTO		1
 
@@ -306,10 +295,12 @@ struct mwifiex_ds_read_eeprom {
 	u8 value[MAX_EEPROM_DATA];
 };
 
+#define IEEE_MAX_IE_SIZE		256
+
 struct mwifiex_ds_misc_gen_ie {
 	u32 type;
 	u32 len;
-	u8 ie_data[IW_CUSTOM_MAX];
+	u8 ie_data[IEEE_MAX_IE_SIZE];
 };
 
 struct mwifiex_ds_misc_cmd {

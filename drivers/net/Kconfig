@@ -2,9 +2,6 @@
 # Network device configuration
 #
 
-config HAVE_NET_MACB
-	bool
-
 menuconfig NETDEVICES
 	default y if UML
 	depends on NET
@@ -28,18 +25,32 @@ menuconfig NETDEVICES
 # that for each of the symbols.
 if NETDEVICES
 
-config IFB
-	tristate "Intermediate Functional Block support"
-	depends on NET_CLS_ACT
+config NET_CORE
+	default y
+	bool "Network core driver support"
 	---help---
-	  This is an intermediate driver that allows sharing of
-	  resources.
+	  You can say N here if you do not intend to use any of the
+	  networking core drivers (i.e. VLAN, bridging, bonding, etc.)
+
+if NET_CORE
+
+config BONDING
+	tristate "Bonding driver support"
+	depends on INET
+	depends on IPV6 || IPV6=n
+	---help---
+	  Say 'Y' or 'M' if you wish to be able to 'bond' multiple Ethernet
+	  Channels together. This is called 'Etherchannel' by Cisco,
+	  'Trunking' by Sun, 802.3ad by the IEEE, and 'Bonding' in Linux.
+
+	  The driver supports multiple bonding modes to allow for both high
+	  performance and high availability operation.
+
+	  Refer to <file:Documentation/networking/bonding.txt> for more
+	  information.
+
 	  To compile this driver as a module, choose M here: the module
-	  will be called ifb.  If you want to use more than one ifb
-	  device at a time, you need to compile this driver as a module.
-	  Instead of 'ifb', the devices will then be called 'ifb0',
-	  'ifb1' etc.
-	  Look at the iproute2 documentation directory for usage etc
+	  will be called bonding.
 
 config DUMMY
 	tristate "Dummy net driver support"
@@ -60,23 +71,61 @@ config DUMMY
 	  Instead of 'dummy', the devices will then be called 'dummy0',
 	  'dummy1' etc.
 
-config BONDING
-	tristate "Bonding driver support"
-	depends on INET
-	depends on IPV6 || IPV6=n
+config EQUALIZER
+	tristate "EQL (serial line load balancing) support"
 	---help---
-	  Say 'Y' or 'M' if you wish to be able to 'bond' multiple Ethernet
-	  Channels together. This is called 'Etherchannel' by Cisco,
-	  'Trunking' by Sun, 802.3ad by the IEEE, and 'Bonding' in Linux.
+	  If you have two serial connections to some other computer (this
+	  usually requires two modems and two telephone lines) and you use
+	  SLIP (the protocol for sending Internet traffic over telephone
+	  lines) or PPP (a better SLIP) on them, you can make them behave like
+	  one double speed connection using this driver.  Naturally, this has
+	  to be supported at the other end as well, either with a similar EQL
+	  Linux driver or with a Livingston Portmaster 2e.
 
-	  The driver supports multiple bonding modes to allow for both high
-	  performance and high availability operation.
-
-	  Refer to <file:Documentation/networking/bonding.txt> for more
-	  information.
+	  Say Y if you want this and read
+	  <file:Documentation/networking/eql.txt>.  You may also want to read
+	  section 6.2 of the NET-3-HOWTO, available from
+	  <http://www.tldp.org/docs.html#howto>.
 
 	  To compile this driver as a module, choose M here: the module
-	  will be called bonding.
+	  will be called eql.  If unsure, say N.
+
+config NET_FC
+	bool "Fibre Channel driver support"
+	depends on SCSI && PCI
+	help
+	  Fibre Channel is a high speed serial protocol mainly used to connect
+	  large storage devices to the computer; it is compatible with and
+	  intended to replace SCSI.
+
+	  If you intend to use Fibre Channel, you need to have a Fibre channel
+	  adaptor card in your computer; say Y here and to the driver for your
+	  adaptor below. You also should have said Y to "SCSI support" and
+	  "SCSI generic support".
+
+config MII
+	tristate "Generic Media Independent Interface device support"
+	help
+	  Most ethernet controllers have MII transceiver either as an external
+	  or internal device.  It is safe to say Y or M here even if your
+	  ethernet card lacks MII.
+
+source "drivers/ieee802154/Kconfig"
+
+config IFB
+	tristate "Intermediate Functional Block support"
+	depends on NET_CLS_ACT
+	---help---
+	  This is an intermediate driver that allows sharing of
+	  resources.
+	  To compile this driver as a module, choose M here: the module
+	  will be called ifb.  If you want to use more than one ifb
+	  device at a time, you need to compile this driver as a module.
+	  Instead of 'ifb', the devices will then be called 'ifb0',
+	  'ifb1' etc.
+	  Look at the iproute2 documentation directory for usage etc
+
+source "drivers/net/team/Kconfig"
 
 config MACVLAN
 	tristate "MAC-VLAN support (EXPERIMENTAL)"
@@ -105,24 +154,46 @@ config MACVTAP
 	  To compile this driver as a module, choose M here: the module
 	  will be called macvtap.
 
-config EQUALIZER
-	tristate "EQL (serial line load balancing) support"
+config NETCONSOLE
+	tristate "Network console logging support"
 	---help---
-	  If you have two serial connections to some other computer (this
-	  usually requires two modems and two telephone lines) and you use
-	  SLIP (the protocol for sending Internet traffic over telephone
-	  lines) or PPP (a better SLIP) on them, you can make them behave like
-	  one double speed connection using this driver.  Naturally, this has
-	  to be supported at the other end as well, either with a similar EQL
-	  Linux driver or with a Livingston Portmaster 2e.
+	If you want to log kernel messages over the network, enable this.
+	See <file:Documentation/networking/netconsole.txt> for details.
 
-	  Say Y if you want this and read
-	  <file:Documentation/networking/eql.txt>.  You may also want to read
-	  section 6.2 of the NET-3-HOWTO, available from
-	  <http://www.tldp.org/docs.html#howto>.
+config NETCONSOLE_DYNAMIC
+	bool "Dynamic reconfiguration of logging targets"
+	depends on NETCONSOLE && SYSFS && CONFIGFS_FS && \
+			!(NETCONSOLE=y && CONFIGFS_FS=m)
+	help
+	  This option enables the ability to dynamically reconfigure target
+	  parameters (interface, IP addresses, port numbers, MAC addresses)
+	  at runtime through a userspace interface exported using configfs.
+	  See <file:Documentation/networking/netconsole.txt> for details.
 
-	  To compile this driver as a module, choose M here: the module
-	  will be called eql.  If unsure, say N.
+config NETPOLL
+	def_bool NETCONSOLE
+
+config NETPOLL_TRAP
+	bool "Netpoll traffic trapping"
+	default n
+	depends on NETPOLL
+
+config NET_POLL_CONTROLLER
+	def_bool NETPOLL
+
+config RIONET
+	tristate "RapidIO Ethernet over messaging driver support"
+	depends on RAPIDIO
+
+config RIONET_TX_SIZE
+	int "Number of outbound queue entries"
+	depends on RIONET
+	default "128"
+
+config RIONET_RX_SIZE
+	int "Number of inbound queue entries"
+	depends on RIONET
+	default "128"
 
 config TUN
 	tristate "Universal TUN/TAP device driver support"
@@ -154,6 +225,32 @@ config VETH
 	  When one end receives the packet it appears on its pair and vice
 	  versa.
 
+config VIRTIO_NET
+	tristate "Virtio network driver (EXPERIMENTAL)"
+	depends on EXPERIMENTAL && VIRTIO
+	---help---
+	  This is the virtual network driver for virtio.  It can be used with
+	  lguest or QEMU based VMMs (like KVM or Xen).  Say Y or M.
+
+endif # NET_CORE
+
+config SUNGEM_PHY
+	tristate
+
+source "drivers/net/arcnet/Kconfig"
+
+source "drivers/atm/Kconfig"
+
+source "drivers/net/caif/Kconfig"
+
+source "drivers/net/dsa/Kconfig"
+
+source "drivers/net/ethernet/Kconfig"
+
+source "drivers/net/fddi/Kconfig"
+
+source "drivers/net/hippi/Kconfig"
+
 config NET_SB1000
 	tristate "General Instruments Surfboard 1000"
 	depends on PNP
@@ -178,202 +275,72 @@ config NET_SB1000
 
 	  If you don't have this card, of course say N.
 
-source "drivers/net/arcnet/Kconfig"
-
-config MII
-	tristate "Generic Media Independent Interface device support"
-	help
-	  Most ethernet controllers have MII transceiver either as an external
-	  or internal device.  It is safe to say Y or M here even if your
-	  ethernet card lacks MII.
-
 source "drivers/net/phy/Kconfig"
 
-#
-#	Ethernet
-#
+source "drivers/net/plip/Kconfig"
 
-menuconfig NET_ETHERNET
-	bool "Ethernet (10 or 100Mbit)"
-	depends on !UML
-	---help---
-	  Ethernet (also called IEEE 802.3 or ISO 8802-2) is the most common
-	  type of Local Area Network (LAN) in universities and companies.
+source "drivers/net/ppp/Kconfig"
 
-	  Common varieties of Ethernet are: 10BASE-2 or Thinnet (10 Mbps over
-	  coaxial cable, linking computers in a chain), 10BASE-T or twisted
-	  pair (10 Mbps over twisted pair cable, linking computers to central
-	  hubs), 10BASE-F (10 Mbps over optical fiber links, using hubs),
-	  100BASE-TX (100 Mbps over two twisted pair cables, using hubs),
-	  100BASE-T4 (100 Mbps over 4 standard voice-grade twisted pair
-	  cables, using hubs), 100BASE-FX (100 Mbps over optical fiber links)
-	  [the 100BASE varieties are also known as Fast Ethernet], and Gigabit
-	  Ethernet (1 Gbps over optical fiber or short copper links).
+source "drivers/net/slip/Kconfig"
 
-	  If your Linux machine will be connected to an Ethernet and you have
-	  an Ethernet network interface card (NIC) installed in your computer,
-	  say Y here and read the Ethernet-HOWTO, available from
-	  <http://www.tldp.org/docs.html#howto>. You will then also have
-	  to say Y to the driver for your particular NIC.
+source "drivers/s390/net/Kconfig"
 
-	  Note that the answer to this question won't directly affect the
-	  kernel: saying N will just cause the configurator to skip all
-	  the questions about Ethernet network cards. If unsure, say N.
+source "drivers/net/tokenring/Kconfig"
 
-if NET_ETHERNET
+source "drivers/net/usb/Kconfig"
 
-config MACB
-	tristate "Atmel MACB support"
-	depends on HAVE_NET_MACB
-	select PHYLIB
+source "drivers/net/wireless/Kconfig"
+
+source "drivers/net/wimax/Kconfig"
+
+source "drivers/net/wan/Kconfig"
+
+config XEN_NETDEV_FRONTEND
+	tristate "Xen network device frontend driver"
+	depends on XEN
+	select XEN_XENBUS_FRONTEND
+	default y
 	help
-	  The Atmel MACB ethernet interface is found on many AT32 and AT91
-	  parts. Say Y to include support for the MACB chip.
+	  This driver provides support for Xen paravirtual network
+	  devices exported by a Xen network driver domain (often
+	  domain 0).
 
-	  To compile this driver as a module, choose M here: the module
-	  will be called macb.
+	  The corresponding Linux backend driver is enabled by the
+	  CONFIG_XEN_NETDEV_BACKEND option.
 
-source "drivers/net/arm/Kconfig"
+	  If you are compiling a kernel for use as Xen guest, you
+	  should say Y here. To compile this driver as a module, chose
+	  M here: the module will be called xen-netfront.
 
-config AX88796
-	tristate "ASIX AX88796 NE2000 clone support"
-	depends on ARM || MIPS || SUPERH
-	select PHYLIB
-	select MDIO_BITBANG
+config XEN_NETDEV_BACKEND
+	tristate "Xen backend network device"
+	depends on XEN_BACKEND
 	help
-	  AX88796 driver, using platform bus to provide
-	  chip detection and resources
+	  This driver allows the kernel to act as a Xen network driver
+	  domain which exports paravirtual network devices to other
+	  Xen domains. These devices can be accessed by any operating
+	  system that implements a compatible front end.
 
-config AX88796_93CX6
-	bool "ASIX AX88796 external 93CX6 eeprom support"
-	depends on AX88796
-	select EEPROM_93CX6
+	  The corresponding Linux frontend driver is enabled by the
+	  CONFIG_XEN_NETDEV_FRONTEND configuration option.
+
+	  The backend driver presents a standard network device
+	  endpoint for each paravirtual network device to the driver
+	  domain network stack. These can then be bridged or routed
+	  etc in order to provide full network connectivity.
+
+	  If you are compiling a kernel to run in a Xen network driver
+	  domain (often this is domain 0) you should say Y here. To
+	  compile this driver as a module, chose M here: the module
+	  will be called xen-netback.
+
+config VMXNET3
+	tristate "VMware VMXNET3 ethernet driver"
+	depends on PCI && INET
 	help
-	  Select this if your platform comes with an external 93CX6 eeprom.
-
-config MACE
-	tristate "MACE (Power Mac ethernet) support"
-	depends on PPC_PMAC && PPC32
-	select CRC32
-	help
-	  Power Macintoshes and clones with Ethernet built-in on the
-	  motherboard will usually use a MACE (Medium Access Control for
-	  Ethernet) interface. Say Y to include support for the MACE chip.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called mace.
-
-config MACE_AAUI_PORT
-	bool "Use AAUI port instead of TP by default"
-	depends on MACE
-	help
-	  Some Apple machines (notably the Apple Network Server) which use the
-	  MACE ethernet chip have an Apple AUI port (small 15-pin connector),
-	  instead of an 8-pin RJ45 connector for twisted-pair ethernet.  Say
-	  Y here if you have such a machine.  If unsure, say N.
-	  The driver will default to AAUI on ANS anyway, and if you use it as
-	  a module, you can provide the port_aaui=0|1 to force the driver.
-
-config BMAC
-	tristate "BMAC (G3 ethernet) support"
-	depends on PPC_PMAC && PPC32
-	select CRC32
-	help
-	  Say Y for support of BMAC Ethernet interfaces. These are used on G3
-	  computers.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called bmac.
-
-config ARIADNE
-	tristate "Ariadne support"
-	depends on ZORRO
-	help
-	  If you have a Village Tronic Ariadne Ethernet adapter, say Y.
-	  Otherwise, say N.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called ariadne.
-
-config A2065
-	tristate "A2065 support"
-	depends on ZORRO
-	select CRC32
-	help
-	  If you have a Commodore A2065 Ethernet adapter, say Y. Otherwise,
-	  say N.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called a2065.
-
-config HYDRA
-	tristate "Hydra support"
-	depends on ZORRO
-	select CRC32
-	help
-	  If you have a Hydra Ethernet adapter, say Y. Otherwise, say N.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called hydra.
-
-config ZORRO8390
-	tristate "Zorro NS8390-based Ethernet support"
-	depends on ZORRO
-	select CRC32
-	help
-	  This driver is for Zorro Ethernet cards using an NS8390-compatible
-	  chipset, like the Village Tronic Ariadne II and the Individual
-	  Computers X-Surf Ethernet cards. If you have such a card, say Y.
-	  Otherwise, say N.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called zorro8390.
-
-config APNE
-	tristate "PCMCIA NE2000 support"
-	depends on AMIGA_PCMCIA
-	select CRC32
-	help
-	  If you have a PCMCIA NE2000 compatible adapter, say Y.  Otherwise,
-	  say N.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called apne.
-
-config MAC8390
-	bool "Macintosh NS 8390 based ethernet cards"
-	depends on MAC
-	select CRC32
-	help
-	  If you want to include a driver to support Nubus or LC-PDS
-	  Ethernet cards using an NS8390 chipset or its equivalent, say Y
-	  and read the Ethernet-HOWTO, available from
-	  <http://www.tldp.org/docs.html#howto>.
-
-config MAC89x0
-	tristate "Macintosh CS89x0 based ethernet cards"
-	depends on MAC
-	---help---
-	  Support for CS89x0 chipset based Ethernet cards.  If you have a
-	  Nubus or LC-PDS network (Ethernet) card of this type, say Y and
-	  read the Ethernet-HOWTO, available from
-	  <http://www.tldp.org/docs.html#howto>.
-
-	  To compile this driver as a module, choose M here. This module will
-	  be called mac89x0.
-
-config MACSONIC
-	tristate "Macintosh SONIC based ethernet (onboard, NuBus, LC, CS)"
-	depends on MAC
-	---help---
-	  Support for NatSemi SONIC based Ethernet devices.  This includes
-	  the onboard Ethernet in many Quadras as well as some LC-PDS,
-	  a few Nubus and all known Comm Slot Ethernet cards.  If you have
-	  one of these say Y and read the Ethernet-HOWTO, available from
-	  <http://www.tldp.org/docs.html#howto>.
-
-	  To compile this driver as a module, choose M here. This module will
-	  be called macsonic.
+	  This driver supports VMware's vmxnet3 virtual ethernet NIC.
+	  To compile this driver as a module, choose M here: the
+	  module will be called vmxnet3.
 
 config MACMACE
 	bool "Macintosh (AV) onboard MACE ethernet"

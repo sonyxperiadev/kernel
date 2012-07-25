@@ -26,6 +26,8 @@
  *     Alex Deucher <alexander.deucher@amd.com>
  */
 
+#include <linux/module.h>
+
 #include "drmP.h"
 #include "drm.h"
 #include "radeon_drm.h"
@@ -405,7 +407,7 @@ static void r600_cp_load_microcode(drm_radeon_private_t *dev_priv)
 
 	RADEON_WRITE(R600_GRBM_SOFT_RESET, R600_SOFT_RESET_CP);
 	RADEON_READ(R600_GRBM_SOFT_RESET);
-	DRM_UDELAY(15000);
+	mdelay(15);
 	RADEON_WRITE(R600_GRBM_SOFT_RESET, 0);
 
 	fw_data = (const __be32 *)dev_priv->me_fw->data;
@@ -498,7 +500,7 @@ static void r700_cp_load_microcode(drm_radeon_private_t *dev_priv)
 
 	RADEON_WRITE(R600_GRBM_SOFT_RESET, R600_SOFT_RESET_CP);
 	RADEON_READ(R600_GRBM_SOFT_RESET);
-	DRM_UDELAY(15000);
+	mdelay(15);
 	RADEON_WRITE(R600_GRBM_SOFT_RESET, 0);
 
 	fw_data = (const __be32 *)dev_priv->pfp_fw->data;
@@ -1795,15 +1797,15 @@ static void r600_cp_init_ring_buffer(struct drm_device *dev,
 
 	RADEON_WRITE(R600_GRBM_SOFT_RESET, R600_SOFT_RESET_CP);
 	RADEON_READ(R600_GRBM_SOFT_RESET);
-	DRM_UDELAY(15000);
+	mdelay(15);
 	RADEON_WRITE(R600_GRBM_SOFT_RESET, 0);
 
 
 	/* Set ring buffer size */
 #ifdef __BIG_ENDIAN
 	RADEON_WRITE(R600_CP_RB_CNTL,
-		     RADEON_BUF_SWAP_32BIT |
-		     RADEON_RB_NO_UPDATE |
+		     R600_BUF_SWAP_32BIT |
+		     R600_RB_NO_UPDATE |
 		     (dev_priv->ring.rptr_update_l2qw << 8) |
 		     dev_priv->ring.size_l2qw);
 #else
@@ -1813,22 +1815,22 @@ static void r600_cp_init_ring_buffer(struct drm_device *dev,
 		     dev_priv->ring.size_l2qw);
 #endif
 
-	RADEON_WRITE(R600_CP_SEM_WAIT_TIMER, 0x4);
+	RADEON_WRITE(R600_CP_SEM_WAIT_TIMER, 0x0);
 
 	/* Set the write pointer delay */
 	RADEON_WRITE(R600_CP_RB_WPTR_DELAY, 0);
 
 #ifdef __BIG_ENDIAN
 	RADEON_WRITE(R600_CP_RB_CNTL,
-		     RADEON_BUF_SWAP_32BIT |
-		     RADEON_RB_NO_UPDATE |
-		     RADEON_RB_RPTR_WR_ENA |
+		     R600_BUF_SWAP_32BIT |
+		     R600_RB_NO_UPDATE |
+		     R600_RB_RPTR_WR_ENA |
 		     (dev_priv->ring.rptr_update_l2qw << 8) |
 		     dev_priv->ring.size_l2qw);
 #else
 	RADEON_WRITE(R600_CP_RB_CNTL,
-		     RADEON_RB_NO_UPDATE |
-		     RADEON_RB_RPTR_WR_ENA |
+		     R600_RB_NO_UPDATE |
+		     R600_RB_RPTR_WR_ENA |
 		     (dev_priv->ring.rptr_update_l2qw << 8) |
 		     dev_priv->ring.size_l2qw);
 #endif
@@ -1851,13 +1853,8 @@ static void r600_cp_init_ring_buffer(struct drm_device *dev,
 			- ((unsigned long) dev->sg->virtual)
 			+ dev_priv->gart_vm_start;
 	}
-	RADEON_WRITE(R600_CP_RB_RPTR_ADDR,
-#ifdef __BIG_ENDIAN
-		     (2 << 0) |
-#endif
-		     (rptr_addr & 0xfffffffc));
-	RADEON_WRITE(R600_CP_RB_RPTR_ADDR_HI,
-		     upper_32_bits(rptr_addr));
+	RADEON_WRITE(R600_CP_RB_RPTR_ADDR, (rptr_addr & 0xfffffffc));
+	RADEON_WRITE(R600_CP_RB_RPTR_ADDR_HI, upper_32_bits(rptr_addr));
 
 #ifdef __BIG_ENDIAN
 	RADEON_WRITE(R600_CP_RB_CNTL,

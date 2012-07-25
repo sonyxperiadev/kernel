@@ -92,6 +92,20 @@ struct btrfs_device {
 	struct btrfs_work work;
 	struct rcu_head rcu;
 	struct work_struct rcu_work;
+
+	/* readahead state */
+	spinlock_t reada_lock;
+	atomic_t reada_in_flight;
+	u64 reada_next;
+	struct reada_zone *reada_curr_zone;
+	struct radix_tree_root reada_zones;
+	struct radix_tree_root reada_extents;
+
+	/* for sending down flush barriers */
+	struct bio *flush_bio;
+	struct completion flush_wait;
+	int nobarriers;
+
 };
 
 struct btrfs_fs_devices {
@@ -136,7 +150,10 @@ struct btrfs_bio_stripe {
 	u64 length; /* only used for discard mappings */
 };
 
-struct btrfs_multi_bio {
+struct btrfs_bio;
+typedef void (btrfs_bio_end_io_t) (struct btrfs_bio *bio, int err);
+
+struct btrfs_bio {
 	atomic_t stripes_pending;
 	bio_end_io_t *end_io;
 	struct bio *orig_bio;
@@ -144,6 +161,7 @@ struct btrfs_multi_bio {
 	atomic_t error;
 	int max_errors;
 	int num_stripes;
+	int mirror_num;
 	struct btrfs_bio_stripe stripes[];
 };
 
@@ -168,10 +186,55 @@ struct map_lookup {
 #define map_lookup_size(n) (sizeof(struct map_lookup) + \
 			    (sizeof(struct btrfs_bio_stripe) * (n)))
 
+/*
+ * Restriper's general type filter
+ */
+#define BTRFS_BALANCE_DATA		(1ULL << 0)
+#define BTRFS_BALANCE_SYSTEM		(1ULL << 1)
+#define BTRFS_BALANCE_METADATA		(1ULL << 2)
+
+#define BTRFS_BALANCE_TYPE_MASK		(BTRFS_BALANCE_DATA |	    \
+					 BTRFS_BALANCE_SYSTEM |	    \
+					 BTRFS_BALANCE_METADATA)
+
+#define BTRFS_BALANCE_FORCE		(1ULL << 3)
+#define BTRFS_BALANCE_RESUME		(1ULL << 4)
+
+/*
+ * Balance filters
+ */
+#define BTRFS_BALANCE_ARGS_PROFILES	(1ULL << 0)
+#define BTRFS_BALANCE_ARGS_USAGE	(1ULL << 1)
+#define BTRFS_BALANCE_ARGS_DEVID	(1ULL << 2)
+#define BTRFS_BALANCE_ARGS_DRANGE	(1ULL << 3)
+#define BTRFS_BALANCE_ARGS_VRANGE	(1ULL << 4)
+
+/*
+ * Profile changing flags.  When SOFT is set we won't relocate chunk if
+ * it already has the target profile (even though it may be
+ * half-filled).
+ */
+#define BTRFS_BALANCE_ARGS_CONVERT	(1ULL << 8)
+#define BTRFS_BALANCE_ARGS_SOFT		(1ULL << 9)
+
+struct btrfs_balance_args;
+struct btrfs_balance_progress;
+struct btrfs_balance_control {
+	struct btrfs_fs_info *fs_info;
+
+	struct btrfs_balance_args data;
+	struct btrfs_balance_args meta;
+	struct btrfs_balance_args sys;
+
+	u64 flags;
+
+	struct btrfs_balance_progress stat;
+};
+
 int btrfs_account_dev_extents_size(struct btrfs_device *device, u64 start,
 				   u64 end, u64 *length);
 
-#define btrfs_multi_bio_size(n) (sizeof(struct btrfs_multi_bio) + \
+#define btrfs_bio_size(n) (sizeof(struct btrfs_bio) + \
 			    (sizeof(struct btrfs_bio_stripe) * (n)))
 
 int btrfs_alloc_dev_extent(struct btrfs_trans_handle *trans,
@@ -180,7 +243,7 @@ int btrfs_alloc_dev_extent(struct btrfs_trans_handle *trans,
 			   u64 chunk_offset, u64 start, u64 num_bytes);
 int btrfs_map_block(struct btrfs_mapping_tree *map_tree, int rw,
 		    u64 logical, u64 *length,
-		    struct btrfs_multi_bio **multi_ret, int mirror_num);
+		    struct btrfs_bio **bbio_ret, int mirror_num);
 int btrfs_rmap_block(struct btrfs_mapping_tree *map_tree,
 		     u64 chunk_start, u64 physical, u64 devid,
 		     u64 **logical, int *naddrs, int *stripe_len);
@@ -197,12 +260,12 @@ int btrfs_open_devices(struct btrfs_fs_devices *fs_devices,
 int btrfs_scan_one_device(const char *path, fmode_t flags, void *holder,
 			  struct btrfs_fs_devices **fs_devices_ret);
 int btrfs_close_devices(struct btrfs_fs_devices *fs_devices);
-int btrfs_close_extra_devices(struct btrfs_fs_devices *fs_devices);
+void btrfs_close_extra_devices(struct btrfs_fs_devices *fs_devices);
 int btrfs_add_device(struct btrfs_trans_handle *trans,
 		     struct btrfs_root *root,
 		     struct btrfs_device *device);
 int btrfs_rm_device(struct btrfs_root *root, char *device_path);
-int btrfs_cleanup_fs_uuids(void);
+void btrfs_cleanup_fs_uuids(void);
 int btrfs_num_copies(struct btrfs_mapping_tree *map_tree, u64 logical, u64 len);
 int btrfs_grow_device(struct btrfs_trans_handle *trans,
 		      struct btrfs_device *device, u64 new_size);
@@ -210,9 +273,12 @@ struct btrfs_device *btrfs_find_device(struct btrfs_root *root, u64 devid,
 				       u8 *uuid, u8 *fsid);
 int btrfs_shrink_device(struct btrfs_device *device, u64 new_size);
 int btrfs_init_new_device(struct btrfs_root *root, char *path);
-int btrfs_balance(struct btrfs_root *dev_root);
+int btrfs_balance(struct btrfs_balance_control *bctl,
+		  struct btrfs_ioctl_balance_args *bargs);
+int btrfs_recover_balance(struct btrfs_root *tree_root);
+int btrfs_pause_balance(struct btrfs_fs_info *fs_info);
+int btrfs_cancel_balance(struct btrfs_fs_info *fs_info);
 int btrfs_chunk_readonly(struct btrfs_root *root, u64 chunk_offset);
-int find_free_dev_extent(struct btrfs_trans_handle *trans,
-			 struct btrfs_device *device, u64 num_bytes,
+int find_free_dev_extent(struct btrfs_device *device, u64 num_bytes,
 			 u64 *start, u64 *max_avail);
 #endif
