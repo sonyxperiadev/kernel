@@ -510,12 +510,6 @@ void ion_unmap_dma(struct ion_client *client, struct ion_handle *handle)
 	struct ion_buffer *buffer;
 
 	mutex_lock(&client->lock);
-	if (!ion_handle_validate(client, handle)) {
-		pr_err("%s: invalid handle passed to unmap_dma.\n",
-				__func__);
-		mutex_unlock(&client->lock);
-		return;
-	}
 	buffer = handle->buffer;
 	mutex_lock(&buffer->lock);
 	if (_ion_unmap(&buffer->dmap_cnt, &handle->dmap_cnt)) {

@@ -13,8 +13,6 @@
  * GNU General Public License for more details.
  *
  */
-#define pr_fmt(fmt) "android-ion: " fmt
-
 #include <linux/spinlock.h>
 
 #include <linux/err.h>
@@ -82,41 +80,19 @@ static void ion_carveout_heap_free(struct ion_buffer *buffer)
 {
 	struct ion_heap *heap = buffer->heap;
 
-	if(buffer->priv_phys != ION_CARVEOUT_ALLOCATE_FAIL) {
-		ion_carveout_free(heap, buffer->priv_phys, buffer->size);
-		buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
-	}
+	ion_carveout_free(heap, buffer->priv_phys, buffer->size);
+	buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
 }
 
 struct scatterlist *ion_carveout_heap_map_dma(struct ion_heap *heap,
 					      struct ion_buffer *buffer)
 {
-	struct scatterlist *sglist;
-
-	pr_debug("dma map heap(%s)(%d) buffer(%p) \n",
-			heap->name, heap->id, buffer);
-	if (buffer->priv_phys == ION_CARVEOUT_ALLOCATE_FAIL) {
-		return NULL;
-	} else {
-		sglist = vmalloc(sizeof(struct scatterlist));
-		if (!sglist)
-			return ERR_PTR(-ENOMEM);
-		sg_init_table(sglist, 1);
-		sg_set_page(sglist, phys_to_page(buffer->priv_phys), buffer->size, 0);
-		return sglist;
-	}
+	return ERR_PTR(-EINVAL);
 }
 
 void ion_carveout_heap_unmap_dma(struct ion_heap *heap,
 				 struct ion_buffer *buffer)
 {
-	pr_debug("dma unmap heap(%s)(%d) buffer(%p) \n",
-			heap->name, heap->id, buffer);
-	if (buffer->sglist) {
-		vfree(buffer->sglist);
-		buffer->sglist = NULL;
-	}
-
 	return;
 }
 
@@ -151,8 +127,6 @@ static struct ion_heap_ops carveout_heap_ops = {
 	.map_user = ion_carveout_heap_map_user,
 	.map_kernel = ion_carveout_heap_map_kernel,
 	.unmap_kernel = ion_carveout_heap_unmap_kernel,
-	.map_dma = ion_carveout_heap_map_dma,
-	.unmap_dma = ion_carveout_heap_unmap_dma,
 };
 
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
