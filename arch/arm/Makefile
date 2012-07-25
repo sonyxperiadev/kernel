@@ -164,7 +164,6 @@ machine-$(CONFIG_ARCH_INTEGRATOR)	:= integrator
 machine-$(CONFIG_ARCH_IOP13XX)		:= iop13xx
 machine-$(CONFIG_ARCH_IOP32X)		:= iop32x
 machine-$(CONFIG_ARCH_IOP33X)		:= iop33x
-machine-$(CONFIG_ARCH_ISLAND)           := island
 machine-$(CONFIG_ARCH_IXP2000)		:= ixp2000
 machine-$(CONFIG_ARCH_IXP23XX)		:= ixp23xx
 machine-$(CONFIG_ARCH_IXP4XX)		:= ixp4xx
@@ -217,7 +216,6 @@ machine-$(CONFIG_ARCH_ZYNQ)		:= zynq
 
 # Platform directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
-plat-$(CONFIG_ARCH_KONA)	:= kona
 plat-$(CONFIG_ARCH_MXC)		:= mxc
 plat-$(CONFIG_ARCH_OMAP)	:= omap
 plat-$(CONFIG_ARCH_S3C64XX)	:= samsung
@@ -230,6 +228,7 @@ plat-$(CONFIG_PLAT_S3C24XX)	:= s3c24xx samsung
 plat-$(CONFIG_PLAT_S5P)		:= s5p samsung
 plat-$(CONFIG_PLAT_SPEAR)	:= spear
 plat-$(CONFIG_PLAT_VERSATILE)	:= versatile
+plat-$(CONFIG_ARCH_KONA)        := kona
 
 ifeq ($(CONFIG_ARCH_EBSA110),y)
 # This is what happens if you forget the IOCS16 line.
@@ -300,7 +299,7 @@ endif
 # Convert bzImage to zImage
 bzImage: zImage
 
-zImage Image xipImage bootpImage uImage dt-blob: vmlinux
+zImage Image xipImage bootpImage uImage: vmlinux
 	$(Q)$(MAKE) $(build)=$(boot) MACHINE=$(MACHINE) $(boot)/$@
 
 zinstall uinstall install: vmlinux
@@ -315,10 +314,6 @@ dtbs:
 # We use MRPROPER_FILES and CLEAN_FILES now
 archclean:
 	$(Q)$(MAKE) $(clean)=$(boot)
-	$(Q)echo "Removing rdb link for Rhea"; \
-	if test -e $(srctree)/arch/arm/mach-rhea/include/mach/rdb; then \
-		rm $(srctree)/arch/arm/mach-rhea/include/mach/rdb; \
-	fi;
 
 # My testing targets (bypasses dependencies)
 bp:;	$(Q)$(MAKE) $(build)=$(boot) MACHINE=$(MACHINE) $(boot)/bootpImage

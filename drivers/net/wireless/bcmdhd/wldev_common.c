@@ -59,12 +59,8 @@ s32 wldev_ioctl(
 	ioc.buf = arg;
 	ioc.len = len;
 	ioc.set = set;
-//	if (arg != NULL) {
-//		WLDEV_ERROR(("iovar:%s ioc->len%d cmd->%d type->%s\n",
-//			(char *)arg, ioc.len, cmd, set ? "set": "get"));
-//	}
-	ret = dhd_ioctl_entry_local(dev, &ioc, cmd);
 
+	ret = dhd_ioctl_entry_local(dev, &ioc, cmd);
 
 	return ret;
 }
@@ -195,6 +191,7 @@ s32 wldev_mkiovar_bsscfg(
 	return iolen;
 
 }
+
 s32 wldev_iovar_getbuf_bsscfg(
 	struct net_device *dev, s8 *iovar_name,
 	void *param, s32 paramlen, void *buf, s32 buflen, s32 bsscfg_idx, struct mutex* buf_sync)

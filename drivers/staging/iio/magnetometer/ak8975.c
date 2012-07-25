@@ -194,8 +194,41 @@ static int ak8975_setup(struct i2c_client *client)
 		return ret;
 	}
 
-	/* Precalculate scale factor for each axis and
-           store in the device data. */
+/*
+ * Precalculate scale factor (in Gauss units) for each axis and
+ * store in the device data.
+ *
+ * This scale factor is axis-dependent, and is derived from 3 calibration
+ * factors ASA(x), ASA(y), and ASA(z).
+ *
+ * These ASA values are read from the sensor device at start of day, and
+ * cached in the device context struct.
+ *
+ * Adjusting the flux value with the sensitivity adjustment value should be
+ * done via the following formula:
+ *
+ * Hadj = H * ( ( ( (ASA-128)*0.5 ) / 128 ) + 1 )
+ *
+ * where H is the raw value, ASA is the sensitivity adjustment, and Hadj
+ * is the resultant adjusted value.
+ *
+ * We reduce the formula to:
+ *
+ * Hadj = H * (ASA + 128) / 256
+ *
+ * H is in the range of -4096 to 4095.  The magnetometer has a range of
+ * +-1229uT.  To go from the raw value to uT is:
+ *
+ * HuT = H * 1229/4096, or roughly, 3/10.
+ *
+ * Since 1uT = 100 gauss, our final scale factor becomes:
+ *
+ * Hadj = H * ((ASA + 128) / 256) * 3/10 * 100
+ * Hadj = H * ((ASA + 128) * 30 / 256
+ *
+ * Since ASA doesn't change, we cache the resultant scale factor into the
+ * device context in ak8975_setup().
+ */
 	data->raw_to_gauss[0] = ((data->asa[0] + 128) * 30) >> 8;
 	data->raw_to_gauss[1] = ((data->asa[1] + 128) * 30) >> 8;
 	data->raw_to_gauss[2] = ((data->asa[2] + 128) * 30) >> 8;
@@ -257,48 +290,57 @@ static ssize_t store_mode(struct device *dev, struct device_attribute *devattr,
 	return count;
 }
 
-/*
- * Emits the scale factor to bring the raw value into Gauss units.
- *
- * This scale factor is axis-dependent, and is derived from 3 calibration
- * factors ASA(x), ASA(y), and ASA(z).
- *
- * These ASA values are read from the sensor device at start of day, and
- * cached in the device context struct.
- *
- * Adjusting the flux value with the sensitivity adjustment value should be
- * done via the following formula:
- *
- * Hadj = H * ( ( ( (ASA-128)*0.5 ) / 128 ) + 1 )
- *
- * where H is the raw value, ASA is the sensitivity adjustment, and Hadj
- * is the resultant adjusted value.
- *
- * We reduce the formula to:
- *
- * Hadj = H * (ASA + 128) / 256
- *
- * H is in the range of -4096 to 4095.  The magnetometer has a range of
- * +-1229uT.  To go from the raw value to uT is:
- *
- * HuT = H * 1229/4096, or roughly, 3/10.
- *
- * Since 1uT = 100 gauss, our final scale factor becomes:
- *
- * Hadj = H * ((ASA + 128) / 256) * 3/10 * 100
- * Hadj = H * ((ASA + 128) * 30 / 256
- *
- * Since ASA doesn't change, we cache the resultant scale factor into the
- * device context in ak8975_setup().
- */
-static ssize_t show_scale(struct device *dev, struct device_attribute *devattr,
-			  char *buf)
+static int wait_conversion_complete_gpio(struct ak8975_data *data)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
-	struct ak8975_data *data = indio_dev->dev_data;
-	struct iio_dev_attr *this_attr = to_iio_dev_attr(devattr);
+	struct i2c_client *client = data->client;
+	u8 read_status;
+	u32 timeout_ms = AK8975_MAX_CONVERSION_TIMEOUT;
+	int ret;
 
-	return sprintf(buf, "%ld\n", data->raw_to_gauss[this_attr->address]);
+	/* Wait for the conversion to complete. */
+	while (timeout_ms) {
+		msleep(AK8975_CONVERSION_DONE_POLL_TIME);
+		if (gpio_get_value(data->eoc_gpio))
+			break;
+		timeout_ms -= AK8975_CONVERSION_DONE_POLL_TIME;
+	}
+	if (!timeout_ms) {
+		dev_err(&client->dev, "Conversion timeout happened\n");
+		return -EINVAL;
+	}
+
+	ret = ak8975_read_data(client, AK8975_REG_ST1, 1, &read_status);
+	if (ret < 0) {
+		dev_err(&client->dev, "Error in reading ST1\n");
+		return ret;
+	}
+	return read_status;
+}
+
+static int wait_conversion_complete_polled(struct ak8975_data *data)
+{
+	struct i2c_client *client = data->client;
+	u8 read_status;
+	u32 timeout_ms = AK8975_MAX_CONVERSION_TIMEOUT;
+	int ret;
+
+	/* Wait for the conversion to complete. */
+	while (timeout_ms) {
+		msleep(AK8975_CONVERSION_DONE_POLL_TIME);
+		ret = ak8975_read_data(client, AK8975_REG_ST1, 1, &read_status);
+		if (ret < 0) {
+			dev_err(&client->dev, "Error in reading ST1\n");
+			return ret;
+		}
+		if (read_status)
+			break;
+		timeout_ms -= AK8975_CONVERSION_DONE_POLL_TIME;
+	}
+	if (!timeout_ms) {
+		dev_err(&client->dev, "Conversion timeout happened\n");
+		return -EINVAL;
+	}
+	return read_status;
 }
 
 /*
@@ -308,8 +350,6 @@ static int ak8975_read_axis(struct iio_dev *indio_dev, int index, int *val)
 {
 	struct ak8975_data *data = iio_priv(indio_dev);
 	struct i2c_client *client = data->client;
-	struct iio_dev_attr *this_attr = to_iio_dev_attr(devattr);
-	u32 timeout_ms = AK8975_MAX_CONVERSION_TIMEOUT;
 	u16 meas_reg;
 	s16 raw;
 	u8 read_status;
@@ -335,23 +375,14 @@ static int ak8975_read_axis(struct iio_dev *indio_dev, int index, int *val)
 	}
 
 	/* Wait for the conversion to complete. */
-	while (timeout_ms) {
-		msleep(AK8975_CONVERSION_DONE_POLL_TIME);
-		if (gpio_get_value(data->eoc_gpio))
-			break;
-		timeout_ms -= AK8975_CONVERSION_DONE_POLL_TIME;
-	}
-	if (!timeout_ms) {
-		dev_err(&client->dev, "Conversion timeout happened\n");
-		ret = -EINVAL;
+	if (gpio_is_valid(data->eoc_gpio))
+		ret = wait_conversion_complete_gpio(data);
+	else
+		ret = wait_conversion_complete_polled(data);
+	if (ret < 0)
 		goto exit;
-	}
 
-	ret = ak8975_read_data(client, AK8975_REG_ST1, 1, &read_status);
-	if (ret < 0) {
-		dev_err(&client->dev, "Error in reading ST1\n");
-		goto exit;
-	}
+	read_status = ret;
 
 	if (read_status & AK8975_REG_ST1_DRDY_MASK) {
 		ret = ak8975_read_data(client, AK8975_REG_ST2, 1, &read_status);
@@ -433,6 +464,12 @@ static struct attribute_group ak8975_attr_group = {
 	.attrs = ak8975_attr,
 };
 
+static const struct iio_info ak8975_info = {
+	.attrs = &ak8975_attr_group,
+	.read_raw = &ak8975_read_raw,
+	.driver_module = THIS_MODULE,
+};
+
 static int ak8975_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
@@ -447,36 +484,29 @@ static int ak8975_probe(struct i2c_client *client,
 	else
 		eoc_gpio = *(int *)(client->dev.platform_data);
 
-	if (!data->eoc_gpio) {
-		dev_err(&client->dev, "failed, no valid GPIO\n");
-		err = -EINVAL;
-		goto exit_free;
-	}
+	/* We may not have a GPIO based IRQ to scan, that is fine, we will
+	   poll if so */
+	if (gpio_is_valid(eoc_gpio)) {
+		err = gpio_request(eoc_gpio, "ak_8975");
+		if (err < 0) {
+			dev_err(&client->dev,
+				"failed to request GPIO %d, error %d\n",
+							eoc_gpio, err);
+			goto exit;
+		}
 
-	err = gpio_request(data->eoc_gpio, "ak_8975");
-	if (err < 0) {
-		dev_err(&client->dev, "failed to request GPIO %d, error %d\n",
-			data->eoc_gpio, err);
-		goto exit_free;
-	}
-
-	err = gpio_direction_input(data->eoc_gpio);
-	if (err < 0) {
-		dev_err(&client->dev, "Failed to configure input direction for"
-			" GPIO %d, error %d\n", data->eoc_gpio, err);
-		goto exit_gpio;
-	}
-
-	/* Perform some basic start-of-day setup of the device. */
-	err = ak8975_setup(client);
-	if (err < 0) {
-		dev_err(&client->dev, "AK8975 initialization fails\n");
-		goto exit_gpio;
+		err = gpio_direction_input(eoc_gpio);
+		if (err < 0) {
+			dev_err(&client->dev,
+				"Failed to configure input direction for GPIO %d, error %d\n",
+						eoc_gpio, err);
+			goto exit_gpio;
+		}
 	}
 
 	/* Register with IIO */
-	data->indio_dev = iio_allocate_device();
-	if (data->indio_dev == NULL) {
+	indio_dev = iio_allocate_device(sizeof(*data));
+	if (indio_dev == NULL) {
 		err = -ENOMEM;
 		goto exit_gpio;
 	}
@@ -489,13 +519,17 @@ static int ak8975_probe(struct i2c_client *client,
 		goto exit_free_iio;
 	}
 
-	data->indio_dev->dev.parent = &client->dev;
-	data->indio_dev->attrs = &ak8975_attr_group;
-	data->indio_dev->dev_data = (void *)(data);
-	data->indio_dev->driver_module = THIS_MODULE;
-	data->indio_dev->modes = INDIO_DIRECT_MODE;
+	data->client = client;
+	mutex_init(&data->lock);
+	data->eoc_irq = client->irq;
+	data->eoc_gpio = eoc_gpio;
+	indio_dev->dev.parent = &client->dev;
+	indio_dev->channels = ak8975_channels;
+	indio_dev->num_channels = ARRAY_SIZE(ak8975_channels);
+	indio_dev->info = &ak8975_info;
+	indio_dev->modes = INDIO_DIRECT_MODE;
 
-	err = iio_device_register(data->indio_dev);
+	err = iio_device_register(indio_dev);
 	if (err < 0)
 		goto exit_free_iio;
 
@@ -504,9 +538,8 @@ static int ak8975_probe(struct i2c_client *client,
 exit_free_iio:
 	iio_free_device(indio_dev);
 exit_gpio:
-	gpio_free(data->eoc_gpio);
-exit_free:
-	kfree(data);
+	if (gpio_is_valid(eoc_gpio))
+		gpio_free(eoc_gpio);
 exit:
 	return err;
 }
@@ -518,7 +551,8 @@ static int ak8975_remove(struct i2c_client *client)
 
 	iio_device_unregister(indio_dev);
 
-	gpio_free(data->eoc_gpio);
+	if (gpio_is_valid(data->eoc_gpio))
+		gpio_free(data->eoc_gpio);
 
 	iio_free_device(indio_dev);
 

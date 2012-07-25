@@ -573,72 +573,8 @@ config_desc = {
 	.iConfiguration =	FSG_STRING_CONFIG,
 	.bmAttributes =		USB_CONFIG_ATT_ONE | USB_CONFIG_ATT_SELFPOWER,
 	.bMaxPower =		CONFIG_USB_GADGET_VBUS_DRAW / 2,
-	//.bMaxPower =		0, //unused suggestion by DWC patch 
 };
 
-#ifdef CONFIG_USB_DWC_OTG_LPM
-#define USB_DEVICE_CAPABILITY_20_EXTENSION	0x02
-#define USB_20_EXT_LPM				0x02
-typedef struct usb_dev_cap_20_ext_desc {
-	__u8 bLength;
-	__u8 bDescriptorType;
- 	__u8 bDevCapabilityType;
- 	__le32 bmAttributes;
-} __attribute__ ((__packed__)) usb_dev_cap_20_ext_desc_t;
- 
-static struct usb_bos_20_ext_desc {
-    struct usb_bos_descriptor bos_desc;
-    struct usb_dev_cap_20_ext_desc dev_cap_20_ext_desc;
-} __attribute__ ((__packed__)) bos_20_ext_desc = {
- 	{
- 		.bLength =		sizeof(struct usb_bos_descriptor),
- 		.bDescriptorType =	USB_DT_BOS,
- 		.wTotalLength =		sizeof(struct usb_bos_20_ext_desc),
- 		.bNumDeviceCaps =	1,
- 	},
- 	{
- 		.bLength =		sizeof(struct usb_dev_cap_20_ext_desc),
- 		.bDescriptorType =	USB_DT_DEVICE_CAPABILITY,
- 		.bDevCapabilityType =	USB_DEVICE_CAPABILITY_20_EXTENSION,
- 		.bmAttributes =		USB_20_EXT_LPM,
- 	},
-};
-#endif
-
-static struct usb_otg_descriptor
-otg_desc = {
-	.bLength =		sizeof(otg_desc),
-	.bDescriptorType =	USB_DT_OTG,
-
-	.bmAttributes =		USB_OTG_SRP,
-};
-
-/* There is only one interface. */
-
-static struct usb_interface_descriptor
-intf_desc = {
-	.bLength =		sizeof intf_desc,
-	.bDescriptorType =	USB_DT_INTERFACE,
-
-	.bNumEndpoints =	2,		// Adjusted during fsg_bind()
-	.bInterfaceClass =	USB_CLASS_MASS_STORAGE,
-	.bInterfaceSubClass =	USB_SC_SCSI,	// Adjusted during fsg_bind()
-	.bInterfaceProtocol =	USB_PR_BULK,	// Adjusted during fsg_bind()
-	.iInterface =		FSG_STRING_INTERFACE,
-};
-
-/* Three full-speed endpoint descriptors: bulk-in, bulk-out,
- * and interrupt-in. */
-
-static struct usb_endpoint_descriptor
-fs_bulk_in_desc = {
-	.bLength =		USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType =	USB_DT_ENDPOINT,
-
-	.bEndpointAddress =	USB_DIR_IN,
-	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
-	/* wMaxPacketSize set by autoconfiguration */
-};
 
 static struct usb_qualifier_descriptor
 dev_qualifier = {
@@ -1006,12 +942,7 @@ static int standard_setup_req(struct fsg_dev *fsg,
 
 		case USB_DT_DEVICE:
 			VDBG(fsg, "get device descriptor\n");
-#ifdef CONFIG_USB_DWC_OTG_LPM
-			/* Set the bcdUSB to 0201H to indicate support
-			 * for the BOS Descriptor. */
-			DBG(fsg, "set bcdUSB to 0201h\n");
-			device_desc.bcdUSB = 0x201;
-#endif
+			device_desc.bMaxPacketSize0 = fsg->ep0->maxpacket;
 			value = sizeof device_desc;
 			memcpy(req->buf, &device_desc, value);
 			break;
@@ -1051,24 +982,13 @@ get_config:
 			value = usb_gadget_get_string(&fsg_stringtab,
 					w_value & 0xff, req->buf);
 			break;
-#ifdef CONFIG_USB_DWC_OTG_LPM
-		case USB_DT_BOS:
-			/* When the PCD has LPM enabled set the LPM
-			 * Feature bit to 1 when not enabled set the
-			 * bit to 0. */
-			if (usb_gadget_test_lpm_support(fsg->gadget)) {
-				VDBG(fsg, "LPM support enabled in DWC UDC PCD\n");
-				bos_20_ext_desc.dev_cap_20_ext_desc.bmAttributes |= USB_20_EXT_LPM;
-			} else {
-				VDBG(fsg, "LPM support disabled in DWC UDC PCD\n");
-				bos_20_ext_desc.dev_cap_20_ext_desc.bmAttributes &= ~USB_20_EXT_LPM;
-			}
-			DBG(fsg, "sending BOS descriptor to host\n");
-			value = sizeof bos_20_ext_desc;
-			memcpy(req->buf, &bos_20_ext_desc, value);	
-			break;
-#endif
 
+		case USB_DT_BOS:
+			VDBG(fsg, "get bos descriptor\n");
+
+			if (gadget_is_superspeed(fsg->gadget))
+				value = populate_bos(fsg, req->buf);
+			break;
 		}
 
 		break;
@@ -2730,9 +2650,6 @@ static int received_cbw(struct fsg_dev *fsg, struct fsg_buffhd *bh)
 			fsg_set_halt(fsg, fsg->bulk_out);
 			halt_bulk_in_endpoint(fsg);
 		}
-		fsg->bulk_in->ops->set_halt(fsg->bulk_in, 3);
-		fsg_set_halt(fsg, fsg->bulk_out);
-		fsg->bulk_out->ops->set_halt(fsg->bulk_out, 3);
 		return -EINVAL;
 	}
 
@@ -3094,8 +3011,7 @@ static void handle_exception(struct fsg_dev *fsg)
 		 * bulk endpoint, clear the halt now.  (The SuperH UDC
 		 * requires this.) */
 		if (test_and_clear_bit(IGNORE_BULK_OUT, &fsg->atomic_bitflags))
-                   //usb_ep_clear_halt(fsg->bulk_in); //DWC patch:
-                   fsg->bulk_in->ops->set_halt(fsg->bulk_in, 2);
+			usb_ep_clear_halt(fsg->bulk_in);
 
 		if (transport_is_bbb()) {
 			if (fsg->ep0_req_tag == exception_req_tag)
@@ -3169,9 +3085,6 @@ static int fsg_main_thread(void *fsg_)
 	 * that expects a __user pointer and it will work okay. */
 	set_fs(get_ds());
 
-	/* Setting this thread high priority */
-	set_user_nice(current, -20);
-	
 	/* The main loop */
 	while (fsg->state != FSG_STATE_TERMINATED) {
 		if (exception_in_progress(fsg) || signal_pending(current)) {
@@ -3319,13 +3232,6 @@ static int __init check_parameters(struct fsg_dev *fsg)
 		gcnum = usb_gadget_controller_number(fsg->gadget);
 		if (gcnum >= 0)
 			mod_data.release = 0x0300 + gcnum;
-                else if (gadget_is_dwc_otg(fsg->gadget)) {
-			mod_data.release = __constant_cpu_to_le16 (0x0200);
-                        mod_data.vendor  = __constant_cpu_to_le16 (0x053f);
-                        if (mod_data.product == FSG_PRODUCT_ID) {
-                                mod_data.product  = __constant_cpu_to_le16 (0x0000);
-                        }
-                }
 		else {
 			WARNING(fsg, "controller '%s' not recognized\n",
 				fsg->gadget->name);
@@ -3586,14 +3492,6 @@ static int __init fsg_bind(struct usb_gadget *gadget)
 		fsg_otg_desc.bmAttributes |= USB_OTG_HNP;
 
 	rc = -ENOMEM;
-
-#ifdef CONFIG_USB_DWC_OTG_LPM
-	/* When LPM is enabled, Inform the host that the remote wake
-	 * up capability is supported. */
-	if (usb_gadget_test_lpm_support(fsg->gadget)) {
-		config_desc.bmAttributes |= USB_CONFIG_ATT_WAKEUP;
-	}
-#endif
 
 	/* Allocate the request and buffer for endpoint 0 */
 	fsg->ep0req = req = usb_ep_alloc_request(fsg->ep0, GFP_KERNEL);

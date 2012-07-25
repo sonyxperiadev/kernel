@@ -501,7 +501,6 @@ extern void usb_ep0_reinit(struct usb_device *);
 #define GetPortStatus		(0xa300 | USB_REQ_GET_STATUS)
 #define SetHubFeature		(0x2000 | USB_REQ_SET_FEATURE)
 #define SetPortFeature		(0x2300 | USB_REQ_SET_FEATURE)
-#define SetandTestPortFeature	(0xa300 | HUB_SET_AND_TEST)
 
 
 /*-------------------------------------------------------------------------*/

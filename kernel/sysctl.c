@@ -61,6 +61,7 @@
 #include <linux/capability.h>
 #include <linux/binfmts.h>
 
+#include <asm/system_misc.h>
 #include <asm/uaccess.h>
 #include <asm/processor.h>
 

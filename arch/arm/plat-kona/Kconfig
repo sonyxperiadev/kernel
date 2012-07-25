@@ -244,5 +244,6 @@ config KONA_CSL_CAMERA
 config KONA_CHAL_CAMERA
 	tristate
 
+
 endmenu
 

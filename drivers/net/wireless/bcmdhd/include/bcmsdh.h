@@ -23,7 +23,11 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh.h 300018 2011-12-01 20:31:37Z $
+ * $Id: bcmsdh.h 326276 2012-04-06 23:16:42Z $
+ */
+
+/**
+ * @file bcmsdh.h
  */
 
 #ifndef	_bcmsdh_h_

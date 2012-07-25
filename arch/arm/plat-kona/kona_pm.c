@@ -79,20 +79,20 @@ static int allow_idle = 1;
 module_param_named(allow_idle, allow_idle, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 __weak int kona_mach_enter_idle_state(struct cpuidle_device *dev,
-				      struct cpuidle_state *state)
+				      struct cpuidle_driver *drv, int index)
 {
 	ktime_t t1 = {.tv64 = 0, }, t2 = {
 	.tv64 = 0,};
 	s64 diff;
 	int ret;
 	int mach_ret = -1;
-	struct kona_idle_state *kona_state = cpuidle_get_statedata(state);
+	struct kona_idle_state *kona_state = cpuidle_get_statedata(&dev->states_usage[index]);
 #ifdef CONFIG_HAS_WAKELOCK
 		/*Enter simple WFI (safe state) if idle wake lock
 		is active*/
-		BUG_ON(!dev->safe_state);
+	/* Here 0 is assumed to be the safe state, as safe state pointer is removed we use 0 instead */
 		if (has_wake_lock(WAKE_LOCK_IDLE))
-			kona_state = cpuidle_get_statedata(dev->safe_state);
+			kona_state = cpuidle_get_statedata(&dev->states_usage[0]);
 #endif
 
 	BUG_ON(kona_state == NULL);
@@ -233,6 +233,8 @@ int __init kona_pm_init()
 #ifdef CONFIG_CPU_IDLE
 	int i, num_states;
 	struct cpuidle_device *dev;
+	struct cpuidle_driver *drv = &kona_idle_driver;
+	struct cpuidle_state_usage *state_usg;
 	struct cpuidle_state *state;
 	struct kona_idle_state *idle_states = NULL;
 
@@ -245,15 +247,15 @@ int __init kona_pm_init()
 	dev = &per_cpu(kona_idle_dev, smp_processor_id());
 
 	for (i = 0; i < num_states; i++) {
-		state = &dev->states[i];
+		state_usg = &dev->states_usage[i];
+//		state = dev->kobjs[i]->state;
+		state = &drv->states[i];
 
-		cpuidle_set_statedata(state, &idle_states[i]);
+		cpuidle_set_statedata(state_usg, &idle_states[i]);
 		state->exit_latency = idle_states[i].latency;
 		state->target_residency = idle_states[i].target_residency;
 		state->flags = idle_states[i].flags;
 		state->enter = kona_mach_enter_idle_state;
-		if (i == 0)
-			dev->safe_state = state;
 		strncpy(state->name, idle_states[i].name, CPUIDLE_NAME_LEN - 1);
 		state->name[CPUIDLE_NAME_LEN - 1] = 0;
 		strncpy(state->desc, idle_states[i].desc, CPUIDLE_DESC_LEN - 1);
@@ -263,6 +265,7 @@ int __init kona_pm_init()
 
 	dev->state_count = i;
 
+	cpuidle_register_driver(&kona_idle_driver);
 	if (cpuidle_register_device(dev)) {
 		printk(KERN_ERR "%s: CPUidle register device failed\n",
 		       __func__);

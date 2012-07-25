@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_common.c 322672 2012-03-21 09:40:01Z $
+ * $Id: dhd_common.c 321870 2012-03-17 00:43:35Z $
  */
 #include <typedefs.h>
 #include <osl.h>
@@ -862,6 +862,8 @@ wl_show_host_event(wl_event_msg_t *event, void *event_data)
 		break;
 
 	case WLC_E_SCAN_COMPLETE:
+	case WLC_E_ASSOC_REQ_IE:
+	case WLC_E_ASSOC_RESP_IE:
 	case WLC_E_PMKID_CACHE:
 		DHD_EVENT(("MACEVENT: %s\n", event_name));
 		break;

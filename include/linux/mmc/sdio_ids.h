@@ -49,4 +49,4 @@
 #define SDIO_DEVICE_ID_BROADCOM_4325            0x0000
 #endif
 
-#endif
+#endif /* LINUX_MMC_SDIO_IDS_H */

@@ -94,41 +94,20 @@ static int __init init_static_idmap(void)
 
 	return 0;
 }
-#else
-void identity_mapping_del(pgd_t *pgd, unsigned long addr, unsigned long end)
-{
-}
-#endif
+early_initcall(init_static_idmap);
 
 /*
- * In order to soft-boot, we need to insert a 1:1 mapping of memory.
- * This will then ensure that we have predictable results when turning
- * the mmu off.
+ * In order to soft-boot, we need to switch to a 1:1 mapping for the
+ * cpu_reset functions. This will then ensure that we have predictable
+ * results when turning off the mmu.
  */
-void setup_mm_for_reboot(char mode, pgd_t *pgd)
+void setup_mm_for_reboot(void)
 {
-	unsigned long kernel_end;
-
-	/* If we don't have a pgd, hijack the current task. */
-	if (pgd == NULL) {
-		pgd = current->active_mm->pgd;
-		identity_mapping_add(pgd, 0, TASK_SIZE);
-	} else {
-		identity_mapping_add(pgd, 0, TASK_SIZE);
-		/*
-		 * Extend the flat mapping into kernelspace.
-		 * We leave room for the kernel image and the reserved
-		 * page below swapper.
-		 */
-		kernel_end = ALIGN((unsigned long)_end, PMD_SIZE);
-		identity_mapping_add(pgd, kernel_end, 0);
-	}
-
 	/* Clean and invalidate L1. */
 	flush_cache_all();
 
-	/* Switch exclusively to kernel mappings. */
-	cpu_switch_mm(pgd, &init_mm);
+	/* Switch to the identity mapping. */
+	cpu_switch_mm(idmap_pgd, &init_mm);
 
 	/* Flush the TLB. */
 	local_flush_tlb_all();

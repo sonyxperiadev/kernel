@@ -1059,11 +1059,6 @@ MODULE_LICENSE ("GPL");
 #define PLATFORM_DRIVER		ohci_hcd_da8xx_driver
 #endif
 
-#ifdef CONFIG_USB_OHCI_BCM
-#include "ohci-bcm.c"
-#define PLATFORM_DRIVER         ohci_bcm_driver
-#endif
-
 #ifdef CONFIG_USB_OHCI_SH
 #include "ohci-sh.c"
 #define PLATFORM_DRIVER		ohci_hcd_sh_driver

@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmcdc.h 275703 2011-08-04 20:20:27Z $
+ * $Id: bcmcdc.h 318308 2012-03-02 02:23:42Z $
  */
 #ifndef _bcmcdc_h_
 #define	_bcmcdc_h_

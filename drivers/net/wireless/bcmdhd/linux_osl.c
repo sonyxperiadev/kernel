@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: linux_osl.c 308650 2012-01-17 02:59:47Z $
+ * $Id: linux_osl.c 311099 2012-01-27 14:46:59Z $
  */
 
 #define LINUX_PORT
@@ -47,7 +47,7 @@
 #define OS_HANDLE_MAGIC		0x1234abcd	
 #define BCM_MEM_FILENAME_LEN 	24		
 
-#ifdef DHD_USE_STATIC_BUF
+#ifdef CONFIG_DHD_USE_STATIC_BUF
 #define STATIC_BUF_MAX_NUM	16
 #define STATIC_BUF_SIZE	(PAGE_SIZE*2)
 #define STATIC_BUF_TOTAL_LEN	(STATIC_BUF_MAX_NUM * STATIC_BUF_SIZE)
@@ -147,6 +147,7 @@ static int16 linuxbcmerrormap[] =
 	-ENODATA,		
 
 
+
 #if BCME_LAST != -42
 #error "You need to add a OS error translation in the linuxbcmerrormap \
 	for new error code defined in bcmutils.h"
@@ -208,7 +209,7 @@ osl_attach(void *pdev, uint bustype, bool pkttag)
 			break;
 	}
 
-#if defined(DHD_USE_STATIC_BUF)
+#if defined(CONFIG_DHD_USE_STATIC_BUF)
 	if (!bcm_static_buf) {
 		if (!(bcm_static_buf = (bcm_static_buf_t *)dhd_os_prealloc(osh, 3, STATIC_BUF_SIZE+
 			STATIC_BUF_TOTAL_LEN))) {
@@ -236,6 +237,8 @@ osl_attach(void *pdev, uint bustype, bool pkttag)
 		sema_init(&bcm_static_skb->osl_pkt_sem, 1);
 	}
 #endif 
+
+	spin_lock_init(&(osh->pktalloc_lock));
 
 	return osh;
 }
@@ -401,7 +404,7 @@ osl_ctfpool_stats(osl_t *osh, void *b)
 	if ((osh == NULL) || (osh->ctfpool == NULL))
 		return;
 
-#ifdef DHD_USE_STATIC_BUF
+#ifdef CONFIG_DHD_USE_STATIC_BUF
 	if (bcm_static_buf) {
 		bcm_static_buf = 0;
 	}
@@ -469,6 +472,14 @@ osl_pktfastget(osl_t *osh, uint len)
 }
 #endif 
 
+struct sk_buff * BCMFASTPATH
+osl_pkt_tonative(osl_t *osh, void *pkt)
+{
+#ifndef WL_UMK
+	struct sk_buff *nskb;
+	unsigned long flags;
+#endif
+
 	if (osh->pub.pkttag)
 		bzero((void*)((struct sk_buff *)pkt)->cb, OSL_PKTTAG_SZ);
 
@@ -524,6 +535,7 @@ osl_pktget(osl_t *osh, uint len)
 		skb->priority = 0;
 
 
+		spin_lock_irqsave(&osh->pktalloc_lock, flags);
 		osh->pub.pktalloced++;
 		spin_unlock_irqrestore(&osh->pktalloc_lock, flags);
 	}
@@ -612,8 +624,8 @@ osl_pktfree(osl_t *osh, void *p, bool send)
 	}
 }
 
-#ifdef DHD_USE_STATIC_BUF
-void *
+#ifdef CONFIG_DHD_USE_STATIC_BUF
+void*
 osl_pktget_static(osl_t *osh, uint len)
 {
 	int i = 0;

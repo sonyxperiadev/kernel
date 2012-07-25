@@ -78,13 +78,12 @@ struct mmc_ios {
 #define MMC_SET_DRIVER_TYPE_A	1
 #define MMC_SET_DRIVER_TYPE_C	2
 #define MMC_SET_DRIVER_TYPE_D	3
+#ifdef   CONFIG_BCM_SDIOWL
+	unsigned char   host_reset;             /* reset host controller */
 
-#ifdef	 CONFIG_BCM_SDIOWL
-	unsigned char	host_reset;		/* reset host controller */
-
-#define MMC_HOST_RESET_CMD	1
-#define MMC_HOST_RESET_DAT	2
-#define MMC_HOST_RESET_ALL	3
+#define MMC_HOST_RESET_CMD      1
+#define MMC_HOST_RESET_DAT      2
+#define MMC_HOST_RESET_ALL      3
 #endif
 };
 
@@ -138,10 +137,12 @@ struct mmc_host_ops {
 	void	(*init_card)(struct mmc_host *host, struct mmc_card *card);
 
 	int	(*start_signal_voltage_switch)(struct mmc_host *host, struct mmc_ios *ios);
+
+	/* The tuning command opcode value is different for SD and eMMC cards */
 	int	(*execute_tuning)(struct mmc_host *host, u32 opcode);
 	void	(*enable_preset_value)(struct mmc_host *host, bool enable);
-	int	(*select_drive_strength)(unsigned int max_dtr,
-			int host_drv, int card_drv);
+	int	(*select_drive_strength)(unsigned int max_dtr, int host_drv, int card_drv);
+	void	(*hw_reset)(struct mmc_host *host);
 };
 
 struct mmc_card;
@@ -298,6 +299,8 @@ struct mmc_host {
 	struct delayed_work	detect;
 	struct wake_lock	detect_wake_lock;
 	unsigned char *detect_wake_lock_name;
+	int			detect_change;	/* card detect flag */
+	struct mmc_hotplug	hotplug;
 
 	const struct mmc_bus_ops *bus_ops;	/* current bus driver */
 	unsigned int		bus_refs;	/* reference counter */
@@ -327,8 +330,6 @@ struct mmc_host {
 #ifdef CONFIG_FAIL_MMC_REQUEST
 	struct fault_attr	fail_mmc_request;
 #endif
-
-	unsigned int		actual_clock;	/* Actual HC clock rate */
 
 #ifdef CONFIG_MMC_EMBEDDED_SDIO
 	struct {

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: vlan.h,v 9.7 2009-03-13 01:11:50 $
+ * $Id: vlan.h 241182 2011-02-17 21:50:03Z $
  */
 
 #ifndef _vlan_h_

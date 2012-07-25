@@ -68,8 +68,15 @@ struct mmc_ext_csd {
 	bool			enhanced_area_en;	/* enable bit */
 	unsigned long long	enhanced_area_offset;	/* Units: Byte */
 	unsigned int		enhanced_area_size;	/* Units: KB */
-	unsigned int		boot_size;		/* in bytes */
 	unsigned int		rpmb_size;		/* in bytes */
+	unsigned int		cache_size;		/* Units: KB */
+	bool			hpi_en;			/* HPI enablebit */
+	bool			hpi;			/* HPI support bit */
+	unsigned int		hpi_cmd;		/* cmd used as HPI */
+	unsigned int            data_sector_size;       /* 512 bytes or 4KB */
+	unsigned int            data_tag_unit_size;     /* DATA TAG UNIT size */
+	unsigned int		boot_ro_lock;		/* ro lock support */
+	bool			boot_ro_lockable;
 	u8			raw_partition_support;	/* 160 */
 	u8			raw_erased_mem_count;	/* 181 */
 	u8			raw_ext_csd_structure;	/* 194 */
@@ -226,10 +233,14 @@ struct mmc_card {
 #define MMC_QUIRK_DISABLE_CD	(1<<5)		/* disconnect CD/DAT[3] resistor */
 #define MMC_QUIRK_INAND_CMD38	(1<<6)		/* iNAND devices have broken CMD38 */
 #define MMC_QUIRK_BLK_NO_CMD23	(1<<7)		/* Avoid CMD23 for regular multiblock */
-#define MMC_QUIRK_BLK_DISABLE_CMD23 (1<<8)  /* completely disable CMD23. MMC_QUIRK_BLK_NO_CMD23 
-                                             * still allows CMD23 for reliable writes.
-                                             */
-
+#define MMC_QUIRK_BROKEN_BYTE_MODE_512 (1<<8)	/* Avoid sending 512 bytes in */
+#define MMC_QUIRK_LONG_READ_TIME (1<<9)		/* Data read time > CSD says */
+						/* byte mode */
+	unsigned int    poweroff_notify_state;	/* eMMC4.5 notify feature */
+#define MMC_NO_POWER_NOTIFICATION	0
+#define MMC_POWERED_ON			1
+#define MMC_POWEROFF_SHORT		2
+#define MMC_POWEROFF_LONG		3
 
 	unsigned int		erase_size;	/* erase size in sectors */
  	unsigned int		erase_shift;	/* if erase unit is power 2 */

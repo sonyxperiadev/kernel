@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: siutils.c 279502 2011-08-24 20:46:27Z $
+ * $Id: siutils.c 323774 2012-03-27 00:16:45Z $
  */
 
 #include <bcm_cfg.h>
@@ -44,10 +44,6 @@
 #include <sbsdpcmdev.h>
 #include <bcmsdpcm.h>
 #include <hndpmu.h>
-
-#if !defined(BCM_BOOTLOADER) && defined(SAVERESTORE)
-#include <saverestore.h>
-#endif
 
 #include "siutils_priv.h"
 
@@ -221,11 +217,11 @@ si_buscore_setup(si_info_t *sii, chipcregs_t *cc, uint bustype, uint32 savewin,
 
 	/* figure out bus/orignal core idx */
 	sii->pub.buscoretype = NODEV_CORE_ID;
-	sii->pub.buscorerev = NOREV;
+	sii->pub.buscorerev = (uint)NOREV;
 	sii->pub.buscoreidx = BADIDX;
 
 	pci = pcie = FALSE;
-	pcirev = pcierev = NOREV;
+	pcirev = pcierev = (uint)NOREV;
 	pciidx = pcieidx = BADIDX;
 
 	for (i = 0; i < sii->numcores; i++) {
@@ -378,12 +374,6 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 	sih->chip = w & CID_ID_MASK;
 	sih->chiprev = (w & CID_REV_MASK) >> CID_REV_SHIFT;
 	sih->chippkg = (w & CID_PKG_MASK) >> CID_PKG_SHIFT;
-	if (CHIPID(sih->chip) == BCM4322_CHIP_ID && (((sih->chipst & CST4322_SPROM_OTP_SEL_MASK)
-		>> CST4322_SPROM_OTP_SEL_SHIFT) == (CST4322_OTP_PRESENT |
-		CST4322_SPROM_PRESENT))) {
-		SI_ERROR(("%s: Invalid setting: both SPROM and OTP strapped.\n", __FUNCTION__));
-		return NULL;
-	}
 
 	if ((CHIPID(sih->chip) == BCM4329_CHIP_ID) && (sih->chiprev == 0) &&
 		(sih->chippkg != BCM4329_289PIN_PKG_ID)) {
@@ -470,11 +460,8 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 		}
 
 
-
-#if !defined(BCM_BOOTLOADER) && defined(SAVERESTORE)
-	sr_save_restore_init(sih);
-#endif /* !defined(BCM_BOOTLOADER) && defined(SAVERESTORE) */
-
+	/* clear any previous epidiag-induced target abort */
+	ASSERT(!si_taclear(sih, FALSE));
 
 	return (sii);
 

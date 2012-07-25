@@ -11,6 +11,7 @@
 #include <linux/init.h>
 #include <linux/delay.h>
 #include <mach/gpio.h>
+#include <linux/gpio.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>

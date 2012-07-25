@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: hndpmu.c 279296 2011-08-23 23:17:20Z $
+ * $Id: hndpmu.c 324060 2012-03-27 23:26:47Z $
  */
 
 #include <bcm_cfg.h>
@@ -94,26 +94,8 @@ static const sdiod_drive_str_t sdiod_drive_strength_tab4_1v8[] = {
 	{0, 0x1} };
 
 /* SDIO Drive Strength to sel value table for PMU Rev 11 (1.2v) */
-static const sdiod_drive_str_t sdiod_drive_strength_tab4_1v2[] = {
-	{16, 0x3},
-	{13, 0x2},
-	{11, 0x1},
-	{8, 0x0},
-	{6, 0x7},
-	{4, 0x6},
-	{2, 0x5},
-	{0, 0x4} };
 
 /* SDIO Drive Strength to sel value table for PMU Rev 11 (2.5v) */
-static const sdiod_drive_str_t sdiod_drive_strength_tab4_2v5[] = {
-	{80, 0x5},
-	{65, 0x4},
-	{55, 0x7},
-	{40, 0x6},
-	{30, 0x1},
-	{20, 0x0},
-	{10, 0x3},
-	{0, 0x2} };
 
 /* SDIO Drive Strength to sel value table for PMU Rev 13 (1.8v) */
 static const sdiod_drive_str_t sdiod_drive_strength_tab5_1v8[] = {
@@ -126,14 +108,6 @@ static const sdiod_drive_str_t sdiod_drive_strength_tab5_1v8[] = {
 	{0, 0x0} };
 
 /* SDIO Drive Strength to sel value table for PMU Rev 13 (3.3v) */
-static const sdiod_drive_str_t sdiod_drive_strength_tab5_3v3[] = {
-	{12, 0x7},
-	{10, 0x6},
-	{8, 0x5},
-	{6, 0x4},
-	{4, 0x2},
-	{2, 0x1},
-	{0, 0x0} };
 
 
 #define SDIOD_DRVSTR_KEY(chip, pmu)	(((chip) << 16) | (pmu))

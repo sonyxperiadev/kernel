@@ -1,5 +1,5 @@
 /*
- * DHD Bus Module for SDIO (Linux)
+ * DHD Bus Module for SDIO
  *
  * Copyright (C) 1999-2012, Broadcom Corporation
  * 
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_sdio.c 317487 2012-02-28 19:56:22Z $
+ * $Id: dhd_sdio.c 325483 2012-04-03 13:22:22Z $
  */
 
 #include <typedefs.h>
@@ -327,8 +327,6 @@ typedef struct dhd_bus {
 	bool		_slpauto;
 	bool		_oobwakeup;
 	bool		_srenab;
-	bool        readframes;
-	bool        reqbussleep;
 } dhd_bus_t;
 
 /* clkstate */
@@ -3591,8 +3589,6 @@ dhd_bus_stop(struct dhd_bus *bus, bool enforce_mutex)
 	bus->rxskip = FALSE;
 	bus->tx_seq = bus->rx_seq = 0;
 
-	bus->tx_max = 4;
-
 	if (enforce_mutex)
 		dhd_os_sdunlock(bus->dhd);
 }
@@ -4108,7 +4104,7 @@ dhdsdio_rxglom(dhd_bus_t *bus, uint8 rxseq)
 		if ((uint8)(txmax - bus->tx_seq) > 0x40) {
 			DHD_ERROR(("%s: got unlikely tx max %d with tx_seq %d\n",
 			           __FUNCTION__, txmax, bus->tx_seq));
-			txmax = bus->tx_seq;
+			txmax = bus->tx_max;
 		}
 		bus->tx_max = txmax;
 
@@ -4339,8 +4335,6 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
-	bus->readframes = TRUE;
-
 	if (!KSO_ENAB(bus)) {
 		DHD_ERROR(("%s: KSO off\n", __FUNCTION__));
 		bus->readframes = FALSE;
@@ -4364,6 +4358,14 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 	for (rxseq = bus->rx_seq, rxleft = maxframes;
 	     !bus->rxskip && rxleft && bus->dhd->busstate != DHD_BUS_DOWN;
 	     rxseq++, rxleft--) {
+
+#ifdef DHDTHREAD
+		/* tx more to improve rx performance */
+		if ((bus->clkstate == CLK_AVAIL) && !bus->fcstate &&
+			pktq_mlen(&bus->txq, ~bus->flowcontrol) && DATAOK(bus)) {
+			dhdsdio_sendfromq(bus, dhd_txbound);
+		}
+#endif /* DHDTHREAD */
 
 		/* Handle glomming separately */
 		if (bus->glom || bus->glomd) {
@@ -4585,7 +4587,7 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 			if ((uint8)(txmax - bus->tx_seq) > 0x40) {
 					DHD_ERROR(("%s: got unlikely tx max %d with tx_seq %d\n",
 						__FUNCTION__, txmax, bus->tx_seq));
-					txmax = bus->tx_seq;
+					txmax = bus->tx_max;
 			}
 			bus->tx_max = txmax;
 
@@ -4742,7 +4744,7 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 		if ((uint8)(txmax - bus->tx_seq) > 0x40) {
 			DHD_ERROR(("%s: got unlikely tx max %d with tx_seq %d\n",
 			           __FUNCTION__, txmax, bus->tx_seq));
-			txmax = bus->tx_seq;
+			txmax = bus->tx_max;
 		}
 		bus->tx_max = txmax;
 
@@ -5709,12 +5711,8 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 			bus->idlecount = 0;
 			if (bus->activity) {
 				bus->activity = FALSE;
-				if (SLPAUTO_ENAB(bus)) {
-					if (!bus->readframes)
-						dhdsdio_bussleep(bus, TRUE);
-					else
-						bus->reqbussleep = TRUE;
-				}
+				if (SLPAUTO_ENAB(bus))
+					dhdsdio_bussleep(bus, TRUE);
 				else
 					dhdsdio_clkctl(bus, CLK_NONE, FALSE);
 			}
@@ -5835,7 +5833,15 @@ dhdsdio_chipmatch(uint16 chipid)
 		return TRUE;
 	if (chipid == BCM43362_CHIP_ID)
 		return TRUE;
+	if (chipid == BCM4314_CHIP_ID)
+		return TRUE;
+	if (chipid == BCM4334_CHIP_ID)
+		return TRUE;
 	if (chipid == BCM43239_CHIP_ID)
+		return TRUE;
+	if (chipid == BCM4324_CHIP_ID)
+		return TRUE;
+	if (chipid == BCM4335_CHIP_ID)
 		return TRUE;
 	return FALSE;
 }
@@ -6377,7 +6383,7 @@ dhdsdio_release_malloc(dhd_bus_t *bus, osl_t *osh)
 		return;
 
 	if (bus->rxbuf) {
-#ifndef DHD_USE_STATIC_BUF
+#ifndef CONFIG_DHD_USE_STATIC_BUF
 		MFREE(osh, bus->rxbuf, bus->rxblen);
 #endif
 		bus->rxctl = bus->rxbuf = NULL;
@@ -6385,7 +6391,7 @@ dhdsdio_release_malloc(dhd_bus_t *bus, osl_t *osh)
 	}
 
 	if (bus->databuf) {
-#ifndef DHD_USE_STATIC_BUF
+#ifndef CONFIG_DHD_USE_STATIC_BUF
 		MFREE(osh, bus->databuf, MAX_DATA_BUF);
 #endif
 		bus->databuf = NULL;

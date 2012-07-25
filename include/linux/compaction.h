@@ -74,7 +74,12 @@ static inline int compact_pgdat(pg_data_t *pgdat, int order)
 	return COMPACT_CONTINUE;
 }
 
-static inline void defer_compaction(struct zone *zone)
+static inline unsigned long compaction_suitable(struct zone *zone, int order)
+{
+	return COMPACT_SKIPPED;
+}
+
+static inline void defer_compaction(struct zone *zone, int order)
 {
 }
 

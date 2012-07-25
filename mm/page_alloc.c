@@ -644,13 +644,21 @@ static inline void __free_one_page(struct page *page,
 		buddy = page + (buddy_idx - page_idx);
 		if (!page_is_buddy(page, buddy, order))
 			break;
-
-		/* Our buddy is free, merge with it and move up one order. */
-		list_del(&buddy->lru);
-		zone->free_area[order].nr_free--;
-		if (PageCma(page))
-			zone->nr_cma_free[order]--;
-		rmv_page_order(buddy);
+		/*
+		 * Our buddy is free or it is CONFIG_DEBUG_PAGEALLOC guard page,
+		 * merge with it and move up one order.
+		 */
+		if (page_is_guard(buddy)) {
+			clear_page_guard_flag(buddy);
+			set_page_private(page, 0);
+			__mod_zone_page_state(zone, NR_FREE_PAGES, 1 << order);
+		} else {
+			list_del(&buddy->lru);
+			zone->free_area[order].nr_free--;
+			if (PageCma(page))
+				zone->nr_cma_free[order]--;
+			rmv_page_order(buddy);
+		}
 		combined_idx = buddy_idx & page_idx;
 		page = page + (combined_idx - page_idx);
 		page_idx = combined_idx;
@@ -1754,6 +1762,12 @@ static bool __zone_watermark_ok(struct zone *z, int order, unsigned long mark,
 		min -= min / 2;
 	if (alloc_flags & ALLOC_HARDER)
 		min -= min / 4;
+
+	if (alloc_flags & ALLOC_UNMOVABLE) {
+		if ((free_pages - zone_page_state(z, NR_FREE_CMA_PAGES)) <=
+				(min + z->lowmem_reserve[classzone_idx]))
+			return false;
+	}
 
 	if (free_pages <= min + z->lowmem_reserve[classzone_idx])
 		return false;
@@ -5926,26 +5940,19 @@ static int __reclaim_pages(struct zone *zone, gfp_t gfp_mask, int count)
 	int did_some_progress = 0;
 	int order = 1;
 
-	/*
-	 * Increase level of watermarks to force kswapd do his job
-	 * to stabilise at new watermark level.
-	 */
-	__update_cma_watermarks(zone, count);
-
 	/* Obey watermarks as if the page was being allocated */
-	while (!zone_watermark_ok(zone, 0, low_wmark_pages(zone), 0, 0)) {
+	while (!fatal_signal_pending(current) &&
+		!zone_watermark_ok(zone, 0, low_wmark_pages(zone), 0, 0)) {
 		wake_all_kswapd(order, zonelist, high_zoneidx, zone_idx(zone));
 
 		did_some_progress = __perform_reclaim(gfp_mask, order, zonelist,
 						      NULL);
 		if (!did_some_progress) {
 			/* Exhausted what can be done so it's blamo time */
-			out_of_memory(zonelist, gfp_mask, order, NULL);
+			/* Verify the last argument below. pass true if we have to force kill the task. Fixme*/
+			out_of_memory(zonelist, gfp_mask, order, NULL, false);
 		}
 	}
-
-	/* Restore original watermark levels. */
-	__update_cma_watermarks(zone, -count);
 
 	return count;
 }
@@ -6042,8 +6049,6 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 
 	/* Make sure the range is really isolated. */
 	if (test_pages_isolated(outer_start, end)) {
-		pr_warn("alloc_contig_range test_pages_isolated(%lx, %lx) failed\n",
-		       outer_start, end);
 		ret = -EBUSY;
 		goto done;
 	}

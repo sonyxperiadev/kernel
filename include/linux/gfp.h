@@ -393,5 +393,13 @@ extern void free_contig_range(unsigned long pfn, unsigned nr_pages);
 extern void init_cma_reserved_pageblock(struct page *page);
 
 #endif
+#ifdef CONFIG_PM_SLEEP
+extern bool pm_suspended_storage(void);
+#else
+static inline bool pm_suspended_storage(void)
+{
+	return false;
+}
+#endif /* CONFIG_PM_SLEEP */
 
 #endif /* __LINUX_GFP_H */

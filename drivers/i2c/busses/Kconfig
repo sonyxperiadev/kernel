@@ -913,12 +913,27 @@ config I2C_BSC
 	help
 	Enable the i2c adapter on Island.
 
+choice
+	prompt "KONA PMU_BSC Speed"
+	default KONA_PMU_BSC_HS_MODE
+	depends on I2C_BSC
+
 config KONA_PMU_BSC_HS_MODE
-	tristate "PMU BSC adapter in High Speed Mode"
-	depends on ARCH_KONA && I2C_BSC
-	default n
+	bool "PMU_BSC speed 3.25MHZ"
 	help
-	 Enable this option to use High speed mode for PMU I2C adapter
+	  Set PMU_BSC speed to 3.25MHZ
+
+config KONA_PMU_BSC_HS_1MHZ
+	bool "PMU_BSC speed 1MHZ"
+	help
+	  Set PMU_BSC speed to 1MHZ
+
+config KONA_PMU_BSC_HS_1625KHZ
+	bool "PMU_BSC speed 1625KHZ"
+	help
+	  Set PMU_BSC speed to 1625KHZ
+
+endchoice
 
 config I2C_BRCM_SSPI
 	tristate "BRCM SSPI-based I2C"

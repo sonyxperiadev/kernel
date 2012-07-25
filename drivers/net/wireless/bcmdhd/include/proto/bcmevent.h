@@ -23,7 +23,7 @@
  *
  * Dependencies: proto/bcmeth.h
  *
- * $Id: bcmevent.h,v 9.64.2.9 2011-02-01 06:24:21 $
+ * $Id: bcmevent.h 326276 2012-04-06 23:16:42Z $
  *
  */
 
@@ -177,10 +177,18 @@ typedef BWL_PRE_PACKED_STRUCT struct bcm_event {
 #define WLC_E_CSA_COMPLETE_IND		80	
 #define WLC_E_EXCESS_PM_WAKE_EVENT	81	
 #define WLC_E_PFN_SCAN_NONE		82	
-#define WLC_E_PFN_SCAN_ALLGONE	83	
-#define WLC_E_GTK_PLUMBED 84
-#define WLC_E_LAST	85	
-
+#define WLC_E_PFN_SCAN_ALLGONE		83	
+#define WLC_E_GTK_PLUMBED 		84
+#define WLC_E_ASSOC_IND_NDIS		85	
+#define WLC_E_REASSOC_IND_NDIS		86	
+#define WLC_E_ASSOC_REQ_IE 		87
+#define WLC_E_ASSOC_RESP_IE 		88
+#define WLC_E_ASSOC_RECREATED	89	
+#define WLC_E_ACTION_FRAME_RX_NDIS	90	
+#define WLC_E_AUTH_REQ		91	
+#define WLC_E_TDLS_PEER_EVENT 	92	
+#define WLC_E_SPEEDY_RECREATE_FAIL	93	
+#define WLC_E_LAST			94	
 
 
 typedef struct {

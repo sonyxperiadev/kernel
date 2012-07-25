@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sbhnddma.h 281450 2011-09-02 01:38:29Z $
+ * $Id: sbhnddma.h 309193 2012-01-19 00:03:57Z $
  */
 
 #ifndef	_sbhnddma_h_

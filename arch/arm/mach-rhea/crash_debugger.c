@@ -25,6 +25,8 @@
 #include <linux/spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/proc_fs.h>
+#include <linux/module.h>
+#include <linux/reboot.h>
 
 #include <mach/hardware.h>
 #include <mach/cdebugger.h>
@@ -139,7 +141,7 @@ struct cdebugger_fault_status_t {
 };
 
 /* enable cdebugger feature */
-unsigned ramdump_enable;
+unsigned int ramdump_enable;
 EXPORT_SYMBOL(ramdump_enable);
 
 /*SRAM base address*/
@@ -508,7 +510,7 @@ static void cdebugger_set_upload_cause(enum cdebugger_upload_cause_t type)
 
 static void cdebugger_hw_reset(void)
 {
-	arm_machine_restart('h', "upload");
+	machine_restart("upload");
 }
 
 static void setup_log_buffer_address(void)

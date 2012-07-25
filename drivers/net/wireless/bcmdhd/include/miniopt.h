@@ -20,7 +20,7 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * $Id: miniopt.h 275703 2011-08-04 20:20:27Z $
+ * $Id: miniopt.h 241182 2011-02-17 21:50:03Z $
  */
 
 

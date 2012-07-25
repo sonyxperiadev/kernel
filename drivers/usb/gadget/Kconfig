@@ -494,37 +494,6 @@ config USB_CI13XXX_MSM
 	  dynamically linked module called "ci13xxx_msm" and force all
 	  gadget drivers to also be dynamically linked.
 
-config USB_CI13XXX_MSM
-	tristate
-	depends on USB_GADGET_CI13XXX_MSM
-	default USB_GADGET
-	select USB_GADGET_SELECTED
-
-config USB_GADGET_DWC_OTG
-	boolean "Synopsys DWC_OTG 2.91a"
-	depends on ARCH_KONA
-	help
-	   This driver provides USB Device Controller driver for DW_OTG
-
-	   Say "y" to link the driver statically, or "m" to build a
-	   dynamically linked module called "dwc_otg" and to force all
-	   gadget drivers to also be dynamically linked.
-
-config USB_DWC_OTG_HOST_MODE
-	boolean "Synopsys DWC_OTG host mode"
-	depends on USB_GADGET_DWC_OTG
-	default n
-	help
-	   Say "y" to enable host mode by default. Say "n" to enable
-	   device mode by default.
-
-config USB_DWC_OTG
-	tristate
-	depends on USB_GADGET_DWC_OTG
-	default USB_GADGET
-	select USB_GADGET_SELECTED
-	select USB_GADGET_DUALSPEED
-
 #
 # LAST -- dummy/emulated controller
 #
@@ -566,36 +535,6 @@ config USB_GADGET_DUALSPEED
 config USB_GADGET_SUPERSPEED
 	bool
 	depends on USB_GADGET_DUALSPEED
-
-config USB_GADGET_SNPS_DWC_OTG
-	boolean "Synopsys Driver for DWC_otg Controller"
-	depends on USB && EXPERIMENTAL
-	select USB_OTG
-	select USB_GADGET_DUALSPEED
-	help
-	   Selects the Synopsys Driver for the DWC_otg Controller.
-
-config USB_LPM
-	boolean "Enable LPM support"
-	depends on USB && EXPERIMENTAL
-	default n
-	help
-	   Enables LPM support.
-
-config USB_DWC_OTG_LPM
-	boolean "Enable LPM support in DWC OTG driver"
-	depends on USB && EXPERIMENTAL
-	select USB_LPM
-	default n
-	help
-	   Enables LPM support in DWC OTG driver.
-
-config USB_DWC_OTG_DEVICE_ONLY
-	boolean "DWC OTG Driver device only mode"
-	depends on USB_GADGET
-	default n
-	help
-	   Enables DWC OTG Driver device only mode
 
 #
 # USB Gadget Drivers
@@ -908,81 +847,13 @@ config USB_G_PRINTER
 	  which includes sample code for accessing the device file.
 
 config USB_G_ANDROID
-	tristate "Android Gadget"
-	depends on SWITCH
+	boolean "Android Composite Gadget"
 	help
 	  The Android Composite Gadget supports multiple USB
 	  functions: adb, acm, mass storage, mtp, accessory
 	  and rndis.
 	  Each function can be configured and enabled/disabled
 	  dynamically from userspace through a sysfs interface.
-
-config USB_G_ANDROID_ACM
-	boolean "Android gadget ACM serial function"
-	depends on USB_G_ANDROID
-	help
-	  Provides ACM serial function for android gadget driver.
-
-config USB_G_ANDROID_ADB
-	boolean "Android gadget adb function"
-	depends on USB_G_ANDROID
-	help
-	  Provides adb function for android gadget driver.
-
-config USB_G_ANDROID_MASS_STORAGE
-	boolean "Android gadget mass storage function"
-	depends on USB_G_ANDROID && SWITCH
-	help
-	  Provides USB mass storage function for android gadget driver.
-
-config USB_G_ANDROID_MTP
-	boolean "Android MTP function"
-	depends on USB_G_ANDROID
-	help
-	  Provides Media Transfer Protocol (MTP) support for android gadget driver.
-
-config USB_G_ANDROID_RNDIS
-	boolean "Android gadget RNDIS ethernet function"
-	depends on USB_G_ANDROID
-	help
-	  Provides RNDIS ethernet function for android gadget driver.
-
-config USB_G_ANDROID_RNDIS_WCEIS
-        boolean "Use Windows Internet Sharing Class/SubClass/Protocol"
-        depends on USB_G_ANDROID_RNDIS
-        help
-         Causes the driver to look like a Windows-compatible Internet
-         Sharing device, so Windows auto-detects it.
-
-         If you enable this option, the device is no longer CDC ethernet
-         compatible.
-
- config USB_ETH_SKB_ALLOC_OPTIMIZATION
-	bool "USB_ETH_SKB_ALLOC_OPTIMIZATION support"
-	depends on USB_G_ANDROID_RNDIS	
-	help
-	   If you say "y" here, the Ethernet gadget driver will use the skb allocation
-	   optimization approach to optimize the skb allocation.	 
-	   
-
-config USB_G_ANDROID_OBEX
-	boolean "Android gadget OBEX function"
-	depends on USB_G_ANDROID
-	help
-	  Provides OBEX function for android gadget driver.
-
-config USB_G_ANDROID_2_6_SYSFS
-	boolean "Android gadget Kernel 2.6 sysfs interface"
-	depends on USB_G_ANDROID
-	help
-	  Provides 2.6 and 3.0 sysfs interface for Android Gingerbread UI.
-
-config USB_G_ANDROID_SYSFS_CLEANUP
-	boolean "Android gadget sysfs cleanup"
-	depends on USB_G_ANDROID=m
-	default y
-	help
-	  Provides additional sysfs cleanup.
 
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"
@@ -1114,6 +985,5 @@ config USB_G_WEBCAM
 	  dynamically linked module called "g_webcam".
 
 endchoice
-
 
 endif # USB_GADGET

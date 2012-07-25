@@ -37,6 +37,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/moduleparam.h>
 #include <linux/sched.h>
 #include <linux/kthread.h>
+#include <linux/module.h>
 
 #include <linux/broadcom/bcm_major.h>
 #include <sound/core.h>

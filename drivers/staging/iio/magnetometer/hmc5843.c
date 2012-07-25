@@ -532,6 +532,12 @@ static void hmc5843_init_client(struct i2c_client *client)
 	pr_info("HMC5843 initialized\n");
 }
 
+static const struct iio_info hmc5843_info = {
+	.attrs = &hmc5843_group,
+	.read_raw = &hmc5843_read_raw,
+	.driver_module = THIS_MODULE,
+};
+
 static int hmc5843_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
@@ -556,17 +562,13 @@ static int hmc5843_probe(struct i2c_client *client,
 	/* Initialize the HMC5843 chip */
 	hmc5843_init_client(client);
 
-	data->indio_dev = iio_allocate_device();
-	if (!data->indio_dev) {
-		err = -ENOMEM;
-		goto exit_free1;
-	}
-	data->indio_dev->attrs = &hmc5843_group;
-	data->indio_dev->dev.parent = &client->dev;
-	data->indio_dev->dev_data = (void *)(data);
-	data->indio_dev->driver_module = THIS_MODULE;
-	data->indio_dev->modes = INDIO_DIRECT_MODE;
-	err = iio_device_register(data->indio_dev);
+	indio_dev->info = &hmc5843_info;
+	indio_dev->name = id->name;
+	indio_dev->channels = hmc5843_channels;
+	indio_dev->num_channels = ARRAY_SIZE(hmc5843_channels);
+	indio_dev->dev.parent = &client->dev;
+	indio_dev->modes = INDIO_DIRECT_MODE;
+	err = iio_device_register(indio_dev);
 	if (err)
 		goto exit_free2;
 	return 0;

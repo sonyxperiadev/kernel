@@ -128,3 +128,13 @@ obj-y				+= clk/
 
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
 obj-$(CONFIG_MMCPOLL)		+= mmc-poll/
+obj-$(CONFIG_NFC)		+= nfc/
+obj-$(CONFIG_IOMMU_SUPPORT)	+= iommu/
+obj-$(CONFIG_REMOTEPROC)	+= remoteproc/
+obj-$(CONFIG_RPMSG)		+= rpmsg/
+
+# Virtualization drivers
+obj-$(CONFIG_VIRT_DRIVERS)	+= virt/
+obj-$(CONFIG_HYPERV)		+= hv/
+
+obj-$(CONFIG_PM_DEVFREQ)	+= devfreq/

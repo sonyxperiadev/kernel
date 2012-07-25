@@ -7,19 +7,31 @@ menu "Multifunction device drivers"
 
 config MFD_CORE
 	tristate
-	default y
+	default n
+
+config MFD_88PM860X
+	bool "Support Marvell 88PM8606/88PM8607"
+	depends on I2C=y && GENERIC_HARDIRQS
+	select REGMAP_I2C
+	select MFD_CORE
+	help
+	  This supports for Marvell 88PM8606/88PM8607 Power Management IC.
+	  This includes the I2C driver and the core APIs _only_, you have to
+	  select individual components like voltage regulators, RTC and
+	  battery-charger under the corresponding menus.
 
 config MFD_BCMPMU
 	bool "MFD BCM PMU"
-	depends on MFD_CORE && I2C_BSC
+	depends on I2C_BSC
 	select KONA_USB_CONTROL
-	default n
+	select MFD_CORE
+	default y
 	help
 	  Support for the Broadcom PMUs
 
 config MFD_BCM_PMU590XX
 	bool "MFD BCM PMU590XX PMIC"
-	depends on MFD_CORE && I2C_BSC
+	depends on I2C_BSC
 	help
 	  Support for the Broadcom PMIC.
 
@@ -57,17 +69,6 @@ config MFD_BCM_PWRMGR_SW_SEQUENCER
 	default n
 	help
 	  This enables power manager i2c software sequencer support.
-
-config MFD_88PM860X
-	bool "Support Marvell 88PM8606/88PM8607"
-	depends on I2C=y && GENERIC_HARDIRQS
-	select REGMAP_I2C
-	select MFD_CORE
-	help
-	  This supports for Marvell 88PM8606/88PM8607 Power Management IC.
-	  This includes the I2C driver and the core APIs _only_, you have to
-	  select individual components like voltage regulators, RTC and
-	  battery-charger under the corresponding menus.
 
 config MFD_SM501
 	tristate "Support for Silicon Motion SM501"

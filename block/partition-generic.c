@@ -24,6 +24,10 @@
 extern void md_autodetect_dev(dev_t dev);
 #endif
  
+#ifdef CONFIG_APANIC_ON_MMC
+extern void mmc_panic_copy_dev_name(char *dev_path, int dev_num);
+#endif
+
 /*
  * disk_name() is used by partition check code and the genhd driver.
  * It formats the devicename of the indicated disk into
@@ -533,6 +537,29 @@ rescan:
 		if (state->parts[p].flags & ADDPART_FLAG_RAID)
 			md_autodetect_dev(part_to_dev(part)->devt);
 #endif
+#ifdef CONFIG_APANIC_ON_MMC
+		if (strncmp(part->info->volname, CONFIG_APANIC_PLABEL,
+				strlen(CONFIG_APANIC_PLABEL)) == 0) {
+			struct device *ddev = disk_to_dev(disk);
+			char *dname, *blk_name;
+			int dev_num = -1;
+
+			dname = (char *)dev_name(ddev);
+			blk_name = kzalloc(BDEVNAME_SIZE, GFP_KERNEL);
+			if (!blk_name)
+				continue;
+
+			if (isdigit(dname[strlen(dname) - 1])) {
+				sprintf(blk_name, "%sp%d", dname, part->partno);
+				dev_num = dname[strlen(dname) - 1] - '0';
+			} else
+				sprintf(blk_name, "%s%d", dname, part->partno);
+
+			mmc_panic_copy_dev_name(blk_name, dev_num);
+			kfree(blk_name);
+		}
+#endif
+
 	}
 	kfree(state);
 	return 0;

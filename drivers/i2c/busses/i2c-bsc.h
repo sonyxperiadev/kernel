@@ -294,7 +294,7 @@ static inline void bsc_reset(uint32_t baseAddr)
  */
 #define BSC_HS_HSMODE_TIMING_26MHZ        0x0000024
 #define BSC_HS_HSMODE_1MHZ_26MHZ          0x000014D
-#define BSC_HS_HSMODE_1625KHZ_26MHZ       0x0000108
+#define BSC_HS_HSMODE_1625KHZ_26MHZ       0x00000A8
 #define BSC_HS_HSMODE_2600KHZ_26MHZ       0x0000064
 #define BSC_HS_HSMODE_2MHZ_26MHZ          0x0000086
 #define BSC_HS_HSMODE_TIMING              0x00000513
@@ -463,7 +463,7 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
 		if (ref_clk == BSC_BUS_REF_26MHZ) {
 			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
 			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
-			NO_DIV = 0;
+			NO_DIV = 1;
 			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
 				      BSC_HS_HSMODE_1MHZ_26MHZ);
 		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
@@ -481,7 +481,7 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
 		if (ref_clk == BSC_BUS_REF_26MHZ) {
 			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
 			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
-			NO_DIV = 0;
+			NO_DIV = 1;
 			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
 				      BSC_HS_HSMODE_2MHZ_26MHZ);
 		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
@@ -499,7 +499,7 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
 		if (ref_clk == BSC_BUS_REF_26MHZ) {
 			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
 			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
-			NO_DIV = 0;
+			NO_DIV = 1;
 			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
 				      BSC_HS_HSMODE_1625KHZ_26MHZ);
 		} else if (ref_clk == BSC_BUS_REF_104MHZ) {
@@ -517,7 +517,7 @@ static inline void bsc_set_bus_speed(uint32_t baseAddr, BSC_SPEED_t speed,
 		if (ref_clk == BSC_BUS_REF_26MHZ) {
 			DIV = I2C_MM_HS_TIM_DIV_CMD_DIV2;
 			PRESCALE = I2C_MM_HS_TIM_PRESCALE_CMD_DIV4;
-			NO_DIV = 0;
+			NO_DIV = 1;
 			BSC_WRITE_REG((baseAddr + I2C_MM_HS_HSTIM_OFFSET),
 				      BSC_HS_HSMODE_2600KHZ_26MHZ);
 		} else if (ref_clk == BSC_BUS_REF_104MHZ) {

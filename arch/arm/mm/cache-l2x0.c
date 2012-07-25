@@ -325,13 +325,7 @@ static void l2x0_disable(void)
 
 	raw_spin_lock_irqsave(&l2x0_lock, flags);
 	__l2x0_flush_all();
-	/* TODO Allow this only in Secure Mode */
-	if (0) { /* Secure Mode */
-		writel_relaxed(0, l2x0_base + L2X0_CTRL);
-	} else {
-		writel_relaxed(0xFF, l2x0_base + L2X0_LOCKDOWN_WAY_D);
-		writel_relaxed(0xFF, l2x0_base + L2X0_LOCKDOWN_WAY_I);
-	}
+	writel_relaxed(0, l2x0_base + L2X0_CTRL);
 	dsb();
 	raw_spin_unlock_irqrestore(&l2x0_lock, flags);
 }

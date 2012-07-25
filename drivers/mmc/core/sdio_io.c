@@ -708,6 +708,7 @@ void sdio_f0_writeb(struct sdio_func *func, unsigned char b, unsigned int addr,
 		*err_ret = ret;
 }
 EXPORT_SYMBOL_GPL(sdio_f0_writeb);
+
 /**
  *	sdio_get_host_pm_caps - get host power management capabilities
  *	@func: SDIO function attached to host

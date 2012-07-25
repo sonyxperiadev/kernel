@@ -27,7 +27,6 @@ obj-$(CONFIG_USB_HWA_HCD)	+= host/
 obj-$(CONFIG_USB_ISP1760_HCD)	+= host/
 obj-$(CONFIG_USB_IMX21_HCD)	+= host/
 obj-$(CONFIG_USB_FSL_MPH_DR_OF)	+= host/
-obj-$(CONFIG_USB_DWCOTG)        += host/
 obj-$(CONFIG_USB_BCM_ISLAND)	+= host/
 
 obj-$(CONFIG_USB_C67X00_HCD)	+= c67x00/
@@ -55,9 +54,7 @@ obj-$(CONFIG_USB_SPEEDTOUCH)	+= atm/
 
 obj-$(CONFIG_USB_MUSB_HDRC)	+= musb/
 obj-$(CONFIG_USB_RENESAS_USBHS)	+= renesas_usbhs/
-obj-$(CONFIG_USB_OTG_UTILS)	+= otg/
 obj-$(CONFIG_KONA_OTG_CP)       += otg/
-obj-$(CONFIG_USB_DWC_OTG)	+= otg/
 obj-$(CONFIG_USB_GADGET)	+= gadget/
 
 obj-$(CONFIG_USB_COMMON)	+= usb-common.o

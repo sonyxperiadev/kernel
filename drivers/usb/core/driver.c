@@ -1211,19 +1211,6 @@ static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
 	 * and flush any outstanding URBs.
 	 */
 	} else {
-#ifdef CONFIG_USB_OTG
-		/* According to OTG supplement Rev 2.0 section 6.3
-		* Unless an A-device enables b_hnp_enable before entering
-		* suspend it shall also continue polling while the bus is
-		* suspended.
-		*
-		* We don't have to perform HNP polling, as we are going to
-		* enable b_hnp_enable before suspending.
-		*/
-		if (udev->bus->hnp_support &&
-				udev->portnum == udev->bus->otg_port)
-			cancel_delayed_work(&udev->bus->hnp_polling);
-#endif
 		udev->can_submit = 0;
 		for (i = 0; i < 16; ++i) {
 			usb_hcd_flush_endpoint(udev, udev->ep_out[i]);
@@ -1286,77 +1273,6 @@ static int usb_resume_both(struct usb_device *udev, pm_message_t msg)
 		udev->reset_resume = 0;
 	return status;
 }
-
-#ifdef CONFIG_USB_OTG
-void usb_hnp_polling_work(struct work_struct *work)
-{
-	int ret;
-	struct usb_bus *bus =
-			container_of(work, struct usb_bus, hnp_polling.work);
-	struct usb_device *udev = bus->root_hub->children[bus->otg_port - 1];
-	struct usb_otg_descriptor	*desc = NULL;
-	u8 *status = kmalloc(sizeof(*status), GFP_KERNEL);
-
-	if (!status)
-		return;
-
-	if (__usb_get_extra_descriptor (udev->rawdescriptors[0],
-					le16_to_cpu(udev->config[0].desc.wTotalLength),
-					USB_DT_OTG, (void **) &desc) == 0) {
-		if (desc->bLength == sizeof(*desc) &&
-				le16_to_cpu(desc->bcdOTG) >= 0x200) {
-			ret = usb_control_msg(udev, usb_rcvctrlpipe(udev, 0),
-				USB_REQ_GET_STATUS, USB_DIR_IN | USB_RECIP_DEVICE,
-				0, OTG_STATUS_SELECTOR, status, sizeof(*status),
-				USB_CTRL_GET_TIMEOUT);
-			if (ret < 0) {
-				/* Peripheral may not be supporting HNP polling */
-				dev_vdbg(&udev->dev, "HNP polling failed. status %d\n", ret);
-				goto out;
-			}
-		} else {
-			 /* No flag for OTG1.3 so set it anyway to suspend the
-			 * bus and let B-device start HNP */
-			*status = 1 << HOST_REQUEST_FLAG;
-		}
-	}
-
-	if (*status & (1 << HOST_REQUEST_FLAG)) {
-		/* Suspend the bus so B-device
-		* can initiate role switch */
-		do_unbind_rebind(udev, DO_UNBIND);
-		ret = usb_suspend_both(udev, PMSG_USER_SUSPEND);
-		if (ret)
-			dev_info(&udev->dev, "suspend failed\n");
-	} else {
-		schedule_delayed_work(&bus->hnp_polling,
-				msecs_to_jiffies(THOST_REQ_POLL));
-	}
-out:
-		kfree(status);
-}
-
-void usb_host_suspend_test_device(struct usb_device *udev)
-{
-		do_unbind_rebind(udev, DO_UNBIND);
-		usb_suspend_both(udev, PMSG_USER_SUSPEND);
-}
-
-
-void usb_host_test_device_sessend_work(struct work_struct *work)
-{
-	struct usb_bus *bus =
-			container_of(work, struct usb_bus, maint_conf_session_for_td.work);
-	struct usb_hcd *hcd = bus_to_hcd(bus);
-
-	/* Stop HNP polling */
-	cancel_delayed_work_sync(&bus->hnp_polling);
-
-	/* Revisit cleaning up the device before ending the session */
-	if (hcd->driver && hcd->driver->stop)
-		hcd->driver->stop(hcd);
-}
-#endif
 
 static void choose_wakeup(struct usb_device *udev, pm_message_t msg)
 {

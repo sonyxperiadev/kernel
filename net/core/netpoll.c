@@ -9,17 +9,7 @@
  * Copyright (C) 2002  Red Hat, Inc.
  */
 
-/*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
-
-Unless you and Broadcom execute a separate written software license agreement governing use
-of this software, this software is licensed to you under the terms of the GNU General Public
-License version 2, available at http://www.gnu.org/copyleft/gpl.html (the "GPL").
-
-Notwithstanding the above, under no circumstances may you combine this software in any way
-with any other Broadcom software provided under a license other than the GPL, without
-Broadcom's express prior written consent.
-*******************************************************************************************/
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/moduleparam.h>
 #include <linux/netdevice.h>
@@ -71,9 +61,12 @@ static atomic_t trapped;
 				sizeof(struct iphdr) + sizeof(struct ethhdr) + \
 				sizeof (struct rndis_packet_msg_type))
 #else
-#define MAX_SKB_SIZE \
-		(MAX_UDP_CHUNK + sizeof(struct udphdr) + \
-				sizeof(struct iphdr) + sizeof(struct ethhdr))
+#define MAX_SKB_SIZE                                                   \
+	(sizeof(struct ethhdr) +                                       \
+	sizeof(struct iphdr) +                                         \
+	sizeof(struct udphdr) +                                        \
+	MAX_UDP_CHUNK)
+
 #endif
 
 static void zap_completion_queue(void);
@@ -84,6 +77,12 @@ module_param(carrier_timeout, uint, 0644);
 
 static DEFINE_SPINLOCK(txq_lock);
 static struct workqueue_struct *brcm_tx_work_q;
+#define np_info(np, fmt, ...)				\
+	pr_info("%s: " fmt, np->name, ##__VA_ARGS__)
+#define np_err(np, fmt, ...)				\
+	pr_err("%s: " fmt, np->name, ##__VA_ARGS__)
+#define np_notice(np, fmt, ...)				\
+	pr_notice("%s: " fmt, np->name, ##__VA_ARGS__)
 
 static void queue_process(struct work_struct *work)
 {

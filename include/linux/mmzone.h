@@ -35,12 +35,11 @@
  */
 #define PAGE_ALLOC_COSTLY_ORDER 3
 
-enum {
-	MIGRATE_UNMOVABLE,
-	MIGRATE_RECLAIMABLE,
-	MIGRATE_MOVABLE,
-	MIGRATE_PCPTYPES,	/* the number of types on the pcp lists */
-	MIGRATE_RESERVE = MIGRATE_PCPTYPES,
+#define MIGRATE_UNMOVABLE     0
+#define MIGRATE_RECLAIMABLE   1
+#define MIGRATE_MOVABLE       2
+#define MIGRATE_PCPTYPES      3 /* the number of types on the pcp lists */
+#define MIGRATE_RESERVE       3
 #ifdef CONFIG_CMA
 	/*
 	 * MIGRATE_CMA migration type is designed to mimic the way
@@ -55,11 +54,10 @@ enum {
 	 * MAX_ORDER_NR_PAGES should biggest page be bigger then
 	 * a single pageblock.
 	 */
-	MIGRATE_CMA,
+#define	MIGRATE_CMA	       4
 #endif
-	MIGRATE_ISOLATE,	/* can't allocate from here */
-	MIGRATE_TYPES
-};
+#define MIGRATE_ISOLATE       5 /* can't allocate from here */
+#define MIGRATE_TYPES         6
 
 #ifdef CONFIG_CMA
 #  define is_migrate_cma(migratetype) unlikely((migratetype) == MIGRATE_CMA)
@@ -143,8 +141,11 @@ enum zone_stat_item {
 #endif
 #ifdef CONFIG_CMA
 	NR_FREE_CMA_PAGES,
-	NR_CMA_ANON,
-	NR_CMA_FILE,
+	NR_LRU_CMA_BASE,
+	NR_CMA_INACTIVE_ANON = NR_LRU_CMA_BASE,
+	NR_CMA_ACTIVE_ANON,
+	NR_CMA_INACTIVE_FILE,
+	NR_CMA_ACTIVE_FILE,
 	NR_CMA_UNEVICTABLE,
 	NR_CONTIG_PAGES,
 #endif
@@ -174,20 +175,23 @@ enum lru_list {
 };
 
 #ifdef CONFIG_CMA
-
-enum lru_cma_count {
-	LRU_CMA_ANON = NR_LRU_LISTS,
-	LRU_CMA_FILE = NR_LRU_LISTS + 1,
-	NR_LRU_CMA_COUNTS
+#  define is_migrate_cma(migratetype) unlikely((migratetype) == MIGRATE_CMA)
+#  define cma_wmark_pages(zone)	zone->min_cma_pages
+#define LRU_CMA_BASE	(NR_LRU_LISTS)
+enum lru_cma_lists {
+	LRU_CMA_INACTIVE_ANON = LRU_CMA_BASE,
+	LRU_CMA_ACTIVE_ANON = LRU_CMA_BASE + LRU_ACTIVE,
+	LRU_CMA_INACTIVE_FILE = LRU_CMA_BASE + LRU_FILE,
+	LRU_CMA_ACTIVE_FILE = LRU_CMA_BASE + LRU_FILE + LRU_ACTIVE,
+	NR_LRU_LISTS_CMA,
 };
-
 #else
-
-#define NR_LRU_CMA_COUNTS (0)
-
+#  define is_migrate_cma(migratetype) false
+#  define cma_wmark_pages(zone) 0
+#define NR_LRU_LISTS_CMA	(NR_LRU_LISTS)
 #endif
 
-#define for_each_lru(l) for (l = 0; l < NR_LRU_LISTS; l++)
+#define for_each_lru(lru) for (lru = 0; lru < NR_LRU_LISTS; lru++)
 
 #define for_each_evictable_lru(lru) for (lru = 0; lru <= LRU_ACTIVE_FILE; lru++)
 

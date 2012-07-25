@@ -30,6 +30,9 @@ FONTC	= $(srctree)/drivers/video/console/font_acorn_8x8.c
 ifeq ($(CONFIG_GCOV_KERNEL),y)
 GCOV_PROFILE		:= n
 endif
+# string library code (-Os is enforced to keep it much smaller)
+OBJS		+= string.o
+CFLAGS_string.o	:= -Os
 
 #
 # Architecture dependencies
@@ -179,6 +182,12 @@ $(obj)/longlong.h: $(srctree)/arch/$(SRCARCH)/lib/longlong.h FORCE
 
 $(obj)/divdi3.c: $(srctree)/arch/$(SRCARCH)/lib/divdi3.c $(obj)/longlong.h FORCE
 	$(call cmd,shipped)
+check_for_multiple_zreladdr = \
+if [ $(words $(ZRELADDR)) -gt 1 -a "$(CONFIG_AUTO_ZRELADDR)" = "" ]; then \
+	echo 'multiple zreladdrs: $(ZRELADDR)'; \
+	echo 'This needs CONFIG_AUTO_ZRELADDR to be set'; \
+	false; \
+fi
 
 $(obj)/vmlinux: $(obj)/vmlinux.lds $(obj)/$(HEAD) $(obj)/piggy.$(suffix_y).o \
 		$(addprefix $(obj)/, $(OBJS)) $(lib1funcs) $(ashldi3) FORCE

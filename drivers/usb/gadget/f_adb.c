@@ -451,6 +451,9 @@ static struct miscdevice adb_device = {
 	.fops = &adb_fops,
 };
 
+
+
+
 static int
 adb_function_bind(struct usb_configuration *c, struct usb_function *f)
 {
@@ -593,7 +596,6 @@ static int adb_setup(void)
 
 	INIT_LIST_HEAD(&dev->tx_idle);
 
-	/* _adb_dev must be set before calling usb_gadget_register_driver */
 	_adb_dev = dev;
 
 	ret = misc_register(&adb_device);
@@ -611,6 +613,7 @@ err:
 static void adb_cleanup(void)
 {
 	misc_deregister(&adb_device);
+
 	kfree(_adb_dev);
 	_adb_dev = NULL;
 }

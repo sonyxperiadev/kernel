@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sdspi.h,v 9.2.120.1 2010-11-15 17:56:25 $
+ * $Id: sdspi.h 241182 2011-02-17 21:50:03Z $
  */
 #ifndef	_SD_SPI_H
 #define	_SD_SPI_H

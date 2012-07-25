@@ -406,12 +406,5 @@ config REGULATOR_TPS728XX
 	help
 	  This driver supports the voltage regulators provided by
 	  TPS728XX.
-
-config MAX8649_SUPPORT_CHANGE_VID_MODE
-	bool "Enable Maxim 8649 regulator to change voltage "
-	depends on REGULATOR_MAX8649
-	help
-	  This support is to add a virtual consumer for changing voltages, and modes.
-
 endif
 

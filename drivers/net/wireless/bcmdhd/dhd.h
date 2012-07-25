@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd.h 318241 2012-03-02 00:20:51Z $
+ * $Id: dhd.h 327089 2012-04-12 02:05:07Z $
  */
 
 /****************
@@ -346,9 +346,8 @@ inline static void MUTEX_UNLOCK_SOFTAP_SET(dhd_pub_t * dhdp)
 #define DHD_OS_WAKE_UNLOCK(pub) 		dhd_os_wake_unlock(pub)
 #define DHD_OS_WAKE_LOCK_TIMEOUT(pub)		dhd_os_wake_lock_timeout(pub)
 #define DHD_OS_WAKE_LOCK_TIMEOUT_ENABLE(pub, val)	dhd_os_wake_lock_timeout_enable(pub, val)
-
-#define DHD_PACKET_TIMEOUT	1
-#define DHD_EVENT_TIMEOUT	2
+#define DHD_PACKET_TIMEOUT_MS	1000
+#define DHD_EVENT_TIMEOUT_MS	1500
 
 /* interface operations (register, remove) should be atomic, use this lock to prevent race
  * condition among wifi on/off and interface operation functions
@@ -426,7 +425,6 @@ extern void dhd_sched_dpc(dhd_pub_t *dhdp);
 /* Notify tx completion */
 extern void dhd_txcomplete(dhd_pub_t *dhdp, void *txp, bool success);
 
-
 /* OS independent layer functions */
 extern int dhd_os_proto_block(dhd_pub_t * pub);
 extern int dhd_os_proto_unblock(dhd_pub_t * pub);
@@ -475,7 +473,6 @@ extern int net_os_rxfilter_add_remove(struct net_device *dev, int val, int num);
 extern int dhd_get_dtim_skip(dhd_pub_t *dhd);
 extern bool dhd_check_ap_wfd_mode_set(dhd_pub_t *dhd);
 
-
 #ifdef DHD_DEBUG
 extern int write_to_file(dhd_pub_t *dhd, uint8 *buf, int size);
 #endif /* DHD_DEBUG */
@@ -508,6 +505,7 @@ extern int dhd_wl_ioctl_cmd(dhd_pub_t *dhd_pub, int cmd, void *arg, int len, uin
 
 extern void dhd_common_init(osl_t *osh);
 
+extern int dhd_do_driver_init(struct net_device *net);
 extern int dhd_add_if(struct dhd_info *dhd, int ifidx, void *handle,
 	char *name, uint8 *mac_addr, uint32 flags, uint8 bssidx);
 extern void dhd_del_if(struct dhd_info *dhd, int ifidx);
@@ -747,12 +745,6 @@ typedef struct dhd_pkttag {
 #define DHD_PKTTAG_DSTN(tag)	((dhd_pkttag_t*)(tag))->dstn_ether
 
 typedef int (*f_commitpkt_t)(void* ctx, void* p);
-int dhd_wlfc_enable(dhd_pub_t *dhd);
-int dhd_wlfc_interface_event(struct dhd_info *, uint8 action, uint8 ifid, uint8 iftype, uint8* ea);
-int dhd_wlfc_FIFOcreditmap_event(struct dhd_info *dhd, uint8* event_data);
-int dhd_wlfc_event(struct dhd_info *dhd);
-int dhd_os_wlfc_block(dhd_pub_t *pub);
-int dhd_os_wlfc_unblock(dhd_pub_t *pub);
 
 #ifdef PROP_TXSTATUS_DEBUG
 #define DHD_WLFC_CTRINC_MAC_CLOSE(entry)	do { (entry)->closed_ct++; } while (0)
@@ -793,16 +785,5 @@ void dhd_aoe_arp_clr(dhd_pub_t *dhd);
 int dhd_arp_get_arp_hostip_table(dhd_pub_t *dhd, void *buf, int buflen);
 void dhd_arp_offload_add_ip(dhd_pub_t *dhd, uint32 ipaddr);
 #endif /* ARP_OFFLOAD_SUPPORT */
-
-#ifdef DHD_BCM_WIFI_HDMI
-/* Wireless HDMI run-time enable flag */
-extern bool dhd_bcm_whdmi_enable;
-
-/* Network interface created for the Wireless HDMI soft AP */
-#define DHD_WHDMI_SOFTAP_IF_NAME	"wl0.2"
-#define DHD_WHDMI_SOFTAP_IF_NAME_LEN	5
-#define DHD_WHDMI_SOFTAP_IF_NUM		2
-
-#endif /* DHD_BCM_WIFI_HDMI */
 
 #endif /* _dhd_h_ */

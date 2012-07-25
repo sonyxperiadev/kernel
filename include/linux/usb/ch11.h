@@ -33,7 +33,6 @@
  */
 #define HUB_SET_DEPTH		12
 #define HUB_GET_PORT_ERR_COUNT	13
-#define HUB_SET_AND_TEST	14
 
 /*
  * Hub Class feature numbers

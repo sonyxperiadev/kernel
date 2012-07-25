@@ -3,13 +3,12 @@ config ARM
 	default y
 	select HAVE_AOUT
 	select HAVE_DMA_API_DEBUG
-	select HAVE_DMA_CONTIGUOUS if (CPU_V6 || CPU_V6K || CPU_V7)
-	select CMA if (CPU_V6 || CPU_V6K || CPU_V7)
-	select HAVE_IDE
+	select HAVE_IDE if PCI || ISA || PCMCIA
 	select HAVE_MEMBLOCK
 	select RTC_LIB
 	select SYS_SUPPORTS_APM_EMULATION
 	select GENERIC_ATOMIC64 if (CPU_V6 || !CPU_32v6K || !AEABI)
+	select HAVE_DMA_CONTIGUOUS if (CPU_V6 || CPU_V6K || CPU_V7)
 	select HAVE_OPROFILE if (HAVE_PERF_EVENTS)
 	select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL
 	select HAVE_ARCH_KGDB
@@ -999,28 +998,42 @@ config ARCH_VT8500
 	help
 	  Support for VIA/WonderMedia VT8500/WM85xx System-on-Chip.
 
-config ARCH_KONA
-	bool "Broadcom KONA Architecture"
-	depends on MMU
+config ARCH_ZYNQ
+	bool "Xilinx Zynq ARM Cortex A9 Platform"
 	select CPU_V7
-	select HAVE_CLK
-	select COMMON_CLKDEV
+	select GENERIC_CLOCKEVENTS
 	select CLKDEV_LOOKUP
 	select ARM_GIC
-	select GENERIC_GPIO
-	select ARCH_REQUIRE_GPIOLIB
-	select GENERIC_TIME
-	select GENERIC_CLOCKEVENTS
-	select ARCH_HAS_CPUFREQ
-	select HAVE_SCHED_CLOCK
-	select ARM_ERRATA_743622
-	select ARM_ERRATA_751472 if SMP
-	select ARM_ERRATA_754322
-	select ARM_ERRATA_764369 if SMP
-	select KONA_WFI_WORKAROUND if SMP
+	select ARM_AMBA
+	select ICST
+	select MIGHT_HAVE_CACHE_L2X0
+	select USE_OF
 	help
-	  This enables support for system based on Broadcom KONA architecture
- 
+	  Support for Xilinx Zynq ARM Cortex A9 Platform
+
+config ARCH_KONA
+        bool "Broadcom KONA Architecture"
+        depends on MMU
+        select CPU_V7
+        select HAVE_CLK
+        select COMMON_CLKDEV
+        select CLKDEV_LOOKUP
+        select ARM_GIC
+        select GENERIC_GPIO
+        select ARCH_REQUIRE_GPIOLIB
+        select GENERIC_TIME
+        select GENERIC_CLOCKEVENTS
+        select ARCH_HAS_CPUFREQ
+        select HAVE_SCHED_CLOCK
+        select ARM_ERRATA_743622
+        select ARM_ERRATA_751472 if SMP
+        select ARM_ERRATA_754322
+        select ARM_ERRATA_764369 if SMP
+        select KONA_WFI_WORKAROUND if SMP
+	select MIGHT_HAVE_CACHE_L2X0
+        help
+          This enables support for system based on Broadcom KONA architecture
+
 endchoice
 
 #
@@ -1064,9 +1077,6 @@ source "arch/arm/mach-ixp23xx/Kconfig"
 
 source "arch/arm/mach-kirkwood/Kconfig"
 
-source "arch/arm/plat-kona/Kconfig"
-source "arch/arm/mach-rhea/Kconfig"
-
 source "arch/arm/mach-ks8695/Kconfig"
 
 source "arch/arm/mach-lpc32xx/Kconfig"
@@ -1089,6 +1099,9 @@ source "arch/arm/plat-omap/Kconfig"
 source "arch/arm/mach-omap1/Kconfig"
 
 source "arch/arm/mach-omap2/Kconfig"
+
+source "arch/arm/plat-kona/Kconfig"
+source "arch/arm/mach-rhea/Kconfig"
 
 source "arch/arm/mach-orion5x/Kconfig"
 
@@ -1382,16 +1395,17 @@ config ARM_ERRATA_754327
 	  This workaround defines cpu_relax() as smp_mb(), preventing correctly
 	  written polling loops from denying visibility of updates to memory.
 
-config ARM_ERRATA_754322
-	bool "ARM errata: possible faulty MMU translations following an ASID switch"
-	depends on CPU_V7
+config ARM_ERRATA_364296
+	bool "ARM errata: Possible cache data corruption with hit-under-miss enabled"
+	depends on CPU_V6 && !SMP
 	help
-	  This option enables the workaround for the 754322 Cortex-A9 (r2p*,
-	  r3p*) erratum. A speculative memory access may cause a page table walk
-	  which starts prior to an ASID switch but completes afterwards. This
-	  can populate the micro-TLB with a stale entry which may be hit with
-	  the new ASID. This workaround places two dsb instructions in the mm
-	  switching code so that no page table walks can cross the ASID switch.
+	  This options enables the workaround for the 364296 ARM1136
+	  r0p2 erratum (possible cache data corruption with
+	  hit-under-miss enabled). It sets the undocumented bit 31 in
+	  the auxiliary control register and the FI bit in the control
+	  register, thus disabling hit-under-miss without putting the
+	  processor into full low interrupt latency mode. ARM11MPCore
+	  is not affected.
 
 config ARM_ERRATA_764369
 	bool "ARM errata: Data cache line maintenance operation by MVA may not succeed"
@@ -1406,6 +1420,18 @@ config ARM_ERRATA_764369
 	  system. This workaround adds a DSB instruction before the
 	  relevant cache maintenance functions and sets a specific bit
 	  in the diagnostic control register of the SCU.
+
+config PL310_ERRATA_769419
+	bool "PL310 errata: no automatic Store Buffer drain"
+	depends on CACHE_L2X0
+	help
+	  On revisions of the PL310 prior to r3p2, the Store Buffer does
+	  not automatically drain. This can cause normal, non-cacheable
+	  writes to be retained when the memory system is idle, leading
+	  to suboptimal I/O performance for drivers using coherent DMA.
+	  This option adds a write barrier to the cpu_idle loop so that,
+	  on systems with an outer cache, the store buffer is drained
+	  explicitly.
 
 endmenu
 
@@ -1490,10 +1516,8 @@ config SMP
 	bool "Symmetric Multi-Processing"
 	depends on CPU_V6K || CPU_V7
 	depends on GENERIC_CLOCKEVENTS
-	depends on REALVIEW_EB_ARM11MP || REALVIEW_EB_A9MP || \
-		 MACH_REALVIEW_PB11MP || MACH_REALVIEW_PBX || ARCH_OMAP4 || \
-		 ARCH_EXYNOS4 || ARCH_TEGRA || ARCH_U8500 || ARCH_VEXPRESS_CA9X4 || \
-		 ARCH_MSM_SCORPIONMP || ARCH_SHMOBILE || ARCH_KONA
+	depends on HAVE_SMP
+	depends on MMU
 	select USE_GENERIC_SMP_HELPERS
 	select HAVE_ARM_SCU if !ARCH_MSM_SCORPIONMP
 	help
@@ -1725,17 +1749,6 @@ config ARCH_SELECT_MEMORY_MODEL
 
 config HAVE_ARCH_PFN_VALID
 	def_bool ARCH_HAS_HOLES_MEMORYMODEL || !SPARSEMEM
-
-config ARCH_ENABLE_MEMORY_HOTPLUG
-	def_bool y
-
-config ARCH_ENABLE_MEMORY_HOTREMOVE
-	def_bool y
-	depends on MEMORY_HOTPLUG
-
-config ARCH_MEMORY_PROBE
-	def_bool y
-	depends on MEMORY_HOTPLUG
 
 config HIGHMEM
 	bool "High Memory Support"

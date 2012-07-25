@@ -260,9 +260,11 @@ extern void dump_stack(void) __cold;
 	if (__ratelimit(&_rs))						\
 		printk(fmt, ##__VA_ARGS__);				\
 })
+extern int brcm_klogging(char *data, int length);
 #else
 #define printk_ratelimited(fmt, ...)					\
 	no_printk(fmt, ##__VA_ARGS__)
+static inline int brcm_klogging(char *data, int length){ return 0;}
 #endif
 
 #define pr_emerg_ratelimited(fmt, ...)					\

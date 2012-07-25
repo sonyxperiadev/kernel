@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: siutils.h 275703 2011-08-04 20:20:27Z $
+ * $Id: siutils.h 321982 2012-03-19 06:58:08Z $
  */
 
 #ifndef	_siutils_h_
@@ -58,6 +58,7 @@ struct si_pub {
 
 
 typedef const struct si_pub si_t;
+
 
 
 #define	SI_OSH		NULL	
@@ -307,5 +308,6 @@ extern int si_pcie_configspace_restore(si_t *sih);
 extern int si_pcie_configspace_get(si_t *sih, uint8 *buf, uint size);
 
 char *si_getnvramflvar(si_t *sih, const char *name);
+
 
 #endif	

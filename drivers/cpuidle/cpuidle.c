@@ -400,6 +400,8 @@ static int __cpuidle_register_device(struct cpuidle_device *dev)
 
 	if (!dev)
 		return -EINVAL;
+	if (!cpuidle_driver)
+		return -EINVAL;
 	if (!try_module_get(cpuidle_driver->owner))
 		return -EINVAL;
 

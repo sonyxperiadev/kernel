@@ -31,7 +31,6 @@ struct pwm_bl_data {
 	void			(*notify_after)(struct device *,
 					int brightness);
 	int			(*check_fb)(struct device *, struct fb_info *);
-	int 			pwm_started;
 };
 
 static int pwm_backlight_update_status(struct backlight_device *bl)
@@ -49,19 +48,14 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 	if (pb->notify)
 		brightness = pb->notify(pb->dev, brightness);
 
-	pwm_set_period_ns(pb->pwm, pb->period);
 	if (brightness == 0) {
-		pwm_set_duty_ns(pb->pwm, 0);
-		if(pb->pwm_started != 0){ 
-			pwm_stop(pb->pwm);
-			pb->pwm_started = 0;
-		}
+		pwm_config(pb->pwm, 0, pb->period);
+		pwm_disable(pb->pwm);
 	} else {
-		pwm_set_duty_ns(pb->pwm, brightness * pb->period / max);
-		if(pb->pwm_started == 0){
-			pwm_start(pb->pwm);
-			pb->pwm_started = 1;
-		}
+		brightness = pb->lth_brightness +
+			(brightness * (pb->period - pb->lth_brightness) / max);
+		pwm_config(pb->pwm, brightness, pb->period);
+		pwm_enable(pb->pwm);
 	}
 
 	if (pb->notify_after)
@@ -123,7 +117,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		(data->pwm_period_ns / data->max_brightness);
 	pb->dev = &pdev->dev;
 
-	pb->pwm = pwm_request(data->pwm_name, "backlight");
+	pb->pwm = pwm_request(data->pwm_id, "backlight");
 	if (IS_ERR(pb->pwm)) {
 		dev_err(&pdev->dev, "unable to request PWM for backlight\n");
 		ret = PTR_ERR(pb->pwm);
@@ -150,9 +144,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	return 0;
 
 err_bl:
-	pwm_release(pb->pwm);
-err_pwm:
-	kfree(pb);
+	pwm_free(pb->pwm);
 err_alloc:
 	if (data->exit)
 		data->exit(&pdev->dev);
@@ -166,11 +158,9 @@ static int pwm_backlight_remove(struct platform_device *pdev)
 	struct pwm_bl_data *pb = dev_get_drvdata(&bl->dev);
 
 	backlight_device_unregister(bl);
-	pwm_set_duty_ns(pb->pwm, 0);
-	pwm_stop(pb->pwm);
-	pwm_release(pb->pwm);
-
-	kfree(pb);
+	pwm_config(pb->pwm, 0, pb->period);
+	pwm_disable(pb->pwm);
+	pwm_free(pb->pwm);
 	if (data->exit)
 		data->exit(&pdev->dev);
 	return 0;
@@ -184,24 +174,16 @@ static int pwm_backlight_suspend(struct device *dev)
 
 	if (pb->notify)
 		pb->notify(pb->dev, 0);
-	pwm_set_duty_ns(pb->pwm, 0);
-	if(pb->pwm_started != 0){
-		pwm_stop(pb->pwm);
-		pb->pwm_started = 0;
-	}
-
+	pwm_config(pb->pwm, 0, pb->period);
+	pwm_disable(pb->pwm);
+	if (pb->notify_after)
+		pb->notify_after(pb->dev, 0);
 	return 0;
 }
 
 static int pwm_backlight_resume(struct device *dev)
 {
-	struct backlight_device *bl = platform_get_drvdata(pdev);
-	struct pwm_bl_data *pb = dev_get_drvdata(&bl->dev);
-
-	if(pb->pwm_started == 0){
-		pwm_start(pb->pwm);
-		pb->pwm_started = 1;
-	}
+	struct backlight_device *bl = dev_get_drvdata(dev);
 
 	backlight_update_status(bl);
 	return 0;

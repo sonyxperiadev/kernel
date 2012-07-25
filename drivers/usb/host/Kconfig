@@ -426,6 +426,26 @@ config USB_OHCI_BCM
           Enables OHCI support for USB host controller on some Broadcom
           SOCs.
 
+config USB_OHCI_HCD_PLATFORM
+	bool "Generic OHCI driver for a platform device"
+	depends on USB_OHCI_HCD && EXPERIMENTAL
+	default n
+	---help---
+	  Adds an OHCI host driver for a generic platform device, which
+	  provieds a memory space and an irq.
+
+	  If unsure, say N.
+
+config USB_EHCI_HCD_PLATFORM
+	bool "Generic EHCI driver for a platform device"
+	depends on USB_EHCI_HCD && EXPERIMENTAL
+	default n
+	---help---
+	  Adds an EHCI host driver for a generic platform device, which
+	  provieds a memory space and an irq.
+
+	  If unsure, say N.
+
 config USB_OHCI_BIG_ENDIAN_DESC
 	bool
 	depends on USB_OHCI_HCD
@@ -604,6 +624,15 @@ config USB_HWA_HCD
 	  To compile this driver a module, choose M here: the module
 	  will be called "hwa-hc".
 
+config USB_IMX21_HCD
+       tristate "i.MX21 HCD support"
+       depends on USB && ARM && ARCH_MXC
+       help
+         This driver enables support for the on-chip USB host in the
+         i.MX21 processor.
+
+         To compile this driver as a module, choose M here: the
+         module will be called "imx21-hcd".
 
 config USB_OCTEON_EHCI
 	bool "Octeon on-chip EHCI support"
@@ -630,23 +659,3 @@ config USB_OCTEON_OHCI
 config USB_OCTEON2_COMMON
 	bool
 	default y if USB_OCTEON_EHCI || USB_OCTEON_OHCI
-
-config USB_DWCOTG
-	tristate "Synopsis DWC host support"
-	depends on USB
-	help
-	  The Synopsis DWC controller is a dual-role
-	  host/peripheral/OTG ("On The Go") USB controllers.
-
-	  Enable this option to support this IP in host controller mode.
-	  If unsure, say N.
-
-	  To compile this driver as a module, choose M here: the
-	  modules built will be called dwc_otg and dwc_common_port.
-
-config DWCOTG_ROOT
-	string "Path to DWC OTG modules source directory"
-	default "../../../../hardware/broadcom/bcm2835/kernel/DWC_otg/"
-	depends on USB_DWCOTG
-	help
-        This is required to tell the kernel where to build DWC OTG driver from

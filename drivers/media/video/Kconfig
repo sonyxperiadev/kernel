@@ -480,15 +480,38 @@ config VIDEO_OV7670
 	  OV7670 VGA camera.  It currently only works with the M88ALP01
 	  controller.
 
-config VIDEO_OV5640_MC
-	tristate "OmniVision OV5640 sensor MC support"
+config VIDEO_VS6624
+	tristate "ST VS6624 sensor support"
+	depends on VIDEO_V4L2 && I2C
+	---help---
+	  This is a Video4Linux2 sensor-level driver for the ST VS6624
+	  camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called vs6624.
+
+config VIDEO_MT9M032
+	tristate "MT9M032 camera sensor support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	select VIDEO_APTINA_PLL
+	---help---
+	  This driver supports MT9M032 camera sensors from Aptina, monochrome
+	  models only.
+
+config VIDEO_MT9P031
+	tristate "Aptina MT9P031 support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	select VIDEO_APTINA_PLL
+	---help---
+	  This is a Video4Linux2 sensor-level driver for the Aptina
+	  (Micron) mt9p031 5 Mpixel camera.
+
+config VIDEO_MT9T001
+	tristate "Aptina MT9T001 support"
 	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
 	---help---
-	  This driver is derived from omap4 tree.
-	  Driver implements media controller api. It currently
-	  works with unicam media controller driver.
-	  Currently this driver support yuv,uyvy and jpeg 5MP capture.
-
+	  This is a Video4Linux2 sensor-level driver for the Aptina
+	  (Micron) mt0t001 3 Mpixel camera.
 
 config VIDEO_MT9V011
 	tristate "Micron mt9v011 sensor support"
@@ -1197,38 +1220,7 @@ config VIDEO_UNICAM_CAMERA
 	  To compile this driver as a modulem choose M here: the
 	  module will be called unicam_camera
 
-#
-# USB Multimedia device configuration
-#
-
-menuconfig V4L_USB_DRIVERS
-	bool "V4L USB devices"
-	depends on USB
-	default y
-
-if V4L_USB_DRIVERS && USB
-
-source "drivers/media/video/uvc/Kconfig"
-
-source "drivers/media/video/gspca/Kconfig"
-
-source "drivers/media/video/pvrusb2/Kconfig"
-
-source "drivers/media/video/hdpvr/Kconfig"
-
-source "drivers/media/video/em28xx/Kconfig"
-
-source "drivers/media/video/tlg2300/Kconfig"
-
-source "drivers/media/video/cx231xx/Kconfig"
-
-source "drivers/media/video/usbvision/Kconfig"
-
-source "drivers/media/video/et61x251/Kconfig"
-
-source "drivers/media/video/sn9c102/Kconfig"
-
-source "drivers/media/video/pwc/Kconfig"
+source "drivers/media/video/s5p-tv/Kconfig"
 
 endif # V4L_PLATFORM_DRIVERS
 endif # VIDEO_CAPTURE_DRIVERS

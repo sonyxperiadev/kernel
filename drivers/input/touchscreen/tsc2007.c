@@ -158,23 +158,18 @@ static bool tsc2007_is_pen_down(struct tsc2007 *ts)
 	 * to fall back on the pressure reading.
 	 */
 
-		dev_dbg(&ts->client->dev, "pen is still down\n");
-	}
-	tsc2007_read_values(ts, &tc);
-#ifdef CONFIG_ARCH_KONA
-	if(ts->clear_penirq)
-		ts->clear_penirq();
-#endif
-	rt = tsc2007_calculate_pressure(ts, &tc);
-	if (rt > ts->max_rt) {
-		/*
-		 * Sample found inconsistent by debouncing or pressure is
-		 * beyond the maximum. Don't report it to user space,
-		 * repeat at least once more the measurement.
-		 */
-		dev_dbg(&ts->client->dev, "ignored pressure %d\n", rt);
-		debounced = true;
-		goto out;
+	if (!ts->get_pendown_state)
+		return true;
+
+	return ts->get_pendown_state();
+}
+
+static irqreturn_t tsc2007_soft_irq(int irq, void *handle)
+{
+	struct tsc2007 *ts = handle;
+	struct input_dev *input = ts->input;
+	struct ts_event tc;
+	u32 rt;
 
 	while (!ts->stopped && tsc2007_is_pen_down(ts)) {
 

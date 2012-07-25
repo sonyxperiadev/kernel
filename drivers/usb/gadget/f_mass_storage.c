@@ -2631,12 +2631,8 @@ static int fsg_main_thread(void *common_)
 		}
 
 		if (!common->running) {
-			if (sleep_thread(common)) {
-				DBG(common, "sleep_thread error\n");
-				continue;
-			} else {
-				continue;
-			}
+			sleep_thread(common);
+			continue;
 		}
 
 		if (get_next_command(common))
@@ -2834,20 +2830,18 @@ static struct fsg_common *fsg_common_init(struct fsg_common *common,
 
 	/* Data buffers cyclic list */
 	bh = common->buffhds;
-	i = FSG_NUM_BUFFERS;
-
+	i = fsg_num_buffers;
+	goto buffhds_first_it;
 	do {
+		bh->next = bh + 1;
+		++bh;
+buffhds_first_it:
 		bh->buf = kmalloc(FSG_BUFLEN, GFP_KERNEL);
 		if (unlikely(!bh->buf)) {
 			rc = -ENOMEM;
 			goto error_release;
 		}
-		if (i > 1) {
-			bh->next = bh + 1;
-			++bh;
-		}
 	} while (--i);
-
 	bh->next = common->buffhds;
 
 	/* Prepare inquiryString */
@@ -3217,66 +3211,3 @@ fsg_common_from_params(struct fsg_common *common,
 	return fsg_common_init(common, cdev, &cfg);
 }
 
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-
-static struct fsg_config fsg_cfg;
-
-static int fsg_probe(struct platform_device *pdev)
-{
-	struct usb_mass_storage_platform_data *pdata = pdev->dev.platform_data;
-	int i, nluns;
-
-	printk(KERN_INFO "fsg_probe pdev: %p, pdata: %p\n", pdev, pdata);
-	if (!pdata)
-		return -1;
-
-	nluns = pdata->nluns;
-	if (nluns > FSG_MAX_LUNS)
-		nluns = FSG_MAX_LUNS;
-	fsg_cfg.nluns = nluns;
-	for (i = 0; i < nluns; i++)
-		fsg_cfg.luns[i].removable = 1;
-
-	fsg_cfg.vendor_name = pdata->vendor;
-	fsg_cfg.product_name = pdata->product;
-	fsg_cfg.release = pdata->release;
-	fsg_cfg.can_stall = 0;
-	fsg_cfg.pdev = pdev;
-
-	return 0;
-}
-
-static struct platform_driver fsg_platform_driver = {
-	.driver = { .name = FUNCTION_NAME, },
-	.probe = fsg_probe,
-};
-
-int mass_storage_bind_config(struct usb_configuration *c)
-{
-	struct fsg_common *common;
-
-	common = fsg_common_init(NULL, c->cdev, &fsg_cfg);
-
-	if (IS_ERR(common))
-		return -1;
-
-	return fsg_add(c->cdev, c, common);
-}
-
-static struct android_usb_function mass_storage_function = {
-	.name = FUNCTION_NAME,
-	.bind_config = mass_storage_bind_config,
-};
-
-static int __init init(void)
-{
-	int		rc;
-	printk(KERN_INFO "f_mass_storage init\n");
-	rc = platform_driver_register(&fsg_platform_driver);
-	if (rc != 0)
-		return rc;
-	android_register_function(&mass_storage_function);
-	return 0;
-}module_init(init);
-
-#endif /* CONFIG_USB_ANDROID_MASS_STORAGE */

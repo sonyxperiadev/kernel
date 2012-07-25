@@ -37,6 +37,45 @@ struct uart_8250_port {
 	unsigned char		lsr_saved_flags;
 #define MSR_SAVE_FLAGS UART_MSR_ANY_DELTA
 	unsigned char		msr_saved_flags;
+	struct clk		*clk;
+#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_HAS_WAKELOCK)
+	struct wake_lock uart_lock;
+#define WAKELOCK_TIMEOUT_VAL 5000
+#endif
+	/*
+	 * Kona PM - QOS service
+ 	 */
+	struct timer_list	rx_shutoff_timer;
+#define RX_SHUTOFF_DELAY_MSECS	3000
+
+#ifdef CONFIG_KONA_PI_MGR
+	struct pi_mgr_qos_node qos_tx_node;
+	struct pi_mgr_qos_node qos_rx_node;
+#else
+	void *qos_tx_node;
+	void *qos_rx_node;
+	/*
+	 * Stubs - If KONA_PI_MGR is not defined let the functions be dummy
+	 * otherwise the code looks ugly with too many #ifdefs
+	 */
+#define pi_mgr_qos_add_request(a,b,c,d) (0)
+#define pi_mgr_qos_request_update(a,b)
+#define PI_MGR_QOS_DEFAULT_VALUE 0
+#define PI_MGR_PI_ID_ARM_SUB_SYSTEM 1
+#endif /* KONA_PI_MGR not defined */
+#else /* Rhea not defined */
+	/* Apart from Rhea platforms (i.e island for now) these calls are stubs */
+	void *qos_tx_node;
+	void *qos_rx_node;
+#define pi_mgr_qos_add_request(a,b,c,d) (0)
+#define pi_mgr_qos_request_update(a,b)
+#define PI_MGR_QOS_DEFAULT_VALUE 0
+#define PI_MGR_PI_ID_ARM_SUB_SYSTEM 1
+#endif
+#ifdef CONFIG_RHEA_UART_RX_FIX
+	unsigned int iir;
+#endif
 };
 
 struct old_serial_port {

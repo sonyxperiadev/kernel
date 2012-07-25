@@ -157,6 +157,23 @@ config LEDS_GPIO
 	  defined as platform devices and/or OpenFirmware platform devices.
 	  The code to use these bindings can be selected below.
 
+config LEDS_GPIO_PLATFORM
+	bool "Platform device bindings for GPIO LEDs"
+	depends on LEDS_GPIO
+	default y
+	help
+	  Let the leds-gpio driver drive LEDs which have been defined as
+	  platform devices.  If you don't know what this means, say yes.
+
+config LEDS_GPIO_OF
+	bool "OpenFirmware platform device bindings for GPIO LEDs"
+	depends on LEDS_GPIO && OF_DEVICE
+	default y
+	help
+	  Let the leds-gpio driver drive LEDs which have been defined as
+	  of_platform devices.  For instance, LEDs which are listed in a "dts"
+	  file.
+
 config LEDS_LP3944
 	tristate "LED Support for N.S. LP3944 (Fun Light) I2C chip"
 	depends on LEDS_CLASS
@@ -374,6 +391,39 @@ config LEDS_ISLANDS_FF
           This option enable support for on-chip LED drivers found
           on Broadcom Islands FF
 
+config LEDS_RENESAS_TPU
+	bool "LED support for Renesas TPU"
+	depends on LEDS_CLASS && HAVE_CLK && GENERIC_GPIO
+	help
+	  This option enables build of the LED TPU platform driver,
+	  suitable to drive any TPU channel on newer Renesas SoCs.
+	  The driver controls the GPIO pin connected to the LED via
+	  the GPIO framework and expects the LED to be connected to
+	  a pin that can be driven in both GPIO mode and using TPU
+	  pin function. The latter to support brightness control.
+	  Brightness control is supported but hardware blinking is not.
+
+config LEDS_TCA6507
+	tristate "LED Support for TCA6507 I2C chip"
+	depends on LEDS_CLASS && I2C
+	help
+	  This option enables support for LEDs connected to TC6507
+	  LED driver chips accessed via the I2C bus.
+	  Driver support brightness control and hardware-assisted blinking.
+
+config LEDS_MAX8997
+	tristate "LED support for MAX8997 PMIC"
+	depends on LEDS_CLASS && MFD_MAX8997
+	help
+	  This option enables support for on-chip LED drivers on
+	  MAXIM MAX8997 PMIC.
+
+config LEDS_OT200
+	tristate "LED support for the Bachmann OT200"
+	depends on LEDS_CLASS && HAS_IOMEM
+	help
+	  This option enables support for the LEDs on the Bachmann OT200.
+	  Say Y to enable LEDs on the Bachmann OT200.
 
 config LEDS_TRIGGERS
 	bool "LED Trigger support"

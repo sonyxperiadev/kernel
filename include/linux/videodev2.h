@@ -1060,7 +1060,6 @@ struct v4l2_input {
 /* If sensor is mounted upside down set both bits */
 #define V4L2_IN_ST_HFLIP       0x00000010 /* Frames are flipped horizontally */
 #define V4L2_IN_ST_VFLIP       0x00000020 /* Frames are flipped vertically */
-#define V4L2_IN_ST_BACK        0x00000040 /* back sensor if set else front sensor */
 
 /* field 'status' - analog */
 #define V4L2_IN_ST_NO_H_LOCK   0x00000100  /* No horizontal sync lock */
@@ -1266,9 +1265,7 @@ enum v4l2_colorfx {
 #define V4L2_CID_ALPHA_COMPONENT		(V4L2_CID_BASE+41)
 
 /* last CID + 1 */
-#define V4L2_CID_LASTP1                 (V4L2_CID_BASE+39)
-
-
+#define V4L2_CID_LASTP1                         (V4L2_CID_BASE+42)
 
 /*  MPEG-class control IDs defined by V4L2 */
 #define V4L2_CID_MPEG_BASE 			(V4L2_CTRL_CLASS_MPEG | 0x900)

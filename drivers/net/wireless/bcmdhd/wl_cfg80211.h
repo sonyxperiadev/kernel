@@ -126,7 +126,7 @@ do {									\
 #define WL_AP_MAX		256
 #define WL_FILE_NAME_MAX	256
 #define WL_DWELL_TIME 		200
-#define WL_MED_DWELL_TIME 		400
+#define WL_MED_DWELL_TIME       400
 #define WL_LONG_DWELL_TIME 	1000
 #define IFACE_MAX_CNT 		2
 
@@ -633,9 +633,10 @@ struct device *wl_cfg80211_get_parent_dev(void);
 
 extern s32 wl_cfg80211_up(void *para);
 extern s32 wl_cfg80211_down(void *para);
-extern s32 wl_cfg80211_notify_ifadd(struct net_device *net, s32 idx, s32 bssidx, void* _net_attach);
+extern s32 wl_cfg80211_notify_ifadd(struct net_device *ndev, s32 idx, s32 bssidx,
+	void* _net_attach);
 extern s32 wl_cfg80211_ifdel_ops(struct net_device *net);
-extern s32 wl_cfg80211_notify_ifdel(void);
+extern s32 wl_cfg80211_notify_ifdel(struct net_device *ndev);
 extern s32 wl_cfg80211_is_progress_ifadd(void);
 extern s32 wl_cfg80211_is_progress_ifchange(void);
 extern s32 wl_cfg80211_is_progress_ifadd(void);
@@ -649,10 +650,9 @@ extern s32 wl_cfg80211_set_wps_p2p_ie(struct net_device *net, char *buf, int len
 extern s32 wl_cfg80211_set_p2p_ps(struct net_device *net, char* buf, int len);
 extern int wl_cfg80211_hang(struct net_device *dev, u16 reason);
 extern s32 wl_mode_to_nl80211_iftype(s32 mode);
-
-/* do scan abort */
-extern s32 wl_cfg80211_scan_abort(struct wl_priv *wl, struct net_device *ndev);
-
-extern s32 wl_cfg80211_if_is_group_owner(void);
+int wl_cfg80211_do_driver_init(struct net_device *net);
 void wl_cfg80211_enable_trace(int level);
+extern s32 wl_cfg80211_if_is_group_owner(void);
+extern chanspec_t wl_ch_host_to_driver(u16 channel);
+
 #endif				/* _wl_cfg80211_h_ */

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: 802.11e.h,v 1.6 2008-12-01 22:55:11 $
+ * $Id: 802.11e.h 241182 2011-02-17 21:50:03Z $
  */
 
 #ifndef _802_11e_H_

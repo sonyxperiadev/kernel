@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_linux.c 312787 2012-02-03 23:06:26Z $
+ * $Id: bcmsdh_linux.c 312788 2012-02-03 23:06:32Z $
  */
 
 /**
@@ -176,7 +176,7 @@ int bcmsdh_probe(struct device *dev)
 	irq_flags =
 		IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE;
 #else
-	 irq_flags = IRQF_TRIGGER_FALLING | IRQF_NO_SUSPEND;
+	 irq_flags = IRQF_TRIGGER_FALLING;
 #endif /* HW_OOB */
 
 	/* Get customer specific OOB IRQ parametres: IRQ number as IRQ type */

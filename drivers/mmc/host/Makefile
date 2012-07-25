@@ -9,10 +9,9 @@ obj-$(CONFIG_MMC_MXC)		+= mxcmmc.o
 obj-$(CONFIG_MMC_MXS)		+= mxs-mmc.o
 obj-$(CONFIG_MMC_SDHCI)		+= sdhci.o
 obj-$(CONFIG_MMC_SDHCI_PCI)	+= sdhci-pci.o
-obj-$(CONFIG_MMC_SDHCI_PXA)	+= sdhci-pxa.o
-obj-$(CONFIG_MMC_SDHCI_PLTFM_KONA)	+= sdhci-pltfm-kona.o
-obj-$(CONFIG_MMC_KONA_SDIO_WIFI)    += sdio-wifi.o
-obj-$(CONFIG_MMC_SDHCI_PLTFM)	+= sdhci-pltfm.o
+obj-$(subst m,y,$(CONFIG_MMC_SDHCI_PCI))	+= sdhci-pci-data.o
+obj-$(CONFIG_MMC_SDHCI_PXAV3)	+= sdhci-pxav3.o
+obj-$(CONFIG_MMC_SDHCI_PXAV2)	+= sdhci-pxav2.o
 obj-$(CONFIG_MMC_SDHCI_S3C)	+= sdhci-s3c.o
 obj-$(CONFIG_MMC_SDHCI_SPEAR)	+= sdhci-spear.o
 obj-$(CONFIG_MMC_WBSD)		+= wbsd.o
@@ -26,6 +25,9 @@ obj-$(CONFIG_MMC_MSM)		+= msm_sdcc.o
 obj-$(CONFIG_MMC_MVSDIO)	+= mvsdio.o
 obj-$(CONFIG_MMC_DAVINCI)       += davinci_mmc.o
 obj-$(CONFIG_MMC_SPI)		+= mmc_spi.o
+obj-$(CONFIG_MMC_SDHCI_PXA)    += sdhci-pxa.o
+obj-$(CONFIG_MMC_SDHCI_PLTFM_KONA)     += sdhci-pltfm-kona.o
+obj-$(CONFIG_MMC_KONA_SDIO_WIFI)    += sdio-wifi.o
 ifeq ($(CONFIG_OF),y)
 obj-$(CONFIG_MMC_SPI)		+= of_mmc_spi.o
 endif

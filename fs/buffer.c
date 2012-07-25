@@ -3094,8 +3094,8 @@ drop_buffers(struct page *page, struct buffer_head **buffers_to_free)
 			set_bit(AS_EIO, &page->mapping->flags);
 		if (buffer_busy(bh)) {
 			if (bh_lru_evict(bh)) {
-				if (buffer_busy(bh))
-					goto failed;
+		if (buffer_busy(bh))
+			goto failed;
 			} else {
 				goto failed;
 			}

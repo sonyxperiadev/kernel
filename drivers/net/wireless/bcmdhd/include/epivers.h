@@ -19,7 +19,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: epivers.h.in,v 13.32.4.1 2010-09-17 00:39:18 $
+ * $Id: epivers.h.in,v 13.33 2010-09-08 22:08:53 $
  *
 */
 
@@ -28,21 +28,21 @@
 
 #define	EPI_MAJOR_VERSION	1
 
-#define	EPI_MINOR_VERSION	27
+#define	EPI_MINOR_VERSION	26
 
-#define	EPI_RC_NUMBER		125
+#define	EPI_RC_NUMBER		0
 
-#define	EPI_INCREMENTAL_NUMBER	129
+#define	EPI_INCREMENTAL_NUMBER	0
 
 #define	EPI_BUILD_NUMBER	0
 
-#define	EPI_VERSION		5, 90, 125, 129
+#define	EPI_VERSION		1, 26, 0, 0
 
-#define	EPI_VERSION_NUM		0x055a7d81
+#define	EPI_VERSION_NUM		0x011a0000
 
-#define EPI_VERSION_DEV		5.90.125
+#define EPI_VERSION_DEV		1.26.0
 
 
-#define	EPI_VERSION_STR		"5.90.125.129"
+#define	EPI_VERSION_STR		"1.26 (r327295)"
 
 #endif 

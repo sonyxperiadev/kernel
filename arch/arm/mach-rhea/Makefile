@@ -12,6 +12,8 @@
 # consent.
 #*****************************************************************************
 
+KBUILD_AFLAGS	:=$(KBUILD_AFLAGS:-msoft-float=-Wa,-mfpu=vfp3)
+
 obj-y := io_map.o rhea.o common.o rhea_pinmux.o
 obj-$(CONFIG_ARCH_RHEA) += clock_rhea.o
 obj-$(CONFIG_MACH_HERA_RAY) += hera_ray.o

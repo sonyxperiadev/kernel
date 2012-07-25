@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdspi.h 275703 2011-08-04 20:20:27Z $
+ * $Id: bcmsdspi.h 294363 2011-11-06 23:02:20Z $
  */
 #ifndef	_BCM_SD_SPI_H
 #define	_BCM_SD_SPI_H

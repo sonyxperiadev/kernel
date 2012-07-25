@@ -20,7 +20,7 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * $Id: bcmutils.c 275693 2011-08-04 19:59:34Z $
+ * $Id: bcmutils.c 312855 2012-02-04 02:01:18Z $
  */
 
 #include <bcm_cfg.h>
@@ -1126,7 +1126,6 @@ pktsetprio(void *pkt, bool update_vtag)
 	return (rc | priority);
 }
 
-#ifndef BCM_BOOTLOADER
 
 static char bcm_undeferrstr[32];
 static const char *bcmerrorstrtable[] = BCMERRSTRINGTABLE;
@@ -1148,7 +1147,6 @@ bcmerrorstr(int bcmerror)
 	return bcmerrorstrtable[-bcmerror];
 }
 
-#endif /* !BCM_BOOTLOADER */
 
 
 /* iovar table lookup */

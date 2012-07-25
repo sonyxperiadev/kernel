@@ -34,6 +34,7 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/rmap.h>
+#include <linux/module.h>
 #ifdef CONFIG_CMA_DEBUG_FS
 #include <linux/debugfs.h>
 #endif

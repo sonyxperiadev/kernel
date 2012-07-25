@@ -34,11 +34,9 @@
 #include <linux/console.h>
 
 #include <asm/cacheflush.h>
-#include <asm/idmap.h>
 #include <asm/processor.h>
 #include <asm/thread_notify.h>
 #include <asm/stacktrace.h>
-#include <asm/pgalloc.h>
 #include <asm/mach/time.h>
 
 #ifdef CONFIG_CC_STACKPROTECTOR
@@ -57,6 +55,8 @@ static const char *processor_modes[] = {
 static const char *isa_modes[] = {
   "ARM" , "Thumb" , "Jazelle", "ThumbEE"
 };
+
+extern void setup_mm_for_reboot(void);
 
 static volatile int hlt_counter;
 
@@ -101,7 +101,8 @@ static int __init hlt_setup(char *__unused)
 __setup("nohlt", nohlt_setup);
 __setup("hlt", hlt_setup);
 
-static char reboot_mode = 'h';
+extern void call_with_stack(void (*fn)(void *), void *arg, void *sp);
+typedef void (*phys_reset_t)(unsigned long);
 
 #ifdef CONFIG_ARM_FLUSH_CONSOLE_ON_RESTART
 void arm_machine_flush_console(void)
@@ -141,12 +142,8 @@ static void __soft_restart(void *addr)
 {
 	phys_reset_t phys_reset;
 
-	/*
-	 * Tell the mm system that we are going to reboot -
-	 * we may need it to insert some 1:1 mappings so that
-	 * soft boot works.
-	 */
-	setup_mm_for_reboot(mode, NULL);
+	/* Take out a flat memory mapping. */
+	setup_mm_for_reboot();
 
 	/* Clean and invalidate caches */
 	flush_cache_all();
@@ -186,72 +183,6 @@ void soft_restart(unsigned long addr)
 
 static void null_restart(char mode, const char *cmd)
 {
-}
-
-extern void switch_stack(void (*fn)(void *), void *arg, void *sp);
-typedef void (*phys_reset_t)(unsigned long);
-
-struct arm_machine_reset_args {
-	unsigned long reset_code_phys;
-	pgd_t *reboot_tables;
-};
-
-void __arm_machine_reset(void *args)
-{
-	struct arm_machine_reset_args reset_args;
-	unsigned long reset_code_phys;
-	phys_reset_t phys_reset;
-
-	/* Copy our arguments onto the new stack. */
-	memcpy(&reset_args, args, sizeof(reset_args));
-	reset_code_phys = reset_args.reset_code_phys;
-
-	/* Take out a flat memory mapping. */
-	setup_mm_for_reboot(reboot_mode, reset_args.reboot_tables);
-
-	/* Clean and invalidate caches */
-	flush_cache_all();
-
-	/* Turn off caching */
-	cpu_proc_fin();
-
-	/* Push out any further dirty data, and ensure cache is empty */
-	flush_cache_all();
-
-	/* Switch to the identity mapping. */
-	phys_reset = (phys_reset_t)virt_to_phys(cpu_reset);
-	phys_reset(reset_code_phys);
-
-	/* Should never get here. */
-	BUG();
-}
-
-void arm_machine_reset(unsigned long reset_code_phys)
-{
-	phys_addr_t cpu_reset_end_phys;
-	void *cpu_reset_end;
-	struct arm_machine_reset_args reset_args;
-
-	cpu_reset_end = (void *)PAGE_ALIGN((unsigned long)cpu_reset);
-	cpu_reset_end_phys = virt_to_phys(cpu_reset_end);
-
-	/* Disable interrupts first. */
-	local_irq_disable();
-	local_fiq_disable();
-
-	/* Disable the L2. */
-	outer_disable();
-
-	/* Populate the reset args. */
-	reset_args.reset_code_phys = reset_code_phys;
-	reset_args.reboot_tables = pgd_alloc(&init_mm);
-
-	/* Change to the new stack and continue with the reset. */
-	switch_stack(__arm_machine_reset, (void *)&reset_args,
-		     (void *)RESERVE_STACK_PAGE);
-
-	/* Should never get here. */
-	BUG();
 }
 
 /*
@@ -352,6 +283,8 @@ void cpu_idle(void)
 		schedule_preempt_disabled();
 	}
 }
+
+static char reboot_mode = 'h';
 
 int __init reboot_setup(char *str)
 {

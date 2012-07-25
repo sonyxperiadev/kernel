@@ -21,7 +21,7 @@
  *
  * Fundamental types and constants relating to 802.11
  *
- * $Id: 802.11.h,v 9.260.2.6 2010-12-15 21:41:14 $
+ * $Id: 802.11.h 320583 2012-03-12 15:09:36Z $
  */
 
 #ifndef _802_11_H_
@@ -434,7 +434,7 @@ typedef struct dot11_obss_chanlist dot11_obss_chanlist_t;
 BWL_PRE_PACKED_STRUCT struct dot11_extcap_ie {
 	uint8 id;
 	uint8 len;
-	uint8 cap;
+	uint8 cap[1];
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_extcap_ie dot11_extcap_ie_t;
 #define DOT11_EXTCAP_LEN    1
@@ -542,14 +542,14 @@ BWL_PRE_PACKED_STRUCT struct dot11_ibss_dfs {
 typedef struct dot11_ibss_dfs dot11_ibss_dfs_t;
 
 
-#define WME_OUI         "\x00\x50\xf2"  
-#define WME_OUI_LEN     3
-#define WME_OUI_TYPE        2   
-#define WME_VER         1   
-#define WME_TYPE        2   
-#define WME_SUBTYPE_IE      0   
-#define WME_SUBTYPE_PARAM_IE    1   
-#define WME_SUBTYPE_TSPEC   2   
+#define WME_OUI			"\x00\x50\xf2"	
+#define WME_OUI_LEN		3
+#define WME_OUI_TYPE		2	
+#define WME_TYPE		2	
+#define WME_SUBTYPE_IE		0	
+#define WME_SUBTYPE_PARAM_IE	1	
+#define WME_SUBTYPE_TSPEC	2	
+#define WME_VER			1	
 
 
 #define AC_BE			0	
@@ -932,115 +932,139 @@ BWL_PRE_PACKED_STRUCT struct dot11_management_notification {
 
 #define DOT11_RC_MAX			23	
 
+#define DOT11_RC_TDLS_PEER_UNREACH	25
+#define DOT11_RC_TDLS_DOWN_UNSPECIFIED	26
 
-#define DOT11_SC_SUCCESS        0   
-#define DOT11_SC_FAILURE        1   
-#define DOT11_SC_CAP_MISMATCH       10  
-#define DOT11_SC_REASSOC_FAIL       11  
-#define DOT11_SC_ASSOC_FAIL     12  
-#define DOT11_SC_AUTH_MISMATCH      13  
-#define DOT11_SC_AUTH_SEQ       14  
-#define DOT11_SC_AUTH_CHALLENGE_FAIL    15  
-#define DOT11_SC_AUTH_TIMEOUT       16  
-#define DOT11_SC_ASSOC_BUSY_FAIL    17  
-#define DOT11_SC_ASSOC_RATE_MISMATCH    18  
-#define DOT11_SC_ASSOC_SHORT_REQUIRED   19  
-#define DOT11_SC_ASSOC_PBCC_REQUIRED    20  
-#define DOT11_SC_ASSOC_AGILITY_REQUIRED 21  
-#define DOT11_SC_ASSOC_SPECTRUM_REQUIRED    22  
-#define DOT11_SC_ASSOC_BAD_POWER_CAP    23  
-#define DOT11_SC_ASSOC_BAD_SUP_CHANNELS 24  
-#define DOT11_SC_ASSOC_SHORTSLOT_REQUIRED   25  
-#define DOT11_SC_ASSOC_ERPBCC_REQUIRED  26  
-#define DOT11_SC_ASSOC_DSSOFDM_REQUIRED 27  
+
+#define DOT11_SC_SUCCESS		0	
+#define DOT11_SC_FAILURE		1	
+#define DOT11_SC_TDLS_WAKEUP_SCH_ALT 2	
+					
+#define DOT11_SC_TDLS_WAKEUP_SCH_REJ 3	
+#define DOT11_SC_TDLS_SEC_DISABLED	5	
+#define DOT11_SC_LIFETIME_REJ		6	
+#define DOT11_SC_NOT_SAME_BSS		7	
+#define DOT11_SC_CAP_MISMATCH		10	
+#define DOT11_SC_REASSOC_FAIL		11	
+#define DOT11_SC_ASSOC_FAIL		12	
+#define DOT11_SC_AUTH_MISMATCH		13	
+#define DOT11_SC_AUTH_SEQ		14	
+#define DOT11_SC_AUTH_CHALLENGE_FAIL	15	
+#define DOT11_SC_AUTH_TIMEOUT		16	
+#define DOT11_SC_ASSOC_BUSY_FAIL	17	
+#define DOT11_SC_ASSOC_RATE_MISMATCH	18	
+#define DOT11_SC_ASSOC_SHORT_REQUIRED	19	
+#define DOT11_SC_ASSOC_PBCC_REQUIRED	20	
+#define DOT11_SC_ASSOC_AGILITY_REQUIRED	21	
+#define DOT11_SC_ASSOC_SPECTRUM_REQUIRED	22	
+#define DOT11_SC_ASSOC_BAD_POWER_CAP	23	
+#define DOT11_SC_ASSOC_BAD_SUP_CHANNELS	24	
+#define DOT11_SC_ASSOC_SHORTSLOT_REQUIRED	25	
+#define DOT11_SC_ASSOC_ERPBCC_REQUIRED	26	
+#define DOT11_SC_ASSOC_DSSOFDM_REQUIRED	27	
 #define DOT11_SC_ASSOC_R0KH_UNREACHABLE	28	
 #define DOT11_SC_ASSOC_TRY_LATER	30	
 #define DOT11_SC_ASSOC_MFP_VIOLATION	31	
 
-#define DOT11_SC_DECLINED       37  
-#define DOT11_SC_INVALID_PARAMS     38  
+#define	DOT11_SC_DECLINED		37	
+#define	DOT11_SC_INVALID_PARAMS		38	
 #define DOT11_SC_INVALID_PAIRWISE_CIPHER	42 
-#define DOT11_SC_INVALID_AKMP       43  
+#define	DOT11_SC_INVALID_AKMP		43	
 #define DOT11_SC_INVALID_RSNIE_CAP	45	
 #define DOT11_SC_DLS_NOT_ALLOWED	48	
 #define	DOT11_SC_INVALID_PMKID		53	
-#define DOT11_SC_INVALID_MDID       54  
-#define DOT11_SC_INVALID_FTIE       55  
+#define	DOT11_SC_INVALID_MDID		54	
+#define	DOT11_SC_INVALID_FTIE		55	
 
 #define DOT11_SC_UNEXP_MSG			70	
 #define DOT11_SC_INVALID_SNONCE		71	
 #define DOT11_SC_INVALID_RSNIE		72	
 
-#define DOT11_MNG_DS_PARAM_LEN          1   
-#define DOT11_MNG_IBSS_PARAM_LEN        2   
+
+#define DOT11_MNG_DS_PARAM_LEN			1	
+#define DOT11_MNG_IBSS_PARAM_LEN		2	
 
 
-#define DOT11_MNG_TIM_FIXED_LEN         3   
-#define DOT11_MNG_TIM_DTIM_COUNT        0   
-#define DOT11_MNG_TIM_DTIM_PERIOD       1   
-#define DOT11_MNG_TIM_BITMAP_CTL        2   
-#define DOT11_MNG_TIM_PVB           3   
+#define DOT11_MNG_TIM_FIXED_LEN			3	
+#define DOT11_MNG_TIM_DTIM_COUNT		0	
+#define DOT11_MNG_TIM_DTIM_PERIOD		1	
+#define DOT11_MNG_TIM_BITMAP_CTL		2	
+#define DOT11_MNG_TIM_PVB			3	
 
 
-#define TLV_TAG_OFF     0   
-#define TLV_LEN_OFF     1   
-#define TLV_HDR_LEN     2   
-#define TLV_BODY_OFF        2   
+#define TLV_TAG_OFF		0	
+#define TLV_LEN_OFF		1	
+#define TLV_HDR_LEN		2	
+#define TLV_BODY_OFF		2	
 
 
-#define DOT11_MNG_SSID_ID           0   
-#define DOT11_MNG_RATES_ID          1   
-#define DOT11_MNG_FH_PARMS_ID           2   
-#define DOT11_MNG_DS_PARMS_ID           3   
-#define DOT11_MNG_CF_PARMS_ID           4   
-#define DOT11_MNG_TIM_ID            5   
-#define DOT11_MNG_IBSS_PARMS_ID         6   
-#define DOT11_MNG_COUNTRY_ID            7   
-#define DOT11_MNG_HOPPING_PARMS_ID      8   
-#define DOT11_MNG_HOPPING_TABLE_ID      9   
-#define DOT11_MNG_REQUEST_ID            10  
-#define DOT11_MNG_QBSS_LOAD_ID          11  
-#define DOT11_MNG_EDCA_PARAM_ID         12  
-#define DOT11_MNG_CHALLENGE_ID          16  
-#define DOT11_MNG_PWR_CONSTRAINT_ID     32  
-#define DOT11_MNG_PWR_CAP_ID            33  
-#define DOT11_MNG_TPC_REQUEST_ID        34  
-#define DOT11_MNG_TPC_REPORT_ID         35  
-#define DOT11_MNG_SUPP_CHANNELS_ID      36  
-#define DOT11_MNG_CHANNEL_SWITCH_ID     37  
-#define DOT11_MNG_MEASURE_REQUEST_ID        38  
-#define DOT11_MNG_MEASURE_REPORT_ID     39  
-#define DOT11_MNG_QUIET_ID          40  
-#define DOT11_MNG_IBSS_DFS_ID           41  
-#define DOT11_MNG_ERP_ID            42  
-#define DOT11_MNG_TS_DELAY_ID           43  
-#define DOT11_MNG_HT_CAP            45  
-#define DOT11_MNG_QOS_CAP_ID            46  
-#define DOT11_MNG_NONERP_ID         47  
-#define DOT11_MNG_RSN_ID            48  
-#define DOT11_MNG_EXT_RATES_ID          50  
-#define DOT11_MNG_AP_CHREP_ID       51  
-#define DOT11_MNG_NBR_REP_ID        52  
-#define DOT11_MNG_MDIE_ID       54  
-#define DOT11_MNG_FTIE_ID       55  
-#define DOT11_MNG_FT_TI_ID      56  
-#define DOT11_MNG_RDE_ID			57	
-#define DOT11_MNG_REGCLASS_ID           59  
-#define DOT11_MNG_EXT_CSA_ID            60  
-#define DOT11_MNG_HT_ADD            61  
-#define DOT11_MNG_EXT_CHANNEL_OFFSET        62  
-#ifdef BCMWAPI_WAI
-#define DOT11_MNG_WAPI_ID           68  /* d11 management WAPI id */
-#endif
+#define DOT11_MNG_SSID_ID			0	
+#define DOT11_MNG_RATES_ID			1	
+#define DOT11_MNG_FH_PARMS_ID			2	
+#define DOT11_MNG_DS_PARMS_ID			3	
+#define DOT11_MNG_CF_PARMS_ID			4	
+#define DOT11_MNG_TIM_ID			5	
+#define DOT11_MNG_IBSS_PARMS_ID			6	
+#define DOT11_MNG_COUNTRY_ID			7	
+#define DOT11_MNG_HOPPING_PARMS_ID		8	
+#define DOT11_MNG_HOPPING_TABLE_ID		9	
+#define DOT11_MNG_REQUEST_ID			10	
+#define DOT11_MNG_QBSS_LOAD_ID 			11	
+#define DOT11_MNG_EDCA_PARAM_ID			12	
+#define DOT11_MNG_CHALLENGE_ID			16	
+#define DOT11_MNG_PWR_CONSTRAINT_ID		32	
+#define DOT11_MNG_PWR_CAP_ID			33	
+#define DOT11_MNG_TPC_REQUEST_ID 		34	
+#define DOT11_MNG_TPC_REPORT_ID			35	
+#define DOT11_MNG_SUPP_CHANNELS_ID		36	
+#define DOT11_MNG_CHANNEL_SWITCH_ID		37	
+#define DOT11_MNG_MEASURE_REQUEST_ID		38	
+#define DOT11_MNG_MEASURE_REPORT_ID		39	
+#define DOT11_MNG_QUIET_ID			40	
+#define DOT11_MNG_IBSS_DFS_ID			41	
+#define DOT11_MNG_ERP_ID			42	
+#define DOT11_MNG_TS_DELAY_ID			43	
+#define	DOT11_MNG_HT_CAP			45	
+#define DOT11_MNG_QOS_CAP_ID			46	
+#define DOT11_MNG_NONERP_ID			47	
+#define DOT11_MNG_RSN_ID			48	
+#define DOT11_MNG_EXT_RATES_ID			50	
+#define DOT11_MNG_AP_CHREP_ID		51	
+#define DOT11_MNG_NBR_REP_ID		52	
+#define DOT11_MNG_MDIE_ID		54	
+#define DOT11_MNG_FTIE_ID		55	
+#define DOT11_MNG_FT_TI_ID		56	
+#define	DOT11_MNG_REGCLASS_ID			59	
+#define DOT11_MNG_EXT_CSA_ID			60	
+#define	DOT11_MNG_HT_ADD			61	
+#define	DOT11_MNG_EXT_CHANNEL_OFFSET		62	
+#define DOT11_MNG_WAPI_ID			68	
+#define DOT11_MNG_TIME_ADVERTISE_ID	69	
+#define DOT11_MNG_RRM_CAP_ID		70	
+#define	DOT11_MNG_HT_BSS_COEXINFO_ID		72	
+#define	DOT11_MNG_HT_BSS_CHANNEL_REPORT_ID	73	
+#define	DOT11_MNG_HT_OBSS_ID			74	
+#define DOT11_MNG_CHANNEL_USAGE			97 
+#define DOT11_MNG_TIME_ZONE_ID			98	
+#define DOT11_MNG_LINK_IDENTIFIER_ID	101	
+#define DOT11_MNG_WAKEUP_SCHEDULE_ID	102 
+#define DOT11_MNG_CHANNEL_SWITCH_TIMING_ID	104 
+#define DOT11_MNG_PTI_CONTROL_ID		105	
+#define DOT11_MNG_PU_BUFFER_STATUS_ID	106	
+#define DOT11_MNG_INTERWORKING_ID		107	
+#define DOT11_MNG_ADVERTISEMENT_ID		108	
+#define DOT11_MNG_EXP_BW_REQ_ID			109	
+#define DOT11_MNG_QOS_MAP_ID			110	
+#define DOT11_MNG_ROAM_CONSORT_ID		111	
+#define DOT11_MNG_EMERGCY_ALERT_ID		112	
+#define	DOT11_MNG_EXT_CAP_ID		127	
+#define	DOT11_MNG_VHT_CAP_ID		191	
+#define	DOT11_MNG_VHT_OPERATION_ID	192	
 
+#define DOT11_MNG_WPA_ID			221	
+#define DOT11_MNG_PROPR_ID			221	
 
-#define DOT11_MNG_RRM_CAP_ID        70  
-#define DOT11_MNG_HT_BSS_COEXINFO_ID        72  
-#define DOT11_MNG_HT_BSS_CHANNEL_REPORT_ID  73  
-#define DOT11_MNG_HT_OBSS_ID            74  
-#define DOT11_MNG_EXT_CAP_ID           127 
-#define DOT11_MNG_WPA_ID            221 
-#define DOT11_MNG_PROPR_ID          221 
+#define DOT11_MNG_VS_ID				221	
 
 
 #define DOT11_RATE_BASIC			0x80	
@@ -1861,70 +1885,175 @@ BWL_PRE_PACKED_STRUCT struct dot11_obss_ie {
 	obss_params_t obss_params;
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_obss_ie dot11_obss_ie_t;
-#define DOT11_OBSS_SCAN_IE_LEN  sizeof(obss_params_t)   
+#define DOT11_OBSS_SCAN_IE_LEN	sizeof(obss_params_t)	
 
 
-#define HT_CTRL_LA_TRQ      0x00000002  
-#define HT_CTRL_LA_MAI      0x0000003C  
-#define HT_CTRL_LA_MAI_SHIFT    2
-#define HT_CTRL_LA_MAI_MRQ  0x00000004  
-#define HT_CTRL_LA_MAI_MSI  0x00000038  
-#define HT_CTRL_LA_MFSI     0x000001C0  
-#define HT_CTRL_LA_MFSI_SHIFT   6
-#define HT_CTRL_LA_MFB_ASELC    0x0000FE00  
-#define HT_CTRL_LA_MFB_ASELC_SH 9
-#define HT_CTRL_LA_ASELC_CMD    0x00000C00  
-#define HT_CTRL_LA_ASELC_DATA   0x0000F000  
-#define HT_CTRL_CAL_POS     0x00030000  
-#define HT_CTRL_CAL_SEQ     0x000C0000  
-#define HT_CTRL_CSI_STEERING    0x00C00000  
-#define HT_CTRL_CSI_STEER_SHIFT 22
-#define HT_CTRL_CSI_STEER_NFB   0       
-#define HT_CTRL_CSI_STEER_CSI   1       
-#define HT_CTRL_CSI_STEER_NCOM  2       
-#define HT_CTRL_CSI_STEER_COM   3       
-#define HT_CTRL_NDP_ANNOUNCE    0x01000000  
-#define HT_CTRL_AC_CONSTRAINT   0x40000000  
-#define HT_CTRL_RDG_MOREPPDU    0x80000000  
+#define HT_CTRL_LA_TRQ		0x00000002	
+#define HT_CTRL_LA_MAI		0x0000003C	
+#define HT_CTRL_LA_MAI_SHIFT	2
+#define HT_CTRL_LA_MAI_MRQ	0x00000004	
+#define HT_CTRL_LA_MAI_MSI	0x00000038	
+#define HT_CTRL_LA_MFSI		0x000001C0	
+#define HT_CTRL_LA_MFSI_SHIFT	6
+#define HT_CTRL_LA_MFB_ASELC	0x0000FE00	
+#define HT_CTRL_LA_MFB_ASELC_SH	9
+#define HT_CTRL_LA_ASELC_CMD	0x00000C00	
+#define HT_CTRL_LA_ASELC_DATA	0x0000F000	
+#define HT_CTRL_CAL_POS		0x00030000	
+#define HT_CTRL_CAL_SEQ		0x000C0000	
+#define HT_CTRL_CSI_STEERING	0x00C00000	
+#define HT_CTRL_CSI_STEER_SHIFT	22
+#define HT_CTRL_CSI_STEER_NFB	0		
+#define HT_CTRL_CSI_STEER_CSI	1		
+#define HT_CTRL_CSI_STEER_NCOM	2		
+#define HT_CTRL_CSI_STEER_COM	3		
+#define HT_CTRL_NDP_ANNOUNCE	0x01000000	
+#define HT_CTRL_AC_CONSTRAINT	0x40000000	
+#define HT_CTRL_RDG_MOREPPDU	0x80000000	
 
-#define HT_OPMODE_OPTIONAL  0x0001  
-#define HT_OPMODE_HT20IN40  0x0002  
-#define HT_OPMODE_MIXED 0x0003  
-#define HT_OPMODE_NONGF 0x0004  
-#define DOT11N_TXBURST      0x0008  
-#define DOT11N_OBSS_NONHT   0x0010  
-
-
-
-#define WPA_OUI         "\x00\x50\xF2"  
-#define WPA_OUI_LEN     3       
-#define WPA_OUI_TYPE        1
-#define WPA_VERSION     1   
-#define WPA2_OUI        "\x00\x0F\xAC"  
-#define WPA2_OUI_LEN        3       
-#define WPA2_VERSION        1   
-#define WPA2_VERSION_LEN    2   
+#define HT_OPMODE_OPTIONAL	0x0001	
+#define HT_OPMODE_HT20IN40	0x0002	
+#define HT_OPMODE_MIXED	0x0003	
+#define HT_OPMODE_NONGF	0x0004	
+#define DOT11N_TXBURST		0x0008	
+#define DOT11N_OBSS_NONHT	0x0010	
 
 
-#define WPS_OUI         "\x00\x50\xF2"  
-#define WPS_OUI_LEN     3       
-#define WPS_OUI_TYPE        4
+
+BWL_PRE_PACKED_STRUCT struct vht_cap_ie {
+	uint32  vht_cap_info;
+	
+	uint16	rx_mcs_map;
+	uint16  rx_max_rate;
+	uint16  tx_mcs_map;
+	uint16	tx_max_rate;
+} BWL_POST_PACKED_STRUCT;
+typedef struct vht_cap_ie vht_cap_ie_t;
+
+#define VHT_CAP_IE_LEN 12
+
+#define VHT_CAP_INFO_MAX_MPDU_LEN_MASK			0x00000003
+#define VHT_CAP_INFO_SUPP_CHAN_WIDTH_MASK       0x0000000c
+#define VHT_CAP_INFO_LDPC                       0x00000010
+#define VHT_CAP_INFO_SGI_80MHZ                  0x00000020
+#define VHT_CAP_INFO_SGI_160MHZ                 0x00000040
+#define VHT_CAP_INFO_TX_STBC                    0x00000080
+
+#define VHT_CAP_INFO_RX_STBC_MASK               0x00000700
+#define VHT_CAP_INFO_RX_STBC_SHIFT              8
+#define VHT_CAP_INFO_SU_BEAMFMR                 0x00000800
+#define VHT_CAP_INFO_SU_BEAMFMEE                0x00001000
+#define VHT_CAP_INFO_NUM_BMFMR_ANT_MASK         0x0000e000
+#define VHT_CAP_INFO_NUM_BMFMR_ANT_SHIFT        13
+
+#define VHT_CAP_INFO_NUM_SOUNDING_DIM_MASK      0x00070000
+#define VHT_CAP_INFO_NUM_SOUNDING_DIM_SHIFT     16
+#define VHT_CAP_INFO_MU_BEAMFMR                 0x00080000
+#define VHT_CAP_INFO_MU_BEAMFMEE                0x00100000
+#define VHT_CAP_INFO_TXOPPS                     0x00200000
+#define VHT_CAP_INFO_HTCVHT                     0x00400000
+#define VHT_CAP_INFO_AMPDU_MAXLEN_EXP_MASK      0x03800000
+#define VHT_CAP_INFO_AMPDU_MAXLEN_EXP_SHIFT     23
+
+#define VHT_CAP_INFO_LINK_ADAPT_CAP_MASK        0x0c000000
+#define VHT_CAP_INFO_LINK_ADAPT_CAP_SHIFT       26
 
 
-#define WFA_OUI         "\x50\x6F\x9A"  
-#define WFA_OUI_LEN 3   
+#define VHT_CAP_SUPP_MCS_RX_HIGHEST_RATE_MASK	0x1fff
+#define VHT_CAP_SUPP_MCS_RX_HIGHEST_RATE_SHIFT	0
 
-#define WFA_OUI_TYPE_WPA    1
-#define WFA_OUI_TYPE_WPS    4
-#define WFA_OUI_TYPE_TPC    8
-#define WFA_OUI_TYPE_P2P    9
+#define VHT_CAP_SUPP_MCS_TX_HIGHEST_RATE_MASK	0x1fff
+#define VHT_CAP_SUPP_MCS_TX_HIGHEST_RATE_SHIFT	0
+
+#define VHT_CAP_MCS_MAP_0_7						0
+#define VHT_CAP_MCS_MAP_0_8						1
+#define VHT_CAP_MCS_MAP_0_9						2
+#define VHT_CAP_MCS_MAP_NONE					3
+
+#define VHT_CAP_MCS_MAP_NSS_MAX					8
 
 
-#define RSN_AKM_NONE        0   
-#define RSN_AKM_UNSPECIFIED 1   
-#define RSN_AKM_PSK     2   
-#define RSN_AKM_FBT_1X      3   
-#define RSN_AKM_FBT_PSK     4   
+typedef enum vht_cap_chan_width {
+	VHT_CAP_CHAN_WIDTH_20_40  = 0x00,
+	VHT_CAP_CHAN_WIDTH_80	  = 0x04,
+	VHT_CAP_CHAN_WIDTH_160	  = 0x08
+} vht_cap_chan_width_t;
+
+
+typedef enum vht_cap_max_mpdu_len {
+	VHT_CAP_MPDU_MAX_4K		= 0x00,
+	VHT_CAP_MPDU_MAX_8K		= 0x01,
+	VHT_CAP_MPDU_MAX_11K	= 0x02
+} vht_cap_max_mpdu_len_t;
+
+
+BWL_PRE_PACKED_STRUCT struct vht_op_ie {
+	uint8	chan_width;
+	uint8	chan1;
+	uint8	chan2;
+	uint16	supp_mcs;  
+} BWL_POST_PACKED_STRUCT;
+typedef struct vht_op_ie vht_op_ie_t;
+
+#define VHT_OP_IE_LEN 5
+
+typedef enum vht_op_chan_width {
+	VHT_OP_CHAN_WIDTH_20_40	= 0,
+	VHT_OP_CHAN_WIDTH_80	= 1,
+	VHT_OP_CHAN_WIDTH_160	= 2,
+	VHT_OP_CHAN_WIDTH_80_80	= 3
+} vht_op_chan_width_t;
+
+
+#define VHT_MCS_MAP_GET_SS_IDX(numSpatialStreams) ((numSpatialStreams-1)*2)
+#define VHT_MCS_MAP_GET_MCS_PER_SS(numSpatialStreams, mcsMap) \
+			((mcsMap >> VHT_MCS_MAP_GET_SS_IDX(numSpatialStreams)) & 0x3)
+#define VHT_MCS_MAP_SET_MCS_PER_SS(numSpatialStreams, numMcs, mcsMap) \
+			(mcsMap |= ((numMcs & 0x3) << VHT_MCS_MAP_GET_SS_IDX(numSpatialStreams)))
+
+
+#define WPA_OUI			"\x00\x50\xF2"	
+#define WPA_OUI_LEN		3		
+#define WPA_OUI_TYPE		1
+#define WPA_VERSION		1		
+#define WPA2_OUI		"\x00\x0F\xAC"	
+#define WPA2_OUI_LEN		3		
+#define WPA2_VERSION		1		
+#define WPA2_VERSION_LEN	2		
+
+
+#define WPS_OUI			"\x00\x50\xF2"	
+#define WPS_OUI_LEN		3		
+#define WPS_OUI_TYPE		4
+
+
+
+#ifdef P2P_IE_OVRD
+#define WFA_OUI			MAC_OUI
+#else
+#define WFA_OUI			"\x50\x6F\x9A"	
+#endif 
+#define WFA_OUI_LEN		3		
+#ifdef P2P_IE_OVRD
+#define WFA_OUI_TYPE_P2P	MAC_OUI_TYPE_P2P
+#else
+#define WFA_OUI_TYPE_P2P	9
+#endif
+
+#define WFA_OUI_TYPE_TPC	8
+#ifdef WLTDLS
+#define WFA_OUI_TYPE_WFD	10
+#endif 
+
+
+#define RSN_AKM_NONE		0	
+#define RSN_AKM_UNSPECIFIED	1	
+#define RSN_AKM_PSK		2	
+#define RSN_AKM_FBT_1X		3	
+#define RSN_AKM_FBT_PSK		4	
+#define RSN_AKM_MFP_1X		5	
+#define RSN_AKM_MFP_PSK		6	
+#define RSN_AKM_TPK			7	
 
 
 #define DOT11_MAX_DEFAULT_KEYS	4	
@@ -1933,30 +2062,30 @@ typedef struct dot11_obss_ie dot11_obss_ie_t;
 #define DOT11_EXT_IV_FLAG	(1<<5)	
 #define DOT11_WPA_KEY_RSC_LEN   8       
 
-#define WEP1_KEY_SIZE       5   
-#define WEP1_KEY_HEX_SIZE   10  
-#define WEP128_KEY_SIZE     13  
-#define WEP128_KEY_HEX_SIZE 26  
-#define TKIP_MIC_SIZE       8   
-#define TKIP_EOM_SIZE       7   
-#define TKIP_EOM_FLAG       0x5a    
-#define TKIP_KEY_SIZE       32  
-#define TKIP_MIC_AUTH_TX    16  
-#define TKIP_MIC_AUTH_RX    24  
-#define TKIP_MIC_SUP_RX     TKIP_MIC_AUTH_TX    
-#define TKIP_MIC_SUP_TX     TKIP_MIC_AUTH_RX    
-#define AES_KEY_SIZE        16  
-#define AES_MIC_SIZE        8   
+#define WEP1_KEY_SIZE		5	
+#define WEP1_KEY_HEX_SIZE	10	
+#define WEP128_KEY_SIZE		13	
+#define WEP128_KEY_HEX_SIZE	26	
+#define TKIP_MIC_SIZE		8	
+#define TKIP_EOM_SIZE		7	
+#define TKIP_EOM_FLAG		0x5a	
+#define TKIP_KEY_SIZE		32	
+#define TKIP_MIC_AUTH_TX	16	
+#define TKIP_MIC_AUTH_RX	24	
+#define TKIP_MIC_SUP_RX		TKIP_MIC_AUTH_TX	
+#define TKIP_MIC_SUP_TX		TKIP_MIC_AUTH_RX	
+#define AES_KEY_SIZE		16	
+#define AES_MIC_SIZE		8	
+#define BIP_KEY_SIZE		16	
 
 
-#define WCN_OUI         "\x00\x50\xf2"  
-#define WCN_TYPE        4   
+#define WCN_OUI			"\x00\x50\xf2"	
+#define WCN_TYPE		4	
 
 #ifdef BCMWAPI_WPI
-#define SMS4_KEY_LEN        16
-#define SMS4_WPI_CBC_MAC_LEN    16
+#define SMS4_KEY_LEN		16
+#define SMS4_WPI_CBC_MAC_LEN	16
 #endif
-
 
 
 
@@ -2029,13 +2158,63 @@ typedef struct dot11_gtk_ie dot11_gtk_ie_t;
 #define WMM_OUI_SUBTYPE_PARAMETER	1
 #define WMM_PARAMETER_IE_LEN		24
 
-#ifdef BCMWAPI_WAI
-#define WAPI_IE_MIN_LEN     20  /* WAPI IE min length */
-#define WAPI_VERSION        1   /* WAPI version */
-#define WAPI_VERSION_LEN    2   /* WAPI version length */
-#define WAPI_OUI        "\x00\x14\x72"  /* WAPI OUI */
-#define WAPI_OUI_LEN        DOT11_OUI_LEN   /* WAPI OUI length */
-#endif /* BCMWAPI_WAI */
+
+BWL_PRE_PACKED_STRUCT struct link_id_ie {
+	uint8 id;
+	uint8 len;
+	struct ether_addr	bssid;
+	struct ether_addr	tdls_init_mac;
+	struct ether_addr	tdls_resp_mac;
+} BWL_POST_PACKED_STRUCT;
+typedef struct link_id_ie link_id_ie_t;
+#define TDLS_LINK_ID_IE_LEN		18
+
+
+BWL_PRE_PACKED_STRUCT struct wakeup_sch_ie {
+	uint8 id;
+	uint8 len;
+	uint32 offset;			
+	uint32 interval;		
+	uint32 awake_win_slots;	
+	uint32 max_wake_win;	
+	uint16 idle_cnt;		
+} BWL_POST_PACKED_STRUCT;
+typedef struct wakeup_sch_ie wakeup_sch_ie_t;
+#define TDLS_WAKEUP_SCH_IE_LEN		18
+
+
+BWL_PRE_PACKED_STRUCT struct channel_switch_timing_ie {
+	uint8 id;
+	uint8 len;
+	uint16 switch_time;		
+	uint16 switch_timeout;	
+} BWL_POST_PACKED_STRUCT;
+typedef struct channel_switch_timing_ie channel_switch_timing_ie_t;
+#define TDLS_CHANNEL_SWITCH_TIMING_IE_LEN		4
+
+
+BWL_PRE_PACKED_STRUCT struct pti_control_ie {
+	uint8 id;
+	uint8 len;
+	uint8 tid;
+	uint16 seq_control;
+} BWL_POST_PACKED_STRUCT;
+typedef struct pti_control_ie pti_control_ie_t;
+#define TDLS_PTI_CONTROL_IE_LEN		3
+
+
+BWL_PRE_PACKED_STRUCT struct pu_buffer_status_ie {
+	uint8 id;
+	uint8 len;
+	uint8 status;
+} BWL_POST_PACKED_STRUCT;
+typedef struct pu_buffer_status_ie pu_buffer_status_ie_t;
+#define TDLS_PU_BUFFER_STATUS_IE_LEN	1
+#define TDLS_PU_BUFFER_STATUS_AC_BK		1
+#define TDLS_PU_BUFFER_STATUS_AC_BE		2
+#define TDLS_PU_BUFFER_STATUS_AC_VI		4
+#define TDLS_PU_BUFFER_STATUS_AC_VO		8
+
 
 #include <packed_section_end.h>
 

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: pcicfg.h 275703 2011-08-04 20:20:27Z $
+ * $Id: pcicfg.h 309193 2012-01-19 00:03:57Z $
  */
 
 #ifndef	_h_pcicfg_

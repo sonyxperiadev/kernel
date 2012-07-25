@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_linux_sched.c 279742 2011-08-25 17:24:48Z $
+ * $Id: dhd_linux_sched.c 291086 2011-10-21 01:17:24Z $
  */
 #include <linux/kernel.h>
 #include <linux/module.h>

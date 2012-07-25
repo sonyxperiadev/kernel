@@ -30,7 +30,8 @@
 /* set up by the platform code */
 static void __iomem *twd_base;
 
-unsigned long twd_timer_rate;
+static struct clk *twd_clk;
+static unsigned long twd_timer_rate;
 
 static struct clock_event_device __percpu **twd_evt;
 static int twd_ppi;
@@ -343,19 +344,4 @@ void __init twd_local_timer_of_register(void)
 out:
 	WARN(err, "twd_local_timer_of_register failed (%d)\n", err);
 }
-
-#ifdef CONFIG_HOTPLUG_CPU
-/*
- * take a local timer down
- */
-void twd_timer_stop(void)
-{
-	__raw_writel(0, twd_base + TWD_TIMER_CONTROL);
-}
 #endif
-
-unsigned long twd_get_timer_rate(void)
-{
-	return twd_timer_rate;
-}
-EXPORT_SYMBOL(twd_get_timer_rate);

@@ -259,7 +259,7 @@ int usb_remove_config(struct usb_composite_dev *,
  *	and language IDs provided in control requests
  * @max_speed: Highest speed the driver supports.
  * @needs_serial: set to 1 if the gadget needs userspace to provide
- *	a serial number.  If one is not provided, warning will be printed.
+ * 	a serial number.  If one is not provided, warning will be printed.
  * @unbind: Reverses bind; called as a side effect of unregistering
  *	this driver.
  * @disconnect: optional driver disconnect method
@@ -299,9 +299,9 @@ struct usb_composite_driver {
 
 extern int usb_composite_probe(struct usb_composite_driver *driver,
 			       int (*bind)(struct usb_composite_dev *cdev));
-extern int usb_composite_register(struct usb_composite_driver *);
-extern void usb_composite_unregister(struct usb_composite_driver *);
+extern void usb_composite_unregister(struct usb_composite_driver *driver);
 extern void usb_composite_setup_continue(struct usb_composite_dev *cdev);
+
 
 /**
  * struct usb_composite_device - represents one composite usb gadget

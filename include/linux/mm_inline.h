@@ -24,27 +24,14 @@ static inline int page_is_file_cache(struct page *page)
 static inline void
 add_page_to_lru_list(struct zone *zone, struct page *page, enum lru_list lru)
 {
-	list_add(&page->lru, head);
-	__mod_zone_page_state(zone, NR_LRU_BASE + l, hpage_nr_pages(page));
-	if (PageCma(page)) {
-		if (is_file_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_FILE,
-						hpage_nr_pages(page));
-		} else if (!is_unevictable_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_ANON,
-					hpage_nr_pages(page));
-		} else {
-			__mod_zone_page_state(zone, NR_CMA_UNEVICTABLE,
-					hpage_nr_pages(page));
-		}
-	}
-
-	mem_cgroup_add_lru_list(page, l);
-}
+	struct lruvec *lruvec;
 
 	lruvec = mem_cgroup_lru_add_list(zone, page, lru);
 	list_add(&page->lru, &lruvec->lists[lru]);
 	__mod_zone_page_state(zone, NR_LRU_BASE + lru, hpage_nr_pages(page));
+	if (PageCma(page))
+		__mod_zone_page_state(zone, NR_LRU_CMA_BASE + lru,
+				hpage_nr_pages(page));
 }
 
 static inline void
@@ -52,21 +39,10 @@ del_page_from_lru_list(struct zone *zone, struct page *page, enum lru_list lru)
 {
 	mem_cgroup_lru_del_list(page, lru);
 	list_del(&page->lru);
-	__mod_zone_page_state(zone, NR_LRU_BASE + l, -hpage_nr_pages(page));
-	if (PageCma(page)) {
-		if (is_file_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_FILE,
+	__mod_zone_page_state(zone, NR_LRU_BASE + lru, -hpage_nr_pages(page));
+	if (PageCma(page))
+		__mod_zone_page_state(zone, NR_LRU_CMA_BASE + lru,
 						-hpage_nr_pages(page));
-		} else if (!is_unevictable_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_ANON,
-						-hpage_nr_pages(page));
-		} else {
-			__mod_zone_page_state(zone, NR_CMA_UNEVICTABLE,
-						-hpage_nr_pages(page));
-		}
-	}
-
-	mem_cgroup_del_lru_list(page, l);
 }
 
 /**
@@ -105,21 +81,7 @@ static inline enum lru_list page_off_lru(struct page *page)
 			lru += LRU_ACTIVE;
 		}
 	}
-	__mod_zone_page_state(zone, NR_LRU_BASE + l, -hpage_nr_pages(page));
-	if (PageCma(page)) {
-		if (is_file_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_FILE,
-						-hpage_nr_pages(page));
-		} else if (!is_unevictable_lru(l)) {
-			__mod_zone_page_state(zone, NR_CMA_ANON,
-						-hpage_nr_pages(page));
-		} else {
-			__mod_zone_page_state(zone, NR_CMA_UNEVICTABLE,
-						-hpage_nr_pages(page));
-		}
-	}
-
-	mem_cgroup_del_lru_list(page, l);
+	return lru;
 }
 
 /**

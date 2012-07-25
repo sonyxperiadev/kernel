@@ -108,7 +108,7 @@ enum wl_cfgp2p_status {
 									&(wl)->p2p->status))
 #define wl_clr_p2p_status(wl, stat) ((!(wl)->p2p_supported) ? 0 : clear_bit(WLP2P_STATUS_ ## stat, \
 									&(wl)->p2p->status))
-#define wl_chg_p2p_status(wl, stat) ((!(wl)->p2p_supported) ? 0: change_bit(WLP2P_STATUS_ ## stat, \
+#define wl_chg_p2p_status(wl, stat) ((!(wl)->p2p_supported) ? 0:change_bit(WLP2P_STATUS_ ## stat, \
 									&(wl)->p2p->status))
 #define p2p_on(wl) ((wl)->p2p->on)
 #define p2p_scan(wl) ((wl)->p2p->scan)

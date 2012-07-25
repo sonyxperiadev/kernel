@@ -23,12 +23,14 @@ undo_isolate_page_range(unsigned long start_pfn, unsigned long end_pfn,
 			unsigned migratetype);
 
 /*
- * Test all pages in [start_pfn, end_pfn) are isolated or not.
+ * test all pages in [start_pfn, end_pfn)are isolated or not.
  */
-int test_pages_isolated(unsigned long start_pfn, unsigned long end_pfn);
+extern int
+test_pages_isolated(unsigned long start_pfn, unsigned long end_pfn);
 
 /*
- * Internal functions. Changes pageblock's migrate type.
+ * Internal funcs.Changes pageblock's migrate type.
+ * Please use make_pagetype_isolated()/make_pagetype_movable().
  */
 extern int set_migratetype_isolate(struct page *page);
 extern void unset_migratetype_isolate(struct page *page, unsigned migratetype);

@@ -38,9 +38,11 @@
 #include <asm-generic/gpio.h>
 #include <mach/irqs.h>
 
+/*
 #define gpio_get_value(gpio)		 __gpio_get_value(gpio)
 #define gpio_set_value(gpio,value)  __gpio_set_value(gpio,value)
 #define gpio_cansleep(gpio)		 __gpio_cansleep(gpio)
+*/
 
 int __init kona_gpio_init(int num_bank);
 

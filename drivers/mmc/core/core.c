@@ -1293,6 +1293,7 @@ int mmc_resume_bus(struct mmc_host *host)
 	if (!mmc_bus_needs_resume(host))
 		return -EINVAL;
 
+	printk("%s: Starting deferred resume\n", mmc_hostname(host));
 	spin_lock_irqsave(&host->lock, flags);
 	host->rescan_disable = 0;
 	host->bus_resume_flags &= ~MMC_BUSRESUME_NEEDS_RESUME;
@@ -1306,7 +1307,7 @@ int mmc_resume_bus(struct mmc_host *host)
 		BUG_ON(!host->bus_ops->resume);
 		host->bus_ops->resume(host);
 		if (host->bus_ops->detect)
-			host->bus_ops->detect(host);
+		host->bus_ops->detect(host);
 	}
 
 	mmc_bus_put(host);
@@ -2044,11 +2045,8 @@ void mmc_rescan(struct work_struct *work)
 	int i;
 	bool extend_wakelock = false;
 
-	if (host->rescan_disable) {
-		if (mmc_bus_needs_resume(host))
-			wake_unlock(&host->detect_wake_lock);
+	if (host->rescan_disable)
 		return;
-	}
 
 	mmc_bus_get(host);
 
@@ -2471,7 +2469,7 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		host->power_notify_type = MMC_HOST_PW_NOTIFY_LONG;
 		spin_unlock_irqrestore(&host->lock, flags);
 		if (!host->card_detect_cap) {
-			mmc_detect_change(host, 0);
+		mmc_detect_change(host, 0);
 			/* Add a flush here to make sure mmc_detect completes
 			* executing. In absence of this there is a race
 			* condition where multiple wakelocks could be taken

@@ -68,7 +68,6 @@ obj-$(CONFIG_VIDEO_CX25840) += cx25840/
 obj-$(CONFIG_VIDEO_UPD64031A) += upd64031a.o
 obj-$(CONFIG_VIDEO_UPD64083) += upd64083.o
 obj-$(CONFIG_VIDEO_OV7670) 	+= ov7670.o
-obj-$(CONFIG_VIDEO_OV5640_MC) += ov5640_mc.o
 obj-$(CONFIG_VIDEO_TCM825X) += tcm825x.o
 obj-$(CONFIG_VIDEO_TVEEPROM) += tveeprom.o
 obj-$(CONFIG_VIDEO_MT9M032) += mt9m032.o
@@ -90,6 +89,7 @@ obj-$(CONFIG_SOC_CAMERA_MT9T031)	+= mt9t031.o
 obj-$(CONFIG_SOC_CAMERA_MT9T112)	+= mt9t112.o
 obj-$(CONFIG_SOC_CAMERA_MT9V022)	+= mt9v022.o
 obj-$(CONFIG_SOC_CAMERA_OV2640)		+= ov2640.o
+obj-$(CONFIG_SOC_CAMERA_OV5642)		+= ov5642.o
 obj-$(CONFIG_SOC_CAMERA_OV5640)		+= ov5640.o
 obj-$(CONFIG_SOC_CAMERA_OV7692)		+= ov7692.o
 obj-$(CONFIG_SOC_CAMERA_OV6650)		+= ov6650.o
@@ -199,9 +199,8 @@ obj-$(CONFIG_VIDEO_SAMSUNG_S5P_TV)	+= s5p-tv/
 
 obj-$(CONFIG_VIDEO_SAMSUNG_S5P_G2D)	+= s5p-g2d/
 
-obj-$(CONFIG_BLACKFIN)                  += blackfin/
-
 obj-$(CONFIG_VIDEO_UNICAM_CAMERA)		+= unicam_camera.o
+obj-$(CONFIG_BLACKFIN)                  += blackfin/
 
 obj-$(CONFIG_ARCH_DAVINCI)		+= davinci/
 

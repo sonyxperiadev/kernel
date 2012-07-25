@@ -253,10 +253,10 @@ static int __die(const char *str, int err, struct thread_info *thread, struct pt
 	static int die_counter;
 	int ret;
 
-	printk(KERN_EMERG "Internal error: %s: %x [#%d]" S_PREEMPT S_SMP "\n",
-	       str, err, ++die_counter);
+	printk(KERN_EMERG "Internal error: %s: %x [#%d]" S_PREEMPT S_SMP
+	       S_ISA "\n", str, err, ++die_counter);
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
-	rhea_display_crash_image(CP_CRASH_DUMP_START);
+        rhea_display_crash_image(CP_CRASH_DUMP_START);
 #endif
 
 	/* trap and error numbers are mostly meaningless on ARM */
@@ -299,6 +299,10 @@ void die(const char *str, struct pt_regs *regs, int err)
 	local_irq_disable();
 	knllog_dump();
 #endif
+	if (!user_mode(regs))
+		bug_type = report_bug(regs->ARM_pc, regs);
+	if (bug_type != BUG_TRAP_TYPE_NONE)
+		str = "Oops - BUG";
 	ret = __die(str, err, thread, regs);
 
 	if (regs && kexec_should_crash(thread->task))

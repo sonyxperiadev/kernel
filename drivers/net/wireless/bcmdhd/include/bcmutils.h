@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmutils.h 295287 2011-11-10 01:19:44Z $
+ * $Id: bcmutils.h 315959 2012-02-20 18:04:48Z $
  */
 
 #ifndef	_bcmutils_h_
@@ -249,7 +249,9 @@ extern int pktpool_avail_notify_exclusive(osl_t *osh, pktpool_t *pktp, pktpool_c
 extern int pktpool_avail_register(pktpool_t *pktp, pktpool_cb_t cb, void *arg);
 extern int pktpool_empty_register(pktpool_t *pktp, pktpool_cb_t cb, void *arg);
 extern int pktpool_setmaxlen(pktpool_t *pktp, uint16 maxlen);
+extern int pktpool_setmaxlen_strict(osl_t *osh, pktpool_t *pktp, uint16 maxlen);
 extern void pktpool_emptycb_disable(pktpool_t *pktp, bool disable);
+extern bool pktpool_emptycb_disabled(pktpool_t *pktp);
 
 #define POOLPTR(pp)			((pktpool_t *)(pp))
 #define pktpool_len(pp)			(POOLPTR(pp)->len - 1)
@@ -367,7 +369,6 @@ extern char *bcm_ip_ntoa(struct ipv4_addr *ia, char *buf);
 extern void bcm_mdelay(uint ms);
 
 #define NVRAM_RECLAIM_CHECK(name)
-
 
 extern char *getvar(char *vars, const char *name);
 extern int getintvar(char *vars, const char *name);

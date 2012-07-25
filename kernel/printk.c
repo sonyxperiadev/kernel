@@ -45,6 +45,9 @@
 
 #include <asm/uaccess.h>
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/printk.h>
+
 void (* BrcmLogString)(const char *inLogString,
 				unsigned short inSender) = 0;
 
@@ -926,7 +929,7 @@ int brcm_retrive_early_printk(void)
 	}
 
 	lockdep_off();
-	spin_lock(&logbuf_lock);
+	raw_spin_lock(&logbuf_lock);
 	printk_cpu = this_cpu;
 
 	if (bcmlog_log_ulogging_id > 0 && BrcmLogString)
@@ -1007,7 +1010,7 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 #endif
 
 	p = printk_buf;
-	
+
 	/* Read log level and handle special printk prefix */
 	plen = log_prefix(p, &current_log_level, &special);
 	if (plen) {

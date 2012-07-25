@@ -57,6 +57,11 @@ extern atomic_t ueth_rx_skb_ref_count;
 extern unsigned short ueth_rx_skb_size(void);
 extern void ueth_recycle_rx_skbs(struct sk_buff *skb);
 #endif
+/* return minimum truesize of one skb containing X bytes of data */
+#define SKB_TRUESIZE(X) ((X) +						\
+			 SKB_DATA_ALIGN(sizeof(struct sk_buff)) +	\
+			 SKB_DATA_ALIGN(sizeof(struct skb_shared_info)))
+
 /* A. Checksumming of received packets by device.
  *
  *	NONE: device failed to checksum this packet.
@@ -500,7 +505,7 @@ struct sk_buff {
 				*data;
 	unsigned int		truesize;
 	atomic_t		users;
-	};
+};
 
 #ifdef __KERNEL__
 /*

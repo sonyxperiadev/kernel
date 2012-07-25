@@ -31,3 +31,7 @@ config SHOW_FREE_LISTS
 	  list is identical to /proc/pagetypeinfo (In fact this uses the exact code
 	  and replaces seq_prints by printks. Specially usefull to see the free
 	  migrate type lists when kernel runs out of memory
+
+config PAGE_GUARD
+	bool
+	select WANT_PAGE_DEBUG_FLAGS

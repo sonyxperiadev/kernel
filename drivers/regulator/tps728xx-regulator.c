@@ -203,7 +203,7 @@ static int tps728xx_regulator_probe(struct platform_device *pdev)
 
 
 	/* register regulator */
-	tps728xx->regl = regulator_register(&regl_desc, &pdev->dev, pdata->initdata, tps728xx);
+	tps728xx->regl = regulator_register(&regl_desc, &pdev->dev, pdata->initdata, tps728xx, NULL);
 	regulator_has_full_constraints();
 
 	pr_info("%s SUCCESS\n", __func__);

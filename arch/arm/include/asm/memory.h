@@ -191,6 +191,9 @@ static inline unsigned long __phys_to_virt(unsigned long x)
 #ifndef PHYS_OFFSET
 #ifdef PLAT_PHYS_OFFSET
 #define PHYS_OFFSET	PLAT_PHYS_OFFSET
+#else
+#define PHYS_OFFSET	UL(CONFIG_PHYS_OFFSET)
+#endif
 #endif
 
 /*

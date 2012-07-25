@@ -189,9 +189,15 @@ enum pl330_reqtype {
 
 #define PART			0x330
 #define DESIGNER		0x41
-#define REVISION		0x0
 #define INTEG_CFG		0x0
 #define PERIPH_ID_VAL		((PART << 0) | (DESIGNER << 12))
+#define PERIPH_ID_MASK (0x000FFFFF)
+
+#define PERIPH_REV_SHIFT       20
+#define PERIPH_REV_MASK                0xF
+#define PERIPH_REV_R0P0                0
+#define PERIPH_REV_R1P0                1
+#define PERIPH_REV_R1P1                2
 
 #define PCELL_ID_VAL		0xb105f00d
 
@@ -257,6 +263,8 @@ enum pl330_reqtype {
 
 #define BYTE_TO_BURST(b, ccr)	((b) / BRST_SIZE(ccr) / BRST_LEN(ccr))
 #define BURST_TO_BYTE(c, ccr)	((c) * BRST_SIZE(ccr) * BRST_LEN(ccr))
+#define REM_UNALIGNED(b, ccr)  ((b) % (BRST_SIZE(ccr) * BRST_LEN(ccr)))
+#define BYTE_TO_SINGLE(b, ccr)  ((b) / BRST_SIZE(ccr))
 
 /*
  * With 256 bytes, we can do more than 2.5MB and 5MB xfers per req
@@ -264,13 +272,22 @@ enum pl330_reqtype {
  * For typical scenario, at 1word/burst, 10MB and 20MB xfers per req
  * should be enough for P<->M and M<->M respectively.
  */
-#define MCODE_BUFF_PER_REQ	256
+/*#define MCODE_BUFF_PER_REQ	256*/
+
+/*
+ * Scatter-Gather + modified burst xfers consume more microcode space
+ * So we increase microcode quota for all the channels to 2K.
+ */
+#define MCODE_BUFF_PER_REQ		2048
 
 /* If the _pl330_req is available to the client */
 #define IS_FREE(req)	(*((u8 *)((req)->mc_cpu)) == CMD_DMAEND)
 
 /* Use this _only_ to wait on transient states */
-#define UNTIL(t, s)	while (!(_state(t) & (s))) cpu_relax();
+#define UNTIL(t, s)	while (!(_state(t) & (s)));
+
+/* Uncomment line below to enable Channel Microcode Dump */
+/*#define PL330_DEBUG_MCGEN*/
 
 #ifdef PL330_DEBUG_MCGEN
 static unsigned cmd_line;
@@ -351,6 +368,16 @@ struct pl330_reqcfg {
 	enum pl330_dstcachectrl dcctl;
 	enum pl330_srccachectrl scctl;
 	enum pl330_byteswap swap;
+	/* Peripheral flush control */
+	bool peri_flush_start; /* peripheral needs FLUSHP before DMA start */
+	bool peri_flush_end; /* peripheral needs FLUSHP afrer transfer */
+	/*
+	 * peripheral always generates burst requset.
+	 * Support modified burst(unaligned size) transfers
+	 */
+	bool always_burst;
+	/* single DMA requests follows burst req for the last remainder data */
+	bool end_single_req;
 	struct pl330_config *pcfg;
 };
 
@@ -435,6 +462,7 @@ enum pl330_chan_op {
 
 struct _xfer_spec {
 	u32 ccr;
+	bool restore_ccr;
 	struct pl330_req *r;
 	struct pl330_xfer *x;
 };
@@ -610,6 +638,13 @@ struct dma_pl330_desc {
 	struct dma_pl330_chan *pchan;
 };
 
+enum end_xfer_req	{
+	END_XFER_NONE = 0,
+	END_ALWAYS_BURST = 1,
+	END_SINGLE_XFERS = 2,
+};
+
+
 static inline void _callback(struct pl330_req *r, enum pl330_op_err err)
 {
 	if (r && r->xfer_cb)
@@ -642,9 +677,14 @@ static inline bool is_manager(struct pl330_thread *thrd)
 /* If manager of the thread is in Non-Secure mode */
 static inline bool _manager_ns(struct pl330_thread *thrd)
 {
+/* BRCM: No manager thread, security based on APB interface */
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	struct pl330_dmac *pl330 = thrd->dmac;
 
 	return (pl330->pinfo->pcfg.mode & DMAC_MODE_NS) ? true : false;
+#else
+	return true;
+#endif
 }
 
 static inline u32 get_id(struct pl330_info *pi, u32 off)
@@ -663,6 +703,12 @@ static inline u32 get_id(struct pl330_info *pi, u32 off)
 static inline u32 get_revision(u32 periph_id)
 {
 	return (periph_id >> PERIPH_REV_SHIFT) & PERIPH_REV_MASK;
+}
+
+/* Return PL330 revision ID info */
+static inline u32 get_revision_id(u32 periph_id)
+{
+	return ((periph_id >> PERIPH_REV_SHIFT) & PERIPH_REV_MASK);
 }
 
 static inline u32 _emit_ADDH(unsigned dry_run, u8 buf[],
@@ -749,7 +795,7 @@ static inline u32 _emit_LDP(unsigned dry_run, u8 buf[],
 }
 
 static inline u32 _emit_LP(unsigned dry_run, u8 buf[],
-		unsigned loop, u8 cnt)
+		unsigned loop, unsigned cnt)
 {
 	if (dry_run)
 		return SZ_DMALP;
@@ -760,7 +806,7 @@ static inline u32 _emit_LP(unsigned dry_run, u8 buf[],
 		buf[0] |= (1 << 1);
 
 	cnt--; /* DMAC increments by 1 internally */
-	buf[1] = cnt;
+	buf[1] = (u8)cnt;
 
 	PL330_DBGCMD_DUMP(SZ_DMALP, "\tDMALP_%c %u\n", loop ? '1' : '0', cnt);
 
@@ -1076,6 +1122,8 @@ static void mark_free(struct pl330_thread *thrd, int idx)
 
 static inline u32 _state(struct pl330_thread *thrd)
 {
+/* BRCM: Cant determine the state machine in open mode!!!*/
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	void __iomem *regs = thrd->dmac->pinfo->base;
 	u32 val;
 
@@ -1130,11 +1178,16 @@ static inline u32 _state(struct pl330_thread *thrd)
 	default:
 		return PL330_STATE_INVALID;
 	}
+#else
+	return PL330_STATE_STOPPED;
+#endif
 }
 
 static void _stop(struct pl330_thread *thrd)
 {
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	void __iomem *regs = thrd->dmac->pinfo->base;
+#endif
 	u8 insn[6] = {0, 0, 0, 0, 0, 0};
 
 	if (_state(thrd) == PL330_STATE_FAULT_COMPLETING)
@@ -1149,7 +1202,10 @@ static void _stop(struct pl330_thread *thrd)
 	_emit_KILL(0, insn);
 
 	/* Stop generating interrupts for SEV */
+	 /* BRCM: non-secure mode, INTEN is set once in ABI */
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	writel(readl(regs + INTEN) & ~(1 << thrd->ev), regs + INTEN);
+#endif
 
 	_execute_DBGINSN(thrd, insn, is_manager(thrd));
 }
@@ -1157,7 +1213,9 @@ static void _stop(struct pl330_thread *thrd)
 /* Start doing req 'idx' of thread 'thrd' */
 static bool _trigger(struct pl330_thread *thrd)
 {
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	void __iomem *regs = thrd->dmac->pinfo->base;
+#endif
 	struct _pl330_req *req;
 	struct pl330_req *r;
 	struct _arg_GO go;
@@ -1188,10 +1246,14 @@ static bool _trigger(struct pl330_thread *thrd)
 
 	if (r->cfg)
 		ns = r->cfg->nonsecure ? 1 : 0;
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	else if (readl(regs + CS(thrd->id)) & CS_CNS)
 		ns = 1;
 	else
 		ns = 0;
+#else
+		ns = 1;
+#endif
 
 	/* See 'Abort Sources' point-4 at Page 2-25 */
 	if (_manager_ns(thrd) && !ns)
@@ -1204,7 +1266,10 @@ static bool _trigger(struct pl330_thread *thrd)
 	_emit_GO(0, insn, &go);
 
 	/* Set to generate interrupts for SEV */
+	 /* BRCM: non-secure mode, INTEN is set once in ABI */
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	writel(readl(regs + INTEN) | (1 << thrd->ev), regs + INTEN);
+#endif
 
 	/* Only manager can execute GO */
 	_execute_DBGINSN(thrd, insn, true);
@@ -1253,17 +1318,56 @@ static inline int _ldst_memtomem(unsigned dry_run, u8 buf[],
 	int off = 0;
 	struct pl330_config *pcfg = pxs->r->cfg->pcfg;
 
-	/* check lock-up free version */
-	if (get_revision(pcfg->periph_id) >= PERIPH_REV_R1P0) {
-		while (cyc--) {
-			off += _emit_LD(dry_run, &buf[off], ALWAYS);
-			off += _emit_ST(dry_run, &buf[off], ALWAYS);
-		}
-	} else {
-		while (cyc--) {
-			off += _emit_LD(dry_run, &buf[off], ALWAYS);
+        /*
+	 * PL330 rev r0p0 needs memory barrier instructions to avoid MFIFO lockup
+	 * This workaround is not needed for PL330 DMAC revision >= r1p0
+	 */
+	while (cyc--) {
+		off += _emit_LD(dry_run, &buf[off], ALWAYS);
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
 			off += _emit_RMB(dry_run, &buf[off]);
-			off += _emit_ST(dry_run, &buf[off], ALWAYS);
+		}
+		off += _emit_ST(dry_run, &buf[off], ALWAYS);
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
+			off += _emit_WMB(dry_run, &buf[off]);
+		}
+	}
+	return off;
+}
+
+static inline int _ldst_devtomem(unsigned dry_run, u8 buf[],
+		const struct _xfer_spec *pxs, int cyc,
+		bool rem, enum end_xfer_req end_req)
+{
+	int off = 0;
+	enum pl330_cond c;
+	struct pl330_config *pcfg = pxs->r->cfg->pcfg;
+
+	/* If modified-burst/single for remainder */
+	if (rem)	{
+		if (end_req == END_ALWAYS_BURST)
+			c = BURST;
+		else
+			c = SINGLE;
+	} else	{
+		/* Regular DMA cfg */
+		if (pxs->r->cfg->brst_len > 1)
+			c = BURST;
+		else
+			c = SINGLE;
+	}
+	/*
+	 * PL330 rev r0p0 needs needs memory barrier instructions(ERRATA 716336)
+	 * This workaround is not nedded for DMAC rev >= r1p0
+	 */
+	while (cyc--) {
+		off += _emit_WFP(dry_run, &buf[off], c, pxs->r->peri);
+		off += _emit_LDP(dry_run, &buf[off], c, pxs->r->peri);
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
+			off += _emit_RMB(dry_run, &buf[off]);
+		}
+		off += _emit_ST(dry_run, &buf[off], ALWAYS);
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
 			off += _emit_WMB(dry_run, &buf[off]);
 		}
 	}
@@ -1271,47 +1375,60 @@ static inline int _ldst_memtomem(unsigned dry_run, u8 buf[],
 	return off;
 }
 
-static inline int _ldst_devtomem(unsigned dry_run, u8 buf[],
-		const struct _xfer_spec *pxs, int cyc)
-{
-	int off = 0;
-
-	while (cyc--) {
-		off += _emit_WFP(dry_run, &buf[off], SINGLE, pxs->r->peri);
-		off += _emit_LDP(dry_run, &buf[off], SINGLE, pxs->r->peri);
-		off += _emit_ST(dry_run, &buf[off], ALWAYS);
-		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
-	}
-
-	return off;
-}
-
 static inline int _ldst_memtodev(unsigned dry_run, u8 buf[],
-		const struct _xfer_spec *pxs, int cyc)
+		const struct _xfer_spec *pxs, int cyc,
+		bool rem, enum end_xfer_req end_req)
 {
 	int off = 0;
+	enum pl330_cond c;
+	struct pl330_config *pcfg = pxs->r->cfg->pcfg;
 
+	/* If modified-burst/single for remainder */
+	if (rem)	{
+		if (end_req == END_ALWAYS_BURST)
+			c = BURST;
+		else
+			c = SINGLE;
+	} else {
+		/* Regular DMA cfg */
+		if (pxs->r->cfg->brst_len > 1)
+			c = BURST;
+		else
+			c = SINGLE;
+	}
+	/*
+	 * PL330 rev r0p0 needs needs memory barrier instructions(ERRATA 716336)
+	 * This workaround is not nedded for DMAC rev >= r1p0
+	 */
 	while (cyc--) {
-		off += _emit_WFP(dry_run, &buf[off], SINGLE, pxs->r->peri);
+		off += _emit_WFP(dry_run, &buf[off], c, pxs->r->peri);
 		off += _emit_LD(dry_run, &buf[off], ALWAYS);
-		off += _emit_STP(dry_run, &buf[off], SINGLE, pxs->r->peri);
-		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
+			off += _emit_RMB(dry_run, &buf[off]);
+		}
+		off += _emit_STP(dry_run, &buf[off], c, pxs->r->peri);
+		if (get_revision_id(pcfg->periph_id) < PERIPH_REV_R1P0) {
+			off += _emit_WMB(dry_run, &buf[off]);
+		}
 	}
 
 	return off;
 }
 
 static int _bursts(unsigned dry_run, u8 buf[],
-		const struct _xfer_spec *pxs, int cyc)
+		const struct _xfer_spec *pxs, int cyc,
+		bool rem, enum end_xfer_req end_req)
 {
 	int off = 0;
 
 	switch (pxs->r->rqtype) {
 	case MEMTODEV:
-		off += _ldst_memtodev(dry_run, &buf[off], pxs, cyc);
+		off += _ldst_memtodev(dry_run, &buf[off], pxs, cyc,
+					rem, end_req);
 		break;
 	case DEVTOMEM:
-		off += _ldst_devtomem(dry_run, &buf[off], pxs, cyc);
+		off += _ldst_devtomem(dry_run, &buf[off], pxs, cyc,
+					rem, end_req);
 		break;
 	case MEMTOMEM:
 		off += _ldst_memtomem(dry_run, &buf[off], pxs, cyc);
@@ -1325,8 +1442,9 @@ static int _bursts(unsigned dry_run, u8 buf[],
 }
 
 /* Returns bytes consumed and updates bursts */
-static inline int _loop(unsigned dry_run, u8 buf[],
-		unsigned long *bursts, const struct _xfer_spec *pxs)
+static inline int _loop(unsigned dry_run, u8 buf[], unsigned long *bursts,
+		const struct _xfer_spec *pxs, bool rem,
+		enum end_xfer_req end_req)
 {
 	int cyc, cycmax, szlp, szlpend, szbrst, off;
 	unsigned lcnt0, lcnt1, ljmp0, ljmp1;
@@ -1348,7 +1466,7 @@ static inline int _loop(unsigned dry_run, u8 buf[],
 	}
 
 	szlp = _emit_LP(1, buf, 0, 0);
-	szbrst = _bursts(1, buf, pxs, 1);
+	szbrst = _bursts(1, buf, pxs, 1, rem, end_req);
 
 	lpend.cond = ALWAYS;
 	lpend.forever = false;
@@ -1380,7 +1498,7 @@ static inline int _loop(unsigned dry_run, u8 buf[],
 	off += _emit_LP(dry_run, &buf[off], 1, lcnt1);
 	ljmp1 = off;
 
-	off += _bursts(dry_run, &buf[off], pxs, cyc);
+	off += _bursts(dry_run, &buf[off], pxs, cyc, rem, end_req);
 
 	lpend.cond = ALWAYS;
 	lpend.forever = false;
@@ -1404,24 +1522,61 @@ static inline int _loop(unsigned dry_run, u8 buf[],
 }
 
 static inline int _setup_loops(unsigned dry_run, u8 buf[],
-		const struct _xfer_spec *pxs)
+		struct _xfer_spec *pxs)
 {
 	struct pl330_xfer *x = pxs->x;
 	u32 ccr = pxs->ccr;
-	unsigned long c, bursts = BYTE_TO_BURST(x->bytes, ccr);
+	unsigned long c, bursts, rem_bytes, remainder;
 	int off = 0;
+
+	bursts = BYTE_TO_BURST(x->bytes, ccr);
+	/* remaining burst-unaligned bytes */
+	rem_bytes = REM_UNALIGNED(x->bytes, ccr);
+	remainder = BYTE_TO_SINGLE(rem_bytes, ccr);
+
+	/* Restore CCR if modified beat-length for unaligned burst xfer */
+	if (bursts && pxs->restore_ccr)	{
+		off += _emit_MOV(dry_run, &buf[off], CCR, pxs->ccr);
+		pxs->restore_ccr = false;
+	}
 
 	while (bursts) {
 		c = bursts;
-		off += _loop(dry_run, &buf[off], &c, pxs);
+		off += _loop(dry_run, &buf[off], &c, pxs, false, 0);
 		bursts -= c;
 	}
 
+	/* Handle burst unaligned xfers here */
+	if (remainder)	{
+		/* Modified burst xfer */
+		if (pxs->r->cfg->always_burst)	{
+			c = 1;
+			/* CCR: Modify beat length to un-aligned xfer size */
+			ccr &= ~(0xf << CC_SRCBRSTLEN_SHFT);
+			ccr |= (((remainder - 1) & 0xf) << CC_SRCBRSTLEN_SHFT);
+			ccr &= ~(0xf << CC_DSTBRSTLEN_SHFT);
+			ccr |= (((remainder - 1) & 0xf) << CC_DSTBRSTLEN_SHFT);
+			/* DMAMOV CCR, ccr */
+			off += _emit_MOV(dry_run, &buf[off], CCR, ccr);
+			off += _loop(dry_run, &buf[off], &c, pxs, true,
+							END_ALWAYS_BURST);
+			/* Needs to restore CCR if next burst xfer */
+			pxs->restore_ccr = true;
+		} else {
+			/* Peripheral sends single_req for the remainder */
+			if (pxs->r->cfg->end_single_req)	{
+				c = remainder;
+				off += _loop(dry_run, &buf[off], &c, pxs, true,
+							END_SINGLE_XFERS);
+				remainder -= c;
+			}
+		}
+	}
 	return off;
 }
 
 static inline int _setup_xfer(unsigned dry_run, u8 buf[],
-		const struct _xfer_spec *pxs)
+		struct _xfer_spec *pxs)
 {
 	struct pl330_xfer *x = pxs->x;
 	int off = 0;
@@ -1451,20 +1606,36 @@ static int _setup_req(unsigned dry_run, struct pl330_thread *thrd,
 
 	PL330_DBGMC_START(req->mc_bus);
 
+	/* If Peripheral needs FLUSHP before starting DMA */
+	if(pxs->r->cfg->peri_flush_start)
+		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
+
 	/* DMAMOV CCR, ccr */
 	off += _emit_MOV(dry_run, &buf[off], CCR, pxs->ccr);
+	pxs->restore_ccr = false;
 
 	x = pxs->r->x;
 	do {
 		/* Error if xfer length is not aligned at burst size */
-		if (x->bytes % (BRST_SIZE(pxs->ccr) * BRST_LEN(pxs->ccr)))
-			return -EINVAL;
+		if (pxs->r->cfg->end_single_req ||
+				pxs->r->cfg->always_burst)	{
+			if (x->bytes % (BRST_SIZE(pxs->ccr)))
+				return -EINVAL;
+		} else	{
+			if (x->bytes % (BRST_SIZE(pxs->ccr) *
+					BRST_LEN(pxs->ccr)))
+				return -EINVAL;
+		}
 
 		pxs->x = x;
 		off += _setup_xfer(dry_run, &buf[off], pxs);
 
 		x = x->next;
 	} while (x);
+
+	/* Some Peripheral needs FLUSHP after completing DMA */
+	if(pxs->r->cfg->peri_flush_end)
+		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
 
 	/* DMASEV peripheral/event */
 	off += _emit_SEV(dry_run, &buf[off], thrd->ev);
@@ -1539,7 +1710,7 @@ static int pl330_submit_req(void *ch_id, struct pl330_req *r)
 	int ret = 0;
 
 	/* No Req or Unacquired Channel or DMAC */
-	if (!r || !thrd || thrd->free)
+	if (!r || !r->cfg || !thrd || thrd->free)
 		return -EINVAL;
 
 	pl330 = thrd->dmac;
@@ -1567,6 +1738,8 @@ static int pl330_submit_req(void *ch_id, struct pl330_req *r)
 		ret = -EAGAIN;
 		goto xfer_exit;
 	}
+
+	r->cfg->pcfg = &pi->pcfg;
 
 	/* Prefer Secure Channel */
 	if (!_manager_ns(thrd))
@@ -1722,6 +1895,8 @@ static int pl330_update(const struct pl330_info *pi)
 	}
 
 	/* Check which event happened i.e, thread notified */
+	/*BRCM: ES reg is Secure APB only*/
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	val = readl(regs + ES);
 	if (pi->pcfg.num_events < 32
 			&& val & ~((1 << pi->pcfg.num_events) - 1)) {
@@ -1730,17 +1905,26 @@ static int pl330_update(const struct pl330_info *pi)
 		ret = 1;
 		goto updt_exit;
 	}
+#else
+	/* Read INTSTATUS to check channel interrupts */
+	val = readl(regs + INTSTATUS);
+#endif
 
 	for (ev = 0; ev < pi->pcfg.num_events; ev++) {
 		if (val & (1 << ev)) { /* Event occurred */
 			struct pl330_thread *thrd;
-			u32 inten = readl(regs + INTEN);
 			int active;
+
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
+			u32 inten = readl(regs + INTEN);
 
 			/* Clear the event */
 			if (inten & (1 << ev))
 				writel(1 << ev, regs + INTCLR);
-
+#else
+			/* clear the inetrrupt */
+			writel(1 << ev, regs + INTCLR);
+#endif
 			ret = 1;
 
 			id = pl330->events[ev];
@@ -1780,7 +1964,9 @@ static int pl330_update(const struct pl330_info *pi)
 		spin_lock_irqsave(&pl330->lock, flags);
 	}
 
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 updt_exit:
+#endif
 	spin_unlock_irqrestore(&pl330->lock, flags);
 
 	if (pl330->dmac_tbd.reset_dmac
@@ -2099,21 +2285,38 @@ static int pl330_add(struct pl330_info *pi)
 	regs = pi->base;
 
 	/* Check if we can handle this DMAC */
-	if ((get_id(pi, PERIPH_ID) & 0xfffff) != PERIPH_ID_VAL
-	   || get_id(pi, PCELL_ID) != PCELL_ID_VAL) {
+	if (((get_id(pi, PERIPH_ID) & PERIPH_ID_MASK) != PERIPH_ID_VAL)
+	    || (get_id(pi, PCELL_ID) != PCELL_ID_VAL)) {
 		dev_err(pi->dev, "PERIPH_ID 0x%x, PCELL_ID 0x%x !\n",
-			get_id(pi, PERIPH_ID), get_id(pi, PCELL_ID));
+			get_id(pi, PERIPH_ID) & PERIPH_ID_MASK, get_id(pi, PCELL_ID));
 		return -EINVAL;
 	}
 
 	/* Read the configuration of the DMAC */
 	read_dmac_config(pi);
 
+	/* Print PL330 revision */
+	if (get_revision_id(pi->pcfg.periph_id) == PERIPH_REV_R0P0)
+		dev_info(pi->dev, "PL330 DMAC Revision ID = 0x%04x, Revision r0p0\n",
+			get_revision_id(pi->pcfg.periph_id));
+	else if (get_revision_id(pi->pcfg.periph_id) == PERIPH_REV_R1P0)
+		dev_info(pi->dev, "PL330 DMAC Revision ID = 0x%04x, Revision r1p0\n",
+			get_revision_id(pi->pcfg.periph_id));
+	else if (get_revision_id(pi->pcfg.periph_id) == PERIPH_REV_R1P1)
+		dev_info(pi->dev, "PL330 DMAC Revision ID = 0x%04x, Revision r1p1\n",
+			get_revision_id(pi->pcfg.periph_id));
+	else
+		dev_info(pi->dev, "PL330 DMAC Revision ID = 0x%04x\n",
+			 get_revision_id(pi->pcfg.periph_id));
+
 	if (pi->pcfg.num_events == 0) {
 		dev_err(pi->dev, "%s:%d Can't work without events!\n",
 			__func__, __LINE__);
 		return -EINVAL;
 	}
+
+	/*clear interrupt status to avoid any spurious interrupts during bootup*/
+	writel(0xFFFFFFFF, regs + INTCLR);
 
 	pl330 = kzalloc(sizeof(*pl330), GFP_KERNEL);
 	if (!pl330) {

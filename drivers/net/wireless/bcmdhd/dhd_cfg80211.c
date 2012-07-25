@@ -41,13 +41,8 @@ extern void dhd_pktfilter_offload_enable(dhd_pub_t * dhd, char *arg, int enable,
 
 static int dhd_dongle_up = FALSE;
 
-#include <dngl_stats.h>
-#include <dhd.h>
-#include <dhdioctl.h>
-#include <wlioctl.h>
-#include <dhd_cfg80211.h>
-
 static s32 wl_dongle_up(struct net_device *ndev, u32 up);
+
 /**
  * Function implementations
  */
@@ -110,7 +105,6 @@ static s32 wl_dongle_up(struct net_device *ndev, u32 up)
 	}
 	return err;
 }
-
 s32 dhd_config_dongle(struct wl_priv *wl, bool need_lock)
 {
 #ifndef DHD_SDALIGN

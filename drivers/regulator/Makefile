@@ -52,8 +52,6 @@ obj-$(CONFIG_REGULATOR_WM831X) += wm831x-ldo.o
 obj-$(CONFIG_REGULATOR_WM8350) += wm8350-regulator.o
 obj-$(CONFIG_REGULATOR_WM8400) += wm8400-regulator.o
 obj-$(CONFIG_REGULATOR_WM8994) += wm8994-regulator.o
-
-
 obj-$(CONFIG_REGULATOR_BCM_PMU59055) += bcm590xx-regulator.o bcm59055_regulator.o
 obj-$(CONFIG_REGULATOR_BCMPMU)  += bcmpmu-regulator.o
 obj-$(CONFIG_REGULATOR_BCMPMU) += bcmpmu-regulator.o
@@ -61,6 +59,5 @@ obj-$(CONFIG_REGULATOR_BCM59055) += bcmpmu-rgltr-bcm59055.o
 obj-$(CONFIG_REGULATOR_BCM59039) += bcmpmu-rgltr-bcm59039.o
 obj-$(CONFIG_REGULATOR_BCM59042) += bcmpmu-rgltr-bcm59042.o
 obj-$(CONFIG_REGULATOR_TPS728XX) += tps728xx-regulator.o
-		
 
 ccflags-$(CONFIG_REGULATOR_DEBUG) += -DDEBUG

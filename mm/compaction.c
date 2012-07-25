@@ -48,7 +48,7 @@ static void map_pages(struct list_head *list)
 static inline bool migrate_async_suitable(int migratetype)
 {
 	return is_migrate_cma(migratetype) || migratetype == MIGRATE_MOVABLE;
-}
+	}
 
 /*
  * Isolate free pages onto a private freelist. Caller must hold zone->lock.
@@ -328,7 +328,7 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 			mode |= ISOLATE_ASYNC_MIGRATE;
 
 		/* Try isolate the page */
-		if (__isolate_lru_page(page, ISOLATE_BOTH | ISOLATE_CMA, 0))
+		if (__isolate_lru_page(page, mode, 0) != 0)
 			continue;
 
 		VM_BUG_ON(PageTransCompound(page));

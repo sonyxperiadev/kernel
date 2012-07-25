@@ -974,32 +974,4 @@ config TOUCHSCREEN_TPS6507X
 	  To compile this driver as a module, choose M here: the
 	  module will be called tps6507x_ts.
 
-config TOUCHSCREEN_EGALAX_I2C
-        tristate "eGalax Capacitive Touchscreen"
-        depends on I2C
-        help
-	  Say Y here if you have the EETI eGalax capacitive touchscreen.
-
-	  If unsure, say N.
-
-	  To compile this driver as a module, choose M here: the
-          module will be called egalax_i2c_ts.
-
-config CP_TS_SOFTKEY
-   bool "Compal Softkey Support"
-   depends on TOUCHSCREEN_EGALAX_I2C
-   default n
-   help
-     Say Y if you want Compal touch panel softkey support.
-     If unsure, say N.
-
-config TOUCHSCREEN_SCALE
-   bool "Compal touchscreen scaling Support"
-   depends on TOUCHSCREEN_EGALAX_I2C
-   default n
-   help
-     Say Y if you want Compal touch panel scaling support.
-     Give it a try, it's quite cool!
-     If unsure, say N.
-     
 endif

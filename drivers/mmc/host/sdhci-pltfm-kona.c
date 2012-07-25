@@ -124,7 +124,7 @@ static int sdhci_pltfm_disable(struct sdhci_host *host, int lazy);
  * Get the base clock. Use central clock source for now. Not sure if different
  * clock speed to each dev is allowed
  */
-static unsigned long sdhci_get_max_clk(struct sdhci_host *host)
+static unsigned int sdhci_get_max_clk(struct sdhci_host *host)
 {
 	unsigned int i;
 
@@ -143,7 +143,7 @@ static unsigned int sdhci_get_timeout_clock(struct sdhci_host *host)
 }
 
 static struct sdhci_ops sdhci_pltfm_ops = {
-	.get_max_clk = sdhci_get_max_clk,
+	.get_max_clock = sdhci_get_max_clk,
 	.get_timeout_clock = sdhci_get_timeout_clock,
 	.clk_enable = sdhci_pltfm_clk_enable,
 	.set_signalling = sdhci_pltfm_set_signalling,
@@ -521,32 +521,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	dev->cd_gpio = hw_cfg->cd_gpio;
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		dev->wifi_gpio = &hw_cfg->wifi_gpio;
-	/*
-	 * In the corresponding mmc_host->caps filed, need to
-	 * expose the MMC_CAP_DISABLE capability only for SD Card interface.
-	 * Note that for now we are exposing Dynamic Power Management
-	 * capability on the interface that suppors SD Card.
-	 *
-	 * When we finally decide to do away with managing clocks from sdhci.c
-	 * and when we enable the DISABLED state management, we need to
-	 * enable this capability for ALL SDIO interfaces. For WLAN interface
-	 * we should ensure that the regulator is NOT turned OFF so that the
-	 * handshakes need not happen again.
-	 */
-	if (dev->devtype == SDIO_DEV_TYPE_SDMMC) {
-		host->mmc->caps |= MMC_CAP_DISABLE;
-		/*
-		 * There are multiple paths that can trigger disable work.
-		 * One common path is from
-		 * mmc/card/block.c function,  mmc_blk_issue_rq after the
-		 * transfer is done.
-		 * mmc_release_host-->mmc_host_lazy_disable, this starts the
-		 * mmc disable work only if host->disable_delay is non zero.
-		 * So we need to set disable_delay otherwise the work will never
-		 * get scheduled.
-		 */
-		mmc_set_disable_delay(host->mmc, KONA_SDMMC_DISABLE_DELAY);
-	}
 
 	pr_debug("%s: DEV TYPE %x\n", __func__, dev->devtype);
 
@@ -698,9 +672,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 				gpio_to_irq(dev->cd_gpio), dev->cd_gpio);
 			goto err_free_cd_gpio;
 		}
-
-		/* support SD card detect interrupts for insert/removal */
-		host->mmc->card_detect_cap = true;
 
 		/* Set debounce for SD Card detect to maximum value (128ms)
 		 *

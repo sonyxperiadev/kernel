@@ -280,6 +280,14 @@ static struct mem_type mem_types[] = {
 		.prot_l1   = PMD_TYPE_TABLE,
 		.domain    = DOMAIN_KERNEL,
 	},
+	[MT_MEMORY_SO] = {
+		.prot_pte  = L_PTE_PRESENT | L_PTE_YOUNG | L_PTE_DIRTY |
+				L_PTE_MT_UNCACHED,
+		.prot_l1   = PMD_TYPE_TABLE,
+		.prot_sect = PMD_TYPE_SECT | PMD_SECT_AP_WRITE | PMD_SECT_S |
+				PMD_SECT_UNCACHED | PMD_SECT_XN,
+		.domain    = DOMAIN_KERNEL,
+	},
 	[MT_MEMORY_DMA_READY] = {
 		.prot_pte  = L_PTE_PRESENT | L_PTE_YOUNG | L_PTE_DIRTY,
 		.prot_l1   = PMD_TYPE_TABLE,
@@ -617,7 +625,7 @@ static void __init alloc_init_section(pud_t *pud, unsigned long addr,
 	 * L1 entries, whereas PGDs refer to a group of L1 entries making
 	 * up one logical pointer to an L2 table.
 	 */
-	if (type->prot_sect && ((addr | end | phys) & ~SECTION_MASK) == 0) {
+	if (((addr | end | phys) & ~SECTION_MASK) == 0 && !force_pages) {
 		pmd_t *p = pmd;
 
 #ifndef CONFIG_ARM_LPAE
@@ -795,13 +803,14 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
 
 	for (md = io_desc; nr; md++, nr--) {
 		create_mapping(md, false);
-		vm->addr = (void *)(md->virtual & PAGE_MASK);
+/*		vm->addr = (void *)(md->virtual & PAGE_MASK);
 		vm->size = PAGE_ALIGN(md->length + (md->virtual & ~PAGE_MASK));
 		vm->phys_addr = __pfn_to_phys(md->pfn); 
 		vm->flags = VM_IOREMAP | VM_ARM_STATIC_MAPPING; 
 		vm->flags |= VM_ARM_MTYPE(md->type);
 		vm->caller = iotable_init;
-		vm_area_add_early(vm++);
+		vm++;
+		vm_area_add_early(vm++); */
 	}
 }
 
@@ -945,6 +954,7 @@ void __init sanity_check_meminfo(void)
 	}
 #endif
 	meminfo.nr_banks = j;
+	high_memory = __va(arm_lowmem_limit - 1) + 1;
 	memblock_set_current_limit(arm_lowmem_limit);
 }
 
@@ -995,27 +1005,18 @@ static inline void prepare_page_table(void)
  */
 void __init arm_mm_memblock_reserve(void)
 {
-	phys_addr_t swapper_pa = __pa(swapper_pg_dir);
-
 	/*
 	 * Reserve the page tables.  These are already in use,
 	 * and can only be in node 0.
 	 */
-	memblock_reserve(swapper_pa, PTRS_PER_PGD * sizeof(pgd_t));
+	memblock_reserve(__pa(swapper_pg_dir), SWAPPER_PG_DIR_SIZE);
 
 #ifdef CONFIG_SA1111
 	/*
 	 * Because of the SA1111 DMA bug, we want to preserve our
 	 * precious DMA-able memory...
 	 */
-	memblock_reserve(PHYS_OFFSET, swapper_pa - PHYS_OFFSET);
-#else
-	/*
-	 * Reserve the page immediately below swapper to use as a
-	 * temporary stack and a holding area for secondary CPUs when we
-	 * are kexec'd.
-	 */
-	memblock_reserve(swapper_pa - PAGE_SIZE, PAGE_SIZE);
+	memblock_reserve(PHYS_OFFSET, __pa(swapper_pg_dir) - PHYS_OFFSET);
 #endif
 }
 
@@ -1037,6 +1038,7 @@ static void __init devicemaps_init(struct machine_desc *mdesc)
 	 */
 	vectors = early_alloc(PAGE_SIZE);
 
+	pr_info("Early trap init\n");
 	early_trap_init(vectors);
 
 	for (addr = VMALLOC_START; addr; addr += PMD_SIZE)

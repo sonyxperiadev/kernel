@@ -21,6 +21,7 @@
 #include <linux/jiffies.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/module.h>
 #include <plat/kona_cpufreq_drv.h>
 
 #include <plat/pi_mgr.h>

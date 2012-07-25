@@ -31,6 +31,7 @@
 #include "plat/chal/chal_dma_vc4lite.h"
 #include "plat/osdal_os.h"
 #include "linux/dma-mapping.h"
+#include <mach/memory.h>
 
 /*
  * Local Definitions

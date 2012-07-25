@@ -80,3 +80,6 @@ ifdef CONFIG_RHEA_PANDA
 obj-$(CONFIG_SERIAL_SPI)               += spi/
 endif
 
+obj-$(CONFIG_SERIAL_SIRFSOC) += sirfsoc_uart.o
+obj-$(CONFIG_SERIAL_AR933X)   += ar933x_uart.o
+obj-$(CONFIG_SERIAL_EFM32_UART) += efm32-uart.o

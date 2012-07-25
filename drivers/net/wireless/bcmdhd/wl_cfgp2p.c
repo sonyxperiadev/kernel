@@ -105,7 +105,6 @@ bool wl_cfgp2p_is_p2p_action(void *frame, u32 frame_len)
 
 	return false;
 }
-
 bool wl_cfgp2p_is_gas_action(void *frame, u32 frame_len)
 {
 
@@ -129,7 +128,6 @@ bool wl_cfgp2p_is_gas_action(void *frame, u32 frame_len)
 		return false;
 
 }
-
 void wl_cfgp2p_print_actframe(bool tx, void *frame, u32 frame_len)
 {
 	wifi_p2p_pub_act_frame_t *pact_frm;
@@ -290,6 +288,7 @@ wl_cfgp2p_deinit_priv(struct wl_priv *wl)
 	CFGP2P_DBG(("In\n"));
 	if (wl->p2p) {
 		kfree(wl->p2p);
+		wl->p2p = NULL;
 	}
 	wl->p2p_supported = 0;
 }
@@ -345,7 +344,7 @@ wl_cfgp2p_ifadd(struct wl_priv *wl, struct ether_addr *mac, u8 if_type,
 	ifreq.chspec = chspec;
 	memcpy(ifreq.addr.octet, mac->octet, sizeof(ifreq.addr.octet));
 
-	CFGP2P_INFO(("---wl p2p_ifadd %02x:%02x:%02x:%02x:%02x:%02x %s %u\n",
+	CFGP2P_DBG(("---wl p2p_ifadd %02x:%02x:%02x:%02x:%02x:%02x %s %u\n",
 	    ifreq.addr.octet[0], ifreq.addr.octet[1], ifreq.addr.octet[2],
 		ifreq.addr.octet[3], ifreq.addr.octet[4], ifreq.addr.octet[5],
 		(if_type == WL_P2P_IF_GO) ? "go" : "client",
@@ -1738,7 +1737,7 @@ wl_cfgp2p_retreive_p2pattrib(void *buf, u8 element_id)
 	len -= 4;	/* exclude OUI + OUI_TYPE */
 
 	while (len >= 3) {
-	/* attribute id */
+		/* attribute id */
 		subelt_id = *subel;
 		subel += 1;
 		len -= 1;
@@ -1922,11 +1921,7 @@ static int wl_cfgp2p_do_ioctl(struct net_device *net, struct ifreq *ifr, int cmd
 	 * For Android PRIV CMD handling map it to primary I/F
 	 */
 	if (cmd == SIOCDEVPRIVATE+1) {
-#if defined(OEM_ANROID)
 		ret = wl_android_priv_cmd(ndev, ifr, cmd);
-#else
-	(void)ndev;
-#endif
 
 	} else {
 		CFGP2P_ERR(("%s: IOCTL req 0x%x on p2p0 I/F. Ignoring. \n",
@@ -1939,12 +1934,34 @@ static int wl_cfgp2p_do_ioctl(struct net_device *net, struct ifreq *ifr, int cmd
 
 static int wl_cfgp2p_if_open(struct net_device *net)
 {
-	CFGP2P_DBG(("Do Nothing \n"));
+	struct wireless_dev *wdev = net->ieee80211_ptr;
+
+	if (!wdev)
+		return -EINVAL;
+
+	/* If suppose F/W download (ifconfig wlan0 up) hasn't been done by now,
+	 * do it here. This will make sure that in concurrent mode, supplicant
+	 * is not dependent on a particular order of interface initialization.
+	 * i.e you may give wpa_supp -iwlan0 -N -ip2p0 or wpa_supp -ip2p0 -N
+	 * -iwlan0.
+	 */
+	wl_cfg80211_do_driver_init(net);
+
+	wdev->wiphy->interface_modes |= (BIT(NL80211_IFTYPE_P2P_CLIENT)
+		| BIT(NL80211_IFTYPE_P2P_GO));
+
 	return 0;
 }
 
 static int wl_cfgp2p_if_stop(struct net_device *net)
 {
-	CFGP2P_DBG(("Do Nothing \n"));
+	struct wireless_dev *wdev = net->ieee80211_ptr;
+
+	if (!wdev)
+		return -EINVAL;
+
+	wdev->wiphy->interface_modes = (wdev->wiphy->interface_modes)
+					& (~(BIT(NL80211_IFTYPE_P2P_CLIENT)|
+					BIT(NL80211_IFTYPE_P2P_GO)));
 	return 0;
 }

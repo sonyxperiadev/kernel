@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sbsocram.h 275703 2011-08-04 20:20:27Z $
+ * $Id: sbsocram.h 271781 2011-07-13 20:00:06Z $
  */
 
 #ifndef	_SBSOCRAM_H

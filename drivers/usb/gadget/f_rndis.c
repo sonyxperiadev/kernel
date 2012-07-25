@@ -364,10 +364,6 @@ static struct usb_gadget_strings *rndis_strings[] = {
 	NULL,
 };
 
-#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-#define DMA_ALIGN_ROOM 4
-#endif
-
 /*-------------------------------------------------------------------------*/
 
 static struct sk_buff *rndis_add_header(struct gether *port,
@@ -375,11 +371,7 @@ static struct sk_buff *rndis_add_header(struct gether *port,
 {
 	struct sk_buff *skb2;
 
-	skb2 = skb_realloc_headroom(skb, sizeof(struct rndis_packet_msg_type)
-#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-		+ DMA_ALIGN_ROOM
-#endif
-	);
+	skb2 = skb_realloc_headroom(skb, sizeof(struct rndis_packet_msg_type));
 	if (skb2)
 		rndis_add_hdr(skb2);
 
@@ -567,7 +559,6 @@ static int rndis_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 
 		if (rndis->port.in_ep->driver_data) {
 			DBG(cdev, "reset rndis\n");
-			pr_info("reset rndis\n");
 			gether_disconnect(&rndis->port);
 		}
 
@@ -624,7 +615,6 @@ static void rndis_disable(struct usb_function *f)
 		return;
 
 	DBG(cdev, "rndis deactivated\n");
-	pr_info("%s\n", __func__);
 
 	rndis_uninit(rndis->config);
 	gether_disconnect(&rndis->port);
@@ -632,18 +622,6 @@ static void rndis_disable(struct usb_function *f)
 	usb_ep_disable(rndis->notify);
 	rndis->notify->driver_data = NULL;
 }
-
-#ifdef CONFIG_BRCM_NETCONSOLE
-/* Keep the function for debugging purpose */
-static void rndis_suspend(struct usb_function *f)
-{
-	struct f_rndis		*rndis = func_to_rndis(f);
-	struct usb_composite_dev *cdev = f->config->cdev;
-
-	DBG(cdev, "rndis suspend\n");
-	gether_disconnect(&rndis->port);
-}
-#endif //#ifdef CONFIG_BRCM_NETCONSOLE
 
 /*-------------------------------------------------------------------------*/
 
@@ -947,9 +925,6 @@ rndis_bind_config_vendor(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
 	rndis->port.func.set_alt = rndis_set_alt;
 	rndis->port.func.setup = rndis_setup;
 	rndis->port.func.disable = rndis_disable;
-#ifdef CONFIG_BRCM_NETCONSOLE
-	rndis->port.func.suspend = rndis_suspend;
-#endif
 
 	status = usb_add_function(c, &rndis->port.func);
 	if (status) {

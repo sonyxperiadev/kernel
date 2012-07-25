@@ -271,9 +271,8 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 #else
 	if (card->ext_csd.rev > 3) {
 #endif
-		printk(KERN_ERR "%s: unrecognised EXT_CSD structure "
-			"version %d\n", mmc_hostname(card->host),
-			card->ext_csd.rev);
+		pr_err("%s: unrecognised EXT_CSD revision %d\n",
+			mmc_hostname(card->host), card->ext_csd.rev);
 		err = -EINVAL;
 		goto out;
 	}
@@ -478,12 +477,18 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			ext_csd[EXT_CSD_SEC_FEATURE_SUPPORT];
 		card->ext_csd.trim_timeout = 300 *
 			ext_csd[EXT_CSD_TRIM_MULT];
-
 		card->ext_csd.rpmb_size =
 			ext_csd[EXT_CSD_RPMB_SIZE_MULT] << 17;
 
-		printk(KERN_INFO "%s: card->ext_csd.rpmb_size: %d\n",
+		pr_info(KERN_INFO "%s: card->ext_csd.rpmb_size: %d\n",
 			__func__, card->ext_csd.rpmb_size);
+		/*
+		 * Note that the call to mmc_part_add above defaults to read
+		 * only. If this default assumption is changed, the call must
+		 * take into account the value of boot_locked below.
+		 */
+		card->ext_csd.boot_ro_lock = ext_csd[EXT_CSD_BOOT_WP];
+		card->ext_csd.boot_ro_lockable = true;
 	}
 
 	if (card->ext_csd.rev >= 5) {
@@ -875,20 +880,8 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		err = mmc_send_cid(host, cid);
 	else
 		err = mmc_all_send_cid(host, cid);
-#if 0 /* Original code before adding temporary workaround for broken MMC parts */
 	if (err)
 		goto err;
-#else
-	if (err){
-		if (err == -ETIMEDOUT || err == -EILSEQ) {
-			pr_debug("%s: Ignoring error %d for mmc_all_send_cid\n",
-				__func__, err);
-			err = 0;
-		} else {
-			goto err;
-		}
-	}
-#endif
 
 	if (oldcard) {
 		if (memcmp(cid, oldcard->raw_cid, sizeof(cid)) != 0) {
@@ -1021,11 +1014,8 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	 * If the host supports the power_off_notify capability then
 	 * set the notification byte in the ext_csd register of device
 	 */
-	if ((card->ext_csd.hs_max_dtr != 0) &&
-#ifdef CONFIG_MMC_BCM_SD
-        (host->f_max > SDHCI_HOST_MAX_CLK_LS_MODE) &&
-#endif
-		(host->caps & MMC_CAP_MMC_HIGHSPEED)) {
+	if ((host->caps2 & MMC_CAP2_POWEROFF_NOTIFY) &&
+	    (card->ext_csd.rev >= 6)) {
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 				 EXT_CSD_POWER_OFF_NOTIFICATION,
 				 EXT_CSD_POWER_ON,

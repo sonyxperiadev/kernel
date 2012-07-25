@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: aiutils.c 275693 2011-08-04 19:59:34Z $
+ * $Id: aiutils.c 321247 2012-03-14 21:14:33Z $
  */
 #include <bcm_cfg.h>
 #include <typedefs.h>
@@ -37,6 +37,9 @@
 #include "siutils_priv.h"
 
 #define BCM47162_DMP() (0)
+#define BCM5357_DMP() (0)
+#define remap_coreid(sih, coreid)	(coreid)
+#define remap_corerev(sih, corerev)	(corerev)
 
 
 
@@ -517,6 +520,10 @@ ai_flag(si_t *sih)
 		SI_ERROR(("%s: Attempting to read MIPS DMP registers on 47162a0", __FUNCTION__));
 		return sii->curidx;
 	}
+	if (BCM5357_DMP()) {
+		SI_ERROR(("%s: Attempting to read USB20H DMP registers on 5357b0\n", __FUNCTION__));
+		return sii->curidx;
+	}
 	ai = sii->curwrap;
 
 	return (R_REG(sii->osh, &ai->oobselouta30) & 0x1f);
@@ -746,6 +753,11 @@ ai_core_cflags_wo(si_t *sih, uint32 mask, uint32 val)
 		          __FUNCTION__));
 		return;
 	}
+	if (BCM5357_DMP()) {
+		SI_ERROR(("%s: Accessing USB20H DMP register (ioctrl) on 5357\n",
+		          __FUNCTION__));
+		return;
+	}
 
 	ASSERT(GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
@@ -768,6 +780,11 @@ ai_core_cflags(si_t *sih, uint32 mask, uint32 val)
 	sii = SI_INFO(sih);
 	if (BCM47162_DMP()) {
 		SI_ERROR(("%s: Accessing MIPS DMP register (ioctrl) on 47162a0",
+		          __FUNCTION__));
+		return 0;
+	}
+	if (BCM5357_DMP()) {
+		SI_ERROR(("%s: Accessing USB20H DMP register (ioctrl) on 5357\n",
 		          __FUNCTION__));
 		return 0;
 	}
@@ -795,6 +812,11 @@ ai_core_sflags(si_t *sih, uint32 mask, uint32 val)
 	sii = SI_INFO(sih);
 	if (BCM47162_DMP()) {
 		SI_ERROR(("%s: Accessing MIPS DMP register (iostatus) on 47162a0",
+		          __FUNCTION__));
+		return 0;
+	}
+	if (BCM5357_DMP()) {
+		SI_ERROR(("%s: Accessing USB20H DMP register (iostatus) on 5357\n",
 		          __FUNCTION__));
 		return 0;
 	}

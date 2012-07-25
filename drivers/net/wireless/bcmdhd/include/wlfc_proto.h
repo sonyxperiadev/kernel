@@ -18,7 +18,7 @@
 *      Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
-* $Id: wlfc_proto.h 275703 2011-08-04 20:20:27Z $
+* $Id: wlfc_proto.h 322519 2012-03-21 01:15:45Z $
 *
 */
 #ifndef __wlfc_proto_definitions_h__
@@ -117,8 +117,7 @@
 #define WLFC_CTL_VALUE_LEN_REQUEST_PACKET	3	/* credit, MAC-handle, prec_bitmap */
 
 #define WLFC_CTL_VALUE_LEN_NIC_PRD_START	1
-#define WLFC_CTL_VALUE_LEN_NIC_PRD_END		1
-#define WLFC_CTL_VALUE_LEN_AF_TXS		3
+#define WLFC_CTL_VALUE_LEN_NIC_PRD_END		7
 
 
 #define WLFC_PKTID_GEN_MASK		0x80000000

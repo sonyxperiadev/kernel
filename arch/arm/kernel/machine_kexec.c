@@ -136,5 +136,5 @@ void machine_kexec(struct kimage *image)
 	if (kexec_reinit)
 		kexec_reinit();
 
-	arm_machine_reset(reboot_code_buffer_phys);
+	soft_restart(reboot_code_buffer_phys);
 }

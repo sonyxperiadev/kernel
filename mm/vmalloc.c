@@ -1131,13 +1131,17 @@ void __init vm_area_add_early(struct vm_struct *vm)
 {
 	struct vm_struct *tmp, **p;
 
+	pr_info("vmap_initialized %d %p %p\n", vmap_initialized, vm, vm->addr);
 	BUG_ON(vmap_initialized);
 	for (p = &vmlist; (tmp = *p) != NULL; p = &tmp->next) {
 		if (tmp->addr >= vm->addr) {
+			pr_err("tmp->addr >= vm->addr ....%p %p %ld\n", tmp->addr, vm->addr, vm->size);
 			BUG_ON(tmp->addr < vm->addr + vm->size);
 			break;
-		} else
+		} else {
+			pr_err("tmp->addr >= vm->addr ....%p %p %ld\n", tmp->addr, vm->addr, vm->size);
 			BUG_ON(tmp->addr + tmp->size > vm->addr);
+		}
 	}
 	vm->next = *p;
 	*p = vm;
@@ -1193,6 +1197,7 @@ void __init vmalloc_init(void)
 
 	vmap_area_pcpu_hole = VMALLOC_END;
 
+	pr_info("vmalloc_init complete\n");
 	vmap_initialized = true;
 }
 

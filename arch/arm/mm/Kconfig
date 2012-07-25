@@ -849,12 +849,8 @@ config MIGHT_HAVE_CACHE_L2X0
 	  inadvertently configuring a broken kernel.
 
 config CACHE_L2X0
-	bool "Enable the L2x0 outer cache controller"
-	depends on REALVIEW_EB_ARM11MP || MACH_REALVIEW_PB11MP || MACH_REALVIEW_PB1176 || \
-		   REALVIEW_EB_A9MP || SOC_IMX35 || SOC_IMX31 || MACH_REALVIEW_PBX || \
-		   ARCH_NOMADIK || ARCH_OMAP4 || ARCH_EXYNOS4 || ARCH_TEGRA || \
-		   ARCH_U8500 || ARCH_VEXPRESS_CA9X4 || ARCH_SHMOBILE || ARCH_KONA
-	default y
+	bool "Enable the L2x0 outer cache controller" if MIGHT_HAVE_CACHE_L2X0
+	default MIGHT_HAVE_CACHE_L2X0
 	select OUTER_CACHE
 	select OUTER_CACHE_SYNC
 	help
@@ -894,7 +890,7 @@ config ARM_L1_CACHE_SHIFT_6
 config ARM_L1_CACHE_SHIFT
 	int
 	default 6 if ARM_L1_CACHE_SHIFT_6
-	default 5
+	# default 5
 
 config ARM_DMA_MEM_BUFFERABLE
 	bool "Use non-cacheable memory for DMA" if (CPU_V6 || CPU_V6K) && !CPU_V7
