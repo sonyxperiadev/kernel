@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -113,8 +113,8 @@
 #define AXIPV_CTRL_REG_OFFSET                                             0x0000002C
 #define AXIPV_CTRL_REG_TYPE                                               UInt32
 #define AXIPV_CTRL_REG_RESERVED_MASK                                      0x00000000
-#define    AXIPV_CTRL_REG_AXIPV_CTRL_UNUSED_2_SHIFT                       29
-#define    AXIPV_CTRL_REG_AXIPV_CTRL_UNUSED_2_MASK                        0xE0000000
+#define    AXIPV_CTRL_REG_RES_REG_CTRL_31_29_SHIFT                        29
+#define    AXIPV_CTRL_REG_RES_REG_CTRL_31_29_MASK                         0xE0000000
 #define    AXIPV_CTRL_REG_AXIPV_DBG_CLK_DIV_SHIFT                         27
 #define    AXIPV_CTRL_REG_AXIPV_DBG_CLK_DIV_MASK                          0x18000000
 #define    AXIPV_CTRL_REG_AXIPV_DBG_SEL_SHIFT                             21
@@ -131,16 +131,16 @@
 #define    AXIPV_CTRL_REG_AXI_ID_SYS_MASK                                 0x00000800
 #define    AXIPV_CTRL_REG_NUM_OUTSTDG_XFERS_SHIFT                         9
 #define    AXIPV_CTRL_REG_NUM_OUTSTDG_XFERS_MASK                          0x00000600
-#define    AXIPV_CTRL_REG_AXIPV_CTRL_UNUSED_1_SHIFT                       8
-#define    AXIPV_CTRL_REG_AXIPV_CTRL_UNUSED_1_MASK                        0x00000100
+#define    AXIPV_CTRL_REG_RES_REG_CTRL_8_SHIFT                            8
+#define    AXIPV_CTRL_REG_RES_REG_CTRL_8_MASK                             0x00000100
 #define    AXIPV_CTRL_REG_PIXEL_FORMAT_SHIFT                              5
 #define    AXIPV_CTRL_REG_PIXEL_FORMAT_MASK                               0x000000E0
 #define    AXIPV_CTRL_REG_AXIPV_ACTIVE_SHIFT                              4
 #define    AXIPV_CTRL_REG_AXIPV_ACTIVE_MASK                               0x00000010
 #define    AXIPV_CTRL_REG_AXIPV_MODE_SHIFT                                3
 #define    AXIPV_CTRL_REG_AXIPV_MODE_MASK                                 0x00000008
-#define    AXIPV_CTRL_REG_AXIPV_CTRL_UNUSED_0_SHIFT                       2
-#define    AXIPV_CTRL_REG_AXIPV_CTRL_UNUSED_0_MASK                        0x00000004
+#define    AXIPV_CTRL_REG_SINGLE_SHOT_FRAME_SHIFT                         2
+#define    AXIPV_CTRL_REG_SINGLE_SHOT_FRAME_MASK                          0x00000004
 #define    AXIPV_CTRL_REG_SFT_RSTN_SHIFT                                  1
 #define    AXIPV_CTRL_REG_SFT_RSTN_MASK                                   0x00000002
 #define    AXIPV_CTRL_REG_AXIPV_EN_SHIFT                                  0
@@ -157,8 +157,12 @@
 #define AXIPV_INTR_EN_REG_OFFSET                                          0x00000034
 #define AXIPV_INTR_EN_REG_TYPE                                            UInt32
 #define AXIPV_INTR_EN_REG_RESERVED_MASK                                   0x00000000
-#define    AXIPV_INTR_EN_REG_AXIPV_INTR_EN_UNUSED_SHIFT                   7
-#define    AXIPV_INTR_EN_REG_AXIPV_INTR_EN_UNUSED_MASK                    0xFFFFFF80
+#define    AXIPV_INTR_EN_REG_AXIPV_INTR_EN_UNUSED_SHIFT                   9
+#define    AXIPV_INTR_EN_REG_AXIPV_INTR_EN_UNUSED_MASK                    0xFFFFFE00
+#define    AXIPV_INTR_EN_REG_LB_ALMOST_EMPTY_INT_EN_SHIFT                 8
+#define    AXIPV_INTR_EN_REG_LB_ALMOST_EMPTY_INT_EN_MASK                  0x00000100
+#define    AXIPV_INTR_EN_REG_PV_START_THRESH_INT_EN_SHIFT                 7
+#define    AXIPV_INTR_EN_REG_PV_START_THRESH_INT_EN_MASK                  0x00000080
 #define    AXIPV_INTR_EN_REG_AXIPV_DISABLED_EN_SHIFT                      6
 #define    AXIPV_INTR_EN_REG_AXIPV_DISABLED_EN_MASK                       0x00000040
 #define    AXIPV_INTR_EN_REG_FRAME_END_EN_SHIFT                           5
@@ -177,8 +181,12 @@
 #define AXIPV_INTR_STAT_REG_OFFSET                                        0x00000038
 #define AXIPV_INTR_STAT_REG_TYPE                                          UInt32
 #define AXIPV_INTR_STAT_REG_RESERVED_MASK                                 0x00000000
-#define    AXIPV_INTR_STAT_REG_AXIPV_INTR_STAT_UNUSED_SHIFT               7
-#define    AXIPV_INTR_STAT_REG_AXIPV_INTR_STAT_UNUSED_MASK                0xFFFFFF80
+#define    AXIPV_INTR_STAT_REG_AXIPV_INTR_STAT_UNUSED_SHIFT               9
+#define    AXIPV_INTR_STAT_REG_AXIPV_INTR_STAT_UNUSED_MASK                0xFFFFFE00
+#define    AXIPV_INTR_STAT_REG_LB_ALMOST_EMPTY_INT_SHIFT                  8
+#define    AXIPV_INTR_STAT_REG_LB_ALMOST_EMPTY_INT_MASK                   0x00000100
+#define    AXIPV_INTR_STAT_REG_PV_START_THRESH_INT_SHIFT                  7
+#define    AXIPV_INTR_STAT_REG_PV_START_THRESH_INT_MASK                   0x00000080
 #define    AXIPV_INTR_STAT_REG_AXIPV_DISABLED_SHIFT                       6
 #define    AXIPV_INTR_STAT_REG_AXIPV_DISABLED_MASK                        0x00000040
 #define    AXIPV_INTR_STAT_REG_FRAME_END_SHIFT                            5
@@ -197,8 +205,12 @@
 #define AXIPV_INTR_CLR_REG_OFFSET                                         0x0000003C
 #define AXIPV_INTR_CLR_REG_TYPE                                           UInt32
 #define AXIPV_INTR_CLR_REG_RESERVED_MASK                                  0x00000000
-#define    AXIPV_INTR_CLR_REG_AXIPV_INTR_CLR_UNUSED_SHIFT                 7
-#define    AXIPV_INTR_CLR_REG_AXIPV_INTR_CLR_UNUSED_MASK                  0xFFFFFF80
+#define    AXIPV_INTR_CLR_REG_AXIPV_INTR_CLR_UNUSED_SHIFT                 9
+#define    AXIPV_INTR_CLR_REG_AXIPV_INTR_CLR_UNUSED_MASK                  0xFFFFFE00
+#define    AXIPV_INTR_CLR_REG_LB_ALMOST_EMPTY_INT_CLR_SHIFT               8
+#define    AXIPV_INTR_CLR_REG_LB_ALMOST_EMPTY_INT_CLR_MASK                0x00000100
+#define    AXIPV_INTR_CLR_REG_PV_START_THRESH_INT_CLR_SHIFT               7
+#define    AXIPV_INTR_CLR_REG_PV_START_THRESH_INT_CLR_MASK                0x00000080
 #define    AXIPV_INTR_CLR_REG_AXIPV_DISABLED_CLR_SHIFT                    6
 #define    AXIPV_INTR_CLR_REG_AXIPV_DISABLED_CLR_MASK                     0x00000040
 #define    AXIPV_INTR_CLR_REG_FRAME_END_CLR_SHIFT                         5
@@ -271,6 +283,18 @@
 #define AXIPV_LINE_BUFF_DATA_L_RESERVED_MASK                              0x00000000
 #define    AXIPV_LINE_BUFF_DATA_L_LINE_BUFF_DATA_L_SHIFT                  0
 #define    AXIPV_LINE_BUFF_DATA_L_LINE_BUFF_DATA_L_MASK                   0xFFFFFFFF
+
+#define AXIPV_RES_REG_1_OFFSET                                            0x00000060
+#define AXIPV_RES_REG_1_TYPE                                              UInt32
+#define AXIPV_RES_REG_1_RESERVED_MASK                                     0x00000000
+#define    AXIPV_RES_REG_1_RES_REG_1_SHIFT                                0
+#define    AXIPV_RES_REG_1_RES_REG_1_MASK                                 0xFFFFFFFF
+
+#define AXIPV_RES_REG_2_OFFSET                                            0x00000064
+#define AXIPV_RES_REG_2_TYPE                                              UInt32
+#define AXIPV_RES_REG_2_RESERVED_MASK                                     0x00000000
+#define    AXIPV_RES_REG_2_RES_REG_2_SHIFT                                0
+#define    AXIPV_RES_REG_2_RES_REG_2_MASK                                 0xFFFFFFFF
 
 #endif /* __BRCM_RDB_AXIPV_H__ */
 

@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -514,9 +514,9 @@
 
 #define A9PTM_ITMISCIN_OFFSET                                             0x00000EE0
 #define A9PTM_ITMISCIN_TYPE                                               UInt32
-#define A9PTM_ITMISCIN_RESERVED_MASK                                      0xFFFFFFA0
-#define    A9PTM_ITMISCIN_STANDBYWFI_SHIFT                                6
-#define    A9PTM_ITMISCIN_STANDBYWFI_MASK                                 0x00000040
+#define A9PTM_ITMISCIN_RESERVED_MASK                                      0xFFFFFFC0
+#define    A9PTM_ITMISCIN_STANDBYWFI_SHIFT                                5
+#define    A9PTM_ITMISCIN_STANDBYWFI_MASK                                 0x00000020
 #define    A9PTM_ITMISCIN_DBGACK_SHIFT                                    4
 #define    A9PTM_ITMISCIN_DBGACK_MASK                                     0x00000010
 #define    A9PTM_ITMISCIN_PTMEXTIN_SHIFT                                  0

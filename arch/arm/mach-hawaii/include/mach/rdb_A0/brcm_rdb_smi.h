@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -30,7 +30,7 @@
 
 #define SMI_CS_OFFSET                                                     0x00000000
 #define SMI_CS_TYPE                                                       UInt32
-#define SMI_CS_RESERVED_MASK                                              0x00FF0000
+#define SMI_CS_RESERVED_MASK                                              0x00FE0000
 #define    SMI_CS_RXF_SHIFT                                               31
 #define    SMI_CS_RXF_MASK                                                0x80000000
 #define    SMI_CS_TXE_SHIFT                                               30
@@ -47,6 +47,8 @@
 #define    SMI_CS_AFERR_MASK                                              0x02000000
 #define    SMI_CS_PRDY_SHIFT                                              24
 #define    SMI_CS_PRDY_MASK                                               0x01000000
+#define    SMI_CS_FIFO_ADR_SEL_SHIFT                                      16
+#define    SMI_CS_FIFO_ADR_SEL_MASK                                       0x00010000
 #define    SMI_CS_EDREQ_SHIFT                                             15
 #define    SMI_CS_EDREQ_MASK                                              0x00008000
 #define    SMI_CS_PXLDAT_SHIFT                                            14
@@ -323,6 +325,12 @@
 #define    SMI_FD_FLVL_MASK                                               0x00003F00
 #define    SMI_FD_FCNT_SHIFT                                              0
 #define    SMI_FD_FCNT_MASK                                               0x0000003F
+
+#define SMI_AD_OFFSET                                                     0x00000060
+#define SMI_AD_TYPE                                                       UInt32
+#define SMI_AD_RESERVED_MASK                                              0x00000000
+#define    SMI_AD_D_SHIFT                                                 0
+#define    SMI_AD_D_MASK                                                  0xFFFFFFFF
 
 #endif /* __BRCM_RDB_SMI_H__ */
 

@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -149,8 +149,8 @@
 #define MODEM_CFG_AND_CORE_CLKS_CHIPVERSION_RESERVED_MASK                 0xFFFFFF00
 #define    MODEM_CFG_AND_CORE_CLKS_CHIPVERSION_CHIPVERSIONHIGH_RH_A_SHIFT 4
 #define    MODEM_CFG_AND_CORE_CLKS_CHIPVERSION_CHIPVERSIONHIGH_RH_A_MASK  0x000000F0
-#define    MODEM_CFG_AND_CORE_CLKS_CHIPVERSION_CHIPVERSIONLOW_RH_5_SHIFT  0
-#define    MODEM_CFG_AND_CORE_CLKS_CHIPVERSION_CHIPVERSIONLOW_RH_5_MASK   0x0000000F
+#define    MODEM_CFG_AND_CORE_CLKS_CHIPVERSION_CHIPVERSIONLOW_RH_0_SHIFT  0
+#define    MODEM_CFG_AND_CORE_CLKS_CHIPVERSION_CHIPVERSIONLOW_RH_0_MASK   0x0000000F
 
 #endif /* __BRCM_RDB_MODEM_CFG_AND_CORE_CLKS_H__ */
 

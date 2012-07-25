@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     :    Generated on 4/25/2012 23:31:7                                            */
+/*     Date     :    Generated on 7/19/2012 6:24:14                                            */
 /*     RDB file : //HAWAII/                                                                    */
 /************************************************************************************************/
 
@@ -145,7 +145,6 @@
 #include "brcm_rdb_spum_axi.h"
 #include "brcm_rdb_srcmixer.h"
 #include "brcm_rdb_sspil.h"
-#include "brcm_rdb_sspil_slv.h"
 #include "brcm_rdb_swstm.h"
 #include "brcm_rdb_syssw.h"
 #include "brcm_rdb_te.h"

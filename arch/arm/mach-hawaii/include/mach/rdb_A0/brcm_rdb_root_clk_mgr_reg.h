@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -698,6 +698,18 @@
 #define    ROOT_CLK_MGR_REG_PLL1_OFFSET_PLL1_OFFSET_MODE_MASK             0x10000000
 #define    ROOT_CLK_MGR_REG_PLL1_OFFSET_PLL1_NDIV_FRAC_OFFSET_SHIFT       0
 #define    ROOT_CLK_MGR_REG_PLL1_OFFSET_PLL1_NDIV_FRAC_OFFSET_MASK        0x000FFFFF
+
+#define ROOT_CLK_MGR_REG_PLL0_OFFSET_OFFSET                               0x00000C58
+#define ROOT_CLK_MGR_REG_PLL0_OFFSET_TYPE                                 UInt32
+#define ROOT_CLK_MGR_REG_PLL0_OFFSET_RESERVED_MASK                        0x4FF00000
+#define    ROOT_CLK_MGR_REG_PLL0_OFFSET_PRIV_ACCESS_MODE_SHIFT            31
+#define    ROOT_CLK_MGR_REG_PLL0_OFFSET_PRIV_ACCESS_MODE_MASK             0x80000000
+#define    ROOT_CLK_MGR_REG_PLL0_OFFSET_PLL0_OFFSET_SW_CTL_SHIFT          29
+#define    ROOT_CLK_MGR_REG_PLL0_OFFSET_PLL0_OFFSET_SW_CTL_MASK           0x20000000
+#define    ROOT_CLK_MGR_REG_PLL0_OFFSET_PLL0_OFFSET_MODE_SHIFT            28
+#define    ROOT_CLK_MGR_REG_PLL0_OFFSET_PLL0_OFFSET_MODE_MASK             0x10000000
+#define    ROOT_CLK_MGR_REG_PLL0_OFFSET_PLL0_NDIV_FRAC_OFFSET_SHIFT       0
+#define    ROOT_CLK_MGR_REG_PLL0_OFFSET_PLL0_NDIV_FRAC_OFFSET_MASK        0x000FFFFF
 
 #define ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET                                0x00000C60
 #define ROOT_CLK_MGR_REG_CRYSTALCTL_TYPE                                  UInt32

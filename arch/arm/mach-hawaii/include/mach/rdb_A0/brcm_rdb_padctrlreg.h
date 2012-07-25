@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -1066,29 +1066,7 @@
 #define    PADCTRLREG_GPS_HOSTREQ_SEL_0_GPS_HOSTREQ_SHIFT                 0
 #define    PADCTRLREG_GPS_HOSTREQ_SEL_0_GPS_HOSTREQ_MASK                  0x00000001
 
-#define PADCTRLREG_GPS_TMARK_OFFSET                                       0x000000C4
-#define PADCTRLREG_GPS_TMARK_TYPE                                         UInt32
-#define PADCTRLREG_GPS_TMARK_RESERVED_MASK                                0xFFFFF800
-#define    PADCTRLREG_GPS_TMARK_PINSEL_GPS_TMARK_SHIFT                    8
-#define    PADCTRLREG_GPS_TMARK_PINSEL_GPS_TMARK_MASK                     0x00000700
-#define    PADCTRLREG_GPS_TMARK_HYS_EN_GPS_TMARK_SHIFT                    7
-#define    PADCTRLREG_GPS_TMARK_HYS_EN_GPS_TMARK_MASK                     0x00000080
-#define    PADCTRLREG_GPS_TMARK_PDN_GPS_TMARK_SHIFT                       6
-#define    PADCTRLREG_GPS_TMARK_PDN_GPS_TMARK_MASK                        0x00000040
-#define    PADCTRLREG_GPS_TMARK_PUP_GPS_TMARK_SHIFT                       5
-#define    PADCTRLREG_GPS_TMARK_PUP_GPS_TMARK_MASK                        0x00000020
-#define    PADCTRLREG_GPS_TMARK_SRC_GPS_TMARK_SHIFT                       4
-#define    PADCTRLREG_GPS_TMARK_SRC_GPS_TMARK_MASK                        0x00000010
-#define    PADCTRLREG_GPS_TMARK_IND_GPS_TMARK_SHIFT                       3
-#define    PADCTRLREG_GPS_TMARK_IND_GPS_TMARK_MASK                        0x00000008
-#define    PADCTRLREG_GPS_TMARK_SEL_2_GPS_TMARK_SHIFT                     2
-#define    PADCTRLREG_GPS_TMARK_SEL_2_GPS_TMARK_MASK                      0x00000004
-#define    PADCTRLREG_GPS_TMARK_SEL_1_GPS_TMARK_SHIFT                     1
-#define    PADCTRLREG_GPS_TMARK_SEL_1_GPS_TMARK_MASK                      0x00000002
-#define    PADCTRLREG_GPS_TMARK_SEL_0_GPS_TMARK_SHIFT                     0
-#define    PADCTRLREG_GPS_TMARK_SEL_0_GPS_TMARK_MASK                      0x00000001
-
-#define PADCTRLREG_GPS_PABLANK_OFFSET                                     0x000000C8
+#define PADCTRLREG_GPS_PABLANK_OFFSET                                     0x000000C4
 #define PADCTRLREG_GPS_PABLANK_TYPE                                       UInt32
 #define PADCTRLREG_GPS_PABLANK_RESERVED_MASK                              0xFFFFF800
 #define    PADCTRLREG_GPS_PABLANK_PINSEL_GPS_PABLANK_SHIFT                8
@@ -1109,6 +1087,28 @@
 #define    PADCTRLREG_GPS_PABLANK_SEL_1_GPS_PABLANK_MASK                  0x00000002
 #define    PADCTRLREG_GPS_PABLANK_SEL_0_GPS_PABLANK_SHIFT                 0
 #define    PADCTRLREG_GPS_PABLANK_SEL_0_GPS_PABLANK_MASK                  0x00000001
+
+#define PADCTRLREG_GPS_TMARK_OFFSET                                       0x000000C8
+#define PADCTRLREG_GPS_TMARK_TYPE                                         UInt32
+#define PADCTRLREG_GPS_TMARK_RESERVED_MASK                                0xFFFFF800
+#define    PADCTRLREG_GPS_TMARK_PINSEL_GPS_TMARK_SHIFT                    8
+#define    PADCTRLREG_GPS_TMARK_PINSEL_GPS_TMARK_MASK                     0x00000700
+#define    PADCTRLREG_GPS_TMARK_HYS_EN_GPS_TMARK_SHIFT                    7
+#define    PADCTRLREG_GPS_TMARK_HYS_EN_GPS_TMARK_MASK                     0x00000080
+#define    PADCTRLREG_GPS_TMARK_PDN_GPS_TMARK_SHIFT                       6
+#define    PADCTRLREG_GPS_TMARK_PDN_GPS_TMARK_MASK                        0x00000040
+#define    PADCTRLREG_GPS_TMARK_PUP_GPS_TMARK_SHIFT                       5
+#define    PADCTRLREG_GPS_TMARK_PUP_GPS_TMARK_MASK                        0x00000020
+#define    PADCTRLREG_GPS_TMARK_SRC_GPS_TMARK_SHIFT                       4
+#define    PADCTRLREG_GPS_TMARK_SRC_GPS_TMARK_MASK                        0x00000010
+#define    PADCTRLREG_GPS_TMARK_IND_GPS_TMARK_SHIFT                       3
+#define    PADCTRLREG_GPS_TMARK_IND_GPS_TMARK_MASK                        0x00000008
+#define    PADCTRLREG_GPS_TMARK_SEL_2_GPS_TMARK_SHIFT                     2
+#define    PADCTRLREG_GPS_TMARK_SEL_2_GPS_TMARK_MASK                      0x00000004
+#define    PADCTRLREG_GPS_TMARK_SEL_1_GPS_TMARK_SHIFT                     1
+#define    PADCTRLREG_GPS_TMARK_SEL_1_GPS_TMARK_MASK                      0x00000002
+#define    PADCTRLREG_GPS_TMARK_SEL_0_GPS_TMARK_SHIFT                     0
+#define    PADCTRLREG_GPS_TMARK_SEL_0_GPS_TMARK_MASK                      0x00000001
 
 #define PADCTRLREG_ICUSBDM_OFFSET                                         0x000000CC
 #define PADCTRLREG_ICUSBDM_TYPE                                           UInt32
@@ -3344,9 +3344,9 @@
 
 #define PADCTRLREG_ACCESS_LOCK4_OFFSET                                    0x00000790
 #define PADCTRLREG_ACCESS_LOCK4_TYPE                                      UInt32
-#define PADCTRLREG_ACCESS_LOCK4_RESERVED_MASK                             0xFFF80000
+#define PADCTRLREG_ACCESS_LOCK4_RESERVED_MASK                             0xF8000000
 #define    PADCTRLREG_ACCESS_LOCK4_ACCESS_LOCK_SHIFT                      0
-#define    PADCTRLREG_ACCESS_LOCK4_ACCESS_LOCK_MASK                       0x0007FFFF
+#define    PADCTRLREG_ACCESS_LOCK4_ACCESS_LOCK_MASK                       0x07FFFFFF
 
 #define PADCTRLREG_WR_ACCESS_OFFSET                                       0x000007F0
 #define PADCTRLREG_WR_ACCESS_TYPE                                         UInt32

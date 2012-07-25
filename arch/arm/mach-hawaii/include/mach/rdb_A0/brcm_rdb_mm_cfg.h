@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -284,7 +284,7 @@
 
 #define MM_CFG_DSI0_PRBS_CTRL_OFFSET                                      0x00000020
 #define MM_CFG_DSI0_PRBS_CTRL_TYPE                                        UInt32
-#define MM_CFG_DSI0_PRBS_CTRL_RESERVED_MASK                               0x0C00C000
+#define MM_CFG_DSI0_PRBS_CTRL_RESERVED_MASK                               0x0000C000
 #define    MM_CFG_DSI0_PRBS_CTRL_ISP_ECO_BYPASS_SHIFT                     31
 #define    MM_CFG_DSI0_PRBS_CTRL_ISP_ECO_BYPASS_MASK                      0x80000000
 #define    MM_CFG_DSI0_PRBS_CTRL_SMI_ECO_BYPASS_SHIFT                     30
@@ -293,6 +293,10 @@
 #define    MM_CFG_DSI0_PRBS_CTRL_VCE_ECO_BYPASS_MASK                      0x20000000
 #define    MM_CFG_DSI0_PRBS_CTRL_DSI_ECO_BYPASS_SHIFT                     28
 #define    MM_CFG_DSI0_PRBS_CTRL_DSI_ECO_BYPASS_MASK                      0x10000000
+#define    MM_CFG_DSI0_PRBS_CTRL_SMI_24BIT_ENABLE_SHIFT                   27
+#define    MM_CFG_DSI0_PRBS_CTRL_SMI_24BIT_ENABLE_MASK                    0x08000000
+#define    MM_CFG_DSI0_PRBS_CTRL_DMA_16BEAT_ENABLE_SHIFT                  26
+#define    MM_CFG_DSI0_PRBS_CTRL_DMA_16BEAT_ENABLE_MASK                   0x04000000
 #define    MM_CFG_DSI0_PRBS_CTRL_PM_INV_SHIFT                             25
 #define    MM_CFG_DSI0_PRBS_CTRL_PM_INV_MASK                              0x02000000
 #define    MM_CFG_DSI0_PRBS_CTRL_DSI_CONST_REG_EN_SHIFT                   24
@@ -613,6 +617,22 @@
 #define    MM_CFG_DSI0_LN3_PRBS_ST_PRBS_STKY_MASK                         0x00000002
 #define    MM_CFG_DSI0_LN3_PRBS_ST_PRBS_LOCK_SHIFT                        0
 #define    MM_CFG_DSI0_LN3_PRBS_ST_PRBS_LOCK_MASK                         0x00000001
+
+#define MM_CFG_MM_QOS_EN_OFFSET                                           0x00000060
+#define MM_CFG_MM_QOS_EN_TYPE                                             UInt32
+#define MM_CFG_MM_QOS_EN_RESERVED_MASK                                    0xFFFFFF7E
+#define    MM_CFG_MM_QOS_EN_ENABLE_AXIPV_QOS_SHIFT                        7
+#define    MM_CFG_MM_QOS_EN_ENABLE_AXIPV_QOS_MASK                         0x00000080
+#define    MM_CFG_MM_QOS_EN_ENABLE_CSI_QOS_SHIFT                          0
+#define    MM_CFG_MM_QOS_EN_ENABLE_CSI_QOS_MASK                           0x00000001
+
+#define MM_CFG_MM_QOS_CSI_COUNT_OFFSET                                    0x00000064
+#define MM_CFG_MM_QOS_CSI_COUNT_TYPE                                      UInt32
+#define MM_CFG_MM_QOS_CSI_COUNT_RESERVED_MASK                             0x00000000
+#define    MM_CFG_MM_QOS_CSI_COUNT_CSI_POST_COUNT_REG_SHIFT               16
+#define    MM_CFG_MM_QOS_CSI_COUNT_CSI_POST_COUNT_REG_MASK                0xFFFF0000
+#define    MM_CFG_MM_QOS_CSI_COUNT_CSI_THRESH_COUNT_REG_SHIFT             0
+#define    MM_CFG_MM_QOS_CSI_COUNT_CSI_THRESH_COUNT_REG_MASK              0x0000FFFF
 
 #endif /* __BRCM_RDB_MM_CFG_H__ */
 

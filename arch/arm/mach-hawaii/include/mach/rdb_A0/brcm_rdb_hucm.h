@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 2/10/2012 15:44:22                                             */
-/*     RDB file : //RHEA/                                                                   */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_HUCM_H__
@@ -80,9 +80,9 @@
 
 #define HUCM_CM_DEST_OFFSET                                               0x00000018
 #define HUCM_CM_DEST_TYPE                                                 UInt32
-#define HUCM_CM_DEST_RESERVED_MASK                                        0xFFFFF000
+#define HUCM_CM_DEST_RESERVED_MASK                                        0xFFFFE000
 #define    HUCM_CM_DEST_CM_HARQ_ADDR_SHIFT                                0
-#define    HUCM_CM_DEST_CM_HARQ_ADDR_MASK                                 0x00000FFF
+#define    HUCM_CM_DEST_CM_HARQ_ADDR_MASK                                 0x00001FFF
 
 #define HUCM_CM_DDI_OFFSET                                                0x0000001C
 #define HUCM_CM_DDI_TYPE                                                  UInt32
@@ -118,9 +118,9 @@
 
 #define HUCM_CM_ERNTI_OFFSET                                              0x00000030
 #define HUCM_CM_ERNTI_TYPE                                                UInt32
-#define HUCM_CM_ERNTI_RESERVED_MASK                                       0xFFFF0000
+#define HUCM_CM_ERNTI_RESERVED_MASK                                       0x00000000
 #define    HUCM_CM_ERNTI_CM_ERNTI_SHIFT                                   0
-#define    HUCM_CM_ERNTI_CM_ERNTI_MASK                                    0x0000FFFF
+#define    HUCM_CM_ERNTI_CM_ERNTI_MASK                                    0xFFFFFFFF
 
 #endif /* __BRCM_RDB_HUCM_H__ */
 

@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -51,26 +51,6 @@
 #define    MMMMU_OPEN_IMR_PERFCOUNT1_OVERFLOW_MASK                        0x00000002
 #define    MMMMU_OPEN_IMR_EXFIFO_NOT_EMPTY_SHIFT                          0
 #define    MMMMU_OPEN_IMR_EXFIFO_NOT_EMPTY_MASK                           0x00000001
-
-#define MMMMU_OPEN_VPUISR_OFFSET                                          0x00000018
-#define MMMMU_OPEN_VPUISR_TYPE                                            UInt32
-#define MMMMU_OPEN_VPUISR_RESERVED_MASK                                   0xFFFFFFF8
-#define    MMMMU_OPEN_VPUISR_PERFCOUNT2_OVERFLOW_SHIFT                    2
-#define    MMMMU_OPEN_VPUISR_PERFCOUNT2_OVERFLOW_MASK                     0x00000004
-#define    MMMMU_OPEN_VPUISR_PERFCOUNT1_OVERFLOW_SHIFT                    1
-#define    MMMMU_OPEN_VPUISR_PERFCOUNT1_OVERFLOW_MASK                     0x00000002
-#define    MMMMU_OPEN_VPUISR_EXFIFO_NOT_EMPTY_SHIFT                       0
-#define    MMMMU_OPEN_VPUISR_EXFIFO_NOT_EMPTY_MASK                        0x00000001
-
-#define MMMMU_OPEN_VPUIMR_OFFSET                                          0x0000001C
-#define MMMMU_OPEN_VPUIMR_TYPE                                            UInt32
-#define MMMMU_OPEN_VPUIMR_RESERVED_MASK                                   0xFFFFFFF8
-#define    MMMMU_OPEN_VPUIMR_PERFCOUNT2_OVERFLOW_SHIFT                    2
-#define    MMMMU_OPEN_VPUIMR_PERFCOUNT2_OVERFLOW_MASK                     0x00000004
-#define    MMMMU_OPEN_VPUIMR_PERFCOUNT1_OVERFLOW_SHIFT                    1
-#define    MMMMU_OPEN_VPUIMR_PERFCOUNT1_OVERFLOW_MASK                     0x00000002
-#define    MMMMU_OPEN_VPUIMR_EXFIFO_NOT_EMPTY_SHIFT                       0
-#define    MMMMU_OPEN_VPUIMR_EXFIFO_NOT_EMPTY_MASK                        0x00000001
 
 #define MMMMU_OPEN_TBR_OFFSET                                             0x00000020
 #define MMMMU_OPEN_TBR_TYPE                                               UInt32
@@ -119,12 +99,12 @@
 #define MMMMU_OPEN_XFIFO_RESERVED_MASK                                    0x00000000
 #define    MMMMU_OPEN_XFIFO_ADDRESS_SHIFT                                 12
 #define    MMMMU_OPEN_XFIFO_ADDRESS_MASK                                  0xFFFFF000
-#define    MMMMU_OPEN_XFIFO_ID_SHIFT                                      4
-#define    MMMMU_OPEN_XFIFO_ID_MASK                                       0x00000FF0
-#define    MMMMU_OPEN_XFIFO_RW_SHIFT                                      3
-#define    MMMMU_OPEN_XFIFO_RW_MASK                                       0x00000008
+#define    MMMMU_OPEN_XFIFO_ID_SHIFT                                      6
+#define    MMMMU_OPEN_XFIFO_ID_MASK                                       0x00000FC0
+#define    MMMMU_OPEN_XFIFO_RW_SHIFT                                      5
+#define    MMMMU_OPEN_XFIFO_RW_MASK                                       0x00000020
 #define    MMMMU_OPEN_XFIFO_REASON_SHIFT                                  2
-#define    MMMMU_OPEN_XFIFO_REASON_MASK                                   0x00000004
+#define    MMMMU_OPEN_XFIFO_REASON_MASK                                   0x0000001C
 #define    MMMMU_OPEN_XFIFO_OVFL_SHIFT                                    1
 #define    MMMMU_OPEN_XFIFO_OVFL_MASK                                     0x00000002
 #define    MMMMU_OPEN_XFIFO_VALID_SHIFT                                   0
@@ -132,9 +112,27 @@
 
 #define MMMMU_OPEN_PCCR_OFFSET                                            0x00000060
 #define MMMMU_OPEN_PCCR_TYPE                                              UInt32
-#define MMMMU_OPEN_PCCR_RESERVED_MASK                                     0x00000000
-#define    MMMMU_OPEN_PCCR_TBD_SHIFT                                      0
-#define    MMMMU_OPEN_PCCR_TBD_MASK                                       0xFFFFFFFF
+#define MMMMU_OPEN_PCCR_RESERVED_MASK                                     0x00400040
+#define    MMMMU_OPEN_PCCR_ID2_SHIFT                                      24
+#define    MMMMU_OPEN_PCCR_ID2_MASK                                       0xFF000000
+#define    MMMMU_OPEN_PCCR_IDEN2_SHIFT                                    23
+#define    MMMMU_OPEN_PCCR_IDEN2_MASK                                     0x00800000
+#define    MMMMU_OPEN_PCCR_ACL2_SHIFT                                     20
+#define    MMMMU_OPEN_PCCR_ACL2_MASK                                      0x00300000
+#define    MMMMU_OPEN_PCCR_ACLEN2_SHIFT                                   19
+#define    MMMMU_OPEN_PCCR_ACLEN2_MASK                                    0x00080000
+#define    MMMMU_OPEN_PCCR_MODE2_SHIFT                                    16
+#define    MMMMU_OPEN_PCCR_MODE2_MASK                                     0x00070000
+#define    MMMMU_OPEN_PCCR_ID1_SHIFT                                      8
+#define    MMMMU_OPEN_PCCR_ID1_MASK                                       0x0000FF00
+#define    MMMMU_OPEN_PCCR_IDEN1_SHIFT                                    7
+#define    MMMMU_OPEN_PCCR_IDEN1_MASK                                     0x00000080
+#define    MMMMU_OPEN_PCCR_ACL1_SHIFT                                     4
+#define    MMMMU_OPEN_PCCR_ACL1_MASK                                      0x00000030
+#define    MMMMU_OPEN_PCCR_ACLEN1_SHIFT                                   3
+#define    MMMMU_OPEN_PCCR_ACLEN1_MASK                                    0x00000008
+#define    MMMMU_OPEN_PCCR_MODE1_SHIFT                                    0
+#define    MMMMU_OPEN_PCCR_MODE1_MASK                                     0x00000007
 
 #define MMMMU_OPEN_PCR1_OFFSET                                            0x00000068
 #define MMMMU_OPEN_PCR1_TYPE                                              UInt32

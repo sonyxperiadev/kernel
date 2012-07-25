@@ -22,7 +22,7 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /*                                                                                              */
-/*     Date     : Generated on 04/25/2012 23:31:07                                   */
+/*     Date     : Generated on 07/19/2012 06:24:14                                   */
 /*     RDB file : //HAWAII/                                                                    */
 /************************************************************************************************/
 
@@ -310,8 +310,8 @@
 #define UARTB_BASE_ADDR           0x3E000000 /* brcm_rdb_uartb.h */
 #define UARTB2_BASE_ADDR          0x3E001000 /* brcm_rdb_uartb.h */
 #define UARTB3_BASE_ADDR          0x3E002000 /* brcm_rdb_uartb.h */
-#define SSP0_BASE_ADDR            0x3E004000 /* brcm_rdb_sspil_slv.h */
-#define SSP1_BASE_ADDR            0x3E005000 /* brcm_rdb_sspil_slv.h */
+#define SSP0_BASE_ADDR            0x3E004000 /* brcm_rdb_sspil.h */
+#define SSP1_BASE_ADDR            0x3E005000 /* brcm_rdb_sspil.h */
 #define TIMER_BASE_ADDR           0x3E00D000 /* brcm_rdb_kona_gptimer.h */
 #define DMUX_BASE_ADDR            0x3E00E000 /* brcm_rdb_dmux.h */
 

@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -36,15 +36,15 @@
 
 #define ETB2AXI_RDPTR_OFFSET                                              0x00000004
 #define ETB2AXI_RDPTR_TYPE                                                UInt32
-#define ETB2AXI_RDPTR_RESERVED_MASK                                       0x0003FFFF
-#define    ETB2AXI_RDPTR_AXI_RDPTR_SHIFT                                  18
-#define    ETB2AXI_RDPTR_AXI_RDPTR_MASK                                   0xFFFC0000
+#define ETB2AXI_RDPTR_RESERVED_MASK                                       0x000FFFFF
+#define    ETB2AXI_RDPTR_AXI_RDPTR_SHIFT                                  20
+#define    ETB2AXI_RDPTR_AXI_RDPTR_MASK                                   0xFFF00000
 
 #define ETB2AXI_WRPTR_OFFSET                                              0x00000004
 #define ETB2AXI_WRPTR_TYPE                                                UInt32
-#define ETB2AXI_WRPTR_RESERVED_MASK                                       0x0003FFFF
-#define    ETB2AXI_WRPTR_AXI_WRPTR_SHIFT                                  18
-#define    ETB2AXI_WRPTR_AXI_WRPTR_MASK                                   0xFFFC0000
+#define ETB2AXI_WRPTR_RESERVED_MASK                                       0x000FFFFF
+#define    ETB2AXI_WRPTR_AXI_WRPTR_SHIFT                                  20
+#define    ETB2AXI_WRPTR_AXI_WRPTR_MASK                                   0xFFF00000
 
 #define ETB2AXI_STATUS_OFFSET                                             0x0000000C
 #define ETB2AXI_STATUS_TYPE                                               UInt32

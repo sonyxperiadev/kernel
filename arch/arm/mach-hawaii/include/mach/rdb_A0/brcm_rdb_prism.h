@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -484,9 +484,9 @@
 
 #define PRISM_PENDINGCMDSTAT_OFFSET                                       0x00000070
 #define PRISM_PENDINGCMDSTAT_TYPE                                         UInt32
-#define PRISM_PENDINGCMDSTAT_RESERVED_MASK                                0xF0000000
+#define PRISM_PENDINGCMDSTAT_RESERVED_MASK                                0xFC000000
 #define    PRISM_PENDINGCMDSTAT_PENDINGCMDSSTATUS_SHIFT                   0
-#define    PRISM_PENDINGCMDSTAT_PENDINGCMDSSTATUS_MASK                    0x0FFFFFFF
+#define    PRISM_PENDINGCMDSTAT_PENDINGCMDSSTATUS_MASK                    0x03FFFFFF
 
 #define PRISM_CELL0STATUS_OFFSET                                          0x00000074
 #define PRISM_CELL0STATUS_TYPE                                            UInt32
@@ -575,90 +575,6 @@
 #define    PRISM_OTHERSTATICCTL4_POST_HSDPA_OUTSCALE_TRUNC_MASK           0x000000F0
 #define    PRISM_OTHERSTATICCTL4_POST_HSDPA_OUTSCALE_EN_SHIFT             0
 #define    PRISM_OTHERSTATICCTL4_POST_HSDPA_OUTSCALE_EN_MASK              0x00000001
-
-#define PRISM_OTHERSTATICCTL5_OFFSET                                      0x00000098
-#define PRISM_OTHERSTATICCTL5_TYPE                                        UInt32
-#define PRISM_OTHERSTATICCTL5_RESERVED_MASK                               0xFFFFC000
-#define    PRISM_OTHERSTATICCTL5_PREPROC_COMPLETE_TIME_RB_00101011100110_SHIFT 0
-#define    PRISM_OTHERSTATICCTL5_PREPROC_COMPLETE_TIME_RB_00101011100110_MASK 0x00003FFF
-
-#define PRISM_OTHERSTATICCTL6_OFFSET                                      0x0000009C
-#define PRISM_OTHERSTATICCTL6_TYPE                                        UInt32
-#define PRISM_OTHERSTATICCTL6_RESERVED_MASK                               0xFFFFC000
-#define    PRISM_OTHERSTATICCTL6_DUMP_RESIDUEDATA_TIME_RB_10011101100000_SHIFT 0
-#define    PRISM_OTHERSTATICCTL6_DUMP_RESIDUEDATA_TIME_RB_10011101100000_MASK 0x00003FFF
-
-#define PRISM_OTHERSTATICCTL7_OFFSET                                      0x000000A0
-#define PRISM_OTHERSTATICCTL7_TYPE                                        UInt32
-#define PRISM_OTHERSTATICCTL7_RESERVED_MASK                               0xFFFFC000
-#define    PRISM_OTHERSTATICCTL7_FAILSAFE_TIME_RB_10100010100000_SHIFT    0
-#define    PRISM_OTHERSTATICCTL7_FAILSAFE_TIME_RB_10100010100000_MASK     0x00003FFF
-
-#define PRISM_OTHERCONFIG_OFFSET                                          0x000000A4
-#define PRISM_OTHERCONFIG_TYPE                                            UInt32
-#define PRISM_OTHERCONFIG_RESERVED_MASK                                   0x00FFFFF8
-#define    PRISM_OTHERCONFIG_OCUPDATESLOT_SHIFT                           28
-#define    PRISM_OTHERCONFIG_OCUPDATESLOT_MASK                            0xF0000000
-#define    PRISM_OTHERCONFIG_OCUPDATESYMBOL_SHIFT                         24
-#define    PRISM_OTHERCONFIG_OCUPDATESYMBOL_MASK                          0x0F000000
-#define    PRISM_OTHERCONFIG_EXTRAITERS_SHIFT                             0
-#define    PRISM_OTHERCONFIG_EXTRAITERS_MASK                              0x00000007
-
-#define PRISM_OVSFMASK0HSPA_OFFSET                                        0x000000A8
-#define PRISM_OVSFMASK0HSPA_TYPE                                          UInt32
-#define PRISM_OVSFMASK0HSPA_RESERVED_MASK                                 0x00000000
-#define    PRISM_OVSFMASK0HSPA_OVSFMASK0HSPA_SHIFT                        0
-#define    PRISM_OVSFMASK0HSPA_OVSFMASK0HSPA_MASK                         0xFFFFFFFF
-
-#define PRISM_OVSFMASK1HSPA_OFFSET                                        0x000000AC
-#define PRISM_OVSFMASK1HSPA_TYPE                                          UInt32
-#define PRISM_OVSFMASK1HSPA_RESERVED_MASK                                 0x00000000
-#define    PRISM_OVSFMASK1HSPA_OVSFMASK1HSPA_SHIFT                        0
-#define    PRISM_OVSFMASK1HSPA_OVSFMASK1HSPA_MASK                         0xFFFFFFFF
-
-#define PRISM_OVSFMASK2HSPA_OFFSET                                        0x000000B0
-#define PRISM_OVSFMASK2HSPA_TYPE                                          UInt32
-#define PRISM_OVSFMASK2HSPA_RESERVED_MASK                                 0x00000000
-#define    PRISM_OVSFMASK2HSPA_OVSFMASK2HSPA_SHIFT                        0
-#define    PRISM_OVSFMASK2HSPA_OVSFMASK2HSPA_MASK                         0xFFFFFFFF
-
-#define PRISM_OVSFMASK3HSPA_OFFSET                                        0x000000B4
-#define PRISM_OVSFMASK3HSPA_TYPE                                          UInt32
-#define PRISM_OVSFMASK3HSPA_RESERVED_MASK                                 0x00000000
-#define    PRISM_OVSFMASK3HSPA_OVSFMASK3HSPA_SHIFT                        0
-#define    PRISM_OVSFMASK3HSPA_OVSFMASK3HSPA_MASK                         0xFFFFFFFF
-
-#define PRISM_OVSFMASK4HSPA_OFFSET                                        0x000000B8
-#define PRISM_OVSFMASK4HSPA_TYPE                                          UInt32
-#define PRISM_OVSFMASK4HSPA_RESERVED_MASK                                 0x00000000
-#define    PRISM_OVSFMASK4HSPA_OVSFMASK4HSPA_SHIFT                        0
-#define    PRISM_OVSFMASK4HSPA_OVSFMASK4HSPA_MASK                         0xFFFFFFFF
-
-#define PRISM_OVSFMASK5HSPA_OFFSET                                        0x000000BC
-#define PRISM_OVSFMASK5HSPA_TYPE                                          UInt32
-#define PRISM_OVSFMASK5HSPA_RESERVED_MASK                                 0x00000000
-#define    PRISM_OVSFMASK5HSPA_OVSFMASK5HSPA_SHIFT                        0
-#define    PRISM_OVSFMASK5HSPA_OVSFMASK5HSPA_MASK                         0xFFFFFFFF
-
-#define PRISM_OVSFMASK6HSPA_OFFSET                                        0x000000C0
-#define PRISM_OVSFMASK6HSPA_TYPE                                          UInt32
-#define PRISM_OVSFMASK6HSPA_RESERVED_MASK                                 0x00000000
-#define    PRISM_OVSFMASK6HSPA_OVSFMASK6HSPA_SHIFT                        0
-#define    PRISM_OVSFMASK6HSPA_OVSFMASK6HSPA_MASK                         0xFFFFFFFF
-
-#define PRISM_OVSFMASK7HSPA_OFFSET                                        0x000000C4
-#define PRISM_OVSFMASK7HSPA_TYPE                                          UInt32
-#define PRISM_OVSFMASK7HSPA_RESERVED_MASK                                 0x00000000
-#define    PRISM_OVSFMASK7HSPA_OVSFMASK7HSPA_SHIFT                        0
-#define    PRISM_OVSFMASK7HSPA_OVSFMASK7HSPA_MASK                         0xFFFFFFFF
-
-#define PRISM_OVSFMASKHSPAUPDATETIME_OFFSET                               0x000000C8
-#define PRISM_OVSFMASKHSPAUPDATETIME_TYPE                                 UInt32
-#define PRISM_OVSFMASKHSPAUPDATETIME_RESERVED_MASK                        0x00FFFFFF
-#define    PRISM_OVSFMASKHSPAUPDATETIME_OVSFMASKHSPAUTSLOT_SHIFT          28
-#define    PRISM_OVSFMASKHSPAUPDATETIME_OVSFMASKHSPAUTSLOT_MASK           0xF0000000
-#define    PRISM_OVSFMASKHSPAUPDATETIME_OVSFMASKHSPAUTSYMBOL_SHIFT        24
-#define    PRISM_OVSFMASKHSPAUPDATETIME_OVSFMASKHSPAUTSYMBOL_MASK         0x0F000000
 
 #endif /* __BRCM_RDB_PRISM_H__ */
 

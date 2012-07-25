@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 2/10/2012 15:44:22                                             */
-/*     RDB file : //RHEA/                                                                   */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_TINY_FNG_CORE_TOP_H__
@@ -30,7 +30,7 @@
 
 #define TINY_FNG_CORE_TOP_CTRL_OFFSET                                     0x00000000
 #define TINY_FNG_CORE_TOP_CTRL_TYPE                                       UInt32
-#define TINY_FNG_CORE_TOP_CTRL_RESERVED_MASK                              0x0EEEEEEE
+#define TINY_FNG_CORE_TOP_CTRL_RESERVED_MASK                              0x0EEEEECE
 #define    TINY_FNG_CORE_TOP_CTRL_IIR_CLEAR_SHIFT                         31
 #define    TINY_FNG_CORE_TOP_CTRL_IIR_CLEAR_MASK                          0x80000000
 #define    TINY_FNG_CORE_TOP_CTRL_IIR_PROG_COEF_RB_001_SHIFT              28
@@ -45,6 +45,8 @@
 #define    TINY_FNG_CORE_TOP_CTRL_SW_CPI_STTD_MASK                        0x00001000
 #define    TINY_FNG_CORE_TOP_CTRL_CCPCH_SEL_SHIFT                         8
 #define    TINY_FNG_CORE_TOP_CTRL_CCPCH_SEL_MASK                          0x00000100
+#define    TINY_FNG_CORE_TOP_CTRL_IQ_MSTTIMERGATE_SHIFT                   5
+#define    TINY_FNG_CORE_TOP_CTRL_IQ_MSTTIMERGATE_MASK                    0x00000020
 #define    TINY_FNG_CORE_TOP_CTRL_SW_FNG_EN_SHIFT                         4
 #define    TINY_FNG_CORE_TOP_CTRL_SW_FNG_EN_MASK                          0x00000010
 #define    TINY_FNG_CORE_TOP_CTRL_FNG_PARA_LOAD_SHIFT                     0
@@ -204,13 +206,15 @@
 
 #define TINY_FNG_CORE_TOP_DLL_CTRL1_OFFSET                                0x00000050
 #define TINY_FNG_CORE_TOP_DLL_CTRL1_TYPE                                  UInt32
-#define TINY_FNG_CORE_TOP_DLL_CTRL1_RESERVED_MASK                         0xEE0EC00F
+#define TINY_FNG_CORE_TOP_DLL_CTRL1_RESERVED_MASK                         0xEE06C00F
 #define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_SW_RET_EN_SHIFT                28
 #define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_SW_RET_EN_MASK                 0x10000000
 #define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_SW_ADV_EN_SHIFT                24
 #define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_SW_ADV_EN_MASK                 0x01000000
 #define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_SW_CMD_NO_SHIFT                20
 #define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_SW_CMD_NO_MASK                 0x00F00000
+#define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_UNFREEZE_BIT_SHIFT             19
+#define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_UNFREEZE_BIT_MASK              0x00080000
 #define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_HW_FREEZE_SHIFT                16
 #define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_HW_FREEZE_MASK                 0x00010000
 #define    TINY_FNG_CORE_TOP_DLL_CTRL1_DLL_MASTER_SHIFT                   12
@@ -237,6 +241,14 @@
 #define TINY_FNG_CORE_TOP_DLL_PWR_DIFF_RESERVED_MASK                      0xFFFF0000
 #define    TINY_FNG_CORE_TOP_DLL_PWR_DIFF_DLL_PWR_DIFF_SHIFT              0
 #define    TINY_FNG_CORE_TOP_DLL_PWR_DIFF_DLL_PWR_DIFF_MASK               0x0000FFFF
+
+#define TINY_FNG_CORE_TOP_LPF_OFFSET                                      0x0000005C
+#define TINY_FNG_CORE_TOP_LPF_TYPE                                        UInt32
+#define TINY_FNG_CORE_TOP_LPF_RESERVED_MASK                               0xFFFFFFCE
+#define    TINY_FNG_CORE_TOP_LPF_LPF_DMCH_SEL_SHIFT                       4
+#define    TINY_FNG_CORE_TOP_LPF_LPF_DMCH_SEL_MASK                        0x00000030
+#define    TINY_FNG_CORE_TOP_LPF_SW_DM_ENA_SHIFT                          0
+#define    TINY_FNG_CORE_TOP_LPF_SW_DM_ENA_MASK                           0x00000001
 
 #endif /* __BRCM_RDB_TINY_FNG_CORE_TOP_H__ */
 

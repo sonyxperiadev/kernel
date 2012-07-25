@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -40,15 +40,11 @@
 
 #define KHUB_RST_MGR_REG_SOFT_RSTN0_OFFSET                                0x00000004
 #define KHUB_RST_MGR_REG_SOFT_RSTN0_TYPE                                  UInt32
-#define KHUB_RST_MGR_REG_SOFT_RSTN0_RESERVED_MASK                         0x71F007F0
+#define KHUB_RST_MGR_REG_SOFT_RSTN0_RESERVED_MASK                         0x7BF007F0
 #define    KHUB_RST_MGR_REG_SOFT_RSTN0_PRIV_ACCESS_MODE_SHIFT             31
 #define    KHUB_RST_MGR_REG_SOFT_RSTN0_PRIV_ACCESS_MODE_MASK              0x80000000
-#define    KHUB_RST_MGR_REG_SOFT_RSTN0_FINAL_FUNNEL_SOFT_RSTN_SHIFT       27
-#define    KHUB_RST_MGR_REG_SOFT_RSTN0_FINAL_FUNNEL_SOFT_RSTN_MASK        0x08000000
 #define    KHUB_RST_MGR_REG_SOFT_RSTN0_ETB_SOFT_RSTN_SHIFT                26
 #define    KHUB_RST_MGR_REG_SOFT_RSTN0_ETB_SOFT_RSTN_MASK                 0x04000000
-#define    KHUB_RST_MGR_REG_SOFT_RSTN0_HSI_SOFT_RSTN_SHIFT                25
-#define    KHUB_RST_MGR_REG_SOFT_RSTN0_HSI_SOFT_RSTN_MASK                 0x02000000
 #define    KHUB_RST_MGR_REG_SOFT_RSTN0_SEC_VIOL_TRAP_7_SOFT_RSTN_SHIFT    19
 #define    KHUB_RST_MGR_REG_SOFT_RSTN0_SEC_VIOL_TRAP_7_SOFT_RSTN_MASK     0x00080000
 #define    KHUB_RST_MGR_REG_SOFT_RSTN0_SEC_VIOL_TRAP_4_SOFT_RSTN_SHIFT    18
@@ -78,7 +74,7 @@
 
 #define KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET                                0x00000008
 #define KHUB_RST_MGR_REG_SOFT_RSTN1_TYPE                                  UInt32
-#define KHUB_RST_MGR_REG_SOFT_RSTN1_RESERVED_MASK                         0x7FF0060C
+#define KHUB_RST_MGR_REG_SOFT_RSTN1_RESERVED_MASK                         0x7FF0062C
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_PRIV_ACCESS_MODE_SHIFT             31
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_PRIV_ACCESS_MODE_MASK              0x80000000
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_AXI_TRACE_13_SOFT_RSTN_SHIFT       19
@@ -105,8 +101,6 @@
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_APB9_SOFT_RSTN_MASK                0x00000080
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_ETB2AXI_SOFT_RSTN_SHIFT            6
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_ETB2AXI_SOFT_RSTN_MASK             0x00000040
-#define    KHUB_RST_MGR_REG_SOFT_RSTN1_ATB_FILTER_SOFT_RSTN_SHIFT         5
-#define    KHUB_RST_MGR_REG_SOFT_RSTN1_ATB_FILTER_SOFT_RSTN_MASK          0x00000020
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_MDIOMASTER_SOFT_RSTN_SHIFT         4
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_MDIOMASTER_SOFT_RSTN_MASK          0x00000010
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_AXI_TRACE_11_SOFT_RSTN_SHIFT       1

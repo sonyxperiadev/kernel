@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -68,7 +68,9 @@
 
 #define DMA_TI_OFFSET                                                     0x00000008
 #define DMA_TI_TYPE                                                       UInt32
-#define DMA_TI_RESERVED_MASK                                              0xF8000004
+#define DMA_TI_RESERVED_MASK                                              0xF0000004
+#define    DMA_TI_BURST_WRITE_ENABLE32_SHIFT                              27
+#define    DMA_TI_BURST_WRITE_ENABLE32_MASK                               0x08000000
 #define    DMA_TI_NO_WIDE_BURSTS_SHIFT                                    26
 #define    DMA_TI_NO_WIDE_BURSTS_MASK                                     0x04000000
 #define    DMA_TI_WAITS_SHIFT                                             21
@@ -194,7 +196,9 @@
 
 #define DMA_TI1_OFFSET                                                    0x00000108
 #define DMA_TI1_TYPE                                                      UInt32
-#define DMA_TI1_RESERVED_MASK                                             0xF8000004
+#define DMA_TI1_RESERVED_MASK                                             0xF0000004
+#define    DMA_TI1_BURST_WRITE_ENABLE32_SHIFT                             27
+#define    DMA_TI1_BURST_WRITE_ENABLE32_MASK                              0x08000000
 #define    DMA_TI1_NO_WIDE_BURSTS_SHIFT                                   26
 #define    DMA_TI1_NO_WIDE_BURSTS_MASK                                    0x04000000
 #define    DMA_TI1_WAITS_SHIFT                                            21
@@ -320,7 +324,9 @@
 
 #define DMA_TI2_OFFSET                                                    0x00000208
 #define DMA_TI2_TYPE                                                      UInt32
-#define DMA_TI2_RESERVED_MASK                                             0xF8000004
+#define DMA_TI2_RESERVED_MASK                                             0xF0000004
+#define    DMA_TI2_BURST_WRITE_ENABLE32_SHIFT                             27
+#define    DMA_TI2_BURST_WRITE_ENABLE32_MASK                              0x08000000
 #define    DMA_TI2_NO_WIDE_BURSTS_SHIFT                                   26
 #define    DMA_TI2_NO_WIDE_BURSTS_MASK                                    0x04000000
 #define    DMA_TI2_WAITS_SHIFT                                            21

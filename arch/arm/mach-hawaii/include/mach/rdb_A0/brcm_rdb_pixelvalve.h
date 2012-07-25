@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -30,9 +30,7 @@
 
 #define PIXELVALVE_C_OFFSET                                               0x00000000
 #define PIXELVALVE_C_TYPE                                                 UInt32
-#define PIXELVALVE_C_RESERVED_MASK                                        0xFE000000
-#define    PIXELVALVE_C_PIX_CLK_MUX_EN_SHIFT                              24
-#define    PIXELVALVE_C_PIX_CLK_MUX_EN_MASK                               0x01000000
+#define PIXELVALVE_C_RESERVED_MASK                                        0xFF000000
 #define    PIXELVALVE_C_PIX_F_SHIFT                                       21
 #define    PIXELVALVE_C_PIX_F_MASK                                        0x00E00000
 #define    PIXELVALVE_C_FIFO_FULL_LEVEL_SHIFT                             15
@@ -204,11 +202,9 @@
 
 #define PIXELVALVE_DSI_HACT_ACT_OFFSET                                    0x00000030
 #define PIXELVALVE_DSI_HACT_ACT_TYPE                                      UInt32
-#define PIXELVALVE_DSI_HACT_ACT_RESERVED_MASK                             0x00000000
-#define    PIXELVALVE_DSI_HACT_ACT_HFP_WIDTH_SHIFT                        16
-#define    PIXELVALVE_DSI_HACT_ACT_HFP_WIDTH_MASK                         0xFFFF0000
-#define    PIXELVALVE_DSI_HACT_ACT_HACT_WIDTH_SHIFT                       0
-#define    PIXELVALVE_DSI_HACT_ACT_HACT_WIDTH_MASK                        0x0000FFFF
+#define PIXELVALVE_DSI_HACT_ACT_RESERVED_MASK                             0xFFFF0000
+#define    PIXELVALVE_DSI_HACT_ACT_DSI_HACT_ACT_SHIFT                     0
+#define    PIXELVALVE_DSI_HACT_ACT_DSI_HACT_ACT_MASK                      0x0000FFFF
 
 #endif /* __BRCM_RDB_PIXELVALVE_H__ */
 

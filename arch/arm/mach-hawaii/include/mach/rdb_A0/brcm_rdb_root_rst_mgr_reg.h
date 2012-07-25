@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2012 23:31:7                                             */
+/*     Date     : Generated on 7/19/2012 6:24:14                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -98,9 +98,11 @@
 
 #define ROOT_RST_MGR_REG_RSTSTS_OFFSET                                    0x00000018
 #define ROOT_RST_MGR_REG_RSTSTS_TYPE                                      UInt32
-#define ROOT_RST_MGR_REG_RSTSTS_RESERVED_MASK                             0x7FFFE000
+#define ROOT_RST_MGR_REG_RSTSTS_RESERVED_MASK                             0x7FFFC000
 #define    ROOT_RST_MGR_REG_RSTSTS_PRIV_ACCESS_MODE_SHIFT                 31
 #define    ROOT_RST_MGR_REG_RSTSTS_PRIV_ACCESS_MODE_MASK                  0x80000000
+#define    ROOT_RST_MGR_REG_RSTSTS_MDMWDRST_DET_SHIFT                     13
+#define    ROOT_RST_MGR_REG_RSTSTS_MDMWDRST_DET_MASK                      0x00002000
 #define    ROOT_RST_MGR_REG_RSTSTS_DAPRST_DET_SHIFT                       12
 #define    ROOT_RST_MGR_REG_RSTSTS_DAPRST_DET_MASK                        0x00001000
 #define    ROOT_RST_MGR_REG_RSTSTS_FMON_HIGH_WARNINGRST_DET_SHIFT         11
@@ -140,9 +142,11 @@
 
 #define ROOT_RST_MGR_REG_RSTSTS_SFTCLR_OFFSET                             0x00000020
 #define ROOT_RST_MGR_REG_RSTSTS_SFTCLR_TYPE                               UInt32
-#define ROOT_RST_MGR_REG_RSTSTS_SFTCLR_RESERVED_MASK                      0x7FFFE001
+#define ROOT_RST_MGR_REG_RSTSTS_SFTCLR_RESERVED_MASK                      0x7FFFC001
 #define    ROOT_RST_MGR_REG_RSTSTS_SFTCLR_PRIV_ACCESS_MODE_SHIFT          31
 #define    ROOT_RST_MGR_REG_RSTSTS_SFTCLR_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    ROOT_RST_MGR_REG_RSTSTS_SFTCLR_MDMWDRST_DET_V_SHIFT            13
+#define    ROOT_RST_MGR_REG_RSTSTS_SFTCLR_MDMWDRST_DET_V_MASK             0x00002000
 #define    ROOT_RST_MGR_REG_RSTSTS_SFTCLR_DAPRST_DET_V_SHIFT              12
 #define    ROOT_RST_MGR_REG_RSTSTS_SFTCLR_DAPRST_DET_V_MASK               0x00001000
 #define    ROOT_RST_MGR_REG_RSTSTS_SFTCLR_FMON_HIGH_WARNINGRST_DET_V_SHIFT 11
