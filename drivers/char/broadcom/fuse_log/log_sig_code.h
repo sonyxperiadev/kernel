@@ -187,6 +187,7 @@ typedef enum {
 	L1DATA_TWIF,		/*//<Payload type {::TWIF_LOG_t} */
 	AUDIO_DATA,
 	L1DATA_RF_LOGGING,
+	VMS_TRACE_KEYS,
 	/* End of log_gl1s */
 
 #if defined(STACK_wedge) && defined(UMTS)
@@ -268,6 +269,7 @@ typedef enum {
 	URLC_UL_STATS_RBS_INFO,
 	URLC_DL_STATS_RBS_INFO,
 	UAS_CIPHER_KEYS_IND,
+   URLC_SDU_Q_WATERMARK_THRESHOLD,  /** MobC00223725: IPC buffer overflow signal **/
 	/* End of log_urlcul */
 
 	/* Start of log_urrcdc */
