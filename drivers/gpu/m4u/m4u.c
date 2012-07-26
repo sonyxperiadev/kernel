@@ -34,9 +34,6 @@
 #include <mach/rdb/brcm_rdb_mmmmu_open.h>
 
 #define DEBUG_M4U
-/* #if !defined (CONFIG_MACH_HAWAII_FPGA) */
-#define M4U_HW_AVAILABLE
-/* #endif */
 
 #define BCM_INT_ID_M4U_OPEN		(BCM_INT_ID_RESERVED181)
 #define	M4U_PAGE_SHIFT			(12)
@@ -131,13 +128,6 @@ static void m4u_print_platform_data(struct m4u_platform_data *pdata)
 	}
 }
 
-#ifdef DEBUG_M4U
-static void  m4u_debug_print(struct m4u_device *mdev)
-{
-	m4u_print_platform_data(&mdev->pdata);
-}
-#endif
-
 static inline u32 m4u_pte(u32 pa, u32 order, u32 valid)
 {
 	u32 page_order = order & 0xf;
@@ -218,20 +208,21 @@ static int m4u_pt_init(struct m4u_device *mdev)
 static int m4u_reg_init(struct m4u_device *mdev)
 {
 	int pt_offset;
-	u32 pte;
-	u32 tbr;
+	u32 tbr, lr, ldr;
 
-	pte = m4u_pte(page_to_phys(mdev->garbage_page),0,1);
 	pt_offset = (mdev->pdata.mma_start >> M4U_PAGE_SHIFT);
 	tbr = mdev->pt_handle - (pt_offset<<2);
+	lr = mdev->pdata.mma_end & ~0xFFF;
+	ldr = m4u_pte(page_to_phys(mdev->garbage_page),0,1);
 	m4u_write_reg(mdev, MMMMU_OPEN_CR_OFFSET, 0);
 	m4u_write_reg(mdev, MMMMU_OPEN_IMR_OFFSET, 0);
 	m4u_write_reg(mdev, MMMMU_OPEN_TBR_OFFSET, tbr);
-	m4u_write_reg(mdev, MMMMU_OPEN_LR_OFFSET, (mdev->pdata.mma_end & ~0xFFF));
-	m4u_write_reg(mdev, MMMMU_OPEN_LDR_OFFSET, pte);
+	m4u_write_reg(mdev, MMMMU_OPEN_LR_OFFSET, lr);
+	m4u_write_reg(mdev, MMMMU_OPEN_LDR_OFFSET, ldr);
 	m4u_write_reg(mdev, MMMMU_OPEN_EFL_OFFSET, 0x11);
 #ifdef DEBUG_M4U
-	pr_info("(Debug) tbr(0x%x) \n", tbr);
+	pr_info("(Debug) TBR(0x%x) LR(0x%x) LDR(0x%x) \n", 
+			tbr, lr, ldr);
 #endif
 	return 0;
 }
@@ -248,8 +239,7 @@ static int m4u_init(struct m4u_device *mdev)
 	}
 	/* Allocate page table */
 	pt_offset = (mdev->pdata.mma_start >> M4U_PAGE_SHIFT);
-	pt_size = (SZ_2G >> M4U_PAGE_SHIFT) + (SZ_2G >> M4U_PAGE_SHIFT) 
-		- pt_offset;
+	pt_size = (SZ_2G >> (M4U_PAGE_SHIFT-1)) - pt_offset;
 	mdev->pt_base = (u32 *)dma_alloc_coherent(NULL, (pt_size<<2), 
 			&mdev->pt_handle, (GFP_KERNEL | ___GFP_ZERO));
 	if (mdev->pt_base == NULL) {
@@ -264,9 +254,7 @@ static int m4u_init(struct m4u_device *mdev)
 		goto error;
 	}
 	/* Initialize m4u registers */
-#ifdef M4U_HW_AVAILABLE
 	m4u_reg_init(mdev);
-#endif
 
 	return 0;
 
@@ -396,7 +384,7 @@ static int m4u_open(struct inode *inode, struct file *filp)
 
 	pr_info("open mdev(%p) \n", mdev);
 #ifdef DEBUG_M4U
-	m4u_debug_print(mdev);
+	m4u_print_platform_data(&mdev->pdata);
 #endif
 	m4u_reg_init(mdev);
 	filp->private_data = mdev;
@@ -454,9 +442,7 @@ static int m4u_probe(struct platform_device *pdev)
 		}
 	}
 	/* TODO: Free region buffers */
-#ifdef DEBUG_M4U
 	pr_info("(Debug) mdev(%p) \n", g_mdev);
-#endif
 
 	/* Map the register space */
 	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
