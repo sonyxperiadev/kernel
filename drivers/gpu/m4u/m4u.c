@@ -59,6 +59,7 @@ static struct m4u_platform_data m4u_data = {
 	.mma_start		= 0x80000000,
 	.mma_end		= 0xF0000000,
 	.mma_sg_start	= 0xA0000000,
+	.xfifo_size		= SZ_16K,
 	.nr				= ARRAY_SIZE(m4u_regions),
 	.regions		= m4u_regions,
 };
@@ -94,6 +95,9 @@ struct m4u_device {
 	struct page				*garbage_page;
 	dma_addr_t 				pt_handle;
 	u32						*pt_base;
+	dma_addr_t 				xfifo_handle;
+	u32						*xfifo_base;
+	u32						xfifo_widx;
 	struct m4u_platform_data pdata;
 	struct list_head		static_region_list;
 	struct dentry 			*debug_root;
@@ -126,6 +130,7 @@ static void m4u_print_platform_data(struct m4u_platform_data *pdata)
 		pr_info("\t(%d) - mma(0x%08x) pa(0x%08x) size(0x%08x) page_size(0x%08x) \n", 
 				i, r->mma, r->pa, r->size, r->page_size);
 	}
+	pr_info("xfifo size(0x%08x) \n", pdata->xfifo_size);
 }
 
 static inline u32 m4u_pte(u32 pa, u32 order, u32 valid)
@@ -215,16 +220,33 @@ static int m4u_reg_init(struct m4u_device *mdev)
 	lr = mdev->pdata.mma_end & ~0xFFF;
 	ldr = m4u_pte(page_to_phys(mdev->garbage_page),0,1);
 	m4u_write_reg(mdev, MMMMU_OPEN_CR_OFFSET, 0);
-	m4u_write_reg(mdev, MMMMU_OPEN_IMR_OFFSET, 0);
+	m4u_write_reg(mdev, MMMMU_OPEN_IMR_OFFSET, 
+			(MMMMU_OPEN_IMR_PERFCOUNT1_OVERFLOW_MASK | 
+			 MMMMU_OPEN_IMR_PERFCOUNT2_OVERFLOW_MASK));
 	m4u_write_reg(mdev, MMMMU_OPEN_TBR_OFFSET, tbr);
 	m4u_write_reg(mdev, MMMMU_OPEN_LR_OFFSET, lr);
 	m4u_write_reg(mdev, MMMMU_OPEN_LDR_OFFSET, ldr);
 	m4u_write_reg(mdev, MMMMU_OPEN_EFL_OFFSET, 0x11);
-#ifdef DEBUG_M4U
-	pr_info("(Debug) TBR(0x%x) LR(0x%x) LDR(0x%x) \n", 
-			tbr, lr, ldr);
-#endif
+
 	return 0;
+}
+
+static void m4u_exit(struct m4u_device *mdev)
+{
+	int pt_size, pt_offset;
+
+	pt_offset = (mdev->pdata.mma_start >> M4U_PAGE_SHIFT);
+	pt_size = (SZ_2G >> (M4U_PAGE_SHIFT-1)) - pt_offset;
+
+	if (mdev->xfifo_base)
+		dma_free_coherent(NULL, mdev->pdata.xfifo_size, mdev->xfifo_base, mdev->xfifo_handle);
+	mdev->xfifo_base = NULL;
+	if (mdev->pt_base)
+		dma_free_coherent(NULL, (pt_size<<2), mdev->pt_base, mdev->pt_handle);
+	mdev->pt_base = NULL;
+	if(mdev->garbage_page)
+		__free_page(mdev->garbage_page);
+	mdev->garbage_page = NULL;
 }
 
 static int m4u_init(struct m4u_device *mdev)
@@ -246,9 +268,21 @@ static int m4u_init(struct m4u_device *mdev)
 		pr_err("Page table allocation (0x%x) failed. \n", (pt_size<<2));
 		goto error;
 	}
-	pr_info("garbage_page(0x%x) pt base(%p:0x%x) offset(0x%x) entries(0x%x) \n",
-			page_to_phys(mdev->garbage_page), mdev->pt_base, mdev->pt_handle,
-			pt_offset, pt_size);
+	/* Allocate xfifo buffer */
+	if (mdev->pdata.xfifo_size) {
+		mdev->xfifo_base = (u32 *)dma_alloc_coherent(NULL, mdev->pdata.xfifo_size, 
+				&mdev->xfifo_handle, (GFP_KERNEL | ___GFP_ZERO));
+		if (mdev->xfifo_base == NULL) {
+			pr_err("xfifo buffer allocation (0x%x) failed. \n", mdev->pdata.xfifo_size);
+			goto error;
+		}
+	}
+
+	pr_info("pt base(%p:0x%x) offset(0x%x) entries(0x%x) \n",
+			mdev->pt_base, mdev->pt_handle,	pt_offset, pt_size);
+	pr_info("garbage_page(0x%x) xfifo base(%p:0x%x 0x%08x) \n",
+			page_to_phys(mdev->garbage_page), mdev->xfifo_base, mdev->xfifo_handle,
+			mdev->pdata.xfifo_size);
 	/* Initialize m4u page table */
 	if (m4u_pt_init(mdev)) {
 		goto error;
@@ -259,12 +293,7 @@ static int m4u_init(struct m4u_device *mdev)
 	return 0;
 
 error:
-	if (mdev->pt_base)
-		dma_free_coherent(NULL, (pt_size*4), mdev->pt_base, mdev->pt_handle);
-	mdev->pt_base = NULL;
-	if(mdev->garbage_page)
-		__free_page(mdev->garbage_page);
-	mdev->garbage_page = NULL;
+	m4u_exit(mdev);
 	return -ENOMEM;
 }
 
@@ -345,23 +374,41 @@ static irqreturn_t m4u_isr(int irq, void *data)
 {
 	struct m4u_device *mdev = (struct m4u_device *)data;
 	u32 status = 0;
-	u32 xfifo_val;
+	u32 val;
 
 	/* Read the status bits */
 	status = m4u_read_reg(mdev, MMMMU_OPEN_ISR_OFFSET);
-	pr_info("Interrupt status [0x%08x] \n", status);
+	pr_debug("Interrupt status [0x%08x] \n", status);
 	if (status & MMMMU_OPEN_IMR_EXFIFO_NOT_EMPTY_MASK) {
 		while(1) {
-			xfifo_val = m4u_read_reg(mdev, MMMMU_OPEN_XFIFO_OFFSET);
-			if (xfifo_val & MMMMU_OPEN_XFIFO_VALID_MASK) {
-				pr_info("xfifo(0x%x) \n", xfifo_val);
+			val = m4u_read_reg(mdev, MMMMU_OPEN_XFIFO_OFFSET);
+			if (val & MMMMU_OPEN_XFIFO_VALID_MASK) {
+				pr_debug("xfifo(0x%x) \n", val);
+				mdev->xfifo_base[mdev->xfifo_widx++] = val;
+				if (mdev->xfifo_widx >= (mdev->pdata.xfifo_size>>2))
+					mdev->xfifo_widx = 0;
+			} else {
+				break;
 			}
 		}
+		return IRQ_HANDLED;
 	}
-	/* Mask the iterrupt */
-	m4u_write_reg(mdev, MMMMU_OPEN_IMR_OFFSET, 7);
+	if (status & MMMMU_OPEN_IMR_PERFCOUNT1_OVERFLOW_MASK) {
+		val = m4u_read_reg(mdev, MMMMU_OPEN_PCR1_OFFSET);
+		pr_debug("pcr1(0x%x) \n", val);
+		/* Mask the iterrupt */
+		m4u_write_reg(mdev, MMMMU_OPEN_IMR_OFFSET, MMMMU_OPEN_IMR_PERFCOUNT1_OVERFLOW_MASK);
+		return IRQ_HANDLED;
+	}
+	if (status & MMMMU_OPEN_IMR_PERFCOUNT2_OVERFLOW_MASK) {
+		val = m4u_read_reg(mdev, MMMMU_OPEN_PCR2_OFFSET);
+		pr_debug("pcr2(0x%x) \n", val);
+		/* Mask the iterrupt */
+		m4u_write_reg(mdev, MMMMU_OPEN_IMR_OFFSET, MMMMU_OPEN_IMR_PERFCOUNT2_OVERFLOW_MASK);
+		return IRQ_HANDLED;
+	}
 
-	return IRQ_HANDLED;
+	return IRQ_NONE;
 }
 
 static long m4u_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
@@ -537,6 +584,7 @@ static int m4u_remove(struct platform_device *pdev)
 	pr_info("M4U device remove \n");
 	if (mdev) {
 		debugfs_remove_recursive(mdev->debug_root);
+		m4u_exit(mdev);
 		irq = platform_get_irq(pdev, 0);
 		free_irq(irq, mdev);
 		misc_deregister(&mdev->dev);

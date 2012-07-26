@@ -31,6 +31,7 @@ struct m4u_platform_data {
 	u32 mma_start;
 	u32 mma_end;
 	u32 mma_sg_start;
+	u32 xfifo_size;
 	int nr;
 	struct m4u_region *regions;
 };
