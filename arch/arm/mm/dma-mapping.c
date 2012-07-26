@@ -532,8 +532,8 @@ static void __free_from_contiguous(struct device *dev, struct page *page,
 
 #define __dma_alloc_remap(page, size, gfp, prot, c)	page_address(page)
 #define __dma_free_remap(addr, size)			do { } while (0)
-#define __alloc_remap_buffer(dev, size, gfp, prot, ret)	NULL
-#define __alloc_from_pool(dev, size, ret_page)		NULL
+#define __alloc_remap_buffer(dev, size, gfp, prot, ret, c)	NULL
+#define __alloc_from_pool(dev, size, ret_page, c)		NULL
 #define __alloc_from_contiguous(dev, size, prot, ret)	NULL
 #define __free_from_pool(cpu_addr, size)		0
 #define __free_from_contiguous(dev, page, size)		do { } while (0)
@@ -643,7 +643,7 @@ static int dma_mmap(struct device *dev, struct vm_area_struct *vma,
 	int ret = -ENXIO;
 #ifdef CONFIG_MMU
 	unsigned long pfn = dma_to_pfn(dev, dma_addr);
-			ret = remap_pfn_range(vma, vma->vm_start,
+	ret = remap_pfn_range(vma, vma->vm_start,
 			      pfn + vma->vm_pgoff,
 			      vma->vm_end - vma->vm_start,
 					      vma->vm_page_prot);
