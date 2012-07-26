@@ -42,15 +42,6 @@ ENTRY(dormant_enter_prepare)
 	ldr	r3, =restore_and_return
 	bl	cpu_suspend	@ set-up to be ready to suspend
 
-	/* Just returned from cleaning the cache */
-	bl dormant_enter_continue
-
-	/*
- 	 * Dormant entry failed, let us restore the stack to where it would
- 	 * have been if we came back through cpu_resume and continue
- 	 * execution.
- 	 */
-
 	ldr	r3, =saved_virtual_sp
 #ifdef CONFIG_SMP
 	ALT_SMP(mrc p15, 0, r2, c0, c0, 5)
@@ -60,6 +51,9 @@ ENTRY(dormant_enter_prepare)
 #else
 	ldr	sp, [r3]		@ restore the saved virtual sp
 #endif
+
+	/* Just returned from cleaning the cache */
+	bl dormant_enter_continue
 
 	/* Return a failure response since this is a fall through */
 	mov	r0, #DORMANT_NOT_ENTERED

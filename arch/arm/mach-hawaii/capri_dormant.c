@@ -237,8 +237,9 @@ static inline void print_dbg_counters(void)
 {
 	if (dbg_msg_counters && cnt_attempts &&
 	    (cnt_attempts % dbg_periodic_cnt) == 0) {
-		pr_info("Dormant Stats: Try:%d Win:%d Loss:%d\n", cnt_attempts,
-		       cnt_success, cnt_failure);
+		pr_info("Dormant Stats: Try:%d Win:%d Loss:%d Win%%:%d\n",
+				cnt_attempts, cnt_success, cnt_failure,
+				(cnt_success*100)/cnt_attempts);
 	}
 }
 
@@ -529,7 +530,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		 * the L2 memory.  Fake dormant is like retention so just
 		 * indicate a 2.
 		 */
-		if (is_l2_disabled() && !fake_dormant) {
+		if (is_l2_disabled() || fake_dormant) {
 			writel_relaxed(PWRCTRL_DORMANT_L2_OFF_CORE_0,
 					   KONA_CHIPREG_VA +
 					   CHIPREG_PERIPH_MISC_REG3_OFFSET);
@@ -726,7 +727,17 @@ void dormant_enter_continue(void)
 	u32 processor_id;
 	processor_id = (read_mpidr() & 0xff);
 
+
+	/*
+	 * Clear the L2 area where the sleep saved_sp would
+	 * be saved.
+	 */
+	outer_clean_range((phys_addr_t)(cpu_resume+PHYS_OFFSET-PAGE_OFFSET),
+			(phys_addr_t)
+			(cpu_resume+SZ_1K+PHYS_OFFSET-PAGE_OFFSET));
+
 	disable_clean_inv_dcache_v7_l1();
+
 	write_actlr(read_actlr() & ~(0x40));
 
 	/* Let us always indicate the dormant mode to the SCU
