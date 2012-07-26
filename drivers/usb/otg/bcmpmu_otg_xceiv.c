@@ -130,11 +130,6 @@ static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
 		bcm_hsotgctrl_phy_deinit();
 		xceiv_data->otg_xceiver.xceiver.state = OTG_STATE_UNDEFINED;
 		if (!xceiv_data->otg_enabled) {
-			if (wake_lock_active
-			    (&xceiv_data->otg_xceiver.xceiver_wake_lock))
-				wake_unlock(&xceiv_data->otg_xceiver.
-					    xceiver_wake_lock);
-
 			if (xceiv_data->bcm_hsotg_regulator &&
 				    xceiv_data->regulator_enabled) {
 				/* This should have no effect for most of
@@ -171,8 +166,6 @@ static int bcmpmu_otg_xceiv_start(struct otg_transceiver *otg)
 	if (xceiv_data) {
 
 		if (!xceiv_data->otg_enabled) {
-			wake_lock(&xceiv_data->otg_xceiver.xceiver_wake_lock);
-
 			if (xceiv_data->bcm_hsotg_regulator &&
 				    !xceiv_data->regulator_enabled) {
 				regulator_enable(xceiv_data->
@@ -968,41 +961,42 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int bcmpmu_otg_xceiv_runtime_suspend(struct device *dev)
+static int bcmpmu_otg_xceiv_pm_suspend(struct platform_device *pdev,
+	pm_message_t state)
 {
 	int status = 0;
-	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(dev);
+	struct bcmpmu_otg_xceiv_data *xceiv_data = platform_get_drvdata(pdev);
+	bool suspend_allowed = false;
 
-	if ((xceiv_data->otg_xceiver.xceiver.state !=
-	     OTG_STATE_UNDEFINED) || xceiv_data->otg_enabled) {
-		/* Don't allow runtime suspend if USB is active
-		 * or in OTG mode */
-		status = -EBUSY;
+	if (bcm_hsotgctrl_is_suspend_allowed(&suspend_allowed)) {
+		dev_warn(&pdev->dev,
+			"Failed to check if USB allows sys suspend\n");
 	} else {
-		/* Allow runtime suspend since USB is not active */
-		status = 0;
+		if ((suspend_allowed == false) || xceiv_data->otg_enabled) {
+			/* Don't allow runtime suspend if USB is active
+			 * or in OTG mode */
+			status = -EBUSY;
+		} else {
+			/* Allow runtime suspend since USB is not active */
+			status = 0;
+		}
 	}
-
 	return status;
 }
 
-static int bcmpmu_otg_xceiv_runtime_resume(struct device *dev)
+static int bcmpmu_otg_xceiv_pm_resume(struct platform_device *pdev)
 {
 	return 0;
 }
 
-static const struct dev_pm_ops bcmpmu_otg_xceiv_pm_ops = {
-	.runtime_suspend = bcmpmu_otg_xceiv_runtime_suspend,
-	.runtime_resume = bcmpmu_otg_xceiv_runtime_resume,
-};
-
 static struct platform_driver bcmpmu_otg_xceiv_driver = {
 	.probe = bcmpmu_otg_xceiv_probe,
 	.remove = __exit_p(bcmpmu_otg_xceiv_remove),
+	.suspend = bcmpmu_otg_xceiv_pm_suspend,
+	.resume = bcmpmu_otg_xceiv_pm_resume,
 	.driver = {
 		   .name = "bcmpmu_otg_xceiv",
 		   .owner = THIS_MODULE,
-		   .pm = &bcmpmu_otg_xceiv_pm_ops,
 		   },
 };
 

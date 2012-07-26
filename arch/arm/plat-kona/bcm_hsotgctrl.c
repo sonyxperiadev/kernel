@@ -838,7 +838,8 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int bcm_hsotgctrl_runtime_suspend(struct device *dev)
+static int bcm_hsotgctrl_pm_suspend(struct platform_device *pdev,
+	pm_message_t state)
 {
 	int status = 0;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
@@ -852,24 +853,20 @@ static int bcm_hsotgctrl_runtime_suspend(struct device *dev)
 	return status;
 }
 
-static int bcm_hsotgctrl_runtime_resume(struct device *dev)
+static int bcm_hsotgctrl_pm_resume(struct platform_device *pdev)
 {
 	return 0;
 }
-
-static const struct dev_pm_ops bcm_hsotg_ctrl_pm_ops = {
-	.runtime_suspend = bcm_hsotgctrl_runtime_suspend,
-	.runtime_resume = bcm_hsotgctrl_runtime_resume,
-};
 
 static struct platform_driver bcm_hsotgctrl_driver = {
 	.driver = {
 		   .name = "bcm_hsotgctrl",
 		   .owner = THIS_MODULE,
-		   .pm = &bcm_hsotg_ctrl_pm_ops,
 	},
 	.probe = bcm_hsotgctrl_probe,
 	.remove = bcm_hsotgctrl_remove,
+	.suspend = bcm_hsotgctrl_pm_suspend,
+	.resume = bcm_hsotgctrl_pm_resume,
 };
 
 static int __init bcm_hsotgctrl_init(void)
@@ -1210,6 +1207,20 @@ int bcm_hsotgctrl_phy_wakeup_condition(bool set)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_wakeup_condition);
 
+int bcm_hsotgctrl_is_suspend_allowed(bool *suspend_allowed)
+{
+	void *hsotg_ctrl_base;
+
+	if ((NULL != local_hsotgctrl_handle) &&
+		    suspend_allowed)
+		*suspend_allowed = local_hsotgctrl_handle->allow_suspend;
+	else
+		return -ENODEV;
+
+	return 0;
+
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_is_suspend_allowed);
 
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("USB HSOTGCTRL driver");
