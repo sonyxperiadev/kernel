@@ -99,18 +99,6 @@ static histo_t vi_d1, vi_d2, vi_d3, vi_d4;
 extern bool ap_cfg_running;
 extern bool ap_fw_loaded;
 #endif
-#if 0
-#ifdef CONFIG_KONA_PI_MGR
-#include <mach/pi_mgr.h>
-#include <plat/pi_mgr.h>
-static struct pi_mgr_qos_node wlan_qos_node;
-static int qos_wlan = -1;
-
-
-
-#endif
-#endif
-
 
 /* enable HOSTIP cache update from the host side when an eth0:N is up */
 #define AOE_IP_ALIAS_SUPPORT 1
@@ -125,10 +113,6 @@ static int qos_wlan = -1;
 #endif
 
 #include <wl_android.h>
-
-extern void Set_XTAL_PM_Delay(void);
-
-
 
 #ifdef ARP_OFFLOAD_SUPPORT
 void aoe_update_host_ipv4_table(dhd_pub_t *dhd_pub, u32 ipa, bool add);
@@ -367,7 +351,7 @@ struct semaphore dhd_registration_sem;
 struct semaphore dhd_chipup_sem;
 int dhd_registration_check = FALSE;
 
-#define DHD_REGISTRATION_TIMEOUT  5000000  /* msec : allowed time to finished dhd registration */
+#define DHD_REGISTRATION_TIMEOUT  12000  /* msec : allowed time to finished dhd registration */
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) */
 
 /* Spawn a thread for system ioctls (set mac, set mcast) */
@@ -575,7 +559,7 @@ static int dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata,
 static int dhd_sleep_pm_callback(struct notifier_block *nfb, unsigned long action, void *ignored)
 {
 	int ret = NOTIFY_DONE;
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39))
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39)) || defined(BCMHOST)
 	switch (action) {
 	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
@@ -631,8 +615,7 @@ static void dhd_set_packet_filter(int value, dhd_pub_t *dhd)
 static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 {
 	char iovbuf[32];
-
-#ifdef CUSTOMER_HW_SAMSUNG
+#ifdef CUSTOMER_HW3
 	int power_mode = PM_FAST;
 	/* wl_pkt_filter_enable_t	enable_parm; */
 	int bcn_li_dtim = 3;
@@ -661,7 +644,7 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 			/* Kernel suspended */
 			DHD_ERROR(("%s: force extra Suspend setting \n", __FUNCTION__));
 
-#ifdef CUSTOMER_HW_SAMSUNG
+#ifdef CUSTOMER_HW3
 			dhd_wl_ioctl_cmd(dhd, WLC_SET_PM, (char *)&power_mode,
 				sizeof(power_mode), TRUE, 0);
 #endif
@@ -681,7 +664,7 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 			dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 #endif /* PASS_ALL_MCAST_PKTS */
 
-#ifdef CUSTOMER_HW_SAMSUNG
+#ifdef CUSTOMER_HW3
 			/* If DTIM skip is set up as default, force it to wake
 			 * each third DTIM for better power savings.  Note that
 			 * one side effect is a chance to miss BC/MC packet.
@@ -711,7 +694,7 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 			/* Kernel resumed  */
 			DHD_ERROR(("%s: Remove extra suspend setting \n", __FUNCTION__));
 
-#ifdef CUSTOMER_HW_SAMSUNG
+#ifdef CUSTOMER_HW3
 			power_mode = PM_FAST;
 			dhd_wl_ioctl_cmd(dhd, WLC_SET_PM, (char *)&power_mode,
 				sizeof(power_mode), TRUE, 0);
@@ -732,7 +715,7 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 			dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 #endif /* PASS_ALL_MCAST_PKTS */
 
-#ifdef CUSTOMER_HW_SAMSUNG
+#ifdef CUSTOMER_HW3
 			/* restore pre-suspend setting for dtim_skip */
 			bcm_mkiovar("bcn_li_dtim", (char *)&dhd->dtim_skip,
 				4, iovbuf, sizeof(iovbuf));
@@ -1263,13 +1246,13 @@ dhd_op_if(dhd_if_t *ifp)
 		/* dhd_op_if is called again from some other context */
 		ifp->state = DHD_IF_DELETING;
 		if (ifp->net != NULL) {
-			DHD_TRACE(("\n%s: got 'DHD_IF_DEL' state\n", __FUNCTION__));
+			DHD_ERROR(("\n%s: (WAR TRACE) got 'DHD_IF_DEL' state\n", __FUNCTION__));
+			netif_stop_queue(ifp->net);
 #ifdef WL_CFG80211
 			if (dhd->dhd_state & DHD_ATTACH_STATE_CFG80211) {
 				wl_cfg80211_notify_ifdel(ifp->net);
 			}
 #endif
-			netif_stop_queue(ifp->net);
 			unregister_netdev(ifp->net);
 			ret = DHD_DEL_IF;	/* Make sure the free_netdev() is called */
 		}
@@ -1556,7 +1539,7 @@ dhd_start_xmit(struct sk_buff *skb, struct net_device *net)
 	 *   kernel panic issue when first bootup time,
 	 *   rmmod without interface down make unnecessary hang event.
 	 */
-	if (dhd->pub.busstate == DHD_BUS_DOWN) {
+	if (dhd->pub.busstate == DHD_BUS_DOWN || dhd->pub.hang_was_sent) {
 		DHD_ERROR(("%s: xmit rejected pub.up=%d busstate=%d \n",
 			__FUNCTION__, dhd->pub.up, dhd->pub.busstate));
 		netif_stop_queue(net);
@@ -2007,15 +1990,13 @@ dhd_watchdog_thread(void *data)
 	/* This thread doesn't need any user-level access,
 	 * so get rid of all our resources
 	 */
-/* pmuk -- temporary fix for MP3 playback issue on SS phones */
-#if 0
 	if (dhd_watchdog_prio > 0) {
 		struct sched_param param;
 		param.sched_priority = (dhd_watchdog_prio < MAX_RT_PRIO)?
 			dhd_watchdog_prio:(MAX_RT_PRIO-1);
 		setScheduler(current, SCHED_FIFO, &param);
 	}
-#endif
+
 	DAEMONIZE("dhd_watchdog");
 
 	/* Run until signal received */
@@ -2104,15 +2085,13 @@ dhd_dpc_thread(void *data)
 	/* This thread doesn't need any user-level access,
 	 * so get rid of all our resources
 	 */
-/* pmuk -- Temporary fix for SS MP3 background playback issue */
-#if 0	 
 	if (dhd_dpc_prio > 0)
 	{
 		struct sched_param param;
 		param.sched_priority = (dhd_dpc_prio < MAX_RT_PRIO)?dhd_dpc_prio:(MAX_RT_PRIO-1);
 		setScheduler(current, SCHED_FIFO, &param);
 	}
-#endif
+
 	DAEMONIZE("dhd_dpc");
 	/* DHD_OS_WAKE_LOCK is called in dhd_sched_dpc[dhd_linux.c] down below  */
 
@@ -2393,8 +2372,17 @@ dhd_ethtool(dhd_info_t *dhd, void *uaddr)
 
 static bool dhd_check_hang(struct net_device *net, dhd_pub_t *dhdp, int error)
 {
+	dhd_info_t * dhd;
+
 	if (!dhdp)
 		return FALSE;
+
+	dhd = (dhd_info_t *)dhdp->info;
+	if (dhd->thr_sysioc_ctl.thr_pid <0) {
+		DHD_ERROR(("%s : skipped due to negative pid - unloading?\n", __FUNCTION__));
+		return FALSE;
+	}
+
 	if ((error == -ETIMEDOUT) || (error == -EREMOTEIO) 
 		|| ((dhdp->busstate == DHD_BUS_DOWN)&&(!dhdp->dongle_reset))) {
 		DHD_ERROR(("%s: Event HANG send up due to  re=%d te=%d e=%d s=%d\n", __FUNCTION__,
@@ -2642,7 +2630,7 @@ dhd_cleanup_virt_ifaces(dhd_info_t *dhd)
 
 	for (i = 1; i < DHD_MAX_IFS; i++) {
 		if (dhd->iflist[i]) {
-			DHD_TRACE(("Deleting IF: %d \n", i));
+			DHD_ERROR(("(WAR TRACE)Deleting IF: %d \n", i));
 			if ((dhd->iflist[i]->state != DHD_IF_DEL) &&
 				(dhd->iflist[i]->state != DHD_IF_DELETING)) {
 				dhd->iflist[i]->state = DHD_IF_DEL;
@@ -2676,7 +2664,7 @@ dhd_stop(struct net_device *net)
 	int ifidx;
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(net);
 	DHD_OS_WAKE_LOCK(&dhd->pub);
-	DHD_TRACE(("%s: Enter %p\n", __FUNCTION__, net));
+	DHD_TRACE(("%s: (WAR TRACE)Enter %p\n", __FUNCTION__, net));
 	if (dhd->pub.up == 0) {
 		goto exit;
 	}
@@ -3033,32 +3021,6 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 			goto fail;
 		}
 #endif /* BCM4334_CHECK_CHIP_REV */
-
-#if 0
-#ifdef CONFIG_KONA_PI_MGR
-		qos_wlan=-1;
-
-		qos_wlan = pi_mgr_qos_add_request(&wlan_qos_node, "wlan_arm_susbsystem",
-					   PI_MGR_PI_ID_ARM_SUB_SYSTEM,
-					   PI_MGR_QOS_DEFAULT_VALUE);
-		if (qos_wlan < 0) 
-			{
-	
-			printk(KERN_ERR "WIFI  wlan_qosNode addition FAILED\n");
-	
-			}
-		else
-			
-			printk(KERN_ERR "WIFI	wlan_qosNode SUCCESFULL\n");
-	
-	
-	
-	
-	
-	
-	
-#endif
-#endif
 
 	/* updates firmware nvram path if it was provided as module parameters */
 	if ((strlen(firmware_path) != 0) && (firmware_path[0] != '\0'))
@@ -3485,9 +3447,10 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #ifdef CUSTOMER_HW_SAMSUNG
 #ifdef ROAM_ENABLE
 	uint roamvar = 0;
-	int roam_trigger[2] = {-75, WLC_BAND_ALL};
+	int roam_trigger[2] = {WL_AUTO_ROAM_TRIGGER, WLC_BAND_ALL};
 	int roam_scan_period[2] = {10, WLC_BAND_ALL};
 	int roam_delta[2] = {10, WLC_BAND_ALL};
+	int roam_env_mode = AP_ENV_INDETERMINATE;
 #ifdef FULL_ROAMING_SCAN_PERIOD_60_SEC
 	int roam_fullscan_period = 60;
 #else /* FULL_ROAMING_SCAN_PERIOD_60_SEC */
@@ -3681,6 +3644,13 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	dhd_wl_ioctl_cmd(dhd, WLC_SET_ROAM_DELTA, roam_delta, sizeof(roam_delta), TRUE, 0);
 	bcm_mkiovar("fullroamperiod", (char *)&roam_fullscan_period, 4, iovbuf, sizeof(iovbuf));
 	dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+	if (roam_trigger[0] == WL_AUTO_ROAM_TRIGGER) {
+		bcm_mkiovar("roam_env_detection", (char *)&roam_env_mode, 4, iovbuf, sizeof(iovbuf));
+		if (dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0) == BCME_OK)
+			dhd->roam_env_detection = TRUE;
+		else
+			dhd->roam_env_detection = FALSE;
+	}
 #endif
 
 #ifdef OKC_SUPPORT
@@ -3777,7 +3747,9 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	setbit(eventmask, WLC_E_MIC_ERROR);
 	setbit(eventmask, WLC_E_ASSOC_REQ_IE);
 	setbit(eventmask, WLC_E_ASSOC_RESP_IE);
+#ifndef WL_CFG80211
 	setbit(eventmask, WLC_E_PMKID_CACHE);
+#endif
 	setbit(eventmask, WLC_E_TXFAIL);
 	setbit(eventmask, WLC_E_JOIN_START);
 	setbit(eventmask, WLC_E_SCAN_COMPLETE);
@@ -3906,16 +3878,6 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	}
 
 done:
-#ifdef XTAL_PU_TIME_MOD
-		printk("%s:***** CALL SET_PMY_DELAY\n", __FUNCTION__);
-
-
-
-		Set_XTAL_PM_Delay();
-
-		printk("%s:***** CALL DONE SET_PMY_DELAY\n", __FUNCTION__);
-
-#endif		
 	return ret;
 }
 
@@ -4376,25 +4338,7 @@ void dhd_detach(dhd_pub_t *dhdp)
 		dhd_monitor_uninit();
 	}
 #endif
-#if 0
-#ifdef CONFIG_KONA_PI_MGR
 
-	if (pi_mgr_qos_request_remove(&wlan_qos_node))
-		printk(KERN_ERR "FAIL to unregister wlan qos client\n");
-	else
-		{
-		printk(KERN_ERR "SUCCESS to unregister wlan qos client\n");
-		qos_wlan=-1;
-		}
-
-
-
-
-
-
-	
-#endif
-#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP)
 		unregister_pm_notifier(&dhd_sleep_pm_notifier);
@@ -4689,6 +4633,9 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
+	if (!dhd)
+                return;
+
 	flags = dhd_os_spin_lock(pub);
 
 	/* don't start the wd until fw is loaded */
@@ -4697,9 +4644,6 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 		return;
 	}
 	
-	if (!dhd)
-		return;
-
 	/* Totally stop the timer */
 	if (!wdtick && dhd->wd_timer_valid == TRUE) {
 		dhd->wd_timer_valid = FALSE;
@@ -5431,33 +5375,16 @@ int dhd_os_wake_lock(dhd_pub_t *pub)
 	dhd_info_t *dhd = (dhd_info_t *)(pub->info);
 	unsigned long flags;
 	int ret = 0;
-//	int lock=-1;
 
 	if (dhd) {
 		spin_lock_irqsave(&dhd->wakelock_spinlock, flags);
 #ifdef CONFIG_HAS_WAKELOCK
 		if (!dhd->wakelock_counter)
 			wake_lock(&dhd->wl_wifi);
-#if 0
-#ifdef CONFIG_KONA_PI_MGR
-			
-			
-				lock = pi_mgr_qos_request_update(&wlan_qos_node, 0);
-				if (lock == 0)
-			
-				DHD_TRACE(( "WIFI in  retention SUCCESSFUL\n",__FUNCTION__));
-				else
-			
-				DHD_ERROR(( "WIFI retention FAILED\n"));
-		
-#endif
-#endif
-		
 #elif defined(CONFIG_PM_SLEEP) && defined(CUSTOMER_HW_SLP)
 		/*SLP_wakelock_alternative_code*/
 		pm_stay_awake(pm_dev);			
 #endif /* CONFIG_PM_SLEEP && CUSTOMER_HW_SLP */
-
 		dhd->wakelock_counter++;
 		ret = dhd->wakelock_counter;
 		spin_unlock_irqrestore(&dhd->wakelock_spinlock, flags);
@@ -5480,7 +5407,7 @@ int dhd_os_wake_unlock(dhd_pub_t *pub)
 	dhd_info_t *dhd = (dhd_info_t *)(pub->info);
 	unsigned long flags;
 	int ret = 0;
-//	int lock=-1;
+
 	dhd_os_wake_lock_timeout(pub);
 	if (dhd) {
 		spin_lock_irqsave(&dhd->wakelock_spinlock, flags);
@@ -5489,21 +5416,6 @@ int dhd_os_wake_unlock(dhd_pub_t *pub)
 #ifdef CONFIG_HAS_WAKELOCK
 			if (!dhd->wakelock_counter)
 				wake_unlock(&dhd->wl_wifi);
-#if 0			
-#ifdef CONFIG_KONA_PI_MGR
-			
-			
-				lock = pi_mgr_qos_request_update(&wlan_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
-				if (lock == 0)
-			
-				DHD_TRACE(( "WIFI in  retention SUCCESSFUL\n",__FUNCTION__));
-				else
-			
-				DHD_ERROR(( "WIFI retention FAILED\n"));
-			
-#endif
-#endif
-
 #elif defined(CONFIG_PM_SLEEP) && defined(CUSTOMER_HW_SLP)
 			/*SLP_wakelock_alternative_code*/
 			pm_relax(pm_dev);		

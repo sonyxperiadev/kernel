@@ -171,10 +171,6 @@ int bcmsdh_probe(struct device *dev)
 	int ret = 0;
 #endif /* CONFIG_PM_SLEEP && CUSTOMER_HW_SLP */
 
-
-	printk(KERN_ERR "%s ENTER \n",__FUNCTION__);
-
-
 #if !defined(BCMLXSDMMC) && defined(BCMPLATFORM_BUS)
 	pdev = to_platform_device(dev);
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -188,13 +184,15 @@ int bcmsdh_probe(struct device *dev)
 	irq_flags =
 		IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE;
 #else
-	 irq_flags = IRQF_TRIGGER_FALLING|IRQF_NO_SUSPEND;
+	 irq_flags = IRQF_TRIGGER_FALLING;
 #endif /* HW_OOB */
-
-	printk(KERN_ERR "%s IRQ_FLAGS_VALUE=%x\n",__FUNCTION__,irq_flags);
 
 	/* Get customer specific OOB IRQ parametres: IRQ number as IRQ type */
 	irq = dhd_customer_oob_irq_map(&irq_flags);
+//#if defined(BCMHOST)
+	/* Do not disable this IRQ during suspend */
+	irq_flags |= IRQF_NO_SUSPEND;
+//#endif
 	if  (irq < 0) {
 		SDLX_MSG(("%s: Host irq is not defined\n", __FUNCTION__));
 		return 1;
@@ -642,7 +640,6 @@ int bcmsdh_register_oob_intr(void * dhdp)
 	int error = 0;
 
 	SDLX_MSG(("%s Enter \n", __FUNCTION__));
-	printk(KERN_ERR "%s ENTER\n",__FUNCTION__);
 
 	/* IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE; */
 
@@ -652,7 +649,6 @@ int bcmsdh_register_oob_intr(void * dhdp)
 		SDLX_MSG(("%s IRQ=%d Type=%X \n", __FUNCTION__,
 			(int)sdhcinfo->oob_irq, (int)sdhcinfo->oob_flags));
 		/* Refer to customer Host IRQ docs about proper irqflags definition */
-		sdhcinfo->oob_flags |= IRQF_NO_SUSPEND;
 		error = request_irq(sdhcinfo->oob_irq, wlan_oob_irq, sdhcinfo->oob_flags,
 			"bcmsdh_sdmmc", NULL);
 		if (error)
@@ -662,7 +658,6 @@ int bcmsdh_register_oob_intr(void * dhdp)
 		sdhcinfo->oob_irq_registered = TRUE;
 		sdhcinfo->oob_irq_enable_flag = TRUE;
 	}
-	printk(KERN_ERR "%s IRQ_FLAGS=%x\n",__FUNCTION__,sdhcinfo->oob_flags);
 
 	return 0;
 }
@@ -673,15 +668,11 @@ void bcmsdh_set_irq(int flag)
 		SDLX_MSG(("%s Flag = %d", __FUNCTION__, flag));
 		sdhcinfo->oob_irq_enable_flag = flag;
 		if (flag) {
-
 			enable_irq(sdhcinfo->oob_irq);
 			enable_irq_wake(sdhcinfo->oob_irq);
-			printk(KERN_ERR "%s - ENABLE ISR: \n",__FUNCTION__);
 		} else {
-
 			disable_irq_wake(sdhcinfo->oob_irq);
 			disable_irq(sdhcinfo->oob_irq);
-			printk(KERN_ERR "%s - DISBALE ISR: \n",__FUNCTION__);			
 		}
 	}
 }

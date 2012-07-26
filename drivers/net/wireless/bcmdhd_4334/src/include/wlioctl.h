@@ -1869,6 +1869,12 @@ typedef struct wl_po {
 #define	WLAN_AUTO_W_NOISE	4	/* ACI: auto - detect and non 802.11 interference */
 #define AUTO_ACTIVE	(1 << 7) /* Auto is currently active */
 
+/* AP environment */
+#define AP_ENV_DETECT_NOT_USED		0 /* We aren't using AP environment detection */
+#define AP_ENV_DENSE			1 /* "Corporate" or other AP dense environment */
+#define AP_ENV_SPARSE			2 /* "Home" or other sparse environment */
+#define AP_ENV_INDETERMINATE		3 /* AP environment hasn't been identified */
+
 typedef struct wl_aci_args {
 	int enter_aci_thresh; /* Trigger level to start detecting ACI */
 	int exit_aci_thresh; /* Trigger level to exit ACI mode */

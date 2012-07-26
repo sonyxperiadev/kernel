@@ -1416,6 +1416,7 @@ wl_iw_get_scan(
 	struct iw_event	iwe;
 	wl_bss_info_t *bi = NULL;
 	int error, i, j;
+	int rssi = 0;
 	char *event = extra, *end = extra + dwrq->length, *value;
 	uint buflen = dwrq->length;
 
@@ -1481,11 +1482,14 @@ wl_iw_get_scan(
 			WF_CHAN_FACTOR_2_4_G : WF_CHAN_FACTOR_5_G);
 		iwe.u.freq.e = 6;
 		event = IWE_STREAM_ADD_EVENT(info, event, end, &iwe, IW_EV_FREQ_LEN);
-
 		
 		iwe.cmd = IWEVQUAL;
-		iwe.u.qual.qual = rssi_to_qual(dtoh16(bi->RSSI));
-		iwe.u.qual.level = 0x100 + dtoh16(bi->RSSI);
+		rssi = dtoh16(bi->RSSI);
+		if (rssi >= WL_IW_RSSI_INVALID)
+			rssi = WL_IW_RSSI_MAXVAL;
+
+		iwe.u.qual.qual = rssi_to_qual(rssi);
+		iwe.u.qual.level = 0x100 + rssi;
 		iwe.u.qual.noise = 0x100 + bi->phy_noise;
 		event = IWE_STREAM_ADD_EVENT(info, event, end, &iwe, IW_EV_QUAL_LEN);
 
@@ -1607,8 +1611,12 @@ wl_iw_iscan_get_scan(
 
 		
 		iwe.cmd = IWEVQUAL;
-		iwe.u.qual.qual = rssi_to_qual(dtoh16(bi->RSSI));
-		iwe.u.qual.level = 0x100 + dtoh16(bi->RSSI);
+		rssi = dtoh16(bi->RSSI);
+		if (rssi >= WL_IW_RSSI_INVALID)
+                        rssi = WL_IW_RSSI_MAXVAL;
+
+		iwe.u.qual.qual = rssi_to_qual(rssi);
+		iwe.u.qual.level = 0x100 + rssi;
 		iwe.u.qual.noise = 0x100 + bi->phy_noise;
 		event = IWE_STREAM_ADD_EVENT(info, event, end, &iwe, IW_EV_QUAL_LEN);
 
@@ -3405,6 +3413,9 @@ int wl_iw_get_wireless_stats(struct net_device *dev, struct iw_statistics *wstat
 		goto done;
 
 	rssi = dtoh32(scb_val.val);
+	if (rssi >= WL_IW_RSSI_INVALID)
+		rssi = WL_IW_RSSI_MAXVAL;
+
 	WL_TRACE(("wl_iw_get_wireless_stats rssi=%d ****** \n", rssi));
 	if (rssi <= WL_IW_RSSI_NO_SIGNAL)
 		wstats->qual.qual = 0;
