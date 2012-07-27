@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/kernel_stat.h>
+#include <linux/module.h>
 #include <asm/mach/arch.h>
 #include <mach/io_map.h>
 #include <mach/memory.h>
