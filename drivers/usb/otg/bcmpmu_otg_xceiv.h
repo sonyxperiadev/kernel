@@ -21,7 +21,8 @@
 #define T_B_ADP_DETACH	3200
 
 struct bcm_otg_xceiver {
-	struct otg_transceiver xceiver;
+	struct usb_phy phy;
+	struct usb_otg otg;
 	struct timer_list srp_failure_timer;
 	struct timer_list sess_end_srp_timer;
 	struct wake_lock xceiver_wake_lock;

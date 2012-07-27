@@ -461,8 +461,8 @@ int hcd_init(
 	dwc_otg_hcd_set_priv_data(dwc_otg_hcd, hcd);
 
 #ifdef CONFIG_USB_OTG_UTILS
-	if (dwc_otg_hcd->core_if->xceiver->set_host)
-		otg_set_host(dwc_otg_hcd->core_if->xceiver, &hcd->self);
+	if (dwc_otg_hcd->core_if->xceiver->otg->set_host)
+		otg_set_host(dwc_otg_hcd->core_if->xceiver->otg, &hcd->self);
 #endif
 
 	return 0;
@@ -521,8 +521,8 @@ void hcd_remove(
 		return;
 	}
 #ifdef CONFIG_USB_OTG_UTILS
-	if (dwc_otg_hcd->core_if->xceiver->set_host)
-		otg_set_host(dwc_otg_hcd->core_if->xceiver, NULL);
+	if (dwc_otg_hcd->core_if->xceiver->otg->set_host)
+		otg_set_host(dwc_otg_hcd->core_if->xceiver->otg, NULL);
 #endif
 
 	usb_remove_hcd(hcd);

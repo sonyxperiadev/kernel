@@ -37,12 +37,12 @@ static void bcmpmu_otg_xceiv_adp_change_handler(struct work_struct *work)
 
 	/* Need to turn on Vbus within 200ms */
 	if (bcmpmu_otg_xceiv_check_id_gnd(xceiv_data)) {
-		if (xceiv_data->otg_xceiver.xceiver.set_vbus)
-			xceiv_data->otg_xceiver.xceiver.set_vbus(&xceiv_data->
+		if (xceiv_data->otg_xceiver.phy.otg->set_vbus)
+			xceiv_data->otg_xceiver.phy.otg->set_vbus(&xceiv_data->
 								 otg_xceiver.
-								 xceiver, true);
+								 otg, true);
 
-		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.xceiver.
+		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.phy.
 					   notifier, USB_EVENT_VBUS, NULL);
 	} else
 		bcmpmu_otg_xceiv_do_srp(xceiv_data);	/* Do SRP */

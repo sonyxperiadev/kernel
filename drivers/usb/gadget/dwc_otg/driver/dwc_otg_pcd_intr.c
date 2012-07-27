@@ -1330,8 +1330,8 @@ void do_test_mode(void *data)
 		break;
 	case 6:		/* Set otg_srp_reqd */
 #ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver->set_srp_reqd)
-			core_if->xceiver->set_srp_reqd(core_if->xceiver);
+		if (core_if->xceiver->otg->set_srp_reqd)
+			core_if->xceiver->otg->set_srp_reqd(core_if->xceiver->otg);
 #endif
 		break;
 	case 7:		/* Set otg_hnp_reqd */

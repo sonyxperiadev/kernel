@@ -897,9 +897,9 @@ static int dwc_otg_driver_probe(struct platform_device *_dev
 #endif
 
 #ifdef CONFIG_USB_OTG_UTILS
-	if (dwc_otg_device->core_if->xceiver->set_otg_enable)
-		dwc_otg_device->core_if->xceiver->
-		    set_otg_enable(dwc_otg_device->core_if->xceiver,
+	if (dwc_otg_device->core_if->xceiver->otg->set_otg_enable)
+		dwc_otg_device->core_if->xceiver->otg->
+		    set_otg_enable(dwc_otg_device->core_if->xceiver->otg,
 				   dwc_otg_device->core_if->core_params->
 				   otg_supp_enable);
 #endif
@@ -953,11 +953,11 @@ static int dwc_otg_driver_probe(struct platform_device *_dev
 #ifdef CONFIG_USB_OTG_UTILS
 #ifdef CONFIG_USB_OTG
 	if (dwc_otg_device->core_if->xceiver->shutdown &&
-	    (!dwc_otg_device->core_if->xceiver->default_a) &&
+	    (!dwc_otg_device->core_if->xceiver->otg->default_a) &&
 	    (!dwc_otg_device->core_if->core_params->otg_supp_enable))
 #else
 	if (dwc_otg_device->core_if->xceiver->shutdown &&
-	    (!dwc_otg_device->core_if->xceiver->default_a))
+	    (!dwc_otg_device->core_if->xceiver->otg->default_a))
 #endif /* CONFIG_USB_OTG */
 	{
 		/* Shutdown USB when in non-OTG device mode until

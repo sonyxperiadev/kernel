@@ -1251,10 +1251,10 @@ static struct gadget_wrapper *alloc_wrapper(
 	d->gadget.dev.parent = &_dev->dev;
 	d->gadget.dev.release = dwc_otg_pcd_gadget_release;
 	d->gadget.ops = &dwc_otg_pcd_ops;
-	d->gadget.is_dualspeed = dwc_otg_pcd_is_dualspeed(otg_dev->pcd);
+	/*d->gadget.is_dualspeed = dwc_otg_pcd_is_dualspeed(otg_dev->pcd);*/
 	d->gadget.is_otg = dwc_otg_pcd_is_otg(otg_dev->pcd);
-	d->gadget.otg_version = dwc_otg_pcd_is_otg20(otg_dev->pcd);
-	d->gadget.is_lpm = dwc_otg_pcd_is_lpm_enabled(otg_dev->pcd);
+	/*d->gadget.otg_version = dwc_otg_pcd_is_otg20(otg_dev->pcd);*/
+	/*d->gadget.is_lpm = dwc_otg_pcd_is_lpm_enabled(otg_dev->pcd);*/
 
 	d->driver = 0;
 	/* Register the gadget device */
@@ -1430,8 +1430,8 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	gadget_wrapper->driver = 0;
 
 #ifdef CONFIG_USB_OTG_UTILS
-	if (gadget_wrapper->pcd->core_if->xceiver->set_peripheral)
-		otg_set_peripheral(gadget_wrapper->pcd->core_if->xceiver, NULL);
+	if (gadget_wrapper->pcd->core_if->xceiver->otg->set_peripheral)
+		otg_set_peripheral(gadget_wrapper->pcd->core_if->xceiver->otg, NULL);
 #endif
 
 	DWC_DEBUGPL(DBG_ANY, "unregistered driver '%s'\n", driver->driver.name);
@@ -1455,7 +1455,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	DWC_DEBUGPL(DBG_PCD, "probing gadget driver '%s'\n",
 		    driver->driver.name);
 
-	if (!driver || driver->speed == USB_SPEED_UNKNOWN ||
+	if (!driver || driver->max_speed == USB_SPEED_UNKNOWN ||
 	    !bind || !driver->unbind || !driver->disconnect || !driver->setup) {
 		DWC_DEBUGPL(DBG_PCDV, "EINVAL\n");
 		return -EINVAL;
@@ -1475,9 +1475,9 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 
 #ifdef CONFIG_USB_OTG_UTILS
 #ifndef CONFIG_USB_OTG
-	if (!(gadget_wrapper->pcd->core_if->xceiver->default_a))
+	if (!(gadget_wrapper->pcd->core_if->xceiver->otg->default_a))
 #else
-	if (!(gadget_wrapper->pcd->core_if->xceiver->default_a) &&
+	if (!(gadget_wrapper->pcd->core_if->xceiver->otg->default_a) &&
 	    !(gadget_wrapper->pcd->core_if->core_params->otg_supp_enable))
 #endif
 	{
@@ -1514,8 +1514,8 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	dwc_otg_enable_global_interrupts(gadget_wrapper->pcd->core_if);
 
 #ifdef CONFIG_USB_OTG_UTILS
-	if (gadget_wrapper->pcd->core_if->xceiver->set_peripheral)
-		otg_set_peripheral(gadget_wrapper->pcd->core_if->xceiver,
+	if (gadget_wrapper->pcd->core_if->xceiver->otg->set_peripheral)
+		otg_set_peripheral(gadget_wrapper->pcd->core_if->xceiver->otg,
 				   &gadget_wrapper->gadget);
 #endif
 
