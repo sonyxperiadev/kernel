@@ -292,7 +292,7 @@ void __init dma_contiguous_remap(void)
 		map.pfn = __phys_to_pfn(start);
 		map.virtual = __phys_to_virt(start);
 		map.length = end - start;
-		map.type = MT_MEMORY_SO;
+		map.type = MT_MEMORY_DMA_READY;
 
 		/*
 		 * Clear previous low-memory mapping
