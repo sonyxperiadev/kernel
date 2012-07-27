@@ -438,7 +438,7 @@ void w_peri_suspend_powersaving(void *p)
 
 	if (core_if) {
 		/* Suspend trasceiver */
-		otg_set_suspend(core_if->xceiver, 1);
+		usb_phy_set_suspend(core_if->xceiver, 1);
 	}
 }
 
@@ -1176,7 +1176,6 @@ int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
 #else
 		/* Suspend trasceiver */
 		usb_phy_set_suspend(core_if->xceiver, 1);
-	}
 #endif
 	}
 
