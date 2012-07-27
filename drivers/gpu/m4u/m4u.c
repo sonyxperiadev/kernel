@@ -101,11 +101,62 @@ struct m4u_device {
 	struct m4u_platform_data pdata;
 	struct list_head		static_region_list;
 	struct dentry 			*debug_root;
+	struct dentry 			*debug_reg_dir;
+	/* Registers */
+	struct dentry 			*debug_cr_fs;
+	struct dentry 			*debug_isr_fs;
+	struct dentry 			*debug_imr_fs;
+	struct dentry 			*debug_tbr_fs;
+	struct dentry 			*debug_lr_fs;
+	struct dentry 			*debug_ldr_fs;
+	struct dentry 			*debug_efl_fs;
+	struct dentry 			*debug_elock_fs;
+	struct dentry 			*debug_eunlock_fs;
+	struct dentry 			*debug_xfifo_fs;
+	struct dentry 			*debug_pccr_fs;
+	struct dentry 			*debug_pcr1_fs;
+	struct dentry 			*debug_pcr2_fs;
 };
 
 struct m4u_device *g_mdev;
 #ifdef DEBUG_M4U
 #endif
+
+/* Macros for debugfs creation */
+#define _M4U_GET_REG(REG_NAME, REG_KEY)		\
+static int get_ ## REG_NAME ##  _val(void *data, u64 *val) \
+{ \
+	*val = m4u_read_reg(data, MMMMU_OPEN_ ## REG_KEY ## _OFFSET); \
+	return 0; \
+}
+
+#define _M4U_SET_REG(REG_NAME, REG_KEY)		\
+static int set_ ## REG_NAME ##  _val(void *data, u64 val) \
+{ \
+	m4u_write_reg(data, MMMMU_OPEN_ ## REG_KEY ## _OFFSET, val); \
+	return 0; \
+}
+
+#define M4U_GET_REG(REG_NAME, REG_KEY)	\
+	_M4U_GET_REG(REG_NAME, REG_KEY) 		\
+	DEFINE_SIMPLE_ATTRIBUTE(m4u_debug_reg_ ## REG_NAME ## _fops, \
+		get_ ## REG_NAME ## _val, NULL, "0x%08llx\n");
+
+#define M4U_SET_REG(REG_NAME, REG_KEY)	\
+	_M4U_SET_REG(REG_NAME, REG_KEY) 		\
+	DEFINE_SIMPLE_ATTRIBUTE(m4u_debug_reg_ ## REG_NAME ## _fops, \
+		NULL, set_ ## REG_NAME ## _val, "0x%08llx\n");
+
+#define M4U_GET_SET_REG(REG_NAME, REG_KEY)	\
+	_M4U_GET_REG(REG_NAME, REG_KEY) 		\
+	_M4U_SET_REG(REG_NAME, REG_KEY) 		\
+	DEFINE_SIMPLE_ATTRIBUTE(m4u_debug_reg_ ## REG_NAME ## _fops, \
+		get_ ## REG_NAME ## _val, set_ ## REG_NAME ## _val, "0x%08llx\n");
+
+#define M4U_DEBUGFS_CREATE_REG_FILE(REG_NAME)	\
+		mdev->debug_ ## REG_NAME ## _fs = debugfs_create_file( 		\
+				#REG_NAME, (S_IRUGO|S_IWUSR), mdev->debug_reg_dir, 	\
+				mdev, &m4u_debug_reg_ ## REG_NAME ## _fops);
 
 static inline void m4u_write_reg(struct m4u_device *mdev, u32 offset, u32 value)
 {
@@ -411,6 +462,57 @@ static irqreturn_t m4u_isr(int irq, void *data)
 	return IRQ_NONE;
 }
 
+static int m4u_debug_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+M4U_GET_REG(cr, CR);
+M4U_GET_REG(isr, ISR);
+M4U_GET_SET_REG(imr, IMR);
+M4U_GET_SET_REG(tbr, TBR);	/* Convert to only get after bringup */
+M4U_GET_SET_REG(lr, LR);	/* Convert to only get after bringup */
+M4U_GET_REG(ldr, LDR);
+M4U_SET_REG(efl, EFL);
+M4U_SET_REG(elock, ELOCK);
+M4U_SET_REG(eunlock, EUNLOCK);
+M4U_GET_REG(xfifo, XFIFO);
+M4U_GET_SET_REG(pccr, PCCR);
+M4U_GET_SET_REG(pcr1, PCR1);
+M4U_GET_SET_REG(pcr2, PCR2);
+
+void m4u_debugfs_init(struct m4u_device *mdev, struct platform_device *pdev)
+{
+	char debug_name[64];
+
+	/* Create root directory */
+	mdev->debug_root = debugfs_create_dir(pdev->name, NULL);
+	if (IS_ERR_OR_NULL(mdev->debug_root))
+		pr_err("Failed to create debug root dir.\n");
+
+	/* Create register files */
+	snprintf(debug_name, 64, "registers");
+	mdev->debug_reg_dir = debugfs_create_dir(debug_name, mdev->debug_root);
+	if (IS_ERR_OR_NULL(mdev->debug_reg_dir)) {
+		pr_err("Failed to create dir(%s).\n", debug_name);
+	} else {
+		M4U_DEBUGFS_CREATE_REG_FILE(cr);
+		M4U_DEBUGFS_CREATE_REG_FILE(isr);
+		M4U_DEBUGFS_CREATE_REG_FILE(imr);
+		M4U_DEBUGFS_CREATE_REG_FILE(tbr);
+		M4U_DEBUGFS_CREATE_REG_FILE(lr);
+		M4U_DEBUGFS_CREATE_REG_FILE(ldr);
+		M4U_DEBUGFS_CREATE_REG_FILE(efl);
+		M4U_DEBUGFS_CREATE_REG_FILE(elock);
+		M4U_DEBUGFS_CREATE_REG_FILE(eunlock);
+		M4U_DEBUGFS_CREATE_REG_FILE(xfifo);
+		M4U_DEBUGFS_CREATE_REG_FILE(pccr);
+		M4U_DEBUGFS_CREATE_REG_FILE(pcr1);
+		M4U_DEBUGFS_CREATE_REG_FILE(pcr2);
+	}
+}
+
 static long m4u_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct m4u_device *mdev = filp->private_data;
@@ -545,9 +647,7 @@ static int m4u_probe(struct platform_device *pdev)
 	}
 
 	/* Create Debug files */
-	mdev->debug_root = debugfs_create_dir(pdev->name, NULL);
-	if (IS_ERR_OR_NULL(mdev->debug_root))
-		pr_err("Failed to create debug root dir.\n");
+	m4u_debugfs_init(mdev, pdev);
 
 	/* Set the mdev and platform device private data */
 	platform_set_drvdata(pdev, mdev);
