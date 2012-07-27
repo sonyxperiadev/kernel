@@ -97,6 +97,10 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_ConnectDL,
 	ACTION_AUD_UpdateUserVolSetting,
 	ACTION_AUD_BufferReady,
+	ACTION_AUD_BTTest,
+	ACTION_AUD_CfgIHF,
+	ACTION_AUD_CfgSSP,
+	ACTION_AUD_HwCtl,
 	ACTION_AUD_AtCtl,
 	ACTION_AUD_TOTAL
 };
@@ -250,6 +254,42 @@ struct __BRCM_AUDIO_Param_CallMode_t {
 };
 #define BRCM_AUDIO_Param_CallMode_t struct __BRCM_AUDIO_Param_CallMode_t
 
+struct __BRCM_AUDIO_Param_ECNS_t {
+	Int32 ec_ns;
+};
+#define BRCM_AUDIO_Param_ECNS_t struct __BRCM_AUDIO_Param_ECNS_t
+
+struct __BRCM_AUDIO_Param_AMPCTL_t {
+	Int32 amp_status;
+};
+#define BRCM_AUDIO_Param_AMPCTL_t struct __BRCM_AUDIO_Param_AMPCTL_t
+
+struct __BRCM_AUDIO_Param_BT_Test_t {
+	int mode;
+};
+#define BRCM_AUDIO_Param_BT_Test_t struct __BRCM_AUDIO_Param_BT_Test_t
+
+struct __BRCM_AUDIO_Param_Cfg_IHF_t {
+	Boolean stIHF;
+};
+#define BRCM_AUDIO_Param_Cfg_IHF_t struct __BRCM_AUDIO_Param_Cfg_IHF_t
+
+struct __BRCM_AUDIO_Param_Cfg_SSP_t {
+	int mode;
+	int bus;
+	int en_lpbk;
+};
+#define BRCM_AUDIO_Param_Cfg_SSP_t struct __BRCM_AUDIO_Param_Cfg_SSP_t
+
+struct __BRCM_AUDIO_Param_HwCtl_t {
+	int access_type;
+	int arg1;
+	int arg2;
+	int arg3;
+	int arg4;
+};
+#define BRCM_AUDIO_Param_HwCtl_t struct __BRCM_AUDIO_Param_HwCtl_t
+
 struct __BRCM_AUDIO_Param_AtCtl_t {
 	Int32 cmdIndex;
 	void *pChip;
@@ -277,19 +317,15 @@ union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
 	BRCM_AUDIO_Param_SetApp_t parm_setapp;
 	BRCM_AUDIO_Param_CallMode_t parm_callmode;
+	BRCM_AUDIO_Param_ECNS_t parm_ecns;
+	BRCM_AUDIO_Param_AMPCTL_t parm_ampctl;
+	BRCM_AUDIO_Param_BT_Test_t parm_bt_test;
+	BRCM_AUDIO_Param_Cfg_IHF_t parm_cfg_ihf;
+	BRCM_AUDIO_Param_Cfg_SSP_t parm_cfg_ssp;
+	BRCM_AUDIO_Param_HwCtl_t parm_hwCtl;
 	BRCM_AUDIO_Param_AtCtl_t parm_atctl;
-
 };
 #define BRCM_AUDIO_Control_Params_un_t union __BRCM_AUDIO_Control_Params_un_t
-struct __BRCM_AUDIO_Param_ECNS_t {
-	Int32 ec_ns;
-};
-#define BRCM_AUDIO_Param_ECNS_t struct __BRCM_AUDIO_Param_ECNS_t
-
-struct __BRCM_AUDIO_Param_AMPCTL_t {
-	Int32 amp_status;
-};
-#define BRCM_AUDIO_Param_AMPCTL_t struct __BRCM_AUDIO_Param_AMPCTL_t
 
 void caph_audio_init(void);
 

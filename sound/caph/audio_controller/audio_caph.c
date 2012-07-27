@@ -142,6 +142,10 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 		"ConnectDL",
 		"UpdateUserVolSetting",
 		"BufferReady",
+		"BTTest",
+		"CfgIHF",
+		"CfgSSP",
+		"HwCtl",
 		"AtCtl",
 };
 
@@ -421,6 +425,18 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 		break;
 	case ACTION_AUD_AtCtl:
 		size = sizeof(BRCM_AUDIO_Param_AtCtl_t);
+		break;
+	case ACTION_AUD_BTTest:
+		size = sizeof(BRCM_AUDIO_Param_BT_Test_t);
+		break;
+	case ACTION_AUD_CfgIHF:
+		size = sizeof(BRCM_AUDIO_Param_Cfg_IHF_t);
+		break;
+	case ACTION_AUD_CfgSSP:
+		size = sizeof(BRCM_AUDIO_Param_Cfg_SSP_t);
+		break;
+	case ACTION_AUD_HwCtl:
+		size = sizeof(BRCM_AUDIO_Param_HwCtl_t);
 		break;
 	default:
 		break;
@@ -1623,6 +1639,52 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			/*copy values back to arg_param */
 			memcpy((void *)arg_param, (void *)&parm_atctl,
 				sizeof(BRCM_AUDIO_Param_AtCtl_t));
+		}
+		break;
+	case ACTION_AUD_BTTest:
+		{
+			BRCM_AUDIO_Param_BT_Test_t *param_bt =
+				(BRCM_AUDIO_Param_BT_Test_t *) arg_param;
+			aTrace(LOG_AUDIO_CNTLR,
+				"\n %lx:AUDIO_Ctrl_Process-"
+				"ACTION_AUD_BTTest.\n", jiffies);
+			AUDCTRL_SetBTMode(param_bt->mode);
+		}
+		break;
+	case ACTION_AUD_CfgIHF:
+		{
+			BRCM_AUDIO_Param_Cfg_IHF_t *param_ihf =
+				(BRCM_AUDIO_Param_Cfg_IHF_t *) arg_param;
+			aTrace(LOG_AUDIO_CNTLR,
+				"\n %lx:AUDIO_Ctrl_Process-"
+				"ACTION_AUD_CfgIHF.\n", jiffies);
+			AUDCTRL_SetIHFmode(param_ihf->stIHF);
+		}
+		break;
+	case ACTION_AUD_CfgSSP:
+		{
+			BRCM_AUDIO_Param_Cfg_SSP_t *param_ssp =
+				(BRCM_AUDIO_Param_Cfg_SSP_t *) arg_param;
+			aTrace(LOG_AUDIO_CNTLR,
+				"\n %lx:AUDIO_Ctrl_Process-"
+				"ACTION_AUD_CfgSSP.\n", jiffies);
+			AUDCTRL_ConfigSSP(param_ssp->mode,
+				param_ssp->bus,
+				param_ssp->en_lpbk);
+		}
+		break;
+	case ACTION_AUD_HwCtl:
+		{
+			BRCM_AUDIO_Param_HwCtl_t *param_hwCtl =
+				(BRCM_AUDIO_Param_HwCtl_t *) arg_param;
+			aTrace(LOG_AUDIO_CNTLR,
+				"\n %lx:AUDIO_Ctrl_Process-"
+				"ACTION_AUD_HwCtl.\n", jiffies);
+			AUDCTRL_HardwareControl(param_hwCtl->access_type,
+				param_hwCtl->arg1,
+				param_hwCtl->arg2,
+				param_hwCtl->arg3,
+				param_hwCtl->arg4);
 		}
 		break;
 	default:
