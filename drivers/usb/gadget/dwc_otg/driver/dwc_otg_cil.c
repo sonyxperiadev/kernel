@@ -80,8 +80,8 @@ void dwc_otg_core_soft_disconnect(dwc_otg_core_if_t *core_if, bool en)
 		dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl,
 				dctl.d32);
 #ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver->pullup_on && (!gotgctl.b.hnpreq))
-			core_if->xceiver->pullup_on(core_if->xceiver, !en);
+		if (core_if->xceiver->otg->pullup_on && (!gotgctl.b.hnpreq))
+			core_if->xceiver->otg->pullup_on(core_if->xceiver->otg, !en);
 #endif
 	} else {
 		DWC_PRINTF("NOT SUPPORTED IN HOST MODE\n");
@@ -96,7 +96,7 @@ void w_init_core(void *p)
 #ifdef CONFIG_USB_OTG_UTILS
 		if (core_if->xceiver->init
 		    && (core_if->xceiver->state == OTG_STATE_UNDEFINED))
-			otg_init(core_if->xceiver);
+			usb_phy_init(core_if->xceiver);
 #endif
 		dwc_otg_disable_global_interrupts(core_if);
 		if (dwc_otg_is_host_mode(core_if))
@@ -135,7 +135,7 @@ void w_shutdown_core(void *p)
 
 #ifdef CONFIG_USB_OTG_UTILS
 			if (core_if->xceiver->shutdown)
-				otg_shutdown(core_if->xceiver);
+				usb_phy_shutdown(core_if->xceiver);
 #endif
 		}
 	}
@@ -147,7 +147,7 @@ void w_vbus_draw(void *p)
 	dwc_otg_core_if_t *core_if = p;
 
 	if (core_if->xceiver->set_power)
-		otg_set_power(core_if->xceiver, core_if->vbus_ma);
+		usb_phy_set_power(core_if->xceiver, core_if->vbus_ma);
 #endif
 }
 
@@ -386,9 +386,9 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t *reg_base_addr)
 	/*
 	 * Get OTG transceiver driver.
 	 */
-	core_if->xceiver = otg_get_transceiver();
+	core_if->xceiver = usb_get_transceiver();
 	if (!core_if->xceiver) {
-		DWC_WARN("otg_get_transceiver failed\n");
+		DWC_WARN("usb_get_transceiver failed\n");
 		dwc_free(host_if);
 		dwc_free(dev_if);
 		DWC_WORKQ_FREE(core_if->wq_otg);
@@ -401,7 +401,7 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t *reg_base_addr)
 	}
 
 	core_if->otg_xceiv_nb.notifier_call = dwc_otg_xceiv_nb_callback;
-	otg_register_notifier(core_if->xceiver, &core_if->otg_xceiv_nb);
+	usb_register_notifier(core_if->xceiver, &core_if->otg_xceiv_nb);
 #endif
 
 	/** ADP initialization */
@@ -426,9 +426,9 @@ void dwc_otg_cil_remove(dwc_otg_core_if_t *core_if)
 
 #ifdef CONFIG_USB_OTG_UTILS
 	if (core_if->xceiver) {
-		otg_unregister_notifier(core_if->xceiver,
+		usb_unregister_notifier(core_if->xceiver,
 					&core_if->otg_xceiv_nb);
-		otg_put_transceiver(core_if->xceiver);
+		usb_put_transceiver(core_if->xceiver);
 	}
 #endif
 
@@ -2309,8 +2309,8 @@ void dwc_otg_core_host_init(dwc_otg_core_if_t *core_if)
 			hprt0.b.prtpwr = 1;
 			dwc_write_reg32(host_if->hprt0, hprt0.d32);
 #ifdef CONFIG_USB_OTG_UTILS
-			if (core_if->xceiver->set_vbus)
-				core_if->xceiver->set_vbus(core_if->xceiver,
+			if (core_if->xceiver->otg->set_vbus)
+				core_if->xceiver->otg->set_vbus(core_if->xceiver->otg,
 							   true);
 			cil_hcd_session_start(core_if);
 #endif
@@ -6540,8 +6540,8 @@ void dwc_otg_set_prtpower(dwc_otg_core_if_t *core_if, uint32_t val)
 	hprt0.b.prtpwr = val;
 	dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
 #ifdef CONFIG_USB_OTG_UTILS
-	if (core_if->xceiver->set_vbus)
-		core_if->xceiver->set_vbus(core_if->xceiver,
+	if (core_if->xceiver->otg->set_vbus)
+		core_if->xceiver->otg->set_vbus(core_if->xceiver->otg,
 					   val ? true : false);
 	if (val)
 		cil_hcd_session_start(core_if);
@@ -6760,8 +6760,8 @@ void dwc_otg_initiate_srp(dwc_otg_core_if_t *core_if)
 		return;
 	}
 #ifdef CONFIG_USB_OTG_UTILS
-	if (core_if->xceiver->pullup_on)
-		core_if->xceiver->pullup_on(core_if->xceiver, true);
+	if (core_if->xceiver->otg->pullup_on)
+		core_if->xceiver->otg->pullup_on(core_if->xceiver->otg, true);
 #endif
 
 	DWC_INFO("Session Request Initated\n");	/* NOTICE */
