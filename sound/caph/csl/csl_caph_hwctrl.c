@@ -189,6 +189,7 @@ static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 static CHAL_HANDLE lp_handle;
 static int en_lpbk_pcm, en_lpbk_i2s;
 static int rec_pre_call;
+static int dsp_path;
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -599,6 +600,15 @@ void csl_caph_arm2sp_set_fm_mixmode(int mix_mode)
 		__func__, fm_mix_mode, mix_mode);
 
 	fm_mix_mode = mix_mode;
+}
+
+
+/*
+ * if DSP does not give cb, do not turn off clock
+ */
+void csl_caph_dspcb(int path)
+{
+	dsp_path = path;
 }
 
 /*
@@ -1184,7 +1194,10 @@ static void csl_caph_obtain_blocks
 			"caph dsp spk buf@ %p\r\n", path->pBuf);
 #endif
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R) {
+
+			if (path->source == DUALMICS_NOISE_REF_MIC) {
+
+				/* the secondary mic input path */
 				dmaCH = CSL_CAPH_DMA_CH14;
 #if defined(ENABLE_DMA_VOICE)
 			path->pBuf = (void *)
@@ -1193,8 +1206,9 @@ static void csl_caph_obtain_blocks
 				aTrace(LOG_AUDIO_CSL,
 				"caph dsp sec buf@ %p\r\n", path->pBuf);
 #endif
-		} else {
-			dmaCH = CSL_CAPH_DMA_CH13;
+
+			} else {
+				dmaCH = CSL_CAPH_DMA_CH13;
 #if defined(ENABLE_DMA_VOICE)
 			path->pBuf =
 				(void *)
@@ -1204,6 +1218,7 @@ static void csl_caph_obtain_blocks
 				"caph dsp pri buf@ %p\r\n", path->pBuf);
 #endif
 		}
+
 		} /*else {
 			path->dma[sinkNo][0] = csl_caph_dma_obtain_channel();
 		}*/
@@ -1255,7 +1270,7 @@ static void csl_caph_obtain_blocks
 				"caph dsp spk cfifo# 0x%x\r\n", fifo);
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
 			if (path->source ==
-					CSL_CAPH_DEV_EANC_DIGI_MIC_R) {
+					DUALMICS_NOISE_REF_MIC) {
 				fifo = csl_caph_cfifo_get_fifo_by_dma
 					(CSL_CAPH_DMA_CH14);
 				aTrace(LOG_AUDIO_CSL,
@@ -1299,7 +1314,7 @@ static void csl_caph_obtain_blocks
 		  Must use adjacent SW channels for MICs and SRCs.
 		*/
 		if (path->sink[0] == CSL_CAPH_DEV_DSP) {
-			if (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R) {
+			if (path->source == DUALMICS_NOISE_REF_MIC) {
 				if (blockIdx == 0)
 					sw = CSL_CAPH_SWITCH_CH14;
 				else
@@ -1358,7 +1373,7 @@ static void csl_caph_obtain_blocks
 			srcmIn = CSL_CAPH_SRCM_MONO_CH1;
 			csl_caph_srcmixer_set_inchnl_status(srcmIn);
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R) {
+			if (path->source == DUALMICS_NOISE_REF_MIC) {
 				srcmIn = CSL_CAPH_SRCM_MONO_CH2;
 				csl_caph_srcmixer_set_inchnl_status(srcmIn);
 			} else {
@@ -1438,7 +1453,7 @@ static void csl_caph_obtain_blocks
 			srcmIn = CSL_CAPH_SRCM_MONO_CH1;
 			csl_caph_srcmixer_set_inchnl_status(srcmIn);
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R) {
+			if (path->source == DUALMICS_NOISE_REF_MIC) {
 				srcmIn = CSL_CAPH_SRCM_MONO_CH2;
 				csl_caph_srcmixer_set_inchnl_status(srcmIn);
 			} else {
@@ -2641,7 +2656,7 @@ void csl_caph_ControlHWClock(Boolean enable)
 			if (clkIDCAPH[CLK_156M]->use_cnt == 0)
 				clk_enable(clkIDCAPH[CLK_156M]);
 		}
-	} else if (enable == FALSE && sClkCurEnabled == TRUE) {
+	} else if (enable == FALSE && sClkCurEnabled == TRUE && dsp_path == 0) {
 		UInt32 count = 0;
 		sClkCurEnabled = FALSE;
 
@@ -2659,6 +2674,12 @@ void csl_caph_ControlHWClock(Boolean enable)
 		enable156MClk = FALSE;
 		enable2P4MClk = FALSE;
 	}
+
+	if (enable == FALSE && sClkCurEnabled == TRUE && dsp_path != 0) {
+		aError("%s: CAPH clock remains ON due to DSP response does not "
+		"come. dsp_path 0x%x\n", __func__, dsp_path);
+	}
+
 	aTrace(LOG_AUDIO_CSL,
 		"%s: action = %d,"
 		"result = %d\r\n", __func__, enable, sClkCurEnabled);
@@ -3467,10 +3488,10 @@ static CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(
 
 	list = LIST_NUM;
 	if ((path->source == CSL_CAPH_DEV_MEMORY)
-	&& ((path->sink[sinkNo] == CSL_CAPH_DEV_EP)
-	|| (path->sink[sinkNo] == CSL_CAPH_DEV_HS)
-	|| (path->sink[sinkNo] == CSL_CAPH_DEV_IHF)
-	|| (path->sink[sinkNo] == CSL_CAPH_DEV_VIBRA))) {
+		&& ((path->sink[sinkNo] == CSL_CAPH_DEV_EP)
+		|| (path->sink[sinkNo] == CSL_CAPH_DEV_HS)
+		|| (path->sink[sinkNo] == CSL_CAPH_DEV_IHF)
+		|| (path->sink[sinkNo] == CSL_CAPH_DEV_VIBRA))) {
 		list = LIST_DMA_MIX_SW;
 
 		/*vibra does not go thru mixer*/
@@ -3552,9 +3573,20 @@ static CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(
 		list = LIST_DMA_MIX_SW;
 	} else if ((path->source == CSL_CAPH_DEV_DSP)/*DSP-->SRC-->SW-->AUDIOH*/
 		&& ((path->sink[sinkNo] == CSL_CAPH_DEV_EP)
-		|| (path->sink[sinkNo] == CSL_CAPH_DEV_HS))) {
+		|| (path->sink[sinkNo] == CSL_CAPH_DEV_HS)
+		|| (path->sink[sinkNo] == CSL_CAPH_DEV_IHF))) {
+		/*
+		if source==CSL_CAPH_DEV_DSP and sink==CSL_CAPH_DEV_IHF
+		then 8KHz voice call to loud speaker.
+
+		in audio_vdriver.c, for voice call to IHF, it sets
+		source = CSL_CAPH_DEV_DSP_throughMEM;
+		src_sampleRate = AUDIO_SAMPLING_RATE_48000;
+		therefore voice call to loud speaker at 48KHz
+		does not come inside this if statement.
+		*/
 		aTrace(LOG_AUDIO_CSL,
-			"Voice DL: DSP->AUDIOH(EP/HS)\r\n");
+			"Voice DL: DSP->AUDIOH(EP/HS/IHF)\r\n");
 #if defined(ENABLE_DMA_VOICE)
 		list = LIST_DMA_MIX_SW;
 #else
@@ -3568,9 +3600,10 @@ static CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(
 		|| (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
 		|| (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
 		&& (path->sink[sinkNo] == CSL_CAPH_DEV_DSP)) {
+
 		aTrace(LOG_AUDIO_CSL,
-			"Voice UL: AudioH(AnalogMic/HSMic/DMIC1/2/3/4)"
-			"->DSP\r\n");
+			"Voice UL: AudioH(AnalogMic/HSMic/DMIC1/2/3/4) %d"
+			"->DSP\r\n", path->source);
 #if defined(ENABLE_DMA_VOICE)
 		list = LIST_SW_SRC_DMA;
 #else
@@ -3809,6 +3842,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		/*only start the path if it is not streaming with Memory.*/
 		csl_caph_hwctrl_StartPath(config.pathID);
 	}
+
 #ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
 	pathCount = csl_caph_hwctrl_pathsEnabled();
 	if (pathCount < 2)

@@ -377,7 +377,6 @@ static const struct ov5640_reg yuv422_init_common[] = {
 	/*Format control */
 	{0x4300, 0x32},		/*Output Format[7:4] Sequence[3:0] (UVYV) */
 	/*MIPI Control */
-	{0x300e, 0x45},	/*MIPI Control  Dual Lane */
 	{0x4837, 0x0a},
 	/*PCLK Divider */
 	{0x3824, 0x01},		/*Scale Divider [4:0] */
@@ -398,11 +397,27 @@ static const struct ov5640_reg jpeg_init_common[] = {
 	/*Format control */
 	{0x4300, 0x30},		/*Output Format[7:4] Sequence[3:0] (UVYV) */
 	/*MIPI Control */
-	{0x300e, 0x45},		/*MIPI Control  Dual Lane */
 	{0x4837, 0x16},
 	/*PCLK Divider */
 	{0x3824, 0x04},		/*Scale Divider [4:0] */
 	{0x3008, 0x42},		/*stop sensor streaming */
+
+	{0xFFFF, 0x00}
+};
+
+static const struct ov5640_reg ov5640_stream[] = {
+	/* System Control */
+	{0x300e, 0x45},		/* enable 2 lane MIPI */
+	{0x3008, 0x02},		/* enable streaming */
+
+	{0xFFFF, 0x00}
+};
+
+static const struct ov5640_reg ov5640_power_down[] = {
+	/* System Control */
+	{0x3008, 0x42},		/* disable streaming */
+	{0x300e, 0x58},		/* power down MIPI */
+	{0xFFFF, 1},		/* Sleep 1ms */
 
 	{0xFFFF, 0x00}
 };

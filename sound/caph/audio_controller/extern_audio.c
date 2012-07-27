@@ -39,6 +39,12 @@
 #include "linux/gpio.h"
 #include "audio_trace.h"
 
+
+
+#ifdef THIRD_PARTY_PMU
+#include "dialog_audio.h"
+#endif
+
 #if (!defined(CONFIG_BCMPMU_AUDIO))
 
 void extern_hs_on(void) {; }
@@ -496,9 +502,12 @@ static struct PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM] = {
 
 };
 
+#ifndef THIRD_PARTY_PMU
 static char ihf_IsOn;
 static char hs_IsOn;
 static int pll_IsOn;
+#endif
+
 static int hs_gain_l = -400; /* mB */
 static int hs_gain_r = -400; /* mB */
 static int ihf_gain = -400; /* mB */
@@ -593,6 +602,12 @@ static struct PMU_AudioGainMapping_t map2pmu_ihf_gain(int arg_gain_mB)
 ****************************************************************************/
 void extern_hs_on(void)
 {
+
+#ifdef THIRD_PARTY_PMU
+
+	dialog_audio_hs_poweron();
+
+#else
 	BCMPMU_Audio_HS_Param hs_param;
 
 	/*enable the audio PLL before power ON */
@@ -602,7 +617,7 @@ void extern_hs_on(void)
 	}
 
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH,
-				  PMU_HSGAIN_MUTE),
+				  PMU_HSGAIN_MUTE);
 
 	/*
 	./drivers/misc/bcm59055-audio.c:int bcm59055_hs_power(bool on)
@@ -620,6 +635,7 @@ void extern_hs_on(void)
 	hs_param.hs_gain_right = PMU_HSGAIN_MUTE;
 	hs_param.hs_hi_gain_mode = 0;
 	bcmpmu_audio_driver_set_hs_param(hs_param);
+#endif
 
 }
 
@@ -632,10 +648,19 @@ void extern_hs_on(void)
 ****************************************************************************/
 void extern_hs_off(void)
 {
+
+#ifdef THIRD_PARTY_PMU
+
+	dialog_audio_hs_poweroff();
+
+#else
+
 	BCMPMU_Audio_HS_Param hs_param;
 
+	/*BCM59039 PMU HW ramps down HS gain when powers off HS amp.
+	no need for software to ramp down HS gain.
 	bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH,
-				  PMU_HSGAIN_MUTE),
+				  PMU_HSGAIN_MUTE);*/
 	bcmpmu_hs_power(0);
 
 	hs_IsOn = 0;
@@ -653,7 +678,7 @@ void extern_hs_off(void)
 			bcmpmu_audio_deinit();
 			pll_IsOn = 0;
 		}
-
+#endif
 }
 
 /********************************************************************
@@ -665,6 +690,13 @@ void extern_hs_off(void)
 ****************************************************************************/
 void extern_ihf_on(void)
 {
+
+#ifdef THIRD_PARTY_PMU
+
+	dialog_audio_ihf_poweron();
+
+#else
+
 #if defined(CONFIG_IHF_EXT_AMPLIFIER)
 	audio_gpio_output(GPIO_IHF_EXT_AMP, 1);
 #else
@@ -674,10 +706,11 @@ void extern_ihf_on(void)
 		pll_IsOn = 1;
 	}
 
-	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE),
+	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE);
 	bcmpmu_ihf_power(1);
 #endif
 	ihf_IsOn = 1;
+#endif
 }
 
 /********************************************************************
@@ -689,11 +722,18 @@ void extern_ihf_on(void)
 ****************************************************************************/
 void extern_ihf_off(void)
 {
+
+#ifdef THIRD_PARTY_PMU
+
+	dialog_audio_ihf_poweroff();
+
+#else
+
 	ihf_IsOn = 0;
 #if defined(CONFIG_IHF_EXT_AMPLIFIER)
 	audio_gpio_output(GPIO_IHF_EXT_AMP, 0);
 #else
-	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE),
+	bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE);
 	bcmpmu_ihf_power(0);
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)
@@ -703,6 +743,7 @@ void extern_ihf_off(void)
 			pll_IsOn = 0;
 		}
 
+#endif
 #endif
 }
 
@@ -770,6 +811,19 @@ int extern_hs_find_gain(int gain_mB)
 ****************************************************************************/
 void extern_hs_set_gain(int gain_mB, AUDIO_GAIN_LR_t lr)
 {
+
+#ifdef THIRD_PARTY_PMU
+
+      /*There is no gain mapping as below..is that ok??*/
+	if (lr == AUDIO_HS_LEFT)
+		dialog_audio_hs_set_gain(AUDIO_HS_LEFT, gain_mB);
+	else if (lr == AUDIO_HS_RIGHT)
+		dialog_audio_hs_set_gain(AUDIO_HS_RIGHT, gain_mB);
+	else if (lr == AUDIO_HS_BOTH)
+		dialog_audio_hs_set_gain(AUDIO_HS_BOTH, gain_mB);
+
+#else
+
 	BCMPMU_Audio_HS_Param hs_param;
 	struct PMU_AudioGainMapping_t gain_map;
 
@@ -802,6 +856,7 @@ void extern_hs_set_gain(int gain_mB, AUDIO_GAIN_LR_t lr)
 	}
 
 	bcmpmu_audio_driver_set_hs_param(hs_param);
+#endif
 }
 
 /********************************************************************
@@ -882,6 +937,16 @@ int extern_ihf_find_gain(int gain_mB)
 ****************************************************************************/
 void extern_ihf_set_gain(int gain_mB)
 {
+
+#ifdef THIRD_PARTY_PMU
+
+	aTrace(LOG_AUDIO_CNTLR, "%s gain_mB=%d\n",
+			__func__, gain_mB);
+
+	dialog_audio_ihf_set_gain(gain_mB);
+
+#else
+
 	struct PMU_AudioGainMapping_t gain_map;
 
 	gain_map = map2pmu_ihf_gain(gain_mB);
@@ -891,6 +956,9 @@ void extern_ihf_set_gain(int gain_mB)
 	bcmpmu_ihf_set_gain(gain_map.PMU_gain_enum);
 
 	ihf_gain = gain_map.gain_mB;
+
+#endif
+
 }
 
 
@@ -932,5 +1000,173 @@ void extern_ihf_en_hi_gain_mode(int enable)
 	else
 		bcmpmu_hi_gain_mode_en(1);
 }
+
+
+/********************************************************************
+*  @brief  Set IHF Noise gate parameter
+*
+*  @param  IHF Noise parameter
+*  @return  none
+*
+****************************************************************************/
+
+void extern_set_ihf_noise_gate(int param_value)
+{
+#ifdef THIRD_PARTY_PMU
+
+	dialog_noise_gate_t noise_gate;
+
+	noise_gate.cfg = (param_value & 0xC0) >> 6;
+	noise_gate.atk = (param_value & 0x0038) >> 3;
+	noise_gate.deb = (param_value & 0x06) >> 1;
+	noise_gate.en  = (param_value & 0x01);
+	noise_gate.rms = (param_value & 0x1800) >> 11;
+	noise_gate.rel = (param_value & 0x700) >> 8;
+
+	aTrace(LOG_AUDIO_CNTLR, "%s cfg=%d, atk=%d, deb =%d\n",
+		__func__, noise_gate.cfg, noise_gate.atk, noise_gate.deb);
+
+	aTrace(LOG_AUDIO_CNTLR, "en =%d, rms =%d, rel =%d\n" ,
+		noise_gate.en, noise_gate.rms, noise_gate.rel);
+
+	dialog_set_ihf_noise_gate(noise_gate);
+
+#endif
+}
+
+
+/********************************************************************
+*  @brief  Set HS Noise gate parameter
+*
+*  @param  HS Noise parameter
+*  @return  none
+*
+****************************************************************************/
+
+void extern_set_hs_noise_gate(int param_value)
+{
+#ifdef THIRD_PARTY_PMU
+	dialog_noise_gate_t noise_gate;
+
+	noise_gate.cfg = (param_value & 0xC0) >> 6;
+	noise_gate.atk = (param_value & 0x0038) >> 3;
+	noise_gate.deb = (param_value & 0x06) >> 1;
+	noise_gate.en  = (param_value & 0x01);
+	noise_gate.rms = (param_value & 0x1800) >> 11;
+	noise_gate.rel = (param_value & 0x700) >> 8;
+
+
+	aTrace(LOG_AUDIO_CNTLR, "%s cfg=%d, atk=%d, deb =%d\n",
+		__func__, noise_gate.cfg, noise_gate.atk, noise_gate.deb);
+
+	aTrace(LOG_AUDIO_CNTLR, "en =%d, rms =%d, rel =%d\n" ,
+		noise_gate.en, noise_gate.rms, noise_gate.rel);
+
+
+	dialog_set_hs_noise_gate(noise_gate);
+#endif
+
+}
+
+/********************************************************************
+*  @brief  Set IHF None Clip parameter
+*
+*  @param  None Clip parameter
+*  @return  none
+*
+****************************************************************************/
+
+void extern_set_ihf_none_clip(int param_value)
+{
+
+#ifdef THIRD_PARTY_PMU
+
+	dialog_spk_nonclip_t non_clip;
+
+	non_clip.zc_en = (param_value & 0x80) >> 7;
+	non_clip.rel = (param_value & 0x70) >> 4;
+	non_clip.atk = (param_value & 0xe) >> 1;
+	non_clip.en = (param_value & 0x01);
+	non_clip.hld = (param_value & 0xC000) >> 14;
+	non_clip.thd = (param_value & 0x3f00) >> 8;
+
+	aTrace(LOG_AUDIO_CNTLR, "%s zc_en=%d, rel=%d, atk =%d\n",
+		__func__, non_clip.zc_en, non_clip.rel, non_clip.atk);
+
+	aTrace(LOG_AUDIO_CNTLR, "en =%d, hld =%d, thd=%d\n",
+		non_clip.en, non_clip.hld, non_clip.thd);
+
+	dialog_set_ihf_none_clip(non_clip);
+#endif
+}
+
+
+/********************************************************************
+*  @brief  Set IHF pwr parameter
+*
+*  @param  pwr parameter
+*  @return  none
+*
+****************************************************************************/
+
+
+void extern_set_ihf_pwr(int param_value)
+{
+
+#ifdef THIRD_PARTY_PMU
+	dialog_spk_pwr_t spk_pwr;
+
+	spk_pwr.pwr = (param_value & 0x7e) >> 1;
+	spk_pwr.limit_en = (param_value & 0x01);
+
+	aTrace(LOG_AUDIO_CNTLR, "%s pwr=%d , limit_en = %d\n",
+		__func__, spk_pwr.pwr, spk_pwr.limit_en);
+
+	dialog_set_ihf_pwr(spk_pwr);
+
+#endif
+
+}
+
+/********************************************************************
+*  @brief  Set IHF preamp gain
+*
+*  @param  gain_mB	requested IHF preamp gain
+*  @return  none
+*
+****************************************************************************/
+
+void extern_set_ihf_preamp_gain(int gain_mB)
+{
+#ifdef THIRD_PARTY_PMU
+	dialog_set_ihf_preamp_gain(gain_mB);
+
+	aTrace(LOG_AUDIO_CNTLR, "%s gain_mB=%d",
+		__func__, gain_mB);
+
+#endif
+
+}
+
+/********************************************************************
+*  @brief  Set HS preamp gain
+*
+*  @param  gain_mB	requested HS preamp gain
+*  @return  none
+*
+****************************************************************************/
+
+void extern_set_hs_preamp_gain(int gain_mB)
+{
+#ifdef THIRD_PARTY_PMU
+	dialog_set_hs_preamp_gain(gain_mB);
+
+	aTrace(LOG_AUDIO_CNTLR, "%s gain_mBr=%d",
+		__func__, gain_mB);
+
+#endif
+
+}
+
 
 #endif

@@ -31,6 +31,10 @@
     #include <mach/rdb/brcm_rdb_padctrlreg.h>
     #include <mach/rdb/brcm_rdb_sysmap.h>
     #include <mach/rdb/brcm_rdb_util.h>
+
+#include <linux/err.h>
+#include <linux/clk.h>
+#include <plat/clock.h>
     
 
 //===========================================================================
@@ -86,6 +90,9 @@ static void chalCamCopy( cUInt8 *wr_addr, cUInt8 *rd_addr, cUInt32 size );
 // static CHAL_CAM_STATUS_CODES chal_cam_wait_value(CHAL_HANDLE handle, CHAL_CAM_INTF_t intf, cUInt32 timeout, cUInt32 *reg_addr, cUInt32 reg_mask, cUInt32 value);
 
 // ---- Functions -----------------------------------------------------------
+
+/* mm ccu clock to check if mm domain is active */
+static struct clk *mm_ccu;
 
 CHAL_CAM_STATUS_CODES chal_cam_register_display(CHAL_HANDLE handle, CHAL_CAM_PARAM_st_t* param)
 {
@@ -305,7 +312,13 @@ CHAL_HANDLE chal_cam_init(cUInt32 baseAddr)
         DBG_OUT( chal_dprintf(CDBG_INFO, "chal_cam_init: already initialized\n") );
     }         
     
-    DBG_OUT( chal_dprintf(CDBG_INFO, "chal_cam_init: Register base=0x%x \n", pCamDevice->baseAddr) );
+	DBG_OUT(chal_dprintf(CDBG_INFO, "chal_cam_init: Register base=0x%x\n",
+						pCamDevice->baseAddr));
+	if (mm_ccu == NULL) {
+		mm_ccu = clk_get(NULL, MM_CCU_CLK_NAME_STR);
+		if (IS_ERR_OR_NULL(mm_ccu))
+			BUG();
+	}
 
     return (CHAL_HANDLE)pCamDevice;
 }
@@ -325,6 +338,7 @@ cVoid chal_cam_deinit(CHAL_HANDLE handle)
 {
     chal_cam_t *pCamDevice = (chal_cam_t *)handle;
     cUInt32 clk_base_addr;
+
     clk_base_addr = HW_IO_PHYS_TO_VIRT(MM_CLK_BASE_ADDR);
 
     if (pCamDevice == NULL)
@@ -333,6 +347,10 @@ cVoid chal_cam_deinit(CHAL_HANDLE handle)
     }
     else
     {
+	if (mm_ccu) {
+		if (mm_ccu->use_cnt <= 0)
+			BUG();
+	}
         pCamDevice->baseAddr = 0;
         pCamDevice->init = FALSE;
 		/* Disable clocks here */
@@ -366,7 +384,12 @@ CHAL_CAM_STATUS_CODES chal_cam_cfg_intf(CHAL_HANDLE handle, CHAL_CAM_CFG_INTF_st
 // Reset Cam 
 //    chalCamReset(handle);
 
-    printk("chal_cam_cfg_intf() base=0x%x \n", pCamDevice->baseAddr);   
+	if (mm_ccu) {
+		if (mm_ccu->use_cnt <= 0)
+			BUG();
+	}
+	printk(KERN_ERR "chal_cam_cfg_intf() base=0x%x\n",
+					pCamDevice->baseAddr);
     // Set Camera CSIx Phy & Clock Registers
         cfg_base_addr = HW_IO_PHYS_TO_VIRT(MM_CFG_BASE_ADDR);
         clk_base_addr = HW_IO_PHYS_TO_VIRT(MM_CLK_BASE_ADDR);

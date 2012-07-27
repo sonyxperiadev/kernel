@@ -1032,6 +1032,7 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 	int stream = STREAM_OF_CTL(priv);
 	int rtn = 0, chn = 0;
 	struct snd_ctl_elem_info info;
+	BRCM_AUDIO_Param_AtCtl_t parm_atctl;
 
 	switch (function) {
 	case CTL_FUNCTION_LOOPBACK_TEST:
@@ -1065,9 +1066,23 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		break;
 	case CTL_FUNCTION_AT_AUDIO:
 		kcontrol->info(kcontrol, &info);
-		rtn =
+		/*rtn =
 		    AtAudCtlHandler_get(kcontrol->id.index, pChip, info.count,
-					ucontrol->value.integer.value);
+					ucontrol->value.integer.value);*/
+		memset(&parm_atctl, 0, sizeof(parm_atctl));
+		parm_atctl.cmdIndex = kcontrol->id.index;
+		parm_atctl.pChip = pChip;
+		parm_atctl.ParamCount = info.count;
+		parm_atctl.isGet = 1;
+		memcpy(&parm_atctl.Params, ucontrol->value.integer.value,
+			sizeof(parm_atctl.Params));
+		AUDIO_Ctrl_Trigger(ACTION_AUD_AtCtl, &parm_atctl, NULL, 1);
+
+		/*copy values back to ucontrol value[] */
+		memcpy((void *)&(ucontrol->value.integer.value),
+			(void *)&parm_atctl.Params,
+			sizeof(parm_atctl.Params));
+
 		break;
 	case CTL_FUNCTION_BYPASS_VIBRA:
 		ucontrol->value.integer.value[0] =
@@ -1166,6 +1181,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	BRCM_AUDIO_Param_ECNS_t parm_ecns;
 	BRCM_AUDIO_Param_AMPCTL_t parm_ampctl;
 	BRCM_AUDIO_Param_CallMode_t parm_callmode;
+	BRCM_AUDIO_Param_AtCtl_t parm_atctl;
 	struct snd_pcm_substream *pStream = NULL;
 	int sink = 0;
 	struct snd_ctl_elem_info info;
@@ -1353,9 +1369,20 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		break;
 	case CTL_FUNCTION_AT_AUDIO:
 		kcontrol->info(kcontrol, &info);
-		rtn =
+
+		/*rtn =
 		    AtAudCtlHandler_put(kcontrol->id.index, pChip, info.count,
-					ucontrol->value.integer.value);
+					ucontrol->value.integer.value);*/
+		memset(&parm_atctl, 0, sizeof(parm_atctl));
+		parm_atctl.cmdIndex = kcontrol->id.index;
+		/*this pointer would not released, so no need to pass the
+		  whole structure*/
+		parm_atctl.pChip = pChip;
+		parm_atctl.ParamCount = info.count;
+		parm_atctl.isGet = 0;
+		memcpy(&parm_atctl.Params, ucontrol->value.integer.value,
+			sizeof(parm_atctl.Params));
+		AUDIO_Ctrl_Trigger(ACTION_AUD_AtCtl, &parm_atctl, NULL, 1);
 		break;
 	case CTL_FUNCTION_BYPASS_VIBRA:
 		pChip->pi32BypassVibraParam[0] =
@@ -1981,6 +2008,8 @@ static struct snd_kcontrol_new sgSndCtrls[] __devinitdata = {
 	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_READ_REG,
 		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_WRITE_REG,
+		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_PRINT_PATH,
 		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_HW_CTL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "AMP-CTL", 0,
 		CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_AMP_CTL)),

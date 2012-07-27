@@ -653,6 +653,13 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 			    csl_audio_render_resume(aud_drv->stream_id);
 		}
 		break;
+	case AUDIO_DRIVER_BUFFER_READY:
+		{
+			/*notify render a new buffer is ready*/
+			result_code =
+			    csl_audio_render_buffer_ready(aud_drv->stream_id);
+		}
+		break;
 	default:
 		aWarn(
 				"AUDIO_DRIVER_ProcessRenderCmd::Unsupported command\n");

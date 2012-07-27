@@ -62,9 +62,9 @@ static spinlock_t mLock;
 #define RPC_LOCK_INIT
 #endif
 
-/*#define _DBG_(a) a */
-/*#undef RPC_TRACE */
-/*#define RPC_TRACE(fmt,args...) printk (fmt, ##args) */
+/*#define _DBG_(a) a*/
+/*#undef RPC_TRACE*/
+/*#define RPC_TRACE(fmt,args...) printk (fmt, ##args)*/
 
 /*****************************************************************************
 				Global defines
@@ -969,6 +969,7 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 
 	if (result != RPC_RESULT_PENDING) {
 		/* Packet was never consumed */
+		/* coverity [dead_error_line] */
 		IPC_FreeBuffer(bufHandle);
 		rpcLogFreePacket((PACKET_InterfaceType_t)type, pktBufHandle);
 		_DBG_(RPC_TRACE("RPC_BufferDelivery filterCb FAIL h=%d r=%d\n",
@@ -1110,9 +1111,7 @@ for (itype = INTERFACE_START; itype < INTERFACE_TOTAL; itype++) {
 		ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_Capi2App : IPC_EP_Capi2Cp;
-	}
-
-	else if (itype == INTERFACE_DRX) {
+		} else if (itype == INTERFACE_DRX) {
 		ipcBufList[itype].max_pkts[0] = CFG_RPC_DRX_MAX_PACKETS;
 		ipcBufList[itype].pkt_size[0] = CFG_RPC_DRX_PKT_SIZE;
 
@@ -1127,9 +1126,7 @@ for (itype = INTERFACE_START; itype < INTERFACE_TOTAL; itype++) {
 		ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_DrxAP : IPC_EP_DrxCP;
-	}
-
-	else if (itype == INTERFACE_PACKET) {
+		} else if (itype == INTERFACE_PACKET) {
 		for (index = 0; index < MAX_CHANNELS; index++) {
 			ipcBufList[itype].pkt_size[(int)index] =
 				    CFG_RPC_PKTDATA_PKT_SIZE;
@@ -1150,9 +1147,8 @@ for (itype = INTERFACE_START; itype < INTERFACE_TOTAL; itype++) {
 			ipcBufList[itype].destEpId =
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_PsAppData : IPC_EP_PsCpData;
-	}
+		} else if (itype == INTERFACE_USB_EEM) {
 
-	else if (itype == INTERFACE_USB_EEM) {
 		for (index = 0; index < MAX_CHANNELS; index++) {
 			ipcBufList[itype].pkt_size[(int)index] =
 				    CFG_RPC_EEMDATA_PKT_SIZE;
@@ -1194,9 +1190,7 @@ for (itype = INTERFACE_START; itype < INTERFACE_TOTAL; itype++) {
 			    (rpcProcType ==
 			     RPC_COMMS) ? IPC_EP_CsdAppCSDData :
 			    IPC_EP_CsdCpCSDData;
-	}
-
-	else if (itype == INTERFACE_LOGGING) {
+		} else if (itype == INTERFACE_LOGGING) {
 #if !defined(UNDER_CE) &&  !defined(UNDER_LINUX)	/*modify for UDP log */
 		for (index = 0; index < MAX_CHANNELS; index++) {
 			ipcBufList[itype].pkt_size[index] =

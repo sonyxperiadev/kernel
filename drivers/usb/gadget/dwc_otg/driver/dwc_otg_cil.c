@@ -93,6 +93,11 @@ void w_init_core(void *p)
 	dwc_otg_core_if_t *core_if = p;
 
 	if (core_if) {
+
+#ifdef CONFIG_USB_DELAYED_SUSPEND_POWER_SAVING
+		DWC_TIMER_CANCEL(core_if->suspend_power_saving_timer);
+#endif
+
 #ifdef CONFIG_USB_OTG_UTILS
 		if (core_if->xceiver->init
 		    && (core_if->xceiver->state == OTG_STATE_UNDEFINED))
@@ -126,17 +131,25 @@ void w_shutdown_core(void *p)
 {
 	dwc_otg_core_if_t *core_if = p;
 
-	if ((core_if->op_state == B_PERIPHERAL) &&
-		    core_if->xceiver->state != OTG_STATE_UNDEFINED) {
-		if (dwc_otg_is_device_mode(core_if)) {
-			core_if->lx_state = DWC_OTG_L0;
-			cil_pcd_stop(core_if);
-			dwc_otg_start_stop_phy_clk(core_if, false);
+	if (core_if) {
+#ifdef CONFIG_USB_DELAYED_SUSPEND_POWER_SAVING
+		DWC_TIMER_CANCEL(core_if->suspend_power_saving_timer);
+#endif
+
+		if ((core_if->op_state == B_PERIPHERAL) &&
+			    core_if->xceiver->state != OTG_STATE_UNDEFINED) {
+			if (dwc_otg_is_device_mode(core_if)) {
+				core_if->lx_state = DWC_OTG_L0;
+				/* Make sure PHY clock is on */
+				dwc_otg_start_stop_phy_clk(core_if, true);
+				cil_pcd_stop(core_if);
+				dwc_otg_start_stop_phy_clk(core_if, false);
 
 #ifdef CONFIG_USB_OTG_UTILS
-			if (core_if->xceiver->shutdown)
-				otg_shutdown(core_if->xceiver);
+				if (core_if->xceiver->shutdown)
+					otg_shutdown(core_if->xceiver);
 #endif
+			}
 		}
 	}
 }
@@ -377,6 +390,25 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t *reg_base_addr)
 	}
 #endif
 
+#ifdef CONFIG_USB_DELAYED_SUSPEND_POWER_SAVING
+	core_if->suspend_power_saving_timer =
+	    DWC_TIMER_ALLOC("power saving workaround timer",
+	    w_peri_suspend_powersaving, core_if);
+
+	if (core_if->suspend_power_saving_timer == 0) {
+		DWC_WARN("DWC_TIMER_ALLOC failed\n");
+		dwc_free(host_if);
+		dwc_free(dev_if);
+		DWC_WORKQ_FREE(core_if->wq_otg);
+		DWC_TIMER_FREE(core_if->wkp_timer);
+#ifdef CONFIG_USB_OTG
+		DWC_TIMER_FREE(core_if->bidl_adisconn_timer);
+#endif
+		dwc_free(core_if);
+		return 0;
+	}
+#endif
+
 	if (dwc_otg_setup_params(core_if))
 		DWC_WARN("Error while setting core params\n");
 
@@ -395,6 +427,10 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t *reg_base_addr)
 		DWC_TIMER_FREE(core_if->wkp_timer);
 #ifdef CONFIG_USB_OTG
 		DWC_TIMER_FREE(core_if->bidl_adisconn_timer);
+#endif
+
+#ifdef CONFIG_USB_DELAYED_SUSPEND_POWER_SAVING
+		DWC_TIMER_FREE(core_if->suspend_power_saving_timer);
 #endif
 		dwc_free(core_if);
 		return 0;
@@ -455,6 +491,11 @@ void dwc_otg_cil_remove(dwc_otg_core_if_t *core_if)
 #ifdef CONFIG_USB_OTG
 	if (core_if->bidl_adisconn_timer)
 		DWC_TIMER_FREE(core_if->bidl_adisconn_timer);
+#endif
+
+#ifdef CONFIG_USB_DELAYED_SUSPEND_POWER_SAVING
+	if (core_if->suspend_power_saving_timer)
+		DWC_TIMER_FREE(core_if->suspend_power_saving_timer);
 #endif
 
 	if (core_if->srp_timer)

@@ -434,20 +434,42 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 		  voice even in call mode*/
 		chip->streamCtl[substream_number].dev_prop.p[0].sink =
 			AUDIO_SINK_LOUDSPK;
-	} else if ((callMode == MODEM_CALL)
+
+	} else if (
+		(callMode == MODEM_CALL
+			/*&& (audio_rpc_read_flag_vc_rel_by_modem() == FALSE)*/)
 	    && (chip->streamCtl[substream_number].iLineSelect[0]
 		!= AUDIO_SINK_I2S)) {
 		/*call mode & not FM Tx playback */
+		/*
+		during voice call, audio is played throught DSP to CAPH so that
+		DSP has the audio data for echo cancellation reference.
+
+		but, for the short time window between the time voice call
+		is already released by modem and the time user app tells
+		kernel driver to end voice call audio path,
+		audio playback is directly to CAPH. (not through DSP)
+		This avoids the 1 frame (20ms) audio glitch in speaker output.
+		*/
+
 		chip->streamCtl[substream_number].dev_prop.p[0].source =
 		    AUDIO_SOURCE_MEM;
 		chip->streamCtl[substream_number].dev_prop.p[0].sink =
 		    AUDIO_SINK_DSP;
+
+		aTrace(LOG_ALSA_INTERFACE,
+			"ALSA-CAPH PcmPlaybackTrigger to DSP MEM\n");
+
 	} else {
 		for (i = 0; i < MAX_PLAYBACK_DEV; i++) {
 			if (pSel[i] >= AUDIO_SINK_HANDSET
 			    && pSel[i] < AUDIO_SINK_VALID_TOTAL) {
 				chip->streamCtl[substream_number].dev_prop.p[i].
 				    sink = pSel[i];
+
+				aTrace(LOG_ALSA_INTERFACE,
+					"ALSA-CAPH PcmPlaybackTrigger to CAPH\n");
+
 			} else {
 				/* No valid device in the list to do a playback,
 				 * return error
@@ -634,6 +656,7 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 				" hw_ptr = %d,dmaptr= %d, pos = %d\n",
 				(int)chip->streamCtl[substream->number].
 				stream_hw_ptr, dmaPointer, (int)pos);
+#if !defined(DYNAMIC_DMA_PLAYBACK)
 		whichbuffer = csl_audio_render_get_current_buffer(
 			StreamIdOfDriver(runtime->private_data));
 		if (whichbuffer != 1 && whichbuffer != 2) {
@@ -648,6 +671,11 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 		else
 			pos = chip->streamCtl[substream->number].stream_hw_ptr;
 	} else
+#else
+		dmaPointer = 0;
+	}
+#endif
+
 	pos =
 	    chip->streamCtl[substream->number].stream_hw_ptr +
 	    bytes_to_frames(runtime, dmaPointer);
@@ -972,6 +1000,80 @@ static snd_pcm_uframes_t PcmCapturePointer(struct snd_pcm_substream *substream)
 	return pos;
 }
 
+int PcmPlaybackCopy(struct snd_pcm_substream *substream, int channel,
+	    snd_pcm_uframes_t pos,
+	    void __user *buf, snd_pcm_uframes_t count)
+{
+	int periods_copied;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	AUDIO_DRIVER_HANDLE_t drv_handle = substream->runtime->private_data;
+	char *buf_start = runtime->dma_area;
+	int period_bytes = frames_to_bytes(runtime, runtime->period_size);
+	char *hwbuf = runtime->dma_area + frames_to_bytes(runtime, pos);
+	int bytes_to_copy = frames_to_bytes(runtime, count);
+	int not_copied = copy_from_user(hwbuf, buf, bytes_to_copy);
+	char *new_hwbuf = hwbuf + (bytes_to_copy - not_copied);
+
+	if (bytes_to_copy != period_bytes)
+		aError("%s: stream = %d,"
+		" buf_start = %p, hwbuf = %p, "
+		"new_hwbuf = %p,period_bytes = %d,"
+		" bytes_to_copy = %d, not_copied = %d, count %d\n",
+		__func__, substream->number, buf_start, hwbuf,
+		new_hwbuf, period_bytes, bytes_to_copy, not_copied,
+		(int)count);
+
+	if (not_copied) {
+		aError("%s: why didn't copy all the bytes?"
+			" not_copied = %d, to_copy = %d\n",
+			__func__, not_copied, bytes_to_copy);
+		aTrace(LOG_ALSA_INTERFACE, "%s: stream = %d,"
+		" buf_start = %p, hwbuf = %p, "
+		"new_hwbuf = %p,period_bytes = %d,"
+		" bytes_to_copy = %d, not_copied = %d\n",
+		__func__, substream->number, buf_start, hwbuf,
+		new_hwbuf, period_bytes, bytes_to_copy, not_copied);
+	}
+
+	/**
+	 * Set DMA engine ready bit according to pos and count
+	*/
+	periods_copied = bytes_to_copy/period_bytes;
+	while (periods_copied--) {
+		BRCM_AUDIO_Param_BufferReady_t param_bufferready;
+
+		param_bufferready.drv_handle = drv_handle;
+		param_bufferready.stream = substream->number;
+
+		/*aTrace(LOG_ALSA_INTERFACE, "%s: stream = %d, "
+			"ACTION_AUD_BufferReady\n",
+			__func__, param_bufferready.stream);*/
+
+		AUDIO_Ctrl_Trigger(ACTION_AUD_BufferReady, &param_bufferready,
+			NULL, 0);
+	}
+
+	return 0;
+
+}
+int PcmPlaybackSilence(struct snd_pcm_substream *substream, int channel,
+	       snd_pcm_uframes_t pos, snd_pcm_uframes_t count)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	char *hwbuf = runtime->dma_area + frames_to_bytes(runtime, pos);
+	snd_pcm_format_set_silence(runtime->format, hwbuf,
+		count * runtime->channels);
+	/**
+	 * Set DMA engine ready bit according to pos and count
+	 */
+
+	aTrace(LOG_ALSA_INTERFACE, "%s: stream = %d, Called\n",
+			__func__, substream->number);
+
+	return 0;
+}
+
+
 /* Playback device operator */
 static struct snd_pcm_ops brcm_alsa_omx_pcm_playback_ops = {
 	.open = PcmPlaybackOpen,
@@ -982,6 +1084,10 @@ static struct snd_pcm_ops brcm_alsa_omx_pcm_playback_ops = {
 	.prepare = PcmPlaybackPrepare,
 	.trigger = PcmPlaybackTrigger,
 	.pointer = PcmPlaybackPointer,
+#if defined(DYNAMIC_DMA_PLAYBACK)
+	.copy = PcmPlaybackCopy,
+	/*.silence = PcmPlaybackSilence,*/
+#endif
 };
 
 /* Capture device operator*/
@@ -1125,8 +1231,10 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 	whichbuffer = csl_audio_render_get_current_buffer(
 		StreamIdOfDriver(runtime->private_data));
 	if (whichbuffer == 0) {
+#if !defined(DYNAMIC_DMA_PLAYBACK)
 		pChip->streamCtl[substream->number].xrun_occured = 1;
 		aWarn("whichbuffer-%d\n", whichbuffer);
+#endif
 	}
 
 	AUDIO_DRIVER_Ctrl(drv_handle, AUDIO_DRIVER_GET_DRV_TYPE,

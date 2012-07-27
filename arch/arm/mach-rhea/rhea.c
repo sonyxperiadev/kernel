@@ -46,6 +46,9 @@
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 #include <mach/secure_api.h>
 #endif
+#ifdef CONFIG_RHEA_L2X0_PREFETCH
+#include <mach/cache-l2x0.h>
+#endif
 #include <plat/cpu.h>
 #include <plat/kona_reset_reason.h>
 #include <mach/memory.h>
@@ -93,6 +96,10 @@ static void __init rhea_l2x0_init(void)
 	 * 32KB way size, 8-way associativity
 	 */
 	l2x0_init(l2cache_base, 0x00040000, 0xfff0ffff);
+
+#ifdef CONFIG_RHEA_L2X0_PREFETCH
+	rhea_l2x0_prefetch(1);
+#endif
 }
 #endif
 

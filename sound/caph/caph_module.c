@@ -76,7 +76,7 @@ MODULE_LICENSE("GPL");
 int gAudioDebugLevel; /* No default audio logging */
 module_param(gAudioDebugLevel, int, 0);
 
-static brcm_alsa_chip_t *sgpCaph_chip;
+brcm_alsa_chip_t *sgpCaph_chip;
 
 /* AUDIO LOGGING */
 

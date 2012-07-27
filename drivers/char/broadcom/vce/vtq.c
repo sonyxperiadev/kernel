@@ -300,6 +300,8 @@ static int proc_debug_write(struct file *file,
 	char request[100];
 	int s;
 
+	(void) file;
+
 	g = (struct vtq_global *)priv;
 
 	if (nbytes > sizeof(request) - 1)
@@ -369,25 +371,34 @@ int vtq_driver_init(struct vtq_global **vtq_global_out,
 	struct vtq_global *vtq_global;
 	int s;
 
+	/* This is per-driver stuff, so struct vce doesn't even belong
+	 * on this API */
+	(void) vce;
+
 	vtq_global = kmalloc(sizeof(*vtq_global), GFP_KERNEL);
 	if (vtq_global == NULL) {
 		err_print("kmalloc failure\n");
 		goto err_kmalloc_vtq_global_state;
 	}
 
+	/* Start with overly pessimistic values for instruction and
+	 * data memory sizes to permit images to be registered before
+	 * configuration step */
 	vtq_global->loaderkernel_size = 0;
 	vtq_global->relocatedloaderkernelimage = NULL;
-	vtq_global->loaderkernel_loadoffset = 0;
+	vtq_global->loaderkernel_loadoffset = 0x1000;
 	vtq_global->loaderkernel_firstentry = 0;
 
 	vtq_global->debug_fifo = 0;
 
 	/* host_push was *intended* to be a debug-aid, but it turns
 	 * out we need to work around a hardware issue, so, until we
-	 * have a better workaround, we have to default to 1 at boot.
-	 * TODO: Review h/w issue and make better workaround
+	 * have a better workaround, we have to default to 1 at boot,
+	 * or restrict image size to 8kB.  As we currently have no
+	 * users with images above 8kB, we can leave this turned off
+	 * for now.  TODO: Review h/w issue and make better workaround
 	 */
-	vtq_global->host_push = 1;
+	vtq_global->host_push = 0;
 
 	vtq_global->proc_dir = proc_vcedir;
 	s = init_driverprocentries(vtq_global);
@@ -567,6 +578,10 @@ int vtq_pervce_init(struct vtq_vce **vtq_pervce_state_out,
 
 	vtq_pervce_state->on = 0;
 	vtq_pervce_state->power_lock_count = 0;
+
+	/* Start with pessimistic value to allow for early image
+	 * registration */
+	vtq_pervce_state->datamem_reservation = 0x1000;
 
 	/* Initialize the work_t for unloading the loader after the
 	 * FIFO is empty */
@@ -1243,6 +1258,7 @@ static void vtq_remove_all_entrypts(struct vtq_context *ctx,
 static vtq_task_id_t vtq_assign_prog_id(struct vtq_context *ctx)
 {
 	int prog_id;
+
 	mutex_lock(&ctx->vce->host_mutex);
 	for (prog_id = 0; prog_id < VTQ_MAX_TASKS; prog_id++) {
 		if (!ctx->vce->tasks[prog_id].occupied) {
@@ -1254,7 +1270,6 @@ static vtq_task_id_t vtq_assign_prog_id(struct vtq_context *ctx)
 	}
 
 	/* Argh! Out of task IDs */
-
 	mutex_unlock(&ctx->vce->host_mutex);
 	return -1;
 }

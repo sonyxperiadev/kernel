@@ -82,6 +82,7 @@
 #include <linux/mfd/bcmpmu.h>
 #endif
 #endif
+#include <linux/usb/bcm_hsotgctrl.h>
 
 /* dynamic ETM support */
 unsigned int etm_on;
@@ -190,7 +191,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	 .hs_ref = BSC_BUS_REF_104MHZ,
 	 },
 	{			/* for PMU */
-#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
+#if defined(CONFIG_KONA_PMU_BSC_HS_MODE)
 	 .speed = BSC_BUS_SPEED_HS,
 	 /* No dynamic speed in HS mode */
 	 .dynamic_speed = 0,
@@ -202,6 +203,14 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	  * PMU reads until the writes are through. PMU need more
 	  * retry counts in HS mode to handle this.
 	  */
+	 .retries = 5,
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1MHZ)
+	 .speed = BSC_BUS_SPEED_HS_1MHZ,
+	 .dynamic_speed = 0,
+	 .retries = 5,
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1625KHZ)
+	 .speed = BSC_BUS_SPEED_HS_1625KHZ,
+	 .dynamic_speed = 0,
 	 .retries = 5,
 #else
 	 .speed = BSC_BUS_SPEED_50K,
@@ -535,11 +544,22 @@ static struct resource kona_hsotgctrl_platform_resource[] = {
 	       },
 };
 
+static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
+	.hsotgctrl_virtual_mem_base = KONA_USB_HSOTG_CTRL_VA,
+	.chipreg_virtual_mem_base = KONA_CHIPREG_VA,
+	.irq = BCM_INT_ID_RESERVED128,
+	.usb_ahb_clk_name = USB_OTG_AHB_BUS_CLK_NAME_STR,
+	.mdio_mstr_clk_name = MDIOMASTER_PERI_CLK_NAME_STR,
+};
+
 static struct platform_device board_kona_hsotgctrl_platform_device = {
 	.name = "bcm_hsotgctrl",
 	.id = -1,
 	.resource = kona_hsotgctrl_platform_resource,
 	.num_resources = ARRAY_SIZE(kona_hsotgctrl_platform_resource),
+	.dev = {
+		.platform_data = &hsotgctrl_plat_data,
+		},
 };
 
 static struct resource kona_otg_platform_resource[] = {
@@ -615,47 +635,74 @@ static struct platform_device kona_cpufreq_device = {
 
 #ifdef CONFIG_KONA_AVS
 
-void avs_silicon_type_notify(u32 silicon_type)
+void avs_silicon_type_notify(u32 silicon_type, int freq_id)
 {
-	pr_info("%s : silicon type = %d\n", __func__, silicon_type);
-	pm_init_pmu_sr_vlt_map_table(silicon_type);
+	pr_info("%s : silicon type = %d freq = %d\n", __func__,
+			silicon_type,
+			freq_id);
+	pm_init_pmu_sr_vlt_map_table(silicon_type, freq_id);
 }
 
-static u32 svt_pmos_bin[3 + 1] = { 125, 146, 171, 201 };
-static u32 svt_nmos_bin[3 + 1] = { 75, 96, 126, 151 };
-
-static u32 lvt_pmos_bin[3 + 1] = { 150, 181, 216, 251 };
-static u32 lvt_nmos_bin[3 + 1] = { 90, 111, 146, 181 };
-
-u32 svt_silicon_type_lut[3 * 3] = {
-	SILICON_TYPE_SLOW, SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL,
-	SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL,
-	SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL, SILICON_TYPE_FAST
+/**
+ * B0 VM index table
+ */
+static u32 vm_bin_B0_lut[4][VM_BIN_LUT_SIZE] = {
+	{95, 131, 161, UINT_MAX}, /* vm0_lut*/
+	{156, 202, 246, UINT_MAX}, /* vm1_lut */
+	{94, 125, 156, UINT_MAX}, /* vm2_lut */
+	{128, 168, 196, UINT_MAX} /* vm3_lut */
 };
 
-u32 lvt_silicon_type_lut[3 * 3] = {
-	SILICON_TYPE_SLOW, SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL,
-	SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL,
-	SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL, SILICON_TYPE_FAST
+/**
+ * B1 VM index table
+ */
+static u32 vm_bin_B1_lut[4][VM_BIN_LUT_SIZE] = {
+	{97, 126, 161, UINT_MAX},
+	{159, 183, 249, UINT_MAX},
+	{96, 121, 151, UINT_MAX},
+	{133, 151, 200, UINT_MAX},
 };
 
+u32 silicon_type_lut[VM_BIN_LUT_SIZE] = {
+	 SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL, SILICON_TYPE_FAST,
+};
+
+/* index = ATE_AVS_BIN[3:0]*/
+static struct kona_ate_lut_entry ate_lut[] = {
+	{ATE_FIELD_RESERVED , ATE_FIELD_RESERVED}, /* 0 */
+	{A9_FREQ_850_MHZ, SILICON_TYPE_FAST},	/* 1 */
+	{A9_FREQ_850_MHZ, SILICON_TYPE_TYPICAL},/* 2 */
+	{A9_FREQ_850_MHZ, SILICON_TYPE_SLOW},   /* 3 */
+	{A9_FREQ_1_GHZ, SILICON_TYPE_FAST},	/* 4 */
+	{A9_FREQ_1_GHZ, SILICON_TYPE_TYPICAL},  /* 5 */
+	{ATE_FIELD_RESERVED, ATE_FIELD_RESERVED},/* 6 - Reserved */
+	{ATE_FIELD_RESERVED, ATE_FIELD_RESERVED},/* 7 - Reserved */
+	{ATE_FIELD_RESERVED, ATE_FIELD_RESERVED},/* 8 - Reserved */
+	{ATE_FIELD_RESERVED, ATE_FIELD_RESERVED},/* 9 - Reserved */
+	{A9_FREQ_850_MHZ, SILICON_TYPE_TYPICAL}, /* 10 */
+	{A9_FREQ_850_MHZ, SILICON_TYPE_SLOW},    /* 11 */
+	{ATE_FIELD_RESERVED, ATE_FIELD_RESERVED},/* 12 - reserved */
+	{ATE_FIELD_RESERVED, ATE_FIELD_RESERVED},/* 13 - reserved */
+	{A9_FREQ_1_GHZ, SILICON_TYPE_TYPICAL},	/* 14 */
+	{A9_FREQ_850_MHZ, SILICON_TYPE_TYPICAL},/* 15 */
+};
 
 static struct kona_avs_pdata avs_pdata = {
-	.flags = AVS_TYPE_OPEN | AVS_READ_FROM_MEM,
-	.param = 0x3404BFA8,	/*AVS_READ_FROM_MEM - Address
-			location where monitor values are copied by ABI */
-	.nmos_bin_size = 3,
-	.pmos_bin_size = 3,
+	.flags = AVS_TYPE_OPEN | AVS_READ_FROM_MEM | AVS_ATE_FEATURE_ENABLE,
 
-	.svt_pmos_bin = svt_pmos_bin,
-	.svt_nmos_bin = svt_nmos_bin,
+	/* Mem addr where perfomance monitor value is copied by ABI */
+	.avs_mon_addr = 0x3404BFA8,
 
-	.lvt_pmos_bin = lvt_pmos_bin,
-	.lvt_nmos_bin = lvt_nmos_bin,
+	/* Mem addr where ATE value is copied by ABI */
+	.avs_ate_addr = 0x3404BFA0,
 
-	.svt_silicon_type_lut = svt_silicon_type_lut,
-	.lvt_silicon_type_lut = lvt_silicon_type_lut,
+	.ate_default_silicon_type = SILICON_TYPE_SLOW,
 
+	.vm_bin_B0_lut = vm_bin_B0_lut,
+	.vm_bin_B1_lut = vm_bin_B1_lut,
+	.silicon_type_lut = silicon_type_lut,
+
+	.ate_lut = ate_lut,
 
 	.silicon_type_notify = avs_silicon_type_notify,
 };

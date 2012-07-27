@@ -33,13 +33,16 @@
 #include <plat/kona_avs.h>
 #endif
 #include "pm_params.h"
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
+#include <linux/spa_power.h>
+#endif
 
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0C
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 2
 
-static int vlt_tbl_init;
+
 
 static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0x01, .val = 0x00, .mask = 0x01},
@@ -65,7 +68,6 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 	{.map = 0, .addr = 0x47, .val = 0xFF, .mask = 0xFF},
 	{.map = 0, .addr = 0x52, .val = 0x04, .mask = 0x04},
 	{.map = 0, .addr = 0x58, .val = 0x05, .mask = 0x0F},
-	/* USB_FC_OPTION needed to be 1, in order to charge from SDP */
 	{.map = 0, .addr = 0x5E, .val = 0x30, .mask = 0xFF},
 	/*
 	* temp workaround for LDOs, to be revisited once final
@@ -103,9 +105,14 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 
 	/*Init SDSR NM, NM2 and LPM voltages to 1.2V
 	*/
+#if 0
 	{.map = 0, .addr = 0xD0, .val = 0x13, .mask = 0xFF},
 	{.map = 0, .addr = 0xD1, .val = 0x13, .mask = 0xFF},
 	{.map = 0, .addr = 0xD2, .val = 0x13, .mask = 0xFF},
+#endif
+	{.map = 0, .addr = 0xD0, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD1, .val = 0x15, .mask = 0xFF},
+	{.map = 0, .addr = 0xD2, .val = 0x15, .mask = 0xFF},
 
 	/*Init CSR LPM  to 0.9 V
 	CSR NM2 to 1.22V
@@ -123,9 +130,16 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 #ifdef CONFIG_MACH_RHEA_STONE_EDN2X
 	{.map = 0, .addr = 0xD9, .val = 0x1A, .mask = 0xFF},
 #else
+#if defined(CONFIG_MACH_RHEA_SS_EMMC_EXTLDO)
+	/* ASR NM - 1.2V to VCAMC_1.2V*/
+	{.map = 0, .addr = 0xD8, .val = 0x13, .mask = 0xFF},
+	/* ASR LPM - Supply lowest voltage to VCAMC_1.2V*/
+	{.map = 0, .addr = 0xD9, .val = 0x00, .mask = 0xFF},
+#else
 	/*Init ASR LPM to 2.9V - for Rhea EDN10 & EDN00 and 1.8V for EDN2x
 	*/
 	{.map = 0, .addr = 0xD9, .val = 0x1F, .mask = 0xFF},
+#endif /*CONFIG_MACH_RHEA_SS_EMMC_EXTLDO*/
 	/*Init IOSR NM2 and LPM voltages to 1.8V
 	*/
 	{.map = 0, .addr = 0xC9, .val = 0x1A, .mask = 0xFF},
@@ -133,7 +147,7 @@ static struct bcmpmu_rw_data __initdata register_init_data[] = {
 #endif /*CONFIG_MACH_RHEA_STONE_EDN2X*/
 	/*FGOPMODCTRL, Set bits 4, 1 for FG Sync. Mode*/
 	{.map = 1, .addr = 0x42, .val = 0x15, .mask = 0xFF},
-
+	{.map = 1, .addr = 0x43, .val = 0x02, .mask = 0xFF},
 	/* Disable the charging elapsed timer by TCH[2:0]=111b 
 	   OTP default value; TCH[2:0] = 010b (5hrs) ,TTR[2:0] = 011b (45mins)
         */
@@ -221,9 +235,11 @@ static struct regulator_init_data bcm59039_hv1ldo_data = {
 			.name = "hv1ldo",
 			.min_uV = 1300000,
 			.max_uV = 3300000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+				REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL |
+				REGULATOR_MODE_IDLE | REGULATOR_MODE_STANDBY,
 			.always_on = 1,	// VDD_AUD_2.9V
 			},
 	.num_consumer_supplies = ARRAY_SIZE(hv1_supply),
@@ -231,7 +247,7 @@ static struct regulator_init_data bcm59039_hv1ldo_data = {
 };
 
 __weak struct regulator_consumer_supply hv2_supply[] = {
-	{.supply = "hv2"},
+	{.supply = "hv2ldo_uc"},
 };
 static struct regulator_init_data bcm59039_hv2ldo_data = {
 	.constraints = {
@@ -553,7 +569,11 @@ static struct regulator_init_data bcm59039_asr_nm_data = {
             .max_uV = 2900000,
             .valid_ops_mask =
             REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
+		#if defined(CONFIG_MACH_RHEA_SS_EMMC_EXTLDO)
+		.always_on = 0,
+		#else
             .always_on = 1,
+		#endif
             },
     .num_consumer_supplies = ARRAY_SIZE(asr_nm_supply),
     .consumer_supplies = asr_nm_supply,
@@ -601,7 +621,7 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_CAMLDO, &bcm59039_camldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
 	},
 	[BCMPMU_REGULATOR_HV1LDO] =	{	// VDD_AUD_2.9V
-		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x22, BCMPMU_REGL_OFF_IN_DSM
+		BCMPMU_REGULATOR_HV1LDO, &bcm59039_hv1ldo_data, 0x22, 0
 	},
 	[BCMPMU_REGULATOR_HV2LDO] =	{	// VDD_USB_3.3V
 		BCMPMU_REGULATOR_HV2LDO, &bcm59039_hv2ldo_data, 0x11, BCMPMU_REGL_LPM_IN_DSM
@@ -613,7 +633,7 @@ struct bcmpmu_regulator_init_data bcm59039_regulators[BCMPMU_REGULATOR_MAX] = {
 		BCMPMU_REGULATOR_HV4LDO, &bcm59039_hv4ldo_data, 0xAA, BCMPMU_REGL_OFF_IN_DSM
 	},
 	[BCMPMU_REGULATOR_HV5LDO] = {		// VLCD_3.0V
-		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x01, 0
+		BCMPMU_REGULATOR_HV5LDO, &bcm59039_hv5ldo_data, 0x11, 0
 	},
 	[BCMPMU_REGULATOR_HV6LDO] = {		// VDD_SDXC(BB-SDIO)
 		BCMPMU_REGULATOR_HV6LDO, &bcm59039_hv6ldo_data, 0x11, BCMPMU_REGL_LPM_IN_DSM
@@ -640,8 +660,9 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
 			BCMPMU_REGL_LPM_IN_DSM
 	},
 #else
+/*Changed from 0x11 to 0xAA - GCF 27.17.1.4 and 5.1.3 (CSP 542271)*/
 	[BCMPMU_REGULATOR_SIMLDO] = {
-		BCMPMU_REGULATOR_SIMLDO, &bcm59039_simldo_data, 0x11,
+		BCMPMU_REGULATOR_SIMLDO, &bcm59039_simldo_data, 0xAA,
 			BCMPMU_REGL_LPM_IN_DSM
 	},
 #endif
@@ -676,6 +697,10 @@ we keep SIMLDO ON by default for Rhearay till the issue is root casued*/
     [BCMPMU_REGULATOR_ASR_NM] = {
         BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x01, 0
     },
+#elif defined(CONFIG_MACH_RHEA_SS_EMMC_EXTLDO)
+	[BCMPMU_REGULATOR_ASR_NM] = {
+		BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0xAA, 0
+	},
 #else
     [BCMPMU_REGULATOR_ASR_NM] = {
         BCMPMU_REGULATOR_ASR_NM, &bcm59039_asr_nm_data, 0x11, 0
@@ -769,35 +794,37 @@ static struct bcmpmu_charge_zone chrg_zone[] = {
 
 static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 	/*
-	* Battery data for 1200mAH
+	* Battery data for 1200mAH re-measured by Minal 20120601
+	* align zero crossing @ 3400mV complying to SS spec
 	*/
 	/*
 	* volt capacity
 	*/
-	{4158, 100},
-	{4120, 95},
-	{4070, 90},
-	{4022, 85},
-	{3977, 80},
-	{3937, 75},
-	{3900, 70},
-	{3866, 65},
-	{3837, 60},
-	{3811, 55},
-	{3790, 50},
-	{3772, 45},
-	{3757, 40},
-	{3745, 35},
-	{3734, 30},
-	{3722, 25},
-	{3704, 20},
-	{3676, 15},
-	{3648, 10},
-	{3637, 8},
-	{3621, 6},
-	{3584, 4},
-	{3475, 2},
-	{3218, 0},
+	{4168, 100},
+	{4150, 98},
+	{4130, 95},
+	{4097, 90},
+	{4056, 85},
+	{4018, 80},
+	{3984, 75},
+	{3952, 70},
+	{3918, 65},
+	{3872, 60},
+	{3845, 55},
+	{3826, 50},
+	{3809, 45},
+	{3794, 40},
+	{3781, 35},
+	{3768, 30},
+	{3751, 25},
+	{3733, 20},
+	{3705, 15},
+	{3678, 10},
+	{3675, 8},
+	{3671, 6},
+	{3659, 4},
+	{3595, 2},
+	{3400, 0},
 };
 
 static int bcmpmu_init_platform_hw(struct bcmpmu *);
@@ -805,130 +832,92 @@ static int bcmpmu_init_platform_hw(struct bcmpmu *);
 
 static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 /* This table is default data, the real data from board file or device tree*/
+/* Battery data for 1200mAH re-measured by Minal 20120601 */
 	{.temp = -200,
 	 .reset = 0, .fct = 290, .guardband = 100,
-	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
-	 .esr_vl = 150, .esr_vl_slope = 100, .esr_vl_offset = 0,
-	 .esr_vm = 140, .esr_vm_slope = 100, .esr_vm_offset = 0,
-	 .esr_vh = 135, .esr_vh_slope = 100, .esr_vh_offset = 0,
-	 .esr_vf = 135, .esr_vf_slope = 100, .esr_vf_offset = 0,
+	 .esr_vl_lvl = 3630, .esr_vm_lvl = 3820, .esr_vh_lvl = 3860,
+	 .esr_vl = 186, .esr_vl_slope = -95, .esr_vl_offset = 522,
+	 .esr_vm = 172, .esr_vm_slope = -26, .esr_vm_offset = 270,
+	 .esr_vh = 184, .esr_vh_slope = 700, .esr_vh_offset = -2504,
+	 .esr_vf = 183, .esr_vf_slope = -115, .esr_vf_offset = 643,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -20 */
 	{.temp = -150,
 	 .reset = 0, .fct = 506, .guardband = 100,
-	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
-	 .esr_vl = 150, .esr_vl_slope = 100, .esr_vl_offset = 0,
-	 .esr_vm = 140, .esr_vm_slope = 100, .esr_vm_offset = 0,
-	 .esr_vh = 135, .esr_vh_slope = 100, .esr_vh_offset = 0,
-	 .esr_vf = 135, .esr_vf_slope = 100, .esr_vf_offset = 0,
+	 .esr_vl_lvl = 3630, .esr_vm_lvl = 3820, .esr_vh_lvl = 3860,
+	 .esr_vl = 186, .esr_vl_slope = -95, .esr_vl_offset = 522,
+	 .esr_vm = 172, .esr_vm_slope = -26, .esr_vm_offset = 270,
+	 .esr_vh = 184, .esr_vh_slope = 700, .esr_vh_offset = -2504,
+	 .esr_vf = 183, .esr_vf_slope = -115, .esr_vf_offset = 643,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -15 */
 	{.temp = -100,
 	 .reset = 0, .fct = 723, .guardband = 100,
-	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
-	 .esr_vl = 150, .esr_vl_slope = 100, .esr_vl_offset = 0,
-	 .esr_vm = 140, .esr_vm_slope = 100, .esr_vm_offset = 0,
-	 .esr_vh = 135, .esr_vh_slope = 100, .esr_vh_offset = 0,
-	 .esr_vf = 135, .esr_vf_slope = 100, .esr_vf_offset = 0,
+	 .esr_vl_lvl = 3630, .esr_vm_lvl = 3820, .esr_vh_lvl = 3860,
+	 .esr_vl = 186, .esr_vl_slope = -95, .esr_vl_offset = 522,
+	 .esr_vm = 172, .esr_vm_slope = -26, .esr_vm_offset = 270,
+	 .esr_vh = 184, .esr_vh_slope = 700, .esr_vh_offset = -2504,
+	 .esr_vf = 183, .esr_vf_slope = -115, .esr_vf_offset = 643,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -10 */
 	{.temp = -50,
 	 .reset = 0, .fct = 782, .guardband = 100,
-	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
-	 .esr_vl = 150, .esr_vl_slope = 100, .esr_vl_offset = 0,
-	 .esr_vm = 140, .esr_vm_slope = 100, .esr_vm_offset = 0,
-	 .esr_vh = 135, .esr_vh_slope = 100, .esr_vh_offset = 0,
-	 .esr_vf = 135, .esr_vf_slope = 100, .esr_vf_offset = 0,
+	 .esr_vl_lvl = 3630, .esr_vm_lvl = 3820, .esr_vh_lvl = 3860,
+	 .esr_vl = 186, .esr_vl_slope = -95, .esr_vl_offset = 522,
+	 .esr_vm = 172, .esr_vm_slope = -26, .esr_vm_offset = 270,
+	 .esr_vh = 184, .esr_vh_slope = 700, .esr_vh_offset = -2504,
+	 .esr_vf = 183, .esr_vf_slope = -115, .esr_vf_offset = 643,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -5 */
 	{.temp = 0,
 	 .reset = 0, .fct = 930, .guardband = 100,
-	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
-	 .esr_vl = 150, .esr_vl_slope = 100, .esr_vl_offset = 0,
-	 .esr_vm = 140, .esr_vm_slope = 100, .esr_vm_offset = 0,
-	 .esr_vh = 135, .esr_vh_slope = 100, .esr_vh_offset = 0,
-	 .esr_vf = 135, .esr_vf_slope = 100, .esr_vf_offset = 0,
+	 .esr_vl_lvl = 3630, .esr_vm_lvl = 3820, .esr_vh_lvl = 3860,
+	 .esr_vl = 186, .esr_vl_slope = -95, .esr_vl_offset = 522,
+	 .esr_vm = 172, .esr_vm_slope = -26, .esr_vm_offset = 270,
+	 .esr_vh = 184, .esr_vh_slope = 700, .esr_vh_offset = -2504,
+	 .esr_vf = 183, .esr_vf_slope = -115, .esr_vf_offset = 643,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 0 */
 	{.temp = 50,
 	 .reset = 0, .fct = 955, .guardband = 100,
-	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
-	 .esr_vl = 150, .esr_vl_slope = 100, .esr_vl_offset = 0,
-	 .esr_vm = 140, .esr_vm_slope = 100, .esr_vm_offset = 0,
-	 .esr_vh = 135, .esr_vh_slope = 100, .esr_vh_offset = 0,
-	 .esr_vf = 135, .esr_vf_slope = 100, .esr_vf_offset = 0,
+	 .esr_vl_lvl = 3630, .esr_vm_lvl = 3820, .esr_vh_lvl = 3860,
+	 .esr_vl = 186, .esr_vl_slope = -95, .esr_vl_offset = 522,
+	 .esr_vm = 172, .esr_vm_slope = -26, .esr_vm_offset = 270,
+	 .esr_vh = 184, .esr_vh_slope = 700, .esr_vh_offset = -2504,
+	 .esr_vf = 183, .esr_vf_slope = -115, .esr_vf_offset = 643,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 5 */
 	{.temp = 100,
 	 .reset = 0, .fct = 980, .guardband = 30,
-	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
-	 .esr_vl = 150, .esr_vl_slope = 100, .esr_vl_offset = 0,
-	 .esr_vm = 140, .esr_vm_slope = 100, .esr_vm_offset = 0,
-	 .esr_vh = 135, .esr_vh_slope = 100, .esr_vh_offset = 0,
-	 .esr_vf = 135, .esr_vf_slope = 100, .esr_vf_offset = 0,
+	 .esr_vl_lvl = 3630, .esr_vm_lvl = 3820, .esr_vh_lvl = 3860,
+	 .esr_vl = 186, .esr_vl_slope = -95, .esr_vl_offset = 522,
+	 .esr_vm = 172, .esr_vm_slope = -26, .esr_vm_offset = 270,
+	 .esr_vh = 184, .esr_vh_slope = 700, .esr_vh_offset = -2504,
+	 .esr_vf = 183, .esr_vf_slope = -115, .esr_vf_offset = 643,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 10 */
 	{.temp = 150,
 	 .reset = 0, .fct = 1000, .guardband = 30,
-	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
-	 .esr_vl = 150, .esr_vl_slope = 100, .esr_vl_offset = 0,
-	 .esr_vm = 140, .esr_vm_slope = 100, .esr_vm_offset = 0,
-	 .esr_vh = 135, .esr_vh_slope = 100, .esr_vh_offset = 0,
-	 .esr_vf = 135, .esr_vf_slope = 100, .esr_vf_offset = 0,
+	 .esr_vl_lvl = 3630, .esr_vm_lvl = 3820, .esr_vh_lvl = 3860,
+	 .esr_vl = 186, .esr_vl_slope = -95, .esr_vl_offset = 522,
+	 .esr_vm = 172, .esr_vm_slope = -26, .esr_vm_offset = 270,
+	 .esr_vh = 184, .esr_vh_slope = 700, .esr_vh_offset = -2504,
+	 .esr_vf = 183, .esr_vf_slope = -115, .esr_vf_offset = 643,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 15 */
 	{.temp = 200,
 	 .reset = 0, .fct = 1000, .guardband = 30,
-	 .esr_vl_lvl = 3600, .esr_vm_lvl = 3800, .esr_vh_lvl = 4000,
-	 .esr_vl = 150, .esr_vl_slope = 100, .esr_vl_offset = 0,
-	 .esr_vm = 140, .esr_vm_slope = 100, .esr_vm_offset = 0,
-	 .esr_vh = 135, .esr_vh_slope = 100, .esr_vh_offset = 0,
-	 .esr_vf = 135, .esr_vf_slope = 100, .esr_vf_offset = 0,
+	 .esr_vl_lvl = 3630, .esr_vm_lvl = 3820, .esr_vh_lvl = 3860,
+	 .esr_vl = 186, .esr_vl_slope = -95, .esr_vl_offset = 522,
+	 .esr_vm = 172, .esr_vm_slope = -26, .esr_vm_offset = 270,
+	 .esr_vh = 184, .esr_vh_slope = 700, .esr_vh_offset = -2504,
+	 .esr_vf = 183, .esr_vf_slope = -115, .esr_vf_offset = 643,
 	 .vcmap = &batt_voltcap_map[0],
 	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 20 */
 };
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
-static void notify_spa(enum bcmpmu_event_t event, int data)
-{
-	printk(KERN_INFO "%s event=%d, data=%d\n",
-		__func__, event, data);
-
-	switch (event) {
-	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
-		/* notify SPA driver
-		spa_event_handler(SPA_EVT_CHARGER, data)
-		*/
-		break;
-	case BCMPMU_CHRGR_EVENT_MBTEMP:
-		/* notify SPA driver
-		spa_event_handler(SPA_EVT_TEMP, data);
-		*/
-		break;
-	case BCMPMU_CHRGR_EVENT_MBOV:
-		/* notify SPA driver
-		spa_event_handler(SPA_EVT_OVP, data);
-		*/
-		break;
-	case BCMPMU_CHRGR_EVENT_USBOV:
-		/* notify SPA driver
-		spa_event_handler(SPA_EVT_OVP, data);
-		*/
-		break;
-	case BCMPMU_CHRGR_EVENT_EOC:
-		/* notify SPA driver
-		spa_event_handler(SPA_EVT_EOC, 0);
-		*/
-		break;
-	case BCMPMU_CHRGR_EVENT_CAPACITY:
-		/* notify SPA driver
-		spa_event_handler(SPA_EVT_CAPACITY, (void *)data);
-		*/
-		break;
-	default:
-		break;
-	}
-}
+static void notify_spa(enum bcmpmu_event_t event, int data);
 #endif
 
 static struct bcmpmu_platform_data bcmpmu_plat_data = {
@@ -950,29 +939,35 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.regulator_init_data = &bcm59039_regulators[0],
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,
-	.fg_slp_curr_ua = 1000,
-	.fg_factor = 976,
+	.fg_slp_curr_ua = 1220,
+	.fg_factor = 1024,
 	.fg_sns_res = 10,
 	.batt_voltcap_map = &batt_voltcap_map[0],
 	.batt_voltcap_map_len = ARRAY_SIZE(batt_voltcap_map),
 	.batt_impedence = 140,
+	.sys_impedence = 30,
 	.chrg_1c_rate = 1200,
-	.chrg_eoc = 60,
-	.support_hw_eoc = 1,
+	.chrg_eoc = 100,
+	.support_hw_eoc = 0,
 	.chrg_zone_map = &chrg_zone[0],
-	.fg_capacity_full = 1200 * 3600,
+	.fg_capacity_full = (1200) * 3600,
 	.support_fg = 1,
 	.support_chrg_maint = 1,
+	.chrg_resume_lvl = 4152,
 	.wd_setting = &bcm59039_wd_setting,
-	.chrg_resume_lvl = 4150,
 	.fg_support_tc = 1,
-	.fg_tc_dn_lvl = 50, /* 5c */
-	.fg_tc_up_lvl = 200, /* 20c */
+	.fg_tc_dn_lvl = 50,
+	.fg_tc_up_lvl = 200,
 	.fg_zone_settle_tm = 60,
 	.fg_zone_info = &fg_zone[0],
+	.fg_poll_hbat = 112000,
+	.fg_poll_lbat = 1000,
+	.fg_lbat_lvl = 3490,
+	.fg_fbat_lvl = 4152,
+	.fg_low_cal_lvl = 3550,
 	.bc = BCMPMU_BC_PMU_BC12,
 	.batt_model = "SS,1200mAH",
-	.cutoff_volt = 3300,
+	.cutoff_volt = 3400,  /* 0% capacity */
 	.cutoff_count_max = 3,
 	.hard_reset_en = -1,
 	.restart_en = -1,
@@ -986,8 +981,41 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.piggyback_chrg = 1,
 	.piggyback_chrg_name = "bcm59039_charger",
 	.piggyback_notify = notify_spa,
+	.piggyback_work = NULL,
+	.spafifo = NULL,
+	.spalock = NULL,
 #endif
 };
+
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+static void notify_spa(enum bcmpmu_event_t event, int data)
+{
+	if (bcmpmu_plat_data.spafifo) {
+		mutex_lock(bcmpmu_plat_data.spalock);
+		if (!bcmpmu_plat_data.spafifo->fifo_full) {
+			bcmpmu_plat_data.spafifo->
+				event[bcmpmu_plat_data.spafifo->head] = event;
+			bcmpmu_plat_data.spafifo->
+				data[bcmpmu_plat_data.spafifo->head] = data;
+			bcmpmu_plat_data.spafifo->
+				head = ((bcmpmu_plat_data.spafifo->head+1)
+				 & (bcmpmu_plat_data.spafifo->length-1));
+
+			if (bcmpmu_plat_data.spafifo->
+				head == bcmpmu_plat_data.spafifo->tail)
+				bcmpmu_plat_data.spafifo->fifo_full = true;
+			mutex_unlock(bcmpmu_plat_data.spalock);
+
+	if (bcmpmu_plat_data.piggyback_work)
+		schedule_delayed_work(bcmpmu_plat_data.piggyback_work, 0);
+		} else {
+			printk(KERN_INFO "%s: fifo full.\n", __func__);
+			mutex_unlock(bcmpmu_plat_data.spalock);
+		}
+	}
+}
+#endif
+
 
 static struct i2c_board_info __initdata pmu_info[] = {
 	{
@@ -997,82 +1025,6 @@ static struct i2c_board_info __initdata pmu_info[] = {
 	},
 };
 
-
-/*800 Mhz CSR voltage definitions....*/
-
-#define CSR_VAL_RETN_SS_800M	0x3 /*0.88V*/
-#define CSR_VAL_RETN_TT_800M	0x3 /*0.88V*/
-#define CSR_VAL_RETN_FF_800M	0x3 /*0.88V*/
-
-#define CSR_VAL_ECO_SS_800M		0xd /*1.08V*/
-#define CSR_VAL_ECO_TT_800M		0x8 /*0.98V*/
-#define CSR_VAL_ECO_FF_800M		0x8 /*0.98V*/
-
-#define CSR_VAL_NRML_SS_800M	0x11 /*1.16V*/
-#define CSR_VAL_NRML_TT_800M	0x0b /*1.04V*/
-#define CSR_VAL_NRML_FF_800M	0x8 /*0.98V*/
-
-#define CSR_VAL_TURBO_SS_800M		0x1A /*1.34V*/
-#define B0_CSR_VAL_TURBO_SS_800M	0x19 /*1.32V*/
-#define CSR_VAL_TURBO_TT_800M		0x14 /*1.22V*/
-#define CSR_VAL_TURBO_FF_800M		0x0F /*1.12V*/
-
-
-
-#define PMU_CSR_VLT_TBL_SS_800M	ARRAY_LIST(\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_RETN_SS_800M,\
-					CSR_VAL_ECO_SS_800M,\
-					CSR_VAL_ECO_SS_800M,\
-					CSR_VAL_ECO_SS_800M,\
-					CSR_VAL_NRML_SS_800M,\
-					CSR_VAL_NRML_SS_800M,\
-					CSR_VAL_NRML_SS_800M,\
-					CSR_VAL_TURBO_SS_800M,\
-					CSR_VAL_TURBO_SS_800M)
-
-
-#define PMU_CSR_VLT_TBL_TT_800M	ARRAY_LIST(\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_RETN_TT_800M,\
-					CSR_VAL_ECO_TT_800M,\
-					CSR_VAL_ECO_TT_800M,\
-					CSR_VAL_ECO_TT_800M,\
-					CSR_VAL_NRML_TT_800M,\
-					CSR_VAL_NRML_TT_800M,\
-					CSR_VAL_NRML_TT_800M,\
-					CSR_VAL_TURBO_TT_800M,\
-					CSR_VAL_TURBO_TT_800M)
-
-#define PMU_CSR_VLT_TBL_FF_800M	ARRAY_LIST(\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_RETN_FF_800M,\
-					CSR_VAL_ECO_FF_800M,\
-					CSR_VAL_ECO_FF_800M,\
-					CSR_VAL_ECO_FF_800M,\
-					CSR_VAL_NRML_FF_800M,\
-					CSR_VAL_NRML_FF_800M,\
-					CSR_VAL_NRML_FF_800M,\
-					CSR_VAL_TURBO_FF_800M,\
-					CSR_VAL_TURBO_FF_800M)
 
 
 /*850 Mhz CSR voltage definitions....*/
@@ -1085,14 +1037,13 @@ static struct i2c_board_info __initdata pmu_info[] = {
 #define CSR_VAL_ECO_TT_850M		0x8 /*0.98V*/
 #define CSR_VAL_ECO_FF_850M		0x8 /*0.98V*/
 
-#define CSR_VAL_NRML_SS_850M	0x11 /*1.16V*/
-#define CSR_VAL_NRML_TT_850M	0x0b /*1.04V*/
-#define CSR_VAL_NRML_FF_850M	0x8 /*0.98V*/
+#define CSR_VAL_NRML_SS_850M	0x10 /*1.14V*/
+#define CSR_VAL_NRML_TT_850M	0x0E /*1.10V*/
+#define CSR_VAL_NRML_FF_850M	0xA  /*1.02V*/
 
 #define CSR_VAL_TURBO_SS_850M		0x1B /*1.36V*/
-#define B0_CSR_VAL_TURBO_SS_850M	0x19 /*1.32V*/
-#define CSR_VAL_TURBO_TT_850M		0x15 /*1.24V*/
-#define CSR_VAL_TURBO_FF_850M		0x10 /*1.14V*/
+#define CSR_VAL_TURBO_TT_850M	0x17 /*1.28V*/
+#define CSR_VAL_TURBO_FF_850M	0x11 /*1.16V*/
 
 
 
@@ -1151,99 +1102,11 @@ static struct i2c_board_info __initdata pmu_info[] = {
 						CSR_VAL_TURBO_FF_850M,\
 						CSR_VAL_TURBO_FF_850M)
 
-/*1 Ghz CSR voltage definitions....*/
 
-#define CSR_VAL_RETN_SS_1G	0x3 /*0.88V*/
-#define CSR_VAL_RETN_TT_1G	0x3 /*0.88V*/
-#define CSR_VAL_RETN_FF_1G	0x3 /*0.88V*/
+u8 csr_vlt_table_ss[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_SS_850M;
+u8 csr_vlt_table_tt[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_TT_850M;
+u8 csr_vlt_table_ff[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_FF_850M;
 
-#define CSR_VAL_ECO_SS_1G	0xd /*1.08V*/
-#define CSR_VAL_ECO_TT_1G	0x8 /*0.98V*/
-#define CSR_VAL_ECO_FF_1G	0x8 /*0.98V*/
-
-#define CSR_VAL_NRML_SS_1G	0x11 /*1.16V*/
-#define CSR_VAL_NRML_TT_1G	0x0b /*1.04V*/
-#define CSR_VAL_NRML_FF_1G	0x8	/*0.98V*/
-
-#define CSR_VAL_TURBO_SS_1G		0x1B /*1.36V*/
-#define B0_CSR_VAL_TURBO_SS_1G	0x19 /*1.32V*/
-#define CSR_VAL_TURBO_TT_1G		0x1B /*1.36V*/
-#define B0_CSR_VAL_TURBO_TT_1G	0x19 /*1.32V*/
-#define CSR_VAL_TURBO_FF_1G		0x15 /*1.24V*/
-
-
-
-#define PMU_CSR_VLT_TBL_SS_1G	ARRAY_LIST(\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_RETN_SS_1G,\
-						CSR_VAL_ECO_SS_1G,\
-						CSR_VAL_ECO_SS_1G,\
-						CSR_VAL_ECO_SS_1G,\
-						CSR_VAL_NRML_SS_1G,\
-						CSR_VAL_NRML_SS_1G,\
-						CSR_VAL_NRML_SS_1G,\
-						CSR_VAL_TURBO_SS_1G,\
-						CSR_VAL_TURBO_SS_1G)
-
-#define PMU_CSR_VLT_TBL_TT_1G	ARRAY_LIST(\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_RETN_TT_1G,\
-						CSR_VAL_ECO_TT_1G,\
-						CSR_VAL_ECO_TT_1G,\
-						CSR_VAL_ECO_TT_1G,\
-						CSR_VAL_NRML_TT_1G,\
-						CSR_VAL_NRML_TT_1G,\
-						CSR_VAL_NRML_TT_1G,\
-						CSR_VAL_TURBO_TT_1G,\
-						CSR_VAL_TURBO_TT_1G)
-
-#define PMU_CSR_VLT_TBL_FF_1G	ARRAY_LIST(\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_RETN_FF_1G,\
-						CSR_VAL_ECO_FF_1G,\
-						CSR_VAL_ECO_FF_1G,\
-						CSR_VAL_ECO_FF_1G,\
-						CSR_VAL_NRML_FF_1G,\
-						CSR_VAL_NRML_FF_1G,\
-						CSR_VAL_NRML_FF_1G,\
-						CSR_VAL_TURBO_FF_1G,\
-						CSR_VAL_TURBO_FF_1G)
-
-u8 csr_vlt_table_ss[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
-	[A9_FREQ_800_MHZ]	= PMU_CSR_VLT_TBL_SS_800M,
-	[A9_FREQ_850_MHZ]	= PMU_CSR_VLT_TBL_SS_850M,
-	[A9_FREQ_1_GHZ]		= PMU_CSR_VLT_TBL_SS_1G,
-};
-
-u8 csr_vlt_table_tt[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
-	[A9_FREQ_800_MHZ]	= PMU_CSR_VLT_TBL_TT_800M,
-	[A9_FREQ_850_MHZ]	= PMU_CSR_VLT_TBL_TT_850M,
-	[A9_FREQ_1_GHZ]		= PMU_CSR_VLT_TBL_TT_1G,
-};
-
-u8 csr_vlt_table_ff[A9_FREQ_MAX][SR_VLT_LUT_SIZE] = {
-	[A9_FREQ_800_MHZ]	= PMU_CSR_VLT_TBL_FF_800M,
-	[A9_FREQ_850_MHZ]	= PMU_CSR_VLT_TBL_FF_850M,
-	[A9_FREQ_1_GHZ]		= PMU_CSR_VLT_TBL_FF_1G,
-};
 
 const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
 						u32 silicon_type)
@@ -1252,25 +1115,24 @@ const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
 			"silicon_type = %d\n", __func__,
 			sr, freq_inx, silicon_type);
 
-	BUG_ON(!vlt_tbl_init ||
-		freq_inx > A9_FREQ_1_GHZ);
+	BUG_ON(freq_inx != A9_FREQ_850_MHZ);
 
 #ifdef CONFIG_KONA_AVS
 	switch (silicon_type) {
 	case SILICON_TYPE_SLOW:
-		return csr_vlt_table_ss[freq_inx];
+		return csr_vlt_table_ss;
 
 	case SILICON_TYPE_TYPICAL:
-		return csr_vlt_table_tt[freq_inx];
+		return csr_vlt_table_tt;
 
 	case SILICON_TYPE_FAST:
-		return csr_vlt_table_ff[freq_inx];
+		return csr_vlt_table_ff;
 
 	default:
 		BUG();
 	}
 #else
-	return csr_vlt_table_ss[freq_inx];
+	return csr_vlt_table_ss;
 #endif
 }
 
@@ -1284,32 +1146,10 @@ int bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 	*/
 
 	if (bcmpmu->rev_info.dig_rev >= BCM59039_CO_DIG_REV) {
-		bcmpmu->pdata->restart_en = 1;
-		bcmpmu->pdata->pok_restart_dly = POK_RESTRT_DLY_4SEC;
-		bcmpmu->pdata->pok_restart_deb = POK_RESTRT_DEB_4SEC;
+		bcmpmu->pdata->pok_restart_dly = POK_RESTRT_DLY_1SEC;
+		bcmpmu->pdata->pok_restart_deb = POK_RESTRT_DEB_8SEC;
 		bcmpmu->pdata->pok_lock = 1;
-		bcmpmu->pdata->hard_reset_en = 0;
-	} else {
-
-		memset(&csr_vlt_table_ss[A9_FREQ_800_MHZ][SR_TURBO_INX_START],
-			B0_CSR_VAL_TURBO_SS_800M,
-			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
-
-		memset(&csr_vlt_table_ss[A9_FREQ_850_MHZ][SR_TURBO_INX_START],
-			B0_CSR_VAL_TURBO_SS_850M,
-			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
-
-		memset(&csr_vlt_table_ss[A9_FREQ_1_GHZ][SR_TURBO_INX_START],
-			B0_CSR_VAL_TURBO_SS_1G,
-			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
-
-		memset(&csr_vlt_table_tt[A9_FREQ_1_GHZ][SR_TURBO_INX_START],
-			B0_CSR_VAL_TURBO_TT_1G,
-			(SR_TURBO_INX_END - SR_TURBO_INX_START) + 1);
-
 	}
-
-	vlt_tbl_init = 1;
 
 	for (i = 0; i < ARRAY_SIZE(bcmpmu_client_devices); i++)
 		bcmpmu_client_devices[i]->dev.platform_data = bcmpmu;

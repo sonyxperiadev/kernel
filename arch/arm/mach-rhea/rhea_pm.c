@@ -402,6 +402,27 @@ static int enter_retention_state(struct kona_idle_state *state)
 	return 0;
 }
 
+int disable_all_interrupts(void)
+{
+	if (force_sleep) {
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR1_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR2_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR3_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR4_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR5_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR6_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR7_OFFSET);
+	}
+	return 0;
+}
+
 int rhea_force_sleep(suspend_state_t state)
 {
 	struct kona_idle_state s;
@@ -427,6 +448,7 @@ int rhea_force_sleep(suspend_state_t state)
 			if (test == 0)
 				pwr_mgr_event_trg_enable(i, 0);
 		}
+		disable_all_interrupts();
 
 		enter_idle_state(&s);
 	}

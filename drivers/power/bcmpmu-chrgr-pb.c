@@ -23,6 +23,7 @@
 #include <linux/power_supply.h>
 
 #include <linux/mfd/bcmpmu.h>
+#include <linux/spa_power.h>
 
 #define BCMPMU_PRINT_ERROR (1U << 0)
 #define BCMPMU_PRINT_INIT (1U << 1)
@@ -30,6 +31,7 @@
 #define BCMPMU_PRINT_DATA (1U << 3)
 
 static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
+/* static int debug_mask = 0xFF; */
 #define pr_chrgr(debug_level, args...) \
 	do { \
 		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
@@ -37,10 +39,15 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 		} \
 	} while (0)
 
+static bool pchrgr_on;
+
 struct bcmpmu_chrgr {
 	struct bcmpmu *bcmpmu;
 	struct power_supply chrgr;
 	struct notifier_block nb;
+	struct delayed_work work;
+	struct bcmpmu_spa_event_fifo spafifo;
+	struct mutex lock;
 	int eoc;
 	int icc_fc;
 	int status;
@@ -384,14 +391,13 @@ static int bcmpmu_chrgr_set_property(struct power_supply *ps,
 	struct bcmpmu_chrgr *pchrgr = container_of(ps,
 		struct bcmpmu_chrgr, chrgr);
 	struct bcmpmu *bcmpmu = pchrgr->bcmpmu;
-	struct bcmpmu_platform_data *pdata = pchrgr->bcmpmu->pdata;
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_STATUS:
 		pchrgr->status = propval->intval;
 		if (propval->intval == POWER_SUPPLY_STATUS_CHARGING)
 			bcmpmu_chrgr_usb_en(bcmpmu, 1);
-		else if (propval->intval == POWER_SUPPLY_STATUS_DISCHARGING)
+		else
 			bcmpmu_chrgr_usb_en(bcmpmu, 0);
 		blocking_notifier_call_chain(
 			&pchrgr->bcmpmu->event[BCMPMU_CHRGR_EVENT_CHRG_STATUS].
@@ -406,12 +412,7 @@ static int bcmpmu_chrgr_set_property(struct power_supply *ps,
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 		pchrgr->eoc = propval->intval;
-		if (pdata->support_hw_eoc)
 			bcmpmu_set_eoc(bcmpmu, (int)propval->intval);
-		else if (bcmpmu->fg_set_eoc)
-			bcmpmu->fg_set_eoc(bcmpmu, pchrgr->eoc);
-		else
-			ret = -ENODATA;
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
@@ -453,8 +454,11 @@ static int bcmpmu_chrgr_get_property(struct power_supply *ps,
 			propval->intval = POWER_SUPPLY_TYPE_USB;
 		else if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_CDP)
 			propval->intval = POWER_SUPPLY_TYPE_USB_CDP;
-		else
+		else if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_DCP)
 			propval->intval = POWER_SUPPLY_TYPE_USB_DCP;
+		else
+			propval->intval = POWER_SUPPLY_TYPE_BATTERY;
+
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		req.sig = PMU_ADC_NTC;
@@ -538,8 +542,12 @@ static int bcmpmu_chrgr_event_handler(struct notifier_block *nb,
 			data = POWER_SUPPLY_TYPE_USB;
 		else if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_CDP)
 			data = POWER_SUPPLY_TYPE_USB_CDP;
-		else
+		else if (pchrgr->chrgrtype == PMU_CHRGR_TYPE_DCP)
 			data = POWER_SUPPLY_TYPE_USB_DCP;
+		else
+			data = POWER_SUPPLY_TYPE_BATTERY;
+
+
 
 		if (pdata->piggyback_notify)
 			pdata->piggyback_notify(
@@ -603,7 +611,11 @@ static void bcmpmu_chrgr_isr(enum bcmpmu_irq irq, void *data)
 		pchrgr->usb_ov = 1;
 		if (pdata->piggyback_notify)
 			pdata->piggyback_notify(
+#if defined(CONFIG_MACH_ZANIN_CHN_OPEN)
+				BCMPMU_CHRGR_EVENT_USBOV, 4);
+#else
 				BCMPMU_CHRGR_EVENT_USBOV, 1);
+#endif
 		break;
 	case PMU_IRQ_USBOV_DIS:
 		if ((pchrgr->usb_ov == 1) && (pdata->piggyback_notify))
@@ -625,6 +637,67 @@ static void bcmpmu_chrgr_isr(enum bcmpmu_irq irq, void *data)
 	default:
 		break;
 	}
+}
+
+static void bcmpmu_chrgr_spa_evt(struct work_struct *work)
+{
+	struct bcmpmu_chrgr *pchrgr =
+		container_of(work, struct bcmpmu_chrgr, work.work);
+	enum bcmpmu_event_t event = 0;
+	int data = 0;
+	bool event_exist = false;
+
+	mutex_lock(&pchrgr->lock);
+	if (!SPA_FIFO_EMPTY(pchrgr->spafifo)) {
+		event = pchrgr->spafifo.event[pchrgr->spafifo.tail];
+		data = pchrgr->spafifo.data[pchrgr->spafifo.tail];
+		SPA_FIFO_TAIL(pchrgr->spafifo);
+		if (pchrgr->spafifo.fifo_full)
+			pchrgr->spafifo.fifo_full = false;
+		if (!SPA_FIFO_EMPTY(pchrgr->spafifo))
+			event_exist = true;
+		mutex_unlock(&pchrgr->lock);
+
+		printk(KERN_INFO "%s event=%d, data=%d\n",
+			__func__, event, data);
+
+		if (event == BCMPMU_CHRGR_EVENT_CHGR_DETECTION)
+			pchrgr_on =
+			(data != POWER_SUPPLY_TYPE_BATTERY) ? true : false;
+
+		if (!pchrgr_on && (event == BCMPMU_CHRGR_EVENT_EOC))
+			event = BCMPMU_EVENT_MAX;
+
+		switch (event) {
+		case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
+			spa_event_handler(SPA_EVT_CHARGER, data);
+			break;
+		case BCMPMU_CHRGR_EVENT_MBTEMP:
+			spa_event_handler(SPA_EVT_TEMP, data);
+			break;
+		case BCMPMU_CHRGR_EVENT_MBOV:
+			spa_event_handler(SPA_EVT_OVP, data);
+			break;
+		case BCMPMU_CHRGR_EVENT_USBOV:
+			spa_event_handler(SPA_EVT_OVP, data);
+			break;
+		case BCMPMU_CHRGR_EVENT_EOC:
+			spa_event_handler(SPA_EVT_EOC, 0);
+			break;
+		case BCMPMU_CHRGR_EVENT_CAPACITY:
+			spa_event_handler(SPA_EVT_CAPACITY, data);
+			break;
+		default:
+			break;
+		}
+	} else {
+		printk(KERN_INFO "%s fifo empty\n", __func__);
+			mutex_unlock(&pchrgr->lock);
+	}
+
+	if (event_exist)
+		schedule_delayed_work(&pchrgr->work, 0);
+
 }
 
 static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
@@ -668,7 +741,18 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 
 	ret = power_supply_register(&pdev->dev, &pchrgr->chrgr);
 	if (ret)
-		goto err;
+		goto err1;
+
+	pdata->piggyback_work = &pchrgr->work;
+	pchrgr->spafifo.head = 0;
+	pchrgr->spafifo.tail = 0;
+	pchrgr->spafifo.length = BCMPMU_SPA_EVENT_FIFO_LENGTH;
+	pchrgr->spafifo.fifo_full = false;
+	pdata->spafifo = &pchrgr->spafifo;
+	mutex_init(&pchrgr->lock);
+	pdata->spalock = &pchrgr->lock;
+
+	INIT_DELAYED_WORK(&pchrgr->work, bcmpmu_chrgr_spa_evt);
 
 	pchrgr->chrgrtype = bcmpmu->usb_accy_data.chrgr_type;
 
@@ -682,19 +766,21 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 		bcmpmu_chrgr_isr, pchrgr);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBOV_DIS,
 		bcmpmu_chrgr_isr, pchrgr);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_EOC,
-		bcmpmu_chrgr_isr, pchrgr);
+	if (pdata->support_hw_eoc)
+		bcmpmu->register_irq(bcmpmu, PMU_IRQ_EOC,
+	bcmpmu_chrgr_isr, pchrgr);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBOV,
-		bcmpmu_chrgr_isr, pchrgr);
+	bcmpmu_chrgr_isr, pchrgr);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBOV_DIS,
-		bcmpmu_chrgr_isr, pchrgr);
+	bcmpmu_chrgr_isr, pchrgr);
 
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBTEMPLOW);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBTEMPHIGH);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_CHGERRDIS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBOV);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBOV_DIS);
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC);
+	if (pdata->support_hw_eoc)
+		bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_EOC);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBOV);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBOV_DIS);
 
@@ -715,6 +801,7 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 err:
 	power_supply_unregister(&pchrgr->chrgr);
 	bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &pchrgr->nb);
+err1:
 	kfree(pchrgr);
 	return ret;
 }
@@ -723,6 +810,7 @@ static int __devexit bcmpmu_chrgr_remove(struct platform_device *pdev)
 {
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_chrgr *pchrgr = bcmpmu->chrgrinfo;
+	struct bcmpmu_platform_data *pdata = pchrgr->bcmpmu->pdata;
 
 	power_supply_unregister(&pchrgr->chrgr);
 
@@ -731,7 +819,8 @@ static int __devexit bcmpmu_chrgr_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHGERRDIS);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBOV);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBOV_DIS);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_EOC);
+	if (pdata->support_hw_eoc)
+		bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_EOC);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV_DIS);
 

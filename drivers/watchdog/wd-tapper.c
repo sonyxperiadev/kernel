@@ -24,18 +24,46 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/spinlock.h>
 #include <linux/vmalloc.h>
 #include <linux/platform_device.h>
 #include <mach/kona_timer.h>
 #include <linux/broadcom/wd-tapper.h>
 
+static DEFINE_SPINLOCK(tapper_lock);
+
 /* The Driver specific data */
 struct wd_tapper_data {
 	struct kona_timer *kt;
 	unsigned int count;
+	unsigned int def_count;
 };
 
 struct wd_tapper_data *wd_tapper_data;
+
+int wd_tapper_set_timeout(unsigned int timeout_in_sec)
+{
+	int ret = -EINVAL;
+	if (wd_tapper_data) {
+		spin_lock(&tapper_lock);
+		if (timeout_in_sec == TAPPER_DEFAULT_TIMEOUT)
+			wd_tapper_data->count = wd_tapper_data->def_count;
+		else
+			wd_tapper_data->count = sec_to_ticks(timeout_in_sec);
+		spin_unlock(&tapper_lock);
+		ret = 0;
+	}
+	return ret;
+}
+EXPORT_SYMBOL(wd_tapper_set_timeout);
+
+unsigned int wd_tapper_get_timeout(void)
+{
+	if (wd_tapper_data)
+		return ticks_to_sec(wd_tapper_data->count);
+	return 0;
+}
+EXPORT_SYMBOL(wd_tapper_get_timeout);
 
 /**
  * wd_tapper_callback - The timer expiry registered callback
@@ -46,7 +74,7 @@ struct wd_tapper_data *wd_tapper_data;
 int wd_tapper_callback(void *dev)
 {
 	/* Pet the PMU Watchdog */
-	pr_info("AP wakeup: HUB wakeup timer\n");
+	pr_info("petting the pmu wd\n");
 	return 0;
 }
 
@@ -105,6 +133,8 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
 
 	/* Get the time out period */
 	wd_tapper_data->count = sec_to_ticks(pltfm_data->count);
+	wd_tapper_data->def_count = wd_tapper_data->count;
+
 	if (wd_tapper_data->count == 0) {
 		dev_err(&pdev->dev, "count value set is 0 - INVALID\n");
 		goto out;

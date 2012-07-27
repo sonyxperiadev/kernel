@@ -28,6 +28,8 @@
 #include <linux/wakelock.h>
 #include <linux/notifier.h>
 #include <linux/stringify.h>
+#include <plat/pi_mgr.h>
+#include <mach/pm.h>
 
 #include <linux/mfd/bcmpmu.h>
 #include <linux/usb/bcm_hsotgctrl.h>
@@ -131,6 +133,7 @@ struct bcmpmu_accy {
 	struct delayed_work det_work;
 	struct mutex lock;
 	struct wake_lock wake_lock;
+	struct pi_mgr_qos_node qos;
 	struct accy_cb usb_cb;
 	int adp_cal_done;
 	enum bcmpmu_usb_det_state_t det_state;
@@ -856,8 +859,16 @@ static void bc_detection(struct bcmpmu_accy *paccy)
 			 * gets enabled here. Hence, restart BC by
 			 * power-cycling BCDLDO to get proper detection.
 			 */
-			enable_bc_clock(paccy, true);
+
+			/* In some cases, this state machine comes back to
+			 * USB_IDLE state when clocks are already enabled
+			 */
+			if (!paccy->clock_en)
+				enable_bc_clock(paccy, true);
+
 			wake_lock(&paccy->wake_lock);
+			pi_mgr_qos_request_update(&paccy->qos,
+						DEEP_SLEEP_LATENCY);
 			bcdldo_cycle_power(paccy);
 			reset_bc(paccy);
 			paccy->retry_cnt = 0;
@@ -926,8 +937,12 @@ static void bc_detection(struct bcmpmu_accy *paccy)
 	pr_accy(FLOW, "%s, usb=%d, chrgr=%d, state: %d\n", __func__, usb_type,
 		chrgr_type, paccy->det_state);
 
-	if (paccy->det_state == USB_IDLE && wake_lock_active(&paccy->wake_lock))
+	if (paccy->det_state == USB_IDLE &&
+			wake_lock_active(&paccy->wake_lock)) {
 		wake_unlock(&paccy->wake_lock);
+			pi_mgr_qos_request_update(&paccy->qos,
+						PI_MGR_QOS_DEFAULT_VALUE);
+	}
 
 	if ((usb_type < PMU_USB_TYPE_MAX) &&
 	    (usb_type != bcmpmu->usb_accy_data.usb_type)) {
@@ -1082,10 +1097,19 @@ static void usb_det_work(struct work_struct *work)
 	if (usb_type != PMU_USB_TYPE_NONE)
 		bc_det_sts_clear(paccy);
 
-	if (paccy->det_state == USB_IDLE)
+	if (paccy->det_state == USB_IDLE &&
+			wake_lock_active(&paccy->wake_lock)) {
 		wake_unlock(&paccy->wake_lock);
-	else
+			pi_mgr_qos_request_update(&paccy->qos,
+						PI_MGR_QOS_DEFAULT_VALUE);
+	}
+
+	else if (paccy->det_state != USB_IDLE &&
+			!wake_lock_active(&paccy->wake_lock)) {
 		wake_lock(&paccy->wake_lock);
+			pi_mgr_qos_request_update(&paccy->qos,
+						DEEP_SLEEP_LATENCY);
+	}
 
 	if ((paccy->det_state == USB_DETECT) || (paccy->det_state == USB_RETRY))
 		return;
@@ -1450,14 +1474,6 @@ int bcmpmu_usb_get(struct bcmpmu *bcmpmu,
 		val =
 		    val >> bcmpmu->regmap[PMU_REG_ADP_STATUS_ATTACH_DET].shift;
 		break;
-	case BCMPMU_USB_CTRL_GET_ADP_SENSE_TIMER_VALUE:
-		ret = bcmpmu->read_dev(bcmpmu,
-				       PMU_REG_ADP_SNS_TM,
-				       &val,
-				       bcmpmu->
-				       regmap[PMU_REG_ADP_SNS_TM].mask);
-		val = val >> bcmpmu->regmap[PMU_REG_ADP_SNS_TM].shift;
-		break;
 	case BCMPMU_USB_CTRL_GET_ADP_SENSE_STATUS:
 		ret = bcmpmu->read_dev(bcmpmu,
 				       PMU_REG_ADP_STATUS_SNS_DET,
@@ -1613,7 +1629,10 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	paccy->adp_prob_comp = 0;
 	paccy->adp_sns_comp = 0;
 	paccy->bc = pdata->bc;
+
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
 	paccy->piggyback_chrg = pdata->piggyback_chrg;
+#endif
 
 	INIT_DELAYED_WORK(&paccy->adp_work, usb_adp_work);
 	if ((paccy->bc == BCMPMU_BC_BB_BC11) ||
@@ -1624,6 +1643,16 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	}
 
 	wake_lock_init(&paccy->wake_lock, WAKE_LOCK_SUSPEND, "usb_accy");
+
+	/*Register QoS request to diable deep sleep when charger
+		is connected*/
+	pi_mgr_qos_add_request(&paccy->qos, "usb_accy",
+				PI_MGR_PI_ID_ARM_CORE,
+				PI_MGR_QOS_DEFAULT_VALUE);
+
+
+
+
 	for (i = 0; i < BCMPMU_EVENT_MAX; i++) {
 		bcmpmu->event[i].event_id = i;
 		BLOCKING_INIT_NOTIFIER_HEAD(&bcmpmu->event[i].notifiers);
@@ -1732,6 +1761,7 @@ static int __devexit bcmpmu_accy_remove(struct platform_device *pdev)
 	cancel_delayed_work_sync(&paccy->det_work);
 	cancel_delayed_work_sync(&paccy->adp_work);
 	wake_lock_destroy(&paccy->wake_lock);
+	pi_mgr_qos_request_remove(&paccy->qos);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_accy_attr_group);

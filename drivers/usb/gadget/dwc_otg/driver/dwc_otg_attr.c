@@ -318,6 +318,10 @@
 
 #include <linux/io.h>
 
+#ifdef CONFIG_KONA_USB_CONTROL
+#include <linux/usb/bcm_hsotgctrl.h>
+#endif
+
 #include "dwc_os.h"
 #include "dwc_otg_driver.h"
 #include "dwc_otg_attr.h"
@@ -1003,11 +1007,25 @@ static ssize_t regdump_show(struct device *_dev,
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
+#ifdef CONFIG_KONA_USB_CONTROL
+	/* We want to be able to do this with and without
+	 * USB-PMU-xceiver interface so use direct API
+	 */
+	bcm_hsotgctrl_en_clock(true);
 	dwc_otg_dump_global_registers(otg_dev->core_if);
 	if (dwc_otg_is_host_mode(otg_dev->core_if))
 		dwc_otg_dump_host_registers(otg_dev->core_if);
 	else
 		dwc_otg_dump_dev_registers(otg_dev->core_if);
+
+	bcm_hsotgctrl_en_clock(false);
+#else
+	dwc_otg_dump_global_registers(otg_dev->core_if);
+	if (dwc_otg_is_host_mode(otg_dev->core_if))
+		dwc_otg_dump_host_registers(otg_dev->core_if);
+	else
+		dwc_otg_dump_dev_registers(otg_dev->core_if);
+#endif
 
 	return sprintf(buf, "Register Dump\n");
 }

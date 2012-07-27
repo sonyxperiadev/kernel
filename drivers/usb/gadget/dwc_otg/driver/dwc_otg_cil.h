@@ -907,6 +907,11 @@ struct dwc_otg_core_if {
 	dwc_timer_t *bidl_adisconn_timer;
 #endif
 
+#ifdef CONFIG_USB_DELAYED_SUSPEND_POWER_SAVING
+#define T_USB_SUSPEND_POWER_SAVING_DELAY_IN_MS 1000
+	dwc_timer_t *suspend_power_saving_timer;
+#endif
+
 #ifdef DEBUG
 	uint32_t start_hcchar_val[MAX_EPS_CHANNELS];
 
@@ -994,6 +999,7 @@ extern void w_shutdown_core(void *p);
 extern void w_vbus_draw(void *p);
 extern void w_wakeup_detected(void *p);
 extern void w_a_periph_done(void *p);
+extern void w_peri_suspend_powersaving(void *p);
 extern void w_init_core(void *p);
 
 /** Saves global register values into system memory. */

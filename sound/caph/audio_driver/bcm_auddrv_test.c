@@ -1409,6 +1409,9 @@ void AUDTST_VoIP_Stop(void)
 		/*Restore the App policy state*/
 		AUDIO_Policy_RestoreState();
 
+		/*may need it to avoid crash or freeze*/
+		/*msleep(200);*/
+
 		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
 		OSSEMAPHORE_Destroy(sVtQueue_Sema);
 		AUDQUE_Destroy(sVtQueue);

@@ -692,6 +692,8 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
 	caph_aadmac_ch = csl_caph_dma_get_chal_chnl(chnl_config.dma_ch);
 	caph_cfifo_fifo = csl_caph_cfifo_get_chal_fifo(chnl_config.fifo);
 
+	chal_caph_dma_clear_register(handle, caph_aadmac_ch);
+
 	chal_caph_dma_set_cfifo(handle, caph_aadmac_ch, caph_cfifo_fifo);
 
 	direction = csl_caph_dma_get_chal_direction(chnl_config.direction);

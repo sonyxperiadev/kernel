@@ -376,6 +376,8 @@ static struct attribute_group bcm_attr_group = {
 
 static int __init bcm_sysfs_init(void)
 {
+	/* init reset reason as 0 */
+	hard_reset_reason = 0;
 	bcm_kobj = kobject_create_and_add("bcm", NULL);
 	if (!bcm_kobj)
 		return -ENOMEM;

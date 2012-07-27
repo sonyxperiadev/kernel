@@ -1757,7 +1757,6 @@ static void shrink_active_list(unsigned long nr_to_scan,
 	struct zone_reclaim_stat *reclaim_stat = get_reclaim_stat(mz);
 	unsigned long nr_rotated = 0;
 	unsigned long nr_cma_taken = 0;
-
 	isolate_mode_t isolate_mode = ISOLATE_ACTIVE;
 	struct zone *zone = mz->zone;
 
@@ -2986,8 +2985,9 @@ loop_again:
 				continue;
 			}
 
-			if (!zone_watermark_ok_safe(zone, testorder,
-					high_wmark_pages(zone), end_zone, 0)) {
+			if (!zone_watermark_ok_safe(zone, order,
+					high_wmark_pages(zone),
+					end_zone, ALLOC_UNMOVABLE)) {
 				all_zones_ok = 0;
 				/*
 				 * We are still under min water mark.  This

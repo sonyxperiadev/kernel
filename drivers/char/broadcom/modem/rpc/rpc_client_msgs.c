@@ -7,9 +7,9 @@
 *   under the terms of the GNU General Public License version 2, available
 *    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a license
-* other than the GPL, without Broadcom's express prior written consent.
+*   Notwithstanding the above, under no circumstances may you combine this
+*   software in any way with any other Broadcom software provided under a license
+*   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 /**
@@ -93,11 +93,11 @@ static Boolean rpc_build_lookup_msgs(UInt16 *tbl, UInt16 table_size,
 				bRetVal = FALSE;
 			} else {
 				if (tableBase2[id2] == 0xFFFF)
-					tableBase2[id2] = 0;
+				    tableBase2[id2] = 0;
 
 				tableBase2[id2] |= mask;
 
-				/*_DBG_(RPC_TRACE("rpc_build_lookup = 0x%x, 0x%x, 0x%x\r\n", id, id1, id2)); */
+				/*_DBG_(RPC_TRACE("rpc_build_lookup = 0x%x, 0x%x, 0x%x\r\n", id, id1, id2));*/
 			}
 		}
 	} else {
@@ -138,7 +138,7 @@ Boolean rpc_reset_client_msgs(UInt8 clientId)
 }
 
 Boolean rpc_register_client_msgs(UInt8 clientId, UInt16 *tbl,
-				UInt16 table_size)
+					UInt16 table_size)
 {
 	UInt32 mask = 1;
 
@@ -148,8 +148,8 @@ Boolean rpc_register_client_msgs(UInt8 clientId, UInt16 *tbl,
 		      ("rpc_register_client_msgs cid=%d sz=%d mask=%x \r\n",
 		       clientId, table_size, mask));
 
-		/*printk("rpc_register_client_msgs cid=%d sz=%d mask=%x \r\n",
-		       (int)clientId, (int)table_size, (int)mask); */
+/*		printk("rpc_register_client_msgs cid=%d sz=%d mask=%x \r\n", */
+/*		       (int)clientId, (int)table_size, (int)mask); */
 
 		return rpc_build_lookup_msgs(tbl, table_size, mask);
 	}

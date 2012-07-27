@@ -62,6 +62,7 @@
 #include <linux/err.h>
 #include <linux/regulator/consumer.h>
 
+#include "csl_dsp.h"
 /**There are two loopback paths available in AudioH.
 One is 6.5MHz analog microphone loopback path. It does not support digital mics.
 The other one is HW sidetone path. It supports all the mics. This is prefered.
@@ -161,6 +162,7 @@ static Boolean is26MClk = FALSE;
 static Boolean muteInPlay = FALSE;
 static Boolean isStIHF = FALSE;
 
+static Boolean isFmMuted = FALSE;
 /*
 static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 static unsigned int recordGainR[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
@@ -1031,24 +1033,34 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 	sp_struct.inHWlpbk = inHWlpbk;
 	sp_struct.mixOutGain_mB = GAIN_SYSPARM;
 	sp_struct.mixOutGainR_mB = GAIN_SYSPARM;
-	if (users_gain[AUDPATH_FM].valid) {
-		/*do not apply FM mixer input gain to music*/
-		if (path->source == CSL_CAPH_DEV_MEMORY) {
-			sp_struct.mixInGain_mB = GAIN_SYSPARM;
-			sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+	if (isFmMuted == FALSE) {
+		if (users_gain[AUDPATH_FM].valid) {
+			/*do not apply FM mixer input gain to music*/
+			if (path->source == CSL_CAPH_DEV_MEMORY) {
+				sp_struct.mixInGain_mB = GAIN_SYSPARM;
+				sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+			} else {
+				sp_struct.mixInGain_mB =
+					users_gain[AUDPATH_FM].L;
+				sp_struct.mixInGainR_mB =
+					users_gain[AUDPATH_FM].R;
+			}
 		} else {
-			sp_struct.mixInGain_mB = users_gain[AUDPATH_FM].L;
-			sp_struct.mixInGainR_mB = users_gain[AUDPATH_FM].R;
+			if (muteInPlay) {
+				sp_struct.mixInGain_mB = GAIN_NA;
+				sp_struct.mixInGainR_mB = GAIN_NA;
+			} else {
+				sp_struct.mixInGain_mB = GAIN_SYSPARM;
+				sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+			}
 		}
 	} else {
-		if (muteInPlay) {
-			sp_struct.mixInGain_mB = GAIN_NA;
-			sp_struct.mixInGainR_mB = GAIN_NA;
-		} else {
-			sp_struct.mixInGain_mB = GAIN_SYSPARM;
-			sp_struct.mixInGainR_mB = GAIN_SYSPARM;
-		}
+		aTrace(LOG_AUDIO_CNTLR,
+			"FM IS MUTED APPLY GAIN_NA\n");
+		sp_struct.mixInGain_mB = GAIN_NA;
+		sp_struct.mixInGainR_mB = GAIN_NA;
 	}
+
 	if (user_vol_setting[app][mode].valid == FALSE)
 		fillUserVolSetting(mode, app);
 	sp_struct.mixOutGain_mB = user_vol_setting[app][mode].L;
@@ -1876,6 +1888,11 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 	vol_right 0x%x\n", vol_left, vol_right);
 	*/
 
+	/*if the CAPH clock is not turned on.
+	do not set HW audio gain.*/
+	if (FALSE == csl_caph_QueryHWClock())
+		return;
+
 	speaker = getDeviceFromSink(sink);
 	mixer = csl_caph_FindMixer(speaker, pathID);
 	/*determine which mixer input to apply the gains to */
@@ -1952,6 +1969,8 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 				/*do not mute music even FM is muted*/
 				if (source != AUDIO_SOURCE_I2S)
 					muteInPlay = TRUE;
+				else
+					isFmMuted = TRUE;
 			}
 		}
 	} else {
@@ -1974,6 +1993,8 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 					mixInGain, mixInGainR);
 				if (source != AUDIO_SOURCE_I2S)
 					muteInPlay = FALSE;
+				else
+					isFmMuted = FALSE;
 			}
 		}
 	}
@@ -3271,6 +3292,13 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 	case AUDCTRL_HW_CFG_DSPMUTE:
 		AUDCTRL_SetTelephonySpkrMute(AUDIO_SINK_RESERVED4, arg1);
 		break;
+	case AUDCTRL_HW_PRINT_PATH:
+		csl_caph_hwctrl_PrintAllPaths();
+		if (arg1 == 1) {
+			Dump_AllCaph_regs();
+			Dsp_Shared_memDump();
+		}
+		break;
 	case AUDCTRL_HW_WRITE_GAIN:
 
 		/*arg2 is gain in milli Bel */
@@ -3685,6 +3713,8 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 				"power OFF pmu HS amp\n");
 
 			extern_hs_off();
+/*			audctl_usleep_range(20000,
+				22000); no pop noise */
 			audctl_usleep_range(wait_pmu_off,
 				wait_pmu_off+2000);
 		}
@@ -3755,6 +3785,12 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 #else
 	AudioSysParm_t *p;
 #endif
+	/*#define can be removed after the sysparam is updated
+	with these new params*/
+
+#ifdef NEW_PARAMS_TP_PMU
+	Int16 param_value;
+#endif
 
 	p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
 
@@ -3775,11 +3811,44 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 		pmu_gain = (short)p->ext_speaker_pga_r;	/* Q13p2 dB */
 		extern_hs_set_gain(pmu_gain * 25, AUDIO_HS_RIGHT);
 
+		/*#define can be removed after the sysparam is updated
+		   with these new params*/
+
+#ifdef NEW_PARAMS_TP_PMU
+		param_value = p->ext_speaker_preamp_pga;
+
+		extern_set_hs_preamp_gain(param_value);
+
+		param_value = p->ext_speaker_param1;
+
+		extern_set_hs_noise_gate(param_value);
+#endif
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
+
 		extern_ihf_set_gain(pmu_gain * 25);
+		/*#define can be removed after the sysparam is updated
+		with these new params*/
+
+#ifdef NEW_PARAMS_TP_PMU
+		param_value = p->ext_speaker_preamp_pga;
+
+		extern_set_ihf_preamp_gain(param_value);
+
+		param_value = p->ext_speaker_param1;
+
+		extern_set_ihf_noise_gate(param_value);
+
+		param_value = p->ext_speaker_param2;
+
+		extern_set_ihf_none_clip(param_value);
+
+		param_value = p->ext_speaker_param3;
+
+		extern_set_ihf_pwr(param_value);
+#endif
 
 #ifdef CONFIG_BCM_MODEM
 		pmu_gain = (int)p->ext_speaker_high_gain_mode_enable;
@@ -3934,3 +4003,78 @@ void AUDCTRL_UpdateUserVolSetting(
 	aTrace(LOG_AUDIO_CNTLR, "%s app = %d, mode = %d\n",
 		__func__, app, mode);
 }
+
+
+void setExternalParameter(Int16 param_id, Int16 param_value, int channel)
+{
+	AudioMode_t mode;
+	mode = AUDCTRL_GetAudioMode();
+
+	aTrace(LOG_AUDIO_CNTLR, "%s param_id =%d,param_value =%d\n",
+		__func__, param_id, param_value);
+
+	switch (param_id) {
+	case 0:
+		{
+			aTrace(LOG_AUDIO_CNTLR, "IHF/HS:Gain  =%d ,"
+				"mode =%d\n", param_value, mode);
+			if (mode == AUDIO_MODE_HANDSET ||
+					mode == AUDIO_MODE_SPEAKERPHONE)
+				extern_ihf_set_gain(param_value);
+			else
+				if (channel ==
+					PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+					extern_hs_set_gain(param_value,
+								AUDIO_HS_LEFT);
+				else if (channel ==
+					PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL)
+					extern_hs_set_gain(param_value,
+								AUDIO_HS_RIGHT);
+
+		}
+		break;
+	case 1:
+		{
+			aTrace(LOG_AUDIO_CNTLR, "IHF/HS:PreAmpGain  =%d,"
+				"mode =%d\n", param_value, mode);
+			if (mode == AUDIO_MODE_HANDSET ||
+					mode == AUDIO_MODE_SPEAKERPHONE)
+				extern_set_ihf_preamp_gain(param_value);
+			else
+				extern_set_hs_preamp_gain(param_value);
+		}
+		break;
+	case 2:
+		{
+			aTrace(LOG_AUDIO_CNTLR, "IHF/HS:NoiseGate  =%d,"
+				"mode =%d\n", param_value, mode);
+			if (mode == AUDIO_MODE_HANDSET ||
+				mode == AUDIO_MODE_SPEAKERPHONE)
+				extern_set_ihf_noise_gate(param_value);
+			else
+				extern_set_hs_noise_gate(param_value);
+		}
+		break;
+	case 3:
+		{
+			aTrace(LOG_AUDIO_CNTLR, "IHF:NoneClip  =%d\n",
+						param_value);
+			extern_set_ihf_none_clip(param_value);
+		}
+		break;
+	case 4:
+		{
+			aTrace(LOG_AUDIO_CNTLR, "IHF:PWR  =%d\n",
+						param_value);
+			extern_set_ihf_pwr(param_value);
+		}
+		break;
+	default:
+		break;
+	}
+
+	return;
+}
+
+
+

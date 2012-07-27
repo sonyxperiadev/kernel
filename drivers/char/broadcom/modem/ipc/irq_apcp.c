@@ -34,6 +34,12 @@
 /* for BINTC register offsets */
 #include <mach/rdb/brcm_rdb_bintc.h>
 
+
+#include <mach/rdb/brcm_rdb_chipreg.h>
+
+void ipc_set_interrupt_mask(void);
+
+
 #define INTC_IMR             0x0000
 #define INTC_ISR             0x0004
 #define INTC_ICR             0x0008
@@ -67,6 +73,9 @@ enum interrupt_source_type {
 };
 
 static DEFINE_SPINLOCK(intc_lock);
+
+
+
 
 static void intc_ack_irq(struct irq_data *d)
 {
@@ -131,17 +140,30 @@ static int intc_set_type(struct irq_data *d, unsigned int flow_type)
 
 void intc_trigger_softirq(unsigned int irq)
 {
-	void __iomem *base = (void __iomem *)(KONA_BINTC_BASE_ADDR);
+
+    void __iomem *chipreg_base = (void __iomem *)(KONA_CHIPREG_VA);
+	unsigned int birq = IRQ_TO_BMIRQ(IRQ_IPC_A2C);
+
 	/* convert to BModem IRQ */
-	unsigned int birq = IRQ_TO_BMIRQ(irq);
+
 	unsigned long flags;
+	unsigned int ReadData=0;;
 	/* removed printouts */
 	/* printk("intc_trigger_softirq\n"); */
 	spin_lock_irqsave(&intc_lock, flags);
-	if (birq >= 32)
-		writel(1 << (birq - 32), base + BINTC_ISWIR1_OFFSET);
-	else
-		writel(1 << birq, base + BINTC_ISWIR0_OFFSET);
+
+	// This SEL code is for safety only, bits in this register are shared for some other operations
+	//This is additional read and write to register and may cause extra dealy. 
+	// if the code stability is proven , we can remove this code below 3 lines INTR_SEL.
+	ReadData=readl(chipreg_base + CHIPREG_MDM_SW_INTR_SEL_OFFSET   );
+	ReadData|=(1<<birq);
+    writel(ReadData, chipreg_base + CHIPREG_MDM_SW_INTR_SEL_OFFSET  );
+
+	writel((1<<birq), chipreg_base + CHIPREG_MDM_SW_INTR_SET_OFFSET	);
+
+		
+
+	
 	spin_unlock_irqrestore(&intc_lock, flags);
 }
 EXPORT_SYMBOL(intc_trigger_softirq);
@@ -329,6 +351,45 @@ static struct irq_chip intc_chip = {
 	.irq_set_type = intc_set_type,
 	.irq_set_wake = intc_set_wake,
 };
+
+
+
+void ipc_set_interrupt_mask()
+{
+
+		void __iomem *base = (void __iomem *)(KONA_BINTC_BASE_ADDR);
+	
+		void __iomem *chipreg_base = (void __iomem *)(KONA_CHIPREG_VA);
+		unsigned int ReadData=0;
+		unsigned int birq = IRQ_TO_BMIRQ(IRQ_IPC_A2C);
+
+
+		printk(KERN_ERR "%s birq=%x base=%x chip_base=%x\n",__FUNCTION__,birq,(unsigned int)base,(unsigned int)chipreg_base);
+		printk(KERN_ERR "%s DOD birq=%x base=%x chip_base=%x\n",__FUNCTION__,birq,(unsigned int)base,(unsigned int)chipreg_base);
+
+
+		writel((1<<birq), base + BINTC_IMR0_13_SET_OFFSET	   );
+
+		//Set AP to CP Event Interrupt
+		writel((1<<birq), base + BINTC_IMR0_8_SET_OFFSET	   );
+
+
+
+		ReadData=readl(chipreg_base + CHIPREG_MDM_SW_INTR_SEL_OFFSET);
+		ReadData |= (1<<birq);
+		writel(ReadData, chipreg_base + CHIPREG_MDM_SW_INTR_SEL_OFFSET	);
+
+	
+		
+		
+		printk(KERN_ERR "%s AFT  birq=%x base=%x chip_base=%x\n",__FUNCTION__,birq,(unsigned int)base,(unsigned int)chipreg_base);
+
+
+}
+
+EXPORT_SYMBOL(ipc_set_interrupt_mask);
+
+
 
 /** @addtogroup InterruptAPIGroup
 	@{

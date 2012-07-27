@@ -66,6 +66,7 @@ enum __AUDCTRL_HW_ACCESS_TYPE_en_t {
 	AUDCTRL_HW_WRITE_GAIN,
 	AUDCTRL_HW_READ_REG,
 	AUDCTRL_HW_WRITE_REG,
+	AUDCTRL_HW_PRINT_PATH,
 	AUDCTRL_HW_ACCESS_TYPE_TOTAL
 };
 #define AUDCTRL_HW_ACCESS_TYPE_en_t enum __AUDCTRL_HW_ACCESS_TYPE_en_t
@@ -897,5 +898,17 @@ void AUDCTRL_UpdateUserVolSetting(
 	int vol_left,
 	int vol_right,
 	AudioApp_t app);
+
+/********************************************************************
+*  @brief  Update tuning parameter for dialog pmu.
+*
+*  @param
+*
+*  @return none
+*
+****************************************************************************/
+
+void setExternalParameter(Int16 param_id, Int16 param_value, int channel);
+
 
 #endif /* #define __AUDIO_CONTROLLER_H__ */

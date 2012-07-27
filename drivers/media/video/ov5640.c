@@ -1455,29 +1455,13 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret = 0;
 
-	if (enable) {
-		ret = ov5640_reg_write(client, 0x3008, 0x02);
-		if (ret)
-			goto out;
+	if (enable)
+		/* Power Up, Start Streaming */
+		ret = ov5640_reg_writes(client, ov5640_stream);
+	else
+		/* Stop Streaming, Power Down*/
+		ret = ov5640_reg_writes(client, ov5640_power_down);
 
-	} else {
-		u8 tmpreg = 0;
-
-		/* Stop Sensor Streaming */
-		ret = ov5640_reg_read(client, 0x3008, &tmpreg);
-		if (ret)
-			goto out;
-		ret = ov5640_reg_write(client, 0x3008, tmpreg | 0x40);
-		if (ret)
-			goto out;
-
-		/* MIPI Control  Powered down */
-		ret = ov5640_reg_write(client, 0x300e, 0x3d);
-		if (ret)
-			goto out;
-	}
-
-out:
 	return ret;
 }
 
@@ -2174,8 +2158,8 @@ static int ov5640_init(struct i2c_client *client)
 		goto out;
 #endif
 
-	/* Start Streaming for AF Init*/
-	ret = ov5640_reg_write(client, 0x3008, 0x02);
+	/* Power Up, Start Streaming for AF Init*/
+	ret = ov5640_reg_writes(client, ov5640_stream);
 	if (ret)
 		goto out;
 	/* Delay for sensor streaming*/
@@ -2186,10 +2170,8 @@ static int ov5640_init(struct i2c_client *client)
 	if (ret)
 		goto out;
 
-	/* Stop Streaming */
-	ov5640_reg_write(client, 0x3008, 0x42);
-	/* MIPI Control  Powered down */
-	ov5640_reg_write(client, 0x300e, 0x3d);
+	/* Stop Streaming, Power Down*/
+	ret = ov5640_reg_writes(client, ov5640_power_down);
 
 	/* default brightness and contrast */
 	ov5640->brightness = EV_DEFAULT;

@@ -40,6 +40,11 @@ Copyright 2009 - 2011  Broadcom Corporation
 
 #include "csl_apcmd.h"
 #include "audio_trace.h"
+#if defined(ENABLE_DMA_VOICE)
+#include "csl_dsp_caph_control_api.h"
+#endif
+
+#include "ipcinterface.h"
 
 /*when system is busy, 50ms is not enough*/
 #define AUDIO_ENABLE_RESP_TIMEOUT 1000
@@ -73,6 +78,8 @@ static bool_t xdr_AudioCompfilter_t(void *xdrs, AudioCompfilter_t *rsp);
 static bool_t xdr_AudioTuningParamInd_st(void *xdrs,
 			struct AudioTuningParamInd_st *rsp);
 
+static Boolean audioRpc_vcall_released_by_modem = FALSE;
+
 #define _T(a) a
 static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 /* Add phonebook message serialize/deserialize routine map */
@@ -101,6 +108,9 @@ static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 	(xdrproc_t)xdr_AudioTuningParamInd_st,
 	sizeof(struct AudioTuningParamInd_st), 0 },
 
+	{MSG_AUDIO_VCALL_REL_IND, _T("MSG_AUDIO_VCALL_REL_IND"),
+	 (xdrproc_t) xdr_UInt32, sizeof(UInt32), 0},
+
 	{(MsgType_t) __dontcare__, "", NULL_xdrproc_t, 0, 0}
 };
 
@@ -120,6 +130,14 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 
 		if ((*codecID) != 0)	/* Make sure codeid is not 0 */
 			AUDDRV_Telephone_RequestRateChange((UInt8) (*codecID));
+	}
+
+	if (MSG_AUDIO_VCALL_REL_IND == pMsg->msgId) {
+
+		aTrace(LOG_AUDIO_DRIVER,
+				"HandleAudioEventrespCb : MSG_AUDIO_VCALL_REL_IND \r\n");
+
+		audioRpc_vcall_released_by_modem = TRUE;
 	}
 
 	if (MSG_AUDIO_START_TUNING_IND == pMsg->msgId) {
@@ -623,20 +641,43 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 		tid = s_sid++; /* RPC_SyncCreateTID(&val, sizeof(UInt32)); */
 		aTrace(LOG_AUDIO_DRIVER,
 			"audio_control_dsp tid=%ld,param1=%ld\n", tid, param1);
+
+		/** init completion before send this DSP command */
+		if (param1 == AUDDRV_DSPCMD_AUDIO_ENABLE) {
+			/*aError("i_c");*/
+			init_completion(&audioEnableDone);
+			/*aError("i_d");*/
+		}
+
 		CAPI2_audio_control_dsp(tid, audioClientId, &audioParam);
 		/*
 		RPC_SyncWaitForResponse(tid, audioClientId, &ackResult,
 					&msgType, NULL);
 		*/
 		if (param1 == AUDDRV_DSPCMD_AUDIO_ENABLE) {
-			jiff_in = wait_for_completion_interruptible_timeout(
+
+			/** wait for response from DSP for this command.
+			Response usually comes back very fast, less than 10ms  */
+			jiff_in = wait_for_completion_timeout(
 				&audioEnableDone,
 				timeout_jiff);
 			if (!jiff_in) {
-				aError("!!!Timeout on COMMAND_AUDIO_ENABLE"
-					" resp!!!\n");
-				init_completion(&audioEnableDone);
+				aError("!!!Timeout on COMMAND_AUDIO_ENABLE %d"
+					" resp!!!\n", (int)param2);
+				/**
+				IPCCP_SetCPCrashedStatus(IPC_AP_ASSERT);
+				BUG_ON(1);
+				panic("COMMAND_AUDIO_ENABLE timeout");
+				*/
 			}
+#if defined(ENABLE_DMA_VOICE)
+			{
+				UInt16 dsp_path;
+				dsp_path =
+				csl_dsp_caph_control_aadmac_get_enable_path();
+				csl_caph_enable_adcpath_by_dsp(dsp_path);
+			}
+#endif
 		}
 
 		break;
@@ -666,6 +707,16 @@ UInt32 audio_cmf_filter(AudioCompfilter_t *cf)
 	*/
 
 	return val;
+}
+
+Boolean audio_rpc_read_flag_vc_rel_by_modem(void)
+{
+	return audioRpc_vcall_released_by_modem;
+}
+
+void audio_rpc_clear_flag_vc_rel_by_modem(void)
+{
+	audioRpc_vcall_released_by_modem = FALSE;
 }
 
 #else /* CONFIG_BCM_MODEM */

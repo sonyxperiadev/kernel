@@ -26,7 +26,7 @@
         0x00000043   /* 0x3500_4820: DCLK1: DCLK1: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000443   /* 0x3500_4824: DCLK4: GPIO95: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000443   /* 0x3500_4828: DCLKREQ1: GPIO111: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-        0x00000243   /* 0x3500_482C: DCLKREQ4: SSP1DI: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+        0x00000243   /* 0x3500_482C: DCLKREQ4: SSP1DI: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000423   /* 0x3500_4830: DMIC0CLK: GPIO123: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000443   /* 0x3500_4834: DMIC0DQ: GPIO124: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000043   /* 0x3500_4838: DSI0TE: GPIO37: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
@@ -46,8 +46,8 @@
         0x00000043   /* 0x3500_4870: GPIO13: GPIO13: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000003   /* 0x3500_4874: GPIO14: GPIO14: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000003   /* 0x3500_4878: GPIO15: GPIO15: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-        0x00000020   /* 0x3500_487C: GPIO16: GPIO16: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 000: xmA */
-        0x00000020   /* 0x3500_4880: GPIO17: GPIO17: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 000: xmA */
+        0x00000120   /* 0x3500_487C: GPIO16: BSC2CLK: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 000: xmA */
+        0x00000120   /* 0x3500_4880: GPIO17: BSC2DAT: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 000: xmA */
         0x00000223   /* 0x3500_4884: GPIO18: UB2TX: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000123   /* 0x3500_4888: GPIO19: LCD_WR: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000123   /* 0x3500_488C: GPIO20: LCDRE: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
@@ -61,7 +61,7 @@
         0x00000043   /* 0x3500_48AC: GPIO28: GPIO28: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000003   /* 0x3500_48B0: GPIO32: GPIO32: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000023   /* 0x3500_48B4: GPIO33: GPIO33: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-        0x00000023   /* 0x3500_48B8: GPIO34: GPIO34: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+        0x00000003   /* 0x3500_48B8: GPIO34: GPIO34: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000443   /* 0x3500_48BC: GPS_CALREQ: GPIO99: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000443   /* 0x3500_48C0: GPS_HOSTREQ: GPIO100: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000443   /* 0x3500_48C4: GPS_PABLANK: GPIO97: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
@@ -100,7 +100,7 @@
         0x00000023   /* 0x3500_4948: MMC1DAT2: MMC1DAT2: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000023   /* 0x3500_494C: MMC1DAT3: MMC1DAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000203   /* 0x3500_4950: MMC1DAT4: SSP2SYN: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-        0x00000243   /* 0x3500_4954: MMC1DAT5: SSP2DI: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+        0x00000243   /* 0x3500_4954: MMC1DAT5: SSP2DI: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000203   /* 0x3500_4958: MMC1DAT6: SSP2DO: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000203   /* 0x3500_495C: MMC1DAT7: SSP2CK: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000443   /* 0x3500_4960: MMC1RST: GPIO70: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
@@ -124,7 +124,7 @@
         0x00000023   /* 0x3500_49A8: SDDAT3: SDDAT3: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000003   /* 0x3500_49AC: SIMCLK: SIMCLK: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000023   /* 0x3500_49B0: SIMDAT: SIMDAT: 0 = TTL input: 0 = pull-down disabled: 1 = pull-up enabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
-        0x00000443   /* 0x3500_49B4: SIMDET: GPIO56: 0 = TTL input: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
+        0x00000443   /* 0x3500_49B4: SIMDET: GPIO56: 0 = TTL output: 1 = pull-down enabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000003   /* 0x3500_49B8: SIMRST: SIMRSTN: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 011: 8mA */
         0x00000200   /* 0x3500_49BC: GPIO93: SSP1CK: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
         0x00000200   /* 0x3500_49C0: GPIO94: SSP1SYN: 0 = TTL input: 0 = pull-down disabled: 0 = pull-up disabled: 0 = unslewed output: 0 = Input Enabled: 000: 2mA */
@@ -177,10 +177,10 @@
             37    0x00000000 /* 0: Output  0: Drive Low */
             41    0x00000000 /* 0: Output  1: Drive High */
             43    0x00000000 /* 0: Output  0: Drive Low */
+	    56    0x00000000 /* 0: Output  0: Drive Low */
             70    0x00000000 /* 0: Output  0: Drive Low */
             95    0x00000000 /* 0: Output  0: Drive Low */
             97    0x00000000 /* 0: Output  0: Drive Low */
-            98    0x00000002 /* 1: Input  0: Drive Low */
             100    0x00000000 /* 0: Output  0: Drive Low */
             111    0x00000000 /* 0: Output  0: Drive Low */
             121    0x00000000 /* 0: Output  1: Drive High */

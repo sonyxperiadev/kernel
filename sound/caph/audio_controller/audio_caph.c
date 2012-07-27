@@ -136,14 +136,22 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 		"DisableFMPlay",
 		"SetARM2SPInst",
 		"RateChange", /*33 */
-		"AmpEnable"
+		"AmpEnable",
+		"DisableByPassVibra_CB",
+		"SetCallMode",
+		"ConnectDL",
+		"UpdateUserVolSetting",
+		"BufferReady",
+		"AtCtl",
 };
 
+extern brcm_alsa_chip_t *sgpCaph_chip;
 static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 static unsigned int n_msg_in, n_msg_out, last_action;
 static struct completion complete_kfifo;
 static struct TAudioHalThreadData sgThreadData;
 static int telephonyIsEnabled;
+static DEFINE_MUTEX(mutexBlock);
 
 #define KFIFO_SIZE		2048
 #define BLOCK_WAITTIME_MS	60000
@@ -221,6 +229,7 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 		last_action = msgAudioCtrl.action_code;
 
 		/* process the operation */
+		/* This is message consumer of sgThreadData.m_pkfifo */
 		AUDIO_Ctrl_Process(msgAudioCtrl.action_code,
 				   &msgAudioCtrl.param,
 				   msgAudioCtrl.pCallBack, msgAudioCtrl.block);
@@ -352,6 +361,9 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 	case ACTION_AUD_SetPrePareParameters:
 		size = sizeof(BRCM_AUDIO_Param_Prepare_t);
 		break;
+	case ACTION_AUD_BufferReady:
+		size = sizeof(BRCM_AUDIO_Param_BufferReady_t);
+		break;
 	case ACTION_AUD_AddChannel:
 	case ACTION_AUD_RemoveChannel:
 	case ACTION_AUD_SwitchSpkr:
@@ -406,6 +418,9 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 		break;
 	case ACTION_AUD_SetCallMode:
 		size = sizeof(BRCM_AUDIO_Param_CallMode_t);
+		break;
+	case ACTION_AUD_AtCtl:
+		size = sizeof(BRCM_AUDIO_Param_AtCtl_t);
 		break;
 	default:
 		break;
@@ -531,6 +546,8 @@ void AUDIO_Ctrl_SetUserAudioApp(AudioApp_t app)
   *     we reserve bit 0 to indicate block mode.
   *
   * Return 0 for success, non-zero for error code
+  *
+  * This is message producer to sgThreadData.m_pkfifo
   */
 Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 			    void *arg_param, void *callback, int block)
@@ -595,6 +612,13 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	}
 	/** EDN: not support 48KHz recording during voice call.*/
 
+	/*When multi blocking triggers (such as OpenPlay and ClosePlay) arrive
+	  at the same time, each would compete for action_complete semaphore,
+	  which may be intended for other trigger. As a result, incorrect
+	  parameters are returned.
+	*/
+	if (block & 1)
+		mutex_lock(&mutexBlock);
 
 	if (action_code == ACTION_AUD_DisableByPassVibra_CB) {
 		action_code = ACTION_AUD_DisableByPassVibra;
@@ -733,16 +757,18 @@ AUDIO_Ctrl_Trigger_Wait:
 			 *      sgThreadData.m_pkfifo_out.out);
 			 */
 			if (len == 0)	/* FIFO empty sleep */
-				return status;
+				break;
 			if (arg_param)
 				memcpy(arg_param, &msgAudioCtrl.param,
 				       params_size);
 		}
+		mutex_unlock(&mutexBlock);
 	}
 
 	return status;
 }
 
+/* This is message consumer of sgThreadData.m_pkfifo */
 static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			void *arg_param, void *callback, int block)
 {
@@ -793,6 +819,9 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    (CTL_STREAM_PANEL_FIRST - 1)
 			    && param_start->stream <
 			    (CTL_STREAM_PANEL_LAST - 1));
+
+		sgpCaph_chip->streamCtl[param_start->stream].playback_prev_time
+			= 0;
 
 		newmode = AUDIO_Policy_Get_Mode( \
 			param_start->pdev_prop->p[0].sink);
@@ -883,6 +912,28 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			aTrace(LOG_AUDIO_CNTLR,
 					"AUDIO_Ctrl_Process Stop Playback"
 					" completed\n");
+		}
+		break;
+	case ACTION_AUD_BufferReady:
+		{
+			BRCM_AUDIO_Param_BufferReady_t *param_bufferready =
+			    (BRCM_AUDIO_Param_BufferReady_t *) arg_param;
+
+			/*aTrace(LOG_AUDIO_CNTLR,
+			       "\n %lx:AUDIO_Ctrl_Process-"
+			       "ACTION_AUD_BufferReady. stream=%d\n",
+			       jiffies, param_bufferready->stream);*/
+			CAPH_ASSERT(param_bufferready->stream >=
+				    (CTL_STREAM_PANEL_FIRST - 1)
+				    && param_bufferready->stream <
+				    (CTL_STREAM_PANEL_LAST - 1));
+
+			AUDIO_DRIVER_Ctrl(param_bufferready->drv_handle,
+					  AUDIO_DRIVER_BUFFER_READY, NULL);
+
+			/*aTrace(LOG_AUDIO_CNTLR,
+			"AUDIO_Ctrl_Process ACTION_AUD_BufferReady"
+			" completed. stream=%d\n", param_bufferready->stream);*/
 		}
 		break;
 	case ACTION_AUD_PausePlay:
@@ -1142,6 +1193,10 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 	case ACTION_AUD_DisableTelephony:
 		AUDCTRL_DisableTelephony();
 		AUDIO_Policy_RestoreState();
+		/*VT app profile is set from User space
+		when VT call disable set user-app prof to default MUSIC */
+		if (AUDIO_APP_VT_CALL == AUDCTRL_GetUserAudioApp())
+			AUDCTRL_SetUserAudioApp(AUDIO_APP_MUSIC);
 		telephonyIsEnabled = FALSE;
 		break;
 
@@ -1471,12 +1526,26 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 * AUDIO_ID_CALL16k
 			 * 0x06 indicates AMR NB
 			 */
+
+			/*Consider VT-NB/WB case*/
 			if (AUDCTRL_InVoiceCall()) {
 				if (param_rate_change->codecID == 0x0A) {
-					app_profile = AUDIO_APP_VOICE_CALL_WB;
+					if (AUDIO_APP_VT_CALL ==
+						AUDCTRL_GetUserAudioApp())
+						app_profile =
+							AUDIO_APP_VT_CALL_WB;
+					else
+						app_profile =
+							AUDIO_APP_VOICE_CALL_WB;
 				} else if (param_rate_change->codecID == 0x06) {
-					app_profile = AUDIO_APP_VOICE_CALL;
-					} else {
+					if (AUDIO_APP_VT_CALL ==
+						AUDCTRL_GetUserAudioApp())
+						app_profile =
+							AUDIO_APP_VT_CALL;
+					else
+						app_profile =
+							AUDIO_APP_VOICE_CALL;
+				} else {
 					aError("Invalid Telephony CodecID %d\n",
 						param_rate_change->codecID);
 						break;
@@ -1526,6 +1595,29 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				parm_vol->volume1,
 				parm_vol->volume2,
 				parm_vol->app);
+		}
+		break;
+	case ACTION_AUD_AtCtl:
+		{
+			BRCM_AUDIO_Param_AtCtl_t parm_atctl;
+
+			memcpy((void *)&parm_atctl, arg_param,
+				sizeof(BRCM_AUDIO_Param_AtCtl_t));
+
+			if (parm_atctl.isGet)
+				AtAudCtlHandler_get(parm_atctl.cmdIndex,
+				parm_atctl.pChip,
+				parm_atctl.ParamCount,
+				parm_atctl.Params);
+			else
+				AtAudCtlHandler_put(parm_atctl.cmdIndex,
+				parm_atctl.pChip,
+				parm_atctl.ParamCount,
+				parm_atctl.Params);
+
+			/*copy values back to arg_param */
+			memcpy((void *)arg_param, (void *)&parm_atctl,
+				sizeof(BRCM_AUDIO_Param_AtCtl_t));
 		}
 		break;
 	default:

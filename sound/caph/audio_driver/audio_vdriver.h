@@ -50,10 +50,6 @@ Copyright 2009 - 2012  Broadcom Corporation
 typedef void (*audio_codecId_handler_t) (int codecId);
 typedef void (*audio_handleCPReset_handler_t) (Boolean cpReset);
 
-/* Define the other mic which is used for Noise Cancellation.
-	It is product-dependent. */
-#define MIC_NOISE_CANCEL CSL_CAPH_DEV_EANC_DIGI_MIC_R
-
 enum _AUDDRV_REQUEST_ID_t {
 	AUDDRV_RATE_CHANGE_REQ,	/* 0x00 */
 	AUDDRV_REQUEST_ID_TOTAL_COUNT
@@ -193,6 +189,10 @@ UInt32 audio_control_dsp(UInt32 param1,
 
 UInt32 audio_cmf_filter(AudioCompfilter_t *cf);
 
+Boolean audio_rpc_read_flag_vc_rel_by_modem(void);
+void audio_rpc_clear_flag_vc_rel_by_modem(void);
+
+
 /* Description:   Inititialize audio driver */
 void AUDDRV_Init(void);
 
@@ -306,7 +306,6 @@ int AUDDRV_User_CtrlDSP(AudioDrvUserCtrl_t UserCtrlType,
 
 void AUDDRV_User_HandleDSPInt(UInt32 param1, UInt32 param2,
 				      UInt32 param3);
-void AUDDRV_SetPCMOnOff(Boolean on_off);
 
 void AUDDRV_ControlFlagFor_CustomGain(Boolean on_off);
 

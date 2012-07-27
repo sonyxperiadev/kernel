@@ -125,7 +125,7 @@ static void bld_device_status_str(char *buf, int len, char *label, int device,
 		if (sd_max_size == 0) {
 			safe_strncat(buf, "-> SD card", len);
 		} else {
-			sprintf(sd_max, "%d", sd_max_size);
+			snprintf(sd_max, sizeof(sd_max)-1, "%d", sd_max_size);
 			safe_strncat(buf, "-> SD card", len);
 			safe_strncat(buf, " (Max file size : ", len);
 			safe_strncat(buf, sd_max, len);
@@ -207,7 +207,7 @@ static ssize_t proc_write(struct file *file, const char __user * buffer,
 		memset(kbuf, 0, sizeof(kbuf));
 		if (count > sizeof(kbuf) - 1)
 			count = sizeof(kbuf) - 1;
-		if (copy_from_user(kbuf, buffer, count))
+		if (copy_from_user((void *)kbuf, buffer, count))
 			return -EFAULT;
 
 		switch (*kbuf) {

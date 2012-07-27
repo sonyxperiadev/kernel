@@ -49,6 +49,11 @@ enum {
 	VTQ_CMD_ONLOADHOOK,
 	VTQ_CMD_QUEUE_JOB_MULTIPLE,
 	VTQ_CMD_MULTIPURPOSE_LOCK,
+	VTQ_CMD_IMAGECONV_GETTASKS,
+	VTQ_CMD_IMAGECONV_READY,
+	VTQ_CMD_IMAGECONV_ENQUEUE_DIRECT,
+	VTQ_CMD_IMAGECONV_AWAIT,
+	VTQ_CMD_REGISTER_IMAGE_BLOB,
 	VTQ_CMD_LAST,
 
 	/* debug */
@@ -208,6 +213,50 @@ struct vtq_awaitjob_ioctldata {
 	uint32_t job_id;
 };
 
+#define VTQ_BLOB_ID_IMAGECONV 0
+struct vtq_registerimage_blob_ioctldata {
+	/* result */
+	int result;
+
+	/* inputs */
+	int blobid;
+	const uint32_t *blob;
+	size_t blobsz;
+};
+
+struct vtq_imageconv_gettasks_ioctldata {
+	/* result */
+	int task_direct;
+	int task_bgr24;
+	int task_resv1;
+	int task_resv2;
+	int task_resv3;
+};
+
+struct vtq_imageconv_ready_ioctldata {
+	/* result */
+	int isready;
+};
+
+struct vtq_imageconv_enqueue_direct_ioctldata {
+	/* result */
+	uint32_t job_id;
+
+	/* input */
+	uint32_t type;
+	uint32_t tformat_baseaddr;
+	uint32_t raster_baseaddr;
+	uint32_t signedrasterstride;
+	uint32_t numtiles_wide;
+	uint32_t numtiles_high;
+	uint32_t dmacfg;
+};
+
+struct vtq_imageconv_await_ioctldata {
+	/* input */
+	uint32_t job_id;
+};
+
 /*
  * reserved
  */
@@ -296,6 +345,25 @@ struct vtq_multipurposelock_ioctldata {
 #define VTQ_IOCTL_MULTIPURPOSE_LOCK _IOW(BCM_VCE_MAGIC,			\
 				      VTQ_CMD_MULTIPURPOSE_LOCK,	\
 				      struct vtq_multipurposelock_ioctldata)
+#define VTQ_IOCTL_REGISTER_IMAGE_BLOB _IOWR(BCM_VCE_MAGIC,		\
+				       VTQ_CMD_REGISTER_IMAGE_BLOB,	\
+				       struct vtq_registerimage_blob_ioctldata)
+/* TODO: the imageconv ioctls don't really belong among the rest of
+ * the VTQ ioctls, but as we have a bit of a hybrid interface to this
+ * at the moment, it will do for now */
+#define VTQ_IMAGECONV_IOCTL_GETTASKS _IOR(BCM_VCE_MAGIC,                \
+		VTQ_CMD_IMAGECONV_GETTASKS,                             \
+		struct vtq_imageconv_gettasks_ioctldata)
+#define VTQ_IMAGECONV_IOCTL_READY _IOR(BCM_VCE_MAGIC,			\
+		VTQ_CMD_IMAGECONV_READY,				\
+		struct vtq_imageconv_ready_ioctldata)
+#define VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT _IOR(BCM_VCE_MAGIC,		\
+		VTQ_CMD_IMAGECONV_ENQUEUE_DIRECT,			\
+		struct vtq_imageconv_enqueue_direct_ioctldata)
+#define VTQ_IMAGECONV_IOCTL_AWAIT _IOR(BCM_VCE_MAGIC,			\
+		VTQ_CMD_IMAGECONV_AWAIT,				\
+		struct vtq_imageconv_await_ioctldata)
+
 #define VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS  _IOR(BCM_VCE_MAGIC, VCE_CMD_DEBUG_FETCH_KSTAT_IRQS, unsigned int)
 #define VCE_IOCTL_DEBUG_LOW_LATENCY_HACK  _IO(BCM_VCE_MAGIC, \
 		VCE_CMD_DEBUG_LOW_LATENCY_HACK)

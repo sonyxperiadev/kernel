@@ -2419,6 +2419,36 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 			mmc_hostname(host->mmc), (unsigned)intmask);
 		sdhci_dumpregs(host);
 
+		/*
+		 * This condition is hit with some damaged SD card.
+		 * This is wrong trigger of DTOERR when host is processing
+		 * STOP command.
+		 *
+		 * Workaround:
+		 *
+		 * Make sure to complete the request by scheduling
+		 * finish_tasklet. This sends the completion event
+		 * to the upper layers and un-block the mmc_queue_thread.
+
+		 * Return cmd error -ENOMEDIUM so block layer does not send
+		 * more IO requests in case of damaged card.
+		 *
+		 * Disable command retry as with DTO = 2.8sec,retries = 5,
+		 * mmc_queue_thread would block for more than 10seconds.
+		 *
+		 */
+		if (host->mrq->data)	{
+			if (host->mrq->data->error)	{
+				printk(KERN_ERR"%s- It is possible that the"
+				 "damaged SD card is inserted-Error:0x%x\n",
+				 mmc_hostname(host->mmc),
+				 host->mrq->data->error);
+
+				host->mrq->cmd->error = -ENOMEDIUM;
+				host->mrq->cmd->retries = 0;
+				tasklet_schedule(&host->finish_tasklet);
+			}
+		}
 		return;
 	}
 

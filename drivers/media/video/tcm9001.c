@@ -98,6 +98,7 @@ struct tcm9001 {
 	int brightness;
 	int contrast;
 	int colorlevel;
+	int framerate;
 };
 
 static struct tcm9001 *to_tcm9001(const struct i2c_client *client)
@@ -194,6 +195,17 @@ static const struct v4l2_queryctrl tcm9001_controls[] = {
 	 .step = 1,
 	 .default_value = IMAGE_EFFECT_NONE,
 	 },
+	{
+	.id = V4L2_CID_CAMERA_FRAME_RATE,
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.name = "Framerate control",
+	.minimum = FRAME_RATE_AUTO,
+	.maximum = (1 << FRAME_RATE_AUTO | 1 << FRAME_RATE_5 |
+			1 << FRAME_RATE_10 | 1 << FRAME_RATE_15 |
+			1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),
+			.step = 1,
+			.default_value = FRAME_RATE_AUTO,
+	},
 };
 static int tcm9001_init(struct i2c_client *client);
 static int tcm9001_s_stream(struct v4l2_subdev *sd, int enable)
@@ -338,6 +350,9 @@ static int tcm9001_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAMERA_EFFECT:
 		ctrl->value = tcm9001->colorlevel;
 		break;
+	case V4L2_CID_CAMERA_FRAME_RATE:
+		ctrl->value = tcm9001->framerate;
+		break;
 	}
 	return 0;
 }
@@ -385,6 +400,22 @@ static int tcm9001_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		   color |= 0x7; */
 		printk(KERN_INFO "Writing color value 0x%x\n", color);
 		tcm9001_reg_write(client, 0xB4, color);
+	case V4L2_CID_CAMERA_FRAME_RATE:
+		tcm9001->framerate = ctrl->value;
+		switch (tcm9001->framerate) {
+		case FRAME_RATE_5:
+		/* case FRAME_RATE_7: */
+		case FRAME_RATE_10:
+		case FRAME_RATE_15:
+		case FRAME_RATE_20:
+		case FRAME_RATE_25:
+		case FRAME_RATE_30:
+		case FRAME_RATE_AUTO:
+		default:
+		printk(KERN_INFO "Framerate %d\n", tcm9001->framerate);
+		break;
+		}
+		break;
 	default:
 		break;
 	}
@@ -778,6 +809,7 @@ static int tcm9001_video_probe(struct soc_camera_device *icd,
 	tcm9001->brightness = 0;
 	tcm9001->contrast = 0x5B;
 	tcm9001->colorlevel = 0;
+	tcm9001->framerate = FRAME_RATE_AUTO;
 	tcm9001->i_size = TCM9001_SIZE_QVGA;
 	return 0;
 }

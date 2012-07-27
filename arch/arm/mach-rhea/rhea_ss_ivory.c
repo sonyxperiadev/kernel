@@ -1407,8 +1407,8 @@ static struct platform_device board_bcmbt_rfkill_device = {
 #endif
 
 #ifdef CONFIG_BCM_BZHW
-#define GPIO_BT_WAKE 6
-#define GPIO_HOST_WAKE 14
+#define GPIO_BT_WAKE 7
+#define GPIO_HOST_WAKE 34
 static struct bcm_bzhw_platform_data bcm_bzhw_data = {
         .gpio_bt_wake = GPIO_BT_WAKE,
         .gpio_host_wake = GPIO_HOST_WAKE,
@@ -1424,8 +1424,8 @@ static struct platform_device board_bcm_bzhw_device = {
 #endif
 
 #ifdef CONFIG_BCM_BT_LPM
-#define GPIO_BT_WAKE   6 
-#define GPIO_HOST_WAKE 14
+#define GPIO_BT_WAKE 7
+#define GPIO_HOST_WAKE 34
 
 static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
         .gpio_bt_wake = GPIO_BT_WAKE,
@@ -1448,6 +1448,16 @@ static struct platform_device board_bcmbt_lpm_device = {
 
 static struct gps_platform_data gps_hostwake_data= {
         .gpio_interrupt = GPIO_GPS_HOST_WAKE,
+	.i2c_pdata  = {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),},
+};
+
+static struct i2c_board_info __initdata gpsi2c[] = {
+	{
+	I2C_BOARD_INFO("gpsi2c", 0x1FA),
+	.flags = I2C_CLIENT_TEN,
+	.platform_data = (void *)&gps_hostwake_data,
+	.irq = gpio_to_irq(GPIO_GPS_HOST_WAKE),
+	},
 };
 
 static struct platform_device gps_hostwake= {
@@ -1717,6 +1727,11 @@ static void __init rhea_ray_add_i2c_devices (void)
 			ARRAY_SIZE(pca953x_2_info));
 #endif
 #endif
+
+#if defined(CONFIG_GPS_IRQ)
+	i2c_register_board_info(1, gpsi2c, ARRAY_SIZE(gpsi2c));
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 	i2c_register_board_info(1,
 			qt602240_info,

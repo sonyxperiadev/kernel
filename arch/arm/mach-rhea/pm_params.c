@@ -33,6 +33,7 @@
 #include <linux/err.h>
 #include <linux/module.h>
 #include "pm_params.h"
+#include <plat/kona_avs.h>
 
 /*sysfs interface to read PMU vlt table*/
 static u32 csr_vlt_table[SR_VLT_LUT_SIZE];
@@ -154,18 +155,28 @@ extern int __jira_wa_enabled(u32 jira)
 }
 
 #ifdef CONFIG_KONA_POWER_MGR
-
-#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
+#if defined(CONFIG_KONA_PMU_BSC_HS_MODE) /* 3.25MHZ */
 #define START_CMD			0xb
 #define START_DELAY			6
 #define WRITE_DELAY			6
 #define VLT_CHANGE_DELAY		0x25
-#else
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1MHZ) /* 1MHZ */
+#define START_CMD			0xb
+#define START_DELAY			6
+#define WRITE_DELAY			12
+#define VLT_CHANGE_DELAY		0x25
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1625KHZ) /* 1.65MHZ */
+#define START_CMD			0xb
+#define START_DELAY			6
+#define WRITE_DELAY			9
+#define VLT_CHANGE_DELAY		0x25
+#else /* FS mode */
 #define START_CMD			0x3
 #define START_DELAY			0x10
 #define WRITE_DELAY			0x80
 #define VLT_CHANGE_DELAY		0x80
-#endif /*CONFIG_KONA_PMU_BSC_HS_MODE */
+#endif
+
 #define PMU_SLAVE_ID				0x8
 #define PMU_CSR_REG_ADDR			0xC0
 #define READ_DELAY				0x20
@@ -393,7 +404,7 @@ static const u32 a9_freq_list[A9_FREQ_MAX] = {
 };
 
 
-int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
+int pm_init_pmu_sr_vlt_map_table(int silicon_type, int freq_id)
 {
 #define RATE_ADJ 10
 	struct clk *a9_pll_chnl1;
@@ -419,6 +430,24 @@ int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 		pr_info("%s : BUG => No maching freq found!!!\n", __func__);
 		BUG();
 	}
+	/**
+	 * Frequency reported by AVS is not same as PLL configuration??
+	 * Decision taken here is:
+	 * 1.	if AVS reported frequency > PLL configuration : use
+	 * voltage table for PLL configured frequency
+	 * 2.	if AVS reported frequency < PLL configuration : This
+	 * is ideally not possible (device may not work !!).
+	 * Report an error
+	 * 3.   if freq_id is negative: for 1GHZ configuration assume
+	 * typical silicon type (1GHZ chip is never SS)
+	 * otherwise assume slow silicon
+	 */
+
+	if ((freq_id < 0) && (inx == A9_FREQ_1_GHZ))
+		silicon_type = SILICON_TYPE_TYPICAL;
+	else if ((freq_id >= 0) && (freq_id < inx))
+		pr_info("%s: Wrong A9 PLL configuration!!\n", __func__);
+
 	vlt_table = (u8 *) bcmpmu_get_sr_vlt_table(0, (u32) inx, silicon_type);
 	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
 		csr_vlt_table[inx] = vlt_table[inx];

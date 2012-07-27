@@ -830,12 +830,8 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 	struct sdhci_host *host = dev->host;
 
 	flush_work_sync(&host->wait_erase_work);
-	ret = sdhci_kona_anystate_to_off(dev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "Unable to Turn OFF regulator err=%d\n",
-			ret);
-		return ret;
-	}
+	
+	sdhci_kona_anystate_to_off(dev);
 
 	dev->suspended = 1;
 	return 0;
@@ -844,6 +840,8 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 static int sdhci_pltfm_resume(struct platform_device *pdev)
 {
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
+
+	sdhci_kona_off_to_enabled(dev);
 
 	dev->suspended = 0;
 	return 0;

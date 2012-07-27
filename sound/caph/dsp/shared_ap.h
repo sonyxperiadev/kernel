@@ -2750,6 +2750,9 @@ EXTERN UInt32 shared_ext_dl_buf[2][ NUM_OF_EXT_MODEM_INTERF_SAMP_PER_INT/2]     
 /**
  * @}
  */
+EXTERN UInt16 shared_dsp_support_chip_reg_ap_int                            AP_SHARED_SEC_DIAGNOS;
+
+EXTERN UInt16 shared_ap_support_chip_reg_ap_int                             AP_SHARED_SEC_DIAGNOS;
 
 EXTERN UInt32 NOT_USE_shared_memory_end                                     AP_SHARED_SEC_DIAGNOS;
 

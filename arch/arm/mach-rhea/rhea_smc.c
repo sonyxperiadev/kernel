@@ -44,6 +44,8 @@ static struct sec_api sec_api[SEC_API_MAX] = {
 	SEC_API_INIT(0x01000002, 0),
 	SEC_API_INIT(0x01000003, 0),
 	SEC_API_INIT(0x0E000006, 4),
+	SEC_API_INIT(0x0E00000D, 0),
+	SEC_API_INIT(0x0E00000F, 0),
 };
 
 static inline u32 save_spsr(void)

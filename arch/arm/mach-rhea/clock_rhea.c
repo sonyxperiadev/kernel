@@ -225,6 +225,7 @@ static int en_8ph_pll1_clk_enable(struct clk *clk, int enable)
 		reg_val |= ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
 		/*Enable 8ph bit in pll 1*/
 		do {
+			udelay(1);
 			writel(reg_val, KONA_ROOT_CLK_VA
 				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
 			insurance--;
