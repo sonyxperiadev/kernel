@@ -174,6 +174,7 @@ int mdp4_overlay_writeback_update(struct msm_fb_data_type *mfd)
 	pipe->dst_y = 0;
 	pipe->dst_x = 0;
 
+	mdp4_overlay_mdp_pipe_req(pipe, mfd);
 	if (mfd->map_buffer) {
 		pipe->srcp0_addr = (unsigned int)mfd->map_buffer->iova[0] + \
 			buf_offset;

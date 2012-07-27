@@ -26,6 +26,7 @@ extern spinlock_t mdp_spin_lock;
 extern struct mdp4_statistic mdp4_stat;
 extern uint32 mdp4_extn_disp;
 extern spinlock_t dsi_clk_lock;
+extern u32 mdp_max_clk;
 
 #define MDP4_OVERLAYPROC0_BASE	0x10000
 #define MDP4_OVERLAYPROC1_BASE	0x18000
@@ -364,6 +365,8 @@ struct mdp4_overlay_pipe {
 	uint32 blt_ov_done;
 	uint32 blt_dmap_koff;
 	uint32 blt_dmap_done;
+	uint32 req_clk;
+	uint32 req_bw;
 	uint32 luma_align_size;
 	struct mdp4_hsic_regs hsic_regs;
 	struct mdp_overlay req_data;
@@ -613,9 +616,6 @@ void mdp4_external_vsync_dtv(void);
 void mdp4_lcdc_wait4vsync(int cndx, long long *vtime);
 void mdp4_overlay_lcdc_vsync_push(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe);
-void mdp4_overlay_dtv_set_perf(struct msm_fb_data_type *mfd);
-void mdp4_update_perf_level(u32 perf_level);
-void mdp4_set_perf_level(void);
 void mdp4_mddi_overlay_dmas_restore(void);
 
 #ifndef CONFIG_FB_MSM_MIPI_DSI
@@ -925,4 +925,9 @@ int mdp4_v4l2_overlay_play(struct fb_info *info, struct mdp4_overlay_pipe *pipe,
 	unsigned long srcp0_addr, unsigned long srcp1_addr,
 	unsigned long srcp2_addr);
 
+int mdp4_overlay_mdp_pipe_req(struct mdp4_overlay_pipe *pipe,
+			      struct msm_fb_data_type *mfd);
+int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
+			      struct mdp4_overlay_pipe *plist);
+void mdp4_overlay_mdp_perf_upd(struct msm_fb_data_type *mfd, int flag);
 #endif /* MDP_H */
