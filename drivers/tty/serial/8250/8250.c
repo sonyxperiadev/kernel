@@ -1774,8 +1774,27 @@ EXPORT_SYMBOL_GPL(serial8250_handle_irq);
 static int serial8250_default_handle_irq(struct uart_port *port)
 {
 	unsigned int iir = serial_port_in(port, UART_IIR);
+	struct uart_8250_port *up =
+		container_of(port, struct uart_8250_port, port);
+	int handled;
 
-	return serial8250_handle_irq(port, iir);
+	handled  = serial8250_handle_irq(port, iir);
+	if (!handled && (up->port.iotype == UPIO_DWAPB) &&
+		    ((iir & UART_IIR_BUSY) == UART_IIR_BUSY)) {
+		unsigned int status;
+		/* The DesignWare APB UART has an Busy Detect (0x07)
+		 * interrupt meaning an LCR write attempt occurred while the
+		 * UART was busy. The interrupt must be cleared by reading
+		 * the UART status register (USR) and the LCR re-written. */
+		status = *(volatile u32 *)up->port.private_data;
+		/* Stop writing to LCR if the value is same. */
+		if (serial_in(up, UART_LCR) != up->lcr)
+			serial_out(up, UART_LCR, up->lcr);
+
+		handled = 1;
+	}
+
+	return handled;
 }
 
 /*
@@ -1797,7 +1816,6 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 	struct irq_info *i = dev_id;
 	struct list_head *l, *end = NULL;
 	int pass_counter = 0, handled = 0;
-	unsigned int iir;
 
 	DEBUG_INTR("serial8250_interrupt(%d)...", irq);
 
@@ -1810,29 +1828,9 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 
 		up = list_entry(l, struct uart_8250_port, list);
 		port = &up->port;
-		iir = serial_in(up, UART_IIR);
-		if (!(iir & UART_IIR_NO_INT)) {
-#ifdef CONFIG_RHEA_UART_RX_FIX
-			up->iir = iir;
-#endif
-			if (port->handle_irq(port))
-				handled = 1;
 
-			end = NULL;
-		} else if ((up->port.iotype == UPIO_DWAPB) &&
-			    ((iir & UART_IIR_BUSY) == UART_IIR_BUSY)) {
-			/* The DesignWare APB UART has an Busy Detect (0x07)
-			 * interrupt meaning an LCR write attempt occurred while the
-			 * UART was busy. The interrupt must be cleared by reading
-			 * the UART status register (USR) and the LCR re-written. */
-			unsigned int status;
-			status = *(volatile u32 *)up->port.private_data;
-			/* Stop writing to LCR if the value is same. */
-			if (serial_in(up, UART_LCR) != up->lcr)
-				serial_out(up, UART_LCR, up->lcr);
-
+		if (port->handle_irq(port)) {
 			handled = 1;
-
 			end = NULL;
 		} else if (end == NULL)
 			end = l;
@@ -2008,14 +2006,7 @@ static void serial8250_timeout(unsigned long data)
 	struct uart_8250_port *up = (struct uart_8250_port *)data;
 	unsigned int iir;
 
-	iir = serial_in(up, UART_IIR);
-	if (!(iir & UART_IIR_NO_INT)) {
-#ifdef CONFIG_RHEA_UART_RX_FIX
-		up->iir = iir;
-#endif
-		up->port.handle_irq(&up->port);
-	}
-
+	up->port.handle_irq(&up->port);
 	mod_timer(&up->timer, jiffies + uart_poll_timeout(&up->port));
 }
 
