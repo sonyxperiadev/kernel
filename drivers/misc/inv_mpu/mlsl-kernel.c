@@ -19,6 +19,7 @@
 
 #include "mlsl.h"
 #include <linux/i2c.h>
+#include <linux/module.h>
 #include "log.h"
 #include "mpu6050b1.h"
 
