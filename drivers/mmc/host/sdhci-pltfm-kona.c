@@ -825,7 +825,6 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	int ret;
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
 
