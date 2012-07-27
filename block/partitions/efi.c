@@ -98,6 +98,7 @@
 #include <linux/math64.h>
 #include <linux/slab.h>
 #include <linux/nls.h>
+#include <linux/module.h>
 #include "check.h"
 #include "efi.h"
 
