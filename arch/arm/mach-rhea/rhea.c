@@ -73,7 +73,7 @@ static void rhea_restart(char mode, const char *cmd)
 	if (hard_reset_reason)
 		bcmpmu_client_hard_reset(hard_reset_reason);
 	else
-		machine_restart(cmd);
+		machine_restart((char*)cmd);
 }
 
 #ifdef CONFIG_CACHE_L2X0
