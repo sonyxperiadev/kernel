@@ -51,6 +51,7 @@ REMEDY.
 #include <linux/completion.h>
 #include <linux/bio.h>
 #include <linux/mutex.h>
+#include <linux/module.h>
 
 #include "emmc_rpmb_rw.h"
 #include "hmac_sha2.h"
