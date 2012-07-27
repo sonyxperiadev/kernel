@@ -89,13 +89,7 @@ static inline void cache_sync(void)
 #ifdef POLL_C_BIT_FOR_CACHE_OPERATIONS
 	cache_wait(base + L2X0_CACHE_SYNC, 1);
 #endif
-
-#ifdef CONFIG_ARM_ERRATA_753970
-	/* write to an unmmapped register */
-	writel_relaxed(0, base + L2X0_DUMMY_REG);
-#else
-	writel_relaxed(0, base + L2X0_CACHE_SYNC);
-#endif
+	writel_relaxed(0, base + sync_reg_offset);
 	cache_wait(base + L2X0_CACHE_SYNC, 1);
 }
 
