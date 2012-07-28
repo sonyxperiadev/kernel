@@ -526,7 +526,7 @@ void ion_unmap_dma(struct ion_client *client, struct ion_handle *handle)
 		buffer->heap->ops->unmap_dma(buffer->heap, buffer);
 		buffer->sg_table = NULL;
 #ifdef CONFIG_M4U
-		m4u_unmap(g_mdev, buffer->dma_addr, buffer->size);
+		m4u_unmap(g_mdev, buffer->dma_addr);
 		buffer->dma_addr = 0;
 #endif
 	}

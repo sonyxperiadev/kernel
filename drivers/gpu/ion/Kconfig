@@ -22,3 +22,9 @@ config M4U
 	help
 	  Choose this option if you wish to enable m4u support in a Broadcom Kona processor.
 
+config DEBUG_M4U
+	tristate "Enable Debug M4U"
+	depends on M4U
+	help
+	  Choose this option if you wish to enable m4u ioctls for debugging.
+

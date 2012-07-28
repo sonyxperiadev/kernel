@@ -21,7 +21,9 @@
 #include <linux/err.h>
 #include <linux/list.h>
 #include <linux/platform_device.h>
+#ifdef CONFIG_DEBUG_M4U
 #include <linux/miscdevice.h>
+#endif
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
@@ -33,16 +35,32 @@
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_mmmmu_open.h>
 
-#define DEBUG_M4U
-
 #define BCM_INT_ID_M4U_OPEN		(BCM_INT_ID_RESERVED181)
 #define	M4U_PAGE_SHIFT			(12)
 #define	M4U_TLB_LINE_SHIFT		(3)
 #define	M4U_TLB_LINE_SIZE		(1<<M4U_TLB_LINE_SHIFT)
 
-struct m4u_region_node {
-	struct m4u_region region;
+/**
+ * m4u_mapping - m4u mapping structure
+ * @ref:		reference count
+ * @list:		node pointer to chain m4u mappings
+ * @mdev:		m4u device
+ * @region:		Region definition
+ * @sgt:		scatter-gather list of the physical address space
+ * @contig_flag	Contiguous buffer or sglist buffer
+ * @locked		Mapping is locked in TLB
+ *
+ * Modifications to mapping list, or mapping should be protected by
+ * external lock.
+ */
+struct m4u_mapping {
+	struct kref ref;
 	struct list_head list;
+	struct m4u_device *mdev;
+	struct m4u_region region;
+	struct sg_table	sgt;
+	u32 contig_flag;
+	u32 locked;
 };
 
 /* To be moved to board file - Start */
@@ -55,10 +73,9 @@ static struct m4u_region m4u_regions[] = {
 	},
 };
 
-static struct m4u_platform_data m4u_data = {
-	.mma_start		= 0x80000000,
-	.mma_end		= 0xF0000000,
-	.mma_sg_start	= 0xA0000000,
+static struct m4u_platform_data m4u_pdata = {
+	.mma_begin		= 0x80000000,
+	.mma_size		= (SZ_2G - SZ_4M),
 	.xfifo_size		= SZ_16K,
 	.nr				= ARRAY_SIZE(m4u_regions),
 	.regions		= m4u_regions,
@@ -68,6 +85,7 @@ static struct resource m4u_resources[] = {
 	[0] = {
 	       .start = MMMMU_OPEN_BASE_ADDR,
 	       .end = MMMMU_OPEN_BASE_ADDR + SZ_4K - 1,
+		   /* TODO: Size from rdb? */
 	       .flags = IORESOURCE_MEM,
 	       },
 	[1] = {
@@ -81,7 +99,7 @@ static struct platform_device m4u_platform_device = {
 	.name = "m4u",
 	.id = 0,
 	.dev = {
-		.platform_data = &m4u_data,
+		.platform_data = &m4u_pdata,
 	},
 	.resource = m4u_resources,
 	.num_resources = ARRAY_SIZE(m4u_resources),
@@ -89,7 +107,9 @@ static struct platform_device m4u_platform_device = {
 /* To be moved to board file - End */
 
 struct m4u_device {
+#ifdef CONFIG_DEBUG_M4U
 	struct miscdevice 		dev;
+#endif
 	struct mutex 			lock;
 	void __iomem			*ioreg_base;
 	struct page				*garbage_page;
@@ -99,7 +119,9 @@ struct m4u_device {
 	u32						*xfifo_base;
 	u32						xfifo_widx;
 	struct m4u_platform_data pdata;
-	struct list_head		static_region_list;
+	struct list_head		map_list;
+	int						page_count;
+	u32						tlb_lock_count;
 	struct dentry 			*debug_root;
 	struct dentry 			*debug_reg_dir;
 	/* Registers */
@@ -118,9 +140,8 @@ struct m4u_device {
 	struct dentry 			*debug_pcr2_fs;
 };
 
-struct m4u_device *g_mdev;
-#ifdef DEBUG_M4U
-#endif
+/* Global device used by kernel drivers to invoke M4U APIs */
+struct m4u_device *g_mdev = NULL;
 
 /* Macros for debugfs creation */
 #define _M4U_GET_REG(REG_NAME, REG_KEY)		\
@@ -170,15 +191,15 @@ static inline u32 m4u_read_reg(struct m4u_device *mdev, u32 offset)
 
 static void m4u_print_platform_data(struct m4u_platform_data *pdata)
 {
-	int i;
 	struct m4u_region *r;
+	int i;
 
-	pr_info("MMA area (0x%08x - 0x%08x) Dynamic Map start (0x%08x) \n",
-			pdata->mma_start, pdata->mma_end, pdata->mma_sg_start);
+	pr_info("MMA area (0x%08x - 0x%08x) \n",
+			pdata->mma_begin, (pdata->mma_begin + pdata->mma_size));
 	pr_info("(%d) Fixed mapping MMA regions: \n", pdata->nr);
 	for(i=0; i<pdata->nr; i++) {
 		r = &(pdata->regions[i]);
-		pr_info("\t(%d) - mma(0x%08x) pa(0x%08x) size(0x%08x) page_size(0x%08x) \n", 
+		pr_info("\t(%d) - mma(0x%08x) pa(0x%08x) size(0x%08x) page_size(0x%08x) \n",
 				i, r->mma, r->pa, r->size, r->page_size);
 	}
 	pr_info("xfifo size(0x%08x) \n", pdata->xfifo_size);
@@ -197,82 +218,52 @@ static inline u32 m4u_pte(u32 pa, u32 order, u32 valid)
 	return pte;
 }
 
-static void m4u_map_big_page(struct m4u_device *mdev, u32 mma, u32 pa, int page_order)
+#if 0
+static inline void m4u_tlb_lock(struct m4u_device *mdev, u32 mma)
 {
-	int i;
-	int page_order_base4k;
-	u32 pte, num_pte;
-	u32 *pt;
 	u32 mma_aligned;
 
-	page_order_base4k = page_order - M4U_PAGE_SHIFT;
-	num_pte = (1 << page_order_base4k);
-	mma_aligned = (mma >> (page_order+M4U_TLB_LINE_SHIFT)) << (page_order+M4U_TLB_LINE_SHIFT);
-	pt = mdev->pt_base + ((mma_aligned - mdev->pdata.mma_start) >> M4U_PAGE_SHIFT);
-	pt += (mma >> page_order) & (M4U_TLB_LINE_SIZE-1);
-	pte = m4u_pte(pa, page_order_base4k, 1);
-	for (i=0; i<num_pte; i++) {
-		*pt = pte;
-		pt += M4U_TLB_LINE_SIZE;
-	}
+	/* TODO: Threshold for locked TLB check */
+	mma_aligned = mma & MMMMU_OPEN_ELOCK_ADDRESS_MASK;
+	m4u_write_reg(mdev, MMMMU_OPEN_ELOCK_OFFSET, mma_aligned);
+	mdev->tlb_lock_count++;
 }
 
-static int m4u_map_pages(struct m4u_device *mdev, u32 mma, u32 pa, int page_order, int n)
+static inline void m4u_tlb_unlock(struct m4u_device *mdev, u32 mma)
 {
-	int i;
-	u32 *pt;
+	u32 mma_aligned;
 
-#ifdef DEBUG_M4U
-	pr_info("(Debug) mma(0x%x) pa(0x%08x) page_order(%d) n(%d) \n", 
-			mma, pa, page_order, n);
+	mma_aligned = mma & MMMMU_OPEN_EUNLOCK_ADDRESS_MASK;
+	m4u_write_reg(mdev, MMMMU_OPEN_EUNLOCK_OFFSET, mma_aligned);
+	mdev->tlb_lock_count--;
+}
 #endif
-	if (page_order == M4U_PAGE_SHIFT) {
-		pt = mdev->pt_base + ((mma - mdev->pdata.mma_start) >> M4U_PAGE_SHIFT);
-		for (i=0; i<n; i++) {
-			*pt++ = m4u_pte(pa, 0, 1);
-			pa += 1 << M4U_PAGE_SHIFT;
-		}
-	} else {
-		for (i=0; i<n; i++) {
-			m4u_map_big_page(mdev, mma, pa, page_order);
-			mma += 1 << page_order;
-			pa += 1 << page_order;
-		}
-	}
-	return 0;
-}
 
-static int m4u_pt_init(struct m4u_device *mdev)
+static inline void m4u_tlb_invalidate(struct m4u_device *mdev, u32 mma, int page_order, int n)
 {
-	int i;
-	int page_order, n;
+	u32 mma_aligned;
+	u32 flush_order;
 
-	for (i=0; i<mdev->pdata.nr; i++) {
-		page_order = (fls_long(mdev->pdata.regions[i].page_size) - 1);
-		n = mdev->pdata.regions[i].size >> page_order;
-		if ((page_order < M4U_PAGE_SHIFT) || (n & 0x7)) {
-			pr_err("Invalid page configuration. page_order(%d), n(%d) \n",
-					page_order, n);
-			return -EINVAL;
-		}
-		m4u_map_pages(mdev, mdev->pdata.regions[i].mma, mdev->pdata.regions[i].pa, 
-				page_order, n);
-	}
-	return 0;
+	/* TODO: Invalidation on non-aligned boundaries */
+	mma_aligned = mma & MMMMU_OPEN_EFL_ADDRESS_MASK;
+	flush_order = (page_order - M4U_PAGE_SHIFT) + 
+		(n - M4U_TLB_LINE_SHIFT);
+	m4u_write_reg(mdev, MMMMU_OPEN_EFL_OFFSET, (mma_aligned | flush_order));
 }
 
 static int m4u_reg_init(struct m4u_device *mdev)
 {
+	struct m4u_platform_data *pdata = &mdev->pdata;
 	int pt_offset;
 	u32 tbr, lr, ldr;
 
-	pt_offset = (mdev->pdata.mma_start >> M4U_PAGE_SHIFT);
+	pt_offset = (pdata->mma_begin >> M4U_PAGE_SHIFT);
 	tbr = mdev->pt_handle - (pt_offset<<2);
-	lr = mdev->pdata.mma_end & ~0xFFF;
+	lr = (pdata->mma_begin + pdata->mma_size) & ~0xFFF;
 	ldr = m4u_pte(page_to_phys(mdev->garbage_page),0,1);
 	m4u_write_reg(mdev, MMMMU_OPEN_CR_OFFSET, 0);
-	m4u_write_reg(mdev, MMMMU_OPEN_IMR_OFFSET, 
-			(MMMMU_OPEN_IMR_PERFCOUNT1_OVERFLOW_MASK | 
+	m4u_write_reg(mdev, MMMMU_OPEN_IMR_OFFSET,
+			(MMMMU_OPEN_IMR_PERFCOUNT1_OVERFLOW_MASK |
 			 MMMMU_OPEN_IMR_PERFCOUNT2_OVERFLOW_MASK));
 	m4u_write_reg(mdev, MMMMU_OPEN_TBR_OFFSET, tbr);
 	m4u_write_reg(mdev, MMMMU_OPEN_LR_OFFSET, lr);
@@ -282,18 +273,277 @@ static int m4u_reg_init(struct m4u_device *mdev)
 	return 0;
 }
 
+/* Invalidation of page will have to be done external */
+static void m4u_map_single_page(struct m4u_device *mdev, u32 mma, u32 pa, int page_order, u32 valid)
+{
+	struct m4u_platform_data *pdata = &mdev->pdata;
+	int page_order_base4k;
+	u32 pte, num_pte;
+	u32 *pt;
+	u32 mma_aligned;
+	int i;
+
+	page_order_base4k = page_order - M4U_PAGE_SHIFT;
+	num_pte = (1 << page_order_base4k);
+	mma_aligned = (mma >> (page_order+M4U_TLB_LINE_SHIFT)) << (page_order+M4U_TLB_LINE_SHIFT);
+	pt = mdev->pt_base + ((mma_aligned - pdata->mma_begin) >> M4U_PAGE_SHIFT);
+	pt += (mma >> page_order) & (M4U_TLB_LINE_SIZE-1);
+	pte = m4u_pte(pa, page_order_base4k, valid);
+	for (i=0; i<num_pte; i++) {
+		*pt = pte;
+		pt += M4U_TLB_LINE_SIZE;
+	}
+}
+
+static int m4u_map_pages(struct m4u_device *mdev, u32 mma, u32 pa, int page_order, int n, u32 valid)
+{
+	struct m4u_platform_data *pdata = &mdev->pdata;
+	u32 *pt;
+	int i;
+
+	pr_debug("mma(0x%x) pa(0x%08x) page_order(%d) n(%d) \n",
+			mma, pa, page_order, n);
+	if (page_order == M4U_PAGE_SHIFT) {
+		pt = mdev->pt_base + ((mma - pdata->mma_begin) >> M4U_PAGE_SHIFT);
+		for (i=0; i<n; i++) {
+			*pt++ = m4u_pte(pa, 0, valid);
+			pa += valid << M4U_PAGE_SHIFT;
+		}
+	} else {
+		for (i=0; i<n; i++) {
+			m4u_map_single_page(mdev, mma, pa, page_order, valid);
+			mma += 1 << page_order;
+			pa += valid << page_order;
+		}
+	}
+	if (valid)
+		mdev->page_count += n;
+	else
+		mdev->page_count -= n;
+	return 0;
+}
+
+/**
+ * Create a new mapping
+ */
+static int m4u_mapping_create(struct m4u_device *mdev, struct m4u_region *region, struct sg_table *sgt)
+{
+	struct m4u_mapping *mapping;
+	int page_order, n;
+	int ret = 0;
+
+	if (!region) {
+		pr_err("Failed adding invalid region \n");
+		return -EINVAL;
+	}
+	/* Allocate a new region node */
+	mapping = kzalloc(sizeof(struct m4u_mapping), GFP_KERNEL);
+	if (!mapping) {
+		pr_err("Failed allocating region node \n");
+		return -ENOMEM;
+	}
+	mapping->mdev = mdev;
+	kref_init(&mapping->ref);
+	mapping->region = *region;
+	if(sgt)
+		mapping->sgt = *sgt;
+	else
+		mapping->contig_flag = 1;
+	pr_info("Add region - mma(0x%08x) pa(0x%08x) size(0x%08x) page_size(0x%08x) \n",
+			region->mma, region->pa, region->size, region->page_size);
+
+	mutex_lock(&mdev->lock);
+	/* Add it to static list */
+	list_add_tail(&mapping->list, &mdev->map_list);
+
+	/* Validate the page size is multiple of 4K and number of pages is multiple of 8 */
+	if (sgt) {
+		pr_info("SG table map \n");
+		/* TODO: If not contiguous, map pages in sgt to page table */
+	} else {
+		page_order = ilog2(region->page_size);
+		n = region->size >> page_order;
+		if ((page_order < M4U_PAGE_SHIFT) || (!n)) {
+			pr_err("Map Invalid page configuration. page_order(%d), n(%d) \n",
+					page_order, n);
+			ret = -EINVAL;
+			goto err;
+		}
+		/* Create page table entries in the page table */
+		m4u_map_pages(mdev, region->mma, region->pa, page_order, n, 1);
+		m4u_tlb_invalidate(mdev, region->mma, page_order, n);
+		/* TODO: TLB locking based on page_size and threshold */
+	}
+
+	mutex_unlock(&mdev->lock);
+	return 0;
+
+err:
+	mutex_unlock(&mdev->lock);
+	kfree(mapping);
+	return ret;
+}
+
+static void _m4u_mapping_destroy(struct kref *kref)
+{
+	struct m4u_mapping *mapping = container_of(kref, struct m4u_mapping, ref);
+	struct m4u_device *mdev = mapping->mdev;
+	struct m4u_region *r = &mapping->region;
+	int page_order, n;
+
+	/* Unmap the region in page table, unlock and flush the TLB */
+	page_order = ilog2(r->page_size);
+	n = r->size >> page_order;
+	if ((page_order < M4U_PAGE_SHIFT) || (!n)) {
+		pr_err("Unmap Invalid page configuration. page_order(%d), n(%d) \n",
+				page_order, n);
+	}
+	m4u_map_pages(mdev, r->mma, r->pa, page_order, n, 0);
+	/* TODO: Unlock TLB if region was TLB locked */
+	m4u_tlb_invalidate(mdev, r->mma, page_order, n);
+
+	/* Remove the node from list and free the node */
+	list_del(&mapping->list);
+	kfree(mapping);
+}
+
+static void m4u_mapping_get(struct m4u_mapping *mapping)
+{
+	kref_get(&mapping->ref);
+}
+
+static int m4u_mapping_put(struct m4u_mapping *mapping)
+{
+	return kref_put(&mapping->ref, _m4u_mapping_destroy);
+}
+
+static u32 m4u_mapping_lookup(struct m4u_device *mdev, u32 pa, u32 size, u32 align)
+{
+	struct list_head *elt;
+	struct m4u_mapping *mapping = NULL;
+	struct m4u_region *r;
+	u32 mma = INVALID_MMA;
+	u32 pa_end = pa + size;
+
+	mutex_lock(&mdev->lock);
+	list_for_each(elt, &mdev->map_list) {
+		mapping = list_entry(elt, struct m4u_mapping, list);
+		r = &mapping->region;
+		pr_debug("Search region mma(0x%08x) pa(0x%08x) size(0x%08x) \n",
+				r->mma, r->pa, r->size);
+		if ((pa >= r->pa) && (pa_end <= r->pa + r->size)) {
+			/* TODO: Alignment check */
+			mma = r->mma + (pa - r->pa);
+			m4u_mapping_get(mapping);
+			break;
+		}
+	}
+	mutex_unlock(&mdev->lock);
+	return mma;
+}
+
+u32 m4u_map_contiguous(struct m4u_device *mdev, u32 pa, u32 size, u32 align)
+{
+	struct m4u_region region;
+	u32 mma = INVALID_MMA;
+	int ret;
+
+	/* Search for existing mapping matching pa, size, align */
+	mma = m4u_mapping_lookup(mdev, pa, size, align);
+	if (mma == INVALID_MMA) {
+		/* TODO: Use page_size = size for expected sizes and keep track of
+		 * free areas in a separate list */
+		size = roundup_pow_of_two(size);
+		if (size < (1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT))) {
+			pr_debug("Invalid size (%d) for creating mapping \n", size);
+			size = 1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT);
+		}
+		/* TODO: Get mma from pool satisfying the alignment request */
+		if (mma != INVALID_MMA) {
+			region.mma = mma;
+			region.pa = pa;
+			region.size = size;
+			region.page_size = size >> M4U_TLB_LINE_SHIFT;
+			ret = m4u_mapping_create(mdev, &region, NULL);
+			if (ret)
+				mma = INVALID_MMA;
+		}
+	}
+	pr_debug("map_contiguous mma(0x%08x) pa(0x%08x) size(0x%08x) align(%d) \n",
+			mma, pa, size, align);
+	return mma;
+}
+EXPORT_SYMBOL(m4u_map_contiguous);
+
+u32 m4u_map(struct m4u_device *mdev, struct sg_table *sgt, u32 size, u32 align)
+{
+	struct m4u_region region;
+	u32 pa, mma = INVALID_MMA;
+	int ret;
+
+	if (!IS_ERR_OR_NULL(sgt) && (sgt->nents == 1))
+	{
+		pa = sg_phys(sgt->sgl);
+		mma = m4u_map_contiguous(mdev, pa, size, align);
+	} else {
+		size = roundup_pow_of_two(size);
+		if (size < (1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT))) {
+			pr_debug("Invalid size (%d) for creating mapping \n", size);
+			size = 1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT);
+		}
+		/* TODO: Get mma from pool satisfying the alignment request */
+		if (mma != INVALID_MMA) {
+			region.mma = mma;
+			region.pa = 0;
+			region.size = size;
+			/* TODO: Utilize bigger pagesizes */
+			region.page_size = (1 << M4U_PAGE_SHIFT);
+			ret = m4u_mapping_create(mdev, &region, sgt);
+			if (ret)
+				mma = INVALID_MMA;
+		}
+		pr_debug("map_sgt mma(0x%08x) sgt(%p) size(0x%08x) align(%d) \n",
+				mma, sgt, size, align);
+	}
+	return mma;
+}
+EXPORT_SYMBOL(m4u_map);
+
+void m4u_unmap(struct m4u_device *mdev, u32 mma)
+{
+	struct list_head *elt;
+	struct m4u_mapping *mapping = NULL;
+	struct m4u_region *r;
+
+	mutex_lock(&mdev->lock);
+	list_for_each(elt, &mdev->map_list) {
+		mapping = list_entry(elt, struct m4u_mapping, list);
+		r = &mapping->region;
+		pr_debug("Search region mma(0x%08x) pa(0x%08x) size(0x%08x) \n",
+				r->mma, r->pa, r->size);
+		if ((mma >= r->mma) && (mma < r->mma + r->size)) {
+			pr_debug("Unmap mma(0x%08x) mapping - mma(0x%08x) pa(0x%08x) size(0x%08x) \n",
+					mma, r->mma, r->pa, r->size);
+			m4u_mapping_put(mapping);
+			break;
+		}
+	}
+	mutex_unlock(&mdev->lock);
+}
+EXPORT_SYMBOL(m4u_unmap);
+
 static void m4u_exit(struct m4u_device *mdev)
 {
-	int pt_size, pt_offset;
+	struct m4u_platform_data *pdata = &mdev->pdata;
+	int pt_size;
 
-	pt_offset = (mdev->pdata.mma_start >> M4U_PAGE_SHIFT);
-	pt_size = (SZ_2G >> (M4U_PAGE_SHIFT-1)) - pt_offset;
+	pt_size = (pdata->mma_size >> (M4U_PAGE_SHIFT-2));
 
 	if (mdev->xfifo_base)
-		dma_free_coherent(NULL, mdev->pdata.xfifo_size, mdev->xfifo_base, mdev->xfifo_handle);
+		dma_free_coherent(NULL, pdata->xfifo_size, mdev->xfifo_base, mdev->xfifo_handle);
 	mdev->xfifo_base = NULL;
 	if (mdev->pt_base)
-		dma_free_coherent(NULL, (pt_size<<2), mdev->pt_base, mdev->pt_handle);
+		dma_free_coherent(NULL, pt_size, mdev->pt_base, mdev->pt_handle);
 	mdev->pt_base = NULL;
 	if(mdev->garbage_page)
 		__free_page(mdev->garbage_page);
@@ -302,7 +552,10 @@ static void m4u_exit(struct m4u_device *mdev)
 
 static int m4u_init(struct m4u_device *mdev)
 {
-	int pt_size, pt_offset;
+	struct m4u_platform_data *pdata = &mdev->pdata;
+	int pt_size;
+	int ret;
+	int i;
 
 	/* Allocate garbage page for limit register */
 	mdev->garbage_page = alloc_page(GFP_KERNEL);
@@ -311,35 +564,41 @@ static int m4u_init(struct m4u_device *mdev)
 		goto error;
 	}
 	/* Allocate page table */
-	pt_offset = (mdev->pdata.mma_start >> M4U_PAGE_SHIFT);
-	pt_size = (SZ_2G >> (M4U_PAGE_SHIFT-1)) - pt_offset;
-	mdev->pt_base = (u32 *)dma_alloc_coherent(NULL, (pt_size<<2), 
+	pt_size = (pdata->mma_size >> (M4U_PAGE_SHIFT-2));
+	mdev->pt_base = (u32 *)dma_alloc_coherent(NULL, pt_size,
 			&mdev->pt_handle, (GFP_KERNEL | ___GFP_ZERO));
 	if (mdev->pt_base == NULL) {
-		pr_err("Page table allocation (0x%x) failed. \n", (pt_size<<2));
+		pr_err("Page table allocation (0x%x) failed. \n", pt_size);
 		goto error;
 	}
+	pr_info("pt base(%p:0x%x 0x%08x) garbage_page(0x%08x) \n", mdev->pt_base, 
+			mdev->pt_handle, pt_size, page_to_phys(mdev->garbage_page));
+
 	/* Allocate xfifo buffer */
-	if (mdev->pdata.xfifo_size) {
-		mdev->xfifo_base = (u32 *)dma_alloc_coherent(NULL, mdev->pdata.xfifo_size, 
+	if (pdata->xfifo_size) {
+		mdev->xfifo_base = (u32 *)dma_alloc_coherent(NULL, pdata->xfifo_size,
 				&mdev->xfifo_handle, (GFP_KERNEL | ___GFP_ZERO));
 		if (mdev->xfifo_base == NULL) {
-			pr_err("xfifo buffer allocation (0x%x) failed. \n", mdev->pdata.xfifo_size);
+			pr_err("xfifo buffer allocation (0x%x) failed. \n", pdata->xfifo_size);
 			goto error;
 		}
 	}
+	pr_info("xfifo base(%p:0x%x 0x%08x) \n",
+			mdev->xfifo_base, mdev->xfifo_handle, pdata->xfifo_size);
 
-	pr_info("pt base(%p:0x%x) offset(0x%x) entries(0x%x) \n",
-			mdev->pt_base, mdev->pt_handle,	pt_offset, pt_size);
-	pr_info("garbage_page(0x%x) xfifo base(%p:0x%x 0x%08x) \n",
-			page_to_phys(mdev->garbage_page), mdev->xfifo_base, mdev->xfifo_handle,
-			mdev->pdata.xfifo_size);
-	/* Initialize m4u page table */
-	if (m4u_pt_init(mdev)) {
-		goto error;
-	}
+	/* TODO: Allocate bitmap for mma pool */
+
 	/* Initialize m4u registers */
 	m4u_reg_init(mdev);
+
+	/* Initialize m4u page table */
+	for (i=0; i<pdata->nr; i++) {
+		/* TODO: Validate mma space is a valid area in pool */
+		ret = m4u_mapping_create(mdev, &pdata->regions[i], NULL);
+		if (ret) {
+			goto error;
+		}
+	}
 
 	return 0;
 
@@ -348,82 +607,10 @@ error:
 	return -ENOMEM;
 }
 
-int m4u_map(struct m4u_device *mdev, struct sg_table *sgt, u32 size, u32 align)
-{
-	struct m4u_region_node *region_node;
-	struct m4u_region *r;
-	struct list_head *reg;
-	u32 pa = 0, mma = 0, pa_end;
-
-	/* Only contiguous blocks assumed */
-	if (!IS_ERR_OR_NULL(sgt) && (sgt->nents == 1))
-		pa = sg_phys(sgt->sgl);
-	if (pa) {
-		pa_end = pa + size - 1;
-		list_for_each(reg, &mdev->static_region_list) {
-			region_node = list_entry(reg, struct m4u_region_node, list);
-			r = &region_node->region;
-			pr_debug("map region mma(0x%08x) pa(0x%08x) size(0x%08x) \n",
-				   r->mma, r->pa, r->size);
-			if ((pa > r->pa) && (pa_end < r->pa + r->size)) {
-				mma = r->mma + (pa - r->pa);
-				break;
-			}
-		}
-	}
-	pr_debug("map mma(0x%08x) pa(0x%08x) size(0x%08x) align(%d) \n",
-		mma, pa, size, align);
-	return mma;
-}
-EXPORT_SYMBOL(m4u_map);
-
-void m4u_unmap(struct m4u_device *mdev, u32 mma, u32 size)
-{
-	struct m4u_region_node *region_node;
-	struct m4u_region *r;
-	struct list_head *reg;
-	u32 pa = 0, mma_end = 0;
-
-	list_for_each(reg, &mdev->static_region_list) {
-		region_node = list_entry(reg, struct m4u_region_node, list);
-		r = &region_node->region;
-		pr_debug("map region mma(0x%08x) pa(0x%08x) size(0x%08x) \n",
-				r->mma, r->pa, r->size);
-		if ((mma > r->mma) && (mma_end < r->mma + r->size)) {
-			pa = r->pa + (mma - r->mma);
-			break;
-		}
-	}
-	pr_debug("unmap mma(0x%08x) pa(0x%08x) size(0x%08x) \n",
-		mma, pa, size);
-}
-EXPORT_SYMBOL(m4u_unmap);
-
-int m4u_add_region(struct m4u_device *mdev, struct m4u_region *region)
-{
-	struct m4u_region_node *region_node;
-
-	if (!region) {
-		pr_err("Failed adding invalid region \n");
-		return -EINVAL;
-	}
-	region_node = kmalloc(sizeof(struct m4u_region_node), GFP_KERNEL);
-	if (!region_node) {
-		pr_err("Failed allocating metadata for region \n");
-		return -ENOMEM;
-	}
-	region_node->region = *region;
-	list_add_tail(&region_node->list, &mdev->static_region_list);
-		pr_info("Add region - mma(0x%08x) pa(0x%08x) size(0x%08x) page_size(0x%08x) \n", 
-				region->mma, region->pa, region->size, region->page_size);
-
-	return 0;
-}
-EXPORT_SYMBOL(m4u_add_region);
-
 static irqreturn_t m4u_isr(int irq, void *data)
 {
 	struct m4u_device *mdev = (struct m4u_device *)data;
+	struct m4u_platform_data *pdata = &mdev->pdata;
 	u32 status = 0;
 	u32 val;
 
@@ -436,7 +623,7 @@ static irqreturn_t m4u_isr(int irq, void *data)
 			if (val & MMMMU_OPEN_XFIFO_VALID_MASK) {
 				pr_debug("xfifo(0x%x) \n", val);
 				mdev->xfifo_base[mdev->xfifo_widx++] = val;
-				if (mdev->xfifo_widx >= (mdev->pdata.xfifo_size>>2))
+				if (mdev->xfifo_widx >= (pdata->xfifo_size>>2))
 					mdev->xfifo_widx = 0;
 			} else {
 				break;
@@ -460,12 +647,6 @@ static irqreturn_t m4u_isr(int irq, void *data)
 	}
 
 	return IRQ_NONE;
-}
-
-static int m4u_debug_open(struct inode *inode, struct file *file)
-{
-	file->private_data = inode->i_private;
-	return 0;
 }
 
 M4U_GET_REG(cr, CR);
@@ -513,13 +694,131 @@ void m4u_debugfs_init(struct m4u_device *mdev, struct platform_device *pdev)
 	}
 }
 
+#ifdef CONFIG_DEBUG_M4U
+enum m4u_ioctls {
+	M4U_MAPPING_ADD = 0,
+	M4U_MAPPING_REMOVE,
+	M4U_MAPPING_UPDATE,
+	M4U_REG_GET,
+	M4U_REG_SET,
+	M4U_REG_SET_GET,
+};
+
+struct m4u_reg_data {
+	u32 offset;
+	u32 val;
+};
+
+static int m4u_mapping_update(struct m4u_device *mdev, struct m4u_region *region)
+{
+	struct list_head *elt;
+	struct m4u_mapping *mapping = NULL;
+	struct m4u_region *r;
+	int page_order, n;
+	u32 mma, mma_end;
+
+	if (!region) {
+		pr_err("Failed updating invalid region \n");
+		return -EINVAL;
+	}
+	mma = region->mma;
+	mma_end = mma + region->size;
+	mutex_lock(&mdev->lock);
+	list_for_each(elt, &mdev->map_list) {
+		mapping = list_entry(elt, struct m4u_mapping, list);
+		r = &mapping->region;
+		pr_debug("Search region mma(0x%08x) pa(0x%08x) size(0x%08x) \n",
+				r->mma, r->pa, r->size);
+		if ((mapping->contig_flag) && (mma == r->mma) && (mma < r->mma + r->size)) {
+			*r = *region;
+			if (region->page_size) {
+				page_order = ilog2(region->page_size);
+				n = region->size >> page_order;
+				if (!((page_order < M4U_PAGE_SHIFT) || (n & 0x7))) {
+					pr_debug("Update mapping - mma(0x%08x) pa(0x%08x) size(0x%08x) \n",
+							r->mma, r->pa, r->size);
+					/* TODO: Unlock TLB if region was TLB locked */
+					m4u_tlb_invalidate(mdev, region->mma, page_order, n);
+					m4u_map_pages(mdev, region->mma, region->pa, page_order, n, 1);
+					break;
+				}
+			}
+		}
+	}
+	mutex_unlock(&mdev->lock);
+	return 0;
+}
+
 static long m4u_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct m4u_device *mdev = filp->private_data;
 
-	pr_info("ioctl mdev(%p) \n", mdev);
+	pr_debug("ioctl mdev(%p) cmd(%d) \n", mdev, cmd);
 
 	switch (cmd) {
+	case M4U_MAPPING_ADD:
+	{
+		struct m4u_region data;
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+		pr_debug("M4U_MAPPING_ADD - mma(0x%08x) pa(0x%08x) size(0x%08x) page_size(0x%08x) \n",
+				data.mma, data.pa, data.size, data.page_size);
+		m4u_mapping_create(mdev, &data, NULL);
+		break;
+	}
+	case M4U_MAPPING_REMOVE:
+	{
+		pr_debug("M4U_MAPPING_REMOVE - mma(0x%08x) \n", (u32)arg);
+		m4u_unmap(mdev, (u32)arg);
+		break;
+	}
+	case M4U_MAPPING_UPDATE:
+	{
+		struct m4u_region data;
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+		pr_debug("M4U_MAPPING_UPDATE - mma(0x%08x) pa(0x%08x) size(0x%08x) page_size(0x%08x) \n",
+				data.mma, data.pa, data.size, data.page_size);
+		m4u_mapping_update(mdev, &data);
+		break;
+	}
+	case M4U_REG_GET:
+	{
+		struct m4u_reg_data data;
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+		data.val = m4u_read_reg(mdev, data.offset);
+		pr_debug("M4U_REG_GET - offset(0x%08x) data(0x%08x) \n",
+				data.offset, data.val);
+		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+			return -EFAULT;
+		break;
+	}
+	case M4U_REG_SET:
+	{
+		struct m4u_reg_data data;
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+		pr_debug("M4U_REG_SET - offset(0x%08x) data(0x%08x) \n",
+				data.offset, data.val);
+		m4u_write_reg(mdev, data.offset, data.val);
+		break;
+	}
+	case M4U_REG_SET_GET:
+	{
+		struct m4u_reg_data data;
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+		pr_debug("M4U_REG_SET_GET - offset(0x%08x) data(0x%08x) \n",
+				data.offset, data.val);
+		m4u_write_reg(mdev, data.offset, data.val);
+		data.val = m4u_read_reg(mdev, data.offset);
+		pr_debug("M4U_REG_SET_GET - offset(0x%08x) data(0x%08x) \n",
+				data.offset, data.val);
+		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+			return -EFAULT;
+		break;
+	}
 	default:
 		return -ENOTTY;
 	}
@@ -531,11 +830,7 @@ static int m4u_open(struct inode *inode, struct file *filp)
 	struct miscdevice *miscdev = filp->private_data;
 	struct m4u_device *mdev = container_of(miscdev, struct m4u_device, dev);
 
-	pr_info("open mdev(%p) \n", mdev);
-#ifdef DEBUG_M4U
-	m4u_print_platform_data(&mdev->pdata);
-#endif
-	m4u_reg_init(mdev);
+	pr_debug("open mdev(%p) \n", mdev);
 	filp->private_data = mdev;
 
 	return 0;
@@ -545,7 +840,7 @@ static int m4u_release(struct inode *inode, struct file *filp)
 {
 	struct m4u_device *mdev = filp->private_data;
 
-	pr_info("close mdev(%p) \n", mdev);
+	pr_debug("close mdev(%p) \n", mdev);
 
 	return 0;
 }
@@ -556,6 +851,7 @@ static const struct file_operations m4u_fops = {
 	.release        = m4u_release,
 	.unlocked_ioctl = m4u_ioctl,
 };
+#endif
 
 static int m4u_probe(struct platform_device *pdev)
 {
@@ -564,7 +860,6 @@ static int m4u_probe(struct platform_device *pdev)
 	struct resource *mem_res = NULL;
 	unsigned int irq = 0;
 	int ret;
-	int i;
 
 	pr_debug("M4U device probe \n");
 	if (!pdev || !pdev->dev.platform_data) {
@@ -583,15 +878,7 @@ static int m4u_probe(struct platform_device *pdev)
 	g_mdev = mdev;
 	mutex_init(&mdev->lock);
 	memcpy(&mdev->pdata, pdata, sizeof(*pdata));
-	INIT_LIST_HEAD(&mdev->static_region_list);
-	for(i=0; i<pdata->nr; i++) {
-		ret = m4u_add_region(mdev, &pdata->regions[i]);
-		if (ret) {
-			goto err_freemem;
-		}
-	}
-	/* TODO: Free region buffers */
-	pr_info("(Debug) mdev(%p) \n", g_mdev);
+	INIT_LIST_HEAD(&mdev->map_list);
 
 	/* Map the register space */
 	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -614,6 +901,7 @@ static int m4u_probe(struct platform_device *pdev)
 		goto err_freereg;
 	}
 
+#ifdef CONFIG_DEBUG_M4U
 	/* Register misc device */
 #if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
 	mdev->dev.minor = 5;
@@ -630,6 +918,7 @@ static int m4u_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err_unmap;
 	}
+#endif
 
 	/* Register IRQ */
 	irq = platform_get_irq(pdev, 0);
@@ -640,6 +929,7 @@ static int m4u_probe(struct platform_device *pdev)
 		goto err_deregister;
 	}
 
+	/* Initialize m4u page table and registers as per platform data */
 	if (m4u_init(mdev)) {
 		pr_err("Failed to initialize m4u. \n");
 		ret = -ENOMEM;
@@ -651,8 +941,8 @@ static int m4u_probe(struct platform_device *pdev)
 
 	/* Set the mdev and platform device private data */
 	platform_set_drvdata(pdev, mdev);
-	pr_info("probe successfull - irq(%d) reg-base(%p). \n",
-			irq, mdev->ioreg_base);
+	pr_info("probe successfull - mdev(%p) irq(%d) reg-base(%p). \n",
+			mdev, irq, mdev->ioreg_base);
 
 	return 0;
 
@@ -660,9 +950,11 @@ err_freeirq:
 	free_irq(irq, mdev);
 
 err_deregister:
+#ifdef CONFIG_DEBUG_M4U
 	misc_deregister(&mdev->dev);
 
 err_unmap:
+#endif
 	iounmap(mdev->ioreg_base);
 
 err_freereg:
@@ -687,7 +979,9 @@ static int m4u_remove(struct platform_device *pdev)
 		m4u_exit(mdev);
 		irq = platform_get_irq(pdev, 0);
 		free_irq(irq, mdev);
+#ifdef CONFIG_DEBUG_M4U
 		misc_deregister(&mdev->dev);
+#endif
 		iounmap(mdev->ioreg_base);
 		mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 		if (mem_res)
