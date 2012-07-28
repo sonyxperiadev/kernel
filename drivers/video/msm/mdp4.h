@@ -625,7 +625,7 @@ void mdp4_mddi_overlay_restore(void);
 static inline void mdp4_mddi_kickoff_video(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe)
 {
-	/* empth */
+	/* empty */
 }
 static inline void mdp4_mddi_dma_busy_wait(struct msm_fb_data_type *mfd)
 {

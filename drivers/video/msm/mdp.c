@@ -2047,7 +2047,7 @@ static void configure_mdp_core_clk_table(uint32 min_clk_rate)
 static uint32_t mdp_bus_scale_handle;
 int mdp_bus_scale_update_request(uint32_t index)
 {
-	if (!mdp_pdata || (!mdp_pdata->mdp_bus_scale_table
+	if (!mdp_pdata && (!mdp_pdata->mdp_bus_scale_table
 	     || index > (mdp_pdata->mdp_bus_scale_table->num_usecases - 1))) {
 		printk(KERN_ERR "%s invalid table or index\n", __func__);
 		return -EINVAL;

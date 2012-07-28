@@ -455,7 +455,7 @@ void mdp4_dmap_done_dsi_cmd(int cndx)
 	pipe->blt_dmap_done++;
 	diff = pipe->blt_ov_done - pipe->blt_dmap_done;
 	spin_unlock(&vctrl->spin_lock);
-	pr_info("%s: ov_done=%d dmap_done=%d ov_koff=%d dmap_koff=%d\n",
+	pr_debug("%s: ov_done=%d dmap_done=%d ov_koff=%d dmap_koff=%d\n",
 			__func__, pipe->blt_ov_done, pipe->blt_dmap_done,
 				pipe->blt_ov_koff, pipe->blt_dmap_koff);
 	if (diff <= 0) {
@@ -527,8 +527,6 @@ void mdp4_dsi_rdptr_init(int cndx)
 		pr_err("%s: out or range: cndx=%d\n", __func__, cndx);
 		return;
 	}
-
-	pr_info("%s: ndx=%d\n", __func__, cndx);
 
 	vctrl = &vsync_ctrl_db[cndx];
 	if (vctrl->inited)

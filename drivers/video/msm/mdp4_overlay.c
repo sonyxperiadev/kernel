@@ -248,7 +248,7 @@ void mdp4_iommu_unmap(struct mdp4_overlay_pipe *pipe)
 		iom_pipe_info = &mdp_iommu[pipe->mixer_num][j];
 		for (i = 0; i < MDP4_MAX_PLANE; i++) {
 			if (iom_pipe_info->prev_ihdl[i]) {
-				pr_info("%s(): mixer %u, pipe %u, plane %u, "
+				pr_debug("%s(): mixer %u, pipe %u, plane %u, "
 					"prev_ihdl %p\n", __func__,
 					pipe->mixer_num, j + 1, i,
 					iom_pipe_info->prev_ihdl[i]);
@@ -262,7 +262,7 @@ void mdp4_iommu_unmap(struct mdp4_overlay_pipe *pipe)
 
 			if (iom_pipe_info->mark_unmap) {
 				if (iom_pipe_info->ihdl[i]) {
-					pr_info("%s(): MARK, mixer %u, pipe %u, plane %u, "
+					pr_debug("%s(): MARK, mixer %u, pipe %u, plane %u, "
 						"ihdl %p\n", __func__,
 						pipe->mixer_num, j + 1, i,
 						iom_pipe_info->ihdl[i]);
@@ -398,7 +398,6 @@ void unfill_black_screen(void) { return; }
 void unfill_black_screen(void)
 {
 	uint32 temp_src_format;
-
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	/*
 	* VG2 Constant Color
@@ -422,7 +421,6 @@ void fill_black_screen(void)
 	/*Black color*/
 	uint32 color = 0x00000000;
 	uint32 temp_src_format;
-
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	/*
 	* VG2 Constant Color
@@ -445,6 +443,7 @@ void fill_black_screen(void)
 
 void mdp4_overlay_dmae_xy(struct mdp4_overlay_pipe *pipe)
 {
+
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 
 	MDP_OUTP(MDP_BASE + 0xb0004,
@@ -926,6 +925,7 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 			outpdw(MDP_BASE + 0x00c0, ctrl->cs_controller);
 		}
 	}
+
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
@@ -1519,7 +1519,6 @@ int mdp4_overlay_pipe_staged(int mixer)
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	data = inpdw(MDP_BASE + off);
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
-
 	p1 = 0;
 	p2 = 0;
 	for (i = 0; i < 8; i++) {
@@ -1603,7 +1602,7 @@ void mdp4_mixer_stage_commit(int mixer)
 			data |= ctrl->mixer_cfg[num];
 			off = 0x10100;
 		}
-		pr_info("%s: mixer=%d data=%x flush=%x\n", __func__,
+		pr_debug("%s: mixer=%d data=%x flush=%x\n", __func__,
 				mixer, data, ctrl->flush[mixer]);
 	}
 
@@ -1862,7 +1861,7 @@ void mdp4_mixer_blend_setup(int mixer)
 
 	d_pipe = ctrl->stage[mixer][MDP4_MIXER_STAGE_BASE];
 	if (d_pipe == NULL) {
-		pr_err("%s: no bg_pipe at mixer=%d\n", __func__, mixer);
+		pr_err("%s: Error: no bg_pipe at mixer=%d\n", __func__, mixer);
 		return;
 	}
 
@@ -2057,7 +2056,7 @@ struct mdp4_overlay_pipe *mdp4_overlay_pipe_alloc(int ptype, int mixer)
 				continue;
 			init_completion(&pipe->comp);
 			init_completion(&pipe->dmas_comp);
-			pr_info("%s: pipe=%x ndx=%d num=%d\n", __func__,
+			pr_debug("%s: pipe=%x ndx=%d num=%d\n", __func__,
 				(int)pipe, pipe->pipe_ndx, pipe->pipe_num);
 			return pipe;
 		}
@@ -2074,7 +2073,7 @@ void mdp4_overlay_pipe_free(struct mdp4_overlay_pipe *pipe)
 	uint32 ptype, num, ndx, mixer;
 	struct mdp4_iommu_pipe_info *iom_pipe_info;
 
-	pr_info("%s: pipe=%x ndx=%d\n", __func__, (int)pipe, pipe->pipe_ndx);
+	pr_debug("%s: pipe=%x ndx=%d\n", __func__, (int)pipe, pipe->pipe_ndx);
 
 	ptype = pipe->pipe_type;
 	num = pipe->pipe_num;
@@ -2617,7 +2616,6 @@ void mdp4_set_perf_level(void)
 {
 	static int old_perf_level;
 	int cur_perf_level;
-
 
 	if (mdp4_extn_disp)
 		cur_perf_level = OVERLAY_PERF_LEVEL1;
@@ -3239,10 +3237,8 @@ mddi:
 
 	if (!(pipe->flags & MDP_OV_PLAY_NOWAIT))
 		mdp4_iommu_unmap(pipe);
-
 	mdp4_stat.overlay_play[pipe->mixer_num]++;
 	mutex_unlock(&mfd->dma->ov_mutex);
-
 end:
 #ifdef CONFIG_ANDROID_PMEM
 	if (srcp0_file)
@@ -3255,7 +3251,6 @@ end:
 	/* only source may use frame buffer */
 	if (img->flags & MDP_MEMORY_ID_TYPE_FB)
 		fput_light(srcp0_file, ps0_need);
-
 	return ret;
 }
 
