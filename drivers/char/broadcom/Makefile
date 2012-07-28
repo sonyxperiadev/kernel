@@ -1,6 +1,7 @@
 
 EXTRA_CFLAGS := -fno-inline -Wno-multichar -O2
 
+obj-y += mm/
 obj-$(CONFIG_V3D) += v3d/
 obj-$(CONFIG_MMDMA) += mmdma/
 obj-y += vce/
