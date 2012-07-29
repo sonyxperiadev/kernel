@@ -813,8 +813,8 @@ static inline int mdp_bus_scale_update_request(uint32_t index)
 #endif
 
 #ifdef MDP_HW_VSYNC
-void vsync_clk_enable(void);
-void vsync_clk_disable(void);
+void vsync_clk_prepare_enable(void);
+void vsync_clk_disable_unprepare(void);
 void mdp_hw_vsync_clk_enable(struct msm_fb_data_type *mfd);
 void mdp_hw_vsync_clk_disable(struct msm_fb_data_type *mfd);
 void mdp_vsync_clk_disable(void);
