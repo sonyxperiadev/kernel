@@ -111,8 +111,6 @@
 #define	P_no_receiver		253
 #define	P_many_receiver		254
 
-#include "logapi.h"
-
 typedef enum {
 #if defined(STACK_wedge) && defined(UMTS)
 	/* Start of log_urrcm */
@@ -148,7 +146,7 @@ typedef enum {
 	EGPRS_TX_BLK,
 #endif
 	EDGE_RX_HDR,
-	DSP_DATA_OBSOLETE,
+	DSP_DATA,
 	AGC_TRACK_DATA,
 	RX_TRACK_DATA,
 	SACCH_TRACK_DATA,
@@ -187,7 +185,7 @@ typedef enum {
 	L1DATA_FACCH,
 	L1DATA_BPM_STATUS,  /* //<Payload type {::BPM_STATUS_LOG_t} */
 	L1DATA_TWIF,		/*//<Payload type {::TWIF_LOG_t} */
-	AUDIO_DATA_OBSOLETE,
+	AUDIO_DATA,
 	L1DATA_RF_LOGGING,
 	VMS_TRACE_KEYS,
 	/* End of log_gl1s */
@@ -3113,11 +3111,6 @@ API_CAPI_MSG_ELEM_MSDB_PTR_MS_LOCAL_PHCTRL_ELEM_PLMNSEL_REGISTERED_PLMN
 #endif
 	/* End of umtsfw */
 #endif /* #if defined(STACK_wedge) && defined(UMTS) */
-
-	/* Start of AUDIO */
-	DSP_DATA = ((LOGID_AUDIO << 16) | 1),
-	AUDIO_DATA = ((LOGID_AUDIO << 16) | 2),
-	/* End of AUDIO */
 
 	LAST_LOG_SIGNAL
 } log_signal_id_t;
