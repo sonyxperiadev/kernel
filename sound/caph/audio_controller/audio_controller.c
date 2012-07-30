@@ -2033,6 +2033,8 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
 	curr_spk = csl_caph_FindSinkDevice(pathID);
+	aTrace(LOG_AUDIO_CNTLR,
+			"curr_spk %d, new_spk %d\n", curr_spk, new_spk);
 
 	if (curr_spk == new_spk) {
 		aTrace(LOG_AUDIO_CNTLR,
@@ -2069,18 +2071,19 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 	}
 #endif
 
-	/* add new spk first... */
-	if (getDeviceFromSink(sink) != CSL_CAPH_DEV_NONE) {
-		config.source = getDeviceFromSrc(source);
-		config.sink = getDeviceFromSink(sink);
-		(void)csl_caph_hwctrl_AddPath(pathID, config);
-	}
-	/* remove current spk */
+	/* remove current spk first*/
 	if (curr_spk != CSL_CAPH_DEV_NONE) {
 		config.source = getDeviceFromSrc(source);
 		config.sink = curr_spk;
 		(void)csl_caph_hwctrl_RemovePath(pathID, config);
 	}
+	/* add new spk ... */
+	if (getDeviceFromSink(sink) != CSL_CAPH_DEV_NONE) {
+		config.source = getDeviceFromSrc(source);
+		config.sink = getDeviceFromSink(sink);
+		(void)csl_caph_hwctrl_AddPath(pathID, config);
+	}
+
 
 	if (source == AUDIO_SOURCE_I2S && AUDCTRL_InVoiceCall() == FALSE
 		&& fmPlayStarted == TRUE) {
