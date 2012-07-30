@@ -2210,6 +2210,89 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 
 /****************************************************************************
 *
+* Function Name: AUDCTRL_AddPlaySpk_InPMU
+*
+* Description:   add a speaker by indicating to the PMU
+*
+****************************************************************************/
+
+void AUDCTRL_AddPlaySpk_InPMU(AUDIO_SOURCE_Enum_t source,
+			AUDIO_SINK_Enum_t sink, unsigned int pathID)
+{
+	CSL_CAPH_HWCTRL_CONFIG_t config;
+	CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+
+	aTrace(LOG_AUDIO_CNTLR, "%s src %d, sink %d,"
+			"pathID %d", __func__, source, sink, pathID);
+
+	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
+
+	speaker = getDeviceFromSink(sink);
+
+	if (speaker != CSL_CAPH_DEV_NONE) {
+		/*Enable the PMU for HS/IHF. */
+		if (sink == AUDIO_SINK_LOUDSPK) {
+
+			aTrace(LOG_AUDIO_CNTLR, "HS -> HS+IHF:Multicast"
+				"Indication\n");
+
+			multicastToSpkr(TRUE);
+
+		} else if (sink == AUDIO_SINK_HEADSET) {
+
+			aTrace(LOG_AUDIO_CNTLR, "IHF->IHF+HS: Switch"
+				"and Multicast\n");
+
+			AUDCTRL_SwitchPlaySpk(source, AUDIO_SINK_HEADSET,
+					      pathID);
+
+			multicastToSpkr(TRUE);
+		}
+	}
+
+	if (AUDIO_APP_FM == AUDCTRL_GetAudioApp()) {
+		if (isStIHF &&
+			currAudioMode_fm == AUDIO_MODE_SPEAKERPHONE &&
+			sink == AUDIO_SINK_HANDSET)
+			AUDCTRL_SetAudioMode_ForFM(
+				AUDIO_MODE_SPEAKERPHONE, pathID, FALSE);
+		else {
+#ifndef CONFIG_ENABLE_SSMULTICAST
+			AUDCTRL_SetAudioMode_ForFM(
+				GetAudioModeBySink(sink), pathID, FALSE);
+#else
+
+
+			AUDCTRL_SetAudioMode_ForFM_Multicast(
+				GetAudioModeBySink(sink), pathID, FALSE);
+#endif
+		}
+	} else {
+		if (isStIHF &&
+			currAudioMode_playback == AUDIO_MODE_SPEAKERPHONE &&
+			sink == AUDIO_SINK_HANDSET)
+				AUDCTRL_SetAudioMode_ForMusicPlayback(
+				AUDIO_MODE_SPEAKERPHONE, pathID, FALSE);
+		else
+#ifndef CONFIG_ENABLE_SSMULTICAST
+				AUDCTRL_SetAudioMode_ForMusicPlayback(
+				GetAudioModeBySink(sink), pathID, FALSE);
+#else
+				/*Revisit for stIHF case*/
+
+				AUDCTRL_SetAudioMode_ForMusicMulticast(
+				GetAudioModeBySink(sink), pathID);
+#endif
+	}
+	return;
+
+
+}
+
+
+
+/****************************************************************************
+*
 * Function Name: AUDCTRL_RemovePlaySpk
 *
 * Description:   remove a speaker to a playback path
@@ -2277,6 +2360,89 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 	}
 	return;
 }
+
+
+/****************************************************************************
+*
+* Function Name: AUDCTRL_RemovePlaySpk_InPMU
+*
+* Description:   remove a speaker by indicating to PMU
+*
+****************************************************************************/
+void AUDCTRL_RemovePlaySpk_InPMU(AUDIO_SOURCE_Enum_t source,
+			   AUDIO_SINK_Enum_t sink, unsigned int pathID)
+{
+
+	CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+#ifdef CONFIG_ENABLE_SSMULTICAST
+	SetAudioMode_Sp_t sp_struct;
+#endif
+
+
+	aTrace(LOG_AUDIO_CNTLR, "%s src 0x%x, sink 0x%x", __func__,
+			source, sink);
+
+	if (pathID == 0) {
+		audio_xassert(0, pathID);
+		return;
+	}
+	speaker = getDeviceFromSink(sink);
+	if (speaker != CSL_CAPH_DEV_NONE) {
+
+		if (sink == AUDIO_SINK_LOUDSPK) {
+
+			aTrace(LOG_AUDIO_CNTLR, "Remove IHF - Stop MC\n");
+			multicastToSpkr(FALSE);
+
+		} else if (sink == AUDIO_SINK_HEADSET) {
+
+			aTrace(LOG_AUDIO_CNTLR, "Remove HS - Stop MC"
+				"and Switch\n");
+			multicastToSpkr(FALSE);
+
+			AUDCTRL_SwitchPlaySpk(source, AUDIO_SINK_LOUDSPK,
+					      pathID);
+
+		}
+
+
+#ifdef CONFIG_ENABLE_SSMULTICAST
+		/*If IHF removed reload HS params with mode HEADSET*/
+		if (sink == AUDIO_SINK_LOUDSPK &&
+			(currAudioMode_playback == AUDIO_MODE_SPEAKERPHONE ||
+			currAudioMode_fm == AUDIO_MODE_SPEAKERPHONE)) {
+			int i, j;
+			sp_struct.mode = AUDIO_MODE_HEADSET;
+			sp_struct.app = AUDCTRL_GetAudioApp();
+			sp_struct.pathID = pathID;
+			sp_struct.inHWlpbk = FALSE;
+			sp_struct.mixInGain_mB = GAIN_SYSPARM;
+			sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+
+			i = AUDCTRL_GetAudioApp();
+			j = AUDIO_MODE_HEADSET;
+			if (user_vol_setting[i][j].valid == FALSE)
+				fillUserVolSetting(j, i);
+			sp_struct.mixOutGain_mB = user_vol_setting[i][j].L;
+			sp_struct.mixOutGainR_mB = user_vol_setting[i][j].R;
+
+			if (sp_struct.app == AUDIO_APP_FM) {
+				AUDCTRL_SetAudioMode_ForFM(
+				AUDIO_MODE_HEADSET, pathID, FALSE);
+			} else {
+				AUDDRV_SetAudioMode_Speaker(sp_struct);
+				setExternAudioGain(AUDIO_MODE_HEADSET,
+					AUDCTRL_GetAudioApp());
+			}
+
+			AUDCTRL_SaveAudioMode(AUDIO_MODE_HEADSET);
+		}
+#endif
+	}
+	return;
+}
+
+
 
 /****************************************************************************
 *
@@ -4007,6 +4173,18 @@ void AUDCTRL_UpdateUserVolSetting(
 		__func__, app, mode);
 }
 
+/********************************************************************
+*  @brief  Set PMU Paramters
+*
+*  @param  param_id	param_value	channel
+*
+*  @param  param_id - Indicates what param has to be set
+	   param_value - The value to be set
+	   channel - left/right on which the param has to be set
+*
+*  @return none
+*
+****************************************************************************/
 
 void setExternalParameter(Int16 param_id, Int16 param_value, int channel)
 {
@@ -4079,5 +4257,25 @@ void setExternalParameter(Int16 param_id, Int16 param_value, int channel)
 	return;
 }
 
+/****************************************************************************
+*
+* Function Name: multicastToSpkr
+*
+* Description:  Indicate to the PMU to add or remove IHF
+*
+****************************************************************************/
+
+void multicastToSpkr(Boolean flag)
+{
+
+	aTrace(LOG_AUDIO_CNTLR, "%s flag =%d\n",
+		__func__, flag);
+	if (flag == TRUE)
+		extern_start_stop_multicast(TRUE);
+	else
+		extern_start_stop_multicast(FALSE);
+
+
+}
 
 

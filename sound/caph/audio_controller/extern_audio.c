@@ -1168,5 +1168,28 @@ void extern_set_hs_preamp_gain(int gain_mB)
 
 }
 
+/********************************************************************
+*  @brief  Set Multicast on/off on PMU
+*
+*  @param  flag	IHF on/off for multicasting
+*  @return  none
+*
+****************************************************************************/
+
+void extern_start_stop_multicast(unsigned char flag)
+{
+
+#ifdef THIRD_PARTY_PMU
+
+
+	aTrace(LOG_AUDIO_CNTLR, "%s flag=%d",
+					__func__, flag);
+
+	dialog_turn_multicast_onoff(flag);
+
+#endif
+
+
+}
 
 #endif

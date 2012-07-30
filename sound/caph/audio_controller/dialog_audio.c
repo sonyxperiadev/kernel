@@ -94,6 +94,11 @@ int dialog_set_ihf_pwr(dialog_spk_pwr_t power)
 	return 1;
 }
 
+int dialog_turn_multicast_onoff(unsigned char flag)
+{
+	return 1;
+}
+
 #endif
 
 

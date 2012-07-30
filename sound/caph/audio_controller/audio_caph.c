@@ -906,7 +906,17 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					if (param_stop->stream >=
 						 CAPH_MAX_PCM_STREAMS)
 						break;
-
+#ifdef THIRD_PARTY_PMU
+					AUDCTRL_RemovePlaySpk_InPMU(param_stop->
+							      pdev_prop->p[0]
+							      .source,
+							      param_stop->
+							      pdev_prop->p[i].
+							      sink,
+							      pathID
+							      [param_stop->
+							       stream]);
+#else
 					AUDCTRL_RemovePlaySpk(param_stop->
 							      pdev_prop->p[0]
 							      .source,
@@ -916,6 +926,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 							      pathID
 							      [param_stop->
 							       stream]);
+#endif
 				}
 			}
 
@@ -1161,9 +1172,15 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 			app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_MUSIC);
 			AUDCTRL_SaveAudioApp(app_profile);
+#ifdef THIRD_PARTY_PMU
+			/* coverity[overrun-local] */
+			AUDCTRL_AddPlaySpk_InPMU(parm_spkr->src,
+				parm_spkr->sink, pathID[parm_spkr->stream]);
+#else
 			/* coverity[overrun-local] */
 			AUDCTRL_AddPlaySpk(parm_spkr->src, parm_spkr->sink,
 					   pathID[parm_spkr->stream]);
+#endif
 		}
 		break;
 	case ACTION_AUD_RemoveChannel:
@@ -1174,9 +1191,16 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_spkr->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+#ifdef THIRD_PARTY_PMU
+
+			/* coverity[overrun-local] */
+			AUDCTRL_RemovePlaySpk_InPMU(parm_spkr->src,
+				parm_spkr->sink, pathID[parm_spkr->stream]);
+#else
 			/* coverity[overrun-local] */
 			AUDCTRL_RemovePlaySpk(parm_spkr->src, parm_spkr->sink,
 					      pathID[parm_spkr->stream]);
+#endif
 		}
 		break;
 
