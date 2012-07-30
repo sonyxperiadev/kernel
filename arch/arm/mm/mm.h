@@ -64,6 +64,9 @@ extern phys_addr_t arm_lowmem_limit;
 #define VM_ARM_MTYPE(mt)		((mt) << 20)
 #define VM_ARM_MTYPE_MASK	(0x1f << 20)
 
+/* consistent regions used by dma_alloc_attrs() */
+#define VM_ARM_DMA_CONSISTENT	0x20000000
+
 #endif
 
 #ifdef CONFIG_ZONE_DMA

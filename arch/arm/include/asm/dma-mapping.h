@@ -210,7 +210,7 @@ int dma_mmap_writecombine(struct device *, struct vm_area_struct *,
  * DMA region above it's default value of 2MB. It must be called before the
  * memory allocator is initialised, i.e. before any core_initcall.
  */
-extern void __init init_consistent_dma_size(unsigned long size);
+static inline void init_consistent_dma_size(unsigned long size) { }
 
 
 #ifdef CONFIG_DMABOUNCE
