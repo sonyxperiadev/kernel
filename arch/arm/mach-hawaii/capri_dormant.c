@@ -301,7 +301,7 @@ static void restore_proc_clk_regs(void)
 	/* Allow write access to the CCU registers */
 	writel_relaxed(UNLOCK_PROC_CLK, PROC_CLK_REG_ADDR(WR_ACCESS));
 
-#ifdef CONFIG_BCM_HWCAPRI_1605
+#if defined(CONFIG_BCM_HWCAPRI_1605) || defined(CONFIG_BCM_HWCAPRI_1605_A2)
 	/* If the issue is not fixed, first step to 312 MHZ before restoring
 	 * all the registers
 	 */
