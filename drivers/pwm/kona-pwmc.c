@@ -402,32 +402,6 @@ static void kona_pwmc_release(struct pwm_device *p)
 
 }
 
-void pwm_disable(struct pwm_device *pwm)
-{
-	struct pwm_config c = {
-		.config_mask = BIT(PWM_CONFIG_STOP),
-	};
-
-	kona_pwmc_config(pwm, &c);
-}
-EXPORT_SYMBOL(pwm_disable);
-
-int pwm_enable(struct pwm_device *pwm)
-{
-	struct pwm_config c = {
-		.config_mask = BIT(PWM_CONFIG_STOP),
-	};
-
-	return kona_pwmc_config(pwm, &c);
-}
-EXPORT_SYMBOL(pwm_enable);
-
-void pwm_free(struct pwm_device *pwm)
-{
-	pwm_release(pwm);
-	kfree(pwm);
-}
-EXPORT_SYMBOL(pwm_free);
 
 static const struct pwm_device_ops kona_pwm_ops = {
 	.request = kona_pwmc_request,

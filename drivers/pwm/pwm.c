@@ -334,6 +334,33 @@ int pwm_stop(struct pwm_device *p)
 
 EXPORT_SYMBOL(pwm_stop);
 
+void pwm_disable(struct pwm_device *pwm)
+{
+	struct pwm_config c = {
+		.config_mask = BIT(PWM_CONFIG_STOP),
+	};
+
+	pwm->ops->config(pwm, &c);
+}
+EXPORT_SYMBOL(pwm_disable);
+
+int pwm_enable(struct pwm_device *pwm)
+{
+	struct pwm_config c = {
+		.config_mask = BIT(PWM_CONFIG_START),
+	};
+
+	return pwm->ops->config(pwm, &c);
+}
+EXPORT_SYMBOL(pwm_enable);
+
+void pwm_free(struct pwm_device *pwm)
+{
+	pwm_release(pwm);
+	kfree(pwm);
+}
+EXPORT_SYMBOL(pwm_free);
+
 int pwm_synchronize(struct pwm_device *p, struct pwm_device *to_p)
 {
 	if (!p->ops->synchronize)

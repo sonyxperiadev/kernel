@@ -918,7 +918,7 @@ void __init board_add_sdio_devices(void)
 
 static struct platform_pwm_backlight_data bcm_backlight_data = {
 /* backlight */
-	.pwm_id 	= 1,
+	.pwm_id 	= 4,
 	.max_brightness = 32,   /* Android calibrates to 32 levels*/
 	.dft_brightness = 32,
 	.polarity       = 1,    /* Inverted polarity */
