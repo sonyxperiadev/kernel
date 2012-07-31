@@ -4056,7 +4056,8 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID,
 	}
 
 	if (path->sinkCount == 1) {
-		aError("%s::pathID %d, last sink %d is removed\n",
+		aTrace(LOG_AUDIO_CSL, "%s::pathID %d, last sink %d"
+			"is removed\n",
 		__func__, pathID, path->sink[sinkNo]);
 	}
 

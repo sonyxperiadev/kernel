@@ -514,6 +514,20 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 			AUDIO_SINK_Enum_t sink, unsigned int pathID);
 
 /********************************************************************
+*  @brief  Add a speaker to a playback path by indicating to PMU
+*
+*  @param   source  Source
+*  @param   sink	(in)  playback sink
+*  @param pathID (in) the pathID returned by CSL HW controller.
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_AddPlaySpk_InPMU(AUDIO_SOURCE_Enum_t source,
+			      AUDIO_SINK_Enum_t sink, unsigned int pathID);
+
+
+/********************************************************************
 *  @brief  Remove a speaker to a playback path
 *
 *  @param   source  Source
@@ -525,6 +539,20 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 ****************************************************************************/
 void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 			   AUDIO_SINK_Enum_t sink, unsigned int pathID);
+
+/********************************************************************
+*  @brief  Remove a speaker to a playback path by indicating to the PMU
+*
+*  @param   source  Source
+*  @param  sink	(in)  playback sink
+*  @param pathID (in) the pathID returned by CSL HW controller.
+*
+*  @return none
+*
+****************************************************************************/
+
+void AUDCTRL_RemovePlaySpk_InPMU(AUDIO_SOURCE_Enum_t source,
+				AUDIO_SINK_Enum_t sink, unsigned int pathID);
 
 /********************************************************************
 *  @brief  enable a record path
@@ -910,5 +938,15 @@ void AUDCTRL_UpdateUserVolSetting(
 
 void setExternalParameter(Int16 param_id, Int16 param_value, int channel);
 
+/********************************************************************
+*  @brief  Indicate PMU to add or remove IHF.
+*
+*  @param
+*
+*  @return none
+*
+****************************************************************************/
+
+void multicastToSpkr(Boolean flag);
 
 #endif /* #define __AUDIO_CONTROLLER_H__ */
