@@ -50,8 +50,13 @@ config MACH_HAWAII_FPGA_MM_V1
 	   HAWAII_MM_v1.0.0
 	   HAWAII_MM_v2.0.0
 	   HAWAII_MM_v2.0.0_fix"
-endchoice
 
+config MACH_HAWAII_FPGA_USB_V1
+	bool "Support Hawaii USB FPGA Image with dual A9"
+	help
+	   "Support Following USB FPGA Images :
+	   HAWAII_USB_v2.0.0
+endchoice
 
 config RHEA_B0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA
