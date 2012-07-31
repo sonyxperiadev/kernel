@@ -7819,6 +7819,23 @@ int __init clock_late_init(void)
 	return 0;
 }
 
+#ifdef CONFIG_MACH_HAWAII_FPGA
+struct clk clk_stub;
+
+struct clk *clk_get(struct device *dev, const char *con_id)
+{
+	return &clk_stub;
+}
+EXPORT_SYMBOL(clk_get);
+
+void clk_put(struct clk *clk)
+{
+}
+EXPORT_SYMBOL(clk_put);
+#endif
+
+
+
 #ifndef CONFIG_MACH_HAWAII_FPGA
 #ifndef CONFIG_KONA_POWER_MGR
 early_initcall(rhea_clock_init);

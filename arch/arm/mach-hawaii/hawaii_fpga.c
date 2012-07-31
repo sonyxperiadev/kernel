@@ -266,7 +266,9 @@ static struct platform_device board_sdio2_device = {
 
 /* Common devices among all the boards */
 static struct platform_device *board_sdio_plat_devices[] __initdata = {
+#ifndef CONFIG_MACH_HAWAII_FPGA_USB_V1
 	&board_sdio1_device,
+#endif
 #ifndef CONFIG_MACH_HAWAII_FPGA_MM_V1
 	&board_sdio2_device,
 #endif
@@ -303,12 +305,14 @@ static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 #if defined(CONFIG_HW_RANDOM_KONA)
 	&rng_device,
 #endif
+#endif
 
 #ifdef CONFIG_USB_DWC_OTG
 	&board_kona_hsotgctrl_platform_device,
 	&board_kona_otg_platform_device,
 #endif
-#endif
+
+
 };
 
 /* Hawaii Ray specific i2c devices */
@@ -318,6 +322,7 @@ static void __init hawaii_ray_add_i2c_devices(void)
 
 static int __init hawaii_ray_add_lateInit_devices(void)
 {
+
 #ifdef CONFIG_MMC
 	board_add_sdio_devices();
 #endif
