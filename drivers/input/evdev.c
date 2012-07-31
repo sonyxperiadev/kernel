@@ -62,6 +62,15 @@ static void evdev_pass_event(struct evdev_client *client,
 			     struct input_event *event,
 			     ktime_t mono, ktime_t real)
 {
+	/* Having clkid always to MONOTONIC is a hack. This will be required
+	 * until an application would send the EVIOCSCLOCKID ioctl to set the
+	 * right clock being used. As this is not done currently on ICS, the
+	 * default clkid is 0 (which is real) would be chosen. Android currently
+	 * uses MONOTONIC and hence touch does not work.
+	 */
+#ifdef CONFIG_EVDEV_QUIRK_FORCE_MONOTONIC
+	client->clkid = CLOCK_MONOTONIC;
+#endif
 	event->time = ktime_to_timeval(client->clkid == CLOCK_MONOTONIC ?
 					mono : real);
 
