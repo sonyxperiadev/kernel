@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.4.0-rc6 Kernel Configuration
+# Linux/arm 3.4.0 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -2941,11 +2941,10 @@ CONFIG_HAVE_ARCH_KGDB=y
 CONFIG_ARM_UNWIND=y
 CONFIG_DEBUG_USER=y
 # CONFIG_DEBUG_RODATA is not set
-CONFIG_DEBUG_LL=y
-CONFIG_DEBUG_LL_UART_NONE=y
+# CONFIG_DEBUG_LL is not set
+# CONFIG_DEBUG_LL_UART_NONE is not set
 # CONFIG_DEBUG_ICEDCC is not set
 # CONFIG_DEBUG_SEMIHOSTING is not set
-# CONFIG_EARLY_PRINTK is not set
 
 #
 # Security options
