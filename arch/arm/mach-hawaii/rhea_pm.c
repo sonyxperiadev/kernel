@@ -118,7 +118,7 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.state = RHEA_STATE_C1,
 		.enter = enter_suspend_state,
 	},
-#ifdef CONFIG_RHEA_A9_RETENTION_CSTATE
+#ifdef CONFIG_A9_RETENTION_CSTATE
 	{
 		.name = "C2",
 		.desc = "suspend-rtn", /*suspend-retention (XTAL ON)*/
@@ -158,7 +158,7 @@ static struct kona_idle_state rhea_cpu_states[] = {
 #endif
 };
 
-#ifdef CONFIG_RHEA_A9_RETENTION_CSTATE
+#ifdef CONFIG_A9_RETENTION_CSTATE
 #define NON_DORMANT_MAX_EXIT_LATENCY	RHEA_C3_EXIT_LATENCY
 #else
 #define NON_DORMANT_MAX_EXIT_LATENCY	RHEA_C1_EXIT_LATENCY
@@ -338,9 +338,6 @@ int enter_suspend_state(struct kona_idle_state* state)
 static void set_spare_power_status(unsigned int mode)
 {
 	unsigned int val;
-
-	if (get_chip_rev_id() < RHEA_CHIP_REV_B1)
-		return;
 
 	mode = mode & 0x3;
 
