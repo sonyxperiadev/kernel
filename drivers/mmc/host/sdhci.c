@@ -2042,6 +2042,24 @@ static void sdhci_do_enable_preset_value(struct sdhci_host *host, bool enable)
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
+static int sdhci_enable(struct mmc_host *mmc)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+	if (host->ops->platform_set)
+		return host->ops->platform_set(host, 1, 0);
+	else
+		return -ENODEV;
+}
+
+static int sdhci_disable(struct mmc_host *mmc)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+	if (host->ops->platform_set)
+		return host->ops->platform_set(host, 0, 0);
+	else
+		return -ENODEV;
+}
+
 static void sdhci_enable_preset_value(struct mmc_host *mmc, bool enable)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
@@ -2060,6 +2078,8 @@ static const struct mmc_host_ops sdhci_ops = {
 	.start_signal_voltage_switch	= sdhci_start_signal_voltage_switch,
 	.execute_tuning			= sdhci_execute_tuning,
 	.enable_preset_value		= sdhci_enable_preset_value,
+	.disable	= sdhci_disable,
+	.enable		= sdhci_enable,
 };
 
 /*****************************************************************************\
