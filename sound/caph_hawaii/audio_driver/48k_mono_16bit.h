@@ -1,4 +1,4 @@
-short int playback_audiotest[] = {
+short int playback_audiotest_mono[] = {
 0x4952,
 0x4646,
 0xbacc,
