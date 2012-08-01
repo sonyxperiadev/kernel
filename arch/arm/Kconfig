@@ -1025,7 +1025,6 @@ config ARCH_KONA
         select GENERIC_CLOCKEVENTS
         select ARCH_HAS_CPUFREQ
         select HAVE_SCHED_CLOCK
-        select ARM_ERRATA_743622
         select ARM_ERRATA_751472 if SMP
         select ARM_ERRATA_754322
         select ARM_ERRATA_764369 if SMP
