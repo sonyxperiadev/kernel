@@ -27,6 +27,7 @@
 #include <linux/kernel.h>
 #include <linux/cpumask.h>
 #include <linux/delay.h>
+#include <linux/module.h>
 #include <mach/io_map.h>
 #include <asm/io.h>
 #include <asm/mach/map.h>
@@ -52,6 +53,7 @@
 #include <plat/cpu.h>
 #include <plat/kona_reset_reason.h>
 #include <mach/memory.h>
+#include <mach/system.h>
 
 static void rhea_poweroff(void)
 {
@@ -68,13 +70,25 @@ static void rhea_poweroff(void)
 	while (1) ;
 }
 
-static void rhea_restart(char mode, const char *cmd)
+void rhea_restart(char mode, const char *cmd)
 {
 	if (hard_reset_reason)
 		bcmpmu_client_hard_reset(hard_reset_reason);
-	else
-		machine_restart((char*)cmd);
+	else {
+		switch (mode) {
+		case 's':
+			/* Jump into X address. Unused.
+			 * Kept to catch wrong mode*/
+			soft_restart(0);
+			break;
+		case 'h':
+		default:
+			kona_reset(mode, cmd);
+			break;
+		}
+	}
 }
+EXPORT_SYMBOL(rhea_restart);
 
 #ifdef CONFIG_CACHE_L2X0
 static void __init rhea_l2x0_init(void)
@@ -177,7 +191,6 @@ static void cpu_info_verbose(void)
 static int __init rhea_init(void)
 {
 	pm_power_off = rhea_poweroff;
-	arm_pm_restart = rhea_restart;
 
 	cpu_info_verbose();
 	pinmux_init();

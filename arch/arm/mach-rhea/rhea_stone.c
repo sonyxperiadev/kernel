@@ -142,7 +142,6 @@
 #include <linux/broadcom/wd-tapper.h>
 #endif
 
-
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
 #include "board-Rhea_wifi.h"
@@ -1805,5 +1804,6 @@ MACHINE_START(RHEA_STONE, "rheastone")
 	.handle_irq = gic_handle_irq,
 	.timer  = &kona_timer,
 	.init_machine = board_init,
-	.reserve = rhea_stone_reserve
+	.reserve = rhea_stone_reserve,
+	.restart = rhea_restart,
 MACHINE_END
