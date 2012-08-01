@@ -1111,7 +1111,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 #ifdef HAWAII_ZEBU_TEST
 		if (param.app >= AUDIO_APP_NUMBER)
 			mixInGain = 0;
-#elif
+#else
 		if (param.app >= AUDIO_APP_NUMBER)
 			mixInGain
 		= (short)p1->srcmixer_input_gain_l; /* Q13p2 dB */
@@ -1120,7 +1120,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 #endif
 #ifdef HAWAII_ZEBU_TEST
 			mixInGain = 0;
-#elif
+#else
 			mixInGain
 		= (short)p->srcmixer_input_gain_l; /* Q13p2 dB */
 #endif
@@ -1129,7 +1129,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		if (param.app >= AUDIO_APP_NUMBER)
 #ifdef HAWAII_ZEBU_TEST
 			mixInGainR = 0;
-#elif
+#else
 			mixInGainR
 		= (short)p1->srcmixer_input_gain_r; /* Q13p2 dB */
 
@@ -1138,7 +1138,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 #endif
 #ifdef HAWAII_ZEBU_TEST
 			mixInGainR = 0;
-#elif
+#else
 			mixInGainR
 		= (short)p->srcmixer_input_gain_r; /* Q13p2 dB */
 #endif
@@ -1148,7 +1148,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		if (param.app >= AUDIO_APP_NUMBER)
 #ifdef HAWAII_ZEBU_TEST
 			mixInGain = 0;
-#elif
+#else
 			mixInGain
 		= (short)p1->srcmixer_input_gain_l; /* Q13p2 dB */
 #endif
@@ -1156,7 +1156,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 #endif
 #ifdef HAWAII_ZEBU_TEST
 			mixInGain = 0;
-#elif
+#else
 			mixInGain
 		= (short)p->srcmixer_input_gain_l; /* Q13p2 dB */
 #endif
@@ -1167,7 +1167,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		if (param.app >= AUDIO_APP_NUMBER)
 #ifdef HAWAII_ZEBU_TEST
 			mixInGainR = 0;
-#elif
+#else
 			mixInGainR
 		= (short)p1->srcmixer_input_gain_r; /* Q13p2 dB */
 #endif
@@ -1175,7 +1175,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 #endif
 #ifdef HAWAII_ZEBU_TEST
 			mixInGainR = 0;
-#elif
+#else
 			mixInGainR
 		= (short)p->srcmixer_input_gain_r; /* Q13p2 dB */
 #endif
@@ -1243,7 +1243,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			if (param.app >= AUDIO_APP_NUMBER)
 #ifdef HAWAII_ZEBU_TEST
 				mixOutGain = 0;
-#elif
+#else
 				mixOutGain
 			= (short)p1->srcmixer_output_fine_gain_l;
 #endif
@@ -1251,7 +1251,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 #endif
 #ifdef HAWAII_ZEBU_TEST
 				mixOutGain = 0;
-#elif
+#else
 				mixOutGain
 					= (short)p->srcmixer_output_fine_gain_l;
 #endif
@@ -1260,7 +1260,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			if (param.app >= AUDIO_APP_NUMBER)
 #ifdef HAWAII_ZEBU_TEST
 				mixOutGainR = 0;
-#elif
+#else
 				mixOutGainR
 			= (short)p1->srcmixer_output_fine_gain_r;
 #endif
@@ -1268,7 +1268,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 #endif
 #ifdef HAWAII_ZEBU_TEST
 				mixOutGainR = 0;
-#elif
+#else
 				mixOutGainR
 					= (short)p->srcmixer_output_fine_gain_r;
 #endif
@@ -1278,7 +1278,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			if (param.app >= AUDIO_APP_NUMBER)
 #ifdef HAWAII_ZEBU_TEST
 				mixOutGain = 0;
-#elif
+#else
 				mixOutGain
 			= (short)p1->srcmixer_output_fine_gain_l;
 #endif
@@ -1286,7 +1286,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 #endif
 #ifdef HAWAII_ZEBU_TEST
 				mixOutGain = 0;
-#elif
+#else
 				mixOutGain
 					= (short)p->srcmixer_output_fine_gain_l;
 #endif
@@ -1297,7 +1297,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			if (param.app >= AUDIO_APP_NUMBER)
 #ifdef HAWAII_ZEBU_TEST
 				mixOutGainR = 0;
-#elif
+#else
 				mixOutGainR
 			= (short)p1->srcmixer_output_fine_gain_r;
 #endif
@@ -1305,7 +1305,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 #endif
 #ifdef HAWAII_ZEBU_TEST
 				mixOutGainR = 0;
-#elif
+#else
 				mixOutGainR
 					= (short)p->srcmixer_output_fine_gain_r;
 #endif
@@ -1321,14 +1321,14 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		if (param.app >= AUDIO_APP_NUMBER)
 #ifdef HAWAII_ZEBU_TEST
 			mixBitSel = 96;
-#elif
+#else
 			mixBitSel = (short)p1->srcmixer_output_coarse_gain_l;
 #endif
 		else
 #endif
 #ifdef HAWAII_ZEBU_TEST
 			mixBitSel = 96;
-#elif
+#else
 			mixBitSel = (short)p->srcmixer_output_coarse_gain_l;
 #endif
 		mixBitSel = mixBitSel / 24;
@@ -1337,14 +1337,14 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		if (param.app >= AUDIO_APP_NUMBER)
 #ifdef HAWAII_ZEBU_TEST
 			mixBitSelR = 96;
-#elif
+#else
 			mixBitSelR = (short)p1->srcmixer_output_coarse_gain_r;
 #endif
 		else
 #endif
 #ifdef HAWAII_ZEBU_TEST
 			mixBitSelR = 96;
-#elif
+#else
 			mixBitSelR = (short)p->srcmixer_output_coarse_gain_r;
 #endif
 		mixBitSelR = mixBitSelR / 24;
@@ -1441,14 +1441,14 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	if (app >= AUDIO_APP_NUMBER)
 #ifdef HAWAII_ZEBU_TEST
 		gainTemp1 = 72;
-#elif
+#else
 		gainTemp1 = p1->mic_pga; /* Q13p2 */
 #endif
 	else
 #endif
 #ifdef HAWAII_ZEBU_TEST
 		gainTemp1 = 72;
-#elif
+#else
 		gainTemp1 = p->mic_pga; /* Q13p2 */
 #endif
 	csl_caph_audioh_setMicPga_by_mB(gainTemp1 * 25);
@@ -1467,7 +1467,7 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 		gainTemp2 = 0;
 		gainTemp3 = 0;
 		gainTemp4 = 0;
-#elif
+#else
 		gainTemp1 = p1->amic_dga_coarse_gain;	/* Q13p2 dB */
 		gainTemp2 = p1->amic_dga_fine_gain;	/* Q13p2 dB */
 		gainTemp1 = p1->dmic1_dga_coarse_gain;
@@ -1488,7 +1488,7 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 		gainTemp2 = 0;
 		gainTemp3 = 0;
 		gainTemp4 = 0;
-#elif
+#else
 		gainTemp1 = p->amic_dga_coarse_gain;	/* Q13p2 dB */
 		gainTemp2 = p->amic_dga_fine_gain;	/* Q13p2 dB */
 		gainTemp1 = p->dmic1_dga_coarse_gain;
@@ -1513,7 +1513,7 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 		gainTemp2 = 0;
 		gainTemp3 = 0;
 		gainTemp4 = 0;
-#elif
+#else
 		gainTemp1 = p1->dmic3_dga_coarse_gain;
 		gainTemp2 = p1->dmic3_dga_fine_gain;
 		gainTemp3 = p1->dmic4_dga_coarse_gain;
@@ -1526,7 +1526,7 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 		gainTemp2 = 0;
 		gainTemp3 = 0;
 		gainTemp4 = 0;
-#elif
+#else
 		gainTemp1 = p->dmic3_dga_coarse_gain;
 		gainTemp2 = p->dmic3_dga_fine_gain;
 		gainTemp3 = p->dmic4_dga_coarse_gain;

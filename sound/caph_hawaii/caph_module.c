@@ -753,7 +753,7 @@ static int __devinit ALSAModuleInit(void)
 	int err = 0;
 
 	aTrace(LOG_ALSA_INTERFACE, "ALSA Module init called:\n");
-#ifdef HAWAII_ZEBU_TEST
+#ifndef HAWAII_ZEBU_TEST
 	if (is_ap_only_boot()) {
 		/* don't register audio driver for AP only boot mode */
 		aTrace(LOG_ALSA_INTERFACE, "AP Only Boot\n");
@@ -802,7 +802,7 @@ static void __devexit ALSAModuleExit(void)
 {
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:ModuleExit\n", jiffies);
-#if HAWAII_ZEBU_TEST
+#ifndef HAWAII_ZEBU_TEST
 	if (is_ap_only_boot()) {
 		/* AP only boot mode - no need to de-register */
 		aTrace(LOG_ALSA_INTERFACE, "AP Only Boot\n");
