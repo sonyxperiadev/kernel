@@ -59,8 +59,8 @@
 #include "lcd/cp_crash_end_565.h"
 #endif
 
-//#define kona_FB_DEBUG
-//#define PARTIAL_UPDATE_SUPPORT
+/*#define kona_FB_DEBUG */
+/*#define PARTIAL_UPDATE_SUPPORT */
 #define kona_FB_ENABLE_DYNAMIC_CLOCK	1
 
 #define kona_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
@@ -711,7 +711,7 @@ printk("%s:%d\n", __func__, __LINE__);
 	/* Test pattern */
 	char *dest = fb->fb.screen_base;
 	int i, j;
-	for (i = 0, j=1; i < framesize;) {
+	for (i = 0, j = 1; i < framesize;) {
 		dest[i] = j+2;
 		dest[i+1] = j+1;
 		dest[i+2] = j;
@@ -889,9 +889,8 @@ err_enable_display_failed:
 	fb->display_ops->stop(&fb->dfs_node);
 #endif
 err_fbmem_alloc_failed:
-	if (pi_mgr_dfs_request_remove(&fb->dfs_node)) {
+	if (pi_mgr_dfs_request_remove(&fb->dfs_node))
 		printk(KERN_ERR "Failed to remove dfs request for LCD\n");
-	}
 fb_data_failed:
 	kfree(fb);
 	g_kona_fb = NULL;

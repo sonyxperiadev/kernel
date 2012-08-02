@@ -195,7 +195,7 @@ CSL_DSI_CM_VC_t	NT35516_VCCmCfg = {
 	LCD_IF_CM_O_RGB888,		/* cm_out */
 	/* TE configuration */
 	{
-		//DSI_TE_CTRLR_INPUT_0,	/* DSI Te Input	Type */
+		/*DSI_TE_CTRLR_INPUT_0,*//* DSI Te Inputi Type */
 		DSI_TE_NONE,	/* DSI Te Input	Type */
 	},
 };
@@ -888,7 +888,7 @@ static void NT35516_WrCmndP0(
 	msgData[0] = reg;
 	msgData[1] = 0;
 
-	//CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
+	/*CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);*/
 }
 
 #if 0
@@ -984,7 +984,7 @@ Int32 NT35516_WinSet(
 			msgData[5] = (p_win->r & 0xFF00) >> 8;
 			msgData[6] = (p_win->r & 0x00FF);
 
-			//CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
+			/*CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);*/
 
 			msgData[0] = MIPI_DCS_SET_PAGE_ADDRESS;
 			msgData[1] = 0;
@@ -994,7 +994,7 @@ Int32 NT35516_WinSet(
 			msgData[5] = (p_win->b & 0xFF00) >> 8;
 			msgData[6] = (p_win->b & 0x00FF);
 
-			//CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
+			/*CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);*/
 
 			return 0;
 		}
@@ -1419,7 +1419,7 @@ static int NT35516_WrSendCmnd(
 		msg.isLong     = msg_size > 2;
 		msg.endWithBta = FALSE;
 
-		//CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
+		/*CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);*/
 		LCD_DBG(LCD_DBG_INIT_ID, "[DISPDRV] %s:	DT[0x%02lX] "
 			"SIZE[%lu]\n",	__func__, msg.dsiCmnd, msg_size);
 	}

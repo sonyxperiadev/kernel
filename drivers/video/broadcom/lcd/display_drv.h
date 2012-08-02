@@ -160,8 +160,8 @@ extern "C" {
 #define dispdrv2busCh(p) p == KONA_BUS_CH_0 ? 0 : \
 		p == KONA_BUS_CH_1 ? 1 : 2
 
-#define dispdrv2busW(p) p == KONA_BUS_WIDTH_08 ? 8:   \
-		p == KONA_BUS_WIDTH_09 ? 9:   \
+#define dispdrv2busW(p) p == KONA_BUS_WIDTH_08 ? 8 :   \
+		p == KONA_BUS_WIDTH_09 ? 9 :   \
 		p == KONA_BUS_WIDTH_16 ? 16 : \
 		p == KONA_BUS_WIDTH_18 ? 18 : 0
 
@@ -174,10 +174,10 @@ extern "C" {
 		p == KONA_CM_I_XRGB888 ? LCD_IF_CM_I_RGB888U : \
 		LCD_IF_CM_I_INV
 
-#define dispdrv2cmOut(p) p==KONA_CM_O_RGB565 ? LCD_IF_CM_O_RGB565 : \
-		p==KONA_CM_O_RGB565_DSI_VM ? LCD_IF_CM_O_RGB565_DSI_VM:\
-		p==KONA_CM_O_RGB666 ? LCD_IF_CM_O_RGB666 : \
-		p==KONA_CM_O_RGB888 ? LCD_IF_CM_O_RGB888 : \
+#define dispdrv2cmOut(p) p ==KONA_CM_O_RGB565 ? LCD_IF_CM_O_RGB565 : \
+		p ==KONA_CM_O_RGB565_DSI_VM ? LCD_IF_CM_O_RGB565_DSI_VM:\
+		p ==KONA_CM_O_RGB666 ? LCD_IF_CM_O_RGB666 : \
+		p ==KONA_CM_O_RGB888 ? LCD_IF_CM_O_RGB888 : \
 		LCD_IF_CM_O_INV
 
 /**
