@@ -26,27 +26,55 @@
 #include <linux/io.h>
 #include <linux/init.h>
 #include <linux/jiffies.h>
+#include <linux/sched.h>
 
 #include "ipc_stubs.h"
+
+static UInt32	IpcSyncTime;
+static UInt32	IpcSyncJiffies;
+
+#define JIFFIES_TO_NS (1000000000 / HZ)
+
+
+/******************************************************************************/
+/**
+ *   Ajust the timestamp since jiffies doesn't adjust/jump after deep sleep
+ *
+ *	@return		Number of clock ticks since system startup.
+ *
+ ******************************************************************************/
+void IPC_AlignTime(void)
+{
+	unsigned long long t;
+
+	IpcSyncJiffies = (UInt32)jiffies;
+
+	t = cpu_clock(smp_processor_id());
+	if (do_div(t, JIFFIES_TO_NS) >= JIFFIES_TO_NS/2)
+	{
+		IpcSyncTime = (UInt32)t + 1;
+	}
+	else
+	{
+		IpcSyncTime = (UInt32)t;
+	}
+
+	//printk(KERN_CRIT "IPC_AlignTime time=%u jiffis=%u\n", (unsigned int)IpcSyncTime, (unsigned int)IpcSyncJiffies);
+}
+
 
 /******************************************************************************/
 /**
  *   Retrieve the current value of the system timer tick counter
  *
- *	@return		Number of clock ticks since system startup.
+ *	@return		Number of ticks (jiffies) since system startup.
  *
  ******************************************************************************/
 UInt32 TIMER_GetValue(void)
 {
-	/**
-	 *  **FixMe** Does not match the CP's timer
-	 * (required for matching AP/CP
-	 *
-	 * timestamps), but good enough for AP side debugging.
-	 */
-	return jiffies;
-	/* return timer_get_tick_count(); */
+	return IpcSyncTime + (UInt32)((int)jiffies - (int)IpcSyncJiffies);
 }
+
 
 void CAPI2_Assert(char *expr, char *file, int line, int value)
 {
@@ -55,3 +83,4 @@ void CAPI2_Assert(char *expr, char *file, int line, int value)
 	IPCCP_SetCPCrashedStatus(IPC_AP_ASSERT);
 #endif
 }
+

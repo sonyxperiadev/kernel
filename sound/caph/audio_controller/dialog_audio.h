@@ -82,8 +82,12 @@ extern int dialog_set_hs_noise_gate(dialog_noise_gate_t noisegate);
 extern int dialog_set_ihf_noise_gate(dialog_noise_gate_t noisegate);
 extern int dialog_set_ihf_none_clip(dialog_spk_nonclip_t noneclip);
 extern int dialog_set_ihf_pwr(dialog_spk_pwr_t power);
-
+extern int dialog_turn_multicast_onoff(unsigned char flag);
 #endif
+
+
+
+
 #endif
 
 

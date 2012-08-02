@@ -79,7 +79,7 @@ MODULE_LICENSE("GPL");
 
 
 /* turn off audio debug traces by default */
-int gAudioDebugLevel;
+int gAudioDebugLevel = 15;
 module_param(gAudioDebugLevel, int, 0);
 
 static brcm_alsa_chip_t *sgpCaph_chip;
@@ -166,7 +166,7 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 		if (ret != 0)
 			aError("ALSA DriverProbe Error to create "
 			"sysfs for Auddrv test ret = %d\n", ret);
-//#ifdef CONFIG_BCM_AUDIO_SELFTEST
+ /*#ifdef CONFIG_BCM_AUDIO_SELFTEST */
 #if 0
 		ret = BrcmCreateAuddrv_selftestSysFs(card);
 		if (ret != 0)
@@ -753,12 +753,13 @@ static int __devinit ALSAModuleInit(void)
 	int err = 0;
 
 	aTrace(LOG_ALSA_INTERFACE, "ALSA Module init called:\n");
+#ifndef HAWAII_ZEBU_TEST
 	if (is_ap_only_boot()) {
 		/* don't register audio driver for AP only boot mode */
 		aTrace(LOG_ALSA_INTERFACE, "AP Only Boot\n");
 		return 0;
 	}
-
+#endif
 	err = platform_device_register(&sgPlatformDevice);
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:device register done %d\n"
 			, jiffies, err);
@@ -801,12 +802,13 @@ static void __devexit ALSAModuleExit(void)
 {
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:ModuleExit\n", jiffies);
+#ifndef HAWAII_ZEBU_TEST
 	if (is_ap_only_boot()) {
 		/* AP only boot mode - no need to de-register */
 		aTrace(LOG_ALSA_INTERFACE, "AP Only Boot\n");
 		return;
 	}
-
+#endif
 	snd_card_free(sgpCaph_chip->card);
 
 	platform_driver_unregister(&sgPlatformDriver);

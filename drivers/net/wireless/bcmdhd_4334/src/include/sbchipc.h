@@ -288,8 +288,12 @@ typedef volatile struct {
 	uint32	pllcontrol_addr;
 	uint32	pllcontrol_data;
 	uint32	pmustrapopt;		
-	uint32	pmu_xtalfreq;		
-	uint32	PAD[100];
+	uint32	pmu_xtalfreq;
+	uint32  retention_ctl;
+	uint32	PAD[3];
+	uint32  retention_grpidx;
+	uint32  retention_grpctl;
+	uint32  PAD[94];
 	uint16	sromotp[512];		
 	
 	uint32	nand_revision;		

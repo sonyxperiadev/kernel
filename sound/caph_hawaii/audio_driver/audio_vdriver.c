@@ -1108,43 +1108,77 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		param.mixInGainR_mB == GAIN_SYSPARM) {
 		/*GAIN_SYSPARM means use sysparm*/
 #if defined(USE_NEW_AUDIO_MM_PARAM)
+#ifdef HAWAII_ZEBU_TEST
+		if (param.app >= AUDIO_APP_NUMBER)
+			mixInGain = 0;
+#else
 		if (param.app >= AUDIO_APP_NUMBER)
 			mixInGain
 		= (short)p1->srcmixer_input_gain_l; /* Q13p2 dB */
+#endif
 		else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+			mixInGain = 0;
+#else
 			mixInGain
 		= (short)p->srcmixer_input_gain_l; /* Q13p2 dB */
+#endif
 		mixInGain = mixInGain * 25;	/* into mB */
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 		if (param.app >= AUDIO_APP_NUMBER)
+#ifdef HAWAII_ZEBU_TEST
+			mixInGainR = 0;
+#else
 			mixInGainR
 		= (short)p1->srcmixer_input_gain_r; /* Q13p2 dB */
+
+#endif
 		else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+			mixInGainR = 0;
+#else
 			mixInGainR
 		= (short)p->srcmixer_input_gain_r; /* Q13p2 dB */
+#endif
 		mixInGainR = mixInGainR * 25;	/* into mB */
 	} else if (param.mixInGain_mB == GAIN_SYSPARM) {
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 		if (param.app >= AUDIO_APP_NUMBER)
+#ifdef HAWAII_ZEBU_TEST
+			mixInGain = 0;
+#else
 			mixInGain
 		= (short)p1->srcmixer_input_gain_l; /* Q13p2 dB */
+#endif
 		else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+			mixInGain = 0;
+#else
 			mixInGain
 		= (short)p->srcmixer_input_gain_l; /* Q13p2 dB */
+#endif
 		mixInGain = mixInGain * 25;	/* into mB */
 		mixInGainR = param.mixInGainR_mB;
 	} else if (param.mixInGainR_mB == GAIN_SYSPARM) {
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 		if (param.app >= AUDIO_APP_NUMBER)
+#ifdef HAWAII_ZEBU_TEST
+			mixInGainR = 0;
+#else
 			mixInGainR
 		= (short)p1->srcmixer_input_gain_r; /* Q13p2 dB */
+#endif
 		else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+			mixInGainR = 0;
+#else
 			mixInGainR
 		= (short)p->srcmixer_input_gain_r; /* Q13p2 dB */
+#endif
 		mixInGainR = mixInGainR * 25;	/* into mB */
 		mixInGain = param.mixInGain_mB;
 	} else {
@@ -1207,42 +1241,74 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			/* Q13p2 dB */
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 			if (param.app >= AUDIO_APP_NUMBER)
+#ifdef HAWAII_ZEBU_TEST
+				mixOutGain = 0;
+#else
 				mixOutGain
 			= (short)p1->srcmixer_output_fine_gain_l;
+#endif
 			else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+				mixOutGain = 0;
+#else
 				mixOutGain
 					= (short)p->srcmixer_output_fine_gain_l;
+#endif
 			mixOutGain = mixOutGain * 25;	/*into mB */
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 			if (param.app >= AUDIO_APP_NUMBER)
+#ifdef HAWAII_ZEBU_TEST
+				mixOutGainR = 0;
+#else
 				mixOutGainR
 			= (short)p1->srcmixer_output_fine_gain_r;
+#endif
 			else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+				mixOutGainR = 0;
+#else
 				mixOutGainR
 					= (short)p->srcmixer_output_fine_gain_r;
+#endif
 			mixOutGainR = mixOutGainR * 25;	/*into mB */
 		} else if (param.mixOutGain_mB == GAIN_SYSPARM) {
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 			if (param.app >= AUDIO_APP_NUMBER)
+#ifdef HAWAII_ZEBU_TEST
+				mixOutGain = 0;
+#else
 				mixOutGain
 			= (short)p1->srcmixer_output_fine_gain_l;
+#endif
 			else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+				mixOutGain = 0;
+#else
 				mixOutGain
 					= (short)p->srcmixer_output_fine_gain_l;
+#endif
 			mixOutGain = mixOutGain * 25;	/*into mB */
 			mixOutGainR = param.mixOutGainR_mB;
 		} else if (param.mixOutGainR_mB == GAIN_SYSPARM) {
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 			if (param.app >= AUDIO_APP_NUMBER)
+#ifdef HAWAII_ZEBU_TEST
+				mixOutGainR = 0;
+#else
 				mixOutGainR
 			= (short)p1->srcmixer_output_fine_gain_r;
+#endif
 			else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+				mixOutGainR = 0;
+#else
 				mixOutGainR
 					= (short)p->srcmixer_output_fine_gain_r;
+#endif
 			mixOutGainR = mixOutGainR * 25;	/*into mB */
 			mixOutGain = param.mixOutGain_mB;
 		} else {
@@ -1253,18 +1319,34 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		/* Q13p2 dB */
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 		if (param.app >= AUDIO_APP_NUMBER)
+#ifdef HAWAII_ZEBU_TEST
+			mixBitSel = 96;
+#else
 			mixBitSel = (short)p1->srcmixer_output_coarse_gain_l;
+#endif
 		else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+			mixBitSel = 96;
+#else
 			mixBitSel = (short)p->srcmixer_output_coarse_gain_l;
+#endif
 		mixBitSel = mixBitSel / 24;
 		/* bit_shift */
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 		if (param.app >= AUDIO_APP_NUMBER)
+#ifdef HAWAII_ZEBU_TEST
+			mixBitSelR = 96;
+#else
 			mixBitSelR = (short)p1->srcmixer_output_coarse_gain_r;
+#endif
 		else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+			mixBitSelR = 96;
+#else
 			mixBitSelR = (short)p->srcmixer_output_coarse_gain_r;
+#endif
 		mixBitSelR = mixBitSelR / 24;
 		/* bit_shift */
 
@@ -1357,11 +1439,18 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	***/
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER)
+#ifdef HAWAII_ZEBU_TEST
+		gainTemp1 = 72;
+#else
 		gainTemp1 = p1->mic_pga; /* Q13p2 */
+#endif
 	else
 #endif
+#ifdef HAWAII_ZEBU_TEST
+		gainTemp1 = 72;
+#else
 		gainTemp1 = p->mic_pga; /* Q13p2 */
-
+#endif
 	csl_caph_audioh_setMicPga_by_mB(gainTemp1 * 25);
 
 	aTrace(LOG_AUDIO_DRIVER,
@@ -1369,6 +1458,16 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 		app, gainTemp1*25);
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER) {
+#ifdef HAWAII_ZEBU_TEST
+		gainTemp1 = 0;
+		gainTemp2 = 0;
+		gainTemp1 = 0;
+		/* dmic1_dga_coarse_gain is the same
+		 * register as amic_dga_coarse_gain */
+		gainTemp2 = 0;
+		gainTemp3 = 0;
+		gainTemp4 = 0;
+#else
 		gainTemp1 = p1->amic_dga_coarse_gain;	/* Q13p2 dB */
 		gainTemp2 = p1->amic_dga_fine_gain;	/* Q13p2 dB */
 		gainTemp1 = p1->dmic1_dga_coarse_gain;
@@ -1377,8 +1476,19 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 		gainTemp2 = p1->dmic1_dga_fine_gain;
 		gainTemp3 = p1->dmic2_dga_coarse_gain;
 		gainTemp4 = p1->dmic2_dga_fine_gain;
-	} else{
 #endif
+	} else {
+#endif
+#ifdef HAWAII_ZEBU_TEST
+		gainTemp1 = 0;
+		gainTemp2 = 0;
+		gainTemp1 = 0;
+		/* dmic1_dga_coarse_gain is the same
+		 * register as amic_dga_coarse_gain */
+		gainTemp2 = 0;
+		gainTemp3 = 0;
+		gainTemp4 = 0;
+#else
 		gainTemp1 = p->amic_dga_coarse_gain;	/* Q13p2 dB */
 		gainTemp2 = p->amic_dga_fine_gain;	/* Q13p2 dB */
 		gainTemp1 = p->dmic1_dga_coarse_gain;
@@ -1387,6 +1497,7 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 		gainTemp2 = p->dmic1_dga_fine_gain;
 		gainTemp3 = p->dmic2_dga_coarse_gain;
 		gainTemp4 = p->dmic2_dga_fine_gain;
+#endif
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	}
 #endif
@@ -1397,16 +1508,31 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 						((int)gainTemp4) * 25);
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER) {
+#ifdef HAWAII_ZEBU_TEST
+		gainTemp1 = 0;
+		gainTemp2 = 0;
+		gainTemp3 = 0;
+		gainTemp4 = 0;
+#else
 		gainTemp1 = p1->dmic3_dga_coarse_gain;
 		gainTemp2 = p1->dmic3_dga_fine_gain;
 		gainTemp3 = p1->dmic4_dga_coarse_gain;
 		gainTemp4 = p1->dmic4_dga_fine_gain;
-	} else{
 #endif
+	} else {
+#endif
+#ifdef HAWAII_ZEBU_TEST
+		gainTemp1 = 0;
+		gainTemp2 = 0;
+		gainTemp3 = 0;
+		gainTemp4 = 0;
+#else
 		gainTemp1 = p->dmic3_dga_coarse_gain;
 		gainTemp2 = p->dmic3_dga_fine_gain;
 		gainTemp3 = p->dmic4_dga_coarse_gain;
 		gainTemp4 = p->dmic4_dga_fine_gain;
+#endif
+
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	}
 #endif

@@ -793,6 +793,10 @@ typedef enum {
 	/** 383	Call request is blocked by BDN settings */
 	CC_BDN_BLOCK_MAKE_CALL,
 
+	/** 384	Call request failed due to collision with MT */
+	CC_FAIL_CALL_MT_IN_PROGRESS,
+
+
 	/* ------ Result code for CME GPRS error ----- */
 
 	/** 400	Illegal MS */

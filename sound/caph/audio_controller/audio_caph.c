@@ -142,6 +142,10 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 		"ConnectDL",
 		"UpdateUserVolSetting",
 		"BufferReady",
+		"BTTest",
+		"CfgIHF",
+		"CfgSSP",
+		"HwCtl",
 		"AtCtl",
 };
 
@@ -421,6 +425,18 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 		break;
 	case ACTION_AUD_AtCtl:
 		size = sizeof(BRCM_AUDIO_Param_AtCtl_t);
+		break;
+	case ACTION_AUD_BTTest:
+		size = sizeof(BRCM_AUDIO_Param_BT_Test_t);
+		break;
+	case ACTION_AUD_CfgIHF:
+		size = sizeof(BRCM_AUDIO_Param_Cfg_IHF_t);
+		break;
+	case ACTION_AUD_CfgSSP:
+		size = sizeof(BRCM_AUDIO_Param_Cfg_SSP_t);
+		break;
+	case ACTION_AUD_HwCtl:
+		size = sizeof(BRCM_AUDIO_Param_HwCtl_t);
 		break;
 	default:
 		break;
@@ -820,6 +836,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    && param_start->stream <
 			    (CTL_STREAM_PANEL_LAST - 1));
 
+		sgpCaph_chip->streamCtl[param_start->stream].playback_stop = 0;
+
 		sgpCaph_chip->streamCtl[param_start->stream].playback_prev_time
 			= 0;
 
@@ -873,6 +891,9 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    && param_stop->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
 
+			sgpCaph_chip->
+				streamCtl[param_stop->stream].playback_stop = 1;
+
 			AUDIO_DRIVER_Ctrl(param_stop->drv_handle,
 					  AUDIO_DRIVER_STOP, NULL);
 
@@ -885,7 +906,17 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					if (param_stop->stream >=
 						 CAPH_MAX_PCM_STREAMS)
 						break;
-
+#ifdef THIRD_PARTY_PMU
+					AUDCTRL_RemovePlaySpk_InPMU(param_stop->
+							      pdev_prop->p[0]
+							      .source,
+							      param_stop->
+							      pdev_prop->p[i].
+							      sink,
+							      pathID
+							      [param_stop->
+							       stream]);
+#else
 					AUDCTRL_RemovePlaySpk(param_stop->
 							      pdev_prop->p[0]
 							      .source,
@@ -895,6 +926,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 							      pathID
 							      [param_stop->
 							       stream]);
+#endif
 				}
 			}
 
@@ -1140,9 +1172,15 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 			app_profile = AUDIO_Policy_Get_Profile(AUDIO_APP_MUSIC);
 			AUDCTRL_SaveAudioApp(app_profile);
+#ifdef THIRD_PARTY_PMU
+			/* coverity[overrun-local] */
+			AUDCTRL_AddPlaySpk_InPMU(parm_spkr->src,
+				parm_spkr->sink, pathID[parm_spkr->stream]);
+#else
 			/* coverity[overrun-local] */
 			AUDCTRL_AddPlaySpk(parm_spkr->src, parm_spkr->sink,
 					   pathID[parm_spkr->stream]);
+#endif
 		}
 		break;
 	case ACTION_AUD_RemoveChannel:
@@ -1153,9 +1191,16 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_spkr->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+#ifdef THIRD_PARTY_PMU
+
+			/* coverity[overrun-local] */
+			AUDCTRL_RemovePlaySpk_InPMU(parm_spkr->src,
+				parm_spkr->sink, pathID[parm_spkr->stream]);
+#else
 			/* coverity[overrun-local] */
 			AUDCTRL_RemovePlaySpk(parm_spkr->src, parm_spkr->sink,
 					      pathID[parm_spkr->stream]);
+#endif
 		}
 		break;
 
@@ -1618,6 +1663,52 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			/*copy values back to arg_param */
 			memcpy((void *)arg_param, (void *)&parm_atctl,
 				sizeof(BRCM_AUDIO_Param_AtCtl_t));
+		}
+		break;
+	case ACTION_AUD_BTTest:
+		{
+			BRCM_AUDIO_Param_BT_Test_t *param_bt =
+				(BRCM_AUDIO_Param_BT_Test_t *) arg_param;
+			aTrace(LOG_AUDIO_CNTLR,
+				"\n %lx:AUDIO_Ctrl_Process-"
+				"ACTION_AUD_BTTest.\n", jiffies);
+			AUDCTRL_SetBTMode(param_bt->mode);
+		}
+		break;
+	case ACTION_AUD_CfgIHF:
+		{
+			BRCM_AUDIO_Param_Cfg_IHF_t *param_ihf =
+				(BRCM_AUDIO_Param_Cfg_IHF_t *) arg_param;
+			aTrace(LOG_AUDIO_CNTLR,
+				"\n %lx:AUDIO_Ctrl_Process-"
+				"ACTION_AUD_CfgIHF.\n", jiffies);
+			AUDCTRL_SetIHFmode(param_ihf->stIHF);
+		}
+		break;
+	case ACTION_AUD_CfgSSP:
+		{
+			BRCM_AUDIO_Param_Cfg_SSP_t *param_ssp =
+				(BRCM_AUDIO_Param_Cfg_SSP_t *) arg_param;
+			aTrace(LOG_AUDIO_CNTLR,
+				"\n %lx:AUDIO_Ctrl_Process-"
+				"ACTION_AUD_CfgSSP.\n", jiffies);
+			AUDCTRL_ConfigSSP(param_ssp->mode,
+				param_ssp->bus,
+				param_ssp->en_lpbk);
+		}
+		break;
+	case ACTION_AUD_HwCtl:
+		{
+			BRCM_AUDIO_Param_HwCtl_t *param_hwCtl =
+				(BRCM_AUDIO_Param_HwCtl_t *) arg_param;
+			aTrace(LOG_AUDIO_CNTLR,
+				"\n %lx:AUDIO_Ctrl_Process-"
+				"ACTION_AUD_HwCtl.\n", jiffies);
+			AUDCTRL_HardwareControl(param_hwCtl->access_type,
+				param_hwCtl->arg1,
+				param_hwCtl->arg2,
+				param_hwCtl->arg3,
+				param_hwCtl->arg4);
 		}
 		break;
 	default:

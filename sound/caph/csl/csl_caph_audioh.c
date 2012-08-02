@@ -2666,6 +2666,9 @@ void csl_caph_audioh_start_ihf(void)
 	chnl_enable = CHAL_AUDIO_CHANNEL_LEFT;
 
 	chal_audio_ihfpath_set_dac_pwr(handle, chnl_enable);
+
+	epIHFStatus |= CSL_CAPH_AUDIOH_IHF_ON;
+
 	chal_audio_ihfpath_set_gain(handle, 0);
 	/*chal_audio_ihfpath_enable(handle, chnl_enable);*/
 }

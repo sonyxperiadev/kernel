@@ -522,6 +522,19 @@ sdioh_iovar_op(sdioh_info_t *si, const char *name,
 		/* Now set it */
 		si->client_block_size[func] = blksize;
 
+#ifdef VSDB_DYNAMIC_F2_BLKSIZE
+		if (gInstance == NULL || gInstance->func[func] == NULL) {
+			sd_err(("%s: SDIO Device not present\n", __FUNCTION__));
+			bcmerror = BCME_NORESOURCE;
+			break;
+		}
+		sdio_claim_host(gInstance->func[func]);
+		bcmerror = sdio_set_block_size(gInstance->func[func], blksize);
+		if (bcmerror) {
+			sd_err(("%s: Failed to set F%d blocksize to %d\n", __FUNCTION__, func, blksize));
+		}
+		sdio_release_host(gInstance->func[func]);
+#endif
 		break;
 	}
 
@@ -1044,6 +1057,10 @@ sdioh_request_packet(sdioh_info_t *sd, uint fix_inc, uint write, uint func,
 			else if(pkt_len % DHD_SDALIGN) // write
 				pkt_len += DHD_SDALIGN - (pkt_len % DHD_SDALIGN);
 
+#ifdef VSDB_DYNAMIC_F2_BLKSIZE
+			if (write && pkt_len > 64 && (pkt_len % 64) == 32)
+				pkt_len += 32;
+#endif
 #ifdef CONFIG_MMC_MSM7X00A
 			if ((pkt_len % 64) == 32) {
 				sd_trace(("%s: Rounding up TX packet +=32\n", __FUNCTION__));

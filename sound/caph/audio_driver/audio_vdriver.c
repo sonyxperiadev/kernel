@@ -2064,11 +2064,7 @@ static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 
 	csl_caph_dspcb(enabled_path & ~((UInt16)DSP_AADMAC_RETIRE_DS_CMD));
 
-	/*aError("i_e");*/
-
 	complete(&audioEnableDone);
-
-	/*aError("i_f");*/
 }
 
 #if defined(CONFIG_RHEA_PANDA)

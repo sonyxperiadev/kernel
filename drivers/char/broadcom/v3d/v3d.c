@@ -538,7 +538,8 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 					    ("Trying to free current job[0x%08x]",
 					     (u32)last_match_job);
 					//Reset V3D to stop executing current job
-					v3d_reset();
+					if (v3d_job_curr->job_status == V3D_JOB_STATUS_RUNNING)
+						v3d_reset();
 					v3d_job_kill((v3d_job_t *)v3d_job_curr,
 						     V3D_JOB_STATUS_ERROR);
 					curr_job_killed = 1;
@@ -571,7 +572,8 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 				KLOG_D
 				    ("Trying to free current job - head[0x%08x]",
 				     (u32)last_match_job);
-				v3d_reset();
+				if (v3d_job_curr->job_status == V3D_JOB_STATUS_RUNNING)
+					v3d_reset();
 				v3d_job_kill((v3d_job_t *)v3d_job_curr,
 					     V3D_JOB_STATUS_ERROR);
 				curr_job_killed = 1;
@@ -1460,7 +1462,7 @@ static irqreturn_t v3d_isr_worklist(int irq, void *dev_id)
 		}
 	}
 
-	if (v3d_flags) {
+	if (v3d_flags && v3d_job_curr) {
 		v3d_job_t *p_v3d_job = (v3d_job_t *)v3d_job_curr;
 
 		irq_retval = 1;

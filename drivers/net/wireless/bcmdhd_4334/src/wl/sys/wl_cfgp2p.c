@@ -1380,8 +1380,10 @@ wl_cfgp2p_listen_complete(struct wl_priv *wl, struct net_device *ndev,
 #ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
 			wl_clr_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, ndev);
 #endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
-			cfg80211_remain_on_channel_expired(ndev, wl->last_roc_id,
-				&wl->remain_on_chan, wl->remain_on_chan_type, GFP_KERNEL);
+			if (ndev && (ndev->ieee80211_ptr != NULL)) {
+				cfg80211_remain_on_channel_expired(ndev, wl->last_roc_id,
+					&wl->remain_on_chan, wl->remain_on_chan_type, GFP_KERNEL);
+			}
 		}
 		if (wl_add_remove_eventmsg(netdev, WLC_E_P2P_PROBREQ_MSG, false) != BCME_OK) {
 			CFGP2P_ERR((" failed to unset WLC_E_P2P_PROPREQ_MSG\n"));
@@ -1740,7 +1742,7 @@ wl_cfgp2p_supported(struct wl_priv *wl, struct net_device *ndev)
 	ret = wldev_iovar_getint(ndev, "p2p",
 	               &p2p_supported);
 	if (ret < 0) {
-		CFGP2P_ERR(("wl p2p error %d\n", ret));
+		CFGP2P_ERR(("wl p2p supported IOVAR = %d\n", ret));
 		return 0;
 	}
 	if (p2p_supported == 1) {

@@ -115,11 +115,24 @@ typedef struct IPC_SmFifoPair_S {
 } IPC_SmFifoPair_T;
 
 /**************************************************/
-/* IPC interrupt counter, used for detecting interrupt loss and CP hang */
-typedef struct IPC_IntCount_S {
-	IPC_U32 InterruptRaised;
-	IPC_U32 InterruptHandled;
-} IPC_IntCount_T;
+/* IPC interrupt counter and timestamp, used for detecting interrupt loss and CP hang */
+typedef struct IPC_IrqCount_S {
+	IPC_U32 IrqRaised;
+	IPC_U32 IrqHandled;
+} IPC_IrqCount_T;
+
+typedef struct IPC_IrqTime_S {
+	IPC_U32 IrqRaiseTime;
+	IPC_U32 IrqRaiseTimeCopy;
+	IPC_U32 IrqHandleTime;
+} IPC_IrqTime_T;
+
+/**************************************************/
+/* CPU Sleep and Resume timestamp */
+typedef struct IPC_SleepTime_S {
+	IPC_U32 SleepTime;
+	IPC_U32 ResumeTime;
+} IPC_SleepTime_T;
 
 /**************************************************/
 /* Structure containing control information for Shared Memory */
@@ -138,8 +151,13 @@ typedef volatile struct IPC_SmControl_S {
 	volatile IPC_SmPtr FirstPool;
 	volatile IPC_SmPtr LastPool;
 	volatile IPC_U32 PersistentData[IPC_PERSISTENT_DATA_SIZE];
+
+	volatile IPC_U32 Unused[256 - 8 - 24];
+	volatile IPC_SleepTime_T ApSleepTime[4];
+	volatile IPC_IrqTime_T IrqTime[IPC_CPU_ARRAY_SIZE][4];
+
 	volatile IPC_U32 Properties[IPC_NUM_OF_PROPERTIES];
-	volatile IPC_IntCount_T Interrupts[IPC_CPU_ARRAY_SIZE];
+	volatile IPC_IrqCount_T IrqCounts[IPC_CPU_ARRAY_SIZE];
 	volatile IPC_U32 Version[IPC_CPU_ARRAY_SIZE];
 	volatile IPC_U32 Reserved[8];
 	volatile IPC_U32 Size;

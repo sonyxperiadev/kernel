@@ -190,6 +190,7 @@ struct _TPcm_Stream_Ctrls {
 	struct completion *pStopCompletion;
 	s32 xrun_occured;
 	UInt32 playback_prev_time;
+	UInt32 playback_stop;
 	UInt32 period_ms;
 };
 

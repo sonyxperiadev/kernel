@@ -168,6 +168,11 @@ struct _SysAudioParm_t {
 	UInt32 audio_param_address;
 	UInt16 audio_channel;
 	UInt16 speaker_pga;  /* level, index */
+	UInt16 ext_speaker_preamp_pga;
+	UInt16 ext_speaker_param1;  //customer pmu param1
+	UInt16 ext_speaker_param2;  //customer pmu param2
+	UInt16 ext_speaker_param3;  //customer pmu param3
+	UInt16 ext_speaker_param4;  //customer pmu param4
 	UInt16 mic_pga;      /* level, index */
 	UInt16 max_mic_gain;
 	UInt16 sidetone;

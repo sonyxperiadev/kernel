@@ -50,8 +50,13 @@ config MACH_HAWAII_FPGA_MM_V1
 	   HAWAII_MM_v1.0.0
 	   HAWAII_MM_v2.0.0
 	   HAWAII_MM_v2.0.0_fix"
-endchoice
 
+config MACH_HAWAII_FPGA_USB_V1
+	bool "Support Hawaii USB FPGA Image with dual A9"
+	help
+	   "Support Following USB FPGA Images :
+	   HAWAII_USB_v2.0.0
+endchoice
 
 config RHEA_B0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA
@@ -194,5 +199,13 @@ config RHEA_PI_MGR_DISABLE_POLICY_CHANGE
 	help
 	  Debug flag to diable PI policy change by default. All PI
 	  policy will be set to wakeup policy 7
+
+config A9_RETENTION_CSTATE
+	bool "Turn ON A9 retention state"
+	default n
+	help
+	  Option to enable A9 retention state for cpuidle. A9 retention
+	  results in A9 domain voltage being lowered, resulting in better
+	  power savings during idle.
 
 endmenu

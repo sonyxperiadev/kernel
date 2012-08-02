@@ -239,5 +239,12 @@ void extern_set_ihf_preamp_gain(int gain_mB);
 
 void extern_set_hs_preamp_gain(int gain_mB);
 
-
+/********************************************************************
+*  @brief  Set Multicast on/off on PMU
+*
+*  @param  flag	IHF on/off for multicasting
+*  @return  none
+*
+****************************************************************************/
+void extern_start_stop_multicast(unsigned char flag);
 #endif
