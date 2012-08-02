@@ -29,38 +29,6 @@ static unsigned short  libra_sdio_card_id;
 static suspend_handler_t *libra_suspend_hldr;
 static resume_handler_t *libra_resume_hldr;
 static notify_card_removal_t *libra_notify_card_removal_hdlr;
-static shutdown_handler_t *libra_sdio_shutdown_hdlr;
-
-int libra_enable_sdio_irq_in_chip(struct sdio_func *func, u8 enable)
-{
-	unsigned char reg = 0;
-	int err = 0;
-
-	sdio_claim_host(func);
-
-	/* Read the value into reg */
-	libra_sdiocmd52(func, SDIO_CCCR_IENx, &reg, 0, &err);
-	if (err)
-		printk(KERN_ERR "%s: Could not read  SDIO_CCCR_IENx register "
-				"err=%d\n", __func__, err);
-
-	if (libra_mmc_host) {
-		if (enable) {
-			reg |= 1 << func->num;
-			reg |= 1;
-		} else {
-			reg &= ~(1 << func->num);
-		}
-		libra_sdiocmd52(func, SDIO_CCCR_IENx, &reg, 1, &err);
-		if (err)
-			printk(KERN_ERR "%s: Could not enable/disable irq "
-					 "err=%d\n", __func__, err);
-	 }
-	sdio_release_host(func);
-
-	return err;
-}
-EXPORT_SYMBOL(libra_enable_sdio_irq_in_chip);
 
 int libra_enable_sdio_irq_in_chip(struct sdio_func *func, u8 enable)
 {
@@ -484,23 +452,6 @@ static int libra_sdio_resume(struct device *dev)
 #define libra_sdio_resume 0
 #endif
 
-static void libra_sdio_shutdown(struct device *dev)
-{
-	if (libra_sdio_shutdown_hdlr) {
-		libra_sdio_shutdown_hdlr();
-		printk(KERN_INFO "%s : Notified shutdown event to Libra driver.\n",
-			 __func__);
-	}
-}
-
-int libra_sdio_register_shutdown_hdlr(
-		shutdown_handler_t *libra_shutdown_hdlr)
-{
-	libra_sdio_shutdown_hdlr = libra_shutdown_hdlr;
-	return 0;
-}
-EXPORT_SYMBOL(libra_sdio_register_shutdown_hdlr);
-
 int libra_sdio_notify_card_removal(
 		notify_card_removal_t *libra_sdio_notify_card_removal_hdlr)
 {
@@ -521,12 +472,11 @@ static const struct dev_pm_ops libra_sdio_pm_ops = {
 };
 
 static struct sdio_driver libra_sdiofn_driver = {
-	.name      = "libra_sdiofn",
-	.id_table  = libra_sdioid,
-	.probe     = libra_sdio_probe,
-	.remove    = libra_sdio_remove,
-	.drv.pm    = &libra_sdio_pm_ops,
-	.drv.shutdown    = libra_sdio_shutdown,
+    .name      = "libra_sdiofn",
+    .id_table  = libra_sdioid,
+    .probe     = libra_sdio_probe,
+    .remove    = libra_sdio_remove,
+    .drv.pm    = &libra_sdio_pm_ops,
 };
 
 static int __init libra_sdioif_init(void)
@@ -537,7 +487,6 @@ static int __init libra_sdioif_init(void)
 	libra_suspend_hldr = NULL;
 	libra_resume_hldr = NULL;
 	libra_notify_card_removal_hdlr = NULL;
-	libra_sdio_shutdown_hdlr = NULL;
 
 	sdio_register_driver(&libra_sdiofn_driver);
 
