@@ -74,6 +74,11 @@
 #define UART_CLK_HZ 26000000
 #endif
 
+#ifdef CONFIG_FB_BRCM_KONA
+#include <video/kona_fb_boot.h>
+#include <video/kona_fb.h>
+#endif
+
 #define KONA_8250PORT_FPGA(name, clk)				\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
@@ -351,10 +356,51 @@ static void __init hawaii_ray_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
+
+#ifdef CONFIG_FB_BRCM_KONA
+/*
+ * KONA FRAME BUFFER DISPLAY DRIVER PLATFORM CONFIG
+ */
+struct kona_fb_platform_data konafb_devices[] __initdata = {
+	{
+		.dispdrv_name  = "NT35516",
+		.dispdrv_entry = DISP_DRV_NT35516_GetFuncTable,
+		.parms = {
+			.w0 = {
+				.bits = {
+					.boot_mode  = 0,
+					.bus_type   = KONA_BUS_DSI,
+					.bus_no     = KONA_BUS_0,
+					.bus_ch     = KONA_BUS_CH_0,
+					.bus_width  = 0,
+					.te_input   = KONA_TE_IN_1_DSI0,
+					.col_mode_i = KONA_CM_I_XRGB888,
+					.col_mode_o = KONA_CM_O_RGB888,
+				},
+			},
+			.w1 = {
+			.bits = {
+					.api_rev  =  KONA_LCD_BOOT_API_REV,
+					.lcd_rst0 =  25, /* DSI_BRIDGE_PON   */
+					.lcd_rst1 =  12, /* DSI_BRIDGE_RESET */
+					.lcd_rst2 =  13, /* SHARP_RESET      */
+				},
+			},
+		},
+	},
+};
+
+#include "kona_fb_init.c"
+#endif /* #ifdef CONFIG_FB_BRCM_KONA */
+
 void __init board_init(void)
 {
 	hawaii_ray_add_devices();
 	board_add_common_devices();
+#ifdef CONFIG_FB_BRCM_KONA
+	/* kona_fb_init.c */
+	konafb_init();
+#endif
 	return;
 }
 

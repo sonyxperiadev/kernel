@@ -416,14 +416,14 @@ Int32 DISPDRV_Init(struct dispdrv_init_parms *parms, DISPDRV_HANDLE_T *handle)
 		LCD_DBG(LCD_DBG_INIT_ID, "[DISPDRV] %s: Rst 2      %d \n",
 			__func__, parms->w1.bits.lcd_rst2);
 
-		if ((u8)parms->w1.bits.api_rev != RHEA_LCD_BOOT_API_REV) {
+		if ((u8)parms->w1.bits.api_rev != KONA_LCD_BOOT_API_REV) {
 			LCD_DBG(LCD_DBG_ERR_ID, "[DISPDRV] %s: "
 				"Boot Init API Rev Mismatch(%d.%d vs %d.%d)\n",
 				__func__,
 				(parms->w1.bits.api_rev & 0xF0) >> 8,
 				(parms->w1.bits.api_rev & 0x0F),
-				(RHEA_LCD_BOOT_API_REV & 0xF0) >> 8,
-				(RHEA_LCD_BOOT_API_REV & 0x0F));
+				(KONA_LCD_BOOT_API_REV & 0xF0) >> 8,
+				(KONA_LCD_BOOT_API_REV & 0x0F));
 			return (-1);
 		}
 
