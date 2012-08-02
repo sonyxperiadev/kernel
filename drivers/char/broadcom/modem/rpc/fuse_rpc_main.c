@@ -55,6 +55,8 @@
 #include "bcmlog.h"
 #include "mqueue.h"
 
+#include "ipcinterface.h"
+
 #define SYSRPC_TRACE_TRACE_ON
 
 #ifdef SYSRPC_TRACE_TRACE_ON
@@ -79,9 +81,13 @@ static void __exit bcm_fuse_rpc_exit_module(void);
  *
  *  @param  inSleep (in)   TRUE if AP entering deep sleep, FALSE if exiting
  */
+//extern void IPC_ApSleepModeSet(IPC_Boolean inSleep);
+
 void BcmRpc_SetApSleep(bool inSleep)
-{
+{	
 	RPC_SetProperty(RPC_PROP_AP_IN_DEEPSLEEP, (inSleep ? 1 : 0));
+
+	IPC_ApSleepModeSet((IPC_Boolean)inSleep);
 }
 
 void RPC_Assert(char *expr, char *file, int line, int value)

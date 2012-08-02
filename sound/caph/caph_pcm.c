@@ -1205,6 +1205,11 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 	}
 	drv_handle = substream->runtime->private_data;
 
+	if (pChip->streamCtl[substream->number].playback_stop) {
+		aWarn("Invalid DMA Callback\n");
+		return;
+	}
+
 	if (pChip->streamCtl[substream->number].playback_prev_time != 0) {
 		int_period = int_time -
 			pChip->streamCtl[substream->number].playback_prev_time;

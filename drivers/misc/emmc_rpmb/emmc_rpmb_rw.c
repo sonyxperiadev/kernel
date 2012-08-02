@@ -73,6 +73,8 @@ REMEDY.
 #define IMEIMAC2_RPMB_LEN			256
 #define CKDATA_RPMB_START_ADDR		0x4
 #define CKDATA_RPMB_LEN				2560
+#define KEYBOX_RPMB_START_ADDR	0xe
+#define KEYBOX_RPMB_LEN			256
 
 struct kobject *emmc_rpmb_test_kobj;
 static void *bio_buff;
@@ -633,6 +635,44 @@ err_out:
 		return 0;
 }
 EXPORT_SYMBOL(read_imei2);
+
+/**
+ * @brief	readkeybox : Reads keybox data from eMMC RPMB partition.
+ * @param	buff	: Kernel Space buffer to which the data will be read.
+ * @param	len     : number of bytes to read.
+ * @return	Returns -ve number on error and 0 on success
+ *
+ * @description	This function reads the Keybox data from the RPMB partition.
+ */
+int readkeybox(char *buff, int len)
+{
+	int ret = 0;
+
+	if ((NULL == buff) || (0 == len)) {
+		pr_err("readkeybox: buffer or length invalid \r\n");
+		return -1;
+	}
+
+	if (len > KEYBOX_RPMB_LEN) {
+		pr_err("Cannot read more than keybox block size\n");
+		return -1;
+	}
+
+	mutex_lock(&rpmb_mutex);
+
+	ret = authenticated_data_read(buff, len, KEYBOX_RPMB_START_ADDR);
+	if (ret < 0) {
+		pr_err("Keybox data read failure\n");
+		goto err_out;
+	}
+
+	pr_info("Done Reading %d bytes of keybox from RPMB\n", len);
+
+err_out:
+	mutex_unlock(&rpmb_mutex);
+	return ret;
+}
+EXPORT_SYMBOL(readkeybox);
 
 /* Init routine */
 int __init emmc_rpmb_rw_init(void)
