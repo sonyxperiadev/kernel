@@ -554,6 +554,9 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 		return;
 
 	mode = GetAudioModeBySink(sink);
+	app = AUDCTRL_GetAudioApp();
+	/* need to figure out App when use Bluetooth headset. */
+
 #ifdef	CONFIG_AUDIO_FEATURE_SET_DISABLE_ECNS
 	/* when turning off EC and NS, we set mode to
 	  * AUDIO_MODE_HANDSFREE as customer's request, while
@@ -579,8 +582,6 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 		return;
 	}
 
-	if (voiceCallMic == source && voiceCallSpkr == sink)
-		return;
 
 	if (voiceCallSpkr != sink)
 		powerOnExternalAmp(voiceCallSpkr, TelephonyUse,
@@ -602,7 +603,7 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	AUDDRV_Telephony_Deinit();
 
 	AUDDRV_Telephony_Init(source, sink, mode, app,
-	bNeedDualMic, bmuteVoiceCall);	/* retain the mute flag */
+		bNeedDualMic, bmuteVoiceCall);	/* retain the mute flag */
 	if (voiceCallSpkr != sink)
 		powerOnExternalAmp(sink, TelephonyUse,
 				TRUE, FALSE);
@@ -4154,7 +4155,8 @@ void AUDCTRL_SetCallMode(Int32 callMode)
 
 void AUDCTRL_ConnectDL(void)
 {
-	AUDDRV_ConnectDL();
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
+	aTrace(LOG_AUDIO_CNTLR,  "AUDCTRL_ConnectDL PTT CONNECT_DL\n");
 }
 
 void AUDCTRL_UpdateUserVolSetting(
