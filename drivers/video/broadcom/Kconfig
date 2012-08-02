@@ -1,11 +1,14 @@
-config FB_BRCM_RHEA
-	tristate "Broadcom Rhea Platform Framebuffer support"
-	depends on FB && ARM && ARCH_RHEA
+config FB_BRCM_KONA
+	tristate "Broadcom KONA Platform Framebuffer support"
+	depends on FB && ARM && ARCH_KONA
 	select FB_CFB_FILLRECT
 	select FB_CFB_COPYAREA
 	select FB_CFB_IMAGEBLIT
+	select KONA_DSI
+	select KONA_VC4LITE
+	select KONA_SMI
 	help
-	  This framebuffer device driver is for the Broadcom Rhea platform.
+	  This framebuffer device driver is for the Broadcom KONA platform.
 
 config FB_BRCM_ASYNC_UPDATE
 	bool "FB Async Update"
