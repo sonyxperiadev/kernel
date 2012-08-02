@@ -200,4 +200,12 @@ config RHEA_PI_MGR_DISABLE_POLICY_CHANGE
 	  Debug flag to diable PI policy change by default. All PI
 	  policy will be set to wakeup policy 7
 
+config A9_RETENTION_CSTATE
+	bool "Turn ON A9 retention state"
+	default n
+	help
+	  Option to enable A9 retention state for cpuidle. A9 retention
+	  results in A9 domain voltage being lowered, resulting in better
+	  power savings during idle.
+
 endmenu
