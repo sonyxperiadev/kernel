@@ -154,6 +154,27 @@ extern "C" {
 		DE1_CM_LE = 2,	/*/< out -> B0,B1,B2,B3 */
 		DE1_CM_BE = 3,	/*/< out -> B3,B2,B1,B0 */
 	} CHAL_DSI_DE1_COL_MOD_t;
+/**
+*
+*  Display Engine 0 Color Modes
+*
+*****************************************************************************/
+	typedef enum {
+		DE0_CM_565P = 0,
+		DE0_CM_666P_VID = 1,
+		DE0_CM_666 = 2,
+		DE0_CM_888U = 3,
+	} CHAL_DSI_DE0_COL_MOD_t;
+/**
+*
+*  Display Engine 0 Modes
+*
+*****************************************************************************/
+	typedef enum {
+		DE0_MODE_VID = 0,
+		DE0_MODE_CMD = 1,
+	} CHAL_DSI_DE0_MODE_t;
+
 
 /**
 *
@@ -183,6 +204,7 @@ extern "C" {
 		cBool start; /*/< start transmission */
 		cUInt32 repeat; /*/< packet repeat count */
 		cBool endWithBta; /*/< end with BTA, USE ONLY WHEN REPEAT==1 */
+		cUInt32 dispEngine; /*/< Display Engine: source of pixel data */
 	} CHAL_DSI_TX_CFG_t, *pCHAL_DSI_TX_CFG;
 
 /**
@@ -493,6 +515,47 @@ extern "C" {
 *  @note
 *****************************************************************************/
 	cVoid chal_dsi_de1_enable(CHAL_HANDLE handle, cBool ena);
+
+/**
+*
+*  @brief    Set Display Engine 0 Color Mode
+*
+*  @param	 handle  (in)  DSI cHAL handle
+*  @param	 cm      (in)  DE0 Color Mode Configuration
+*
+*  @return	 void
+*
+*  @note
+*****************************************************************************/
+	cVoid chal_dsi_de0_set_cm(CHAL_HANDLE handle,
+				  CHAL_DSI_DE0_COL_MOD_t cm);
+
+/**
+*
+*  @brief    Enable/Disable Display Engine 0
+*
+*  @param	 handle  (in)  DSI cHAL handle
+*  @param	 ena     (in)  TRUE=enable FALSE=disable
+*
+*  @return	 void
+*
+*  @note
+*****************************************************************************/
+	cVoid chal_dsi_de0_enable(CHAL_HANDLE handle, cBool ena);
+
+/**
+*
+*  @brief    Set Display Engine 0 Mode
+*
+*  @param	 handle  (in)  DSI cHAL handle
+*  @param	 ena     (in)  TRUE=enable FALSE=disable
+*
+*  @return	 void
+*
+*  @note
+*****************************************************************************/
+	cVoid chal_dsi_de0_set_mode(CHAL_HANDLE handle,
+				CHAL_DSI_DE0_MODE_t mode);
 
 /**
 *

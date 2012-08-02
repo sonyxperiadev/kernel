@@ -56,8 +56,8 @@ struct
 
 int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 {
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	struct clk *smi_axi;
-	struct clk *mm_dma_axi;
 	struct clk *smi;
 
 	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
@@ -67,10 +67,8 @@ int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 	}
 
 	smi_axi = clk_get (NULL, "smi_axi_clk");
-	mm_dma_axi = clk_get(NULL, "mm_dma_axi_clk");
 	smi = clk_get (NULL, "smi_clk");
-	BUG_ON(IS_ERR_OR_NULL(smi_axi) || IS_ERR_OR_NULL(smi) ||
-			 IS_ERR_OR_NULL(mm_dma_axi));
+	BUG_ON(IS_ERR_OR_NULL(smi_axi) || IS_ERR_OR_NULL(smi));
 
 	if (clk_set_rate(smi, 250000000)) {
 		printk(KERN_ERR "Failed to set the SMI peri clock to 250MHZ");
@@ -86,30 +84,22 @@ int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 		printk(KERN_ERR "Failed to enable the SMI bus clock");
 		return -EIO;
 	}
-
-	if (clk_enable(mm_dma_axi)) {
-		printk(KERN_ERR "Failed to enable the MM DMA bus clock");
-		return -EIO;
-	}
-
+#endif
 	return 0;
 }
 
 int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 {
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	struct clk *smi_axi;
-	struct clk *mm_dma_axi;
 	struct clk *smi;
 
 	smi_axi = clk_get (NULL, "smi_axi_clk");
-	mm_dma_axi = clk_get (NULL, "mm_dma_axi_clk");
 	smi = clk_get (NULL, "smi_clk");
-	BUG_ON(IS_ERR_OR_NULL(smi_axi) || IS_ERR_OR_NULL(smi) ||
-			IS_ERR_OR_NULL(mm_dma_axi));
+	BUG_ON(IS_ERR_OR_NULL(smi_axi) || IS_ERR_OR_NULL(smi));
 
 	clk_disable(smi);
 	clk_disable(smi_axi);
-	clk_disable(mm_dma_axi);
 
 	if (pi_mgr_dfs_request_update(dfs_node, PI_MGR_DFS_MIN_VALUE))
 	{
@@ -117,6 +107,7 @@ int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 	    return  -EIO;
 	}
 
+#endif
 	return 0;
 }
 
@@ -128,7 +119,7 @@ int brcm_enable_dsi_lcd_clocks(
         unsigned int dsi_pll_ch_div, 
         unsigned int esc_clk_hz )
 {
-	struct clk *mm_dma_axi;
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	struct	clk *dsi_axi;
 	struct	clk *dsi_esc;
 	
@@ -138,17 +129,10 @@ int brcm_enable_dsi_lcd_clocks(
 	    return  -EIO;
 	}
 
-	mm_dma_axi  = clk_get (NULL, "mm_dma_axi_clk");
 	dsi_axi     = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_axi);
 	dsi_esc     = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_esc);
-	BUG_ON(IS_ERR_OR_NULL(mm_dma_axi) || IS_ERR_OR_NULL(dsi_axi) ||
-			IS_ERR_OR_NULL(dsi_esc));
+	BUG_ON(IS_ERR_OR_NULL(dsi_axi) || IS_ERR_OR_NULL(dsi_esc));
 
-	if (clk_enable(mm_dma_axi)) {
-		printk(KERN_ERR "Failed to enable the MM DMA bus clock\n");
-		return -EIO;
-	}
-       
 	if (clk_enable (dsi_axi)) {
 		printk(KERN_ERR "Failed to enable the DSI[%d] AXI clock\n", 
                 	dsi_bus);
@@ -165,6 +149,7 @@ int brcm_enable_dsi_lcd_clocks(
                 	dsi_bus );
 		return -EIO;
 	}
+#endif
 
 	return 0;
 }
@@ -175,6 +160,7 @@ int brcm_enable_dsi_pll_clocks(
         unsigned int dsi_pll_ch_div, 
         unsigned int esc_clk_hz )
 {
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	struct	clk *dsi_pll;
 	struct	clk *dsi_pll_ch;
 	u32	pixel_pll_val;
@@ -227,6 +213,7 @@ int brcm_enable_dsi_pll_clocks(
                 	dsi_bus, pixel_pll_val);
 		return -EIO;
         }
+#endif
 
 	return 0;
 }
@@ -235,17 +222,14 @@ int brcm_enable_dsi_pll_clocks(
 
 int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 {
-	struct clk *mm_dma_axi;
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	struct clk *dsi_axi;
 	struct clk *dsi_esc;
 
-	mm_dma_axi = clk_get(NULL, "mm_dma_axi_clk");
 	dsi_axi    = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_axi);
 	dsi_esc    = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_esc);
-	BUG_ON(IS_ERR_OR_NULL(mm_dma_axi) || IS_ERR_OR_NULL(dsi_axi) ||
-		   IS_ERR_OR_NULL(dsi_esc));
+	BUG_ON(IS_ERR_OR_NULL(dsi_axi) || IS_ERR_OR_NULL(dsi_esc));
 
-	clk_disable(mm_dma_axi);
 	clk_disable(dsi_axi);
 	clk_disable(dsi_esc);
 
@@ -254,6 +238,7 @@ int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 	    return  -EIO;
 	}
+#endif
 
 	return 0;
 }
@@ -261,6 +246,7 @@ int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 
 int brcm_disable_dsi_pll_clocks(u32 dsi_bus)
 {
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	struct clk *dsi_pll;
 	struct clk *dsi_pll_ch;
 
@@ -271,6 +257,7 @@ int brcm_disable_dsi_pll_clocks(u32 dsi_bus)
         mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel,DSI_NO_CLOCK);
 	clk_disable(dsi_pll_ch);
 	clk_disable(dsi_pll);
+#endif
 
 	return 0;
 }
@@ -284,40 +271,28 @@ int brcm_enable_dsi_lcd_clocks(
         unsigned int dsi_pll_ch_div, 
         unsigned int esc_clk_hz )
 {
-	struct clk *mm_dma_axi;
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
 	{
 	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 	    return  -EIO;
 	}
 
-	mm_dma_axi = clk_get (NULL, "mm_dma_axi_clk");
-	BUG_ON(IS_ERR_OR_NULL(mm_dma_axi));
-
-	if (clk_enable(mm_dma_axi)) {
-		printk(KERN_ERR "Failed to enable the MM DMA bus clock");
-		return -EIO;
-	}
-
+#endif
 	return 0;
 }
 
 int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 {
-	struct clk *mm_dma_axi;
-
-	mm_dma_axi = clk_get (NULL, "mm_dma_axi_clk");
-	BUG_ON(IS_ERR_OR_NULL(mm_dma_axi));
-
-	clk_disable(mm_dma_axi);
+#ifndef CONFIG_MACH_HAWAII_FPGA
 
 	if (pi_mgr_dfs_request_update(dfs_node, PI_MGR_DFS_MIN_VALUE));
 	{
 	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 	    return  -EIO;
 	}
-
+#endif
 	return 0;
 }
 

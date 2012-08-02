@@ -31,6 +31,38 @@
 
 #include "mach/rdb/brcm_rdb_util.h"
 
+
+/*
+ * RDB diff from Rhea to Hawaii.
+ * Reuse code!
+ */
+#ifdef CONFIG_ARCH_HAWAII
+#define DSI1_CTRL_DISP_CRCC_SHIFT DSI1_CTRL_DIS_DISP_CRCC_SHIFT
+#define DSI1_CTRL_DISP_CRCC_MASK DSI1_CTRL_DIS_DISP_CRCC_MASK
+#define DSI1_CTRL_DISP_ECCC_SHIFT DSI1_CTRL_DIS_DISP_ECCC_SHIFT
+#define DSI1_CTRL_DISP_ECCC_MASK DSI1_CTRL_DIS_DISP_ECCC_MASK
+#define DSI1_CTRL_DSI_EN_SHIFT DSI1_CTRL_DSI1_EN_SHIFT
+#define DSI1_CTRL_DSI_EN_MASK DSI1_CTRL_DSI1_EN_MASK
+
+#define DSI1_TXPKT1_H_WC_CDFIFO_SHIFT DSI1_TXPKT1_H_BC_CMDFIFO_SHIFT
+#define DSI1_TXPKT1_H_WC_CDFIFO_MASK DSI1_TXPKT1_H_BC_CMDFIFO_MASK
+#define DSI1_TXPKT1_H_WC_PARAM_SHIFT DSI1_TXPKT1_H_BC_PARAM_SHIFT
+#define DSI1_TXPKT1_H_WC_PARAM_MASK DSI1_TXPKT1_H_BC_PARAM_MASK
+#define DSI1_TXPKT2_H_WC_CDFIFO_SHIFT DSI1_TXPKT2_H_BC_CMDFIFO_MASK
+#define DSI1_TXPKT2_H_WC_CDFIFO_MASK DSI1_TXPKT2_H_BC_PARAM_SHIFT
+#define DSI1_TXPKT2_H_WC_PARAM_SHIFT DSI1_TXPKT2_H_BC_PARAM_MASK
+#define DSI1_TXPKT2_H_WC_PARAM_MASK DSI1_TXPKT2_H_DT_SHIFT
+
+#define DSI1_RXPKT1_H_WC_PARAM_SHIFT DSI1_RXPKT1_H_BC_PARAM_SHIFT
+#define DSI1_RXPKT1_H_WC_PARAM_MASK DSI1_RXPKT1_H_BC_PARAM_MASK
+#define DSI1_TXPKT_PIXD_FIFO_PIXEL_SHIFT DSI1_TXPKT_PIXD_FIFO_WORD_SHIFT
+#define DSI1_TXPKT_PIXD_FIFO_PIXEL_MASK DSI1_TXPKT_PIXD_FIFO_WORD_MASK
+#define DSI1_LP_DLT6_LPX_SHIFT DSI1_LP_DLT6_LP_LPX_SHIFT
+#define DSI1_LP_DLT6_LPX_MASK DSI1_LP_DLT6_LP_LPX_MASK
+#define DSI1_PHY_TST2_PHYD0_TEST_HSDATA_SHIFT DSI1_PHY_TST2_PHYD0_HSDATA_SHIFT
+#define DSI1_PHY_TST2_PHYD0_TEST_HSDATA_MASK DSI1_PHY_TST2_PHYD0_HSDATA_MASK
+#endif
+
 struct CHAL_DSI {
 	cBool init;
 	cUInt32 baseAddr;
@@ -38,10 +70,17 @@ struct CHAL_DSI {
 	cBool clkContinuous;
 };
 
+#ifdef CONFIG_ARCH_HAWAII
+/* NO OF DATA LINES SUPPORTED */
+#define	DSI_DL_COUNT		    4
+/* NO OF CONTROLLERs */
+#define	DSI_DEV_COUNT		    1
+#else
 /* NO OF DATA LINES SUPPORTED */
 #define	DSI_DL_COUNT		    1
 /* NO OF CONTROLLERs */
 #define	DSI_DEV_COUNT		    2
+#endif
 
 /*
  * Local Variables
@@ -278,16 +317,30 @@ cVoid chal_dsi_phy_state(CHAL_HANDLE handle, CHAL_DSI_PHY_STATE_t state)
 
 	regMask = DSI_REG_FIELD_SET(DSI1_PHYC, FORCE_TXSTOP_0, 1)
 	    | DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSCLK, 1)
-	    | DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_0, 1)
 	    | DSI_REG_FIELD_SET(DSI1_PHYC, TX_HSCLK_CONT, 1);
+
+	switch (pDev->dlCount) {
+	case 4:
+		regMask |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_3, 1);
+		regVal |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_3, 1);
+	case 3:
+		regMask |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_2, 1);
+		regVal |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_2, 1);
+	case 2:
+		regMask |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_1, 1);
+		regVal |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_1, 1);
+	case 1:
+	default:
+		regMask |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_0, 1);
+		regVal |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_0, 1);
+	}
 
 	switch (state) {
 	case PHY_TXSTOP:
 		regVal = DSI_REG_FIELD_SET(DSI1_PHYC, FORCE_TXSTOP_0, 1);
 		break;
 	case PHY_ULPS:
-		regVal = DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSCLK, 1)
-		    | DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_0, 1);
+		regVal = DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSCLK, 1);
 		break;
 	case PHY_CORE:
 	default:
@@ -730,15 +783,28 @@ cVoid chal_dsi_on(CHAL_HANDLE handle, pCHAL_DSI_MODE dsiMode)
 	mask = 0;
 	ctrl = 0;
 
-	mask = DSI1_PHYC_TX_HSCLK_CONT_MASK
-	    | DSI1_PHYC_PHY_CLANE_EN_MASK | DSI1_PHYC_PHY_DLANE0_EN_MASK;
+	mask = DSI1_PHYC_TX_HSCLK_CONT_MASK | DSI1_PHYC_PHY_CLANE_EN_MASK;
+	switch (pDev->dlCount) {
+	case 4:
+		mask |= DSI1_PHYC_PHY_DLANE3_EN_MASK;
+		ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, PHY_DLANE3_EN, 1);
+	case 3:
+		mask |= DSI1_PHYC_PHY_DLANE2_EN_MASK;
+		ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, PHY_DLANE2_EN, 1);
+	case 2:
+		mask |= DSI1_PHYC_PHY_DLANE1_EN_MASK;
+		ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, PHY_DLANE1_EN, 1);
+	case 1:
+	default:
+		mask |= DSI1_PHYC_PHY_DLANE0_EN_MASK;
+		ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, PHY_DLANE0_EN, 1);
+	}
 
 	rmb();
 	if (dsiMode->enaContClock)
 		ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, TX_HSCLK_CONT, 1);
 
 	ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, PHY_CLANE_EN, 1);
-	ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, PHY_DLANE0_EN, 1);
 
 	wmb();
 	DSI_REG_WRITE_MASKED(pDev->baseAddr, DSI1_PHYC, mask, ctrl);
@@ -1002,9 +1068,12 @@ CHAL_DSI_RES_t chal_dsi_tx_long(CHAL_HANDLE handle,
 	if (txCfg->msgLen == txCfg->msgLenCFifo)
 		pktc |= DSI_REG_FIELD_SET(DSI1_TXPKT1_C, DISPLAY_NO,
 					  DSI_PKT_SRC_CMND_FIFO);
-	else
+	else if (txCfg->dispEngine == 1)
 		pktc |= DSI_REG_FIELD_SET(DSI1_TXPKT1_C, DISPLAY_NO,
 					  DSI_PKT_SRC_DE1);
+	else
+		pktc |= DSI_REG_FIELD_SET(DSI1_TXPKT1_C, DISPLAY_NO,
+					  DSI_PKT_SRC_DE0);
 
 	if (txCfg->isTe)
 		pktc |= DSI_REG_FIELD_SET(DSI1_TXPKT1_C, CMD_TE_EN, 1);
@@ -1347,3 +1416,50 @@ cVoid chal_dsi_de1_enable(CHAL_HANDLE handle, cBool ena)
 	else
 		BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_DISP1_CTRL, EN, 0);
 }
+
+
+/*
+ *
+ *  Function Name:  chal_dsi_de0_set_cm
+ *
+ *  Description:
+ *
+ */
+cVoid chal_dsi_de0_set_cm(CHAL_HANDLE handle, CHAL_DSI_DE0_COL_MOD_t cm)
+{
+	struct CHAL_DSI *pDev = (struct CHAL_DSI *)handle;
+
+	BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_DISP0_CTRL, PFORMAT, cm);
+}
+
+/*
+ *
+ *  Function Name:  chal_dsi_de1_enable
+ *
+ *  Description:    Ena | Dis Color Engine 1
+ *
+ */
+cVoid chal_dsi_de0_enable(CHAL_HANDLE handle, cBool ena)
+{
+	struct CHAL_DSI *pDev = (struct CHAL_DSI *)handle;
+
+	if (ena)
+		BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_DISP0_CTRL, EN, 1);
+	else
+		BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_DISP0_CTRL, EN, 0);
+}
+
+/*
+ *
+ *  Function Name:  chal_dsi_de0_set_mode
+ *
+ *  Description:
+ *
+ */
+cVoid chal_dsi_de0_set_mode(CHAL_HANDLE handle, CHAL_DSI_DE0_MODE_t mode)
+{
+	struct CHAL_DSI *pDev = (struct CHAL_DSI *)handle;
+
+	BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_DISP0_CTRL, MODE, mode);
+}
+
