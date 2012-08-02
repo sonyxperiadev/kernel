@@ -4513,12 +4513,8 @@ void dhd_bus_country_set(struct net_device *dev, wl_country_t *cspec)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
-	if (dhd && dhd->pub.up) {
+	if (dhd && dhd->pub.up)
 		memcpy(&dhd->pub.dhd_cspec, cspec, sizeof(wl_country_t));
-#ifdef WL_CFG80211
-		wl_update_wiphybands(NULL);
-#endif
-	}
 }
 
 
