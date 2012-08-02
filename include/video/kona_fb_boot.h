@@ -21,48 +21,48 @@ extern "C" {
 #endif
 
 
-/** 
+/**
  * @addtogroup DisplayGroup
  * @{
  */
 
-/** 
+/**
  *
- * RHEA dispdrv platform(boot) init interface 
+ * KONA dispdrv platform(boot) init interface
  * Shared between kernel space & boot environment disp drivers
- * 
+ *
  */
 
-/* RHEA LCD Drivers Boot Init Interface */
-#define	RHEA_TE_IN_0_LCD  	1   
-#define	RHEA_TE_IN_1_DSI0 	2
-#define	RHEA_TE_IN_2_DSI1 	3
+/* KONA LCD Drivers Boot Init Interface */
+#define	KONA_TE_IN_0_LCD	1
+#define	KONA_TE_IN_1_DSI0	2
+#define	KONA_TE_IN_2_DSI1	3
 
-#define	RHEA_CM_I_XRGB888 	1
-#define	RHEA_CM_I_RGB565  	2
+#define	KONA_CM_I_XRGB888	1
+#define	KONA_CM_I_RGB565	2
 
-#define	RHEA_CM_O_RGB565  	1
-#define	RHEA_CM_O_RGB565_DSI_VM	2
-#define	RHEA_CM_O_RGB666  	3
-#define	RHEA_CM_O_RGB888 	4
+#define	KONA_CM_O_RGB565	1
+#define	KONA_CM_O_RGB565_DSI_VM	2
+#define	KONA_CM_O_RGB666	3
+#define	KONA_CM_O_RGB888	4
 
-#define	RHEA_BUS_SMI            1
-#define	RHEA_BUS_DSI            2
+#define	KONA_BUS_SMI            1
+#define	KONA_BUS_DSI            2
 
-#define	RHEA_BUS_0            	1
-#define	RHEA_BUS_1            	2
+#define	KONA_BUS_0		1
+#define	KONA_BUS_1		2
 
-#define	RHEA_BUS_CH_0          	1
-#define	RHEA_BUS_CH_1          	2
+#define	KONA_BUS_CH_0		1
+#define	KONA_BUS_CH_1		2
 
-#define	RHEA_BUS_WIDTH_08	1
-#define	RHEA_BUS_WIDTH_09	2
-#define	RHEA_BUS_WIDTH_16	3
-#define	RHEA_BUS_WIDTH_18	4
+#define	KONA_BUS_WIDTH_08	1
+#define	KONA_BUS_WIDTH_09	2
+#define	KONA_BUS_WIDTH_16	3
+#define	KONA_BUS_WIDTH_18	4
 
-#define	RHEA_LCD_BOOT_API_REV		((unsigned char)0x10)
-#define RHEA_LCD_BOOT_PARM_COUNT 	2
-#define RHEA_DISP_DRV_NAME_MAX 		32
+#define	KONA_LCD_BOOT_API_REV		((unsigned char)0x10)
+#define KONA_LCD_BOOT_PARM_COUNT	2
+#define KONA_DISP_DRV_NAME_MAX		32
 
 struct dispdrv_init_parms  {
 	union{
@@ -76,10 +76,10 @@ struct dispdrv_init_parms  {
 		  unsigned long  te_input   :3;
 		  unsigned long  col_mode_i :3;
 		  unsigned long  col_mode_o :3;
-			
+
 		} bits;
 	}w0;
-	
+
 	union  {
 		unsigned long w32;
 		struct  {
@@ -88,7 +88,7 @@ struct dispdrv_init_parms  {
 		  unsigned long  lcd_rst1   :8;
 		  unsigned long  lcd_rst2   :8;
 		} bits;
-	}w1;	
+	}w1;
 };
 
 

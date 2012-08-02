@@ -105,7 +105,7 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
-#ifdef CONFIG_FB_BRCM_HAWAII
+#ifdef CONFIG_FB_BRCM_KONA
 #include <video/kona_fb_boot.h>
 #include <video/kona_fb.h>
 #endif
@@ -1459,7 +1459,7 @@ static void __init hawaii_ray_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
-#ifdef CONFIG_FB_BRCM_HAWAII
+#ifdef CONFIG_FB_BRCM_KONA
 /*
  *   	     KONA FRAME BUFFER DISPLAY DRIVER PLATFORM CONFIG
  */
@@ -1592,13 +1592,13 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 };
 
 #include "hawaii_fb_init.c"
-#endif /* #ifdef CONFIG_FB_BRCM_HAWAII */
+#endif /* #ifdef CONFIG_FB_BRCM_KONA */
 
 void __init board_init(void)
 {
 	hawaii_ray_add_devices();
 	board_add_common_devices();
-#ifdef CONFIG_FB_BRCM_HAWAII
+#ifdef CONFIG_FB_BRCM_KONA
 	/* hawaii_fb_init.c */
 	konafb_init();
 #endif
