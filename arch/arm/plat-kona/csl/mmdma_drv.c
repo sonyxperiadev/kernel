@@ -80,6 +80,7 @@ int mmdma_execute(unsigned int srcAddr, unsigned int dstAddr, unsigned int size)
 	}
 
 	/* Add the DMA transfer data */
+	dmaData.burstWriteEnable32 = 1;
 	dmaData.srcAddr = srcAddr;
 	dmaData.dstAddr = dstAddr;
 	dmaData.xferLength = size;
