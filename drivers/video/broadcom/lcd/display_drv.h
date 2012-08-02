@@ -151,33 +151,33 @@ extern "C" {
 	} DISPDRV_WIN_t;
 
 /* Convert dispdrv platform(boot) init values to dispdrv interface values */
-#define dispdrv2busType(p) p == RHEA_BUS_SMI ? DISPLAY_BUS_SMI : \
-		p == RHEA_BUS_DSI ? DISPLAY_BUS_DSI : DISPLAY_BUS_MIN
+#define dispdrv2busType(p) p == KONA_BUS_SMI ? DISPLAY_BUS_SMI : \
+		p == KONA_BUS_DSI ? DISPLAY_BUS_DSI : DISPLAY_BUS_MIN
 
-#define dispdrv2busNo(p) p == RHEA_BUS_0 ? 0 : \
-		p == RHEA_BUS_1 ? 1 : 2
+#define dispdrv2busNo(p) p == KONA_BUS_0 ? 0 : \
+		p == KONA_BUS_1 ? 1 : 2
 
-#define dispdrv2busCh(p) p == RHEA_BUS_CH_0 ? 0 : \
-		p == RHEA_BUS_CH_1 ? 1 : 2
+#define dispdrv2busCh(p) p == KONA_BUS_CH_0 ? 0 : \
+		p == KONA_BUS_CH_1 ? 1 : 2
 
-#define dispdrv2busW(p) p == RHEA_BUS_WIDTH_08 ? 8:   \
-		p == RHEA_BUS_WIDTH_09 ? 9:   \
-		p == RHEA_BUS_WIDTH_16 ? 16 : \
-		p == RHEA_BUS_WIDTH_18 ? 18 : 0
+#define dispdrv2busW(p) p == KONA_BUS_WIDTH_08 ? 8:   \
+		p == KONA_BUS_WIDTH_09 ? 9:   \
+		p == KONA_BUS_WIDTH_16 ? 16 : \
+		p == KONA_BUS_WIDTH_18 ? 18 : 0
 
-#define dispdrv2busTE(p) p == RHEA_TE_IN_0_LCD  ? TE_VC4L_IN_0_LCD  : \
-		p == RHEA_TE_IN_1_DSI0 ? TE_VC4L_IN_1_DSI0 : \
-		p == RHEA_TE_IN_2_DSI1 ? TE_VC4L_IN_2_DSI1 : \
+#define dispdrv2busTE(p) p == KONA_TE_IN_0_LCD  ? TE_VC4L_IN_0_LCD  : \
+		p == KONA_TE_IN_1_DSI0 ? TE_VC4L_IN_1_DSI0 : \
+		p == KONA_TE_IN_2_DSI1 ? TE_VC4L_IN_2_DSI1 : \
 		TE_VC4L_IN_INV
 
-#define dispdrv2cmIn(p) p == RHEA_CM_I_RGB565  ? LCD_IF_CM_I_RGB565P : \
-		p == RHEA_CM_I_XRGB888 ? LCD_IF_CM_I_RGB888U : \
+#define dispdrv2cmIn(p) p == KONA_CM_I_RGB565  ? LCD_IF_CM_I_RGB565P : \
+		p == KONA_CM_I_XRGB888 ? LCD_IF_CM_I_RGB888U : \
 		LCD_IF_CM_I_INV
 
-#define dispdrv2cmOut(p) p==RHEA_CM_O_RGB565 ? LCD_IF_CM_O_RGB565 : \
-		p==RHEA_CM_O_RGB565_DSI_VM ? LCD_IF_CM_O_RGB565_DSI_VM:\
-		p==RHEA_CM_O_RGB666 ? LCD_IF_CM_O_RGB666 : \
-		p==RHEA_CM_O_RGB888 ? LCD_IF_CM_O_RGB888 : \
+#define dispdrv2cmOut(p) p==KONA_CM_O_RGB565 ? LCD_IF_CM_O_RGB565 : \
+		p==KONA_CM_O_RGB565_DSI_VM ? LCD_IF_CM_O_RGB565_DSI_VM:\
+		p==KONA_CM_O_RGB666 ? LCD_IF_CM_O_RGB666 : \
+		p==KONA_CM_O_RGB888 ? LCD_IF_CM_O_RGB888 : \
 		LCD_IF_CM_O_INV
 
 /**

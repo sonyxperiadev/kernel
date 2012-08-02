@@ -58,6 +58,9 @@
 
 #ifdef UNDER_LINUX
 #include <plat/csl/csl_dma_vc4lite.h>
+#include <plat/axipv.h>
+#include <plat/pv.h>
+#include <mach/clock.h>
 #else
 #include "csl_dma_vc4lite.h"
 #endif
@@ -81,7 +84,11 @@
 #define DSI_CORE_CLK_MAX_MHZ	125000000
 
 #define DSI_INITIALIZED		0x13579BDF
+#ifdef CONFIG_ARCH_HAWAII
+#define DSI_INST_COUNT		(UInt32)1
+#else
 #define DSI_INST_COUNT		(UInt32)2
+#endif
 #define DSI_MAX_CLIENT		4
 #define DSI_CM_MAX_HANDLES	4
 
@@ -107,7 +114,7 @@
 #define CSL_DSI1_BASE_ADDR	KONA_DSI1_VA
 
 #define CM_PKT_SIZE_B		768
-#define DE1_DEF_THRESHOLD_W	(CM_PKT_SIZE_B >> 2)
+#define DE1_DEF_THRESHOLD_W	(CM_PKT_SIZE_B / 3)
 #define DE1_DEF_THRESHOLD_B	(CM_PKT_SIZE_B)
 
 #ifdef UNDER_LINUX
@@ -117,7 +124,7 @@
 	(*(volatile unsigned long *)HW_IO_PHYS_TO_VIRT(a) = (v))
 #endif
 
-#define XTRA_INT 0x4003c0
+#define AXIPV_MIN_BUFF_SIZE (3 * 8)
 
 /* DSI Core clk tree configuration / settings */
 typedef struct {
@@ -174,6 +181,7 @@ typedef struct {
 	Semaphore_t semaDsi;
 	Semaphore_t semaInt;
 	Semaphore_t semaDma;
+	Semaphore_t semaAxipv;
 #ifdef UNDER_LINUX
 	irq_handler_t lisr;
 #else
@@ -191,6 +199,9 @@ typedef struct {
 #endif
 	DSI_CLIENT_t client[DSI_MAX_CLIENT];
 	DSI_CM_HANDLE_t chCm[DSI_CM_MAX_HANDLES];
+	struct axipv_config_t *axipvCfg;
+	struct pv_config_t *pvCfg;
+	UInt32 dispEngine;
 } DSI_HANDLE_t, *DSI_HANDLE;
 
 typedef struct {
@@ -214,6 +225,124 @@ static CSL_LCD_RES_T cslDsiWaitForInt(DSI_HANDLE dsiH, UInt32 tout_msec);
 static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg);
 static CSL_LCD_RES_T cslDsiDmaStop(DSI_UPD_REQ_MSG_T *updMsg);
 static void cslDsiClearAllFifos(DSI_HANDLE dsiH);
+static CSL_LCD_RES_T cslDsiPixTxStart(DSI_UPD_REQ_MSG_T *updMsg);
+static CSL_LCD_RES_T cslDsiPixTxStop(DSI_UPD_REQ_MSG_T *updMsg);
+static void cslDsiPixTxPollInt(DSI_UPD_REQ_MSG_T *updMsg);
+static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg);
+static CSL_LCD_RES_T cslDsiAxipvStop(DSI_UPD_REQ_MSG_T *updMsg);
+static void cslDsiAxipvPollInt(DSI_UPD_REQ_MSG_T *updMsg);
+static void axipv_irq_cb(int err);
+static void axipv_release_cb(u32 free_buf);
+static void pv_err_cb(int err);
+static void pv_eof_cb(void);
+
+
+static CSL_LCD_RES_T cslDsiPixTxStart(DSI_UPD_REQ_MSG_T *updMsg)
+{
+	if (updMsg->dsiH->dispEngine)
+		return cslDsiDmaStart(updMsg);
+	else
+		return cslDsiAxipvStart(updMsg);
+}
+
+
+static CSL_LCD_RES_T cslDsiPixTxStop(DSI_UPD_REQ_MSG_T *updMsg)
+{
+	if (updMsg->dsiH->dispEngine)
+		return cslDsiDmaStop(updMsg);
+	else
+		return cslDsiAxipvStop(updMsg);
+
+}
+
+void cslDsiPixTxPollInt(DSI_UPD_REQ_MSG_T *updMsg)
+{
+	if (updMsg->dsiH->dispEngine)
+		csl_dma_poll_int(updMsg->dmaCh);
+	else
+		cslDsiAxipvPollInt(updMsg);
+}
+
+static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
+{
+	struct axipv_config_t *axipvCfg = updMsg->dsiH->axipvCfg;
+	struct pv_config_t *pvCfg = updMsg->dsiH->pvCfg;
+
+	if (!pvCfg)
+		pr_err("pvCfg is NULL\n");
+	if (!axipvCfg)
+		pr_err("axipvCfg is NULL\n");
+	axipvCfg->width = (updMsg->updReq.lineLenP + updMsg->updReq.xStrideB) * 4;
+	axipvCfg->height = updMsg->updReq.lineCount;
+	axipvCfg->pix_fmt = AXIPV_PIXEL_FORMAT_24BPP_RGB;
+
+	pvCfg->hact = updMsg->updReq.lineLenP;
+	pvCfg->vact = updMsg->updReq.lineCount;
+
+	axipvCfg->buff.sync.addr = (u32) updMsg->updReq.buff;
+	axipvCfg->buff.sync.xlen = updMsg->updReq.lineLenP * 4;
+	axipvCfg->buff.sync.ylen = updMsg->updReq.lineCount;
+
+	printk("configure axipv\n");
+	axipv_change_state(AXIPV_CONFIG, axipvCfg);
+	printk("configure pv\n");
+	pv_change_state(PV_VID_CONFIG, pvCfg);
+	printk("enable axipv\n");
+	axipv_change_state(AXIPV_START, axipvCfg);
+	printk("waiting for axipv interrupt\n");
+	if (OSSTATUS_SUCCESS != OSSEMAPHORE_Obtain(updMsg->dsiH->semaAxipv,
+		TICKS_IN_MILLISECONDS(100))) {
+		pr_err("Timed out waiting for PV_START_THRESH interrupt\n");
+		return CSL_LCD_ERR;
+	}
+
+#if 0
+	printk("Using AXIPV path, enable dsi\n");
+	chal_dsi_tx_start(updMsg->dsiH->chalH, TX_PKT_ENG_2, TRUE);
+	mb();
+	chal_dsi_tx_start(updMsg->dsiH->chalH, TX_PKT_ENG_1, TRUE);
+#endif
+
+	printk("enable pv\n");
+	pv_change_state(PV_START, pvCfg);
+
+	return CSL_LCD_OK;
+}
+
+static CSL_LCD_RES_T cslDsiAxipvStop(DSI_UPD_REQ_MSG_T *updMsg)
+{
+	/* For Video mode only */
+	/* In command mode, axipv and pv are automatically stopped */
+	return CSL_LCD_OK;
+}
+
+void cslDsiAxipvPollInt(DSI_UPD_REQ_MSG_T *updMsg)
+{
+	/* AXIPV and PV are not yet ready for this */
+}
+
+static void axipv_irq_cb(int stat)
+{
+	DSI_HANDLE dsiH = &dsiBus[0];
+	if (stat & PV_START_THRESH_INT)
+		OSSEMAPHORE_Release(dsiH->semaAxipv);
+}
+
+static void axipv_release_cb(u32 free_buf)
+{
+	DSI_HANDLE dsiH = &dsiBus[0];
+	OSSEMAPHORE_Release(dsiH->semaDma);
+}
+
+static void pv_err_cb(int err)
+{
+	pr_err("pv_err_cb=0x%x\n", err);
+}
+
+static void pv_eof_cb()
+{
+	pr_info("pv end of frame\n");
+}
 
 /*
  *
@@ -233,9 +362,9 @@ static void cslDsi0Stat_LISR(void)
 	uint32_t int_status = chal_dsi_get_int(dsiH->chalH);
 	mb();
 	if (int_status & (1 << 22))
-		pr_info("fifo error 0x%x\n", int_status);
+		pr_info("dsi int fifo error 0x%x\n", int_status);
 
-	chal_dsi_ena_int(dsiH->chalH, 0 | XTRA_INT);
+	chal_dsi_ena_int(dsiH->chalH, 0);
 	chal_dsi_clr_int(dsiH->chalH, int_status);
 
 	OSSEMAPHORE_Release(dsiH->semaInt);
@@ -258,6 +387,7 @@ static void cslDsi0Stat_HISR(void)
 	OSSEMAPHORE_Release(dsiH->semaInt);
 }
 
+#ifndef CONFIG_ARCH_HAWAII
 /*
  *
  * Function Name:  cslDsi1Stat_LISR
@@ -295,6 +425,7 @@ static void cslDsi1Stat_HISR(void)
 	DSI_HANDLE dsiH = &dsiBus[1];
 	OSSEMAPHORE_Release(dsiH->semaInt);
 }
+#endif
 
 /*
  *
@@ -315,6 +446,7 @@ static void cslDsi0EofDma(DMA_VC4LITE_CALLBACK_STATUS status)
 	OSSEMAPHORE_Release(dsiH->semaDma);
 }
 
+#ifndef CONFIG_ARCH_HAWAII
 /*
  *
  * Function Name:  cslDsi1EofDma
@@ -333,6 +465,7 @@ static void cslDsi1EofDma(DMA_VC4LITE_CALLBACK_STATUS status)
 
 	OSSEMAPHORE_Release(dsiH->semaDma);
 }
+#endif
 
 /*
  *
@@ -372,7 +505,7 @@ static void cslDsi0UpdateTask(void)
 				res = CSL_LCD_OS_ERR;
 			}
 
-			cslDsiDmaStop(&updMsg);
+			cslDsiPixTxStop(&updMsg);
 		}
 
 		if (res == CSL_LCD_OK)
@@ -382,7 +515,11 @@ static void cslDsi0UpdateTask(void)
 
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
-		chal_dsi_de1_enable(dsiH->chalH, FALSE);
+
+		if (dsiH->dispEngine)
+			chal_dsi_de1_enable(dsiH->chalH, FALSE);
+		else
+			chal_dsi_de0_enable(dsiH->chalH, FALSE);
 
 		if (!updMsg.clientH->hasLock)
 			OSSEMAPHORE_Release(dsiH->semaDsi);
@@ -395,11 +532,12 @@ static void cslDsi0UpdateTask(void)
 	}
 }
 
+#ifndef CONFIG_ARCH_HAWAII
 /*
  *
  * Function Name:  cslDsi1UpdateTask
  *
- * Description:    DSI Controller 0 Update Task
+ * Description:    DSI Controller 1 Update Task
  *
  */
 static void cslDsi1UpdateTask(void)
@@ -433,7 +571,7 @@ static void cslDsi1UpdateTask(void)
 				res = CSL_LCD_OS_ERR;
 			}
 
-			cslDsiDmaStop(&updMsg);
+			cslDsiPixTxStop(&updMsg);
 		}
 
 		if (res == CSL_LCD_OK)
@@ -456,6 +594,7 @@ static void cslDsi1UpdateTask(void)
 		}
 	}
 }
+#endif
 
 /*
  *
@@ -526,6 +665,17 @@ Boolean cslDsiOsInit(DSI_HANDLE dsiH)
 	} else {
 		OSSEMAPHORE_ChangeName(dsiH->semaDma,
 				dsiH->bus ? "Dsi1Dma" : "Dsi0Dma");
+	}
+
+	/* Axipv Semaphore */
+	dsiH->semaAxipv = OSSEMAPHORE_Create(0, OSSUSPEND_PRIORITY);
+	if (!dsiH->semaAxipv) {
+		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: ERR Sema Creation!\n",
+			__func__);
+		res = FALSE;
+	} else {
+		OSSEMAPHORE_ChangeName(dsiH->semaAxipv,
+				dsiH->bus ? "Dsi1Axipv" : "Dsi0Axipv");
 	}
 
 #ifndef __KERNEL__
@@ -841,7 +991,6 @@ static void cslDsiClearAllFifos(DSI_HANDLE dsiH)
  */
 static void cslDsiEnaIntEvent(DSI_HANDLE dsiH, UInt32 intEventMask)
 {
-	intEventMask |= XTRA_INT;
 	chal_dsi_ena_int(dsiH->chalH, intEventMask);
 #ifdef UNDER_LINUX
 /*      enable_irq(dsiH->interruptId); */
@@ -892,6 +1041,10 @@ static CSL_LCD_RES_T cslDsiWaitForInt(DSI_HANDLE dsiH, UInt32 tout_msec)
 		if (osRes == OSSTATUS_TIMEOUT) {
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
 				"ERR Timed Out!\n", __func__);
+			printk("cslDsiWaitForInt int_stat=0x%x, int_en=0x%x\n\
+			stat=0x%x\n", readl(HW_IO_PHYS_TO_VIRT(0x3c200030)),
+			readl(HW_IO_PHYS_TO_VIRT(0x3c200034)),
+			readl(HW_IO_PHYS_TO_VIRT(0x3c200038)));
 			res = CSL_LCD_OS_TOUT;
 		} else {
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
@@ -1171,7 +1324,7 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 
 			if (pfifo_len > DE1_DEF_THRESHOLD_B) {
 				chal_dsi_de1_set_dma_thresh(dsiH->chalH,
-							    pfifo_len >> 2);
+							    pfifo_len / 3);
 			}
 
 			chal_dsi_de1_set_cm(dsiH->chalH, DE1_CM_BE);
@@ -1332,6 +1485,8 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 		goto exit_err;
 	}
 
+	printk("cm_in=0x%d cm_out=%d\n", dsiCmVcCfg->cm_in, dsiCmVcCfg->cm_out);
+
 	switch (dsiCmVcCfg->cm_in) {
 		/* 1x888 pixel per 32-bit word (MSB DontCare) */
 	case LCD_IF_CM_I_RGB888U:
@@ -1341,7 +1496,8 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 			cmVcH->bpp_dma = 4;
 			cmVcH->bpp_wire = 3;
 			cmVcH->wc_rshift = 0;
-			cmVcH->cm = DE1_CM_888U;
+			cmVcH->cm = dsiH->dispEngine ?
+					DE1_CM_888U : DE0_CM_888U;
 			break;
 		default:
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
@@ -1363,9 +1519,11 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 			cmVcH->bpp_wire = 2;
 			cmVcH->wc_rshift = 1;
 			if (dsiCmVcCfg->cm_out == LCD_IF_CM_O_RGB565)
-				cmVcH->cm = DE1_CM_565;
+				cmVcH->cm = dsiH->dispEngine ?
+						DE1_CM_565 : DE0_CM_565P;
 			else
-				cmVcH->cm = DE1_CM_LE;
+				cmVcH->cm = dsiH->dispEngine ?
+						DE1_CM_LE : DE0_CM_565P;
 			break;
 		default:
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
@@ -1448,26 +1606,31 @@ void CSL_DSI_Force_Stop(CSL_LCD_HANDLE vcH)
 	DSI_CLIENT clientH;
 	DSI_CM_HANDLE dsiChH;
 
-	/* stop DMA transfer */
-	if (csl_dma_vc4lite_stop_transfer(0)
-	    != DMA_VC4LITE_STATUS_SUCCESS) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-			"ERR DMA Stop Transfer\n ", __func__);
-	}
-	/* release DMA channel */
-	if (csl_dma_vc4lite_release_channel(0)
-	    != DMA_VC4LITE_STATUS_SUCCESS) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-			"ERR ERR DMA Release Channel\n ", __func__);
-	}
-
 	dsiChH = (DSI_CM_HANDLE) vcH;
 	clientH = (DSI_CLIENT) dsiChH->client;
 	dsiH = (DSI_HANDLE)clientH->lcdH;
 
+	if (dsiH->dispEngine) {
+		/* stop DMA transfer */
+		if (csl_dma_vc4lite_stop_transfer(0)
+		    != DMA_VC4LITE_STATUS_SUCCESS) {
+			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
+				"ERR DMA Stop Transfer\n ", __func__);
+		}
+		/* release DMA channel */
+		if (csl_dma_vc4lite_release_channel(0)
+		    != DMA_VC4LITE_STATUS_SUCCESS) {
+			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
+				"ERR ERR DMA Release Channel\n ", __func__);
+		}
+	}
+
 	chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
 	chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
-	chal_dsi_de1_enable(dsiH->chalH, FALSE);
+	if (dsiH->dispEngine)
+		chal_dsi_de1_enable(dsiH->chalH, FALSE);
+	else
+		chal_dsi_de0_enable(dsiH->chalH, FALSE);
 
 	cslDsiClearAllFifos(dsiH);
 }
@@ -1494,7 +1657,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	CHAL_DSI_TX_CFG_t txPkt;
 
 	UInt32 frame_size_p,	/* XY size                    [pixels] */
-	spare_pix,       /* When pixel count is (! x2 in 565 mode)
+	spare_pix = 0,       /* When pixel count is (! x2 in 565 mode)
 				or (! x4 in 888 mode) */
 	 wire_size_b,		/* XY wire size               [bytes] */
 	 txNo1_len,		/* TX no 1 - packet size      [bytes] */
@@ -1528,9 +1691,25 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 
 	frame_size_p = req->lineLenP * req->lineCount;
 	/* linelength is odd => MMDMA 2D config fails */
-	if ((dsiChH->bpp_dma == 2) && (req->lineLenP & 1)) {
-		pr_info("ERR Pixel Buff Size!");
-		return CSL_LCD_MSG_SIZE;
+	if (1 == dsiH->dispEngine) {
+		if ((dsiChH->bpp_dma == 2) && (req->lineLenP & 1)) {
+			pr_info("ERR Pixel Buff Size!");
+			return CSL_LCD_MSG_SIZE;
+		}
+		/* Include the MM-DMA requirement on payload size once the RDB
+		 * is updated */
+	} else {
+		/* Todo: Verify that the update request meet minimum criteria
+		 * for DSI, PV and AXIPV */
+		 if ((0 != ((req->lineLenP * dsiChH->bpp_dma) & 7))
+			|| (0 != (((req->xStrideB + req->lineLenP)
+			* dsiChH->bpp_dma) & 7))
+			|| (((req->lineLenP * req->lineCount)
+			* dsiChH->bpp_dma) < AXIPV_MIN_BUFF_SIZE)
+			) {
+			pr_info("ERR Pixel Buff Size!");
+			return CSL_LCD_MSG_SIZE;
+		 }
 	}
 
 	wire_size_b = frame_size_p * dsiChH->bpp_wire;
@@ -1568,16 +1747,28 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	/* set TE mode -- SHOULD BE PART OF INIT or OPEN */
 	chal_dsi_te_mode(dsiH->chalH, dsiChH->teMode);
 
-	/* Set DE1 Mode, Enable */
-	chal_dsi_de1_set_cm(dsiH->chalH, dsiChH->cm);
-	chal_dsi_de1_enable(dsiH->chalH, TRUE);
+	txPkt.dispEngine = dsiH->dispEngine;
+	if (1 == dsiH->dispEngine) {
+		/* Set DE1 Mode, Enable */
+		chal_dsi_de1_set_cm(dsiH->chalH, dsiChH->cm);
+		chal_dsi_de1_enable(dsiH->chalH, TRUE);
+	} else {
+		/* Set DE0 Mode, Enable */
+		chal_dsi_de0_set_cm(dsiH->chalH, dsiChH->cm);
+		chal_dsi_de0_set_mode(dsiH->chalH, DE0_MODE_CMD);
+		chal_dsi_de0_enable(dsiH->chalH, TRUE);
+	}
 
 	/* BOF TX PKT ENG(s) Set-Up */
 	/* TX No1 - first packet */
 	chal_dsi_wr_cfifo(dsiH->chalH, &dsiChH->dcsCmndStart, 1);
 	txPkt.msgLen = 1 + txNo1_len;
 
-	spare_pix = frame_size_p & (dsiChH->bpp_dma - 1);
+	if (1 == dsiH->dispEngine)
+		spare_pix = frame_size_p & (dsiChH->bpp_dma - 1);
+	else
+		spare_pix = 0; /* AXIPV FIFO width is 64bits*/
+
 	if (spare_pix) {
 			int offset;
 			/*
@@ -1649,17 +1840,21 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	/*--- Wait for TX PKT ENG 1 DONE */
 	cslDsiEnaIntEvent(dsiH, (UInt32)CHAL_DSI_ISTAT_TXPKT1_DONE);
 
-	/*--- Start TX PKT Engine(s) */
-	if (txNo2_repeat != 0) {
-		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, TRUE);
-		mb();
-	}
-	chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
 	mb();
+	if (1 == dsiH->dispEngine) {
+		printk("Using MMDMA path, enable DSI packets\n");
+		/*--- Start TX PKT Engine(s) */
+		if (txNo2_repeat != 0) {
+			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, TRUE);
+			mb();
+		}
+		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
+	}
 	/* send rest of the frame */
 
+	mb();
 	/*--- Start DMA */
-	res = cslDsiDmaStart(&updMsgCm);
+	res = cslDsiPixTxStart(&updMsgCm);
 	if (res != CSL_LCD_OK) {
 		LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
 			"ERR Failed To Start DMA!\n", dsiH->bus, __func__);
@@ -1668,7 +1863,22 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 			OSSEMAPHORE_Release(dsiH->semaDsi);
 		return res;
 	}
-
+#if 1 
+	if (0 == dsiH->dispEngine) {
+		printk("Using AXIPV path, Enable DSI PKT engines\n");
+		/*--- Start TX PKT Engine(s) */
+		if (txNo2_repeat != 0) {
+			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, TRUE);
+			mb();
+		}
+		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
+	}
+#endif
+#if 0
+	printk("wait for completion\n");
+			readl(HW_IO_PHYS_TO_VIRT(0x3c200034)),
+			readl(HW_IO_PHYS_TO_VIRT(0x3c200038)));
+#endif
 	if (req->cslLcdCb == NULL) {
 		if (!clientH->hasLock) {
 			osStat = OSSEMAPHORE_Obtain(dsiH->semaDma,
@@ -1676,12 +1886,16 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 								  timeOut_ms));
 
 			if (osStat != OSSTATUS_SUCCESS) {
-				cslDsiDmaStop(&updMsgCm);
+				cslDsiPixTxStop(&updMsgCm);
 				if (osStat == OSSTATUS_TIMEOUT) {
 					LCD_DBG(LCD_DBG_ERR_ID,
 					"[CSL DSI][%d] %s: "
 					"ERR Timed Out Waiting For EOF DMA!\n",
 					dsiH->bus, __func__);
+					printk("cslDsiWaitForInt int_stat=0x%x, int_en=0x%x\n\
+					stat=0x%x\n", readl(HW_IO_PHYS_TO_VIRT(0x3c200030)),
+					readl(HW_IO_PHYS_TO_VIRT(0x3c200034)),
+					readl(HW_IO_PHYS_TO_VIRT(0x3c200038)));
 					res = CSL_LCD_OS_TOUT;
 				} else {
 					LCD_DBG(LCD_DBG_ERR_ID,
@@ -1703,14 +1917,17 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 				"In Atomic wait for DSI/DMA finish...\n",
 				dsiH->bus, __func__);
 
-			csl_dma_poll_int(updMsgCm.dmaCh);
+			cslDsiPixTxPollInt(&updMsgCm);
 			res = cslDsiWaitForStatAny_Poll(dsiH,
 					CHAL_DSI_STAT_TXPKT1_DONE, NULL, 100);
 		}
 
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
-		chal_dsi_de1_enable(dsiH->chalH, FALSE);
+		if (dsiH->dispEngine)
+			chal_dsi_de1_enable(dsiH->chalH, FALSE);
+		else
+			chal_dsi_de0_enable(dsiH->chalH, FALSE);
 
 		if (!clientH->hasLock)
 			OSSEMAPHORE_Release(dsiH->semaDsi);
@@ -1963,12 +2180,37 @@ static void csl_dsi_set_chal_api_clks(DSI_HANDLE dsiH,
  */
 CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 {
+	int ret;
 	CSL_LCD_RES_T res = CSL_LCD_OK;
 	DSI_HANDLE dsiH;
 
 	CHAL_DSI_MODE_t chalMode;
 	CHAL_DSI_INIT_t chalInit;
 	CHAL_DSI_AFE_CFG_t chalAfeCfg;
+
+#ifdef CONFIG_ARCH_HAWAII 
+	struct axipv_init_t axipv_init_data = {
+		.irq = BCM_INT_ID_AXIPV,
+		.base_addr = KONA_AXIPV_VA,
+#ifdef AXIPV_HAS_CLK
+		.clk_name = AXIPV_AXI_BUS_CLK_NAME_STR,
+#endif
+		.irq_cb = axipv_irq_cb,
+		.release_cb = axipv_release_cb,
+	};
+	struct pv_init_t pv_init_data = {
+		.id = 0,
+		.irq = BCM_INT_ID_PV,
+		.base_addr = KONA_PIXELVALVE_VA,
+#ifdef PV_HAS_CLK
+		.apb_clk_name = PIXELV_APB_BUS_CLK_NAME_STR,
+		.pix_clk_name = PIXELV_PERI_CLK_NAME_STR,
+#endif
+		.err_cb = pv_err_cb,
+		.eof_cb = pv_eof_cb,
+	};
+#endif
+
 
 	if (dsiCfg->bus >= DSI_INST_COUNT) {
 		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
@@ -1986,7 +2228,43 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 	}
 
 	if (dsiH->initOnce != DSI_INITIALIZED) {
+
 		memset(dsiH, 0, sizeof(DSI_HANDLE_t));
+
+		dsiH->dispEngine = dsiCfg->dispEngine;
+
+#ifdef CONFIG_ARCH_HAWAII
+		if (dsiH->dispEngine == 0) {
+			printk("Initialising AXIPV and PV\n");
+			ret = axipv_init(&axipv_init_data, &dsiH->axipvCfg);
+			if ((ret < 0) || !dsiH->axipvCfg) {
+				pr_err("axipv_init failed with ret=%d\n", ret);
+				return CSL_LCD_ERR;
+			}
+			dsiH->axipvCfg->cmd = true;
+			dsiH->axipvCfg->test = false;
+			dsiH->axipvCfg->async = false;
+
+			ret = pv_init(&pv_init_data, &dsiH->pvCfg);
+			if ((ret < 0) || !dsiH->pvCfg) {
+				pr_err("pv_init failed with ret=%d\n", ret);
+				return CSL_LCD_ERR;
+			}
+			dsiH->pvCfg->pix_fmt = DSI_VIDEO_CMD_18_24BPP;
+			dsiH->pvCfg->pclk_sel = DISP_CTRL_DSI;
+			dsiH->pvCfg->cmd = true;
+			dsiH->pvCfg->cont = false;
+			dsiH->pvCfg->interlaced = false;
+			dsiH->pvCfg->vsyncd = 0;
+			dsiH->pvCfg->pix_stretch = 0;
+			dsiH->pvCfg->vs = 0;
+			dsiH->pvCfg->vbp = 0;
+			dsiH->pvCfg->vfp = 1;
+			dsiH->pvCfg->hs = 0;
+			dsiH->pvCfg->hbp = 0;
+			dsiH->pvCfg->hfp = 0;
+		}
+#endif
 
 		dsiH->bus = dsiCfg->bus;
 
@@ -2001,6 +2279,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiH->hisr = cslDsi0Stat_HISR;
 			dsiH->task = cslDsi0UpdateTask;
 			dsiH->dma_cb = cslDsi0EofDma;
+#ifndef CONFIG_ARCH_HAWAII
 		} else {
 			dsiH->dsiCoreRegAddr = CSL_DSI1_BASE_ADDR;
 			dsiH->interruptId = CSL_DSI1_IRQ;
@@ -2008,6 +2287,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiH->hisr = cslDsi1Stat_HISR;
 			dsiH->task = cslDsi1UpdateTask;
 			dsiH->dma_cb = cslDsi1EofDma;
+#endif
 		}
 
 		if (!cslDsiOsInit(dsiH)) {

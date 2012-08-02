@@ -81,7 +81,7 @@ extern "C" {
 		LCD_DBG_INIT_ID = 2,
 	} LCD_DBG_ID_TYPE;
 
-#define LCD_DBG(id, fmt, args...)	do { if (id == LCD_DBG_ERR_ID) printk(KERN_ERR fmt, ##args); } while (0)
+#define LCD_DBG(id, fmt, args...)	printk(KERN_ERR fmt, ##args)
 #endif
 
 /**
