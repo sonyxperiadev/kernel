@@ -150,7 +150,7 @@ static void __init draw_logo(void)
 
 int __init logo_init(void)
 {
-	if (!load_565rle_image(INIT_IMAGE_FILE))
+	if (!load_565rle_image(INIT_IMAGE_FILE, true))
 		draw_logo();
 
 	return 0;
