@@ -272,7 +272,8 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 		pr_err("pvCfg is NULL\n");
 	if (!axipvCfg)
 		pr_err("axipvCfg is NULL\n");
-	axipvCfg->width = (updMsg->updReq.lineLenP + updMsg->updReq.xStrideB) * 4;
+	axipvCfg->width = (updMsg->updReq.lineLenP +
+				updMsg->updReq.xStrideB) * 4;
 	axipvCfg->height = updMsg->updReq.lineCount;
 	axipvCfg->pix_fmt = AXIPV_PIXEL_FORMAT_24BPP_RGB;
 
@@ -1863,7 +1864,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 			OSSEMAPHORE_Release(dsiH->semaDsi);
 		return res;
 	}
-#if 1 
+#if 1
 	if (0 == dsiH->dispEngine) {
 		printk("Using AXIPV path, Enable DSI PKT engines\n");
 		/*--- Start TX PKT Engine(s) */
@@ -2188,7 +2189,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 	CHAL_DSI_INIT_t chalInit;
 	CHAL_DSI_AFE_CFG_t chalAfeCfg;
 
-#ifdef CONFIG_ARCH_HAWAII 
+#ifdef CONFIG_ARCH_HAWAII
 	struct axipv_init_t axipv_init_data = {
 		.irq = BCM_INT_ID_AXIPV,
 		.base_addr = KONA_AXIPV_VA,

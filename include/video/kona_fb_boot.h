@@ -88,7 +88,7 @@ struct dispdrv_init_parms  {
 		  unsigned long  lcd_rst1   :8;
 		  unsigned long  lcd_rst2   :8;
 		} bits;
-	}w1;
+	} w1;
 };
 
 

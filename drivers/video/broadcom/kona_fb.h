@@ -3,7 +3,7 @@
 
 #ifdef kona_FB_DEBUG
 #define konafb_debug(fmt, arg...)	\
-	printk("%s:%d " fmt, __func__, __LINE__, ##arg)
+	printk(KERN_INFO"%s:%d " fmt, __func__, __LINE__, ##arg)
 #else
 #define konafb_debug(fmt, arg...)	\
 	do {	} while (0)

@@ -16,18 +16,18 @@
 
 struct kona_fb_platform_data {
 	char			*dispdrv_name;
-	void* 			(*dispdrv_entry) (void);
+	void *(*dispdrv_entry) (void);
 	struct 	dispdrv_init_parms   parms;
 };
 
-extern void* DISPDRV_GetFuncTable(void);
-extern void* DISP_DRV_LQ043Y1DX01_GetFuncTable(void);
-extern void* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable(void);
-extern void* DISP_DRV_NT35516_GetFuncTable(void);
-extern void* DISP_DRV_BCM91008_ALEX_GetFuncTable(void);
-extern void* DISP_DRV_R61581_HVGA_SMI_GetFuncTable(void);
-extern void* DISPDRV_ili9486_GetFuncTable(void);
-extern void* DISPDRV_R61531_GetFuncTable(void);
+extern void *DISPDRV_GetFuncTable(void);
+extern void *DISP_DRV_LQ043Y1DX01_GetFuncTable(void);
+extern void *DISP_DRV_NT35582_WVGA_SMI_GetFuncTable(void);
+extern void *DISP_DRV_NT35516_GetFuncTable(void);
+extern void *DISP_DRV_BCM91008_ALEX_GetFuncTable(void);
+extern void *DISP_DRV_R61581_HVGA_SMI_GetFuncTable(void);
+extern void *DISPDRV_ili9486_GetFuncTable(void);
+extern void *DISPDRV_R61531_GetFuncTable(void);
 extern void *DISPDRV_ili9341_GetFuncTable(void);
 extern void *LCD_DISPDRV_GetFuncTable(void);
 #endif /* KONA_FB_H_ */

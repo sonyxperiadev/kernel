@@ -244,7 +244,7 @@ extern "C" {
 *  @param    dsiCmVcH		(in) Video Mode VC handle
 *  @param    req		(in) Update Request
 *
-*  @return   CSL_LCD_RES_T  	(out) result
+*  @return   CSL_LCD_RES_T	(out) result
 *
 *  @note
 *
