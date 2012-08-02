@@ -28,10 +28,6 @@ ifneq ($(CONFIG_WIRELESS_EXT),)
 bcmdhd-objs += wl_iw.o
 DHDCFLAGS += -DSOFTAP
 endif
-ifneq ($(CONFIG_DHD_USE_SCHED_SCAN),)
-DHDCFLAGS += -DWL_SCHED_SCAN
-else
-endif
 EXTRA_CFLAGS = $(DHDCFLAGS)
 ifeq ($(CONFIG_BCMDHD),m)
 EXTRA_LDFLAGS += --strip-debug

@@ -112,7 +112,7 @@ typedef struct android_wifi_priv_cmd {
  */
 void dhd_customer_gpio_wlan_ctrl(int onoff);
 uint dhd_dev_reset(struct net_device *dev, uint8 flag);
-int dhd_dev_init_ioctl(struct net_device *dev);
+void dhd_dev_init_ioctl(struct net_device *dev);
 #ifdef WL_CFG80211
 int wl_cfg80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr);
 int wl_cfg80211_set_btcoex_dhcp(struct net_device *dev, char *command);
@@ -364,10 +364,7 @@ int wl_android_wifi_on(struct net_device *dev)
 		sdioh_start(NULL, 0);
 		ret = dhd_dev_reset(dev, FALSE);
 		sdioh_start(NULL, 1);
-		if (!ret) {
-			if (dhd_dev_init_ioctl(dev) < 0)
-				ret = -EFAULT;
-		}
+		dhd_dev_init_ioctl(dev);
 		g_wifi_on = 1;
 	}
 	dhd_net_if_unlock(dev);
@@ -661,21 +658,20 @@ void wl_android_wifictrl_func_del(void)
 	}
 }
 
-void *wl_android_prealloc(int section, unsigned long size)
+void* wl_android_prealloc(int section, unsigned long size)
 {
 	void *alloc_ptr = NULL;
 	if (wifi_control_data && wifi_control_data->mem_prealloc) {
 		alloc_ptr = wifi_control_data->mem_prealloc(section, size);
 		if (alloc_ptr) {
 			DHD_INFO(("success alloc section %d\n", section));
-			if (size != 0L)
-				bzero(alloc_ptr, size);
+			bzero(alloc_ptr, size);
 			return alloc_ptr;
 		}
 	}
 
 	DHD_ERROR(("can't alloc section %d\n", section));
-	return NULL;
+	return 0;
 }
 
 #if !defined(CUSTOMER_HW) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39))
