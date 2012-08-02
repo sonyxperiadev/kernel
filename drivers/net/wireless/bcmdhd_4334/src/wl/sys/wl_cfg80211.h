@@ -455,7 +455,6 @@ struct wl_priv {
 	void *pub;
 	u32 iface_cnt;
 	u32 channel;		/* current channel */
-	s32 glom;
 #ifdef WL_CFG80211_SYNC_GON_TIME
 	u32 af_sent_channel;	/* channel action frame is sent */
 	/* save the next gon af subtype when it needs to wait more time for next gon af

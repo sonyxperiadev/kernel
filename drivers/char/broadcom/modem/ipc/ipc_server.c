@@ -225,6 +225,7 @@ void ipcs_intr_tasklet_handler(unsigned long data)
 	}
 }
 
+
 static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 {
 	void __iomem *base = (void __iomem *)(KONA_BINTC_BASE_ADDR);
@@ -236,6 +237,8 @@ static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 		       base + BINTC_ISWIR1_CLR_OFFSET /*0x34 */ );
 	else
 		writel(1 << (birq), base + BINTC_ISWIR0_CLR_OFFSET /*0x24 */ );
+
+	IPC_UpdateIrqStats();
 
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&ipc_wake_lock);
@@ -560,7 +563,7 @@ struct device *ipcs_get_drvdata(void)
 static int ipcs_read_proc(char *page, char **start, off_t off, int count,
 			  int *eof, void *data)
 {
-	int len = IPC_DumpStatus(page);
+	int len = IPC_DumpStatus(page, count);
 	if (len <= off + count)
 		*eof = 1;
 	*start = page + off;
@@ -571,6 +574,7 @@ static int ipcs_read_proc(char *page, char **start, off_t off, int count,
 		len = 0;
 	return len;
 }
+
 
 static int __init ipcs_module_init(void)
 {

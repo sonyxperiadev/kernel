@@ -643,11 +643,8 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 			"audio_control_dsp tid=%ld,param1=%ld\n", tid, param1);
 
 		/** init completion before send this DSP command */
-		if (param1 == AUDDRV_DSPCMD_AUDIO_ENABLE) {
-			/*aError("i_c");*/
+		if (param1 == AUDDRV_DSPCMD_AUDIO_ENABLE)
 			init_completion(&audioEnableDone);
-			/*aError("i_d");*/
-		}
 
 		CAPI2_audio_control_dsp(tid, audioClientId, &audioParam);
 		/*

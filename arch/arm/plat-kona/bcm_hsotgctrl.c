@@ -58,6 +58,8 @@ struct bcm_hsotgctrl_drv_data {
 	struct clk *mdio_master_clk;
 	void *hsotg_ctrl_base;
 	void *chipregs_base;
+	struct workqueue_struct *bcm_hsotgctrl_work_queue;
+	struct delayed_work wakeup_work;
 	int hsotgctrl_irq;
 	bool irq_enabled;
 	bool allow_suspend;
@@ -349,6 +351,13 @@ int bcm_hsotgctrl_phy_deinit(void)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
+	if (work_pending(&bcm_hsotgctrl_handle->wakeup_work.work)) {
+		cancel_delayed_work(&bcm_hsotgctrl_handle->
+			wakeup_work);
+		flush_workqueue(bcm_hsotgctrl_handle->
+			bcm_hsotgctrl_work_queue);
+	}
+
 	if (bcm_hsotgctrl_handle->irq_enabled) {
 		/* We are shutting down USB so ensure wake IRQ
 		 * is disabled
@@ -558,13 +567,19 @@ int bcm_hsotgctrl_bc_vdp_src_off(void)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_vdp_src_off);
 
-static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
+static void bcm_hsotgctrl_delayed_wakeup_handler(struct work_struct *work)
 {
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
-		local_hsotgctrl_handle;
+		container_of(work, struct bcm_hsotgctrl_drv_data,
+			 wakeup_work.work);
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
-		return IRQ_NONE;
+	if (bcm_hsotgctrl_handle !=	local_hsotgctrl_handle) {
+		dev_warn(local_hsotgctrl_handle->dev,
+			"Invalid HSOTGCTRL wakeup handler");
+		return;
+	}
+
+	dev_info(bcm_hsotgctrl_handle->dev, "Do HSOTGCTRL wakeup\n");
 
 	if (bcm_hsotgctrl_handle->irq_enabled) {
 
@@ -576,12 +591,27 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 		/* Disable wakeup interrupt */
 		bcm_hsotgctrl_phy_wakeup_condition(false);
 
-		disable_irq_nosync(bcm_hsotgctrl_handle->hsotgctrl_irq);
+		disable_irq(bcm_hsotgctrl_handle->hsotgctrl_irq);
 		bcm_hsotgctrl_handle->irq_enabled = false;
 
 		/* Request PHY clock */
 		bcm_hsotgctrl_set_phy_clk_request(true);
 	}
+}
+
+static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
+{
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
+		local_hsotgctrl_handle;
+
+	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+		return IRQ_NONE;
+
+	/* Disable wakeup interrupt */
+	bcm_hsotgctrl_phy_wakeup_condition(false);
+
+	schedule_delayed_work(&bcm_hsotgctrl_handle->wakeup_work,
+	  msecs_to_jiffies(BCM_HSOTGCTRL_WAKEUP_PROCESSING_DELAY));
 
 	return IRQ_HANDLED;
 }
@@ -608,24 +638,21 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-	if (bcm_hsotgctrl_handle->irq_enabled == false) {
-		/* Enable wake IRQ */
-		bcm_hsotgctrl_handle->irq_enabled = true;
-		enable_irq(bcm_hsotgctrl_handle->hsotgctrl_irq);
-	}
-
 	/* Enable wakeup interrupt */
 	bcm_hsotgctrl_phy_wakeup_condition(true);
 
 	/* Clear PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(true);
 
-	/* REVISIT: Disable OTG AHB clock. This step needs
-	 * more investigation. For now, don't do it as it has
-	 * side-effect and needs some coordination between
-	 * USB driver components
+	/* Disable OTG AHB clock */
 	bcm_hsotgctrl_en_clock(false);
-	*/
+
+	if (bcm_hsotgctrl_handle->irq_enabled == false) {
+		/* Enable wake IRQ */
+		bcm_hsotgctrl_handle->irq_enabled = true;
+		enable_irq(bcm_hsotgctrl_handle->hsotgctrl_irq);
+	}
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_handle_bus_suspend);
@@ -757,6 +784,19 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	hsotgctrl_drvdata->hsotgctrl_irq = platform_get_irq(pdev, 0);
 
+	/* Create a work queue for wakeup work items */
+	hsotgctrl_drvdata->bcm_hsotgctrl_work_queue =
+		create_workqueue("bcm_hsotgctrl_events");
+
+	if (hsotgctrl_drvdata->bcm_hsotgctrl_work_queue == NULL) {
+		dev_warn(&pdev->dev,
+			 "BCM HSOTGCTRL events work queue creation failed\n");
+		/* Treat this as non-fatal error */
+	}
+
+	INIT_DELAYED_WORK(&hsotgctrl_drvdata->wakeup_work,
+			  bcm_hsotgctrl_delayed_wakeup_handler);
+
 	/* request_irq enables irq */
 	hsotgctrl_drvdata->irq_enabled = true;
 	error = request_irq(hsotgctrl_drvdata->hsotgctrl_irq,
@@ -798,7 +838,8 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int bcm_hsotgctrl_runtime_suspend(struct device *dev)
+static int bcm_hsotgctrl_pm_suspend(struct platform_device *pdev,
+	pm_message_t state)
 {
 	int status = 0;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
@@ -812,24 +853,20 @@ static int bcm_hsotgctrl_runtime_suspend(struct device *dev)
 	return status;
 }
 
-static int bcm_hsotgctrl_runtime_resume(struct device *dev)
+static int bcm_hsotgctrl_pm_resume(struct platform_device *pdev)
 {
 	return 0;
 }
-
-static const struct dev_pm_ops bcm_hsotg_ctrl_pm_ops = {
-	.runtime_suspend = bcm_hsotgctrl_runtime_suspend,
-	.runtime_resume = bcm_hsotgctrl_runtime_resume,
-};
 
 static struct platform_driver bcm_hsotgctrl_driver = {
 	.driver = {
 		   .name = "bcm_hsotgctrl",
 		   .owner = THIS_MODULE,
-		   .pm = &bcm_hsotg_ctrl_pm_ops,
 	},
 	.probe = bcm_hsotgctrl_probe,
 	.remove = bcm_hsotgctrl_remove,
+	.suspend = bcm_hsotgctrl_pm_suspend,
+	.resume = bcm_hsotgctrl_pm_resume,
 };
 
 static int __init bcm_hsotgctrl_init(void)
@@ -1077,19 +1114,21 @@ int bcm_hsotgctrl_set_phy_clk_request(bool on)
 	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 
 	if (on) {
+		/* Set PHY clk req */
 		val |= HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQUEST_MASK;
 		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-	} else {
-		/* Clear PHY req */
-		val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQUEST_MASK;
-		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-		/* Clear phy req clear bit */
-		val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-		val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQ_CLEAR_MASK;
-		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-		/* Set phy req clear bit */
+
+		/* Set phy clk req clear bit */
 		val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 		val |= HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQ_CLEAR_MASK;
+		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	} else {
+		/* Clear PHY clk req */
+		val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQUEST_MASK;
+		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+		/* Clear phy clk req clear bit */
+		val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+		val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQ_CLEAR_MASK;
 		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	}
 
@@ -1168,6 +1207,20 @@ int bcm_hsotgctrl_phy_wakeup_condition(bool set)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_wakeup_condition);
 
+int bcm_hsotgctrl_is_suspend_allowed(bool *suspend_allowed)
+{
+	void *hsotg_ctrl_base;
+
+	if ((NULL != local_hsotgctrl_handle) &&
+		    suspend_allowed)
+		*suspend_allowed = local_hsotgctrl_handle->allow_suspend;
+	else
+		return -ENODEV;
+
+	return 0;
+
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_is_suspend_allowed);
 
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("USB HSOTGCTRL driver");

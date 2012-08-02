@@ -1081,8 +1081,12 @@ static UInt32 csl_caph_get_fifo_addr(CSL_CAPH_PathID pathID,
 	default:
 		break;
 	}
-	if (!addr)
+	if (!addr) {
+		aError("csl_caph_get_fifo_addr"
+			"pathid %d, sinkNo %d, blockPathIdx %d, direction %d",
+			pathID, sinkNo, blockPathIdx, direction);
 		audio_xassert(0, pathID);
+	}
 
 	return addr;
 }
@@ -1989,6 +1993,10 @@ static void csl_caph_config_sw
 			swCfg->FIFO_srcAddr = csl_i2s_get_rx0_fifo_data_port
 				(fmHandleSSP);
 		} else {
+			aError("csl_caph_config_sw pathid"
+			"%d, sinkNo %d, blockPathIdx %d",
+			pathID, sinkNo, blockPathIdx);
+
 			audio_xassert(0, pathID);
 		}
 	}
@@ -2020,6 +2028,10 @@ static void csl_caph_config_sw
 					csl_i2s_get_tx0_fifo_data_port(
 						fmHandleSSP);
 		} else {
+			aError("csl_caph_config_sw pathid"
+			"%d, sinkNo %d, blockPathIdx %d",
+			pathID, sinkNo, blockPathIdx);
+
 			audio_xassert(0, pathID);
 		}
 	}
@@ -2059,6 +2071,10 @@ static void csl_caph_config_sw
 			swCfg->trigger = csl_caph_srcmixer_get_outchnl_trigger
 				(path->srcmRoute[sinkNo][blockIdxTmp].outChnl);
 		} else {
+			aError("csl_caph_config_sw pathid"
+			"%d, sinkNo %d, blockPathIdx %d",
+			pathID, sinkNo, blockPathIdx);
+
 			audio_xassert(0, pathID);
 		}
 	}
@@ -2100,8 +2116,14 @@ static void csl_caph_config_sw
 
 		if (swCfg->cloned)
 			csl_caph_switch_release_channel(cur_sw);
-		else
+		else {
+			aError("csl_caph_config_sw pathid"
+			"%d, sinkNo %d, blockPathIdx %d",
+			pathID, sinkNo, blockPathIdx);
+
 			audio_xassert(0, cur_sw);
+		}
+
 		aTrace(LOG_AUDIO_CSL,
 			"%s sw %d in path %d sink %d clones sw %d "
 			"in path %d sink %d\n",
@@ -4034,7 +4056,8 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID,
 	}
 
 	if (path->sinkCount == 1) {
-		aError("%s::pathID %d, last sink %d is removed\n",
+		aTrace(LOG_AUDIO_CSL, "%s::pathID %d, last sink %d"
+			"is removed\n",
 		__func__, pathID, path->sink[sinkNo]);
 	}
 

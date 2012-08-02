@@ -76,7 +76,8 @@ struct cntry_locales_custom {
 #define	WL_IW_RSSI_GOOD		-68	
 #define	WL_IW_RSSI_VERY_GOOD	-58	
 #define	WL_IW_RSSI_EXCELLENT	-57	
-#define	WL_IW_RSSI_INVALID	 0	
+#define	WL_IW_RSSI_INVALID	 0
+#define WL_IW_RSSI_MAXVAL	-15
 #define MAX_WX_STRING 80
 #define SSID_FMT_BUF_LEN	((4 * 32) + 1)
 #define isprint(c) bcm_isprint(c)

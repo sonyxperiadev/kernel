@@ -424,8 +424,7 @@ static void kona_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 		/* Clear interrupt before handler is called so we don't
 		 * miss any interrupt occurred during executing them.
 		 */
-		__raw_writel(__raw_readl(reg_base + GPIO_INT_STA(bankId)) |
-			     (1 << bit), reg_base + GPIO_INT_STA(bankId));
+		__raw_writel((1 << bit), reg_base + GPIO_INT_STA(bankId));
 
 		/* Invoke interrupt handler.
 		 */

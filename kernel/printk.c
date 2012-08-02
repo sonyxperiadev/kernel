@@ -41,6 +41,7 @@
 #include <linux/cpu.h>
 #include <linux/notifier.h>
 #include <linux/rculist.h>
+#include <linux/dma-mapping.h>
 #include <trace/stm.h>
 
 #include <asm/uaccess.h>
@@ -154,8 +155,11 @@ EXPORT_SYMBOL(console_set_on_cmdline);
 static int console_may_schedule;
 
 #ifdef CONFIG_PRINTK
-
+#ifdef CONFIG_LOGBUF_NONCACHE
+static char __initdata __log_buf[__LOG_BUF_LEN];
+#else
 static char __log_buf[__LOG_BUF_LEN];
+#endif
 char *log_buf = __log_buf;
 int log_buf_len = __LOG_BUF_LEN;
 static unsigned logged_chars; /* Number of chars produced since last read+clear operation */
@@ -1933,4 +1937,45 @@ void kmsg_dump(enum kmsg_dump_reason reason)
 		dumper->dump(dumper, reason, s1, l1, s2, l2);
 	rcu_read_unlock();
 }
+#endif
+
+#ifdef CONFIG_LOGBUF_NONCACHE
+static int logbuf_noncache;
+static int __init setup_logbuf_noncache(char *p)
+{
+	get_option(&p, &logbuf_noncache);
+	return 0;
+}
+
+early_param("logbuf_nocache", setup_logbuf_noncache);
+
+static int __init non_cached_log_buf(void){
+
+	dma_addr_t p;
+	void *v;
+
+	if (logbuf_noncache) {
+		v = dma_alloc_coherent(NULL, log_buf_len, &p, GFP_KERNEL);
+		if (v == NULL) {
+			pr_err("%s:dma_alloc_coherent failed\n", __func__);
+			BUG_ON(1);
+		}
+		log_buf = v;
+		memcpy(v, __log_buf, logged_chars);
+		printk(KERN_INFO "Switched to non-cached __log_buf\n");
+	} else {
+		v = (void *)__get_free_pages(GFP_KERNEL,
+						get_order(log_buf_len));
+		if (v == NULL) {
+			pr_err("%s:get_free_pages failed for log_buf\n",
+				__func__);
+			BUG_ON(1);
+		}
+		log_buf = v;
+		memcpy(v, __log_buf, logged_chars);
+		printk(KERN_INFO "__log_buf cacheable\n");
+	}
+	return 0;
+}
+arch_initcall(non_cached_log_buf);
 #endif

@@ -569,6 +569,12 @@ config LOG_BUF_SHIFT
 	             14 => 16 KB
 		     13 =>  8 KB
 		     12 =>  4 KB
+config LOGBUF_NONCACHE
+	default n
+	bool "Make kernel logbuf non-cacheable"
+	help
+	  This option makes kernel's log buffer non cacheable
+
 
 #
 # Architectures with an unreliable sched_clock() should select this:

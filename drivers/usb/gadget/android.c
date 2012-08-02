@@ -1064,9 +1064,19 @@ static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, field ## _show, field ## _store);
 DESCRIPTOR_ATTR(idVendor, "%04x\n")
 DESCRIPTOR_ATTR(idProduct, "%04x\n")
 DESCRIPTOR_ATTR(bcdDevice, "%04x\n")
+#if defined CONFIG_MACH_RHEA_SS \
+|| defined CONFIG_MACH_RHEA_SS_ZANIN \
+|| defined CONFIG_MACH_RHEA_SS_LUCAS \
+|| defined CONFIG_MACH_RHEA_SS_AMAZING \
+|| defined CONFIG_MACH_RHEA_SS_IVORY
+DESCRIPTOR_ATTR(bDeviceClass, "%02x\n")
+DESCRIPTOR_ATTR(bDeviceSubClass, "%02x\n")
+DESCRIPTOR_ATTR(bDeviceProtocol, "%02x\n")
+#else
 DESCRIPTOR_ATTR(bDeviceClass, "%d\n")
 DESCRIPTOR_ATTR(bDeviceSubClass, "%d\n")
 DESCRIPTOR_ATTR(bDeviceProtocol, "%d\n")
+#endif
 DESCRIPTOR_STRING_ATTR(iManufacturer, manufacturer_string)
 DESCRIPTOR_STRING_ATTR(iProduct, product_string)
 DESCRIPTOR_STRING_ATTR(iSerial, serial_string)
