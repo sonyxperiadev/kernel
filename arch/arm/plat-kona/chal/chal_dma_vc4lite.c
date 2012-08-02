@@ -80,7 +80,12 @@ typedef struct {
 	cUInt32 perMap : 5;
 	cUInt32 waits : 5;
 	cUInt32 noWideBurst : 1;
+#ifdef CONFIG_ARCH_HAWAII
+	cUInt32 burstWriteEnable32 : 1;
+	cUInt32 unused1 : 4;
+#else
 	cUInt32 unused1 : 5;
+#endif
 	cUInt32 srcAddr : 32;
 	cUInt32 dstAddr : 32;
 	cUInt32 xferLen : 32;
@@ -602,6 +607,9 @@ CHAL_DMA_VC4LITE_STATUS_t
 	for (i = 0; i < sizeof(ChalDmaVc4liteCtrlBlk_t) / 4; i++)
 		*(cUInt32 *) ((cUInt32) pCurCtrlBlk + i * 4) = 0;
 
+#ifdef CONFIG_ARCH_HAWAII
+	pCurCtrlBlk->burstWriteEnable32 = curCtrlBlkInfo->burstWriteEnable32;
+#endif
 	pCurCtrlBlk->noWideBurst = curCtrlBlkInfo->noWideBurst;
 	pCurCtrlBlk->waits = curCtrlBlkInfo->waitCycles;
 	pCurCtrlBlk->burstLength = curCtrlBlkInfo->burstLength;
