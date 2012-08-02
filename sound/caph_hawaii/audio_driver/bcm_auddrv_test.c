@@ -89,15 +89,26 @@
 #include "audio_vdriver_voice_play.h"
 #endif
 
+/* Macro to Enable and disable test data*/
 #define CONFIG_BCM_ENABLE_TESTDATA
 
+#ifdef CONFIG_BCM_ENABLE_TESTDATA
 #include "48k_stereo_16bit.h"
 #include "48k_mono_16bit.h"
+#else
+static UInt16 playback_audiotest_mono[] = { 0 };
+static UInt16 playback_audiotest_stereo[] = { 0 };
+#endif
 
 static UInt8 *samplePCM16_inaudiotest;
 static UInt16 *record_test_buf;
 
 UInt8 playback_audiotest_srcmixer[] = { 0 };
+
+#define RD_REG(addr) \
+		(*((volatile unsigned int *)(HW_IO_PHYS_TO_VIRT(addr))))
+#define WR_REG(addr, val) \
+		(*((volatile unsigned int *)(HW_IO_PHYS_TO_VIRT(addr))) = val)
 
 #ifdef CONFIG_BCM_MODEM
 #define USE_LOOPBACK_SYSPARM
@@ -919,11 +930,135 @@ static int HandleControlCommand()
 					    AUDIOH_LOOPBACK_CTRL_OFFSET))));
 
 		break;
+	case 15:
+		/*call after you enable playback/capture or audio loopback*/
+		aTrace(LOG_AUDIO_DRIVER, "CAPH resigter dump\n");
+		aTrace(LOG_AUDIO_DRIVER, "CFIFO_CH1[0x%08x]"
+				"CFIFO_CH2[0x%08x]"
+				"MIXER1_OFIFO_DAT0[0x%08x]"
+				"MIXER2_OFIFO_DAT0[0x%08x]"
+				"MIXER2_OFIFO1_DAT[0x%08x]"
+				"MIXER2_OFIFO2_DAT[0x%08x]"
+				"AH_VIN_FIFO[0x%08x]"
+				"SSP3_FIFO_RX0[0x%08x]"
+				"SSP4_FIFO_RX0[0x%08x]\n" ,
+				RD_REG(0x3502D000),
+				RD_REG(0x3502D040),
+				RD_REG(0x3502C000 + 0x00000C08),
+				RD_REG(0x3502C000 + 0x00000C18),
+				RD_REG(0x3502C000 + 0x00000C20),
+				RD_REG(0x3502C000 + 0x00000C30),
+				RD_REG(0x35020000 + 0x00006800),
+				RD_REG(0x3502B000 + 0x00000600),
+				RD_REG(0x35028000 + 0x00000600));
+		break;
+	case 16:
+		{
+		aTrace(LOG_AUDIO_DRIVER, "SSPI Loopback\n");
+		AUDCTRL_SSP_PORT_e ssp_port;
+		AUDCTRL_SSP_BUS_e ssp_bus;
+		int en_lpbk = 0;
+		unsigned int ssp_tdx3 = 0x0, ssp_tdx4 = 0x0, ssp_tdx6 = 0x0;
+
+		if (sgBrcm_auddrv_TestValues[2] == 3)
+			ssp_port = AUDCTRL_SSP_3;
+		else if (sgBrcm_auddrv_TestValues[2] == 4)
+			ssp_port = AUDCTRL_SSP_4;
+		else if (sgBrcm_auddrv_TestValues[2] == 4)
+			ssp_port = AUDCTRL_SSP_6;
+		else {
+
+			aTrace(LOG_AUDIO_DRIVER, "Pls provide proper SSP\n");
+			return 0;
+		}
+
+		if (sgBrcm_auddrv_TestValues[3] == 1)
+			ssp_bus = AUDCTRL_SSP_PCM;
+		else if (sgBrcm_auddrv_TestValues[3] == 2)
+			ssp_bus = AUDCTRL_SSP_I2S;
+		else if (sgBrcm_auddrv_TestValues[3] == 3)
+			ssp_bus = AUDCTRL_SSP_TDM;
+		else {
+			aTrace(LOG_AUDIO_DRIVER, "Pls provide audio format\n");
+			return 0;
+		}
+
+		if (sgBrcm_auddrv_TestValues[4] == 1)
+			en_lpbk = 1;
+		else if (sgBrcm_auddrv_TestValues[4] == 0)
+			en_lpbk = 2;
+		else
+			return 0;
+
+		AUDCTRL_ConfigSSP(ssp_port, ssp_bus, en_lpbk);
+
+		if (sgBrcm_auddrv_TestValues[2] == 3) {
+			ssp_tdx3 = RD_REG(0x35004800 + 0x00000354);
+				if (en_lpbk == 1) {
+					ssp_tdx3 &= ~(1 << 3);
+					WR_REG((0x35004800 + 0x00000354),
+							ssp_tdx3);
+					aTrace(LOG_AUDIO_DRIVER,
+							"SSP_TDX3[0x%08x]\n",
+							RD_REG(0x35004800 +
+								0x00000354));
+				} else if (en_lpbk == 2) {
+					ssp_tdx3 |= (1 << 3);
+					WR_REG((0x35004800 + 0x00000354),
+							ssp_tdx3);
+					aTrace(LOG_AUDIO_DRIVER,
+							"SSP_TDX3[0x%08x]\n",
+							RD_REG(0x35004800 +
+								0x00000354));
+				}
+		} else if (sgBrcm_auddrv_TestValues[2] == 4) {
+			ssp_tdx4 = RD_REG(0x35004800 + 0x00000364);
+				if (en_lpbk == 1) {
+					ssp_tdx4 &= ~(1 << 3);
+					WR_REG((0x35004800 + 0x00000354),
+							ssp_tdx4);
+					aTrace(LOG_AUDIO_DRIVER,
+							"SSP_TDX4[0x%08x]\n",
+							RD_REG(0x35004800 +
+								0x00000364));
+				} else if (en_lpbk == 2) {
+					ssp_tdx4 |= (1 << 3);
+					WR_REG((0x35004800 + 0x00000354),
+							ssp_tdx4);
+					aTrace(LOG_AUDIO_DRIVER,
+							"SSP_TDX4[0x%08x]\n",
+							RD_REG(0x35004800 +
+								0x00000364));
+				}
+
+		} else if (sgBrcm_auddrv_TestValues[2] == 6) {
+			ssp_tdx6 = RD_REG(0x35004800 + 0x00000384);
+				if (en_lpbk == 1) {
+					ssp_tdx6 &= ~(1 << 3);
+					WR_REG((0x35004800 + 0x00000384),
+							ssp_tdx6);
+					aTrace(LOG_AUDIO_DRIVER,
+							"SSP_TDX6[0x%08x]\n",
+							RD_REG(0x35004800 +
+								0x00000384));
+				} else if (en_lpbk == 2) {
+					ssp_tdx6 |= (1 << 3);
+					WR_REG((0x35004800 + 0x00000384),
+							ssp_tdx6);
+					aTrace(LOG_AUDIO_DRIVER,
+							"SSP_TDX4[0x%08x]\n",
+							RD_REG(0x35004800 +
+								0x00000384));
+				}
+		}
+		}
+		break;
 	default:
 		aTrace(LOG_AUDIO_DRIVER, " Invalid Control Command\n");
 	}
 	return 0;
 }
+
 
 static unsigned long current_ipbuffer_index;
 static unsigned long dma_buffer_write_index;
