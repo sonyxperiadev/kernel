@@ -496,7 +496,7 @@ config USB_CI13XXX_MSM
 
 
 config USB_GADGET_DWC_OTG
-	boolean "Synopsys DWC_OTG 2.91a"
+	tristate "Synopsys DWC_OTG 2.91a"
 	depends on ARCH_KONA
 	help
 	   This driver provides USB Device Controller driver for DW_OTG
@@ -514,7 +514,7 @@ config USB_DWC_OTG_HOST_MODE
 	   device mode by default.
 
 config USB_DWC_OTG
-	tristate
+	tristate "Synopsys USB DWC OTG" 
 	depends on USB_GADGET_DWC_OTG
 	default USB_GADGET
 	select USB_GADGET_SELECTED
@@ -903,7 +903,7 @@ config USB_G_PRINTER
 	  which includes sample code for accessing the device file.
 
 config USB_G_ANDROID
-	boolean "Android Composite Gadget"
+	tristate "Android Composite Gadget"
 	help
 	  The Android Composite Gadget supports multiple USB
 	  functions: adb, acm, mass storage, mtp, accessory
