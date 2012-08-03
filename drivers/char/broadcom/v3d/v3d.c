@@ -173,15 +173,6 @@ void dvts_finish(dvts_object_t obj)
 	wake_up_all(&obj->wq);
 }
 
-void dvts_wait(dvts_object_t obj, dvts_target_t target)
-{
-	/* This version cannot be interrupted -- use
-	 * dvts_wait_interruptible in preference where possible in
-	 * order to avoid uninterruptible sleep */
-	wait_event(obj->wq,
-			dvts_reached_target(obj, target));
-}
-
 int dvts_wait_interruptible(dvts_object_t obj, dvts_target_t target)
 {
 	int s;
@@ -246,9 +237,11 @@ typedef struct {
 
 v3d_t *v3d_dev;
 
+#define V3D_MAX_JOBS 128
+/* Don't add anything at the beginning of this structure
+   unless you are changing 'v3d_job_post_t' as well! */
 typedef struct v3d_job_t_ {
 	uint32_t job_type;
-	v3d_t *dev;
 	uint32_t job_id;
 	uint32_t v3d_ct0ca;
 	uint32_t v3d_ct0ea;
@@ -259,12 +252,11 @@ typedef struct v3d_job_t_ {
 	uint32_t v3d_srqpc[MAX_USER_JOBS];
 	uint32_t v3d_srqua[MAX_USER_JOBS];
 	uint32_t v3d_srqul[MAX_USER_JOBS];
+	v3d_t *dev;
 	volatile v3d_job_status_e job_status;
 	u32 job_intern_state;
 	u32 job_wait_state;
 	wait_queue_head_t v3d_job_done_q;
-	dvts_object_t dvts_object;
-	dvts_target_t dvts_target;
 	struct v3d_job_t_ *next;
 } v3d_job_t;
 
@@ -295,7 +287,9 @@ static struct workqueue_struct *oom_wq;
 
 /* event bits 0:rend_done, 1:bin_done, 4:qpu_done, 5:oom_fatal */
 static volatile int v3d_flags;
-v3d_job_t *v3d_job_head;
+static v3d_job_t *v3d_job_head, *v3d_job_tail, *v3d_job_free_list;
+static spinlock_t v3d_job_free_list_spinlock;
+
 volatile v3d_job_t *v3d_job_curr;
 volatile int suspend_pending;
 
@@ -304,7 +298,7 @@ volatile int suspend_pending;
  */
 struct mutex v3d_sem;
 struct mutex suspend_sem;
-wait_queue_head_t v3d_start_q, v3d_isr_done_q;
+wait_queue_head_t v3d_start_q, v3d_isr_done_q, v3d_job_free_q;
 
 /* Debug count variables for job activities */
 static int dbg_job_post_rend_cnt;
@@ -369,72 +363,73 @@ static void v3d_print_all_jobs(int bp)
 	}
 }
 
-static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t * p_job_post)
+static void v3d_job_free(v3d_job_t *p_v3d_job)
 {
-	v3d_t *dev;
+	spin_lock(&v3d_job_free_list_spinlock);
+	p_v3d_job->next = v3d_job_free_list;
+	v3d_job_free_list = p_v3d_job;
+	spin_unlock(&v3d_job_free_list_spinlock);
+	if (!v3d_job_free_list->next)
+		wake_up_interruptible(&v3d_job_free_q);
+}
+
+static v3d_job_t *v3d_job_create(v3d_t *dev, const v3d_job_post_t *p_job_post)
+{
 	v3d_job_t *p_v3d_job;
 
-	dev = (v3d_t *)(filp->private_data);
-	p_v3d_job = kmalloc(sizeof(v3d_job_t), GFP_KERNEL);
-	if (!p_v3d_job) {
-		KLOG_E("kmalloc failed in v3d_job_post");
-		return NULL;
+	spin_lock(&v3d_job_free_list_spinlock);
+	while (!v3d_job_free_list) {
+		spin_unlock(&v3d_job_free_list_spinlock);
+		if (wait_event_interruptible(v3d_job_free_q,
+			v3d_job_free_list != NULL)) {
+			KLOG_D("wait interrupted\n");
+			return ERR_PTR(-ERESTARTSYS);
+		}
+		spin_lock(&v3d_job_free_list_spinlock);
 	}
-	p_v3d_job->job_id = p_job_post->job_id;
+	p_v3d_job = v3d_job_free_list;
+	v3d_job_free_list = v3d_job_free_list->next;
+	spin_unlock(&v3d_job_free_list_spinlock);
+
+	/* Note that this is a bit hacky as we overwrite a couple of fields
+	   at the end of the 'v3d_job_t' structure. This is pending a rewrite
+	   that splits the structure into proper public and private
+	   declarations */
+	if (copy_from_user
+		(p_v3d_job, p_job_post,
+		sizeof(*p_job_post))) {
+		KLOG_E("copy_from_user failed\n");
+		v3d_job_free(p_v3d_job);
+		return ERR_PTR(-EPERM);
+	}
+
+	/* Fill in the private, internal fields */
 	p_v3d_job->dev = dev;
 
-	/* eventually we may wish to generalize this sync stuff, but
-	 * for now, we hard-code it such that per open
-	 * file-descriptor, there can be at most *one* deferred v3d
-	 * task serializer */
-	if (p_job_post->dvts_id == 777) {
-		p_v3d_job->dvts_object = dev->shared_dvts_object;
-		p_v3d_job->dvts_target = p_job_post->dvts_target;
-	} else
-		p_v3d_job->dvts_object = NULL;
-
-	if (p_job_post->job_type != V3D_JOB_USER) {
+	if (p_v3d_job->job_type != V3D_JOB_USER) {
 		/* Ignore this job type as we'll determine it ourself */
-		p_v3d_job->job_type = V3D_JOB_BIN_REND;	/* p_job_post->job_type; */
+		p_v3d_job->job_type = V3D_JOB_BIN_REND;
 
-		/* Figure out job type */
-		if (p_job_post->v3d_ct0ca == p_job_post->v3d_ct0ea)
+		if (p_v3d_job->v3d_ct0ca == p_v3d_job->v3d_ct0ea)
 			p_v3d_job->job_type &= ~V3D_JOB_BIN;
 
-		if (p_job_post->v3d_ct1ca == p_job_post->v3d_ct1ea)
+		if (p_v3d_job->v3d_ct1ca == p_v3d_job->v3d_ct1ea)
 			p_v3d_job->job_type &= ~V3D_JOB_REND;
-
-	} else {
-		p_v3d_job->job_type = V3D_JOB_USER;
-		p_v3d_job->user_cnt = p_job_post->user_cnt;
-		if (p_v3d_job->user_cnt) {
-			memcpy(p_v3d_job->v3d_srqpc, p_job_post->v3d_srqpc,
-			       sizeof(p_job_post->v3d_srqpc));
-			memcpy(p_v3d_job->v3d_srqua, p_job_post->v3d_srqua,
-			       sizeof(p_job_post->v3d_srqua));
-			memcpy(p_v3d_job->v3d_srqul, p_job_post->v3d_srqul,
-			       sizeof(p_job_post->v3d_srqul));
-		}
-
 	}
 
-	p_v3d_job->v3d_ct0ca = p_job_post->v3d_ct0ca;
-	p_v3d_job->v3d_ct0ea = p_job_post->v3d_ct0ea;
-	p_v3d_job->v3d_ct1ca = p_job_post->v3d_ct1ca;
-	p_v3d_job->v3d_ct1ea = p_job_post->v3d_ct1ea;
-	p_v3d_job->v3d_vpm_size = p_job_post->v3d_vpm_size;
 	p_v3d_job->job_status = V3D_JOB_STATUS_READY;
 	p_v3d_job->job_intern_state = 0;
 	p_v3d_job->job_wait_state = 0;
 	p_v3d_job->next = NULL;
 
-	KLOG_V
-	    ("job[0x%08x] dev[%p] job_id[%d] job_type[%d] ct0_ca[0x%x] ct0_ea[0x%x] ct1_ca[0x%x] ct1_ea[0x%x] srqpc[0x%x] srqua[0x%x] srqul[0x%x]",
-	     (u32)p_v3d_job, dev, p_job_post->job_id, p_job_post->job_type,
-	     p_job_post->v3d_ct0ca, p_job_post->v3d_ct0ea,
-	     p_job_post->v3d_ct1ca, p_job_post->v3d_ct1ea,
-	     p_job_post->v3d_srqpc[0], p_job_post->v3d_srqua[0],
-	     p_job_post->v3d_srqul[0]);
+	KLOG_V("job %p dev %p job_id %d job_type %d "
+		"ct0_ca 0x%x ct0_ea 0x%x ct1_ca 0x%x ct1_ea 0x%x srqpc 0x%x "
+		"srqua[0x%x] srqul[0x%x]",
+		p_v3d_job, dev, p_v3d_job->job_id, p_v3d_job->job_type,
+		p_v3d_job->v3d_ct0ca, p_v3d_job->v3d_ct0ea,
+		p_v3d_job->v3d_ct1ca, p_v3d_job->v3d_ct1ea,
+		p_v3d_job->v3d_srqpc[0], p_v3d_job->v3d_srqua[0],
+		p_v3d_job->v3d_srqul[0]);
 
 	return p_v3d_job;
 }
@@ -442,24 +437,20 @@ static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t * p_job_post)
 static void v3d_job_add(struct file *filp, v3d_job_t *p_v3d_job)
 {
 	v3d_t *dev;
-	v3d_job_t *tmp_job;
-
 	dev = (v3d_t *)(filp->private_data);
 	if (NULL == v3d_job_head) {
+		BUG_ON(v3d_job_tail != NULL);
 		KLOG_V("Adding job %p to head for dev %p", p_v3d_job, dev);
-		v3d_job_head = p_v3d_job;
+		v3d_job_head = v3d_job_tail = p_v3d_job;
 	} else {
-		tmp_job = v3d_job_head;
-		while (tmp_job->next != NULL)
-			tmp_job = tmp_job->next;
-
 		KLOG_V("Adding job %p to tail %p for dev %p", p_v3d_job,
-		       tmp_job, dev);
-		tmp_job->next = p_v3d_job;
+			v3d_job_tail, dev);
+		v3d_job_tail->next = p_v3d_job;
+		v3d_job_tail = p_v3d_job;
 	}
 }
 
-static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
+static void v3d_job_remove(struct file *filp, v3d_job_t *p_v3d_wait_job)
 {
 	v3d_t *dev;
 	v3d_job_t *tmp_job, *parent_job;
@@ -484,6 +475,8 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 				last_match_job = tmp_job;
 				tmp_job = tmp_job->next;
 				parent_job->next = tmp_job;
+				if (last_match_job == v3d_job_tail)
+					v3d_job_tail = parent_job;
 				if (last_match_job == v3d_job_curr) {
 					/* Kill the job, free the job, return error if waiting ?? */
 					KLOG_D
@@ -506,7 +499,7 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 					KLOG_V("Free job[%p] for dev[%p]: ",
 						last_match_job, dev);
 				}
-				kfree(last_match_job);
+				v3d_job_free(last_match_job);
 				if (last_match_job == p_v3d_wait_job)
 					break;
 
@@ -533,7 +526,12 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 				v3d_job_curr = v3d_job_curr->next;
 				spin_unlock_irqrestore(&v3d_state.v3d_spinlock, flags);
 			}
-			v3d_job_head = v3d_job_head->next;
+			if (v3d_job_head == v3d_job_tail) {
+				BUG_ON(v3d_job_head->next != NULL);
+				v3d_job_head = v3d_job_tail = NULL;
+			} else {
+				v3d_job_head = v3d_job_head->next;
+			}
 			KLOG_V
 			    ("Update head to [%p] and free [%p] for dev[%p]",
 			     v3d_job_head, last_match_job, dev);
@@ -543,7 +541,7 @@ static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
 				     v3d_job_head, last_match_job,
 				     dev);
 			}
-			kfree(last_match_job);
+			v3d_job_free(last_match_job);
 		}
 	}
 	if (curr_job_killed) {
@@ -824,7 +822,7 @@ static int v3d_thread(void *data)
 	return 0;
 }
 
-static int v3d_job_post(struct file *filp, v3d_job_post_t * p_job_post)
+static int v3d_job_post(struct file *filp, const v3d_job_post_t *p_job_post)
 {
 	v3d_t *dev;
 	int ret = 0;
@@ -832,18 +830,15 @@ static int v3d_job_post(struct file *filp, v3d_job_post_t * p_job_post)
 
 	dev = (v3d_t *)(filp->private_data);
 
-	/* Allocate new job, copy params from user, init other data */
-	p_v3d_job = v3d_job_create(filp, p_job_post);
-	if (p_v3d_job == NULL) {
-		ret = -ENOMEM;
-		goto err;
-	}
+	/* Allocate a new job, copy params from user, init other data */
+	p_v3d_job = v3d_job_create(dev, p_job_post);
+	if (IS_ERR(p_v3d_job))
+		return PTR_ERR(p_v3d_job);
 
-	/* Lock the code */
 	if (mutex_lock_interruptible(&v3d_sem)) {
 		KLOG_D("lock acquire failed");
-		ret = -ERESTARTSYS;
-		goto err;
+		v3d_job_free(p_v3d_job);
+		return -ERESTARTSYS;
 	}
 
 	/* Add the job to queue */
@@ -866,13 +861,7 @@ static int v3d_job_post(struct file *filp, v3d_job_post_t * p_job_post)
 		wake_up(&v3d_start_q);
 	}
 
-	/* Unlock the code */
 	mutex_unlock(&v3d_sem);
-
-	return ret;
-
-err:
-	kfree(p_v3d_job);
 	return ret;
 }
 
@@ -932,7 +921,7 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 		dev->last_completed_job_id = p_v3d_wait_job->job_id;
 
 		/* Remove all jobs from queue from head till the job (inclusive) on which wait was happening */
-		v3d_job_free(filp, p_v3d_wait_job);
+		v3d_job_remove(filp, p_v3d_wait_job);
 
 	} else {
 		/* No jobs found matching the dev and job_id
@@ -1427,8 +1416,8 @@ static int v3d_release(struct inode *inode, struct file *filp)
 	}
 
 	v3d_print_all_jobs(0);
-	/* Free all jobs posted using this file */
-	v3d_job_free(filp, NULL);
+	/* Remove all jobs posted using this file */
+	v3d_job_remove(filp, NULL);
 	KLOG_V("after free for id[%d]", dev->id);
 	v3d_print_all_jobs(0);
 	free_bin_mem(dev);
@@ -1479,17 +1468,8 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case V3D_IOCTL_POST_JOB:{
-			v3d_job_post_t job_post;
 			KLOG_V("v3d_ioctl :V3D_IOCTL_POST_JOB");
-			if (copy_from_user
-			    (&job_post, (v3d_job_post_t *) arg,
-			     sizeof(job_post))) {
-				KLOG_E
-				    ("V3D_IOCTL_POST_JOB copy_from_user failed");
-				ret = -EPERM;
-				break;
-			}
-			ret = v3d_job_post(filp, &job_post);
+			ret = v3d_job_post(filp, (const v3d_job_post_t *)arg);
 		}
 		break;
 
@@ -1828,7 +1808,8 @@ static struct platform_device v3d_platform_device = {
 
 int __init v3d_init(void)
 {
-	int ret = -1;
+	int i, ret = -1;
+	size_t sz;
 
 	KLOG_D("V3D driver Init\n");
 
@@ -1840,6 +1821,17 @@ int __init v3d_init(void)
 	v3d_oom_block_used = 0;
 	v3d_job_curr = NULL;
 	v3d_job_head = NULL;
+
+	sz = sizeof(v3d_job_t) * V3D_MAX_JOBS;
+	KLOG_D("Allocating %d bytes", sz);
+	v3d_job_free_list = kmalloc(sz, GFP_KERNEL);
+	if (!v3d_job_free_list) {
+		KLOG_E("kmalloc failed for %d bytes", sz);
+		goto err;
+	}
+	for (i = 0; i != V3D_MAX_JOBS - 1; ++i)
+		v3d_job_free_list[i].next = &v3d_job_free_list[i + 1];
+	v3d_job_free_list[i].next = NULL;
 
 	/* Map the V3D registers */
 	v3d_base =
@@ -1914,7 +1906,9 @@ int __init v3d_init(void)
 
 	init_waitqueue_head(&v3d_isr_done_q);
 	init_waitqueue_head(&v3d_start_q);
+	init_waitqueue_head(&v3d_job_free_q);
 	spin_lock_init(&v3d_state.v3d_spinlock);
+	spin_lock_init(&v3d_job_free_list_spinlock);
 
 	/* Start the thread to process work queue */
 	v3d_thread_task = kthread_run(&v3d_thread, v3d_dev, "v3d_thread");
