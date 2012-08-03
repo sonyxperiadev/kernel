@@ -11,3 +11,15 @@ config ION_TEGRA
 	help
 	  Choose this option if you wish to use ion on an nVidia Tegra.
 
+config ION_KONA
+	tristate "Ion for Broadcom Kona Processor"
+	depends on ARCH_KONA && ION
+	help
+	  Choose this option if you wish to use ion on a Broadcom Kona processor.
+
+config M4U
+	tristate "M4U for Broadcom Kona Processor"
+	depends on ARCH_HAWAII
+	help
+	  Choose this option if you wish to enable m4u support in a Broadcom Kona processor.
+

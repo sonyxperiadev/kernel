@@ -243,7 +243,11 @@ typedef struct {
 	Imported stuff
 ********************************************************/
 /* Job Error Handling variables */
+#if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
+#define V3D_ISR_TIMEOUT_IN_MS	(1000000)
+#else
 #define V3D_ISR_TIMEOUT_IN_MS	(1500)
+#endif
 #define V3D_JOB_TIMEOUT_IN_MS	(V3D_ISR_TIMEOUT_IN_MS)
 
 v3d_t *v3d_dev;
@@ -1104,7 +1108,12 @@ static void v3d_print_status(void)
 
 static void v3d_reg_init(void)
 {
+#ifdef CONFIG_ARCH_RHEA
 	v3d_write(2, V3D_L2CACTL_OFFSET);
+#else
+	v3d_write(1, V3D_L2CACTL_OFFSET);
+	v3d_write(4, V3D_L2CACTL_OFFSET);
+#endif
 	v3d_write(0x8000, V3D_CT0CS_OFFSET);
 	v3d_write(0x8000, V3D_CT1CS_OFFSET);
 	v3d_write(1, V3D_RFC_OFFSET);
@@ -1178,6 +1187,7 @@ static int enable_v3d_clock(void)
 {
 	int rc = 0;
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	if (pi_mgr_dfs_request_update(&v3d_state.dfs_node, PI_OPP_TURBO)) {
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 		return -EIO;
@@ -1194,6 +1204,7 @@ static int enable_v3d_clock(void)
 		KLOG_E("%s: error enable clock\n", __func__);
 		return -EIO;
 	}
+#endif
 
 	return rc;
 }
@@ -1202,6 +1213,7 @@ static int disable_v3d_clock(void)
 {
 	int rc = 0;
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	v3d_clk = clk_get(NULL, "v3d_axi_clk");
 	if (IS_ERR_OR_NULL(v3d_clk)) {
 		KLOG_E("%s: error get clock\n", __func__);
@@ -1215,6 +1227,7 @@ static int disable_v3d_clock(void)
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 		return -EIO;
 	}
+#endif
 
 	return rc;
 }
@@ -1987,12 +2000,18 @@ int __init v3d_init(void)
 		goto err2;
 	}
 
+#if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
+	v3d_major = 206;
+#endif
 	ret = register_chrdev(v3d_major, V3D_DEV_NAME, &v3d_fops);
 	if (ret < 0) {
 		ret = -EINVAL;
 		goto err2;
-	} else
+	}
+#if !defined (CONFIG_MACH_HAWAII_FPGA_E) && !defined (CONFIG_MACH_HAWAII_FPGA)
+	else
 		v3d_major = ret;
+#endif
 
 	v3d_state.v3d_class = class_create(THIS_MODULE, V3D_DEV_NAME);
 	if (IS_ERR(v3d_state.v3d_class)) {

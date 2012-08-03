@@ -552,8 +552,12 @@ static int __init Comms_Start(void)
 {
 	return cpStart(0);   /* Normal Comms_Start */
 }
+/* The FPGA block does not have the comms module and will hang
+	 * on attempt to access it
+	 */
+#ifndef CONFIG_MACH_HAWAII_FPGA
 arch_initcall(Comms_Start);
-
+#endif
 
 struct device *ipcs_get_drvdata(void)
 {

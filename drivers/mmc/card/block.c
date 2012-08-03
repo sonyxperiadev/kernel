@@ -623,6 +623,17 @@ static inline int mmc_blk_part_switch(struct mmc_card *card,
 	if (main_md->part_curr == md->part_type)
 		return 0;
 
+	/*
+	 * We see CMD6 fail (with data timeouts) on switching between
+	 * boot1 and boot0 partitions. As those partitions are not used
+	 * we comment switching to them for now and will continue to
+	 * debug the issue.
+	 */
+#ifdef CONFIG_MACH_HAWAII_FPGA
+	if ((md->part_type == 1) || (md->part_type == 2))
+		return -1;
+#endif
+
 	if (mmc_card_mmc(card)) {
 		u8 part_config = card->ext_csd.part_config;
 

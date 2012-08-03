@@ -18,7 +18,7 @@
 #include <trace/stm.h>
 #ifdef CONFIG_BCM_STM
 #include "linux/broadcom/mobcom_types.h"
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || (CONFIG_ARCH_HAWAII)
 #include "mach/rdb/brcm_rdb_padctrlreg.h"
 #endif
 #include "mach/rdb/brcm_rdb_util.h"

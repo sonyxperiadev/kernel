@@ -19,7 +19,6 @@
 static void __iomem *scu_base;
 static DEFINE_SPINLOCK(scu_lock);
 
-#if defined(CONFIG_RHEA_B0_PM_ASIC_WORKAROUND)
 /* Ref counting for scu_standby signal disable requests */
 static int scu_standby_disable_cnt;
 module_param_named(scu_standby_disable, scu_standby_disable_cnt, int,
@@ -57,13 +56,6 @@ int scu_standby(bool enable)
 	return 0;
 }
 EXPORT_SYMBOL(scu_standby);
-#else
-int scu_standby(bool enable)
-{
-	return 0;
-}
-EXPORT_SYMBOL(scu_standby);
-#endif /* CONFIG_RHEA_B0_PM_ASIC_WORKAROUND */
 
 int scu_invalidate_all(void)
 {
@@ -85,18 +77,17 @@ int scu_invalidate_all(void)
  */
 int scu_set_power_mode(unsigned int mode)
 {
-	unsigned int val;
-	int cpu = smp_processor_id();
+	int cpu;
 
 	if (!scu_base)
 		return -ENODEV;
 
-	if (mode > 3 || mode == 1 || cpu > 3)
+	if (mode > 3 || mode == 1)
 		return -EINVAL;
 
-	val = readb(scu_base + SCU_POWER_STATUS_OFFSET + cpu) & ~0x03;
-	val |= mode;
-	writeb_relaxed(val, scu_base + SCU_POWER_STATUS_OFFSET + cpu);
+	cpu = get_cpu();
+	writeb_relaxed(mode, scu_base + SCU_POWER_STATUS_OFFSET + cpu);
+	put_cpu();
 
 	return 0;
 }

@@ -12,10 +12,6 @@ OBJ :=  unicam.o
 obj-$(CONFIG_UNICAM) := unicam-driver.o
 	unicam-driver-objs := $(OBJ)
 
-$(info ++++++++++++++++++++++)
-$(info CONFIG_UNICAM = $(CONFIG_UNICAM))
-$(info obj = $(obj))
-
 all:
 	$(MAKE) -C $(KERNEL_DIR) SUBDIRS=$(PWD) modules
 

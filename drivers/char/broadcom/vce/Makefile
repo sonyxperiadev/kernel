@@ -13,10 +13,6 @@ OBJ :=  vce.o vtqbr.o vtq.o vtqutil.o vtq_imageconv.o
 obj-$(CONFIG_VCE) := vce-driver.o
 	vce-driver-objs := $(OBJ)
 
-$(info ++++++++++++++++++++++)
-$(info CONFIG_VCE = $(CONFIG_VCE))
-$(info obj = $(obj))
-
 all:
 	$(MAKE) -C $(KERNEL_DIR) SUBDIRS=$(PWD) modules
 

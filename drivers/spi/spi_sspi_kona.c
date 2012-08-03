@@ -55,7 +55,9 @@
 /* Timeout(ms) for wait_for_completion */
 #define SSPI_WFC_TIME_OUT	200
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 extern void csl_caph_ControlHWClock(Boolean eanble);
+#endif
 static uint8_t clk_name[3][32] = {"ssp0_clk", "ssp4_clk", "ssp3_clk"};
 
 #ifdef CONFIG_DMAC_PL330
@@ -226,6 +228,7 @@ static irqreturn_t spi_kona_isr(int irq, void *dev_id)
 static int spi_kona_config_clk(struct spi_kona_data *spi_kona,
 			       uint32_t clk_rate)
 {
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	CHAL_HANDLE chandle = spi_kona->chandle;
 	uint32_t clk_src = 1000000, clk_pdiv = 0;
 
@@ -243,6 +246,10 @@ static int spi_kona_config_clk(struct spi_kona_data *spi_kona,
 	chal_sspi_set_clk_divider(chandle, SSPI_CLK_DIVIDER0, clk_pdiv);
 	chal_sspi_set_clk_divider(chandle, SSPI_CLK_REF_DIVIDER, clk_pdiv);
 	clk_enable(spi_kona->ssp_clk);
+	chal_sspi_set_clk_src_select(chandle, SSPI_CLK_SRC_EXTCLK);
+	chal_sspi_set_clk_divider(chandle, SSPI_CLK_DIVIDER0, clk_pdiv);
+	chal_sspi_set_clk_divider(chandle, SSPI_CLK_REF_DIVIDER, clk_pdiv);
+#endif
 	return 0;
 }
 
@@ -292,7 +299,11 @@ static int spi_kona_configure(struct spi_kona_data *spi_kona,
 	spi_kona_fifo_config(spi_kona, spi_kona->enable_dma);
 
 	/* Configure the clock speed */
+#ifdef CONFIG_MACH_HAWAII_FPGA
+	ret = spi_kona_config_clk(spi_kona, 13*1000*1000);
+#else
 	ret = spi_kona_config_clk(spi_kona, config->speed_hz);
+#endif
 	if (ret < 0)
 		return ret;
 
@@ -437,7 +448,7 @@ static void spi_dma_callback(void *priv, enum pl330_xfer_status status)
 	struct completion *c = (struct completion *)priv;
 
 	if (status == DMA_PL330_XFER_OK)
-		pr_debug("DMA transfer status ok\n");
+		pr_info("DMA transfer status ok\n");
 	else if (status == DMA_PL330_XFER_ERR)
 		pr_err("DMA transfer error\n");
 	else if (status == DMA_PL330_XFER_ABORT)
@@ -446,10 +457,12 @@ static void spi_dma_callback(void *priv, enum pl330_xfer_status status)
 		pr_err("DMA transfer Invalid status!!!\n");
 
 	/* If process waiting for completion */
-	if (c)
+	if (c) {
+		pr_info("spi_dma_callback complete\n");
 		complete(c);
-	else
+	} else {
 		pr_err("NULL pointer passed to %s!!!!\n", __func__);
+	}
 }
 
 static int spi_kona_dma_xfer_rx(struct spi_kona_data *spi_kona)
@@ -923,10 +936,15 @@ static void spi_kona_work(struct work_struct *work)
 		status = 0;
 
 		if (master->bus_num != 0) {
+#ifndef CONFIG_MACH_HAWAII_FPGA
 			/*turn on caph clock for ssp1 and ssp2*/
 			csl_caph_ControlHWClock(TRUE);
+#endif
 		}
+
+#ifndef CONFIG_MACH_HAWAII_FPGA
 		clk_enable(spi_kona->ssp_clk);
+#endif
 		list_for_each_entry(t, &m->transfers, transfer_list) {
 
 			/* override speed or wordsize? */
@@ -997,10 +1015,14 @@ static void spi_kona_work(struct work_struct *work)
 		if (!(status == 0 && cs_change))
 			spi_kona_chipselect(spi, CS_INACTIVE);
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 		clk_disable(spi_kona->ssp_clk);
+#endif
 		if (master->bus_num != 0) {
+#ifndef CONFIG_MACH_HAWAII_FPGA
 			/*turn on caph clock for ssp1 and ssp2*/
 			csl_caph_ControlHWClock(FALSE);
+#endif
 		}
 	}
 	spin_lock(&spi_kona->lock);
@@ -1208,6 +1230,7 @@ static int spi_kona_probe(struct platform_device *pdev)
 		goto out_iounmap;
 	}
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	spi_kona->ssp_clk = clk_get(NULL, clk_name[master->bus_num]);
 	if (IS_ERR_OR_NULL(spi_kona->ssp_clk)) {
 		dev_err(&pdev->dev, "unable to get %s clock\n", clk_name[master->bus_num]);
@@ -1215,6 +1238,9 @@ static int spi_kona_probe(struct platform_device *pdev)
 		goto out_free_irq;
 	}
 	clk_enable(spi_kona->ssp_clk);
+#else
+	spi_kona->ssp_clk = NULL;
+#endif
 
 	status = spi_kona_config_spi_hw(spi_kona);
 	if (status) {
@@ -1248,13 +1274,17 @@ static int spi_kona_probe(struct platform_device *pdev)
 		spi_kona->enable_dma = 0;
 	}
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	clk_disable(spi_kona->ssp_clk);
+#endif
 	pr_info("%s: SSP %d setup done\n", __func__, master->bus_num);
 	return status;
 
 out_clk_put:
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	clk_disable(spi_kona->ssp_clk);
 	clk_put(spi_kona->ssp_clk);
+#endif
 out_free_irq:
 	free_irq(spi_kona->irq, spi_kona);
 out_iounmap:
@@ -1286,8 +1316,10 @@ static int spi_kona_remove(struct platform_device *pdev)
 	if (status != CHAL_SSPI_STATUS_SUCCESS)
 		status = -EBUSY;
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	clk_disable(spi_kona->ssp_clk);
 	clk_put(spi_kona->ssp_clk);
+#endif
 	free_irq(spi_kona->irq, spi_kona);
 
 	spi_master_put(master);

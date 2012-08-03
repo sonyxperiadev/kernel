@@ -1,0 +1,211 @@
+menu	"Hawaii SoC based Machine types"
+	depends on ARCH_HAWAII
+
+choice
+	prompt "Choose Hawaii SOC Silicon Version"
+	default ARCH_HAWAII_A0
+
+config  ARCH_HAWAII_A0
+        bool "Hawaii SOC Version - A0"
+
+endchoice
+
+choice
+	prompt "Hawaii SoC based board type"
+	default MACH_HAWAII_FPGA
+
+config  MACH_HAWAII_FPGA
+        bool "Hawaii SOC Version - FPGA"
+	help
+	   "This config option will enable support
+	    for FPGA platform like Chip-it where CCU is absent." 
+
+config  MACH_HAWAII_FPGA_E
+        bool "Hawaii SOC Version - FPGA Eve"
+	help
+	   "This config option will enable support for
+	    FPGA platform like Eve where CCU is present."
+
+config  MACH_HAWAII_RAY
+        bool "Hawaii SOC Version - RAY"
+endchoice
+
+choice
+	prompt "Hawaii FPGA type"
+	depends on MACH_HAWAII_FPGA || MACH_HAWAII_FPGA_E
+	default MACH_HAWAII_FPGA_PERI_V1
+
+config MACH_HAWAII_FPGA_PERI_V1
+	bool "Support Hawaii BSP FPGA Image with dual A9"
+	help
+	   "Support Following BSP FPGA Images :
+	   HAWAII_Peri_v1.0.0
+	   HAWAII_Peri_v1.0.1
+	   Hawaii_PERI_FREEZE_1p52_16APR2012_v2.0.0"
+
+config MACH_HAWAII_FPGA_MM_V1
+	bool "Support Hawaii MM FPGA Image without M4U & AXI-PV"
+	help
+	   "Support Following MM FPGA Images :
+	   HAWAII_MM_v1.0.0
+	   HAWAII_MM_v2.0.0
+	   HAWAII_MM_v2.0.0_fix"
+
+config MACH_HAWAII_FPGA_USB_V1
+	bool "Support Hawaii USB FPGA Image with dual A9"
+	help
+	   "Support Following USB FPGA Images :
+	   HAWAII_USB_v2.0.0
+endchoice
+
+config RHEA_B0_PM_ASIC_WORKAROUND
+       depends on ARCH_RHEA
+       bool "Enable B0 ASIC workarounds for Power management"
+       default n
+       help
+       Say Y if you want to enable Rhea B0 ASIC workarounds for Power management
+
+config RHEA_PWRMGR_USE_DUMMY_SEQ
+       bool "Use dummy PWRMGR HW I2C sequencer"
+       default n
+       help
+       Say Y if you want to use dummy PWRMGR HW I2C sequencer
+
+config KONA_PMU_BSC_CLKPAD_CTRL
+	bool "Kona PMU_BSC CLKPAD Control feature"
+	depends on MFD_BCM_PWRMGR_SW_SEQUENCER
+	default y
+	help
+	   Enable to save the leakage current due to BSC CLKPAD. If enabled
+	   Sequencer will disable the PMU BSC CLK pad at the end of each
+	   i2c transaction which will save the leakage current on the pad pi
+
+config RHEA_WA_HWJIRA_2531
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2531"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2531 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2301
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2301"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2301 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2877
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2877"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2301 workaround. Refer JIRA DB for more
+	 info on this JIRA. Memc will put dram in bad state if the xtal clock
+	 stops in the middle of say internally triggered ZQ cal or dev temp
+	 polling. This workaround will disable temperature polling in LPM.
+
+config RHEA_WA_HWJIRA_2221
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2221"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2221 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2490
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2490"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2490 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2276
+	depends on ARCH_RHEA && RHEA_DORMANT_MODE
+	bool "Enable workaround for RHEA JIRA 2276"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2276 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2045
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2045"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2045 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2272
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2272"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2272 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2348
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2348"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2348 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2489
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2489"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2489 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2706
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2706"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2706 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2747
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2747"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2747 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEALC_2093
+	bool "Enable RheaLC&2093"
+	default n
+        help
+           Enable ReahLC&2093.
+
+config RHEA_UART_RX_FIX
+	bool "Rhea UART Rx Fix"
+	depends on ARCH_RHEA
+	help
+	  UART RX interrupt happened but in LSR Data Ready is not set.
+	  This fix modifies the serial driver to take decission to
+	  call receive_chars based on iir and not based on LSR
+
+config RHEA_PI_MGR_DISABLE_POLICY_CHANGE
+	bool "Enable debug flag to disable PI policy change by default"
+	depends on KONA_PI_MGR
+	default n
+	help
+	  Debug flag to diable PI policy change by default. All PI
+	  policy will be set to wakeup policy 7
+
+config A9_RETENTION_CSTATE
+	bool "Turn ON A9 retention state"
+	default n
+	help
+	  Option to enable A9 retention state for cpuidle. A9 retention
+	  results in A9 domain voltage being lowered, resulting in better
+	  power savings during idle.
+
+endmenu

@@ -665,8 +665,13 @@ static u8 sdhci_calc_timeout(struct sdhci_host *host, struct mmc_command *cmd)
 	 * longer to time out, but that's much better than having a too-short
 	 * timeout value.
 	 */
-	if (host->quirks & SDHCI_QUIRK_BROKEN_TIMEOUT_VAL)
+	if (host->quirks & SDHCI_QUIRK_BROKEN_TIMEOUT_VAL) {
+#ifdef CONFIG_MACH_HAWAII_FPGA
+		return 0x8;
+#else
 		return 0xE;
+#endif
+	}
 
 	/* Unspecified timeout, assume max */
 	if (!data && !cmd->cmd_timeout_ms)
@@ -1428,6 +1433,9 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		u16 clk, ctrl_2;
 		unsigned int clock;
 
+		/* MM Chipit FPGA does not seem to run with High speed bit enabled. Peri image runs
+		 * fine. Hence disable if its MM image */
+#ifndef CONFIG_MACH_HAWAII_FPGA_MM_V1
 		/* In case of UHS-I modes, set High Speed Enable */
 		if ((ios->timing == MMC_TIMING_MMC_HS200) ||
 		    (ios->timing == MMC_TIMING_UHS_SDR50) ||
@@ -1435,6 +1443,10 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		    (ios->timing == MMC_TIMING_UHS_DDR50) ||
 		    (ios->timing == MMC_TIMING_UHS_SDR25))
 			ctrl |= SDHCI_CTRL_HISPD;
+#else
+
+		ctrl &= ~SDHCI_CTRL_HISPD;
+#endif
 
 		ctrl_2 = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 		if (!(ctrl_2 & SDHCI_CTRL_PRESET_VAL_ENABLE)) {
@@ -3054,10 +3066,10 @@ int sdhci_add_host(struct sdhci_host *host)
 	 */
 	mmc->ops = &sdhci_ops;
 	mmc->f_max = host->max_clk;
-#ifdef CONFIG_MACH_BCM2850_FPGA
-   /* frequency divisor does not work on FPGA image */
-   mmc->f_min = host->max_clk;
-#endif
+#if defined(CONFIG_MACH_BCM2850_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA)
+	/* frequency divisor does not work on FPGA image */
+	mmc->f_min = host->max_clk;
+#else
 	if (host->ops->get_min_clock)
 		mmc->f_min = host->ops->get_min_clock(host);
 	else if (host->version >= SDHCI_SPEC_300) {
@@ -3068,6 +3080,7 @@ int sdhci_add_host(struct sdhci_host *host)
 			mmc->f_min = host->max_clk / SDHCI_MAX_DIV_SPEC_300;
 	} else
 		mmc->f_min = host->max_clk / SDHCI_MAX_DIV_SPEC_200;
+#endif
 
 	host->timeout_clk =
 		(caps[0] & SDHCI_TIMEOUT_CLK_MASK) >> SDHCI_TIMEOUT_CLK_SHIFT;
@@ -3114,7 +3127,8 @@ int sdhci_add_host(struct sdhci_host *host)
 	if (!(host->quirks & SDHCI_QUIRK_FORCE_1_BIT_DATA))
 		mmc->caps |= MMC_CAP_4_BIT_DATA;
 
-#ifndef CONFIG_MACH_BCM2850_FPGA /* FPGA not fast enough for high speed */
+/* FPGA not fast enough for high speed */
+#if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_HAWAII_FPGA)
 	if (caps[0] & SDHCI_CAN_DO_HISPD)
 #ifdef CONFIG_MMC_BCM_SD
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
@@ -3128,6 +3142,7 @@ int sdhci_add_host(struct sdhci_host *host)
 		mmc->caps |= MMC_CAP_NEEDS_POLL;
 
 #if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI)
+#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_HAWAII_FPGA)
 	/* Any UHS-I mode in caps implies SDR12 and SDR25 support. */
 	if (caps[1] & (SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |
 		       SDHCI_SUPPORT_DDR50))

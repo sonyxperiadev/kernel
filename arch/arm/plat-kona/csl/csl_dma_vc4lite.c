@@ -112,18 +112,16 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
 		/* Allocate dma memory */
 
 		dmaCtrlBlkList =
-		    kmalloc(DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE *
-			    DMA_VC4LITE_TOTAL_CHANNELS, GFP_KERNEL);
+		    dma_alloc_coherent(NULL, DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE *
+			    DMA_VC4LITE_TOTAL_CHANNELS, (dma_addr_t*)&dmaCtrlBlkListPhys, GFP_KERNEL);
 		if ((void *)dmaCtrlBlkList == NULL) {
 			pr_info("DMA driver: failed to allocate DMA memory\n");
 			return -ENOMEM;
 		}
-		dmaCtrlBlkListPhys = (UInt32 *)virt_to_phys(dmaCtrlBlkList);
 
 		printk(KERN_ERR
-		       "the virt addr=0x%08x phy addr=0x%08x acp addr=%08x\n",
-		       dmaCtrlBlkList, virt_to_phys(dmaCtrlBlkList),
-		       dmaCtrlBlkListPhys);
+		       "the virt addr=0x%08x phy addr=0x%08x \n",
+		       dmaCtrlBlkList, dmaCtrlBlkListPhys);
 #endif
 
 #ifdef UNDER_LINUX

@@ -12,10 +12,6 @@ OBJ :=  isp.o
 obj-$(CONFIG_ISP) := isp-driver.o
 	isp-driver-objs := $(OBJ)
 
-$(info ++++++++++++++++++++++)
-$(info CONFIG_ISP = $(CONFIG_ISP))
-$(info obj = $(obj))
-
 all:
 	$(MAKE) -C $(KERNEL_DIR) SUBDIRS=$(PWD) modules
 

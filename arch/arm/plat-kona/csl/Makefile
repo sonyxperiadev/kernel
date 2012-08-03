@@ -12,6 +12,10 @@
 # consent.
 #*****************************************************************************
 obj-$(CONFIG_FB_BRCM_RHEA) += csl_dsi.o csl_smi.o csl_dma_vc4lite.o csl_tectl_vc4lite.o
+obj-$(CONFIG_KONA_DSI) += csl_dsi.o
+obj-$(CONFIG_KONA_SMI) += csl_smi.o
+obj-$(CONFIG_KONA_VC4LITE) += csl_dma_vc4lite.o csl_tectl_vc4lite.o
+obj-$(CONFIG_MMDMA) += mmdma_drv.o
 obj-$(CONFIG_KONA_CSL_CAMERA) += csl_cam.o
 # obj-$(CONFIG_BCM_STM) += csl_trace.o
 # we have moved SW configuration for STM trace to stm.c so commenting out

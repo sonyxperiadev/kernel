@@ -2063,6 +2063,7 @@ static int ccu_clk_policy_engine_stop(struct ccu_clk *ccu_clk)
 
 	reg_val = (CCU_POLICY_OP_EN << CCU_POLICY_CONFIG_EN_SHIFT);
 	writel(reg_val, CCU_LVM_EN_REG(ccu_clk));
+
 	while ((readl(CCU_LVM_EN_REG(ccu_clk)) & CCU_POLICY_CONFIG_EN_MASK) &&
 	       insurance) {
 		udelay(1);

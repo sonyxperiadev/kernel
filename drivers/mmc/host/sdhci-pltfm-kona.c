@@ -71,7 +71,11 @@
 #define SD_DETECT_GPIO_DEBOUNCE_128MS	128
 
 #define KONA_SDMMC_DISABLE_DELAY	(100)
+#ifdef CONFIG_MACH_HAWAII_FPGA
+#define KONA_SDMMC_OFF_TIMEOUT		(800000)
+#else
 #define KONA_SDMMC_OFF_TIMEOUT		(8000)
+#endif
 
 enum {ENABLED = 0, DISABLED, OFF};
 
@@ -371,7 +375,7 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 
 static int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
 {
-#ifdef CONFIG_ARCH_SAMOA
+#if defined(CONFIG_ARCH_SAMOA) || defined(CONFIG_MACH_HAWAII_FPGA)
 	return 0;
 #else
 	int ret = 0;
@@ -537,6 +541,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	} else {
 		dev->clk_hz = gClock[dev->devtype];
 	}
+#elif defined(CONFIG_MACH_HAWAII_FPGA)
+	dev->clk_hz =  hw_cfg->peri_clk_rate;
 #else
 	/* peripheral clock */
 	dev->peri_clk = clk_get(&pdev->dev, hw_cfg->peri_clk_name);
@@ -705,6 +711,11 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
 			bcm_kona_sd_card_emulate(dev, 1);
 	}
+
+	/* Force insertion interrupt, in case of no card detect registered.
+	 */
+	if (dev->cd_gpio < 0)
+		bcm_kona_sd_card_emulate(dev, 1);
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 	if ((dev->devtype == SDIO_DEV_TYPE_WIFI) &&
 	    (hw_cfg->register_status_notify != NULL)) {
@@ -738,7 +749,7 @@ err_reset:
 err_term_clk:
 	sdhci_pltfm_clk_enable(host, 0);
 
-#ifndef CONFIG_MACH_BCM2850_FPGA
+#if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_HAWAII_FPGA)
 err_sleep_clk_disable:
 	clk_disable(dev->sleep_clk);
 
@@ -807,7 +818,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 
 	sdhci_pltfm_clk_enable(host, 0);
 
-#ifndef CONFIG_MACH_BCM2850_FPGA
+#if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_HAWAII_FPGA)
 	clk_disable(dev->sleep_clk);
 	clk_put(dev->sleep_clk);
 	clk_put(dev->peri_clk);

@@ -17,11 +17,16 @@ config ARCH_RHEA
 	help
 	  Support for the Broadcom Rhea SoC platform.
 
+config ARCH_HAWAII
+	bool "Broadcom Hawaii Soc"
+	help
+	  Support for the Broadcom Hawaii Soc platform.
+
 endchoice
 
 config KONA_POWER
        bool "Enable support for kona power management"
-       depends on ARCH_RHEA || ARCH_ISLAND
+       depends on ARCH_RHEA || ARCH_ISLAND || ARCH_HAWAII
        help
        	Say Y if you want to enable the support for kona power management
 
@@ -33,7 +38,7 @@ config GP_TIMER_CLOCK_OFF_FIX
 
 config GP_TIMER_COMPARATOR_LOAD_DELAY
         bool "Enable the delay after loading general purpose timer compare register"
-        depends on ARCH_RHEA || ARCH_ISLAND
+        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_HAWAII
         default y
 
 config KONA_DCACHE_INVALIDATION
@@ -62,7 +67,7 @@ config BCM_STM
 
 config DMAC_PL330
 	bool "PL330 DMAC driver support for Kona architecture"
-	depends on ARCH_RHEA
+	depends on ARCH_RHEA || ARCH_HAWAII
 	select PL330
 	select ARM_PL330_FIX_ERRATA_716336
 	help
@@ -176,7 +181,7 @@ config KONA_PWRMGR_REV2
 
 config KONA_PMU_BSC_USE_PMGR_HW_SEM
 	bool "use HW sem to sync i2c between sw & sequencer"
-	depends on ARCH_RHEA && KONA_POWER_MGR
+	depends on (ARCH_RHEA || ARCH_HAWAII) && KONA_POWER_MGR
 	default y
 	help
 	  The HW sequencer can generate i2c transcations on the PMU i2c
@@ -244,6 +249,17 @@ config KONA_CSL_CAMERA
 config KONA_CHAL_CAMERA
 	tristate
 
+config KONA_DSI
+	tristate
+
+config KONA_SMI
+	tristate
+
+config KONA_VC4LITE
+	tristate
+
+config KONA_KEYPAD
+	tristate
 
 endmenu
 

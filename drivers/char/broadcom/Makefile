@@ -1,11 +1,12 @@
 
 EXTRA_CFLAGS := -fno-inline -Wno-multichar -O2
 
-obj-y += v3d/
+obj-$(CONFIG_V3D) += v3d/
+obj-$(CONFIG_MMDMA) += mmdma/
 obj-y += vce/
 obj-y += fuse_log/
 obj-$(CONFIG_BCM_MODEM) += modem/
-obj-y += isp/
+obj-$(CONFIG_ISP) += isp/
 obj-y += unicam/
 obj-$(CONFIG_BCM_MMUTIL) += mmutil/
 obj-$(CONFIG_GPS_IRQ)		 += brcm_gps_irq.o

@@ -34,6 +34,9 @@ endif
 ifneq ($(filter y,$(CONFIG_MACH_RHEA_STONE) $(CONFIG_MACH_RHEA_STONE_EDN2X)),)
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCONFIG_ENABLE_SSMULTICAST
 endif
+ifdef CONFIG_ARCH_HAWAII
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCAPH_48K_MONO_PASSTHRU
+endif
 
 #Linux header files
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./include/linux/
@@ -55,6 +58,9 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I$(src)/chal/B0/inc/
 else
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I$(src)/chal/A0/inc/
 endif
+ifdef CONFIG_ARCH_HAWAII
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I$(src)/chal/B0/inc/
+endif
 #RPC Header files
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/fuse_log
@@ -70,6 +76,9 @@ ifdef CONFIG_ARCH_RHEA_BX
 obj-$(CONFIG_BCM_ALSA_SOUND) += chal/B0/src/
 else
 obj-$(CONFIG_BCM_ALSA_SOUND) += chal/A0/src/
+endif
+ifdef CONFIG_ARCH_HAWAII
+obj-$(CONFIG_BCM_ALSA_SOUND) += chal/B0/src/
 endif
 obj-$(CONFIG_BCM_ALSA_SOUND) += csl/
 #obj-$(CONFIG_BCM_MODEM)    += dsp/

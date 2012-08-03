@@ -234,7 +234,7 @@ int kona_timer_module_set_rate(char *name, unsigned int rate)
 	if (pktm->cfg_state == CONFIGURED_BUSY)
 		goto err_out;
 
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
 	/* Configure KONA Timer count in 32 bit mode */
 	writel(0x0, KONA_CHIPREG_VA + CHIPREG_HUB_TIMER_WIDTH_OFFSET);
 #endif

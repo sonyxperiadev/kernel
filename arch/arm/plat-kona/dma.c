@@ -1351,10 +1351,12 @@ int dma_start_transfer(unsigned int chan)
 	}
 #endif
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	/* Enable the clock before the transfer */
 	ret = clk_enable(dmac->clk);
 	if (ret)
 		goto err1;
+#endif
 
 	if (pl330_submit_req(c->pl330_chan_id, &c->req) != 0)
 		goto err2;
@@ -1380,7 +1382,9 @@ int dma_start_transfer(unsigned int chan)
 	return 0;
       err2:
 	dmux_sema_unprotect();
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	clk_disable(dmac->clk);
+#endif
       err1:
 #ifdef CONFIG_KONA_PI_MGR
 	pi_mgr_dfs_request_update(&c->dfs_node, PI_MGR_DFS_MIN_VALUE);
@@ -1412,8 +1416,10 @@ int dma_stop_transfer(unsigned int chan)
 	/* free memory allocated for this request */
 	_cleanup_req(&c->req);
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	/* Disable clock after transfer */
 	clk_disable(dmac->clk);
+#endif
 
 #ifdef CONFIG_KONA_PI_MGR
 	/* Request for a update on the bus speed */
@@ -1560,12 +1566,16 @@ static int pl330_probe(struct platform_device *pdev)
 		goto probe_err3;
 	}
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 	/* Get the clock struct */
 	pd->clk = clk_get(NULL, DMAC_MUX_APB_BUS_CLK_NAME_STR);
 	if (IS_ERR_OR_NULL(pd->clk)) {
 		ret = -ENOENT;
 		goto probe_err4;
 	}
+#else
+	pd->clk = NULL;
+#endif
 
 	/* Hook the info */
 	pd->pi = pl330_info;

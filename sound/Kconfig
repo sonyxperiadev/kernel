@@ -92,8 +92,13 @@ source "sound/spi/Kconfig"
 source "sound/mips/Kconfig"
 
 source "sound/sh/Kconfig"
- 
+if (ARCH_RHEA || ARCH_ISLAND)
 source "sound/caph/Kconfig"
+endif 
+
+if ARCH_HAWAII
+source "sound/caph_hawaii/Kconfig"
+endif
 
 # the following will depend on the order of config.
 # here assuming USB is defined before ALSA
