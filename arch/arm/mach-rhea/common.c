@@ -520,7 +520,7 @@ static struct platform_device rng_device = {
 };
 #endif
 
-#ifdef CONFIG_USB_DWC_OTG
+#if defined(CONFIG_USB_DWC_OTG) || defined (CONFIG_USB_DWC_OTG_MODULE)
 static struct resource kona_hsotgctrl_platform_resource[] = {
 	[0] = {
 	       .start = HSOTG_CTRL_BASE_ADDR,
@@ -849,7 +849,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&rng_device,
 #endif
 
-#ifdef CONFIG_USB_DWC_OTG
+#if defined (CONFIG_USB_DWC_OTG) || defined (CONFIG_USB_DWC_OTG_MODULE)
 	&board_kona_hsotgctrl_platform_device,
 	&board_kona_otg_platform_device,
 #endif
