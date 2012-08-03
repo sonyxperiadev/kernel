@@ -229,7 +229,7 @@ typedef struct {
 	dvts_object_t shared_dvts_object;
 	uint32_t shared_dvts_object_usecount;
 	uint32_t last_completed_job_id;
-	uint32_t last_submitted_job_id;
+	struct v3d_job_t_ *last_submitted_job;
 #ifdef V3D_PERF_SUPPORT
 	uint32_t perf_ctr[16];
 	uint32_t v3d_perf_mask;
@@ -439,45 +439,24 @@ static v3d_job_t *v3d_job_create(struct file *filp, v3d_job_post_t * p_job_post)
 	return p_v3d_job;
 }
 
-static void v3d_job_add(struct file *filp, v3d_job_t *p_v3d_job, int pos)
+static void v3d_job_add(struct file *filp, v3d_job_t *p_v3d_job)
 {
 	v3d_t *dev;
 	v3d_job_t *tmp_job;
 
 	dev = (v3d_t *)(filp->private_data);
 	if (NULL == v3d_job_head) {
-		KLOG_V("Adding job[0x%08x] to head[NULL]", (u32)p_v3d_job);
+		KLOG_V("Adding job %p to head for dev %p", p_v3d_job, dev);
 		v3d_job_head = p_v3d_job;
 	} else {
 		tmp_job = v3d_job_head;
 		while (tmp_job->next != NULL)
 			tmp_job = tmp_job->next;
 
-		KLOG_V("Adding job[0x%08x] to tail[0x%08x]", (u32)p_v3d_job,
-		       (u32)tmp_job);
+		KLOG_V("Adding job %p to tail %p for dev %p", p_v3d_job,
+		       tmp_job, dev);
 		tmp_job->next = p_v3d_job;
 	}
-}
-
-static v3d_job_t *v3d_job_search(struct file *filp,
-				 v3d_job_status_t *p_job_status)
-{
-	v3d_t *dev;
-	v3d_job_t *tmp_job;
-	v3d_job_t *last_match_job = NULL;
-
-	dev = (v3d_t *)(filp->private_data);
-	tmp_job = v3d_job_head;
-	while (tmp_job != NULL) {
-		if (tmp_job->dev == dev) {
-			last_match_job = tmp_job;
-		}
-		tmp_job = tmp_job->next;
-	}
-
-	KLOG_V("Last job to wait for dev[%p]: [%p]", dev,
-	       last_match_job);
-	return last_match_job;
 }
 
 static void v3d_job_free(struct file *filp, v3d_job_t *p_v3d_wait_job)
@@ -868,7 +847,8 @@ static int v3d_job_post(struct file *filp, v3d_job_post_t * p_job_post)
 	}
 
 	/* Add the job to queue */
-	v3d_job_add(filp, p_v3d_job, -1);
+	v3d_job_add(filp, p_v3d_job);
+	dev->last_submitted_job = p_v3d_job;
 
 	if (p_v3d_job->job_type == V3D_JOB_REND)
 		dbg_job_post_rend_cnt++;
@@ -916,8 +896,8 @@ static int v3d_job_wait(struct file *filp, v3d_job_status_t *p_job_status)
 	dbg_job_wait_cnt++;
 
 	/* Find the last matching job in the queue if present */
-	p_v3d_wait_job = v3d_job_search(filp, p_job_status);
-
+	p_v3d_wait_job = dev->last_submitted_job;
+	dev->last_submitted_job = NULL;
 	if (p_v3d_wait_job != NULL) {
 		/* Wait for the job to complete if not yet complete */
 		KLOG_V
