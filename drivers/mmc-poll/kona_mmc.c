@@ -26,6 +26,7 @@
 #include <linux/mmc-poll/mmc_poll.h>
 #include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
+#include <mach/memory.h>
 #include "kona_mmc.h"
 
 #ifdef DEBUG

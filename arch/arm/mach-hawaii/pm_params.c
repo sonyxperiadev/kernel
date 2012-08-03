@@ -20,7 +20,6 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <linux/io.h>
@@ -32,6 +31,7 @@
 #include <mach/clock.h>
 #include <linux/clk.h>
 #include <linux/err.h>
+#include <linux/module.h>
 #include "pm_params.h"
 
 /*sysfs interface to read PMU vlt table*/

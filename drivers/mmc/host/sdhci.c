@@ -3141,7 +3141,6 @@ int sdhci_add_host(struct sdhci_host *host)
 	    mmc_card_is_removable(mmc))
 		mmc->caps |= MMC_CAP_NEEDS_POLL;
 
-#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI)
 #if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_HAWAII_FPGA)
 	/* Any UHS-I mode in caps implies SDR12 and SDR25 support. */
 	if (caps[1] & (SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |

@@ -664,23 +664,6 @@ void __init_memblock __next_free_mem_range_rev(u64 *idx, int nid,
 	*idx = ULLONG_MAX;
 }
 
-phys_addr_t __init memblock_alloc_new(phys_addr_t size, phys_addr_t align, phys_addr_t min_addr, phys_addr_t max_addr)
-{
-	phys_addr_t found;
-
-	/* We align the size to limit fragmentation. Without this, a lot of
-	 * small allocs quickly eat up the whole reserve array on sparc
-	 */
-	size = memblock_align_up(size, align);
-
-	found = memblock_find_base(size, align, min_addr, max_addr);
-	if (found != MEMBLOCK_ERROR &&
-	    !memblock_add_region(&memblock.reserved, found, size))
-		return found;
-
-	return 0;
-}
-
 #ifdef CONFIG_HAVE_MEMBLOCK_NODE_MAP
 /*
  * Common iterator interface used to define for_each_mem_range().

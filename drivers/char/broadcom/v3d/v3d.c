@@ -32,6 +32,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/workqueue.h>
 #include <linux/platform_device.h>
 
+#include <mach/memory.h>
 #include <linux/broadcom/v3d.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>

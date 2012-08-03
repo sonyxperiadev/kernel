@@ -74,6 +74,7 @@
 #include <mach/rdb/brcm_rdb_aci.h>
 #include <mach/rdb/brcm_rdb_auxmic.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
+#include <mach/memory.h>
 
 
 /*

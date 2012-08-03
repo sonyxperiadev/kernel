@@ -22,6 +22,7 @@
 #include <asm/uaccess.h>
 #include <linux/device.h>
 #include <linux/errno.h>
+#include <linux/module.h>
 #include <linux/broadcom/mmdma.h>
 
 #define MMDMA_DEV_NAME "mmdma"

@@ -35,6 +35,7 @@
 #include <mach/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/pm.h>
+#include <mach/memory.h>
 
 #include "pm_params.h"
 

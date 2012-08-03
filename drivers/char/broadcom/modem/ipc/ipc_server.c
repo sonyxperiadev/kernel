@@ -50,6 +50,7 @@
 #include "ipcinterface.h"
 
 #include <mach/comms/platform_mconfig.h>
+#include <mach/memory.h>
 
 #include <mach/io_map.h>
 /* for BINTC register offsets */
@@ -548,6 +549,7 @@ int cpStart(int isReset)
 }
 
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 static int __init Comms_Start(void)
 {
 	return cpStart(0);   /* Normal Comms_Start */
@@ -555,7 +557,6 @@ static int __init Comms_Start(void)
 /* The FPGA block does not have the comms module and will hang
 	 * on attempt to access it
 	 */
-#ifndef CONFIG_MACH_HAWAII_FPGA
 arch_initcall(Comms_Start);
 #endif
 

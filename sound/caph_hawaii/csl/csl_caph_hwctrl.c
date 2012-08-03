@@ -74,6 +74,7 @@
 
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
+#include <mach/memory.h>
 static struct regulator *gAUD_regulator;
 static struct regulator *gMIC_regulator;
 

@@ -125,7 +125,9 @@ static unsigned long offs;
 
 static void BCMLOG_klogging_crashdump(const char *buf, int size)
 {
+#ifdef CONFIG_BRCM_NETCONSOLE
 	brcm_klogging((char *)buf, size) ;
+#endif
 	mdelay(10);
 }
 

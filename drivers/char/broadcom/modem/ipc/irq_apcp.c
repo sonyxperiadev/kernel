@@ -31,6 +31,7 @@
 #include <asm/mach/irq.h>
 #include <mach/irqs.h>
 #include <mach/io_map.h>
+#include <mach/memory.h>
 /* for BINTC register offsets */
 #include <mach/rdb/brcm_rdb_bintc.h>
 

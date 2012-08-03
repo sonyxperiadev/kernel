@@ -47,6 +47,8 @@
 #include <mach/rdb/brcm_rdb_ahintc.h>
 #include <mach/rdb/brcm_rdb_cph_ssasw.h>
 #include <mach/rdb/brcm_rdb_sspil.h>
+#include <mach/memory.h>
+#include <asm/memory.h>
 
 AP_SharedMem_t *vp_shared_mem;
 

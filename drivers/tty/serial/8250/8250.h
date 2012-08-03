@@ -38,11 +38,11 @@ struct uart_8250_port {
 #define MSR_SAVE_FLAGS UART_MSR_ANY_DELTA
 	unsigned char		msr_saved_flags;
 	struct clk		*clk;
-#ifdef CONFIG_ARCH_RHEA
 #if defined(CONFIG_HAS_WAKELOCK)
 	struct wake_lock uart_lock;
 #define WAKELOCK_TIMEOUT_VAL 5000
 #endif
+#ifdef CONFIG_ARCH_RHEA
 	/*
 	 * Kona PM - QOS service
  	 */

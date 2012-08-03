@@ -41,10 +41,14 @@
 #include <mach/kona.h>
 #include <mach/timer.h>
 #include <mach/profile_timer.h>
+#include <linux/reboot.h>
+#include <asm/system_misc.h>
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 #include <mach/secure_api.h>
 #endif
 #include <plat/cpu.h>
+#include <plat/kona_reset_reason.h>
+#include <mach/memory.h>
 
 static void hawaii_poweroff(void)
 {
@@ -63,7 +67,12 @@ static void hawaii_poweroff(void)
 
 static void hawaii_restart(char mode, const char *cmd)
 {
-	arm_machine_restart('h', cmd);
+#ifdef CONFIG_MFD_BCMPMU 
+        if (hard_reset_reason)
+		bcmpmu_client_hard_reset(hard_reset_reason);
+	else
+#endif
+		machine_restart(cmd);
 }
 
 #ifdef CONFIG_CACHE_L2X0

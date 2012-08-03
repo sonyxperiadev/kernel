@@ -2722,10 +2722,10 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	/*
 	 * Ask the core to calculate the divisor for us.
 	 */
-#ifdef CONFIG_ARCH_SAMOA
-       printk("Samoa UART clock is now fixed at %d\n", port->uartclk);
-#else
+#if !defined(CONFIG_ARCH_SAMOA) && !defined(CONFIG_MACH_HAWAII_FPGA)
 	uart_fix_clock_rate(port, termios);
+#else
+	printk("UART clock is now fixed at %d\n", port->uartclk);
 #endif
 
 	baud = uart_get_baud_rate(port, termios, old,
@@ -3682,7 +3682,7 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
 	if (uart) {
 		uart_remove_one_port(&serial8250_reg, &uart->port);
 
-#ifndef CONFIG_ARCH_SAMOA
+#if !defined(CONFIG_ARCH_SAMOA) && !defined(CONFIG_MACH_HAWAII_FPGA)
         uart->clk = clk_get(uart->port.dev, clk_name);
         if (IS_ERR(uart->clk))
             return PTR_ERR(uart->clk);
