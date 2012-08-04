@@ -235,7 +235,6 @@ static void vid_dec_output_frame_done(struct video_client_ctx *client_ctx,
 	struct file *file;
 	s32 buffer_index = -1;
 	enum vdec_picture pic_type;
-	u32 ion_flag = 0;
 
 	if (!client_ctx || !vcd_frame_data) {
 		ERR("vid_dec_input_frame_done() NULL pointer\n");
@@ -335,15 +334,7 @@ static void vid_dec_output_frame_done(struct video_client_ctx *client_ctx,
 		ERR("vid_dec_output_frame_done UVA can not be found\n");
 		vdec_msg->vdec_msg_info.status_code = VDEC_S_EFATAL;
 	}
-	if (vcd_frame_data->data_len > 0) {
-		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_OUTPUT,
-				pmem_fd, kernel_vaddr, buffer_index);
-		if (ion_flag == CACHED) {
-			invalidate_caches(kernel_vaddr,
-					(unsigned long)vcd_frame_data->data_len,
-					phy_addr);
-		}
-	}
+
 	mutex_lock(&client_ctx->msg_queue_lock);
 	list_add_tail(&vdec_msg->list, &client_ctx->msg_queue);
 	mutex_unlock(&client_ctx->msg_queue_lock);
@@ -1259,10 +1250,7 @@ static u32 vid_dec_fill_output_buffer(struct video_client_ctx *client_ctx,
 		vcd_frame.virtual = (u8 *) kernel_vaddr;
 		vcd_frame.frm_clnt_data = (u32) fill_buffer_cmd->client_data;
 		vcd_frame.alloc_len = fill_buffer_cmd->buffer.buffer_len;
-		vcd_frame.ion_flag = vidc_get_fd_info(client_ctx,
-						 BUFFER_TYPE_OUTPUT,
-						pmem_fd, kernel_vaddr,
-						buffer_index);
+
 		vcd_status = vcd_fill_output_buffer(client_ctx->vcd_handle,
 						    &vcd_frame);
 		if (!vcd_status)
