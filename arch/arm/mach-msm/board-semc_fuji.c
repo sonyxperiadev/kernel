@@ -108,6 +108,7 @@
 #include <mach/rpm-regulator.h>
 #include <mach/restart.h>
 #include <mach/board-msm8660.h>
+#include <mach/iommu_domains.h>
 
 #include <mach/simple_remote_msm8x60_pf.h>
 
@@ -2457,13 +2458,13 @@ unsigned char hdmi_is_primary;
 #define USER_SMI_SIZE         (MSM_SMI_SIZE - KERNEL_SMI_SIZE)
 #define MSM_PMEM_SMIPOOL_SIZE USER_SMI_SIZE
 
-#define MSM_ION_SF_SIZE                0x4000000 /* 64MB */
+#define MSM_ION_SF_SIZE		0x4000000 /* 64MB */
 #define MSM_ION_CAMERA_SIZE     MSM_PMEM_ADSP_SIZE
 #define MSM_ION_MM_FW_SIZE      0x200000 /* (2MB) */
-#define MSM_ION_MM_SIZE         0x3600000 /* (54MB) */
-#define MSM_ION_MFC_SIZE       SZ_8K
-#define MSM_ION_WB_SIZE                0x600000 /* 6MB */
-#define MSM_ION_QSECOM_SIZE	0x300000 /* (3MB) */
+#define MSM_ION_MM_SIZE         0x3600000 /* (54MB) Must be a multiple of 64K */
+#define MSM_ION_MFC_SIZE	SZ_8K
+#define MSM_ION_WB_SIZE		0x600000 /* 6MB */
+#define MSM_ION_QSECOM_SIZE	0x600000 /* (6MB) */
 #define MSM_ION_AUDIO_SIZE	MSM_PMEM_AUDIO_SIZE
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
@@ -2692,7 +2693,7 @@ void *setup_smi_region(void)
 static struct android_pmem_platform_data android_pmem_smipool_pdata = {
 	.name = "pmem_smipool",
 	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
-	.cached = 1,
+	.cached = 0,
 	.memory_type = MEMTYPE_SMI,
 	.request_region = request_smi_region,
 	.release_region = release_smi_region,
@@ -4057,10 +4058,12 @@ static struct platform_device *fuji_devices[] __initdata = {
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 static struct ion_cp_heap_pdata cp_mm_ion_pdata = {
 	.permission_type = IPT_TYPE_MM_CARVEOUT,
-	.align = PAGE_SIZE,
+	.align = SZ_64K,
 	.request_region = request_smi_region,
 	.release_region = release_smi_region,
 	.setup_region = setup_smi_region,
+	.iommu_map_all = 1,
+	.iommu_2x_map_domain = VIDEO_DOMAIN,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_ion_pdata = {
@@ -4222,6 +4225,23 @@ static void reserve_ion_memory(void)
 				pr_debug("msm_ion_sf_size 0x%x\n",
 					msm_ion_sf_size);
 				break;
+			}
+		}
+	}
+
+	/* Verify size of heap is a multiple of 64K */
+	for (i = 0; i < ion_pdata.nr; i++) {
+		struct ion_platform_heap *heap = &(ion_pdata.heaps[i]);
+
+		if (heap->extra_data && heap->type == ION_HEAP_TYPE_CP) {
+			int map_all = ((struct ion_cp_heap_pdata *)
+				heap->extra_data)->iommu_map_all;
+
+			if (map_all && (heap->size & (SZ_64K-1))) {
+				heap->size = ALIGN(heap->size, SZ_64K);
+				pr_err("Heap %s size is not a multiple of 64K. Adjusting size to %x\n",
+					heap->name, heap->size);
+
 			}
 		}
 	}
@@ -7486,7 +7506,7 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #endif
 	.mdp_rev = MDP_REV_41,
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-	.mem_hid = ION_CP_WB_HEAP_ID,
+	.mem_hid = BIT(ION_CP_WB_HEAP_ID),
 #else
 	.mem_hid = MEMTYPE_EBI1,
 #endif
