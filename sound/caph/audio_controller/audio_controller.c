@@ -906,8 +906,6 @@ void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app)
 void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 				   unsigned int arg_pathID, Boolean inHWlpbk)
 {
-	AUDIO_SOURCE_Enum_t mic;
-	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	SetAudioMode_Sp_t sp_struct;
@@ -936,8 +934,6 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
 	/*enable clock if it is not enabled. */
-
-	AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 
 /*set PMU on/off, gain,
 for multicast, need to find the other mode and reconcile on mixer gains.
@@ -1000,8 +996,6 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 				   unsigned int arg_pathID, Boolean inHWlpbk)
 {
-	AUDIO_SOURCE_Enum_t mic;
-	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	SetAudioMode_Sp_t sp_struct;
@@ -1024,7 +1018,6 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 		csl_caph_ControlHWClock(TRUE);
 	/*enable clock if it is not enabled. */
 
-	AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 	currAudioMode_fm = mode;
 
 	app = AUDCTRL_GetAudioApp();
@@ -1192,8 +1185,6 @@ void AUDCTRL_SetAudioMode_ForFM_Multicast(AudioMode_t mode,
 void AUDCTRL_SetAudioMode_ForMusicRecord(
 	AudioMode_t mode, unsigned int arg_pathID)
 {
-	AUDIO_SOURCE_Enum_t mic;
-	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
 	AudioApp_t app;
 
@@ -1211,8 +1202,6 @@ void AUDCTRL_SetAudioMode_ForMusicRecord(
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
 	/*enable clock if it is not enabled. */
-
-	AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 
 /*no PMU
 for FM recording + voice call, need to find separate gains from sysparm
