@@ -29,6 +29,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/log2.h>
 #include <linux/debugfs.h>
+#include <linux/seq_file.h>
 #include <linux/broadcom/m4u.h>
 
 #include <mach/irqs.h>
@@ -69,7 +70,7 @@ static struct m4u_region m4u_regions[] = {
 		.mma			= 0x80000000,
 		.pa				= 0x80000000,
 		.size			= SZ_128M,
-		.page_size		= SZ_1M,
+		.page_size		= SZ_4K,
 	},
 };
 
@@ -106,6 +107,26 @@ static struct platform_device m4u_platform_device = {
 };
 /* To be moved to board file - End */
 
+struct m4u_debugfs {
+	struct dentry 			*debug_root;
+	struct dentry 			*debug_map_fs;
+	struct dentry 			*debug_reg_dir;
+	/* Registers */
+	struct dentry 			*debug_cr_fs;
+	struct dentry 			*debug_isr_fs;
+	struct dentry 			*debug_imr_fs;
+	struct dentry 			*debug_tbr_fs;
+	struct dentry 			*debug_lr_fs;
+	struct dentry 			*debug_ldr_fs;
+	struct dentry 			*debug_efl_fs;
+	struct dentry 			*debug_elock_fs;
+	struct dentry 			*debug_eunlock_fs;
+	struct dentry 			*debug_xfifo_fs;
+	struct dentry 			*debug_pccr_fs;
+	struct dentry 			*debug_pcr1_fs;
+	struct dentry 			*debug_pcr2_fs;
+};
+
 struct m4u_device {
 #ifdef CONFIG_DEBUG_M4U
 	struct miscdevice 		dev;
@@ -122,22 +143,7 @@ struct m4u_device {
 	struct list_head		map_list;
 	int						page_count;
 	u32						tlb_lock_count;
-	struct dentry 			*debug_root;
-	struct dentry 			*debug_reg_dir;
-	/* Registers */
-	struct dentry 			*debug_cr_fs;
-	struct dentry 			*debug_isr_fs;
-	struct dentry 			*debug_imr_fs;
-	struct dentry 			*debug_tbr_fs;
-	struct dentry 			*debug_lr_fs;
-	struct dentry 			*debug_ldr_fs;
-	struct dentry 			*debug_efl_fs;
-	struct dentry 			*debug_elock_fs;
-	struct dentry 			*debug_eunlock_fs;
-	struct dentry 			*debug_xfifo_fs;
-	struct dentry 			*debug_pccr_fs;
-	struct dentry 			*debug_pcr1_fs;
-	struct dentry 			*debug_pcr2_fs;
+	struct m4u_debugfs		debugfs;
 };
 
 /* Global device used by kernel drivers to invoke M4U APIs */
@@ -175,8 +181,8 @@ static int set_ ## REG_NAME ##  _val(void *data, u64 val) \
 		get_ ## REG_NAME ## _val, set_ ## REG_NAME ## _val, "0x%08llx\n");
 
 #define M4U_DEBUGFS_CREATE_REG_FILE(REG_NAME)	\
-		mdev->debug_ ## REG_NAME ## _fs = debugfs_create_file( 		\
-				#REG_NAME, (S_IRUGO|S_IWUSR), mdev->debug_reg_dir, 	\
+		mdev->debugfs.debug_ ## REG_NAME ## _fs = debugfs_create_file( 		\
+				#REG_NAME, (S_IRUGO|S_IWUSR), mdev->debugfs.debug_reg_dir, 	\
 				mdev, &m4u_debug_reg_ ## REG_NAME ## _fops);
 
 static inline void m4u_write_reg(struct m4u_device *mdev, u32 offset, u32 value)
@@ -219,11 +225,11 @@ static inline u32 m4u_pte(u32 pa, u32 order, u32 valid)
 }
 
 #if 0
+/* TODO: Threshold for locked TLB check */
 static inline void m4u_tlb_lock(struct m4u_device *mdev, u32 mma)
 {
 	u32 mma_aligned;
 
-	/* TODO: Threshold for locked TLB check */
 	mma_aligned = mma & MMMMU_OPEN_ELOCK_ADDRESS_MASK;
 	m4u_write_reg(mdev, MMMMU_OPEN_ELOCK_OFFSET, mma_aligned);
 	mdev->tlb_lock_count++;
@@ -246,7 +252,7 @@ static inline void m4u_tlb_invalidate(struct m4u_device *mdev, u32 mma, int page
 
 	/* TODO: Invalidation on non-aligned boundaries */
 	mma_aligned = mma & MMMMU_OPEN_EFL_ADDRESS_MASK;
-	flush_order = (page_order - M4U_PAGE_SHIFT) + 
+	flush_order = (page_order - M4U_PAGE_SHIFT) +
 		(n - M4U_TLB_LINE_SHIFT);
 	m4u_write_reg(mdev, MMMMU_OPEN_EFL_OFFSET, (mma_aligned | flush_order));
 }
@@ -372,7 +378,7 @@ static int m4u_mapping_create(struct m4u_device *mdev, struct m4u_region *region
 		/* Create page table entries in the page table */
 		m4u_map_pages(mdev, region->mma, region->pa, page_order, n, 1);
 		m4u_tlb_invalidate(mdev, region->mma, page_order, n);
-		/* TODO: TLB locking based on page_size and threshold */
+		/* TODO: Reduce the number of invalidate operations */
 	}
 
 	mutex_unlock(&mdev->lock);
@@ -571,7 +577,7 @@ static int m4u_init(struct m4u_device *mdev)
 		pr_err("Page table allocation (0x%x) failed. \n", pt_size);
 		goto error;
 	}
-	pr_info("pt base(%p:0x%x 0x%08x) garbage_page(0x%08x) \n", mdev->pt_base, 
+	pr_info("pt base(%p:0x%x 0x%08x) garbage_page(0x%08x) \n", mdev->pt_base,
 			mdev->pt_handle, pt_size, page_to_phys(mdev->garbage_page));
 
 	/* Allocate xfifo buffer */
@@ -663,19 +669,58 @@ M4U_GET_SET_REG(pccr, PCCR);
 M4U_GET_SET_REG(pcr1, PCR1);
 M4U_GET_SET_REG(pcr2, PCR2);
 
+static int m4u_debug_map_show(struct seq_file *s, void *unused)
+{
+	struct m4u_device *mdev = s->private;
+	struct list_head *elt;
+	struct m4u_mapping *mapping = NULL;
+	struct m4u_region *r;
+
+	seq_printf(s, "%12.12s %12.12s %12.12s %12.12s %10.10s\n",
+			"mma_addr", "phys_addr", "size", "page_size", "refcount");
+	list_for_each(elt, &mdev->map_list) {
+		mapping = list_entry(elt, struct m4u_mapping, list);
+		r = &mapping->region;
+
+		seq_printf(s, "   %#08x   %#08x  %8u KB %8u KB %6d\n",
+				r->mma, r->pa, (r->size>>10), (r->page_size>>10),
+				atomic_read(&mapping->ref.refcount));
+	}
+
+	return 0;
+}
+
+static int m4u_debug_map_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, m4u_debug_map_show, inode->i_private);
+}
+
+static const struct file_operations m4u_debug_map_fops = {
+	.open = m4u_debug_map_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 void m4u_debugfs_init(struct m4u_device *mdev, struct platform_device *pdev)
 {
 	char debug_name[64];
 
 	/* Create root directory */
-	mdev->debug_root = debugfs_create_dir(pdev->name, NULL);
-	if (IS_ERR_OR_NULL(mdev->debug_root))
+	mdev->debugfs.debug_root = debugfs_create_dir(pdev->name, NULL);
+	if (IS_ERR_OR_NULL(mdev->debugfs.debug_root))
 		pr_err("Failed to create debug root dir.\n");
+
+	/* Create debugfs maplist files */
+	snprintf(debug_name, 64, "map");
+	mdev->debugfs.debug_map_fs = debugfs_create_file(debug_name, 0664,
+						 mdev->debugfs.debug_root, mdev,
+						 &m4u_debug_map_fops);
 
 	/* Create register files */
 	snprintf(debug_name, 64, "registers");
-	mdev->debug_reg_dir = debugfs_create_dir(debug_name, mdev->debug_root);
-	if (IS_ERR_OR_NULL(mdev->debug_reg_dir)) {
+	mdev->debugfs.debug_reg_dir = debugfs_create_dir(debug_name, mdev->debugfs.debug_root);
+	if (IS_ERR_OR_NULL(mdev->debugfs.debug_reg_dir)) {
 		pr_err("Failed to create dir(%s).\n", debug_name);
 	} else {
 		M4U_DEBUGFS_CREATE_REG_FILE(cr);
@@ -709,46 +754,6 @@ struct m4u_reg_data {
 	u32 val;
 };
 
-static int m4u_mapping_update(struct m4u_device *mdev, struct m4u_region *region)
-{
-	struct list_head *elt;
-	struct m4u_mapping *mapping = NULL;
-	struct m4u_region *r;
-	int page_order, n;
-	u32 mma, mma_end;
-
-	if (!region) {
-		pr_err("Failed updating invalid region \n");
-		return -EINVAL;
-	}
-	mma = region->mma;
-	mma_end = mma + region->size;
-	mutex_lock(&mdev->lock);
-	list_for_each(elt, &mdev->map_list) {
-		mapping = list_entry(elt, struct m4u_mapping, list);
-		r = &mapping->region;
-		pr_debug("Search region mma(0x%08x) pa(0x%08x) size(0x%08x) \n",
-				r->mma, r->pa, r->size);
-		if ((mapping->contig_flag) && (mma == r->mma) && (mma < r->mma + r->size)) {
-			*r = *region;
-			if (region->page_size) {
-				page_order = ilog2(region->page_size);
-				n = region->size >> page_order;
-				if (!((page_order < M4U_PAGE_SHIFT) || (n & 0x7))) {
-					pr_debug("Update mapping - mma(0x%08x) pa(0x%08x) size(0x%08x) \n",
-							r->mma, r->pa, r->size);
-					/* TODO: Unlock TLB if region was TLB locked */
-					m4u_tlb_invalidate(mdev, region->mma, page_order, n);
-					m4u_map_pages(mdev, region->mma, region->pa, page_order, n, 1);
-					break;
-				}
-			}
-		}
-	}
-	mutex_unlock(&mdev->lock);
-	return 0;
-}
-
 static long m4u_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct m4u_device *mdev = filp->private_data;
@@ -770,16 +775,6 @@ static long m4u_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	{
 		pr_debug("M4U_MAPPING_REMOVE - mma(0x%08x) \n", (u32)arg);
 		m4u_unmap(mdev, (u32)arg);
-		break;
-	}
-	case M4U_MAPPING_UPDATE:
-	{
-		struct m4u_region data;
-		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
-			return -EFAULT;
-		pr_debug("M4U_MAPPING_UPDATE - mma(0x%08x) pa(0x%08x) size(0x%08x) page_size(0x%08x) \n",
-				data.mma, data.pa, data.size, data.page_size);
-		m4u_mapping_update(mdev, &data);
 		break;
 	}
 	case M4U_REG_GET:
@@ -975,7 +970,7 @@ static int m4u_remove(struct platform_device *pdev)
 
 	pr_info("M4U device remove \n");
 	if (mdev) {
-		debugfs_remove_recursive(mdev->debug_root);
+		debugfs_remove_recursive(mdev->debugfs.debug_root);
 		m4u_exit(mdev);
 		irq = platform_get_irq(pdev, 0);
 		free_irq(irq, mdev);
