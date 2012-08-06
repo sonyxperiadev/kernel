@@ -134,18 +134,27 @@ unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *hand
 	struct sg_table *sg_table;
 
 	sg_table = ion_map_dma(client, handle);
+	if (IS_ERR_OR_NULL(sg_table))
+		return dma_addr;
+
 #ifdef CONFIG_M4U
 	buffer = kona_ion_acquire_buffer(client, handle);
 	if (!buffer->dma_addr) {
 		buffer->dma_addr = m4u_map(g_mdev, sg_table, buffer->size, buffer->align);
+		if (buffer->dma_addr == INVALID_MMA) {
+			buffer->dma_addr = 0;
+		}
 	}
 	dma_addr = buffer->dma_addr;
 	kona_ion_release_buffer(client, buffer);
 #else
 	/* Do not have IOMMU to map multiple scatterlist entries to contiguous dma address */
-	if (!IS_ERR_OR_NULL(sg_table) && (sg_table->nents == 1))
+	if (sg_table->nents == 1)
 		dma_addr = sg_phys(sg_table->sgl);
 #endif
+
+	if (!dma_addr)
+		ion_unmap_dma(client, handle);
 	return dma_addr;
 }
 EXPORT_SYMBOL(kona_ion_map_dma);
