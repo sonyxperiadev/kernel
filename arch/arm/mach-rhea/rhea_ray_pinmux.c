@@ -23,6 +23,7 @@
 /*                                                                                              */
 /************************************************************************************************/
 #include <linux/kernel.h>
+#include <linux/bug.h>
 #include <linux/init.h>
 #include "mach/pinmux.h"
 #include <mach/rdb/brcm_rdb_padctrlreg.h>

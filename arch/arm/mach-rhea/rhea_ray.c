@@ -27,7 +27,6 @@
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/kernel_stat.h>
@@ -40,6 +39,7 @@
 #include <linux/input.h>
 #include <asm/gpio.h>
 #include <mach/sdio_platform.h>
+#include <asm/hardware/gic.h>
 #ifdef CONFIG_GPIO_PCA953X
 #include <linux/i2c/pca953x.h>
 #endif
@@ -1233,7 +1233,7 @@ void __init board_add_sdio_devices(void)
 
 static struct platform_pwm_backlight_data bcm_backlight_data = {
 /* backlight */
-	.pwm_name = "kona_pwmc:4",
+	.pwm_id 	= 4,
 	.max_brightness = 32,	/* Android calibrates to 32 levels */
 	.dft_brightness = 32,
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
@@ -1977,6 +1977,11 @@ void __init board_map_io(void)
 late_initcall(rhea_ray_add_lateInit_devices);
 
 MACHINE_START(RHEA, "RheaRay")
-    .map_io = board_map_io,.init_irq = kona_init_irq,.timer =
-    &kona_timer,.init_machine = board_init,.reserve =
-    rhea_ray_reserve MACHINE_END
+	.atag_offset = 0x100,
+    	.map_io = board_map_io,
+	.init_irq = kona_init_irq,
+	.handle_irq = gic_handle_irq,
+	.timer = &kona_timer,.init_machine = board_init,
+	.reserve = rhea_ray_reserve,
+	.restart = rhea_restart,
+MACHINE_END
