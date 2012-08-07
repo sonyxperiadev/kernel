@@ -165,15 +165,9 @@ static void sdhci_mask_irqs(struct sdhci_host *host, u32 irqs)
 
 static void sdhci_set_card_detection(struct sdhci_host *host, bool enable)
 {
-	u32 present, irqs;
-
-	if ((host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION) ||
-	    (host->mmc->caps & MMC_CAP_NONREMOVABLE))
+	u32 irqs = SDHCI_INT_CARD_REMOVE | SDHCI_INT_CARD_INSERT;
+	if (host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION)
 		return;
-
-	present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
-			      SDHCI_CARD_PRESENT;
-	irqs = present ? SDHCI_INT_CARD_REMOVE : SDHCI_INT_CARD_INSERT;
 
 	if (enable)
 		sdhci_unmask_irqs(host, irqs);
@@ -2042,24 +2036,6 @@ static void sdhci_do_enable_preset_value(struct sdhci_host *host, bool enable)
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
-static int sdhci_enable(struct mmc_host *mmc)
-{
-	struct sdhci_host *host = mmc_priv(mmc);
-	if (host->ops->platform_set)
-		return host->ops->platform_set(host, 1, 0);
-	else
-		return -ENODEV;
-}
-
-static int sdhci_disable(struct mmc_host *mmc)
-{
-	struct sdhci_host *host = mmc_priv(mmc);
-	if (host->ops->platform_set)
-		return host->ops->platform_set(host, 0, 0);
-	else
-		return -ENODEV;
-}
-
 static void sdhci_enable_preset_value(struct mmc_host *mmc, bool enable)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
@@ -2078,8 +2054,6 @@ static const struct mmc_host_ops sdhci_ops = {
 	.start_signal_voltage_switch	= sdhci_start_signal_voltage_switch,
 	.execute_tuning			= sdhci_execute_tuning,
 	.enable_preset_value		= sdhci_enable_preset_value,
-	.disable	= sdhci_disable,
-	.enable		= sdhci_enable,
 };
 
 /*****************************************************************************\
@@ -2128,7 +2102,7 @@ static void sdhci_tasklet_card(unsigned long param)
 			sdhci_set_clock(host, clock);
 
 			pr_info("SD Card Inserted\n");
-	}
+		}
 #endif
 	}
 
@@ -2565,11 +2539,12 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		spin_unlock(&host->lock);
 		pr_warning("%s: got irq while runtime suspended\n",
 		       mmc_hostname(host->mmc));
+		if (host->ops->clk_enable)
+			host->ops->clk_enable(host, 0);
 		return IRQ_HANDLED;
 	}
 
 	intmask = sdhci_readl(host, SDHCI_INT_STATUS);
-
 	if (!intmask || intmask == 0xffffffff) {
 		result = IRQ_NONE;
 		goto out;
@@ -2644,6 +2619,9 @@ again:
 	if (intmask && --max_loops)
 		goto again;
 out:
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 0);
+
 	spin_unlock(&host->lock);
 
 	if (unexpected) {
@@ -2701,25 +2679,8 @@ int sdhci_suspend_host(struct sdhci_host *host)
 		return ret;
 	}
 
-	flush_work_sync(&host->wait_erase_work);
-
-	/* Note that mmc_suspend_host calls mmc_power_off, that internally
-	 * calls set_ios function to re-program certain SDHC registers, which
-	 * is not desirable in case of WiFi case, so do not perform this call
-	 * in case of SDIO. (The type is detected dynamically while talking to
-	 * the card from mmc_sdio_init_card function.
-	 */
-	if (mmc->card && (mmc->card->type != MMC_TYPE_SDIO)) {
-		ret = mmc_suspend_host(host->mmc);
-			if (ret)
-				goto suspend_ret;
-	}
 	free_irq(host->irq, host);
 
-	if (host->vmmc)
-		ret = regulator_disable(host->vmmc);
-
-suspend_ret:
 	if (host->ops->clk_enable)
 		host->ops->clk_enable(host, 0);
 	return ret;
@@ -2731,15 +2692,9 @@ int sdhci_resume_host(struct sdhci_host *host)
 {
 	int ret = 0;
 
-	if (host->vmmc) {
-		int ret = regulator_enable(host->vmmc);
-		if (ret)
-			goto retval;
-
-	}
-
 	if (host->ops->clk_enable)
 		host->ops->clk_enable(host, 1);
+
 	if (host->flags & (SDHCI_USE_SDMA | SDHCI_USE_ADMA)) {
 		if (host->ops->enable_dma)
 			host->ops->enable_dma(host);
@@ -2776,7 +2731,6 @@ int sdhci_resume_host(struct sdhci_host *host)
 resume_ret:
 	if (host->ops->clk_enable)
 		host->ops->clk_enable(host, 0);
-retval:
 	return ret;
 }
 
