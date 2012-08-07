@@ -45,6 +45,11 @@ config ISP
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
 	default n
 
+config H264
+	tristate "H264 Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_HAWAII)
+	default n
+
 config UNICAM
 	tristate "UNICAM Driver"
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)

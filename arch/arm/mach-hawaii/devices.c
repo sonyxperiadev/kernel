@@ -575,7 +575,7 @@ static struct ion_platform_data ion_data0 = {
 			.type = ION_HEAP_TYPE_CARVEOUT,
 			.name = "ion-carveout-0",
 			.base = 0,
-			.size = (16 *SZ_1M),
+			.size = (32 *SZ_1M),
 		},
 	},
 };
