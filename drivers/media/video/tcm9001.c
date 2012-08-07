@@ -213,6 +213,7 @@ static int tcm9001_s_stream(struct v4l2_subdev *sd, int enable)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct tcm9001 *tcm9001 = to_tcm9001(client);
 	int ret = 0;
+	int val;
 	if (enable) {
 		ret = tcm9001_init(client);
 		if (tcm9001_frmsizes[tcm9001->i_size].width == 640) {
@@ -223,6 +224,9 @@ static int tcm9001_s_stream(struct v4l2_subdev *sd, int enable)
 			tcm9001_reg_write(client, 0x22, 0x03);
 		}
 	} else {
+		tcm9001_reg_read(client,0xFF,&val);
+		val = val | 0x30;
+		tcm9001_reg_write(client,0xFF,val);
 		printk(KERN_INFO "Disabling !!!!! STREAM from TCM9001 client\n");
 		/* Nothing to do */
 	}
