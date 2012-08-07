@@ -91,17 +91,21 @@
 
 /* Macro to Enable and disable test data*/
 #define CONFIG_BCM_ENABLE_TESTDATA
+#define TEST_DATA_SIZE		(16 * 1024)
 
 #ifdef CONFIG_BCM_ENABLE_TESTDATA
 #include "48k_stereo_16bit.h"
 #include "48k_mono_16bit.h"
+#include "8k_mono_16bit.h"
 #else
 static UInt16 playback_audiotest_mono[] = { 0 };
 static UInt16 playback_audiotest_stereo[] = { 0 };
+static UInt16 playback_audiotest_8k_mono[] = { 0 };
 #endif
 
 static UInt8 *samplePCM16_inaudiotest;
 static UInt16 *record_test_buf;
+static UInt32 test_data_size = TEST_DATA_SIZE;
 
 UInt8 playback_audiotest_srcmixer[] = { 0 };
 
@@ -932,22 +936,15 @@ static int HandleControlCommand()
 		break;
 	case 15:
 		/*call after you enable playback/capture or audio loopback*/
-		aTrace(LOG_AUDIO_DRIVER, "CAPH resigter dump\n");
-		aTrace(LOG_AUDIO_DRIVER, "CFIFO_CH1[0x%08x]"
-				"CFIFO_CH2[0x%08x]"
-				"MIXER1_OFIFO_DAT0[0x%08x]"
-				"MIXER2_OFIFO_DAT0[0x%08x]"
-				"MIXER2_OFIFO1_DAT[0x%08x]"
-				"MIXER2_OFIFO2_DAT[0x%08x]"
-				"AH_VIN_FIFO[0x%08x]"
-				"SSP3_FIFO_RX0[0x%08x]"
-				"SSP4_FIFO_RX0[0x%08x]\n" ,
+		aTrace(LOG_AUDIO_DRIVER, "CFIFO_CH1:%x"
+				"CFIFO_CH2:%x"
+				"MIXER2_OFIFO1_DAT:%x"
+				"AH_VIN_FIFO:%x"
+				"SSP3_FIFO_RX0:%x"
+				"SSP4_FIFO_RX0:%x\n" ,
 				RD_REG(0x3502D000),
 				RD_REG(0x3502D040),
-				RD_REG(0x3502C000 + 0x00000C08),
-				RD_REG(0x3502C000 + 0x00000C18),
 				RD_REG(0x3502C000 + 0x00000C20),
-				RD_REG(0x3502C000 + 0x00000C30),
 				RD_REG(0x35020000 + 0x00006800),
 				RD_REG(0x3502B000 + 0x00000600),
 				RD_REG(0x35028000 + 0x00000600));
@@ -964,7 +961,7 @@ static int HandleControlCommand()
 			ssp_port = AUDCTRL_SSP_3;
 		else if (sgBrcm_auddrv_TestValues[2] == 4)
 			ssp_port = AUDCTRL_SSP_4;
-		else if (sgBrcm_auddrv_TestValues[2] == 4)
+		else if (sgBrcm_auddrv_TestValues[2] == 6)
 			ssp_port = AUDCTRL_SSP_6;
 		else {
 
@@ -983,10 +980,16 @@ static int HandleControlCommand()
 			return 0;
 		}
 
-		if (sgBrcm_auddrv_TestValues[4] == 1)
+		if (sgBrcm_auddrv_TestValues[4] == 1) {
 			en_lpbk = 1;
-		else if (sgBrcm_auddrv_TestValues[4] == 0)
+			if (sgBrcm_auddrv_TestValues[3] == 1)
+				AUDCTRL_SetBTMode(BT_MODE_NB_TEST);
+
+		} else if (sgBrcm_auddrv_TestValues[4] == 0) {
 			en_lpbk = 2;
+			if (sgBrcm_auddrv_TestValues[3] == 1)
+				AUDCTRL_SetBTMode(BT_MODE_NB);
+		}
 		else
 			return 0;
 
@@ -999,6 +1002,7 @@ static int HandleControlCommand()
 					WR_REG((0x35004800 + 0x00000354),
 							ssp_tdx3);
 					aTrace(LOG_AUDIO_DRIVER,
+							"Enable loopback:"
 							"SSP_TDX3[0x%08x]\n",
 							RD_REG(0x35004800 +
 								0x00000354));
@@ -1007,6 +1011,7 @@ static int HandleControlCommand()
 					WR_REG((0x35004800 + 0x00000354),
 							ssp_tdx3);
 					aTrace(LOG_AUDIO_DRIVER,
+							"Disable loopback"
 							"SSP_TDX3[0x%08x]\n",
 							RD_REG(0x35004800 +
 								0x00000354));
@@ -1015,17 +1020,19 @@ static int HandleControlCommand()
 			ssp_tdx4 = RD_REG(0x35004800 + 0x00000364);
 				if (en_lpbk == 1) {
 					ssp_tdx4 &= ~(1 << 3);
-					WR_REG((0x35004800 + 0x00000354),
+					WR_REG((0x35004800 + 0x00000364),
 							ssp_tdx4);
 					aTrace(LOG_AUDIO_DRIVER,
+							"Enable loopback"
 							"SSP_TDX4[0x%08x]\n",
 							RD_REG(0x35004800 +
 								0x00000364));
 				} else if (en_lpbk == 2) {
 					ssp_tdx4 |= (1 << 3);
-					WR_REG((0x35004800 + 0x00000354),
+					WR_REG((0x35004800 + 0x00000364),
 							ssp_tdx4);
 					aTrace(LOG_AUDIO_DRIVER,
+							"Disable loopback"
 							"SSP_TDX4[0x%08x]\n",
 							RD_REG(0x35004800 +
 								0x00000364));
@@ -1038,6 +1045,7 @@ static int HandleControlCommand()
 					WR_REG((0x35004800 + 0x00000384),
 							ssp_tdx6);
 					aTrace(LOG_AUDIO_DRIVER,
+							"Enable loopback"
 							"SSP_TDX6[0x%08x]\n",
 							RD_REG(0x35004800 +
 								0x00000384));
@@ -1046,7 +1054,8 @@ static int HandleControlCommand()
 					WR_REG((0x35004800 + 0x00000384),
 							ssp_tdx6);
 					aTrace(LOG_AUDIO_DRIVER,
-							"SSP_TDX4[0x%08x]\n",
+							"Disable loopback"
+							"SSP_TDX6[0x%08x]\n",
 							RD_REG(0x35004800 +
 								0x00000384));
 				}
@@ -1102,12 +1111,14 @@ static int HandlePlayCommand()
 						" 48KHz mono data\n");
 				samplePCM16_inaudiotest =
 					(char *)playback_audiotest_mono;
+			test_data_size = sizeof(playback_audiotest_mono);
 			} else if (sgBrcm_auddrv_TestValues[3] == 1) {
 				aTrace(LOG_AUDIO_DRIVER,
 						" Playback of sample"
 						" 48KHz stereo data\n");
 				samplePCM16_inaudiotest =
 					(char *)playback_audiotest_stereo;
+			test_data_size = sizeof(playback_audiotest_stereo);
 			}
 			if (sgBrcm_auddrv_TestValues[4] == 1) {
 				aTrace(LOG_AUDIO_DRIVER,
@@ -1116,6 +1127,15 @@ static int HandlePlayCommand()
 				samplePCM16_inaudiotest =
 					(char *)playback_audiotest_srcmixer;
 				src_used = 1;
+			test_data_size = sizeof(playback_audiotest_srcmixer);
+			}
+			if (sgBrcm_auddrv_TestValues[4] == 2) {
+				aTrace(LOG_AUDIO_DRIVER,
+						" Playback of sample"
+						" 8KHz mono data\n");
+				samplePCM16_inaudiotest =
+					(char *)playback_audiotest_8k_mono;
+			test_data_size = sizeof(playback_audiotest_8k_mono);
 			}
 
 		} else if (sgBrcm_auddrv_TestValues[2] == 1) {
@@ -1201,10 +1221,10 @@ static int HandlePlayCommand()
 		current_ipbuffer_index = 0;
 		dma_buffer_write_index = 0;
 
-		if ((num_blocks * period_bytes) <= (2 * buf_param.buf_size))
+		if ((num_blocks * period_bytes) <= test_data_size)
 			copy_bytes = (num_blocks * period_bytes);
 		else
-			copy_bytes = (2 * buf_param.buf_size);
+			copy_bytes = test_data_size;
 
 		src =
 			((char *)samplePCM16_inaudiotest) +
@@ -1295,7 +1315,7 @@ static void AUDIO_DRIVER_TEST_InterruptPeriodCB(void *pPrivate)
 	aTrace(LOG_AUDIO_DRIVER, " playback Interrupt- %lu\n", jiffies);
 
 	if ((current_ipbuffer_index + period_bytes) >=
-			(2 * buf_param.buf_size))
+			test_data_size)
 		current_ipbuffer_index = 0;
 
 	src = ((char *)samplePCM16_inaudiotest) + current_ipbuffer_index;
@@ -1443,14 +1463,14 @@ static int HandleCaptCommand()
 	case 3:
 		if (!record_buf_allocated) {
 			record_test_buf =
-				kmalloc((2 * capt_buf_param.buf_size),
+				kmalloc(test_data_size,
 						GFP_KERNEL);
 			if (record_test_buf == NULL) {
 				aError("kmalloc failed\n");
 				return -1;
 			}
 			memset(record_test_buf, 0,
-					(2 * capt_buf_param.buf_size));
+					test_data_size);
 			record_buf_allocated = 1;
 		}
 		if (sgBrcm_auddrv_TestValues[2] != 0)
@@ -1503,7 +1523,7 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate)
 	aTrace(LOG_AUDIO_DRIVER, " capture Interrupt- %lu\n", jiffies);
 
 	if ((current_capt_buffer_index + capt_period_bytes) >=
-			(2 * capt_buf_param.buf_size))
+			test_data_size)
 		current_capt_buffer_index = 0;
 
 	dest = ((char *)record_test_buf) + current_capt_buffer_index;
