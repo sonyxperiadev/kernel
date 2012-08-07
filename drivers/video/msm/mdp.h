@@ -75,7 +75,8 @@ extern struct workqueue_struct *mdp_hist_wq;
 
 struct mdp_buf_type {
 	struct ion_handle *ihdl;
-	u32 phys_addr;
+	u32 write_addr;
+	u32 read_addr;
 	u32 size;
 };
 
@@ -860,10 +861,6 @@ static inline int mdp4_overlay_dsi_state_get(void)
 static inline void mdp_dsi_cmd_overlay_suspend(struct msm_fb_data_type *mfd)
 {
 	/* empty */
-}
-static inline void mdp4_iommu_detach(void)
-{
-    /* empty */
 }
 #endif
 

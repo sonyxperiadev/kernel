@@ -209,7 +209,7 @@ int mdp4_lcdc_pipe_commit(void)
 		vsync_irq_enable(INTR_DMA_P_DONE, MDP_DMAP_TERM);
 		spin_unlock_irqrestore(&vctrl->spin_lock, flags);
 		mdp4_lcdc_wait4dmap(0);
-		if (pipe->blt_addr)
+		if (pipe->ov_blt_addr)
 			mdp4_lcdc_wait4ov(0);
 	}
 
@@ -231,7 +231,7 @@ int mdp4_lcdc_pipe_commit(void)
 
 	pipe = vctrl->base_pipe;
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
-	if (pipe->blt_addr) {
+	if (pipe->ov_blt_addr) {
 		mdp4_lcdc_blt_ov_update(pipe);
 		pipe->ov_cnt++;
 		INIT_COMPLETION(vctrl->ov_comp);
@@ -458,6 +458,7 @@ int mdp4_lcdc_on(struct platform_device *pdev)
 
 	vctrl->mfd = mfd;
 	vctrl->dev = mfd->fbi->dev;
+	vctrl->fake_vsync = 1;
 
 	/* mdp clock on */
 	mdp_clk_ctrl(1);
@@ -486,8 +487,8 @@ int mdp4_lcdc_on(struct platform_device *pdev)
 			printk(KERN_INFO "%s: format2pipe failed\n", __func__);
 
 		mdp4_init_writeback_buf(mfd, MDP4_MIXER0);
-		pipe->blt_addr = 0;
-
+		pipe->ov_blt_addr = 0;
+		pipe->dma_blt_addr = 0;
 
 		vctrl->base_pipe = pipe; /* keep it */
 	} else {
@@ -500,6 +501,8 @@ int mdp4_lcdc_on(struct platform_device *pdev)
 	pipe->src_w = fbi->var.xres;
 	pipe->src_y = 0;
 	pipe->src_x = 0;
+	pipe->dst_h = fbi->var.yres;
+	pipe->dst_w = fbi->var.xres;
 	if (mfd->map_buffer) {
 		pipe->srcp0_addr = (unsigned int)mfd->map_buffer->iova[0] + \
 			buf_offset;
@@ -662,7 +665,7 @@ static void mdp4_lcdc_blt_ov_update(struct mdp4_overlay_pipe *pipe)
 	int bpp;
 	char *overlay_base;
 
-	if (pipe->blt_addr == 0)
+	if (pipe->ov_blt_addr == 0)
 		return;
 
 #ifdef BLT_RGB565
@@ -673,7 +676,7 @@ static void mdp4_lcdc_blt_ov_update(struct mdp4_overlay_pipe *pipe)
 	off = 0;
 	if (pipe->ov_cnt & 0x01)
 		off = pipe->src_height * pipe->src_width * bpp;
-	addr = pipe->blt_addr + off;
+	addr = pipe->ov_blt_addr + off;
 
 	/* overlay 0 */
 	overlay_base = MDP_BASE + MDP4_OVERLAYPROC0_BASE;/* 0x10000 */
@@ -686,7 +689,7 @@ static void mdp4_lcdc_blt_dmap_update(struct mdp4_overlay_pipe *pipe)
 	uint32 off, addr;
 	int bpp;
 
-	if (pipe->blt_addr == 0)
+	if (pipe->ov_blt_addr == 0)
 		return;
 
 #ifdef BLT_RGB565
@@ -697,7 +700,7 @@ static void mdp4_lcdc_blt_dmap_update(struct mdp4_overlay_pipe *pipe)
 	off = 0;
 	if (pipe->dmap_cnt & 0x01)
 		off = pipe->src_height * pipe->src_width * bpp;
-	addr = pipe->blt_addr + off;
+	addr = pipe->dma_blt_addr + off;
 
 	/* dmap */
 	MDP_OUTP(MDP_BASE + 0x90008, addr);
@@ -752,7 +755,7 @@ void mdp4_dmap_done_lcdc(int cndx)
 	if (vctrl->blt_change) {
 		mdp4_overlayproc_cfg(pipe);
 		mdp4_overlay_dmap_xy(pipe);
-		if (pipe->blt_addr) {
+		if (pipe->ov_blt_addr) {
 			mdp4_lcdc_blt_ov_update(pipe);
 			pipe->ov_cnt++;
 			/* Prefill one frame */
@@ -785,7 +788,7 @@ void mdp4_overlay0_done_lcdc(int cndx)
 	vsync_irq_disable(INTR_OVERLAY0_DONE, MDP_OVERLAY0_TERM);
 	vctrl->ov_done++;
 	complete_all(&vctrl->ov_comp);
-	if (pipe->blt_addr == 0) {
+	if (pipe->ov_blt_addr == 0) {
 		spin_unlock(&vctrl->spin_lock);
 		return;
 	}
@@ -807,14 +810,15 @@ static void mdp4_lcdc_do_blt(struct msm_fb_data_type *mfd, int enable)
 
 	mdp4_allocate_writeback_buf(mfd, MDP4_MIXER0);
 
-	if (mfd->ov0_wb_buf->phys_addr == 0) {
+	if (mfd->ov0_wb_buf->write_addr == 0) {
 		pr_info("%s: no blt_base assigned\n", __func__);
 		return;
 	}
 
 	spin_lock_irqsave(&vctrl->spin_lock, flag);
-	if (enable && pipe->blt_addr == 0) {
-		pipe->blt_addr = mfd->ov0_wb_buf->phys_addr;
+	if (enable && pipe->ov_blt_addr == 0) {
+		pipe->ov_blt_addr = mfd->ov0_wb_buf->write_addr;
+		pipe->dma_blt_addr = mfd->ov0_wb_buf->read_addr;
 		pipe->ov_cnt = 0;
 		pipe->dmap_cnt = 0;
 		vctrl->ov_koff = 0;
@@ -822,14 +826,15 @@ static void mdp4_lcdc_do_blt(struct msm_fb_data_type *mfd, int enable)
 		vctrl->blt_free = 0;
 		mdp4_stat.blt_lcdc++;
 		vctrl->blt_change++;
-	} else if (enable == 0 && pipe->blt_addr) {
-		pipe->blt_addr = 0;
+	} else if (enable == 0 && pipe->ov_blt_addr) {
+		pipe->ov_blt_addr = 0;
+		pipe->dma_blt_addr = 0;
 		vctrl->blt_free = 4;    /* 4 commits to free wb buf */
 		vctrl->blt_change++;
 	}
 
 	pr_info("%s: enable=%d change=%d blt_addr=%x\n", __func__,
-		vctrl->blt_change, enable, (int)pipe->blt_addr);
+		vctrl->blt_change, enable, (int)pipe->ov_blt_addr);
 
 	if (!vctrl->blt_change) {
 		spin_unlock_irqrestore(&vctrl->spin_lock, flag);
@@ -890,7 +895,7 @@ void mdp4_lcdc_overlay(struct msm_fb_data_type *mfd)
 
 	mdp4_lcdc_pipe_commit();
 
-	if (pipe->blt_addr)
+	if (pipe->ov_blt_addr)
 		mdp4_lcdc_wait4ov(0);
 	else
 		mdp4_lcdc_wait4dmap(0);
