@@ -17,4 +17,16 @@ the GPL, without Broadcom's express prior written consent.
 #include "mm_fw.h"
 #include <plat/scu.h>
 
+
+
+int dev_power_init(struct device_power_t *dev_power,
+					  char *dev_name,
+					  const char *dev_clk_name,
+					  MM_DVFS *dvfs_params,
+					  unsigned int bulk_job_count);
+void dev_power_exit(struct device_power_t *dev_power, const char *dev_name);
+
+void dev_clock_enable(device_t *dev);
+void dev_clock_disable(device_t *dev);
+
 #endif

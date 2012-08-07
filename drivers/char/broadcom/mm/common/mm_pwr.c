@@ -12,10 +12,8 @@ the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
 #include "mm_pwr.h"
-#include "mm_fw_pwr_ifc.h"
 
 #define MAX_BUF_LEN 72
-
 
 static int dev_dfs_chg_notifier(struct notifier_block *self,
                                unsigned long event, void *data)
@@ -34,18 +32,17 @@ static int dev_dfs_chg_notifier(struct notifier_block *self,
 	return 0;
 }
 
-static void enable_clock_work(struct work_struct* work)
+void dev_clock_enable(device_t* dev)
 {
-	struct device_power_t *dev_power =
-                container_of(work, struct device_power_t, enable_clock_work);
-	device_t *dev =
-                container_of(dev_power, device_t, dev_power);
-	cancel_work_sync(&(dev_power->disable_clock_work));
+	struct device_power_t *dev_power = &dev->dev_power;
+
 	if(!(dev_power->dev_is_on))
 	{
 		clk_enable(dev_power->dev_clk);
 		dev_power->dev_is_on = 1;
-		dev->dev_reset(dev->device_id);
+		dbg_print("dev turned on \n");
+		clk_reset(dev_power->dev_clk);
+		dev->dev_init(dev->device_id);
 		init_timer(&(dev->dev_timeout));
 		setup_timer(&(dev->dev_timeout), dev_timeout_callback, (unsigned long)dev);
 		getnstimeofday(&dev_power->ts1);
@@ -53,27 +50,24 @@ static void enable_clock_work(struct work_struct* work)
 	}
 }
 
-static void disable_clock_work(struct work_struct* work)
+void dev_clock_disable(device_t* dev)
 {
 	struct timespec diff;
-	struct device_power_t *tmp_dev_power =
-                container_of(work, struct device_power_t, disable_clock_work);
-	device_t *dev =
-                container_of(tmp_dev_power, device_t, dev_power);
+	struct device_power_t *dev_power = &dev->dev_power;
 
 	if(dev->dev_power.dev_is_on) {
 		del_timer_sync(&(dev->dev_timeout));
-		clk_disable(tmp_dev_power->dev_clk);
+		dbg_print("dev stayed on for %llu nanoseconds\n", (unsigned long long)timespec_to_ns(&diff));
+		clk_disable(dev_power->dev_clk);
 		dev->dev_power.dev_is_on = 0;
-		getnstimeofday(&tmp_dev_power->ts2);
+		getnstimeofday(&dev_power->ts2);
 		diff.tv_sec = 0;
 		diff.tv_nsec = 0;
-		diff = timespec_sub(tmp_dev_power->ts2, tmp_dev_power->ts1);
-		dbg_print("dev stayed on for %llu nanoseconds\n", (unsigned long long)timespec_to_ns(&diff));
+		diff = timespec_sub(dev_power->ts2, dev_power->ts1);
 		/* for profiling */
-		tmp_dev_power->hw_on_duration += timespec_to_ns(&diff);
+		dev_power->hw_on_duration += timespec_to_ns(&diff);
 		/* for dvfs */
-		tmp_dev_power->dvfs_hw_on_dur += timespec_to_ns(&diff);
+		dev_power->dvfs_hw_on_dur += timespec_to_ns(&diff);
 	}
 }
 
@@ -182,8 +176,13 @@ static void dvfs_work(struct work_struct* work)
 	diff = timespec_sub(dev_power->dvfst2, dev_power->dvfst1);
 	temp = (int)(dev_power->dvfs_hw_on_dur/1000000);//convert hw_on_dur in millisecs
 	temp2 = (int) ((unsigned long)timespec_to_ns(&diff)/1000000);//convert last dvfs timeslot in millisecs
+	if(temp2 != 0)
 	percnt = (temp*100)/temp2;
-	if(percnt > 100) percnt = 100;
+	else
+		percnt = 100;
+
+	if(percnt > 100)
+		percnt = 100;
 
 	dbg_print("dvfs_hw_on_dur %lu dvfs timeslot %lu percnt %d", dev_power->dvfs_hw_on_dur, (unsigned long)timespec_to_ns(&diff)/1000000, percnt);
 
@@ -243,19 +242,6 @@ static void dvfs_work(struct work_struct* work)
 	}
 }
 
-void dev_clock_enable(device_t *dev)
-{
-	queue_work(dev->dev_power.single_wq, &(dev->dev_power.enable_clock_work));
-	flush_workqueue(dev->dev_power.single_wq);
-}
-
-void dev_clock_disable(device_t *dev)
-{
-	dbg_print("dev_clock_disable..\n");
-	del_timer_sync(&(dev->dev_timeout));
-	queue_work(dev->dev_power.single_wq, &(dev->dev_power.disable_clock_work));
-}
-
 static void start_prof_timer(struct device_power_t *dev_power, int secs)
 {
 	struct timespec diff;
@@ -294,7 +280,7 @@ static void dev_prof_work(struct work_struct* work)
 	}
 	temp = (unsigned long)(dev_power->hw_on_duration)/1000;
 	percnt = (int)(temp/(unsigned long)(dev_power->secs*10000));
-	err_print("hw_usage: ON : %d [%d] percnt JOBS : %d in %d secs ",  percnt,dev_power->dvfs_state.current_mode,dev_power->hw_prof_job_count, dev_power->secs);
+	err_print("hw_usage: ON : %d%% [DVFS:%d] JOBS : %d in %d secs ",  percnt,dev_power->dvfs_state.current_mode,dev_power->hw_prof_job_count, dev_power->secs);
 	dev_power->hw_prof_job_count = 0;
 
 	if(dev_power->prof_hw_usage)
@@ -461,8 +447,6 @@ static void dev_late_resume(struct early_suspend *desc)
 	device_t *dev = 
 				container_of(dev_power, device_t, dev_power);
 	dev_power->dvfs_state.suspend_requested = false;
-	dev_clock_enable(dev);
-	tasklet_schedule(&(dev->dev_tasklet));
 	queue_work(dev_power->single_wq, &(dev_power->dvfs_work));
 }
 #endif
@@ -486,7 +470,8 @@ int dev_power_init(struct device_power_t *dev_power,
 	dev_power->jp_ts1_noted = false;
 	dev_power->hw_prof_job_count = 0;
 	dev_power->dvfs_state.params.is_dvfs_on = dvfs_params->is_dvfs_on;
-	dev_power->dvfs_state.params.enable_susres = dvfs_params->enable_susres;
+	dev_power->dvfs_state.params.user_requested_mode = dvfs_params->user_requested_mode;
+	dev_power->dvfs_state.params.enable_suspend_resume = dvfs_params->enable_suspend_resume;
 	dev_power->dvfs_state.params.T1 = dvfs_params->T1;
 	dev_power->dvfs_state.params.P1 = dvfs_params->P1;
 	dev_power->dvfs_state.params.T2 = dvfs_params->T2;
@@ -496,19 +481,27 @@ int dev_power_init(struct device_power_t *dev_power,
 	dev_power->dvfs_jobs_pend = 0;
 	dev_power->dvfs_state.suspend_requested = false;
 	dev_power->dvfs_state.timer_state = false;
-	dev_power->dvfs_state.requested_mode = NORMAL;
-	dev_power->dvfs_state.user_requested_mode = NORMAL;
-	dev_power->dvfs_state.current_mode = NORMAL;
+	if(dev_power->dvfs_state.params.is_dvfs_on) {	
+		dev_power->dvfs_state.requested_mode = NORMAL;	
+		dev_power->dvfs_state.user_requested_mode = NORMAL;
+		dev_power->dvfs_state.current_mode = NORMAL;
+		}
+	else {
+		dev_power->dvfs_state.requested_mode = dvfs_params->user_requested_mode;	
+		dev_power->dvfs_state.user_requested_mode = dvfs_params->user_requested_mode;
+		dev_power->dvfs_state.current_mode = dvfs_params->user_requested_mode;
+		}
 	/* clk disabled initially */
 	dev_power->dev_is_on = 0;
 
-	scu_standby(false);
+//	scu_standby(false);
 
 	dev_power->dev_clk = clk_get(NULL, dev_clk_name);
 	if (!dev_power->dev_clk) {
 		err_print("error get clock %s for %s dev\n", dev_clk_name, dev_name);
 		ret = -EIO;
 	}
+
 	rate = clk_get_rate(dev_power->dev_clk);
 	dbg_print("%s clk rate %lu\n", dev_clk_name, rate);
 
@@ -547,7 +540,7 @@ int dev_power_init(struct device_power_t *dev_power,
 		ret = -ENOENT;
     }
 
-	dev_power->single_wq = create_singlethread_workqueue("mm_pwr_wq");
+	dev_power->single_wq = alloc_ordered_workqueue("mm_pwr_wq",WQ_HIGHPRI);
 	if (dev_power->single_wq == NULL) {
 		ret = -ENOMEM;
 	}
@@ -561,15 +554,6 @@ int dev_power_init(struct device_power_t *dev_power,
 		return ret;
 	}
 
-	ret = pi_mgr_qos_add_request(&(dev_power->dev_qos_node), dev_name, PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
-	if (ret) {
-		err_print("failed to register PI QOS request for %s\n", dev_name);
-		pi_mgr_dfs_request_remove(&(dev_power->dev_dfs_node));
-		return -EIO;
-	}
-
-	pi_mgr_qos_request_update(&(dev_power->dev_qos_node), 0);
-
 	dev_power->pwr_dfs_chg_notifier.dev_dfs_chg_notify_blk.notifier_call = dev_dfs_chg_notifier;
 	dev_power->pwr_dfs_chg_notifier.data = (void *)dev_power;
     ret = pi_mgr_register_notifier(PI_MGR_PI_ID_MM,
@@ -577,12 +561,11 @@ int dev_power_init(struct device_power_t *dev_power,
                     PI_NOTIFY_DFS_CHANGE);
     if (ret != 0) {
             err_print("Failed to register PM Notifier\n");
-			pi_mgr_qos_request_remove(&(dev_power->dev_qos_node));
             ret = -ENOENT;
     }
 
 	/* start dvfs with normal*/
-	if (pi_mgr_dfs_request_update(&(dev_power->dev_dfs_node), NORMAL))
+	if (pi_mgr_dfs_request_update(&(dev_power->dev_dfs_node), dev_power->dvfs_state.requested_mode))
 	{
 		err_print("failed to update dfs request for %s\n", dev_name);
 		pi_mgr_dfs_request_remove(&(dev_power->dev_dfs_node));
@@ -592,15 +575,13 @@ int dev_power_init(struct device_power_t *dev_power,
 		return -EIO;
 	}
 
-	INIT_WORK(&(dev_power->disable_clock_work), disable_clock_work);
-	INIT_WORK(&(dev_power->enable_clock_work), enable_clock_work);
 	INIT_WORK(&(dev_power->dev_prof_work), dev_prof_work);
 	INIT_WORK(&(dev_power->dvfs_work), dvfs_work);
 
 	init_timer(&(dev_power->dev_prof_timeout));
 	setup_timer(&(dev_power->dev_prof_timeout), dev_prof_timeout_callback, (unsigned long)dev_power);
 
-	if(dev_power->dvfs_state.params.enable_susres)
+	if(dev_power->dvfs_state.params.enable_suspend_resume)
 	{
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	    dev_power->early_suspend_desc.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
@@ -615,11 +596,9 @@ int dev_power_init(struct device_power_t *dev_power,
 
 void dev_power_exit(struct device_power_t *dev_power, const char *dev_name)
 {
-	clk_disable(dev_power->dev_clk);
 	if (dev_power->debugfs_dir)
 		debugfs_remove_recursive(dev_power->debugfs_dir);
 	destroy_workqueue(dev_power->single_wq);
-	pi_mgr_qos_request_update(&(dev_power->dev_qos_node), PI_MGR_QOS_DEFAULT_VALUE);
 	if (pi_mgr_dfs_request_update(&(dev_power->dev_dfs_node), PI_MGR_DFS_MIN_VALUE))
 	{
 		err_print("failed to update dfs request for %s", dev_name);
@@ -631,9 +610,6 @@ void dev_power_exit(struct device_power_t *dev_power, const char *dev_name)
 
 	pi_mgr_dfs_request_remove(&(dev_power->dev_dfs_node));
 	dev_power->dev_dfs_node.name = NULL;
-
-	pi_mgr_qos_request_remove(&(dev_power->dev_qos_node));
-	dev_power->dev_qos_node.name = NULL;
 
 	scu_standby(true);
 	del_timer(&(dev_power->dev_prof_timeout));

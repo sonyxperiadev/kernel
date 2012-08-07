@@ -1,8 +1,8 @@
 
 EXTRA_CFLAGS := -fno-inline -Wno-multichar -O2
 
-obj-$(CONFIG_HAWAII_MM) += mm/
-obj-$(CONFIG_V3D) += v3d/
+obj-y += mm/
+#obj-$(CONFIG_V3D) += v3d/
 obj-$(CONFIG_MMDMA) += mmdma/
 obj-y += vce/
 obj-y += fuse_log/

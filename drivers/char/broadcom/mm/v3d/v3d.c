@@ -11,6 +11,7 @@ in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 #include <linux/kernel.h>
+#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/module.h>
 #include <linux/init.h>
@@ -40,7 +41,7 @@ the GPL, without Broadcom's express prior written consent.
 #define V3D_HW_SIZE (1024*4)
 
 #define IRQ_V3D	BCM_INT_ID_RESERVED148
-#define V3D_BIN_OOM_SIZE 3*1024*1024
+#define V3D_BIN_OOM_SIZE 4*1024*1024
 
 typedef struct {
 	int v3d_bin_oom_block;
@@ -55,22 +56,21 @@ typedef struct {
 	volatile void *vaddr;
 } v3d_device_t;
 
-static void v3d_write(v3d_device_t *v3d, unsigned int reg, unsigned int value)
-{
-	return dev_write(v3d->vaddr, reg, value);
+static inline void v3d_write(v3d_device_t *v3d, unsigned int reg, unsigned int value) {
+	return mm_write_reg(v3d->vaddr, reg, value);
 }
 
-static unsigned int v3d_read(v3d_device_t *v3d, unsigned int reg)
-{
-	return dev_read(v3d->vaddr, reg);
+static inline unsigned int v3d_read(v3d_device_t *v3d, unsigned int reg) {
+	return mm_read_reg(v3d->vaddr, reg);
 }
 
-
-
-static void v3d_reg_init(void* device_id)
+static int v3d_reset(void* device_id)
 {
 	v3d_device_t* id = (v3d_device_t*)device_id;
 
+	v3d_write(id,V3D_CT0CS_OFFSET , 0x8000);
+	v3d_write(id,V3D_CT1CS_OFFSET , 0x8000);
+	
 	v3d_write(id,V3D_L2CACTL_OFFSET , 2);
 
 	v3d_write(id,V3D_CT0CS_OFFSET , 0x8000);
@@ -86,22 +86,43 @@ static void v3d_reg_init(void* device_id)
 	v3d_write(id,V3D_INTCTL_OFFSET , 0xF);
 	v3d_write(id,V3D_INTENA_OFFSET , 0x7);
 
+	id->v3d_oom_block_used = 0;
+
+
+	return 0;
 }
 
-int v3d_reset(void* device_id)
+static int v3d_print_regs(void* device_id)
 {
 	v3d_device_t* id = (v3d_device_t*)device_id;
+
+	err_print("regs:(0x%08x 0x%08x 0x%08x) (0x%08x 0x%08x 0x%08x) (0x%08x 0x%08x 0x%08x)\n",v3d_read(id,V3D_CT0CS_OFFSET),v3d_read(id,V3D_CT0CA_OFFSET),v3d_read(id,V3D_CT0EA_OFFSET),
+		v3d_read(id,V3D_CT1CS_OFFSET),v3d_read(id,V3D_CT1CA_OFFSET),v3d_read(id,V3D_CT1EA_OFFSET),
+		v3d_read(id,V3D_BPOA_OFFSET),v3d_read(id,V3D_BPOS_OFFSET),v3d_read(id,V3D_PCS_OFFSET));
+	dbg_print("%x %x %x\n",v3d_read(id,V3D_PCS_OFFSET),v3d_read(id,V3D_CT0CS_OFFSET),v3d_read(id,V3D_CT1CS_OFFSET));
+}
+
+static int v3d_abort(void* device_id, mm_job_post_t* job)
+{
+	v3d_device_t* id = (v3d_device_t*)device_id;
+	v3d_write(id,V3D_CT0CS_OFFSET , 0x20);
+	v3d_write(id,V3D_CT1CS_OFFSET , 0x20);
+	v3d_write(id,V3D_CT0CA_OFFSET , 0);
+	v3d_write(id,V3D_CT0EA_OFFSET , 0);
+	v3d_write(id,V3D_CT1CA_OFFSET , 0);
+	v3d_write(id,V3D_CT1EA_OFFSET , 0);
+
 	v3d_write(id,V3D_CT0CS_OFFSET , 0x8000);
 	v3d_write(id,V3D_CT1CS_OFFSET , 0x8000);
-	v3d_reg_init(id);
-	id->v3d_oom_block_used = 0;
+
+	v3d_reset(id);	
 	return 0;
 }
 
 static mm_isr_type_e process_v3d_irq(void* device_id)
 {
 	u32 flags, flags_qpu, tmp;
-	int irq_retval = 0;
+	mm_isr_type_e irq_retval = MM_ISR_UNKNOWN;
 	v3d_device_t* id = (v3d_device_t*)device_id;
 
 	/* Read the interrupt status registers */
@@ -115,33 +136,42 @@ static mm_isr_type_e process_v3d_irq(void* device_id)
 		v3d_write(id,V3D_DBQITC_OFFSET, flags_qpu);
 	}
 
+	/* Handle Binning Interrupt*/
+	if (flags & 2) {
+		irq_retval = MM_ISR_PROCESSED;
+	}
+
+	/* Handle Rendering Interrupt*/
+	if (flags & 1) {
+		irq_retval = MM_ISR_SUCCESS;
+		id->v3d_oom_block_used = 0;
+	}
+
 	/* Handle oom case */
 	if (flags & (1 << 2)) {
-		irq_retval = 0;
+		irq_retval = MM_ISR_PROCESSED;
 		if (id->v3d_oom_block_used == 0) {
 			v3d_write(id,V3D_BPOA_OFFSET, id->v3d_bin_oom_block);
 			v3d_write(id,V3D_BPOS_OFFSET, id->v3d_bin_oom_size);
 			id->v3d_oom_block_used = 1;
-		}else if (id->v3d_oom_block_used == 1) {
+			err_print("v3d hw asking for OOM");
+		}/*else if (id->v3d_oom_block_used == 1) {
 			v3d_write(id,V3D_BPOA_OFFSET, id->v3d_bin_oom_block2);
 			v3d_write(id,V3D_BPOS_OFFSET, id->v3d_bin_oom_size2);
 			id->v3d_oom_block_used = 2;
-		}else {
+		}*/else {
 			v3d_write(id,V3D_INTDIS_OFFSET, 1 << 2);
 			v3d_write(id,V3D_CT0CS_OFFSET , 0x8000);
 			v3d_write(id,V3D_CT1CS_OFFSET , 0x8000);
+			err_print("v3d hw resetting for OOM");
 
-			irq_retval = 1;
+			irq_retval = MM_ISR_ERROR;
 			id->v3d_oom_block_used = 0;
 		}
 		/* Clear the oom interrupt ? */
 		v3d_write(id,V3D_INTCTL_OFFSET, 1 << 2);
 	}
 
-	if (flags & 3) {
-		irq_retval = 1;
-		if(flags&1 )id->v3d_oom_block_used = 0;
-	}
 	return irq_retval;
 
 
@@ -150,7 +180,9 @@ static mm_isr_type_e process_v3d_irq(void* device_id)
 bool get_v3d_status(void* device_id)
 {
 	v3d_device_t* id = (v3d_device_t*)device_id;
-	if((v3d_read(id,V3D_CT0CS_OFFSET)&0x20) || (v3d_read(id,V3D_CT1CS_OFFSET)&0x20) ){
+
+	dbg_print("%x %x %x\n",v3d_read(id,V3D_PCS_OFFSET),v3d_read(id,V3D_CT0CS_OFFSET),v3d_read(id,V3D_CT1CS_OFFSET));
+	if((v3d_read(id,V3D_CT0CS_OFFSET)) | (v3d_read(id,V3D_CT1CS_OFFSET)) | (v3d_read(id,V3D_PCS_OFFSET)) ){
 		return true;
 		}
 	return false;
@@ -160,6 +192,7 @@ mm_job_status_e v3d_start_job(void* device_id , mm_job_post_t* job)
 {
 	v3d_device_t* id = (v3d_device_t*)device_id;
 	v3d_job_t* job_params = (v3d_job_t*)job->data;
+
 	switch( job->job_status ){
 		case MM_JOB_STATUS_READY:
 			{
@@ -168,20 +201,27 @@ mm_job_status_e v3d_start_job(void* device_id , mm_job_post_t* job)
 					job->job_status = MM_JOB_STATUS_RUNNING;
 					v3d_write(id,V3D_CT1CA_OFFSET,job_params->v3d_ct1ca);
 					v3d_write(id,V3D_CT1EA_OFFSET,job_params->v3d_ct1ea);
+					return MM_JOB_STATUS_RUNNING;
 				} else if (job->job_type == V3D_BIN_REND_JOB){
 					job->job_status = MM_JOB_STATUS_RUNNING;
-					v3d_write(id,V3D_CT0CA_OFFSET,job_params->v3d_ct0ca);
-					v3d_write(id,V3D_CT0EA_OFFSET,job_params->v3d_ct0ea);
+					if(job_params->v3d_ct0ca != job_params->v3d_ct0ea) {
+						v3d_write(id,V3D_CT0CA_OFFSET,job_params->v3d_ct0ca);
+						v3d_write(id,V3D_CT0EA_OFFSET,job_params->v3d_ct0ea);
+						}
 					v3d_write(id,V3D_CT1CA_OFFSET,job_params->v3d_ct1ca);
 					v3d_write(id,V3D_CT1EA_OFFSET,job_params->v3d_ct1ea);
+					v3d_write(id,V3D_BPOA_OFFSET , id->v3d_bin_oom_block);
+					v3d_write(id,V3D_BPOS_OFFSET , id->v3d_bin_oom_size);
+					return MM_JOB_STATUS_RUNNING;
 				}
-				return MM_JOB_STATUS_RUNNING;
 			}
+		break;
 		case MM_JOB_STATUS_RUNNING:
 			{
 				job->job_status = MM_JOB_STATUS_SUCCESS;
 				return MM_JOB_STATUS_SUCCESS;
 			}
+		break;
 		}
 	return MM_JOB_STATUS_ERROR;
 }
@@ -222,28 +262,32 @@ int __init v3d_init(void)
 	dbg_print("v3d bin oom2 phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
 		gV3d->v3d_bin_oom_block2, gV3d->v3d_bin_oom_size2, (int)gV3d->v3d_bin_oom_cpuaddr2);
 
-	ifc_param.dev_name = V3D_DEV_NAME;
-	ifc_param.dev_clk_name = V3D_AXI_BUS_CLK_NAME_STR;
-	ifc_param.dev_base_addr = MM_V3D_BASE_ADDR;
-	ifc_param.dev_hw_size = V3D_HW_SIZE;
-	ifc_param.dev_irq = IRQ_V3D;
-	ifc_param.get_hw_status = get_v3d_status;
-	ifc_param.dev_start_job = v3d_start_job;
-	ifc_param.process_irq = process_v3d_irq;
-	ifc_param.dev_reset = v3d_reset;
-	ifc_param.dvfs_params.is_dvfs_on = 1;
-	ifc_param.dvfs_params.enable_susres = 1;
-	ifc_param.dvfs_params.T1 = 100;
-	ifc_param.dvfs_params.P1 = 80;
-	ifc_param.dvfs_params.T2 = 1000;
-	ifc_param.dvfs_params.P2 = 40;
-	ifc_param.dvfs_bulk_job_cnt = 0;
-	ifc_param.device_id = (void *)gV3d;
-	ifc_param.virt_addr = NULL;
+	ifc_param.mm_dev_name = V3D_DEV_NAME;
+	ifc_param.mm_dev_clk_name = V3D_AXI_BUS_CLK_NAME_STR;
+	ifc_param.mm_dev_base_addr = MM_V3D_BASE_ADDR;
+	ifc_param.mm_dev_hw_size = V3D_HW_SIZE;
+	ifc_param.mm_dev_irq = IRQ_V3D;
+	ifc_param.mm_dev_get_status = get_v3d_status;
+	ifc_param.mm_dev_start_job = v3d_start_job;
+	ifc_param.mm_dev_process_irq = process_v3d_irq;
+	ifc_param.mm_dev_init = v3d_reset;
+	ifc_param.mm_dev_deinit = v3d_reset;
+	ifc_param.mm_dev_abort = v3d_abort;
+	ifc_param.mm_dev_print_regs = v3d_print_regs;
+	ifc_param.mm_dvfs_params.is_dvfs_on = 1;
+	ifc_param.mm_dvfs_params.user_requested_mode = TURBO;
+	ifc_param.mm_dvfs_params.enable_suspend_resume = 0;
+	ifc_param.mm_dvfs_params.T1 = 300;
+	ifc_param.mm_dvfs_params.P1 = 80;
+	ifc_param.mm_dvfs_params.T2 = 3000;
+	ifc_param.mm_dvfs_params.P2 = 30;
+	ifc_param.mm_dvfs_params.dvfs_bulk_job_cnt = 0;
+	ifc_param.mm_device_id = (void *)gV3d;
+	ifc_param.mm_dev_virt_addr = NULL;
 
-	ret = dev_init(&ifc_param);
+	ret = mm_fmwk_register(&ifc_param);
 	/* get kva from fmwk */
-	gV3d->vaddr = ifc_param.virt_addr;
+	gV3d->vaddr = ifc_param.mm_dev_virt_addr;
 err:
 	dbg_print("V3D driver Module Init over\n");
 	return ret;
@@ -252,7 +296,7 @@ err:
 void __exit v3d_exit(void)
 {
 	dbg_print("V3D driver Module Exit\n");
-	dev_exit(gV3d, V3D_DEV_NAME, IRQ_V3D);
+	mm_fmwk_unregister(gV3d, V3D_DEV_NAME, IRQ_V3D);
 	if (gV3d->v3d_bin_oom_cpuaddr2)
 		dma_free_coherent(NULL, gV3d->v3d_bin_oom_size2, gV3d->v3d_bin_oom_cpuaddr2, gV3d->v3d_bin_oom_block2);
 	if (gV3d->v3d_bin_oom_cpuaddr)
