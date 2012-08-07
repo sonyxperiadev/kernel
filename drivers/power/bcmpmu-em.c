@@ -39,9 +39,11 @@
 #define BCMPMU_PRINT_DATA (1U << 3)
 #define BCMPMU_PRINT_REPORT (1U << 4)
 
-static int debug_mask = 0xff; /*BCMPMU_PRINT_ERROR |
+static int debug_mask = BCMPMU_PRINT_ERROR |
 			BCMPMU_PRINT_INIT |
-			BCMPMU_PRINT_REPORT;*/
+			BCMPMU_PRINT_REPORT;
+
+/* static int debug_mask = 0xFF; */
 
 #define POLL_SAMPLES		8
 #define CAP_POLL_SAMPLES	4
