@@ -980,10 +980,16 @@ static int HandleControlCommand()
 			return 0;
 		}
 
-		if (sgBrcm_auddrv_TestValues[4] == 1)
+		if (sgBrcm_auddrv_TestValues[4] == 1) {
 			en_lpbk = 1;
-		else if (sgBrcm_auddrv_TestValues[4] == 0)
+			if (sgBrcm_auddrv_TestValues[3] == 1)
+				AUDCTRL_SetBTMode(BT_MODE_NB_TEST);
+
+		} else if (sgBrcm_auddrv_TestValues[4] == 0) {
 			en_lpbk = 2;
+			if (sgBrcm_auddrv_TestValues[3] == 1)
+				AUDCTRL_SetBTMode(BT_MODE_NB);
+		}
 		else
 			return 0;
 
