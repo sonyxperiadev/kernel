@@ -1,5 +1,5 @@
-#ifndef __rhea_FB_H__
-#define __rhea_FB_H__
+#ifndef __RHEA_FB_H__
+#define __RHEA_FB_H__
 
 #ifdef RHEA_FB_DEBUG
 #define rheafb_debug(fmt, arg...)	\
@@ -21,4 +21,4 @@
 #define rheafb_alert(fmt, arg...)	\
 	printk(KERN_ALERT"%s:%d " fmt, __func__, __LINE__, ##arg)
 
-#endif /* __rhea_FB_H__ */
+#endif /* __RHEA_FB_H__ */

@@ -11,7 +11,6 @@
 # license other than the GPL, without Broadcom's express prior written
 # consent.
 #*****************************************************************************
-obj-$(CONFIG_FB_BRCM_RHEA) += csl_dsi.o csl_smi.o csl_dma_vc4lite.o csl_tectl_vc4lite.o
 obj-$(CONFIG_KONA_DSI) += csl_dsi.o
 obj-$(CONFIG_KONA_SMI) += csl_smi.o
 obj-$(CONFIG_KONA_VC4LITE) += csl_dma_vc4lite.o csl_tectl_vc4lite.o

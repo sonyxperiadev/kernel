@@ -46,7 +46,7 @@ static int __init konafb_init(void)
 		printk("konafb_bootcfg\n");
 	}
 
-	printk("konafb_devices=%d\n", dev_count);
+	pr_info("konafb_devices count=%d\n", dev_count);
 	for (i = 0; i < dev_count; i++) {
 		pdev = platform_device_alloc("kona_fb", i);
 		if (!pdev) {
@@ -71,6 +71,7 @@ static int __init konafb_init(void)
 			pdata.parms.w1.w32 = konafb_devices[i].parms.w1.w32;
 		}
 
+		pr_info("board supports %s\n", konafb_devices[i].dispdrv_name);
 		err = platform_device_add_data(pdev, (const void *)&pdata,
 			sizeof(struct kona_fb_platform_data));
 		if (err) {

@@ -72,10 +72,10 @@ typedef	enum {
 
 	NT35516_CMD_SLPIN		= 0x10,
 	NT35516_CMD_SLPOUT		= 0x11,
-	NT35516_CMD_GAMTABLESET	= 0x26,
+	NT35516_CMD_GAMTABLESET		= 0x26,
 	NT35516_CMD_DISOFF		= 0x28,
 	NT35516_CMD_DISON		= 0x29,
-	NT35516_CMD_SOSEQCTL	= 0x36,
+	NT35516_CMD_SOSEQCTL		= 0x36,
 	NT35516_CMD_COLMOD		= 0x3A,
 	NT35516_CMD_PRIV1		= 0xB9,
 
@@ -1464,7 +1464,7 @@ static void NT35516_ExecCmndList(
 			tx_size	= 0;
 
 		} else if (cmnd_lst[i].type == DISPCTRL_SLEEP_MS) {
-			OSTASK_Sleep(TICKS_IN_MILLISECONDS(cmnd_lst[i].data));
+			msleep(cmnd_lst[i].data);
 		}
 		i++;
 	}

@@ -1,5 +1,5 @@
-#ifndef __kona_FB_H__
-#define __kona_FB_H__
+#ifndef __KONA_FB_H__
+#define __KONA_FB_H__
 
 #ifdef kona_FB_DEBUG
 #define konafb_debug(fmt, arg...)	\
@@ -21,4 +21,4 @@
 #define konafb_alert(fmt, arg...)	\
 	printk(KERN_ALERT"%s:%d " fmt, __func__, __LINE__, ##arg)
 
-#endif /* __kona_FB_H__ */
+#endif /* __KONA_FB_H__ */
