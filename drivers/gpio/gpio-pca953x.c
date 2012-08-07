@@ -390,6 +390,7 @@ static uint16_t pca953x_irq_pending(struct pca953x_chip *chip)
 	uint16_t old_stat;
 	uint16_t pending;
 	uint16_t trigger;
+	uint16_t missed;
 	int ret, offset = 0;
 
 	switch (chip->chip_type) {
@@ -410,7 +411,14 @@ static uint16_t pca953x_irq_pending(struct pca953x_chip *chip)
 	old_stat = chip->irq_stat;
 	trigger = (cur_stat ^ old_stat) & chip->irq_mask;
 
-	if (!trigger)
+	/* Account for possible missed edges */
+	missed = ((~cur_stat & chip->irq_trig_fall) |
+			(cur_stat & chip->irq_trig_raise )) & chip->irq_mask;
+
+	/* remove both edges */
+	missed &= ~(chip->irq_trig_fall & chip->irq_trig_raise);
+
+	if (!trigger & !missed)
 		return 0;
 
 	chip->irq_stat = cur_stat;
@@ -418,6 +426,9 @@ static uint16_t pca953x_irq_pending(struct pca953x_chip *chip)
 	pending = (old_stat & chip->irq_trig_fall) |
 		  (cur_stat & chip->irq_trig_raise);
 	pending &= trigger;
+
+	/* Account for possible missed edges */
+	pending |=  missed;
 
 	return pending;
 }
@@ -495,7 +506,8 @@ static int pca953x_irq_setup(struct pca953x_chip *chip,
 		ret = request_threaded_irq(client->irq,
 					   NULL,
 					   pca953x_irq_handler,
-					   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+					   IRQF_TRIGGER_RISING |
+					   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 					   dev_name(&client->dev), chip);
 		if (ret) {
 			dev_err(&client->dev, "failed to request irq %d\n",
