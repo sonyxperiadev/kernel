@@ -267,6 +267,10 @@ int __init v3d_init(void)
 	ifc_param.mm_dev_base_addr = MM_V3D_BASE_ADDR;
 	ifc_param.mm_dev_hw_size = V3D_HW_SIZE;
 	ifc_param.mm_dev_irq = IRQ_V3D;
+
+	ifc_param.mm_dev_timer = DEFAULT_MM_DEV_TIMER_MS;
+	ifc_param.mm_dev_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
+	
 	ifc_param.mm_dev_get_status = get_v3d_status;
 	ifc_param.mm_dev_start_job = v3d_start_job;
 	ifc_param.mm_dev_process_irq = process_v3d_irq;

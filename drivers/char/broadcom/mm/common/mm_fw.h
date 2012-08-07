@@ -47,6 +47,10 @@ typedef struct {
 	/* job list */
 	struct list_head job_list;
 	uint32_t device_job_id;
+
+	uint32_t mm_dev_timer;
+	uint32_t mm_dev_timeout;
+
 	/* device funcs */
 	int (*dev_init)(void *device_id);
 	int (*dev_deinit)(void *device_id);

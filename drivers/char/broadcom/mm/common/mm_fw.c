@@ -24,8 +24,6 @@ typedef struct dev_job_list {
 	struct file* filp;
 } dev_job_list_t;
 
-#define DEV_TIMER_MS (32)
-#define DEV_TIMEOUT_MS (500)
 
 typedef struct job_maint_work {
 	struct work_struct work;
@@ -134,7 +132,7 @@ static void dev_tasklet_func(struct work_struct* work)
 			status  = dev->dev_start_job(dev->device_id, &job_list_elem->job);
 			if(status == MM_JOB_STATUS_RUNNING) {
 				getnstimeofday(&dev->sched_time);
-				timespec_add_ns(&dev->sched_time, DEV_TIMEOUT_MS * NSEC_PER_MSEC);
+				timespec_add_ns(&dev->sched_time, dev->mm_dev_timeout * NSEC_PER_MSEC);
 				is_hw_busy = true;
 				/* profile 'n' jobs exec time */
 				dbg_print("job posted \n");
@@ -199,8 +197,8 @@ static void dev_tasklet_func(struct work_struct* work)
 		/* disable clk as hw is not in use*/
 		dev_clock_disable(dev);
 	} else {
-		mod_timer(&dev->dev_timeout, jiffies+ msecs_to_jiffies(DEV_TIMER_MS));
-		dbg_print("mod_timer  %lx %lx",jiffies,msecs_to_jiffies(DEV_TIMER_MS));
+		mod_timer(&dev->dev_timeout, jiffies+ msecs_to_jiffies(dev->mm_dev_timer));
+		dbg_print("mod_timer  %lx %lx",jiffies,msecs_to_jiffies(dev->mm_dev_timer));
 	}
 }
 
@@ -369,11 +367,6 @@ mm_fmwk_register_t mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param)
 	dev = kmalloc(sizeof(device_t),GFP_KERNEL);
 	memset(dev,0,sizeof(device_t));
 
-	dev->mdev.minor = MISC_DYNAMIC_MINOR;
-	dev->mdev.name = ifc_param->mm_dev_name;
-	dev->mdev.fops = &mm_dev_fops;
-	dev->mdev.parent = NULL;
-
 	dev->dev_init = ifc_param->mm_dev_init;
 	dev->dev_deinit = ifc_param->mm_dev_deinit;
 	dev->get_hw_status = ifc_param->mm_dev_get_status;
@@ -381,6 +374,14 @@ mm_fmwk_register_t mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param)
 	dev->process_irq = ifc_param->mm_dev_process_irq;
 	dev->dev_abort = ifc_param->mm_dev_abort;
 	dev->dev_print_regs = ifc_param->mm_dev_print_regs;
+
+	dev->mm_dev_timer = ifc_param->mm_dev_timer;
+	dev->mm_dev_timeout = ifc_param->mm_dev_timeout;
+
+	dev->mdev.minor = MISC_DYNAMIC_MINOR;
+	dev->mdev.name = ifc_param->mm_dev_name;
+	dev->mdev.fops = &mm_dev_fops;
+	dev->mdev.parent = NULL;
 
     ret = misc_register(&dev->mdev);
     if (ret) {

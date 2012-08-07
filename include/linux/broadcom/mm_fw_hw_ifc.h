@@ -57,6 +57,9 @@ the GPL, without Broadcom's express prior written consent.
     printk(KERN_ERR "%s():" fmt, __func__, ##arg)
 
 
+#define DEFAULT_MM_DEV_TIMER_MS (100)
+#define DEFAULT_MM_DEV_TIMEOUT_MS (1000)
+
 typedef enum {
 	MM_FMWK_REGISTER_SUCCESS = 0,
 	MM_FMWK_VALIDATE_ERROR,
@@ -102,6 +105,9 @@ typedef struct mm_fmwk_hw_ifc {
 	uint32_t mm_dev_base_addr;
 	uint32_t mm_dev_hw_size;
 	void *mm_dev_virt_addr;//to be filled in by fmwk init with KVA
+
+	uint32_t mm_dev_timer;
+	uint32_t mm_dev_timeout;
 
 	/* dvfs related parameters*/
 	MM_DVFS mm_dvfs_params;
