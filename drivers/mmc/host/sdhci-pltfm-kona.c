@@ -816,6 +816,8 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
 
+	sdhci_pltfm_clk_enable(host, 1);
+
 	flush_work_sync(&host->wait_erase_work);
 
 	sdhci_kona_sdio_regulator_power(dev, 0);
@@ -829,11 +831,8 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 static int sdhci_pltfm_resume(struct platform_device *pdev)
 {
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
-	struct sdhci_host *host = dev->host;
 
 	sdhci_kona_sdio_regulator_power(dev, 1);
-
-	sdhci_pltfm_clk_enable(host, 1);
 
 	dev->suspended = 0;
 	return 0;
