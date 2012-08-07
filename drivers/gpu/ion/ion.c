@@ -120,6 +120,11 @@ bool ion_buffer_fault_user_mappings(struct ion_buffer *buffer)
                 !(buffer->flags & ION_FLAG_CACHED_NEEDS_SYNC));
 }
 
+bool ion_buffer_cached(struct ion_buffer *buffer)
+{
+        return !!(buffer->flags & ION_FLAG_CACHED);
+}
+
 /* this function should only be called while dev->lock is held */
 static void ion_buffer_add(struct ion_device *dev,
 			   struct ion_buffer *buffer)
@@ -1483,17 +1488,17 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
 		struct ion_buffer *buffer = rb_entry(n, struct ion_buffer,
 						     node);
-		if (buffer->heap->id == heap->id) {
-			total_size += buffer->size;
-			if (!buffer->handle_count) {
-				seq_printf(s, "%16.s %16u %13u KB\n",
-						buffer->task_comm,
-						buffer->pid, buffer->size);
-				total_orphaned_size += buffer->size;
-			}
-			if (buffer->handle_count > 1)
-				total_shared_size += buffer->size;
+		if (buffer->heap->id != heap->id)
+			continue;
+		total_size += buffer->size;
+		if (!buffer->handle_count) {
+			seq_printf(s, "%16.s %16u %16u %d %d\n", buffer->task_comm,
+				   buffer->pid, buffer->size, buffer->kmap_cnt,
+				   buffer->ref);
+			total_orphaned_size += buffer->size;
 		}
+		if (buffer->handle_count > 1)
+			total_shared_size += buffer->size;
 	}
 	mutex_unlock(&dev->lock);
 	if (!total_orphaned_size)
@@ -1515,6 +1520,10 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	}
 	seq_printf(s, "----------------------------------------------------\n");
 #endif
+
+	if (heap->debug_show)
+		heap->debug_show(heap, s, unused);
+	seq_printf(s, "----------------------------------------------------\n");
 
 	seq_printf(s, "Summary:\n");
 	if (heap->size)

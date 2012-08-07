@@ -136,6 +136,8 @@ struct ion_heap_ops {
  *			allocating.  These are specified by platform data and
  *			MUST be unique
  * @name:		used for debugging
+ * @debug_show:		called when heap debug file is read to add any
+ *			heap specific debug info to output
  * @priv:		private heap data
  * @size:		reserved size of carveout/cma heaps for debug_show
  *
@@ -151,6 +153,7 @@ struct ion_heap {
 	struct ion_heap_ops *ops;
 	int id;
 	const char *name;
+	int (*debug_show)(struct ion_heap *heap, struct seq_file *, void *);
 	void *priv;
 #ifdef CONFIG_ION_KONA
 	int size;
@@ -163,6 +166,14 @@ struct ion_heap {
 	struct dentry *lmc_debug_root;
 #endif
 };
+
+/**
+ * ion_buffer_cached - this ion buffer is cached
+ * @buffer:		buffer
+ *
+ * indicates whether this ion buffer is cached
+ */
+bool ion_buffer_cached(struct ion_buffer *buffer);
 
 /**
  * ion_buffer_fault_user_mappings - fault in user mappings of this buffer
