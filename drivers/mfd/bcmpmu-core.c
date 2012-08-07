@@ -123,8 +123,8 @@ static ssize_t show_reginit(struct device *dev,
 
 static DEVICE_ATTR(adcreq, 0644, NULL, store_adc_req);
 static DEVICE_ATTR(rgltr, 0644, NULL, store_rgltr);
-static DEVICE_ATTR(regread, 0664, NULL, store_regread);
-static DEVICE_ATTR(regwrite, 0664, NULL, store_regwrite);
+static DEVICE_ATTR(regread, 0644, NULL, store_regread);
+static DEVICE_ATTR(regwrite, 0644, NULL, store_regwrite);
 static DEVICE_ATTR(reginit, 0644, show_reginit, NULL);
 static DEVICE_ATTR(test, 0644, NULL, NULL);
 

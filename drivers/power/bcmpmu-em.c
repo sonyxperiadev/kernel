@@ -967,11 +967,11 @@ fg_cap_show(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "%lld\n", pem->fg_capacity);
 }
 
-static DEVICE_ATTR(dbgmsk, 0666, dbgmsk_show, dbgmsk_set);
+static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_set);
 static DEVICE_ATTR(pollrate, 0644, pollrate_show, pollrate_set);
 static DEVICE_ATTR(fgcal, 0644, fgcal_show, fgcal_set);
 static DEVICE_ATTR(fgdelta, 0644, fgdelta_show, fgdelta_set);
-static DEVICE_ATTR(fg_dbg_temp, 0666, fg_temp_show, fg_temp_set);
+static DEVICE_ATTR(fg_dbg_temp, 0644, fg_temp_show, fg_temp_set);
 static DEVICE_ATTR(fg_tcstatus, 0644, fg_tcstatus_show, NULL);
 static DEVICE_ATTR(fg_tczone_info, 0644, fg_tczone_info_show, NULL);
 static DEVICE_ATTR(fg_tczone_map, 0644, fg_tczone_map_show, NULL);
