@@ -313,5 +313,5 @@ module_init(v3d_init);
 module_exit(v3d_exit);
 
 MODULE_AUTHOR("Broadcom Corporation");
-MODULE_DESCRIPTION("ISP device driver");
+MODULE_DESCRIPTION("V3D device driver");
 MODULE_LICENSE("GPL");
