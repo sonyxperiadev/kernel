@@ -50,6 +50,7 @@ struct kona_pwmc {
 	struct pwm_device_ops ops;
 	void __iomem *iobase;
 	struct clk *clk;
+	int	pwm_started;
 };
 
 struct pwm_control {
@@ -353,12 +354,14 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
 	if (test_bit(PWM_CONFIG_DUTY_TICKS, &c->config_mask))
 		kona_pwmc_config_duty_ticks(ap, chan, c);
 
-	if (test_bit(PWM_CONFIG_START, &c->config_mask)) {
+	if (!ap->pwm_started && test_bit(PWM_CONFIG_START, &c->config_mask)) {
 		/* Restore duty ticks cater for STOP case. */
 		struct pwm_config d = {
 			.config_mask = PWM_CONFIG_DUTY_TICKS,
 			.duty_ticks = p->duty_ticks,
 		};
+
+		ap->pwm_started = 1;
 		kona_pwmc_clear_set_bit(ap, pwm_chan_ctrl_info[chan].offset,
 					pwm_chan_ctrl_info[chan].
 					smooth_type_shift, 1);
@@ -367,11 +370,13 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
 		kona_pwmc_start(ap, chan);
 	}
 
-	if (test_bit(PWM_CONFIG_STOP, &c->config_mask)) {
+	if (ap->pwm_started && test_bit(PWM_CONFIG_STOP, &c->config_mask)) {
 		struct pwm_config d = {
 			.config_mask = PWM_CONFIG_DUTY_TICKS,
 			.duty_ticks = 0,
 		};
+
+		ap->pwm_started = 0;
 		kona_pwmc_clear_set_bit(ap, pwm_chan_ctrl_info[chan].offset,
 					pwm_chan_ctrl_info[chan].
 					smooth_type_shift, 0);
