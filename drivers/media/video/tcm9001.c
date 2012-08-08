@@ -224,9 +224,9 @@ static int tcm9001_s_stream(struct v4l2_subdev *sd, int enable)
 			tcm9001_reg_write(client, 0x22, 0x03);
 		}
 	} else {
-		tcm9001_reg_read(client,0xFF,&val);
+		tcm9001_reg_read(client, 0xFF, &val);
 		val = val | 0x30;
-		tcm9001_reg_write(client,0xFF,val);
+		tcm9001_reg_write(client, 0xFF, val);
 		printk(KERN_INFO "Disabling !!!!! STREAM from TCM9001 client\n");
 		/* Nothing to do */
 	}
