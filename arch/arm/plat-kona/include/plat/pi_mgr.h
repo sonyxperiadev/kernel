@@ -271,7 +271,7 @@ int __pi_disable(struct pi *pi);
 int pi_enable(struct pi *pi, int enable);
 int pi_init(struct pi *pi);
 int pi_init_state(struct pi *pi);
-
+void pi_mgr_print_active_pis(void);
 #define pi_get_name(pi)	(pi)->name
 #else
 static inline struct pi *pi_mgr_get(int pi_id)

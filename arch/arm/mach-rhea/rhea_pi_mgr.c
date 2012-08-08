@@ -582,6 +582,16 @@ char *get_opp_name(int opp)
 	return name;
 }
 
+int rhea_pi_mgr_print_act_pis(void)
+{
+	pr_info("\n*** ACTIVE PIs DURING SUSPEND ***\n");
+	pr_info("\tPI \t STATE \t USE_CNT\n");
+	pi_mgr_print_active_pis();
+	pr_info("**********************************\n");
+	return 0;
+}
+EXPORT_SYMBOL(rhea_pi_mgr_print_act_pis);
+
 void __init rhea_pi_mgr_init()
 {
 	int i;
