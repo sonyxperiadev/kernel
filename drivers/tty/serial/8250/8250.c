@@ -3698,10 +3698,11 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
         uart->port.uartclk     = clk_get_rate(uart->clk);
 #endif
 
-#ifdef CONFIG_ARCH_RHEA
 #if defined(CONFIG_HAS_WAKELOCK)
 		wake_lock_init(&uart->uart_lock, WAKE_LOCK_IDLE, "UARTWAKE");
 #endif
+
+#ifdef CONFIG_ARCH_RHEA
 		ret = pi_mgr_qos_add_request(&uart->qos_tx_node,(char *)clk_name,
 			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
 		ret = pi_mgr_qos_add_request(&uart->qos_rx_node,(char *)clk_name,
