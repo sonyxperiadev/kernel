@@ -385,9 +385,9 @@ static int SelCtrlGet(struct snd_kcontrol *kcontrol,
 	 */
 	ucontrol->value.integer.value[0] = pSel[0];
 	ucontrol->value.integer.value[1] = pSel[1];
-	aTrace(LOG_ALSA_INTERFACE, "\nALSA-CAPH %s stream %d, pSel %d:%d, "
+	aTrace(LOG_ALSA_INTERFACE, "\nALSA-CAPH %s stream %d, pSel %d:%d:%d, "
 		"numid=%d index=%d\n",
-		__func__, stream+1, pSel[0], pSel[1],
+		__func__, stream+1, pSel[0], pSel[1], pSel[2],
 		ucontrol->id.numid, ucontrol->id.index);
 	return 0;
 }
@@ -479,7 +479,9 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 			 */
 			if (pCurSel[0] < AUDIO_SINK_VALID_TOTAL
 			    && pCurSel[1] < AUDIO_SINK_VALID_TOTAL
-			    && pSel[1] >= AUDIO_SINK_VALID_TOTAL) {
+			    && pSel[1] >= AUDIO_SINK_VALID_TOTAL
+			    && ((pCurSel[0] != AUDIO_SINK_LOUDSPK) || !isSTIHF)
+			    ) {
 				struct snd_kcontrol tmp_kcontrol;
 				struct snd_ctl_elem_value tmp_ucontrol;
 				s32 new_sel[MAX_PLAYBACK_DEV];
@@ -1501,14 +1503,15 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		break;
 
 	case CTL_FUNCTION_SINK_CHG:
+		cmd = ucontrol->value.integer.value[0];
+		pSel = pChip->streamCtl[stream - 1].iLineSelect;
 		aTrace
 			(LOG_ALSA_INTERFACE,
 			 "Change sink device stream=%d"
-			 "cmd=%ld sink=%ld\n", stream,
+			 "cmd=%ld sink=%ld to %d:%d:%d\n", stream,
 			 ucontrol->value.integer.value[0],
-			 ucontrol->value.integer.value[1]);
-		cmd = ucontrol->value.integer.value[0];
-		pSel = pChip->streamCtl[stream - 1].iLineSelect;
+			 ucontrol->value.integer.value[1],
+			 pSel[0], pSel[1], pSel[2]);
 		if (cmd == 0) {	/*add device */
 			for (i = 0; i < MAX_PLAYBACK_DEV; i++) {
 				if ((pSel[i] == AUDIO_SINK_UNDEFINED ||
@@ -1524,10 +1527,8 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 							"in the list\n");
 					break;
 				} else if (++cnt == MAX_PLAYBACK_DEV) {
-					aTrace(LOG_ALSA_INTERFACE,
-							"Max devices count "
-							"reached. Cannot add"
-							"more device\n");
+					aError("Max devices count "
+					"reached. Cannot add more device\n");
 					return -1;
 				}
 			}

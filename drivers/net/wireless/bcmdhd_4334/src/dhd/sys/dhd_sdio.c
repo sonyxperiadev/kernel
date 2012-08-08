@@ -3627,13 +3627,12 @@ dhd_bus_stop(struct dhd_bus *bus, bool enforce_mutex)
 	if (enforce_mutex)
 		dhd_os_sdlock(bus->dhd);
 
-	BUS_WAKE(bus);
 
 	/* Change our idea of bus state */
 	bus->dhd->busstate = DHD_BUS_DOWN;
 
 	if (KSO_ENAB(bus)) {
-
+	BUS_WAKE(bus);
 	/* Enable clock for device interrupts */
 	dhdsdio_clkctl(bus, CLK_AVAIL, FALSE);
 
