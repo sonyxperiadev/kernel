@@ -102,6 +102,8 @@ static const char *const chrgr_type_str[] = {
 	[PMU_CHRGR_TYPE_ACA]	= __stringify(PMU_CHRGR_TYPE_ACA),
 };
 
+static int prev_chrgr_type;
+
 #define log_charger_type(x)  \
 	do {\
 		if ((x) < PMU_CHRGR_TYPE_MAX) \
@@ -640,7 +642,9 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&
 		    (paccy->bc != BCMPMU_BC_BB_BC12))
 			schedule_delayed_work(&paccy->det_work, 0);
-		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_SESSION_INVALID, NULL);
+		if (strcmp(get_supply_type_str(prev_chrgr_type), "usb") == 0)
+			send_usb_event(bcmpmu,
+					BCMPMU_USB_EVENT_SESSION_INVALID, NULL);
 
 		break;
 
@@ -657,7 +661,9 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_VBUS_4V5_F:
-		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_VBUS_INVALID, NULL);
+		if (strcmp(get_supply_type_str(prev_chrgr_type), "usb") == 0)
+			send_usb_event(bcmpmu,
+					BCMPMU_USB_EVENT_VBUS_INVALID, NULL);
 		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&
 		    (paccy->bc != BCMPMU_BC_BB_BC12))
 			schedule_delayed_work(&paccy->det_work, 0);
@@ -1019,6 +1025,7 @@ static void usb_det_work(struct work_struct *work)
 			if (is_detection_done(paccy, bc_status)) {
 				chrgr_type = _get_charger_type(paccy,
 							       bc_status);
+				prev_chrgr_type = chrgr_type;
 				log_charger_type(chrgr_type);
 				if (chrgr_type != PMU_CHRGR_TYPE_NONE) {
 					paccy->det_state = USB_CONNECTED;
