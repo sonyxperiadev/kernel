@@ -72,6 +72,7 @@ obj-$(CONFIG_BCM_ALSA_SOUND) += caph_pcm.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_hwdep.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_ptt_hwdep.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += audio_controller/ audio_driver/
+ifdef CONFIG_ARCH_RHEA_BX
 obj-$(CONFIG_BCM_ALSA_SOUND) += chal/B0/src/
 else
 obj-$(CONFIG_BCM_ALSA_SOUND) += chal/A0/src/
