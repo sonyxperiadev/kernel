@@ -351,19 +351,26 @@ int bcm_hsotgctrl_phy_deinit(void)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-	if (work_pending(&bcm_hsotgctrl_handle->wakeup_work.work)) {
-		cancel_delayed_work(&bcm_hsotgctrl_handle->
-			wakeup_work);
-		flush_workqueue(bcm_hsotgctrl_handle->
-			bcm_hsotgctrl_work_queue);
-	}
-
 	if (bcm_hsotgctrl_handle->irq_enabled) {
+
 		/* We are shutting down USB so ensure wake IRQ
 		 * is disabled
 		 */
 		disable_irq(bcm_hsotgctrl_handle->hsotgctrl_irq);
 		bcm_hsotgctrl_handle->irq_enabled = false;
+
+	}
+
+	if (work_pending(&bcm_hsotgctrl_handle->wakeup_work.work)) {
+
+		/* Cancel scheduled work */
+		cancel_delayed_work(&bcm_hsotgctrl_handle->
+			wakeup_work);
+
+		/* Make sure work queue is flushed */
+		flush_workqueue(bcm_hsotgctrl_handle->
+			bcm_hsotgctrl_work_queue);
+
 	}
 
 	/* Disable wakeup condition */
@@ -581,22 +588,17 @@ static void bcm_hsotgctrl_delayed_wakeup_handler(struct work_struct *work)
 
 	dev_info(bcm_hsotgctrl_handle->dev, "Do HSOTGCTRL wakeup\n");
 
-	if (bcm_hsotgctrl_handle->irq_enabled) {
-
-		if (!clk_get_usage(bcm_hsotgctrl_handle->otg_clk)) {
-			/* Enable OTG AHB clock */
-			bcm_hsotgctrl_en_clock(true);
-		}
-
-		/* Disable wakeup interrupt */
-		bcm_hsotgctrl_phy_wakeup_condition(false);
-
-		disable_irq(bcm_hsotgctrl_handle->hsotgctrl_irq);
-		bcm_hsotgctrl_handle->irq_enabled = false;
-
-		/* Request PHY clock */
-		bcm_hsotgctrl_set_phy_clk_request(true);
+	if (!clk_get_usage(bcm_hsotgctrl_handle->otg_clk)) {
+		/* Enable OTG AHB clock */
+		bcm_hsotgctrl_en_clock(true);
 	}
+
+	/* Disable wakeup interrupt */
+	bcm_hsotgctrl_phy_wakeup_condition(false);
+
+	/* Request PHY clock */
+	bcm_hsotgctrl_set_phy_clk_request(true);
+
 }
 
 static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
@@ -607,13 +609,15 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return IRQ_NONE;
 
-	/* Disable wakeup interrupt */
-	bcm_hsotgctrl_phy_wakeup_condition(false);
+	/* Disable wake IRQ */
+	disable_irq_nosync(bcm_hsotgctrl_handle->hsotgctrl_irq);
+	bcm_hsotgctrl_handle->irq_enabled = false;
 
 	schedule_delayed_work(&bcm_hsotgctrl_handle->wakeup_work,
 	  msecs_to_jiffies(BCM_HSOTGCTRL_WAKEUP_PROCESSING_DELAY));
 
 	return IRQ_HANDLED;
+
 }
 
 int bcm_hsotgctrl_get_clk_count(void)
@@ -801,7 +805,7 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	hsotgctrl_drvdata->irq_enabled = true;
 	error = request_irq(hsotgctrl_drvdata->hsotgctrl_irq,
 			bcm_hsotgctrl_wake_irq,
-			IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
+			IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND,
 			"bcm_hsotgctrl", (void *)hsotgctrl_drvdata);
 	if (error) {
 		hsotgctrl_drvdata->irq_enabled = false;

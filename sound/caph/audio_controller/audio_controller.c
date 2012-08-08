@@ -554,6 +554,9 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 		return;
 
 	mode = GetAudioModeBySink(sink);
+	app = AUDCTRL_GetAudioApp();
+	/* need to figure out App when use Bluetooth headset. */
+
 #ifdef	CONFIG_AUDIO_FEATURE_SET_DISABLE_ECNS
 	/* when turning off EC and NS, we set mode to
 	  * AUDIO_MODE_HANDSFREE as customer's request, while
@@ -579,8 +582,6 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 		return;
 	}
 
-	if (voiceCallMic == source && voiceCallSpkr == sink)
-		return;
 
 	if (voiceCallSpkr != sink)
 		powerOnExternalAmp(voiceCallSpkr, TelephonyUse,
@@ -602,7 +603,7 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	AUDDRV_Telephony_Deinit();
 
 	AUDDRV_Telephony_Init(source, sink, mode, app,
-	bNeedDualMic, bmuteVoiceCall);	/* retain the mute flag */
+		bNeedDualMic, bmuteVoiceCall);	/* retain the mute flag */
 	if (voiceCallSpkr != sink)
 		powerOnExternalAmp(sink, TelephonyUse,
 				TRUE, FALSE);
@@ -905,8 +906,6 @@ void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app)
 void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 				   unsigned int arg_pathID, Boolean inHWlpbk)
 {
-	AUDIO_SOURCE_Enum_t mic;
-	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	SetAudioMode_Sp_t sp_struct;
@@ -935,8 +934,6 @@ void AUDCTRL_SetAudioMode_ForMusicPlayback(AudioMode_t mode,
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
 	/*enable clock if it is not enabled. */
-
-	AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 
 /*set PMU on/off, gain,
 for multicast, need to find the other mode and reconcile on mixer gains.
@@ -999,8 +996,6 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 				   unsigned int arg_pathID, Boolean inHWlpbk)
 {
-	AUDIO_SOURCE_Enum_t mic;
-	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	SetAudioMode_Sp_t sp_struct;
@@ -1023,7 +1018,6 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 		csl_caph_ControlHWClock(TRUE);
 	/*enable clock if it is not enabled. */
 
-	AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 	currAudioMode_fm = mode;
 
 	app = AUDCTRL_GetAudioApp();
@@ -1191,8 +1185,6 @@ void AUDCTRL_SetAudioMode_ForFM_Multicast(AudioMode_t mode,
 void AUDCTRL_SetAudioMode_ForMusicRecord(
 	AudioMode_t mode, unsigned int arg_pathID)
 {
-	AUDIO_SOURCE_Enum_t mic;
-	AUDIO_SINK_Enum_t spk;
 	Boolean bClk = csl_caph_QueryHWClock();
 	AudioApp_t app;
 
@@ -1210,8 +1202,6 @@ void AUDCTRL_SetAudioMode_ForMusicRecord(
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
 	/*enable clock if it is not enabled. */
-
-	AUDCTRL_GetSrcSinkByMode(mode, &mic, &spk);
 
 /*no PMU
 for FM recording + voice call, need to find separate gains from sysparm
@@ -4154,7 +4144,8 @@ void AUDCTRL_SetCallMode(Int32 callMode)
 
 void AUDCTRL_ConnectDL(void)
 {
-	AUDDRV_ConnectDL();
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
+	aTrace(LOG_AUDIO_CNTLR,  "AUDCTRL_ConnectDL PTT CONNECT_DL\n");
 }
 
 void AUDCTRL_UpdateUserVolSetting(
