@@ -216,7 +216,7 @@ Result_t AUDIO_Policy_AddModeToQueue(int state, int mode, int app)
 		return 0;
 
 	if (tTopStatePtr > BRCM_STATE_END) {
-		aTrace(LOG_AUDIO_CNTLR,
+		aError(
 				"%s(): error total %d active states.",
 			__func__, tTopStatePtr);
 		tTopStatePtr = 0;
@@ -278,7 +278,7 @@ Result_t AUDIO_Policy_RemoveModeFromQueue(
 		return 0;
 
 	if (tTopStatePtr > BRCM_STATE_END) {
-		aTrace(LOG_AUDIO_CNTLR,
+		aError(
 				"%s: error total %d active states.\n",
 			__func__, tTopStatePtr);
 		tTopStatePtr = 0;

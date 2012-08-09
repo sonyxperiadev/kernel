@@ -34,7 +34,8 @@
 
 #include "mobcom_types.h"
 
-#include "chal_types.h"
+#include <plat/chal/chal_types.h>
+#include <mach/kona_headset_pd.h>
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "csl_caph.h"
@@ -66,6 +67,7 @@
 
 static CSL_CAPH_AUDIOH_Path_t path[AUDDRV_PATH_TOTAL];
 static CHAL_HANDLE handle = 0x0;
+static Boolean isSTIHF = FALSE;
 
 /*-
 //Microphone status:
@@ -324,9 +326,7 @@ const unsigned int stoneFirCoeff[] = {
 /*local function declarations                                              */
 /***************************************************************************/
 
-/***************************************************************************/
-/*local function declarations                                              */
-/***************************************************************************/
+static csl_caph_Sidetone_Gain_t csl_caph_audioh_GetSidetoneGain(short gain);
 
 /***************************************************************************/
 /* Global function definitions                                             */
@@ -389,6 +389,7 @@ void csl_caph_audioh_unconfig(int path_id)
 	path[path_id].sample_mode = 0;
 	path[path_id].eanc_input = 0;
 	path[path_id].eanc_output = 0;
+	path[path_id].started = 0;
 	return;
 }
 
@@ -407,6 +408,10 @@ void csl_caph_audioh_unconfig(int path_id)
 void csl_caph_audioh_config(int path_id, void *p)
 {
 	audio_config_t *pcfg = (void *)p;
+
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL)
+		if (path[path_id].started)
+			return;
 	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_config:: path %d sr %d bits %d chNum %d pack %d eanc %d:%d.\r\n",
@@ -788,6 +793,12 @@ void csl_caph_audioh_start(int path_id)
 {
 	UInt16 chnl_enable = 0x0;
 
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL) {
+		if (path[path_id].started)
+			return;
+		else
+			path[path_id].started = 1;
+	}
 	aTrace
 	      (LOG_AUDIO_CSL, "csl_caph_audioh_start:: %d.\r\n", path_id);
 
@@ -818,8 +829,14 @@ void csl_caph_audioh_start(int path_id)
 			audioh_hs_on = 1;
 			chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
 			chal_audio_hspath_set_gain(handle, 0);
+				/*enable dither*/
+			chal_audio_hspath_sdm_set_dither_seed(handle, 1, 1);
+			chal_audio_hspath_sdm_set_dither_poly(handle,
+							0x48000000,
+							0x41000000);
+			chal_audio_hspath_sdm_set_dither_strength(handle, 3, 3);
+			chal_audio_hspath_sdm_enable_dither(handle, 0x3);
 		}
-
 		chal_audio_hspath_enable(handle, chnl_enable);
 		break;
 
@@ -931,6 +948,9 @@ void csl_caph_audioh_start(int path_id)
 		break;
 
 	case AUDDRV_PATH_HEADSET_INPUT:
+#if 0		
+		switch_bias_voltage(TRUE);
+#endif		
 		chal_audio_hs_mic_pwrctrl(handle, TRUE);
 		chal_audio_vinpath_select_primary_mic(handle,
 						      CHAL_AUDIO_ENABLE);
@@ -986,6 +1006,7 @@ static void csl_caph_audioh_stop_keep_config(int path_id)
 		chal_audio_hspath_int_enable(handle, FALSE, FALSE);
 		chal_audio_hspath_enable(handle, 0);
 		chal_audio_hspath_set_dac_pwr(handle, 0);
+		chal_audio_hspath_sdm_enable_dither(handle, 0);
 		break;
 
 	case AUDDRV_PATH_IHF_OUTPUT:
@@ -1091,6 +1112,9 @@ static void csl_caph_audioh_stop_keep_config(int path_id)
 		break;
 
 	case AUDDRV_PATH_HEADSET_INPUT:
+#if 0		
+		switch_bias_voltage(FALSE);
+#endif		
 		chal_audio_vinpath_select_primary_mic(handle, 0);
 		chal_audio_hs_mic_pwrctrl(handle, 0);
 		break;
@@ -1765,10 +1789,12 @@ void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff)
 // Return:
 //
 //===========================================================================*/
-
 void csl_caph_audioh_sidetone_set_gain(UInt32 gain)
 {
-	chal_audio_stpath_set_gain(handle, gain);
+	csl_caph_Sidetone_Gain_t outGain;
+	memset(&outGain, 0, sizeof(csl_caph_Sidetone_Gain_t));
+	outGain = csl_caph_audioh_GetSidetoneGain((short)gain);
+	chal_audio_stpath_set_gain(handle, outGain.sidetoneGain_Log);
 	return;
 }
 /*============================================================================
@@ -1818,6 +1844,9 @@ void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl)
 
 void csl_caph_audioh_set_linear_filter(int path_id)
 {
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL)
+		if (path[path_id].started)
+			return;
 	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_set_linear_filter.\r\n");
@@ -1878,10 +1907,12 @@ void csl_caph_audioh_set_linear_filter(int path_id)
 
 void csl_caph_audioh_set_minimum_filter(int path_id)
 {
+	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL)
+		if (path[path_id].started)
+			return;
 	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_set_minimum_filter.\r\n");
-
 	switch (path_id) {
 	case AUDDRV_PATH_VIBRA_OUTPUT:
 		chal_audio_vibra_set_filter(handle,
@@ -2268,6 +2299,260 @@ static csl_caph_Mic_Gain_t DMic_GainTable[DMIC_GAIN_LEVEL_NUM] = {
 	/* 24.0dB */   {2400, GAIN_NA, 0x1FB3, 0x0003, GAIN_SYSPARM},
 };
 
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_Sidetone_Gain_t
+*  csl_caph_audioh_GetSidetoneGain(short gain)
+*
+*  Description: read the sidetone target gain in linear and log format.
+*
+****************************************************************************/
+
+/* Gain Conversion from dB Q13.2 to register value.
+ * Not a gain distribution table.
+ */
+#define SIDETONE_GAIN_LEVEL_NUM 201
+static csl_caph_Sidetone_Gain_t
+	Sidetone_GainTable[SIDETONE_GAIN_LEVEL_NUM] = {
+	/* 0dB */	{0x0000, 16384, 0x0},
+	/* -0.25dB */	{0xffff, 15919, 0xa},
+	/* -0.5dB */	{0xfffe, 15467, 0x16},
+	/* -0.75dB */	{0xfffd, 15029, 0x20},
+	/* -1.0dB */	{0xfffc, 14602, 0x2b},
+	/* -1.25dB */	{0xfffb, 14188, 0x35},
+	/* -1.5dB */	{0xfffa, 13785, 0x3f},
+	/* -1.75dB */	{0xfff9, 13394, 0x4b},
+	/* -2.0dB */	{0xfff8, 13014, 0x55},
+	/* -2.25dB */	{0xfff7, 12645, 0x60},
+	/* -2.5dB */	{0xfff6, 12286, 0x6a},
+	/* -2.75dB */	{0xfff5, 11938, 0x75},
+	/* -3.0dB */	{0xfff4, 11599, 0x80},
+	/* -3.25dB */	{0xfff3, 11270, 0x8a},
+	/* -3.5dB */	{0xfff2, 10950, 0x95},
+	/* -3.75dB */	{0xfff1, 10639, 0x9f},
+	/* -4.0dB */	{0xfff0, 10338, 0xaa},
+	/* -4.25dB */	{0xffef, 10044, 0xb5},
+	/* -4.5dB */	{0xffee, 9759, 0xc0},
+	/* -4.75dB */	{0xffed, 9482, 0xca},
+	/* -5.0dB */	{0xffec, 9213, 0xd4},
+	/* -5.25dB */	{0xffeb, 8952, 0xe0},
+	/* -5.5dB */	{0xffea, 8698, 0xea},
+	/* -5.75dB */	{0xffe9, 8451, 0xf5},
+	/* -6.0dB */	{0xffe8, 8211, 0xff},
+	/* -6.25dB */	{0xffe7, 7978, 0x10a},
+	/* -6.5dB */	{0xffe6, 7752, 0x115},
+	/* -6.75dB */	{0xffe5, 7514, 0x11f},
+	/* -7.0dB */	{0xffe4, 7301, 0x12a},
+	/* -7.25dB */	{0xffe3, 7094, 0x134},
+	/* -7.5dB */	{0xffe2, 6892, 0x13f},
+	/* -7.75dB */	{0xffe1, 6697, 0x14a},
+	/* -8.0dB */	{0xffe0, 6507, 0x154},
+	/* -8.25dB */	{0xffdf, 6322, 0x15f},
+	/* -8.5dB */	{0xffde, 6143, 0x16a},
+	/* -8.75dB */	{0xffdd, 5969, 0x174},
+	/* -9.0dB */	{0xffdc, 5799, 0x17f},
+	/* -9.25dB */	{0xffdb, 5635, 0x18a},
+	/* -9.5dB */	{0xffda, 5475, 0x194},
+	/* -9.75dB */	{0xffd9, 5319, 0x19f},
+	/* -10.0dB */	{0xffd8, 5169, 0x1aa},
+	/* -10.25dB */	{0xffd7, 5022, 0x1b4},
+	/* -10.5dB */	{0xffd6, 4879, 0x1be},
+	/* -10.75dB */	{0xffd5, 4741, 0x1c9},
+	/* -11.0dB */	{0xffd4, 4606, 0x1d4},
+	/* -11.25dB */	{0xffd3, 4476, 0x1df},
+	/* -11.5dB */	{0xffd2, 4349, 0x1e9},
+	/* -11.75dB */	{0xffd1, 4225, 0x1f3},
+	/* -12.0dB */	{0xffd0, 4105, 0x1ff},
+	/* -12.25dB */	{0xffcf, 3989, 0x209},
+	/* -12.5dB */	{0xffce, 3876, 0x214},
+	/* -12.75dB */	{0xffcd, 3757, 0x21e},
+	/* -13.0dB */	{0xffcc, 3650, 0x229},
+	/* -13.25dB */	{0xffcb, 3547, 0x234},
+	/* -13.5dB */	{0xffca, 3446, 0x23e},
+	/* -13.75dB */	{0xffc9, 3348, 0x249},
+	/* -14.0dB */	{0xffc8, 3253, 0x253},
+	/* -14.25dB */	{0xffc7, 3161, 0x25e},
+	/* -14.5dB */	{0xffc6, 3071, 0x269},
+	/* -14.75dB */	{0xffc5, 2984, 0x274},
+	/* -15.0dB */	{0xffc4, 2899, 0x27e},
+	/* -15.25dB */	{0xffc3, 2817, 0x288},
+	/* -15.5dB */	{0xffc2, 2737, 0x293},
+	/* -15.75dB */	{0xffc1, 2659, 0x29e},
+	/* -16.0dB */	{0xffc0, 2584, 0x2a9},
+	/* -16.25dB */	{0xffbf, 2511, 0x2b3},
+	/* -16.5dB */	{0xffbe, 2439, 0x2be},
+	/* -16.75dB */	{0xffbd, 2370, 0x2c9},
+	/* -17.0dB */	{0xffbc, 2303, 0x2d3},
+	/* -17.25dB */	{0xffbb, 2238, 0x2de},
+	/* -17.5dB */	{0xffba, 2174, 0x2e8},
+	/* -17.75dB */	{0xffb9, 2112, 0x2f3},
+	/* -18.0dB */	{0xffb8, 2052, 0x2fe},
+	/* -18.25dB */	{0xffb7, 1994, 0x308},
+	/* -18.5dB */	{0xffb6, 1938, 0x312},
+	/* -18.75dB */	{0xffb5, 1878, 0x31d},
+	/* -19.0dB */	{0xffb4, 1825, 0x328},
+	/* -19.25dB */	{0xffb3, 1773, 0x333},
+	/* -19.5dB */	{0xffb2, 1723, 0x33e},
+	/* -19.75dB */	{0xffb1, 1674, 0x348},
+	/* -20.0dB */	{0xffb0, 1626, 0x353},
+	/* -20.25dB */	{0xffaf, 1580, 0x35d},
+	/* -20.5dB */	{0xffae, 1535, 0x368},
+	/* -20.75dB */	{0xffad, 1492, 0x373},
+	/* -21.0dB */	{0xffac, 1449, 0x37d},
+	/* -21.25dB */	{0xffab, 1408, 0x388},
+	/* -21.5dB */	{0xffaa, 1368, 0x393},
+	/* -21.75dB */	{0xffa9, 1329, 0x39d},
+	/* -22.0dB */	{0xffa8, 1292, 0x3a7},
+	/* -22.25dB */	{0xffa7, 1255, 0x3b2},
+	/* -22.5dB */	{0xffa6, 1219, 0x3bd},
+	/* -22.75dB */	{0xffa5, 1185, 0x3c8},
+	/* -23.0dB */	{0xffa4, 1151, 0x3d2},
+	/* -23.25dB */	{0xffa3, 1119, 0x3dc},
+	/* -23.5dB */	{0xffa2, 1087, 0x3e8},
+	/* -23.75dB */	{0xffa1, 1056, 0x3f2},
+	/* -24.0dB */	{0xffa0, 1026, 0x3fd},
+	/* -24.25dB */	{0xff9f, 997, 0x407},
+	/* -24.5dB */	{0xff9e, 969, 0x412},
+	/* -24.75dB */	{0xff9d, 939, 0x41d},
+	/* -25.0dB */	{0xff9c, 912, 0x427},
+	/* -25.25dB */	{0xff9b, 886, 0x432},
+	/* -25.5dB */	{0xff9a, 861, 0x43c},
+	/* -25.75dB */	{0xff99, 837, 0x447},
+	/* -26.0dB */	{0xff98, 813, 0x452},
+	/* -26.25dB */	{0xff97, 790, 0x45d},
+	/* -26.5dB */	{0xff96, 767, 0x467},
+	/* -26.75dB */	{0xff95, 746, 0x471},
+	/* -27.0dB */	{0xff94, 724, 0x47c},
+	/* -27.25dB */	{0xff93, 704, 0x487},
+	/* -27.5dB */	{0xff92, 684, 0x492},
+	/* -27.75dB */	{0xff91, 664, 0x49c},
+	/* -28.0dB */	{0xff90, 646, 0x4a7},
+	/* -28.25dB */	{0xff8f, 627, 0x4b2},
+	/* -28.5dB */	{0xff8e, 609, 0x4bc},
+	/* -28.75dB */	{0xff8d, 592, 0x4c7},
+	/* -29.0dB */	{0xff8c, 575, 0x4d1},
+	/* -29.25dB */	{0xff8b, 559, 0x4dc},
+	/* -29.5dB */	{0xff8a, 543, 0x4e7},
+	/* -29.75dB */	{0xff89, 528, 0x4f1},
+	/* -30.0dB */	{0xff88, 513, 0x4fb},
+	/* -30.25dB */	{0xff87, 498, 0x507},
+	/* -30.5dB */	{0xff86, 484, 0x511},
+	/* -30.75dB */	{0xff85, 469, 0x51c},
+	/* -31.0dB */	{0xff84, 456, 0x527},
+	/* -31.25dB */	{0xff83, 443, 0x531},
+	/* -31.5dB */	{0xff82, 430, 0x53c},
+	/* -31.75dB */	{0xff81, 418, 0x546},
+	/* -32.0dB */	{0xff80, 406, 0x551},
+	/* -32.25dB */	{0xff7f, 395, 0x55b},
+	/* -32.5dB */	{0xff7e, 383, 0x566},
+	/* -32.75dB */	{0xff7d, 373, 0x571},
+	/* -33.0dB */	{0xff7c, 362, 0x57c},
+	/* -33.25dB */	{0xff7b, 352, 0x586},
+	/* -33.5dB */	{0xff7a, 342, 0x590},
+	/* -33.75dB */	{0xff79, 332, 0x59c},
+	/* -34.0dB */	{0xff78, 323, 0x5a6},
+	/* -34.25dB */	{0xff77, 313, 0x5b1},
+	/* -34.5dB */	{0xff76, 304, 0x5bb},
+	/* -34.75dB */	{0xff75, 296, 0x5c6},
+	/* -35.0dB */	{0xff74, 287, 0x5d1},
+	/* -35.25dB */	{0xff73, 279, 0x5db},
+	/* -35.5dB */	{0xff72, 271, 0x5e6},
+	/* -35.75dB */	{0xff71, 264, 0x5f0},
+	/* -36.0dB */	{0xff70, 256, 0x5fb},
+	/* -36.25dB */	{0xff6f, 249, 0x606},
+	/* -36.5dB */	{0xff6e, 242, 0x610},
+	/* -36.75dB */	{0xff6d, 234, 0x61b},
+	/* -37.0dB */	{0xff6c, 228, 0x625},
+	/* -37.25dB */	{0xff6b, 221, 0x630},
+	/* -37.5dB */	{0xff6a, 215, 0x63b},
+	/* -37.75dB */	{0xff69, 209, 0x646},
+	/* -38.0dB */	{0xff68, 203, 0x650},
+	/* -38.25dB */	{0xff67, 197, 0x65b},
+	/* -38.5dB */	{0xff66, 191, 0x665},
+	/* -38.75dB */	{0xff65, 186, 0x670},
+	/* -39.0dB */	{0xff64, 181, 0x67b},
+	/* -39.25dB */	{0xff63, 176, 0x685},
+	/* -39.5dB */	{0xff62, 171, 0x690},
+	/* -39.75dB */	{0xff61, 166, 0x69b},
+	/* -40.0dB */	{0xff60, 161, 0x6a5},
+	/* -40.25dB */	{0xff5f, 156, 0x6af},
+	/* -40.5dB */	{0xff5e, 152, 0x6bb},
+	/* -40.75dB */	{0xff5d, 148, 0x6c5},
+	/* -41.0dB */	{0xff5c, 143, 0x6d0},
+	/* -41.25dB */	{0xff5b, 139, 0x6da},
+	/* -41.5dB */	{0xff5a, 135, 0x6e4},
+	/* -41.75dB */	{0xff59, 132, 0x6f0},
+	/* -42.0dB */	{0xff58, 128, 0x6fa},
+	/* -42.25dB */	{0xff57, 124, 0x705},
+	/* -42.5dB */	{0xff56, 121, 0x70f},
+	/* -42.75dB */	{0xff55, 117, 0x71a},
+	/* -43.0dB */	{0xff54, 114, 0x725},
+	/* -43.25dB */	{0xff53, 110, 0x72f},
+	/* -43.5dB */	{0xff52, 107, 0x73a},
+	/* -43.75dB */	{0xff51, 104, 0x744},
+	/* -44.0dB */	{0xff50, 101, 0x74f},
+	/* -44.25dB */	{0xff4f, 98, 0x75a},
+	/* -44.5dB */	{0xff4e, 95, 0x765},
+	/* -44.75dB */	{0xff4d, 93, 0x76f},
+	/* -45.0dB */	{0xff4c, 90, 0x779},
+	/* -45.25dB */	{0xff4b, 88, 0x785},
+	/* -45.5dB */	{0xff4a, 85, 0x78f},
+	/* -45.75dB */	{0xff49, 83, 0x79a},
+	/* -46.0dB */	{0xff48, 80, 0x7a4},
+	/* -46.25dB */	{0xff47, 78, 0x7af},
+	/* -46.5dB */	{0xff46, 76, 0x7ba},
+	/* -46.75dB */	{0xff45, 74, 0x7c4},
+	/* -47.0dB */	{0xff44, 71, 0x7cf},
+	/* -47.25dB */	{0xff43, 69, 0x7d9},
+	/* -47.5dB */	{0xff42, 67, 0x7e4},
+	/* -47.75dB */	{0xff41, 66, 0x7ef},
+	/* -48.0dB */	{0xff40, 64, 0x7f9},
+	/* -48.25dB */	{0xff3f, 62, 0x804},
+	/* -48.5dB */	{0xff3e, 60, 0x80f},
+	/* -48.75dB */	{0xff3d, 58, 0x819},
+	/* -49.0dB */	{0xff3c, 57, 0x824},
+	/* -49.25dB */	{0xff3b, 55, 0x82f},
+	/* -49.5dB */	{0xff3a, 53, 0x839},
+	/* -49.75dB */	{0xff39, 52, 0x844},
+	/* -50.0dB */	{0xff38, 50, 0x84f}
+
+};
+
+static csl_caph_Sidetone_Gain_t csl_caph_audioh_GetSidetoneGain(short gain)
+{
+	csl_caph_Sidetone_Gain_t outGain;
+	UInt8 i = 0;
+	memset(&outGain, 0, sizeof(csl_caph_Sidetone_Gain_t));
+	aTrace
+	      (LOG_AUDIO_CSL,
+	       "csl_caph_audioh_GetSidetoneGain.\r\n");
+
+	if (gain >= Sidetone_GainTable[0].gain) {
+		memcpy(&outGain,
+				&Sidetone_GainTable[0],
+				sizeof(csl_caph_Sidetone_Gain_t));
+		return outGain;
+	} else if (gain <=
+			Sidetone_GainTable[SIDETONE_GAIN_LEVEL_NUM-1].gain) {
+		memcpy(&outGain,
+				&Sidetone_GainTable[SIDETONE_GAIN_LEVEL_NUM-1],
+				sizeof(csl_caph_Sidetone_Gain_t));
+		return outGain;
+	}
+	for (i = 1; i < SIDETONE_GAIN_LEVEL_NUM-1; i++) {
+		if (gain == Sidetone_GainTable[i].gain) {
+				memcpy(&outGain,
+					&Sidetone_GainTable[i],
+					sizeof(csl_caph_Sidetone_Gain_t));
+			return outGain;
+	    }
+	}
+	/* Should not run to here. */
+	aError("%s failed to find the sidetone gain.\n", __func__);
+	return outGain;
+}
+
 /****************************************************************************
 *
 *  Function Name: csl_caph_Mic_Gain_t csl_caph_map_mB_gain_to_registerVal(
@@ -2349,6 +2634,12 @@ void csl_caph_audioh_start_hs(void)
 
 	chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
 	chal_audio_hspath_set_gain(handle, 0);
+	/*enable dither*/
+	chal_audio_hspath_sdm_set_dither_seed(handle, 1, 1);
+	chal_audio_hspath_sdm_set_dither_poly(handle, 0x48000000,
+					0x41000000);
+	chal_audio_hspath_sdm_set_dither_strength(handle, 3, 3);
+	chal_audio_hspath_sdm_enable_dither(handle, 0x3);
 	/*chal_audio_hspath_enable(handle, chnl_enable);*/
 }
 
@@ -2374,12 +2665,33 @@ void csl_caph_audioh_start_ihf(void)
 
 	chal_audio_ihfpath_mute(handle, 1);
 
+#ifdef CONFIG_CAPH_STEREO_IHF
+	/*Power up the DAC on both channels when stereo IHF mode is set*/
+	if (isSTIHF)
+		chnl_enable = CHAL_AUDIO_CHANNEL_LEFT |
+			CHAL_AUDIO_CHANNEL_RIGHT;
+	else
+		chnl_enable = CHAL_AUDIO_CHANNEL_LEFT;
+#else
 	/*ihf only supports mono*/
 	chnl_enable = CHAL_AUDIO_CHANNEL_LEFT;
+#endif
 
 	chal_audio_ihfpath_set_dac_pwr(handle, chnl_enable);
 	chal_audio_ihfpath_set_gain(handle, 0);
 	/*chal_audio_ihfpath_enable(handle, chnl_enable);*/
+}
+
+/****************************************************************************
+ *
+ * Function Name: csl_caph_audioh_SetIHFmode
+ *
+ * Description: set IHF mode (stereo/mono)
+ *
+ * *************************************************************************/
+void csl_caph_audioh_SetIHFmode(Boolean stIHF)
+{
+	isSTIHF = stIHF;
 }
 
 /****************************************************************************
@@ -2400,6 +2712,7 @@ void csl_caph_audioh_stop_hs(void)
 	chal_audio_hspath_int_enable(handle, FALSE, FALSE);
 	chal_audio_hspath_enable(handle, 0);
 	chal_audio_hspath_set_dac_pwr(handle, 0);
+	chal_audio_hspath_sdm_enable_dither(handle, 0);
 }
 
 /****************************************************************************

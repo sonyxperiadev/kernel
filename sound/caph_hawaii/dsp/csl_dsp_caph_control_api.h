@@ -57,7 +57,9 @@ typedef enum {
 	DSP_AADMAC_SEC_MIC_EN = 0x20,
 	DSP_AADMAC_SPKR_EN = 0x40,
 	DSP_AADMAC_IHF_SPKR_EN = 0x80,
-	DSP_AADMAC_LEG_IHF_SPKR_EN = 0x100
+	DSP_AADMAC_LEG_IHF_SPKR_EN = 0x100,
+	DSP_AADMAC_PACKED_16BIT_IN_OUT_EN = 0x200,
+	DSP_AADMAC_RETIRE_DS_CMD = 0x8000
 } DSP_AADMAC_Audio_Connections_t;
 
 typedef enum {
@@ -153,5 +155,20 @@ void csl_dsp_caph_control_aadmac_disable_path(UInt16 path);
 *****************************************************************************/
 UInt32 *csl_dsp_ext_modem_get_aadmac_buf_base_addr(
 	DSP_AADMAC_Ext_Modem_Connections_t aadmac_ext_modem_audio_connection);
+
+/*****************************************************************************/
+/**
+*
+* Function Name: csl_dsp_caph_control_aadmac_get_enable_path
+*
+*   @note     This function informs driver about which hardware path is disabled
+*             or enabled
+*
+*   @param    None
+*
+*   @return   path (DSP_AADMAC_Audio_Connections_t)
+*
+*****************************************************************************/
+UInt16 csl_dsp_caph_control_aadmac_get_enable_path(void);
 
 #endif /* _CSL_DSP_CAPH_CONTROL_API_H_ */

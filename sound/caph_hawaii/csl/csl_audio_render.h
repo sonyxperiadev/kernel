@@ -36,6 +36,14 @@
 
 #include <linux/spinlock.h>
 
+enum _DYNDMA_STATE {
+	DYNDMA_NORMAL,
+	DYNDMA_TRIGGER,
+	DYNDMA_LOW_DONE,
+	DYNDMA_LOW_RDY,
+};
+#define DYNDMA_STATE enum __DYNDMA_STATE
+
 typedef void (*CSL_AUDRENDER_CB)(UInt32 streamID,
 			UInt32 buffer_status);
 
@@ -53,6 +61,13 @@ struct _CSL_CAPH_Render_Drv_t {
 	spinlock_t readyStatusLock;
 	spinlock_t configLock;
 	UInt32 blockIndex;
+	int maxBlkBytes;
+	int periodMs;
+	int periodMsDiv;
+	int numBlocks2;
+	int readyBlockIndex;
+	atomic_t dmaState;
+	atomic_t availBytes;
 	/*CSL_CAPH_DMA_CHNL_e dmaCH2;
 	AUDIO_NUM_OF_CHANNEL_t numChannels;
 	AUDIO_BITS_PER_SAMPLE_t bitsPerSample;
@@ -174,5 +189,6 @@ UInt16 csl_audio_render_get_current_position(UInt32 streamID);
 UInt16 csl_audio_render_get_current_buffer(UInt32 streamID);
 
 CSL_CAPH_Render_Drv_t *GetRenderDriverByType(UInt32 streamID);
+void csl_audio_render_set_dma_size(int rate);
 
 #endif /* _CSL_AUDIO_RENDER_ */

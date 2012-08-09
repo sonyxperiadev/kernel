@@ -301,7 +301,7 @@ struct __CSL_CAPH_HWConfig_Table_t {
 enum __CSL_SSP_PORT_e {
 	CSL_SSP_4 = 1,
 	CSL_SSP_3,
-    CSL_SSP_6
+	CSL_SSP_6
 };
 #define  CSL_SSP_PORT_e enum __CSL_SSP_PORT_e
 
@@ -786,6 +786,16 @@ CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
 *****************************************************************************/
 void csl_caph_SetSRC26MClk(Boolean is26M);
 
+/****************************************************************************
+*  @brief  Check HW path status
+*
+*  @param  none
+*
+*  @return TRUE|FALSE
+*
+*****************************************************************************/
+Boolean csl_caph_hwctrl_allPathsDisabled(void);
+
 #if defined(CONFIG_BCM_MODEM)
 /****************************************************************************
 *  @brief  enable adcpath
@@ -797,4 +807,15 @@ void csl_caph_SetSRC26MClk(Boolean is26M);
 *****************************************************************************/
 void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path);
 #endif
+
+/****************************************************************************
+*  @brief  Dump all paths
+*
+*  @param  none
+*
+*  @return none
+*
+*****************************************************************************/
+void csl_caph_hwctrl_PrintAllPaths(void);
+void csl_caph_dspcb(int path);
 #endif

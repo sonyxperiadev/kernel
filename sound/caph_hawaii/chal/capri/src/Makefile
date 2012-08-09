@@ -34,5 +34,4 @@ obj-$(CONFIG_BCM_ALSA_SOUND) 	+= chal_audio.o
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= chal_analogtest.o
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= chal_analogmic.o
 obj-$(CONFIG_BCM_ALSA_SOUND) 	+= chal_sspi_hawaii.o
-
 	

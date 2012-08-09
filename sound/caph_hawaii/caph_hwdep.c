@@ -394,7 +394,6 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		       unsigned int cmd, unsigned long arg)
 {
 	bcm_caph_hwdep_voip_t *pVoIP;
-	AUDIO_DRIVER_CallBackParams_t cbParams;
 	int ret = 0;
 	Boolean enable = FALSE;
 	Int32 size = 0;
@@ -418,6 +417,9 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			"voipInstCnt=%u\n", data, voipInstCnt);
 		if (voipInstCnt == 0) {	/* start VoIP only once */
 			BRCM_AUDIO_Param_RateChange_t param_rate_change;
+			BRCM_AUDIO_Param_Open_t param_open;
+			BRCM_AUDIO_Param_Prepare_t parm_prepare;
+			BRCM_AUDIO_Param_Start_t param_start;
 
 			voipInstCnt++;
 			hw->private_data =
@@ -467,8 +469,13 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 				return -ENOMEM;
 			}
 
+			param_open.drv_handle = NULL;
+			param_open.drv_type = AUDIO_DRIVER_VOIP;
+			AUDIO_Ctrl_Trigger(ACTION_AUD_OpenVoIP,
+				&param_open, NULL, 1);
 			pVoIP->buffer_handle->drv_handle =
-			    AUDIO_DRIVER_Open(AUDIO_DRIVER_VOIP);
+				param_open.drv_handle;
+
 			if (!pVoIP->buffer_handle->drv_handle) {
 				kfree(pVoIP->buffer_handle->
 				      voip_data_dl_buf_ptr);
@@ -480,18 +487,24 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 
 			/* set UL callback */
 
-			cbParams.voipULCallback = HWDEP_VOIP_DumpUL_CB;
-			cbParams.pPrivateData = (void *)pVoIP;
-			AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,
-					  AUDIO_DRIVER_SET_VOIP_UL_CB,
-					  (void *)&cbParams);
+			parm_prepare.drv_handle =
+				pVoIP->buffer_handle->drv_handle;
+			parm_prepare.cbParams.voipULCallback =
+				HWDEP_VOIP_DumpUL_CB;
+			parm_prepare.cbParams.pPrivateData = (void *)pVoIP;
+			AUDIO_Ctrl_Trigger(
+				ACTION_AUD_SET_VOIP_UL_CB,
+				&parm_prepare, NULL, 0);
 
 			/* set DL callback */
-			cbParams.voipDLCallback = HWDEP_VOIP_FillDL_CB;
-			cbParams.pPrivateData = (void *)pVoIP;
-			AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,
-					  AUDIO_DRIVER_SET_VOIP_DL_CB,
-					  (void *)&cbParams);
+			parm_prepare.drv_handle =
+				pVoIP->buffer_handle->drv_handle;
+			parm_prepare.cbParams.voipDLCallback =
+				HWDEP_VOIP_FillDL_CB;
+			parm_prepare.cbParams.pPrivateData = (void *)pVoIP;
+			AUDIO_Ctrl_Trigger(
+				ACTION_AUD_SET_VOIP_DL_CB,
+				&parm_prepare, NULL, 0);
 
 			if ((pVoIP->codec_type == 4) ||
 			    (pVoIP->codec_type == 5)) {
@@ -502,8 +515,11 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			AUDIO_Ctrl_Trigger(ACTION_AUD_RateChange,
 					&param_rate_change, NULL, 0);
 
-			AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,
-				  AUDIO_DRIVER_START, &pChip->voip_data);
+			param_start.drv_handle =
+				pVoIP->buffer_handle->drv_handle;
+			param_start.data = (void *)&pChip->voip_data;
+			AUDIO_Ctrl_Trigger(ACTION_AUD_StartVoIP,
+				&param_start, NULL, 0);
 
 			pVoIP->writecount = VOIP_FRAMES_IN_BUFFER;
 			pVoIP->status = VoIP_Hwdep_Status_Started;
@@ -527,10 +543,18 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		if (voipInstCnt == 2)
 			voipInstCnt--;
 		else if (voipInstCnt == 1) {
-			AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,
-					  AUDIO_DRIVER_STOP, NULL);
+			BRCM_AUDIO_Param_Stop_t param_stop;
+			BRCM_AUDIO_Param_Close_t param_close;
 
-			AUDIO_DRIVER_Close(pVoIP->buffer_handle->drv_handle);
+			param_stop.drv_handle =
+				pVoIP->buffer_handle->drv_handle;
+			AUDIO_Ctrl_Trigger(ACTION_AUD_StopVoIP,
+				&param_stop, NULL, 0);
+
+			param_close.drv_handle =
+				pVoIP->buffer_handle->drv_handle;
+			AUDIO_Ctrl_Trigger(ACTION_AUD_CloseVoIP,
+				&param_close, NULL, 1);
 			kfree(pVoIP->buffer_handle->voip_data_dl_buf_ptr);
 			kfree(pVoIP->buffer_handle->voip_data_ul_buf_ptr);
 			kfree(pVoIP->buffer_handle);
@@ -565,6 +589,33 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		aTrace(LOG_ALSA_INTERFACE,
 				" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
 				pChip->voip_data.codec_type);
+
+		pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
+		if (!pVoIP)
+			break;
+
+		pVoIP->codec_type = pChip->voip_data.codec_type;
+
+		/*Check whether in a VoLTE call*/
+		/*If no, do nothing.*/
+		/*If yes, do the NB<->WB switching*/
+		if (isVoLTE) {
+			BRCM_AUDIO_Param_RateChange_t param_rate_change;
+			if (pVoIP->ulstarted == 0 && pVoIP->dlstarted == 0)
+				break;
+
+			AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,
+				AUDIO_DRIVER_SET_AMR, &pChip->voip_data);
+
+			if ((pVoIP->codec_type == 4) ||
+			    (pVoIP->codec_type == 5))
+				/* VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k */
+				param_rate_change.codecID = 0x0A;
+			else
+				param_rate_change.codecID = 0x06;
+			AUDIO_Ctrl_Trigger(ACTION_AUD_RateChange,
+					&param_rate_change, NULL, 0);
+		}
 		break;
 	case VoIP_Ioctl_SetBitrate:
 		get_user(data, __user(int *)arg);

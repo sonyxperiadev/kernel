@@ -192,6 +192,15 @@ void DJB_StartStream(void);
 **********************************************************************/
 void DJB_PutFrame(DJB_InputFrame *pInputFrame);
 
+/*********************************************************************/
+/**
+*
+*   DJB_GetStatistics gets Jitter Buffer statistics
+*
+*
+**********************************************************************/
+void DJB_GetStatistics(void);
+
 /** @} */
 
 #endif /* _CSL_VOIP_H_ */

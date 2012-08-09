@@ -232,7 +232,7 @@ struct brcm_alsa_chip {
 	 * integer[0] -- SSP port, 3 fo SSP3, 4 SSP4;
 	 * integer[1] -- 0 for PCM, 1 I2S.
 	 */
-	s32	i32CfgSSP[3]; /* integer[0] -- SSP port; integer[1] -- 0 for PCM, 1 for I2S */
+	s32	i32CfgSSP[3];
 	s32	i32CurApp;
 	s32	i32CurAmpState;
 	s32	iCallMode;
@@ -278,6 +278,7 @@ enum	CTL_FUNCTION_t {
 	CTL_FUNCTION_SINK_CHG,
 	CTL_FUNCTION_HW_CTL,
 	CTL_FUNCTION_APP_SEL,
+	CTL_FUNCTION_APP_RMV,
 	CTL_FUNCTION_AMP_CTL,
 	CTL_FUNCTION_CALL_MODE
 };

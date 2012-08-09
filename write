@@ -1,0 +1,147 @@
+fs/sync.c:171:	if (!file->f_op || !file->f_op->fsync) {
+fs/sync.c:183:	err = file->f_op->fsync(file, datasync);
+fs/aio.c:1322:		rw_op = file->f_op->aio_read;
+fs/aio.c:1325:		rw_op = file->f_op->aio_write;
+fs/aio.c:1366:	if (file->f_op->aio_fsync)
+fs/aio.c:1367:		ret = file->f_op->aio_fsync(iocb, 1);
+fs/aio.c:1376:	if (file->f_op->aio_fsync)
+fs/aio.c:1377:		ret = file->f_op->aio_fsync(iocb, 0);
+fs/aio.c:1447:		if (file->f_op->aio_read)
+fs/aio.c:1465:		if (file->f_op->aio_write)
+fs/aio.c:1479:		if (file->f_op->aio_read)
+fs/aio.c:1493:		if (file->f_op->aio_write)
+fs/aio.c:1498:		if (file->f_op->aio_fsync)
+fs/aio.c:1503:		if (file->f_op->aio_fsync)
+fs/autofs4/dev-ioctl.c:379:		if (!pipe->f_op || !pipe->f_op->write) {
+fs/autofs4/inode.c:295:	if (!pipe->f_op || !pipe->f_op->write)
+fs/autofs4/waitq.c:75:	       (wr = file->f_op->write(file,data,bytes,&file->f_pos)) > 0) {
+fs/binfmt_aout.c:225:	if (!bprm->file->f_op || !bprm->file->f_op->mmap)
+fs/binfmt_aout.c:286:		error = bprm->file->f_op->read(bprm->file,
+fs/binfmt_aout.c:309:		if (!bprm->file->f_op->mmap||((fd_offset & ~PAGE_MASK) != 0)) {
+fs/binfmt_aout.c:314:			bprm->file->f_op->read(bprm->file,
+fs/binfmt_aout.c:397:	if (!file->f_op || !file->f_op->mmap)
+fs/binfmt_aout.c:421:		file->f_op->read(file, (char __user *)start_addr,
+fs/binfmt_elf.c:397:	if (!interpreter->f_op || !interpreter->f_op->mmap)
+fs/binfmt_elf.c:599:	if (!bprm->file->f_op || !bprm->file->f_op->mmap)
+fs/binfmt_elf.c:1026:	    !elf_check_arch(&elf_ex) || !file->f_op || !file->f_op->mmap)
+fs/binfmt_elf_fdpic.c:113:	if (!file->f_op || !file->f_op->mmap)
+fs/binfmt_elf_fdpic.c:982:		ret = file->f_op->read(file, (void *) seg->addr,
+fs/binfmt_em86.c:41:		(!bprm->file->f_op || !bprm->file->f_op->mmap)) {
+fs/binfmt_flat.c:211:	ret = bprm->file->f_op->read(bprm->file, buf, LBUFSIZE, &fpos);
+fs/binfmt_flat.c:281:		ret = bprm->file->f_op->read(bprm->file, buf, LBUFSIZE, &fpos);
+fs/binfmt_flat.c:589:			result = bprm->file->f_op->read(bprm->file, (char *) datapos,
+fs/binfmt_flat.c:644:			result = bprm->file->f_op->read(bprm->file,
+fs/binfmt_flat.c:654:			result = bprm->file->f_op->read(bprm->file,
+fs/binfmt_flat.c:658:				result = bprm->file->f_op->read(bprm->file, (char *) datapos,
+fs/cachefiles/rdwr.c:927:		if (file->f_op->write) {
+fs/cachefiles/rdwr.c:947:			ret = file->f_op->write(
+fs/char_dev.c:407:	if (filp->f_op->open) {
+fs/char_dev.c:408:		ret = filp->f_op->open(inode,filp);
+fs/coda/dir.c:397:	if (host_file->f_op->readdir)
+fs/coda/dir.c:410:			ret = host_file->f_op->readdir(host_file, buf, filldir);
+fs/coda/file.c:39:	if (!host_file->f_op || !host_file->f_op->read)
+fs/coda/file.c:42:	return host_file->f_op->read(host_file, buf, count, ppos);
+fs/coda/file.c:59:	splice_read = host_file->f_op->splice_read;
+fs/coda/file.c:78:	if (!host_file->f_op || !host_file->f_op->write)
+fs/coda/file.c:84:	ret = host_file->f_op->write(host_file, buf, count, ppos);
+fs/coda/file.c:106:	if (!host_file->f_op || !host_file->f_op->mmap)
+fs/coda/file.c:130:	return host_file->f_op->mmap(host_file, vma);
+fs/compat.c:1126:		fn = file->f_op->read;
+fs/compat.c:1127:		fnv = file->f_op->aio_read;
+fs/compat.c:1129:		fn = (io_fn_t)file->f_op->write;
+fs/compat.c:1130:		fnv = file->f_op->aio_write;
+fs/compat.c:1161:	if (!file->f_op || (!file->f_op->aio_read && !file->f_op->read))
+fs/compat.c:1220:	if (!file->f_op || (!file->f_op->aio_write && !file->f_op->write))
+fs/compat_ioctl.c:1603:		if (filp->f_op && filp->f_op->compat_ioctl) {
+fs/compat_ioctl.c:1604:			error = filp->f_op->compat_ioctl(filp, cmd, arg);
+fs/compat_ioctl.c:1609:		if (!filp->f_op || !filp->f_op->unlocked_ioctl)
+fs/ecryptfs/file.c:312:	if (lower_file->f_op && lower_file->f_op->fasync)
+fs/ecryptfs/file.c:313:		rc = lower_file->f_op->fasync(fd, lower_file, flag);
+fs/ecryptfs/file.c:325:	if (lower_file && lower_file->f_op && lower_file->f_op->unlocked_ioctl)
+fs/ecryptfs/file.c:326:		rc = lower_file->f_op->unlocked_ioctl(lower_file, cmd, arg);
+fs/ecryptfs/file.c:339:	if (lower_file && lower_file->f_op && lower_file->f_op->compat_ioctl)
+fs/ecryptfs/file.c:340:		rc = lower_file->f_op->compat_ioctl(lower_file, cmd, arg);
+fs/eventpoll.c:249:/* Used to call file's f_op->poll() under the nested calls boundaries */
+fs/eventpoll.c:470: *                      the scan code, to call f_op->poll(). Also allows for
+fs/eventpoll.c:476: * @depth: The current depth of recursive f_op->poll calls.
+fs/eventpoll.c:666:		if (epi->ffd.file->f_op->poll(epi->ffd.file, NULL) &
+fs/eventpoll.c:698:	 * supervision, since the call to f_op->poll() done on listed files
+fs/eventpoll.c:852:	 * (because we're accessing user memory, and because of linux f_op->poll()
+fs/eventpoll.c:968:	revents = tfile->f_op->poll(tfile, &epq.pt);
+fs/eventpoll.c:1043:	 * Set the new event interest mask before calling f_op->poll();
+fs/eventpoll.c:1045:	 * f_op->poll() call and the new event set registering.
+fs/eventpoll.c:1054:	revents = epi->ffd.file->f_op->poll(epi->ffd.file, NULL);
+fs/eventpoll.c:1101:		revents = epi->ffd.file->f_op->poll(epi->ffd.file, NULL) &
+fs/eventpoll.c:1386:	if (!tfile->f_op || !tfile->f_op->poll)
+fs/eventpoll.c:1589:	/* Initialize the structure used to perform file's f_op->poll() calls */
+fs/exec.c:2180:		if (!cprm.file->f_op || !cprm.file->f_op->write)
+fs/exec.c:2216:	return access_ok(VERIFY_READ, addr, nr) && file->f_op->write(file, addr, nr, &file->f_pos) == nr;
+fs/exec.c:2224:	if (file->f_op->llseek && file->f_op->llseek != no_llseek) {
+fs/exec.c:2225:		if (file->f_op->llseek(file, off, SEEK_CUR) < 0)
+fs/exportfs/expfs.c:275:	if (!file->f_op->readdir)
+fs/fcntl.c:176:	if (filp->f_op && filp->f_op->check_flags)
+fs/fcntl.c:177:		error = filp->f_op->check_flags(arg);
+fs/fcntl.c:185:			filp->f_op->fasync) {
+fs/fcntl.c:186:		error = filp->f_op->fasync(fd, filp, (arg & FASYNC) != 0);
+fs/file_table.c:243:		if (file->f_op && file->f_op->fasync)
+fs/file_table.c:244:			file->f_op->fasync(-1, file, 0);
+fs/file_table.c:246:	if (file->f_op && file->f_op->release)
+fs/file_table.c:247:		file->f_op->release(inode, file);
+fs/ioctl.c:40:	if (!filp->f_op || !filp->f_op->unlocked_ioctl)
+fs/ioctl.c:43:	error = filp->f_op->unlocked_ioctl(filp, cmd, arg);
+fs/ioctl.c:504:		if (filp->f_op && filp->f_op->fasync)
+fs/ioctl.c:506:			error = filp->f_op->fasync(fd, filp, on);
+fs/locks.c:1443:	if (filp->f_op && filp->f_op->setlease)
+fs/locks.c:1444:		return filp->f_op->setlease(filp, arg, lease);
+fs/locks.c:1634:	if (filp->f_op && filp->f_op->flock)
+fs/locks.c:1635:		error = filp->f_op->flock(filp,
+fs/locks.c:1660:	if (filp->f_op && filp->f_op->lock)
+fs/locks.c:1661:		return filp->f_op->lock(filp, F_GETLK, fl);
+fs/locks.c:1772:	if (filp->f_op && filp->f_op->lock)
+fs/locks.c:1773:		return filp->f_op->lock(filp, cmd, fl);
+fs/locks.c:2045:	if (filp->f_op && filp->f_op->flock) {
+fs/locks.c:2053:		filp->f_op->flock(filp, F_SETLKW, &fl);
+fs/locks.c:2111:	if (filp->f_op && filp->f_op->lock)
+fs/locks.c:2112:		return filp->f_op->lock(filp, F_CANCELLK, fl);
+fs/nfsctl.c:93:	err = file->f_op->write(file, p, map[cmd].wsize, &file->f_pos);
+fs/nfsctl.c:95:		err = file->f_op->read(file, res, map[cmd].rsize, &file->f_pos);
+fs/nfsd/vfs.c:886:	if (file->f_op->splice_read && rqstp->rq_splice_ok) {
+fs/nfsd/vfs.c:988:	if (!file->f_op->fsync) {/* COMMIT3 cannot work */
+fs/open.c:266:	if (!file->f_op->fallocate)
+fs/open.c:269:	return file->f_op->fallocate(file, mode, offset, len);
+fs/open.c:711:		open = f->f_op->open;
+fs/open.c:724:	/* NB: we're sure to have correct a_ops only after f_op->open */
+fs/open.c:777: * If the open callback is set to NULL, then the standard f_op->open()
+fs/open.c:1068:	if (filp->f_op && filp->f_op->flush)
+fs/open.c:1069:		retval = filp->f_op->flush(filp, id);
+fs/read_write.c:165:		if (file->f_op && file->f_op->llseek)
+fs/read_write.c:166:			fn = file->f_op->llseek;
+fs/read_write.c:292:		ret = filp->f_op->aio_read(&kiocb, &iov, 1, kiocb.ki_pos);
+fs/read_write.c:312:	if (!file->f_op || (!file->f_op->read && !file->f_op->aio_read))
+fs/read_write.c:320:		if (file->f_op->read)
+fs/read_write.c:321:			ret = file->f_op->read(file, buf, count, pos);
+fs/read_write.c:348:		ret = filp->f_op->aio_write(&kiocb, &iov, 1, kiocb.ki_pos);
+fs/read_write.c:368:	if (!file->f_op || (!file->f_op->write && !file->f_op->aio_write))
+fs/read_write.c:376:		if (file->f_op->write)
+fs/read_write.c:377:			ret = file->f_op->write(file, buf, count, pos);
+fs/read_write.c:677:		fn = file->f_op->read;
+fs/read_write.c:678:		fnv = file->f_op->aio_read;
+fs/read_write.c:680:		fn = (io_fn_t)file->f_op->write;
+fs/read_write.c:681:		fnv = file->f_op->aio_write;
+fs/read_write.c:707:	if (!file->f_op || (!file->f_op->aio_read && !file->f_op->read))
+fs/read_write.c:720:	if (!file->f_op || (!file->f_op->aio_write && !file->f_op->write))
+fs/readdir.c:27:	if (!file->f_op || !file->f_op->readdir)
+fs/readdir.c:40:		res = file->f_op->readdir(file, buf, filler);
+fs/select.c:454:					if (f_op && f_op->poll) {
+fs/select.c:456:						mask = (*f_op->poll)(file, wait);
+fs/select.c:740:			if (file->f_op && file->f_op->poll) {
+fs/select.c:744:				mask = file->f_op->poll(file, pwait);
+fs/seq_file.c:130: *	Ready-made ->f_op->read()
+fs/seq_file.c:279: *	Ready-made ->f_op->llseek()
+fs/seq_file.c:323: *	as ->f_op->release() if you don't have private data to destroy.
+fs/splice.c:691:	if (!likely(file->f_op && file->f_op->sendpage))
+fs/splice.c:695:	return file->f_op->sendpage(file, buf->page, buf->offset,
+fs/splice.c:1105:	if (out->f_op && out->f_op->splice_write)
+fs/splice.c:1106:		splice_write = out->f_op->splice_write;
+fs/splice.c:1131:	if (in->f_op && in->f_op->splice_read)
+fs/splice.c:1132:		splice_read = in->f_op->splice_read;

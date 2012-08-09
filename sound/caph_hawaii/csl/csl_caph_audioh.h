@@ -87,6 +87,7 @@ struct _CSL_CAPH_AUDIOH_Path_t {
 	int sample_pack;
 	int eanc_input;
 	int eanc_output;
+	int started;
 };
 #define CSL_CAPH_AUDIOH_Path_t struct _CSL_CAPH_AUDIOH_Path_t
 
@@ -142,6 +143,13 @@ struct _csl_caph_Mic_Gain_t {
 };
 #define csl_caph_Mic_Gain_t struct _csl_caph_Mic_Gain_t
 
+struct _csl_caph_Sidetone_Gain_t {
+	short gain;  /*In Q13.2 */
+	UInt16 sidetoneGain_Linear;
+	UInt16 sidetoneGain_Log;
+};
+#define csl_caph_Sidetone_Gain_t struct _csl_caph_Sidetone_Gain_t
+
 void *csl_caph_audioh_init(UInt32 baseAddr, UInt32 sdtBaseAddr);
 void csl_caph_audioh_deinit(void);
 void csl_caph_audioh_config(int path_id, void *pcfg);
@@ -179,6 +187,7 @@ void csl_caph_audioh_start_hs(void);
 void csl_caph_audioh_start_ihf(void);
 void csl_caph_audioh_stop_hs(void);
 void csl_caph_audioh_stop_ihf(void);
+void csl_caph_audioh_SetIHFmode(Boolean stIHF);
 
 /**
 *

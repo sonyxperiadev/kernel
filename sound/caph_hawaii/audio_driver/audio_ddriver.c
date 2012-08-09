@@ -53,6 +53,12 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "audio_controller.h"
 #include "audio_trace.h"
 
+#include <linux/hrtimer.h>
+#include <linux/ktime.h>
+#define MS_TO_NS(x) (x * 1E6L)
+static struct hrtimer hr_timer;
+static ktime_t ktime;
+
 /* Public Variable declarations */
 
 #define VOLTECALLENABLE			0x2
@@ -146,13 +152,19 @@ struct _AUDIO_DDRIVER_t {
 };
 #define AUDIO_DDRIVER_t struct _AUDIO_DDRIVER_t
 
+struct _AUDIO_DDRV_INFO_t {
+	spinlock_t audio_lock;
+	AUDIO_DDRIVER_t *aud_drv_p;
+};
+#define AUDIO_DDRV_INFO_t struct _AUDIO_DDRV_INFO_t
+
 /* Private Type and Constant declarations */
-static AUDIO_DDRIVER_t *audio_render_driver[CSL_CAPH_STREAM_TOTAL];
+static AUDIO_DDRV_INFO_t audio_render_driver[CSL_CAPH_STREAM_TOTAL];
 /* 2 ARM2SP instances */
-static AUDIO_DDRIVER_t *audio_voice_driver[VORENDER_ARM2SP_INSTANCE_TOTAL];
-static AUDIO_DDRIVER_t *audio_voip_driver; /* init to NULL */
-static AUDIO_DDRIVER_t *audio_ptt_driver; /* init to NULL */
-static AUDIO_DDRIVER_t *audio_capture_driver; /* init to NULL */
+static AUDIO_DDRV_INFO_t audio_voice_driver[VORENDER_ARM2SP_INSTANCE_TOTAL];
+static AUDIO_DDRV_INFO_t audio_voip_driver; /* init to NULL */
+static AUDIO_DDRV_INFO_t audio_ptt_driver; /* init to NULL */
+static AUDIO_DDRV_INFO_t audio_capture_driver; /* init to NULL */
 static int index = 1;
 static Boolean endOfBuffer = FALSE;
 static const UInt16 sVoIPDataLen[] = { 0, 322, 160, 38, 166, 642, 70 };
@@ -252,6 +264,11 @@ static Boolean VoLTE_WriteDLData(
 	UInt16 *pBuf,
 	UInt32 dl_timestamp);
 
+static enum hrtimer_restart TimerCbSendSilence(struct hrtimer *timer);
+static void setKtime(UInt16 speechMode, UInt16 framesPerInt);
+static UInt8 getRFCFrameType(UInt16 frame_type,
+		UInt16 amr_codec_mode, Boolean isAMRWB);
+
 /* Functions */
 
 UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h)
@@ -262,40 +279,64 @@ UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h)
 
 static int SetPlaybackStreamHandle(AUDIO_DDRIVER_t *h)
 {
+	static Boolean renderInit = FALSE;
+	static int lockInit[CSL_CAPH_STREAM_TOTAL];
+	unsigned long flags;
+
+	if (renderInit == FALSE) {
+		memset(lockInit, 0, sizeof(lockInit));
+		renderInit = TRUE;
+	}
+
 	if (h->stream_id >= CSL_CAPH_STREAM_TOTAL) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"Error: SetPlaybackStreamHandle invalid stream id=%ld\n",
 				h->stream_id);
 		return -1;
 	}
-	if (audio_render_driver[h->stream_id] != NULL)
-		aTrace(LOG_AUDIO_DRIVER,
+	if (audio_render_driver[h->stream_id].aud_drv_p != NULL)
+		aWarn(
 				"Warnning: SetPlaybackStreamHandle handle of stream id=%ld is overwritten pre=%p, after=%p\n",
-				h->stream_id, audio_render_driver[h->stream_id],
+				h->stream_id,
+				audio_render_driver[h->stream_id].aud_drv_p,
 				h);
 
-	audio_render_driver[h->stream_id] = h;
+	if (lockInit[h->stream_id] == 0) {
+		spin_lock_init(&audio_render_driver[h->stream_id].audio_lock);
+		lockInit[h->stream_id] = 1;
+	}
+
+	spin_lock_irqsave(&audio_render_driver[h->stream_id].audio_lock, flags);
+	audio_render_driver[h->stream_id].aud_drv_p = h;
+	spin_unlock_irqrestore(
+		&audio_render_driver[h->stream_id].audio_lock,
+		flags);
 
 	return -1;
 }
 
 static AUDIO_DDRIVER_t *GetPlaybackStreamHandle(UInt32 streamID)
 {
-	if (audio_render_driver[streamID] == NULL)
-		aTrace(LOG_AUDIO_DRIVER,
+	if (audio_render_driver[streamID].aud_drv_p == NULL)
+		aError(
 				"Error: GetPlaybackStreamHandle invalid handle for id %ld\n",
 				streamID);
-	return audio_render_driver[streamID];
+	return audio_render_driver[streamID].aud_drv_p;
 }
 
 static int ResetPlaybackStreamHandle(UInt32 streamID)
 {
+	unsigned long flags;
 
-	if (audio_render_driver[streamID] == NULL)
-		aTrace(LOG_AUDIO_DRIVER,
+	if (audio_render_driver[streamID].aud_drv_p == NULL)
+		aError(
 				"Warning: ResetPlaybackStreamHandle invalid handle for id %ld\n",
 				streamID);
-	audio_render_driver[streamID] = NULL;
+	spin_lock_irqsave(&audio_render_driver[streamID].audio_lock, flags);
+	audio_render_driver[streamID].aud_drv_p = NULL;
+	spin_unlock_irqrestore(
+		&audio_render_driver[streamID].audio_lock,
+		flags);
 
 	return 0;
 }
@@ -310,13 +351,17 @@ static int ResetPlaybackStreamHandle(UInt32 streamID)
 AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 {
 	AUDIO_DDRIVER_t *aud_drv = NULL;
+	static Boolean hrTimerInit = FALSE;
+	static Boolean voipLockInit = FALSE;
+	static Boolean pttLockInit = FALSE;
+	static Boolean captLockInit = FALSE;
+	unsigned long flags;
 	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_Open::\n");
 
 	/* allocate memory */
 	aud_drv = kzalloc(sizeof(AUDIO_DDRIVER_t), GFP_KERNEL);
 	if (aud_drv == NULL) {
 		aError("kzalloc failed\n");
-		BUG();
 		return NULL;
 	}
 
@@ -343,23 +388,51 @@ AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 	case AUDIO_DRIVER_PLAY_AUDIO:
 	case AUDIO_DRIVER_PLAY_EPT:
 	case AUDIO_DRIVER_PLAY_RINGER:
+	case AUDIO_DRIVER_VOIF:
+		break;
+	case AUDIO_DRIVER_CAPT_VOICE:
+		if (captLockInit == FALSE) {
+			spin_lock_init(&audio_capture_driver.audio_lock);
+			captLockInit = TRUE;
+		}
+		if (!hrTimerInit) {
+			hrtimer_init(&hr_timer,
+				CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+			hr_timer.function = &TimerCbSendSilence;
+			hrTimerInit = TRUE;
+		}
+		break;
 	case AUDIO_DRIVER_CAPT_HQ:
 	case AUDIO_DRIVER_CAPT_EPT:
-	case AUDIO_DRIVER_CAPT_VOICE:
-	case AUDIO_DRIVER_VOIF:
+		if (captLockInit == 0) {
+			spin_lock_init(&audio_capture_driver.audio_lock);
+			captLockInit = 1;
+		}
 		break;
 
 	case AUDIO_DRIVER_VOIP:
-		audio_voip_driver = aud_drv;
+		if (voipLockInit == FALSE) {
+			spin_lock_init(&audio_voip_driver.audio_lock);
+			voipLockInit = TRUE;
+		}
+		spin_lock_irqsave(&audio_voip_driver.audio_lock, flags);
+		audio_voip_driver.aud_drv_p = aud_drv;
+		spin_unlock_irqrestore(&audio_voip_driver.audio_lock, flags);
 		break;
 
 	case AUDIO_DRIVER_PTT:
-		audio_ptt_driver = aud_drv;
+		if (pttLockInit == FALSE) {
+			spin_lock_init(&audio_ptt_driver.audio_lock);
+			pttLockInit = TRUE;
+		}
+		spin_lock_irqsave(&audio_ptt_driver.audio_lock, flags);
+		audio_ptt_driver.aud_drv_p = aud_drv;
+		spin_unlock_irqrestore(&audio_ptt_driver.audio_lock, flags);
 		CSL_RegisterPTTStatusHandler(Ptt_FillDL_CB);
 		break;
 
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_Open::Unsupported driver\n");
 		break;
 	}
@@ -376,10 +449,11 @@ AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 {
 	AUDIO_DDRIVER_t *aud_drv = (AUDIO_DDRIVER_t *) drv_handle;
+	unsigned long flags;
 	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_Close\n");
 
 	if (aud_drv == NULL) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"AUDIO_DRIVER_Close::Invalid Handle\n");
 		return;
 	}
@@ -396,7 +470,11 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 		break;
 	case AUDIO_DRIVER_VOIP:
 		{
-			audio_voip_driver = NULL;
+			spin_lock_irqsave(&audio_voip_driver.audio_lock, flags);
+			audio_voip_driver.aud_drv_p = NULL;
+			spin_unlock_irqrestore(
+				&audio_voip_driver.audio_lock,
+				flags);
 			kfree(aud_drv->tmp_buffer);
 			aud_drv->tmp_buffer = NULL;
 		}
@@ -404,11 +482,15 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 	case AUDIO_DRIVER_PTT:
 		{
 			CSL_RegisterPTTStatusHandler(NULL);
-			audio_ptt_driver = NULL;
+			spin_lock_irqsave(&audio_ptt_driver.audio_lock, flags);
+			audio_ptt_driver.aud_drv_p = NULL;
+			spin_unlock_irqrestore(
+				&audio_ptt_driver.audio_lock,
+				flags);
 		}
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_Close::Unsupported driver\n");
 		break;
 	}
@@ -461,7 +543,7 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 	Result_t result_code = RESULT_ERROR;
 
 	if (aud_drv == NULL) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"AUDIO_DRIVER_Ctrl::Invalid Handle\n");
 		return;
 	}
@@ -476,69 +558,70 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 	switch (aud_drv->drv_type) {
 	case AUDIO_DRIVER_PLAY_VOICE:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessVoiceRenderCmd(aud_drv,
-							       ctrl_cmd,
-							       pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessVoiceRenderCmd(aud_drv,
+						       ctrl_cmd,
+						       pCtrlStruct);
 		}
 		break;
 	case AUDIO_DRIVER_PLAY_AUDIO:
 	case AUDIO_DRIVER_PLAY_RINGER:
 	case AUDIO_DRIVER_PLAY_EPT:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessRenderCmd(aud_drv, ctrl_cmd,
-							  pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessRenderCmd(aud_drv, ctrl_cmd,
+						  pCtrlStruct);
 		}
 		break;
 	case AUDIO_DRIVER_CAPT_HQ:
 	case AUDIO_DRIVER_CAPT_EPT:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessCaptureCmd(aud_drv, ctrl_cmd,
-							   pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessCaptureCmd(aud_drv, ctrl_cmd,
+						   pCtrlStruct);
 		}
 		break;
 	case AUDIO_DRIVER_CAPT_VOICE:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessCaptureVoiceCmd(aud_drv,
-								ctrl_cmd,
-								pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessCaptureVoiceCmd(aud_drv,
+							ctrl_cmd,
+							pCtrlStruct);
 		}
 		break;
 
 	case AUDIO_DRIVER_VOIP:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessVoIPCmd(aud_drv, ctrl_cmd,
-							pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessVoIPCmd(aud_drv, ctrl_cmd,
+						pCtrlStruct);
 		}
 		break;
 	case AUDIO_DRIVER_VOIF:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessVoIFCmd(aud_drv, ctrl_cmd,
-							pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessVoIFCmd(aud_drv, ctrl_cmd,
+						pCtrlStruct);
 		}
 		break;
 	case AUDIO_DRIVER_PTT:
 		{
-			result_code =
-			    AUDIO_DRIVER_ProcessPttCmd(aud_drv, ctrl_cmd,
-							pCtrlStruct);
+		result_code =
+		    AUDIO_DRIVER_ProcessPttCmd(aud_drv, ctrl_cmd,
+						pCtrlStruct);
 		}
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_Ctrl::Unsupported driver\n");
 		break;
 	}
 
 	if (result_code == RESULT_ERROR) {
-		aTrace(LOG_AUDIO_DRIVER,
-				"AUDIO_DRIVER_Ctrl::command processing failed aud_drv->drv_type %d ctrl_cmd %d\n",
-				aud_drv->drv_type, ctrl_cmd);
+		aError(
+			"AUDIO_DRIVER_Ctrl::command processing"
+			"failed aud_drv->drv_type %d ctrl_cmd %d\n",
+			aud_drv->drv_type, ctrl_cmd);
 	}
 	return;
 }
@@ -557,6 +640,18 @@ void AUDIO_DRIVER_UpdateBuffer(AUDIO_DRIVER_HANDLE_t drv_handle,
 {
 	aTrace(LOG_AUDIO_DRIVER, "AUDIO_DRIVER_UpdateBuffer::\n");
 	return;
+}
+
+/**
+ * Function Name: StartHRTimer
+ *
+ * Description: This function starts HR timer
+ *
+ ***************************************************************************/
+void StartHRTimer(void)
+{
+	aTrace(LOG_AUDIO_DRIVER, "StartHRTimer......\n");
+	hrtimer_start(&hr_timer, ktime, HRTIMER_MODE_REL);
 }
 
 /* Private function definitions */
@@ -595,7 +690,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 			    (aud_drv->ring_buffer == NULL) ||
 			    (aud_drv->ring_buffer_size == 0)
 			    ) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aWarn(
 						"AUDIO_DRIVER_ProcessRenderCmd::All Configuration is not set yet\n");
 				return result_code;
 			}
@@ -628,6 +723,9 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 				aud_drv->stream_id,
 				aud_drv->arm2sp_config.mixMode);
 
+			if (result_code != RESULT_OK)
+				return result_code;
+
 			/*start render*/
 			result_code = AUDCTRL_StartRender(aud_drv->stream_id);
 		}
@@ -659,12 +757,17 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_BUFFER_READY:
 		{
 			/*notify render a new buffer is ready*/
-			result_code =
-			    csl_audio_render_buffer_ready(aud_drv->stream_id);
+			result_code = RESULT_OK;
+			if (aud_drv->stream_id) {
+				result_code =
+				csl_audio_render_buffer_ready
+				(aud_drv->stream_id);
+			}
 		}
 		break;
+
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_ProcessRenderCmd::Unsupported command\n");
 		break;
 	}
@@ -686,8 +789,16 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 {
 	Result_t result_code = RESULT_ERROR;
 #if defined(CONFIG_BCM_MODEM)
+	static Boolean vorenderInit = FALSE;
+	static int lockInit[VORENDER_ARM2SP_INSTANCE_TOTAL];
 	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode;
 	UInt32 numFramesPerInterrupt;
+	unsigned long flags;
+
+	if (vorenderInit == FALSE) {
+		memset(lockInit, 0, sizeof(lockInit));
+		vorenderInit = TRUE;
+	}
 
 	aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessVoiceRenderCmd::%d\n", ctrl_cmd);
@@ -703,12 +814,26 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 		    (aud_drv->ring_buffer == NULL) ||
 		    (aud_drv->ring_buffer_size == 0)
 		    ) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aWarn(
 				"AUDIO_DRIVER_ProcessVoiceRenderCmd::All cfg is not set yet\n");
 			return result_code;
 		}
 
-		audio_voice_driver[aud_drv->arm2sp_config.instanceID] = aud_drv;
+		if (lockInit[aud_drv->arm2sp_config.instanceID] == 0) {
+			spin_lock_init(&audio_voice_driver
+				[aud_drv->arm2sp_config.instanceID]
+				.audio_lock);
+			lockInit[aud_drv->arm2sp_config.instanceID] = 1;
+		}
+
+		spin_lock_irqsave(&audio_voice_driver
+			[aud_drv->arm2sp_config.instanceID]
+			.audio_lock, flags);
+		audio_voice_driver[aud_drv->arm2sp_config.instanceID]
+			.aud_drv_p = aud_drv;
+		spin_unlock_irqrestore(&audio_voice_driver
+			[aud_drv->arm2sp_config.instanceID]
+			.audio_lock, flags);
 
 		aud_drv->num_periods = aud_drv->ring_buffer_size /
 		    aud_drv->interrupt_period;
@@ -786,8 +911,14 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 		endOfBuffer = FALSE;
 		/*de-init during stop as the android sequence is
 		open->start->stop->start */
-		audio_voice_driver[aud_drv->arm2sp_config.instanceID] =
-		    NULL;
+		spin_lock_irqsave(&audio_voice_driver
+			[aud_drv->arm2sp_config.instanceID]
+			.audio_lock, flags);
+		audio_voice_driver[aud_drv->arm2sp_config.instanceID]
+			.aud_drv_p = NULL;
+		spin_unlock_irqrestore(&audio_voice_driver
+			[aud_drv->arm2sp_config.instanceID]
+			.audio_lock, flags);
 	}
 	break;
 	case AUDIO_DRIVER_PAUSE:
@@ -829,7 +960,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(
 	}
 	break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessVoiceRenderCmd::Unsupported command\n");
 	break;
 	}
@@ -856,6 +987,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t *aud_drv,
 {
 	Result_t result_code = RESULT_ERROR;
 	AUDIO_SOURCE_Enum_t *dev = NULL;
+	unsigned long flags;
 
 	switch (ctrl_cmd) {
 	case AUDIO_DRIVER_START:
@@ -875,14 +1007,16 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t *aud_drv,
 		    (aud_drv->ring_buffer == NULL) ||
 		    (aud_drv->ring_buffer_size == 0)
 		    ) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aWarn(
 			"AUDIO_DRIVER_ProcessCaptureCmd::All Config is not set yet\n");
 			return result_code;
 		}
 		aud_drv->stream_id =
 		    csl_audio_capture_init(getDeviceFromSrc(*dev),
 					   CSL_CAPH_DEV_MEMORY);
-		audio_capture_driver = aud_drv;
+		spin_lock_irqsave(&audio_capture_driver.audio_lock, flags);
+		audio_capture_driver.aud_drv_p = aud_drv;
+		spin_unlock_irqrestore(&audio_capture_driver.audio_lock, flags);
 		/* Block size = (smaples per ms) * (number of channeles)
 			* (bytes per sample) * (interrupt period in ms)
 		 * Number of blocks = buffer size/block size
@@ -901,6 +1035,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t *aud_drv,
 			(CSL_AUDCAPTURE_CB)AUDIO_DRIVER_CaptureDmaCallback,
 			aud_drv->stream_id);
 
+		if (result_code != RESULT_OK)
+			return result_code;
+
 		/*start capture*/
 		result_code = AUDCTRL_StartCapture(aud_drv->stream_id);
 	}
@@ -912,7 +1049,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t *aud_drv,
 		/*de-init as the sequence is open->start->stop->start
 		in android */
 		csl_audio_capture_deinit(aud_drv->stream_id);
-		audio_capture_driver = NULL;
+		spin_lock_irqsave(&audio_capture_driver.audio_lock, flags);
+		audio_capture_driver.aud_drv_p = NULL;
+		spin_unlock_irqrestore(&audio_capture_driver.audio_lock, flags);
 	}
 	break;
 	case AUDIO_DRIVER_PAUSE:
@@ -930,7 +1069,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t *aud_drv,
 	}
 	break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessCaptureCmd::Unsupported command\n");
 	break;
 	}
@@ -953,6 +1092,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 #if defined(CONFIG_BCM_MODEM)
 	voice_rec_t *voiceRecStr;
 	VOCAPTURE_RECORD_MODE_t recordMode;
+	unsigned long flags;
 
 	aTrace(LOG_AUDIO_DRIVER,
 			"AUDIO_DRIVER_ProcessCaptureVoiceCmd::%d\n", ctrl_cmd);
@@ -980,9 +1120,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			    (aud_drv->ring_buffer == NULL) ||
 			    (aud_drv->ring_buffer_size == 0)
 			    ) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aWarn(
 					"AUDIO_DRIVER_ProcessCaptureCmd::");
-				aTrace(LOG_AUDIO_DRIVER,
+				aWarn(
 					"All Configuration is not set yet\n");
 				return result_code;
 			}
@@ -1018,7 +1158,11 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 				recordMode = voiceRecStr->recordMode;
 
 			aud_drv->voicecapt_config.recordMode = recordMode;
-			audio_capture_driver = aud_drv;
+			spin_lock_irqsave(&audio_capture_driver
+				.audio_lock, flags);
+			audio_capture_driver.aud_drv_p = aud_drv;
+			spin_unlock_irqrestore(&audio_capture_driver
+				.audio_lock, flags);
 
 			if (AUDCTRL_InVoiceCall()) {
 				wait_cnt = 100;
@@ -1053,7 +1197,14 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_STOP:
 		{
 			/* stop capture */
-			VPRIPCMDQ_CancelRecording();
+			if (hrtimer_active(&hr_timer)) {
+				aTrace(LOG_AUDIO_CNTLR,
+				       "Hrtimer cancel is going to be called"
+				       "from capture\n");
+
+				hrtimer_cancel(&hr_timer);
+			} else
+				VPRIPCMDQ_CancelRecording();
 			result_code = RESULT_OK;
 			index = 1;	/* reset */
 			endOfBuffer = FALSE;
@@ -1061,7 +1212,11 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 
 			/* de-init during stop as the android sequence is
 			open->start->stop->start */
-			audio_capture_driver = NULL;
+			spin_lock_irqsave(
+				&audio_capture_driver.audio_lock, flags);
+			audio_capture_driver.aud_drv_p = NULL;
+			spin_unlock_irqrestore(
+				&audio_capture_driver.audio_lock, flags);
 		}
 		break;
 	case AUDIO_DRIVER_PAUSE:
@@ -1069,7 +1224,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_RESUME:
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessCaptureVoiceCmd::Invalid command\n");
 		break;
 	}
@@ -1116,7 +1271,7 @@ static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
 
 		AUDIO_DRIVER_CallBackParams_t *pCbParams;
 		if (pCtrlStruct == NULL) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aError(
 				"AUDIO_DRIVER_ProcessPttCmd::Invalid Ptr\n");
 			return result_code;
 		}
@@ -1134,7 +1289,7 @@ static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
 		UInt32 buf_index;
 		Int16  *buf_ptr;
 		if (pCtrlStruct == NULL) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aError(
 				"AUDIO_DRIVER_ProcessPttCmd::Invalid Ptr\n");
 			return result_code;
 		}
@@ -1146,7 +1301,7 @@ static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
 	}
 	break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessVoIPCmd::Unsupported command\n");
 	break;
 	}
@@ -1200,7 +1355,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 			aud_drv->voip_config.codec_type =
 			   CSL_VOIP_AMR_WB_MODE_7k;
 		else {
-			aTrace(LOG_AUDIO_DRIVER,
+			aWarn(
 				"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n");
 			break;
 		}
@@ -1208,10 +1363,9 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 		aud_drv->voip_config.codec_type += (bitrate_index << 8);
 		aud_drv->tmp_buffer = kzalloc(VOIP_MAX_FRAME_LEN, GFP_KERNEL);
 
-		if (aud_drv->tmp_buffer == NULL) {
-			BUG();
+		if (aud_drv->tmp_buffer == NULL)
 			break;
-		} else
+		else
 			memset(aud_drv->tmp_buffer, 0, VOIP_MAX_FRAME_LEN);
 
 		/* VoLTE call */
@@ -1230,7 +1384,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 					"==> VoLTE call starts, codec_type=%x\n",
 					aud_drv->voip_config.codec_type);
 			} else {
-				aTrace(LOG_AUDIO_DRIVER,
+				aWarn(
 					"==> Codec Type not supported in VoLTE\n");
 				return result_code;
 			}
@@ -1264,7 +1418,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 
 		AUDIO_DRIVER_CallBackParams_t *pCbParams;
 		if (pCtrlStruct == NULL) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aError(
 				"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr\n");
 			return result_code;
 		}
@@ -1282,7 +1436,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 	{
 		AUDIO_DRIVER_CallBackParams_t *pCbParams;
 		if (pCtrlStruct == NULL) {
-			aTrace(LOG_AUDIO_DRIVER,
+			aError(
 				"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr\n");
 			return result_code;
 		}
@@ -1296,8 +1450,53 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 		result_code = RESULT_OK;
 	}
 	break;
+	case AUDIO_DRIVER_SET_AMR:
+	{
+		if (pCtrlStruct != NULL)
+			codec_type =
+			    ((voip_data_t *) pCtrlStruct)->codec_type;
+
+		if (codec_type == 0)
+			aud_drv->voip_config.codec_type = CSL_VOIP_PCM;
+		else if (codec_type == 1)
+			aud_drv->voip_config.codec_type = CSL_VOIP_FR;
+		else if (codec_type == 2)
+			aud_drv->voip_config.codec_type = CSL_VOIP_AMR475;
+		else if (codec_type == 3)
+			aud_drv->voip_config.codec_type = CSL_VOIP_G711_U;
+		else if (codec_type == 4)
+			aud_drv->voip_config.codec_type = CSL_VOIP_PCM_16K;
+		else if (codec_type == 5)
+			aud_drv->voip_config.codec_type =
+			   CSL_VOIP_AMR_WB_MODE_7k;
+		else {
+			aTrace(LOG_AUDIO_DRIVER,
+				"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n");
+			break;
+		}
+
+		if (inVoLTECall) {
+			/* Disconnect DSP DL to avoid pop noise
+			 * DSP DL will be connected at the end
+			 * of the AUDDRV_Telephony_RateChange()
+			 */
+			audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL,
+				FALSE, 0, 0, 0, 0);
+
+			aTrace(LOG_AUDIO_DRIVER,
+				"AUDIO_DRIVER_ProcessVOIPCmd::SET_AMR codec\n");
+			encode_amr_mode = (CSL_VP_Mode_AMR_t)
+				aud_drv->voip_config.codec_type;
+			encode_amr_mode |= VOLTECALLENABLE;
+			prev_amr_mode = encode_amr_mode;
+			VPRIPCMDQ_DSP_AMR_RUN((UInt16) encode_amr_mode,
+					telephony_amr_if2, FALSE);
+		}
+	}
+	break;
+
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessVoIPCmd::Unsupported command\n");
 	break;
 	}
@@ -1352,7 +1551,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIFCmd(AUDIO_DDRIVER_t *aud_drv,
 		}
 		break;
 	default:
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 			"AUDIO_DRIVER_ProcessVoIFCmd::Unsupported command\n");
 		break;
 	}
@@ -1385,7 +1584,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 			AUDIO_DRIVER_CONFIG_t *pAudioConfig =
 			    (AUDIO_DRIVER_CONFIG_t *) pCtrlStruct;
 			if (pCtrlStruct == NULL) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aError(
 						"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1406,7 +1605,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 		{
 			AUDIO_DRIVER_CallBackParams_t *pCbParams;
 			if (pCtrlStruct == NULL) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aError(
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1432,7 +1631,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_SET_INT_PERIOD:
 		{
 			if (pCtrlStruct == NULL) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aError(
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1445,7 +1644,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 			AUDIO_DRIVER_BUFFER_t *pAudioBuffer =
 			    (AUDIO_DRIVER_BUFFER_t *) pCtrlStruct;
 			if (pCtrlStruct == NULL) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aError(
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1461,7 +1660,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 			AUDIO_DRIVER_TYPE_t *pDriverType =
 			    (AUDIO_DRIVER_TYPE_t *) pCtrlStruct;
 			if (pCtrlStruct == NULL) {
-				aTrace(LOG_AUDIO_DRIVER,
+				aError(
 					"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr\n");
 				return result_code;
 			}
@@ -1616,6 +1815,8 @@ static Result_t VPU_record_start(VOCAPTURE_start_t capt_start)
 	/* restrict numFramesPerInterrupt due to the shared memory size */
 	if (capt_start.numFramesPerInterrupt > 4)
 		capt_start.numFramesPerInterrupt = 4;
+	setKtime(capt_start.speechMode,
+		(UInt16)capt_start.numFramesPerInterrupt);
 
 	aTrace(LOG_AUDIO_DRIVER,
 		" VPU_record_start::\n"
@@ -1716,7 +1917,7 @@ void VOIF_Buffer_Request(UInt32 bufferIndex, UInt32 samplingRate)
 static Boolean VoIP_StartTelephony(void)
 {
 	aTrace(LOG_AUDIO_DRIVER, "=====VoIP_StartTelephony\r\n");
-	voip_workqueue = create_workqueue("voip");
+	voip_workqueue = alloc_ordered_workqueue("voip", WQ_MEM_RECLAIM);
 	if (!voip_workqueue)
 		return TRUE;
 
@@ -1771,7 +1972,9 @@ static Boolean VoIP_StopTelephony(void)
 static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id, UInt32 buffer_idx)
 {
 	AUDIO_DDRIVER_t *pAudDrv;
+	unsigned long flags;
 
+	spin_lock_irqsave(&audio_render_driver[stream_id].audio_lock, flags);
 	pAudDrv = GetPlaybackStreamHandle(stream_id);
 
 	/*aTrace(LOG_AUDIO_DRIVER,
@@ -1779,7 +1982,9 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id, UInt32 buffer_idx)
 		stream_id);*/
 
 	if ((pAudDrv == NULL)) {
-		aTrace(LOG_AUDIO_DRIVER,
+		spin_unlock_irqrestore(
+			&audio_render_driver[stream_id].audio_lock, flags);
+		aError(
 				"AUDIO_DRIVER_RenderDmaCallback::"
 				"Spurious call back\n");
 		return;
@@ -1797,10 +2002,12 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id, UInt32 buffer_idx)
 #endif
 		pAudDrv->pCallback(pAudDrv->pCBPrivate);
 	} else
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_RenderDmaCallback::"
 				"No callback registerd\n");
 
+	spin_unlock_irqrestore(
+		&audio_render_driver[stream_id].audio_lock, flags);
 	return;
 }
 
@@ -1817,8 +2024,23 @@ void ARM2SP_Render_Request(UInt16 buf_index)
 	AUDIO_DDRIVER_t *pAudDrv;
 	UInt8 *pSrc = NULL;
 	UInt32 srcIndex, copied_bytes;
+	unsigned long flags;
 
-	pAudDrv = audio_voice_driver[VORENDER_ARM2SP_INSTANCE1];
+	spin_lock_irqsave(
+		&audio_voice_driver[VORENDER_ARM2SP_INSTANCE1]
+		.audio_lock, flags);
+	pAudDrv = audio_voice_driver
+		[VORENDER_ARM2SP_INSTANCE1].aud_drv_p;
+
+	if (pAudDrv == NULL) {
+		spin_unlock_irqrestore(
+			&audio_voice_driver[VORENDER_ARM2SP_INSTANCE2]
+			.audio_lock, flags);
+		aError(
+				"ARM2SP2_Render_Request::"
+				"Spurious call back\n");
+		return;
+	}
 
 	pSrc = pAudDrv->ring_buffer;
 	srcIndex = pAudDrv->read_index;
@@ -1850,7 +2072,9 @@ void ARM2SP_Render_Request(UInt16 buf_index)
 			index++;
 		}
 	}
-
+	spin_unlock_irqrestore(
+		&audio_voice_driver[VORENDER_ARM2SP_INSTANCE1]
+		.audio_lock, flags);
 }
 
 /**
@@ -1866,8 +2090,22 @@ void ARM2SP2_Render_Request(UInt16 buf_index)
 	AUDIO_DDRIVER_t *pAudDrv;
 	UInt8 *pSrc = NULL;
 	UInt32 srcIndex, copied_bytes;
+	unsigned long flags;
 
-	pAudDrv = audio_voice_driver[VORENDER_ARM2SP_INSTANCE2];
+	spin_lock_irqsave(
+		&audio_voice_driver[VORENDER_ARM2SP_INSTANCE2]
+		.audio_lock, flags);
+	pAudDrv = audio_voice_driver[VORENDER_ARM2SP_INSTANCE2].aud_drv_p;
+
+	if (pAudDrv == NULL) {
+		spin_unlock_irqrestore(
+			&audio_voice_driver[VORENDER_ARM2SP_INSTANCE2]
+			.audio_lock, flags);
+		aError(
+				"ARM2SP2_Render_Request::"
+				"Spurious call back\n");
+		return;
+	}
 
 	pSrc = pAudDrv->ring_buffer;
 	srcIndex = pAudDrv->read_index;
@@ -1898,7 +2136,9 @@ void ARM2SP2_Render_Request(UInt16 buf_index)
 			index++;
 		}
 	}
-
+	spin_unlock_irqrestore(
+		&audio_voice_driver[VORENDER_ARM2SP_INSTANCE2]
+		.audio_lock, flags);
 }
 
 /**
@@ -1910,31 +2150,36 @@ void ARM2SP2_Render_Request(UInt16 buf_index)
  ***************************************************************************/
 static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id, UInt32 buffer_idx)
 {
-
+	unsigned long flags;
 	/*aTrace(LOG_AUDIO_DRIVER,"AUDIO_DRIVER_CaptureDmaCallback::\n");*/
 
-	if ((audio_capture_driver == NULL)) {
-		aTrace(LOG_AUDIO_DRIVER,
+	spin_lock_irqsave(&audio_capture_driver.audio_lock, flags);
+	if ((audio_capture_driver.aud_drv_p == NULL)) {
+		spin_unlock_irqrestore(&audio_capture_driver.audio_lock, flags);
+		aError(
 				"AUDIO_DRIVER_CaptureDmaCallback:: Spurious call back\n");
 		return;
 	}
-	if (audio_capture_driver->pCallback != NULL) {
+	if (audio_capture_driver.aud_drv_p->pCallback != NULL) {
 #ifdef CONFIG_MAP_VOIP
-		if (audio_capture_driver->drv_type == AUDIO_DRIVER_CAPT_EPT) {
+		if (audio_capture_driver.
+			aud_drv_p->drv_type == AUDIO_DRIVER_CAPT_EPT) {
 			AUDIO_DRIVER_Stats_t* p = (AUDIO_DRIVER_Stats_t *)
-					(audio_capture_driver->pCBPrivate);
+				(audio_capture_driver.aud_drv_p->pCBPrivate);
 			/* for debug only, remove from final code */
-			p->dmach = audio_capture_driver->stream_id;
+			p->dmach = audio_capture_driver.aud_drv_p->stream_id;
 			p->buffer_idx = (int)buffer_idx;
 			p->intr_counter++;
 		}
 #endif
-		audio_capture_driver->pCallback(audio_capture_driver->
-						pCBPrivate);
+		audio_capture_driver.aud_drv_p->
+			pCallback(audio_capture_driver.aud_drv_p->
+				pCBPrivate);
 	} else
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"AUDIO_DRIVER_CaptureDmaCallback:: No callback registerd\n");
 
+	spin_unlock_irqrestore(&audio_capture_driver.audio_lock, flags);
 	return;
 }
 
@@ -1952,16 +2197,23 @@ void VPU_Capture_Request(UInt16 buf_index)
 	UInt8 *pdest_buf;
 	UInt32 recv_size;
 	AUDIO_DDRIVER_t *aud_drv;
+	unsigned long flags;
 
-	aud_drv = audio_capture_driver;
+	if (hrtimer_active(&hr_timer)) /* CP reset */
+		return;
+
+	spin_lock_irqsave(&audio_capture_driver.audio_lock, flags);
+	aud_drv = audio_capture_driver.aud_drv_p;
 
 	if ((aud_drv == NULL)) {
-		aTrace(LOG_AUDIO_DRIVER,
+		spin_unlock_irqrestore(&audio_capture_driver.audio_lock, flags);
+		aError(
 			"VPU_Capture_Request:: Spurious call back\n");
 		return;
 	}
 	/* get rid of HW glitch in VPU recording */
 	if (wait_cnt < waitcnt_thold) {
+		spin_unlock_irqrestore(&audio_capture_driver.audio_lock, flags);
 		aTrace(LOG_AUDIO_DRIVER,
 			"VPU_Capture_Request:: wait_cnt = %d, thold=%d\n",
 			wait_cnt, waitcnt_thold);
@@ -2007,6 +2259,8 @@ void VPU_Capture_Request(UInt16 buf_index)
 			index++;
 		}
 	}
+
+	spin_unlock_irqrestore(&audio_capture_driver.audio_lock, flags);
 	return;
 }
 
@@ -2106,10 +2360,13 @@ static Boolean VOIP_DumpUL_CB(UInt8 *pSrc, UInt32 amrMode)
 	CSL_VOIP_Buffer_t *voipBufPtr = NULL;
 	UInt16 codecType;
 	UInt32 ulSize = 0;
+	unsigned long flags;
 
-	aud_drv = audio_voip_driver;
+	spin_lock_irqsave(&audio_voip_driver.audio_lock, flags);
+	aud_drv = audio_voip_driver.aud_drv_p;
 	if ((aud_drv == NULL)) {
-		aTrace(LOG_AUDIO_DRIVER,
+		spin_unlock_irqrestore(&audio_voip_driver.audio_lock, flags);
+		aError(
 			"VOIP_DumpUL_CB:: Spurious call back\n");
 		return TRUE;
 	}
@@ -2117,7 +2374,7 @@ static Boolean VOIP_DumpUL_CB(UInt8 *pSrc, UInt32 amrMode)
 	codecType = voipBufPtr->voip_vocoder;
 	index = (codecType & 0xf000) >> 12;
 	if (index >= 7)
-		aTrace(LOG_AUDIO_DRIVER,
+		aWarn(
 				"VOIP_DumpUL_CB :: Invalid codecType = 0x%x\n",
 				codecType);
 	else {
@@ -2133,6 +2390,7 @@ static Boolean VOIP_DumpUL_CB(UInt8 *pSrc, UInt32 amrMode)
 							     (ulSize - 2));
 
 	}
+	spin_unlock_irqrestore(&audio_voip_driver.audio_lock, flags);
 	return TRUE;
 };
 
@@ -2147,10 +2405,13 @@ static Boolean VOIP_FillDL_CB(UInt32 nFrames)
 {
 	AUDIO_DDRIVER_t *aud_drv;
 	UInt32 dlSize = 0, dl_timestamp = 0;
+	unsigned long flags;
 
-	aud_drv = audio_voip_driver;
+	spin_lock_irqsave(&audio_voip_driver.audio_lock, flags);
+	aud_drv = audio_voip_driver.aud_drv_p;
 	if (aud_drv == NULL) {
-		aTrace(LOG_AUDIO_DRIVER,
+		spin_unlock_irqrestore(&audio_voip_driver.audio_lock, flags);
+		aError(
 				"VOIP_FillDL_CB:: Spurious call back\n");
 		return TRUE;
 	}
@@ -2176,6 +2437,7 @@ static Boolean VOIP_FillDL_CB(UInt32 nFrames)
 					  dl_timestamp
 				      );
 #endif
+	spin_unlock_irqrestore(&audio_voip_driver.audio_lock, flags);
 	return TRUE;
 };
 
@@ -2209,7 +2471,7 @@ static Boolean VoLTE_WriteDLData(
 	UInt16 *dataPtr = pBuf;
 
 	if (djbBuf == NULL) {
-		aTrace(LOG_AUDIO_DRIVER,
+		aError(
 				"VoLTE_WriteDLData, missing VoLTE init ...\n");
 		return FALSE;
 	}
@@ -2221,9 +2483,8 @@ static Boolean VoLTE_WriteDLData(
 		 && decode_mode <= CSL_VOIP_AMR_WB_MODE_24k)
 		isAMRWB = TRUE;
 	else {
-		aTrace(LOG_AUDIO_DRIVER,
-				"VoLTE_WriteDLData, unsupported codec type"
-				"decode_mode %d\n", decode_mode);
+		aWarn(
+				"VoLTE_WriteDLData, unsupported codec type.\n");
 		return FALSE;
 	}
 
@@ -2235,21 +2496,29 @@ static Boolean VoLTE_WriteDLData(
 	djbBuf->frameIndex = 0;
 	djbBuf->codecType = (UInt8) ((isAMRWB) ? WB_AMR : NB_AMR);
 	if (isAMRWB) {
-		djbBuf->frameType =
-		    (UInt8) ((dlBuf->voip_frame).frame_amr_wb.frame_type);
+		djbBuf->frameType = getRFCFrameType(
+			(dlBuf->voip_frame).frame_amr_wb.frame_type,
+			(dlBuf->voip_frame).frame_amr_wb.amr_codec_mode,
+			isAMRWB);
+		djbBuf->frameQuality = ((dlBuf->voip_frame).frame_amr_wb
+			.frame_type) ? VOLTEFRAMESILENT : VOLTEFRAMEGOOD;
 	} else {
-		djbBuf->frameType = (UInt8) ((dlBuf->voip_frame).frame_amr[0]);
+		djbBuf->frameType = getRFCFrameType(
+			(dlBuf->voip_frame).frame_amr[0],
+			(dlBuf->voip_frame).frame_amr[1],
+			isAMRWB);
+		djbBuf->frameQuality = ((dlBuf->voip_frame).frame_amr[0])
+			? VOLTEFRAMESILENT : VOLTEFRAMEGOOD;
 	}
-	/* For silence frame, set quality to 0, otherwise 1 */
-	djbBuf->frameQuality =
-	    (djbBuf->frameType & 0x000f) ? VOLTEFRAMESILENT : VOLTEFRAMEGOOD;
+
 
 	/*aTrace(LOG_AUDIO_DRIVER,
 	"VoLTE_WriteDLData, TimeStamp=%d, payloadSize=%d ",
 	djbBuf->RTPTimestamp, djbBuf->payloadSize);
 	aTrace(LOG_AUDIO_DRIVER,
-	"codecType=%d, quality=%d\n",
-	djbBuf->codecType, djbBuf->frameQuality);*/
+	"codecType=%d, frame_type=%d, quality=%d\n",
+	djbBuf->codecType, djbBuf->frameType,
+	djbBuf->frameQuality);*/
 
 	DJB_PutFrame(djbBuf);
 	return TRUE;
@@ -2258,18 +2527,118 @@ static Boolean VoLTE_WriteDLData(
 static void Ptt_FillDL_CB(UInt32 buf_index, UInt32 ptt_flag, UInt32 int_rate)
 {
 	Int16  *buf_ptr;
+	unsigned long flags;
+
 	if (buf_index != 0 && buf_index != 1) {
-		aTrace(LOG_AUDIO_DRIVER, "Ptt_FillDL_CB: invalid index\n");
+		aWarn("Ptt_FillDL_CB: invalid index\n");
 		return;
 	}
-	if (audio_ptt_driver == NULL) {
-		aTrace(LOG_AUDIO_DRIVER, "Ptt_FillDL_CB: spurious callback\n");
+	spin_lock_irqsave(&audio_ptt_driver.audio_lock, flags);
+	if (audio_ptt_driver.aud_drv_p == NULL) {
+		spin_unlock_irqrestore(&audio_ptt_driver.audio_lock, flags);
+		aError("Ptt_FillDL_CB: spurious callback\n");
 		return;
 	}
 	aTrace(LOG_AUDIO_DRIVER, "Int rate-%ld\n", int_rate);
 	buf_ptr = CSL_GetULPTTBuffer(buf_index);
-	audio_ptt_driver->ptt_config.pPttDLCallback(
-			audio_ptt_driver->ptt_config.pPttCBPrivate , buf_ptr,
-			PTT_FRAME_SIZE);
+	audio_ptt_driver.aud_drv_p->ptt_config.pPttDLCallback(
+		audio_ptt_driver.aud_drv_p->ptt_config.pPttCBPrivate , buf_ptr,
+		PTT_FRAME_SIZE);
+	spin_unlock_irqrestore(&audio_ptt_driver.audio_lock, flags);
 	return;
+}
+
+static enum hrtimer_restart TimerCbSendSilence(struct hrtimer *timer)
+{
+	AUDIO_DDRIVER_t *aud_drv;
+	Int32 dest_index, num_bytes_to_copy;
+	UInt8 *pdest_buf;
+	UInt8 *outBuf = NULL;
+	unsigned long flags;
+
+	spin_lock_irqsave(&audio_capture_driver.audio_lock, flags);
+	aud_drv = audio_capture_driver.aud_drv_p;
+
+	if ((aud_drv == NULL)) {
+		spin_unlock_irqrestore(&audio_capture_driver.audio_lock, flags);
+		aTrace(LOG_AUDIO_DRIVER,
+			"TimerCbSendSilence:: Spurious call back\n");
+		/* restart timer */
+		hrtimer_forward_now(timer, ktime);
+		return HRTIMER_RESTART;
+	}
+
+	/* Copy the data to the ringbuffer from dsp shared memory */
+	dest_index = aud_drv->write_index;
+	pdest_buf = aud_drv->ring_buffer;
+	outBuf = pdest_buf + dest_index;
+	num_bytes_to_copy = (aud_drv->voicecapt_config.num_frames) *
+	    (aud_drv->voicecapt_config.frame_size);
+	memset(outBuf, 0, num_bytes_to_copy);
+	outBuf += num_bytes_to_copy;
+	/* update the write index */
+	dest_index += num_bytes_to_copy;
+
+	if (dest_index >= aud_drv->ring_buffer_size) {
+		dest_index -= aud_drv->ring_buffer_size;
+		endOfBuffer = TRUE;
+	}
+
+	aud_drv->write_index = dest_index;
+
+	if ((dest_index >= (aud_drv->interrupt_period * index))
+	    || (endOfBuffer == TRUE)) {
+		/* then send the period elapsed */
+
+		if (aud_drv->pCallback != NULL)
+			aud_drv->pCallback(aud_drv->pCBPrivate);
+
+		if (index == aud_drv->num_periods) {
+			endOfBuffer = FALSE;
+			index = 1;	/* reset back */
+		} else {
+			index++;
+		}
+	}
+	spin_unlock_irqrestore(&audio_capture_driver.audio_lock, flags);
+	/*recur after 20ms */
+	hrtimer_forward_now(timer, ktime);
+	return HRTIMER_RESTART;
+}
+
+static void setKtime(UInt16 speechMode, UInt16 framesPerInt)
+{
+	UInt32 ktime_ms;
+	UInt16 frameSize;
+
+	if (speechMode == VP_SPEECH_MODE_LINEAR_PCM_16K) {
+		frameSize = WB_LIN_PCM_FRAME_SIZE; /* sample */
+		ktime_ms = (framesPerInt * frameSize) >> 4;
+	} else {
+		frameSize = LIN_PCM_FRAME_SIZE;
+		ktime_ms = (framesPerInt * frameSize) >> 3;
+	}
+	aTrace(LOG_AUDIO_DRIVER,
+			"ktime_ms = %d\n", (int) ktime_ms);
+	ktime = ktime_set(0, MS_TO_NS(ktime_ms));
+}
+
+
+
+static UInt8 getRFCFrameType(UInt16 frame_type,
+		UInt16 amr_codec_mode, Boolean isAMRWB)
+{
+	UInt8 RFC_FrameType = 0;
+
+	if (frame_type == 0)
+		RFC_FrameType = amr_codec_mode;
+	else if ((frame_type == 1) || (frame_type == 2)) {
+		if (isAMRWB)
+			RFC_FrameType = 9;
+		else
+			RFC_FrameType = 8;
+	} else
+		RFC_FrameType = 15;
+
+	return RFC_FrameType;
 }

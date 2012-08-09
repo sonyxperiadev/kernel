@@ -510,43 +510,6 @@ void VPRIPCMDQ_Clear_VoIPMode(UInt16 arg0)
 }
 
 /**
-*	Function Name: VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
-*	@note Function to enable the output to the speaker path at 48kHz.
-*
-*	@note This command enables the output to the speaker path at 48kHz.
-*	This command has to be sent by the APE before sending VP_COMMAND_SP.
-*	COMMAND_NEWAUDFIFO_START. APE should enable the Audio interrupts to
-*	come to the DSP at 16kHz using the COMMAND_AUDIO_ENABLE command,
-*	and the audio input or output should be enabled using the
-*	COMMAND_AUDIO_CONNECT command.
-*
-*	@param  UInt16	{
-*	Bit 0: Enable_48kHz_Speaker_Output: 0 = Disable, 1 = Enable
-*   Bit 1: Interrupt is enabled for this //Currently not supported
-*   Bit 2: = 0 Mono, = 1 Stereo // Currently only supports mono
-*	}
-*
-*	 \see VP_COMMAND_SP, NEWAUDFIFO Interface, COMMAND_NEWAUDFIFO_START
-*    @retval	None
-*/
-void VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(Boolean enable,
-					   Boolean interrupt_enabled,
-					   Boolean stereo_enabled)
-{
-	VPCmdQ_t msg;
-
-	msg.cmd = VP_COMMAND_48KHZ_SPEAKER_OUTPUT_ENABLE;
-	msg.arg0 =
-	    ((UInt16) enable | (((UInt16) interrupt_enabled) << 1) |
-	     (((UInt16) stereo_enabled) << 2));
-	msg.arg1 = 0;
-	msg.arg2 = 0;
-
-	VPSHAREDMEM_PostCmdQ(&msg);
-
-}
-
-/**
 *	Function Name: VPRIPCMDQ_VoLTE_Init
 *	@note Function initializes Jitter Buffer of VoLTE interface.
 *
