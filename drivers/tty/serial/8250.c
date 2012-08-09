@@ -2664,6 +2664,10 @@ static void serial8250_shutdown(struct uart_port *port)
 	if (is_real_interrupt(up->port.irq))
 		serial_unlink_irq_chain(up);
 	pi_mgr_qos_request_update(&up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
+	/* Making sure that Qos nodes are set to default values.
+	 * Problem observed when the BT enable fails, TX Qos node is not set
+	 * to the default values.*/
+	pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 }
 
 /*
