@@ -54,6 +54,8 @@ typedef struct {
 	volatile int v3d_oom_block_used ;
 
 	volatile void *vaddr;
+
+	int fmwk_handle;
 } v3d_device_t;
 
 static inline void v3d_write(v3d_device_t *v3d, unsigned int reg, unsigned int value) {
@@ -230,7 +232,8 @@ v3d_device_t* gV3d = NULL;
 int __init v3d_init(void)
 {
 	int ret = 0;
-	MM_FMWK_HW_IFC ifc_param;
+	MM_FMWK_HW_IFC fmwk_param;
+	MM_DVFS_HW_IFC dvfs_param;
 	gV3d = kmalloc(sizeof(v3d_device_t), GFP_KERNEL);
 	gV3d->vaddr = NULL;
 	dbg_print("V3D driver Module Init\n");
@@ -262,36 +265,37 @@ int __init v3d_init(void)
 	dbg_print("v3d bin oom2 phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
 		gV3d->v3d_bin_oom_block2, gV3d->v3d_bin_oom_size2, (int)gV3d->v3d_bin_oom_cpuaddr2);
 
-	ifc_param.mm_dev_name = V3D_DEV_NAME;
-	ifc_param.mm_dev_clk_name = V3D_AXI_BUS_CLK_NAME_STR;
-	ifc_param.mm_dev_base_addr = MM_V3D_BASE_ADDR;
-	ifc_param.mm_dev_hw_size = V3D_HW_SIZE;
-	ifc_param.mm_dev_irq = IRQ_V3D;
+	fmwk_param.mm_dev_name = V3D_DEV_NAME;
+	fmwk_param.mm_dev_clk_name = V3D_AXI_BUS_CLK_NAME_STR;
+	fmwk_param.mm_dev_base_addr = MM_V3D_BASE_ADDR;
+	fmwk_param.mm_dev_hw_size = V3D_HW_SIZE;
+	fmwk_param.mm_dev_irq = IRQ_V3D;
 
-	ifc_param.mm_dev_timer = DEFAULT_MM_DEV_TIMER_MS;
-	ifc_param.mm_dev_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
+	fmwk_param.mm_dev_timer = DEFAULT_MM_DEV_TIMER_MS;
+	fmwk_param.mm_dev_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
 	
-	ifc_param.mm_dev_get_status = get_v3d_status;
-	ifc_param.mm_dev_start_job = v3d_start_job;
-	ifc_param.mm_dev_process_irq = process_v3d_irq;
-	ifc_param.mm_dev_init = v3d_reset;
-	ifc_param.mm_dev_deinit = v3d_reset;
-	ifc_param.mm_dev_abort = v3d_abort;
-	ifc_param.mm_dev_print_regs = v3d_print_regs;
-	ifc_param.mm_dvfs_params.is_dvfs_on = 1;
-	ifc_param.mm_dvfs_params.user_requested_mode = TURBO;
-	ifc_param.mm_dvfs_params.enable_suspend_resume = 0;
-	ifc_param.mm_dvfs_params.T1 = 300;
-	ifc_param.mm_dvfs_params.P1 = 80;
-	ifc_param.mm_dvfs_params.T2 = 3000;
-	ifc_param.mm_dvfs_params.P2 = 30;
-	ifc_param.mm_dvfs_params.dvfs_bulk_job_cnt = 0;
-	ifc_param.mm_device_id = (void *)gV3d;
-	ifc_param.mm_dev_virt_addr = NULL;
+	fmwk_param.mm_dev_get_status = get_v3d_status;
+	fmwk_param.mm_dev_start_job = v3d_start_job;
+	fmwk_param.mm_dev_process_irq = process_v3d_irq;
+	fmwk_param.mm_dev_init = v3d_reset;
+	fmwk_param.mm_dev_deinit = v3d_reset;
+	fmwk_param.mm_dev_abort = v3d_abort;
+	fmwk_param.mm_dev_print_regs = v3d_print_regs;
+	fmwk_param.mm_device_id = (void *)gV3d;
+	fmwk_param.mm_dev_virt_addr = NULL;
 
-	ret = mm_fmwk_register(&ifc_param);
+	dvfs_param.is_dvfs_on = 1;
+	dvfs_param.user_requested_mode = TURBO;
+	dvfs_param.enable_suspend_resume = 0;
+	dvfs_param.T1 = 300;
+	dvfs_param.P1 = 80;
+	dvfs_param.T2 = 3000;
+	dvfs_param.P2 = 30;
+	dvfs_param.dvfs_bulk_job_cnt = 0;
+
+	gV3d->fmwk_handle = mm_fmwk_register(&fmwk_param,&dvfs_param);
 	/* get kva from fmwk */
-	gV3d->vaddr = ifc_param.mm_dev_virt_addr;
+	gV3d->vaddr = fmwk_param.mm_dev_virt_addr;
 err:
 	dbg_print("V3D driver Module Init over\n");
 	return ret;
@@ -300,7 +304,7 @@ err:
 void __exit v3d_exit(void)
 {
 	dbg_print("V3D driver Module Exit\n");
-	mm_fmwk_unregister(gV3d, V3D_DEV_NAME, IRQ_V3D);
+	mm_fmwk_unregister(gV3d->fmwk_handle);
 	if (gV3d->v3d_bin_oom_cpuaddr2)
 		dma_free_coherent(NULL, gV3d->v3d_bin_oom_size2, gV3d->v3d_bin_oom_cpuaddr2, gV3d->v3d_bin_oom_block2);
 	if (gV3d->v3d_bin_oom_cpuaddr)

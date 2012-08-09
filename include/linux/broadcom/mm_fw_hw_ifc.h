@@ -15,6 +15,7 @@ the GPL, without Broadcom's express prior written consent.
 #define _MM_FW_HW_H_
 
 #include <linux/kernel.h>
+#include <linux/notifier.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/module.h>
@@ -61,15 +62,6 @@ the GPL, without Broadcom's express prior written consent.
 #define DEFAULT_MM_DEV_TIMEOUT_MS (1000)
 
 typedef enum {
-	MM_FMWK_REGISTER_SUCCESS = 0,
-	MM_FMWK_VALIDATE_ERROR,
-	MM_FMWK_MISC_REGISTER_ERROR,
-	MM_FMWK_REGISTER_MAP_ERROR,
-	MM_FMWK_GENERAL_ERROR,
-	
-} mm_fmwk_register_t;
-
-typedef enum {
 	MM_ISR_UNKNOWN = 0,
 	MM_ISR_SUCCESS,
     MM_ISR_ERROR,
@@ -87,17 +79,19 @@ typedef struct {
 	bool is_dvfs_on;
 	bool enable_suspend_resume;
 	dvfs_mode_e user_requested_mode; // When DVFS is off, this mode will be chosen
+	unsigned int dvfs_bulk_job_cnt;
 
 	unsigned int T1; //time in ms for DVFS profiling when in Normal mode
 	unsigned int P1; // percentage (1~99) threshold at which framework should request Turbo mode for this device
 	unsigned int T2; //time in ms for DVFS profiling when in Turbo mode
 	unsigned int P2; // percentage (1~99) threshold at which framework should fall back to Normal mode for this device 
-
-	unsigned int dvfs_bulk_job_cnt;
-}MM_DVFS;
+} MM_DVFS_HW_IFC;
 
 typedef struct mm_fmwk_hw_ifc {
-	char *mm_dev_name;
+	/* These pointers need to be preserved.
+	preferably string macros, so that they are present in text section 
+	and are alive always */
+	char *mm_dev_name; 
 	char *mm_dev_clk_name;
 
 	uint8_t mm_dev_irq;
@@ -108,9 +102,6 @@ typedef struct mm_fmwk_hw_ifc {
 
 	uint32_t mm_dev_timer;
 	uint32_t mm_dev_timeout;
-
-	/* dvfs related parameters*/
-	MM_DVFS mm_dvfs_params;
 
 	/* device funcs */
 	int (*mm_dev_init)(void *device_id);
@@ -125,8 +116,8 @@ typedef struct mm_fmwk_hw_ifc {
 	
 }MM_FMWK_HW_IFC;
 
-mm_fmwk_register_t mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param);
-void mm_fmwk_unregister(void *data, const char *dev_name, uint8_t dev_irq);
+int mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param);
+void mm_fmwk_unregister(int);
 
 
 static inline void mm_write_reg(volatile void *base_addr, u32 reg, u32 value) {
