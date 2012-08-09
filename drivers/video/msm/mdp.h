@@ -857,6 +857,10 @@ static inline int mdp4_overlay_dsi_state_get(void)
 {
 	return 0;
 }
+static inline void mdp4_iommu_detach(void)
+{
+	/*empty */
+}
 #endif
 
 #ifndef CONFIG_FB_MSM_MDP40
