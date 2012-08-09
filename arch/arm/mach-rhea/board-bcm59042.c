@@ -96,35 +96,35 @@ static struct bcmpmu_temp_map batt_temp_map[] = {
 	/*
 	* adc temp
 	*/
-	{932, 233},			/* -40 C */
-	{900, 238},			/* -35 C */
-	{860, 243},			/* -30 C */
-	{816, 248},			/* -25 C */
-	{760, 253},			/* -20 C */
-	{704, 258},			/* -15 C */
-	{636, 263},			/* -10 C */
-	{568, 268},			/* -5 C */
-	{500, 273},			/* 0 C */
-	{440, 278},			/* 5 C */
-	{376, 283},			/* 10 C */
-	{324, 288},			/* 15 C */
-	{272, 293},			/* 20 C */
-	{228, 298},			/* 25 C */
-	{192, 303},			/* 30 C */
-	{160, 308},			/* 35 C */
-	{132, 313},			/* 40 C */
-	{112, 318},			/* 45 C */
-	{92, 323},			/* 50 C */
-	{76, 328},			/* 55 C */
-	{64, 333},			/* 60 C */
-	{52, 338},			/* 65 C */
-	{44, 343},			/* 70 C */
-	{36, 348},			/* 75 C */
-	{32, 353},			/* 80 C */
-	{28, 358},			/* 85 C */
-	{24, 363},			/* 90 C */
-	{20, 368},			/* 95 C */
-	{16, 373},			/* 100 C */
+	{932, -400},			/* -40 C */
+	{900, -350},			/* -35 C */
+	{860, -300},			/* -30 C */
+	{816, -250},			/* -25 C */
+	{760, -200},			/* -20 C */
+	{704, -150},			/* -15 C */
+	{636, -100},			/* -10 C */
+	{568, -50},			/* -5 C */
+	{500, 0},			/* 0 C */
+	{440, 50},			/* 5 C */
+	{376, 100},			/* 10 C */
+	{324, 150},			/* 15 C */
+	{272, 200},			/* 20 C */
+	{228, 250},			/* 25 C */
+	{192, 300},			/* 30 C */
+	{160, 350},			/* 35 C */
+	{132, 400},			/* 40 C */
+	{112, 450},			/* 45 C */
+	{92, 500},			/* 50 C */
+	{76, 550},			/* 55 C */
+	{64, 600},			/* 60 C */
+	{52, 650},			/* 65 C */
+	{44, 700},			/* 70 C */
+	{36, 750},			/* 75 C */
+	{32, 800},			/* 80 C */
+	{28, 850},			/* 85 C */
+	{24, 900},			/* 90 C */
+	{20, 950},			/* 95 C */
+	{16, 1000},			/* 100 C */
 };
 
 __weak struct regulator_consumer_supply rf_supply[] = {
@@ -636,46 +636,131 @@ static struct bcmpmu_adc_setting adc_setting = {
 };
 
 static struct bcmpmu_charge_zone chrg_zone[] = {
-	{.tl = 268, .th = 333, .v = 3000, .fc = 10, .qc = 100},	/* Zone QC */
-	{.tl = 268, .th = 272, .v = 4200, .fc = 100, .qc = 0},	/* Zone LL */
-	{.tl = 273, .th = 282, .v = 4200, .fc = 100, .qc = 0},	/* Zone L */
-	{.tl = 283, .th = 318, .v = 4200, .fc = 100, .qc = 0},	/* Zone N */
-	{.tl = 319, .th = 323, .v = 4200, .fc = 100, .qc = 0},	/* Zone H */
-	{.tl = 324, .th = 333, .v = 4200, .fc = 100, .qc = 0},	/* Zone HH */
-	{.tl = 268, .th = 333, .v = 0, .fc = 0, .qc = 0},	/* Zone OUT */
+	{.tl = -50, .th = 600, .v = 3000, .fc = 10, .qc = 100},	/* Zone QC */
+	{.tl = -50, .th = -1, .v = 4200, .fc = 100, .qc = 0},	/* Zone LL */
+	{.tl = 0, .th = 99, .v = 4200, .fc = 100, .qc = 0},	/* Zone L */
+	{.tl = 100, .th = 450, .v = 4200, .fc = 100, .qc = 0},	/* Zone N */
+	{.tl = 451, .th = 500, .v = 4200, .fc = 100, .qc = 0},	/* Zone H */
+	{.tl = 501, .th = 600, .v = 4200, .fc = 100, .qc = 0},	/* Zone HH */
+	{.tl = -50, .th = 600, .v = 0, .fc = 0, .qc = 0},	/* Zone OUT */
 };
 
 static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
-	/*
-	* Battery data for 1300mAH
-	*/
-	/*
-	* volt capacity
-	*/
-	{4160, 100},
-	{4122, 95},
-	{4072, 90},
-	{4031, 85},
-	{3978, 80},
-	{3937, 75},
-	{3903, 70},
-	{3866, 65},
-	{3834, 60},
-	{3808, 55},
-	{3787, 50},
-	{3769, 45},
-	{3753, 40},
-	{3741, 35},
-	{3730, 30},
-	{3710, 25},
-	{3670, 20},
-	{3648, 15},
-	{3590, 10},
-	{3542, 8},
-	{3480, 6},
-	{3400, 4},
-	{3310, 2},
-	{3200, 0},
+	{4153, 100},
+	{4088, 95},
+	{4045, 90},
+	{4007, 85},
+	{3975, 81},
+	{3946, 76},
+	{3919, 71},
+	{3896, 66},
+	{3870, 61},
+	{3839, 56},
+	{3814, 51},
+	{3798, 47},
+	{3788, 42},
+	{3781, 37},
+	{3775, 32},
+	{3764, 27},
+	{3742, 22},
+	{3721, 17},
+	{3687, 13},
+	{3679, 11},
+	{3675, 10},
+	{3672, 9},
+	{3668, 8},
+	{3663, 7},
+	{3657, 6},
+	{3642, 5},
+	{3608, 4},
+	{3562, 2},
+	{3503, 1},
+	{3400, 0},
+};
+
+static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
+/* This table is default data, the real data from board file or device tree*/
+	{.temp = -200,
+	 .reset = 0, .fct = 26, .guardband = 100,
+	 .esr_vl_lvl = 2970, .esr_vm_lvl = 3207, .esr_vh_lvl = 3326,
+	 .esr_vl = 140, .esr_vl_slope = -1766, .esr_vl_offset = 6953,
+	 .esr_vm = 140, .esr_vm_slope = -628, .esr_vm_offset = 3573,
+	 .esr_vh = 140, .esr_vh_slope = -122, .esr_vh_offset = 1950,
+	 .esr_vf = 140, .esr_vf_slope = -1606, .esr_vf_offset = 6886,
+	 .vcmap = &batt_voltcap_map[0],
+	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -20 */
+	{.temp = -150,
+	 .reset = 0, .fct = 210, .guardband = 100,
+	 .esr_vl_lvl = 2970, .esr_vm_lvl = 3207, .esr_vh_lvl = 3326,
+	 .esr_vl = 140, .esr_vl_slope = -1766, .esr_vl_offset = 6953,
+	 .esr_vm = 140, .esr_vm_slope = -628, .esr_vm_offset = 3573,
+	 .esr_vh = 140, .esr_vh_slope = -122, .esr_vh_offset = 1950,
+	 .esr_vf = 140, .esr_vf_slope = -1606, .esr_vf_offset = 6886,
+	 .vcmap = &batt_voltcap_map[0],
+	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -15 */
+	{.temp = -100,
+	 .reset = 0, .fct = 394, .guardband = 100,
+	 .esr_vl_lvl = 3317, .esr_vm_lvl = 3382, .esr_vh_lvl = 3621,
+	 .esr_vl = 140, .esr_vl_slope = -1590, .esr_vl_offset = 6251,
+	 .esr_vm = 140, .esr_vm_slope = -834, .esr_vm_offset = 3743,
+	 .esr_vh = 140, .esr_vh_slope = -271, .esr_vh_offset = 1839,
+	 .esr_vf = 140, .esr_vf_slope = -978, .esr_vf_offset = 4399,
+	 .vcmap = &batt_voltcap_map[0],
+	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -10 */
+	{.temp = -50,
+	 .reset = 0, .fct = 565, .guardband = 100,
+	 .esr_vl_lvl = 3317, .esr_vm_lvl = 3382, .esr_vh_lvl = 3621,
+	 .esr_vl = 140, .esr_vl_slope = -1590, .esr_vl_offset = 6251,
+	 .esr_vm = 140, .esr_vm_slope = -834, .esr_vm_offset = 3743,
+	 .esr_vh = 140, .esr_vh_slope = -271, .esr_vh_offset = 1839,
+	 .esr_vf = 140, .esr_vf_slope = -978, .esr_vf_offset = 4399,
+	 .vcmap = &batt_voltcap_map[0],
+	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* -5 */
+	{.temp = 0,
+	 .reset = 0, .fct = 736, .guardband = 100,
+	 .esr_vl_lvl = 3411, .esr_vm_lvl = 3562, .esr_vh_lvl = 3813,
+	 .esr_vl = 140, .esr_vl_slope = -1675, .esr_vl_offset = 6427,
+	 .esr_vm = 140, .esr_vm_slope = -1342, .esr_vm_offset = 5292,
+	 .esr_vh = 140, .esr_vh_slope = -176, .esr_vh_offset = 1139,
+	 .esr_vf = 140, .esr_vf_slope = -841, .esr_vf_offset = 3675,
+	 .vcmap = &batt_voltcap_map[0],
+	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 0 */
+	{.temp = 50,
+	 .reset = 0, .fct = 811, .guardband = 100,
+	 .esr_vl_lvl = 3411, .esr_vm_lvl = 3634, .esr_vh_lvl = 3715,
+	 .esr_vl = 140, .esr_vl_slope = -1824, .esr_vl_offset = 6782,
+	 .esr_vm = 140, .esr_vm_slope = -1020, .esr_vm_offset = 4040,
+	 .esr_vh = 140, .esr_vh_slope = 414, .esr_vh_offset = -1171,
+	 .esr_vf = 140, .esr_vf_slope = -488, .esr_vf_offset = 2180,
+	 .vcmap = &batt_voltcap_map[0],
+	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 5 */
+	{.temp = 100,
+	 .reset = 0, .fct = 887, .guardband = 30,
+	 .esr_vl_lvl = 3411, .esr_vm_lvl = 3634, .esr_vh_lvl = 3715,
+	 .esr_vl = 140, .esr_vl_slope = -1824, .esr_vl_offset = 6782,
+	 .esr_vm = 140, .esr_vm_slope = -1020, .esr_vm_offset = 4040,
+	 .esr_vh = 140, .esr_vh_slope = 414, .esr_vh_offset = -1171,
+	 .esr_vf = 140, .esr_vf_slope = -488, .esr_vf_offset = 2180,
+	 .vcmap = &batt_voltcap_map[0],
+	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 10 */
+	{.temp = 150,
+	 .reset = 0, .fct = 1000, .guardband = 30,
+	 .esr_vl_lvl = 3657, .esr_vm_lvl = 3699, .esr_vh_lvl = 3781,
+	 .esr_vl = 140, .esr_vl_slope = -655, .esr_vl_offset = 2562,
+	 .esr_vm = 140, .esr_vm_slope = -211, .esr_vm_offset = 982,
+	 .esr_vh = 140, .esr_vh_slope = 366, .esr_vh_offset = -1152,
+	 .esr_vf = 140, .esr_vf_slope = -346, .esr_vf_offset = 1541,
+	 .vcmap = &batt_voltcap_map[0],
+	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 15 */
+	{.temp = 200,
+	 .reset = 0, .fct = 1000, .guardband = 30,
+	 .esr_vl_lvl = 3657, .esr_vm_lvl = 3699, .esr_vh_lvl = 3781,
+	 .esr_vl = 140, .esr_vl_slope = -655, .esr_vl_offset = 2562,
+	 .esr_vm = 140, .esr_vm_slope = -211, .esr_vm_offset = 982,
+	 .esr_vh = 140, .esr_vh_slope = 366, .esr_vh_offset = -1152,
+	 .esr_vf = 140, .esr_vf_slope = -346, .esr_vf_offset = 1541,
+	 .vcmap = &batt_voltcap_map[0],
+	 .maplen = ARRAY_SIZE(batt_voltcap_map)},/* 20 */
 };
 
 static struct bcmpmu_wd_setting bcm59042_wd_setting = {
@@ -696,6 +781,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	/* # of registers defined in register_init_data.
 	   This value will come from device tree */
 	.init_max = ARRAY_SIZE(register_init_data),
+	.batt_temp_in_celsius = 1,
 	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
@@ -709,17 +795,27 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.batt_voltcap_map = &batt_voltcap_map[0],
 	.batt_voltcap_map_len = ARRAY_SIZE(batt_voltcap_map),
 	.batt_impedence = 140,
-	.chrg_1c_rate = 1300,
-	.chrg_eoc = 65,
+	.chrg_1c_rate = 1500,
+	.chrg_eoc = 75,
+	.support_hw_eoc = 0,
 	.chrg_zone_map = &chrg_zone[0],
-	.fg_capacity_full = 1300 * 3600,
+	.fg_capacity_full = 1500 * 3600,
 	.support_fg = 1,
 	.support_chrg_maint = 1,
 	.wd_setting = &bcm59042_wd_setting,
 	.chrg_resume_lvl = 4150,
+	.fg_support_tc = 1,
+	.fg_tc_dn_lvl = 50, /* 5c */
+	.fg_tc_up_lvl = 200, /* 20c */
+	.fg_zone_settle_tm = 60,
+	.fg_zone_info = &fg_zone[0],
+	.fg_poll_hbat = 112000,
+	.fg_poll_lbat = 5000,
+	.fg_lbat_lvl = 3550,
+	.fg_fbat_lvl = 4150,
 	.bc = BCMPMU_BC_PMU_BC12,
-	.batt_model = "Unknown",
-	.cutoff_volt = 3300,
+	.batt_model = "BRCM BL-84 1500mAH",
+	.cutoff_volt = 3400,
 	.cutoff_count_max = 3,
 	.hard_reset_en = -1,
 	.restart_en = -1,
@@ -879,7 +975,9 @@ __init int board_pmu_init(void)
 	int             irq;
 
 #ifdef CONFIG_KONA_DT_BCMPMU
+/*
 	bcmpmu_update_pdata_dt_batt(&bcmpmu_plat_data);
+*/
 	bcmpmu_update_pdata_dt_pmu(&bcmpmu_plat_data);
 #endif
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu-irq");
