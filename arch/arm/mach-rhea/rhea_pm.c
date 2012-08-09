@@ -271,7 +271,7 @@ static void log_wakeup_interrupts(void)
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET2_OFFSET));
 
 	pm_dbg(LOG_INTR_STATUS, "GIC pending status3 = %x\n",
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET3_OFFSET));
 
 	pm_dbg(LOG_INTR_STATUS, "GIC pending status4 = %x\n",
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));

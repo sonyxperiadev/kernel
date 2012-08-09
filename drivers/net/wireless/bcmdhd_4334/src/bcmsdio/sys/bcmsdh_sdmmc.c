@@ -797,7 +797,7 @@ sdioh_request_byte(sdioh_info_t *sd, uint rw, uint func, uint regaddr, uint8 *by
 	int err_ret;
 
 	sd_info(("%s: rw=%d, func=%d, addr=0x%05x\n", __FUNCTION__, rw, func, regaddr));
-
+	
 	DHD_PM_RESUME_WAIT(sdioh_request_byte_wait);
 	DHD_PM_RESUME_RETURN_ERROR(SDIOH_API_RC_FAIL);
 	if(rw) { /* CMD52 Write */
@@ -898,30 +898,35 @@ sdioh_request_word(sdioh_info_t *sd, uint cmd_type, uint rw, uint func, uint add
 
 	DHD_PM_RESUME_WAIT(sdioh_request_word_wait);
 	DHD_PM_RESUME_RETURN_ERROR(SDIOH_API_RC_FAIL);
-	/* Claim host controller */
-	sdio_claim_host(gInstance->func[func]);
+	
+	if (gInstance->func[func]) {
+		/* Claim host controller */
+		sdio_claim_host(gInstance->func[func]);
 
-	if(rw) { /* CMD52 Write */
-		if (nbytes == 4) {
-			sdio_writel(gInstance->func[func], *word, addr, &err_ret);
-		} else if (nbytes == 2) {
-			sdio_writew(gInstance->func[func], (*word & 0xFFFF), addr, &err_ret);
-		} else {
-			sd_err(("%s: Invalid nbytes: %d\n", __FUNCTION__, nbytes));
+		if(rw) { /* CMD52 Write */
+			if (nbytes == 4) {
+				sdio_writel(gInstance->func[func], *word, addr, &err_ret);
+			} else if (nbytes == 2) {
+				sdio_writew(gInstance->func[func], (*word & 0xFFFF), addr, &err_ret);
+			} else {
+				sd_err(("%s: Invalid nbytes: %d\n", __FUNCTION__, nbytes));
+			}
+		} else { /* CMD52 Read */
+			if (nbytes == 4) {
+				*word = sdio_readl(gInstance->func[func], addr, &err_ret);
+			} else if (nbytes == 2) {
+				*word = sdio_readw(gInstance->func[func], addr, &err_ret) & 0xFFFF;
+			} else {
+				sd_err(("%s: Invalid nbytes: %d\n", __FUNCTION__, nbytes));
+			}
 		}
-	} else { /* CMD52 Read */
-		if (nbytes == 4) {
-			*word = sdio_readl(gInstance->func[func], addr, &err_ret);
-		} else if (nbytes == 2) {
-			*word = sdio_readw(gInstance->func[func], addr, &err_ret) & 0xFFFF;
-		} else {
-			sd_err(("%s: Invalid nbytes: %d\n", __FUNCTION__, nbytes));
-		}
+
+		/* Release host controller */
+		sdio_release_host(gInstance->func[func]);
+	} else {
+		sd_err(("%s: gInstance->func[%d] is Null \n", __FUNCTION__, func));
 	}
-
-	/* Release host controller */
-	sdio_release_host(gInstance->func[func]);
-
+	
 	if (err_ret) {
 		sd_err(("bcmsdh_sdmmc: Failed to %s word, Err: 0x%08x",
 		                        rw ? "Write" : "Read", err_ret));
