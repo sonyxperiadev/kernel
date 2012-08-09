@@ -29,7 +29,7 @@ config MAP_VOIP
 
 config CAPH_STEREO_IHF
 	boolean "Broadcom CAPH stereo IHF support"
-	depends on (MACH_CAPRI_RAY && BCM_ALSA_SOUND)
+	depends on (ARCH_HAWAII && BCM_ALSA_SOUND)
 	default n
 	help
 	 Say Y here to activate stereo IHF feature on CAPRI RAY platform
