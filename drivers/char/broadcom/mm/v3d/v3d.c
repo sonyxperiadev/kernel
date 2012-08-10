@@ -37,19 +37,33 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_v3d.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
+#ifdef CONFIG_ION
+#include <linux/broadcom/kona_ion.h>
+#endif
+
 
 #define V3D_HW_SIZE (1024*4)
 
 #define IRQ_V3D	BCM_INT_ID_RESERVED148
-#define V3D_BIN_OOM_SIZE 4*1024*1024
+#if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
+#define V3D_BIN_OOM_SIZE 512*1024
+#else
+#define V3D_BIN_OOM_SIZE 2*1024*1024
+#endif
 
 typedef struct {
+#ifdef CONFIG_ION
+	struct ion_client *v3d_bin_oom_client;
+	struct ion_handle *v3d_bin_oom_handle;
+	struct ion_handle *v3d_bin_oom_handle2;
+#else
+	void* v3d_bin_oom_cpuaddr;
+	void* v3d_bin_oom_cpuaddr2;
+#endif
 	int v3d_bin_oom_block;
 	int v3d_bin_oom_size ;
-	void* v3d_bin_oom_cpuaddr;
 	int v3d_bin_oom_block2;
 	int v3d_bin_oom_size2 ;
-	void* v3d_bin_oom_cpuaddr2;
 
 	volatile int v3d_oom_block_used ;
 
@@ -238,7 +252,45 @@ int __init v3d_init(void)
 	gV3d->vaddr = NULL;
 	dbg_print("V3D driver Module Init\n");
 
-	gV3d->v3d_bin_oom_cpuaddr = kmalloc(V3D_BIN_OOM_SIZE,GFP_KERNEL);//dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &gV3d->v3d_bin_oom_block, GFP_ATOMIC | GFP_DMA);
+#ifdef CONFIG_ION
+	gV3d->v3d_bin_oom_client = ion_client_create(idev, ION_DEFAULT_HEAP, "v3d");
+	if (gV3d->v3d_bin_oom_client == NULL) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	gV3d->v3d_bin_oom_handle = ion_alloc(gV3d->v3d_bin_oom_client,
+			V3D_BIN_OOM_SIZE, SZ_4K, ION_DEFAULT_HEAP);
+	gV3d->v3d_bin_oom_block = kona_ion_map_dma(gV3d->v3d_bin_oom_client,
+			gV3d->v3d_bin_oom_handle);
+	if (gV3d->v3d_bin_oom_block == 0) {
+		pr_err("ion alloc failed for v3d oom block size[0x%x] client[0x%x] handle[0x%x] \n",
+		       V3D_BIN_OOM_SIZE, gV3d->v3d_bin_oom_client, gV3d->v3d_bin_oom_handle);
+		gV3d->v3d_bin_oom_size = 0;
+		ret = -ENOMEM;
+		goto err;
+	}
+	gV3d->v3d_bin_oom_size = V3D_BIN_OOM_SIZE ;
+	pr_info("v3d bin oom dma[0x%08x], size[0x%08x] \n",
+	       gV3d->v3d_bin_oom_block, gV3d->v3d_bin_oom_size);
+
+	gV3d->v3d_bin_oom_handle2 = ion_alloc(gV3d->v3d_bin_oom_client,
+			V3D_BIN_OOM_SIZE, SZ_4K, ION_DEFAULT_HEAP);
+	gV3d->v3d_bin_oom_block2 = kona_ion_map_dma(gV3d->v3d_bin_oom_client,
+			gV3d->v3d_bin_oom_handle2);
+	if (gV3d->v3d_bin_oom_block2 == 0) {
+		pr_err("ion alloc failed for v3d oom block2 size[0x%x] client[0x%x] handle2[0x%x] \n",
+		       V3D_BIN_OOM_SIZE, gV3d->v3d_bin_oom_client, gV3d->v3d_bin_oom_handle2);
+		gV3d->v3d_bin_oom_size2 = 0;
+		ret = -ENOMEM;
+		goto err;
+	}
+	gV3d->v3d_bin_oom_size2 = V3D_BIN_OOM_SIZE ;
+	pr_info("v3d bin oom 2 dma[0x%08x], size[0x%08x] \n",
+	       gV3d->v3d_bin_oom_block2, gV3d->v3d_bin_oom_size2);
+
+#else
+	gV3d->v3d_bin_oom_cpuaddr = dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &gV3d->v3d_bin_oom_block, GFP_ATOMIC | GFP_DMA);
 	if (gV3d->v3d_bin_oom_cpuaddr == NULL) {
 		err_print("dma_alloc_coherent failed for v3d oom block size[0x%x]", gV3d->v3d_bin_oom_size);
 		gV3d->v3d_bin_oom_block = 0;
@@ -246,13 +298,11 @@ int __init v3d_init(void)
 		ret = -ENOMEM;
 		goto err;
 	}
-	gV3d->v3d_bin_oom_block = virt_to_phys(gV3d->v3d_bin_oom_cpuaddr);
 	gV3d->v3d_bin_oom_size = V3D_BIN_OOM_SIZE ;
 	dbg_print("v3d bin oom phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
 		gV3d->v3d_bin_oom_block,gV3d->v3d_bin_oom_size, (int)gV3d->v3d_bin_oom_cpuaddr);
 
-	gV3d->v3d_bin_oom_cpuaddr2 = kmalloc(V3D_BIN_OOM_SIZE,GFP_KERNEL);//dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &gV3d->v3d_bin_oom_block, GFP_ATOMIC | GFP_DMA);
-//	gV3d->v3d_bin_oom_cpuaddr2 = dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &gV3d->v3d_bin_oom_block2, GFP_ATOMIC | GFP_DMA);
+	gV3d->v3d_bin_oom_cpuaddr2 = dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &gV3d->v3d_bin_oom_block, GFP_ATOMIC | GFP_DMA);
 	if (gV3d->v3d_bin_oom_cpuaddr2 == NULL) {
 		err_print("dma_alloc_coherent failed for v3d oom block size[0x%x]", gV3d->v3d_bin_oom_size2);
 		gV3d->v3d_bin_oom_block2 = 0;
@@ -260,10 +310,10 @@ int __init v3d_init(void)
 		ret = -ENOMEM;
 		goto err;
 	}
-	gV3d->v3d_bin_oom_block = virt_to_phys(gV3d->v3d_bin_oom_cpuaddr2);
 	gV3d->v3d_bin_oom_size2 = V3D_BIN_OOM_SIZE;
 	dbg_print("v3d bin oom2 phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
 		gV3d->v3d_bin_oom_block2, gV3d->v3d_bin_oom_size2, (int)gV3d->v3d_bin_oom_cpuaddr2);
+#endif
 
 	fmwk_param.mm_dev_name = V3D_DEV_NAME;
 	fmwk_param.mm_dev_clk_name = V3D_AXI_BUS_CLK_NAME_STR;
@@ -305,10 +355,23 @@ void __exit v3d_exit(void)
 {
 	dbg_print("V3D driver Module Exit\n");
 	mm_fmwk_unregister(gV3d->fmwk_handle);
+#ifdef CONFIG_ION
+	if (gV3d->v3d_bin_oom_block2)
+		ion_unmap_dma(gV3d->v3d_bin_oom_client, gV3d->v3d_bin_oom_handle2);
+	if (gV3d->v3d_bin_oom_handle2)
+		ion_free(gV3d->v3d_bin_oom_client, gV3d->v3d_bin_oom_handle2);
+	if (gV3d->v3d_bin_oom_block)
+		ion_unmap_dma(gV3d->v3d_bin_oom_client, gV3d->v3d_bin_oom_handle);
+	if (gV3d->v3d_bin_oom_handle)
+		ion_free(gV3d->v3d_bin_oom_client, gV3d->v3d_bin_oom_handle);
+	if (gV3d->v3d_bin_oom_client)
+		ion_client_destroy(gV3d->v3d_bin_oom_client);
+#else
 	if (gV3d->v3d_bin_oom_cpuaddr2)
 		dma_free_coherent(NULL, gV3d->v3d_bin_oom_size2, gV3d->v3d_bin_oom_cpuaddr2, gV3d->v3d_bin_oom_block2);
 	if (gV3d->v3d_bin_oom_cpuaddr)
 		dma_free_coherent(NULL, gV3d->v3d_bin_oom_size, gV3d->v3d_bin_oom_cpuaddr, gV3d->v3d_bin_oom_block);
+#endif
 	kfree(gV3d);
 }
 
