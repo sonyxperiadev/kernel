@@ -568,14 +568,21 @@ struct platform_device android_pmem = {
 #ifdef CONFIG_ION
 
 static struct ion_platform_data ion_data0 = {
-	.nr = 1,
+	.nr = 2,
 	.heaps = {
 		[0] = {
 			.id = 0,
 			.type = ION_HEAP_TYPE_CARVEOUT,
 			.name = "ion-carveout-0",
 			.base = 0,
-			.size = (32 *SZ_1M),
+			.size = (16 * SZ_1M),
+		},
+		[1] = {
+			.id = 1,
+			.type = ION_HEAP_TYPE_CARVEOUT,
+			.name = "ion-carveout-1",
+			.base = 0,
+			.size = (16 * SZ_1M),
 		},
 	},
 };
@@ -683,11 +690,41 @@ static int __init setup_ion_carveout0_pages(char *str)
 }
 early_param("carveout0", setup_ion_carveout0_pages);
 
+static int __init setup_ion_carveout1_pages(char *str)
+{
+	char *endp = NULL;
+
+	if (str) {
+		ion_data0.heaps[1].size = memparse((const char *)str, &endp);
+	}
+	return 0;
+}
+early_param("carveout1", setup_ion_carveout1_pages);
+
 /* Carveout memory regions for ION */
 static void __init ion_carveout_memory(void)
 {
 	int err;
 	phys_addr_t carveout_size, carveout_base;
+
+	carveout_size = ion_data0.heaps[1].size;
+	if (carveout_size) {
+		carveout_base = memblock_alloc_new(carveout_size, SZ_4M, 0, 0xF0000000);
+		memblock_free(carveout_base, carveout_size);
+		err = memblock_remove(carveout_base, carveout_size);
+		if (!err) {
+			pr_info("android-ion: carveout-1 from (%08x-%08x) \n",
+					carveout_base,
+					carveout_base + carveout_size);
+			ion_data0.heaps[1].base = carveout_base;
+		} else {
+			pr_err("android-ion: Carveout-1 memory failed\n");
+			ion_data0.heaps[1].size = 0;
+		}
+	}
+	if (ion_data0.heaps[1].size == 0) {
+		ion_data0.heaps[1].id = ION_INVALID_HEAP_ID;
+	}
 
 	carveout_size = ion_data0.heaps[0].size;
 	if (carveout_size) {
@@ -700,7 +737,7 @@ static void __init ion_carveout_memory(void)
 					carveout_base + carveout_size);
 			ion_data0.heaps[0].base = carveout_base;
 		} else {
-			pr_err("android-ion: Carveout memory failed\n");
+			pr_err("android-ion: Carveout-0 memory failed\n");
 			ion_data0.heaps[0].size = 0;
 		}
 	}
