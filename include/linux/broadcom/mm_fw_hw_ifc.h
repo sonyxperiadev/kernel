@@ -106,8 +106,8 @@ typedef struct mm_fmwk_hw_ifc {
 	
 }MM_FMWK_HW_IFC;
 
-int mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_PROF_HW_IFC* prof_param);
-void mm_fmwk_unregister(int);
+void* mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_PROF_HW_IFC* prof_param);
+void mm_fmwk_unregister(void* handle);
 
 
 static inline void mm_write_reg(volatile void *base_addr, u32 reg, u32 value) {

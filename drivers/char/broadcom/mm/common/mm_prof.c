@@ -33,6 +33,9 @@ int mm_prof_notification_handler(struct notifier_block* block,unsigned long para
 			mm_prof->hw_on_dur += timespec_to_ns(&diff);
 			pr_debug("dev stayed on for %llu nanoseconds", (unsigned long long)timespec_to_ns(&diff));
 			break;
+		case MM_FMWK_NOTIFY_DVFS_UPDATE:
+			mm_prof->current_mode = (dvfs_mode_e)data;
+			break;
 		case MM_FMWK_NOTIFY_INVALID:
 		default:
 			break;
@@ -161,5 +164,10 @@ void* mm_prof_init(mm_fmwk_common_t* mm_common, char *dev_name, MM_PROF_HW_IFC *
 void mm_prof_exit( void *dev_p)
 {
 	mm_prof_t* mm_prof = (mm_prof_t*)dev_p;
+
+	if(mm_prof->prof_dir)
+		debugfs_remove_recursive(mm_prof->prof_dir);
+
+	kfree(mm_prof);
 }
 

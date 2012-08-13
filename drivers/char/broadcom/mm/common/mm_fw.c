@@ -19,8 +19,19 @@ the GPL, without Broadcom's express prior written consent.
 #define MISC_DYNAMIC_MINOR 255
 #define WQ_PREFIX "mm_fmwk_wq-"
 
+/* The following varliables in this block shall 
+	be accessed with mm_fmwk_mutex protection */
+
+DEFINE_MUTEX(mm_fmwk_mutex);
+LIST_HEAD(mm_dev_list);
+static unsigned int mm_device_id = 0;
+
+/* MM Framework globals end*/
+
 typedef struct {
 	struct miscdevice mdev;
+	struct list_head dev_list;
+	unsigned int device_num;
 
 	volatile void __iomem *dev_base;
 	struct clk *dev_clk;
@@ -383,7 +394,7 @@ static int validate(MM_FMWK_HW_IFC *ifc_param)
 	return 0;
 }
 
-int mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_PROF_HW_IFC* prof_param)
+void* mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_PROF_HW_IFC* prof_param)
 {
 	int ret = 0;
 	device_t *fw_dev = NULL;
@@ -445,7 +456,7 @@ int mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_P
 
 	fw_dev->mm_common.single_wq = alloc_ordered_workqueue(fw_dev->mm_common.single_wq_name,WQ_HIGHPRI|WQ_MEM_RECLAIM);
 	if (fw_dev->mm_common.single_wq == NULL) {
-		ret = -ENOMEM;
+		goto err_register;
 	}
 
 	ATOMIC_INIT_NOTIFIER_HEAD(&fw_dev->mm_common.notifier_head);
@@ -455,7 +466,7 @@ int mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_P
 	{
 		pr_err("Error %ld creating debugfs dir for %s",
                            PTR_ERR(fw_dev->mm_common.debugfs_dir), fw_dev->mm_device.mm_dev_name);
-		ret = -ENOENT;
+		goto err_register;
     }
 
 #ifdef CONFIG_KONA_PI_MGR
@@ -465,28 +476,68 @@ int mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_P
 #endif
 	fw_dev->mm_prof = mm_prof_init(&fw_dev->mm_common,ifc_param->mm_dev_name,  prof_param);
 
-	return 0;
+	mutex_lock(&mm_fmwk_mutex);
+	list_add_tail(&fw_dev->dev_list,&mm_dev_list);
+	mm_device_id++;
+	fw_dev->device_num = mm_device_id;
+	ret = fw_dev->device_num;
+	mutex_unlock(&mm_fmwk_mutex);
+	
+	return fw_dev;
 
 err_register:
 	pr_err("Error in dev_init for %s", ifc_param->mm_dev_name);
-	ret = -1;
-//	mm_fmwk_unregister();
-	return ret;
+	if(fw_dev)
+		mm_fmwk_unregister(fw_dev);
+	return NULL;
 }
 
-void mm_fmwk_unregister(int dev_name)
+void mm_fmwk_unregister(void* dev_name)
 {
-/*	device_t *dev =
-                container_of(data, device_t, device_id);
-	disable_irq(dev_irq);
-	if (dev->dev_base)
-		iounmap(dev->dev_base);
+	device_t* fw_dev = NULL;
+	device_t* temp = NULL;
+	bool found = false;
+	
+	mutex_lock(&mm_fmwk_mutex);
+	list_for_each_entry_safe(fw_dev, temp, &mm_dev_list, dev_list) {
+		if( fw_dev == dev_name) {
+			list_del(&fw_dev->dev_list);
+			found = true;
+			break;
+			}
+		}
+	mutex_unlock(&mm_fmwk_mutex);
 
-	dev_power_exit(&(dev->dev_power), dev_name);
+	if(found) {
+#ifdef CONFIG_KONA_PI_MGR
+		if(fw_dev->mm_dvfs)
+			mm_dvfs_exit(fw_dev->mm_dvfs);
+#else
+		fw_dev->mm_dvfs = NULL;
+#endif
+		if(fw_dev->mm_prof)
+			mm_prof_exit(fw_dev->mm_prof);
+		if(fw_dev->mm_common.debugfs_dir)
+			debugfs_remove_recursive(fw_dev->mm_common.debugfs_dir);
 
-	destroy_workqueue(dev_power->single_wq);
-	misc_deregister(&dev->mdev);
-*/
+		if(fw_dev->mm_common.single_wq) {
+			flush_workqueue(fw_dev->mm_common.single_wq);
+			destroy_workqueue(fw_dev->mm_common.single_wq);
+			}
+		
+		if(fw_dev->mm_common.single_wq_name)
+			kfree(fw_dev->mm_common.single_wq_name);
+		if(fw_dev->mm_device.mm_dev_name)
+			kfree(fw_dev->mm_device.mm_dev_name);
+		if(fw_dev->mm_device.mm_dev_clk_name)
+			kfree(fw_dev->mm_device.mm_dev_clk_name);
 
+		if(fw_dev->dev_base)
+			iounmap(fw_dev->dev_base);
+		misc_deregister(&fw_dev->mdev);
+
+		if(fw_dev)
+			kfree(fw_dev);
+		}
 }
 

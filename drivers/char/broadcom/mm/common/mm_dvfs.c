@@ -27,6 +27,7 @@ static void mm_dfs_notifier(struct work_struct* work)
 {
 	mm_dvfs_t *mm_dvfs = container_of(work, mm_dvfs_t, dvfs_notification);
 	mm_dvfs->current_mode = pi_get_active_opp(PI_MGR_PI_ID_MM);
+	atomic_notifier_call_chain(&mm_dvfs->mm_common->notifier_head, MM_FMWK_NOTIFY_DVFS_UPDATE, (void*)mm_dvfs->current_mode);
 }
 
 int mm_dvfs_notification_handler(struct notifier_block* block,unsigned long param, void* data)
@@ -341,20 +342,20 @@ void* mm_dvfs_init(mm_fmwk_common_t* mm_common, char *dev_name, MM_DVFS_HW_IFC *
 void mm_dvfs_exit( void *dev_p)
 {
 	mm_dvfs_t* mm_dvfs = (mm_dvfs_t*)dev_p;
-	if (pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), PI_MGR_DFS_MIN_VALUE))
-	{
-//		pr_err("failed to update dfs request for %s", dev_name);
-	}
-
+	atomic_notifier_chain_unregister(&mm_dvfs->mm_common->notifier_head, &mm_dvfs->mm_fmwk_notifier_blk);
+	debugfs_remove_recursive(mm_dvfs->dvfs_dir);
+	pi_mgr_dfs_request_remove(&(mm_dvfs->dev_dfs_node));
 	pi_mgr_unregister_notifier(PI_MGR_PI_ID_MM,
 			&(mm_dvfs->mm_dfs_chg_notify_blk),
 			PI_NOTIFY_DFS_CHANGE);
 
-	pi_mgr_dfs_request_remove(&(mm_dvfs->dev_dfs_node));
 	mm_dvfs->dev_dfs_node.name = NULL;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    unregister_early_suspend(&mm_dvfs->early_suspend_desc);
+	if(mm_dvfs->dvfs.enable_suspend_resume)	{
+		unregister_early_suspend(&mm_dvfs->early_suspend_desc);
+		}
 #endif
+	kfree(mm_dvfs);
 }
 
