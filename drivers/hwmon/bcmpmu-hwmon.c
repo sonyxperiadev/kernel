@@ -1272,9 +1272,9 @@ static ssize_t fg_factor_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(dbgmsk, 0666, dbgmsk_show, dbgmsk_store);
+static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_store);
 static DEVICE_ATTR(fg_status, 0644, fg_status_show, NULL);
-static DEVICE_ATTR(fg_factor, 0666, fg_factor_show, fg_factor_store);
+static DEVICE_ATTR(fg_factor, 0644, fg_factor_show, fg_factor_store);
 #endif
 
 static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)

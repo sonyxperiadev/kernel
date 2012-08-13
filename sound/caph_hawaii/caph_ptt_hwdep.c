@@ -183,8 +183,7 @@ static long hwdep_ptt_write(struct snd_hwdep *hw, const char __user * buf,
 				goto error;
 			}
 			if (pPtt->underrun)
-				aTrace(LOG_ALSA_INTERFACE,
-						"underrun occured\n");
+				aWarn("underrun occured\n");
 			if (pPtt->ptt_dsp_buf_ptr == NULL)
 				continue;
 			to_copy = (count > PTT_FRAME_SIZE) ? PTT_FRAME_SIZE

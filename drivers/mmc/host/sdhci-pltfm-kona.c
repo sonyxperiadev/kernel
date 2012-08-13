@@ -484,6 +484,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	host->quirks = SDHCI_QUIRK_NO_CARD_NO_RESET
 	    | SDHCI_QUIRK_BROKEN_TIMEOUT_VAL
 	    | SDHCI_QUIRK_32BIT_DMA_ADDR
+#ifdef CONFIG_MACH_HAWAII_FPGA_MM_V1
+	    | SDHCI_QUIRK_BROKEN_ADMA
+#endif
 	    | SDHCI_QUIRK_32BIT_DMA_SIZE | SDHCI_QUIRK_32BIT_ADMA_SIZE;
 
 #ifdef CONFIG_MACH_RHEA_DALTON2_EB30

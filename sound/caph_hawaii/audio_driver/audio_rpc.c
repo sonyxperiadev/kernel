@@ -40,8 +40,20 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "csl_voip.h"
 #include "csl_apcmd.h"
 #include "audio_trace.h"
+#include "audio_mqueue.h"
 
-#define AUDIO_ENABLE_RESP_TIMEOUT 300  /* 300ms */
+/* Define whether to start audio rpc
+ * as an END POINT to rpc-ipc layer.
+ */
+/*#defined AUDIO_RPC_END_POINT */
+#if defined(ENABLE_DMA_VOICE)
+#include "csl_dsp_caph_control_api.h"
+#endif
+
+#include "ipcinterface.h"
+
+/*when system is busy, 50ms is not enough*/
+#define AUDIO_ENABLE_RESP_TIMEOUT 1000
 #define	timeout_jiff msecs_to_jiffies(AUDIO_ENABLE_RESP_TIMEOUT)
 
 /* If this struct is changed then please change xdr_Audio_Params_t() also. */
@@ -63,10 +75,12 @@ struct AudioTuningParamInd_st {
 	Int16 param[256];
 };
 
+
 /* FRAMEWORK CODE */
 #if defined(CONFIG_BCM_MODEM)	/* for AP only without MODEM (CP, DSP) */
 static UInt8 audioClientId;
 static Boolean audioRpcInited = FALSE;
+static Boolean inCpReset = FALSE;
 static bool_t xdr_Audio_Params_t(void *xdrs, Audio_Params_t *rsp);
 static bool_t xdr_AudioCompfilter_t(void *xdrs, AudioCompfilter_t *rsp);
 static bool_t xdr_AudioTuningParamInd_st(void *xdrs,
@@ -289,14 +303,30 @@ static void HandleAudioCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
 
 	/* for now, just ack that we're ready for reset */
 	if (RPC_CPRESET_START == event) {
+		inCpReset = TRUE;
 		AUDDRV_HandleCPReset(TRUE);
 		RPC_AckCPReset(audioClientId);
 	} else if (RPC_CPRESET_COMPLETE == event) {
 		AUDDRV_HandleCPReset(FALSE);
+		inCpReset = FALSE;
 		RPC_AckCPReset(audioClientId);
 	}
 }
 #endif
+#if defined(AUDIO_RPC_END_POINT)
+static RPC_Result_t AUDIO_RPC_MsgCb(PACKET_Interface_t interfaceType,
+		UInt8 cid, PACKET_BufHandle_t dataBufHandle)
+{
+	int ret;
+	ret = MsgQueueAdd();
+	if (ret != 0)
+		aTrace(LOG_AUDIO_DRIVER,
+				"Audio_RPC_MsgCb POST MSG Fail %d",
+				audioClientId);
+}
+#endif
+
+
 /*  AUDIO API CODE */
 #if defined(CONFIG_BCM_MODEM)
 void Audio_InitRpc(void)
@@ -320,6 +350,18 @@ void Audio_InitRpc(void)
 
 #if defined(FUSE_COMMS_PROCESSOR)
 		SYS_RegisterForMSEvent(HandleCallStatusIndCb, 0);
+#endif
+
+#if defined(AUDIO_RPC_END_POINT)
+		/* Initialize the Audio RPC thread's message queue.
+		 */
+		Audio_MsgQueueInit();
+
+		/* Register message handler to
+		 * RPC-IPC layer
+		 */
+		RPC_PACKET_RegisterDataInd(0, INTERFACE_AUDIO,
+				AUDIO_RPC_MsgCb, NULL);
 #endif
 
 		audioRpcInited = TRUE;
@@ -555,6 +597,9 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 			" param3 %ld param4 %ld *\n\r",
 			param1, param2, param3, param4);
 
+	if (inCpReset)
+		return val;
+
 	switch (param1) {
 
 	case AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND:
@@ -612,20 +657,43 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 		tid = s_sid++; /* RPC_SyncCreateTID(&val, sizeof(UInt32)); */
 		aTrace(LOG_AUDIO_DRIVER,
 			"audio_control_dsp tid=%ld,param1=%ld\n", tid, param1);
+
+		/** init completion before send this DSP command */
+		if (param1 == AUDDRV_DSPCMD_AUDIO_ENABLE) {
+			/*aError("i_c");*/
+			init_completion(&audioEnableDone);
+			/*aError("i_d");*/
+		}
+
 		CAPI2_audio_control_dsp(tid, audioClientId, &audioParam);
 		/*
 		RPC_SyncWaitForResponse(tid, audioClientId, &ackResult,
 					&msgType, NULL);
 		*/
 		if (param1 == AUDDRV_DSPCMD_AUDIO_ENABLE) {
-			jiff_in = wait_for_completion_interruptible_timeout(
+
+			/** wait for response from DSP for this command.
+			Response usually comes back very fast, less than 10ms  */
+			jiff_in = wait_for_completion_timeout(
 				&audioEnableDone,
 				timeout_jiff);
 			if (!jiff_in) {
-				aError("!!!Timeout on COMMAND_AUDIO_ENABLE"
-					" resp!!!\n");
-				init_completion(&audioEnableDone);
+				aError("!!!Timeout on COMMAND_AUDIO_ENABLE %d"
+					" resp!!!\n", (int)param2);
+				/**
+				IPCCP_SetCPCrashedStatus(IPC_AP_ASSERT);
+				BUG_ON(1);
+				panic("COMMAND_AUDIO_ENABLE timeout");
+				*/
 			}
+#if defined(ENABLE_DMA_VOICE)
+			{
+				UInt16 dsp_path;
+				dsp_path =
+				csl_dsp_caph_control_aadmac_get_enable_path();
+				csl_caph_enable_adcpath_by_dsp(dsp_path);
+			}
+#endif
 		}
 
 		break;

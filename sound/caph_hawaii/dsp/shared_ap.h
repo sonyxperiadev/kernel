@@ -105,11 +105,6 @@
 
 #define DJB_BUFFER_SIZE     			600		// 600 words ~ 300ms
 
-#if defined(_RHEA_)||defined(_HERA_)||defined(_SAMOA_)
-//#define FPGA_AUDIO_HUB_VERIFICATION
-#endif
-
-
 typedef struct
 {
 	UInt32 array2[35];
@@ -222,14 +217,39 @@ typedef struct
 
 typedef struct
 {
-   UInt16 * freeListp;
-   UInt16 * plStartp;
-   UInt16 * plEndp;
-   UInt16   freeListSize;
-   UInt16   numEntry;
-   UInt16   entrySizeInWords;
-   UInt16   numAlloc;
+   UInt16 *freeListp;
+   UInt16 *plStartp;
+   UInt16 *plEndp;
+   UInt16 freeListSize;
+   UInt16 numEntry;
+   UInt16 entrySizeInWords;
+   UInt16 numAlloc;
 } DJB_PAYLOADQ;
+
+/* Adaptive Jitter Control Module Statistics */
+typedef struct
+{
+   UInt16    peakHoldingTime;
+   UInt16    packetCount;
+   UInt16    addTailCount;
+   UInt16    reorderCount;
+   UInt16    overrunCount;
+   UInt16    duplicateCount;
+   UInt16    outOfRangeCount;
+   UInt16    tooLateCount;
+   UInt16    cantDecodeCount;
+   UInt16    ajcUnderrunCount;
+   UInt16    ajcDeleteCount;
+   UInt16    ajcRepeatCount;
+   UInt16    ajcResyncCount;
+   UInt16    ajcPhaseJitterCount;
+   UInt16    ajcHdrPayloadDiff;
+   UInt16    ajcPayloadOverflowE;
+   UInt16    ajcStatsReserve1;
+   UInt16    ajcStatsReserve2;
+   UInt16    ajcStatsReserve3;
+   UInt16    ajcStatsReserve4;
+} DJB_STATS;
 
 //******************************************************************************
 // Shared memory enumerations
@@ -2430,7 +2450,6 @@ EXTERN dummy2_config_t shared_SP_left_config								AP_SHARED_SEC_GEN_AUDIO;
 EXTERN dummy2_config_t shared_SP_right_config								AP_SHARED_SEC_GEN_AUDIO;
 EXTERN dummy3_queries_t shared_SP_params_left								AP_SHARED_SEC_GEN_AUDIO;
 EXTERN dummy3_queries_t shared_SP_params_right								AP_SHARED_SEC_GEN_AUDIO;
-#if defined(_RHEA_)||defined(_HERA_)||defined(_SAMOA_)
 /**
  * This variable tells about the audio sampling rate to the DSP, while using AADMAC during a regular
  * phone call.
@@ -2511,10 +2530,24 @@ EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_48K_SAMP_PER_INT0_INT]             
 /**
  * @}
  */
+/* 10 - sizeof(DJB_STATS) in UInt32 */
+EXTERN UInt32 shared_UNUSED[95-10]	AP_SHARED_SEC_GEN_AUDIO;
+/**
+ * @addtogroup Adaptive Jitter Buffer
+ * @{
+ */
 
-EXTERN UInt32 shared_UNUSED[NUM_OF_48K_SAMP_PER_INT0_INT*2-1]           AP_SHARED_SEC_GEN_AUDIO;
-EXTERN UInt16 shared_unused_extra                                             AP_SHARED_SEC_GEN_AUDIO;
-EXTERN UInt16 shared_unused_voif                                              AP_SHARED_SEC_GEN_AUDIO;
+/**
+ * Adaptive Jitter Buffer statistics for reporting to ARM .\BR
+ *
+ */
+EXTERN DJB_STATS shared_AjcStatistics	AP_SHARED_SEC_GEN_AUDIO;
+/**
+ * @}
+ */
+EXTERN UInt16 shared_unused_extra	    AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_unused_voif        AP_SHARED_SEC_GEN_AUDIO;
+
 
 #ifdef FPGA_AUDIO_HUB_VERIFICATION
 EXTERN UInt16 shared_ap_test_flag_for_sspi4                                 AP_SHARED_SEC_GEN_AUDIO;
@@ -2526,8 +2559,6 @@ EXTERN UInt16 *shared_dsp_test_outptr_for_sspi4                             AP_S
 EXTERN UInt16 shared_cnc_emergency_flag										AP_SHARED_SEC_GEN_AUDIO;	// 1: emergency call flag
 EXTERN UInt16 shared_cnc_debug												AP_SHARED_SEC_GEN_AUDIO;	// 
 EXTERN UInt16 shared_cnc_init_flag											AP_SHARED_SEC_GEN_AUDIO;	// 1: init cnc then clear this variable
-
-#endif
 
 EXTERN VOIP_Buffer_t VOIP_DL_buf										 	AP_SHARED_SEC_GEN_AUDIO;
 EXTERN VOIP_Buffer_t VOIP_UL_buf										 	AP_SHARED_SEC_GEN_AUDIO;
@@ -2718,9 +2749,7 @@ EXTERN Audio_Logging_Buf_t shared_audio_stream_2[2]           				AP_SHARED_SEC_
 EXTERN Audio_Logging_Buf_t shared_audio_stream_3[2]           				AP_SHARED_SEC_DIAGNOS;                        // 8KHz 20ms double buffer of Audio                                                                          
 EXTERN UInt16 shared_usb_status_option				           				AP_SHARED_SEC_DIAGNOS;                        // STATUS_USB_HEADSET_BUFFER ptr option 0 or 1                                                                          
 
-#if defined(_RHEA_)||defined(_HERA_)||defined(_SAMOA_)
 EXTERN UInt16 shared_rhea_audio_test_select			           				AP_SHARED_SEC_DIAGNOS;                        // STATUS_USB_HEADSET_BUFFER ptr option 0 or 1                                                                          
-#endif
 
 //#ifdef PTT_SUPPORT	
 EXTERN Int16 shared_PTT_UL_buffer[2][320]	           				        AP_SHARED_SEC_DIAGNOS;                                                                                                  

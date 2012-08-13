@@ -65,9 +65,9 @@
 #define SSPI_HW_FRAME3_MASK						(1 << 3)
 #define MAX_TRANS_SIZE							4096
 
-//******************************************************************************
-// Local Definitions
-//******************************************************************************
+/******************************************************************************
+* Local Definitions
+******************************************************************************/
 static chal_sspi_task_conf_t task_conf;
 static chal_sspi_seq_conf_t seq_conf;
 static CHAL_HANDLE intc_handle = 0x0;
@@ -226,20 +226,20 @@ static void csl_pcm_reset(CSL_PCM_HANDLE_t *pDevice)
 {
 	u32 *reg, *reg2, reg_value, data, shift, reg_wr;
 
-	if (pDevice->base == KONA_SSP3_BASE_VA) {
+	if (pDevice->base == (cUInt32)KONA_SSP3_BASE_VA) {
 		shift = KHUB_RST_MGR_REG_SOFT_RSTN1_SSP3_SOFT_RSTN_SHIFT;
 		aTrace(LOG_AUDIO_CSL, "csl_pcm_reset::reset SSP3 port, "
 			"shift %d\n", shift);
-	} else if (pDevice->base == KONA_SSP4_BASE_VA) {
+	} else if (pDevice->base == (cUInt32)KONA_SSP4_BASE_VA) {
 		shift = KHUB_RST_MGR_REG_SOFT_RSTN1_SSP4_SOFT_RSTN_SHIFT;
 		aTrace(LOG_AUDIO_CSL, "csl_pcm_reset::reset SSP4 port, "
 			"shift %d\n", shift);
-#if 0			
-	} else if (pDevice->base == KONA_SSP6_BASE_VA) {
+#if 0		
+	} else if (pDevice->base == (cUInt32)KONA_SSP6_BASE_VA) {
 		shift = KHUB_RST_MGR_REG_SOFT_RSTN1_SSP6_SOFT_RSTN_SHIFT;
 		aTrace(LOG_AUDIO_CSL, "csl_pcm_reset::reset SSP6 port, "
 			"shift %d\n", shift);
-#endif			
+#endif		
 	} else {
 		aError("csl_pcm_reset::AUDIO ERROR invalid base 0x%x\n",
 			(u32)pDevice->base);
@@ -298,7 +298,7 @@ CSL_PCM_HANDLE csl_pcm_init(UInt32 baseAddr, UInt32 caphIntcHandle)
 	handle = chal_sspi_init(baseAddr);
 	pDevice = (CSL_PCM_HANDLE_t *) handle;
 	if (handle == NULL) {
-		aTrace(LOG_AUDIO_CSL, "csl_pcm_init failed\r\n");
+		aError("csl_pcm_init failed\r\n");
 		return NULL;
 	}
 
@@ -310,13 +310,13 @@ CSL_PCM_HANDLE csl_pcm_init(UInt32 baseAddr, UInt32 caphIntcHandle)
 	return handle;
 }
 
-//******************************************************************************
-//
-//  Function Name:	csl_pcm_deinit
-//
-//  Description:	This function deinitializes the CSL layer
-//
-//******************************************************************************
+/******************************************************************************
+*
+* Function Name:	csl_pcm_deinit
+*
+*  Description:	This function deinitializes the CSL layer
+*
+******************************************************************************/
 CSL_PCM_OPSTATUS_t csl_pcm_deinit(CSL_PCM_HANDLE handle)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
@@ -325,7 +325,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_deinit(CSL_PCM_HANDLE handle)
 	aTrace(LOG_AUDIO_CSL, "+csl_pcm_deinit\r\n");
 
 	if (handle == NULL) {
-		aTrace(LOG_AUDIO_CSL, "csl_pcm_deinit failed\r\n");
+		aError("csl_pcm_deinit failed\r\n");
 		return CSL_PCM_ERR_HANDLE;
 	}
 
@@ -362,13 +362,13 @@ CSL_PCM_OPSTATUS_t csl_pcm_enable_scheduler(CSL_PCM_HANDLE handle,
     return CSL_PCM_SUCCESS;
 }
 
-//******************************************************************************
-//
-//  Function Name:	csl_pcm_start
-//
-//  Description:	This function starts scheduler operation
-//
-//******************************************************************************
+/******************************************************************************
+*
+*  Function Name:	csl_pcm_start
+*
+*  Description:	This function starts scheduler operation
+*
+*****************************************************************************/
 CSL_PCM_OPSTATUS_t csl_pcm_start(CSL_PCM_HANDLE handle,
 				 csl_pcm_config_device_t *config)
 {
@@ -412,13 +412,13 @@ CSL_PCM_OPSTATUS_t csl_pcm_start(CSL_PCM_HANDLE handle,
 	return CSL_PCM_SUCCESS;
 }
 
-//******************************************************************************
-//
-//  Function Name:	csl_pcm_start_tx
-//
-//  Description:	This function starts transmit operation
-//
-//******************************************************************************
+/******************************************************************************
+*
+*  Function Name:	csl_pcm_start_tx
+*
+*  Description:	This function starts transmit operation
+*
+******************************************************************************/
 CSL_PCM_OPSTATUS_t csl_pcm_start_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
@@ -444,13 +444,13 @@ CSL_PCM_OPSTATUS_t csl_pcm_start_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 	return CSL_PCM_SUCCESS;
 }
 
-//******************************************************************************
-//
-//  Function Name:	csl_pcm_start_rx
-//
-//  Description:	This function starts receive operation
-//
-//******************************************************************************
+/******************************************************************************
+*
+*  Function Name:	csl_pcm_start_rx
+*
+*  Description:	This function starts receive operation
+*
+******************************************************************************/
 CSL_PCM_OPSTATUS_t csl_pcm_start_rx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
@@ -467,8 +467,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_start_rx(CSL_PCM_HANDLE handle, UInt8 channel)
                                               SSPI_FIFO_ID_RX0,
                                               TRUE,
                                               TRUE);
-    }
-    else if (channel == CSL_PCM_CHAN_RX1) {
+	} else if (channel == CSL_PCM_CHAN_RX1) {
         chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_RX1);
         chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
                                               SSPI_FIFO_ID_RX1,
@@ -478,13 +477,13 @@ CSL_PCM_OPSTATUS_t csl_pcm_start_rx(CSL_PCM_HANDLE handle, UInt8 channel)
     return CSL_PCM_SUCCESS;
 }
 
-//******************************************************************************
-//
-//  Function Name:	csl_pcm_stop_tx
-//
-//  Description:	This function stops transmit operation
-//
-//******************************************************************************
+/******************************************************************************
+*
+*  Function Name:	csl_pcm_stop_tx
+*
+*  Description:	This function stops transmit operation
+*
+******************************************************************************/
 CSL_PCM_OPSTATUS_t csl_pcm_stop_tx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
@@ -500,8 +499,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_stop_tx(CSL_PCM_HANDLE handle, UInt8 channel)
                                               SSPI_FIFO_ID_TX0,
                                               FALSE,
                                               FALSE);
-    }
-    else if(channel == CSL_PCM_CHAN_TX1) {
+	} else if (channel == CSL_PCM_CHAN_TX1) {
         chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_TX1);
         chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
                                               SSPI_FIFO_ID_TX1,
@@ -512,13 +510,13 @@ CSL_PCM_OPSTATUS_t csl_pcm_stop_tx(CSL_PCM_HANDLE handle, UInt8 channel)
     return CSL_PCM_SUCCESS;
 }
 
-//******************************************************************************
-//
-//  Function Name:	csl_pcm_stop_rx
-//
-//  Description:	This function stops receive operation
-//
-//******************************************************************************
+/******************************************************************************
+*
+*  Function Name:	csl_pcm_stop_rx
+*
+*  Description:	This function stops receive operation
+*
+******************************************************************************/
 CSL_PCM_OPSTATUS_t csl_pcm_stop_rx(CSL_PCM_HANDLE handle, UInt8 channel)
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
@@ -535,8 +533,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_stop_rx(CSL_PCM_HANDLE handle, UInt8 channel)
                                               SSPI_FIFO_ID_RX0,
                                               FALSE,
                                               FALSE);
-    }
-    else if (channel == CSL_PCM_CHAN_RX1) {
+	} else if (channel == CSL_PCM_CHAN_RX1) {
         chal_sspi_fifo_reset(pDevice, SSPI_FIFO_ID_RX1);
         chal_sspi_enable_fifo_pio_start_stop_intr(pDevice,
                                               SSPI_FIFO_ID_RX1,
@@ -578,13 +575,13 @@ CSL_PCM_OPSTATUS_t csl_pcm_resume(CSL_PCM_HANDLE handle)
 	return CSL_PCM_SUCCESS;
 }
 
-//******************************************************************************
-//
-//  Function Name:	csl_pcm_config
-//
-//  Description:	This function configures SSPI as PCM operation
-//
-//******************************************************************************
+/******************************************************************************
+*
+*  Function Name:	csl_pcm_config
+*
+*  Description:	This function configures SSPI as PCM operation
+*
+******************************************************************************/
 CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 				csl_pcm_config_device_t *configDev)
 {
@@ -624,7 +621,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	}
 
 	if (handle == NULL) {
-		aTrace(LOG_AUDIO_CSL, "csl_pcm_config failed\r\n");
+		aError("csl_pcm_config failed\r\n");
 		return CSL_PCM_ERR_HANDLE;
 	}
 
@@ -675,7 +672,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 
 	/*set sspi at idle state */
 	if (chal_sspi_set_idle_state(handle, SSPI_PROT_DEFAULT_PCM)) {
-		aTrace(LOG_AUDIO_CSL, "csl_pcm_config failed \r\n");
+		aError("csl_pcm_config failed \r\n");
 		return CSL_PCM_ERROR;
 	}
 
@@ -875,26 +872,28 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	return CSL_PCM_SUCCESS;
 }
 
-//******************************************************************************
-//
-//  Function Name:	csl_pcm_get_tx0_fifo_data_port
-//
-//  Description:	This function get transmit channel fifo port address
-//
-//******************************************************************************
+/******************************************************************************
+*
+*  Function Name:	csl_pcm_get_tx0_fifo_data_port
+*
+*  Description:	This function get transmit channel fifo port address
+*
+*******************************************************************************/
 UInt32 csl_pcm_get_tx0_fifo_data_port(CSL_PCM_HANDLE handle)
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
-	if(pDevice) return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0TX_OFFSET);
-	else return 0;
+	if (pDevice)
+		return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0TX_OFFSET);
+	else
+		return 0;
 }
-//******************************************************************************
-//
-//  Function Name:	csl_pcm_get_tx1_fifo_data_port
-//
-//  Description:	This function get receive channel fifo port address
-//
-//******************************************************************************
+/******************************************************************************
+*
+*  Function Name:	csl_pcm_get_tx1_fifo_data_port
+*
+*  Description:	This function get receive channel fifo port address
+*
+*******************************************************************************/
 
 UInt32 csl_pcm_get_tx1_fifo_data_port(CSL_PCM_HANDLE handle)
 {
@@ -902,18 +901,20 @@ UInt32 csl_pcm_get_tx1_fifo_data_port(CSL_PCM_HANDLE handle)
 	return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY1TX_OFFSET);
 }
 
-//******************************************************************************
-//
-//  Function Name:	csl_pcm_get_rx0_fifo_data_port
-//
-//  Description:	This function get receive channel fifo port address
-//
-//******************************************************************************
+/******************************************************************************
+*
+*  Function Name:	csl_pcm_get_rx0_fifo_data_port
+*
+*  Description:	This function get receive channel fifo port address
+*
+*******************************************************************************/
 UInt32 csl_pcm_get_rx0_fifo_data_port(CSL_PCM_HANDLE handle)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
-	if(pDevice) return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0RX_OFFSET);
-	else return 0;
+	if (pDevice)
+		return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0RX_OFFSET);
+	else
+		return 0;
 }
 
 /*
@@ -930,12 +931,14 @@ UInt32 csl_pcm_get_rx1_fifo_data_port(CSL_PCM_HANDLE handle)
 
 /****************************************************************************
 *
-*  Function Name: void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
+*  Function Name: void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e
+*		csl_owner, CSL_CAPH_SSP_e csl_sspid)
 *
 *  Description: enable pcm intr
 *
 ****************************************************************************/
-void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
+void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner,
+		CSL_CAPH_SSP_e csl_sspid)
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
@@ -959,12 +962,14 @@ void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e 
 
 /****************************************************************************
 *
-*  Function Name: void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
+*  Function Name: void csl_caph_intc_disable_pcm_intr(
+*	CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
 *
 *  Description: disable pcm intr
 *
 ****************************************************************************/
-void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
+void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner,
+		CSL_CAPH_SSP_e csl_sspid)
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
@@ -982,7 +987,7 @@ void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e
     else if (csl_sspid == CSL_CAPH_SSP_6)
         chal_caph_intc_disable_ssp_intr(intc_handle, 4, owner);
 	else
-		// should not get here.
+		/* should not get here. */
 		audio_xassert(0, csl_sspid);
 }
 
