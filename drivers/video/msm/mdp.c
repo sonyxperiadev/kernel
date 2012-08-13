@@ -2571,8 +2571,6 @@ static int mdp_probe(struct platform_device *pdev)
 #ifdef CONFIG_FB_MSM_MDP40
 		if (mfd->panel.type == MIPI_CMD_PANEL) {
 			mipi = &mfd->panel_info.mipi;
-			configure_mdp_core_clk_table(
-				(mipi->dsi_pclk_rate) * 3 / 2);
 		}
 #endif
 	} else {
