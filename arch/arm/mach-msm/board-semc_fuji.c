@@ -2518,6 +2518,15 @@ static int __init pmem_audio_size_setup(char *p)
 }
 early_param("pmem_audio_size", pmem_audio_size_setup);
 
+static unsigned pmem_smipool_size = MSM_PMEM_SMIPOOL_SIZE;
+
+static int __init pmem_smipool_size_setup(char *p)
+{
+        pmem_smipool_size = memparse(p, NULL);
+        return 0;
+}
+early_param("pmem_smipool_size", pmem_smipool_size_setup);
+
 #ifdef CONFIG_SEMC_SWIQI
 static unsigned pmem_swiqi_size = MSM_PMEM_SWIQI_SIZE;
 
@@ -2704,6 +2713,20 @@ static struct platform_device android_pmem_smipool_device = {
 	.name = "android_pmem",
 	.id = 7,
 	.dev = { .platform_data = &android_pmem_smipool_pdata },
+};
+#else
+static struct android_pmem_platform_data android_pmem_smipool_pdata = {
+        .name = "pmem_smipool",
+        .allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
+        .cached = 0,
+        .memory_type = MEMTYPE_EBI1,
+	.map_on_demand = 1,
+};
+
+static struct platform_device android_pmem_smipool_device = {
+        .name = "android_pmem",
+        .id = 7,
+        .dev = { .platform_data = &android_pmem_smipool_pdata },
 };
 #endif
 #endif
@@ -3957,11 +3980,11 @@ static struct platform_device *fuji_devices[] __initdata = {
 #ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
 	&android_pmem_device,
 	&android_pmem_adsp_device,
-	&android_pmem_smipool_device,
 #ifdef CONFIG_SEMC_SWIQI
 	&android_pmem_swiqi_device,
 #endif
 #endif
+	&android_pmem_smipool_device,
 	&android_pmem_audio_device,
 #endif
 #ifdef CONFIG_MSM_ROTATOR
@@ -4270,6 +4293,7 @@ static void __init size_pmem_devices(void)
 	android_pmem_swiqi_pdata.size = pmem_swiqi_size;
 #endif
 #endif
+	android_pmem_smipool_pdata.size = MSM_PMEM_SMIPOOL_SIZE;
 	android_pmem_audio_pdata.size = MSM_PMEM_AUDIO_SIZE;
 #endif
 }
@@ -4290,6 +4314,7 @@ static void __init reserve_pmem_memory(void)
 	reserve_memory_for(&android_pmem_swiqi_pdata);
 #endif
 #endif
+	reserve_memory_for(&android_pmem_smipool_pdata);
 	reserve_memory_for(&android_pmem_audio_pdata);
 	msm8x60_reserve_table[MEMTYPE_EBI1].size += pmem_kernel_ebi1_size;
 #endif
