@@ -523,7 +523,8 @@ static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 		return -ENOMEM;
 
 	BUG_ON(!current->group_leader->mm);
-	add_mm_counter(current->group_leader->mm, MM_CMAPAGES, nr_pages);
+
+	atomic_long_add(nr_pages, &current->group_leader->mm->cma_stat);
 	data->pfn = page_to_pfn(page);
 	data->size = len;
 	data->flags |= PMEM_FLAGS_CMA;
@@ -997,8 +998,7 @@ static int pmem_cma_free(int id, struct pmem_data *data)
 	BUG_ON(ret == 0);
 
 	if (task_is_allocator(data))
-		add_mm_counter(current->group_leader->mm,
-			       MM_CMAPAGES, -nr_pages);
+		atomic_long_add(-nr_pages, &current->group_leader->mm->cma_stat);
 
 	data->flags &= ~PMEM_FLAGS_CMA;
 

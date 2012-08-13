@@ -269,9 +269,6 @@ enum {
 	MM_FILEPAGES,
 	MM_ANONPAGES,
 	MM_SWAPENTS,
-#ifdef CONFIG_CMA
-	MM_CMAPAGES,
-#endif
 	NR_MM_COUNTERS
 };
 
@@ -339,6 +336,10 @@ struct mm_struct {
 	 * page_table_lock, in other configurations by being atomic.
 	 */
 	struct mm_rss_stat rss_stat;
+
+#ifdef CONFIG_CMA
+	atomic_long_t cma_stat;
+#endif
 
 	struct linux_binfmt *binfmt;
 
