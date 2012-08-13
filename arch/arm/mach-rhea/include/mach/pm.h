@@ -54,27 +54,28 @@
  */
 
 enum {
-	RHEA_STATE_C1, /* suspend */
-	RHEA_STATE_C2, /* suspend-rtn */
-	RHEA_STATE_C3, /* ds-rtn */
-	RHEA_STATE_C4, /* suspend-drmt */
-	RHEA_STATE_C5, /* ds-drmt */
+	CSTATE_SIMPLE_WFI, /* Simple WFI */
+	CSTATE_SUSPEND_RETN, /* suspend retention */
+	CSTATE_SUSPEND_DRMT, /* suspend dormant */
+	CSTATE_DS_DRMT, /* deep sleep dormant */
 };
 
+/*Cstate Exit latency*/
 enum {
-	RHEA_C1_EXIT_LATENCY = 0,
-	RHEA_C2_EXIT_LATENCY = 200,
-	RHEA_C3_EXIT_LATENCY = 300,
-	RHEA_C4_EXIT_LATENCY = 2000,	/* Worst case dormant sequence delay */
-	RHEA_C5_EXIT_LATENCY = 10000,	/* 8ms crystal warmup + c4 latency */
+	EXIT_LAT_SIMPLE_WFI = 0,
+	EXIT_LAT_SUSPEND_RETN = 200,
+	/* Worst case dormant sequence delay */
+	EXIT_LAT_SUSPEND_DRMT = 2000,
+	/*dormant latency + xtal warmup delay*/
+	EXIT_LAT_DS_DRMT = DEEP_SLEEP_LATENCY + 2000,
 };
 
+/*CState target residency values*/
 enum {
-	RHEA_C1_TARGET_RESIDENCY = 0,
-	RHEA_C2_TARGET_RESIDENCY = 200,
-	RHEA_C3_TARGET_RESIDENCY = 300,
-	RHEA_C4_TARGET_RESIDENCY = RHEA_C4_EXIT_LATENCY + 2000,
-	RHEA_C5_TARGET_RESIDENCY = RHEA_C5_EXIT_LATENCY + 5000,
+	TRGT_RESI_SIMPLE_WFI = 0,
+	TRGT_RESI_SUSPEND_RETN = 200,
+	TRGT_RESI_SUSPEND_DRMT = EXIT_LAT_SUSPEND_DRMT + 2000,
+	TRGT_RESI_DS_DRMT = EXIT_LAT_DS_DRMT + 5000,
 };
 #endif
 

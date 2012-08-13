@@ -725,7 +725,7 @@ static struct haptic_platform_data haptic_control_data = {
 	/* Haptic device name: can be device-specific name like ISA1000 */
 	.name = "pwm_vibra",
 	/* PWM interface name to request */
-	.pwm_name = "kona_pwmc:4",
+	.pwm_id = 4,
 	/* Invalid gpio for now, pass valid gpio number if connected */
 	.gpio = ARCH_NR_GPIOS,
 	.setup_pin = haptic_gpio_setup,

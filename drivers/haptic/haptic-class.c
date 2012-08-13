@@ -18,7 +18,6 @@
 #include <linux/spinlock.h>
 #include <linux/device.h>
 #include <linux/rwsem.h>
-#include <linux/sysdev.h>
 #include <linux/timer.h>
 #include <linux/err.h>
 #include <linux/ctype.h>

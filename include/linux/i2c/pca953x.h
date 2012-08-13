@@ -3,10 +3,13 @@
 
 #include <linux/types.h>
 #include <linux/i2c.h>
+#include <linux/i2c-kona.h>
 
 /* platform data for the PCA9539 16-bit I/O expander driver */
 
 struct pca953x_platform_data {
+	struct i2c_slave_platform_data i2c_pdata;
+
 	/* number of the first GPIO */
 	unsigned	gpio_base;
 
