@@ -74,8 +74,6 @@ static int force_sleep;
 #define CHIPREG_PERIPH_SPARE_CONTROL2    \
 	(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET)
 
-static struct pi_mgr_qos_node arm_qos;
-
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 
@@ -89,34 +87,14 @@ int enter_suspend_state(struct kona_idle_state* state);
 int enter_dormant_state(struct kona_idle_state *state);
 static void set_spare_power_status(unsigned int mode);
 
-const char *sleep_prevent_clocks[] =
-		{
-			/*HUB*/
-			"caph_srcmixer_clk",
-			"ssp4_audio_clk",
-			"ssp3_audio_clk",
-			"audioh_156m_clk",
-			"audioh_2p4m_clk",
-			"audioh_26m",
-			/*MM*/
-			"dsi0_esc_clk",
-			"smi_clk",
-			"v3d_axi_clk",
-			"mm_dma_axi_clk",
-			"mm_dma_axi_clk",
-			"vce_axi_clk",
-			"smi_axi_clk"
-		};
-
-
-static struct kona_idle_state rhea_cpu_states[] = {
+static struct kona_idle_state idle_states[] = {
 	{
 		.name = "C1",
 		.desc = "suspend",
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = RHEA_C1_EXIT_LATENCY,
-		.target_residency = RHEA_C1_TARGET_RESIDENCY,
-		.state = RHEA_STATE_C1,
+		.latency = EXIT_LAT_SIMPLE_WFI,
+		.target_residency = TRGT_RESI_SIMPLE_WFI,
+		.state = CSTATE_SIMPLE_WFI,
 		.enter = enter_suspend_state,
 	},
 #ifdef CONFIG_A9_RETENTION_CSTATE
@@ -124,46 +102,33 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.name = "C2",
 		.desc = "suspend-rtn", /*suspend-retention (XTAL ON)*/
 		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
-		.latency = RHEA_C2_EXIT_LATENCY,
-		.target_residency = RHEA_C2_TARGET_RESIDENCY,
-		.state = RHEA_STATE_C2,
-		.enter = enter_idle_state,
-	}, {
-		.name = "C3",
-		.desc = "ds-retn", /*deepsleep-retention (XTAL OFF)*/
-		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = RHEA_C3_EXIT_LATENCY,
-		.target_residency = RHEA_C3_TARGET_RESIDENCY,
-		.state = RHEA_STATE_C3,
+		.latency = EXIT_LAT_SUSPEND_RETN,
+		.target_residency = TGT_RESI_SUSPEND_RETN,
+		.state = CSTATE_SUSPEND_RETN,
 		.enter = enter_idle_state,
 	},
 #endif
 #ifdef CONFIG_RHEA_DORMANT_MODE
 	{
-		.name = "C4",
+		.name = "C3",
 		.desc = "suspend-drmnt", /* suspend-dormant */
 		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
-		.latency = RHEA_C4_EXIT_LATENCY,
-		.target_residency = RHEA_C4_TARGET_RESIDENCY,
-		.state = RHEA_STATE_C4,
+		.latency = EXIT_LAT_SUSPEND_DRMT,
+		.target_residency = TRGT_RESI_SUSPEND_DRMT,
+		.state = CSTATE_SUSPEND_DRMT,
 		.enter = enter_idle_state,
 	}, {
-		.name = "C5",
+		.name = "C4",
 		.desc = "ds-drmnt", /* deepsleep-dormant(XTAL OFF) */
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = RHEA_C5_EXIT_LATENCY,
-		.target_residency = RHEA_C5_TARGET_RESIDENCY,
-		.state = RHEA_STATE_C5,
+		.latency = EXIT_LAT_DS_DRMT,
+		.target_residency = TRGT_RESI_DS_DRMT,
+		.state = CSTATE_DS_DRMT,
 		.enter = enter_idle_state,
 	},
 #endif
 };
 
-#ifdef CONFIG_A9_RETENTION_CSTATE
-#define NON_DORMANT_MAX_EXIT_LATENCY	RHEA_C3_EXIT_LATENCY
-#else
-#define NON_DORMANT_MAX_EXIT_LATENCY	RHEA_C1_EXIT_LATENCY
-#endif
 
 static int pm_enable_self_refresh(bool enable)
 {
@@ -272,7 +237,7 @@ static void log_wakeup_interrupts(void)
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET2_OFFSET));
 
 	pm_dbg(LOG_INTR_STATUS, "GIC pending status3 = %x\n",
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET3_OFFSET));
 
 	pm_dbg(LOG_INTR_STATUS, "GIC pending status4 = %x\n",
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
@@ -340,6 +305,9 @@ static void set_spare_power_status(unsigned int mode)
 {
 	unsigned int val;
 
+	if (get_chip_rev_id() < RHEA_CHIP_REV_B1)
+		return;
+
 	mode = mode & 0x3;
 
 	val = readl(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
@@ -399,11 +367,31 @@ static int enter_retention_state(struct kona_idle_state *state)
 	return 0;
 }
 
+int disable_all_interrupts(void)
+{
+	if (force_sleep) {
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR1_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR2_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR3_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR4_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR5_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR6_OFFSET);
+		writel(0xFFFFFFFF, KONA_GICDIST_VA +
+				GICDIST_ENABLE_CLR7_OFFSET);
+	}
+	return 0;
+}
+
 int rhea_force_sleep(suspend_state_t state)
 {
 	struct kona_idle_state s;
 	int i;
-
 	memset(&s, 0, sizeof(s));
 	s.state = get_force_sleep_state();
 
@@ -424,6 +412,7 @@ int rhea_force_sleep(suspend_state_t state)
 			if (test == 0)
 				pwr_mgr_event_trg_enable(i, 0);
 		}
+		disable_all_interrupts();
 
 		enter_idle_state(&s);
 	}
@@ -497,12 +486,11 @@ int enter_idle_state(struct kona_idle_state *state)
 			rhea_clock_print_act_clks();
 
 	switch (state->state) {
-	case RHEA_STATE_C2:
-	case RHEA_STATE_C3:
+	case CSTATE_SUSPEND_RETN:
 		enter_retention_state(state);
 		break;
-	case RHEA_STATE_C4:
-	case RHEA_STATE_C5:
+	case CSTATE_SUSPEND_DRMT:
+	case CSTATE_DS_DRMT:
 		enter_dormant_state(state);
 		break;
 	}
@@ -618,12 +606,11 @@ int enter_idle_state(struct kona_idle_state *state)
 	return -1;
 }
 
-int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
-{
-	pr_info("RHEA => kona_mach_get_idle_states\n");
-	*idle_states = rhea_cpu_states;
-	return ARRAY_SIZE(rhea_cpu_states);
-}
+static struct pm_init_param pm_init = {
+	.states = idle_states,
+	.num_states = ARRAY_SIZE(idle_states),
+	.suspend_state =  ARRAY_SIZE(idle_states)-1,
+};
 
 
 int __init rhea_pm_init(void)
@@ -633,53 +620,13 @@ int __init rhea_pm_init(void)
 				&noncache_buf_pa, GFP_ATOMIC);
 #endif
     pm_config_deep_sleep();
-	return kona_pm_init();
+	return kona_pm_init(&pm_init);
 }
 device_initcall(rhea_pm_init);
 
 
 #ifdef CONFIG_DEBUG_FS
 
-
-static struct clk* uartb_clk = NULL;
-static int clk_active = 1;
-struct delayed_work uartb_wq;
-
-static void uartb_wq_handler(struct work_struct *work)
-{
-
-	if(force_retention)
-	{
-
-		if(!uartb_clk)
-			uartb_clk = clk_get(NULL,"uartb_clk");
-		BUG_ON(IS_ERR_OR_NULL(uartb_clk));
-		clk_disable(uartb_clk);
-		clk_active = 0;
-	}
-}
-
-#ifdef CONFIG_UART_FORCE_RETENTION_TST
-void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
-{
-	if(force_retention)
-	{
-		if(!clk_active)
-		{
-			if(!uartb_clk)
-				uartb_clk = clk_get(NULL,"uartb_clk");
-			BUG_ON(IS_ERR_OR_NULL(uartb_clk));
-			clk_enable(uartb_clk);
-			clk_active = 1;
-
-
-		}
-		cancel_delayed_work_sync(&uartb_wq);
-		schedule_delayed_work(&uartb_wq,
-				msecs_to_jiffies(3000));
-	}
-}
-#endif
 static int enable_self_refresh(void *data, u64 val)
 {
     if (val == 0) {
@@ -690,17 +637,21 @@ static int enable_self_refresh(void *data, u64 val)
     return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(pm_en_self_refresh_fops, NULL, enable_self_refresh, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(pm_en_self_refresh_fops, NULL,
+						enable_self_refresh, "%llu\n");
 
 /* Disable/enable dormant mode at runtime */
 static int dormant_enable_set(void *data, u64 val)
 {
 	if (val) {
 		dormant_enable = 1;
-		pi_mgr_qos_request_update(&arm_qos, PI_MGR_QOS_DEFAULT_VALUE);
+		kona_pm_disable_idle_state(CSTATE_SUSPEND_DRMT, false);
+		kona_pm_disable_idle_state(CSTATE_DS_DRMT, false);
+
 	} else {
-		pi_mgr_qos_request_update(&arm_qos,
-					  NON_DORMANT_MAX_EXIT_LATENCY);
+		kona_pm_disable_idle_state(CSTATE_SUSPEND_DRMT, true);
+		kona_pm_disable_idle_state(CSTATE_DS_DRMT, true);
+
 		dormant_enable = 0;
 	}
 
@@ -713,14 +664,6 @@ DEFINE_SIMPLE_ATTRIBUTE(dormant_enable_fops, NULL, dormant_enable_set,
 static struct dentry *dent_rhea_pm_root_dir;
 int __init rhea_pm_debug_init(void)
 {
-	int ret;
-
-    INIT_DELAYED_WORK(&uartb_wq, uartb_wq_handler);
-#ifdef CONFIG_UART_FORCE_RETENTION_TST
-	if (pwr_mgr_register_event_handler(UBRX_EVENT,
-			uartb_pwr_mgr_event_cb, NULL))
-		return -ENOMEM;
-#endif
 	/* create root clock dir /clock */
     dent_rhea_pm_root_dir = debugfs_create_dir("rhea_pm", 0);
     if(!dent_rhea_pm_root_dir)
@@ -735,23 +678,13 @@ int __init rhea_pm_debug_init(void)
 			dent_rhea_pm_root_dir, (int*)&force_retention))
 		return -ENOMEM;
 
-	/* A9 QOS interface is used to disable dormant C-states
-	 * at runtime. To disable dormant set PM_QOS_CPU_DMA_LATENCY
-	 * to the latency of the highest non-dormant state.
-	 */
-	ret = pi_mgr_qos_add_request(&arm_qos, "pm",
-				     PI_MGR_PI_ID_ARM_CORE,
-				     PI_MGR_QOS_DEFAULT_VALUE);
-	if (ret < 0)
-		return ret;
-
 	/* If dormant is not enabled out of boot, prevent cpuidle
 	 * from entering into dormant C-states.
 	 */
-	if (dormant_enable == 0)
-		pi_mgr_qos_request_update(&arm_qos,
-					  NON_DORMANT_MAX_EXIT_LATENCY);
-
+	if (dormant_enable == 0) {
+		kona_pm_disable_idle_state(CSTATE_SUSPEND_DRMT, true);
+		kona_pm_disable_idle_state(CSTATE_DS_DRMT, true);
+	}
 	/* Interface to enable disable dormant mode at runtime */
 	if (!debugfs_create_file("dormant_enable", S_IRUGO | S_IWUSR,
 				 dent_rhea_pm_root_dir, NULL,

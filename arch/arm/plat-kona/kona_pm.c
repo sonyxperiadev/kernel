@@ -286,7 +286,6 @@ int __init kona_pm_init(struct pm_init_param *ip)
 			return ret;
 		}
 	}
-	}
 #endif /*CONFIG_CPU_IDLE */
 
 #ifdef CONFIG_SUSPEND
