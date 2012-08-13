@@ -458,7 +458,11 @@ int mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_P
 		ret = -ENOENT;
     }
 
+#ifdef CONFIG_KONA_PI_MGR
 	fw_dev->mm_dvfs = mm_dvfs_init(&fw_dev->mm_common,ifc_param->mm_dev_name,  dvfs_param);
+#else
+	fw_dev->mm_dvfs = NULL;
+#endif
 	fw_dev->mm_prof = mm_prof_init(&fw_dev->mm_common,ifc_param->mm_dev_name,  prof_param);
 
 	return 0;
