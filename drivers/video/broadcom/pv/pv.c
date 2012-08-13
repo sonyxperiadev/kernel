@@ -290,8 +290,15 @@ int pv_change_state(int event, struct pv_config_t *vid_config)
 
 	switch (event) {
 	case PV_VID_CONFIG:
-		while (PV_STOPPING == dev->state)
-			usleep_range(1000, 1100);
+#if 0
+		int cnt = 100;
+		while ((PV_STOPPING == dev->state) && cnt-- ) {
+			if (readl(pv_base + REG_PV_STAT) & VID_IDLE_STAT)
+				dev->state = PV_STOPPED;
+			else
+				usleep_range(1000, 1100);
+		}
+#endif
 		if ((PV_STOPPED == dev->state)
 			|| (PV_INIT_DONE == dev->state)) {
 			pv_clk_enable(dev);

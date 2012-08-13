@@ -52,9 +52,10 @@
 #define HBP_START	(1<<1)
 #define HSYNC_START	(1<<0)
 
-#define HVS_OF	(1<<10)
-#define PV_UF	(1<<9)
-#define HVS_UF	(1<<8)
+#define HVS_OF	(1<<11)
+#define PV_UF	(1<<10)
+#define HVS_UF	(1<<9)
+#define VID_IDLE_STAT	(1<<8)
 #define VFP	(1<<7)
 #define VACT	(1<<6)
 #define VBP	(1<<5)
