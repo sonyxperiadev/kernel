@@ -235,8 +235,10 @@ void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
 	gptimer_clockevents_init();
 	gptimer_set_next_event((CLOCK_TICK_RATE / HZ), NULL);
 
+	/* TODO: Define this using DEFINE_TWD_LOCAL_TIMER
 #ifdef CONFIG_LOCAL_TIMERS
 	twd_base = IOMEM(KONA_PTIM_VA);
 #endif
+*/
 	setup_sched_clock(kona_update_sched_clock, 32, CLOCK_TICK_RATE);
 }

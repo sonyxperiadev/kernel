@@ -18,6 +18,7 @@
 #include <linux/spinlock.h>
 #include <linux/jiffies.h>
 #include <linux/delay.h>
+#include <mach/memory.h>
 
 #include <asm/cacheflush.h>
 #include <asm/hardware/gic.h>
