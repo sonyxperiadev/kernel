@@ -796,6 +796,9 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data_ex(DMA_VC4LITE_CHANNEL_t chanID,
 	}
 #endif
 	/* set the ctrl block information */
+#ifdef CONFIG_ARCH_HAWAII
+	dmaCtrlBlkInfo.burstWriteEnable32 = pData->burstWriteEnable32;
+#endif
 	dmaCtrlBlkInfo.noWideBurst = 0;
 	dmaCtrlBlkInfo.waitCycles = 0;
 	dmaCtrlBlkInfo.srcIgnoreRead = 0;
