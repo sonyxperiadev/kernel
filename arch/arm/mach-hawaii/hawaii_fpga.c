@@ -377,7 +377,7 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 					.bus_type   = KONA_BUS_DSI,
 					.bus_no     = KONA_BUS_0,
 					.bus_ch     = KONA_BUS_CH_0,
-					.bus_width  = 0,
+					.bus_width  = 3,
 					.te_input   = KONA_TE_IN_1_DSI0,
 					.col_mode_i = KONA_CM_I_XRGB888,
 					.col_mode_o = KONA_CM_O_RGB888,
@@ -386,9 +386,7 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 			.w1 = {
 			.bits = {
 					.api_rev  =  KONA_LCD_BOOT_API_REV,
-					.lcd_rst0 =  25, /* DSI_BRIDGE_PON   */
-					.lcd_rst1 =  12, /* DSI_BRIDGE_RESET */
-					.lcd_rst2 =  13, /* SHARP_RESET      */
+					.lcd_rst0 =  22,
 				},
 			},
 		},

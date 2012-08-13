@@ -645,7 +645,7 @@ static int kona_fb_probe(struct platform_device *pdev)
 	int ret_val = -1;
 	struct kona_fb_platform_data *fb_data;
 
-printk("%s:%d\n", __func__, __LINE__);
+	printk("%s:%d\n", __func__, __LINE__);
 
 	if (g_kona_fb && (g_kona_fb->is_display_found == 1)) {
 		konafb_info("A right display device is already found!\n");
@@ -787,7 +787,7 @@ printk("%s:%d\n", __func__, __LINE__);
 	fb->fb.fix.smem_start = fb->phys_fbbase;
 	fb->fb.fix.smem_len = framesize;
 
-printk("%s:%d\n", __func__, __LINE__);
+	printk("%s:%d\n", __func__, __LINE__);
 	konafb_debug
 	    ("Framebuffer starts at phys[0x%08x], and virt[0x%08x] with frame size[0x%08x]\n",
 	     fb->phys_fbbase, (uint32_t) fb->fb.screen_base, framesize);
