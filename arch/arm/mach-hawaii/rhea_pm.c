@@ -8,6 +8,9 @@
 /*                                                                            */
 /******************************************************************************/
 
+#include <mach/appf_types.h>
+#include <mach/appf_internals.h>
+#include <mach/appf_helpers.h>
 #include <linux/sched.h>
 #include <linux/cpuidle.h>
 #include <linux/pm.h>
@@ -344,6 +347,20 @@ int enter_dormant_state(struct kona_idle_state *state)
 
 static int enter_retention_state(struct kona_idle_state *state)
 {
+	u32 sctlr[CONFIG_NR_CPUS];
+	u32 actlr[CONFIG_NR_CPUS];
+	int cpu;
+
+	/*per CPU access to clear/inv D$ */
+	cpu = get_cpu();
+	sctlr[cpu] = read_sctlr();
+	put_cpu();
+	disable_clean_inv_dcache_v7_l1();
+	cpu = get_cpu();
+	actlr[cpu] = read_actlr();
+	put_cpu();
+	write_actlr(read_actlr() & ~A9_SMP_BIT);
+
 	scu_set_power_mode(SCU_STATUS_DORMANT);
 	/* Rhea B1 adds CHIREGS:PERIPH_SPARE_CONTROL2:PWRCTLx_BYPASS
 	 * bits for configuring low power modes. Hence these bits
@@ -360,6 +377,13 @@ static int enter_retention_state(struct kona_idle_state *state)
 		instrument_retention(TRACE_EXIT);
 
 	set_spare_power_status(SCU_STATUS_NORMAL);
+
+	/*perCpu config D$ */
+	cpu = get_cpu();
+	write_actlr(actlr[cpu]);
+	write_sctlr(sctlr[cpu]);
+	put_cpu();
+
 	return 0;
 }
 
