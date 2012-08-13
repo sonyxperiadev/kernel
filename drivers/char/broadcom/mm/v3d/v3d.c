@@ -112,10 +112,10 @@ static int v3d_print_regs(void* device_id)
 {
 	v3d_device_t* id = (v3d_device_t*)device_id;
 
-	err_print("regs:(0x%08x 0x%08x 0x%08x) (0x%08x 0x%08x 0x%08x) (0x%08x 0x%08x 0x%08x)\n",v3d_read(id,V3D_CT0CS_OFFSET),v3d_read(id,V3D_CT0CA_OFFSET),v3d_read(id,V3D_CT0EA_OFFSET),
+	pr_err("regs:(0x%08x 0x%08x 0x%08x) (0x%08x 0x%08x 0x%08x) (0x%08x 0x%08x 0x%08x)",v3d_read(id,V3D_CT0CS_OFFSET),v3d_read(id,V3D_CT0CA_OFFSET),v3d_read(id,V3D_CT0EA_OFFSET),
 		v3d_read(id,V3D_CT1CS_OFFSET),v3d_read(id,V3D_CT1CA_OFFSET),v3d_read(id,V3D_CT1EA_OFFSET),
 		v3d_read(id,V3D_BPOA_OFFSET),v3d_read(id,V3D_BPOS_OFFSET),v3d_read(id,V3D_PCS_OFFSET));
-	dbg_print("%x %x %x\n",v3d_read(id,V3D_PCS_OFFSET),v3d_read(id,V3D_CT0CS_OFFSET),v3d_read(id,V3D_CT1CS_OFFSET));
+	pr_debug("%x %x %x",v3d_read(id,V3D_PCS_OFFSET),v3d_read(id,V3D_CT0CS_OFFSET),v3d_read(id,V3D_CT1CS_OFFSET));
 }
 
 static int v3d_abort(void* device_id, mm_job_post_t* job)
@@ -170,7 +170,7 @@ static mm_isr_type_e process_v3d_irq(void* device_id)
 			v3d_write(id,V3D_BPOA_OFFSET, id->v3d_bin_oom_block);
 			v3d_write(id,V3D_BPOS_OFFSET, id->v3d_bin_oom_size);
 			id->v3d_oom_block_used = 1;
-			err_print("v3d hw asking for OOM");
+			pr_err("v3d hw asking for OOM");
 		}/*else if (id->v3d_oom_block_used == 1) {
 			v3d_write(id,V3D_BPOA_OFFSET, id->v3d_bin_oom_block2);
 			v3d_write(id,V3D_BPOS_OFFSET, id->v3d_bin_oom_size2);
@@ -179,7 +179,7 @@ static mm_isr_type_e process_v3d_irq(void* device_id)
 			v3d_write(id,V3D_INTDIS_OFFSET, 1 << 2);
 			v3d_write(id,V3D_CT0CS_OFFSET , 0x8000);
 			v3d_write(id,V3D_CT1CS_OFFSET , 0x8000);
-			err_print("v3d hw resetting for OOM");
+			pr_err("v3d hw resetting for OOM");
 
 			irq_retval = MM_ISR_ERROR;
 			id->v3d_oom_block_used = 0;
@@ -197,7 +197,6 @@ bool get_v3d_status(void* device_id)
 {
 	v3d_device_t* id = (v3d_device_t*)device_id;
 
-	dbg_print("%x %x %x\n",v3d_read(id,V3D_PCS_OFFSET),v3d_read(id,V3D_CT0CS_OFFSET),v3d_read(id,V3D_CT1CS_OFFSET));
 	if((v3d_read(id,V3D_CT0CS_OFFSET)) | (v3d_read(id,V3D_CT1CS_OFFSET)) | (v3d_read(id,V3D_PCS_OFFSET)) ){
 		return true;
 		}
@@ -248,9 +247,10 @@ int __init v3d_init(void)
 	int ret = 0;
 	MM_FMWK_HW_IFC fmwk_param;
 	MM_DVFS_HW_IFC dvfs_param;
+	MM_PROF_HW_IFC prof_param;
 	gV3d = kmalloc(sizeof(v3d_device_t), GFP_KERNEL);
 	gV3d->vaddr = NULL;
-	dbg_print("V3D driver Module Init\n");
+	pr_debug("V3D driver Module Init");
 
 #ifdef CONFIG_ION
 	gV3d->v3d_bin_oom_client = ion_client_create(idev, ION_DEFAULT_HEAP, "v3d");
@@ -290,28 +290,30 @@ int __init v3d_init(void)
 	       gV3d->v3d_bin_oom_block2, gV3d->v3d_bin_oom_size2);
 
 #else
-	gV3d->v3d_bin_oom_cpuaddr = dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &gV3d->v3d_bin_oom_block, GFP_ATOMIC | GFP_DMA);
+	gV3d->v3d_bin_oom_cpuaddr = kmalloc(V3D_BIN_OOM_SIZE,GFP_KERNEL);//dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &gV3d->v3d_bin_oom_block, GFP_ATOMIC | GFP_DMA);
 	if (gV3d->v3d_bin_oom_cpuaddr == NULL) {
-		err_print("dma_alloc_coherent failed for v3d oom block size[0x%x]", gV3d->v3d_bin_oom_size);
+		pr_err("dma_alloc_coherent failed for v3d oom block size[0x%x]", gV3d->v3d_bin_oom_size);
 		gV3d->v3d_bin_oom_block = 0;
 		gV3d->v3d_bin_oom_size = 0;
 		ret = -ENOMEM;
 		goto err;
 	}
+ 	gV3d->v3d_bin_oom_block = virt_to_phys(gV3d->v3d_bin_oom_cpuaddr);
 	gV3d->v3d_bin_oom_size = V3D_BIN_OOM_SIZE ;
-	dbg_print("v3d bin oom phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
+	pr_debug("v3d bin oom phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
 		gV3d->v3d_bin_oom_block,gV3d->v3d_bin_oom_size, (int)gV3d->v3d_bin_oom_cpuaddr);
 
-	gV3d->v3d_bin_oom_cpuaddr2 = dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &gV3d->v3d_bin_oom_block, GFP_ATOMIC | GFP_DMA);
+	gV3d->v3d_bin_oom_cpuaddr2 = kmalloc(V3D_BIN_OOM_SIZE,GFP_KERNEL);//dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &gV3d->v3d_bin_oom_block, GFP_ATOMIC | GFP_DMA);
 	if (gV3d->v3d_bin_oom_cpuaddr2 == NULL) {
-		err_print("dma_alloc_coherent failed for v3d oom block size[0x%x]", gV3d->v3d_bin_oom_size2);
+		pr_err("dma_alloc_coherent failed for v3d oom block size[0x%x]", gV3d->v3d_bin_oom_size2);
 		gV3d->v3d_bin_oom_block2 = 0;
 		gV3d->v3d_bin_oom_size2 = 0;
 		ret = -ENOMEM;
 		goto err;
 	}
+ 	gV3d->v3d_bin_oom_block = virt_to_phys(gV3d->v3d_bin_oom_cpuaddr2);
 	gV3d->v3d_bin_oom_size2 = V3D_BIN_OOM_SIZE;
-	dbg_print("v3d bin oom2 phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
+	pr_debug("v3d bin oom2 phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
 		gV3d->v3d_bin_oom_block2, gV3d->v3d_bin_oom_size2, (int)gV3d->v3d_bin_oom_cpuaddr2);
 #endif
 
@@ -343,17 +345,17 @@ int __init v3d_init(void)
 	dvfs_param.P2 = 30;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
-	gV3d->fmwk_handle = mm_fmwk_register(&fmwk_param,&dvfs_param);
+	gV3d->fmwk_handle = mm_fmwk_register(&fmwk_param,&dvfs_param,&prof_param);
 	/* get kva from fmwk */
 	gV3d->vaddr = fmwk_param.mm_dev_virt_addr;
 err:
-	dbg_print("V3D driver Module Init over\n");
+	pr_debug("V3D driver Module Init over");
 	return ret;
 }
 
 void __exit v3d_exit(void)
 {
-	dbg_print("V3D driver Module Exit\n");
+	pr_debug("V3D driver Module Exit");
 	mm_fmwk_unregister(gV3d->fmwk_handle);
 #ifdef CONFIG_ION
 	if (gV3d->v3d_bin_oom_block2)

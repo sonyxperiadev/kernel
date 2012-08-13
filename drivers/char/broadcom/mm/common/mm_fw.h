@@ -17,7 +17,8 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
 
-#define MAX_BUF_LEN 72
+#define TURBO_RATE 250
+#define NORMAL_RATE 166
 
 enum {
 	MM_FMWK_NOTIFY_INVALID=0,
@@ -38,38 +39,20 @@ typedef struct mm_fmwk_common {
 	Do not edit in other files*/
 	struct workqueue_struct *single_wq;
 	char* single_wq_name;
+
+	/*HW status*/
+	bool mm_hw_is_on;
+
+    /* Used for exporting per-device information to debugfs */
+    struct dentry *debugfs_dir;
 }mm_fmwk_common_t;
 
-void* dev_power_init(mm_fmwk_common_t* mm_common, char *dev_name, MM_DVFS_HW_IFC *dvfs_params);
-void dev_power_exit( void *dev_power);
 
-#define DEFINE_DEBUGFS_HANDLER(name,parameter,MIN,MAX,SCALE,T,notify)			\
-	static int mm_fmwk_debugfs_##name##_get(void* root, u64* param) {			\
-		T* obj = (T*)root;														\
-		*param = obj->parameter;												\
-		return 0;																\
-	}																			\
-	static int mm_fmwk_debugfs_##name##_set(void* root, u64 param) {			\
-		T* obj = (T*)root;														\
-		if( (param >= ((MIN)*(obj->SCALE))) && 									\
-			(param <= ((MAX)*(obj->SCALE)))) {									\
-			obj->parameter = param;												\
-			notify(obj);														\
-			err_print("set to %d\n",obj->parameter);							\
-			}																	\
-		else {																	\
-			err_print("valid values are from %d to %d\n",						\
-						(MIN)*(obj->SCALE),(MAX)*(obj->SCALE) );				\
-			}																	\
-		return 0;																\
-	}																			\
-	DEFINE_SIMPLE_ATTRIBUTE(mm_fmwk_debugfs_##name,mm_fmwk_debugfs_##name##_get,\
-									mm_fmwk_debugfs_##name##_set,#name" : %llu\n");\
+void* mm_dvfs_init(mm_fmwk_common_t* mm_common, char *mm_dev_name, MM_DVFS_HW_IFC *dvfs_params);
+void mm_dvfs_exit( void *mm_dvfs);
 
+void* mm_prof_init(mm_fmwk_common_t* mm_common, char *mm_dev_name, MM_PROF_HW_IFC *prof_params);
+void mm_prof_exit( void *mm_prof);
 
-#define CREATE_DEBUGFS_FILE(obj,name,dir)								\
-	obj->name = debugfs_create_file(#name, 								\
-									(S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP),\
-									dir, obj, &mm_fmwk_debugfs_##name)
 
 #endif

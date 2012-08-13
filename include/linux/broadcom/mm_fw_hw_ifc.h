@@ -46,17 +46,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "mm_fw_usr_ifc.h"
 
-//#define MM_DEBUG
-#ifdef MM_DEBUG
-#define dbg_print(fmt, arg...) \
-    printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
-#else
-#define dbg_print(fmt, arg...)   do { } while (0)
-#endif
-
-#define err_print(fmt, arg...) \
-    printk(KERN_ERR "%s():" fmt, __func__, ##arg)
-
 
 #define DEFAULT_MM_DEV_TIMER_MS (100)
 #define DEFAULT_MM_DEV_TIMEOUT_MS (1000)
@@ -87,19 +76,21 @@ typedef struct {
 	unsigned int P2; // percentage (1~99) threshold at which framework should fall back to Normal mode for this device 
 } MM_DVFS_HW_IFC;
 
+typedef struct {
+	unsigned int temp;
+} MM_PROF_HW_IFC;
+
 typedef struct mm_fmwk_hw_ifc {
-	/* These pointers need to be preserved.
-	preferably string macros, so that they are present in text section 
-	and are alive always */
+
 	char *mm_dev_name; 
+
 	char *mm_dev_clk_name;
-
 	uint8_t mm_dev_irq;
-
 	uint32_t mm_dev_base_addr;
-	uint32_t mm_dev_hw_size;
 	void *mm_dev_virt_addr;//to be filled in by fmwk init with KVA
+	void *mm_device_id;//aby device specific data
 
+	uint32_t mm_dev_hw_size;
 	uint32_t mm_dev_timer;
 	uint32_t mm_dev_timeout;
 
@@ -112,11 +103,10 @@ typedef struct mm_fmwk_hw_ifc {
 	int (*mm_dev_reset)(void *device_id);
 	int (*mm_dev_abort)(void *device_id, mm_job_post_t *job);
 	int (*mm_dev_print_regs)(void *device_id);
-	void *mm_device_id;//aby device specific data
 	
 }MM_FMWK_HW_IFC;
 
-int mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param);
+int mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_PROF_HW_IFC* prof_param);
 void mm_fmwk_unregister(int);
 
 
