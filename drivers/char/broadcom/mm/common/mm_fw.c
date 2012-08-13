@@ -100,7 +100,7 @@ static void mm_fmwk_job_maint_work(struct work_struct* work)
 		dev_job_list_t *job = maint_job->job;
 		pr_debug("add the job to the queue");
 
-		job->job.job_status = MM_JOB_STATUS_READY;
+		job->job.status = MM_JOB_STATUS_READY;
 		job->filp = filp;
 		INIT_LIST_HEAD(&(job->list));
 		INIT_LIST_HEAD(&(job->wait_list));
@@ -117,14 +117,14 @@ static void mm_fmwk_job_maint_work(struct work_struct* work)
 		pr_debug("wait for completion ");
 		
 		list_for_each_entry_safe_reverse(job_list, temp_list, &(fw_dev->job_list), list) {
-			if((job_list->filp == filp) && (maint_job->status->job_id == job_list->job.job_id)) {
+			if((job_list->filp == filp) && (maint_job->status->id == job_list->job.id)) {
 				list_add_tail(&(maint_job->wait_list),&(job_list->wait_list) );
 				added_to_list = true;
 				break;
 				}
 			}
 		if(added_to_list == false) {
-			maint_job->status->job_status = MM_JOB_STATUS_SUCCESS;
+			maint_job->status->status = MM_JOB_STATUS_SUCCESS;
 			}
 		}
 
@@ -135,7 +135,7 @@ static void mm_fmwk_job_maint_work(struct work_struct* work)
 		pr_debug("removing all jobs from specific file");
 		list_for_each_entry_safe(p_job_list_elem, temp, &(fw_dev->job_list), list)	{
 			if(p_job_list_elem->filp == filp) {
-				if(p_job_list_elem->job.job_status != MM_JOB_STATUS_READY) {
+				if(p_job_list_elem->job.status != MM_JOB_STATUS_READY) {
 					/* reset once in release */
 					hw_ifc->mm_dev_abort(hw_ifc->mm_device_id,&list_first_entry(&(fw_dev->job_list),dev_job_list_t,list)->job);
 					clk_reset(fw_dev->dev_clk);
@@ -243,11 +243,11 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 				}
 			if(status == MM_JOB_STATUS_ERROR) pr_err("error in job completion, removing the job ");
 			
-			pr_debug("job complete job_status %d ", job_list_elem->job.job_status);
+			pr_debug("job complete job_status %d ", job_list_elem->job.status);
 			atomic_notifier_call_chain(&fw_dev->mm_common.notifier_head, MM_FMWK_NOTIFY_JOB_COMPLETE, NULL);
 
 			list_for_each_entry_safe(wait_list, temp_wait_list, &(job_list_elem->wait_list), wait_list) {
-				wait_list->status->job_status = status;
+				wait_list->status->status = status;
 				wake_up_interruptible_all(&fw_dev->queue);
 				}
 			list_del(&job_list_elem->list);
@@ -355,7 +355,7 @@ static long mm_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 		case MM_IOCTL_WAIT_JOB:
 		{
-			mm_job_status_t job_status = {0,0,0};
+			mm_job_status_t job_status = {0,MM_JOB_STATUS_INVALID};
 			if (copy_from_user (&job_status, (mm_job_status_t *)arg, sizeof(job_status))) {
 				pr_err("MM_IOCTL_POST_JOB copy_from_user failed");
 				ret = -EFAULT;
@@ -363,11 +363,11 @@ static long mm_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			MAINT_SET_STATUS(maint_work,&job_status);
 			
 			/* Initialize result*/
-			job_status.job_status = MM_JOB_STATUS_INVALID;
+			job_status.status = MM_JOB_STATUS_INVALID;
 			queue_work(fw_dev->mm_common.single_wq, &(maint_work.work));
 			flush_work_sync(&(maint_work.work));
 			
-			wait_event_interruptible(fw_dev->queue, job_status.job_status != MM_JOB_STATUS_INVALID );
+			wait_event_interruptible(fw_dev->queue, job_status.status != MM_JOB_STATUS_INVALID );
 
 			if (copy_to_user((u32 *) arg, &job_status, sizeof(job_status))) {
 				pr_err("MM_IOCTL_WAIT_JOB copy_to_user failed");

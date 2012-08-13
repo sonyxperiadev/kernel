@@ -14,6 +14,8 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _MM_FW_USR_H_
 #define _MM_FW_USR_H_
 
+#define MAX_IL 4
+
 typedef enum {
 	ISP_INVALID_JOB = 0x65000000,
 	ISP_CSC_JOB,
@@ -38,11 +40,13 @@ typedef enum {
 } mm_job_status_e;
 
 typedef struct {
-	mm_job_status_e job_status;
-    mm_job_type_e job_type;
-	uint32_t job_id;
+	mm_job_status_e status;
+    mm_job_type_e type;
+	uint32_t id;
     unsigned int size;
     void *data;
+	uint32_t handle;
+	uint32_t handles[MAX_IL];
 } mm_job_post_t;
 
 #define ISP_DEV_NAME	"isp"
@@ -58,9 +62,9 @@ enum {
 
 
 typedef struct {
-        uint32_t job_id;
-        mm_job_status_e job_status;
-        int32_t timeout;
+        uint32_t id;
+        mm_job_status_e status;
+		int32_t timeout;
 } mm_job_status_t;
 
 #define MM_IOCTL_POST_JOB _IOWR(MM_DEV_MAGIC, MM_CMD_POST_JOB, mm_job_post_t)

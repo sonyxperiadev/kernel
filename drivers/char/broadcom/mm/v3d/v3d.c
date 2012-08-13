@@ -209,17 +209,17 @@ mm_job_status_e v3d_start_job(void* device_id , mm_job_post_t* job)
 	v3d_device_t* id = (v3d_device_t*)device_id;
 	v3d_job_t* job_params = (v3d_job_t*)job->data;
 
-	switch( job->job_status ){
+	switch( job->status ){
 		case MM_JOB_STATUS_READY:
 			{
 				v3d_reset(id);
-				if (job->job_type == V3D_REND_JOB) {
-					job->job_status = MM_JOB_STATUS_RUNNING;
+				if (job->type == V3D_REND_JOB) {
+					job->status = MM_JOB_STATUS_RUNNING;
 					v3d_write(id,V3D_CT1CA_OFFSET,job_params->v3d_ct1ca);
 					v3d_write(id,V3D_CT1EA_OFFSET,job_params->v3d_ct1ea);
 					return MM_JOB_STATUS_RUNNING;
-				} else if (job->job_type == V3D_BIN_REND_JOB){
-					job->job_status = MM_JOB_STATUS_RUNNING;
+				} else if (job->type == V3D_BIN_REND_JOB){
+					job->status = MM_JOB_STATUS_RUNNING;
 					if(job_params->v3d_ct0ca != job_params->v3d_ct0ea) {
 						v3d_write(id,V3D_CT0CA_OFFSET,job_params->v3d_ct0ca);
 						v3d_write(id,V3D_CT0EA_OFFSET,job_params->v3d_ct0ea);
@@ -234,7 +234,7 @@ mm_job_status_e v3d_start_job(void* device_id , mm_job_post_t* job)
 		break;
 		case MM_JOB_STATUS_RUNNING:
 			{
-				job->job_status = MM_JOB_STATUS_SUCCESS;
+				job->status = MM_JOB_STATUS_SUCCESS;
 				return MM_JOB_STATUS_SUCCESS;
 			}
 		break;
