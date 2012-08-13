@@ -796,7 +796,9 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 				updMsg->dsiH->chalH);
 				dmaData1D.xferLength  = (updMsg->updReq.lineLenP
 					- spare_pix) * (updMsg->updReq.buffBpp);
+#ifdef CONFIG_ARCH_HAWAII
 				dmaData1D.burstWriteEnable32 = 1;
+#endif
 
 				if ((uint32_t)dmaData1D.xferLength & 0x3)
 					pr_info("xferlength unaligned 0x%x\n",
@@ -834,7 +836,9 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 	dmaData2D.dstAddr  = chal_dsi_de1_get_dma_address(updMsg->dsiH->chalH);
 	dmaData2D.xXferLength = width;
 	dmaData2D.yXferLength = height - 1;
+#ifdef CONFIG_ARCH_HAWAII
 	dmaData2D.burstWriteEnable32 = 1;
+#endif
 
 	if ((uint32_t)dmaData2D.xXferLength & 0x3) {
 		pr_info("xXferLength unaligned 0x%x stride=0x%x\n",
