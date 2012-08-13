@@ -754,7 +754,7 @@ void mdp_lcdc_update(struct msm_fb_data_type *mfd);
 int mdp_dsi_video_on(struct platform_device *pdev);
 int mdp_dsi_video_off(struct platform_device *pdev);
 void mdp_dsi_video_update(struct msm_fb_data_type *mfd);
-void mdp3_dsi_cmd_dma_busy_wait(struct msm_fb_data_type *mfd);
+void mdp3_dsi_cmd_dma_busy_wait(struct msm_fb_data_type *mfd)
 static inline int mdp4_dsi_cmd_off(struct platform_device *pdev)
 {
 	return 0;
