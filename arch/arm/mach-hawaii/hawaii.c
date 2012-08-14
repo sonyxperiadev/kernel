@@ -43,9 +43,7 @@
 #include <mach/profile_timer.h>
 #include <linux/reboot.h>
 #include <asm/system_misc.h>
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-#include <mach/secure_api.h>
-#endif
+#include <mach/sec_api.h>
 #include <plat/cpu.h>
 #include <plat/kona_reset_reason.h>
 #include <mach/memory.h>
@@ -79,7 +77,6 @@ static void hawaii_restart(char mode, const char *cmd)
 static void __init hawaii_l2x0_init(void)
 {
 	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
-#ifdef CONFIG_ROM_SEC_DISPATCHER
 	u32 val;
 
 	/*
@@ -88,9 +85,7 @@ static void __init hawaii_l2x0_init(void)
 	val = readl(l2cache_base + L2X0_CTRL);
 	val = val & 0x1;
 	if (val == 0)
-		hw_sec_pub_dispatcher(SEC_API_ENABLE_L2_CACHE, SEC_FLAGS);
-#endif
-
+		secure_api_call(SSAPI_ENABLE_L2_CACHE, 0, 0, 0, 0);
 	/*
 	 * 32KB way size, 16-way associativity
 	 */
@@ -102,11 +97,8 @@ static int __init hawaii_arch_init(void)
 {
 	int ret = 0;
 
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-	ret = smc_init();
-	if (ret < 0)
-		pr_err("smc_init failed\n");
-#endif
+	secure_api_call_init();
+
 #ifdef CONFIG_CACHE_L2X0
 	hawaii_l2x0_init();
 #endif

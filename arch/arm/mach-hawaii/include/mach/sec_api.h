@@ -56,6 +56,7 @@
 #define SSAPI_ROW_AES			0x0E000006
 #define SSAPI_BRCM_START_VC_CORE	0x0E000008
 
+#ifdef CONFIG_KONA_SECURE_MONITOR_CALL
 extern void secure_api_call_init(void);
 
 extern unsigned secure_api_call(unsigned service_id, unsigned arg0,
@@ -64,4 +65,16 @@ extern unsigned secure_api_call(unsigned service_id, unsigned arg0,
 extern unsigned get_secure_buffer(void);
 
 extern unsigned get_secure_buffer_size(void);
+#else
+void secure_api_call_init(void) { };
+
+unsigned secure_api_call(unsigned service_id, unsigned arg0,
+	unsigned arg1, unsigned arg2, unsigned arg3) { return 0; };
+
+unsigned get_secure_buffer(void) { return 0; }
+
+unsigned get_secure_buffer_size(void) { return 0; }
+
+#endif /* CONFIG_KONA_SECURE_MONITOR_CALL */
+
 #endif /* SEC_API_H */
