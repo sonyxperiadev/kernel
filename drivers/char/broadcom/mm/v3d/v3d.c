@@ -108,7 +108,7 @@ static int v3d_reset(void* device_id)
 	return 0;
 }
 
-static int v3d_print_regs(void* device_id)
+static int v3d_get_regs(void* device_id, MM_REG_VALUE* ptr, int count)
 {
 	v3d_device_t* id = (v3d_device_t*)device_id;
 
@@ -204,7 +204,7 @@ bool get_v3d_status(void* device_id)
 	return false;
 }
 
-mm_job_status_e v3d_start_job(void* device_id , mm_job_post_t* job)
+mm_job_status_e v3d_start_job(void* device_id , mm_job_post_t* job, unsigned int profmask)
 {
 	v3d_device_t* id = (v3d_device_t*)device_id;
 	v3d_job_t* job_params = (v3d_job_t*)job->data;
@@ -335,7 +335,7 @@ int __init v3d_init(void)
 	fmwk_param.mm_dev_init = v3d_reset;
 	fmwk_param.mm_dev_deinit = v3d_reset;
 	fmwk_param.mm_dev_abort = v3d_abort;
-	fmwk_param.mm_dev_print_regs = v3d_print_regs;
+	fmwk_param.mm_dev_get_regs = v3d_get_regs;
 	fmwk_param.mm_device_id = (void *)v3d_device;
 	fmwk_param.mm_dev_virt_addr = NULL;
 

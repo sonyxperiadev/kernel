@@ -61,8 +61,12 @@ typedef enum {
         ECONOMY = PI_OPP_ECONOMY,
         NORMAL,
         TURBO,
-        MAX
 }dvfs_mode_e;
+
+typedef struct {
+	const char* name;
+	unsigned int value;
+} MM_REG_VALUE;
 
 typedef struct {
 	bool is_dvfs_on;
@@ -77,18 +81,18 @@ typedef struct {
 } MM_DVFS_HW_IFC;
 
 typedef struct {
-	unsigned int temp;
+	unsigned int bitmask;
+	const char* desc[32]; 
 } MM_PROF_HW_IFC;
 
 typedef struct mm_fmwk_hw_ifc {
-
 	char *mm_dev_name; 
 
 	char *mm_dev_clk_name;
 	uint8_t mm_dev_irq;
 	uint32_t mm_dev_base_addr;
 	void *mm_dev_virt_addr;//to be filled in by fmwk init with KVA
-	void *mm_device_id;//aby device specific data
+	void *mm_device_id;//any device specific data
 
 	uint32_t mm_dev_hw_size;
 	uint32_t mm_dev_timer;
@@ -98,13 +102,14 @@ typedef struct mm_fmwk_hw_ifc {
 	int (*mm_dev_init)(void *device_id);
 	int (*mm_dev_deinit)(void *device_id);
 	bool (*mm_dev_get_status)(void *device_id);
-	mm_job_status_e (*mm_dev_start_job)(void *device_id, mm_job_post_t *job);
+	mm_job_status_e (*mm_dev_start_job)(void *device_id, mm_job_post_t *job, unsigned int profmask);
 	mm_isr_type_e (*mm_dev_process_irq)(void *device_id);
 	int (*mm_dev_reset)(void *device_id);
 	int (*mm_dev_abort)(void *device_id, mm_job_post_t *job);
-	int (*mm_dev_print_regs)(void *device_id);
+	int (*mm_dev_get_regs)(void *device_id, MM_REG_VALUE* ptr, int max);
+	int (*mm_dev_get_prof)(void *device_id, unsigned int* ptr);
 	
-}MM_FMWK_HW_IFC;
+} MM_FMWK_HW_IFC;
 
 void* mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_PROF_HW_IFC* prof_param);
 void mm_fmwk_unregister(void* handle);

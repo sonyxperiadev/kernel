@@ -23,6 +23,7 @@ int mm_prof_notification_handler(struct notifier_block* block,unsigned long para
 		case MM_FMWK_NOTIFY_JOB_COMPLETE:
 		case MM_FMWK_NOTIFY_JOB_REMOVE:
 			mm_prof->jobs_done++;
+			mm_prof->jobs_done_type[(unsigned int)data & (MAX_JOB_TYPE-1)]++;
 			break;
 		case MM_FMWK_NOTIFY_CLK_ENABLE:
 			getnstimeofday(&mm_prof->ts1);
@@ -67,6 +68,10 @@ static void prof_work(struct work_struct* work)
 	if(mm_prof->timer_state == false) {
 		mm_prof->hw_on_dur = 0;
 		mm_prof->jobs_done = 0;
+		mm_prof->jobs_done_type[0] = 0;
+		mm_prof->jobs_done_type[1] = 0;
+		mm_prof->jobs_done_type[2] = 0;
+		mm_prof->jobs_done_type[3] = 0;
 		mm_prof->mm_fmwk_notifier_blk.notifier_call = mm_prof_notification_handler;
 		atomic_notifier_chain_register(&mm_prof->mm_common->notifier_head, &mm_prof->mm_fmwk_notifier_blk);
 		getnstimeofday(&(mm_prof->proft1));
@@ -92,10 +97,18 @@ static void prof_work(struct work_struct* work)
 	temp = (timespec_to_ns(&diff)>>12);
 	percnt = percnt/temp;
 
-	pr_err("hw_usage: ON : %d%% [DVFS:%d] JOBS : %d in %d secs ",  percnt,mm_prof->current_mode,mm_prof->jobs_done, mm_prof->T1);
+	pr_err("hw_usage: ON : %d%% [DVFS:%d] JOBS : %d [%d %d %d %d] in %d secs ",  
+						percnt,mm_prof->current_mode,
+						mm_prof->jobs_done, mm_prof->jobs_done_type[0], 
+						mm_prof->jobs_done_type[1], mm_prof->jobs_done_type[2],
+						mm_prof->jobs_done_type[3], mm_prof->T1);
 
 	mm_prof->hw_on_dur = 0;
 	mm_prof->jobs_done = 0;
+	mm_prof->jobs_done_type[0] = 0;
+	mm_prof->jobs_done_type[1] = 0;
+	mm_prof->jobs_done_type[2] = 0;
+	mm_prof->jobs_done_type[3] = 0;
 	mod_timer(&mm_prof->prof_timeout, jiffies+msecs_to_jiffies(mm_prof->T1*1000));
 }
 

@@ -74,6 +74,7 @@ void mm_prof_update_handler(struct work_struct* work);
 									(S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP),\
 									dir, root, &mm_prof_debugfs_##name)
 
+#define MAX_JOB_TYPE 4
 typedef struct _mm_prof {
 
 	mm_fmwk_common_t* mm_common;
@@ -102,6 +103,7 @@ typedef struct _mm_prof {
 
 	s64 hw_on_dur;
 	unsigned int jobs_done;
+	unsigned int jobs_done_type[MAX_JOB_TYPE];
 
 } mm_prof_t;
 

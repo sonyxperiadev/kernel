@@ -14,7 +14,7 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _MM_FW_USR_H_
 #define _MM_FW_USR_H_
 
-#define MAX_IL 4
+#define MAX_HANDLES 4
 
 typedef enum {
 	ISP_INVALID_JOB = 0x65000000,
@@ -46,7 +46,8 @@ typedef struct {
     unsigned int size;
     void *data;
 	uint32_t handle;
-	uint32_t handles[MAX_IL];
+	uint32_t num_dep_handles;
+	uint32_t dep_handles[MAX_HANDLES];
 } mm_job_post_t;
 
 #define ISP_DEV_NAME	"isp"
@@ -57,9 +58,9 @@ enum {
 	MM_CMD_QUERY = 0x80,
     MM_CMD_POST_JOB,
     MM_CMD_WAIT_JOB,
+    MM_CMD_WAIT_HANDLES,
     MM_CMD_LAST
 };
-
 
 typedef struct {
         uint32_t id;
@@ -67,7 +68,14 @@ typedef struct {
 		int32_t timeout;
 } mm_job_status_t;
 
-#define MM_IOCTL_POST_JOB _IOWR(MM_DEV_MAGIC, MM_CMD_POST_JOB, mm_job_post_t)
-#define MM_IOCTL_WAIT_JOB _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_JOB, mm_job_status_t)
+typedef struct {
+	uint32_t num_handles;
+	uint32_t handles[MAX_HANDLES];
+	mm_job_status_e status[MAX_HANDLES];
+} mm_handle_status_t;
+
+#define MM_IOCTL_POST_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_POST_JOB, mm_job_post_t)
+#define MM_IOCTL_WAIT_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_JOB, mm_job_status_t)
+#define MM_IOCTL_WAIT_HANDLES _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_HANDLES, mm_handle_status_t)
 
 #endif

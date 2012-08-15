@@ -11,12 +11,10 @@ in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
-#define pr_fmt(fmt) "<%s> %s:" fmt "\n",fw_dev->mm_common.single_wq_name,__func__
+#define pr_fmt(fmt) "<%s> " fmt "\n",fw_dev->mm_common.single_wq_name
 
 #include "mm_fw.h"
 
-#define MAX_DEVICES 10
-#define MISC_DYNAMIC_MINOR 255
 #define WQ_PREFIX "mm_fmwk_wq-"
 
 /* The following varliables in this block shall 
@@ -205,6 +203,7 @@ static void mm_fmwk_disable_clock(device_t *fw_dev)
 	if(fw_dev->mm_common.mm_hw_is_on == true) {
 		fw_dev->mm_common.mm_hw_is_on = false;
 		del_timer_sync(&(fw_dev->dev_timer));
+		//Call dev_deinit
 		/* Release interrupt */
 		free_irq(hw_ifc->mm_dev_irq,fw_dev);
 		pr_debug("dev turned off ");
@@ -231,7 +230,7 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 		dev_job_list_t *job_list_elem = NULL;
 		dev_job_list_t *temp = NULL;
 		list_for_each_entry_safe(job_list_elem, temp, &(fw_dev->job_list), list) {
-			status  = hw_ifc->mm_dev_start_job(hw_ifc->mm_device_id, &job_list_elem->job);
+			status  = hw_ifc->mm_dev_start_job(hw_ifc->mm_device_id, &job_list_elem->job, 0);
 			if(status == MM_JOB_STATUS_RUNNING) {
 				getnstimeofday(&fw_dev->sched_time);
 				timespec_add_ns(&fw_dev->sched_time, hw_ifc->mm_dev_timeout * NSEC_PER_MSEC);
@@ -244,12 +243,13 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 			if(status == MM_JOB_STATUS_ERROR) pr_err("error in job completion, removing the job ");
 			
 			pr_debug("job complete job_status %d ", job_list_elem->job.status);
-			atomic_notifier_call_chain(&fw_dev->mm_common.notifier_head, MM_FMWK_NOTIFY_JOB_COMPLETE, NULL);
+			atomic_notifier_call_chain(&fw_dev->mm_common.notifier_head, MM_FMWK_NOTIFY_JOB_COMPLETE,(void*) job_list_elem->job.type);
 
 			list_for_each_entry_safe(wait_list, temp_wait_list, &(job_list_elem->wait_list), wait_list) {
 				wait_list->status->status = status;
-				wake_up_interruptible_all(&fw_dev->queue);
 				}
+			wake_up_interruptible_all(&fw_dev->queue);
+
 			list_del(&job_list_elem->list);
 			kfree(job_list_elem->job.data);
 			kfree(job_list_elem);
@@ -263,7 +263,7 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 		getnstimeofday(&cur_time);
 		if(timespec_compare (&cur_time, & fw_dev->sched_time) > 0) {
 			pr_err("reset v3d hw ");
-			hw_ifc->mm_dev_print_regs(hw_ifc->mm_device_id);
+			hw_ifc->mm_dev_get_regs(hw_ifc->mm_device_id , NULL, 0);
 			hw_ifc->mm_dev_abort(hw_ifc->mm_device_id,&list_first_entry(&(fw_dev->job_list),dev_job_list_t,list)->job);
 			is_hw_busy = false;
 			queue_work(fw_dev->mm_common.single_wq, &(fw_dev->job_scheduler));
