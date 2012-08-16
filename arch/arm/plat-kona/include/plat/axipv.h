@@ -10,6 +10,7 @@
 typedef u32 axipv_async_buf_t;
 
 #define PV_START_THRESH_INT (1<<7)
+#define WATER_LVL2_INT	(1<<1)
 
 /* Once we change the Userspace Framebuffer.cpp to request for buffers
  * from display drivers, we can change this accordingly*/
@@ -32,6 +33,7 @@ struct axipv_init_t {
 #ifdef AXIPV_HAS_CLK
 	char *clk_name;
 #endif
+	bool bypassPV;
 	void (*irq_cb)(int err);
 	void (*release_cb)(u32 free_buf);
 };

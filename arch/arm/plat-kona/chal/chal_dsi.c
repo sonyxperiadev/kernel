@@ -319,6 +319,7 @@ cVoid chal_dsi_phy_state(CHAL_HANDLE handle, CHAL_DSI_PHY_STATE_t state)
 	    | DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSCLK, 1)
 	    | DSI_REG_FIELD_SET(DSI1_PHYC, TX_HSCLK_CONT, 1);
 
+#ifndef CONFIG_MACH_HAWAII_FPGA_E
 	switch (pDev->dlCount) {
 	case 4:
 		regMask |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_3, 1);
@@ -334,18 +335,19 @@ cVoid chal_dsi_phy_state(CHAL_HANDLE handle, CHAL_DSI_PHY_STATE_t state)
 		regMask |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_0, 1);
 		regVal |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_0, 1);
 	}
+#endif
 
 	switch (state) {
 	case PHY_TXSTOP:
-		regVal = DSI_REG_FIELD_SET(DSI1_PHYC, FORCE_TXSTOP_0, 1);
+		regVal |= DSI_REG_FIELD_SET(DSI1_PHYC, FORCE_TXSTOP_0, 1);
 		break;
 	case PHY_ULPS:
-		regVal = DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSCLK, 1);
+		regVal |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSCLK, 1);
 		break;
 	case PHY_CORE:
 	default:
 		if (pDev->clkContinuous)
-			regVal = DSI_REG_FIELD_SET(DSI1_PHYC, TX_HSCLK_CONT, 1);
+			regVal |= DSI_REG_FIELD_SET(DSI1_PHYC, TX_HSCLK_CONT, 1);
 		else
 			regVal = 0;
 		break;
@@ -619,6 +621,7 @@ cBool chal_dsi_set_timing(CHAL_HANDLE handle,
 		}
 	}
 
+#if 0
 	for (i = 0; i < DSI_C_MAX; i++) {
 		if (pDsiC[i].timeBase == DSI_C_TIME_ESC2LPDT) {
 			chal_dprintf(CDBG_ERRO,
@@ -642,6 +645,7 @@ cBool chal_dsi_set_timing(CHAL_HANDLE handle,
 
 	chal_dprintf(CDBG_ERRO, "[cHAL DSI] chal_dsi_set_timing: "
 		     "LP_DATA_RATE %u[kbps]\n\r", lp_clk_khz / 2);
+#endif
 
 	/* set ESC 2 LPDT ratio */
 	BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_PHYC,

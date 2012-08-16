@@ -7,6 +7,12 @@
 #include <linux/clk.h>
 #endif
 
+#include <linux/time.h>
+#if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
+static struct timeval tv1, tv2;
+#endif
+
+
 #define axipv_info(fmt, args...) \
 		printk(KERN_INFO"%s:%d " fmt, __func__, __LINE__, ##args)
 #define axipv_debug(fmt, args...) \
@@ -48,6 +54,7 @@ struct axipv_dev {
 #ifdef AXIPV_HAS_CLK
 	struct clk *clk;
 #endif
+	bool bypassPV;
 	struct axipv_buff buff[AXIPV_MAX_DISP_BUFF_SUPP];
 	struct axipv_config_t config;
 	struct work_struct irq_work;
@@ -234,6 +241,8 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	axipv_clk_disable(dev);
 	dev->base_addr = init->base_addr;
 	dev->irq_cb = init->irq_cb;
+	dev->bypassPV = init->bypassPV;
+	printk("PV bypass is %d\n",init->bypassPV);
 	dev->release_cb = init->release_cb;
 	INIT_WORK(&dev->irq_work, process_irq);
 	INIT_WORK(&dev->release_work, process_release);
@@ -292,10 +301,17 @@ static inline int axipv_config(struct axipv_config_t *config)
 	writel_relaxed(AXIPV_AXI_ID2, axipv_base + REG_AXI_ID_CFG_2);
 
 	ctrl =  SFT_RSTN_DONE | (config->cmd ? AXIPV_CMD_MODE : 0)
-		| (config->pix_fmt << PIXEL_FORMAT_SHIFT) | NUM_OUTSTDG_XFERS_8
-		| AXI_ID_SYS_DUAL | AXIPV_ARPROT | AXIPV_ARCACHE
-		| (config->test ? AXIPV_TESTMODE : 0);
-	writel(ctrl, axipv_base + REG_CTRL);
+		| NUM_OUTSTDG_XFERS_8 | AXI_ID_SYS_DUAL | AXIPV_ARPROT
+		| AXIPV_ARCACHE	| (config->test ? AXIPV_TESTMODE : 0);
+
+	if (dev->bypassPV) {
+		printk("bypassing PV--ctrl\n");
+		ctrl = ctrl | (1 << 8) | (1 << 29);
+		ctrl = (ctrl & ~PIXEL_FORMAT_MASK) | (PIXEL_FORMAT_24BPP_RGB <<
+			PIXEL_FORMAT_SHIFT);
+	} else {
+		ctrl |= (config->pix_fmt << PIXEL_FORMAT_SHIFT);
+	}
 
 	tx_size = config->buff.sync.xlen * config->buff.sync.ylen;
 	if ((PIXEL_FORMAT_24BPP_RGB == config->pix_fmt)
@@ -319,6 +335,21 @@ static inline int axipv_config(struct axipv_config_t *config)
 		axipv_err("tx_size=%d is too less to be sent via axipv\n",
 			tx_size);
 	}
+	if (dev->bypassPV) {
+		printk("bypassing PV--waterlevels\n");
+		int pv_start_thre = readl(axipv_base + REG_PV_THRESH);
+		if (!((config->pix_fmt == PIXEL_FORMAT_24BPP_RGB) ||
+			(config->pix_fmt == PIXEL_FORMAT_24BPP_BGR) ||
+			(config->pix_fmt == PIXEL_FORMAT_16BPP_PACKED) ||
+			(config->pix_fmt == PIXEL_FORMAT_16BPP_UNPACKED)))
+			axipv_err("Unsupported format=%d!\n",config->pix_fmt);
+		writel_relaxed(pv_start_thre + 1, axipv_base + REG_W_LVL_1);
+		writel_relaxed(pv_start_thre / 4, axipv_base + REG_W_LVL_2);
+		writel_relaxed(AXIPV_LB_EMPTY_THRES_MIN,
+					axipv_base + REG_LB_EMPTY_THRES);
+	}
+	writel(ctrl , axipv_base + REG_CTRL);
+
 	return 0;
 }
 
@@ -328,8 +359,6 @@ static inline int axipv_config(struct axipv_config_t *config)
 		AXIPV_BUFF_TXFERED); \
 		if (!err)\
 			schedule_work(&dev->release_work);\
-		else\
-			axipv_debug("failed to set buff status err=%d\n", err);\
 	} while (0)
 
 static irqreturn_t axipv_isr(int err, void *dev_id)
@@ -372,6 +401,11 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		writel(AXIPV_DISABLED_INT, axipv_base + REG_INTR_CLR);
 		axipv_clk_disable(dev);
 		irq_stat = irq_stat & ~AXIPV_DISABLED_INT;
+#if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
+		do_gettimeofday(&tv2);
+		printk("axipv tx time(us)=%d\n", (tv2.tv_sec-tv1.tv_sec)*1000000 +
+		tv2.tv_usec - tv1.tv_usec);
+#endif
 	}
 
 	if (irq_stat) {
@@ -543,10 +577,13 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 #ifdef AXIPV_HAS_CLK
 			axipv_clk_enable(dev);
 #endif
+#if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
+			do_gettimeofday(&tv1);
+#endif
 			spin_lock_irqsave(&lock, flags);
 			writel_relaxed(UINT_MAX, axipv_base + REG_INTR_EN);
 			if (config->cmd) {
-				writel_relaxed(readl(axipv_base + REG_CTRL) &
+				writel_relaxed(readl(axipv_base + REG_CTRL) |
 				AXIPV_SINGLE_SHOT, axipv_base + REG_CTRL);
 			}
 			writel(readl(axipv_base + REG_CTRL) | AXIPV_EN,

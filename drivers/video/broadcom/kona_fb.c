@@ -53,6 +53,10 @@
 #include "kona_fb.h"
 #include "lcd/display_drv.h"
 
+#ifdef CONFIG_ION
+#include <linux/broadcom/kona_ion.h>
+#endif
+
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 #include <video/kona_fb_image_dump.h>
 #include "lcd/cp_crash_start_565.h"
@@ -61,9 +65,9 @@
 
 /*#define kona_FB_DEBUG */
 /*#define PARTIAL_UPDATE_SUPPORT */
-#define kona_FB_ENABLE_DYNAMIC_CLOCK	1
+#define KONA_FB_ENABLE_DYNAMIC_CLOCK	1
 
-#define kona_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
+#define KONA_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
 
 static struct pi_mgr_qos_node g_mm_qos_node;
 
@@ -106,6 +110,10 @@ struct kona_fb {
 	void *buff1;
 	atomic_t force_update;
 	struct dispdrv_init_parms lcd_drv_parms;
+#ifdef CONFIG_ION
+	struct ion_client *ionClient;
+	struct ion_handle *ionHandle;
+#endif
 };
 
 static struct kona_fb *g_kona_fb;
@@ -256,14 +264,14 @@ static int kona_fb_set_par(struct fb_info *info)
 
 static inline void kona_clock_start(struct kona_fb *fb)
 {
-#if (kona_FB_ENABLE_DYNAMIC_CLOCK == 1)
+#if (KONA_FB_ENABLE_DYNAMIC_CLOCK == 1)
 	fb->display_ops->start(fb->display_hdl, &fb->dfs_node);
 #endif
 }
 
 static inline void kona_clock_stop(struct kona_fb *fb)
 {
-#if (kona_FB_ENABLE_DYNAMIC_CLOCK == 1)
+#if (KONA_FB_ENABLE_DYNAMIC_CLOCK == 1)
 	fb->display_ops->stop(fb->display_hdl, &fb->dfs_node);
 #endif
 }
@@ -450,6 +458,7 @@ static int enable_display(struct kona_fb *fb, struct dispdrv_init_parms *parms)
 
 	kona_clock_start(fb);
 	ret = fb->display_ops->open(fb->display_hdl);
+
 	if (ret != 0) {
 		konafb_error("Failed to open this display device!\n");
 		goto fail_to_open;
@@ -497,7 +506,7 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	konafb_debug("kona ioctl called! Cmd %x, Arg %lx\n", cmd, arg);
 	switch (cmd) {
 
-	case kona_IOCTL_SET_BUFFER_AND_UPDATE:
+	case KONA_IOCTL_SET_BUFFER_AND_UPDATE:
 
 		if (mutex_lock_killable(&fb->update_sem))
 			return -EINTR;
@@ -645,8 +654,6 @@ static int kona_fb_probe(struct platform_device *pdev)
 	int ret_val = -1;
 	struct kona_fb_platform_data *fb_data;
 
-	printk("%s:%d\n", __func__, __LINE__);
-
 	if (g_kona_fb && (g_kona_fb->is_display_found == 1)) {
 		konafb_info("A right display device is already found!\n");
 		return -EINVAL;
@@ -689,7 +696,7 @@ static int kona_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_graphics_started, 0);
 	init_completion(&fb->thread_sem);
 
-#if (kona_FB_ENABLE_DYNAMIC_CLOCK != 1)
+#if (KONA_FB_ENABLE_DYNAMIC_CLOCK != 1)
 	fb->display_ops->start(&fb->dfs_node);
 #endif
 	/* Enable_display will start/stop clocks on its own if dynamic */
@@ -704,28 +711,34 @@ static int kona_fb_probe(struct platform_device *pdev)
 
 	framesize = fb->display_info->width * fb->display_info->height *
 	    fb->display_info->Bpp * 2;
+
+#ifdef CONFIG_ION
+	fb->ionClient = ion_client_create(idev, ION_DEFAULT_HEAP, "kona_fb");
+	if (fb->ionClient == NULL) {
+		ret = -ENOMEM;
+		konafb_error("ion client creation failed \n");
+		goto err_ion_client_create_failed;
+	}
+	fb->ionHandle = ion_alloc(fb->ionClient,
+			framesize, SZ_4K, ION_DEFAULT_HEAP, 0);
+
+	fb->fb.screen_base = ion_map_kernel(fb->ionClient, fb->ionHandle);
+	fb->phys_fbbase = kona_ion_map_dma(fb->ionClient, fb->ionHandle);
+	if ((fb->fb.screen_base == NULL) || (fb->phys_fbbase == 0)) {
+		ret = -ENOMEM;
+		konafb_error("ion client creation failed \n");
+		goto err_fbmem_alloc_failed;
+	}
+#else
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
 						    framesize, &fb->phys_fbbase,
 						    GFP_KERNEL);
-#if 1
-	/* Test pattern */
-	char *dest = fb->fb.screen_base;
-	int i, j;
-	for (i = 0, j = 1; i < framesize;) {
-		dest[i] = j+2;
-		dest[i+1] = j+1;
-		dest[i+2] = j;
-		dest[i+3] = 0;
-		i += 4;
-		j += 3;
-	}
-#endif
-
 	if (fb->fb.screen_base == NULL) {
 		ret = -ENOMEM;
 		konafb_error("Unable to allocate fb memory\n");
 		goto err_fbmem_alloc_failed;
 	}
+#endif
 
 	/* Now we should get correct width and height for this display .. */
 	width = fb->display_info->width;
@@ -787,7 +800,6 @@ static int kona_fb_probe(struct platform_device *pdev)
 	fb->fb.fix.smem_start = fb->phys_fbbase;
 	fb->fb.fix.smem_len = framesize;
 
-	printk("%s:%d\n", __func__, __LINE__);
 	konafb_debug
 	    ("Framebuffer starts at phys[0x%08x], and virt[0x%08x] with frame size[0x%08x]\n",
 	     fb->phys_fbbase, (uint32_t) fb->fb.screen_base, framesize);
@@ -797,17 +809,14 @@ static int kona_fb_probe(struct platform_device *pdev)
 		konafb_error("fb_set_var failed\n");
 		goto err_set_var_failed;
 	}
+#if 0
 	/* Paint it black (assuming default fb contents are all zero) */
 	ret = kona_fb_pan_display(&fb->fb.var, &fb->fb);
-
-#if 1
-	ret = 0;
-#endif
-
 	if (ret) {
 		konafb_error("Can not enable the LCD!\n");
 		goto err_fb_register_failed;
 	}
+#endif
 
 	if (fb->display_ops->set_brightness) {
 		kona_clock_start(fb);
@@ -877,20 +886,29 @@ static int kona_fb_probe(struct platform_device *pdev)
 
 err_fb_register_failed:
 err_set_var_failed:
+#ifdef CONFIG_ION
+	ion_unmap_dma(fb->ionClient, fb->ionHandle);
+	ion_free(fb->ionClient, fb->ionHandle);
+#else
 	dma_free_writecombine(&pdev->dev, fb->fb.fix.smem_len,
 			      fb->fb.screen_base, fb->fb.fix.smem_start);
+#endif
 
 	kona_clock_start(fb);
 	disable_display(fb);
 	kona_clock_stop(fb);
 
-err_enable_display_failed:
-#if (kona_FB_ENABLE_DYNAMIC_CLOCK != 1)
-	fb->display_ops->stop(&fb->dfs_node);
-#endif
 err_fbmem_alloc_failed:
+#ifdef CONFIG_ION
+	ion_client_destroy(fb->ionClient);
+err_ion_client_create_failed:
+#endif
 	if (pi_mgr_dfs_request_remove(&fb->dfs_node))
 		printk(KERN_ERR "Failed to remove dfs request for LCD\n");
+err_enable_display_failed:
+#if (KONA_FB_ENABLE_DYNAMIC_CLOCK != 1)
+	fb->display_ops->stop(&fb->dfs_node);
+#endif
 fb_data_failed:
 	kfree(fb);
 	g_kona_fb = NULL;
