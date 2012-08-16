@@ -123,4 +123,9 @@ rndis_bind_config_vendor(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
 
 #endif
 
+#ifdef CONFIG_BRCM_NETCONSOLE
+extern void brcm_current_netcon_status(unsigned char status);
+extern unsigned char brcm_get_netcon_status(void);
+#endif
+
 #endif /* __U_ETHER_H */

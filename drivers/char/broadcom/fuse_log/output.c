@@ -738,7 +738,9 @@ int BCMLOG_OutputInit(void)
 	g_netconsole_on = brcm_netconsole_register_callbacks(&_cb);
 
 #endif
-
+#ifdef CONFIG_USB_G_ANDROID
+	g_acm_on = acm_logging_register_callbacks(&_acm_cb);
+#endif
 	return 0;
 
 }

@@ -76,20 +76,6 @@ static struct kmem_cache *skbuff_fclone_cache __read_mostly;
 extern unsigned short netpoll_skb_size(void);
 extern void netpoll_recycle_skbs(struct sk_buff *skb);
 
-/*Fix this*/
-/*TBF*/
-unsigned short ueth_rx_skb_size(void)
-{
-}
-
-void ueth_recycle_rx_skbs(struct sk_buff *skb)
-{
-
-}
-
-atomic_t ueth_rx_skb_ref_count = ATOMIC_INIT(0);
-/*End of fix me*/
-
 static void sock_pipe_buf_release(struct pipe_inode_info *pipe,
 				  struct pipe_buffer *buf)
 {
