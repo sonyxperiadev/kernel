@@ -4098,6 +4098,11 @@ dhd_bus_stop(struct dhd_bus *bus, bool enforce_mutex)
 	bus->rxskip = FALSE;
 	bus->tx_seq = bus->rx_seq = 0;
 
+	/* Initialize the tx_max to a reasonable known value
+	 * so that communication can start. This will get reset when
+	 * receiving a message from firmware */
+	 bus->tx_max = 4;
+
 	if (enforce_mutex)
 		dhd_os_sdunlock(bus->dhd);
 }
