@@ -213,6 +213,7 @@ static struct regulator_init_data bcm59042_hv3ldo_data = {
 __weak struct regulator_consumer_supply hv4_supply[] = {
 	{.supply = "hv4"},
 	{.supply = "2v9_vibra"},
+	{.supply = "dummy"},
 };
 static struct regulator_init_data bcm59042_hv4ldo_data = {
 	.constraints = {
