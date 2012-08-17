@@ -1330,11 +1330,11 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 						/*mono output*/
 
 					if (path->srcmRoute[i][j].inChnl ==
-							CAPH_SRCM_CH5
+							 (int )	CAPH_SRCM_CH5
 						|| path->srcmRoute[i][j].inChnl
-							== CAPH_SRCM_PASSCH1
+							== (int) CAPH_SRCM_PASSCH1
 						|| path->srcmRoute[i][j].inChnl
-							== CAPH_SRCM_PASSCH2) {
+							==( int ) CAPH_SRCM_PASSCH2) {
 						/*only on stereo inputs.*/
 						if (mixInGain != GAIN_NA &&
 						mixInGainR != GAIN_NA) {

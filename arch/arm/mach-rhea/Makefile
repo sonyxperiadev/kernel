@@ -45,6 +45,9 @@ obj-y += pm_params.o
 
 obj-$(CONFIG_ROM_SEC_DISPATCHER_LIB) += sec_bridge_tz.i
 obj-$(CONFIG_ROM_SEC_DISPATCHER_SRC) += rhea_smc.o
+
+CFLAGS_rhea_smc.o :=$(call as-instr,.arch_extension sec,-DSMC_INSTR=1)
+
 obj-$(CONFIG_MFD_BCM59055) += board-bcm59055.o
 ifeq ($(CONFIG_MACH_RHEA_SS_COMMON),)
 obj-$(CONFIG_MFD_BCM59039) += board-bcm59039.o
