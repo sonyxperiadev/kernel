@@ -26,8 +26,13 @@ enum {
 	H264_CMD_LAST
 };
 
+typedef struct {
+	unsigned int mcin_intr;
+	unsigned int cbc_intr;
+} sIntrStatus;
+
 #define H264_IOCTL_ENABLE_IRQ	_IOR(BCM_H264_MAGIC, H264_CMD_ENABLE_IRQ, unsigned int)
-#define H264_IOCTL_WAIT_IRQ		_IOR(BCM_H264_MAGIC, H264_CMD_WAIT_IRQ, unsigned int)
+#define H264_IOCTL_WAIT_IRQ	_IOR(BCM_H264_MAGIC, H264_CMD_WAIT_IRQ, unsigned int)
 #define H264_IOCTL_DISABLE_IRQ	_IOR(BCM_H264_MAGIC, H264_CMD_DISABLE_IRQ, unsigned int)
 
 #define H264_IOCTL_RELEASE_IRQ 	_IOR(BCM_H264_MAGIC, H264_CMD_RELEASE_IRQ, unsigned int)
