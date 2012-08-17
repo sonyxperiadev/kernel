@@ -346,7 +346,7 @@ int __init v3d_init(void)
 	dvfs_param.P2 = 30;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
-	v3d_device->fmwk_handle = mm_fmwk_register(V3D_DEV_NAME,V3D_AXI_BUS_CLK_NAME_STR,
+	v3d_device->fmwk_handle = mm_fmwk_register(V3D_DEV_NAME,V3D_AXI_BUS_CLK_NAME_STR,1,
 												&core_param,&dvfs_param,&prof_param);
 	/* get kva from fmwk */
 	v3d_device->vaddr = core_param.mm_virt_addr;

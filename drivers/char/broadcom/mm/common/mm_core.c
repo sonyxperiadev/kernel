@@ -11,7 +11,7 @@ in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
-#define pr_fmt(fmt) "<%s> " fmt "\n",core_dev->mm_common->single_wq_name
+#define pr_fmt(fmt) "<%s> " fmt "\n",core_dev->mm_common->mm_name
 
 #include "mm_core.h"
 
@@ -40,14 +40,13 @@ static irqreturn_t dev_isr(int irq, void *data)
 	}
 }
 
-static int mm_fmwk_enable_clock(mm_core_t *core_dev) 
+static int mm_core_enable_clock(mm_core_t *core_dev) 
 {
 	MM_CORE_HW_IFC* hw_ifc = &core_dev->mm_device;
 	int ret =0;
-	if(core_dev->mm_common->mm_hw_is_on == false) {
-		clk_enable(core_dev->mm_common->common_clk);
-		clk_reset(core_dev->mm_common->common_clk);
-		core_dev->mm_common->mm_hw_is_on = true;
+
+	if(core_dev->mm_core_is_on == 0) {
+		mm_common_enable_clock(core_dev->mm_common);
 		pr_debug("dev turned on ");
 		hw_ifc->mm_init(hw_ifc->mm_device_id);
 
@@ -57,23 +56,27 @@ static int mm_fmwk_enable_clock(mm_core_t *core_dev)
 		
 		init_timer(&(core_dev->dev_timer));
 		setup_timer(&(core_dev->dev_timer), dev_timer_callback, (unsigned long)core_dev);
-		atomic_notifier_call_chain(&core_dev->mm_common->notifier_head, MM_FMWK_NOTIFY_CLK_ENABLE, NULL);
 		}
+
+	core_dev->mm_core_is_on ++;
+
 	return ret;
+
 }
 
-static void mm_fmwk_disable_clock(mm_core_t *core_dev)
+static void mm_core_disable_clock(mm_core_t *core_dev)
 {
 	MM_CORE_HW_IFC* hw_ifc = &core_dev->mm_device;
-	if(core_dev->mm_common->mm_hw_is_on == true) {
-		core_dev->mm_common->mm_hw_is_on = false;
+
+	core_dev->mm_core_is_on --;
+	if(core_dev->mm_core_is_on == 0) {
+
 		del_timer_sync(&(core_dev->dev_timer));
 		//Call dev_deinit
 		/* Release interrupt */
 		free_irq(hw_ifc->mm_irq,core_dev);
 		pr_debug("dev turned off ");
-		clk_disable(core_dev->mm_common->common_clk);
-		atomic_notifier_call_chain(&core_dev->mm_common->notifier_head, MM_FMWK_NOTIFY_CLK_DISABLE, NULL);
+		mm_common_disable_clock(core_dev->mm_common);
 		}
 }
 
@@ -127,8 +130,7 @@ void mm_core_job_maint_work(struct work_struct* work)
 				if(p_job_list_elem->job.status != MM_JOB_STATUS_READY) {
 					/* reset once in release */
 					hw_ifc->mm_abort(hw_ifc->mm_device_id,&list_first_entry(&(core_dev->job_list),dev_job_list_t,list)->job);
-					clk_reset(core_dev->mm_common->common_clk);
-					mm_fmwk_disable_clock(core_dev);
+					mm_core_disable_clock(core_dev);
 					}
 				list_del(&p_job_list_elem->list);
 				kfree(p_job_list_elem->job.data);
@@ -153,7 +155,7 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 	mm_core_t *core_dev = container_of(work, mm_core_t, job_scheduler);
 	MM_CORE_HW_IFC* hw_ifc = &core_dev->mm_device;
 	
-	if(mm_fmwk_enable_clock(core_dev)) goto mm_fmwk_job_scheduler_done;
+	if(mm_core_enable_clock(core_dev)) goto mm_fmwk_job_scheduler_done;
 
 	is_hw_busy = hw_ifc->mm_get_status(hw_ifc->mm_device_id);
 	if(!is_hw_busy)	{
@@ -184,7 +186,6 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 			kfree(job_list_elem->job.data);
 			kfree(job_list_elem);
 			job_list_elem = NULL;
-			clk_reset(core_dev->mm_common->common_clk);
 			hw_ifc->mm_init(hw_ifc->mm_device_id);
 		}
 	} 
@@ -192,7 +193,7 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 		struct timespec cur_time;
 		getnstimeofday(&cur_time);
 		if(timespec_compare (&cur_time, & core_dev->sched_time) > 0) {
-			pr_err("reset v3d hw ");
+			pr_err("abort hw ");
 			hw_ifc->mm_get_regs(hw_ifc->mm_device_id , NULL, 0);
 			hw_ifc->mm_abort(hw_ifc->mm_device_id,&list_first_entry(&(core_dev->job_list),dev_job_list_t,list)->job);
 			is_hw_busy = false;
@@ -207,7 +208,7 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 		}
 
 mm_fmwk_job_scheduler_done:
-	mm_fmwk_disable_clock(core_dev);
+	mm_core_disable_clock(core_dev);
 }
 
 
@@ -231,6 +232,7 @@ void* mm_core_init(mm_common_t* mm_common, const char *mm_dev_name, MM_CORE_HW_I
 	INIT_WORK(&(core_dev->job_scheduler), mm_fmwk_job_scheduler);
 	INIT_LIST_HEAD(&(core_dev->job_list));
 	core_dev->device_job_id = 1;
+	core_dev->mm_core_is_on = 0;
 
 	core_dev->mm_common = mm_common;
 

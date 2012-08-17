@@ -47,16 +47,19 @@ typedef struct mm_common {
 	char* mm_name;
 
 	/*HW status*/
-	bool mm_hw_is_on;
+	unsigned int mm_hw_is_on;
 	struct clk *common_clk;
 
-	void* mm_core;
+	void* mm_core[MAX_ASYMMETRIC_PROC];
 	void* mm_dvfs;
 	void* mm_prof;
 
     /* Used for exporting per-device information to debugfs */
     struct dentry *debugfs_dir;
 }mm_common_t;
+
+void mm_common_enable_clock(mm_common_t *common);
+void mm_common_disable_clock(mm_common_t *common);
 
 
 #endif

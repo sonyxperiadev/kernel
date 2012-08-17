@@ -31,6 +31,30 @@ LIST_HEAD(mm_dev_list);
 /* MM Framework globals end*/
 
 
+void mm_common_enable_clock(mm_common_t *common) 
+{
+	if(common->mm_hw_is_on == 0) {
+		clk_enable(common->common_clk);
+		clk_reset(common->common_clk);
+		pr_debug("mm common clock turned on ");		
+		atomic_notifier_call_chain(&common->notifier_head, MM_FMWK_NOTIFY_CLK_ENABLE, NULL);
+		}
+	
+	common->mm_hw_is_on++;
+}
+
+void mm_common_disable_clock(mm_common_t *common)
+{
+	common->mm_hw_is_on--;
+	
+	if(common->mm_hw_is_on == 0) {
+		pr_debug("mm common clock turned off ");
+		clk_disable(common->common_clk);
+		atomic_notifier_call_chain(&common->notifier_head, MM_FMWK_NOTIFY_CLK_DISABLE, NULL);
+		}
+}
+
+
 static int mm_file_open(struct inode *inode, struct file *filp) {
 	return 0;
 }
@@ -39,11 +63,15 @@ static int mm_file_release(struct inode *inode, struct file *filp) {
 	struct miscdevice *miscdev = filp->private_data;
 	mm_common_t *common = container_of(miscdev, mm_common_t, mdev);
 	job_maint_work_t maint_work;
-	INIT_MAINT_WORK(maint_work,filp,common->mm_core);
+	int i;
+	for(i=0; (i< MAX_ASYMMETRIC_PROC) && (common->mm_core[i] != NULL); i++) {
+		INIT_MAINT_WORK(maint_work,filp);
+		MAINT_SET_DEV(maint_work,common->mm_core[i]);
 
-	/* Free all jobs posted using this file */
-	queue_work(common->single_wq, &(maint_work.work));
-	flush_work_sync(&(maint_work.work));
+		/* Free all jobs posted using this file */
+		queue_work(common->single_wq, &(maint_work.work));
+		flush_work_sync(&(maint_work.work));
+		}
 
 	return 0;
 }
@@ -55,7 +83,7 @@ static long mm_file_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	mm_common_t *common = container_of(miscdev, mm_common_t, mdev);
 
 	job_maint_work_t maint_work;
-	INIT_MAINT_WORK(maint_work,filp,common->mm_core);
+	INIT_MAINT_WORK(maint_work,filp);
 
 	if ( (_IOC_TYPE(cmd) != MM_DEV_MAGIC) || (_IOC_NR(cmd) > MM_CMD_LAST) )
 		return -ENOTTY;
@@ -80,6 +108,7 @@ static long mm_file_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			if (copy_from_user (&(mm_job_node->job), (mm_job_post_t *)arg, sizeof(mm_job_post_t))) {
 				pr_err("MM_IOCTL_POST_JOB copy_from_user failed");
 				ret = -EFAULT;
+				break;
 			}
 			if(mm_job_node->job.size > 0) {
 				job_post = kmalloc(mm_job_node->job.size, GFP_KERNEL);
@@ -87,8 +116,11 @@ static long mm_file_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 				if (copy_from_user(job_post,  ((mm_job_post_t *) arg)->data,  mm_job_node->job.size)) {
                         pr_err("MM_IOCTL_POST_JOB data copy_from_user failed");
                         ret = -EPERM;
+						break;
                 }
-				
+				BUG_ON( ((mm_job_node->job.type&0xFF0000)>>16)>= MAX_ASYMMETRIC_PROC );
+				BUG_ON( common->mm_core[(mm_job_node->job.type&0xFF0000)>>16] == NULL );
+				MAINT_SET_DEV(maint_work,common->mm_core[(mm_job_node->job.type&0xFF0000)>>16]);
 				MAINT_SET_JOB(maint_work,mm_job_node);
 				queue_work(common->single_wq, &(maint_work.work));
 				flush_work_sync(&(maint_work.work));
@@ -106,17 +138,23 @@ static long mm_file_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		break;
 		case MM_IOCTL_WAIT_JOB:
 		{
+			int i;
 			mm_job_status_t job_status = {0,MM_JOB_STATUS_INVALID};
 			if (copy_from_user (&job_status, (mm_job_status_t *)arg, sizeof(job_status))) {
 				pr_err("MM_IOCTL_POST_JOB copy_from_user failed");
 				ret = -EFAULT;
 				}
-			MAINT_SET_STATUS(maint_work,&job_status);
-			
 			/* Initialize result*/
 			job_status.status = MM_JOB_STATUS_INVALID;
-			queue_work(common->single_wq, &(maint_work.work));
-			flush_work_sync(&(maint_work.work));
+
+			for(i=0; (i< MAX_ASYMMETRIC_PROC) && (common->mm_core[i] != NULL); i++) {
+				INIT_MAINT_WORK(maint_work,filp);
+				MAINT_SET_DEV(maint_work,common->mm_core[i]);
+				MAINT_SET_STATUS(maint_work,&job_status);
+			
+				queue_work(common->single_wq, &(maint_work.work));
+				flush_work_sync(&(maint_work.work));
+				}
 			
 			wait_event_interruptible(common->queue, job_status.status != MM_JOB_STATUS_INVALID );
 
@@ -142,12 +180,16 @@ static struct file_operations mm_fops = {
 
 
 void* mm_fmwk_register( const char* name, const char* clk_name,
+						unsigned int count,
 						MM_CORE_HW_IFC *core_param, 
 						MM_DVFS_HW_IFC* dvfs_param,
 						MM_PROF_HW_IFC* prof_param)
 {
 	int ret = 0;
+	int i=0;
 	mm_common_t *common = NULL;
+
+	BUG_ON(count >= MAX_ASYMMETRIC_PROC);
 
 	common = kmalloc(sizeof(mm_common_t),GFP_KERNEL);
 	memset(common,0,sizeof(mm_common_t));
@@ -196,7 +238,9 @@ void* mm_fmwk_register( const char* name, const char* clk_name,
 		goto err_register;
     }
 
-	common->mm_core = mm_core_init(common, name, core_param);
+	for(i=0; i< count; i++){
+		common->mm_core[i] = mm_core_init(common, name, &core_param[i]);
+		}
 
 #ifdef CONFIG_KONA_PI_MGR
 	common->mm_dvfs = mm_dvfs_init(common, name, dvfs_param);
@@ -223,6 +267,7 @@ void mm_fmwk_unregister(void* dev_name)
 	mm_common_t* common = NULL;
 	mm_common_t* temp = NULL;
 	bool found = false;
+	int i;
 	
 	mutex_lock(&mm_fmwk_mutex);
 	list_for_each_entry_safe(common, temp, &mm_dev_list, list) {
@@ -243,8 +288,9 @@ void mm_fmwk_unregister(void* dev_name)
 #else
 		common->mm_dvfs = NULL;
 #endif
-		if(common->mm_core)
-			mm_core_exit(common->mm_core);
+		for(i=0; (i< MAX_ASYMMETRIC_PROC) && (common->mm_core[i] != NULL); i++) {
+			mm_core_exit(common->mm_core[i]);
+			}
 
 		if(common->debugfs_dir)
 			debugfs_remove_recursive(common->debugfs_dir);

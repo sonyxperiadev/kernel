@@ -46,7 +46,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "mm_fw_usr_ifc.h"
 
-
+#define MAX_ASYMMETRIC_PROC (8)
 #define DEFAULT_MM_DEV_TIMER_MS (100)
 #define DEFAULT_MM_DEV_TIMEOUT_MS (1000)
 
@@ -109,6 +109,7 @@ typedef struct mm_core_hw_ifc {
 } MM_CORE_HW_IFC;
 
 void* mm_fmwk_register(const char* name, const char* clk_name,
+						unsigned int count,
 						MM_CORE_HW_IFC *ifc_param,
 						MM_DVFS_HW_IFC* dvfs_param,
 						MM_PROF_HW_IFC* prof_param);

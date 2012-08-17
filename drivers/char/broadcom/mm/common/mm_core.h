@@ -17,20 +17,21 @@ the GPL, without Broadcom's express prior written consent.
 #include "mm_common.h"
 
 typedef struct {
-	volatile void __iomem *dev_base;
+	mm_common_t* mm_common;
 
-	/*Job Scheduling and Waiting*/
+	/*Job Scheduling and Waiting.
+	Should be modified to an array for SMP*/
 	struct timespec sched_time;
-	struct work_struct job_scheduler;	
-	struct timer_list dev_timer;
+	struct work_struct job_scheduler;
+	volatile void __iomem *dev_base;
+	MM_CORE_HW_IFC mm_device;
+	unsigned int mm_core_is_on;
 
-	/* job list */
+
+	/* job list. will be Unique for SMP*/
+	struct timer_list dev_timer;
 	struct list_head job_list;
 	uint32_t device_job_id;
-
-	MM_CORE_HW_IFC mm_device;
-
-	mm_common_t* mm_common;
 
 }mm_core_t;
 
@@ -54,14 +55,15 @@ typedef struct job_maint_work {
 } job_maint_work_t;
 
 
-#define INIT_MAINT_WORK(a,b,c) \
+#define INIT_MAINT_WORK(a,b) \
 	INIT_WORK(&(a.work), mm_core_job_maint_work); \
 	INIT_LIST_HEAD(&((a).wait_list)); \
 	a.filp = b; \
-	a.dev = c; \
+	a.dev = NULL; \
 	a.job = NULL; \
 	a.status = NULL;
 
+#define MAINT_SET_DEV(a,b) (a).dev = (b);
 #define MAINT_SET_JOB(a,b) (a).job = (b);
 #define MAINT_SET_STATUS(a,b) (a).status = (b);
 
