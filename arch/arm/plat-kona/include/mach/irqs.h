@@ -247,16 +247,25 @@
 #define BCM_INT_ID_RESERVED173          (173 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_RESERVED174          (174 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_RESERVED175          (175 + BCM_INT_ID_PPI_MAX)
-#define BCM_INT_ID_RESERVED176          (176 + BCM_INT_ID_PPI_MAX)
-#define BCM_INT_ID_RESERVED177          (177 + BCM_INT_ID_PPI_MAX)
-#define BCM_INT_ID_VPM                  (178 + BCM_INT_ID_PPI_MAX)
+
 #ifdef CONFIG_ARCH_HAWAII
+
+#define BCM_INT_ID_H264_AOB             (176 + BCM_INT_ID_PPI_MAX)
+#define BCM_INT_ID_H264_CME             (177 + BCM_INT_ID_PPI_MAX)
+#define BCM_INT_ID_H264_MCIN_CBC        (178 + BCM_INT_ID_PPI_MAX)
+
 #define BCM_INT_ID_AXIPV		(179 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_PV			(180 + BCM_INT_ID_PPI_MAX)
 #else
+#define BCM_INT_ID_RESERVED176          (176 + BCM_INT_ID_PPI_MAX)
+#define BCM_INT_ID_RESERVED177          (177 + BCM_INT_ID_PPI_MAX)
+#define BCM_INT_ID_VPM                  (178 + BCM_INT_ID_PPI_MAX)
+
 #define BCM_INT_ID_RESERVED179          (179 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_RESERVED180          (180 + BCM_INT_ID_PPI_MAX)
+
 #endif
+
 #define BCM_INT_ID_RESERVED181          (181 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_RESERVED182          (182 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_TEMP_MON             (183 + BCM_INT_ID_PPI_MAX)

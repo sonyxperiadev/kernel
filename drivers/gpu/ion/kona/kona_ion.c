@@ -129,7 +129,9 @@ static void kona_ion_release_buffer(struct ion_client *client, struct ion_buffer
 
 unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *handle)
 {
+#ifdef CONFIG_M4U
 	struct ion_buffer *buffer;
+#endif
 	unsigned int dma_addr = 0;
 	struct sg_table *sg_table;
 
