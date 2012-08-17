@@ -24,7 +24,6 @@
 #include <plat/scu.h>
 #include <mach/secure_api.h>
 #include <mach/pm.h>
-
 static u32 *smc_buf_p;
 static u32 *smc_buf_v;
 
@@ -84,6 +83,9 @@ static u32 __smc(u32 service, u32 flags, u32 list)
 		__asmeq("%1", "r0")
 		__asmeq("%2", "r1")
 		__asmeq("%3", "r2")
+#ifdef SMC_INSTR
+			".arch_extension sec\n"
+#endif
 		"nop\n"
 		"nop\n"
 		"nop\n"
