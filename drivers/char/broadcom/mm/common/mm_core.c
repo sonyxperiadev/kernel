@@ -111,12 +111,9 @@ void mm_core_job_maint_work(struct work_struct* work)
 		list_for_each_entry_safe_reverse(job_list, temp_list, &(core_dev->job_list), list) {
 			if((job_list->filp == filp) && (maint_job->status->id == job_list->job.id)) {
 				list_add_tail(&(maint_job->wait_list),&(job_list->wait_list) );
-				added_to_list = true;
+				maint_job->added_to_wait_queue = true;
 				break;
 				}
-			}
-		if(added_to_list == false) {
-			maint_job->status->status = MM_JOB_STATUS_SUCCESS;
 			}
 		}
 

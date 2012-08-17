@@ -51,6 +51,7 @@ typedef struct job_maint_work {
 	mm_core_t* dev;
 	dev_job_list_t* job;
 	mm_job_status_t *status;
+	volatile bool added_to_wait_queue;
 	struct file* filp;
 } job_maint_work_t;
 
@@ -61,7 +62,8 @@ typedef struct job_maint_work {
 	a.filp = b; \
 	a.dev = NULL; \
 	a.job = NULL; \
-	a.status = NULL;
+	a.status = NULL; \
+	a.added_to_wait_queue = false;
 
 #define MAINT_SET_DEV(a,b) (a).dev = (b);
 #define MAINT_SET_JOB(a,b) (a).job = (b);

@@ -148,15 +148,19 @@ static long mm_file_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			job_status.status = MM_JOB_STATUS_INVALID;
 
 			for(i=0; (i< MAX_ASYMMETRIC_PROC) && (common->mm_core[i] != NULL); i++) {
-				INIT_MAINT_WORK(maint_work,filp);
 				MAINT_SET_DEV(maint_work,common->mm_core[i]);
 				MAINT_SET_STATUS(maint_work,&job_status);
 			
 				queue_work(common->single_wq, &(maint_work.work));
 				flush_work_sync(&(maint_work.work));
+				if(maint_work.added_to_wait_queue) {
+					wait_event_interruptible(common->queue, job_status.status != MM_JOB_STATUS_INVALID );
+					break;
+					}
 				}
-			
-			wait_event_interruptible(common->queue, job_status.status != MM_JOB_STATUS_INVALID );
+			if(maint_work.added_to_wait_queue==  false){
+				job_status.status = MM_JOB_STATUS_NOT_FOUND;
+				}
 
 			if (copy_to_user((u32 *) arg, &job_status, sizeof(job_status))) {
 				pr_err("MM_IOCTL_WAIT_JOB copy_to_user failed");
