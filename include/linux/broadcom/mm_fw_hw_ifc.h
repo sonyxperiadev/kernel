@@ -85,33 +85,34 @@ typedef struct {
 	const char* desc[32]; 
 } MM_PROF_HW_IFC;
 
-typedef struct mm_fmwk_hw_ifc {
-	char *mm_dev_name; 
-
-	char *mm_dev_clk_name;
-	uint8_t mm_dev_irq;
-	uint32_t mm_dev_base_addr;
-	void *mm_dev_virt_addr;//to be filled in by fmwk init with KVA
+typedef struct mm_core_hw_ifc {
+	uint8_t mm_irq;
+	uint32_t mm_base_addr;
+	void *mm_virt_addr;//to be filled in by fmwk init with KVA
 	void *mm_device_id;//any device specific data
 
-	uint32_t mm_dev_hw_size;
-	uint32_t mm_dev_timer;
-	uint32_t mm_dev_timeout;
+	uint32_t mm_hw_size;
+	uint32_t mm_timer;
+	uint32_t mm_timeout;
 
 	/* device funcs */
-	int (*mm_dev_init)(void *device_id);
-	int (*mm_dev_deinit)(void *device_id);
-	bool (*mm_dev_get_status)(void *device_id);
-	mm_job_status_e (*mm_dev_start_job)(void *device_id, mm_job_post_t *job, unsigned int profmask);
-	mm_isr_type_e (*mm_dev_process_irq)(void *device_id);
-	int (*mm_dev_reset)(void *device_id);
-	int (*mm_dev_abort)(void *device_id, mm_job_post_t *job);
-	int (*mm_dev_get_regs)(void *device_id, MM_REG_VALUE* ptr, int max);
-	int (*mm_dev_get_prof)(void *device_id, unsigned int* ptr);
+	int (*mm_init)(void *device_id);
+	int (*mm_deinit)(void *device_id);
+	bool (*mm_get_status)(void *device_id);
+	mm_job_status_e (*mm_start_job)(void *device_id, mm_job_post_t *job, unsigned int profmask);
+	mm_isr_type_e (*mm_process_irq)(void *device_id);
+	int (*mm_reset)(void *device_id);
+	int (*mm_abort)(void *device_id, mm_job_post_t *job);
+	int (*mm_get_regs)(void *device_id, MM_REG_VALUE* ptr, int max);
+	int (*mm_get_prof)(void *device_id, unsigned int* ptr);
 	
-} MM_FMWK_HW_IFC;
+} MM_CORE_HW_IFC;
 
-void* mm_fmwk_register(MM_FMWK_HW_IFC *ifc_param, MM_DVFS_HW_IFC* dvfs_param, MM_PROF_HW_IFC* prof_param);
+void* mm_fmwk_register(const char* name, const char* clk_name,
+						MM_CORE_HW_IFC *ifc_param,
+						MM_DVFS_HW_IFC* dvfs_param,
+						MM_PROF_HW_IFC* prof_param);
+
 void mm_fmwk_unregister(void* handle);
 
 

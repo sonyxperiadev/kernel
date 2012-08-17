@@ -148,7 +148,7 @@ void mm_prof_update_handler(struct work_struct* work)
 
 DEFINE_DEBUGFS_HANDLER(TIME,MM_PROF_UPDATE_TIME);
 
-void* mm_prof_init(mm_fmwk_common_t* mm_common, char *dev_name, MM_PROF_HW_IFC *prof_params)
+void* mm_prof_init(mm_common_t* mm_common, const char *dev_name, MM_PROF_HW_IFC *prof_params)
 {
 	int ret = 0;
 	mm_prof_t *mm_prof = kmalloc(sizeof(mm_prof_t),GFP_KERNEL);

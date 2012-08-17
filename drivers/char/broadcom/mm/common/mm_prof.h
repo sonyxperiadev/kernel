@@ -14,7 +14,7 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _MM_PROF_H_
 #define _MM_PROF_H_
 
-#include "mm_fw.h"
+#include "mm_common.h"
 #include "mm_dvfs.h"
 
 typedef enum {
@@ -77,7 +77,7 @@ void mm_prof_update_handler(struct work_struct* work);
 #define MAX_JOB_TYPE 4
 typedef struct _mm_prof {
 
-	mm_fmwk_common_t* mm_common;
+	mm_common_t* mm_common;
 
 	struct notifier_block mm_fmwk_notifier_blk;
 
@@ -107,6 +107,8 @@ typedef struct _mm_prof {
 
 } mm_prof_t;
 
+void* mm_prof_init(mm_common_t* mm_common, const char *mm_dev_name, MM_PROF_HW_IFC *prof_params);
+void mm_prof_exit( void *mm_prof);
 
 
 #endif

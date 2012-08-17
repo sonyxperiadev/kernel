@@ -274,7 +274,7 @@ DEFINE_DEBUGFS_HANDLER(P1,MM_DVFS_UPDATE_P1);
 DEFINE_DEBUGFS_HANDLER(T2,MM_DVFS_UPDATE_T2);
 DEFINE_DEBUGFS_HANDLER(P2,MM_DVFS_UPDATE_P2);
 
-void* mm_dvfs_init(mm_fmwk_common_t* mm_common, char *dev_name, MM_DVFS_HW_IFC *dvfs_params)
+void* mm_dvfs_init(mm_common_t* mm_common, const char *dev_name, MM_DVFS_HW_IFC *dvfs_params)
 {
 	int ret = 0;
 	mm_dvfs_t *mm_dvfs = kmalloc(sizeof(mm_dvfs_t),GFP_KERNEL);

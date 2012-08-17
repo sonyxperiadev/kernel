@@ -248,7 +248,7 @@ static v3d_device_t* v3d_device = NULL;
 int __init v3d_init(void)
 {
 	int ret = 0;
-	MM_FMWK_HW_IFC fmwk_param;
+	MM_CORE_HW_IFC core_param;
 	MM_DVFS_HW_IFC dvfs_param;
 	MM_PROF_HW_IFC prof_param;
 	v3d_device = kmalloc(sizeof(v3d_device_t), GFP_KERNEL);
@@ -320,24 +320,22 @@ int __init v3d_init(void)
 		v3d_device->v3d_bin_oom_block2, v3d_device->v3d_bin_oom_size2, (int)v3d_device->v3d_bin_oom_cpuaddr2);
 #endif
 
-	fmwk_param.mm_dev_name = V3D_DEV_NAME;
-	fmwk_param.mm_dev_clk_name = V3D_AXI_BUS_CLK_NAME_STR;
-	fmwk_param.mm_dev_base_addr = MM_V3D_BASE_ADDR;
-	fmwk_param.mm_dev_hw_size = V3D_HW_SIZE;
-	fmwk_param.mm_dev_irq = IRQ_V3D;
+	core_param.mm_base_addr = MM_V3D_BASE_ADDR;
+	core_param.mm_hw_size = V3D_HW_SIZE;
+	core_param.mm_irq = IRQ_V3D;
 
-	fmwk_param.mm_dev_timer = DEFAULT_MM_DEV_TIMER_MS;
-	fmwk_param.mm_dev_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
+	core_param.mm_timer = DEFAULT_MM_DEV_TIMER_MS;
+	core_param.mm_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
 	
-	fmwk_param.mm_dev_get_status = get_v3d_status;
-	fmwk_param.mm_dev_start_job = v3d_start_job;
-	fmwk_param.mm_dev_process_irq = process_v3d_irq;
-	fmwk_param.mm_dev_init = v3d_reset;
-	fmwk_param.mm_dev_deinit = v3d_reset;
-	fmwk_param.mm_dev_abort = v3d_abort;
-	fmwk_param.mm_dev_get_regs = v3d_get_regs;
-	fmwk_param.mm_device_id = (void *)v3d_device;
-	fmwk_param.mm_dev_virt_addr = NULL;
+	core_param.mm_get_status = get_v3d_status;
+	core_param.mm_start_job = v3d_start_job;
+	core_param.mm_process_irq = process_v3d_irq;
+	core_param.mm_init = v3d_reset;
+	core_param.mm_deinit = v3d_reset;
+	core_param.mm_abort = v3d_abort;
+	core_param.mm_get_regs = v3d_get_regs;
+	core_param.mm_device_id = (void *)v3d_device;
+	core_param.mm_virt_addr = NULL;
 
 	dvfs_param.is_dvfs_on = 1;
 	dvfs_param.user_requested_mode = TURBO;
@@ -348,9 +346,10 @@ int __init v3d_init(void)
 	dvfs_param.P2 = 30;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
-	v3d_device->fmwk_handle = mm_fmwk_register(&fmwk_param,&dvfs_param,&prof_param);
+	v3d_device->fmwk_handle = mm_fmwk_register(V3D_DEV_NAME,V3D_AXI_BUS_CLK_NAME_STR,
+												&core_param,&dvfs_param,&prof_param);
 	/* get kva from fmwk */
-	v3d_device->vaddr = fmwk_param.mm_dev_virt_addr;
+	v3d_device->vaddr = core_param.mm_virt_addr;
 
 	if( (v3d_device->fmwk_handle == NULL) ||
 		(v3d_device->vaddr == NULL )) {

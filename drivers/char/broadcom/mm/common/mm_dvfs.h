@@ -14,7 +14,7 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _MM_DVFS_H_
 #define _MM_DVFS_H_
 
-#include "mm_fw.h"
+#include "mm_common.h"
 
 typedef enum {
 	MM_DVFS_UPDATE_UNKNOWN=0,
@@ -77,7 +77,7 @@ void mm_dvfs_update_handler(struct work_struct* work);
 
 typedef struct _mm_dvfs {
 
-	mm_fmwk_common_t* mm_common;
+	mm_common_t* mm_common;
 
 	struct notifier_block mm_fmwk_notifier_blk;
 	struct notifier_block mm_dfs_chg_notify_blk;
@@ -117,6 +117,7 @@ typedef struct _mm_dvfs {
 #endif
 } mm_dvfs_t;
 
-
+void* mm_dvfs_init(mm_common_t* mm_common, const char *mm_dev_name, MM_DVFS_HW_IFC *dvfs_params);
+void mm_dvfs_exit( void *mm_dvfs);
 
 #endif
