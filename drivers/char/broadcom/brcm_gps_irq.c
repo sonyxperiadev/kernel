@@ -165,7 +165,7 @@ void read_workqueue(struct work_struct *work)
 
 	kk = 0;
 	counter = 0;
-	i = gpio_get_value(ac_data->host_req_pin);
+	i = __gpio_get_value(ac_data->host_req_pin);
 	if (i == 0)
 		return;
 
@@ -176,13 +176,13 @@ void read_workqueue(struct work_struct *work)
 
 		if (ret != I2C_PACKET_SIZE) {
 			printk(KERN_INFO "GPS read error\n");
-			i = gpio_get_value(ac_data->host_req_pin);
+			i = __gpio_get_value(ac_data->host_req_pin);
 			continue;
 		}
 
 		if (ac_data->rd_buffer[ac_data->rbuffer_wp][0] == 0) {
 			++zero_read;
-			i = gpio_get_value(ac_data->host_req_pin);
+			i = __gpio_get_value(ac_data->host_req_pin);
 			continue;
 		}
 
@@ -197,7 +197,7 @@ void read_workqueue(struct work_struct *work)
 		udelay(UDELAY_AFTER_I2C_READ);
 		++counter;
 
-		i = gpio_get_value(ac_data->host_req_pin);
+		i = __gpio_get_value(ac_data->host_req_pin);
 	}  while (i == 1);
 
 	if (counter >= RX_SIZE)	{
