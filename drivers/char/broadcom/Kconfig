@@ -295,3 +295,10 @@ config BCM_LOGRAM_HELPER
     default n
     ---help---
     Reserves a page of bootmem and stores ramdump address
+
+config NEW_GPSCHIP_I2C
+	bool "GPS I2C NEW COMMUNICATION PROTOCOL"
+	default n
+	--help---
+		If GPS I2C using new comm protocol
+
