@@ -34,6 +34,14 @@
 
 #include <asm/hardware/cache-l2x0.h>
 
+/* Control variable to enter retention instead
+ * of dormant in idle path but enter
+ * dormant during suspend
+ */
+static u32 force_retention_in_idle = 1;
+module_param_named(force_retention_in_idle, force_retention_in_idle,
+		   int, S_IRUGO | S_IWUSR | S_IWGRP);
+
 /* Control variable to enable/disable dormant */
 static u32 dormant_disable;
 module_param_named(dormant_disable, dormant_disable,
@@ -421,7 +429,10 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 	u32 dormant_return;
 	u32 reg_val;
 
-	if (dormant_disable || fake_dormant) {
+	spin_lock_irqsave(&dormant_entry_lock, flgs);
+	if (dormant_disable || fake_dormant ||
+			(force_retention_in_idle &&
+			 (service == CAPRI_DORMANT_CORE_DOWN))) {
 		/* Dis-allow entering dormant */
 		reg_val = readl_relaxed(KONA_PWRMGR_VA +
 					PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
@@ -442,6 +453,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		writel_relaxed(reg_val, KONA_PWRMGR_VA +
 				PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
 	}
+	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
 
 	if (dormant_disable) {
 
@@ -762,17 +774,23 @@ void dormant_enter_continue(void)
 		 * be turned off.
 		 */
 
-		if (is_l2_disabled() || fake_dormant) {
-			local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
-					 (u32)SEC_BUFFER_ADDR,
-					 (u32)SEC_BUFFER_ADDR +
-					 MAX_SECURE_BUFFER_SIZE, 3);
+		if (force_retention_in_idle && !is_l2_disabled()) {
+			/* We want to enter retention in idle path */
+			wfi();
 		} else {
-			local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
-					 (u32)SEC_BUFFER_ADDR,
-					 (u32)SEC_BUFFER_ADDR +
-					 MAX_SECURE_BUFFER_SIZE, 2);
+			if (is_l2_disabled() || fake_dormant) {
+				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
+						 (u32)SEC_BUFFER_ADDR,
+						 (u32)SEC_BUFFER_ADDR +
+						 MAX_SECURE_BUFFER_SIZE, 3);
+			} else {
+				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
+						 (u32)SEC_BUFFER_ADDR,
+						 (u32)SEC_BUFFER_ADDR +
+						 MAX_SECURE_BUFFER_SIZE, 2);
+			}
 		}
+
 
 	} else {
 		/* Write the address where we want core-1 to boot */
