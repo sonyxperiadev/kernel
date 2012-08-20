@@ -80,8 +80,8 @@ void dwc_otg_core_soft_disconnect(dwc_otg_core_if_t *core_if, bool en)
 		dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl,
 				dctl.d32);
 #ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver->otg->pullup_on && (!gotgctl.b.hnpreq))
-			core_if->xceiver->otg->pullup_on(core_if->xceiver->otg, !en);
+		if (core_if->xceiver->pullup_on && (!gotgctl.b.hnpreq))
+			core_if->xceiver->pullup_on(core_if->xceiver, !en);
 #endif
 	} else {
 		DWC_PRINTF("NOT SUPPORTED IN HOST MODE\n");
@@ -6801,8 +6801,9 @@ void dwc_otg_initiate_srp(dwc_otg_core_if_t *core_if)
 		return;
 	}
 #ifdef CONFIG_USB_OTG_UTILS
-	if (core_if->xceiver->otg->pullup_on)
-		core_if->xceiver->otg->pullup_on(core_if->xceiver->otg, true);
+	if (core_if->xceiver->pullup_on)
+		core_if->xceiver->pullup_on(core_if->xceiver, true);
+
 #endif
 
 	DWC_INFO("Session Request Initated\n");	/* NOTICE */

@@ -226,9 +226,11 @@ static int bcmpmu_otg_xceiv_set_otg_enable(struct usb_otg *otg,
 	return 0;
 }
 
-static int bcmpmu_otg_xceiv_pullup_on(struct usb_otg *otg, bool on)
+static int bcmpmu_otg_xceiv_pullup_on(struct usb_phy *phy,
+	bool on)
 {
-	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->phy->dev);
+	struct bcmpmu_otg_xceiv_data *xceiv_data =
+		dev_get_drvdata(phy->dev);
 
 	if (!xceiv_data)
 		return -EINVAL;
@@ -837,7 +839,8 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	    bcmpmu_otg_xceiv_set_srp_reqd_handler;
 	xceiv_data->otg_xceiver.phy.otg->set_otg_enable =
 	    bcmpmu_otg_xceiv_set_otg_enable;
-	xceiv_data->otg_xceiver.phy.otg->pullup_on = bcmpmu_otg_xceiv_pullup_on;
+	xceiv_data->otg_xceiver.phy.pullup_on =
+		bcmpmu_otg_xceiv_pullup_on;
 	xceiv_data->otg_xceiver.phy.set_suspend =
 	    bcmpmu_otg_xceiv_set_suspend;
 
