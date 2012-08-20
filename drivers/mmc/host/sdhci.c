@@ -2435,7 +2435,8 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 		 * mmc_queue_thread would block for more than 10seconds.
 		 *
 		 */
-		if (host->mrq->data)	{
+		WARN_ON(host->mrq == NULL);
+		if (host->mrq && host->mrq->data)	{
 			if (host->mrq->data->error)	{
 				printk(KERN_ERR"%s- It is possible that the"
 				 "damaged SD card is inserted-Error:0x%x\n",
