@@ -626,6 +626,13 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_term_clk;
 
+	if ((hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) &&
+		(hw_cfg->configure_sdio_pullup))	{
+		dev_info(dev->dev,
+			"Pull-Down SD CMD/DAT Line before power-on\n");
+		hw_cfg->configure_sdio_pullup(0);
+	}
+
 	ret = bcm_kona_sd_init(dev);
 	if (ret)
 		goto err_reset;
@@ -731,8 +738,14 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		 * edge sensitive, check the initial GPIO value here, emulate
 		 * only if the card is present
 		 */
-		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
+		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)		{
+			if (hw_cfg->configure_sdio_pullup)	{
+				dev_info(dev->dev,
+				"Pull-up SD CMD/DAT line before detection\n");
+				hw_cfg->configure_sdio_pullup(1);
+			}
 			bcm_kona_sd_card_emulate(dev, 1);
+		}
 	}
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 	if ((dev->devtype == SDIO_DEV_TYPE_WIFI) &&
@@ -1135,6 +1148,9 @@ static int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host)
 int sdhci_kona_sdio_regulator_power(struct sdio_dev *dev, int power_state)
 {
 	int ret = 0;
+	struct device *pdev = dev->dev;
+	struct sdio_platform_cfg *hw_cfg =
+		(struct sdio_platform_cfg *)pdev->platform_data;
 
 	/*
 	 * Note that from the board file the appropriate regualtor names are
@@ -1149,11 +1165,25 @@ int sdhci_kona_sdio_regulator_power(struct sdio_dev *dev, int power_state)
 	 */
 	if (dev->vdd_sdxc_regulator) {
 		if (power_state) {
-			dev_dbg(dev->dev, "Turning ON sdxc sd \r\n");
+			if ((hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) &&
+				(hw_cfg->configure_sdio_pullup))	{
+				dev_info(dev->dev, "Pull Up CMD/DAT Line\n");
+				/* Pull-up SDCMD, SDDAT[0:3] */
+				hw_cfg->configure_sdio_pullup(1);
+				mdelay(1); /* wait before power-on */
+			}
+			dev_dbg(dev->dev, "Turning ON sdxc sd\n");
 			ret = regulator_enable(dev->vdd_sdxc_regulator);
 		} else {
-			dev_dbg(dev->dev, "Turning OFF sdxc sd \r\n");
+			dev_dbg(dev->dev, "Turning OFF sdxc sd\n");
 			ret = regulator_disable(dev->vdd_sdxc_regulator);
+
+			if ((hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) &&
+				(hw_cfg->configure_sdio_pullup))	{
+				dev_info(dev->dev, "Pull Down CMD/DAT Line\n");
+				/* Pull-down SDCMD, SDDAT[0:3] */
+				hw_cfg->configure_sdio_pullup(0);
+			}
 		}
 	 }
 
