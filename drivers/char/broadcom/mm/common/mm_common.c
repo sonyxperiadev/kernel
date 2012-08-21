@@ -34,8 +34,10 @@ LIST_HEAD(mm_dev_list);
 void mm_common_enable_clock(mm_common_t *common) 
 {
 	if(common->mm_hw_is_on == 0) {
-		clk_enable(common->common_clk);
-		clk_reset(common->common_clk);
+		if(common->common_clk) {
+			clk_enable(common->common_clk);
+			clk_reset(common->common_clk);
+			}
 		pr_debug("mm common clock turned on ");		
 		atomic_notifier_call_chain(&common->notifier_head, MM_FMWK_NOTIFY_CLK_ENABLE, NULL);
 		}
@@ -49,7 +51,9 @@ void mm_common_disable_clock(mm_common_t *common)
 	
 	if(common->mm_hw_is_on == 0) {
 		pr_debug("mm common clock turned off ");
-		clk_disable(common->common_clk);
+		if(common->common_clk) {
+			clk_disable(common->common_clk);
+			}
 		atomic_notifier_call_chain(&common->notifier_head, MM_FMWK_NOTIFY_CLK_DISABLE, NULL);
 		}
 }
@@ -194,6 +198,7 @@ void* mm_fmwk_register( const char* name, const char* clk_name,
 	mm_common_t *common = NULL;
 
 	BUG_ON(count >= MAX_ASYMMETRIC_PROC);
+	if(name == NULL ) return NULL;
 
 	common = kmalloc(sizeof(mm_common_t),GFP_KERNEL);
 	memset(common,0,sizeof(mm_common_t));
@@ -204,11 +209,14 @@ void* mm_fmwk_register( const char* name, const char* clk_name,
 	ATOMIC_INIT_NOTIFIER_HEAD(&common->notifier_head);
 
 	/*get common clock*/
-	common->common_clk = clk_get(NULL, clk_name);
-	if (!common->common_clk) {
-		pr_err("error get clock %s for %s dev", clk_name, name);
-		ret = -EIO;
-	}
+	if(clk_name) {
+		common->common_clk = clk_get(NULL, clk_name);
+		if (!common->common_clk) {
+			pr_err("error get clock %s for %s dev", clk_name, name);
+			ret = -EIO;
+			}
+		}
+
 
 	common->mm_name = kmalloc(strlen(MM_PREFIX)+strlen(name)+1,GFP_KERNEL);
 	strcpy(common->mm_name,MM_PREFIX);
@@ -244,6 +252,11 @@ void* mm_fmwk_register( const char* name, const char* clk_name,
 
 	for(i=0; i< count; i++){
 		common->mm_core[i] = mm_core_init(common, name, &core_param[i]);
+		if(common->mm_core[i] == NULL) {
+			pr_err("Error creating Core instance for core-%d in %s",
+							   i, common->mm_name);
+			goto err_register;
+			}
 		}
 
 #ifdef CONFIG_KONA_PI_MGR
