@@ -290,6 +290,42 @@ static AudioMode_t AUDCTRL_GetModeBySpeaker(CSL_CAPH_DEVICE_e speaker)
 
 /****************************************************************************
 *
+* Function Name: AUDCTRL_FinalizeAudioApp
+*
+* Description:   get audio application.
+*
+****************************************************************************/
+static AudioApp_t AUDCTRL_FinalizeAudioApp(AudioMode_t mode)
+{
+	AudioApp_t app = AUDCTRL_GetAudioApp();
+
+	if (mode == AUDIO_MODE_BLUETOOTH) {
+		/* need to figure out App when use Bluetooth headset. */
+		if (FALSE == AUDCTRL_IsBTMWB()
+		&& app == AUDIO_APP_VOICE_CALL_WB)
+			app = AUDIO_APP_VOICE_CALL;
+
+		if (TRUE == AUDCTRL_IsBTMWB()
+		&& app == AUDIO_APP_VOICE_CALL)
+			app = AUDIO_APP_VOICE_CALL_WB;
+	} else {
+		/*when switch from BT headset to handset mode,
+		need to figure out app */
+		if (voiceCallSampleRate == AUDIO_SAMPLING_RATE_16000
+		&& app == AUDIO_APP_VOICE_CALL)
+			app = AUDIO_APP_VOICE_CALL_WB;
+
+		if (voiceCallSampleRate == AUDIO_SAMPLING_RATE_8000
+		&& app == AUDIO_APP_VOICE_CALL_WB)
+			app = AUDIO_APP_VOICE_CALL;
+	}
+	AUDCTRL_SaveAudioApp(app);
+
+	return currAudioApp;
+}
+
+/****************************************************************************
+*
 * Function Name: AUDCTRL_Init
 *
 * Description:   Init function
@@ -342,6 +378,7 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 	aTrace(LOG_AUDIO_CNTLR, "%s sink %d, mic %d\n", __func__, sink, source);
 
 	mode = GetAudioModeBySink(sink);
+	app = AUDCTRL_FinalizeAudioApp(mode);
 
 	if (user_vol_setting[app][mode].valid == FALSE)
 		fillUserVolSetting(mode, app);
@@ -456,6 +493,7 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate)
 	if (AUDCTRL_InVoiceCall()) {
 
 		mode = AUDCTRL_GetAudioMode();
+		app = AUDCTRL_FinalizeAudioApp(mode);
 		bNeedDualMic = needDualMic(mode, app);
 
 		AUDDRV_Telephony_RateChange(mode, app, bNeedDualMic,
@@ -554,8 +592,7 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 		return;
 
 	mode = GetAudioModeBySink(sink);
-	app = AUDCTRL_GetAudioApp();
-	/* need to figure out App when use Bluetooth headset. */
+	app = AUDCTRL_FinalizeAudioApp(mode);
 
 #ifdef	CONFIG_AUDIO_FEATURE_SET_DISABLE_ECNS
 	/* when turning off EC and NS, we set mode to

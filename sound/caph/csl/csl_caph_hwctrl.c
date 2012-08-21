@@ -2318,14 +2318,18 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 #endif
 			else if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR &&
 				path->source == CSL_CAPH_DEV_BT_MIC)
+				/*loopback from BT mic to BT speaker */
 				pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
+
 			if ((bt_mode == BT_MODE_NB) ||
 					(bt_mode == BT_MODE_NB_TEST))
 				pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_8000;
 			else
 				pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_16000;
+
 			if (path->source == CSL_CAPH_DEV_DSP)
 				pcmCfg.sample_rate = path->src_sampleRate;
+
 			pcmCfg.interleave = TRUE;
 			pcmCfg.ext_bits = 0;
 			pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
