@@ -65,6 +65,8 @@ static struct map_desc hawaii_io_desc[] __initdata = {
 	IO_DESC(KONA_DSP_CCU_VA, SZ_4K),
 	IO_DESC(KONA_BSC1_VA, SZ_4K),
 	IO_DESC(KONA_BSC2_VA, SZ_4K),
+	IO_DESC(KONA_BSC3_VA, SZ_4K),
+	IO_DESC(KONA_BSC4_VA, SZ_4K),
 	IO_DESC(KONA_CHIPREG_VA, SZ_4K),
 	IO_DESC(KONA_DMAC_NS_VA, SZ_4K),
 	IO_DESC(KONA_DMAC_S_VA, SZ_4K),
@@ -96,9 +98,6 @@ static struct map_desc hawaii_io_desc[] __initdata = {
 	IO_DESC(KONA_SDIO1_VA, SZ_64K),
 	IO_DESC(KONA_SDIO2_VA, SZ_64K),
 	IO_DESC(KONA_SDIO3_VA, SZ_64K),
-#ifdef CONFIG_ARCH_RHEA_BX
-	IO_DESC(KONA_SDIO4_VA, SZ_64K),
-#endif
 	IO_DESC(KONA_SEC_VA, SZ_4K),
 	IO_DESC(KONA_SECWD_VA, SZ_4K),
 	IO_DESC(KONA_SPUM_NS_VA, SZ_64K),
@@ -107,12 +106,11 @@ static struct map_desc hawaii_io_desc[] __initdata = {
 	IO_DESC(KONA_SPUM_APB_S_VA, SZ_4K),
 
 	IO_DESC(KONA_SSP0_VA, SZ_4K),
-	IO_DESC(KONA_SSP3_VA, SZ_4K),
+	IO_DESC(KONA_SSP1_VA, SZ_4K),
 
 	IO_DESC(KONA_STM_VA, SZ_4K),
 	IO_DESC(KONA_SWSTM_VA, SZ_4K),
 	IO_DESC(KONA_SWSTM_ST_VA, SZ_4K),
-	IO_DESC(KONA_SSP4_VA, SZ_4K),
 
 	IO_DESC(KONA_SYSTMR_VA, SZ_4K),	/* 32-bit kona gp timer */
 	IO_DESC(KONA_TMR_HUB_VA, SZ_4K),	/* 64-bit hub timer */
