@@ -145,8 +145,6 @@ static mm_isr_type_e process_mcin_irq(void* device_id)
 	
 	if(flags & (1<<3))
 		irq_retval = MM_ISR_SUCCESS;
-	else
-		irq_retval = MM_ISR_ERROR;
 
 	return irq_retval;
 }

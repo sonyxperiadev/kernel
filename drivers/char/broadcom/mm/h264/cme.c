@@ -142,9 +142,7 @@ static mm_isr_type_e process_cme_irq(void* device_id)
 	/* Disable CME Idle Interrupt */
 	cme_write(id,H264_CME_INTCS_OFFSET,0);
 	
-	if(flags & (1<<31))
-		irq_retval = MM_ISR_ERROR;
-	else
+	if((flags & (1<<31)) == 0)
 		irq_retval = MM_ISR_SUCCESS;
 
 	return irq_retval;
