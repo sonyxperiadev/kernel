@@ -296,33 +296,29 @@ void mm_fmwk_unregister(void* dev_name)
 		}
 	mutex_unlock(&mm_fmwk_mutex);
 
-	if(found) {
-		if(common->mm_prof)
-			mm_prof_exit(common->mm_prof);
+	if(common->mm_prof)
+		mm_prof_exit(common->mm_prof);
 #ifdef CONFIG_KONA_PI_MGR
-		if(common->mm_dvfs)
-			mm_dvfs_exit(common->mm_dvfs);
+	if(common->mm_dvfs)
+		mm_dvfs_exit(common->mm_dvfs);
 #else
-		common->mm_dvfs = NULL;
+	common->mm_dvfs = NULL;
 #endif
-		for(i=0; (i< MAX_ASYMMETRIC_PROC) && (common->mm_core[i] != NULL); i++) {
-			mm_core_exit(common->mm_core[i]);
-			}
-
-		if(common->debugfs_dir)
-			debugfs_remove_recursive(common->debugfs_dir);
-
-		misc_deregister(&common->mdev);
-
-		if(common->single_wq) {
-			flush_workqueue(common->single_wq);
-			destroy_workqueue(common->single_wq);
-			}
-		
-		if(common->single_wq_name) kfree(common->single_wq_name);
-		if(common->mm_name) kfree(common->mm_name);
-
-		if(common) kfree(common);
+	for(i=0; (i< MAX_ASYMMETRIC_PROC) && (common->mm_core[i] != NULL); i++) {
+		mm_core_exit(common->mm_core[i]);
 		}
+	if(common->debugfs_dir)
+		debugfs_remove_recursive(common->debugfs_dir);
+
+	misc_deregister(&common->mdev);
+
+	if(common->single_wq) {
+		flush_workqueue(common->single_wq);
+		destroy_workqueue(common->single_wq);
+		}
+		
+	if(common->single_wq_name) kfree(common->single_wq_name);
+	if(common->mm_name) kfree(common->mm_name);
+	if(common) kfree(common);
 }
 
