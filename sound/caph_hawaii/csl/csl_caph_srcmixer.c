@@ -155,7 +155,7 @@ static CSL_CAPH_SRCM_CHNL_TABLE_t chnlTable[OUTCHNL_MAX_NUM_CHNL] = {
 	{CSL_CAPH_SRCM_STEREO_CH2_L, 0x0000},
 	{CSL_CAPH_SRCM_STEREO_CH2_R, 0x0000},
 #ifdef CONFIG_CAPH_STEREO_IHF
-    {CSL_CAPH_SRCM_STEREO_CH2, 0x0000},
+	{CSL_CAPH_SRCM_STEREO_CH2, 0x0000},
 #endif
 };
 
@@ -965,7 +965,8 @@ static CAPH_DATA_FORMAT_e csl_caph_srcmixer_get_chal_dataformat(CHAL_HANDLE
 		/* test 16bit mono in pass through */
 		chalDataFmt = CAPH_MONO_16BITP;
 #else
-		/*packed in case of mono passthru (CAPRI cHAL differentiates this) */
+		/*packed in case of mono passthru
+		(CAPRI cHAL differentiates this) */
 		chalDataFmt = CAPH_MONO_16BIT;
 #endif
 		break;
@@ -1279,7 +1280,7 @@ CSL_CAPH_MIXER_e csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEVICE_e
 	case CSL_CAPH_DEV_IHF:
 	case CSL_CAPH_DEV_VIBRA:
 #ifdef CONFIG_CAPH_STEREO_IHF
-		if((sink == CSL_CAPH_DEV_IHF) && (isSTIHF == TRUE))
+		if ((sink == CSL_CAPH_DEV_IHF) && (isSTIHF == TRUE))
 			outChnl = CSL_CAPH_SRCM_STEREO_CH2;
 		else
 #endif
@@ -1593,19 +1594,24 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	/* Clear Input FIFO */
 	chal_caph_srcmixer_clr_fifo(handle, fifo);
 
-	/* Get Output Channel FIFO */
-	fifo = csl_caph_srcmixer_get_outchnl_fifo(routeConfig.outChnl);
-	/* Get Output Data Format */
-	dataFmt =
-	    csl_caph_srcmixer_get_chal_dataformat(handle,
-						  routeConfig.outDataFmt);
-	/* Set output FIFO data format */
-	chal_caph_srcmixer_set_fifo_datafmt(handle, fifo, dataFmt);
-	/* Set output FIFO threshold */
-	chal_caph_srcmixer_set_fifo_thres(handle, fifo, routeConfig.outThres,
-					  (UInt8) srcmixer_fifo_thres2);
-	/* Clear output FIFO */
-	chal_caph_srcmixer_clr_fifo(handle, fifo);
+	inChnls = csl_caph_srcmixer_read_outchnltable(routeConfig.outChnl);
+	/*config only if output is not active*/
+	if (inChnls == 0) {
+		/* Get Output Channel FIFO */
+		fifo = csl_caph_srcmixer_get_outchnl_fifo(routeConfig.outChnl);
+		/* Get Output Data Format */
+		dataFmt = csl_caph_srcmixer_get_chal_dataformat(handle,
+			routeConfig.outDataFmt);
+
+		/* Set output FIFO data format */
+		chal_caph_srcmixer_set_fifo_datafmt(handle, fifo, dataFmt);
+		/* Set output FIFO threshold */
+		chal_caph_srcmixer_set_fifo_thres(handle, fifo,
+			routeConfig.outThres,
+			(UInt8) srcmixer_fifo_thres2);
+		/* Clear output FIFO */
+		chal_caph_srcmixer_clr_fifo(handle, fifo);
+	}
 	/* Enable the mixer input channel */
 	chal_caph_srcmixer_enable_chnl(handle, (UInt16) chalInChnl);
 	/* Update the output channel usage table */
@@ -1625,15 +1631,16 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 	/* In case of stereo IHF, configure MIXER2 as stereo. MIXER2 can be
 	configured as mono/stereo on CAPRI platform */
 #ifdef CONFIG_CAPH_STEREO_IHF
-		if (routeConfig.sink == CSL_CAPH_DEV_IHF)
-		{
-			if(isSTIHF == TRUE)
-				chal_caph_srcmixer_set_mixer2_mono(handle,0); /*Stereo IHF */
+		if (routeConfig.sink == CSL_CAPH_DEV_IHF) {
+			if (isSTIHF == TRUE)
+				/*Stereo IHF */
+				chal_caph_srcmixer_set_mixer2_mono(handle, 0);
 			else
-				chal_caph_srcmixer_set_mixer2_mono(handle,1); /* Mono IHF */
-		}
-		else
-			chal_caph_srcmixer_set_mixer2_mono(handle,1); /* default is mono */
+				/* Mono IHF */
+				chal_caph_srcmixer_set_mixer2_mono(handle, 1);
+		} else
+			/* default is mono */
+			chal_caph_srcmixer_set_mixer2_mono(handle, 1);
 #endif
 
 	/* Mute those input channels which do not connect

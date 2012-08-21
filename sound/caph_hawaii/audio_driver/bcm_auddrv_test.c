@@ -451,8 +451,11 @@ static int HandleControlCommand()
 	case 4:/* Enable telephony */
 
 		aTrace(LOG_AUDIO_DRIVER, " Enable telephony\n");
+		AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_ANALOG_MAIN,
+				AUDIO_SINK_HANDSET);
 		AUDCTRL_EnableTelephony(AUDIO_SOURCE_ANALOG_MAIN,
 				AUDIO_SINK_HANDSET);
+#if 0		
 		(*((UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502F050))) =
 		 (UInt32) (0x805DC990));
 		(*((UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502F054))) =
@@ -467,6 +470,7 @@ static int HandleControlCommand()
 		 (UInt32) (0x07000000));
 		(*((UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502C264))) =
 		 (UInt32) (0x0));
+#endif		
 
 		aTrace(LOG_AUDIO_DRIVER, " Telephony enabled\n");
 
@@ -1250,6 +1254,11 @@ static int HandlePlayCommand()
 		CSL_CAPH_DEVICE_e aud_dev = CSL_CAPH_DEV_EP;
 		aTrace(LOG_AUDIO_DRIVER, " Start Playback\n");
 		spkr = sgBrcm_auddrv_TestValues[2];
+
+		if (sgBrcm_auddrv_TestValues[3] == 1)
+			AUDCTRL_SetIHFmode(TRUE);
+		else
+			AUDCTRL_SetIHFmode(FALSE);
 
 		AUDCTRL_EnablePlay(AUDIO_SOURCE_MEM,
 				spkr,

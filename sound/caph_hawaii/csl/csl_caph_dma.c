@@ -630,6 +630,7 @@ void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)
 				__func__, rc);
 		return;
 	}
+#if 0
 #ifdef CONFIG_SMP
 	{
 		unsigned int cpu = smp_processor_id();
@@ -639,6 +640,7 @@ void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)
 		irq_set_affinity(BCM_INT_ID_CAPH, cpumask_of(cpu));
 	}
 #endif /* CONFIG_SMP */
+#endif
 	return;
 }
 
@@ -1126,8 +1128,8 @@ void csl_caph_dma_clear_intr(CSL_CAPH_DMA_CHNL_e chnl,
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
 	/* aTrace(LOG_AUDIO_CSL, "%s: chnl=0x%x
-	   owner=0x%x \n", __func__, chnl, csl_owner);
-	 */
+	   owner=0x%x \n", __func__, chnl, csl_owner);*/
+
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
 
@@ -1329,4 +1331,41 @@ UInt32 csl_caph_dma_read_timestamp(CSL_CAPH_DMA_CHNL_e chnl)
 {
 	return chal_caph_dma_read_timestamp(handle,
 					    csl_caph_dma_get_chal_chnl(chnl));
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CHNL_e chnl)
+*
+*  Description: check if a given dma channel is obtained
+*
+****************************************************************************/
+Boolean csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CHNL_e chnl)
+{
+	return dmaCH_ctrl[chnl].bUsed;
+}
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_dma_set_buffer
+*
+*  Description: set dma buffer addr and wrap size
+*
+****************************************************************************/
+void csl_caph_dma_set_buffer(CSL_CAPH_DMA_CONFIG_t *chnl_config)
+{
+	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
+
+	/*aTrace(LOG_AUDIO_CSL,
+		"%s dma %d mem %p size %ld\n",
+		__func__, chnl_config->dma_ch, chnl_config->mem_addr,
+		chnl_config->mem_size);*/
+
+	if (chnl_config->dma_ch == CSL_CAPH_DMA_NONE)
+		return;
+
+	caph_aadmac_ch = csl_caph_dma_get_chal_chnl(chnl_config->dma_ch);
+	chal_caph_dma_set_buffer(handle, caph_aadmac_ch,
+		 (cUInt32) chnl_config->mem_addr, chnl_config->mem_size);
+	return;
 }

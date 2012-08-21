@@ -86,11 +86,12 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_SwitchSpkr,
 	ACTION_AUD_SetHWLoopback,
 	ACTION_AUD_SetAudioMode,
-	ACTION_AUD_SetAudioApp, /*set audio profile*/
+	ACTION_AUD_SetAudioApp, /*set audio app on*/
+	ACTION_AUD_RemoveAudioApp, /*Remove audio app*/
 	ACTION_AUD_EnableFMPlay,
 	ACTION_AUD_DisableFMPlay,
 	ACTION_AUD_SetARM2SPInst,
-	ACTION_AUD_RateChange,/* 33 */
+	ACTION_AUD_RateChange,/* 34 */
 	ACTION_AUD_AMPEnable,
 	ACTION_AUD_DisableByPassVibra_CB,
 	ACTION_AUD_BufferReady,
@@ -98,6 +99,17 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_ConnectDL,
 	ACTION_AUD_UpdateUserVolSetting,
 	ACTION_AUD_HandleCPReset,
+	ACTION_AUD_OpenVoIP,
+	ACTION_AUD_CloseVoIP,
+	ACTION_AUD_SET_VOIP_UL_CB,
+	ACTION_AUD_SET_VOIP_DL_CB,
+	ACTION_AUD_StartVoIP,
+	ACTION_AUD_StopVoIP,
+	ACTION_AUD_BTTest,
+	ACTION_AUD_CfgIHF,
+	ACTION_AUD_CfgSSP,
+	ACTION_AUD_HwCtl,
+	ACTION_AUD_AtCtl,
 	ACTION_AUD_TOTAL
 };
 #define BRCM_AUDIO_ACTION_en_t enum __BRCM_AUDIO_ACTION_en_t
@@ -111,6 +123,7 @@ struct __BRCM_AUDIO_Param_Start_t {
 	Int32 mixMode;
 	Int32 callMode;
 	int stream;
+	void *data;
 };
 #define BRCM_AUDIO_Param_Start_t struct __BRCM_AUDIO_Param_Start_t
 
@@ -142,7 +155,7 @@ struct __BRCM_AUDIO_Param_Open_t {
 	void *drv_handle;
 	TIDChanOfDev *pdev_prop;
 	int stream;
-
+	AUDIO_DRIVER_TYPE_t drv_type;
 };
 #define BRCM_AUDIO_Param_Open_t struct __BRCM_AUDIO_Param_Open_t
 
@@ -254,6 +267,51 @@ struct __BRCM_AUDIO_Param_CallMode_t {
 };
 #define BRCM_AUDIO_Param_CallMode_t struct __BRCM_AUDIO_Param_CallMode_t
 
+struct __BRCM_AUDIO_Param_ECNS_t {
+	Int32 ec_ns;
+};
+#define BRCM_AUDIO_Param_ECNS_t struct __BRCM_AUDIO_Param_ECNS_t
+
+struct __BRCM_AUDIO_Param_AMPCTL_t {
+	Int32 amp_status;
+};
+#define BRCM_AUDIO_Param_AMPCTL_t struct __BRCM_AUDIO_Param_AMPCTL_t
+
+struct __BRCM_AUDIO_Param_BT_Test_t {
+	int mode;
+};
+#define BRCM_AUDIO_Param_BT_Test_t struct __BRCM_AUDIO_Param_BT_Test_t
+
+struct __BRCM_AUDIO_Param_Cfg_IHF_t {
+	Boolean stIHF;
+};
+#define BRCM_AUDIO_Param_Cfg_IHF_t struct __BRCM_AUDIO_Param_Cfg_IHF_t
+
+struct __BRCM_AUDIO_Param_Cfg_SSP_t {
+	int mode;
+	int bus;
+	int en_lpbk;
+};
+#define BRCM_AUDIO_Param_Cfg_SSP_t struct __BRCM_AUDIO_Param_Cfg_SSP_t
+
+struct __BRCM_AUDIO_Param_HwCtl_t {
+	int access_type;
+	int arg1;
+	int arg2;
+	int arg3;
+	int arg4;
+};
+#define BRCM_AUDIO_Param_HwCtl_t struct __BRCM_AUDIO_Param_HwCtl_t
+
+struct __BRCM_AUDIO_Param_AtCtl_t {
+	Int32 cmdIndex;
+	void *pChip;
+	Int32 ParamCount;
+	Int32 isGet;
+	Int32 Params[7];
+};
+#define BRCM_AUDIO_Param_AtCtl_t struct __BRCM_AUDIO_Param_AtCtl_t
+
 union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_Start_t param_start;
 	BRCM_AUDIO_Param_Stop_t param_stop;
@@ -271,19 +329,18 @@ union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_FM_t parm_FM;
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
 	BRCM_AUDIO_Param_SetApp_t parm_setapp;
+	BRCM_AUDIO_Param_SetApp_t parm_rmapp;
 	BRCM_AUDIO_Param_CallMode_t parm_callmode;
+	BRCM_AUDIO_Param_ECNS_t parm_ecns;
+	BRCM_AUDIO_Param_AMPCTL_t parm_ampctl;
+	BRCM_AUDIO_Param_BT_Test_t parm_bt_test;
+	BRCM_AUDIO_Param_Cfg_IHF_t parm_cfg_ihf;
+	BRCM_AUDIO_Param_Cfg_SSP_t parm_cfg_ssp;
+	BRCM_AUDIO_Param_HwCtl_t parm_hwCtl;
+	BRCM_AUDIO_Param_AtCtl_t parm_atctl;
 
 };
 #define BRCM_AUDIO_Control_Params_un_t union __BRCM_AUDIO_Control_Params_un_t
-struct __BRCM_AUDIO_Param_ECNS_t {
-	Int32 ec_ns;
-};
-#define BRCM_AUDIO_Param_ECNS_t struct __BRCM_AUDIO_Param_ECNS_t
-
-struct __BRCM_AUDIO_Param_AMPCTL_t {
-	Int32 amp_status;
-};
-#define BRCM_AUDIO_Param_AMPCTL_t struct __BRCM_AUDIO_Param_AMPCTL_t
 
 struct __BRCM_AUDIO_Param_cpReset_t {
 	Boolean cp_reset_start;
@@ -299,5 +356,10 @@ int TerminateAudioHalThread(void);
 
 Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 			    void *arg_param, void *callback, int block);
+
+#ifdef CONFIG_AUDIO_S2
+void S2_vibtonz_en(bool on_off);
+void S2_vibtonz_pwm(int nForce);
+#endif
 
 #endif /* _CAPH_AUDIO_H__ */

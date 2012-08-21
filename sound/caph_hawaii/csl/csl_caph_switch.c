@@ -446,8 +446,9 @@ CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t
 	 */
 	if (dstStatus != CAPH_DST_OK) {
 		audio_xassert(0, dstStatus);
-		aTrace(LOG_AUDIO_CSL, "%s::sw %d dst 0x%lx used by other sw\n",
-			__func__, chnl_config.chnl, chnl_config.FIFO_dstAddr);
+		aWarn("%s::sw %d dst 0x%lx used by other sw\n",
+				__func__, chnl_config.chnl,
+				chnl_config.FIFO_dstAddr);
 		chal_caph_switch_free_channel(handle, chal_chnl);
 		status = CSL_CAPH_SWITCH_BORROWER;
 		return status;
@@ -496,11 +497,9 @@ void csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr)
 	chal_chnl = csl_caph_switch_get_chalchnl(chnl);
 	/* Add one more destination for this channel */
 	if (CAPH_DST_OK !=
-	    chal_caph_switch_add_dst(handle, chal_chnl,
-				     (UInt16) FIFO_dstAddr)) {
-		aTrace
-		      (LOG_AUDIO_CSL, "csl_caph_switch_add_dst:: FAIL\n");
-	}
+			chal_caph_switch_add_dst(handle, chal_chnl,
+				(UInt16) FIFO_dstAddr))
+		aError("csl_caph_switch_add_dst:: FAIL\n");
 
 }
 

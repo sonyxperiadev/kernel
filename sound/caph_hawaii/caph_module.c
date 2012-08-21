@@ -77,6 +77,8 @@ MODULE_LICENSE("GPL");
 #define AUDIO_FUSE_LOG(a)
 #endif
 
+#define DEBUG_MUSIC_LOG
+#define LOG_BUF_SIZE (128*1024)
 
 /* turn off audio debug traces by default */
 int gAudioDebugLevel = 15;
@@ -97,6 +99,15 @@ wait_queue_head_t audio_log_queue;
 static AUDLOG_CB_INFO audio_log_writecb;
 
 static int read_count;
+
+#ifdef DEBUG_MUSIC_LOG
+static unsigned char *log_buffer;
+static unsigned char *log_read_ptr;
+static unsigned char *log_write_ptr;
+static unsigned char *log_buffer_head;
+static unsigned char *log_buffer_end;
+static int log_buffer_count;
+#endif
 
 /* wait queues */
 int audio_data_arrived;
@@ -234,6 +245,19 @@ static int BCMAudLOG_open(struct inode *inode, struct file *file)
 	}
 	audio_data_arrived = 0;
 	audio_data_gone = 0;
+
+#ifdef	DEBUG_MUSIC_LOG
+
+	if (log_buffer == NULL) {
+		log_buffer = kmalloc(LOG_BUF_SIZE, GFP_KERNEL);
+		log_read_ptr = log_buffer;
+		log_write_ptr = log_buffer ;
+		log_buffer_head = log_buffer;
+		log_buffer_end = log_buffer + LOG_BUF_SIZE;
+		log_buffer_count = 0;
+	}
+
+#endif
 	return 0;
 }
 
@@ -243,6 +267,48 @@ BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
 {
 	int ret;
 	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH BCMLOG_read\n");
+
+
+#ifdef	DEBUG_MUSIC_LOG
+
+	/*** read music playback stream data ***/
+
+	if (count > 4) {
+
+		aTrace(LOG_ALSA_INTERFACE,
+		"\n log_buffer_count = 0x%x, count = 0x%x",
+		log_buffer_count, count);
+
+		while (1) {
+			if (log_buffer_count >= count) {
+				ret = copy_to_user(buf,
+						 log_read_ptr,
+						 count);
+				log_buffer_count -= count;
+				log_read_ptr += count;
+				if (log_read_ptr >= log_buffer_end)
+					log_read_ptr = log_buffer_head;
+				break;
+			}
+
+			wait_event_interruptible(bcmlogreadq,
+				(audio_data_arrived != 0));
+
+			if (audio_data_arrived == 2) {
+				audio_data_arrived = 0;
+				return 0;
+			}
+			audio_data_arrived = 0;
+
+		}
+
+		return count;
+
+	}
+
+#endif
+
+	/*** voice call read  ***/
 
 	if (wait_event_interruptible(bcmlogreadq, (audio_data_arrived != 0))) {
 		/*  Wait for read  ... */
@@ -325,6 +391,14 @@ static int BCMAudLOG_release(struct inode *inode, struct file *file)
 		audio_data_arrived = 0;
 	}
 
+#ifdef	DEBUG_MUSIC_LOG
+
+	kfree(log_buffer);
+	log_buffer = NULL;
+	log_buffer_count = 0;
+
+#endif
+
 	aTrace(LOG_ALSA_INTERFACE,
 			"\n BCMLOG_release : 3 dev_use_count = %d\n",
 			dev_use_count);
@@ -375,6 +449,7 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 	int index;
 	int rtn = 0;
 	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH BCMLOG_ioctl cmd=0x%x\n", cmd);
+
 
 	switch (cmd) {
 	case BCM_LOG_IOCTL_CONFIG_CHANNEL:
@@ -448,6 +523,8 @@ static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd,
 		{
 			if (wait_event_interruptible(bcmlogwriteq,
 				(audio_data_gone != 0)))
+				return -ERESTARTSYS;
+			else
 				audio_data_gone = 0;
 		}
 		break;
@@ -571,7 +648,23 @@ int logmsg_ready(struct snd_pcm_substream *substream, int log_point)
 					audio_log_cbinfo[i].size_to_read =
 					    runtime->dma_bytes / 2;
 					audio_log_writecb = audio_log_cbinfo[i];
+
+#ifdef	DEBUG_MUSIC_LOG
+
+					if (LOG_BUF_SIZE - log_buffer_count >=
+						runtime->dma_bytes / 2) {
+						memcpy(log_write_ptr, p_read,
+							runtime->dma_bytes / 2);
+						log_write_ptr +=
+							runtime->dma_bytes / 2;
+					if (log_write_ptr >= log_buffer_end)
+						log_write_ptr = log_buffer_head;
+						log_buffer_count +=
+							runtime->dma_bytes / 2;
+					}
+#endif
 					wake_up_interruptible(&bcmlogreadq);
+
 				}
 			}
 

@@ -42,7 +42,6 @@
 #include "csl_dsp_caph_control_api.h"
 #include "audio_trace.h"
 
-
 /*****************************************************************************/
 /**
 *
@@ -100,6 +99,10 @@ UInt32 *csl_dsp_caph_control_get_aadmac_buf_base_addr(
 *****************************************************************************/
 void csl_dsp_caph_control_aadmac_set_samp_rate(UInt16 value)
 {
+	aTrace(LOG_AUDIO_DSP, "\n\r\t*"
+		"csl_dsp_caph_control_aadmac_set_samp_rate:"
+		"shared_aadmac_audio_samp_rate= %x*\n\r",
+		value);
 	if ((value != 8000) && (value != 16000)) {
 		/* Assert */
 		assert(0);
@@ -125,19 +128,22 @@ void csl_dsp_caph_control_aadmac_set_samp_rate(UInt16 value)
 void csl_dsp_caph_control_aadmac_enable_path(UInt16 path)
 {
 	if (path & (UInt16) (~(DSP_AADMAC_PRI_MIC_EN | DSP_AADMAC_SEC_MIC_EN |
-			       DSP_AADMAC_SPKR_EN | DSP_AADMAC_IHF_SPKR_EN))) {
+				DSP_AADMAC_SPKR_EN | DSP_AADMAC_IHF_SPKR_EN |
+				DSP_AADMAC_LEG_IHF_SPKR_EN |
+				DSP_AADMAC_PACKED_16BIT_IN_OUT_EN |
+				DSP_AADMAC_RETIRE_DS_CMD))) {
 		/* Assert */
 		assert(0);
 	} else {
 
 		vp_shared_mem->shared_aadmac_aud_enable |= path;
 		aTrace(LOG_AUDIO_DSP, "\n\r\t*"
-		       "csl_dsp_caph_control_aadmac_enable_path: vp_shared_mem = %lx,"
-		       "&(vp_shared_mem->shared_aadmac_aud_enable) =%lx,"
-		       "shared_aadmac_aud_enable = %x*\n\r",
-		       (UInt32) vp_shared_mem,
-		       (UInt32) (&(vp_shared_mem->shared_aadmac_aud_enable)),
-		       vp_shared_mem->shared_aadmac_aud_enable);
+			"csl_dsp_caph_control_aadmac_enable_path: vp_shared_mem = %lx,"
+			"&(vp_shared_mem->shared_aadmac_aud_enable) =%lx,"
+			"shared_aadmac_aud_enable = %x*\n\r",
+			(UInt32) vp_shared_mem,
+			(UInt32) (&(vp_shared_mem->shared_aadmac_aud_enable)),
+			vp_shared_mem->shared_aadmac_aud_enable);
 
 	}
 
@@ -160,18 +166,21 @@ void csl_dsp_caph_control_aadmac_enable_path(UInt16 path)
 void csl_dsp_caph_control_aadmac_disable_path(UInt16 path)
 {
 	if (path & (UInt16) (~(DSP_AADMAC_PRI_MIC_EN | DSP_AADMAC_SEC_MIC_EN |
-			       DSP_AADMAC_SPKR_EN | DSP_AADMAC_IHF_SPKR_EN))) {
+				DSP_AADMAC_SPKR_EN | DSP_AADMAC_IHF_SPKR_EN |
+				DSP_AADMAC_LEG_IHF_SPKR_EN |
+				DSP_AADMAC_PACKED_16BIT_IN_OUT_EN |
+				DSP_AADMAC_RETIRE_DS_CMD))) {
 		/* Assert */
 		assert(0);
 	} else {
 		vp_shared_mem->shared_aadmac_aud_enable &= ~path;
 		aTrace(LOG_AUDIO_DSP, "\n\r\t*"
-		       "csl_dsp_caph_control_aadmac_disable_path vp_shared_mem = %lx,"
-		       "&(vp_shared_mem->shared_aadmac_aud_enable) =%lx,"
-		       "shared_aadmac_aud_enable = %x*\n\r",
-		       (UInt32) vp_shared_mem,
-		       (UInt32) (&(vp_shared_mem->shared_aadmac_aud_enable)),
-		       vp_shared_mem->shared_aadmac_aud_enable);
+			"csl_dsp_caph_control_aadmac_disable_path vp_shared_mem = %lx,"
+			"&(vp_shared_mem->shared_aadmac_aud_enable) =%lx,"
+			"shared_aadmac_aud_enable = %x*\n\r",
+			(UInt32) vp_shared_mem,
+			(UInt32) (&(vp_shared_mem->shared_aadmac_aud_enable)),
+			vp_shared_mem->shared_aadmac_aud_enable);
 
 	}
 
@@ -221,3 +230,21 @@ UInt32 *csl_dsp_ext_modem_get_aadmac_buf_base_addr(
 	return base_addr;
 }
 
+/*****************************************************************************/
+/**
+*
+* Function Name: csl_dsp_caph_control_aadmac_get_enable_path
+*
+*   @note     This function informs driver about which hardware path is disabled
+*             or enabled
+*
+*   @param    None
+*
+*   @return   path (DSP_AADMAC_Audio_Connections_t)
+*
+*****************************************************************************/
+UInt16 csl_dsp_caph_control_aadmac_get_enable_path()
+{
+	return (UInt16)(vp_shared_mem->shared_aadmac_aud_enable &
+		~((UInt16)DSP_AADMAC_RETIRE_DS_CMD));
+}

@@ -44,8 +44,10 @@
 #include <linux/printk.h>
 #if defined(CONFIG_BCM_KNLLOG_SUPPORT)
 #include <linux/broadcom/knllog.h>
-#else
-#define KNLLOG(a,...)
+#endif
+
+#if !defined(CONFIG_BCM_KNLLOG_SUPPORT)
+#define KNLLOG(format, args...) do { } while (0)
 #endif
 
 #if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
@@ -89,7 +91,7 @@ extern int gAudioDebugLevel;
 
 #define audio_xassert(a, b) \
 {if ((a) == 0)\
-	pr_info("AUD_ERR:%s assert line %d, %d, 0x%x\n",\
+	aError("%s assert line %d, %d, 0x%x\n",\
 			__func__, __LINE__, a, b);\
 }
 

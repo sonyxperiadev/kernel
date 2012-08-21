@@ -1586,6 +1586,46 @@ __weak char *get_opp_name(int opp)
 {
 	return NULL;
 }
+void pi_mgr_print_active_pis(void)
+{
+	u32 i;
+	struct pi *pi;
+	struct pi_mgr_qos_object *qos;
+	struct pi_mgr_qos_node *qos_node;
+	unsigned long flag;
+	int state_policy;
+
+	if (unlikely(!pi_mgr.init))
+		return;
+
+	for (i = 0; i < PI_MGR_PI_ID_MAX; i++) {
+		pi = pi_mgr.pi_list[i];
+
+		if (!pi)
+			continue;
+		qos = &pi_mgr.qos[pi->id];
+
+		if (pi_mgr.pi_list[pi->id]->flags & PI_NO_QOS)
+			continue;
+		spin_lock_irqsave(&pi->lock, flag);
+		state_policy = pi->pi_state[pi->state_allowed].state_policy;
+		if (IS_ACTIVE_POLICY(state_policy)) {
+			pr_info("%s \t%d \t%d\n", pi->name,
+					pi->state_allowed, pi->usg_cnt);
+			pr_info("-- Qos Request List --\n");
+			pr_info("client \t latency\n");
+			/**
+			 * print the QoS Request list
+			 */
+			plist_for_each_entry(qos_node, &qos->requests, list)
+				pr_info("%s \t %d\n", qos_node->name,
+						qos_node->latency);
+			pr_info("---------------------\n");
+		}
+		spin_unlock_irqrestore(&pi->lock, flag);
+	}
+}
+EXPORT_SYMBOL(pi_mgr_print_active_pis);
 
 #ifdef CONFIG_DEBUG_FS
 

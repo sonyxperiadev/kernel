@@ -221,3 +221,48 @@ void DJB_PutFrame(DJB_InputFrame *pInputFrame)
 
 }
 
+/*********************************************************************/
+/**
+*
+*   DJB_GetStatistics gets Jitter Buffer statistics
+*
+*
+**********************************************************************/
+void DJB_GetStatistics(void)
+{
+	aTrace(LOG_AUDIO_DSP, "===== Jitter Buffer Statistics:\n");
+
+	aTrace(LOG_AUDIO_DSP, "Peak Holding Time: %d\n",
+		vp_shared_mem->shared_AjcStatistics.peakHoldingTime);
+	aTrace(LOG_AUDIO_DSP, "Frames received: %d\n",
+		vp_shared_mem->shared_AjcStatistics.packetCount);
+	aTrace(LOG_AUDIO_DSP, "Frames in order: %d\n",
+		vp_shared_mem->shared_AjcStatistics.addTailCount);
+	aTrace(LOG_AUDIO_DSP, "Frames out of order: %d\n",
+		vp_shared_mem->shared_AjcStatistics.reorderCount);
+	aTrace(LOG_AUDIO_DSP, "Decoder overrun: %d\n",
+		vp_shared_mem->shared_AjcStatistics.overrunCount);
+	aTrace(LOG_AUDIO_DSP, "Duplicate frames: %d\n",
+		vp_shared_mem->shared_AjcStatistics.duplicateCount);
+	aTrace(LOG_AUDIO_DSP, "Frames out of range: %d\n",
+		vp_shared_mem->shared_AjcStatistics.outOfRangeCount);
+	aTrace(LOG_AUDIO_DSP, "Frames too late: %d\n",
+		vp_shared_mem->shared_AjcStatistics.tooLateCount);
+	aTrace(LOG_AUDIO_DSP, "Frames with wrong codec: %d\n",
+		vp_shared_mem->shared_AjcStatistics.cantDecodeCount);
+	aTrace(LOG_AUDIO_DSP, "JB underrun: %d\n",
+		vp_shared_mem->shared_AjcStatistics.ajcUnderrunCount);
+	aTrace(LOG_AUDIO_DSP, "Deleted frames to contract: %d\n",
+		vp_shared_mem->shared_AjcStatistics.ajcDeleteCount);
+	aTrace(LOG_AUDIO_DSP, "Repeated frames to expand: %d\n",
+		vp_shared_mem->shared_AjcStatistics.ajcRepeatCount);
+	aTrace(LOG_AUDIO_DSP, "Resync count: %d\n",
+		vp_shared_mem->shared_AjcStatistics.ajcResyncCount);
+	aTrace(LOG_AUDIO_DSP, "Phase discontinuity count: %d\n",
+		vp_shared_mem->shared_AjcStatistics.ajcPhaseJitterCount);
+	aTrace(LOG_AUDIO_DSP, "Header-payload alloc diff: %d\n",
+		vp_shared_mem->shared_AjcStatistics.ajcHdrPayloadDiff);
+	aTrace(LOG_AUDIO_DSP, "Payload overrun: %d\n",
+		vp_shared_mem->shared_AjcStatistics.ajcPayloadOverflowE);
+
+}

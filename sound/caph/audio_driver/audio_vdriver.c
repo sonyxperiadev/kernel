@@ -1105,7 +1105,7 @@ void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param)
 				}
 	} else {
 		aError(
-		"AUDDRV_SetAudioMode_Speaker can not find path\n");
+		"AUDDRV_SetAudioMode_Multicast can not find path\n");
 	}
 
 	if (outChnl) {

@@ -65,6 +65,7 @@
 /*local variable definitions                                               */
 /***************************************************************************/
 static CSL_CAPH_Render_Drv_t sRenderDrv[CSL_CAPH_STREAM_TOTAL] = { {0} };
+static atomic_t renderNumBlocks = ATOMIC_INIT(2);
 
 /***************************************************************************/
 /*local function declarations                                              */
@@ -235,6 +236,14 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 	*/
 	audDrv->readyBlockStatus = CSL_CAPH_READY_NONE;
 	audDrv->blockIndex = 1;
+#if defined(DYNAMIC_DMA_PLAYBACK)
+	audDrv->numBlocks2 = numBlocks;
+	audDrv->maxBlkBytes = blockSize;
+	atomic_set(&audDrv->dmaState, DYNDMA_NORMAL);
+	atomic_set(&audDrv->availBytes, 2*blockSize);
+	audDrv->periodMsDiv = sampleRate*numChannels*(bitsPerSample>>3);
+	audDrv->periodMs = (blockSize * 1000)/audDrv->periodMsDiv;
+#endif
 	return RESULT_OK;
 }
 
@@ -330,6 +339,41 @@ Result_t csl_audio_render_resume(UInt32 streamID)
 ****************************************************************************/
 Result_t csl_audio_render_buffer_ready(UInt32 streamID)
 {
+#if defined(DYNAMIC_DMA_PLAYBACK)
+	CSL_CAPH_Render_Drv_t *audDrv = NULL;
+	unsigned long flags;
+	/*aTrace(LOG_AUDIO_CSL,
+		"csl_audio_render_buffer_ready:streamID=0x%lx\n", streamID);*/
+
+	audDrv = GetRenderDriverByType(streamID);
+
+	if (audDrv == NULL)
+		return RESULT_WRONG_STATE;
+
+	atomic_add(audDrv->maxBlkBytes, &audDrv->availBytes);
+	if (atomic_read(&audDrv->dmaState) == DYNDMA_LOW_DONE) {
+		atomic_set(&audDrv->dmaState, DYNDMA_LOW_RDY);
+		aTrace(LOG_AUDIO_CSL, "%s stream %d idx %d low rdy\n",
+			__func__, (int)streamID, (int)audDrv->readyBlockIndex);
+	}
+
+	spin_lock_irqsave(&audDrv->readyStatusLock, flags);
+
+	if (audDrv->numBlocks == 2) {
+		/* Set the block(s) that are ready for processing */
+		csl_caph_dma_set_ddrfifo_status(audDrv->dmaCH,
+			audDrv->readyBlockStatus);
+	}
+
+	/* Clear the ready block status */
+	audDrv->readyBlockStatus = CSL_CAPH_READY_NONE;
+
+	spin_unlock_irqrestore(&audDrv->readyStatusLock, flags);
+
+	audDrv->readyBlockIndex++;
+	if (audDrv->readyBlockIndex >= 2)
+		audDrv->readyBlockIndex = 0;
+#else
 	CSL_CAPH_Render_Drv_t *audDrv = NULL;
 	unsigned long flags;
 
@@ -339,7 +383,7 @@ Result_t csl_audio_render_buffer_ready(UInt32 streamID)
 	audDrv = GetRenderDriverByType(streamID);
 
 	if (audDrv == NULL)
-		return RESULT_ERROR;
+		return RESULT_WRONG_STATE;
 
 
 	spin_lock_irqsave(&audDrv->readyStatusLock, flags);
@@ -352,7 +396,7 @@ Result_t csl_audio_render_buffer_ready(UInt32 streamID)
 	audDrv->readyBlockStatus = CSL_CAPH_READY_NONE;
 
 	spin_unlock_irqrestore(&audDrv->readyStatusLock, flags);
-
+#endif
 	return RESULT_OK;
 }
 
@@ -375,6 +419,52 @@ CSL_CAPH_Render_Drv_t *GetRenderDriverByType(UInt32 streamID)
 	return audDrv;
 }
 
+#if defined(DYNAMIC_DMA_PLAYBACK)
+static void audio_dma_cb_checklow(CSL_CAPH_DMA_CHNL_e chnl,
+	CSL_CAPH_Render_Drv_t *audDrv,
+	CSL_CAPH_DMA_CHNL_FIFO_STATUS_e fifo_status)
+{
+	int buffer_status = 0;
+	unsigned long flags;
+	UInt8 *addr;
+	int avail;
+
+	if ((fifo_status & CSL_CAPH_READY_LOW) == CSL_CAPH_READY_NONE
+		&& (audDrv->blockIndex & 1)) {
+
+		avail = atomic_read(&audDrv->availBytes);
+		avail -= audDrv->blockSize;
+		atomic_set(&audDrv->availBytes, avail);
+		buffer_status |= CSL_CAPH_READY_LOW;
+
+		if (audDrv->numBlocks == 2) {
+			spin_lock_irqsave(&audDrv->configLock, flags);
+			if (audDrv->dmaCB)
+				audDrv->dmaCB(audDrv->streamID, buffer_status);
+			spin_unlock_irqrestore(&audDrv->configLock, flags);
+		}
+
+		audDrv->blockIndex++;
+		if (audDrv->blockIndex >= audDrv->numBlocks)
+			audDrv->blockIndex = 0;
+
+		addr = audDrv->ringBuffer +
+			audDrv->blockIndex * audDrv->blockSize;
+		csl_caph_dma_set_lobuffer_address(chnl, addr);
+
+		spin_lock_irqsave(&audDrv->readyStatusLock, flags);
+		audDrv->readyBlockStatus |= CSL_CAPH_READY_LOW;
+		spin_unlock_irqrestore(&audDrv->readyStatusLock, flags);
+		if (audDrv->numBlocks > 2)
+			csl_caph_dma_set_ddrfifo_status(chnl,
+			CSL_CAPH_READY_LOW);
+
+		aTrace(LOG_AUDIO_CSL, "AUDIO_DMA_CB::chnl = %d idx %d addr %p"
+		" low avail %d\n", chnl, (int)audDrv->blockIndex, addr, avail);
+	}
+}
+#endif
+
 /* ==========================================================================
 //
 // Function Name: AUDIO_DMA_CB
@@ -384,6 +474,141 @@ CSL_CAPH_Render_Drv_t *GetRenderDriverByType(UInt32 streamID)
 // =========================================================================*/
 static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 {
+#if defined(DYNAMIC_DMA_PLAYBACK)
+	int temp, avail;
+	UInt32 streamID;
+	CSL_CAPH_Render_Drv_t *audDrv;
+	CSL_CAPH_DMA_CHNL_FIFO_STATUS_e buffer_status = CSL_CAPH_READY_NONE;
+	CSL_CAPH_DMA_CHNL_FIFO_STATUS_e fifo_status;
+	UInt8 *addr;
+	unsigned long flags;
+
+	/* aTrace(LOG_AUDIO_CSL, "AUDIO_DMA_CB::
+	   DMA callback. chnl = %d\n", chnl); */
+
+	streamID = GetStreamIDByDmaCH(chnl);
+
+	/* Collect a snapshot of the status */
+	fifo_status = csl_caph_dma_read_ddrfifo_sw_status(chnl);
+
+	audDrv = GetRenderDriverByType(streamID);
+	if (audDrv == NULL)
+		return;
+
+	temp = atomic_read(&renderNumBlocks);
+	if (atomic_read(&audDrv->dmaState) == DYNDMA_NORMAL
+		&& temp != audDrv->numBlocks2) {
+		atomic_set(&audDrv->dmaState, DYNDMA_TRIGGER);
+		audDrv->numBlocks2 = temp;
+	}
+
+	if (atomic_read(&audDrv->dmaState) == DYNDMA_TRIGGER
+		&& audDrv->blockIndex == (audDrv->numBlocks>>1)) {
+		/*wait for low long buffer*/
+		atomic_set(&audDrv->dmaState, DYNDMA_LOW_DONE);
+		aTrace(LOG_AUDIO_CSL, "%s chnl %d low done\n", __func__, chnl);
+	} else if (atomic_read(&audDrv->dmaState) == DYNDMA_LOW_RDY
+		&& audDrv->blockIndex == 0) {
+		/*wait for high long buffer*/
+		CSL_CAPH_DMA_CONFIG_t dma_cfg;
+
+		if ((fifo_status & CSL_CAPH_READY_LOW) == CSL_CAPH_READY_NONE)
+			atomic_sub(audDrv->blockSize, &audDrv->availBytes);
+		if ((fifo_status & CSL_CAPH_READY_HIGH) == CSL_CAPH_READY_NONE)
+			atomic_sub(audDrv->blockSize, &audDrv->availBytes);
+
+		atomic_set(&audDrv->dmaState, DYNDMA_NORMAL);
+		audDrv->numBlocks = audDrv->numBlocks2;
+		audDrv->blockSize = (2*audDrv->maxBlkBytes)/audDrv->numBlocks;
+		audDrv->blockIndex = 1;
+
+		spin_lock_irqsave(&audDrv->readyStatusLock, flags);
+		audDrv->readyBlockStatus = CSL_CAPH_READY_NONE;
+		spin_unlock_irqrestore(&audDrv->readyStatusLock, flags);
+
+		dma_cfg.mem_addr = audDrv->ringBuffer;
+		dma_cfg.dma_ch = chnl;
+		dma_cfg.mem_size = 2*audDrv->blockSize;
+
+		csl_caph_dma_set_buffer(&dma_cfg);
+		csl_caph_dma_set_hibuffer_address(audDrv->dmaCH,
+			audDrv->ringBuffer + audDrv->blockSize);
+		csl_caph_dma_set_ddrfifo_status(audDrv->dmaCH,
+			CSL_CAPH_READY_HIGHLOW);
+
+		buffer_status |= CSL_CAPH_READY_HIGHLOW;
+		avail = atomic_read(&audDrv->availBytes);
+
+		spin_lock_irqsave(&audDrv->configLock, flags);
+		if (audDrv->dmaCB)
+			audDrv->dmaCB(audDrv->streamID, buffer_status);
+		spin_unlock_irqrestore(&audDrv->configLock, flags);
+
+		aTrace(LOG_AUDIO_CSL, "AUDIO_DMA_CB::chnl %d numBlocks %d "
+			"addr %p idx %d blkSize %d avail %d\n",
+			chnl, (int)audDrv->numBlocks, dma_cfg.mem_addr,
+			(int)audDrv->blockIndex, (int)audDrv->blockSize,
+			avail);
+		return;
+	}
+
+	/* Handle special case to clear LOW block if undderrun.
+	 * Set LOW addr to last used block used and clear */
+	/*if (fifo_status == CSL_CAPH_READY_NONE) {
+		addr = audDrv->ringBuffer +
+		   audDrv->blockIndex * audDrv->blockSize;
+		memset(phys_to_virt((UInt32)addr),
+			0, audDrv->blockSize);
+		csl_caph_dma_set_lobuffer_address(chnl, addr);
+	}*/
+
+	/*in case both low and high are done,
+	  blockIndex should still dictate the sequence*/
+	audio_dma_cb_checklow(chnl, audDrv, fifo_status);
+
+	if ((fifo_status & CSL_CAPH_READY_HIGH) == CSL_CAPH_READY_NONE
+		&& (audDrv->blockIndex & 1) == 0) {
+
+		buffer_status |= CSL_CAPH_READY_HIGH;
+
+		avail = atomic_read(&audDrv->availBytes);
+		avail -= audDrv->blockSize;
+		atomic_set(&audDrv->availBytes, avail);
+
+		/*small dma sends cb when the last high is done*/
+		if (audDrv->numBlocks == 2
+			|| audDrv->blockIndex == (audDrv->numBlocks>>1)
+			|| audDrv->blockIndex == 0) {
+			spin_lock_irqsave(&audDrv->configLock, flags);
+			if (audDrv->dmaCB)
+				audDrv->dmaCB(audDrv->streamID, buffer_status);
+			spin_unlock_irqrestore(&audDrv->configLock, flags);
+		}
+
+		audDrv->blockIndex++;
+		if (audDrv->blockIndex >= audDrv->numBlocks)
+			audDrv->blockIndex = 0;
+
+		addr = audDrv->ringBuffer +
+			audDrv->blockIndex * audDrv->blockSize;
+		csl_caph_dma_set_hibuffer_address(chnl, addr);
+
+		spin_lock_irqsave(&audDrv->readyStatusLock, flags);
+		audDrv->readyBlockStatus |= CSL_CAPH_READY_HIGH;
+		spin_unlock_irqrestore(&audDrv->readyStatusLock, flags);
+
+		if (audDrv->numBlocks > 2)
+			csl_caph_dma_set_ddrfifo_status(chnl,
+			CSL_CAPH_READY_HIGH);
+
+		aTrace(LOG_AUDIO_CSL, "AUDIO_DMA_CB::chnl = %d idx %d addr %p "
+			"high avail %d\n",
+			chnl, (int)audDrv->blockIndex, addr, avail);
+
+		/*check low again*/
+		audio_dma_cb_checklow(chnl, audDrv, fifo_status);
+	}
+#else
 	UInt32 streamID = 0;
 	CSL_CAPH_Render_Drv_t *audDrv = NULL;
 	CSL_CAPH_DMA_CHNL_FIFO_STATUS_e buffer_status = CSL_CAPH_READY_NONE;
@@ -461,6 +686,7 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 			audDrv->blockIndex * audDrv->blockSize;
 		csl_caph_dma_set_lobuffer_address(chnl, addr);
 	}
+#endif
 }
 
 /* ==========================================================================
@@ -537,4 +763,27 @@ UInt16 csl_audio_render_get_current_buffer(UInt32 streamID)
 		return csl_caph_dma_check_dmabuffer(audDrv->dmaCH);
 	else
 		return 0;
+}
+
+/* ==========================================================================
+//
+// Description: Configure dma size
+//
+// =========================================================================*/
+void csl_audio_render_set_dma_size(int numBlocks)
+{
+	int temp;
+	if (numBlocks != 2 && numBlocks != 8) {
+		aTrace(LOG_AUDIO_CSL, "%s numBlocks %d\n",
+			__func__, numBlocks);
+		return;
+	}
+
+	temp = atomic_read(&renderNumBlocks);
+	if (temp == numBlocks)
+		return;
+
+	atomic_set(&renderNumBlocks, numBlocks);
+	aTrace(LOG_AUDIO_CSL, "%s numBlocks %d->%d\n",
+		__func__, temp, numBlocks);
 }

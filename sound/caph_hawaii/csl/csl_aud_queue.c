@@ -140,7 +140,6 @@ AUDQUE_Queue_t *AUDQUE_Create(UInt8 *baseAddr,
 
 	if (que == NULL) {
 		aError("kzalloc failed\n");
-		BUG();
 		return NULL;
 	}
 
