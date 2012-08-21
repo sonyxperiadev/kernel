@@ -18,14 +18,19 @@ config HAWAII_MM_V3D
 	depends on HAWAII_MM
 	default n
 
-config V3D
-	tristate "V3D Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
-	default n
-
 config HAWAII_MM_VCE
 	tristate "Hawaii VCE Driver (uses new Driver Framework)"
 	depends on HAWAII_MM
+	default n
+
+config HAWAII_MM_H264
+	tristate "Hawaii MM - H264 Driver"
+	depends on HAWAII_MM
+	default n
+
+config V3D
+	tristate "V3D Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
 	default n
 
 config VCE
