@@ -67,6 +67,7 @@
 #include <linux/switch.h>
 #endif
 #include <mach/io_map.h>
+#include <mach/memory.h>
 #include <mach/kona_headset_pd.h>
 #include <mach/rdb/brcm_rdb_aci.h>
 #include <mach/rdb/brcm_rdb_auxmic.h>
