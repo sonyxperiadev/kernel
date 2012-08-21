@@ -370,6 +370,8 @@ static struct bcmpmu_reg_map bcm59042_reg_map[PMU_REG_MAX] = {
 		.mask = 0xFF, .ro = 0, .shift = 0},
 	[PMU_REG_FG_CAP] =		{.map = 0x01, .addr = 0x59,
 		.mask = 0xFF, .ro = 0, .shift = 0},
+	[PMU_REG_FG_CIC] =	{.map = 0x01, .addr = 0x43,
+				.mask = 0xFF, .ro = 0, .shift = 0},
 
 	/* usb status */
 	[PMU_REG_USB_STATUS_ID_CODE] = {.map = 0, .addr = 0xE3,

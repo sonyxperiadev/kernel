@@ -537,11 +537,11 @@ static void v3d_job_remove(struct file *filp, v3d_job_t *p_v3d_wait_job)
 				v3d_job_head = v3d_job_head->next;
 			}
 			KLOG_V
-			    ("Update head to [%p] and free [%p] for dev[%p]",
+			    ("Update head to %p and free %p for dev %p",
 			     v3d_job_head, last_match_job, dev);
 			if (p_v3d_wait_job == NULL) {
 				KLOG_V
-				    ("Update head to [%p] and free [%p] for dev[%p]",
+				    ("Update head to %p and free %p for dev %p",
 				     v3d_job_head, last_match_job,
 				     dev);
 			}
@@ -1835,7 +1835,7 @@ int __init v3d_init(void)
 	v3d_job_curr = NULL;
 	v3d_job_head = NULL;
 
-	sz = sizeof(v3d_job_t) * V3D_MAX_JOBS;
+	sz = V3D_MAX_JOBS * sizeof(v3d_job_t);
 	KLOG_D("Allocating %d bytes", sz);
 	v3d_job_free_list = kmalloc(sz, GFP_KERNEL);
 	if (!v3d_job_free_list) {

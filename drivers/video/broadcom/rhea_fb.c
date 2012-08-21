@@ -49,7 +49,7 @@
 #include <linux/clk.h>
 #include <plat/pi_mgr.h>
 #include <linux/broadcom/mobcom_types.h>
-
+#include <mach/pm.h>
 #include "rhea_fb.h"
 #include "lcd/display_drv.h"
 
@@ -59,13 +59,16 @@
 #include "lcd/cp_crash_end_565.h"
 #endif
 
-//#define RHEA_FB_DEBUG 
+/*#define RHEA_FB_DEBUG*/
 //#define PARTIAL_UPDATE_SUPPORT
 #define RHEA_FB_ENABLE_DYNAMIC_CLOCK	1
 
 #define RHEA_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
 
 static struct pi_mgr_qos_node g_mm_qos_node;
+#ifdef CONFIG_BACKLIGHT_PWM
+static struct pi_mgr_qos_node g_arm_qos_node;
+#endif
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 static DEFINE_SPINLOCK(g_fb_crash_spin_lock);
@@ -536,6 +539,28 @@ static void rhea_fb_early_suspend(struct early_suspend *h)
 	switch (h->level) {
 
 	case EARLY_SUSPEND_LEVEL_BLANK_SCREEN:
+
+#ifdef CONFIG_BACKLIGHT_PWM
+		/*
+		LCD supply LDO Opmode is set to 0x11(LPM when PC1 is low)
+		For both TCL and Rheastone HW, PWM is used to control LCD
+		backlight. PWM clock will be always active when PWM back
+		light is ON. PWM clock will make sure that fabric CCU won't
+		enter retention and PC1 won't go LOW when the backlight
+		is ON. During early suspend, back light is turned off (and
+		thereby PWM clock) before LCD is powered down and during late
+		resume, LCD is powered ON before back light is turned ON.
+
+		In this small window during early suspend/ late resume
+		where LCD is not powered down but back light is OFF,
+		all CCUs can enter low power mode (PC1 will go LOW) and LCD
+		supply LDO opmode will be set to LPM even though LCD is
+		not powered down. To resolve this issue A9 dormant is
+		disabled using QoS while processing early suspend/late resume
+		requests in FB driver*/
+
+		pi_mgr_qos_request_update(&g_arm_qos_node, 0);
+#endif
 		/* Turn off the backlight */
 		fb = container_of(h, struct rhea_fb, early_suspend_level1);
 		mutex_lock(&fb->update_sem);
@@ -570,6 +595,10 @@ static void rhea_fb_early_suspend(struct early_suspend *h)
 		/* Ok for MM going to shutdown state */
 		pi_mgr_qos_request_update(&g_mm_qos_node,
 					  PI_MGR_QOS_DEFAULT_VALUE);
+#ifdef CONFIG_BACKLIGHT_PWM
+		pi_mgr_qos_request_update(&g_arm_qos_node,
+				PI_MGR_QOS_DEFAULT_VALUE);
+#endif
 		break;
 
 	default:
@@ -599,6 +628,10 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 		if (atomic_read(&g_rhea_fb->force_update))
 			rhea_display_crash_image(CP_CRASH_DUMP_START);
 #endif
+#ifdef CONFIG_BACKLIGHT_PWM
+		 pi_mgr_qos_request_update(&g_arm_qos_node,
+					PI_MGR_QOS_DEFAULT_VALUE);
+#endif
 		break;
 
 	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
@@ -609,6 +642,27 @@ static void rhea_fb_late_resume(struct early_suspend *h)
 		break;
 
 	case EARLY_SUSPEND_LEVEL_DISABLE_FB:
+#ifdef CONFIG_BACKLIGHT_PWM
+		/*
+		LCD supply LDO Opmode is set to 0x11(LPM when PC1 is low)
+		For both TCL and Rheastone HW, PWM is used to control LCD
+		backlight. PWM clock will be always active when PWM back
+		light is ON. PWM clock will make sure that fabric CCU won't
+		enter retention and PC1 won't go LOW when the backlight
+		is ON. During early suspend, back light is turned off (and
+		thereby PWM clock) before LCD is powered down and during late
+		resume, LCD is powered ON before back light is turned ON.
+
+		In this small window during early suspend/ late resume
+		where LCD is not powered down but back light is OFF,
+		all CCUs can enter low power mode (PC1 will go LOW) and LCD
+		supply LDO opmode will be set to LPM even though LCD is
+		not powered down. To resolve this issue A9 dormant is
+		disabled using QoS while processing early suspend/late resume
+		requests in FB driver
+		*/
+		 pi_mgr_qos_request_update(&g_arm_qos_node, 0);
+#endif
 		fb = container_of(h, struct rhea_fb, early_suspend_level3);
 		/* Ok for MM going to retention but not shutdown state */
 		pi_mgr_qos_request_update(&g_mm_qos_node, 10);
@@ -914,6 +968,10 @@ static int __init rhea_fb_init(void)
 
 	ret =
 	    pi_mgr_qos_add_request(&g_mm_qos_node, "lcd", PI_MGR_PI_ID_MM, 10);
+#ifdef CONFIG_BACKLIGHT_PWM
+	ret |= pi_mgr_qos_add_request(&g_arm_qos_node, "lcd",
+		PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+#endif
 	if (ret)
 		printk(KERN_ERR "failed to register qos client for lcd\n");
 
