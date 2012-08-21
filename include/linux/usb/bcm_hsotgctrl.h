@@ -12,6 +12,9 @@
 *  consent.
 *
 *****************************************************************************/
+#ifndef __BCM_HSOTGCTRL_H
+#define __BCM_HSOTGCTRL_H
+
 #define BCM_HSOTGCTRL_WAKEUP_PROCESSING_DELAY 5
 
 struct bcm_hsotgctrl_platform_data {
@@ -45,3 +48,5 @@ int bcm_hsotgctrl_phy_wakeup_condition(bool set);
 int bcm_hsotgctrl_handle_bus_suspend(void);
 int bcm_hsotgctrl_get_clk_count(void);
 int bcm_hsotgctrl_is_suspend_allowed(bool *suspend_allowed);
+
+#endif /*__BCM_HSOTGCTRL_H*/
