@@ -1,17 +1,12 @@
-/*******************************************************************************
-* Copyright 2010-2012 Broadcom Corporation.  All rights reserved.
-*
-*       @file   include/linux/broadcom/bcm_audio.h
-*
-* Unless you and Broadcom execute a separate written software license agreement
-* governing use of this software, this software is licensed to you under the
-* terms of the GNU General Public License version 2, available at
-* http://www.gnu.org/copyleft/gpl.html (the "GPL").
-*
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a license
-* other than the GPL, without Broadcom's express prior written consent.
-*******************************************************************************/
+//***************************************************************************
+//
+// (c)1999-2011 Broadcom Corporation
+//
+// Unless you and Broadcom execute a separate written software license agreement governing use of this software,
+// this software is licensed to you under the terms of the GNU General Public License version 2,
+// available at http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+//
+//***************************************************************************
 /**
 *
 *   @file   audio_tuning.h
@@ -24,11 +19,30 @@
 #define _INC_AUDIO_TUNING_H_
 
 /****************************************************************
- * The following part shows all the constant values needed in
- * audio baseband code.
+ * The following part shows all the constant values needed in audio baseband code.
  ****************************************************************/
-#define	AUDIO_MODE_NUMBER		9
-#define AUDIO_APP_NUMBER		16
+
+/* Define whether to suppor thew new audio sysparm data structure
+ * This new structure is to reduce the memory consumption of the
+ * audio sysparm. It will remove the DSP sysparm data from some
+ * audio profiles which do not use DSP
+ * When commenting it out, the new audio sysparm data structure
+ * is disabled.
+ */
+#define USE_NEW_AUDIO_MM_PARAM
+
+/* Number of audio modes */
+#define	AUDIO_MODE_NUMBER	9
+
+#if defined(USE_NEW_AUDIO_MM_PARAM)
+/* Number of audio profiles for voice call or voice processing */
+#define AUDIO_APP_NUMBER        12
+/* Number of audio profiles for multimedia. No DSP involved */
+#define AUDIO_APP_MM_NUMBER     6
+#else
+/* Number of audio profiles for voice call or voice processing */
+#define AUDIO_APP_NUMBER        16
+#endif
 
 #define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*AUDIO_APP_NUMBER)
 
@@ -389,11 +403,6 @@ enum _AudioParam_t {
 	PARAM_VOICE_MIC2_HPF_ENABLE,	/* 302 */
 	PARAM_VOICE_MIC2_HPF_CUTOFF_FREQ,	/* 303 */
 
-	PARAM_EXT_SPEAKER_PARAM1 = 304,				// 304
-	PARAM_EXT_SPEAKER_PARAM2,				// 305
-	PARAM_EXT_SPEAKER_PARAM3,				// 306
-	PARAM_EXT_SPEAKER_PARAM4,				// 307
-
 	PARAM_MULTIBAND_COMP_G_LOW = 308, /* 308 */
 	PARAM_MULTIBAND_COMP_G_MID,	/* 309  */
 	PARAM_MULTIBAND_COMP_G_HIGH,	/* 310  */
@@ -425,6 +434,8 @@ enum _AudioParam_t {
 
 	AUDIO_PARM_NUMBER	/* 330 */
 };
+
 #define AudioParam_t enum _AudioParam_t
 
-#endif /*_INC_AUDIO_TUNING_H_ */
+#endif   /*_INC_AUDIO_TUNING_H_*/
+
