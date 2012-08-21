@@ -37,7 +37,7 @@
 #include <linux/unistd.h>
 #include <linux/kthread.h>
 
-#define NEW_GPSCHIP_I2C
+/*#define NEW_GPSCHIP_I2C*/
 #define GPS_VERSION	"2.00"
 
 #define RX_SIZE					128
