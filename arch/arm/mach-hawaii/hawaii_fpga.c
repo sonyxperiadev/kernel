@@ -29,6 +29,7 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
+#include <linux/android_pmem.h>
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -73,6 +74,10 @@
 #else
 #define UART_CLK_HZ 26000000
 #endif
+
+#define KONA_UART0_PA   UARTB_BASE_ADDR
+#define KONA_UART1_PA   UARTB2_BASE_ADDR
+#define KONA_UART2_PA   UARTB3_BASE_ADDR
 
 #define KONA_8250PORT_FPGA(name, clk)				\
 {								\
@@ -166,7 +171,7 @@ static struct kona_pl330_data hawaii_pl330_pdata = {
 	/* # of PL330 dmac channels 'configurable' */
 	.num_pl330_chans = 8,
 	/* irq number to use */
-	.irq_base = BCM_INT_ID_RESERVED184,
+	.irq_base = BCM_INT_ID_DMAC0,
 	/* # of PL330 Interrupt lines connected to GIC */
 	.irq_line_count = 8,
 };
@@ -282,17 +287,17 @@ void __init board_add_sdio_devices(void)
 
 /* Hawaii Ray specific platform devices */
 static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
-	&board_serial_device,
+	&hawaii_serial_device,
 #ifdef CONFIG_DMAC_PL330
 	&pl330_dmac_device,
 #endif
-	&kona_sspi_spi0_device,
+	&hawaii_ssp0_device,
 #ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH
-	&board_spum_device,
+	&hawaii_spum_device,
 #endif
 
 #ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_AES
-	&board_spum_aes_device,
+	&hawaii_spum_aes_device,
 #endif
 #if 0
 	&board_i2c_adap_devices[0],
@@ -308,11 +313,9 @@ static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_USB_DWC_OTG
-	&board_kona_hsotgctrl_platform_device,
-	&board_kona_otg_platform_device,
+	&hawaii_hsotgctrl_platform_device,
+	&hawaii_otg_platform_device,
 #endif
-
-
 };
 
 /* Hawaii Ray specific i2c devices */
@@ -331,17 +334,32 @@ static int __init hawaii_ray_add_lateInit_devices(void)
 
 static void __init hawaii_ray_reserve(void)
 {
-	board_common_reserve();
+	hawaii_reserve();
 }
 
 static void hawaii_ray_add_pdata(void)
 {
-	board_serial_device.dev.platform_data = &uart_data;
-	board_i2c_adap_devices[0].dev.platform_data = &bsc_i2c_cfg[0];
-	board_i2c_adap_devices[1].dev.platform_data = &bsc_i2c_cfg[1];
-	board_i2c_adap_devices[2].dev.platform_data = &bsc_i2c_cfg[2];
-	kona_sspi_spi0_device.dev.platform_data = &sspi_spi0_info;
-	kona_sspi_spi2_device.dev.platform_data = &sspi_spi2_info;
+	hawaii_serial_device.dev.platform_data = &uart_data;
+	hawaii_i2c_adap_devices[0].dev.platform_data = &bsc_i2c_cfg[0];
+	hawaii_i2c_adap_devices[1].dev.platform_data = &bsc_i2c_cfg[1];
+	hawaii_i2c_adap_devices[2].dev.platform_data = &bsc_i2c_cfg[2];
+	hawaii_ssp0_device.dev.platform_data = &sspi_spi0_info;
+	hawaii_ssp1_device.dev.platform_data = &sspi_spi2_info;
+}
+
+/* Remove below extern when pmem pdata is moved to this file */
+extern struct android_pmem_platform_data android_pmem_data;
+void __init hawaii_add_common_devices(void)
+{
+	unsigned long pmem_size = android_pmem_data.cmasize;
+
+	platform_device_register(&android_pmem);
+	printk(KERN_EMERG"PMEM : CMA size (0x%08lx, %lu pages)\n",
+				pmem_size, (pmem_size >> PAGE_SHIFT));
+
+#ifdef CONFIG_ION
+	platform_device_register(&ion_device0);
+#endif
 }
 
 /* All Hawaii Ray specific devices */
@@ -359,7 +377,7 @@ static void __init hawaii_ray_add_devices(void)
 void __init board_init(void)
 {
 	hawaii_ray_add_devices();
-	board_add_common_devices();
+	hawaii_add_common_devices();
 	return;
 }
 
