@@ -25,7 +25,7 @@ typedef struct {
 	struct work_struct job_scheduler;
 	volatile void __iomem *dev_base;
 	MM_CORE_HW_IFC mm_device;
-	unsigned int mm_core_is_on;
+	volatile bool mm_core_is_on;
 
 
 	/* job list. will be Unique for SMP*/

@@ -45,7 +45,7 @@ static int mm_core_enable_clock(mm_core_t *core_dev)
 	MM_CORE_HW_IFC* hw_ifc = &core_dev->mm_device;
 	int ret =0;
 
-	if(core_dev->mm_core_is_on == 0) {
+	if(core_dev->mm_core_is_on == false) {
 		mm_common_enable_clock(core_dev->mm_common);
 		pr_debug("dev turned on ");
 		hw_ifc->mm_init(hw_ifc->mm_device_id);
@@ -54,11 +54,11 @@ static int mm_core_enable_clock(mm_core_t *core_dev)
 		ret = request_irq(hw_ifc->mm_irq, dev_isr, IRQF_SHARED,	core_dev->mm_common->mm_name, core_dev);
 		if(ret) pr_err("request_irq failed for %s ret = %d", core_dev->mm_common->mm_name, ret);
 		
+		core_dev->mm_core_is_on = true;
+
 		init_timer(&(core_dev->dev_timer));
 		setup_timer(&(core_dev->dev_timer), dev_timer_callback, (unsigned long)core_dev);
 		}
-
-	core_dev->mm_core_is_on ++;
 
 	return ret;
 
@@ -68,14 +68,14 @@ static void mm_core_disable_clock(mm_core_t *core_dev)
 {
 	MM_CORE_HW_IFC* hw_ifc = &core_dev->mm_device;
 
-	core_dev->mm_core_is_on --;
-	if(core_dev->mm_core_is_on == 0) {
+	if(core_dev->mm_core_is_on == true) {
 
 		del_timer_sync(&(core_dev->dev_timer));
 		/* Release interrupt */
 		free_irq(hw_ifc->mm_irq,core_dev);
 
 		hw_ifc->mm_deinit(hw_ifc->mm_device_id);
+		core_dev->mm_core_is_on = false;
 		pr_debug("dev turned off ");
 		mm_common_disable_clock(core_dev->mm_common);
 		}
@@ -230,7 +230,7 @@ void* mm_core_init(mm_common_t* mm_common, const char *mm_dev_name, MM_CORE_HW_I
 	INIT_WORK(&(core_dev->job_scheduler), mm_fmwk_job_scheduler);
 	INIT_LIST_HEAD(&(core_dev->job_list));
 	core_dev->device_job_id = 1;
-	core_dev->mm_core_is_on = 0;
+	core_dev->mm_core_is_on = false;
 
 	core_dev->mm_common = mm_common;
 

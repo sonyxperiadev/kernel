@@ -47,6 +47,8 @@ void mm_common_enable_clock(mm_common_t *common)
 
 void mm_common_disable_clock(mm_common_t *common)
 {
+	BUG_ON(common->mm_hw_is_on == 0);
+	
 	common->mm_hw_is_on--;
 	
 	if(common->mm_hw_is_on == 0) {
@@ -204,7 +206,7 @@ void* mm_fmwk_register( const char* name, const char* clk_name,
 	memset(common,0,sizeof(mm_common_t));
 
 
-	common->mm_hw_is_on = false;
+	common->mm_hw_is_on = 0;
 	init_waitqueue_head(&common->queue);
 	ATOMIC_INIT_NOTIFIER_HEAD(&common->notifier_head);
 

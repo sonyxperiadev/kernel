@@ -83,12 +83,13 @@ static void prof_work(struct work_struct* work)
 		return;
 		}
 
+	getnstimeofday(&diff);
 	if(mm_prof->mm_common->mm_hw_is_on) {
-		mm_prof_notification_handler(&mm_prof->mm_fmwk_notifier_blk,MM_FMWK_NOTIFY_CLK_DISABLE,NULL);
-		mm_prof_notification_handler(&mm_prof->mm_fmwk_notifier_blk,MM_FMWK_NOTIFY_CLK_ENABLE,NULL);
+		struct timespec diff2 = timespec_sub(diff, mm_prof->ts1);
+		mm_prof->hw_on_dur += timespec_to_ns(&diff2);
+		getnstimeofday(&mm_prof->ts1);
 		}
 
-	getnstimeofday(&diff);
 	diff = timespec_sub(diff, mm_prof->proft1);
 	getnstimeofday(&(mm_prof->proft1));
 
