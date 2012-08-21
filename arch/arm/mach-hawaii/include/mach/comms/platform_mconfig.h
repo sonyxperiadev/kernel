@@ -1,1 +1,1 @@
-#include "platform_mconfig_rhea.h"
+#include "platform_mconfig_hawaii.h"
