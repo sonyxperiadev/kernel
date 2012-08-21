@@ -72,9 +72,10 @@ static void mm_core_disable_clock(mm_core_t *core_dev)
 	if(core_dev->mm_core_is_on == 0) {
 
 		del_timer_sync(&(core_dev->dev_timer));
-		//Call dev_deinit
 		/* Release interrupt */
 		free_irq(hw_ifc->mm_irq,core_dev);
+
+		hw_ifc->mm_deinit(hw_ifc->mm_device_id);
 		pr_debug("dev turned off ");
 		mm_common_disable_clock(core_dev->mm_common);
 		}
