@@ -20,11 +20,7 @@
 
 #define MPU6050_INIT_CFG	0x10
 
-#if defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_STONE_EDN2X)
-#define MPU6050_IRQ_GPIO	2
-#else
-#define MPU6050_IRQ_GPIO	77
-#endif
+#define MPU6050_IRQ_GPIO	33
 
 #ifdef CONFIG_MPU_SENSORS_AK8975
 #define MPU6050_COMPASS_SLAVE_ADDR   0x0E
@@ -40,22 +36,8 @@
 #define MPU6050_COMPASS_SLAVE_ADDR   0x0C
 #endif
 
-#if defined(CONFIG_MACH_RHEA_STONE) || defined(CONFIG_MACH_RHEA_STONE_EDN2X)
 /*
- * Correction for the mount position of MPU6050 sensor on RheaStone.
- *  For x reverse x
- *  For y y
- *  For z reverse z
- */
-#define MPU6050_DRIVER_ACCEL_GYRO_ORIENTATION \
-{ \
-	-1, 0, 0, \
-	 0, 1, 0, \
-	 0, 0, -1, \
-}
-#else
-/*
- * Correction for the mount position of MPU6050 sensor on RheaBerri.
+ *  Correction for the mount position of MPU6050 sensor on Hawaii.
  *  For x y
  *  For y reverse x
  *  For z z
@@ -67,7 +49,6 @@
 	-1, 0, 0, \
 	 0, 0, 1, \
 }
-#endif /* CONFIG_MACH_RHEA_STONE */
 
 #define MPU6050_DRIVER_COMPASS_ORIENTATION \
 { \
