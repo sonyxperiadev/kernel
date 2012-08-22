@@ -51,6 +51,7 @@
 #include <plat/pi_mgr.h>
 #include <plat/cpu.h>
 #include "pm_params.h"
+#include <mach/memory.h>
 
 #ifdef CONFIG_DEBUG_FS
 /*GPIO0-15/ debug bus select values*/

@@ -147,26 +147,13 @@ static int __devexit m41t94_remove(struct spi_device *spi)
 static struct spi_driver m41t94_driver = {
 	.driver = {
 		.name	= "rtc-m41t94",
-		.bus	= &spi_bus_type,
 		.owner	= THIS_MODULE,
 	},
 	.probe	= m41t94_probe,
 	.remove = __devexit_p(m41t94_remove),
 };
 
-static __init int m41t94_init(void)
-{
-	return spi_register_driver(&m41t94_driver);
-}
-
-module_init(m41t94_init);
-
-static __exit void m41t94_exit(void)
-{
-	spi_unregister_driver(&m41t94_driver);
-}
-
-module_exit(m41t94_exit);
+module_spi_driver(m41t94_driver);
 
 MODULE_AUTHOR("Kim B. Heino <Kim.Heino@bluegiga.com>");
 MODULE_DESCRIPTION("Driver for ST M41T94 SPI RTC");

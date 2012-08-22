@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Intel Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2012 Intel Corporation. All rights reserved.
  *
  * Portions of this file are derived from the ipw3945 project, as well
  * as portions of the ieee80211 subsystem header files.
@@ -117,7 +117,6 @@ struct iwl_tt_mgmt {
 u8 iwl_tt_current_power_mode(struct iwl_priv *priv);
 bool iwl_tt_is_low_power_state(struct iwl_priv *priv);
 bool iwl_ht_enabled(struct iwl_priv *priv);
-bool iwl_check_for_ct_kill(struct iwl_priv *priv);
 enum iwl_antenna_ok iwl_tx_ant_restriction(struct iwl_priv *priv);
 enum iwl_antenna_ok iwl_rx_ant_restriction(struct iwl_priv *priv);
 void iwl_tt_enter_ct_kill(struct iwl_priv *priv);

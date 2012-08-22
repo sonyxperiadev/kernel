@@ -9,6 +9,7 @@
 /******************************************************************************/
 
 #include <linux/module.h>
+#include <linux/clk.h>
 #include <linux/dma-mapping.h>
 #include <plat/kona_pm_dbg.h>
 #include <plat/pwr_mgr.h>
@@ -20,6 +21,7 @@
 #include <mach/pm.h>
 #include <mach/pwr_mgr.h>
 #include <mach/pi_mgr.h>
+#include <mach/memory.h>
 #ifdef CONFIG_KONA_PROFILER
 #include <plat/profiler.h>
 #endif

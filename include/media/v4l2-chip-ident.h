@@ -79,6 +79,7 @@ enum {
 	V4L2_IDENT_OV5640 = 261,
 	V4L2_IDENT_S5K4ECGX = 262,
 	V4L2_IDENT_OV7692 = 263,
+	V4L2_IDENT_OV5642 = 264,
 
 	/* module saa7146: reserved range 300-309 */
 	V4L2_IDENT_SAA7146 = 300,
@@ -145,6 +146,9 @@ enum {
 	/* module saa6588: just ident 6588 */
 	V4L2_IDENT_SAA6588 = 6588,
 
+	/* module vs6624: just ident 6624 */
+	V4L2_IDENT_VS6624 = 6624,
+
 	/* module saa6752hs: reserved range 6750-6759 */
 	V4L2_IDENT_SAA6752HS = 6752,
 	V4L2_IDENT_SAA6752HS_AC3 = 6753,
@@ -163,6 +167,9 @@ enum {
 
 	/* module adv7180: just ident 7180 */
 	V4L2_IDENT_ADV7180 = 7180,
+
+	/* module adv7183: just ident 7183 */
+	V4L2_IDENT_ADV7183 = 7183,
 
 	/* module saa7185: just ident 7185 */
 	V4L2_IDENT_SAA7185 = 7185,
@@ -188,8 +195,9 @@ enum {
 	/* module wm8775: just ident 8775 */
 	V4L2_IDENT_WM8775 = 8775,
 
-	/* module cafe_ccic, just ident 8801 */
+	/* Marvell controllers starting at 8801 */
 	V4L2_IDENT_CAFE = 8801,
+	V4L2_IDENT_ARMADA610 = 8802,
 
 	/* AKM AK8813/AK8814 */
 	V4L2_IDENT_AK8813 = 8813,
@@ -212,9 +220,6 @@ enum {
 
 	/* module sn9c20x: just ident 10000 */
 	V4L2_IDENT_SN9C20X = 10000,
-
-	/* Siliconfile sensors: reserved range 10100 - 10199 */
-	V4L2_IDENT_NOON010PC30	= 10100,
 
 	/* module cx231xx and cx25840 */
 	V4L2_IDENT_CX2310X_AV = 23099, /* Integrated A/V decoder; not in '100 */

@@ -873,8 +873,6 @@ static void bc_detection(struct bcmpmu_accy *paccy)
 				enable_bc_clock(paccy, true);
 
 			wake_lock(&paccy->wake_lock);
-			pi_mgr_qos_request_update(&paccy->qos,
-						DEEP_SLEEP_LATENCY);
 			bcdldo_cycle_power(paccy);
 			reset_bc(paccy);
 			paccy->retry_cnt = 0;
@@ -946,8 +944,6 @@ static void bc_detection(struct bcmpmu_accy *paccy)
 	if (paccy->det_state == USB_IDLE &&
 			wake_lock_active(&paccy->wake_lock)) {
 		wake_unlock(&paccy->wake_lock);
-			pi_mgr_qos_request_update(&paccy->qos,
-						PI_MGR_QOS_DEFAULT_VALUE);
 	}
 
 	if ((usb_type < PMU_USB_TYPE_MAX) &&
@@ -1109,15 +1105,11 @@ static void usb_det_work(struct work_struct *work)
 	if (paccy->det_state == USB_IDLE &&
 			wake_lock_active(&paccy->wake_lock)) {
 		wake_unlock(&paccy->wake_lock);
-			pi_mgr_qos_request_update(&paccy->qos,
-						PI_MGR_QOS_DEFAULT_VALUE);
 	}
 
 	else if (paccy->det_state != USB_IDLE &&
 			!wake_lock_active(&paccy->wake_lock)) {
 		wake_lock(&paccy->wake_lock);
-			pi_mgr_qos_request_update(&paccy->qos,
-						DEEP_SLEEP_LATENCY);
 	}
 
 	if ((paccy->det_state == USB_DETECT) || (paccy->det_state == USB_RETRY))

@@ -37,6 +37,7 @@
 #include <linux/seq_file.h>
 #endif
 #include <mach/pm.h>
+#include <mach/memory.h>
 
 #ifndef PWRMGR_I2C_VAR_DATA_REG
 #define PWRMGR_I2C_VAR_DATA_REG 6

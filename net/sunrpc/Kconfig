@@ -4,6 +4,10 @@ config SUNRPC
 config SUNRPC_GSS
 	tristate
 
+config SUNRPC_BACKCHANNEL
+	bool
+	depends on SUNRPC
+
 config SUNRPC_XPRT_RDMA
 	tristate
 	depends on SUNRPC && INFINIBAND && INFINIBAND_ADDR_TRANS && EXPERIMENTAL
@@ -33,5 +37,18 @@ config RPCSEC_GSS_KRB5
 	  daemon which may be found in the Linux nfs-utils package
 	  available from http://linux-nfs.org/.  In addition, user-space
 	  Kerberos support should be installed.
+
+	  If unsure, say Y.
+
+config SUNRPC_DEBUG
+	bool "RPC: Enable dprintk debugging"
+	depends on SUNRPC && SYSCTL
+	help
+	  This option enables a sysctl-based debugging interface
+	  that is be used by the 'rpcdebug' utility to turn on or off
+	  logging of different aspects of the kernel RPC activity.
+
+	  Disabling this option will make your kernel slightly smaller,
+	  but makes troubleshooting NFS issues significantly harder.
 
 	  If unsure, say Y.

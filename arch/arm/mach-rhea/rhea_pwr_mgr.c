@@ -27,17 +27,18 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
 #include <linux/interrupt.h>
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <mach/io_map.h>
 #include <linux/io.h>
+#include <linux/module.h>
 #include <mach/irqs.h>
 #include<mach/clock.h>
 #include<plat/pi_mgr.h>
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
+#include <mach/memory.h>
 #include<plat/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_bmdm_pwrmgr.h>

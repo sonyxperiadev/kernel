@@ -27,7 +27,6 @@
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/kernel_stat.h>
@@ -67,6 +66,7 @@
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <linux/delay.h>
+#include <asm/hardware/gic.h>
 
 #ifdef CONFIG_MACH_HAWAII_FPGA
 #define UART_CLK_HZ 13000000
@@ -417,8 +417,10 @@ void __init board_map_io(void)
 late_initcall(hawaii_ray_add_lateInit_devices);
 
 MACHINE_START(HAWAII, "HawaiiFPGA")
+    .atag_offset = 0x100,
     .map_io = board_map_io,
     .init_irq = kona_init_irq,
+    .handle_irq = gic_handle_irq,
     .timer = &kona_timer,
     .init_machine = board_init,
     .reserve = hawaii_ray_reserve

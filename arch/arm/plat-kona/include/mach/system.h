@@ -107,7 +107,7 @@ static void arch_idle(void)
 #endif
 }
 
-static void arch_reset(char mode, const char *cmd)
+static void kona_reset(char mode, const char *cmd)
 {
 	unsigned int val;
 

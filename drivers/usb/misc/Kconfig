@@ -244,10 +244,3 @@ config USB_YUREX
 	  To compile this driver as a module, choose M here: the
 	  module will be called yurex.
 
-config USB_DUAL_DISK_SUPPORT
-	tristate "Support two LUNs for USB MSC"
-	depends on USB
-	default n
-	help
-	  This is for supporting two media for demonstrating multi-LUN in USB MSC
-

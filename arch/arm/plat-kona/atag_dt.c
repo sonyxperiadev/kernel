@@ -24,6 +24,8 @@
 #include <linux/string.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
+#include <linux/module.h>
+#include <asm/setup.h>
 
 #include <linux/of.h>
 #include <linux/of_fdt.h>

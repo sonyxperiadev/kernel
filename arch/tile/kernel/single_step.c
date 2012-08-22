@@ -25,9 +25,9 @@
 #include <linux/types.h>
 #include <linux/err.h>
 #include <asm/cacheflush.h>
-#include <asm/opcode-tile.h>
-#include <asm/opcode_constants.h>
+#include <asm/unaligned.h>
 #include <arch/abi.h>
+#include <arch/opcode.h>
 
 #define signExtend17(val) sign_extend((val), 17)
 #define TILE_X1_MASK (0xffffffffULL << 31)
@@ -118,7 +118,7 @@ static tile_bundle_bits rewrite_load_store_unaligned(
 	int val_reg, addr_reg, err, val;
 
 	/* Get address and value registers */
-	if (bundle & TILE_BUNDLE_Y_ENCODING_MASK) {
+	if (bundle & TILEPRO_BUNDLE_Y_ENCODING_MASK) {
 		addr_reg = get_SrcA_Y2(bundle);
 		val_reg = get_SrcBDest_Y2(bundle);
 	} else if (mem_op == MEMOP_LOAD || mem_op == MEMOP_LOAD_POSTINCR) {
@@ -152,6 +152,25 @@ static tile_bundle_bits rewrite_load_store_unaligned(
 	addr = (void __user *)regs->regs[addr_reg];
 	if (((unsigned long)addr % size) == 0)
 		return bundle;
+
+	/*
+	 * Return SIGBUS with the unaligned address, if requested.
+	 * Note that we return SIGBUS even for completely invalid addresses
+	 * as long as they are in fact unaligned; this matches what the
+	 * tilepro hardware would be doing, if it could provide us with the
+	 * actual bad address in an SPR, which it doesn't.
+	 */
+	if (unaligned_fixup == 0) {
+		siginfo_t info = {
+			.si_signo = SIGBUS,
+			.si_code = BUS_ADRALN,
+			.si_addr = addr
+		};
+		trace_unhandled_signal("unaligned trap", regs,
+				       (unsigned long)addr, SIGBUS);
+		force_sig_info(info.si_signo, &info, current);
+		return (tilepro_bundle_bits) 0;
+	}
 
 #ifndef __LITTLE_ENDIAN
 # error We assume little-endian representation with copy_xx_user size 2 here
@@ -192,18 +211,6 @@ static tile_bundle_bits rewrite_load_store_unaligned(
 		return (tile_bundle_bits) 0;
 	}
 
-	if (unaligned_fixup == 0) {
-		siginfo_t info = {
-			.si_signo = SIGBUS,
-			.si_code = BUS_ADRALN,
-			.si_addr = addr
-		};
-		trace_unhandled_signal("unaligned trap", regs,
-				       (unsigned long)addr, SIGBUS);
-		force_sig_info(info.si_signo, &info, current);
-		return (tile_bundle_bits) 0;
-	}
-
 	if (unaligned_printk || unaligned_fixup_count == 0) {
 		pr_info("Process %d/%s: PC %#lx: Fixup of"
 			" unaligned %s at %#lx.\n",
@@ -229,7 +236,7 @@ P("\n");
 	}
 	++unaligned_fixup_count;
 
-	if (bundle & TILE_BUNDLE_Y_ENCODING_MASK) {
+	if (bundle & TILEPRO_BUNDLE_Y_ENCODING_MASK) {
 		/* Convert the Y2 instruction to a prefetch. */
 		bundle &= ~(create_SrcBDest_Y2(-1) |
 			    create_Opcode_Y2(-1));
@@ -339,12 +346,10 @@ void single_step_once(struct pt_regs *regs)
 		}
 
 		/* allocate a cache line of writable, executable memory */
-		down_write(&current->mm->mmap_sem);
-		buffer = (void __user *) do_mmap(NULL, 0, 64,
+		buffer = (void __user *) vm_mmap(NULL, 0, 64,
 					  PROT_EXEC | PROT_READ | PROT_WRITE,
 					  MAP_PRIVATE | MAP_ANONYMOUS,
 					  0);
-		up_write(&current->mm->mmap_sem);
 
 		if (IS_ERR((void __force *)buffer)) {
 			kfree(state);
@@ -389,7 +394,7 @@ void single_step_once(struct pt_regs *regs)
 	state->branch_next_pc = 0;
 	state->update = 0;
 
-	if (!(bundle & TILE_BUNDLE_Y_ENCODING_MASK)) {
+	if (!(bundle & TILEPRO_BUNDLE_Y_ENCODING_MASK)) {
 		/* two wide, check for control flow */
 		int opcode = get_Opcode_X1(bundle);
 

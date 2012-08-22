@@ -98,6 +98,8 @@ struct sparc_trapf {
  */
 #ifndef __ASSEMBLY__
 
+#include <linux/types.h>
+
 struct pt_regs {
 	unsigned long psr;
 	unsigned long pc;
@@ -163,7 +165,7 @@ struct sparc_stackf {
 #ifdef __KERNEL__
 
 #include <linux/threads.h>
-#include <asm/system.h>
+#include <asm/switch_to.h>
 
 static inline int pt_regs_trap_type(struct pt_regs *regs)
 {
@@ -207,13 +209,20 @@ do {	current_thread_info()->syscall_noerror = 1; \
 #define instruction_pointer(regs) ((regs)->tpc)
 #define instruction_pointer_set(regs, val) ((regs)->tpc = (val))
 #define user_stack_pointer(regs) ((regs)->u_regs[UREG_FP])
-#define regs_return_value(regs) ((regs)->u_regs[UREG_I0])
+static inline int is_syscall_success(struct pt_regs *regs)
+{
+	return !(regs->tstate & (TSTATE_XCARRY | TSTATE_ICARRY));
+}
+
+static inline long regs_return_value(struct pt_regs *regs)
+{
+	return regs->u_regs[UREG_I0];
+}
 #ifdef CONFIG_SMP
 extern unsigned long profile_pc(struct pt_regs *);
 #else
 #define profile_pc(regs) instruction_pointer(regs)
 #endif
-extern void show_regs(struct pt_regs *);
 #endif /* (__KERNEL__) */
 
 #else /* __ASSEMBLY__ */
@@ -232,8 +241,7 @@ extern void show_regs(struct pt_regs *);
 #ifndef __ASSEMBLY__
 
 #ifdef __KERNEL__
-
-#include <asm/system.h>
+#include <asm/switch_to.h>
 
 static inline bool pt_regs_is_syscall(struct pt_regs *regs)
 {
@@ -257,7 +265,6 @@ static inline bool pt_regs_clear_syscall(struct pt_regs *regs)
 #define instruction_pointer(regs) ((regs)->pc)
 #define user_stack_pointer(regs) ((regs)->u_regs[UREG_FP])
 unsigned long profile_pc(struct pt_regs *);
-extern void show_regs(struct pt_regs *);
 #endif /* (__KERNEL__) */
 
 #else /* (!__ASSEMBLY__) */

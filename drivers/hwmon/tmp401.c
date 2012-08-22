@@ -334,7 +334,7 @@ static ssize_t store_temp_min(struct device *dev, struct device_attribute
 	long val;
 	u16 reg;
 
-	if (strict_strtol(buf, 10, &val))
+	if (kstrtol(buf, 10, &val))
 		return -EINVAL;
 
 	reg = tmp401_temp_to_register(val, data->config);
@@ -361,7 +361,7 @@ static ssize_t store_temp_max(struct device *dev, struct device_attribute
 	long val;
 	u16 reg;
 
-	if (strict_strtol(buf, 10, &val))
+	if (kstrtol(buf, 10, &val))
 		return -EINVAL;
 
 	reg = tmp401_temp_to_register(val, data->config);
@@ -388,7 +388,7 @@ static ssize_t store_temp_crit(struct device *dev, struct device_attribute
 	long val;
 	u8 reg;
 
-	if (strict_strtol(buf, 10, &val))
+	if (kstrtol(buf, 10, &val))
 		return -EINVAL;
 
 	reg = tmp401_crit_temp_to_register(val, data->config);
@@ -413,7 +413,7 @@ static ssize_t store_temp_crit_hyst(struct device *dev, struct device_attribute
 	long val;
 	u8 reg;
 
-	if (strict_strtol(buf, 10, &val))
+	if (kstrtol(buf, 10, &val))
 		return -EINVAL;
 
 	if (data->config & TMP401_CONFIG_RANGE)
@@ -447,7 +447,7 @@ static ssize_t reset_temp_history(struct device *dev,
 {
 	long val;
 
-	if (strict_strtol(buf, 10, &val))
+	if (kstrtol(buf, 10, &val))
 		return -EINVAL;
 
 	if (val != 1) {
@@ -624,7 +624,7 @@ static int tmp401_probe(struct i2c_client *client,
 			goto exit_remove;
 	}
 
-	/* Register aditional tmp411 sysfs hooks */
+	/* Register additional tmp411 sysfs hooks */
 	if (data->kind == tmp411) {
 		for (i = 0; i < ARRAY_SIZE(tmp411_attr); i++) {
 			err = device_create_file(&client->dev,
@@ -662,19 +662,8 @@ static struct i2c_driver tmp401_driver = {
 	.address_list	= normal_i2c,
 };
 
-static int __init tmp401_init(void)
-{
-	return i2c_add_driver(&tmp401_driver);
-}
-
-static void __exit tmp401_exit(void)
-{
-	i2c_del_driver(&tmp401_driver);
-}
+module_i2c_driver(tmp401_driver);
 
 MODULE_AUTHOR("Hans de Goede <hdegoede@redhat.com>");
 MODULE_DESCRIPTION("Texas Instruments TMP401 temperature sensor driver");
 MODULE_LICENSE("GPL");
-
-module_init(tmp401_init);
-module_exit(tmp401_exit);

@@ -85,32 +85,6 @@
 #define INT_CRERR_CNT		0x06
 #define INT_COL_CNT		0x07
 
-/* Transmit status register errors */
-#define TSR_ECOL		(1<<5)
-#define TSR_LCOL		(1<<4)
-#define TSR_LOSS_CRS		(1<<3)
-#define TSR_JBR			(1<<2)
-#define TSR_ERRORS		(TSR_ECOL | TSR_LCOL | TSR_LOSS_CRS | TSR_JBR)
-/* Receive status register errors */
-#define RSR_CRC			(1<<2)
-#define RSR_FAE			(1<<1)
-#define RSR_ERRORS		(RSR_CRC | RSR_FAE)
-
-/* Media status register definitions */
-#define MSR_DUPLEX		(1<<4)
-#define MSR_SPEED		(1<<3)
-#define MSR_LINK		(1<<2)
-
-/* Interrupt pipe data */
-#define INT_TSR			0x00
-#define INT_RSR			0x01
-#define INT_MSR			0x02
-#define INT_WAKSR		0x03
-#define INT_TXOK_CNT		0x04
-#define INT_RXLOST_CNT		0x05
-#define INT_CRERR_CNT		0x06
-#define INT_COL_CNT		0x07
-
 
 #define	RTL8150_MTU		1540
 #define	RTL8150_TX_TIMEOUT	(HZ)
@@ -169,25 +143,7 @@ struct rtl8150 {
 
 typedef struct rtl8150 rtl8150_t;
 
-static void fill_skb_pool(rtl8150_t *);
-static void free_skb_pool(rtl8150_t *);
-static inline struct sk_buff *pull_skb(rtl8150_t *);
-static void rtl8150_disconnect(struct usb_interface *intf);
-static int rtl8150_probe(struct usb_interface *intf,
-			   const struct usb_device_id *id);
-static int rtl8150_suspend(struct usb_interface *intf, pm_message_t message);
-static int rtl8150_resume(struct usb_interface *intf);
-
 static const char driver_name [] = "rtl8150";
-
-static struct usb_driver rtl8150_driver = {
-	.name =		driver_name,
-	.probe =	rtl8150_probe,
-	.disconnect =	rtl8150_disconnect,
-	.id_table =	rtl8150_table,
-	.suspend =	rtl8150_suspend,
-	.resume =	rtl8150_resume
-};
 
 /*
 **
@@ -333,7 +289,7 @@ static int rtl8150_set_mac_address(struct net_device *netdev, void *p)
 	/* Write the MAC address into eeprom. Eeprom writes must be word-sized,
 	   so we need to split them up. */
 	for (i = 0; i * 2 < netdev->addr_len; i++) {
-		set_registers(dev, IDR_EEPROM + (i * 2), 2, 
+		set_registers(dev, IDR_EEPROM + (i * 2), 2,
 		netdev->dev_addr + (i * 2));
 	}
 	/* Clear the WEPROM bit (preventing accidental eeprom writes). */
@@ -490,44 +446,6 @@ resched:
 	tasklet_schedule(&dev->tl);
 }
 
-static void rx_fixup(unsigned long data)
-{
-	rtl8150_t *dev;
-	struct sk_buff *skb;
-	int status;
-
-	dev = (rtl8150_t *)data;
-
-	spin_lock_irq(&dev->rx_pool_lock);
-	fill_skb_pool(dev);
-	spin_unlock_irq(&dev->rx_pool_lock);
-	if (test_bit(RX_URB_FAIL, &dev->flags))
-		if (dev->rx_skb)
-			goto try_again;
-	spin_lock_irq(&dev->rx_pool_lock);
-	skb = pull_skb(dev);
-	spin_unlock_irq(&dev->rx_pool_lock);
-	if (skb == NULL)
-		goto tlsched;
-	dev->rx_skb = skb;
-	usb_fill_bulk_urb(dev->rx_urb, dev->udev, usb_rcvbulkpipe(dev->udev, 1),
-		      dev->rx_skb->data, RTL8150_MTU, read_bulk_callback, dev);
-try_again:
-	status = usb_submit_urb(dev->rx_urb, GFP_ATOMIC);
-	if (status == -ENODEV) {
-		netif_device_detach(dev->netdev);
-	} else if (status) {
-		set_bit(RX_URB_FAIL, &dev->flags);
-		goto tlsched;
-	} else {
-		clear_bit(RX_URB_FAIL, &dev->flags);
-	}
-
-	return;
-tlsched:
-	tasklet_schedule(&dev->tl);
-}
-
 static void write_bulk_callback(struct urb *urb)
 {
 	rtl8150_t *dev;
@@ -665,6 +583,42 @@ static void free_skb_pool(rtl8150_t *dev)
 			dev_kfree_skb(dev->rx_skb_pool[i]);
 }
 
+static void rx_fixup(unsigned long data)
+{
+	struct rtl8150 *dev = (struct rtl8150 *)data;
+	struct sk_buff *skb;
+	int status;
+
+	spin_lock_irq(&dev->rx_pool_lock);
+	fill_skb_pool(dev);
+	spin_unlock_irq(&dev->rx_pool_lock);
+	if (test_bit(RX_URB_FAIL, &dev->flags))
+		if (dev->rx_skb)
+			goto try_again;
+	spin_lock_irq(&dev->rx_pool_lock);
+	skb = pull_skb(dev);
+	spin_unlock_irq(&dev->rx_pool_lock);
+	if (skb == NULL)
+		goto tlsched;
+	dev->rx_skb = skb;
+	usb_fill_bulk_urb(dev->rx_urb, dev->udev, usb_rcvbulkpipe(dev->udev, 1),
+		      dev->rx_skb->data, RTL8150_MTU, read_bulk_callback, dev);
+try_again:
+	status = usb_submit_urb(dev->rx_urb, GFP_ATOMIC);
+	if (status == -ENODEV) {
+		netif_device_detach(dev->netdev);
+	} else if (status) {
+		set_bit(RX_URB_FAIL, &dev->flags);
+		goto tlsched;
+	} else {
+		clear_bit(RX_URB_FAIL, &dev->flags);
+	}
+
+	return;
+tlsched:
+	tasklet_schedule(&dev->tl);
+}
+
 static int enable_net_traffic(rtl8150_t * dev)
 {
 	u8 cr, tcr, rcr, msr;
@@ -778,7 +732,7 @@ static int rtl8150_open(struct net_device *netdev)
 		return -ENOMEM;
 
 	set_registers(dev, IDR, 6, netdev->dev_addr);
-	
+
 	usb_fill_bulk_urb(dev->rx_urb, dev->udev, usb_rcvbulkpipe(dev->udev, 1),
 		      dev->rx_skb->data, RTL8150_MTU, read_bulk_callback, dev);
 	if ((res = usb_submit_urb(dev->rx_urb, GFP_KERNEL))) {
@@ -898,8 +852,8 @@ static const struct net_device_ops rtl8150_netdev_ops = {
 	.ndo_stop		= rtl8150_close,
 	.ndo_do_ioctl		= rtl8150_ioctl,
 	.ndo_start_xmit		= rtl8150_start_xmit,
-	.ndo_tx_timeout 	= rtl8150_tx_timeout,
-	.ndo_set_multicast_list = rtl8150_set_multicast,
+	.ndo_tx_timeout		= rtl8150_tx_timeout,
+	.ndo_set_rx_mode	= rtl8150_set_multicast,
 	.ndo_set_mac_address	= rtl8150_set_mac_address,
 
 	.ndo_change_mtu		= eth_change_mtu,
@@ -914,10 +868,8 @@ static int rtl8150_probe(struct usb_interface *intf,
 	struct net_device *netdev;
 
 	netdev = alloc_etherdev(sizeof(rtl8150_t));
-	if (!netdev) {
-		err("Out of memory");
+	if (!netdev)
 		return -ENOMEM;
-	}
 
 	dev = netdev_priv(netdev);
 
@@ -929,7 +881,7 @@ static int rtl8150_probe(struct usb_interface *intf,
 
 	tasklet_init(&dev->tl, rx_fixup, (unsigned long)dev);
 	spin_lock_init(&dev->rx_pool_lock);
-	
+
 	dev->udev = udev;
 	dev->netdev = netdev;
 	netdev->netdev_ops = &rtl8150_netdev_ops;
@@ -947,7 +899,7 @@ static int rtl8150_probe(struct usb_interface *intf,
 	}
 	fill_skb_pool(dev);
 	set_ethernet_addr(dev);
-	
+
 	usb_set_intfdata(intf, dev);
 	SET_NETDEV_DEV(netdev, &intf->dev);
 	if (register_netdev(netdev) != 0) {
@@ -989,20 +941,16 @@ static void rtl8150_disconnect(struct usb_interface *intf)
 	}
 }
 
-static int __init usb_rtl8150_init(void)
-{
-	printk(KERN_INFO KBUILD_MODNAME ": " DRIVER_VERSION ":"
-	       DRIVER_DESC "\n");
-	return usb_register(&rtl8150_driver);
-}
+static struct usb_driver rtl8150_driver = {
+	.name		= driver_name,
+	.probe		= rtl8150_probe,
+	.disconnect	= rtl8150_disconnect,
+	.id_table	= rtl8150_table,
+	.suspend	= rtl8150_suspend,
+	.resume		= rtl8150_resume
+};
 
-static void __exit usb_rtl8150_exit(void)
-{
-	usb_deregister(&rtl8150_driver);
-}
-
-module_init(usb_rtl8150_init);
-module_exit(usb_rtl8150_exit);
+module_usb_driver(rtl8150_driver);
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);

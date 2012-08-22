@@ -111,6 +111,7 @@ int dccp_v4_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 	rt = ip_route_newports(fl4, rt, orig_sport, orig_dport,
 			       inet->inet_sport, inet->inet_dport, sk);
 	if (IS_ERR(rt)) {
+		err = PTR_ERR(rt);
 		rt = NULL;
 		goto failure;
 	}
@@ -299,7 +300,8 @@ static void dccp_v4_err(struct sk_buff *skb, u32 info)
 		 */
 		WARN_ON(req->sk);
 
-		if (seq != dccp_rsk(req)->dreq_iss) {
+		if (!between48(seq, dccp_rsk(req)->dreq_iss,
+				    dccp_rsk(req)->dreq_gss)) {
 			NET_INC_STATS_BH(net, LINUX_MIB_OUTOFWINDOWICMPS);
 			goto out;
 		}
@@ -433,6 +435,7 @@ exit:
 	NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_LISTENDROPS);
 	return NULL;
 put_and_exit:
+	bh_unlock_sock(newsk);
 	sock_put(newsk);
 	goto exit;
 }
@@ -472,10 +475,11 @@ static struct dst_entry* dccp_v4_route_skb(struct net *net, struct sock *sk,
 					   struct sk_buff *skb)
 {
 	struct rtable *rt;
+	const struct iphdr *iph = ip_hdr(skb);
 	struct flowi4 fl4 = {
 		.flowi4_oif = skb_rtable(skb)->rt_iif,
-		.daddr = ip_hdr(skb)->saddr,
-		.saddr = ip_hdr(skb)->daddr,
+		.daddr = iph->saddr,
+		.saddr = iph->daddr,
 		.flowi4_tos = RT_CONN_FLAGS(sk),
 		.flowi4_proto = sk->sk_protocol,
 		.fl4_sport = dccp_hdr(skb)->dccph_dport,
@@ -636,11 +640,12 @@ int dccp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 	 *
 	 * Set S.ISR, S.GSR, S.SWL, S.SWH from packet or Init Cookie
 	 *
-	 * In fact we defer setting S.GSR, S.SWL, S.SWH to
-	 * dccp_create_openreq_child.
+	 * Setting S.SWL/S.SWH to is deferred to dccp_create_openreq_child().
 	 */
 	dreq->dreq_isr	   = dcb->dccpd_seq;
+	dreq->dreq_gsr	   = dreq->dreq_isr;
 	dreq->dreq_iss	   = dccp_v4_init_sequence(skb);
+	dreq->dreq_gss     = dreq->dreq_iss;
 	dreq->dreq_service = service;
 
 	if (dccp_v4_send_response(sk, req, NULL))

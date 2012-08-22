@@ -41,9 +41,9 @@ struct superblock_smack {
 };
 
 struct socket_smack {
-	char		*smk_out;			/* outbound label */
-	char		*smk_in;			/* inbound label */
-	char		smk_packet[SMK_LABELLEN];	/* TCP peer label */
+	char		*smk_out;	/* outbound label */
+	char		*smk_in;	/* inbound label */
+	char		*smk_packet;	/* TCP peer label */
 };
 
 /*
@@ -116,13 +116,19 @@ struct smk_netlbladdr {
  * If there is a cipso value associated with the label it
  * gets stored here, too. This will most likely be rare as
  * the cipso direct mapping in used internally.
+ *
+ * Keep the access rules for this subject label here so that
+ * the entire set of rules does not need to be examined every
+ * time.
  */
 struct smack_known {
 	struct list_head	list;
 	char			smk_known[SMK_LABELLEN];
 	u32			smk_secid;
 	struct smack_cipso	*smk_cipso;
-	spinlock_t		smk_cipsolock; /* for changing cipso map */
+	spinlock_t		smk_cipsolock;	/* for changing cipso map */
+	struct list_head	smk_rules;	/* access rules */
+	struct mutex		smk_rules_lock;	/* lock for the rules */
 };
 
 /*
@@ -150,7 +156,6 @@ struct smack_known {
 
 /*
  * smackfs magic number
- * smackfs macic number
  */
 #define SMACK_MAGIC	0x43415d53 /* "SMAC" */
 
@@ -176,9 +181,18 @@ struct smack_known {
 #define MAY_NOT		0
 
 /*
- * Number of access types used by Smack (rwxa)
+ * Number of access types used by Smack (rwxat)
  */
-#define SMK_NUM_ACCESS_TYPE 4
+#define SMK_NUM_ACCESS_TYPE 5
+
+/* SMACK data */
+struct smack_audit_data {
+	const char *function;
+	char *subject;
+	char *object;
+	char *request;
+	int result;
+};
 
 /*
  * Smack audit data; is empty if CONFIG_AUDIT not set
@@ -187,6 +201,7 @@ struct smack_known {
 struct smk_audit_info {
 #ifdef CONFIG_AUDIT
 	struct common_audit_data a;
+	struct smack_audit_data sad;
 #endif
 };
 /*
@@ -201,10 +216,12 @@ int smk_access_entry(char *, char *, struct list_head *);
 int smk_access(char *, char *, int, struct smk_audit_info *);
 int smk_curacc(char *, u32, struct smk_audit_info *);
 int smack_to_cipso(const char *, struct smack_cipso *);
-void smack_from_cipso(u32, char *, char *);
+char *smack_from_cipso(u32, char *);
 char *smack_from_secid(const u32);
+void smk_parse_smack(const char *string, int len, char *smack);
 char *smk_import(const char *, int);
 struct smack_known *smk_import_entry(const char *, int);
+struct smack_known *smk_find_entry(const char *);
 u32 smack_to_secid(const char *);
 
 /*
@@ -223,7 +240,6 @@ extern struct smack_known smack_known_star;
 extern struct smack_known smack_known_web;
 
 extern struct list_head smack_known_list;
-extern struct list_head smack_rule_list;
 extern struct list_head smk_netlbladdr_list;
 
 extern struct security_operations smack_ops;
@@ -305,7 +321,16 @@ static inline void smk_ad_init(struct smk_audit_info *a, const char *func,
 {
 	memset(a, 0, sizeof(*a));
 	a->a.type = type;
-	a->a.smack_audit_data.function = func;
+	a->a.smack_audit_data = &a->sad;
+	a->a.smack_audit_data->function = func;
+}
+
+static inline void smk_ad_init_net(struct smk_audit_info *a, const char *func,
+				   char type, struct lsm_network_audit *net)
+{
+	smk_ad_init(a, func, type);
+	memset(net, 0, sizeof(*net));
+	a->a.u.net = net;
 }
 
 static inline void smk_ad_setfield_u_tsk(struct smk_audit_info *a,
@@ -331,7 +356,7 @@ static inline void smk_ad_setfield_u_fs_path(struct smk_audit_info *a,
 static inline void smk_ad_setfield_u_net_sk(struct smk_audit_info *a,
 					    struct sock *sk)
 {
-	a->a.u.net.sk = sk;
+	a->a.u.net->sk = sk;
 }
 
 #else /* no AUDIT */

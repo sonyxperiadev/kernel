@@ -35,8 +35,6 @@ struct gserial {
 
 	struct usb_ep			*in;
 	struct usb_ep			*out;
-	struct usb_endpoint_descriptor	*in_desc;
-	struct usb_endpoint_descriptor	*out_desc;
 
 	/* REVISIT avoid this CDC-ACM support harder ... */
 	struct usb_cdc_line_coding port_line_coding;	/* 9600-8-N-1 etc */
@@ -64,17 +62,4 @@ int acm_bind_config(struct usb_configuration *c, u8 port_num);
 int gser_bind_config(struct usb_configuration *c, u8 port_num);
 int obex_bind_config(struct usb_configuration *c, u8 port_num);
 
-/* ACM devices */
-#ifdef CONFIG_BRCM_FUSE_LOG
-#define ACM_LOGGING_PORT	1
-
-static struct acm_logging_callbacks *acm_logging_cb;
-extern struct acm_logging_callbacks *get_acm_callback_func(void);
-struct acm_logging_callbacks {
-	/** Start function for role change */
-	int (*start) (void);
-	/** Stop Function for role change */
-	int (*stop) (void);
-};
-#endif
 #endif /* __U_SERIAL_H */

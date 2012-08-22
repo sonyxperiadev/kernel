@@ -26,6 +26,7 @@
 #include <linux/init.h>
 
 #include <mach/pinmux.h>
+#include <linux/bug.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 

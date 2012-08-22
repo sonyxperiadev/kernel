@@ -12,6 +12,7 @@
 #include <linux/sched.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
+#include <linux/elfcore.h>
 #include <linux/smp.h>
 #include <linux/slab.h>
 #include <linux/interrupt.h>
@@ -22,14 +23,13 @@
 #include <linux/kprobes.h>
 #include <linux/random.h>
 #include <linux/module.h>
-#include <asm/system.h>
 #include <asm/io.h>
 #include <asm/processor.h>
 #include <asm/irq.h>
 #include <asm/timer.h>
 #include <asm/nmi.h>
-#include <asm/compat.h>
 #include <asm/smp.h>
+#include <asm/switch_to.h>
 #include "entry.h"
 
 asmlinkage void ret_from_fork(void) asm ("ret_from_fork");
@@ -75,28 +75,24 @@ static void default_idle(void)
 	if (test_thread_flag(TIF_MCCK_PENDING)) {
 		local_mcck_enable();
 		local_irq_enable();
-		s390_handle_mcck();
 		return;
 	}
-	trace_hardirqs_on();
-	/* Don't trace preempt off for idle. */
-	stop_critical_timings();
-	/* Stop virtual timer and halt the cpu. */
+	/* Halt the cpu and keep track of cpu time accounting. */
 	vtime_stop_cpu();
-	/* Reenable preemption tracer. */
-	start_critical_timings();
 }
 
 void cpu_idle(void)
 {
 	for (;;) {
-		tick_nohz_stop_sched_tick(1);
-		while (!need_resched())
+		tick_nohz_idle_enter();
+		rcu_idle_enter();
+		while (!need_resched() && !test_thread_flag(TIF_MCCK_PENDING))
 			default_idle();
-		tick_nohz_restart_sched_tick();
-		preempt_enable_no_resched();
-		schedule();
-		preempt_disable();
+		rcu_idle_exit();
+		tick_nohz_idle_exit();
+		if (test_thread_flag(TIF_MCCK_PENDING))
+			s390_handle_mcck();
+		schedule_preempt_disabled();
 	}
 }
 
@@ -117,7 +113,8 @@ int kernel_thread(int (*fn)(void *), void * arg, unsigned long flags)
 	struct pt_regs regs;
 
 	memset(&regs, 0, sizeof(regs));
-	regs.psw.mask = psw_kernel_bits | PSW_MASK_IO | PSW_MASK_EXT;
+	regs.psw.mask = psw_kernel_bits |
+		PSW_MASK_DAT | PSW_MASK_IO | PSW_MASK_EXT | PSW_MASK_MCHECK;
 	regs.psw.addr = (unsigned long) kernel_thread_starter | PSW_ADDR_AMODE;
 	regs.gprs[9] = (unsigned long) fn;
 	regs.gprs[10] = (unsigned long) arg;

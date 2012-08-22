@@ -53,6 +53,7 @@
 #include "chal_bmodem_intc_inc.h"
 #include "csl_arm2sp.h"
 #include "audio_trace.h"
+#include <mach/memory.h>
 
 typedef struct {
 	struct tasklet_struct task;

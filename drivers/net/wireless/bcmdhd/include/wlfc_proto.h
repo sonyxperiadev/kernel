@@ -1,7 +1,7 @@
 /*
-* Copyright (C) 1999-2011, Broadcom Corporation
+* Copyright (C) 1999-2012, Broadcom Corporation
 * 
-*         Unless you and Broadcom execute a separate written software license
+*      Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2 (the "GPL"),
 * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -18,7 +18,7 @@
 *      Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
-* $Id: wlfc_proto.h 275703 2011-08-04 20:20:27Z $
+* $Id: wlfc_proto.h 322519 2012-03-21 01:15:45Z $
 *
 */
 #ifndef __wlfc_proto_definitions_h__
@@ -62,20 +62,26 @@
 	|  13  |   3  | (count, handle, prec_bmp)| One time request for packet to a specific
 	|      |      |                          | MAC destination.
 	 ---------------------------------------------------------------------------
+	|  15  |   1  | interface ID             | NIC period start
+	 ---------------------------------------------------------------------------
+	|  16  |   1  | interface ID             | NIC period end
+	 ---------------------------------------------------------------------------
+	|  17  |   3  | (ifid, txs)              | Action frame tx status
+	 ---------------------------------------------------------------------------
 	| 255  |  N/A |  N/A                     | FILLER - This is a special type
 	|      |      |                          | that has no length or value.
 	|      |      |                          | Typically used for padding.
 	 ---------------------------------------------------------------------------
 	*/
 
-#define WLFC_CTL_TYPE_MAC_OPEN				1
-#define WLFC_CTL_TYPE_MAC_CLOSE				2
+#define WLFC_CTL_TYPE_MAC_OPEN			1
+#define WLFC_CTL_TYPE_MAC_CLOSE			2
 #define WLFC_CTL_TYPE_MAC_REQUEST_CREDIT	3
-#define WLFC_CTL_TYPE_TXSTATUS				4
-#define WLFC_CTL_TYPE_PKTTAG				5
+#define WLFC_CTL_TYPE_TXSTATUS			4
+#define WLFC_CTL_TYPE_PKTTAG			5
 
-#define WLFC_CTL_TYPE_MACDESC_ADD			6
-#define WLFC_CTL_TYPE_MACDESC_DEL			7
+#define WLFC_CTL_TYPE_MACDESC_ADD		6
+#define WLFC_CTL_TYPE_MACDESC_DEL		7
 #define WLFC_CTL_TYPE_RSSI					8
 
 #define WLFC_CTL_TYPE_INTERFACE_OPEN		9
@@ -85,26 +91,33 @@
 
 #define WLFC_CTL_TYPE_PENDING_TRAFFIC_BMP	12
 #define WLFC_CTL_TYPE_MAC_REQUEST_PACKET	13
+#define WLFC_CTL_TYPE_HOST_REORDER_RXPKTS	14
 
-#define WLFC_CTL_TYPE_FILLER				255
+#define WLFC_CTL_TYPE_NIC_PRD_START		15
+#define WLFC_CTL_TYPE_NIC_PRD_END		16
+#define WLFC_CTL_TYPE_AF_TXS			17
 
-#define WLFC_CTL_VALUE_LEN_MACDESC			8 /* handle, interface, MAC */
+#define WLFC_CTL_TYPE_FILLER			255
 
-#define WLFC_CTL_VALUE_LEN_MAC		1	/* MAC-handle */
-#define WLFC_CTL_VALUE_LEN_RSSI		1
+#define WLFC_CTL_VALUE_LEN_MACDESC		8	/* handle, interface, MAC */
 
-#define WLFC_CTL_VALUE_LEN_INTERFACE	1
+#define WLFC_CTL_VALUE_LEN_MAC			1	/* MAC-handle */
+#define WLFC_CTL_VALUE_LEN_RSSI			1
+
+#define WLFC_CTL_VALUE_LEN_INTERFACE		1
 #define WLFC_CTL_VALUE_LEN_PENDING_TRAFFIC_BMP	2
 
-#define WLFC_CTL_VALUE_LEN_TXSTATUS	4
-#define WLFC_CTL_VALUE_LEN_PKTTAG	4
+#define WLFC_CTL_VALUE_LEN_TXSTATUS		4
+#define WLFC_CTL_VALUE_LEN_PKTTAG		4
 
 /* enough space to host all 4 ACs, bc/mc and atim fifo credit */
 #define WLFC_CTL_VALUE_LEN_FIFO_CREDITBACK	6
 
-#define WLFC_CTL_VALUE_LEN_REQUEST_CREDIT 3 /* credit, MAC-handle, prec_bitmap */
-#define WLFC_CTL_VALUE_LEN_REQUEST_PACKET 3 /* credit, MAC-handle, prec_bitmap */
+#define WLFC_CTL_VALUE_LEN_REQUEST_CREDIT	3	/* credit, MAC-handle, prec_bitmap */
+#define WLFC_CTL_VALUE_LEN_REQUEST_PACKET	3	/* credit, MAC-handle, prec_bitmap */
 
+#define WLFC_CTL_VALUE_LEN_NIC_PRD_START	1
+#define WLFC_CTL_VALUE_LEN_NIC_PRD_END		7
 
 
 #define WLFC_PKTID_GEN_MASK		0x80000000
@@ -169,15 +182,15 @@
 #define WLFC_CTL_PKTFLAG_DISCARD		0
 /* D11 suppressed a packet */
 #define WLFC_CTL_PKTFLAG_D11SUPPRESS	1
-/* WL firmware suppressed a packet because MAC is 
+/* WL firmware suppressed a packet because MAC is
 	already in PSMode (short time window)
 */
 #define WLFC_CTL_PKTFLAG_WLSUPPRESS		2
 /* Firmware tossed this packet */
 #define WLFC_CTL_PKTFLAG_TOSSED_BYWLC	3
 
-#define WLFC_D11_STATUS_INTERPRET(txs)	((((txs)->status & TX_STATUS_SUPR_MASK) >> \
-		TX_STATUS_SUPR_SHIFT)) ? WLFC_CTL_PKTFLAG_D11SUPPRESS : WLFC_CTL_PKTFLAG_DISCARD
+#define WLFC_D11_STATUS_INTERPRET(txs)	\
+	(((txs)->status.suppr_ind != 0) ? WLFC_CTL_PKTFLAG_D11SUPPRESS : WLFC_CTL_PKTFLAG_DISCARD)
 
 #ifdef PROP_TXSTATUS_DEBUG
 #define WLFC_DBGMESG(x) printf x
@@ -194,5 +207,22 @@
 #define WLFC_PRINTMAC(banner, ea)
 #define WLFC_WHEREIS(s)
 #endif
+
+/* AMPDU host reorder packet flags */
+#define WLHOST_REORDERDATA_MAXFLOWS		256
+#define WLHOST_REORDERDATA_LEN		 10
+#define WLHOST_REORDERDATA_TOTLEN	(WLHOST_REORDERDATA_LEN + 1 + 1) /* +tag +len */
+
+#define WLHOST_REORDERDATA_FLOWID_OFFSET		0
+#define WLHOST_REORDERDATA_MAXIDX_OFFSET		2
+#define WLHOST_REORDERDATA_FLAGS_OFFSET			4
+#define WLHOST_REORDERDATA_CURIDX_OFFSET		6
+#define WLHOST_REORDERDATA_EXPIDX_OFFSET		8
+
+#define WLHOST_REORDERDATA_DEL_FLOW		0x01
+#define WLHOST_REORDERDATA_FLUSH_ALL		0x02
+#define WLHOST_REORDERDATA_CURIDX_VALID		0x04
+#define WLHOST_REORDERDATA_EXPIDX_VALID		0x08
+#define WLHOST_REORDERDATA_NEW_HOLE		0x10
 
 #endif /* __wlfc_proto_definitions_h__ */

@@ -22,6 +22,7 @@
 
 #include <mach/hardware.h>
 #include <mach/jornada720.h>
+#include <mach/irqs.h>
 
 MODULE_AUTHOR("Kristoffer Ericson <kristoffer.ericson@gmail.com>");
 MODULE_DESCRIPTION("HP Jornada 710/720/728 touchscreen driver");
@@ -127,7 +128,7 @@ static int __devinit jornada720_ts_probe(struct platform_device *pdev)
 
 	error = request_irq(IRQ_GPIO9,
 			jornada720_ts_interrupt,
-			IRQF_DISABLED | IRQF_TRIGGER_RISING,
+			IRQF_TRIGGER_RISING,
 			"HP7XX Touchscreen driver", pdev);
 	if (error) {
 		printk(KERN_INFO "HP7XX TS : Unable to acquire irq!\n");
@@ -172,16 +173,4 @@ static struct platform_driver jornada720_ts_driver = {
 		.owner	= THIS_MODULE,
 	},
 };
-
-static int __init jornada720_ts_init(void)
-{
-	return platform_driver_register(&jornada720_ts_driver);
-}
-
-static void __exit jornada720_ts_exit(void)
-{
-	platform_driver_unregister(&jornada720_ts_driver);
-}
-
-module_init(jornada720_ts_init);
-module_exit(jornada720_ts_exit);
+module_platform_driver(jornada720_ts_driver);

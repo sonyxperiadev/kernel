@@ -1036,14 +1036,14 @@ static int ocfs2_get_refcount_cpos_end(struct ocfs2_caching_info *ci,
 
 	tmp_el = left_path->p_node[subtree_root].el;
 	blkno = left_path->p_node[subtree_root+1].bh->b_blocknr;
-	for (i = 0; i < le32_to_cpu(tmp_el->l_next_free_rec); i++) {
+	for (i = 0; i < le16_to_cpu(tmp_el->l_next_free_rec); i++) {
 		if (le64_to_cpu(tmp_el->l_recs[i].e_blkno) == blkno) {
 			*cpos_end = le32_to_cpu(tmp_el->l_recs[i+1].e_cpos);
 			break;
 		}
 	}
 
-	BUG_ON(i == le32_to_cpu(tmp_el->l_next_free_rec));
+	BUG_ON(i == le16_to_cpu(tmp_el->l_next_free_rec));
 
 out:
 	ocfs2_free_path(left_path);
@@ -1468,7 +1468,7 @@ static int ocfs2_divide_leaf_refcount_block(struct buffer_head *ref_leaf_bh,
 
 	trace_ocfs2_divide_leaf_refcount_block(
 		(unsigned long long)ref_leaf_bh->b_blocknr,
-		le32_to_cpu(rl->rl_count), le32_to_cpu(rl->rl_used));
+		le16_to_cpu(rl->rl_count), le16_to_cpu(rl->rl_used));
 
 	/*
 	 * XXX: Improvement later.
@@ -2411,7 +2411,7 @@ static int ocfs2_calc_refcount_meta_credits(struct super_block *sb,
 				rb = (struct ocfs2_refcount_block *)
 							prev_bh->b_data;
 
-				if (le64_to_cpu(rb->rf_records.rl_used) +
+				if (le16_to_cpu(rb->rf_records.rl_used) +
 				    recs_add >
 				    le16_to_cpu(rb->rf_records.rl_count))
 					ref_blocks++;
@@ -2476,7 +2476,7 @@ static int ocfs2_calc_refcount_meta_credits(struct super_block *sb,
 	if (prev_bh) {
 		rb = (struct ocfs2_refcount_block *)prev_bh->b_data;
 
-		if (le64_to_cpu(rb->rf_records.rl_used) + recs_add >
+		if (le16_to_cpu(rb->rf_records.rl_used) + recs_add >
 		    le16_to_cpu(rb->rf_records.rl_count))
 			ref_blocks++;
 
@@ -3629,7 +3629,7 @@ int ocfs2_refcounted_xattr_delete_need(struct inode *inode,
 			 * one will split a refcount rec, so totally we need
 			 * clusters * 2 new refcount rec.
 			 */
-			if (le64_to_cpu(rb->rf_records.rl_used) + clusters * 2 >
+			if (le16_to_cpu(rb->rf_records.rl_used) + clusters * 2 >
 			    le16_to_cpu(rb->rf_records.rl_count))
 				ref_blocks++;
 
@@ -4368,25 +4368,6 @@ static inline int ocfs2_may_create(struct inode *dir, struct dentry *child)
 	return inode_permission(dir, MAY_WRITE | MAY_EXEC);
 }
 
-/* copied from user_path_parent. */
-static int ocfs2_user_path_parent(const char __user *path,
-				  struct nameidata *nd, char **name)
-{
-	char *s = getname(path);
-	int error;
-
-	if (IS_ERR(s))
-		return PTR_ERR(s);
-
-	error = kern_path_parent(s, nd);
-	if (error)
-		putname(s);
-	else
-		*name = s;
-
-	return error;
-}
-
 /**
  * ocfs2_vfs_reflink - Create a reference-counted link
  *
@@ -4460,10 +4441,8 @@ int ocfs2_reflink_ioctl(struct inode *inode,
 			bool preserve)
 {
 	struct dentry *new_dentry;
-	struct nameidata nd;
-	struct path old_path;
+	struct path old_path, new_path;
 	int error;
-	char *to = NULL;
 
 	if (!ocfs2_refcount_tree(OCFS2_SB(inode->i_sb)))
 		return -EOPNOTSUPP;
@@ -4474,39 +4453,33 @@ int ocfs2_reflink_ioctl(struct inode *inode,
 		return error;
 	}
 
-	error = ocfs2_user_path_parent(newname, &nd, &to);
-	if (error) {
+	new_dentry = user_path_create(AT_FDCWD, newname, &new_path, 0);
+	error = PTR_ERR(new_dentry);
+	if (IS_ERR(new_dentry)) {
 		mlog_errno(error);
 		goto out;
 	}
 
 	error = -EXDEV;
-	if (old_path.mnt != nd.path.mnt)
-		goto out_release;
-	new_dentry = lookup_create(&nd, 0);
-	error = PTR_ERR(new_dentry);
-	if (IS_ERR(new_dentry)) {
+	if (old_path.mnt != new_path.mnt) {
 		mlog_errno(error);
-		goto out_unlock;
+		goto out_dput;
 	}
 
-	error = mnt_want_write(nd.path.mnt);
+	error = mnt_want_write(new_path.mnt);
 	if (error) {
 		mlog_errno(error);
 		goto out_dput;
 	}
 
 	error = ocfs2_vfs_reflink(old_path.dentry,
-				  nd.path.dentry->d_inode,
+				  new_path.dentry->d_inode,
 				  new_dentry, preserve);
-	mnt_drop_write(nd.path.mnt);
+	mnt_drop_write(new_path.mnt);
 out_dput:
 	dput(new_dentry);
-out_unlock:
-	mutex_unlock(&nd.path.dentry->d_inode->i_mutex);
-out_release:
-	path_put(&nd.path);
-	putname(to);
+	mutex_unlock(&new_path.dentry->d_inode->i_mutex);
+	path_put(&new_path);
 out:
 	path_put(&old_path);
 

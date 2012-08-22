@@ -20,7 +20,6 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
-#include <linux/pm_qos_params.h>
 
 #include <plat/clock.h>
 #include <plat/pi_mgr.h>

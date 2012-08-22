@@ -208,4 +208,13 @@ config A9_RETENTION_CSTATE
 	  results in A9 domain voltage being lowered, resulting in better
 	  power savings during idle.
 
+config KONA_SECURE_MONITOR_CALL
+	bool "Execute in non-secure mode using Kona secure monitor"
+	default y
+	help
+	  Select this option if you are running with a bootloader that
+	  has configured the ARM to run in non-secure mode and provides
+	  a secure monitor implementation to access secure registers
+	  and peripherals.
+
 endmenu

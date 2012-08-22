@@ -1,17 +1,16 @@
 /*
  * Android related remote wl declarations
  *
- * Copyright (C) 2011, Broadcom Corporation
+ * Copyright (C) 2012, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
  * the contents of this file may not be disclosed to third parties, copied
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
- * $Id: bcm_android_types.h 275703 2011-08-04 20:20:27Z $
+ * $Id: bcm_android_types.h 241182 2011-02-17 21:50:03Z $
  *
  */
-
 #ifndef _wlu_android_h
 #define _wlu_android_h
 #define  __fd_mask unsigned long

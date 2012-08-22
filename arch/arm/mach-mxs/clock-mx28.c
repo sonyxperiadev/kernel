@@ -22,6 +22,7 @@
 #include <linux/io.h>
 #include <linux/jiffies.h>
 #include <linux/clkdev.h>
+#include <linux/spinlock.h>
 
 #include <asm/clkdev.h>
 #include <asm/div64.h>
@@ -29,6 +30,7 @@
 #include <mach/mx28.h>
 #include <mach/common.h>
 #include <mach/clock.h>
+#include <mach/digctl.h>
 
 #include "regs-clkctrl-mx28.h"
 
@@ -43,6 +45,33 @@ static struct clk emi_clk;
 static struct clk saif0_clk;
 static struct clk saif1_clk;
 static struct clk clk32k_clk;
+static DEFINE_SPINLOCK(clkmux_lock);
+
+/*
+ * HW_SAIF_CLKMUX_SEL:
+ *  DIRECT(0x0): SAIF0 clock pins selected for SAIF0 input clocks, and SAIF1
+ *		clock pins selected for SAIF1 input clocks.
+ *  CROSSINPUT(0x1): SAIF1 clock inputs selected for SAIF0 input clocks, and
+ *		SAIF0 clock inputs selected for SAIF1 input clocks.
+ *  EXTMSTR0(0x2): SAIF0 clock pin selected for both SAIF0 and SAIF1 input
+ *		clocks.
+ *  EXTMSTR1(0x3): SAIF1 clock pin selected for both SAIF0 and SAIF1 input
+ *		clocks.
+ */
+int mxs_saif_clkmux_select(unsigned int clkmux)
+{
+	if (clkmux > 0x3)
+		return -EINVAL;
+
+	spin_lock(&clkmux_lock);
+	__raw_writel(BM_DIGCTL_CTRL_SAIF_CLKMUX,
+			DIGCTRL_BASE_ADDR + HW_DIGCTL_CTRL + MXS_CLR_ADDR);
+	__raw_writel(clkmux << BP_DIGCTL_CTRL_SAIF_CLKMUX,
+			DIGCTRL_BASE_ADDR + HW_DIGCTL_CTRL + MXS_SET_ADDR);
+	spin_unlock(&clkmux_lock);
+
+	return 0;
+}
 
 static int _raw_clk_enable(struct clk *clk)
 {
@@ -293,7 +322,6 @@ static int name##_set_rate(struct clk *clk, unsigned long rate)		\
 {									\
 	u32 reg, bm_busy, div_max, d, f, div, frac;			\
 	unsigned long diff, parent_rate, calc_rate;			\
-	int i;								\
 									\
 	div_max = BM_CLKCTRL_##dr##_DIV >> BP_CLKCTRL_##dr##_DIV;	\
 	bm_busy = BM_CLKCTRL_##dr##_BUSY;				\
@@ -349,7 +377,7 @@ static int name##_set_rate(struct clk *clk, unsigned long rate)		\
 									\
 		reg = __raw_readl(CLKCTRL_BASE_ADDR + HW_CLKCTRL_##fr);	\
 		reg &= ~BM_CLKCTRL_##fr##_##fs##FRAC;			\
-		reg |= frac;						\
+		reg |= frac << BP_CLKCTRL_##fr##_##fs##FRAC;		\
 		__raw_writel(reg, CLKCTRL_BASE_ADDR + HW_CLKCTRL_##fr);	\
 	}								\
 									\
@@ -367,16 +395,7 @@ static int name##_set_rate(struct clk *clk, unsigned long rate)		\
 	}								\
 	__raw_writel(reg, CLKCTRL_BASE_ADDR + HW_CLKCTRL_##dr);		\
 									\
-	for (i = 10000; i; i--)						\
-		if (!(__raw_readl(CLKCTRL_BASE_ADDR +			\
-			HW_CLKCTRL_##dr) & bm_busy))			\
-			break;						\
-	if (!i)	{							\
-		pr_err("%s: divider writing timeout\n", __func__);	\
-		return -ETIMEDOUT;					\
-	}								\
-									\
-	return 0;							\
+	return mxs_clkctrl_timeout(HW_CLKCTRL_##dr, bm_busy);		\
 }
 
 _CLK_SET_RATE(cpu_clk, CPU, FRAC0, CPU)
@@ -392,7 +411,6 @@ static int name##_set_rate(struct clk *clk, unsigned long rate)		\
 {									\
 	u32 reg, div_max, div;						\
 	unsigned long parent_rate;					\
-	int i;								\
 									\
 	parent_rate = clk_get_rate(clk->parent);			\
 	div_max = BM_CLKCTRL_##dr##_DIV >> BP_CLKCTRL_##dr##_DIV;	\
@@ -410,16 +428,7 @@ static int name##_set_rate(struct clk *clk, unsigned long rate)		\
 	}								\
 	__raw_writel(reg, CLKCTRL_BASE_ADDR + HW_CLKCTRL_##dr);		\
 									\
-	for (i = 10000; i; i--)						\
-		if (!(__raw_readl(CLKCTRL_BASE_ADDR +			\
-			HW_CLKCTRL_##dr) & BM_CLKCTRL_##dr##_BUSY))	\
-			break;						\
-	if (!i)	{							\
-		pr_err("%s: divider writing timeout\n", __func__);	\
-		return -ETIMEDOUT;					\
-	}								\
-									\
-	return 0;							\
+	return mxs_clkctrl_timeout(HW_CLKCTRL_##dr, BM_CLKCTRL_##dr##_BUSY);\
 }
 
 _CLK_SET_RATE1(xbus_clk, XBUS)
@@ -432,7 +441,6 @@ static int name##_set_rate(struct clk *clk, unsigned long rate)		\
 	u32 reg;							\
 	u64 lrate;							\
 	unsigned long parent_rate;					\
-	int i;								\
 									\
 	parent_rate = clk_get_rate(clk->parent);			\
 	if (rate > parent_rate)						\
@@ -448,18 +456,13 @@ static int name##_set_rate(struct clk *clk, unsigned long rate)		\
 	reg = __raw_readl(CLKCTRL_BASE_ADDR + HW_CLKCTRL_##rs);		\
 	reg &= ~BM_CLKCTRL_##rs##_DIV;					\
 	reg |= div << BP_CLKCTRL_##rs##_DIV;				\
+	if (reg & (1 << clk->enable_shift)) {				\
+		pr_err("%s: clock is gated\n", __func__);		\
+		return -EINVAL;						\
+	}								\
 	__raw_writel(reg, CLKCTRL_BASE_ADDR + HW_CLKCTRL_##rs);		\
 									\
-	for (i = 10000; i; i--)						\
-		if (!(__raw_readl(CLKCTRL_BASE_ADDR +			\
-			HW_CLKCTRL_##rs) & BM_CLKCTRL_##rs##_BUSY))	\
-			break;						\
-	if (!i) {							\
-		pr_err("%s: divider writing timeout\n", __func__);	\
-		return -ETIMEDOUT;					\
-	}								\
-									\
-	return 0;							\
+	return mxs_clkctrl_timeout(HW_CLKCTRL_##rs, BM_CLKCTRL_##rs##_BUSY);\
 }
 
 _CLK_SET_RATE_SAIF(saif0_clk, SAIF0)
@@ -614,6 +617,7 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK("duart", NULL, uart_clk)
 	_REGISTER_CLOCK("imx28-fec.0", NULL, fec_clk)
 	_REGISTER_CLOCK("imx28-fec.1", NULL, fec_clk)
+	_REGISTER_CLOCK("imx28-gpmi-nand", NULL, gpmi_clk)
 	_REGISTER_CLOCK("mxs-auart.0", NULL, uart_clk)
 	_REGISTER_CLOCK("mxs-auart.1", NULL, uart_clk)
 	_REGISTER_CLOCK("mxs-auart.2", NULL, uart_clk)
@@ -625,6 +629,8 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK("mxs-dma-apbx", NULL, xbus_clk)
 	_REGISTER_CLOCK("mxs-mmc.0", NULL, ssp0_clk)
 	_REGISTER_CLOCK("mxs-mmc.1", NULL, ssp1_clk)
+	_REGISTER_CLOCK("mxs-mmc.2", NULL, ssp2_clk)
+	_REGISTER_CLOCK("mxs-mmc.3", NULL, ssp3_clk)
 	_REGISTER_CLOCK("flexcan.0", NULL, can0_clk)
 	_REGISTER_CLOCK("flexcan.1", NULL, can1_clk)
 	_REGISTER_CLOCK(NULL, "usb0", usb0_clk)
@@ -640,12 +646,14 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK(NULL, "lradc", lradc_clk)
 	_REGISTER_CLOCK(NULL, "spdif", spdif_clk)
 	_REGISTER_CLOCK("imx28-fb", NULL, lcdif_clk)
+	_REGISTER_CLOCK("mxs-saif.0", NULL, saif0_clk)
+	_REGISTER_CLOCK("mxs-saif.1", NULL, saif1_clk)
 };
 
 static int clk_misc_init(void)
 {
 	u32 reg;
-	int i;
+	int ret;
 
 	/* Fix up parent per register setting */
 	reg = __raw_readl(CLKCTRL_BASE_ADDR + HW_CLKCTRL_CLKSEQ);
@@ -708,11 +716,11 @@ static int clk_misc_init(void)
 
 	/* SAIF has to use frac div for functional operation */
 	reg = __raw_readl(CLKCTRL_BASE_ADDR + HW_CLKCTRL_SAIF0);
-	reg &= ~BM_CLKCTRL_SAIF0_DIV_FRAC_EN;
+	reg |= BM_CLKCTRL_SAIF0_DIV_FRAC_EN;
 	__raw_writel(reg, CLKCTRL_BASE_ADDR + HW_CLKCTRL_SAIF0);
 
 	reg = __raw_readl(CLKCTRL_BASE_ADDR + HW_CLKCTRL_SAIF1);
-	reg &= ~BM_CLKCTRL_SAIF1_DIV_FRAC_EN;
+	reg |= BM_CLKCTRL_SAIF1_DIV_FRAC_EN;
 	__raw_writel(reg, CLKCTRL_BASE_ADDR + HW_CLKCTRL_SAIF1);
 
 	/*
@@ -725,24 +733,23 @@ static int clk_misc_init(void)
 	reg |= 3 << BP_CLKCTRL_HBUS_DIV;
 	__raw_writel(reg, CLKCTRL_BASE_ADDR + HW_CLKCTRL_HBUS);
 
-	for (i = 10000; i; i--)
-		if (!(__raw_readl(CLKCTRL_BASE_ADDR +
-			HW_CLKCTRL_HBUS) & BM_CLKCTRL_HBUS_ASM_BUSY))
-			break;
-	if (!i) {
-		pr_err("%s: divider writing timeout\n", __func__);
-		return -ETIMEDOUT;
-	}
+	ret = mxs_clkctrl_timeout(HW_CLKCTRL_HBUS, BM_CLKCTRL_HBUS_ASM_BUSY);
 
 	/* Gate off cpu clock in WFI for power saving */
 	__raw_writel(BM_CLKCTRL_CPU_INTERRUPT_WAIT,
 			CLKCTRL_BASE_ADDR + HW_CLKCTRL_CPU_SET);
 
-	/* Extra fec clock setting */
-	reg = __raw_readl(CLKCTRL_BASE_ADDR + HW_CLKCTRL_ENET);
-	reg &= ~BM_CLKCTRL_ENET_SLEEP;
-	reg |= BM_CLKCTRL_ENET_CLK_OUT_EN;
-	__raw_writel(reg, CLKCTRL_BASE_ADDR + HW_CLKCTRL_ENET);
+	/*
+	 * Extra fec clock setting
+	 * The DENX M28 uses an external clock source
+	 * and the clock output must not be enabled
+	 */
+	if (!machine_is_m28evk()) {
+		reg = __raw_readl(CLKCTRL_BASE_ADDR + HW_CLKCTRL_ENET);
+		reg &= ~BM_CLKCTRL_ENET_SLEEP;
+		reg |= BM_CLKCTRL_ENET_CLK_OUT_EN;
+		__raw_writel(reg, CLKCTRL_BASE_ADDR + HW_CLKCTRL_ENET);
+	}
 
 	/*
 	 * 480 MHz seems too high to be ssp clock source directly,
@@ -753,7 +760,7 @@ static int clk_misc_init(void)
 	reg |= 30 << BP_CLKCTRL_FRAC0_IO0FRAC;
 	__raw_writel(reg, CLKCTRL_BASE_ADDR + HW_CLKCTRL_FRAC0);
 
-	return 0;
+	return ret;
 }
 
 int __init mx28_clocks_init(void)
@@ -766,14 +773,27 @@ int __init mx28_clocks_init(void)
 	 */
 	clk_set_parent(&ssp0_clk, &ref_io0_clk);
 	clk_set_parent(&ssp1_clk, &ref_io0_clk);
+	clk_set_parent(&ssp2_clk, &ref_io1_clk);
+	clk_set_parent(&ssp3_clk, &ref_io1_clk);
 
-	clk_enable(&cpu_clk);
-	clk_enable(&hbus_clk);
-	clk_enable(&xbus_clk);
-	clk_enable(&emi_clk);
-	clk_enable(&uart_clk);
+	clk_prepare_enable(&cpu_clk);
+	clk_prepare_enable(&hbus_clk);
+	clk_prepare_enable(&xbus_clk);
+	clk_prepare_enable(&emi_clk);
+	clk_prepare_enable(&uart_clk);
 
 	clk_set_parent(&lcdif_clk, &ref_pix_clk);
+	clk_set_parent(&saif0_clk, &pll0_clk);
+	clk_set_parent(&saif1_clk, &pll0_clk);
+
+	/*
+	 * Set an initial clock rate for the saif internal logic to work
+	 * properly. This is important when working in EXTMASTER mode that
+	 * uses the other saif's BITCLK&LRCLK but it still needs a basic
+	 * clock which should be fast enough for the internal logic.
+	 */
+	clk_set_rate(&saif0_clk, 24000000);
+	clk_set_rate(&saif1_clk, 24000000);
 
 	clkdev_add_table(lookups, ARRAY_SIZE(lookups));
 

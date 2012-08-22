@@ -33,6 +33,7 @@
 #include <mach/gpio.h>
 #include <mach/rdb/brcm_rdb_gpio.h>
 #include <mach/io_map.h>
+#include <mach/memory.h>
 
 #define KONA_GPIO_PASSWD (0x00a5a501)
 #define GPIO_PER_BANK (32)

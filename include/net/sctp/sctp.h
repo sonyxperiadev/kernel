@@ -71,7 +71,7 @@
 #include <linux/jiffies.h>
 #include <linux/idr.h>
 
-#if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
+#if IS_ENABLED(CONFIG_IPV6)
 #include <net/ipv6.h>
 #include <net/ip6_route.h>
 #endif
@@ -120,6 +120,7 @@ extern int sctp_copy_local_addr_list(struct sctp_bind_addr *,
 				     int flags);
 extern struct sctp_pf *sctp_get_pf_specific(sa_family_t family);
 extern int sctp_register_pf(struct sctp_pf *, sa_family_t);
+extern void sctp_addr_wq_mgmt(struct sctp_sockaddr_entry *, int);
 
 /*
  * sctp/socket.c
@@ -134,6 +135,7 @@ void sctp_sock_rfree(struct sk_buff *skb);
 void sctp_copy_sock(struct sock *newsk, struct sock *sk,
 		    struct sctp_association *asoc);
 extern struct percpu_counter sctp_sockets_allocated;
+extern int sctp_asconf_mgmt(struct sctp_sock *, struct sctp_sockaddr_entry *);
 
 /*
  * sctp/primitive.c
@@ -285,20 +287,21 @@ do {							\
 		pr_cont(fmt, ##args);			\
 } while (0)
 #define SCTP_DEBUG_PRINTK_IPADDR(fmt_lead, fmt_trail,			\
-				 args_lead, saddr, args_trail...)	\
+				 args_lead, addr, args_trail...)	\
 do {									\
+	const union sctp_addr *_addr = (addr);				\
 	if (sctp_debug_flag) {						\
-		if (saddr->sa.sa_family == AF_INET6) {			\
+		if (_addr->sa.sa_family == AF_INET6) {			\
 			printk(KERN_DEBUG				\
 			       pr_fmt(fmt_lead "%pI6" fmt_trail),	\
 			       args_lead,				\
-			       &saddr->v6.sin6_addr,			\
+			       &_addr->v6.sin6_addr,			\
 			       args_trail);				\
 		} else {						\
 			printk(KERN_DEBUG				\
 			       pr_fmt(fmt_lead "%pI4" fmt_trail),	\
 			       args_lead,				\
-			       &saddr->v4.sin_addr.s_addr,		\
+			       &_addr->v4.sin_addr.s_addr,		\
 			       args_trail);				\
 		}							\
 	}								\
@@ -380,7 +383,7 @@ static inline void sctp_sysctl_unregister(void) { return; }
 /* Size of Supported Address Parameter for 'x' address types. */
 #define SCTP_SAT_LEN(x) (sizeof(struct sctp_paramhdr) + (x) * sizeof(__u16))
 
-#if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
+#if IS_ENABLED(CONFIG_IPV6)
 
 void sctp_v6_pf_init(void);
 void sctp_v6_pf_exit(void);
@@ -410,6 +413,7 @@ static inline sctp_assoc_t sctp_assoc2id(const struct sctp_association *asoc)
 /* Look up the association by its id.  */
 struct sctp_association *sctp_id2assoc(struct sock *sk, sctp_assoc_t id);
 
+int sctp_do_peeloff(struct sock *sk, sctp_assoc_t id, struct socket **sockp);
 
 /* A macro to walk a list of skbs.  */
 #define sctp_skb_for_each(pos, head, tmp) \
@@ -598,7 +602,7 @@ static inline int ipver2af(__u8 ipver)
 		return AF_INET6;
 	default:
 		return 0;
-	};
+	}
 }
 
 /* Convert from an address parameter type to an address family.  */
@@ -611,7 +615,7 @@ static inline int param_type2af(__be16 type)
 		return AF_INET6;
 	default:
 		return 0;
-	};
+	}
 }
 
 /* Perform some sanity checks. */
@@ -698,6 +702,19 @@ static inline void sctp_v4_map_v6(union sctp_addr *addr)
 	addr->v6.sin6_addr.s6_addr32[0] = 0;
 	addr->v6.sin6_addr.s6_addr32[1] = 0;
 	addr->v6.sin6_addr.s6_addr32[2] = htonl(0x0000ffff);
+}
+
+/* The cookie is always 0 since this is how it's used in the
+ * pmtu code.
+ */
+static inline struct dst_entry *sctp_transport_dst_check(struct sctp_transport *t)
+{
+	if (t->dst && !dst_check(t->dst, 0)) {
+		dst_release(t->dst);
+		t->dst = NULL;
+	}
+
+	return t->dst;
 }
 
 #endif /* __net_sctp_h__ */

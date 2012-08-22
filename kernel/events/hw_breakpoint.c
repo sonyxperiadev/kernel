@@ -431,9 +431,11 @@ int register_perf_hw_breakpoint(struct perf_event *bp)
 struct perf_event *
 register_user_hw_breakpoint(struct perf_event_attr *attr,
 			    perf_overflow_handler_t triggered,
+			    void *context,
 			    struct task_struct *tsk)
 {
-	return perf_event_create_kernel_counter(attr, -1, tsk, triggered);
+	return perf_event_create_kernel_counter(attr, -1, tsk, triggered,
+						context);
 }
 EXPORT_SYMBOL_GPL(register_user_hw_breakpoint);
 
@@ -502,7 +504,8 @@ EXPORT_SYMBOL_GPL(unregister_hw_breakpoint);
  */
 struct perf_event * __percpu *
 register_wide_hw_breakpoint(struct perf_event_attr *attr,
-			    perf_overflow_handler_t triggered)
+			    perf_overflow_handler_t triggered,
+			    void *context)
 {
 	struct perf_event * __percpu *cpu_events, **pevent, *bp;
 	long err;
@@ -515,7 +518,8 @@ register_wide_hw_breakpoint(struct perf_event_attr *attr,
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		pevent = per_cpu_ptr(cpu_events, cpu);
-		bp = perf_event_create_kernel_counter(attr, cpu, NULL, triggered);
+		bp = perf_event_create_kernel_counter(attr, cpu, NULL,
+						      triggered, context);
 
 		*pevent = bp;
 
@@ -577,6 +581,12 @@ static int hw_breakpoint_event_init(struct perf_event *bp)
 	if (bp->attr.type != PERF_TYPE_BREAKPOINT)
 		return -ENOENT;
 
+	/*
+	 * no branch sampling for breakpoint events
+	 */
+	if (has_branch_stack(bp))
+		return -EOPNOTSUPP;
+
 	err = register_perf_hw_breakpoint(bp);
 	if (err)
 		return err;
@@ -609,6 +619,11 @@ static void hw_breakpoint_stop(struct perf_event *bp, int flags)
 	bp->hw.state = PERF_HES_STOPPED;
 }
 
+static int hw_breakpoint_event_idx(struct perf_event *bp)
+{
+	return 0;
+}
+
 static struct pmu perf_breakpoint = {
 	.task_ctx_nr	= perf_sw_context, /* could eventually get its own */
 
@@ -618,6 +633,8 @@ static struct pmu perf_breakpoint = {
 	.start		= hw_breakpoint_start,
 	.stop		= hw_breakpoint_stop,
 	.read		= hw_breakpoint_pmu_read,
+
+	.event_idx	= hw_breakpoint_event_idx,
 };
 
 int __init init_hw_breakpoint(void)
@@ -647,10 +664,10 @@ int __init init_hw_breakpoint(void)
 
  err_alloc:
 	for_each_possible_cpu(err_cpu) {
-		if (err_cpu == cpu)
-			break;
 		for (i = 0; i < TYPE_MAX; i++)
 			kfree(per_cpu(nr_task_bp_pinned[i], cpu));
+		if (err_cpu == cpu)
+			break;
 	}
 
 	return -ENOMEM;

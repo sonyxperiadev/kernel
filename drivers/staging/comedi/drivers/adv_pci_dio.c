@@ -8,16 +8,16 @@
 /*
 Driver: adv_pci_dio
 Description: Advantech PCI-1730, PCI-1733, PCI-1734, PCI-1735U,
-	PCI-1736UP, PCI-1750, PCI-1751, PCI-1752, PCI-1753/E,
-	PCI-1754, PCI-1756, PCI-1762
+	PCI-1736UP, PCI-1739U, PCI-1750, PCI-1751, PCI-1752,
+	PCI-1753/E, PCI-1754, PCI-1756, PCI-1760, PCI-1762
 Author: Michal Dobes <dobes@tesnet.cz>
 Devices: [Advantech] PCI-1730 (adv_pci_dio), PCI-1733,
-  PCI-1734, PCI-1735U, PCI-1736UP, PCI-1750,
+  PCI-1734, PCI-1735U, PCI-1736UP, PCI-1739U, PCI-1750,
   PCI-1751, PCI-1752, PCI-1753,
   PCI-1753+PCI-1753E, PCI-1754, PCI-1756,
   PCI-1760, PCI-1762
 Status: untested
-Updated: Tue, 04 May 2010 13:00:00 +0000
+Updated: Mon, 09 Jan 2012 12:40:46 +0000
 
 This driver supports now only insn interface for DI/DO/DIO.
 
@@ -51,6 +51,7 @@ Configuration options:
 /* hardware types of the cards */
 enum hw_cards_id {
 	TYPE_PCI1730, TYPE_PCI1733, TYPE_PCI1734, TYPE_PCI1735, TYPE_PCI1736,
+	TYPE_PCI1739,
 	TYPE_PCI1750,
 	TYPE_PCI1751,
 	TYPE_PCI1752,
@@ -108,6 +109,12 @@ enum hw_io_access {
 #define PCI1736_3_INT_CLR       0x10	/* R/W: clear interrupts */
 #define PCI1736_BOARDID    4	/* R:   Board I/D switch for 1736UP */
 #define PCI1736_MAINREG    0	/* Normal register (2) doesn't work */
+
+/* Advantech PCI-1739U */
+#define PCI1739_DIO	   0	/* R/W: begin of 8255 registers block */
+#define PCI1739_ICR	  32	/* W:   Interrupt control register */
+#define PCI1739_ISR	  32	/* R:   Interrupt status register */
+#define PCI1739_BOARDID	   8    /* R:   Board I/D switch for 1739U */
 
 /*  Advantech PCI-1750 */
 #define PCI1750_IDI	   0	/* R:   Isolated digital input  0-15 */
@@ -262,6 +269,7 @@ static DEFINE_PCI_DEVICE_TABLE(pci_dio_pci_table) = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_ADVANTECH, 0x1734) },
 	{ PCI_DEVICE(PCI_VENDOR_ID_ADVANTECH, 0x1735) },
 	{ PCI_DEVICE(PCI_VENDOR_ID_ADVANTECH, 0x1736) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_ADVANTECH, 0x1739) },
 	{ PCI_DEVICE(PCI_VENDOR_ID_ADVANTECH, 0x1750) },
 	{ PCI_DEVICE(PCI_VENDOR_ID_ADVANTECH, 0x1751) },
 	{ PCI_DEVICE(PCI_VENDOR_ID_ADVANTECH, 0x1752) },
@@ -314,6 +322,14 @@ static const struct dio_boardtype boardtypes[] = {
 	 { {0, 0, 0, 0}, {16, PCI1736_IDO, 2, 0} },
 	 { {0, 0, 0, 0}, {0, 0, 0, 0} },
 	 {4, PCI1736_BOARDID, 1, SDF_INTERNAL},
+	 { {0, 0, 0, 0} },
+	 IO_8b},
+	{"pci1739", PCI_VENDOR_ID_ADVANTECH, 0x1739, PCIDIO_MAINREG,
+	 TYPE_PCI1739,
+	 { {0, 0, 0, 0}, {0, 0, 0, 0} },
+	 { {0, 0, 0, 0}, {0, 0, 0, 0} },
+	 { {48, PCI1739_DIO, 2, 0}, {0, 0, 0, 0} },
+	 {0, 0, 0, 0},
 	 { {0, 0, 0, 0} },
 	 IO_8b},
 	{"pci1750", PCI_VENDOR_ID_ADVANTECH, 0x1750, PCIDIO_MAINREG,
@@ -422,7 +438,7 @@ struct pci_dio_private {
 	unsigned short IDIFiltrHigh[8];	/*  IDI's filter value high signal */
 };
 
-static struct pci_dio_private *pci_priv = NULL;	/* list of allocated cards */
+static struct pci_dio_private *pci_priv;	/* list of allocated cards */
 
 #define devpriv ((struct pci_dio_private *)dev->private)
 #define this_board ((const struct dio_boardtype *)dev->board_ptr)
@@ -883,6 +899,11 @@ static int pci_dio_reset(struct comedi_device *dev)
 		outb(0, dev->iobase + PCI1736_3_INT_RF);
 		break;
 
+	case TYPE_PCI1739:
+		/* disable & clear interrupts */
+		outb(0x88, dev->iobase + PCI1739_ICR);
+		break;
+
 	case TYPE_PCI1750:
 	case TYPE_PCI1751:
 		/* disable & clear interrupts */
@@ -1106,13 +1127,10 @@ static int pci_dio_attach(struct comedi_device *dev,
 	unsigned long iobase;
 	struct pci_dev *pcidev = NULL;
 
-	printk("comedi%d: adv_pci_dio: ", dev->minor);
 
 	ret = alloc_private(dev, sizeof(struct pci_dio_private));
-	if (ret < 0) {
-		printk(", Error: Cann't allocate private memory!\n");
+	if (ret < 0)
 		return -ENOMEM;
-	}
 
 	for_each_pci_dev(pcidev) {
 		/*  loop through cards supported by this driver */
@@ -1140,19 +1158,18 @@ static int pci_dio_attach(struct comedi_device *dev,
 	}
 
 	if (!dev->board_ptr) {
-		printk(", Error: Requested type of the card was not found!\n");
+		dev_err(dev->hw_dev, "Error: Requested type of the card was not found!\n");
 		return -EIO;
 	}
 
 	if (comedi_pci_enable(pcidev, driver_pci_dio.driver_name)) {
-		printk
-		    (", Error: Can't enable PCI device and request regions!\n");
+		dev_err(dev->hw_dev, "Error: Can't enable PCI device and request regions!\n");
 		return -EIO;
 	}
 	iobase = pci_resource_start(pcidev, this_board->main_pci_region);
-	printk(", b:s:f=%d:%d:%d, io=0x%4lx",
-	       pcidev->bus->number, PCI_SLOT(pcidev->devfn),
-	       PCI_FUNC(pcidev->devfn), iobase);
+	dev_dbg(dev->hw_dev, "b:s:f=%d:%d:%d, io=0x%4lx\n",
+		pcidev->bus->number, PCI_SLOT(pcidev->devfn),
+		PCI_FUNC(pcidev->devfn), iobase);
 
 	dev->iobase = iobase;
 	dev->board_name = this_board->name;
@@ -1177,15 +1194,10 @@ static int pci_dio_attach(struct comedi_device *dev,
 	}
 
 	ret = alloc_subdevices(dev, n_subdevices);
-	if (ret < 0) {
-		printk(", Error: Cann't allocate subdevice memory!\n");
+	if (ret < 0)
 		return ret;
-	}
-
-	printk(".\n");
 
 	subdev = 0;
-
 	for (i = 0; i < MAX_DI_SUBDEVS; i++)
 		if (this_board->sdi[i].chans) {
 			s = dev->subdevices + subdev;

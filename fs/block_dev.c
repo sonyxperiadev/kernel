@@ -16,7 +16,9 @@
 #include <linux/blkdev.h>
 #include <linux/module.h>
 #include <linux/blkpg.h>
+#include <linux/magic.h>
 #include <linux/buffer_head.h>
+#include <linux/swap.h>
 #include <linux/pagevec.h>
 #include <linux/writeback.h>
 #include <linux/mpage.h>
@@ -24,7 +26,7 @@
 #include <linux/uio.h>
 #include <linux/namei.h>
 #include <linux/log2.h>
-#include <linux/kmemleak.h>
+#include <linux/cleancache.h>
 #include <asm/uaccess.h>
 #include "internal.h"
 
@@ -44,27 +46,31 @@ inline struct block_device *I_BDEV(struct inode *inode)
 {
 	return &BDEV_I(inode)->bdev;
 }
-
 EXPORT_SYMBOL(I_BDEV);
 
 /*
- * move the inode from it's current bdi to the a new bdi. if the inode is dirty
- * we need to move it onto the dirty list of @dst so that the inode is always
- * on the right list.
+ * Move the inode from its current bdi to a new bdi. If the inode is dirty we
+ * need to move it onto the dirty list of @dst so that the inode is always on
+ * the right list.
  */
 static void bdev_inode_switch_bdi(struct inode *inode,
 			struct backing_dev_info *dst)
 {
-	spin_lock(&inode_wb_list_lock);
+	struct backing_dev_info *old = inode->i_data.backing_dev_info;
+
+	if (unlikely(dst == old))		/* deadlock avoidance */
+		return;
+	bdi_lock_two(&old->wb, &dst->wb);
 	spin_lock(&inode->i_lock);
 	inode->i_data.backing_dev_info = dst;
 	if (inode->i_state & I_DIRTY)
 		list_move(&inode->i_wb_list, &dst->wb.b_dirty);
 	spin_unlock(&inode->i_lock);
-	spin_unlock(&inode_wb_list_lock);
+	spin_unlock(&old->wb.list_lock);
+	spin_unlock(&dst->wb.list_lock);
 }
 
-static sector_t max_block(struct block_device *bdev)
+sector_t blkdev_max_block(struct block_device *bdev)
 {
 	sector_t retval = ~((sector_t)0);
 	loff_t sz = i_size_read(bdev->bd_inode);
@@ -78,13 +84,35 @@ static sector_t max_block(struct block_device *bdev)
 }
 
 /* Kill _all_ buffers and pagecache , dirty or not.. */
-static void kill_bdev(struct block_device *bdev)
+void kill_bdev(struct block_device *bdev)
 {
-	if (bdev->bd_inode->i_mapping->nrpages == 0)
+	struct address_space *mapping = bdev->bd_inode->i_mapping;
+
+	if (mapping->nrpages == 0)
 		return;
+
 	invalidate_bh_lrus();
-	truncate_inode_pages(bdev->bd_inode->i_mapping, 0);
+	truncate_inode_pages(mapping, 0);
 }	
+EXPORT_SYMBOL(kill_bdev);
+
+/* Invalidate clean unused buffers and pagecache. */
+void invalidate_bdev(struct block_device *bdev)
+{
+	struct address_space *mapping = bdev->bd_inode->i_mapping;
+
+	if (mapping->nrpages == 0)
+		return;
+
+	invalidate_bh_lrus();
+	lru_add_drain_all();	/* make sure all lru add caches are flushed */
+	invalidate_mapping_pages(mapping, 0, -1);
+	/* 99% of the time, we don't need to flush the cleancache on the bdev.
+	 * But, for the strange corners, lets be cautious
+	 */
+	cleancache_invalidate_inode(mapping);
+}
+EXPORT_SYMBOL(invalidate_bdev);
 
 int set_blocksize(struct block_device *bdev, int size)
 {
@@ -135,7 +163,7 @@ static int
 blkdev_get_block(struct inode *inode, sector_t iblock,
 		struct buffer_head *bh, int create)
 {
-	if (iblock >= max_block(I_BDEV(inode))) {
+	if (iblock >= blkdev_max_block(I_BDEV(inode))) {
 		if (create)
 			return -EIO;
 
@@ -157,7 +185,7 @@ static int
 blkdev_get_blocks(struct inode *inode, sector_t iblock,
 		struct buffer_head *bh, int create)
 {
-	sector_t end_block = max_block(I_BDEV(inode));
+	sector_t end_block = blkdev_max_block(I_BDEV(inode));
 	unsigned long max_blocks = bh->b_size >> inode->i_blkbits;
 
 	if ((iblock + max_blocks) > end_block) {
@@ -355,42 +383,47 @@ static loff_t block_llseek(struct file *file, loff_t offset, int origin)
 	mutex_lock(&bd_inode->i_mutex);
 	size = i_size_read(bd_inode);
 
+	retval = -EINVAL;
 	switch (origin) {
-		case 2:
+		case SEEK_END:
 			offset += size;
 			break;
-		case 1:
+		case SEEK_CUR:
 			offset += file->f_pos;
+		case SEEK_SET:
+			break;
+		default:
+			goto out;
 	}
-	retval = -EINVAL;
 	if (offset >= 0 && offset <= size) {
 		if (offset != file->f_pos) {
 			file->f_pos = offset;
 		}
 		retval = offset;
 	}
+out:
 	mutex_unlock(&bd_inode->i_mutex);
 	return retval;
 }
 	
-int blkdev_fsync(struct file *filp, int datasync)
+int blkdev_fsync(struct file *filp, loff_t start, loff_t end, int datasync)
 {
 	struct inode *bd_inode = filp->f_mapping->host;
 	struct block_device *bdev = I_BDEV(bd_inode);
 	int error;
+	
+	error = filemap_write_and_wait_range(filp->f_mapping, start, end);
+	if (error)
+		return error;
 
 	/*
 	 * There is no need to serialise calls to blkdev_issue_flush with
 	 * i_mutex and doing so causes performance issues with concurrent
 	 * O_SYNC writers to a block device.
 	 */
-	mutex_unlock(&bd_inode->i_mutex);
-
 	error = blkdev_issue_flush(bdev, GFP_KERNEL, NULL);
 	if (error == -EOPNOTSUPP)
 		error = 0;
-
-	mutex_lock(&bd_inode->i_mutex);
 
 	return error;
 }
@@ -416,7 +449,6 @@ static void bdev_i_callback(struct rcu_head *head)
 	struct inode *inode = container_of(head, struct inode, i_rcu);
 	struct bdev_inode *bdi = BDEV_I(inode);
 
-	INIT_LIST_HEAD(&inode->i_dentry);
 	kmem_cache_free(bdev_cachep, bdi);
 }
 
@@ -475,7 +507,7 @@ static const struct super_operations bdev_sops = {
 static struct dentry *bd_mount(struct file_system_type *fs_type,
 	int flags, const char *dev_name, void *data)
 {
-	return mount_pseudo(fs_type, "bdev:", &bdev_sops, NULL, 0x62646576);
+	return mount_pseudo(fs_type, "bdev:", &bdev_sops, NULL, BDEVFS_MAGIC);
 }
 
 static struct file_system_type bd_type = {
@@ -484,12 +516,12 @@ static struct file_system_type bd_type = {
 	.kill_sb	= kill_anon_super,
 };
 
-struct super_block *blockdev_superblock __read_mostly;
+static struct super_block *blockdev_superblock __read_mostly;
 
 void __init bdev_cache_init(void)
 {
 	int err;
-	struct vfsmount *bd_mnt;
+	static struct vfsmount *bd_mnt;
 
 	bdev_cachep = kmem_cache_create("bdev_cache", sizeof(struct bdev_inode),
 			0, (SLAB_HWCACHE_ALIGN|SLAB_RECLAIM_ACCOUNT|
@@ -501,12 +533,7 @@ void __init bdev_cache_init(void)
 	bd_mnt = kern_mount(&bd_type);
 	if (IS_ERR(bd_mnt))
 		panic("Cannot create bdev pseudo-fs");
-	/*
-	 * This vfsmount structure is only used to obtain the
-	 * blockdev_superblock, so tell kmemleak not to report it.
-	 */
-	kmemleak_not_leak(bd_mnt);
-	blockdev_superblock = bd_mnt->mnt_sb;	/* For writeback */
+	blockdev_superblock = bd_mnt->mnt_sb;   /* For writeback */
 }
 
 /*
@@ -547,6 +574,7 @@ struct block_device *bdget(dev_t dev)
 
 	if (inode->i_state & I_NEW) {
 		bdev->bd_contains = NULL;
+		bdev->bd_super = NULL;
 		bdev->bd_inode = inode;
 		bdev->bd_block_size = (1 << inode->i_blkbits);
 		bdev->bd_part_count = 0;
@@ -627,6 +655,11 @@ static struct block_device *bd_acquire(struct inode *inode)
 		spin_unlock(&bdev_lock);
 	}
 	return bdev;
+}
+
+static inline int sb_is_blkdev_sb(struct super_block *sb)
+{
+	return sb == blockdev_superblock;
 }
 
 /* Call when you free inode */
@@ -961,7 +994,7 @@ static void flush_disk(struct block_device *bdev, bool kill_dirty)
 
 	if (!bdev->bd_disk)
 		return;
-	if (disk_partitionable(bdev->bd_disk))
+	if (disk_part_scan_enabled(bdev->bd_disk))
 		bdev->bd_invalidated = 1;
 }
 
@@ -1107,6 +1140,7 @@ static int __blkdev_get(struct block_device *bdev, fmode_t mode, int for_part)
 	mutex_lock_nested(&bdev->bd_mutex, for_part);
 	if (!bdev->bd_openers) {
 		bdev->bd_disk = disk;
+		bdev->bd_queue = disk->queue;
 		bdev->bd_contains = bdev;
 		if (!partno) {
 			struct backing_dev_info *bdi;
@@ -1127,6 +1161,7 @@ static int __blkdev_get(struct block_device *bdev, fmode_t mode, int for_part)
 					disk_put_part(bdev->bd_part);
 					bdev->bd_part = NULL;
 					bdev->bd_disk = NULL;
+					bdev->bd_queue = NULL;
 					mutex_unlock(&bdev->bd_mutex);
 					disk_unblock_events(disk);
 					put_disk(disk);
@@ -1208,6 +1243,7 @@ static int __blkdev_get(struct block_device *bdev, fmode_t mode, int for_part)
 	disk_put_part(bdev->bd_part);
 	bdev->bd_disk = NULL;
 	bdev->bd_part = NULL;
+	bdev->bd_queue = NULL;
 	bdev_inode_switch_bdi(bdev->bd_inode, &default_backing_dev_info);
 	if (bdev != bdev->bd_contains)
 		__blkdev_put(bdev->bd_contains, mode, 1);
@@ -1461,6 +1497,8 @@ static int __blkdev_put(struct block_device *bdev, fmode_t mode, int for_part)
 
 int blkdev_put(struct block_device *bdev, fmode_t mode)
 {
+	mutex_lock(&bdev->bd_mutex);
+
 	if (mode & FMODE_EXCL) {
 		bool bdev_free;
 
@@ -1469,7 +1507,6 @@ int blkdev_put(struct block_device *bdev, fmode_t mode)
 		 * are protected with bdev_lock.  bd_mutex is to
 		 * synchronize disk_holder unlinking.
 		 */
-		mutex_lock(&bdev->bd_mutex);
 		spin_lock(&bdev_lock);
 
 		WARN_ON_ONCE(--bdev->bd_holders < 0);
@@ -1487,16 +1524,20 @@ int blkdev_put(struct block_device *bdev, fmode_t mode)
 		 * If this was the last claim, remove holder link and
 		 * unblock evpoll if it was a write holder.
 		 */
-		if (bdev_free) {
-			if (bdev->bd_write_holder) {
-				disk_unblock_events(bdev->bd_disk);
-				disk_check_events(bdev->bd_disk);
-				bdev->bd_write_holder = false;
-			}
+		if (bdev_free && bdev->bd_write_holder) {
+			disk_unblock_events(bdev->bd_disk);
+			bdev->bd_write_holder = false;
 		}
-
-		mutex_unlock(&bdev->bd_mutex);
 	}
+
+	/*
+	 * Trigger event checking and tell drivers to flush MEDIA_CHANGE
+	 * event.  This is to ensure detection of media removal commanded
+	 * from userland - e.g. eject(1).
+	 */
+	disk_flush_events(bdev->bd_disk, DISK_EVENT_MEDIA_CHANGE);
+
+	mutex_unlock(&bdev->bd_mutex);
 
 	return __blkdev_put(bdev, mode, 0);
 }

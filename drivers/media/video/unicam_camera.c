@@ -124,9 +124,9 @@ static struct unicam_camera_buffer *to_unicam_camera_vb(struct vb2_buffer *vb)
 
 /* videobuf operations */
 
-static int unicam_videobuf_setup(struct vb2_queue *vq,
+static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 				 unsigned int *count, unsigned int *numplanes,
-				 unsigned long sizes[], void *alloc_ctxs[])
+				 unsigned int sizes[], void *alloc_ctxs[])
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vq);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
@@ -151,7 +151,7 @@ static int unicam_videobuf_setup(struct vb2_queue *vq,
 	if (!*count)
 		*count = 2;
 
-	iprintk("no_of_buf=%d size=%lu", *count, sizes[0]);
+	iprintk("no_of_buf=%d size=%u", *count, sizes[0]);
 
 	dprintk("-exit");
 	return 0;
@@ -170,7 +170,7 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 		return bytes_per_line;
 
 	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p, size=%lu", vb,
-		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_paddr(vb,
+		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
 									   0),
 		vb2_get_plane_payload(vb, 0));
 
@@ -209,7 +209,7 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 		return -ENOMEM;
 	}
 
-	phys_addr = vb2_dma_contig_plane_paddr(unicam_dev->active, 0);
+	phys_addr = vb2_dma_contig_plane_dma_addr(unicam_dev->active, 0);
 
 	dprintk("updating buffer phys=0x%p", (void *)phys_addr);
 
@@ -376,7 +376,7 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 
 	dprintk("-enter");
 	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,
-		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_paddr(vb,
+		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
 									   0),
 		vb2_get_plane_payload(vb, 0));
 
@@ -386,10 +386,15 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 	if (!unicam_dev->active) {
 		unicam_dev->active = vb;
 		/* use this buffer to trigger capture */
-		unicam_camera_update_buf(unicam_dev);
-		if (unicam_dev->if_params.if_mode ==
-			V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)
-			unicam_camera_capture(unicam_dev);
+		/* Configure HW only is streamon has been done
+		 * else only update active, HW would be configured
+		 * by streamon  */
+		if(unicam_dev->streaming){
+			unicam_camera_update_buf(unicam_dev);
+			if (unicam_dev->if_params.if_mode ==
+				V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)
+				unicam_camera_capture(unicam_dev);
+		}
 	}
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	dprintk("-exit");
@@ -406,7 +411,7 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 	dprintk("-enter");
 
 	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,
-		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_paddr(vb,
+		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
 									   0),
 		vb2_get_plane_payload(vb, 0));
 	spin_lock_irqsave(&unicam_dev->lock, flags);
@@ -426,7 +431,7 @@ static int unicam_videobuf_init(struct vb2_buffer *vb)
 	return 0;
 }
 
-int unicam_videobuf_start_streaming(struct vb2_queue *q)
+int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(q);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
@@ -657,6 +662,13 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 			return -1;
 		}
 
+	}
+	/* Configure HW if buffer is queued ahead of streamon */
+	if(unicam_dev->active){
+		unicam_camera_update_buf(unicam_dev);
+		if (unicam_dev->if_params.if_mode ==
+			V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)
+			unicam_camera_capture(unicam_dev);
 	}
 	unicam_dev->streaming = 1;
 	dprintk("-exit");

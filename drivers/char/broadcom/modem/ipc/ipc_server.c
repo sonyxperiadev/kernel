@@ -50,6 +50,7 @@
 #include "ipcinterface.h"
 
 #include <mach/comms/platform_mconfig.h>
+#include <mach/memory.h>
 
 #include <mach/io_map.h>
 /* for BINTC register offsets */

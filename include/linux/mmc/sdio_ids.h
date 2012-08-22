@@ -2,8 +2,8 @@
  * SDIO Classes, Interface Types, Manufacturer IDs, etc.
  */
 
-#ifndef MMC_SDIO_IDS_H
-#define MMC_SDIO_IDS_H
+#ifndef LINUX_MMC_SDIO_IDS_H
+#define LINUX_MMC_SDIO_IDS_H
 
 /*
  * Standard SDIO Function Interfaces
@@ -49,4 +49,4 @@
 #define SDIO_DEVICE_ID_BROADCOM_4325            0x0000
 #endif
 
-#endif
+#endif /* LINUX_MMC_SDIO_IDS_H */

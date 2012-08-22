@@ -18,7 +18,7 @@
 *.so
 *.so.dbg
 *.mod.c
-#*.i
+*.i
 *.lst
 *.symtypes
 *.order
@@ -32,7 +32,6 @@ modules.builtin
 *.lzo
 *.patch
 *.gcno
-*.backup
 
 #
 # Top-level generic files
@@ -47,6 +46,11 @@ modules.builtin
 /Module.symvers
 
 #
+# Debian directory (make deb-pkg)
+#
+/debian/
+
+#
 # git files that we don't want to ignore even it they are dot-files
 #
 !.gitignore
@@ -55,23 +59,10 @@ modules.builtin
 #
 # Generated include files
 #
-include/asm
-include/asm-*/asm-offsets.h
-include/asm-*/mach-types.h
 include/config
 include/linux/version.h
 include/generated
 arch/*/include/generated
-include/asm-*/mach-types.h
-include/linux/autoconf.h
-include/linux/compile.h
-include/linux/utsrelease.h
-include/linux/bounds.h
-
-#
-# Generated script/host tool
-#
-scripts/basic/hash
 
 # stgit generated dirs
 patches-*
@@ -92,17 +83,8 @@ GTAGS
 
 *.orig
 *~
-#*#
+\#*#
 
-#brcm
-initramfs
-vcos_version.c
-bcm-kernel-build
-bcm-kernel-headers
-
-#brcm - only for rhea to support multiple rdb
-#arch/arm/mach-rhea/include/mach/rdb is a soft link
-#the appropriate rdb version. So do not include this in git
 arch/arm/mach-rhea/include/mach/rdb
 arch/arm/mach-hawaii/include/mach/rdb
 

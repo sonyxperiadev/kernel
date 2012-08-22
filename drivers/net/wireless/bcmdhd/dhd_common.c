@@ -1,9 +1,9 @@
 /*
  * Broadcom Dongle Host Driver (DHD), common DHD core.
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_common.c 322672 2012-03-21 09:40:01Z $
+ * $Id: dhd_common.c 321870 2012-03-17 00:43:35Z $
  */
 #include <typedefs.h>
 #include <osl.h>
@@ -44,12 +44,21 @@
 #ifdef WL_CFG80211
 #include <wl_cfg80211.h>
 #endif
+#ifdef WLBTAMP
 #include <proto/bt_amp_hci.h>
 #include <dhd_bta.h>
+#endif
 #ifdef SET_RANDOM_MAC_SOFTAP
 #include <linux/random.h>
 #include <linux/jiffies.h>
 #endif
+
+#define htod32(i) i
+#define htod16(i) i
+#define dtoh32(i) i
+#define dtoh16(i) i
+#define htodchanspec(i) i
+#define dtohchanspec(i) i
 
 #ifdef PROP_TXSTATUS
 #include <wlfc_proto.h>
@@ -78,10 +87,6 @@ uint32 dhd_conn_event;
 uint32 dhd_conn_status;
 uint32 dhd_conn_reason;
 
-#define htod32(i) i
-#define htod16(i) i
-#define dtoh32(i) i
-#define dtoh16(i) i
 extern int dhd_iscan_request(void * dhdp, uint16 action);
 extern void dhd_ind_scan_confirm(void *h, bool status);
 extern int dhd_iscan_in_progress(void *h);
@@ -115,8 +120,10 @@ enum {
 	IOV_LOGSTAMP,
 	IOV_GPIOOB,
 	IOV_IOCTLTIMEOUT,
+#ifdef WLBTAMP
 	IOV_HCI_CMD,		/* HCI command */
 	IOV_HCI_ACL_DATA,	/* HCI data packet */
+#endif
 #if defined(DHD_DEBUG)
 	IOV_CONS,
 	IOV_DCONSOLE_POLL,
@@ -130,6 +137,7 @@ enum {
 	IOV_WLPKTDLYSTAT_SZ,
 #endif
 	IOV_CHANGEMTU,
+	IOV_HOSTREORDER_FLOWS,
 	IOV_LAST
 };
 
@@ -149,8 +157,10 @@ const bcm_iovar_t dhd_iovars[] = {
 	{"clearcounts", IOV_CLEARCOUNTS, 0, IOVT_VOID,	0 },
 	{"gpioob",	IOV_GPIOOB,	0,	IOVT_UINT32,	0 },
 	{"ioctl_timeout",	IOV_IOCTLTIMEOUT,	0,	IOVT_UINT32,	0 },
+#ifdef WLBTAMP
 	{"HCI_cmd",	IOV_HCI_CMD,	0,	IOVT_BUFFER,	0},
 	{"HCI_ACL_data", IOV_HCI_ACL_DATA, 0,	IOVT_BUFFER,	0},
+#endif
 #ifdef PROP_TXSTATUS
 	{"proptx",	IOV_PROPTXSTATUS_ENABLE,	0,	IOVT_UINT32,	0 },
 	/*
@@ -166,28 +176,14 @@ const bcm_iovar_t dhd_iovars[] = {
 	{"pktdlystatsz", IOV_WLPKTDLYSTAT_SZ, 0, IOVT_UINT8, 0 },
 #endif
 	{"changemtu", IOV_CHANGEMTU, 0, IOVT_UINT32, 0 },
+	{"host_reorder_flows", IOV_HOSTREORDER_FLOWS, 0, IOVT_BUFFER,
+	(WLHOST_REORDERDATA_MAXFLOWS + 1) },
 	{NULL, 0, 0, 0, 0 }
 };
 
-struct dhd_cmn *
+void
 dhd_common_init(osl_t *osh)
 {
-	dhd_cmn_t *cmn;
-
-	/* Init global variables at run-time, not as part of the declaration.
-	 * This is required to support init/de-init of the driver. Initialization
-	 * of globals as part of the declaration results in non-deterministic
-	 * behavior since the value of the globals may be different on the
-	 * first time that the driver is initialized vs subsequent initializations.
-	 */
-	/* Allocate private bus interface state */
-	if (!(cmn = MALLOC(osh, sizeof(dhd_cmn_t)))) {
-		DHD_ERROR(("%s: MALLOC failed\n", __FUNCTION__));
-		return NULL;
-	}
-	memset(cmn, 0, sizeof(dhd_cmn_t));
-	cmn->osh = osh;
-
 #ifdef CONFIG_BCMDHD_FW_PATH
 	bcm_strncpy_s(fw_path, sizeof(fw_path), CONFIG_BCMDHD_FW_PATH, MOD_PARAM_PATHLEN-1);
 #else /* CONFIG_BCMDHD_FW_PATH */
@@ -201,28 +197,6 @@ dhd_common_init(osl_t *osh)
 #ifdef SOFTAP
 	fw_path2[0] = '\0';
 #endif
-	return cmn;
-}
-
-void
-dhd_common_deinit(dhd_pub_t *dhd_pub, dhd_cmn_t *sa_cmn)
-{
-	osl_t *osh;
-	dhd_cmn_t *cmn;
-
-	if (dhd_pub != NULL)
-		cmn = dhd_pub->cmn;
-	else
-		cmn = sa_cmn;
-
-	if (!cmn)
-		return;
-
-	osh = cmn->osh;
-
-	if (dhd_pub != NULL)
-	dhd_pub->cmn = NULL;
-	MFREE(osh, cmn, sizeof(dhd_cmn_t));
 }
 
 static int
@@ -430,6 +404,7 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 		break;
 	}
 
+#ifdef WLBTAMP
 	case IOV_SVAL(IOV_HCI_CMD): {
 		amp_hci_cmd_t *cmd = (amp_hci_cmd_t *)arg;
 
@@ -459,6 +434,7 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 		dhd_bta_tx_hcidata(dhd_pub, ACL_data, len);
 		break;
 	}
+#endif /* WLBTAMP */
 
 #ifdef PROP_TXSTATUS
 	case IOV_GVAL(IOV_PROPTXSTATUS_ENABLE):
@@ -512,6 +488,25 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 		int_val &= 0xffff;
 		bcmerror = dhd_change_mtu(dhd_pub, int_val, 0);
 		break;
+
+	case IOV_GVAL(IOV_HOSTREORDER_FLOWS):
+	{
+		uint i = 0;
+		uint8 *ptr = (uint8 *)arg;
+		uint8 count = 0;
+
+		ptr++;
+		for (i = 0; i < WLHOST_REORDERDATA_MAXFLOWS; i++) {
+			if (dhd_pub->reorder_bufs[i] != NULL) {
+				*ptr = dhd_pub->reorder_bufs[i]->flow_id;
+				ptr++;
+				count++;
+			}
+		}
+		ptr = (uint8 *)arg;
+		*ptr = count;
+		break;
+	}
 
 	default:
 		bcmerror = BCME_UNSUPPORTED;
@@ -734,6 +729,7 @@ wl_show_host_event(wl_event_msg_t *event, void *event_data)
 	flags = ntoh16(event->flags);
 	status = ntoh32(event->status);
 	reason = ntoh32(event->reason);
+	BCM_REFERENCE(reason);
 	auth_type = ntoh32(event->auth_type);
 	datalen = ntoh32(event->datalen);
 
@@ -813,6 +809,7 @@ wl_show_host_event(wl_event_msg_t *event, void *event_data)
 			DHD_EVENT(("MACEVENT: %s, MAC %s, %s, FAILURE, reason %d\n",
 			       event_name, eabuf, auth_str, (int)reason));
 		}
+		BCM_REFERENCE(auth_str);
 
 		break;
 
@@ -843,11 +840,14 @@ wl_show_host_event(wl_event_msg_t *event, void *event_data)
 
 	case WLC_E_LINK:
 		DHD_EVENT(("MACEVENT: %s %s\n", event_name, link?"UP":"DOWN"));
+		BCM_REFERENCE(link);
 		break;
 
 	case WLC_E_MIC_ERROR:
 		DHD_EVENT(("MACEVENT: %s, MAC %s, Group %d, Flush %d\n",
 		       event_name, eabuf, group, flush_txq));
+		BCM_REFERENCE(group);
+		BCM_REFERENCE(flush_txq);
 		break;
 
 	case WLC_E_ICV_ERROR:
@@ -862,6 +862,8 @@ wl_show_host_event(wl_event_msg_t *event, void *event_data)
 		break;
 
 	case WLC_E_SCAN_COMPLETE:
+	case WLC_E_ASSOC_REQ_IE:
+	case WLC_E_ASSOC_RESP_IE:
 	case WLC_E_PMKID_CACHE:
 		DHD_EVENT(("MACEVENT: %s\n", event_name));
 		break;
@@ -966,7 +968,7 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 	/* check whether packet is a BRCM event pkt */
 	bcm_event_t *pvt_data = (bcm_event_t *)pktdata;
 	uint8 *event_data;
-	uint32 type, status, reason, datalen;
+	uint32 type, status, datalen;
 	uint16 flags;
 	int evlen;
 
@@ -990,7 +992,6 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 	type = ntoh32_ua((void *)&event->event_type);
 	flags = ntoh16_ua((void *)&event->flags);
 	status = ntoh32_ua((void *)&event->status);
-	reason = ntoh32_ua((void *)&event->reason);
 	datalen = ntoh32_ua((void *)&event->datalen);
 	evlen = datalen + sizeof(bcm_event_t);
 
@@ -1008,26 +1009,31 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 
 	case WLC_E_IF:
 		{
-			dhd_if_event_t *ifevent = (dhd_if_event_t *)event_data;
+		dhd_if_event_t *ifevent = (dhd_if_event_t *)event_data;
 #ifdef PROP_TXSTATUS
 			{
-				uint8* ea = pvt_data->eth.ether_dhost;
-				WLFC_DBGMESG(("WLC_E_IF: idx:%d, action:%s, iftype:%s, "
-						"[%02x:%02x:%02x:%02x:%02x:%02x]\n",
-						ifevent->ifidx,
-						((ifevent->action == WLC_E_IF_ADD) ? "ADD":"DEL"),
-						((ifevent->is_AP == 0) ? "STA":"AP "),
-						ea[0], ea[1], ea[2], ea[3], ea[4], ea[5]));
-				(void)ea;
+		uint8* ea = pvt_data->eth.ether_dhost;
+		WLFC_DBGMESG(("WLC_E_IF: idx:%d, action:%s, iftype:%s, "
+		              "[%02x:%02x:%02x:%02x:%02x:%02x]\n",
+		              ifevent->ifidx,
+		              ((ifevent->action == WLC_E_IF_ADD) ? "ADD":"DEL"),
+		              ((ifevent->is_AP == 0) ? "STA":"AP "),
+		              ea[0], ea[1], ea[2], ea[3], ea[4], ea[5]));
+		(void)ea;
+		if (ifevent->action == WLC_E_IF_CHANGE)
+			dhd_wlfc_interface_event(dhd_pub->info,
+				eWLFC_MAC_ENTRY_ACTION_UPDATE,
+				ifevent->ifidx, ifevent->is_AP, ea);
+		else
+			dhd_wlfc_interface_event(dhd_pub->info,
+				((ifevent->action == WLC_E_IF_ADD) ?
+				eWLFC_MAC_ENTRY_ACTION_ADD : eWLFC_MAC_ENTRY_ACTION_DEL),
+				ifevent->ifidx, ifevent->is_AP, ea);
 
-				dhd_wlfc_interface_event(dhd_pub->info,
-					((ifevent->action == WLC_E_IF_ADD) ?
-					eWLFC_MAC_ENTRY_ACTION_ADD : eWLFC_MAC_ENTRY_ACTION_DEL),
-					ifevent->ifidx, ifevent->is_AP, ea);
 
-				/* dhd already has created an interface by default, for 0 */
-				if (ifevent->ifidx == 0)
-					break;
+		/* dhd already has created an interface by default, for 0 */
+		if (ifevent->ifidx == 0)
+			break;
 			}
 #endif /* PROP_TXSTATUS */
 
@@ -1041,7 +1047,7 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 				return (BCME_OK);
 			}
 #endif /* WL_CFG80211 */
-				if (ifevent->ifidx > 0 && ifevent->ifidx < DHD_MAX_IFS) {
+		if (ifevent->ifidx > 0 && ifevent->ifidx < DHD_MAX_IFS) {
 					if (ifevent->action == WLC_E_IF_ADD) {
 						if (dhd_add_if(dhd_pub->info, ifevent->ifidx,
 							NULL, event->ifname,
@@ -1055,8 +1061,8 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 							return (BCME_ERROR);
 						}
 					}
-			else
-				dhd_del_if(dhd_pub->info, ifevent->ifidx);
+					else if (ifevent->action == WLC_E_IF_DEL)
+						dhd_del_if(dhd_pub->info, ifevent->ifidx);
 		} else {
 #ifndef PROP_TXSTATUS
 			DHD_ERROR(("%s: Invalid ifidx %d for %s\n",
@@ -1068,7 +1074,7 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 			*ifidx = dhd_ifname2idx(dhd_pub->info, event->ifname);
 			/* push up to external supp/auth */
 			dhd_event(dhd_pub->info, (char *)pvt_data, evlen, *ifidx);
-			break;
+		break;
 
 
 #ifdef WLMEDIA_HTSF
@@ -1076,12 +1082,17 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 		htsf_update(dhd_pub->info, event_data);
 		break;
 #endif /* WLMEDIA_HTSF */
+#if defined(NDIS630)
+	case WLC_E_NDIS_LINK:
+		break;
+#else /* defined(NDIS630) && defined(BCMDONGLEHOST) */
 	case WLC_E_NDIS_LINK: {
 		uint32 temp = hton32(WLC_E_LINK);
 
 		memcpy((void *)(&pvt_data->event.event_type), &temp,
 		       sizeof(pvt_data->event.event_type));
 	}
+#endif 
 		/* These are what external supplicant/authenticator wants */
 		/* fall through */
 	case WLC_E_LINK:
@@ -1098,6 +1109,8 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 		dhd_event(dhd_pub->info, (char *)pvt_data, evlen, *ifidx);
 		DHD_TRACE(("%s: MAC event %d, flags %x, status %x\n",
 		           __FUNCTION__, type, flags, status));
+		BCM_REFERENCE(flags);
+		BCM_REFERENCE(status);
 
 		/* put it back to WLC_E_NDIS_LINK */
 		if (type == WLC_E_NDIS_LINK) {
@@ -1486,7 +1499,7 @@ int
 dhd_arp_get_arp_hostip_table(dhd_pub_t *dhd, void *buf, int buflen)
 {
 	int retcode, i;
-	int iov_len = 0;
+	int iov_len;
 	uint32 *ptr32 = buf;
 	bool clr_bottom = FALSE;
 
@@ -1494,6 +1507,7 @@ dhd_arp_get_arp_hostip_table(dhd_pub_t *dhd, void *buf, int buflen)
 		return -1;
 
 	iov_len = bcm_mkiovar("arp_hostip", 0, 0, buf, buflen);
+	BCM_REFERENCE(iov_len);
 	retcode = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, buf, buflen, FALSE, 0);
 
 	if (retcode) {
@@ -1523,8 +1537,10 @@ void
 dhd_sendup_event_common(dhd_pub_t *dhdp, wl_event_msg_t *event, void *data)
 {
 	switch (ntoh32(event->event_type)) {
+#ifdef WLBTAMP
 	case WLC_E_BTA_HCI_EVENT:
 		break;
+#endif /* WLBTAMP */
 	default:
 		break;
 	}
@@ -1812,15 +1828,29 @@ exit:
 bool dhd_check_ap_wfd_mode_set(dhd_pub_t *dhd)
 {
 #ifdef  WL_CFG80211
+#ifndef WL_ENABLE_P2P_IF
+	/* To be back compatble with ICS MR1 release where p2p interface
+	 * disable but wlan0 used for p2p
+	 */
 	if (((dhd->op_mode & HOSTAPD_MASK) == HOSTAPD_MASK) ||
-		((dhd->op_mode & WFD_MASK) == WFD_MASK))
+		((dhd->op_mode & WFD_MASK) == WFD_MASK)) {
 		return TRUE;
+	}
 	else
+#else
+	/* concurent mode with p2p interface for wfd and wlan0 for sta */
+	if (((dhd->op_mode & P2P_GO_ENABLED) == P2P_GO_ENABLED) ||
+		((dhd->op_mode & P2P_GC_ENABLED) == P2P_GC_ENABLED)) {
+		DHD_ERROR(("%s P2P enabled for  mode=%d\n", __FUNCTION__, dhd->op_mode));
+		return TRUE;
+	}
+	else
+#endif /* WL_ENABLE_P2P_IF */
 #endif /* WL_CFG80211 */
 		return FALSE;
 }
 
-#ifdef PNO_SUPPORT
+#if defined(PNO_SUPPORT)
 int
 dhd_pno_clean(dhd_pub_t *dhd)
 {
@@ -2015,7 +2045,7 @@ dhd_pno_get_status(dhd_pub_t *dhd)
 		return (dhd->pno_enable);
 }
 
-#endif /* PNO_SUPPORT */
+#endif /* OEM_ANDROID && PNO_SUPPORT */
 
 #if defined(KEEP_ALIVE)
 int dhd_keep_alive_onoff(dhd_pub_t *dhd)

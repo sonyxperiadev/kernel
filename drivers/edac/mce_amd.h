@@ -69,12 +69,12 @@ enum rrrr_ids {
 	R4_SNOOP,
 };
 
-extern const char *tt_msgs[];
-extern const char *ll_msgs[];
-extern const char *rrrr_msgs[];
-extern const char *pp_msgs[];
-extern const char *to_msgs[];
-extern const char *ii_msgs[];
+extern const char * const tt_msgs[];
+extern const char * const ll_msgs[];
+extern const char * const rrrr_msgs[];
+extern const char * const pp_msgs[];
+extern const char * const to_msgs[];
+extern const char * const ii_msgs[];
 
 /*
  * per-family decoder ops
@@ -82,13 +82,12 @@ extern const char *ii_msgs[];
 struct amd_decoder_ops {
 	bool (*dc_mce)(u16, u8);
 	bool (*ic_mce)(u16, u8);
-	bool (*nb_mce)(u16, u8);
 };
 
 void amd_report_gart_errors(bool);
-void amd_register_ecc_decoder(void (*f)(int, struct mce *, u32));
-void amd_unregister_ecc_decoder(void (*f)(int, struct mce *, u32));
-void amd_decode_nb_mce(int, struct mce *, u32);
+void amd_register_ecc_decoder(void (*f)(int, struct mce *));
+void amd_unregister_ecc_decoder(void (*f)(int, struct mce *));
+void amd_decode_nb_mce(struct mce *);
 int amd_decode_mce(struct notifier_block *nb, unsigned long val, void *data);
 
 #endif /* _EDAC_MCE_AMD_H */

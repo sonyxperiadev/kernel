@@ -21,6 +21,7 @@
 #include <plat/kona_avs.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
+#include <linux/module.h>
 #include <plat/cpu.h>
 
 /*#define KONA_AVS_DEBUG*/

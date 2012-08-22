@@ -26,11 +26,12 @@
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
 #include <linux/interrupt.h>
 #include <linux/kernel_stat.h>
+#include <linux/module.h>
 #include <asm/mach/arch.h>
 #include <mach/io_map.h>
+#include <mach/memory.h>
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>

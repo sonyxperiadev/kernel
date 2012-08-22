@@ -40,6 +40,7 @@
 #include <mach/dma.h>
 #include <mach/clock.h>
 #include <plat/dmux.h>
+#include <mach/memory.h>
 
 #define DMUX_CHAN_INVALID	0xF
 #define DMUX_PERI_INVALID	0x7F

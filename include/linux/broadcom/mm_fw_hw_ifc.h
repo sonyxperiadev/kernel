@@ -36,6 +36,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <plat/pi_mgr.h>
 #include <linux/debugfs.h>
 #include <linux/miscdevice.h>
+#include <linux/sched.h>
 
 #include <plat/clock.h>
 #include <linux/workqueue.h>

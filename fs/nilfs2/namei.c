@@ -72,12 +72,7 @@ nilfs_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
 		return ERR_PTR(-ENAMETOOLONG);
 
 	ino = nilfs_inode_by_name(dir, &dentry->d_name);
-	inode = NULL;
-	if (ino) {
-		inode = nilfs_iget(dir->i_sb, NILFS_I(dir)->i_root, ino);
-		if (IS_ERR(inode))
-			return ERR_CAST(inode);
-	}
+	inode = ino ? nilfs_iget(dir->i_sb, NILFS_I(dir)->i_root, ino) : NULL;
 	return d_splice_alias(inode, dentry);
 }
 
@@ -89,7 +84,7 @@ nilfs_lookup(struct inode *dir, struct dentry *dentry, struct nameidata *nd)
  * If the create succeeds, we fill in the inode information
  * with d_instantiate().
  */
-static int nilfs_create(struct inode *dir, struct dentry *dentry, int mode,
+static int nilfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 			struct nameidata *nd)
 {
 	struct inode *inode;
@@ -117,7 +112,7 @@ static int nilfs_create(struct inode *dir, struct dentry *dentry, int mode,
 }
 
 static int
-nilfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t rdev)
+nilfs_mknod(struct inode *dir, struct dentry *dentry, umode_t mode, dev_t rdev)
 {
 	struct inode *inode;
 	struct nilfs_transaction_info ti;
@@ -198,9 +193,6 @@ static int nilfs_link(struct dentry *old_dentry, struct inode *dir,
 	struct nilfs_transaction_info ti;
 	int err;
 
-	if (inode->i_nlink >= NILFS_LINK_MAX)
-		return -EMLINK;
-
 	err = nilfs_transaction_begin(dir->i_sb, &ti, 1);
 	if (err)
 		return err;
@@ -218,14 +210,11 @@ static int nilfs_link(struct dentry *old_dentry, struct inode *dir,
 	return err;
 }
 
-static int nilfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
+static int nilfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 {
 	struct inode *inode;
 	struct nilfs_transaction_info ti;
 	int err;
-
-	if (dir->i_nlink >= NILFS_LINK_MAX)
-		return -EMLINK;
 
 	err = nilfs_transaction_begin(dir->i_sb, &ti, 1);
 	if (err)
@@ -294,7 +283,7 @@ static int nilfs_do_unlink(struct inode *dir, struct dentry *dentry)
 		nilfs_warning(inode->i_sb, __func__,
 			      "deleting nonexistent file (%lu), %d\n",
 			      inode->i_ino, inode->i_nlink);
-		inode->i_nlink = 1;
+		set_nlink(inode, 1);
 	}
 	err = nilfs_delete_entry(de, page);
 	if (err)
@@ -405,11 +394,6 @@ static int nilfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		drop_nlink(new_inode);
 		nilfs_mark_inode_dirty(new_inode);
 	} else {
-		if (dir_de) {
-			err = -EMLINK;
-			if (new_dir->i_nlink >= NILFS_LINK_MAX)
-				goto out_dir;
-		}
 		err = nilfs_add_link(new_dentry, old_inode);
 		if (err)
 			goto out_dir;

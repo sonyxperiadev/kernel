@@ -213,14 +213,14 @@ struct atm_cirange {
 
 #ifdef __KERNEL__
 
-#include <linux/device.h>
 #include <linux/wait.h> /* wait_queue_head_t */
 #include <linux/time.h> /* struct timeval */
 #include <linux/net.h>
+#include <linux/bug.h>
 #include <linux/skbuff.h> /* struct sk_buff */
 #include <linux/uio.h>
 #include <net/sock.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 
 #ifdef CONFIG_PROC_FS
 #include <linux/proc_fs.h>
@@ -249,6 +249,7 @@ struct k_atm_dev_stats {
 	struct k_atm_aal_stats aal5;
 };
 
+struct device;
 
 enum {
 	ATM_VF_ADDR,		/* Address is in use. Set by anybody, cleared
@@ -444,16 +445,6 @@ void atm_dev_signal_change(struct atm_dev *dev, char signal);
 void vcc_insert_socket(struct sock *sk);
 
 void atm_dev_release_vccs(struct atm_dev *dev);
-
-/*
- * This is approximately the algorithm used by alloc_skb.
- *
- */
-
-static inline int atm_guess_pdu2truesize(int size)
-{
-	return SKB_DATA_ALIGN(size) + sizeof(struct skb_shared_info);
-}
 
 
 static inline void atm_force_charge(struct atm_vcc *vcc,int truesize)

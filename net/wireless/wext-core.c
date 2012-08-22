@@ -13,6 +13,7 @@
 #include <linux/slab.h>
 #include <linux/wireless.h>
 #include <linux/uaccess.h>
+#include <linux/export.h>
 #include <net/cfg80211.h>
 #include <net/iw_handler.h>
 #include <net/netlink.h>
@@ -779,8 +780,10 @@ static int ioctl_standard_iw_point(struct iw_point *iwp, unsigned int cmd,
 		if (cmd == SIOCSIWENCODEEXT) {
 			struct iw_encode_ext *ee = (void *) extra;
 
-			if (iwp->length < sizeof(*ee) + ee->key_len)
-				return -EFAULT;
+			if (iwp->length < sizeof(*ee) + ee->key_len) {
+				err = -EFAULT;
+				goto out;
+			}
 		}
 	}
 

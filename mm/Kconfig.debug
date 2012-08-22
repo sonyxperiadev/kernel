@@ -4,6 +4,7 @@ config DEBUG_PAGEALLOC
 	depends on !HIBERNATION || ARCH_SUPPORTS_DEBUG_PAGEALLOC && !PPC && !SPARC
 	depends on !KMEMCHECK
 	select PAGE_POISONING if !ARCH_SUPPORTS_DEBUG_PAGEALLOC
+	select PAGE_GUARD if ARCH_SUPPORTS_DEBUG_PAGEALLOC
 	---help---
 	  Unmap pages from the kernel linear mapping after free_pages().
 	  This results in a large slowdown, but helps to find certain types
@@ -30,3 +31,7 @@ config SHOW_FREE_LISTS
 	  list is identical to /proc/pagetypeinfo (In fact this uses the exact code
 	  and replaces seq_prints by printks. Specially usefull to see the free
 	  migrate type lists when kernel runs out of memory
+
+config PAGE_GUARD
+	bool
+	select WANT_PAGE_DEBUG_FLAGS

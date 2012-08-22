@@ -17,18 +17,21 @@
  */
 
 #include <linux/types.h>
+#include <linux/gpio.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/errno.h>
 #include <linux/io.h>
 
-#include <mach/hardware.h>
 #include <asm/irq.h>
 #include <asm/mach/irq.h>
 
 #include <plat/fpga.h>
-#include <mach/gpio.h>
+
+#include <mach/hardware.h>
+
+#include "iomap.h"
 
 static void fpga_mask_irq(struct irq_data *d)
 {

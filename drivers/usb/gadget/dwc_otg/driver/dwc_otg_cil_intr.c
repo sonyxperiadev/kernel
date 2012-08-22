@@ -269,8 +269,8 @@ void w_conn_id_status_change(void *p)
 		DWC_ASSERT(++count < 10000,
 			   "Connection id status change timed out");
 #ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver->set_vbus)
-			core_if->xceiver->set_vbus(core_if->xceiver, false);
+		if (core_if->xceiver->otg->set_vbus)
+			core_if->xceiver->otg->set_vbus(core_if->xceiver->otg, false);
 #endif
 		core_if->op_state = B_PERIPHERAL;
 		dwc_otg_core_init(core_if);
@@ -438,7 +438,7 @@ void w_peri_suspend_powersaving(void *p)
 
 	if (core_if) {
 		/* Suspend trasceiver */
-		otg_set_suspend(core_if->xceiver, 1);
+		usb_phy_set_suspend(core_if->xceiver, 1);
 	}
 }
 
@@ -463,7 +463,7 @@ int32_t dwc_otg_handle_wakeup_detected_intr(dwc_otg_core_if_t *core_if)
 	    (core_if->lx_state == DWC_OTG_L2) &&
 	    !core_if->core_params->otg_supp_enable) {
 		/* REVISIT when we use the external wake interrupt */
-		otg_set_suspend(core_if->xceiver, 0);
+		usb_phy_set_suspend(core_if->xceiver, 0);
 	}
 #endif
 
@@ -1175,7 +1175,7 @@ int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
 			T_USB_SUSPEND_POWER_SAVING_DELAY_IN_MS);
 #else
 		/* Suspend trasceiver */
-		otg_set_suspend(core_if->xceiver, 1);
+		usb_phy_set_suspend(core_if->xceiver, 1);
 #endif
 	}
 

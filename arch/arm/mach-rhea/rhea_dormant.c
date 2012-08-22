@@ -10,6 +10,7 @@
 
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
+#include <linux/module.h>
 #include <asm/io.h>
 #include <linux/delay.h>
 
@@ -34,6 +35,7 @@
 #include <mach/rdb/brcm_rdb_a9ptm.h>
 #include <mach/rdb/brcm_rdb_glbtmr.h>
 #include <mach/pm.h>
+#include <mach/memory.h>
 
 #ifdef CONFIG_ROM_SEC_DISPATCHER
 #include <mach/secure_api.h>
@@ -524,7 +526,7 @@ static void dormant_restore_addnl_reg(void)
 }
 
 static int dormant_pass;
-module_param_named(dormant_pass, dormant_pass, int,
+module_param_named(dormant_pass, dormant_pass, int, 
 		   S_IRUGO | S_IWUSR | S_IWGRP);
 
 static int dormant_fail;

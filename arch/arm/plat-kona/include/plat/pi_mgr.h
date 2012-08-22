@@ -15,7 +15,7 @@
 #include <linux/plist.h>
 #include <linux/version.h>
 #include <linux/notifier.h>
-#include <linux/pm_qos_params.h>
+#include <linux/pm_qos.h>
 #include <mach/pi_mgr.h>
 #include <asm/cputime.h>
 
@@ -177,7 +177,7 @@ struct pi {
 	struct pm_pi_info pi_info;
 	u32 *dep_pi;
 	u32 num_dep_pi;
-	struct pm_qos_request_list pm_qos;
+	struct pm_qos_request pm_qos;
 	struct pi_ops *ops;
 	spinlock_t lock;
 #ifdef CONFIG_KONA_PI_DFS_STATS

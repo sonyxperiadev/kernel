@@ -249,7 +249,7 @@ static irqreturn_t synaptics_ts_irq_handler(int irq, void *dev_id)
 {
 	struct synaptics_ts_data *ts = dev_id;
 
-	 printk("synaptics_ts_irq_handler\n");
+	/* printk("synaptics_ts_irq_handler\n"); */
 	disable_irq_nosync(ts->client->irq);
 	queue_work(synaptics_wq, &ts->work);
 	return IRQ_HANDLED;

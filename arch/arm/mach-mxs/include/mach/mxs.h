@@ -23,19 +23,8 @@
 #include <linux/io.h>
 #endif
 #include <asm/mach-types.h>
+#include <mach/digctl.h>
 #include <mach/hardware.h>
-
-/*
- * MXS CPU types
- */
-#define cpu_is_mx23()		(					\
-		machine_is_mx23evk() ||					\
-		machine_is_stmp378x() ||				\
-		0)
-#define cpu_is_mx28()		(					\
-		machine_is_mx28evk() ||					\
-		machine_is_tx28() ||					\
-		0)
 
 /*
  * IO addresses common to MXS-based
@@ -87,6 +76,8 @@
 	.type = _type,							\
 }
 
+#define MXS_GPIO_NR(bank, nr)	((bank) * 32 + (nr))
+
 #define MXS_SET_ADDR		0x4
 #define MXS_CLR_ADDR		0x8
 #define MXS_TOG_ADDR		0xc
@@ -105,6 +96,21 @@ static inline void __mxs_clrl(u32 mask, void __iomem *reg)
 static inline void __mxs_togl(u32 mask, void __iomem *reg)
 {
 	__raw_writel(mask, reg + MXS_TOG_ADDR);
+}
+
+/*
+ * MXS CPU types
+ */
+#define MXS_CHIPID (MXS_IO_ADDRESS(MXS_DIGCTL_BASE_ADDR) + HW_DIGCTL_CHIPID)
+
+static inline int cpu_is_mx23(void)
+{
+	return ((__raw_readl(MXS_CHIPID) >> 16) == 0x3780);
+}
+
+static inline int cpu_is_mx28(void)
+{
+	return ((__raw_readl(MXS_CHIPID) >> 16) == 0x2800);
 }
 #endif
 

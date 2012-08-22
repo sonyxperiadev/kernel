@@ -21,6 +21,7 @@
 #include <asm/disassemble.h>
 #include <asm/kvm_book3s.h>
 #include <asm/reg.h>
+#include <asm/switch_to.h>
 
 #define OP_19_XOP_RFID		18
 #define OP_19_XOP_RFI		50
@@ -62,6 +63,25 @@
 /* Book3S_32 defines mfsrin(v) - but that messes up our abstract
  * function pointers, so let's just disable the define. */
 #undef mfsrin
+
+enum priv_level {
+	PRIV_PROBLEM = 0,
+	PRIV_SUPER = 1,
+	PRIV_HYPER = 2,
+};
+
+static bool spr_allowed(struct kvm_vcpu *vcpu, enum priv_level level)
+{
+	/* PAPR VMs only access supervisor SPRs */
+	if (vcpu->arch.papr_enabled && (level > PRIV_SUPER))
+		return false;
+
+	/* Limit user space to its own small SPR set */
+	if ((vcpu->arch.shared->msr & MSR_PR) && level > PRIV_PROBLEM)
+		return false;
+
+	return true;
+}
 
 int kvmppc_core_emulate_op(struct kvm_run *run, struct kvm_vcpu *vcpu,
                            unsigned int inst, int *advance)
@@ -211,9 +231,12 @@ int kvmppc_core_emulate_op(struct kvm_run *run, struct kvm_vcpu *vcpu,
 
 			r = kvmppc_st(vcpu, &addr, 32, zeros, true);
 			if ((r == -ENOENT) || (r == -EPERM)) {
+				struct kvmppc_book3s_shadow_vcpu *svcpu;
+
+				svcpu = svcpu_get(vcpu);
 				*advance = 0;
 				vcpu->arch.shared->dar = vaddr;
-				to_svcpu(vcpu)->fault_dar = vaddr;
+				svcpu->fault_dar = vaddr;
 
 				dsisr = DSISR_ISSTORE;
 				if (r == -ENOENT)
@@ -222,7 +245,8 @@ int kvmppc_core_emulate_op(struct kvm_run *run, struct kvm_vcpu *vcpu,
 					dsisr |= DSISR_PROTFAULT;
 
 				vcpu->arch.shared->dsisr = dsisr;
-				to_svcpu(vcpu)->fault_dsisr = dsisr;
+				svcpu->fault_dsisr = dsisr;
+				svcpu_put(svcpu);
 
 				kvmppc_book3s_queue_irqprio(vcpu,
 					BOOK3S_INTERRUPT_DATA_STORAGE);
@@ -296,6 +320,8 @@ int kvmppc_core_emulate_mtspr(struct kvm_vcpu *vcpu, int sprn, int rs)
 
 	switch (sprn) {
 	case SPRN_SDR1:
+		if (!spr_allowed(vcpu, PRIV_HYPER))
+			goto unprivileged;
 		to_book3s(vcpu)->sdr1 = spr_val;
 		break;
 	case SPRN_DSISR:
@@ -390,6 +416,7 @@ int kvmppc_core_emulate_mtspr(struct kvm_vcpu *vcpu, int sprn, int rs)
 	case SPRN_PMC4_GEKKO:
 	case SPRN_WPAR_GEKKO:
 		break;
+unprivileged:
 	default:
 		printk(KERN_INFO "KVM: invalid SPR write: %d\n", sprn);
 #ifndef DEBUG_SPR
@@ -421,6 +448,8 @@ int kvmppc_core_emulate_mfspr(struct kvm_vcpu *vcpu, int sprn, int rt)
 		break;
 	}
 	case SPRN_SDR1:
+		if (!spr_allowed(vcpu, PRIV_HYPER))
+			goto unprivileged;
 		kvmppc_set_gpr(vcpu, rt, to_book3s(vcpu)->sdr1);
 		break;
 	case SPRN_DSISR:
@@ -449,6 +478,10 @@ int kvmppc_core_emulate_mfspr(struct kvm_vcpu *vcpu, int sprn, int rt)
 	case SPRN_HID5:
 		kvmppc_set_gpr(vcpu, rt, to_book3s(vcpu)->hid[5]);
 		break;
+	case SPRN_CFAR:
+	case SPRN_PURR:
+		kvmppc_set_gpr(vcpu, rt, 0);
+		break;
 	case SPRN_GQR0:
 	case SPRN_GQR1:
 	case SPRN_GQR2:
@@ -476,6 +509,7 @@ int kvmppc_core_emulate_mfspr(struct kvm_vcpu *vcpu, int sprn, int rt)
 		kvmppc_set_gpr(vcpu, rt, 0);
 		break;
 	default:
+unprivileged:
 		printk(KERN_INFO "KVM: invalid SPR read: %d\n", sprn);
 #ifndef DEBUG_SPR
 		emulated = EMULATE_FAIL;

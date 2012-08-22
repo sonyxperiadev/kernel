@@ -102,7 +102,7 @@ static int ocfs2_symlink_get_block(struct inode *inode, sector_t iblock,
 		 * copy, the data is still good. */
 		if (buffer_jbd(buffer_cache_bh)
 		    && ocfs2_inode_is_new(inode)) {
-			kaddr = kmap_atomic(bh_result->b_page, KM_USER0);
+			kaddr = kmap_atomic(bh_result->b_page);
 			if (!kaddr) {
 				mlog(ML_ERROR, "couldn't kmap!\n");
 				goto bail;
@@ -110,7 +110,7 @@ static int ocfs2_symlink_get_block(struct inode *inode, sector_t iblock,
 			memcpy(kaddr + (bh_result->b_size * iblock),
 			       buffer_cache_bh->b_data,
 			       bh_result->b_size);
-			kunmap_atomic(kaddr, KM_USER0);
+			kunmap_atomic(kaddr);
 			set_buffer_uptodate(bh_result);
 		}
 		brelse(buffer_cache_bh);
@@ -236,13 +236,13 @@ int ocfs2_read_inline_data(struct inode *inode, struct page *page,
 		return -EROFS;
 	}
 
-	kaddr = kmap_atomic(page, KM_USER0);
+	kaddr = kmap_atomic(page);
 	if (size)
 		memcpy(kaddr, di->id2.i_data.id_data, size);
 	/* Clear the remaining part of the page */
 	memset(kaddr + size, 0, PAGE_CACHE_SIZE - size);
 	flush_dcache_page(page);
-	kunmap_atomic(kaddr, KM_USER0);
+	kunmap_atomic(kaddr);
 
 	SetPageUptodate(page);
 
@@ -290,7 +290,15 @@ static int ocfs2_readpage(struct file *file, struct page *page)
 	}
 
 	if (down_read_trylock(&oi->ip_alloc_sem) == 0) {
+		/*
+		 * Unlock the page and cycle ip_alloc_sem so that we don't
+		 * busyloop waiting for ip_alloc_sem to unlock
+		 */
 		ret = AOP_TRUNCATED_PAGE;
+		unlock_page(page);
+		unlock = 0;
+		down_read(&oi->ip_alloc_sem);
+		up_read(&oi->ip_alloc_sem);
 		goto out_inode_unlock;
 	}
 
@@ -551,9 +559,8 @@ bail:
 
 /*
  * ocfs2_dio_end_io is called by the dio core when a dio is finished.  We're
- * particularly interested in the aio/dio case.  Like the core uses
- * i_alloc_sem, we use the rw_lock DLM lock to protect io on one node from
- * truncation on another.
+ * particularly interested in the aio/dio case.  We use the rw_lock DLM lock
+ * to protect io on one node from truncation on another.
  */
 static void ocfs2_dio_end_io(struct kiocb *iocb,
 			     loff_t offset,
@@ -564,13 +571,21 @@ static void ocfs2_dio_end_io(struct kiocb *iocb,
 {
 	struct inode *inode = iocb->ki_filp->f_path.dentry->d_inode;
 	int level;
+	wait_queue_head_t *wq = ocfs2_ioend_wq(inode);
 
 	/* this io's submitter should not have unlocked this before we could */
 	BUG_ON(!ocfs2_iocb_is_rw_locked(iocb));
 
-	if (ocfs2_iocb_is_sem_locked(iocb)) {
-		up_read(&inode->i_alloc_sem);
+	if (ocfs2_iocb_is_sem_locked(iocb))
 		ocfs2_iocb_clear_sem_locked(iocb);
+
+	if (ocfs2_iocb_is_unaligned_aio(iocb)) {
+		ocfs2_iocb_clear_unaligned_aio(iocb);
+
+		if (atomic_dec_and_test(&OCFS2_I(inode)->ip_unaligned_aio) &&
+		    waitqueue_active(wq)) {
+			wake_up_all(wq);
+		}
 	}
 
 	ocfs2_iocb_clear_rw_locked(iocb);
@@ -580,6 +595,7 @@ static void ocfs2_dio_end_io(struct kiocb *iocb,
 
 	if (is_async)
 		aio_complete(iocb, ret, 0);
+	inode_dio_done(inode);
 }
 
 /*
@@ -673,7 +689,7 @@ static void ocfs2_clear_page_regions(struct page *page,
 
 	ocfs2_figure_cluster_boundaries(osb, cpos, &cluster_start, &cluster_end);
 
-	kaddr = kmap_atomic(page, KM_USER0);
+	kaddr = kmap_atomic(page);
 
 	if (from || to) {
 		if (from > cluster_start)
@@ -684,7 +700,7 @@ static void ocfs2_clear_page_regions(struct page *page,
 		memset(kaddr + cluster_start, 0, cluster_end - cluster_start);
 	}
 
-	kunmap_atomic(kaddr, KM_USER0);
+	kunmap_atomic(kaddr);
 }
 
 /*
@@ -865,6 +881,12 @@ struct ocfs2_write_ctxt {
 	struct page			*w_target_page;
 
 	/*
+	 * w_target_locked is used for page_mkwrite path indicating no unlocking
+	 * against w_target_page in ocfs2_write_end_nolock.
+	 */
+	unsigned int			w_target_locked:1;
+
+	/*
 	 * ocfs2_write_end() uses this to know what the real range to
 	 * write in the target should be.
 	 */
@@ -897,6 +919,24 @@ void ocfs2_unlock_and_free_pages(struct page **pages, int num_pages)
 
 static void ocfs2_free_write_ctxt(struct ocfs2_write_ctxt *wc)
 {
+	int i;
+
+	/*
+	 * w_target_locked is only set to true in the page_mkwrite() case.
+	 * The intent is to allow us to lock the target page from write_begin()
+	 * to write_end(). The caller must hold a ref on w_target_page.
+	 */
+	if (wc->w_target_locked) {
+		BUG_ON(!wc->w_target_page);
+		for (i = 0; i < wc->w_num_pages; i++) {
+			if (wc->w_target_page == wc->w_pages[i]) {
+				wc->w_pages[i] = NULL;
+				break;
+			}
+		}
+		mark_page_accessed(wc->w_target_page);
+		page_cache_release(wc->w_target_page);
+	}
 	ocfs2_unlock_and_free_pages(wc->w_pages, wc->w_num_pages);
 
 	brelse(wc->w_di_bh);
@@ -1134,20 +1174,17 @@ static int ocfs2_grab_pages_for_write(struct address_space *mapping,
 			 */
 			lock_page(mmap_page);
 
+			/* Exit and let the caller retry */
 			if (mmap_page->mapping != mapping) {
+				WARN_ON(mmap_page->mapping);
 				unlock_page(mmap_page);
-				/*
-				 * Sanity check - the locking in
-				 * ocfs2_pagemkwrite() should ensure
-				 * that this code doesn't trigger.
-				 */
-				ret = -EINVAL;
-				mlog_errno(ret);
+				ret = -EAGAIN;
 				goto out;
 			}
 
 			page_cache_get(mmap_page);
 			wc->w_pages[i] = mmap_page;
+			wc->w_target_locked = true;
 		} else {
 			wc->w_pages[i] = find_or_create_page(mapping, index,
 							     GFP_NOFS);
@@ -1162,6 +1199,8 @@ static int ocfs2_grab_pages_for_write(struct address_space *mapping,
 			wc->w_target_page = wc->w_pages[i];
 	}
 out:
+	if (ret)
+		wc->w_target_locked = false;
 	return ret;
 }
 
@@ -1819,8 +1858,20 @@ try_again:
 	 */
 	ret = ocfs2_grab_pages_for_write(mapping, wc, wc->w_cpos, pos, len,
 					 cluster_of_pages, mmap_page);
-	if (ret) {
+	if (ret && ret != -EAGAIN) {
 		mlog_errno(ret);
+		goto out_quota;
+	}
+
+	/*
+	 * ocfs2_grab_pages_for_write() returns -EAGAIN if it could not lock
+	 * the target page. In this case, we exit with no error and no target
+	 * page. This will trigger the caller, page_mkwrite(), to re-try
+	 * the operation.
+	 */
+	if (ret == -EAGAIN) {
+		BUG_ON(wc->w_target_page);
+		ret = 0;
 		goto out_quota;
 	}
 
@@ -1930,9 +1981,9 @@ static void ocfs2_write_end_inline(struct inode *inode, loff_t pos,
 		}
 	}
 
-	kaddr = kmap_atomic(wc->w_target_page, KM_USER0);
+	kaddr = kmap_atomic(wc->w_target_page);
 	memcpy(di->id2.i_data.id_data + pos, kaddr + pos, *copied);
-	kunmap_atomic(kaddr, KM_USER0);
+	kunmap_atomic(kaddr);
 
 	trace_ocfs2_write_end_inline(
 	     (unsigned long long)OCFS2_I(inode)->ip_blkno,

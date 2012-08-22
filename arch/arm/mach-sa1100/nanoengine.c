@@ -19,6 +19,7 @@
 
 #include <asm/mach-types.h>
 #include <asm/setup.h>
+#include <asm/page.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach/flash.h>
@@ -27,6 +28,7 @@
 
 #include <mach/hardware.h>
 #include <mach/nanoengine.h>
+#include <mach/irqs.h>
 
 #include "generic.h"
 
@@ -57,15 +59,8 @@ static struct flash_platform_data nanoengine_flash_data = {
 };
 
 static struct resource nanoengine_flash_resources[] = {
-	{
-		.start	= SA1100_CS0_PHYS,
-		.end	= SA1100_CS0_PHYS + SZ_32M - 1,
-		.flags	= IORESOURCE_MEM,
-	}, {
-		.start	= SA1100_CS1_PHYS,
-		.end	= SA1100_CS1_PHYS + SZ_32M - 1,
-		.flags	= IORESOURCE_MEM,
-	}
+	DEFINE_RES_MEM(SA1100_CS0_PHYS, SZ_32M),
+	DEFINE_RES_MEM(SA1100_CS1_PHYS, SZ_32M),
 };
 
 static struct map_desc nanoengine_io_desc[] __initdata = {
@@ -111,9 +106,11 @@ static void __init nanoengine_init(void)
 }
 
 MACHINE_START(NANOENGINE, "BSE nanoEngine")
-	.boot_params	= 0xc0000000,
+	.atag_offset	= 0x100,
 	.map_io		= nanoengine_map_io,
+	.nr_irqs	= SA1100_NR_IRQS,
 	.init_irq	= sa1100_init_irq,
 	.timer		= &sa1100_timer,
 	.init_machine	= nanoengine_init,
+	.restart	= sa11x0_restart,
 MACHINE_END

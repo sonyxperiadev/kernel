@@ -9,6 +9,7 @@
 
 struct pca953x_platform_data {
 	struct i2c_slave_platform_data i2c_pdata;
+
 	/* number of the first GPIO */
 	unsigned	gpio_base;
 

@@ -27,12 +27,15 @@
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
+#include <linux/moduleparam.h>
 #include <linux/smsc911x.h>
 #include <linux/mtd/physmap.h>
 #include <linux/spi/spi.h>
 #include <linux/mfd/mc13783.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/ulpi.h>
+#include <linux/regulator/machine.h>
+#include <linux/regulator/fixed.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -192,7 +195,7 @@ static struct mxc_usbh_platform_data usbh2_pdata __initdata = {
 	.portsc	= MXC_EHCI_MODE_ULPI | MXC_EHCI_UTMI_8BIT,
 };
 
-static void lilly1131_usb_init(void)
+static void __init lilly1131_usb_init(void)
 {
 	imx31_add_mxc_ehci_hs(1, &usbh1_pdata);
 
@@ -241,8 +244,15 @@ static struct platform_device *devices[] __initdata = {
 static int mx31lilly_baseboard;
 core_param(mx31lilly_baseboard, mx31lilly_baseboard, int, 0444);
 
+static struct regulator_consumer_supply dummy_supplies[] = {
+	REGULATOR_SUPPLY("vdd33a", "smsc911x"),
+	REGULATOR_SUPPLY("vddvario", "smsc911x"),
+};
+
 static void __init mx31lilly_board_init(void)
 {
+	imx31_soc_init();
+
 	switch (mx31lilly_baseboard) {
 	case MX31LILLY_NOBOARD:
 		break;
@@ -277,6 +287,8 @@ static void __init mx31lilly_board_init(void)
 	imx31_add_spi_imx1(&spi1_pdata);
 	spi_register_board_info(&mc13783_dev, 1);
 
+	regulator_register_fixed(0, dummy_supplies, ARRAY_SIZE(dummy_supplies));
+
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 
 	/* USB */
@@ -293,10 +305,12 @@ static struct sys_timer mx31lilly_timer = {
 };
 
 MACHINE_START(LILLY1131, "INCO startec LILLY-1131")
-	.boot_params = MX3x_PHYS_OFFSET + 0x100,
+	.atag_offset = 0x100,
 	.map_io = mx31_map_io,
 	.init_early = imx31_init_early,
 	.init_irq = mx31_init_irq,
+	.handle_irq = imx31_handle_irq,
 	.timer = &mx31lilly_timer,
 	.init_machine = mx31lilly_board_init,
+	.restart	= mxc_restart,
 MACHINE_END

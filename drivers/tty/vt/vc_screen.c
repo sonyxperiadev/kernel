@@ -22,6 +22,7 @@
 #include <linux/kernel.h>
 #include <linux/major.h>
 #include <linux/errno.h>
+#include <linux/export.h>
 #include <linux/tty.h>
 #include <linux/interrupt.h>
 #include <linux/mm.h>
@@ -607,10 +608,10 @@ vcs_open(struct inode *inode, struct file *filp)
 	unsigned int currcons = iminor(inode) & 127;
 	int ret = 0;
 	
-	tty_lock();
+	console_lock();
 	if(currcons && !vc_cons_allocated(currcons-1))
 		ret = -ENXIO;
-	tty_unlock();
+	console_unlock();
 	return ret;
 }
 

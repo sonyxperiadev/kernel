@@ -922,23 +922,20 @@ static int __devexit arasan_cf_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int arasan_cf_suspend(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct ata_host *host = dev_get_drvdata(&pdev->dev);
+	struct ata_host *host = dev_get_drvdata(dev);
 	struct arasan_cf_dev *acdev = host->ports[0]->private_data;
 
-	if (acdev->dma_chan) {
+	if (acdev->dma_chan)
 		acdev->dma_chan->device->device_control(acdev->dma_chan,
 				DMA_TERMINATE_ALL, 0);
-		dma_release_channel(acdev->dma_chan);
-	}
+
 	cf_exit(acdev);
 	return ata_host_suspend(host, PMSG_SUSPEND);
 }
 
 static int arasan_cf_resume(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct ata_host *host = dev_get_drvdata(&pdev->dev);
+	struct ata_host *host = dev_get_drvdata(dev);
 	struct arasan_cf_dev *acdev = host->ports[0]->private_data;
 
 	cf_init(acdev);
@@ -946,12 +943,9 @@ static int arasan_cf_resume(struct device *dev)
 
 	return 0;
 }
-
-static const struct dev_pm_ops arasan_cf_pm_ops = {
-	.suspend	= arasan_cf_suspend,
-	.resume		= arasan_cf_resume,
-};
 #endif
+
+static SIMPLE_DEV_PM_OPS(arasan_cf_pm_ops, arasan_cf_suspend, arasan_cf_resume);
 
 static struct platform_driver arasan_cf_driver = {
 	.probe		= arasan_cf_probe,
@@ -959,23 +953,11 @@ static struct platform_driver arasan_cf_driver = {
 	.driver		= {
 		.name	= DRIVER_NAME,
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_PM
-		.pm		= &arasan_cf_pm_ops,
-#endif
+		.pm	= &arasan_cf_pm_ops,
 	},
 };
 
-static int __init arasan_cf_init(void)
-{
-	return platform_driver_register(&arasan_cf_driver);
-}
-module_init(arasan_cf_init);
-
-static void __exit arasan_cf_exit(void)
-{
-	platform_driver_unregister(&arasan_cf_driver);
-}
-module_exit(arasan_cf_exit);
+module_platform_driver(arasan_cf_driver);
 
 MODULE_AUTHOR("Viresh Kumar <viresh.kumar@st.com>");
 MODULE_DESCRIPTION("Arasan ATA Compact Flash driver");

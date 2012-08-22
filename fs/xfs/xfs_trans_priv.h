@@ -53,7 +53,7 @@ void	xfs_trans_committed_bulk(struct xfs_ail *ailp, struct xfs_log_vec *lv,
  * of the list to trigger traversal restarts.
  */
 struct xfs_ail_cursor {
-	struct xfs_ail_cursor	*next;
+	struct list_head	list;
 	struct xfs_log_item	*item;
 };
 
@@ -67,9 +67,10 @@ struct xfs_ail {
 	struct task_struct	*xa_task;
 	struct list_head	xa_ail;
 	xfs_lsn_t		xa_target;
-	struct xfs_ail_cursor	xa_cursors;
+	struct list_head	xa_cursors;
 	spinlock_t		xa_lock;
 	xfs_lsn_t		xa_last_pushed_lsn;
+	int			xa_log_flush;
 };
 
 /*
@@ -102,9 +103,6 @@ xfs_trans_ail_delete(
 void			xfs_ail_push(struct xfs_ail *, xfs_lsn_t);
 void			xfs_ail_push_all(struct xfs_ail *);
 xfs_lsn_t		xfs_ail_min_lsn(struct xfs_ail *ailp);
-
-void			xfs_trans_unlocked_item(struct xfs_ail *,
-					xfs_log_item_t *);
 
 struct xfs_log_item *	xfs_trans_ail_cursor_first(struct xfs_ail *ailp,
 					struct xfs_ail_cursor *cur,

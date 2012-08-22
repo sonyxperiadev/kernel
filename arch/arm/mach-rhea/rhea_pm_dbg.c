@@ -20,6 +20,7 @@
 #include <mach/pm.h>
 #include <mach/pwr_mgr.h>
 #include <mach/pi_mgr.h>
+#include <mach/memory.h>
 #ifdef CONFIG_KONA_PROFILER
 #include <plat/profiler.h>
 #endif
@@ -198,7 +199,7 @@ static void cmd_display_stats(const char *p)
 	pr_info("dormant trace %x\n", *dormant_trace_v);
 }
 
-static int force_sleep_state = RHEA_STATE_C5;
+static int force_sleep_state = CSTATE_DS_DRMT;
 int get_force_sleep_state(void)
 {
 	return force_sleep_state;

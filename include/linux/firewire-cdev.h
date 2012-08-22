@@ -30,10 +30,13 @@
 #include <linux/types.h>
 #include <linux/firewire-constants.h>
 
+/* available since kernel version 2.6.22 */
 #define FW_CDEV_EVENT_BUS_RESET				0x00
 #define FW_CDEV_EVENT_RESPONSE				0x01
 #define FW_CDEV_EVENT_REQUEST				0x02
 #define FW_CDEV_EVENT_ISO_INTERRUPT			0x03
+
+/* available since kernel version 2.6.30 */
 #define FW_CDEV_EVENT_ISO_RESOURCE_ALLOCATED		0x04
 #define FW_CDEV_EVENT_ISO_RESOURCE_DEALLOCATED		0x05
 
@@ -120,24 +123,11 @@ struct fw_cdev_event_response {
 
 /**
  * struct fw_cdev_event_request - Old version of &fw_cdev_event_request2
- * @closure:	See &fw_cdev_event_common; set by %FW_CDEV_IOC_ALLOCATE ioctl
  * @type:	See &fw_cdev_event_common; always %FW_CDEV_EVENT_REQUEST
- * @tcode:	See &fw_cdev_event_request2
- * @offset:	See &fw_cdev_event_request2
- * @handle:	See &fw_cdev_event_request2
- * @length:	See &fw_cdev_event_request2
- * @data:	See &fw_cdev_event_request2
  *
  * This event is sent instead of &fw_cdev_event_request2 if the kernel or
- * the client implements ABI version <= 3.
- *
- * Unlike &fw_cdev_event_request2, the sender identity cannot be established,
- * broadcast write requests cannot be distinguished from unicast writes, and
- * @tcode of lock requests is %TCODE_LOCK_REQUEST.
- *
- * Requests to the FCP_REQUEST or FCP_RESPONSE register are responded to as
- * with &fw_cdev_event_request2, except in kernel 2.6.32 and older which send
- * the response packet of the client's %FW_CDEV_IOC_SEND_RESPONSE ioctl.
+ * the client implements ABI version <= 3.  &fw_cdev_event_request lacks
+ * essential information; use &fw_cdev_event_request2 instead.
  */
 struct fw_cdev_event_request {
 	__u64 closure;
@@ -217,12 +207,16 @@ struct fw_cdev_event_request2 {
  * @closure:	See &fw_cdev_event_common;
  *		set by %FW_CDEV_CREATE_ISO_CONTEXT ioctl
  * @type:	See &fw_cdev_event_common; always %FW_CDEV_EVENT_ISO_INTERRUPT
- * @cycle:	Cycle counter of the interrupt packet
+ * @cycle:	Cycle counter of the last completed packet
  * @header_length: Total length of following headers, in bytes
  * @header:	Stripped headers, if any
  *
  * This event is sent when the controller has completed an &fw_cdev_iso_packet
- * with the %FW_CDEV_ISO_INTERRUPT bit set.
+ * with the %FW_CDEV_ISO_INTERRUPT bit set, when explicitly requested with
+ * %FW_CDEV_IOC_FLUSH_ISO, or when there have been so many completed packets
+ * without the interrupt bit set that the kernel's internal buffer for @header
+ * is about to overflow.  (In the last case, kernels with ABI version < 5 drop
+ * header data up to the next interrupt packet.)
  *
  * Isochronous transmit events (context type %FW_CDEV_ISO_CONTEXT_TRANSMIT):
  *
@@ -277,9 +271,9 @@ struct fw_cdev_event_iso_interrupt {
  *
  * This event is sent in multichannel contexts (context type
  * %FW_CDEV_ISO_CONTEXT_RECEIVE_MULTICHANNEL) for &fw_cdev_iso_packet buffer
- * chunks that have the %FW_CDEV_ISO_INTERRUPT bit set.  Whether this happens
- * when a packet is completed and/or when a buffer chunk is completed depends
- * on the hardware implementation.
+ * chunks that have been completely filled and that have the
+ * %FW_CDEV_ISO_INTERRUPT bit set, or when explicitly requested with
+ * %FW_CDEV_IOC_FLUSH_ISO.
  *
  * The buffer is continuously filled with the following data, per packet:
  *  - the 1394 iso packet header as described at &fw_cdev_event_iso_interrupt,
@@ -429,6 +423,9 @@ union fw_cdev_event {
 #define FW_CDEV_IOC_RECEIVE_PHY_PACKETS _IOW('#', 0x16, struct fw_cdev_receive_phy_packets)
 #define FW_CDEV_IOC_SET_ISO_CHANNELS    _IOW('#', 0x17, struct fw_cdev_set_iso_channels)
 
+/* available since kernel version 3.4 */
+#define FW_CDEV_IOC_FLUSH_ISO           _IOW('#', 0x18, struct fw_cdev_flush_iso)
+
 /*
  * ABI version history
  *  1  (2.6.22)  - initial version
@@ -451,30 +448,32 @@ union fw_cdev_event {
  *               - added %FW_CDEV_EVENT_ISO_INTERRUPT_MULTICHANNEL,
  *                 %FW_CDEV_ISO_CONTEXT_RECEIVE_MULTICHANNEL, and
  *                 %FW_CDEV_IOC_SET_ISO_CHANNELS
+ *  5  (3.4)     - send %FW_CDEV_EVENT_ISO_INTERRUPT events when needed to
+ *                 avoid dropping data
+ *               - added %FW_CDEV_IOC_FLUSH_ISO
  */
-#define FW_CDEV_VERSION 3 /* Meaningless; don't use this macro. */
 
 /**
  * struct fw_cdev_get_info - General purpose information ioctl
  * @version:	The version field is just a running serial number.  Both an
  *		input parameter (ABI version implemented by the client) and
  *		output parameter (ABI version implemented by the kernel).
- *		A client must not fill in an %FW_CDEV_VERSION defined from an
- *		included kernel header file but the actual version for which
- *		the client was implemented.  This is necessary for forward
- *		compatibility.  We never break backwards compatibility, but
- *		may add more structs, events, and ioctls in later revisions.
- * @rom_length:	If @rom is non-zero, at most rom_length bytes of configuration
+ *		A client shall fill in the ABI @version for which the client
+ *		was implemented.  This is necessary for forward compatibility.
+ * @rom_length:	If @rom is non-zero, up to @rom_length bytes of Configuration
  *		ROM will be copied into that user space address.  In either
  *		case, @rom_length is updated with the actual length of the
- *		configuration ROM.
+ *		Configuration ROM.
  * @rom:	If non-zero, address of a buffer to be filled by a copy of the
- *		device's configuration ROM
+ *		device's Configuration ROM
  * @bus_reset:	If non-zero, address of a buffer to be filled by a
  *		&struct fw_cdev_event_bus_reset with the current state
  *		of the bus.  This does not cause a bus reset to happen.
  * @bus_reset_closure: Value of &closure in this and subsequent bus reset events
  * @card:	The index of the card this device belongs to
+ *
+ * The %FW_CDEV_IOC_GET_INFO ioctl is usually the very first one which a client
+ * performs right after it opened a /dev/fw* file.
  *
  * As a side effect, reception of %FW_CDEV_EVENT_BUS_RESET events to be read(2)
  * is started by this ioctl.
@@ -615,7 +614,7 @@ struct fw_cdev_initiate_bus_reset {
  * @handle:	Handle to the descriptor, written by the kernel
  *
  * Add a descriptor block and optionally a preceding immediate key to the local
- * node's configuration ROM.
+ * node's Configuration ROM.
  *
  * The @key field specifies the upper 8 bits of the descriptor root directory
  * pointer and the @data and @length fields specify the contents. The @key
@@ -630,9 +629,9 @@ struct fw_cdev_initiate_bus_reset {
  * If successful, the kernel adds the descriptor and writes back a @handle to
  * the kernel-side object to be used for later removal of the descriptor block
  * and immediate key.  The kernel will also generate a bus reset to signal the
- * change of the configuration ROM to other nodes.
+ * change of the Configuration ROM to other nodes.
  *
- * This ioctl affects the configuration ROMs of all local nodes.
+ * This ioctl affects the Configuration ROMs of all local nodes.
  * The ioctl only succeeds on device files which represent a local node.
  */
 struct fw_cdev_add_descriptor {
@@ -644,13 +643,13 @@ struct fw_cdev_add_descriptor {
 };
 
 /**
- * struct fw_cdev_remove_descriptor - Remove contents from the configuration ROM
+ * struct fw_cdev_remove_descriptor - Remove contents from the Configuration ROM
  * @handle:	Handle to the descriptor, as returned by the kernel when the
  *		descriptor was added
  *
  * Remove a descriptor block and accompanying immediate key from the local
- * nodes' configuration ROMs.  The kernel will also generate a bus reset to
- * signal the change of the configuration ROM to other nodes.
+ * nodes' Configuration ROMs.  The kernel will also generate a bus reset to
+ * signal the change of the Configuration ROM to other nodes.
  */
 struct fw_cdev_remove_descriptor {
 	__u32 handle;
@@ -862,17 +861,31 @@ struct fw_cdev_stop_iso {
 };
 
 /**
+ * struct fw_cdev_flush_iso - flush completed iso packets
+ * @handle:	handle of isochronous context to flush
+ *
+ * For %FW_CDEV_ISO_CONTEXT_TRANSMIT or %FW_CDEV_ISO_CONTEXT_RECEIVE contexts,
+ * report any completed packets.
+ *
+ * For %FW_CDEV_ISO_CONTEXT_RECEIVE_MULTICHANNEL contexts, report the current
+ * offset in the receive buffer, if it has changed; this is typically in the
+ * middle of some buffer chunk.
+ *
+ * Any %FW_CDEV_EVENT_ISO_INTERRUPT or %FW_CDEV_EVENT_ISO_INTERRUPT_MULTICHANNEL
+ * events generated by this ioctl are sent synchronously, i.e., are available
+ * for reading from the file descriptor when this ioctl returns.
+ */
+struct fw_cdev_flush_iso {
+	__u32 handle;
+};
+
+/**
  * struct fw_cdev_get_cycle_timer - read cycle timer register
  * @local_time:   system time, in microseconds since the Epoch
  * @cycle_timer:  Cycle Time register contents
  *
- * The %FW_CDEV_IOC_GET_CYCLE_TIMER ioctl reads the isochronous cycle timer
- * and also the system clock (%CLOCK_REALTIME).  This allows to express the
- * receive time of an isochronous packet as a system time.
- *
- * @cycle_timer consists of 7 bits cycleSeconds, 13 bits cycleCount, and
- * 12 bits cycleOffset, in host byte order.  Cf. the Cycle Time register
- * per IEEE 1394 or Isochronous Cycle Timer register per OHCI-1394.
+ * Same as %FW_CDEV_IOC_GET_CYCLE_TIMER2, but fixed to use %CLOCK_REALTIME
+ * and only with microseconds resolution.
  *
  * In version 1 and 2 of the ABI, this ioctl returned unreliable (non-
  * monotonic) @cycle_timer values on certain controllers.
@@ -889,10 +902,17 @@ struct fw_cdev_get_cycle_timer {
  * @clk_id:       input parameter, clock from which to get the system time
  * @cycle_timer:  Cycle Time register contents
  *
- * The %FW_CDEV_IOC_GET_CYCLE_TIMER2 works like
- * %FW_CDEV_IOC_GET_CYCLE_TIMER but lets you choose a clock like with POSIX'
- * clock_gettime function.  Supported @clk_id values are POSIX' %CLOCK_REALTIME
- * and %CLOCK_MONOTONIC and Linux' %CLOCK_MONOTONIC_RAW.
+ * The %FW_CDEV_IOC_GET_CYCLE_TIMER2 ioctl reads the isochronous cycle timer
+ * and also the system clock.  This allows to correlate reception time of
+ * isochronous packets with system time.
+ *
+ * @clk_id lets you choose a clock like with POSIX' clock_gettime function.
+ * Supported @clk_id values are POSIX' %CLOCK_REALTIME and %CLOCK_MONOTONIC
+ * and Linux' %CLOCK_MONOTONIC_RAW.
+ *
+ * @cycle_timer consists of 7 bits cycleSeconds, 13 bits cycleCount, and
+ * 12 bits cycleOffset, in host byte order.  Cf. the Cycle Time register
+ * per IEEE 1394 or Isochronous Cycle Timer register per OHCI-1394.
  */
 struct fw_cdev_get_cycle_timer2 {
 	__s64 tv_sec;
@@ -1013,5 +1033,7 @@ struct fw_cdev_send_phy_packet {
 struct fw_cdev_receive_phy_packets {
 	__u64 closure;
 };
+
+#define FW_CDEV_VERSION 3 /* Meaningless legacy macro; don't use it. */
 
 #endif /* _LINUX_FIREWIRE_CDEV_H */

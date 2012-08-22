@@ -21,7 +21,6 @@ extern unsigned long alloc_stack(int order, int atomic);
 extern void free_stack(unsigned long stack, int order);
 
 extern int do_signal(void);
-extern void copy_sc(struct uml_pt_regs *regs, void *from);
 extern void interrupt_end(void);
 extern void relay_signal(int sig, struct uml_pt_regs *regs);
 
@@ -49,7 +48,7 @@ extern void do_uml_exitcalls(void);
  * GFP_ATOMIC.
  */
 extern int __cant_sleep(void);
-extern void *get_current(void);
+extern int get_current_pid(void);
 extern int copy_from_user_proc(void *to, void *from, int size);
 extern int cpu(void);
 extern char *uml_strdup(const char *string);

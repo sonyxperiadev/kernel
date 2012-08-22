@@ -29,18 +29,18 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/sysmacros.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <asm/boot.h>
+#include <tools/le_byteshift.h>
 
 typedef unsigned char  u8;
 typedef unsigned short u16;
-typedef unsigned long  u32;
+typedef unsigned int   u32;
 
 #define DEFAULT_MAJOR_ROOT 0
 #define DEFAULT_MINOR_ROOT 0
+#define DEFAULT_ROOT_DEV (DEFAULT_MAJOR_ROOT << 8 | DEFAULT_MINOR_ROOT)
 
 /* Minimal number of setup sectors */
 #define SETUP_SECT_MIN 5
@@ -130,47 +130,25 @@ static void die(const char * str, ...)
 
 static void usage(void)
 {
-	die("Usage: build setup system [rootdev] [> image]");
+	die("Usage: build setup system [> image]");
 }
 
 int main(int argc, char ** argv)
 {
+#ifdef CONFIG_EFI_STUB
+	unsigned int file_sz, pe_header;
+#endif
 	unsigned int i, sz, setup_sectors;
 	int c;
 	u32 sys_size;
-	u8 major_root, minor_root;
 	struct stat sb;
 	FILE *file;
 	int fd;
 	void *kernel;
 	u32 crc = 0xffffffffUL;
 
-	if ((argc < 3) || (argc > 4))
+	if (argc != 3)
 		usage();
-	if (argc > 3) {
-		if (!strcmp(argv[3], "CURRENT")) {
-			if (stat("/", &sb)) {
-				perror("/");
-				die("Couldn't stat /");
-			}
-			major_root = major(sb.st_dev);
-			minor_root = minor(sb.st_dev);
-		} else if (strcmp(argv[3], "FLOPPY")) {
-			if (stat(argv[3], &sb)) {
-				perror(argv[3]);
-				die("Couldn't stat root device.");
-			}
-			major_root = major(sb.st_rdev);
-			minor_root = minor(sb.st_rdev);
-		} else {
-			major_root = 0;
-			minor_root = 0;
-		}
-	} else {
-		major_root = DEFAULT_MAJOR_ROOT;
-		minor_root = DEFAULT_MINOR_ROOT;
-	}
-	fprintf(stderr, "Root device is (%d, %d)\n", major_root, minor_root);
 
 	/* Copy the setup code */
 	file = fopen(argv[1], "r");
@@ -181,7 +159,7 @@ int main(int argc, char ** argv)
 		die("read-error on `setup'");
 	if (c < 1024)
 		die("The setup must be at least 1024 bytes");
-	if (buf[510] != 0x55 || buf[511] != 0xaa)
+	if (get_unaligned_le16(&buf[510]) != 0xAA55)
 		die("Boot block hasn't got boot flag (0xAA55)");
 	fclose(file);
 
@@ -193,8 +171,7 @@ int main(int argc, char ** argv)
 	memset(buf+c, 0, i-c);
 
 	/* Set the default root device */
-	buf[508] = minor_root;
-	buf[509] = major_root;
+	put_unaligned_le16(DEFAULT_ROOT_DEV, &buf[508]);
 
 	fprintf(stderr, "Setup is %d bytes (padded to %d bytes).\n", c, i);
 
@@ -214,10 +191,51 @@ int main(int argc, char ** argv)
 
 	/* Patch the setup code with the appropriate size parameters */
 	buf[0x1f1] = setup_sectors-1;
-	buf[0x1f4] = sys_size;
-	buf[0x1f5] = sys_size >> 8;
-	buf[0x1f6] = sys_size >> 16;
-	buf[0x1f7] = sys_size >> 24;
+	put_unaligned_le32(sys_size, &buf[0x1f4]);
+
+#ifdef CONFIG_EFI_STUB
+	file_sz = sz + i + ((sys_size * 16) - sz);
+
+	pe_header = get_unaligned_le32(&buf[0x3c]);
+
+	/* Size of code */
+	put_unaligned_le32(file_sz, &buf[pe_header + 0x1c]);
+
+	/* Size of image */
+	put_unaligned_le32(file_sz, &buf[pe_header + 0x50]);
+
+#ifdef CONFIG_X86_32
+	/*
+	 * Address of entry point.
+	 *
+	 * The EFI stub entry point is +16 bytes from the start of
+	 * the .text section.
+	 */
+	put_unaligned_le32(i + 16, &buf[pe_header + 0x28]);
+
+	/* .text size */
+	put_unaligned_le32(file_sz, &buf[pe_header + 0xb0]);
+
+	/* .text size of initialised data */
+	put_unaligned_le32(file_sz, &buf[pe_header + 0xb8]);
+#else
+	/*
+	 * Address of entry point. startup_32 is at the beginning and
+	 * the 64-bit entry point (startup_64) is always 512 bytes
+	 * after. The EFI stub entry point is 16 bytes after that, as
+	 * the first instruction allows legacy loaders to jump over
+	 * the EFI stub initialisation
+	 */
+	put_unaligned_le32(i + 528, &buf[pe_header + 0x28]);
+
+	/* .text size */
+	put_unaligned_le32(file_sz, &buf[pe_header + 0xc0]);
+
+	/* .text size of initialised data */
+	put_unaligned_le32(file_sz, &buf[pe_header + 0xc8]);
+
+#endif /* CONFIG_X86_32 */
+#endif /* CONFIG_EFI_STUB */
 
 	crc = partial_crc32(buf, i, crc);
 	if (fwrite(buf, 1, i, stdout) != i)
@@ -236,8 +254,9 @@ int main(int argc, char ** argv)
 	}
 
 	/* Write the CRC */
-	fprintf(stderr, "CRC %lx\n", crc);
-	if (fwrite(&crc, 1, 4, stdout) != 4)
+	fprintf(stderr, "CRC %x\n", crc);
+	put_unaligned_le32(crc, buf);
+	if (fwrite(buf, 1, 4, stdout) != 4)
 		die("Writing CRC failed");
 
 	close(fd);

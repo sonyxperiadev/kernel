@@ -36,7 +36,6 @@
 #include <mach/hardware.h>
 #include <asm/mach-types.h>
 #include <asm/irq.h>
-#include <asm/system.h>
 #include <asm/tlbflush.h>
 #include <asm/pgtable.h>
 
@@ -56,7 +55,8 @@
 #define INTC_PIN	IXP23XX_GPIO_PIN_11
 #define INTD_PIN	IXP23XX_GPIO_PIN_12
 
-static int __init roadrunner_map_irq(struct pci_dev *dev, u8 idsel, u8 pin)
+static int __init roadrunner_map_irq(const struct pci_dev *dev, u8 idsel,
+	u8 pin)
 {
 	static int pci_card_slot_irq[] = {INTB, INTC, INTD, INTA};
 	static int pmc_card_slot_irq[] = {INTA, INTB, INTC, INTD};
@@ -174,6 +174,7 @@ MACHINE_START(ROADRUNNER, "ADI Engineering RoadRunner Development Platform")
 	.map_io		= ixp23xx_map_io,
 	.init_irq	= ixp23xx_init_irq,
 	.timer		= &ixp23xx_timer,
-	.boot_params	= 0x00000100,
+	.atag_offset	= 0x100,
 	.init_machine	= roadrunner_init,
+	.restart	= ixp23xx_restart,
 MACHINE_END

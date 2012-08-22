@@ -33,9 +33,7 @@ enum {
 
 struct max8649_platform_data {
 	struct regulator_init_data *regulator;
-#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
-	void (*init)(void) ;
-#endif    
+
 	unsigned	mode:2;		/* bit[1:0] = VID1,VID0 */
 	unsigned	extclk_freq:2;
 	unsigned	extclk:1;

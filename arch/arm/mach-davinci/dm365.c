@@ -17,12 +17,10 @@
 #include <linux/serial_8250.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
-#include <linux/gpio.h>
 #include <linux/spi/spi.h>
 
 #include <asm/mach/map.h>
 
-#include <mach/dm365.h>
 #include <mach/cputype.h>
 #include <mach/edma.h>
 #include <mach/psc.h>
@@ -34,12 +32,29 @@
 #include <mach/asp.h>
 #include <mach/keyscan.h>
 #include <mach/spi.h>
+#include <mach/gpio-davinci.h>
 
-
+#include "davinci.h"
 #include "clock.h"
 #include "mux.h"
 
 #define DM365_REF_FREQ		24000000	/* 24 MHz on the DM365 EVM */
+
+/* Base of key scan register bank */
+#define DM365_KEYSCAN_BASE		0x01c69400
+
+#define DM365_RTC_BASE			0x01c69000
+
+#define DAVINCI_DM365_VC_BASE		0x01d0c000
+#define DAVINCI_DMA_VC_TX		2
+#define DAVINCI_DMA_VC_RX		3
+
+#define DM365_EMAC_BASE			0x01d07000
+#define DM365_EMAC_MDIO_BASE		(DM365_EMAC_BASE + 0x4000)
+#define DM365_EMAC_CNTRL_OFFSET		0x0000
+#define DM365_EMAC_CNTRL_MOD_OFFSET	0x3000
+#define DM365_EMAC_CNTRL_RAM_OFFSET	0x1000
+#define DM365_EMAC_CNTRL_RAM_SIZE	0x2000
 
 static struct pll_data pll1_data = {
 	.num		= 1,
@@ -1084,7 +1099,6 @@ static struct davinci_soc_info davinci_soc_info_dm365 = {
 	.emac_pdata		= &dm365_emac_pdata,
 	.sram_dma		= 0x00010000,
 	.sram_len		= SZ_32K,
-	.reset_device		= &davinci_wdt_device,
 };
 
 void __init dm365_init_asp(struct snd_platform_data *pdata)
@@ -1124,6 +1138,7 @@ void __init dm365_init_rtc(void)
 void __init dm365_init(void)
 {
 	davinci_common_init(&davinci_soc_info_dm365);
+	davinci_map_sysmod();
 }
 
 static struct resource dm365_vpss_resources[] = {

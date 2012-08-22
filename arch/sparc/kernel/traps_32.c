@@ -14,9 +14,9 @@
 #include <linux/signal.h>
 #include <linux/smp.h>
 #include <linux/kdebug.h>
+#include <linux/export.h>
 
 #include <asm/delay.h>
-#include <asm/system.h>
 #include <asm/ptrace.h>
 #include <asm/oplib.h>
 #include <asm/page.h>

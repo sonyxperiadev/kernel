@@ -33,6 +33,7 @@
 #include <linux/module.h>
 #include <linux/err.h>
 #include <linux/clk.h>
+#include <mach/memory.h>
 
 #include <plat/cpu.h>
 #include <mach/kona_timer.h>

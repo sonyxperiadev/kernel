@@ -18,18 +18,28 @@
 #define TWD_TIMER_CONTROL_PERIODIC	(1 << 1)
 #define TWD_TIMER_CONTROL_IT_ENABLE	(1 << 2)
 
-#define TWD_WDOG_CONTROL_ENABLE         (1 << 0)
-#define TWD_WDOG_CONTROL_PERIODIC	(1 << 1)
-#define TWD_WDOG_CONTROL_IT_ENABLE	(1 << 2)
-#define TWD_WDOG_CONTROL_TIMER_MODE	(0 << 3)
-#define TWD_WDOG_CONTROL_WATCHDOG_MODE	(1 << 3)
+#include <linux/ioport.h>
 
-struct clock_event_device;
+struct twd_local_timer {
+	struct resource	res[2];
+};
 
-extern void __iomem *twd_base;
+#define DEFINE_TWD_LOCAL_TIMER(name,base,irq)	\
+struct twd_local_timer name __initdata = {	\
+	.res	= {				\
+		DEFINE_RES_MEM(base, 0x10),	\
+		DEFINE_RES_IRQ(irq),		\
+	},					\
+};
 
-int twd_timer_ack(void);
-void twd_timer_setup(struct clock_event_device *);
-unsigned long twd_get_timer_rate(void);
+int twd_local_timer_register(struct twd_local_timer *);
+
+#ifdef CONFIG_HAVE_ARM_TWD
+void twd_local_timer_of_register(void);
+#else
+static inline void twd_local_timer_of_register(void)
+{
+}
+#endif
 
 #endif

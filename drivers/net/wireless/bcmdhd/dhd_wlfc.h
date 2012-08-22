@@ -1,7 +1,7 @@
 /*
-* Copyright (C) 1999-2011, Broadcom Corporation
+* Copyright (C) 1999-2012, Broadcom Corporation
 * 
-*         Unless you and Broadcom execute a separate written software license
+*      Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2 (the "GPL"),
 * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -18,7 +18,7 @@
 *      Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
-* $Id: dhd_wlfc.h 280556 2011-08-30 01:59:16Z $
+* $Id: dhd_wlfc.h 322459 2012-03-20 22:36:07Z $
 *
 */
 #ifndef __wlfc_host_driver_definitions_h__
@@ -62,6 +62,7 @@ typedef enum ewlfc_packet_state {
 typedef enum ewlfc_mac_entry_action {
 	eWLFC_MAC_ENTRY_ACTION_ADD,
 	eWLFC_MAC_ENTRY_ACTION_DEL,
+	eWLFC_MAC_ENTRY_ACTION_UPDATE,
 	eWLFC_MAC_ENTRY_ACTION_MAX
 } ewlfc_mac_entry_action_t;
 
@@ -92,12 +93,13 @@ typedef struct wlfc_hanger {
 #define WLFC_STATE_CLOSE	2
 
 #define WLFC_PSQ_PREC_COUNT		((AC_COUNT + 1) * 2) /* 2 for each AC traffic and bc/mc */
-#define WLFC_PSQ_LEN			64
-#define WLFC_SENDQ_LEN			256
+#define WLFC_PSQ_LEN			256
+#define WLFC_SENDQ_LEN			128
 
-#define WLFC_FLOWCONTROL_DELTA		8
-#define WLFC_FLOWCONTROL_HIWATER	(WLFC_PSQ_LEN - WLFC_FLOWCONTROL_DELTA)
-#define WLFC_FLOWCONTROL_LOWATER	(WLFC_FLOWCONTROL_HIWATER - WLFC_FLOWCONTROL_DELTA)
+
+#define WLFC_FLOWCONTROL_HIWATER	128
+#define WLFC_FLOWCONTROL_LOWATER	64
+
 
 typedef struct wlfc_mac_descriptor {
 	uint8 occupied;
@@ -264,5 +266,13 @@ typedef struct athost_wl_status_info {
 	uint32  borrow_defer_timestamp;
 
 } athost_wl_status_info_t;
+
+int dhd_wlfc_enable(dhd_pub_t *dhd);
+int dhd_wlfc_interface_event(struct dhd_info *,
+	ewlfc_mac_entry_action_t action, uint8 ifid, uint8 iftype, uint8* ea);
+int dhd_wlfc_FIFOcreditmap_event(struct dhd_info *dhd, uint8* event_data);
+int dhd_wlfc_event(struct dhd_info *dhd);
+int dhd_os_wlfc_block(dhd_pub_t *pub);
+int dhd_os_wlfc_unblock(dhd_pub_t *pub);
 
 #endif /* __wlfc_host_driver_definitions_h__ */

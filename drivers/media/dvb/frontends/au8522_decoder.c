@@ -692,7 +692,7 @@ static int au8522_g_tuner(struct v4l2_subdev *sd, struct v4l2_tuner *vt)
 	/* Interrogate the decoder to see if we are getting a real signal */
 	lock_status = au8522_readreg(state, 0x00);
 	if (lock_status == 0xa2)
-		vt->signal = 0x01;
+		vt->signal = 0xffff;
 	else
 		vt->signal = 0x00;
 
@@ -839,15 +839,4 @@ static struct i2c_driver au8522_driver = {
 	.id_table	= au8522_id,
 };
 
-static __init int init_au8522(void)
-{
-	return i2c_add_driver(&au8522_driver);
-}
-
-static __exit void exit_au8522(void)
-{
-	i2c_del_driver(&au8522_driver);
-}
-
-module_init(init_au8522);
-module_exit(exit_au8522);
+module_i2c_driver(au8522_driver);

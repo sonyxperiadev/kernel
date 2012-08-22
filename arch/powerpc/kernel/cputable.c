@@ -14,12 +14,13 @@
 #include <linux/sched.h>
 #include <linux/threads.h>
 #include <linux/init.h>
-#include <linux/module.h>
+#include <linux/export.h>
 
 #include <asm/oprofile_impl.h>
 #include <asm/cputable.h>
 #include <asm/prom.h>		/* for PTRRELOC on ARCH=ppc */
 #include <asm/mmu.h>
+#include <asm/setup.h>
 
 struct cpu_spec* cur_cpu_spec = NULL;
 EXPORT_SYMBOL(cur_cpu_spec);
@@ -1505,6 +1506,19 @@ static struct cpu_spec __initdata cpu_specs[] = {
 		.machine_check		= machine_check_4xx,
 		.platform		= "ppc405",
 	},
+	{	/* APM8018X */
+		.pvr_mask		= 0xffff0000,
+		.pvr_value		= 0x7ff11432,
+		.cpu_name		= "APM8018X",
+		.cpu_features		= CPU_FTRS_40X,
+		.cpu_user_features	= PPC_FEATURE_32 |
+			PPC_FEATURE_HAS_MMU | PPC_FEATURE_HAS_4xxMAC,
+		.mmu_features		= MMU_FTR_TYPE_40x,
+		.icache_bsize		= 32,
+		.dcache_bsize		= 32,
+		.machine_check		= machine_check_4xx,
+		.platform		= "ppc405",
+	},
 	{	/* default match */
 		.pvr_mask		= 0x00000000,
 		.pvr_value		= 0x00000000,
@@ -1803,7 +1817,7 @@ static struct cpu_spec __initdata cpu_specs[] = {
 		.platform		= "ppc440",
 	},
 	{ /* 464 in APM821xx */
-		.pvr_mask		= 0xffffff00,
+		.pvr_mask		= 0xfffffff0,
 		.pvr_value		= 0x12C41C80,
 		.cpu_name		= "APM821XX",
 		.cpu_features		= CPU_FTRS_44X,
@@ -1820,6 +1834,20 @@ static struct cpu_spec __initdata cpu_specs[] = {
 		.pvr_mask		= 0xffffffff,
 		.pvr_value		= 0x11a52080,
 		.cpu_name		= "476",
+		.cpu_features		= CPU_FTRS_47X | CPU_FTR_476_DD2,
+		.cpu_user_features	= COMMON_USER_BOOKE |
+			PPC_FEATURE_HAS_FPU,
+		.mmu_features		= MMU_FTR_TYPE_47x |
+			MMU_FTR_USE_TLBIVAX_BCAST | MMU_FTR_LOCK_BCAST_INVAL,
+		.icache_bsize		= 32,
+		.dcache_bsize		= 128,
+		.machine_check		= machine_check_47x,
+		.platform		= "ppc470",
+	},
+	{ /* 476fpe */
+		.pvr_mask		= 0xffff0000,
+		.pvr_value		= 0x7ff50000,
+		.cpu_name		= "476fpe",
 		.cpu_features		= CPU_FTRS_47X | CPU_FTR_476_DD2,
 		.cpu_user_features	= COMMON_USER_BOOKE |
 			PPC_FEATURE_HAS_FPU,
@@ -1992,6 +2020,24 @@ static struct cpu_spec __initdata cpu_specs[] = {
 		.machine_check		= machine_check_e500mc,
 		.platform		= "ppce5500",
 	},
+	{	/* e6500 */
+		.pvr_mask		= 0xffff0000,
+		.pvr_value		= 0x80400000,
+		.cpu_name		= "e6500",
+		.cpu_features		= CPU_FTRS_E6500,
+		.cpu_user_features	= COMMON_USER_BOOKE | PPC_FEATURE_HAS_FPU,
+		.mmu_features		= MMU_FTR_TYPE_FSL_E | MMU_FTR_BIG_PHYS |
+			MMU_FTR_USE_TLBILX,
+		.icache_bsize		= 64,
+		.dcache_bsize		= 64,
+		.num_pmcs		= 4,
+		.oprofile_cpu_type	= "ppc/e6500",
+		.oprofile_type		= PPC_OPROFILE_FSL_EMB,
+		.cpu_setup		= __setup_cpu_e5500,
+		.cpu_restore		= __restore_cpu_e5500,
+		.machine_check		= machine_check_e500mc,
+		.platform		= "ppce6500",
+	},
 #ifdef CONFIG_PPC32
 	{	/* default match */
 		.pvr_mask		= 0x00000000,
@@ -2051,7 +2097,8 @@ static struct cpu_spec __initdata cpu_specs[] = {
 
 static struct cpu_spec the_cpu_spec;
 
-static void __init setup_cpu_spec(unsigned long offset, struct cpu_spec *s)
+static struct cpu_spec * __init setup_cpu_spec(unsigned long offset,
+					       struct cpu_spec *s)
 {
 	struct cpu_spec *t = &the_cpu_spec;
 	struct cpu_spec old;
@@ -2114,6 +2161,8 @@ static void __init setup_cpu_spec(unsigned long offset, struct cpu_spec *s)
 		t->cpu_setup(offset, t);
 	}
 #endif /* CONFIG_PPC64 || CONFIG_BOOKE */
+
+	return t;
 }
 
 struct cpu_spec * __init identify_cpu(unsigned long offset, unsigned int pvr)
@@ -2124,10 +2173,8 @@ struct cpu_spec * __init identify_cpu(unsigned long offset, unsigned int pvr)
 	s = PTRRELOC(s);
 
 	for (i = 0; i < ARRAY_SIZE(cpu_specs); i++,s++) {
-		if ((pvr & s->pvr_mask) == s->pvr_value) {
-			setup_cpu_spec(offset, s);
-			return s;
-		}
+		if ((pvr & s->pvr_mask) == s->pvr_value)
+			return setup_cpu_spec(offset, s);
 	}
 
 	BUG();

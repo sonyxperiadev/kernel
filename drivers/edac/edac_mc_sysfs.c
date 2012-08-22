@@ -452,7 +452,7 @@ static ssize_t mci_sdram_scrub_rate_store(struct mem_ctl_info *mci,
 	int new_bw = 0;
 
 	if (!mci->set_sdram_scrub_rate)
-		return -EINVAL;
+		return -ENODEV;
 
 	if (strict_strtoul(data, 10, &bandwidth) < 0)
 		return -EINVAL;
@@ -475,7 +475,7 @@ static ssize_t mci_sdram_scrub_rate_show(struct mem_ctl_info *mci, char *data)
 	int bandwidth = 0;
 
 	if (!mci->get_sdram_scrub_rate)
-		return -EINVAL;
+		return -ENODEV;
 
 	bandwidth = mci->get_sdram_scrub_rate(mci);
 	if (bandwidth < 0) {
@@ -1021,19 +1021,19 @@ void edac_remove_sysfs_mci_device(struct mem_ctl_info *mci)
 int edac_sysfs_setup_mc_kset(void)
 {
 	int err = -EINVAL;
-	struct sysdev_class *edac_class;
+	struct bus_type *edac_subsys;
 
 	debugf1("%s()\n", __func__);
 
-	/* get the /sys/devices/system/edac class reference */
-	edac_class = edac_get_sysfs_class();
-	if (edac_class == NULL) {
-		debugf1("%s() no edac_class error=%d\n", __func__, err);
+	/* get the /sys/devices/system/edac subsys reference */
+	edac_subsys = edac_get_sysfs_subsys();
+	if (edac_subsys == NULL) {
+		debugf1("%s() no edac_subsys error=%d\n", __func__, err);
 		goto fail_out;
 	}
 
 	/* Init the MC's kobject */
-	mc_kset = kset_create_and_add("mc", NULL, &edac_class->kset.kobj);
+	mc_kset = kset_create_and_add("mc", NULL, &edac_subsys->dev_root->kobj);
 	if (!mc_kset) {
 		err = -ENOMEM;
 		debugf1("%s() Failed to register '.../edac/mc'\n", __func__);
@@ -1045,7 +1045,7 @@ int edac_sysfs_setup_mc_kset(void)
 	return 0;
 
 fail_kset:
-	edac_put_sysfs_class();
+	edac_put_sysfs_subsys();
 
 fail_out:
 	return err;
@@ -1059,6 +1059,6 @@ fail_out:
 void edac_sysfs_teardown_mc_kset(void)
 {
 	kset_unregister(mc_kset);
-	edac_put_sysfs_class();
+	edac_put_sysfs_subsys();
 }
 

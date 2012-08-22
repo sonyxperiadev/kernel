@@ -92,7 +92,6 @@ struct pwm_device {
 	unsigned long	duty_ticks;
 };
 
-struct pwm_device *pwm_request(const char *name, const char *label);
 void pwm_release(struct pwm_device *p);
 
 static inline int pwm_is_requested(const struct pwm_device *p)
@@ -132,12 +131,37 @@ int pwm_start(struct pwm_device *p);
 int pwm_stop(struct pwm_device *p);
 
 int pwm_config_nosleep(struct pwm_device *p, struct pwm_config *c);
-int pwm_config(struct pwm_device *p, struct pwm_config *c);
 
 int pwm_synchronize(struct pwm_device *p, struct pwm_device *to_p);
 int pwm_unsynchronize(struct pwm_device *p, struct pwm_device *from_p);
 
 struct pwm_device *gpio_pwm_create(int gpio);
 int gpio_pwm_destroy(struct pwm_device *p);
+
+/*
+ * pwm_request - request a PWM device
+ */
+struct pwm_device *pwm_request(int pwm_id, const char *label);
+
+/*
+ * pwm_free - free a PWM device
+ */
+void pwm_free(struct pwm_device *pwm);
+
+/*
+ * pwm_config - change a PWM device configuration
+ */
+int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns);
+
+/*
+ * pwm_enable - start a PWM output toggling
+ */
+int pwm_enable(struct pwm_device *pwm);
+
+/*
+ * pwm_disable - stop a PWM output toggling
+ */
+void pwm_disable(struct pwm_device *pwm);
+
 
 #endif

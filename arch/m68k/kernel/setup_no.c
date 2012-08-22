@@ -31,11 +31,13 @@
 #include <linux/init.h>
 #include <linux/initrd.h>
 #include <linux/root_dev.h>
+#include <linux/rtc.h>
 
 #include <asm/setup.h>
 #include <asm/irq.h>
 #include <asm/machdep.h>
 #include <asm/pgtable.h>
+#include <asm/sections.h>
 
 unsigned long memory_start;
 unsigned long memory_end;
@@ -46,8 +48,9 @@ EXPORT_SYMBOL(memory_end);
 char __initdata command_line[COMMAND_LINE_SIZE];
 
 /* machine dependent timer functions */
-void (*mach_gettod)(int*, int*, int*, int*, int*, int*);
+void (*mach_sched_init)(irq_handler_t handler) __initdata = NULL;
 int (*mach_set_clock_mmss)(unsigned long);
+int (*mach_hwclk) (int, struct rtc_time*);
 
 /* machine dependent reboot functions */
 void (*mach_reset)(void);
@@ -79,9 +82,6 @@ void (*mach_power_off)(void);
 #ifndef CPU_INSTR_PER_JIFFY
 #define	CPU_INSTR_PER_JIFFY	16
 #endif
-
-extern int _stext, _etext, _sdata, _edata, _sbss, _ebss, _end;
-extern int _ramstart, _ramend;
 
 #if defined(CONFIG_UBOOT)
 /*

@@ -51,7 +51,6 @@
 #include <linux/kernel.h>
 #include <linux/ctype.h>
 #include <linux/parport.h>
-#include <linux/version.h>
 #include <linux/list.h>
 #include <linux/notifier.h>
 #include <linux/reboot.h>
@@ -59,7 +58,6 @@
 
 #include <linux/io.h>
 #include <linux/uaccess.h>
-#include <asm/system.h>
 
 #define LCD_MINOR		156
 #define KEYPAD_MINOR		185
@@ -1180,16 +1178,14 @@ static inline int handle_lcd_special_code(void)
 			break;
 
 		while (*esc) {
-			char *endp;
-
 			if (*esc == 'x') {
 				esc++;
-				lcd_addr_x = simple_strtoul(esc, &endp, 10);
-				esc = endp;
+				if (kstrtoul(esc, 10, &lcd_addr_x) < 0)
+					break;
 			} else if (*esc == 'y') {
 				esc++;
-				lcd_addr_y = simple_strtoul(esc, &endp, 10);
-				esc = endp;
+				if (kstrtoul(esc, 10, &lcd_addr_y) < 0)
+					break;
 			} else
 				break;
 		}

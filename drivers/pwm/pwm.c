@@ -100,12 +100,14 @@ err_flag_requested:
  * Returns a pointer to the requested PWM device on success, -EINVAL
  * otherwise.
  */
-struct pwm_device *pwm_request(const char *name, const char *label)
+struct pwm_device *pwm_request(int pwm_id, const char *label)
 {
 	struct device *d;
+	char name[16];
 	struct pwm_device *p;
 	int ret;
 
+	sprintf(name, "kona_pwmc:%d", pwm_id);
 	d = class_find_device(&pwm_class, NULL, (char *)name, pwm_match_name);
 	if (!d)
 		return ERR_PTR(-EINVAL);
@@ -201,27 +203,32 @@ EXPORT_SYMBOL(pwm_config_nosleep);
  * -EINVAL if they are found to be invalid.  Otherwise, returns
  * whatever the PWM device's config() method returns.
  */
-int pwm_config(struct pwm_device *p, struct pwm_config *c)
+int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 {
 	int ret = 0;
+	struct pwm_config c = {
+		.config_mask = (BIT(PWM_CONFIG_PERIOD_TICKS)
+				| BIT(PWM_CONFIG_DUTY_TICKS)),
+		.period_ticks = pwm_ns_to_ticks(pwm, period_ns),
+		.duty_ticks = pwm_ns_to_ticks(pwm, duty_ns),
+	};
 
-	dev_dbg(&p->dev, "%s: config_mask %lu period_ticks %lu "
-		"duty_ticks %lu polarity %d\n",
-		__func__, c->config_mask, c->period_ticks,
-		c->duty_ticks, c->polarity);
 
-	switch (c->config_mask & (BIT(PWM_CONFIG_PERIOD_TICKS)
+	dev_dbg(&pwm->dev, "%s: period_ticks %d "
+		"duty_ticks %d \n",__func__, period_ns, duty_ns);
+
+	switch (c.config_mask & (BIT(PWM_CONFIG_PERIOD_TICKS)
 				  | BIT(PWM_CONFIG_DUTY_TICKS))) {
 	case BIT(PWM_CONFIG_PERIOD_TICKS):
-		if (p->duty_ticks > c->period_ticks)
+		if (pwm->duty_ticks > c.period_ticks)
 			ret = -EINVAL;
 		break;
 	case BIT(PWM_CONFIG_DUTY_TICKS):
-		if (p->period_ticks < c->duty_ticks)
+		if (pwm->period_ticks < c.duty_ticks)
 			ret = -EINVAL;
 		break;
 	case BIT(PWM_CONFIG_DUTY_TICKS) | BIT(PWM_CONFIG_PERIOD_TICKS):
-		if (c->duty_ticks > c->period_ticks)
+		if (c.duty_ticks > c.period_ticks)
 			ret = -EINVAL;
 		break;
 	default:
@@ -230,7 +237,7 @@ int pwm_config(struct pwm_device *p, struct pwm_config *c)
 
 	if (ret)
 		return ret;
-	return p->ops->config(p, c);
+	return pwm->ops->config(pwm, &c);
 }
 
 EXPORT_SYMBOL(pwm_config);
@@ -254,7 +261,7 @@ int pwm_set(struct pwm_device *p, unsigned long period_ns,
 		.polarity = polarity
 	};
 
-	return pwm_config(p, &c);
+	return p->ops->config(p, &c);
 }
 
 EXPORT_SYMBOL(pwm_set);
@@ -266,7 +273,7 @@ int pwm_set_period_ns(struct pwm_device *p, unsigned long period_ns)
 		.period_ticks = pwm_ns_to_ticks(p, period_ns),
 	};
 
-	return pwm_config(p, &c);
+	return p->ops->config(p, &c);
 }
 
 EXPORT_SYMBOL(pwm_set_period_ns);
@@ -284,7 +291,7 @@ int pwm_set_duty_ns(struct pwm_device *p, unsigned long duty_ns)
 		.config_mask = BIT(PWM_CONFIG_DUTY_TICKS),
 		.duty_ticks = pwm_ns_to_ticks(p, duty_ns),
 	};
-	return pwm_config(p, &c);
+	return p->ops->config(p, &c);
 }
 
 EXPORT_SYMBOL(pwm_set_duty_ns);
@@ -302,7 +309,7 @@ int pwm_set_polarity(struct pwm_device *p, int polarity)
 		.config_mask = BIT(PWM_CONFIG_POLARITY),
 		.polarity = polarity,
 	};
-	return pwm_config(p, &c);
+	return p->ops->config(p, &c);
 }
 
 EXPORT_SYMBOL(pwm_set_polarity);
@@ -312,7 +319,7 @@ int pwm_start(struct pwm_device *p)
 	struct pwm_config c = {
 		.config_mask = BIT(PWM_CONFIG_START),
 	};
-	return pwm_config(p, &c);
+	return p->ops->config(p, &c);
 }
 
 EXPORT_SYMBOL(pwm_start);
@@ -322,10 +329,37 @@ int pwm_stop(struct pwm_device *p)
 	struct pwm_config c = {
 		.config_mask = BIT(PWM_CONFIG_STOP),
 	};
-	return pwm_config(p, &c);
+	return p->ops->config(p, &c);
 }
 
 EXPORT_SYMBOL(pwm_stop);
+
+void pwm_disable(struct pwm_device *pwm)
+{
+	struct pwm_config c = {
+		.config_mask = BIT(PWM_CONFIG_STOP),
+	};
+
+	pwm->ops->config(pwm, &c);
+}
+EXPORT_SYMBOL(pwm_disable);
+
+int pwm_enable(struct pwm_device *pwm)
+{
+	struct pwm_config c = {
+		.config_mask = BIT(PWM_CONFIG_START),
+	};
+
+	return pwm->ops->config(pwm, &c);
+}
+EXPORT_SYMBOL(pwm_enable);
+
+void pwm_free(struct pwm_device *pwm)
+{
+	pwm_release(pwm);
+	kfree(pwm);
+}
+EXPORT_SYMBOL(pwm_free);
 
 int pwm_synchronize(struct pwm_device *p, struct pwm_device *to_p)
 {

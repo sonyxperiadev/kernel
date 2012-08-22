@@ -58,7 +58,6 @@ struct ctlr_info {
 	unsigned long paddr;
 	int 	nr_cmds; /* Number of commands allowed on this controller */
 	struct CfgTable __iomem *cfgtable;
-	int     max_sg_entries;
 	int	interrupts_enabled;
 	int	major;
 	int 	max_commands;
@@ -95,8 +94,6 @@ struct ctlr_info {
 	unsigned long  		*cmd_pool_bits;
 	int			nr_allocs;
 	int			nr_frees;
-	int			busy_initializing;
-	int			busy_scanning;
 	int			scan_finished;
 	spinlock_t		scan_lock;
 	wait_queue_head_t	scan_wait_queue;
@@ -104,8 +101,7 @@ struct ctlr_info {
 	struct Scsi_Host *scsi_host;
 	spinlock_t devlock; /* to protect hba[ctlr]->dev[];  */
 	int ndevices; /* number of used elements in .dev[] array. */
-#define HPSA_MAX_SCSI_DEVS_PER_HBA 256
-	struct hpsa_scsi_dev_t *dev[HPSA_MAX_SCSI_DEVS_PER_HBA];
+	struct hpsa_scsi_dev_t *dev[HPSA_MAX_DEVICES];
 	/*
 	 * Performant mode tables.
 	 */
@@ -124,6 +120,11 @@ struct ctlr_info {
 	unsigned char reply_pool_wraparound;
 	u32 *blockFetchTable;
 	unsigned char *hba_inquiry_data;
+	u64 last_intr_timestamp;
+	u32 last_heartbeat;
+	u64 last_heartbeat_timestamp;
+	u32 lockup_detected;
+	struct list_head lockup_list;
 };
 #define HPSA_ABORT_MSG 0
 #define HPSA_DEVICE_RESET_MSG 1
@@ -315,7 +316,7 @@ static unsigned long SA5_completed(struct ctlr_info *h)
 		dev_dbg(&h->pdev->dev, "Read %lx back from board\n",
 			register_value);
 	else
-		dev_dbg(&h->pdev->dev, "hpsa: FIFO Empty read\n");
+		dev_dbg(&h->pdev->dev, "FIFO Empty read\n");
 #endif
 
 	return register_value;

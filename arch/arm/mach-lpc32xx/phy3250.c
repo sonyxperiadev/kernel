@@ -18,7 +18,7 @@
 
 #include <linux/init.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
+#include <linux/device.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/dma-mapping.h>
@@ -37,6 +37,8 @@
 
 #include <mach/hardware.h>
 #include <mach/platform.h>
+#include <mach/board.h>
+#include <mach/gpio-lpc32xx.h>
 #include "common.h"
 
 /*
@@ -148,20 +150,8 @@ static struct clcd_board lpc32xx_clcd_data = {
 	.remove		= lpc32xx_clcd_remove,
 };
 
-static struct amba_device lpc32xx_clcd_device = {
-	.dev				= {
-		.coherent_dma_mask	= ~0,
-		.init_name		= "dev:clcd",
-		.platform_data		= &lpc32xx_clcd_data,
-	},
-	.res				= {
-		.start			= LPC32XX_LCD_BASE,
-		.end			= (LPC32XX_LCD_BASE + SZ_4K - 1),
-		.flags			= IORESOURCE_MEM,
-	},
-	.dma_mask			= ~0,
-	.irq				= {IRQ_LPC32XX_LCD, NO_IRQ},
-};
+static AMBA_AHB_DEVICE(lpc32xx_clcd, "dev:clcd", 0,
+	LPC32XX_LCD_BASE, { IRQ_LPC32XX_LCD }, &lpc32xx_clcd_data);
 
 /*
  * AMBA SSP (SPI)
@@ -190,20 +180,8 @@ static struct pl022_ssp_controller lpc32xx_ssp0_data = {
 	.enable_dma		= 0,
 };
 
-static struct amba_device lpc32xx_ssp0_device = {
-	.dev				= {
-		.coherent_dma_mask	= ~0,
-		.init_name		= "dev:ssp0",
-		.platform_data		= &lpc32xx_ssp0_data,
-	},
-	.res				= {
-		.start			= LPC32XX_SSP0_BASE,
-		.end			= (LPC32XX_SSP0_BASE + SZ_4K - 1),
-		.flags			= IORESOURCE_MEM,
-	},
-	.dma_mask			= ~0,
-	.irq				= {IRQ_LPC32XX_SSP0, NO_IRQ},
-};
+static AMBA_APB_DEVICE(lpc32xx_ssp0, "dev:ssp0", 0,
+	LPC32XX_SSP0_BASE, { IRQ_LPC32XX_SSP0 }, &lpc32xx_ssp0_data);
 
 /* AT25 driver registration */
 static int __init phy3250_spi_board_register(void)
@@ -270,11 +248,16 @@ static struct platform_device lpc32xx_gpio_led_device = {
 };
 
 static struct platform_device *phy3250_devs[] __initdata = {
+	&lpc32xx_rtc_device,
+	&lpc32xx_tsc_device,
 	&lpc32xx_i2c0_device,
 	&lpc32xx_i2c1_device,
 	&lpc32xx_i2c2_device,
 	&lpc32xx_watchdog_device,
 	&lpc32xx_gpio_led_device,
+	&lpc32xx_adc_device,
+	&lpc32xx_ohci_device,
+	&lpc32xx_net_device,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -382,9 +365,10 @@ arch_initcall(lpc32xx_display_uid);
 
 MACHINE_START(PHY3250, "Phytec 3250 board with the LPC3250 Microcontroller")
 	/* Maintainer: Kevin Wells, NXP Semiconductors */
-	.boot_params	= 0x80000100,
+	.atag_offset	= 0x100,
 	.map_io		= lpc32xx_map_io,
 	.init_irq	= lpc32xx_init_irq,
 	.timer		= &lpc32xx_timer,
 	.init_machine	= phy3250_board_init,
+	.restart	= lpc23xx_restart,
 MACHINE_END

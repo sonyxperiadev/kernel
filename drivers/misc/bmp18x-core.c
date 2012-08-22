@@ -52,6 +52,7 @@
 #include "linux/bmp18x.h"
 #include <linux/miscdevice.h>
 #include <linux/poll.h>
+#include <linux/module.h>
 
 #include <linux/brvsens_driver.h>
 

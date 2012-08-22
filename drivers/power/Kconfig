@@ -70,10 +70,25 @@ config BATTERY_DS2760
 
 config BATTERY_DS2780
 	tristate "DS2780 battery driver"
+	depends on HAS_IOMEM
 	select W1
 	select W1_SLAVE_DS2780
 	help
 	  Say Y here to enable support for batteries with ds2780 chip.
+
+config BATTERY_DS2781
+	tristate "2781 battery driver"
+	depends on HAS_IOMEM
+	select W1
+	select W1_SLAVE_DS2781
+	help
+	  If you enable this you will have the DS2781 battery driver support.
+
+	  The battery monitor chip is used in many batteries/devices
+	  as the one who is responsible for charging/discharging/monitoring
+	  Li+ batteries.
+
+	  If you are unsure, say N.
 
 config BATTERY_DS2782
 	tristate "DS2782/DS2786 standalone gas-gauge"
@@ -115,12 +130,12 @@ config BATTERY_WM97XX
 	help
 	  Say Y to enable support for battery measured by WM97xx aux port.
 
-config BATTERY_BQ20Z75
-        tristate "TI BQ20z75 gas gauge"
+config BATTERY_SBS
+        tristate "SBS Compliant gas gauge"
         depends on I2C
         help
-         Say Y to include support for TI BQ20z75 SBS-compliant
-         gas gauge and protection IC.
+	  Say Y to include support for SBS battery driver for SBS-compliant
+	  gas gauges.
 
 config BATTERY_BQ27x00
 	tristate "BQ27x00 battery driver"
@@ -148,6 +163,14 @@ config BATTERY_DA9030
 	help
 	  Say Y here to enable support for batteries charger integrated into
 	  DA9030 PMIC.
+
+config BATTERY_DA9052
+	tristate "Dialog DA9052 Battery"
+	depends on PMIC_DA9052
+	depends on BROKEN
+	help
+	  Say Y here to enable support for batteries charger integrated into
+	  DA9052 PMIC.
 
 config BATTERY_MAX17040
 	tristate "Maxim MAX17040 Fuel Gauge"
@@ -225,6 +248,12 @@ config CHARGER_TWL4030
 	help
 	  Say Y here to enable support for TWL4030 Battery Charge Interface.
 
+config CHARGER_LP8727
+	tristate "TI/National Semiconductor LP8727 charger driver"
+	depends on I2C
+	help
+	  Say Y here to enable support for LP8727 Charger Driver.
+
 config CHARGER_GPIO
 	tristate "GPIO charger"
 	depends on GPIOLIB
@@ -257,18 +286,49 @@ config BCM_CMP_BATTERY_BQ24616
           CMP driver based on BQ24616 for supplying battery and power supply
           information to Power Supply system.
 
-config MONITOR_ADC121C021_I2C
-        tristate "ADC121C021 Battery Monitor"
-        depends on I2C
-        help
-         Say Y here if you want to support a ADC121C021 battery monitor.
-         If unsure, say N.
+config CHARGER_MANAGER
+	bool "Battery charger manager for multiple chargers"
+	depends on REGULATOR && RTC_CLASS
+	help
+          Say Y to enable charger-manager support, which allows multiple
+          chargers attached to a battery and multiple batteries attached to a
+          system. The charger-manager also can monitor charging status in
+          runtime and in suspend-to-RAM by waking up the system periodically
+          with help of suspend_again support.
 
-config MONITOR_BQ27541_I2C
-        tristate "BQ27541 Battery Monitor"
-        depends on I2C
-        help
-         Say Y here if you want to support BQ27541 battery monitor.
+config CHARGER_MAX8997
+	tristate "Maxim MAX8997/MAX8966 PMIC battery charger driver"
+	depends on MFD_MAX8997 && REGULATOR_MAX8997
+	help
+	  Say Y to enable support for the battery charger control sysfs and
+	  platform data of MAX8997/LP3974 PMICs.
+
+config CHARGER_MAX8998
+	tristate "Maxim MAX8998/LP3974 PMIC battery charger driver"
+	depends on MFD_MAX8998 && REGULATOR_MAX8998
+	help
+	  Say Y to enable support for the battery charger control sysfs and
+	  platform data of MAX8998/LP3974 PMICs.
+
+config CHARGER_SMB347
+	tristate "Summit Microelectronics SMB347 Battery Charger"
+	depends on I2C
+	help
+	  Say Y to include support for Summit Microelectronics SMB347
+	  Battery Charger.
+
+config AB8500_BM
+	bool "AB8500 Battery Management Driver"
+	depends on AB8500_CORE && AB8500_GPADC
+	help
+	  Say Y to include support for AB5500 battery management.
+
+config AB8500_BATTERY_THERM_ON_BATCTRL
+	bool "Thermistor connected on BATCTRL ADC"
+	depends on AB8500_BM
+	help
+	  Say Y to enable battery temperature measurements using
+	  thermistor connected on BATCTRL ADC.
 
 config POWER_BCMPMU
 	tristate "BCMPMU battery and charger driver"
@@ -290,5 +350,4 @@ config CHARGER_BCMPMU_SPA
 	default n
 	help
 	 Say Y to support SPA charging module for BCM PMUs.
-
 endif # POWER_SUPPLY

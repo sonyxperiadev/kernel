@@ -4,7 +4,7 @@
  * Framebuffer support for the EP93xx series.
  *
  * Copyright (C) 2007 Bluewater Systems Ltd
- * Author: Ryan Mallon <ryan@bluewatersys.com>
+ * Author: Ryan Mallon
  *
  * Copyright (c) 2009 H Hartley Sweeten <hsweeten@visionengravers.com>
  *
@@ -18,6 +18,7 @@
  */
 
 #include <linux/platform_device.h>
+#include <linux/module.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
@@ -518,12 +519,15 @@ static int __devinit ep93xxfb_probe(struct platform_device *pdev)
 		goto failed;
 	}
 
-	res = request_mem_region(res->start, resource_size(res), pdev->name);
-	if (!res) {
-		err = -EBUSY;
-		goto failed;
-	}
-
+	/*
+	 * FIXME - We don't do a request_mem_region here because we are
+	 * sharing the register space with the backlight driver (see
+	 * drivers/video/backlight/ep93xx_bl.c) and doing so will cause
+	 * the second loaded driver to return -EBUSY.
+	 *
+	 * NOTE: No locking is required; the backlight does not touch
+	 * any of the framebuffer registers.
+	 */
 	fbi->res = res;
 	fbi->mmio_base = ioremap(res->start, resource_size(res));
 	if (!fbi->mmio_base) {
@@ -585,8 +589,6 @@ failed:
 		clk_put(fbi->clk);
 	if (fbi->mmio_base)
 		iounmap(fbi->mmio_base);
-	if (fbi->res)
-		release_mem_region(fbi->res->start, resource_size(fbi->res));
 	ep93xxfb_dealloc_videomem(info);
 	if (&info->cmap)
 		fb_dealloc_cmap(&info->cmap);
@@ -607,7 +609,6 @@ static int __devexit ep93xxfb_remove(struct platform_device *pdev)
 	clk_disable(fbi->clk);
 	clk_put(fbi->clk);
 	iounmap(fbi->mmio_base);
-	release_mem_region(fbi->res->start, resource_size(fbi->res));
 	ep93xxfb_dealloc_videomem(info);
 	fb_dealloc_cmap(&info->cmap);
 
@@ -644,6 +645,6 @@ module_exit(ep93xxfb_exit);
 
 MODULE_DESCRIPTION("EP93XX Framebuffer Driver");
 MODULE_ALIAS("platform:ep93xx-fb");
-MODULE_AUTHOR("Ryan Mallon <ryan&bluewatersys.com>, "
+MODULE_AUTHOR("Ryan Mallon, "
 	      "H Hartley Sweeten <hsweeten@visionengravers.com");
 MODULE_LICENSE("GPL");

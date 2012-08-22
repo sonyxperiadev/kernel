@@ -13,9 +13,8 @@
 #include <linux/smp.h>
 #include <linux/init.h>
 #include <linux/reboot.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 #include <asm/ptrace.h>
-#include <asm/sigp.h>
 #include <asm/smp.h>
 
 #include "sclp.h"
@@ -30,7 +29,8 @@ static void do_machine_quiesce(void)
 	psw_t quiesce_psw;
 
 	smp_send_stop();
-	quiesce_psw.mask = PSW_BASE_BITS | PSW_MASK_WAIT;
+	quiesce_psw.mask =
+		PSW_MASK_BASE | PSW_MASK_EA | PSW_MASK_BA | PSW_MASK_WAIT;
 	quiesce_psw.addr = 0xfff;
 	__load_psw(quiesce_psw);
 }

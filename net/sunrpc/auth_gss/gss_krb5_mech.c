@@ -344,7 +344,7 @@ out_err:
 	return PTR_ERR(p);
 }
 
-struct crypto_blkcipher *
+static struct crypto_blkcipher *
 context_v2_alloc_cipher(struct krb5_ctx *ctx, const char *cname, u8 *key)
 {
 	struct crypto_blkcipher *cp;
@@ -743,6 +743,13 @@ static struct pf_desc gss_kerberos_pfs[] = {
 		.name = "krb5p",
 	},
 };
+
+MODULE_ALIAS("rpc-auth-gss-krb5");
+MODULE_ALIAS("rpc-auth-gss-krb5i");
+MODULE_ALIAS("rpc-auth-gss-krb5p");
+MODULE_ALIAS("rpc-auth-gss-390003");
+MODULE_ALIAS("rpc-auth-gss-390004");
+MODULE_ALIAS("rpc-auth-gss-390005");
 
 static struct gss_api_mech gss_kerberos_mech = {
 	.gm_name	= "krb5",

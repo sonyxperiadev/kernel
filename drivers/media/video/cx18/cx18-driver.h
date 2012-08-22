@@ -25,7 +25,6 @@
 #ifndef CX18_DRIVER_H
 #define CX18_DRIVER_H
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
@@ -45,8 +44,6 @@
 #include <linux/slab.h>
 #include <asm/byteorder.h>
 
-#include <linux/dvb/video.h>
-#include <linux/dvb/audio.h>
 #include <media/v4l2-common.h>
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-device.h>
@@ -410,6 +407,7 @@ struct cx18_stream {
 
 	/* Videobuf for YUV video */
 	u32 pixelformat;
+	u32 vb_bytes_per_frame;
 	struct list_head vb_capture;    /* video capture queue */
 	spinlock_t vb_lock;
 	struct timer_list vb_timeout;
@@ -431,10 +429,6 @@ struct cx18_open_id {
 	u32 open_id;
 	int type;
 	struct cx18 *cx;
-
-	struct videobuf_queue vbuf_q;
-	spinlock_t s_lock; /* Protect vbuf_q */
-	enum v4l2_buf_type vb_type;
 };
 
 static inline struct cx18_open_id *fh2id(struct v4l2_fh *fh)

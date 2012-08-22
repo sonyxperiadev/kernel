@@ -574,9 +574,10 @@ static int hppfs_readdir(struct file *file, void *ent, filldir_t filldir)
 	return err;
 }
 
-static int hppfs_fsync(struct file *file, int datasync)
+static int hppfs_fsync(struct file *file, loff_t start, loff_t end,
+		       int datasync)
 {
-	return 0;
+	return filemap_write_and_wait_range(file->f_mapping, start, end);
 }
 
 static const struct file_operations hppfs_dir_fops = {
@@ -621,7 +622,6 @@ void hppfs_evict_inode(struct inode *ino)
 static void hppfs_i_callback(struct rcu_head *head)
 {
 	struct inode *inode = container_of(head, struct inode, i_rcu);
-	INIT_LIST_HEAD(&inode->i_dentry);
 	kfree(HPPFS_I(inode));
 }
 
@@ -701,7 +701,7 @@ static struct inode *get_inode(struct super_block *sb, struct dentry *dentry)
 	inode->i_ctime = proc_ino->i_ctime;
 	inode->i_ino = proc_ino->i_ino;
 	inode->i_mode = proc_ino->i_mode;
-	inode->i_nlink = proc_ino->i_nlink;
+	set_nlink(inode, proc_ino->i_nlink);
 	inode->i_size = proc_ino->i_size;
 	inode->i_blocks = proc_ino->i_blocks;
 
@@ -725,18 +725,13 @@ static int hppfs_fill_super(struct super_block *sb, void *d, int silent)
 	sb->s_fs_info = proc_mnt;
 
 	err = -ENOMEM;
-	root_inode = get_inode(sb, dget(proc_mnt->mnt_sb->s_root));
-	if (!root_inode)
-		goto out_mntput;
-
-	sb->s_root = d_alloc_root(root_inode);
+	root_inode = get_inode(sb, dget(proc_mnt->mnt_root));
+	sb->s_root = d_make_root(root_inode);
 	if (!sb->s_root)
-		goto out_iput;
+		goto out_mntput;
 
 	return 0;
 
- out_iput:
-	iput(root_inode);
  out_mntput:
 	mntput(proc_mnt);
  out:

@@ -17,7 +17,7 @@
 #include <linux/errno.h>
 #include <linux/err.h>
 #include <linux/clk.h>
-#include <linux/sysdev.h>
+#include <linux/device.h>
 #include <linux/io.h>
 #include <asm/div64.h>
 
@@ -61,6 +61,20 @@ struct clk clk_fout_apll = {
 	.id		= -1,
 };
 
+/* BPLL clock output */
+
+struct clk clk_fout_bpll = {
+	.name		= "fout_bpll",
+	.id		= -1,
+};
+
+/* CPLL clock output */
+
+struct clk clk_fout_cpll = {
+	.name		= "fout_cpll",
+	.id		= -1,
+};
+
 /* MPLL clock output
  * No need .ctrlbit, this is always on
 */
@@ -99,6 +113,28 @@ static struct clk *clk_src_apll_list[] = {
 struct clksrc_sources clk_src_apll = {
 	.sources	= clk_src_apll_list,
 	.nr_sources	= ARRAY_SIZE(clk_src_apll_list),
+};
+
+/* Possible clock sources for BPLL Mux */
+static struct clk *clk_src_bpll_list[] = {
+	[0] = &clk_fin_bpll,
+	[1] = &clk_fout_bpll,
+};
+
+struct clksrc_sources clk_src_bpll = {
+	.sources	= clk_src_bpll_list,
+	.nr_sources	= ARRAY_SIZE(clk_src_bpll_list),
+};
+
+/* Possible clock sources for CPLL Mux */
+static struct clk *clk_src_cpll_list[] = {
+	[0] = &clk_fin_cpll,
+	[1] = &clk_fout_cpll,
+};
+
+struct clksrc_sources clk_src_cpll = {
+	.sources	= clk_src_cpll_list,
+	.nr_sources	= ARRAY_SIZE(clk_src_cpll_list),
 };
 
 /* Possible clock sources for MPLL Mux */
@@ -167,6 +203,41 @@ unsigned long s5p_epll_get_rate(struct clk *clk)
 {
 	return clk->rate;
 }
+
+int s5p_spdif_set_rate(struct clk *clk, unsigned long rate)
+{
+	struct clk *pclk;
+	int ret;
+
+	pclk = clk_get_parent(clk);
+	if (IS_ERR(pclk))
+		return -EINVAL;
+
+	ret = pclk->ops->set_rate(pclk, rate);
+	clk_put(pclk);
+
+	return ret;
+}
+
+unsigned long s5p_spdif_get_rate(struct clk *clk)
+{
+	struct clk *pclk;
+	int rate;
+
+	pclk = clk_get_parent(clk);
+	if (IS_ERR(pclk))
+		return -EINVAL;
+
+	rate = pclk->ops->get_rate(pclk);
+	clk_put(pclk);
+
+	return rate;
+}
+
+struct clk_ops s5p_sclk_spdif_ops = {
+	.set_rate	= s5p_spdif_set_rate,
+	.get_rate	= s5p_spdif_get_rate,
+};
 
 static struct clk *s5p_clks[] __initdata = {
 	&clk_ext_xtal_mux,

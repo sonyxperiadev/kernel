@@ -24,20 +24,19 @@
 #include <mach/hardware.h>
 #include <asm/leds.h>
 #include <asm/mach-types.h>
-#include <asm/system.h>
 
 #define LED_STATE_ENABLED	1
 #define LED_STATE_CLAIMED	2
 static char led_state;
 static char hw_led_state;
 
-static DEFINE_SPINLOCK(leds_lock);
+static DEFINE_RAW_SPINLOCK(leds_lock);
 
 static void netwinder_leds_event(led_event_t evt)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&leds_lock, flags);
+	raw_spin_lock_irqsave(&leds_lock, flags);
 
 	switch (evt) {
 	case led_start:
@@ -117,12 +116,12 @@ static void netwinder_leds_event(led_event_t evt)
 		break;
 	}
 
-	spin_unlock_irqrestore(&leds_lock, flags);
+	raw_spin_unlock_irqrestore(&leds_lock, flags);
 
 	if  (led_state & LED_STATE_ENABLED) {
-		spin_lock_irqsave(&nw_gpio_lock, flags);
+		raw_spin_lock_irqsave(&nw_gpio_lock, flags);
 		nw_gpio_modify_op(GPIO_RED_LED | GPIO_GREEN_LED, hw_led_state);
-		spin_unlock_irqrestore(&nw_gpio_lock, flags);
+		raw_spin_unlock_irqrestore(&nw_gpio_lock, flags);
 	}
 }
 

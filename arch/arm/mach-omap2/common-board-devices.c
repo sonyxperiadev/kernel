@@ -20,41 +20,19 @@
  *
  */
 
-#include <linux/i2c.h>
-#include <linux/i2c/twl.h>
-
 #include <linux/gpio.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/ads7846.h>
 
-#include <plat/i2c.h>
 #include <plat/mcspi.h>
 #include <plat/nand.h>
 
 #include "common-board-devices.h"
 
-static struct i2c_board_info __initdata pmic_i2c_board_info = {
-	.addr		= 0x48,
-	.flags		= I2C_CLIENT_WAKE,
-};
-
-void __init omap_pmic_init(int bus, u32 clkrate,
-			   const char *pmic_type, int pmic_irq,
-			   struct twl4030_platform_data *pmic_data)
-{
-	strncpy(pmic_i2c_board_info.type, pmic_type,
-		sizeof(pmic_i2c_board_info.type));
-	pmic_i2c_board_info.irq = pmic_irq;
-	pmic_i2c_board_info.platform_data = pmic_data;
-
-	omap_register_i2c_bus(bus, clkrate, &pmic_i2c_board_info, 1);
-}
-
 #if defined(CONFIG_TOUCHSCREEN_ADS7846) || \
 	defined(CONFIG_TOUCHSCREEN_ADS7846_MODULE)
 static struct omap2_mcspi_device_config ads7846_mcspi_config = {
 	.turbo_mode	= 0,
-	.single_channel	= 1,	/* 0: slave, 1: master */
 };
 
 static struct ads7846_platform_data ads7846_config = {
@@ -97,13 +75,15 @@ void __init omap_ads7846_init(int bus_num, int gpio_pendown, int gpio_debounce,
 			gpio_set_debounce(gpio_pendown, gpio_debounce);
 	}
 
-	ads7846_config.gpio_pendown = gpio_pendown;
-
 	spi_bi->bus_num	= bus_num;
-	spi_bi->irq	= OMAP_GPIO_IRQ(gpio_pendown);
+	spi_bi->irq	= gpio_to_irq(gpio_pendown);
 
-	if (board_pdata)
+	if (board_pdata) {
+		board_pdata->gpio_pendown = gpio_pendown;
 		spi_bi->platform_data = board_pdata;
+	} else {
+		ads7846_config.gpio_pendown = gpio_pendown;
+	}
 
 	spi_register_board_info(&ads7846_spi_board_info, 1);
 }
@@ -115,9 +95,7 @@ void __init omap_ads7846_init(int bus_num, int gpio_pendown, int gpio_debounce,
 #endif
 
 #if defined(CONFIG_MTD_NAND_OMAP2) || defined(CONFIG_MTD_NAND_OMAP2_MODULE)
-static struct omap_nand_platform_data nand_data = {
-	.dma_channel	= -1,		/* disable DMA in OMAP NAND driver */
-};
+static struct omap_nand_platform_data nand_data;
 
 void __init omap_nand_flash_init(int options, struct mtd_partition *parts,
 				 int nr_parts)
@@ -148,7 +126,7 @@ void __init omap_nand_flash_init(int options, struct mtd_partition *parts,
 		nand_data.cs = nandcs;
 		nand_data.parts = parts;
 		nand_data.nr_parts = nr_parts;
-		nand_data.options = options;
+		nand_data.devsize = options;
 
 		printk(KERN_INFO "Registering NAND on CS%d\n", nandcs);
 		if (gpmc_nand_init(&nand_data) < 0)

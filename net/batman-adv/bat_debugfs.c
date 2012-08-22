@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 B.A.T.M.A.N. contributors:
+ * Copyright (C) 2010-2012 B.A.T.M.A.N. contributors:
  *
  * Marek Lindner
  *
@@ -50,7 +50,8 @@ static void emit_log_char(struct debug_log *debug_log, char c)
 		debug_log->log_start = debug_log->log_end - log_buff_len;
 }
 
-static int fdebug_log(struct debug_log *debug_log, char *fmt, ...)
+__printf(2, 3)
+static int fdebug_log(struct debug_log *debug_log, const char *fmt, ...)
 {
 	va_list args;
 	static char debug_log_buf[256];
@@ -74,14 +75,14 @@ static int fdebug_log(struct debug_log *debug_log, char *fmt, ...)
 	return 0;
 }
 
-int debug_log(struct bat_priv *bat_priv, char *fmt, ...)
+int debug_log(struct bat_priv *bat_priv, const char *fmt, ...)
 {
 	va_list args;
 	char tmp_log_buf[256];
 
 	va_start(args, fmt);
 	vscnprintf(tmp_log_buf, sizeof(tmp_log_buf), fmt, args);
-	fdebug_log(bat_priv->debug_log, "[%10u] %s",
+	fdebug_log(bat_priv->debug_log, "[%10lu] %s",
 		   (jiffies / HZ), tmp_log_buf);
 	va_end(args);
 
@@ -114,7 +115,7 @@ static ssize_t log_read(struct file *file, char __user *buf,
 	    !(debug_log->log_end - debug_log->log_start))
 		return -EAGAIN;
 
-	if ((!buf) || (count < 0))
+	if (!buf)
 		return -EINVAL;
 
 	if (count == 0)
@@ -184,7 +185,7 @@ static int debug_log_setup(struct bat_priv *bat_priv)
 	if (!bat_priv->debug_dir)
 		goto err;
 
-	bat_priv->debug_log = kzalloc(sizeof(struct debug_log), GFP_ATOMIC);
+	bat_priv->debug_log = kzalloc(sizeof(*bat_priv->debug_log), GFP_ATOMIC);
 	if (!bat_priv->debug_log)
 		goto err;
 
@@ -219,6 +220,11 @@ static void debug_log_cleanup(struct bat_priv *bat_priv)
 	return;
 }
 #endif
+
+static int bat_algorithms_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, bat_algo_seq_print_text, NULL);
+}
 
 static int originators_open(struct inode *inode, struct file *file)
 {
@@ -273,6 +279,7 @@ struct bat_debuginfo bat_debuginfo_##_name = {	\
 		}				\
 };
 
+static BAT_DEBUGINFO(routing_algos, S_IRUGO, bat_algorithms_open);
 static BAT_DEBUGINFO(originators, S_IRUGO, originators_open);
 static BAT_DEBUGINFO(gateways, S_IRUGO, gateways_open);
 static BAT_DEBUGINFO(softif_neigh, S_IRUGO, softif_neigh_open);
@@ -292,9 +299,25 @@ static struct bat_debuginfo *mesh_debuginfos[] = {
 
 void debugfs_init(void)
 {
+	struct bat_debuginfo *bat_debug;
+	struct dentry *file;
+
 	bat_debugfs = debugfs_create_dir(DEBUGFS_BAT_SUBDIR, NULL);
 	if (bat_debugfs == ERR_PTR(-ENODEV))
 		bat_debugfs = NULL;
+
+	if (!bat_debugfs)
+		goto out;
+
+	bat_debug = &bat_debuginfo_routing_algos;
+	file = debugfs_create_file(bat_debug->attr.name,
+				   S_IFREG | bat_debug->attr.mode,
+				   bat_debugfs, NULL, &bat_debug->fops);
+	if (!file)
+		pr_err("Can't add debugfs file: %s\n", bat_debug->attr.name);
+
+out:
+	return;
 }
 
 void debugfs_destroy(void)

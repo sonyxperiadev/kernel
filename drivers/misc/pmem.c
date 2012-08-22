@@ -18,6 +18,7 @@
 #include <linux/fs.h>
 #include <linux/file.h>
 #include <linux/mm.h>
+#include <linux/mm_types.h>
 #include <linux/oom.h>
 #include <linux/notifier.h>
 #include <linux/list.h>
@@ -35,6 +36,7 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <asm/cacheflush.h>
+#include <asm/tlbflush.h>
 
 #define PMEM_MAX_DEVICES	(2)
 #define PMEM_DEBUG		0
@@ -339,15 +341,14 @@ static int pmem_unmap_pfn_range(int id, struct vm_area_struct *vma,
 				unsigned long len)
 {
 	int garbage_pages;
-	unsigned long end;
 	DLOG("unmap offset %lx len %lx\n", offset, len);
 
 	BUG_ON(!PMEM_IS_PAGE_ALIGNED(len));
 
 	garbage_pages = len >> PAGE_SHIFT;
-	end = zap_page_range(vma, vma->vm_start + offset, len, NULL);
-	printk(KERN_ERR "vma_start=0x%p len=0x%p end=0x%p\n",
-	       (void *)(vma->vm_start + offset), (void *)len, (void *)end);
+	zap_page_range(vma, vma->vm_start + offset, len, NULL);
+	printk(KERN_ERR "vma_start=0x%p len=0x%p\n",
+	       (void *)(vma->vm_start + offset), (void *)len);
 	pmem_map_garbage(id, vma, data, offset, len);
 	return 0;
 }
@@ -387,17 +388,10 @@ static int pmem_remap_pfn_range(int id, struct file *file,
 				struct pmem_data *data, unsigned long offset,
 				unsigned long len)
 {
-	unsigned long end;
-
 	/* hold the mm semp for the vma you are modifying when you call this */
 	BUG_ON(!vma);
 
-	end = zap_page_range(vma, vma->vm_start + offset, len, NULL);
-	if (end != vma->vm_start + offset) {
-		printk(KERN_ERR
-		       "%s: unexpected end (%lu), expected was (%lu)\n",
-		       __func__, end, vma->vm_start + offset);
-	}
+	zap_page_range(vma, vma->vm_start + offset, len, NULL);
 
 	return pmem_map_pfn_range(id, file, vma, data, offset, len);
 }

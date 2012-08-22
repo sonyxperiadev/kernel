@@ -12,7 +12,6 @@
 #include <linux/pci.h>
 #include <linux/serial_8250.h>
 #include <asm/mach-types.h>
-#include <asm/system.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/flash.h>
 #include <asm/mach/pci.h>
@@ -462,7 +461,7 @@ static void __init gmlr_pci_postinit(void)
 	}
 }
 
-static int __init gmlr_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
+static int __init gmlr_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 {
 	switch(slot) {
 	case SLOT_ETHA:	return IXP4XX_GPIO_IRQ(GPIO_IRQ_ETHA);
@@ -497,8 +496,13 @@ subsys_initcall(gmlr_pci_init);
 MACHINE_START(GORAMO_MLR, "MultiLink")
 	/* Maintainer: Krzysztof Halasa */
 	.map_io		= ixp4xx_map_io,
+	.init_early	= ixp4xx_init_early,
 	.init_irq	= ixp4xx_init_irq,
 	.timer		= &ixp4xx_timer,
-	.boot_params	= 0x0100,
+	.atag_offset	= 0x100,
 	.init_machine	= gmlr_init,
+#if defined(CONFIG_PCI)
+	.dma_zone_size	= SZ_64M,
+#endif
+	.restart	= ixp4xx_restart,
 MACHINE_END

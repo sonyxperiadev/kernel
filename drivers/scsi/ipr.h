@@ -38,8 +38,8 @@
 /*
  * Literals
  */
-#define IPR_DRIVER_VERSION "2.5.2"
-#define IPR_DRIVER_DATE "(April 27, 2011)"
+#define IPR_DRIVER_VERSION "2.5.3"
+#define IPR_DRIVER_DATE "(March 10, 2012)"
 
 /*
  * IPR_MAX_CMD_PER_LUN: This defines the maximum number of outstanding
@@ -53,12 +53,12 @@
  * IPR_NUM_BASE_CMD_BLKS: This defines the maximum number of
  *	ops the mid-layer can send to the adapter.
  */
-#define IPR_NUM_BASE_CMD_BLKS				100
+#define IPR_NUM_BASE_CMD_BLKS			(ioa_cfg->max_cmds)
 
 #define PCI_DEVICE_ID_IBM_OBSIDIAN_E	0x0339
 
 #define PCI_DEVICE_ID_IBM_CROC_FPGA_E2          0x033D
-#define PCI_DEVICE_ID_IBM_CROC_ASIC_E2          0x034A
+#define PCI_DEVICE_ID_IBM_CROCODILE             0x034A
 
 #define IPR_SUBS_DEV_ID_2780	0x0264
 #define IPR_SUBS_DEV_ID_5702	0x0266
@@ -82,6 +82,7 @@
 
 #define IPR_SUBS_DEV_ID_57B4    0x033B
 #define IPR_SUBS_DEV_ID_57B2    0x035F
+#define IPR_SUBS_DEV_ID_57C3    0x0353
 #define IPR_SUBS_DEV_ID_57C4    0x0354
 #define IPR_SUBS_DEV_ID_57C6    0x0357
 #define IPR_SUBS_DEV_ID_57CC    0x035C
@@ -91,7 +92,7 @@
 #define IPR_SUBS_DEV_ID_57B1    0x0355
 
 #define IPR_SUBS_DEV_ID_574D    0x0356
-#define IPR_SUBS_DEV_ID_575D    0x035D
+#define IPR_SUBS_DEV_ID_57C8    0x035D
 
 #define IPR_NAME				"ipr"
 
@@ -152,7 +153,7 @@
 #define IPR_NUM_INTERNAL_CMD_BLKS	(IPR_NUM_HCAMS + \
                                      ((IPR_NUM_RESET_RELOAD_RETRIES + 1) * 2) + 4)
 
-#define IPR_MAX_COMMANDS		IPR_NUM_BASE_CMD_BLKS
+#define IPR_MAX_COMMANDS		100
 #define IPR_NUM_CMD_BLKS		(IPR_NUM_BASE_CMD_BLKS + \
 						IPR_NUM_INTERNAL_CMD_BLKS)
 
@@ -208,7 +209,7 @@
 #define IPR_CANCEL_ALL_TIMEOUT		(ipr_fastfail ? 10 * HZ : 30 * HZ)
 #define IPR_ABORT_TASK_TIMEOUT		(ipr_fastfail ? 10 * HZ : 30 * HZ)
 #define IPR_INTERNAL_TIMEOUT			(ipr_fastfail ? 10 * HZ : 30 * HZ)
-#define IPR_WRITE_BUFFER_TIMEOUT		(10 * 60 * HZ)
+#define IPR_WRITE_BUFFER_TIMEOUT		(30 * 60 * HZ)
 #define IPR_SET_SUP_DEVICE_TIMEOUT		(2 * 60 * HZ)
 #define IPR_REQUEST_SENSE_TIMEOUT		(10 * HZ)
 #define IPR_OPERATIONAL_TIMEOUT		(5 * 60)
@@ -1304,7 +1305,9 @@ struct ipr_interrupts {
 
 struct ipr_chip_cfg_t {
 	u32 mailbox;
+	u16 max_cmds;
 	u8 cache_line_size;
+	u8 clear_isr;
 	struct ipr_interrupt_offsets regs;
 };
 
@@ -1360,6 +1363,7 @@ enum ipr_sdt_state {
 	INACTIVE,
 	WAIT_FOR_DUMP,
 	GET_DUMP,
+	READ_DUMP,
 	ABORT_DUMP,
 	DUMP_OBTAINED
 };
@@ -1384,6 +1388,9 @@ struct ipr_ioa_cfg {
 	u8 needs_warm_reset:1;
 	u8 msi_received:1;
 	u8 sis64:1;
+	u8 dump_timeout:1;
+	u8 cfg_locked:1;
+	u8 clear_isr:1;
 
 	u8 revid;
 
@@ -1497,8 +1504,9 @@ struct ipr_ioa_cfg {
 	struct ata_host ata_host;
 	char ipr_cmd_label[8];
 #define IPR_CMD_LABEL		"ipr_cmd"
-	struct ipr_cmnd *ipr_cmnd_list[IPR_NUM_CMD_BLKS];
-	dma_addr_t ipr_cmnd_list_dma[IPR_NUM_CMD_BLKS];
+	u32 max_cmds;
+	struct ipr_cmnd **ipr_cmnd_list;
+	dma_addr_t *ipr_cmnd_list_dma;
 }; /* struct ipr_ioa_cfg */
 
 struct ipr_cmnd {

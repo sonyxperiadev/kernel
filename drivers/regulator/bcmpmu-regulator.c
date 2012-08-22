@@ -395,7 +395,7 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 		regl[i] = regulator_register(&bcmpmu->rgltr_desc[regl_id],
 					&pdev->dev,
 					(bcmpmu_regulators + i)->initdata,
-					bcmpmu);
+					bcmpmu, NULL);
 		if (IS_ERR(regl[i])) {
 			dev_err(&pdev->dev, "failed to register %s\n",
 				(bcmpmu->rgltr_desc + regl_id)->name);

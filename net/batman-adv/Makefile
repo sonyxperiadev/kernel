@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2011 B.A.T.M.A.N. contributors:
+# Copyright (C) 2007-2012 B.A.T.M.A.N. contributors:
 #
 # Marek Lindner, Simon Wunderlich
 #
@@ -19,8 +19,8 @@
 #
 
 obj-$(CONFIG_BATMAN_ADV) += batman-adv.o
-batman-adv-y += aggregation.o
 batman-adv-y += bat_debugfs.o
+batman-adv-y += bat_iv_ogm.o
 batman-adv-y += bat_sysfs.o
 batman-adv-y += bitarray.o
 batman-adv-y += gateway_client.o

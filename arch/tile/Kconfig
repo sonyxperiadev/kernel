@@ -11,7 +11,9 @@ config TILE
 	select GENERIC_IRQ_PROBE
 	select GENERIC_PENDING_IRQ if SMP
 	select GENERIC_IRQ_SHOW
+	select HAVE_SYSCALL_WRAPPERS if TILEGX
 	select SYS_HYPERVISOR
+	select ARCH_HAVE_NMI_SAFE_CMPXCHG
 
 # FIXME: investigate whether we need/want these options.
 #	select HAVE_IOREMAP_PROT
@@ -45,9 +47,6 @@ config NEED_PER_CPU_PAGE_FIRST_CHUNK
 config SYS_SUPPORTS_HUGETLBFS
 	def_bool y
 
-config GENERIC_TIME
-	def_bool y
-
 config GENERIC_CLOCKEVENTS
 	def_bool y
 
@@ -69,6 +68,9 @@ config ARCH_PHYS_ADDR_T_64BIT
 	def_bool y
 
 config ARCH_DMA_ADDR_T_64BIT
+	def_bool y
+
+config NEED_DMA_MAP_STATE
 	def_bool y
 
 config LOCKDEP_SUPPORT
@@ -120,7 +122,7 @@ config 64BIT
 
 config ARCH_DEFCONFIG
 	string
-	default "arch/tile/configs/tile_defconfig" if !TILEGX
+	default "arch/tile/configs/tilepro_defconfig" if !TILEGX
 	default "arch/tile/configs/tilegx_defconfig" if TILEGX
 
 source "init/Kconfig"
@@ -242,6 +244,7 @@ endchoice
 
 config PAGE_OFFSET
 	hex
+	depends on !64BIT
 	default 0xF0000000 if VMSPLIT_3_75G
 	default 0xE0000000 if VMSPLIT_3_5G
 	default 0xB0000000 if VMSPLIT_2_75G
@@ -323,6 +326,7 @@ config PCI
 	bool "PCI support"
 	default y
 	select PCI_DOMAINS
+	select GENERIC_PCI_IOMAP
 	---help---
 	  Enable PCI root complex support, so PCIe endpoint devices can
 	  be attached to the Tile chip.  Many, but not all, PCI devices

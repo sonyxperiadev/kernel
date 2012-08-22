@@ -17,8 +17,9 @@
  * Debugging macro include header
  */
 #include <mach/io_map.h>
+#include <mach/memory.h>
 
-	.macro addruart, px, vx
+	.macro addruart, px, vx, tm
 	ldr	\px, =KONA_UART_LLDEBUG_PA 		@ MMU off, Physical
 	ldr	\vx, =KONA_UART_LLDEBUG_VA 	@ MMU on, Virtual
 	.endm

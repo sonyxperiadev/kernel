@@ -90,16 +90,9 @@ config MTD_NAND_DENALI_SCRATCH_REG_ADDR
           scratch register here to enable this feature. On Intel Moorestown
           boards, the scratch register is at 0xFF108018.
 
-config MTD_NAND_EDB7312
-	tristate "Support for Cirrus Logic EBD7312 evaluation board"
-	depends on ARCH_EDB7312
-	help
-	  This enables the driver for the Cirrus Logic EBD7312 evaluation
-	  board to access the onboard NAND Flash.
-
 config MTD_NAND_H1900
 	tristate "iPAQ H1900 flash"
-	depends on ARCH_PXA
+	depends on ARCH_PXA && BROKEN
 	help
 	  This enables the driver for the iPAQ h1900 flash.
 
@@ -123,30 +116,11 @@ config MTD_NAND_AMS_DELTA
 	  Support for NAND flash on Amstrad E3 (Delta).
 
 config MTD_NAND_OMAP2
-	tristate "NAND Flash device on OMAP2 and OMAP3"
-	depends on ARM && (ARCH_OMAP2 || ARCH_OMAP3)
+	tristate "NAND Flash device on OMAP2, OMAP3 and OMAP4"
+	depends on ARCH_OMAP2PLUS
 	help
-          Support for NAND flash on Texas Instruments OMAP2 and OMAP3 platforms.
-
-config MTD_NAND_OMAP_PREFETCH
-	bool "GPMC prefetch support for NAND Flash device"
-	depends on MTD_NAND_OMAP2
-	default y
-	help
-	 The NAND device can be accessed for Read/Write using GPMC PREFETCH engine
-	 to improve the performance.
-
-config MTD_NAND_OMAP_PREFETCH_DMA
-	depends on MTD_NAND_OMAP_PREFETCH
-	bool "DMA mode"
-	default n
-	help
-	 The GPMC PREFETCH engine can be configured eigther in MPU interrupt mode
-	 or in DMA interrupt mode.
-	 Say y for DMA mode or MPU mode will be used
-
-config MTD_NAND_IDS
-	tristate
+          Support for NAND flash on Texas Instruments OMAP2, OMAP3 and OMAP4
+	  platforms.
 
 config MTD_NAND_RICOH
 	tristate "Ricoh xD card reader"
@@ -162,7 +136,7 @@ config MTD_NAND_RICOH
 
 config MTD_NAND_AU1550
 	tristate "Au1550/1200 NAND support"
-	depends on SOC_AU1200 || SOC_AU1550
+	depends on MIPS_ALCHEMY
 	help
 	  This enables the driver for the NAND flash controller on the
 	  AMD/Alchemy 1550 SOC.
@@ -217,7 +191,7 @@ config MTD_NAND_PPCHAMELEONEVB
 
 config MTD_NAND_S3C2410
 	tristate "NAND Flash support for Samsung S3C SoCs"
-	depends on ARCH_S3C2410 || ARCH_S3C64XX
+	depends on ARCH_S3C24XX || ARCH_S3C64XX
 	help
 	  This enables the NAND flash controller on the S3C24xx and S3C64xx
 	  SoCs
@@ -276,6 +250,7 @@ config MTD_NAND_BCM_UMI_HWCS
 config MTD_NAND_DISKONCHIP
 	tristate "DiskOnChip 2000, Millennium and Millennium Plus (NAND reimplementation) (EXPERIMENTAL)"
 	depends on EXPERIMENTAL
+	depends on HAS_IOMEM
 	select REED_SOLOMON
 	select REED_SOLOMON_DEC16
 	help
@@ -342,6 +317,26 @@ config MTD_NAND_DISKONCHIP_BBTWRITE
 	  Even if you leave this disabled, you can enable BBT writes at module
 	  load time (assuming you build diskonchip as a module) with the module
 	  parameter "inftl_bbt_write=1".
+
+config MTD_NAND_DOCG4
+	tristate "Support for DiskOnChip G4 (EXPERIMENTAL)"
+	depends on EXPERIMENTAL
+	select BCH
+	select BITREVERSE
+	help
+	  Support for diskonchip G4 nand flash, found in various smartphones and
+	  PDAs, among them the Palm Treo680, HTC Prophet and Wizard, Toshiba
+	  Portege G900, Asus P526, and O2 XDA Zinc.
+
+	  With this driver you will be able to use UBI and create a ubifs on the
+	  device, so you may wish to consider enabling UBI and UBIFS as well.
+
+	  These devices ship with the Mys/Sandisk SAFTL formatting, for which
+	  there is currently no mtd parser, so you may want to use command line
+	  partitioning to segregate write-protected blocks. On the Treo680, the
+	  first five erase blocks (256KiB each) are write-protected, followed
+	  by the block containing the saftl partition table.  This is probably
+	  typical.
 
 config MTD_NAND_SHARPSL
 	tristate "Support for NAND Flash on Sharp SL Series (C7xx + others)"
@@ -447,8 +442,20 @@ config MTD_NAND_NANDSIM
 	  The simulator may simulate various NAND flash chips for the
 	  MTD nand layer.
 
+config MTD_NAND_GPMI_NAND
+        bool "GPMI NAND Flash Controller driver"
+        depends on MTD_NAND && (SOC_IMX23 || SOC_IMX28)
+        help
+	 Enables NAND Flash support for IMX23 or IMX28.
+	 The GPMI controller is very powerful, with the help of BCH
+	 module, it can do the hardware ECC. The GPMI supports several
+	 NAND flashs at the same time. The GPMI may conflicts with other
+	 block, such as SD card. So pay attention to it when you enable
+	 the GPMI.
+
 config MTD_NAND_PLATFORM
 	tristate "Support for generic platform NAND driver"
+	depends on HAS_IOMEM
 	help
 	  This implements a generic NAND driver for on-SOC platform
 	  devices. You will need to provide platform-specific functions
@@ -477,6 +484,16 @@ config MTD_NAND_FSL_ELBC
 	help
 	  Various Freescale chips, including the 8313, include a NAND Flash
 	  Controller Module with built-in hardware ECC capabilities.
+	  Enabling this option will enable you to use this to control
+	  external NAND devices.
+
+config MTD_NAND_FSL_IFC
+	tristate "NAND support for Freescale IFC controller"
+	depends on MTD_NAND && FSL_SOC
+	select FSL_IFC
+	help
+	  Various Freescale chips e.g P1010, include a NAND Flash machine
+	  with built-in hardware ECC capabilities.
 	  Enabling this option will enable you to use this to control
 	  external NAND devices.
 

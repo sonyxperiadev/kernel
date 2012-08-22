@@ -20,9 +20,9 @@
 #include <linux/fs.h>
 #include <linux/string.h>
 #include <linux/kernel.h>
-#include <asm/opcode-tile.h>
 #include <asm/pgtable.h>
 #include <asm/homecache.h>
+#include <arch/opcode.h>
 
 #ifdef __tilegx__
 # define Elf_Rela Elf64_Rela
@@ -67,6 +67,8 @@ void *module_alloc(unsigned long size)
 	area = __get_vm_area(size, VM_ALLOC, MEM_MODULE_START, MEM_MODULE_END);
 	if (!area)
 		goto error;
+	area->nr_pages = npages;
+	area->pages = pages;
 
 	if (map_vm_area(area, prot_rwx, &pages)) {
 		vunmap(area->addr);
@@ -96,25 +98,6 @@ void module_free(struct module *mod, void *module_region)
 	 * FIXME: If module_region == mod->module_init, trim exception
 	 * table entries.
 	 */
-}
-
-/* We don't need anything special. */
-int module_frob_arch_sections(Elf_Ehdr *hdr,
-			      Elf_Shdr *sechdrs,
-			      char *secstrings,
-			      struct module *mod)
-{
-	return 0;
-}
-
-int apply_relocate(Elf_Shdr *sechdrs,
-		   const char *strtab,
-		   unsigned int symindex,
-		   unsigned int relsec,
-		   struct module *me)
-{
-	pr_err("module %s: .rel relocation unsupported\n", me->name);
-	return -ENOEXEC;
 }
 
 #ifdef __tilegx__
@@ -248,16 +231,4 @@ int apply_relocate_add(Elf_Shdr *sechdrs,
 		}
 	}
 	return 0;
-}
-
-int module_finalize(const Elf_Ehdr *hdr,
-		    const Elf_Shdr *sechdrs,
-		    struct module *me)
-{
-	/* FIXME: perhaps remove the "writable" bit from the TLB? */
-	return 0;
-}
-
-void module_arch_cleanup(struct module *mod)
-{
 }

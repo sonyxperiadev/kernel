@@ -18,7 +18,6 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 #include <asm/mmu_context.h>
-#include <asm/system.h>
 #include <asm/isadep.h>
 #include <asm/io.h>
 #include <asm/bootinfo.h>
@@ -253,6 +252,11 @@ static void tx39_flush_icache_range(unsigned long start, unsigned long end)
 	}
 }
 
+static void tx39_flush_kernel_vmap_range(unsigned long vaddr, int size)
+{
+	BUG();
+}
+
 static void tx39_dma_cache_wback_inv(unsigned long addr, unsigned long size)
 {
 	unsigned long end;
@@ -393,6 +397,8 @@ void __cpuinit tx39_cache_init(void)
 		flush_cache_page = tx39_flush_cache_page;
 		flush_icache_range = tx39_flush_icache_range;
 		local_flush_icache_range = tx39_flush_icache_range;
+
+		__flush_kernel_vmap_range = tx39_flush_kernel_vmap_range;
 
 		flush_cache_sigtramp = tx39_flush_cache_sigtramp;
 		local_flush_data_cache_page = local_tx39_flush_data_cache_page;

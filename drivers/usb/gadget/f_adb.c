@@ -111,6 +111,8 @@ static struct usb_descriptor_header *hs_adb_descs[] = {
 	NULL,
 };
 
+static void adb_ready_callback(void);
+static void adb_closed_callback(void);
 
 /* temporary variable used between adb_open() and adb_gadget_bind() */
 static struct adb_dev *_adb_dev;
@@ -205,7 +207,7 @@ static void adb_complete_out(struct usb_ep *ep, struct usb_request *req)
 	struct adb_dev *dev = _adb_dev;
 
 	dev->rx_done = 1;
-	if (req->status != 0)
+	if (req->status != 0 && req->status != -ECONNRESET)
 		dev->error = 1;
 
 	wake_up(&dev->read_wq);
@@ -313,7 +315,8 @@ requeue_req:
 	/* wait for a request to complete */
 	ret = wait_event_interruptible(dev->read_wq, dev->rx_done);
 	if (ret < 0) {
-		dev->error = 1;
+		if (ret != -ERESTARTSYS)
+			dev->error = 1;
 		r = ret;
 		usb_ep_dequeue(dev->ep_out, req);
 		goto done;
@@ -406,7 +409,7 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 
 static int adb_open(struct inode *ip, struct file *fp)
 {
-	printk(KERN_INFO "adb_open\n");
+	pr_info("adb_open\n");
 	if (!_adb_dev)
 		return -ENODEV;
 
@@ -418,18 +421,23 @@ static int adb_open(struct inode *ip, struct file *fp)
 	/* clear the error latch */
 	_adb_dev->error = 0;
 
+	adb_ready_callback();
+
 	return 0;
 }
 
 static int adb_release(struct inode *ip, struct file *fp)
 {
-	printk(KERN_INFO "adb_release\n");
+	pr_info("adb_release\n");
+
+	adb_closed_callback();
+
 	adb_unlock(&_adb_dev->open_excl);
 	return 0;
 }
 
 /* file operations for ADB device /dev/android_adb */
-static struct file_operations adb_fops = {
+static const struct file_operations adb_fops = {
 	.owner = THIS_MODULE,
 	.read = adb_read,
 	.write = adb_write,
@@ -442,6 +450,9 @@ static struct miscdevice adb_device = {
 	.name = adb_shortname,
 	.fops = &adb_fops,
 };
+
+
+
 
 static int
 adb_function_bind(struct usb_configuration *c, struct usb_function *f)
@@ -505,16 +516,20 @@ static int adb_function_set_alt(struct usb_function *f,
 	int ret;
 
 	DBG(cdev, "adb_function_set_alt intf: %d alt: %d\n", intf, alt);
-	ret = usb_ep_enable(dev->ep_in,
-			ep_choose(cdev->gadget,
-				&adb_highspeed_in_desc,
-				&adb_fullspeed_in_desc));
+
+	ret = config_ep_by_speed(cdev->gadget, f, dev->ep_in);
 	if (ret)
 		return ret;
-	ret = usb_ep_enable(dev->ep_out,
-			ep_choose(cdev->gadget,
-				&adb_highspeed_out_desc,
-				&adb_fullspeed_out_desc));
+
+	ret = usb_ep_enable(dev->ep_in);
+	if (ret)
+		return ret;
+
+	ret = config_ep_by_speed(cdev->gadget, f, dev->ep_out);
+	if (ret)
+		return ret;
+
+	ret = usb_ep_enable(dev->ep_out);
 	if (ret) {
 		usb_ep_disable(dev->ep_in);
 		return ret;
@@ -581,7 +596,6 @@ static int adb_setup(void)
 
 	INIT_LIST_HEAD(&dev->tx_idle);
 
-	/* _adb_dev must be set before calling usb_gadget_register_driver */
 	_adb_dev = dev;
 
 	ret = misc_register(&adb_device);
@@ -599,6 +613,7 @@ err:
 static void adb_cleanup(void)
 {
 	misc_deregister(&adb_device);
+
 	kfree(_adb_dev);
 	_adb_dev = NULL;
 }

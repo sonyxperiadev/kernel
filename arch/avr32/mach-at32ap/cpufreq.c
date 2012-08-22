@@ -18,7 +18,7 @@
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/err.h>
-#include <asm/system.h>
+#include <linux/export.h>
 
 static struct clk *cpuclk;
 

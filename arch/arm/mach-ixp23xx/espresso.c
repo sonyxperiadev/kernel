@@ -32,7 +32,6 @@
 #include <mach/hardware.h>
 #include <asm/mach-types.h>
 #include <asm/irq.h>
-#include <asm/system.h>
 #include <asm/tlbflush.h>
 #include <asm/pgtable.h>
 
@@ -88,6 +87,7 @@ MACHINE_START(ESPRESSO, "IP Fabrics Double Espresso")
 	.map_io		= ixp23xx_map_io,
 	.init_irq	= ixp23xx_init_irq,
 	.timer		= &ixp23xx_timer,
-	.boot_params	= 0x00000100,
+	.atag_offset	= 0x100,
 	.init_machine	= espresso_init,
+	.restart	= ixp23xx_restart,
 MACHINE_END

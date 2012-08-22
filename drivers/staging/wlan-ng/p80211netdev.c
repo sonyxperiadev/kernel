@@ -150,7 +150,7 @@ static int p80211knetdev_init(netdevice_t *netdev)
 * Returns:
 *	the address of the statistics structure
 ----------------------------------------------------------------*/
-static struct net_device_stats *p80211knetdev_get_stats(netdevice_t * netdev)
+static struct net_device_stats *p80211knetdev_get_stats(netdevice_t *netdev)
 {
 	wlandevice_t *wlandev = netdev->ml_priv;
 
@@ -715,7 +715,7 @@ static const struct net_device_ops p80211_netdev_ops = {
 	.ndo_stop = p80211knetdev_stop,
 	.ndo_get_stats = p80211knetdev_get_stats,
 	.ndo_start_xmit = p80211knetdev_hard_start_xmit,
-	.ndo_set_multicast_list = p80211knetdev_set_multicast_list,
+	.ndo_set_rx_mode = p80211knetdev_set_multicast_list,
 	.ndo_do_ioctl = p80211knetdev_do_ioctl,
 	.ndo_set_mac_address = p80211knetdev_set_mac_address,
 	.ndo_tx_timeout = p80211knetdev_tx_timeout,

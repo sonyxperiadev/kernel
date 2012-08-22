@@ -76,6 +76,7 @@ struct trace_iterator {
 	struct trace_entry	*ent;
 	unsigned long		lost_events;
 	int			leftover;
+	int			ent_size;
 	int			cpu;
 	u64			ts;
 
@@ -129,6 +130,10 @@ void trace_current_buffer_unlock_commit(struct ring_buffer *buffer,
 void trace_nowake_buffer_unlock_commit(struct ring_buffer *buffer,
 				       struct ring_buffer_event *event,
 					unsigned long flags, int pc);
+void trace_nowake_buffer_unlock_commit_regs(struct ring_buffer *buffer,
+					    struct ring_buffer_event *event,
+					    unsigned long flags, int pc,
+					    struct pt_regs *regs);
 void trace_current_buffer_discard_commit(struct ring_buffer *buffer,
 					 struct ring_buffer_event *event);
 
@@ -139,8 +144,14 @@ struct event_filter;
 enum trace_reg {
 	TRACE_REG_REGISTER,
 	TRACE_REG_UNREGISTER,
+#ifdef CONFIG_PERF_EVENTS
 	TRACE_REG_PERF_REGISTER,
 	TRACE_REG_PERF_UNREGISTER,
+	TRACE_REG_PERF_OPEN,
+	TRACE_REG_PERF_CLOSE,
+	TRACE_REG_PERF_ADD,
+	TRACE_REG_PERF_DEL,
+#endif
 };
 
 struct ftrace_event_call;
@@ -152,7 +163,7 @@ struct ftrace_event_class {
 	void			*perf_probe;
 #endif
 	int			(*reg)(struct ftrace_event_call *event,
-				       enum trace_reg type);
+				       enum trace_reg type, void *data);
 	int			(*define_fields)(struct ftrace_event_call *);
 	struct list_head	*(*get_fields)(struct ftrace_event_call *);
 	struct list_head	fields;
@@ -160,13 +171,15 @@ struct ftrace_event_class {
 };
 
 extern int ftrace_event_reg(struct ftrace_event_call *event,
-			    enum trace_reg type);
+			    enum trace_reg type, void *data);
 
 enum {
 	TRACE_EVENT_FL_ENABLED_BIT,
 	TRACE_EVENT_FL_FILTERED_BIT,
 	TRACE_EVENT_FL_RECORDED_CMD_BIT,
 	TRACE_EVENT_FL_CAP_ANY_BIT,
+	TRACE_EVENT_FL_NO_SET_FILTER_BIT,
+	TRACE_EVENT_FL_IGNORE_ENABLE_BIT,
 };
 
 enum {
@@ -174,6 +187,8 @@ enum {
 	TRACE_EVENT_FL_FILTERED		= (1 << TRACE_EVENT_FL_FILTERED_BIT),
 	TRACE_EVENT_FL_RECORDED_CMD	= (1 << TRACE_EVENT_FL_RECORDED_CMD_BIT),
 	TRACE_EVENT_FL_CAP_ANY		= (1 << TRACE_EVENT_FL_CAP_ANY_BIT),
+	TRACE_EVENT_FL_NO_SET_FILTER	= (1 << TRACE_EVENT_FL_NO_SET_FILTER_BIT),
+	TRACE_EVENT_FL_IGNORE_ENABLE	= (1 << TRACE_EVENT_FL_IGNORE_ENABLE_BIT),
 };
 
 struct ftrace_event_call {
@@ -234,6 +249,7 @@ enum {
 	FILTER_STATIC_STRING,
 	FILTER_DYN_STRING,
 	FILTER_PTR_STRING,
+	FILTER_TRACE_FN,
 };
 
 #define EVENT_STORAGE_SIZE 128

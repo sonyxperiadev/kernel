@@ -59,14 +59,6 @@ struct ion_buffer {
 	void *vaddr;
 	int dmap_cnt;
 	struct sg_table *sg_table;
-#ifdef CONFIG_M4U
-	unsigned int dma_addr;
-	unsigned int align;
-#endif
-#ifdef CONFIG_ION_KONA
-	unsigned int custom_flags;
-	int custom_update_count;
-#endif
 };
 
 /**

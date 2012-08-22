@@ -10,7 +10,6 @@
  *  DMA uncached mapping support.
  */
 #include <linux/module.h>
-#include <linux/mm.h>
 #include <linux/gfp.h>
 #include <linux/errno.h>
 #include <linux/list.h>
@@ -30,6 +29,7 @@
 #include <asm/mach/map.h>
 #include <asm/mach/arch.h>
 #include <asm/dma-contiguous.h>
+#include <asm/system_info.h>
 
 #include "mm.h"
 
@@ -113,9 +113,8 @@ static void __dma_free_buffer(struct page *page, size_t size)
 
 #ifdef CONFIG_MMU
 
-
 #define CONSISTENT_OFFSET(x)	(((unsigned long)(x) - consistent_base) >> PAGE_SHIFT)
-#define CONSISTENT_PTE_INDEX(x) (((unsigned long)(x) - consistent_base) >> PGDIR_SHIFT)
+#define CONSISTENT_PTE_INDEX(x) (((unsigned long)(x) - consistent_base) >> PMD_SHIFT)
 
 /*
  * These are the page tables (2MB each) covering uncached, DMA consistent allocations
@@ -166,8 +165,7 @@ static int __init consistent_init(void)
 	pte_t *pte;
 	int i = 0;
 	unsigned long base = consistent_base;
-	unsigned long num_ptes = (CONSISTENT_END - base) >> PGDIR_SHIFT;
-
+	unsigned long num_ptes = (CONSISTENT_END - base) >> PMD_SHIFT;
 	if (cpu_architecture() >= CPU_ARCH_ARMv6)
 		return 0;
 
@@ -206,11 +204,12 @@ static int __init consistent_init(void)
 		}
 
 		consistent_pte[i++] = pte;
-		base += (1 << PGDIR_SHIFT);
+		base += PMD_SIZE;
 	} while (base < CONSISTENT_END);
 
 	return ret;
 }
+
 core_initcall(consistent_init);
 
 static void *__alloc_from_contiguous(struct device *dev, size_t size,
@@ -307,7 +306,8 @@ void __init dma_contiguous_remap(void)
 }
 
 static void *
-__dma_alloc_remap(struct page *page, size_t size, gfp_t gfp, pgprot_t prot)
+__dma_alloc_remap(struct page *page, size_t size, gfp_t gfp, pgprot_t prot,
+	const void *caller)
 {
 	struct arm_vmregion *c;
 	size_t align;
@@ -334,7 +334,7 @@ __dma_alloc_remap(struct page *page, size_t size, gfp_t gfp, pgprot_t prot)
 	 * Allocate a virtual address in the consistent mapping region.
 	 */
 	c = arm_vmregion_alloc(&consistent_head, align, size,
-			    gfp & ~(__GFP_DMA | __GFP_HIGHMEM));
+			    gfp & ~(__GFP_DMA | __GFP_HIGHMEM), caller);
 	if (c) {
 		pte_t *pte;
 		int idx = CONSISTENT_PTE_INDEX(c->vm_start);
@@ -432,7 +432,7 @@ static void __dma_remap(struct page *page, size_t size, pgprot_t prot)
 }
 
 static void *__alloc_remap_buffer(struct device *dev, size_t size, gfp_t gfp,
-				 pgprot_t prot, struct page **ret_page)
+				 pgprot_t prot, struct page **ret_page, const void *caller)
 {
 	struct page *page;
 	void *ptr;
@@ -440,7 +440,7 @@ static void *__alloc_remap_buffer(struct device *dev, size_t size, gfp_t gfp,
 	if (!page)
 		return NULL;
 
-	ptr = __dma_alloc_remap(page, size, gfp, prot);
+	ptr = __dma_alloc_remap(page, size, gfp, prot, caller);
 	if (!ptr) {
 		__dma_free_buffer(page, size);
 		return NULL;
@@ -451,7 +451,7 @@ static void *__alloc_remap_buffer(struct device *dev, size_t size, gfp_t gfp,
 }
 
 static void *__alloc_from_pool(struct device *dev, size_t size,
-			       struct page **ret_page)
+			       struct page **ret_page,  const void *caller)
 {
 	struct arm_vmregion *c;
 	size_t align;
@@ -469,7 +469,7 @@ static void *__alloc_from_pool(struct device *dev, size_t size,
 	 * size. This helps reduce fragmentation of the DMA space.
 	 */
 	align = PAGE_SIZE << get_order(size);
-	c = arm_vmregion_alloc(&coherent_head, align, size, 0);
+	c = arm_vmregion_alloc(&coherent_head, align, size, 0, caller);
 	if (c) {
 		void *ptr = (void *)c->vm_start;
 		struct page *page = virt_to_page(ptr);
@@ -530,10 +530,10 @@ static void __free_from_contiguous(struct device *dev, struct page *page,
 
 #else	/* !CONFIG_MMU */
 
-#define nommu() 1
-
-#define __alloc_remap_buffer(dev, size, gfp, prot, ret)	NULL
-#define __alloc_from_pool(dev, size, ret_page)		NULL
+#define __dma_alloc_remap(page, size, gfp, prot, c)	page_address(page)
+#define __dma_free_remap(addr, size)			do { } while (0)
+#define __alloc_remap_buffer(dev, size, gfp, prot, ret, c)	NULL
+#define __alloc_from_pool(dev, size, ret_page, c)		NULL
 #define __alloc_from_contiguous(dev, size, prot, ret)	NULL
 #define __free_from_pool(cpu_addr, size)		0
 #define __free_from_contiguous(dev, page, size)		do { } while (0)
@@ -553,10 +553,9 @@ static void *__alloc_simple_buffer(struct device *dev, size_t size, gfp_t gfp,
 	return page_address(page);
 }
 
-
-
-static void *__dma_alloc(struct device *dev, size_t size, dma_addr_t *handle,
-			 gfp_t gfp, pgprot_t prot)
+static void *
+__dma_alloc(struct device *dev, size_t size, dma_addr_t *handle, gfp_t gfp,
+	    pgprot_t prot, const void *caller)
 {
 	u64 mask = get_coherent_dma_mask(dev);
 	struct page *page;
@@ -571,23 +570,33 @@ static void *__dma_alloc(struct device *dev, size_t size, dma_addr_t *handle,
 	}
 #endif
 
+	/*
+	 * Following is a work-around (a.k.a. hack) to prevent pages
+	 * with __GFP_COMP being passed to split_page() which cannot
+	 * handle them.  The real problem is that this flag probably
+	 * should be 0 on ARM as it is not supported on this
+	 * platform; see CONFIG_HUGETLBFS.
+	 */
+	gfp &= ~(__GFP_COMP);
+
+	*handle = ~0;
+	size = PAGE_ALIGN(size);
+
 	if (!mask)
 		return NULL;
 
 	if (mask < 0xffffffffULL)
 		gfp |= GFP_DMA;
 
-	*handle = ~0;
-	size = PAGE_ALIGN(size);
-
 	if (arch_is_coherent() || nommu())
 		addr = __alloc_simple_buffer(dev, size, gfp, &page);
 	else if (cpu_architecture() < CPU_ARCH_ARMv6)
-		addr = __alloc_remap_buffer(dev, size, gfp, prot, &page);
+		addr = __alloc_remap_buffer(dev, size, gfp, prot, &page, caller);
 	else if (gfp & GFP_ATOMIC)
-		addr = __alloc_from_pool(dev, size, &page);
+		addr = __alloc_from_pool(dev, size, &page, caller);
 	else
 		addr = __alloc_from_contiguous(dev, size, prot, &page);
+
 
 	if (addr)
 		*handle = pfn_to_dma(dev, page_to_pfn(page));
@@ -601,8 +610,8 @@ static void *__dma_alloc(struct device *dev, size_t size, dma_addr_t *handle,
  * Allocate DMA-coherent memory space and return both the kernel remapped
  * virtual and bus address for that space.
  */
-void *dma_alloc_coherent(struct device *dev, size_t size, dma_addr_t *handle,
-			 gfp_t gfp)
+void *
+dma_alloc_coherent(struct device *dev, size_t size, dma_addr_t *handle, gfp_t gfp)
 {
 	void *memory;
 
@@ -610,7 +619,8 @@ void *dma_alloc_coherent(struct device *dev, size_t size, dma_addr_t *handle,
 		return memory;
 
 	return __dma_alloc(dev, size, handle, gfp,
-			   pgprot_dmacoherent(pgprot_kernel));
+			   pgprot_dmacoherent(pgprot_kernel),
+			   __builtin_return_address(0));
 }
 EXPORT_SYMBOL(dma_alloc_coherent);
 
@@ -622,7 +632,8 @@ void *
 dma_alloc_writecombine(struct device *dev, size_t size, dma_addr_t *handle, gfp_t gfp)
 {
 	return __dma_alloc(dev, size, handle, gfp,
-			   pgprot_writecombine(pgprot_kernel));
+			   pgprot_writecombine(pgprot_kernel),
+			   __builtin_return_address(0));
 }
 EXPORT_SYMBOL(dma_alloc_writecombine);
 
@@ -635,7 +646,7 @@ static int dma_mmap(struct device *dev, struct vm_area_struct *vma,
 	ret = remap_pfn_range(vma, vma->vm_start,
 			      pfn + vma->vm_pgoff,
 			      vma->vm_end - vma->vm_start,
-			      vma->vm_page_prot);
+					      vma->vm_page_prot);
 #endif	/* CONFIG_MMU */
 
 	return ret;
@@ -656,7 +667,6 @@ int dma_mmap_writecombine(struct device *dev, struct vm_area_struct *vma,
 	return dma_mmap(dev, vma, cpu_addr, dma_addr, size);
 }
 EXPORT_SYMBOL(dma_mmap_writecombine);
-
 
 /*
  * Free a buffer as defined by the above mapping.
@@ -955,6 +965,9 @@ EXPORT_SYMBOL(dma_set_mask);
 
 static int __init dma_debug_do_init(void)
 {
+#ifdef CONFIG_MMU
+	arm_vmregion_create_proc("dma-mappings", &consistent_head);
+#endif
 	dma_debug_init(PREALLOC_DMA_DEBUG_ENTRIES);
 	return 0;
 }

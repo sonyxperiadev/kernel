@@ -412,8 +412,7 @@ static void cell_iommu_enable_hardware(struct cbe_iommu *iommu)
 			IIC_IRQ_IOEX_ATI | (iommu->nid << IIC_IRQ_NODE_SHIFT));
 	BUG_ON(virq == NO_IRQ);
 
-	ret = request_irq(virq, ioc_interrupt, IRQF_DISABLED,
-			iommu->name, iommu);
+	ret = request_irq(virq, ioc_interrupt, 0, iommu->name, iommu);
 	BUG_ON(ret);
 
 	/* set the IOC segment table origin register (and turn on the iommu) */
@@ -565,7 +564,8 @@ static struct iommu_table *cell_get_iommu_table(struct device *dev)
 /* A coherent allocation implies strong ordering */
 
 static void *dma_fixed_alloc_coherent(struct device *dev, size_t size,
-				      dma_addr_t *dma_handle, gfp_t flag)
+				      dma_addr_t *dma_handle, gfp_t flag,
+				      struct dma_attrs *attrs)
 {
 	if (iommu_fixed_is_weak)
 		return iommu_alloc_coherent(dev, cell_get_iommu_table(dev),
@@ -573,18 +573,19 @@ static void *dma_fixed_alloc_coherent(struct device *dev, size_t size,
 					    device_to_mask(dev), flag,
 					    dev_to_node(dev));
 	else
-		return dma_direct_ops.alloc_coherent(dev, size, dma_handle,
-						     flag);
+		return dma_direct_ops.alloc(dev, size, dma_handle, flag,
+					    attrs);
 }
 
 static void dma_fixed_free_coherent(struct device *dev, size_t size,
-				    void *vaddr, dma_addr_t dma_handle)
+				    void *vaddr, dma_addr_t dma_handle,
+				    struct dma_attrs *attrs)
 {
 	if (iommu_fixed_is_weak)
 		iommu_free_coherent(cell_get_iommu_table(dev), size, vaddr,
 				    dma_handle);
 	else
-		dma_direct_ops.free_coherent(dev, size, vaddr, dma_handle);
+		dma_direct_ops.free(dev, size, vaddr, dma_handle, attrs);
 }
 
 static dma_addr_t dma_fixed_map_page(struct device *dev, struct page *page,
@@ -643,8 +644,8 @@ static int dma_fixed_dma_supported(struct device *dev, u64 mask)
 static int dma_set_mask_and_switch(struct device *dev, u64 dma_mask);
 
 struct dma_map_ops dma_iommu_fixed_ops = {
-	.alloc_coherent = dma_fixed_alloc_coherent,
-	.free_coherent  = dma_fixed_free_coherent,
+	.alloc          = dma_fixed_alloc_coherent,
+	.free           = dma_fixed_free_coherent,
 	.map_sg         = dma_fixed_map_sg,
 	.unmap_sg       = dma_fixed_unmap_sg,
 	.dma_supported  = dma_fixed_dma_supported,
@@ -1038,6 +1039,8 @@ static int __init cell_iommu_fixed_mapping_init(void)
 
 	/* The fixed mapping is only supported on axon machines */
 	np = of_find_node_by_name(NULL, "axon");
+	of_node_put(np);
+
 	if (!np) {
 		pr_debug("iommu: fixed mapping disabled, no axons found\n");
 		return -1;
@@ -1159,6 +1162,26 @@ static int __init setup_iommu_fixed(char *str)
 }
 __setup("iommu_fixed=", setup_iommu_fixed);
 
+static u64 cell_dma_get_required_mask(struct device *dev)
+{
+	struct dma_map_ops *dma_ops;
+
+	if (!dev->dma_mask)
+		return 0;
+
+	if (!iommu_fixed_disabled &&
+			cell_iommu_get_fixed_address(dev) != OF_BAD_ADDR)
+		return DMA_BIT_MASK(64);
+
+	dma_ops = get_dma_ops(dev);
+	if (dma_ops->get_required_mask)
+		return dma_ops->get_required_mask(dev);
+
+	WARN_ONCE(1, "no get_required_mask in %p ops", dma_ops);
+
+	return DMA_BIT_MASK(64);
+}
+
 static int __init cell_iommu_init(void)
 {
 	struct device_node *np;
@@ -1175,6 +1198,7 @@ static int __init cell_iommu_init(void)
 
 	/* Setup various ppc_md. callbacks */
 	ppc_md.pci_dma_dev_setup = cell_pci_dma_dev_setup;
+	ppc_md.dma_get_required_mask = cell_dma_get_required_mask;
 	ppc_md.tce_build = tce_build_cell;
 	ppc_md.tce_free = tce_free_cell;
 

@@ -74,6 +74,7 @@
 #include <mach/rdb/brcm_rdb_aci.h>
 #include <mach/rdb/brcm_rdb_auxmic.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
+#include <mach/memory.h>
 
 
 /*
@@ -694,27 +695,27 @@ void chal_audio_mic_mute(CHAL_HANDLE handle, _Bool mute_ctrl)
 
 void chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 {
-//#ifndef CENTRALIZED_PADCTRL
-#if 0 // Kishore - need to change as per Rhea
-	cUInt32  regVal;
-	cUInt32   function = 0x4;
+
+	cUInt32 regVal;
+	cUInt32 function = 0x4;
 
 	if (pwronoff == TRUE)
 		function = 0x0;
+	/* Select the function for DMIC0_CLK */
+	/* For function = 0 (alt_fn1), this will be set
+	 * as DMIC1_CLK */
+	regVal = READ_REG32((KONA_PAD_CTRL_VA + PADCTRLREG_DMIC0CLK_OFFSET));
+	regVal &= (~PADCTRLREG_DMIC0CLK_PINSEL_DMIC0CLK_MASK);
+	regVal |= (function << PADCTRLREG_DMIC0CLK_PINSEL_DMIC0CLK_SHIFT);
+	WRITE_REG32((KONA_PAD_CTRL_VA + PADCTRLREG_DMIC0CLK_OFFSET), regVal);
 
-	/* For function = 0 (alt_fn1), this will be set as DMIC1_CLK */
-	regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC1_CLK_OFFSET));
-	regVal &= (~PADCTRLREG_DIGMIC1_CLK_PINSEL_2_0_MASK);
-	regVal |= (function << PADCTRLREG_DIGMIC1_CLK_PINSEL_2_0_SHIFT);
-	WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC1_CLK_OFFSET), regVal);
-
-	/* For function = 0 (alt_fn1), this will be set as DMIC1_DATA */
-	regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC1_DQ_OFFSET));
-	regVal &= (~PADCTRLREG_DIGMIC1_DQ_PINSEL_2_0_MASK);
-	regVal |= (function << PADCTRLREG_DIGMIC1_DQ_PINSEL_2_0_SHIFT);
-	WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC1_DQ_OFFSET), regVal);
-#endif /* #ifndef CENTRALIZED_PADCTRL */
-
+	/* Select the function for DMIC0_DATA */
+	/* For function = 0 (alt_fn1), this will be set as 
+	 * DMIC1_DATA */
+	regVal = READ_REG32((KONA_PAD_CTRL_VA + PADCTRLREG_DMIC0DQ_OFFSET));
+	regVal &= (~PADCTRLREG_DMIC0DQ_PINSEL_DMIC0DQ_MASK);
+	regVal |= (function << PADCTRLREG_DMIC0DQ_PINSEL_DMIC0DQ_SHIFT);
+	WRITE_REG32((KONA_PAD_CTRL_VA + PADCTRLREG_DMIC0DQ_OFFSET), regVal);
 }
 
 /*
@@ -734,25 +735,28 @@ void chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
  */
 void chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 {
-//#ifndef CENTRALIZED_PADCTRL
-#if 0 // Kishore - need to change as per Rhea
-	cUInt32  regVal;
-	cUInt32  function = 0x0;
+
+	cUInt32 regVal;
+	cUInt32 function = 0x0;
 
 	if (pwronoff == TRUE)
-		function = 0x0;
+		function = 0x4;
 
-	/* For function = 0 (alt_fn1), this will be set as DMIC2_CLK */
-	regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC2_CLK_OFFSET));
-	regVal &= (~PADCTRLREG_DIGMIC2_CLK_PINSEL_2_0_MASK);
-	regVal |= (function << PADCTRLREG_DIGMIC2_CLK_PINSEL_2_0_SHIFT);
-	WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC2_CLK_OFFSET), regVal);
+	/* Select the function for GPIO33 */
+	/* For function = 4 (alt_fn5), this will be set
+	 * as DMIC2_CLK */
+	regVal = READ_REG32((KONA_PAD_CTRL_VA + PADCTRLREG_GPIO33_OFFSET));
+	regVal &= (~PADCTRLREG_GPIO33_PINSEL_GPIO33_MASK);
+	regVal |= (function << PADCTRLREG_GPIO33_PINSEL_GPIO33_SHIFT);
+	WRITE_REG32((KONA_PAD_CTRL_VA + PADCTRLREG_GPIO33_OFFSET), regVal);
 
-	/* For function = 0 (alt_fn1), this will be set as DMIC2_DATA */
-	regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC2_DQ_OFFSET));
-	regVal &= (~PADCTRLREG_DIGMIC2_DQ_PINSEL_2_0_MASK);
-	regVal |= (function << PADCTRLREG_DIGMIC2_DQ_PINSEL_2_0_SHIFT);
-	WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC2_DQ_OFFSET), regVal);
-#endif /* #ifndef CENTRALIZED_PADCTRL */
+	/* Select the function for GPIO34 */
+	/* For function = 4 (alt_fn5), this will be set as
+	 * DMIC2_DATA */
+	regVal = READ_REG32((KONA_PAD_CTRL_VA + PADCTRLREG_GPIO34_OFFSET));
+	regVal &= (~PADCTRLREG_GPIO34_PINSEL_GPIO34_MASK);
+	regVal |= (function << PADCTRLREG_GPIO34_PINSEL_GPIO34_SHIFT);
+	WRITE_REG32((KONA_PAD_CTRL_VA + PADCTRLREG_GPIO34_OFFSET), regVal);
+	/* For FPGA no pads are present */
 }
 

@@ -7,6 +7,7 @@
  *	      Michael Holzheu <holzheu@linux.vnet.ibm.com>
  */
 
+#include <linux/linkage.h>
 #include <asm/page.h>
 #include <asm/ptrace.h>
 #include <asm/thread_info.h>
@@ -22,9 +23,7 @@
  * This function runs with disabled interrupts.
  */
 	.section .text
-	.align	4
-	.globl swsusp_arch_suspend
-swsusp_arch_suspend:
+ENTRY(swsusp_arch_suspend)
 	stmg	%r6,%r15,__SF_GPRS(%r15)
 	lgr	%r1,%r15
 	aghi	%r15,-STACK_FRAME_OVERHEAD
@@ -43,7 +42,7 @@ swsusp_arch_suspend:
 	lghi	%r1,0x1000
 
 	/* Save CPU address */
-	stap	__LC_CPU_ADDRESS(%r0)
+	stap	__LC_EXT_CPU_ADDR(%r0)
 
 	/* Store registers */
 	mvc	0x318(4,%r1),__SF_EMPTY(%r15)	/* move prefix to lowcore */
@@ -112,8 +111,7 @@ swsusp_arch_suspend:
  * Then we return to the function that called swsusp_arch_suspend().
  * swsusp_arch_resume() runs with disabled interrupts.
  */
-	.globl swsusp_arch_resume
-swsusp_arch_resume:
+ENTRY(swsusp_arch_resume)
 	stmg	%r6,%r15,__SF_GPRS(%r15)
 	lgr	%r1,%r15
 	aghi	%r15,-STACK_FRAME_OVERHEAD
@@ -138,11 +136,14 @@ swsusp_arch_resume:
 0:
 	lg	%r2,8(%r1)
 	lg	%r4,0(%r1)
+	iske	%r0,%r4
 	lghi	%r3,PAGE_SIZE
 	lghi	%r5,PAGE_SIZE
 1:
 	mvcle	%r2,%r4,0
 	jo	1b
+	lg	%r2,8(%r1)
+	sske	%r0,%r2
 	lg	%r1,16(%r1)
 	ltgr	%r1,%r1
 	jnz	0b
@@ -172,15 +173,15 @@ pgm_check_entry:
 	larl	%r1,.Lresume_cpu		/* Resume CPU address: r2 */
 	stap	0(%r1)
 	llgh	%r2,0(%r1)
-	llgh	%r1,__LC_CPU_ADDRESS(%r0)	/* Suspend CPU address: r1 */
+	llgh	%r1,__LC_EXT_CPU_ADDR(%r0)	/* Suspend CPU address: r1 */
 	cgr	%r1,%r2
 	je	restore_registers		/* r1 = r2 -> nothing to do */
 	larl	%r4,.Lrestart_suspend_psw	/* Set new restart PSW */
 	mvc	__LC_RST_NEW_PSW(16,%r0),0(%r4)
 3:
-	sigp	%r9,%r1,__SIGP_INITIAL_CPU_RESET
-	brc	8,4f	/* accepted */
-	brc	2,3b	/* busy, try again */
+	sigp	%r9,%r1,11			/* sigp initial cpu reset */
+	brc	8,4f				/* accepted */
+	brc	2,3b				/* busy, try again */
 
 	/* Suspend CPU not available -> panic */
 	larl	%r15,init_thread_union
@@ -195,10 +196,10 @@ pgm_check_entry:
 	lpsw	0(%r3)
 4:
 	/* Switch to suspend CPU */
-	sigp	%r9,%r1,__SIGP_RESTART	/* start suspend CPU */
+	sigp	%r9,%r1,6		/* sigp restart to suspend CPU */
 	brc	2,4b			/* busy, try again */
 5:
-	sigp	%r9,%r2,__SIGP_STOP	/* stop resume (current) CPU */
+	sigp	%r9,%r2,5		/* sigp stop to current resume CPU */
 	brc	2,5b			/* busy, try again */
 6:	j	6b
 
@@ -206,7 +207,7 @@ restart_suspend:
 	larl	%r1,.Lresume_cpu
 	llgh	%r2,0(%r1)
 7:
-	sigp	%r9,%r2,__SIGP_SENSE	/* Wait for resume CPU */
+	sigp	%r9,%r2,1		/* sigp sense, wait for resume CPU */
 	brc	8,7b			/* accepted, status 0, still running */
 	brc	2,7b			/* busy, try again */
 	tmll	%r9,0x40		/* Test if resume CPU is stopped */
@@ -255,6 +256,9 @@ restore_registers:
 	/* Make all free pages unstable */
 	lghi	%r2,0
 	brasl	%r14,arch_set_page_states
+
+	/* Log potential guest relocation */
+	brasl	%r14,lgr_info_log
 
 	/* Reinitialize the channel subsystem */
 	brasl	%r14,channel_subsystem_reinit

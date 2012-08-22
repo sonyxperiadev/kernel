@@ -45,13 +45,20 @@ static void pci_acpi_wake_dev(acpi_handle handle, u32 event, void *context)
 {
 	struct pci_dev *pci_dev = context;
 
-	if (event == ACPI_NOTIFY_DEVICE_WAKE && pci_dev) {
+	if (event != ACPI_NOTIFY_DEVICE_WAKE || !pci_dev)
+		return;
+
+	if (!pci_dev->pm_cap || !pci_dev->pme_support
+	     || pci_check_pme_status(pci_dev)) {
+		if (pci_dev->pme_poll)
+			pci_dev->pme_poll = false;
+
 		pci_wakeup_event(pci_dev);
-		pci_check_pme_status(pci_dev);
 		pm_runtime_resume(&pci_dev->dev);
-		if (pci_dev->subordinate)
-			pci_pme_wakeup_bus(pci_dev->subordinate);
 	}
+
+	if (pci_dev->subordinate)
+		pci_pme_wakeup_bus(pci_dev->subordinate);
 }
 
 /**
@@ -193,7 +200,7 @@ static pci_power_t acpi_pci_choose_state(struct pci_dev *pdev)
 		return PCI_D1;
 	case ACPI_STATE_D2:
 		return PCI_D2;
-	case ACPI_STATE_D3:
+	case ACPI_STATE_D3_HOT:
 		return PCI_D3hot;
 	case ACPI_STATE_D3_COLD:
 		return PCI_D3cold;
@@ -270,41 +277,6 @@ static int acpi_pci_sleep_wake(struct pci_dev *dev, bool enable)
 	return 0;
 }
 
-/**
- * acpi_dev_run_wake - Enable/disable wake-up for given device.
- * @phys_dev: Device to enable/disable the platform to wake-up the system for.
- * @enable: Whether enable or disable the wake-up functionality.
- *
- * Find the ACPI device object corresponding to @pci_dev and try to
- * enable/disable the GPE associated with it.
- */
-static int acpi_dev_run_wake(struct device *phys_dev, bool enable)
-{
-	struct acpi_device *dev;
-	acpi_handle handle;
-	int error = -ENODEV;
-
-	if (!device_run_wake(phys_dev))
-		return -EINVAL;
-
-	handle = DEVICE_ACPI_HANDLE(phys_dev);
-	if (!handle || ACPI_FAILURE(acpi_bus_get_device(handle, &dev))) {
-		dev_dbg(phys_dev, "ACPI handle has no context in %s!\n",
-			__func__);
-		return -ENODEV;
-	}
-
-	if (enable) {
-		acpi_enable_wakeup_device_power(dev, ACPI_STATE_S0);
-		acpi_enable_gpe(dev->wakeup.gpe_device, dev->wakeup.gpe_number);
-	} else {
-		acpi_disable_gpe(dev->wakeup.gpe_device, dev->wakeup.gpe_number);
-		acpi_disable_wakeup_device_power(dev);
-	}
-
-	return error;
-}
-
 static void acpi_pci_propagate_run_wake(struct pci_bus *bus, bool enable)
 {
 	while (bus->parent) {
@@ -312,14 +284,14 @@ static void acpi_pci_propagate_run_wake(struct pci_bus *bus, bool enable)
 
 		if (bridge->pme_interrupt)
 			return;
-		if (!acpi_dev_run_wake(&bridge->dev, enable))
+		if (!acpi_pm_device_run_wake(&bridge->dev, enable))
 			return;
 		bus = bus->parent;
 	}
 
 	/* We have reached the root bus. */
 	if (bus->bridge)
-		acpi_dev_run_wake(bus->bridge, enable);
+		acpi_pm_device_run_wake(bus->bridge, enable);
 }
 
 static int acpi_pci_run_wake(struct pci_dev *dev, bool enable)
@@ -327,7 +299,7 @@ static int acpi_pci_run_wake(struct pci_dev *dev, bool enable)
 	if (dev->pme_interrupt)
 		return 0;
 
-	if (!acpi_dev_run_wake(&dev->dev, enable))
+	if (!acpi_pm_device_run_wake(&dev->dev, enable))
 		return 0;
 
 	acpi_pci_propagate_run_wake(dev->bus, enable);
@@ -393,7 +365,6 @@ static int __init acpi_pci_init(void)
 
 	if (acpi_gbl_FADT.boot_flags & ACPI_FADT_NO_ASPM) {
 		printk(KERN_INFO"ACPI FADT declares the system doesn't support PCIe ASPM, so disable it\n");
-		pcie_clear_aspm();
 		pcie_no_aspm();
 	}
 

@@ -26,6 +26,7 @@
 #include <linux/reboot.h>
 #include <linux/kmsg_dump.h>
 #include <linux/mfd/bcmpmu.h>
+#include <linux/module.h>
 #include <plat/kona_reset_reason.h>
 
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS

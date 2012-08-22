@@ -85,7 +85,8 @@ static int __devinit platform_lcd_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	plcd = kzalloc(sizeof(struct platform_lcd), GFP_KERNEL);
+	plcd = devm_kzalloc(&pdev->dev, sizeof(struct platform_lcd),
+			    GFP_KERNEL);
 	if (!plcd) {
 		dev_err(dev, "no memory for state\n");
 		return -ENOMEM;
@@ -98,7 +99,7 @@ static int __devinit platform_lcd_probe(struct platform_device *pdev)
 	if (IS_ERR(plcd->lcd)) {
 		dev_err(dev, "cannot register lcd device\n");
 		err = PTR_ERR(plcd->lcd);
-		goto err_mem;
+		goto err;
 	}
 
 	platform_set_drvdata(pdev, plcd);
@@ -106,8 +107,7 @@ static int __devinit platform_lcd_probe(struct platform_device *pdev)
 
 	return 0;
 
- err_mem:
-	kfree(plcd);
+ err:
 	return err;
 }
 
@@ -116,15 +116,14 @@ static int __devexit platform_lcd_remove(struct platform_device *pdev)
 	struct platform_lcd *plcd = platform_get_drvdata(pdev);
 
 	lcd_device_unregister(plcd->lcd);
-	kfree(plcd);
 
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int platform_lcd_suspend(struct platform_device *pdev, pm_message_t st)
+static int platform_lcd_suspend(struct device *dev)
 {
-	struct platform_lcd *plcd = platform_get_drvdata(pdev);
+	struct platform_lcd *plcd = dev_get_drvdata(dev);
 
 	plcd->suspended = 1;
 	platform_lcd_set_power(plcd->lcd, plcd->power);
@@ -132,43 +131,33 @@ static int platform_lcd_suspend(struct platform_device *pdev, pm_message_t st)
 	return 0;
 }
 
-static int platform_lcd_resume(struct platform_device *pdev)
+static int platform_lcd_resume(struct device *dev)
 {
-	struct platform_lcd *plcd = platform_get_drvdata(pdev);
+	struct platform_lcd *plcd = dev_get_drvdata(dev);
 
 	plcd->suspended = 0;
 	platform_lcd_set_power(plcd->lcd, plcd->power);
 
 	return 0;
 }
-#else
-#define platform_lcd_suspend NULL
-#define platform_lcd_resume NULL
+
+static SIMPLE_DEV_PM_OPS(platform_lcd_pm_ops, platform_lcd_suspend,
+			platform_lcd_resume);
 #endif
 
 static struct platform_driver platform_lcd_driver = {
 	.driver		= {
 		.name	= "platform-lcd",
 		.owner	= THIS_MODULE,
+#ifdef CONFIG_PM
+		.pm	= &platform_lcd_pm_ops,
+#endif
 	},
 	.probe		= platform_lcd_probe,
 	.remove		= __devexit_p(platform_lcd_remove),
-	.suspend        = platform_lcd_suspend,
-	.resume         = platform_lcd_resume,
 };
 
-static int __init platform_lcd_init(void)
-{
-	return platform_driver_register(&platform_lcd_driver);
-}
-
-static void __exit platform_lcd_cleanup(void)
-{
-	platform_driver_unregister(&platform_lcd_driver);
-}
-
-module_init(platform_lcd_init);
-module_exit(platform_lcd_cleanup);
+module_platform_driver(platform_lcd_driver);
 
 MODULE_AUTHOR("Ben Dooks <ben-linux@fluff.org>");
 MODULE_LICENSE("GPL v2");

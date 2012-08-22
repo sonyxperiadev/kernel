@@ -190,18 +190,10 @@ nv50_dac_mode_fixup(struct drm_encoder *encoder, struct drm_display_mode *mode,
 	}
 
 	if (connector->scaling_mode != DRM_MODE_SCALE_NONE &&
-	     connector->native_mode) {
-		int id = adjusted_mode->base.id;
-		*adjusted_mode = *connector->native_mode;
-		adjusted_mode->base.id = id;
-	}
+	     connector->native_mode)
+		drm_mode_copy(adjusted_mode, connector->native_mode);
 
 	return true;
-}
-
-static void
-nv50_dac_prepare(struct drm_encoder *encoder)
-{
 }
 
 static void
@@ -266,7 +258,7 @@ static const struct drm_encoder_helper_funcs nv50_dac_helper_funcs = {
 	.save = nv50_dac_save,
 	.restore = nv50_dac_restore,
 	.mode_fixup = nv50_dac_mode_fixup,
-	.prepare = nv50_dac_prepare,
+	.prepare = nv50_dac_disconnect,
 	.commit = nv50_dac_commit,
 	.mode_set = nv50_dac_mode_set,
 	.get_crtc = nv50_dac_crtc_get,

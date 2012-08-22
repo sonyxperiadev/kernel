@@ -791,11 +791,6 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	return 0;
 }
 
-static int vidioc_log_status(struct file *file, void *priv)
-{
-	return 0;
-}
-
 static int fill_queryctrl(struct saa7164_encoder_params *params,
 	struct v4l2_queryctrl *c)
 {
@@ -1246,7 +1241,6 @@ static unsigned int fops_poll(struct file *file, poll_table *wait)
 	struct saa7164_encoder_fh *fh =
 		(struct saa7164_encoder_fh *)file->private_data;
 	struct saa7164_port *port = fh->port;
-	struct saa7164_user_buffer *ubuf;
 	unsigned int mask = 0;
 
 	port->last_poll_msecs_diff = port->last_poll_msecs;
@@ -1278,10 +1272,7 @@ static unsigned int fops_poll(struct file *file, poll_table *wait)
 	}
 
 	/* Pull the first buffer from the used list */
-	ubuf = list_first_entry(&port->list_buf_used.list,
-		struct saa7164_user_buffer, list);
-
-	if (ubuf)
+	if (!list_empty(&port->list_buf_used.list))
 		mask |= POLLIN | POLLRDNORM;
 
 	return mask;
@@ -1351,7 +1342,6 @@ static const struct v4l2_ioctl_ops mpeg_ioctl_ops = {
 	.vidioc_g_ext_ctrls	 = vidioc_g_ext_ctrls,
 	.vidioc_s_ext_ctrls	 = vidioc_s_ext_ctrls,
 	.vidioc_try_ext_ctrls	 = vidioc_try_ext_ctrls,
-	.vidioc_log_status	 = vidioc_log_status,
 	.vidioc_queryctrl	 = vidioc_queryctrl,
 	.vidioc_g_chip_ident	 = saa7164_g_chip_ident,
 #ifdef CONFIG_VIDEO_ADV_DEBUG

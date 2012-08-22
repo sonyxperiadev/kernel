@@ -57,6 +57,7 @@
 #include <linux/scatterlist.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/module.h>
 
 #include <net/sock.h>
 
@@ -101,12 +102,16 @@ iscsi_iser_recv(struct iscsi_conn *conn,
 
 	/* verify PDU length */
 	datalen = ntoh24(hdr->dlength);
-	if (datalen != rx_data_len) {
-		printk(KERN_ERR "iscsi_iser: datalen %d (hdr) != %d (IB) \n",
-		       datalen, rx_data_len);
+	if (datalen > rx_data_len || (datalen + 4) < rx_data_len) {
+		iser_err("wrong datalen %d (hdr), %d (IB)\n",
+			datalen, rx_data_len);
 		rc = ISCSI_ERR_DATALEN;
 		goto error;
 	}
+
+	if (datalen != rx_data_len)
+		iser_dbg("aligned datalen (%d) hdr, %d (IB)\n",
+			datalen, rx_data_len);
 
 	/* read AHS */
 	ahslen = hdr->hlength * 4;
@@ -147,7 +152,6 @@ int iser_initialize_task_headers(struct iscsi_task *task,
 	tx_desc->tx_sg[0].length = ISER_HEADERS_LEN;
 	tx_desc->tx_sg[0].lkey   = device->mr->lkey;
 
-	iser_task->headers_initialized	= 1;
 	iser_task->iser_conn		= iser_conn;
 	return 0;
 }
@@ -162,8 +166,7 @@ iscsi_iser_task_init(struct iscsi_task *task)
 {
 	struct iscsi_iser_task *iser_task = task->dd_data;
 
-	if (!iser_task->headers_initialized)
-		if (iser_initialize_task_headers(task, &iser_task->desc))
+	if (iser_initialize_task_headers(task, &iser_task->desc))
 			return -ENOMEM;
 
 	/* mgmt task */
@@ -274,6 +277,13 @@ iscsi_iser_task_xmit(struct iscsi_task *task)
 static void iscsi_iser_cleanup_task(struct iscsi_task *task)
 {
 	struct iscsi_iser_task *iser_task = task->dd_data;
+	struct iser_tx_desc	*tx_desc = &iser_task->desc;
+
+	struct iscsi_iser_conn *iser_conn = task->conn->dd_data;
+	struct iser_device     *device    = iser_conn->ib_conn->device;
+
+	ib_dma_unmap_single(device->ib_device,
+		tx_desc->dma_addr, ISER_HEADERS_LEN, DMA_TO_DEVICE);
 
 	/* mgmt tasks do not need special cleanup */
 	if (!task->sc)
@@ -354,6 +364,9 @@ iscsi_iser_conn_bind(struct iscsi_cls_session *cls_session,
 	}
 	ib_conn = ep->dd_data;
 
+	if (iser_alloc_rx_descriptors(ib_conn))
+		return -ENOMEM;
+
 	/* binds the iSER connection retrieved from the previously
 	 * connected ep_handle to the iSCSI layer connection. exchanges
 	 * connection pointers */
@@ -386,19 +399,6 @@ iscsi_iser_conn_stop(struct iscsi_cls_conn *cls_conn, int flag)
 		iser_conn_put(ib_conn, 1); /* deref iscsi/ib conn unbinding */
 	}
 	iser_conn->ib_conn = NULL;
-}
-
-static int
-iscsi_iser_conn_start(struct iscsi_cls_conn *cls_conn)
-{
-	struct iscsi_conn *conn = cls_conn->dd_data;
-	int err;
-
-	err = iser_conn_set_full_featured_mode(conn);
-	if (err)
-		return err;
-
-	return iscsi_conn_start(cls_conn);
 }
 
 static void iscsi_iser_session_destroy(struct iscsi_cls_session *cls_session)
@@ -628,6 +628,59 @@ iscsi_iser_ep_disconnect(struct iscsi_endpoint *ep)
 	iser_conn_terminate(ib_conn);
 }
 
+static umode_t iser_attr_is_visible(int param_type, int param)
+{
+	switch (param_type) {
+	case ISCSI_HOST_PARAM:
+		switch (param) {
+		case ISCSI_HOST_PARAM_NETDEV_NAME:
+		case ISCSI_HOST_PARAM_HWADDRESS:
+		case ISCSI_HOST_PARAM_INITIATOR_NAME:
+			return S_IRUGO;
+		default:
+			return 0;
+		}
+	case ISCSI_PARAM:
+		switch (param) {
+		case ISCSI_PARAM_MAX_RECV_DLENGTH:
+		case ISCSI_PARAM_MAX_XMIT_DLENGTH:
+		case ISCSI_PARAM_HDRDGST_EN:
+		case ISCSI_PARAM_DATADGST_EN:
+		case ISCSI_PARAM_CONN_ADDRESS:
+		case ISCSI_PARAM_CONN_PORT:
+		case ISCSI_PARAM_EXP_STATSN:
+		case ISCSI_PARAM_PERSISTENT_ADDRESS:
+		case ISCSI_PARAM_PERSISTENT_PORT:
+		case ISCSI_PARAM_PING_TMO:
+		case ISCSI_PARAM_RECV_TMO:
+		case ISCSI_PARAM_INITIAL_R2T_EN:
+		case ISCSI_PARAM_MAX_R2T:
+		case ISCSI_PARAM_IMM_DATA_EN:
+		case ISCSI_PARAM_FIRST_BURST:
+		case ISCSI_PARAM_MAX_BURST:
+		case ISCSI_PARAM_PDU_INORDER_EN:
+		case ISCSI_PARAM_DATASEQ_INORDER_EN:
+		case ISCSI_PARAM_TARGET_NAME:
+		case ISCSI_PARAM_TPGT:
+		case ISCSI_PARAM_USERNAME:
+		case ISCSI_PARAM_PASSWORD:
+		case ISCSI_PARAM_USERNAME_IN:
+		case ISCSI_PARAM_PASSWORD_IN:
+		case ISCSI_PARAM_FAST_ABORT:
+		case ISCSI_PARAM_ABORT_TMO:
+		case ISCSI_PARAM_LU_RESET_TMO:
+		case ISCSI_PARAM_TGT_RESET_TMO:
+		case ISCSI_PARAM_IFACE_NAME:
+		case ISCSI_PARAM_INITIATOR_NAME:
+			return S_IRUGO;
+		default:
+			return 0;
+		}
+	}
+
+	return 0;
+}
+
 static struct scsi_host_template iscsi_iser_sht = {
 	.module                 = THIS_MODULE,
 	.name                   = "iSCSI Initiator over iSER, v." DRV_VER,
@@ -649,32 +702,6 @@ static struct iscsi_transport iscsi_iser_transport = {
 	.owner                  = THIS_MODULE,
 	.name                   = "iser",
 	.caps                   = CAP_RECOVERY_L0 | CAP_MULTI_R2T,
-	.param_mask		= ISCSI_MAX_RECV_DLENGTH |
-				  ISCSI_MAX_XMIT_DLENGTH |
-				  ISCSI_HDRDGST_EN |
-				  ISCSI_DATADGST_EN |
-				  ISCSI_INITIAL_R2T_EN |
-				  ISCSI_MAX_R2T |
-				  ISCSI_IMM_DATA_EN |
-				  ISCSI_FIRST_BURST |
-				  ISCSI_MAX_BURST |
-				  ISCSI_PDU_INORDER_EN |
-				  ISCSI_DATASEQ_INORDER_EN |
-				  ISCSI_CONN_PORT |
-				  ISCSI_CONN_ADDRESS |
-				  ISCSI_EXP_STATSN |
-				  ISCSI_PERSISTENT_PORT |
-				  ISCSI_PERSISTENT_ADDRESS |
-				  ISCSI_TARGET_NAME | ISCSI_TPGT |
-				  ISCSI_USERNAME | ISCSI_PASSWORD |
-				  ISCSI_USERNAME_IN | ISCSI_PASSWORD_IN |
-				  ISCSI_FAST_ABORT | ISCSI_ABORT_TMO |
-				  ISCSI_LU_RESET_TMO | ISCSI_TGT_RESET_TMO |
-				  ISCSI_PING_TMO | ISCSI_RECV_TMO |
-				  ISCSI_IFACE_NAME | ISCSI_INITIATOR_NAME,
-	.host_param_mask	= ISCSI_HOST_HWADDRESS |
-				  ISCSI_HOST_NETDEV_NAME |
-				  ISCSI_HOST_INITIATOR_NAME,
 	/* session management */
 	.create_session         = iscsi_iser_session_create,
 	.destroy_session        = iscsi_iser_session_destroy,
@@ -682,11 +709,12 @@ static struct iscsi_transport iscsi_iser_transport = {
 	.create_conn            = iscsi_iser_conn_create,
 	.bind_conn              = iscsi_iser_conn_bind,
 	.destroy_conn           = iscsi_iser_conn_destroy,
+	.attr_is_visible	= iser_attr_is_visible,
 	.set_param              = iscsi_iser_set_param,
 	.get_conn_param		= iscsi_conn_get_param,
 	.get_ep_param		= iscsi_iser_get_ep_param,
 	.get_session_param	= iscsi_session_get_param,
-	.start_conn             = iscsi_iser_conn_start,
+	.start_conn             = iscsi_conn_start,
 	.stop_conn              = iscsi_iser_conn_stop,
 	/* iscsi host params */
 	.get_host_param		= iscsi_host_get_param,

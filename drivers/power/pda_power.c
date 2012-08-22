@@ -39,8 +39,11 @@ static struct timer_list supply_timer;
 static struct timer_list polling_timer;
 static int polling;
 
-static struct otg_transceiver *transceiver;
+#ifdef CONFIG_USB_OTG_UTILS
+static struct usb_phy *transceiver;
 static struct notifier_block otg_nb;
+#endif
+
 static struct regulator *ac_draw;
 
 enum {
@@ -317,13 +320,15 @@ static int pda_power_probe(struct platform_device *pdev)
 		ret = PTR_ERR(ac_draw);
 	}
 
-	transceiver = otg_get_transceiver();
+#ifdef CONFIG_USB_OTG_UTILS
+	transceiver = usb_get_transceiver();
 	if (transceiver && !pdata->is_usb_online) {
 		pdata->is_usb_online = otg_is_usb_online;
 	}
 	if (transceiver && !pdata->is_ac_online) {
 		pdata->is_ac_online = otg_is_ac_online;
 	}
+#endif
 
 	if (pdata->is_ac_online) {
 		ret = power_supply_register(&pdev->dev, &pda_psy_ac);
@@ -367,15 +372,17 @@ static int pda_power_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef CONFIG_USB_OTG_UTILS
 	if (transceiver && pdata->use_otg_notifier) {
 		otg_nb.notifier_call = otg_handle_notification;
-		ret = otg_register_notifier(transceiver, &otg_nb);
+		ret = usb_register_notifier(transceiver, &otg_nb);
 		if (ret) {
 			dev_err(dev, "failure to register otg notifier\n");
 			goto otg_reg_notifier_failed;
 		}
 		polling = 0;
 	}
+#endif
 
 	if (polling) {
 		dev_dbg(dev, "will poll for status\n");
@@ -389,17 +396,21 @@ static int pda_power_probe(struct platform_device *pdev)
 
 	return 0;
 
+#ifdef CONFIG_USB_OTG_UTILS
 otg_reg_notifier_failed:
 	if (pdata->is_usb_online && usb_irq)
 		free_irq(usb_irq->start, &pda_psy_usb);
+#endif
 usb_irq_failed:
 	if (pdata->is_usb_online)
 		power_supply_unregister(&pda_psy_usb);
 usb_supply_failed:
 	if (pdata->is_ac_online && ac_irq)
 		free_irq(ac_irq->start, &pda_psy_ac);
+#ifdef CONFIG_USB_OTG_UTILS
 	if (transceiver)
-		otg_put_transceiver(transceiver);
+		usb_put_transceiver(transceiver);
+#endif
 ac_irq_failed:
 	if (pdata->is_ac_online)
 		power_supply_unregister(&pda_psy_ac);
@@ -433,7 +444,7 @@ static int pda_power_remove(struct platform_device *pdev)
 		power_supply_unregister(&pda_psy_ac);
 #ifdef CONFIG_USB_OTG_UTILS
 	if (transceiver)
-		otg_put_transceiver(transceiver);
+		usb_put_transceiver(transceiver);
 #endif
 	if (ac_draw) {
 		regulator_put(ac_draw);
@@ -487,8 +498,6 @@ static int pda_power_resume(struct platform_device *pdev)
 #define pda_power_resume NULL
 #endif /* CONFIG_PM */
 
-MODULE_ALIAS("platform:pda-power");
-
 static struct platform_driver pda_power_pdrv = {
 	.driver = {
 		.name = "pda-power",
@@ -499,17 +508,8 @@ static struct platform_driver pda_power_pdrv = {
 	.resume = pda_power_resume,
 };
 
-static int __init pda_power_init(void)
-{
-	return platform_driver_register(&pda_power_pdrv);
-}
+module_platform_driver(pda_power_pdrv);
 
-static void __exit pda_power_exit(void)
-{
-	platform_driver_unregister(&pda_power_pdrv);
-}
-
-module_init(pda_power_init);
-module_exit(pda_power_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Anton Vorontsov <cbou@mail.ru>");
+MODULE_ALIAS("platform:pda-power");

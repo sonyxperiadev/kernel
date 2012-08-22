@@ -49,6 +49,7 @@
 #include <mach/rdb/brcm_rdb_khub_rst_mgr_reg.h>
 #include <linux/io.h>
 #include <mach/io_map.h>
+#include <mach/memory.h>
 
 #define SSPI_HW_WORD_LEN_32Bit					32
 #define SSPI_HW_WORD_LEN_25Bit					25

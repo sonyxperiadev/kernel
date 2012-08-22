@@ -25,7 +25,6 @@
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
 #include <linux/interrupt.h>
 #include <linux/amba/bus.h>
 #include <linux/clkdev.h>
@@ -53,27 +52,8 @@
 #include <mach/csp/chipcHw_inline.h>
 #include <mach/csp/tmrHw_reg.h>
 
-#define AMBA_DEVICE(name, initname, base, plat, size)       \
-static struct amba_device name##_device = {     \
-   .dev = {                                     \
-      .coherent_dma_mask = ~0,                  \
-      .init_name = initname,                    \
-      .platform_data = plat                     \
-   },                                           \
-   .res = {                                     \
-      .start = MM_ADDR_IO_##base,               \
-		.end = MM_ADDR_IO_##base + (size) - 1,    \
-      .flags = IORESOURCE_MEM                   \
-   },                                           \
-   .dma_mask = ~0,                              \
-   .irq = {                                     \
-      IRQ_##base                                \
-   }                                            \
-}
-
-
-AMBA_DEVICE(uartA, "uarta", UARTA, NULL, SZ_4K);
-AMBA_DEVICE(uartB, "uartb", UARTB, NULL, SZ_4K);
+static AMBA_APB_DEVICE(uartA, "uartA", 0, MM_ADDR_IO_UARTA, {IRQ_UARTA}, NULL);
+static AMBA_APB_DEVICE(uartB, "uartB", 0, MM_ADDR_IO_UARTB, {IRQ_UARTB}, NULL);
 
 static struct clk pll1_clk = {
 	.name = "PLL1",
@@ -235,7 +215,7 @@ void __init bcmring_init_timer(void)
 	 */
 	bcmring_clocksource_init();
 
-	sp804_clockevents_register(TIMER0_VA_BASE, IRQ_TIMER0, "timer0");
+	sp804_clockevents_init(TIMER0_VA_BASE, IRQ_TIMER0, "timer0");
 }
 
 struct sys_timer bcmring_timer = {

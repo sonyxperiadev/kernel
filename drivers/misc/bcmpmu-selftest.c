@@ -38,6 +38,7 @@
 #include <linux/uaccess.h>
 #include <linux/errno.h>
 #include <linux/io.h>
+#include <linux/module.h>
 
 #include <mach/hardware.h>
 #include <mach/io_map.h>

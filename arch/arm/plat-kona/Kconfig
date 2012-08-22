@@ -19,6 +19,7 @@ config ARCH_RHEA
 
 config ARCH_HAWAII
 	bool "Broadcom Hawaii Soc"
+	select HAVE_SMP
 	help
 	  Support for the Broadcom Hawaii Soc platform.
 

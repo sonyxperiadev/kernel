@@ -39,6 +39,7 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <mach/memory.h>
 
 #include <plat/chal/chal_types.h>
 #include <plat/chal/chal_sspi.h>

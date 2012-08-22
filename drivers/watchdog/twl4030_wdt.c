@@ -42,8 +42,8 @@ struct twl4030_wdt {
 	unsigned long		state;
 };
 
-static int nowayout = WATCHDOG_NOWAYOUT;
-module_param(nowayout, int, 0);
+static bool nowayout = WATCHDOG_NOWAYOUT;
+module_param(nowayout, bool, 0);
 MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started "
 	"(default=" __MODULE_STRING(WATCHDOG_NOWAYOUT) ")");
 
@@ -256,17 +256,7 @@ static struct platform_driver twl4030_wdt_driver = {
 	},
 };
 
-static int __devinit twl4030_wdt_init(void)
-{
-	return platform_driver_register(&twl4030_wdt_driver);
-}
-module_init(twl4030_wdt_init);
-
-static void __devexit twl4030_wdt_exit(void)
-{
-	platform_driver_unregister(&twl4030_wdt_driver);
-}
-module_exit(twl4030_wdt_exit);
+module_platform_driver(twl4030_wdt_driver);
 
 MODULE_AUTHOR("Nokia Corporation");
 MODULE_LICENSE("GPL");

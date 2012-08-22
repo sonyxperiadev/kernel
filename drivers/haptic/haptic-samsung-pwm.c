@@ -277,7 +277,7 @@ static int samsung_pwm_haptic_probe(struct platform_device *pdev)
 		goto error_classdev;
 	}
 
-	haptic->pwm = pwm_request(pdata->pwm_name, "haptic");
+	haptic->pwm = pwm_request(pdata->pwm_id, "haptic");
 	if (IS_ERR(haptic->pwm)) {
 		dev_err(&pdev->dev, "unable to request PWM for haptic\n");
 		ret = PTR_ERR(haptic->pwm);

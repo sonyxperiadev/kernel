@@ -25,6 +25,7 @@
 #include <linux/init.h>
 #include <linux/input.h>
 #include <linux/input/sparse-keymap.h>
+#include <linux/fb.h>
 
 #include "asus-wmi.h"
 
@@ -37,6 +38,29 @@ MODULE_LICENSE("GPL");
 #define ASUS_NB_WMI_EVENT_GUID	"0B3CBB35-E3C2-45ED-91C2-4C5A6D195D1C"
 
 MODULE_ALIAS("wmi:"ASUS_NB_WMI_EVENT_GUID);
+
+/*
+ * WAPF defines the behavior of the Fn+Fx wlan key
+ * The significance of values is yet to be found, but
+ * most of the time:
+ * Bit | Bluetooth | WLAN
+ *  0  | Hardware  | Hardware
+ *  1  | Hardware  | Software
+ *  4  | Software  | Software
+ */
+static uint wapf;
+module_param(wapf, uint, 0444);
+MODULE_PARM_DESC(wapf, "WAPF value");
+
+static struct quirk_entry quirk_asus_unknown = {
+};
+
+static void asus_nb_wmi_quirks(struct asus_wmi_driver *driver)
+{
+	driver->quirks = &quirk_asus_unknown;
+	driver->quirks->wapf = wapf;
+	driver->panel_power = FB_BLANK_UNBLANK;
+}
 
 static const struct key_entry asus_nb_wmi_keymap[] = {
 	{ KE_KEY, 0x30, { KEY_VOLUMEUP } },
@@ -52,17 +76,19 @@ static const struct key_entry asus_nb_wmi_keymap[] = {
 	{ KE_KEY, 0x50, { KEY_EMAIL } },
 	{ KE_KEY, 0x51, { KEY_WWW } },
 	{ KE_KEY, 0x55, { KEY_CALC } },
+	{ KE_IGNORE, 0x57, },  /* Battery mode */
+	{ KE_IGNORE, 0x58, },  /* AC mode */
 	{ KE_KEY, 0x5C, { KEY_F15 } },  /* Power Gear key */
-	{ KE_KEY, 0x5D, { KEY_WLAN } },
-	{ KE_KEY, 0x5E, { KEY_WLAN } },
-	{ KE_KEY, 0x5F, { KEY_WLAN } },
+	{ KE_KEY, 0x5D, { KEY_WLAN } }, /* Wireless console Toggle */
+	{ KE_KEY, 0x5E, { KEY_WLAN } }, /* Wireless console Enable */
+	{ KE_KEY, 0x5F, { KEY_WLAN } }, /* Wireless console Disable */
 	{ KE_KEY, 0x60, { KEY_SWITCHVIDEOMODE } },
 	{ KE_KEY, 0x61, { KEY_SWITCHVIDEOMODE } },
 	{ KE_KEY, 0x62, { KEY_SWITCHVIDEOMODE } },
 	{ KE_KEY, 0x63, { KEY_SWITCHVIDEOMODE } },
 	{ KE_KEY, 0x6B, { KEY_TOUCHPAD_TOGGLE } },
-	{ KE_KEY, 0x7E, { KEY_BLUETOOTH } },
 	{ KE_KEY, 0x7D, { KEY_BLUETOOTH } },
+	{ KE_KEY, 0x7E, { KEY_BLUETOOTH } },
 	{ KE_KEY, 0x82, { KEY_CAMERA } },
 	{ KE_KEY, 0x88, { KEY_RFKILL  } },
 	{ KE_KEY, 0x8A, { KEY_PROG1 } },
@@ -81,6 +107,7 @@ static struct asus_wmi_driver asus_nb_wmi_driver = {
 	.keymap = asus_nb_wmi_keymap,
 	.input_name = "Asus WMI hotkeys",
 	.input_phys = ASUS_NB_WMI_FILE "/input0",
+	.detect_quirks = asus_nb_wmi_quirks,
 };
 
 

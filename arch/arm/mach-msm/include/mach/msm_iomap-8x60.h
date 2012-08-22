@@ -62,4 +62,13 @@
 #define MSM8X60_TMR0_PHYS	0x02040000
 #define MSM8X60_TMR0_SIZE	SZ_4K
 
+#ifdef CONFIG_DEBUG_MSM8660_UART
+#define MSM_DEBUG_UART_BASE	0xE1040000
+#define MSM_DEBUG_UART_PHYS	0x19C40000
+#endif
+
+#ifndef __ASSEMBLY__
+extern void msm_map_msm8x60_io(void);
+#endif
+
 #endif

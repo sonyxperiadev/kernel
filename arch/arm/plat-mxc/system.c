@@ -21,28 +21,25 @@
 #include <linux/io.h>
 #include <linux/err.h>
 #include <linux/delay.h>
+#include <linux/module.h>
 
 #include <mach/hardware.h>
 #include <mach/common.h>
+#include <asm/system_misc.h>
 #include <asm/proc-fns.h>
-#include <asm/system.h>
 #include <asm/mach-types.h>
+
+void __iomem *(*imx_ioremap)(unsigned long, size_t, unsigned int) = NULL;
+EXPORT_SYMBOL_GPL(imx_ioremap);
 
 static void __iomem *wdog_base;
 
 /*
  * Reset the system. It is called by machine_restart().
  */
-void arch_reset(char mode, const char *cmd)
+void mxc_restart(char mode, const char *cmd)
 {
 	unsigned int wcr_enable;
-
-#ifdef CONFIG_MACH_MX51_EFIKAMX
-	if (machine_is_mx51_efikamx()) {
-		mx51_efikamx_reset();
-		return;
-	}
-#endif
 
 	if (cpu_is_mx1()) {
 		wcr_enable = (1 << 0);
@@ -51,7 +48,7 @@ void arch_reset(char mode, const char *cmd)
 
 		clk = clk_get_sys("imx2-wdt.0", NULL);
 		if (!IS_ERR(clk))
-			clk_enable(clk);
+			clk_prepare_enable(clk);
 		wcr_enable = (1 << 2);
 	}
 
@@ -67,7 +64,7 @@ void arch_reset(char mode, const char *cmd)
 	mdelay(50);
 
 	/* we'll take a jump through zero as a poor second */
-	cpu_reset(0);
+	soft_restart(0);
 }
 
 void mxc_arch_reset_init(void __iomem *base)

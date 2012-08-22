@@ -21,6 +21,7 @@
 #include <linux/cpumask.h>
 #include <linux/in6.h>
 #include <linux/netpoll.h>
+#include <linux/inetdevice.h>
 #include "bond_3ad.h"
 #include "bond_alb.h"
 
@@ -147,6 +148,7 @@ struct bond_params {
 	int updelay;
 	int downdelay;
 	int lacp_fast;
+	unsigned int min_links;
 	int ad_select;
 	char primary[IFNAMSIZ];
 	int primary_reselect;
@@ -165,7 +167,6 @@ struct bond_parm_tbl {
 
 struct vlan_entry {
 	struct list_head vlan_list;
-	__be32 vlan_ip;
 	unsigned short vlan_id;
 };
 
@@ -217,11 +218,10 @@ struct bonding {
 	struct   slave *primary_slave;
 	bool     force_primary;
 	s32      slave_cnt; /* never change this value outside the attach/detach wrappers */
-	void     (*recv_probe)(struct sk_buff *, struct bonding *,
+	int     (*recv_probe)(struct sk_buff *, struct bonding *,
 			       struct slave *);
 	rwlock_t lock;
 	rwlock_t curr_slave_lock;
-	s8       kill_timers;
 	u8	 send_peer_notif;
 	s8	 setup_by_slave;
 	s8       igmp_retrans;
@@ -232,15 +232,11 @@ struct bonding {
 	struct   list_head bond_list;
 	struct   netdev_hw_addr_list mc_list;
 	int      (*xmit_hash_policy)(struct sk_buff *, int);
-	__be32   master_ip;
-	u16      flags;
 	u16      rr_tx_counter;
 	struct   ad_bond_info ad_info;
 	struct   alb_bond_info alb_info;
 	struct   bond_params params;
 	struct   list_head vlan_list;
-	struct   vlan_group *vlgrp;
-	struct   packet_type arp_mon_pt;
 	struct   workqueue_struct *wq;
 	struct   delayed_work mii_work;
 	struct   delayed_work arp_work;
@@ -252,6 +248,11 @@ struct bonding {
 	struct	 dentry *debug_dir;
 #endif /* CONFIG_DEBUG_FS */
 };
+
+static inline bool bond_vlan_used(struct bonding *bond)
+{
+	return !list_empty(&bond->vlan_list);
+}
 
 #define bond_slave_get_rcu(dev) \
 	((struct slave *) rcu_dereference(dev->rx_handler_data))
@@ -376,11 +377,28 @@ static inline bool bond_is_slave_inactive(struct slave *slave)
 	return slave->inactive;
 }
 
+static inline __be32 bond_confirm_addr(struct net_device *dev, __be32 dst, __be32 local)
+{
+	struct in_device *in_dev;
+	__be32 addr = 0;
+
+	rcu_read_lock();
+	in_dev = __in_dev_get_rcu(dev);
+
+	if (in_dev)
+		addr = inet_confirm_addr(in_dev, dst, local, RT_SCOPE_HOST);
+
+	rcu_read_unlock();
+	return addr;
+}
+
+struct bond_net;
+
 struct vlan_entry *bond_next_vlan(struct bonding *bond, struct vlan_entry *curr);
 int bond_dev_queue_xmit(struct bonding *bond, struct sk_buff *skb, struct net_device *slave_dev);
 int bond_create(struct net *net, const char *name);
-int bond_create_sysfs(void);
-void bond_destroy_sysfs(void);
+int bond_create_sysfs(struct bond_net *net);
+void bond_destroy_sysfs(struct bond_net *net);
 void bond_prepare_sysfs_group(struct bonding *bond);
 int bond_create_slave_symlinks(struct net_device *master, struct net_device *slave);
 void bond_destroy_slave_symlinks(struct net_device *master, struct net_device *slave);
@@ -406,6 +424,7 @@ struct bond_net {
 #ifdef CONFIG_PROC_FS
 	struct proc_dir_entry *	proc_dir;
 #endif
+	struct class_attribute	class_attr_bonding_masters;
 };
 
 #ifdef CONFIG_PROC_FS

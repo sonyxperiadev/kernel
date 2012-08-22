@@ -6,6 +6,7 @@ struct of_irq;
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/irq.h>
+#include <linux/irqdomain.h>
 #include <linux/ioport.h>
 #include <linux/of.h>
 
@@ -32,6 +33,8 @@ struct of_irq {
 	u32 size; /* Specifier size */
 	u32 specifier[OF_MAX_IRQ_SPEC]; /* Specifier copy */
 };
+
+typedef int (*of_irq_init_cb_t)(struct device_node *, struct device_node *);
 
 /*
  * Workarounds only applied to 32bit powermac machines
@@ -69,6 +72,8 @@ extern int of_irq_count(struct device_node *dev);
 extern int of_irq_to_resource_table(struct device_node *dev,
 		struct resource *res, int nr_irqs);
 extern struct device_node *of_irq_find_parent(struct device_node *child);
+
+extern void of_irq_init(const struct of_device_id *matches);
 
 #endif /* CONFIG_OF_IRQ */
 #endif /* CONFIG_OF */

@@ -7,7 +7,7 @@
 #include <linux/backlight.h>
 
 struct platform_pwm_backlight_data {
-	const char *pwm_name;
+	int pwm_id;
 	unsigned int max_brightness;
 	unsigned int dft_brightness;
 	unsigned int lth_brightness;
@@ -15,6 +15,7 @@ struct platform_pwm_backlight_data {
 	unsigned int polarity;
 	int (*init)(struct device *dev);
 	int (*notify)(struct device *dev, int brightness);
+	void (*notify_after)(struct device *dev, int brightness);
 	void (*exit)(struct device *dev);
 	int (*check_fb)(struct device *dev, struct fb_info *info);
 };

@@ -977,7 +977,7 @@ struct dwc_otg_core_if {
 	int device_speed;
 #ifdef CONFIG_USB_OTG_UTILS
 	/* OTG transceiver */
-	struct otg_transceiver *xceiver;
+	struct usb_phy *xceiver;
 
 	struct notifier_block	otg_xceiv_nb;
 #endif

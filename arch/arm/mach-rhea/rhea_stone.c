@@ -26,7 +26,6 @@
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/kernel_stat.h>
@@ -52,6 +51,7 @@
 #include "common.h"
 #include <mach/sdio_platform.h>
 #include <linux/i2c/tango_ts.h>
+#include <asm/hardware/gic.h>
 
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
@@ -141,7 +141,6 @@
 #ifdef CONFIG_WD_TAPPER
 #include <linux/broadcom/wd-tapper.h>
 #endif
-
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
@@ -726,7 +725,7 @@ static struct haptic_platform_data haptic_control_data = {
 	/* Haptic device name: can be device-specific name like ISA1000 */
 	.name = "pwm_vibra",
 	/* PWM interface name to request */
-	.pwm_name = "kona_pwmc:4",
+	.pwm_id = 4,
 	/* Invalid gpio for now, pass valid gpio number if connected */
 	.gpio = ARCH_NR_GPIOS,
 	.setup_pin = haptic_gpio_setup,
@@ -918,7 +917,7 @@ void __init board_add_sdio_devices(void)
 
 static struct platform_pwm_backlight_data bcm_backlight_data = {
 /* backlight */
-	.pwm_name 	= "kona_pwmc:4",
+	.pwm_id 	= 4,
 	.max_brightness = 32,   /* Android calibrates to 32 levels*/
 	.dft_brightness = 32,
 	.polarity       = 1,    /* Inverted polarity */
@@ -1799,9 +1798,12 @@ void __init board_map_io(void)
 late_initcall(rhea_stone_add_lateInit_devices);
 
 MACHINE_START(RHEA_STONE, "rheastone")
+	.atag_offset = 0x100,
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
+	.handle_irq = gic_handle_irq,
 	.timer  = &kona_timer,
 	.init_machine = board_init,
-	.reserve = rhea_stone_reserve
+	.reserve = rhea_stone_reserve,
+	.restart = rhea_restart,
 MACHINE_END

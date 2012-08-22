@@ -5,7 +5,7 @@
  * This allows to use PCI devices that only support 32bit addresses on systems
  * with more than 4GB.
  *
- * See Documentation/PCI/PCI-DMA-mapping.txt for the interface specification.
+ * See Documentation/DMA-API-HOWTO.txt for the interface specification.
  *
  * Copyright 2002 Andi Kleen, SuSE Labs.
  * Subject to the GNU General Public License v2 only.
@@ -30,7 +30,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/io.h>
 #include <linux/gfp.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 #include <asm/mtrr.h>
 #include <asm/pgtable.h>
 #include <asm/proto.h>
@@ -477,7 +477,7 @@ error:
 /* allocate and map a coherent mapping */
 static void *
 gart_alloc_coherent(struct device *dev, size_t size, dma_addr_t *dma_addr,
-		    gfp_t flag)
+		    gfp_t flag, struct dma_attrs *attrs)
 {
 	dma_addr_t paddr;
 	unsigned long align_mask;
@@ -500,7 +500,8 @@ gart_alloc_coherent(struct device *dev, size_t size, dma_addr_t *dma_addr,
 		}
 		__free_pages(page, get_order(size));
 	} else
-		return dma_generic_alloc_coherent(dev, size, dma_addr, flag);
+		return dma_generic_alloc_coherent(dev, size, dma_addr, flag,
+						  attrs);
 
 	return NULL;
 }
@@ -508,7 +509,7 @@ gart_alloc_coherent(struct device *dev, size_t size, dma_addr_t *dma_addr,
 /* free a coherent mapping */
 static void
 gart_free_coherent(struct device *dev, size_t size, void *vaddr,
-		   dma_addr_t dma_addr)
+		   dma_addr_t dma_addr, struct dma_attrs *attrs)
 {
 	gart_unmap_page(dev, dma_addr, size, DMA_BIDIRECTIONAL, NULL);
 	free_pages((unsigned long)vaddr, get_order(size));
@@ -700,8 +701,8 @@ static struct dma_map_ops gart_dma_ops = {
 	.unmap_sg			= gart_unmap_sg,
 	.map_page			= gart_map_page,
 	.unmap_page			= gart_unmap_page,
-	.alloc_coherent			= gart_alloc_coherent,
-	.free_coherent			= gart_free_coherent,
+	.alloc				= gart_alloc_coherent,
+	.free				= gart_free_coherent,
 	.mapping_error			= gart_mapping_error,
 };
 

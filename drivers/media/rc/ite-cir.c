@@ -42,7 +42,6 @@
 #include <linux/bitops.h>
 #include <media/rc-core.h>
 #include <linux/pci_ids.h>
-#include <linux/delay.h>
 
 #include "ite-cir.h"
 
@@ -383,7 +382,7 @@ static int ite_set_tx_duty_cycle(struct rc_dev *rcdev, u32 duty_cycle)
 /* transmit out IR pulses; what you get here is a batch of alternating
  * pulse/space/pulse/space lengths that we should write out completely through
  * the FIFO, blocking on a full FIFO */
-static int ite_tx_ir(struct rc_dev *rcdev, int *txbuf, u32 n)
+static int ite_tx_ir(struct rc_dev *rcdev, unsigned *txbuf, unsigned n)
 {
 	unsigned long flags;
 	struct ite_dev *dev = rcdev->priv;
@@ -398,9 +397,6 @@ static int ite_tx_ir(struct rc_dev *rcdev, int *txbuf, u32 n)
 
 	/* clear the array just in case */
 	memset(last_sent, 0, ARRAY_SIZE(last_sent));
-
-	/* n comes in bytes; convert to ints */
-	n /= sizeof(int);
 
 	spin_lock_irqsave(&dev->lock, flags);
 
@@ -1519,16 +1515,6 @@ static int ite_probe(struct pnp_dev *pdev, const struct pnp_device_id
 	/* initialize raw event */
 	init_ir_raw_event(&itdev->rawir);
 
-	ret = -EBUSY;
-	/* now claim resources */
-	if (!request_region(itdev->cir_addr,
-				dev_desc->io_region_size, ITE_DRIVER_NAME))
-		goto failure;
-
-	if (request_irq(itdev->cir_irq, ite_cir_isr, IRQF_SHARED,
-			ITE_DRIVER_NAME, (void *)itdev))
-		goto failure;
-
 	/* set driver data into the pnp device */
 	pnp_set_drvdata(pdev, itdev);
 	itdev->pdev = pdev;
@@ -1603,6 +1589,16 @@ static int ite_probe(struct pnp_dev *pdev, const struct pnp_device_id
 	rdev->input_id.version = 0;
 	rdev->driver_name = ITE_DRIVER_NAME;
 	rdev->map_name = RC_MAP_RC6_MCE;
+
+	ret = -EBUSY;
+	/* now claim resources */
+	if (!request_region(itdev->cir_addr,
+				dev_desc->io_region_size, ITE_DRIVER_NAME))
+		goto failure;
+
+	if (request_irq(itdev->cir_irq, ite_cir_isr, IRQF_SHARED,
+			ITE_DRIVER_NAME, (void *)itdev))
+		goto failure;
 
 	ret = rc_register_device(rdev);
 	if (ret)

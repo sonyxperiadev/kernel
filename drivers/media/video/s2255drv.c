@@ -16,15 +16,10 @@
  * Example maximum bandwidth utilization:
  *
  * -full size, color mode YUYV or YUV422P: 2 channels at once
- *
  * -full or half size Grey scale: all 4 channels at once
- *
  * -half size, color mode YUYV or YUV422P: all 4 channels at once
- *
  * -full size, color mode YUYV or YUV422P 1/2 frame rate: all 4 channels
  *  at once.
- *  (TODO: Incorporate videodev2 frame rate(FR) enumeration,
- *  which is currently experimental.)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,7 +42,6 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/videodev2.h>
-#include <linux/version.h>
 #include <linux/mm.h>
 #include <media/videobuf-vmalloc.h>
 #include <media/v4l2-common.h>
@@ -56,12 +50,7 @@
 #include <linux/vmalloc.h>
 #include <linux/usb.h>
 
-#define S2255_MAJOR_VERSION	1
-#define S2255_MINOR_VERSION	21
-#define S2255_RELEASE		0
-#define S2255_VERSION		KERNEL_VERSION(S2255_MAJOR_VERSION, \
-					       S2255_MINOR_VERSION, \
-					       S2255_RELEASE)
+#define S2255_VERSION		"1.22.1"
 #define FIRMWARE_FILE_NAME "f2255usb.bin"
 
 /* default JPEG quality */
@@ -126,7 +115,7 @@
 #define MASK_COLOR       0x000000ff
 #define MASK_JPG_QUALITY 0x0000ff00
 #define MASK_INPUT_TYPE  0x000f0000
-/* frame decimation. Not implemented by V4L yet(experimental in V4L) */
+/* frame decimation. */
 #define FDEC_1		1	/* capture every frame. default */
 #define FDEC_2		2	/* capture every 2nd frame */
 #define FDEC_3		3	/* capture every 3rd frame */
@@ -145,7 +134,7 @@
 
 /* usb config commands */
 #define IN_DATA_TOKEN	cpu_to_le32(0x2255c0de)
-#define CMD_2255	cpu_to_le32(0xc2255000)
+#define CMD_2255	0xc2255000
 #define CMD_SET_MODE	cpu_to_le32((CMD_2255 | 0x10))
 #define CMD_START	cpu_to_le32((CMD_2255 | 0x20))
 #define CMD_STOP	cpu_to_le32((CMD_2255 | 0x30))
@@ -312,9 +301,9 @@ struct s2255_fh {
 };
 
 /* current cypress EEPROM firmware version */
-#define S2255_CUR_USB_FWVER	((3 << 8) | 11)
+#define S2255_CUR_USB_FWVER	((3 << 8) | 12)
 /* current DSP FW version */
-#define S2255_CUR_DSP_FWVER     10102
+#define S2255_CUR_DSP_FWVER     10104
 /* Need DSP version 5+ for video status feature */
 #define S2255_MIN_DSP_STATUS      5
 #define S2255_MIN_DSP_COLORFILTER 8
@@ -502,7 +491,7 @@ static void planar422p_to_yuv_packed(const unsigned char *in,
 
 static void s2255_reset_dsppower(struct s2255_dev *dev)
 {
-	s2255_vendor_req(dev, 0x40, 0x0b0b, 0x0b01, NULL, 0, 1);
+	s2255_vendor_req(dev, 0x40, 0x0000, 0x0001, NULL, 0, 1);
 	msleep(10);
 	s2255_vendor_req(dev, 0x50, 0x0000, 0x0000, NULL, 0, 1);
 	msleep(600);
@@ -856,7 +845,6 @@ static int vidioc_querycap(struct file *file, void *priv,
 	strlcpy(cap->driver, "s2255", sizeof(cap->driver));
 	strlcpy(cap->card, "s2255", sizeof(cap->card));
 	usb_make_path(dev->udev, cap->bus_info, sizeof(cap->bus_info));
-	cap->version = S2255_VERSION;
 	cap->capabilities = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
 	return 0;
 }
@@ -864,15 +852,13 @@ static int vidioc_querycap(struct file *file, void *priv,
 static int vidioc_enum_fmt_vid_cap(struct file *file, void *priv,
 			       struct v4l2_fmtdesc *f)
 {
-	int index = 0;
-	if (f)
-		index = f->index;
+	int index = f->index;
 
 	if (index >= ARRAY_SIZE(formats))
 		return -EINVAL;
-    if (!jpeg_enable && ((formats[index].fourcc == V4L2_PIX_FMT_JPEG) ||
-			 (formats[index].fourcc == V4L2_PIX_FMT_MJPEG)))
-	return -EINVAL;
+	if (!jpeg_enable && ((formats[index].fourcc == V4L2_PIX_FMT_JPEG) ||
+			(formats[index].fourcc == V4L2_PIX_FMT_MJPEG)))
+		return -EINVAL;
 	dprintk(4, "name %s\n", formats[index].name);
 	strlcpy(f->description, formats[index].name, sizeof(f->description));
 	f->pixelformat = formats[index].fourcc;
@@ -1984,9 +1970,8 @@ static int s2255_probe_v4l(struct s2255_dev *dev)
 			  video_device_node_name(&channel->vdev));
 
 	}
-	printk(KERN_INFO "Sensoray 2255 V4L driver Revision: %d.%d\n",
-	       S2255_MAJOR_VERSION,
-	       S2255_MINOR_VERSION);
+	printk(KERN_INFO "Sensoray 2255 V4L driver Revision: %s\n",
+	       S2255_VERSION);
 	/* if no channels registered, return error and probe will fail*/
 	if (atomic_read(&dev->num_channels) == 0) {
 		v4l2_device_unregister(&dev->v4l2_dev);
@@ -2040,7 +2025,7 @@ static int save_frame(struct s2255_dev *dev, struct s2255_pipeinfo *pipe_info)
 					pdata[1]);
 				offset = jj + PREFIX_SIZE;
 				bframe = 1;
-				cc = pdword[1];
+				cc = le32_to_cpu(pdword[1]);
 				if (cc >= MAX_CHANNELS) {
 					printk(KERN_ERR
 					       "bad channel\n");
@@ -2049,22 +2034,22 @@ static int save_frame(struct s2255_dev *dev, struct s2255_pipeinfo *pipe_info)
 				/* reverse it */
 				dev->cc = G_chnmap[cc];
 				channel = &dev->channel[dev->cc];
-				payload =  pdword[3];
+				payload =  le32_to_cpu(pdword[3]);
 				if (payload > channel->req_image_size) {
 					channel->bad_payload++;
 					/* discard the bad frame */
 					return -EINVAL;
 				}
 				channel->pkt_size = payload;
-				channel->jpg_size = pdword[4];
+				channel->jpg_size = le32_to_cpu(pdword[4]);
 				break;
 			case S2255_MARKER_RESPONSE:
 
 				pdata += DEF_USB_BLOCK;
 				jj += DEF_USB_BLOCK;
-				if (pdword[1] >= MAX_CHANNELS)
+				if (le32_to_cpu(pdword[1]) >= MAX_CHANNELS)
 					break;
-				cc = G_chnmap[pdword[1]];
+				cc = G_chnmap[le32_to_cpu(pdword[1])];
 				if (cc >= MAX_CHANNELS)
 					break;
 				channel = &dev->channel[cc];
@@ -2087,11 +2072,11 @@ static int save_frame(struct s2255_dev *dev, struct s2255_pipeinfo *pipe_info)
 					wake_up(&dev->fw_data->wait_fw);
 					break;
 				case S2255_RESPONSE_STATUS:
-					channel->vidstatus = pdword[3];
+					channel->vidstatus = le32_to_cpu(pdword[3]);
 					channel->vidstatus_ready = 1;
 					wake_up(&channel->wait_vidstatus);
 					dprintk(5, "got vidstatus %x chan %d\n",
-						pdword[3], cc);
+						le32_to_cpu(pdword[3]), cc);
 					break;
 				default:
 					printk(KERN_INFO "s2255 unknown resp\n");
@@ -2302,15 +2287,12 @@ static int s2255_board_init(struct s2255_dev *dev)
 	/* query the firmware */
 	fw_ver = s2255_get_fx2fw(dev);
 
-	printk(KERN_INFO "2255 usb firmware version %d.%d\n",
+	printk(KERN_INFO "s2255: usb firmware version %d.%d\n",
 	       (fw_ver >> 8) & 0xff,
 	       fw_ver & 0xff);
 
 	if (fw_ver < S2255_CUR_USB_FWVER)
-		dev_err(&dev->udev->dev,
-			"usb firmware not up to date %d.%d\n",
-			(fw_ver >> 8) & 0xff,
-			fw_ver & 0xff);
+		printk(KERN_INFO "s2255: newer USB firmware available\n");
 
 	for (j = 0; j < MAX_CHANNELS; j++) {
 		struct s2255_channel *channel = &dev->channel[j];
@@ -2621,10 +2603,11 @@ static int s2255_probe(struct usb_interface *interface,
 		__le32 *pRel;
 		pRel = (__le32 *) &dev->fw_data->fw->data[fw_size - 4];
 		printk(KERN_INFO "s2255 dsp fw version %x\n", *pRel);
-		dev->dsp_fw_ver = *pRel;
-		if (*pRel < S2255_CUR_DSP_FWVER)
+		dev->dsp_fw_ver = le32_to_cpu(*pRel);
+		if (dev->dsp_fw_ver < S2255_CUR_DSP_FWVER)
 			printk(KERN_INFO "s2255: f2255usb.bin out of date.\n");
-		if (dev->pid == 0x2257 && *pRel < S2255_MIN_DSP_COLORFILTER)
+		if (dev->pid == 0x2257 &&
+				dev->dsp_fw_ver < S2255_MIN_DSP_COLORFILTER)
 			printk(KERN_WARNING "s2255: 2257 requires firmware %d"
 			       " or above.\n", S2255_MIN_DSP_COLORFILTER);
 	}
@@ -2698,26 +2681,9 @@ static struct usb_driver s2255_driver = {
 	.id_table = s2255_table,
 };
 
-static int __init usb_s2255_init(void)
-{
-	int result;
-	/* register this driver with the USB subsystem */
-	result = usb_register(&s2255_driver);
-	if (result)
-		pr_err(KBUILD_MODNAME
-		       ": usb_register failed. Error number %d\n", result);
-	dprintk(2, "%s\n", __func__);
-	return result;
-}
-
-static void __exit usb_s2255_exit(void)
-{
-	usb_deregister(&s2255_driver);
-}
-
-module_init(usb_s2255_init);
-module_exit(usb_s2255_exit);
+module_usb_driver(s2255_driver);
 
 MODULE_DESCRIPTION("Sensoray 2255 Video for Linux driver");
 MODULE_AUTHOR("Dean Anderson (Sensoray Company Inc.)");
 MODULE_LICENSE("GPL");
+MODULE_VERSION(S2255_VERSION);

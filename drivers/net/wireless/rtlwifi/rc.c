@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2009-2010  Realtek Corporation.
+ * Copyright(c) 2009-2012  Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -200,7 +200,7 @@ static void rtl_tx_status(void *ppriv,
 	if (sta) {
 		/* Check if aggregation has to be enabled for this tid */
 		sta_entry = (struct rtl_sta_info *) sta->drv_priv;
-		if ((sta->ht_cap.ht_supported == true) &&
+		if ((sta->ht_cap.ht_supported) &&
 				!(skb->protocol == cpu_to_be16(ETH_P_PAE))) {
 			if (ieee80211_is_data_qos(fc)) {
 				u8 tid = rtl_get_tid(skb);
@@ -251,7 +251,7 @@ static void *rtl_rate_alloc_sta(void *ppriv,
 	rate_priv = kzalloc(sizeof(struct rtl_rate_priv), gfp);
 	if (!rate_priv) {
 		RT_TRACE(rtlpriv, COMP_ERR, DBG_EMERG,
-			 ("Unable to allocate private rc structure\n"));
+			 "Unable to allocate private rc structure\n");
 		return NULL;
 	}
 

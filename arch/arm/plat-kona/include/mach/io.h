@@ -26,9 +26,15 @@
 #ifndef __PLAT_KONA_IO_H
 #define __PLAT_KONA_IO_H
 
+#ifndef IO_SPACE_LIMIT
 #define IO_SPACE_LIMIT		(0xffffffff)
+#endif
 
+/*
+#ifndef __io
 #define __io(a)			__typesafe_io(a)
+#endif
+*/
 #define __mem_pci(a)		(a)
 
 #ifdef __ASSEMBLER__

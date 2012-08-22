@@ -74,7 +74,6 @@ struct rtas_suspend_me_data {
 /* RTAS event classes */
 #define RTAS_INTERNAL_ERROR		0x80000000 /* set bit 0 */
 #define RTAS_EPOW_WARNING		0x40000000 /* set bit 1 */
-#define RTAS_POWERMGM_EVENTS		0x20000000 /* set bit 2 */
 #define RTAS_HOTPLUG_EVENTS		0x10000000 /* set bit 3 */
 #define RTAS_IO_EVENTS			0x08000000 /* set bit 4 */
 #define RTAS_EVENT_SCAN_ALL_EVENTS	0xffffffff
@@ -204,6 +203,39 @@ struct rtas_ext_event_log_v6 {
 					/* Variable length.		*/
 };
 
+/* pSeries event log format */
+
+/* Two bytes ASCII section IDs */
+#define PSERIES_ELOG_SECT_ID_PRIV_HDR		(('P' << 8) | 'H')
+#define PSERIES_ELOG_SECT_ID_USER_HDR		(('U' << 8) | 'H')
+#define PSERIES_ELOG_SECT_ID_PRIMARY_SRC	(('P' << 8) | 'S')
+#define PSERIES_ELOG_SECT_ID_EXTENDED_UH	(('E' << 8) | 'H')
+#define PSERIES_ELOG_SECT_ID_FAILING_MTMS	(('M' << 8) | 'T')
+#define PSERIES_ELOG_SECT_ID_SECONDARY_SRC	(('S' << 8) | 'S')
+#define PSERIES_ELOG_SECT_ID_DUMP_LOCATOR	(('D' << 8) | 'H')
+#define PSERIES_ELOG_SECT_ID_FW_ERROR		(('S' << 8) | 'W')
+#define PSERIES_ELOG_SECT_ID_IMPACT_PART_ID	(('L' << 8) | 'P')
+#define PSERIES_ELOG_SECT_ID_LOGIC_RESOURCE_ID	(('L' << 8) | 'R')
+#define PSERIES_ELOG_SECT_ID_HMC_ID		(('H' << 8) | 'M')
+#define PSERIES_ELOG_SECT_ID_EPOW		(('E' << 8) | 'P')
+#define PSERIES_ELOG_SECT_ID_IO_EVENT		(('I' << 8) | 'E')
+#define PSERIES_ELOG_SECT_ID_MANUFACT_INFO	(('M' << 8) | 'I')
+#define PSERIES_ELOG_SECT_ID_CALL_HOME		(('C' << 8) | 'H')
+#define PSERIES_ELOG_SECT_ID_USER_DEF		(('U' << 8) | 'D')
+
+/* Vendor specific Platform Event Log Format, Version 6, section header */
+struct pseries_errorlog {
+	uint16_t id;			/* 0x00 2-byte ASCII section ID	*/
+	uint16_t length;		/* 0x02 Section length in bytes	*/
+	uint8_t version;		/* 0x04 Section version		*/
+	uint8_t subtype;		/* 0x05 Section subtype		*/
+	uint16_t creator_component;	/* 0x06 Creator component ID	*/
+	uint8_t data[];			/* 0x08 Start of section data	*/
+};
+
+struct pseries_errorlog *get_pseries_errorlog(struct rtas_error_log *log,
+					      uint16_t section_id);
+
 /*
  * This can be set by the rtas_flash module so that it can get called
  * as the absolutely last thing before the kernel terminates.
@@ -245,14 +277,22 @@ extern int early_init_dt_scan_rtas(unsigned long node,
 
 extern void pSeries_log_error(char *buf, unsigned int err_type, int fatal);
 
+#ifdef CONFIG_PPC_RTAS_DAEMON
+extern void rtas_cancel_event_scan(void);
+#else
+static inline void rtas_cancel_event_scan(void) { }
+#endif
+
 /* Error types logged.  */
 #define ERR_FLAG_ALREADY_LOGGED	0x0
 #define ERR_FLAG_BOOT		0x1 	/* log was pulled from NVRAM on boot */
 #define ERR_TYPE_RTAS_LOG	0x2	/* from rtas event-scan */
-#define ERR_TYPE_KERNEL_PANIC	0x4	/* from panic() */
+#define ERR_TYPE_KERNEL_PANIC	0x4	/* from die()/panic() */
+#define ERR_TYPE_KERNEL_PANIC_GZ 0x8	/* ditto, compressed */
 
 /* All the types and not flags */
-#define ERR_TYPE_MASK	(ERR_TYPE_RTAS_LOG | ERR_TYPE_KERNEL_PANIC)
+#define ERR_TYPE_MASK \
+	(ERR_TYPE_RTAS_LOG | ERR_TYPE_KERNEL_PANIC | ERR_TYPE_KERNEL_PANIC_GZ)
 
 #define RTAS_DEBUG KERN_DEBUG "RTAS: "
  
@@ -304,6 +344,20 @@ static inline u32 rtas_config_addr(int busno, int devfn, int reg)
 
 extern void __cpuinit rtas_give_timebase(void);
 extern void __cpuinit rtas_take_timebase(void);
+
+#ifdef CONFIG_PPC_RTAS
+static inline int page_is_rtas_user_buf(unsigned long pfn)
+{
+	unsigned long paddr = (pfn << PAGE_SHIFT);
+	if (paddr >= rtas_rmo_buf && paddr < (rtas_rmo_buf + RTAS_RMOBUF_MAX))
+		return 1;
+	return 0;
+}
+#else
+static inline int page_is_rtas_user_buf(unsigned long pfn) { return 0;}
+#endif
+
+extern int call_rtas(const char *, int, int, unsigned long *, ...);
 
 #endif /* __KERNEL__ */
 #endif /* _POWERPC_RTAS_H */

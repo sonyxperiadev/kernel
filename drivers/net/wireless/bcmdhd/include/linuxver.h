@@ -2,9 +2,9 @@
  * Linux-specific abstractions to gain some independence from linux kernel versions.
  * Pave over some 2.2 versus 2.4 versus 2.6 kernel differences.
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -22,9 +22,8 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: linuxver.h 275790 2011-08-04 23:02:47Z $
+ * $Id: linuxver.h 315203 2012-02-16 00:58:00Z $
  */
-
 
 #ifndef _linuxver_h_
 #define _linuxver_h_
@@ -72,6 +71,8 @@
 #include <linux/netdevice.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 #include <linux/semaphore.h>
+#else
+#include <asm/semaphore.h>
 #endif 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28))
 #undef IP_TOS
@@ -94,13 +95,28 @@
 #ifndef flush_scheduled_work
 #define flush_scheduled_work() flush_scheduled_tasks()
 #endif
-#endif	
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
+#define DAEMONIZE(a) daemonize(a); \
+	allow_signal(SIGKILL); \
+	allow_signal(SIGTERM);
+#else /* Linux 2.4 (w/o preemption patch) */
+#define DAEMONIZE(a) daemonize(); \
+	do { if (a) \
+		strncpy(current->comm, a, MIN(sizeof(current->comm), (strlen(a)
+	} while (0);
+#endif /* LINUX_VERSION_CODE  */
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19)
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func)
 #else
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func, _work)
+#if !(LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 18) && defined(RHEL_MAJOR) && \
+	(RHEL_MAJOR == 5))
+
 typedef void (*work_func_t)(void *work);
+#endif
 #endif	
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0))
@@ -217,10 +233,10 @@ extern void pci_unregister_driver(struct pci_driver *drv);
 #undef WL_USE_NETDEV_OPS
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31)) && defined(CONFIG_RFKILL_INPUT)
-#define WL_CONFIG_RFKILL_INPUT
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 31)) && defined(CONFIG_RFKILL)
+#define WL_CONFIG_RFKILL
 #else
-#undef WL_CONFIG_RFKILL_INPUT
+#undef WL_CONFIG_RFKILL
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 48))
@@ -469,7 +485,7 @@ typedef struct {
 	long 	thr_pid;
 	int 	prio; 
 	struct	semaphore sema;
-	bool	terminated;
+	int	terminated;
 	struct	completion completed;
 } tsk_ctl_t;
 
@@ -578,10 +594,11 @@ do {									\
 
 #endif 
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
-#define WL_DEV_IF(dev)          ((wl_if_t*)netdev_priv(dev))
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 24))
+#define DEV_PRIV(dev)	(dev->priv)
 #else
-#define WL_DEV_IF(dev)          ((wl_if_t*)(dev)->priv)
+#define DEV_PRIV(dev)	netdev_priv(dev)
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)

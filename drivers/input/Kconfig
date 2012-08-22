@@ -3,7 +3,7 @@
 #
 
 menu "Input device support"
-	depends on !S390
+	depends on !S390 && !UML
 
 config INPUT
 	tristate "Generic input layer (needed for keyboard, mouse, ...)" if EXPERT
@@ -24,6 +24,10 @@ config INPUT
 	  module will be called input.
 
 if INPUT
+
+config INPUT_OF_MATRIX_KEYMAP
+	depends on USE_OF
+	bool
 
 config INPUT_FF_MEMLESS
 	tristate "Support for memoryless force-feedback devices"
@@ -169,6 +173,14 @@ config INPUT_KEYRESET
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called keyreset.
+
+config EVDEV_QUIRK_FORCE_MONOTONIC
+	tristate "Force monotonic"
+	default n
+	depends on ARCH_RHEA
+	---help---
+	Say Y if application does not send EVIOCSCLOCKID ioctl and clock
+	used in MONOTONIC
 
 comment "Input Device Drivers"
 

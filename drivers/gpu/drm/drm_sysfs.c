@@ -16,6 +16,7 @@
 #include <linux/kdev_t.h>
 #include <linux/gfp.h>
 #include <linux/err.h>
+#include <linux/export.h>
 
 #include "drm_sysfs.h"
 #include "drm_core.h"
@@ -71,7 +72,7 @@ static int drm_class_resume(struct device *dev)
 	return 0;
 }
 
-static char *drm_devnode(struct device *dev, mode_t *mode)
+static char *drm_devnode(struct device *dev, umode_t *mode)
 {
 	return kasprintf(GFP_KERNEL, "dri/%s", dev_name(dev));
 }
@@ -453,6 +454,8 @@ void drm_sysfs_connector_remove(struct drm_connector *connector)
 {
 	int i;
 
+	if (!connector->kdev.parent)
+		return;
 	DRM_DEBUG("removing \"%s\" from sysfs\n",
 		  drm_get_connector_name(connector));
 
@@ -460,6 +463,7 @@ void drm_sysfs_connector_remove(struct drm_connector *connector)
 		device_remove_file(&connector->kdev, &connector_attrs[i]);
 	sysfs_remove_bin_file(&connector->kdev.kobj, &edid_attr);
 	device_unregister(&connector->kdev);
+	connector->kdev.parent = NULL;
 }
 EXPORT_SYMBOL(drm_sysfs_connector_remove);
 
@@ -532,7 +536,9 @@ err_out:
  */
 void drm_sysfs_device_remove(struct drm_minor *minor)
 {
-	device_unregister(&minor->kdev);
+	if (minor->kdev.parent)
+		device_unregister(&minor->kdev);
+	minor->kdev.parent = NULL;
 }
 
 

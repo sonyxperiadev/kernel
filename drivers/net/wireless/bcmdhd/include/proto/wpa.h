@@ -1,9 +1,9 @@
 /*
  * Fundamental types and constants relating to WPA
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -21,9 +21,8 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wpa.h,v 1.19 2009-07-13 08:29:58 $
+ * $Id: wpa.h 261155 2011-05-23 23:51:32Z $
  */
-
 
 #ifndef _proto_wpa_h_
 #define _proto_wpa_h_
@@ -114,30 +113,35 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define WPA_CIPHER_AES_OCB	3	
 #define WPA_CIPHER_AES_CCM	4	
 #define WPA_CIPHER_WEP_104	5	
+#define WPA_CIPHER_BIP		6	
+#define WPA_CIPHER_TPK		7	
 
-#ifdef BCMWAPI_WPI
+#ifdef BCMWAPI_WAI
 #define WAPI_CIPHER_NONE	WPA_CIPHER_NONE
 #define WAPI_CIPHER_SMS4	11
 
 #define WAPI_CSE_WPI_SMS4	1
-#endif /* BCMWAPI_WPI */
+#endif 
+
 #define IS_WPA_CIPHER(cipher)	((cipher) == WPA_CIPHER_NONE || \
 				 (cipher) == WPA_CIPHER_WEP_40 || \
 				 (cipher) == WPA_CIPHER_WEP_104 || \
 				 (cipher) == WPA_CIPHER_TKIP || \
 				 (cipher) == WPA_CIPHER_AES_OCB || \
-				 (cipher) == WPA_CIPHER_AES_CCM)
+				 (cipher) == WPA_CIPHER_AES_CCM || \
+				 (cipher) == WPA_CIPHER_TPK)
+
 #ifdef BCMWAPI_WAI
 #define IS_WAPI_CIPHER(cipher)	((cipher) == WAPI_CIPHER_NONE || \
 				 (cipher) == WAPI_CSE_WPI_SMS4)
 
-/* convert WAPI_CSE_WPI_XXX to WAPI_CIPHER_XXX */
+
 #define WAPI_CSE_WPI_2_CIPHER(cse) ((cse) == WAPI_CSE_WPI_SMS4 ? \
 				WAPI_CIPHER_SMS4 : WAPI_CIPHER_NONE)
 
 #define WAPI_CIPHER_2_CSE_WPI(cipher) ((cipher) == WAPI_CIPHER_SMS4 ? \
 				WAPI_CSE_WPI_SMS4 : WAPI_CIPHER_NONE)
-#endif /* BCMWAPI_WAI */
+#endif 
 
 
 #define WPA_TKIP_CM_DETECT	60	
@@ -157,6 +161,10 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define RSN_CAP_2_REPLAY_CNTRS		1
 #define RSN_CAP_4_REPLAY_CNTRS		2
 #define RSN_CAP_16_REPLAY_CNTRS		3
+#ifdef MFP
+#define RSN_CAP_MFPR			0x0040
+#define RSN_CAP_MFPC			0x0080
+#endif
 
 
 #define WPA_CAP_4_REPLAY_CNTRS		RSN_CAP_4_REPLAY_CNTRS
@@ -165,23 +173,31 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define WPA_CAP_REPLAY_CNTR_MASK	RSN_CAP_PTK_REPLAY_CNTR_MASK
 
 
+#define WPA_CAP_PEER_KEY_ENABLE		(0x1 << 1)	
+
+
 #define WPA_CAP_LEN	RSN_CAP_LEN	
+#define WPA_PMKID_CNT_LEN	2 	
 
 #define	WPA_CAP_WPA2_PREAUTH		RSN_CAP_PREAUTH
+
+#define WPA2_PMKID_COUNT_LEN	2
 
 #ifdef BCMWAPI_WAI
 #define WAPI_CAP_PREAUTH		RSN_CAP_PREAUTH
 
-/* Other WAI definition */
+
 #define WAPI_WAI_REQUEST		0x00F1
 #define WAPI_UNICAST_REKEY		0x00F2
 #define WAPI_STA_AGING			0x00F3
 #define WAPI_MUTIL_REKEY		0x00F4
 #define WAPI_STA_STATS			0x00F5
 
-#define WAPI_USK_REKEY_COUNT		0x4000000 /* 0xA00000 */
-#define WAPI_MSK_REKEY_COUNT		0x4000000 /* 0xA00000 */
-#endif /* BCMWAPI_WAI */
+#define WAPI_USK_REKEY_COUNT		0x4000000 
+#define WAPI_MSK_REKEY_COUNT		0x4000000 
+#endif 
+
+
 #include <packed_section_end.h>
 
 #endif 

@@ -3,13 +3,11 @@
  *
  * LED driver for OSK with optional Mistral QVGA board
  */
+#include <linux/gpio.h>
 #include <linux/init.h>
 
 #include <mach/hardware.h>
 #include <asm/leds.h>
-#include <asm/system.h>
-
-#include <mach/gpio.h>
 
 #include "leds.h"
 

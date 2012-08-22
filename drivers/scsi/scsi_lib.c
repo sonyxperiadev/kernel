@@ -12,6 +12,7 @@
 #include <linux/blkdev.h>
 #include <linux/completion.h>
 #include <linux/kernel.h>
+#include <linux/export.h>
 #include <linux/mempool.h>
 #include <linux/slab.h>
 #include <linux/init.h>
@@ -137,6 +138,7 @@ static int __scsi_queue_insert(struct scsi_cmnd *cmd, int reason, int unbusy)
 		host->host_blocked = host->max_host_blocked;
 		break;
 	case SCSI_MLQUEUE_DEVICE_BUSY:
+	case SCSI_MLQUEUE_EH_RETRY:
 		device->device_blocked = device->max_device_blocked;
 		break;
 	case SCSI_MLQUEUE_TARGET_BUSY:
@@ -680,11 +682,11 @@ static int __scsi_error_from_host_byte(struct scsi_cmnd *cmd, int result)
 		error = -ENOLINK;
 		break;
 	case DID_TARGET_FAILURE:
-		cmd->result |= (DID_OK << 16);
+		set_host_byte(cmd, DID_OK);
 		error = -EREMOTEIO;
 		break;
 	case DID_NEXUS_FAILURE:
-		cmd->result |= (DID_OK << 16);
+		set_host_byte(cmd, DID_OK);
 		error = -EBADE;
 		break;
 	default:
@@ -878,6 +880,7 @@ void scsi_io_completion(struct scsi_cmnd *cmd, unsigned int good_bytes)
 				    cmd->cmnd[0] == WRITE_SAME)) {
 				description = "Discard failure";
 				action = ACTION_FAIL;
+				error = -EREMOTEIO;
 			} else
 				action = ACTION_FAIL;
 			break;
@@ -1314,15 +1317,10 @@ static inline int scsi_target_queue_ready(struct Scsi_Host *shost,
 	}
 
 	if (scsi_target_is_busy(starget)) {
-		if (list_empty(&sdev->starved_entry))
-			list_add_tail(&sdev->starved_entry,
-				      &shost->starved_list);
+		list_move_tail(&sdev->starved_entry, &shost->starved_list);
 		return 0;
 	}
 
-	/* We're OK to process the command, so we can't be starved */
-	if (!list_empty(&sdev->starved_entry))
-		list_del_init(&sdev->starved_entry);
 	return 1;
 }
 
@@ -1640,7 +1638,7 @@ struct request_queue *__scsi_alloc_queue(struct Scsi_Host *shost,
 					 request_fn_proc *request_fn)
 {
 	struct request_queue *q;
-	struct device *dev = shost->shost_gendev.parent;
+	struct device *dev = shost->dma_dev;
 
 	q = blk_init_queue(request_fn, NULL);
 	if (!q)
@@ -2570,7 +2568,7 @@ void *scsi_kmap_atomic_sg(struct scatterlist *sgl, int sg_count,
 	if (*len > sg_len)
 		*len = sg_len;
 
-	return kmap_atomic(page, KM_BIO_SRC_IRQ);
+	return kmap_atomic(page);
 }
 EXPORT_SYMBOL(scsi_kmap_atomic_sg);
 
@@ -2580,6 +2578,6 @@ EXPORT_SYMBOL(scsi_kmap_atomic_sg);
  */
 void scsi_kunmap_atomic_sg(void *virt)
 {
-	kunmap_atomic(virt, KM_BIO_SRC_IRQ);
+	kunmap_atomic(virt);
 }
 EXPORT_SYMBOL(scsi_kunmap_atomic_sg);

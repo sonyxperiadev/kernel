@@ -48,6 +48,8 @@
 #include <mach/rdb/brcm_rdb_cph_ssasw.h>
 #include <mach/rdb/brcm_rdb_sspil.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
+#include <mach/memory.h>
+#include <asm/memory.h>
 
 AP_SharedMem_t *vp_shared_mem;
 

@@ -25,7 +25,6 @@
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#include <linux/sysdev.h>
 #include <linux/interrupt.h>
 #include <linux/serial_8250.h>
 #include <linux/irq.h>
@@ -36,7 +35,7 @@
 #include <linux/memblock.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <linux/gpio.h>
+//#include <linux/gpio.h>
 #include <mach/hardware.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -106,9 +105,9 @@ EXPORT_SYMBOL(etm_on);
 	.irq	    = BCM_INT_ID_##name,			\
 	.uartclk    = 26000000,					\
 	.regshift   = 2,				\
-	.iotype	    = UPIO_DWAPB,			\
+	.iotype     = UPIO_DWAPB,                       \
 	.type	    = PORT_16550A,			\
-	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST, \
+	.flags	    = UPF_BOOT_AUTOCONF | UPF_BUG_THRE | UPF_FIXED_TYPE | UPF_SKIP_TEST, \
 	.private_data = (void __iomem *)((KONA_##name##_VA) + \
 						UARTB_USR_OFFSET), \
 	.clk_name = clk,	\
@@ -521,7 +520,7 @@ static struct platform_device rng_device = {
 };
 #endif
 
-#ifdef CONFIG_USB_DWC_OTG
+#if defined(CONFIG_USB_DWC_OTG) || defined (CONFIG_USB_DWC_OTG_MODULE)
 static struct resource kona_hsotgctrl_platform_resource[] = {
 	[0] = {
 	       .start = HSOTG_CTRL_BASE_ADDR,
@@ -850,7 +849,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&rng_device,
 #endif
 
-#ifdef CONFIG_USB_DWC_OTG
+#if defined (CONFIG_USB_DWC_OTG) || defined (CONFIG_USB_DWC_OTG_MODULE)
 	&board_kona_hsotgctrl_platform_device,
 	&board_kona_otg_platform_device,
 #endif

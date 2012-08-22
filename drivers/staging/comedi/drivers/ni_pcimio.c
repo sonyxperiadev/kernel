@@ -29,14 +29,15 @@ Devices: [National Instruments] PCI-MIO-16XE-50 (ni_pcimio),
   PCI-MIO-16XE-10, PXI-6030E, PCI-MIO-16E-1, PCI-MIO-16E-4, PCI-6014, PCI-6040E,
   PXI-6040E, PCI-6030E, PCI-6031E, PCI-6032E, PCI-6033E, PCI-6071E, PCI-6023E,
   PCI-6024E, PCI-6025E, PXI-6025E, PCI-6034E, PCI-6035E, PCI-6052E,
-  PCI-6110, PCI-6111, PCI-6220, PCI-6221, PCI-6224, PXI-6224, PCI-6225, PXI-6225,
-  PCI-6229, PCI-6250, PCI-6251, PCIe-6251, PCI-6254, PCI-6259, PCIe-6259,
+  PCI-6110, PCI-6111, PCI-6220, PCI-6221, PCI-6224, PXI-6224,
+  PCI-6225, PXI-6225, PCI-6229, PCI-6250, PCI-6251, PCIe-6251, PXIe-6251,
+  PCI-6254, PCI-6259, PCIe-6259,
   PCI-6280, PCI-6281, PXI-6281, PCI-6284, PCI-6289,
   PCI-6711, PXI-6711, PCI-6713, PXI-6713,
   PXI-6071E, PCI-6070E, PXI-6070E,
   PXI-6052E, PCI-6036E, PCI-6731, PCI-6733, PXI-6733,
   PCI-6143, PXI-6143
-Updated: Wed, 03 Dec 2008 10:51:47 +0000
+Updated: Mon, 09 Jan 2012 14:52:48 +0000
 
 These boards are almost identical to the AT-MIO E series, except that
 they use the PCI bus instead of ISA (i.e., AT).  See the notes for
@@ -182,6 +183,7 @@ static DEFINE_PCI_DEVICE_TABLE(ni_pci_table) = {
 	{PCI_DEVICE(PCI_VENDOR_ID_NI, 0x717f)},
 	{PCI_DEVICE(PCI_VENDOR_ID_NI, 0x71bc)},
 	{PCI_DEVICE(PCI_VENDOR_ID_NI, 0x717d)},
+	{PCI_DEVICE(PCI_VENDOR_ID_NI, 0x72e8)},
 	{0}
 };
 
@@ -1046,6 +1048,25 @@ static const struct ni_board_struct ni_boards[] = {
 	 .has_8255 = 0,
 	 },
 	{
+	 .device_id = 0x72e8,
+	 .name = "pxie-6251",
+	 .n_adchan = 16,
+	 .adbits = 16,
+	 .ai_fifo_depth = 4095,
+	 .gainlkup = ai_gain_628x,
+	 .ai_speed = 800,
+	 .n_aochan = 2,
+	 .aobits = 16,
+	 .ao_fifo_depth = 8191,
+	 .ao_range_table = &range_ni_M_625x_ao,
+	 .reg_type = ni_reg_625x,
+	 .ao_unipolar = 0,
+	 .ao_speed = 357,
+	 .num_p0_dio_channels = 8,
+	 .caldac = {caldac_none},
+	 .has_8255 = 0,
+	 },
+	{
 	 .device_id = 0x70b7,
 	 .name = "pci-6254",
 	 .n_adchan = 32,
@@ -1470,7 +1491,7 @@ static void m_series_stc_writew(struct comedi_device *dev, uint16_t data,
 		/* FIXME: DIO_Output_Register (16 bit reg) is replaced by M_Offset_Static_Digital_Output (32 bit)
 		   and M_Offset_SCXI_Serial_Data_Out (8 bit) */
 	default:
-		printk("%s: bug! unhandled register=0x%x in switch.\n",
+		printk(KERN_WARNING "%s: bug! unhandled register=0x%x in switch.\n",
 		       __func__, reg);
 		BUG();
 		return;
@@ -1505,7 +1526,7 @@ static uint16_t m_series_stc_readw(struct comedi_device *dev, int reg)
 		offset = M_Offset_G01_Status;
 		break;
 	default:
-		printk("%s: bug! unhandled register=0x%x in switch.\n",
+		printk(KERN_WARNING "%s: bug! unhandled register=0x%x in switch.\n",
 		       __func__, reg);
 		BUG();
 		return 0;
@@ -1547,7 +1568,7 @@ static void m_series_stc_writel(struct comedi_device *dev, uint32_t data,
 		offset = M_Offset_G1_Load_B;
 		break;
 	default:
-		printk("%s: bug! unhandled register=0x%x in switch.\n",
+		printk(KERN_WARNING "%s: bug! unhandled register=0x%x in switch.\n",
 		       __func__, reg);
 		BUG();
 		return;
@@ -1573,7 +1594,7 @@ static uint32_t m_series_stc_readl(struct comedi_device *dev, int reg)
 		offset = M_Offset_G1_Save;
 		break;
 	default:
-		printk("%s: bug! unhandled register=0x%x in switch.\n",
+		printk(KERN_WARNING "%s: bug! unhandled register=0x%x in switch.\n",
 		       __func__, reg);
 		BUG();
 		return 0;
@@ -1632,9 +1653,8 @@ static void m_series_init_eeprom_buffer(struct comedi_device *dev)
 	}
 	devpriv->serial_number = be32_to_cpu(devpriv->serial_number);
 
-	for (i = 0; i < M_SERIES_EEPROM_SIZE; ++i) {
+	for (i = 0; i < M_SERIES_EEPROM_SIZE; ++i)
 		devpriv->eeprom_buffer[i] = ni_readb(Start_Cal_EEPROM + i);
-	}
 
 	writel(old_iodwbsr1_bits, devpriv->mite->mite_io_addr + MITE_IODWBSR_1);
 	writel(old_iodwbsr_bits, devpriv->mite->mite_io_addr + MITE_IODWBSR);
@@ -1665,9 +1685,9 @@ static void init_6143(struct comedi_device *dev)
 static int pcimio_detach(struct comedi_device *dev)
 {
 	mio_common_detach(dev);
-	if (dev->irq) {
+	if (dev->irq)
 		free_irq(dev->irq, dev);
-	}
+
 	if (dev->private) {
 		mite_free_ring(devpriv->ai_mite_ring);
 		mite_free_ring(devpriv->ao_mite_ring);
@@ -1685,7 +1705,7 @@ static int pcimio_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 {
 	int ret;
 
-	printk("comedi%d: ni_pcimio:", dev->minor);
+	dev_info(dev->hw_dev, "comedi%d: ni_pcimio:\n", dev->minor);
 
 	ret = ni_alloc_private(dev);
 	if (ret < 0)
@@ -1695,7 +1715,7 @@ static int pcimio_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 	if (ret < 0)
 		return ret;
 
-	printk(" %s", boardtype.name);
+	dev_dbg(dev->hw_dev, "%s\n", boardtype.name);
 	dev->board_name = boardtype.name;
 
 	if (boardtype.reg_type & ni_reg_m_series_mask) {
@@ -1712,7 +1732,7 @@ static int pcimio_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 
 	ret = mite_setup(devpriv->mite);
 	if (ret < 0) {
-		printk(" error setting up mite\n");
+		pr_warn("error setting up mite\n");
 		return ret;
 	}
 	comedi_set_hw_dev(dev, &devpriv->mite->pcidev->dev);
@@ -1740,13 +1760,13 @@ static int pcimio_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 	dev->irq = mite_irq(devpriv->mite);
 
 	if (dev->irq == 0) {
-		printk(" unknown irq (bad)\n");
+		pr_warn("unknown irq (bad)\n");
 	} else {
-		printk(" ( irq = %u )", dev->irq);
+		pr_debug("( irq = %u )\n", dev->irq);
 		ret = request_irq(dev->irq, ni_E_interrupt, NI_E_IRQ_FLAGS,
 				  DRV_NAME, dev);
 		if (ret < 0) {
-			printk(" irq not available\n");
+			pr_warn("irq not available\n");
 			dev->irq = 0;
 		}
 	}
@@ -1787,7 +1807,7 @@ static int pcimio_find_device(struct comedi_device *dev, int bus, int slot)
 			}
 		}
 	}
-	printk("no device found\n");
+	pr_warn("no device found\n");
 	mite_list_devices();
 	return -EIO;
 }

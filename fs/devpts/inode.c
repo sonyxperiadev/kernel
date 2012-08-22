@@ -36,7 +36,61 @@
 #define DEVPTS_DEFAULT_PTMX_MODE 0000
 #define PTMX_MINOR	2
 
-extern int pty_limit;			/* Config limit on Unix98 ptys */
+/*
+ * sysctl support for setting limits on the number of Unix98 ptys allocated.
+ * Otherwise one can eat up all kernel memory by opening /dev/ptmx repeatedly.
+ */
+static int pty_limit = NR_UNIX98_PTY_DEFAULT;
+static int pty_reserve = NR_UNIX98_PTY_RESERVE;
+static int pty_limit_min;
+static int pty_limit_max = INT_MAX;
+static int pty_count;
+
+static struct ctl_table pty_table[] = {
+	{
+		.procname	= "max",
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.data		= &pty_limit,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &pty_limit_min,
+		.extra2		= &pty_limit_max,
+	}, {
+		.procname	= "reserve",
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.data		= &pty_reserve,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &pty_limit_min,
+		.extra2		= &pty_limit_max,
+	}, {
+		.procname	= "nr",
+		.maxlen		= sizeof(int),
+		.mode		= 0444,
+		.data		= &pty_count,
+		.proc_handler	= proc_dointvec,
+	},
+	{}
+};
+
+static struct ctl_table pty_kern_table[] = {
+	{
+		.procname	= "pty",
+		.mode		= 0555,
+		.child		= pty_table,
+	},
+	{}
+};
+
+static struct ctl_table pty_root_table[] = {
+	{
+		.procname	= "kernel",
+		.mode		= 0555,
+		.child		= pty_kern_table,
+	},
+	{}
+};
+
 static DEFINE_MUTEX(allocated_ptys_lock);
 
 static struct vfsmount *devpts_mnt;
@@ -49,10 +103,11 @@ struct pts_mount_opts {
 	umode_t mode;
 	umode_t ptmxmode;
 	int newinstance;
+	int max;
 };
 
 enum {
-	Opt_uid, Opt_gid, Opt_mode, Opt_ptmxmode, Opt_newinstance,
+	Opt_uid, Opt_gid, Opt_mode, Opt_ptmxmode, Opt_newinstance,  Opt_max,
 	Opt_err
 };
 
@@ -63,6 +118,7 @@ static const match_table_t tokens = {
 #ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
 	{Opt_ptmxmode, "ptmxmode=%o"},
 	{Opt_newinstance, "newinstance"},
+	{Opt_max, "max=%d"},
 #endif
 	{Opt_err, NULL}
 };
@@ -109,6 +165,7 @@ static int parse_mount_options(char *data, int op, struct pts_mount_opts *opts)
 	opts->gid     = 0;
 	opts->mode    = DEVPTS_DEFAULT_MODE;
 	opts->ptmxmode = DEVPTS_DEFAULT_PTMX_MODE;
+	opts->max     = NR_UNIX98_PTY_MAX;
 
 	/* newinstance makes sense only on initial mount */
 	if (op == PARSE_MOUNT)
@@ -151,6 +208,12 @@ static int parse_mount_options(char *data, int op, struct pts_mount_opts *opts)
 			/* newinstance makes sense only on initial mount */
 			if (op == PARSE_MOUNT)
 				opts->newinstance = 1;
+			break;
+		case Opt_max:
+			if (match_int(&args[0], &option) ||
+			    option < 0 || option > NR_UNIX98_PTY_MAX)
+				return -EINVAL;
+			opts->max = option;
 			break;
 #endif
 		default:
@@ -246,9 +309,9 @@ static int devpts_remount(struct super_block *sb, int *flags, char *data)
 	return err;
 }
 
-static int devpts_show_options(struct seq_file *seq, struct vfsmount *vfs)
+static int devpts_show_options(struct seq_file *seq, struct dentry *root)
 {
-	struct pts_fs_info *fsi = DEVPTS_SB(vfs->mnt_sb);
+	struct pts_fs_info *fsi = DEVPTS_SB(root->d_sb);
 	struct pts_mount_opts *opts = &fsi->mount_opts;
 
 	if (opts->setuid)
@@ -258,6 +321,8 @@ static int devpts_show_options(struct seq_file *seq, struct vfsmount *vfs)
 	seq_printf(seq, ",mode=%03o", opts->mode);
 #ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
 	seq_printf(seq, ",ptmxmode=%03o", opts->ptmxmode);
+	if (opts->max < NR_UNIX98_PTY_MAX)
+		seq_printf(seq, ",max=%d", opts->max);
 #endif
 
 	return 0;
@@ -301,23 +366,20 @@ devpts_fill_super(struct super_block *s, void *data, int silent)
 
 	inode = new_inode(s);
 	if (!inode)
-		goto free_fsi;
+		goto fail;
 	inode->i_ino = 1;
 	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
 	inode->i_mode = S_IFDIR | S_IRUGO | S_IXUGO | S_IWUSR;
 	inode->i_op = &simple_dir_inode_operations;
 	inode->i_fop = &simple_dir_operations;
-	inode->i_nlink = 2;
+	set_nlink(inode, 2);
 
-	s->s_root = d_alloc_root(inode);
+	s->s_root = d_make_root(inode);
 	if (s->s_root)
 		return 0;
 
 	printk(KERN_ERR "devpts: get root dentry failed\n");
-	iput(inode);
 
-free_fsi:
-	kfree(s->s_fs_info);
 fail:
 	return -ENOMEM;
 }
@@ -440,6 +502,12 @@ retry:
 		return -ENOMEM;
 
 	mutex_lock(&allocated_ptys_lock);
+	if (pty_count >= pty_limit -
+			(fsi->mount_opts.newinstance ? pty_reserve : 0)) {
+		mutex_unlock(&allocated_ptys_lock);
+		return -ENOSPC;
+	}
+
 	ida_ret = ida_get_new(&fsi->allocated_ptys, &index);
 	if (ida_ret < 0) {
 		mutex_unlock(&allocated_ptys_lock);
@@ -448,11 +516,12 @@ retry:
 		return -EIO;
 	}
 
-	if (index >= pty_limit) {
+	if (index >= fsi->mount_opts.max) {
 		ida_remove(&fsi->allocated_ptys, index);
 		mutex_unlock(&allocated_ptys_lock);
-		return -EIO;
+		return -ENOSPC;
 	}
+	pty_count++;
 	mutex_unlock(&allocated_ptys_lock);
 	return index;
 }
@@ -464,6 +533,7 @@ void devpts_kill_index(struct inode *ptmx_inode, int idx)
 
 	mutex_lock(&allocated_ptys_lock);
 	ida_remove(&fsi->allocated_ptys, idx);
+	pty_count--;
 	mutex_unlock(&allocated_ptys_lock);
 }
 
@@ -549,7 +619,7 @@ void devpts_pty_kill(struct tty_struct *tty)
 
 	dentry = d_find_alias(inode);
 
-	inode->i_nlink--;
+	drop_nlink(inode);
 	d_delete(dentry);
 	dput(dentry);	/* d_alloc_name() in devpts_pty_new() */
 	dput(dentry);		/* d_find_alias above */
@@ -560,11 +630,15 @@ void devpts_pty_kill(struct tty_struct *tty)
 static int __init init_devpts_fs(void)
 {
 	int err = register_filesystem(&devpts_fs_type);
+	struct ctl_table_header *table;
+
 	if (!err) {
+		table = register_sysctl_table(pty_root_table);
 		devpts_mnt = kern_mount(&devpts_fs_type);
 		if (IS_ERR(devpts_mnt)) {
 			err = PTR_ERR(devpts_mnt);
 			unregister_filesystem(&devpts_fs_type);
+			unregister_sysctl_table(table);
 		}
 	}
 	return err;

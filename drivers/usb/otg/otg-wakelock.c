@@ -16,6 +16,7 @@
 
 #include <linux/kernel.h>
 #include <linux/device.h>
+#include <linux/module.h>
 #include <linux/notifier.h>
 #include <linux/wakelock.h>
 #include <linux/spinlock.h>
@@ -24,7 +25,7 @@
 #define TEMPORARY_HOLD_TIME	2000
 
 static bool enabled = true;
-static struct otg_transceiver *otgwl_xceiv;
+static struct usb_phy *otgwl_xceiv;
 static struct notifier_block otgwl_nb;
 
 /*
@@ -138,7 +139,7 @@ static int __init otg_wakelock_init(void)
 {
 	int ret;
 
-	otgwl_xceiv = otg_get_transceiver();
+	otgwl_xceiv = usb_get_transceiver();
 
 	if (!otgwl_xceiv) {
 		pr_err("%s: No OTG transceiver found\n", __func__);

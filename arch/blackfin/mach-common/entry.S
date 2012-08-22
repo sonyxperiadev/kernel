@@ -1244,7 +1244,7 @@ ENTRY(_software_trace_buff)
 	.endr
 #endif /* CONFIG_DEBUG_BFIN_HWTRACE_EXPAND */
 
-#if CONFIG_EARLY_PRINTK
+#ifdef CONFIG_EARLY_PRINTK
 __INIT
 ENTRY(_early_trap)
 	SAVE_ALL_SYS
@@ -1543,7 +1543,7 @@ ENTRY(_sys_call_table)
 	.long _sys_ni_syscall	/* for vm86 */
 	.long _sys_ni_syscall	/* old "query_module" */
 	.long _sys_ni_syscall	/* sys_poll */
-	.long _sys_nfsservctl
+	.long _sys_ni_syscall   /* old nfsservctl */
 	.long _sys_setresgid	/* setresgid16 */	/* 170 */
 	.long _sys_getresgid	/* getresgid16 */
 	.long _sys_prctl
@@ -1755,6 +1755,8 @@ ENTRY(_sys_call_table)
 	.long _sys_syncfs
 	.long _sys_setns
 	.long _sys_sendmmsg		/* 380 */
+	.long _sys_process_vm_readv
+	.long _sys_process_vm_writev
 
 	.rept NR_syscalls-(.-_sys_call_table)/4
 	.long _sys_ni_syscall

@@ -28,6 +28,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/proc_fs.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <linux/module.h>
 
 #include <asm/io.h>
 

@@ -47,6 +47,8 @@
 #include <linux/clk.h>
 #include <asm/io.h>
 #include <mach/pi_mgr.h>
+#include <mach/memory.h>
+#include <linux/clk.h>
 #include <asm/div64.h>
 #include <plat/pi_mgr.h>
 #include <plat/cpu.h>

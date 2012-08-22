@@ -47,20 +47,23 @@ xfs_trans_inode_broot_debug(
  * Add a locked inode to the transaction.
  *
  * The inode must be locked, and it cannot be associated with any transaction.
+ * If lock_flags is non-zero the inode will be unlocked on transaction commit.
  */
 void
 xfs_trans_ijoin(
 	struct xfs_trans	*tp,
-	struct xfs_inode	*ip)
+	struct xfs_inode	*ip,
+	uint			lock_flags)
 {
 	xfs_inode_log_item_t	*iip;
 
-	ASSERT(ip->i_transp == NULL);
 	ASSERT(xfs_isilocked(ip, XFS_ILOCK_EXCL));
 	if (ip->i_itemp == NULL)
 		xfs_inode_item_init(ip, ip->i_mount);
 	iip = ip->i_itemp;
+
 	ASSERT(iip->ili_lock_flags == 0);
+	iip->ili_lock_flags = lock_flags;
 
 	/*
 	 * Get a log_item_desc to point at the new item.
@@ -68,31 +71,6 @@ xfs_trans_ijoin(
 	xfs_trans_add_item(tp, &iip->ili_item);
 
 	xfs_trans_inode_broot_debug(ip);
-
-	/*
-	 * Initialize i_transp so we can find it with xfs_inode_incore()
-	 * in xfs_trans_iget() above.
-	 */
-	ip->i_transp = tp;
-}
-
-/*
- * Add a locked inode to the transaction.
- *
- *
- * Grabs a reference to the inode which will be dropped when the transaction
- * is committed.  The inode will also be unlocked at that point.  The inode
- * must be locked, and it cannot be associated with any transaction.
- */
-void
-xfs_trans_ijoin_ref(
-	struct xfs_trans	*tp,
-	struct xfs_inode	*ip,
-	uint			lock_flags)
-{
-	xfs_trans_ijoin(tp, ip);
-	IHOLD(ip);
-	ip->i_itemp->ili_lock_flags = lock_flags;
 }
 
 /*
@@ -111,17 +89,20 @@ xfs_trans_ichgtime(
 
 	ASSERT(tp);
 	ASSERT(xfs_isilocked(ip, XFS_ILOCK_EXCL));
-	ASSERT(ip->i_transp == tp);
 
 	tv = current_fs_time(inode->i_sb);
 
 	if ((flags & XFS_ICHGTIME_MOD) &&
 	    !timespec_equal(&inode->i_mtime, &tv)) {
 		inode->i_mtime = tv;
+		ip->i_d.di_mtime.t_sec = tv.tv_sec;
+		ip->i_d.di_mtime.t_nsec = tv.tv_nsec;
 	}
 	if ((flags & XFS_ICHGTIME_CHG) &&
 	    !timespec_equal(&inode->i_ctime, &tv)) {
 		inode->i_ctime = tv;
+		ip->i_d.di_ctime.t_sec = tv.tv_sec;
+		ip->i_d.di_ctime.t_nsec = tv.tv_nsec;
 	}
 }
 
@@ -140,7 +121,6 @@ xfs_trans_log_inode(
 	xfs_inode_t	*ip,
 	uint		flags)
 {
-	ASSERT(ip->i_transp == tp);
 	ASSERT(ip->i_itemp != NULL);
 	ASSERT(xfs_isilocked(ip, XFS_ILOCK_EXCL));
 
@@ -150,12 +130,12 @@ xfs_trans_log_inode(
 	/*
 	 * Always OR in the bits from the ili_last_fields field.
 	 * This is to coordinate with the xfs_iflush() and xfs_iflush_done()
-	 * routines in the eventual clearing of the ilf_fields bits.
+	 * routines in the eventual clearing of the ili_fields bits.
 	 * See the big comment in xfs_iflush() for an explanation of
 	 * this coordination mechanism.
 	 */
 	flags |= ip->i_itemp->ili_last_fields;
-	ip->i_itemp->ili_format.ilf_fields |= flags;
+	ip->i_itemp->ili_fields |= flags;
 }
 
 #ifdef XFS_TRANS_DEBUG

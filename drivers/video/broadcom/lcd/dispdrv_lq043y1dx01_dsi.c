@@ -19,6 +19,7 @@
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
 #include <linux/gpio.h>
+#include <linux/module.h>
 #include <plat/osabstract/osinterrupt.h>
 #include <plat/osabstract/ostask.h>
 #include <plat/csl/csl_dma_vc4lite.h>
