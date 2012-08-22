@@ -309,6 +309,8 @@ static struct bcmpmu_reg_map bcm59042_reg_map[PMU_REG_MAX] = {
 				 .ro = 0, .shift = 0},
 	[PMU_REG_IHFPWRDRV_PUP] = {.map = 0x01, .addr = 0x91, .mask = 0x01,
 				   .ro = 0, .shift = 0},
+	[PMU_REG_IHF_NGTHRESH] = {.map = 0x01, .addr = 0x9A, .mask = 0x07,
+				 .ro = 0, .shift = 0},
 	[PMU_REG_IHFNG_PUP] =	{.map = 0x01, .addr = 0x9B, .mask = 0x08,
 				 .ro = 0, .shift = 3},
 	[PMU_REG_IHFPOP_EN] =	{.map = 0x01, .addr = 0x83, .mask = 0x04,
