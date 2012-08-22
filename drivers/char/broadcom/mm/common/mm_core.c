@@ -87,7 +87,11 @@ void mm_core_job_maint_work(struct work_struct* work)
 	struct file *filp = maint_job->filp;
 	mm_core_t* core_dev = maint_job->dev;
 	MM_CORE_HW_IFC* hw_ifc = &core_dev->mm_device;
-	
+
+	if(maint_job->added_to_wait_queue) {
+		list_del_init(&maint_job->wait_list);
+		return;
+		}
 
 	if(maint_job->job) {
 		dev_job_list_t *job = maint_job->job;

@@ -160,7 +160,11 @@ static long mm_file_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 				queue_work(common->single_wq, &(maint_work.work));
 				flush_work_sync(&(maint_work.work));
 				if(maint_work.added_to_wait_queue) {
-					wait_event_interruptible(common->queue, job_status.status != MM_JOB_STATUS_INVALID );
+					if(wait_event_interruptible(common->queue, job_status.status != MM_JOB_STATUS_INVALID )) {
+						//Task interrupted... Ensure to remove from the waitlist
+						queue_work(common->single_wq, &(maint_work.work));
+						flush_work_sync(&(maint_work.work));
+						}
 					break;
 					}
 				}

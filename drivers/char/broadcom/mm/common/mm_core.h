@@ -47,12 +47,14 @@ extern void mm_core_job_maint_work(struct work_struct* work);
 
 typedef struct job_maint_work {
 	struct work_struct work;
-	struct list_head wait_list;
+	struct file* filp;
 	mm_core_t* dev;
+
 	dev_job_list_t* job;
+
+	struct list_head wait_list;
 	mm_job_status_t *status;
 	volatile bool added_to_wait_queue;
-	struct file* filp;
 } job_maint_work_t;
 
 
