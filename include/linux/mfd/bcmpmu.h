@@ -427,6 +427,9 @@ enum bcmpmu_reg {
 	PMU_REG_UASCTRL3,
 	PMU_REG_UASCTRL4,
 
+	/* Common Control Registers */
+	PMU_REG_COMM_CTRL,
+
 	PMU_REG_MAX,
 };
 enum bcmpmu_irq_reg {
@@ -533,6 +536,7 @@ enum bcmpmu_adc_sig {
 	PMU_ADC_BSI_CAL_HI,
 	PMU_ADC_NTC_CAL_LO,
 	PMU_ADC_NTC_CAL_HI,
+	PMU_ADC_TEMP_SNS,
 	PMU_ADC_MAX,
 };
 
@@ -1232,6 +1236,8 @@ struct bcmpmu_platform_data {
 	int pa_temp_voltmap_len;
 	struct bcmpmu_temp_map *x32_temp_voltmap;
 	int x32_temp_voltmap_len;
+	struct bcmpmu_temp_map *pmu_temp_map;
+	int pmu_temp_map_len;
 	struct bcmpmu_bom_map *bom_map;
 	int bom_map_len;
 

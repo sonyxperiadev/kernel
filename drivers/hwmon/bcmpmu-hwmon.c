@@ -39,6 +39,10 @@
 #define BCMPMU_PRINT_INIT (1U << 1)
 #define BCMPMU_PRINT_FLOW (1U << 2)
 #define BCMPMU_PRINT_DATA (1U << 3)
+
+#define BCMPMU_TEMP_SNS_EA 0x10 /*Enable*/
+#define BCMPMU_TEMP_SNS_DS 0x00 /*Disable*/
+
 /* static int debug_mask = 0xff; */
 static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define pr_hwmon(debug_level, args...) \
@@ -57,6 +61,8 @@ struct bcmpmu_adc {
 	struct bcmpmu_adc_setting *adcsetting;
 	const struct bcmpmu_temp_map *btmap;
 	int btmap_len;
+	const struct bcmpmu_temp_map *pmu_temp_map;
+	int ptmap_len; /* PMU Temperature MAP len */
 	struct bcmpmu_bom_map *bom_map;
 	int bom_map_len;
 	wait_queue_head_t wait;
@@ -64,6 +70,8 @@ struct bcmpmu_adc {
 	struct mutex cal_lock;
 	struct bcmpmu_adc_req *rtmreq;
 };
+
+struct bcmpmu_adc *pgadc;
 
 struct bcmpmu_env {
 	struct bcmpmu *bcmpmu;
@@ -83,7 +91,28 @@ struct bcmpmu_adc_temp_cal_data {
 	int offset;
 };
 
-static int adc_map_batt_temp(struct bcmpmu_adc *padc, int adc,
+static int return_index(const struct bcmpmu_temp_map *slist,
+						int len, int element)
+{
+	int low = 0;
+	int high = len - 1;
+	while (low <= high) {
+		int middle = low + (high - low)/2;
+
+		if (element > slist[middle].adc)
+			low = middle + 1;
+		else if (element < slist[middle].adc)
+			high = middle - 1;
+		else
+			return middle;
+	}
+	if (element >= slist[low].adc && element < slist[high].adc)
+		return low;
+	else
+		return high;
+}
+
+static int adc_map_batt_temp(const struct bcmpmu_adc *padc, int adc,
 			     enum bcmpmu_adc_sig sig)
 {
 	int i = 0;
@@ -114,6 +143,34 @@ static int adc_map_batt_temp(struct bcmpmu_adc *padc, int adc,
 	}
 	return temp;
 }
+
+static int adc_map_pmu_temp(struct bcmpmu_adc *padc, int adc,
+						enum bcmpmu_adc_sig sig) {
+
+	const struct bcmpmu_temp_map *pmu_temp_map;
+						/*PMU Temperature Sensor map*/
+	int delta = 0;
+	int pmu_temp = 0; /* PMU Temperature */
+	int index = 0;
+
+	pmu_temp_map = padc->pmu_temp_map;
+	if (pmu_temp_map == NULL) {
+		pr_hwmon(ERROR, "%s pmu_temp_map is NULL\n", __func__);
+		return -EINVAL;
+	}
+	index = return_index(pmu_temp_map, padc->ptmap_len, adc);
+	delta = adc - pmu_temp_map[index].adc;
+	pmu_temp = pmu_temp_map[index].temp + (delta/2);
+	pr_hwmon(DATA, "%s adc-r = %d adc = %d, temp = %d pmu_temp = %d\n",
+						__func__, adc,
+						pmu_temp_map[index].adc,
+						pmu_temp_map[index].temp,
+						pmu_temp);
+
+	return pmu_temp;
+
+}
+
 
 static int adc_map_bom(struct bcmpmu_adc *padc, int value)
 {
@@ -460,6 +517,12 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 		} else
 			req->cnv = 0;
 		break;
+
+	case PMU_ADC_TEMP_SNS:
+
+		req->cnv = adc_map_pmu_temp(padc, req->raw, req->sig);
+		break;
+
 	default:
 		req->cnv = req->cal;
 		break;
@@ -749,6 +812,25 @@ static int bcmpmu_adc_request(struct bcmpmu *bcmpmu, struct bcmpmu_adc_req *req)
 
 	return ret;
 }
+
+int bcmpmu_read_pmu_temp(void){
+	struct bcmpmu *bcmpmu = pgadc->bcmpmu;
+	struct bcmpmu_adc_req req;
+
+	bcmpmu->write_dev(bcmpmu, PMU_REG_COMM_CTRL, BCMPMU_TEMP_SNS_EA,
+			bcmpmu->regmap[PMU_REG_COMM_CTRL].mask);
+
+	req.sig = PMU_ADC_TEMP_SNS;
+	req.tm = PMU_ADC_TM_RTM_SW;
+	req.flags = PMU_ADC_RAW_AND_UNIT;
+	bcmpmu->adc_req(bcmpmu, &req);
+
+	bcmpmu->write_dev(bcmpmu, PMU_REG_COMM_CTRL, BCMPMU_TEMP_SNS_DS,
+			bcmpmu->regmap[PMU_REG_COMM_CTRL].mask);
+	return req.cnv;
+
+}
+EXPORT_SYMBOL(bcmpmu_read_pmu_temp);
 
 /* bcmpmu_get_adcunit_data
  * Input: signal number, pointer to where data should go
@@ -1298,12 +1380,15 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	init_waitqueue_head(&padc->wait);
 	mutex_init(&padc->lock);
 	mutex_init(&padc->cal_lock);
+	pgadc = padc;
 	padc->bcmpmu = bcmpmu;
 	padc->adcmap = bcmpmu_get_adcmap(bcmpmu);
 	padc->adcunit = bcmpmu_get_adcunit(bcmpmu);
 	padc->ctrlmap = bcmpmu_get_adc_ctrl_map(bcmpmu);
 	padc->btmap = pdata->batt_temp_map;
 	padc->btmap_len = (int)pdata->batt_temp_map_len;
+	padc->pmu_temp_map = pdata->pmu_temp_map;
+	padc->ptmap_len = (int)pdata->pmu_temp_map_len;
 	padc->rtmreq = NULL;
 	padc->bom_map = pdata->bom_map;
 	padc->bom_map_len = pdata->bom_map_len;
