@@ -31,6 +31,7 @@ struct bcm_otg_xceiver {
 };
 
 struct bcmpmu_otg_xceiv_data {
+	unsigned int prev_otg_id;
 	struct device *dev;
 	struct bcmpmu *bcmpmu;
 
