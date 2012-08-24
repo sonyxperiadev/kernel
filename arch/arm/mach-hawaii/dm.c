@@ -13,7 +13,7 @@
 #include <mach/appf_helpers.h>
 #include <linux/module.h>
 #include <linux/io.h>
-#include <linux/ioport.h>
+#include <linux/delay.h>
 #include <mach/sec_api.h>
 #include <mach/dormant.h>
 #include <asm/proc-fns.h>
@@ -318,6 +318,7 @@ static void restore_proc_clk_regs(void)
 
 	/* Wait until the new frequency takes effect */
 	do {
+		udelay(1);
 		val1 = readl_relaxed(PROC_CLK_REG_ADDR(POLICY_CTL)) &
 		    KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
 
