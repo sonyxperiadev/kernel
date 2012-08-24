@@ -16,7 +16,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/kernel.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
-#include <mach/rdb/brcm_rdb_sysmap.h> 
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_h264.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
@@ -89,11 +89,11 @@ static void cme_reg_init(void* device_id)
 {
 	cme_device_t* id = (cme_device_t*)device_id;
 	pr_debug("cme_reg_init: cme_verion = 0x%x\n",id->cme_version);
-	
+
 	id->cme_version = cme_read(id,H264_CME_VERSION_OFFSET);
 	cme_write(id,H264_CME_LOADCTRL_OFFSET,0);
 	cme_write(id,H264_CME_SEARCHCTRL_OFFSET,0);
-	cme_write(id,H264_CME_TOTSAD_OFFSET,0); 
+	cme_write(id,H264_CME_TOTSAD_OFFSET,0);
 	cme_write(id,H264_CME_INTCS_OFFSET,0);
 }
 
@@ -111,8 +111,8 @@ static int cme_reset(void* device_id)
 
 	/*Reset the registers*/
 	cme_reg_init(id);
-	
-	while((cme_read(id,H264_CME_AUTOSTATUS_OFFSET) >> 31) & 0x1); 
+
+	while((cme_read(id,H264_CME_AUTOSTATUS_OFFSET) >> 31) & 0x1);
 
 	return 0;
 }
@@ -126,7 +126,7 @@ static int cme_abort(void* device_id, mm_job_post_t* job)
 	cme_write(id,H264_CME_AUTOCTRL_OFFSET,0x4);
 
 	while((cme_read(id,H264_CME_AUTOSTATUS_OFFSET) >> 31) & 0x1);
-	
+
 	return 0;
 }
 
@@ -138,10 +138,10 @@ static mm_isr_type_e process_cme_irq(void* device_id)
 
 	/* Read the interrupt status registers */
 	flags = cme_read(id,H264_CME_INTCS_OFFSET);
-	
+
 	/* Disable CME Idle Interrupt */
 	cme_write(id,H264_CME_INTCS_OFFSET,0);
-	
+
 	if((flags & (1<<31)) == 0)
 		irq_retval = MM_ISR_SUCCESS;
 
@@ -152,12 +152,12 @@ bool get_cme_status(void* device_id)
 {
 	cme_device_t* id = (cme_device_t*)device_id;
 	pr_debug("get_cme_status:\n");
-	
+
 	/*Read the status of AUTO SM and return based on the bit*/
 	if((cme_read(id,H264_CME_AUTOSTATUS_OFFSET) >> 31)&(0x1)) {
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -183,7 +183,7 @@ mm_job_status_e cme_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 			/*Reset CME*/
 			cme_reset(id);
 			/*Bound checks*/
-			if(!(jp->hradius_mb >= 1 && jp->hradius_mb <= 6 && 
+			if(!(jp->hradius_mb >= 1 && jp->hradius_mb <= 6 &&
 					jp->vradius_mb >= 1 && jp->vradius_mb <= 4)){
 				pr_err("Invalid Parameter \n");
 				return MM_JOB_STATUS_ERROR;
@@ -200,7 +200,7 @@ mm_job_status_e cme_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 			}
 
 			if (!jp->dump_vstride_bytes){
-				jp->dump_vstride_bytes = 
+				jp->dump_vstride_bytes =
 					jp->dump_hstride_bytes * jp->width_mb;
 			}
 
@@ -214,22 +214,22 @@ mm_job_status_e cme_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 				case CME_FORMAT_YUV_UV32:
 					cme_write(id,H264_CME_PITCH_OFFSET,32);
 					/*NB vc_image->pitch is bytes per slab*/
-					cme_write(id,H264_CME_AUTOSTRIPE_OFFSET,(jp->img_pitch << 12) + 
+					cme_write(id,H264_CME_AUTOSTRIPE_OFFSET,(jp->img_pitch << 12) +
 							(jp->img_pitch >> 3) + 0);
 					var_pitch = (127 & (jp->cur_y_addr | jp->cur_c_addr |
 								jp->ref_y_addr | jp->ref_c_addr)) ? 1 : 0;
 					break;
 				case CME_FORMAT_YUV_UV:
 					cme_write(id,H264_CME_PITCH_OFFSET,128);
-					cme_write(id,H264_CME_AUTOSTRIPE_OFFSET,((jp->img_pitch-128+32) << 12) + 
-							((jp->img_pitch-128+32) >> 3) + 2);					
+					cme_write(id,H264_CME_AUTOSTRIPE_OFFSET,((jp->img_pitch-128+32) << 12) +
+							((jp->img_pitch-128+32) >> 3) + 2);
 					var_pitch = 1;
 					break;
 #if CME_DEFAULT_IGNOREC
 				case CME_FORMAT_YUV420:
 				case CME_FORMAT_YUV422:
 				case CME_FORMAT_YUV422PLANAR:
-					/*We can accept planar YUV, but only when ignoring Chroma. 
+					/*We can accept planar YUV, but only when ignoring Chroma.
 					 * Must be 32-byte aligned.*/
 					if(31 & (jp->img_pitch | jp->cur_y_addr | jp->ref_y_addr)){
 						pr_err("Planar YUV without 32-byte aligned\n");
@@ -239,7 +239,7 @@ mm_job_status_e cme_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 					cme_write(id,H264_CME_AUTOSTRIPE_OFFSET,((1<<17)|(1<<2)));
 					var_pitch = 1;
 					break;
-#endif			
+#endif
 				default:
 					pr_err("cme_start_job: Unsupported Format\n");
 					return MM_JOB_STATUS_ERROR;
@@ -247,7 +247,7 @@ mm_job_status_e cme_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 
 			cme_write(id,H264_CME_INTCS_OFFSET,0x8);
 			cme_write(id,H264_CME_DUMPADDR_OFFSET,jp->vetctor_dump_addr);
-			cme_write(id,H264_CME_DUMPSTRIDE_OFFSET, (jp->dump_vstride_bytes << 16) | 
+			cme_write(id,H264_CME_DUMPSTRIDE_OFFSET, (jp->dump_vstride_bytes << 16) |
 					(jp->dump_hstride_bytes));
 			cme_write(id,H264_CME_BIAS_OFFSET,jp->cme_bias);
 
@@ -294,7 +294,7 @@ int cme_init(MM_CORE_HW_IFC* core_param)
 		ret = -ENOMEM;
 		goto err;
 	}
-	
+
 	cme_device->vaddr = NULL;
 	cme_device->cme_version = 0;
 	pr_debug("cme_init: -->\n");
@@ -303,10 +303,10 @@ int cme_init(MM_CORE_HW_IFC* core_param)
 	core_param->mm_base_addr = MM_CME_BASE_ADDR;
 	core_param->mm_hw_size = CME_HW_SIZE;
 	core_param->mm_irq = BCM_INT_ID_H264_CME;
-	
+
 	core_param->mm_timer = DEFAULT_MM_DEV_TIMER_MS;
 	core_param->mm_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
-	
+
 	core_param->mm_get_status = get_cme_status;
 	core_param->mm_start_job = cme_start_job;
 	core_param->mm_process_irq = process_cme_irq;

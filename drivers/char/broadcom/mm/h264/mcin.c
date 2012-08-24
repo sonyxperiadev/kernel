@@ -16,7 +16,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/kernel.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
-#include <mach/rdb/brcm_rdb_sysmap.h> 
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_h264.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
@@ -99,9 +99,33 @@ static void mcin_reg_init(void* device_id)
 	mcin_write(id,H264_MCODEIN_OUTMARKOFFSET_OFFSET,0x0);
 }
 
+static int mcin_complete_sequence (mcin_device_t* id)
+{
+	u32 control;
+	pr_debug("mcin_complete_sequence:\n");
+
+	while(mcin_read(id,H264_MCODEIN_STATUS_OFFSET) & 0xef);
+	control = mcin_read(id,H264_MCODEIN_CONTROL_OFFSET);
+	/*Set COMPLETE bit*/
+	control |= 1 << 4;
+	/*Clearing INTENABLE bit*/
+	control &= 0xFFFFFFFE;
+
+	mcin_write(id,H264_MCODEIN_CONTROL_OFFSET,  control);
+
+	while(mcin_read(id,H264_MCODEIN_STATUS_OFFSET) & 0xef);
+	/*Clear COMPLETE bit*/
+	control &= 0xFFFFFEFF;
+
+	mcin_write(id,H264_MCODEIN_CONTROL_OFFSET,control);
+
+	return 0;
+}
+
 static int mcin_get_regs(void* device_id, MM_REG_VALUE* ptr, int count)
 {
 	mcin_device_t* id = (mcin_device_t*)device_id;
+	pr_debug("mcin_get_regs:\n");
 	print_regs(id);
 	return 0;
 }
@@ -118,7 +142,7 @@ static int mcin_reset(void* device_id)
 
 	mcin_reg_init(id);
 
-	while(mcin_read(id,H264_MCODEIN_STATUS_OFFSET) & 0xef); 
+	while(mcin_read(id,H264_MCODEIN_STATUS_OFFSET) & 0xef);
 
 	return 0;
 }
@@ -126,8 +150,10 @@ static int mcin_reset(void* device_id)
 static int mcin_abort(void* device_id, mm_job_post_t* job)
 {
 	mcin_device_t* id = (mcin_device_t*)device_id;
+
 	pr_debug("mcin_abort:\n");
 	mcin_reset(id);
+
 	return 0;
 }
 
@@ -142,7 +168,7 @@ static mm_isr_type_e process_mcin_irq(void* device_id)
 
 	/* Clear interrupts isr is going to handle */
 	mcin_write(id,H264_MCODEIN_STATUS_OFFSET,1<<3);
-	
+
 	if(flags & (1<<3))
 		irq_retval = MM_ISR_SUCCESS;
 
@@ -169,12 +195,13 @@ mm_job_status_e mcin_start_job(void* device_id , mm_job_post_t* job, u32 profmas
 
 	u32 control = 0;
 	u32 control_extra = 0;
+	MCIN_OUT_PARAMS_T out_p;
 
 	if(jp == NULL){
 		pr_err("mcin_start_job: id or jp is null\n");
 		return MM_JOB_STATUS_ERROR;
 	}
-	
+
 	if(job->type != H264_MCIN_EPR_JOB){
 		pr_err("mcin_start_job: Invalid job type\n");
 		return MM_JOB_STATUS_ERROR;
@@ -213,9 +240,9 @@ mm_job_status_e mcin_start_job(void* device_id , mm_job_post_t* job, u32 profmas
 			/*CODE*/
 			control |= jp->mcin_config.start_byte << 8;
 
-			if (jp->mcin_config.flags & VD3_INPUT_CONFIG_AVS)
+			if (jp->mcin_config.flags & MCIN_INPUT_CONFIG_AVS)
 				/*AVSMODE*/
-				control |= 1 << 7; 
+				control |= 1 << 7;
 
 			if (jp->mcin_config.start_mask == 0xff)
 				/* Startcode occupies full byte; next byte cannot form startcode */
@@ -233,6 +260,18 @@ mm_job_status_e mcin_start_job(void* device_id , mm_job_post_t* job, u32 profmas
 
 			control_extra = jp->mcin_config.guard_byte << 1;
 
+			if (jp->mcin_config.use_ep == 0){
+				/*EMUL_DISABLE*/
+				control_extra |= 1 << 12;
+				if(jp->mcin_config.no_startcodes){
+					/*MEMCPY*/
+					control_extra |= 1;
+				}
+			} else if (jp->mcin_config.no_startcodes){
+				/*MASK*/
+				control |= 0 << 16;
+			}
+
 			mcin_write(id,H264_MCODEIN_CONTROL_OFFSET,control);
 			mcin_write(id,H264_MCODEIN_CONTROL_EXTRA_OFFSET,control_extra);
 
@@ -243,6 +282,26 @@ mm_job_status_e mcin_start_job(void* device_id , mm_job_post_t* job, u32 profmas
 			return MM_JOB_STATUS_RUNNING;
 
 		case MM_JOB_STATUS_RUNNING:
+			/*Check for complete sequence*/
+			if ( jp->mcin_config.nal_end == 1)
+				mcin_complete_sequence(id);
+			/*read back the state variables for client*/
+			out_p.state[0] = mcin_read(id,H264_MCODEIN_STATE0_OFFSET);
+			out_p.state[1] = mcin_read(id,H264_MCODEIN_STATE1_OFFSET);
+			out_p.state[2] = mcin_read(id,H264_MCODEIN_STATE2_OFFSET);
+			out_p.state[3] = mcin_read(id,H264_MCODEIN_STATE3_OFFSET);
+			out_p.state[4] = mcin_read(id,H264_MCODEIN_STATE4_OFFSET);
+			out_p.state[5] = mcin_read(id,H264_MCODEIN_STATE5_OFFSET);
+			out_p.state[6] = mcin_read(id,H264_MCODEIN_STATE6_OFFSET);
+			out_p.remaining_len = mcin_read(id,H264_MCODEIN_LENGTH_OFFSET);
+			out_p.user_data = mcin_read(id,H264_MCODEIN_USERDATA_OFFSET);
+			/*copy the structure to user space*/
+			if(copy_to_user((void*)jp->out_param_addr,(void*)&out_p,
+										sizeof(MCIN_OUT_PARAMS_T)) != 0){
+				pr_err("cabac_start_job: copy_to_user for outparam failed \n");
+				return MM_JOB_STATUS_ERROR;
+			}
+
 			job->status = MM_JOB_STATUS_SUCCESS;
 			return MM_JOB_STATUS_SUCCESS;
 
@@ -283,10 +342,10 @@ int mcin_init(MM_CORE_HW_IFC* core_param)
 	core_param->mm_base_addr = MM_MCIN_BASE_ADDR;
 	core_param->mm_hw_size = MCIN_HW_SIZE;
 	core_param->mm_irq = BCM_INT_ID_H264_MCIN_CBC;
-	
+
 	core_param->mm_timer = DEFAULT_MM_DEV_TIMER_MS;
 	core_param->mm_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
-	
+
 	core_param->mm_get_status = get_mcin_status;
 	core_param->mm_start_job = mcin_start_job;
 	core_param->mm_process_irq = process_mcin_irq;

@@ -17,20 +17,30 @@ the GPL, without Broadcom's express prior written consent.
 
 typedef enum
 {
-	VD3_INPUT_CONFIG_AVS       = 1
-} vd3_input_config_flags_t;
+	MCIN_INPUT_CONFIG_AVS       = 1
+} mcin_input_config_flags_t;
 
-typedef struct vd3_input_config_t
+typedef struct mcin_out_params_t
+{
+	unsigned int state[7];
+	unsigned int remaining_len;
+	unsigned int user_data;
+} MCIN_OUT_PARAMS_T;
+
+typedef struct mcin_input_config_t
 {
 	unsigned char start_byte;
 	unsigned char start_mask;
 	unsigned char guard_byte;
 	unsigned char ep_byte;
-	vd3_input_config_flags_t flags;
-} VD3_INPUT_CONFIG_T;
+	unsigned char use_ep;
+	unsigned char no_startcodes;
+	unsigned char nal_end;
+	mcin_input_config_flags_t flags;
+} MCIN_INPUT_CONFIG_T;
 
 typedef struct{
-	VD3_INPUT_CONFIG_T mcin_config;
+	MCIN_INPUT_CONFIG_T mcin_config;
 	unsigned int state[7];
 	unsigned int user_data;
 	unsigned int in_addr;
@@ -38,6 +48,7 @@ typedef struct{
 	unsigned int out_base;
 	unsigned int out_size;
 	unsigned int out_mark_offset;
+	unsigned int out_param_addr;
 } mcin_job_t;
 
 #endif

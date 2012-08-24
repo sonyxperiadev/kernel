@@ -38,12 +38,12 @@ typedef struct{
 	unsigned int dump_vstride_bytes;
 	unsigned int dump_hstride_bytes;
 	unsigned int height_mb;
-	unsigned int width_mb;	
-	unsigned int vradius_mb;	
-	unsigned int hradius_mb;	
+	unsigned int width_mb;
+	unsigned int vradius_mb;
+	unsigned int hradius_mb;
 	unsigned int cme_autolimit;
-	unsigned char auto_hrext;	
-	unsigned char auto_ignorec;	
+	unsigned char auto_hrext;
+	unsigned char auto_ignorec;
 }cme_job_t;
 
 #endif

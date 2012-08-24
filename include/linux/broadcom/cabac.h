@@ -16,8 +16,8 @@ the GPL, without Broadcom's express prior written consent.
 typedef struct{
 	unsigned int highest_ctxt_used;
 	unsigned int rd_ctxt_addr;
-	unsigned int wt_ctxt_addr;	
-	unsigned int cmd_buf_addr;	
+	unsigned int wt_ctxt_addr;
+	unsigned int cmd_buf_addr;
 	unsigned int log2_cmd_buf_size;
 	unsigned int upstride_base_addr;
 	unsigned int num_cmds;

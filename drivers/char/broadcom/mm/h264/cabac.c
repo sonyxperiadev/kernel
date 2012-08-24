@@ -16,7 +16,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/kernel.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
-#include <mach/rdb/brcm_rdb_sysmap.h> 
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_h264.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
@@ -68,7 +68,7 @@ static void print_regs(cabac_device_t *cabac)
 	pr_debug("H264_REGC2_REGCABAC2BINSCOMMANDBUFFERLOGSIZE_OFFSET: 0x%x\n",
 				cabac_read(cabac,H264_REGC2_REGCABAC2BINSCOMMANDBUFFERLOGSIZE_OFFSET));
 	pr_debug("H264_REGC2_REGCABAC2BINSUPSTRIPEBASEADDR_OFFSET: 0x%x\n",
-				cabac_read(cabac,H264_REGC2_REGCABAC2BINSUPSTRIPEBASEADDR_OFFSET));				
+				cabac_read(cabac,H264_REGC2_REGCABAC2BINSUPSTRIPEBASEADDR_OFFSET));
 	pr_debug("H264_REGC2_REGCABAC2BINSCTL_OFFSET: 0x%x\n",
 				cabac_read(cabac,H264_REGC2_REGCABAC2BINSCTL_OFFSET));
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
@@ -116,7 +116,7 @@ static int cabac_reset(void* device_id)
 {
 	cabac_device_t* id = (cabac_device_t*)device_id;
 	pr_debug("cabac_reset:\n");
-	
+
 	/*Reset the registers*/
 	cabac_write(id,H264_REGC2_REGCABAC2BINSCTL_OFFSET,0x1);
 
@@ -133,13 +133,13 @@ static mm_isr_type_e process_cabac_irq(void* device_id)
 {
 	u32 flags;
 	u32 pending_cmds;
-	
+
 	mm_isr_type_e irq_retval = MM_ISR_UNKNOWN;
 	cabac_device_t* id = (cabac_device_t*)device_id;
 
 	/* Read the interrupt status registers */
 	flags = cabac_read(id,H264_REGC2_REGCABAC2BINSCTL_OFFSET);
-	
+
 	/*Reading Pending commands*/
 	pending_cmds = cabac_read(id,H264_REGC2_REGCABAC2BINSCOMMANDBUFFERCOUNT_OFFSET) & 0x7FF;
 
@@ -178,7 +178,7 @@ mm_job_status_e cabac_start_job(void* device_id , mm_job_post_t* job, u32 profma
 		return MM_JOB_STATUS_ERROR;
 	}
 
-	if(job->type != H264_CABAC_DEC_JOB && 
+	if(job->type != H264_CABAC_DEC_JOB &&
 			job->type != H264_CABAC_ENC_JOB){
 		pr_err("cabac_start_job: Invalid job type\n");
 		return MM_JOB_STATUS_ERROR;
@@ -193,17 +193,17 @@ mm_job_status_e cabac_start_job(void* device_id , mm_job_post_t* job, u32 profma
 				pr_err("cabac_start_job: read context address is not 16B alligned\n");
 				return MM_JOB_STATUS_ERROR;
 			}
-			
+
 			if(jp->wt_ctxt_addr & 0x7FF){
 				pr_err("cabac_start_job: read context address is not 2KB alligned\n");
 				return MM_JOB_STATUS_ERROR;
 			}
-			
+
 			if(jp->num_cmds > 0x7FF){
 				pr_err("cabac_start_job: Too many commands\n");
 				return MM_JOB_STATUS_ERROR;
 			}
-			
+
 			/*Program CABAC*/
 			/*if(job->job_type == H264_CABAC_DEC_JOB){*/ /*TODO: Any difference in DEC/ENC*/
 				if(jp->highest_ctxt_used)
@@ -214,7 +214,7 @@ mm_job_status_e cabac_start_job(void* device_id , mm_job_post_t* job, u32 profma
 				cabac_write(id,H264_REGC2_REGCABAC2BINSUPSTRIPEBASEADDR_OFFSET,jp->upstride_base_addr);
 				cabac_write(id,H264_REGC2_REGCABAC2BINSCOMMANDBUFFERLOGSIZE_OFFSET,jp->log2_cmd_buf_size);
 			/*}*/
-		
+
 			for(i=0;i<jp->num_cmds;i++){
 				cabac_write(id,H264_REGC2_REGCABAC2BINSCOMMANDBUFFERCOUNT_OFFSET,0x1);
 			}
@@ -260,14 +260,14 @@ int cabac_init(MM_CORE_HW_IFC* core_param)
 	pr_debug("cabac_init: -->\n");
 
 	/*Do any device specific structure initialisation required.*/
-	
+
 	core_param->mm_base_addr = MM_CABAC_BASE_ADDR;
 	core_param->mm_hw_size = CABAC_HW_SIZE;
 	core_param->mm_irq = BCM_INT_ID_H264_MCIN_CBC;
-	
+
 	core_param->mm_timer = DEFAULT_MM_DEV_TIMER_MS;
 	core_param->mm_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
-	
+
 	core_param->mm_get_status = get_cabac_status;
 	core_param->mm_start_job = cabac_start_job;
 	core_param->mm_process_irq = process_cabac_irq;
