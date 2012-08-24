@@ -2717,3 +2717,31 @@ void csl_caph_audioh_stop_ihf(void)
 	if (epIHFStatus == 0)
 		chal_audio_earpath_set_dac_pwr(handle, 0);
 }
+
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+/****************************************************************************
+*
+*  Function Name: csl_caph_audioh_hs_supply_get_indicator
+*
+*  Description: get the status of the headset driver supply indicator
+*
+****************************************************************************/
+void csl_caph_audioh_hs_supply_get_hs_ds_indicator(UInt16 *hs_ds_indicator)
+{
+	chal_audio_hspath_hs_supply_get_indicator(handle,
+				hs_ds_indicator);
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_audioh_hs_supply_set_hs_ds_thres
+*
+*  Description: set the headset driver supply indicator threshold
+*
+****************************************************************************/
+void csl_caph_audioh_hs_supply_set_hs_ds_thres(UInt32 hs_ds_thres)
+{
+	chal_audio_hspath_hs_supply_thres(handle,
+				hs_ds_thres);
+}
+#endif

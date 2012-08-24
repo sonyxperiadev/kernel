@@ -1011,3 +1011,32 @@ cVoid chal_audio_hspath_turn_on_pmu_signal(cVoid)
 	regVal |= (function << PADCTRLREG_STAT2_PINSEL_STAT2_SHIFT);
 	writel(regVal, (KONA_PAD_CTRL+PADCTRLREG_STAT2_OFFSET));
 }
+
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+/*============================================================================
+*
+* Function Name: cVoid chal_audio_hspath_hs_supply_get_indicator(CHAL_HANDLE
+* handle, cUInt32 vout_supply_ctrl)
+*
+* Description:  Get the headset driver supply indicator
+*
+* Parameters:  handle - audio chal handle.
+*              hs_ds_indicator (out) - Headset Driver Supply Indicator,
+*
+* Return:       None.
+*
+*============================================================================*/
+
+cVoid chal_audio_hspath_hs_supply_get_indicator(CHAL_HANDLE handle,
+				cUInt16 *hs_ds_indicator)
+{
+	cUInt32 base = ((ChalAudioCtrlBlk_t *) handle)->audioh_base;
+	cUInt32 reg_val = 0;
+
+	reg_val = BRCM_READ_REG(base, AUDIOH_HS_DRIVER_SUPPLY_CTRL);
+	reg_val &= AUDIOH_HS_DRIVER_SUPPLY_CTRL_HS_DS_INDICATOR_MASK;
+	reg_val = reg_val >> AUDIOH_HS_DRIVER_SUPPLY_CTRL_HS_DS_INDICATOR_SHIFT;
+	*hs_ds_indicator = reg_val;
+	return;
+}
+#endif
