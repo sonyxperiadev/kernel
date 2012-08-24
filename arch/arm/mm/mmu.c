@@ -805,14 +805,13 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
 
 	for (md = io_desc; nr; md++, nr--) {
 		create_mapping(md, false);
-/*		vm->addr = (void *)(md->virtual & PAGE_MASK);
+		vm->addr = (void *)(md->virtual & PAGE_MASK);
 		vm->size = PAGE_ALIGN(md->length + (md->virtual & ~PAGE_MASK));
-		vm->phys_addr = __pfn_to_phys(md->pfn); 
-		vm->flags = VM_IOREMAP | VM_ARM_STATIC_MAPPING; 
+		vm->phys_addr = __pfn_to_phys(md->pfn);
+		vm->flags = VM_IOREMAP | VM_ARM_STATIC_MAPPING;
 		vm->flags |= VM_ARM_MTYPE(md->type);
 		vm->caller = iotable_init;
-		vm++;
-		vm_area_add_early(vm++); */
+		vm_area_add_early(vm++);
 	}
 }
 
