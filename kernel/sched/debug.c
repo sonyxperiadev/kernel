@@ -297,9 +297,6 @@ do {									\
 	SEQ_printf(m, "  .%-30s: %Ld.%06ld\n", #x, SPLIT_NS(rq->x))
 
 	P(nr_running);
-	SEQ_printf(m, "  .%-30s: %d.%03d   \n", "ave_nr_running",
-		   rq->ave_nr_running / FIXED_1,
-		   ((rq->ave_nr_running % FIXED_1) * 1000) / FIXED_1);
 	SEQ_printf(m, "  .%-30s: %lu\n", "load",
 		   rq->load.weight);
 	P(nr_switches);
