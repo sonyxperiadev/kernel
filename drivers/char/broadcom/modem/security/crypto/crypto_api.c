@@ -17,8 +17,8 @@
 #include <linux/dma-mapping.h>
 #include "crypto_api.h"
 
-#ifdef CONFIG_ROM_SEC_DISPATCHER
-#include <mach/secure_api.h>
+#ifdef CONFIG_KONA_SECURE_MONITOR_CALL
+#include <mach/sec_api.h>
 #endif
 
 
@@ -36,7 +36,7 @@
 unsigned char EncDec(unsigned char *outDataPtr, const unsigned char *inDataPtr,
 			unsigned int inDataSize, unsigned int inEncDec)
 {
-#if defined(CONFIG_ROM_SEC_DISPATCHER) &&\
+#if defined(CONFIG_KONA_SECURE_MONITOR_CALL) &&\
 		defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES)
 
 	 struct clk *sec_spum_clk = NULL;
@@ -86,11 +86,10 @@ unsigned char EncDec(unsigned char *outDataPtr, const unsigned char *inDataPtr,
 	  argument 5 : Pointer to output buffer.It should be physical address.
 	  argument 6 : Direction: encrypt or decrypt.
 	*/
-	hw_sec_pub_dispatcher(SEC_API_AES,
-				0x0F,
-				&aes_p[0],
+	secure_api_call(SSAPI_ROW_AES,
+				(unsigned int)&aes_p[0],
 				inDataSize,
-				&aes_p[inDataSize],
+				(unsigned int)&aes_p[inDataSize],
 				inEncDec);
 
 	clk_disable(sec_spum_clk);
