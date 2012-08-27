@@ -37,6 +37,7 @@
 #include <mach/io_map.h>
 #include <mach/kona_timer.h>
 #include <mach/timer.h>
+#include <mach/irqs.h>
 
 #ifdef CONFIG_LOCAL_TIMERS
 #include <asm/smp_twd.h>
@@ -228,17 +229,26 @@ static u32 notrace kona_update_sched_clock(void)
 	return kona_timer_get_counter(gpt_src);
 }
 
+#ifdef CONFIG_HAVE_ARM_TWD
+static DEFINE_TWD_LOCAL_TIMER(twd_local_timer,
+				PTIM_BASE_ADDR, IRQ_LOCALTIMER);
+
+static void __init kona_twd_init(void)
+{
+	int err = twd_local_timer_register(&twd_local_timer);
+	if (err)
+		pr_err("twd_local_timer_register failed %d\n", err);
+}
+#else
+#define kona_twd_init()        do {} while(0)
+#endif
+
 void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
 {
 	timers_init(gpt_setup);
 	gptimer_clocksource_init();
 	gptimer_clockevents_init();
 	gptimer_set_next_event((CLOCK_TICK_RATE / HZ), NULL);
-
-	/* TODO: Define this using DEFINE_TWD_LOCAL_TIMER
-#ifdef CONFIG_LOCAL_TIMERS
-	twd_base = IOMEM(KONA_PTIM_VA);
-#endif
-*/
+	kona_twd_init();
 	setup_sched_clock(kona_update_sched_clock, 32, CLOCK_TICK_RATE);
 }
