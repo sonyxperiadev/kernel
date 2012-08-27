@@ -936,7 +936,7 @@ static void spi_kona_work(struct work_struct *work)
 		status = 0;
 
 		if (master->bus_num != 0) {
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#if !defined(CONFIG_MACH_HAWAII_FPGA) && defined(CONFIG_BCM_ALSA_SOUND)
 			/*turn on caph clock for ssp1 and ssp2*/
 			csl_caph_ControlHWClock(TRUE);
 #endif
@@ -1019,7 +1019,7 @@ static void spi_kona_work(struct work_struct *work)
 		clk_disable(spi_kona->ssp_clk);
 #endif
 		if (master->bus_num != 0) {
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#if !defined(CONFIG_MACH_HAWAII_FPGA) && defined(CONFIG_BCM_ALSA_SOUND)
 			/*turn on caph clock for ssp1 and ssp2*/
 			csl_caph_ControlHWClock(FALSE);
 #endif
