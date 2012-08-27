@@ -14,11 +14,13 @@
 #define __KONA_RESET_REASON_H__
 
 #define REG_EMU_AREA	0x3404BF90
+#define POWERON_RESET	0x1
 #define AP_ONLY_BOOT	0x4
 #define CHARGING_STATE	0x3
 #define BOOTLOADER_BOOT	0x5
 #define RECOVERY_BOOT   0x6
 
+void do_set_poweron_reset_boot(void);
 void do_set_bootloader_boot(void);
 void do_set_recovery_boot(void);
 void do_set_ap_only_boot(void);
