@@ -43,10 +43,11 @@ static int keep_xtl_on;
 module_param_named(keep_xtl_on, keep_xtl_on, int, S_IRUGO|S_IWUSR|S_IWGRP);
 
 /**
- * Run time flag to debug the Rhea clocks preventing deepsleep
+ * Run time flag to debug the Rhea clocks or active domains preventing deepsleep
  */
-static int clk_dbg_dsm;
-module_param_named(clk_dbg_dsm, clk_dbg_dsm, int, S_IRUGO|S_IWUSR|S_IWGRP);
+static int dbg_dsm_suspend;
+module_param_named(dbg_dsm_suspend, dbg_dsm_suspend, int,
+		S_IRUGO|S_IWUSR|S_IWGRP);
 
 
 /* Rhea PM log values */
@@ -237,7 +238,7 @@ static void log_wakeup_interrupts(void)
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET2_OFFSET));
 
 	pm_dbg(LOG_INTR_STATUS, "GIC pending status3 = %x\n",
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET3_OFFSET));
 
 	pm_dbg(LOG_INTR_STATUS, "GIC pending status4 = %x\n",
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
@@ -481,9 +482,11 @@ int enter_idle_state(struct kona_idle_state *state)
 				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2221*/
-	if (clk_dbg_dsm)
-		if (state->flags & CPUIDLE_ENTER_SUSPEND)
+	if (dbg_dsm_suspend)
+		if (state->flags & CPUIDLE_ENTER_SUSPEND) {
 			rhea_clock_print_act_clks();
+			rhea_pi_mgr_print_act_pis();
+		}
 
 	switch (state->state) {
 	case CSTATE_SUSPEND_RETN:

@@ -1079,7 +1079,7 @@ ssize_t ft5306_min_gap_store(struct kobject *kobj, struct kobj_attribute *attr, 
 static struct kobj_attribute ft5306_min_gap_attr = {
 	.attr = {
 		.name = "min_gap",
-		.mode = S_IRWXUGO,
+		.mode = 0644,
 	},
 	.show = &ft5306_min_gap_show,
 	.store = &ft5306_min_gap_store,
@@ -1111,7 +1111,7 @@ ssize_t ft5306_sensitivity_store(struct kobject *kobj, struct kobj_attribute *at
 static struct kobj_attribute ft5306_sensitivity_attr = {
 	.attr = {
 		.name = "sensitivity",
-		.mode = S_IRWXUGO,
+		.mode = 0644,
 	},
 	.show = &ft5306_sensitivity_show,
 	.store = &ft5306_sensitivity_store,
@@ -1140,7 +1140,7 @@ ssize_t ft5306_upgrade_fw_store(struct kobject *kobj, struct kobj_attribute *att
 static struct kobj_attribute ft5306_upgrade_fw_attr = {
 	.attr = {
 		.name = "upgradefw",
-		.mode = S_IRWXUGO,
+		.mode = 0644,
 	},
 	.show = &ft5306_upgrade_fw_show,
 	.store = &ft5306_upgrade_fw_store,
