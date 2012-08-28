@@ -8,8 +8,7 @@
 * (at your option) any later version.
 ***********************************************************************/
 
-/* Lucas main 5MP sensor driver file */
-
+  
 
 #include <linux/i2c.h>
 
@@ -25,25 +24,21 @@
 #include <media/soc_camera.h>
 #include <linux/videodev2_brcm.h>
 #include <camdrv_ss.h>
-#include <camdrv_ss_s5k4ecgx.h>
-#include <linux/kthread.h>
-#include <asm/atomic.h>
-#include <asm/siginfo.h>	//siginfo
-
+#include <camdrv_ss_s5k4ecgx.h>           
 
 #define S5K4ECGX_NAME	"s5k4ecgx"
 #define SENSOR_ID 2
 #define SENSOR_JPEG_SNAPSHOT_MEMSIZE	0x4b0000  // 4915200  = 2560*1920     //0x33F000     //3403776 //2216 * 1536
-#define SENSOR_PREVIEW_WIDTH      640 // 1024
-#define SENSOR_PREVIEW_HEIGHT     480 // 768
-#define AF_OUTER_WINDOW_WIDTH   320
-#define AF_OUTER_WINDOW_HEIGHT  266
-#define AF_INNER_WINDOW_WIDTH   143
-#define AF_INNER_WINDOW_HEIGHT  143
+#define SENSOR_PREVIEW_WIDTH      1024
+#define SENSOR_PREVIEW_HEIGHT     768
+#define AF_OUTER_WINDOW_WIDTH   512 //320
+#define AF_OUTER_WINDOW_HEIGHT  426 //266
+#define AF_INNER_WINDOW_WIDTH   230 //143
+#define AF_INNER_WINDOW_HEIGHT  230 //143
 #define MAX_BUFFER			(4096)
 
 #define S5K4ECGX_DEFAULT_PIX_FMT		V4L2_PIX_FMT_UYVY	/* YUV422 */
-#define S5K4ECGX_DEFAULT_MBUS_PIX_FMT    V4L2_MBUS_FMT_UYVY8_2X8
+#define S5K4ECGX_DEFAULT_MBUS_PIX_FMT    V4L2_MBUS_FMT_UYVY8_2X8 
 #define FORMAT_FLAGS_COMPRESSED 0x3
 #define DEFUALT_MCLK		26000000
 #define S5K4ECGX_REGISTER_SIZE 4
@@ -53,44 +48,49 @@ static bool first_af_status = false;
 
 
 #define EXIF_SOFTWARE		""
-#define EXIF_MAKE		"Samsung"
+#define EXIF_MAKE		"SAMSUNG"
 #define EXIF_MODEL		"GT-B7810"
 static DEFINE_MUTEX(af_cancel_op);
-static DEFINE_MUTEX(esd_and_P_lock);
-struct task_struct *camdrv_ss_s5k4ecgx_P_value_thread = NULL;
+extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 
 
-static atomic_t preview_going_on = ATOMIC_INIT(0);
-static int camdrv_ss_s5k4ecgx_P_value_thread_func(void *data);
+extern  int camdrv_ss_i2c_set_config_register(struct i2c_client *client, 
+                                         regs_t reg_buffer[], 
+          				                 int num_of_regs, 
+          				                 char *name);
 
-
-//#define __JPEG_CAPTURE__ 1
+extern int camdrv_ss_set_preview_size(struct v4l2_subdev *sd);
+extern int camdrv_ss_set_capture_size(struct v4l2_subdev *sd);
+extern int camdrv_ss_set_dataline_onoff(struct v4l2_subdev *sd, int onoff);
+extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
+int wb_auto=1,iso_auto=1;
+//#define __JPEG_CAPTURE__ 1        
 
 static const struct camdrv_ss_framesize s5k4ecgx_supported_preview_framesize_list[] = {
 /*	{ PREVIEW_SIZE_QCIF,	176,  144 },
 	{ PREVIEW_SIZE_QVGA,	320,  240 },
 	{ PREVIEW_SIZE_CIF,	352,  288 },*/
 	{ PREVIEW_SIZE_VGA,	640,  480 },
-//	{ PREVIEW_SIZE_D1,	720,  480 },
+	//{ PREVIEW_SIZE_D1,	720,  480 },
     { PREVIEW_SIZE_XGA,	1024, 768 },
-#if 0 
-   { PREVIEW_SIZE_1MP, 1280, 1024 },
+#if 0
+    { PREVIEW_SIZE_1MP, 1280, 1024 },
 	{ PREVIEW_SIZE_W1MP, 1600,960  },
     { PREVIEW_SIZE_2MP,	1600,  1200 },
     { PREVIEW_SIZE_3MP,	2048,  1536 },
 #endif
-    { PREVIEW_SIZE_5MP,	2560,  1920 },
+    { PREVIEW_SIZE_5MP,	2560,  1920 },        
 };
 
 
 static const struct camdrv_ss_framesize  s5k4ecgx_supported_capture_framesize_list[] = {
 	{ CAPTURE_SIZE_VGA,		640,  480 },
-	// { CAPTURE_SIZE_1MP, 			1280, 960 },
-	//{ CAPTURE_SIZE_2MP,		1600, 1200 },
+//	{ CAPTURE_SIZE_1MP,		1280, 960 },
+//	{ CAPTURE_SIZE_2MP,		1600, 1200 },
 	{ CAPTURE_SIZE_3MP,		2048, 1536 },
 	{ CAPTURE_SIZE_5MP,		2560, 1920 },
 };
-const static struct v4l2_fmtdesc s5k4ecgx_fmts[] =
+const static struct v4l2_fmtdesc s5k4ecgx_fmts[] = 
 {
     {
         .index          = 0,
@@ -108,7 +108,7 @@ const static struct v4l2_fmtdesc s5k4ecgx_fmts[] =
 		.description	= "JPEG + Postview",
 		.pixelformat	= V4L2_MBUS_FMT_JPEG_1X8,
 	},
-#endif
+#endif	
 };
 
 static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
@@ -171,7 +171,7 @@ static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "ISO",
 		.minimum	= ISO_AUTO ,
-		.maximum	= (1 << ISO_AUTO | 1 << ISO_50 | 1 << ISO_100 | 1 << ISO_200 | 1 << ISO_400 | 1 << ISO_800 | 1 << ISO_1200
+		.maximum	= (1 << ISO_AUTO | 1 << ISO_50 | 1 << ISO_100 | 1 << ISO_200 | 1 << ISO_400 | 1 << ISO_800 | 1 << ISO_1200 
 						| 1 << ISO_1600 | 1 << ISO_2400 | 1 << ISO_3200 | 1 << ISO_SPORTS | 1 << ISO_NIGHT | 1 << ISO_MOVIE),
 		.step		= 1,
 		.default_value	= ISO_AUTO,
@@ -283,7 +283,7 @@ static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
 		.step		= 1,
 		.default_value	= AUTO_FOCUS_OFF,
 	},
-
+		
 	{
 		.id 		= V4L2_CID_CAMERA_TOUCH_AF_AREA,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
@@ -298,10 +298,10 @@ static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Framerate control",
 		.minimum	= FRAME_RATE_AUTO,
-		.maximum	= (1 << FRAME_RATE_AUTO | 1 << FRAME_RATE_7 | 1 << FRAME_RATE_15
-						| 1 << FRAME_RATE_20 | 1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),
+		.maximum	= (1 << FRAME_RATE_AUTO /*| 1 << FRAME_RATE_5 | 1 << FRAME_RATE_7 */|1 << FRAME_RATE_10  | 1 << FRAME_RATE_15
+						/*| 1 << FRAME_RATE_20*/ | 1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),		
 		.step		= 1,
-		.default_value	= FRAME_RATE_30,
+		.default_value	= FRAME_RATE_AUTO,
 	},
 
 	{
@@ -372,7 +372,7 @@ static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
 		.maximum	= CAM_VT_MODE_VOIP,
 		.step		= 1,
 		.default_value	= CAM_VT_MODE_3G,
-	},
+	},	
 
 	{
 		.id			= V4L2_CID_CAMERA_SENSOR_MODE,
@@ -382,8 +382,8 @@ static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
 		.maximum	= SENSOR_MOVIE,
 		.step		= 1,
 		.default_value	= SENSOR_CAMERA,
-	},
-
+	},	
+		
 };
 
 static int camdrv_ss_s5k4ecgx_enum_frameintervals(struct v4l2_subdev *sd,struct v4l2_frmivalenum *fival)
@@ -396,7 +396,7 @@ static int camdrv_ss_s5k4ecgx_enum_frameintervals(struct v4l2_subdev *sd,struct 
 		CAM_ERROR_PRINTK("%s: returning ERROR because index =%d !!!  \n",__func__,fival->index);
 		return -EINVAL;
 	}
-
+	
 	CAM_INFO_PRINTK("%s :  check w = %d h = %d \n",__func__,fival->width,fival->height);
 	fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
 
@@ -491,7 +491,20 @@ static long camdrv_ss_s5k4ecgx_ss_ioctl(struct v4l2_subdev *sd, unsigned int cmd
 #endif
 			 break;
 		}
-
+		case VIDIOC_SENSOR_G_OPTICAL_INFO:
+		{
+			 struct v4l2_sensor_optical_info *p= arg;
+       p->hor_angle.numerator = 512;
+       p->hor_angle.denominator = 10;
+       p->ver_angle.numerator = 394;
+       p->ver_angle.denominator = 10;
+       p->focus_distance[0] = 10;
+       p->focus_distance[1] = 120;
+       p->focus_distance[2] = -1;
+       p->focal_length.numerator = 354;
+       p->focal_length.denominator = 100;
+			break;	
+		}
 		default:
 			ret = -ENOIOCTLCMD;
 			break;
@@ -515,33 +528,39 @@ int camdrv_ss_s5k4ecgx_set_preview_start(struct v4l2_subdev *sd)
 	}
 
 	if (state->mode_switch == PICTURE_CAPTURE_TO_CAMERA_PREVIEW_RETURN) {
+
+	    CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);
+            err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
+		if (err < 0) {
+			CAM_ERROR_PRINTK( "%s :s5k4ecgx_ae_unlock_regs IS FAILED\n",__func__);
+			return -EIO;
+		}
+		
 		err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_preview_camera_regs, ARRAY_SIZE(s5k4ecgx_preview_camera_regs), "preview_camera_regs");
 		if (err < 0) {
 			CAM_ERROR_PRINTK( "%s :s5k4ecgx_preview_camera_regs IS FAILED\n",__func__);
 			return -EIO;
 		}
+
+		if (state->currentScene == SCENE_MODE_NIGHTSHOT) 
+			msleep(200);
+		else if (state->currentScene == SCENE_MODE_FIREWORKS)
+			msleep(800);
+		
 	}
 
 	if(state->mode_switch == CAMERA_PREVIEW_TO_CAMCORDER_PREVIEW)
 	{
-		err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_fps_25_regs, ARRAY_SIZE(s5k4ecgx_fps_25_regs), "fps_25_regs");
-		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s : s5k4ecgx_fps_25_regs is FAILED !!\n", __func__);
-			return -EIO;
-		}
+        if (state->currentScene != SCENE_MODE_NONE) {
+    		err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_none_regs, ARRAY_SIZE(s5k4ecgx_scene_none_regs), "scene_none_regs");
+    		if (err < 0) {
+    			CAM_ERROR_PRINTK( "%s :s5k4ecgx_scene_none_regs IS FAILED\n",__func__);
+    			return -EIO;
+    		}
+        }
 	}
 	else if(state->mode_switch == INIT_DONE_TO_CAMCORDER_PREVIEW)
 	{
-		err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_init_regs, ARRAY_SIZE(s5k4ecgx_init_regs), "init_regs");
-		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s :s5k4ecgx_init_regs IS FAILED\n",__func__);
-			return -EIO;
-		}
-		err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_fps_25_regs, ARRAY_SIZE(s5k4ecgx_fps_25_regs), "fps_25_regs");
-		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s : s5k4ecgx_fps_25_regs is FAILED !!\n", __func__);
-			return -EIO;
-		}
 	}
 	else if(state->mode_switch == CAMCORDER_PREVIEW_TO_CAMERA_PREVIEW)
 	{
@@ -550,12 +569,6 @@ int camdrv_ss_s5k4ecgx_set_preview_start(struct v4l2_subdev *sd)
 			CAM_ERROR_PRINTK( "%s :s5k4ecgx_preview_camera_regs IS FAILED\n",__func__);
 			return -EIO;
 		}
-	}
-
-	err = camdrv_ss_set_preview_size(sd);
-	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s : camdrv_ss_set_preview_size is FAILED !!\n", __func__);
-		return -EIO;
 	}
 
 	state->camera_flash_fire = 0;
@@ -569,70 +582,459 @@ int camdrv_ss_s5k4ecgx_set_preview_start(struct v4l2_subdev *sd)
 		}
 	}
 
-	atomic_set(&preview_going_on, 1);
-
-	if(camdrv_ss_s5k4ecgx_P_value_thread == NULL)
-	{
-		camdrv_ss_s5k4ecgx_P_value_thread = kthread_run(camdrv_ss_s5k4ecgx_P_value_thread_func, sd, "camdrv-ss-s5k4ecgx-P-value-thread");
-		if (IS_ERR(camdrv_ss_s5k4ecgx_P_value_thread))
-		{
-			CAM_ERROR_PRINTK( "%s : camdrv_ss_s5k4ecgx_P_value_thread create failed  !!\n", __func__);
-			return -EIO;
-		}
-	}
-
 	return 0;
 }
 
 
-
-static int camdrv_ss_s5k4ecgx_P_value_thread_func(void *data)
+static int camdrv_ss_s5k4ecgx_set_capture_start(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
-	struct v4l2_subdev *sd = (struct v4l2_subdev *)data;
-	allow_signal(SIGTERM);
-	set_current_state(TASK_INTERRUPTIBLE);
-	while(1)
-	{
-		msleep_interruptible(500);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camdrv_ss_state *state = to_state(sd);
+	int err = 0;
+	int light_state = CAM_NORMAL_LIGHT;
 
-		if(atomic_read(&preview_going_on) == 0)
-		{
-			CAM_ERROR_PRINTK("%s: exit the thread.. preview stopped .. \n",__func__);
-			break;
-		}
-		mutex_lock(&esd_and_P_lock);
-		CAM_ERROR_PRINTK("%s: check P Val \n",__func__);
-		/*
-		*
-		*DENIS TO ADD THE CODE FOR P-CHECK
-		*
-		*/
-		mutex_unlock(&esd_and_P_lock);
+	CAM_INFO_PRINTK( "%s Entered\n", __func__);
+
+	/* Set image size */
+	err = camdrv_ss_set_capture_size(sd);
+	if (err < 0) {
+		CAM_ERROR_PRINTK( "%s: camdrv_ss_set_capture_size not supported !!!\n", __func__);
+		return -EIO;
 	}
-	return 0;
-}
-int camdrv_ss_s5k4ecgx_set_preview_stop(struct v4l2_subdev *sd)
-{
-	atomic_set(&preview_going_on,0);
-	int err;
-	if(camdrv_ss_s5k4ecgx_P_value_thread)
-	{
-		CAM_ERROR_PRINTK("camdrv_ss_s5k4ecgx_set_preview_stop: send_sig to terminate P-Val thread...\n");
-		err = send_sig(SIGTERM, camdrv_ss_s5k4ecgx_P_value_thread, 1);
+
+	/* Set Snapshot registers */
+
+		err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_snapshot_normal_regs, ARRAY_SIZE(s5k4ecgx_snapshot_normal_regs), "snapshot_normal_regs");
 		if (err < 0) {
-			CAM_ERROR_PRINTK("camdrv_ss_s5k4ecgx_set_preview_stop error sending signal\n");
-			return -1;
+		CAM_ERROR_PRINTK( "%s : camdrv_ss_i2c_set_config_register failed  not supported !!!\n",  __func__);
+		return -EIO;
 		}
-		camdrv_ss_s5k4ecgx_P_value_thread = NULL;
-	}
+
+	return 0;
 }
+
+
+#if 1
+int camdrv_ss_s5k4ecgx_set_iso(struct v4l2_subdev *sd, int mode)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	int err = 0;
+
+
+	CAM_INFO_PRINTK( "%s :  value =%d wb_auto=%d, iso_auto=%d\n" , __func__, mode,wb_auto,iso_auto);
+
+	switch (mode) {
+	case ISO_AUTO:
+	{
+		iso_auto=1;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_iso_auto_regs), "iso_auto_regs");
+		
+		
+		break;
+	}
+	case ISO_50:
+	{
+		iso_auto=0;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_iso_50_regs, ARRAY_SIZE(s5k4ecgx_iso_50_regs), "iso_50_regs");
+	
+		
+		break;
+	}
+
+	case ISO_100:
+	{
+		iso_auto=0;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_iso_100_regs, ARRAY_SIZE(s5k4ecgx_iso_100_regs), "iso_100_regs");
+	
+		
+		break;
+	}
+	case ISO_200:
+	{
+		iso_auto=0;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_iso_200_regs, ARRAY_SIZE(s5k4ecgx_iso_200_regs), "iso_200_regs");
+	
+		
+		break;
+	}
+	case ISO_400:
+	{
+		iso_auto=0;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_iso_400_regs, ARRAY_SIZE(s5k4ecgx_iso_400_regs), "iso_400_regs");
+		
+		
+		break;
+	}
+
+
+	default:
+	{
+		CAM_ERROR_PRINTK( "%s  : default case supported !!!\n" , __func__);
+			break;
+        }			
+	} /* end of switch */
+
+	return err;
+}
+int camdrv_ss_s5k4ecgx_set_white_balance(struct v4l2_subdev *sd, int mode)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camdrv_ss_state *state = to_state(sd);
+	int err = 0;
+
+	CAM_INFO_PRINTK( "%s :  value =%d wb_auto=%d iso_auto=%d\n" , __func__, mode,wb_auto,iso_auto);
+
+	switch (mode) {
+	case WHITE_BALANCE_AUTO:
+	{
+		wb_auto=1;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_regs), "wb_auto_regs");
+
+		
+		break;
+	}
+
+	case WHITE_BALANCE_CLOUDY:
+	{
+		wb_auto=0;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_cloudy_regs, ARRAY_SIZE(s5k4ecgx_wb_cloudy_regs), "wb_cloudy_regs");
+
+		
+		break;
+	}
+
+
+	case WHITE_BALANCE_FLUORESCENT:
+	{
+		wb_auto=0;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_fluorescent_regs, ARRAY_SIZE(s5k4ecgx_wb_fluorescent_regs), "wb_fluorescent_regs");
+
+		
+		break;
+	}
+
+	case WHITE_BALANCE_CWF:
+	{
+		wb_auto=0;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		/*if (s5k4ecgx_wb_cwf_regs == 0)
+			CAM_ERROR_PRINTK( "%s  : wb_cwf_regs not supported !!!\n" , __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_cwf_regs, ARRAY_SIZE(s5k4ecgx_wb_cwf_regs), "wb_cwf_regs");
+		*/
+		
+		break;
+	}
+	case WHITE_BALANCE_DAYLIGHT:
+	{
+		wb_auto=0;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_daylight_regs, ARRAY_SIZE(s5k4ecgx_wb_daylight_regs), "wb_daylight_regs");
+
+		
+		break;
+	}
+	case WHITE_BALANCE_INCANDESCENT:
+	{
+		wb_auto=0;
+		if(wb_auto==1 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_iso_auto_regs), "wb_iso_auto_regs");
+		}else if(wb_auto==0 && iso_auto==1){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_auto_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_auto_regs), "wb_manual_iso_auto_regs");
+		}else if(wb_auto==1 &&iso_auto==0){
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_auto_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_auto_iso_manual_regs), "wb_auto_iso_manual_regs");
+		}else{
+			
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_manual_iso_manual_regs, ARRAY_SIZE(s5k4ecgx_wb_manual_iso_manual_regs), "wb_manual_iso_manual_regs");
+		}
+		
+			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_wb_incandescent_regs, ARRAY_SIZE(s5k4ecgx_wb_incandescent_regs), "wb_incandescent_regs");
+
+		break;
+	}
+
+	default:
+	{
+		CAM_ERROR_PRINTK( " %s : default not supported !!!\n" , __func__);
+		break;
+	}
+	}
+
+	state->currentWB = mode;
+
+	return err;
+}
+#endif
+//denis
+static int camdrv_ss_s5k4ecgx_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camdrv_ss_state *state = to_state(sd);
+	int err = 0;
+
+	CAM_INFO_PRINTK( "%s : value =%d\n", __func__, ctrl->value);
+#if 1
+	if (state->current_mode == PICTURE_MODE){
+		return 0;
+	}
+#endif	
+
+	switch (ctrl->value) {
+    	case SCENE_MODE_NONE:
+    	{
+    		err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_none_regs, ARRAY_SIZE(s5k4ecgx_scene_none_regs), "scene_none_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_PORTRAIT:
+    	{
+    		/* Metering-Center, EV0, WB-Auto, Sharp-1, Sat0, AF-Auto will be set in HAL layer */
+
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_portrait_regs, ARRAY_SIZE(s5k4ecgx_scene_portrait_regs), "scene_portrait_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_NIGHTSHOT:
+    	{
+			CAM_ERROR_PRINTK("night mode normal\n");
+    		err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_nightshot_regs, ARRAY_SIZE(s5k4ecgx_scene_nightshot_regs), "scene_nightshot_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_BACK_LIGHT:
+    	{
+    		/* Metering-Spot, EV0, WB-Auto, Sharp0, Sat0, AF-Auto will be set in HAL layer */
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_backlight_regs, ARRAY_SIZE(s5k4ecgx_scene_backlight_regs), "scene_backlight_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_LANDSCAPE:
+    	{
+    		/* Metering-Matrix, EV0, WB-Auto, Sharp+1, Sat+1, AF-Auto will be set in HAL layer */
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_landscape_regs, ARRAY_SIZE(s5k4ecgx_scene_landscape_regs), "scene_landscape_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_SPORTS:
+    	{
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_sports_regs, ARRAY_SIZE(s5k4ecgx_scene_sports_regs), "scene_sports_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_PARTY_INDOOR:
+    	{
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_party_indoor_regs, ARRAY_SIZE(s5k4ecgx_scene_party_indoor_regs), "scene_party_indoor_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_BEACH_SNOW:
+    	{
+    		/* Metering-Center, EV+1, WB-Auto, Sharp0, Sat+1, AF-Auto will be set in HAL layer */
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_beach_snow_regs, ARRAY_SIZE(s5k4ecgx_scene_beach_snow_regs), "scene_beach_snow_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_SUNSET:
+    	{
+    		/* Metering-Center, EV0, WB-daylight, Sharp0, Sat0, AF-Auto will be set in HAL layer */
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_sunset_regs, ARRAY_SIZE(s5k4ecgx_scene_sunset_regs), "scene_sunset_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_DUSK_DAWN:
+    	{
+    		/* Metering-Center, EV0, WB-fluorescent, Sharp0, Sat0, AF-Auto will be set in HAL layer */
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_duskdawn_regs, ARRAY_SIZE(s5k4ecgx_scene_duskdawn_regs), "scene_duskdawn_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_FALL_COLOR:
+    	{
+    		/* Metering-Center, EV0, WB-Auto, Sharp0, Sat+2, AF-Auto will be set in HAL layer */
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_fall_color_regs, ARRAY_SIZE(s5k4ecgx_scene_fall_color_regs), "scene_fall_color_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_FIREWORKS:
+    	{
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_fireworks_regs, ARRAY_SIZE(s5k4ecgx_scene_fireworks_regs), "scene_fireworks_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_TEXT:
+    	{
+    		/* Metering-Center, EV0, WB-Auto, Sharp+2, Sat0, AF-Macro will be set in HAL layer */
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_text_regs, ARRAY_SIZE(s5k4ecgx_scene_text_regs), "scene_text_regs");
+    		break;
+    	}
+
+    	case SCENE_MODE_CANDLE_LIGHT:
+    	{
+    		/* Metering-Center, EV0, WB-Daylight, Sharp0, Sat0, AF-Auto will be set in HAL layer */
+   			err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_candle_light_regs, ARRAY_SIZE(s5k4ecgx_scene_candle_light_regs), "scene_candle_light_regs");
+    		break;
+    	}
+
+    	default:
+    	{
+    		CAM_ERROR_PRINTK( "%s default not supported !!!\n", __func__);
+    		err = -EINVAL;
+    		break;
+    	}
+	}
+
+	state->currentScene = ctrl->value;
+
+	return err;
+}
+
 
 static unsigned char pBurstData[MAX_BUFFER];
 
-static int camdrv_ss_s5k4ecgx_i2c_set_data_burst(struct i2c_client *client,
+static int camdrv_ss_s5k4ecgx_i2c_set_data_burst(struct i2c_client *client, 
                                          regs_t reg_buffer[],int num_of_regs,char *name)
 {
-	struct i2c_msg msg = {client->addr, 0, 0, 0};
+	struct i2c_msg msg = {client->addr, 0, 0, 0};	
     unsigned short subaddr=0, data_value=0;
 	
 	int next_subaddr;
@@ -655,11 +1057,11 @@ static int camdrv_ss_s5k4ecgx_i2c_set_data_burst(struct i2c_client *client,
                 if(index == 0)
                 {
                     pBurstData[index++] = subaddr >> 8;
-                    pBurstData[index++] = subaddr & 0xFF;
-                }
+                    pBurstData[index++] = subaddr & 0xFF;	
+                }	
 
                 pBurstData[index++] = data_value >> 8;
-                pBurstData[index++] = data_value & 0xFF;
+                pBurstData[index++] = data_value & 0xFF;	
 
                 // Get Next Address
                 if((i+1) == num_of_regs)  // The last code
@@ -673,17 +1075,15 @@ static int camdrv_ss_s5k4ecgx_i2c_set_data_burst(struct i2c_client *client,
 
                 // If next subaddr is different from the current subaddr
                 // In other words, if burst mode ends, write the all of the burst datas which were gathered until now
-                if(next_subaddr != subaddr)
+                if(next_subaddr != subaddr) 
                 {
                     msg.buf = pBurstData;
                     msg.len = index;
 
-                  //  CAM_INFO_PRINTK("i2c burst index : %d, 0x%x \n", index, *pBurstData);
-
                     err = i2c_transfer(client->adapter, &msg, 1);
                 	if(err < 0)
                 	{
-                		CAM_ERROR_PRINTK("[%s: %d] i2c burst write fail\n", __FILE__, __LINE__);
+                		CAM_ERROR_PRINTK("[%s: %d] i2c burst write fail\n", __FILE__, __LINE__);	
                 		return -EIO;
                 	}
 
@@ -696,9 +1096,9 @@ static int camdrv_ss_s5k4ecgx_i2c_set_data_burst(struct i2c_client *client,
             case DELAY_SEQ:
             {
 				if(data_value == DELAY_SEQ)
-		   			break;
+		   			break;				
 
-				CAM_ERROR_PRINTK("%s : added sleep for  = %d msec in %s !PLEASE CHECK !!! \n", __func__,data_value,name);
+//				CAM_ERROR_PRINTK("%s : added sleep for  = %d msec in %s !PLEASE CHECK !!! \n", __func__,data_value,name);
                 msleep(data_value);
                 break;
             }
@@ -708,14 +1108,14 @@ static int camdrv_ss_s5k4ecgx_i2c_set_data_burst(struct i2c_client *client,
             case 0x002A:
             default:
             {
-                err = camdrv_ss_i2c_write_4_bytes(client, subaddr, data_value);
+				      err = camdrv_ss_i2c_write_4_bytes(client, subaddr, data_value);
             	if(err < 0)
             	{
             		CAM_ERROR_PRINTK("%s :i2c transfer failed ! \n", __func__);
             		return -EIO;
             	}
             	break;
-            }
+            }            
         }
     }
 #endif
@@ -741,7 +1141,7 @@ static void camdrv_ss_AAT_flash_write_data(unsigned char count)
     {
         if(count)
         {
-            do
+            do 
             {
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
                 udelay(AAT_PULS_LO_TIME);
@@ -757,7 +1157,7 @@ static void camdrv_ss_AAT_flash_write_data(unsigned char count)
     {
         if(count)
         {
-            do
+            do 
             {
                 gpio_set_value(GPIO_CAM_FLASH_SET, 0);
                 udelay(AAT_PULS_LO_TIME);
@@ -769,14 +1169,14 @@ static void camdrv_ss_AAT_flash_write_data(unsigned char count)
             udelay(AAT_LATCH_TIME);
         }
     }
-
+    
     local_irq_restore(flags);
 }
 #endif
 
 static float camdrv_ss_s5k4ecgx_get_exposureTime(struct v4l2_subdev *sd)
 {
-    struct i2c_client *client = v4l2_get_subdevdata(sd);
+    struct i2c_client *client = v4l2_get_subdevdata(sd);	
     unsigned short read_value1 = 0, read_value2 = 0;
     int exposureTime = 0;
 
@@ -788,7 +1188,11 @@ static float camdrv_ss_s5k4ecgx_get_exposureTime(struct v4l2_subdev *sd)
 
     exposureTime = (int)read_value2;
     exposureTime = (exposureTime << 16) | (read_value1 & 0xFFFF);
-    return ((exposureTime * 1000) / 400); // us
+//    return ((exposureTime * 1000) / 400); // us
+    return ((1000 * 400)/exposureTime ); // us
+
+ 
+
 }
 //aska add
 static int camdrv_ss_s5k4ecgx_get_nightmode(struct v4l2_subdev *sd)
@@ -797,51 +1201,81 @@ static int camdrv_ss_s5k4ecgx_get_nightmode(struct v4l2_subdev *sd)
 };
 static int camdrv_ss_s5k4ecgx_get_iso_speed_rate(struct v4l2_subdev *sd)
 {
-#if 0
-    struct i2c_client *client = v4l2_get_subdevdata(sd);
-    unsigned short read_value = 0;
-    int GainValue = 0;
-    int isospeedrating = 100;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camdrv_ss_state *state = to_state(sd);
+	
+	unsigned short read_value1 = 0, read_value2 = 0;
+	unsigned short  GainValue = 0;
+	int isospeedrating = 100;
 	int rows_num_=0;
 
-    camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
-    camdrv_ss_i2c_write_4_bytes(client, 0x002C, 0x7000);
-    camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x2A18);
-    camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value);
+	camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
+	camdrv_ss_i2c_write_4_bytes(client, 0x002C, 0x7000);
+	camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x2BC4);
+	camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value1);
+	camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value2);
 
-    GainValue = ((read_value * 10) / 256);
+	CAM_INFO_PRINTK(" camdrv_ss_s5k4ecgx_get_iso_speed_rate read_value1=0x%x, read_value2=0x%x, iso_auto=%d \n", read_value1, read_value2 , iso_auto);
+	if(iso_auto) {
+		GainValue = ( (read_value1 * read_value2) / 256 )/2 ;
+		CAM_INFO_PRINTK(" camdrv_ss_s5k4ecgx_get_iso_speed_rate ISO Auto GainValue=0x%x\n", GainValue );
 
-    if(GainValue < 19)
-    {
-        isospeedrating = 50;
-    }
-    else if(GainValue < 23)
-    {
-        isospeedrating = 100;
-    }
-    else if(GainValue < 28)
-    {
-        isospeedrating = 200;
-    }
-    else
-    {
-        isospeedrating = 400;
-    }
-	   return isospeedrating;
-#endif
-	/* no implementation yet */
-	return -1;
+		if(GainValue < 0xC0)
+		{
+			isospeedrating = 50;
+		}
+		else if(GainValue < 0x21F)
+		{
+			isospeedrating = 100;
+		}
+		else if(GainValue < 0x37F)
+		{
+			isospeedrating = 200;
+		}
+		else
+		{
+			isospeedrating = 400;
+		}
+	} else {
+		GainValue = read_value1 ;
+		CAM_INFO_PRINTK(" camdrv_ss_s5k4ecgx_get_iso_speed_rate ISO Manual GainValue=0x%x\n", GainValue );
 
+		if(GainValue < 0x101)
+		{
+			isospeedrating = 50;
+		}
+		else if(GainValue < 0x23F)
+		{
+			isospeedrating = 100;
+		}
+		else if(GainValue < 0x37F)
+		{
+			isospeedrating = 200;
+		}
+		else
+		{
+			isospeedrating = 400;
+		}
+	}
+
+	if (state->currentScene == SCENE_MODE_FIREWORKS)   //denis : set iso value for the specific scene mode
+		isospeedrating = 50;
+	else if (state->currentScene == SCENE_MODE_BEACH_SNOW)
+		isospeedrating = 50;
+	else if (state->currentScene == SCENE_MODE_PARTY_INDOOR)
+		isospeedrating = 200;
+
+	return isospeedrating;
 }
 
 static int camdrv_ss_s5k4ecgx_get_ae_stable_status(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
-{
+{   
 #if 0
     struct i2c_client *client = v4l2_get_subdevdata(sd);
     int err = 0;
     unsigned short AE_stable = 0x0000;
 	int rows_num_=0;
-
+    
     //Check AE stable
     err = camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
     err += camdrv_ss_i2c_write_4_bytes(client, 0x002C, 0x7000);
@@ -864,19 +1298,20 @@ static int camdrv_ss_s5k4ecgx_get_ae_stable_status(struct v4l2_subdev *sd, struc
 #endif
 
     return 0;
-}
-// end
+}        
+// end 
 
 
 static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
-{
+{ 
     struct i2c_client *client = v4l2_get_subdevdata(sd);
+    struct camdrv_ss_state *state = to_state(sd);
     int err = 0;
     unsigned short usReadData =0 ;
 
     CAM_INFO_PRINTK("camdrv_ss_s5k4ecgx_get_auto_focus_status E \n");
 	if(!first_af_status)
-	{
+    {
         err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_get_1st_af_search_status,ARRAY_SIZE(s5k4ecgx_get_1st_af_search_status),"get_1st_af_search_status");
         if(err < 0)
         {
@@ -891,7 +1326,7 @@ static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, stru
             ctrl->value = CAMERA_AF_STATUS_FAILED;
 			return -EFAULT;
         }
-
+        
         CAM_INFO_PRINTK(" 1st check status, usReadData : 0x%x\n", usReadData );
 
         switch( usReadData & 0xFF )
@@ -904,15 +1339,15 @@ static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, stru
                 CAM_INFO_PRINTK("1st CAM_AF_SUCCESS\n " );
                  ctrl->value = CAMERA_AF_STATUS_SEARCHING;
 				 first_af_status = true;
-				 break;
-            default:
+            break;
+            default:                    
                 CAM_ERROR_PRINTK("1st CAM_AF_FAIL.\n ");
                 ctrl->value = CAMERA_AF_STATUS_FAILED;
-				CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);
-				err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
+//        	CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);  //to maintain AE lock in case of af fail
+//        	err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
 				return 0;
     	}
-	}
+    }
 
     if (first_af_status)
     {
@@ -940,9 +1375,10 @@ static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, stru
             CAM_INFO_PRINTK("2nd CAM_AF_SUCCESS, \n ");
             ctrl->value = CAMERA_AF_STATUS_FOCUSED;
 			first_af_status = false;
-	    	CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);
-            err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
-
+	
+	if (state->currentScene == SCENE_MODE_NIGHTSHOT) {
+		msleep(200);
+	}
             return 0;
         }
 		else
@@ -952,80 +1388,172 @@ static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, stru
 		}
 
     }
-	return 0;
+    	
+    	
+    return 0;
 }
 
 
 static int camdrv_ss_s5k4ecgx_get_touch_focus_status(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
+
+
+    struct i2c_client *client = v4l2_get_subdevdata(sd);
+    int err = 0;
+    unsigned short usReadData =0 ;
+
     CAM_INFO_PRINTK("camdrv_ss_s5k4ecgx_get_touch_focus_status E \n");
- 	return camdrv_ss_s5k4ecgx_get_auto_focus_status(sd, ctrl);
+	if(!first_af_status)
+    {
+        err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_get_1st_af_search_status,ARRAY_SIZE(s5k4ecgx_get_1st_af_search_status),"get_1st_af_search_status");
+        if(err < 0)
+        {
+            CAM_ERROR_PRINTK("%s: I2C failed during s5k4ecgx_get_1st_af_search_status \n", __func__);
+            ctrl->value = CAMERA_AF_STATUS_FAILED;
+			return -EFAULT;
+        }
+        err = camdrv_ss_i2c_read_2_bytes(client, 0x0F12,&usReadData);
+        if(err < 0)
+        {
+            CAM_ERROR_PRINTK("%s: I2C failed during AF \n", __func__);
+            ctrl->value = CAMERA_AF_STATUS_FAILED;
+			return -EFAULT;
+        }
+        
+        CAM_INFO_PRINTK(" 1st check status, usReadData : 0x%x\n", usReadData );
+
+        switch( usReadData & 0xFF )
+    	{
+            case 1:
+                CAM_ERROR_PRINTK( "1st CAM_AF_STATUS_PROGRESS...\n " );
+                ctrl->value =CAMERA_AF_STATUS_SEARCHING;
+				return 0;
+            case 2:
+                CAM_INFO_PRINTK("1st CAM_AF_SUCCESS\n " );
+                 ctrl->value = CAMERA_AF_STATUS_SEARCHING;
+				 first_af_status = true;
+            break;
+            default:                    
+                CAM_ERROR_PRINTK("1st CAM_AF_FAIL.\n ");
+                ctrl->value = CAMERA_AF_STATUS_FAILED;
+				return 0;
+    	}
+    }
+
+    if (first_af_status)
+    {
+        err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_get_2nd_af_search_status,ARRAY_SIZE(s5k4ecgx_get_2nd_af_search_status),"get_2nd_af_search_status");
+		if(err < 0)
+        {
+            CAM_ERROR_PRINTK("%s: I2C failed during s5k4ecgx_get_2nd_af_search_status \n", __func__);
+            ctrl->value = CAMERA_AF_STATUS_FAILED;
+			first_af_status = false;
+			return -EFAULT;
+        }
+        err = camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &usReadData);
+        if(err < 0)
+        {
+            CAM_ERROR_PRINTK("%s: I2C failed during AF \n", __func__);
+            ctrl->value = CAMERA_AF_STATUS_FAILED;
+			first_af_status = false;
+            return -EFAULT;
+        }
+
+        CAM_INFO_PRINTK(" 2nd check status, usReadData : 0x%x\n", usReadData );
+
+        if (!(usReadData & 0xff00))
+        {
+            CAM_INFO_PRINTK("2nd CAM_AF_SUCCESS, \n ");
+            ctrl->value = CAMERA_AF_STATUS_FOCUSED;
+			first_af_status = false;
+	
+            return 0;
+        }
+		else
+		{
+			CAM_ERROR_PRINTK("2nd CAM_AF_STATUS_PROGRESS.... \n ");
+		    ctrl->value = CAMERA_AF_STATUS_SEARCHING;
+		}
+
+    }
+   	
+    	
+    return 0;
 }
 
 
 static int camdrv_ss_s5k4ecgx_set_auto_focus(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
-    struct i2c_client *client = v4l2_get_subdevdata(sd);
-	  struct camdrv_ss_state *state = to_state(sd);
-    int err = 0;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camdrv_ss_state *state = to_state(sd);
+	int err = 0;
 
-    mutex_lock(&af_cancel_op);
+	mutex_lock(&af_cancel_op);
 	CAM_INFO_PRINTK("camdrv_ss_s5k4ecgx_set_auto_focus E \n");
 
 	first_af_status = false;
 
-    // Initialize fine search value.
-    state->bStartFineSearch = false;
+	// Initialize fine search value.
+	state->bStartFineSearch = false;
 
-    if(ctrl->value == AUTO_FOCUS_ON)
-    {
-	    CAM_INFO_PRINTK("%s, AUTFOCUS ON\n", __func__ );
+	if(ctrl->value == AUTO_FOCUS_ON) 	{
+		CAM_INFO_PRINTK("%s, AUTFOCUS ON\n", __func__ );
 
-        CAM_INFO_PRINTK("%s , ae lock\n ",__func__);
-        err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_lock_regs, ARRAY_SIZE(s5k4ecgx_ae_lock_regs), "ae_lock_regs");
-        CAM_INFO_PRINTK("%s , AF start\n ",__func__);
-	    err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_single_af_start_regs, ARRAY_SIZE(s5k4ecgx_single_af_start_regs),"single_af_start_regs");
+		CAM_INFO_PRINTK("%s , ae lock\n ",__func__);
+		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_lock_regs, ARRAY_SIZE(s5k4ecgx_ae_lock_regs), "ae_lock_regs");
+		CAM_INFO_PRINTK("%s , AF start\n ",__func__);
+		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_single_af_start_regs, ARRAY_SIZE(s5k4ecgx_single_af_start_regs),"single_af_start_regs");
 
 		if(err < 0)
-    	{
-    		CAM_ERROR_PRINTK("%s : i2c failed !!! \n", __func__);
-    		mutex_unlock(&af_cancel_op);
-    		return -EIO;
-    	}
+		{
+			CAM_ERROR_PRINTK("%s : i2c failed !!! \n", __func__);
+			mutex_unlock(&af_cancel_op);
+			return -EIO;
+		}
+	} else if(ctrl->value == AUTO_FOCUS_OFF) {
+		CAM_INFO_PRINTK("%s :  AUTFOCUS OFF , af_mode : %d\n", __func__, state->af_mode);
+        
+		state->camera_flash_fire = 0;
+		state->camera_af_flash_checked = 0;
+		
+		if (state->af_mode == FOCUS_MODE_AUTO) {
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_single_af_stop_regs,ARRAY_SIZE(s5k4ecgx_single_af_stop_regs),"single_af_stop_regs");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		} else if (state->af_mode == FOCUS_MODE_MACRO) {
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_macro_af_stop_regs,ARRAY_SIZE(s5k4ecgx_macro_af_stop_regs),"macro_af_stop_regs");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		}
 
-    }
-    else if(ctrl->value == AUTO_FOCUS_OFF)
-    {
+		CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);
+		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
+		 
+		msleep(150);  // need to add more delay in case of night or fireworks mode : 300ms
+	}
 
-		CAM_INFO_PRINTK("%s :  AUTFOCUS OFF  \n", __func__);
+	mutex_unlock(&af_cancel_op);
 
-        state->camera_flash_fire = 0;
-        state->camera_af_flash_checked = 0;
-		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_single_af_stop_regs,ARRAY_SIZE(s5k4ecgx_single_af_stop_regs),"single_af_stop_regs");
-		 if(err < 0)
-    	 {
-    		CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
-    		mutex_unlock(&af_cancel_op);
-    		return -EIO;
-    	 }
-        msleep(150);  // need to add more delay in case of night or fireworks mode : 300ms
-
-    }
-
-    mutex_unlock(&af_cancel_op);
-
-    return 0;
+	return 0;
 }
 
 
-static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_touch_af touch_af, v4l2_touch_area *touch_area)
+static int camdrv_ss_s5k4ecgx_set_touch_focus_area(struct v4l2_subdev *sd, enum v4l2_touch_af touch_af, v4l2_touch_area *touch_area)
 {
 	struct camdrv_ss_state *state = to_state(sd);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	unsigned short FirstWinStartX, FirstWinStartY, SecondWinStartX, SecondWinStartY;
-	unsigned short FirstWinEndX, FirstWinEndY, ConvFirstWinStartX, ConvFirstWinStartY;
-	unsigned short SecondWinEndX, SecondWinEndY, ConvSecondWinStartX, ConvSecondWinStartY;
+    unsigned short FirstWinEndX, FirstWinEndY, ConvFirstWinStartX, ConvFirstWinStartY;
+    unsigned short SecondWinEndX, SecondWinEndY, ConvSecondWinStartX, ConvSecondWinStartY;
 	unsigned short DefaultFirstWinStartX, DefaultFirstWinStartY, DefaultSecondWinStartX, DefaultSecondWinStartY;
 	int preview_width, preview_height;
     struct v4l2_control ctrl = {0};
@@ -1035,7 +1563,7 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_
 
 	preview_width = state->pix.width;
 	preview_height = state->pix.height;
-
+	
 	DefaultFirstWinStartX = preview_width - ((preview_width - AF_OUTER_WINDOW_WIDTH) / 2); /* 640x480 => 160, 800x480 => 240 */
 	DefaultFirstWinStartY = preview_height - ((preview_height - AF_OUTER_WINDOW_HEIGHT) / 2); /* 640x480 => 107, 800x480 => 107 */
 	DefaultSecondWinStartX = preview_width - ((preview_width - AF_INNER_WINDOW_WIDTH) / 2); /* 640x480 => 248, 800x480 => 160 */
@@ -1044,7 +1572,7 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_
 	CAM_INFO_PRINTK("[%s:%d] preview_width %d, preview_height %d\n",__func__, __LINE__, preview_width, preview_height);
 	CAM_INFO_PRINTK("[%s:%d] DefaultFirstWinStartX %d, DefaultFirstWinStartY %d\n",__func__, __LINE__, DefaultFirstWinStartX, DefaultFirstWinStartY);
 	CAM_INFO_PRINTK("[%s:%d] DefaultSecondWinStartX %d, DefaultSecondWinStartY %d\n",__func__, __LINE__,DefaultSecondWinStartX ,DefaultSecondWinStartY );
-
+	
 
 	/* value 0 is Touch AF Stop, 1 is Touch AF start */
 	if(touch_af == TOUCH_AF_STOP)	{ /* AF stop */
@@ -1053,15 +1581,13 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_
 		camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x0294);
 		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (unsigned short)((DefaultFirstWinStartX << 10) / preview_width)); /* FstWinStartX */
 		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (unsigned short)((DefaultFirstWinStartY << 10) / preview_height)); /* FstWinStartY */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (320 << 10) / preview_width  ); /* FstWinSizeX : 320 */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (266 << 10) / preview_height );  /* FstWinSizeY : 266 */
+		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (AF_OUTER_WINDOW_WIDTH << 10) / preview_width  ); /* FstWinSizeX : 320 */
+		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (AF_OUTER_WINDOW_HEIGHT << 10) / preview_height );  /* FstWinSizeY : 266 */
 		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (unsigned short)((DefaultSecondWinStartX << 10) / preview_width)); /* ScndWinStartX */
 		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (unsigned short)((DefaultSecondWinStartY << 10) / preview_height)); /* ScndWinStartY */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (143 << 10) / preview_width  ); /* ScndWinSizeX : 143 */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (143 << 10) / preview_height ); /* ScndWinSizeY : 143  */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0001); /* WinSizesUpdated */
-
-        ctrl.value = AUTO_FOCUS_OFF;
+		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (AF_INNER_WINDOW_WIDTH << 10) / preview_width  ); /* ScndWinSizeX : 143 */
+		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (AF_INNER_WINDOW_HEIGHT << 10) / preview_height ); /* ScndWinSizeY : 143  */
+		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0001); /* WinSizesUpdated */		
 	}
 	else if(touch_af == TOUCH_AF_START) { /* AF start */
         // Prevent divided-by-zero.
@@ -1070,200 +1596,121 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_
             return -EIO;
         }
 
-		FirstWinStartX = SecondWinStartX = touch_area->leftTopX;
-		FirstWinStartY = SecondWinStartY = touch_area->leftTopY;
-		CAM_INFO_PRINTK("[%s:%d]touch X %d, touch Y %d\n",__func__, __LINE__,  FirstWinStartX, FirstWinStartY);
+        SecondWinStartX = touch_area->leftTopX - ( (AF_INNER_WINDOW_WIDTH - touch_area->rightBottomX) / 2 );
+        if (SecondWinStartX < 0)
+            SecondWinStartX = 0;
+        if (SecondWinStartX+AF_INNER_WINDOW_WIDTH > preview_width)
+            SecondWinStartX = preview_width-AF_INNER_WINDOW_WIDTH-1;
 
-		// AF Position(Round Down)
-		if(FirstWinStartX > AF_OUTER_WINDOW_WIDTH/2) {
-			FirstWinStartX -= AF_OUTER_WINDOW_WIDTH/2;
+        SecondWinStartY = touch_area->leftTopY - ( (AF_INNER_WINDOW_HEIGHT- touch_area->rightBottomY) / 2 );
+        if (SecondWinStartY < 0)
+            SecondWinStartY = 0;
+        if (SecondWinStartY+AF_INNER_WINDOW_HEIGHT > preview_height)
+            SecondWinStartY = preview_height-AF_INNER_WINDOW_HEIGHT-1;
 
-			if(FirstWinStartX + AF_OUTER_WINDOW_WIDTH > preview_width) {
-				CAM_ERROR_PRINTK( "%s: X Position Overflow : [%d, %d] \n", __func__, FirstWinStartX, AF_OUTER_WINDOW_WIDTH);
-
-				FirstWinStartX = preview_width - AF_OUTER_WINDOW_WIDTH - 1;
-        }
-		}
-		else
+        FirstWinStartX = touch_area->leftTopX - ( (AF_OUTER_WINDOW_WIDTH - touch_area->rightBottomX) / 2 );
+        if (FirstWinStartX < 0)
 			FirstWinStartX = 0;
-
-
-		if(FirstWinStartY > AF_OUTER_WINDOW_HEIGHT/2)	{
-			FirstWinStartY -= AF_OUTER_WINDOW_HEIGHT/2;
-
-			if(FirstWinStartY + AF_OUTER_WINDOW_HEIGHT > preview_height) {
-				CAM_ERROR_PRINTK( "%s: Y Position Overflow : [%d, %d] \n", __func__, FirstWinStartY, AF_OUTER_WINDOW_HEIGHT);
-
-				FirstWinStartY = preview_height - AF_OUTER_WINDOW_HEIGHT - 1;
-        }
-        }
-        else
+        if (FirstWinStartX+AF_OUTER_WINDOW_WIDTH > preview_width)
+            FirstWinStartX = preview_width-AF_OUTER_WINDOW_WIDTH-1;
+        
+        FirstWinStartY = touch_area->leftTopY - ( (AF_OUTER_WINDOW_HEIGHT- touch_area->rightBottomY) / 2 );
+        if (FirstWinStartY < 0)
 			FirstWinStartY = 0;
-                CAM_INFO_PRINTK("[%s:%d] FirstWinStartX %d, FirstWinStartY %d\n",__func__, __LINE__, FirstWinStartX, FirstWinStartY);
+        if (FirstWinStartY+AF_OUTER_WINDOW_HEIGHT > preview_height)
+            FirstWinStartY = preview_height-AF_OUTER_WINDOW_HEIGHT-1;
 
-		// AF Position(Round Down)
-		if(SecondWinStartX > AF_INNER_WINDOW_WIDTH/2) {
-			SecondWinStartX -= AF_INNER_WINDOW_WIDTH/2;
 
-			if(SecondWinStartX + AF_INNER_WINDOW_WIDTH > preview_width) {
-				CAM_ERROR_PRINTK( "%s: X Position Overflow : [%d, %d] \n", __func__, SecondWinStartX, AF_INNER_WINDOW_WIDTH);
+		CAM_INFO_PRINTK("[%s:%d]leftTopX %d, leftTopY %d, rightBottomX %d, rightBottomY %d\n",__func__, __LINE__,  
+                touch_area->leftTopX,touch_area->leftTopY, touch_area->rightBottomX, touch_area->rightBottomY);
+		CAM_INFO_PRINTK("[%s:%d]SecondWinStartX %d, SecondWinStartY %d\n",__func__, __LINE__,  SecondWinStartX, SecondWinStartY);
+		CAM_INFO_PRINTK("[%s:%d]FirstWinStartX %d, FirstWinStartY %d\n",__func__, __LINE__,  FirstWinStartX, FirstWinStartY);
+            
+            
+		ConvFirstWinStartX = (unsigned short)((FirstWinStartX << 10) / preview_width);
+		ConvFirstWinStartY = (unsigned short)((FirstWinStartY << 10) / preview_height);
 
-				SecondWinStartX = preview_width - AF_INNER_WINDOW_WIDTH - 1;
-        }
-        }
-		else
-			SecondWinStartX = 0;
+		ConvSecondWinStartX = (unsigned short)((SecondWinStartX << 10) / preview_width);
+		ConvSecondWinStartY = (unsigned short)((SecondWinStartY << 10) / preview_height);
 
-		if(SecondWinStartY > AF_INNER_WINDOW_HEIGHT/2)	{
-			SecondWinStartY -= AF_INNER_WINDOW_HEIGHT/2;
-
-			if(SecondWinStartY + AF_INNER_WINDOW_HEIGHT > preview_height) {
-				CAM_ERROR_PRINTK( "%s: Y Position Overflow : [%d, %d] \n", __func__, SecondWinStartY, AF_INNER_WINDOW_HEIGHT);
-
-				SecondWinStartY = preview_height - AF_INNER_WINDOW_HEIGHT - 1;
-        }
-        }
-        else
-			SecondWinStartY = 0;
-                CAM_INFO_PRINTK("[%s:%d] SecondWinStartX %d, SecondWinStartY %d\n",__func__, __LINE__, SecondWinStartX, SecondWinStartY);
-
-                // if use mirror/flip, need this code.
-                FirstWinEndX = FirstWinStartX + AF_OUTER_WINDOW_WIDTH;
-                FirstWinEndY = FirstWinStartY + AF_OUTER_WINDOW_HEIGHT;
-
-                if(preview_width - FirstWinEndX <= 0)
-                    ConvFirstWinStartX = 0;
-                else
-                    ConvFirstWinStartX = preview_width - FirstWinEndX -1;
-
-                if(preview_height - FirstWinEndY <= 0)
-                    ConvFirstWinStartY = 0;
-                else
-                    ConvFirstWinStartY = preview_height - FirstWinEndY -1;
-                CAM_INFO_PRINTK("[%s:%d] Conv::FirstWinStartX %d, FirstWinStartY %d\n",__func__, __LINE__, ConvFirstWinStartX, ConvFirstWinStartY);
-
-                SecondWinEndX = SecondWinStartX + AF_INNER_WINDOW_WIDTH;
-                SecondWinEndY = SecondWinStartY + AF_INNER_WINDOW_HEIGHT;
-
-                if(preview_width - SecondWinEndX <= 0)
-                    ConvSecondWinStartX = 0;
-                else
-                    ConvSecondWinStartX = preview_width - SecondWinEndX -1;
-
-                if(preview_height - SecondWinEndY <= 0)
-                    ConvSecondWinStartY = 0;
-                else
-                    ConvSecondWinStartY = preview_height - SecondWinEndY -1;
-                CAM_INFO_PRINTK("[%s:%d] Conv::ConvSecondWinStartX %d, ConvSecondWinStartY %d\n",__func__, __LINE__, ConvSecondWinStartX, ConvSecondWinStartY);
-
-		ConvFirstWinStartX = (unsigned short)((ConvFirstWinStartX << 10) / preview_width);
-		ConvFirstWinStartY = (unsigned short)((ConvFirstWinStartY << 10) / preview_height);
-
-		//SecondWinStartX = ConvFirstWinStartX + 140;
-		//SecondWinStartY = ConvFirstWinStartY + 131;
-		ConvSecondWinStartX = (unsigned short)((ConvSecondWinStartX << 10) / preview_width);
-		ConvSecondWinStartY = (unsigned short)((ConvSecondWinStartY << 10) / preview_height);
-
+		CAM_INFO_PRINTK("[%s:%d]ConvSecondWinStartX %d, ConvSecondWinStartY %d\n",__func__, __LINE__,  ConvSecondWinStartX, ConvSecondWinStartY);
+		CAM_INFO_PRINTK("[%s:%d]ConvFirstWinStartX %d, ConvFirstWinStartY %d\n",__func__, __LINE__,  ConvFirstWinStartX, ConvFirstWinStartY);
+			
 		camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
 		camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
 		camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x0294);
 		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, ConvFirstWinStartX); /* FstWinStartX */
 		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, ConvFirstWinStartY); /* FstWinStartY */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (320 << 10) / preview_width  ); /* FstWinSizeX : 320 */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (266 << 10) / preview_height );  /* FstWinSizeY : 266 */
+		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (AF_OUTER_WINDOW_WIDTH << 10) / preview_width  ); /* FstWinSizeX : 320 */
+		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (AF_OUTER_WINDOW_HEIGHT << 10) / preview_height );  /* FstWinSizeY : 266 */
 		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, ConvSecondWinStartX); /* ScndWinStartX */
 		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, ConvSecondWinStartY); /* ScndWinStartY */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (72 << 10) / preview_width  ); /* ScndWinSizeX : 72 */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (143 << 10) / preview_height ); /* ScndWinSizeY : 143  */
+		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (AF_INNER_WINDOW_WIDTH << 10) / preview_width  ); /* ScndWinSizeX : 72 */
+		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, (AF_INNER_WINDOW_HEIGHT << 10) / preview_height ); /* ScndWinSizeY : 143  */
 		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0001); /* WinSizesUpdated */
-
-//		state->touch_ae_af_state = 1;
-
-		/* Are we need "Touch AE Weight"? */
-		/* FIXME */
-
-        ctrl.value = AUTO_FOCUS_ON;
-
     }
-
-    msleep(100);
-
-    err = camdrv_ss_s5k4ecgx_set_auto_focus(sd, &ctrl);
+}
 
 
-#if 0 //touch_AE
-    else if(value == 2){ /* stop touch AE */
-#if 0
-		camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
-		camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
-		camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x395C);
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0000); /* FDA_bUseFaceAlg, Touched AE&AF support on/off */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0000); /* FDA_bUseConfigChange, Change config */
+static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_touch_af touch_af, v4l2_touch_area *touch_area)
+{
+	struct camdrv_ss_state *state = to_state(sd);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
-		state->touch_ae_af_state = 0;
-#endif
-	} else if(value == 3){ /* start touch AE */
+    int err = 0;
 
-		unsigned int aeX = 0, aeY = 0;
+    mutex_lock(&af_cancel_op);
+	CAM_INFO_PRINTK("camdrv_ss_s5k4ecgx_set_touch_focus E \n");
 
-		aeX = state->position.x;
-		aeY = state->position.y;
+	first_af_status = false;
 
-		// AE Position(Round Down)
-		if(aeX > AE_WINDOW_WIDTH/2) {
-			aeX -= AE_WINDOW_WIDTH/2;
+    // Initialize fine search value.
+    state->bStartFineSearch = false;
 
-			if(aeX + AE_WINDOW_WIDTH > preview_width) {
-				CAM_ERROR_PRINTK( "%s:[Touch AE] X Position Overflow : [%d, %d] \n", __func__, aeX, AE_WINDOW_WIDTH);
-				aeX = preview_width - AE_WINDOW_WIDTH - 1;
-			}
-            }
-				else
-			aeX = 0;
+	if(touch_af == TOUCH_AF_START) {
+		CAM_INFO_PRINTK("%s, AUTFOCUS ON\n", __func__ );
 
-		if(aeY > AE_WINDOW_HEIGHT/2) {
-			aeY -= AE_WINDOW_HEIGHT/2;
+		CAM_INFO_PRINTK("%s , AF start\n ",__func__);
+		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_single_af_start_regs, ARRAY_SIZE(s5k4ecgx_single_af_start_regs),"single_af_start_regs");
 
-			if(aeY + AE_WINDOW_HEIGHT > preview_height) {
-				CAM_ERROR_PRINTK( "%s:[Touch AE] Y Position Overflow : [%d, %d] \n", __func__, aeY, AE_WINDOW_HEIGHT);
-				aeY = preview_width - AE_WINDOW_HEIGHT - 1;
-            }
-            }
-		else
-			aeY = 0;
-#if 0
-		if(state->touch_ae_af_state == 0) /* Default setting */
+		if(err < 0)
 		{
-			camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
-			camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
-			camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x395C);
-			camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0001); /* FDA_bUseFaceAlg, Touched AE&AF support on/off */
-			camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0001); /* FDA_bUseConfigChange, Change config */
-			camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x3962); /* FDA_FaceArr */
-			camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0000); /* FDA_FaceArr_0_X_Start, region start x position */
-			camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0000); /* FDA_FaceArr_0_Y_Start, region start y position */
-			camdrv_ss_i2c_write_4_bytes(client, 0x0F12, preview_width ); /* FDA_FaceArr_0_X_End, region end x position */
-			camdrv_ss_i2c_write_4_bytes(client, 0x0F12, preview_height ); /* FDA_FaceArr_0_Y_End, region end y position */
-			camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x003D); /* FDA_FaceArr_0_ABR, region target brightness */
-			camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0000); /* FDA_FaceArr_0__Weigt_Ratio, Weight ratio between region and backtround */
-			camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0001); /* FDA_FaceArr_0__UpdateState, region change update */
-			camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0001); /* FDA_FaceArr_0__bUpdate, use or not use*/
-    	}
-#endif
-//		CAM_INFO_PRINTK("[%s:%d] state->touch_ae_af_state %d\n", __func__, __LINE__, state->touch_ae_af_state);
-		camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
-		camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
-		camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x3962); /* FDA_FaceArr */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, aeX ); /* FDA_FaceArr_0_X_Start, region start x position */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, aeY ); /* FDA_FaceArr_0_Y_Start, region start y position */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, aeX + AE_WINDOW_WIDTH ); /* FDA_FaceArr_0_X_End, region end x position */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, aeY + AE_WINDOW_HEIGHT ); /* FDA_FaceArr_0_Y_End, region end y position */
-		camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x396C); /* FDA_FaceArr_0__Weigt_Ratio, Weight ratio between region and backtround */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0100); /* FDA_FaceArr_0__Weigt_Ratio, Weight ratio between region and backtround */
-		camdrv_ss_i2c_write_4_bytes(client, 0x0F12, 0x0001); /* FDA_FaceArr_0__UpdateState, region change update */
+			CAM_ERROR_PRINTK("%s : i2c failed !!! \n", __func__);
+			mutex_unlock(&af_cancel_op);
+			return -EIO;
+		}
+	} else if(touch_af == TOUCH_AF_STOP) {
+		CAM_INFO_PRINTK("%s :  AUTFOCUS OFF , af_mode : %d\n", __func__, state->af_mode);
+        
+		state->camera_flash_fire = 0;
+		state->camera_af_flash_checked = 0;
+		
+		if (state->af_mode == FOCUS_MODE_AUTO) {
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_single_af_stop_regs,ARRAY_SIZE(s5k4ecgx_single_af_stop_regs),"single_af_stop_regs");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		} else if (state->af_mode == FOCUS_MODE_MACRO) {
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_macro_af_stop_regs,ARRAY_SIZE(s5k4ecgx_macro_af_stop_regs),"macro_af_stop_regs");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		}
+
+		CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);
+		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
+		
+		// The delay below is moved to camera HAL So it is not needed.
+		// msleep(150);  // need to add more delay in case of night or fireworks mode : 300ms
 	}
 
-#endif //Touch AE
+	mutex_unlock(&af_cancel_op);	
 
 	return err;
 }
@@ -1272,7 +1719,7 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_
 #if 0
 static int camdrv_ss_s5k4ecgx_get_light_condition(struct v4l2_subdev *sd, int *Result)
 {
-    struct i2c_client *client = v4l2_get_subdevdata(sd);
+    struct i2c_client *client = v4l2_get_subdevdata(sd);	
     unsigned short read_value1, read_value2;
     int NB_value = 0;
 
@@ -1284,7 +1731,7 @@ static int camdrv_ss_s5k4ecgx_get_light_condition(struct v4l2_subdev *sd, int *R
 
     NB_value = (int)read_value2;
     NB_value = ((NB_value << 16) | (read_value1 & 0xFFFF));
-
+    
     if(NB_value > 0xFFFE)
     {
         *Result = CAM_HIGH_LIGHT;
@@ -1309,7 +1756,7 @@ static int camdrv_ss_s5k4ecgx_get_light_condition(struct v4l2_subdev *sd, int *R
 static bool camdrv_ss_s5k4ecgx_check_flash_needed(struct v4l2_subdev *sd)
 {
 #if 0
-    struct i2c_client *client = v4l2_get_subdevdata(sd);
+    struct i2c_client *client = v4l2_get_subdevdata(sd);	
     unsigned short read_value1 = 0;
 
     camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
@@ -1318,9 +1765,9 @@ static bool camdrv_ss_s5k4ecgx_check_flash_needed(struct v4l2_subdev *sd)
     camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value1);
 
     CAM_INFO_PRINTK( "%s [Read Value : %X]\n", __func__, read_value1);
-
+    
     if(read_value1 >= 0x0708)
-    {
+    {   
         return true;
     }
     else
@@ -1343,7 +1790,7 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
         case FLASH_CONTROL_MAX_LEVEL:
         {
             if(HWREV >= 0x03)
-            {
+            {                    
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
             }
             else
@@ -1356,12 +1803,12 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
             gpio_set_value(GPIO_CAM_FLASH_EN, 1);
             break;
         }
-
+    
         // USE FLASH MODE
         case FLASH_CONTROL_HIGH_LEVEL:
         {
             if(HWREV >= 0x03)
-            {
+            {                    
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
             }
             else
@@ -1382,7 +1829,7 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
         case FLASH_CONTROL_MIDDLE_LEVEL:
         {
             if(HWREV >= 0x03)
-            {
+            {                    
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
             }
             else
@@ -1400,14 +1847,14 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
         case FLASH_CONTROL_LOW_LEVEL:
         {
             if(HWREV >= 0x03)
-            {
+            {                    
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
             }
             else
             {
                 gpio_set_value(GPIO_CAM_FLASH_SET, 0);
             }
-            gpio_set_value(GPIO_CAM_FLASH_EN, 0);
+            gpio_set_value(GPIO_CAM_FLASH_EN, 0); 
             udelay(1);
 
             camdrv_ss_AAT_flash_write_data(7);   // 69mA
@@ -1418,7 +1865,7 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
         default:
         {
             if(HWREV >= 0x03)
-            {
+            {                    
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
             }
             else
@@ -1427,7 +1874,7 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
             }
             gpio_set_value(GPIO_CAM_FLASH_EN, 0);
             break;
-        }
+        }        
     }
 
     return 0;
@@ -1443,11 +1890,11 @@ static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
 static struct regulator *VCAM_CORE_1_2_V;   //ASR_SW
 #else
-#define CAM_CORE_EN	   42
+#define CAM_CORE_EN	   98 //Since Nevis is using GPS_TMARK pin for VCAMC_EN
 #endif
 #define CAM_AF_EN     121
 
-//main cam
+//main cam 
 #define CAM0_RESET    33
 #define CAM0_STNBY    111
 
@@ -1468,7 +1915,6 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	CAM_INFO_PRINTK("%s:camera power %s\n", __func__, (on ? "on" : "off"));
-	atomic_set(&preview_going_on,0);
 
 	if (!unicam_dfs_node.valid) {
 		ret =
@@ -1503,30 +1949,30 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 	{
 		CAM_ERROR_PRINTK("can not get VCAM_IO_1.8V\n");
 		return -1;
-	}
-
+	}	
+	
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
 	VCAM_CORE_1_2_V = regulator_get(NULL,"asr_nm_uc");
 	if(IS_ERR(VCAM_CORE_1_2_V))
 	{
 		CAM_ERROR_PRINTK("can not get VCAM_CORE_1_2_V\n");
 		return -1;
-	}
-#else
+	}	
+#else	
 	gpio_request(CAM_CORE_EN, "cam_1_2v");
-	gpio_direction_output(CAM_CORE_EN,0);
+	gpio_direction_output(CAM_CORE_EN,0); 
 #endif
 
 	gpio_request(CAM_AF_EN, "cam_af_2_8v");
-	gpio_direction_output(CAM_AF_EN,0);
-
+	gpio_direction_output(CAM_AF_EN,0); 
+	
 	CAM_INFO_PRINTK("set cam_rst cam_stnby  to low\n");
 	gpio_request(CAM0_RESET, "cam0_rst");
 	gpio_direction_output(CAM0_RESET,0);
-
+	
 	gpio_request(CAM0_STNBY, "cam0_stnby");
 	gpio_direction_output(CAM0_STNBY,0);
-
+		
 	gpio_request(CAM1_RESET, "cam1_rst");
 	gpio_direction_output(CAM1_RESET,0);
 
@@ -1549,7 +1995,7 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 		regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
 		regulator_set_voltage(VCAM_CORE_1_2_V,1200000,1200000);
-#endif
+#endif	
 		value = clk_enable(axi_clk);
 		if (value) {
 			CAM_ERROR_PRINTK("%s:failed to enable csi2 axi clock\n", __func__);
@@ -1559,14 +2005,14 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 		regulator_enable(VCAM_A_2_8_V);
 
 		regulator_enable(VCAM_IO_1_8_V);
+	
+		gpio_set_value(CAM_AF_EN,1); 
 
-		gpio_set_value(CAM_AF_EN,1);
+		msleep(1);	
 
+        gpio_set_value(CAM1_STNBY,1);
 		msleep(1);
-
-		gpio_set_value(CAM1_STNBY,1);
-		msleep(1);
-
+	
 		value = clk_enable(clock);
 		if (value) {
 			CAM_ERROR_PRINTK("%s: failed to enable clock %s\n", __func__,SENSOR_0_CLK);
@@ -1585,28 +2031,28 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
  		msleep(1);
 
 		gpio_set_value(CAM1_STNBY,0);
-
-#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
+		
+#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3		
 		regulator_enable(VCAM_CORE_1_2_V);
 #else
-		gpio_set_value(CAM_CORE_EN,1);
-#endif
+		gpio_set_value(CAM_CORE_EN,1); 
+#endif				
 		msleep(1);
-
+				
 		gpio_set_value(CAM0_STNBY,1);
 		msleep(1);
 
 		gpio_set_value(CAM0_RESET,1);
-
+	
 		msleep(2);
 
-
+		
 #ifdef CONFIG_FLASH_ENABLE
 				CAM_INFO_PRINTK( "5MP camera S5K4ECGX loaded. HWREV is 0x%x\n", HWREV);
-
+			
 				// FLASH
 				if(HWREV >= 0x03)
-				{
+				{					 
 					ret = gpio_request(GPIO_CAM_FLASH_SET_NEW, "GPJ0[5]");
 					if(ret)
 					{
@@ -1623,16 +2069,16 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 						return 0;
 					}
 				}
-
+				
 				ret = gpio_request(GPIO_CAM_FLASH_EN, "GPJ0[7]");
 				if(ret)
 				{
 					CAM_ERROR_PRINTK( "gpio_request(GPJ0[7]) failed!! \n");
 					return 0;
 				}
-
+			
 				if(HWREV >= 0x03)
-				{
+				{					 
 					gpio_direction_output(GPIO_CAM_FLASH_SET_NEW, 0);
 				}
 				else
@@ -1650,7 +2096,7 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 		/* enable reset gpio */
 		gpio_set_value(CAM0_RESET,0);
 		msleep(1);
-
+		
 		clk_disable(clock);
 		clk_disable(axi_clk);
 
@@ -1659,27 +2105,27 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 
 		gpio_set_value(CAM1_RESET,0);
 		msleep(1);
-
+		
 		/* enable power down gpio */
 
-		gpio_set_value(CAM_AF_EN,0);
+		gpio_set_value(CAM_AF_EN,0); 
 		msleep(1);
 
 		regulator_disable(VCAM_IO_1_8_V);
 		regulator_disable(VCAM_A_2_8_V);
-#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
+#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3		
 		regulator_disable(VCAM_CORE_1_2_V);
 #else
 		gpio_set_value(CAM_CORE_EN, 0);
-#endif
-
+#endif		
+		
 #ifdef CONFIG_FLASH_ENABLE
 			// FLASH
 			// ?? need to do below?
 			//camdrv_ss_AAT_flash_control(sd, FLASH_CONTROL_OFF);
-
+			
 			if(HWREV >= 0x03)
-			{
+			{					 
 				gpio_free(GPIO_CAM_FLASH_SET_NEW);
 			}
 			else
@@ -1719,7 +2165,7 @@ int camdrv_ss_s5k4ecgx_get_sensor_param_for_exif(
 	num = (int)exposureTime;
 	if (num > 0) 
 	{
-	    snprintf(str, 19, "%d/1000000", num);
+		snprintf(str, 19, "1/%d", num);
 		strcpy(exif_param->exposureTime, str);
 	} 
 	else 
@@ -1736,15 +2182,16 @@ int camdrv_ss_s5k4ecgx_get_sensor_param_for_exif(
 	} else {
 		strcpy(exif_param->isoSpeedRating, "");
 	}
+	CAM_INFO_PRINTK("%s :num=%d and isoSpeedRating =  %s \n",__func__,num, exif_param->isoSpeedRating);
 
 	/* sRGB mandatory field! */
 	strcpy(exif_param->colorSpaceInfo,	"1");
 
-	strcpy(exif_param->contrast,		"0");
-	strcpy(exif_param->saturation,		"0");
-	strcpy(exif_param->sharpness,		"0");
+	strcpy(exif_param->contrast,		"");
+	strcpy(exif_param->saturation,		"");
+	strcpy(exif_param->sharpness,		"");
 
-	strcpy(exif_param->FNumber,		(char *)"28/10");
+	strcpy(exif_param->FNumber,		(char *)"26/10");
 	strcpy(exif_param->exposureProgram,	"");
 	strcpy(exif_param->shutterSpeed,	"");
 	strcpy(exif_param->aperture,		"");
@@ -1752,7 +2199,7 @@ int camdrv_ss_s5k4ecgx_get_sensor_param_for_exif(
 	strcpy(exif_param->exposureBias,	"");
 	strcpy(exif_param->maxLensAperture,	"");
 	strcpy(exif_param->flash,		"");
-	strcpy(exif_param->lensFocalLength,	"");
+	strcpy(exif_param->lensFocalLength,	(char *)"354/100");
 	strcpy(exif_param->userComments,	"");
 	ret = 0;
 
@@ -1766,7 +2213,6 @@ bool camdrv_ss_s5k4ecgx_get_esd_status(struct v4l2_subdev *sd)
 	bool bEsdStatus = false;
 	unsigned short read_value = 0;
 
-	mutex_lock(&esd_and_P_lock);
 //	CAM_INFO_PRINTK("%s = %d \n",__func__,bEsdStatus);
 
 	camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
@@ -1785,7 +2231,6 @@ bool camdrv_ss_s5k4ecgx_get_esd_status(struct v4l2_subdev *sd)
 	camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x1002);
 	camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value);
 
-	mutex_unlock(&esd_and_P_lock);
 	if (read_value != 0x0000) {
 		bEsdStatus = true;		//ESD detected
 		CAM_ERROR_PRINTK("%s :: ESD detected. 2nd read value is 0x%x \n",__func__,read_value);
@@ -1821,24 +2266,23 @@ int camdrv_ss_s5k4ecgx_get_mode_change(struct v4l2_subdev *sd)
 
 	return ret;
 }
-
 bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 {
 
 	strcpy(sensor->name,S5K4ECGX_NAME);
 	sensor->supported_preview_framesize_list  = s5k4ecgx_supported_preview_framesize_list;
 	sensor->supported_number_of_preview_sizes = ARRAY_SIZE(s5k4ecgx_supported_preview_framesize_list);
-
+	
 	sensor->supported_capture_framesize_list  =  s5k4ecgx_supported_capture_framesize_list;
 	sensor->supported_number_of_capture_sizes = ARRAY_SIZE(s5k4ecgx_supported_capture_framesize_list);
-
+	
 	sensor->fmts 				   = s5k4ecgx_fmts;
 	sensor->rows_num_fmts		   =ARRAY_SIZE(s5k4ecgx_fmts);
 
 
 	sensor->controls				   =s5k4ecgx_controls;
 	sensor->rows_num_controls	      =ARRAY_SIZE(s5k4ecgx_controls);
-
+	
 	sensor->default_pix_fmt 				   = S5K4ECGX_DEFAULT_PIX_FMT;
 	sensor->default_mbus_pix_fmt			   = S5K4ECGX_DEFAULT_MBUS_PIX_FMT;
 	sensor->register_size 		  			 = S5K4ECGX_REGISTER_SIZE;
@@ -1847,19 +2291,23 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->delay_duration				= S5K4ECGX_DELAY_DURATION;
 
 	/* sensor dependent functions */
-
+	
 /* mandatory*/
 	sensor->thumbnail_ioctl			       = camdrv_ss_s5k4ecgx_ss_ioctl;
 	sensor->enum_frameintervals			   = camdrv_ss_s5k4ecgx_enum_frameintervals;
-
+	
 /*optional*/
-        sensor->get_nightmode		   		 = camdrv_ss_s5k4ecgx_get_nightmode; //aska add
-	sensor->set_preview_start      = camdrv_ss_s5k4ecgx_set_preview_start;
-	sensor->set_preview_stop	   = camdrv_ss_s5k4ecgx_set_preview_stop;
+	sensor->get_nightmode		   		 = camdrv_ss_s5k4ecgx_get_nightmode; //aska add
+	sensor->set_preview_start      = camdrv_ss_s5k4ecgx_set_preview_start;//aska add
+	sensor->set_capture_start      = camdrv_ss_s5k4ecgx_set_capture_start;//aska add
+
+	sensor->set_iso      					 = camdrv_ss_s5k4ecgx_set_iso;//aska add
+	sensor->set_white_balance      = camdrv_ss_s5k4ecgx_set_white_balance;//aska add
 	sensor->get_ae_stable_status      =  camdrv_ss_s5k4ecgx_get_ae_stable_status;
 	sensor->set_auto_focus		 	  =  camdrv_ss_s5k4ecgx_set_auto_focus;
 	sensor->get_auto_focus_status     = camdrv_ss_s5k4ecgx_get_auto_focus_status;
 
+	sensor->set_touch_focus_area 	  =  camdrv_ss_s5k4ecgx_set_touch_focus_area;
 	sensor->set_touch_focus		 	  =  camdrv_ss_s5k4ecgx_set_touch_focus;
 	sensor->get_touch_focus_status     = camdrv_ss_s5k4ecgx_get_touch_focus_status;
 
@@ -1867,23 +2315,25 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->i2c_set_data_burst   	   = camdrv_ss_s5k4ecgx_i2c_set_data_burst;
 	sensor->check_flash_needed   	   = camdrv_ss_s5k4ecgx_check_flash_needed;
 //	sensor->get_light_condition   = camdrv_ss_s5k4ecgx_get_light_condition;
-
+	
 	sensor->sensor_power 			   = camdrv_ss_s5k4ecgx_sensor_power;
 
 	sensor->get_exif_sensor_info       = camdrv_ss_s5k4ecgx_get_sensor_param_for_exif;
 	sensor->getEsdStatus 			   = camdrv_ss_s5k4ecgx_get_esd_status;
 	sensor->get_mode_change_reg	= camdrv_ss_s5k4ecgx_get_mode_change;
 
+	sensor->set_scene_mode 			   = camdrv_ss_s5k4ecgx_set_scene_mode;   //denis
+
 
 	/*REGS and their sizes*/
 	/* List all the capabilities of sensor . List all the supported register setting tables */
-
+	
 	sensor->init_regs						  = s5k4ecgx_init_regs;
 	sensor->rows_num_init_regs				  = ARRAY_SIZE(s5k4ecgx_init_regs);
-
+	
 	sensor->preview_camera_regs 			  = s5k4ecgx_preview_camera_regs;
 	sensor->rows_num_preview_camera_regs 	  = ARRAY_SIZE(s5k4ecgx_preview_camera_regs);
-
+			
 	/*snapshot mode*/
 	sensor->snapshot_normal_regs			  =	s5k4ecgx_snapshot_normal_regs;
 	sensor->rows_num_snapshot_normal_regs	  = ARRAY_SIZE(s5k4ecgx_snapshot_normal_regs);
@@ -1910,28 +2360,28 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	/*effect*/
 	sensor->effect_normal_regs			      =	s5k4ecgx_effect_normal_regs;
 	sensor->rows_num_effect_normal_regs      = ARRAY_SIZE(s5k4ecgx_effect_normal_regs);
-
+	
 	sensor->effect_negative_regs		      =	s5k4ecgx_effect_negative_regs;
 	sensor->rows_num_effect_negative_regs	 = ARRAY_SIZE(s5k4ecgx_effect_negative_regs);
-
+	
 	sensor->effect_sepia_regs			      =	s5k4ecgx_effect_sepia_regs;
 	sensor->rows_num_effect_sepia_regs	  	  = ARRAY_SIZE(s5k4ecgx_effect_sepia_regs);
-
+	
 	sensor->effect_mono_regs			      =	s5k4ecgx_effect_mono_regs;
 	sensor->rows_num_effect_mono_regs	      = ARRAY_SIZE(s5k4ecgx_effect_mono_regs);
 
 	sensor->effect_aqua_regs				  =	s5k4ecgx_effect_aqua_regs;
 	sensor->rows_num_effect_aqua_regs	  	  = ARRAY_SIZE(s5k4ecgx_effect_aqua_regs);
-
+	
 	sensor->effect_sharpen_regs 		      =	s5k4ecgx_effect_sharpen_regs;
 	sensor->rows_num_effect_sharpen_regs     = ARRAY_SIZE(s5k4ecgx_effect_sharpen_regs);
-
+	
 	sensor->effect_solarization_regs		   = s5k4ecgx_effect_solarization_regs;
 	sensor->rows_num_effect_solarization_regs = ARRAY_SIZE(s5k4ecgx_effect_solarization_regs);
-
+	
 	sensor->effect_black_white_regs 	       =	s5k4ecgx_effect_black_white_regs;
 	sensor->rows_num_effect_black_white_regs  = ARRAY_SIZE(s5k4ecgx_effect_black_white_regs);
-
+	
 
 	/*wb*/
 	sensor->wb_auto_regs				  =	s5k4ecgx_wb_auto_regs;
@@ -1939,10 +2389,10 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	//sensor->wb_sunny_regs				 =	s5k4ecgx_wb_sunny_regs;
 	//sensor->rows_num_wb_sunny_regs	  	 = ARRAY_SIZE(s5k4ecgx_wb_sunny_regs);
-
+	
 	sensor->wb_cloudy_regs				 =	s5k4ecgx_wb_cloudy_regs;
 	sensor->rows_num_wb_cloudy_regs	 = ARRAY_SIZE(s5k4ecgx_wb_cloudy_regs);
-
+	
 	//sensor->wb_tungsten_regs			 =	s5k4ecgx_wb_tungsten_regs;
 	//sensor->rows_num_wb_tungsten_regs	 = ARRAY_SIZE(s5k4ecgx_wb_tungsten_regs);
 	//Changed reg table name to fit UI's name
@@ -1965,7 +2415,7 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	sensor->metering_spot_regs			  =	  s5k4ecgx_metering_spot_regs;
 	sensor->rows_num_metering_spot_regs	  		  = ARRAY_SIZE(s5k4ecgx_metering_spot_regs);
-
+	
 	/*EV*/
 	sensor->ev_minus_4_regs 			 =	s5k4ecgx_ev_minus_4_regs;
 	sensor->rows_num_ev_minus_4_regs	 = ARRAY_SIZE(s5k4ecgx_ev_minus_4_regs);
@@ -1994,14 +2444,14 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->ev_plus_4_regs				 =	s5k4ecgx_ev_plus_4_regs;
 	sensor->rows_num_ev_plus_4_regs	 = ARRAY_SIZE(s5k4ecgx_ev_plus_4_regs);
 
-
+	
 	/*contrast*/
 	sensor->contrast_minus_2_regs		 	 =	s5k4ecgx_contrast_minus_2_regs;
 	sensor->rows_num_contrast_minus_2_regs	 = ARRAY_SIZE(s5k4ecgx_contrast_minus_2_regs);
 
 	sensor->contrast_minus_1_regs		     =	s5k4ecgx_contrast_minus_1_regs;
 	sensor->rows_num_contrast_minus_1_regs	 = ARRAY_SIZE(s5k4ecgx_contrast_minus_1_regs);
-
+  
 	sensor->contrast_default_regs			 =	s5k4ecgx_contrast_default_regs;
 	sensor->rows_num_contrast_default_regs  = ARRAY_SIZE(s5k4ecgx_contrast_default_regs);
 
@@ -2010,8 +2460,8 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	sensor->contrast_plus_2_regs			 =	s5k4ecgx_contrast_plus_2_regs;
 	sensor->rows_num_contrast_plus_2_regs	 = ARRAY_SIZE(s5k4ecgx_contrast_plus_2_regs);
-
-	/*sharpness*/
+	
+	/*sharpness*/ 
 	sensor->sharpness_minus_3_regs		     =	s5k4ecgx_sharpness_minus_3_regs;
 	sensor->rows_num_sharpness_minus_3_regs= ARRAY_SIZE(s5k4ecgx_sharpness_minus_3_regs);
 
@@ -2029,11 +2479,11 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	sensor->sharpness_plus_2_regs		     =	s5k4ecgx_sharpness_plus_2_regs;
 	sensor->rows_num_sharpness_plus_2_regs	 =	ARRAY_SIZE(s5k4ecgx_sharpness_plus_2_regs);
-
+    
 	sensor->sharpness_plus_3_regs		     =	s5k4ecgx_sharpness_plus_3_regs;
 	sensor->rows_num_sharpness_plus_3_regs	 =	ARRAY_SIZE(s5k4ecgx_sharpness_plus_3_regs);
 
-
+		
 	/*saturation*/
 	sensor->saturation_minus_2_regs 	      =	s5k4ecgx_saturation_minus_2_regs;
 	sensor->rows_num_saturation_minus_2_regs = ARRAY_SIZE(s5k4ecgx_saturation_minus_2_regs);
@@ -2050,7 +2500,7 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->saturation_plus_2_regs		       =	s5k4ecgx_saturation_plus_2_regs;
 	sensor->rows_num_saturation_plus_2_regs   = ARRAY_SIZE(s5k4ecgx_saturation_plus_2_regs);
 
-
+	
 	/*zoom*/
 	sensor->zoom_00_regs					 =	s5k4ecgx_zoom_00_regs;
 	sensor->rows_num_zoom_00_regs	  		  = ARRAY_SIZE(s5k4ecgx_zoom_00_regs);
@@ -2079,7 +2529,7 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->zoom_08_regs					 =	s5k4ecgx_zoom_08_regs;
 	sensor->rows_num_zoom_08_regs	  		  = ARRAY_SIZE(s5k4ecgx_zoom_08_regs);
 
-
+	
 	/*scene mode*/
 	sensor->scene_none_regs 			 		=	s5k4ecgx_scene_none_regs;
 	sensor->rows_num_scene_none_regs	  		 = ARRAY_SIZE(s5k4ecgx_scene_none_regs);
@@ -2116,14 +2566,14 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	sensor->scene_fireworks_regs				 =	s5k4ecgx_scene_fireworks_regs;
 	sensor->rows_num_scene_fireworks_regs	  	  = ARRAY_SIZE(s5k4ecgx_scene_fireworks_regs);
-
+	
 	sensor->scene_candle_light_regs 	 		=	s5k4ecgx_scene_candle_light_regs;
 	sensor->rows_num_scene_candle_light_regs	= ARRAY_SIZE(s5k4ecgx_scene_candle_light_regs);
 
 	sensor->scene_text_regs			   =	s5k4ecgx_scene_text_regs;
 	sensor->rows_num_scene_text_regs	  	 = ARRAY_SIZE(s5k4ecgx_scene_text_regs);
 
-
+		
 	/*fps*/
 	sensor->fps_auto_regs				 =	s5k4ecgx_fps_auto_regs;
 	sensor->rows_num_fps_auto_regs	  		  = ARRAY_SIZE(s5k4ecgx_fps_auto_regs);
@@ -2148,15 +2598,15 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	sensor->fps_30_regs 				 =	s5k4ecgx_fps_30_regs;
 	sensor->rows_num_fps_30_regs 		  = ARRAY_SIZE(s5k4ecgx_fps_30_regs);
-
+	
 	sensor->fps_60_regs 				 =	s5k4ecgx_fps_60_regs;
 	sensor->rows_num_fps_60_regs	  		  = ARRAY_SIZE(s5k4ecgx_fps_60_regs);
 
 	sensor->fps_120_regs 				 =	s5k4ecgx_fps_120_regs;
 	sensor->rows_num_fps_120_regs	  		  = ARRAY_SIZE(s5k4ecgx_fps_120_regs);
+	
 
-
-
+	
 	/*quality*/
 	sensor->quality_superfine_regs			 =	s5k4ecgx_quality_superfine_regs;
 	sensor->rows_num_quality_superfine_regs	  = ARRAY_SIZE(s5k4ecgx_quality_superfine_regs);
@@ -2170,62 +2620,62 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->quality_economy_regs			 =	s5k4ecgx_quality_economy_regs;
 	sensor->rows_num_quality_economy_regs   = ARRAY_SIZE(s5k4ecgx_quality_economy_regs);
 
-
+	
 	/*preview size */
 	sensor->preview_size_176x144_regs	        =	s5k4ecgx_preview_size_176x144_regs;
 	sensor->rows_num_preview_size_176x144_regs	 = ARRAY_SIZE(s5k4ecgx_preview_size_176x144_regs);
 
-	sensor->preview_size_320x240_regs	         =	s5k4ecgx_preview_size_320x240_regs;
+	sensor->preview_size_320x240_regs	         =	s5k4ecgx_preview_size_320x240_regs; 
 	sensor->rows_num_preview_size_320x240_regs	  = ARRAY_SIZE(s5k4ecgx_preview_size_320x240_regs);
 
-	sensor->preview_size_352x288_regs	          =	s5k4ecgx_preview_size_352x288_regs;
+	sensor->preview_size_352x288_regs	          =	s5k4ecgx_preview_size_352x288_regs; 
 	sensor->rows_num_preview_size_352x288_regs	  = ARRAY_SIZE(s5k4ecgx_preview_size_352x288_regs);
 
-	sensor->preview_size_640x480_regs	          =	s5k4ecgx_preview_size_640x480_regs;
+	sensor->preview_size_640x480_regs	          =	s5k4ecgx_preview_size_640x480_regs; 
 	sensor->rows_num_preview_size_640x480_regs	  = ARRAY_SIZE(s5k4ecgx_preview_size_640x480_regs);
 
-	sensor->preview_size_704x576_regs	 		=	s5k4ecgx_preview_size_704x576_regs;
+	sensor->preview_size_704x576_regs	 		=	s5k4ecgx_preview_size_704x576_regs; 
 	sensor->rows_num_preview_size_704x576_regs	 = ARRAY_SIZE(s5k4ecgx_preview_size_704x576_regs);
 
-	sensor->preview_size_720x480_regs	 		=	s5k4ecgx_preview_size_720x480_regs;
+	sensor->preview_size_720x480_regs	 		=	s5k4ecgx_preview_size_720x480_regs; 
 	sensor->rows_num_preview_size_720x480_regs	 = ARRAY_SIZE(s5k4ecgx_preview_size_720x480_regs);
-
+	
 	sensor->preview_size_800x480_regs	        =	s5k4ecgx_preview_size_800x480_regs;
 	sensor->rows_num_preview_size_800x480_regs	 = ARRAY_SIZE(s5k4ecgx_preview_size_800x480_regs);
 
 	sensor->preview_size_800x600_regs	        =	s5k4ecgx_preview_size_800x600_regs;
 	sensor->rows_num_preview_size_800x600_regs	 = ARRAY_SIZE(s5k4ecgx_preview_size_800x600_regs);
 
-	sensor->preview_size_1024x600_regs	         =	s5k4ecgx_preview_size_1024x600_regs;
+	sensor->preview_size_1024x600_regs	         =	s5k4ecgx_preview_size_1024x600_regs; 
 	sensor->rows_num_preview_size_1024x600_regs	  = ARRAY_SIZE(s5k4ecgx_preview_size_1024x600_regs);
 
-	sensor->preview_size_1024x768_regs	          =	s5k4ecgx_preview_size_1024x768_regs;
+	sensor->preview_size_1024x768_regs	          =	s5k4ecgx_preview_size_1024x768_regs; 
 	sensor->rows_num_preview_size_1024x768_regs	  = ARRAY_SIZE(s5k4ecgx_preview_size_1024x768_regs);
 
-	sensor->preview_size_1280x960_regs	          =	s5k4ecgx_preview_size_1280x960_regs;
+	sensor->preview_size_1280x960_regs	          =	s5k4ecgx_preview_size_1280x960_regs; 
 	sensor->rows_num_preview_size_1280x960_regs	  = ARRAY_SIZE(s5k4ecgx_preview_size_1280x960_regs);
 
-	sensor->preview_size_1600x960_regs	 		=	s5k4ecgx_preview_size_1600x960_regs;
+	sensor->preview_size_1600x960_regs	 		=	s5k4ecgx_preview_size_1600x960_regs; 
 	sensor->rows_num_preview_size_1600x960_regs	 = ARRAY_SIZE(s5k4ecgx_preview_size_1600x960_regs);
 
-	sensor->preview_size_1600x1200_regs	 		=	s5k4ecgx_preview_size_1600x1200_regs;
+	sensor->preview_size_1600x1200_regs	 		=	s5k4ecgx_preview_size_1600x1200_regs; 
 	sensor->rows_num_preview_size_1600x1200_regs	 = ARRAY_SIZE(s5k4ecgx_preview_size_1600x1200_regs);
 
 	sensor->preview_size_2048x1232_regs	        =	s5k4ecgx_preview_size_2048x1232_regs;
 	sensor->rows_num_preview_size_2048x1232_regs	 = ARRAY_SIZE(s5k4ecgx_preview_size_2048x1232_regs);
 
-	sensor->preview_size_2048x1536_regs	         =	s5k4ecgx_preview_size_2048x1536_regs;
+	sensor->preview_size_2048x1536_regs	         =	s5k4ecgx_preview_size_2048x1536_regs; 
 	sensor->rows_num_preview_size_2048x1536_regs	  = ARRAY_SIZE(s5k4ecgx_preview_size_2048x1536_regs);
 
-	sensor->preview_size_2560x1920_regs	          =	s5k4ecgx_preview_size_2560x1920_regs;
+	sensor->preview_size_2560x1920_regs	          =	s5k4ecgx_preview_size_2560x1920_regs; 
 	sensor->rows_num_preview_size_2560x1920_regs	  = ARRAY_SIZE(s5k4ecgx_preview_size_2560x1920_regs);
-
-
+  
+	
 	/*Capture size */
 	sensor->capture_size_640x480_regs	 		=	s5k4ecgx_capture_size_640x480_regs;
 	sensor->rows_num_capture_size_640x480_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_640x480_regs);
 
-	sensor->capture_size_720x480_regs  			=	s5k4ecgx_capture_size_720x480_regs;
+	sensor->capture_size_720x480_regs  			=	s5k4ecgx_capture_size_720x480_regs; 
 	sensor->rows_num_capture_size_720x480_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_720x480_regs);
 
 	sensor->capture_size_800x480_regs	 		=	s5k4ecgx_capture_size_800x480_regs;
@@ -2234,41 +2684,41 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->capture_size_800x486_regs	 		=	s5k4ecgx_capture_size_800x486_regs;
 	sensor->rows_num_capture_size_800x486_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_800x486_regs);
 
-	sensor->capture_size_800x600_regs  			=	s5k4ecgx_capture_size_800x600_regs;
+	sensor->capture_size_800x600_regs  			=	s5k4ecgx_capture_size_800x600_regs; 
 	sensor->rows_num_capture_size_800x600_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_800x600_regs);
 
     	sensor->capture_size_1024x600_regs	 		=	s5k4ecgx_capture_size_1024x600_regs;
 	sensor->rows_num_capture_size_1024x600_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_1024x600_regs);
 
-	sensor->capture_size_1024x768_regs  			=	s5k4ecgx_capture_size_1024x768_regs;
+	sensor->capture_size_1024x768_regs  			=	s5k4ecgx_capture_size_1024x768_regs; 
 	sensor->rows_num_capture_size_1024x768_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_1024x768_regs);
 
-	sensor->capture_size_1280x960_regs  			=	s5k4ecgx_capture_size_1280x960_regs;
+	sensor->capture_size_1280x960_regs  			=	s5k4ecgx_capture_size_1280x960_regs; 
 	sensor->rows_num_capture_size_1280x960_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_1280x960_regs);
 
     	sensor->capture_size_1600x960_regs	 		=	s5k4ecgx_capture_size_1600x960_regs;
 	sensor->rows_num_capture_size_1600x960_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_1600x960_regs);
 
-	sensor->capture_size_1600x1200_regs  			=	s5k4ecgx_capture_size_1600x1200_regs;
+	sensor->capture_size_1600x1200_regs  			=	s5k4ecgx_capture_size_1600x1200_regs; 
 	sensor->rows_num_capture_size_1600x1200_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_1600x1200_regs);
 
-	sensor->capture_size_2048x1232_regs  			=	s5k4ecgx_capture_size_2048x1232_regs;
+	sensor->capture_size_2048x1232_regs  			=	s5k4ecgx_capture_size_2048x1232_regs; 
 	sensor->rows_num_capture_size_2048x1232_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_2048x1232_regs);
 
-	sensor->capture_size_2048x1536_regs  			=	s5k4ecgx_capture_size_2048x1536_regs;
+	sensor->capture_size_2048x1536_regs  			=	s5k4ecgx_capture_size_2048x1536_regs; 
 	sensor->rows_num_capture_size_2048x1536_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_2048x1536_regs);
 
-	sensor->capture_size_2560x1536_regs  			=	s5k4ecgx_capture_size_2560x1536_regs;
+	sensor->capture_size_2560x1536_regs  			=	s5k4ecgx_capture_size_2560x1536_regs; 
 	sensor->rows_num_capture_size_2560x1536_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_2560x1536_regs);
 
-	sensor->capture_size_2560x1920_regs  			=	s5k4ecgx_capture_size_2560x1920_regs;
+	sensor->capture_size_2560x1920_regs  			=	s5k4ecgx_capture_size_2560x1920_regs; 
 	sensor->rows_num_capture_size_2560x1920_regs	 = ARRAY_SIZE(s5k4ecgx_capture_size_2560x1920_regs);
 
-
+	
 	/*pattern*/
 	sensor->pattern_on_regs 			  = s5k4ecgx_pattern_on_regs;
 	sensor->rows_num_pattern_on_regs	  = ARRAY_SIZE(s5k4ecgx_pattern_on_regs);
-
+	
 	sensor->pattern_off_regs			  = s5k4ecgx_pattern_off_regs;
 	sensor->rows_num_pattern_off_regs	  = ARRAY_SIZE(s5k4ecgx_pattern_off_regs);
 
@@ -2276,7 +2726,7 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->ae_lock_regs			  = s5k4ecgx_ae_lock_regs;
 	sensor->rows_num_ae_lock_regs	  = ARRAY_SIZE(s5k4ecgx_ae_lock_regs);
 
-
+		
 	sensor->ae_unlock_regs			  = s5k4ecgx_ae_unlock_regs;
 	sensor->rows_num_ae_unlock_regs	  = ARRAY_SIZE(s5k4ecgx_ae_unlock_regs);
 
@@ -2285,10 +2735,10 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	sensor->awb_lock_regs			  = s5k4ecgx_awb_lock_regs;
 	sensor->rows_num_awb_lock_regs	  = ARRAY_SIZE(s5k4ecgx_awb_lock_regs);
-
+		
 	sensor->awb_unlock_regs			  = s5k4ecgx_awb_unlock_regs;
 	sensor->rows_num_awb_unlock_regs	  = ARRAY_SIZE(s5k4ecgx_awb_unlock_regs);
-
+	
 	//ISO//
 	sensor->iso_auto_regs			  = s5k4ecgx_iso_auto_regs;
 	sensor->rows_num_iso_auto_regs	  = ARRAY_SIZE(s5k4ecgx_iso_auto_regs);
@@ -2351,17 +2801,19 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 
 	/* af return & focus mode */
-//	sensor->af_return_inf_pos = s5k4ecgx_af_return_inf_pos;
-//	sensor->rows_num_af_return_inf_pos     = ARRAY_SIZE(s5k4ecgx_af_return_inf_pos);
+	sensor->af_return_inf_pos = s5k4ecgx_af_return_inf_pos;
+	sensor->rows_num_af_return_inf_pos     = ARRAY_SIZE(s5k4ecgx_af_return_inf_pos);
 
-//	sensor->af_return_macro_pos = s5k4ecgx_af_return_macro_pos;
-//	sensor->rows_num_af_return_macro_pos     = ARRAY_SIZE(s5k4ecgx_af_return_macro_pos);
+	sensor->af_return_macro_pos = s5k4ecgx_af_return_macro_pos;
+	sensor->rows_num_af_return_macro_pos     = ARRAY_SIZE(s5k4ecgx_af_return_macro_pos);
 
 	sensor->focus_mode_auto_regs = s5k4ecgx_focus_mode_auto_regs;
 	sensor->rows_num_focus_mode_auto_regs     = ARRAY_SIZE(s5k4ecgx_focus_mode_auto_regs);
 
 	sensor->focus_mode_macro_regs = s5k4ecgx_focus_mode_macro_regs;
 	sensor->rows_num_focus_mode_macro_regs     = ARRAY_SIZE(s5k4ecgx_focus_mode_macro_regs);
+	sensor->focus_mode_infinity_regs = s5k4ecgx_focus_mode_auto_regs;
+	sensor->rows_num_focus_mode_infinity_regs     = ARRAY_SIZE(s5k4ecgx_focus_mode_auto_regs);
 
 	sensor->vt_mode_regs = s5k4ecgx_vt_mode_regs;
 	sensor->rows_num_vt_mode_regs     = ARRAY_SIZE(s5k4ecgx_vt_mode_regs);
