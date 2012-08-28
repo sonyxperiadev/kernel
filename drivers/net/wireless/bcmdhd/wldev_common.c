@@ -105,7 +105,10 @@ s32 wldev_iovar_setbuf(
 		mutex_lock(buf_sync);
 	}
 	iovar_len = wldev_mkiovar(iovar_name, param, paramlen, buf, buflen);
-	ret = wldev_ioctl(dev, WLC_SET_VAR, buf, iovar_len, TRUE);
+	if (iovar_len > 0)
+		ret = wldev_ioctl(dev, WLC_SET_VAR, buf, iovar_len, TRUE);
+	else
+		ret = BCME_BUFTOOSHORT;
 	if (buf_sync)
 		mutex_unlock(buf_sync);
 	return ret;
@@ -220,7 +223,12 @@ s32 wldev_iovar_setbuf_bsscfg(
 		mutex_lock(buf_sync);
 	}
 	iovar_len = wldev_mkiovar_bsscfg(iovar_name, param, paramlen, buf, buflen, bsscfg_idx);
-	ret = wldev_ioctl(dev, WLC_SET_VAR, buf, iovar_len, TRUE);
+	if (iovar_len > 0)
+		ret = wldev_ioctl(dev, WLC_SET_VAR, buf, iovar_len, TRUE);
+	else {
+		ret = BCME_BUFTOOSHORT;
+	}
+
 	if (buf_sync) {
 		mutex_unlock(buf_sync);
 	}
@@ -320,6 +328,8 @@ int wldev_set_band(
 
 	if ((band == WLC_BAND_AUTO) || (band == WLC_BAND_5G) || (band == WLC_BAND_2G)) {
 		error = wldev_ioctl(dev, WLC_SET_BAND, &band, sizeof(band), 1);
+		if (!error)
+			dhd_bus_band_set(dev, band);
 	}
 	return error;
 }
@@ -349,20 +359,21 @@ int wldev_set_country(
 				__FUNCTION__, error));
 			return error;
 		}
-	}
-	cspec.rev = -1;
-	memcpy(cspec.country_abbrev, country_code, WLC_CNTRY_BUF_SZ);
-	memcpy(cspec.ccode, country_code, WLC_CNTRY_BUF_SZ);
-	get_customized_country_code((char *)&cspec.country_abbrev, &cspec);
-	error = wldev_iovar_setbuf(dev, "country", &cspec, sizeof(cspec),
-		smbuf, sizeof(smbuf), NULL);
-	if (error < 0) {
-		WLDEV_ERROR(("%s: set country for %s as %s rev %d failed\n",
+
+		cspec.rev = -1;
+		memcpy(cspec.country_abbrev, country_code, WLC_CNTRY_BUF_SZ);
+		memcpy(cspec.ccode, country_code, WLC_CNTRY_BUF_SZ);
+		get_customized_country_code((char *)&cspec.country_abbrev, &cspec);
+		error = wldev_iovar_setbuf(dev, "country", &cspec, sizeof(cspec),
+			smbuf, sizeof(smbuf), NULL);
+		if (error < 0) {
+			WLDEV_ERROR(("%s: set country for %s as %s rev %d failed\n",
+				__FUNCTION__, country_code, cspec.ccode, cspec.rev));
+			return error;
+		}
+		dhd_bus_country_set(dev, &cspec);
+		WLDEV_ERROR(("%s: set country for %s as %s rev %d\n",
 			__FUNCTION__, country_code, cspec.ccode, cspec.rev));
-		return error;
 	}
-	dhd_bus_country_set(dev, &cspec);
-	WLDEV_ERROR(("%s: set country for %s as %s rev %d\n",
-		__FUNCTION__, country_code, cspec.ccode, cspec.rev));
 	return 0;
 }

@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: siutils.c 323774 2012-03-27 00:16:45Z $
+ * $Id: siutils.c 347632 2012-07-27 11:00:35Z $
  */
 
 #include <bcm_cfg.h>
@@ -1926,6 +1926,70 @@ done:
 	return memsize;
 }
 
+
+/* Return the TCM-RAM size of the ARMCR4 core. */
+uint32
+si_tcm_size(si_t *sih)
+{
+	si_info_t *sii;
+	uint origidx;
+	uint intr_val = 0;
+	uint8 *regs;
+	bool wasup;
+	uint32 corecap;
+	uint memsize = 0;
+	uint32 nab = 0;
+	uint32 nbb = 0;
+	uint32 totb = 0;
+	uint32 bxinfo = 0;
+	uint32 idx = 0;
+	uint32 *arm_cap_reg;
+	uint32 *arm_bidx;
+	uint32 *arm_binfo;
+
+	sii = SI_INFO(sih);
+
+	/* Block ints and save current core */
+	INTR_OFF(sii, intr_val);
+	origidx = si_coreidx(sih);
+
+	/* Switch to CR4 core */
+	if (!(regs = si_setcore(sih, ARMCR4_CORE_ID, 0)))
+		goto done;
+
+	/* Get info for determining size. If in reset, come out of reset,
+	 * but remain in halt
+	 */
+	if (!(wasup = si_iscoreup(sih)))
+		si_core_reset(sih, SICF_CPUHALT, SICF_CPUHALT);
+
+	arm_cap_reg = (uint32 *)(regs + SI_CR4_CAP);
+	corecap = R_REG(sii->osh, arm_cap_reg);
+
+	nab = (corecap & ARMCR4_TCBANB_MASK) >> ARMCR4_TCBANB_SHIFT;
+	nbb = (corecap & ARMCR4_TCBBNB_MASK) >> ARMCR4_TCBBNB_SHIFT;
+	totb = nab + nbb;
+
+	arm_bidx = (uint32 *)(regs + SI_CR4_BANKIDX);
+	arm_binfo = (uint32 *)(regs + SI_CR4_BANKINFO);
+	for (idx = 0; idx < totb; idx++) {
+		W_REG(sii->osh, arm_bidx, idx);
+
+		bxinfo = R_REG(sii->osh, arm_binfo);
+		memsize += ((bxinfo & ARMCR4_BSZ_MASK) + 1) * ARMCR4_BSZ_MULT;
+	}
+
+	/* Return to previous state and core */
+	if (!wasup)
+		si_core_disable(sih, 0);
+	si_setcoreidx(sih, origidx);
+
+done:
+	INTR_RESTORE(sii, intr_val);
+
+	return memsize;
+}
+
 uint32
 si_socram_srmem_size(si_t *sih)
 {
@@ -2343,6 +2407,9 @@ si_is_sprom_available(si_t *sih)
 	case BCM4324_CHIP_ID:
 		return ((sih->chipst & CST4324_SPROM_MASK) &&
 			!(sih->chipst & CST4324_SFLASH_MASK));
+	case BCM4335_CHIP_ID:
+		return ((sih->chipst & CST4335_SPROM_MASK) &&
+			!(sih->chipst & CST4335_SFLASH_MASK));
 	case BCM43131_CHIP_ID:
 	case BCM43217_CHIP_ID:
 	case BCM43227_CHIP_ID:
@@ -2352,4 +2419,47 @@ si_is_sprom_available(si_t *sih)
 	default:
 		return TRUE;
 	}
+}
+
+
+uint32 si_get_sromctl(si_t *sih)
+{
+	chipcregs_t *cc;
+	uint origidx;
+	uint32 sromctl;
+	osl_t *osh;
+
+	osh = si_osh(sih);
+	origidx = si_coreidx(sih);
+	cc = si_setcoreidx(sih, SI_CC_IDX);
+	ASSERT((uintptr)cc);
+
+	sromctl = R_REG(osh, &cc->sromcontrol);
+
+	/* return to the original core */
+	si_setcoreidx(sih, origidx);
+	return sromctl;
+}
+
+int si_set_sromctl(si_t *sih, uint32 value)
+{
+	chipcregs_t *cc;
+	uint origidx;
+	osl_t *osh;
+
+	osh = si_osh(sih);
+	origidx = si_coreidx(sih);
+	cc = si_setcoreidx(sih, SI_CC_IDX);
+	ASSERT((uintptr)cc);
+
+	/* get chipcommon rev */
+	if (si_corerev(sih) < 32)
+		return BCME_UNSUPPORTED;
+
+	W_REG(osh, &cc->sromcontrol, value);
+
+	/* return to the original core */
+	si_setcoreidx(sih, origidx);
+	return BCME_OK;
+
 }
