@@ -98,6 +98,11 @@ extern bool ap_cfg_running;
 extern bool ap_fw_loaded;
 #endif
 
+
+
+extern void Set_XTAL_PM_Delay(void);
+
+
 /* enable HOSTIP cache update from the host side when an eth0:N is up */
 #define AOE_IP_ALIAS_SUPPORT 1
 
@@ -533,8 +538,8 @@ static void dhd_set_packet_filter(int value, dhd_pub_t *dhd)
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 {
-//	int power_mode = PM_MAX;
-	int power_mode = 0;
+	int power_mode = PM_MAX;
+//	int power_mode = 0;
 
 	/* wl_pkt_filter_enable_t	enable_parm; */
 	char iovbuf[32];
@@ -3296,6 +3301,12 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	}
 
 done:
+#ifdef XTAL_PU_TIME_MOD
+		printk("%s:***** CALL SET_PMY_DELAY\n", __FUNCTION__);
+		Set_XTAL_PM_Delay();
+		printk("%s:***** CALL DONE SET_PMY_DELAY\n", __FUNCTION__);
+#endif
+
 	return ret;
 }
 
