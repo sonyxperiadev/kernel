@@ -199,6 +199,7 @@ typedef enum
 
 	MSG_ROAMING_STATUS			= MSG_GRP_SYS+0x03,
 
+	MSG_POWERON_NO_RF_CNF		= MSG_GRP_SYS+0x04,
 	// End of MSG_GRP_SYS (0x0000)
 
 	//---------------------------------------------------------------

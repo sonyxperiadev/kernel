@@ -30,6 +30,8 @@
 
 /* big enough to hold our biggest descriptor */
 #define USB_BUFSIZ	1024
+#define USB_PRE_CONFIG_CURRENT		100
+#define USB_OTG_PRE_CONFIG_CURRENT	2
 
 static struct usb_composite_driver *composite;
 static int (*composite_gadget_bind)(struct usb_composite_dev *cdev);
@@ -1348,6 +1350,10 @@ static void composite_disconnect(struct usb_gadget *gadget)
 	if (composite->disconnect)
 		composite->disconnect(cdev);
 	spin_unlock_irqrestore(&cdev->lock, flags);
+
+	usb_gadget_vbus_draw(gadget,
+		gadget_is_otg(gadget) ? USB_OTG_PRE_CONFIG_CURRENT :
+		    USB_PRE_CONFIG_CURRENT);
 }
 
 /*-------------------------------------------------------------------------*/

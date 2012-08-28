@@ -80,8 +80,8 @@ void dwc_otg_core_soft_disconnect(dwc_otg_core_if_t *core_if, bool en)
 		dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl,
 				dctl.d32);
 #ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver->otg->pullup_on && (!gotgctl.b.hnpreq))
-			core_if->xceiver->otg->pullup_on(core_if->xceiver->otg, !en);
+		if (core_if->xceiver->pullup_on && (!gotgctl.b.hnpreq))
+			core_if->xceiver->pullup_on(core_if->xceiver, !en);
 #endif
 	} else {
 		DWC_PRINTF("NOT SUPPORTED IN HOST MODE\n");
@@ -1829,12 +1829,10 @@ void dwc_otg_enable_device_interrupts(dwc_otg_core_if_t *core_if)
 #endif /* DWC_EN_ISOC */
 
 	/** @todo NGS: Should this be a module parameter? */
-#ifdef USE_PERIODIC_EP
 	intr_mask.b.isooutdrop = 1;
 	intr_mask.b.eopframe = 1;
 	intr_mask.b.incomplisoin = 1;
 	intr_mask.b.incomplisoout = 1;
-#endif
 
 	dwc_modify_reg32(&global_regs->gintmsk, intr_mask.d32, intr_mask.d32);
 
@@ -2754,6 +2752,49 @@ void hc_xfer_timeout(void *ptr)
 }
 #endif
 
+void ep_xfer_timeout(void *ptr)
+{
+	struct ep_xfer_info *xfer_info = NULL;
+	int ep_num = 0;
+	dctl_data_t dctl = {.d32 = 0 };
+	gintsts_data_t gintsts = {.d32 = 0 };
+	gintmsk_data_t gintmsk = {.d32 = 0 };
+
+	if (ptr)
+		xfer_info = (struct ep_xfer_info *) ptr;
+
+	if (!xfer_info->ep) {
+		DWC_ERROR("xfer_info->ep = %p\n", xfer_info->ep);
+		return;
+	}
+
+	ep_num = xfer_info->ep->num;
+	DWC_WARN("%s: timeout on endpoit %d\n", __func__, ep_num);
+	/* Put the sate to 2 as it was time outed */
+	xfer_info->state = 2;
+
+	dctl.d32 = DWC_READ_REG32(&xfer_info->core_if->
+		dev_if->dev_global_regs->dctl);
+	gintsts.d32 = DWC_READ_REG32(&xfer_info->core_if->
+		core_global_regs->gintsts);
+	gintmsk.d32 = DWC_READ_REG32(&xfer_info->core_if->
+		core_global_regs->gintmsk);
+
+	if (!gintmsk.b.goutnakeff) {
+		/* Unmask it */
+		gintmsk.b.goutnakeff = 1;
+		DWC_WRITE_REG32(&xfer_info->core_if->
+			core_global_regs->gintmsk, gintmsk.d32);
+
+	}
+
+	if (!gintsts.b.goutnakeff)
+		dctl.b.sgoutnak = 1;
+	DWC_WRITE_REG32(&xfer_info->core_if->dev_if->
+		dev_global_regs->dctl, dctl.d32);
+
+}
+
 void set_pid_isoc(dwc_hc_t *hc)
 {
 	/* Set up the initial PID for the transfer. */
@@ -3199,6 +3240,47 @@ uint32_t dwc_otg_get_frame_number(dwc_otg_core_if_t *core_if)
 }
 
 /**
+ * Calculates and gets the frame Interval value of HFIR register according PHY
+ * type and speed.The application can modify a value of HFIR register only after
+ * the Port Enable bit of the Host Port Control and Status register
+ * (HPRT.PrtEnaPort) has been set.
+*/
+
+uint32_t calc_frame_interval(dwc_otg_core_if_t *core_if)
+{
+	gusbcfg_data_t usbcfg;
+	hwcfg2_data_t hwcfg2;
+	hprt0_data_t hprt0;
+	int clock = 60;		/* default value */
+	usbcfg.d32 = DWC_READ_REG32(&core_if->core_global_regs->gusbcfg);
+	hwcfg2.d32 = DWC_READ_REG32(&core_if->core_global_regs->ghwcfg2);
+	hprt0.d32 = DWC_READ_REG32(core_if->host_if->hprt0);
+	if (!usbcfg.b.physel && usbcfg.b.ulpi_utmi_sel && !usbcfg.b.phyif)
+		clock = 60;
+	if (usbcfg.b.physel && hwcfg2.b.fs_phy_type == 3)
+		clock = 48;
+	if (!usbcfg.b.phylpwrclksel && !usbcfg.b.physel &&
+	    !usbcfg.b.ulpi_utmi_sel && usbcfg.b.phyif)
+		clock = 30;
+	if (!usbcfg.b.phylpwrclksel && !usbcfg.b.physel &&
+	    !usbcfg.b.ulpi_utmi_sel && !usbcfg.b.phyif)
+		clock = 60;
+	if (usbcfg.b.phylpwrclksel && !usbcfg.b.physel &&
+	    !usbcfg.b.ulpi_utmi_sel && usbcfg.b.phyif)
+		clock = 48;
+	if (usbcfg.b.physel && !usbcfg.b.phyif && hwcfg2.b.fs_phy_type == 2)
+		clock = 48;
+	if (usbcfg.b.physel && hwcfg2.b.fs_phy_type == 1)
+		clock = 48;
+	if (hprt0.b.prtspd == 0)
+		/* High speed case */
+		return 125 * clock;
+	else
+		/* FS/LS case */
+		return 1000 * clock;
+}
+
+/**
  * This function reads a setup packet from the Rx FIFO into the destination
  * buffer. This function is called from the Rx Status Queue Level (RxStsQLvl)
  * Interrupt routine when a SETUP packet has been received in Slave mode.
@@ -3330,6 +3412,9 @@ void dwc_otg_ep_activate(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 			diepmsk.b.ahberr = 1;
 			diepmsk.b.intknepmis = 1;
 			diepmsk.b.txfifoundrn = 1;	/* ????? */
+			if (ep->type == DWC_OTG_EP_TYPE_ISOC)
+				diepmsk.b.nak = 1;
+
 /*
 			if (core_if->dma_desc_enable) {
 				diepmsk.b.bna = 1;
@@ -3348,6 +3433,8 @@ void dwc_otg_ep_activate(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 			doepmsk.b.xfercompl = 1;
 			doepmsk.b.ahberr = 1;
 			doepmsk.b.epdisabled = 1;
+			if (ep->type == DWC_OTG_EP_TYPE_ISOC)
+				doepmsk.b.outtknepdis = 1;
 
 /*
 
@@ -3366,6 +3453,21 @@ void dwc_otg_ep_activate(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 		dwc_modify_reg32(&dev_if->dev_global_regs->deachintmsk,
 				 0, daintmsk.d32);
 	} else {
+		if (ep->type == DWC_OTG_EP_TYPE_ISOC) {
+			if (ep->is_in) {
+				diepmsk_data_t diepmsk = {.d32 = 0 };
+				diepmsk.b.nak = 1;
+				DWC_MODIFY_REG32(
+					&dev_if->dev_global_regs->diepmsk,
+					0, diepmsk.d32);
+			} else {
+				doepmsk_data_t doepmsk = {.d32 = 0 };
+				doepmsk.b.outtknepdis = 1;
+				DWC_MODIFY_REG32(
+					&dev_if->dev_global_regs->doepmsk,
+					0, doepmsk.d32);
+			}
+		}
 		dwc_modify_reg32(&dev_if->dev_global_regs->daintmsk,
 				 0, daintmsk.d32);
 	}
@@ -3603,6 +3705,60 @@ static void init_dma_desc_chain(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 }
 
 /**
+ * This function is called when to write ISOC data into appropriate dedicated
+ * periodic FIFO.
+ */
+static int32_t write_isoc_tx_fifo(dwc_otg_core_if_t *core_if,
+	dwc_ep_t *dwc_ep)
+{
+	dwc_otg_dev_if_t *dev_if = core_if->dev_if;
+	dwc_otg_dev_in_ep_regs_t *ep_regs;
+	dtxfsts_data_t txstatus = {.d32 = 0 };
+	uint32_t len = 0;
+	int epnum = dwc_ep->num;
+	int dwords;
+
+	DWC_DEBUGPL(DBG_PCD, "Dedicated TxFifo Empty: %d\n", epnum);
+
+	ep_regs = core_if->dev_if->in_ep_regs[epnum];
+
+	len = dwc_ep->xfer_len - dwc_ep->xfer_count;
+
+	if (len > dwc_ep->maxpacket)
+		len = dwc_ep->maxpacket;
+
+	dwords = (len + 3) / 4;
+
+	/* While there is space in the queue and space in the FIFO and
+	 * More data to tranfer, Write packets to the Tx FIFO */
+	txstatus.d32 = DWC_READ_REG32(&dev_if->in_ep_regs[epnum]->dtxfsts);
+	DWC_DEBUGPL(DBG_PCDV, "b4 dtxfsts[%d]=0x%08x\n", epnum, txstatus.d32);
+
+	while (txstatus.b.txfspcavail > dwords &&
+	       dwc_ep->xfer_count < dwc_ep->xfer_len &&
+	       dwc_ep->xfer_len != 0) {
+		/* Write the FIFO */
+		dwc_otg_ep_write_packet(core_if, dwc_ep, 0);
+
+		len = dwc_ep->xfer_len - dwc_ep->xfer_count;
+		if (len > dwc_ep->maxpacket)
+			len = dwc_ep->maxpacket;
+
+		dwords = (len + 3) / 4;
+		txstatus.d32 =
+		    DWC_READ_REG32(&dev_if->in_ep_regs[epnum]->dtxfsts);
+		DWC_DEBUGPL(DBG_PCDV, "dtxfsts[%d]=0x%08x\n", epnum,
+			    txstatus.d32);
+	}
+
+	DWC_DEBUGPL(DBG_PCDV, "b4 dtxfsts[%d]=0x%08x\n", epnum,
+		    DWC_READ_REG32(&dev_if->in_ep_regs[epnum]->dtxfsts));
+
+
+	return 1;
+}
+
+/**
  * This function does the setup for a data transfer for an EP and
  * starts the transfer. For an IN transfer, the packets will be
  * loaded into the appropriate Tx FIFO in the ISR. For OUT transfers,
@@ -3718,6 +3874,30 @@ void dwc_otg_ep_start_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 
 					}
 				}
+			} else
+				write_isoc_tx_fifo(core_if, ep);
+
+		}
+		if (!core_if->core_params->en_multiple_tx_fifo &&
+			core_if->dma_enable)
+			depctl.b.nextep = core_if->nextep_seq[ep->num];
+
+		if (ep->type == DWC_OTG_EP_TYPE_ISOC) {
+			dsts_data_t dsts = {.d32 = 0};
+			if (ep->bInterval == 1) {
+				dsts.d32 =
+					DWC_READ_REG32(&core_if->
+					dev_if->dev_global_regs->dsts);
+				ep->frame_num = dsts.b.soffn + ep->bInterval;
+				if (ep->frame_num > 0x3FFF) {
+					ep->frm_overrun = 1;
+					ep->frame_num &= 0x3FFF;
+				} else
+					ep->frm_overrun = 0;
+				if (ep->frame_num & 0x1)
+					depctl.b.setd1pid = 1;
+				else
+					depctl.b.setd0pid = 1;
 			}
 		}
 
@@ -3817,6 +3997,26 @@ void dwc_otg_ep_start_transfer(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 			}
 		} else {
 			dwc_write_reg32(&out_regs->doeptsiz, deptsiz.d32);
+		}
+
+		if (ep->type == DWC_OTG_EP_TYPE_ISOC) {
+			dsts_data_t dsts = {.d32 = 0};
+			if (ep->bInterval == 1) {
+				dsts.d32 =
+					DWC_READ_REG32(&core_if->dev_if->
+					dev_global_regs->dsts);
+				ep->frame_num = dsts.b.soffn + ep->bInterval;
+				if (ep->frame_num > 0x3FFF) {
+					ep->frm_overrun = 1;
+					ep->frame_num &= 0x3FFF;
+				} else
+					ep->frm_overrun = 0;
+
+				if (ep->frame_num & 0x1)
+					depctl.b.setd1pid = 1;
+				else
+					depctl.b.setd0pid = 1;
+			}
 		}
 
 		/* EP enable */
@@ -6605,6 +6805,80 @@ void dwc_otg_set_prtsuspend(dwc_otg_core_if_t *core_if, uint32_t val)
 	dwc_write_reg32(core_if->host_if->hprt0, val);
 }
 
+uint32_t dwc_otg_get_fr_interval(dwc_otg_core_if_t *core_if)
+{
+	hfir_data_t hfir;
+	hfir.d32 = DWC_READ_REG32(&core_if->host_if->host_global_regs->hfir);
+	return hfir.b.frint;
+
+}
+
+void dwc_otg_set_fr_interval(dwc_otg_core_if_t *core_if, uint32_t val)
+{
+	hfir_data_t hfir;
+	uint32_t fram_int;
+	fram_int = calc_frame_interval(core_if);
+	hfir.d32 = DWC_READ_REG32(&core_if->host_if->host_global_regs->hfir);
+	if (!core_if->core_params->reload_ctl) {
+		DWC_WARN(
+			"\nCan't reload HFIR reg.HFIR.HFIRRldCtrl bit isn't 1");
+		DWC_WARN(
+			"Load driver with reload_ctl=1 module parameter\n");
+		return;
+	}
+	switch (fram_int) {
+	case 3750:
+		if ((val < 3350) || (val > 4150)) {
+			DWC_WARN(
+		"HFIR interval HS 30 MHz should be 3350 to 4150\n");
+			return;
+		}
+		break;
+	case 30000:
+		if ((val < 26820) || (val > 33180)) {
+			DWC_WARN(
+		"HFIR interval FS/LS 30 MHz should be 26820 to 33180\n");
+			return;
+		}
+		break;
+	case 6000:
+		if ((val < 5360) || (val > 6640)) {
+			DWC_WARN(
+		"HFIR interval HS 48 MHz should be 5360 to 6640\n");
+			return;
+		}
+		break;
+	case 48000:
+		if ((val < 42912) || (val > 53088)) {
+			DWC_WARN(
+		"HFIR interval FS/LS 48 MHz should be 42912 to 53088\n");
+			return;
+		}
+		break;
+	case 7500:
+		if ((val < 6700) || (val > 8300)) {
+			DWC_WARN(
+		"HFIR interval HS core 60 MHz should be 6700 to 8300\n");
+			return;
+		}
+		break;
+	case 60000:
+		if ((val < 53640) || (val > 65536)) {
+			DWC_WARN(
+		"HFIR interval FS/LS core 60 MHz should be 53640 to 65536\n");
+			return;
+		}
+		break;
+	default:
+		DWC_WARN("Unknown frame interval\n");
+		return;
+		break;
+
+	}
+	hfir.b.frint = val;
+	DWC_WRITE_REG32(&core_if->host_if->host_global_regs->hfir, hfir.d32);
+}
+
 void dwc_otg_set_prtresume(dwc_otg_core_if_t *core_if, uint32_t val)
 {
 	hprt0_data_t hprt0;
@@ -6801,8 +7075,9 @@ void dwc_otg_initiate_srp(dwc_otg_core_if_t *core_if)
 		return;
 	}
 #ifdef CONFIG_USB_OTG_UTILS
-	if (core_if->xceiver->otg->pullup_on)
-		core_if->xceiver->otg->pullup_on(core_if->xceiver->otg, true);
+	if (core_if->xceiver->pullup_on)
+		core_if->xceiver->pullup_on(core_if->xceiver, true);
+
 #endif
 
 	DWC_INFO("Session Request Initated\n");	/* NOTICE */

@@ -122,6 +122,9 @@ typedef enum {
 	URRCM_RESEL_TRACE_EVAL,
 #endif
 	URRCM_RESEL_TRACE_CONFIG,
+    URRCM_TRACE_FILTERED_INTRA,
+    URRCM_TRACE_FILTERED_INTER,
+    URRCM_TRACE_FILTERED_GSM,
 	/* End of log_urrcm */
 #endif				/* #if defined(STACK_wedge) && defined(UMTS) */
 

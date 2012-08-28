@@ -365,7 +365,7 @@ static struct i2c_board_info __initdata pmu_info[] = {
 };
 #endif
 
-#ifdef CONFIG_MFD_BCM59039
+#if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042)
 struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "vdd_sdxc"},
 };

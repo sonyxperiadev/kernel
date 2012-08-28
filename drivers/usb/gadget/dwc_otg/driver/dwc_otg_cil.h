@@ -165,6 +165,13 @@ typedef struct dwc_ep {
 	/** Allocated DMA Desc count */
 	uint32_t desc_cnt;
 
+	/** bInterval */
+	uint32_t bInterval;
+	/** Next frame num to setup next ISOC transfer */
+	uint32_t frame_num;
+	/** Indicates SOF number overrun in DSTS */
+	uint8_t frm_overrun;
+
 #ifdef DWC_UTE_PER_IO
 	/** Next frame num for which will be setup DMA Desc */
 	uint32_t xiso_frame_num;
@@ -678,6 +685,12 @@ typedef struct dwc_otg_core_params {
 	 */
 	int32_t adp_supp_enable;
 
+	/** HFIR Reload Control
+	 * 0 - The HFIR cannot be reloaded dynamically.
+	 * 1 - Allow dynamic reloading of the HFIR register during runtime.
+	 */
+	int32_t reload_ctl;
+
 		/** Core Power down mode
 	 * 0 - No Power Down is enabled
 	 * 1 - Reserved
@@ -711,6 +724,13 @@ typedef struct hc_xfer_info {
 	dwc_hc_t *hc;
 } hc_xfer_info_t;
 #endif
+
+struct ep_xfer_info {
+	struct dwc_otg_core_if *core_if;
+	dwc_ep_t *ep;
+	uint8_t state;
+};
+
 /*
  * Device States
  */
@@ -895,6 +915,9 @@ struct dwc_otg_core_if {
 	/** Timer object used for handling "Wakeup Detected" Interrupt */
 	dwc_timer_t *wkp_timer;
 
+	struct ep_xfer_info ep_xfer_info[MAX_EPS_CHANNELS];
+	dwc_timer_t *ep_xfer_timer[MAX_EPS_CHANNELS];
+
 #ifdef CONFIG_USB_OTG
 	/* TA_BIDL_ADIS range is 155ms to 200ms.
 	* Used to determine when to disconnect in
@@ -966,6 +989,21 @@ struct dwc_otg_core_if {
 
 	/** OTG status flag used for HNP polling */
 	uint8_t otg_sts;
+
+	/** Start predict NextEP based on Learning Queue if equal 1,
+	 * also used as counter of disabled NP IN EP's */
+	uint8_t start_predict;
+
+	/** NextEp sequence, including EP0:
+	* nextep_seq[] = EP if non-periodic and
+	 * active, 0xff otherwise */
+	uint8_t nextep_seq[MAX_EPS_CHANNELS];
+
+	/** Index of fisrt EP in nextep_seq array which should be re-enabled **/
+	uint8_t first_in_nextep_seq;
+
+	/** Frame number while entering to ISR - needed for ISOCs **/
+	uint32_t frame_num;
 
 	/** saved value of last request from stack to activate/deactivate pullup */
 	bool gadget_pullup_on;

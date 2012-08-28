@@ -1102,7 +1102,7 @@ static inline unsigned long get_mm_rss(struct mm_struct *mm)
 #ifdef CONFIG_CMA
 static inline unsigned long get_mm_cma(struct mm_struct *mm)
 {
-	        return get_mm_counter(mm, MM_CMAPAGES);
+	return atomic_long_read(&mm->cma_stat);
 }
 #endif
 

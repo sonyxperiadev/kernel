@@ -390,7 +390,7 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 
 	ep = ep_from_handle(pcd, usb_ep);
 	if (ep == NULL)
-		return -EINVAL;
+		is_isoc_ep = 0;
 	else
 		is_isoc_ep = (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) ? 1 : 0;
 

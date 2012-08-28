@@ -13,10 +13,12 @@
 #include <linux/oom.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/module.h>
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <asm/cacheflush.h>
+#include <asm/tlbflush.h>
 
 
 /* Uncomment this to see file reference count in the *DEBUG* log

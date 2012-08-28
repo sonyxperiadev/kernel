@@ -1551,6 +1551,10 @@ int dwc_otg_pcd_ep_enable(dwc_otg_pcd_t *pcd,
 #ifdef DWC_UTE_PER_IO
 	ep->dwc_ep.xiso_bInterval = 1 << (ep->desc->bInterval - 1);
 #endif
+	if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) {
+		ep->dwc_ep.bInterval = 1 << (ep->desc->bInterval - 1);
+		ep->dwc_ep.frame_num = 0xFFFFFFFF;
+	}
 
 	dwc_otg_ep_activate(GET_CORE_IF(pcd), &ep->dwc_ep);
 
@@ -2074,6 +2078,39 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t *pcd, void *ep_handle,
 	req->priv = req_handle;
 
 	DWC_SPINLOCK_IRQSAVE(pcd->lock, &flags);
+
+	/*
+	 * After adding request to the queue for IN ISOC wait for
+	 * In Token Received
+	 * when TX FIFO is empty interrupt and for OUT ISOC wait for OUT Token
+	 * Received when EP is disabled interrupt to obtain starting microframe
+	 * (odd/even) start transfer
+	 */
+	if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) {
+		if (!DWC_CIRCLEQ_EMPTY(&ep->queue) || ep->stopped) {
+			if (req != 0) {
+				depctl_data_t depctl = {
+					.d32 = DWC_READ_REG32(
+					&pcd->core_if->dev_if->
+					in_ep_regs[ep->dwc_ep.num]->
+					diepctl)};
+				++pcd->request_pending;
+
+				DWC_CIRCLEQ_INSERT_TAIL(
+					&ep->queue, req, queue_entry);
+				if (ep->dwc_ep.is_in) {
+					depctl.b.cnak = 1;
+					DWC_WRITE_REG32(
+						&pcd->core_if->dev_if->
+						in_ep_regs[ep->dwc_ep.num]->
+						diepctl, depctl.d32);
+				}
+
+				DWC_SPINUNLOCK_IRQRESTORE(pcd->lock, flags);
+			}
+			return 0;
+		}
+	}
 
 	/*
 	 * For EP0 IN without premature status, zlp is required?

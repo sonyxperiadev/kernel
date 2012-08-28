@@ -201,6 +201,12 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 		return RESULT_ERROR;
 	}
 	audDrv->dmaCH = csl_caph_hwctrl_GetdmaCH(audDrv->pathID);
+
+	if (stream.size >= 0x10000 && audDrv->dmaCH > CSL_CAPH_DMA_CH2) {
+		csl_caph_hwctrl_SetLongDma(audDrv->pathID);
+		audDrv->dmaCH = csl_caph_hwctrl_GetdmaCH(audDrv->pathID);
+		}
+
 	audDrv->ringBuffer = ringBuffer;
 	audDrv->numBlocks = numBlocks;
 	audDrv->blockSize = blockSize;
