@@ -1313,7 +1313,7 @@ static void __init hawaii_add_i2c_devices(void)
 #endif
 
 #ifdef CONFIG_SENSORS_BMA222
-	i2c_register_board_info(1, bma222_accl_info, ARRAY_SIZE(bma222_accl_info));
+	i2c_register_board_info(2, bma222_accl_info, ARRAY_SIZE(bma222_accl_info));
 #endif
 
 #if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
@@ -1322,7 +1322,7 @@ static void __init hawaii_add_i2c_devices(void)
 #endif
 
 #if defined(CONFIG_BCMI2CNFC)
-	i2c_register_board_info(2, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
+	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
 #endif
 
 #if defined(CONFIG_GPS_IRQ)
