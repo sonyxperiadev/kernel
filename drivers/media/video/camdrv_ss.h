@@ -79,17 +79,22 @@ struct camdrv_ss_af_info {
 	int y;
 	int preview_width;
 	int preview_height;
-} ;
+};
 
-enum  camdrv_ss_mode_switch{
-	INIT_DONE_TO_CAMERA_PREVIEW = 0,      		//Initilization done : need to do camera preview
-	CAMERA_PREVIEW_SIZE_CHANGE,       	  		//cam_preview to cam_preview : size-resolution change in camera mode
-	CAMERA_PREVIEW_TO_PICTURE_CAPTURE,			// capture mode
-	PICTURE_CAPTURE_TO_CAMERA_PREVIEW_RETURN,	//back to preview: preview return
-	INIT_DONE_TO_CAMCORDER_PREVIEW,		  		//Initialization done: need to do camcorder preview
-	CAMERA_PREVIEW_TO_CAMCORDER_PREVIEW,  		//camera to camcorder
-	CAMCORDER_PREVIEW_SIZE_CHANGE, 		  		//size -resolution change in camcorder mode
-	CAMCORDER_PREVIEW_TO_CAMERA_PREVIEW, 		 //camcorder to camera
+struct camdrv_ss_image_info {
+	int width;
+	int height;
+};
+
+enum camdrv_ss_mode_switch {
+	INIT_DONE_TO_CAMERA_PREVIEW = 0,		/* Initilization done : need to do camera preview */
+	CAMERA_PREVIEW_SIZE_CHANGE,			/* cam_preview to cam_preview : size-resolution change in camera mode */
+	CAMERA_PREVIEW_TO_PICTURE_CAPTURE,		/* capture mode */
+	PICTURE_CAPTURE_TO_CAMERA_PREVIEW_RETURN,	/* back to preview: preview return */
+	INIT_DONE_TO_CAMCORDER_PREVIEW,			/* Initialization done: need to do camcorder preview */
+	CAMERA_PREVIEW_TO_CAMCORDER_PREVIEW,		/* camera to camcorder */
+	CAMCORDER_PREVIEW_SIZE_CHANGE,			/* size -resolution change in camcorder mode */
+	CAMCORDER_PREVIEW_TO_CAMERA_PREVIEW,		/* camcorder to camera */
 };
 
 enum camdrv_ss_capture_mode_state {
@@ -107,6 +112,8 @@ struct camdrv_ss_state {
 	struct camdrv_jpeg_param jpeg_param;
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
 	struct camdrv_ss_version fw_ver;
+	struct camdrv_ss_af_info af_info;
+	struct camdrv_ss_image_info postview_info;
 	struct v4l2_streamparm strm;
 
 	int capture_framesize_index;
@@ -139,9 +146,10 @@ struct camdrv_ss_framesize {
 
 int camdrv_ss_set_preview_size(struct v4l2_subdev *sd);
 int camdrv_ss_set_dataline_onoff(struct v4l2_subdev *sd, int onoff);
+int camdrv_ss_set_capture_size(struct v4l2_subdev *sd);
 
-int camdrv_ss_i2c_write_2_bytes(struct i2c_client *client,unsigned char sub_addr,unsigned char data);
-int camdrv_ss_i2c_read_1_byte(struct i2c_client *client,unsigned char subaddr,unsigned char *data);
+int camdrv_ss_i2c_write_2_bytes(struct i2c_client *client, unsigned char sub_addr, unsigned char data);
+int camdrv_ss_i2c_read_1_byte(struct i2c_client *client, unsigned char subaddr, unsigned char *data);
 int camdrv_ss_i2c_write_4_bytes(struct i2c_client *client, unsigned short subaddr, unsigned short data);
 int camdrv_ss_i2c_read_2_bytes(struct i2c_client *client, unsigned short subaddr, unsigned short *data);
 
@@ -150,7 +158,6 @@ int camdrv_ss_i2c_set_config_register(struct i2c_client *client,
 					int num_of_regs,
 					char *name);
 
-struct camdrv_ss_state* to_state(struct v4l2_subdev *sd);
 
 enum camdrv_ss_cam_light {
 	CAM_LOW_LIGHT = 0,
@@ -195,11 +202,14 @@ struct camdrv_ss_sensor_cap {
 
 /* Optional */
 	int (*set_preview_start)(struct v4l2_subdev *sd);
-	int (*set_preview_stop)(struct v4l2_subdev *sd);
-	int (*get_nightmode)(struct v4l2_subdev *sd); //aska add
+	int (*set_capture_start)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
+	int (*get_nightmode)(struct v4l2_subdev *sd); /* aska add */
+	int (*set_iso)(struct v4l2_subdev *sd, int mode); /* aska add */
+	int (*set_white_balance)(struct v4l2_subdev *sd, int mode); /* aska add */
 	int (*get_ae_stable_status)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
 	int (*set_auto_focus)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
 	int (*get_auto_focus_status)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
+	int  (*set_touch_focus_area)(struct v4l2_subdev *sd, enum v4l2_touch_af touch_af, v4l2_touch_area *touch_area);
 	int  (*set_touch_focus)(struct v4l2_subdev *sd, enum v4l2_touch_af touch_af, v4l2_touch_area *touch_area);
 	int  (*get_touch_focus_status)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
 	int (*AAT_flash_control)(struct v4l2_subdev *sd, int control_mode);
@@ -209,7 +219,8 @@ struct camdrv_ss_sensor_cap {
 	int (*sensor_power)(int on);
 	bool (*getEsdStatus)(struct v4l2_subdev *sd);
 	int (*get_mode_change_reg)(struct v4l2_subdev *sd);
-
+	int (*set_scene_mode)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);  /* denis */
+	void (*smartStayChangeInitSetting)(struct camdrv_ss_sensor_cap *sensor);
 
 /************************/
 /* REGISTER TABLE SETTINGS */
@@ -217,7 +228,7 @@ struct camdrv_ss_sensor_cap {
 	const regs_t *init_regs;
 
 	/*vt mode*/
-	 const regs_t *vt_mode_regs;
+	const regs_t *vt_mode_regs;
 
 	const regs_t *preview_camera_regs;
 
@@ -231,6 +242,10 @@ struct camdrv_ss_sensor_cap {
 	const regs_t *snapshot_af_preflash_off_regs;
 
 	/*af*/
+	const regs_t *single_af_start_regs;
+	const regs_t *get_1st_af_search_status;
+	const regs_t *get_2nd_af_search_status;
+	const regs_t *single_af_stop_regs;
 	const regs_t *focus_mode_off_regs;
 	const regs_t *focus_mode_af_regs;
 	const regs_t *focus_mode_macro_regs;
@@ -264,7 +279,6 @@ struct camdrv_ss_sensor_cap {
 	const regs_t *wb_incandescent_regs;
 	const regs_t *wb_shade_regs;
 	const regs_t *wb_horizon_regs;
-
 
 	/*metering*/
 	const regs_t *metering_matrix_regs;
@@ -324,7 +338,7 @@ struct camdrv_ss_sensor_cap {
 	const regs_t *scene_none_regs;
 	const regs_t *scene_portrait_regs;
 	const regs_t *scene_nightshot_regs;
-	const regs_t *scene_nightshot_dark_regs; //aska add
+	const regs_t *scene_nightshot_dark_regs; /* aska add */
 	const regs_t *scene_backlight_regs;
 	const regs_t *scene_landscape_regs;
 	const regs_t *scene_sports_regs;
@@ -416,12 +430,11 @@ struct camdrv_ss_sensor_cap {
 	const regs_t *iso_night_regs;
 	const regs_t *iso_movie_regs;
 
-    /* WDR */
+	/* WDR */
 	const regs_t *wdr_on_regs;
 	const regs_t *wdr_off_regs;
 
-
-    /* CCD EV */
+	/* CCD EV */
 	const regs_t *ev_camcorder_minus_4_regs;
 	const regs_t *ev_camcorder_minus_3_regs;
 	const regs_t *ev_camcorder_minus_2_regs;
@@ -432,13 +445,16 @@ struct camdrv_ss_sensor_cap {
 	const regs_t *ev_camcorder_plus_3_regs;
 	const regs_t *ev_camcorder_plus_4_regs;
 
-
-    /* auto contrast */
+	/* auto contrast */
 	const regs_t *auto_contrast_on_regs;
 	const regs_t *auto_contrast_off_regs;
+
+	/* af return & focus mode */
+	const regs_t *af_return_inf_pos;
+	const regs_t *af_return_macro_pos;
 	/* NO OF ROWS OF EACH REGISTER SETTING */
 	int  rows_num_init_regs;
-	 int  rows_num_vt_mode_regs;
+	int  rows_num_vt_mode_regs;
 	int  rows_num_preview_camera_regs;
 
 	/* snapshot mode */
@@ -451,6 +467,10 @@ struct camdrv_ss_sensor_cap {
 	int  rows_num_snapshot_af_preflash_off_regs;
 
 	/*af*/
+	int  rows_num_single_af_start_regs;
+	int  rows_num_get_1st_af_search_status;
+	int  rows_num_get_2nd_af_search_status;
+	int  rows_num_single_af_stop_regs;
 	int  rows_num_focus_mode_off_regs;
 	int  rows_num_focus_mode_af_regs;
 	int  rows_num_focus_mode_macro_regs;
@@ -470,8 +490,8 @@ struct camdrv_ss_sensor_cap {
 	int  rows_num_effect_sharpen_regs;
 	int  rows_num_effect_solarization_regs;
 	int  rows_num_effect_black_white_regs;
-	int	 rows_num_effect_emboss_regs;
-	int	 rows_num_effect_outline_regs;
+	int  rows_num_effect_emboss_regs;
+	int  rows_num_effect_outline_regs;
 
 	/*wb*/
 	int  rows_num_wb_auto_regs;
@@ -481,9 +501,9 @@ struct camdrv_ss_sensor_cap {
 	int  rows_num_wb_fluorescent_regs;
 	int  rows_num_wb_cwf_regs;
 	int  rows_num_wb_daylight_regs;
-	int	 rows_num_wb_incandescent_regs;
-	int	 rows_num_wb_shade_regs;
-	int	 rows_num_wb_horizon_regs;
+	int  rows_num_wb_incandescent_regs;
+	int  rows_num_wb_shade_regs;
+	int  rows_num_wb_horizon_regs;
 
 	/*metering*/
 	int  rows_num_metering_matrix_regs;
@@ -539,12 +559,11 @@ struct camdrv_ss_sensor_cap {
 	int  rows_num_zoom_07_regs;
 	int  rows_num_zoom_08_regs;
 
-
 	/*scene mode*/
 	int  rows_num_scene_none_regs;
 	int  rows_num_scene_portrait_regs;
 	int  rows_num_scene_nightshot_regs;
-	int  rows_num_scene_nightshot_dark_regs; //aska add
+	int  rows_num_scene_nightshot_dark_regs; /* aska add */
 	int  rows_num_scene_backlight_regs;
 	int  rows_num_scene_landscape_regs;
 	int  rows_num_scene_sports_regs;
@@ -636,11 +655,11 @@ struct camdrv_ss_sensor_cap {
 	int rows_num_iso_movie_regs;
 
 
-/* WDR */
+	/* WDR */
 	int rows_num_wdr_on_regs;
 	int rows_num_wdr_off_regs;
 
-/* CCD EV */
+	/* CCD EV */
 	int rows_num_ev_camcorder_minus_4_regs;
 	int rows_num_ev_camcorder_minus_3_regs;
 	int rows_num_ev_camcorder_minus_2_regs;
@@ -652,11 +671,14 @@ struct camdrv_ss_sensor_cap {
 	int rows_num_ev_camcorder_plus_4_regs;
 
 
-/* auto contrast */
+	/* auto contrast */
 	int rows_num_auto_contrast_on_regs;
 	int rows_num_auto_contrast_off_regs;
 
 
+	/* af return & focus mode */
+	int rows_num_af_return_inf_pos;
+	int rows_num_af_return_macro_pos;
 };
 
 /************************/
