@@ -90,10 +90,6 @@
 #include <linux/broadcom/bcmbt_rfkill.h>
 #endif
 
-#ifdef CONFIG_GPS_IRQ
-#include <linux/broadcom/gps.h>
-#endif
-
 #ifdef CONFIG_BCM_BZHW
 #include <linux/broadcom/bcm_bzhw.h>
 #endif
@@ -1323,11 +1319,6 @@ static void __init hawaii_add_i2c_devices(void)
 
 #if defined(CONFIG_BCMI2CNFC)
 	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
-#endif
-
-#if defined(CONFIG_GPS_IRQ)
-/* Remove this comment when GPS is addded */
-/*	i2c_register_board_info(0, gpsi2c, ARRAY_SIZE(gpsi2c)); */
 #endif
 
 #if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
