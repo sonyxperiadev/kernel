@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_cdc.c 347640 2012-07-27 11:53:21Z $
+ * $Id: dhd_cdc.c 351481 2012-08-19 15:30:00Z $
  *
  * BDC is like CDC, except it includes a header for data packets to convey
  * packet priority over the bus, and flags (e.g. to indicate checksum status
@@ -171,7 +171,10 @@ dhdcdc_query_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len, uin
 	 * value which is 8Kbytes for various 'get' commands to 2000.  48 bytes are
 	 * left for sw headers and misc.
 	 */
-	len = (len > 2000) ? 2000 : len;
+	if (len > 2000) {
+		DHD_ERROR(("dhdcdc_query_ioctl: len is truncated to 2000 bytes\n"));
+		len = 2000;
+	}
 #endif /* BCMSPI */
 	msg->cmd = htol32(cmd);
 	msg->len = htol32(len);
@@ -1781,7 +1784,8 @@ dhd_wlfc_txcomplete(dhd_pub_t *dhd, void *txp, bool success)
 		wlfc->stats.signal_only_pkts_freed++;
 #endif
 		/* is this a signal-only packet? */
-		PKTFREE(wlfc->osh, txp, TRUE);
+		if (success)
+			PKTFREE(wlfc->osh, txp, TRUE);
 		return;
 	}
 	if (!success) {
@@ -2408,24 +2412,19 @@ dhd_wlfc_cleanup(dhd_pub_t *dhd)
 {
 	int i;
 	int total_entries;
-	int prec;
 	athost_wl_status_info_t* wlfc = (athost_wl_status_info_t*)
 		dhd->wlfc_state;
 	wlfc_mac_descriptor_t* table;
 	wlfc_hanger_t* h;
+	int prec;
 	void *pkt = NULL;
 	struct pktq *txq = NULL;
-	bool found = FALSE;
-
 	if (dhd->wlfc_state == NULL)
 		return;
 	/* flush bus->txq */
 	txq = dhd_bus_txq(dhd->bus);
-
-
 	/* any in the hanger? */
 	h = (wlfc_hanger_t*)wlfc->hanger;
-
 	total_entries = sizeof(wlfc->destination_entries)/sizeof(wlfc_mac_descriptor_t);
 	/* search all entries, include nodes as well as interfaces */
 	table = (wlfc_mac_descriptor_t*)&wlfc->destination_entries;
@@ -2434,7 +2433,7 @@ dhd_wlfc_cleanup(dhd_pub_t *dhd)
 		if (table[i].occupied) {
 			if (table[i].psq.len) {
 				WLFC_DBGMESG(("%s(): DELAYQ[%d].len = %d\n",
-							  _FUNCTION_, i, table[i].psq.len));
+					__FUNCTION__, i, table[i].psq.len));
 				/* release packets held in DELAYQ */
 				pktq_flush(wlfc->osh, &table[i].psq, TRUE, NULL, 0);
 			}
@@ -2444,19 +2443,17 @@ dhd_wlfc_cleanup(dhd_pub_t *dhd)
 	/* release packets held in SENDQ */
 	if (wlfc->SENDQ.len)
 		pktq_flush(wlfc->osh, &wlfc->SENDQ, TRUE, NULL, 0);
-
 	for (prec = 0; prec < txq->num_prec; prec++) {
 		pkt = pktq_pdeq(txq, prec);
 		while (pkt) {
-			found = FALSE;
 			for (i = 0; i < h->max_items; i++) {
 				if (pkt == h->items[i].pkt) {
-					found = TRUE;
 					if (h->items[i].state == WLFC_HANGER_ITEM_STATE_INUSE) {
 						PKTFREE(wlfc->osh, h->items[i].pkt, TRUE);
 						h->items[i].state = WLFC_HANGER_ITEM_STATE_FREE;
-					} else if (h->items[i].state == WLFC_HANGER_ITEM_STATE_INUSE_SUPPRESSED) {
-						/* These are freed from the psq so no need to free again */
+					} else if (h->items[i].state ==
+						WLFC_HANGER_ITEM_STATE_INUSE_SUPPRESSED) {
+						/* These are already freed from the psq */
 						h->items[i].state = WLFC_HANGER_ITEM_STATE_FREE;
 					}
 					break;
