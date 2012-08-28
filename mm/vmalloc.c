@@ -1131,15 +1131,12 @@ void __init vm_area_add_early(struct vm_struct *vm)
 {
 	struct vm_struct *tmp, **p;
 
-	pr_info("vmap_initialized %d %p %p\n", vmap_initialized, vm, vm->addr);
 	BUG_ON(vmap_initialized);
 	for (p = &vmlist; (tmp = *p) != NULL; p = &tmp->next) {
 		if (tmp->addr >= vm->addr) {
-			pr_err("tmp->addr >= vm->addr ....%p %p %ld\n", tmp->addr, vm->addr, vm->size);
 			BUG_ON(tmp->addr < vm->addr + vm->size);
 			break;
 		} else {
-			pr_err("tmp->addr >= vm->addr ....%p %p %ld\n", tmp->addr, vm->addr, vm->size);
 			BUG_ON(tmp->addr + tmp->size > vm->addr);
 		}
 	}
@@ -1189,9 +1186,10 @@ void __init vmalloc_init(void)
 	/* Import existing vmlist entries. */
 	for (tmp = vmlist; tmp; tmp = tmp->next) {
 		va = kzalloc(sizeof(struct vmap_area), GFP_NOWAIT);
-		va->flags = tmp->flags | VM_VM_AREA;
+		va->flags = VM_VM_AREA;
 		va->va_start = (unsigned long)tmp->addr;
 		va->va_end = va->va_start + tmp->size;
+		va->vm = tmp;
 		__insert_vmap_area(va);
 	}
 

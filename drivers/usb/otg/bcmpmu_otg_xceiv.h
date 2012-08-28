@@ -15,6 +15,8 @@
 #ifndef _BCMPMU_OTG_XCEIV_H
 #define _BCMPMU_OTG_XCEIV_H
 
+#include <linux/wakelock.h>
+
 #define T_NO_ADP_DELAY_MIN_IN_MS	5000
 #define T_SRP_FAILURE_MAX_IN_MS 6000
 #define T_SESS_END_SRP_START_IN_MS 1600

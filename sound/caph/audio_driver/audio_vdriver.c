@@ -1105,7 +1105,7 @@ void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param)
 				}
 	} else {
 		aError(
-		"AUDDRV_SetAudioMode_Speaker can not find path\n");
+		"AUDDRV_SetAudioMode_Multicast can not find path\n");
 	}
 
 	if (outChnl) {
@@ -1336,8 +1336,13 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 						|| path->srcmRoute[i][j].inChnl
 							== CAPH_SRCM_PASSCH2) {
 						/*only on stereo inputs.*/
-						mixInGain = mixInGain - 602;
-						mixInGainR = mixInGainR  - 602;
+						if (mixInGain != GAIN_NA &&
+						mixInGainR != GAIN_NA) {
+							mixInGain =
+								mixInGain-602;
+							mixInGainR =
+								mixInGainR-602;
+							}
 						}
 					}
 

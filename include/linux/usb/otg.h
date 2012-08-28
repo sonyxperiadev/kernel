@@ -76,9 +76,6 @@ struct usb_otg {
 	/* start or continue HNP role switch */
 	int	(*start_hnp)(struct usb_otg *otg);
 
-	/* Control pullup */
-	int	(*pullup_on)(struct usb_otg  *otg, bool on);
-
 	/* set_delayed_adp */
 	int	(*set_delayed_adp)(struct usb_otg  *otg);
 
@@ -127,6 +124,9 @@ struct usb_phy {
 	/* for non-OTG B devices: set transceiver into suspend mode */
 	int	(*set_suspend)(struct usb_phy *x,
 				int suspend);
+
+	/* Control pullup */
+	int	(*pullup_on)(struct usb_phy  *x, bool on);
 
 };
 

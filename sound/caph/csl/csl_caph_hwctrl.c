@@ -2318,14 +2318,18 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID
 #endif
 			else if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR &&
 				path->source == CSL_CAPH_DEV_BT_MIC)
+				/*loopback from BT mic to BT speaker */
 				pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
+
 			if ((bt_mode == BT_MODE_NB) ||
 					(bt_mode == BT_MODE_NB_TEST))
 				pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_8000;
 			else
 				pcmCfg.sample_rate = AUDIO_SAMPLING_RATE_16000;
+
 			if (path->source == CSL_CAPH_DEV_DSP)
 				pcmCfg.sample_rate = path->src_sampleRate;
+
 			pcmCfg.interleave = TRUE;
 			pcmCfg.ext_bits = 0;
 			pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
@@ -5691,3 +5695,38 @@ void csl_caph_hwctrl_PrintAllPaths(void)
 	}
 	gAudioDebugLevel = dbg_level;
 }
+
+/*********************************************************************
+*
+*  Description: Set the DMA channel for long buffer
+*
+**********************************************************************/
+void csl_caph_hwctrl_SetLongDma(CSL_CAPH_PathID pathID)
+{
+	CSL_CAPH_DMA_CHNL_e dmaCH1, dmaCH2, chnl;
+	CSL_CAPH_HWConfig_Table_t *path;
+
+	if (pathID == 0)
+		return;
+	path = &HWConfig_Table[pathID - 1];
+	if (path->size < 0x10000)
+		return;
+
+	dmaCH1 =  path->dma[0][0];
+	/*only dma1 and dma2 support buffer of >= 64kb*/
+	chnl = CSL_CAPH_DMA_CH1;
+	if (csl_caph_dma_channel_obtained(chnl))
+		chnl = CSL_CAPH_DMA_CH2;
+	dmaCH2 = csl_caph_dma_obtain_given_channel(chnl);
+	if (dmaCH2 == CSL_CAPH_DMA_NONE) {
+		aError("%s pathID %d dmaCH %d size 0x%x. "
+			"Both dma1&2 are occupied\n",
+			__func__, pathID, dmaCH1, (u32)path->size);
+		return;
+	}
+	csl_caph_dma_release_channel(dmaCH1);
+	path->dma[0][0] = dmaCH2;
+	aTrace(LOG_AUDIO_CSL, "%s pathID %d dmaCH %d-->%d size 0x%x\n",
+		__func__, pathID, dmaCH1, dmaCH2, (u32)path->size);
+}
+

@@ -1549,6 +1549,8 @@ typedef union deptsiz_data {
 	struct {
 		/** Transfer size */
 		unsigned xfersize:19;
+/** Max packet count for EP (pow(2,10)-1) */
+#define MAX_PKT_CNT 1023
 		/** Packet Count */
 		unsigned pktcnt:10;
 		/** Multi Count - Periodic IN endpoints */
@@ -1754,6 +1756,9 @@ typedef struct dwc_otg_dev_if {
 
 	/** Setup Packet Detected - if set clear NAK when queueing */
 	uint32_t spd;
+
+	/** Isoc ep pointer on which incomplete happens */
+	void *isoc_ep;
 
 } dwc_otg_dev_if_t;
 

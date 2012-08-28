@@ -1702,7 +1702,7 @@ unsigned int serial8250_modem_status(struct uart_8250_port *up)
 			port->icount.dsr++;
 		if (status & UART_MSR_DDCD)
 			uart_handle_dcd_change(port, status & UART_MSR_DCD);
-		if (status & UART_MSR_DCTS)
+		if (!(up->mcr & UART_MCR_AFE) && (status & UART_MSR_DCTS))
 			uart_handle_cts_change(port, status & UART_MSR_CTS);
 
 		wake_up_interruptible(&port->state->port.delta_msr_wait);
@@ -2740,10 +2740,11 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 		quot++;
 
 	if (up->capabilities & UART_CAP_FIFO && port->fifosize > 1) {
-		if (baud < 2400)
-			fcr = UART_FCR_ENABLE_FIFO | UART_FCR_TRIGGER_1;
-		else
-			fcr = uart_config[port->type].fcr;
+		fcr = uart_config[port->type].fcr;
+		if (baud < 2400) {
+			fcr &= ~UART_FCR_TRIGGER_MASK;
+			fcr |= UART_FCR_TRIGGER_1;
+		}
 	}
 
 	/*

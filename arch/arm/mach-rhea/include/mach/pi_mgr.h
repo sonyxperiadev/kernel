@@ -33,5 +33,5 @@ enum {
 };
 
 void rhea_pi_mgr_init(void);
-
+int rhea_pi_mgr_print_act_pis(void);
 #endif /*__RHEA_PI_MNGR_H__*/
