@@ -133,7 +133,7 @@ config	RHEA_B0_PM_ASIC_WORKAROUND
 	help
 	  Say Y if you want to enable Rhea B0 ASIC workarounds for Power management
 
-config	HAWAII_PWRMGR_USE_DUMMY_SEQ
+config	PWRMGR_DUMMY_SEQUENCER
 	bool "Use dummy PWRMGR HW I2C sequencer"
 	default n
 	help

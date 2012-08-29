@@ -357,7 +357,7 @@ static struct i2c_cmd i2c_dummy_seq_cmd[] = {
 
 };
 
-#ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ
+#ifdef CONFIG_PWRMGR_DUMMY_SEQUENCER
 
 #define I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_0_SHIFT \
 PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_0_SHIFT
@@ -424,7 +424,7 @@ static int dummy_pm_init(void)
 
 	return 0;
 }
-#endif /* #ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ */
+#endif /* #ifdef CONFIG_PWRMGR_DUMMY_SEQUENCER */
 
 struct pm_special_event_range rhea_special_event_list[] = {
 	{GPIO29_A_EVENT, GPIO93_A_EVENT},
@@ -478,7 +478,7 @@ int __init rhea_pwr_mgr_init()
 	pwr_mgr_init(&rhea_pwr_mgr_info);
 	rhea_pi_mgr_init();
 
-#ifdef CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ
+#ifdef CONFIG_PWRMGR_DUMMY_SEQUENCER
 	dummy_pm_init();
 #endif
 
