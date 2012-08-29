@@ -25,4 +25,6 @@ obj-$(CONFIG_KONA_PI_MGR) += rhea_pi_mgr.o
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += rhea_pm.o rhea_wfi.o rhea_pm_dbg.o
 obj-$(CONFIG_KONA_SECURE_MONITOR_CALL) += sec_api.o
 obj-$(CONFIG_ARCH_HAWAII) += hawaii_bmdm_wd_monitor.o
-obj-y += pm_params.o
+obj-$(CONFIG_A9_DORMANT_MODE) += dm.o dm_v7_c.o dm_a9.o dm_gic.o dm_a9_c.o \
+	dm_prepare.o
+obj-y += pm_params.o helpers.o v7.o
