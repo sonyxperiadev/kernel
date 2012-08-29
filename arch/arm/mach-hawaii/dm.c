@@ -85,7 +85,7 @@ static int cnt_failure;
 module_param_named(cnt_failure, cnt_failure, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 /* Buffer to pass parameters to secure rom */
-#define	SEC_BUFFER_ADDR				0x3404C400	/* SRAM */
+#define	SEC_BUFFER_ADDR				0x3404E400	/* SRAM */
 #define	SEC_BUFFER_SIZE				0x00000400	/* 1kB */
 
 #define MAX_SECURE_BUFFER_SIZE		0x280
