@@ -297,6 +297,20 @@ static struct usb_gadget_strings *acm_strings[] = {
 	NULL,
 };
 
+/**
+* This function is called to register the callback functions for logging modules.
+*
+* @return    1: ready to send to logging data; 0: not ready to send the logging data.
+*
+*/
+char acm_logging_register_callbacks(struct acm_logging_callbacks *_cb)
+{
+	pr_info("%s\n", __func__);
+	acm_logging_cb = _cb;
+	return 0;	/* logging is not ready to send */
+}
+EXPORT_SYMBOL(acm_logging_register_callbacks);
+
 /*-------------------------------------------------------------------------*/
 
 /* ACM control ... data handling is delegated to tty library code.
@@ -572,14 +586,24 @@ static void acm_connect(struct gserial *port)
 {
 	struct f_acm		*acm = port_to_acm(port);
 
+	pr_info("%s", __func__);
+
 	acm->serial_state |= ACM_CTRL_DSR | ACM_CTRL_DCD;
 	acm_notify_serial_state(acm);
+	if (acm->port_num == ACM_LOGGING_PORT)
+		if (acm_logging_cb->start)
+			acm_logging_cb->start();
 }
 
 static void acm_disconnect(struct gserial *port)
 {
 	struct f_acm		*acm = port_to_acm(port);
 
+	pr_info("%s", __func__);
+
+	if (acm->port_num == ACM_LOGGING_PORT)
+		if (acm_logging_cb->stop)
+			acm_logging_cb->stop();
 	acm->serial_state &= ~(ACM_CTRL_DSR | ACM_CTRL_DCD);
 	acm_notify_serial_state(acm);
 }

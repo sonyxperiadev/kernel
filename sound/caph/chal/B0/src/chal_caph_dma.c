@@ -211,17 +211,17 @@ cVoid chal_caph_dma_disable(CHAL_HANDLE handle, cUInt16 channel)
 CAPH_DMA_CHANNEL_e chal_caph_dma_alloc_channel(CHAL_HANDLE handle)
 {
 	chal_caph_dma_cb_t *pchal_cb = (chal_caph_dma_cb_t *) handle;
-	cUInt32 ch = 0;
+	cUInt32 ch;
 
-	if (ch == 0) {
-		/* Look for a free (non-allocated) channel  */
-		for (; ch < CHAL_CAPH_DMA_MAX_CHANNELS; ch++) {
-			if (pchal_cb->alloc_status[ch] == FALSE) {
-				/* Found one */
-				break;
-			}
+	/* Look for a free (non-allocated) channel  */
+
+	for (ch = 2; ch < CHAL_CAPH_DMA_MAX_CHANNELS; ch++) {
+		if (pchal_cb->alloc_status[ch] == FALSE) {
+			/* Found one */
+			break;
 		}
 	}
+
 
 	if (ch < CHAL_CAPH_DMA_MAX_CHANNELS) {
 		/* Found a free channel */

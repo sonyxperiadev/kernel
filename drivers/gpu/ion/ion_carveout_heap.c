@@ -13,8 +13,6 @@
  * GNU General Public License for more details.
  *
  */
-#define pr_fmt(fmt) "android-ion: " fmt
-
 #include <linux/spinlock.h>
 
 #include <linux/err.h>
@@ -82,11 +80,9 @@ static void ion_carveout_heap_free(struct ion_buffer *buffer)
 {
 	struct ion_heap *heap = buffer->heap;
 
-	if(buffer->priv_phys != ION_CARVEOUT_ALLOCATE_FAIL) {
 		ion_carveout_free(heap, buffer->priv_phys, buffer->size);
 		buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
 	}
-}
 
 struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 					      struct ion_buffer *buffer)
@@ -94,11 +90,6 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 	struct sg_table *table;
 	int ret;
 
-	pr_debug("dma map heap(%s)(%d) buffer(%p) \n",
-			heap->name, heap->id, buffer);
-	if (buffer->priv_phys == ION_CARVEOUT_ALLOCATE_FAIL) {
-		return NULL;
-	} else {
 		table = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
 		if (!table)
 			return ERR_PTR(-ENOMEM);
@@ -111,27 +102,23 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 				0);
 		return table;
 	}
-}
 
 void ion_carveout_heap_unmap_dma(struct ion_heap *heap,
 				 struct ion_buffer *buffer)
 {
-	pr_debug("dma unmap heap(%s)(%d) buffer(%p) \n",
-			heap->name, heap->id, buffer);
-	if (buffer->sg_table) {
-		sg_free_table(buffer->sg_table);
-		kfree(buffer->sg_table);
-		buffer->sg_table = NULL;
-	}
-
-	return;
+	sg_free_table(buffer->sg_table);
 }
 
 void *ion_carveout_heap_map_kernel(struct ion_heap *heap,
 				   struct ion_buffer *buffer)
 {
+	int mtype = MT_MEMORY_NONCACHED;
+
+	if (buffer->flags & ION_FLAG_CACHED)
+		mtype = MT_MEMORY;
+
 	return __arm_ioremap(buffer->priv_phys, buffer->size,
-			      MT_MEMORY_NONCACHED);
+			      mtype);
 }
 
 void ion_carveout_heap_unmap_kernel(struct ion_heap *heap,
@@ -158,8 +145,6 @@ static struct ion_heap_ops carveout_heap_ops = {
 	.map_user = ion_carveout_heap_map_user,
 	.map_kernel = ion_carveout_heap_map_kernel,
 	.unmap_kernel = ion_carveout_heap_unmap_kernel,
-	.map_dma = ion_carveout_heap_map_dma,
-	.unmap_dma = ion_carveout_heap_unmap_dma,
 };
 
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)

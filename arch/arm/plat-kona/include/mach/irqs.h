@@ -323,4 +323,6 @@
 #define NR_IRQS               (IRQ_GPIO_0 + NUM_GPIO_IRQS)
 #endif
 
+#define IRQ_LOCALTIMER 	BCM_INT_ID_PPI13
+
 #endif /* __PLAT_KONA_IRQS_H */

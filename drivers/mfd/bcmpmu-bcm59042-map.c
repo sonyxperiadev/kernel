@@ -309,6 +309,8 @@ static struct bcmpmu_reg_map bcm59042_reg_map[PMU_REG_MAX] = {
 				 .ro = 0, .shift = 0},
 	[PMU_REG_IHFPWRDRV_PUP] = {.map = 0x01, .addr = 0x91, .mask = 0x01,
 				   .ro = 0, .shift = 0},
+	[PMU_REG_IHF_NGTHRESH] = {.map = 0x01, .addr = 0x9A, .mask = 0x07,
+				 .ro = 0, .shift = 0},
 	[PMU_REG_IHFNG_PUP] =	{.map = 0x01, .addr = 0x9B, .mask = 0x08,
 				 .ro = 0, .shift = 3},
 	[PMU_REG_IHFPOP_EN] =	{.map = 0x01, .addr = 0x83, .mask = 0x04,
@@ -439,6 +441,10 @@ static struct bcmpmu_reg_map bcm59042_reg_map[PMU_REG_MAX] = {
 	[PMU_REG_UASCTRL3] =		{.map = 0x00, .addr = 0x72,
 		.mask = 0xFF, .ro = 0},
 	[PMU_REG_UASCTRL4] =		{.map = 0x00, .addr = 0x73,
+		.mask = 0xFF, .ro = 0},
+
+	/* Common Control Registers */
+	[PMU_REG_COMM_CTRL] = {.map = 0x00, .addr = 0xFC,
 		.mask = 0xFF, .ro = 0},
 
 };
@@ -626,6 +632,8 @@ static const struct bcmpmu_adc_map bcm59042_adc_map[PMU_ADC_MAX] = {
 		.dmask = 0xFFFF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
 	[PMU_ADC_FG_VMBATT] =		{.map = 1, .addr0 = 0x57, .addr1 = 0x56,
 		.dmask = 0x03FF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 4800},
+	[PMU_ADC_TEMP_SNS] = {.addr0 = 0x99, .addr1 = 0x98,
+		.dmask = 0x3FF, .vmask = 0x0000, .rtmsel = 0xE, .vrng = 1200},
 };
 
 static const struct bcmpmu_reg_map bcm59042_adc_ctrl_map[PMU_ADC_CTRL_MAX] = {

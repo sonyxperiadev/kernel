@@ -46,7 +46,7 @@
 #include <linux/wakelock.h>
 #endif
 
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
 
 /*
  * NOTE: We are using  ARCH specific flag to protect the PI MGR code
@@ -1358,7 +1358,7 @@ static void serial8250_stop_tx(struct uart_port *port)
 	mdelay(1);
 	pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
 	if (up->bugs & UART_BUG_THRE)
 		del_timer_sync(&up->timer);
 #endif
@@ -1371,7 +1371,7 @@ static void serial8250_start_tx(struct uart_port *port)
 
 	pi_mgr_qos_request_update(&up->qos_tx_node,0);
 
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
 	if (up->bugs & UART_BUG_THRE) {
 		up->timer.function = serial8250_backup_timeout;
 		up->timer.data = (unsigned long)up;
@@ -1474,7 +1474,7 @@ serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 	}
 
 
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
 	/*
 	 * Handle port gets called from either the interrupt context
 	 * _OR_ from the timeout thread context (serial8250_timeout).
@@ -1659,7 +1659,7 @@ void serial8250_tx_chars(struct uart_8250_port *up)
      * so go and disable the clock
      */
 	if (uart_circ_empty(xmit)) {
-#ifndef CONFIG_ARCH_RHEA
+#if !defined(CONFIG_ARCH_RHEA) && !defined(CONFIG_ARCH_HAWAII)
 		__stop_tx(up);
 		pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 #endif
@@ -1680,7 +1680,7 @@ void serial8250_tx_chars(struct uart_8250_port *up)
 
 	DEBUG_INTR("THRE...");
 
-#ifndef CONFIG_ARCH_RHEA
+#if !defined(CONFIG_ARCH_RHEA) && !defined(CONFIG_ARCH_HAWAII)
 	if (uart_circ_empty(xmit))
 		__stop_tx(up);
 #endif
@@ -1702,7 +1702,7 @@ unsigned int serial8250_modem_status(struct uart_8250_port *up)
 			port->icount.dsr++;
 		if (status & UART_MSR_DDCD)
 			uart_handle_dcd_change(port, status & UART_MSR_DCD);
-		if (status & UART_MSR_DCTS)
+		if (!(up->mcr & UART_MCR_AFE) && (status & UART_MSR_DCTS))
 			uart_handle_cts_change(port, status & UART_MSR_CTS);
 
 		wake_up_interruptible(&port->state->port.delta_msr_wait);
@@ -1745,7 +1745,7 @@ int serial8250_handle_irq(struct uart_port *port, unsigned int iir)
 	}
 	serial8250_modem_status(up);
 
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
 	/*
 	 * Note that from the transmit_chars  we are NOT disabling the TX
 	 * interrupt when the circular buffer becomes empty. So we will get
@@ -1758,7 +1758,7 @@ int serial8250_handle_irq(struct uart_port *port, unsigned int iir)
 		pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 
 		if (up->bugs & UART_BUG_THRE)
-			del_timer_sync(&up->timer);
+			del_timer(&up->timer);
 
 	} else if (status & UART_LSR_THRE)
 		serial8250_tx_chars(up);
@@ -2050,7 +2050,7 @@ static void serial8250_backup_timeout(unsigned long data)
 		serial_out(up, UART_IER, ier);
 
 	spin_unlock_irqrestore(&up->port.lock, flags);
-#ifndef CONFIG_ARCH_RHEA
+#if !defined(CONFIG_ARCH_RHEA) && !defined(CONFIG_ARCH_HAWAII)
 	/* Standard timer interval plus 0.2s to keep the port running */
 	mod_timer(&up->timer,
 		jiffies + uart_poll_timeout(&up->port) + HZ / 5);
@@ -2740,10 +2740,11 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 		quot++;
 
 	if (up->capabilities & UART_CAP_FIFO && port->fifosize > 1) {
-		if (baud < 2400)
-			fcr = UART_FCR_ENABLE_FIFO | UART_FCR_TRIGGER_1;
-		else
-			fcr = uart_config[port->type].fcr;
+		fcr = uart_config[port->type].fcr;
+		if (baud < 2400) {
+			fcr &= ~UART_FCR_TRIGGER_MASK;
+			fcr |= UART_FCR_TRIGGER_1;
+		}
 	}
 
 	/*
@@ -3630,7 +3631,7 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
 	return NULL;
 }
 
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
 static void rx_timeout_handler(unsigned long data)
 {
 	struct uart_8250_port *up = (struct uart_8250_port *)data;
@@ -3702,7 +3703,7 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
 		wake_lock_init(&uart->uart_lock, WAKE_LOCK_IDLE, "UARTWAKE");
 #endif
 
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
 		ret = pi_mgr_qos_add_request(&uart->qos_tx_node,(char *)clk_name,
 			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
 		ret = pi_mgr_qos_add_request(&uart->qos_rx_node,(char *)clk_name,

@@ -642,7 +642,8 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&
 		    (paccy->bc != BCMPMU_BC_BB_BC12))
 			schedule_delayed_work(&paccy->det_work, 0);
-		if (strcmp(get_supply_type_str(prev_chrgr_type), "usb") == 0)
+		if ((get_supply_type_str(prev_chrgr_type) != NULL) &&
+		(strcmp(get_supply_type_str(prev_chrgr_type), "usb") == 0))
 			send_usb_event(bcmpmu,
 					BCMPMU_USB_EVENT_SESSION_INVALID, NULL);
 
@@ -661,7 +662,8 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_VBUS_4V5_F:
-		if (strcmp(get_supply_type_str(prev_chrgr_type), "usb") == 0)
+		if ((get_supply_type_str(prev_chrgr_type) != NULL) &&
+		(strcmp(get_supply_type_str(prev_chrgr_type), "usb") == 0))
 			send_usb_event(bcmpmu,
 					BCMPMU_USB_EVENT_VBUS_INVALID, NULL);
 		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&

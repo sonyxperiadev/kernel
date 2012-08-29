@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh.c 300445 2011-12-03 05:37:20Z $
+ * $Id: bcmsdh.c 347614 2012-07-27 10:24:51Z $
  */
 
 /**
@@ -362,9 +362,10 @@ bcmsdh_cis_read(void *sdh, uint func, uint8 *cis, uint length)
 		}
 		bcopy(cis, tmp_buf, length);
 		for (tmp_ptr = tmp_buf, ptr = cis; ptr < (cis + length - 4); tmp_ptr++) {
-			ptr += sprintf((char*)ptr, "%.2x ", *tmp_ptr & 0xff);
+			ptr += snprintf((char*)ptr, (cis + length - ptr - 4),
+				"%.2x ", *tmp_ptr & 0xff);
 			if ((((tmp_ptr - tmp_buf) + 1) & 0xf) == 0)
-				ptr += sprintf((char *)ptr, "\n");
+				ptr += snprintf((char *)ptr, (cis + length - ptr -4), "\n");
 		}
 		MFREE(bcmsdh->osh, tmp_buf, length);
 	}
@@ -724,3 +725,32 @@ bcmsdh_gpioout(void *sdh, uint32 gpio, bool enab)
 
 	return sdioh_gpioout(sd, gpio, enab);
 }
+
+#ifdef BCMSDIOH_TXGLOM
+void
+bcmsdh_glom_post(void *sdh, uint8 *frame, uint len)
+{
+	bcmsdh_info_t *bcmsdh = (bcmsdh_info_t *)sdh;
+	sdioh_glom_post(bcmsdh->sdioh, frame, len);
+}
+
+void
+bcmsdh_glom_clear(void *sdh)
+{
+	bcmsdh_info_t *bcmsdh = (bcmsdh_info_t *)sdh;
+	sdioh_glom_clear(bcmsdh->sdioh);
+}
+
+uint
+bcmsdh_set_mode(void *sdh, uint mode)
+{
+	bcmsdh_info_t *bcmsdh = (bcmsdh_info_t *)sdh;
+	return (sdioh_set_mode(bcmsdh->sdioh, mode));
+}
+
+bool
+bcmsdh_glom_enabled(void)
+{
+	return (sdioh_glom_enabled());
+}
+#endif /* BCMSDIOH_TXGLOM */

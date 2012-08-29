@@ -364,6 +364,10 @@ static struct usb_gadget_strings *rndis_strings[] = {
 	NULL,
 };
 
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+#define DMA_ALIGN_ROOM 4
+#endif
+
 /*-------------------------------------------------------------------------*/
 
 static struct sk_buff *rndis_add_header(struct gether *port,
@@ -371,7 +375,11 @@ static struct sk_buff *rndis_add_header(struct gether *port,
 {
 	struct sk_buff *skb2;
 
-	skb2 = skb_realloc_headroom(skb, sizeof(struct rndis_packet_msg_type));
+	skb2 = skb_realloc_headroom(skb, sizeof(struct rndis_packet_msg_type)
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+		+ DMA_ALIGN_ROOM
+#endif
+	);
 	if (skb2)
 		rndis_add_hdr(skb2);
 
@@ -820,7 +828,6 @@ rndis_unbind(struct usb_configuration *c, struct usb_function *f)
 
 	rndis_deregister(rndis->config);
 	rndis_exit();
-	rndis_string_defs[0].id = 0;
 
 	if (gadget_is_superspeed(c->cdev->gadget))
 		usb_free_descriptors(f->ss_descriptors);
@@ -869,13 +876,13 @@ rndis_bind_config_vendor(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
 	if (!can_support_rndis(c) || !ethaddr)
 		return -EINVAL;
 
+	/* setup RNDIS itself */
+	status = rndis_init();
+	if (status < 0)
+		return status;
+
 	/* maybe allocate device-global string IDs */
 	if (rndis_string_defs[0].id == 0) {
-
-		/* ... and setup RNDIS itself */
-		status = rndis_init();
-		if (status < 0)
-			return status;
 
 		/* control interface label */
 		status = usb_string_id(c->cdev);

@@ -42,7 +42,7 @@ struct uart_8250_port {
 	struct wake_lock uart_lock;
 #define WAKELOCK_TIMEOUT_VAL 5000
 #endif
-#ifdef CONFIG_ARCH_RHEA
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
 	/*
 	 * Kona PM - QOS service
  	 */

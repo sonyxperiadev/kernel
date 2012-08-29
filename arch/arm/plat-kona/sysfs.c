@@ -124,6 +124,10 @@ void do_clear_ap_only_boot(void)
 }
 EXPORT_SYMBOL(do_clear_ap_only_boot);
 
+bool ap_only_boot;
+EXPORT_SYMBOL(ap_only_boot);
+
+core_param(ap_only_boot, ap_only_boot, bool, 0644);
 
 /**
  * This API checks to see if kernel boot is done for AP_ONLY mode
@@ -136,7 +140,10 @@ unsigned int is_ap_only_boot(void)
 {
 	unsigned int rst;
 
-	rst = get_emu_reset_reason(REG_EMU_AREA);
+	if (!ap_only_boot)
+		rst = get_emu_reset_reason(REG_EMU_AREA);
+	else
+		rst = AP_ONLY_BOOT;
 	rst = rst & 0xf;
 
 	pr_debug("%s\n reset_reason = 0x%x", __func__, rst);
