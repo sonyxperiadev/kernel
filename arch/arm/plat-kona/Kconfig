@@ -125,6 +125,14 @@ config KONA_PM_NO_CLK_DISABLE
 	help
 		Say Y to disable clk disable.
 
+config	PM_LOG_TO_UNCACHED_MEM
+	bool "Enable uncached logging facility for PM"
+	default n
+	help
+		Say Y to enable uncached logging facility for PM.
+		used to log PM specific events. This will help in
+		enhancing ramdump analysis as the ctritical PM events
+		and traces can be seen in ramdump.
 
 config KONA_CPU_FREQ_DRV
        bool "Enable CPU frequency scaling for kona chips"

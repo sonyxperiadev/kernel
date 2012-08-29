@@ -2950,5 +2950,23 @@ cVoid chal_audio_adcpath_fifo_global_clear(CHAL_HANDLE handle, Boolean clear);
 
 cVoid chal_audio_hspath_turn_on_pmu_signal(cVoid);
 
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+/**
+*
+* Function Name: cVoid chal_audio_hspath_hs_supply_get_indicator
+* (CHAL_HANDLE handle, cUInt16 *hs_ds_indicator)
+*
+* Description:  Get the headset driver supply indicator
+*
+* Parameters:  handle - audio chal handle.
+*              hs_ds_indicator (out) - Headset Driver Supply Indicator,
+*
+* Return:       None.
+*
+*****************************************************************************/
 
+cVoid chal_audio_hspath_hs_supply_get_indicator(CHAL_HANDLE handle,
+				cUInt16 *hs_ds_indicator);
+
+#endif
 #endif /* _CHAL_CAPH_AUDIOH_ */

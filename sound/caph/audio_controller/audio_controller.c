@@ -75,7 +75,130 @@ Only one loopback path can be enabled at a time.*/
 #define VIBRA_LDO_REGULATOR "2v9_vibra"
 #define DIGI_MIC_LDO_REGULATOR "hv7"
 
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+#define TEMP_CHECK_DELAY_2MIN (2*60*1000)
+#define TEMP_CHECK_DELAY_30SEC (30*1000)
+#define TEMP_CHECK_DELAY_1MS 1
+#define TEMP_HIGH 95
+#define TEMP_VERY_HIGH 125
+#define PMU_DELTA_T_RANGE  31
+#define PMU_GAIN_RANGE  64
+
 /** Private Type and Constant declarations */
+struct PMU_DeltaTOutputLimitMapping_t {
+	float PMU_output_limit;
+	int deltaT;
+};
+
+static struct PMU_DeltaTOutputLimitMapping_t
+	hsPMU_DeltaTOutputTable[PMU_DELTA_T_RANGE] = {
+	/* Gain in milli Bel,      HS PMU Gain enum */
+	{1.5100, 0},
+	{1.4255, 1},
+	{1.3458, 2},
+	{1.2705, 3},
+	{1.1994, 4},
+	{1.1323, 5},
+	{1.0690, 6},
+	{1.0092, 7},
+	{0.9527, 8},
+	{0.8994, 9},
+	{0.8491, 10},
+	{0.8016, 11},
+	{0.7568, 12},
+	{0.7145, 13},
+	{0.6745, 14},
+	{0.6368, 15},
+	{0.6011, 16},
+	{0.5675, 17},
+	{0.5358, 18},
+	{0.5058, 19},
+	{0.4775, 20},
+	{0.4508, 21},
+	{0.4256, 22},
+	{0.4018, 23},
+	{0.3793, 24},
+	{0.3581, 25},
+	{0.3380, 26},
+	{0.3191, 27},
+	{0.3013, 28},
+	{0.2844, 29},
+	{0.2685, 30}
+};
+
+struct PMU_GAINPartialcalulation_t {
+	int pmu_gain;
+	float PMU_thresh_partial_val;
+};
+
+static struct PMU_GAINPartialcalulation_t
+	hsPMU_GAINPartialcalulationTable[PMU_GAIN_RANGE] = {
+{	-10000	,	0.000024	},
+{	-6800	,	0.000955457	},
+{	-6500	,	0.001349619	},
+{	-6200	,	0.001906388	},
+{	-5900	,	0.002692844	},
+{	-5600	,	0.003803744	},
+{	-5300	,	0.005372931	},
+{	-5000	,	0.007589466	},
+{	-4700	,	0.010720406	},
+{	-4400	,	0.015142976	},
+{	-4250	,	0.017997461	},
+{	-4100	,	0.021390023	},
+{	-3950	,	0.025422089	},
+{	-3800	,	0.03021421	},
+{	-3650	,	0.035909656	},
+{	-3500	,	0.042678706	},
+{	-3350	,	0.050723737	},
+{	-3200	,	0.060285274	},
+{	-3050	,	0.071649183	},
+{	-2900	,	0.085155213	},
+{	-2750	,	0.101207161	},
+{	-2600	,	0.120284936	},
+{	-2450	,	0.142958914	},
+{	-2400	,	0.151429763	},
+{	-2350	,	0.16040254	},
+{	-2300	,	0.169906988	},
+{	-2250	,	0.17997461	},
+{	-2200	,	0.190638776	},
+{	-2150	,	0.201934834	},
+{	-2100	,	0.213900225	},
+{	-2050	,	0.22657461	},
+{	-2000	,	0.24},
+{	-1950	,	0.254220894	},
+{	-1900	,	0.269284429	},
+{	-1850	,	0.285240535	},
+{	-1800	,	0.302142099	},
+{	-1750	,	0.320045144	},
+{	-1700	,	0.339009011	},
+{	-1650	,	0.359096557	},
+{	-1600	,	0.380374366	},
+{	-1550	,	0.402912964	},
+{	-1500	,	0.426787058	},
+{	-1450	,	0.452075781	},
+{	-1400	,	0.478862956	},
+{	-1350	,	0.50723737	},
+{	-1300	,	0.537293073	},
+{	-1250	,	0.569129689	},
+{	-1200	,	0.602852744	},
+{	-1150	,	0.638574014	},
+{	-1100	,	0.676411904	},
+{	-1050	,	0.716491829	},
+{	-1000	,	0.758946638	},
+{	-950	,	0.803917054	},
+{	-900	,	0.851552134	},
+{	-850	,	0.90200977	},
+{	-800	,	0.955457209	},
+{	-750	,	1.012071608	},
+{	-700	,	1.072040621	},
+{	-650	,	1.135563022	},
+{	-600	,	1.202849361	},
+{	-550	,	1.274122666	},
+{	-500	,	1.34961918	},
+{	-450	,	1.429589144	},
+{	-400	,	1.514297627	}
+};
+#endif
 
 enum ExtSpkrUsage_en_t {
 	TelephonyUse,
@@ -163,6 +286,12 @@ static Boolean muteInPlay = FALSE;
 static Boolean isStIHF = FALSE;
 
 static Boolean isFmMuted = FALSE;
+
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+Boolean gtemp = 30;
+Boolean gtempGainCompEnable = 1;
+#endif
+
 /*
 static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 static unsigned int recordGainR[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
@@ -3536,6 +3665,13 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 			Dsp_Shared_memDump();
 		}
 		break;
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+	case AUDCTRL_HW_TEMPGAINCOMP:
+		aWarn("Temp Gain Compensation Status !!!!%d\n", arg1);
+		gtempGainCompEnable = arg1;
+		break;
+#endif
+
 	case AUDCTRL_HW_WRITE_GAIN:
 
 		/*arg2 is gain in milli Bel */
@@ -4233,6 +4369,12 @@ void AUDCTRL_ConnectDL(void)
 	aTrace(LOG_AUDIO_CNTLR,  "AUDCTRL_ConnectDL PTT CONNECT_DL\n");
 }
 
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+Boolean AUDCTRL_AllPathsDisabled(void)
+{
+	return csl_caph_hwctrl_allPathsDisabled();
+}
+#endif
 void AUDCTRL_UpdateUserVolSetting(
 	AUDIO_SINK_Enum_t sink,
 	int vol_left,
@@ -4353,5 +4495,238 @@ void multicastToSpkr(Boolean flag)
 
 
 }
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
 
+int AUDCTRL_TempGainComp(BrcmPmuTempGainComp *paudio)
+{
+	int gainL_mB = 0, gainR_mB = 0;
+	int delay =  TEMP_CHECK_DELAY_2MIN;
+	int deltaT = 0;
+	unsigned short int hs_ds_indicator = 0;
+	unsigned int hs_ds_thres;
+	int pmu_gainR,  pmu_gainL;
+	int hs_ds_ind_count = 0;
+	int loop;
+	int temp;
+	if (csl_caph_IsHSActive()) {
+		if (!csl_caph_QueryHWClock()) {
+			aWarn("Clocks are not enabled\n");
+			return delay;
+		}
+		csl_caph_ClockLock();
+	    if (paudio->firstFlag == 0) {
+			paudio->firstFlag = 1;
+		/* store the gain */
+			csl_srcmixer_getMixOutGain(CSL_CAPH_SRCM_STEREO_CH1,
+					&gainL_mB, &gainR_mB);
+			paudio->hs_orig_gain_L = gainL_mB;
+			paudio->hs_orig_gain_R = gainR_mB;
+			paudio->hs_curr_gain_L = gainL_mB;
+			paudio->hs_curr_gain_R = gainR_mB;
+			aTrace(LOG_AUDIO_PMUTEMP, "AUDCTRL_TempGainComp:"
+				" original mixer"
+				"out gain %d, %d\n", gainL_mB, gainR_mB);
+	    }
+	    temp = paudio->currTemp;
+		aTrace(LOG_AUDIO_PMUTEMP, "inside AUDCTRL_TempGainComp"
+			"temp %d\n", temp);
+	    if (temp < TEMP_HIGH) {
+				if (paudio->tempGainState == AUDCTRL_AMP_OFF) {
+					/* Turn on AMP */
+					extern_hs_on();
+					setExternAudioGain(
+						GetAudioModeBySink(
+							AUDIO_SINK_HEADSET),
+						AUDCTRL_GetAudioApp());
+					aTrace(LOG_AUDIO_PMUTEMP,
+						"Turn on HS AMP\n");
+					gainL_mB = paudio->hs_orig_gain_L;
+					gainR_mB = paudio->hs_orig_gain_R;
+					paudio->hs_curr_gain_L = gainL_mB;
+					paudio->hs_curr_gain_R = gainR_mB;
+					aTrace(LOG_AUDIO_PMUTEMP, "Turn on "
+						"HS AMP %d %d\n",
+						paudio->hs_orig_gain_L,
+						paudio->hs_orig_gain_R);
+					csl_srcmixer_setMixOutGain(
+						CSL_CAPH_SRCM_STEREO_CH1,
+						gainL_mB,  gainR_mB);
+				}
+				if (paudio->tempGainState
+					== AUDCTRL_HIGH_TEMP) {
+					gainL_mB = paudio->hs_orig_gain_L;
+					gainR_mB = paudio->hs_orig_gain_R;
+					paudio->hs_curr_gain_L = gainL_mB;
+					paudio->hs_curr_gain_R = gainR_mB;
+					aTrace(LOG_AUDIO_PMUTEMP, "Restoring "
+					"the Original BB"
+						"gain %d\n", gainR_mB);
+					csl_srcmixer_setMixOutGain(
+						CSL_CAPH_SRCM_STEREO_CH1,
+						gainL_mB,  gainR_mB);
+				}
+			paudio->tempGainState = AUDCTRL_NORMAL_TEMP;
+			delay = TEMP_CHECK_DELAY_2MIN;
+			aTrace(LOG_AUDIO_PMUTEMP, "Headset present\n");
+		} else if (temp >= TEMP_HIGH
+			&& temp < TEMP_VERY_HIGH) {
+			if (paudio->tempGainState == AUDCTRL_AMP_OFF) {
+					/* Turn on AMP */
+					extern_hs_on();
+						setExternAudioGain(
+							GetAudioModeBySink(
+							AUDIO_SINK_HEADSET),
+							AUDCTRL_GetAudioApp());
+				aTrace(LOG_AUDIO_PMUTEMP, "Turn on HS AMP in"
+					"TEMP_HIGH State\n");
+		    }
+			deltaT = temp - TEMP_HIGH;
+			/* compute the threshold*/
+			extern_hs_get_gain(&pmu_gainL, &pmu_gainR);
+			hs_ds_thres = AUDCTRL_TempGainComp_ComputeThresh(
+				deltaT, pmu_gainR);
+			/*Write to BB register*/
+			csl_caph_audioh_hs_supply_set_hs_ds_thres(hs_ds_thres);
+			aTrace(LOG_AUDIO_PMUTEMP, "pmu_gainL %d pmu_gainR  %d"
+				"set hs_ds_thres = 0x%x %d\n",
+				pmu_gainL, pmu_gainR, hs_ds_thres, hs_ds_thres);
+			/* delay of 2 msec */
+			mdelay(2);
+			/* Read the headset driver supply indicator
+			50 times in 50ms*/
+			hs_ds_ind_count = 0;
+			for (loop = 0; loop < 50; loop++) {
+				/* The clocks module is waiting to turnoff
+				the clock. Break the loop and return.*/
+				if (csl_caph_ClockWaitStatus()) {
+					aError("Clock module waiting "
+					"to trun os clock !!!!");
+					break;
+				}
+				csl_caph_audioh_hs_supply_get_hs_ds_indicator(
+					(unsigned short int*)&hs_ds_indicator);
+				mdelay(1);
+				if (hs_ds_indicator)
+					hs_ds_ind_count++;
+			}
+			if (hs_ds_ind_count) {
+				/*covert dB to mB*/
+				gainR_mB =
+					paudio->hs_orig_gain_R - (50 * deltaT);
+				gainL_mB =
+					paudio->hs_orig_gain_L - (50 * deltaT);
+				paudio->hs_curr_gain_L =
+					gainL_mB;
+				paudio->hs_curr_gain_R =
+					gainR_mB;
 
+				aTrace(LOG_AUDIO_PMUTEMP, "The Final"
+					" hs_ds_ind_count %d,"
+					"New gainR_mB %d\n",
+					hs_ds_ind_count, gainR_mB);
+				csl_srcmixer_setMixOutGain(
+					CSL_CAPH_SRCM_STEREO_CH1,
+					gainR_mB,  gainR_mB);
+			} else {
+				/* if one or more 1 then set the
+				baseband gain = original + 0.5 deltaT; */
+				gainL_mB = paudio->hs_curr_gain_L;
+				gainR_mB = paudio->hs_curr_gain_R;
+
+				aTrace(LOG_AUDIO_PMUTEMP, "Old  gainR_mB %d\n",
+					gainR_mB);
+				/*covert dB to mB*/
+				gainR_mB = gainR_mB + (50);
+				gainL_mB = gainL_mB + (50);
+				paudio->hs_curr_gain_L = gainL_mB;
+				paudio->hs_curr_gain_R = gainR_mB;
+				csl_srcmixer_setMixOutGain(
+					CSL_CAPH_SRCM_STEREO_CH1,
+					gainR_mB,  gainR_mB);
+				aTrace(LOG_AUDIO_PMUTEMP, "Increase"
+				" gain by 0.5dB: New  gainR_mB %d"
+				"paudio->hs_orig_gain_R %d\n",
+				gainR_mB, paudio->hs_orig_gain_R);
+				if (gainR_mB >= paudio->hs_orig_gain_R)  {
+					paudio->hs_curr_gain_L =
+						paudio->hs_orig_gain_L;
+					paudio->hs_curr_gain_R =
+						paudio->hs_orig_gain_R;
+					csl_srcmixer_setMixOutGain(
+						CSL_CAPH_SRCM_STEREO_CH1,
+						paudio->hs_orig_gain_L,
+						paudio->hs_orig_gain_R);
+					aTrace(LOG_AUDIO_PMUTEMP, "Setting  "
+					"gain original value  %d\n",
+					paudio->hs_orig_gain_R);
+				}
+			}
+			paudio->tempGainState = AUDCTRL_HIGH_TEMP;
+			/* start the timer for 30sec.*/
+			delay = TEMP_CHECK_DELAY_30SEC;
+		} else if (temp >= TEMP_VERY_HIGH) {
+			/* store amp turn off status.*/
+			paudio->tempGainState = AUDCTRL_AMP_OFF;
+			/* Turn off the amp*/
+			extern_hs_off();
+			aTrace(LOG_AUDIO_PMUTEMP, "Temp = %d. !!!More than 125."
+			" Shutdown HS AMP\n", temp);
+		}
+	} else
+	aTrace(LOG_AUDIO_PMUTEMP, "***Headset is not active\n");
+	csl_caph_ClockUnLock();
+	return delay;
+}
+
+unsigned int AUDCTRL_TempGainComp_ComputeThresh(int deltaT, int pmu_gain)
+{
+/* Threshold calculation
+Threshold (decimal) =
+floor[(PMU_OUTPUT_LIMIT/(0.5*4.8*10exp(PMU_GAIN/20)))*2to the power 23]
+*/
+	unsigned int thresh = 0;
+	float PMU_output_limit;
+	float PMU_thresh_partial_val;
+	int index;
+	float tempThresh;
+	aTrace(LOG_AUDIO_PMUTEMP, "AUDCTRL_TempGainComp_ComputeThresh"
+	" deltaT=%d, pmu_gain=%d\n", deltaT, pmu_gain);
+	for (index = 0; index < PMU_GAIN_RANGE; index++) {
+		if (pmu_gain ==
+			hsPMU_GAINPartialcalulationTable[index].pmu_gain) {
+			PMU_thresh_partial_val =
+			hsPMU_GAINPartialcalulationTable[index].
+			PMU_thresh_partial_val;
+			PMU_output_limit =
+			hsPMU_DeltaTOutputTable[deltaT].PMU_output_limit;
+			tempThresh =
+				(PMU_output_limit/PMU_thresh_partial_val)
+				*8388608;
+			thresh = (unsigned int)(tempThresh - 0.5);
+			break;
+		}
+	}
+	return thresh;
+}
+
+void AUDCTRL_TempGainCompInit(BrcmPmuTempGainComp *paudio)
+{
+	if (paudio->intiComplete == 0) {
+		paudio->firstFlag = 0;
+		paudio->tempGainState = AUDCTRL_NORMAL_TEMP;
+		paudio->intiComplete = 1;
+		paudio->prevTemp = 0;
+		paudio->currTemp = 0;
+	}
+}
+
+void AUDCTRL_TempGainCompDeInit(BrcmPmuTempGainComp *paudio)
+{
+	paudio->intiComplete = 0;
+}
+
+Boolean AUDCTRL_TempGainCompStatus(void)
+{
+	return gtempGainCompEnable;
+}
+#endif

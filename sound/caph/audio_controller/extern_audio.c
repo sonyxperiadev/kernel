@@ -1192,4 +1192,19 @@ void extern_start_stop_multicast(unsigned char flag)
 
 }
 
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+/********************************************************************
+*  @brief  Get headset gain (mB)
+*
+*  @param  gain_mB	returned Headset gain
+*  @return  none
+*
+****************************************************************************/
+void extern_hs_get_gain(int *pGainL_mB, int *pGainR_mB)
+{
+
+		*pGainL_mB = hs_gain_l;
+		*pGainR_mB = hs_gain_r;
+}
+#endif
 #endif

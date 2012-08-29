@@ -69,6 +69,9 @@
 #endif
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_bintc.h>
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+#include <linux/mutex.h>
+#endif
 #define BINTC_OUT_DEST_DSP_NORM 17
 #define BMREG_BLOCK_SIZE (BINTC_IMR0_1_OFFSET-BINTC_IMR0_0_OFFSET)
 
@@ -143,6 +146,9 @@ enum CAPH_CLK_ID {
 	CLK_APB, /* KHUB_AUDIOH_APB_CLK */
 	CLK_156M, /* KHUB_AUDIOH_156M_CLK */
 };
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+struct mutex clockLock;
+#endif
 
 /* static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM] = {NULL,NULL}; */
 
@@ -185,6 +191,10 @@ static UInt32 dspSharedMemAddr;
 static Boolean isSTIHF = FALSE;
 static BT_MODE_t bt_mode = BT_MODE_NB;
 static Boolean sClkCurEnabled = FALSE;
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+static Boolean sClockDisable = FALSE;
+#endif
+
 static CSL_CAPH_DEVICE_e bt_spk_mixer_sink = CSL_CAPH_DEV_NONE;
 static CHAL_HANDLE lp_handle;
 static int en_lpbk_pcm, en_lpbk_i2s;
@@ -260,8 +270,9 @@ static void csl_caph_hwctrl_closeSRCMixerOutput(
 static void csl_caph_hwctrl_closeAudioH(CSL_CAPH_DEVICE_e dev,
 		CSL_CAPH_PathID pathID);
 static void csl_caph_hwctrl_ACIControl(void);
-
+#if (!defined(CONFIG_MFD_BCM59039) & !defined(CONFIG_MFD_BCM59042))
 static Boolean csl_caph_hwctrl_allPathsDisabled(void);
+#endif
 #ifdef CONFIG_CAPH_DYNAMIC_SRC_CLK
 static int csl_caph_hwctrl_pathsEnabled(void);
 
@@ -2684,6 +2695,10 @@ void csl_caph_ControlHWClock(Boolean enable)
 		}
 	} else if (enable == FALSE && sClkCurEnabled == TRUE && dsp_path == 0) {
 		UInt32 count = 0;
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+		sClockDisable = TRUE;
+		mutex_lock(&clockLock);
+#endif
 		sClkCurEnabled = FALSE;
 
 		/*disable only CAPH clocks*/
@@ -2699,6 +2714,10 @@ void csl_caph_ControlHWClock(Boolean enable)
 
 		enable156MClk = FALSE;
 		enable2P4MClk = FALSE;
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+		sClockDisable = FALSE;
+		mutex_unlock(&clockLock);
+#endif
 	}
 
 	if (enable == FALSE && sClkCurEnabled == TRUE && dsp_path != 0) {
@@ -3273,7 +3292,11 @@ static void csl_caph_hwctrl_ACIControl()
  *
  *  Description: Check whether all paths are disabled.
  ****************************************************************************/
+ #if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+Boolean csl_caph_hwctrl_allPathsDisabled(void)
+#else
 static Boolean csl_caph_hwctrl_allPathsDisabled(void)
+#endif
 {
 	UInt8 i = 0;
 	for (i = 0; i < MAX_AUDIO_PATH; i++) {
@@ -3321,7 +3344,9 @@ void csl_caph_hwctrl_init(void)
 	en_lpbk_pcm = 0;
 	en_lpbk_i2s = 0;
 	csl_caph_ControlHWClock(TRUE);
-
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+	mutex_init(&clockLock);
+#endif
 	memset(&addr, 0, sizeof(addr));
 	addr.cfifo_baseAddr = CFIFO_BASE_ADDR1;
 	addr.aadmac_baseAddr = AADMAC_BASE_ADDR1;
@@ -5730,3 +5755,54 @@ void csl_caph_hwctrl_SetLongDma(CSL_CAPH_PathID pathID)
 		__func__, pathID, dmaCH1, dmaCH2, (u32)path->size);
 }
 
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+/****************************************************************************
+*
+*  Function Name: csl_caph_IsHSActive
+*
+*  Description: returns true if HS is active.
+*
+*****************************************************************************/
+Boolean  csl_caph_IsHSActive(void)
+{
+	UInt8 i = 0;
+	int pathCount = 0;
+	aTrace(LOG_AUDIO_CSL, "\n\nPaths Active ");
+	for (i = 0; i < MAX_AUDIO_PATH; i++) {
+		if (HWConfig_Table[i].pathID != 0) {
+			if (HWConfig_Table[i].sink[0] == CSL_CAPH_DEV_HS)
+				pathCount++;
+		}
+	}
+	if (pathCount)
+		return TRUE;
+	else
+		return FALSE;
+}
+/****************************************************************************
+*
+*  Function Name: csl_caph_IsHSActive
+*
+*  Description: returns true if HS is active.
+*
+*****************************************************************************/
+void csl_caph_ClockLock(void)
+{
+	mutex_lock(&clockLock);
+}
+/****************************************************************************
+*
+*  Function Name: csl_caph_IsHSActive
+*
+*  Description: returns true if HS is active.
+*
+*****************************************************************************/
+void  csl_caph_ClockUnLock(void)
+{
+	mutex_unlock(&clockLock);
+}
+Boolean csl_caph_ClockWaitStatus()
+{
+	return sClockDisable;
+}
+#endif

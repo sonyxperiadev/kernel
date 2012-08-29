@@ -295,6 +295,36 @@ static int bcmpmu_otg_xceiv_vbus_notif_handler(struct notifier_block *nb,
 	return 0;
 }
 
+static int bcmpmu_otg_xceiv_a_invalid_notif_handler(
+	struct notifier_block *nb, unsigned long value, void *data)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data =
+	    container_of(nb, struct bcmpmu_otg_xceiv_data,
+			 bcm_otg_vbus_a_invalid_notifier);
+	bool suspend_allowed = false;
+
+	if (!xceiv_data)
+		return -EINVAL;
+
+	/* Check if system suspend is allowed */
+	bcm_hsotgctrl_is_suspend_allowed(&suspend_allowed);
+
+	if (suspend_allowed) {
+		/* Clock must be off. Enable OTG AHB clock */
+		bcm_hsotgctrl_en_clock(true);
+	}
+
+	/* Inform the core of session invalid level  */
+	bcm_hsotgctrl_phy_set_vbus_stat(false);
+
+	/* This triggers shutdown that will turn off the clock */
+	atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
+				   phy.notifier,
+				   USB_EVENT_NONE, NULL);
+
+	return 0;
+}
+
 static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block
 							*nb,
 							unsigned long value,
@@ -692,32 +722,53 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(work, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_id_status_change_work);
+	unsigned int new_id;
 	bool id_gnd = false;
 	bool id_rid_a = false;
 	bool id_rid_c = false;
 
 	dev_info(xceiv_data->dev, "ID change detected\n");
-	id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
-	id_rid_a = bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
-	id_rid_c = bcmpmu_otg_xceiv_check_id_rid_c(xceiv_data);
 
-	bcm_hsotgctrl_phy_set_id_stat(!(id_gnd || id_rid_a));
+	bcmpmu_usb_get(xceiv_data->bcmpmu,
+		BCMPMU_USB_CTRL_GET_ID_VALUE,
+		&new_id);
 
 	/* If ID is gnd, we need to turn on Vbus within 200ms
 	 * If ID is RID_A/B/C/FLOAT then we should not turn it on
 	 */
 	bcmpmu_otg_xceiv_set_vbus(&xceiv_data->otg_xceiver.
 		    otg, id_gnd ? true : false);
+	if (xceiv_data->prev_otg_id != new_id) {
+		id_gnd = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data);
+		id_rid_a = bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
+		id_rid_c = bcmpmu_otg_xceiv_check_id_rid_c(xceiv_data);
 
-	if (!id_rid_c)
-		msleep(HOST_TO_PERIPHERAL_DELAY_MS);
+		bcm_hsotgctrl_phy_set_id_stat(!(id_gnd || id_rid_a));
 
-	if (id_gnd || id_rid_a || id_rid_c) {
-		bcm_hsotgctrl_phy_deinit();
-		xceiv_data->otg_xceiver.phy.state = OTG_STATE_UNDEFINED;
-		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.phy.
-					   notifier, USB_EVENT_ID, NULL);
+		if (id_gnd) {
+			/* If ID is gnd, we need to turn on
+			 * Vbus within 200ms
+			 */
+			bcmpmu_otg_xceiv_set_vbus(&xceiv_data->otg_xceiver.
+				    otg, true);
+		}
+
+		if (!id_rid_c)
+			msleep(HOST_TO_PERIPHERAL_DELAY_MS);
+
+		if (id_gnd || id_rid_a || id_rid_c) {
+			bcm_hsotgctrl_phy_deinit();
+			xceiv_data->otg_xceiver.phy.state =
+				OTG_STATE_UNDEFINED;
+			atomic_notifier_call_chain(&xceiv_data->
+				otg_xceiver.phy.notifier,
+				USB_EVENT_ID, NULL);
+		}
 	}
+
+	/* Update local ID copy */
+	xceiv_data->prev_otg_id = new_id;
+
 }
 
 static void bcmpmu_otg_xceiv_chg_detect_handler(struct work_struct *work)
@@ -824,6 +875,11 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&xceiv_data->bcm_otg_delayed_adp_work,
 			  bcmpmu_otg_xceiv_delayed_adp_handler);
 
+	/* Initial value for previous OTG ID value.
+	 * 0 means unsupported
+	 */
+	xceiv_data->prev_otg_id = 0;
+
 	xceiv_data->otg_xceiver.phy.state = OTG_STATE_UNDEFINED;
 	xceiv_data->otg_xceiver.phy.otg->set_vbus = bcmpmu_otg_xceiv_set_vbus;
 	xceiv_data->otg_xceiver.phy.otg->set_peripheral =
@@ -850,8 +906,19 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	    bcmpmu_otg_xceiv_vbus_notif_handler;
 	bcmpmu_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID,
 			    &xceiv_data->bcm_otg_vbus_validity_notifier);
-	bcmpmu_add_notifier(BCMPMU_USB_EVENT_SESSION_INVALID,
-			    &xceiv_data->bcm_otg_vbus_validity_notifier);
+
+	/* Originally, we are using A session invalid event.
+	 * However, that event is coming in too late and fails a
+	 * compliance test. We need to use RM event instead
+	 * as a workaround
+	 * The name a_invalid is not changed to remind that it
+	 * really is for A session invalid event
+	 */
+	xceiv_data->bcm_otg_vbus_a_invalid_notifier.notifier_call =
+	    bcmpmu_otg_xceiv_a_invalid_notif_handler;
+	bcmpmu_add_notifier(BCMPMU_USB_EVENT_RM,
+			    &xceiv_data->bcm_otg_vbus_a_invalid_notifier);
+
 	xceiv_data->bcm_otg_id_chg_notifier.notifier_call =
 	    bcmpmu_otg_xceiv_id_chg_notif_handler;
 	bcmpmu_add_notifier(BCMPMU_USB_EVENT_ID_CHANGE,
@@ -904,6 +971,11 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev, "Failed to create WAKE file\n");
 		goto error_attr_wake;
 	}
+
+	/* Save original ID value */
+	bcmpmu_usb_get(xceiv_data->bcmpmu,
+		BCMPMU_USB_CTRL_GET_ID_VALUE,
+		&xceiv_data->prev_otg_id);
 
 	/* Check if we should default to A-device */
 	xceiv_data->otg_xceiver.phy.otg->default_a =
