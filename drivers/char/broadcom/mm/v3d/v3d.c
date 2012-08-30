@@ -263,11 +263,11 @@ int __init v3d_init(void)
 	}
 
 	v3d_device->v3d_bin_oom_handle = ion_alloc(v3d_device->v3d_bin_oom_client,
-			V3D_BIN_OOM_SIZE, SZ_4K, ION_DEFAULT_HEAP);
+			V3D_BIN_OOM_SIZE, 0, ION_DEFAULT_HEAP, 0);
 	v3d_device->v3d_bin_oom_block = kona_ion_map_dma(v3d_device->v3d_bin_oom_client,
 			v3d_device->v3d_bin_oom_handle);
 	if (v3d_device->v3d_bin_oom_block == 0) {
-		pr_err("ion alloc failed for v3d oom block size[0x%x] client[0x%x] handle[0x%x] \n",
+		pr_err("ion alloc failed for v3d oom block size[0x%x] client[%p] handle[%p] \n",
 		       V3D_BIN_OOM_SIZE, v3d_device->v3d_bin_oom_client, v3d_device->v3d_bin_oom_handle);
 		v3d_device->v3d_bin_oom_size = 0;
 		ret = -ENOMEM;
@@ -278,11 +278,11 @@ int __init v3d_init(void)
 	       v3d_device->v3d_bin_oom_block, v3d_device->v3d_bin_oom_size);
 
 	v3d_device->v3d_bin_oom_handle2 = ion_alloc(v3d_device->v3d_bin_oom_client,
-			V3D_BIN_OOM_SIZE, SZ_4K, ION_DEFAULT_HEAP);
+			V3D_BIN_OOM_SIZE, 0, ION_DEFAULT_HEAP, 0);
 	v3d_device->v3d_bin_oom_block2 = kona_ion_map_dma(v3d_device->v3d_bin_oom_client,
 			v3d_device->v3d_bin_oom_handle2);
 	if (v3d_device->v3d_bin_oom_block2 == 0) {
-		pr_err("ion alloc failed for v3d oom block2 size[0x%x] client[0x%x] handle2[0x%x] \n",
+		pr_err("ion alloc failed for v3d oom block2 size[0x%x] client[%p] handle2[%p] \n",
 		       V3D_BIN_OOM_SIZE, v3d_device->v3d_bin_oom_client, v3d_device->v3d_bin_oom_handle2);
 		v3d_device->v3d_bin_oom_size2 = 0;
 		ret = -ENOMEM;
@@ -370,12 +370,8 @@ void __exit v3d_exit(void)
 	if(v3d_device->fmwk_handle)
 		mm_fmwk_unregister(v3d_device->fmwk_handle);
 #ifdef CONFIG_ION
-	if (v3d_device->v3d_bin_oom_block2)
-		ion_unmap_dma(v3d_device->v3d_bin_oom_client, v3d_device->v3d_bin_oom_handle2);
 	if (v3d_device->v3d_bin_oom_handle2)
 		ion_free(v3d_device->v3d_bin_oom_client, v3d_device->v3d_bin_oom_handle2);
-	if (v3d_device->v3d_bin_oom_block)
-		ion_unmap_dma(v3d_device->v3d_bin_oom_client, v3d_device->v3d_bin_oom_handle);
 	if (v3d_device->v3d_bin_oom_handle)
 		ion_free(v3d_device->v3d_bin_oom_client, v3d_device->v3d_bin_oom_handle);
 	if (v3d_device->v3d_bin_oom_client)

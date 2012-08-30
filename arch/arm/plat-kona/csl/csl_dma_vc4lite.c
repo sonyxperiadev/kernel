@@ -162,7 +162,7 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
 			return -ENOMEM;
 		}
 		dmaCtrlBlkListHandle = ion_alloc(dmaCtrlBlkListClient,
-				size, SZ_4K, ION_DEFAULT_HEAP);
+				size, 0, ION_DEFAULT_HEAP, 0);
 		dmaCtrlBlkList = ion_map_kernel(dmaCtrlBlkListClient,
 				dmaCtrlBlkListHandle);
 		dmaCtrlBlkListPhys = (UInt32*)kona_ion_map_dma(dmaCtrlBlkListClient,
