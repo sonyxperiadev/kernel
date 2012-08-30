@@ -36,7 +36,6 @@
  */
 /**
  * struct ion_client - a process/hw block local address space
- * @ref:		for reference counting the client
  * @node:		node in the tree of all clients
  * @dev:		backpointer to ion device
  * @handles:		an rb tree of all the handles in this client
@@ -50,7 +49,6 @@
  * as well as the handles themselves, and should be held while modifying either.
  */
 struct ion_client {
-	struct kref ref;
 	struct rb_node node;
 	struct ion_device *dev;
 	struct rb_root handles;
@@ -70,7 +68,6 @@ struct ion_client {
  * @node:		node in the client's handle rbtree
  * @kmap_cnt:		count of times this client has mapped to kernel
  * @dmap_cnt:		count of times this client has mapped for dma
- * @usermap_cnt:	count of times this client has mapped for userspace
  *
  * Modifications to node, map_cnt or mapping should be protected by the
  * lock in the client.  Other fields are never changed after initialization.
@@ -81,8 +78,6 @@ struct ion_handle {
 	struct ion_buffer *buffer;
 	struct rb_node node;
 	unsigned int kmap_cnt;
-	unsigned int dmap_cnt;
-	unsigned int usermap_cnt;
 };
 
 static bool ion_handle_validate(struct ion_client *client, struct ion_handle *handle)
@@ -135,7 +130,7 @@ unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *hand
 	unsigned int dma_addr = 0;
 	struct sg_table *sg_table;
 
-	sg_table = ion_map_dma(client, handle);
+	sg_table = ion_sg_table(client, handle);
 	if (IS_ERR_OR_NULL(sg_table))
 		return dma_addr;
 
@@ -155,8 +150,6 @@ unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *hand
 		dma_addr = sg_phys(sg_table->sgl);
 #endif
 
-	if (!dma_addr)
-		ion_unmap_dma(client, handle);
 	return dma_addr;
 }
 EXPORT_SYMBOL(kona_ion_map_dma);
@@ -239,7 +232,6 @@ static long kona_ion_custom_ioctl (struct ion_client *client,
 
 		pr_debug("ION_IOC_CUSTOM_DMA_UNMAP client(%p) handle(%p) \n",
 				client, handle);
-		ion_unmap_dma(client, handle);
 
 		break;
 	}
