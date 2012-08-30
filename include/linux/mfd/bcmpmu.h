@@ -317,6 +317,7 @@ enum bcmpmu_reg {
 	PMU_REG_CHRGR_BCDLDO,
 	PMU_REG_CHRGR_BCDLDO_AON,
 	PMU_REG_CHP_TYP,
+	PMU_REG_TCH_TIMER,
 	/* fuel gauge */
 	PMU_REG_FG_ACCM0,
 	PMU_REG_FG_ACCM1,
@@ -1259,6 +1260,7 @@ struct bcmpmu_platform_data {
 	int support_fg;
 	int support_chrg_maint;
 	int chrg_resume_lvl;
+	int tch_timer_dis;
 	int fg_support_tc;
 	int fg_tc_dn_lvl;
 	int fg_tc_up_lvl;
