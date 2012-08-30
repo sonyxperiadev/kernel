@@ -36,6 +36,7 @@
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/pm.h>
 #include <mach/memory.h>
+#include <mach/dormant.h>
 
 #include "pm_params.h"
 
@@ -63,7 +64,6 @@ enum {
 	} while(0)
 
 extern void enter_wfi(void);
-extern void dormant_enter(void);
 
 static u32 force_retention;
 static u32 log_mask;
@@ -108,7 +108,7 @@ static struct kona_idle_state idle_states[] = {
 		.enter = enter_idle_state,
 	},
 #endif
-#ifdef CONFIG_RHEA_DORMANT_MODE
+#ifdef CONFIG_A9_DORMANT_MODE
 	{
 		.name = "C3",
 		.desc = "suspend-drmnt", /* suspend-dormant */
@@ -319,7 +319,7 @@ static void set_spare_power_status(unsigned int mode)
 
 int enter_dormant_state(struct kona_idle_state *state)
 {
-#ifdef CONFIG_RHEA_DORMANT_MODE
+#ifdef CONFIG_A9_DORMANT_MODE
 	u32 v;
 	if (dormant_enable != 0) {
 
@@ -334,7 +334,7 @@ int enter_dormant_state(struct kona_idle_state *state)
 		writel_relaxed(v, CHIPREG_PERIPH_SPARE_CONTROL2);
 		set_spare_power_status(SCU_STATUS_DORMANT);
 
-		dormant_enter();
+		dormant_enter(DORMANT_CORE_DOWN);
 
 		set_spare_power_status(SCU_STATUS_NORMAL);
 		v = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
@@ -342,7 +342,7 @@ int enter_dormant_state(struct kona_idle_state *state)
 		writel_relaxed(v, CHIPREG_PERIPH_SPARE_CONTROL2);
 		pwr_mgr_arm_core_dormant_enable(false);
 	}
-#endif /* CONFIG_RHEA_DORMANT_MODE */
+#endif /* CONFIG_A9_DORMANT_MODE */
 	return 0;
 }
 
