@@ -41,8 +41,13 @@
 #define GPS_VERSION	"2.00"
 
 #define RX_SIZE					128
+#if defined(NEW_GPSCHIP_I2C)
 #define TX_SIZE					64
 #define I2C_PACKET_SIZE			256
+#else
+#define TX_SIZE					32
+#define I2C_PACKET_SIZE			128
+#endif
 #define I2C_MAX_SIZE			256
 #define RX_BUFFER_LENGTH		16384
 #define UDELAY_AFTER_I2C_READ	30
