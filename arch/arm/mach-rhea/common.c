@@ -538,8 +538,8 @@ static struct resource kona_hsotgctrl_platform_resource[] = {
 	       .flags = IORESOURCE_MEM,
 	       },
 	[3] = {
-	       .start = BCM_INT_ID_RESERVED128,
-	       .end = BCM_INT_ID_RESERVED128,
+	       .start = BCM_INT_ID_HSOTG_WAKEUP,
+	       .end = BCM_INT_ID_HSOTG_WAKEUP,
 	       .flags = IORESOURCE_IRQ,
 	       },
 };
@@ -547,7 +547,7 @@ static struct resource kona_hsotgctrl_platform_resource[] = {
 static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
 	.hsotgctrl_virtual_mem_base = KONA_USB_HSOTG_CTRL_VA,
 	.chipreg_virtual_mem_base = KONA_CHIPREG_VA,
-	.irq = BCM_INT_ID_RESERVED128,
+	.irq = BCM_INT_ID_HSOTG_WAKEUP,
 	.usb_ahb_clk_name = USB_OTG_AHB_BUS_CLK_NAME_STR,
 	.mdio_mstr_clk_name = MDIOMASTER_PERI_CLK_NAME_STR,
 };
@@ -797,8 +797,8 @@ static u64 unicam_camera_dma_mask = DMA_BIT_MASK(32);
 
 static struct resource board_unicam_resource[] = {
 	[0] = {
-	       .start = BCM_INT_ID_RESERVED156,
-	       .end = BCM_INT_ID_RESERVED156,
+	       .start = BCM_INT_ID_CSI,
+	       .end = BCM_INT_ID_CSI,
 	       .flags = IORESOURCE_IRQ,
 	       },
 };
