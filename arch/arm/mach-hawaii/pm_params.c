@@ -27,7 +27,8 @@
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
-#include <plat/cpu.h>
+#include <mach/memory.h>
+#include <mach/cpu.h>
 #include <mach/clock.h>
 #include <linux/clk.h>
 #include <linux/err.h>
@@ -45,36 +46,9 @@ These flags can be used to enable/disable JIRA workaround at runtime
 DEFINE_JIRA_WA_RO_FLG(2531, 1);
 #endif
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2301
-DEFINE_JIRA_WA_FLG(2301, 1);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2877
-DEFINE_JIRA_WA_FLG(2877, 1);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2221
-DEFINE_JIRA_WA_FLG(2221, 1);
-#endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
 DEFINE_JIRA_WA_RO_FLG(2490, 1);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2276
-DEFINE_JIRA_WA_RO_FLG(2276, 1);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2045
-DEFINE_JIRA_WA_FLG(2045, 1);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2348
-DEFINE_JIRA_WA_FLG(2348, 1);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2489
-DEFINE_JIRA_WA_FLG(2489, 1);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2272
@@ -92,51 +66,10 @@ extern int __jira_wa_enabled(u32 jira)
 		break;
 #endif
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2221
-	case 2221:
-		enabled = JIRA_WA_FLG_NAME(2221);
-		break;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2301
-	case 2301:
-		enabled = JIRA_WA_FLG_NAME(2301);
-		break;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2877
-	case 2877:
-		enabled = JIRA_WA_FLG_NAME(2877);
-		break;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2489
-	case 2489:
-		enabled = JIRA_WA_FLG_NAME(2489);
-		break;
-#endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2272
 	case 2272:
 		enabled = JIRA_WA_FLG_NAME(2272);
-		break;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2348
-	case 2348:
-		enabled = JIRA_WA_FLG_NAME(2348);
-		break;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2045
-	case 2045:
-		enabled = JIRA_WA_FLG_NAME(2045);
-		break;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2276
-	case 2276:
-		enabled = JIRA_WA_FLG_NAME(2276);
 		break;
 #endif
 
@@ -333,50 +266,19 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 
 static void rhea_pm_init_wa_flgs(void)
 {
-	int chip_rev = get_chip_rev_id();
+	int chip_id = get_chip_id();
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2531
-	JIRA_WA_FLG_NAME(2531) = chip_rev <= RHEA_CHIP_REV_B2;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2221
-	JIRA_WA_FLG_NAME(2221) = chip_rev < RHEA_CHIP_REV_B1;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2301
-	JIRA_WA_FLG_NAME(2301) = chip_rev < RHEA_CHIP_REV_B1;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2877
-	JIRA_WA_FLG_NAME(2877) = chip_rev >= RHEA_CHIP_REV_B1;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2489
-	JIRA_WA_FLG_NAME(2489) = chip_rev < RHEA_CHIP_REV_B1;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2348
-	JIRA_WA_FLG_NAME(2348) = chip_rev < RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2531) = chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2272
-	JIRA_WA_FLG_NAME(2272) = chip_rev <= RHEA_CHIP_REV_B2;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2045
-	/*      Workaround is disabled for B1.
-	   New register bits added in B1 to resolve this issue.
-	 */
-	JIRA_WA_FLG_NAME(2045) = chip_rev < RHEA_CHIP_REV_B1;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2276
-	JIRA_WA_FLG_NAME(2276) = chip_rev < RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2272) = chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
 	/* Workaround is enabled */
-	JIRA_WA_FLG_NAME(2490) = chip_rev <= RHEA_CHIP_REV_B2;
+	JIRA_WA_FLG_NAME(2490) = chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0);
 #endif
 
 }

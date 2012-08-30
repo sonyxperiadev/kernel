@@ -24,7 +24,6 @@
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
-#include <plat/cpu.h>
 #include <plat/clock.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_csr.h>
@@ -304,9 +303,6 @@ int enter_suspend_state(struct kona_idle_state* state)
 static void set_spare_power_status(unsigned int mode)
 {
 	unsigned int val;
-
-	if (get_chip_rev_id() < RHEA_CHIP_REV_B1)
-		return;
 
 	mode = mode & 0x3;
 

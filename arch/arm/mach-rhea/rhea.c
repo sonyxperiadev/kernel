@@ -50,7 +50,7 @@
 #ifdef CONFIG_RHEA_L2X0_PREFETCH
 #include <mach/cache-l2x0.h>
 #endif
-#include <plat/cpu.h>
+#include <mach/cpu.h>
 #include <plat/kona_reset_reason.h>
 #include <mach/memory.h>
 #include <mach/system.h>

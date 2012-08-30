@@ -47,7 +47,7 @@
 #ifdef CONFIG_HAWAII_L2X0_PREFETCH
 #include <mach/cache-l2x0.h>
 #endif
-#include <plat/cpu.h>
+#include <mach/cpu.h>
 #include <plat/scu.h>
 #include <plat/kona_reset_reason.h>
 #include <mach/sec_api.h>

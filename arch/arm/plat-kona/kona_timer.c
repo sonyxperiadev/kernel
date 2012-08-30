@@ -34,8 +34,8 @@
 #include <linux/err.h>
 #include <linux/clk.h>
 #include <mach/memory.h>
-
-#include <plat/cpu.h>
+#include <linux/io.h>
+#include <mach/cpu.h>
 #include <mach/kona_timer.h>
 #include <mach/io.h>
 #include <mach/io_map.h>
@@ -50,7 +50,7 @@
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #endif
 
-#include <linux/io.h>
+
 
 #define NUM_OF_TIMER_MODULES	(2)
 #define NUM_OF_CHANNELS		(4)
@@ -923,7 +923,6 @@ static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 {
 	unsigned long prev;
 	unsigned long cur;
-
 	/* If the CPU is Rhea B1 and greater, and if the counter read call is
 	 * for HUB timer then we need to read the counter until we get the same
 	 * value for two consecutive reads. That is the Hub timer value may not
@@ -932,8 +931,15 @@ static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 	 * transition of counter in progress, so this debouncing is required.
 	 * Refer - HWRHEA2045
 	 */
-	if ((get_chip_rev_id() >= RHEA_CHIP_REV_B1) &&
-			(reg_base == IOMEM(KONA_TMR_HUB_VA))) {
+	if (reg_base == IOMEM(KONA_TMR_HUB_VA) &&
+#if defined(CONFIG_ARCH_RHEA)
+		get_chip_id() >= RHEA_CHIP_ID(RHEA_CHIP_REV_B1)
+#elif defined(CONFIG_ARCH_HAWAII)
+		get_chip_id() >= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0)
+#else
+#error "unsupported platform"
+#endif
+		) {
 		prev = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
 		do {
 			cur = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);

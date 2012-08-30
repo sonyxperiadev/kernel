@@ -43,9 +43,6 @@
 #include <mach/kona.h>
 #include <mach/hawaii.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
-#include <mach/io_map.h>
-#include <mach/rdb/brcm_rdb_chipreg.h>
-#include <plat/cpu.h>
 #include <plat/chal/chal_trace.h>
 #ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
@@ -686,14 +683,6 @@ static int __init setup_etm(char *p)
 }
 early_param("etm_on", setup_etm);
 
-/* Return the Hawaii chip revision ID */
-int notrace get_chip_rev_id(void)
-{
-	return (readl(KONA_CHIPREG_VA + CHIPREG_CHIPID_REVID_OFFSET) &
-	CHIPREG_CHIPID_REVID_REVID_MASK) >>
-	CHIPREG_CHIPID_REVID_REVID_SHIFT;
-}
-EXPORT_SYMBOL(get_chip_rev_id);
 
 static int __init setup_pmem_pages(char *str)
 {

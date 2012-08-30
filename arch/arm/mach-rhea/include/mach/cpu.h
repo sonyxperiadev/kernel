@@ -12,26 +12,28 @@
 * consent.
 *****************************************************************************/
 
-#ifndef __CPU_H__
-#define __CPU_H__
+#ifndef __RHEA_CPU_H__
+#define __RHEA_CPU_H__
 
-/*Product family id*/
-#define KONA_PROD_FMLY_ID	0x3
+#include <mach/io_map.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
+#include <plat/cpu.h>
 
+#define RHEA_CHIP_REV_B0       0x1
+#define RHEA_CHIP_REV_B1       0x2
+#define RHEA_CHIP_REV_B2       0x3
 
-#define KONA_CHIP_ID(f, p, r) \
-		((((f) << CHIPREG_CHIPID_REVID_PRODUCT_FAMILY_ID_SHIFT) &\
-			CHIPREG_CHIPID_REVID_PRODUCT_FAMILY_ID_MASK) |\
-		(((p) << CHIPREG_CHIPID_REVID_PRODUCT_ID_SHIFT) &\
-		    CHIPREG_CHIPID_REVID_PRODUCT_ID_MASK) |\
-		(((r) << CHIPREG_CHIPID_REVID_REVID_SHIFT) &\
-			   CHIPREG_CHIPID_REVID_REVID_MASK))
-
-static inline u32 get_chip_id(void)
-{
-	return readl(KONA_CHIPREG_VA + CHIPREG_CHIPID_REVID_OFFSET) &
-		(~CHIPREG_CHIPID_REVID_RESERVED_MASK);
-}
+#define cpu_is_rhea_B0()    (get_chip_id() == RHEA_CHIP_ID(RHEA_CHIP_REV_B0))
+#define cpu_is_rhea_B1()    (get_chip_id() == RHEA_CHIP_ID(RHEA_CHIP_REV_B1))
+#define cpu_is_rhea_B2()    (get_chip_id() == RHEA_CHIP_ID(RHEA_CHIP_REV_B2))
 
 
-#endif /* __CPU_H__ */
+#define RHEA_PROD_ID		0x1
+#define RHEA_PROD_FMLY_ID	KONA_PROD_FMLY_ID
+
+
+#define RHEA_CHIP_ID(r)	KONA_CHIP_ID(RHEA_PROD_FMLY_ID,\
+					RHEA_PROD_ID, r)
+
+
+#endif /*__RHEA_CPU_H__*/

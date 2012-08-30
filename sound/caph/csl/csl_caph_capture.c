@@ -40,7 +40,8 @@
 #include "csl_caph_hwctrl.h"
 #include "csl_audio_capture.h"
 #include "audio_trace.h"
-#include <plat/cpu.h>
+#include <linux/io.h>
+#include <mach/cpu.h>
 
 /***************************************************************************/
 /*                       G L O B A L   S E C T I O N                       */
