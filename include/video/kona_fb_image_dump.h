@@ -21,11 +21,7 @@ enum crash_dump_image_idx {
 	CP_CRASH_DUMP_END,
 };
 
-/* This is a hack until we have kona_display_crash_image
- * defined.
- * remove the definition here and make it an extern later.
- */
-static void kona_display_crash_image(enum crash_dump_image_idx image_idx) {}
+extern void kona_display_crash_image(enum crash_dump_image_idx image_idx);
 #endif
 
 #endif /* _KONA_FB_IMAGE_DUMP_H_ */

@@ -326,7 +326,7 @@ CONFIG_RHEA_WA_HWJIRA_2747=y
 # CONFIG_59055_SIM_EM_SHDWN is not set
 # CONFIG_A9_RETENTION_CSTATE is not set
 # CONFIG_A9_DORMANT_MODE is not set
-CONFIG_KONA_SECURE_MONITOR_CALL=y
+# CONFIG_KONA_SECURE_MONITOR_CALL is not set
 
 #
 # Broadcom KONA architecture based implementations
