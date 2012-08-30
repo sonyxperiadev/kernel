@@ -76,12 +76,6 @@ config	HAWAII_IGNORE_DAP_POWERUP_REQ
 	  PI policy will change to 7 always. This feature enables the system to
 	  retain the states as is, even after attaching JTAG.
 
-config	HAWAII_DORMANT_MODE
-	bool "Enable dormant mode support for Hawaii platform"
-	default n
-	help
-	  Say Y if you want to enable dormant mode support for Hawaii platform
-
 config	HAWAII_L2X0_PREFETCH
 	bool "Enable L2 cache prefetching for Hawaii platform"
 	default n
@@ -90,31 +84,6 @@ config	HAWAII_L2X0_PREFETCH
 	  for the Hawaii platform. This enables both, data and
 	  instruction prefetching that have been shown to improve
 	  performance especially in multimedia use cases.
-
-config	ROM_SEC_DISPATCHER
-	bool "Enable secure calls to ROM"
-	default n
-	help
-	  Say Y if you want to enable secure calls to boot ROM.
-
-choice
-	prompt "Choose secure dispatcher version"
-	depends on ROM_SEC_DISPATCHER
-	default ROM_SEC_DISPATCHER_SRC
-
-config	ROM_SEC_DISPATCHER_LIB
-	bool "Secure API Library"
-	help
-	  Say Y here to enable secure rom code dispatcher library
-	  (.i file) to enable secure calls to rom.
-
-config	ROM_SEC_DISPATCHER_SRC
-	bool "Secure API Source"
-	help
-	  Say Y here to enable the build of secure rom code dispatcher
-	  source for secure calls to rom.
-
-endchoice
 
 config	HAWAII_DELAYED_PM_INIT
 	depends on ARCH_HAWAII
