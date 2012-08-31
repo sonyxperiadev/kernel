@@ -256,8 +256,9 @@ static void adb_android_function_enable(struct android_usb_function *f)
 	data->enabled = true;
 
 	/* Disable the gadget until adbd is ready */
-	if (!data->opened)
-		android_disable(dev);
+	/* Removed: can not pass USB CV test ....  */
+	/* if (!data->opened)
+		android_disable(dev); */
 }
 
 static void adb_android_function_disable(struct android_usb_function *f)
@@ -268,8 +269,9 @@ static void adb_android_function_disable(struct android_usb_function *f)
 	data->enabled = false;
 
 	/* Balance the disable that was called in closed_callback */
-	if (!data->opened)
-		android_enable(dev);
+	/* Removed: can not pass USB CV test ....  */
+	/*if (!data->opened)
+		android_enable(dev); */
 }
 
 static struct android_usb_function adb_function = {
@@ -289,9 +291,9 @@ static void adb_ready_callback(void)
 	mutex_lock(&dev->mutex);
 
 	data->opened = true;
-
-	if (data->enabled)
-		android_enable(dev);
+	/* Removed: can not pass USB CV test ....  */
+	/*if (data->enabled)
+		android_enable(dev); */
 
 	mutex_unlock(&dev->mutex);
 }
@@ -304,9 +306,9 @@ static void adb_closed_callback(void)
 	mutex_lock(&dev->mutex);
 
 	data->opened = false;
-
-	if (data->enabled)
-		android_disable(dev);
+	/* Removed: can not pass USB CV test ....  */
+	/*if (data->enabled)
+		android_disable(dev);*/
 
 	mutex_unlock(&dev->mutex);
 }
