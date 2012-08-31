@@ -78,12 +78,12 @@ typedef struct {
 	unsigned int T1; //time in ms for DVFS profiling when in Normal mode
 	unsigned int P1; // percentage (1~99) threshold at which framework should request Turbo mode for this device
 	unsigned int T2; //time in ms for DVFS profiling when in Turbo mode
-	unsigned int P2; // percentage (1~99) threshold at which framework should fall back to Normal mode for this device 
+	unsigned int P2; // percentage (1~99) threshold at which framework should fall back to Normal mode for this device
 } MM_DVFS_HW_IFC;
 
 typedef struct {
 	unsigned int bitmask;
-	const char* desc[32]; 
+	const char* desc[32];
 } MM_PROF_HW_IFC;
 
 typedef struct mm_core_hw_ifc {
@@ -106,7 +106,7 @@ typedef struct mm_core_hw_ifc {
 	int (*mm_abort)(void *device_id, mm_job_post_t *job);
 	int (*mm_get_regs)(void *device_id, MM_REG_VALUE* ptr, int max);
 	int (*mm_get_prof)(void *device_id, unsigned int* ptr);
-	
+
 } MM_CORE_HW_IFC;
 
 void* mm_fmwk_register(const char* name, const char* clk_name,
@@ -124,6 +124,14 @@ static inline void mm_write_reg(volatile void *base_addr, u32 reg, u32 value) {
 
 static inline u32 mm_read_reg(volatile void *base_addr, u32 reg) {
 	return readl(base_addr + reg);
+}
+
+static inline void mm_clr_bit32(volatile void *base_addr, u32 reg, unsigned long bits){
+    writel(readl(base_addr + reg) & ~bits, (base_addr + reg));
+}
+
+static inline void mm_write_bit32(volatile void *base_addr, u32 reg, unsigned long bits){
+    writel(readl(base_addr + reg) | bits,  (base_addr + reg));
 }
 
 #endif

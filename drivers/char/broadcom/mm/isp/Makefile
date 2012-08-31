@@ -1,1 +1,2 @@
-# TBD
+obj-y +=  isp.o
+

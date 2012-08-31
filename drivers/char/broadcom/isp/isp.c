@@ -40,6 +40,9 @@ the GPL, without Broadcom's express prior written consent.
 #include <plat/scu.h>
 #include <linux/delay.h>
 
+#undef ISP_DEV_NAME
+#define ISP_DEV_NAME	"bcm_isp"
+
 /* TODO - define the major device ID */
 #define ISP_DEV_MAJOR    0
 
@@ -363,7 +366,7 @@ static inline void reg_write(void __iomem *base_addr, unsigned int reg,
 	iowrite32(value, base_addr + reg);
 }
 
-int __init isp_init(void)
+int __init bcm_isp_init(void)
 {
 	int ret;
 	struct device *isp_dev;
@@ -416,7 +419,7 @@ err:
 	return ret;
 }
 
-void __exit isp_exit(void)
+void __exit bcm_isp_exit(void)
 {
 	dbg_print("ISP driver Exit\n");
 	if (isp_base)
@@ -430,8 +433,8 @@ void __exit isp_exit(void)
 	unregister_chrdev(isp_major, ISP_DEV_NAME);
 }
 
-module_init(isp_init);
-module_exit(isp_exit);
+module_init(bcm_isp_init);
+module_exit(bcm_isp_exit);
 
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("ISP device driver");
