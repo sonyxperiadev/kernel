@@ -34,4 +34,6 @@ void bcm_aquire_lock(void * lock);
 
 void bcm_release_lock(void * lock);
 
+void bcm_delete_lock(void *lock);
+
 #endif /* _BCM_FUSE_LNX_IF_H_ */

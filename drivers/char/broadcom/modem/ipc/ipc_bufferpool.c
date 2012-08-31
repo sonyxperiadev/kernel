@@ -395,8 +395,9 @@ void IPC_PoolNextPoolSet(IPC_BufferPool Pool, IPC_BufferPool NextPool)
 /**************************************************/
 void IPC_PoolDelete(IPC_BufferPool Pool)
 {
-	IPC_TRACE(IPC_Channel_Error, "IPC_PoolDelete", "Not yet Implemented", 0,
-		  0, 0, 0);
+	IPC_BufferPool_T *PoolPtr = IPC_PoolToPtr(Pool);
+	IPC_EVENT_DELETE(PoolPtr->EmptyEvent);
+	CRITICAL_REIGON_DELETE(PoolPtr->Lock);
 }
 
 /**************************************************/

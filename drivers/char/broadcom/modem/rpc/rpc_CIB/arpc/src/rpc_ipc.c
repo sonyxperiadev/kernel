@@ -41,6 +41,7 @@
 
 #include "rpc_debug.h"
 #include "rpc_wakelock.h"
+#include "ipc_bufferpool.h"
 
 #if defined(CNEON_COMMON) && defined(FUSE_APPS_PROCESSOR)
 #include "ostask.h"
@@ -133,6 +134,7 @@ static void RPC_FlowCntrl(IPC_BufferPool Pool, IPC_FlowCtrlEvent_T Event);
 static void RPC_BufferDelivery(IPC_Buffer bufHandle);
 Boolean RPC_SetProperty(RPC_PropType_t type, UInt32 value);
 static void RPC_IPC_APEndPointInit(void);
+static void RPC_FreeBufferPools(PACKET_InterfaceType_t interfaceType);
 
 #ifdef FUSE_COMMS_PROCESSOR
 #define RPC_PROP_VER		RPC_PROP_CP_VERSION
@@ -310,9 +312,9 @@ static void RPC_CreateBufferPool(PACKET_InterfaceType_t type, int channel_index)
 	val = ((channel_index << 16) | (type & 0xFFFF));
 
 	_DBG_(RPC_TRACE
-	      ("RPC_CreateBufferPool(%c) type:%d, index:%d, pool:%x\r\n",
-	       (gRpcProcType == RPC_COMMS) ? 'C' : 'A', type, channel_index,
-	       ipcInfoList[type].ipc_buf_pool[channel_index]));
+		("RPC_CreateBufferPool(%c) type:%d, index:%d, pool:%x\r\n",
+		(gRpcProcType == RPC_COMMS) ? 'C' : 'A', type, channel_index,
+		ipcInfoList[type].ipc_buf_pool[channel_index]));
 
 	xassert((void *)(ipcInfoList[type].ipc_buf_pool[channel_index]) != NULL,
 		val);
@@ -660,6 +662,14 @@ void CheckReadyForCPReset(void)
 		_DBG_(RPC_TRACE("CheckReadyForCPReset done\n"));
 		/* ready for start CP reset, so notify IPC here */
 		IPCAP_ReadyForReset(sIPCResetClientId);
+
+		for (currIF = INTERFACE_START; currIF < INTERFACE_TOTAL;
+				currIF++) {
+			_DBG_(RPC_TRACE
+				("freeing buffer pools for IF%d\n",
+				currIF));
+			RPC_FreeBufferPools(currIF);
+		}
 	}
 }
 
@@ -791,6 +801,24 @@ static void RPC_FlowCntrl(IPC_BufferPool Pool, IPC_FlowCtrlEvent_T Event)
 		_DBG_(RPC_TRACE
 		      ("RPC_FlowCntrl(%c) type=%d event=%d\r\n",
 		       (gRpcProcType == RPC_COMMS) ? 'C' : 'A', type, Event));
+	}
+
+}
+
+/* Frees all buffer pools for the interface type. */
+static void RPC_FreeBufferPools(PACKET_InterfaceType_t interfaceType)
+{
+	int index;
+	for (index = 0; index < MAX_CHANNELS; index++) {
+		if (ipcInfoList[interfaceType].ipc_buf_pool[index] != 0) {
+			IPC_PoolDelete(ipcInfoList
+						[interfaceType].
+						ipc_buf_pool[index]);
+		_DBG_(RPC_TRACE
+				("RPC_FreeBufferPools(%c) i=%d\n",
+				(gRpcProcType == RPC_COMMS) ? 'C' : 'A',
+				(int)interfaceType));
+		}
 	}
 
 }

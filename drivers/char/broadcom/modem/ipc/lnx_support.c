@@ -149,3 +149,13 @@ void bcm_aquire_lock(void * lock)
 	}
 }
 
+/**
+  void bcm_delete_lock(void *);
+  */
+void bcm_delete_lock(void *lock)
+{
+	if (lock) {
+		IPC_DEBUG(DBG_TRACE, "IPC: bcm_delete_lock %p\n", lock);
+		kfree(lock);
+	}
+}

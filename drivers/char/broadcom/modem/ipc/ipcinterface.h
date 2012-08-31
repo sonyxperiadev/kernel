@@ -1,4 +1,4 @@
-/*******************************************************************************
+/*****************************************************************************
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
@@ -9,8 +9,9 @@
 *
 *
 *  Notwithstanding the above, under no circumstances may you combine this
-*  software in any way with any other Broadcom software provided under a license
-*  other than the GPL, without Broadcom's express prior written consent.
+*  software in any way with any other Broadcom software provided under
+*  a license other than the GPL, without Broadcom's express prior
+*  written consent.
 *
 *******************************************************************************/
 
@@ -32,18 +33,38 @@
 extern "C" {
 #endif	/* __cplusplus */
 
+#define IPC_IOREMAP_GUARD				(SZ_4K)
+#define IPC_CP_CRASH_SUMMARY_AREA_SZ	(SZ_4K)
+#define IPC_CP_ASSERT_BUF_AREA_SZ		(SZ_4K)
+#define IPC_CP_STRING_MAP_AREA_SZ		(SZ_4K)
+#define IPC_CP_RAMDUMP_BLOCK_AREA_SZ	(SZ_4K)
+#define IPC_CP_CRASH_SUMMARY_AREA		(0)
+#define IPC_CP_ASSERT_BUF_AREA			(IPC_CP_CRASH_SUMMARY_AREA + \
+			IPC_CP_CRASH_SUMMARY_AREA_SZ + IPC_IOREMAP_GUARD)
+#define IPC_CP_STRING_MAP_AREA			(IPC_CP_ASSERT_BUF_AREA + \
+			IPC_CP_ASSERT_BUF_AREA_SZ + IPC_IOREMAP_GUARD)
+#define IPC_CP_RAMDUMP_BLOCK_AREA		(IPC_CP_STRING_MAP_AREA + \
+			IPC_CP_STRING_MAP_AREA_SZ + IPC_IOREMAP_GUARD)
 
-/*============================================================
- * Switch for direct IPC buffer allocate/send
- *============================================================*/
-/* #define DIRECT_IPC_BUFFERING */
+#define IPC_CPMAP_NUM_PAGES ((IPC_CP_CRASH_SUMMARY_AREA_SZ + \
+			IPC_IOREMAP_GUARD + \
+			IPC_CP_ASSERT_BUF_AREA_SZ + \
+			IPC_IOREMAP_GUARD + \
+			IPC_CP_STRING_MAP_AREA_SZ + \
+			IPC_IOREMAP_GUARD +  \
+			IPC_CP_RAMDUMP_BLOCK_AREA_SZ + \
+			IPC_IOREMAP_GUARD) >> PAGE_SHIFT)
 
+#define free_size_ipc(size) (size + IPC_IOREMAP_GUARD)
 
-/*============================================================
- * Switch To turn on IPC sanity checking code
- * Undefine for better performance
- *============================================================*/
-/* #define IPC_DEBUG  */
+/*===========================================================*/
+/* Switch for direct IPC buffer allocate/send */
+/*#define DIRECT_IPC_BUFFERING */
+
+/*===========================================================*/
+/* Switch To turn on IPC sanity checking code */
+/* Undefine for better performance */
+/*#define IPC_DEBUG */
 
 /*============================================================
 * Types
@@ -67,6 +88,14 @@ typedef IPC_U32 IPC_BufferPool;
 * "Enums"
 *===========================================================*/
 typedef IPC_U32 IPC_SmCPUSleepState_T;
+
+/* silent CP reset support */
+typedef enum {
+        IPC_CPSTATE_CRASHED,
+        IPC_CPSTATE_RUNNING,
+        IPC_CPSTATE_RESET_START,      /* CP Reset starting */
+        IPC_CPSTATE_RESET_COMPLETE    /* CP Reset complete */
+} IPC_CPState_t;
 
 #define IPC_CPUAWake	IPC_FALSE
 #define IPC_CPUASleep	IPC_TRUE
@@ -214,17 +243,17 @@ typedef IPC_U32 IPC_Priority_T;
 /* Trace Channels */
 typedef IPC_U32 IPC_Channel_E;
 
-#define	IPC_Channel_Data			 0
-#define	IPC_Channel_Buffer			 1
-#define	IPC_Channel_Pool			 2
-#define	IPC_Channel_Queue			 3
-#define	IPC_Channel_General			 4
-#define	IPC_Channel_Error			 5
-#define	IPC_Channel_Hisr			 6
-#define	IPC_Channel_Sm				 7
-#define	IPC_Channel_FlowControl		 8
-#define	IPC_Channel_Debug			 9
-#define	IPC_Channel_All				10
+#define	IPC_Channel_Data		0
+#define	IPC_Channel_Buffer		1
+#define	IPC_Channel_Pool		2
+#define	IPC_Channel_Queue		3
+#define	IPC_Channel_General		4
+#define	IPC_Channel_Error		5
+#define	IPC_Channel_Hisr		6
+#define	IPC_Channel_Sm			7
+#define	IPC_Channel_FlowControl		8
+#define	IPC_Channel_Debug		9
+#define	IPC_Channel_All			10
 
 #ifdef FUSE_IPC_CRASH_SUPPORT
 /*************************************************
@@ -255,9 +284,8 @@ typedef IPC_U32 IPC_Channel_E;
 #define	IPC_CP_MAX_CRASH_CODE           19
 
 typedef IPC_U32 IPC_CrashCode_T;
+
 #endif		/* FUSE_IPC_CRASH_SUPPORT */
-
-
 
 /*============================================================
 * Callback Prototypes
@@ -270,6 +298,7 @@ typedef void (*IPC_RaiseInterruptFPtr_T) (void);
 typedef void * (*IPC_CreateLockFPtr_T) (void);
 typedef void (*IPC_AquireLockFPtr_T) (void * lock);
 typedef void (*IPC_ReleaseLockFPtr_T) (void * lock);
+typedef void (*IPC_DeleteLockFPtr_T) (void *lock);
 
 /**************************************************/
 typedef void *(*IPC_PhyAddrToOSAddrFPtr_T) (IPC_U32 PhysicalAddr);
@@ -281,6 +310,7 @@ typedef IPC_ReturnCode_T(*IPC_EventSetFPtr_T) (void *Event);
 typedef IPC_ReturnCode_T(*IPC_EventClearFPtr_T) (void *Event);
 typedef IPC_ReturnCode_T(*IPC_EventWaitFPtr_T) (void *Event,
 						 IPC_U32 MilliSeconds);
+typedef IPC_ReturnCode_T (*IPC_EventDeleteFPtr_T) (void *Event);
 
 /* Special values for MilliSeconds */
 #define IPC_WAIT_FOREVER	(~0)
@@ -308,11 +338,10 @@ typedef void (*IPCCPCrashCbFptr_T) (IPC_CrashCode_T);
 
 /**************************************************/
 typedef struct IPC_PlatformSpecificPowerSavingInfo_S {
-	IPCvoidReturnvoidFPtr_T	SemaphoreAccessDelayFPtr_T;
-	IPCvoidReturnvoidFPtr_T	EnableHWDeepSleepFPtr_T;
-	IPCvoidReturnvoidFPtr_T	DisableHWDeepSleepFPtr_T;
-	IPCPSCheckDeepSleepAllowedFPtr_T
-			CheckDeepSleepAllowedFPtr_T;
+	IPCvoidReturnvoidFPtr_T SemaphoreAccessDelayFPtr_T;
+	IPCvoidReturnvoidFPtr_T EnableHWDeepSleepFPtr_T;
+	IPCvoidReturnvoidFPtr_T DisableHWDeepSleepFPtr_T;
+	IPCPSCheckDeepSleepAllowedFPtr_T CheckDeepSleepAllowedFPtr_T;
 } IPC_PlatformSpecificPowerSavingInfo_T;
 
 /**************************************************/
@@ -321,6 +350,7 @@ typedef struct IPC_EventFunctions_S {
 	IPC_EventSetFPtr_T Set;
 	IPC_EventClearFPtr_T Clear;
 	IPC_EventWaitFPtr_T Wait;
+	IPC_EventDeleteFPtr_T Delete;
 } IPC_EventFunctions_T;
 
 /**************************************************/
@@ -329,7 +359,8 @@ typedef struct IPC_LockFunctions_S
 	IPC_CreateLockFPtr_T CreateLock;
 	IPC_AquireLockFPtr_T AcquireLock;
 	IPC_ReleaseLockFPtr_T ReleaseLock;
-} IPC_LockFunctions_T;
+	IPC_DeleteLockFPtr_T DeleteLock;
+}IPC_LockFunctions_T;
 
 /**************************************************/
 typedef struct IPC_ControlInfo_S {
@@ -596,7 +627,7 @@ IPC_Boolean IPC_BufferUserParameterSet(IPC_Buffer Buffer,
 
 /****************************************/
 /* not used, use deep sleep API instead */
-void IPC_ApSleepModeSet(IPC_Boolean inSleep);
+void IPC_ApSleepModeSet(IPC_Boolean Setting);
 
 /****************************************/
 IPC_Boolean IPC_ApSleepModeGet(void);
@@ -673,12 +704,12 @@ void IPCAP_ClearCrashData(void);
 
 /* silent CP reset support */
 typedef enum {
-	IPC_CPRESET_START,	/* < CP Reset starting */
-	IPC_CPRESET_COMPLETE	/* < CP Reset complete */
+	IPC_CPRESET_START,	///< CP Reset starting
+	IPC_CPRESET_COMPLETE	///< CP Reset complete
 } IPC_CPResetEvent_t;
 typedef void(*IPCAP_CPResetHandler_T)(IPC_CPResetEvent_t inEvent);
 int IPCAP_RegisterCPResetHandler(IPCAP_CPResetHandler_T inResetHandler);
-void IPCAP_ReadyForReset(int inClientID);
+void IPCAP_ReadyForReset( int inClientID );
 /* Crash handling functions CP side */
 
 /****************************************/

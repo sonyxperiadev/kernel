@@ -104,6 +104,9 @@ void IPC_BufferReturnToPool(IPC_Buffer Buffer, IPC_BufferPool Pool);
 void IPC_PoolNextPoolSet(IPC_BufferPool Pool, IPC_BufferPool NextPool);
 
 /**************************************************/
+void IPC_PoolDelete(IPC_BufferPool Pool);
+
+/**************************************************/
 void IPC_PoolDump(IPC_BufferPool Pool);
 
 /**************************************************/

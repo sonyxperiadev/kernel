@@ -625,17 +625,20 @@ void IPC_Initialise(void *Sm_BaseAddress,
 	SmLocalControl.Event.Set = ControlInfo->EventFunctions.Set;
 	SmLocalControl.Event.Clear = ControlInfo->EventFunctions.Clear;
 	SmLocalControl.Event.Wait = ControlInfo->EventFunctions.Wait;
+	SmLocalControl.Event.Delete = ControlInfo->EventFunctions.Delete;
 
 	if ((SmLocalControl.Event.Create == 0) ||
 	    (SmLocalControl.Event.Set == 0) ||
 	    (SmLocalControl.Event.Clear == 0) ||
-	    (SmLocalControl.Event.Wait == 0)
+	    (SmLocalControl.Event.Wait == 0) ||
+	    (SmLocalControl.Event.Delete == 0)
 	    ) {
-		/* Need all four to be useful */
+		/* Need all five to be useful */
 		SmLocalControl.Event.Create = 0;
 		SmLocalControl.Event.Set = 0;
 		SmLocalControl.Event.Clear = 0;
 		SmLocalControl.Event.Wait = 0;
+		SmLocalControl.Event.Delete = 0;
 	}
 #ifdef FUSE_IPC_CRASH_SUPPORT
 	SmLocalControl.IPCCPCrashed = IPCCPCrashedCb;

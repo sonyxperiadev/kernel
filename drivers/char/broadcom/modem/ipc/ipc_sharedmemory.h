@@ -197,12 +197,16 @@ extern IPC_SmLocalControl_T SmLocalControl;
 #define CRITICAL_REIGON_CREATE()	(*SmLocalControl.LockFunctions.CreateLock)()
 #define CRITICAL_REIGON_ENTER(lock)	(*SmLocalControl.LockFunctions.AcquireLock) ((void *) lock)
 #define CRITICAL_REIGON_LEAVE(lock)	(*SmLocalControl.LockFunctions.ReleaseLock) ((void *) lock)
+#define CRITICAL_REIGON_DELETE(lock) \
+		(*SmLocalControl.LockFunctions.DeleteLock) ((void *) lock)
 
 /* Macros for Event Flags */
 #define IPC_EVENT_CREATE					 	  SmLocalControl.Event.Create ? (*SmLocalControl.Event.Create) () : 0
 #define IPC_EVENT_SET(EventPtr)					(*SmLocalControl.Event.Set)		((void *) EventPtr)
 #define IPC_EVENT_CLEAR(EventPtr)				(*SmLocalControl.Event.Clear)	((void *) EventPtr)
 #define IPC_EVENT_WAIT(EventPtr, MilliSeconds)	(*SmLocalControl.Event.Wait)	((void *) EventPtr, MilliSeconds)
+#define IPC_EVENT_DELETE(EventPtr) (*SmLocalControl.Event.Delete) \
+	((void *) EventPtr)
 
 /*============================================================
 * Functions

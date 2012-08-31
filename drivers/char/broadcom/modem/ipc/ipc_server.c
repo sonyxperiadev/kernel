@@ -158,6 +158,16 @@ static IPC_ReturnCode_T EventWait(void *Event, IPC_U32 MilliSeconds)
 	}
 }
 
+static IPC_ReturnCode_T EventDelete(void *Event)
+{
+	struct IPC_Evt_t *ipcEvt = (struct IPC_Evt_t *)Event;
+	if (ipcEvt) {
+		IPC_DEBUG(DBG_TRACE, "EventDelete: %p\n", ipcEvt);
+		kfree(ipcEvt);
+	}
+	return IPC_OK;
+}
+
 /**
    @fn Boolean is_CP_running(void);
 */
@@ -254,12 +264,14 @@ int ipc_ipc_init(void *smbase, unsigned int size)
 	ipc_control.LockFunctions.CreateLock = bcm_create_lock;
 	ipc_control.LockFunctions.AcquireLock = bcm_aquire_lock;
 	ipc_control.LockFunctions.ReleaseLock = bcm_release_lock;
+	ipc_control.LockFunctions.DeleteLock = bcm_delete_lock;
 	ipc_control.PhyToOSAddrFPtr = bcm_map_phys_to_virt;
 	ipc_control.OSToPhyAddrFPtr = bcm_map_virt_to_phys;
 	ipc_control.EventFunctions.Create = EventCreate;
 	ipc_control.EventFunctions.Set = EventSet;
 	ipc_control.EventFunctions.Clear = EventClear;
 	ipc_control.EventFunctions.Wait = EventWait;
+	ipc_control.EventFunctions.Delete = EventDelete;
 	ipc_control.PowerSavingStruct = &ipc_ps;
 
 #if defined(CONFIG_BCM215X_PM) && defined(CONFIG_ARCH_BCM2153)

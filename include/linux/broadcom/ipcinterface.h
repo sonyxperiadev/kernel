@@ -298,6 +298,7 @@ typedef void (*IPC_RaiseInterruptFPtr_T) (void);
 typedef void * (*IPC_CreateLockFPtr_T) (void);
 typedef void (*IPC_AquireLockFPtr_T) (void * lock);
 typedef void (*IPC_ReleaseLockFPtr_T) (void * lock);
+typedef void (*IPC_DeleteLockFPtr_T) (void *lock);
 
 /**************************************************/
 typedef void *(*IPC_PhyAddrToOSAddrFPtr_T) (IPC_U32 PhysicalAddr);
@@ -309,6 +310,7 @@ typedef IPC_ReturnCode_T(*IPC_EventSetFPtr_T) (void *Event);
 typedef IPC_ReturnCode_T(*IPC_EventClearFPtr_T) (void *Event);
 typedef IPC_ReturnCode_T(*IPC_EventWaitFPtr_T) (void *Event,
 						 IPC_U32 MilliSeconds);
+typedef IPC_ReturnCode_T (*IPC_EventDeleteFPtr_T) (void *Event);
 
 /* Special values for MilliSeconds */
 #define IPC_WAIT_FOREVER	(~0)
@@ -348,6 +350,7 @@ typedef struct IPC_EventFunctions_S {
 	IPC_EventSetFPtr_T Set;
 	IPC_EventClearFPtr_T Clear;
 	IPC_EventWaitFPtr_T Wait;
+	IPC_EventDeleteFPtr_T Delete;
 } IPC_EventFunctions_T;
 
 /**************************************************/
@@ -356,6 +359,7 @@ typedef struct IPC_LockFunctions_S
 	IPC_CreateLockFPtr_T CreateLock;
 	IPC_AquireLockFPtr_T AcquireLock;
 	IPC_ReleaseLockFPtr_T ReleaseLock;
+	IPC_DeleteLockFPtr_T DeleteLock;
 }IPC_LockFunctions_T;
 
 /**************************************************/
