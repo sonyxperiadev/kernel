@@ -547,11 +547,11 @@ static int ion_debug_client_show(struct seq_file *s, void *unused)
 	for (n = rb_first(&client->handles); n; n = rb_next(n)) {
 		struct ion_handle *handle = rb_entry(n, struct ion_handle,
 						     node);
-		enum ion_heap_type type = handle->buffer->heap->type;
+		int id = handle->buffer->heap->id;
 
-		if (!names[type])
-			names[type] = handle->buffer->heap->name;
-		sizes[type] += handle->buffer->size;
+		if (!names[id])
+			names[id] = handle->buffer->heap->name;
+		sizes[id] += handle->buffer->size;
 	}
 	mutex_unlock(&client->lock);
 
@@ -1122,7 +1122,7 @@ static const struct file_operations ion_fops = {
 };
 
 static size_t ion_debug_heap_total(struct ion_client *client,
-				   enum ion_heap_type type)
+				   int id)
 {
 	size_t size = 0;
 	struct rb_node *n;
@@ -1132,7 +1132,7 @@ static size_t ion_debug_heap_total(struct ion_client *client,
 		struct ion_handle *handle = rb_entry(n,
 						     struct ion_handle,
 						     node);
-		if (handle->buffer->heap->type == type)
+		if (handle->buffer->heap->id == id)
 			size += handle->buffer->size;
 	}
 	mutex_unlock(&client->lock);
@@ -1145,23 +1145,28 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	struct ion_device *dev = heap->dev;
 	struct rb_node *n;
 
-	seq_printf(s, "%16.s %16.s %16.s\n", "client", "pid", "size");
+	if (heap->size)
+		seq_printf(s, "Total size reserved = %d KB\n",
+				(heap->size>>10));
+	seq_printf(s, "%16.s %16.s %16.s %16.s\n",
+			"client", "pid", "size", "oom_adj");
 
 	for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
 		struct ion_client *client = rb_entry(n, struct ion_client,
 						     node);
-		size_t size = ion_debug_heap_total(client, heap->type);
+		size_t size = ion_debug_heap_total(client, heap->id);
 		if (!size)
 			continue;
 		if (client->task) {
 			char task_comm[TASK_COMM_LEN];
 
 			get_task_comm(task_comm, client->task);
-			seq_printf(s, "%16.s %16u %16u\n", task_comm,
-				   client->pid, size);
+			seq_printf(s, "%16.s %16u %13u KB %16d\n", task_comm,
+					client->pid, (size>>10), 
+					client->task->signal->oom_adj);
 		} else {
-			seq_printf(s, "%16.s %16u %16u\n", client->name,
-				   client->pid, size);
+			seq_printf(s, "%16.s %16u %13u KB\n", client->name,
+					client->pid, (size>>10));
 		}
 	}
 	return 0;
