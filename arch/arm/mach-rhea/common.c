@@ -782,7 +782,7 @@ static struct platform_device board_unicam_device = {
 
 #ifdef CONFIG_ION
 
-static struct ion_platform_data ion_data0 = {
+static struct ion_platform_data ion_carveout_data = {
 	.nr = 2,
 	.heaps = {
 		[0] = {
@@ -802,11 +802,11 @@ static struct ion_platform_data ion_data0 = {
 	},
 };
 
-static struct platform_device ion_device0 = {
+static struct platform_device ion_carveout_device = {
 	.name = "ion-kona",
 	.id = 0,
 	.dev = {
-		.platform_data = &ion_data0,
+		.platform_data = &ion_carveout_data,
 	},
 	.num_resources = 0,
 };
@@ -814,7 +814,7 @@ static struct platform_device ion_device0 = {
 #ifdef CONFIG_CMA
 
 static u64 ion_dmamask = DMA_BIT_MASK(32);
-static struct ion_platform_data ion_data1 = {
+static struct ion_platform_data ion_cma_data = {
 	.nr = 1,
 	.heaps = {
 		[0] = {
@@ -827,13 +827,13 @@ static struct ion_platform_data ion_data1 = {
 	},
 };
 
-static struct platform_device ion_device1 = {
+static struct platform_device ion_cma_device = {
 	.name = "ion-kona",
 	.id = 1,
 	.dev = {
 		.dma_mask = &ion_dmamask,
 		.coherent_dma_mask = DMA_BIT_MASK(32),
-		.platform_data = &ion_data1,
+		.platform_data = &ion_cma_data,
 	},
 	.num_resources = 0,
 };
@@ -958,11 +958,13 @@ static int __init setup_etm(char *p)
 early_param("etm_on", setup_etm);
 
 #ifdef CONFIG_ION
+/* Change carveout region size for ION */
 static int __init setup_ion_carveout0_pages(char *str)
 {
 	char *endp = NULL;
 	if (str)
-		ion_data0.heaps[0].size = memparse((const char *)str, &endp);
+		ion_carveout_data.heaps[0].size = memparse((const char *)str,
+				&endp);
 	return 0;
 }
 early_param("carveout0", setup_ion_carveout0_pages);
@@ -971,7 +973,8 @@ static int __init setup_ion_carveout1_pages(char *str)
 {
 	char *endp = NULL;
 	if (str)
-		ion_data0.heaps[1].size = memparse((const char *)str, &endp);
+		ion_carveout_data.heaps[1].size = memparse((const char *)str,
+				&endp);
 	return 0;
 }
 early_param("carveout1", setup_ion_carveout1_pages);
@@ -979,54 +982,35 @@ early_param("carveout1", setup_ion_carveout1_pages);
 /* Carveout memory regions for ION */
 static void __init ion_carveout_memory(void)
 {
-	int err;
 	phys_addr_t carveout_size, carveout_base;
+	int i;
 
-	carveout_size = ion_data0.heaps[1].size;
-	if (carveout_size) {
-		carveout_base = memblock_alloc_from_range(carveout_size, SZ_4M,
-				0x90000000, 0xa0000000);
-		memblock_free(carveout_base, carveout_size);
-		err = memblock_remove(carveout_base, carveout_size);
-		if (!err) {
-			pr_info("android-ion: carveout-1 from (%08x-%08x) \n",
-					carveout_base,
+	for (i = 0; i < ion_carveout_data.nr; i++) {
+		carveout_size = ion_carveout_data.heaps[i].size;
+		if (carveout_size) {
+			carveout_base = memblock_alloc_from_range(
+					carveout_size, SZ_1M,
+					ion_carveout_data.heaps[i].base,
+					0xa0000000);
+			memblock_free(carveout_base, carveout_size);
+			memblock_remove(carveout_base, carveout_size);
+			pr_info("ion: carveout(%d) of (%d)MB from (%08x-%08x)\n",
+					i, (carveout_size>>20), carveout_base,
 					carveout_base + carveout_size);
-			ion_data0.heaps[1].base = carveout_base;
+			ion_carveout_data.heaps[i].base = carveout_base;
 		} else {
-			pr_err("android-ion: Carveout-1 memory failed\n");
-			ion_data0.heaps[1].size = 0;
+			ion_carveout_data.heaps[i].id = ION_INVALID_HEAP_ID;
 		}
 	}
-	if (ion_data0.heaps[1].size == 0)
-		ion_data0.heaps[1].id = ION_INVALID_HEAP_ID;
-
-	carveout_size = ion_data0.heaps[0].size;
-	if (carveout_size) {
-		carveout_base = memblock_alloc_from_range(carveout_size, SZ_4M,
-				0x90000000, 0xa0000000);
-		memblock_free(carveout_base, carveout_size);
-		err = memblock_remove(carveout_base, carveout_size);
-		if (!err) {
-			pr_info("android-ion: carveout-0 from (%08x-%08x) \n",
-					carveout_base,
-					carveout_base + carveout_size);
-			ion_data0.heaps[0].base = carveout_base;
-		} else {
-			pr_err("android-ion: Carveout-0 memory failed\n");
-			ion_data0.heaps[0].size = 0;
-		}
-	}
-	if (ion_data0.heaps[0].size == 0)
-		ion_data0.heaps[0].id = ION_INVALID_HEAP_ID;
 }
 
 #ifdef CONFIG_CMA
+/* Change cma region size for ION */
 static int __init setup_ion_cma0_pages(char *str)
 {
 	char *endp = NULL;
 	if (str)
-		ion_data1.heaps[0].size = memparse((const char *)str, &endp);
+		ion_cma_data.heaps[0].size = memparse((const char *)str, &endp);
 	return 0;
 }
 early_param("cma0", setup_ion_cma0_pages);
@@ -1034,15 +1018,15 @@ early_param("cma0", setup_ion_cma0_pages);
 /* Reserve cma regions for ION */
 static void __init ion_cma_reserve(void)
 {
-	phys_addr_t cma_size;
-
-	cma_size = ion_data1.heaps[0].size;
-	if (cma_size) {
-		dma_declare_contiguous(&ion_device1.dev,
-				cma_size, ion_data1.heaps[0].base, 0);
-	}
-	if (ion_data1.heaps[0].size == 0)
-		ion_data1.heaps[0].id = ION_INVALID_HEAP_ID;
+	int i;
+	for (i = 0; i < ion_cma_data.nr; i++)
+		if (ion_cma_data.heaps[i].size)
+			dma_declare_contiguous(&ion_cma_device.dev,
+					ion_cma_data.heaps[i].size,
+					ion_cma_data.heaps[i].base,
+					0);
+		else
+			ion_cma_data.heaps[i].id = ION_INVALID_HEAP_ID;
 }
 #endif
 
@@ -1135,9 +1119,9 @@ void __init board_add_common_devices(void)
 
 	platform_device_register(&android_pmem);
 #ifdef CONFIG_ION
-	platform_device_register(&ion_device0);
+	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
-	platform_device_register(&ion_device1);
+	platform_device_register(&ion_cma_device);
 #endif
 #endif
 	printk(KERN_EMERG"PMEM : CMA size (0x%08lx, %lu pages)\n",
