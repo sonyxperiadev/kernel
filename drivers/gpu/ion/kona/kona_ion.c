@@ -25,6 +25,7 @@
 #include "../ion_priv.h"
 #include <linux/uaccess.h>
 #include <linux/mutex.h>
+#include <linux/module.h>
 #ifdef CONFIG_M4U
 #include <linux/broadcom/m4u.h>
 #endif
@@ -308,35 +309,55 @@ static int kona_ion_probe(struct platform_device *pdev)
 {
 	struct ion_platform_data *pdata;
 	int err;
-	int i;
+	int i, prev_num_heaps = 0;
 
 	if (!pdev || !pdev->dev.platform_data) {
-		pr_err("Unable to probe \n");
+		pr_err("Unable to probe\n");
 		return -ENODEV;
 	}
 
 	pdata = pdev->dev.platform_data;
-	pr_info("Max heaps(%d) \n", pdata->nr);
-	num_heaps = pdata->nr;
+	pr_info("Probe: add (%d)heaps\n", pdata->nr);
+	if (num_heaps == 0) {
+		num_heaps = pdata->nr;
+		heaps = kzalloc(sizeof(struct ion_heap *) * pdata->nr,
+				GFP_KERNEL);
+		idev = ion_device_create(kona_ion_custom_ioctl);
+		if (IS_ERR_OR_NULL(idev)) {
+			kfree(heaps);
+			return PTR_ERR(idev);
+		}
+	} else {
+		struct ion_heap **tmp_heaps;
 
-	heaps = kzalloc(sizeof(struct ion_heap *) * pdata->nr, GFP_KERNEL);
-
-	idev = ion_device_create(kona_ion_custom_ioctl);
-	if (IS_ERR_OR_NULL(idev)) {
+		prev_num_heaps = num_heaps;
+		num_heaps += pdata->nr;
+		/* Reallocate ion_heap array */
+		tmp_heaps = kzalloc(sizeof(struct ion_heap *) * num_heaps,
+				GFP_KERNEL);
+		/* Copy old heap array into reallocated buffer and
+		 * free old one */
+		for (i = 0; i < prev_num_heaps; i++)
+			tmp_heaps[i] = heaps[i];
 		kfree(heaps);
-		return PTR_ERR(idev);
+		/* Set the reallocated buffer as new heap array */
+		heaps = tmp_heaps;
 	}
 
 	/* create the heaps as specified in the board file */
-	for (i = 0; i < num_heaps; i++) {
-		struct ion_platform_heap *heap_data = &pdata->heaps[i];
+	for (i = prev_num_heaps; i < num_heaps; i++) {
+		struct ion_platform_heap *heap_data =
+			&pdata->heaps[i - prev_num_heaps];
 
 		if (heap_data->id != ION_INVALID_HEAP_ID) {
-			pr_info("Heap[%d]: Name(%10s) Type(%d) Id(%d) Base(0x%08x) Size (0x%08x)\n",
-					i, heap_data->name, heap_data->type, heap_data->id,
+			pr_info("Heap[%d]: Name(%10s) Type(%d) Id(%d)",
+					i, heap_data->name, heap_data->type,
+					heap_data->id);
+			pr_info("Base(0x%08x) Size (0x%08x)\n",
 					(unsigned int)heap_data->base, heap_data->size);
-			heaps[i] = ion_heap_create(heap_data);
+			heaps[i] = ion_heap_create_full(heap_data, &pdev->dev);
 			if (IS_ERR_OR_NULL(heaps[i])) {
+				heaps[i] = NULL;
 				err = PTR_ERR(heaps[i]);
 				goto err;
 			}
@@ -359,12 +380,15 @@ static int kona_ion_remove(struct platform_device *pdev)
 	struct ion_device *idev = platform_get_drvdata(pdev);
 	int i;
 
-	pr_info("Kona ION device remove \n");
+	pr_info("Kona ION device remove\n");
 	ion_device_destroy(idev);
+	idev = NULL;
 	for (i = 0; i < num_heaps; i++)
 		if (heaps[i])
 			ion_heap_destroy(heaps[i]);
 	kfree(heaps);
+	heaps = NULL;
+	num_heaps = 0;
 	return 0;
 }
 
