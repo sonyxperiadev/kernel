@@ -811,6 +811,35 @@ static struct platform_device ion_device0 = {
 	.num_resources = 0,
 };
 
+#ifdef CONFIG_CMA
+
+static u64 ion_dmamask = DMA_BIT_MASK(32);
+static struct ion_platform_data ion_data1 = {
+	.nr = 1,
+	.heaps = {
+		[0] = {
+			.id = 2,
+			.type = ION_HEAP_TYPE_DMA,
+			.name = "ion-cma-0",
+			.base = 0,
+			.size = (4 * SZ_1M),
+		},
+	},
+};
+
+static struct platform_device ion_device1 = {
+	.name = "ion-kona",
+	.id = 1,
+	.dev = {
+		.dma_mask = &ion_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+		.platform_data = &ion_data1,
+	},
+	.num_resources = 0,
+};
+
+#endif
+
 #endif
 
 /* Allocate the top 16M of the DRAM for the pmem. */
@@ -991,6 +1020,32 @@ static void __init ion_carveout_memory(void)
 	if (ion_data0.heaps[0].size == 0)
 		ion_data0.heaps[0].id = ION_INVALID_HEAP_ID;
 }
+
+#ifdef CONFIG_CMA
+static int __init setup_ion_cma0_pages(char *str)
+{
+	char *endp = NULL;
+	if (str)
+		ion_data1.heaps[0].size = memparse((const char *)str, &endp);
+	return 0;
+}
+early_param("cma0", setup_ion_cma0_pages);
+
+/* Reserve cma regions for ION */
+static void __init ion_cma_reserve(void)
+{
+	phys_addr_t cma_size;
+
+	cma_size = ion_data1.heaps[0].size;
+	if (cma_size) {
+		dma_declare_contiguous(&ion_device1.dev,
+				cma_size, ion_data1.heaps[0].base, 0);
+	}
+	if (ion_data1.heaps[0].size == 0)
+		ion_data1.heaps[0].id = ION_INVALID_HEAP_ID;
+}
+#endif
+
 #endif
 
 
@@ -1044,6 +1099,9 @@ void __init board_common_reserve(void)
 
 #ifdef CONFIG_ION
 	ion_carveout_memory();
+#ifdef CONFIG_CMA
+	ion_cma_reserve();
+#endif
 #endif
 	carveout_size = android_pmem_data.carveout_size;
 	cmasize = android_pmem_data.cmasize;
@@ -1078,6 +1136,9 @@ void __init board_add_common_devices(void)
 	platform_device_register(&android_pmem);
 #ifdef CONFIG_ION
 	platform_device_register(&ion_device0);
+#ifdef CONFIG_CMA
+	platform_device_register(&ion_device1);
+#endif
 #endif
 	printk(KERN_EMERG"PMEM : CMA size (0x%08lx, %lu pages)\n",
 				pmem_size, (pmem_size >> PAGE_SHIFT));
