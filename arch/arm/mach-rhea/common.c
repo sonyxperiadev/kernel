@@ -789,15 +789,17 @@ static struct ion_platform_data ion_carveout_data = {
 			.id = 0,
 			.type = ION_HEAP_TYPE_CARVEOUT,
 			.name = "ion-carveout-0",
-			.base = 0,
-			.size = (16 * SZ_1M),
+			.base = 0x90000000,
+			.limit = 0xa0000000,
+			.size = (8 * SZ_1M),
 		},
 		[1] = {
 			.id = 1,
 			.type = ION_HEAP_TYPE_CARVEOUT,
 			.name = "ion-carveout-1",
 			.base = 0,
-			.size = (16 * SZ_1M),
+			.limit = 0,
+			.size = (0 * SZ_1M),
 		},
 	},
 };
@@ -821,8 +823,9 @@ static struct ion_platform_data ion_cma_data = {
 			.id = 2,
 			.type = ION_HEAP_TYPE_DMA,
 			.name = "ion-cma-0",
-			.base = 0,
-			.size = (4 * SZ_1M),
+			.base = 0x90000000,
+			.limit = 0xa0000000,
+			.size = (0 * SZ_1M),
 		},
 	},
 };
@@ -991,7 +994,7 @@ static void __init ion_carveout_memory(void)
 			carveout_base = memblock_alloc_from_range(
 					carveout_size, SZ_1M,
 					ion_carveout_data.heaps[i].base,
-					0xa0000000);
+					ion_carveout_data.heaps[i].limit);
 			memblock_free(carveout_base, carveout_size);
 			memblock_remove(carveout_base, carveout_size);
 			pr_info("ion: carveout(%d) of (%d)MB from (%08x-%08x)\n",
@@ -1024,7 +1027,7 @@ static void __init ion_cma_reserve(void)
 			dma_declare_contiguous(&ion_cma_device.dev,
 					ion_cma_data.heaps[i].size,
 					ion_cma_data.heaps[i].base,
-					0);
+					ion_cma_data.heaps[i].limit);
 		else
 			ion_cma_data.heaps[i].id = ION_INVALID_HEAP_ID;
 }
