@@ -26,6 +26,7 @@
 #include <linux/plist.h>
 #include <linux/power_supply.h>
 #include <linux/delay.h>
+#include <linux/wakelock.h>
 
 #include <asm/io.h>
 #include <mach/io_map.h>

@@ -371,9 +371,8 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 		telephonyPathID.ul2PathID,
 		telephonyPathID.dlPathID);
 
-
-	if (speaker == AUDIO_SINK_LOUDSPK) {
 #if defined(ENABLE_DMA_VOICE)
+	if (speaker == AUDIO_SINK_LOUDSPK) {
 		csl_dsp_caph_control_aadmac_disable_path((UInt16)
 			 (DSP_AADMAC_SPKR_EN) |
 			 (UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN));
@@ -383,11 +382,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 			((UInt16)DSP_AADMAC_RETIRE_DS_CMD);
 
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
-#endif
-
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 	} else {
-#if defined(ENABLE_DMA_VOICE)
 		csl_dsp_caph_control_aadmac_disable_path((UInt16)
 			 (DSP_AADMAC_IHF_SPKR_EN) |
 			 (UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN));
@@ -403,29 +398,20 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 			    (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN);
 
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
-#endif
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
 	}
+#endif
 
-	if (curCallMode != PTT_CALL) {
-#if defined(ENABLE_DMA_VOICE)
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, TRUE, 0, 0, 0, 0);
+
+	if (curCallMode != PTT_CALL)
 		audio_control_dsp(
 			AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
-#else
-		audio_control_dsp(
-			AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE,
-			AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
-#endif
-	} else
+	else
 		aTrace(LOG_AUDIO_DRIVER,  "AUDDRV_Telephony_Init: "
 			"PTT, skip AUDIO_CONNECT_DL\n");
 
-#if defined(ENABLE_DMA_VOICE)
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0);
-#else
-	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, TRUE,
-			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
-#endif
+
 /*	audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, TRUE, TRUE, 0, 0, 0); */
 	audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, ec_enable_from_sysparm,
 			  ns_enable_from_sysparm, 0, 0, 0);
@@ -722,8 +708,8 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 
 	currVoiceSpkr = sink;
 
-	if (sample_rate == AUDIO_SAMPLING_RATE_8000) {
 #if defined(ENABLE_DMA_VOICE)
+	if (sample_rate == AUDIO_SAMPLING_RATE_8000) {
 		csl_dsp_caph_control_aadmac_set_samp_rate
 		    (AUDIO_SAMPLING_RATE_8000);
 		if (sink == AUDIO_SINK_BTM)
@@ -735,19 +721,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 			csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_SPKR_EN) |
 				(UInt16) (DSP_AADMAC_RETIRE_DS_CMD));
-
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  1, 0, 0, 0, 0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0,
-				  0, 0);
-#else
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 0, 0, 0,
-				  0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0,
-				  0, 0);
-#endif
 	} else {
-#if defined(ENABLE_DMA_VOICE)
 		csl_dsp_caph_control_aadmac_set_samp_rate
 		    (AUDIO_SAMPLING_RATE_16000);
 		if (sink == AUDIO_SINK_BTM)
@@ -759,17 +733,12 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 			csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_SPKR_EN) |
 				(UInt16) (DSP_AADMAC_RETIRE_DS_CMD));
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  1, 0, 0, 0, 0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0,
-				  0, 0);
-#else
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 1, 0, 0,
-				  0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 1, 0,
-				  0, 0);
-#endif
 	}
+#endif
+
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, 1, 0, 0, 0, 0);
+
 	voicePlayOutpathEnabled = TRUE;
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s voicePlayOutpathEnabled=%d",
@@ -822,8 +791,8 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 	if (telephonyPathID.ulPathID)
 		return;
 
-	if (sample_rate == AUDIO_SAMPLING_RATE_8000) {
 #if defined(ENABLE_DMA_VOICE)
+	if (sample_rate == AUDIO_SAMPLING_RATE_8000) {
 		csl_dsp_caph_control_aadmac_set_samp_rate
 		    (AUDIO_SAMPLING_RATE_8000);
 		if (source == AUDIO_SOURCE_BTM)
@@ -839,21 +808,7 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 					(DSP_AADMAC_PRI_MIC_EN) |
 					(UInt16) (DSP_AADMAC_RETIRE_DS_CMD));
 		}
-
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  1, 0, 0, 0, 0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 0, 0,
-				  0, 0);
-	/* AUDDRV_DSPCMD_AUDIO_CONNECT should be called after
-		AUDDRV_DSPCMD_AUDIO_ENABLE */
-#else
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 0, 0, 0,
-				  0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 0, 0,
-				  0, 0);
-#endif
 	} else {
-#if defined(ENABLE_DMA_VOICE)
 		csl_dsp_caph_control_aadmac_set_samp_rate
 		    (AUDIO_SAMPLING_RATE_16000);
 		if (source == AUDIO_SOURCE_BTM)
@@ -869,17 +824,13 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 					(DSP_AADMAC_PRI_MIC_EN) |
 					(UInt16) (DSP_AADMAC_RETIRE_DS_CMD));
 		}
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  1, 1, 0, 0, 0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 1, 0,
-				  0, 0);
-#else
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 1, 0, 0,
-				  0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 1, 0,
-				  0, 0);
-#endif
 	}
+#endif
+
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
+	/* AUDDRV_DSPCMD_AUDIO_CONNECT should be called after
+	AUDDRV_DSPCMD_AUDIO_ENABLE */
 
 /*
 When voice call ends, AUDDRV_DSPCMD_MUTE_DSP_UL is being sent to DSP and
@@ -1154,7 +1105,7 @@ void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param)
 				}
 	} else {
 		aError(
-		"AUDDRV_SetAudioMode_Speaker can not find path\n");
+		"AUDDRV_SetAudioMode_Multicast can not find path\n");
 	}
 
 	if (outChnl) {
@@ -1379,14 +1330,19 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 						/*mono output*/
 
 					if (path->srcmRoute[i][j].inChnl ==
-							CAPH_SRCM_CH5
+							 (int )	CAPH_SRCM_CH5
 						|| path->srcmRoute[i][j].inChnl
-							== CAPH_SRCM_PASSCH1
+							== (int) CAPH_SRCM_PASSCH1
 						|| path->srcmRoute[i][j].inChnl
-							== CAPH_SRCM_PASSCH2) {
+							==( int ) CAPH_SRCM_PASSCH2) {
 						/*only on stereo inputs.*/
-						mixInGain = mixInGain - 602;
-						mixInGainR = mixInGainR  - 602;
+						if (mixInGain != GAIN_NA &&
+						mixInGainR != GAIN_NA) {
+							mixInGain =
+								mixInGain-602;
+							mixInGainR =
+								mixInGainR-602;
+							}
 						}
 					}
 
@@ -2105,17 +2061,6 @@ void AUDDRV_SetCallMode(Int32 callMode)
 	curCallMode = callMode;
 	aTrace(LOG_AUDIO_DRIVER,  "%s callMode = %d\n",
 		__func__, (int)curCallMode);
-}
-
-void AUDDRV_ConnectDL(void)
-{
-	aTrace(LOG_AUDIO_DRIVER,  "%s PTT CONNECT_DL\n", __func__);
-#if defined(ENABLE_DMA_VOICE)
-	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
-#else
-	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE,
-			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
-#endif
 }
 
 void AUDDRV_CPResetCleanup(void)

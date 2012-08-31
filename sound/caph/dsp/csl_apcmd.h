@@ -188,17 +188,6 @@ void VPRIPCMDQ_DSP_AMR_RUN(UInt16 type, Boolean amr_if2_enable,
 
 /*****************************************************************************/
 /**
-	Function Name:       VPRIPCMDQ_DigitalSound
-
-	Description:
-
-	Notes:
-
-******************************************************************************/
-void VPRIPCMDQ_DigitalSound(UInt16 arg0);
-
-/*****************************************************************************/
-/**
 	Function Name:       VPRIPCMDQ_SetARM2SP
 
 	Description:

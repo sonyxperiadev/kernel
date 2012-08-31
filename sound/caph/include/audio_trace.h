@@ -54,7 +54,9 @@ extern int gAudioDebugLevel;
 #define LOG_AUDIO_CSL		0x8
 #define LOG_AUDIO_CHAL		0x10
 #define LOG_AUDIO_DSP		0x20
-
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+#define LOG_AUDIO_PMUTEMP                0x40
+#endif
 #define aError(format, args...) \
 	do { \
 		pr_err(pr_fmt("AUD_ERR:"format), ##args);\

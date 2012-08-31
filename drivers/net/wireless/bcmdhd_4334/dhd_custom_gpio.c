@@ -20,7 +20,7 @@
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *
-* $Id: dhd_custom_gpio.c 345514 2012-07-18 07:47:36Z $
+* $Id: dhd_custom_gpio.c 350488 2012-08-14 04:36:26Z $
 */
 
 #include <typedefs.h>
@@ -255,6 +255,7 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"BN", "BN", 1},
 	{"CA", "CA", 2},
 	{"CH", "CH", 1},
+	{"CN", "CN", 0},
 	{"CY", "CY", 1},
 	{"CZ", "CZ", 1},
 	{"DE", "DE", 3},
@@ -299,6 +300,7 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"PS", "XZ", 11},	/* Universal if Country code is PALESTINIAN TERRITORY, OCCUPIED */
 	{"TL", "XZ", 11},	/* Universal if Country code is TIMOR-LESTE (EAST TIMOR) */
 	{"MH", "XZ", 11},	/* Universal if Country code is MARSHALL ISLANDS */
+	{"PK", "XZ", 11},	/* Universal if Country code is PAKISTAN */
 #endif
 #ifdef BCM4334_CHIP
 	{"RU", "RU", 5},

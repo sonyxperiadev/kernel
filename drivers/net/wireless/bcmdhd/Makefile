@@ -16,6 +16,8 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                     \
 	-DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT                                \
 	-DKEEP_ALIVE -DGET_CUSTOM_MAC_ENABLE -DPKT_FILTER_SUPPORT             \
 	-DEMBEDDED_PLATFORM -DENABLE_INSMOD_NO_FW_LOAD -DPNO_SUPPORT          \
+	-DDHD_USE_IDLECOUNT -DSET_RANDOM_MAC_SOFTAP -DROAM_ENABLE -DVSDB      \
+	-DWL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST -DESCAN_RESULT_PATCH       \
 	-Idrivers/net/wireless/bcmdhd -Idrivers/net/wireless/bcmdhd/include
 
 
@@ -36,6 +38,8 @@ ifeq ($(CONFIG_MACH_RHEA_STONE),y)
 # SW-OOB Interrupt
 DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74
 endif
+
+DHDCFLAGS += -DXTAL_PU_TIME_MOD
 
 ifeq ($(CONFIG_MACH_RHEA_STONE_EDN2X),y)
 # SW-OOB Interrupt
@@ -65,11 +69,14 @@ obj-$(CONFIG_BCMDHD) += bcmdhd.o
 bcmdhd-objs += $(DHDOFILES)
 ifneq ($(CONFIG_WIRELESS_EXT),)
 bcmdhd-objs += wl_iw.o
-DHDCFLAGS += -DSOFTAP -DUSE_IW
+DHDCFLAGS += -DSOFTAP -DWL_WIRELESS_EXT -DUSE_IW
 endif
 ifneq ($(CONFIG_CFG80211),)
 bcmdhd-objs += wl_cfg80211.o wl_cfgp2p.o wl_linux_mon.o dhd_cfg80211.o
 DHDCFLAGS += -DWL_CFG80211 -DWL_CFG80211_STA_EVENT -DWL_ENABLE_P2P_IF
+endif
+ifneq ($(CONFIG_DHD_USE_SCHED_SCAN),)
+DHDCFLAGS += -DWL_SCHED_SCAN
 endif
 EXTRA_CFLAGS = $(DHDCFLAGS)
 ifeq ($(CONFIG_BCMDHD),m)

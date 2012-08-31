@@ -841,4 +841,11 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path);
 void csl_caph_hwctrl_PrintAllPaths(void);
 void csl_caph_dspcb(int path);
 void csl_caph_hwctrl_SetLongDma(CSL_CAPH_PathID pathID);
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+Boolean csl_caph_hwctrl_allPathsDisabled(void);
+Boolean  csl_caph_IsHSActive(void);
+void csl_caph_ClockLock(void);
+void csl_caph_ClockUnLock(void);
+Boolean csl_caph_ClockWaitStatus(void);
+#endif
 #endif

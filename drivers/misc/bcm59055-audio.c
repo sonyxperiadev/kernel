@@ -34,7 +34,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/io.h>
-#include <linux/broadcom/bcm59055-audio.h>
+#include <linux/broadcom/bcmpmu_audio.h>
 /*#include <linux/mfd/bcm590xx/bcm59055_A0.h>*/
 #include <linux/mfd/bcm590xx/core.h>
 

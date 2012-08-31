@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: bcmspibrcm.c 345514 2012-07-18 07:47:36Z $
+ * $Id: bcmspibrcm.c 348325 2012-08-01 12:43:22Z $
  */
 
 #define HSMODE
@@ -56,7 +56,11 @@ extern void spi_sendrecv(sdioh_info_t *sd, uint8 *msg_out, uint8 *msg_in, int ms
 #define DWORDMODE_ON (sd->chip == BCM4329_CHIP_ID) && (sd->chiprev == 2) && (sd->dwordmode == TRUE)
 
 /* Globals */
+#if defined(DHD_DEBUG)
+uint sd_msglevel = SDH_ERROR_VAL;
+#else
 uint sd_msglevel = 0;
+#endif 
 
 uint sd_hiok = FALSE;		/* Use hi-speed mode if available? */
 uint sd_sdmode = SDIOH_MODE_SPI;		/* Use SD4 mode by default */

@@ -869,7 +869,7 @@ void csl_arm2sp_set_arm2sp(UInt32 samplingRate,
 		break;
 	}
 
-	aTrace(LOG_AUDIO_DSP, "ARM2SP Start, playbackMode = %d,"
+	aTrace(LOG_AUDIO_DSP, "set_arm2sp playbackMode = %d,"
 			"mixMode = %d, arg0 = 0x%x instanceID=1,"
 			"Reset_out_ptr_flag = %d\n",
 			playbackMode, mixMode, arg0, Reset_out_ptr_flag);

@@ -548,7 +548,6 @@ int __video_register_device(struct video_device *vdev, int type, int nr,
 	int minor_offset = 0;
 	int minor_cnt = VIDEO_NUM_DEVICES;
 	const char *name_base;
-	printk("haipeng, __video_register_device\n"); //@HW
 
 	/* A minor value of -1 marks this video device as never
 	   having been registered */

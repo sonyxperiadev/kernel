@@ -37,7 +37,6 @@
 #ifdef DWC_UTE_CFI
 #include "dwc_otg_cfi.h"
 #endif
-/* #include <linux/usb/ch9.h> */
 
 #ifdef DWC_UTE_PER_IO
 extern void complete_xiso_ep(dwc_otg_pcd_ep_t *ep);
@@ -253,6 +252,9 @@ void start_next_request(dwc_otg_pcd_ep_t *ep)
 		}
 #endif
 		dwc_otg_ep_start_transfer(GET_CORE_IF(ep->pcd), &ep->dwc_ep);
+	} else if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) {
+		DWC_PRINTF("There are no more ISOC requests\n");
+		ep->dwc_ep.frame_num = 0xFFFFFFFF;
 	}
 }
 
@@ -1098,12 +1100,27 @@ int32_t dwc_otg_pcd_handle_end_periodic_frame_intr(dwc_otg_pcd_t *pcd)
 {
 	gintmsk_data_t intr_mask = {.d32 = 0 };
 	gintsts_data_t gintsts;
-	DWC_PRINTF("INTERRUPT Handler not implemented for %s\n", "EOP");
+#if 0
+		depctl_data_t depctl = {.d32 = 0 };
+		dwc_ep_t *dwc_ep;
+		dwc_otg_dev_if_t *dev_if;
+		int i;
+		dev_if = GET_CORE_IF(pcd)->dev_if;
 
-	intr_mask.b.eopframe = 1;
-	dwc_modify_reg32(&GET_CORE_IF(pcd)->core_global_regs->gintmsk,
-			 intr_mask.d32, 0);
+		for (i = 1; i <= dev_if->num_in_eps; ++i) {
+			dwc_ep = &pcd->in_ep[i-1].dwc_ep;
+			depctl.d32 =
+				DWC_READ_REG32(&dev_if->in_ep_regs[i]->diepctl);
+			if (depctl.b.epena &&
+				dwc_ep->type == DWC_OTG_EP_TYPE_ISOC)
+				start_next_request(&pcd->in_ep[i-1]);
+		}
 
+#else
+		intr_mask.b.eopframe = 1;
+		dwc_modify_reg32(&GET_CORE_IF(pcd)->core_global_regs->gintmsk,
+				 intr_mask.d32, 0);
+#endif
 	/* Clear interrupt */
 	gintsts.d32 = 0;
 	gintsts.b.eopframe = 1;
@@ -2022,6 +2039,24 @@ static void complete_ep(dwc_otg_pcd_ep_t *ep)
 						is_last = 1;
 					}
 				} else {
+					if (ep->dwc_ep.type ==
+						DWC_OTG_EP_TYPE_ISOC) {
+						/* HS IN endpoints are not
+						*  updating so force it here */
+						/* req->actual = 0; */
+						req->actual =
+							ep->dwc_ep.xfer_len;
+						dwc_otg_request_done(
+							ep, req, 0);
+
+						ep->dwc_ep.start_xfer_buff = 0;
+						ep->dwc_ep.xfer_buff = 0;
+						ep->dwc_ep.xfer_len = 0;
+
+						/* If there is a request in the
+						*   queue start it. */
+						start_next_request(ep);
+					} else
 					DWC_WARN
 					    ("Incomplete transfer (%d - %s [siz=%d pkt=%d])\n",
 					     ep->dwc_ep.num,
@@ -3065,6 +3100,7 @@ static inline void handle_in_ep_disable_intr(dwc_otg_pcd_t *pcd,
 
 	if (dwc_ep->type == DWC_OTG_EP_TYPE_ISOC) {
 		dwc_otg_flush_tx_fifo(core_if, dwc_ep->tx_fifo_num);
+		complete_ep(ep);
 		return;
 	}
 
@@ -3374,8 +3410,26 @@ do { \
 						complete_xiso_ep(ep);
 				}
 #endif /* DWC_UTE_PER_IO */
-				else
+				else {
+					if (dwc_ep->type ==
+						DWC_OTG_EP_TYPE_ISOC &&
+						dwc_ep->bInterval > 1) {
+						dwc_ep->frame_num +=
+							dwc_ep->bInterval;
+						if (dwc_ep->frame_num >
+							0x3FFF) {
+							dwc_ep->frm_overrun = 1;
+							dwc_ep->frame_num &=
+								0x3FFF;
+						} else
+							dwc_ep->frm_overrun = 0;
+					}
 					complete_ep(ep);
+					if (diepint.b.nak)
+						CLEAR_IN_EP_INTR(
+							core_if,
+							epnum, nak);
+				}
 			}
 			/* Endpoint disable      */
 			if (diepint.b.epdisabled) {
@@ -3521,9 +3575,58 @@ do { \
 			}
 			/* NAK Interrutp */
 			if (diepint.b.nak) {
-				DWC_DEBUGPL(DBG_ANY, "EP%d IN NAK Interrupt\n",
-					    epnum);
-				handle_in_ep_nak_intr(pcd, epnum);
+				DWC_DEBUGPL(DBG_ANY,
+					"EP%d IN NAK Interrupt\n",
+					epnum);
+				if (ep->dwc_ep.type ==
+					DWC_OTG_EP_TYPE_ISOC) {
+					depctl_data_t depctl;
+					if (ep->dwc_ep.frame_num ==
+						0xFFFFFFFF) {
+						ep->dwc_ep.frame_num =
+							core_if->frame_num;
+						if (ep->dwc_ep.bInterval > 1) {
+							depctl.d32 = 0;
+							depctl.d32 =
+								DWC_READ_REG32(
+								&dev_if->
+								in_ep_regs
+								[epnum]->
+								diepctl);
+							if (ep->dwc_ep.
+								frame_num &
+								0x1) {
+								depctl.b.
+									setd1pid
+									= 1;
+								depctl.b.
+									setd0pid
+									= 0;
+							} else {
+								depctl.b.
+									setd0pid
+									= 1;
+								depctl.b.
+									setd1pid
+									= 0;
+							}
+							DWC_WRITE_REG32(
+								&dev_if->
+								in_ep_regs
+								[epnum]->
+								diepctl,
+								depctl.d32);
+						}
+						start_next_request(ep);
+					}
+					ep->dwc_ep.frame_num +=
+						ep->dwc_ep.bInterval;
+					if (dwc_ep->frame_num > 0x3FFF) {
+						dwc_ep->frm_overrun = 1;
+						dwc_ep->frame_num &= 0x3FFF;
+					} else
+						dwc_ep->frm_overrun = 0;
+				}
 
 				CLEAR_IN_EP_INTR(core_if, epnum, nak);
 			}
@@ -3648,6 +3751,42 @@ do { \
 
 				/* Clear the bit in DOEPINTn for this interrupt */
 				CLEAR_OUT_EP_INTR(core_if, epnum, epdisabled);
+				if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) {
+					dctl_data_t dctl;
+					gintmsk_data_t intr_mask = {.d32 = 0};
+					dwc_otg_pcd_request_t *req = 0;
+
+					dctl.d32 = DWC_READ_REG32(
+						&core_if->dev_if->
+						dev_global_regs->dctl);
+					dctl.b.cgoutnak = 1;
+					DWC_WRITE_REG32(
+						&core_if->dev_if->
+						dev_global_regs->dctl,
+						dctl.d32);
+
+					intr_mask.d32 = 0;
+					intr_mask.b.incomplisoout = 1;
+
+					/* Get any pending requests */
+					if (!DWC_CIRCLEQ_EMPTY(&ep->queue)) {
+						req =
+							DWC_CIRCLEQ_FIRST(
+							&ep->queue);
+						if (!req)
+							DWC_PRINTF(
+								"complete_ep 0x%p, req = NULL!\n",
+								ep);
+						else {
+							dwc_otg_request_done(ep,
+								req, 0);
+							start_next_request(ep);
+						}
+					} else
+						DWC_PRINTF(
+							"complete_ep 0x%p, ep->queue empty!\n",
+							ep);
+				}
 			}
 			/* AHB Error */
 			if (doepint.b.ahberr) {
@@ -3721,6 +3860,48 @@ do { \
 
 				CLEAR_OUT_EP_INTR(core_if, epnum, babble);
 			}
+			if (doepint.b.outtknepdis) {
+				DWC_DEBUGPL(DBG_ANY,
+					"EP%d OUT Token received when EP is disabled\n",
+					epnum);
+				if (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) {
+					doepmsk_data_t doepmsk = {.d32 = 0};
+					ep->dwc_ep.frame_num =
+						core_if->frame_num;
+					if (ep->dwc_ep.bInterval >
+						1) {
+						depctl_data_t depctl;
+						depctl.d32 =
+							DWC_READ_REG32(
+							&core_if->dev_if->
+							out_ep_regs[epnum]->
+							doepctl);
+						if (ep->dwc_ep.
+							frame_num & 0x1) {
+							depctl.b.
+								setd1pid = 1;
+							depctl.b.
+								setd0pid = 0;
+						} else {
+							depctl.b.
+								setd0pid = 1;
+							depctl.b.
+								setd1pid = 0;
+						}
+						DWC_WRITE_REG32(
+							&core_if->dev_if->
+							out_ep_regs[epnum]->
+							doepctl,
+							depctl.d32);
+					}
+					start_next_request(ep);
+					doepmsk.b.outtknepdis = 1;
+					DWC_MODIFY_REG32(&core_if->dev_if->
+						dev_global_regs->doepmsk,
+						doepmsk.d32, 0);
+				}
+				CLEAR_OUT_EP_INTR(core_if, epnum, outtknepdis);
+			}
 			/* NAK Interrutp */
 			if (doepint.b.nak) {
 				DWC_DEBUGPL(DBG_ANY, "EP%d OUT NAK\n", epnum);
@@ -3744,6 +3925,18 @@ do { \
 	return 1;
 
 #undef CLEAR_OUT_EP_INTR
+}
+
+static int drop_transfer(uint32_t trgt_fr, uint32_t curr_fr,
+	uint8_t frm_overrun)
+{
+	int retval = 0;
+	if (!frm_overrun && curr_fr >= trgt_fr)
+		retval = 1;
+	else if (frm_overrun && (curr_fr >= trgt_fr &&
+		((curr_fr - trgt_fr) < 0x3FFF/2)))
+		retval = 1;
+	return retval;
 }
 
 /**
@@ -3814,13 +4007,38 @@ int32_t dwc_otg_pcd_handle_incomplete_isoc_in_intr(dwc_otg_pcd_t *pcd)
 	}
 
 #else
-	gintmsk_data_t intr_mask = {.d32 = 0 };
-	DWC_PRINTF("INTERRUPT Handler not implemented for %s\n",
-		   "IN ISOC Incomplete");
+	depctl_data_t depctl = {.d32 = 0 };
+	dwc_ep_t *dwc_ep;
+	dwc_otg_dev_if_t *dev_if;
+	int i;
+	dev_if = GET_CORE_IF(pcd)->dev_if;
 
-	intr_mask.b.incomplisoin = 1;
-	dwc_modify_reg32(&GET_CORE_IF(pcd)->core_global_regs->gintmsk,
-			 intr_mask.d32, 0);
+	DWC_DEBUGPL(DBG_PCD, "Incomplete ISO IN\n");
+
+	for (i = 1; i <= dev_if->num_in_eps; ++i) {
+		dwc_ep = &pcd->in_ep[i-1].dwc_ep;
+		depctl.d32 =
+			DWC_READ_REG32(&dev_if->in_ep_regs[i]->diepctl);
+		if (depctl.b.epena && dwc_ep->type == DWC_OTG_EP_TYPE_ISOC) {
+			if (drop_transfer(dwc_ep->frame_num,
+				GET_CORE_IF(pcd)->frame_num,
+				dwc_ep->frm_overrun)) {
+				depctl.d32 =
+					DWC_READ_REG32(&dev_if->
+					in_ep_regs[i]->diepctl);
+				depctl.b.snak = 1;
+				depctl.b.epdis = 1;
+				DWC_MODIFY_REG32(&dev_if->
+					in_ep_regs[i]->diepctl,
+					depctl.d32, depctl.d32);
+
+			}
+		}
+	}
+
+	/*intr_mask.b.incomplisoin = 1;
+	DWC_MODIFY_REG32(&GET_CORE_IF(pcd)->core_global_regs->gintmsk,
+			 intr_mask.d32, 0);	 */
 #endif /*DWC_EN_ISOC */
 
 	/* Clear interrupt */
@@ -3907,13 +4125,55 @@ int32_t dwc_otg_pcd_handle_incomplete_isoc_out_intr(dwc_otg_pcd_t *pcd)
 #else
 	/** @todo implement ISR */
 	gintmsk_data_t intr_mask = {.d32 = 0 };
+	dwc_otg_core_if_t *core_if;
+	deptsiz_data_t deptsiz = {.d32 = 0 };
+	depctl_data_t depctl = {.d32 = 0 };
+	dctl_data_t dctl = {.d32 = 0 };
+	dwc_ep_t *dwc_ep = NULL;
+	int i;
+	core_if = GET_CORE_IF(pcd);
 
-	DWC_PRINTF("INTERRUPT Handler not implemented for %s\n",
-		   "OUT ISOC Incomplete");
+	for (i = 0; i < core_if->dev_if->num_out_eps; ++i) {
+		dwc_ep = &pcd->out_ep[i].dwc_ep;
+		depctl.d32 =
+			DWC_READ_REG32(&core_if->dev_if->
+			out_ep_regs[dwc_ep->num]->doepctl);
+		if (depctl.b.epena && depctl.b.dpid ==
+			(core_if->frame_num & 0x1)) {
+			core_if->dev_if->isoc_ep = dwc_ep;
+			deptsiz.d32 =
+				DWC_READ_REG32(&core_if->dev_if->
+				out_ep_regs[dwc_ep->num]->doeptsiz);
+				break;
+		}
+	}
+	dctl.d32 = DWC_READ_REG32(&core_if->dev_if->dev_global_regs->dctl);
+	gintsts.d32 = DWC_READ_REG32(&core_if->core_global_regs->gintsts);
+	intr_mask.d32 = DWC_READ_REG32(&core_if->core_global_regs->gintmsk);
 
+	if (!intr_mask.b.goutnakeff) {
+		/* Unmask it */
+		intr_mask.b.goutnakeff = 1;
+		DWC_WRITE_REG32(&core_if->core_global_regs->gintmsk,
+			intr_mask.d32);
+	}
+	if (!gintsts.b.goutnakeff)
+		dctl.b.sgoutnak = 1;
+
+	DWC_WRITE_REG32(&core_if->dev_if->dev_global_regs->dctl, dctl.d32);
+
+	depctl.d32 = DWC_READ_REG32(&core_if->dev_if->
+		out_ep_regs[dwc_ep->num]->doepctl);
+	if (depctl.b.epena) {
+		depctl.b.epdis = 1;
+		depctl.b.snak = 1;
+	}
+	DWC_WRITE_REG32(&core_if->dev_if->
+		out_ep_regs[dwc_ep->num]->doepctl,
+		depctl.d32);
+
+	intr_mask.d32 = 0;
 	intr_mask.b.incomplisoout = 1;
-	dwc_modify_reg32(&GET_CORE_IF(pcd)->core_global_regs->gintmsk,
-			 intr_mask.d32, 0);
 
 #endif /* DWC_EN_ISOC */
 
@@ -3973,20 +4233,42 @@ int32_t dwc_otg_pcd_handle_in_nak_effective(dwc_otg_pcd_t *pcd)
  */
 int32_t dwc_otg_pcd_handle_out_nak_effective(dwc_otg_pcd_t *pcd)
 {
+	dwc_otg_dev_if_t *dev_if = GET_CORE_IF(pcd)->dev_if;
 	gintmsk_data_t intr_mask = {.d32 = 0 };
 	gintsts_data_t gintsts;
+	depctl_data_t doepctl;
 
-	DWC_PRINTF("INTERRUPT Handler not implemented for %s\n",
-		   "Global IN NAK Effective\n");
-	/* Disable the Global IN NAK Effective Interrupt */
+	/* Disable the Global OUT NAK Effective Interrupt */
 	intr_mask.b.goutnakeff = 1;
-	dwc_modify_reg32(&GET_CORE_IF(pcd)->core_global_regs->gintmsk,
-			 intr_mask.d32, 0);
+	DWC_MODIFY_REG32(&GET_CORE_IF(pcd)->core_global_regs->gintmsk,
+		intr_mask.d32, 0);
+
+	/* We come here from Incomplete ISO OUT handler */
+	if (dev_if->isoc_ep) {
+		dwc_ep_t *dwc_ep = (dwc_ep_t *)dev_if->isoc_ep;
+		uint32_t epnum = dwc_ep->num;
+		doepint_data_t doepint;
+		doepint.d32 = DWC_READ_REG32(
+			&dev_if->out_ep_regs[dwc_ep->num]->doepint);
+		dev_if->isoc_ep = NULL;
+		doepctl.d32 = DWC_READ_REG32(
+			&dev_if->out_ep_regs[epnum]->doepctl);
+		DWC_PRINTF("Before disable DOEPCTL = %08x\n", doepctl.d32);
+		if (doepctl.b.epena) {
+			doepctl.b.epdis = 1;
+			doepctl.b.snak = 1;
+		}
+		DWC_WRITE_REG32(&dev_if->out_ep_regs[epnum]->doepctl,
+			doepctl.d32);
+		return 1;
+	} else
+		DWC_PRINTF("INTERRUPT Handler not implemented for %s\n",
+			   "Global OUT NAK Effective\n");
 
 	/* Clear interrupt */
 	gintsts.d32 = 0;
 	gintsts.b.goutnakeff = 1;
-	dwc_write_reg32(&GET_CORE_IF(pcd)->core_global_regs->gintsts,
+	DWC_WRITE_REG32(&GET_CORE_IF(pcd)->core_global_regs->gintsts,
 			gintsts.d32);
 
 	return 1;

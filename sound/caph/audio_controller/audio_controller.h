@@ -34,7 +34,10 @@
 *****************************************************************************/
 #ifndef __AUDIO_CONTROLLER_H__
 #define __AUDIO_CONTROLLER_H__
-
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+#include <linux/workqueue.h>
+#include <linux/mutex.h>
+#endif
 /**
  * @addtogroup Audio_Controller
  * @{
@@ -67,6 +70,9 @@ enum __AUDCTRL_HW_ACCESS_TYPE_en_t {
 	AUDCTRL_HW_READ_REG,
 	AUDCTRL_HW_WRITE_REG,
 	AUDCTRL_HW_PRINT_PATH,
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+	AUDCTRL_HW_TEMPGAINCOMP,
+#endif
 	AUDCTRL_HW_ACCESS_TYPE_TOTAL
 };
 #define AUDCTRL_HW_ACCESS_TYPE_en_t enum __AUDCTRL_HW_ACCESS_TYPE_en_t
@@ -122,6 +128,32 @@ struct _second_dev {
 };
 
 #define BRCM_AUDIO_Param_Second_Dev_t struct _second_dev
+
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+enum __AUDCTRL_TEMP_STATE_e {
+	AUDCTRL_NORMAL_TEMP,
+	AUDCTRL_HIGH_TEMP,
+	AUDCTRL_VERYHIGH_TEMP,
+	AUDCTRL_AMP_OFF,
+};
+#define AUDCTRL_TEMP_STATE_e enum __AUDCTRL_TEMP_STATE_e
+
+struct _BrcmPmuTempGainComp {
+	struct delayed_work temp_gain_comp;
+	u16 firstFlag;
+	u16 intiComplete;
+	AUDCTRL_TEMP_STATE_e tempGainState;
+	int hs_orig_gain_L;
+	int hs_orig_gain_R;
+	int hs_curr_gain_L;
+	int hs_curr_gain_R;
+	int hs_adj_gain;
+	int currTemp;
+	int prevTemp;
+};
+#define	BrcmPmuTempGainComp struct _BrcmPmuTempGainComp
+#endif
+
 
 /**
 *  @brief  This function is the Init entry point for Audio Controller
@@ -948,5 +980,26 @@ void setExternalParameter(Int16 param_id, Int16 param_value, int channel);
 ****************************************************************************/
 
 void multicastToSpkr(Boolean flag);
+
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+
+/********************************************************************
+*  @brief  Check if all the paths are disabled.
+*
+*  @param
+*
+*  @return Boolean (TURE if there are no paths)
+*
+****************************************************************************/
+
+Boolean AUDCTRL_AllPathsDisabled(void);
+
+int AUDCTRL_TempGainComp(BrcmPmuTempGainComp *paudio);
+
+unsigned int AUDCTRL_TempGainComp_ComputeThresh(int deltaT, int gain_mB);
+void AUDCTRL_TempGainCompInit(BrcmPmuTempGainComp *paudio);
+void AUDCTRL_TempGainCompDeInit(BrcmPmuTempGainComp *paudio);
+Boolean AUDCTRL_TempGainCompStatus(void);
+#endif
 
 #endif /* #define __AUDIO_CONTROLLER_H__ */

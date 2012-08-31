@@ -586,10 +586,6 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 
 	switch (param1) {
 
-	case AUDDRV_DSPCMD_COMMAND_DIGITAL_SOUND:
-		VPRIPCMDQ_DigitalSound((UInt16) param2);
-		break;
-
 	case AUDDRV_DSPCMD_COMMAND_SET_BT_NB:
 		VPRIPCMDQ_SetBTNarrowBand((UInt16) param2);
 
@@ -607,12 +603,6 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 
 	case AUDDRV_DSPCMD_MM_VPU_DISABLE:
 		VPRIPCMDQ_MMVPUDisable();
-
-		break;
-
-		/* AMCR PCM enable bit is controlled by ARM audio */
-	case AUDDRV_DSPCMD_AUDIO_SET_PCM:
-		VPRIPCMDQ_DigitalSound((UInt16) param2);
 
 		break;
 

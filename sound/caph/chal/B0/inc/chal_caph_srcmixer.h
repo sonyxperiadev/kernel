@@ -305,6 +305,22 @@ cVoid chal_caph_srcmixer_set_spkrgain(CHAL_HANDLE handle,
 				      CAPH_SRCMixer_OUTPUT_e mixerOutput,
 				      cUInt16 gain);
 
+
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+/**
+*
+*  @brief  get caph srcmixer speaker gain
+*
+*  @param   handle  (in) handle of the caph srcmixer block
+*  @param   mixerOutput  (in) LR channel id of the caph srcmixer block
+*  @param   gain  (out) gain read
+*
+*  @return cVoid
+*****************************************************************************/
+cVoid chal_caph_srcmixer_get_spkrgain(CHAL_HANDLE handle,
+				      CAPH_SRCMixer_OUTPUT_e mixerOutput,
+				      cUInt16 *gain);
+#endif
 /**
 *
 *  @brief  set caph srcmixer speaker gain bitsel

@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wlioctl.h 326733 2012-04-10 18:54:41Z $
+ * $Id: wlioctl.h 334796 2012-05-23 22:59:44Z $
  */
 
 #ifndef _wlioctl_h_
@@ -441,19 +441,6 @@ typedef struct wl_scan_results {
 /* Used in EXT_STA */
 #define DNGL_RXCTXT_SIZE	45
 
-#if defined(SIMPLE_ISCAN)
-#define ISCAN_RETRY_CNT   5
-#define ISCAN_STATE_IDLE   0
-#define ISCAN_STATE_SCANING 1
-#define ISCAN_STATE_PENDING 2
-
-/* the buf lengh can be WLC_IOCTL_MAXLEN (8K) to reduce iteration */
-#define WLC_IW_ISCAN_MAXLEN   2048
-typedef struct iscan_buf {
-	struct iscan_buf * next;
-	char   iscan_buf[WLC_IW_ISCAN_MAXLEN];
-} iscan_buf_t;
-#endif /* SIMPLE_ISCAN */
 
 #define ESCAN_REQ_VERSION 1
 
@@ -847,20 +834,19 @@ typedef enum sup_auth_status {
 	WLC_SUP_KEYXCHANGE_PREP_G2	/* Preparing to send handshake msg G2 */
 } sup_auth_status_t;
 
-
-#define CRYPTO_ALGO_OFF         0
-#define CRYPTO_ALGO_WEP1        1
-#define CRYPTO_ALGO_TKIP        2
-#define CRYPTO_ALGO_WEP128      3
-#define CRYPTO_ALGO_AES_CCM     4
-#define CRYPTO_ALGO_AES_OCB_MSDU    5
-#define CRYPTO_ALGO_AES_OCB_MPDU    6
-#define CRYPTO_ALGO_NALG        7
-
+/* Enumerate crypto algorithms */
+#define	CRYPTO_ALGO_OFF			0
+#define	CRYPTO_ALGO_WEP1		1
+#define	CRYPTO_ALGO_TKIP		2
+#define	CRYPTO_ALGO_WEP128		3
+#define CRYPTO_ALGO_AES_CCM		4
+#define CRYPTO_ALGO_AES_OCB_MSDU	5
+#define CRYPTO_ALGO_AES_OCB_MPDU	6
+#define CRYPTO_ALGO_NALG		7
 #ifdef BCMWAPI_WPI
-#define CRYPTO_ALGO_SMS4        11
+#define CRYPTO_ALGO_SMS4		11
 #endif /* BCMWAPI_WPI */
-#define CRYPTO_ALGO_PMK			12	
+#define CRYPTO_ALGO_PMK			12	/* for 802.1x supp to set PMK before 4-way */
 
 #define WSEC_GEN_MIC_ERROR  0x0001
 #define WSEC_GEN_REPLAY     0x0002
@@ -905,6 +891,12 @@ typedef struct {
 	uint8	key[WSEC_MAX_PSK_LEN];	/* PMK material */
 } wsec_pmk_t;
 
+/* wireless security bitvec */
+#define WEP_ENABLED		0x0001
+#define TKIP_ENABLED		0x0002
+#define AES_ENABLED		0x0004
+#define WSEC_SWFLAG		0x0008
+#define SES_OW_ENABLED		0x0040	/* to go into transition mode without setting wep */
 
 #define WEP_ENABLED     0x0001
 #define TKIP_ENABLED        0x0002
@@ -912,31 +904,40 @@ typedef struct {
 #define WSEC_SWFLAG     0x0008
 #define SES_OW_ENABLED      0x0040  
 
+#define WSEC_ENABLED(wsec)	((wsec) & (WEP_ENABLED | TKIP_ENABLED | AES_ENABLED))
+#define WSEC_SES_OW_ENABLED(wsec)	((wsec) & SES_OW_ENABLED)
+
+#ifdef MFP
+#define MFP_CAPABLE		0x0200
+#define MFP_REQUIRED	0x0400
+#define MFP_SHA256		0x0800 /* a special configuration for STA for WIFI test tool */
+#endif /* MFP */
+
 #ifdef BCMWAPI_WPI
-#define SMS4_ENABLED        0x0100
+#define SMS4_ENABLED		0x0100
 #endif /* BCMWAPI_WPI */
 
-#define WPA_AUTH_DISABLED   0x0000  
-#define WPA_AUTH_NONE       0x0001  
-#define WPA_AUTH_UNSPECIFIED    0x0002  
-#define WPA_AUTH_PSK        0x0004  
- 
-#define WPA2_AUTH_UNSPECIFIED   0x0040  
-#define WPA2_AUTH_PSK       0x0080  
-#define BRCM_AUTH_PSK           0x0100  
-#define BRCM_AUTH_DPT       0x0200  
+/* WPA authentication mode bitvec */
+#define WPA_AUTH_DISABLED	0x0000	/* Legacy (i.e., non-WPA) */
+#define WPA_AUTH_NONE		0x0001	/* none (IBSS) */
+#define WPA_AUTH_UNSPECIFIED	0x0002	/* over 802.1x */
+#define WPA_AUTH_PSK		0x0004	/* Pre-shared key */
+/* #define WPA_AUTH_8021X 0x0020 */	/* 802.1x, reserved */
+#define WPA2_AUTH_UNSPECIFIED	0x0040	/* over 802.1x */
+#define WPA2_AUTH_PSK		0x0080	/* Pre-shared key */
+#define BRCM_AUTH_PSK           0x0100  /* BRCM specific PSK */
+#define BRCM_AUTH_DPT		0x0200	/* DPT PSK without group keys */
+#define WPA2_AUTH_MFP           0x1000  /* MFP (11w) in contrast to CCX */
+#define WPA2_AUTH_TPK		0x2000 	/* TDLS Peer Key */
+#define WPA2_AUTH_FT		0x4000 	/* Fast Transition. */
+#define WPA_AUTH_PFN_ANY	0xffffffff	/* for PFN, match only ssid */
 
 #ifdef BCMWAPI_WAI
 #define WPA_AUTH_WAPI           0x0400
-#define WAPI_AUTH_NONE      WPA_AUTH_NONE   /* none (IBSS) */
+#define WAPI_AUTH_NONE		WPA_AUTH_NONE   /* none (IBSS) */
 #define WAPI_AUTH_UNSPECIFIED   0x0400  /* over AS */
-#define WAPI_AUTH_PSK       0x0800  /* Pre-shared key */
+#define WAPI_AUTH_PSK		0x0800  /* Pre-shared key */
 #endif /* BCMWAPI_WAI */
-
-#define WPA2_AUTH_MFP           0x1000  
-#define WPA2_AUTH_TPK		0x2000 	
-#define WPA2_AUTH_FT		0x4000 	
-
 
 #define MAXPMKID        16
 
@@ -1677,7 +1678,13 @@ typedef struct {
 /* WLC_GET_AUTH, WLC_SET_AUTH values */
 #define WL_AUTH_OPEN_SYSTEM		0	/* d11 open authentication */
 #define WL_AUTH_SHARED_KEY		1	/* d11 shared authentication */
-#define WL_AUTH_OPEN_SHARED     	2   /* try open, then shared if open failed w/rc 13 */
+#ifdef BCM4330_CHIP
+#define WL_AUTH_OPEN_SHARED		2	/* try open, then shared if open failed w/rc 13 */
+#else
+/* BCM4334(Phoenex branch) value changed to 3 */
+#define WL_AUTH_OPEN_SHARED		3	/* try open, then shared if open failed w/rc 13 */
+#endif
+#endif /* LINUX_POSTMOGRIFY_REMOVAL */
 
 /* Bit masks for radio disabled status - returned by WL_GET_RADIO */
 #define WL_RADIO_SW_DISABLE		(1<<0)
@@ -4469,20 +4476,6 @@ typedef struct assertlog_results {
 #define LOGRRC_FIX_LEN	8
 #define IOBUF_ALLOWED_NUM_OF_LOGREC(type, len) ((len - LOGRRC_FIX_LEN)/sizeof(type))
 
-#ifdef BCMWAPI_WAI
-#define IV_LEN 16
-struct wapi_sta_msg_t
-{
-	uint16	msg_type;
-	uint16	datalen;
-	uint8	vap_mac[6];
-	uint8	reserve_data1[2];
-	uint8	sta_mac[6];
-	uint8	reserve_data2[2];
-	uint8	gsn[IV_LEN];
-	uint8	wie[256];
-};
-#endif /* BCMWAPI_WAI */
 
 /* channel interference measurement (chanim) related defines */
 

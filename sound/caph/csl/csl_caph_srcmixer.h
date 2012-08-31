@@ -369,7 +369,19 @@ void csl_srcmixer_setMixAllInGain(CSL_CAPH_MIXER_e outChnl,
 void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
 		int gainL_mB, int gainR_mB);
 
-
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+/**
+*
+*  @brief  get the mixer output gain
+*
+*  @param   outChnl  (in) caph srcmixer mixer output channel
+*  @param   gain  (out) caph srcmixer mixer output Left/Right channel gain
+*
+*  @return void
+*****************************************************************************/
+void csl_srcmixer_getMixOutGain(CSL_CAPH_MIXER_e outChnl,
+		int *gainL_mB, int *gainR_mB);
+#endif
 /**
 *
 *  @brief  set the mixer output coarse gain
