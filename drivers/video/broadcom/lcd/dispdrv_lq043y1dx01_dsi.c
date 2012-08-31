@@ -226,6 +226,7 @@ CSL_DSI_CFG_t lq043y1dx01_dsiCfg = {
 	FALSE,		/* enaLpTxEotPkt */
 	FALSE,		/* enaLpRxEotPkt */
 	1,
+	1,
 };
 
 
