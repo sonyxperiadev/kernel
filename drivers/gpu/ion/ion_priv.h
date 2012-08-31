@@ -22,6 +22,7 @@
 #include <linux/mutex.h>
 #include <linux/rbtree.h>
 #include <linux/ion.h>
+#include <linux/device.h>
 
 struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
 
@@ -159,6 +160,9 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap);
  */
 
 struct ion_heap *ion_heap_create(struct ion_platform_heap *);
+struct ion_heap *ion_heap_create_full(struct ion_platform_heap *,
+				      struct device *);
+
 void ion_heap_destroy(struct ion_heap *);
 
 struct ion_heap *ion_system_heap_create(struct ion_platform_heap *);
@@ -177,6 +181,13 @@ ion_phys_addr_t ion_carveout_allocate(struct ion_heap *heap, unsigned long size,
 				      unsigned long align);
 void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
 		       unsigned long size);
+
+#ifdef CONFIG_CMA
+struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *,
+				     struct device *);
+void ion_cma_heap_destroy(struct ion_heap *);
+#endif
+
 /**
  * The carveout heap returns physical addresses, since 0 may be a valid
  * physical address, this is used to indicate allocation failed
