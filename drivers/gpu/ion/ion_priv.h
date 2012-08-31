@@ -109,6 +109,8 @@ struct ion_heap_ops {
  *			allocating.  These are specified by platform data and
  *			MUST be unique
  * @name:		used for debugging
+ * @size:		reserved size of carveout/cma heaps for debug_show
+ * @priv:		private heap data
  *
  * Represents a pool of memory from which buffers can be made.  In some
  * systems the only heap is regular system memory allocated via vmalloc.
@@ -123,6 +125,7 @@ struct ion_heap {
 	int id;
 	const char *name;
 	int size;
+	void *priv;
 };
 
 /**
