@@ -41,7 +41,7 @@
 #define GPS_VERSION	"2.00"
 
 #define RX_SIZE					128
-#if defined(NEW_GPSCHIP_I2C)
+#if defined(CONFIG_NEW_GPSCHIP_I2C)
 #define TX_SIZE					64
 #define I2C_PACKET_SIZE			256
 #else
@@ -253,7 +253,7 @@ static int gps_irq_open(struct inode *inode, struct file *filp)
 	cnt2 = 0;
 
 	zero_read = 0;
-	first_time=1;
+	first_time = 1;
 
 #ifdef POLLING
 	poll_thread_task = kthread_run(&poll_thread, ac_data, "poll_monitor");
@@ -358,13 +358,12 @@ static ssize_t gps_irq_write(struct file *filp, const char __user *buffer,
 	unsigned char test[] = {
 		0xfe, 0x00, 0xfd, 0xc0, 0x4c, 0x01, 0x00, 0x00, 0x00, 0xfc};
 
-	if (first_time==1)
-	{
-	i2c_master_send(ac_data->client, test, 10);
-	mdelay(10);
-	i2c_master_send(ac_data->client, test, 10);
-	mdelay(10);
-	first_time=0;
+	if (first_time==1){
+		i2c_master_send(ac_data->client, test, 10);
+		mdelay(10);
+		i2c_master_send(ac_data->client, test, 10);
+		mdelay(10);
+		first_time = 0;
 	}
 #endif
 
