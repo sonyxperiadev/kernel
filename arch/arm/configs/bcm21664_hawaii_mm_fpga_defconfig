@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.4.0 Kernel Configuration
+# Linux/arm 3.4.5 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -307,7 +307,7 @@ CONFIG_MACH_HAWAII_FPGA_MM_V1=y
 # CONFIG_RHEA_PWRMGR_USE_DUMMY_SEQ is not set
 # CONFIG_RHEALC_2093 is not set
 # CONFIG_A9_RETENTION_CSTATE is not set
-CONFIG_KONA_SECURE_MONITOR_CALL=y
+# CONFIG_KONA_SECURE_MONITOR_CALL is not set
 
 #
 # Broadcom KONA architecture based implementations
@@ -592,7 +592,7 @@ CONFIG_CMA_SIZE_SEL_MBYTES=y
 # CONFIG_CMA_SIZE_SEL_MAX is not set
 CONFIG_CMA_ALIGNMENT=4
 CONFIG_CMA_AREAS=7
-# CONFIG_DMA_SHARED_BUFFER is not set
+CONFIG_DMA_SHARED_BUFFER=y
 # CONFIG_MTD is not set
 CONFIG_DTC=y
 CONFIG_OF=y
@@ -823,6 +823,7 @@ CONFIG_MMDMA=y
 # CONFIG_VC_TEST_WIFI_HDMI is not set
 # CONFIG_GPS_IRQ is not set
 # CONFIG_BCM_LOGRAM_HELPER is not set
+# CONFIG_NEW_GPSCHIP_I2C is not set
 # CONFIG_RAMOOPS is not set
 # CONFIG_BCM_GPS is not set
 # CONFIG_I2C is not set
@@ -991,7 +992,8 @@ CONFIG_REGULATOR_TPS728XX=y
 # Graphics support
 #
 # CONFIG_DRM is not set
-# CONFIG_ION is not set
+CONFIG_ION=y
+CONFIG_ION_KONA=y
 # CONFIG_M4U is not set
 # CONFIG_VGASTATE is not set
 # CONFIG_VIDEO_OUTPUT_CONTROL is not set
