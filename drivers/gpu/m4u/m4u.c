@@ -27,6 +27,7 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
+#include <linux/module.h>
 #include <linux/log2.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
