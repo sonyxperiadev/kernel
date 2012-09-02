@@ -49,6 +49,7 @@ static void print_job_struct(cabac_job_t* job)
 	pr_debug("cfg:log2_cmd_buf_size: 0x%x\n",(u32)job->log2_cmd_buf_size);
 	pr_debug("cfg:upstride_base_addr: 0x%x\n",(u32)job->upstride_base_addr);
 	pr_debug("cfg:num_cmds: 0x%x\n",(u32)job->num_cmds);
+	pr_debug("cfg:end_conf: 0x%x\n",(u32)job->end_conf);
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 }
 
@@ -83,8 +84,6 @@ static void cabac_reg_init(void* device_id)
 	cabac_write(id,H264_REGCS_REGCABAC2BINSWRCONTEXTBASEADDR_OFFSET,0);
 	cabac_write(id,H264_REGC2_REGCABAC2BINSCOMMANDBUFFERLOGSIZE_OFFSET,10);
 	cabac_write(id,H264_REGC2_REGCABAC2BINSUPSTRIPEBASEADDR_OFFSET,0);
-	/*Selecting LE and Clearing any INT, if any*/
-	/*cabac_write(id,H264_REGC2_REGCABAC2BINSCTL_OFFSET,0x10800);*/
 	cabac_write(id,H264_REGC2_REGCABAC2BINSCTL_OFFSET,0x800);
 }
 
@@ -205,15 +204,33 @@ mm_job_status_e cabac_start_job(void* device_id , mm_job_post_t* job, u32 profma
 			}
 
 			/*Program CABAC*/
-			/*if(job->job_type == H264_CABAC_DEC_JOB){*/ /*TODO: Any difference in DEC/ENC*/
-				if(jp->highest_ctxt_used)
-					cabac_write(id,H264_REGCS_REGCABAC2BINSIMGCTXLAST_OFFSET,jp->highest_ctxt_used);
-				cabac_write(id,H264_REGCS_REGCABAC2BINSRDCONTEXTBASEADDR_OFFSET,jp->rd_ctxt_addr);
-				cabac_write(id,H264_REGCS_REGCABAC2BINSWRCONTEXTBASEADDR_OFFSET,jp->wt_ctxt_addr);
-				cabac_write(id,H264_REGC2_REGCABAC2BINSCOMMANDBUFFERADDR_OFFSET,jp->cmd_buf_addr);
-				cabac_write(id,H264_REGC2_REGCABAC2BINSUPSTRIPEBASEADDR_OFFSET,jp->upstride_base_addr);
-				cabac_write(id,H264_REGC2_REGCABAC2BINSCOMMANDBUFFERLOGSIZE_OFFSET,jp->log2_cmd_buf_size);
-			/*}*/
+
+			switch(jp->end_conf){
+				case CABAC_CONF_BE:
+					cabac_write(id,H264_REGC2_REGCABAC2BINSCTL_OFFSET,0x800);
+					break;
+				case CABAC_CONF_LE:
+					cabac_write(id,H264_REGC2_REGCABAC2BINSCTL_OFFSET,0x10800);
+					break;
+				case CABAC_CONF_BE_SW_OVERRIDE:
+					cabac_write(id,H264_REGC2_REGCABAC2BINSCTL_OFFSET,0x20800);
+					break;
+				case CABAC_CONF_LE_SW_OVERRIDE:
+					cabac_write(id,H264_REGC2_REGCABAC2BINSCTL_OFFSET,0x30800);
+					break;
+				default:
+					pr_err("cabac_start_job: Invalid Endianess selection \n");
+					return MM_JOB_STATUS_ERROR;
+					break;
+			}
+
+			if(jp->highest_ctxt_used)
+				cabac_write(id,H264_REGCS_REGCABAC2BINSIMGCTXLAST_OFFSET,jp->highest_ctxt_used);
+			cabac_write(id,H264_REGCS_REGCABAC2BINSRDCONTEXTBASEADDR_OFFSET,jp->rd_ctxt_addr);
+			cabac_write(id,H264_REGCS_REGCABAC2BINSWRCONTEXTBASEADDR_OFFSET,jp->wt_ctxt_addr);
+			cabac_write(id,H264_REGC2_REGCABAC2BINSCOMMANDBUFFERADDR_OFFSET,jp->cmd_buf_addr);
+			cabac_write(id,H264_REGC2_REGCABAC2BINSUPSTRIPEBASEADDR_OFFSET,jp->upstride_base_addr);
+			cabac_write(id,H264_REGC2_REGCABAC2BINSCOMMANDBUFFERLOGSIZE_OFFSET,jp->log2_cmd_buf_size);
 
 			for(i=0;i<jp->num_cmds;i++){
 				cabac_write(id,H264_REGC2_REGCABAC2BINSCOMMANDBUFFERCOUNT_OFFSET,0x1);

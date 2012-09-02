@@ -13,6 +13,14 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _CABAC_H_
 #define _CABAC_H_
 
+typedef enum
+{
+	CABAC_CONF_BE,
+	CABAC_CONF_LE,
+	CABAC_CONF_BE_SW_OVERRIDE,
+	CABAC_CONF_LE_SW_OVERRIDE
+} CABAC_ENDIANNESS_CONF_T;
+
 typedef struct{
 	unsigned int highest_ctxt_used;
 	unsigned int rd_ctxt_addr;
@@ -21,6 +29,7 @@ typedef struct{
 	unsigned int log2_cmd_buf_size;
 	unsigned int upstride_base_addr;
 	unsigned int num_cmds;
+	CABAC_ENDIANNESS_CONF_T end_conf;
 } cabac_job_t;
 
 #endif
