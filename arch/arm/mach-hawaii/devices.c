@@ -725,7 +725,7 @@ static void __init ion_carveout_memory(void)
 
 	carveout_size = ion_data0.heaps[1].size;
 	if (carveout_size) {
-		carveout_base = memblock_alloc_new(carveout_size, SZ_4M, 0, 0xF0000000);
+		carveout_base = memblock_alloc_from_range(carveout_size, SZ_4M, 0, 0xF0000000);
 		memblock_free(carveout_base, carveout_size);
 		err = memblock_remove(carveout_base, carveout_size);
 		if (!err) {
@@ -744,7 +744,7 @@ static void __init ion_carveout_memory(void)
 
 	carveout_size = ion_data0.heaps[0].size;
 	if (carveout_size) {
-		carveout_base = memblock_alloc_new(carveout_size, SZ_4M, 0, 0xF0000000);
+		carveout_base = memblock_alloc_from_range(carveout_size, SZ_4M, 0, 0xF0000000);
 		memblock_free(carveout_base, carveout_size);
 		err = memblock_remove(carveout_base, carveout_size);
 		if (!err) {
