@@ -123,7 +123,7 @@
 #include <linux/pwm_backlight.h>
 #endif
 
-#ifdef CONFIG_FB_BRCM_HAWAII
+#ifdef CONFIG_FB_BRCM_KONA
 #include <video/kona_fb_boot.h>
 #include <video/kona_fb.h>
 #endif
@@ -399,70 +399,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 };
 
-/* Remove this comment when Hawaii FB stuff is in */
-#ifdef CONFIG_FB_BRCM_HAWAII
-/*
- *   KONA FRAME BUFFER DSIPLAY DRIVER PLATFORM CONFIG
- */
-struct kona_fb_platform_data konafb_devices[] __initdata = {
-#ifdef CONFIG_LCD_HX8369_SUPPORT
-	{
-		.dispdrv_name  = "HX8369A",
-		.dispdrv_entry = LCD_DISPDRV_GetFuncTable,
-		 .parms = {
-			.w0 = {
-				.bits = {
-					.boot_mode	= 0,
-					.bus_type	= RHEA_BUS_DSI,
-					.bus_no = RHEA_BUS_0,
-					.bus_ch = RHEA_BUS_CH_0,
-					.bus_width	= 0,
-					.te_input	= RHEA_TE_IN_1_DSI0,
-					.col_mode_i = RHEA_CM_I_XRGB888,
-					.col_mode_o = RHEA_CM_O_RGB888,
-				},
-			},
-			.w1 = {
-			.bits = {
-					.api_rev  =  RHEA_LCD_BOOT_API_REV,
-					.lcd_rst0 =  12,
-				},
-			},
-		},
-	},
-#else
-	{
-		.dispdrv_name  = "LQ043Y1DX01",
-		.dispdrv_entry = DISP_DRV_LQ043Y1DX01_GetFuncTable,
-		.parms = {
-			.w0 = {
-				.bits = {
-					.boot_mode  = 0,
-					.bus_type   = RHEA_BUS_DSI,
-					.bus_no     = RHEA_BUS_0,
-					.bus_ch     = RHEA_BUS_CH_0,
-					.bus_width  = 0,
-					.te_input   = RHEA_TE_IN_1_DSI0,
-					.col_mode_i = RHEA_CM_I_RGB565,
-					.col_mode_o = RHEA_CM_O_RGB565,
-				},
-			},
-			.w1 = {
-			.bits = {
-					.api_rev  =  RHEA_LCD_BOOT_API_REV,
-					.lcd_rst0 =  25, /* DSI_BRIDGE_PON   */
-					.lcd_rst1 =  12, /* DSI_BRIDGE_RESET */
-					.lcd_rst2 =  13, /* SHARP_RESET      */
-				},
-			},
-		},
-	},
-#endif
-};
-
-#include "hawaii_fb_init.c"
-#endif /* #ifdef CONFIG_FB_BRCM_RHEA */
-/* Remove this comment when Hawaii FB stuff is in */
 
 #ifdef CONFIG_KEYBOARD_BCM
 /*
@@ -821,52 +757,6 @@ static struct platform_device board_bcmbt_lpm_device = {
 	},
 };
 #endif
-
-#if defined(CONFIG_SPI_GPIO)
-/* Remove this comment when LCD data for Hawaii is updated */
-/*
- * SPI-BitBang For Sharp LCD
- */
-
-#define SPI_BB_MISO	(92)
-#define SPI_BB_MOSI	(91)
-#define SPI_BB_SCL	(90)
-#define SPI_BB_CS       (89)
-#define SPI_BB_BUS_NUM	(3)
-
-static struct spi_gpio_platform_data spi_gpio_pdata = {
-	.sck		= SPI_BB_SCL,
-	.mosi		= SPI_BB_MOSI,
-	.miso		= SPI_BB_MISO,
-	.num_chipselect	= 1,
-};
-
-static struct platform_device spi_gpio = {
-	.name		= "spi_gpio",
-	.id		= SPI_BB_BUS_NUM,
-	.dev		= {
-		.platform_data	= &spi_gpio_pdata,
-	},
-};
-
-static struct spi_board_info lq043y1dx01_spi_devices[] __initdata = {
-	{
-		.modalias		= "lq043y1dx01_spi",
-		.max_speed_hz		= 1000000,
-		.bus_num		= SPI_BB_BUS_NUM,
-		.chip_select		= 0,
-		.controller_data	= (void *)SPI_BB_CS,
-	},
-};
-
-static void __init hawaii_add_lcd_spi(void)
-{
-	spi_register_board_info(lq043y1dx01_spi_devices,
-					ARRAY_SIZE(lq043y1dx01_spi_devices));
-	platform_device_register(&spi_gpio);
-}
-#endif
-/* Remove this comment when LCD data for Hawaii is updated */
 
 /*
  * SPI board info for the slaves
@@ -1376,11 +1266,6 @@ static void __init hawaii_add_devices(void)
 
 	hawaii_add_pdata();
 
-/* Remove this comment when Hawaii LCD stuff is in*/
-#if defined(CONFIG_SPI_GPIO)
-	hawaii_add_lcd_spi();
-#endif
-
 #ifdef CONFIG_KEYBOARD_BCM
 	hawaii_kp_device.dev.platform_data = &hawaii_keypad_data;
 #endif
@@ -1392,11 +1277,45 @@ static void __init hawaii_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
+#ifdef CONFIG_FB_BRCM_KONA
+/*
+ * KONA FRAME BUFFER DISPLAY DRIVER PLATFORM CONFIG
+ */
+struct kona_fb_platform_data konafb_devices[] __initdata = {
+	{
+		.dispdrv_name  = "NT35516",
+		.dispdrv_entry = DISP_DRV_NT35516_GetFuncTable,
+		.parms = {
+			.w0 = {
+				.bits = {
+					.boot_mode  = 0,
+					.bus_type   = KONA_BUS_DSI,
+					.bus_no     = KONA_BUS_0,
+					.bus_ch     = KONA_BUS_CH_0,
+					.bus_width  = 3,
+					.te_input   = KONA_TE_IN_1_DSI0,
+					.col_mode_i = KONA_CM_I_XRGB888,
+					.col_mode_o = KONA_CM_O_RGB888,
+				},
+			},
+			.w1 = {
+			.bits = {
+					.api_rev  =  KONA_LCD_BOOT_API_REV,
+					.lcd_rst0 =  22,
+				},
+			},
+		},
+	},
+};
+
+#include "kona_fb_init.c"
+#endif /* #ifdef CONFIG_FB_BRCM_KONA */
+
+
 static void __init hawaii_init(void)
 {
 	hawaii_add_devices();
-/* Remove this comment when Hawaii FB is in*/
-#ifdef CONFIG_FB_BRCM_HAWAII
+#ifdef CONFIG_FB_BRCM_KONA
 	konafb_init();
 #endif
 	hawaii_add_common_devices();
