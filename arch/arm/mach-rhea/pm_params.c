@@ -33,7 +33,7 @@
 #include <linux/err.h>
 #include <linux/module.h>
 #include "pm_params.h"
-#include <plat/kona_avs.h>
+#include <mach/rhea_avs.h>
 
 /*sysfs interface to read PMU vlt table*/
 static u32 csr_vlt_table[SR_VLT_LUT_SIZE];

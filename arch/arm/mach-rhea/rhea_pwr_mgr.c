@@ -49,7 +49,7 @@
 #endif
 #include "pm_params.h"
 #ifdef CONFIG_KONA_AVS
-#include <plat/kona_avs.h>
+#include <mach/rhea_avs.h>
 #endif
 
 #ifdef CONFIG_DEBUG_FS

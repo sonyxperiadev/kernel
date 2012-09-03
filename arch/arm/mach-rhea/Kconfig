@@ -197,6 +197,15 @@ config RHEA_DELAYED_PM_INIT
        is recieved, all the PIs start changing policies, arm can enter LPM and
        arm dfs is allowed.
 
+config RHEA_AVS
+       depends on ARCH_RHEA
+       bool "Enable support for Rhea AVS driver"
+       default n
+       help
+       Say Y if you want to enable support for special AVS driver
+       defined for Rhea platform. Note that CONFIG_KONA_AVS should
+       be undefined if this config is enabled.
+
 config RHEA_B0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA
        bool "Enable B0 ASIC workarounds for Power management"
