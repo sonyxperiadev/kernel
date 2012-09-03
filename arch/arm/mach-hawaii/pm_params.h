@@ -197,7 +197,7 @@ extern struct pwrmgr_init_param pwrmgr_init_param;
 extern const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
 			u32 silicon_type);
 extern int __jira_wa_enabled(u32 jira);
-extern int __init rhea_pm_params_init(void);
+extern int __init hawaii_pm_params_init(void);
 extern int pm_init_pmu_sr_vlt_map_table(u32 silicon_type);
 
 #endif	/*__PM_PARAMS_H__*/

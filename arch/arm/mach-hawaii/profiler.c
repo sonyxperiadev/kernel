@@ -1,6 +1,6 @@
 /**********************************************************************
 *
-* @file rhea_profiler.c
+* @file profiler.c
 * RHEA Profiler modules
 *
 * Copyright 2012 Broadcom Corporation.  All rights reserved.
@@ -207,7 +207,7 @@ DEFINE_CCU_PROFILER(kps) = {
 	.counter_shift = ROOT_CLK_MGR_REG_CLK_PROF_CNT_CLK_PROF_CNT_SHIFT,
 };
 
-struct ccu_profiler *rhea_ccu_profiler_tbl[] = {
+static struct ccu_profiler *__ccu_profiler_tbl[] = {
 	&CCU_PROFILER(khub),
 	&CCU_PROFILER(root),
 	&CCU_PROFILER(kpm),
@@ -381,7 +381,7 @@ DEFINE_PI_PROFILER(aon) = {
 		PWRMGR_PC_PIN_OVERRIDE_CONTROL_CLEAR_PI_COUNTERS_SHIFT,
 };
 
-static struct pi_profiler *rhea_pi_profiler_tbl[] = {
+static struct pi_profiler *__pi_profiler_tbl[] = {
 	&PI_PROFILER(arm),
 	&PI_PROFILER(armsubsys),
 	&PI_PROFILER(modem),
@@ -390,7 +390,7 @@ static struct pi_profiler *rhea_pi_profiler_tbl[] = {
 	&PI_PROFILER(aon),
 };
 
-static struct platform_device rhea_profiler_device = {
+static struct platform_device hawaii_profiler_device = {
 	.name = "kona_profiler",
 	.id = -1,
 	.dev = {
@@ -398,26 +398,26 @@ static struct platform_device rhea_profiler_device = {
 	},
 };
 
-static int __init rhea_profiler_init(void)
+static int __init hawaii_profiler_init(void)
 {
 	pr_info("%s\n", __func__);
-	return platform_device_register(&rhea_profiler_device);
+	return platform_device_register(&hawaii_profiler_device);
 }
-device_initcall(rhea_profiler_init);
-static int __init rhea_profiler_register(void)
+device_initcall(hawaii_profiler_init);
+static int __init hawaii_profiler_register(void)
 {
 	int idx;
 	/**
 	 * Register all CCU Profilers
 	 */
 	pr_info("%s\n", __func__);
-	for (idx = 0; idx < ARRAY_SIZE(rhea_ccu_profiler_tbl); idx++)
-		ccu_profiler_register(rhea_ccu_profiler_tbl[idx]);
+	for (idx = 0; idx < ARRAY_SIZE(__ccu_profiler_tbl); idx++)
+		ccu_profiler_register(__ccu_profiler_tbl[idx]);
 	/**
 	 * Register all PI ON profilers
 	 */
-	for (idx = 0; idx < ARRAY_SIZE(rhea_pi_profiler_tbl); idx++)
-		pi_profiler_register(rhea_pi_profiler_tbl[idx]);
+	for (idx = 0; idx < ARRAY_SIZE(__pi_profiler_tbl); idx++)
+		pi_profiler_register(__pi_profiler_tbl[idx]);
 	return 0;
 }
-late_initcall(rhea_profiler_register);
+late_initcall(hawaii_profiler_register);

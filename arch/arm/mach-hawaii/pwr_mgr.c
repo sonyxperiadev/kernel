@@ -1,27 +1,16 @@
- /************************************************************************************************/
-/*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
-/*                                                                                              */
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
+/*****************************************************************************
+* Copyright 2012 Broadcom Corporation.  All rights reserved.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a
+* license other than the GPL, without Broadcom's express prior written
+* consent.
+*****************************************************************************/
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/delay.h>
@@ -92,7 +81,7 @@ module_param_named(pm_late_init, pm_late_init, pm_late_init,
 #endif
 
 #ifdef CONFIG_DEBUG_FS
-const char *_rhea__event2str[] = {
+const char *__event2str[] = {
 	__stringify(LCDTE_EVENT),
 	__stringify(SSP2SYN_EVENT),
 	__stringify(SSP2DI_EVENT),
@@ -432,7 +421,7 @@ struct pm_special_event_range rhea_special_event_list[] = {
 	{KEY_R0_EVENT, KEY_R7_EVENT}
 };
 
-struct pwr_mgr_info rhea_pwr_mgr_info = {
+struct pwr_mgr_info __pwr_mgr_info = {
 	.num_pi = PI_MGR_PI_ID_MAX,
 	.base_addr = KONA_PWRMGR_VA,
 #if defined(CONFIG_KONA_PWRMGR_REV2)
@@ -445,7 +434,7 @@ struct pwr_mgr_info rhea_pwr_mgr_info = {
 	.num_special_event_range = ARRAY_SIZE(rhea_special_event_list),
 };
 
-int __init rhea_pwr_mgr_init()
+int __init hawaii_pwr_mgr_init()
 {
 	struct pm_policy_cfg cfg;
 
@@ -462,21 +451,21 @@ int __init rhea_pwr_mgr_init()
 
 	cfg.ac = 1;
 	cfg.atl = 0;
-	rhea_pm_params_init();
+	hawaii_pm_params_init();
 	/**
 	 * Load the dummy sequencer during power manager initialization
 	 * Actual sequencer will be loaded during pmu i2c driver
 	 * initialisation
 	 */
-	rhea_pwr_mgr_info.i2c_cmds = i2c_dummy_seq_cmd;
-	rhea_pwr_mgr_info.num_i2c_cmds = ARRAY_SIZE(i2c_dummy_seq_cmd);
-	rhea_pwr_mgr_info.i2c_cmd_ptr[VOLT0] = &dummy_seq_v0_ptr;
+	__pwr_mgr_info.i2c_cmds = i2c_dummy_seq_cmd;
+	__pwr_mgr_info.num_i2c_cmds = ARRAY_SIZE(i2c_dummy_seq_cmd);
+	__pwr_mgr_info.i2c_cmd_ptr[VOLT0] = &dummy_seq_v0_ptr;
 
-	rhea_pwr_mgr_info.i2c_var_data = pwrmgr_init_param.def_vlt_tbl;
-	rhea_pwr_mgr_info.num_i2c_var_data = pwrmgr_init_param.vlt_tbl_size;
+	__pwr_mgr_info.i2c_var_data = pwrmgr_init_param.def_vlt_tbl;
+	__pwr_mgr_info.num_i2c_var_data = pwrmgr_init_param.vlt_tbl_size;
 
-	pwr_mgr_init(&rhea_pwr_mgr_info);
-	rhea_pi_mgr_init();
+	pwr_mgr_init(&__pwr_mgr_info);
+	hawaii_pi_mgr_init();
 
 #ifdef CONFIG_PWRMGR_DUMMY_SEQUENCER
 	dummy_pm_init();
@@ -491,7 +480,7 @@ int __init rhea_pwr_mgr_init()
 #endif
 
 	/*MM override is not set by default */
-	pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM, false /*clear */ );
+	pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM, false /*clear */);
 
 	/*Done in two steps to skip DUMMY_EVENT */
 	pwr_mgr_event_clear_events(LCDTE_EVENT, VREQ_NONZERO_PI_MODEM_EVENT);
@@ -540,12 +529,12 @@ int __init rhea_pwr_mgr_init()
 	}
 
 	/*init clks */
-	rhea_clock_init();
+	__clock_init();
 
 	return 0;
 }
 
-early_initcall(rhea_pwr_mgr_init);
+early_initcall(hawaii_pwr_mgr_init);
 
 #ifdef CONFIG_DEBUG_FS
 
@@ -561,7 +550,7 @@ void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param)
 #endif /*CONFIG_DEBUG_FS */
 
 
-int rhea_pwr_mgr_delayed_init(void)
+int hawaii_pwr_mgr_delayed_init(void)
 {
 	int i;
 	struct pi *pi;
@@ -608,7 +597,7 @@ static int param_set_pm_late_init(const char *val,
 	ret = sscanf(val, "%d", &pm_delayed_init);
 	pr_info("%s, pm_delayed_init:%d\n", __func__, pm_delayed_init);
 	if (pm_delayed_init == 1)
-		rhea_pwr_mgr_delayed_init();
+		hawaii_pwr_mgr_delayed_init();
 
 	set_cpufreq_limit(get_cpu_freq_from_opp(PI_OPP_ECONOMY), MIN_LIMIT);
 	if (delay_arm_lpm.valid)
@@ -618,14 +607,14 @@ static int param_set_pm_late_init(const char *val,
 }
 #endif
 
-int __init rhea_pwr_mgr_late_init(void)
+int __init hawaii_pwr_mgr_late_init(void)
 {
 #ifdef CONFIG_RHEA_DELAYED_PM_INIT
 	int ret;
 	if (is_charging_state()) {
 		pr_info("%s: power off charging, complete int here\n",
 						__func__);
-		rhea_pwr_mgr_delayed_init();
+		hawaii_pwr_mgr_delayed_init();
 		set_cpufreq_limit(get_cpu_freq_from_opp(PI_OPP_ECONOMY),
 				MIN_LIMIT);
 	} else {
@@ -633,12 +622,12 @@ int __init rhea_pwr_mgr_late_init(void)
 				PI_MGR_PI_ID_ARM_CORE, 0);
 	}
 #else
-	rhea_pwr_mgr_delayed_init();
+	hawaii_pwr_mgr_delayed_init();
 #endif
 	return 0;
 }
 
-late_initcall(rhea_pwr_mgr_late_init);
+late_initcall(hawaii_pwr_mgr_late_init);
 
 /**
  * Initialize the real sequencer
@@ -646,45 +635,44 @@ late_initcall(rhea_pwr_mgr_late_init);
  * enabled
  */
 
-int __init rhea_pwr_mgr_init_sequencer(void)
+int __init mach_init_sequencer(void)
 {
 	pr_info("%s\n", __func__);
 
 #if defined(CONFIG_KONA_PWRMGR_REV2)
-	rhea_pwr_mgr_info.i2c_rd_off = pwrmgr_init_param.i2c_rd_off;
-	rhea_pwr_mgr_info.i2c_rd_slv_id_off1 =
+	__pwr_mgr_info.i2c_rd_off = pwrmgr_init_param.i2c_rd_off;
+	__pwr_mgr_info.i2c_rd_slv_id_off1 =
 	    pwrmgr_init_param.i2c_rd_slv_id_off1;
-	rhea_pwr_mgr_info.i2c_rd_slv_id_off2 =
+	__pwr_mgr_info.i2c_rd_slv_id_off2 =
 	    pwrmgr_init_param.i2c_rd_slv_id_off2;
-	rhea_pwr_mgr_info.i2c_rd_reg_addr_off =
+	__pwr_mgr_info.i2c_rd_reg_addr_off =
 	    pwrmgr_init_param.i2c_rd_reg_addr_off;
-	rhea_pwr_mgr_info.i2c_rd_nack_jump_off =
+	__pwr_mgr_info.i2c_rd_nack_jump_off =
 	    pwrmgr_init_param.i2c_rd_nack_jump_off;
-	rhea_pwr_mgr_info.i2c_rd_nack_off = pwrmgr_init_param.i2c_rd_nack_off;
-	rhea_pwr_mgr_info.i2c_rd_fifo_off = pwrmgr_init_param.i2c_rd_fifo_off;
-	rhea_pwr_mgr_info.i2c_wr_off = pwrmgr_init_param.i2c_wr_off;
-	rhea_pwr_mgr_info.i2c_wr_slv_id_off =
+	__pwr_mgr_info.i2c_rd_nack_off = pwrmgr_init_param.i2c_rd_nack_off;
+	__pwr_mgr_info.i2c_rd_fifo_off = pwrmgr_init_param.i2c_rd_fifo_off;
+	__pwr_mgr_info.i2c_wr_off = pwrmgr_init_param.i2c_wr_off;
+	__pwr_mgr_info.i2c_wr_slv_id_off =
 	    pwrmgr_init_param.i2c_wr_slv_id_off;
-	rhea_pwr_mgr_info.i2c_wr_reg_addr_off =
+	__pwr_mgr_info.i2c_wr_reg_addr_off =
 	    pwrmgr_init_param.i2c_wr_reg_addr_off;
-	rhea_pwr_mgr_info.i2c_wr_val_addr_off =
+	__pwr_mgr_info.i2c_wr_val_addr_off =
 	    pwrmgr_init_param.i2c_wr_val_addr_off;
-	rhea_pwr_mgr_info.i2c_seq_timeout = pwrmgr_init_param.i2c_seq_timeout;
+	__pwr_mgr_info.i2c_seq_timeout = pwrmgr_init_param.i2c_seq_timeout;
 #endif
 #ifdef CONFIG_RHEA_WA_HWJIRA_2747
-	rhea_pwr_mgr_info.pc_toggle_off = pwrmgr_init_param.pc_toggle_off;
+	__pwr_mgr_info.pc_toggle_off = pwrmgr_init_param.pc_toggle_off;
 #endif
 
-	rhea_pwr_mgr_info.i2c_cmds = pwrmgr_init_param.cmd_buf;
-	rhea_pwr_mgr_info.num_i2c_cmds = pwrmgr_init_param.cmb_buf_size;
-	rhea_pwr_mgr_info.i2c_cmd_ptr[VOLT0] = pwrmgr_init_param.v0ptr;
+	__pwr_mgr_info.i2c_cmds = pwrmgr_init_param.cmd_buf;
+	__pwr_mgr_info.num_i2c_cmds = pwrmgr_init_param.cmb_buf_size;
+	__pwr_mgr_info.i2c_cmd_ptr[VOLT0] = pwrmgr_init_param.v0ptr;
 
-	pwr_mgr_init_sequencer(&rhea_pwr_mgr_info);
+	pwr_mgr_init_sequencer(&__pwr_mgr_info);
 
 	/* pwr_mgr_init_sequencer function will disable the sequencer
 	   re-enable the power manager i2c sequencer */
 	pwr_mgr_pm_i2c_enable(true);
 	return 0;
 }
-
-EXPORT_SYMBOL(rhea_pwr_mgr_init_sequencer);
+EXPORT_SYMBOL(mach_init_sequencer);

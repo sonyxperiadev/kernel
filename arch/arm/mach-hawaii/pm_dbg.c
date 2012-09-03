@@ -181,7 +181,7 @@ enum {
 static void cmd_show_usage(void)
 {
 	const char usage[] = "Usage:\n"
-	  "echo 'cmd string' > /sys/module/rhea_pm/parameters/debug\n"
+	  "echo 'cmd string' > /sys/module/pm_dbg/parameters/debug\n"
 	  "'cmd string' is constructed as follows:\n"
 #ifdef DORMANT_PROFILE
 	  "start dormant profile: d p 1 <ns_gpio> <sec_gpio> <ref_gpio>\n"
@@ -225,7 +225,7 @@ static void cmd_force_sleep(const char *p)
 #endif
 
 	pr_info("Forcing system to state: %d\n", force_sleep_state);
-	kona_pm_reg_pm_enter_handler(&rhea_force_sleep);
+	kona_pm_reg_pm_enter_handler(&hawaii_force_sleep);
 	request_suspend_state(PM_SUSPEND_MEM);
 }
 
@@ -448,7 +448,7 @@ void instrument_wfi(int trace_path)
 }
 
 
-int __init rhea_pmdbg_init(void)
+int __init __pmdbg_init(void)
 {
 	void *v = NULL;
 	dma_addr_t p;
@@ -476,4 +476,4 @@ int __init rhea_pmdbg_init(void)
 	return 0;
 }
 
-arch_initcall(rhea_pmdbg_init);
+arch_initcall(__pmdbg_init);

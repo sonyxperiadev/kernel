@@ -16,6 +16,7 @@
 #define __HAWAII_CPU_H__
 
 #include <mach/io_map.h>
+#include <mach/memory.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <plat/cpu.h>
 

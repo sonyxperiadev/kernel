@@ -461,7 +461,7 @@ AXITRACE counter, there are either outstanding read or write from ACP to A9
 Workaround is to use s/w gating for A9. Now ARM_SWITCH AXI clk will be off
 only when A9 enters LPM
 
-Note: AUTO_GATING flag wll be added by rhea_clock_init() if runtime sysfs
+Note: AUTO_GATING flag wll be added by hawaii_clock_init() if runtime sysfs
 JIRA flag is turned off
 */
 #ifdef CONFIG_RHEA_WA_HWJIRA_2531
@@ -744,9 +744,9 @@ enum {
 int mm_ccu_set_pll_select(u32 clk_id, u32 value);
 int clk_set_pll_pwr_on_idle(int pll_id, int enable);
 int clk_set_crystal_pwr_on_idle(int enable);
-int rhea_clock_init(void);
-int rhea_clock_print_act_clks(void);
-int rhea_chip_reset(void);
+int __clock_init(void);
+int __clock_print_act_clks(void);
+int chip_reset(void);
 #ifdef CONFIG_DEBUG_FS
 int debug_bus_mux_sel(int mux_sel, int mux_param);
 int set_clk_idle_debug_mon(int clk_idle, int db_sel);

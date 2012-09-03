@@ -16,13 +16,13 @@
 #define PWRMGR_HW_SEM_WA_PI_ID		PI_MGR_PI_ID_ARM_CORE
 #define PWRMGR_HW_SEM_LOCK_WA_PI_OPP	PI_OPP_TURBO
 #ifdef CONFIG_DEBUG_FS
-#define PWRMGR_EVENT_ID_TO_STR(e) _rhea__event2str[e]
+#define PWRMGR_EVENT_ID_TO_STR(e) __event2str[e]
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2747
 #define PWRMGR_SW_SEQ_PC_PIN		PC3
 #endif
 
-extern const char *_rhea__event2str[];
+extern const char *__event2str[];
 #endif
 
 enum {
@@ -149,8 +149,7 @@ enum {
 	PWR_MGR_NUM_EVENTS
 };
 
-int rhea_pwr_mgr_init(void);
-int rhea_pwr_mgr_init_sequencer(void);
+int hawaii_pwr_mgr_init(void);
+int mach_init_sequencer(void);
 
-int pwr_mgr_event_trg_enable(int event_id, int event_trg_type);
 #endif /*__RHEA_PWR_MNGR_H__*/

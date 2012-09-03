@@ -32,6 +32,6 @@ enum {
 	PI_OPP_MAX
 };
 
-void rhea_pi_mgr_init(void);
+void hawaii_pi_mgr_init(void);
 
 #endif /*__RHEA_PI_MNGR_H__*/

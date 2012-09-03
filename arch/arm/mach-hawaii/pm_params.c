@@ -1,8 +1,5 @@
 /*****************************************************************************
-*
-* Power Manager config parameters for Rhea platform
-*
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2012 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -236,7 +233,7 @@ static struct v0x_spec_i2c_cmd_ptr v0_ptr = {
 	.set2_ptr = 60,
 	.set1_val = 2,		/*wakeup from retention voltage inx */
 	.set1_ptr = 62,
-	.zerov_ptr = 60,	/*Not used for Rhea */
+	.zerov_ptr = 60,	/*Not used */
 };
 
 struct pwrmgr_init_param pwrmgr_init_param = {
@@ -264,7 +261,7 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 
 #endif /*CONFIG_KONA_POWER_MGR */
 
-static void rhea_pm_init_wa_flgs(void)
+static void __init pm_init_wa_flgs(void)
 {
 	int chip_id = get_chip_id();
 
@@ -297,7 +294,7 @@ static const u32 a9_freq_list[A9_FREQ_MAX] = {
 
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 {
-#ifdef CONFIG_MACH_HAWAII_RAY
+#if 0
 #define RATE_ADJ 10
 	struct clk *a9_pll_chnl1;
 	int inx;
@@ -331,8 +328,8 @@ int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 #endif
 }
 
-int __init rhea_pm_params_init(void)
+int __init hawaii_pm_params_init(void)
 {
-	rhea_pm_init_wa_flgs();
+	pm_init_wa_flgs();
 	return 0;
 }

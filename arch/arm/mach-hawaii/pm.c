@@ -22,7 +22,7 @@
 #include <linux/err.h>
 #include <linux/debugfs.h>
 #include <linux/clk.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <plat/kona_pm.h>
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
@@ -55,19 +55,17 @@ module_param_named(clk_dbg_dsm, clk_dbg_dsm, int, S_IRUGO|S_IWUSR|S_IWGRP);
 /* Rhea PM log values */
 enum {
 
-	LOG_SW2_STATUS		= 1 << 0,
-	LOG_INTR_STATUS		= 1 << 1,
+	LOG_SW2_STATUS	= 1 << 0,
+	LOG_INTR_STATUS	= 1 << 1,
 };
 
 #define pm_dbg(id, format...) \
 	do {		\
 		if (log_mask & (id)) \
 			pr_info(format); \
-	} while(0)
+	} while (0)
 
-extern void enter_wfi(void);
 
-static u32 force_retention;
 static u32 log_mask;
 /* Set this to 1 to enable dormant from boot */
 static u32 dormant_enable = 1;
@@ -80,13 +78,13 @@ static int force_sleep;
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
 
 dma_addr_t noncache_buf_pa;
-char* noncache_buf_va;
-static u32 memc_freq_map = 0;
+char *noncache_buf_va;
+static u32 memc_freq_map;
 #endif /* CONFIG_RHEA_WA_HWJIRA_2221 */
 
 static int enter_idle_state(struct kona_idle_state *state);
-int enter_suspend_state(struct kona_idle_state* state);
-int enter_dormant_state(struct kona_idle_state *state);
+static int enter_suspend_state(struct kona_idle_state *state);
+static int enter_dormant_state(struct kona_idle_state *state);
 static void set_spare_power_status(unsigned int mode);
 
 static struct kona_idle_state idle_states[] = {
@@ -134,20 +132,24 @@ static struct kona_idle_state idle_states[] = {
 
 static int pm_enable_self_refresh(bool enable)
 {
-    u32 reg_val;
-    if (enable == true) {
-	writel(0, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-	reg_val |=CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
-	writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-    } else {
-	writel(1, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-	reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
-	writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-    }
+	u32 reg_val;
+	if (enable == true) {
+		writel(0, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
+		reg_val =
+		readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+		reg_val |= CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
+		writel(reg_val,
+			KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+	} else {
+		writel(1, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
+		reg_val =
+		readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+		reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
+		writel(reg_val,
+			KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+	}
 
-    return 0;
+	return 0;
 }
 
 static int pm_config_deep_sleep(void)
@@ -159,7 +161,7 @@ static int pm_config_deep_sleep(void)
 
 	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 	reg_val |= CSR_HW_FREQ_CHANGE_CNTRL_HW_AUTO_PWR_TRANSITION_MASK;
-	writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+	writel(reg_val, KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 	pm_enable_self_refresh(true);
 
 /*Enable RAM standby
@@ -174,7 +176,7 @@ when subsystems are acvtive and 1 if in sleep (retention/dormant) */
 	writel(reg_val, CHIPREG_PERIPH_SPARE_CONTROL2);
 	pwr_mgr_arm_core_dormant_enable(false);
 	set_spare_power_status(SCU_STATUS_NORMAL);
-    return 0;
+	return 0;
 }
 
 /*
@@ -277,7 +279,7 @@ static void config_wakeup_interrupts(void)
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET6_OFFSET);
 }
 
-int enter_suspend_state(struct kona_idle_state* state)
+int enter_suspend_state(struct kona_idle_state *state)
 {
 	if (WFI_TRACE_ENABLE)
 		instrument_wfi(TRACE_ENTRY);
@@ -290,8 +292,8 @@ int enter_suspend_state(struct kona_idle_state* state)
 	return -1;
 }
 
-/* Rhea B1 adds PWRCTL1_bypass & PWRCTL0_bypass in Periph Spare Control2
- * register to store the CPU power mode. Boot ROM reads this register
+/*  PWRCTL1_bypass & PWRCTL0_bypass in Periph Spare Control2
+ * registers holds CPU power mode. Boot ROM reads this register
  * instead of SCU Power Status register to differentiate between POR and
  * dormant reset. Linux needs to set this register to DORMANT_MODE before
  * dormant entry.
@@ -362,8 +364,8 @@ static int enter_retention_state(struct kona_idle_state *state)
 	write_actlr(read_actlr() & ~A9_SMP_BIT);
 
 	scu_set_power_mode(SCU_STATUS_DORMANT);
-	/* Rhea B1 adds CHIREGS:PERIPH_SPARE_CONTROL2:PWRCTLx_BYPASS
-	 * bits for configuring low power modes. Hence these bits
+	/*  CHIREGS:PERIPH_SPARE_CONTROL2:PWRCTLx_BYPASS bits are 
+	 *  added for configuring low power modes. Hence these bits
 	 * also needs to be configured along with the POWER_STATUS
 	 * register in SCU.
 	 */
@@ -408,7 +410,7 @@ int disable_all_interrupts(void)
 	return 0;
 }
 
-int rhea_force_sleep(suspend_state_t state)
+int hawaii_force_sleep(suspend_state_t state)
 {
 	struct kona_idle_state s;
 	int i;
@@ -440,7 +442,7 @@ int rhea_force_sleep(suspend_state_t state)
 
 int enter_idle_state(struct kona_idle_state *state)
 {
-	struct pi* pi = NULL;
+	struct pi *pi = NULL;
 
 #if defined(CONFIG_RHEA_WA_HWJIRA_2301) || defined(CONFIG_RHEA_WA_HWJIRA_2877)
 	u32 lpddr2_temp_period = 0;
@@ -448,8 +450,8 @@ int enter_idle_state(struct kona_idle_state *state)
 
 	BUG_ON(!state);
 
-	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
-	pwr_mgr_event_clear_events(USBOTG_EVENT,MODEMBUS_ACTIVE_EVENT);
+	pwr_mgr_event_clear_events(LCDTE_EVENT, BRIDGE_TO_MODEM_EVENT);
+	pwr_mgr_event_clear_events(USBOTG_EVENT, MODEMBUS_ACTIVE_EVENT);
 
 	/*Turn off XTAL only for deep sleep state*/
 	if (state->flags & CPUIDLE_FLAG_XTAL_ON || keep_xtl_on)
@@ -488,22 +490,23 @@ int enter_idle_state(struct kona_idle_state *state)
 		u32 temp_val;
 		char *noncache_buf_tmp_va;
 
-		/*JIRA HWRHEA_2221 VAR_312M is_idle from MEMC unexpectedly stays
-		 * asserted for long periods of time - preventing deepsleep entry */
+	/*JIRA HWRHEA_2221 VAR_312M is_idle from MEMC unexpectedly stays
+	 * asserted for long periods of time - preventing deepsleep entry */
 
 		 /* reset all MEMC demesh entries */
 		 noncache_buf_tmp_va = noncache_buf_va;
-		 for (count = 0; count < 16; count++, noncache_buf_tmp_va += 64)
-			temp_val = *(volatile u32 *)noncache_buf_tmp_va;
+		 for (count = 0; count < 16;
+			count++, noncache_buf_tmp_va += 64)
+			temp_val = *(u32 *)noncache_buf_tmp_va;
 		memc_freq_map = readl(KONA_MEMC0_NS_VA +
-						CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
+				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
 		writel_relaxed(1, KONA_MEMC0_NS_VA +
 				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2221*/
 	if (clk_dbg_dsm)
 		if (state->flags & CPUIDLE_ENTER_SUSPEND)
-			rhea_clock_print_act_clks();
+			__clock_print_act_clks();
 
 	switch (state->state) {
 	case CSTATE_SUSPEND_RETN:
@@ -523,7 +526,7 @@ int enter_idle_state(struct kona_idle_state *state)
  */
 	if (JIRA_WA_ENABLED(2301) || JIRA_WA_ENABLED(2877))
 		writel_relaxed(lpddr2_temp_period, KONA_MEMC0_NS_VA +
-                        CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
+			CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
 #endif /*CONFIG_RHEA_WA_HWJIRA_2301 || CONFIG_RHEA_WA_HWJIRA_2877*/
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
@@ -543,20 +546,22 @@ int enter_idle_state(struct kona_idle_state *state)
 	is updated.
 */
 	if (JIRA_WA_ENABLED(2045)) {
-		u32	tmr_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
-		while(tmr_lsw == readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET));
+		u32 tmr_lsw =
+			readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
+		while (tmr_lsw ==
+			readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET))
+			;
 	}
 #endif /*CONFIG_RHEA_WA_HWJIRA_2045*/
 
 	pm_dbg(LOG_SW2_STATUS,
 		"SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
-	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
+	pwr_mgr_event_set(SOFTWARE_2_EVENT, 1);
 
-	pi_enable(pi,1);
+	pi_enable(pi, 1);
 	scu_set_power_mode(SCU_STATUS_NORMAL);
 #ifdef PM_DEBUG
-	if(pwr_mgr_is_event_active(COMMON_INT_TO_AC_EVENT))
-	{
+	if (pwr_mgr_is_event_active(COMMON_INT_TO_AC_EVENT)) {
 		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status1 = %x\n",
 			__func__,
 			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS1_OFFSET));
@@ -615,8 +620,8 @@ int enter_idle_state(struct kona_idle_state *state)
 #endif
 
 	clear_wakeup_interrupts();
-	pwr_mgr_process_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT,false);
-	pwr_mgr_process_events(USBOTG_EVENT,PHY_RESUME_EVENT,false);
+	pwr_mgr_process_events(LCDTE_EVENT, BRIDGE_TO_MODEM_EVENT, false);
+	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
 
 	if (state->flags & CPUIDLE_ENTER_SUSPEND)
 		log_wakeup_interrupts();
@@ -633,32 +638,31 @@ static struct pm_init_param pm_init = {
 };
 
 
-int __init rhea_pm_init(void)
+int __init __pm_init(void)
 {
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
-    noncache_buf_va = dma_alloc_coherent(NULL, 64*16,
+	noncache_buf_va = dma_alloc_coherent(NULL, 64*16,
 				&noncache_buf_pa, GFP_ATOMIC);
 #endif
-    pm_config_deep_sleep();
+	pm_config_deep_sleep();
 	return kona_pm_init(&pm_init);
 }
-device_initcall(rhea_pm_init);
+device_initcall(__pm_init);
 
 
 #ifdef CONFIG_DEBUG_FS
 
 static int enable_self_refresh(void *data, u64 val)
 {
-    if (val == 0) {
-	pm_enable_self_refresh(false);
-    } else {
-	pm_enable_self_refresh(true);
-    }
-    return 0;
+	if (val == 0)
+		pm_enable_self_refresh(false);
+	else
+		pm_enable_self_refresh(true);
+	return 0;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(pm_en_self_refresh_fops, NULL,
-						enable_self_refresh, "%llu\n");
+					enable_self_refresh, "%llu\n");
 
 /* Disable/enable dormant mode at runtime */
 static int dormant_enable_set(void *data, u64 val)
@@ -674,28 +678,24 @@ static int dormant_enable_set(void *data, u64 val)
 
 		dormant_enable = 0;
 	}
-
 	return 0;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(dormant_enable_fops, NULL, dormant_enable_set,
 			"%llu\n");
 
-static struct dentry *dent_rhea_pm_root_dir;
-int __init rhea_pm_debug_init(void)
+static struct dentry *dent_pm_root_dir;
+int __init __pm_debug_init(void)
 {
 	/* create root clock dir /clock */
-    dent_rhea_pm_root_dir = debugfs_create_dir("rhea_pm", 0);
-    if(!dent_rhea_pm_root_dir)
-	return -ENOMEM;
+	dent_pm_root_dir = debugfs_create_dir("hawaii_pm", 0);
+	if (!dent_pm_root_dir)
+		return -ENOMEM;
 	if (!debugfs_create_u32("log_mask", S_IRUGO | S_IWUSR,
-		dent_rhea_pm_root_dir, (int *)&log_mask))
+		dent_pm_root_dir, (int *)&log_mask))
 		return -ENOMEM;
 	if (!debugfs_create_file("en_self_refresh", S_IRUGO | S_IWUSR,
-		dent_rhea_pm_root_dir, NULL, &pm_en_self_refresh_fops))
-		return -ENOMEM;
-	if (!debugfs_create_u32("force_retention", S_IRUGO | S_IWUSR,
-			dent_rhea_pm_root_dir, (int*)&force_retention))
+		dent_pm_root_dir, NULL, &pm_en_self_refresh_fops))
 		return -ENOMEM;
 
 	/* If dormant is not enabled out of boot, prevent cpuidle
@@ -707,12 +707,12 @@ int __init rhea_pm_debug_init(void)
 	}
 	/* Interface to enable disable dormant mode at runtime */
 	if (!debugfs_create_file("dormant_enable", S_IRUGO | S_IWUSR,
-				 dent_rhea_pm_root_dir, NULL,
+				 dent_pm_root_dir, NULL,
 				 &dormant_enable_fops))
 		return -ENOMEM;
 
 	return 0;
 }
-late_initcall(rhea_pm_debug_init);
+late_initcall(__pm_debug_init);
 
 #endif

@@ -569,7 +569,7 @@ late_initcall(rhea_pwr_mgr_late_init);
  * enabled
  */
 
-int __init rhea_pwr_mgr_init_sequencer(void)
+int __init mach_init_sequencer(void)
 {
 	pr_info("%s\n", __func__);
 
@@ -610,4 +610,4 @@ int __init rhea_pwr_mgr_init_sequencer(void)
 	return 0;
 }
 
-EXPORT_SYMBOL(rhea_pwr_mgr_init_sequencer);
+EXPORT_SYMBOL(mach_init_sequencer);

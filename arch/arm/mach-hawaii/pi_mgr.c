@@ -1,27 +1,17 @@
- /************************************************************************************************/
-/*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
-/*                                                                                              */
-/*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
-/*     As a special exception, the copyright holders of this software give you permission to    */
-/*     link this software with independent modules, and to copy and distribute the resulting    */
-/*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
-/*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
-/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
-/************************************************************************************************/
+/*****************************************************************************
+* Copyright 2012 Broadcom Corporation.  All rights reserved.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a
+* license other than the GPL, without Broadcom's express prior written
+* consent.
+*****************************************************************************/
+
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/device.h>
@@ -101,7 +91,7 @@ static u32 arm_core_trans_table[ARM_PI_NUM_OPP * ARM_PI_NUM_OPP];
 static struct pi arm_core_pi = {
 	.name = "arm_core",
 	.id = PI_MGR_PI_ID_ARM_CORE,
-#ifdef CONFIG_RHEA_PI_MGR_DISABLE_POLICY_CHANGE
+#ifdef CONFIG_PI_MGR_DISABLE_POLICY_CHANGE
 	.flags = PI_ENABLE_ON_INIT | PI_ARM_CORE | UPDATE_PM_QOS |
 	    NO_POLICY_CHANGE | DFS_LIMIT_CHECK_EN,
 #else
@@ -193,7 +183,7 @@ static u32 mm_trans_table[MM_PI_NUM_OPP * MM_PI_NUM_OPP];
 static struct pi mm_pi = {
 	.name = "mm",
 	.id = PI_MGR_PI_ID_MM,
-#ifdef CONFIG_RHEA_PI_MGR_DISABLE_POLICY_CHANGE
+#ifdef CONFIG_PI_MGR_DISABLE_POLICY_CHANGE
 	.flags = NO_POLICY_CHANGE | DFS_LIMIT_CHECK_EN,
 #else
 	.flags = DFS_LIMIT_CHECK_EN,
@@ -276,7 +266,7 @@ static u32 hub_trans_table[HUB_PI_NUM_OPP * HUB_PI_NUM_OPP];
 static struct pi hub_pi = {
 	.name = "hub",
 	.id = PI_MGR_PI_ID_HUB_SWITCHABLE,
-#ifdef CONFIG_RHEA_PI_MGR_DISABLE_POLICY_CHANGE
+#ifdef CONFIG_PI_MGR_DISABLE_POLICY_CHANGE
 	.flags = NO_POLICY_CHANGE | DFS_LIMIT_CHECK_EN,
 #else
 	.flags = DFS_LIMIT_CHECK_EN,
@@ -355,7 +345,7 @@ static u32 aon_trans_table[AON_PI_NUM_OPP * AON_PI_NUM_OPP];
 static struct pi aon_pi = {
 	.name = "aon",
 	.id = PI_MGR_PI_ID_HUB_AON,
-#ifdef CONFIG_RHEA_PI_MGR_DISABLE_POLICY_CHANGE
+#ifdef CONFIG_PI_MGR_DISABLE_POLICY_CHANGE
 	.flags = NO_POLICY_CHANGE | DFS_LIMIT_CHECK_EN,
 #else
 	.flags = DFS_LIMIT_CHECK_EN,
@@ -447,7 +437,7 @@ static struct pi sub_sys_pi = {
 	.name = "sub_sys",
 	.id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
 	.ccu_id = sub_sys_ccu,
-#ifdef CONFIG_RHEA_PI_MGR_DISABLE_POLICY_CHANGE
+#ifdef CONFIG_PI_MGR_DISABLE_POLICY_CHANGE
 	.flags = NO_POLICY_CHANGE | DFS_LIMIT_CHECK_EN,
 #else
 	.flags = DFS_LIMIT_CHECK_EN,
@@ -582,7 +572,7 @@ char *get_opp_name(int opp)
 	return name;
 }
 
-void __init rhea_pi_mgr_init()
+void __init hawaii_pi_mgr_init()
 {
 	int i;
 #ifdef CONFIG_RHEA_WA_HWJIRA_2276
@@ -606,11 +596,10 @@ void __init rhea_pi_mgr_init()
 	}
 
 }
-
-EXPORT_SYMBOL(rhea_pi_mgr_init);
+EXPORT_SYMBOL(hawaii_pi_mgr_init);
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
-static int __init rhea_mm_pre_init_state(void)
+static int __init hawaii_mm_pre_init_state(void)
 {
 	if (JIRA_WA_ENABLED(2490)) {
 		if (ref_8ph_en_pll1_clk == NULL) {
@@ -622,7 +611,7 @@ static int __init rhea_mm_pre_init_state(void)
 
 	return 0;
 }
-arch_initcall(rhea_mm_pre_init_state);
+arch_initcall(hawaii_mm_pre_init_state);
 #endif
 
 int __init pi_mgr_late_init(void)
