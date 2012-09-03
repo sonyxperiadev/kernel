@@ -107,6 +107,8 @@ static struct map_desc hawaii_io_desc[] __initdata = {
 
 	IO_DESC(KONA_SSP0_VA, SZ_4K),
 	IO_DESC(KONA_SSP1_VA, SZ_4K),
+	IO_DESC(KONA_SSP3_VA, SZ_4K),
+	IO_DESC(KONA_SSP4_VA, SZ_4K),
 
 	IO_DESC(KONA_STM_VA, SZ_4K),
 	IO_DESC(KONA_SWSTM_VA, SZ_4K),
