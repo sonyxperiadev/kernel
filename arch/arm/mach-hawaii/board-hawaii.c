@@ -59,7 +59,6 @@
 #include <mach/io_map.h>
 #include <mach/irqs.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
-#include <plat/cpu.h>
 #include <plat/spi_kona.h>
 #include <plat/chal/chal_trace.h>
 #include <plat/pi_mgr.h>
