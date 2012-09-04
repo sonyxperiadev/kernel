@@ -23,6 +23,9 @@ obj-$(CONFIG_KONA_POWER_MGR) += pwr_mgr.o
 obj-$(CONFIG_KONA_PI_MGR) += pi_mgr.o
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += pm.o sleep.o pm_dbg.o
 obj-$(CONFIG_KONA_SECURE_MONITOR_CALL) += sec_api.o
+
+CFLAGS_sec_api.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
+
 obj-$(CONFIG_ARCH_HAWAII) += hawaii_bmdm_wd_monitor.o
 obj-$(CONFIG_A9_DORMANT_MODE) += dm.o dm_v7_c.o dm_a9.o dm_gic.o dm_a9_c.o
 obj-y += pm_params.o helpers.o v7.o
