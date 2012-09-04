@@ -90,18 +90,36 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 	struct sg_table *table;
 	int ret;
 
-		table = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
-		if (!table)
-			return ERR_PTR(-ENOMEM);
+	table = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+	if (!table)
+		return ERR_PTR(-ENOMEM);
+	if (buffer->flags & ION_FLAG_CACHED) {
+		struct scatterlist *sg;
+		int ret, i;
+		int nents = PAGE_ALIGN(buffer->size) / PAGE_SIZE;
+		struct page *page = phys_to_page(buffer->priv_phys);
+
+		ret = sg_alloc_table(table, nents, GFP_KERNEL);
+		if (ret) {
+			kfree(table);
+			return ERR_PTR(ret);
+		}
+		sg = table->sgl;
+		for (i = 0; i < nents; i++) {
+			sg_set_page(sg, page + i, PAGE_SIZE, 0);
+			sg = sg_next(sg);
+		}
+	} else {
 		ret = sg_alloc_table(table, 1, GFP_KERNEL);
 		if (ret) {
 			kfree(table);
 			return ERR_PTR(ret);
 		}
-		sg_set_page(table->sgl, phys_to_page(buffer->priv_phys), buffer->size,
-				0);
-		return table;
+		sg_set_page(table->sgl, phys_to_page(buffer->priv_phys),
+				buffer->size, 0);
 	}
+	return table;
+}
 
 void ion_carveout_heap_unmap_dma(struct ion_heap *heap,
 				 struct ion_buffer *buffer)
