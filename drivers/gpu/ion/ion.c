@@ -1180,7 +1180,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	size_t total_orphaned_size = 0;
 
 	seq_printf(s, "%16.s %16.s %16.s %16.s\n",
-			"client", "pid", "size", "oom_adj");
+			"client", "pid", "size", "oom_score_adj");
 	seq_printf(s, "----------------------------------------------------\n");
 
 	for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
@@ -1195,7 +1195,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 			get_task_comm(task_comm, client->task);
 			seq_printf(s, "%16.s %16u %13u KB %16d\n", task_comm,
 					client->pid, (size>>10), 
-					client->task->signal->oom_adj);
+					client->task->signal->oom_score_adj);
 		} else {
 			seq_printf(s, "%16.s %16u %13u KB\n", client->name,
 					client->pid, (size>>10));
