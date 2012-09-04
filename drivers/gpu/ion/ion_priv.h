@@ -211,6 +211,12 @@ extern void ion_unlock_buffer(struct ion_client *client,
 		struct ion_buffer *buffer);
 #endif
 
+#define pgprot_writethrough(prot) \
+	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITETHROUGH)
+
+#define pgprot_writeback(prot) \
+	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITEBACK)
+
 /**
  * The carveout heap returns physical addresses, since 0 may be a valid
  * physical address, this is used to indicate allocation failed
