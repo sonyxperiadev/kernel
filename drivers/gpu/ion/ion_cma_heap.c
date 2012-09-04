@@ -152,11 +152,30 @@ void ion_cma_heap_unmap_dma(struct ion_heap *heap,
 static int ion_cma_mmap(struct ion_heap *mapper, struct ion_buffer *buffer,
 			struct vm_area_struct *vma)
 {
+#if 1
+	struct device *dev = buffer->heap->priv;
+	struct ion_cma_buffer_info *info = buffer->priv_virt;
+
+	if (buffer->flags & ION_FLAG_WRITECOMBINE)
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+	else if (buffer->flags & ION_FLAG_WRITETHROUGH)
+		vma->vm_page_prot = pgprot_writethrough(vma->vm_page_prot);
+	else if (buffer->flags & ION_FLAG_WRITEBACK)
+		vma->vm_page_prot = pgprot_writeback(vma->vm_page_prot);
+	else
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
+	return remap_pfn_range(vma, vma->vm_start,
+			dma_to_pfn(dev, info->handle) + vma->vm_pgoff,
+			vma->vm_end - vma->vm_start,
+			vma->vm_page_prot);
+#else
 	struct device *dev = buffer->heap->priv;
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
 
 	return dma_mmap_coherent(dev, vma, info->cpu_addr, info->handle,
 				 buffer->size);
+#endif
 }
 
 static struct ion_heap_ops ion_cma_ops = {
