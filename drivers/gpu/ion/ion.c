@@ -176,12 +176,14 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 			return ERR_PTR(-EINVAL);
 		}
 
-	ret = ion_buffer_alloc_dirty(buffer);
-	if (ret) {
-		heap->ops->unmap_dma(heap, buffer);
-		heap->ops->free(buffer);
-		kfree(buffer);
-		return ERR_PTR(ret);
+	if (buffer->flags & ION_FLAG_CACHED) {
+		ret = ion_buffer_alloc_dirty(buffer);
+		if (ret) {
+			heap->ops->unmap_dma(heap, buffer);
+			heap->ops->free(buffer);
+			kfree(buffer);
+			return ERR_PTR(ret);
+		}
 	}
 
 	buffer->dev = dev;
@@ -210,6 +212,8 @@ static void ion_buffer_destroy(struct kref *kref)
 	if (WARN_ON(buffer->kmap_cnt > 0))
 		buffer->heap->ops->unmap_kernel(buffer->heap, buffer);
 
+	if (buffer->flags & ION_FLAG_CACHED)
+		kfree(buffer->dirty);
 	buffer->heap->ops->unmap_dma(buffer->heap, buffer);
 	buffer->heap->ops->free(buffer);
 	mutex_lock(&dev->lock);
