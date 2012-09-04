@@ -32,7 +32,9 @@
 #define ION_CARVEOUT0_SIZE		(16*1024*1024)
 
 extern struct ion_device *idev;
-extern unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *handle);
+
+extern unsigned int kona_ion_map_dma(struct ion_client *client,
+		struct ion_handle *handle);
 
 #endif
 

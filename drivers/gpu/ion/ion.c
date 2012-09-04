@@ -328,7 +328,7 @@ static struct ion_handle *ion_handle_lookup(struct ion_client *client,
 	return NULL;
 }
 
-static bool ion_handle_validate(struct ion_client *client, struct ion_handle *handle)
+bool ion_handle_validate(struct ion_client *client, struct ion_handle *handle)
 {
 	struct rb_node *n = client->handles.rb_node;
 
@@ -1337,3 +1337,29 @@ void __init ion_reserve(struct ion_platform_data *data)
 			       data->heaps[i].base);
 	}
 }
+
+#ifdef CONFIG_ION_KONA
+struct ion_buffer *ion_lock_buffer(struct ion_client *client,
+		struct ion_handle *handle)
+{
+	struct ion_buffer *buffer = NULL;
+
+	mutex_lock(&client->lock);
+	if (!ion_handle_validate(client, handle)) {
+		pr_err("Invalid handle passed to custom ioctl.\n");
+		mutex_unlock(&client->lock);
+		return NULL;
+	}
+	buffer = handle->buffer;
+	mutex_lock(&buffer->lock);
+	return buffer;
+}
+
+void ion_unlock_buffer(struct ion_client *client,
+		struct ion_buffer *buffer)
+{
+	mutex_unlock(&buffer->lock);
+	mutex_unlock(&client->lock);
+}
+#endif
+

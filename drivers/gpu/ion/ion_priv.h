@@ -202,6 +202,15 @@ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *,
 void ion_cma_heap_destroy(struct ion_heap *);
 #endif
 
+#ifdef CONFIG_ION_KONA
+extern bool ion_handle_validate(struct ion_client *client,
+		struct ion_handle *handle);
+extern struct ion_buffer *ion_lock_buffer(struct ion_client *client,
+		struct ion_handle *handle);
+extern void ion_unlock_buffer(struct ion_client *client,
+		struct ion_buffer *buffer);
+#endif
+
 /**
  * The carveout heap returns physical addresses, since 0 may be a valid
  * physical address, this is used to indicate allocation failed

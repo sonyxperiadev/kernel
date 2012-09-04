@@ -30,100 +30,12 @@
 #include <linux/broadcom/m4u.h>
 #endif
 
-/* NISHANTH_TODO: The following two structures should ideally be defined
- * in ion_priv.h for custom ioctls to use them.
- * Duplicating it here to minimise modifications to mainline ion code.
- * These would be removed when mainline moves them to header file.
- */
-/**
- * struct ion_client - a process/hw block local address space
- * @node:		node in the tree of all clients
- * @dev:		backpointer to ion device
- * @handles:		an rb tree of all the handles in this client
- * @lock:		lock protecting the tree of handles
- * @heap_mask:		mask of all supported heaps
- * @name:		used for debugging
- * @task:		used for debugging
- *
- * A client represents a list of buffers this client may access.
- * The mutex stored here is used to protect both handles tree
- * as well as the handles themselves, and should be held while modifying either.
- */
-struct ion_client {
-	struct rb_node node;
-	struct ion_device *dev;
-	struct rb_root handles;
-	struct mutex lock;
-	unsigned int heap_mask;
-	const char *name;
-	struct task_struct *task;
-	pid_t pid;
-	struct dentry *debug_root;
-};
-
-/**
- * ion_handle - a client local reference to a buffer
- * @ref:		reference count
- * @client:		back pointer to the client the buffer resides in
- * @buffer:		pointer to the buffer
- * @node:		node in the client's handle rbtree
- * @kmap_cnt:		count of times this client has mapped to kernel
- * @dmap_cnt:		count of times this client has mapped for dma
- *
- * Modifications to node, map_cnt or mapping should be protected by the
- * lock in the client.  Other fields are never changed after initialization.
- */
-struct ion_handle {
-	struct kref ref;
-	struct ion_client *client;
-	struct ion_buffer *buffer;
-	struct rb_node node;
-	unsigned int kmap_cnt;
-};
-
-static bool ion_handle_validate(struct ion_client *client, struct ion_handle *handle)
-{
-	struct rb_node *n = client->handles.rb_node;
-
-	while (n) {
-		struct ion_handle *handle_node = rb_entry(n, struct ion_handle,
-							  node);
-		if (handle < handle_node)
-			n = n->rb_left;
-		else if (handle > handle_node)
-			n = n->rb_right;
-		else
-			return true;
-	}
-	return false;
-}
-
 struct ion_device *idev;
 static int num_heaps;
 static struct ion_heap **heaps;
 
-static struct ion_buffer* kona_ion_acquire_buffer(struct ion_client *client, struct ion_handle *handle)
-{
-	struct ion_buffer *buffer = NULL;
-
-	mutex_lock(&client->lock);
-	if (!ion_handle_validate(client, handle)) {
-		pr_err("Invalid handle passed to custom ioctl.\n");
-		mutex_unlock(&client->lock);
-		return NULL;
-	}
-	buffer = handle->buffer;
-	mutex_lock(&buffer->lock);
-	return buffer;
-}
-
-static void kona_ion_release_buffer(struct ion_client *client, struct ion_buffer *buffer)
-{
-	mutex_unlock(&buffer->lock);
-	mutex_unlock(&client->lock);
-}
-
-unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *handle)
+unsigned int kona_ion_map_dma(struct ion_client *client,
+		struct ion_handle *handle)
 {
 #ifdef CONFIG_M4U
 	struct ion_buffer *buffer;
@@ -136,72 +48,81 @@ unsigned int kona_ion_map_dma(struct ion_client *client, struct ion_handle *hand
 		return dma_addr;
 
 #ifdef CONFIG_M4U
-	buffer = kona_ion_acquire_buffer(client, handle);
+	buffer = ion_lock_buffer(client, handle);
+	if (!buffer)
+		return dma_addr;
 	if (!buffer->dma_addr) {
-		buffer->dma_addr = m4u_map(g_mdev, sg_table, buffer->size, buffer->align);
+		buffer->dma_addr = m4u_map(g_mdev, sg_table, buffer->size,
+				buffer->align);
 		if (buffer->dma_addr == INVALID_MMA) {
 			buffer->dma_addr = 0;
 		}
 	}
 	dma_addr = buffer->dma_addr;
-	kona_ion_release_buffer(client, buffer);
+	ion_unlock_buffer(client, buffer);
 #else
-	/* Do not have IOMMU to map multiple scatterlist entries to contiguous dma address */
-	if (sg_table->nents == 1)
-		dma_addr = sg_phys(sg_table->sgl);
+	/* Do not have IOMMU to map multiple scatterlist entries to
+	 * contiguous dma address. With M4U disabled, this should be called
+	 * only for contiguous buffer.
+	 * TODO: Add check for contiguous buffer */
+	dma_addr = sg_phys(sg_table->sgl);
 #endif
 
 	return dma_addr;
 }
 EXPORT_SYMBOL(kona_ion_map_dma);
 
-static int kona_ion_set_prop(struct ion_client *client, struct ion_custom_property *data)
+static int kona_ion_set_prop(struct ion_client *client,
+		struct ion_custom_property *data)
 {
 	struct ion_buffer *buffer;
 
-	buffer = kona_ion_acquire_buffer(client, data->handle);
+	buffer = ion_lock_buffer(client, data->handle);
 	if (buffer) {
 		buffer->custom_flags = (data->value & data->mask);
-		kona_ion_release_buffer(client, buffer);
+		ion_unlock_buffer(client, buffer);
 		return 0;
 	}
 	return -EINVAL;
 }
 
-static int kona_ion_get_prop(struct ion_client *client, struct ion_custom_property *data)
+static int kona_ion_get_prop(struct ion_client *client,
+		struct ion_custom_property *data)
 {
 	struct ion_buffer *buffer;
 
-	buffer = kona_ion_acquire_buffer(client, data->handle);
+	buffer = ion_lock_buffer(client, data->handle);
 	if (buffer) {
 		data->value = (buffer->custom_flags & data->mask);
-		kona_ion_release_buffer(client, buffer);
+		ion_unlock_buffer(client, buffer);
 		return 0;
 	}
 	return -EINVAL;
 }
 
-static int kona_ion_update_count(struct ion_client *client, struct ion_handle *handle)
+static int kona_ion_update_count(struct ion_client *client,
+		struct ion_handle *handle)
 {
 	struct ion_buffer *buffer;
 
-	buffer = kona_ion_acquire_buffer(client, handle);
+	buffer = ion_lock_buffer(client, handle);
 	if (buffer) {
 		buffer->custom_update_count++;
-		kona_ion_release_buffer(client, buffer);
+		ion_unlock_buffer(client, buffer);
 		return 0;
 	}
 	return -EINVAL;
 }
 
-static int kona_ion_get_update_count(struct ion_client *client, struct ion_custom_update_count *data)
+static int kona_ion_get_update_count(struct ion_client *client,
+		struct ion_custom_update_count *data)
 {
 	struct ion_buffer *buffer;
 
-	buffer = kona_ion_acquire_buffer(client, data->handle);
+	buffer = ion_lock_buffer(client, data->handle);
 	if (buffer) {
 		data->count = buffer->custom_update_count;
-		kona_ion_release_buffer(client, buffer);
+		ion_unlock_buffer(client, buffer);
 		return 0;
 	}
 	return -EINVAL;
@@ -219,7 +140,7 @@ static long kona_ion_custom_ioctl (struct ion_client *client,
 		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
 			return -EFAULT;
 
-		pr_debug("ION_IOC_CUSTOM_DMA_MAP client(%p) handle(%p) \n",
+		pr_debug("ION_IOC_CUSTOM_DMA_MAP client(%p) handle(%p)\n",
 				client, data.handle);
 		data.dma_addr = kona_ion_map_dma(client, data.handle);
 
@@ -229,11 +150,7 @@ static long kona_ion_custom_ioctl (struct ion_client *client,
 	}
 	case ION_IOC_CUSTOM_DMA_UNMAP:
 	{
-		struct ion_handle *handle = (struct ion_handle *)arg;
-
-		pr_debug("ION_IOC_CUSTOM_DMA_UNMAP client(%p) handle(%p) \n",
-				client, handle);
-
+		pr_err("ION_IOC_CUSTOM_DMA_UNMAP - dummy ioctl for 3.4 linux\n");
 		break;
 	}
 	case ION_IOC_CUSTOM_SET_PROP:
@@ -243,8 +160,9 @@ static long kona_ion_custom_ioctl (struct ion_client *client,
 		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
 			return -EFAULT;
 
-		pr_debug("ION_IOC_CUSTOM_SET_PROP client(%p) handle(%p) value(%x) mask(%x)\n",
-				client, data.handle, data.value, data.mask);
+		pr_debug("ION_IOC_CUSTOM_SET_PROP client(%p) handle(%p)"
+			   " value(%x) mask(%x)\n", client, data.handle,
+			   data.value, data.mask);
 		if (kona_ion_set_prop(client, &data))
 			return -EINVAL;
 
@@ -295,11 +213,11 @@ static long kona_ion_custom_ioctl (struct ion_client *client,
 	}
 	case ION_IOC_CUSTOM_TP:
 	{
-		pr_debug(" TP(%ld) \n", arg);
+		pr_debug(" TP(%ld)\n", arg);
 		break;
 	}
 	default:
-		pr_err(" unsupported custom ioctl(%d) \n", cmd);
+		pr_err(" unsupported custom ioctl(%d)\n", cmd);
 		return -ENOTTY;
 	}
 	return 0;
@@ -400,13 +318,13 @@ static struct platform_driver ion_driver = {
 
 static int __init ion_init(void)
 {
-	pr_info("Kona ION driver init \n");
+	pr_info("Kona ION driver init\n");
 	return platform_driver_register(&ion_driver);
 }
 
 static void __exit ion_exit(void)
 {
-	pr_info("Kona ION driver exit \n");
+	pr_info("Kona ION driver exit\n");
 	platform_driver_unregister(&ion_driver);
 }
 
