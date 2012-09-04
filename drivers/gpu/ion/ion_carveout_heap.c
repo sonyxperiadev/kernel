@@ -151,10 +151,21 @@ void ion_carveout_heap_unmap_kernel(struct ion_heap *heap,
 int ion_carveout_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 			       struct vm_area_struct *vma)
 {
+	pgprot_t page_prot;
+
+	if (buffer->flags & ION_FLAG_WRITECOMBINE)
+		page_prot = pgprot_writecombine(vma->vm_page_prot);
+	else if (buffer->flags & ION_FLAG_WRITETHROUGH)
+		page_prot = pgprot_writethrough(vma->vm_page_prot);
+	else if (buffer->flags & ION_FLAG_WRITEBACK)
+		page_prot = pgprot_writeback(vma->vm_page_prot);
+	else
+		page_prot = pgprot_noncached(vma->vm_page_prot);
+
 	return remap_pfn_range(vma, vma->vm_start,
-			       __phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
-			       vma->vm_end - vma->vm_start,
-			       pgprot_noncached(vma->vm_page_prot));
+			__phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
+			vma->vm_end - vma->vm_start,
+			page_prot);
 }
 
 static struct ion_heap_ops carveout_heap_ops = {
