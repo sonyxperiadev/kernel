@@ -121,6 +121,20 @@ static int ion_cma_phys(struct ion_heap *heap, struct ion_buffer *buffer,
 	return 0;
 }
 
+void *ion_cma_heap_map_kernel(struct ion_heap *heap,
+				   struct ion_buffer *buffer)
+{
+	struct ion_cma_buffer_info *info = buffer->priv_virt;
+
+	return info->cpu_addr;
+}
+
+void ion_cma_heap_unmap_kernel(struct ion_heap *heap,
+				    struct ion_buffer *buffer)
+{
+	return;
+}
+
 struct sg_table *ion_cma_heap_map_dma(struct ion_heap *heap,
 					 struct ion_buffer *buffer)
 {
@@ -148,6 +162,8 @@ static int ion_cma_mmap(struct ion_heap *mapper, struct ion_buffer *buffer,
 static struct ion_heap_ops ion_cma_ops = {
 	.allocate = ion_cma_allocate,
 	.free = ion_cma_free,
+	.map_kernel = ion_cma_heap_map_kernel,
+	.unmap_kernel = ion_cma_heap_unmap_kernel,
 	.map_dma = ion_cma_heap_map_dma,
 	.unmap_dma = ion_cma_heap_unmap_dma,
 	.phys = ion_cma_phys,
