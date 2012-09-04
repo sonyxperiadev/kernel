@@ -61,6 +61,7 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 	info->table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
 	if (!info->table) {
 		dev_err(dev, "Fail to allocate sg table\n");
+		dma_free_coherent(dev, len, info->cpu_addr, info->handle);
 		goto err;
 	}
 
@@ -70,6 +71,7 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 	 * so we will only have one entry in sg table */
 	i = sg_alloc_table(info->table, 1, GFP_KERNEL);
 	if (i) {
+		dma_free_coherent(dev, len, info->cpu_addr, info->handle);
 		kfree(info->table);
 		goto err;
 	}
@@ -98,6 +100,7 @@ static void ion_cma_free(struct ion_buffer *buffer)
 	/* release memory */
 	dma_free_coherent(dev, buffer->size, info->cpu_addr, info->handle);
 	/* release sg table */
+	sg_free_table(info->table);
 	kfree(info->table);
 	kfree(info);
 }
