@@ -41,6 +41,7 @@ obj-$(CONFIG_MACH_RHEA_STONE) += rhea_stone.o board-rhea-wifi.o
 obj-$(CONFIG_MACH_RHEA_STONE_EDN2X) += rhea_stone.o board-rhea-wifi.o
 obj-$(CONFIG_CDEBUGGER) += crash_debugger.o
 obj-$(CONFIG_ARCH_RHEA) += rhea_bmdm_wd_monitor.o
+obj-$(CONFIG_RHEA_AVS) += rhea_avs.o
 obj-y += pm_params.o
 
 obj-$(CONFIG_ROM_SEC_DISPATCHER_LIB) += sec_bridge_tz.i

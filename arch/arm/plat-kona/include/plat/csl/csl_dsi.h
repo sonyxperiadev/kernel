@@ -83,7 +83,13 @@ extern "C" {
 		Boolean enaHsTxEotPkt;	///< enable TX of EOT during HS mode
 		Boolean enaLpTxEotPkt;	///< enable TX of EOT during LP mode
 		Boolean enaLpRxEotPkt;	///< enable RX of EOT during LP mode
-		UInt32 dispEngine;	/*/< Display Engine */
+		UInt32 dispEngine;	/* Display Engine- 0=DE0 via Pixel Valve
+						/ 1=DE1 via TXPKT_PIXD_FIFO
+						:Corresponds to Display engine
+						in the DSI module*/
+		UInt32 pixTxporter;	/* Pixel Transporter- 0=AXIPV / 1=MMDMA
+						:Corresponds to the module which
+						fetches pixels and feeds DSI*/
 	} CSL_DSI_CFG_t, *pCSL_DSI_CFG;
 
 /**

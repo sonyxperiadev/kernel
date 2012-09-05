@@ -12,26 +12,11 @@
 * consent.
 *****************************************************************************/
 
-#ifndef __CPU_H__
-#define __CPU_H__
+#ifndef _AL3006_I2C_SETTINGS_H_
+#define _AL3006_I2C_SETTINGS_H_
 
-/*Product family id*/
-#define KONA_PROD_FMLY_ID	0x3
+#define AL3006_I2C_BUS_ID	2
+#define AL3006_I2C_ADDRESS	0x1d
+#define AL3006_IRQ_GPIO		89
 
-
-#define KONA_CHIP_ID(f, p, r) \
-		((((f) << CHIPREG_CHIPID_REVID_PRODUCT_FAMILY_ID_SHIFT) &\
-			CHIPREG_CHIPID_REVID_PRODUCT_FAMILY_ID_MASK) |\
-		(((p) << CHIPREG_CHIPID_REVID_PRODUCT_ID_SHIFT) &\
-		    CHIPREG_CHIPID_REVID_PRODUCT_ID_MASK) |\
-		(((r) << CHIPREG_CHIPID_REVID_REVID_SHIFT) &\
-			   CHIPREG_CHIPID_REVID_REVID_MASK))
-
-static inline u32 get_chip_id(void)
-{
-	return readl(KONA_CHIPREG_VA + CHIPREG_CHIPID_REVID_OFFSET) &
-		(~CHIPREG_CHIPID_REVID_RESERVED_MASK);
-}
-
-
-#endif /* __CPU_H__ */
+#endif /* _AL3006_I2C_SETTINGS_H_ */

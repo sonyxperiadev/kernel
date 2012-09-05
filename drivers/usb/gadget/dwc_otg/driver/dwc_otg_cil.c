@@ -60,7 +60,8 @@
 #include "dwc_os.h"
 #include "dwc_otg_regs.h"
 #include "dwc_otg_cil.h"
-#include "plat/cpu.h"
+#include <linux/io.h>
+#include <mach/cpu.h>
 
 static int dwc_otg_setup_params(dwc_otg_core_if_t *core_if);
 
@@ -1618,7 +1619,13 @@ void dwc_otg_core_init(dwc_otg_core_if_t *core_if)
 	case DWC_INT_DMA_ARCH:
 		DWC_DEBUGPL(DBG_CIL, "Internal DMA Mode\n");
 
-		if (get_chip_rev_id() >= RHEA_CHIP_REV_B1)
+#if defined(CONFIG_ARCH_RHEA)
+		if (get_chip_id() >= RHEA_CHIP_ID(RHEA_CHIP_REV_B1))
+#elif defined(CONFIG_ARCH_HAWAII)
+		if (get_chip_id() >= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
+#else
+#error "unsupported platform"
+#endif
 			ahbcfg.b.hburstlen = DWC_GAHBCFG_INT_DMA_BURST_INCR8;
 		else {
 			/* Default to single burst */

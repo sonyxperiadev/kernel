@@ -56,8 +56,8 @@
 #include <plat/spi_kona.h>
 #include <plat/chal/chal_trace.h>
 #include <trace/stm.h>
-#ifdef CONFIG_KONA_AVS
-#include <plat/kona_avs.h>
+#ifdef CONFIG_RHEA_AVS
+#include <mach/rhea_avs.h>
 #include "pm_params.h"
 #endif
 
@@ -542,8 +542,8 @@ static struct resource kona_hsotgctrl_platform_resource[] = {
 	       .flags = IORESOURCE_MEM,
 	       },
 	[3] = {
-	       .start = BCM_INT_ID_RESERVED128,
-	       .end = BCM_INT_ID_RESERVED128,
+	       .start = BCM_INT_ID_HSOTG_WAKEUP,
+	       .end = BCM_INT_ID_HSOTG_WAKEUP,
 	       .flags = IORESOURCE_IRQ,
 	       },
 };
@@ -551,7 +551,7 @@ static struct resource kona_hsotgctrl_platform_resource[] = {
 static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
 	.hsotgctrl_virtual_mem_base = KONA_USB_HSOTG_CTRL_VA,
 	.chipreg_virtual_mem_base = KONA_CHIPREG_VA,
-	.irq = BCM_INT_ID_RESERVED128,
+	.irq = BCM_INT_ID_HSOTG_WAKEUP,
 	.usb_ahb_clk_name = USB_OTG_AHB_BUS_CLK_NAME_STR,
 	.mdio_mstr_clk_name = MDIOMASTER_PERI_CLK_NAME_STR,
 };
@@ -637,7 +637,7 @@ static struct platform_device kona_cpufreq_device = {
 };
 #endif /*CONFIG_KONA_CPU_FREQ_DRV */
 
-#ifdef CONFIG_KONA_AVS
+#ifdef CONFIG_RHEA_AVS
 
 void avs_silicon_type_notify(u32 silicon_type, int freq_id)
 {
@@ -672,7 +672,7 @@ u32 silicon_type_lut[VM_BIN_LUT_SIZE] = {
 };
 
 /* index = ATE_AVS_BIN[3:0]*/
-static struct kona_ate_lut_entry ate_lut[] = {
+static struct rhea_ate_lut_entry ate_lut[] = {
 	{ATE_FIELD_RESERVED , ATE_FIELD_RESERVED}, /* 0 */
 	{A9_FREQ_850_MHZ, SILICON_TYPE_FAST},	/* 1 */
 	{A9_FREQ_850_MHZ, SILICON_TYPE_TYPICAL},/* 2 */
@@ -691,7 +691,7 @@ static struct kona_ate_lut_entry ate_lut[] = {
 	{A9_FREQ_850_MHZ, SILICON_TYPE_TYPICAL},/* 15 */
 };
 
-static struct kona_avs_pdata avs_pdata = {
+static struct rhea_avs_pdata avs_pdata = {
 	.flags = AVS_TYPE_OPEN | AVS_READ_FROM_MEM | AVS_ATE_FEATURE_ENABLE,
 
 	/* Mem addr where perfomance monitor value is copied by ABI */
@@ -711,8 +711,8 @@ static struct kona_avs_pdata avs_pdata = {
 	.silicon_type_notify = avs_silicon_type_notify,
 };
 
-struct platform_device kona_avs_device = {
-	.name = "kona-avs",
+struct platform_device rhea_avs_device = {
+	.name = "rhea-avs",
 	.id = -1,
 	.dev = {
 		.platform_data = &avs_pdata,
@@ -866,8 +866,8 @@ static u64 unicam_camera_dma_mask = DMA_BIT_MASK(32);
 
 static struct resource board_unicam_resource[] = {
 	[0] = {
-	       .start = BCM_INT_ID_RESERVED156,
-	       .end = BCM_INT_ID_RESERVED156,
+	       .start = BCM_INT_ID_CSI,
+	       .end = BCM_INT_ID_CSI,
 	       .flags = IORESOURCE_IRQ,
 	       },
 };
@@ -923,8 +923,8 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_kona_otg_platform_device,
 #endif
 
-#ifdef CONFIG_KONA_AVS
-	&kona_avs_device,
+#ifdef CONFIG_RHEA_AVS
+	&rhea_avs_device,
 #endif
 
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
@@ -1131,11 +1131,3 @@ void __init board_add_common_devices(void)
 				pmem_size, (pmem_size >> PAGE_SHIFT));
 }
 
-/* Return the Rhea chip revision ID */
-int notrace get_chip_rev_id(void)
-{
-	return (readl(KONA_CHIPREG_VA + CHIPREG_CHIPID_REVID_OFFSET) &
-	CHIPREG_CHIPID_REVID_REVID_MASK) >>
-	CHIPREG_CHIPID_REVID_REVID_SHIFT;
-}
-EXPORT_SYMBOL(get_chip_rev_id);

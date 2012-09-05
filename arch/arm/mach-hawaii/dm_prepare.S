@@ -13,7 +13,7 @@
 * license other than the GPL, without Broadcom's express prior written
 * consent.
 *****************************************************************************/
-
+#include <linux/threads.h>
 #include <linux/linkage.h>
 #include <asm/assembler.h>
 

@@ -1,7 +1,7 @@
 /*******************************************************************************
- * Copyright 2012 Broadcom Corporation.  All rights reserved.
+ * Copyright 2010,2011 Broadcom Corporation.  All rights reserved.
  *
- *	@file	arch/arm/plat-kona/kona_avs.c
+ *	@file	arch/arm/mach-rhea/rhea_avs.c
  *
  * Unless you and Broadcom execute a separate written software license agreement
  * governing use of this software, this software is licensed to you under the
@@ -18,10 +18,11 @@
 #ifdef CONFIG_KONA_OTP
 #include <plat/bcm_otp.h>
 #endif
-#include <plat/kona_avs.h>
+#include <mach/rhea_avs.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/module.h>
+#include <mach/cpu.h>
 
 /*#define KONA_AVS_DEBUG*/
 
@@ -75,7 +76,7 @@ struct avs_info {
 	u32 ate_crc;
 	u32 year;
 	u32 month;
-	struct kona_avs_pdata *pdata;
+	struct rhea_avs_pdata *pdata;
 };
 
 struct avs_info avs_info = {.silicon_type = SILICON_TYPE_SLOW, };
@@ -149,12 +150,12 @@ static int otp_read(int row, struct vm_val *vm_val)
 }
 #endif
 
-u32 kona_avs_get_solicon_type(void)
+u32 rhea_avs_get_solicon_type(void)
 {
 	BUG_ON(avs_info.pdata == NULL);
 	return avs_info.silicon_type;
 }
-EXPORT_SYMBOL(kona_avs_get_solicon_type);
+EXPORT_SYMBOL(rhea_avs_get_solicon_type);
 
 /**
  * converts interger to string radix 2 (binary
@@ -282,8 +283,8 @@ static int avs_read_vm_otp(struct avs_info *avs_inf_ptr)
 		avs_inf_ptr->vm3_val =
 		    (vm_val.val1 >> VM3_VAL_SHIFT) & VM_VAL_MASK;
 
-		avs_dbg(AVS_LOG_INIT, "%s:vm0_val = %d"
-				"vm1_val= %d vm2_val = %d vm3_val = %d\n",
+		avs_dbg(AVS_LOG_INIT, "%s:vm0_val = %d \
+				vm1_val= %d vm2_val = %d vm3_val = %d\n",
 				__func__,
 				avs_inf_ptr->vm0_val,
 				avs_inf_ptr->vm1_val,
@@ -338,8 +339,8 @@ static int avs_read_ate_otp(struct avs_info *avs_inf_ptr)
 		 * if year and month field is 0, we will assume June 2012
 		 * This is just for debug print purpose only
 		 */
-		avs_dbg(AVS_LOG_INFO, "AVS Year & Month of Manufacturing:"
-				"%d %d\n",
+		avs_dbg(AVS_LOG_INFO, "AVS Year & Month of Manufacturing: \
+				%d %d\n",
 				((avs_inf_ptr->year == 0) ? 2012 :
 				 (2010 + avs_inf_ptr->year)),
 				((avs_inf_ptr->month == 0) ? 6 :
@@ -358,7 +359,7 @@ static int avs_read_ate_otp(struct avs_info *avs_inf_ptr)
 
 static int avs_ate_get_silicon_type(struct avs_info *avs_inf_ptr)
 {
-	struct kona_avs_pdata *pdata = avs_inf_ptr->pdata;
+	struct rhea_avs_pdata *pdata = avs_inf_ptr->pdata;
 	char str[33];
 	char pack[60];
 	char crc[5];
@@ -425,11 +426,11 @@ static int avs_ate_get_silicon_type(struct avs_info *avs_inf_ptr)
 static u32 avs_vm_find_silicon_type(struct avs_info *avs_inf_ptr, u32 vm_index,
 				   u32 *lut)
 {
-	struct kona_avs_pdata *pdata = avs_inf_ptr->pdata;
+	struct rhea_avs_pdata *pdata = avs_inf_ptr->pdata;
 	int silicon_type_idx = -1;
 	int i;
 
-	if (lut) {
+	if (pdata->silicon_type_notify && lut) {
 		for (i = 0; i < VM_BIN_LUT_SIZE - 1; i++) {
 			if (vm_index >= lut[i] && vm_index < lut[i + 1]) {
 				silicon_type_idx = i;
@@ -443,25 +444,35 @@ static u32 avs_vm_find_silicon_type(struct avs_info *avs_inf_ptr, u32 vm_index,
 	return pdata->silicon_type_lut[silicon_type_idx];
 }
 
-static u32 avs_vm_get_silicon_type(struct avs_info *avs_inf_ptr)
+static u32 avs_vm_get_silicon_type(struct avs_info *avs_inf_ptr,
+				   int chip_rev_id)
 {
-	struct kona_avs_pdata *pdata = avs_inf_ptr->pdata;
+	struct rhea_avs_pdata *pdata = avs_inf_ptr->pdata;
+	u32 (*lut)[VM_BIN_LUT_SIZE];
 	u32 type_vm0, type_vm1, type_vm2, type_vm3;
 	u32 silicon_type;
 
+	if (chip_rev_id == RHEA_CHIP_REV_B0)
+		lut = pdata->vm_bin_B0_lut;
+	else if (chip_rev_id == RHEA_CHIP_REV_B1)
+		lut = pdata->vm_bin_B1_lut;
+	else {
+		WARN_ON(1);
+		return SILICON_TYPE_SLOW;
+	}
 
 	type_vm0 = avs_vm_find_silicon_type(avs_inf_ptr,
 			avs_inf_ptr->vm0_val,
-			&pdata->vm_bin_lut[0][0]);
+			&lut[0][0]);
 	type_vm1 = avs_vm_find_silicon_type(avs_inf_ptr,
 			avs_inf_ptr->vm1_val,
-			&pdata->vm_bin_lut[1][0]);
+			&lut[1][0]);
 	type_vm2 = avs_vm_find_silicon_type(avs_inf_ptr,
 			avs_inf_ptr->vm2_val,
-			&pdata->vm_bin_lut[2][0]);
+			&lut[2][0]);
 	type_vm3 = avs_vm_find_silicon_type(avs_inf_ptr,
 			avs_inf_ptr->vm3_val,
-			&pdata->vm_bin_lut[3][0]);
+			&lut[3][0]);
 	avs_dbg(AVS_LOG_INIT, "%s: silicon types vm[0-3] : %d %d %d %d\n",
 			__func__, type_vm0, type_vm1, type_vm2, type_vm3);
 
@@ -474,21 +485,58 @@ static u32 avs_vm_get_silicon_type(struct avs_info *avs_inf_ptr)
 
 static int avs_find_silicon_type(void)
 {
-	int ret = -1;
+	int ate_enabled = 0;
+	int ret = 0;
 
 	if (!avs_info.pdata)
 		return  -EPERM;
 
-	if (avs_info.pdata->flags & AVS_ATE_FEATURE_ENABLE)
+	ate_enabled = avs_info.pdata->flags & AVS_ATE_FEATURE_ENABLE;
+
+	if (ate_enabled)
 		ret = avs_ate_get_silicon_type(&avs_info);
 
-	if (ret) {
-		avs_info.silicon_type = SILICON_TYPE_SLOW;
+	if (ate_enabled && ret) {
+		/**
+		 * case 1: All ATE fields are 0 (including YEAR and month)
+		 * In this case use B0 table to determine the silicon type
+		 * And if its FF demote it to TT and TT to SS
+		 */
+		avs_info.silicon_type = avs_vm_get_silicon_type(&avs_info,
+				RHEA_CHIP_REV_B0);
+		if (avs_info.silicon_type == SILICON_TYPE_FAST)
+			avs_info.silicon_type = SILICON_TYPE_TYPICAL;
+		else
+			avs_info.silicon_type = SILICON_TYPE_SLOW;
 		avs_info.freq = -1;
-	}
-	avs_info.vm_silicon_type = avs_vm_get_silicon_type(&avs_info);
-	avs_info.silicon_type = min(avs_info.ate_silicon_type,
+	} else if (ate_enabled && !ret && (avs_info.freq != -1)) {
+		/**
+		 * Case 2: ATE fields are programmed and CRC passed.
+		 * In this case if {year,month} <= {2012, June}, use
+		 * B0 VM index table and ATE lut to determine silicon
+		 * type else use B1 VM index table
+		 */
+		if ((avs_info.year <= AVS_ATE_YEAR_2012) &&
+				(avs_info.month <= AVS_ATE_MONTH_JUNE)) {
+			avs_info.vm_silicon_type = avs_vm_get_silicon_type(
+					&avs_info,
+					RHEA_CHIP_REV_B0);
+		} else {
+			avs_info.vm_silicon_type = avs_vm_get_silicon_type(
+					&avs_info,
+					RHEA_CHIP_REV_B1);
+		}
+		avs_info.silicon_type = min(avs_info.ate_silicon_type,
 					avs_info.vm_silicon_type);
+	} else {
+		/**
+		 * case 3: ATE fields are progammed but CRC failed
+		 * In this case avs_ate_get_silicon_type() would have
+		 * set silicon type to worst case SILICON_TYPE_SLOW
+		 * so avs driver will just report slow silicon
+		 * for this case
+		 */
+	}
 
 	if (avs_info.pdata->silicon_type_notify)
 		avs_info.pdata->silicon_type_notify(avs_info.silicon_type,
@@ -525,10 +573,10 @@ static int param_set_trigger_avs(const char *val, const struct kernel_param *kp)
 	return 0;
 }
 
-static int kona_avs_drv_probe(struct platform_device *pdev)
+static int rhea_avs_drv_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-	struct kona_avs_pdata *pdata = pdev->dev.platform_data;
+	struct rhea_avs_pdata *pdata = pdev->dev.platform_data;
 
 	avs_dbg(AVS_LOG_INIT, "%s\n", __func__);
 
@@ -546,11 +594,9 @@ static int kona_avs_drv_probe(struct platform_device *pdev)
 	BUG_ON((pdata->flags & AVS_READ_FROM_OTP)
 	       && (pdata->flags & AVS_READ_FROM_MEM));
 
-	if (pdata->flags & AVS_ATE_FEATURE_ENABLE) {
-		ret = avs_read_vm_otp(&avs_info);
-		if (ret)
-			goto error;
-	}
+	ret = avs_read_vm_otp(&avs_info);
+	if (ret)
+		goto error;
 	ret = avs_read_ate_otp(&avs_info);
 	if (ret)
 		goto error;
@@ -561,31 +607,31 @@ error:
 	return ret;
 }
 
-static int __devexit kona_avs_drv_remove(struct platform_device *pdev)
+static int __devexit rhea_avs_drv_remove(struct platform_device *pdev)
 {
 	return 0;
 }
 
-static struct platform_driver kona_avs_driver = {
-	.probe = kona_avs_drv_probe,
-	.remove = __devexit_p(kona_avs_drv_remove),
-	.driver = {.name = "kona-avs",},
+static struct platform_driver rhea_avs_driver = {
+	.probe = rhea_avs_drv_probe,
+	.remove = __devexit_p(rhea_avs_drv_remove),
+	.driver = {.name = "rhea-avs",},
 };
 
-static int __init kona_avs_drv_init(void)
+static int __init rhea_avs_drv_init(void)
 {
-	return platform_driver_register(&kona_avs_driver);
+	return platform_driver_register(&rhea_avs_driver);
 }
 
-subsys_initcall_sync(kona_avs_drv_init);
+subsys_initcall_sync(rhea_avs_drv_init);
 
-static void __exit kona_avs_drv_exit(void)
+static void __exit rhea_avs_drv_exit(void)
 {
-	platform_driver_unregister(&kona_avs_driver);
+	platform_driver_unregister(&rhea_avs_driver);
 }
 
-module_exit(kona_avs_drv_exit);
+module_exit(rhea_avs_drv_exit);
 
-MODULE_ALIAS("platform:kona_avs_drv");
+MODULE_ALIAS("platform:rhea_avs_drv");
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("AVS driver for BRCM Kona based Chipsets");

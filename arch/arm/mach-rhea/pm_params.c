@@ -27,13 +27,13 @@
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
-#include <plat/cpu.h>
+#include <mach/cpu.h>
 #include <mach/clock.h>
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/module.h>
 #include "pm_params.h"
-#include <plat/kona_avs.h>
+#include <mach/rhea_avs.h>
 
 /*sysfs interface to read PMU vlt table*/
 static u32 csr_vlt_table[SR_VLT_LUT_SIZE];
@@ -344,50 +344,50 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 
 static void rhea_pm_init_wa_flgs(void)
 {
-	int chip_rev = get_chip_rev_id();
+	int chip_id = get_chip_id();
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2531
-	JIRA_WA_FLG_NAME(2531) = chip_rev <= RHEA_CHIP_REV_B2;
+	JIRA_WA_FLG_NAME(2531) = chip_id <= RHEA_CHIP_ID(RHEA_CHIP_REV_B2);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2221
-	JIRA_WA_FLG_NAME(2221) = chip_rev < RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2221) = chip_id < RHEA_CHIP_ID(RHEA_CHIP_REV_B1);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2301
-	JIRA_WA_FLG_NAME(2301) = chip_rev < RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2301) = chip_id < RHEA_CHIP_ID(RHEA_CHIP_REV_B1);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2877
-	JIRA_WA_FLG_NAME(2877) = chip_rev >= RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2877) = chip_id >= RHEA_CHIP_ID(RHEA_CHIP_REV_B1);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2489
-	JIRA_WA_FLG_NAME(2489) = chip_rev < RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2489) = chip_id < RHEA_CHIP_ID(RHEA_CHIP_REV_B1);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2348
-	JIRA_WA_FLG_NAME(2348) = chip_rev < RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2348) = chip_id < RHEA_CHIP_ID(RHEA_CHIP_REV_B1);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2272
-	JIRA_WA_FLG_NAME(2272) = chip_rev <= RHEA_CHIP_REV_B2;
+	JIRA_WA_FLG_NAME(2272) = chip_id <= RHEA_CHIP_ID(RHEA_CHIP_REV_B2);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2045
 	/*      Workaround is disabled for B1.
 	   New register bits added in B1 to resolve this issue.
 	 */
-	JIRA_WA_FLG_NAME(2045) = chip_rev < RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2045) = chip_id < RHEA_CHIP_ID(RHEA_CHIP_REV_B1);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2276
-	JIRA_WA_FLG_NAME(2276) = chip_rev < RHEA_CHIP_REV_B1;
+	JIRA_WA_FLG_NAME(2276) = chip_id < RHEA_CHIP_ID(RHEA_CHIP_REV_B1);
 #endif
 
 #ifdef CONFIG_RHEA_WA_HWJIRA_2490
 	/* Workaround is enabled */
-	JIRA_WA_FLG_NAME(2490) = chip_rev <= RHEA_CHIP_REV_B2;
+	JIRA_WA_FLG_NAME(2490) = chip_id <= RHEA_CHIP_ID(RHEA_CHIP_REV_B2);
 #endif
 
 }

@@ -201,7 +201,13 @@ typedef struct {
 	DSI_CM_HANDLE_t chCm[DSI_CM_MAX_HANDLES];
 	struct axipv_config_t *axipvCfg;
 	struct pv_config_t *pvCfg;
-	UInt32 dispEngine;
+	UInt32 dispEngine;	/* Display Engine- 0=DE0 via Pixel Valve
+						 / 1=DE1 via TXPKT_PIXD_FIFO
+					:Corresponds to Display engine
+					in the DSI module*/
+	UInt32 pixTxporter;	/* Pixel Transporter- 0=AXIPV / 1=MMDMA
+					:Corresponds to the module which
+					fetches pixels and feeds DSI*/
 } DSI_HANDLE_t, *DSI_HANDLE;
 
 typedef struct {
@@ -239,7 +245,7 @@ static void pv_eof_cb(void);
 
 static CSL_LCD_RES_T cslDsiPixTxStart(DSI_UPD_REQ_MSG_T *updMsg)
 {
-	if (updMsg->dsiH->dispEngine)
+	if (updMsg->dsiH->pixTxporter)
 		return cslDsiDmaStart(updMsg);
 	else
 		return cslDsiAxipvStart(updMsg);
@@ -248,7 +254,7 @@ static CSL_LCD_RES_T cslDsiPixTxStart(DSI_UPD_REQ_MSG_T *updMsg)
 
 static CSL_LCD_RES_T cslDsiPixTxStop(DSI_UPD_REQ_MSG_T *updMsg)
 {
-	if (updMsg->dsiH->dispEngine)
+	if (updMsg->dsiH->pixTxporter)
 		return cslDsiDmaStop(updMsg);
 	else
 		return cslDsiAxipvStop(updMsg);
@@ -257,7 +263,7 @@ static CSL_LCD_RES_T cslDsiPixTxStop(DSI_UPD_REQ_MSG_T *updMsg)
 
 void cslDsiPixTxPollInt(DSI_UPD_REQ_MSG_T *updMsg)
 {
-	if (updMsg->dsiH->dispEngine)
+	if (updMsg->dsiH->pixTxporter)
 		csl_dma_poll_int(updMsg->dmaCh);
 	else
 		cslDsiAxipvPollInt(updMsg);
@@ -268,8 +274,6 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 	struct axipv_config_t *axipvCfg = updMsg->dsiH->axipvCfg;
 	struct pv_config_t *pvCfg = updMsg->dsiH->pvCfg;
 
-	if (!pvCfg)
-		pr_err("pvCfg is NULL\n");
 	if (!axipvCfg)
 		pr_err("axipvCfg is NULL\n");
 	axipvCfg->width = (updMsg->updReq.lineLenP +
@@ -277,8 +281,6 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 	axipvCfg->height = updMsg->updReq.lineCount;
 	axipvCfg->pix_fmt = AXIPV_PIXEL_FORMAT_24BPP_RGB;
 
-	pvCfg->hact = updMsg->updReq.lineLenP;
-	pvCfg->vact = updMsg->updReq.lineCount;
 
 	axipvCfg->buff.sync.addr = (u32) updMsg->updReq.buff;
 	axipvCfg->buff.sync.xlen = updMsg->updReq.lineLenP * 4;
@@ -286,8 +288,14 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 
 	printk("configure axipv\n");
 	axipv_change_state(AXIPV_CONFIG, axipvCfg);
-	printk("configure pv\n");
-	pv_change_state(PV_VID_CONFIG, pvCfg);
+	if (!updMsg->dsiH->dispEngine) {
+		if (!pvCfg)
+			pr_err("pvCfg is NULL\n");
+		pvCfg->hact = updMsg->updReq.lineLenP;
+		pvCfg->vact = updMsg->updReq.lineCount;
+		printk("configure pv\n");
+		pv_change_state(PV_VID_CONFIG, pvCfg);
+	}
 	printk("enable axipv\n");
 	axipv_change_state(AXIPV_START, axipvCfg);
 	printk("waiting for axipv interrupt\n");
@@ -296,16 +304,19 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 		pr_err("Timed out waiting for PV_START_THRESH interrupt\n");
 		return CSL_LCD_ERR;
 	}
+	printk("pv threshold axipv reached, continuing\n");
 
 #if 0
-	printk("Using AXIPV path, enable dsi\n");
-	chal_dsi_tx_start(updMsg->dsiH->chalH, TX_PKT_ENG_2, TRUE);
-	mb();
-	chal_dsi_tx_start(updMsg->dsiH->chalH, TX_PKT_ENG_1, TRUE);
+		printk("Using AXIPV path, enable dsi\n");
+		chal_dsi_tx_start(updMsg->dsiH->chalH, TX_PKT_ENG_2, TRUE);
+		mb();
+		chal_dsi_tx_start(updMsg->dsiH->chalH, TX_PKT_ENG_1, TRUE);
 #endif
 
-	printk("enable pv\n");
-	pv_change_state(PV_START, pvCfg);
+	if (!updMsg->dsiH->dispEngine) {
+		printk("enable pv\n");
+		pv_change_state(PV_START, pvCfg);
+	}
 
 	return CSL_LCD_OK;
 }
@@ -324,7 +335,12 @@ void cslDsiAxipvPollInt(DSI_UPD_REQ_MSG_T *updMsg)
 
 static void axipv_irq_cb(int stat)
 {
+	static int w_lvl2_cnt;
 	DSI_HANDLE dsiH = &dsiBus[0];
+	if (stat & WATER_LVL2_INT) {
+		printk("w_lvl2 int 0x%x\n", stat);
+		w_lvl2_cnt++;
+	}
 	if (stat & PV_START_THRESH_INT)
 		OSSEMAPHORE_Release(dsiH->semaAxipv);
 }
@@ -1048,9 +1064,10 @@ static CSL_LCD_RES_T cslDsiWaitForInt(DSI_HANDLE dsiH, UInt32 tout_msec)
 		if (osRes == OSSTATUS_TIMEOUT) {
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
 				"ERR Timed Out!\n", __func__);
-			printk("cslDsiWaitForInt int_stat=0x%x, int_en=0x%x\n\
-			stat=0x%x dmacs=0x%x dmati=0x%x, dmaLen=0x%x\
-			dmadebug=0x%x\n", readl(HW_IO_PHYS_TO_VIRT(0x3c200030)),
+			printk("cslDsiWaitForInt dsi_int_stat=0x%x,"
+			"dsi_int_en=0x%x dsi_stat=0x%x dmacs=0x%x dmati=0x%x,"
+			"dmaLen=0x%x dmadebug=0x%x\n",
+			readl(HW_IO_PHYS_TO_VIRT(0x3c200030)),
 			readl(HW_IO_PHYS_TO_VIRT(0x3c200034)),
 			readl(HW_IO_PHYS_TO_VIRT(0x3c200038)),
 			readl(HW_IO_PHYS_TO_VIRT(0x3c00A000)),
@@ -1622,7 +1639,7 @@ void CSL_DSI_Force_Stop(CSL_LCD_HANDLE vcH)
 	clientH = (DSI_CLIENT) dsiChH->client;
 	dsiH = (DSI_HANDLE)clientH->lcdH;
 
-	if (dsiH->dispEngine) {
+	if (dsiH->pixTxporter) {
 		/* stop DMA transfer */
 		if (csl_dma_vc4lite_stop_transfer(0)
 		    != DMA_VC4LITE_STATUS_SUCCESS) {
@@ -1635,6 +1652,8 @@ void CSL_DSI_Force_Stop(CSL_LCD_HANDLE vcH)
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
 				"ERR ERR DMA Release Channel\n ", __func__);
 		}
+	} else {
+		/* Force stop AXIPV */
 	}
 
 	chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
@@ -1703,7 +1722,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 
 	frame_size_p = req->lineLenP * req->lineCount;
 	/* linelength is odd => MMDMA 2D config fails */
-	if (1 == dsiH->dispEngine) {
+	if (1 == dsiH->pixTxporter) {
 		if ((dsiChH->bpp_dma == 2) && (req->lineLenP & 1)) {
 			pr_info("ERR Pixel Buff Size!");
 			return CSL_LCD_MSG_SIZE;
@@ -1763,6 +1782,12 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	if (1 == dsiH->dispEngine) {
 		/* Set DE1 Mode, Enable */
 		chal_dsi_de1_set_cm(dsiH->chalH, dsiChH->cm);
+		if (dsiH->pixTxporter)
+			chal_dsi_de1_set_dma_thresh(dsiH->chalH, (frame_size_p
+			>> 2) > DE1_DEF_THRESHOLD_W ? DE1_DEF_THRESHOLD_W :
+			(frame_size_p >> 2));
+		else
+			chal_dsi_de1_set_dma_thresh(dsiH->chalH, 8);
 		chal_dsi_de1_enable(dsiH->chalH, TRUE);
 	} else {
 		/* Set DE0 Mode, Enable */
@@ -1776,7 +1801,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	chal_dsi_wr_cfifo(dsiH->chalH, &dsiChH->dcsCmndStart, 1);
 	txPkt.msgLen = 1 + txNo1_len;
 
-	if (1 == dsiH->dispEngine)
+	if (1 == dsiH->pixTxporter)
 		spare_pix = frame_size_p & (dsiChH->bpp_dma - 1);
 	else
 		spare_pix = 0; /* AXIPV FIFO width is 64bits*/
@@ -1874,7 +1899,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 			OSSEMAPHORE_Release(dsiH->semaDsi);
 		return res;
 	}
-#if 1
 	if (0 == dsiH->dispEngine) {
 		/*--- Start TX PKT Engine(s) */
 		if (txNo2_repeat != 0) {
@@ -1883,7 +1907,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 		}
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
 	}
-#endif
 	if (req->cslLcdCb == NULL) {
 		if (!clientH->hasLock) {
 			osStat = OSSEMAPHORE_Obtain(dsiH->semaDma,
@@ -2202,6 +2225,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 #endif
 		.irq_cb = axipv_irq_cb,
 		.release_cb = axipv_release_cb,
+		.bypassPV = 0,
 	};
 	struct pv_init_t pv_init_data = {
 		.id = 0,
@@ -2237,10 +2261,40 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 		memset(dsiH, 0, sizeof(DSI_HANDLE_t));
 
 		dsiH->dispEngine = dsiCfg->dispEngine;
+		dsiH->pixTxporter = dsiCfg->pixTxporter;
+		if(!dsiH->dispEngine && dsiH->pixTxporter) {
+			pr_err("Error:MMDMA cannot feed DE0! Default to DE1\n");
+			dsiH->dispEngine = 1;
+		}
 
 #ifdef CONFIG_ARCH_HAWAII
-		if (dsiH->dispEngine == 0) {
-			printk("Initialising AXIPV and PV\n");
+		if (0 == dsiH->pixTxporter) {
+			if (0 == dsiH->dispEngine) {
+				printk("Initialising PV\n");
+				ret = pv_init(&pv_init_data, &dsiH->pvCfg);
+				if ((ret < 0) || !dsiH->pvCfg) {
+					pr_err("pv_init failed with ret=%d\n",
+						ret);
+					return CSL_LCD_ERR;
+				}
+				dsiH->pvCfg->pix_fmt = DSI_VIDEO_CMD_18_24BPP;
+				dsiH->pvCfg->pclk_sel = DISP_CTRL_DSI;
+				dsiH->pvCfg->cmd = true;
+				dsiH->pvCfg->cont = false;
+				dsiH->pvCfg->interlaced = false;
+				dsiH->pvCfg->vsyncd = 0;
+				dsiH->pvCfg->pix_stretch = 0;
+				dsiH->pvCfg->vs = 0;
+				dsiH->pvCfg->vbp = 0;
+				dsiH->pvCfg->vfp = 1;
+				dsiH->pvCfg->hs = 0;
+				dsiH->pvCfg->hbp = 0;
+				dsiH->pvCfg->hfp = 0;
+				axipv_init_data.bypassPV = 0;
+			} else {
+				axipv_init_data.bypassPV = 1;
+			}
+			printk("Initialising AXIPV\n");
 			ret = axipv_init(&axipv_init_data, &dsiH->axipvCfg);
 			if ((ret < 0) || !dsiH->axipvCfg) {
 				pr_err("axipv_init failed with ret=%d\n", ret);
@@ -2250,24 +2304,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiH->axipvCfg->test = false;
 			dsiH->axipvCfg->async = false;
 
-			ret = pv_init(&pv_init_data, &dsiH->pvCfg);
-			if ((ret < 0) || !dsiH->pvCfg) {
-				pr_err("pv_init failed with ret=%d\n", ret);
-				return CSL_LCD_ERR;
-			}
-			dsiH->pvCfg->pix_fmt = DSI_VIDEO_CMD_18_24BPP;
-			dsiH->pvCfg->pclk_sel = DISP_CTRL_DSI;
-			dsiH->pvCfg->cmd = true;
-			dsiH->pvCfg->cont = false;
-			dsiH->pvCfg->interlaced = false;
-			dsiH->pvCfg->vsyncd = 0;
-			dsiH->pvCfg->pix_stretch = 0;
-			dsiH->pvCfg->vs = 0;
-			dsiH->pvCfg->vbp = 0;
-			dsiH->pvCfg->vfp = 1;
-			dsiH->pvCfg->hs = 0;
-			dsiH->pvCfg->hbp = 0;
-			dsiH->pvCfg->hfp = 0;
+
 		}
 #endif
 

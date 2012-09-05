@@ -25,12 +25,14 @@
 #include <linux/spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/proc_fs.h>
+#include <linux/module.h>
+#include <linux/reboot.h>
 
 #include <mach/hardware.h>
-#include <mach/system.h>
 #include <mach/cdebugger.h>
 #include <linux/fs.h>
 
+static void cdebugger_set_upload_magic(unsigned magic);
 enum cdebugger_upload_cause_t {
 	UPLOAD_CAUSE_INIT = 0xCAFEBABE,
 	UPLOAD_CAUSE_KERNEL_PANIC = 0x000000C8,
@@ -139,10 +141,33 @@ struct cdebugger_fault_status_t {
 };
 
 /* enable cdebugger feature */
-static unsigned enable;
+unsigned int ramdump_enable;
+EXPORT_SYMBOL(ramdump_enable);
+
 /*SRAM base address*/
 void __iomem *cdebugger_mem_base;
-module_param_named(enable, enable, uint, 0644);
+
+/* Returns 0, or -errno.  arg is in kp->arg. */
+static int param_set_ramdump_enable(const char *val,
+				const struct kernel_param *kp)
+{
+
+	int ret = param_set_bool(val, kp);
+	printk(KERN_INFO "%s ramdump_enable = %d\n", __func__, ramdump_enable);
+
+	if (ramdump_enable)
+		cdebugger_set_upload_magic(0xDEAFABCD);
+	else
+		cdebugger_set_upload_magic(0);
+
+	return ret;
+}
+
+static struct kernel_param_ops params_ops_ramdump_enable = {
+	.set = param_set_ramdump_enable,
+	.get = param_get_uint,
+};
+module_param_cb(enable, &params_ops_ramdump_enable, &ramdump_enable, 0644);
 
 static const char * const gkernel_cdebugger_build_info_date_time[] = {
 	__DATE__,
@@ -304,7 +329,7 @@ EXPORT_SYMBOL(log_tx_param);
 
 static int __init setup_crash_ramdump(char *p)
 {
-	get_option(&p, &enable);
+	get_option(&p, &ramdump_enable);
 	return 0;
 }
 
@@ -485,7 +510,7 @@ static void cdebugger_set_upload_cause(enum cdebugger_upload_cause_t type)
 
 static void cdebugger_hw_reset(void)
 {
-	arm_machine_restart('h', "upload");
+	machine_restart("upload");
 }
 
 static void setup_log_buffer_address(void)
@@ -499,7 +524,7 @@ static void setup_log_buffer_address(void)
 static int cdebugger_panic_handler(struct notifier_block *nb,
 				   unsigned long l, void *buf)
 {
-	if (enable) {
+	if (ramdump_enable) {
 		cdebugger_set_upload_magic(0x66262564);
 
 		if (!strcmp(buf, "Forced Ramdump !!\n"))
@@ -511,37 +536,11 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 
 		handle_sysrq('t');
 
-		ramdump_list[0].mem_size = (num_physpages << PAGE_SHIFT);
-		setup_log_buffer_address();
-
-		log_tx_param[2] = (void *)virt_to_phys((void *)log_buf);
-		log_tx_param[3] = (void *)log_buf_len;
-		log_tx_param[4] = (void *)0;	/* wr index */
-		log_tx_param[5] = (void *)0;	/* rd index */
-		log_tx_param[7] = (void *)virt_to_phys((void *)linkSignature);
-		log_tx_param[11] =
-		    (void *)virt_to_phys((void *)decoder_version);
-		log_tx_param[19] = (void *)virt_to_phys((void *)&mmu_unit_size);
-		log_tx_param[34] =
-		    (void *)virt_to_phys((void *)&cdebugger_fault_status);
-		log_tx_param[57] =
-		    (void *)virt_to_phys((void *)&ramdump_list[0]);
-		log_tx_param[58] =
-		    (void *)virt_to_phys((void *)&num_of_ramdumps);
-		log_tx_param[80] =
-		    (void *)virt_to_phys((void *)&cdebugger_mmu_reg);
-		log_tx_param[84] =
-		    (void *)(cdebugger_mmu_reg.TTBR0 & 0xFFFFC000);
-
-		log_tx_param[87] = (void *)virt_to_phys((void *)&main_log);
-		log_tx_param[88] = (void *)virt_to_phys((void *)&radio_log);
-		log_tx_param[89] = (void *)virt_to_phys((void *)&events_log);
-		log_tx_param[90] = (void *)virt_to_phys((void *)&system_log);
-
 		cdebugger_dump_stack();
 
 		flush_cache_all();
 		outer_flush_all();
+		dmb();
 
 		cdebugger_hw_reset();
 	}
@@ -555,7 +554,7 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
  */
 int cdebugger_dump_stack(void)
 {
-	if (!enable)
+	if (!ramdump_enable)
 		return -1;
 
 	cdebugger_save_context();
@@ -590,7 +589,9 @@ __init int cdebugger_init(void)
 {
 	cdebugger_set_build_info();
 
-	cdebugger_set_upload_magic(0xDEAFABCD);
+	if (ramdump_enable)
+		cdebugger_set_upload_magic(0xDEAFABCD);
+
 	cdebugger_set_upload_cause(UPLOAD_CAUSE_INIT);
 
 	register_reboot_notifier(&nb_reboot_block);
@@ -600,7 +601,8 @@ __init int cdebugger_init(void)
 	return 0;
 }
 
-#define CDEBUGGER_SRAM_MEM_OFFSET	0xBF9C
+/* Use the offset whose content is preserved across PON Key reset */
+#define CDEBUGGER_SRAM_MEM_OFFSET	0xBFBC
 #define INTERNAL_SRAM_BASE_ADDR		0x34040000
 #define SCRATCHRAM_BASE			INTERNAL_SRAM_BASE_ADDR
 
@@ -622,8 +624,10 @@ unsigned int cdebugger_memory_init(void)
 static int ramdump_panic(struct notifier_block *this, unsigned long event,
 			 void *ptr)
 {
-	if (enable)
+	if (ramdump_enable)
 		panic_timeout = 2;
+	else
+		iowrite32(0x0, cdebugger_mem_base);
 	return NOTIFY_DONE;
 }
 
@@ -631,13 +635,43 @@ static struct notifier_block panic_block = {
 	.notifier_call = ramdump_panic,
 };
 
+static void setup_log_tx_param(void)
+{
+	ramdump_list[0].mem_size = (num_physpages << PAGE_SHIFT);
+	setup_log_buffer_address();
+
+	log_tx_param[2] = (void *)virt_to_phys((void *)log_buf);
+	log_tx_param[3] = (void *)log_buf_len;
+	log_tx_param[4] = (void *)0;	/* wr index */
+	log_tx_param[5] = (void *)0;	/* rd index */
+	log_tx_param[7] = (void *)virt_to_phys((void *)linkSignature);
+	log_tx_param[11] =
+	    (void *)virt_to_phys((void *)decoder_version);
+	log_tx_param[19] = (void *)virt_to_phys((void *)&mmu_unit_size);
+	log_tx_param[34] =
+	    (void *)virt_to_phys((void *)&cdebugger_fault_status);
+	log_tx_param[57] =
+	    (void *)virt_to_phys((void *)&ramdump_list[0]);
+	log_tx_param[58] =
+	    (void *)virt_to_phys((void *)&num_of_ramdumps);
+	log_tx_param[80] =
+	    (void *)virt_to_phys((void *)&cdebugger_mmu_reg);
+	log_tx_param[84] =
+	    (void *)(cdebugger_mmu_reg.TTBR0 & 0xFFFFC000);
+
+	log_tx_param[87] = (void *)virt_to_phys((void *)&main_log);
+	log_tx_param[88] = (void *)virt_to_phys((void *)&radio_log);
+	log_tx_param[89] = (void *)virt_to_phys((void *)&events_log);
+	log_tx_param[90] = (void *)virt_to_phys((void *)&system_log);
+
+}
+
 static int __init crash_debugger_init(void)
 {
 	cdebugger_memory_init();
 	/* ready to run */
 	cdebugger_init();
-	/*Initialize MAGIC */
-	iowrite32(UPLOAD_CAUSE_INIT, cdebugger_mem_base);
+	setup_log_tx_param();
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_block);
 	/* Any other relevant init */
 	return 0;

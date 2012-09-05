@@ -15,7 +15,7 @@
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <mach/sec_api.h>
-#include <mach/capri_dormant.h>
+#include <mach/dormant.h>
 #include <asm/proc-fns.h>
 #include <asm/memory.h>
 #include <linux/dma-mapping.h>
@@ -30,9 +30,16 @@
 
 #include <plat/pi_mgr.h>
 #include <plat/pwr_mgr.h>
-#include <mach/chipregHw_inline.h>
-
+#include <mach/memory.h>
 #include <asm/hardware/cache-l2x0.h>
+
+/* Control variable to enter retention instead
+ * of dormant in idle path but enter
+ * dormant during suspend
+ */
+static u32 force_retention_in_idle = 1;
+module_param_named(force_retention_in_idle, force_retention_in_idle,
+		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 /* Control variable to enable/disable dormant */
 static u32 dormant_disable;
@@ -78,7 +85,7 @@ static int cnt_failure;
 module_param_named(cnt_failure, cnt_failure, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 /* Buffer to pass parameters to secure rom */
-#define	SEC_BUFFER_ADDR				0x3404C400	/* SRAM */
+#define	SEC_BUFFER_ADDR				0x3404E400	/* SRAM */
 #define	SEC_BUFFER_SIZE				0x00000400	/* 1kB */
 
 #define MAX_SECURE_BUFFER_SIZE		0x280
@@ -293,7 +300,7 @@ static void restore_proc_clk_regs(void)
 	/* Allow write access to the CCU registers */
 	writel_relaxed(UNLOCK_PROC_CLK, PROC_CLK_REG_ADDR(WR_ACCESS));
 
-#ifdef CONFIG_BCM_HWCAPRI_1605
+#if defined(CONFIG_BCM_HWCAPRI_1605) || defined(CONFIG_BCM_HWCAPRI_1605_A2)
 	/* If the issue is not fixed, first step to 312 MHZ before restoring
 	 * all the registers
 	 */
@@ -414,14 +421,17 @@ u32 is_dormant_enabled(void)
  * interrupts locked.  Will save/restore context of the CPU/CLUSTER
  * and returns back as a normal function call.
  */
-void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
+void dormant_enter(u32 service)
 {
 	unsigned long flgs;
 	u32 boot_2nd_addr;
 	u32 dormant_return;
 	u32 reg_val;
 
-	if (dormant_disable || fake_dormant) {
+	spin_lock_irqsave(&dormant_entry_lock, flgs);
+	if (dormant_disable || fake_dormant ||
+			(force_retention_in_idle &&
+			 (service == DORMANT_CORE_DOWN))) {
 		/* Dis-allow entering dormant */
 		reg_val = readl_relaxed(KONA_PWRMGR_VA +
 					PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
@@ -442,6 +452,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		writel_relaxed(reg_val, KONA_PWRMGR_VA +
 				PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
 	}
+	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
 
 	if (dormant_disable) {
 
@@ -449,7 +460,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		 * and if this is for cluster dorn, write the rest
 		 * of the needed register settings
 		 */
-		if (service == CAPRI_DORMANT_CLUSTER_DOWN) {
+		if (service == DORMANT_CLUSTER_DOWN) {
 
 			writel_relaxed(SCU_DORMANT_MODE,
 				       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
@@ -460,7 +471,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 
 		wfi();
 
-		if (service == CAPRI_DORMANT_CLUSTER_DOWN) {
+		if (service == DORMANT_CLUSTER_DOWN) {
 
 			writel_relaxed(SCU_DORMANT_MODE_OFF, KONA_SCU_VA
 				       + SCU_POWER_STATUS_OFFSET);
@@ -503,7 +514,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 
 	save_mmu((void *)__get_cpu_var(mmu_data));
 
-	if ((service == CAPRI_DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
+	if ((service == DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
 			local_secure_api(SSAPI_DISABLE_L2_CACHE, 0, 0, 0);
 
 	spin_lock_irqsave(&dormant_entry_lock, flgs);
@@ -520,7 +531,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 
 		/* save all proc registers except arm_sys_idle_dly */
 		save_proc_clk_regs();
-
+#if defined(CONFIG_MACH_CAPRI)
 		if (fake_dormant)
 			writel_relaxed(0, PROC_CLK_REG_ADDR(ARM_SYS_IDLE_DLY));
 		else
@@ -540,7 +551,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 					   KONA_CHIPREG_VA +
 					   CHIPREG_PERIPH_MISC_REG3_OFFSET);
 		}
-
+#endif
 		/*
 		 * Code to flush L2 and wait till done if needed
 		 * log_dormant_event(DORMANT_BEFORE_L2_FLUSH_LOG);
@@ -574,7 +585,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET +
 		       smp_processor_id());
 
-	if ((service == CAPRI_DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
+	if ((service == DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
 			local_secure_api(SSAPI_ENABLE_L2_CACHE, 0, 0, 0);
 
 	/* if we failed to enter dormant, restore
@@ -609,7 +620,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 			cnt_success++;
 		else
 			cnt_failure++;
-
+#if defined(CONFIG_MACH_CAPRI)
 		writel_relaxed(UNLOCK_PROC_CLK, KONA_PROC_CLK_VA);
 
 		/* Let ARM_SYS_IDLE_DLY be set to 0 for non dormant cases */
@@ -619,7 +630,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 		writel_relaxed(USE_SCU_PWR_CTRL,
 			       KONA_CHIPREG_VA +
 			       CHIPREG_PERIPH_MISC_REG3_OFFSET);
-
+#endif
 	}
 
 	if (num_cores_in_dormant)
@@ -695,7 +706,7 @@ void dormant_enter(enum CAPRI_DORMANT_SERVICE_TYPE service)
 			 * Here we got out of idle do we let the core-0
 			 * continue to run
 			 */
-			if (service == CAPRI_DORMANT_CORE_DOWN) {
+			if (service == DORMANT_CORE_DOWN) {
 				/* It was not a cluster down but still,
 				 * we exited dormant. Let go of CORE-1
 				 */
@@ -762,17 +773,23 @@ void dormant_enter_continue(void)
 		 * be turned off.
 		 */
 
-		if (is_l2_disabled() || fake_dormant) {
-			local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
-					 (u32)SEC_BUFFER_ADDR,
-					 (u32)SEC_BUFFER_ADDR +
-					 MAX_SECURE_BUFFER_SIZE, 3);
+		if (force_retention_in_idle && !is_l2_disabled()) {
+			/* We want to enter retention in idle path */
+			wfi();
 		} else {
-			local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
-					 (u32)SEC_BUFFER_ADDR,
-					 (u32)SEC_BUFFER_ADDR +
-					 MAX_SECURE_BUFFER_SIZE, 2);
+			if (is_l2_disabled() || fake_dormant) {
+				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
+						 (u32)SEC_BUFFER_ADDR,
+						 (u32)SEC_BUFFER_ADDR +
+						 MAX_SECURE_BUFFER_SIZE, 3);
+			} else {
+				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
+						 (u32)SEC_BUFFER_ADDR,
+						 (u32)SEC_BUFFER_ADDR +
+						 MAX_SECURE_BUFFER_SIZE, 2);
+			}
 		}
+
 
 	} else {
 		/* Write the address where we want core-1 to boot */
@@ -786,11 +803,11 @@ void dormant_enter_continue(void)
 }
 
 /* Initialization function for dormant module */
-int __init capri_dormant_init(void)
+int __init dormant_init(void)
 {
 	struct resource *res;
 
-	u32 core1_pwrctrl_reg;
+
 	void *vptr = NULL;
 
 	dma_addr_t drmt_buf_phy;
@@ -818,7 +835,7 @@ int __init capri_dormant_init(void)
 	secure_params->log_index = 0;
 
 	writel_relaxed(UNLOCK_PROC_CLK, KONA_PROC_CLK_VA);
-
+#if defined(CONFIG_MACH_CAPRI)
 	if (chipregHw_getChipIdRev() > 0xA1) {
 		/* Indicate that core-1 is always willing to enter dormnt
 		 * so the final decision is actually done by core-0's
@@ -834,8 +851,8 @@ int __init capri_dormant_init(void)
 		writel_relaxed(core1_pwrctrl_reg, KONA_CHIPREG_VA +
 			       CHIPREG_PERIPH_MISC_REG2_OFFSET);
 	}
-
+#endif
 	return 0;
 }
 
-module_init(capri_dormant_init);
+module_init(dormant_init);

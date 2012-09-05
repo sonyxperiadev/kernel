@@ -943,7 +943,7 @@ static struct kona_pl330_data rhea_pl330_pdata = {
 	/* # of PL330 dmac channels 'configurable' */
 	.num_pl330_chans = 8,
 	/* irq number to use */
-	.irq_base = BCM_INT_ID_RESERVED184,
+	.irq_base = BCM_INT_ID_DMAC0,
 	/* # of PL330 Interrupt lines connected to GIC */
 	.irq_line_count = 8,
 };

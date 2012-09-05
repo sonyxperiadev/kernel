@@ -38,7 +38,8 @@
 #include "chal_caph_dma.h"
 #include <mach/rdb/brcm_rdb_cph_aadmac.h>
 #include <mach/rdb/brcm_rdb_util.h>
-#include <plat/cpu.h>
+#include <linux/io.h>
+#include <mach/cpu.h>
 
 /****************************************************************************
 			G L O B A L   S E C T I O N

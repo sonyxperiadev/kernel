@@ -51,7 +51,7 @@
 #include <linux/clk.h>
 #include <asm/div64.h>
 #include <plat/pi_mgr.h>
-#include <plat/cpu.h>
+#include <mach/cpu.h>
 #include "pm_params.h"
 
 #ifdef CONFIG_DEBUG_FS
@@ -6903,7 +6903,7 @@ int root_ccu_clk_init(struct clk* clk)
     writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
 
 	/*Reset 8-phase enable de-glitch enable bit for B1 and later chips*/
-	if (get_chip_rev_id() >= RHEA_CHIP_REV_B1) {
+	if (get_chip_id() >= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0)) {
 		reg_val = readl(KONA_ROOT_CLK_VA +
 					ROOT_CLK_MGR_REG_PLL1CTRL3_OFFSET);
 		reg_val &=

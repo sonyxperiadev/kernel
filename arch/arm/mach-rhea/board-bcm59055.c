@@ -29,7 +29,7 @@
 #include <linux/i2c.h>
 #include <linux/mfd/bcmpmu.h>
 #ifdef CONFIG_KONA_AVS
-#include <plat/kona_avs.h>
+#include <mach/rhea_avs.h>
 #endif
 #include "pm_params.h"
 

@@ -24,7 +24,7 @@
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
-#include <plat/cpu.h>
+#include <mach/cpu.h>
 #include <plat/clock.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_csr.h>
@@ -306,7 +306,7 @@ static void set_spare_power_status(unsigned int mode)
 {
 	unsigned int val;
 
-	if (get_chip_rev_id() < RHEA_CHIP_REV_B1)
+	if (get_chip_id() < RHEA_CHIP_ID(RHEA_CHIP_REV_B1))
 		return;
 
 	mode = mode & 0x3;

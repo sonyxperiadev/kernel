@@ -12,9 +12,10 @@
 # consent.
 #*****************************************************************************
 
-obj-y := io_map.o hawaii.o devices.o hawaii_ray_pinmux.o hawaii_pinmux.o
+obj-y := io_map.o hawaii.o devices.o hawaii_pinmux.o hawaii_ray_pinmux.o hawaii-cache-l2x0.o
 obj-$(CONFIG_ARCH_HAWAII) += clock_hawaii.o
-obj-$(CONFIG_MACH_HAWAII_RAY) += hawaii_ray.o
+obj-$(CONFIG_MACH_HAWAII_RAY) += hawaii.o board-hawaii.o hawaii_wifi.o
+obj-$(CONFIG_MACH_HAWAII_STONE) += hawaii.o board-hawaii.o hawaii_wifi.o
 obj-$(CONFIG_MACH_HAWAII_FPGA) += hawaii_fpga.o
 obj-$(CONFIG_MACH_HAWAII_FPGA_E) += hawaii_fpga.o
 obj-$(CONFIG_CDEBUGGER) += crash_debugger.o
@@ -23,4 +24,7 @@ obj-$(CONFIG_KONA_POWER_MGR) += rhea_pwr_mgr.o rhea_mm_workarounds.o
 obj-$(CONFIG_KONA_PI_MGR) += rhea_pi_mgr.o
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += rhea_pm.o rhea_wfi.o rhea_pm_dbg.o
 obj-$(CONFIG_KONA_SECURE_MONITOR_CALL) += sec_api.o
-obj-y += pm_params.o
+obj-$(CONFIG_ARCH_HAWAII) += hawaii_bmdm_wd_monitor.o
+obj-$(CONFIG_A9_DORMANT_MODE) += dm.o dm_v7_c.o dm_a9.o dm_gic.o dm_a9_c.o \
+	dm_prepare.o
+obj-y += pm_params.o helpers.o v7.o

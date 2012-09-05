@@ -42,7 +42,8 @@
 #include "csl_caph_dma.h"
 #include <mach/irqs.h>
 #include "audio_trace.h"
-#include <plat/cpu.h>
+#include <linux/io.h>
+#include <mach/cpu.h>
 
 /****************************************************************************/
 /*                        G L O B A L   S E C T I O N                       */

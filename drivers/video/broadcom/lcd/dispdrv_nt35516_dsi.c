@@ -1,16 +1,16 @@
 /*******************************************************************************
 * Copyright 2011 Broadcom Corporation.	All rights reserved.
 *
-* @file	drivers/video/broadcom/dispdrv_nt35516_dsi.c
+* @file drivers/video/broadcom/dispdrv_nt35516_dsi.c
 *
 * Unless you and Broadcom execute a separate written software license agreement
-* governing use	of this	software, this software	is licensed to you under the
-* terms	of the GNU General Public License version 2, available at
+* governing use of this software, this software is licensed to you under the
+* terms of the GNU General Public License version 2, available at
 * http://www.gnu.org/copyleft/gpl.html (the "GPL").
 *
-* Notwithstanding the above, under no circumstances may	you combine this
-* software in any way with any other Broadcom software provided	under a	license
-* other	than the GPL, without Broadcom's express prior written consent.
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 #ifdef __KERNEL__
 
@@ -57,17 +57,17 @@
 #include "dispdrv_mipi_dsi.h"	   /* MIPI DSI */
 #endif
 
-#define	NT35516_VC		(0)
-#define	NT35516_CMND_IS_LP	FALSE /* display init comm LP or HS mode */
+#define NT35516_VC		(0)
+#define NT35516_CMND_IS_LP FALSE /* display init comm LP or HS mode */
 
 
 #if 0
-#define	NT35516_LOG(id, fmt, args...) printk(KERN_ERR fmt, ##args)
+#define NT35516_LOG(id, fmt, args...) printk(KERN_ERR fmt, ##args)
 #else
 #define NT35516_LOG(id, fmt, args...)
 #endif
 
-typedef	enum {
+typedef enum {
 	NT35516_CMD_NOP	= 0x00,
 	NT35516_CMD_SWRESET	= 0x01,
 	NT35516_CMD_RDDID	= 0x04,
@@ -114,23 +114,23 @@ typedef	enum {
 	NT35516_CMD_RDID3	= 0xDC,
 } NT35516_CMD_T;
 
-typedef	struct {
-	CSL_LCD_HANDLE		clientH;
-	CSL_LCD_HANDLE		dsiCmVcHandle;
-	DISP_DRV_STATE		drvState;
-	DISP_PWR_STATE		pwrState;
-	UInt32			busNo;
-	UInt32			teIn;
-	UInt32			teOut;
-	Boolean			isTE;
-	DISPDRV_WIN_t		win_dim;
-	DISPDRV_WIN_t		win_cur;
+typedef struct {
+	CSL_LCD_HANDLE clientH;
+	CSL_LCD_HANDLE dsiCmVcHandle;
+	DISP_DRV_STATE drvState;
+	DISP_PWR_STATE pwrState;
+	UInt32 busNo;
+	UInt32 teIn;
+	UInt32 teOut;
+	Boolean isTE;
+	DISPDRV_WIN_t win_dim;
+	DISPDRV_WIN_t win_cur;
 	struct pi_mgr_dfs_node	*dfs_node;
 	/* --- */
-	Boolean			boot_mode;
-	UInt32			rst_bridge_pwr_down;
-	UInt32			rst_bridge_reset;
-	UInt32			rst_panel_reset;
+	Boolean boot_mode;
+	UInt32 rst_bridge_pwr_down;
+	UInt32 rst_bridge_reset;
+	UInt32 rst_panel_reset;
 	CSL_DSI_CM_VC_t		*cmnd_mode;
 	CSL_DSI_CFG_t		*dsi_cfg;
 	DISPDRV_INFO_T		*disp_info;
@@ -138,22 +138,26 @@ typedef	struct {
 
 /* LOCAL FUNCTIONs */
 static void NT35516_WrCmndP0(
-	DISPDRV_HANDLE_T	drvH,
-	UInt32			reg);
+	DISPDRV_HANDLE_T drvH,
+	UInt32 reg);
 
 /* DRV INTERFACE FUNCTIONs */
 static Int32 NT35516_Init(
 	struct dispdrv_init_parms	*parms,
 	DISPDRV_HANDLE_T		*handle);
 
-static Int32 NT35516_Exit(DISPDRV_HANDLE_T	drvH);
+static Int32 NT35516_Exit(DISPDRV_HANDLE_T drvH);
 
-static Int32 NT35516_Open(DISPDRV_HANDLE_T	drvH);
+static Int32 NT35516_Open(DISPDRV_HANDLE_T drvH);
 
 static Int32 NT35516_Close(DISPDRV_HANDLE_T drvH);
 
+static void NT35516_ExecCmndList(
+	DISPDRV_HANDLE_T     drvH,
+	pDISPCTRL_REC_T cmnd_lst);
+
 static Int32 NT35516_GetDispDrvFeatures(
-	DISPDRV_HANDLE_T		drvH,
+	DISPDRV_HANDLE_T drvH,
 	const char			**driver_name,
 	UInt32				*version_major,
 	UInt32				*version_minor,
@@ -170,19 +174,19 @@ static Int32 NT35516_Stop(
 	struct pi_mgr_dfs_node *dfs_node);
 
 static Int32 NT35516_PowerControl(
-	DISPDRV_HANDLE_T	drvH,
-	DISPLAY_POWER_STATE_T	state);
+	DISPDRV_HANDLE_T drvH,
+	DISPLAY_POWER_STATE_T state);
 
 static Int32 NT35516_Atomic_Update(
-	DISPDRV_HANDLE_T	drvH,
+	DISPDRV_HANDLE_T drvH,
 	void			*buff,
 	DISPDRV_WIN_t		*p_win);
 
 static Int32 NT35516_Update(
-	 DISPDRV_HANDLE_T	drvH,
+	 DISPDRV_HANDLE_T drvH,
 	 void			*buff,
 	 DISPDRV_WIN_t		*p_win,
-	 DISPDRV_CB_T		apiCb);
+	 DISPDRV_CB_T apiCb);
 
 static Int32 NT35516_WinReset(DISPDRV_HANDLE_T drvH);
 
@@ -204,18 +208,23 @@ static DISPDRV_T NT35516_Drv = {
 };
 
 
-/* DISP	DRV API	- Display Info */
+/* DISP DRV API	- Display Info */
 static DISPDRV_INFO_T NT35516_Info = {
 	DISPLAY_TYPE_LCD_STD,		/* type	*/
+#ifdef CONFIG_MACH_HAWAII_FPGA_E
+	800,				/* width */
+	480,				/* height */
+#else
 	540,				/* width */
 	960,				/* height */
+#endif
 	DISPDRV_FB_FORMAT_RGB888_U,	/* input_format	*/
 	DISPLAY_BUS_DSI,		/* bus_type */
 	4,				/* Bpp */
 };
 
 /* DSI Command Mode VC Configuration */
-CSL_DSI_CM_VC_t	NT35516_VCCmCfg = {
+CSL_DSI_CM_VC_t NT35516_VCCmCfg = {
 	NT35516_VC,			/* VC */
 	DSI_DT_LG_DCS_WR,		/* dsiCmnd */
 	MIPI_DCS_WRITE_MEMORY_START,	/* dcsCmndStart	*/
@@ -226,7 +235,7 @@ CSL_DSI_CM_VC_t	NT35516_VCCmCfg = {
 	/* TE configuration */
 	{
 		/*DSI_TE_CTRLR_INPUT_0,*//* DSI Te Inputi Type */
-		DSI_TE_NONE,	/* DSI Te Input	Type */
+		DSI_TE_NONE,	/* DSI Te Input Type */
 	},
 };
 
@@ -239,7 +248,11 @@ CSL_DSI_CFG_t NT35516_dsiCfg = {
 	{500, 5},	/* escClk   500|312 500[MHz], DIV by 5 = 100[MHz] */
 
 	/* HS CLK Config, RHEA VCO range 600-2400 */
-	{1000, 1},	/* hsBitClk PLL	1000[MHz], DIV by 2 = 500[Mbps]	*/
+#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
+	{1000, 1},
+#else
+	{1000, 2},	/* hsBitClk PLL 1000[MHz], DIV by 2 = 500[Mbps]	*/
+#endif
 
 	/* LP Speed */
 	5,		/* lpBitRate_Mbps, Max 10[Mbps]	*/
@@ -251,6 +264,7 @@ CSL_DSI_CFG_t NT35516_dsiCfg = {
 	FALSE,		/* enaLpTxEotPkt */
 	FALSE,		/* enaLpRxEotPkt */
 	1,		/* dispEngine */
+	0,		/* pixTxporter */
 };
 
 
@@ -261,27 +275,70 @@ static NT35516_PANEL_t panel[1];
 
 static void NT35516_panel_on(NT35516_PANEL_t *pPanel)
 {
+	DISPCTRL_REC_T cmd_list[] = {
+		{DISPCTRL_WR_CMND, NT35516_CMD_DISPON, 0},
+		{DISPCTRL_LIST_END, 0, 0},
+	};
+
+	NT35516_ExecCmndList(pPanel, cmd_list);
 	return;
 }
 
 static void NT35516_panel_off(NT35516_PANEL_t *pPanel)
 {
+	DISPCTRL_REC_T cmd_list[] = {
+		{DISPCTRL_WR_CMND, NT35516_CMD_DISPOFF, 0},
+		{DISPCTRL_LIST_END, 0, 0},
+	};
+
+	NT35516_ExecCmndList(pPanel, cmd_list);
 	return;
 }
 
+
 static void NT35516_panel_sleep_in(NT35516_PANEL_t *pPanel)
 {
+	DISPCTRL_REC_T cmd_list[] = {
+		{DISPCTRL_WR_CMND, NT35516_CMD_SLPIN, 0},
+		{DISPCTRL_LIST_END, 0, 0},
+	};
+
+	NT35516_ExecCmndList(pPanel, cmd_list);
 	return;
 }
 
 static void NT35516_panel_sleep_out(NT35516_PANEL_t *pPanel)
 {
+	DISPCTRL_REC_T cmd_list[] = {
+		{DISPCTRL_WR_CMND, NT35516_CMD_SLPOUT, 0},
+		{DISPCTRL_LIST_END, 0, 0},
+	};
+
+	NT35516_ExecCmndList(pPanel, cmd_list);
 	return;
 }
 
 
 static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
 {
+
+#ifdef CONFIG_MACH_HAWAII_FPGA_E
+	DISPCTRL_REC_T cmd_list[] = {
+		{DISPCTRL_WR_CMND, NT35516_CMD_DISPON, 0},
+		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_COLMOD, 0x07},
+		{DISPCTRL_LIST_END, 0, 0},
+	};
+#else
+	DISPCTRL_REC_T cmd_list[] = {
+		{DISPCTRL_WR_CMND, NT35516_CMD_SLPOUT, 0},
+		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_COLMOD, 0x07},
+		{DISPCTRL_WR_CMND, NT35516_CMD_DISPON, 0},
+		{DISPCTRL_LIST_END, 0, 0},
+	};
+#endif
+
+	NT35516_ExecCmndList(pPanel, cmd_list);
+
 	return;
 }
 
@@ -290,12 +347,12 @@ static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
  *
  *   Function Name: NT35516_TeOn
  *
- *   Description:   Configure TE Input Pin & Route it to DSI Controller	Input
+ *   Description:   Configure TE Input Pin & Route it to DSI Controller Input
  *
  */
 static int NT35516_TeOn(NT35516_PANEL_t	*pPanel)
 {
-	Int32	    res	= 0;
+	Int32 res	= 0;
 
 	TECTL_CFG_t teCfg;
 
@@ -335,10 +392,10 @@ static int NT35516_TeOff(NT35516_PANEL_t *pPanel)
  */
 static void NT35516_WrCmndP0(
 	DISPDRV_HANDLE_T    drvH,
-	UInt32		    reg)
+	UInt32 reg)
 {
-	CSL_DSI_CMND_t		msg;
-	UInt8			msgData[4];
+	CSL_DSI_CMND_t msg;
+	UInt8 msgData[4];
 	NT35516_PANEL_t		*pPanel	= (NT35516_PANEL_t *)drvH;
 
 	msg.dsiCmnd    = DSI_DT_SH_DCS_WR_P0;
@@ -359,18 +416,18 @@ static void NT35516_WrCmndP0(
  *
  *   Function Name: NT35516_ReadReg
  *
- *   Description:   DSI	Read Reg
+ *   Description:   DSI Read Reg
  *
  */
-static int NT35516_ReadReg(DISPDRV_HANDLE_T	drvH, UInt8 reg)
+static int NT35516_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg)
 {
 	NT35516_PANEL_t		*pPanel	= (NT35516_PANEL_t *)drvH;
-	CSL_DSI_CMND_t			msg;
-	CSL_DSI_REPLY_t			rxMsg;	    /* DSI RX message */
-	UInt8				txData[1];  /* DCS Rd Command */
-	UInt8				rxBuff[1];  /* Read Buffer    */
-	Int32				res = 0;
-	CSL_LCD_RES_T			cslRes;
+	CSL_DSI_CMND_t msg;
+	CSL_DSI_REPLY_t rxMsg;	    /* DSI RX message */
+	UInt8 txData[1];  /* DCS Rd Command */
+	UInt8 rxBuff[1];  /* Read Buffer    */
+	Int32 res = 0;
+	CSL_LCD_RES_T cslRes;
 
 	msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
 	msg.msg	       = &txData[0];
@@ -405,25 +462,24 @@ static int NT35516_ReadReg(DISPDRV_HANDLE_T	drvH, UInt8 reg)
  *
  *   Function Name: NT35516_WinSet
  *
- *   Description:   Set	Window
+ *   Description:   Set Window
  *
  */
 Int32 NT35516_WinSet(
-	DISPDRV_HANDLE_T	drvH,
-	Boolean			update,
+	DISPDRV_HANDLE_T drvH,
+	Boolean update,
 	DISPDRV_WIN_t		*p_win)
 {
 	NT35516_PANEL_t *pPanel = (NT35516_PANEL_t *) drvH;
-	CSL_DSI_CMND_t	    msg;
-	UInt8		    msgData[7];
-	CSL_DSI_REPLY_t	    rxMsg;
-	UInt8		    rx_buff[8];
+	CSL_DSI_CMND_t msg;
+	UInt8 msgData[7];
+	CSL_DSI_REPLY_t rxMsg;
+	UInt8 rx_buff[8];
 
 	if ((pPanel->win_cur.l != p_win->l) ||
 	    (pPanel->win_cur.r != p_win->r) ||
 	    (pPanel->win_cur.t != p_win->t) ||
 	    (pPanel->win_cur.b != p_win->b)) {
-
 		pPanel->win_cur	= *p_win;
 
 		if (update) {
@@ -431,7 +487,7 @@ Int32 NT35516_WinSet(
 
 			msg.dsiCmnd    = DSI_DT_LG_DCS_WR;
 			msg.msg	       = &msgData[0];
-			msg.msgLen     = 7;
+			msg.msgLen     = 5;
 			msg.vc	       = NT35516_VC;
 			msg.isLP       = NT35516_CMND_IS_LP;
 			msg.isLong     = TRUE;
@@ -439,25 +495,26 @@ Int32 NT35516_WinSet(
 			msg.reply      = &rxMsg;
 
 			msgData[0] = MIPI_DCS_SET_COLUMN_ADDRESS;
-			msgData[1] = 0;
-			msgData[2] = (p_win->l & 0xFF00) >> 8;
-			msgData[3] = (p_win->l & 0x00FF);
-			msgData[4] = 0;
-			msgData[5] = (p_win->r & 0xFF00) >> 8;
-			msgData[6] = (p_win->r & 0x00FF);
+			msgData[1] = (p_win->l & 0xFF00) >> 8;
+			msgData[2] = (p_win->l & 0x00FF);
+			msgData[3] = (p_win->r & 0xFF00) >> 8;
+			msgData[4] = (p_win->r & 0x00FF);
 
+			printk("%x %x %x %x %x\n", msgData[0], msgData[1],
+			msgData[2], msgData[3], msgData[4]);
 			CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 
 			msgData[0] = MIPI_DCS_SET_PAGE_ADDRESS;
-			msgData[1] = 0;
-			msgData[2] = (p_win->t & 0xFF00) >> 8;
-			msgData[3] = (p_win->t & 0x00FF);
-			msgData[4] = 0;
-			msgData[5] = (p_win->b & 0xFF00) >> 8;
-			msgData[6] = (p_win->b & 0x00FF);
+			msgData[1] = (p_win->t & 0xFF00) >> 8;
+			msgData[2] = (p_win->t & 0x00FF);
+			msgData[3] = (p_win->b & 0xFF00) >> 8;
+			msgData[4] = (p_win->b & 0x00FF);
 
+			printk("%x %x %x %x %x\n", msgData[0], msgData[1],
+			msgData[2], msgData[3], msgData[4]);
 			CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 
+			mdelay(5);
 			return 0;
 		}
 	}
@@ -468,7 +525,7 @@ Int32 NT35516_WinSet(
  *
  *   Function Name: NT35516_WinReset
  *
- *   Description:   Reset	windowing to full screen size.
+ *   Description:   Reset windowing to full screen size.
  *		    Typically, only used in boot code environment
  */
 Int32 NT35516_WinReset(DISPDRV_HANDLE_T drvH)
@@ -476,6 +533,7 @@ Int32 NT35516_WinReset(DISPDRV_HANDLE_T drvH)
 	Int32 res;
 	NT35516_PANEL_t *pPanel = (NT35516_PANEL_t *) drvH;
 
+	printk("%s\n", __func__);
 	res = NT35516_WinSet(drvH, TRUE, &pPanel->win_dim);
 	return res;
 }
@@ -491,19 +549,21 @@ static void NT35516_reset(DISPDRV_HANDLE_T drvH, Boolean on)
 {
 	NT35516_PANEL_t *pPanel = (NT35516_PANEL_t *) drvH;
 
+	int reset_active = 0;
 
 	if (!on) {
 		gpio_request(pPanel->rst_panel_reset  ,	"LCD_RST1");
+		gpio_direction_output(pPanel->rst_panel_reset, 1);
 
-		gpio_direction_output(pPanel->rst_panel_reset  , 1);
-		msleep(1);
-
-		gpio_set_value_cansleep(pPanel->rst_panel_reset,   0);
-		msleep(100);
-		gpio_set_value_cansleep(pPanel->rst_panel_reset,   1);
+		gpio_set_value_cansleep(pPanel->rst_panel_reset, !reset_active);
+		udelay(5);
+		gpio_set_value_cansleep(pPanel->rst_panel_reset, reset_active);
+		udelay(15);
+		gpio_set_value_cansleep(pPanel->rst_panel_reset, !reset_active);
+		msleep(120);
 
 	} else {
-		gpio_set_value_cansleep(pPanel->rst_panel_reset,   0);
+		gpio_set_value_cansleep(pPanel->rst_panel_reset, reset_active);
 	}
 }
 
@@ -511,7 +571,7 @@ static void NT35516_reset(DISPDRV_HANDLE_T drvH, Boolean on)
  *
  *   Function Name: LCD_DRV_NT35516_GetDrvInfo
  *
- *   Description:   Get	Driver Funtion Table
+ *   Description:   Get Driver Funtion Table
  *
  */
 DISPDRV_T *DISP_DRV_NT35516_GetFuncTable(void)
@@ -533,7 +593,6 @@ Int32 NT35516_Init(
 	Int32 res = 0;
 	NT35516_PANEL_t	*pPanel;
 
-	printk("%s:%d\n", __func__, __LINE__);
 	pPanel = &panel[0];
 
 	if (pPanel->drvState ==	DRV_STATE_OFF)	{
@@ -605,7 +664,7 @@ Int32 NT35516_Init(
 			break;
 		default:
 			NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	Unsupported"
-				" Color	Mode\n", __func__);
+				" Color Mode\n", __func__);
 			return -1;
 		}
 
@@ -641,7 +700,7 @@ Int32 NT35516_Init(
  *   Description:
  *
  */
-Int32 NT35516_Exit(DISPDRV_HANDLE_T	drvH)
+Int32 NT35516_Exit(DISPDRV_HANDLE_T drvH)
 {
 	NT35516_PANEL_t *pPanel;
 
@@ -655,17 +714,16 @@ Int32 NT35516_Exit(DISPDRV_HANDLE_T	drvH)
  *
  *  Function Name: NT35516_Open
  *
- *  Description:   disp	bus ON
+ *  Description:   disp bus ON
  *
  */
-Int32 NT35516_Open(DISPDRV_HANDLE_T	drvH)
+Int32 NT35516_Open(DISPDRV_HANDLE_T drvH)
 {
 	Int32 res = 0;
 	NT35516_PANEL_t	*pPanel;
 
 	pPanel = (NT35516_PANEL_t *) drvH;
 
-	printk("%s:%d\n", __func__, __LINE__);
 
 	if (pPanel->drvState !=	DRV_STATE_INIT)	{
 		NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR State != Init\n",
@@ -679,24 +737,24 @@ Int32 NT35516_Open(DISPDRV_HANDLE_T	drvH)
 		pPanel->dsi_cfg->escClk.clkIn_MHz   * 1000000
 		/ pPanel->dsi_cfg->escClk.clkInDiv)) {
 
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR to enable	the "
+		NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV] %s:ERROR to enable the "
 			"clock\n", __func__);
 	}
 
 	if (pPanel->isTE && NT35516_TeOn(pPanel) == -1) {
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	"
-			"Failed	To Configure TE	Input\n", __func__);
+		NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV] %s:"
+			"Failed To Configure TE Input\n", __func__);
 		goto err_te_on;
 	}
 
 	if (CSL_DSI_Init(pPanel->dsi_cfg) != CSL_LCD_OK) {
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR, DSI CSL Init "
+		NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV] %s:ERROR, DSI CSL Init "
 			"Failed\n", __func__);
 		goto err_dsi_init;
 	}
 
 	if (CSL_DSI_OpenClient(pPanel->busNo, &pPanel->clientH)	!= CSL_LCD_OK) {
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR, "
+		NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV] %s:ERROR, "
 			"CSL_DSI_OpenClient Failed\n", __func__);
 		goto err_dsi_open_cl;
 	}
@@ -704,19 +762,25 @@ Int32 NT35516_Open(DISPDRV_HANDLE_T	drvH)
 	if (CSL_DSI_OpenCmVc(pPanel->clientH,
 		pPanel->cmnd_mode, &pPanel->dsiCmVcHandle) != CSL_LCD_OK) {
 
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	CSL_DSI_OpenCmVc "
+		NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV] %s:CSL_DSI_OpenCmVc "
 			"Failed\n", __func__);
 		goto err_dsi_open_cm;
 	}
 
-	if (pPanel->dsi_cfg->dispEngine) {
+	if (!pPanel->dsi_cfg->dispEngine && pPanel->dsi_cfg->pixTxporter) {
+		NT35516_LOG(LCD_DBG_ERR_ID, "Cannot transfer pixels via MMDMA"
+		" to Display Engine 0. Default to Display Engine 1\n");
+		pPanel->dsi_cfg->dispEngine = 1;
+	}
+
+	if (pPanel->dsi_cfg->dispEngine && pPanel->dsi_cfg->pixTxporter) {
 		if (csl_dma_vc4lite_init() != DMA_VC4LITE_STATUS_SUCCESS) {
-			NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: "
+			NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV] %s: "
 				"csl_dma_vc4lite_init Failed\n", __func__);
 			goto err_dma_init;
 		}
 	}
-	NT35516_reset(drvH,	FALSE);
+	NT35516_reset(drvH, FALSE);
 
 	pPanel->win_dim.l = 0;
 	pPanel->win_dim.r = pPanel->disp_info->width-1;
@@ -748,12 +812,12 @@ err_te_on:
  *
  *  Function Name: NT35516_Close
  *
- *  Description:   disp	bus OFF
+ *  Description:   disp bus OFF
  *
  */
 Int32 NT35516_Close(DISPDRV_HANDLE_T drvH)
 {
-	Int32			res = 0;
+	Int32 res = 0;
 	NT35516_PANEL_t	*pPanel	= (NT35516_PANEL_t *)drvH;
 
 	if (CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle)) {
@@ -778,7 +842,7 @@ Int32 NT35516_Close(DISPDRV_HANDLE_T drvH)
 		NT35516_TeOff(pPanel);
 
 	if (brcm_disable_dsi_pll_clocks(pPanel->busNo))	{
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: ERROR to	disable	"
+		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: ERROR to disable	"
 			"the pll clock\n", __func__);
 		return -1;
 	}
@@ -795,19 +859,20 @@ Int32 NT35516_Close(DISPDRV_HANDLE_T drvH)
  *
  * Function Name:  NT35516_WrSendCmnd
  *
- * Parameters:	   msg_buff   =	TX byte	buffer
- *		   msg_size   =	size of	message	to be sent [bytes]
+ * Parameters:	   msg_buff   =	TX byte buffer
+ *		   msg_size   =	size of message to be sent [bytes]
  *
- * Description:	   Send	commands with variable no of parms
+ * Description:	   Send commands with variable no of parms
  *		   Assumption: DISPLAY's Controller Accepts DT Used
  */
 static int NT35516_WrSendCmnd(
-	DISPDRV_HANDLE_T	drvH,
+	DISPDRV_HANDLE_T drvH,
 	UInt8			*msg_buff,
-	UInt32			msg_size)
+	UInt32 msg_size)
 {
-	CSL_DSI_CMND_t		msg;
-	int			res = 0;
+	NT35516_PANEL_t	*pPanel	= (NT35516_PANEL_t *)drvH;
+	CSL_DSI_CMND_t msg;
+	int res = 0;
 
 	switch (msg_size) {
 	case 0:
@@ -835,7 +900,7 @@ static int NT35516_WrSendCmnd(
 		msg.isLong     = msg_size > 2;
 		msg.endWithBta = FALSE;
 
-		/*CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);*/
+		CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 		NT35516_LOG(LCD_DBG_INIT_ID, "[DISPDRV] %s:	DT[0x%02lX] "
 			"SIZE[%lu]\n",	__func__, msg.dsiCmnd, msg_size);
 	}
@@ -853,13 +918,13 @@ static int NT35516_WrSendCmnd(
  */
 static void NT35516_ExecCmndList(
 	DISPDRV_HANDLE_T     drvH,
-	pDISPCTRL_REC_T	     cmnd_lst)
+	pDISPCTRL_REC_T cmnd_lst)
 {
-	#define	TX_MSG_MAX	32
-	UInt32	i = 0;
+	#define TX_MSG_MAX 32
+	UInt32 i = 0;
 
-	UInt8	tx_buff[TX_MSG_MAX];
-	UInt32	tx_size	= 0;
+	UInt8 tx_buff[TX_MSG_MAX];
+	UInt32 tx_size	= 0;
 
 	while (cmnd_lst[i].type	!= DISPCTRL_LIST_END) {
 		if (cmnd_lst[i].type ==	DISPCTRL_WR_CMND) {
@@ -894,8 +959,8 @@ static void NT35516_ExecCmndList(
  *
  */
 Int32 NT35516_PowerControl(
-	DISPDRV_HANDLE_T	drvH,
-	DISPLAY_POWER_STATE_T	state)
+	DISPDRV_HANDLE_T drvH,
+	DISPLAY_POWER_STATE_T state)
 {
 	Int32  res = 0;
 	NT35516_PANEL_t   *pPanel =	(NT35516_PANEL_t *)drvH;
@@ -915,7 +980,7 @@ Int32 NT35516_PowerControl(
 			break;
 		default:
 			NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	POWER ON "
-				"Requested While Not In	POWER DOWN State\n",
+				"Requested While Not In POWER DOWN State\n",
 				__func__);
 			break;
 		}
@@ -929,7 +994,7 @@ Int32 NT35516_PowerControl(
 			NT35516_reset(drvH, TRUE);
 
 			pPanel->pwrState = STATE_PWR_OFF;
-			NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV]	%s: PWR	DOWN\n\r",
+			NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV]	%s: PWR DOWN\n\r",
 				__func__);
 		}
 		break;
@@ -984,7 +1049,7 @@ Int32 NT35516_PowerControl(
 			break;
 		default:
 			NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	"
-				"SCREEN	ON Req While Not In SCREEN OFF State\n",
+				"SCREEN ON Req While Not In SCREEN OFF State\n",
 				__func__);
 			break;
 		}
@@ -1000,7 +1065,7 @@ Int32 NT35516_PowerControl(
 			break;
 		default:
 			NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	"
-				"SCREEN	OFF Req	While Not In SCREEN ON State\n",
+				"SCREEN OFF Req While Not In SCREEN ON State\n",
 				__func__);
 			break;
 		}
@@ -1034,7 +1099,7 @@ Int32 NT35516_Start(
 		NT35516_dsiCfg.escClk.clkIn_MHz * 1000000
 		/ NT35516_dsiCfg.escClk.clkInDiv)) {
 
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: ERROR to	enable "
+		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: ERROR to enable "
 			"the clock\n", __func__);
 		return -1;
 	}
@@ -1049,7 +1114,7 @@ Int32 NT35516_Start(
  *   Description:
  *
  */
-Int32 NT35516_Stop(DISPDRV_HANDLE_T	drvH, struct pi_mgr_dfs_node *dfs_node)
+Int32 NT35516_Stop(DISPDRV_HANDLE_T drvH, struct pi_mgr_dfs_node *dfs_node)
 {
 	NT35516_PANEL_t *pPanel = (NT35516_PANEL_t *)drvH;
 
@@ -1058,7 +1123,7 @@ Int32 NT35516_Stop(DISPDRV_HANDLE_T	drvH, struct pi_mgr_dfs_node *dfs_node)
 			"the clock\n", __func__);
 	    return -1;
 	}
-	return	0;
+	return 0;
 }
 
 /*
@@ -1081,7 +1146,7 @@ const DISPDRV_INFO_T *NT35516_GetDispDrvData(DISPDRV_HANDLE_T drvH)
  *
  */
 Int32 NT35516_GetDispDrvFeatures(
-	DISPDRV_HANDLE_T		drvH,
+	DISPDRV_HANDLE_T drvH,
 	const char			**driver_name,
 	UInt32				*version_major,
 	UInt32				*version_minor,
@@ -1089,7 +1154,6 @@ Int32 NT35516_GetDispDrvFeatures(
 {
 	Int32 res = -1;
 
-	printk("%s:%d\n", __func__, __LINE__);
 	if ((NULL != driver_name)   && (NULL !=	version_major) &&
 	    (NULL != version_minor) && (NULL !=	flags))	{
 
@@ -1141,26 +1205,28 @@ static void NT35516_Cb(CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec)
  *
  */
 Int32 NT35516_Update(
-	DISPDRV_HANDLE_T	drvH,
-	void			*buff,
-	DISPDRV_WIN_t		*p_win,
-	DISPDRV_CB_T		apiCb)
+	DISPDRV_HANDLE_T drvH,
+	void *buff,
+	DISPDRV_WIN_t *p_win,
+	DISPDRV_CB_T apiCb)
 {
 	NT35516_PANEL_t	*pPanel	= (NT35516_PANEL_t *)drvH;
-	CSL_LCD_UPD_REQ_T	req;
-	Int32			res  = 0;
+	CSL_LCD_UPD_REQ_T req;
+	Int32 res  = 0;
 	uint32_t offset;
 
-	NT35516_LOG(LCD_DBG_ID, "[DISPDRV]	+%s\r\n", __func__);
-
+	NT35516_LOG(LCD_DBG_ID, "[DISPDRV] +%s\r\n", __func__);
 	if (pPanel->pwrState ==	STATE_PWR_OFF) {
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: Skip Due	To "
+		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: Skip Due To "
 			"Power State\n", __func__);
 		return -1;
 	}
 
 	if (p_win == NULL)
 		p_win =	&pPanel->win_dim;
+
+	NT35516_LOG(LCD_DBG_ID, "%s %d %d %d %d\n", __func__, p_win->l, p_win->r, p_win->t,
+		p_win->b);
 
 	NT35516_WinSet(drvH, TRUE, p_win);
 
@@ -1215,18 +1281,18 @@ Int32 NT35516_Update(
  *
  */
 Int32 NT35516_Atomic_Update(
-	DISPDRV_HANDLE_T	drvH,
+	DISPDRV_HANDLE_T drvH,
 	void			*buff,
 	DISPDRV_WIN_t		*p_win)
 {
 	NT35516_PANEL_t	*pPanel	= (NT35516_PANEL_t *)drvH;
-	CSL_LCD_UPD_REQ_T	req;
-	Int32			res  = 0;
+	CSL_LCD_UPD_REQ_T req;
+	Int32 res  = 0;
 
 	NT35516_LOG(LCD_DBG_ID, "[DISPDRV]	+%s\r\n", __func__);
 
 	if (pPanel->pwrState ==	STATE_PWR_OFF) {
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: Skip Due	To "
+		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: Skip Due To "
 			"Power State\n", __func__);
 		return -1;
 	}

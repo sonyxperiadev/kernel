@@ -637,7 +637,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	void __iomem *DumpVAddr;
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
-	rhea_display_crash_image(CP_CRASH_DUMP_START);
+	kona_display_crash_image(CP_CRASH_DUMP_START);
 #endif
 
 #ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
@@ -940,7 +940,7 @@ void DUMP_CP_assert_log(void)
 	BCMLOG_EndCpCrashDump();
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
-	rhea_display_crash_image(CP_CRASH_DUMP_END);
+	kona_display_crash_image(CP_CRASH_DUMP_END);
 #endif
 
 	if (BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())

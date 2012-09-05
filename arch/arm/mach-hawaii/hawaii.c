@@ -27,26 +27,30 @@
 #include <linux/kernel.h>
 #include <linux/cpumask.h>
 #include <linux/delay.h>
-#include <mach/io_map.h>
-#include <asm/io.h>
-#include <asm/mach/map.h>
-#include <asm/hardware/cache-l2x0.h>
-#include <mach/pwr_mgr.h>
-#include <mach/clock.h>
+#include <linux/module.h>
+#include <linux/reboot.h>
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcmpmu.h>
-#include <plat/scu.h>
+#include <asm/io.h>
+#include <asm/mach/map.h>
+#include <asm/system_misc.h>
+#include <asm/hardware/cache-l2x0.h>
+#include <mach/io_map.h>
+#include <mach/clock.h>
+#include <mach/memory.h>
+#include <mach/system.h>
 #include <mach/gpio.h>
 #include <mach/pinmux.h>
 #include <mach/kona.h>
 #include <mach/timer.h>
 #include <mach/profile_timer.h>
-#include <linux/reboot.h>
-#include <asm/system_misc.h>
-#include <mach/sec_api.h>
-#include <plat/cpu.h>
+#ifdef CONFIG_HAWAII_L2X0_PREFETCH
+#include <mach/cache-l2x0.h>
+#endif
+#include <mach/cpu.h>
+#include <plat/scu.h>
 #include <plat/kona_reset_reason.h>
-#include <mach/memory.h>
+#include <mach/sec_api.h>
 
 static void hawaii_poweroff(void)
 {
@@ -63,15 +67,39 @@ static void hawaii_poweroff(void)
 	while (1) ;
 }
 
-static void hawaii_restart(char mode, const char *cmd)
+void hawaii_restart(char mode, const char *cmd)
 {
-#ifdef CONFIG_MFD_BCMPMU 
-        if (hard_reset_reason)
+#ifdef CONFIG_MFD_BCMPMU
+	if (hard_reset_reason)
 		bcmpmu_client_hard_reset(hard_reset_reason);
-	else
+	else {
+		switch (mode) {
+		case 's':
+			/* Jump into X address. Unused.
+			 * Kept to catch wrong mode*/
+			soft_restart(0);
+			break;
+		case 'h':
+		default:
+			kona_reset(mode, cmd);
+			break;
+		}
+	}
+#else
+	switch (mode) {
+	case 's':
+		/* Jump into X address. Unused.
+		* Kept to catch wrong mode*/
+		soft_restart(0);
+		break;
+	case 'h':
+	default:
+		kona_reset(mode, cmd);
+		break;
+	}
 #endif
-		machine_restart(cmd);
 }
+EXPORT_SYMBOL(hawaii_restart);
 
 #ifdef CONFIG_CACHE_L2X0
 static void __init hawaii_l2x0_init(void)
@@ -90,6 +118,10 @@ static void __init hawaii_l2x0_init(void)
 	 * 32KB way size, 16-way associativity
 	 */
 	l2x0_init(l2cache_base, 0x00050000, 0xfff0ffff);
+
+#ifdef CONFIG_HAWAII_L2X0_PREFETCH
+	hawaii_l2x0_prefetch(1);
+#endif
 }
 #endif
 
@@ -108,8 +140,7 @@ static int __init hawaii_arch_init(void)
 
 arch_initcall(hawaii_arch_init);
 
-/* GP Timer init code, common for all hawaii based platforms */
-void __init hawaii_ray_timer_init(void)
+void __init hawaii_timer_init(void)
 {
 	struct gp_timer_setup gpt_setup;
 
@@ -140,7 +171,7 @@ void __init hawaii_ray_timer_init(void)
 }
 
 struct sys_timer kona_timer = {
-	.init = hawaii_ray_timer_init,
+	.init = hawaii_timer_init,
 };
 
 #ifdef CONFIG_KONA_ATAG_DT
@@ -159,7 +190,6 @@ static void cpu_info_verbose(void)
 static int __init hawaii_init(void)
 {
 	pm_power_off = hawaii_poweroff;
-	arm_pm_restart = hawaii_restart;
 
 	cpu_info_verbose();
 	pinmux_init();
