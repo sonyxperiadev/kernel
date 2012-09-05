@@ -20,7 +20,7 @@
 #include <asm/memory.h>
 #include <linux/dma-mapping.h>
 #include <linux/spinlock.h>
-
+#include <asm/suspend.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_scu.h>
@@ -37,7 +37,7 @@
  * of dormant in idle path but enter
  * dormant during suspend
  */
-static u32 force_retention_in_idle = 1;
+static u32 force_retention_in_idle;
 module_param_named(force_retention_in_idle, force_retention_in_idle,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
@@ -51,7 +51,7 @@ module_param_named(dormant_disable, dormant_disable,
  * we are entering and exiting dormant but the
  * HW mask to be able to enter dormant is not set
  */
-static u32 fake_dormant;
+static u32 fake_dormant = 1;
 module_param_named(fake_dormant, fake_dormant,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
@@ -85,35 +85,38 @@ static int cnt_failure;
 module_param_named(cnt_failure, cnt_failure, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 /* Buffer to pass parameters to secure rom */
-#define	SEC_BUFFER_ADDR				0x3404E400	/* SRAM */
-#define	SEC_BUFFER_SIZE				0x00000400	/* 1kB */
+#define	SEC_BUFFER_ADDR			0x3404E400	/* SRAM */
+#define	SEC_BUFFER_SIZE			0x00000400	/* 1kB */
 
 #define MAX_SECURE_BUFFER_SIZE		0x280
-#define NUM_API_PARAMETERS			0x3
+#define NUM_API_PARAMETERS		0x3
 
-#define SEC_EXIT_NORMAL 1
-#define SSAPI_RET_FROM_INT_SERV	4
+#define SEC_EXIT_NORMAL			1
+#define SSAPI_RET_FROM_INT_SERV		4
 
 /* CORE-0 is the master core for boot-up */
-#define MASTER_CORE					0
+#define MASTER_CORE			0
 
 #define	SCU_DORMANT_L2_OFF_MODE		0x03030303
-#define	SCU_DORMANT_MODE			0x03030202
+#define	SCU_DORMANT_MODE		0x03030202
 #define	SCU_DORMANT_MODE_OFF		0x03030000
 
 #define	SCU_DORMANT_L2_OFF_B		0x03
-#define	SCU_DORMANT_MODE_B			0x02
+#define	SCU_DORMANT_MODE_B		0x02
 #define	SCU_DORMANT_MODE_OFF_B		0x00
 
-#define	USE_SCU_PWR_CTRL					0x100
-#define	PWRCTRL_DORMANT_CORE_0				0x80
-#define	PWRCTRL_DORMANT_L2_OFF_CORE_0		0xC0
+#define	USE_SCU_PWR_CTRL		0x100
+#define	PWRCTRL_DORMANT_CORE_0		0x80
+#define	PWRCTRL_DORMANT_L2_OFF_CORE_0	0xC0
 
-#define	PWRCTRL_DORMANT_CORE_1				0x02000000
-#define	PWRCTRL_DORMANT_L2_OFF_CORE_1		0x03000000
+#define	PWRCTRL_DORMANT_CORE_1		0x02000000
+#define	PWRCTRL_DORMANT_L2_OFF_CORE_1	0x03000000
 
-#define	UNLOCK_PROC_CLK				0xA5A501
-#define FREQ_312_MHZ_ID				0x04040404
+#define	UNLOCK_PROC_CLK			0xA5A501
+#define FREQ_312_MHZ_ID			0x04040404
+
+#define DORMANT_ENTRY_SUCCESS		0
+#define DORMANT_ENTRY_FAILURE		1
 
 /* Define pointers per CPU to the data that is banked
  * for both the CPU's
@@ -237,6 +240,7 @@ enum DORMANT_LOG_TYPE {
 };
 
 static struct secure_params_t *secure_params;
+static int dormant_enter_continue(unsigned long data);
 
 /*********** Local Functions *************/
 
@@ -274,8 +278,7 @@ static void save_proc_clk_regs(void)
  */
 static u32 num_cpus(void)
 {
-	return (readl(KONA_SCU_VA + SCU_CONFIG_OFFSET) &
-		 SCU_CONFIG_NUM_CPUS_MASK) + 1;
+	return CONFIG_NR_CPUS;
 }
 
 /*
@@ -424,7 +427,9 @@ u32 is_dormant_enabled(void)
 void dormant_enter(u32 service)
 {
 	unsigned long flgs;
+#if defined(CONFIG_SMP)
 	u32 boot_2nd_addr;
+#endif
 	u32 dormant_return;
 	u32 reg_val;
 
@@ -531,7 +536,7 @@ void dormant_enter(u32 service)
 
 		/* save all proc registers except arm_sys_idle_dly */
 		save_proc_clk_regs();
-#if defined(CONFIG_MACH_CAPRI)
+#if defined(CONFIG_CAPRI_DORMANT_MODE)
 		if (fake_dormant)
 			writel_relaxed(0, PROC_CLK_REG_ADDR(ARM_SYS_IDLE_DLY));
 		else
@@ -572,9 +577,7 @@ void dormant_enter(u32 service)
 	}
 	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
 
-	dormant_return = dormant_enter_prepare(un_cached_stack_ptr + SZ_1K +
-					       SZ_1K * smp_processor_id(),
-					       PHYS_OFFSET - PAGE_OFFSET);
+	dormant_return = cpu_suspend(0, dormant_enter_continue);
 
 	/* We are here after either a failed dormant or a successful
 	 * dormant
@@ -591,7 +594,7 @@ void dormant_enter(u32 service)
 	/* if we failed to enter dormant, restore
 	 * only what might have changed when dormant fails
 	 */
-	if (!dormant_return) {
+	if (dormant_return == DORMANT_ENTRY_FAILURE) {
 		/* restore only what we lost without entering
 		 * dormant and return
 		 */
@@ -606,7 +609,7 @@ void dormant_enter(u32 service)
 
 	spin_lock_irqsave(&dormant_entry_lock, flgs);
 
-	if (!dormant_return)
+	if (dormant_return == DORMANT_ENTRY_FAILURE)
 		log_dormant_event(DORMANT_EXIT_FAILURE_LOG);
 	else
 		log_dormant_event(DORMANT_EXIT_SUCCESS_LOG);
@@ -620,7 +623,7 @@ void dormant_enter(u32 service)
 			cnt_success++;
 		else
 			cnt_failure++;
-#if defined(CONFIG_MACH_CAPRI)
+#if defined(CONFIG_CAPRI_DORMANT_MODE)
 		writel_relaxed(UNLOCK_PROC_CLK, KONA_PROC_CLK_VA);
 
 		/* Let ARM_SYS_IDLE_DLY be set to 0 for non dormant cases */
@@ -639,7 +642,7 @@ void dormant_enter(u32 service)
 	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
 
 	/* If dormant exit is successful, restore context */
-	if (dormant_return) {
+	if (dormant_return == DORMANT_ENTRY_SUCCESS) {
 		if (smp_processor_id() == MASTER_CORE) {
 			/*
 			 * True dormant exit and we are core-0.  Let
@@ -700,7 +703,7 @@ void dormant_enter(u32 service)
 					(u32)KONA_SCU_VA);
 
 		restore_performance_monitors((void *)__get_cpu_var(pmu_data));
-
+#if defined(CONFIG_SMP)
 		if (smp_processor_id() == MASTER_CORE) {
 			/*
 			 * Here we got out of idle do we let the core-0
@@ -726,6 +729,7 @@ void dormant_enter(u32 service)
 				} while (boot_2nd_addr & 1);
 			} /* core down */
 		} /* Master core */
+#endif
 	} /* Success dormant return */
 }
 
@@ -733,12 +737,12 @@ void dormant_enter(u32 service)
  * Routine called from assembly, after saving the CPU context
  * this is where WFI would be executed to take down the power
  */
-void dormant_enter_continue(void)
+static int dormant_enter_continue(unsigned long data)
 {
 	u32 processor_id;
-	processor_id = (read_mpidr() & 0xff);
+	processor_id = smp_processor_id();
 
-
+#if defined(CONFIG_CAPRI_DORMANT_MODE)
 	/*
 	 * Clear the L2 area where the sleep saved_sp would
 	 * be saved.
@@ -748,7 +752,7 @@ void dormant_enter_continue(void)
 			(cpu_resume+SZ_1K+PHYS_OFFSET-PAGE_OFFSET));
 
 	disable_clean_inv_dcache_v7_l1();
-
+#endif
 	write_actlr(read_actlr() & ~(0x40));
 
 	/* Let us always indicate the dormant mode to the SCU
@@ -800,10 +804,11 @@ void dormant_enter_continue(void)
 		wfi();
 
 	}
+	return 0;
 }
 
 /* Initialization function for dormant module */
-int __init dormant_init(void)
+static int __init dormant_init(void)
 {
 	struct resource *res;
 
@@ -835,7 +840,7 @@ int __init dormant_init(void)
 	secure_params->log_index = 0;
 
 	writel_relaxed(UNLOCK_PROC_CLK, KONA_PROC_CLK_VA);
-#if defined(CONFIG_MACH_CAPRI)
+#if defined(CONFIG_CAPRI_DORMANT_MODE)
 	if (chipregHw_getChipIdRev() > 0xA1) {
 		/* Indicate that core-1 is always willing to enter dormnt
 		 * so the final decision is actually done by core-0's
