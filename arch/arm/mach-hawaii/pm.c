@@ -103,7 +103,7 @@ static struct kona_idle_state idle_states[] = {
 		.desc = "suspend-rtn", /*suspend-retention (XTAL ON)*/
 		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
 		.latency = EXIT_LAT_SUSPEND_RETN,
-		.target_residency = TGT_RESI_SUSPEND_RETN,
+		.target_residency = TRGT_RESI_SUSPEND_RETN,
 		.state = CSTATE_SUSPEND_RETN,
 		.enter = enter_idle_state,
 	},
