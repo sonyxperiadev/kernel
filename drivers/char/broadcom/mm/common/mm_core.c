@@ -101,7 +101,6 @@ void mm_core_job_maint_work(struct work_struct* work)
 		job->filp = filp;
 		INIT_LIST_HEAD(&(job->list));
 		INIT_LIST_HEAD(&(job->wait_list));
-		
 		list_add_tail(&(job->list), &(core_dev->job_list));
 		queue_work(core_dev->mm_common->single_wq, &(core_dev->job_scheduler));
 		atomic_notifier_call_chain(&core_dev->mm_common->notifier_head, MM_FMWK_NOTIFY_JOB_ADD, NULL);
@@ -131,6 +130,7 @@ void mm_core_job_maint_work(struct work_struct* work)
 			if(p_job_list_elem->filp == filp) {
 				if(p_job_list_elem->job.status != MM_JOB_STATUS_READY) {
 					/* reset once in release */
+					pr_err("aborting hw in release\n");
 					hw_ifc->mm_abort(hw_ifc->mm_device_id,&list_first_entry(&(core_dev->job_list),dev_job_list_t,list)->job);
 					mm_core_disable_clock(core_dev);
 					}

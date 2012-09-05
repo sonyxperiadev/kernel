@@ -112,9 +112,8 @@ static bool get_isp_status(void* id)
 	uint32_t ispStatus = 0;
 	ispStatus = isp_read(ISP_STATUS_OFFSET);
 	//Check if hw busy
-	if((ispStatus & 0x3) == ISP_STATUS_STATE_ENABLED)
-	{
-			return true;
+	if(ispStatus & 0x1){
+		return true;
 	}
 	return false;
 }
@@ -479,7 +478,7 @@ static mm_job_status_e isp_start_job(void* id , mm_job_post_t* job, unsigned int
 					job->status = MM_JOB_STATUS_ERROR;
 					return MM_JOB_STATUS_ERROR;
 				}
-				printispregs(isp);
+				//printispregs(isp);
 				ret = isp_start(isp);
 				if(ret!=0){
 					pr_err("isp_start failed with %d", ret);
