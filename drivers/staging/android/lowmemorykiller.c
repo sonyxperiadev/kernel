@@ -121,7 +121,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef CONFIG_CMA
 	rem += global_page_state(NR_CONTIG_PAGES);
 #endif
-	if (sc->nr_to_scan <= 0 || min_score_adj == OOM_ADJUST_MAX + 1) {
+	if (sc->nr_to_scan <= 0 || min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
 		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
 			     sc->nr_to_scan, sc->gfp_mask, rem);
 		return rem;
