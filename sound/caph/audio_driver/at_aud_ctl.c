@@ -67,6 +67,15 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "extern_audio.h"
 #include "audio_trace.h"
 
+#include "taskmsgs.h"
+#include "ipcproperties.h"
+
+#include "rpc_global.h"
+#include "rpc_ipc.h"
+#include "xdr_porting_layer.h"
+#include "xdr.h"
+#include "rpc_api.h"
+
 /**
 	Description:
 	AT command handler, handle command AT commands at*maudmode=P1,P2,P3
@@ -214,6 +223,9 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		    iLineSelect[0] = mic;
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].
 		    iLineSelect[1] = spk;
+
+		RPC_SetProperty(RPC_PROP_AUDIO_MODE,
+			(UInt32)(app * AUDIO_MODE_NUMBER + mode));
 
 		AUDCTRL_SetUserAudioApp(app);	/* for PCG to set new app */
 		if ((app <= AUDIO_APP_VOICE_CALL_WB) ||

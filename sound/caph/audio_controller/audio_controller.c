@@ -63,6 +63,16 @@
 #include <linux/regulator/consumer.h>
 
 #include "csl_dsp.h"
+
+#include "taskmsgs.h"
+#include "ipcproperties.h"
+
+#include "rpc_global.h"
+#include "rpc_ipc.h"
+#include "xdr_porting_layer.h"
+#include "xdr.h"
+#include "rpc_api.h"
+
 /**There are two loopback paths available in AudioH.
 One is 6.5MHz analog microphone loopback path. It does not support digital mics.
 The other one is HW sidetone path. It supports all the mics. This is prefered.
@@ -1133,17 +1143,12 @@ for multicast, need to find the other mode and reconcile on mixer gains.
 
 	AUDDRV_SetAudioMode_Speaker(sp_struct);
 
-	if (!AUDCTRL_InVoiceCall() && AUDDRV_TuningFlag()) {
+	if (!AUDCTRL_InVoiceCall()) {
 		/*for music tuning, if PCG changed audio mode,
-		   need to pass audio mode to CP in audio_vdriver_caph.c */
-		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
-				      (UInt32) mode,
-				      (UInt32) AUDCTRL_GetAudioApp(), 0, 0, 0);
-		/*this command updates mode in audioapi.c. */
-		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
-				      (UInt32) (((int)AUDCTRL_GetAudioApp()) *
-						AUDIO_MODE_NUMBER + mode), 0, 0,
-				      0, 0);
+		   need to pass audio mode to CP */
+		RPC_SetProperty(RPC_PROP_AUDIO_MODE,
+			(UInt32)(((int)AUDCTRL_GetAudioApp()) *
+			AUDIO_MODE_NUMBER + mode));
 	}
 
 	setExternAudioGain(mode, AUDCTRL_GetAudioApp());
@@ -1228,17 +1233,12 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 
 	AUDDRV_SetAudioMode_Speaker(sp_struct);
 
-	if (!AUDCTRL_InVoiceCall() && AUDDRV_TuningFlag()) {
+	if (!AUDCTRL_InVoiceCall()) {
 		/*for music tuning, if PCG changed audio mode,
 		   need to pass audio mode to CP in audio_vdriver_caph.c */
-		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
-				      (UInt32) mode,
-				      (UInt32) app, 0, 0, 0);
-		/*this command updates mode in audioapi.c. */
-		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
-				      (UInt32) ((int)app *
-						AUDIO_MODE_NUMBER + mode), 0, 0,
-				      0, 0);
+		RPC_SetProperty(RPC_PROP_AUDIO_MODE,
+			(UInt32)(((int)app *
+			AUDIO_MODE_NUMBER + mode)));
 	}
 
 	setExternAudioGain(mode, app);
@@ -1322,17 +1322,12 @@ void AUDCTRL_SetAudioMode_ForFM_Multicast(AudioMode_t mode,
 	setExternAudioGain(AUDIO_MODE_RESERVE, AUDIO_APP_MUSIC);
 	AUDCTRL_SaveAudioMode(AUDIO_MODE_SPEAKERPHONE);
 
-	if (!AUDCTRL_InVoiceCall() && AUDDRV_TuningFlag()) {
+	if (!AUDCTRL_InVoiceCall()) {
 		/*for music tuning, if PCG changed audio mode,
 		   need to pass audio mode to CP in audio_vdriver_caph.c */
-		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
-				      (UInt32) mode,
-				      (UInt32) app, 0, 0, 0);
-		/*this command updates mode in audioapi.c. */
-		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
-				      (UInt32) ((int)app *
-						AUDIO_MODE_NUMBER + mode), 0, 0,
-				      0, 0);
+			RPC_SetProperty(RPC_PROP_AUDIO_MODE,
+				(UInt32)(((int)app *
+				AUDIO_MODE_NUMBER + mode)));
 	}
 
 	if (!bClk)
@@ -1381,17 +1376,12 @@ also need to support audio profile (and/or mode) set from user space code
 
 	AUDDRV_SetAudioMode_Mic(mode, app, arg_pathID, 0);
 
-	if (!AUDCTRL_InVoiceCall() && AUDDRV_TuningFlag()) {
+	if (!AUDCTRL_InVoiceCall()) {
 		/*for music tuning, if PCG changed audio mode,
 		   need to pass audio mode to CP in audio_vdriver_caph.c */
-		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
-				      (UInt32) mode,
-				      (UInt32) app, 0, 0, 0);
-		/*this command updates mode in audioapi.c. */
-		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
-				      (UInt32) ((int)app *
-						AUDIO_MODE_NUMBER + mode), 0, 0,
-				      0, 0);
+		RPC_SetProperty(RPC_PROP_AUDIO_MODE,
+			(UInt32)(((int)app *
+			AUDIO_MODE_NUMBER + mode)));
 	}
 
 	if (!bClk)
@@ -2798,18 +2788,15 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 	}
 
 	*pPathID = pathID;
-	if (!AUDCTRL_InVoiceCall() && AUDDRV_TuningFlag()) {
+
+	if (!AUDCTRL_InVoiceCall()) {
 		/*for music tuning, if PCG changed audio mode,
-		   need to pass audio mode to CP in audio_vdriver_caph.c */
-		audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
-				      (UInt32) mode,
-				      (UInt32) app, 0, 0, 0);
-		/*this command updates mode in audioapi.c. */
-		audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
-				      (UInt32) ((int)app *
-						AUDIO_MODE_NUMBER + mode), 0, 0,
-				      0, 0);
+		   need to pass audio mode to CP */
+		RPC_SetProperty(RPC_PROP_AUDIO_MODE,
+			(UInt32)(((int)app *
+			AUDIO_MODE_NUMBER + mode)));
 	}
+
 }
 
 /****************************************************************************
