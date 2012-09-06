@@ -48,7 +48,7 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif
 #include "pm_params.h"
-#ifdef CONFIG_KONA_AVS
+#ifdef CONFIG_RHEA_AVS
 #include <mach/rhea_avs.h>
 #endif
 
