@@ -112,5 +112,9 @@ obj-$(CONFIG_RTC_DRV_VT8500)	+= rtc-vt8500.o
 obj-$(CONFIG_RTC_DRV_WM831X)	+= rtc-wm831x.o
 obj-$(CONFIG_RTC_DRV_WM8350)	+= rtc-wm8350.o
 obj-$(CONFIG_RTC_DRV_X1205)	+= rtc-x1205.o
+ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
+obj-$(CONFIG_RTC_DRV_BCMPMU)   += rtc-bcmpmu59xxx.o
+else
 obj-$(CONFIG_RTC_DRV_BCMPMU)	+= rtc-bcmpmu.o
+endif
 obj-$(CONFIG_RTC_DRV_ISLAND)	+= rtc-island.o

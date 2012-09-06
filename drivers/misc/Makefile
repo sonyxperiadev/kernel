@@ -72,7 +72,11 @@ obj-$(CONFIG_BCM59055_SARADC)	+= bcm59055-adc.o
 obj-$(CONFIG_BCM59055_FUELGAUGE)+= bcm59055-fuelgauge.o
 obj-$(CONFIG_BCM59055_ADC_CHIPSET_API)+= bcm59055-adc_chipset_api.o
 obj-$(CONFIG_BCMPMU_CSAPI_ADC)	+= bcmpmu_csapi_adc.o
+ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
+obj-$(CONFIG_BCMPMU_AUDIO)	+= bcmpmu59xxx_audio.o
+else
 obj-$(CONFIG_BCMPMU_AUDIO)	+= bcmpmu_audio.o
+endif
 obj-$(CONFIG_BTHID)		+= bthid.o
 obj-$(CONFIG_MACH_RHEA_SELFTEST)	+= bcm_selftest_bb.o
 obj-$(CONFIG_MONITOR_BQ27541_I2C)	+= bq27541.o

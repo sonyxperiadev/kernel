@@ -22,12 +22,20 @@ config MFD_88PM860X
 
 config MFD_BCMPMU
 	bool "MFD BCM PMU"
-	depends on I2C_BSC
+	depends on I2C_BSC && !MFD_BCM_PMU59xxx
 	select KONA_USB_CONTROL
 	select MFD_CORE
 	default y
 	help
 	  Support for the Broadcom PMUs
+
+config MFD_BCM_PMU59xxx
+       bool "BCM PMU59xxx"
+       depends on I2C_BSC
+       select MFD_CORE
+       default n
+       help
+         Support for the Broadcom PMUs
 
 config MFD_BCM_PMU590XX
 	bool "MFD BCM PMU590XX PMIC"
@@ -65,7 +73,7 @@ config MFD_BCM59042
 
 config MFD_BCM_PWRMGR_SW_SEQUENCER
 	bool "MFD BCM POWER MANAGER I2C SEQUENCER Support"
-	depends on MFD_BCMPMU && KONA_PWRMGR_REV2 && RHEA_PWRMGR_USE_DUMMY_SEQ=n && PWRMGR_DUMMY_SEQUENCER=n
+	depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx) && KONA_PWRMGR_REV2 && RHEA_PWRMGR_USE_DUMMY_SEQ=n && PWRMGR_DUMMY_SEQUENCER=n
 	default n
 	help
 	  This enables power manager i2c software sequencer support.

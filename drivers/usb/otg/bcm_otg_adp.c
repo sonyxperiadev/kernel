@@ -15,10 +15,16 @@
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
-#include <linux/mfd/bcmpmu.h>
 #include <linux/usb/otg.h>
+#ifdef CONFIG_MFD_BCM_PMU59xxx
+#include "bcmpmu59xxx_otg_xceiv.h"
+#include <linux/mfd/bcmpmu59xxx.h>
+#else
+#include <linux/mfd/bcmpmu.h>
 #include "bcmpmu_otg_xceiv.h"
+#endif
 #include "bcm_otg_adp.h"
+
 
 static void bcmpmu_otg_xceiv_adp_cprb_done_handler(struct work_struct *work)
 {

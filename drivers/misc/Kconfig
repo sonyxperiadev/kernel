@@ -629,7 +629,7 @@ config WL127X_RFKILL
 	---help---
 	 Creates an rfkill entry in sysfs for power control of Bluetooth
 	 TI wl127x chips.
-	 
+
 config BTHID
 	tristate "Bluetooth HID"
 	depends on HID
@@ -702,7 +702,7 @@ config BCM59055_SELFTEST
 
 config BCMPMU_AUDIO
         tristate "BCM PMU Audio Driver"
-        depends on MFD_BCMPMU
+        depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx)
         help
           If you say Y to support Audio drive on BCM PMUs.
 
