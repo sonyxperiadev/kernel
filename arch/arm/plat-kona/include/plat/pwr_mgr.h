@@ -65,7 +65,6 @@
 #define PWRMGR_PI_ON_COUNTER_OVERFLOW_MASK		0x40000000
 #define PWRMGR_PI_ON_COUNTER_MASK			0x3FFFFFFF
 
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 #define PWRMGR_INTR_STATUS_OFFSET		0x40A0
 #define PWRMGR_INTR_MASK_OFFSET			0x40A4
 #define PWRMGR_EVENT_BANK1_OFFSET		0x40A8
@@ -89,7 +88,6 @@
 #define SET_PC_PIN_CMD_PC2_PIN_OVERRIDE_MASK			(0x40)
 #define SET_PC_PIN_CMD_PC3_PIN_OVERRIDE_MASK			(0x80)
 
-#endif /*CONFIG_KONA_PWRMGR_REV2 */
 
 #if defined(DEBUG)
 #define pwr_dbg printk
@@ -148,10 +146,8 @@ enum {
 	END = 7,		/*stop and wait for new voltage request change */
 	SET_PC_PINS = 8,	/*pc pins are set based on value and mask */
 	SET_UPPER_DATA = 9,	/*sets the data in the upper byte of apb data bus */
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 	READ_FIFO = 0xA,	/*Read I2C FIFO */
 	SET_READ_DATA = 0xB,	/*Copy I2C read data to PWRMGR register */
-#endif /*CONFIG_KONA_PWRMGR_REV2 */
 	JUMP_VOLTAGE = 0xE,	/*jump to address based on current voltage request */
 	JUMP = 0xF		/*jump to address defined in payload */
 };
@@ -191,10 +187,8 @@ enum pc_pin {
 enum {
 	PM_PMU_I2C = (1 << 0),
 	PM_HW_SEM_NO_DFS_REQ = (1 << 1),	/*Don't request for turbo mode when acquiring HW SEM - test only */
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 	PROCESS_EVENTS_ON_INTR = (1 << 2),
 	I2C_SIMULATE_BURST_MODE = (1 << 3),
-#endif
 };
 
 struct pm_policy_cfg {
@@ -235,7 +229,6 @@ struct pwr_mgr_info {
 	struct pm_special_event_range *special_event_list;
 	u32 num_special_event_range;
 
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 pwrmgr_intr;
 	u32 i2c_rd_off;
 	int i2c_rd_slv_id_off1;	/*slave id offset -  write reg address */
@@ -249,13 +242,11 @@ struct pwr_mgr_info {
 	int i2c_wr_reg_addr_off;
 	int i2c_wr_val_addr_off;
 	u32 i2c_seq_timeout;	/*timeout in ms */
-#endif
 #ifdef CONFIG_RHEA_WA_HWJIRA_2747
 	int pc_toggle_off;
 #endif
 };
 
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 /*PWRMGR interrupts -  entries are based on offset*/
 enum {
 	PWRMGR_INTR_I2C_SW_SEQ,
@@ -264,7 +255,6 @@ enum {
 	PWRMGR_INTR_ALL = 0xFF
 };
 
-#endif /*CONFIG_KONA_PWRMGR_REV2 */
 
 int pwr_mgr_event_trg_enable(int event_id, int event_trg_type);
 int pwr_mgr_get_event_trg_type(int event_id);
@@ -311,7 +301,6 @@ int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event);
 void pwr_mgr_init_sequencer(struct pwr_mgr_info *info);
 int pwr_mgr_init(struct pwr_mgr_info *info);
 
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 int pwr_mgr_mask_intr(u32 intr, bool mask);
 int pwr_mgr_clr_intr_status(u32 intr);
 int pwr_mgr_get_intr_status(u32 intr);
@@ -322,7 +311,6 @@ int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start, u8 slave_id,
 int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start, u8 slave_id,
 			      u8 count, u8 * reg_val);
 int pwr_mgr_set_i2c_mode(int poll);
-#endif /*CONFIG_KONA_PWRMGR_REV2 */
 
 #ifdef CONFIG_DEBUG_FS
 #ifdef CONFIG_RHEA_DELAYED_PM_INIT
