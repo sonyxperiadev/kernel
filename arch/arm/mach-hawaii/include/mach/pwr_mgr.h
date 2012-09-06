@@ -22,6 +22,8 @@
 #define PWRMGR_SW_SEQ_PC_PIN		PC3
 #endif
 
+#define PM_I2C_CMD_MAX	128
+
 extern const char *__event2str[];
 #endif
 

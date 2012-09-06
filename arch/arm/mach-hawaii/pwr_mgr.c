@@ -642,10 +642,6 @@ int __init mach_init_sequencer(void)
 	    pwrmgr_init_param.i2c_rd_slv_id_off2;
 	__pwr_mgr_info.i2c_rd_reg_addr_off =
 	    pwrmgr_init_param.i2c_rd_reg_addr_off;
-	__pwr_mgr_info.i2c_rd_nack_jump_off =
-	    pwrmgr_init_param.i2c_rd_nack_jump_off;
-	__pwr_mgr_info.i2c_rd_nack_off = pwrmgr_init_param.i2c_rd_nack_off;
-	__pwr_mgr_info.i2c_rd_fifo_off = pwrmgr_init_param.i2c_rd_fifo_off;
 	__pwr_mgr_info.i2c_wr_off = pwrmgr_init_param.i2c_wr_off;
 	__pwr_mgr_info.i2c_wr_slv_id_off =
 	    pwrmgr_init_param.i2c_wr_slv_id_off;
@@ -660,8 +656,8 @@ int __init mach_init_sequencer(void)
 
 	__pwr_mgr_info.i2c_cmds = pwrmgr_init_param.cmd_buf;
 	__pwr_mgr_info.num_i2c_cmds = pwrmgr_init_param.cmb_buf_size;
-	__pwr_mgr_info.i2c_cmd_ptr[VOLT0] = pwrmgr_init_param.v0ptr;
-
+	__pwr_mgr_info.i2c_cmd_ptr[VOLT0] = pwrmgr_init_param.v0xptr[0];
+	__pwr_mgr_info.i2c_cmd_ptr[VOLT1] = pwrmgr_init_param.v0xptr[1];
 	pwr_mgr_init_sequencer(&__pwr_mgr_info);
 
 	/* pwr_mgr_init_sequencer function will disable the sequencer

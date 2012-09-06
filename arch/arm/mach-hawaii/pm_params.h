@@ -167,10 +167,9 @@ enum {
 struct pwrmgr_init_param {
 	struct i2c_cmd *cmd_buf;
 	u32 cmb_buf_size;
-	struct v0x_spec_i2c_cmd_ptr *v0ptr;
+	struct v0x_spec_i2c_cmd_ptr *v0xptr[V_SET_MAX];
 	u8 *def_vlt_tbl;
 	u32 vlt_tbl_size;
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 	u32 i2c_rd_off;
 	int i2c_rd_slv_id_off1;	/*slave id offset -  write reg address */
 	int i2c_rd_slv_id_off2;	/*slave id offset - read reg value */
@@ -183,7 +182,6 @@ struct pwrmgr_init_param {
 	int i2c_wr_reg_addr_off;
 	int i2c_wr_val_addr_off;
 	u32 i2c_seq_timeout;	/*timeout in ms */
-#endif
 #ifdef CONFIG_RHEA_WA_HWJIRA_2747
 	int pc_toggle_off;
 #endif
