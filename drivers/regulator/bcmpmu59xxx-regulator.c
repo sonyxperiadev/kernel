@@ -628,8 +628,8 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 				if (ret != 0)
 					goto register_fail;
 			}
-			pr_rgltr(INIT, "%s: REGULATOR ID %d, name %s,\
-					def_opmode = %x \n ",
+			pr_rgltr(INIT, "%s: REGULATOR ID %d, name %s"
+					"def_opmode = %x\n",
 					__func__, rgltr_id,
 					rgltr_info->rdesc[rgltr_id].name,
 					opmode);

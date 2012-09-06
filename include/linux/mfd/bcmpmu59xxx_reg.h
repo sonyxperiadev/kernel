@@ -32,10 +32,11 @@
 #define DEC_REG_FLAG(x)		(((x) & FLAG_MASK) >> FLAG_SHIFT)
 #define DEC_REG_ADD(x)		((x) & ADD_MASK)
 
-#define DEC_PMU_REG(a, f, m, r) \
+#define DEC_PMU_REG(a, f, m, r) do { \
 				f = u8(a >> FLAG_SHIFT);\
 				m = u8(a >> AMAP_SHIFT);\
-				r = u16(a);
+				r = u16(a);\
+				} while (0)
 
 #define PMU_REG_I2CCTRL		ENC_PMU_REG(FIFO_MODE, MAP0, 0x0000)
 #define I2CCTRL_RDBLKEN_MASK	0x40

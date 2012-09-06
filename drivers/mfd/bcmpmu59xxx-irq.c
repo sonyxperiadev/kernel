@@ -193,7 +193,7 @@ static void bcmpmu59xxx_read_irq_regs(struct bcmpmu59xxx_irq_data *idata)
 u8 bcmpmu59xxx_get_irq_index(struct bcmpmu59xxx_irq_data *idata,
 				 enum bcmpmu59xxx_irq *irq_num)
 {
-	static u8 reg_index = 0;
+	static u8 reg_index;
 	u8 bit_num, i ;
 	for (i = reg_index; i < NUM_IRQ_REG; i++) {
 		if (idata->irq_regs[i]) {

@@ -274,7 +274,7 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 {
 	struct bcmpmu59xxx *bcmpmu = pmu_audio->bcmpmu;
 	u8 temp;
-	u8 data1, data2, data3;
+	u32 data1, data2, data3;
 	int ret = 0;
 	int HSwasEn = 0;
 	pr_audio(FLOW, "Inside %s, HSgain %d, HSInputmode %d\n",
@@ -289,9 +289,9 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 		HSwasEn = 1;
 	}
 
-	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA1, &data1);
-	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA1, &data2);
-	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA3, &data3);
+	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA1, (u8 *)&data1);
+	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA1, (u8 *)&data2);
+	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA3, (u8 *)&data3);
 	if (HSInputmode == PMU_HS_SINGLE_ENDED_AC_COUPLED) {
 
 		/*add 6 dB shift if input mode is PMU_HS_SINGLE_ENDED,
@@ -358,16 +358,16 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 				BCMPMU_HSPGA3_PGA_ACINADJ);
 	}
 
-	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA1, data1);
-	ret |= bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA2, data2);
-	ret |= bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA3, data3);
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA1, (u8)data1);
+	ret |= bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA2, (u8)data2);
+	ret |= bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA3, (u8)data3);
 
 	/* Power Up HS */
 	if (HSwasEn) {
 		pmu_audio->HS_On = true;
-		bcmpmu->read_dev(bcmpmu, PMU_REG_HSPUP2, &data1);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_HSPUP2, (u8 *)&data1);
 		data1 |= 1 << HSPUP2_HS_PWRUP_SHIFT;
-		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP2, data1);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP2, (u8)data1);
 	}
 	mutex_unlock(&pmu_audio->lock);
 

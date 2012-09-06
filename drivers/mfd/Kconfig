@@ -36,6 +36,8 @@ config MFD_BCM_PMU59xxx
        default n
        help
          Support for the Broadcom PMUs
+	 This will select mfd based PMU core ,IRQ and I2C drivers
+
 
 config MFD_BCM_PMU590XX
 	bool "MFD BCM PMU590XX PMIC"
