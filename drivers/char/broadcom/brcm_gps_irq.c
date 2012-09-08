@@ -304,13 +304,26 @@ static ssize_t gps_irq_read(struct file *filp,
 	if (ac_data->rxlength_rp != ac_data->rxlength_wp) {
 		i = ac_data->rxlength[ac_data->rxlength_rp];
 
-		memcpy(ac_data->tmp+l,
-				&ac_data->rd_buffer[ac_data->rbuffer_rp],
-					i);
-		l = i;
-		ac_data->rbuffer_rp =
-			(ac_data->rbuffer_rp+1) & (RX_SIZE-1);
-		ac_data->rxlength_rp = (ac_data->rxlength_rp+1) & (RX_SIZE-1);
+		if (i>length)
+		{
+			memcpy(ac_data->tmp+l,
+					&ac_data->rd_buffer[ac_data->rbuffer_rp],
+						length);
+			for (j=0;j<(i-length);++j)
+				ac_data->rd_buffer[ac_data->rbuffer_rp][j]=ac_data->rd_buffer[ac_data->rbuffer_rp][j+length];
+			l=length;
+			ac_data->rxlength[ac_data->rxlength_rp]=i-length;
+		}
+		else
+		{
+			memcpy(ac_data->tmp+l,
+					&ac_data->rd_buffer[ac_data->rbuffer_rp],
+						i);
+			l = i;
+			ac_data->rbuffer_rp =
+				(ac_data->rbuffer_rp+1) & (RX_SIZE-1);
+			ac_data->rxlength_rp = (ac_data->rxlength_rp+1) & (RX_SIZE-1);
+		}
 		copy_to_user(buffer, ac_data->tmp, l);
 		return l;
 	} else
