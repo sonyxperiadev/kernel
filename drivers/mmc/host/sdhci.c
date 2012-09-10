@@ -1322,6 +1322,10 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	} else {
 		u32 present_state;
 
+		/* Enable CMD/DATA interrupts */
+		sdhci_unmask_irqs(host, SDHCI_INT_CMD_MASK |
+			SDHCI_INT_DATA_MASK);
+
 		present_state = sdhci_readl(host, SDHCI_PRESENT_STATE);
 		/*
 		 * Check if the re-tuning timer has already expired and there
@@ -2141,6 +2145,9 @@ static void sdhci_tasklet_finish(unsigned long param)
 	host = (struct sdhci_host*)param;
 
 	spin_lock_irqsave(&host->lock, flags);
+
+	/* Disable CMD/DATA interrupts after request is complete */
+	sdhci_mask_irqs(host, SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK);
 
         /*
          * If this tasklet gets rescheduled while running, it will

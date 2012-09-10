@@ -213,7 +213,7 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 {
 	TMsgAudioCtrl msgAudioCtrl;
 	unsigned int len = 0;
-
+	set_user_nice(current, -20);
 	while (1) {
 		/* get operation code from fifo */
 		len = kfifo_out_locked(&sgThreadData.m_pkfifo,

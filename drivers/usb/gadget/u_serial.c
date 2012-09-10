@@ -893,9 +893,15 @@ exit:
 
 static int gs_write(struct tty_struct *tty, const unsigned char *buf, int count)
 {
-	struct gs_port	*port = tty->driver_data;
+	struct gs_port	*port;
 	unsigned long	flags;
 	int		status;
+
+	if (tty->driver_data == (void *)0) {
+		pr_warn("tty->driver_data is zero\n");
+		return 0;
+	}
+	port = tty->driver_data;
 
 	pr_vdebug("gs_write: ttyGS%d (%p) writing %d bytes\n",
 			port->port_num, tty, count);
