@@ -112,6 +112,13 @@ struct ion_heap_ops {
 	void (*unmap_kernel) (struct ion_heap *heap, struct ion_buffer *buffer);
 	int (*map_user) (struct ion_heap *mapper, struct ion_buffer *buffer,
 			 struct vm_area_struct *vma);
+#ifdef CONFIG_ION_KONA
+	int (*flush_cache) (struct ion_heap *heap, struct ion_buffer *buffer,
+			unsigned long offset, unsigned long len);
+	int (*invalidate_cache) (struct ion_heap *heap,
+			struct ion_buffer *buffer, unsigned long offset,
+			unsigned long len);
+#endif
 };
 
 /**
