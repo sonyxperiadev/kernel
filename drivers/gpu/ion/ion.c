@@ -1161,18 +1161,22 @@ static const struct file_operations ion_fops = {
 };
 
 static size_t ion_debug_heap_total(struct ion_client *client,
-				   int id)
+				   int id, size_t *shared)
 {
 	size_t size = 0;
 	struct rb_node *n;
 
+	*shared = 0;
 	mutex_lock(&client->lock);
 	for (n = rb_first(&client->handles); n; n = rb_next(n)) {
 		struct ion_handle *handle = rb_entry(n,
 						     struct ion_handle,
 						     node);
-		if (handle->buffer->heap->id == id)
+		if (handle->buffer->heap->id == id) {
 			size += handle->buffer->size;
+			if(&handle->buffer->handle_count > 1)
+				*shared += handle->buffer->size;
+		}
 	}
 	mutex_unlock(&client->lock);
 	return size;
@@ -1185,27 +1189,30 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	struct rb_node *n;
 	size_t total_size = 0;
 	size_t total_orphaned_size = 0;
+	size_t total_shared_size = 0;
 
-	seq_printf(s, "%16.s %16.s %16.s %16.s\n",
-			"client", "pid", "size", "oom_score_adj");
+	seq_printf(s, "%16.s %16.s %16.s %16.s %16.s\n",
+			"client", "pid", "size", "shared", "oom_score_adj");
 	seq_printf(s, "----------------------------------------------------\n");
 
 	for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
+		size_t shared;
 		struct ion_client *client = rb_entry(n, struct ion_client,
 						     node);
-		size_t size = ion_debug_heap_total(client, heap->id);
+		size_t size = ion_debug_heap_total(client, heap->id, &shared);
 		if (!size)
 			continue;
 		if (client->task) {
 			char task_comm[TASK_COMM_LEN];
 
 			get_task_comm(task_comm, client->task);
-			seq_printf(s, "%16.s %16u %13u KB %16d\n", task_comm,
+			seq_printf(s, "%16.s %16u %13u KB %13u KB %16d\n", task_comm,
 					client->pid, (size>>10), 
+					(shared>>10),
 					client->task->signal->oom_score_adj);
 		} else {
-			seq_printf(s, "%16.s %16u %13u KB\n", client->name,
-					client->pid, (size>>10));
+			seq_printf(s, "%16.s %16u %13u KB %13u KB\n", client->name,
+					client->pid, (size>>10), (shared>>10));
 		}
 	}
 	seq_printf(s, "----------------------------------------------------\n");
@@ -1215,21 +1222,23 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
 		struct ion_buffer *buffer = rb_entry(n, struct ion_buffer,
 						     node);
-		if (buffer->heap->type == heap->type)
+		if (buffer->heap->id == heap->id)
 			total_size += buffer->size;
 		if (!buffer->handle_count) {
 			seq_printf(s, "%16.s %16u %13u KB\n", buffer->task_comm,
 				   buffer->pid, buffer->size);
 			total_orphaned_size += buffer->size;
 		}
+		if (buffer->handle_count > 1)
+			total_shared_size += buffer->size;
 	}
 	mutex_unlock(&dev->lock);
 	seq_printf(s, "----------------------------------------------------\n");
 	if (heap->size)
 		seq_printf(s, "%16.s %13u KB\n", "total reserved",
 				(heap->size>>10));
-	seq_printf(s, "%16.s %13u KB\n", "total used",
-			(total_size>>10));
+	seq_printf(s, "%16.s %13u KB, %16.s %13u KB\n", "total used",
+			(total_size>>10), "total shared", (total_shared_size>>10));
 	seq_printf(s, "%16.s %13u KB\n", "total orphaned",
 			(total_orphaned_size>>10));
 
