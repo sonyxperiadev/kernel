@@ -338,8 +338,8 @@ static void axipv_irq_cb(int stat)
 	static int w_lvl2_cnt;
 	DSI_HANDLE dsiH = &dsiBus[0];
 	if (stat & WATER_LVL2_INT) {
-		printk("w_lvl2 int 0x%x\n", stat);
 		w_lvl2_cnt++;
+		printk("w_lvl2 int stat=0x%x cnt=%d\n", stat, w_lvl2_cnt);
 	}
 	if (stat & PV_START_THRESH_INT)
 		OSSEMAPHORE_Release(dsiH->semaAxipv);

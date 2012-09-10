@@ -227,8 +227,8 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 		ret = PTR_ERR(dev->clk);
 		goto fail;
 	}
-	axipv_clk_enable(dev);
 #endif
+	axipv_clk_enable(dev);
 
 	ctrl &= SFT_RSTN_MASK;
 	/* Do an immediate soft reset and wait for completion */
@@ -366,6 +366,7 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 	struct axipv_dev *dev = dev_id;
 	int irq_stat;
 	u32 axipv_base;
+	bool disable_axipv = false;
 
 	axipv_base = dev->base_addr;
 	irq_stat = readl(axipv_base + REG_INTR_STAT);
@@ -397,9 +398,7 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 			axipv_release_buff(g_nxt);
 			g_nxt = 0;
 		}
-		dev->state = AXIPV_STOPPED;
-		writel(AXIPV_DISABLED_INT, axipv_base + REG_INTR_CLR);
-		axipv_clk_disable(dev);
+		disable_axipv = true;
 		irq_stat = irq_stat & ~AXIPV_DISABLED_INT;
 #if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
 		do_gettimeofday(&tv2);
@@ -418,6 +417,12 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		schedule_work(&dev->irq_work);
 		writel(irq_stat, axipv_base + REG_INTR_CLR);
 	}
+	if (disable_axipv) {
+		dev->state = AXIPV_STOPPED;
+		writel(AXIPV_DISABLED_INT, axipv_base + REG_INTR_CLR);
+		axipv_clk_disable(dev);
+	}
+
 	return IRQ_HANDLED;
 }
 
@@ -574,9 +579,7 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 			|| (AXIPV_STOPPED == dev->state)) {
 			unsigned long flags;
 
-#ifdef AXIPV_HAS_CLK
 			axipv_clk_enable(dev);
-#endif
 #if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
 			do_gettimeofday(&tv1);
 #endif
