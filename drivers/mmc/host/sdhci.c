@@ -2086,20 +2086,22 @@ static void sdhci_tasklet_card(unsigned long param)
 	spin_lock_irqsave(&host->lock, flags);
 
 	/* Check host->mrq first in case we are runtime suspended */
-	if (host->mrq &&
-	    !(sdhci_readl(host, SDHCI_PRESENT_STATE) & SDHCI_CARD_PRESENT)) {
-		pr_err("%s: Card removed during transfer!\n",
-			mmc_hostname(host->mmc));
-		pr_err("%s: Resetting controller.\n",
-			mmc_hostname(host->mmc));
+	if (host->mrq)	{
+		if (sdhci_readl(host, SDHCI_PRESENT_STATE) &
+			SDHCI_CARD_PRESENT) {
+			pr_err("%s: Card removed during transfer!\n",
+				mmc_hostname(host->mmc));
+			pr_err("%s: Resetting controller.\n",
+				mmc_hostname(host->mmc));
 
-		sdhci_reset(host, SDHCI_RESET_CMD);
-		sdhci_reset(host, SDHCI_RESET_DATA);
+			sdhci_reset(host, SDHCI_RESET_CMD);
+			sdhci_reset(host, SDHCI_RESET_DATA);
 
-		host->mrq->cmd->error = -ENOMEDIUM;
-		tasklet_schedule(&host->finish_tasklet);
+			host->mrq->cmd->error = -ENOMEDIUM;
+			tasklet_schedule(&host->finish_tasklet);
 #ifdef CONFIG_MMC_BCM_SD
 			pr_info("SD Card Removed\n");
+		}
 	} else {
 		if (!(sdhci_readl(host, SDHCI_PRESENT_STATE) &
 					SDHCI_CARD_PRESENT)) {
@@ -2697,6 +2699,9 @@ int sdhci_suspend_host(struct sdhci_host *host)
 	struct mmc_host *mmc;
 	bool has_tuning_timer;
 
+	if (host->ops->clk_enable)
+		host->ops->clk_enable(host, 1);
+
 	mmc = host->mmc;
 	if (host->ops->platform_suspend)
 		host->ops->platform_suspend(host);
@@ -2710,6 +2715,9 @@ int sdhci_suspend_host(struct sdhci_host *host)
 		del_timer_sync(&host->tuning_timer);
 		host->flags &= ~SDHCI_NEEDS_RETUNING;
 	}
+
+	/* Flush and wait for erase operation to complete */
+	flush_work_sync(&host->wait_erase_work);
 
 	ret = mmc_suspend_host(host->mmc);
 	if (ret) {
@@ -2989,7 +2997,7 @@ static void sdhci_debugfs_throughput_remove(struct sdhci_host *host)
 
 	mmc_thpt = &mmc_throughput[host->mmc->index];
 	if (!mmc_thpt)
-		return -ENOMEM;
+		return;
 
 	debugfs_remove(mmc_thpt->dentry[0]);
 	debugfs_remove(mmc_thpt->dentry[1]);
@@ -3064,6 +3072,7 @@ int sdhci_add_host(struct sdhci_host *host)
 	u32 max_current_caps;
 	unsigned int ocr_avail;
 	int ret;
+	unsigned int vendor_version = 0;
 
 	WARN_ON(host == NULL);
 	if (host == NULL)
@@ -3077,6 +3086,10 @@ int sdhci_add_host(struct sdhci_host *host)
 		host->quirks2 = debug_quirks2;
 
 	sdhci_reset(host, SDHCI_RESET_ALL);
+
+	host->version = sdhci_readw(host, SDHCI_HOST_VERSION);
+	vendor_version = (host->version & SDHCI_VENDOR_VER_MASK)
+		>> SDHCI_VENDOR_VER_SHIFT;
 
 	host->version = sdhci_readw(host, SDHCI_HOST_VERSION);
 	host->version = (host->version & SDHCI_SPEC_VER_MASK)
@@ -3245,10 +3258,12 @@ int sdhci_add_host(struct sdhci_host *host)
 	/* Auto-CMD23 stuff only works in ADMA or PIO. */
 	if ((host->version >= SDHCI_SPEC_300) &&
 	    ((host->flags & SDHCI_USE_ADMA) ||
-	     !(host->flags & SDHCI_USE_SDMA))) {
+	     !(host->flags & SDHCI_USE_SDMA)) &&
+		(vendor_version != 0xA7)) {
 		host->flags |= SDHCI_AUTO_CMD23;
 		DBG("%s: Auto-CMD23 available\n", mmc_hostname(mmc));
 	} else {
+		host->flags &= ~SDHCI_AUTO_CMD23;
 		DBG("%s: Auto-CMD23 unavailable\n", mmc_hostname(mmc));
 	}
 

@@ -244,8 +244,6 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	/* mmc_detect_change(host->mmc, msecs_to_jiffies(10)); */
-
 	return 0;
 }
 
@@ -627,6 +625,10 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	if (dev->devtype == SDIO_DEV_TYPE_EMMC)
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
 
+	/* Don't issue SLEEP command to e.MMC device */
+	if (dev->devtype == SDIO_DEV_TYPE_EMMC)
+		host->mmc->caps2 |= MMC_CAP2_NO_SLEEP_CMD;
+
 	ret = sdhci_add_host(host);
 	if (ret)
 		goto err_reset;
@@ -828,15 +830,21 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
+	int ret = 0;
 
-	sdhci_pltfm_clk_enable(host, 1);
+	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
+		goto ret_path;
 
-	flush_work_sync(&host->wait_erase_work);
+	ret = sdhci_suspend_host(host);
+	if (ret) {
+		dev_err(&pdev->dev, "Unable to suspend sdhci host err=%d\n",
+			ret);
+		return ret;
+	}
 
 	sdhci_kona_sdio_regulator_power(dev, 0);
 
-	sdhci_pltfm_clk_enable(host, 0);
-
+ret_path:
 	dev->suspended = 1;
 	return 0;
 }
@@ -844,9 +852,21 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 static int sdhci_pltfm_resume(struct platform_device *pdev)
 {
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
+	struct sdhci_host *host = dev->host;
+	int ret = 0;
+
+	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
+		goto ret_path;
 
 	sdhci_kona_sdio_regulator_power(dev, 1);
+	ret = sdhci_resume_host(host);
+	if (ret) {
+		dev_err(&pdev->dev,
+		 "Unable to resume sdhci host err=%d\n", ret);
+		return ret;
+	}
 
+ret_path:
 	dev->suspended = 0;
 	return 0;
 }
