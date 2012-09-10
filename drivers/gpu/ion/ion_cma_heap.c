@@ -152,7 +152,7 @@ void ion_cma_heap_unmap_dma(struct ion_heap *heap,
 static int ion_cma_mmap(struct ion_heap *mapper, struct ion_buffer *buffer,
 			struct vm_area_struct *vma)
 {
-#if 1
+#ifdef CONFIG_ION_KONA
 	struct device *dev = buffer->heap->priv;
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
 
@@ -204,7 +204,9 @@ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data,
 	 * used to make the link with reserved CMA memory */
 	heap->priv = dev;
 	heap->type = ION_HEAP_TYPE_DMA;
+#ifdef CONFIG_ION_KONA
 	heap->size = data->size;
+#endif
 	return heap;
 }
 

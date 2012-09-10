@@ -156,6 +156,9 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 	buffer->dev = dev;
 	buffer->size = len;
 	buffer->flags = flags;
+#ifdef CONFIG_ION_KONA
+	buffer->align = align;
+#endif
 
 	table = heap->ops->map_dma(heap, buffer);
 	if (IS_ERR_OR_NULL(table)) {
@@ -1225,10 +1228,10 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	if (heap->size)
 		seq_printf(s, "%16.s %13u KB\n", "total reserved",
 				(heap->size>>10));
+	seq_printf(s, "%16.s %13u KB\n", "total used",
+			(total_size>>10));
 	seq_printf(s, "%16.s %13u KB\n", "total orphaned",
 			(total_orphaned_size>>10));
-	seq_printf(s, "%16.s %13u KB\n", "total ",
-			(total_size>>10));
 
 	return 0;
 }

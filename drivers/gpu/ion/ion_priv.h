@@ -76,13 +76,13 @@ struct ion_buffer {
 	int handle_count;
 	char task_comm[TASK_COMM_LEN];
 	pid_t pid;
-#ifdef CONFIG_M4U
-	unsigned int dma_addr;
-	unsigned int align;
-#endif
 #ifdef CONFIG_ION_KONA
 	unsigned int custom_flags;
 	int custom_update_count;
+	unsigned int align;
+#endif
+#ifdef CONFIG_M4U
+	unsigned int dma_addr;
 #endif
 };
 
@@ -124,8 +124,8 @@ struct ion_heap_ops {
  *			allocating.  These are specified by platform data and
  *			MUST be unique
  * @name:		used for debugging
- * @size:		reserved size of carveout/cma heaps for debug_show
  * @priv:		private heap data
+ * @size:		reserved size of carveout/cma heaps for debug_show
  *
  * Represents a pool of memory from which buffers can be made.  In some
  * systems the only heap is regular system memory allocated via vmalloc.
@@ -139,8 +139,10 @@ struct ion_heap {
 	struct ion_heap_ops *ops;
 	int id;
 	const char *name;
-	int size;
 	void *priv;
+#ifdef CONFIG_ION_KONA
+	int size;
+#endif
 };
 
 /**
@@ -209,13 +211,14 @@ extern struct ion_buffer *ion_lock_buffer(struct ion_client *client,
 		struct ion_handle *handle);
 extern void ion_unlock_buffer(struct ion_client *client,
 		struct ion_buffer *buffer);
-#endif
 
 #define pgprot_writethrough(prot) \
 	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITETHROUGH)
 
 #define pgprot_writeback(prot) \
 	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITEBACK)
+
+#endif
 
 /**
  * The carveout heap returns physical addresses, since 0 may be a valid
