@@ -125,14 +125,6 @@ config KONA_PM_NO_CLK_DISABLE
 	help
 		Say Y to disable clk disable.
 
-config	PM_LOG_TO_UNCACHED_MEM
-	bool "Enable uncached logging facility for PM"
-	default n
-	help
-		Say Y to enable uncached logging facility for PM.
-		used to log PM specific events. This will help in
-		enhancing ramdump analysis as the ctritical PM events
-		and traces can be seen in ramdump.
 
 config KONA_CPU_FREQ_DRV
        bool "Enable CPU frequency scaling for kona chips"
@@ -251,6 +243,29 @@ config KONA_CSL_CAMERA
 
 config KONA_CHAL_CAMERA
 	tristate
+
+config BRCM_UART_CHANGES
+	bool "Enable the Uart 8250.c changes"
+	depends on ARCH_RHEA
+	default y
+	help
+	  Say Y if you want to enable BRCM UART changes in 8250.c file
+
+config DW_UART_WA_JIRA_1744
+	bool "DesignWare UART Jira-1744 Software workaround"
+	depends on BRCM_UART_CHANGES
+	default y
+	help
+	  UART RX interrupt happened but in LSR Data Ready is not set.
+	  This fix modifies the serial driver to take decission to
+	  call receive_chars based on iir and not based on LSR
+
+config DW_BT_UART_CHANGES
+	bool "BT related changes for Designware Uart"
+	depends on BRCM_UART_CHANGES && BT_RFCOMM_TTY
+	default y
+	help
+	  Handling BT UART ISR changes.
 
 
 endmenu
