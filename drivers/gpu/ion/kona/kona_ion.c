@@ -128,6 +128,47 @@ static int kona_ion_get_update_count(struct ion_client *client,
 	return -EINVAL;
 }
 
+static int kona_is_region_ok(struct ion_buffer *buffer,
+		unsigned long offset, unsigned long len)
+{
+	if ((offset > buffer->size) || ((offset + len) > buffer->size)
+			|| (len > buffer->size))
+		return 0;
+	return 1;
+}
+
+static int kona_ion_cache_flush(struct ion_client *client,
+		struct ion_custom_region_data *data)
+{
+	struct ion_buffer *buffer;
+	int ret = -EINVAL;
+
+	buffer = ion_lock_buffer(client, data->handle);
+	if (buffer && buffer->heap->ops->flush_cache) {
+		if (kona_is_region_ok(buffer, data->offset, data->len))
+			ret = buffer->heap->ops->flush_cache(buffer->heap,
+					buffer,	data->offset, data->len);
+		ion_unlock_buffer(client, buffer);
+	}
+	return ret;
+}
+
+static int kona_ion_cache_invalidate(struct ion_client *client,
+		struct ion_custom_region_data *data)
+{
+	struct ion_buffer *buffer;
+	int ret = -EINVAL;
+
+	buffer = ion_lock_buffer(client, data->handle);
+	if (buffer && buffer->heap->ops->invalidate_cache) {
+		if (kona_is_region_ok(buffer, data->offset, data->len))
+			ret = buffer->heap->ops->invalidate_cache(buffer->heap,
+					buffer,	data->offset, data->len);
+		ion_unlock_buffer(client, buffer);
+	}
+	return ret;
+}
+
 static long kona_ion_custom_ioctl (struct ion_client *client,
 				      unsigned int cmd,
 				      unsigned long arg)
@@ -146,11 +187,6 @@ static long kona_ion_custom_ioctl (struct ion_client *client,
 
 		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
 			return -EFAULT;
-		break;
-	}
-	case ION_IOC_CUSTOM_DMA_UNMAP:
-	{
-		pr_err("ION_IOC_CUSTOM_DMA_UNMAP - dummy ioctl for 3.4 linux\n");
 		break;
 	}
 	case ION_IOC_CUSTOM_SET_PROP:
@@ -205,6 +241,38 @@ static long kona_ion_custom_ioctl (struct ion_client *client,
 		pr_debug("ION_IOC_CUSTOM_GET_UPDATE_COUNT client(%p) handle(%p)\n",
 				client, data.handle);
 		if (kona_ion_get_update_count(client, &data))
+			return -EINVAL;
+
+		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+			return -EFAULT;
+		break;
+	}
+	case ION_IOC_CUSTOM_CACHE_FLUSH:
+	{
+		struct ion_custom_region_data data;
+
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+
+		pr_debug("ION_IOC_CUSTOM_CACHE_FLUSH client(%p) handle(%p)\n",
+				client, data.handle);
+		if (kona_ion_cache_flush(client, &data))
+			return -EINVAL;
+
+		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
+			return -EFAULT;
+		break;
+	}
+	case ION_IOC_CUSTOM_CACHE_INVALIDATE:
+	{
+		struct ion_custom_region_data data;
+
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+
+		pr_debug("ION_IOC_CUSTOM_CACHE_INVALIDATE client(%p) handle(%p)\n",
+				client, data.handle);
+		if (kona_ion_cache_invalidate(client, &data))
 			return -EINVAL;
 
 		if (copy_to_user((void __user *)arg, &data, sizeof(data)))

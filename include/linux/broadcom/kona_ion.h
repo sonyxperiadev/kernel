@@ -42,9 +42,6 @@ extern unsigned int kona_ion_map_dma(struct ion_client *client,
  * DOC: Kona Ion Heap Types for user space to select at alloc time
  */
 #define ION_DEFAULT_HEAP	(0xFFFF)
-#define ION_CONTIG_HEAP		(0x1000)
-#define ION_SG_HEAP			(0x4000)
-#define ION_BANK1_HEAP		(0x2)
 
 /**
  * DOC: Buffer property flags and masks
@@ -113,6 +110,19 @@ struct ion_custom_update_count {
 };
 
 /**
+ * struct ion_custom_region_data - a region and handle passed to/from
+ * the kernel
+ * @handle:	a handle
+ * @offset: offet from start of buffer
+ * @len: size in bytes to be flushed
+ */
+struct ion_custom_region_data {
+	struct ion_handle *handle;
+	unsigned int offset;
+	unsigned int len;
+};
+
+/**
  * DOC: ION_IOC_CUSTOM_DMA_MAP - get dma mapped address
  *
  * Takes an ion_custom_dma_map_data struct with the handle field populated
@@ -120,14 +130,6 @@ struct ion_custom_update_count {
  * set to the M4U or physical address for the buffer held by the handle.
  */
 #define ION_IOC_CUSTOM_DMA_MAP  	     (1)
-
-/**
- * DOC: ION_IOC_CUSTOM_DMA_UNMAP - unmap dma mapped address
- *
- * Takes valid opaque handle as the argument. The dma mapping would be
- * unmapped.
- */
-#define ION_IOC_CUSTOM_DMA_UNMAP  	     (2)
 
 /**
  * DOC: ION_IOC_CUSTOM_SET_PROP - set buffer property
@@ -150,17 +152,39 @@ struct ion_custom_update_count {
 /**
  * DOC: ION_IOC_CUSTOM_UPDATE - Notify ION that buffer is updated
  *
- * Takes a ion_handle as the argument. */
-#define ION_IOC_CUSTOM_UPDATE	  	     (5)
+  * Takes valid opaque handle as the argument. The internal update counter
+ * would be incremented.
+ */
+#define ION_IOC_CUSTOM_UPDATE            (5)
 
 /**
- * DOC: ION_IOC_CUSTOM_GET_UPDATE_COUNT - get buffer update count
+ * DOC: ION_IOC_CUSTOM_GET_UPDATE_COUNT - Get the update count
  *
- * Takes an ion_custom_update_count struct with the handle field
- * populated with a valid opaque handle.  Returns the update count
- * of the buffer in the count field.
+ * Takes an ion_custom_update_data struct with the handle field populated
+ * with a valid opaque handle.  Returns the struct with the count field set
+ * to the buffer internal update counter.
  */
 #define ION_IOC_CUSTOM_GET_UPDATE_COUNT  (6)
+
+/**
+ * DOC: ION_IOC_CUSTOM_CACHE_FLUSH - Arm Cache flush a region of memory
+ *
+ * Takes an ion_custom_region_data struct with the handle field populated
+ * with a valid opaque handle.  The region within the buffer also has to be
+ * populated which needs to be flushed.
+ */
+#define ION_IOC_CUSTOM_CACHE_FLUSH		(7)
+
+/**
+ * DOC: ION_IOC_CUSTOM_CACHE_INVALIDATE - Arm Cache invalidate a region of
+ * memory
+ *
+ * Takes an ion_custom_region_data struct with the handle field populated
+ * with a valid opaque handle.  The region within the buffer also has to be
+ * populated which needs to be flushed.
+ */
+#define ION_IOC_CUSTOM_CACHE_INVALIDATE  (8)
+
 
 /**
  * DOC: ION_IOC_CUSTOM_TP - Do a kernel print - to trace the code
