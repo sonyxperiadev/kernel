@@ -40,8 +40,7 @@
 #define BCMPMU_PRINT_REPORT (1U << 4)
 
 static int debug_mask = BCMPMU_PRINT_ERROR |
-			BCMPMU_PRINT_INIT |
-			BCMPMU_PRINT_REPORT;
+			BCMPMU_PRINT_INIT;
 
 /* static int debug_mask = 0xFF; */
 
