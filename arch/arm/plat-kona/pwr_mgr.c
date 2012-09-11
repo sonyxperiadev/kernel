@@ -353,7 +353,7 @@ int pwr_mgr_event_set_pi_policy(int event_id, int pi_id,
 {
 	u32 reg_val = 0;
 	const struct pi *pi;
-	int realEventId, i;
+	u32 event_offset;
 	unsigned long flgs;
 
 	pwr_pi_dbg(pi_id, PWR_LOG_PI,
@@ -376,23 +376,11 @@ int pwr_mgr_event_set_pi_policy(int event_id, int pi_id,
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
 
-	realEventId = event_id * 4;
-	if (pwr_mgr.info->num_special_event_range) {
-		for (i = 0; i < pwr_mgr.info->num_special_event_range; i++) {
-			if (event_id >=
-			    pwr_mgr.info->special_event_list[i].start
-			    && event_id <=
-			    pwr_mgr.info->special_event_list[i].end) {
-				realEventId =
-				    pwr_mgr.info->special_event_list[i].start *
-				    4;
-				break;
-			}
-		}
-	}
-
+	event_offset = pwr_mgr.info->event_policy_offset[event_id];
+	BUG_ON(event_offset == INVALID_EVENT_OFFSET);
 	reg_val =
-	    readl(PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, realEventId));
+	    readl(PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset,
+								event_offset));
 
 	if (pm_policy_cfg->ac)
 		reg_val |= (1 << pi->pi_info.ac_shift);
@@ -412,7 +400,7 @@ int pwr_mgr_event_set_pi_policy(int event_id, int pi_id,
 		__func__, reg_val, pi->pi_info.pm_policy_shift);
 
 	writel_relaxed(reg_val,
-	       PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, realEventId));
+	       PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, event_offset));
 	pwr_pi_dbg(pi_id, PWR_LOG_PI,
 	"%s : event_id = %d : pi_id = %d, ac : %d,ATL : %d, policy: %d\n",
 	__func__, event_id, pi_id, pm_policy_cfg->ac, pm_policy_cfg->atl,
@@ -435,7 +423,7 @@ int pwr_mgr_event_get_pi_policy(int event_id, int pi_id,
 {
 	u32 reg_val = 0;
 	const struct pi *pi;
-	int realEventId, i;
+	u32 event_offset;
 	unsigned long flgs;
 
 	pwr_pi_dbg(pi_id, PWR_LOG_PI, "%s : event_id = %d : pi_id = %d\n",
@@ -455,22 +443,12 @@ int pwr_mgr_event_get_pi_policy(int event_id, int pi_id,
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 	pi = pi_mgr_get(pi_id);
 	BUG_ON(pi == NULL);
-	realEventId = event_id * 4;
-	if (pwr_mgr.info->num_special_event_range) {
-		for (i = 0; i < pwr_mgr.info->num_special_event_range; i++) {
-			if (event_id >=
-			    pwr_mgr.info->special_event_list[i].start
-			    && event_id <=
-			    pwr_mgr.info->special_event_list[i].end) {
-				realEventId =
-				    pwr_mgr.info->special_event_list[i].start *
-				    4;
-				break;
-			}
-		}
-	}
+
+	event_offset = pwr_mgr.info->event_policy_offset[event_id];
+	BUG_ON(event_offset == INVALID_EVENT_OFFSET);
 	reg_val =
-	    readl(PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, realEventId));
+	    readl(PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset,
+							event_offset));
 
 	pm_policy_cfg->ac = !!(reg_val & (1 << pi->pi_info.ac_shift));
 	pm_policy_cfg->atl = !!(reg_val & (1 << pi->pi_info.atl_shift));
@@ -2973,6 +2951,8 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 	if (!dent_event_tbl)
 		return -ENOMEM;
 	for (event = 0; event < PWR_MGR_NUM_EVENTS; event++) {
+		if (PWRMGR_EVENT_ID_TO_STR(event) == NULL)
+			continue;
 		dent_event =
 		    debugfs_create_dir(PWRMGR_EVENT_ID_TO_STR(event),
 				       dent_event_tbl);
