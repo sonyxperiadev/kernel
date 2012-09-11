@@ -1174,7 +1174,7 @@ static size_t ion_debug_heap_total(struct ion_client *client,
 						     node);
 		if (handle->buffer->heap->id == id) {
 			size += handle->buffer->size;
-			if(&handle->buffer->handle_count > 1)
+			if (handle->buffer->handle_count > 1)
 				*shared += handle->buffer->size;
 		}
 	}
