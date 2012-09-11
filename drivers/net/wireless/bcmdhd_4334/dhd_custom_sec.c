@@ -48,12 +48,12 @@ extern int _dhd_set_mac_address(struct dhd_info *dhd,
 #define MACINFO_EFS NULL
 #define	REVINFO "/data/.rev"
 #else
-#define MACINFO "/data/.mac.info"
+#define MACINFO "/data/misc/wifi/.mac.info"
 #define MACINFO_EFS "/efs/wifi/.mac.info"
-#define NVMACINFO "/data/.nvmac.info"
-#define	REVINFO "/data/.rev"
-#define CIDINFO "/data/.cid.info"
-#define PSMINFO "/data/.psm.info"
+#define NVMACINFO "/data/misc/wifi/.nvmac.info"
+#define	REVINFO "/data/misc/wifi/.rev"
+#define CIDINFO "/data/misc/wifi/.cid.info"
+#define PSMINFO "/data/misc/wifi/.psm.info"
 #endif /* SLP_PATH */
 
 #ifdef READ_MACADDR
