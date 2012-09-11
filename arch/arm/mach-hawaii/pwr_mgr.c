@@ -57,7 +57,7 @@
 
 static int delayed_init_complete;
 
-#ifdef CONFIG_RHEA_DELAYED_PM_INIT
+#ifdef CONFIG_DELAYED_PM_INIT
 struct pi_mgr_qos_node delay_arm_lpm;
 
 struct pm_late_init {
@@ -565,7 +565,7 @@ int hawaii_pwr_mgr_delayed_init(void)
 	pm_mgr_pi_count_clear(1);
 	pm_mgr_pi_count_clear(0);
 
-#ifdef CONFIG_RHEA_IGNORE_DAP_POWERUP_REQ
+#ifdef CONFIG_IGNORE_DAP_POWERUP_REQ
 	pwr_mgr_ignore_dap_powerup_request(true);
 	pwr_mgr_ignore_mdm_dap_powerup_req(true);
 #endif
@@ -577,7 +577,7 @@ int hawaii_pwr_mgr_delayed_init(void)
 #endif
 }
 
-#ifdef CONFIG_RHEA_DELAYED_PM_INIT
+#ifdef CONFIG_DELAYED_PM_INIT
 static int param_set_pm_late_init(const char *val,
 			const struct kernel_param *kp)
 {
@@ -605,7 +605,7 @@ static int param_set_pm_late_init(const char *val,
 
 int __init hawaii_pwr_mgr_late_init(void)
 {
-#ifdef CONFIG_RHEA_DELAYED_PM_INIT
+#ifdef CONFIG_DELAYED_PM_INIT
 	int ret;
 	if (is_charging_state()) {
 		pr_info("%s: power off charging, complete int here\n",

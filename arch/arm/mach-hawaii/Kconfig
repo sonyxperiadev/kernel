@@ -66,7 +66,7 @@ config	MACH_HAWAII_FPGA_USB_V1
 	  HAWAII_USB_v2.0.0
 endchoice
 
-config	HAWAII_IGNORE_DAP_POWERUP_REQ
+config	IGNORE_DAP_POWERUP_REQ
 	bool "Ignore Powerup request from DAP"
 	depends on KONA_POWER_MGR
 	default n
@@ -85,7 +85,7 @@ config	HAWAII_L2X0_PREFETCH
 	  instruction prefetching that have been shown to improve
 	  performance especially in multimedia use cases.
 
-config	HAWAII_DELAYED_PM_INIT
+config	DELAYED_PM_INIT
 	depends on ARCH_HAWAII
 	bool "Enable support for delayed PM init."
 	default n
@@ -94,13 +94,6 @@ config	HAWAII_DELAYED_PM_INIT
 	  space can complete the PM init by writing to sysfs. Once this trigger
 	  is recieved, all the PIs start changing policies, arm can enter LPM and
 	  arm dfs is allowed.
-
-config	RHEA_B0_PM_ASIC_WORKAROUND
-	depends on ARCH_HAWAII
-	bool "Enable B0 ASIC workarounds for Power management"
-	default n
-	help
-	  Say Y if you want to enable Rhea B0 ASIC workarounds for Power management
 
 config	PWRMGR_DUMMY_SEQUENCER
 	bool "Use dummy PWRMGR HW I2C sequencer"

@@ -73,7 +73,7 @@ EXPORT_SYMBOL_GPL(dbg_gpio_clr);
 /*
  * Dormant mode profiling
  */
-#if defined(DORMANT_PROFILE) && defined(CONFIG_RHEA_DORMANT_MODE)
+#if defined(DORMANT_PROFILE) && defined(CONFIG_A9_DORMANT_MODE)
 
 static u32 ns_gpio;
 static u32 sec_gpio;
@@ -123,7 +123,7 @@ static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 	/* Setup common configs */
 	dormant_profile_on = on;
 }
-#else /* !DORMANT_PROFILE && !CONFIG_RHEA_DORMANT_MODE */
+#else /* !DORMANT_PROFILE && !CONFIG_A9_DORMANT_MODE */
 void clear_ns_gpio(void)
 {
 }
@@ -139,7 +139,7 @@ static void dormant_profile_exit(void)
 static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 {
 }
-#endif /* DORMANT_PROFILE && CONFIG_RHEA_DORMANT_MODE */
+#endif /* DORMANT_PROFILE && CONFIG_A9_DORMANT_MODE */
 
 u32 dorm_profile_enable;
 u32 *dormant_trace_v;
@@ -206,10 +206,6 @@ int get_force_sleep_state(void)
 	return force_sleep_state;
 }
 
-#if defined(CONFIG_MACH_RHEA_SS_LUCAS)
-extern void uas_jig_force_sleep(void);
-#endif
-
 
 static void cmd_force_sleep(const char *p)
 {
@@ -220,16 +216,12 @@ static void cmd_force_sleep(const char *p)
 		return;
 	}
 
-#if defined(CONFIG_MACH_RHEA_SS_LUCAS)
-	uas_jig_force_sleep();
-#endif
-
 	pr_info("Forcing system to state: %d\n", force_sleep_state);
 	kona_pm_reg_pm_enter_handler(&hawaii_force_sleep);
 	request_suspend_state(PM_SUSPEND_MEM);
 }
 
-#ifdef CONFIG_RHEA_DORMANT_MODE
+#ifdef CONFIG_A9_DORMANT_MODE
 static void cmd_dormant_profile(const char *p)
 {
 	u32 on, ns, sec, ref;
@@ -270,7 +262,7 @@ static int param_set_debug(const char *val, const struct kernel_param *kp)
 		p++;
 
 	switch (val[0]) {
-#ifdef CONFIG_RHEA_DORMANT_MODE
+#ifdef CONFIG_A9_DORMANT_MODE
 	case CMD_DORMANT:
 		cmd_dormant(p);
 		break;
@@ -303,7 +295,7 @@ static int param_get_debug(char *buffer, const struct kernel_param *kp)
 void instrument_dormant_entry(void)
 {
 	if (dormant_trace_v) {
-#ifdef CONFIG_RHEA_DORMANT_MODE
+#ifdef CONFIG_A9_DORMANT_MODE
 		*dormant_trace_v = DORMANT_ENTRY;
 		*(dormant_trace_v + COUNTER_OFFSET) = dormant_attempt + 1;
 #endif

@@ -1,5 +1,5 @@
-#ifndef __RHEA_PWR_MNGR_H__
-#define __RHEA_PWR_MNGR_H__
+#ifndef __HAWAII_PWR_MNGR_H__
+#define __HAWAII_PWR_MNGR_H__
 
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #ifdef CONFIG_DEBUG_FS
@@ -151,7 +151,6 @@ enum {
 	PWR_MGR_NUM_EVENTS
 };
 
-int hawaii_pwr_mgr_init(void);
 int mach_init_sequencer(void);
 
-#endif /*__RHEA_PWR_MNGR_H__*/
+#endif /*__HAWAII_PWR_MNGR_H__*/

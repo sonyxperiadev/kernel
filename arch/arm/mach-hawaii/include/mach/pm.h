@@ -1,5 +1,5 @@
-#ifndef __RHEA_PM_H__
-#define __RHEA_PM_H__
+#ifndef __HAWAII_PM_H__
+#define __HAWAII_PM_H__
 
 #ifndef __ASSEMBLY__
 #include <linux/suspend.h>
@@ -123,4 +123,4 @@ extern void instrument_retention(int trace_path);
 extern int get_force_sleep_state(void);
 #endif /* __ASSEMBLY__ */
 
-#endif /*__RHEA_PM_H__*/
+#endif /*__HAWAII_PM_H__*/

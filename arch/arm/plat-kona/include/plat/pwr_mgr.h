@@ -335,10 +335,7 @@ int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start, u8 slave_id,
 int pwr_mgr_set_i2c_mode(int poll);
 
 #ifdef CONFIG_DEBUG_FS
-#ifdef CONFIG_RHEA_DELAYED_PM_INIT
 int pwr_mgr_debug_init(u32 bmdm_pwr_base);
-#else
-int __init pwr_mgr_debug_init(u32 bmdm_pwr_base);
 #endif
-#endif
+
 #endif /*__KONA_POWER_MANAGER_H__*/
