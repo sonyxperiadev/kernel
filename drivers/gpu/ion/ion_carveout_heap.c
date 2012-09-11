@@ -23,6 +23,10 @@
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+#ifdef CONFIG_ION_KONA
+#include <linux/dma-direction.h>
+#include <asm/cacheflush.h>
+#endif
 #include "ion_priv.h"
 
 #include <asm/mach/map.h>
@@ -173,6 +177,46 @@ int ion_carveout_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 #endif
 }
 
+#ifdef CONFIG_ION_KONA
+int ion_carveout_heap_flush_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+	int mtype = MT_MEMORY;
+	phys_addr_t pa;
+	void *va;
+
+	pa = buffer->priv_phys;
+	va = __arm_ioremap(buffer->priv_phys, buffer->size, mtype);
+	pr_debug("flush: pa(%x) va(%p) off(%ld) len(%ld)\n",
+			pa, va, offset, len);
+	dmac_flush_range(va + offset, va + offset + len);
+	outer_flush_range(pa + offset, pa + offset + len);
+	__arm_iounmap(va);
+
+	return 0;
+}
+
+int ion_carveout_heap_invalidate_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+	int mtype = MT_MEMORY;
+	phys_addr_t pa;
+	void *va;
+
+	pa = buffer->priv_phys;
+	va = __arm_ioremap(buffer->priv_phys, buffer->size, mtype);
+	pr_debug("inv: pa(%x) va(%p) off(%ld) len(%ld)\n",
+			pa, va, offset, len);
+	outer_inv_range(pa + offset, pa + offset + len);
+	dmac_unmap_area(va + offset, len, DMA_FROM_DEVICE);
+	__arm_iounmap(va);
+
+	return 0;
+}
+#endif
+
 static struct ion_heap_ops carveout_heap_ops = {
 	.allocate = ion_carveout_heap_allocate,
 	.free = ion_carveout_heap_free,
@@ -182,6 +226,10 @@ static struct ion_heap_ops carveout_heap_ops = {
 	.unmap_kernel = ion_carveout_heap_unmap_kernel,
 	.map_dma = ion_carveout_heap_map_dma,
 	.unmap_dma = ion_carveout_heap_unmap_dma,
+#ifdef CONFIG_ION_KONA
+	.flush_cache = ion_carveout_heap_flush_cache,
+	.invalidate_cache = ion_carveout_heap_invalidate_cache,
+#endif
 };
 
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
