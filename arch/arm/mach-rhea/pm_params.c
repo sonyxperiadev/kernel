@@ -192,7 +192,7 @@ extern int __jira_wa_enabled(u32 jira)
 #define BSC_PAD_OUT_EN				(0x0)
 #define BSC_PAD_OUT_DIS				(0x1<<2)
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 #define SET_PC_PIN_CMD(pc_pin)			\
 	(SET_PC_PIN_CMD_##pc_pin##_PIN_VALUE_MASK|\
 	 SET_PC_PIN_CMD_##pc_pin##_PIN_OVERRIDE_MASK)
@@ -284,7 +284,7 @@ static struct i2c_cmd i2c_cmd[] = {
 	{REG_ADDR, 0},		/* 56: NOP */
 	{REG_ADDR, 0},		/* 57: NOP */
 #endif
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 	{SET_PC_PINS, PC_PIN_DEFAULT_STATE},	/* 58: set PC3 high */
 #else
 	{REG_ADDR, 0},		/* 58: nop */
@@ -325,7 +325,7 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 	.i2c_wr_reg_addr_off = 49,
 	.i2c_wr_val_addr_off = 51,
 	.i2c_seq_timeout = 100,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 	.pc_toggle_off = 58,
 #endif
 };

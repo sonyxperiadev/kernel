@@ -52,7 +52,7 @@ static int clk_dbg_dsm;
 module_param_named(clk_dbg_dsm, clk_dbg_dsm, int, S_IRUGO|S_IWUSR|S_IWGRP);
 
 
-/* Rhea PM log values */
+/* PM log masks */
 enum {
 
 	LOG_SW2_STATUS	= 1 << 0,
@@ -74,13 +74,6 @@ static int force_sleep;
 #define CHIPREG_PERIPH_SPARE_CONTROL2    \
 	(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET)
 
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2221
-
-dma_addr_t noncache_buf_pa;
-char *noncache_buf_va;
-static u32 memc_freq_map;
-#endif /* CONFIG_RHEA_WA_HWJIRA_2221 */
 
 static int enter_idle_state(struct kona_idle_state *state);
 static int enter_suspend_state(struct kona_idle_state *state);
@@ -364,8 +357,8 @@ static int enter_retention_state(struct kona_idle_state *state)
 	write_actlr(read_actlr() & ~A9_SMP_BIT);
 
 	scu_set_power_mode(SCU_STATUS_DORMANT);
-	/*  CHIREGS:PERIPH_SPARE_CONTROL2:PWRCTLx_BYPASS bits are 
-	 *  added for configuring low power modes. Hence these bits
+	/*CHIREGS:PERIPH_SPARE_CONTROL2:PWRCTLx_BYPASS bits are
+	 * added for configuring low power modes. Hence these bits
 	 * also needs to be configured along with the POWER_STATUS
 	 * register in SCU.
 	 */
@@ -444,10 +437,6 @@ int enter_idle_state(struct kona_idle_state *state)
 {
 	struct pi *pi = NULL;
 
-#if defined(CONFIG_RHEA_WA_HWJIRA_2301) || defined(CONFIG_RHEA_WA_HWJIRA_2877)
-	u32 lpddr2_temp_period = 0;
-#endif
-
 	BUG_ON(!state);
 
 	pwr_mgr_event_clear_events(LCDTE_EVENT, BRIDGE_TO_MODEM_EVENT);
@@ -463,47 +452,7 @@ int enter_idle_state(struct kona_idle_state *state)
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	BUG_ON(pi == NULL);
 	pi_enable(pi, 0);
-#if defined(CONFIG_RHEA_WA_HWJIRA_2301) || defined(CONFIG_RHEA_WA_HWJIRA_2877)
-	if (JIRA_WA_ENABLED(2301) || JIRA_WA_ENABLED(2877)) {
-		/*
-		Workaround for JIRA CRMEMC-919/2301(Periodic device temp.
-		polling will prevent entering deep sleep in Rhea B0)
-		 Workaround  : Disable temp. polling when A9 enters LPM &
-		re-enable on exit from LPM
-		*/
-		lpddr2_temp_period = readl(KONA_MEMC0_NS_VA +
-				CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
-		/*Disable temperature polling, 0xC3500 -> 0x350080c0
-		Disables periodic reading of the device temperature
-		the period field contains the device temperature period.
-		The timer operates in the XTAL clock domain. 0cC3500 is the
-		default value, write it back. */
-		 writel_relaxed(0xC3500,
-			KONA_MEMC0_NS_VA + CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
-	}
-#endif /* CONFIG_RHEA_WA_HWJIRA_2301 || CONFIG_RHEA_WA_HWJIRA_2877 */
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2221
-	if (JIRA_WA_ENABLED(2221)) {
-
-		u32 count;
-		u32 temp_val;
-		char *noncache_buf_tmp_va;
-
-	/*JIRA HWRHEA_2221 VAR_312M is_idle from MEMC unexpectedly stays
-	 * asserted for long periods of time - preventing deepsleep entry */
-
-		 /* reset all MEMC demesh entries */
-		 noncache_buf_tmp_va = noncache_buf_va;
-		 for (count = 0; count < 16;
-			count++, noncache_buf_tmp_va += 64)
-			temp_val = *(u32 *)noncache_buf_tmp_va;
-		memc_freq_map = readl(KONA_MEMC0_NS_VA +
-				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
-		writel_relaxed(1, KONA_MEMC0_NS_VA +
-				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
-	}
-#endif /*CONFIG_RHEA_WA_HWJIRA_2221*/
 	if (clk_dbg_dsm)
 		if (state->flags & CPUIDLE_ENTER_SUSPEND)
 			__clock_print_act_clks();
@@ -517,42 +466,6 @@ int enter_idle_state(struct kona_idle_state *state)
 		enter_dormant_state(state);
 		break;
 	}
-
-#if defined(CONFIG_RHEA_WA_HWJIRA_2301) || defined(CONFIG_RHEA_WA_HWJIRA_2877)
- /*
-	Workaround for JIRA CRMEMC-919/2301(Periodic device temperature polling
-	will prevent entering deep sleep in Rhea B0)
-	- Disable temp. polling when A9 enters LPM & re-enable on exit from LPM
- */
-	if (JIRA_WA_ENABLED(2301) || JIRA_WA_ENABLED(2877))
-		writel_relaxed(lpddr2_temp_period, KONA_MEMC0_NS_VA +
-			CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET);
-#endif /*CONFIG_RHEA_WA_HWJIRA_2301 || CONFIG_RHEA_WA_HWJIRA_2877*/
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2221
-	if (JIRA_WA_ENABLED(2221))
-		writel_relaxed(memc_freq_map, KONA_MEMC0_NS_VA +
-				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET);
-#endif
-
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2045
-/*
-	Workaround for JIRA 2045:
-	HUB timer counter value is synchronized to apb register only on next
-	32KHz falling edge after WFI wakeup - worst case this could be close to
-	one 32KHz cycle (~30us). To avoid reading invalid counter value by timer
-	driver, idle handler, on exit from WFI, should wait till timer counter
-	is updated.
-*/
-	if (JIRA_WA_ENABLED(2045)) {
-		u32 tmr_lsw =
-			readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
-		while (tmr_lsw ==
-			readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET))
-			;
-	}
-#endif /*CONFIG_RHEA_WA_HWJIRA_2045*/
 
 	pm_dbg(LOG_SW2_STATUS,
 		"SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
@@ -640,10 +553,6 @@ static struct pm_init_param pm_init = {
 
 int __init __pm_init(void)
 {
-#ifdef CONFIG_RHEA_WA_HWJIRA_2221
-	noncache_buf_va = dma_alloc_coherent(NULL, 64*16,
-				&noncache_buf_pa, GFP_ATOMIC);
-#endif
 	pm_config_deep_sleep();
 	return kona_pm_init(&pm_init);
 }

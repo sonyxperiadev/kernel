@@ -20,28 +20,6 @@
 
 #include <plat/pwr_mgr.h>
 
-/*Helper macros for HW JIRA workarounds*/
-/*Macro to check if the workaround enable flag is enabled
- */
-
-#define JIRA_WA_ENABLED(x) __jira_wa_enabled(x)
-
-#define JIRA_WA_FLG_NAME(x) jira_ ## x ## _enable
-/*Macro to define the JIRA workaround flag. R/W sysfs
-   interface is also added to control the flag from console*/
-#define DEFINE_JIRA_WA_FLG(x, def_val)	\
-		int JIRA_WA_FLG_NAME(x) = def_val;\
-		module_param_named(JIRA_WA_FLG_NAME(x),\
-		JIRA_WA_FLG_NAME(x), int, S_IRUGO | \
-				S_IWUSR | S_IWGRP)
-/*Macro to define the JIRA workaround flag. Read only sysfs
-   interface is also added to read the flag from console*/
-#define DEFINE_JIRA_WA_RO_FLG(x, def_val)      \
-		int JIRA_WA_FLG_NAME(x) = def_val;\
-		module_param_named(JIRA_WA_FLG_NAME(x), \
-			JIRA_WA_FLG_NAME(x), int, S_IRUGO)
-
-
 #define ARRAY_LIST(...) {__VA_ARGS__}
 #define SR_VLT_LUT_SIZE 16
 #define SR_ECO_INX_START	8
@@ -154,6 +132,13 @@
 #define PLLDSI_OFFEST_CONFIG    0x0
 #define PLL1_OFFSET_CONFIG	0xBFFFF
 
+
+/*PM Eratta ids*/
+#define ERRATUM_MM_V3D_TIMEOUT		(1 << 0)
+#define ERRATUM_MM_POWER_OK		(1 << 1)
+#define ERRATUM_PLL1_8PHASE_OFF		(1 << 2)
+
+
 /*supported A9 freqs*/
 enum {
 	A9_FREQ_700_MHZ,
@@ -182,7 +167,7 @@ struct pwrmgr_init_param {
 	int i2c_wr_reg_addr_off;
 	int i2c_wr_val_addr_off;
 	u32 i2c_seq_timeout;	/*timeout in ms */
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 	int pc_toggle_off;
 #endif
 };
@@ -194,8 +179,8 @@ extern struct pwrmgr_init_param pwrmgr_init_param;
 /*This API should be defined in appropriate PMU board file*/
 extern const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
 			u32 silicon_type);
-extern int __jira_wa_enabled(u32 jira);
-extern int __init hawaii_pm_params_init(void);
+extern bool is_pm_erratum(u32 erratum);
+extern int __init pm_params_init(void);
 extern int pm_init_pmu_sr_vlt_map_table(u32 silicon_type);
 
 #endif	/*__PM_PARAMS_H__*/

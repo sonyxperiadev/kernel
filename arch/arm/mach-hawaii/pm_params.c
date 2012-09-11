@@ -24,7 +24,6 @@
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
-#include <mach/memory.h>
 #include <mach/cpu.h>
 #include <mach/clock.h>
 #include <linux/clk.h>
@@ -36,52 +35,10 @@
 static u32 csr_vlt_table[SR_VLT_LUT_SIZE];
 module_param_array_named(csr_vlt_table, csr_vlt_table, uint, NULL, S_IRUGO);
 
-/*JIRA workaround flag and sysfs definitions
-These flags can be used to enable/disable JIRA workaround at runtime
-*/
-#ifdef CONFIG_RHEA_WA_HWJIRA_2531
-DEFINE_JIRA_WA_RO_FLG(2531, 1);
-#endif
+static unsigned long pm_erratum_flg;
+module_param_named(pm_erratum_flg, pm_erratum_flg, ulong,
+						S_IRUGO|S_IWUSR|S_IWGRP);
 
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-DEFINE_JIRA_WA_RO_FLG(2490, 1);
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2272
-DEFINE_JIRA_WA_RO_FLG(2272, 1);
-#endif
-
-extern int __jira_wa_enabled(u32 jira)
-{
-	int enabled = false;
-
-	switch (jira) {
-#ifdef CONFIG_RHEA_WA_HWJIRA_2531
-	case 2531:
-		enabled = JIRA_WA_FLG_NAME(2531);
-		break;
-#endif
-
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2272
-	case 2272:
-		enabled = JIRA_WA_FLG_NAME(2272);
-		break;
-#endif
-
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-	case 2490:
-		enabled = JIRA_WA_FLG_NAME(2490);
-		break;
-#endif
-
-	default:
-		break;
-	};
-
-	return enabled;
-}
 
 #ifdef CONFIG_KONA_POWER_MGR
 
@@ -209,7 +166,7 @@ static struct i2c_cmd i2c_cmd[] = {
 	{REG_DATA, PMU_BSC_INT_STATUS_MASK},	/* Clear INT Status */
 	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Reg */
 	{REG_DATA, BSC_PAD_OUT_DIS},	/* Disable pad output */
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 	{SET_PC_PINS, PC_PIN_DEFAULT_STATE},	/* 58: set PC3 high */
 #else
 	{REG_ADDR, 0},		/* 58: nop */
@@ -266,7 +223,7 @@ static struct v0x_spec_i2c_cmd_ptr v1_ptr = {
 #define SW_SEQ_WR_REG_ADDR_OFF			(63)
 #define SW_SEQ_WR_VALUE_OFF			(65)
 
-#define JIRA_2747_PC_PIN_TOGGLE_OFF		(73)
+#define FAKE_TRG_ERRATUM_PC_PIN_TOGGLE_OFF (73)
 
 struct pwrmgr_init_param pwrmgr_init_param = {
 	.cmd_buf = i2c_cmd,
@@ -284,28 +241,30 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 	.i2c_wr_reg_addr_off = SW_SEQ_WR_REG_ADDR_OFF,
 	.i2c_wr_val_addr_off = SW_SEQ_WR_VALUE_OFF,
 	.i2c_seq_timeout = 100,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
-	.pc_toggle_off = JIRA_2747_PC_PIN_TOGGLE_OFF,
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
+	.pc_toggle_off = FAKE_TRG_ERRATUM_PC_PIN_TOGGLE_OFF,
 #endif
 };
 
 #endif /*CONFIG_KONA_POWER_MGR */
 
-static void __init pm_init_wa_flgs(void)
+static void __init __pm_init_errata_flg(void)
 {
-	int chip_id = get_chip_id();
+	u32 chip_id = get_chip_id();
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2531
-	JIRA_WA_FLG_NAME(2531) = chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0);
+#ifdef CONFIG_MM_V3D_TIMEOUT_ERRATUM
+	if (chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
+		pm_erratum_flg |= ERRATUM_MM_V3D_TIMEOUT;
 #endif
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2272
-	JIRA_WA_FLG_NAME(2272) = chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0);
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
+	if (chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
+		pm_erratum_flg |= ERRATUM_PLL1_8PHASE_OFF;
 #endif
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-	/* Workaround is enabled */
-	JIRA_WA_FLG_NAME(2490) = chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0);
+#ifdef MM_V3D_TIMEOUT_ERRATUM
+	if (chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
+		pm_erratum_flg |= ERRATUM_MM_POWER_OK;
 #endif
 
 }
@@ -320,6 +279,11 @@ static const u32 a9_freq_list[A9_FREQ_MAX] = {
 	[A9_FREQ_1_GHZ] = GHZ(1),
 
 };
+
+bool is_pm_erratum(u32 erratum)
+{
+	return !!(pm_erratum_flg & erratum);
+}
 
 
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
@@ -358,8 +322,8 @@ int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 #endif
 }
 
-int __init hawaii_pm_params_init(void)
+int __init pm_params_init(void)
 {
-	pm_init_wa_flgs();
+	__pm_init_errata_flg();
 	return 0;
 }

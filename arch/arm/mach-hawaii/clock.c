@@ -333,7 +333,7 @@ static struct clk clk_tpiu = {
 	.id	= CLK_TPIU_PERI_CLK_ID,
 	.name = TPIU_PERI_CLK_NAME_STR,
 	.flags = TPIU_MISC_CLK_FLAGS,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 	.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(8phase_en_pll1), NULL),
 #endif
 	.ops = &misc_clk_ops,
@@ -344,7 +344,7 @@ static struct clk clk_pti = {
 	.id	= CLK_PTI_PERI_CLK_ID,
 	.name = PTI_PERI_CLK_NAME_STR,
 	.flags = PTI_MISC_CLK_FLAGS,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 	.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(8phase_en_pll1), NULL),
 #endif
 	.ops = &misc_clk_ops,
@@ -4003,7 +4003,7 @@ static struct peri_clk CLK_NAME(sdio2) = {
 				.clk_type = CLK_TYPE_PERI,
 				.id	= CLK_SDIO2_PERI_CLK_ID,
 				.name = SDIO2_PERI_CLK_NAME_STR,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 				.dep_clks =
 				DEFINE_ARRAY_ARGS(CLK_PTR(sdio2_ahb),
 					CLK_PTR(8phase_en_pll1), NULL),
@@ -4107,7 +4107,7 @@ static struct peri_clk CLK_NAME(sdio3) = {
 				.clk_type = CLK_TYPE_PERI,
 				.id	= CLK_SDIO3_PERI_CLK_ID,
 				.name = SDIO3_PERI_CLK_NAME_STR,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 				.dep_clks =
 				DEFINE_ARRAY_ARGS(CLK_PTR(sdio3_ahb),
 					CLK_PTR(8phase_en_pll1), NULL),
@@ -4209,7 +4209,7 @@ static struct peri_clk CLK_NAME(sdio1) = {
 				.clk_type = CLK_TYPE_PERI,
 				.id	= CLK_SDIO1_PERI_CLK_ID,
 				.name = SDIO1_PERI_CLK_NAME_STR,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 				.dep_clks =
 				DEFINE_ARRAY_ARGS(CLK_PTR(sdio1_ahb),
 					CLK_PTR(8phase_en_pll1), NULL),
@@ -4279,7 +4279,7 @@ static struct peri_clk CLK_NAME(sdio4) = {
 		.clk_type = CLK_TYPE_PERI,
 		.id	= CLK_SDIO4_PERI_CLK_ID,
 		.name = SDIO4_PERI_CLK_NAME_STR,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 		.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(sdio4_ahb),
 			CLK_PTR(8phase_en_pll1), NULL),
 #else
@@ -5934,7 +5934,7 @@ static struct ccu_clk CLK_NAME(mm) = {
 				.name = MM_CCU_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 				.dep_clks = DEFINE_ARRAY_ARGS(
 					CLK_PTR(8phase_en_pll1), NULL),
 #endif
@@ -7581,7 +7581,7 @@ static int set_mm_override(void)
 }
 #endif
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 static int remove_dep_clks(void)
 {
 	int clk_inx, inx;
@@ -7638,14 +7638,13 @@ int __init __clock_init(void)
 
 	pixelv_clk_ops.enable = gen_peri_clk_ops.enable;
 
-/*Update arm_switch flag based on runtime settings*/
-#ifdef CONFIG_RHEA_WA_HWJIRA_2531
-	if (!JIRA_WA_ENABLED(2531))
-		CLK_NAME(arm_switch).clk.flags |= AUTO_GATE;
+#ifdef CONFIG_MM_V3D_TIMEOUT_ERRATUM
+	if (is_pm_erratum(ERRATUM_MM_V3D_TIMEOUT))
+		CLK_NAME(arm_switch).clk.flags &= ~AUTO_GATE;
 #endif
 /* Remove dependency on 8ph_en clock */
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-	if (!JIRA_WA_ENABLED(2490))
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
+	if (!is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF))
 		remove_dep_clks();
 #endif
 

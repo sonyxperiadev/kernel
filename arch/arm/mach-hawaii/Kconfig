@@ -117,103 +117,26 @@ config	KONA_PMU_BSC_CLKPAD_CTRL
 	   Sequencer will disable the PMU BSC CLK pad at the end of each
 	   i2c transaction which will save the leakage current on the pad pi
 
-config	RHEA_WA_HWJIRA_2531
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2531"
+config MM_V3D_TIMEOUT_ERRATUM
+	bool "Enable MM V3D timeout erratum workaround"
 	default y
 	help
-	  Say Y to enable RHEA JIRA 2531 workaround
-	  Refer JIRA DB for more info on this JIRA
+	 Say Y to enable MM V3D timeout(HWHAWAII-207) workaround
+	 Refer JIRA DB for more info
 
-config	RHEA_WA_HWJIRA_2301
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2301"
+config PLL1_8PHASE_OFF_ERRATUM
+	bool "Enable workaround for PLL1 8phase off erratum"
 	default y
 	help
-	  Say Y to enable RHEA JIRA 2301 workaround
-	  Refer JIRA DB for more info on this JIRA
+	 Say Y to enable workaround for PLL1 8phase off erratum (HWHAWAII-73)
+	 Refer JIRA DB for more info
 
-config	RHEA_WA_HWJIRA_2877
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2877"
+config MM_POWER_OK_ERRATUM
+	bool "Enable MM power ok mask erratum workaround"
 	default y
 	help
-	  Say Y to enable RHEA JIRA 2301 workaround. Refer JIRA DB for more
-	  info on this JIRA. Memc will put dram in bad state if the xtal clock
-	  stops in the middle of say internally triggered ZQ cal or dev temp
-	  polling. This workaround will disable temperature polling in LPM.
-
-config	RHEA_WA_HWJIRA_2221
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2221"
-	default y
-	help
-	  Say Y to enable RHEA JIRA 2221 workaround
-	  Refer JIRA DB for more info on this JIRA
-
-config	RHEA_WA_HWJIRA_2490
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2490"
-	default y
-	help
-	  Say Y to enable RHEA JIRA 2490 workaround
-	  Refer JIRA DB for more info on this JIRA
-
-config	RHEA_WA_HWJIRA_2276
-	depends on ARCH_HAWAII && HAWAII_DORMANT_MODE
-	bool "Enable workaround for RHEA JIRA 2276"
-	default y
-	help
-	  Say Y to enable RHEA JIRA 2276 workaround
-	  Refer JIRA DB for more info on this JIRA
-
-config	RHEA_WA_HWJIRA_2045
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2045"
-	default y
-	help
-	  Say Y to enable RHEA JIRA 2045 workaround
-	  Refer JIRA DB for more info on this JIRA
-
-config	RHEA_WA_HWJIRA_2272
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2272"
-	default y
-	help
-	  Say Y to enable RHEA JIRA 2272 workaround
-	  Refer JIRA DB for more info on this JIRA
-
-config	RHEA_WA_HWJIRA_2348
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2348"
-	default y
-	help
-	  Say Y to enable RHEA JIRA 2348 workaround
-	  Refer JIRA DB for more info on this JIRA
-
-config	RHEA_WA_HWJIRA_2489
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2489"
-	default y
-	help
-	  Say Y to enable RHEA JIRA 2489 workaround
-	  Refer JIRA DB for more info on this JIRA
-
-config	RHEA_WA_HWJIRA_2706
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2706"
-	default y
-	help
-	  Say Y to enable RHEA JIRA 2706 workaround
-	  Refer JIRA DB for more info on this JIRA
-
-config	RHEA_WA_HWJIRA_2747
-	depends on ARCH_HAWAII
-	bool "Enable workaround for RHEA JIRA 2747"
-	default y
-	help
-	  Say Y to enable RHEA JIRA 2747 workaround
-	  Refer JIRA DB for more info on this JIRA
+	 Say Y to enable workaround for MM power ok mask erratum(HWRHEA-2272)
+	 Refer JIRA DB for more info
 
 config	HAWAIILC_2093
 	bool "Enable HawaiiLC&2093"

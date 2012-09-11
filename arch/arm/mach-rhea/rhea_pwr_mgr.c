@@ -588,7 +588,7 @@ int __init mach_init_sequencer(void)
 	rhea_pwr_mgr_info.i2c_wr_val_addr_off =
 	    pwrmgr_init_param.i2c_wr_val_addr_off;
 	rhea_pwr_mgr_info.i2c_seq_timeout = pwrmgr_init_param.i2c_seq_timeout;
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 	rhea_pwr_mgr_info.pc_toggle_off = pwrmgr_init_param.pc_toggle_off;
 #endif
 

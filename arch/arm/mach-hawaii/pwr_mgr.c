@@ -49,7 +49,7 @@
 #endif
 
 #define VLT_LUT_SIZE	16
-/*PM policy definitions for Rhea */
+/*PM policy definitions */
 #define PM_OFF		0
 #define PM_RET		1
 #define	PM_ECO		4
@@ -447,7 +447,7 @@ int __init hawaii_pwr_mgr_init()
 
 	cfg.ac = 1;
 	cfg.atl = 0;
-	hawaii_pm_params_init();
+	pm_params_init();
 	/**
 	 * Load the dummy sequencer during power manager initialization
 	 * Actual sequencer will be loaded during pmu i2c driver
@@ -467,11 +467,11 @@ int __init hawaii_pwr_mgr_init()
 	dummy_pm_init();
 #endif
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2272
-/*For B0, it was observed that if MM CCU is switched to and
+#ifdef CONFIG_MM_POWER_OK_ERRATUM
+/* it was observed that if MM CCU is switched to and
 	from shutdown state, it would break the DDR self refresh.
 	Recommended workaround is to set the POWER_OK_MASK bit to 0 */
-	if (JIRA_WA_ENABLED(2272))
+	if (is_pm_erratum(ERRATUM_MM_POWER_OK))
 		pwr_mgr_ignore_power_ok_signal(false);
 #endif
 
@@ -650,7 +650,7 @@ int __init mach_init_sequencer(void)
 	__pwr_mgr_info.i2c_wr_val_addr_off =
 	    pwrmgr_init_param.i2c_wr_val_addr_off;
 	__pwr_mgr_info.i2c_seq_timeout = pwrmgr_init_param.i2c_seq_timeout;
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 	__pwr_mgr_info.pc_toggle_off = pwrmgr_init_param.pc_toggle_off;
 #endif
 

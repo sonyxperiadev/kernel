@@ -264,7 +264,7 @@ struct pwr_mgr_info {
 	int i2c_wr_reg_addr_off;
 	int i2c_wr_val_addr_off;
 	u32 i2c_seq_timeout;	/*timeout in ms */
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 	int pc_toggle_off;
 #endif
 };

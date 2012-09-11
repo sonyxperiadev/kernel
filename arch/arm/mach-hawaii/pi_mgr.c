@@ -53,14 +53,11 @@
 #define	SUB_SYS_PI_NUM_OPP		2
 
 
-#define PI_STATE(state_id,policy,latency, flg) \
-		{.id = state_id,.state_policy = policy,\
-		.hw_wakeup_latency = latency,.flags = flg}
+#define PI_STATE(state_id, policy, latency, flg) \
+		{.id = state_id, .state_policy = policy,\
+		.hw_wakeup_latency = latency, .flags = flg}
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2221
-extern char *noncache_buf_va;
-#endif
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 static struct clk *ref_8ph_en_pll1_clk;
 #endif
 
@@ -156,18 +153,18 @@ static struct pi_state mm_states[] = {
 	PI_STATE(PI_STATE_SHUTDOWN, SHTDWN_POLICY, 100, PI_STATE_SAVE_CONTEXT),
 };
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 
 static int mm_pi_enable(struct pi *pi, int enable)
 {
 	int ret;
 	pi_dbg(pi->id, PI_LOG_EN_DIS, "%s\n", __func__);
-	if (JIRA_WA_ENABLED(2490)) {
+	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
 		if (enable && ref_8ph_en_pll1_clk)
 			__clk_enable(ref_8ph_en_pll1_clk);
 	}
 	ret = gen_pi_ops.enable(pi, enable);
-	if (JIRA_WA_ENABLED(2490)) {
+	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
 		if (!enable && ref_8ph_en_pll1_clk)
 			__clk_disable(ref_8ph_en_pll1_clk);
 	}
@@ -237,7 +234,7 @@ static struct pi mm_pi = {
 		.trans_table = mm_trans_table,
 	},
 #endif
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 	.ops = &mm_pi_ops,
 #else
 	.ops = &gen_pi_ops,
@@ -421,18 +418,7 @@ static u32 subsys_trans_table[SUB_SYS_PI_NUM_OPP * SUB_SYS_PI_NUM_OPP];
 /*
 
 */
-#ifdef CONFIG_RHEA_WA_HWJIRA_2276
-/*A9 sometimes freezes on exit from dormant. Recommended
-workaround is to tie A9 & Fabric together to avoid A9 -> fabric
-glitch when A9 is powered off.
 
-With this workaround A9 enters dormant only when fabric is in
-retention */
-
-static u32 sub_sys_dep_pi[] = {
-	PI_MGR_PI_ID_ARM_CORE,
-};
-#endif /*CONFIG_RHEA_WA_HWJIRA_2276 */
 static struct pi sub_sys_pi = {
 	.name = "sub_sys",
 	.id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
@@ -444,10 +430,6 @@ static struct pi sub_sys_pi = {
 #endif
 	.num_ccu_id = ARRAY_SIZE(sub_sys_ccu),
 	.state_allowed = PI_STATE_RETENTION,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2276
-	.dep_pi = sub_sys_dep_pi,
-	.num_dep_pi = ARRAY_SIZE(sub_sys_dep_pi),
-#endif /*CONFIG_RHEA_WA_HWJIRA_2276 */
 	.pi_state = sub_sys_states,
 	.num_states = ARRAY_SIZE(sub_sys_states),
 	.opp_active = 0,
@@ -575,14 +557,7 @@ char *get_opp_name(int opp)
 void __init hawaii_pi_mgr_init()
 {
 	int i;
-#ifdef CONFIG_RHEA_WA_HWJIRA_2276
-	if (!JIRA_WA_ENABLED(2276)) {
-
-		sub_sys_pi.dep_pi = NULL;
-		sub_sys_pi.num_dep_pi = 0;
-	}
-#endif /*CONFIG_RHEA_WA_HWJIRA_2276 */
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 		mm_pi_ops = gen_pi_ops;
 		mm_pi_ops.enable = mm_pi_enable;
 #endif
@@ -598,10 +573,10 @@ void __init hawaii_pi_mgr_init()
 }
 EXPORT_SYMBOL(hawaii_pi_mgr_init);
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2490
-static int __init hawaii_mm_pre_init_state(void)
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
+static int __init __mm_pre_init_state(void)
 {
-	if (JIRA_WA_ENABLED(2490)) {
+	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
 		if (ref_8ph_en_pll1_clk == NULL) {
 			ref_8ph_en_pll1_clk = clk_get(NULL,
 				REF_8PHASE_EN_PLL1_CLK_NAME_STR);
@@ -611,7 +586,7 @@ static int __init hawaii_mm_pre_init_state(void)
 
 	return 0;
 }
-arch_initcall(hawaii_mm_pre_init_state);
+arch_initcall(__mm_pre_init_state);
 #endif
 
 int __init pi_mgr_late_init(void)
