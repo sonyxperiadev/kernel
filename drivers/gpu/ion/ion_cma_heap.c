@@ -21,6 +21,10 @@
 #include <linux/errno.h>
 #include <linux/err.h>
 #include <linux/dma-mapping.h>
+#ifdef CONFIG_ION_KONA
+#include <linux/dma-direction.h>
+#include <asm/cacheflush.h>
+#endif
 
 /* for ion_heap_ops structure */
 #include "ion_priv.h"
@@ -178,6 +182,44 @@ static int ion_cma_mmap(struct ion_heap *mapper, struct ion_buffer *buffer,
 #endif
 }
 
+#ifdef CONFIG_ION_KONA
+int ion_cma_heap_flush_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+	struct ion_cma_buffer_info *info = buffer->priv_virt;
+	phys_addr_t pa;
+	void *va;
+
+	pa = info->handle;
+	va = info->cpu_addr;
+	pr_debug("flush: pa(%x) va(%p) off(%ld) len(%ld)\n",
+			pa, va, offset, len);
+	dmac_flush_range(va + offset, va + offset + len);
+	outer_flush_range(pa + offset, pa + offset + len);
+
+	return 0;
+}
+
+int ion_cma_heap_invalidate_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+	struct ion_cma_buffer_info *info = buffer->priv_virt;
+	phys_addr_t pa;
+	void *va;
+
+	pa = info->handle;
+	va = info->cpu_addr;
+	pr_debug("inv: pa(%x) va(%p) off(%ld) len(%ld)\n",
+			pa, va, offset, len);
+	outer_inv_range(pa + offset, pa + offset + len);
+	dmac_unmap_area(va + offset, len, DMA_FROM_DEVICE);
+
+	return 0;
+}
+#endif
+
 static struct ion_heap_ops ion_cma_ops = {
 	.allocate = ion_cma_allocate,
 	.free = ion_cma_free,
@@ -187,6 +229,10 @@ static struct ion_heap_ops ion_cma_ops = {
 	.unmap_dma = ion_cma_heap_unmap_dma,
 	.phys = ion_cma_phys,
 	.map_user = ion_cma_mmap,
+#ifdef CONFIG_ION_KONA
+	.flush_cache = ion_cma_heap_flush_cache,
+	.invalidate_cache = ion_cma_heap_invalidate_cache,
+#endif
 };
 
 struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data,
