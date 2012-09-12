@@ -33,7 +33,7 @@ obj-$(CONFIG_MACH_RHEA_SS_ZANIN_04) += rhea_ss_zanin.o rhea_ss_zanin_pinmux.o bo
 obj-$(CONFIG_MACH_RHEA_SS_IVORY) += rhea_ss_ivory.o board-bcm59039-ivory.o board-rhea_ss_ivory-wifi.o
 obj-$(CONFIG_MACH_RHEA_FARADAY_EB10) += rhea_ray.o rhea_faraday_eb10_pinmux.o
 obj-$(CONFIG_MACH_RHEA_FARADAY_EB20) += rhea_faraday.o rhea_faraday_eb20_pinmux.o
-obj-$(CONFIG_MACH_RHEA_DALTON2_EB30) += rhea_dalton2.o rhea_dalton2_eb30_pinmux.o 
+obj-$(CONFIG_MACH_RHEA_DALTON2_EB30) += rhea_dalton2.o rhea_dalton2_eb30_pinmux.o
 obj-$(CONFIG_MACH_RHEA_BERRI) += rhea_berri.o rhea_berri_pinmux.o
 obj-$(CONFIG_MACH_RHEA_BERRI_EDN40) += rhea_berri.o rhea_berri_pinmux.o board-rhea-wifi.o
 obj-$(CONFIG_MACH_RHEALC_BERRI) += rhea_berri.o rhea_berri_pinmux.o
@@ -48,9 +48,12 @@ obj-$(CONFIG_ROM_SEC_DISPATCHER_LIB) += sec_bridge_tz.i
 obj-$(CONFIG_ROM_SEC_DISPATCHER_SRC) += rhea_smc.o
 
 CFLAGS_rhea_smc.o :=$(call as-instr,.arch_extension sec,-DSMC_INSTR=1)
-
+ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
+obj-y += board-bcm59xxx.o
+else
 obj-$(CONFIG_MFD_BCM59055) += board-bcm59055.o
 ifeq ($(CONFIG_MACH_RHEA_SS_COMMON),)
 obj-$(CONFIG_MFD_BCM59039) += board-bcm59039.o
 endif
 obj-$(CONFIG_MFD_BCM59042) += board-bcm59042.o
+endif

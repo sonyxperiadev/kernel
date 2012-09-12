@@ -1,5 +1,5 @@
-#ifndef __RHEA_PWR_MNGR_H__
-#define __RHEA_PWR_MNGR_H__
+#ifndef __HAWAII_PWR_MNGR_H__
+#define __HAWAII_PWR_MNGR_H__
 
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #ifdef CONFIG_DEBUG_FS
@@ -16,13 +16,15 @@
 #define PWRMGR_HW_SEM_WA_PI_ID		PI_MGR_PI_ID_ARM_CORE
 #define PWRMGR_HW_SEM_LOCK_WA_PI_OPP	PI_OPP_TURBO
 #ifdef CONFIG_DEBUG_FS
-#define PWRMGR_EVENT_ID_TO_STR(e) _rhea__event2str[e]
+#define PWRMGR_EVENT_ID_TO_STR(e) __event2str[e]
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 #define PWRMGR_SW_SEQ_PC_PIN		PC3
 #endif
 
-extern const char *_rhea__event2str[];
+#define PM_I2C_CMD_MAX	128
+
+extern const char *__event2str[];
 #endif
 
 enum {
@@ -149,8 +151,6 @@ enum {
 	PWR_MGR_NUM_EVENTS
 };
 
-int rhea_pwr_mgr_init(void);
-int rhea_pwr_mgr_init_sequencer(void);
+int mach_init_sequencer(void);
 
-int pwr_mgr_event_trg_enable(int event_id, int event_trg_type);
-#endif /*__RHEA_PWR_MNGR_H__*/
+#endif /*__HAWAII_PWR_MNGR_H__*/

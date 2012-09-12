@@ -1096,9 +1096,10 @@ config RTC_DRV_PUV3
 
 config RTC_DRV_BCMPMU
 	tristate "BCM PMU RTC"
-	depends on MFD_BCMPMU
+	depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx)
 	help
-	  To support RTC driver on BCM PMUs
+	  This will enable support for RTC driver
+	  on BCM PMUs platform
 
 config RTC_DRV_LOONGSON1
 	tristate "loongson1 RTC support"

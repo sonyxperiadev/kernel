@@ -1,6 +1,6 @@
 
-#ifndef __RHEA_PI_MNGR_H__
-#define __RHEA_PI_MNGR_H__
+#ifndef __HAWAII_PI_MNGR_H__
+#define __HAWAII_PI_MNGR_H__
 
 enum {
 	PI_MGR_PI_ID_MM,
@@ -32,6 +32,6 @@ enum {
 	PI_OPP_MAX
 };
 
-void rhea_pi_mgr_init(void);
+void hawaii_pi_mgr_init(void);
 
-#endif /*__RHEA_PI_MNGR_H__*/
+#endif /*__HAWAII_PI_MNGR_H__*/

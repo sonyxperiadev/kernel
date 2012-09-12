@@ -206,12 +206,6 @@ config RHEA_AVS
        defined for Rhea platform. Note that CONFIG_KONA_AVS should
        be undefined if this config is enabled.
 
-config RHEA_B0_PM_ASIC_WORKAROUND
-       depends on ARCH_RHEA
-       bool "Enable B0 ASIC workarounds for Power management"
-       default n
-       help
-       Say Y if you want to enable Rhea B0 ASIC workarounds for Power management
 
 config RHEA_PWRMGR_USE_DUMMY_SEQ
        bool "Use dummy PWRMGR HW I2C sequencer"
@@ -308,22 +302,6 @@ config RHEA_WA_HWJIRA_2489
 	default y
 	help
 	 Say Y to enable RHEA JIRA 2489 workaround
-	 Refer JIRA DB for more info on this JIRA
-
-config RHEA_WA_HWJIRA_2706
-	depends on ARCH_RHEA
-	bool "Enable workaround for RHEA JIRA 2706"
-	default y
-	help
-	 Say Y to enable RHEA JIRA 2706 workaround
-	 Refer JIRA DB for more info on this JIRA
-
-config RHEA_WA_HWJIRA_2747
-	depends on ARCH_RHEA
-	bool "Enable workaround for RHEA JIRA 2747"
-	default y
-	help
-	 Say Y to enable RHEA JIRA 2747 workaround
 	 Refer JIRA DB for more info on this JIRA
 
 config RHEALC_2093

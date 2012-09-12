@@ -1,5 +1,5 @@
-#ifndef __RHEA_PM_H__
-#define __RHEA_PM_H__
+#ifndef __HAWAII_PM_H__
+#define __HAWAII_PM_H__
 
 #ifndef __ASSEMBLY__
 #include <linux/suspend.h>
@@ -111,9 +111,10 @@ extern u32 ns_gpio_bit;
 extern void clear_ns_gpio(void);
 #endif /* DORMANT_PROFILE */
 
+extern void enter_wfi(void);
 extern void dbg_gpio_set(u32 gpio);
 extern void dbg_gpio_clr(u32 gpio);
-extern int rhea_force_sleep(suspend_state_t state);
+extern int hawaii_force_sleep(suspend_state_t state);
 extern void request_suspend_state(suspend_state_t state);
 extern void instrument_dormant_entry(void);
 extern void instrument_dormant_exit(void);
@@ -122,4 +123,4 @@ extern void instrument_retention(int trace_path);
 extern int get_force_sleep_state(void);
 #endif /* __ASSEMBLY__ */
 
-#endif /*__RHEA_PM_H__*/
+#endif /*__HAWAII_PM_H__*/

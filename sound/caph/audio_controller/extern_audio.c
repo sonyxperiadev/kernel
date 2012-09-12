@@ -153,7 +153,7 @@ static struct PMU_AudioGainMapping_t hsPMUGainTable[PMU_HSGAIN_NUM] = {
 	{-200, 0x3F}
 
 #endif
-#if defined(CONFIG_MFD_BCM59039)
+#if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM_PMU59xxx)
 
 	{-10000, 0x00},
 	{-6800, 0x01},
@@ -363,7 +363,7 @@ static struct PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM] = {
 	{400, 0x3F}
 
 #endif
-#if defined(CONFIG_MFD_BCM59039)
+#if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM_PMU59xxx)
 
 	{-10000, 0x00},
 	{-6200, 0x01},

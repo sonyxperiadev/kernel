@@ -194,7 +194,8 @@ extern int rhea_wifi_status_register(
 #define TANGO_GPIO_RESET_PIN			70
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ 	14
 
-#if (defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042))
+#if (defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042) || \
+	 defined(CONFIG_MFD_BCM_PMU59xxx))
 struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "vdd_sdxc"},
 };
@@ -1521,7 +1522,7 @@ static struct i2c_board_info __initdata bma222_accl_info[] = {
 	{
 		I2C_BOARD_INFO("bma222_accl", 0x08),
 		.irq = -1,
-		.platform_data = &bma_pdata, 
+		.platform_data = &bma_pdata,
 	},
 };
 #endif

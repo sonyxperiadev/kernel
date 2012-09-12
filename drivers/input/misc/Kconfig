@@ -615,7 +615,7 @@ config INPUT_SMB380
 
 config INPUT_PONKEY_BCMPMU
         bool "BCMPMU PowerOnKey input events"
-        depends on MFD_BCMPMU
+        depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx)
 	default n
         help
           Say Y here if want to support BCMPMU PowerOnKey events.
@@ -636,7 +636,7 @@ config INPUT_BCM2850_MIC_DETECT
    depends on I2C
    help
      Say Y here if you want to support MIC/Headset dectection for BCM2850 based boards.
-      
+
      To compile this driver as a module, choose M here.
 
 choice

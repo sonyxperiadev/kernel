@@ -57,9 +57,13 @@ obj-$(CONFIG_INPUT_WISTRON_BTNS)	+= wistron_btns.o
 obj-$(CONFIG_INPUT_WM831X_ON)		+= wm831x-on.o
 obj-$(CONFIG_INPUT_XEN_KBDDEV_FRONTEND)	+= xen-kbdfront.o
 obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
-obj-$(CONFIG_INPUT_SMB380)      += smb380.o 
+obj-$(CONFIG_INPUT_SMB380)      += smb380.o
+ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
+obj-$(CONFIG_INPUT_PONKEY_BCMPMU)	+= bcmpmu59xxx_ponkey.o
+else
 obj-$(CONFIG_INPUT_PONKEY_BCMPMU)	+= bcmpmu_ponkey.o
-obj-$(CONFIG_INPUT_BCM59055_ONKEY)	+= bcm59055_onkey.o 
-obj-$(CONFIG_INPUT_BCM2850_MIC_DETECT)	+= bcm2850_mic_detect.o 
+endif
+obj-$(CONFIG_INPUT_BCM59055_ONKEY)	+= bcm59055_onkey.o
+obj-$(CONFIG_INPUT_BCM2850_MIC_DETECT)	+= bcm2850_mic_detect.o
 obj-$(CONFIG_KONA_HEADSET) += kona_headset.o
 obj-$(CONFIG_KONA_HEADSET_MULTI_BUTTON) += kona_headset_multi_button.o

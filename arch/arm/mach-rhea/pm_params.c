@@ -192,7 +192,7 @@ extern int __jira_wa_enabled(u32 jira)
 #define BSC_PAD_OUT_EN				(0x0)
 #define BSC_PAD_OUT_DIS				(0x1<<2)
 
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 #define SET_PC_PIN_CMD(pc_pin)			\
 	(SET_PC_PIN_CMD_##pc_pin##_PIN_VALUE_MASK|\
 	 SET_PC_PIN_CMD_##pc_pin##_PIN_OVERRIDE_MASK)
@@ -255,11 +255,7 @@ static struct i2c_cmd i2c_cmd[] = {
 	{REG_DATA, 1},		/* 36: Clear Start condition */
 	{REG_ADDR, 0x0},	/* 37: i2c_rd_nack_off */
 	{JUMP, 0x0},		/* 38: jump to i2c_rd_nack_jump_off offset */
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 	{READ_FIFO, 0},		/* 39: i2c_rd_fifo_off */
-#else
-	{REG_ADDR, 0},		/* 39 : NOP */
-#endif
 	{END, 0},		/* 40 : End sequence */
 #ifdef CONFIG_KONA_PMU_BSC_CLKPAD_CTRL
 	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 41: Write start: i2c_wr_off */
@@ -278,11 +274,7 @@ static struct i2c_cmd i2c_cmd[] = {
 	{WAIT_TIMER, WRITE_DELAY},	/* 50: Wait ... */
 	{I2C_DATA, 0xC0},	/* 51: i2c_wr_val_addr_off */
 	{WAIT_TIMER, WRITE_DELAY},	/* 52: fall through */
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 	{SET_READ_DATA, 0x48},	/* 53: i2c_rd_nack_jump_off */
-#else
-	{REG_ADDR, 0},		/* 53 : NOP */
-#endif
 	{REG_ADDR, PMU_BSC_INT_STATUS_REG},	/* 54: Set BSC INT Reg */
 	{REG_DATA, PMU_BSC_INT_STATUS_MASK},	/* 55: Clear INT Status */
 #ifdef CONFIG_KONA_PMU_BSC_CLKPAD_CTRL
@@ -292,7 +284,7 @@ static struct i2c_cmd i2c_cmd[] = {
 	{REG_ADDR, 0},		/* 56: NOP */
 	{REG_ADDR, 0},		/* 57: NOP */
 #endif
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 	{SET_PC_PINS, PC_PIN_DEFAULT_STATE},	/* 58: set PC3 high */
 #else
 	{REG_ADDR, 0},		/* 58: nop */
@@ -321,7 +313,6 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 	.cmd_buf = i2c_cmd,
 	.cmb_buf_size = ARRAY_SIZE(i2c_cmd),
 	.v0ptr = &v0_ptr,
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 	.i2c_rd_off = 17,
 	.i2c_rd_slv_id_off1 = 23,
 	.i2c_rd_reg_addr_off = 25,
@@ -334,9 +325,8 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 	.i2c_wr_reg_addr_off = 49,
 	.i2c_wr_val_addr_off = 51,
 	.i2c_seq_timeout = 100,
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 	.pc_toggle_off = 58,
-#endif
 #endif
 };
 

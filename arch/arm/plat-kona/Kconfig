@@ -25,12 +25,6 @@ config ARCH_HAWAII
 
 endchoice
 
-config KONA_POWER
-       bool "Enable support for kona power management"
-       depends on ARCH_RHEA || ARCH_ISLAND || ARCH_HAWAII
-       help
-       	Say Y if you want to enable the support for kona power management
-
 config GP_TIMER_CLOCK_OFF_FIX
 	bool "Enable the fix for general purpose timer clock off issue."
 	depends on ARCH_RHEA
@@ -174,9 +168,27 @@ config KONA_PWRMGR_ENABLE_HW_SEM_WORKAROUND
        help
        	Say Y if you want to enable Kona PWRMGR HW sempaphore workaround
 
+config KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
+	bool "Enable workaround for Kona SW seqeuncer fake trigger erratum"
+	depends on KONA_POWER_MGR
+	default y
+	help
+	 Say Y if you want to enable workaround for Kona SW sequencer
+	 fake trigger erratum. Refer Jira DB (HWRHEA-2747) for more
+	 info.
+
+config KONA_PWRMGR_SWSEQ_FAKE_INTR_ERRATUM
+	bool "Enable workaround for Kona SW seqeuncer fake interrupt erratum"
+	depends on KONA_POWER_MGR
+	default y
+	help
+	 Say Y if you want to enable workaround for Kona SW sequencer
+	 fake interrupt erratum. Refer Jira DB (HWRHEA-2706) for more
+	 info.
+
 config KONA_PWRMGR_REV2
        bool "Enable Kona PWRMGR Revision-2 support"
-       depends on KONA_POWER_MGR
+       depends on KONA_POWER_MGR && ARCH_RHEA=n
        help
        	Say Y if you want to enable Kona PWRMGR Revision-2 support
 

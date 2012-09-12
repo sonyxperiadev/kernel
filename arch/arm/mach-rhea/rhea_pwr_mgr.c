@@ -48,7 +48,7 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif
 #include "pm_params.h"
-#ifdef CONFIG_KONA_AVS
+#ifdef CONFIG_RHEA_AVS
 #include <mach/rhea_avs.h>
 #endif
 
@@ -366,12 +366,8 @@ struct pm_special_event_range rhea_special_event_list[] = {
 struct pwr_mgr_info rhea_pwr_mgr_info = {
 	.num_pi = PI_MGR_PI_ID_MAX,
 	.base_addr = KONA_PWRMGR_VA,
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 	.flags = PM_PMU_I2C | I2C_SIMULATE_BURST_MODE,
 	.pwrmgr_intr = BCM_INT_ID_PWR_MGR,
-#else
-	.flags = PM_PMU_I2C,
-#endif
 	.special_event_list = rhea_special_event_list,
 	.num_special_event_range = ARRAY_SIZE(rhea_special_event_list),
 };
@@ -569,11 +565,10 @@ late_initcall(rhea_pwr_mgr_late_init);
  * enabled
  */
 
-int __init rhea_pwr_mgr_init_sequencer(void)
+int __init mach_init_sequencer(void)
 {
 	pr_info("%s\n", __func__);
 
-#if defined(CONFIG_KONA_PWRMGR_REV2)
 	rhea_pwr_mgr_info.i2c_rd_off = pwrmgr_init_param.i2c_rd_off;
 	rhea_pwr_mgr_info.i2c_rd_slv_id_off1 =
 	    pwrmgr_init_param.i2c_rd_slv_id_off1;
@@ -593,8 +588,7 @@ int __init rhea_pwr_mgr_init_sequencer(void)
 	rhea_pwr_mgr_info.i2c_wr_val_addr_off =
 	    pwrmgr_init_param.i2c_wr_val_addr_off;
 	rhea_pwr_mgr_info.i2c_seq_timeout = pwrmgr_init_param.i2c_seq_timeout;
-#endif
-#ifdef CONFIG_RHEA_WA_HWJIRA_2747
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 	rhea_pwr_mgr_info.pc_toggle_off = pwrmgr_init_param.pc_toggle_off;
 #endif
 
@@ -610,4 +604,4 @@ int __init rhea_pwr_mgr_init_sequencer(void)
 	return 0;
 }
 
-EXPORT_SYMBOL(rhea_pwr_mgr_init_sequencer);
+EXPORT_SYMBOL(mach_init_sequencer);

@@ -454,21 +454,7 @@ enum {
 	CLK_SSP1_AUDIO_PERI_CLK_ID,
 };
 
-/*
-JIRA-1111 is fixed in B0. But if we enable auto gating for ARM_SWITCH AXI
-clock, we observe random V3D timeout (JIRA-2531). From the scanout and
-AXITRACE counter, there are either outstanding read or write from ACP to A9
-Workaround is to use s/w gating for A9. Now ARM_SWITCH AXI clk will be off
-only when A9 enters LPM
-
-Note: AUTO_GATING flag wll be added by rhea_clock_init() if runtime sysfs
-JIRA flag is turned off
-*/
-#ifdef CONFIG_RHEA_WA_HWJIRA_2531
-#define ARM_SWITCH_CLK_FLAGS				HYST_ENABLE|HYST_HIGH
-#else
 #define ARM_SWITCH_CLK_FLAGS				AUTO_GATE|HYST_ENABLE|HYST_HIGH
-#endif
 #define ROOT_CCU_CLK_FLAGS		(CCU_KEEP_UNLOCKED|CCU_DBG_BUS_EN)
 #define APB10_BUS_CLK_FLAGS			AUTO_GATE
 #define APB9_BUS_CLK_FLAGS			AUTO_GATE
@@ -552,10 +538,8 @@ JIRA flag is turned off
 #define HSI_RX_PERI_CLK_FLAGS			(HYST_ENABLE|HYST_HIGH)
 #define ETB_APB_BUS_CLK_FLAGS 			AUTO_GATE|HYST_ENABLE|HYST_HIGH
 #define FINAL_FUNNEL_APB_BUS_CLK_FLAGS 		AUTO_GATE|HYST_ENABLE|HYST_HIGH
-/*JIRA HWRHEA-1477 : Enable Auto gating for ATB_FILTER APB clock */
 #define ATB_FILTER_APB_BUS_CLK_FLAGS 		AUTO_GATE|HYST_ENABLE|HYST_HIGH
 #define AUDIOH_26M_PERI_CLK_FLAGS		DONOT_NOTIFY_STATUS_TO_CCU|HYST_ENABLE|HYST_HIGH
-/*JIRA HWRHEA-1166: Do not enable Auto gating for Hub clock, not fixed in B0 */
 #define HUB_PERI_CLK_FLAGS			(AUTO_GATE| \
 						DONOT_NOTIFY_STATUS_TO_CCU| \
 						HYST_ENABLE|HYST_HIGH)
@@ -584,7 +568,6 @@ JIRA flag is turned off
 #define BROM_PERI_CLK_FLAGS 			AUTO_GATE|HYST_ENABLE|HYST_HIGH
 #define MDIOMASTER_PERI_CLK_FLAGS 		HYST_ENABLE|HYST_HIGH
 #define KHUBAON_CCU_CLK_FLAGS 			CCU_TARGET_AC
-/*JIRA HWRHEA-583: Enable Auto gating for HUBAON*/
 #define HUBAON_BUS_CLK_FLAGS			AUTO_GATE|HYST_ENABLE|HYST_HIGH
 #define SIM_APB_BUS_CLK_FLAGS			HYST_ENABLE|HYST_HIGH
 #define SIM2_APB_BUS_CLK_FLAGS			HYST_ENABLE|HYST_HIGH
@@ -596,7 +579,6 @@ JIRA flag is turned off
 #define SIM_PERI_CLK_FLAGS 			HYST_ENABLE|HYST_HIGH
 #define SIM2_PERI_CLK_FLAGS 			HYST_ENABLE|HYST_HIGH
 #define HUB_TIMER_PERI_CLK_FLAGS		ENABLE_ON_INIT|DONOT_NOTIFY_STATUS_TO_CCU|HYST_ENABLE|HYST_HIGH
-/*JIRA HWRHEA-1183 : PMU BSC clock should be autogated, else AON cannot wakeup from sleep*/
 #define PMU_BSC_PERI_CLK_FLAGS			AUTO_GATE|DONOT_NOTIFY_STATUS_TO_CCU|HYST_ENABLE|HYST_HIGH
 #define KPM_CCU_CLK_FLAGS			(CCU_TARGET_AC|CCU_DBG_BUS_EN)
 #define USB_OTG_AHB_BUS_CLK_FLAGS 		DISABLE_ON_INIT | NOTIFY_STATUS_TO_CCU
@@ -744,9 +726,9 @@ enum {
 int mm_ccu_set_pll_select(u32 clk_id, u32 value);
 int clk_set_pll_pwr_on_idle(int pll_id, int enable);
 int clk_set_crystal_pwr_on_idle(int enable);
-int rhea_clock_init(void);
-int rhea_clock_print_act_clks(void);
-int rhea_chip_reset(void);
+int __clock_init(void);
+int __clock_print_act_clks(void);
+int chip_reset(void);
 #ifdef CONFIG_DEBUG_FS
 int debug_bus_mux_sel(int mux_sel, int mux_param);
 int set_clk_idle_debug_mon(int clk_idle, int db_sel);

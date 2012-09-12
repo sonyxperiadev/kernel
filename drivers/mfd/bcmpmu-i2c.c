@@ -731,7 +731,7 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	/**
 	 * Initialize the power manager sequencer
 	 */
-	rhea_pwr_mgr_init_sequencer();
+	mach_init_sequencer();
 	bcmpmu->read_dev = bcmpmu_i2c_pwrmgr_read;
 	bcmpmu->write_dev = bcmpmu_i2c_pwrmgr_write;
 	bcmpmu->read_dev_drct = bcmpmu_i2c_pwrmgr_read_direct;

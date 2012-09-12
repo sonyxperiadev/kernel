@@ -126,7 +126,6 @@ config FSL_USB2_OTG
 
 config BCMPMU_OTG_XCEIV
        tristate "Broadcom USB OTG Transceiver Driver"
-       select MFD_BCMPMU
        select USB_OTG_UTILS
        select KONA_USB_CONTROL
        help

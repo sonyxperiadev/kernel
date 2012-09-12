@@ -66,14 +66,14 @@ extern unsigned get_secure_buffer(void);
 
 extern unsigned get_secure_buffer_size(void);
 #else
-void secure_api_call_init(void) { };
+static inline void secure_api_call_init(void) { };
 
-unsigned secure_api_call(unsigned service_id, unsigned arg0,
+static inline unsigned secure_api_call(unsigned service_id, unsigned arg0,
 	unsigned arg1, unsigned arg2, unsigned arg3) { return 0; };
 
-unsigned get_secure_buffer(void) { return 0; }
+static inline unsigned get_secure_buffer(void) { return 0; }
 
-unsigned get_secure_buffer_size(void) { return 0; }
+static inline unsigned get_secure_buffer_size(void) { return 0; }
 
 #endif /* CONFIG_KONA_SECURE_MONITOR_CALL */
 
