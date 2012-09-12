@@ -80,7 +80,9 @@ int mmdma_execute(unsigned int srcAddr, unsigned int dstAddr, unsigned int size)
 	}
 
 	/* Add the DMA transfer data */
+#ifdef CONFIG_ARCH_HAWAII
 	dmaData.burstWriteEnable32 = 1;
+#endif
 	dmaData.srcAddr = srcAddr;
 	dmaData.dstAddr = dstAddr;
 	dmaData.xferLength = size;
@@ -102,6 +104,7 @@ int mmdma_execute(unsigned int srcAddr, unsigned int dstAddr, unsigned int size)
 	mb();
 
 	mutex_lock(&lock);
+	return ret;
 
 release_channel:
 	csl_dma_vc4lite_release_channel(dmaCh);
