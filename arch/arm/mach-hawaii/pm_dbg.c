@@ -36,14 +36,6 @@
 #define GPIO_GPORC_BASE_PHYS    (GPIO2_BASE_ADDR + GPIO_GPORC0_OFFSET)
 #define GPIO_GPORC_BASE_VIRT    (KONA_GPIO2_VA + GPIO_GPORC0_OFFSET)
 
-#define	RETENTION_TRACE_OFFSET		(SZ_1K)
-#define	WFI_TRACE_OFFSET		(SZ_2K)
-#define	TRACE_PATTERN_OFFSET		0 /* 1st word from offset */
-#define	COUNTER_OFFSET			1 /* 2nd word from offset */
-
-static int wfi_attempt_count;
-static int ret_attempt_count;
-
 /* No check for gpio number to speed up the API */
 void dbg_gpio_set(u32 gpio)
 {
@@ -142,12 +134,6 @@ static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 #endif /* DORMANT_PROFILE && CONFIG_A9_DORMANT_MODE */
 
 u32 dorm_profile_enable;
-u32 *dormant_trace_v;
-u32 *dormant_trace_p;
-
-u32 *ret_trace_v;
-u32 *wfi_trace_v;
-
 
 struct debug {
 	int dummy;
@@ -196,8 +182,6 @@ static void cmd_show_usage(void)
 
 static void cmd_display_stats(const char *p)
 {
-	pr_info("dormant trace v:%p, p:%p\n", dormant_trace_v, dormant_trace_p);
-	pr_info("dormant trace %x\n", *dormant_trace_v);
 }
 
 static int force_sleep_state = 2;
@@ -294,21 +278,11 @@ static int param_get_debug(char *buffer, const struct kernel_param *kp)
 
 void instrument_dormant_entry(void)
 {
-	if (dormant_trace_v) {
-#ifdef CONFIG_A9_DORMANT_MODE
-		*dormant_trace_v = DORMANT_ENTRY;
-		*(dormant_trace_v + COUNTER_OFFSET) = dormant_attempt + 1;
-#endif
-	}
-
 	dormant_profile_entry();
 }
 
 void instrument_dormant_exit(void)
 {
-	if (dormant_trace_v)
-		*dormant_trace_v = DORMANT_EXIT;
-
 	dormant_profile_exit();
 }
 
@@ -413,14 +387,6 @@ void instrument_idle_exit(void)
 
 void instrument_retention(int trace_path)
 {
-	if (ret_trace_v) {
-		if (trace_path == TRACE_ENTRY) {
-			*(ret_trace_v + TRACE_PATTERN_OFFSET) = RETENTION_ENTRY;
-		} else if (trace_path == TRACE_EXIT) {
-			*(ret_trace_v + TRACE_PATTERN_OFFSET) = RETENTION_EXIT;
-			*(ret_trace_v + COUNTER_OFFSET) = ++ret_attempt_count;
-		}
-	}
 }
 
 /*****************************************************************************
@@ -429,41 +395,13 @@ void instrument_retention(int trace_path)
 
 void instrument_wfi(int trace_path)
 {
-	if (wfi_trace_v) {
-		if (trace_path == TRACE_ENTRY) {
-			*(wfi_trace_v + TRACE_PATTERN_OFFSET) = WFI_ENTRY;
-		} else if (trace_path == TRACE_EXIT) {
-			*(wfi_trace_v + TRACE_PATTERN_OFFSET) = WFI_EXIT;
-			*(wfi_trace_v + COUNTER_OFFSET) = ++wfi_attempt_count;
-		}
-	}
 }
 
 
 int __init __pmdbg_init(void)
 {
-	void *v = NULL;
-	dma_addr_t p;
-
 	snapshot_table_register(snapshot, ARRAY_SIZE(snapshot));
 	dormant_profile_config(0, 0, 0, 0);
-
-	v = dma_alloc_coherent(NULL, SZ_4K, &p, GFP_ATOMIC);
-	if (v == NULL) {
-		pr_info("%s: tracer dma buffer alloc failed\n", __func__);
-		return -ENOMEM;
-	}
-
-	dormant_trace_v = (u32 *) v;
-	dormant_trace_p = (u32 *) p;
-
-	ret_trace_v = (u32 *)((u32)dormant_trace_v + RETENTION_TRACE_OFFSET);
-	wfi_trace_v = (u32 *)((u32)dormant_trace_v + WFI_TRACE_OFFSET);
-
-	pr_info("%s: ret_trace_v:0x%x; wfi_trace_v:0x%x\n", __func__,
-				(u32)ret_trace_v, (u32)wfi_trace_v);
-
-	pr_info("dormant trace v:0x%x, p:0x%x\n", (u32)v, (u32)p);
 
 	return 0;
 }
