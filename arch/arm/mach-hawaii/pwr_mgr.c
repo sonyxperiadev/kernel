@@ -485,141 +485,73 @@ static const struct event_table __event_table[] = {
 };
 
 static struct i2c_cmd i2c_dummy_seq_cmd[] = {
-	{REG_ADDR, 0},		//0 - NOP
-	{JUMP_VOLTAGE, 0},	//1 - jump to address based on current voltage request
-	{REG_ADDR, 0},		//other:2 - NOP
-	{SET_PC_PINS, 0xC0},	//3 - Set PC3/4 pins to 0 to begin transaction (HW has semaphore)
-	{REG_ADDR, 0},		//4 - NOP
-	{REG_ADDR, 0},		//5 - Set Address for i2cmmhs BSC_CS register
-	{REG_ADDR, 0},		//6 - Set Start condition - write 3 to CS register
-	{REG_ADDR, 0},		//7 - Wait..
-	{REG_ADDR, 0},		//8 - Clear Start Condition - write 1 to CS
-	{REG_ADDR, 0},		//9 - Wait..
-	{REG_ADDR, 0},		//10 - PMU client addr  - 8 ..write to FIFO
-	{REG_ADDR, 0},		//11 - Wait..
-	{REG_ADDR, 0},		//12 - PMU register addr C0 (CSRSTRL1)
-	{REG_ADDR, 0},		//13 - Wait..
-	{REG_ADDR, 0},		//14 - Data - Write the requested voltage
-	{REG_ADDR, 0},		//15 - Wait..
-	{SET_PC_PINS, 0xCC},	//16 - Set PC3/4 to 1 to signal End of transaction
-	{END, 0},		//17 - End
-	{REG_ADDR, 0},		//18 - NOP
-	{REG_ADDR, 0},		//19 - NOP
+	{REG_ADDR, 0},		/*0 - NOP*/
+	{JUMP_VOLTAGE, 0},	/*1 - jump based on voltage request*/
+	{REG_ADDR, 0},		/*2 - NOP   - other (all)*/
+	{REG_ADDR, 0},		/*3 - NOP*/
+	{REG_ADDR, 0},		/*4 - NOP*/
+	{REG_ADDR, 0},		/*5 - NOP*/
+	{REG_ADDR, 0},		/*6 - NOP*/
+	{REG_ADDR, 0},		/*7 - NOP*/
+	{REG_ADDR, 0},		/*8 - NOP*/
+	{REG_ADDR, 0},		/*9 - NOP*/
+	{REG_ADDR, 0},		/*10 - NOP*/
+	{REG_ADDR, 0},		/*11 - NOP*/
+	{REG_ADDR, 0},		/*12 - NOP*/
+	{REG_ADDR, 0},		/*13 - NOP*/
+	{REG_ADDR, 0},		/*14 - NOP*/
+	{REG_ADDR, 0},		/*15 - NOP*/
+	{REG_ADDR, 0},		/*16 - NOP*/
+	{END, 0},			/*17 - End*/
+	{SET_PC_PINS, 0x22}, /*18 - wake up (other)*/
+	{END, 0},			/*19 - End*/
 	{REG_ADDR, 0},		//20 - NOP
-	{REG_ADDR, 0},		//21 - NOP
-	{REG_ADDR, 0},		//22 - NOP
-	{REG_ADDR, 0},		//23 - NOP
-	{REG_ADDR, 0},		//24 - NOP
-	{REG_ADDR, 0},		//25 - NOP
-	{REG_ADDR, 0},		//26 - NOP
-	{REG_ADDR, 0},		//27 - NOP
-	{REG_ADDR, 0},		//28 - NOP
-	{REG_ADDR, 0},		//29 - NOP
-	{REG_ADDR, 0},		//30 - NOP
-	{REG_ADDR, 0},		//31 - NOP
-	{REG_ADDR, 0},		//32 - NOP
-	{REG_ADDR, 0},		//33 - NOP
-	{REG_ADDR, 0},		//34 - NOP
-	{REG_ADDR, 0},		//35 - NOP
-	{REG_ADDR, 0},		//36 - NOP
-	{REG_ADDR, 0},		//37 - NOP
-	{REG_ADDR, 0},		//38 - NOP
-	{REG_ADDR, 0},		//39 - NOP
-	{REG_ADDR, 0},		//40 - NOP
-	{REG_ADDR, 0},		//41 - NOP
-	{REG_ADDR, 0},		//42 - NOP
-	{REG_ADDR, 0},		//43 - NOP
-	{REG_ADDR, 0},		//44 - NOP
-	{REG_ADDR, 0},		//45 - NOP
-	{REG_ADDR, 0},		//46 - NOP
-	{REG_ADDR, 0},		//47 - NOP
-	{REG_ADDR, 0},		//48 - NOP
-	{REG_ADDR, 0},		//49 - NOP
-	{REG_ADDR, 0},		//50 - NOP
-	{REG_ADDR, 0},		//51 - NOP
-	{REG_ADDR, 0},		//set2/zero:52 - NOP
-	{SET_PC_PINS, 0x30},	//53 - Set PC1 pins to 0
-	{REG_ADDR, 0},		//54 -NOP
-	{END, 0},		//55 -END
-	{REG_ADDR, 0},		//set1:56 -NOP
-	{SET_PC_PINS, 0x31},	//57 - Set PC1 pins to 1
-	{REG_ADDR, 0},		//58 -NOP
-	{END, 0},		//59 -END
-	{REG_ADDR, 0},		//60 - NOP
-	{REG_ADDR, 0},		//61 - NOP
-	{REG_ADDR, 0},		//62 - NOP
-	{REG_ADDR, 0},		//63 - NOP
+	{SET_PC_PINS, 0x30}, /*21 - retention, zero (other)*/
+	{END, 0},			/*22 - End*/
+	{REG_ADDR, 0},		/*23 - NOP*/
+	{SET_PC_PINS, 0x44}, /*24 - wake up(A9)*/
+	{END, 0},			/*25 - End*/
+	{REG_ADDR, 0},		/*26 - NOP*/
+	{SET_PC_PINS, 0x50}, /*27 - retention, zero (A9)*/
+	{END, 0},			/*28 - End*/
+	{REG_ADDR, 0},		/*29 - NOP*/
+	{REG_ADDR, 0},		/*30 - NOP*/
+	{REG_ADDR, 0},		/*31 - NOP*/
+	{REG_ADDR, 0},		/*32 - NOP*/
+	{REG_ADDR, 0},		/*33 - NOP*/
+	{REG_ADDR, 0},		/*34 - NOP*/
+	{REG_ADDR, 0},		/*35 - NOP*/
+	{REG_ADDR, 0},		/*36 - NOP*/
+	{REG_ADDR, 0},		/*37 - NOP*/
+	{REG_ADDR, 0},		/*38 - NOP*/
+	{REG_ADDR, 0},		/*39 - NOP*/
+	{REG_ADDR, 0},		/*40 - NOP*/
+	{REG_ADDR, 0},		/*41 - NOP*/
+	{REG_ADDR, 0},		/*42 - NOP*/
+	{REG_ADDR, 0},		/*43 - NOP*/
+	{REG_ADDR, 0},		/*44 - NOP*/
+	{REG_ADDR, 0},		/*45 - NOP*/
+	{REG_ADDR, 0},		/*46 - NOP*/
+	{REG_ADDR, 0},		/*47 - NOP*/
+	{REG_ADDR, 0},		/*48 - NOP*/
+	{REG_ADDR, 0},		/*49 - NOP*/
+	{REG_ADDR, 0},		/*50 - NOP*/
+	{REG_ADDR, 0},		/*51 - NOP*/
+	{REG_ADDR, 0},		/*52 - NOP*/
+	{REG_ADDR, 0},		/*53 - NOP*/
+	{REG_ADDR, 0},		/*54 -NOP*/
+	{REG_ADDR, 0},		/*55 - NOP*/
+	{REG_ADDR, 0},		/*56 -NOP*/
+	{REG_ADDR, 0},		/*57 - NOP*/
+	{REG_ADDR, 0},		/*58 -NOP*/
+	{REG_ADDR, 0},		/*59 -NOP*/
+	{REG_ADDR, 0},		/*60 - NOP*/
+	{REG_ADDR, 0},		/*61 - NOP*/
+	{REG_ADDR, 0},		/*62 - NOP*/
+	{END, 0},		/*63 -END*/
 
 };
 
-#ifdef CONFIG_PWRMGR_DUMMY_SEQUENCER
-
-#define I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_0_SHIFT \
-PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_0_SHIFT
-#define I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_1_SHIFT \
-PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_1_SHIFT
-
-static int dummy_pm_init(void)
-{
-	u32 val = 0;
-	u32 i2c_cmd_data = 0;
-	u32 v0_ptr_data = 0;
-	int i = 0;
-
-	pr_info("dummy sequencer init\n");
-
-	/* dummy i2c sequencer */
-	v0_ptr_data = (
-		0x1 << PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_SET2_VALUE_SHIFT |
-		0xA << PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_SET2_SHIFT | 0x2 <<
-		PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_SET1_VALUE_SHIFT | 0xA <<
-		PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_SET1_SHIFT | 0xA <<
-		PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_ZEROV_SHIFT | 0x2 <<
-		PWRMGR_VO_SPECIFIC_I2C_COMMAND_POINTER_SHIFT);
-
-	/* set both VO0 & VO1 pointer to the same offset */
-	writel(v0_ptr_data, KONA_PWRMGR_VA +
-	       PWRMGR_VO0_SPECIFIC_I2C_COMMAND_POINTER_OFFSET);
-	writel(v0_ptr_data, KONA_PWRMGR_VA +
-	       PWRMGR_VO1_SPECIFIC_I2C_COMMAND_POINTER_OFFSET);
-
-	/* NOP and JUMP_VOLTAGE */
-	i2c_cmd_data |= (JUMP_VOLTAGE <<
-			 I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_1_SHIFT);
-	writel(i2c_cmd_data, (KONA_PWRMGR_VA +
-	       PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_OFFSET));
-
-	/* NOP NOP */
-	writel(0x0, (KONA_PWRMGR_VA +
-	       PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_02_OFFSET));
-
-	/* END END */
-	i2c_cmd_data = (END << I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_1_SHIFT)
-		| (END << I2C_COMMAND_DATA_LOC_01_I2C_CMD__01_0_SHIFT);
-
-	/* write END instruction in the rest of the locations */
-	for (i = 2; i < 32; i++) {
-		writel(i2c_cmd_data, (KONA_PWRMGR_VA +
-		    PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_OFFSET +
-		    i * 4));
-	}
-
-	for (i = 0; i < 32; i++) {
-		writel(i2c_cmd_data, (KONA_PWRMGR_VA +
-		    PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_33_OFFSET +
-		    i * 4));
-	}
-
-	/*
-	 * enable power manger I2C so that CCU policy engine will not be stuck
-	 */
-	val = readl(KONA_PWRMGR_VA + PWRMGR_POWER_MANAGER_I2C_ENABLE_OFFSET);
-	val |= PWRMGR_POWER_MANAGER_I2C_ENABLE_POWER_MANAGER_I2C_ENABLE_MASK;
-	writel(val, KONA_PWRMGR_VA + PWRMGR_POWER_MANAGER_I2C_ENABLE_OFFSET);
-
-	return 0;
-}
-#endif /* #ifdef CONFIG_PWRMGR_DUMMY_SEQUENCER */
 
 #define HAWAII_EVENT_POLICY_OFFSET	{ \
 	[LCDTE_EVENT]		= 0x0, \
@@ -761,11 +693,21 @@ static int __init hawaii_pwr_mgr_init(void)
 	struct v0x_spec_i2c_cmd_ptr dummy_seq_v0_ptr = {
 		.other_ptr = 2,
 		.set2_val = 1,	/*Retention voltage inx */
-		.set2_ptr = 52,
+		.set2_ptr = 21,
 		.set1_val = 2,	/*wakeup from retention voltage inx */
-		.set1_ptr = 56,
-		.zerov_ptr = 52,
+		.set1_ptr = 18,
+		.zerov_ptr = 21,
 	};
+
+	struct v0x_spec_i2c_cmd_ptr dummy_seq_v1_ptr = {
+		.other_ptr = 2,
+		.set2_val = 1,	/*Retention voltage inx */
+		.set2_ptr = 27,
+		.set1_val = 2,	/*wakeup from retention voltage inx */
+		.set1_ptr = 24,
+		.zerov_ptr = 27,
+	};
+
 
 	cfg.ac = 1;
 	cfg.atl = 0;
@@ -778,6 +720,7 @@ static int __init hawaii_pwr_mgr_init(void)
 	__pwr_mgr_info.i2c_cmds = i2c_dummy_seq_cmd;
 	__pwr_mgr_info.num_i2c_cmds = ARRAY_SIZE(i2c_dummy_seq_cmd);
 	__pwr_mgr_info.i2c_cmd_ptr[VOLT0] = &dummy_seq_v0_ptr;
+	__pwr_mgr_info.i2c_cmd_ptr[VOLT1] = &dummy_seq_v1_ptr;
 
 	__pwr_mgr_info.i2c_var_data = pwrmgr_init_param.def_vlt_tbl;
 	__pwr_mgr_info.num_i2c_var_data = pwrmgr_init_param.vlt_tbl_size;
@@ -785,9 +728,6 @@ static int __init hawaii_pwr_mgr_init(void)
 	pwr_mgr_init(&__pwr_mgr_info);
 	hawaii_pi_mgr_init();
 
-#ifdef CONFIG_PWRMGR_DUMMY_SEQUENCER
-	dummy_pm_init();
-#endif
 
 #ifdef CONFIG_MM_POWER_OK_ERRATUM
 /* it was observed that if MM CCU is switched to and
@@ -808,7 +748,7 @@ static int __init hawaii_pwr_mgr_init(void)
 	pwr_mgr_event_set(SOFTWARE_2_EVENT, 1);
 	pwr_mgr_event_set(SOFTWARE_0_EVENT, 1);
 
-	pwr_mgr_set_pc_clkreq_override(PC1, true, 1);
+	pwr_mgr_set_pc_clkreq_override(PC0, true, 1);
 	pwr_mgr_pm_i2c_enable(true);
 	/*Init event table */
 	for (i = 0; i < ARRAY_SIZE(__event_table); i++) {
@@ -956,6 +896,8 @@ late_initcall(hawaii_pwr_mgr_late_init);
 
 int __init mach_init_sequencer(void)
 {
+
+#ifndef CONFIG_PWRMGR_DUMMY_SEQUENCER
 	pr_info("%s\n", __func__);
 
 	__pwr_mgr_info.i2c_rd_off = pwrmgr_init_param.i2c_rd_off;
@@ -986,6 +928,7 @@ int __init mach_init_sequencer(void)
 	/* pwr_mgr_init_sequencer function will disable the sequencer
 	   re-enable the power manager i2c sequencer */
 	pwr_mgr_pm_i2c_enable(true);
+#endif /*CONFIG_PWRMGR_DUMMY_SEQUENCER*/
 	return 0;
 }
 EXPORT_SYMBOL(mach_init_sequencer);

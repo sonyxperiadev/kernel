@@ -2238,22 +2238,14 @@ void pwr_mgr_init_sequencer(struct pwr_mgr_info *info)
 	/*init I2C seq, var data & cmd ptr if valid data available */
 	/*Disable seq. before updating seq. params */
 	pwr_mgr_pm_i2c_enable(false);
-	if (info->i2c_cmds) {
+	if (info->i2c_cmds)
 		pwr_mgr_pm_i2c_cmd_write(info->i2c_cmds,
 				info->num_i2c_cmds);
-		/**
-		 * update the i2c_rd_nack_jump_off location
-		 * for at i2c_rd_nack_off location
-		 */
-		pwr_mgr_update_i2c_cmd_data(info->i2c_rd_nack_off,
-				info->i2c_rd_nack_jump_off);
-		pwr_mgr_update_i2c_cmd_data(info->i2c_rd_nack_off + 1,
-				info->i2c_rd_nack_jump_off);
-	}
-	if (info->i2c_var_data) {
+
+	if (info->i2c_var_data)
 		pwr_mgr_pm_i2c_var_data_write(info->i2c_var_data,
 				info->num_i2c_var_data);
-	}
+
 	for (v_set = VOLT0; v_set < V_SET_MAX; v_set++) {
 		if (info->i2c_cmd_ptr[v_set])
 			pwr_mgr_set_v0x_specific_i2c_cmd_ptr(v_set,
