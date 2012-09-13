@@ -1208,13 +1208,14 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 			char task_comm[TASK_COMM_LEN];
 
 			get_task_comm(task_comm, client->task);
-			seq_printf(s, "%16.s %16u %13u KB %13u KB %16d\n", task_comm,
-					client->pid, (size>>10), 
+			seq_printf(s, "%16.s %16u %13u KB %13u KB %16d\n",
+					task_comm, client->pid, (size>>10),
 					(shared>>10),
 					client->task->signal->oom_score_adj);
 		} else {
-			seq_printf(s, "%16.s %16u %13u KB %13u KB\n", client->name,
-					client->pid, (size>>10), (shared>>10));
+			seq_printf(s, "%16.s %16u %13u KB %13u KB\n",
+					client->name, client->pid, (size>>10),
+					(shared>>10));
 		}
 	}
 	seq_printf(s, "----------------------------------------------------\n");
@@ -1240,7 +1241,8 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 		seq_printf(s, "%16.s %13u KB\n", "total reserved",
 				(heap->size>>10));
 	seq_printf(s, "%16.s %13u KB, %16.s %13u KB\n", "total used",
-			(total_size>>10), "total shared", (total_shared_size>>10));
+			(total_size>>10), "total shared",
+			(total_shared_size>>10));
 	seq_printf(s, "%16.s %13u KB\n", "total orphaned",
 			(total_orphaned_size>>10));
 

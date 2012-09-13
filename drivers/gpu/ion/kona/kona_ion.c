@@ -54,9 +54,8 @@ unsigned int kona_ion_map_dma(struct ion_client *client,
 	if (!buffer->dma_addr) {
 		buffer->dma_addr = m4u_map(g_mdev, sg_table, buffer->size,
 				buffer->align);
-		if (buffer->dma_addr == INVALID_MMA) {
+		if (buffer->dma_addr == INVALID_MMA)
 			buffer->dma_addr = 0;
-		}
 	}
 	dma_addr = buffer->dma_addr;
 	ion_unlock_buffer(client, buffer);
@@ -169,7 +168,7 @@ static int kona_ion_cache_invalidate(struct ion_client *client,
 	return ret;
 }
 
-static long kona_ion_custom_ioctl (struct ion_client *client,
+static long kona_ion_custom_ioctl(struct ion_client *client,
 				      unsigned int cmd,
 				      unsigned long arg)
 {
@@ -222,7 +221,7 @@ static long kona_ion_custom_ioctl (struct ion_client *client,
 	}
 	case ION_IOC_CUSTOM_UPDATE:
 	{
-		struct ion_handle *handle = (struct ion_handle*)arg;
+		struct ion_handle *handle = (struct ion_handle *)arg;
 
 		pr_debug("ION_IOC_CUSTOM_UPDATE client(%p) handle(%p)\n",
 				client, handle);
@@ -340,7 +339,8 @@ static int kona_ion_probe(struct platform_device *pdev)
 					i, heap_data->name, heap_data->type,
 					heap_data->id);
 			pr_info("Base(0x%08x) Size (0x%08x)\n",
-					(unsigned int)heap_data->base, heap_data->size);
+					(unsigned int)heap_data->base,
+					heap_data->size);
 			heaps[i] = ion_heap_create_full(heap_data, &pdev->dev);
 			if (IS_ERR_OR_NULL(heaps[i])) {
 				heaps[i] = NULL;
