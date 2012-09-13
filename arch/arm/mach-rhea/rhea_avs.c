@@ -283,16 +283,8 @@ static int avs_read_vm_otp(struct avs_info *avs_inf_ptr)
 		avs_inf_ptr->vm3_val =
 		    (vm_val.val1 >> VM3_VAL_SHIFT) & VM_VAL_MASK;
 
-<<<<<<< HEAD
-		avs_dbg(AVS_LOG_INIT, "%s:vm0_val = %d \
-				vm1_val= %d vm2_val = %d vm3_val = %d\n",
-||||||| merged common ancestors
-		avs_dbg(AVS_LOG_INIT, "%s:vm0_val = %d
-				vm1_val= %d vm2_val = %d vm3_val = %d\n",
-=======
 		avs_dbg(AVS_LOG_INIT, "%s:vm0_val = %d"
 				"vm1_val= %d vm2_val = %d vm3_val = %d\n",
->>>>>>> remotes/mps-git-new/Br_Hawaii_PreSilicon_3.4
 				__func__,
 				avs_inf_ptr->vm0_val,
 				avs_inf_ptr->vm1_val,
@@ -347,16 +339,8 @@ static int avs_read_ate_otp(struct avs_info *avs_inf_ptr)
 		 * if year and month field is 0, we will assume June 2012
 		 * This is just for debug print purpose only
 		 */
-<<<<<<< HEAD
-		avs_dbg(AVS_LOG_INFO, "AVS Year & Month of Manufacturing: \
-				%d %d\n",
-||||||| merged common ancestors
-		avs_dbg(AVS_LOG_INFO, "AVS Year & Month of Manufacturing:
-				%d %d\n",
-=======
 		avs_dbg(AVS_LOG_INFO, "AVS Year & Month of Manufacturing:"
 				"%d %d\n",
->>>>>>> remotes/mps-git-new/Br_Hawaii_PreSilicon_3.4
 				((avs_inf_ptr->year == 0) ? 2012 :
 				 (2010 + avs_inf_ptr->year)),
 				((avs_inf_ptr->month == 0) ? 6 :
