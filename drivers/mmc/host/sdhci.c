@@ -2235,6 +2235,14 @@ static void sdhci_work_wait_erase(struct work_struct *work)
 					      wait_erase_work);
 	int wait_cnt = 0;
 
+	/*
+	 * According to Arasan, when DTOERR  occured while CMD38,
+	 * which is not treated as normal, not an error by the Host,
+	 * host driver should reset DATA Lines for SDHC internal state.
+	 */
+	pr_err("DATA Timeout during Erase, Resetting DATA Lines\n");
+	sdhci_reset(host, SDHCI_RESET_DATA);
+
 	while (wait_cnt++ < MAX_ERASE_WAIT_LOOP &&
 		(sdhci_readl(host, SDHCI_PRESENT_STATE) &
 			SDHCI_DATA_LVL_DAT0_MASK) == 0) {
