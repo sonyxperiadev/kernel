@@ -15,6 +15,8 @@
  *
  */
 
+#define pr_fmt(fmt) "ion-cma: " fmt
+
 #include <linux/device.h>
 #include <linux/ion.h>
 #include <linux/slab.h>

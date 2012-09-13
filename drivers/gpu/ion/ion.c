@@ -14,6 +14,8 @@
  *
  */
 
+#define pr_fmt(fmt) "ion-: " fmt
+
 #include <linux/device.h>
 #include <linux/file.h>
 #include <linux/fs.h>

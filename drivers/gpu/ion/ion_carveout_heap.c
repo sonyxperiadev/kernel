@@ -13,6 +13,9 @@
  * GNU General Public License for more details.
  *
  */
+
+#define pr_fmt(fmt) "ion-carveout: " fmt
+
 #include <linux/spinlock.h>
 
 #include <linux/err.h>

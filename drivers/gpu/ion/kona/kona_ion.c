@@ -14,7 +14,7 @@
  *
  */
 
-#define pr_fmt(fmt) "android-ion: " fmt
+#define pr_fmt(fmt) "ion-kona: " fmt
 
 #include <linux/err.h>
 #include <linux/scatterlist.h>
