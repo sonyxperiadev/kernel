@@ -1088,6 +1088,8 @@ pmem_task_notify_func(struct notifier_block *self,
 	for (id = 0; id < PMEM_MAX_DEVICES; id++) {
 		if (task == pmem[id].deathpending) {
 			pmem[id].deathpending = NULL;
+			printk(KERN_INFO
+				"pmem: %s/%d died !\n", task->comm, task->pid);
 			up(&pmem[id].shrinker_sem);
 		}
 	}
@@ -1175,6 +1177,7 @@ static void pmem_shrink(struct work_struct *work)
 	mutex_unlock(&p_info->data_list_lock);
 
 	if (selected) {
+		int ret;
 		printk(KERN_INFO
 			"send sigkill (%s/%d),adj %d, %lu pages\n",
 			selected->comm, selected->pid,
@@ -1182,7 +1185,19 @@ static void pmem_shrink(struct work_struct *work)
 		p_info->deathpending = selected;
 		force_sig(SIGKILL, selected);
 		/* wait for process to die .... */
-		down(&p_info->shrinker_sem);
+		ret = down_timeout(&p_info->shrinker_sem, HZ*20);
+		if (ret == -ETIME) {
+			printk(KERN_INFO
+				"pmem: (%s/%d usage(%d) exit_state(%d) state(%ld))"
+					"parent(%s/%d) death timedout\n",
+					selected->comm, selected->pid,
+					atomic_read(&selected->usage),
+					selected->exit_state,
+					selected->state,
+					selected->parent->group_leader->comm,
+					selected->parent->group_leader->pid);
+		}
+
 	}
 
 out:
@@ -1800,7 +1815,7 @@ static int pmem_setup(struct platform_device *pdev,
 		/* These are only used when we have associated CMA region */
 		mutex_init(&pmem[id].shrinker_lock);
 		INIT_WORK(&pmem[id].pmem_shrinker, pmem_shrink);
-		sema_init(&pmem[id].shrinker_sem, 1);
+		sema_init(&pmem[id].shrinker_sem, 0);
 		init_waitqueue_head(&pmem[id].deatheaters);
 		pmem[id].deathpending = NULL;
 	} else {
