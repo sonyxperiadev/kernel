@@ -253,8 +253,8 @@ static struct i2c_cmd i2c_cmd[] = {
 	{REG_DATA, 0xF},	/* 34: Read Cmd */
 	{WAIT_TIMER, READ_DELAY},	/* 35 : Wait ... */
 	{REG_DATA, 1},		/* 36: Clear Start condition */
-	{REG_ADDR, 0x0},	/* 37: i2c_rd_nack_off */
-	{JUMP, 0x0},		/* 38: jump to i2c_rd_nack_jump_off offset */
+	{REG_ADDR, 53},	/* 37: i2c_rd_nack_off */
+	{JUMP, 53},		/* 38: jump to i2c_rd_nack_jump_off offset */
 	{READ_FIFO, 0},		/* 39: i2c_rd_fifo_off */
 	{END, 0},		/* 40 : End sequence */
 #ifdef CONFIG_KONA_PMU_BSC_CLKPAD_CTRL
@@ -317,9 +317,7 @@ struct pwrmgr_init_param pwrmgr_init_param = {
 	.i2c_rd_slv_id_off1 = 23,
 	.i2c_rd_reg_addr_off = 25,
 	.i2c_rd_slv_id_off2 = 31,
-	.i2c_rd_nack_off = 37,
 	.i2c_rd_fifo_off = 39,
-	.i2c_rd_nack_jump_off = 53,
 	.i2c_wr_off = 41,
 	.i2c_wr_slv_id_off = 47,
 	.i2c_wr_reg_addr_off = 49,

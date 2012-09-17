@@ -692,9 +692,6 @@ int __init mach_init_sequencer(void)
 	    pwrmgr_init_param.i2c_rd_slv_id_off2;
 	rhea_pwr_mgr_info.i2c_rd_reg_addr_off =
 	    pwrmgr_init_param.i2c_rd_reg_addr_off;
-	rhea_pwr_mgr_info.i2c_rd_nack_jump_off =
-	    pwrmgr_init_param.i2c_rd_nack_jump_off;
-	rhea_pwr_mgr_info.i2c_rd_nack_off = pwrmgr_init_param.i2c_rd_nack_off;
 	rhea_pwr_mgr_info.i2c_rd_fifo_off = pwrmgr_init_param.i2c_rd_fifo_off;
 	rhea_pwr_mgr_info.i2c_wr_off = pwrmgr_init_param.i2c_wr_off;
 	rhea_pwr_mgr_info.i2c_wr_slv_id_off =
