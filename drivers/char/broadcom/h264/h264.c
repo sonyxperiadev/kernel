@@ -36,6 +36,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_h264.h>
+#include <mach/memory.h>
 #include <plat/clock.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
@@ -51,43 +52,94 @@ the GPL, without Broadcom's express prior written consent.
 #define H264_CME_IRQ 		(BCM_INT_ID_H264_CME)
 #define H264_MCIN_CBC_IRQ 	(BCM_INT_ID_H264_MCIN_CBC)
 
-
-#define H264_DEBUG 1 
+#define H264_CLK_MGMT 1
+//#define H264_DEBUG 1
 #ifdef H264_DEBUG
 #define dbg_print(fmt, arg...) \
     printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
+#define err_print(fmt, arg...) \
+    printk(KERN_ERR "%s():" fmt, __func__, ##arg)
 #else
 #define dbg_print(fmt, arg...)   do { } while (0)
+#define err_print(fmt, arg...)   do { } while (0)
 #endif
 
-#define err_print(fmt, arg...) \
-//    printk(KERN_ERR "%s():" fmt, __func__, ##arg)
-
-static int h264_major 			= H264_DEV_MAJOR;
-static struct class *h264_class	= NULL;
-static void __iomem *h264_base 	= NULL;
-static void __iomem *mmclk_base	= NULL;
-#if 0
-static struct clk *h264_clk;
-#endif
-
-#if 0
-static struct pi_mgr_dfs_node h264_dfs_node;
-static struct pi_mgr_qos_node h264_qos_node;
-#endif
+static int h264_major = H264_DEV_MAJOR;
+static struct class *h264_class = NULL;
+static void __iomem *h264_base = NULL;
+static void __iomem *mmclk_base = NULL;
 
 typedef struct {
 	struct completion irq_sem;
 	spinlock_t lock;
 	sIntrStatus dev_status;
 } h264_t;
-#if 0
+
+#ifdef H264_CLK_MGMT
+static struct pi_mgr_dfs_node h264_dfs_node;
+#ifdef H264_QOS_MGMT
+static struct pi_mgr_qos_node h264_qos_node;
+#endif
 static int enable_h264_clock(void);
 static void disable_h264_clock(void);
+static struct clk *h264_clk;
 #endif
+
+#if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
+#define H264_TIMEOUT (1000 * 100)
+#else
+#define H264_TIMEOUT (500 * 2)
+#endif
+
 static inline unsigned int reg_read(void __iomem *, unsigned int reg);
 static inline void reg_write(void __iomem *, unsigned int reg,
 			     unsigned int value);
+
+#ifdef H264_CLK_MGMT
+static int enable_h264_clock(void)
+{
+	unsigned long rate;
+	int ret;
+
+	h264_clk = clk_get(NULL, "h264_axi_clk");
+	if (IS_ERR_OR_NULL(h264_clk)) {
+		printk("%s: error get clock\n", __func__);
+		return -EIO;
+	}
+
+	if (pi_mgr_dfs_request_update(&h264_dfs_node, PI_OPP_TURBO)) {
+		printk(KERN_ERR "%s:failed to update dfs request for h264\n",
+		       __func__);
+		return -1;
+	}
+
+	ret = clk_enable(h264_clk);
+	if (ret) {
+		printk("%s: error enable H264 clock\n", __func__);
+		return -EIO;
+	}
+
+	rate = clk_get_rate(h264_clk);
+	printk("h264_clk_clk rate %lu\n", rate);
+
+	printk
+	    ("mmclk policy status 08:%08x 0c:%08x 10:%08x 14:%08x 18:%08x 1c:%08x ec0:%08x\n",
+	     reg_read(mmclk_base, 0x08), reg_read(mmclk_base, 0x0c),
+	     reg_read(mmclk_base, 0x10), reg_read(mmclk_base, 0x14),
+	     reg_read(mmclk_base, 0x18), reg_read(mmclk_base, 0x1c),
+	     reg_read(mmclk_base, 0xec0));
+
+	return ret;
+}
+
+static void disable_h264_clock(void)
+{
+	h264_clk = clk_get(NULL, "h264_axi_clk");
+	if (IS_ERR_OR_NULL(h264_clk))
+		return;
+	clk_disable(h264_clk);
+}
+#endif
 
 static irqreturn_t h264_isr(int irq, void *dev_id)
 {
@@ -98,69 +150,65 @@ static irqreturn_t h264_isr(int irq, void *dev_id)
 	dev = (h264_t *) dev_id;
 
 	spin_lock_irqsave(&dev->lock, flags);
-	
-	if(irq == H264_AOB_IRQ) {
+
+	if (irq == H264_AOB_IRQ) {
 		/* To do.. Interrupt handling for all other blocks. */
 	}
-	if(irq == H264_CME_IRQ) {
+	if (irq == H264_CME_IRQ) {
 		/* To do.. Interrupt handling for CME (Encoder). */
 	}
-	if(irq == H264_MCIN_CBC_IRQ) {
+	if (irq == H264_MCIN_CBC_IRQ) {
 
-		
 		/* Interrupt handling for MCIN/CBC (Decoder).
-		At this point of time, it is assumed that MCIN/CABAC will be issued sequentially
-		from user space and hence it will not be an issue.
-		In the final design, this has to be changed. 
-		*/
+		   At this point of time, it is assumed that MCIN/CABAC will be issued sequentially
+		   from user space and hence it will not be an issue.
+		   In the final design, this has to be changed.
+		 */
 
 		// Try CABAC
 		status = reg_read(h264_base, H264_REGC2_REGCABAC2BINSCTL_OFFSET);
 
-		/*if(status & H264_REGC2_REGCABAC2BINSCTL_BUSY_MASK) {
-			spin_unlock_irqrestore(&dev->lock, flags);
-			return IRQ_RETVAL(1);
-		}*/
-		if(status & H264_REGC2_REGCABAC2BINSCTL_INT_MASK) {
-			intr_status = reg_read(h264_base, H264_REGC2_REGCABAC2BINSCTL_OFFSET);
-			reg_write(h264_base, H264_REGC2_REGCABAC2BINSCTL_OFFSET, intr_status);
+		if (status & H264_REGC2_REGCABAC2BINSCTL_INT_MASK) {
+			intr_status =
+			    reg_read(h264_base,
+				     H264_REGC2_REGCABAC2BINSCTL_OFFSET);
+			reg_write(h264_base, H264_REGC2_REGCABAC2BINSCTL_OFFSET,
+				  intr_status);
 
 			// Pass this info to the user space.
 			dev->dev_status.cbc_intr = intr_status;
-			/*spin_unlock_irqrestore(&dev->lock, flags);
+			spin_unlock_irqrestore(&dev->lock, flags);
 			complete(&dev->irq_sem);
-			return IRQ_RETVAL(1);*/
+			return IRQ_RETVAL(1);
 		}
-		
 		// First try MCIN.
 		status = reg_read(h264_base, H264_MCODEIN_STATUS_OFFSET);
-		
-		if(status & H264_MCODEIN_STATUS_INT_DONE_MASK) {
-			intr_status = reg_read(h264_base, H264_MCODEIN_STATUS_OFFSET);
-			reg_write(h264_base, H264_MCODEIN_STATUS_OFFSET, intr_status);
+
+		if (status & H264_MCODEIN_STATUS_INT_DONE_MASK) {
+			intr_status =
+			    reg_read(h264_base, H264_MCODEIN_STATUS_OFFSET);
+			reg_write(h264_base, H264_MCODEIN_STATUS_OFFSET,
+				  intr_status);
 
 			// Pass this info to the user space.
 			dev->dev_status.mcin_intr = intr_status;
-			/*spin_unlock_irqrestore(&dev->lock, flags);
+			spin_unlock_irqrestore(&dev->lock, flags);
 			complete(&dev->irq_sem);
-			return IRQ_RETVAL(1);*/
+			return IRQ_RETVAL(1);
 		}
-		
 	}
 	spin_unlock_irqrestore(&dev->lock, flags);
-	complete(&dev->irq_sem);
 	return IRQ_RETVAL(1);
 }
 
 static int h264_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
-
 	h264_t *dev = kmalloc(sizeof(h264_t), GFP_KERNEL);
-	//printk("Open of driver called \n");
-	if (!dev)
+	if (!dev) {
+		printk("\n Returning from no memory");
 		return -ENOMEM;
-
+	}
 	filp->private_data = dev;
 	spin_lock_init(&dev->lock);
 
@@ -168,7 +216,15 @@ static int h264_open(struct inode *inode, struct file *filp)
 	dev->dev_status.mcin_intr = 0x00;
 
 	init_completion(&dev->irq_sem);
-#if 0
+
+	/*
+	   Add a request for DFS.
+	   Add a request for QOS (with default value)
+	   Enable the clock for H.264 block.
+	 */
+
+	printk("\n Before clock mgmt\n");
+#ifdef H264_CLK_MGMT
 	ret =
 	    pi_mgr_dfs_add_request(&h264_dfs_node, "h264", PI_MGR_PI_ID_MM,
 				   PI_MGR_DFS_MIN_VALUE);
@@ -179,20 +235,48 @@ static int h264_open(struct inode *inode, struct file *filp)
 		goto err;
 	}
 
-	ret = pi_mgr_qos_add_request(&h264_qos_node, "h264", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+#ifdef H264_QOS_MGMT
+	ret =
+	    pi_mgr_qos_add_request(&h264_qos_node, "h264",
+				   PI_MGR_PI_ID_ARM_CORE,
+				   PI_MGR_QOS_DEFAULT_VALUE);
 	if (ret) {
-		printk(KERN_ERR "%s: failed to register PI QOS request\n", __func__);
+		printk(KERN_ERR "%s: failed to register PI QOS request\n",
+		       __func__);
 		ret = -EIO;
 		goto qos_request_fail;
 	}
+#endif
+	printk("\n Before enabling clocks\n");
 
-	//enable_h264_clock();
-	pi_mgr_qos_request_update(&h264_qos_node, 0);
+	enable_h264_clock();
+	printk("\n After enabling clocks\n");
+	// Access to root reset manager register block.
+	writel(0xa5a501, HW_IO_PHYS_TO_VIRT(0x35001f00));
+	// Enable multimedia power domain.
+	// Test 0x3d should be sufficient for MM.
+	writel(0x3d, HW_IO_PHYS_TO_VIRT(0x35001f08));
+	// Enable H264 Slave interface control register.
+	writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F004));
+	// Enable 	H264 Master interface control register.
+	writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F008));
+	printk("\n After all reg access\n");
+#ifdef H264_QOS_MGMT
+	ret = pi_mgr_qos_request_update(&h264_qos_node, 0);
+	if(ret) {
+		printk(KERN_ERR "%s: failed to register PI QOS request\n",
+		       __func__);
+		ret = -EIO;
+	}
 	scu_standby(0);
 #endif
+
+#endif
+
+	/* Register for the interrupts */
 	ret =
 	    request_irq(H264_AOB_IRQ, h264_isr, IRQF_DISABLED | IRQF_SHARED |
-	    IRQF_NO_SUSPEND, H264_DEV_NAME, dev);
+			IRQF_NO_SUSPEND, H264_DEV_NAME, dev);
 	if (ret) {
 		err_print("request_irq failed for AOB ret = %d\n", ret);
 		goto err;
@@ -200,7 +284,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 
 	ret =
 	    request_irq(H264_CME_IRQ, h264_isr, IRQF_DISABLED | IRQF_SHARED |
-	    IRQF_NO_SUSPEND, H264_DEV_NAME, dev);
+			IRQF_NO_SUSPEND, H264_DEV_NAME, dev);
 	if (ret) {
 		err_print("request_irq failed for CME ret = %d\n", ret);
 		goto err;
@@ -208,18 +292,19 @@ static int h264_open(struct inode *inode, struct file *filp)
 
 	ret =
 	    request_irq(H264_MCIN_CBC_IRQ, h264_isr, IRQF_DISABLED | IRQF_SHARED
-	    | IRQF_NO_SUSPEND, H264_DEV_NAME, dev);
+			| IRQF_NO_SUSPEND, H264_DEV_NAME, dev);
 	if (ret) {
 		err_print("request_irq failed for MCIN_CBC ret = %d\n", ret);
 		goto err;
 	}
-	
+	printk("\n After all request IRQ\n");
 	disable_irq(H264_AOB_IRQ);
 	disable_irq(H264_CME_IRQ);
 	disable_irq(H264_MCIN_CBC_IRQ);
+	printk("\n Going out of open\n");
 	return 0;
 
-#if 0
+#ifdef H264_QOS_MGMT
 qos_request_fail:
 	pi_mgr_dfs_request_remove(&h264_dfs_node);
 #endif
@@ -233,12 +318,20 @@ static int h264_release(struct inode *inode, struct file *filp)
 {
 	h264_t *dev = (h264_t *) filp->private_data;
 
-#if 0
-	//printk("Free of driver called \n");
+	/*
+	   Restore the default QOS value.
+	   Restore the minimum value for DVFS
+	   Removes the request for DFS and QOS
+	   Disables the clock.
+	 */
+#ifdef H264_CLK_MGMT
+#ifdef H264_QOS_MGMT
 	pi_mgr_qos_request_update(&h264_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 	scu_standby(1);
+#endif
 
-	//disable_h264_clock();
+
+	disable_h264_clock();
 	if (pi_mgr_dfs_request_update(&h264_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 		printk(KERN_ERR "%s: failed to update dfs request for h264\n",
 		       __func__);
@@ -247,13 +340,17 @@ static int h264_release(struct inode *inode, struct file *filp)
 	pi_mgr_dfs_request_remove(&h264_dfs_node);
 	h264_dfs_node.name = NULL;
 
+#ifdef H264_QOS_MGMT
 	pi_mgr_qos_request_remove(&h264_qos_node);
 	h264_qos_node.name = NULL;
 #endif
+
+#endif
+
 	free_irq(H264_AOB_IRQ, dev);
 	free_irq(H264_CME_IRQ, dev);
 	free_irq(H264_MCIN_CBC_IRQ, dev);
-	
+
 	if (dev)
 		kfree(dev);
 
@@ -271,7 +368,8 @@ static int h264_mmap(struct file *filp, struct vm_area_struct *vma)
 	}
 
 	if (!vma->vm_pgoff) {
-		vma->vm_pgoff = HAWAII_H264_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
+		vma->vm_pgoff =
+		    HAWAII_H264_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
 	} else {
 		return -EINVAL;
 	}
@@ -323,20 +421,35 @@ static long h264_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case H264_IOCTL_WAIT_IRQ:
 		{
 			sIntrStatus mStatus;
+			unsigned int ret = 0;
+			unsigned long flags = 0;
 			err_print("H264_IOCTL_WAIT_IRQ\n");
-			/*if (wait_for_completion_interruptible(&dev->irq_sem)) {
-				return -ERESTARTSYS;
-			}*/
-			wait_for_completion(&dev->irq_sem);
+			ret =
+			    wait_for_completion_timeout(&dev->irq_sem,
+							msecs_to_jiffies
+							(H264_TIMEOUT));
+			if (ret <= 0) {
+				printk
+				    ("Timed out waiting for job completion: %d\n", ret);
+				return -ETIME;
+			}
+
+			/* These 2 variables will get updated in ISR context.
+			   Hence protecting them.
+			 */
+			spin_lock_irqsave(&dev->lock, flags);
+
 			mStatus.mcin_intr = dev->dev_status.mcin_intr;
 			mStatus.cbc_intr = dev->dev_status.cbc_intr;
-
-			/* Need to protect this update... */
 			dev->dev_status.cbc_intr = 0x00;
 			dev->dev_status.mcin_intr = 0x00;
 
-			if (copy_to_user((u32 *)arg, &mStatus, sizeof(sIntrStatus))) {
-				printk("Error in copying the status to the user\n");
+			spin_unlock_irqrestore(&dev->lock, flags);
+
+			if (copy_to_user
+			    ((u32 *) arg, &mStatus, sizeof(sIntrStatus))) {
+				printk
+				    ("Error in copying the status to the user\n");
 				ret = -EFAULT;
 			}
 		}
@@ -344,9 +457,9 @@ static long h264_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case H264_IOCTL_DISABLE_IRQ:
 		{
 			/*if ( !(wait_for_completion_interruptible_timeout(&dev->irq_sem, msecs_to_jiffies(100))) ) {
-				printk("waited for 100msec, no jobs pending\n");
-				//return -ERESTARTSYS;
-			}*/
+			   printk("waited for 100msec, no jobs pending\n");
+			   //return -ERESTARTSYS;
+			   } */
 			err_print("H264_IOCTL_DISABLE_IRQ\n");
 			disable_irq(H264_AOB_IRQ);
 			disable_irq(H264_CME_IRQ);
@@ -360,21 +473,6 @@ static long h264_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
-	case H264_IOCTL_CLK_RESET:
-		{
-			struct clk *clk;
-			err_print("H264_IOCTL_CLK_RESET\n");
-			clk = clk_get(NULL, "h264_axi_clk");
-			if (!IS_ERR_OR_NULL(clk)) {
-				dbg_print("reset H264 clock\n");
-				clk_reset(clk);
-				/*  sleep for 1ms */
-				usleep_range(1000, 2000);
-			} else {
-				err_print("%s: error get clock\n", __func__);
-				ret = -EIO;
-			}
-		}
 	default:
 		break;
 	}
@@ -388,7 +486,8 @@ static struct file_operations h264_fops = {
 	.mmap = h264_mmap,
 	.unlocked_ioctl = h264_ioctl,
 };
-static inline unsigned int reg_read(void __iomem *base_addr, unsigned int reg)
+
+static inline unsigned int reg_read(void __iomem * base_addr, unsigned int reg)
 {
 	unsigned int flags;
 
@@ -396,7 +495,7 @@ static inline unsigned int reg_read(void __iomem *base_addr, unsigned int reg)
 	return flags;
 }
 
-static inline void reg_write(void __iomem *base_addr, unsigned int reg,
+static inline void reg_write(void __iomem * base_addr, unsigned int reg,
 			     unsigned int value)
 {
 	iowrite32(value, base_addr + reg);
@@ -408,22 +507,21 @@ int __init h264_init(void)
 	struct device *h264_dev;
 
 	dbg_print("H264 Driver Init\n");
-	
+
 #if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
 	h264_major = 209;
 	ret = register_chrdev(h264_major, H264_DEV_NAME, &h264_fops);
-	if (ret < 0){
+	if (ret < 0) {
 		err_print("Registering h264 device[%s] failed", H264_DEV_NAME);
 		return -EINVAL;
 	}
 #else
 	h264_major = register_chrdev(0, H264_DEV_NAME, &h264_fops);
-	if (h264_major < 0){
+	if (h264_major < 0) {
 		err_print("Registering h264 device[%s] failed", H264_DEV_NAME);
 		return -EINVAL;
 	}
 #endif
-
 
 	h264_class = class_create(THIS_MODULE, H264_DEV_NAME);
 	if (IS_ERR(h264_class)) {
@@ -433,7 +531,7 @@ int __init h264_init(void)
 	}
 
 	h264_dev = device_create(h264_class, NULL, MKDEV(h264_major, 0),
-			NULL, H264_DEV_NAME);
+				 NULL, H264_DEV_NAME);
 	if (IS_ERR(h264_dev)) {
 		err_print("Failed to create H264 Device\n");
 		goto err;
@@ -442,7 +540,7 @@ int __init h264_init(void)
 	/* Map the H264 registers */
 	h264_base =
 	    (void __iomem *)ioremap_nocache(HAWAII_H264_BASE_PERIPHERAL_ADDRESS,
-	    								SZ_1M);
+					    SZ_1M);
 	if (h264_base == NULL)
 		goto err2;
 
@@ -458,7 +556,7 @@ err3:
 	iounmap(h264_base);
 err2:
 	err_print("Failed to MAP the H264 IO space\n");
-	device_destroy(h264_class, MKDEV(h264_major,0));
+	device_destroy(h264_class, MKDEV(h264_major, 0));
 err:
 	class_destroy(h264_class);
 	unregister_chrdev(h264_major, H264_DEV_NAME);
@@ -467,7 +565,6 @@ err:
 
 void __exit h264_exit(void)
 {
-
 	dbg_print("H264 Driver Exit\n");
 	if (h264_base)
 		iounmap(h264_base);
@@ -486,4 +583,3 @@ module_exit(h264_exit);
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("H624 device driver");
 MODULE_LICENSE("GPL");
-
