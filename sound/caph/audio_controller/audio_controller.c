@@ -1573,7 +1573,7 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 	} else {
 		/* music playback */
 		AUDCTRL_SaveAudioApp(AUDIO_APP_MUSIC);
-		if (sr != AUDIO_SAMPLING_RATE_44100)
+		if (sr != AUDIO_PCMOUT1_RATE)
 			/* goes to pcmout2 */
 			usage_flag = Audio2Use;
 
@@ -1698,7 +1698,7 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 	/* get this pathID sr to determine which pcmout used*/
 	pPath = csl_caph_FindPath(pathID);
 	if ((pPath != NULL)
-		&& (pPath->src_sampleRate != AUDIO_SAMPLING_RATE_44100))
+		&& (pPath->src_sampleRate != AUDIO_PCMOUT1_RATE))
 		usage_flag = Audio2Use;
 
 	if (source == AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB) {
@@ -1734,11 +1734,11 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 	path = csl_caph_FindPathID(sink_dev, src_dev, pathID);
 
 	/*Disable the PMU for HS/IHF */
-	if (path) {
+	/*if (path) {
 		aTrace(LOG_AUDIO_CNTLR,
 				"%s pathID %d use the ext amp.", __func__,
 				path);
-	} else {
+	} else */{
 		if (source == AUDIO_SOURCE_I2S
 		&& AUDCTRL_InVoiceCall() == FALSE) {
 			aTrace(LOG_AUDIO_CNTLR,
@@ -2200,7 +2200,7 @@ void AUDCTRL_SwitchPlaySpk(AUDIO_SOURCE_Enum_t source,
 	/* get this pathID sr to determine which pcmout used*/
 	pPath = csl_caph_FindPath(pathID);
 	if ((pPath != NULL)
-		&& (pPath->src_sampleRate != AUDIO_SAMPLING_RATE_44100))
+		&& (pPath->src_sampleRate != AUDIO_PCMOUT1_RATE))
 		usage_flag = Audio2Use;
 	curr_spk = csl_caph_FindSinkDevice(pathID);
 	aTrace(LOG_AUDIO_CNTLR,
@@ -2337,7 +2337,7 @@ void AUDCTRL_AddPlaySpk(AUDIO_SOURCE_Enum_t source,
 	/* get this pathID sr to determine which pcmout used*/
 	pPath = csl_caph_FindPath(pathID);
 	if ((pPath != NULL)
-		&& (pPath->src_sampleRate != AUDIO_SAMPLING_RATE_44100))
+		&& (pPath->src_sampleRate != AUDIO_PCMOUT1_RATE))
 		usage_flag = Audio2Use;
 
 	speaker = getDeviceFromSink(sink);
@@ -2499,7 +2499,7 @@ void AUDCTRL_RemovePlaySpk(AUDIO_SOURCE_Enum_t source,
 
 	pPath = csl_caph_FindPath(pathID);
 	if ((pPath != NULL)
-		&& (pPath->src_sampleRate != AUDIO_SAMPLING_RATE_44100))
+		&& (pPath->src_sampleRate != AUDIO_PCMOUT1_RATE))
 		usage_flag = Audio2Use;
 
 	speaker = getDeviceFromSink(sink);
