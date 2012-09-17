@@ -934,8 +934,10 @@ static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 	if (reg_base == IOMEM(KONA_TMR_HUB_VA) &&
 #if defined(CONFIG_ARCH_RHEA)
 		get_chip_id() >= RHEA_CHIP_ID(RHEA_CHIP_REV_B1)
-#elif defined(CONFIG_ARCH_HAWAII)
+#elif defined(CONFIG_ARCH_HAWAII) && !defined(CONFIG_MACH_HAWAII_FPGA_E)
 		get_chip_id() >= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0)
+#elif defined(CONFIG_MACH_HAWAII_FPGA_E)
+		(0)
 #else
 #error "unsupported platform"
 #endif
