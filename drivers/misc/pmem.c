@@ -1129,10 +1129,8 @@ static void pmem_shrink(struct work_struct *work)
 
 		rcu_read_lock();
 		task = find_task_by_pid_ns(data->pid, &init_pid_ns);
-		if (task) {
+		if (task)
 			task_lock(task);
-			get_task_struct(task);
-		}
 		rcu_read_unlock();
 		up_read(&data->sem);
 
@@ -1141,7 +1139,6 @@ static void pmem_shrink(struct work_struct *work)
 
 		if (!task->mm || !task->signal) {
 			task_unlock(task);
-			put_task_struct(task);
 			continue;
 		}
 
@@ -1149,13 +1146,11 @@ static void pmem_shrink(struct work_struct *work)
 		/* The task is too important to kill */
 		if (oom_adj < 0) {
 			task_unlock(task);
-			put_task_struct(task);
 			continue;
 		}
 
 		task_cmasize = get_mm_cma(task->mm);
 		task_unlock(task);
-		put_task_struct(task);
 
 		BUG_ON(!task_cmasize);
 		if (selected) {
