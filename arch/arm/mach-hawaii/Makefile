@@ -29,3 +29,7 @@ CFLAGS_sec_api.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
 obj-$(CONFIG_ARCH_HAWAII) += hawaii_bmdm_wd_monitor.o
 obj-$(CONFIG_A9_DORMANT_MODE) += dm.o dm_v7_c.o dm_a9.o dm_gic.o dm_a9_c.o
 obj-y += pm_params.o helpers.o v7.o
+
+ifneq ($(call as-instr,.arch_extension sec,+sec),)
+AFLAGS_v7.o :=-Wa,-march=armv7-a+sec
+endif
