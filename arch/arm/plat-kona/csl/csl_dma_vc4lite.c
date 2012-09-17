@@ -982,7 +982,6 @@ static void dma_vc4lite_hisr(void)
 	struct CslDmaVc4lite *pdma = (struct CslDmaVc4lite *)&dmac;
 	UInt8 chanNum;
 
-	csl_dma_disable_axi_clk(pdma);
 	/* process the callback function */
 	for (chanNum = 0; chanNum < 1; chanNum++) {
 		if (pdma->chan[chanNum].irqStatus != 0) {
@@ -1019,6 +1018,7 @@ static void dma_vc4lite_hisr(void)
 			pdma->chan[chanNum].irqStatus = 0;
 		}
 	}
+	csl_dma_disable_axi_clk(pdma);
 
 #ifndef UNDER_LINUX
 	IRQ_Enable(MM_DMA_CHAN1_IRQ);

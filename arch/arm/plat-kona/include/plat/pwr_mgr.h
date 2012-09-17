@@ -146,7 +146,8 @@
 #define PM_I2C_CMD_MAX 64
 #endif
 
-#define EVENT_ID_ALL	0xFFFFFFFF
+#define EVENT_ID_ALL		0xFFFFFFFF
+#define INVALID_EVENT_OFFSET	0xFFFFFFFF
 
 #define PM_POLICY_MASK	0x7
 
@@ -233,11 +234,6 @@ struct v0x_spec_i2c_cmd_ptr {
 	u8 other_ptr;
 };
 
-struct pm_special_event_range {
-	u32 start;
-	u32 end;
-};
-
 struct pwr_mgr_info {
 	u32 flags;
 	u16 num_pi;
@@ -247,9 +243,7 @@ struct pwr_mgr_info {
 	u8 *i2c_var_data;
 	u32 num_i2c_var_data;
 	struct v0x_spec_i2c_cmd_ptr *i2c_cmd_ptr[V_SET_MAX];
-
-	struct pm_special_event_range *special_event_list;
-	u32 num_special_event_range;
+	u32 event_policy_offset[PWR_MGR_NUM_EVENTS];
 
 	u32 pwrmgr_intr;
 	u32 i2c_rd_off;

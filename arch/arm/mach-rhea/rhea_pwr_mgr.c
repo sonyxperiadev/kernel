@@ -199,11 +199,11 @@ const char *_rhea__event2str[] = {
 	__stringify(DMA_REQUEST_EVENT),
 	__stringify(MODEM1_EVENT),
 	__stringify(MODEM2_EVENT),
-	__stringify(MODEM_UART_EVENT),
+	__stringify(SD1DAT1DAT3_EVENT),
 	__stringify(BRIDGE_TO_AC_EVENT),
 	__stringify(BRIDGE_TO_MODEM_EVENT),
 	__stringify(VREQ_NONZERO_PI_MODEM_EVENT),
-	__stringify(DUMMY_EVENT),
+	NULL,
 	__stringify(USBOTG_EVENT),
 	__stringify(GPIO_EXP_IRQ_EVENT),
 	__stringify(DBR_IRQ_EVENT),
@@ -357,19 +357,135 @@ static struct i2c_cmd i2c_dummy_seq_cmd[] = {
 
 };
 
-struct pm_special_event_range rhea_special_event_list[] = {
-	{GPIO29_A_EVENT, GPIO93_A_EVENT},
-	{GPIO18_B_EVENT, GPIO111_B_EVENT},
-	{KEY_R0_EVENT, KEY_R7_EVENT}
-};
+#define RHEA_EVENT_POLICY_OFFSET	{ \
+	[LCDTE_EVENT]		= 0x0, \
+	[SSP2SYN_EVENT]		= 0x4, \
+	[SSP2DI_EVENT]		= 0x4, \
+	[SSP2CK_EVENT]		= 0x4, \
+	[SSP1SYN_EVENT]		= 0x10, \
+	[SSP1DI_EVENT]		= 0x10, \
+	[SSP1CK_EVENT]		= 0x10, \
+	[SSP0SYN_EVENT]		= 0x1C, \
+	[SSP0DI_EVENT]		= 0x1C, \
+	[SSP0CK_EVENT]		= 0x1C, \
+	[DIGCLKREQ_EVENT]	= 0x28, \
+	[ANA_SYS_REQ_EVENT]	= 0x28, \
+	[SYSCLKREQ_EVENT]	= 0x28, \
+	[UBRX_EVENT]		= 0x34, \
+	[UBCTSN_EVENT]		= 0x34, \
+	[UB2RX_EVENT]		= 0x3C, \
+	[UB2CTSN_EVENT]		= 0x3C, \
+	[SIMDET_EVENT]		= 0x44, \
+	[SIM2DET_EVENT]		= 0x44, \
+	[MMC0D3_EVENT]		= 0x4C, \
+	[MMC0D1_EVENT]		= 0x4C, \
+	[MMC1D3_EVENT]		= 0x4C, \
+	[MMC1D1_EVENT]		= 0x4C, \
+	[SDDAT3_EVENT]		= 0x5C, \
+	[SDDAT1_EVENT]		= 0x5C, \
+	[SLB1CLK_EVENT]		= 0x64, \
+	[SLB1DAT_EVENT]		= 0x64, \
+	[SWCLKTCK_EVENT]	= 0x6C, \
+	[SWDIOTMS_EVENT]	= 0x6C, \
+	[KEY_R0_EVENT]		= 0x74, \
+	[KEY_R1_EVENT]		= 0x74, \
+	[KEY_R2_EVENT]		= 0x74, \
+	[KEY_R3_EVENT]		= 0x74, \
+	[KEY_R4_EVENT]		= 0x74, \
+	[KEY_R5_EVENT]		= 0x74, \
+	[KEY_R6_EVENT]		= 0x74, \
+	[KEY_R7_EVENT]		= 0x74, \
+	[CAWAKE_EVENT]		= 0x94, \
+	[CAREADY_EVENT]		= 0x94, \
+	[CAFLAG_EVENT]		= 0x94, \
+	[BATRM_EVENT]		= 0xA0, \
+	[USBDP_EVENT]		= 0xA4, \
+	[USBDN_EVENT]		= 0xA4, \
+	[RXD_EVENT]		= 0xAC, \
+	[GPIO29_A_EVENT]	= 0xB0, \
+	[GPIO32_A_EVENT]	= 0xB0, \
+	[GPIO33_A_EVENT]	= 0xB0, \
+	[GPIO43_A_EVENT]	= 0xB0, \
+	[GPIO44_A_EVENT]	= 0xB0, \
+	[GPIO45_A_EVENT]	= 0xB0, \
+	[GPIO46_A_EVENT]	= 0xB0, \
+	[GPIO47_A_EVENT]	= 0xB0, \
+	[GPIO48_A_EVENT]	= 0xB0, \
+	[GPIO71_A_EVENT]	= 0xB0, \
+	[GPIO72_A_EVENT]	= 0xB0, \
+	[GPIO73_A_EVENT]	= 0xB0, \
+	[GPIO74_A_EVENT]	= 0xB0, \
+	[GPIO95_A_EVENT]	= 0xB0, \
+	[GPIO96_A_EVENT]	= 0xB0, \
+	[GPIO99_A_EVENT]	= 0xB0, \
+	[GPIO100_A_EVENT]	= 0xB0, \
+	[GPIO111_A_EVENT]	= 0xB0, \
+	[GPIO18_A_EVENT]	= 0xB0, \
+	[GPIO19_A_EVENT]	= 0xB0, \
+	[GPIO20_A_EVENT]	= 0xB0, \
+	[GPIO89_A_EVENT]	= 0xB0, \
+	[GPIO90_A_EVENT]	= 0xB0, \
+	[GPIO91_A_EVENT]	= 0xB0, \
+	[GPIO92_A_EVENT]	= 0xB0, \
+	[GPIO93_A_EVENT]	= 0xB0, \
+	[GPIO18_B_EVENT]	= 0x118, \
+	[GPIO19_B_EVENT]	= 0x118, \
+	[GPIO20_B_EVENT]	= 0x118, \
+	[GPIO89_B_EVENT]	= 0x118, \
+	[GPIO90_B_EVENT]	= 0x118, \
+	[GPIO91_B_EVENT]	= 0x118, \
+	[GPIO92_B_EVENT]	= 0x118, \
+	[GPIO93_B_EVENT]	= 0x118, \
+	[GPIO29_B_EVENT]	= 0x118, \
+	[GPIO32_B_EVENT]	= 0x118, \
+	[GPIO33_B_EVENT]	= 0x118, \
+	[GPIO43_B_EVENT]	= 0x118, \
+	[GPIO44_B_EVENT]	= 0x118, \
+	[GPIO45_B_EVENT]	= 0x118, \
+	[GPIO46_B_EVENT]	= 0x118, \
+	[GPIO47_B_EVENT]	= 0x118, \
+	[GPIO48_B_EVENT]	= 0x118, \
+	[GPIO71_B_EVENT]	= 0x118, \
+	[GPIO72_B_EVENT]	= 0x118, \
+	[GPIO73_B_EVENT]	= 0x118, \
+	[GPIO74_B_EVENT]	= 0x118, \
+	[GPIO95_B_EVENT]	= 0x118, \
+	[GPIO96_B_EVENT]	= 0x118, \
+	[GPIO99_B_EVENT]	= 0x118, \
+	[GPIO100_B_EVENT]	= 0x118, \
+	[GPIO111_B_EVENT]	= 0x118, \
+	[COMMON_TIMER_0_EVENT]	= 0x180, \
+	[COMMON_TIMER_1_EVENT]	= 0x184, \
+	[COMMON_TIMER_2_EVENT]	= 0x188, \
+	[COMMON_TIMER_3_EVENT]	= 0x18C, \
+	[COMMON_TIMER_4_EVENT]	= 0x190, \
+	[COMMON_INT_TO_AC_EVENT] = 0x194, \
+	[TZCFG_INT_TO_AC_EVENT]	= 0x198, \
+	[DMA_REQUEST_EVENT]	= 0x19C, \
+	[MODEM1_EVENT]		= 0x1A0, \
+	[MODEM2_EVENT]		= 0x1A4, \
+	[SD1DAT1DAT3_EVENT]	= 0x1A8, \
+	[BRIDGE_TO_AC_EVENT]	= 0x1AC, \
+	[BRIDGE_TO_MODEM_EVENT]	= 0x1B0, \
+	[VREQ_NONZERO_PI_MODEM_EVENT]	= 0x1B4, \
+	[DUMMY_EVENT]		= INVALID_EVENT_OFFSET, \
+	[USBOTG_EVENT]		= 0x1BC, \
+	[GPIO_EXP_IRQ_EVENT]	= 0x1C0, \
+	[DBR_IRQ_EVENT]		= 0x1C4, \
+	[ACI_EVENT]		= 0x1C8, \
+	[PHY_RESUME_EVENT]	= 0x1CC, \
+	[MODEMBUS_ACTIVE_EVENT]	= 0x1D0, \
+	[SOFTWARE_0_EVENT]	= 0x1D4, \
+	[SOFTWARE_1_EVENT]	= 0x1D8, \
+	[SOFTWARE_2_EVENT]	= 0x1DC, \
+}
 
 struct pwr_mgr_info rhea_pwr_mgr_info = {
 	.num_pi = PI_MGR_PI_ID_MAX,
 	.base_addr = KONA_PWRMGR_VA,
 	.flags = PM_PMU_I2C | I2C_SIMULATE_BURST_MODE,
 	.pwrmgr_intr = BCM_INT_ID_PWR_MGR,
-	.special_event_list = rhea_special_event_list,
-	.num_special_event_range = ARRAY_SIZE(rhea_special_event_list),
+	.event_policy_offset = RHEA_EVENT_POLICY_OFFSET,
 };
 
 int __init rhea_pwr_mgr_init()

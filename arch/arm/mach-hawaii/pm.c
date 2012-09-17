@@ -439,10 +439,12 @@ int enter_idle_state(struct kona_idle_state *state)
 
 	BUG_ON(!state);
 
-	pwr_mgr_event_clear_events(LCDTE_EVENT, BRIDGE_TO_MODEM_EVENT);
+	/*Clear all events except auto-clear & SW events*/
+	pwr_mgr_event_clear_events(LCDTE_EVENT, KEY_R7_EVENT);
+	pwr_mgr_event_clear_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT, MODEMBUS_ACTIVE_EVENT);
 
-	/*Turn off XTAL only for deep sleep state*/
+		/*Turn off XTAL only for deep sleep state*/
 	if (state->flags & CPUIDLE_FLAG_XTAL_ON || keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(false);
 
@@ -533,7 +535,8 @@ int enter_idle_state(struct kona_idle_state *state)
 #endif
 
 	clear_wakeup_interrupts();
-	pwr_mgr_process_events(LCDTE_EVENT, BRIDGE_TO_MODEM_EVENT, false);
+	pwr_mgr_process_events(LCDTE_EVENT, KEY_R7_EVENT, false);
+	pwr_mgr_process_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT, false);
 	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
 
 	if (state->flags & CPUIDLE_ENTER_SUSPEND)
