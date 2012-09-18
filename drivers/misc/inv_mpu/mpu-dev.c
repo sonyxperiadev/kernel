@@ -16,6 +16,7 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	$
  */
+
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 #include <linux/interrupt.h>
@@ -42,6 +43,9 @@
 #include <linux/wait.h>
 #include <linux/uaccess.h>
 #include <linux/io.h>
+#ifdef CONFIG_ARCH_KONA
+#include <linux/regulator/consumer.h>
+#endif
 
 #include "mpuirq.h"
 #include "slaveirq.h"
@@ -50,21 +54,6 @@
 #include <linux/mpu.h>
 
 #include "accel/mpu6050.h"
-
-#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
-#include <linux/brcm_axis_change.h>
-#include <linux/brvsens_driver.h>
-
-static int mod_debug = 0x0;
-module_param(mod_debug, int, 0644);
-
-struct axis_data
-{
-	s16 x;
-	s16 y;
-	s16 z;
-};
-#endif
 
 /* Platform data for the MPU */
 struct mpu_private_data {
@@ -90,47 +79,13 @@ struct mpu_private_data {
 	unsigned long event;
 	int pid;
 	struct module *slave_modules[EXT_SLAVE_NUM_TYPES];
+#ifdef CONFIG_ARCH_KONA
+	struct regulator *regulator;
+#endif
 };
 
 struct mpu_private_data *mpu_private_data;
 
-#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
-/* Helper to switch values depending how sensor is mounted on the board */
-static inline s16 mpu_switch_values(struct axis_data* axis, s8* row)
-{
-	return (s16) (row[0] * axis->x + row[1] * axis->y + row[2] * axis->z);
-}
-
-static void mpu6050_change_orientation(struct axis_data* axis, s8* orientation_matrix)
-{
-	s16 x = 0, y = 0, z = 0;
-
-	if (!orientation_matrix)
-		return;
-
-	x = mpu_switch_values(axis, orientation_matrix);
-	y = mpu_switch_values(axis, &orientation_matrix[3]);
-	z = mpu_switch_values(axis, &orientation_matrix[6]);
-
-	axis->x = x;
-	axis->y = y;
-	axis->z = z;
-}
-#if 0
-static s16 undo_twos_complement(u16 twos_comp)
-{
-   s16 temp;
-
-   if (!(twos_comp & 0x8000))
-   {  /* No change needed. */
-      return (s16)twos_comp;
-   }
-
-   temp = ((~(twos_comp)) + 1)*-1;
-   return temp;
-}
-#endif
-#endif
 static void mpu_pm_timeout(u_long data)
 {
 	struct mpu_private_data *mpu = (struct mpu_private_data *)data;
@@ -867,6 +822,7 @@ void mpu_shutdown(struct i2c_client *client)
 
 int mpu_dev_suspend(struct i2c_client *client, pm_message_t mesg)
 {
+	int res;
 	struct mpu_private_data *mpu =
 	    (struct mpu_private_data *)i2c_get_clientdata(client);
 	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
@@ -897,18 +853,28 @@ int mpu_dev_suspend(struct i2c_client *client, pm_message_t mesg)
 		dev_dbg(&client->adapter->dev,
 			"%s: Already suspended %d\n", __func__, mesg.event);
 	}
-
-#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
-	inv_serial_single_write(client->adapter,
-		mldl_cfg->mpu_chip_info->addr, MPUREG_PWR_MGMT_1, 0x40);
+#ifdef CONFIG_ARCH_KONA
+	if (mpu->regulator) {
+		res = regulator_disable(mpu->regulator);
+		dev_info(&client->adapter->dev,
+			"%s, called regulator_disable. Status: %d\n",
+			__func__, res);
+		if (res)
+			dev_err(&client->adapter->dev,
+				"%s, regulator_disable failed "
+				"with status: %d\n", __func__, res);
+	}
 #endif
 
 	mutex_unlock(&mpu->mutex);
+        printk("%s: Suspend handler executed\n", __func__);
+
 	return 0;
 }
 
 int mpu_dev_resume(struct i2c_client *client)
 {
+	int res;
 	struct mpu_private_data *mpu =
 	    (struct mpu_private_data *)i2c_get_clientdata(client);
 	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
@@ -926,6 +892,19 @@ int mpu_dev_resume(struct i2c_client *client)
 	slave_adapter[EXT_SLAVE_TYPE_GYROSCOPE] = client->adapter;
 
 	mutex_lock(&mpu->mutex);
+#ifdef CONFIG_ARCH_KONA
+	if (mpu->regulator) {
+		res = regulator_enable(mpu->regulator);
+		dev_info(&client->adapter->dev,
+			"%s, called regulator_enable. Status: %d\n",
+			__func__, res);
+		if (res)
+			dev_err(&client->adapter->dev,
+				"%s, regulator_enable failed "
+				"with status: %d\n", __func__, res);
+	}
+#endif
+
 	if (mpu->pid && !mldl_cfg->inv_mpu_cfg->ignore_system_suspend) {
 		(void)inv_mpu_resume(mldl_cfg,
 				slave_adapter[EXT_SLAVE_TYPE_GYROSCOPE],
@@ -936,13 +915,8 @@ int mpu_dev_resume(struct i2c_client *client)
 		dev_dbg(&client->adapter->dev,
 			"%s for pid %d\n", __func__, mpu->pid);
 	}
-
-#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
-	inv_serial_single_write(client->adapter,
-		mldl_cfg->mpu_chip_info->addr, MPUREG_PWR_MGMT_1, 0x9);
-#endif
-
 	mutex_unlock(&mpu->mutex);
+        printk("%s: Resume handler executed\n", __func__);
 	return 0;
 }
 
@@ -1139,255 +1113,6 @@ static const struct i2c_device_id mpu_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, mpu_id);
 
-#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
-
-static int mpu6050_set_power_mode(struct i2c_client* client, u8 val)
-{
-	int rc;
-	struct pm_message mesg;
-
-	if(val == 0)
-	{  // Put the mpu6050 to sleep.
-		mesg.event = PM_EVENT_SUSPEND;
-		rc = mpu_dev_suspend(client, mesg);
-
-		if (mod_debug)
-			printk("%s() putting %s to sleep\n", __func__, MPU_NAME);
-	}
-	else
-	{  // Wake the mpu6050.
-		rc = mpu_dev_resume(client);
-		if(mod_debug)
-			printk("%s() waking %s\n", __func__, MPU_NAME);
-	}
-
-	if(mod_debug)
-		printk("%s() called, val %d rc %d\n", __func__, val, rc);
-	return rc;
-}
-
-static int mpu6050_set_compass_power_mode(struct i2c_client* client, u8 val)
-{
-	struct mpu_private_data *mpu = i2c_get_clientdata(client);
-	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
-	struct ext_slave_platform_data *pdata_slave = mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_COMPASS];
-	void *compass_handle;
-	int rc;
-
-	if(mod_debug)
-		printk("%s() called, val %d\n", __func__, val);
-
-	if(!pdata_slave)
-	{
-		if(mod_debug)
-			printk("%s() pdata_slave=NULL, rc=-1\n", __func__);
-		return -1;
-	}
-	compass_handle = i2c_get_adapter(pdata_slave->adapt_num);
-
-	mutex_lock(&mpu->mutex);
-	if(val == 0)
-		rc = inv_mpu_suspend(mldl_cfg, client->adapter, NULL, compass_handle, NULL, INV_THREE_AXIS_COMPASS);
-	else
-		rc = inv_mpu_resume(mldl_cfg, client->adapter, NULL, compass_handle, NULL, INV_THREE_AXIS_COMPASS);
-	mutex_unlock(&mpu->mutex);
-
-	if(mod_debug)
-		printk("%s() rc=%d\n", __func__, rc);
-	return rc;
-}
-
-static int mpu6050_read_gyro(struct i2c_client* client, struct axis_data* coords)
-{
-	struct mpu_private_data *mpu = i2c_get_clientdata(client);
-	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
-	struct mpu_platform_data *p_mpu_pdata = mldl_cfg->pdata;
-	int retval = 0;
-	u16 buffer[3] = { 0, 0, 0};
-
-	retval = inv_serial_read(client->adapter, mldl_cfg->mpu_chip_info->addr, MPUREG_GYRO_XOUT_H, 6, (unsigned char *)buffer);
-
-	if(retval)
-	{
-		printk(KERN_ERR "%s() inv_serial_read_fifo() returned %d\n", __func__, retval);
-		return -1;
-	}
-
-	coords->x = be16_to_cpu(buffer[0]);
-	coords->y = be16_to_cpu(buffer[1]);
-	coords->z = be16_to_cpu(buffer[2]);
-#if 0
-   /* Undo the twos complement, 0xffff == -1! */
-   coords->x = undo_twos_complement(coords->x);
-   coords->y = undo_twos_complement(coords->y);
-   coords->z = undo_twos_complement(coords->z);
-#endif
-	/*if(mod_debug)
-		printk("%s() called before,  x: %d, y: %d, z: %d\n", __func__, coords->x, coords->y, coords->z);*/
-
-	mpu6050_change_orientation(coords, p_mpu_pdata->orientation);
-
-	if(mod_debug)
-		printk("%s() x: %d, y: %d, z: %d\n", __func__, coords->x, coords->y, coords->z);
-	return 0;
-}  /* mpu6050_read_gyro(..) */
-
-static int mpu6050_read_accel(struct i2c_client* client, struct axis_data* coords)
-{
-	struct mpu_private_data *mpu = (struct mpu_private_data *)i2c_get_clientdata(client);
-	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
-	int retval;
-	struct ext_slave_platform_data *pdata_slave = mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_ACCEL];
-	struct ext_slave_descr *slave = mldl_cfg->slave[EXT_SLAVE_TYPE_ACCEL];
-	u16 buffer[3] = { 0, 0, 0};
-
-	if(slave->read_len != 6)
-	{
-		printk(KERN_ERR "%s() wrong buffer length %d. Expected 6 bytes\n", __func__, slave->read_len);
-		return -1;
-	}
-
-	retval = mutex_lock_interruptible(&mpu->mutex);
-	if (retval) {
-		dev_err(&client->adapter->dev, "%s: mutex_lock_interruptible returned %d\n", __func__, retval);
-		return -1;
-	}
-
-	retval = inv_mpu_slave_read(
-			mldl_cfg,
-			client->adapter,
-			i2c_get_adapter(pdata_slave->adapt_num),
-			slave,
-			pdata_slave,
-			(unsigned char*) buffer);
-	
-	mutex_unlock(&mpu->mutex);
-	
-//	dev_info(&client->adapter->dev, "%s: %08x, %08lx, %d\n",	__func__, cmd, arg, retval);
-
-	if(retval)
-	{
-		printk(KERN_ERR "%s() inv_mpu_slave_read() returned %d\n", __func__, retval);
-		return -1;
-	}
-
-	coords->x = be16_to_cpu(buffer[0]);
-	coords->y = be16_to_cpu(buffer[1]);
-	coords->z = be16_to_cpu(buffer[2]);
-#if 0
-	/* Undo the twos complement, 0xffff == -1! */
-	coords->x = undo_twos_complement(coords->x);
-	coords->y = undo_twos_complement(coords->y);
-	coords->z = undo_twos_complement(coords->z);
-#endif
-	mpu6050_change_orientation(coords, pdata_slave->orientation);
-
-	if(mod_debug)
-		printk("%s() x: %d, y: %d, z: %d\n", __func__, coords->x, coords->y, coords->z);
-	return 0;
-}  /* mpu6050_read_accel(..) */
-
-static int mpu6050_read_compass(struct i2c_client* client, struct axis_data* coords)
-{
-	struct mpu_private_data *mpu = (struct mpu_private_data *)i2c_get_clientdata(client);
-	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
-	int retval;
-	struct ext_slave_platform_data *pdata_slave = mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_COMPASS];
-	struct ext_slave_descr *slave = mldl_cfg->slave[EXT_SLAVE_TYPE_COMPASS];
-	unsigned char *p_data;
-
-	if(!slave)
-		return -1;
-
-	p_data = kzalloc(slave->read_len, GFP_KERNEL);
-	if (!p_data)
-		return -1;
-
-	retval = mutex_lock_interruptible(&mpu->mutex);
-	if (retval) {
-		dev_err(&client->adapter->dev, "%s: mutex_lock_interruptible returned %d\n", __func__, retval);
-		kfree(p_data);
-		return -1;
-	}
-
-	retval = inv_mpu_slave_read(
-			mldl_cfg,
-			client->adapter,
-			i2c_get_adapter(pdata_slave->adapt_num),
-			slave,
-			pdata_slave,
-			p_data);
-	
-	mutex_unlock(&mpu->mutex);
-	
-	if(retval)
-	{
-		if(mod_debug)
-			printk(KERN_ERR "%s() inv_mpu_slave_read() returned %d\n", __func__, retval);
-		kfree(p_data);
-		return -1;
-	}
-
-	/*if(mod_debug)
-	{
-		printk("%s() called, length: %d, x:0x%x 0x%x y:0x%x 0x%x z:0x%x 0x%x\n",
-				__func__, slave->read_len, p_data[0], p_data[1], p_data[2], p_data[3], p_data[4], p_data[5]);
-	}*/
-
-	coords->x = be16_to_cpu((p_data[0] << 8)+p_data[1]);
-	coords->y = be16_to_cpu((p_data[2] << 8)+p_data[3]);
-	coords->z = be16_to_cpu((p_data[4] << 8)+p_data[5]);
-
-	/*if(mod_debug)
-		printk("%s() called, before orientation, coords x:%d y:%d z:%d\n", __func__, coords->x, coords->y, coords->z);*/
-
-	mpu6050_change_orientation(coords, pdata_slave->orientation);
-
-	if(mod_debug)
-		printk("%s() x:%d y:%d z:%d\n", __func__, coords->x, coords->y, coords->z);
-
-	kfree(p_data);
-	return 0;
-}
-
-static int mpu6050_init(struct i2c_client*  client, struct mpu_private_data *mpu)
-{
-	int i, sz, rc;
-	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
-	unsigned char reg_values[][2] =
-	{
-		//{register address, value to write}
-		{ MPUREG_PWR_MGMT_1,  0x0 }, /* 0x6b, 107 */
-		{ MPUREG_SMPLRT_DIV,  0x4 }, /* 0x19,  25 */
-		{ MPUREG_CONFIG,      0xb }, /* 0x1a,  26 */
-		{ MPUREG_GYRO_CONFIG, 0x8 }, /* 0x1b,  27 */
-		{ MPUREG_ACCEL_CONFIG,0x8 }, /* 0x1c,  28 */
-		{ MPUREG_INT_ENABLE,  0x0 }, /* 0x38,  56 - do not enable interrupt generation */
-		{ MPUREG_PWR_MGMT_1,  0x9 }, /* 0x6b, 107 - set BIT3 (temperature sensor disable), BIT0 (clock select) */
-		{ MPUREG_PWR_MGMT_2,  0x0 }, /* 0x6C, 108 */
-	};
-
-	if(client == NULL)
-		return -1;
-
-	sz = sizeof(reg_values) >> 1;
-
-	for (i = 0; i < sz; i++)
-	{
-		rc = inv_serial_single_write(client->adapter, mldl_cfg->mpu_chip_info->addr, reg_values[i][0], reg_values[i][1]);
-
-		if(mod_debug)
-		{
-			printk("%s() i: %d sensor_i2c_write_register(0x%x, 0x%x) rc: %d\n",
-                __func__, i, reg_values[i][0], reg_values[i][1], rc);
-		}
-		if(rc)
-			break;
-	}
-	return rc;
-}
-#endif
-
 int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 {
 	struct mpu_platform_data *pdata;
@@ -1395,7 +1120,12 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	struct mldl_cfg *mldl_cfg;
 	int res = 0;
 	int ii = 0;
+  int gpio_pin;
+#ifdef CONFIG_ARCH_KONA
+	struct mpu_platform_data *bcm_pdata;
+#endif
 
+  printk(KERN_INFO "inside mpu_probe");
 	dev_info(&client->adapter->dev, "%s: %d\n", __func__, ii++);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
@@ -1403,6 +1133,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 		goto out_check_functionality_failed;
 	}
 
+  
 	mpu = kzalloc(sizeof(struct mpu_private_data), GFP_KERNEL);
 	if (!mpu) {
 		res = -ENOMEM;
@@ -1451,6 +1182,61 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	}
 	mldl_cfg->pdata = pdata;
 
+
+	bcm_pdata = (struct mpu_platform_data *)pdata;
+	if (bcm_pdata) 
+  {    
+		dev_info(&client->adapter->dev,
+			 "Installing irq using %d\n", client->irq);
+		gpio_pin = irq_to_gpio(client->irq);
+		if (!gpio_pin) {
+			dev_err(&client->adapter->dev,
+				"mpu_probe: no valid GPIO for the interrupt %d\n", client->irq);
+			res = -EINVAL;
+			goto out_misc_register_failed;
+		}
+    
+		res = gpio_request(gpio_pin, "mpu6050_int");
+		if (res < 0) {
+			pr_err("mpu: request GPIO %d failed, err %d\n",
+				gpio_pin, res);
+			goto out_init_hw_failed;
+		}
+
+		res = gpio_direction_input(gpio_pin);
+		if (res < 0) {
+			pr_err("mpu: set GPIO %d as input failed, err %d\n",
+				gpio_pin, res);
+			gpio_free(gpio_pin);
+			goto out_init_hw_failed;
+		}
+	}
+
+#ifdef CONFIG_ARCH_KONA
+
+	mpu->regulator = regulator_get(&client->dev, "hv8");
+	res = IS_ERR_OR_NULL(mpu->regulator);
+	if (res) {
+		dev_err(&client->adapter->dev, "can't get vdd regulator!\n");
+		mpu->regulator = NULL;
+		res = -EIO;
+		goto out_regulator_failed;
+	}
+
+
+	/* make sure that regulator is enabled if device
+	 * is successfully bound */
+	res = regulator_enable(mpu->regulator);
+	dev_info(&client->adapter->dev,
+		"%s, called regulator_enable for vdd regulator. "
+		"Status: %d\n",  __func__, res);
+	if (res) {
+		dev_err(&client->adapter->dev,
+			"%s, can't enable vdd regulator\n", __func__);
+		goto out_regulator_enable_failed;
+	}  
+#endif
+
 	mldl_cfg->mpu_chip_info->addr = client->addr;
 	res = inv_mpu_open(&mpu->mldl_cfg, client->adapter, NULL, NULL, NULL);
 
@@ -1464,6 +1250,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	mpu->dev.minor = MISC_DYNAMIC_MINOR;
 	mpu->dev.name = "mpu";
 	mpu->dev.fops = &mpu_fops;
+  printk(KERN_INFO "it reaches just before misc_register(&mpu->dev)");
 	res = misc_register(&mpu->dev);
 	if (res < 0) {
 		dev_err(&client->adapter->dev,
@@ -1472,35 +1259,8 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	}
 
 	if (client->irq) {
-		int gpio_pin;
 		dev_info(&client->adapter->dev,
 			 "Installing irq using %d\n", client->irq);
-		/* BRCM */
-		/* set up the GPIO pin */
-		gpio_pin = irq_to_gpio(client->irq);
-		if (!gpio_pin) {
-			dev_err(&client->adapter->dev,
-				"mpu_probe: no valid GPIO for the interrupt %d\n", client->irq);
-			res = -EINVAL;
-			goto out_misc_register_failed;
-		}
-
-		res = gpio_request(gpio_pin, "mpu6050_int");
-		if (res < 0) {
-			dev_err(&client->adapter->dev,
-				"mpu_probe: request GPIO %d failed, err %d\n", gpio_pin, res);
-			goto out_misc_register_failed;
-		}
-
-		res = gpio_direction_input(gpio_pin);
-		if (res < 0) {
-			dev_err(&client->adapter->dev,
-				"mpu_probe: set GPIO %d as input failed, err %d\n", gpio_pin, res);
-			gpio_free(gpio_pin);
-			goto out_misc_register_failed;
-		}
-		dev_info(&client->adapter->dev, "mpu_probe: set GPIO %d as input\n", gpio_pin);
-		/* BRCM */
 		res = mpuirq_init(client, mldl_cfg);
 		if (res)
 			goto out_mpuirq_failed;
@@ -1530,38 +1290,6 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 			goto out_slave_pdata_kzalloc_failed;
 		}
 	}
-#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
-	/* Register with BRVSENS driver. */
-	brvsens_register(SENSOR_HANDLE_GYROSCOPE,       /* sensor UID */
-		MPU_NAME,                      /* human readable name */
-		(void*)client,                 /* context: passed back in activate/read callbacks */
-		(PFNACTIVATE)mpu6050_set_power_mode,
-		(PFNREAD)mpu6050_read_gyro);   /* read callback */
-
-	brvsens_register(SENSOR_HANDLE_ACCELEROMETER,   /* sensor UID */
-		MPU_NAME,                      /* human readable name */
-		(void*)client,                 /* context: passed back in activate/read callbacks */
-		(PFNACTIVATE)mpu6050_set_power_mode,
-		(PFNREAD)mpu6050_read_accel);  /* read callback */
-
-#if defined(CONFIG_INV_SENSORS_COMPASS) && \
-	(defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE))
-	brvsens_register(SENSOR_HANDLE_COMPASS,
-#if defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
-		"ami306",
-#else
-#error Undefined compass driver name
-		NULL,
-#endif
-		(void*)client,
-		(PFNACTIVATE)mpu6050_set_compass_power_mode,
-		(PFNREAD)mpu6050_read_compass);
-#endif
-
-	res = mpu6050_init(client, mpu);
-	if (res)
-		goto out_slave_pdata_kzalloc_failed;
-#endif
 	return res;
 
 out_slave_pdata_kzalloc_failed:
@@ -1572,6 +1300,16 @@ out_mpuirq_failed:
 out_misc_register_failed:
 	inv_mpu_close(&mpu->mldl_cfg, client->adapter, NULL, NULL, NULL);
 out_whoami_failed:
+#ifdef CONFIG_ARCH_KONA
+	if (mpu->regulator)
+		regulator_disable(mpu->regulator);
+out_regulator_enable_failed:
+	if (mpu->regulator)
+		regulator_put(mpu->regulator);
+out_regulator_failed:
+	gpio_free(gpio_pin);
+out_init_hw_failed:
+#endif
 	unregister_pm_notifier(&mpu->nb);
 out_register_pm_notifier_failed:
 	kfree(mldl_cfg->mpu_ram->ram);
@@ -1587,11 +1325,15 @@ out_check_functionality_failed:
 
 static int mpu_remove(struct i2c_client *client)
 {
+	int res;
 	struct mpu_private_data *mpu = i2c_get_clientdata(client);
 	struct i2c_adapter *slave_adapter[EXT_SLAVE_NUM_TYPES];
 	struct mldl_cfg *mldl_cfg = &mpu->mldl_cfg;
 	struct ext_slave_platform_data **pdata_slave = mldl_cfg->pdata_slave;
 	int ii;
+#ifdef CONFIG_ARCH_KONA
+	struct mpu_platform_data *bcm_pdata;
+#endif
 
 	for (ii = 0; ii < EXT_SLAVE_NUM_TYPES; ii++) {
 		if (!pdata_slave[ii])
@@ -1628,6 +1370,22 @@ static int mpu_remove(struct i2c_client *client)
 	misc_deregister(&mpu->dev);
 
 	unregister_pm_notifier(&mpu->nb);
+
+#ifdef CONFIG_ARCH_KONA
+	bcm_pdata = (struct mpu_platform_data *)mldl_cfg->pdata;
+	if (mpu->regulator) {
+		res = regulator_disable(mpu->regulator);
+		dev_info(&client->adapter->dev,
+			"%s, called regulator_disable. Status: %d\n",
+			__func__, res);
+		if (res)
+			dev_err(&client->adapter->dev,
+				"%s, regulator_disable failed "
+				"with status: %d\n", __func__, res);
+		regulator_put(mpu->regulator);
+	}
+	gpio_free(client->irq);
+#endif
 
 	kfree(mpu->mldl_cfg.mpu_ram->ram);
 	kfree(mpu);

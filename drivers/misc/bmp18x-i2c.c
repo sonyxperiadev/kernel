@@ -22,7 +22,23 @@
 
 #include <linux/module.h>
 #include <linux/i2c.h>
+#include <linux/input.h>
 #include "linux/bmp18x.h"
+
+#ifdef CONFIG_ARCH_KONA
+#include <linux/regulator/consumer.h>
+static struct regulator *regulator;
+#endif
+
+#define BMP_ERROR(fmt, args...)   printk(KERN_ERR "%s, " fmt, __func__, ## args)
+#define BMP_INFO(fmt, args...)   printk(KERN_INFO "%s, " fmt, __func__, ## args)
+#define BMP_DEBUG(fmt, args...) \
+do { if (mod_debug) printk(KERN_WARNING "%s, " fmt, __func__, ## args); } \
+while (0)
+
+/* module parameter that enables tracing */
+static int mod_debug = 0x0;
+module_param(mod_debug, int, 0644);
 
 static int bmp18x_i2c_read_block(void *client, u8 reg, int len, char *buf)
 {
@@ -41,6 +57,7 @@ static int bmp18x_i2c_write_byte(void *client, u8 reg, u8 value)
 
 static const struct bmp18x_bus_ops bmp18x_i2c_bus_ops =
 {
+	.bus_type	= BUS_I2C,
 	.read_block	= bmp18x_i2c_read_block,
 	.read_byte	= bmp18x_i2c_read_byte,
 	.write_byte	= bmp18x_i2c_write_byte
@@ -49,33 +66,141 @@ static const struct bmp18x_bus_ops bmp18x_i2c_bus_ops =
 static int __devinit bmp18x_i2c_probe(struct i2c_client *client,
 				      const struct i2c_device_id *id)
 {
-	struct bmp18x_data_bus data_bus = 
+	int err = 0;
+	struct bmp18x_data_bus data_bus =
 	{
 		.bops = &bmp18x_i2c_bus_ops,
 		.client = client
 	};
-	return bmp18x_probe(&client->dev, &data_bus);
+
+
+        printk(KERN_ALERT "****************** calling bmp probe*************************"); 
+	err = bmp18x_probe(&client->dev, &data_bus);
+	if (err) {
+		BMP_ERROR("bmp18x_probe failed with status: %d\n", err);
+		return err;
+	}
+
+#ifdef CONFIG_ARCH_KONA
+	regulator = regulator_get(&client->dev, "hv8");
+	err = IS_ERR_OR_NULL(regulator);
+	if (err) {
+		regulator = NULL;
+		BMP_ERROR("%s: can't get vdd regulator!\n", BMP18X_NAME);
+		return -EIO;
+	}
+
+	/* make sure that regulator is enabled if device is successfully
+	   bound */
+	err = regulator_enable(regulator);
+	BMP_INFO("called regulator_enable for vdd regulator. "
+		"Status: %d\n", err);
+	if (err) {
+		BMP_ERROR("regulator_enable for vdd regulator "
+			 "failed with status: %d\n", err);
+		regulator_put(regulator);
+	}
+	return err;
+#endif
 }
 
 static void bmp18x_i2c_shutdown(struct i2c_client *client)
 {
-	bmp18x_disable(&client->dev);
+	int ret;
+	ret = bmp18x_disable(&client->dev);
+	BMP_DEBUG("set low power state. Status: %d\n", ret);
+
+#ifdef CONFIG_ARCH_KONA
+	if (regulator) {
+		ret = regulator_disable(regulator);
+		BMP_DEBUG("called regulator_disable. Status: %d\n", ret);
+		if (ret) {
+			BMP_ERROR("regulator_disable failed with status: %d\n",
+				  ret);
+			return;
+		}
+		regulator_put(regulator);
+	}
+
+#endif
 }
 
 static int bmp18x_i2c_remove(struct i2c_client *client)
 {
-	return bmp18x_remove(&client->dev);
+	int ret;
+
+	ret = bmp18x_remove(&client->dev);
+	if (ret)
+		BMP_ERROR("bmp18x_remove failed with status: %d\n", ret);
+
+#ifdef CONFIG_ARCH_KONA
+	if (regulator) {
+		ret = regulator_disable(regulator);
+		BMP_DEBUG("called regulator_disable. Status: %d\n", ret);
+		if (ret) {
+			BMP_ERROR("regulator_disable failed with status: %d\n",
+				  ret);
+			return ret;
+		}
+		regulator_put(regulator);
+	}
+
+#endif
+	return ret;
 }
 
 #ifdef CONFIG_PM
 static int bmp18x_i2c_suspend(struct device *dev)
 {
-	return bmp18x_disable(dev);
+	int ret = 0;
+
+	BMP_DEBUG("called\n");
+
+	/* set low power state */
+	ret = bmp18x_disable(dev);
+	BMP_DEBUG("set low power state. Status: %d\n", ret);
+	if (ret) {
+		BMP_ERROR("set low power state failed with status: %d\n",
+				 ret);
+		return ret;
+	}
+
+#ifdef CONFIG_ARCH_KONA
+	if (regulator) {
+		ret = regulator_disable(regulator);
+		BMP_DEBUG("called regulator_disable. Status: %d\n", ret);
+		if (ret)
+			BMP_ERROR("regulator_disable failed with status: %d\n",
+				 ret);
+	}
+#endif
+	return ret;
 }
 
 static int bmp18x_i2c_resume(struct device *dev)
 {
-	return bmp18x_enable(dev);
+	int ret = 0;
+
+	BMP_DEBUG("called\n");
+
+	ret = bmp18x_enable(dev);
+	BMP_DEBUG("set high power state. Status: %d\n", ret);
+	if (ret) {
+		BMP_ERROR("set high power state failed with "
+			 "status: %d\n", ret);
+		return ret;
+	}
+
+#ifdef CONFIG_ARCH_KONA
+	if (regulator) {
+		ret = regulator_enable(regulator);
+		BMP_DEBUG("called regulator_enable. Status: %d\n", ret);
+		if (ret)
+			BMP_ERROR("regulator_enable failed with status: %d\n",
+				 ret);
+	}
+#endif
+	return ret;
 }
 
 static const struct dev_pm_ops bmp18x_i2c_pm_ops = {
@@ -90,9 +215,9 @@ static const struct i2c_device_id bmp18x_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, bmp18x_id);
 
-static struct i2c_driver bmp18x_i2c_driver = 
+static struct i2c_driver bmp18x_i2c_driver =
 {
-	.driver = 
+	.driver =
 	{
 		.owner	= THIS_MODULE,
 		.name	= BMP18X_NAME,
@@ -102,12 +227,13 @@ static struct i2c_driver bmp18x_i2c_driver =
 	},
 	.id_table	= bmp18x_id,
 	.probe		= bmp18x_i2c_probe,
+	.remove		= __devexit_p(bmp18x_i2c_remove),
 	.shutdown	= bmp18x_i2c_shutdown,
-	.remove		= __devexit_p(bmp18x_i2c_remove)
 };
 
 static int __init bmp18x_i2c_init(void)
 {
+        printk(KERN_ALERT "inside bmp18x_i2c_init\n");
 	return i2c_add_driver(&bmp18x_i2c_driver);
 }
 
