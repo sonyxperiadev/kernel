@@ -223,7 +223,6 @@ static int h264_open(struct inode *inode, struct file *filp)
 	   Enable the clock for H.264 block.
 	 */
 
-	printk("\n Before clock mgmt\n");
 #ifdef H264_CLK_MGMT
 	ret =
 	    pi_mgr_dfs_add_request(&h264_dfs_node, "h264", PI_MGR_PI_ID_MM,
@@ -247,10 +246,8 @@ static int h264_open(struct inode *inode, struct file *filp)
 		goto qos_request_fail;
 	}
 #endif
-	printk("\n Before enabling clocks\n");
 
 	enable_h264_clock();
-	printk("\n After enabling clocks\n");
 	// Access to root reset manager register block.
 	writel(0xa5a501, HW_IO_PHYS_TO_VIRT(0x35001f00));
 	// Enable multimedia power domain.
@@ -260,7 +257,6 @@ static int h264_open(struct inode *inode, struct file *filp)
 	writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F004));
 	// Enable 	H264 Master interface control register.
 	writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F008));
-	printk("\n After all reg access\n");
 #ifdef H264_QOS_MGMT
 	ret = pi_mgr_qos_request_update(&h264_qos_node, 0);
 	if(ret) {
@@ -297,11 +293,9 @@ static int h264_open(struct inode *inode, struct file *filp)
 		err_print("request_irq failed for MCIN_CBC ret = %d\n", ret);
 		goto err;
 	}
-	printk("\n After all request IRQ\n");
 	disable_irq(H264_AOB_IRQ);
 	disable_irq(H264_CME_IRQ);
 	disable_irq(H264_MCIN_CBC_IRQ);
-	printk("\n Going out of open\n");
 	return 0;
 
 #ifdef H264_QOS_MGMT
