@@ -32,6 +32,7 @@
 #include <plat/pwr_mgr.h>
 #include <mach/memory.h>
 #include <asm/hardware/cache-l2x0.h>
+#include <asm/cacheflush.h>
 #include <mach/pm.h>
 /* Control variable to enter retention instead
  * of dormant in idle path but enter
@@ -605,6 +606,9 @@ void dormant_enter(u32 service)
 		restore_control_registers((void *)__get_cpu_var(control_data),
 					  false);
 
+		invalidate_tlb_btac();
+		flush_cache_all();
+
 		restore_a9_timers((void *)__get_cpu_var(timer_data),
 				  (u32)KONA_SCU_VA);
 
@@ -708,6 +712,10 @@ void dormant_enter(u32 service)
 					(u32)KONA_SCU_VA);
 
 		restore_performance_monitors((void *)__get_cpu_var(pmu_data));
+
+		invalidate_tlb_btac();
+		flush_cache_all();
+
 #if defined(CONFIG_SMP)
 		if (smp_processor_id() == MASTER_CORE) {
 			/*
