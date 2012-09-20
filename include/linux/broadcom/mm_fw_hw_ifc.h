@@ -22,6 +22,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/init.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
+#include <linux/file.h>
 #include <linux/interrupt.h>
 #include <linux/semaphore.h>
 #include <linux/mutex.h>
@@ -33,6 +34,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/mm.h>
 #include <linux/bootmem.h>
 #include <linux/list.h>
+#include <linux/plist.h>
 #include <plat/pi_mgr.h>
 #include <linux/debugfs.h>
 #include <linux/miscdevice.h>

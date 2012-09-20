@@ -10,7 +10,7 @@ Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
-#define pr_fmt(fmt) "<%s> %s:" fmt "\n",mm_prof->mm_common->single_wq_name,__func__
+#define pr_fmt(fmt) "<%s> %s:" fmt "\n",mm_prof->mm_common->mm_name,__func__
 
 #include "mm_prof.h"
 

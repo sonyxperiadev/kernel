@@ -25,52 +25,73 @@ typedef struct {
 	struct work_struct job_scheduler;
 	volatile void __iomem *dev_base;
 	MM_CORE_HW_IFC mm_device;
+	
 	volatile bool mm_core_is_on;
+	dev_job_list_t* current_job;
 
 
 	/* job list. will be Unique for SMP*/
 	struct timer_list dev_timer;
-	struct list_head job_list;
+	struct plist_head job_list;
 	uint32_t device_job_id;
 
 }mm_core_t;
 
-typedef struct dev_job_list {
-	struct list_head list;
-	struct list_head wait_list;
+static inline void mm_core_add_job(dev_job_list_t* job, mm_core_t* core_dev)
+{
+	if(job->added2core) return;
+	job->job.status = MM_JOB_STATUS_READY;
+//	pr_debug("%x %x %x",&job->core_list,job->core_list.next,job->core_list.prev);
+	plist_add(&(job->core_list), &(core_dev->job_list));
+	job->added2core = true;
+	queue_work(core_dev->mm_common->single_wq, &(core_dev->job_scheduler));
+}
 
-	mm_job_post_t job;
-	struct file* filp;
-} dev_job_list_t;
+static inline void mm_core_remove_job(dev_job_list_t* job, mm_core_t* core_dev)
+{
+	if(job->added2core == false) return;
+	plist_del(&job->core_list, &(core_dev->job_list));
+	job->added2core = false;
+}
 
-extern void mm_core_job_maint_work(struct work_struct* work);
+static inline void mm_core_move_job(dev_job_list_t* job, mm_core_t* core_dev, int prio)
+{
+	if(job->added2core == false) {
+		plist_node_init(&(job->core_list),prio);
+		}
+	else {
+		plist_del(&job->core_list, &(core_dev->job_list));
+		plist_node_init(&(job->core_list),prio);
+		plist_add(&(job->core_list), &(core_dev->job_list));
+		}
+}
 
-typedef struct job_maint_work {
-	struct work_struct work;
-	struct file* filp;
-	mm_core_t* dev;
-
-	dev_job_list_t* job;
-
-	struct list_head wait_list;
-	mm_job_status_t *status;
-	volatile bool added_to_wait_queue;
-} job_maint_work_t;
-
-
-#define INIT_MAINT_WORK(a,b) \
-	INIT_WORK(&(a.work), mm_core_job_maint_work); \
-	INIT_LIST_HEAD(&((a).wait_list)); \
-	a.filp = b; \
-	a.dev = NULL; \
-	a.job = NULL; \
-	a.status = NULL; \
-	a.added_to_wait_queue = false;
-
-#define MAINT_SET_DEV(a,b) (a).dev = (b);
-#define MAINT_SET_JOB(a,b) (a).job = (b);
-#define MAINT_SET_STATUS(a,b) (a).status = (b);
-
+static inline void mm_core_abort_job(dev_job_list_t* job, mm_core_t* core_dev)
+{
+	MM_CORE_HW_IFC* hw_ifc = &core_dev->mm_device;
+	mm_common_t* common = core_dev->mm_common;
+	if( (job->job.status > MM_JOB_STATUS_READY) &&
+		(job->job.status < MM_JOB_STATUS_SUCCESS) ){
+		/* reset once in release */
+		pr_err("aborting hw in release\n");
+		hw_ifc->mm_abort(hw_ifc->mm_device_id,&job->job);
+		core_dev->current_job = NULL;
+		queue_work(core_dev->mm_common->single_wq, &(core_dev->job_scheduler));
+		}
+}
+/*
+static inline dev_job_list_t* mm_core_find_job(struct file_private_data* filp, mm_core_t* core_dev)
+{
+	dev_job_list_t *job_list = NULL;
+	dev_job_list_t *temp_list = NULL;
+	list_for_each_entry_safe_reverse(job_list, temp_list, &(core_dev->job_list), core_list) {
+		if(job_list->filp == filp) {
+			return job_list;
+			}
+		}
+	return NULL;
+}
+*/
 void* mm_core_init(mm_common_t* mm_common, const char *mm_dev_name, MM_CORE_HW_IFC *core_params);
 void mm_core_exit( void *mm_dvfs);
 

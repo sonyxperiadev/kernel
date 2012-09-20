@@ -37,13 +37,11 @@ enum {
 typedef struct mm_common {
 	struct atomic_notifier_head notifier_head;
 	struct miscdevice mdev;
-	struct list_head list;
+	struct list_head device_list;
 
 	/*Framework initializes the below parameters. 
 	Do not edit in other files*/
-	wait_queue_head_t queue;
 	struct workqueue_struct *single_wq;
-	char* single_wq_name;
 	char* mm_name;
 
 	/*HW status*/
@@ -58,8 +56,37 @@ typedef struct mm_common {
     struct dentry *debugfs_dir;
 }mm_common_t;
 
+struct file_private_data {
+	mm_common_t* common;
+	bool interlock_count;
+	int prio;
+	struct list_head read_head;
+	struct list_head write_head;
+};
+
+typedef struct dev_job_list {
+	struct plist_node core_list;
+	bool added2core;
+
+	struct list_head file_list;
+	struct list_head wait_list;
+
+	struct dev_job_list* successor;
+	struct dev_job_list* predecessor;
+
+	mm_job_post_t job;
+	struct file_private_data* filp;
+} dev_job_list_t;
+
+typedef struct dev_status_list {
+	mm_job_status_t status;
+	struct list_head wait_list;
+	struct file_private_data* filp;
+} dev_job_status_t;
+
 void mm_common_enable_clock(mm_common_t *common);
 void mm_common_disable_clock(mm_common_t *common);
+void mm_common_job_completion(dev_job_list_t* job ,void* core);
 
 
 #endif

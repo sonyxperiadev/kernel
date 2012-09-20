@@ -241,6 +241,7 @@ mm_job_status_e v3d_start_job(void* device_id , mm_job_post_t* job, unsigned int
 		default:
 			break;
 		}
+	pr_err("v3d_start_job :: job type = %x job status = %x \n",job->type,job->status);
 	return MM_JOB_STATUS_ERROR;
 }
 static v3d_device_t* v3d_device = NULL;

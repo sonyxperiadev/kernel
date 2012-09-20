@@ -17,6 +17,10 @@ the GPL, without Broadcom's express prior written consent.
 #define MAX_HANDLES 4
 
 typedef enum {
+	INTERLOCK_INVALID_JOB = 0x64000000,
+	INTERLOCK_WAITING_JOB,
+	INTERLOCK_LAST_JOB,
+
 	ISP_INVALID_JOB = 0x65000000,
 	ISP_CSC_JOB,
 	ISP_LAST_JOB,
@@ -63,8 +67,9 @@ typedef struct {
 	uint32_t dep_handles[MAX_HANDLES];
 } mm_job_post_t;
 
-#define ISP_DEV_NAME	"isp"
+#define INTERLOCK_DEV_NAME	"interlock"
 #define V3D_DEV_NAME	"v3d"
+#define ISP_DEV_NAME	"isp"
 #define H264_DEV_NAME	"h264"
 #define MM_DEV_MAGIC	'M'
 
