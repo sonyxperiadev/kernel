@@ -55,9 +55,13 @@ enum ion_heap_type {
 					   cached, ion will do cache
 					   maintenance when the buffer is
 					   mapped for dma */
-#define ION_FLAG_WRITECOMBINE 2
+#define ION_FLAG_CACHED_NEEDS_SYNC 2	/* mappings of this buffer will created
+					   at mmap time, if this is set
+					   caches must be managed manually */
+
 #define ION_FLAG_WRITETHROUGH 4 /* Needs explicit cache invalidates */
 #define ION_FLAG_WRITEBACK    8 /* Needs explicit cache flushes */
+#define ION_FLAG_WRITECOMBINE 16
 
 #ifdef __KERNEL__
 struct ion_device;
