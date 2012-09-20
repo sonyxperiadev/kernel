@@ -930,7 +930,7 @@ int __init mach_init_sequencer(void)
 #endif
 
 	__pwr_mgr_info.i2c_cmds = pwrmgr_init_param.cmd_buf;
-	__pwr_mgr_info.num_i2c_cmds = pwrmgr_init_param.cmb_buf_size;
+	__pwr_mgr_info.num_i2c_cmds = pwrmgr_init_param.cmd_buf_size;
 	__pwr_mgr_info.i2c_cmd_ptr[VOLT0] = pwrmgr_init_param.v0xptr[0];
 	__pwr_mgr_info.i2c_cmd_ptr[VOLT1] = pwrmgr_init_param.v0xptr[1];
 	pwr_mgr_init_sequencer(&__pwr_mgr_info);
