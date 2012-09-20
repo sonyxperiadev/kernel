@@ -329,35 +329,8 @@ static loff_t mm_file_lseek(struct file * filp, loff_t offset, int ignore)
 		struct file_private_data *in_private = input->private_data;
 		struct interlock il;
 
-		dev_job_list_t* to = (dev_job_list_t*)kmalloc(sizeof(dev_job_list_t),GFP_KERNEL);
-		dev_job_list_t* from = (dev_job_list_t*)kmalloc(sizeof(dev_job_list_t),GFP_KERNEL);
-
-		to->filp = private;
-		to->job.size = 0;
-		to->added2core = false;
-		to->successor = NULL;
-		to->predecessor = NULL;
-		INIT_LIST_HEAD(&(to->wait_list));
-		INIT_LIST_HEAD(&(to->file_list));
-		plist_node_init(&(to->core_list),private->prio);
-		to->job.type = INTERLOCK_WAITING_JOB;
-		to->job.id = 0;
-		to->job.data = NULL;
-
-		from->filp = in_private;
-		from->job.size = 0;
-		from->added2core = false;
-		from->successor = NULL;
-		from->predecessor = NULL;
-		INIT_LIST_HEAD(&(from->wait_list));
-		INIT_LIST_HEAD(&(from->file_list));
-		plist_node_init(&(from->core_list),in_private->prio);
-		from->job.type = INTERLOCK_WAITING_JOB;
-		from->job.id = 0;
-		from->job.data = NULL;
-
-		il.from = from;
-		il.to = to;
+		il.to = mm_common_alloc_job(private);
+		il.from = mm_common_alloc_job(in_private);
 		il.status = NULL;
 
 		SCHEDULE_INTERLOCK_WORK(il);
@@ -375,17 +348,9 @@ static int mm_file_write(struct file *filp, const char __user * buf,
 {
 	struct file_private_data *private = filp->private_data;
 	mm_common_t *common = private->common;
-	dev_job_list_t* mm_job_node = (dev_job_list_t*)kmalloc(sizeof(dev_job_list_t),GFP_KERNEL);
-	mm_job_node->filp = private;
+	dev_job_list_t* mm_job_node = mm_common_alloc_job(private);
 	mm_job_node->job.size = size - 8;
-	mm_job_node->added2core = false;
 	if(size < 8) return 0;
-	
-	mm_job_node->successor = NULL;
-	mm_job_node->predecessor = NULL;
-	INIT_LIST_HEAD(&(mm_job_node->wait_list));
-	INIT_LIST_HEAD(&(mm_job_node->file_list));
-	plist_node_init(&(mm_job_node->core_list),private->prio);
 
 	if (copy_from_user (&(mm_job_node->job.type), buf, sizeof(mm_job_node->job.type))) {
 		pr_err("copy_from_user failed for type");
@@ -409,7 +374,7 @@ static int mm_file_write(struct file *filp, const char __user * buf,
 			pr_err("MM_IOCTL_POST_JOB data copy_from_user failed");
 			return 0;
 			}
-		//pr_err("mm_file_write %d ",current->prio);
+
 		pr_debug("mm_file_write %x %x %x %x %x %x %x",mm_job_node->job.size,
 							mm_job_node->job.type,
 							mm_job_node->job.id,
@@ -452,29 +417,15 @@ int mm_file_fsync(struct file *filp, loff_t p1, loff_t p2, int datasync)
 	struct interlock il;
 	dev_job_status_t job_status;
 
-	dev_job_list_t* mm_job_node = (dev_job_list_t*)kmalloc(sizeof(dev_job_list_t),GFP_KERNEL);
-	mm_job_node->filp = private;
-	mm_job_node->job.size = 0;
-	mm_job_node->added2core = false;
-
-	mm_job_node->successor = NULL;
-	mm_job_node->predecessor = NULL;
-	INIT_LIST_HEAD(&(mm_job_node->wait_list));
-	INIT_LIST_HEAD(&(mm_job_node->file_list));
-	plist_node_init(&(mm_job_node->core_list),private->prio);
-
-	mm_job_node->job.type = INTERLOCK_WAITING_JOB;
-	mm_job_node->job.id = 0;
-	mm_job_node->job.data = NULL;
-
 	INIT_LIST_HEAD(&job_status.wait_list);
 	job_status.filp = private;
 	job_status.status.status = MM_JOB_STATUS_INVALID;
 	job_status.status.id = 0;
 	il.status = &job_status;
 	il.from = NULL;
-	il.to = mm_job_node;
+	il.to = mm_common_alloc_job(private);
 	SCHEDULE_INTERLOCK_WORK(il);
+
 	if(wait_event_interruptible(mm_queue, job_status.status.status != MM_JOB_STATUS_INVALID )) {
 		//Task interrupted... Ensure to remove from the waitlist
 		pr_err("Task interrupted");
@@ -506,14 +457,7 @@ static long mm_file_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	switch (cmd) {
 		case MM_IOCTL_POST_JOB:
 			{
-				dev_job_list_t* mm_job_node = (dev_job_list_t*)kmalloc(sizeof(dev_job_list_t),GFP_KERNEL);
-				mm_job_node->filp = private;
-				mm_job_node->added2core = false;	
-				mm_job_node->successor = NULL;
-				mm_job_node->predecessor = NULL;
-				INIT_LIST_HEAD(&(mm_job_node->wait_list));
-				INIT_LIST_HEAD(&(mm_job_node->file_list));
-				plist_node_init(&(mm_job_node->core_list),private->prio);
+				dev_job_list_t* mm_job_node = mm_common_alloc_job(private);
 			
 				if (copy_from_user (&(mm_job_node->job), arg, sizeof(mm_job_node->job))) {
 					pr_err("copy_from_user failed for type");
@@ -544,29 +488,15 @@ static long mm_file_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 				struct interlock il;
 				dev_job_status_t job_status;
 				
-				dev_job_list_t* mm_job_node = (dev_job_list_t*)kmalloc(sizeof(dev_job_list_t),GFP_KERNEL);
-				mm_job_node->filp = private;
-				mm_job_node->job.size = 0;
-				mm_job_node->added2core = false;
-				
-				mm_job_node->successor = NULL;
-				mm_job_node->predecessor = NULL;
-				INIT_LIST_HEAD(&(mm_job_node->wait_list));
-				INIT_LIST_HEAD(&(mm_job_node->file_list));
-				plist_node_init(&(mm_job_node->core_list),private->prio);
-				
-				mm_job_node->job.type = INTERLOCK_WAITING_JOB;
-				mm_job_node->job.id = 0;
-				mm_job_node->job.data = NULL;
-				
 				INIT_LIST_HEAD(&job_status.wait_list);
 				job_status.filp = private;
 				job_status.status.status = MM_JOB_STATUS_INVALID;
 				job_status.status.id = 0;
 				il.status = &job_status;
 				il.from = NULL;
-				il.to = mm_job_node;
+				il.to = mm_common_alloc_job(private);
 				SCHEDULE_INTERLOCK_WORK(il);
+				
 				if(wait_event_interruptible(mm_queue, job_status.status.status != MM_JOB_STATUS_INVALID )) {
 					//Task interrupted... Ensure to remove from the waitlist
 					pr_err("Task interrupted");

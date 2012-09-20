@@ -84,6 +84,25 @@ typedef struct dev_status_list {
 	struct file_private_data* filp;
 } dev_job_status_t;
 
+static dev_job_list_t* mm_common_alloc_job(struct file_private_data* private)
+{
+	dev_job_list_t* job = (dev_job_list_t*)kmalloc(sizeof(dev_job_list_t),GFP_KERNEL);
+	
+	job->filp = private;
+	job->job.size = 0;
+	job->added2core = false;
+	job->successor = NULL;
+	job->predecessor = NULL;
+	INIT_LIST_HEAD(&job->wait_list);
+	INIT_LIST_HEAD(&job->file_list);
+	plist_node_init(&job->core_list,private->prio);
+	job->job.type = INTERLOCK_WAITING_JOB;
+	job->job.id = 0;
+	job->job.data = NULL;
+
+	return job;
+}
+
 void mm_common_enable_clock(mm_common_t *common);
 void mm_common_disable_clock(mm_common_t *common);
 void mm_common_job_completion(dev_job_list_t* job ,void* core);
