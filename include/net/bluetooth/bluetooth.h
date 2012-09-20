@@ -117,6 +117,7 @@ int bt_err(const char *fmt, ...);
 #define BT_INFO(fmt, ...)	bt_info(fmt "\n", ##__VA_ARGS__)
 #define BT_ERR(fmt, ...)	bt_err(fmt "\n", ##__VA_ARGS__)
 #define BT_DBG(fmt, ...)	pr_debug(fmt "\n", ##__VA_ARGS__)
+//#define BT_DBG(fmt, ...)	printk("%s "fmt "\n",__FUNCTION__, ##__VA_ARGS__)
 
 /* Connection and socket states */
 enum {
