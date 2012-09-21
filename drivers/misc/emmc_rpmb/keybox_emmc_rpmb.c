@@ -50,6 +50,7 @@ REMEDY.
 #include <linux/genhd.h>
 #include <linux/completion.h>
 #include <linux/bio.h>
+#include <linux/module.h>
 
 #include <linux/emmc_rpmb.h>
 #include <linux/miscdevice.h>
