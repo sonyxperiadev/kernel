@@ -63,14 +63,14 @@ typedef struct {
 } SysparmIndex_t;
 
 SysAudioParm_t __iomem *APSYSPARM_GetAudioParmAccessPtr(void);
-/* NOTE: name of this API will need to be changed to
- * APSYSPARM_GetIndMultimediaAudioParmAccessPtr once
- * USE_NEW_AUDIO_MM_PARAM is enabled (or removed)
- */
-SysIndMultimediaAudioParm_t __iomem *
-APSYSPARM_GetMultimediaAudioParmAccessPtr(void);
+
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 SysMultimediaAudioParm_t __iomem *
+APSYSPARM_GetMultimediaAudioParmAccessPtr(void);
+SysIndMultimediaAudioParm_t __iomem *
+APSYSPARM_GetIndMultimediaAudioParmAccessPtr(void);
+#else
+SysIndMultimediaAudioParm_t __iomem *
 APSYSPARM_GetMultimediaAudioParmAccessPtr(void);
 #endif
 

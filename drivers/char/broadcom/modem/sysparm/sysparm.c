@@ -47,6 +47,9 @@ static SysAudioParm_t __iomem *audio_parm_table;
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 static SysMultimediaAudioParm_t __iomem *mmaudio_parm_table;
 #define MMAUDIO_PARM_TABLE_ENTRIES (AUDIO_APP_MM_NUMBER*AUDIO_MODE_NUMBER)
+#define MM_AUDIO_PARM_NAME "ind_mmaudio_parm"
+#else
+#define MM_AUDIO_PARM_NAME "mmaudio_parm"
 #endif
 static SysIndMultimediaAudioParm_t __iomem *ind_mmaudio_parm_table;
 #endif
@@ -279,8 +282,13 @@ SysAudioParm_t __iomem *APSYSPARM_GetAudioParmAccessPtr(void)
  * Notes:     This is only applicable to audio tuning parameters.
  *
  ******************************************************************************/
+#if defined(USE_NEW_AUDIO_MM_PARAM)
 SysIndMultimediaAudioParm_t __iomem
-    *APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
+	*APSYSPARM_GetIndMultimediaAudioParmAccessPtr(void)
+#else
+SysIndMultimediaAudioParm_t __iomem
+	*APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
+#endif
 {
 	UInt32 ind_mmaudio_parm_addr;
 
@@ -300,7 +308,7 @@ SysIndMultimediaAudioParm_t __iomem
 		 * is enabled
 		 */
 		ind_mmaudio_parm_addr
-			= SYSPARM_GePAtByIndex("mmaudio_parm",
+			= SYSPARM_GePAtByIndex(MM_AUDIO_PARM_NAME,
 						parm_table_size,
 						1);
 		if (!ind_mmaudio_parm_addr) {
