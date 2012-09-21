@@ -465,14 +465,12 @@ static long mm_file_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 					}
 				if(mm_job_node->job.size > 0) {
 					void* job_post = NULL;
-					uint32_t * ptr ;
 					job_post = kmalloc(mm_job_node->job.size, GFP_KERNEL);
-					mm_job_node->job.data = job_post;
-					ptr = (uint32_t *)job_post;
 					if (copy_from_user(job_post, mm_job_node->job.data, mm_job_node->job.size)) {
 						pr_err("MM_IOCTL_POST_JOB data copy_from_user failed");
 						ret = -EINVAL;
 						}
+					mm_job_node->job.data = job_post;
 					BUG_ON( ((mm_job_node->job.type&0xFF0000)>>16)>= MAX_ASYMMETRIC_PROC );
 					BUG_ON( common->mm_core[(mm_job_node->job.type&0xFF0000)>>16] == NULL );
 					SCHEDULE_ADD_WORK(mm_job_node);
