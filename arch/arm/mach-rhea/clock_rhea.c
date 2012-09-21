@@ -19,6 +19,7 @@
 #include <linux/kernel.h>
 #include <linux/math64.h>
 #include <linux/delay.h>
+#include <linux/regulator/consumer.h>
 
 #include <plat/clock.h>
 #include <mach/io_map.h>
@@ -7325,7 +7326,13 @@ EXPORT_SYMBOL(rhea_clock_print_act_clks);
 int debug_bus_mux_sel(int mux_sel, int mux_param)
 {
 	u32 reg_val;
-
+	static struct regulator *rgltr;
+	static int reg_enabled;
+	if (rgltr == NULL) {
+		rgltr = regulator_get(NULL, "sddat_debug_bus");
+		if (IS_ERR_OR_NULL(rgltr))
+			pr_info("regulator_get failed\n");
+	}
 	/*Get pad control write access by rwiting password */
 	writel(0xa5a501, KONA_PAD_CTRL + PADCTRLREG_WR_ACCESS_OFFSET);
 	/* unlock pad control registers */
@@ -7336,6 +7343,12 @@ int debug_bus_mux_sel(int mux_sel, int mux_param)
 	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK4_OFFSET);
 
 	if (mux_sel == 0) {
+		if (!IS_ERR_OR_NULL(rgltr) && (reg_enabled == 1)) {
+			regulator_disable(rgltr);
+			regulator_put(rgltr);
+			rgltr = NULL;
+			reg_enabled = 0;
+		}
 		/* Configure GPIO_XX to TESTPORT_XX  */
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET);
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO01_OFFSET);
@@ -7367,7 +7380,10 @@ int debug_bus_mux_sel(int mux_sel, int mux_param)
 			KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
 
 	} else if (mux_sel == 1) {  /*SDDATA*/
-
+		if (!IS_ERR_OR_NULL(rgltr) && (!regulator_is_enabled(rgltr))) {
+			regulator_enable(rgltr);
+			reg_enabled = 1;
+		}
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT0_OFFSET);
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT1_OFFSET);
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT2_OFFSET);

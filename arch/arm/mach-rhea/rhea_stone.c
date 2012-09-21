@@ -199,6 +199,7 @@ static int configure_sdio_pullup(bool pull_up);
 #if (defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042))
 struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "vdd_sdxc"},
+	{.supply = "sddat_debug_bus"},
 };
 
 struct regulator_consumer_supply hv3_supply[] = {
