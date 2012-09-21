@@ -62,6 +62,8 @@ typedef struct {
 	unsigned int flag;
 } SysparmIndex_t;
 
+int APSYSPARM_RefreshAudioParm(unsigned int addr);
+
 SysAudioParm_t __iomem *APSYSPARM_GetAudioParmAccessPtr(void);
 
 #if defined(USE_NEW_AUDIO_MM_PARAM)

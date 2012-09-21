@@ -373,6 +373,25 @@ SysMultimediaAudioParm_t __iomem
 	return mmaudio_parm_table;
 }
 #endif
+
+/******************************************************************************
+ *
+ * Function Name: APSYSPARM_RefreshAudioParmAccessPtr
+ *
+ * Description:   Reload audio sysparm structure from CP
+ *
+ * Notes:     This is only applicable to audio tuning parameters.
+ *
+ ******************************************************************************/
+int APSYSPARM_RefreshAudioParm(unsigned int addr)
+{
+	/* Note: no longer needed now that we're not caching
+	 * audio sysparms locally; can be removed once this
+	 * call is removed from audio driver
+	 */
+	pr_info("APSYSPARM_RefreshAudioParm: 0x%x\n", addr);
+	return 0;
+}
 #endif /* !SKELETON_DRIVER */
 
 /*******************************************************************************
