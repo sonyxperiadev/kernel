@@ -1191,6 +1191,11 @@ static void pmem_shrink(struct work_struct *work)
 					selected->state,
 					selected->parent->group_leader->comm,
 					selected->parent->group_leader->pid);
+			printk(KERN_ALERT
+				"pmem: (%s/%d) took more than 20secs to die"
+				" crashing now!!\n", selected->comm,
+				selected->pid);
+			*(unsigned long *)0xdeadd00d = 0xdeadd00d;
 		}
 
 	}
