@@ -361,9 +361,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&thermal_device,
 #endif
 
-59 	
-
-
 #ifdef CONFIG_STM_TRACE
 	&hawaii_stm_device,
 #endif
@@ -1217,7 +1214,7 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&wd_tapper,
 #endif
 
-#ifdef(CONFIG_BCM_ALSA_SOUND)	
+#if defined(CONFIG_BCM_ALSA_SOUND)
 	&board_caph_device,
 #endif	
 };
