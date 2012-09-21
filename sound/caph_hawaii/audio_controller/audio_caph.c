@@ -101,6 +101,7 @@ struct TAudioHalThreadData {
 	spinlock_t m_lock_out;
 };
 
+#if 0
 static char action_names[ACTION_AUD_TOTAL][40] = {
 		"OpenPlay",
 		"ClosePlay",
@@ -144,6 +145,7 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 		"BufferReady",
 		"AtCtl",
 };
+#endif
 
 static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 static unsigned int n_msg_in, n_msg_out, last_action;
@@ -1103,7 +1105,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    parm_call->new_mic, parm_call->new_spkr);
 
 			AUDCTRL_SetTelephonyMicSpkr(parm_call->new_mic,
-						    parm_call->new_spkr);
+						    parm_call->new_spkr,
+						    false);
 		}
 		break;
 
@@ -1342,7 +1345,6 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 * can set music app and mode
 			 */
 			/* re-enable FM; need to fill audio app */
-			AUDCTRL_SaveAudioApp(AUDIO_APP_FM_RADIO);
 			AUDCTRL_SaveAudioMode((AudioMode_t) parm_FM->sink);
 
 			AUDCTRL_EnablePlay(parm_FM->source,
@@ -1368,7 +1370,6 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDCTRL_DisablePlay(parm_FM->source, parm_FM->sink,
 					    pathID[parm_FM->stream]);
 			pathID[parm_FM->stream] = 0;
-			AUDCTRL_SetUserAudioApp(AUDIO_APP_MUSIC);
 		}
 		break;
 	case ACTION_AUD_SetARM2SPInst:
@@ -1429,7 +1430,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 	case ACTION_AUD_DisableECNSTelephony:
 		aTrace(LOG_AUDIO_CNTLR, "Telephony : Turning Off EC and NS\n");
-#ifdef AUDIO_FEATURE_SET_DISABLE_ECNS
+#ifdef CONFIG_AUDIO_FEATURE_SET_DISABLE_ECNS
 
 		/* when turning off EC and NS, using
 		 * AUDIO_MODE_HANDSFREE as customer's request
@@ -1483,7 +1484,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				"AUDIO_Ctrl_Process ACTION_AUD_SetAudioApp: aud_app=%d\n",
 				parm_setapp->aud_app);
 
-			AUDCTRL_SetUserAudioApp(parm_setapp->aud_app);
+			AUDCTRL_SaveAudioApp(parm_setapp->aud_app);
 		}
 		break;
 	case ACTION_AUD_RemoveAudioApp:

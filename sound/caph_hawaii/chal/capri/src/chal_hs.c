@@ -687,6 +687,40 @@ void chal_audio_hspath_sdm_enable_dither(CHAL_HANDLE handle,
 /*
  * ============================================================================
  *
+ *	Function Name:
+ *	chal_audio_hspath_sdm_is_dither_enabled(CHAL_HANDLE handle)
+ *
+ *	Description:  Check if dither to sigma delta module on headset path
+ *	enabled
+ *
+ *	Parameters:   handle - audio chal handle.
+ *
+ *	 Return:
+ *		enable : bit 1 for right channel enable/disable
+ *		enable : bit 0 for left channel enable/disable
+ *
+ * ============================================================================
+ */
+cUInt16 chal_audio_hspath_sdm_is_dither_enabled(CHAL_HANDLE handle)
+{
+	cUInt32 reg_val;
+	cUInt32 base = ((ChalAudioCtrlBlk_t *)handle)->audioh_base;
+	cUInt16 ret = 0;
+
+	reg_val = BRCM_READ_REG(base, AUDIOH_SDM_DITHER_CTL);
+
+	if (reg_val & AUDIOH_SDM_DITHER_CTL_STEREO_DITHER_EN_L_MASK)
+		ret |= AUDIOH_SDM_DITHER_CTL_STEREO_DITHER_EN_L_MASK;
+
+	if (reg_val & AUDIOH_SDM_DITHER_CTL_STEREO_DITHER_EN_R_MASK)
+		ret |= AUDIOH_SDM_DITHER_CTL_STEREO_DITHER_EN_R_MASK;
+
+	return ret;
+}
+
+/*
+ * ============================================================================
+ *
  *	Function Name: void hal_audio_hspath_sdm_enable_dither_gain
  *		(CHAL_HANDLE handle, cUInt16 gain_enable)
  *
@@ -1133,5 +1167,48 @@ void chal_audio_hspath_set_filter(CHAL_HANDLE handle, cUInt16 filter)
 Boolean chal_audio_isHSpath_active(void)
 {
 	return isHS;
+}
+
+/*
+ * ============================================================================
+ *
+ *	Function Name: chal_audio_hspath_sdm_mute(CHAL_HANDLE handle,
+ *		cUInt16 enable)
+ *
+ *	Description:  enable dither to sigma delta module on headset path
+ *	set/clear on SDM_DITHER_CTL : Bit0 /Bit4
+ *
+ *	Parameters:   handle - audio chal handle.
+ *		mute - 1 to enable mute, 0 to disable
+ *
+ *		lr_ch: bit 1 for right channel operation
+ *		lr_ch: bit 0 for left channel operation
+ *
+ *  Return: None.
+ *
+ * ============================================================================
+ */
+void chal_audio_hspath_sdm_mute(CHAL_HANDLE handle, _Bool mute, cUInt16 lr_ch)
+{
+	cUInt32     reg_val;
+	cUInt32 base = ((ChalAudioCtrlBlk_t *)handle)->audioh_base;
+
+	reg_val = BRCM_READ_REG(base, AUDIOH_DAC_CTL);
+
+	if (mute == CHAL_AUDIO_ENABLE) {
+		if (lr_ch & CHAL_AUDIO_CHANNEL_LEFT)
+			reg_val |= AUDIOH_DAC_CTL_STEREO_SDM_MUTE_L_MASK;
+		if (lr_ch & CHAL_AUDIO_CHANNEL_RIGHT)
+			reg_val |= AUDIOH_DAC_CTL_STEREO_SDM_MUTE_R_MASK;
+	} else {
+		if (lr_ch & CHAL_AUDIO_CHANNEL_LEFT)
+			reg_val &= ~AUDIOH_DAC_CTL_STEREO_SDM_MUTE_L_MASK;
+		if (lr_ch & CHAL_AUDIO_CHANNEL_RIGHT)
+			reg_val &= ~AUDIOH_DAC_CTL_STEREO_SDM_MUTE_R_MASK;
+	}
+	/* Set the required setting */
+	BRCM_WRITE_REG(base,  AUDIOH_DAC_CTL, reg_val);
+
+	return;
 }
 

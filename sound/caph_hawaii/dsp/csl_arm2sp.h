@@ -58,6 +58,14 @@
 								 Q1.14 format*/
 #define MIN_INP_SP_TO_ARM2SP_MIXER_UL_GAIN	0
 
+#define MAX_ARM2SP_HQ_DL_GAIN		(1<<14)		/* unity gain in DSP
+							   Q1.14 format */
+#define MIN_ARM2SP_HQ_DL_GAIN		0
+
+#define MAX_ARM2SP2_HQ_DL_GAIN		(1<<14)		/* unity gain in DSP
+							   Q1.14 format */
+#define MIN_ARM2SP2_HQ_DL_GAIN		0
+
 typedef enum CSL_ARM2SP_PLAYBACK_MODE_t {
 	CSL_ARM2SP_PLAYBACK_NONE,
 	CSL_ARM2SP_PLAYBACK_DL,
@@ -124,7 +132,6 @@ void CSL_ARM2SP2_Init(void);
 *   @param	writeIndex	(in)	index of ping-pong buffer
 *   @param	in48K		(in)	48K signal ?
 *   @param	audMode		(in)	stereo ?
-*   @return	 UInt32			number of bytes written to the buffer
 *
 **********************************************************************/
 UInt32 CSL_ARM2SP2_Write(UInt8 *inBuf, UInt32 inSize_inBytes,
@@ -315,6 +322,50 @@ Boolean CSL_SetARM2Speech2CallRecordGain(Int16 mBGain);
 ***********************************************************************/
 void CSL_MuteARM2Speech2CallRecord(void);
 
+/*********************************************************************/
+/**
+*
+*   CSL_SetARM2SpeechHQDLGain sets ARM2SP_HQ downlink gain.
+*
+*   @param	mBGain	(in)	gain in millibels
+*				(min = -8430 millibel,
+*				 max = 0 millibel)
+*   @return   Boolean		TRUE if value is out of limits
+*
+**********************************************************************/
+Boolean CSL_SetARM2SpeechHQDLGain(Int16 mBGain);
+
+/*********************************************************************/
+/**
+*
+*   CSL_MuteARM2SpeechHQDL mutes ARM2SP_HQ downlink.
+*
+*
+**********************************************************************/
+void CSL_MuteARM2SpeechHQDL(void);
+
+/*********************************************************************/
+/**
+*
+*   CSL_SetARM2Speech2HQDLGain sets ARM2SP2_HQ downlink gain.
+*
+*   @param	mBGain	(in)	gain in millibels
+*				(min = -8430 millibel,
+*				 max = 0 millibel)
+*   @return   Boolean		TRUE if value is out of limits
+*
+**********************************************************************/
+Boolean CSL_SetARM2Speech2HQDLGain(Int16 mBGain);
+
+/*********************************************************************/
+/**
+*
+*   CSL_MuteARM2Speech2HQDL mutes ARM2SP_HQ downlink.
+*
+*
+**********************************************************************/
+void CSL_MuteARM2Speech2HQDL(void);
+
 /**********************************************************************/
 /**
 *
@@ -381,29 +432,33 @@ UInt16 csl_dsp_arm2sp2_get_size(UInt32 Rate);
 
 /**********************************************************************/
 /**
-*
-* Function Name: csl_arm2sp_set_arm2sp
-*
-*   @note	 This function Starts and Stops the ARM2SP interface.
-*
-*   @param	UInt32 Rate = 8000, 16000 or 48000
-*   @param	CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
-*   @param	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
-*   @param	UInt32 numFramesPerInterrupt
-*   @param	UInt8 audMode	= 0 -> Mono \BR
-*				= 1 -> Stereo
-*   @param	UInt16 Reset_out_ptr_flag \BR
-*			=0, reset output pointer - shared_Arm2SP2_InBuf_out
-*				- of buffer shared_Arm2SP2_InBuf[] to 0.
-*				Used for new arm2sp2 session.\BR
-*			=1, keep output pointer - shared_Arm2SP2_InBuf_out
-*				- unchange.
-*				Used for PAUSE/RESUME the same arm2sp2 session.
-*   @param	UInt16 dl_mix_or_repl_location
-*   @param	UInt16 ul_mix_or_repl_location
-*
-*   @return   None
-*
+
+Function Name: csl_arm2sp_set_arm2sp
+
+	@note	 This function Starts and Stops the ARM2SP interface.
+
+	@param	UInt32 Rate = 8000, 16000 or 48000
+	@param	CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
+	@param	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
+	@param	UInt32 numFramesPerInterrupt
+	@param	UInt8 audMode	= 0 -> Mono \BR
+				= 1 -> Stereo
+	@param	UInt16 Reset_out_ptr_flag \BR
+			=0, reset output pointer - shared_Arm2SP2_InBuf_out
+				- of buffer shared_Arm2SP2_InBuf[] to 0.
+				Used for new arm2sp2 session.\BR
+			=1, keep output pointer - shared_Arm2SP2_InBuf_out
+				- unchange.
+				Used for PAUSE/RESUME the same arm2sp2 session.
+	@param	UInt16 dl_mix_or_repl_location
+	@param	UInt16 ul_mix_or_repl_location
+	@param	UInt16 arm2sp_hq_dl = 1 for 48kHz DL High Quality mode
+			(only valid for playbackMode = CSL_ARM2SP_PLAYBACK_DL
+			and Rate = 48000)
+			= 0 for normal mode
+
+	@return	None
+
 **/
 /**********************************************************************/
 void csl_arm2sp_set_arm2sp(UInt32			samplingRate,
@@ -413,34 +468,39 @@ void csl_arm2sp_set_arm2sp(UInt32			samplingRate,
 				UInt8			audMode,
 				UInt16			Reset_out_ptr_flag,
 				UInt16			dl_mix_or_repl_location,
-				UInt16			ul_mix_or_repl_location
+				UInt16			ul_mix_or_repl_location,
+				UInt16			arm2sp_hq_dl
 				);
 
 /**********************************************************************/
 /**
-*
-* Function Name: csl_arm2sp_set_arm2sp2
-*
-*   @note	 This function Starts and Stops the ARM2SP2 interface.
-*
-*   @param	UInt32 Rate = 8000, 16000 or 48000
-*   @param	CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
-*   @param	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
-*   @param	UInt32 numFramesPerInterrupt
-*   @param	UInt8 audMode	= 0 -> Mono \BR
-*				= 1 -> Stereo
-*   @param	UInt16 Reset_out_ptr_flag \BR
-*			=0, reset output pointer - shared_Arm2SP2_InBuf_out
-*				- of buffer shared_Arm2SP2_InBuf[] to 0.
-*				Used for new arm2sp2 session.\BR
-*			=1, keep output pointer - shared_Arm2SP2_InBuf_out
-*				- unchange.
-*				Used for PAUSE/RESUME the same arm2sp2 session.
-*   @param	UInt16 dl_mix_or_repl_location
-*   @param	UInt16 ul_mix_or_repl_location
-*
-*   @return   None
-*
+
+Function Name: csl_arm2sp_set_arm2sp2
+
+	@note	 This function Starts and Stops the ARM2SP2 interface.
+
+	@param	UInt32 Rate = 8000, 16000 or 48000
+	@param	CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
+	@param	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
+	@param	UInt32 numFramesPerInterrupt
+	@param	UInt8 audMode	= 0 -> Mono \BR
+				= 1 -> Stereo
+	@param	UInt16 Reset_out_ptr_flag \BR
+			=0, reset output pointer - shared_Arm2SP2_InBuf_out
+				- of buffer shared_Arm2SP2_InBuf[] to 0.
+				Used for new arm2sp2 session.\BR
+			=1, keep output pointer - shared_Arm2SP2_InBuf_out
+				- unchange.
+				Used for PAUSE/RESUME the same arm2sp2 session.
+	@param	UInt16 dl_mix_or_repl_location
+	@param	UInt16 ul_mix_or_repl_location
+	@param	UInt16 arm2sp_hq_dl = 1 for 48kHz DL High Quality mode
+			(only valid for playbackMode = CSL_ARM2SP_PLAYBACK_DL
+			and Rate = 48000)
+			= 0 for normal mode
+
+	@return	None
+
 **/
 /**********************************************************************/
 void csl_arm2sp_set_arm2sp2(UInt32			samplingRate,
@@ -450,7 +510,8 @@ void csl_arm2sp_set_arm2sp2(UInt32			samplingRate,
 				UInt8			audMode,
 				UInt16			Reset_out_ptr_flag,
 				UInt16			dl_mix_or_repl_location,
-				UInt16			ul_mix_or_repl_location
+				UInt16			ul_mix_or_repl_location,
+				UInt16			arm2sp_hq_dl
 				);
 
 /** @} */

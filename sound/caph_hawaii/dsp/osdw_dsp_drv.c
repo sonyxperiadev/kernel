@@ -36,6 +36,7 @@
 #include <mach/comms/platform_mconfig.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
+#include <mach/memory.h>
 #include "msconsts.h"
 #include "shared.h"
 #include "csl_dsp.h"
@@ -53,7 +54,7 @@
 #include "chal_bmodem_intc_inc.h"
 #include "csl_arm2sp.h"
 #include "audio_trace.h"
-#include <mach/memory.h>
+
 
 typedef struct {
 	struct tasklet_struct task;

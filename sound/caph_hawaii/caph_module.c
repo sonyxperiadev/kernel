@@ -46,6 +46,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 #include <plat/kona_reset_reason.h>
+#include <mach/caph_platform.h>
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -87,6 +88,8 @@ module_param(gAudioDebugLevel, int, 0);
 
 static brcm_alsa_chip_t *sgpCaph_chip;
 
+static struct caph_platform_cfg sgCaphPlatInfo;
+
 /* AUDIO LOGGING */
 
 #define DATA_TO_READ 4
@@ -108,6 +111,7 @@ static unsigned char *log_write_ptr;
 static unsigned char *log_buffer_head;
 static unsigned char *log_buffer_end;
 static int log_buffer_count;
+DEFINE_SPINLOCK(buf_lock);
 #endif
 
 /* wait queues */
@@ -129,6 +133,13 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH Driver Probe:\n");
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:DriverProbe\n", jiffies);
+
+	/* Copy over platform specific data */
+	memcpy(&sgCaphPlatInfo, pdev->dev.platform_data,
+		sizeof(sgCaphPlatInfo));
+
+	/* Set the platform configuration data */
+	AUDCTRL_PlatCfgSet(&sgCaphPlatInfo.aud_ctrl_plat_cfg);
 
 	err = -ENODEV;
 
@@ -178,8 +189,7 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 		if (ret != 0)
 			aError("ALSA DriverProbe Error to create "
 			"sysfs for Auddrv test ret = %d\n", ret);
- /*#ifdef CONFIG_BCM_AUDIO_SELFTEST */
-#if 0
+#ifdef CONFIG_BCM_AUDIO_SELFTEST
 		ret = BrcmCreateAuddrv_selftestSysFs(card);
 		if (ret != 0)
 			aError("ALSA DriverProbe Error to create sysfs"
@@ -282,11 +292,42 @@ BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
 
 		while (1) {
 			if (log_buffer_count >= count) {
+
+				if (log_buffer_end - log_read_ptr >= count) {
 				ret = copy_to_user(buf,
 						 log_read_ptr,
 						 count);
+					log_read_ptr += count;
+				} else {
+					unsigned char *pbuffer;
+					int first_copy_count;
+					int second_copy_count;
+
+					first_copy_count = log_buffer_end -
+						log_read_ptr;
+					second_copy_count = count -
+						first_copy_count;
+
+					pbuffer = kmalloc(count, GFP_KERNEL);
+
+					memcpy(pbuffer, log_read_ptr,
+						first_copy_count);
+					log_read_ptr = log_buffer_head;
+					memcpy(pbuffer + first_copy_count,
+					log_read_ptr, second_copy_count);
+					log_read_ptr += second_copy_count;
+
+					ret = copy_to_user(buf,
+								 pbuffer,
+								 count);
+					kfree(pbuffer);
+
+				}
+
+				spin_lock(&buf_lock);
 				log_buffer_count -= count;
-				log_read_ptr += count;
+				spin_unlock(&buf_lock);
+
 				if (log_read_ptr >= log_buffer_end)
 					log_read_ptr = log_buffer_head;
 				break;
@@ -633,16 +674,18 @@ int logmsg_ready(struct snd_pcm_substream *substream, int log_point)
 					    bitsPerSample =
 					    runtime->sample_bits;
 
+					if ((AUD_LOG_PCMIN == log_point) ||
+						(AUD_LOG_PCMOUT == log_point)) {
 					p_read =
 					    (void *)audio_log_cbinfo[i].
 					    p_LogRead;
-					if (p_read != runtime->dma_area) {
-						p_read = runtime->dma_area;
-					} else {
 						p_read =
+						(p_read != runtime->dma_area) ?
+							runtime->dma_area :
 						    runtime->dma_area +
 						    runtime->dma_bytes / 2;
-					}
+					} else
+						p_read = runtime->dma_area;
 
 					audio_log_cbinfo[i].p_LogRead =
 					    (void *)p_read;
@@ -654,14 +697,36 @@ int logmsg_ready(struct snd_pcm_substream *substream, int log_point)
 
 					if (LOG_BUF_SIZE - log_buffer_count >=
 						runtime->dma_bytes / 2) {
+						int free_space;
+						free_space = log_buffer_end -
+							log_write_ptr;
+					if (free_space >=
+						runtime->dma_bytes / 2) {
 						memcpy(log_write_ptr, p_read,
 							runtime->dma_bytes / 2);
 						log_write_ptr +=
 							runtime->dma_bytes / 2;
+					} else {
+						memcpy(log_write_ptr,
+							p_read, free_space);
+						log_write_ptr = log_buffer_head;
+						memcpy(log_write_ptr,
+							p_read + free_space,
+							runtime->dma_bytes / 2 -
+							free_space);
+						log_write_ptr +=
+						(runtime->dma_bytes / 2 -
+						free_space);
+					}
+
 					if (log_write_ptr >= log_buffer_end)
 						log_write_ptr = log_buffer_head;
+
+					spin_lock(&buf_lock);
 						log_buffer_count +=
 							runtime->dma_bytes / 2;
+					spin_unlock(&buf_lock);
+
 					}
 #endif
 					wake_up_interruptible(&bcmlogreadq);
@@ -713,10 +778,6 @@ int process_logmsg(void *data)
 
 				/* Preapre audio log messssage header */
 
-				if ((audio_log_cbinfo[i].capture_point ==
-				     AUD_LOG_PCMOUT)
-				    || (audio_log_cbinfo[i].capture_point ==
-					AUD_LOG_PCMIN)) {
 					substream =
 					    (struct snd_pcm_substream *)
 					    audio_log_cbinfo[i].pPrivate;
@@ -737,19 +798,12 @@ int process_logmsg(void *data)
 					    runtime->sample_bits;
 					log_header.frame_size =
 					    runtime->dma_bytes / 2;
-				} else {
-					/* Prepare other format header */
-				}
 
 				link_list[0].byte_array = (void *)&log_header;
 				link_list[0].size = sizeof(log_header);
 
 				/* Preapre audio messssage stream */
 
-				if ((audio_log_cbinfo[i].capture_point ==
-				     AUD_LOG_PCMOUT)
-				    || (audio_log_cbinfo[i].capture_point ==
-					AUD_LOG_PCMIN)) {
 					substream =
 					    (struct snd_pcm_substream *)
 					    audio_log_cbinfo[i].pPrivate;
@@ -758,6 +812,11 @@ int process_logmsg(void *data)
 					runtime = substream->runtime;
 					if (runtime == NULL)
 						goto this_path_done;
+
+				if ((AUD_LOG_PCMIN ==
+					audio_log_cbinfo[i].capture_point) ||
+					(AUD_LOG_PCMOUT ==
+					audio_log_cbinfo[i].capture_point)) {
 
 					p_dma_area =
 					    (void *)audio_log_cbinfo[i].
@@ -774,15 +833,14 @@ int process_logmsg(void *data)
 
 					audio_log_cbinfo[i].p_LogRead =
 					    (void *)p_dma_area;
-
+				} else {
+					p_dma_area = runtime->dma_area;
+				}
 
 					link_list[1].byte_array = p_dma_area;
 					link_list[1].size =
 						runtime->dma_bytes / 2;
 
-				} else {
-					/* Prepare other path data chunk */
-				}
 
 				sig_code = AUDIO_DATA;
 				state = 0;
@@ -803,12 +861,6 @@ this_path_done :
 
 	return 0;
 }
-
-/* Platform device structure */
-static struct platform_device sgPlatformDevice = {
-	.name = "brcm_caph_device",
-	.id = -1,
-};
 
 /* Platfoorm driver structure */
 static struct platform_driver __refdata sgPlatformDriver = {
@@ -854,11 +906,6 @@ static int __devinit ALSAModuleInit(void)
 		return 0;
 	}
 #endif
-	err = platform_device_register(&sgPlatformDevice);
-	aTrace(LOG_ALSA_INTERFACE, "\n %lx:device register done %d\n"
-			, jiffies, err);
-	if (err)
-		return err;
 
 	sgPlatformDriver.probe = DriverProbe;
 	err = platform_driver_register(&sgPlatformDriver);
@@ -906,8 +953,6 @@ static void __devexit ALSAModuleExit(void)
 	snd_card_free(sgpCaph_chip->card);
 
 	platform_driver_unregister(&sgPlatformDriver);
-
-	platform_device_unregister(&sgPlatformDevice);
 	TerminateAudioHalThread();
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:exit done\n", jiffies);

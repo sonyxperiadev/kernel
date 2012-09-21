@@ -216,9 +216,9 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].
 		    iLineSelect[1] = spk;
 
-		AUDCTRL_SetUserAudioApp(app);	/* for PCG to set new app */
+		AUDCTRL_SaveAudioApp(app);	/* for PCG to set new app */
 		if (app <= AUDIO_APP_VOICE_CALL_WB) {
-			AUDCTRL_SetTelephonyMicSpkr(mic, spk);
+			AUDCTRL_SetTelephonyMicSpkr(mic, spk, false);
 			AUDCTRL_SetAudioMode(mode, app);
 		} else if (app == AUDIO_APP_MUSIC) {
 			if (AUDCTRL_InVoiceCall() == FALSE) {

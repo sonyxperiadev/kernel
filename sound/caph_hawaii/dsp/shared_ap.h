@@ -226,25 +226,39 @@ typedef struct
    UInt16 numAlloc;
 } DJB_PAYLOADQ;
 
-/* Adaptive Jitter Control Module Statistics */
+/* Adaptive Jitter Control Module (decoder) Statistics */
 typedef struct
 {
-   UInt16    peakHoldingTime;
-   UInt16    packetCount;
-   UInt16    addTailCount;
-   UInt16    reorderCount;
-   UInt16    overrunCount;
-   UInt16    duplicateCount;
-   UInt16    outOfRangeCount;
-   UInt16    tooLateCount;
-   UInt16    cantDecodeCount;
-   UInt16    ajcUnderrunCount;
-   UInt16    ajcDeleteCount;
-   UInt16    ajcRepeatCount;
-   UInt16    ajcResyncCount;
-   UInt16    ajcPhaseJitterCount;
-   UInt16    ajcHdrPayloadDiff;
-   UInt16    ajcPayloadOverflowE;
+   /* Not in state structure because we want to clear it often with stats reset flag */
+   UInt16    peakHoldingTime;    /* Peak Holding Time since last statistic */
+
+   /* Total number of superpackets arriving on the egress path */
+   UInt16    packetCount;        /* # of packets received */
+
+   /* addTail and reorder are successful additions to the JB */
+   /* addTail is typically 1..N times the packetCount if superpackets are enabled */
+   UInt16    addTailCount;       /* # of frames added to tail of JB - normal case */
+   UInt16    reorderCount;       /* # of frames reordered */
+
+   /* overrun, duplicate, outOfRange, tooLate, jitterMax excess are packets that have been discarded */
+   UInt16    overrunCount;       /* Decoder overrun count */
+   UInt16    duplicateCount;     /* # of duplicate frames deleted */
+   UInt16    outOfRangeCount;    /* # of frames with timestamps too far from current TS to be handled */
+   UInt16    tooLateCount;       /* Packet arrived too late (it's redundant mate already played) */
+
+   /* cantDecode are packets that can't be played out due to algorithm not available */
+   UInt16    cantDecodeCount;    /* Can't decode packet - decoder not in load or pkt hdr bad */
+
+   /* The following are internal to the AJC module - they do not represent physical packets */
+   UInt16    ajcUnderrunCount;   /* Adaptive Jitter Control: jitter buffer underruns */
+   UInt16    ajcDeleteCount;     /* Adaptive Jitter Control: # of packet deletes done to reduce holding time */
+   UInt16    ajcRepeatCount;     /* Adaptive Jitter Control: # of packet repeats done to either increase holding time
+                                    or due to late frame or lost frames. */
+   UInt16    ajcResyncCount;     /* Number of times ajb resynced (went through buildout state) */
+   UInt16    ajcPhaseJitterCount;     /* Number of times ajb inserted a phase discontinuity
+                                    (possibly in silence or during CNG or due to a repeat/delete). */
+   UInt16    ajcHdrPayloadDiff; /* difference between header and payload buffer pool allocation (should be always 0) */
+   UInt16    ajcPayloadOverflowE; /* number of overruns in the payload buffer when the header pool is not full (should be always 0) */
    UInt16    ajcStatsReserve1;
    UInt16    ajcStatsReserve2;
    UInt16    ajcStatsReserve3;
@@ -730,7 +744,8 @@ typedef enum
     *                               bit10     - DL_AFTER_PROC_bit  1= play PCM after DL audio processing (default=0) (JunoB0)
     *                               bit9      - DL_OVERWRITE_bit   1= overwrite Arm2SP buffer to DL (only when DL_MIX_bit=0)
     *                               bit8      - DL_MIX_bit         1= mixing Arm2SP buffer with DL (regardless DL_OVERWRITE_bit setting)
-    *                               bit7      - reserved
+    *                               bit7      - MONO_ST_bit        1= Stereo (not used if not 48k)
+    *                                                              0= Mono
     *                               bit6      - UL_BEFORE_PROC_bit 1= play PCM before UL audio processing (default=0) (JunoB0)
     *                               bit5      - UL_OVERWRITE_bit   1= overwrite Arm2SP buffer to UL (only when UL_MIX_bit=0) 
     *                               bit4      - UL_MIX_bit         1= mixing Arm2SP buffer with UL (regardless UL_OVERWRITE_bit setting)
@@ -876,7 +891,8 @@ typedef enum
     *                               bit10       - DL_AFTER_PROC_bit  1= play PCM after DL audio processing (default=0) (JunoB0)
     *                               bit9        - DL_OVERWRITE_bit   1= overwrite Arm2SP2 buffer to DL (only when DL_MIX_bit=0)
     *                               bit8        - DL_MIX_bit         1= mixing Arm2SP2 buffer with DL (regardless DL_OVERWRITE_bit setting)
-    *                               bit7        - reserved
+    *                               bit7        - MONO_ST_bit        1= Stereo (not used if not 48k)
+    *                                                                0= Mono
     *                               bit6        - UL_BEFORE_PROC_bit 1= play PCM before UL audio processing (default=0) (JunoB0)
     *                               bit5        - UL_OVERWRITE_bit   1= overwrite Arm2SP2 buffer to UL (only when UL_MIX_bit=0) 
     *                               bit4        - UL_MIX_bit         1= mixing Arm2SP2 buffer with UL (regardless UL_OVERWRITE_bit setting)
@@ -1051,7 +1067,193 @@ typedef enum
     *              @param  UInt16 arg0 = 1: Enable\BR
     *                                  = 0: Disable
     */    
-    VP_COMMAND_EXT_MODEM_CALL	// 0x24
+    VP_COMMAND_EXT_MODEM_CALL,	// 0x24
+    /** \HR */
+    /** \par Module
+     *                    Audio
+     *  \par Command Code
+     *                    0x25
+     *  \par Description
+     *       This command is used for configuring the ARM2SP_HQ_DL interface
+     *       for mixing/playing 48kHz PCM data to Downlink. \BR
+     *
+     *       This command is sent by the ARM to the DSP for starting or
+     *       stopping of 48kHz data transfer from the ARM to the DSP. \BR
+     *
+     *  \note Before getting this command ARM should have sent
+     *       COMMAND_AUDIO_ENABLE, and the audio inputs and outputs enabled
+     *       by COMMAND_AUDIO_CONNECT, along with enabling of the 48kHz
+     *       AADMAC interface in shared_aadmac_aud_enable. \BR
+     *
+     *       To start ARM2SP_HQ_DL: ARM enables ARM2SP_HQ_DL by
+     *                              VP_COMMAND_SET_ARM2SP_HQ_DL.
+     *       To resume ARM2SP_HQ_DL: ARM enables ARM2SP_HQ_DL by
+     *                              VP_COMMAND_SET_ARM2SP_HQ_DL with arg1=1.
+     *
+     *       To control shared_Arm2SP_InBuf[]: DSP interrupts ARM
+     *       with VP_STATUS_ARM2SP_HQ_DL_EMPTY( shared_ARM2SP_HQ_DL_done_flag,
+     *       shared_ARM2SP_HQ_DL_InBuf_out, ARM2SP_HQ_DL_flag )
+     *       whenever finishing every 2/4 20ms data.
+     *       shared_ARM2SP_HQ_DL_InBuf_out indicates the next index DSP will
+     *       read.\BR
+     * 
+     *       To stop ARM2SP_HQ_DL:\BR
+     *       Quick stop: ARM disables ARM2SP_HQ_DL using
+     *       VP_COMMAND_SET_ARM2SP_HQ_DL (arg0=0).\BR
+     *       The ARM2SP_HQ_DL will be stopped right away. There may be
+     *       un-finished PCM data in shared_Arm2SP_InBuf[].\BR
+     * 
+     *       Finishing stop: After finishing filling the last speech frames of
+     *       PCM data, ARM set shared_ARM2SP_HQ_DL_done_flag=1
+     *       to indicate the end of PCM data. DSP ISR finishes the last speech
+     *       frames and disables ARM2SP_HQ_DL. DSP sends
+     *       VP_STATUS_ARM2SP_HQ_DL_EMPTY and arg0=0. \BR
+     * 
+     *       To pause ARM2SP_HQ_DL : ARM disables ARM2SP_HQ_DL using
+     *       VP_COMMAND_SET_ARM2SP_HQ_DL (arg0=0, arg1=1).
+     * 
+     * 
+     *              @param  UInt16 ARM2SP_HQ_DL_flag \BR
+     *                      \htmlonly
+     *                      <pre>
+     *                             {
+     *                               bits14:12   - Number of frames of data
+     *                                             after which the DSP is
+     *                                             supposed to send the
+     *                                             VP_STATUS_ARM2SP_HQ_DL_EMPTY
+     *                                             reply
+     *                                             (between 1 and 4 or 1 and 2)
+     *                               bit11:10    - reserved
+     *                               bit9        - DL_OVERWRITE_bit
+     *                                             1= overwrite ARM2SP_HQ_DL
+     *                                                buffer to DL
+     *                                                (only when DL_MIX_bit=0)
+     *                               bit8        - DL_MIX_bit
+     *                                             1= mixing ARM2SP_HQ_DL
+     *                                                buffer with DL
+     *                                                (regardless
+     *                                                DL_OVERWRITE_bit
+     *                                                setting)
+     *                               bit7        - 48kHz Mono/Stereo
+     *                                             [1/0] = [Mono/Stereo]
+     *                               bit6-1      - reserved
+     *                               bit0        - 48kHz DL PCM enable
+     *                                             [1/0] = [enable/disable]
+     *                             }
+     *                      </pre>
+     *                      \endhtmlonly
+     *              @param  UInt16 Reset_out_ptr_flag \BR
+     *                                        =0, reset output pointer -
+     *                                            shared_ARM2SP_HQ_DL_InBuf_out
+     *                                            - of buffer
+     *                                            shared_Arm2SP_InBuf[]
+     *                                            to 0. Used for new
+     *                                            ARM2SP_HQ_DL session.\BR
+     *                                        =1, keep output pointer -
+     *                                            shared_ARM2SP_HQ_DL_InBuf_out
+     *                                            - unchanged.
+     *                                            Used for PAUSE/RESUME the
+     *                                            same ARM2SP_HQ_DL session.
+     * 
+     *  \see ARM2SP_HQ_DL_interface, shared_Arm2SP_InBuf,
+     *       shared_ARM2SP_HQ_DL_InBuf_out, shared_ARM2SP_HQ_DL_done_flag,
+     *       VP_STATUS_ARM2SP_HQ_DL_EMPTY
+     *
+     */
+ 	VP_COMMAND_SET_ARM2SP_HQ_DL,   		   // 0x25
+    /** \HR */
+    /** \par Module
+     *                    Audio
+     *  \par Command Code
+     *                    0x26
+     *  \par Description
+     *       This command is used for configuring the ARM2SP2_HQ_DL interface
+     *       for mixing/playing 48kHz PCM data to Downlink. \BR
+     *
+     *       This command is sent by the ARM to the DSP for starting or
+     *       stopping of 48kHz data transfer from the ARM to the DSP. \BR
+     *
+     *  \note Before getting this command ARM should have sent
+     *       COMMAND_AUDIO_ENABLE, and the audio inputs and outputs enabled
+     *       by COMMAND_AUDIO_CONNECT, along with enabling of the 48kHz
+     *       AADMAC interface in shared_aadmac_aud_enable. \BR
+     *
+     *       To start ARM2SP2_HQ_DL: ARM enables ARM2SP2_HQ_DL by
+     *                              VP_COMMAND_SET_ARM2SP2_HQ_DL.
+     *       To resume ARM2SP2_HQ_DL: ARM enables ARM2SP2_HQ_DL by
+     *                              VP_COMMAND_SET_ARM2SP2_HQ_DL with arg1=1.
+     *
+     *       To control shared_Arm2SP2_InBuf[]: DSP interrupts ARM
+     *       with VP_STATUS_ARM2SP2_HQ_DL_EMPTY( shared_ARM2SP2_HQ_DL_done_flag,
+     *       shared_ARM2SP2_HQ_DL_InBuf_out, ARM2SP2_HQ_DL_flag )
+     *       whenever finishing every 2/4 20ms data.
+     *       shared_ARM2SP2_HQ_DL_InBuf_out indicates the next index DSP will
+     *       read.\BR
+     * 
+     *       To stop ARM2SP2_HQ_DL:\BR
+     *       Quick stop: ARM disables ARM2SP2_HQ_DL using
+     *       VP_COMMAND_SET_ARM2SP2_HQ_DL (arg0=0).\BR
+     *       The ARM2SP2_HQ_DL will be stopped right away. There may be
+     *       un-finished PCM data in shared_Arm2SP2_InBuf[].\BR
+     * 
+     *       Finishing stop: After finishing filling the last speech frames of
+     *       PCM data, ARM set shared_ARM2SP2_HQ_DL_done_flag=1
+     *       to indicate the end of PCM data. DSP ISR finishes the last speech
+     *       frames and disables ARM2SP2_HQ_DL. DSP sends
+     *       VP_STATUS_ARM2SP2_HQ_DL_EMPTY and arg0=0. \BR
+     * 
+     *       To pause ARM2SP2_HQ_DL : ARM disables ARM2SP2_HQ_DL using
+     *       VP_COMMAND_SET_ARM2SP2_HQ_DL (arg0=0, arg1=1).
+     * 
+     * 
+     *              @param  UInt16 ARM2SP2_HQ_DL_flag \BR
+     *                      \htmlonly
+     *                      <pre>
+     *                             {
+     *                               bits14:12   - Number of frames of data
+     *                                             after which the DSP is
+     *                                             supposed to send the
+     *                                             VP_STATUS_ARM2SP2_HQ_DL_EMPTY
+     *                                             reply
+     *                                             (between 1 and 4 or 1 and 2)
+     *                               bit11:10    - reserved
+     *                               bit9        - DL_OVERWRITE_bit
+     *                                             1= overwrite ARM2SP2_HQ_DL
+     *                                                buffer to DL
+     *                                                (only when DL_MIX_bit=0)
+     *                               bit8        - DL_MIX_bit
+     *                                             1= mixing ARM2SP2_HQ_DL
+     *                                                buffer with DL
+     *                                                (regardless
+     *                                                DL_OVERWRITE_bit
+     *                                                setting)
+     *                               bit7        - 48kHz Mono/Stereo
+     *                                             [1/0] = [Mono/Stereo]
+     *                               bit6-1      - reserved
+     *                               bit0        - 48kHz DL PCM enable
+     *                                             [1/0] = [enable/disable]
+     *                             }
+     *                      </pre>
+     *                      \endhtmlonly
+     *              @param  UInt16 Reset_out_ptr_flag \BR
+     *                                        =0, reset output pointer -
+     *                                            shared_ARM2SP2_HQ_DL_InBuf_out
+     *                                            - of buffer
+     *                                            shared_Arm2SP2_InBuf[]
+     *                                            to 0. Used for new
+     *                                            ARM2SP2_HQ_DL session.\BR
+     *                                        =1, keep output pointer -
+     *                                            shared_ARM2SP2_HQ_DL_InBuf_out
+     *                                            - unchanged.
+     *                                            Used for PAUSE/RESUME the
+     *                                            same ARM2SP2_HQ_DL session.
+     * 
+     *  \see ARM2SP2_HQ_DL_interface, shared_Arm2SP2_InBuf,
+     *       shared_ARM2SP2_HQ_DL_InBuf_out, shared_ARM2SP2_HQ_DL_done_flag,
+     *       VP_STATUS_ARM2SP2_HQ_DL_EMPTY
+     *
+     */
+ 	VP_COMMAND_SET_ARM2SP2_HQ_DL   		   // 0x26
 } VPCommand_t;                                 
 /**
  * @}
@@ -1231,7 +1433,8 @@ typedef enum
     *                               bit10     - DL_AFTER_PROC_bit  1= play PCM after DL audio processing (default=0) (JunoB0)
     *                               bit9      - DL_OVERWRITE_bit   1= overwrite Arm2SP buffer to DL (only when DL_MIX_bit=0)
     *                               bit8      - DL_MIX_bit         1= mixing Arm2SP buffer with DL (regardless DL_OVERWRITE_bit setting)
-    *                               bit7      - reserved
+    *                               bit7      - MONO_ST_bit        1= Stereo (not used if not 48k)
+    *                                                              0= Mono
     *                               bit6      - UL_BEFORE_PROC_bit 1= play PCM before UL audio processing (default=0) (JunoB0)
     *                               bit5      - UL_OVERWRITE_bit   1= overwrite Arm2SP buffer to UL (only when UL_MIX_bit=0) 
     *                               bit4      - UL_MIX_bit         1= mixing Arm2SP buffer with UL (regardless UL_OVERWRITE_bit setting)
@@ -1276,7 +1479,8 @@ typedef enum
     *                               bit10       - DL_AFTER_PROC_bit  1= play PCM after DL audio processing (default=0) (JunoB0)
     *                               bit9        - DL_OVERWRITE_bit   1= overwrite Arm2SP2 buffer to DL (only when DL_MIX_bit=0)
     *                               bit8        - DL_MIX_bit         1= mixing Arm2SP2 buffer with DL (regardless DL_OVERWRITE_bit setting)
-    *                               bit7        - reserved
+    *                               bit7        - MONO_ST_bit        1= Stereo (not used if not 48k)
+    *                                                                0= Mono
     *                               bit6        - UL_BEFORE_PROC_bit 1= play PCM before UL audio processing (default=0) (JunoB0)
     *                               bit5        - UL_OVERWRITE_bit   1= overwrite Arm2SP2 buffer to UL (only when UL_MIX_bit=0) 
     *                               bit4        - UL_MIX_bit         1= mixing Arm2SP2 buffer with UL (regardless UL_OVERWRITE_bit setting)
@@ -1553,7 +1757,129 @@ typedef enum
         *                                  = 0: Disable
  	    *
 	    */
-	VP_STATUS_EXT_MODEM_CALL_DONE                // 0x1D (0=disable, 1=Enable)
+	VP_STATUS_EXT_MODEM_CALL_DONE,               // 0x1D (0=disable, 1=Enable)
+	   /** \HR */
+	   /** \par Module
+	    *                    Audio
+	    *  \par Command Code
+	    *                    0x1E
+	    *  \par Description
+	    *       This reply is part of the ARM2SP_HQ_DL interface for
+	    *       mixing/playing 48kHz to Downlink. \BR
+	    *       This reply is sent by the DSP whenever finishing every 2/4 20ms
+	    *       PCM frame.
+	    *       shared_ARM2SP_HQ_DL_InBuf_out indicates the next index DSP will
+	    *       read.
+	    *
+	    *              @param  UInt16 shared_ARM2SP_HQ_DL_done_flag - flag
+	    *                             indicating the end of transfer of data
+	    *              @param  UInt16 shared_ARM2SP_HQ_DL_InBuf_out - index
+	    *                             indicating next index DSP will read
+	    *                             from the shared_Arm2SP_InBuf[]
+	    *                             buffer.
+	    *              @param  UInt16 ARM2SP_HQ_DL_flag - if
+	    *                             shared_ARM2SP_HQ_DL_done_flag is set
+	    *                             then ARM2SP_HQ_DL_flag = 0 \BR
+	    *                             else send back ARM2SP_HQ_DL_flag
+	    *                             received in the
+	    *                             VP_COMMAND_SET_ARM2SP_HQ_DL command \BR
+	    *              \htmlonly
+	    *              <pre>
+	    *                             {
+	    *                               bits14:12   - Number of frames of data
+	    *                                             after which the DSP is
+	    *                                             supposed to send the
+	    *                                             VP_STATUS_ARM2SP_HQ_DL_EMPTY
+	    *                                             reply
+	    *                                             (between 1 and 4 or 1 and 2)
+	    *                               bit11:10    - reserved
+	    *                               bit9        - DL_OVERWRITE_bit
+	    *                                             1= overwrite ARM2SP_HQ_DL
+	    *                                                buffer to DL
+	    *                                                (only when DL_MIX_bit=0)
+	    *                               bit8        - DL_MIX_bit
+	    *                                             1= mixing ARM2SP_HQ_DL
+	    *                                                buffer with DL
+	    *                                                (regardless
+	    *                                                DL_OVERWRITE_bit
+	    *                                                setting)
+	    *                               bit7        - 48kHz Mono/Stereo
+	    *                                             [1/0] = [Mono/Stereo]
+	    *                               bit6-1      - reserved
+	    *                               bit0        - 48kHz DL PCM enable
+	    *                                             [1/0] = [enable/disable]
+	    *                             }
+	    *              </pre>
+	    *              \endhtmlonly
+	    *
+	    *
+	    *  \see ARM2SP_HQ_DL_interface, shared_Arm2SP_InBuf,
+	    *       shared_ARM2SP_HQ_DL_InBuf_out, shared_ARM2SP_HQ_DL_done_flag,
+	    *       VP_COMMAND_SET_ARM2SP_HQ_DL
+	    *
+	    */
+		VP_STATUS_ARM2SP_HQ_DL_EMPTY, 				// 0x1E
+	   /** \HR */
+	   /** \par Module
+	    *                    Audio
+	    *  \par Command Code
+	    *                    0x1F
+	    *  \par Description
+	    *       This reply is part of the ARM2SP2_HQ_DL interface for
+	    *       mixing/playing 48kHz to Downlink. \BR
+	    *       This reply is sent by the DSP whenever finishing every 2/4 20ms
+	    *       PCM frame.
+	    *       shared_ARM2SP2_HQ_DL_InBuf_out indicates the next index DSP will
+	    *       read.
+	    *
+	    *              @param  UInt16 shared_ARM2SP2_HQ_DL_done_flag - flag
+	    *                             indicating the end of transfer of data
+	    *              @param  UInt16 shared_ARM2SP2_HQ_DL_InBuf_out - index
+	    *                             indicating next index DSP will read
+	    *                             from the shared_Arm2SP2_InBuf[]
+	    *                             buffer.
+	    *              @param  UInt16 ARM2SP2_HQ_DL_flag - if
+	    *                             shared_ARM2SP2_HQ_DL_done_flag is set
+	    *                             then ARM2SP2_HQ_DL_flag = 0 \BR
+	    *                             else send back ARM2SP2_HQ_DL_flag
+	    *                             received in the
+	    *                             VP_COMMAND_SET_ARM2SP2_HQ_DL command \BR
+	    *              \htmlonly
+	    *              <pre>
+	    *                             {
+	    *                               bits14:12   - Number of frames of data
+	    *                                             after which the DSP is
+	    *                                             supposed to send the
+	    *                                             VP_STATUS_ARM2SP2_HQ_DL_EMPTY
+	    *                                             reply
+	    *                                             (between 1 and 4 or 1 and 2)
+	    *                               bit11:10    - reserved
+	    *                               bit9        - DL_OVERWRITE_bit
+	    *                                             1= overwrite ARM2SP2_HQ_DL
+	    *                                                buffer to DL
+	    *                                                (only when DL_MIX_bit=0)
+	    *                               bit8        - DL_MIX_bit
+	    *                                             1= mixing ARM2SP2_HQ_DL
+	    *                                                buffer with DL
+	    *                                                (regardless
+	    *                                                DL_OVERWRITE_bit
+	    *                                                setting)
+	    *                               bit7        - 48kHz Mono/Stereo
+	    *                                             [1/0] = [Mono/Stereo]
+	    *                               bit6-1      - reserved
+	    *                               bit0        - 48kHz DL PCM enable
+	    *                                             [1/0] = [enable/disable]
+	    *                             }
+	    *              </pre>
+	    *              \endhtmlonly
+	    *
+	    *
+	    *  \see ARM2SP2_HQ_DL_interface, shared_Arm2SP2_InBuf,
+	    *       shared_ARM2SP2_HQ_DL_InBuf_out, shared_ARM2SP2_HQ_DL_done_flag,
+	    *       VP_COMMAND_SET_ARM2SP2_HQ_DL
+	    *
+	    */
+		VP_STATUS_ARM2SP2_HQ_DL_EMPTY 				// 0x1F
 } VPStatus_t;
 /**
  * @}
@@ -2530,7 +2856,7 @@ EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_48K_SAMP_PER_INT0_INT]             
 /**
  * @}
  */
-/* 10 - sizeof(DJB_STATS) in UInt32 */
+
 EXTERN UInt32 shared_UNUSED[95-10]	AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @addtogroup Adaptive Jitter Buffer
@@ -2757,6 +3083,8 @@ EXTERN Int16 shared_PTT_UL_buffer[2][320]	           				        AP_SHARED_SEC_D
 
 /** @addtogroup Shared_Audio_Buffers
  * @{ */
+
+#if defined(EXT_MODEM_INTERFACE)
 /**
  * @addtogroup External_Modem_Interface
  * @{
@@ -2776,6 +3104,193 @@ EXTERN UInt32 shared_ext_dl_buf[2][ NUM_OF_EXT_MODEM_INTERF_SAMP_PER_INT/2]     
 /**
  * @}
  */
+
+#endif
+/**
+ * @addtogroup ARM2SP_HQ_DL_interface
+ *
+ * This interface is used for mixing/playing \Bold{48kHz Mono/Stereo PCM data
+ * to Downlink}.\BR
+ *
+ * This PCM data will be mixed after Downlink speech processing in the 48kHz
+ * mode.
+ *
+ * \note This interface works in only one way - from ARM to DSP. \BR
+ *
+ * One use-case of this interface is to support S-barge-in feature where a
+ * music might be playing in the downlink using this interface and an
+ * uplink record/speech recognition happens at the same time, then this
+ * UL would get the benefit of echo cancellation of the music.
+ *
+ * In this interface 2 or 4-speech frames worth of data is transferred at a
+ * time from ARM to DSP in ping-pong buffers - i.e. ARM fills empty half of
+ * shared_Arm2SP_InBuf[].
+ *
+ * When shared_ARM2SP_HQ_DL_InBuf_out=0, ARM fills next half number of words from
+ * shared_Arm2SP_InBuf[half].
+ * When shared_ARM2SP_HQ_DL_InBuf_out=half, ARM fills half number of words from
+ * shared_Arm2SP_InBuf[0]. \BR
+ *
+ * To start ARM2SP_HQ_DL: ARM enables ARM2SP_HQ_DL by
+ * VP_COMMAND_SET_ARM2SP_HQ_DL.\BR
+ *
+ * To resume ARM2SP_HQ_DL : ARM enables ARM2SP_HQ_DL by
+ * VP_COMMAND_SET_ARM2SP_HQ_DL  with arg1=1.
+ *
+ * To control shared_Arm2SP_InBuf[]: DSP interrupts ARM with \BR
+ * VP_STATUS_ARM2SP_HQ_DL_EMPTY( shared_ARM2SP_HQ_DL_done_flag, \BR
+ *                               shared_ARM2SP_HQ_DL_InBuf_out, \BR
+ *                               ARM2SP_HQ_DL_flag )\BR
+ * whenever finishing every half PCM data. shared_ARM2SP_HQ_DL_InBuf_out
+ * indicates the next index DSP will read.
+ *
+ * To stop ARM2SP_HQ_DL:\BR
+ * Quick stop: ARM disables ARM2SP_HQ_DL using
+ * VP_COMMAND_SET_ARM2SP_HQ_DL (arg0=0).\BR
+ * \note The ARM2SP_HQ_DL will be stopped right away.
+ * There may be un-finished PCM data in shared_Arm2SP_InBuf[].\BR
+ *
+ * Finishing stop: After finishing filling the last 2/4-speech frame PCM data,
+ * ARM set shared_ARM2SP_HQ_DL_done_flag=1 to indicate the end of PCM data.
+ * DSP ISR finishes the last 2/4-speech frames and disables ARM2SP_HQ_DL.
+ * DSP sends VP_STATUS_ARM2SP_HQ_DL_EMPTY and arg0=0. \BR
+ *
+ * To pause ARM2SP_HQ_DL: ARM disables ARM2SP_HQ_DL using
+ * VP_COMMAND_SET_ARM2SP_HQ_DL (arg0=0, arg1=1).
+ *
+ * \see shared_Arm2SP_InBuf, shared_ARM2SP_HQ_DL_InBuf_out,
+ *      shared_ARM2SP_HQ_DL_done_flag, VP_COMMAND_SET_ARM2SP_HQ_DL,
+ *      VP_STATUS_ARM2SP_HQ_DL_EMPTY,
+ *
+ * @{ */
+/**
+ * This flag indicates the end of the transfer of data from the ARM to the
+ * DSP. The transfer of data by ARM2SP_HQ_DL interface can be disabled by
+ * setting shared_ARM2SP_HQ_DL_done_flag=1 after filling the
+ * shared_Arm2SP_InBuf[] buffer.
+ * DSP will disable the feature when it reaches the next 1/2-speech frame
+ * boundary. */
+EXTERN UInt16    shared_ARM2SP_HQ_DL_done_flag                   					AP_SHARED_SEC_DIAGNOS;
+/**
+ * This index indicates the next index DSP will read from the shared_Arm2SP_InBuf[]
+ * buffer.
+ *
+ * \note This index is changed only by the DSP.
+ *
+ * */
+EXTERN UInt16    shared_ARM2SP_HQ_DL_InBuf_out                   					AP_SHARED_SEC_DIAGNOS;
+
+/**
+ * The gain factor, shared_arm2speech_hq_call_gain_dl is applied on the 48kHz PCM data
+ * on the downlink path.\BR
+ *
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14,
+ * -   Int16 Target_Gain_in_Q14,
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
+ * -   Int16 Reserved,
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_arm2speech_hq_call_gain_dl[5]               					AP_SHARED_SEC_DIAGNOS;
+
+/** @} */
+
+/**
+ * @addtogroup ARM2SP2_HQ_DL_interface
+ *
+ * This interface is used for mixing/playing \Bold{48kHz Mono/Stereo PCM data
+ * to Downlink}.\BR
+ *
+ * This PCM data will be mixed after Downlink speech processing in the 48kHz
+ * mode.
+ *
+ * \note This interface works in only one way - from ARM to DSP. \BR
+ *
+ * One use-case of this interface is to support S-barge-in feature where a
+ * music might be playing in the downlink using this interface and an
+ * uplink record/speech recognition happens at the same time, then this
+ * UL would get the benefit of echo cancellation of the music.
+ *
+ * In this interface 2 or 4-speech frames worth of data is transferred at a
+ * time from ARM to DSP in ping-pong buffers - i.e. ARM fills empty half of
+ * shared_Arm2SP2_InBuf[].
+ *
+ * When shared_ARM2SP2_HQ_DL_InBuf_out=0, ARM fills next half number of words from
+ * shared_Arm2SP2_InBuf[half].
+ * When shared_ARM2SP2_HQ_DL_InBuf_out=half, ARM fills half number of words from
+ * shared_Arm2SP2_InBuf[0]. \BR
+ *
+ * To start ARM2SP2_HQ_DL: ARM enables ARM2SP2_HQ_DL by
+ * VP_COMMAND_SET_ARM2SP2_HQ_DL.\BR
+ *
+ * To resume ARM2SP2_HQ_DL : ARM enables ARM2SP2_HQ_DL by
+ * VP_COMMAND_SET_ARM2SP2_HQ_DL  with arg1=1.
+ *
+ * To control shared_Arm2SP2_InBuf[]: DSP interrupts ARM with \BR
+ * VP_STATUS_ARM2SP2_HQ_DL_EMPTY( shared_ARM2SP2_HQ_DL_done_flag, \BR
+ *                               shared_ARM2SP2_HQ_DL_InBuf_out, \BR
+ *                               ARM2SP2_HQ_DL_flag )\BR
+ * whenever finishing every half PCM data. shared_ARM2SP2_HQ_DL_InBuf_out
+ * indicates the next index DSP will read.
+ *
+ * To stop ARM2SP2_HQ_DL:\BR
+ * Quick stop: ARM disables ARM2SP2_HQ_DL using
+ * VP_COMMAND_SET_ARM2SP2_HQ_DL (arg0=0).\BR
+ * \note The ARM2SP2_HQ_DL will be stopped right away.
+ * There may be un-finished PCM data in shared_Arm2SP2_InBuf[].\BR
+ *
+ * Finishing stop: After finishing filling the last 2/4-speech frame PCM data,
+ * ARM set shared_ARM2SP2_HQ_DL_done_flag=1 to indicate the end of PCM data.
+ * DSP ISR finishes the last 2/4-speech frames and disables ARM2SP2_HQ_DL.
+ * DSP sends VP_STATUS_ARM2SP2_HQ_DL_EMPTY and arg0=0. \BR
+ *
+ * To pause ARM2SP2_HQ_DL: ARM disables ARM2SP2_HQ_DL using
+ * VP_COMMAND_SET_ARM2SP2_HQ_DL (arg0=0, arg1=1).
+ *
+ * \see shared_Arm2SP2_InBuf, shared_ARM2SP2_HQ_DL_InBuf_out,
+ *      shared_ARM2SP2_HQ_DL_done_flag, VP_COMMAND_SET_ARM2SP2_HQ_DL,
+ *      VP_STATUS_ARM2SP2_HQ_DL_EMPTY,
+ *
+ * @{ */
+/**
+ * This flag indicates the end of the transfer of data from the ARM to the
+ * DSP. The transfer of data by ARM2SP2_HQ_DL interface can be disabled by
+ * setting shared_ARM2SP2_HQ_DL_done_flag=1 after filling the
+ * shared_Arm2SP2_InBuf[] buffer.
+ * DSP will disable the feature when it reaches the next 1/2-speech frame
+ * boundary. */
+EXTERN UInt16    shared_ARM2SP2_HQ_DL_done_flag                   					AP_SHARED_SEC_DIAGNOS;
+/**
+ * This index indicates the next index DSP will read from the shared_Arm2SP2_InBuf[]
+ * buffer.
+ *
+ * \note This index is changed only by the DSP.
+ *
+ * */
+EXTERN UInt16    shared_ARM2SP2_HQ_DL_InBuf_out                   					AP_SHARED_SEC_DIAGNOS;
+
+/**
+ * The gain factor, shared_arm2speech2_hq_call_gain_dl is applied on the 48kHz PCM data
+ * on the downlink path.\BR
+ *
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14,
+ * -   Int16 Target_Gain_in_Q14,
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
+ * -   Int16 Reserved,
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_arm2speech2_hq_call_gain_dl[5]               					AP_SHARED_SEC_DIAGNOS;
+
+/** @} */
 /**
  * @}
  */

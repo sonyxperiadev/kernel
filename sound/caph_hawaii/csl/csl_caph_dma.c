@@ -41,13 +41,15 @@
 #include "csl_caph.h"
 #include "csl_caph_srcmixer.h"
 #include "csl_caph_dma.h"
+#include "csl_caph_audioh.h"
 #include "irqs.h"
 #include "audio_trace.h"
 /****************************************************************************/
 /*                        G L O B A L   S E C T I O N                       */
 /****************************************************************************/
 #define CONFIG_THREADED_IRQ
-
+#define SIL_DET_FRM_CNT_THRESH   2
+#define SDM_RESET_DELAY_NS       500
 /****************************************************************************/
 /* global variable definitions                                              */
 /****************************************************************************/
@@ -72,6 +74,9 @@ struct _CSL_CAPH_DMA_CH_t {
 #endif
 	CSL_CAPH_DMA_CALLBACK_p caphDmaCb;
 	spinlock_t dma_ch_lock;
+	int sil_detect_mode;
+	int sil_frm_count_left;
+	int sil_frm_count_right;
 };
 #define CSL_CAPH_DMA_CH_t struct _CSL_CAPH_DMA_CH_t
 
@@ -509,6 +514,30 @@ static irqreturn_t caph_dma_isr(int irq, void *dev_id)
 				flags);
 				continue;
 			}
+			if (dmaCH_ctrl[channel].sil_detect_mode) {
+				UInt16 lr_ch = 0;
+				if (dmaCH_ctrl[channel].sil_frm_count_left >=
+					SIL_DET_FRM_CNT_THRESH) {
+					lr_ch |= CSL_AUDIO_CHANNEL_LEFT;
+					dmaCH_ctrl[channel].
+						sil_frm_count_left = 0;
+			}
+				if (dmaCH_ctrl[channel].sil_frm_count_right >=
+					SIL_DET_FRM_CNT_THRESH) {
+					lr_ch |= CSL_AUDIO_CHANNEL_RIGHT;
+					dmaCH_ctrl[channel].
+						sil_frm_count_right = 0;
+				}
+
+				if (lr_ch) {
+					/* Call to reset SDM */
+					csl_caph_audioh_hs_path_sdm_mute(TRUE,
+						lr_ch);
+					ndelay(SDM_RESET_DELAY_NS);
+					csl_caph_audioh_hs_path_sdm_mute(FALSE,
+						lr_ch);
+				}
+			}
 
 			if (dmaCH_ctrl[channel].eFifoStatus
 			    && dmaCH_ctrl[channel].caphDmaCb)
@@ -613,6 +642,9 @@ void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)
 #endif
 		dmaCH_ctrl[i].caphDmaCb = NULL;
 		spin_lock_init(&dmaCH_ctrl[i].dma_ch_lock);
+		dmaCH_ctrl[i].sil_detect_mode = SDM_RESET_MODE_DISABLED;
+		dmaCH_ctrl[i].sil_frm_count_left = 0;
+		dmaCH_ctrl[i].sil_frm_count_right = 0;
 	}
 
 	/* Register CAPH DMA ISR */
@@ -813,6 +845,8 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
 
 	spin_lock_irqsave(&dmaCH_ctrl[chnl_config.dma_ch].dma_ch_lock, flags);
 	dmaCH_ctrl[chnl_config.dma_ch].caphDmaCb = chnl_config.dmaCB;
+	dmaCH_ctrl[chnl_config.dma_ch].sil_detect_mode = chnl_config.sil_detect;
+
 	spin_unlock_irqrestore(
 		&dmaCH_ctrl[chnl_config.dma_ch].dma_ch_lock,
 		flags);
@@ -1368,4 +1402,60 @@ void csl_caph_dma_set_buffer(CSL_CAPH_DMA_CONFIG_t *chnl_config)
 	chal_caph_dma_set_buffer(handle, caph_aadmac_ch,
 		 (cUInt32) chnl_config->mem_addr, chnl_config->mem_size);
 	return;
+}
+
+/****************************************************************************
+*
+*  Function Name:int csl_caph_dma_get_sdm_reset_mode
+*
+*  Description: Retrieve the SDM reset mode of operation
+*
+****************************************************************************/
+int csl_caph_dma_get_sdm_reset_mode(CSL_CAPH_DMA_CHNL_e chnl)
+{
+	unsigned long flags;
+	int mode;
+	spin_lock_irqsave(&dmaCH_ctrl[chnl].dma_ch_lock, flags);
+	mode = dmaCH_ctrl[chnl].sil_detect_mode;
+	spin_unlock_irqrestore(&dmaCH_ctrl[chnl].dma_ch_lock, flags);
+	return mode;
+}
+
+/****************************************************************************
+*
+*  Function Name:Boolean csl_caph_dma_sil_frm_cnt_incr
+*
+*  Description: Increment frame counter
+*
+****************************************************************************/
+void csl_caph_dma_sil_frm_cnt_incr(CSL_CAPH_DMA_CHNL_e chnl, UInt16 lr_ch)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&dmaCH_ctrl[chnl].dma_ch_lock, flags);
+
+	if (lr_ch & CSL_AUDIO_CHANNEL_LEFT)
+		dmaCH_ctrl[chnl].sil_frm_count_left++;
+
+	if (lr_ch & CSL_AUDIO_CHANNEL_RIGHT)
+		dmaCH_ctrl[chnl].sil_frm_count_right++;
+
+	spin_unlock_irqrestore(&dmaCH_ctrl[chnl].dma_ch_lock, flags);
+}
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_dma_sil_frm_cnt_reset
+*
+*  Description: Reset frame counter
+*
+****************************************************************************/
+void csl_caph_dma_sil_frm_cnt_reset(CSL_CAPH_DMA_CHNL_e chnl, UInt16 lr_ch)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&dmaCH_ctrl[chnl].dma_ch_lock, flags);
+	if (lr_ch & CSL_AUDIO_CHANNEL_LEFT)
+		dmaCH_ctrl[chnl].sil_frm_count_left = 0;
+	if (lr_ch & CSL_AUDIO_CHANNEL_RIGHT)
+		dmaCH_ctrl[chnl].sil_frm_count_right = 0;
+	spin_unlock_irqrestore(&dmaCH_ctrl[chnl].dma_ch_lock, flags);
 }

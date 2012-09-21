@@ -62,6 +62,10 @@ enum __AUDCTRL_HW_ACCESS_TYPE_en_t {
 	AUDCTRL_HW_CFG_CLK,
 	AUDCTRL_HW_CFG_WAIT,
 	AUDCTRL_HW_CFG_DMA,
+	AUDCTRL_HW_CFG_DUALMIC_REFMIC,
+	AUDCTRL_HW_CFG_DAC_LPBK,
+	AUDCTRL_HW_CFG_DOCKING,
+	AUDCTRL_HW_CFG_EXTRA_VOLUME,
 	/* below are for internal purposes */
 	AUDCTRL_HW_READ_GAIN = 20,
 	AUDCTRL_HW_WRITE_GAIN,
@@ -208,14 +212,16 @@ void AUDCTRL_HandleCPReset(Boolean cp_reset);
 *
 ****************************************************************************/
 void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
-				 AUDIO_SINK_Enum_t sink);
+				 AUDIO_SINK_Enum_t sink,
+				 bool force);
 
 /**
 *  @brief  Set telephony speaker (downlink) volume
 *
 *  @param  speaker	(in)  downlink sink, speaker selection
 *  @param  volume	(in)  downlink volume
-*  @param  gain_format	 (in)  gain format
+*  @param  force	(bool) force to re-establish the phone call
+			e.g. need to select a different app
 *
 *  @return none
 *
@@ -278,16 +284,6 @@ void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute);
 *
 ****************************************************************************/
 AudioApp_t AUDCTRL_GetAudioApp(void);
-
-/**
-*   Set audio app
-*
-*	@param		AudioApp_t		audio app
-*
-*	@return		none
-*
-****************************************************************************/
-void AUDCTRL_SetUserAudioApp(AudioApp_t audio_app);
 
 /*********************************************************************
 *   Save audio app
@@ -358,7 +354,8 @@ void AUDCTRL_SetAudioMode_ForFM(AudioMode_t mode,
 *
 *	@return		none
 ****************************************************************************/
-void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode);
+void AUDCTRL_SetAudioMode_ForMusicMulticast(AudioMode_t mode,
+					unsigned int arg_pathID);
 #endif
 
 /**
@@ -786,7 +783,7 @@ void powerOnDigitalMic(Boolean powerOn);
 *  @return device (out)
 *
 ****************************************************************************/
-CSL_CAPH_DEVICE_e getDeviceFromSrc(AUDIO_SOURCE_Enum_t source);
+#define getDeviceFromSrc AUDDRV_GetDRVDeviceFromMic
 
 /**
 *  @brief  This function gets the device enum mapping value from sink
@@ -796,7 +793,7 @@ CSL_CAPH_DEVICE_e getDeviceFromSrc(AUDIO_SOURCE_Enum_t source);
 *  @return device (out)
 *
 ****************************************************************************/
-CSL_CAPH_DEVICE_e getDeviceFromSink(AUDIO_SINK_Enum_t sink);
+#define  getDeviceFromSink AUDDRV_GetDRVDeviceFromSpkr
 
 AudioMode_t GetAudioModeBySink(AUDIO_SINK_Enum_t sink);
 void AUDCTRL_EC(Boolean enable, UInt32 arg);
@@ -878,5 +875,9 @@ Boolean AUDCTRL_GetCPResetState(void);
 *
 ****************************************************************************/
 void AUDCTRL_RegisterCallModeResetCB(caphCtl_resetCallMode reset_cb);
+
+void AUDCTRL_PlatCfgSet(void *cfg);
+
+unsigned int AUDCTRL_GetDSPEnabledPath(void);
 
 #endif /* #define __AUDIO_CONTROLLER_H__ */
