@@ -68,7 +68,7 @@ enum {
 
 static u32 log_mask;
 /* Set this to 1 to enable dormant from boot */
-static u32 dormant_enable = 1;
+static u32 dormant_enable;
 static int force_sleep;
 
 #define CHIPREG_PERIPH_SPARE_CONTROL2    \

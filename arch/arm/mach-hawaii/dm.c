@@ -37,7 +37,7 @@
  * of dormant in idle path but enter
  * dormant during suspend
  */
-static u32 force_retention_in_idle;
+static u32 force_retention_in_idle = 1;
 module_param_named(force_retention_in_idle, force_retention_in_idle,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
@@ -51,7 +51,7 @@ module_param_named(dormant_disable, dormant_disable,
  * we are entering and exiting dormant but the
  * HW mask to be able to enter dormant is not set
  */
-static u32 fake_dormant = 1;
+static u32 fake_dormant;
 module_param_named(fake_dormant, fake_dormant,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
