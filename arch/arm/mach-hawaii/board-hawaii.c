@@ -414,6 +414,11 @@ struct platform_device hawaii_kp_device = {
 	.id = -1,
 };
 
+struct regulator_consumer_supply hv6_supply[] = {
+	{.supply = "vdd_sdxc"},
+	{.supply = "sddat_debug_bus"},
+};
+
 static struct bcm_keymap hawaii_keymap[] = {
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Up Key", KEY_VOLUMEUP},
