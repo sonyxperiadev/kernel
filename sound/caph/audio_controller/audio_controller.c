@@ -1571,8 +1571,6 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 		powerOnExternalAmp(sink, FmUse,
 				TRUE, FALSE);
 	} else {
-		/* music playback */
-		AUDCTRL_SaveAudioApp(AUDIO_APP_MUSIC);
 		if (sr != AUDIO_PCMOUT1_RATE)
 			/* goes to pcmout2 */
 			usage_flag = Audio2Use;
