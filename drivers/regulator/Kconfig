@@ -375,7 +375,7 @@ config REGULATOR_BCM_PMU59055
 
 config REGULATOR_BCMPMU
 	bool "BCM PMU Regulator"
-	depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx)
+	depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx || MFD_BCM_PMU59056)
 	help
 	  This driver supports the voltage regulators provided by
 	  this family of companion chips.

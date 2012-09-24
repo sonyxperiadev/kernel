@@ -55,6 +55,8 @@ obj-$(CONFIG_REGULATOR_WM8994) += wm8994-regulator.o
 obj-$(CONFIG_REGULATOR_BCM_PMU59055) += bcm590xx-regulator.o bcm59055_regulator.o
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
 obj-$(CONFIG_REGULATOR_BCMPMU)  += bcmpmu59xxx-regulator.o  bcmpmu-rgltr-bcm59xxx.o
+else ifeq ($(CONFIG_MFD_BCM_PMU59056), y)
+obj-$(CONFIG_REGULATOR_BCMPMU) += bcmpmu-regulator-56.o  bcmpmu-rgltr-bcm59056.o
 else
 obj-$(CONFIG_REGULATOR_BCMPMU) += bcmpmu-regulator.o
 endif

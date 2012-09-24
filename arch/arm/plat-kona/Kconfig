@@ -239,7 +239,7 @@ config KONA_WFI_WORKAROUND
 config KONA_DT_BCMPMU
 	bool "Support DT for bcmpmu drivers"
 	depends on KONA_ATAG_DT
-	depends on MFD_BCMPMU
+	depends on MFD_BCMPMU || MFD_BCM_PMU59056
 	default 0
 	help
 	  Say Y if you support BCMPMU nodes in DeviceTree

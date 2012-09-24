@@ -118,6 +118,7 @@ obj-$(CONFIG_MFD_S5M_CORE)	+= s5m-core.o s5m-irq.o
 obj-$(CONFIG_MFD_ANATOP)	+= anatop-mfd.o
 obj-$(CONFIG_MFD_BCM_PMU590XX)  += bcm590xx-i2c.o bcm590xx-core.o bcm590xx-usb.o
 obj-$(CONFIG_MFD_BCM_PMU59xxx)	+= bcmpmu59xxx-i2c.o bcmpmu59xxx-core.o bcmpmu59xxx-irq.o bcmpmu59xxx-accy.o
+obj-$(CONFIG_MFD_BCM_PMU59056)	+= bcmpmu-i2c-56.o bcmpmu-core-56.o bcmpmu-irq-56.o bcmpmu-accy-56.o bcmpmu-bcm59056-map.o
 obj-$(CONFIG_MFD_BCMPMU)        += bcmpmu-i2c.o bcmpmu-core.o bcmpmu-irq.o bcmpmu-accy.o
 obj-$(CONFIG_MFD_BCM59055)      += bcmpmu-bcm59055-map.o
 obj-$(CONFIG_MFD_BCM59039)      += bcmpmu-bcm59039-map.o

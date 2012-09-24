@@ -60,6 +60,8 @@ obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_SMB380)      += smb380.o
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
 obj-$(CONFIG_INPUT_PONKEY_BCMPMU)	+= bcmpmu59xxx_ponkey.o
+else ifeq  ($(CONFIG_MFD_BCM_PMU59056), y)
+obj-$(CONFIG_INPUT_PONKEY_BCMPMU)       += bcmpmu_ponkey_56.o
 else
 obj-$(CONFIG_INPUT_PONKEY_BCMPMU)	+= bcmpmu_ponkey.o
 endif

@@ -33,3 +33,6 @@ obj-y += sequencer_ucode.o pm_params.o helpers.o v7.o
 ifneq ($(call as-instr,.arch_extension sec,+sec),)
 AFLAGS_v7.o :=-Wa,-march=armv7-a+sec
 endif
+ifeq ($(CONFIG_MFD_BCM_PMU59056), y)
+obj-y += board-bcm59056.o 
+endif

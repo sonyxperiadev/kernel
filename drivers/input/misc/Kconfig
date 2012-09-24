@@ -615,7 +615,7 @@ config INPUT_SMB380
 
 config INPUT_PONKEY_BCMPMU
         bool "BCMPMU PowerOnKey input events"
-        depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx)
+        depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx || MFD_BCM_PMU59056)
 	default n
         help
           Say Y here if want to support BCMPMU PowerOnKey events.
