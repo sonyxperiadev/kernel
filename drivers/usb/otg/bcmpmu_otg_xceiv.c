@@ -466,6 +466,10 @@ static ssize_t bcmpmu_otg_xceiv_wake_store(struct device *dev,
 		dev_warn(xceiv_data->dev, "Illegal value\n");
 	} else {
 		dev_info(xceiv_data->dev, "Waking up host\n");
+
+		/* Bring core out of suspend */
+		bcm_hsotgctrl_wakeup_core();
+
 		error = usb_gadget_wakeup(gadget);
 		if (error)
 			dev_err(xceiv_data->dev, "Failed to issue wakeup\n");
