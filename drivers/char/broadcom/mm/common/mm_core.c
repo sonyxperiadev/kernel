@@ -131,7 +131,6 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 		getnstimeofday(&cur_time);
 		if(timespec_compare (&cur_time, & core_dev->sched_time) > 0) {
 			pr_err("abort hw ");
-			hw_ifc->mm_get_regs(hw_ifc->mm_device_id , NULL, 0);
 			hw_ifc->mm_abort(hw_ifc->mm_device_id,&core_dev->current_job->job);
 			is_hw_busy = false;
 			queue_work(core_dev->mm_common->single_wq, &(core_dev->job_scheduler));
