@@ -58,8 +58,11 @@ typedef struct mm_common {
 
 struct file_private_data {
 	mm_common_t* common;
-	bool interlock_count;
+	int interlock_count;
 	int prio;
+	int read_count;
+	bool readable;
+	wait_queue_head_t queue;
 	struct list_head read_head;
 	struct list_head write_head;
 };

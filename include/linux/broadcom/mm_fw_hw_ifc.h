@@ -22,6 +22,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/init.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
+#include <linux/poll.h>
 #include <linux/file.h>
 #include <linux/interrupt.h>
 #include <linux/semaphore.h>

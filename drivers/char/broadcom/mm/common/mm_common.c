@@ -175,19 +175,24 @@ void mm_common_read_job(struct work_struct* work)
 	job_work_t *maint_job = container_of(work, job_work_t, work);
 	dev_job_status_t* temp_status = maint_job->u.job_status;
 	struct file_private_data *filp = temp_status->filp;
+	mm_common_t* common = filp->common;
 	mm_job_status_t *status = &temp_status->status;
-	dev_job_list_t *job = NULL;
-	dev_job_list_t *temp = NULL;
 
-	list_for_each_entry_safe(job, temp, &(filp->read_head), file_list)	{
+	if(filp->read_count > 0){
+		dev_job_list_t *job = 
+			list_first_entry(&(filp->read_head), dev_job_list_t, file_list);
 		list_del(&job->file_list);
 		status->id = job->job.id;		
 		status->status = job->job.status;
 		kfree(job->job.data);
 		kfree(job);
-		job = NULL;
-		break;
-	}
+		filp->read_count--;
+		}
+	else {
+		status->id = 0;		
+		status->status = MM_JOB_STATUS_INVALID;
+		}
+
 }
 #define SCHEDULE_READ_WORK(b) 	SCHEDULE_JOB_WORK(job_status,b,mm_common_read_job)
 
@@ -210,6 +215,15 @@ void mm_common_release_jobs(struct work_struct* work)
 		kfree(job);
 		job = NULL;
 		}
+	list_for_each_entry_safe(job, temp, &(filp->read_head), file_list)	{
+		list_del(&job->file_list);
+		kfree(job->job.data);
+		kfree(job);
+		job = NULL;
+		}
+	filp->read_count = -1;
+	pr_debug(" %x %d",filp,filp->read_count);
+	wake_up_interruptible_all(&filp->queue);
 }
 
 #define SCHEDULE_RELEASE_WORK(b) 	SCHEDULE_JOB_WORK(filp,b,mm_common_release_jobs)
@@ -267,7 +281,7 @@ void mm_common_job_completion( dev_job_list_t* job ,void* core)
 	mm_common_t *common = job->filp->common;
 	mm_core_t* core_dev = (mm_core_t*)core;
 
-	list_del(&job->file_list);
+	list_del_init(&job->file_list);
 	wait_job = list_first_entry(&(job->filp->write_head), dev_job_list_t, file_list);
 
 	mm_core_remove_job(job,core_dev);
@@ -284,9 +298,15 @@ void mm_common_job_completion( dev_job_list_t* job ,void* core)
 		}
 	wake_up_interruptible_all(&mm_queue);
 
-	if(job->job.data) kfree(job->job.data);
-	kfree(job);
-
+	if(job->filp->readable) {
+		job->filp->read_count++;
+		list_add_tail(&(job->file_list), &(job->filp->read_head));
+		wake_up_interruptible_all(&job->filp->queue);
+		}
+	else {
+		kfree(job->job.data);
+		kfree(job);
+		}
 }
 
 static int mm_file_open(struct inode *inode, struct file *filp)
@@ -298,9 +318,13 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 	private->common = common;
 	private->interlock_count = 0;
 	private->prio = current->prio;
+	private->read_count = 0;
+	private->readable = ((filp->f_mode & FMODE_READ) == FMODE_READ);
+	init_waitqueue_head(&private->queue);
 
 	INIT_LIST_HEAD(&private->read_head);
 	INIT_LIST_HEAD(&private->write_head);
+	pr_debug(" %x ",private);
 
 	filp->private_data = private;
 	
@@ -400,14 +424,34 @@ static int mm_file_read(struct file *filp, char __user *buf, size_t size, loff_t
 	job_status.filp = private;
 	INIT_LIST_HEAD(&job_status.wait_list);
 
+//	pr_err("something");
 	SCHEDULE_READ_WORK(&job_status);
-	
-	if (copy_to_user(buf, &job_status.status, sizeof(job_status.status))) {
-		pr_err("copy_to_user failed");
-		return 0;
-	}
 
-	return 1;
+	if(job_status.status.id) {
+		if (copy_to_user(buf, &job_status.status, sizeof(job_status.status))) {
+			pr_err("copy_to_user failed");
+			goto mm_file_read_end;
+			}
+		return 1;
+		}
+
+mm_file_read_end:
+	return 0;
+}
+
+static unsigned int mm_file_poll(struct file* filp, struct poll_table_struct* wait)
+{
+	struct file_private_data* private = filp->private_data;
+	mm_common_t *common = private->common;
+
+	poll_wait(filp, &private->queue, wait);
+
+	if (private->read_count != 0) {
+		pr_debug(" %x %d",private,private->read_count);
+		return POLLIN | POLLRDNORM;
+		}
+
+	return 0;
 }
 
 int mm_file_fsync(struct file *filp, loff_t p1, loff_t p2, int datasync)
@@ -424,6 +468,7 @@ int mm_file_fsync(struct file *filp, loff_t p1, loff_t p2, int datasync)
 	il.status = &job_status;
 	il.from = NULL;
 	il.to = mm_common_alloc_job(private);
+//	pr_err("++ %d",current->pid);
 	SCHEDULE_INTERLOCK_WORK(il);
 
 	if(wait_event_interruptible(mm_queue, job_status.status.status != MM_JOB_STATUS_INVALID )) {
@@ -431,6 +476,7 @@ int mm_file_fsync(struct file *filp, loff_t p1, loff_t p2, int datasync)
 		pr_err("Task interrupted");
 		SCHEDULE_INTERLOCK_WORK(il);
 		}
+//	pr_err("-- %d",current->pid);
 	return 0;
 }
 
@@ -516,6 +562,7 @@ static struct file_operations mm_fops = {
 	.llseek = mm_file_lseek,
 	.write = mm_file_write,
 	.read = mm_file_read,
+	.poll = mm_file_poll,
 	.fsync = mm_file_fsync,
 	.unlocked_ioctl = mm_file_ioctl
 };
