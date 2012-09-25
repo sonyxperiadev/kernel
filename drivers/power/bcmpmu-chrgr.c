@@ -60,7 +60,7 @@ static char *usb_names[PMU_USB_TYPE_MAX] = {
 	[PMU_USB_TYPE_ACA]	= "aca",
 };
 
-static char *chrgr_names[PMU_CHRGR_TYPE_MAX] = {
+static const char * const chrgr_names[PMU_CHRGR_TYPE_MAX+1] = {
 	[PMU_CHRGR_TYPE_NONE]	= "none",
 	[PMU_CHRGR_TYPE_SDP]	= "sdp",
 	[PMU_CHRGR_TYPE_CDP]	= "cdp",
@@ -69,6 +69,7 @@ static char *chrgr_names[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_TYPE1]	= "type1",
 	[PMU_CHRGR_TYPE_TYPE2]	= "type2",
 	[PMU_CHRGR_TYPE_ACA]	= "aca",
+	[PMU_CHRGR_TYPE_MAX]	= "unknown",
 };
 
 
