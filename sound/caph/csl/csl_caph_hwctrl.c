@@ -1491,7 +1491,7 @@ static void csl_caph_obtain_blocks
 		} else
 #endif
 		{
-			if (path->sinkCount > 1) {
+			if ((path->sinkCount > 1) || (startOffset > 0 && path->block_split_inCh)) {
 				/* add a sink, reuse the mixer input*/
 				srcmIn =  path->block_split_inCh;
 			} else {
@@ -1690,9 +1690,9 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 			if (path->srcmRoute[sinkNo][blockIdx].inChnl ==
 					CSL_CAPH_SRCM_INCHNL_NONE)
 				continue;
-			if (path->sinkCount > 1 &&
-				path->srcmRoute[sinkNo][blockIdx].inChnl ==
-				path->block_split_inCh)	{
+			if ((path->sinkCount > 1|| startOffset > 0) &&
+				(path->srcmRoute[sinkNo][blockIdx].inChnl ==
+				path->block_split_inCh) )	{
 
 				int closeOutChnl = 1;
 
