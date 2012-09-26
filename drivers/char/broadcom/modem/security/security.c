@@ -684,6 +684,7 @@ static int __init bcm_sec_ModuleInit(void)
 	if (IS_ERR(drvdata)) {
 		pr_err("device_create_drvdata failed\n");
 		unregister_chrdev(major, BCM_SEC_NAME);
+		class_destroy(sModule.mDriverClass);
 		return PTR_ERR(drvdata);
 	}
 
