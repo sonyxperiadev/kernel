@@ -62,12 +62,11 @@ typedef enum {
 	DSP_AADMAC_RETIRE_DS_CMD = 0x8000
 } DSP_AADMAC_Audio_Connections_t;
 
-#if defined(EXT_MODEM_INTERFACE)
 typedef enum {
 	DSP_AADMAC_EXT_MODEM_UL,
 	DSP_AADMAC_EXT_MODEM_DL
 } DSP_AADMAC_Ext_Modem_Connections_t;
-#endif
+
 /* ---- Function Declarations ----------------------------------------- */
 
 /*****************************************************************************/
@@ -135,7 +134,6 @@ void csl_dsp_caph_control_aadmac_enable_path(UInt16 path);
 *****************************************************************************/
 void csl_dsp_caph_control_aadmac_disable_path(UInt16 path);
 
-#if defined(EXT_MODEM_INTERFACE)
 /*****************************************************************************/
 /**
 *
@@ -157,7 +155,6 @@ void csl_dsp_caph_control_aadmac_disable_path(UInt16 path);
 *****************************************************************************/
 UInt32 *csl_dsp_ext_modem_get_aadmac_buf_base_addr(
 	DSP_AADMAC_Ext_Modem_Connections_t aadmac_ext_modem_audio_connection);
-#endif
 
 /*****************************************************************************/
 /**

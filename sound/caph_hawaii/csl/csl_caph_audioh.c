@@ -49,7 +49,7 @@
 /***************************************************************************/
 /*                        L O C A L   S E C T I O N                        */
 /***************************************************************************/
-#define SDM_DITHERING_DEFAULT    0
+
 /***************************************************************************/
 /*local macro declarations                                                 */
 /***************************************************************************/
@@ -829,7 +829,6 @@ void csl_caph_audioh_start(int path_id)
 			audioh_hs_on = 1;
 			chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
 			chal_audio_hspath_set_gain(handle, 0);
-#if SDM_DITHERING_DEFAULT
 				/*enable dither*/
 			chal_audio_hspath_sdm_set_dither_seed(handle, 1, 1);
 			chal_audio_hspath_sdm_set_dither_poly(handle,
@@ -837,7 +836,6 @@ void csl_caph_audioh_start(int path_id)
 							0x41000000);
 			chal_audio_hspath_sdm_set_dither_strength(handle, 3, 3);
 			chal_audio_hspath_sdm_enable_dither(handle, 0x3);
-#endif
 		}
 		chal_audio_hspath_enable(handle, chnl_enable);
 		break;
@@ -2739,49 +2737,4 @@ void csl_caph_audioh_stop_ihf(void)
 	epIHFStatus &= ~CSL_CAPH_AUDIOH_IHF_ON;
 	if (epIHFStatus == 0)
 		chal_audio_earpath_set_dac_pwr(handle, 0);
-}
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_audioh_hs_path_sdm_mute
-*
-*  Description: Set stereo sdm mute channel
-*
-****************************************************************************/
-void csl_caph_audioh_hs_path_sdm_mute(Boolean mute, UInt16 lr_ch)
-{
-	UInt16 chal_lr_chnl = 0;
-	if (lr_ch & CSL_AUDIO_CHANNEL_LEFT)
-		chal_lr_chnl |= CHAL_AUDIO_CHANNEL_LEFT;
-	if (lr_ch & CSL_AUDIO_CHANNEL_RIGHT)
-		chal_lr_chnl |= CHAL_AUDIO_CHANNEL_RIGHT;
-
-	chal_audio_hspath_sdm_mute(handle, mute, chal_lr_chnl);
-}
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_audio_enable_hs_path_dither
-*
-*  Description: Enables dither in headset path
-*
-****************************************************************************/
-void csl_caph_audio_enable_hs_path_dither(Boolean enable)
-{
-	if (enable)
-		chal_audio_hspath_sdm_enable_dither(handle, 0x3);
-	else
-		chal_audio_hspath_sdm_enable_dither(handle, 0);
-}
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_audio_is_hs_path_dither_enabled
-*
-*  Description: Checks if dither in headset path enabled
-*
-****************************************************************************/
-UInt16 csl_caph_audio_is_hs_path_dither_enabled(void)
-{
-	return (UInt16)chal_audio_hspath_sdm_is_dither_enabled(handle);
 }

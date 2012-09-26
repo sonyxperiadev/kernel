@@ -34,9 +34,6 @@
 #ifndef _CSL_CAPH_AUDIOH_
 #define _CSL_CAPH_AUDIOH_
 
-#define CSL_AUDIO_CHANNEL_LEFT   0x1
-#define CSL_AUDIO_CHANNEL_RIGHT  0x2
-
 /**
 *  CAPH AUDIOH Path
 ******************************************************************************/
@@ -191,9 +188,6 @@ void csl_caph_audioh_start_ihf(void);
 void csl_caph_audioh_stop_hs(void);
 void csl_caph_audioh_stop_ihf(void);
 void csl_caph_audioh_SetIHFmode(Boolean stIHF);
-void csl_caph_audioh_hs_path_sdm_mute(Boolean mute, UInt16 lr_ch);
-void csl_caph_audio_enable_hs_path_dither(Boolean enable);
-UInt16 csl_caph_audio_is_hs_path_dither_enabled(void);
 
 /**
 *

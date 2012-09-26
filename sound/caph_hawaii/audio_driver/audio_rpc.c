@@ -210,6 +210,48 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 
 #endif
 
+#if defined(FUSE_COMMS_PROCESSOR)
+static Result_t SendAudioRspForRequest(RPC_Msg_t *req,
+				       MsgType_t msgType, void *payload)
+{
+	RPC_Msg_t rsp;
+
+	rsp.msgId = msgType;
+	rsp.tid = req->tid;
+	rsp.clientID = req->clientID;
+	rsp.dataBuf = (void *)payload;
+	rsp.dataLen = 0;
+
+	return RPC_SerializeRsp(&rsp);
+}
+
+void HandleCallStatusIndCb(InterTaskMsg_t *taskMsg)
+{
+	CallStatusMsg_t *callStatusMsg = NULL;
+	UInt32 tid = 0;
+	RPC_Msg_t msg;
+	UInt32 codecID = (UInt32) 0;
+
+	if (taskMsg->msgType == MSG_CALL_STATUS_IND) {
+		aTrace
+			(LOG_AUDIO_DRIVER, "HandleCallStatusIndCb()"
+			"Receive MSG_CALL_STATUS_IND");
+		callStatusMsg = (CallStatusMsg_t *) taskMsg->dataBuf;
+		aTrace(LOG_AUDIO_DRIVER, "HandleCallStatusIndCb() codecid =",
+				callStatusMsg->codecId);
+		codecID = callStatusMsg->codecId;
+
+		msg.msgId = MSG_AUDIO_CALL_STATUS_IND;
+		msg.tid = tid;
+		msg.clientID = audioClientId;
+		msg.dataLen = 0;
+		msg.dataBuf = (void *)(&codecID);
+		msg.dataLen = sizeof(UInt32);
+		RPC_SerializeRsp(&msg);
+	}
+}
+#endif
+
 void HandleAudioEventReqCb(RPC_Msg_t *pMsg,
 			   ResultDataBufHandle_t dataBufHandle,
 			   UInt32 userContextData)
@@ -218,6 +260,31 @@ void HandleAudioEventReqCb(RPC_Msg_t *pMsg,
 			"HandleAudioEventRspCb msg=0x%x clientID=%d ",
 			pMsg->msgId, 0);
 
+#if defined(FUSE_COMMS_PROCESSOR)
+
+	RPC_SendAckForRequest(dataBufHandle, 0);
+
+	if (pMsg->msgId == MSG_AUDIO_CTRL_GENERIC_REQ) {
+		Audio_Params_t *p = (Audio_Params_t *) pMsg->dataBuf;
+		UInt32 val =
+		    audio_control_generic(p->param1, p->param2, p->param3,
+					  p->param4, p->param5, p->param6);
+
+		SendAudioRspForRequest(pMsg, MSG_AUDIO_CTRL_GENERIC_RSP, &val);
+	} else if (pMsg->msgId == MSG_AUDIO_CTRL_DSP_REQ) {
+		Audio_Params_t *p = (Audio_Params_t *) pMsg->dataBuf;
+		UInt32 val = audio_control_dsp(p->param1, p->param2, p->param3,
+					       p->param4, p->param5, p->param6);
+
+		SendAudioRspForRequest(pMsg, MSG_AUDIO_CTRL_DSP_RSP, &val);
+	} else if (pMsg->msgId == MSG_AUDIO_COMP_FILTER_REQ) {
+		AudioCompfilter_t *p = (AudioCompfilter_t *) pMsg->dataBuf;
+		UInt32 val = audio_cmf_filter(p);
+
+		SendAudioRspForRequest(pMsg, MSG_AUDIO_COMP_FILTER_RSP, &val);
+	} else
+		audio_xassert(0, pMsg->msgId);
+#endif
 #if defined(CONFIG_BCM_MODEM)
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 #endif
@@ -259,6 +326,7 @@ static RPC_Result_t AUDIO_RPC_MsgCb(PACKET_Interface_t interfaceType,
 }
 #endif
 
+
 /*  AUDIO API CODE */
 #if defined(CONFIG_BCM_MODEM)
 void Audio_InitRpc(void)
@@ -279,6 +347,10 @@ void Audio_InitRpc(void)
 
 		handle = RPC_SyncRegisterClient(&params, &syncParams);
 		audioClientId = RPC_SYS_GetClientID(handle);
+
+#if defined(FUSE_COMMS_PROCESSOR)
+		SYS_RegisterForMSEvent(HandleCallStatusIndCb, 0);
+#endif
 
 #if defined(AUDIO_RPC_END_POINT)
 		/* Initialize the Audio RPC thread's message queue.
@@ -338,6 +410,8 @@ void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t *cf)
 
 static bool_t xdr_Audio_Params_t(void *xdrs, Audio_Params_t *rsp)
 {
+	aTrace(LOG_AUDIO_DRIVER , "Audio_Params_t");
+
 	    if (xdr_UInt32(xdrs, &rsp->param1) &&
 		xdr_UInt32(xdrs, &rsp->param2) &&
 		xdr_UInt32(xdrs, &rsp->param3) &&

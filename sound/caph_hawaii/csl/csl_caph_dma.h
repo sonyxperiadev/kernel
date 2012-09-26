@@ -44,9 +44,6 @@
  */
 #define CSL_AADMAC_TSIZE    0x3
 
-#define SDM_RESET_MODE_ENABLED     1
-#define SDM_RESET_MODE_DISABLED    0
-
 /**
 * CAPH AADMAC Channels
 ******************************************************************************/
@@ -92,7 +89,6 @@ struct _CSL_CAPH_DMA_CONFIG_t {
 	CSL_CAPH_DMA_CALLBACK_p dmaCB;
 	int n_dma_buf;
 	int dma_buf_size;
-	int sil_detect;
 };
 #define CSL_CAPH_DMA_CONFIG_t struct _CSL_CAPH_DMA_CONFIG_t
 
@@ -429,35 +425,5 @@ Boolean csl_caph_dma_channel_obtained(CSL_CAPH_DMA_CHNL_e chnl);
 *  @return void
 *****************************************************************************/
 void csl_caph_dma_set_buffer(CSL_CAPH_DMA_CONFIG_t *chnl_config);
-
-/**
-*
-*  @brief  Retrieve the SDM reset mode of operation
-*
-*  @param   chnl  (in) caph dma channel
-*
-*  @return 1 if SDM reset mode enabled, 0 if disabled
-*****************************************************************************/
-int csl_caph_dma_get_sdm_reset_mode(CSL_CAPH_DMA_CHNL_e chnl);
-
-/**
-*
-*  @brief  Increment frame counter
-*
-*  @param   chnl  (in) caph dma channel
-*
-*  @return  None
-*****************************************************************************/
-void csl_caph_dma_sil_frm_cnt_incr(CSL_CAPH_DMA_CHNL_e chnl, UInt16 lr_ch);
-
-/**
-*
-*  @brief  Reset frame counter
-*
-*  @param   chnl  (in) caph dma channel
-*
-*  @return  None
-*****************************************************************************/
-void csl_caph_dma_sil_frm_cnt_reset(CSL_CAPH_DMA_CHNL_e chnl, UInt16 lr_ch);
 
 #endif /* _CSL_CAPH_DMA_ */

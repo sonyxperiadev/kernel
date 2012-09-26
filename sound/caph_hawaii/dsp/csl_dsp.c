@@ -47,6 +47,8 @@
 #include <mach/rdb/brcm_rdb_ahintc.h>
 #include <mach/rdb/brcm_rdb_cph_ssasw.h>
 #include <mach/rdb/brcm_rdb_sspil.h>
+#include <mach/memory.h>
+#include <asm/memory.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 
 AP_SharedMem_t *vp_shared_mem;
@@ -103,8 +105,6 @@ void VPSHAREDMEM_Init(UInt32 *dsp_shared_mem)
 	/* Setting various mixer gains to unity gain */
 	CSL_SetARM2SpeechDLGain(0);
 	CSL_SetARM2Speech2DLGain(0);
-	CSL_SetARM2SpeechHQDLGain(0);
-	CSL_SetARM2Speech2HQDLGain(0);
 	CSL_SetInpSpeechToARM2SpeechMixerDLGain(0);
 
 	CSL_SetARM2SpeechULGain(0);
@@ -527,39 +527,6 @@ void AP_ProcessStatus(void)
 				spin_unlock_bh(&ARM2SP2RenderStatusLock);
 				break;
 			}
-
-		case VP_STATUS_ARM2SP_HQ_DL_EMPTY:
-			{
-				spin_lock_bh(&ARM2SPRenderStatusLock);
-				if (ARM2SPRenderStatusHandler != NULL) {
-					ARM2SPRenderStatusHandler(status_msg.
-								  arg1);
-				} else {
-					aTrace(LOG_AUDIO_DSP,
-					       "AP DSP Interrupt:"
-					       "ARM2SPRenderStatusHandler"
-					       "is not registered");
-				}
-				spin_unlock_bh(&ARM2SPRenderStatusLock);
-				break;
-			}
-
-		case VP_STATUS_ARM2SP2_HQ_DL_EMPTY:
-			{
-				spin_lock_bh(&ARM2SP2RenderStatusLock);
-				if (ARM2SP2RenderStatusHandler != NULL) {
-					ARM2SP2RenderStatusHandler(status_msg.
-								   arg1);
-				} else {
-					aTrace(LOG_AUDIO_DSP,
-					       "AP DSP Interrupt:"
-					       "ARM2SP2RenderStatusHandler"
-					       "is not registered");
-				}
-				spin_unlock_bh(&ARM2SP2RenderStatusLock);
-				break;
-			}
-
 
 		case VP_STATUS_MAIN_AMR_DONE:
 			{

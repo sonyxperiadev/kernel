@@ -452,7 +452,7 @@ static int HandleControlCommand()
 
 		aTrace(LOG_AUDIO_DRIVER, " Enable telephony\n");
 		AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_ANALOG_MAIN,
-				AUDIO_SINK_HANDSET,false);
+				AUDIO_SINK_HANDSET);
 		AUDCTRL_EnableTelephony(AUDIO_SOURCE_ANALOG_MAIN,
 				AUDIO_SINK_HANDSET);
 #if 0		

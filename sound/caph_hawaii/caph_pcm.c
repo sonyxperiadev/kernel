@@ -1281,10 +1281,10 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 	/* Initialize the audio controller */
 	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH PcmDeviceNew:call AUDIO_Init\n");
 	caph_audio_init();
+	AUDCTRL_Init();
 #if defined(CONFIG_BCM_MODEM)
 	DSPDRV_Init();
 #endif
-	AUDCTRL_Init();
 
 	aTrace(LOG_ALSA_INTERFACE,
 	       "\n PcmDeviceNew : PcmDeviceNew err=%d\n", err);

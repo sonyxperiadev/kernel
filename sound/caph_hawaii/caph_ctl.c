@@ -1081,8 +1081,7 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		uinfo->value.integer.max = 2;
 		break;
 	default:
-		aWarn("%s, Unexpected function code %d\n",
-			  __func__, function);
+		aWarn("Unexpected function code %d\n", function);
 		break;
 	}
 
@@ -1203,9 +1202,6 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 	case CTL_FUNCTION_APP_SEL:
 		ucontrol->value.integer.value[0] = pChip->i32CurApp;
 		break;
-	case CTL_FUNCTION_APP_RMV:
-		/* don't need to do anything */
-		break;
 	case CTL_FUNCTION_AMP_CTL:
 		ucontrol->value.integer.value[0] = pChip->i32CurAmpState;
 		break;
@@ -1213,8 +1209,7 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[0] = pChip->iCallMode;
 		break;
 	default:
-		aWarn("%s, Unexpected function code %d\n",
-			  __func__, function);
+		aWarn("Unexpected function code %d\n", function);
 		break;
 	}
 
@@ -1333,12 +1328,11 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				ctl_parm.parm_vol.source = pSel[0];
 				ctl_parm.parm_vol.sink = pSel[1];
 				ctl_parm.parm_vol.volume1 =
-				    pChip->pi32LevelVolume[
-				    CTL_STREAM_PANEL_VOICECALL - 1][0];
+				    pChip->pi32LevelVolume[CTL_STREAM_PANEL_VOICECALL -
+					       1][0];
 				ctl_parm.parm_vol.gain_format =
 				    AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN;
-				AUDIO_Ctrl_Trigger(
-					ACTION_AUD_SetTelephonySpkrVolume,
+				AUDIO_Ctrl_Trigger(ACTION_AUD_SetTelephonySpkrVolume,
 					   &ctl_parm.parm_vol, NULL, 0);
 			}
 		}
@@ -1809,8 +1803,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				   &ctl_parm.parm_call, NULL, 0);
 		break;
 	default:
-		aWarn("%s, Unexpected function code %d\n",
-			  __func__, function);
+		aWarn("Unexpected function code %d\n", function);
 		break;
 	}
 
@@ -2136,18 +2129,6 @@ static struct snd_kcontrol_new sgSndCtrls[] __devinitdata = {
 			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
 				 CTL_FUNCTION_HW_CTL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_DMA,
-			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
-				 CTL_FUNCTION_HW_CTL)),
-	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_DUALMIC_REFMIC,
-			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
-				 CTL_FUNCTION_HW_CTL)),
-	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_DAC_LPBK,
-			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
-				 CTL_FUNCTION_HW_CTL)),
-	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_DOCKING,
-			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
-				 CTL_FUNCTION_HW_CTL)),
-	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_EXTRA_VOLUME,
 			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
 				 CTL_FUNCTION_HW_CTL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_READ_GAIN,

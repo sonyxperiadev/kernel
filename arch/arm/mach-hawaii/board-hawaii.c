@@ -68,11 +68,6 @@
 
 #include "devices.h"
 
-#if defined(CONFIG_BCM_ALSA_SOUND)
-#include <mach/caph_platform.h>
-#include <mach/caph_settings.h>
-#endif	
-
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
 #endif
@@ -1155,30 +1150,6 @@ static struct i2c_board_info bcm915500_i2c_boardinfo[] = {
 };
 #endif
 
-#if defined(CONFIG_BCM_ALSA_SOUND)
-static struct caph_platform_cfg board_caph_platform_cfg =
-#ifdef HW_CFG_CAPH 
-	HW_CFG_CAPH;
-#else
-{
-	.aud_ctrl_plat_cfg = {
-		.ext_aud_plat_cfg = {
-			.ihf_ext_amp_gpio = -1,
-		}
-	}
-};
-#endif
-
-static struct platform_device board_caph_device = {
-	.name = "brcm_caph_device",
-	.id = -1, /*Indicates only one device */
-	.dev = {
-		.platform_data = &board_caph_platform_cfg,
-	},
-};
-
-#endif /* CONFIG_BCM_ALSA_SOUND */
-
 static struct platform_device *hawaii_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
 	&bcm_kp_device,
@@ -1218,10 +1189,6 @@ static struct platform_device *hawaii_devices[] __initdata = {
 #ifdef CONFIG_WD_TAPPER
 	&wd_tapper,
 #endif
-
-#if defined(CONFIG_BCM_ALSA_SOUND)
-	&board_caph_device,
-#endif	
 };
 
 static void __init hawaii_add_i2c_devices(void)
@@ -1265,8 +1232,6 @@ static void __init hawaii_add_i2c_devices(void)
 
 }
 
-
-
 static void hawaii_add_pdata(void)
 {
 	hawaii_serial_device.dev.platform_data = &hawaii_uart_platform_data;
@@ -1299,7 +1264,6 @@ void __init hawaii_add_common_devices(void)
 
 	platform_add_devices(hawaii_common_plat_devices,
 			ARRAY_SIZE(hawaii_common_plat_devices));
-
 }
 
 static void __init hawaii_add_devices(void)
@@ -1316,7 +1280,6 @@ static void __init hawaii_add_devices(void)
 
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
-
 }
 
 #ifdef CONFIG_FB_BRCM_KONA

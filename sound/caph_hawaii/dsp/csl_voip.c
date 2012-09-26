@@ -210,10 +210,6 @@ void DJB_PutFrame(DJB_InputFrame *pInputFrame)
 	/* copy payload content to DSP shared memory */
 	memcpy(pPayload, pInputFrame->pFramePayload, pInputFrame->payloadSize);
 
-	/* adjust wideband codec RTP timestamp to 8kHz domain expected by AJC */
-	if (pInputFrame->codecType == WB_AMR)
-		pInputFrame->RTPTimestamp >>= 1;
-
 	/* take 16-bit LSB of RTP timestamp */
 	timestamp = (UInt16) pInputFrame->RTPTimestamp;
 

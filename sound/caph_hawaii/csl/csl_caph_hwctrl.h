@@ -252,7 +252,7 @@ enum __CAPH_LIST_t {
 	LIST_SW,
 	LIST_MIX_SW,
 	LIST_MIX_DMA,
-	LIST_SW_MIX_DMA,
+	LIST_SW_MIX_SW_DMA,
 	LIST_NUM,
 }; /*the order must match caph_block_list[] */
 #define CAPH_LIST_t enum __CAPH_LIST_t
@@ -541,12 +541,12 @@ CSL_CAPH_DMA_CHNL_e csl_caph_hwctrl_GetdmaCH(CSL_CAPH_PathID pathID);
 *  @param ctrl (in)  control to loop back
 *			   TRUE - enable loop back in path,
 *			   FALSE - disbale loop back in path
-*  @param dir (in)  internal loopback direction
+*  @param path (in)  internal loopback path
 *
 *  @return
 ****************************************************************************/
 void csl_caph_audio_loopback_control(CSL_CAPH_DEVICE_e speaker,
-				     int dir, Boolean ctrl);
+				     int path, Boolean ctrl);
 
 /****************************************************************************
 *
@@ -664,24 +664,6 @@ void csl_caph_hwctrl_SetHeadsetMode(Boolean mode);
 *
 ****************************************************************************/
 void csl_caph_hwctrl_SetBTMode(int mode);
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_hwctrl_GetDualMic_NoiseRefMic
-*
-*  Description: Get the noise ref mic for dual mic operation
-*
-****************************************************************************/
-CSL_CAPH_DEVICE_e csl_caph_hwctrl_GetDualMic_NoiseRefMic(void);
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_hwctrl_SetDualMic_NoiseRefMic
-*
-*  Description: Set the noise ref mic for dual mic operation
-*
-****************************************************************************/
-void csl_caph_hwctrl_SetDualMic_NoiseRefMic(CSL_CAPH_DEVICE_e dev);
 
 /****************************************************************************
 *
@@ -836,5 +818,4 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path);
 *****************************************************************************/
 void csl_caph_hwctrl_PrintAllPaths(void);
 void csl_caph_dspcb(int path);
-void csl_caph_hwctrl_SetLongDma(CSL_CAPH_PathID pathID);
 #endif

@@ -164,22 +164,5 @@ void extern_hs_en_hi_gain_mode(int enable);
 ****************************************************************************/
 void extern_ihf_en_hi_gain_mode(int enable);
 
-/********************************************************************
-*  @brief  Set the platform configuration for external audio layer
-*
-*  @param  cfg - configuration structure
-*  @return  none
-*
-****************************************************************************/
-void extern_audio_platform_cfg_set(void *cfg);
-
-/********************************************************************
-*  @brief  Set the GPIO pin value to route the audio to the dock
-*
-*  @param  Toggle value of the GPIO pin.  1 - High, 0 - Low
-*  @return  none
-*
-****************************************************************************/
-void extern_dock_audio_route(int gpio_val);
 
 #endif

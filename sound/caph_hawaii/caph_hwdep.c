@@ -64,7 +64,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "osdw_dsp_drv.h"
 #include "csl_audio_render.h"
 #include "bcm_audio.h"
-#include "auddrv_audlog.h"
 
 /* Local defines */
 
@@ -144,8 +143,6 @@ static void hwdep_private_free(struct snd_hwdep *hwdep);
 static unsigned int hwdep_poll(struct snd_hwdep *hw, struct file *file,
 			       poll_table *wait);
 
-static void voip_log_capture(CAPTURE_POINT_t log_pint, unsigned char *buf,
-					int size);
 
 uint32_t guULCount = 0, guDLCount = 0;
 static void FillSilenceFrame(u32 codec_type, u32 frame_size, u8 *pDst)
@@ -295,14 +292,6 @@ static long hwdep_read(struct snd_hwdep *hw, char __user * buf, long count,
 						 pVoIP->buffer_handle->
 						 voip_data_ul_rd_index,
 						 pVoIP->frame_size);
-
-				voip_log_capture(AUD_LOG_VOCODER_UL,
-						pVoIP->buffer_handle->
-						voip_data_ul_buf_ptr +
-						pVoIP->buffer_handle->
-						voip_data_ul_rd_index,
-						pVoIP->frame_size);
-
 				pVoIP->frames_available_to_read--;
 #ifdef CONFIG_VOIP_BUFFER_INCREASE
 				pVoIP->buffer_handle->voip_data_ul_rd_index +=
@@ -354,14 +343,6 @@ static long hwdep_write(struct snd_hwdep *hw, const char __user * buf,
 					(struct __dl_frame *)
 					frame_dl_data->data,
 					pVoIP->frame_size);
-
-				voip_log_capture(AUD_LOG_VOCODER_DL,
-					pVoIP->buffer_handle->
-					voip_data_dl_buf_ptr +
-					pVoIP->buffer_handle->
-					voip_data_dl_wr_index,
-					pVoIP->frame_size);
-
 				/* send the DL frame to DSP . In case of VoLTE,
 				whenever the application sends the data,
 				need to send it to DSP.No need to wait
@@ -376,14 +357,6 @@ static long hwdep_write(struct snd_hwdep *hw, const char __user * buf,
 					voip_data_dl_wr_index,
 					buf,
 					pVoIP->frame_size);
-
-				voip_log_capture(AUD_LOG_VOCODER_DL,
-					pVoIP->buffer_handle->
-					voip_data_dl_buf_ptr +
-					pVoIP->buffer_handle->
-					voip_data_dl_wr_index,
-					pVoIP->frame_size);
-
 			}
 			pVoIP->frames_available_to_write++;
 			if (!isVoLTE)
@@ -556,12 +529,10 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 					"VoIP_Ioctl_Start -> just increment "
 					"the count, voip already started\n");
 		}
-		if (pVoIP != NULL) {
 		if (data == VoIP_UL)
 			pVoIP->ulstarted = 1;
 		else
 			pVoIP->dlstarted = 1;
-		}
 
 		break;
 	case VoIP_Ioctl_Stop:
@@ -652,20 +623,6 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		aTrace(LOG_ALSA_INTERFACE,
 				" VoIP_Ioctl_SetBitrate bitrate_index %ld,\n",
 				pChip->voip_data.bitrate_index);
-		pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
-		if (!pVoIP)
-			break;
-
-
-		if (isVoLTE) {
-			if (pVoIP->ulstarted == 0 && pVoIP->dlstarted == 0)
-				break;
-
-			AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,
-				AUDIO_DRIVER_SET_AMR, &pChip->voip_data);
-		}
-
-
 		break;
 	case VoIP_Ioctl_GetSource:
 		{
@@ -880,21 +837,4 @@ int __devinit HwdepDeviceNew(struct snd_card *card)
 	pHwdep->private_free = hwdep_private_free;
 
 	return err;
-}
-
-
-void voip_log_capture(CAPTURE_POINT_t log_point, unsigned char *buf,
-					int size) {
-
-	struct snd_pcm_substream substream;
-	struct snd_pcm_runtime runtime;
-
-	runtime.rate = AUDIO_SAMPLING_RATE_16000;
-	runtime.sample_bits = 16;
-	runtime.channels = AUDIO_CHANNEL_MONO;
-	runtime.dma_area = buf;
-	runtime.dma_bytes = 2*size;
-	substream.runtime = &runtime;
-	logmsg_ready(&substream, log_point);
-
 }

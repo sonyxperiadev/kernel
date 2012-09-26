@@ -34,7 +34,6 @@
 ******************************************************************************/
 
 #include <linux/kernel.h>
-#include <mach/caph_platform.h>
 #include "audio_consts.h"
 #include "extern_audio.h"
 #include "linux/gpio.h"
@@ -43,14 +42,14 @@
 #if (!defined(CONFIG_BCMPMU_AUDIO))
 
 #include <linux/broadcom/bcmpmu_audio.h>
-#define AUDIO_PMU_INIT() NULL
-#define AUDIO_PMU_HS_SET_GAIN(a, b) NULL
-#define AUDIO_PMU_HS_POWER(a) NULL
-#define AUDIO_PMU_IHF_SET_GAIN(a) NULL
-#define AUDIO_PMU_IHF_POWER(a) NULL
-#define AUDIO_PMU_DEINIT() NULL
-#define AUDIO_PMU_HS_HI_GAIN_MODE_EN(a, b) NULL
-#define AUDIO_PMU_IHF_HI_GAIN_MODE_EN(a) NULL
+#define AUDIO_PMU_INIT() 
+#define AUDIO_PMU_HS_SET_GAIN(a, b) 
+#define AUDIO_PMU_HS_POWER(a) 
+#define AUDIO_PMU_IHF_SET_GAIN(a) 
+#define AUDIO_PMU_IHF_POWER(a) 
+#define AUDIO_PMU_DEINIT() 
+#define AUDIO_PMU_HS_HI_GAIN_MODE_EN(a, b) 
+#define AUDIO_PMU_IHF_HI_GAIN_MODE_EN(a) 
 
 #else
 
@@ -253,10 +252,8 @@ static int hs_gain_l = -400; /* mB */
 static int hs_gain_r = -400; /* mB */
 static int ihf_gain = -400; /* mB */
 
-static struct extern_audio_platform_cfg ext_aud_plat_cfg = {
-	.ihf_ext_amp_gpio = -1,
-	.dock_aud_route_gpio = -1,
-};
+#if defined(CONFIG_IHF_EXT_AMPLIFIER)
+#define GPIO_IHF_EXT_AMP 28
 
 /******************************************************************************
 * Function Name: audio_gpio_output
@@ -266,25 +263,20 @@ static struct extern_audio_platform_cfg ext_aud_plat_cfg = {
 * Note: This is only required on some OEM hardware
 *
 ******************************************************************************/
-static void audio_gpio_output(char *name, int gpio_pin, int value)
+static void audio_gpio_output(int gpio_pin, int value)
 {
-	int rc = gpio_request(gpio_pin, name);
+	int rc = gpio_request(gpio_pin, "IHF_EXT_AMP");
 
-	if (!rc) {
 	aTrace(LOG_AUDIO_CNTLR,
 		"audio_gpio_output::gpio pin %d value %d, rc=0x%x\n",
 		gpio_pin, value, rc);
-
 	gpio_direction_output(gpio_pin, 0);
 	gpio_set_value(gpio_pin, value);
 	gpio_free(gpio_pin);
-	} else {
-		aTrace(LOG_AUDIO_CNTLR, "%s::"
-			" failed to request"
-			"%s gpio pin %d rc=%u\n",
-			__func__, name, gpio_pin, rc);
-	}
 }
+#else
+#define audio_gpio_output(a, b)
+#endif
 
 /******************************************************************************
 * Function Name: map2pmu_hs_gain
@@ -379,10 +371,8 @@ void extern_hs_on(void)
 ****************************************************************************/
 void extern_hs_off(void)
 {
-	/*BCM59056 PMU HW ramps down HS gain when powers off HS amp.
-	no need for software to ramp down HS gain.
 	AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
-				  PMU_HSGAIN_MUTE);*/
+				  PMU_HSGAIN_MUTE);
 	AUDIO_PMU_HS_POWER(0);
 
 	hs_IsOn = 0;
@@ -406,9 +396,7 @@ void extern_hs_off(void)
 void extern_ihf_on(void)
 {
 #if defined(CONFIG_IHF_EXT_AMPLIFIER)
-	if (ext_aud_plat_cfg.ihf_ext_amp_gpio > 0)
-		audio_gpio_output("IHF_EXT_AMP",
-			ext_aud_plat_cfg.ihf_ext_amp_gpio, 1);
+	audio_gpio_output(GPIO_IHF_EXT_AMP, 1);
 #else
 	/*enable the audio PLL before power ON */
 	if (pll_IsOn == 0) {
@@ -433,9 +421,7 @@ void extern_ihf_off(void)
 {
 	ihf_IsOn = 0;
 #if defined(CONFIG_IHF_EXT_AMPLIFIER)
-	if (ext_aud_plat_cfg.ihf_ext_amp_gpio > 0)
-		audio_gpio_output("IHF_EXT_AMP",
-			ext_aud_plat_cfg.ihf_ext_amp_gpio, 0);
+	audio_gpio_output(GPIO_IHF_EXT_AMP, 0);
 #else
 	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE);
 	AUDIO_PMU_IHF_POWER(0);
@@ -449,6 +435,8 @@ void extern_ihf_off(void)
 
 #endif
 }
+
+
 
 /********************************************************************
 *  @brief  Find the actual headset gain (mB) that external audio chip can support
@@ -636,30 +624,3 @@ void extern_ihf_en_hi_gain_mode(int enable)
 		AUDIO_PMU_IHF_HI_GAIN_MODE_EN(1);
 }
 
-/********************************************************************
-*  @brief  Set the platform configuration for external audio layer
-*
-*  @param  cfg - configuration structure
-*  @return  none
-*
-****************************************************************************/
-void extern_audio_platform_cfg_set(void *cfg)
-{
-	struct extern_audio_platform_cfg *extaud_cfg =
-		(struct extern_audio_platform_cfg *)cfg;
-	memcpy(&ext_aud_plat_cfg, extaud_cfg, sizeof(ext_aud_plat_cfg));
-}
-
-/********************************************************************
-*  @brief  Set the GPIO pin value to route the audio to the dock
-*
-*  @param  Toggle value of the GPIO pin.  1 - High, 0 - Low
-*  @return  none
-*
-****************************************************************************/
-void extern_dock_audio_route(int gpio_val)
-{
-	if (ext_aud_plat_cfg.dock_aud_route_gpio > 0)
-		audio_gpio_output("AUDIO_DOCK_ROUTE",
-			ext_aud_plat_cfg.dock_aud_route_gpio, gpio_val);
-}

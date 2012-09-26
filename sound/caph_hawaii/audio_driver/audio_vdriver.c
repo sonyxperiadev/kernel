@@ -120,65 +120,8 @@ static Audio_Driver_t sAudDrv = { 0 };
 static audio_codecId_handler_t codecId_handler;
 static audio_handleCPReset_handler_t cpReset_handler;
 static Int32 curCallMode = CALL_MODE_NONE;
-static UInt32 curCallSampleRate = AUDIO_SAMPLING_RATE_8000;
 
 struct completion audioEnableDone;
-
-struct AUDCTRL_SPKR_Mapping_t {
-	AUDIO_SINK_Enum_t spkr;
-	CSL_CAPH_DEVICE_e dev;
-};
-
-/* must match AUDIO_SINK_Enum_t */
-static struct AUDCTRL_SPKR_Mapping_t \
-SPKR_Mapping_Table[AUDIO_SINK_TOTAL_COUNT] = {
-	/* sink ino                                       Device ID */
-	[AUDIO_SINK_HANDSET] = {AUDIO_SINK_HANDSET, CSL_CAPH_DEV_EP},
-	[AUDIO_SINK_HEADSET] = {AUDIO_SINK_HEADSET, CSL_CAPH_DEV_HS},
-	[AUDIO_SINK_HANDSFREE] = {AUDIO_SINK_HANDSFREE, CSL_CAPH_DEV_IHF},
-	[AUDIO_SINK_BTM] = {AUDIO_SINK_BTM, CSL_CAPH_DEV_BT_SPKR},
-	[AUDIO_SINK_LOUDSPK] = {AUDIO_SINK_LOUDSPK, CSL_CAPH_DEV_IHF},
-	[AUDIO_SINK_TTY] = {AUDIO_SINK_TTY, CSL_CAPH_DEV_HS},
-	[AUDIO_SINK_HAC] = {AUDIO_SINK_HAC, CSL_CAPH_DEV_EP},
-	[AUDIO_SINK_USB] = {AUDIO_SINK_USB, CSL_CAPH_DEV_MEMORY},
-	[AUDIO_SINK_BTS] = {AUDIO_SINK_BTS, CSL_CAPH_DEV_BT_SPKR},
-	[AUDIO_SINK_I2S] = {AUDIO_SINK_I2S, CSL_CAPH_DEV_FM_TX},
-	[AUDIO_SINK_VIBRA] = {AUDIO_SINK_VIBRA, CSL_CAPH_DEV_VIBRA},
-	[AUDIO_SINK_HEADPHONE] = {AUDIO_SINK_HEADPHONE, CSL_CAPH_DEV_HS},
-	[AUDIO_SINK_VALID_TOTAL] = {AUDIO_SINK_VALID_TOTAL, CSL_CAPH_DEV_NONE},
-	[AUDIO_SINK_MEM] = {AUDIO_SINK_MEM, CSL_CAPH_DEV_MEMORY},
-	[AUDIO_SINK_DSP] = {AUDIO_SINK_DSP, CSL_CAPH_DEV_DSP},
-	[AUDIO_SINK_UNDEFINED] = {AUDIO_SINK_UNDEFINED, CSL_CAPH_DEV_NONE}
-};
-
-struct AUDIO_SOURCE_Mapping_t {
-	AUDIO_SOURCE_Enum_t mic;
-	CSL_CAPH_DEVICE_e dev;
-};
-
-/* must match AUDIO_SOURCE_Enum_t */
-static struct AUDIO_SOURCE_Mapping_t \
-MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] = {
-	/* source info			  Device ID */
-	{AUDIO_SOURCE_UNDEFINED, CSL_CAPH_DEV_NONE},
-	{AUDIO_SOURCE_ANALOG_MAIN, CSL_CAPH_DEV_ANALOG_MIC},
-	{AUDIO_SOURCE_ANALOG_AUX, CSL_CAPH_DEV_HS_MIC},
-	{AUDIO_SOURCE_DIGI1, CSL_CAPH_DEV_DIGI_MIC_R},
-	{AUDIO_SOURCE_DIGI2, CSL_CAPH_DEV_DIGI_MIC_L},
-	{AUDIO_SOURCE_DIGI3, CSL_CAPH_DEV_EANC_DIGI_MIC_R},
-	{AUDIO_SOURCE_DIGI4, CSL_CAPH_DEV_EANC_DIGI_MIC_L},
-	{AUDIO_SOURCE_MIC_ARRAY1, CSL_CAPH_DEV_DIGI_MIC},
-	{AUDIO_SOURCE_MIC_ARRAY2, CSL_CAPH_DEV_EANC_DIGI_MIC},
-	{AUDIO_SOURCE_BTM, CSL_CAPH_DEV_BT_MIC},
-	{AUDIO_SOURCE_USB, CSL_CAPH_DEV_MEMORY},
-	{AUDIO_SOURCE_I2S, CSL_CAPH_DEV_FM_RADIO},
-	{AUDIO_SOURCE_RESERVED1, CSL_CAPH_DEV_NONE},
-	{AUDIO_SOURCE_RESERVED2, CSL_CAPH_DEV_NONE},
-	{AUDIO_SOURCE_VALID_TOTAL, CSL_CAPH_DEV_NONE},
-	{AUDIO_SOURCE_SPEECH_DIGI, CSL_CAPH_DEV_DIGI_MIC},
-	{AUDIO_SOURCE_MEM, CSL_CAPH_DEV_MEMORY},
-	{AUDIO_SOURCE_DSP, CSL_CAPH_DEV_DSP}
-};
 
 /*=============================================================================
 // Private function prototypes
@@ -294,6 +237,9 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 				    AUDIO_SAMPLING_RATE_t sample_rate,
 				    Boolean bNeedDualMic);
 
+static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr(AUDIO_SINK_Enum_t spkr);
+static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic(AUDIO_SOURCE_Enum_t mic);
+
 static void AUDDRV_HW_SetFilter(AUDDRV_HWCTRL_FILTER_e filter,
 				       void *coeff);
 static void AUDDRV_HW_EnableSideTone(AudioMode_t audio_mode);
@@ -320,11 +266,10 @@ void AUDDRV_Init(void)
 	if (sAudDrv.isRunning == TRUE)
 		return;
 
-#ifdef CONFIG_BCM_MODEM
 	/* register DSP VPU status processing handlers */
+
 	AUDIO_MODEM(CSL_RegisterVPUCaptureStatusHandler
 		    ((VPUCaptureStatusCB_t) &VPU_Capture_Request);)
-#endif
 #if 0		/*These features are not needed in LMP now. */
 	    AUDIO_MODEM(CSL_RegisterVPURenderStatusHandler
 			((VPURenderStatusCB_t) &VPU_Render_Request);)
@@ -420,10 +365,21 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0);
 
-	AUDDRV_Telephony_InitHW(mic, speaker, curCallSampleRate, bNeedDualMic);
+	if (app == AUDIO_APP_VOICE_CALL_WB) {
+		AUDDRV_Telephony_InitHW(mic, speaker, AUDIO_SAMPLING_RATE_16000,
+					bNeedDualMic);
 #if defined(ENABLE_DMA_VOICE)
-	csl_dsp_caph_control_aadmac_set_samp_rate(curCallSampleRate);
+		csl_dsp_caph_control_aadmac_set_samp_rate
+		    (AUDIO_SAMPLING_RATE_16000);
 #endif
+	} else {
+		AUDDRV_Telephony_InitHW(mic, speaker, AUDIO_SAMPLING_RATE_8000,
+					bNeedDualMic);
+#if defined(ENABLE_DMA_VOICE)
+		csl_dsp_caph_control_aadmac_set_samp_rate
+		    (AUDIO_SAMPLING_RATE_8000);
+#endif
+	}
 
 	/* Set new filter coef, sidetone filters, gains. */
 
@@ -980,45 +936,44 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 //		For SS multicase both HS and IHF params are from mode SPEAKER
 //=============================================================================
 */
-void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param)
+void AUDDRV_SetAudioMode_Multicast(AudioMode_t audiomode,
+					AudioApp_t app)
 {
-	int mixInGain, mixOutGain, mixBitSel;	/* Register value. */
-	int mixInGainR, mixOutGainR, mixBitSelR;	/* Register value. */
-	CSL_CAPH_HWConfig_Table_t *path = NULL;
+	int mixInGain;	/* Register value. */
+	int mixOutGain;	/* Bit12:0, Output Fine Gain */
+	int mixBitSel;
+	/*CSL_CAPH_HWConfig_Table_t *path = NULL;*/
 	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
+	AudioMode_t audio_mode = AUDIO_MODE_SPEAKERPHONE;
 
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	SysMultimediaAudioParm_t *p1;
 #endif
 
 #ifdef CONFIG_BCM_MODEM
-	SysAudioParm_t *p = NULL;
+	SysAudioParm_t *p;
 #else
-	AudioSysParm_t *p = NULL;
+	AudioSysParm_t *p;
 #endif
 /*For SS multicast case always load params from mode AUDIO_MODE_SPEAKERPHONE*/
 #if defined(USE_NEW_AUDIO_MM_PARAM)
-	if (param.app >= AUDIO_APP_NUMBER)
-		p1 = &(MMAudParmP()[AUDIO_MODE_SPEAKERPHONE
-			+ (param.app - AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
+	if (app >= AUDIO_APP_NUMBER)
+		p1 = &(MMAudParmP()[audio_mode
+			+ (app - AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
 	else
 #endif
-		p = &(AudParmP()[AUDIO_MODE_SPEAKERPHONE
-			+ param.app * AUDIO_MODE_NUMBER]);
+		p = &(AudParmP()[audio_mode + app * AUDIO_MODE_NUMBER]);
 
-	aTrace(LOG_AUDIO_DRIVER,  "%s mode=%d, app %d, pathID %d\n",
-			__func__, param.mode, param.app, param.pathID);
+	aTrace(LOG_AUDIO_DRIVER, "%s mode=%d, app %d,\n",
+			__func__, audio_mode, app);
 
-	mixInGain = mixOutGain = mixBitSel = 0;
-	mixInGainR = mixOutGainR = mixBitSelR = 0;
 	/* Load the speaker gains form sysparm. */
 
 	/*determine which mixer output to apply the gains to */
 
-	switch (param.mode) {
+	switch (audiomode) {
 
 	case AUDIO_MODE_HEADSET:
-	case AUDIO_MODE_TTY:
 		outChnl = CSL_CAPH_SRCM_STEREO_CH1;
 		break;
 
@@ -1030,129 +985,41 @@ void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param)
 	}
 
 	/*Load HW Mixer gains from sysparm */
-	if (param.mixInGain_mB == GAIN_SYSPARM &&
-		param.mixInGainR_mB == GAIN_SYSPARM) {
 #if defined(USE_NEW_AUDIO_MM_PARAM)
-		if (param.app >= AUDIO_APP_NUMBER)
-			mixInGain = (short)p1->srcmixer_input_gain_l;
-			/* Q13p2 dB */
-		else
-#endif
-			mixInGain = (short)p->srcmixer_input_gain_l;
-		/* Q13p2 dB */
-		mixInGain = mixInGain * 25;	/* into mB */
-#if defined(USE_NEW_AUDIO_MM_PARAM)
-		if (param.app >= AUDIO_APP_NUMBER)
-			mixInGainR = (short)p1->srcmixer_input_gain_r;
-		/* Q13p2 dB */
-		else
-#endif
-			mixInGainR = (short)p->srcmixer_input_gain_r;
-		/* Q13p2 dB */
-		mixInGainR = mixInGainR * 25;	/* into mB */
-	} else if (param.mixInGain_mB == GAIN_SYSPARM) {
-#if defined(USE_NEW_AUDIO_MM_PARAM)
-		if (param.app >= AUDIO_APP_NUMBER)
-			mixInGain = (short)p1->srcmixer_input_gain_l;
-			/* Q13p2 dB */
+	if (app >= AUDIO_APP_NUMBER)
+		mixInGain = (short)p1->srcmixer_input_gain_l;	/* Q13p2 dB */
 	else
 #endif
-			mixInGain = (short)p->srcmixer_input_gain_l;
-			/* Q13p2 dB */
+		mixInGain = (short)p->srcmixer_input_gain_l;	/* Q13p2 dB */
 
 	mixInGain = mixInGain * 25;	/* into mB */
-		mixInGainR = param.mixInGainR_mB;
-	} else if (param.mixInGainR_mB == GAIN_SYSPARM) {
-#if defined(USE_NEW_AUDIO_MM_PARAM)
-		if (param.app >= AUDIO_APP_NUMBER)
-			mixInGainR = (short)p1->srcmixer_input_gain_r;
-			/* Q13p2 dB */
-		else
-#endif
-			mixInGainR = (short)p->srcmixer_input_gain_r;
-			/* Q13p2 dB */
-		mixInGainR = mixInGainR * 25;	/* into mB */
-		mixInGain = param.mixInGain_mB;
-	} else {
-		mixInGain = param.mixInGain_mB;
-		mixInGainR = param.mixInGainR_mB;
-	}
+/*	mixInGain = (short) AudParmP()[
+	arg_audio_mode].srcmixer_input_gain_r;
+	mixInGain = mixInGain*25; //into mB
+*/
 
 	/*determine which which mixer input to apply the gains to */
 
-	if (param.pathID >= 1)
-		path = csl_caph_FindPath(param.pathID);
-	if (path != 0) {
-		int i, j;
-		for (i = 0; i < MAX_SINK_NUM; i++)
-			for (j = 0; j < MAX_BLOCK_NUM; j++)
-				if (path->srcmRoute[i][j].outChnl !=
-				CSL_CAPH_SRCM_CH_NONE) {
-					outChnl = path->srcmRoute[i][j].outChnl;
-					aTrace(LOG_AUDIO_DRIVER,
-					"%s pathID %d outChnl 0x%x inChnl 0x%x\n",
-					__func__, param.pathID, outChnl,
-					path->srcmRoute[i][j].inChnl);
-					aTrace(LOG_AUDIO_DRIVER,
-						"mixInGain 0x%x, mixInGainR 0x%x\n",
-						mixInGain, mixInGainR);
-					csl_srcmixer_setMixInGain(
-						  path->srcmRoute[i][j].inChnl,
-						  path->srcmRoute[i][j].outChnl,
-						  mixInGain, mixInGainR);
-				}
-	} else {
-		aError(
-		"AUDDRV_SetAudioMode_Speaker can not find path\n");
-	}
+	if (outChnl)
+		csl_srcmixer_setMixAllInGain(outChnl,
+				mixInGain, mixInGain);
 	if (outChnl) {
-		if (param.mixOutGain_mB == GAIN_SYSPARM &&
-			param.mixOutGainR_mB == GAIN_SYSPARM) {
-			/* Q13p2 dB */
-#if defined(USE_NEW_AUDIO_MM_PARAM)
-		if (param.app >= AUDIO_APP_NUMBER)
-			mixOutGain = (short)p1->srcmixer_output_fine_gain_l;
-		else
-#endif
-			mixOutGain = (short)p->srcmixer_output_fine_gain_l;
-		mixOutGain = mixOutGain * 25;	/*into mB */
-#if defined(USE_NEW_AUDIO_MM_PARAM)
-		if (param.app >= AUDIO_APP_NUMBER)
-			mixOutGainR = (short)p1->srcmixer_output_fine_gain_r;
 		/* Q13p2 dB */
-		else
-#endif
-			mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
-		mixOutGainR = mixOutGainR * 25;	/*into mB */
-		} else if (param.mixOutGain_mB == GAIN_SYSPARM) {
 #if defined(USE_NEW_AUDIO_MM_PARAM)
-			/* Q13p2 dB */
-		if (param.app >= AUDIO_APP_NUMBER)
+		if (app >= AUDIO_APP_NUMBER)
 			mixOutGain = (short)p1->srcmixer_output_fine_gain_l;
 		else
 #endif
 			mixOutGain = (short)p->srcmixer_output_fine_gain_l;
 
 		mixOutGain = mixOutGain * 25;	/*into mB */
-		mixOutGainR = param.mixOutGainR_mB;
-		} else if (param.mixOutGainR_mB == GAIN_SYSPARM) {
-#if defined(USE_NEW_AUDIO_MM_PARAM)
-			/* Q13p2 dB */
-		if (param.app >= AUDIO_APP_NUMBER)
-			mixOutGainR = (short)p1->srcmixer_output_fine_gain_r;
-		else
-#endif
-			mixOutGainR = (short)p->srcmixer_output_fine_gain_r;
-		mixOutGainR = mixOutGainR * 25;	/*into mB */
-		mixOutGain = param.mixOutGain_mB;
-		} else {
-			mixOutGain = param.mixOutGain_mB;
-			mixOutGainR = param.mixOutGainR_mB;
-		}
+		/* mixOutGain = (short) AudParmP()[
+		   arg_audio_mode].srcmixer_output_fine_gain_r; */
+		/* mixOutGain = mixOutGain*25; //into mB */
 
 		/* Q13p2 dB */
 #if defined(USE_NEW_AUDIO_MM_PARAM)
-	if (param.app >= AUDIO_APP_NUMBER)
+		if (app >= AUDIO_APP_NUMBER)
 			mixBitSel = (short)p1->srcmixer_output_coarse_gain_l;
 		else
 #endif
@@ -1161,43 +1028,14 @@ void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param)
 		mixBitSel = mixBitSel / 24;
 		/* bit_shift */
 
-#if defined(USE_NEW_AUDIO_MM_PARAM)
-	if (param.app >= AUDIO_APP_NUMBER)
-		mixBitSelR = (short)p1->srcmixer_output_coarse_gain_r;
-		/* Q13p2 dB */
-	else
-#endif
-		mixBitSelR = (short)p->srcmixer_output_coarse_gain_r;
-		mixBitSelR = mixBitSelR / 24;
+		/* mixBitSel = (short) AudParmP()
+		   [arg_audio_mode].srcmixer_output_coarse_gain_r; */
+		/* mixBitSel = mixBitSel / 24; */
 		/* bit_shift */
 
-		aTrace(LOG_AUDIO_DRIVER,
-			"%s : mixOutGain 0x%x, mixOutGainR 0x%x, "
-			"mixBitSel %d, mixBitSelR %d\n",
-			__func__, mixOutGain, mixOutGainR,
-			mixBitSel, mixBitSelR);
-		csl_srcmixer_setMixBitSel(outChnl, mixBitSel, mixBitSelR);
-		csl_srcmixer_setMixOutGain(outChnl, mixOutGain, mixOutGainR);
+		csl_srcmixer_setMixBitSel(outChnl, mixBitSel);
+		csl_srcmixer_setMixOutGain(outChnl, mixOutGain);
 	}
-
-
-/* Do not enable/disable sidetone path based on sysparm when in HW loopback */
-	if ((!param.inHWlpbk) && (p != NULL)) {
-		void *coef = NULL;
-		UInt16 gain = 0;
-		UInt16 enable = 0;
-		enable = p->hw_sidetone_enable;
-		if (!enable) {
-			AUDDRV_HW_DisableSideTone(param.mode);
-		} else {
-			AUDDRV_HW_EnableSideTone(param.mode);
-			coef = (void *)&(p->hw_sidetone_eq[0]);
-			AUDDRV_HW_SetFilter(AUDDRV_SIDETONE_FILTER, coef);
-			gain = p->hw_sidetone_gain;
-			csl_caph_audioh_sidetone_set_gain(gain);
-	}
-}
-
 }
 #endif
 
@@ -1263,7 +1101,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		break;
 
 	case AUDIO_MODE_BLUETOOTH:
-#ifdef CONFIG_AUDIO_FEATURE_SET_DISABLE_ECNS
+#ifdef AUDIO_FEATURE_SET_DISABLE_ECNS
 	case AUDIO_MODE_HANDSFREE:
 #endif
 		outChnl =
@@ -1416,13 +1254,15 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 				"AUDDRV_SetAudioMode_Speaker can not find mixer output\n");
 
 	} else {
-		aTrace(LOG_AUDIO_DRIVER,
-			"AUDDRV_SetAudioMode_Speaker path == NULL\n");
+		if (param.app != AUDIO_APP_RECORDING) {
+		aError(
+		"AUDDRV_SetAudioMode_Speaker can not find path\n");
 		/*do not know which mix input to apply gain on
 		if (outChnl)
 			csl_srcmixer_setMixAllInGain(outChnl,
 				mixInGain, mixInGain);
 		*/
+	}
 	}
 
 	if (outChnl) {
@@ -2002,7 +1842,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	if (bNeedDualMic) {
 		config.streamID = CSL_CAPH_STREAM_NONE;
 		config.pathID = 0;
-		config.source = csl_caph_hwctrl_GetDualMic_NoiseRefMic();
+		config.source = MIC_NOISE_CANCEL;
 		config.sink = CSL_CAPH_DEV_DSP;
 		config.dmaCH = CSL_CAPH_DMA_NONE;
 		config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
@@ -2159,12 +1999,51 @@ static void AUDDRV_HW_DisableSideTone(AudioMode_t audio_mode)
 //
 // =========================================================================
 */
-CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic(AUDIO_SOURCE_Enum_t mic)
+static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic(AUDIO_SOURCE_Enum_t mic)
 {
-	CSL_CAPH_DEVICE_e dev = MIC_Mapping_Table[mic].dev;
+	CSL_CAPH_DEVICE_e dev = CSL_CAPH_DEV_NONE;
 
 	aTrace(LOG_AUDIO_DRIVER,
-		"AUDDRV_GetDRVDeviceFromMic::mic %d:%d\n", mic, dev);
+			"AUDDRV_GetDRVDeviceFromMic:: mic = 0x%x\n", mic);
+
+	switch (mic) {
+	case AUDIO_SOURCE_UNDEFINED:
+		dev = CSL_CAPH_DEV_NONE;
+		break;
+
+	case AUDIO_SOURCE_SPEECH_DIGI:
+		/*case AUDDRV_DUAL_MIC_DIGI12:
+		   //case AUDDRV_DUAL_MIC_DIGI21: */
+		dev = CSL_CAPH_DEV_DIGI_MIC;
+		break;
+
+	case AUDIO_SOURCE_DIGI1:
+		dev = CSL_CAPH_DEV_DIGI_MIC_L;
+		break;
+
+	case AUDIO_SOURCE_DIGI2:
+		dev = CSL_CAPH_DEV_DIGI_MIC_R;
+		break;
+
+	case AUDIO_SOURCE_ANALOG_MAIN:
+		dev = CSL_CAPH_DEV_ANALOG_MIC;
+		break;
+
+	case AUDIO_SOURCE_ANALOG_AUX:
+		dev = CSL_CAPH_DEV_HS_MIC;
+		break;
+
+	case AUDIO_SOURCE_BTM:
+		dev = CSL_CAPH_DEV_BT_MIC;
+		break;
+
+	case AUDIO_SOURCE_USB:
+		dev = CSL_CAPH_DEV_MEMORY;
+		break;
+
+	default:
+		break;
+	};
 
 	return dev;
 }
@@ -2177,12 +2056,45 @@ CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic(AUDIO_SOURCE_Enum_t mic)
 //
 // =========================================================================
 */
-CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr(AUDIO_SINK_Enum_t spkr)
+static CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr(AUDIO_SINK_Enum_t spkr)
 {
-	CSL_CAPH_DEVICE_e dev = SPKR_Mapping_Table[spkr].dev;
+	CSL_CAPH_DEVICE_e dev = CSL_CAPH_DEV_NONE;
 
 	aTrace(LOG_AUDIO_DRIVER,
-		"AUDDRV_GetDRVDeviceFromSpkr::spkr %d:%d\n", spkr, dev);
+			"AUDDRV_GetDRVDeviceFromSpkr:: spkr = 0x%x\n", spkr);
+
+	switch (spkr) {
+	case AUDIO_SINK_UNDEFINED:
+		dev = CSL_CAPH_DEV_NONE;
+		break;
+
+	case AUDIO_SINK_HANDSET:
+		dev = CSL_CAPH_DEV_EP;
+		break;
+
+	case AUDIO_SINK_LOUDSPK:
+		dev = CSL_CAPH_DEV_IHF;
+		break;
+
+	case AUDIO_SINK_HEADSET:
+		dev = CSL_CAPH_DEV_HS;
+		break;
+
+	case AUDIO_SINK_VIBRA:
+		dev = CSL_CAPH_DEV_VIBRA;
+		break;
+
+	case AUDIO_SINK_BTM:
+		dev = CSL_CAPH_DEV_BT_SPKR;
+		break;
+
+	case AUDIO_SINK_USB:
+		dev = CSL_CAPH_DEV_MEMORY;
+		break;
+
+	default:
+		break;
+	};
 
 	return dev;
 }
@@ -2218,9 +2130,7 @@ static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 	"AP_ProcessAudioEnableDone, Got AUDIO ENABLE RESP FROM DSP 0x%x\n",
 	enabled_path);
 
-#ifdef CONFIG_BCM_MODEM
 	csl_caph_dspcb(enabled_path & ~((UInt16)DSP_AADMAC_RETIRE_DS_CMD));
-#endif
 
 	/*aError("i_e");*/
 
@@ -2278,11 +2188,4 @@ void AUDDRV_CPResetCleanup(void)
 	voiceInSr = 0;
 	curCallMode = CALL_MODE_NONE;
 	init_completion(&audioEnableDone);
-}
-
-void AUDDRV_SetCallSampleRate(UInt32 voiceSampleRate)
-{
-	curCallSampleRate = voiceSampleRate;
-	aTrace(LOG_AUDIO_DRIVER,  "%s curCallSampleRate = %d\n",
-		__func__, (int)curCallSampleRate);
 }

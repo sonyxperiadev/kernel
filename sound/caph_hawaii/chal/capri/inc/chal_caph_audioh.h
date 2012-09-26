@@ -3014,19 +3014,7 @@ extern void chal_audio_hspath_sdm_enable_dither(CHAL_HANDLE handle,  cUInt16 ena
 *
 *  @return 
 *****************************************************************************/
-extern cUInt16 chal_audio_hspath_sdm_is_dither_enabled(CHAL_HANDLE handle);
-
-/**
-*
-*  @brief
-*
-*  @param
-*  @param
-*
-*  @return
-*****************************************************************************/
-extern void chal_audio_hspath_sdm_enable_dither_gain(CHAL_HANDLE handle,
-	cUInt16 gain_enable);
+extern void chal_audio_hspath_sdm_enable_dither_gain(CHAL_HANDLE handle,  cUInt16 gain_enable);
 
 /**
 *
@@ -3219,14 +3207,6 @@ extern void kona_mic_bias_on(void);
 extern void kona_mic_bias_off(void);
 
 /**
- * chal_audio_hspath_sdm_mute - Mute the SDM.
- *
-*****************************************************************************/
-
-extern void chal_audio_hspath_sdm_mute(CHAL_HANDLE handle,
-	_Bool mute, cUInt16 lr_ch);
-
-/**
 *
 *  @brief Returns the current HS path status
 *
@@ -3247,29 +3227,5 @@ Boolean chal_audio_isHSpath_active(void);
 *****************************************************************************/
 
 Boolean chal_audio_isEPpath_active(void);
-
-/**
-*
-*  @brief  Enable/disable dac loopback path
-*
-*  @param  handle (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  enable (in) flag to specify whether enable or disable the loopback
-*
-*  @return none
-*****************************************************************************/
-cVoid chal_audio_dac_loopback_enable(CHAL_HANDLE handle, cUInt16 enable);
-
-/**
-*
-*  @brief  Enable/disable DAC Loopback
-*
-*  @param  handle   (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dac_mask (in) bit mask of the DAC paths for which loopback enable or disable is needed
-*  @param  enable   (in) flag to specify whether enable or disable the loopback
-*
-*  @return none
-*****************************************************************************/
-cVoid chal_audio_dac_loopback_set_out_paths(CHAL_HANDLE handle, cUInt32 dac_mask, cUInt16 enable);
-
 #endif /* _CHAL_AUDIO_ */
 

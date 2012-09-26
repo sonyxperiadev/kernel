@@ -66,14 +66,12 @@
 /***************************************************************************/
 static CSL_CAPH_Render_Drv_t sRenderDrv[CSL_CAPH_STREAM_TOTAL] = { {0} };
 static atomic_t renderNumBlocks = ATOMIC_INIT(2);
-static atomic_t gNumActiveStreams = ATOMIC_INIT(0);
 
 /***************************************************************************/
 /*local function declarations                                              */
 /***************************************************************************/
 static CSL_CAPH_STREAM_e GetStreamIDByDmaCH(CSL_CAPH_DMA_CHNL_e dmaCH);
 static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl);
-static void audio_sil_frm_detect(CSL_CAPH_Render_Drv_t *audDrv);
 
 /***************************************************************************/
 /*local function definitions                                               */
@@ -229,10 +227,6 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 	spin_unlock_irqrestore(&audDrv->configLock, flags);
 
 	audDrv->dmaCH = csl_caph_hwctrl_GetdmaCH(audDrv->pathID);
-	if (stream.size >= 0x10000 && audDrv->dmaCH > CSL_CAPH_DMA_CH2) {
-		csl_caph_hwctrl_SetLongDma(audDrv->pathID);
-		audDrv->dmaCH = csl_caph_hwctrl_GetdmaCH(audDrv->pathID);
-	}
 	audDrv->ringBuffer = ringBuffer;
 	audDrv->numBlocks = numBlocks;
 	audDrv->blockSize = blockSize;
@@ -272,8 +266,6 @@ Result_t csl_audio_render_start(UInt32 streamID)
 	if (audDrv == NULL)
 		return RESULT_ERROR;
 
-	atomic_inc(&gNumActiveStreams);
-
 	(void)csl_caph_hwctrl_StartPath(audDrv->pathID);
 
 	return RESULT_OK;
@@ -294,7 +286,6 @@ Result_t csl_audio_render_stop(UInt32 streamID)
 			"csl_audio_render_stop::streamID=0x%lx\n", streamID);
 	config.streamID = (CSL_CAPH_STREAM_e) streamID;
 	(void)csl_caph_hwctrl_DisablePath(config);
-	atomic_dec(&gNumActiveStreams);
 
 	return RESULT_OK;
 }
@@ -359,8 +350,6 @@ Result_t csl_audio_render_buffer_ready(UInt32 streamID)
 	if (audDrv == NULL)
 		return RESULT_WRONG_STATE;
 
-	audio_sil_frm_detect(audDrv);
-
 	atomic_add(audDrv->maxBlkBytes, &audDrv->availBytes);
 	if (atomic_read(&audDrv->dmaState) == DYNDMA_LOW_DONE) {
 		atomic_set(&audDrv->dmaState, DYNDMA_LOW_RDY);
@@ -396,7 +385,6 @@ Result_t csl_audio_render_buffer_ready(UInt32 streamID)
 	if (audDrv == NULL)
 		return RESULT_WRONG_STATE;
 
-	audio_sil_frm_detect(audDrv);
 
 	spin_lock_irqsave(&audDrv->readyStatusLock, flags);
 
@@ -429,78 +417,6 @@ CSL_CAPH_Render_Drv_t *GetRenderDriverByType(UInt32 streamID)
 	}
 
 	return audDrv;
-}
-
-/* ==========================================================================
-//
-// Function Name: audio_sil_frm_detect
-//
-// Description: Detection for silent frames
-//
-// =========================================================================*/
-static void audio_sil_frm_detect(CSL_CAPH_Render_Drv_t *audDrv)
-{
-	UInt8 *addr;
-	UInt16 *ptr;
-	int left_sig = 0;
-	int right_sig = 0;
-	UInt16 dither_lr;
-	int i;
-
-	dither_lr = csl_caph_audio_is_hs_path_dither_enabled();
-
-	if (atomic_read(&gNumActiveStreams) == 1 && !dither_lr) {
-
-		if (csl_caph_dma_get_sdm_reset_mode(audDrv->dmaCH) ==
-			SDM_RESET_MODE_ENABLED) {
-
-			addr = audDrv->ringBuffer +
-				audDrv->blockIndex * audDrv->blockSize;
-
-			ptr = phys_to_virt((UInt32)addr);
-			for (i = 0; i < audDrv->blockSize; i += 1) {
-
-				if ((i & 0x1) == 0 && !left_sig) {
-					if (ptr[i] != 0x0 ||
-						(dither_lr &
-						CSL_AUDIO_CHANNEL_LEFT)) {
-						csl_caph_dma_sil_frm_cnt_reset(
-						audDrv->dmaCH,
-						CSL_AUDIO_CHANNEL_LEFT);
-						left_sig = 1;
-					}
-
-				} else if (!right_sig) {
-					if (ptr[i] != 0x0 ||
-						(dither_lr &
-						CSL_AUDIO_CHANNEL_RIGHT)) {
-						csl_caph_dma_sil_frm_cnt_reset(
-						audDrv->dmaCH,
-						CSL_AUDIO_CHANNEL_RIGHT);
-						right_sig = 1;
-					}
-				}
-
-				if (left_sig && right_sig)
-					break;
-			}
-
-			if (i == audDrv->blockSize) {
-				if (!left_sig)
-					csl_caph_dma_sil_frm_cnt_incr(
-						audDrv->dmaCH,
-						CSL_AUDIO_CHANNEL_LEFT);
-				if (!right_sig)
-					csl_caph_dma_sil_frm_cnt_incr(
-						audDrv->dmaCH,
-						CSL_AUDIO_CHANNEL_RIGHT);
-			}
-		}
-	} else {
-		csl_caph_dma_sil_frm_cnt_reset(
-			audDrv->dmaCH,
-			(CSL_AUDIO_CHANNEL_LEFT | CSL_AUDIO_CHANNEL_RIGHT));
-	}
 }
 
 #if defined(DYNAMIC_DMA_PLAYBACK)
