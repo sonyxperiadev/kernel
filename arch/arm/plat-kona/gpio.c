@@ -313,14 +313,11 @@ static void kona_gpio_irq_ack(struct irq_data *d)
 	int bankId = GPIO_BANK(gpio);
 	int bit = GPIO_BIT(gpio);
 	void __iomem *reg_base = kona_gpio.reg_base;
-	u32 val;
 	unsigned long flags;
 
 	spin_lock_irqsave(&kona_gpio.lock, flags);
 
-	val = __raw_readl(reg_base + GPIO_INT_STA(bankId));
-	val |= 1 << bit;
-	__raw_writel(val, reg_base + GPIO_INT_STA(bankId));
+	__raw_writel(1 << bit, reg_base + GPIO_INT_STA(bankId));
 
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 }
@@ -351,14 +348,11 @@ static void kona_gpio_irq_unmask(struct irq_data *d)
 	int bankId = GPIO_BANK(gpio);
 	int bit = GPIO_BIT(gpio);
 	void __iomem *reg_base = kona_gpio.reg_base;
-	u32 val;
 	unsigned long flags;
 
 	spin_lock_irqsave(&kona_gpio.lock, flags);
 
-	val = __raw_readl(reg_base + GPIO_INT_MSKCLR(bankId));
-	val |= 1 << bit;
-	__raw_writel(val, reg_base + GPIO_INT_MSKCLR(bankId));
+	__raw_writel(1 << bit, reg_base + GPIO_INT_MSKCLR(bankId));
 
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 }

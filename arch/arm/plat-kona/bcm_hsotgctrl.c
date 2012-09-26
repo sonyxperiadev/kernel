@@ -574,6 +574,16 @@ int bcm_hsotgctrl_bc_vdp_src_off(void)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_vdp_src_off);
 
+void bcm_hsotgctrl_wakeup_core(void)
+{
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle
+		= local_hsotgctrl_handle;
+
+	/* Request PHY clock */
+	bcm_hsotgctrl_set_phy_clk_request(true);
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_wakeup_core);
+
 static void bcm_hsotgctrl_delayed_wakeup_handler(struct work_struct *work)
 {
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
@@ -588,17 +598,8 @@ static void bcm_hsotgctrl_delayed_wakeup_handler(struct work_struct *work)
 
 	dev_info(bcm_hsotgctrl_handle->dev, "Do HSOTGCTRL wakeup\n");
 
-	if (!clk_get_usage(bcm_hsotgctrl_handle->otg_clk)) {
-		/* Enable OTG AHB clock */
-		bcm_hsotgctrl_en_clock(true);
-	}
-
-	/* Disable wakeup interrupt */
-	bcm_hsotgctrl_phy_wakeup_condition(false);
-
-	/* Request PHY clock */
-	bcm_hsotgctrl_set_phy_clk_request(true);
-
+	/* Use the PHY-core wakeup sequence */
+	bcm_hsotgctrl_wakeup_core();
 }
 
 static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
@@ -609,15 +610,22 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return IRQ_NONE;
 
-	/* Disable wake IRQ */
+	/* Disable the IRQ since already waking up */
 	disable_irq_nosync(bcm_hsotgctrl_handle->hsotgctrl_irq);
 	bcm_hsotgctrl_handle->irq_enabled = false;
+
+	if (!clk_get_usage(bcm_hsotgctrl_handle->otg_clk)) {
+		/* Enable OTG AHB clock */
+		bcm_hsotgctrl_en_clock(true);
+	}
+
+	/* Disable wakeup interrupt */
+	bcm_hsotgctrl_phy_wakeup_condition(false);
 
 	schedule_delayed_work(&bcm_hsotgctrl_handle->wakeup_work,
 	  msecs_to_jiffies(BCM_HSOTGCTRL_WAKEUP_PROCESSING_DELAY));
 
 	return IRQ_HANDLED;
-
 }
 
 int bcm_hsotgctrl_get_clk_count(void)
