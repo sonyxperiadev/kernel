@@ -462,8 +462,18 @@ int32_t dwc_otg_handle_wakeup_detected_intr(dwc_otg_core_if_t *core_if)
 	if (core_if->xceiver->set_suspend &&
 	    (core_if->lx_state == DWC_OTG_L2) &&
 	    !core_if->core_params->otg_supp_enable) {
+
+#ifdef CONFIG_USB_DELAYED_SUSPEND_POWER_SAVING
+		/* We can see a reset before suspend processing
+		 * gets scheduled. Cancel it since we don't want to
+		 * suspend after seeing reset
+		 */
+		DWC_TIMER_CANCEL(core_if->suspend_power_saving_timer);
+#else
 		/* REVISIT when we use the external wake interrupt */
 		usb_phy_set_suspend(core_if->xceiver, 0);
+#endif
+
 	}
 #endif
 

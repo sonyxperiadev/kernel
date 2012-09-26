@@ -38,6 +38,7 @@ int bcm_hsotgctrl_set_bc_iso(bool on);
 int bcm_hsotgctrl_set_soft_ldo_pwrdn(bool on);
 int bcm_hsotgctrl_set_aldo_pdn(bool on);
 int bcm_hsotgctrl_set_phy_resetb(bool on);
+int bcm_hsotgctrl_set_phy_pll_resetb(bool on);
 int bcm_hsotgctrl_set_phy_clk_request(bool on);
 int bcm_hsotgctrl_phy_mdio_init(void);
 int bcm_hsotgctrl_set_ldo_suspend_mask(void);

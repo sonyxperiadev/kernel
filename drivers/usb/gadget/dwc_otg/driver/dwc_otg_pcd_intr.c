@@ -799,6 +799,14 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	DWC_TIMER_CANCEL(core_if->bidl_adisconn_timer);
 #endif
 
+#ifdef CONFIG_USB_DELAYED_SUSPEND_POWER_SAVING
+	/* We can see a reset before suspend processing
+	 * gets scheduled. Cancel it since we don't want to
+	 * suspend after seeing reset
+	 */
+	DWC_TIMER_CANCEL(core_if->suspend_power_saving_timer);
+#endif
+
 	power.d32 = dwc_read_reg32(core_if->pcgcctl);
 	if (power.b.stoppclk) {
 		power.d32 = 0;
