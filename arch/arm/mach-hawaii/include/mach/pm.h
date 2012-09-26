@@ -121,6 +121,7 @@ extern void instrument_dormant_exit(void);
 extern void instrument_wfi(int trace_path);
 extern void instrument_retention(int trace_path);
 extern int get_force_sleep_state(void);
+extern void set_spare_power_status(unsigned int mode);
 #endif /* __ASSEMBLY__ */
 
 #endif /*__HAWAII_PM_H__*/

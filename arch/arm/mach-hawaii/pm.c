@@ -78,7 +78,6 @@ static int force_sleep;
 static int enter_idle_state(struct kona_idle_state *state);
 static int enter_suspend_state(struct kona_idle_state *state);
 static int enter_dormant_state(struct kona_idle_state *state);
-static void set_spare_power_status(unsigned int mode);
 
 static struct kona_idle_state idle_states[] = {
 	{
@@ -298,7 +297,7 @@ int enter_suspend_state(struct kona_idle_state *state)
  * mode and on wakeup, boot ROM incorrectly senses POR instead of dormant
  * wakeup. The new bits listed above is meant to overcome this problem.
  */
-static void set_spare_power_status(unsigned int mode)
+void set_spare_power_status(unsigned int mode)
 {
 	unsigned int val;
 
@@ -314,27 +313,10 @@ static void set_spare_power_status(unsigned int mode)
 int enter_dormant_state(struct kona_idle_state *state)
 {
 #ifdef CONFIG_A9_DORMANT_MODE
-	u32 v;
 	if (dormant_enable != 0) {
-
-		pwr_mgr_arm_core_dormant_enable(true);
-		/* In rentetion mode A9 cache memory PM togling pin
-		 * should be disabled otherwise the memory periphary
-		 * will be powered down in retention which may cause
-		 * system to hang - This bit was added in B0
-		 */
-		v = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
-		v &= ~CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
-		writel_relaxed(v, CHIPREG_PERIPH_SPARE_CONTROL2);
-		set_spare_power_status(SCU_STATUS_DORMANT);
-
 		dormant_enter(DORMANT_CORE_DOWN);
-
-		set_spare_power_status(SCU_STATUS_NORMAL);
-		v = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
-		v |= CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
-		writel_relaxed(v, CHIPREG_PERIPH_SPARE_CONTROL2);
-		pwr_mgr_arm_core_dormant_enable(false);
+	} else {
+		enter_wfi();
 	}
 #endif /* CONFIG_A9_DORMANT_MODE */
 	return 0;

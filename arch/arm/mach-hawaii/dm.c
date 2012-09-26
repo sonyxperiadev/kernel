@@ -27,12 +27,12 @@
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_pl310.h>
-
+#include <plat/scu.h>
 #include <plat/pi_mgr.h>
 #include <plat/pwr_mgr.h>
 #include <mach/memory.h>
 #include <asm/hardware/cache-l2x0.h>
-
+#include <mach/pm.h>
 /* Control variable to enter retention instead
  * of dormant in idle path but enter
  * dormant during suspend
@@ -278,7 +278,8 @@ static void save_proc_clk_regs(void)
  */
 static u32 num_cpus(void)
 {
-	return CONFIG_NR_CPUS;
+	return (readl(KONA_SCU_VA + SCU_CONFIG_OFFSET) &
+		SCU_CONFIG_NUM_CPUS_MASK) + 1;
 }
 
 /*
@@ -432,7 +433,7 @@ void dormant_enter(u32 service)
 #endif
 	u32 dormant_return;
 	u32 reg_val;
-
+#if defined(CONFIG_CAPRI_DORMANT_MODE)
 	spin_lock_irqsave(&dormant_entry_lock, flgs);
 	if (dormant_disable || fake_dormant ||
 			(force_retention_in_idle &&
@@ -458,7 +459,7 @@ void dormant_enter(u32 service)
 				PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
 	}
 	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
-
+#endif
 	if (dormant_disable) {
 
 		/* This is retention case, so just execute WFI.
@@ -536,27 +537,29 @@ void dormant_enter(u32 service)
 
 		/* save all proc registers except arm_sys_idle_dly */
 		save_proc_clk_regs();
-#if defined(CONFIG_CAPRI_DORMANT_MODE)
-		if (fake_dormant)
-			writel_relaxed(0, PROC_CLK_REG_ADDR(ARM_SYS_IDLE_DLY));
-		else
-			writel_relaxed(1, PROC_CLK_REG_ADDR(ARM_SYS_IDLE_DLY));
 
-		/* Indicate 3 to the external power controller to turn off
-		 * the L2 memory.  Fake dormant is like retention so just
-		 * indicate a 2.
-		 */
-		if (is_l2_disabled() || fake_dormant) {
-			writel_relaxed(PWRCTRL_DORMANT_L2_OFF_CORE_0,
-					   KONA_CHIPREG_VA +
-					   CHIPREG_PERIPH_MISC_REG3_OFFSET);
+		if (fake_dormant) {
+			reg_val = readl_relaxed(KONA_CHIPREG_VA +
+					CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
+			reg_val |=
+			  CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
+			writel_relaxed(reg_val, KONA_CHIPREG_VA +
+					CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
 
+			set_spare_power_status(SCU_STATUS_NORMAL);
+			pwr_mgr_arm_core_dormant_enable(false);
 		} else {
-			writel_relaxed(PWRCTRL_DORMANT_CORE_0,
-					   KONA_CHIPREG_VA +
-					   CHIPREG_PERIPH_MISC_REG3_OFFSET);
+			reg_val = readl_relaxed(KONA_CHIPREG_VA +
+					CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
+			reg_val &=
+			  ~CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
+			writel_relaxed(reg_val, KONA_CHIPREG_VA +
+					CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
+
+			set_spare_power_status(SCU_STATUS_DORMANT);
+			pwr_mgr_arm_core_dormant_enable(true);
 		}
-#endif
+
 		/*
 		 * Code to flush L2 and wait till done if needed
 		 * log_dormant_event(DORMANT_BEFORE_L2_FLUSH_LOG);
@@ -623,17 +626,18 @@ void dormant_enter(u32 service)
 			cnt_success++;
 		else
 			cnt_failure++;
-#if defined(CONFIG_CAPRI_DORMANT_MODE)
-		writel_relaxed(UNLOCK_PROC_CLK, KONA_PROC_CLK_VA);
 
-		/* Let ARM_SYS_IDLE_DLY be set to 0 for non dormant cases */
-		writel_relaxed(0, PROC_CLK_REG_ADDR(ARM_SYS_IDLE_DLY));
+		reg_val = readl_relaxed(KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
+		reg_val |=
+		  CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
+		writel_relaxed(reg_val, KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
 
-		/* Use the SCU bits not the bypass bits for non dormant cases */
-		writel_relaxed(USE_SCU_PWR_CTRL,
-			       KONA_CHIPREG_VA +
-			       CHIPREG_PERIPH_MISC_REG3_OFFSET);
-#endif
+		set_spare_power_status(SCU_STATUS_NORMAL);
+		pwr_mgr_arm_core_dormant_enable(false);
+
+
 	}
 
 	if (num_cores_in_dormant)
