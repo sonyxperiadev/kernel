@@ -7681,6 +7681,7 @@ EXPORT_SYMBOL(__clock_print_act_clks);
 int debug_bus_mux_sel(int mux_sel, int mux_param)
 {
 	u32 reg_val;
+	static int reg_enabled;
 	static struct regulator *rgltr;
 	if (rgltr == NULL) {
 		rgltr = regulator_get(NULL, "sddat_debug_bus");
@@ -7697,10 +7698,11 @@ int debug_bus_mux_sel(int mux_sel, int mux_param)
 	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK4_OFFSET);
 
 	if (mux_sel == 0) {
-		if (!IS_ERR_OR_NULL(rgltr) && (regulator_is_enabled(rgltr)))  {
+		if (!IS_ERR_OR_NULL(rgltr) && (reg_enabled == 1)) {
 			regulator_disable(rgltr);
 			regulator_put(rgltr);
 			rgltr = NULL;
+			reg_enabled = 0;
 		}
 		/* Configure GPIO_XX to TESTPORT_XX  */
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET);
@@ -7708,7 +7710,7 @@ int debug_bus_mux_sel(int mux_sel, int mux_param)
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO02_OFFSET);
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO03_OFFSET);
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO04_OFFSET);
-			writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO05_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO05_OFFSET);
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO06_OFFSET);
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO07_OFFSET);
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO08_OFFSET);
@@ -7733,8 +7735,10 @@ int debug_bus_mux_sel(int mux_sel, int mux_param)
 			KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
 
 	} else if (mux_sel == 1) {  /*SDDATA*/
-		if (!IS_ERR_OR_NULL(rgltr) && (!regulator_is_enabled(rgltr)))
+		if (!IS_ERR_OR_NULL(rgltr) && (!regulator_is_enabled(rgltr))) {
 			regulator_enable(rgltr);
+			reg_enabled = 1;
+		}
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT0_OFFSET);
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT1_OFFSET);
 		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT2_OFFSET);
