@@ -150,6 +150,12 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 };
 
 extern brcm_alsa_chip_t *sgpCaph_chip;
+
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+extern int bcmpmu_read_pmu_temp(void);
+static BrcmPmuTempGainComp sgTempGainComp;
+#endif
+
 static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
 static unsigned int n_msg_in, n_msg_out, last_action;
 static struct completion complete_kfifo;
@@ -163,6 +169,10 @@ static DEFINE_MUTEX(mutexBlock);
 
 static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			void *arg_param, void *callback, int block);
+
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+static void temp_gain_comp_work(struct work_struct *work);
+#endif
 
 #ifdef USE_HR_TIMER
 static enum hrtimer_restart TimerCbStopVibrator(struct hrtimer *timer)
@@ -203,7 +213,7 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 {
 	TMsgAudioCtrl msgAudioCtrl;
 	unsigned int len = 0;
-
+	set_user_nice(current, -20);
 	while (1) {
 		/* get operation code from fifo */
 		len = kfifo_out_locked(&sgThreadData.m_pkfifo,
@@ -271,7 +281,40 @@ void caph_audio_init(void)
 	hr_timer.function = &TimerCbStopVibrator;
 #endif
 
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+	sgTempGainComp.intiComplete = 0;
+	INIT_DELAYED_WORK(&sgTempGainComp.temp_gain_comp, temp_gain_comp_work);
+#endif
 }
+
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+static void temp_gain_comp_work(struct work_struct *work)
+{
+	int temp = 0;
+	int next_delay;
+	int result;
+	BrcmPmuTempGainComp *paudio =
+		container_of(work, BrcmPmuTempGainComp, temp_gain_comp.work);
+	if (!AUDCTRL_TempGainCompStatus())
+		return;
+	/* read temperature from PMU */
+	temp = bcmpmu_read_pmu_temp();
+	paudio->prevTemp = paudio->currTemp;
+	paudio->currTemp = temp;
+	next_delay = AUDCTRL_TempGainComp(paudio);
+	aTrace(LOG_AUDIO_PMUTEMP, "temp_gain_comp_work:  temp = %d"
+		"next_delay = %d\n", temp, next_delay);
+	if (!AUDCTRL_AllPathsDisabled()) {
+		result = schedule_delayed_work(&paudio->temp_gain_comp,
+		msecs_to_jiffies(next_delay));
+	} else {
+		AUDCTRL_TempGainCompDeInit(&sgTempGainComp);
+		aTrace(LOG_AUDIO_PMUTEMP, "Stopped Scheduling"
+			"temp_gain_comp_work\n");
+	}
+}
+#endif
+
 
 /**
  * LaunchAudioHalThread: Create Worker thread.
@@ -878,6 +921,11 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDIO_DRIVER_Ctrl(param_start->drv_handle,
 					  AUDIO_DRIVER_START, NULL);
 		}
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+			AUDCTRL_TempGainCompInit(&sgTempGainComp);
+			schedule_delayed_work(&sgTempGainComp.temp_gain_comp,
+				0);
+#endif
 
 		}
 		break;
@@ -1232,6 +1280,11 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 						parm_call->new_spkr);
 
 			AUDIO_Policy_SetState(BRCM_STATE_INCALL);
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+			AUDCTRL_TempGainCompInit(&sgTempGainComp);
+			schedule_delayed_work(&sgTempGainComp.temp_gain_comp,
+				0);
+#endif
 		}
 		break;
 
@@ -1474,6 +1527,11 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			/* coverity[overrun-local] */
 			pathID[parm_FM->stream] = path;
 			AUDIO_Policy_SetState(BRCM_STATE_FM);
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+			AUDCTRL_TempGainCompInit(&sgTempGainComp);
+			schedule_delayed_work(&sgTempGainComp.temp_gain_comp,
+				0);
+#endif
 		}
 		break;
 	case ACTION_AUD_DisableFMPlay:

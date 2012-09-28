@@ -1327,6 +1327,10 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	} else {
 		u32 present_state;
 
+		/* Enable CMD/DATA interrupts */
+		sdhci_unmask_irqs(host, SDHCI_INT_CMD_MASK |
+			SDHCI_INT_DATA_MASK);
+
 		present_state = sdhci_readl(host, SDHCI_PRESENT_STATE);
 		/*
 		 * Check if the re-tuning timer has already expired and there
@@ -2154,6 +2158,9 @@ static void sdhci_tasklet_finish(unsigned long param)
 
 	spin_lock_irqsave(&host->lock, flags);
 
+	/* Disable CMD/DATA interrupts after request is complete */
+	sdhci_mask_irqs(host, SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK);
+
         /*
          * If this tasklet gets rescheduled while running, it will
          * be run again afterwards but without any active request.
@@ -2493,7 +2500,8 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 		 * mmc_queue_thread would block for more than 10seconds.
 		 *
 		 */
-		if (host->mrq->data)	{
+		WARN_ON(host->mrq == NULL);
+		if (host->mrq && host->mrq->data)	{
 			if (host->mrq->data->error)	{
 				printk(KERN_ERR"%s- It is possible that the"
 				 "damaged SD card is inserted-Error:0x%x\n",

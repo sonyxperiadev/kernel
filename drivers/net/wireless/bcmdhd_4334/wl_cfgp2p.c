@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfgp2p.c 347625 2012-07-27 10:52:40Z $
+ * $Id: wl_cfgp2p.c 351769 2012-08-21 08:21:45Z $
  *
  */
 #include <typedefs.h>
@@ -647,6 +647,8 @@ wl_cfgp2p_enable_discovery(struct wl_priv *wl, struct net_device *dev,
 	const u8 *ie, u32 ie_len)
 {
 	s32 ret = BCME_OK;
+	s32 bssidx = (wl_to_prmry_ndev(wl) == dev) ?
+		wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_DEVICE) : wl_cfgp2p_find_idx(wl, dev);
 	if (wl_get_p2p_status(wl, DISCOVERY_ON)) {
 		CFGP2P_INFO((" DISCOVERY is already initialized, we have nothing to do\n"));
 		goto set_ie;
@@ -672,7 +674,7 @@ wl_cfgp2p_enable_discovery(struct wl_priv *wl, struct net_device *dev,
 	}
 set_ie:
 	ret = wl_cfgp2p_set_management_ie(wl, dev,
-	            wl_cfgp2p_find_idx(wl, dev),
+	            bssidx,
 	            VNDR_IE_PRBREQ_FLAG, ie, ie_len);
 
 	if (unlikely(ret < 0)) {
@@ -739,8 +741,10 @@ wl_cfgp2p_escan(struct wl_priv *wl, struct net_device *dev, u16 active,
 #define P2PAPI_SCAN_NPROBES 1
 #define P2PAPI_SCAN_DWELL_TIME_MS 80
 #define P2PAPI_SCAN_SOCIAL_DWELL_TIME_MS 40
+#define P2PAPI_SCAN_ASSOC_TIME_MS 40
 #define P2PAPI_SCAN_HOME_TIME_MS 60
-#define P2PAPI_SCAN_NPROBS_TIME_MS 30
+#define P2PAPI_SCAN_NPROBS_TIME_MS 20
+#define P2PAPI_SCAN_NPROBS_MIN_TIME_MS	15
 #define P2PAPI_SCAN_AF_SEARCH_DWELL_TIME_MS 100
 
 	struct net_device *pri_dev = wl_to_p2p_bss_ndev(wl, P2PAPI_BSSCFG_PRIMARY);
@@ -805,14 +809,23 @@ wl_cfgp2p_escan(struct wl_priv *wl, struct net_device *dev, u16 active,
 		eparams->params.active_time = htod32(P2PAPI_SCAN_SOCIAL_DWELL_TIME_MS);
 	else if (num_chans == AF_PEER_SEARCH_CNT)
 		eparams->params.active_time = htod32(P2PAPI_SCAN_AF_SEARCH_DWELL_TIME_MS);
-	else if (num_chans == 1)
-		eparams->params.active_time = htod32(WL_SCAN_CONNECT_DWELL_TIME_MS);
 	else if (wl_get_drv_status_all(wl, CONNECTED))
-		eparams->params.active_time = -1;
+		eparams->params.active_time = P2PAPI_SCAN_ASSOC_TIME_MS;
 	else
 		eparams->params.active_time = htod32(P2PAPI_SCAN_DWELL_TIME_MS);
 	eparams->params.nprobes = htod32((eparams->params.active_time /
 		P2PAPI_SCAN_NPROBS_TIME_MS));
+
+	/* Override scan params to find a peer for a connection */
+	if (num_chans == 1) {
+		eparams->params.active_time = htod32(200);
+		eparams->params.home_time = 0;
+		eparams->params.nprobes = eparams->params.active_time /
+			P2PAPI_SCAN_NPROBS_MIN_TIME_MS;
+	}
+	if (eparams->params.nprobes <= 0)
+		eparams->params.nprobes = 1;
+
 	CFGP2P_DBG(("nprobes # %d, active_time %d\n",
 		eparams->params.nprobes, eparams->params.active_time));
 	eparams->params.passive_time = htod32(-1);
@@ -913,58 +926,56 @@ wl_cfgp2p_parse_vndr_ies(u8 *parse, u32 len,
 {
 	s32 err = BCME_OK;
 	vndr_ie_t *vndrie;
+	bcm_tlv_t *ie;
 	struct parsed_vndr_ie_info *parsed_info;
 	u32	count = 0;
 	s32 remained_len;
-	u8 *elt;
 
-	elt = parse;
 	remained_len = (s32)len;
 	memset(vndr_ies, 0, sizeof(*vndr_ies));
 
 	WL_INFO(("---> len %d\n", len));
+	ie = (bcm_tlv_t *) parse;
+	if (!bcm_valid_tlv(ie, remained_len))
+		ie = NULL;
+	while (ie) {
+		if (count >= MAX_VNDR_IE_NUMBER)
+			break;
+		if (ie->id == DOT11_MNG_VS_ID) {
+			vndrie = (vndr_ie_t *) ie;
+			/* len should be bigger than OUI length + one data length at least */
+			if (vndrie->len < (VNDR_IE_MIN_LEN + 1)) {
+				CFGP2P_ERR(("%s: invalid vndr ie. length is too small %d\n",
+					__FUNCTION__, vndrie->len));
+				goto end;
+			}
+			/* if wpa or wme ie, do not add ie */
+			if (!bcmp(vndrie->oui, (u8*)WPA_OUI, WPA_OUI_LEN) &&
+				((vndrie->data[0] == WPA_OUI_TYPE) ||
+				(vndrie->data[0] == WME_OUI_TYPE))) {
+				CFGP2P_DBG(("Found WPA/WME oui. Do not add it\n"));
+				goto end;
+			}
 
-	while (remained_len && count < MAX_VNDR_IE_NUMBER &&
-		(vndrie = (vndr_ie_t *)bcm_parse_tlvs(elt,
-		remained_len, DOT11_MNG_VS_ID))) {
-		/* len should be bigger than OUI length + one data length at least */
-		if (vndrie->len < (VNDR_IE_MIN_LEN + 1)) {
-			WL_ERR(("%s: invalid vndr ie. length is too small %d\n",
-				__FUNCTION__, vndrie->len));
-			elt += (vndrie->len + TLV_HDR_LEN);
-			remained_len -= (vndrie->len + TLV_HDR_LEN);
-			continue;
+			parsed_info = &vndr_ies->ie_info[count++];
+
+			/* save vndr ie information */
+			parsed_info->ie_ptr = (char *)vndrie;
+			parsed_info->ie_len = (vndrie->len + TLV_HDR_LEN);
+			memcpy(&parsed_info->vndrie, vndrie, sizeof(vndr_ie_t));
+
+			vndr_ies->count = count;
+
+			CFGP2P_DBG(("\t ** OUI %02x %02x %02x, type 0x%02x \n",
+				parsed_info->vndrie.oui[0], parsed_info->vndrie.oui[1],
+				parsed_info->vndrie.oui[2], parsed_info->vndrie.data[0]));
 		}
-
-		/* if wpa or wme ie, do not add ie */
-		if (!bcmp(vndrie->oui, (u8*)WPA_OUI, WPA_OUI_LEN) &&
-			((vndrie->data[0] == WPA_OUI_TYPE) ||
-			(vndrie->data[0] == WME_OUI_TYPE))) {
-			CFGP2P_DBG(("Found WPA/WME oui. Do not add it\n"));
-			elt += (vndrie->len + TLV_HDR_LEN);
-			remained_len -= (vndrie->len + TLV_HDR_LEN);
-			continue;
-		}
-
-		parsed_info = &vndr_ies->ie_info[count++];
-
-		/* save vndr ie information */
-		parsed_info->ie_ptr = (char *)vndrie;
-		parsed_info->ie_len = (vndrie->len + TLV_HDR_LEN);
-		memcpy(&parsed_info->vndrie, vndrie, sizeof(vndr_ie_t));
-
-		vndr_ies->count = count;
-
-		WL_INFO(("\t ** OUI %02x %02x %02x, type 0x%02x \n",
-			parsed_info->vndrie.oui[0], parsed_info->vndrie.oui[1],
-			parsed_info->vndrie.oui[2], parsed_info->vndrie.data[0]));
-
-		elt += (vndrie->len + TLV_HDR_LEN);
-		remained_len -= (vndrie->len + TLV_HDR_LEN);
+end:
+		ie = bcm_next_tlv(ie, &remained_len);
 	}
-
 	return err;
 }
+
 
 /* Delete and Set a management vndr ie to firmware
  * Parameters:
@@ -1000,9 +1011,8 @@ wl_cfgp2p_set_management_ie(struct wl_priv *wl, struct net_device *ndev, s32 bss
 #define IE_TYPE_LEN(type, bsstype) (wl_to_p2p_bss_saved_ie(wl, bsstype).p2p_ ## type ## _ie_len)
 	memset(g_mgmt_ie_buf, 0, sizeof(g_mgmt_ie_buf));
 	curr_ie_buf = g_mgmt_ie_buf;
-	if (p2p_is_on(wl) && bssidx != -1) {
-		if (bssidx == P2PAPI_BSSCFG_PRIMARY)
-			bssidx =  wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_DEVICE);
+	CFGP2P_DBG((" bssidx %d, pktflag : 0x%02X\n", bssidx, pktflag));
+	if (wl->p2p != NULL) {
 		switch (pktflag) {
 			case VNDR_IE_PRBREQ_FLAG :
 				mgmt_ie_buf = IE_TYPE(probe_req, bssidx);
@@ -1054,7 +1064,7 @@ wl_cfgp2p_set_management_ie(struct wl_priv *wl, struct net_device *ndev, s32 bss
 				return -1;
 		}
 		bssidx = 0;
-	} else if (bssidx == -1 && wl_get_mode_by_netdev(wl, ndev) == WL_MODE_BSS) {
+	} else if (wl_get_mode_by_netdev(wl, ndev) == WL_MODE_BSS) {
 		switch (pktflag) {
 			case VNDR_IE_PRBREQ_FLAG :
 				mgmt_ie_buf = wl->sta_info->probe_req_ie;
@@ -1466,13 +1476,18 @@ wl_cfgp2p_cancel_listen(struct wl_priv *wl, struct net_device *ndev,
 	/* Irrespective of whether timer is running or not, reset
 	 * the LISTEN state.
 	 */
+#ifdef NOT_YET
 	wl_cfgp2p_set_p2p_mode(wl, WL_P2P_DISC_ST_SCAN, 0, 0,
 		wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_DEVICE));
+#endif /* NOT_YET */
 	if (timer_pending(&wl->p2p->listen_timer)) {
 		del_timer_sync(&wl->p2p->listen_timer);
 		if (notify)
-			cfg80211_remain_on_channel_expired(ndev, wl->last_roc_id,
-				&wl->remain_on_chan, wl->remain_on_chan_type, GFP_KERNEL);
+			if (ndev && ndev->ieee80211_ptr) {
+				cfg80211_remain_on_channel_expired(ndev, wl->last_roc_id,
+				 &wl->remain_on_chan, wl->remain_on_chan_type,
+				 GFP_KERNEL);
+			}
 	}
 	return 0;
 }
@@ -1591,7 +1606,8 @@ wl_cfgp2p_action_tx_complete(struct wl_priv *wl, struct net_device *ndev,
 		}
 		else {
 			wl_set_p2p_status(wl, ACTION_TX_NOACK);
-			CFGP2P_ERR(("WLC_E_ACTION_FRAME_COMPLETE : NO ACK\n"));
+			CFGP2P_INFO(("WLC_E_ACTION_FRAME_COMPLETE : NO ACK\n"));
+			wl_stop_wait_next_action_frame(wl, ndev);
 		}
 	} else {
 		CFGP2P_INFO((" WLC_E_ACTION_FRAME_OFFCHAN_COMPLETE is received,"

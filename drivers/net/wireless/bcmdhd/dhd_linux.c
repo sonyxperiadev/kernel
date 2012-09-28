@@ -107,6 +107,11 @@ extern bool ap_cfg_running;
 extern bool ap_fw_loaded;
 #endif
 
+
+
+extern void Set_XTAL_PM_Delay(void);
+
+
 /* enable HOSTIP cache update from the host side when an eth0:N is up */
 #define AOE_IP_ALIAS_SUPPORT 1
 
@@ -3659,6 +3664,12 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	}
 
 done:
+#ifdef XTAL_PU_TIME_MOD
+		printk("%s:***** CALL SET_PMY_DELAY\n", __FUNCTION__);
+		Set_XTAL_PM_Delay();
+		printk("%s:***** CALL DONE SET_PMY_DELAY\n", __FUNCTION__);
+#endif
+
 	return ret;
 }
 

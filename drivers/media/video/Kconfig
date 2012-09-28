@@ -1050,12 +1050,29 @@ config SOC_CAMERA_S5K4ECGX
 	help
 	  This is a s5k4ecgx camera driver
 
+config SOC_CAMERA_SR300PC20
+	tristate "sr300pc20 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr300pc20 camera driver
+
 config SOC_CAMERA_SR030PC50
 	tristate "sr030pc50 camera support"
 	depends on SOC_CAMERA && I2C
 	help
 	  This is a sr030pc50 camera driver
 	  
+config SOC_CAMERA_SR200PC20M
+	tristate "sr200pc20m camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr200pc20m camera driver
+
+config SOC_CAMERA_POWER_USE_ASR
+	bool "Support Broadcom Rhea SS Lucas 03 Ivory 02 board"
+	default n
+	help
+	  Support for the Broadcom Rhea SS Lucas 03 Ivory 02 board.
 
 config SOC_CAMERA_S5K5CCGX
 	tristate "s5k5ccgx camera support"

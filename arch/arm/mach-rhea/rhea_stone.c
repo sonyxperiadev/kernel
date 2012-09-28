@@ -40,6 +40,7 @@
 #include <mach/kona_headset_pd.h>
 #include <mach/kona.h>
 #include <mach/rhea.h>
+#include <mach/pinmux.h>
 #include <asm/mach/map.h>
 #include <linux/power_supply.h>
 #include <linux/mfd/bcm590xx/core.h>
@@ -187,6 +188,7 @@ extern int rhea_wifi_status_register(
 #define BCM_KEY_COL_7  7
 
 
+static int configure_sdio_pullup(bool pull_up);
 /*
  * GPIO pin for Touch screen pen down interrupt
  */
@@ -740,6 +742,104 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
+void dump_rhea_pin_config(struct pin_config *debug_pin_config)
+{
+
+	pr_debug("drv_sth:%d, input_dis:%d, slew_rate_ctrl:%d,"
+		   "pull_up:%d, pull_dn:%d, hys_en:%d, sel:%d\n",
+		debug_pin_config->reg.b.drv_sth,
+		debug_pin_config->reg.b.input_dis,
+		debug_pin_config->reg.b.slew_rate_ctrl,
+		debug_pin_config->reg.b.pull_up,
+		debug_pin_config->reg.b.pull_dn,
+		debug_pin_config->reg.b.hys_en,
+		debug_pin_config->reg.b.sel);
+
+}
+
+int configure_sdio_pullup(bool pull_up)
+{
+	int ret = 0;
+	char i;
+	struct pin_config new_pin_config;
+
+	if (pull_up)
+		pr_debug("%s, Pull-up enable for SD card pins!\n", __func__);
+	else
+		pr_debug("%s, Pull-down enable for SD card pins!\n", __func__);
+
+	new_pin_config.name = PN_SDCMD;
+
+	ret = pinmux_get_pin_config(&new_pin_config);
+	if (ret)	{
+		pr_err("%s, Error pinmux_get_pin_config!%d\n", __func__, ret);
+		return ret;
+	}
+
+	pr_debug("%s: Old SDCMD pin settings\n", __func__);
+	dump_rhea_pin_config(&new_pin_config);
+
+	if (pull_up)	{
+		new_pin_config.reg.b.pull_up = PULL_UP_ON;
+		new_pin_config.reg.b.pull_dn = PULL_DN_OFF;
+	} else {
+		new_pin_config.reg.b.pull_up = PULL_UP_OFF;
+		new_pin_config.reg.b.pull_dn = PULL_DN_ON;
+	}
+
+	ret = pinmux_set_pin_config(&new_pin_config);
+	if (ret)	{
+		pr_err("%s Failed to configure SDCMD:%d\n", __func__, ret);
+		return ret;
+	}
+
+	ret = pinmux_get_pin_config(&new_pin_config);
+	if (ret)	{
+		pr_err("%s, Error pinmux_get_pin_config!%d\n", __func__, ret);
+		return ret;
+	}
+	pr_debug("%s: New SDCMD pin settings\n", __func__);
+	dump_rhea_pin_config(&new_pin_config);
+
+	for (i = 0; i < 4; i++)	{
+		new_pin_config.name = (PN_SDDAT0 + i);
+		ret = pinmux_get_pin_config(&new_pin_config);
+		if (ret)	{
+			pr_info("%s, Error pinmux_get_pin_config():%d\n",
+				__func__, ret);
+			return ret;
+		}
+		pr_debug("%s: Old SDDAT%d pin setting\n", __func__, i);
+		dump_rhea_pin_config(&new_pin_config);
+		if (pull_up)	{
+			new_pin_config.reg.b.pull_up = PULL_UP_ON;
+			new_pin_config.reg.b.pull_dn = PULL_DN_OFF;
+		} else	{
+			new_pin_config.reg.b.pull_up = PULL_UP_OFF;
+			new_pin_config.reg.b.pull_dn = PULL_DN_ON;
+		}
+
+		ret = pinmux_set_pin_config(&new_pin_config);
+		if (ret)	{
+			pr_err("%s: Failed to configure SDDAT%d:%d\n",
+				__func__, i, ret);
+			return ret;
+		}
+
+		ret = pinmux_get_pin_config(&new_pin_config);
+		if (ret)	{
+			pr_err("%s, Error pinmux_get_pin_config!%d\n",
+				__func__, ret);
+			dump_rhea_pin_config(&new_pin_config);
+			return ret;
+		}
+		pr_debug("%s: New SDDAT%d pin setting\n", __func__, i);
+		dump_rhea_pin_config(&new_pin_config);
+	}
+
+	return ret;
+}
+
 static struct resource board_sdio0_resource[] = {
 	[0] = {
 		.start = SDIO1_BASE_ADDR,
@@ -793,6 +893,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.vddo_regulator_name = "vdd_sdio",
 		/*The SD controller regulator*/
 		.vddsdxc_regulator_name = "vdd_sdxc",
+		.configure_sdio_pullup = configure_sdio_pullup,
 	},
 	{ /* SDIO1 */
 		.id = 1,

@@ -15,6 +15,22 @@
 #include <linux/mutex.h>
 #include <plat/clock.h>
 #include <plat/kona_pm_dbg.h>
+#include <linux/dma-mapping.h>
+
+#ifdef CONFIG_PM_LOG_TO_UNCACHED_MEM
+/* PM log buf pointer */
+static char *pm_log_buf;
+static dma_addr_t pm_log_buf_p;
+#define PM_LOG_LINE_SIZE	1024
+#define PM_LOG_BUF_MASK (PM_LOG_BUF_SIZE - 1)
+#define PM_LOG_BUF(idx) (pm_log_buf[(idx) & PM_LOG_BUF_MASK])
+static int new_text_line = 1;
+static unsigned log_start;
+static unsigned log_end;
+static unsigned logged_chars;
+static char pm_log_line[PM_LOG_LINE_SIZE];
+static DEFINE_SPINLOCK(pm_logbuf_lock);
+#endif
 
 /* Snapshot handlers */
 static u32 handle_simple_parm(struct snapshot *s);
@@ -405,3 +421,118 @@ void snapshot_table_register(struct snapshot *table, size_t len)
 	}
 }
 EXPORT_SYMBOL(snapshot_table_register);
+
+#ifdef CONFIG_PM_LOG_TO_UNCACHED_MEM
+/*****************************************************************************
+ *                     PM logging to uncached memory                         *
+ *****************************************************************************/
+int print_pm_log(void)
+{
+	u32 len;
+
+	pr_info(" ******** pm log buf ******** size:%d start:%d end:%d\n",
+			PM_LOG_BUF_SIZE, log_start, log_end);
+
+	for (len = log_start; len < PM_LOG_BUF_SIZE && pm_log_buf[len]; len++)
+		printk(KERN_CONT "%c", pm_log_buf[len]);
+	if (log_end < log_start) {
+		for (len = 0; len <= log_end && pm_log_buf[len]; len++)
+			printk(KERN_CONT "%c", pm_log_buf[len]);
+	}
+
+	pr_info("\n");
+
+	return 0;
+
+}
+EXPORT_SYMBOL(print_pm_log);
+
+static int emit_pm_char(char c)
+{
+	PM_LOG_BUF(log_end) = c;
+	log_end++;
+	if (log_end == PM_LOG_BUF_SIZE) {
+		log_end = 0;
+		log_start++;
+	}
+	if (log_end == log_start)
+		log_start++;
+	if (log_start == PM_LOG_BUF_SIZE)
+		log_start = 0;
+
+	if (logged_chars < PM_LOG_BUF_SIZE)
+		logged_chars++;
+	return 0;
+}
+
+static int __log_pm(const char *fmt, va_list args)
+{
+	int line_len = 0;
+	char tbuf[50], *tp, *p;
+	unsigned tlen;
+	unsigned long long t;
+	unsigned long nanosec_rem;
+	unsigned long flags;
+	int this_cpu;
+
+	this_cpu = smp_processor_id();
+
+	spin_lock_irqsave(&pm_logbuf_lock, flags);
+
+	memset(pm_log_line, 0, sizeof(pm_log_line));
+	line_len = vscnprintf(pm_log_line, sizeof(pm_log_line) - 1, fmt, args);
+	p = &pm_log_line[0];
+
+	for (; *p; p++) {
+		if (new_text_line) {
+			new_text_line = 0;
+			/* Add the current time stamp */
+			t = cpu_clock(this_cpu);
+			nanosec_rem = do_div(t, 1000000000);
+			tlen = sprintf(tbuf, "[%5lu.%06lu] ",
+				(unsigned long) t,
+				nanosec_rem / 1000);
+			for (tp = tbuf; tp < tbuf + tlen; tp++)
+				emit_pm_char(*tp);
+				line_len += tlen;
+			if (!*p)
+				break;
+		}
+		emit_pm_char(*p);
+		if (*p == '\n')
+			new_text_line = 1;
+	}
+	spin_unlock_irqrestore(&pm_logbuf_lock, flags);
+
+	return line_len;
+}
+
+int log_pm(const char *fmt, ...)
+{
+	va_list args;
+	int r;
+
+	va_start(args, fmt);
+	r = __log_pm(fmt, args);
+	va_end(args);
+
+	return r;
+}
+EXPORT_SYMBOL(log_pm);
+int __init kona_pmdbg_init(void)
+{
+	pm_log_buf = dma_alloc_coherent(NULL, PM_LOG_BUF_SIZE,
+					&pm_log_buf_p, GFP_ATOMIC);
+	if (pm_log_buf == NULL) {
+		pr_info("%s: PM dbg buffer alloc failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	pr_info("pm_log_buf v:0x%x, p:0x%x\n", (u32)pm_log_buf,
+			(u32)&pm_log_buf_p);
+
+	return 0;
+}
+
+arch_initcall(kona_pmdbg_init);
+#endif /* CONFIG_PM_LOG_TO_UNCACHED_MEM */

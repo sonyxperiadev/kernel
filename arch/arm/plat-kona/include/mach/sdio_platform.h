@@ -97,6 +97,7 @@ struct sdio_platform_cfg {
 				       (int card_present, void *dev_id),
 				       void *dev_id);
 #endif
+	int (*configure_sdio_pullup) (bool pull_up);
 };
 
 #endif /* SDIO_PLATFORM_H */

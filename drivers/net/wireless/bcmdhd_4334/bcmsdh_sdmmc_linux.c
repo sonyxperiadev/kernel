@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_sdmmc_linux.c 342895 2012-07-04 11:36:15Z $
+ * $Id: bcmsdh_sdmmc_linux.c 351757 2012-08-21 07:51:23Z $
  */
 
 #include <typedefs.h>
@@ -410,6 +410,10 @@ int sdio_function_init(void)
 		return -ENOMEM;
 
 	error = sdio_register_driver(&bcmsdh_sdmmc_driver);
+	if (error && gInstance) {
+		kfree(gInstance);
+		gInstance = 0;
+	}
 
 	return error;
 }

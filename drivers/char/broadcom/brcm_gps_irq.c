@@ -37,12 +37,17 @@
 #include <linux/unistd.h>
 #include <linux/kthread.h>
 
-/*#define NEW_GPSCHIP_I2C*/
+/*#define CONFIG_NEW_GPSCHIP_I2C*/
 #define GPS_VERSION	"2.00"
 
 #define RX_SIZE					128
+#if defined(CONFIG_NEW_GPSCHIP_I2C)
 #define TX_SIZE					64
 #define I2C_PACKET_SIZE			256
+#else
+#define TX_SIZE					32
+#define I2C_PACKET_SIZE			128
+#endif
 #define I2C_MAX_SIZE			256
 #define RX_BUFFER_LENGTH		16384
 #define UDELAY_AFTER_I2C_READ	30
@@ -77,6 +82,7 @@ struct gps_irq {
 int cnt;
 int cnt2;
 int zero_read;
+int first_time;
 
 void write_workqueue(struct work_struct *work)
 {
@@ -157,7 +163,7 @@ void read_workqueue(struct work_struct *work)
 		container_of(work, struct gps_irq, read_task);
 	--cnt;
 
-#if defined(NEW_GPSCHIP_I2C)
+#if defined(CONFIG_NEW_GPSCHIP_I2C)
 	read_new(ac_data);
 #else
 	int counter, ret;
@@ -247,18 +253,12 @@ static int gps_irq_open(struct inode *inode, struct file *filp)
 	cnt2 = 0;
 
 	zero_read = 0;
+	first_time = 1;
 
 #ifdef POLLING
 	poll_thread_task = kthread_run(&poll_thread, ac_data, "poll_monitor");
 	if ((int)poll_thread_task == -ENOMEM)
 		printk(KERN_INFO "gps poll thread is not created\n");
-#endif
-
-#if defined(NEW_GPSCHIP_I2C)
-	i2c_master_send(ac_data->client, test, 10);
-	mdelay(10);
-	i2c_master_send(ac_data->client, test, 10);
-	mdelay(10);
 #endif
 
 	return ret;
@@ -300,7 +300,7 @@ static ssize_t gps_irq_read(struct file *filp,
 		ac_data->rxlength_wp,
 		ac_data->rxlength_rp); */
 
-#if defined(NEW_GPSCHIP_I2C)
+#if defined(CONFIG_NEW_GPSCHIP_I2C)
 	if (ac_data->rxlength_rp != ac_data->rxlength_wp) {
 		i = ac_data->rxlength[ac_data->rxlength_rp];
 
@@ -352,6 +352,20 @@ static ssize_t gps_irq_write(struct file *filp, const char __user *buffer,
 				   size_t length, loff_t *offset)
 {
 	struct gps_irq *ac_data = filp->private_data;
+
+#if defined(CONFIG_NEW_GPSCHIP_I2C)
+
+	unsigned char test[] = {
+		0xfe, 0x00, 0xfd, 0xc0, 0x4c, 0x01, 0x00, 0x00, 0x00, 0xfc};
+
+	if (first_time==1){
+		i2c_master_send(ac_data->client, test, 10);
+		mdelay(10);
+		i2c_master_send(ac_data->client, test, 10);
+		mdelay(10);
+		first_time = 0;
+	}
+#endif
 
 	if (length <= I2C_MAX_SIZE) {
 		if (((ac_data->wbuffer_wp+1) & (TX_SIZE-1)) ==

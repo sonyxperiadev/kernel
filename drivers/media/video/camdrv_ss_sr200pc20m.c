@@ -8,7 +8,7 @@
 * (at your option) any later version.
 ***********************************************************************/
 
-/* Zanin 2MP sensor driver file */
+  
 
 #include <linux/i2c.h>
 
@@ -23,8 +23,8 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 #include <linux/videodev2_brcm.h>
-#include <camdrv_ss.h>
-#include <camdrv_ss_sr200pc20m.h>           
+#include "camdrv_ss.h"
+#include "camdrv_ss_sr200pc20m.h"           
 
 
 #define SR200PC20M_NAME	"sr200pc20m"
@@ -48,16 +48,31 @@
 
 #define SR200PC20M_DELAY_DURATION 0xFF
 
-
+#if defined(CONFIG_MACH_RHEA_SS_CORIPLUS)
 
 #define EXIF_SOFTWARE		""
 #define EXIF_MAKE		"Samsung"
+#define EXIF_MODEL		"GT-S5301"
+#else
+#define EXIF_SOFTWARE		""
+#define EXIF_MAKE		"Samsung"
 #define EXIF_MODEL		"GT-B5330"
+#endif
 
 static DEFINE_MUTEX(af_cancel_op);
+extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 
+
+extern  int camdrv_ss_i2c_set_config_register(struct i2c_client *client, 
+                                         regs_t reg_buffer[], 
+          				                 int num_of_regs, 
+          				                 char *name);
+extern int camdrv_ss_set_preview_size(struct v4l2_subdev *sd);
+extern int camdrv_ss_set_dataline_onoff(struct v4l2_subdev *sd, int onoff);
 static int init=true;
 //#define __JPEG_CAPTURE__ 1        //denis_temp ; yuv capture
+
+extern int camera_antibanding_get(); //add anti-banding code
 
 static const struct camdrv_ss_framesize sr200pc20m_supported_preview_framesize_list[] = {
 	//{ PREVIEW_SIZE_QCIF,	176,  144 },
@@ -251,13 +266,13 @@ static const struct v4l2_queryctrl sr200pc20m_controls[] = {
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Scene Mode",
 		.minimum	= SCENE_MODE_NONE,
-		.maximum	= (1 << SCENE_MODE_NONE | 1 << SCENE_MODE_PORTRAIT |
+		.maximum	= (1 << SCENE_MODE_NONE |
 						1 << SCENE_MODE_NIGHTSHOT | 1 << SCENE_MODE_LANDSCAPE
-						| 1 << SCENE_MODE_SPORTS | 1 << SCENE_MODE_PARTY_INDOOR |
-						1 << SCENE_MODE_BEACH_SNOW | 1 << SCENE_MODE_SUNSET |
-						1 << SCENE_MODE_FIREWORKS | 1 << SCENE_MODE_CANDLE_LIGHT | /*querymenu?*/
+						 | 1 << SCENE_MODE_PARTY_INDOOR |
+						 1 << SCENE_MODE_SUNSET |
+						 1 << SCENE_MODE_CANDLE_LIGHT | /*querymenu?*/
 						1 << SCENE_MODE_BACK_LIGHT | 1<< SCENE_MODE_DUSK_DAWN |
-						1 << SCENE_MODE_FALL_COLOR | 1<< SCENE_MODE_TEXT),
+						1 << SCENE_MODE_FALL_COLOR),
 		.step		= 1,
 		.default_value	= SCENE_MODE_NONE,
 	},
@@ -267,7 +282,7 @@ static const struct v4l2_queryctrl sr200pc20m_controls[] = {
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Set AutoFocus",
 		.minimum	= AUTO_FOCUS_OFF,
-		.maximum	= AUTO_FOCUS_ON,
+		.maximum	= AUTO_FOCUS_OFF, //aska modified
 		.step		= 1,
 		.default_value	= AUTO_FOCUS_OFF,
 	},
@@ -277,9 +292,9 @@ static const struct v4l2_queryctrl sr200pc20m_controls[] = {
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Touchfocus areas",
 		.minimum	= 0,
-		.maximum	= 1,
+		.maximum	= 0, //aska
 		.step		= 1,
-		.default_value	= 1,
+		.default_value	= 0, //aska
 	},
 	{
 		.id			= V4L2_CID_CAMERA_FRAME_RATE,
@@ -475,6 +490,21 @@ static long camdrv_ss_sr200pc20m_ss_ioctl(struct v4l2_subdev *sd, unsigned int c
 #endif
 			 break;
 		}
+		case VIDIOC_SENSOR_G_OPTICAL_INFO:
+		{
+			
+			 struct v4l2_sensor_optical_info *p= arg;
+       p->hor_angle.numerator = 512;
+       p->hor_angle.denominator = 10;
+       p->ver_angle.numerator = 394;
+       p->ver_angle.denominator = 10;
+       p->focus_distance[0] = 10;
+       p->focus_distance[1] = 120;
+       p->focus_distance[2] = -1;
+       p->focal_length.numerator = 270;
+       p->focal_length.denominator = 100;
+			 break;
+		}
 
 		default:
 			ret = -ENOIOCTLCMD;
@@ -504,7 +534,15 @@ int camdrv_ss_sr200pc20m_set_preview_start(struct v4l2_subdev *sd)
 			return -EIO;
 		}
 	}
-
+	if (state->mode_switch == INIT_DONE_TO_CAMERA_PREVIEW) {
+#if 0
+		err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_preview_camera_regs, ARRAY_SIZE(sr200pc20m_preview_camera_regs), "preview_camera_regs");
+		if (err < 0) {
+			CAM_ERROR_PRINTK( "%s :sr200pc20m_preview_camera_regs IS FAILED\n",__func__);
+			return -EIO;
+		}
+#endif		
+	}
 	if(state->mode_switch == CAMERA_PREVIEW_TO_CAMCORDER_PREVIEW)
 	{
 		err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_fps_15_regs, ARRAY_SIZE(sr200pc20m_fps_15_regs), "fps_15_regs");
@@ -515,11 +553,11 @@ int camdrv_ss_sr200pc20m_set_preview_start(struct v4l2_subdev *sd)
 	}
 	else if(state->mode_switch == INIT_DONE_TO_CAMCORDER_PREVIEW)
 	{
-		err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_init_regs, ARRAY_SIZE(sr200pc20m_init_regs), "init_regs");
+		/*err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_init_regs, ARRAY_SIZE(sr200pc20m_init_regs), "init_regs");
 		if (err < 0) {
 			CAM_ERROR_PRINTK( "%s :sr200pc20m_init_regs IS FAILED\n",__func__);
 			return -EIO;
-		}
+		}*/
 		err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_fps_15_regs, ARRAY_SIZE(sr200pc20m_fps_15_regs), "fps_15_regs");
 		if (err < 0) {
 			CAM_ERROR_PRINTK( "%s : sr200pc20m_fps_15_regs is FAILED !!\n", __func__);
@@ -556,7 +594,143 @@ int camdrv_ss_sr200pc20m_set_preview_start(struct v4l2_subdev *sd)
 
 	return 0;
 }
+static int camdrv_ss_sr200pc20m_set_white_balance(struct v4l2_subdev *sd, int mode)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camdrv_ss_state *state = to_state(sd);
+	int err = 0;
 
+	CAM_INFO_PRINTK( " %s :  value =%d\n", __func__, mode);
+
+	switch (mode) {
+	case WHITE_BALANCE_AUTO:
+	{
+		if (sr200pc20m_wb_auto_regs == 0)
+			CAM_ERROR_PRINTK( " %s : wb_auto_regs not supported !!!\n", __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_wb_auto_regs, ARRAY_SIZE(sr200pc20m_wb_auto_regs), "wb_auto_regs");
+
+		break;
+	}
+
+	
+	case WHITE_BALANCE_CLOUDY:
+	{
+		if (sr200pc20m_wb_cloudy_regs == 0)
+			CAM_ERROR_PRINTK( "%s : wb_cloudy_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_wb_cloudy_regs, ARRAY_SIZE(sr200pc20m_wb_cloudy_regs), "wb_cloudy_regs");
+
+		break;
+	}
+
+
+	case WHITE_BALANCE_FLUORESCENT:
+	{
+		if (sr200pc20m_wb_fluorescent_regs== 0)
+			CAM_ERROR_PRINTK( " %s : wb_fluorescent_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client,  sr200pc20m_wb_fluorescent_regs, ARRAY_SIZE(sr200pc20m_wb_fluorescent_regs), "wb_fluorescent_regs");
+
+		break;
+	}
+
+	
+	case WHITE_BALANCE_DAYLIGHT:
+	{
+		if (sr200pc20m_wb_daylight_regs == 0)
+			CAM_ERROR_PRINTK( " %s : wb_daylight_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_wb_daylight_regs, ARRAY_SIZE(sr200pc20m_wb_daylight_regs), "wb_daylight_regs");
+
+		break;
+	}
+	case WHITE_BALANCE_INCANDESCENT:
+	{
+		if (sr200pc20m_wb_incandescent_regs == 0)
+			CAM_ERROR_PRINTK( "%s : wb_incandescent_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_wb_incandescent_regs, ARRAY_SIZE(sr200pc20m_wb_incandescent_regs), "wb_incandescent_regs");
+
+		break;
+	}
+
+	default:
+	{
+		CAM_ERROR_PRINTK( " %s : default not supported !!!\n",  __func__);
+		break;
+	}
+	}
+
+	state->currentWB = mode;
+
+	return err;
+}
+static int camdrv_ss_sr200pc20m_set_iso(struct v4l2_subdev *sd, int mode)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	int err = 0;
+
+
+	CAM_INFO_PRINTK( " %s :  value =%d\n",  __func__, mode);
+
+	switch (mode) {
+	case ISO_AUTO:
+	{
+		if (sr200pc20m_iso_auto_regs == 0)
+			CAM_ERROR_PRINTK( " %s : iso_auto_regs not supported !!!\n", __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_iso_auto_regs, ARRAY_SIZE(sr200pc20m_iso_auto_regs), "iso_auto_regs");
+
+		break;
+	}
+	case ISO_50:
+	{
+		if (sr200pc20m_iso_50_regs== 0)
+			CAM_ERROR_PRINTK( " %s : iso_50_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_iso_50_regs, ARRAY_SIZE(sr200pc20m_iso_50_regs), "iso_50_regs");
+	
+		break;
+	}
+
+	case ISO_100:
+	{
+		if (sr200pc20m_iso_100_regs == 0)
+			CAM_ERROR_PRINTK( " %s : iso_100_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_iso_100_regs, ARRAY_SIZE(sr200pc20m_iso_100_regs), "iso_100_regs");
+	
+		break;
+	}
+	case ISO_200:
+	{
+		if (sr200pc20m_iso_200_regs == 0)
+			CAM_ERROR_PRINTK( "%s  : iso_200_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client,sr200pc20m_iso_200_regs, ARRAY_SIZE(sr200pc20m_iso_200_regs), "iso_200_regs");
+	
+		break;
+	}
+	case ISO_400:
+	{
+		if (sr200pc20m_iso_400_regs == 0)
+			CAM_ERROR_PRINTK( "%s  : iso_400_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr200pc20m_iso_400_regs,ARRAY_SIZE(sr200pc20m_iso_400_regs), "iso_400_regs");
+	
+		break;
+	}
+
+	default:
+	{
+		CAM_ERROR_PRINTK( " %s : default case supported !!!\n", __func__);
+			break;
+        }			
+	} /* end of switch */
+
+	return err;
+}
 
 
 #define AAT_PULS_HI_TIME    1
@@ -628,7 +802,7 @@ static float camdrv_ss_sr200pc20m_get_exposureTime(struct v4l2_subdev *sd)
 	camdrv_ss_i2c_read_1_byte(client, 0x81, &read_value2);
 	camdrv_ss_i2c_read_1_byte(client, 0x82, &read_value3);
 
-	exposureTime = (read_value1 << 16 | read_value2 << 8 | read_value3);
+	exposureTime = (read_value1 << 19 | read_value2 << 11 | read_value3<<3);
 	CAM_INFO_PRINTK("%s, exposureTime =%d \n",__func__,exposureTime);
 	return ((float)exposureTime);
  
@@ -671,40 +845,49 @@ static int camdrv_ss_sr200pc20m_get_nightmode(struct v4l2_subdev *sd)
 
 static int camdrv_ss_sr200pc20m_get_iso_speed_rate(struct v4l2_subdev *sd)
 {
-#if 0	
+#if 1
     struct i2c_client *client = v4l2_get_subdevdata(sd);
     unsigned short read_value = 0;
     int GainValue = 0;
     int isospeedrating = 100;
 	int rows_num_=0;
 
-    camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
+/*    camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
     camdrv_ss_i2c_write_4_bytes(client, 0x002C, 0x7000);
     camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x2A18);
-    camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value);
+    camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value);*/
+    camdrv_ss_i2c_write_2_bytes(client, 0x03, 0x20);
+    camdrv_ss_i2c_read_1_byte(client, 0xb0, &read_value);
 
-    GainValue = ((read_value * 10) / 256);
+    GainValue = ((read_value / 32) + 0.5);
 
-    if(GainValue < 19)
+    if(GainValue < 1.14)
     {
         isospeedrating = 50;
     }
-    else if(GainValue < 23)
+    else if(GainValue < 2.14)
     {
         isospeedrating = 100;
     }
-    else if(GainValue < 28)
+    else if(GainValue < 2.64)
     {
         isospeedrating = 200;
     }
-    else
+        else if(GainValue < 7.52)
     {
         isospeedrating = 400;
     }
+    else
+    {
+        isospeedrating = 800;
+    }
+
+    CAM_ERROR_PRINTK("camdrv_ss_sr200pc20m_get_iso_speed_rate, GainValue =%d, isospeedrating =%d\n", GainValue, isospeedrating );		
+    
 	   return isospeedrating;
 #endif
 	/* no implementation yet */
-	return -1;
+//	return -1;
  
 }
 
@@ -742,7 +925,7 @@ static int camdrv_ss_sr200pc20m_get_ae_stable_status(struct v4l2_subdev *sd, str
 // end 
 
 
-static int camdrv_ss_sr200pc20m_get_auto_focus_status(struct v4l2_subdev *sd, struct v4l2_control *ctrl, struct camdrv_ss_sensor_cap  sensor)
+static int camdrv_ss_sr200pc20m_get_auto_focus_status(struct v4l2_subdev *sd, struct v4l2_control *ctrl, struct camdrv_ss_sensor_cap  *sensor)
 { 
 #if 0
     struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1340,16 +1523,75 @@ static int camdrv_ss_sr200pc20m_AAT_flash_control(struct v4l2_subdev *sd, int co
 //Power (common)
 static struct regulator *VCAM_C_1_8_V;  //LDO_HV9
 static struct regulator *VCAM_A_2_8_V;   //LDO_CAM 12/12/2011
+
+
+#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //VE Group
+static struct regulator *VCAM_CORE_1_8_V;   //ASR_SW
+#else
 #define CAM_IO_EN	   37
+#endif
+
 
 //main cam 
+#if defined(CONFIG_MACH_RHEA_SS_CORIPLUS)
+#define CAM_RST    92
+#else
 #define CAM_RST    13
+#endif
 #define CAM_EN    111
 
 #define SENSOR_0_CLK			"dig_ch0_clk"    //(common)
 #define SENSOR_0_CLK_FREQ		(26000000) //@HW, need to check how fast this meaning.
 
+static int camdrv_ss_sr200pc20m_copy_files_for_60hz(void)
+{
 
+#define COPY_FROM_60HZ_TABLE(TABLE_NAME, ANTI_BANDING_SETTING) \
+	memcpy (TABLE_NAME, TABLE_NAME##_##ANTI_BANDING_SETTING, \
+	sizeof(TABLE_NAME))
+	
+	CAM_INFO_PRINTK("%s: Enter \n",__func__);
+
+	//[ltn_to_do] should be rearranged !!!!! just for Testing
+	COPY_FROM_60HZ_TABLE (sr200pc20m_init_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_preview_camera_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_scene_none_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_scene_backlight_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_scene_landscape_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_scene_party_indoor_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_scene_sunset_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_scene_duskdawn_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_scene_fall_color_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_scene_nightshot_Normal, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_scene_nightshot_Dark, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_scene_candle_light_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr200pc20m_fps_15_regs, 60hz);
+
+	CAM_INFO_PRINTK("%s: copy done!\n", __func__);
+  return 0;
+}
+static int camdrv_ss_sr200pc20m_check_table_size_for_60hz(void)
+{
+#define IS_SAME_NUM_OF_ROWS(TABLE_NAME) \
+	(sizeof(TABLE_NAME) == sizeof(TABLE_NAME##_60hz))
+
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_init_regs) ) return (-1);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_preview_camera_regs) ) return (-2);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_scene_none_regs) ) return (-3);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_scene_backlight_regs) ) return (-4);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_scene_landscape_regs) ) return (-5);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_scene_party_indoor_regs) ) return (-6);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_scene_sunset_regs) ) return (-7);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_scene_duskdawn_regs) ) return (-8);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_scene_fall_color_regs) ) return (-9);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_scene_nightshot_Normal) ) return (-10);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_scene_nightshot_Dark) ) return (-11);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_scene_candle_light_regs) ) return (-12);
+	if ( !IS_SAME_NUM_OF_ROWS(sr200pc20m_fps_15_regs) ) return (-13);
+
+	CAM_INFO_PRINTK("%s: Success !\n", __func__);
+	return 0;
+}	
 
 static int camdrv_ss_sr200pc20m_sensor_power(int on)
 {
@@ -1394,9 +1636,19 @@ static int camdrv_ss_sr200pc20m_sensor_power(int on)
 		CAM_ERROR_PRINTK("can not get VCAM_C_1_8_V\n");
 		return -1;
 	}	
-	
+
+#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //VE Group
+	VCAM_CORE_1_8_V = regulator_get(NULL,"asr_nm_uc");
+	if(IS_ERR(VCAM_CORE_1_8_V))
+	{
+		CAM_ERROR_PRINTK("can not get VCAM_CORE_1_8_V\n");
+		return -1;
+	}	
+#else
 	gpio_request(CAM_IO_EN, "cam_1_2v");
 	gpio_direction_output(CAM_IO_EN,0); 
+#endif
+
 
 	gpio_request(CAM_EN, "cam_stnby");
 	gpio_direction_output(CAM_EN,0);	
@@ -1416,6 +1668,10 @@ static int camdrv_ss_sr200pc20m_sensor_power(int on)
 		regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);
 		regulator_set_voltage(VCAM_C_1_8_V,1800000,1800000);	
 
+#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //VE Group
+		regulator_set_voltage(VCAM_CORE_1_8_V,1800000,1800000);
+#endif	
+
 		value = clk_enable(axi_clk);
 		if (value) {
 			CAM_ERROR_PRINTK("%s:failed to enable csi2 axi clock\n", __func__);
@@ -1425,7 +1681,11 @@ static int camdrv_ss_sr200pc20m_sensor_power(int on)
 		CAM_INFO_PRINTK("power on the sensor's power supply\n"); //@HW
 
 	
+#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //VE Group	
+		regulator_enable(VCAM_CORE_1_8_V);
+#else
 		gpio_set_value(CAM_IO_EN,1); 
+#endif		 
 
 		regulator_enable(VCAM_A_2_8_V);
 		
@@ -1483,7 +1743,13 @@ static int camdrv_ss_sr200pc20m_sensor_power(int on)
 		regulator_disable(VCAM_C_1_8_V);
 		regulator_disable(VCAM_A_2_8_V);
 
+		
+#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //VE Group		
+		regulator_disable(VCAM_CORE_1_8_V);
+#else
 		gpio_set_value(CAM_IO_EN, 0);
+#endif
+
 
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 					      PI_MGR_DFS_MIN_VALUE)) {
@@ -1492,6 +1758,16 @@ static int camdrv_ss_sr200pc20m_sensor_power(int on)
 		}
 		CAM_INFO_PRINTK("rhea_camera_power off success \n");
 	}
+
+	if (ANTI_BANDING_60HZ == camera_antibanding_get()) {
+		ret = camdrv_ss_sr200pc20m_check_table_size_for_60hz();
+		if(ret != 0) {
+			CAM_ERROR_PRINTK("%s: Fail - the table num is %d \n", __func__, ret);
+			return -1;
+		}
+		camdrv_ss_sr200pc20m_copy_files_for_60hz();
+	}
+
 	return 0;
 }
 
@@ -1513,7 +1789,7 @@ int camdrv_ss_sr200pc20m_get_sensor_param_for_exif(
 	num = (int)exposureTime;
 	if (num > 0) 
 	{
-		snprintf(str, 19, "%d/1000000", num);
+		snprintf(str, 19, "%d/26000000", num);
 		strcpy(exif_param->exposureTime, str);
 	} 
 	else 
@@ -1525,7 +1801,7 @@ int camdrv_ss_sr200pc20m_get_sensor_param_for_exif(
 
 	num = camdrv_ss_sr200pc20m_get_iso_speed_rate(sd);
 	if (num > 0) {
-		sprintf(str, "%d", num);
+		sprintf(str, "%d,", num);
 		strcpy(exif_param->isoSpeedRating, str);
 	} else {
 		strcpy(exif_param->isoSpeedRating, "");
@@ -1538,7 +1814,7 @@ int camdrv_ss_sr200pc20m_get_sensor_param_for_exif(
 	strcpy(exif_param->saturation,		"0");
 	strcpy(exif_param->sharpness,		"0");
 
-	strcpy(exif_param->FNumber,		"");
+	strcpy(exif_param->FNumber,		(char *)"28/10");
 	strcpy(exif_param->exposureProgram,	"");
 	strcpy(exif_param->shutterSpeed,	"");
 	strcpy(exif_param->aperture,		"");
@@ -1546,8 +1822,8 @@ int camdrv_ss_sr200pc20m_get_sensor_param_for_exif(
 	strcpy(exif_param->exposureBias,	"");
 	strcpy(exif_param->maxLensAperture,	"");
 	strcpy(exif_param->flash,		"");
-	strcpy(exif_param->lensFocalLength,	"");
-	strcpy(exif_param->userComments,	"");
+	strcpy(exif_param->lensFocalLength,	"270/100");
+	strcpy(exif_param->userComments,	"User Comments");
 	ret = 0;
 
 	return ret;
@@ -1593,6 +1869,8 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 /*optional*/
 	sensor->get_nightmode		   = camdrv_ss_sr200pc20m_get_nightmode; //aska add
 	sensor->set_preview_start      = camdrv_ss_sr200pc20m_set_preview_start;//aska
+	sensor->set_iso      					 = camdrv_ss_sr200pc20m_set_iso;//aska add
+	sensor->set_white_balance      = camdrv_ss_sr200pc20m_set_white_balance;//aska add
 	sensor->get_ae_stable_status      =  camdrv_ss_sr200pc20m_get_ae_stable_status;
 //	sensor->set_auto_focus		 	  =  camdrv_ss_sr200pc20m_set_auto_focus;
 //	sensor->get_auto_focus_status     = camdrv_ss_sr200pc20m_get_auto_focus_status;

@@ -8,7 +8,6 @@
 * (at your option) any later version.
 ***********************************************************************/
 
-/* Ivory 3MP sensor driver file */
   
 
 #include <linux/i2c.h>
@@ -25,7 +24,7 @@
 #include <media/soc_camera.h>
 #include <linux/videodev2_brcm.h>
 #include <camdrv_ss.h>
-#include <camdrv_ss_sr300pc20.h>           
+#include <camdrv_ss_sr300pc20.h>
 
 
 #define SR300PC20_NAME	"sr300pc20"
@@ -54,7 +53,16 @@ static bool first_af_status = false;
 #define EXIF_MODEL		"GT-S6012"
 
 static DEFINE_MUTEX(af_cancel_op);
+extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 
+
+extern  int camdrv_ss_i2c_set_config_register(struct i2c_client *client, 
+                                         regs_t reg_buffer[], 
+          				                 int num_of_regs, 
+          				                 char *name);
+extern int camdrv_ss_set_preview_size(struct v4l2_subdev *sd);
+extern int camdrv_ss_set_dataline_onoff(struct v4l2_subdev *sd, int onoff);
+extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 
 //#define __JPEG_CAPTURE__ 1        //denis_temp ; yuv capture
 
@@ -275,6 +283,7 @@ static const struct v4l2_queryctrl sr300pc20_controls[] = {
 		.default_value	= AUTO_FOCUS_OFF,
 	},
 
+/* Ivory camera not support touch focus
 	{
 		.id 		= V4L2_CID_CAMERA_TOUCH_AF_AREA,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
@@ -284,6 +293,8 @@ static const struct v4l2_queryctrl sr300pc20_controls[] = {
 		.step		= 1,
 		.default_value	= 1,
 	},
+*/
+
 	{
 		.id			= V4L2_CID_CAMERA_FRAME_RATE,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
@@ -515,40 +526,35 @@ int camdrv_ss_sr300pc20_set_preview_start(struct v4l2_subdev *sd)
 
 	if(state->mode_switch == CAMERA_PREVIEW_TO_CAMCORDER_PREVIEW)
 	{
-		err = camdrv_ss_i2c_set_config_register(client, sr300pc20_fps_25_regs, ARRAY_SIZE(sr300pc20_fps_25_regs), "fps_25_regs");
+/*		err = camdrv_ss_i2c_set_config_register(client, sr300pc20_fps_25_regs, ARRAY_SIZE(sr300pc20_fps_25_regs), "fps_25_regs");
 		if (err < 0) {
 			CAM_ERROR_PRINTK( "%s : sr300pc20_fps_25_regs is FAILED !!\n", __func__);
 			return -EIO;
-		}
+		} */ //UI set the setting of framerate after preview. so we don't need to write fixed fps setting in here.
 	}
 	else if(state->mode_switch == INIT_DONE_TO_CAMCORDER_PREVIEW)
 	{
-		err = camdrv_ss_i2c_set_config_register(client, sr300pc20_init_regs, ARRAY_SIZE(sr300pc20_init_regs), "init_regs");
+/*		err = camdrv_ss_i2c_set_config_register(client, sr300pc20_fps_25_regs, ARRAY_SIZE(sr300pc20_fps_25_regs), "fps_25_regs");
+		if (err < 0) {
+			CAM_ERROR_PRINTK( "%s : sr300pc20_fps_25_regs is FAILED !!\n", __func__);
+			return -EIO;
+		} */ //UI set the setting of framerate after preview. so we don't need to write fixed fps setting in here.
+	}
+	else if(state->mode_switch == CAMCORDER_PREVIEW_TO_CAMERA_PREVIEW)
+	{
+		err = camdrv_ss_i2c_set_config_register(client, sr300pc20_init_regs, ARRAY_SIZE(sr300pc20_init_regs), "preview_camera_regs");
 		if (err < 0) {
 			CAM_ERROR_PRINTK( "%s :sr300pc20_init_regs IS FAILED\n",__func__);
 			return -EIO;
 		}
-		err = camdrv_ss_i2c_set_config_register(client, sr300pc20_fps_25_regs, ARRAY_SIZE(sr300pc20_fps_25_regs), "fps_25_regs");
-		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s : sr300pc20_fps_25_regs is FAILED !!\n", __func__);
-			return -EIO;
-		}
 	}
-	else if(state->mode_switch == CAMCORDER_PREVIEW_TO_CAMERA_PREVIEW)
-	{
-		err = camdrv_ss_i2c_set_config_register(client, sr300pc20_preview_camera_regs, ARRAY_SIZE(sr300pc20_preview_camera_regs), "preview_camera_regs");
-		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s :sr300pc20_preview_camera_regs IS FAILED\n",__func__);
-			return -EIO;
-		}
-	}
-
+/*
 	err = camdrv_ss_set_preview_size(sd);
 	if (err < 0) {
 		CAM_ERROR_PRINTK( "%s : camdrv_ss_set_preview_size is FAILED !!\n", __func__);
 		return -EIO;
 	}
-
+*/ //already size setting is included in init registers. we don't need to write again.
 	state->camera_flash_fire = 0;
 	state->camera_af_flash_checked = 0;
 
@@ -563,8 +569,318 @@ int camdrv_ss_sr300pc20_set_preview_start(struct v4l2_subdev *sd)
 	return 0;
 }
 
+static int camdrv_ss_sr300pc20_set_capture_start(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camdrv_ss_state *state = to_state(sd);
+	int err = 0;
+	int light_state = CAM_NORMAL_LIGHT;
+	unsigned short ymean = 0;
+	unsigned char data = 0;
+	
+	CAM_INFO_PRINTK( "%s Entered\n", __func__);
+
+	/* Set image size */
+	err = camdrv_ss_set_capture_size(sd);
+	if (err < 0) {
+		CAM_ERROR_PRINTK( "%s: camdrv_ss_set_capture_size not supported !!!\n", __func__);
+		return -EIO;
+	}
+
+	/* Set Snapshot registers */
+
+	if (state->currentScene == SCENE_MODE_NIGHTSHOT || state->currentScene == SCENE_MODE_FIREWORKS) {
+		/* page mode 0x20 */
+		camdrv_ss_i2c_write_2_bytes(client, 0x03, 0x20);
+		/* read Y_mean */
+		camdrv_ss_i2c_read_1_byte(client,0xB1, &data);
+		ymean = (unsigned short)data;
+	
+		// calculate ISO
+		if(ymean < 0x16 ){
+			err = camdrv_ss_i2c_set_config_register(client, sr300pc20_snapshot_nightmode_regs, ARRAY_SIZE(sr300pc20_snapshot_nightmode_regs), "snapshot_nightmode_regs");
+		}
+		else{
+			err = camdrv_ss_i2c_set_config_register(client, sr300pc20_snapshot_normal_regs, ARRAY_SIZE(sr300pc20_snapshot_normal_regs), "snapshot_normal_regs");
+		}
+		if (err < 0) {
+			CAM_ERROR_PRINTK( "%s : camdrv_ss_i2c_set_config_register failed  not supported !!!\n",  __func__);
+			return -EIO;
+		
+		}
+	}
+	else{
+		err = camdrv_ss_i2c_set_config_register(client, sr300pc20_snapshot_normal_regs, ARRAY_SIZE(sr300pc20_snapshot_normal_regs), "snapshot_normal_regs");
+		if (err < 0) {
+		CAM_ERROR_PRINTK( "%s : camdrv_ss_i2c_set_config_register failed  not supported !!!\n",  __func__);
+		return -EIO;
+		}
+	}
+	
+
+
+	return 0;
+}
+
+
+//aska add
+static int camdrv_ss_sr300pc20_set_white_balance(struct v4l2_subdev *sd, int mode)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camdrv_ss_state *state = to_state(sd);
+	int err = 0;
+
+	CAM_INFO_PRINTK( " %s :  value =%d\n", __func__, mode);
+
+	switch (mode) {
+	case WHITE_BALANCE_AUTO:
+	{
+		if (sr300pc20_wb_auto_regs == 0)
+			CAM_ERROR_PRINTK( " %s : wb_auto_regs not supported !!!\n", __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr300pc20_wb_auto_regs, ARRAY_SIZE(sr300pc20_wb_auto_regs), "wb_auto_regs");
+
+		break;
+	}
+
+	
+	case WHITE_BALANCE_CLOUDY:
+	{
+		if (sr300pc20_wb_cloudy_regs == 0)
+			CAM_ERROR_PRINTK( "%s : wb_cloudy_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr300pc20_wb_cloudy_regs, ARRAY_SIZE(sr300pc20_wb_cloudy_regs), "wb_cloudy_regs");
+
+		break;
+	}
+
+
+	case WHITE_BALANCE_FLUORESCENT:
+	{
+		if (sr300pc20_wb_fluorescent_regs== 0)
+			CAM_ERROR_PRINTK( " %s : wb_fluorescent_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client,  sr300pc20_wb_fluorescent_regs, ARRAY_SIZE(sr300pc20_wb_fluorescent_regs), "wb_fluorescent_regs");
+
+		break;
+	}
+
+	
+	case WHITE_BALANCE_DAYLIGHT:
+	{
+		if (sr300pc20_wb_daylight_regs == 0)
+			CAM_ERROR_PRINTK( " %s : wb_daylight_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr300pc20_wb_daylight_regs, ARRAY_SIZE(sr300pc20_wb_daylight_regs), "wb_daylight_regs");
+
+		break;
+	}
+	case WHITE_BALANCE_INCANDESCENT:
+	{
+		if (sr300pc20_wb_incandescent_regs == 0)
+			CAM_ERROR_PRINTK( "%s : wb_incandescent_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr300pc20_wb_incandescent_regs, ARRAY_SIZE(sr300pc20_wb_incandescent_regs), "wb_incandescent_regs");
+
+		break;
+	}
+
+	default:
+	{
+		CAM_ERROR_PRINTK( " %s : default not supported !!!\n",  __func__);
+		break;
+	}
+	}
+
+	state->currentWB = mode;
+
+	return err;
+}
+//aska add
+static int camdrv_ss_sr300pc20_set_iso(struct v4l2_subdev *sd, int mode)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	int err = 0;
+
+
+	CAM_INFO_PRINTK( " %s :  value =%d\n",  __func__, mode);
+
+	switch (mode) {
+	case ISO_AUTO:
+	{
+		if (sr300pc20_iso_auto_regs == 0)
+			CAM_ERROR_PRINTK( " %s : iso_auto_regs not supported !!!\n", __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr300pc20_iso_auto_regs, ARRAY_SIZE(sr300pc20_iso_auto_regs), "iso_auto_regs");
+
+		break;
+	}
+	case ISO_50:
+	{
+		if (sr300pc20_iso_50_regs== 0)
+			CAM_ERROR_PRINTK( " %s : iso_50_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr300pc20_iso_50_regs, ARRAY_SIZE(sr300pc20_iso_50_regs), "iso_50_regs");
+	
+		break;
+	}
+
+	case ISO_100:
+	{
+		if (sr300pc20_iso_100_regs == 0)
+			CAM_ERROR_PRINTK( " %s : iso_100_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr300pc20_iso_100_regs, ARRAY_SIZE(sr300pc20_iso_100_regs), "iso_100_regs");
+	
+		break;
+	}
+	case ISO_200:
+	{
+		if (sr300pc20_iso_200_regs == 0)
+			CAM_ERROR_PRINTK( "%s  : iso_200_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client,sr300pc20_iso_200_regs, ARRAY_SIZE(sr300pc20_iso_200_regs), "iso_200_regs");
+	
+		break;
+	}
+	case ISO_400:
+	{
+		if (sr300pc20_iso_400_regs == 0)
+			CAM_ERROR_PRINTK( "%s  : iso_400_regs not supported !!!\n",  __func__);
+		else
+			err = camdrv_ss_i2c_set_config_register(client, sr300pc20_iso_400_regs,ARRAY_SIZE(sr300pc20_iso_400_regs), "iso_400_regs");
+	
+		break;
+	}
+
+	default:
+	{
+		CAM_ERROR_PRINTK( " %s : default case supported !!!\n", __func__);
+			break;
+        }			
+	} /* end of switch */
+
+	return err;
+}
 
 static unsigned char pBurstData[MAX_BUFFER];
+#if 1
+#define BURST_MODE_BUFFER_MAX_SIZE 255
+#define BURST_REG 0x0e
+#define DELAY_REG 0xff
+unsigned char sr300pc20_buf_for_burstmode[BURST_MODE_BUFFER_MAX_SIZE];
+
+static int camdrv_ss_sr300pc20_sensor_write(struct i2c_client *sr300pc20_client ,unsigned char subaddr, unsigned char val,int count)
+{
+	unsigned char buf[2] = { 0 };
+	struct i2c_msg msg = { sr300pc20_client->addr, 0, 2, buf };
+	
+#if defined(SENSOR_DEBUG)
+	pr_err("[ 0x%x %x ]\n", subaddr, data);
+#endif
+
+	buf[0] = (subaddr);
+	buf[1] = (val);
+
+	return i2c_transfer(sr300pc20_client->adapter, &msg, 1) == 1 ? 0 : -EIO;
+}
+
+static int camdrv_ss_sr300pc20_sensor_burst_write_list(struct i2c_client *sr300pc20_client ,regs_t reg_buffer[], int size, char *name)
+{
+	int err = -EINVAL;
+	int i = 0;
+	int idx = 0;
+	unsigned short subaddr = 0;
+	unsigned short value = 0;
+	int burst_flag = 0;
+	int burst_cnt = 0;
+	struct i2c_msg msg = { sr300pc20_client->addr,
+		0, 0, sr300pc20_buf_for_burstmode
+	};
+
+	u16 list, list1;
+
+#ifdef CONFIG_LOAD_FILE
+	err = sr300pc20_regs_table_burst_write(name);
+#else
+	for (i = 0; i < size; i++) {
+
+		list1 = reg_buffer[i] >> 16;
+        	list = reg_buffer[i];
+			
+		if (idx > (BURST_MODE_BUFFER_MAX_SIZE - 10)) {
+			pr_err("[%s:%d]Burst mode buffer overflow! "
+			       "Burst Count %d\n",
+			       __func__, __LINE__, burst_cnt);
+			#if 0
+			pr_err("[%s:%d]count %d, addr %x "
+			       "value %x\n", __func__, __LINE__, i,
+			       (list[i] >> 8) & 0xff, list[i] & 0xFF);
+			pr_err("[%s:%d]addr %x value %x\n",
+			       __func__, __LINE__,
+			       (list[i - 1] >> 8) & 0xff, list[i - 1] & 0xFF);
+			pr_err("[%s:%d]addr %x value %x\n",
+			       __func__, __LINE__,
+			       (list[i - 2] >> 8) & 0xff, list[i - 2] & 0xFF);
+			#endif
+			err = -EIO;
+			return err;
+		}
+		subaddr = (list>> 8);
+		value = (list & 0xFF);
+		if (burst_flag == 0) {
+			switch (subaddr) {
+			case BURST_REG:
+				if (value != 0x00) {
+					burst_flag = 1;
+					burst_cnt++;
+				}
+				break;
+			case DELAY_REG:
+				msleep(value * 10);	/* a step is 10ms */
+				break;
+			default:
+				idx = 0;
+				err = camdrv_ss_sr300pc20_sensor_write(sr300pc20_client,subaddr, value,i);
+				break;
+			}
+		} else if (burst_flag == 1) {
+			if (subaddr == BURST_REG && value == 0x00) {
+				msg.len = idx;
+				CAM_INFO_PRINTK("burst_cnt %d, idx %d\n",
+					     burst_cnt, idx);
+				err = i2c_transfer(sr300pc20_client->adapter,
+						   &msg, 1);
+				if (err < 0) {
+					pr_err("[%s:%d]Burst write fail!\n",
+					       __func__, __LINE__);
+					return err;
+				}
+				idx = 0;
+				burst_flag = 0;
+			} else {
+				if (idx == 0) {
+					sr300pc20_buf_for_burstmode[idx++] =
+					    subaddr;
+					sr300pc20_buf_for_burstmode[idx++] =
+					    value;
+				} else {
+					sr300pc20_buf_for_burstmode[idx++] =
+					    value;
+				}
+			}
+		}
+	}
+#endif
+
+	if (unlikely(err < 0)) {
+		pr_err("[%s:%d] register set failed\n", __func__, __LINE__);
+		return err;
+	}
+
+	return err;
+}
+#endif //YGLEE
 
 static int camdrv_ss_sr300pc20_i2c_set_data_burst(struct i2c_client *client, 
                                          regs_t reg_buffer[],int num_of_regs,char *name)
@@ -576,7 +892,9 @@ static int camdrv_ss_sr300pc20_i2c_set_data_burst(struct i2c_client *client,
     int i;
 	int index = 0;
 	int err = 0;
-#if 1
+	camdrv_ss_sr300pc20_sensor_burst_write_list(client,reg_buffer,num_of_regs,name);
+	
+#if 0
     memset(pBurstData, 0, sizeof(pBurstData));
     for(i = 0; i < num_of_regs; i++)
     {
@@ -737,7 +1055,40 @@ static float camdrv_ss_sr300pc20_get_exposureTime(struct v4l2_subdev *sd)
     ShutterSpeed = (int)read_value2;
     ShutterSpeed = (ShutterSpeed << 16) | (read_value1 & 0xFFFF);
 	   return ((ShutterSpeed * 1000) / 400); // us
+#else //YGLEE
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	//unsigned int read_value1=0,read_value2=0,read_value3=0;
+	unsigned short lsb = 0, msb = 0;
+	unsigned short a_gain = 0;
+	unsigned char data = 0;
+   	 int exposureTime = 0;
+
+
+	//AE off
+	camdrv_ss_i2c_write_2_bytes(client, 0x03, 0x20);
+	//camdrv_ss_i2c_write_2_bytes(client, 0x10, 0x0c);
+
+	//camdrv_ss_i2c_read_1_byte(client, 0x80, &read_value1);
+	//camdrv_ss_i2c_read_1_byte(client, 0x81, &read_value2);
+	//camdrv_ss_i2c_read_1_byte(client, 0x82, &read_value3);
+	//exposureTime = (read_value1 << 19 | read_value2 << 11 | read_value3<<3);
+	
+	/* read exposure time */
+	camdrv_ss_i2c_read_1_byte(client,0xa0, &data);
+	msb = (unsigned short)data;
+	camdrv_ss_i2c_read_1_byte(client,0xa1, &data);
+	msb = (msb << 8) | (unsigned short)data;
+	camdrv_ss_i2c_read_1_byte(client,0xa2, &data);
+	lsb = (unsigned short)data;
+	camdrv_ss_i2c_read_1_byte(client,0xa3, &data);
+	lsb = (lsb << 8) | (unsigned short)data;
+
+	exposureTime = (msb << 16) | lsb;
+	CAM_INFO_PRINTK("%s, exposureTime =%d \n",__func__,exposureTime);
+	return (exposureTime);
+	
 #endif
+
 	return 0;
 
  
@@ -781,6 +1132,29 @@ static int camdrv_ss_sr300pc20_get_iso_speed_rate(struct v4l2_subdev *sd)
         isospeedrating = 400;
     }
 	   return isospeedrating;
+#else
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	unsigned short a_gain = 0;
+	unsigned char data = 0;
+
+	/* page mode 0x20 */
+	camdrv_ss_i2c_write_2_bytes(client, 0x03, 0x20);
+	/* read ISO gain */
+	camdrv_ss_i2c_read_1_byte(client,0x50, &data);
+	a_gain = (unsigned short)data;
+	
+	// calculate ISO
+	if(a_gain < 0x25 )
+		return 50;
+	else if(a_gain < 0x5C )
+		return 100;
+	else if(a_gain < 0x83 )
+		return 200;
+	else if(a_gain < 0xF1 )
+		return 400;
+	else
+		return 800;
+	
 #endif
   	return 0;
  
@@ -1405,8 +1779,12 @@ static int camdrv_ss_sr300pc20_AAT_flash_control(struct v4l2_subdev *sd, int con
 //Power (common)
 static struct regulator *VCAM_IO_1_8_V;  //LDO_HV9
 static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
+
+#if defined(CONFIG_SOC_CAMERA_POWER_USE_ASR) || defined(CONFIG_MFD_D2083)   //for hw rev 0.2
+static struct regulator *VCAM_CORE_1_2_V;   //ASR_SW
+#else
 #define CAM_CORE_EN	   37
-//#define CAM_AF_EN     121
+#endif
 
 //main cam 
 #define CAM_RESET    33
@@ -1470,9 +1848,21 @@ static int camdrv_ss_sr300pc20_sensor_power(int on)
 	regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);	
 	//ret = regulator_disable(VCAM_IO_1_8_V);
 
-	
+#if defined(CONFIG_SOC_CAMERA_POWER_USE_ASR) || defined(CONFIG_MFD_D2083)   //for hw rev 0.2
+#if defined(CONFIG_MFD_D2083)
+	VCAM_CORE_1_2_V = regulator_get(NULL,"vcamc");
+#else
+	VCAM_CORE_1_2_V = regulator_get(NULL,"asr_nm_uc");
+#endif
+	if(IS_ERR(VCAM_CORE_1_2_V))
+	{
+		CAM_ERROR_PRINTK("can not get VCAM_CORE_1_2_V\n");
+		return -1;
+	}	
+#else	
 	gpio_request(CAM_CORE_EN, "cam_1_2v");
 	gpio_direction_output(CAM_CORE_EN,0); 
+#endif
 
 	//gpio_request(CAM_AF_EN, "cam_af_2_8v");
 	//gpio_direction_output(CAM_AF_EN,0); 
@@ -1500,45 +1890,31 @@ static int camdrv_ss_sr300pc20_sensor_power(int on)
 			return -1;
 		}
 
+		regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);	
+		regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);		
+#if defined(CONFIG_SOC_CAMERA_POWER_USE_ASR) || defined(CONFIG_MFD_D2083)   //for hw rev 0.3
+		regulator_set_voltage(VCAM_CORE_1_2_V,1200000,1200000);
+#endif	
+
 		value = clk_enable(axi_clk);
 		if (value) {
 			printk(KERN_ERR "%s:failed to enable csi2 axi clock\n", __func__);
 			return -1;
 		}
 
-		msleep(100);
+		msleep(5);
 		printk("power on the sensor's power supply\n"); //@HW
 
-
-		VCAM_IO_1_8_V = regulator_get(NULL,"hv9");
-		if(IS_ERR(VCAM_IO_1_8_V))
-		{
-			printk("can not get VCAM_IO_1.8V\n");
-			return -1;
-		}	
-		regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);	
-
 		regulator_enable(VCAM_IO_1_8_V);
-		
-		//		msleep(1);	
-		
-
-
-		VCAM_A_2_8_V = regulator_get(NULL,"cam");
-		if(IS_ERR(VCAM_A_2_8_V))
-		{
-			printk("can not get VCAM_A_2_8_V.8V\n");
-			return -1;
-		}
-		regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);
 
 		regulator_enable(VCAM_A_2_8_V);
-//		msleep(1);
 		
-
-		gpio_request(CAM_CORE_EN, "cam_1_2v");
+#if defined(CONFIG_SOC_CAMERA_POWER_USE_ASR) || defined(CONFIG_MFD_D2083)   //for hw rev 0.2		
+		regulator_enable(VCAM_CORE_1_2_V);
+#else
 		gpio_set_value(CAM_CORE_EN,1); 
-	
+#endif
+		msleep(3);
 		value = clk_enable(clock);
 		if (value) {
 			printk(KERN_ERR "%s: failed to enable clock %s\n", __func__,
@@ -1578,7 +1954,11 @@ static int camdrv_ss_sr300pc20_sensor_power(int on)
 		gpio_set_value(CAM_STNBY,0);
 		msleep(1);
 
+#if defined(CONFIG_SOC_CAMERA_POWER_USE_ASR) || defined(CONFIG_MFD_D2083)   //for hw rev 0.2		
+		regulator_disable(VCAM_CORE_1_2_V);
+#else
 		gpio_set_value(CAM_CORE_EN, 0);
+#endif
 
 		regulator_disable(VCAM_A_2_8_V);
 		regulator_disable(VCAM_IO_1_8_V);
@@ -1594,6 +1974,8 @@ static int camdrv_ss_sr300pc20_sensor_power(int on)
 	return 0;
 }
 
+#define SENSOR_0_PCLK_FREQ		(52000000)//(104000000) //@HW
+
 int camdrv_ss_sr300pc20_get_sensor_param_for_exif(
 	struct v4l2_subdev *sd,
 	struct v4l2_exif_sensor_info *exif_param)
@@ -1601,17 +1983,19 @@ int camdrv_ss_sr300pc20_get_sensor_param_for_exif(
 	char str[20];
 	int num = -1;
 	int ret = -1;
-	float exposureTime = 0.0f;
+	//float exposureTime = 0.0f;
+	int exposureTime = 0;
 
 	strcpy(exif_param->strSoftware,		EXIF_SOFTWARE);
 	strcpy(exif_param->strMake,		EXIF_MAKE);
 	strcpy(exif_param->strModel,		EXIF_MODEL);
 
-	num = camdrv_ss_sr300pc20_get_exposureTime(sd);
-	num = (int)(exposureTime * 100);
-	if (num > 0) 
+	exposureTime = (int)camdrv_ss_sr300pc20_get_exposureTime(sd);
+	CAM_INFO_PRINTK("%s :exposureTime num=  %d \n",__func__,exposureTime);
+	if (exposureTime > 0) 
 	{
-	    snprintf(str, 19, "%d/%d", num,100);
+		//sprintf(str, "%d/13000000", exposureTime);
+		sprintf(str, "%d/26000000", exposureTime);
 		strcpy(exif_param->exposureTime, str);
 	} 
 	else 
@@ -1619,9 +2003,23 @@ int camdrv_ss_sr300pc20_get_sensor_param_for_exif(
 		strcpy(exif_param->exposureTime, "");
 	}
 
-	num = camdrv_ss_sr300pc20_get_iso_speed_rate(sd);
-	if (num > 0) {
+	num = (SENSOR_0_PCLK_FREQ/2)/(int)exposureTime;
+	CAM_INFO_PRINTK("%s :shutterSpeed num=  %d fps\n",__func__,num);
+	if (num > 0) 
+	{
+		//snprintf(str, 19, "%d/26000000", num);
 		sprintf(str, "%d", num);
+		//strcpy(exif_param->shutterSpeed, str);
+	} 
+	else 
+	{
+		strcpy(exif_param->shutterSpeed, "");
+	}
+	
+	num = camdrv_ss_sr300pc20_get_iso_speed_rate(sd);
+	CAM_INFO_PRINTK("%s :isoSpeedRating =  %d \n",__func__,num);
+	if (num > 0) {
+		sprintf(str, "%d,", num);
 		strcpy(exif_param->isoSpeedRating, str);
 	} else {
 		strcpy(exif_param->isoSpeedRating, "");
@@ -1634,18 +2032,18 @@ int camdrv_ss_sr300pc20_get_sensor_param_for_exif(
 	strcpy(exif_param->saturation,		"0");
 	strcpy(exif_param->sharpness,		"0");
 
-	strcpy(exif_param->FNumber,		"");
+	strcpy(exif_param->FNumber,		"26/10");
 	strcpy(exif_param->exposureProgram,	"");
-	strcpy(exif_param->shutterSpeed,	exif_param->exposureTime);
+	strcpy(exif_param->shutterSpeed,	"");
 	strcpy(exif_param->aperture,		"");
 	strcpy(exif_param->brightness,		"");
 	strcpy(exif_param->exposureBias,	"");
 	strcpy(exif_param->maxLensAperture,	"");
 	strcpy(exif_param->flash,		"");
-	strcpy(exif_param->lensFocalLength,	"");
-	strcpy(exif_param->userComments,	"");
+	strcpy(exif_param->lensFocalLength,	"279/100");
+	strcpy(exif_param->userComments,	"User Comments");
 	ret = 0;
-
+	
 	return ret;
 		
 }
@@ -1684,6 +2082,9 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 /*optional*/
 	sensor->get_nightmode		   		 = camdrv_ss_sr300pc20_get_nightmode; //aska add
 	sensor->set_preview_start		  =  camdrv_ss_sr300pc20_set_preview_start;
+	sensor->set_capture_start      = camdrv_ss_sr300pc20_set_capture_start;//aska add
+	sensor->set_iso      					 = camdrv_ss_sr300pc20_set_iso;//aska add
+	sensor->set_white_balance      = camdrv_ss_sr300pc20_set_white_balance;//aska add
 	sensor->get_ae_stable_status      =  camdrv_ss_sr300pc20_get_ae_stable_status;
 //	sensor->set_auto_focus		 	  =  camdrv_ss_sr300pc20_set_auto_focus;
 //	sensor->get_auto_focus_status     = camdrv_ss_sr300pc20_get_auto_focus_status;
@@ -1692,7 +2093,7 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 //	sensor->get_touch_focus_status     = camdrv_ss_sr300pc20_get_touch_focus_status;
 
 //	sensor->AAT_flash_control    	   = camdrv_ss_sr300pc20_AAT_flash_control;
-//	sensor->i2c_set_data_burst   	   = camdrv_ss_sr300pc20_i2c_set_data_burst;
+	sensor->i2c_set_data_burst   	   = camdrv_ss_sr300pc20_i2c_set_data_burst; //YGLEE
 	sensor->check_flash_needed   	   = camdrv_ss_sr300pc20_check_flash_needed;
 //	sensor->get_light_condition   = camdrv_ss_sr300pc20_get_light_condition;
 	
@@ -1740,7 +2141,17 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->focus_mode_off_regs			  =	sr300pc20_af_normal_mode_regs;
 	sensor->rows_num_focus_mode_off_regs	  = ARRAY_SIZE(sr300pc20_af_normal_mode_regs);
 #endif
+	sensor->single_af_start_regs			  =	sr300pc20_single_af_start_regs;
+	sensor->rows_num_single_af_start_regs	  = ARRAY_SIZE(sr300pc20_single_af_start_regs);
 
+	sensor->get_1st_af_search_status			  =	sr300pc20_get_1st_af_search_status;
+	sensor->rows_num_get_1st_af_search_status	  = ARRAY_SIZE(sr300pc20_get_1st_af_search_status);
+
+	sensor->get_2nd_af_search_status			  =	sr300pc20_get_2nd_af_search_status;
+	sensor->rows_num_get_2nd_af_search_status	  = ARRAY_SIZE(sr300pc20_get_2nd_af_search_status);
+
+	sensor->single_af_stop_regs			  =	sr300pc20_single_af_stop_regs;
+	sensor->rows_num_single_af_stop_regs	  = ARRAY_SIZE(sr300pc20_single_af_stop_regs);
 	/*effect*/
 	sensor->effect_normal_regs			      =	sr300pc20_effect_normal_regs;
 	sensor->rows_num_effect_normal_regs      = ARRAY_SIZE(sr300pc20_effect_normal_regs);
@@ -2143,3 +2554,4 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	return 0;
 };
+

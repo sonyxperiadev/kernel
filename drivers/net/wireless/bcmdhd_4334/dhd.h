@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd.h 347624 2012-07-27 10:49:56Z $
+ * $Id: dhd.h 348969 2012-08-06 05:21:33Z $
  */
 
 /****************
@@ -503,6 +503,7 @@ extern void dhd_os_sdunlock_sndup_rxq(dhd_pub_t * pub);
 extern void dhd_os_sdlock_eventq(dhd_pub_t * pub);
 extern void dhd_os_sdunlock_eventq(dhd_pub_t * pub);
 extern bool dhd_os_check_hang(dhd_pub_t *dhdp, int ifidx, int ret);
+extern int dhd_os_send_hang_message(dhd_pub_t *dhdp);
 extern int net_os_send_hang_message(struct net_device *dev);
 extern void dhd_set_version_info(dhd_pub_t *pub, char *fw);
 
@@ -887,6 +888,7 @@ void dhd_arp_offload_add_ip(dhd_pub_t *dhd, uint32 ipaddr);
 extern int
 dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac);
 #endif
-
+#if defined(SUPPORT_MULTIPLE_REVISION)
 extern int concate_revision(struct dhd_bus *bus, char *path, int path_len);
+#endif /* SUPPORT_MULTIPLE_REVISION */
 #endif /* _dhd_h_ */
