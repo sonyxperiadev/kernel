@@ -342,14 +342,14 @@ config AB8500_BATTERY_THERM_ON_BATCTRL
 
 config POWER_BCMPMU
 	tristate "BCMPMU battery and charger driver"
-	depends on MFD_BCMPMU
+	depends on MFD_BCMPMU || MFD_BCM_PMU59056
 	default n
 	help
 	 Say Y to include support of battery and charger drivers for BCM PMUs.
 
 config BCMPMU_EM
 	tristate "BCMPMU charging and gauging driver"
-	depends on MFD_BCMPMU
+	depends on MFD_BCMPMU || MFD_BCM_PMU59056
 	default n
 	help
 	 Say Y to include kernel charging and gauging module for BCM PMUs.

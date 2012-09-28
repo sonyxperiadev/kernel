@@ -89,7 +89,7 @@ config MMDMA
 config BCMPMU_RPC
 	bool "Support rpc with bcmpmu driver"
 	depends on BRCM_CHAR_DRIVERS
-	depends on MFD_BCMPMU
+	depends on MFD_BCMPMU || MFD_BCM_PMU59056
 	depends on SENSORS_BCMPMU
 	default n
 	---help---

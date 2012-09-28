@@ -55,26 +55,6 @@
 #include "audio_tuning.h"
 #include "sysparm_shared.h"
 
-#define GPIO_INIT_FIELD_NUM 5
-#define GPIO_INIT_REC_NUM 64
-#define IMEI_SIZE					9
-
-#define NUM_OF_FREQ_OFFSETS			8
-
-/** Number of byte of Terminal Profile data defined in Sysparm. If the number of bytes is larger
- * than the "MAX_PROFILE_ARRAY_SIZE" defined in USIMAP/SIMAP, the extra bytes are truncated
- * and are not sent to the USIM/SIM.
- */
-#define MAX_TERMINAL_PROFILE_ARRAY_SIZE  30
-
-#if defined(RF_DESENSED)
-#define DESENSE_TABLE_ROW_SIZE 5
-#define DESENSE_TABLE_COLUMN_SIZE 5
-#endif
-
-/** TX FREQ SECTION PER BAND */
-#define N_FREQ_SECTIONS				8
-
 typedef struct {
 	char *name;
 	void *ptr;
@@ -82,20 +62,18 @@ typedef struct {
 	unsigned int flag;
 } SysparmIndex_t;
 
-UInt16 SYSPARM_GetLogFormat(void);
-SysAudioParm_t *APSYSPARM_GetAudioParmAccessPtr(void);
-SysIndMultimediaAudioParm_t *APSYSPARM_GetMultimediaAudioParmAccessPtr(void);
 int APSYSPARM_RefreshAudioParm(unsigned int addr);
 
-UInt16 SYSPARM_GetDefault4p2VoltReading(void);
-UInt16 SYSPARM_GetActual4p2VoltReading(void);
-UInt16 SYSPARM_GetBattLowThresh(void);
-UInt16 SYSPARM_GetActualLowVoltReading(void);
+SysAudioParm_t __iomem *APSYSPARM_GetAudioParmAccessPtr(void);
 
-UInt8 *SYSPARM_GetGPIO_Default_Value(UInt8 gpio_index);
-
-/* retrieves IMEI string from sysparms only (doesn't check MS database */
-/* value, as is done in CP sysparm.c) */
-Boolean SYSPARM_GetImeiStr(UInt8 *inImeiStrPtr);
+#if defined(USE_NEW_AUDIO_MM_PARAM)
+SysMultimediaAudioParm_t __iomem *
+APSYSPARM_GetMultimediaAudioParmAccessPtr(void);
+SysIndMultimediaAudioParm_t __iomem *
+APSYSPARM_GetIndMultimediaAudioParmAccessPtr(void);
+#else
+SysIndMultimediaAudioParm_t __iomem *
+APSYSPARM_GetMultimediaAudioParmAccessPtr(void);
+#endif
 
 #endif /* _BCM_FUSE_SYSPARM_CIB_H_ */

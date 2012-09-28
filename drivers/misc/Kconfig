@@ -702,13 +702,13 @@ config BCM59055_SELFTEST
 
 config BCMPMU_AUDIO
         tristate "BCM PMU Audio Driver"
-        depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx)
+        depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx || MFD_BCM_PMU59056)
         help
           If you say Y to support Audio drive on BCM PMUs.
 
 config BCMPMU_SELFTEST
         bool "BCM PMU Selftest Driver"
-        depends on MFD_BCMPMU
+        depends on MFD_BCMPMU || MFD_BCM_PMU59056
 	default n
         help
           If you say Y to support selftest drive on BCM PMUs.

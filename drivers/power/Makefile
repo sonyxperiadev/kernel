@@ -57,7 +57,12 @@ ifeq ($(CONFIG_BCM_CMP_BATTERY_BQ24616),m)
 obj-m += cmp_battery.o
 cmp_battery-objs += cmp_battery_bq24616.o
 endif
+ifeq ($(CONFIG_MFD_BCM_PMU59056), y)
+obj-$(CONFIG_POWER_BCMPMU)	+= bcmpmu-batt-56.o bcmpmu-chrgr-56.o
+obj-$(CONFIG_BCMPMU_EM) 	+= bcmpmu-em-56.o
+else
 obj-$(CONFIG_POWER_BCMPMU)	+= bcmpmu-batt.o bcmpmu-chrgr.o
-obj-$(CONFIG_CHARGER_BCMPMU_SPA) += bcmpmu-chrgr-pb.o
 obj-$(CONFIG_BCMPMU_EM) 	+= bcmpmu-em.o
+endif
+obj-$(CONFIG_CHARGER_BCMPMU_SPA) += bcmpmu-chrgr-pb.o
 obj-$(CONFIG_BATTERY_ANDROID)	+= android_battery.o

@@ -23,6 +23,8 @@ extern void dormant_enter(u32 service);
 /* Exported API for saving return path and continue */
 extern u32 dormant_enter_prepare(u32 dont_care, u32 v_to_p_offset);
 
+extern void invalidate_tlb_btac(void);
+
 /* Exported API to check if dormant is enabled or not */
 extern u32 is_dormant_enabled(void);
 

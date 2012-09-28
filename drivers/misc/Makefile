@@ -74,6 +74,8 @@ obj-$(CONFIG_BCM59055_ADC_CHIPSET_API)+= bcm59055-adc_chipset_api.o
 obj-$(CONFIG_BCMPMU_CSAPI_ADC)	+= bcmpmu_csapi_adc.o
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
 obj-$(CONFIG_BCMPMU_AUDIO)	+= bcmpmu59xxx_audio.o
+else ifeq ($(CONFIG_MFD_BCM_PMU59056), y)
+obj-$(CONFIG_BCMPMU_AUDIO)	+= bcmpmu_audio_56.o
 else
 obj-$(CONFIG_BCMPMU_AUDIO)	+= bcmpmu_audio.o
 endif

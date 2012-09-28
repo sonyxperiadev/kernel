@@ -1385,7 +1385,7 @@ config SENSORS_MC13783_ADC
 
 config SENSORS_BCMPMU
 	tristate "BRCM PMUs"
-	depends on MFD_BCMPMU
+	depends on MFD_BCMPMU || MFD_BCM_PMU59056 
 	default n
 	help
 	  If you say yes here you get support for ADC and Fuel Gauge

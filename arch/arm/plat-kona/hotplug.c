@@ -17,8 +17,6 @@
 
 extern volatile int pen_release;
 
-static DECLARE_COMPLETION(cpu_killed);
-
 static inline void cpu_enter_lowpower(void)
 {
 	unsigned int v;
@@ -87,15 +85,13 @@ static inline void platform_do_lowpower(unsigned int cpu)
 		 * possible, since we are currently running incoherently, and
 		 * therefore cannot safely call printk() or anything else
 		 */
-#ifdef DEBUG
-		printk("CPU%u: spurious wakeup call\n", cpu);
-#endif
+		pr_debug("CPU%u: spurious wakeup call\n", cpu);
 	}
 }
 
 int platform_cpu_kill(unsigned int cpu)
 {
-	return wait_for_completion_timeout(&cpu_killed, 5000);
+	return 1;
 }
 
 /*
@@ -109,14 +105,13 @@ void platform_cpu_die(unsigned int cpu)
 	unsigned int this_cpu = hard_smp_processor_id();
 
 	if (cpu != this_cpu) {
-		printk(KERN_CRIT "Eek! platform_cpu_die running on %u, should be %u\n",
+		pr_crit("Eek! platform_cpu_die running on %u, should be %u\n",
 			   this_cpu, cpu);
 		BUG();
 	}
 #endif
 
-	printk(KERN_NOTICE "CPU%u: shutdown\n", cpu);
-	complete(&cpu_killed);
+	pr_notice("CPU%u: shutdown\n", cpu);
 
 	/*
 	 * we're ready for shutdown now, so do it

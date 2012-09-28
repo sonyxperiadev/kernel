@@ -502,7 +502,7 @@ int __init h264_init(void)
 
 	dbg_print("H264 Driver Init\n");
 
-#if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
+#if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA) || defined (CONFIG_ARCH_HAWAII)
 	h264_major = 209;
 	ret = register_chrdev(h264_major, H264_DEV_NAME, &h264_fops);
 	if (ret < 0) {
