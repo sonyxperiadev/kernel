@@ -180,7 +180,7 @@ struct cdebugger_core_t cdebugger_core_reg;
 struct cdebugger_mmu_reg_t cdebugger_mmu_reg;
 enum cdebugger_upload_cause_t cdebugger_upload_cause;
 
-struct cdebugger_fault_status_t cdebugger_fault_status;
+struct cdebugger_fault_status_t cdebugger_fault_status[NR_CPUS];
 
 struct T_RAMDUMP_BLOCK {
 	unsigned int mem_start;
@@ -473,10 +473,12 @@ static void cdebugger_save_context(void)
 
 void cdebugger_save_pte(void *pte, int task_addr)
 {
+	unsigned int cpuid;
 
-	memcpy(&cdebugger_fault_status, pte, sizeof(cdebugger_fault_status));
-	cdebugger_fault_status.cur_process_magic = task_addr;
+	cpuid = smp_processor_id();
 
+	memcpy(&cdebugger_fault_status[cpuid], pte, sizeof(cdebugger_fault_status));
+	cdebugger_fault_status[cpuid].cur_process_magic = task_addr;
 }
 
 static void cdebugger_set_upload_magic(unsigned magic)
