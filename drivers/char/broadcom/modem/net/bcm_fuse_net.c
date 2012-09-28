@@ -678,6 +678,14 @@ static int bcm_fuse_net_attach(unsigned int dev_index)
 		BNET_DEBUG(DBG_ERROR,
 			   "%s: Error [%d] registering device \"%s\"\n",
 			   __FUNCTION__, ret, BCM_NET_DEV_STR);
+
+		/*error recovery, do clean up*/
+		spin_lock_irqsave(&g_dev_lock, flags);
+#ifdef FUSE_NET_NAPI
+		netif_napi_del(&(g_net_dev_tbl[dev_index].rx_napi.napiInfo));
+#endif
+		memset(&g_net_dev_tbl[dev_index], 0, sizeof(net_drvr_info_t));
+		spin_unlock_irqrestore(&g_dev_lock, flags);
 		return -1;
 	}
 
@@ -884,8 +892,14 @@ static int __init bcm_fuse_net_init_module(void)
 	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
 		memset(&g_net_dev_tbl[i], 0, sizeof(net_drvr_info_t));
 
-	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
-		bcm_fuse_net_attach(i);
+	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
+		if (bcm_fuse_net_attach(i) == -1) {
+			/* no need to carry on, something is wrong already,
+			 * hopefully the already attached drivers can be enough
+			 * to use */
+			break;
+		}
+	}
 
 	/* proc entry for net config settings */
 	bcm_fuse_net_config_proc_entry =
