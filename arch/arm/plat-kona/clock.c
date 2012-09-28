@@ -4902,17 +4902,17 @@ struct gen_clk_ops gen_core_clk_ops = {
 
 #ifdef CONFIG_DEBUG_FS
 
-__weak int debug_bus_mux_sel(int mux_sel, int mux_param)
+__weak int debug_bus_mux_sel(int mux_sel, int mux_param, u32 dbg_bit_sel)
 {
 	return 0;
 }
 
-__weak int set_clk_idle_debug_mon(int clk_idle, int db_sel)
+__weak int set_clk_idle_debug_mon(int clk_idle, int db_sel, u32 dbg_bit_sel)
 {
 	return 0;
 }
 
-__weak int set_clk_monitor_debug(int mon_select, int debug_bus)
+__weak int set_clk_monitor_debug(int mon_select, int debug_bus, u32 dbg_bit_sel)
 {
 	return 0;
 }
@@ -4922,7 +4922,7 @@ __weak int clock_monitor_enable(struct clk *clk, int monitor)
 	return 0;
 }
 __weak int set_ccu_dbg_bus_mux(struct ccu_clk *ccu_clk, int mux_sel,
-			int mux_param)
+			int mux_param, u32 dbg_bit_sel)
 {
 	return 0;
 }
@@ -4941,6 +4941,7 @@ static ssize_t set_clk_idle_debug(struct file *file, char const __user *buf,
 	int db_sel = 0;
 	int clk_idle = 0;
 	char input_str[100];
+	u32 dbg_bit_sel = 0;
 
 	if (count > sizeof(input_str))
 		len = sizeof(input_str);
@@ -4949,8 +4950,8 @@ static ssize_t set_clk_idle_debug(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
-	sscanf(input_str, "%d%d", &clk_idle, &db_sel);
-	set_clk_idle_debug_mon(clk_idle, db_sel);
+	sscanf(input_str, "%d%d%x", &clk_idle, &db_sel, &dbg_bit_sel);
+	set_clk_idle_debug_mon(clk_idle, db_sel, dbg_bit_sel);
 	return count;
 }
 
@@ -4965,6 +4966,7 @@ static ssize_t set_clk_mon_debug(struct file *file, char const __user *buf,
 	u32 len = 0;
 	int db_sel = 0;
 	int mon_sel = 0;
+	u32 dbg_bit_sel = 0;
 	char input_str[100];
 
 	if (count > 100)
@@ -4974,10 +4976,10 @@ static ssize_t set_clk_mon_debug(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
-	sscanf(input_str, "%d%d", &mon_sel, &db_sel);
+	sscanf(input_str, "%d%d%x", &mon_sel, &db_sel, &dbg_bit_sel);
 	clk_dbg("%s:Clock to be monitored on %s\n", __func__,
 		mon_sel ? "DEBUG_BUS_GPIO" : "CAMCS_PIN");
-	set_clk_monitor_debug(mon_sel, db_sel);
+	set_clk_monitor_debug(mon_sel, db_sel, dbg_bit_sel);
 	return count;
 }
 
@@ -5096,6 +5098,7 @@ static ssize_t ccu_debug_set_dbg_bus_sel(struct file *file,
 	u32 len = 0;
 	char input_str[10];
 	u32 sel = 0, mux = 0, mux_parm = 0;
+	u32 dbg_bit_sel = 0;
 
 	BUG_ON(clk == NULL);
 	ccu_clk = to_ccu_clk(clk);
@@ -5109,8 +5112,8 @@ static ssize_t ccu_debug_set_dbg_bus_sel(struct file *file,
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
 
-	sscanf(&input_str[0], "%x%x%x", &sel, &mux, &mux_parm);
-	set_ccu_dbg_bus_mux(ccu_clk, mux, mux_parm);
+	sscanf(&input_str[0], "%x%x%x%x", &sel, &mux, &mux_parm, &dbg_bit_sel);
+	set_ccu_dbg_bus_mux(ccu_clk, mux, mux_parm, dbg_bit_sel);
 	ccu_set_dbg_bus_sel(ccu_clk, sel);
 	return count;
 }

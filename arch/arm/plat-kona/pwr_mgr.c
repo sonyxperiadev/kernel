@@ -2426,7 +2426,8 @@ static int pwr_mgr_pm_i2c_var_data_read(u8 *data)
 #ifdef CONFIG_DEBUG_FS
 
 
-__weak void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param)
+__weak void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param,
+		u32 dbg_bit_sel)
 {
 }
 
@@ -2462,6 +2463,7 @@ static ssize_t set_pm_mgr_dbg_bus(struct file *file, char const __user *buf,
 	int param = 0;
 	char input_str[100];
 	u32 reg_val;
+	u32 dbg_bit_sel = 0;
 
 	if (count > 100)
 		len = 100;
@@ -2470,9 +2472,9 @@ static ssize_t set_pm_mgr_dbg_bus(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
-	sscanf(input_str, "%x%x%x", &val, &db_sel, &param);
+	sscanf(input_str, "%x%x%x%x", &val, &db_sel, &param, &dbg_bit_sel);
 
-	pwr_mgr_mach_debug_fs_init(0, db_sel, param);
+	pwr_mgr_mach_debug_fs_init(0, db_sel, param, dbg_bit_sel);
 	reg_val =
 	    readl(PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
 	reg_val &= ~(0xF << 20);
@@ -2521,6 +2523,7 @@ static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
 	int db_sel = 0;
 	int val = 0;
 	int param = 0;
+	u32 dbg_bit_sel  = 0;
 	char input_str[100];
 	u32 reg_val;
 	u32 reg_addr = (u32)file->private_data +
@@ -2532,10 +2535,10 @@ static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
-	sscanf(input_str, "%x%x%x", &val, &db_sel, &param);
+	sscanf(input_str, "%x%x%x%x", &val, &db_sel, &param, &dbg_bit_sel);
 
 	pwr_dbg(PWR_LOG_DBGFS, "%s: val: %d\n", __func__, val);
-	pwr_mgr_mach_debug_fs_init(1, db_sel, param);
+	pwr_mgr_mach_debug_fs_init(1, db_sel, param, dbg_bit_sel);
 	reg_val = readl(reg_addr);
 	reg_val &=
 	    ~(BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_DEBUG_BUS_SELECT_MASK);
