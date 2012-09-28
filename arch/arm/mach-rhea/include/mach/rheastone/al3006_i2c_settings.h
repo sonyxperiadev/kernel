@@ -19,4 +19,8 @@
 #define AL3006_I2C_ADDRESS	0x1d
 #define AL3006_IRQ_GPIO	31 /* SAT1 */
 
+/* Disable interrupt even though it is connected.
+ * HAL doesn't expect interrupt. Otherwise Android will hang */
+#undef AL3006_IRQ
+
 #endif /* _AL3006_I2C_SETTINGS_H_ */

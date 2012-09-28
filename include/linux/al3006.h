@@ -30,16 +30,16 @@
 #ifndef _AL3006_H
 #define _AL3006_H
 
-#include <linux/types.h>
-#include <linux/i2c.h>
-#include <linux/i2c-kona.h>
+
+#ifdef CONFIG_ARCH_KONA
+
+#define AL3006_NAME "al3006"
 
 /* platform data for the al3006 driver */
-
 struct al3006_platform_data {
-	struct i2c_slave_platform_data i2c_pdata;
-	int	(*init_platform_hw)(void);
-	void (*exit_platform_hw)(void);
+	int	irq_gpio;
 };
+
+#endif
 
 #endif

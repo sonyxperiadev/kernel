@@ -22,6 +22,7 @@
 
 #include <linux/module.h>
 #include <linux/spi/spi.h>
+#include <linux/input.h>
 #include "linux/bmp18x.h"
 
 static int bmp18x_spi_write_byte(void *client, u8 reg, u8 value)
@@ -54,6 +55,7 @@ static int bmp18x_spi_read_byte(void *client, u8 reg)
 }
 
 static const struct bmp18x_bus_ops bmp18x_spi_bus_ops = {
+	.bus_type	= BUS_SPI,
 	.read_block	= bmp18x_spi_read_block,
 	.read_byte	= bmp18x_spi_read_byte,
 	.write_byte	= bmp18x_spi_write_byte
