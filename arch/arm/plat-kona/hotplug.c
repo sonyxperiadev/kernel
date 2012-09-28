@@ -14,6 +14,9 @@
 #include <linux/completion.h>
 
 #include <asm/cacheflush.h>
+#ifdef CONFIG_A9_DORMANT_MODE
+#include <mach/dormant.h>
+#endif
 
 extern volatile int pen_release;
 
@@ -65,11 +68,14 @@ static inline void platform_do_lowpower(unsigned int cpu)
 		/*
 		 * here's the WFI
 		 */
+#ifdef CONFIG_A9_DORMANT_MODE
+		dormant_enter(DORMANT_CORE_DOWN);
+#else
 		asm(".word	0xe320f003\n"
 		    :
 		    :
 		    : "memory", "cc");
-
+#endif
 		if (pen_release == cpu) {
 			/*
 			 * OK, proper wakeup, we're done
@@ -113,6 +119,11 @@ void platform_cpu_die(unsigned int cpu)
 
 	pr_notice("CPU%u: shutdown\n", cpu);
 
+#ifdef CONFIG_A9_DORMANT_MODE
+	if (is_dormant_enabled())
+		platform_do_lowpower(cpu);
+	else {
+#endif
 	/*
 	 * we're ready for shutdown now, so do it
 	 */
@@ -124,6 +135,9 @@ void platform_cpu_die(unsigned int cpu)
 	 * coherency, and then restore interrupts
 	 */
 	cpu_leave_lowpower();
+#ifdef CONFIG_A9_DORMANT_MODE
+	}
+#endif
 }
 
 int platform_cpu_disable(unsigned int cpu)
