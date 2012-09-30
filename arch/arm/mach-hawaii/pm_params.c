@@ -163,7 +163,7 @@ int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 	return 0;
 #endif
 }
-
+#if !defined (CONFIG_MACH_HAWAII_FPGA)
 int __init pm_params_init(void)
 {
 	__pm_init_errata_flg();
@@ -171,3 +171,4 @@ int __init pm_params_init(void)
 	pwrmgr_init_param.cmd_buf_size = cmd_buf_sz;
 	return 0;
 }
+#endif
