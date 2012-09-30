@@ -96,20 +96,20 @@ typedef enum {
 	/** 12 Timer expired */
 	RESULT_TIMER_EXPIRED,
 
-	/** 14	Out of  memory */
-	RESULT_OUT_OF_MEMORY,				
+	/** 13 OUt of memory */
+	RESULT_OUT_OF_MEMORY,
 
-	/** 15	RPC Encoding fail */
-	RESULT_ENCODING_FAIL,				
+	/** 14 RPC Encoding fail */
+	RESULT_ENCODING_FAIL,
+
+	/** 15 RPC Decoding fail */
+	RESULT_DECODING_FAIL,
 	
-	/** 16	RPC Decoding fail */
-	RESULT_DECODING_FAIL,				
+	/** 16 RPC Message ID not found */
+	RESULT_MSG_NOT_FOUND,
 	
-	/** 17	RPC Message ID not found */
-	RESULT_MSG_NOT_FOUND,			
-	
-	/**18	RPC Send Fail */
-	RESULT_SEND_FAIL,					
+	/** 17 RPC Send Fail */
+	RESULT_SEND_FAIL,
 
 	/* ------ Result code for Supplementary-service APIs ----- */
 

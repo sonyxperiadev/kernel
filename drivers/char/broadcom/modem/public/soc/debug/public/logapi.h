@@ -200,6 +200,22 @@ FTDI driver needed).
 #define	LOGID_MINDREADER		287
 #define LOGID_WLAN_GENERIC_DBG	288
 
+#ifdef CNEON_COMMON
+#define LOGID_GLUEAPI_ID1       301
+#define LOGID_GLUEAPI_ID2       302
+#define LOGID_GLUEAPI_ID3       303
+#define LOGID_GLUEAPI_ID4       304
+#define LOGID_GLUEAPI_ID5       305
+#define LOGID_GLUEAPI_ID6       306
+#define LOGID_GLUEAPI_ID7       307
+#define LOGID_GLUEAPI_ID8       308
+#define LOGID_GLUEAPI_ID9       309
+#define LOGID_GLUEAPI_MISC      310
+
+#define LOGID_CHIPSET_ASSERT_LVL0    311
+#define LOGID_CHIPSET_ASSERT_LVL1    312
+#define LOGID_CHIPSET_ASSERT_LVL2    313
+#else
 #define LOGID_GLUEAPI_ID1       301
 #define LOGID_GLUEAPI_ID2       302
 #define LOGID_GLUEAPI_ID3       303
@@ -210,6 +226,8 @@ FTDI driver needed).
 #define LOGID_GLUEAPI_ID8       308
 #define LOGID_GLUEAPI_ID9       309
 #define LOGID_GLUEAPI_ID10      310
+#endif
+
 
 #define	LOGID_ATC_HANDLERS						311
 #define	LOGID_ATC_PARSER						312
@@ -475,6 +493,8 @@ FTDI driver needed).
 
 #define	LOGID_PROFILING							888
 
+#define P_log_chart                             999
+
 /// last logging id that would be used by Broadcom platform
 /// the numbers after this are all for MMI/application use
 #define LAST_RESERVED_ID						1023
@@ -486,6 +506,330 @@ FTDI driver needed).
 #define	PSEUDO_LOGID_LOGCTRL					0xFFFB
 	
 #include "log_sig_code.h"
+
+typedef struct
+{
+    char title[32]; // chart name
+    char x_axis_name[16]; // x axis name, such as "TimeLine".
+    char y_axis_name[16];
+    char x_unit[8]; // x axis unit name, such as "ms".
+    char y_unit[8];
+	UInt16 array_length; // specify the number of entries in the array.
+	UInt16 display_style; // 0: line; 1: dots only; 2: bars on X axis; 3: bars on Y axis
+	UInt32 background_color; // 00RRGGBB
+	UInt32 line_color; // 00RRGGBB
+	UInt8 x_value_visible; // determine whether to show x value for each point. boolean - 0:false 1:true
+	UInt8 y_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 x_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only; 0 means no x array in dereference, x array is derived from array_length, x_min, and x_max)
+	UInt8 y_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	Int32 x_min; // minimum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 x_max; // maximum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 y_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+} T_CHART_X_Y_HEADER;
+
+typedef T_CHART_X_Y_HEADER CHART_X_Y;
+
+typedef struct
+{
+    char title[32]; // chart name
+    char x_axis_name[16]; // x axis name, such as "TimeLine".
+    char y_axis_name[16];
+    char x_unit[8]; // x axis unit name, such as "ms".
+    char y_unit[8];
+	UInt16 array_length; // specify the number of entries in the array.
+	UInt16 display_style; // 0: line; 1: dots only; 2: bars on X axis; 3: bars on Y axis
+	UInt32 background_color; // 00RRGGBB
+	UInt32 line1_color; // 00RRGGBB
+	UInt32 line2_color; // 00RRGGBB
+	UInt8 x_value_visible; // determine whether to show x value for each point. boolean - 0:false 1:true
+	UInt8 y1_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y2_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 x_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only; 0 means no x array in dereference, x array is derived from array_length, x_min, and x_max)
+	UInt8 y1_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y2_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	Int32 x_min; // minimum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 x_max; // maximum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 y1_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y1_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+} T_CHART_X_2Y_HEADER;
+
+typedef T_CHART_X_2Y_HEADER CHART_X_2Y;
+
+typedef struct
+{
+    char title[32]; // chart name
+    char x_axis_name[16]; // x axis name, such as "TimeLine".
+    char y_axis_name[16];
+    char x_unit[8]; // x axis unit name, such as "ms".
+    char y_unit[8];
+	UInt16 array_length; // specify the number of entries in the array.
+	UInt16 display_style; // 0: line; 1: dots only; 2: bars on X axis; 3: bars on Y axis
+	UInt32 background_color; // 00RRGGBB
+	UInt32 line1_color; // 00RRGGBB
+	UInt32 line2_color; // 00RRGGBB
+	UInt32 line3_color; // 00RRGGBB
+	UInt8 x_value_visible; // determine whether to show x value for each point. boolean - 0:false 1:true
+	UInt8 y1_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y2_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y3_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 x_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only; 0 means no x array in dereference, x array is derived from array_length, x_min, and x_max)
+	UInt8 y1_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y2_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y3_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	Int32 x_min; // minimum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 x_max; // maximum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 y1_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y1_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+} T_CHART_X_3Y_HEADER;
+
+typedef T_CHART_X_3Y_HEADER CHART_X_3Y;
+
+typedef struct
+{
+    char title[32]; // chart name
+    char x_axis_name[16]; // x axis name, such as "TimeLine".
+    char y_axis_name[16];
+    char x_unit[8]; // x axis unit name, such as "ms".
+    char y_unit[8];
+	UInt16 array_length; // specify the number of entries in the array.
+	UInt16 display_style; // 0: line; 1: dots only; 2: bars on X axis; 3: bars on Y axis
+	UInt32 background_color; // 00RRGGBB
+	UInt32 line1_color; // 00RRGGBB
+	UInt32 line2_color; // 00RRGGBB
+	UInt32 line3_color; // 00RRGGBB
+	UInt32 line4_color; // 00RRGGBB
+	UInt8 x_value_visible; // determine whether to show x value for each point. boolean - 0:false 1:true
+	UInt8 y1_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y2_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y3_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y4_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 x_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only; 0 means no x array in dereference, x array is derived from array_length, x_min, and x_max)
+	UInt8 y1_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y2_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y3_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y4_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	Int32 x_min; // minimum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 x_max; // maximum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 y1_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y1_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y4_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y4_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+} T_CHART_X_4Y_HEADER;
+
+typedef T_CHART_X_4Y_HEADER CHART_X_4Y;
+
+typedef struct
+{
+    char title[32]; // chart name
+    char x_axis_name[16]; // x axis name, such as "TimeLine".
+    char y_axis_name[16];
+    char x_unit[8]; // x axis unit name, such as "ms".
+    char y_unit[8];
+	UInt16 array_length; // specify the number of entries in the array.
+	UInt16 display_style; // 0: line; 1: dots only; 2: bars on X axis; 3: bars on Y axis
+	UInt32 background_color; // 00RRGGBB
+	UInt32 line1_color; // 00RRGGBB
+	UInt32 line2_color; // 00RRGGBB
+	UInt32 line3_color; // 00RRGGBB
+	UInt32 line4_color; // 00RRGGBB
+	UInt32 line5_color; // 00RRGGBB
+	UInt8 x_value_visible; // determine whether to show x value for each point. boolean - 0:false 1:true
+	UInt8 y1_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y2_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y3_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y4_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y5_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 x_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only; 0 means no x array in dereference, x array is derived from array_length, x_min, and x_max)
+	UInt8 y1_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y2_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y3_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y4_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y5_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	Int32 x_min; // minimum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 x_max; // maximum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 y1_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y1_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y4_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y4_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y5_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y5_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+} T_CHART_X_5Y_HEADER;
+
+typedef T_CHART_X_5Y_HEADER CHART_X_5Y;
+
+typedef struct
+{
+    char title[32]; // chart name
+    char x_axis_name[16]; // x axis name, such as "TimeLine".
+    char y_axis_name[16];
+    char x_unit[8]; // x axis unit name, such as "ms".
+    char y_unit[8];
+	UInt16 array_length; // specify the number of entries in the array.
+	UInt16 display_style; // 0: line; 1: dots only; 2: bars on X axis; 3: bars on Y axis
+	UInt32 background_color; // 00RRGGBB
+	UInt32 line1_color; // 00RRGGBB
+	UInt32 line2_color; // 00RRGGBB
+	UInt32 line3_color; // 00RRGGBB
+	UInt32 line4_color; // 00RRGGBB
+	UInt32 line5_color; // 00RRGGBB
+	UInt32 line6_color; // 00RRGGBB
+	UInt8 x_value_visible; // determine whether to show x value for each point. boolean - 0:false 1:true
+	UInt8 y1_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y2_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y3_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y4_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y5_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y6_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 x_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only; 0 means no x array in dereference, x array is derived from array_length, x_min, and x_max)
+	UInt8 y1_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y2_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y3_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y4_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y5_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y6_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	Int32 x_min; // minimum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 x_max; // maximum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 y1_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y1_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y4_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y4_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y5_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y5_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y6_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y6_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+} T_CHART_X_6Y_HEADER;
+
+typedef T_CHART_X_6Y_HEADER CHART_X_6Y;
+
+typedef struct
+{
+    char title[32]; // chart name
+    char x_axis_name[16]; // x axis name, such as "TimeLine".
+    char y_axis_name[16];
+    char x_unit[8]; // x axis unit name, such as "ms".
+    char y_unit[8];
+	UInt16 array_length; // specify the number of entries in the array.
+	UInt16 display_style; // 0: line; 1: dots only; 2: bars on X axis; 3: bars on Y axis
+	UInt32 background_color; // 00RRGGBB
+	UInt32 line1_color; // 00RRGGBB
+	UInt32 line2_color; // 00RRGGBB
+	UInt32 line3_color; // 00RRGGBB
+	UInt32 line4_color; // 00RRGGBB
+	UInt32 line5_color; // 00RRGGBB
+	UInt32 line6_color; // 00RRGGBB
+	UInt32 line7_color; // 00RRGGBB
+	UInt8 x_value_visible; // determine whether to show x value for each point. boolean - 0:false 1:true
+	UInt8 y1_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y2_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y3_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y4_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y5_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y6_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y7_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 x_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only; 0 means no x array in dereference, x array is derived from array_length, x_min, and x_max)
+	UInt8 y1_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y2_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y3_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y4_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y5_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y6_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y7_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	Int32 x_min; // minimum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 x_max; // maximum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 y1_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y1_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y4_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y4_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y5_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y5_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y6_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y6_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y7_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y7_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+} T_CHART_X_7Y_HEADER;
+
+typedef T_CHART_X_7Y_HEADER CHART_X_7Y;
+
+typedef struct
+{
+    char title[32]; // chart name
+    char x_axis_name[16]; // x axis name, such as "TimeLine".
+    char y_axis_name[16];
+    char x_unit[8]; // x axis unit name, such as "ms".
+    char y_unit[8];
+	UInt16 array_length; // specify the number of entries in the array.
+	UInt16 display_style; // 0: line; 1: dots only; 2: bars on X axis; 3: bars on Y axis
+	UInt32 background_color; // 00RRGGBB
+	UInt32 line1_color; // 00RRGGBB
+	UInt32 line2_color; // 00RRGGBB
+	UInt32 line3_color; // 00RRGGBB
+	UInt32 line4_color; // 00RRGGBB
+	UInt32 line5_color; // 00RRGGBB
+	UInt32 line6_color; // 00RRGGBB
+	UInt32 line7_color; // 00RRGGBB
+	UInt32 line8_color; // 00RRGGBB
+	UInt8 x_value_visible; // determine whether to show x value for each point. boolean - 0:false 1:true
+	UInt8 y1_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y2_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y3_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y4_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y5_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y6_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y7_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 y8_value_visible; // determine whether to show y value for each point. boolean - 0:false 1:true
+	UInt8 x_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only; 0 means no x array in dereference, x array is derived from array_length, x_min, and x_max)
+	UInt8 y1_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y2_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y3_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y4_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y5_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y6_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y7_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	UInt8 y8_array_unit_size; // specify the number of bytes per array entry (1, 2, or 4 are supported, little-endian only)
+	Int32 x_min; // minimum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 x_max; // maximum value of x scale, if both x_min and x_max are zero, auto-scaling will be used.
+	Int32 y1_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y1_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y2_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y3_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y4_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y4_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y5_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y5_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y6_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y6_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y7_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y7_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y8_min; // minimum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+	Int32 y8_max; // maximum value of y scale, if both y_min and y_max are zero, auto-scaling will be used.
+} T_CHART_X_8Y_HEADER;
+
+typedef T_CHART_X_8Y_HEADER CHART_X_8Y;
 
 //#ifdef WIN32
 //#else
@@ -1061,6 +1405,17 @@ const char* Log_GetLogIdName(UInt16 logID);
 
 void Log_OutputStatistics(void);
 
+
+#ifdef CNEON_COMMON
+const char* Log_GetLogIdName(UInt16 logID);
+
+//***************************************************************************************
+/**
+    Function to output logging statistics in log file
+**/	
+
+void Log_OutputStatistics(void);
+#endif
 /** @} */
 
 #endif
