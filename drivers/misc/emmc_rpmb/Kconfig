@@ -1,0 +1,37 @@
+#
+#	BRCM eMMC RPMB Driver
+#
+
+menuconfig BRCM_EMMC_RPMB
+	bool "BRCM eMMC RPMB implementation"
+	default n
+	---help---
+	  Say Y here to see options for various RPMB utilities.
+	  If you say N, all options in this submenu will be skipped and disabled.
+
+if BRCM_EMMC_RPMB
+
+config BRCM_EMMC_RPMB_SUPPORT
+	bool "BRCM eMMC RPMB support"
+	default n
+	help
+	  This driver basically implements eMMC RPMB protocol over the mmc
+	  protocol. This can be used with in the kernel to read/write from
+	  RPMB partition.
+
+config BRCM_EMMC_RPMB_TEST
+	bool "BRCM eMMC RPMB Test code"
+	depends on !BRCM_EMMC_RPMB_SUPPORT
+	default n
+	help
+	  This driver implements a very basic eMMC RPMB test
+	  driver.
+
+config BRCM_EMMC_RPMB_KEYBOX
+	bool "BRCM KEYBOX function support"
+	depends on BRCM_EMMC_RPMB_SUPPORT
+	default n
+	help
+	  This driver implements a misc driver for read keybox from eMMC RPMB area.
+
+endif # BRCM_EMMC_RPMB

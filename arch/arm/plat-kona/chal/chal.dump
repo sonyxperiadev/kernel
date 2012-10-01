@@ -1,0 +1,325 @@
+
+chal_tectl_vc4lite.o:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+00000000 <chal_te_set_mux_out>:
+// Description:    TECTL MUX Output Configuration
+//                 Route Selected Chip TE Input To LCD Controller TE input
+//
+//*****************************************************************************
+cInt32 chal_te_set_mux_out ( cUInt32 teIn, cUInt32 teOut )
+{
+   0:	e92d4030 	push	{r4, r5, lr}
+    cUInt32  mask;
+    cUInt32  value = (cUInt32) teIn;
+    
+    switch ( teOut )
+   4:	e3510005 	cmp	r1, #5	; 0x5
+   8:	979ff101 	ldrls	pc, [pc, r1, lsl #2]
+   c:	ea000005 	b	28 <chal_te_set_mux_out+0x28>
+  10:	0000003c 	.word	0x0000003c
+  14:	00000048 	.word	0x00000048
+  18:	00000030 	.word	0x00000030
+  1c:	00000054 	.word	0x00000054
+  20:	00000060 	.word	0x00000060
+  24:	0000006c 	.word	0x0000006c
+            value <<= TE_MUX_CTL_DSI1_TE1_TRIG_SHIFT;
+            break;
+        default:
+            chal_dprintf (CDBG_ERRO, "chal_te_set_mux_out: "
+                "Invalid MUX Output[%d]\n", (int)teOut );
+            return ( -1 );    
+  28:	e3e00000 	mvn	r0, #0	; 0x0
+  2c:	e8bd8030 	pop	{r4, r5, pc}
+            mask = TE_MUX_CTL_SMI_TE_TRIG_MASK;
+            value <<= TE_MUX_CTL_SMI_TE_TRIG_SHIFT;
+            break;
+        case TE_VC4L_OUT_DSI0_TE0:
+            mask = TE_MUX_CTL_DSI0_TE0_TRIG_MASK;                                  
+            value <<= TE_MUX_CTL_DSI0_TE0_TRIG_SHIFT;
+  30:	e1a03000 	mov	r3, r0
+        case TE_VC4L_OUT_SMI:     
+            mask = TE_MUX_CTL_SMI_TE_TRIG_MASK;
+            value <<= TE_MUX_CTL_SMI_TE_TRIG_SHIFT;
+            break;
+        case TE_VC4L_OUT_DSI0_TE0:
+            mask = TE_MUX_CTL_DSI0_TE0_TRIG_MASK;                                  
+  34:	e3a02003 	mov	r2, #3	; 0x3
+  38:	ea00000d 	b	74 <chal_te_set_mux_out+0x74>
+    
+    switch ( teOut )
+    {
+        case TE_VC4L_OUT_SPI:     
+            mask = TE_MUX_CTL_SPI_TE_TRIG_MASK;                                    
+            value <<= TE_MUX_CTL_SPI_TE_TRIG_SHIFT;
+  3c:	e1a03a00 	lsl	r3, r0, #20
+    cUInt32  value = (cUInt32) teIn;
+    
+    switch ( teOut )
+    {
+        case TE_VC4L_OUT_SPI:     
+            mask = TE_MUX_CTL_SPI_TE_TRIG_MASK;                                    
+  40:	e3a02603 	mov	r2, #3145728	; 0x300000
+            value <<= TE_MUX_CTL_SPI_TE_TRIG_SHIFT;
+            break;
+  44:	ea00000a 	b	74 <chal_te_set_mux_out+0x74>
+        case TE_VC4L_OUT_SMI:     
+            mask = TE_MUX_CTL_SMI_TE_TRIG_MASK;
+            value <<= TE_MUX_CTL_SMI_TE_TRIG_SHIFT;
+  48:	e1a03800 	lsl	r3, r0, #16
+        case TE_VC4L_OUT_SPI:     
+            mask = TE_MUX_CTL_SPI_TE_TRIG_MASK;                                    
+            value <<= TE_MUX_CTL_SPI_TE_TRIG_SHIFT;
+            break;
+        case TE_VC4L_OUT_SMI:     
+            mask = TE_MUX_CTL_SMI_TE_TRIG_MASK;
+  4c:	e3a02803 	mov	r2, #196608	; 0x30000
+            value <<= TE_MUX_CTL_SMI_TE_TRIG_SHIFT;
+            break;
+  50:	ea000007 	b	74 <chal_te_set_mux_out+0x74>
+            mask = TE_MUX_CTL_DSI0_TE0_TRIG_MASK;                                  
+            value <<= TE_MUX_CTL_DSI0_TE0_TRIG_SHIFT;
+            break;
+        case TE_VC4L_OUT_DSI0_TE1:
+            mask = TE_MUX_CTL_DSI0_TE1_TRIG_MASK;                                  
+            value <<= TE_MUX_CTL_DSI0_TE1_TRIG_SHIFT;
+  54:	e1a03200 	lsl	r3, r0, #4
+        case TE_VC4L_OUT_DSI0_TE0:
+            mask = TE_MUX_CTL_DSI0_TE0_TRIG_MASK;                                  
+            value <<= TE_MUX_CTL_DSI0_TE0_TRIG_SHIFT;
+            break;
+        case TE_VC4L_OUT_DSI0_TE1:
+            mask = TE_MUX_CTL_DSI0_TE1_TRIG_MASK;                                  
+  58:	e3a02030 	mov	r2, #48	; 0x30
+            value <<= TE_MUX_CTL_DSI0_TE1_TRIG_SHIFT;
+            break;
+  5c:	ea000004 	b	74 <chal_te_set_mux_out+0x74>
+        case TE_VC4L_OUT_DSI1_TE0:
+            mask = TE_MUX_CTL_DSI1_TE0_TRIG_MASK;                                  
+            value <<= TE_MUX_CTL_DSI1_TE0_TRIG_SHIFT;
+  60:	e1a03400 	lsl	r3, r0, #8
+        case TE_VC4L_OUT_DSI0_TE1:
+            mask = TE_MUX_CTL_DSI0_TE1_TRIG_MASK;                                  
+            value <<= TE_MUX_CTL_DSI0_TE1_TRIG_SHIFT;
+            break;
+        case TE_VC4L_OUT_DSI1_TE0:
+            mask = TE_MUX_CTL_DSI1_TE0_TRIG_MASK;                                  
+  64:	e3a02c03 	mov	r2, #768	; 0x300
+            value <<= TE_MUX_CTL_DSI1_TE0_TRIG_SHIFT;
+            break;
+  68:	ea000001 	b	74 <chal_te_set_mux_out+0x74>
+        case TE_VC4L_OUT_DSI1_TE1:
+            mask = TE_MUX_CTL_DSI1_TE1_TRIG_MASK;                                  
+            value <<= TE_MUX_CTL_DSI1_TE1_TRIG_SHIFT;
+  6c:	e1a03600 	lsl	r3, r0, #12
+        case TE_VC4L_OUT_DSI1_TE0:
+            mask = TE_MUX_CTL_DSI1_TE0_TRIG_MASK;                                  
+            value <<= TE_MUX_CTL_DSI1_TE0_TRIG_SHIFT;
+            break;
+        case TE_VC4L_OUT_DSI1_TE1:
+            mask = TE_MUX_CTL_DSI1_TE1_TRIG_MASK;                                  
+  70:	e3a02a03 	mov	r2, #12288	; 0x3000
+            chal_dprintf (CDBG_ERRO, "chal_te_set_mux_out: "
+                "Invalid MUX Output[%d]\n", (int)teOut );
+            return ( -1 );    
+    }
+    
+    TECTL_WRITE_REG_MASKED ( TECTL_ADDR, TE_MUX_CTL, mask, value );
+  74:	e59f4024 	ldr	r4, [pc, #36]	; a0 <chal_te_set_mux_out+0xa0>
+    return ( 0 );            
+  78:	e3a00000 	mov	r0, #0	; 0x0
+            chal_dprintf (CDBG_ERRO, "chal_te_set_mux_out: "
+                "Invalid MUX Output[%d]\n", (int)teOut );
+            return ( -1 );    
+    }
+    
+    TECTL_WRITE_REG_MASKED ( TECTL_ADDR, TE_MUX_CTL, mask, value );
+  7c:	e59fc020 	ldr	ip, [pc, #32]	; a4 <chal_te_set_mux_out+0xa4>
+  80:	e5945018 	ldr	r5, [r4, #24]
+  84:	e1a0100c 	mov	r1, ip
+  88:	e005c00c 	and	ip, r5, ip
+  8c:	e1cc2002 	bic	r2, ip, r2
+  90:	e1823003 	orr	r3, r2, r3
+  94:	e0031001 	and	r1, r3, r1
+  98:	e5841018 	str	r1, [r4, #24]
+    return ( 0 );            
+}        
+  9c:	e8bd8030 	pop	{r4, r5, pc}
+  a0:	f8002000 	.word	0xf8002000
+  a4:	00333333 	.word	0x00333333
+
+000000a8 <chal_te_cfg_input>:
+                        | TE_0C_HSLINE_MASK 
+                        | TE_0C_POL_MASK    
+                        | TE_0C_TE_EN_MASK;  
+    
+
+    if( teCfg->sync_pol == TE_VC4L_ACT_POL_HI )
+  a8:	e891000c 	ldm	r1, {r2, r3}
+    {
+        te_ctrl_reg_val |= TE_0C_POL_MASK;
+  ac:	e3530001 	cmp	r3, #1	; 0x1
+  b0:	03a03004 	moveq	r3, #4	; 0x4
+  b4:	13a03000 	movne	r3, #0	; 0x0
+    }
+    
+    if ( teCfg->te_mode == TE_VC4L_MODE_VSYNC_HSYNC )
+  b8:	e3520001 	cmp	r2, #1	; 0x1
+  bc:	1a000004 	bne	d4 <chal_te_cfg_input+0x2c>
+            chal_dprintf (CDBG_ERRO, "chal_te_cfg_input: "
+                "VSYNC Width Value[0x%08X] Overflow, Max[0x%08X]\n", 
+                (unsigned int)teCfg->vsync_width, TE_VSWIDTH_MAX );
+            return ( -1 );
+        }    
+        if ( teCfg->hsync_line > TE_HSLINE_MAX )
+  c0:	e591200c 	ldr	r2, [r1, #12]
+  c4:	e3520801 	cmp	r2, #65536	; 0x10000
+  c8:	2a000020 	bcs	150 <chal_te_cfg_input+0xa8>
+        te_ctrl_reg_val |= TE_0C_POL_MASK;
+    }
+    
+    if ( teCfg->te_mode == TE_VC4L_MODE_VSYNC_HSYNC )
+    {
+        te_ctrl_reg_val |= TE_0C_MODE_MASK; 
+  cc:	e1833182 	orr	r3, r3, r2, lsl #3
+                "HSYNC Line Value[0x%08X] Overflow, Max[0x%08X]\n", 
+                (unsigned int)teCfg->hsync_line, TE_HSLINE_MAX  );
+            return ( -1 );
+        }
+        
+        te_ctrl_reg_val |= ( teCfg->hsync_line << TE_0C_HSLINE_SHIFT );
+  d0:	e3833002 	orr	r3, r3, #2	; 0x2
+    }    
+    
+    te_ctrl_reg_val |= TE_0C_TE_EN_MASK;
+    
+    switch ( teIn )
+  d4:	e3500002 	cmp	r0, #2	; 0x2
+        }
+        
+        te_ctrl_reg_val |= ( teCfg->hsync_line << TE_0C_HSLINE_SHIFT );
+    }    
+    
+    te_ctrl_reg_val |= TE_0C_TE_EN_MASK;
+  d8:	e3833001 	orr	r3, r3, #1	; 0x1
+    
+    switch ( teIn )
+  dc:	0a00000b 	beq	110 <chal_te_cfg_input+0x68>
+  e0:	e3500003 	cmp	r0, #3	; 0x3
+  e4:	0a000011 	beq	130 <chal_te_cfg_input+0x88>
+  e8:	e3500001 	cmp	r0, #1	; 0x1
+  ec:	1a000017 	bne	150 <chal_te_cfg_input+0xa8>
+    {
+        case TE_VC4L_IN_0:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_0VSWIDTH, teCfg->vsync_width );
+  f0:	e5911008 	ldr	r1, [r1, #8]
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_0C, te_ctrl_reg_val );
+  f4:	e3c334ff 	bic	r3, r3, #-16777216	; 0xff000000
+    te_ctrl_reg_val |= TE_0C_TE_EN_MASK;
+    
+    switch ( teIn )
+    {
+        case TE_VC4L_IN_0:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_0VSWIDTH, teCfg->vsync_width );
+  f8:	e59f2058 	ldr	r2, [pc, #88]	; 158 <chal_te_cfg_input+0xb0>
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_0C, te_ctrl_reg_val );
+  fc:	e3c3373e 	bic	r3, r3, #16252928	; 0xf80000
+            chal_dprintf (CDBG_ERRO, "chal_te_cfg_input: "
+                "Invalid TE Input[%d]\n", (int)teIn );
+            return ( -1 );    
+    }
+    
+    return ( 0 );
+ 100:	e3a00000 	mov	r0, #0	; 0x0
+    te_ctrl_reg_val |= TE_0C_TE_EN_MASK;
+    
+    switch ( teIn )
+    {
+        case TE_VC4L_IN_0:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_0VSWIDTH, teCfg->vsync_width );
+ 104:	e5821004 	str	r1, [r2, #4]
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_0C, te_ctrl_reg_val );
+ 108:	e5823000 	str	r3, [r2]
+            break;
+ 10c:	e12fff1e 	bx	lr
+        case TE_VC4L_IN_1:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_1VSWIDTH, teCfg->vsync_width );
+ 110:	e5911008 	ldr	r1, [r1, #8]
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_1C, te_ctrl_reg_val );
+ 114:	e3c334ff 	bic	r3, r3, #-16777216	; 0xff000000
+        case TE_VC4L_IN_0:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_0VSWIDTH, teCfg->vsync_width );
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_0C, te_ctrl_reg_val );
+            break;
+        case TE_VC4L_IN_1:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_1VSWIDTH, teCfg->vsync_width );
+ 118:	e59f2038 	ldr	r2, [pc, #56]	; 158 <chal_te_cfg_input+0xb0>
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_1C, te_ctrl_reg_val );
+ 11c:	e3c3373e 	bic	r3, r3, #16252928	; 0xf80000
+            chal_dprintf (CDBG_ERRO, "chal_te_cfg_input: "
+                "Invalid TE Input[%d]\n", (int)teIn );
+            return ( -1 );    
+    }
+    
+    return ( 0 );
+ 120:	e3a00000 	mov	r0, #0	; 0x0
+        case TE_VC4L_IN_0:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_0VSWIDTH, teCfg->vsync_width );
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_0C, te_ctrl_reg_val );
+            break;
+        case TE_VC4L_IN_1:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_1VSWIDTH, teCfg->vsync_width );
+ 124:	e582100c 	str	r1, [r2, #12]
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_1C, te_ctrl_reg_val );
+ 128:	e5823008 	str	r3, [r2, #8]
+            break;
+ 12c:	e12fff1e 	bx	lr
+        case TE_VC4L_IN_2:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_2VSWIDTH, teCfg->vsync_width );
+ 130:	e5911008 	ldr	r1, [r1, #8]
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_2C, te_ctrl_reg_val );
+ 134:	e3c334ff 	bic	r3, r3, #-16777216	; 0xff000000
+        case TE_VC4L_IN_1:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_1VSWIDTH, teCfg->vsync_width );
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_1C, te_ctrl_reg_val );
+            break;
+        case TE_VC4L_IN_2:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_2VSWIDTH, teCfg->vsync_width );
+ 138:	e59f2018 	ldr	r2, [pc, #24]	; 158 <chal_te_cfg_input+0xb0>
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_2C, te_ctrl_reg_val );
+ 13c:	e3c3373e 	bic	r3, r3, #16252928	; 0xf80000
+            chal_dprintf (CDBG_ERRO, "chal_te_cfg_input: "
+                "Invalid TE Input[%d]\n", (int)teIn );
+            return ( -1 );    
+    }
+    
+    return ( 0 );
+ 140:	e3a00000 	mov	r0, #0	; 0x0
+        case TE_VC4L_IN_1:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_1VSWIDTH, teCfg->vsync_width );
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_1C, te_ctrl_reg_val );
+            break;
+        case TE_VC4L_IN_2:
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_2VSWIDTH, teCfg->vsync_width );
+ 144:	e5821014 	str	r1, [r2, #20]
+            BRCM_WRITE_REG ( TECTL_ADDR, TE_2C, te_ctrl_reg_val );
+ 148:	e5823010 	str	r3, [r2, #16]
+            break;
+ 14c:	e12fff1e 	bx	lr
+        if ( teCfg->hsync_line > TE_HSLINE_MAX )
+        {
+            chal_dprintf (CDBG_ERRO, "chal_te_cfg_input: "
+                "HSYNC Line Value[0x%08X] Overflow, Max[0x%08X]\n", 
+                (unsigned int)teCfg->hsync_line, TE_HSLINE_MAX  );
+            return ( -1 );
+ 150:	e3e00000 	mvn	r0, #0	; 0x0
+                "Invalid TE Input[%d]\n", (int)teIn );
+            return ( -1 );    
+    }
+    
+    return ( 0 );
+}
+ 154:	e12fff1e 	bx	lr
+ 158:	f8002000 	.word	0xf8002000

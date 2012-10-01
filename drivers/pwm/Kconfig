@@ -1,0 +1,36 @@
+#
+# PWM infrastructure and devices
+#
+
+menuconfig GENERIC_PWM
+	tristate "PWM Support"
+	help
+	  Enables PWM device support implemented via a generic
+	  framework.  If unsure, say N.
+
+config GPIO_PWM
+       tristate "GPIO+hrtimer PWM device emulation"
+       depends on GENERIC_PWM
+       help
+         When enabled, this feature emulates single-channel PWM
+	 devices using high-resolution timers and GPIO pins.  You may
+	 create as many of these devices as desired, subject to CPU
+	 throughput limitations and GPIO pin availability.
+
+	 To compile this feature as a module, chose M here; the module
+	 will be called gpio-pwm.  If unsure, say N.
+
+config ATMEL_PWMC
+       tristate "Atmel AT32/AT91 PWMC support"
+       depends on GENERIC_PWM && (AVR32 || ARCH_AT91SAM9263 || ARCH_AT91SAM9RL || ARCH_AT91CAP9)
+       help
+         This option enables support under the generic PWM
+	 framework for PWMC peripheral channels found on
+	 certain Atmel microcontrollers.  If unsure, say N.
+
+
+config KONA_PWMC
+       tristate "KONA PWM"
+       depends on GENERIC_PWM && ARCH_KONA
+       help
+         When enabled, this feature supports PWM functionality for chip. If unsure, say N.

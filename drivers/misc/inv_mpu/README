@@ -1,0 +1,111 @@
+Kernel driver inv_mpu
+=====================
+
+Supported chips:
+    InvenSense MPU6050
+	
+Prefix: 
+	mpu6050
+	
+Module names:
+	inv_mpu
+	inv_<compass_name>
+	inv_<pressure_name>
+
+Author: 
+	InvenSense <http://invensense.com>
+
+Description
+-----------
+The mpu is a motion processor unit that controls the mpu6050 gyroscope and 
+accelorometer combo, a slave compass, and a pressure sensor.  
+This document describes how to install the driver into a Linux kernel.
+
+Sysfs entries
+-------------
+/dev/mpu
+/dev/mpuirq
+/dev/compassirq
+/dev/pressureirq
+
+Note: /dev/timerirq, namely the Sysfs irq entry for the software IRQ 
+      timer substitutes the /dev/accelirq. 
+	  The software does not support physical accelerometer interrupt 
+	  on the mpu6050 device.
+
+General Remarks
+---------------
+* Valid addresses for the MPU6050 is 0x68 or 0x69, depending on 
+  the voltage level the AD0 pin is held at.
+* The magnetometer can be either configured on the primary bus or the 
+  secondary bus, the pressure sensor must be on the primary bus.
+
+Programming the chip using /dev/mpu
+-----------------------------------
+Programming of MPU6050 is done by first opening the /dev/mpu file and
+then performing a series of IOCTLS on the handle returned.  The IOCTL codes 
+can be found in mpu.h.  Typically this is done by the mllite library in user
+space.
+
+Board and Platform Data
+-----------------------
+In order for the driver to work, board and platform data specific to the device
+needs to be added to the board file.  A mpu_platform_data structure must
+be created and populated and set in the i2c_board_info_structure.  For details
+of each structure member see mpu.h.  
+All values below are simply an example and should be modified for your platform.
+
+Note: the accelerometer portion of the platform data is identical to the 
+	  gyroscope's therefore can be omitted. 
+
+#include <linux/mpu.h>
+
+static struct mpu_platform_data mpu_gyro_data = {
+	.int_config  = 0x10,
+	.orientation = {+1,  0,  0,
+			         0, +1,  0,
+			         0,  0, +1},};
+/* compass */
+static struct ext_slave_platform_data mpu_compass_data = {
+	.bus         = EXT_SLAVE_BUS_PRIMARY,
+	.orientation = {+1,  0,  0,
+			         0, +1,  0,
+			         0,  0, +1},
+};
+
+static struct i2c_board_info __initdata inv_mpu_i2c4_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("mpu6050", 0x68),
+		.irq = (IH_GPIO_BASE + MPUIRQ_GPIO),
+		.platform_data = &mpu_gyro_data,
+	},
+	{
+		I2C_BOARD_INFO("ak8975", 0x0E),
+		.irq = (IH_GPIO_BASE + COMPASS_IRQ_GPIO),
+		.platform_data = &mpu_compass_data,
+	},
+};
+
+The inv_mpu_i2c4_boardinfo needs to be registered to the appropriate
+bus adapter (in the example below, adapter 4 running at 400 Hz) using a 
+platform specific calls such as:
+	
+omap_register_i2c_bus(4, 400, inv_mpu_i2c4_boardinfo,
+					  ARRAY_SIZE(inv_mpu_i2c4_boardinfo));
+
+Typically the IRQ is a GPIO input pin and needs to be configured properly.  If
+in the above example GPIO 168 corresponds to IRQ 299, the following should be
+done as well:
+
+#define MPU_GPIO_IRQ 168
+
+gpio_request(MPU_GPIO_IRQ, "MPUIRQ");
+gpio_direction_input(MPU_GPIO_IRQ)
+
+Dynamic Debug
+=============
+
+The inv_mpu kernel driver makes use of dynamic debug.  
+For details on how to use this refer to Documentation/dynamic-debug-howto.txt
+
+

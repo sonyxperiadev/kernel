@@ -1,0 +1,239 @@
+Broadcom Kona
+Power Management DFS and QoS Interface APIs
+
+Table of Contents
+
+1	Introduction	
+2	Overview	
+3	PM DFS APIs	
+3.1	DFS API - Sample code	
+4	PM QoS APIs	
+4.1	QoS API - Sample code	
+5	Debugfs Interface for DFS	
+6	Debugfs Interface for QoS	
+
+1 Introduction
+==============
+
+This document gives an overview of Kona power management DFS and QoS APIs and
+explains the usage & test interface supported. 
+
+2 Overview
+==========
+
+Kernel drivers can use PM DFS & QoS APIs to control Kona Power Island (PI)
+operating frequency (OPP) and allowed low power state.  Most suitable OPP and
+state that can satisfy all client requests are selected by Kona PM PI manager
+framework.  Peripheral drivers which require higher OPP for a PI can request the
+PI manager to boost the frequency levels. When the driver completes the
+operation, it can request the PI manager to reduce the frequency of the PI.
+Power manager ensures that minimum required OPP to satisfy all driver requests
+is selected for the PI.  For Rhea platform, three OPP are supported: ECONOMY,
+NORMAL and TURBO.  Note: Refer mach/pi_mgr.h for PI ids, supported OPPs and
+latency values.  Peripheral drivers can use QoS API to specify the minimum low
+power state wake up latency requirement and control the allowed low power
+state of the PI.
+
+3 PM DFS APIs
+=============
+
+DFS APIs that drivers can use to request PI OPP are listed below:
+
+Function Name: struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(
+                                                      char* client_name,
+                                                      u32 pi_id, u32 opp)
+Parameters:    char* client_name  -  Name of the client requesting for DFS.
+               u32 pi_id  -  PI id for which the DFS is requested.
+               u32 opp  -  Operating point requested by the client for the PI.
+Returns:       struct pi_mgr_dfs_node*  -  DFS request instance node.
+Description:   Interface function to add a new DFS OPP request for a PI.
+               Returns DFS request instance handle which can be used
+               update/remove existing request
+
+Function Name: int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, 
+                                             u32 opp)
+Parameters:    struct pi_mgr_dfs_node* node  DFS request instance handle
+               u32 opp  - New OPP value requested for the PI(PI Id contained
+                          in the node).
+Returns:       Integer - Returns 0 on success and negative error code on failure
+Description:   Interface function to update existing OPP request for a PI
+
+Function Name: int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node)
+Parameters:    struct pi_mgr_dfs_node* node  -   DFS request instance handle
+Returns:       Integer - Returns 0 on success and negative error code on failure
+Description:   Remove DFS OPP request for the PI. 
+               Note: DFS request instance handle is no longer valid after
+                     removing the OPP request
+
+Function Name: int pi_mgr_dfs_add_notifier(u32 pi_id,
+                                           struct notifier_block *notifier)
+Parameters:    u32 pi_id - ID of the power Island
+               struct notifier_block *notifier - Linux notifier block structure
+               containing the callback and details required for notifier chains
+Returns:       Integer - Returns 0 on success and negative error code on failure
+Description:   Register the notifier with Linux blocking notifier chain with the
+               callback function specified. Any changes in frequency of the PI
+               will be notified to the clients through the registered call backs
+
+Function Name: int pi_mgr_dfs_remove_notifier(u32 pi_id,
+                                              struct notifier_block *notifier)
+Parameters:    u32 pi_id - ID of the power Island
+               struct notifier_block *notifier -  Linux notifier block structure
+               containing the callback and details required for notifier chains.
+Returns:       Integer - Returns 0 on success and negative error code on failure
+Description:   Removes the notifier from Linux blocking notifier chain.  
+
+3.1 DFS API - Sample code
+
+Add a new DFS request to request NORMAL OPP for HUB: 
+
+    struct pi_mgr_dfs_node*  node;
+    node  = pi_mgr_dfs_add_request("client_name",
+                                   PI_MGR_PI_ID_HUB_SWITCHABLE,
+                                   PI_OPP_NORMAL);
+
+Update existing OPP request to TURBO:
+
+    pi_mgr_dfs_request_update(node, PI_OPP_TURBO);
+
+Remove DFS request:
+
+    pi_mgr_dfs_request_remove(node);
+
+
+4 PM QoS APIs
+=============
+
+PM QoS API are listed below. Kernel driver can use these APIs to specify the
+minimum wake up latency and there by controlling PI low power state.
+
+
+
+Function:      struct pi_mgr_qos_node* pi_mgr_qos_add_request(
+                                                           char* client_name,
+                                                           u32 pi_id,
+                                                           u32 lat_value)
+Parameters:    char* client_name  -  Name of the client requesting for DFS.
+               u32 pi_id  -  power island for which the QoS is requested.
+               u32  lat_value -  Maximum PI wake up Latency value that can be
+                                 tolerated by the client.
+Returns:       struct  pi_mgr_qos_node *  -  QOS request instance.
+Description:   Interface function to add a QoS request for a PI. This function
+               returns the  QOS request instance handle and can be used to
+               update/remove the request.
+
+Function:      int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node,
+                                             u32 lat_value)
+Parameters:    struct pi_mgr_qos_node* node   QOS request instance.
+               u32  lat_value -  Maximum PI wake up Latency value that can be
+                                 tolerated by the client.
+Returns:       Integer - Returns 0 on success and negative error code on failure
+Description:   Interface function to update an existing QoS request for a PI
+
+Function:      int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node)
+Parameters:    struct pi_mgr_qos_node* node  -   QOS request instance
+Returns:       Integer - Returns 0 on success and negative error code on failure
+Description:   Interface function to remove QoS request for the PI. 
+               Note: QoS request instance handle is no longer valid after
+                     removing the QoS request	
+
+Function:      u32 pi_get_active_qos(int pi_id)
+Parameters:    Int pi_id - ID of the power island.
+Returns:       Returns the current active maximum allowed latency of the PI.
+Description:   This function returns the maximum allowed latency selected by PI
+               manager based all request.
+
+Function:      int pi_mgr_qos_add_notifier(u32 pi_id,
+                                           struct notifier_block *notifier)
+Parameters:    u32 pi_id - ID of the power Island
+               struct notifier_block *notifier - Linux notifier block structure
+                          containing the callback and details required for
+                          notifier chains.
+Returns:       Integer - Returns 0 on success and negative error code on failure
+Description:   Register the notifier with Linux blocking notifier chain with the
+               callback function specified. Any changes in latency requirement
+               of  PI will be notified to the clients through the registered
+               call backs.
+
+Function:      int pi_mgr_qos_remove_notifier(u32 pi_id,
+                                              struct notifier_block *notifier)
+Parameters:    u32 pi_id - ID of the power Island
+               struct notifier_block *notifier -  Linux notifier block structure
+               containing the callback and details required for notifier chains.
+Returns:       Integer - Returns 0 on success and negative error code on failure
+Description:   Removes the notifier from Linux blocking notifier chain.  
+
+4.1 QoS API - Sample code
+
+Add a new QoS request to make sure that HUB is always active (latency = 0):
+
+    struct pi_mgr_qos_node*  node;
+    node  = pi_mgr_qos_add_request("client_name",
+                                   PI_MGR_PI_ID_HUB_SWITCHABLE , 0);
+
+Update latency requirement to 1000 us:
+
+    pi_mgr_qos_request_update(node, 1000);
+
+Remove QOS request:
+
+    pi_mgr_qos_request_remove(node);
+
+
+5 Debugfs Interface for DFS
+===========================
+
+All PI registered with PI manager are listed under
+/sys/kernel/debug/power_domains/ debug fs folder.
+
+Each PI has a DFS folder which has debug fs interfaces to list all DFS OPP
+requests. DFS request test clients can also be registered to test DFS APIs
+
+For eg: MM DFS debug FS files are listed under
+/sys/kernel/debug/power_domains/mm/dfs folder.
+
+DFS Debug fs file    Description
+-----------------    ---------------------------------------------------------
+dfs                  Read this file to get the active OPP
+
+request_list         Read this file to get a list all registered DFS OPP
+                     requests
+
+register_client      Echo/write test client no. (0 - 9) to this file to
+                     register a DFS test client
+
+remove_client        Echo/write test client no. (0 - 9) to this file to
+                     remove a registered  DFS test client
+
+pi_client_n          Echo/write the OPP to this file to request an OPP through
+                     test client n.  Read this file to get the OPP requested
+                     by the test client n
+
+
+6 Debugfs Interface for QoS
+===========================
+
+All PI registered with PI manager are listed under
+/sys/kernel/debug/power_domains/ debug fs folder.
+
+Each PI has a QoS folder which has debug fs interfaces to list all QoS
+requests for the PI. QoS request test clients can also be registered to test
+QoS APIs
+
+For eg: MM QoS debug FS files are listed under
+/sys/kernel/debug/power_domains/mm/qos folder.
+
+DFS Debug fs file    Description
+-----------------    ---------------------------------------------------------
+qos                  Read this file to get the selected latency value
+request_list         Read this file to get a list all registered QoS requests
+register_client      Echo/write test client no. (0 - 9) to this file to
+                     register a QoS test client
+remove_client        Echo/write test client no. (0 - 9) to this file to remove
+                     a registered  QoS  test client.
+pi_client_n          Echo/write the latency value to this file to request
+                     latency value through test client n.  Read this file to
+                     get the latency value requested by the test client n.
+
+
+

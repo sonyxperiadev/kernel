@@ -1,0 +1,174 @@
+I2S-Function configuration APIs:
+
+CSL_HANDLE csl_i2s_init(cUInt32 baseAddr);
+Description: Initialize SSPI as I2S
+Parameters:  base_addr (in) mapped address of the SSPI core to be initialized
+Return values: CSL handle for this I2S/SSPI core instance
+
+
+void csl_i2s_deinit(CSL_HANDLE hContext);
+Description: De-initialize I2S/SSPI CSL internal data structure
+Parameters: handle    (in) I2S CSL handle to be deinitialized
+Return values: SSPI status
+
+
+void csl_i2s_config(CSL_HANDLE hContext,CSL_I2S_CONFIG_t *config); 
+Description: Config I2S, such as mode, protocol, size, tx sampling rate and rx sampling rate
+Parameters:  handle    (in) I2S CSL handle
+             CSL_I2S_CONFIG_t (in) I2S CSL config struct
+Return values: none
+
+
+void csl_i2s_start(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config);
+Description:  Start I2S
+Parameters:   handle    (in) I2S CSL handle
+              CSL_I2S_CONFIG_t (in) I2S CSL config struct
+Return values: none
+
+
+void csl_i2s_stop_tx(CSL_HANDLE handle);
+Description: Stop I2S TX
+Parameters: handle    (in) I2S CSL handle
+Return values: none
+
+
+void csl_i2s_stop_rx(CSL_HANDLE handle);
+Description: Stop I2S RX
+Parameters: handle    (in) I2S CSL handle
+Return values: none
+
+
+UInt32 csl_i2s_get_tx0_fifo_data_port(CSL_HANDLE handle);
+Description: Get channel 0 TX port address
+Parameters: handle    (in) I2S CSL handle
+Return values: Tx0 port address
+
+
+UInt32 csl_i2s_get_tx1_fifo_data_port(CSL_HANDLE handle);
+Description: Get channel 1 TX port address
+Parameters: handle    (in) I2S CSL handle
+Return values: Tx1 port address
+
+
+UInt32 csl_i2s_get_rx0_fifo_data_port(CSL_HANDLE handle);
+Description: Get channel 0 RX port address
+Parameters: handle    (in) I2S CSL handle
+Return values: Rx0 port address
+
+
+UInt32 csl_i2s_get_rx1_fifo_data_port(CSL_HANDLE handle);
+Description: Get channel 1 RX port address
+Parameters: handle    (in) I2S CSL handle
+Return values: Rx1 port address
+
+
+
+PCM-function configuration APIs:
+
+CSL_PCM_HANDLE csl_pcm_init(cUInt32 baseAddr);
+Description: This function initializes the PCM CSL layer
+Parameters: base address
+Return values: device CSL handle
+
+
+CSL_PCM_OPSTATUS_t csl_pcm_deinit(CSL_PCM_HANDLE handle);
+Description: This function deitializes the PCM CSL layer
+Parameters: device CSL handle
+Return values: driver CSL layer operation status
+
+
+CSL_PCM_OPSTATUS_t csl_pcm_config (
+    CSL_PCM_HANDLE handle,
+    csl_pcm_config_device_t *configDev, 
+    csl_pcm_config_tx_t *configTx,
+    csl_pcm_config_rx_t *configRx
+);
+
+Description: This function configures driver CSL layer
+Parameters: device CSL handle
+            device descriptor struct
+            transmit configuration struct
+            receive configuration struct
+Return values: driver CSL layer operation status
+
+
+CSL_PCM_OPSTATUS_t csl_pcm_enable_scheduler(CSL_PCM_HANDLE handle, Boolean enable);
+Description: Enable PCM Scheduler
+Parameters: device CSL handle
+            scheduler status
+Return values: driver CSL layer operation status
+
+
+CSL_PCM_OPSTATUS_t csl_pcm_start(CSL_PCM_HANDLE handle, csl_pcm_config_device_t *config);
+Description: Start PCM
+Parameters: device CSL handle
+            device descriptor struct
+Return values: driver CSL layer operation status
+
+
+CSL_PCM_OPSTATUS_t csl_pcm_start_tx(CSL_PCM_HANDLE handle, UInt8 channel);
+Description: Start PCM TX
+Parameters: device CSL handle
+            transmit channel number
+Return values: driver CSL layer operation status
+
+
+
+CSL_PCM_OPSTATUS_t csl_pcm_start_rx(CSL_PCM_HANDLE handle, UInt8 channel);
+Description: Start PCM RX
+Parameters: device CSL handle
+            transmit channel number
+Return values: driver CSL layer operation status
+
+
+CSL_PCM_OPSTATUS_t csl_pcm_stop_tx(CSL_PCM_HANDLE handle, UInt8 channel);
+Description: Stop PCM TX
+Parameters: device CSL handle
+            transmit channel number
+Return values: driver CSL layer operation status
+
+
+CSL_PCM_OPSTATUS_t csl_pcm_stop_rx(CSL_PCM_HANDLE handle, UInt8 channel);
+Description: Stop PCM RX
+Parameters:  device CSL handle
+Return values: driver CSL layer operation status
+
+
+CSL_PCM_OPSTATUS_t csl_pcm_resume(CSL_PCM_HANDLE handle);
+Description: Resume PCM TX after pause
+Parameters:  device CSL handle
+Return values: driver CSL layer operation status
+
+
+CSL_PCM_OPSTATUS_t csl_pcm_pause(CSL_PCM_HANDLE handle);
+Description: Pause PCM TX
+Parameters:  device CSL handle
+Return values: driver CSL layer operation status
+
+
+UInt32 csl_pcm_get_tx0_fifo_data_port(CSL_PCM_HANDLE handle);
+Description: Get TX channel0 port address
+Parameters: device CSL handle
+            transmit channel number
+Return values: transmit channel0 port address
+
+
+UInt32 csl_pcm_get_rx0_fifo_data_port(CSL_PCM_HANDLE handle);
+Description: Get RX channel port address
+Parameters: device CSL handle
+            receive channel number
+Return values: receive channel0 port address
+
+
+UInt32 csl_pcm_get_tx1_fifo_data_port(CSL_PCM_HANDLE handle);
+Description: Get TX channel port address
+Parameters: device CSL handle
+            transmit channel number
+Return values: transmit channel1 port address
+
+
+UInt32 csl_pcm_get_rx1_fifo_data_port(CSL_PCM_HANDLE handle);
+Description: Get RX channel port address
+Parameters: device CSL handle
+            receive channel number
+Return values:  receive channel port address

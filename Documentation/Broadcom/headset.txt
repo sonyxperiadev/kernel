@@ -1,0 +1,26 @@
+Broadcom Headset driver interface
+=================================
+
+Notes to support drivers/input/misc/kona_headset.c
+
+Headset type detection
+----------------------------------
+1) Plug in the accessory
+2) Type the command
+   cat /sys/hs_type/hs_type_read
+3) This command displays 1/2/3
+
+   1 means Headphone
+   2 means open cable
+   3 means headset
+
+If the connected accessory is a headset, how to test button press
+-----------------------------------------------------------------
+Once the accessory is plugged in type the following command
+
+od /dev/input/event1
+
+Now when the button is pressed/released the event structure
+bytes should be displayed on the console.
+
+
