@@ -64,9 +64,75 @@
 #define PC_PIN_DEFAULT_STATE		SET_PC_PIN_CMD(PC3)
 
 struct i2c_cmd i2c_cmd[] = {
-	{REG_ADDR, 0},		/* 0: -- VO0 Sequencer -- NOP */
+	{REG_ADDR, 0},		/* 0: NOP */
 	{JUMP_VOLTAGE, 0},	/* Jump based upon the voltage */
-	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Regiter */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 2: i2c Read - SW_SEQ_RD_START_OFF */
+	{REG_DATA, BSC_PAD_OUT_EN},	/* Enable pad output */
+	{REG_ADDR, 0x20},	/* Set BSC CS Register */
+	{REG_DATA, START_CMD},	/* Send Start command */
+	{WAIT_TIMER, START_DELAY},	/* Wait ... */
+	{REG_DATA, 1},		/* Clear Start condition */
+	{I2C_DATA, 0x10},	/* 8: SW_SEQ_RD_SLAVE_ID_1_OFF */
+	{WAIT_TIMER, WRITE_DELAY},	/* Wait ... */
+	{I2C_DATA, 0x00},	/* 10: SW_SEQ_RD_REG_ADDR_OFF */
+	{WAIT_TIMER, WRITE_DELAY}, /* Wait ... */
+	{REG_ADDR, 0x20},	/* Set BSC CS Addr */
+	{REG_DATA, START_CMD},	/* Send Restart */
+	{WAIT_TIMER, START_DELAY},	/* Wait ... */
+	{REG_DATA, 1},		/* Clear Start */
+	{I2C_DATA, 0x11},	/* 16: SW_SEQ_RD_SLAVE_ID_2_OFF */
+	{WAIT_TIMER, WRITE_DELAY},	/* Wait ... */
+	{REG_ADDR, 0x20},	/* Set BSC CS Addr */
+	{REG_DATA, 0xF},	/* Read Cmd */
+	{WAIT_TIMER, READ_DELAY},	/* Wait ... */
+	{REG_DATA, 1},		/* Clear Start condition */
+	{READ_FIFO, 0},	/* Read bsc DATA register */
+	{REG_ADDR, RDWR_CLR_BSC_ISR_JUMP_OFF},
+	{JUMP, RDWR_CLR_BSC_ISR_JUMP_OFF},
+	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 25: i2c Write- SW_SEQ_WR_START_OFF*/
+	{REG_DATA, BSC_PAD_OUT_EN},	/* Enable pad output */
+	{REG_ADDR, 0x20},	/* Set BSC CS Reg */
+	{REG_DATA, START_CMD},	/* Send Start condition */
+	{WAIT_TIMER, START_DELAY},	/* Wait ... */
+	{REG_DATA, 1},		/* Clear Start condition */
+	{I2C_DATA, 0x10},	/* 31: SW_SEQ_WR_SLAVE_ID_OFF */
+	{WAIT_TIMER, WRITE_DELAY},	/* Wait... */
+	{I2C_DATA, 0x00},	/* 33: SW_SEQ_WR_REG_ADDR_OFF */
+	{WAIT_TIMER, WRITE_DELAY},	/* Wait ... */
+	{I2C_DATA, 0xC0},	/* 35: SW_SEQ_WR_VALUE_OFF */
+	{WAIT_TIMER, WRITE_DELAY},	/* fall through */
+	{SET_READ_DATA, PMU_BSC_INT_STATUS_REG},/*37:RDWR_CLR_BSC_ISR_JUMP_OFF*/
+	{REG_ADDR, PMU_BSC_INT_STATUS_REG},	/* Set BSC INT Reg */
+	{REG_DATA, PMU_BSC_INT_STATUS_MASK},	/* Clear INT Status */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Reg */
+	{REG_DATA, BSC_PAD_OUT_DIS},	/* Disable pad output */
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
+	{SET_PC_PINS, PC_PIN_DEFAULT_STATE},/*42:FAKE_TRG_ERRATUM_PC_PIN_TOGGLE_OFF */
+#else
+	{REG_ADDR, 0},		/* 42: nop */
+#endif
+	{END, 0},		/* 43 : End sequence (write/read) */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* NOP */
+	{REG_ADDR, 0}, /* 63: NOP */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 64: VO0_HW_SEQ_START_OFF */
 	{REG_DATA, BSC_PAD_OUT_EN},	/* Enable pad output */
 	{REG_ADDR, 0x20},	/* Set BSC CS address */
 	{REG_DATA, START_CMD},	/* Start condition */
@@ -75,11 +141,13 @@ struct i2c_cmd i2c_cmd[] = {
 	{I2C_DATA, (PMU_SLAVE_ID << 1)},	/* Send Slave Address */
 	{WAIT_TIMER, WRITE_DELAY},	/* Wait ... */
 	{I2C_DATA, PMU_MSR_REG_ADDR},	/* Send CSR Reg address */
-	{REG_ADDR, VO0_VO1_JUMP_OFFSET}, /* set address before jump */
-	{JUMP, VO0_VO1_JUMP_OFFSET},	/* JUMP */
-	{REG_ADDR, 0},	/* 13: -- VO1 Sequencer -- */
-	{JUMP_VOLTAGE, 0}, /* JUMP based upon the voltage */
-	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Regiter */
+	{WAIT_TIMER, WRITE_DELAY},	/*  Wait */
+	{I2C_VAR, 0},		/* 74: Write Variable voltage */
+	{WAIT_TIMER, VLT_CHANGE_DELAY},	/* Wait for voltage change */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Register */
+	{REG_DATA, BSC_PAD_OUT_DIS},	/* Disable pad outpout */
+	{END, 0},		/*  78: -- VO0 -- End Sequence */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},/* 79:VO1 SEQ: VO1_HW_SEQ_START_OFF*/
 	{REG_DATA, BSC_PAD_OUT_EN},	/* Enable pad output */
 	{REG_ADDR, 0x20},	/* Set BSC CS address */
 	{REG_DATA, START_CMD},	/* Start condition */
@@ -88,68 +156,22 @@ struct i2c_cmd i2c_cmd[] = {
 	{I2C_DATA, (PMU_SLAVE_ID << 1)},	/* Send Slave Address */
 	{WAIT_TIMER, WRITE_DELAY},	/* Wait ... */
 	{I2C_DATA, PMU_CSR_REG_ADDR},	/* Send CSR Reg address: fall through */
-	{WAIT_TIMER, WRITE_DELAY},	/* 24: - VO0_VO1_JUMP_OFFSET - Wait */
-	{I2C_VAR, 0},		/* Write Variable voltage */
+	{WAIT_TIMER, WRITE_DELAY},	/* Wait */
+	{I2C_VAR, 0},		/* 89 : Write Variable voltage */
 	{WAIT_TIMER, VLT_CHANGE_DELAY},	/* Wait for voltage change */
 	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Register */
 	{REG_DATA, BSC_PAD_OUT_DIS},	/* Disable pad outpout */
-	{END, 0},		/*  29: -- VO0/VO1 -- End Sequence */
-	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 30: i2c Read - SW_SEQ_RD_START_OFF */
-	{REG_DATA, BSC_PAD_OUT_EN},	/* Enable pad output */
-	{REG_ADDR, 0x20},	/* Set BSC CS Register */
-	{REG_DATA, START_CMD},	/* Send Start command */
-	{WAIT_TIMER, START_DELAY},	/* Wait ... */
-	{REG_DATA, 1},		/* Clear Start condition */
-	{I2C_DATA, 0x10},	/* 36: SW_SEQ_RD_SLAVE_ID_1_OFF */
-	{WAIT_TIMER, WRITE_DELAY},	/* Wait ... */
-	{I2C_DATA, 0x00},	/* 38: SW_SEQ_RD_REG_ADDR_OFF */
-	{WAIT_TIMER, WRITE_DELAY}, /* Wait ... */
-	{REG_ADDR, 0x20},	/* Set BSC CS Addr */
-	{REG_DATA, START_CMD},	/* Send Restart */
-	{WAIT_TIMER, START_DELAY},	/* Wait ... */
-	{REG_DATA, 1},		/* Clear Start */
-	{I2C_DATA, 0x11},	/* 44: SW_SEQ_RD_SLAVE_ID_2_OFF */
-	{WAIT_TIMER, WRITE_DELAY},	/* Wait ... */
-	{REG_ADDR, 0x20},	/* Set BSC CS Addr */
-	{REG_DATA, 0xF},	/* Read Cmd */
-	{WAIT_TIMER, READ_DELAY},	/* Wait ... */
-	{REG_DATA, 1},		/* Clear Start condition */
-	{READ_FIFO, 0},	/* Read bsc DATA register */
-	{REG_ADDR, RD_CLR_BSC_ISR_REG_OFFSET},	/* set address before jump */
-	{JUMP, RD_CLR_BSC_ISR_REG_OFFSET}, /* jump */
-	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 53: i2c Write- SW_SEQ_WR_START_OFF*/
-	{REG_DATA, BSC_PAD_OUT_EN},	/* Enable pad output */
-	{REG_ADDR, 0x20},	/* Set BSC CS Reg */
-	{REG_DATA, START_CMD},	/* Send Start condition */
-	{WAIT_TIMER, START_DELAY},	/* Wait ... */
-	{REG_DATA, 1},		/* Clear Start condition */
-	{I2C_DATA, 0x10},	/* 59: SW_SEQ_WR_SLAVE_ID_OFF */
-	{WAIT_TIMER, WRITE_DELAY},	/* Wait... */
-	{I2C_DATA, 0x00},	/* 61: SW_SEQ_WR_REG_ADDR_OFF */
-	{WAIT_TIMER, WRITE_DELAY},	/* Wait ... */
-	{I2C_DATA, 0xC0},	/* 63: SW_SEQ_WR_VALUE_OFF */
-	{WAIT_TIMER, WRITE_DELAY},	/* fall through */
-	{SET_READ_DATA, PMU_BSC_INT_STATUS_REG},/*65:RD_CLR_BSC_ISR_REG_OFFSET*/
-	{REG_ADDR, PMU_BSC_INT_STATUS_REG},	/* Set BSC INT Reg */
-	{REG_DATA, PMU_BSC_INT_STATUS_MASK},	/* Clear INT Status */
-	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Reg */
-	{REG_DATA, BSC_PAD_OUT_DIS},	/* Disable pad output */
-#ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
-	{SET_PC_PINS, PC_PIN_DEFAULT_STATE},/* 70:FAKE_TRG_ERRATUM_PC_PIN_TOGGLE_OFF */
-#else
-	{REG_ADDR, 0},		/* 70: nop */
-#endif
-	{END, 0},		/* 71: End sequence (write/read) */
-	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1)},/* 72:set PC low-VO0_SET2_OFFSET*/
+	{END, 0},		/*  93: -- VO1 -- End Sequence */
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1)},/* 94:set PC low-VO0_SET2_OFFSET*/
 	{END, 0},		/* End */
-	{SET_PC_PINS, SET_PC_PIN_CMD(PC1)},/* 74: set PC high-VO0_SET1_OFFSET*/
+	{SET_PC_PINS, SET_PC_PIN_CMD(PC1)},/* 96: set PC high-VO0_SET1_OFFSET*/
 	{END, 0},		/* END */
-	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC2)},/* 76:set PC low-VO1_SET2_OFFSET*/
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC3)},/* 98:set PC low-VO1_SET2_OFFSET*/
 	{END, 0},		/* End sequence (SET2) */
-	{SET_PC_PINS, SET_PC_PIN_CMD(PC2)},/* 78:set PC high-VO1_SET1_OFFSET*/
+	{SET_PC_PINS, SET_PC_PIN_CMD(PC3)},/* 100:set PC high-VO1_SET1_OFFSET*/
 	{REG_ADDR, VO1_HW_SEQ_START_OFF},
 	{JUMP, VO1_HW_SEQ_START_OFF},
-	{END, 0},		/* 81: End sequence */
+	{END, 0},		/* 103: End sequence */
 };
 
 struct i2c_cmd *i2c_cmd_buf = i2c_cmd;

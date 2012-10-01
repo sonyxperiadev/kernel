@@ -19,10 +19,13 @@
 #define PWRMGR_EVENT_ID_TO_STR(e) __event2str[e]
 
 #ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
-#define PWRMGR_SW_SEQ_PC_PIN		PC3
+#define PWRMGR_SW_SEQ_PC_PIN		PC2
 #endif
 
 #define PM_I2C_CMD_MAX	128
+
+#define PWRMGR_I2C_CMD_BANK0_OFFSET				(0x4104)
+#define PWRMGR_I2C_CMD_BANK1_OFFSET				(0x4280)
 
 extern const char *__event2str[];
 #endif
