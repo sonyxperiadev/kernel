@@ -713,9 +713,9 @@ int rhea_clock_init(void);
 int rhea_clock_print_act_clks(void);
 int rhea_chip_reset(void);
 #ifdef CONFIG_DEBUG_FS
-int debug_bus_mux_sel(int mux_sel, int mux_param);
-int set_clk_idle_debug_mon(int clk_idle, int db_sel);
-int set_clk_monitor_debug(int mon_select, int db_sel);
+int debug_bus_mux_sel(int mux_sel, int mux_param, u32 dbg_bit_sel);
+int set_clk_idle_debug_mon(int clk_idle, int db_sel, u32 dbg_bit_sel);
+int set_clk_monitor_debug(int mon_select, int db_sel, u32 dbg_bit_sel);
 #endif
 
 #endif /* __ARM_ARCH_BCM2165X_CLOCK_MGR_H  */
