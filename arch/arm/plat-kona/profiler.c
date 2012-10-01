@@ -557,7 +557,7 @@ static int __init profiler_probe(struct platform_device *pdev)
 	profiler_data->dentry_root_dir = debugfs_create_dir(
 			PROFILER_ROOT_DIR_NAME, 0);
 	if (!profiler_data->dentry_root_dir)
-		return -ENOMEM;
+		goto clean_debugfs;
 
 	if (!debugfs_create_file("output", S_IRUSR | S_IWUSR,
 				profiler_data->dentry_root_dir, profiler_data,
@@ -604,6 +604,7 @@ static int __init profiler_probe(struct platform_device *pdev)
 
 clean_debugfs:
 	pr_err("%s: failed\n", __func__);
+	kfree(profiler_data->circ_buff);
 	if (profiler_data->dentry_root_dir)
 		debugfs_remove_recursive(profiler_data->dentry_root_dir);
 	kfree(profiler_data);
