@@ -275,7 +275,7 @@ config KONA_KEYPAD
 	tristate
 config BRCM_UART_CHANGES
 	bool "Enable the Uart 8250.c changes"
-	depends on ARCH_RHEA
+	depends on ARCH_RHEA || ARCH_HAWAII
 	default y
 	help
 	  Say Y if you want to enable BRCM UART changes in 8250.c file

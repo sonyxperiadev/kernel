@@ -42,7 +42,7 @@
 
 #include "8250.h"
 
-#ifdef CONFIG_BRCM_UART_CHANGES
+#ifdef CONFIG_DW_BT_UART_CHANGES
 extern int bt_dw8250_handle_irq(struct uart_port *p);
 #endif
 
@@ -139,10 +139,12 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 		if (!(p->handle_irq)) {
 			/* Default 8250_dw handler */
 			port.handle_irq = dw8250_handle_irq;
+#ifdef CONFIG_DW_BT_UART_CHANGES
 			if (p->port_name) {
 				if (!strcmp(p->port_name, "bluetooth"))
 					port.handle_irq = bt_dw8250_handle_irq;
 			}
+#endif
 		}
 
 		port.set_termios	= p->set_termios;

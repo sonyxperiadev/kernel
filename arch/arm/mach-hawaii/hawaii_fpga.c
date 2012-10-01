@@ -84,26 +84,27 @@
 #include <video/kona_fb.h>
 #endif
 
-#define KONA_8250PORT_FPGA(name, clk)				\
+#define KONA_8250PORT_FPGA(name, clk, freq, uart_name)		\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
 	.irq	    = BCM_INT_ID_##name,			\
-	.uartclk    = UART_CLK_HZ,				\
+	.uartclk    = freq,				\
 	.regshift   = 2,				\
-	.iotype	    = UPIO_DWAPB,			\
+	.iotype	    = UPIO_MEM32,			\
 	.type	    = PORT_16550A,			\
 	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST | \
 						UPF_LOW_LATENCY, \
 	.private_data = (void __iomem *)((KONA_##name##_VA) + \
 						UARTB_USR_OFFSET), \
 	.clk_name = clk,	\
+	.port_name = uart_name,			\
 }
 
 static struct plat_serial8250_port uart_data[] = {
-	KONA_8250PORT_FPGA(UART0, "uartb_clk"),
-	KONA_8250PORT_FPGA(UART1, "uartb2_clk"),
-	KONA_8250PORT_FPGA(UART2, "uartb3_clk"),
+	KONA_8250PORT_FPGA(UART0, "uartb_clk", UART_CLK_HZ, "console"),
+	KONA_8250PORT_FPGA(UART1, "uartb2_clk", 48000000, "bluetooth"),
+	KONA_8250PORT_FPGA(UART2, "uartb3_clk", 26000000, "gps"),
 	{
 	 .flags = 0,
 	 },

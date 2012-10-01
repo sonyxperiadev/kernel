@@ -132,7 +132,7 @@ struct platform_device ion_device0 = {
 #endif
 
 struct platform_device hawaii_serial_device = {
-	.name = "serial8250",
+	.name = "serial8250_dw",
 	.id = PLAT8250_DEV_PLATFORM,
 };
 
