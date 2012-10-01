@@ -592,10 +592,10 @@ static int pmem_cma_free(int id, struct pmem_data *data)
 	if (pmem[id].deathpending) {
 		pmem[id].deathpending_rss -= nr_pages;
 		if (pmem[id].deathpending_rss <= 0L) {
-			printk(KERN_INFO
-				"pmem: memory released after killing!\n");
 			pmem[id].deathpending = NULL;
 			pmem[id].deathpending_rss = 0L;
+			printk(KERN_INFO
+				"pmem: memory released after killing!\n");
 			up(&pmem[id].shrinker_sem);
 		}
 	}
@@ -728,7 +728,7 @@ static void pmem_shrink(struct work_struct *work)
 			selected_oom_adj, selected_task_cmasize);
 		p_info->deathpending = selected;
 		p_info->deathpending_rss = selected_task_cmasize;
-		force_sig(SIGKILL, selected);
+		send_sig_info(SIGKILL, SEND_SIG_FORCED, selected);
 		/* wait for process to die .... */
 		ret = down_timeout(&p_info->shrinker_sem, HZ*20);
 		if (ret == -ETIME) {
