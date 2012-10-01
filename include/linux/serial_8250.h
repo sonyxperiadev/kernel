@@ -39,6 +39,7 @@ struct plat_serial8250_port {
 	void		(*pm)(struct uart_port *, unsigned int state,
 			      unsigned old);
 	const unsigned char * clk_name;
+	const unsigned char * port_name;
 };
 
 /*
@@ -69,7 +70,7 @@ enum {
 struct uart_port;
 struct uart_8250_port;
 
-int serial8250_register_port(struct uart_port *port, const unsigned char * clk_name);
+int serial8250_register_port(struct uart_port *port);
 void serial8250_unregister_port(int line);
 void serial8250_suspend_port(int line);
 void serial8250_resume_port(int line);

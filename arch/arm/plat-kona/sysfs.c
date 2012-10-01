@@ -90,6 +90,12 @@ unsigned int is_charging_state(void)
 }
 
 
+void do_set_poweron_reset_boot(void)
+{
+	pr_info("%s\n", __func__);
+	set_emu_reset_reason(REG_EMU_AREA, POWERON_RESET);
+}
+EXPORT_SYMBOL(do_set_poweron_reset_boot);
 
 /* Add reboot to bootloader support */
 void do_set_bootloader_boot(void)

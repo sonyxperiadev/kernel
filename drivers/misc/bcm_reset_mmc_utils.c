@@ -48,6 +48,7 @@ reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 {
 	pr_debug("%s\n", __func__);
 	if (v == NULL) {
+		do_set_poweron_reset_boot();
 		goto clean_up;
 	}
 

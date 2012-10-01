@@ -38,48 +38,14 @@
 #include <linux/nmi.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
-#include <linux/clk.h>
 #ifdef CONFIG_SPARC
 #include <linux/sunserialcore.h>
-#endif
-#if defined(CONFIG_HAS_WAKELOCK)
-#include <linux/wakelock.h>
-#endif
-
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
-
-/*
- * NOTE: We are using  ARCH specific flag to protect the PI MGR code
- * because this functionality is not fully up on island.
- */
-
-#ifdef CONFIG_KONA_PI_MGR
-#include <mach/pi_mgr.h>
-#include <plat/pi_mgr.h>
-#endif
-
 #endif
 
 #include <asm/io.h>
 #include <asm/irq.h>
 
 #include "8250.h"
-
-#define UART_USR		(0x1F) /* UART status register */
-#define UART_TX_FIFO_LEVEL	(0x20) /* UART Transmit FIFO level register */
-#define UART_RX_FIFO_LEVEL	(0x21) /* UART Receive FIFO level register */
-#define UART_HALT_TX		(0x29) /* UART Halt Tx register */
-#define UART_CONFIG_ID		(0x3D) /* UART Configuration ID register */
-#define UART_COMPONENT_VER	(0x3E) /* UART Component Version register */
-#define UART_PERIPHERAL_ID	(0x3F) /* UART Peripheral PID register */
-#define UART_CONFIG		(0x40) /* UART Configuration register */
-#define UART_IRCR		(0x42) /* UART IrDA Configuration register */
-#define UART_UBABCSR		(0x44) /* UART UBABCSR Auto Baud Detection
-					Control and State Register */
-#define UART_UBABCNTR		(0x45) /* UART UBABCNTR Auto Baud Detection
-					  Control and State Register */
-
-#define UART_IIR_TIME_OUT	(0x0C) /* Timeout indication interrupt */
 
 /*
  * Configuration:
@@ -91,7 +57,13 @@ static unsigned int share_irqs = SERIAL8250_SHARE_IRQS;
 static unsigned int nr_uarts = CONFIG_SERIAL_8250_RUNTIME_UARTS;
 
 static struct uart_driver serial8250_reg;
+
+#ifdef CONFIG_BRCM_UART_CHANGES
+/* For Buggy Uart when THRE is empty, interrupt is not generated. This periodic
+ * timer, for every 0.2 seconds check for uart circ buffer empty. If not
+ * empty invokes serial8250_tx_chars(). */
 static void serial8250_backup_timeout(unsigned long data);
+#endif
 
 static int serial_index(struct uart_port *port)
 {
@@ -451,33 +423,6 @@ static void au_serial_out(struct uart_port *p, int offset, int value)
 	__raw_writel(value, p->membase + offset);
 }
 
-/* Save the LCR value so it can be re-written when a Busy Detect IRQ occurs. */
-static inline void dwapb_save_out_value(struct uart_port *p, int offset,
-		                                        int value)
-{
-	struct uart_8250_port *up =
-		container_of(p, struct uart_8250_port, port);
-
-	if (offset == UART_LCR)
-		up->lcr = value;
-}
-
-/* Read the IER to ensure any interrupt is cleared before returning from ISR. */
-static inline void dwapb_check_clear_ier(struct uart_port *p, int offset)
-{
-	if (offset == UART_TX || offset == UART_IER)
-		p->serial_in(p, UART_IER);
-}
-
-static void dwapb_serial_out(struct uart_port *p, int offset, int value)
-{
-	int save_offset = offset;
-	offset = map_8250_out_reg(p, offset) << p->regshift;
-	dwapb_save_out_value(p, save_offset, value);
-	writeb(value, p->membase + offset);
-	dwapb_check_clear_ier(p, save_offset);
-}
-
 static unsigned int io_serial_in(struct uart_port *p, int offset)
 {
 	offset = map_8250_in_reg(p, offset) << p->regshift;
@@ -517,10 +462,7 @@ static void set_io_from_upio(struct uart_port *p)
 		p->serial_in = au_serial_in;
 		p->serial_out = au_serial_out;
 		break;
-        case UPIO_DWAPB:
-		p->serial_in = mem_serial_in;
-		p->serial_out = dwapb_serial_out;
-		break;
+
 	default:
 		p->serial_in = io_serial_in;
 		p->serial_out = io_serial_out;
@@ -538,7 +480,6 @@ serial_port_out_sync(struct uart_port *p, int offset, int value)
 	case UPIO_MEM:
 	case UPIO_MEM32:
 	case UPIO_AU:
-	case UPIO_DWAPB:
 		p->serial_out(p, offset, value);
 		p->serial_in(p, UART_LCR);	/* safe, no side-effects */
 		break;
@@ -1308,7 +1249,6 @@ static void autoconfig_irq(struct uart_8250_port *up)
 	serial_in(up, UART_RX);
 	serial_in(up, UART_IIR);
 	serial_in(up, UART_MSR);
-	serial_in(up, UART_USR);
 	serial_out(up, UART_TX, 0xFF);
 	udelay(20);
 	irq = probe_irq_off(irqs);
@@ -1334,7 +1274,11 @@ static void serial8250_stop_tx(struct uart_port *port)
 {
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
-
+#ifdef CONFIG_BRCM_UART_CHANGES
+	/* Before releasing the TX Qos Node, Making sure that the TX Fifo is
+	 * empty. */
+	int loop_cnt = serial_port_in(port, UART_TX_FIFO_LEVEL);
+#endif /* CONFIG_BRCM_UART_CHANGES */
 	__stop_tx(up);
 
 	/*
@@ -1344,24 +1288,21 @@ static void serial8250_stop_tx(struct uart_port *port)
 		up->acr |= UART_ACR_TXDIS;
 		serial_icr_write(up, UART_ACR, up->acr);
 	}
-
-	/*Wait until the ongoing tx is done before calling qos function to allow retention.
-	 *In case if the Baud rate is 9600 bps to shift the last byte in the
-	 *TX register (if any) it would take 1/9600 * 9 = 0.0009375 seconds.
-	 *That is 937 usec. Rounding it off to 1 msec.
-         *Assuming 8N1N.
-	 *Note that we have used 9600 as the least baud rate that can be used
-	 *in the system. There is no known use case to run below this baud
-	 *rate. Worst case if this happens, the byte in transmission when this
-	 *call is made would be lost.
-	 */
-	mdelay(1);
+#ifdef CONFIG_BRCM_UART_CHANGES
+	while (loop_cnt-- > 0) {
+		/* Reading UART_LSR clears some bits. So reading UART_USR for
+		 * checking TX Fifo empty. */
+		if (serial_port_in(port, UART_USR) & UART_USR_TFE)
+			break;
+		/* Delay is calculated for 1 byte (8 bits) @ 115200 baud.
+		 * It comes to 69.44 micro sec. */
+		udelay(70);
+	}
+	/* Before releasing the Qos Node, last byte from the shift register
+	 * should be send out. */
+	udelay(70);
 	pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
-
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
-	if (up->bugs & UART_BUG_THRE)
-		del_timer_sync(&up->timer);
-#endif
+#endif /* CONFIG_BRCM_UART_CHANGES */
 }
 
 static void serial8250_start_tx(struct uart_port *port)
@@ -1369,15 +1310,8 @@ static void serial8250_start_tx(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
+#ifdef CONFIG_BRCM_UART_CHANGES
 	pi_mgr_qos_request_update(&up->qos_tx_node,0);
-
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
-	if (up->bugs & UART_BUG_THRE) {
-		up->timer.function = serial8250_backup_timeout;
-		up->timer.data = (unsigned long)up;
-		mod_timer(&up->timer, jiffies +
-				uart_poll_timeout(&up->port) + HZ / 5);
-	}
 #endif
 	if (!(up->ier & UART_IER_THRI)) {
 		up->ier |= UART_IER_THRI;
@@ -1411,7 +1345,9 @@ static void serial8250_stop_rx(struct uart_port *port)
 	up->ier &= ~UART_IER_RLSI;
 	up->port.read_status_mask &= ~UART_LSR_DR;
 	serial_port_out(port, UART_IER, up->ier);
+#ifdef CONFIG_BRCM_UART_CHANGES
 	pi_mgr_qos_request_update(&up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
+#endif
 }
 
 static void serial8250_enable_ms(struct uart_port *port)
@@ -1461,20 +1397,8 @@ serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 	unsigned char ch;
 	int max_count = 256;
 	char flag;
-	int afe_status = 0;
-	int n_fifo;
-	int mcr;
 
-	/* Check whether Auto Flow control is enable in Modem control register */
-	mcr = serial_port_in(port, UART_MCR);
-	if (mcr & UART_MCR_AFE) {
-		afe_status = 1;
-		/* Disabling Auto flow control */
-		serial_port_out(port, UART_MCR, mcr & (~UART_MCR_AFE));
-	}
-
-
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
+#ifdef CONFIG_BRCM_UART_CHANGES
 	/*
 	 * Handle port gets called from either the interrupt context
 	 * _OR_ from the timeout thread context (serial8250_timeout).
@@ -1493,11 +1417,10 @@ serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 	 * the TX FIFO + THR is also empty.
 	 *
 	 * From the Power Mgr perspective if from both the TX and RX context
- 	 * if we have released the clocks then this block will be put into
+	 * if we have released the clocks then this block will be put into
 	 * retention. Note that the aggregation is done by the Power
 	 * Management code.
 	 */
-
 	pi_mgr_qos_request_update(&up->qos_rx_node,0);
 
 	/*
@@ -1506,24 +1429,26 @@ serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 	 * to go to retention, so start the timer immediately. If there are
 	 * no more Rx activity for another RX_SHUTOFF_DELAY_MSECS, then this
 	 * timer would come and call the pi mgr API to release the RX context
-	 *
 	 */
 	mod_timer(&up->rx_shutoff_timer,
-		jiffies + msecs_to_jiffies(RX_SHUTOFF_DELAY_MSECS));
-#endif
-
+			jiffies + msecs_to_jiffies(RX_SHUTOFF_DELAY_MSECS));
+#endif /* CONFIG_BRCM_UART_CHANGES */
 	do {
+#ifdef CONFIG_BRCM_UART_CHANGES
 		/* Jira-1744 UART Line Status Register's Data Ready bit is not
 		 * updated sometime when data is received in fifo and a Rx
 		 * interrupt is generated.
 		 * UART RX interrupt happened but in LSR Data Ready is not set.
 		 * This fix is to take the decission based on iir also. */
-#ifdef CONFIG_RHEA_UART_RX_FIX
+#ifdef CONFIG_DW_UART_WA_JIRA_1744
 		if (likely((lsr & UART_LSR_DR) ||
 			(up->iir & UART_IIR_TIME_OUT)))
 #else
 		if (likely(lsr & UART_LSR_DR))
-#endif
+#endif /* CONFIG_DW_UART_WA_JIRA_1744 */
+#else
+		if (likely(lsr & UART_LSR_DR))
+#endif /* CONFIG_BRCM_UART_CHANGES */
 			ch = serial_in(up, UART_RX);
 		else
 			/*
@@ -1586,33 +1511,11 @@ serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 		if (uart_handle_sysrq_char(port, ch))
 			goto ignore_char;
 
-		if (afe_status) {
-			/* Re-enable AFE if FIFO level go up. (this is not common)*/
-			n_fifo = serial_port_in(port, UART_RX_FIFO_LEVEL);
-			/* FIXME: Currently this is added as a workaround for BT throughput.
-			 * Received data available interrpt is generated when FIFO is Half full.
-			 * Making sure we have enough time to clear the fifo by initially disabling
-			 * the auto flow control. When FIFO has more than 150 bytes, enable the auto
-			 * flow control so that we dont run into overrun condition. */
-			if (n_fifo >= 150) {
-				mcr = serial_port_in(port, UART_MCR);
-				serial_port_out(port, UART_MCR, mcr | (UART_MCR_AFE));
-				afe_status = 0;
-			}
-		}
-
 		uart_insert_char(port, lsr, UART_LSR_OE, ch, flag);
 
 ignore_char:
 		lsr = serial_in(up, UART_LSR);
 	} while ((lsr & (UART_LSR_DR | UART_LSR_BI)) && (max_count-- > 0));
-
-	/* Keep the Auto flow control to its pervious state.*/
-	if (afe_status) {
-		/* MUST enable AFE when exit this routine */
-		mcr = serial_port_in(port, UART_MCR);
-		serial_port_out(port, UART_MCR, mcr | (UART_MCR_AFE));
-	}
 	spin_unlock(&port->lock);
 	tty_flip_buffer_push(tty);
 	spin_lock(&port->lock);
@@ -1626,43 +1529,22 @@ void serial8250_tx_chars(struct uart_8250_port *up)
 	struct circ_buf *xmit = &port->state->xmit;
 	int count;
 
+#ifdef CONFIG_BRCM_UART_CHANGES
 	pi_mgr_qos_request_update(&up->qos_tx_node,0);
-	
+#endif
 	if (port->x_char) {
 		serial_out(up, UART_TX, port->x_char);
 		port->icount.tx++;
 		port->x_char = 0;
 		return;
 	}
-
-	/* in case of automatic hw flow control, upper layers should not stop if tty stopped tx */
-	if (!(up->mcr & UART_MCR_AFE) && uart_tx_stopped(port)) {
-		serial8250_stop_tx(&up->port);
-		pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
-
+	/*if (!(up->mcr & UART_MCR_AFE) && uart_tx_stopped(port)) { */
+	if (uart_tx_stopped(port)) {
+		serial8250_stop_tx(port);
 		return;
 	}
-    /*
-     * The below piece of code disables the TX interrupt if the
-     * circular buffer is empty. But please note that while using
-     * the qos APIs we need to disable the uart peri clock
-     * when
-     * a) The THR is empty, The Transmit FIFO is empty &&
-     * b) The circular buffer is also empty.
-     *
-     * But for that condition to happen we should not disable the
-     * interrupt after copying the data from the circular buffer to the
-     * FIFO and the circular buffer becomes empty.
-     * Instead we should keep the tx interrupt enabled and then when
-     * the next interrupt happens condition a)might have happended, now
-     * if the circular buffer is still empty there is nothing to transmit
-     * so go and disable the clock
-     */
 	if (uart_circ_empty(xmit)) {
-#if !defined(CONFIG_ARCH_RHEA) && !defined(CONFIG_ARCH_HAWAII)
 		__stop_tx(up);
-		pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
-#endif
 		return;
 	}
 
@@ -1680,7 +1562,21 @@ void serial8250_tx_chars(struct uart_8250_port *up)
 
 	DEBUG_INTR("THRE...");
 
-#if !defined(CONFIG_ARCH_RHEA) && !defined(CONFIG_ARCH_HAWAII)
+#ifndef CONFIG_BRCM_UART_CHANGES
+	/* The below piece of code disables the TX interrupt if the
+	 * circular buffer is empty. But please note that while using
+	 * the qos APIs we need to disable the uart peri clock
+	 * when
+	 * a) The THR is empty, The Transmit FIFO is empty &&
+	 * b) The circular buffer is also empty.
+	 *
+	 * But for that condition to happen we should not disable the
+	 * interrupt after copying the data from the circular buffer to the
+	 * FIFO and the circular buffer becomes empty.
+	 * Instead we should keep the tx interrupt enabled and then when
+	 * the next interrupt happens condition a)might have happended, now
+	 * if the circular buffer is still empty there is nothing to transmit
+	 * so go and disable the clock */
 	if (uart_circ_empty(xmit))
 		__stop_tx(up);
 #endif
@@ -1702,7 +1598,11 @@ unsigned int serial8250_modem_status(struct uart_8250_port *up)
 			port->icount.dsr++;
 		if (status & UART_MSR_DDCD)
 			uart_handle_dcd_change(port, status & UART_MSR_DCD);
+#if defined(CONFIG_BRCM_UART_CHANGES) && defined(CONFIG_DW_BT_UART_CHANGES)
 		if (!(up->mcr & UART_MCR_AFE) && (status & UART_MSR_DCTS))
+#else
+		if (status & UART_MSR_DCTS)
+#endif
 			uart_handle_cts_change(port, status & UART_MSR_CTS);
 
 		wake_up_interruptible(&port->state->port.delta_msr_wait);
@@ -1729,42 +1629,46 @@ int serial8250_handle_irq(struct uart_port *port, unsigned int iir)
 
 	status = serial_port_in(port, UART_LSR);
 
-	DEBUG_INTR("status = x%x...\n", status);
+	DEBUG_INTR("status = %x...", status);
 
-#ifdef CONFIG_RHEA_UART_RX_FIX
-	if ((iir & UART_IIR_RDI) || (status & (UART_LSR_DR | UART_LSR_BI)))
+#ifdef CONFIG_BRCM_UART_CHANGES
+	/* Jira-1744 UART Line Status Register's Data Ready bit is not
+	 * updated sometime when data is received in fifo and a Rx
+	 * interrupt is generated.
+	 * UART RX interrupt happened but in LSR Data Ready is not set.
+	 * This fix is to take the decission based on iir also. */
+#ifdef CONFIG_DW_UART_WA_JIRA_1744
+	if ((iir & UART_IIR_RDI) || (status & (UART_LSR_DR | UART_LSR_BI))) {
 #else
 	if (status & (UART_LSR_DR | UART_LSR_BI))
-#endif
-	{
+#endif /* CONFIG_DW_UART_WA_JIRA_1744 */
 #if defined(CONFIG_HAS_WAKELOCK)
 		wake_lock_timeout(&up->uart_lock,
-			msecs_to_jiffies(WAKELOCK_TIMEOUT_VAL));
-#endif
+				msecs_to_jiffies(WAKELOCK_TIMEOUT_VAL));
+#endif /* CONFIG_HAS_WAKELOCK */
 		status = serial8250_rx_chars(up, status);
 	}
 	serial8250_modem_status(up);
-
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
 	/*
-	 * Note that from the transmit_chars  we are NOT disabling the TX
+	 * Note that from the serial8250_tx_chars we are NOT disabling the TX
 	 * interrupt when the circular buffer becomes empty. So we will get
 	 * a TX over interrupt once the FIFO is flushed. In that case, go
 	 * and stop the Tx and disable the clocks so that the CCU can go to
 	 * retention.
-	 */
+	 *  */
 	if ((status & BOTH_EMPTY) && uart_circ_empty(&up->port.state->xmit)) {
 		__stop_tx(up);
 		pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
-
-		if (up->bugs & UART_BUG_THRE)
-			del_timer(&up->timer);
-
 	} else if (status & UART_LSR_THRE)
 		serial8250_tx_chars(up);
-#else
+
+#else /* CONFIG_BRCM_UART_CHANGES Not Defined */
+	if (status & (UART_LSR_DR | UART_LSR_BI))
+		status = serial8250_rx_chars(up, status);
+	serial8250_modem_status(up);
 	if (status & UART_LSR_THRE)
 		serial8250_tx_chars(up);
+
 #endif
 	spin_unlock_irqrestore(&port->lock, flags);
 	return 1;
@@ -1774,27 +1678,8 @@ EXPORT_SYMBOL_GPL(serial8250_handle_irq);
 static int serial8250_default_handle_irq(struct uart_port *port)
 {
 	unsigned int iir = serial_port_in(port, UART_IIR);
-	struct uart_8250_port *up =
-		container_of(port, struct uart_8250_port, port);
-	int handled;
 
-	handled  = serial8250_handle_irq(port, iir);
-	if (!handled && (up->port.iotype == UPIO_DWAPB) &&
-		    ((iir & UART_IIR_BUSY) == UART_IIR_BUSY)) {
-		unsigned int status;
-		/* The DesignWare APB UART has an Busy Detect (0x07)
-		 * interrupt meaning an LCR write attempt occurred while the
-		 * UART was busy. The interrupt must be cleared by reading
-		 * the UART status register (USR) and the LCR re-written. */
-		status = *(volatile u32 *)up->port.private_data;
-		/* Stop writing to LCR if the value is same. */
-		if (serial_in(up, UART_LCR) != up->lcr)
-			serial_out(up, UART_LCR, up->lcr);
-
-		handled = 1;
-	}
-
-	return handled;
+	return serial8250_handle_irq(port, iir);
 }
 
 /*
@@ -1838,46 +1723,6 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 		l = l->next;
 
 		if (l == i->head && pass_counter++ > PASS_LIMIT) {
-			/* As this is not easily reproducable, Dumping the
-			 * registers when Dead.*/
-			printk_ratelimited(KERN_ERR"RBR_THR_DLL = 0x%02x\n",
-					serial_in(up, UART_RX));
-			printk_ratelimited(KERN_ERR"DLH_IER     = 0x%02x\n",
-					serial_in(up, UART_IER));
-			printk_ratelimited(KERN_ERR"IIR_FCR    = 0x%02x\n",
-					serial_in(up, UART_IIR));
-			printk_ratelimited(KERN_ERR"LCR        = 0x%02x\n",
-					serial_in(up, UART_LCR));
-			printk_ratelimited(KERN_ERR"MCR        = 0x%02x\n",
-					serial_in(up, UART_MCR));
-			printk_ratelimited(KERN_ERR"LSR        = 0x%02x\n",
-					serial_in(up, UART_LSR));
-			printk_ratelimited(KERN_ERR"MSR        = 0x%02x\n",
-					serial_in(up, UART_MSR));
-			printk_ratelimited(KERN_ERR"SCR        = 0x%02x\n",
-					serial_in(up, UART_SCR));
-			printk_ratelimited(KERN_ERR"USR        = 0x%02x\n",
-					serial_in(up, UART_USR));
-			printk_ratelimited(KERN_ERR"TFL        = 0x%02x\n",
-					serial_in(up, UART_TX_FIFO_LEVEL));
-			printk_ratelimited(KERN_ERR"RFL        = 0x%02x\n",
-					serial_in(up, UART_RX_FIFO_LEVEL));
-			printk_ratelimited(KERN_ERR"HTX        = 0x%02x\n",
-					serial_in(up, UART_HALT_TX));
-			printk_ratelimited(KERN_ERR"CID        = 0x%02x\n",
-					serial_in(up, UART_CONFIG_ID));
-			printk_ratelimited(KERN_ERR"UCV        = 0x%02x\n",
-					serial_in(up, UART_COMPONENT_VER));
-			printk_ratelimited(KERN_ERR"PID        = 0x%02x\n",
-					serial_in(up, UART_PERIPHERAL_ID));
-			printk_ratelimited(KERN_ERR"UCR        = 0x%02x\n",
-					serial_in(up, UART_CONFIG));
-			printk_ratelimited(KERN_ERR"IRCR       = 0x%02x\n",
-					serial_in(up, UART_IRCR));
-			printk_ratelimited(KERN_ERR"UBABCSR    = 0x%02x\n",
-					serial_in(up, UART_UBABCSR));
-			printk_ratelimited(KERN_ERR"UBABCNTR   = 0x%02x\n",
-					serial_in(up, UART_UBABCNTR));
 			/* If we hit this, we're dead. */
 			printk_ratelimited(KERN_ERR
 				"serial8250: too much work for irq%d\n", irq);
@@ -2014,6 +1859,9 @@ static void serial8250_backup_timeout(unsigned long data)
 	struct uart_8250_port *up = (struct uart_8250_port *)data;
 	unsigned int iir, ier = 0, lsr;
 	unsigned long flags;
+#ifdef CONFIG_BRCM_UART_CHANGES
+	static int tx_flag;
+#endif
 
 	spin_lock_irqsave(&up->port.lock, flags);
 
@@ -2043,18 +1891,34 @@ static void serial8250_backup_timeout(unsigned long data)
 		iir |= UART_IIR_THRI;
 	}
 
-	if (!(iir & UART_IIR_NO_INT))
+	if (!(iir & UART_IIR_NO_INT)) {
+#ifdef CONFIG_BRCM_UART_CHANGES
+		/* qos_tx_node is acquired in serial8250_tx_chars() and is
+		 * release when THRE interrupt is occured.
+		 * tx_flag is used to the release the qos_tx_node when there is
+		 * no data in UART Tx FIFO and uart_circ_empty(). */
+		tx_flag = 1;
+#endif
 		serial8250_tx_chars(up);
+	}
+
+#ifdef CONFIG_BRCM_UART_CHANGES
+	if ((lsr & BOTH_EMPTY) && uart_circ_empty(&up->port.state->xmit)) {
+		if (tx_flag == 1) {
+			tx_flag = 0;
+			pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
+		}
+	}
+#endif
 
 	if (up->port.irq)
 		serial_out(up, UART_IER, ier);
 
 	spin_unlock_irqrestore(&up->port.lock, flags);
-#if !defined(CONFIG_ARCH_RHEA) && !defined(CONFIG_ARCH_HAWAII)
+
 	/* Standard timer interval plus 0.2s to keep the port running */
 	mod_timer(&up->timer,
 		jiffies + uart_poll_timeout(&up->port) + HZ / 5);
-#endif
 }
 
 static unsigned int serial8250_tx_empty(struct uart_port *port)
@@ -2088,8 +1952,13 @@ static unsigned int serial8250_get_mctrl(struct uart_port *port)
 		ret |= TIOCM_RNG;
 	if (status & UART_MSR_DSR)
 		ret |= TIOCM_DSR;
-	/* in case of automatic hw flow control, always show CTS as asserted to avoid dead lock! */
+#if defined(CONFIG_BRCM_UART_CHANGES) && defined(CONFIG_DW_BT_UART_CHANGES)
+	/* In case of automatic hw flow control, always show CTS as asserted to
+	 * avoid dead lock! */
 	if ((up->mcr & UART_MCR_AFE) || (status & UART_MSR_CTS))
+#else
+	if (status & UART_MSR_CTS)
+#endif /* CONFIG_BRCM_UART_CHANGES */
 		ret |= TIOCM_CTS;
 	return ret;
 }
@@ -2173,22 +2042,12 @@ static void wait_for_xmitr(struct uart_8250_port *up, int bits)
 
 static int serial8250_get_poll_char(struct uart_port *port)
 {
-	unsigned char lsr;
-	unsigned int val;
+	unsigned char lsr = serial_port_in(port, UART_LSR);
 
-	pi_mgr_qos_request_update(&up->qos_rx_node,0);
-
-	lsr = serial_port_in(port, UART_LSR);
-
-	if (!(lsr & UART_LSR_DR)) {
-		pi_mgr_qos_request_update(&up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
+	if (!(lsr & UART_LSR_DR))
 		return NO_POLL_CHAR;
-	}
 
-	val = serial_port_in(port, UART_RX);
-
-	pi_mgr_qos_request_update(&up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
-	return val;
+	return serial_port_in(port, UART_RX);
 }
 
 
@@ -2199,7 +2058,6 @@ static void serial8250_put_poll_char(struct uart_port *port,
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
-	pi_mgr_qos_request_update(&up->qos_tx_node,0);
 	/*
 	 *	First save the IER then disable the interrupts
 	 */
@@ -2226,8 +2084,6 @@ static void serial8250_put_poll_char(struct uart_port *port,
 	 */
 	wait_for_xmitr(up, BOTH_EMPTY);
 	serial_port_out(port, UART_IER, ier);
-
-	pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 }
 
 #endif /* CONFIG_CONSOLE_POLL */
@@ -2238,7 +2094,7 @@ static int serial8250_startup(struct uart_port *port)
 		container_of(port, struct uart_8250_port, port);
 	unsigned long flags;
 	unsigned char lsr, iir;
-	int retval, retry_count=0;
+	int retval;
 
 	port->fifosize = uart_config[up->port.type].fifo_size;
 	up->tx_loadsz = uart_config[up->port.type].tx_loadsz;
@@ -2282,7 +2138,6 @@ static int serial8250_startup(struct uart_port *port)
 	serial_port_in(port, UART_RX);
 	serial_port_in(port, UART_IIR);
 	serial_port_in(port, UART_MSR);
-	serial_port_in(port, UART_USR);
 
 	/*
 	 * At this point, there's no way the LSR could still be 0xff;
@@ -2305,9 +2160,11 @@ static int serial8250_startup(struct uart_port *port)
 		serial_out(up, UART_LCR, UART_LCR_CONF_MODE_B);
 
 		fctr = serial_in(up, UART_FCTR) & ~(UART_FCTR_RX|UART_FCTR_TX);
-		serial_port_out(port, UART_FCTR,fctr | UART_FCTR_TRGD | UART_FCTR_RX);
+		serial_port_out(port, UART_FCTR,
+				fctr | UART_FCTR_TRGD | UART_FCTR_RX);
 		serial_port_out(port, UART_TRG, UART_TRG_96);
-		serial_port_out(port, UART_FCTR,fctr | UART_FCTR_TRGD | UART_FCTR_TX);
+		serial_port_out(port, UART_FCTR,
+				fctr | UART_FCTR_TRGD | UART_FCTR_TX);
 		serial_port_out(port, UART_TRG, UART_TRG_96);
 
 		serial_port_out(port, UART_LCR, 0);
@@ -2382,18 +2239,6 @@ static int serial8250_startup(struct uart_port *port)
 	/*
 	 * Now, initialize the UART
 	 */
-	/* Checking whether UART is busy or NOT.
-	 * Should update the LCR only when UART is NOT busy. */
-	while (serial_port_in(port, UART_USR) & 0x01) {
-		/* min value is selected for time taken to transfer for #1 byte
-		 * @115200 baud rate. */
-		usleep_range(9, 256);
-		retry_count++;
-		if (retry_count > 256) {
-			WARN(1, "UART is busy and trying to update LCR register");
-			break;
-		}
-	}
 	serial_port_out(port, UART_LCR, UART_LCR_WLEN8);
 
 	spin_lock_irqsave(&port->lock, flags);
@@ -2407,8 +2252,7 @@ static int serial8250_startup(struct uart_port *port)
 		if (port->irq)
 			up->port.mctrl |= TIOCM_OUT2;
 
-	
-	serial8250_set_mctrl(port, port->mctrl & (TIOCM_OUT1|TIOCM_OUT2));
+	serial8250_set_mctrl(port, port->mctrl);
 
 	/* Serial over Lan (SoL) hack:
 	   Intel 8257x Gigabit ethernet chips have a
@@ -2455,7 +2299,6 @@ dont_test_tx_en:
 	serial_port_in(port, UART_RX);
 	serial_port_in(port, UART_IIR);
 	serial_port_in(port, UART_MSR);
-	serial_port_in(port, UART_USR);
 	up->lsr_saved_flags = 0;
 	up->msr_saved_flags = 0;
 
@@ -2485,10 +2328,10 @@ static void serial8250_shutdown(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 	unsigned long flags;
-	int retry_count = 0;
+#ifdef CONFIG_BRCM_UART_CHANGES
 	int mcr = 0;
-
 	pi_mgr_qos_request_update(&up->qos_rx_node, 0);
+#endif /* CONFIG_BRCM_UART_CHANGES */
 	/*
 	 * Disable interrupts from this port
 	 */
@@ -2504,28 +2347,15 @@ static void serial8250_shutdown(struct uart_port *port)
 		port->mctrl &= ~TIOCM_OUT2;
 
 	serial8250_set_mctrl(port, port->mctrl);
-
+#if defined(CONFIG_BRCM_UART_CHANGES) && defined(CONFIG_DW_BT_UART_CHANGES)
 	if (up->mcr & UART_MCR_AFE) {
 		mcr = serial_port_in(port, UART_MCR);
 		mcr &= ~(UART_MCR_AFE);
 		serial_port_out(port, UART_MCR, mcr);
 		serial_port_out(port, UART_MCR, mcr & (~UART_MCR_RTS));
 	}
-
+#endif /* CONFIG_BRCM_UART_CHANGES and CONFIG_DW_BT_UART_CHANGES */
 	spin_unlock_irqrestore(&port->lock, flags);
-
-	/* Checking whether UART is busy or NOT.
-	 * Should update the LCR only when UART is NOT busy. */
-	while (serial_port_in(port, UART_USR) & 0x01) {
-		/* min value is selected for time taken to transfer for #1 byte
-		 * @115200 baud rate. */
-		usleep_range(9, 256);
-		retry_count++;
-		if (retry_count > 256) {
-			WARN(1, "UART is busy and trying to update LCR register");
-			break;
-		}
-	}
 
 	/*
 	 * Disable break condition and FIFOs
@@ -2551,91 +2381,10 @@ static void serial8250_shutdown(struct uart_port *port)
 	up->timer.function = serial8250_timeout;
 	if (port->irq)
 		serial_unlink_irq_chain(up);
+#ifdef CONFIG_BRCM_UART_CHANGES
 	pi_mgr_qos_request_update(&up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
-}
-
-/*
- * Routine which returns the proper uart input clock for the
- * required baud rate.
- *
- * Note: The baud_table needs to be kept in sync with the
- * include/asm/termbits.h file.
- *
- * Baudrates below 4800 is ignored as they are not used practically
- *
- * -------------------------------------------------------------------
- *    Baud	 uart_clk	rounded 	Divisor		%Error
- * -------------------------------------------------------------------
- *    4800	3000000		2999500		39.056		0.125
- *    9600	6000000		6001800		39.074		0.1875
- *   19200	12000000	12000000	39.0625		0.156
- *   38400	2457600		2457900		4.00049		0.0104
- *   57600	1843200		1843200		2			0
- *  115200	1843200		1843200		1			0
- *  230400	14745600	14747400	4.00049		0.01215
- *  460800	29491200	29494800	4.00049		0.01215
- *  500000	48000000	48000000	6			0
- *  576000	18433400	18437600	2.00061		0.00030
- *  921600	29491200	29494800	2.00024		0.01221
- * 1000000	48000000	48000000	3			0
- * 1152000	36864000	36875300	2.00061		0.03064
- * 1500000	48000000	48000000	2			0
- * 2000000	64000000	64000000	2			0
- * 2500000	40000000	40016000	1.0004		0.04
- * 3000000	48000000	48000000	1			0
- * 3500000	56000000	56011200	1.0002		0.02
- * 4000000	64000000	64000000	1			0
- * -------------------------------------------------------------------
- */
-static const speed_t uartclk_table[] = {
-   26000000, 26000000,/* B0, B50 */
-   26000000, 26000000,/* B75, B110 */
-   26000000, 26000000,/* B134, B150 */
-   26000000, 26000000,/* B200, B300 */
-   26000000, 26000000,/* B600, B1200 */
-   26000000, 26000000,/* B1800, B2400 */
-   3000000, 6000000,  /* B4800, B9600 */
-   12000000, 2457600, /* B19200, B38400 */
-   1843200, 26000000,  /* B57600, B115200 */
-   14745600, 29491200,/* B230400, B460800 */
-   48000000, 18433400,/* B500000, B576000 */
-   29491200, 48000000,/* B921600, B1000000 */
-   36864000, 48000000,/* B1152000, B1500000 */
-   64000000, 40000000,/* B2000000, B2500000 */
-   48000000, 56000000,/* B3000000, B3500000 */
-   64000000,          /* B4000000 */
-};
-
-static void
-uart_fix_clock_rate(struct uart_port *port, struct ktermios *termios)
-{
-        struct uart_8250_port *up = (struct uart_8250_port *)port;
-        speed_t uart_clk, round_clk;
-        speed_t cbaud = termios->c_cflag & CBAUD;
-        if (cbaud & CBAUDEX) {
-                cbaud &= ~CBAUDEX;
-                if (cbaud < 1 || cbaud + 15 > ARRAY_SIZE(uartclk_table))
-                   termios->c_cflag &= ~CBAUDEX;
-                else
-                   cbaud += 15;
-        }
-
-        if(cbaud < ARRAY_SIZE(uartclk_table))	{
-            uart_clk = uartclk_table[cbaud];
-        }
-        else {
-            pr_info("clock rate not available for given baud, using 26MHz!\n");
-            /* Use default clock rate */
-            uart_clk = 26000000;
-        }
-
-        round_clk = clk_round_rate(up->clk, uart_clk);
-        if (port->uartclk != round_clk) {
-                clk_disable(up->clk);
-                clk_set_rate(up->clk, round_clk);
-                clk_enable(up->clk);
-                port->uartclk = clk_get_rate(up->clk);
-        }
+	pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
+#endif /* CONFIG_BRCM_UART_CHANGES */
 }
 
 static unsigned int serial8250_get_divisor(struct uart_port *port, unsigned int baud)
@@ -2658,29 +2407,6 @@ static unsigned int serial8250_get_divisor(struct uart_port *port, unsigned int 
 	return quot;
 }
 
-void serial8250_togglerts_afe(struct uart_port *port, unsigned int flowon)
-{
-
-	unsigned char old_mcr;
-        struct uart_8250_port *up = (struct uart_8250_port *)port;
-
-	old_mcr = serial_in(up, UART_MCR);
-	if (flowon) {
-		/* Enable AFE */
-		old_mcr |= (UART_MCR_AFE | UART_MCR_RTS);
-		serial_port_out(port, UART_MCR, old_mcr);
-	} else {
-		/* In case of flow_off, Disable AFE and pull the RTS line high.
-		 * This will make sure BT will NOT send data. */
-		old_mcr &= ~(UART_MCR_AFE);
-		serial_port_out(port, UART_MCR, old_mcr);
-		/* Writing MCR[1] = 0, make RTS line to go high */
-		old_mcr &= ~(UART_MCR_RTS);
-		serial_port_out(port, UART_MCR, old_mcr);
-	}
-}
-EXPORT_SYMBOL(serial8250_togglerts_afe);
-
 void
 serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 		          struct ktermios *old)
@@ -2690,7 +2416,6 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned char cval, fcr = 0;
 	unsigned long flags;
 	unsigned int baud, quot;
-	int retry_count = 0;
 
 	switch (termios->c_cflag & CSIZE) {
 	case CS5:
@@ -2722,12 +2447,6 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	/*
 	 * Ask the core to calculate the divisor for us.
 	 */
-#if !defined(CONFIG_ARCH_SAMOA) && !defined(CONFIG_MACH_HAWAII_FPGA)
-	uart_fix_clock_rate(port, termios);
-#else
-	printk("UART clock is now fixed at %d\n", port->uartclk);
-#endif
-
 	baud = uart_get_baud_rate(port, termios, old,
 				  port->uartclk / 16 / 0xffff,
 				  port->uartclk / 16);
@@ -2757,23 +2476,17 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	 */
 	if (up->capabilities & UART_CAP_AFE && port->fifosize >= 32) {
 		up->mcr &= ~UART_MCR_AFE;
+#if defined(CONFIG_BRCM_UART_CHANGES) && defined(CONFIG_DW_BT_UART_CHANGES)
 		if (termios->c_cflag & CRTSCTS) {
-		    up->port.flags &= ~ASYNC_CTS_FLOW;  /* in case of AFE, needs to be ignored to avoid
-		                                         * lock up in serialcore cts handler */
+			/* In case of AFE, needs to be ignored to avoid
+			 * lock up in serialcore cts handler */
+			up->port.flags &= ~ASYNC_CTS_FLOW;
 			up->mcr |= UART_MCR_AFE;
 		}
-	}
-	/* Checking whether UART is busy or NOT.
-	 * Should update the LCR only when UART is NOT busy. */
-	while (serial_in(up, UART_USR) & 0x01) {
-		/* min value is selected for time taken to transfer for #1 byte
-		 * @115200 baud rate. */
-		usleep_range(9, 256);
-		retry_count++;
-		if (retry_count > 256) {
-			WARN(1, "UART is busy and trying to update LCR register");
-			break;
-		}
+#else
+		if (termios->c_cflag & CRTSCTS)
+			up->mcr |= UART_MCR_AFE;
+#endif
 	}
 
 	/*
@@ -2878,10 +2591,9 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	serial_port_out(port, UART_LCR, cval);		/* reset DLAB */
 	up->lcr = cval;					/* Save LCR */
 	if (port->type != PORT_16750) {
-		if (fcr & UART_FCR_ENABLE_FIFO) {
-			/* emulated UARTs (Lucent Venus 167x) need two steps */
+		/* emulated UARTs (Lucent Venus 167x) need two steps */
+		if (fcr & UART_FCR_ENABLE_FIFO)
 			serial_port_out(port, UART_FCR, UART_FCR_ENABLE_FIFO);
-		}
 		serial_port_out(port, UART_FCR, fcr);		/* set fcr */
 	}
 	serial8250_set_mctrl(port, port->mctrl);
@@ -2958,8 +2670,7 @@ static int serial8250_request_std_resource(struct uart_8250_port *up)
 	case UPIO_TSI:
 	case UPIO_MEM32:
 	case UPIO_MEM:
-	case UPIO_DWAPB:
-		if (!up->port.mapbase)
+		if (!port->mapbase)
 			break;
 
 		if (!request_mem_region(port->mapbase, size, "serial")) {
@@ -2995,8 +2706,7 @@ static void serial8250_release_std_resource(struct uart_8250_port *up)
 	case UPIO_TSI:
 	case UPIO_MEM32:
 	case UPIO_MEM:
-	case UPIO_DWAPB:
-		if (!up->port.mapbase)
+		if (!port->mapbase)
 			break;
 
 		if (port->flags & UPF_IOREMAP) {
@@ -3520,7 +3230,7 @@ static int __devinit serial8250_probe(struct platform_device *dev)
 		port.pm			= p->pm;
 		port.dev		= &dev->dev;
 		port.irqflags		|= irqflag;
-		ret = serial8250_register_port(&port, p->clk_name);
+		ret = serial8250_register_port(&port);
 		if (ret < 0) {
 			dev_err(&dev->dev, "unable to register port at index %d "
 				"(IO%lx MEM%llx IRQ%d): %d\n", i,
@@ -3631,7 +3341,9 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
 	return NULL;
 }
 
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
+#ifdef CONFIG_BRCM_UART_CHANGES
+/* Rx Qos node is acquired from the interrupt handler and
+ * released from rx_timeout_handler() timer. */
 static void rx_timeout_handler(unsigned long data)
 {
 	struct uart_8250_port *up = (struct uart_8250_port *)data;
@@ -3647,14 +3359,14 @@ static void rx_timeout_handler(unsigned long data)
 	 * again.
 	 * 1 - The Transmit path when some data needs to be sent.
 	 * 2 - In the RX path if some data is received that triggers the Power
- 	 *     Manager Event which will in turn wake the UART up. But in this
-	 *     case, if the HW itself does not hold the data and pass on the
-	 *     interrupt the first byte might be lost. During testing I
-	 *     observed no such loss.
-	 */
-	 return;
+	 * Manager Event which will in turn wake the UART up. But in this
+	 * case, if the HW itself does not hold the data and pass on the
+	 * interrupt the first byte might be lost. During testing I
+	 * observed no such loss. */
+
+	return;
 }
-#endif
+#endif /* CONFIG_BRCM_UART_CHANGES */
 
 /**
  *	serial8250_register_port - register a serial port
@@ -3669,10 +3381,13 @@ static void rx_timeout_handler(unsigned long data)
  *
  *	On success the port is ready to use and the line number is returned.
  */
-int serial8250_register_port(struct uart_port *port, const unsigned char * clk_name)
+int serial8250_register_port(struct uart_port *port)
 {
 	struct uart_8250_port *uart;
 	int ret = -ENOSPC;
+#ifdef CONFIG_BRCM_UART_CHANGES
+	struct plat_serial8250_port *p = port->dev->platform_data;
+#endif
 
 	if (port->uartclk == 0)
 		return -EINVAL;
@@ -3682,31 +3397,13 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
 	uart = serial8250_find_match_or_unused(port);
 	if (uart) {
 		uart_remove_one_port(&serial8250_reg, &uart->port);
-
-#if !defined(CONFIG_ARCH_SAMOA) && !defined(CONFIG_MACH_HAWAII_FPGA)
-        uart->clk = clk_get(uart->port.dev, clk_name);
-        if (IS_ERR(uart->clk))
-            return PTR_ERR(uart->clk);
-
-       /*
-        * Ensure to disable clocks, before changing the rate.
-        *clock may be ON for console port for low level debug prints.
-        */
-        clk_disable(uart->clk);
-        clk_set_rate(uart->clk, port->uartclk);
-        clk_enable(uart->clk);
-
-        uart->port.uartclk     = clk_get_rate(uart->clk);
-#endif
-
+#ifdef CONFIG_BRCM_UART_CHANGES
 #if defined(CONFIG_HAS_WAKELOCK)
 		wake_lock_init(&uart->uart_lock, WAKE_LOCK_IDLE, "UARTWAKE");
-#endif
-
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
-		ret = pi_mgr_qos_add_request(&uart->qos_tx_node,(char *)clk_name,
+#endif /* CONFIG_HAS_WAKELOCK */
+		ret = pi_mgr_qos_add_request(&uart->qos_tx_node,(char *)p->clk_name,
 			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
-		ret = pi_mgr_qos_add_request(&uart->qos_rx_node,(char *)clk_name,
+		ret = pi_mgr_qos_add_request(&uart->qos_rx_node,(char *)p->clk_name,
 			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
 
 		init_timer(&uart->rx_shutoff_timer);
@@ -3715,7 +3412,8 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
 		uart->rx_shutoff_timer.expires =
 			jiffies + msecs_to_jiffies(RX_SHUTOFF_DELAY_MSECS);
 		add_timer(&uart->rx_shutoff_timer);
-#endif
+#endif /* CONFIG_BRCM_UART_CHANGES */
+
 		uart->port.iobase       = port->iobase;
 		uart->port.membase      = port->membase;
 		uart->port.irq          = port->irq;
@@ -3773,9 +3471,6 @@ void serial8250_unregister_port(int line)
 	struct uart_8250_port *uart = &serial8250_ports[line];
 
 	mutex_lock(&serial_mutex);
-#if defined(CONFIG_HAS_WAKELOCK)
-	wake_lock_destroy(&uart->uart_lock);
-#endif
 	uart_remove_one_port(&serial8250_reg, &uart->port);
 	if (serial8250_isa_devs) {
 		uart->port.flags &= ~UPF_BOOT_AUTOCONF;

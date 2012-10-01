@@ -98,32 +98,36 @@ EXPORT_SYMBOL(etm_on);
 #define KONA_UART1_PA	UARTB2_BASE_ADDR
 #define KONA_UART2_PA	UARTB3_BASE_ADDR
 
-#define KONA_8250PORT(name, clk)				\
+#define KONA_8250PORT(name, clk, freq, uart_name)\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
 	.irq	    = BCM_INT_ID_##name,			\
-	.uartclk    = 26000000,					\
-	.regshift   = 2,				\
-	.iotype     = UPIO_DWAPB,                       \
-	.type	    = PORT_16550A,			\
-	.flags	    = UPF_BOOT_AUTOCONF | UPF_BUG_THRE | UPF_FIXED_TYPE | UPF_SKIP_TEST, \
+	.uartclk    = freq,					\
+	.regshift   = 2,					\
+	.iotype     = UPIO_MEM32,                       	\
+	.type	    = PORT_16550A,				\
+	.flags	    = UPF_BOOT_AUTOCONF | UPF_BUG_THRE | UPF_FIXED_TYPE | \
+							UPF_SKIP_TEST, \
 	.private_data = (void __iomem *)((KONA_##name##_VA) + \
 						UARTB_USR_OFFSET), \
-	.clk_name = clk,	\
+	.clk_name = clk,					\
+	.port_name = uart_name,					\
 }
 
 static struct plat_serial8250_port uart_data[] = {
-	KONA_8250PORT(UART0, "uartb_clk"),
-	KONA_8250PORT(UART1, "uartb2_clk"),
-	KONA_8250PORT(UART2, "uartb3_clk"),
+	KONA_8250PORT(UART0, "uartb_clk", 26000000, "console"),
+	/* Do not change the "bluetooth". This is used in 8250_dw.c to identify
+	 * that this is a Bluetooth Uart. */
+	KONA_8250PORT(UART1, "uartb2_clk", 48000000, "bluetooth"),
+	KONA_8250PORT(UART2, "uartb3_clk", 26000000, NULL),
 	{
 	 .flags = 0,
 	 },
 };
 
 static struct platform_device board_serial_device = {
-	.name = "serial8250",
+	.name = "serial8250_dw",
 	.id = PLAT8250_DEV_PLATFORM,
 	.dev = {
 		.platform_data = uart_data,

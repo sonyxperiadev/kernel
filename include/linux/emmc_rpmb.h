@@ -24,6 +24,8 @@ extern int read_imei1(char *imei1, char *imei_mac1,
 					int imei1_len, int imei_mac1_len);
 extern int read_imei2(char *imei2, char *imei_mac2,
 					int imei2_len, int imei_mac2_len);
-extern int readkeybox(char *buff, int len);
+extern int readkeyboxKey(char *buff, int len);
+extern int readkeyboxData(char *buff, int len);
+extern int writekeyboxData(char *buff, int len);
 
 #endif /* __EMMC_RPMB_H */

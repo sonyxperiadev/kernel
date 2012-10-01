@@ -200,6 +200,7 @@ static int configure_sdio_pullup(bool pull_up);
 	 defined(CONFIG_MFD_BCM_PMU59xxx))
 struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "vdd_sdxc"},
+	{.supply = "sddat_debug_bus"},
 };
 
 struct regulator_consumer_supply hv3_supply[] = {
