@@ -67,10 +67,10 @@ typedef struct {
 	uint32_t dep_handles[MAX_HANDLES];
 } mm_job_post_t;
 
-#define INTERLOCK_DEV_NAME	"interlock"
-#define V3D_DEV_NAME	"v3d"
-#define ISP_DEV_NAME	"isp"
-#define H264_DEV_NAME	"h264"
+#define INTERLOCK_DEV_NAME	"mm_interlock"
+#define V3D_DEV_NAME	"mm_v3d"
+#define ISP_DEV_NAME	"mm_isp"
+#define H264_DEV_NAME	"mm_h264"
 #define MM_DEV_MAGIC	'M'
 
 enum {

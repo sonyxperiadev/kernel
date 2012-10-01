@@ -26,6 +26,12 @@ typedef enum{
 	CME_FORMAT_UNKNOWN = 0xFFFF
 } CME_IMG_FORMAT_T;
 
+typedef struct cme_out_params_t
+{
+	unsigned int totalsad;
+	unsigned int progress;
+} CME_OUT_PARAMS_T;
+
 typedef struct{
 	CME_IMG_FORMAT_T img_type;
 	unsigned int cur_y_addr;
@@ -44,6 +50,7 @@ typedef struct{
 	unsigned int cme_autolimit;
 	unsigned char auto_hrext;
 	unsigned char auto_ignorec;
+	unsigned int out_param_addr;
 }cme_job_t;
 
 #endif

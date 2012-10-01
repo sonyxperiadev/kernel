@@ -201,7 +201,10 @@ mm_job_status_e mcin_start_job(void* device_id , mm_job_post_t* job, u32 profmas
 		pr_err("mcin_start_job: id or jp is null\n");
 		return MM_JOB_STATUS_ERROR;
 	}
-
+	if(job->size != sizeof(mcin_job_t)){
+		pr_err("mcin_start_job: job struct size mismatch\n");
+		return MM_JOB_STATUS_ERROR;
+	}
 	if(job->type != H264_MCIN_EPR_JOB){
 		pr_err("mcin_start_job: Invalid job type\n");
 		return MM_JOB_STATUS_ERROR;
@@ -296,12 +299,15 @@ mm_job_status_e mcin_start_job(void* device_id , mm_job_post_t* job, u32 profmas
 			out_p.remaining_len = mcin_read(id,H264_MCODEIN_LENGTH_OFFSET);
 			out_p.user_data = mcin_read(id,H264_MCODEIN_USERDATA_OFFSET);
 			/*copy the structure to user space*/
-			if(copy_to_user((void*)jp->out_param_addr,(void*)&out_p,
-										sizeof(MCIN_OUT_PARAMS_T)) != 0){
-				pr_err("cabac_start_job: copy_to_user for outparam failed \n");
-				return MM_JOB_STATUS_ERROR;
+			if((void*)jp->out_param_addr != NULL){
+				if(copy_to_user((void*)jp->out_param_addr,(void*)&out_p,
+							sizeof(MCIN_OUT_PARAMS_T)) != 0){
+					pr_err("mcin_start_job: copy_to_user for outparam failed \n");
+					return MM_JOB_STATUS_ERROR;
+				}
+			} else {
+				pr_info("mcin_start_job: out_param_addr is NULL\n");
 			}
-
 			job->status = MM_JOB_STATUS_SUCCESS;
 			return MM_JOB_STATUS_SUCCESS;
 

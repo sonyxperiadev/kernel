@@ -177,6 +177,11 @@ mm_job_status_e cabac_start_job(void* device_id , mm_job_post_t* job, u32 profma
 		return MM_JOB_STATUS_ERROR;
 	}
 
+	if(job->size != sizeof(cabac_job_t)){
+		pr_err("cabac_start_job: job struct size mismatch\n");
+		return MM_JOB_STATUS_ERROR;
+	}
+
 	if(job->type != H264_CABAC_DEC_JOB &&
 			job->type != H264_CABAC_ENC_JOB){
 		pr_err("cabac_start_job: Invalid job type\n");

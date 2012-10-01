@@ -167,9 +167,15 @@ mm_job_status_e cme_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 	cme_job_t* jp = (cme_job_t*)job->data;
 	u32 temp;
 	u32 var_pitch;
+	CME_OUT_PARAMS_T out_p;
 
 	if(jp == NULL){
 		pr_err("cme_start_job: jp is null\n");
+		return MM_JOB_STATUS_ERROR;
+	}
+
+	if(job->size != sizeof(cme_job_t)){
+		pr_err("cme_start_job: job struct size mismatch\n");
 		return MM_JOB_STATUS_ERROR;
 	}
 
@@ -261,8 +267,20 @@ mm_job_status_e cme_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 			return MM_JOB_STATUS_RUNNING;
 
 		case MM_JOB_STATUS_RUNNING:
+			out_p.totalsad = cme_read(id,H264_CME_TOTSAD_OFFSET);
+			out_p.progress = (cme_read(id,H264_CME_AUTOSTATUS_OFFSET) >> 2) & 0x1F;
+			/*copy the structure to user space*/
+			if((void*)jp->out_param_addr != NULL){
+				if(copy_to_user((void*)jp->out_param_addr,(void*)&out_p,
+							sizeof(CME_OUT_PARAMS_T)) != 0){
+					pr_err("cme_start_job: copy_to_user for outparam failed \n");
+					return MM_JOB_STATUS_ERROR;
+				}
+			} else {
+				pr_info("cme_start_job: out_param_addr is NULL\n");
+			}
 			job->status = MM_JOB_STATUS_SUCCESS;
-			return MM_JOB_STATUS_SUCCESS;
+			return job->status;
 
 		case MM_JOB_STATUS_SUCCESS:
 		case MM_JOB_STATUS_ERROR:
