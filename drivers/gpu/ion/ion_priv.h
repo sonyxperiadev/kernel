@@ -21,7 +21,9 @@
 #include <linux/mm_types.h>
 #include <linux/mutex.h>
 #include <linux/rbtree.h>
+#include <linux/sched.h>
 #include <linux/ion.h>
+#include <linux/device.h>
 
 struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
 
@@ -42,6 +44,15 @@ struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
  * @vaddr:		the kenrel mapping if kmap_cnt is not zero
  * @dmap_cnt:		number of times the buffer is mapped for dma
  * @sg_table:		the sg table for the buffer if dmap_cnt is not zero
+ * @dirty:		bitmask representing which pages of this buffer have
+ *			been dirtied by the cpu and need cache maintenance
+ *			before dma
+ * @vmas:		list of vma's mapping this buffer
+ * @handle_count:	count of handles referencing this buffer
+ * @task_comm:		taskcomm of last client to reference this buffer in a
+ *			handle, used for debugging
+ * @pid:		pid of last client to reference this buffer in a
+ *			handle, used for debugging
 */
 struct ion_buffer {
 	struct kref ref;
@@ -61,6 +72,18 @@ struct ion_buffer {
 	struct sg_table *sg_table;
 	unsigned long *dirty;
 	struct list_head vmas;
+	/* used to track orphaned buffers */
+	int handle_count;
+	char task_comm[TASK_COMM_LEN];
+	pid_t pid;
+#ifdef CONFIG_ION_KONA
+	unsigned int custom_flags;
+	int custom_update_count;
+	unsigned int align;
+#endif
+#ifdef CONFIG_M4U
+	unsigned int dma_addr;
+#endif
 };
 
 /**
@@ -89,6 +112,13 @@ struct ion_heap_ops {
 	void (*unmap_kernel) (struct ion_heap *heap, struct ion_buffer *buffer);
 	int (*map_user) (struct ion_heap *mapper, struct ion_buffer *buffer,
 			 struct vm_area_struct *vma);
+#ifdef CONFIG_ION_KONA
+	int (*flush_cache) (struct ion_heap *heap, struct ion_buffer *buffer,
+			unsigned long offset, unsigned long len);
+	int (*invalidate_cache) (struct ion_heap *heap,
+			struct ion_buffer *buffer, unsigned long offset,
+			unsigned long len);
+#endif
 };
 
 /**
@@ -101,6 +131,8 @@ struct ion_heap_ops {
  *			allocating.  These are specified by platform data and
  *			MUST be unique
  * @name:		used for debugging
+ * @priv:		private heap data
+ * @size:		reserved size of carveout/cma heaps for debug_show
  *
  * Represents a pool of memory from which buffers can be made.  In some
  * systems the only heap is regular system memory allocated via vmalloc.
@@ -114,6 +146,10 @@ struct ion_heap {
 	struct ion_heap_ops *ops;
 	int id;
 	const char *name;
+	void *priv;
+#ifdef CONFIG_ION_KONA
+	int size;
+#endif
 };
 
 /**
@@ -147,6 +183,9 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap);
  */
 
 struct ion_heap *ion_heap_create(struct ion_platform_heap *);
+struct ion_heap *ion_heap_create_full(struct ion_platform_heap *,
+				      struct device *);
+
 void ion_heap_destroy(struct ion_heap *);
 
 struct ion_heap *ion_system_heap_create(struct ion_platform_heap *);
@@ -165,6 +204,29 @@ ion_phys_addr_t ion_carveout_allocate(struct ion_heap *heap, unsigned long size,
 				      unsigned long align);
 void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
 		       unsigned long size);
+
+#ifdef CONFIG_CMA
+struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *,
+				     struct device *);
+void ion_cma_heap_destroy(struct ion_heap *);
+#endif
+
+#ifdef CONFIG_ION_KONA
+extern bool ion_handle_validate(struct ion_client *client,
+		struct ion_handle *handle);
+extern struct ion_buffer *ion_lock_buffer(struct ion_client *client,
+		struct ion_handle *handle);
+extern void ion_unlock_buffer(struct ion_client *client,
+		struct ion_buffer *buffer);
+
+#define pgprot_writethrough(prot) \
+	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITETHROUGH)
+
+#define pgprot_writeback(prot) \
+	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITEBACK)
+
+#endif
+
 /**
  * The carveout heap returns physical addresses, since 0 may be a valid
  * physical address, this is used to indicate allocation failed

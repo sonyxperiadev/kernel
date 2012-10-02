@@ -55,5 +55,8 @@ extern struct platform_device caph_i2s_device;
 extern struct platform_device caph_pcm_device;
 #endif
 extern struct platform_device android_pmem;
+#ifdef CONFIG_ION
+extern struct platform_device ion_device0;
+#endif
 
 #endif /* __MACH_HAWAII_DEVICE_H */

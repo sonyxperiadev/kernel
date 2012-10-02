@@ -71,20 +71,11 @@ typedef enum {
 } v3d_job_status_e;
 
 typedef struct {
-	uint32_t job_type;
-	uint32_t job_id;
 	uint32_t v3d_ct0ca;
 	uint32_t v3d_ct0ea;
 	uint32_t v3d_ct1ca;
 	uint32_t v3d_ct1ea;
-	uint32_t v3d_vpm_size;
-	uint32_t user_cnt;
-	uint32_t v3d_srqpc[MAX_USER_JOBS];
-	uint32_t v3d_srqua[MAX_USER_JOBS];
-	uint32_t v3d_srqul[MAX_USER_JOBS];
-	dvts_id_t dvts_id;
-	dvts_target_t dvts_target;
-} v3d_job_post_t;
+} v3d_job_t;
 
 typedef struct {
 	uint32_t job_id;

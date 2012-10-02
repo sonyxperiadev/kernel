@@ -64,8 +64,8 @@ typedef struct sdhci_throughput {
 	u32		blk_size;
 	u32		nm_of_blks;
 	u32		bytes_tx[2];
-	struct	timeval t1;
-	struct	timeval t2;
+	struct timeval t1;
+	struct timeval t2;
 	struct	timeval tot_time[2];
 	struct	dentry *dentry[3];
 
