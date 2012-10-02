@@ -50,6 +50,7 @@ REMEDY.
 #include <linux/genhd.h>
 #include <linux/completion.h>
 #include <linux/bio.h>
+#include <linux/module.h>
 
 #include <linux/emmc_rpmb.h>
 #include <linux/miscdevice.h>
@@ -57,10 +58,33 @@ REMEDY.
 #define MAX_KEYBOX_LEN		256
 #define KEYBOX_DEBUG
 
-static struct kobject *keybox_kobj;
+/*keybox ioctl data structure*/
+struct _bcm_keybox_ioc_param {
+	void __user *buf;
+	int len;
+};
+
+#define bcm_keybox_ioc_param struct _bcm_keybox_ioc_param
+
+/* an 8-bit integer selected to be specific to this driver */
+#define BCM_KEYBOX_IOC_MAGIC   0xF2
+/**
+ *
+ *  ioctl commands
+ *
+ **/
+#define BCM_KEYBOX_IOC_GET_DATA	       _IOR(BCM_KEYBOX_IOC_MAGIC, 1, bcm_keybox_ioc_param)
+#define BCM_KEYBOX_IOC_WR_DATA           _IOW(BCM_KEYBOX_IOC_MAGIC, 2, bcm_keybox_ioc_param)
+
+#define BCM_KEYBOX_IOC_MAXNR			   3
+
+/*open state for keybox*/
 static int open_state;
 
 #ifdef KEYBOX_DEBUG
+
+static struct kobject *keybox_kobj;
+
 /* Utility function to dump buffer for debug purpose */
 static void dump_buffer(const char *cmdbuf, unsigned int size)
 {
@@ -75,6 +99,132 @@ static void dump_buffer(const char *cmdbuf, unsigned int size)
 	}
 	pr_info("\n");
 }
+
+static ssize_t
+kbox_read_key(struct device *dev, struct device_attribute *attr,
+	      const char *buf, size_t n)
+{
+	int bytes;
+	char *rd_buff;
+	int ret = 0;
+
+	if (sscanf(buf, "%d", &bytes) != 1) {
+		pr_err("Usage: echo [num of bytes] > "
+		       "/sys/kbox_debug/kbox_read_key\n");
+		return n;
+	}
+
+	if (bytes > MAX_KEYBOX_LEN) {
+		pr_err("keybox read count %d is over the limit 256\r\n", bytes);
+		return -EINVAL;
+	}
+
+	rd_buff = kmalloc(bytes, GFP_KERNEL);
+
+	ret = readkeyboxKey(rd_buff, bytes);
+	if (ret < 0) {
+		pr_err("readkeyboxKey Failure. Try again\n");
+		kfree(rd_buff);
+		return -1;
+	}
+
+	pr_info("Done Reading Data from keybox, return 0x%x\n", ret);
+	dump_buffer(rd_buff, bytes);
+
+	kfree(rd_buff);
+	return n;
+}
+
+static ssize_t
+kbox_read_data(struct device *dev, struct device_attribute *attr,
+	       const char *buf, size_t n)
+{
+	int bytes;
+	char *rd_buff;
+	int ret = 0;
+
+	if (sscanf(buf, "%d", &bytes) != 1) {
+		pr_err("Usage: echo [num of bytes] > "
+		       "/sys/kbox_debug/keybox_read_data\n");
+		return n;
+	}
+
+	if (bytes > MAX_KEYBOX_LEN) {
+		pr_err("keybox read count %d is over the limit 256\r\n", bytes);
+		return -EINVAL;
+	}
+
+	rd_buff = kmalloc(bytes, GFP_KERNEL);
+
+	ret = readkeyboxData(rd_buff, bytes);
+	if (ret < 0) {
+		pr_err("readkeyboxData Failure. Try again\n");
+		kfree(rd_buff);
+		return -1;
+	}
+
+	pr_info("Done Reading Data from keybox, return 0x%x\n", ret);
+	dump_buffer(rd_buff, bytes);
+
+	kfree(rd_buff);
+	return n;
+}
+
+static ssize_t
+kbox_write_data(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t n)
+{
+	int bytes;
+	int pattern;
+	char *rd_buff;
+	int ret = 0;
+	int i = 0;
+
+	if (sscanf(buf, "%d %x", &bytes, &pattern) != 2) {
+		pr_err("Usage: echo  [num of bytes] [byte pattern] > "
+		       "/sys/kbox_debug/kbox_write_data\n");
+		return n;
+	}
+
+	if (bytes > MAX_KEYBOX_LEN) {
+		pr_err("keybox write count %d is over the limit 256\r\n",
+		       bytes);
+		return -EINVAL;
+	}
+
+	rd_buff = kmalloc(bytes, GFP_KERNEL);
+
+	for (i = 0; i < bytes; i++)
+		*(rd_buff + i) = pattern;
+
+	ret = writekeyboxData(rd_buff, bytes);
+	if (ret < 0) {
+		pr_err("writekeyboxData Failure. Try again\n");
+		kfree(rd_buff);
+		return -1;
+	}
+
+	pr_info("Done writing Data to keybox, return 0x%x\n", ret);
+	dump_buffer(rd_buff, bytes);
+
+	kfree(rd_buff);
+	return n;
+}
+
+static DEVICE_ATTR(kbox_read_key, 0644, NULL, kbox_read_key);
+static DEVICE_ATTR(kbox_read_data, 0644, NULL, kbox_read_data);
+static DEVICE_ATTR(kbox_write_data, 0644, NULL, kbox_write_data);
+
+static struct attribute *keybox_attrs[] = {
+	&dev_attr_kbox_read_key.attr,
+	&dev_attr_kbox_read_data.attr,
+	&dev_attr_kbox_write_data.attr,
+	NULL,
+};
+
+static struct attribute_group keybox_attr_group = {
+	.attrs = keybox_attrs,
+};
 #endif
 
 /************************************************************/
@@ -101,7 +251,9 @@ int keybox_release(struct inode *inode, struct file *filp)
 	return -1;
 }
 
-ssize_t keybox_read(struct file *filp, char *buf, size_t count, loff_t fpos)
+/*read keybox key*/
+ssize_t keybox_read(struct file *filp, char __user *buf, size_t count,
+		    loff_t *fpos)
 {
 	char *rd_buff;
 	int ret;
@@ -116,11 +268,11 @@ ssize_t keybox_read(struct file *filp, char *buf, size_t count, loff_t fpos)
 		return -EINVAL;
 	}
 
-	pr_info("keybox read count %d\n", count);
+	pr_info("keybox key read count %d\n", count);
 
 	rd_buff = kmalloc(count, GFP_KERNEL);
 
-	ret = readkeybox(rd_buff, count);
+	ret = readkeyboxKey(rd_buff, count);
 	if (ret < 0) {
 		pr_err("Read Failure. Try again\n");
 		kfree(rd_buff);
@@ -142,41 +294,127 @@ ssize_t keybox_read(struct file *filp, char *buf, size_t count, loff_t fpos)
 	return count;
 }
 
-static ssize_t
-keybox_read_data(struct device *dev, struct device_attribute *attr,
-		 const char *buf, size_t n)
+static long handle_keybox_get_data(struct file *filp, unsigned int cmd,
+				   unsigned long arg)
 {
-	int bytes;
 	char *rd_buff;
-	int ret = 0;
+	int ret;
+	bcm_keybox_ioc_param kb_param;
 
-	if (sscanf(buf, "%d", &bytes) != 1) {
-		pr_err("Usage: echo [num of bytes] > "
-		       "/sys/keybox_debug/keybox_read_data\n");
-		return n;
+	if (open_state != 1) {
+		pr_err("keybox has not been opend yet\r\n");
+		return -1;
 	}
 
-	if (bytes > MAX_KEYBOX_LEN) {
-		pr_err("keybox read count %d is over the limit 256\r\n", bytes);
+	if (copy_from_user(&kb_param, (bcm_keybox_ioc_param *) arg,
+			   sizeof(bcm_keybox_ioc_param)) != 0) {
+		pr_err("handle_keybox_get_data: copy_from_user error\n");
+		return -EFAULT;
+	}
+
+	if (kb_param.len > MAX_KEYBOX_LEN) {
+		pr_err("keybox read count %d is over the limit 256\r\n",
+		       kb_param.len);
 		return -EINVAL;
 	}
 
-	rd_buff = kmalloc(bytes, GFP_KERNEL);
+	pr_info("keybox data read count %d\n", kb_param.len);
 
-	ret = readkeybox(rd_buff, bytes);
+	rd_buff = kmalloc(kb_param.len, GFP_KERNEL);
+
+	ret = readkeyboxData(rd_buff, kb_param.len);
 	if (ret < 0) {
-		pr_err("Read Failure. Try again\n");
+		pr_err("readkeyboxData Failure. Try again\n");
+		kfree(rd_buff);
+		return -1;
+	}
+#ifdef KEYBOX_DEBUG
+	dump_buffer(rd_buff, kb_param.len);
+#endif
+
+	if (copy_to_user(kb_param.buf, rd_buff, kb_param.len)) {
+		kfree(rd_buff);
+		pr_err("handle_keybox_get_data: copy_to_user error\n");
+		return -EFAULT;
+	}
+
+	kfree(rd_buff);
+	return kb_param.len;
+}
+
+static long handle_keybox_wr_data(struct file *filp, unsigned int cmd,
+				  unsigned long arg)
+{
+	char *rd_buff;
+	int ret;
+	bcm_keybox_ioc_param kb_param;
+
+	if (open_state != 1) {
+		pr_err("keybox has not been opend yet\r\n");
+		return -1;
+	}
+
+	if (copy_from_user(&kb_param, (bcm_keybox_ioc_param *) arg,
+			   sizeof(bcm_keybox_ioc_param)) != 0) {
+		pr_err("handle_keybox_wr_data: copy_from_user error\n");
+		return -EFAULT;
+	}
+
+	if (kb_param.len > MAX_KEYBOX_LEN) {
+		pr_err("keybox read count %d is over the limit 256\r\n",
+		       kb_param.len);
+		return -EINVAL;
+	}
+
+	pr_info("keybox data write count %d\n", kb_param.len);
+
+	rd_buff = kmalloc(kb_param.len, GFP_KERNEL);
+
+	if (copy_from_user(rd_buff, kb_param.buf, kb_param.len) != 0) {
+		pr_err("handle_keybox_wr_data: copy_from_user error\n");
+		kfree(rd_buff);
+		return -EFAULT;
+	}
+
+	ret = writekeyboxData(rd_buff, kb_param.len);
+	if (ret < 0) {
+		pr_err("writekeyboxData failure Try again\n");
 		kfree(rd_buff);
 		return -1;
 	}
 
-	pr_info("Done Reading Data from keybox, return 0x%x\n", ret);
-#ifdef KEYBOX_DEBUG
-	dump_buffer(rd_buff, bytes);
-#endif
-
 	kfree(rd_buff);
-	return n;
+	return kb_param.len;
+}
+
+static long keybox_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	long ret = 0;
+
+	if (_IOC_TYPE(cmd) != BCM_KEYBOX_IOC_MAGIC
+	    || _IOC_NR(cmd) >= BCM_KEYBOX_IOC_MAXNR) {
+		pr_err("keybox_ioctl ERROR cmd=0x%x\n", cmd);
+		return -ENOIOCTLCMD;
+	}
+
+	switch (cmd) {
+	case BCM_KEYBOX_IOC_GET_DATA:
+		{
+			ret = handle_keybox_get_data(filp, cmd, arg);
+			break;
+		}
+	case BCM_KEYBOX_IOC_WR_DATA:
+		{
+			ret = handle_keybox_wr_data(filp, cmd, arg);
+			break;
+		}
+	default:
+		ret = -ENOIOCTLCMD;
+		pr_err("keybox_ioctl ERROR unhandled cmd=0x%x\n", cmd);
+		break;
+	}
+
+	return ret;
 }
 
 /***********************************************/
@@ -185,24 +423,13 @@ const struct file_operations keybox_fops = {
 	.open = keybox_open,
 	.release = keybox_release,
 	.read = keybox_read,
+	.unlocked_ioctl = keybox_ioctl,
 };
 
 struct miscdevice keybox_dev = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.fops = &keybox_fops,
-	.name = "bcm_keybox",
-	.nodename = "bcm_keybox_node"
-};
-
-static DEVICE_ATTR(keybox_read_data, 0666, NULL, keybox_read_data);
-
-static struct attribute *keybox_attrs[] = {
-	&dev_attr_keybox_read_data.attr,
-	NULL,
-};
-
-static struct attribute_group keybox_attr_group = {
-	.attrs = keybox_attrs,
+	.name = "bcm_kbox",
 };
 
 static int __init keybox_init(void)
@@ -216,18 +443,23 @@ static int __init keybox_init(void)
 		pr_err("keybox_init: keybox_dev register failed\n");
 		return err;
 	}
-
-	keybox_kobj = kobject_create_and_add("keybox_debug", NULL);
+#ifdef KEYBOX_DEBUG
+	keybox_kobj = kobject_create_and_add("kbox_debug", NULL);
 	if (!keybox_kobj)
 		return -ENOMEM;
 
 	return sysfs_create_group(keybox_kobj, &keybox_attr_group);
+#else
+	return 0;
+#endif
 }
 
 static void __exit keybox_exit(void)
 {
 	misc_deregister(&keybox_dev);
+#ifdef KEYBOX_DEBUG
 	sysfs_remove_group(keybox_kobj, &keybox_attr_group);
+#endif
 }
 
 module_init(keybox_init);

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfg80211.c 347620 2012-07-27 10:38:40Z $
+ * $Id: wl_cfg80211.c 351770 2012-08-21 08:22:26Z $
  */
 
 #include <typedefs.h>
@@ -98,7 +98,11 @@ static struct device *cfg80211_parent_dev = NULL;
 static int vsdb_supported = 0;
 struct wl_priv *wlcfg_drv_priv = NULL;
 
+#ifdef CUSTOMER_HW4
+u32 wl_dbg_level = WL_DBG_ERR | WL_DBG_TRACE2;
+#else
 u32 wl_dbg_level = WL_DBG_ERR;
+#endif /* CUSTOMER_HW4 */
 
 #define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MACSTR "%02x:%02x:%02x:%02x:%02x:%02x"
@@ -837,20 +841,28 @@ static void swap_key_to_BE(struct wl_wsec_key *key)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 0)
 /* For debug: Dump the contents of the encoded wps ie buffe */
 static void
-wl_validate_wps_ie(char *wps_ie, bool *pbc)
+wl_validate_wps_ie(char *wps_ie, s32 wps_ie_len, bool *pbc)
 {
 	#define WPS_IE_FIXED_LEN 6
-	u16 len = (u16) wps_ie[TLV_LEN_OFF];
-	u8 *subel = wps_ie+  WPS_IE_FIXED_LEN;
+	u16 len;
+	u8 *subel = NULL;
 	u16 subelt_id;
 	u16 subelt_len;
 	u16 val;
 	u8 *valptr = (uint8*) &val;
+	if (wps_ie == NULL || wps_ie_len < WPS_IE_FIXED_LEN) {
+		WL_ERR(("invalid argument : NULL\n"));
+		return;
+	}
+	len = (u16)wps_ie[TLV_LEN_OFF];
 
+	if (len > wps_ie_len) {
+		WL_ERR(("invalid length len %d, wps ie len %d\n", len, wps_ie_len));
+		return;
+	}
 	WL_DBG(("wps_ie len=%d\n", len));
-
 	len -= 4;	/* for the WPS IE's OUI, oui_type fields */
-
+	subel = wps_ie + WPS_IE_FIXED_LEN;
 	while (len >= 4) {		/* must have attr id, attr len fields */
 		valptr[0] = *subel++;
 		valptr[1] = *subel++;
@@ -2084,11 +2096,7 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 					}
 				}
 				if (!wl->p2p_supported || !p2p_scan(wl)) {
-					if ((wl_cfgp2p_find_p2pie((u8 *)request->ie,
-						request->ie_len)) &&
-						(ndev != wl_to_prmry_ndev(wl))) {
-						bssidx = wl_cfgp2p_find_idx(wl, ndev);
-					}
+					bssidx = wl_cfgp2p_find_idx(wl, ndev);
 					err = wl_cfgp2p_set_management_ie(wl, ndev, bssidx,
 						VNDR_IE_PRBREQ_FLAG, (u8 *)request->ie,
 						request->ie_len);
@@ -2884,36 +2892,10 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	if (!wl_get_drv_status(wl, DISCONNECTING, dev))
 		wl_update_prof(wl, dev, NULL, (void *)&bssid, WL_PROF_BSSID);
 
-	if (!memcmp(sme->ssid, WL_P2P_WILDCARD_SSID, WL_P2P_WILDCARD_SSID_LEN) &&
-		(dev != wl_to_prmry_ndev(wl))) {
+	if (p2p_is_on(wl) && (dev != wl_to_prmry_ndev(wl))) {
 		/* we only allow to connect using virtual interface in case of P2P */
-		if (p2p_is_on(wl) && is_wps_conn(sme)) {
-			WL_DBG(("ASSOC1 p2p index : %d sme->ie_len %d\n",
-				wl_cfgp2p_find_idx(wl, dev), sme->ie_len));
-			/* Have to apply WPS IE + P2P IE in assoc req frame */
-			wl_cfgp2p_set_management_ie(wl, dev,
-				wl_cfgp2p_find_idx(wl, dev), VNDR_IE_PRBREQ_FLAG,
-				wl_to_p2p_bss_saved_ie(wl, P2PAPI_BSSCFG_DEVICE).p2p_probe_req_ie,
-				wl_to_p2p_bss_saved_ie(wl,
-				P2PAPI_BSSCFG_DEVICE).p2p_probe_req_ie_len);
 			wl_cfgp2p_set_management_ie(wl, dev, wl_cfgp2p_find_idx(wl, dev),
 				VNDR_IE_ASSOCREQ_FLAG, sme->ie, sme->ie_len);
-		} else if (p2p_is_on(wl) && (sme->crypto.wpa_versions & NL80211_WPA_VERSION_2)) {
-			/* This is the connect req after WPS is done [credentials exchanged]
-			 * currently identified with WPA_VERSION_2 .
-			 * Update the previously set IEs with
-			 * the newly received IEs from Supplicant. This will remove the WPS IE from
-			 * the Assoc Req.
-			 */
-			WL_DBG(("ASSOC2 p2p index : %d sme->ie_len %d\n",
-				wl_cfgp2p_find_idx(wl, dev), sme->ie_len));
-			wl_cfgp2p_set_management_ie(wl, dev,
-				wl_cfgp2p_find_idx(wl, dev), VNDR_IE_PRBREQ_FLAG,
-				sme->ie, sme->ie_len);
-			wl_cfgp2p_set_management_ie(wl, dev, wl_cfgp2p_find_idx(wl, dev),
-				VNDR_IE_ASSOCREQ_FLAG, sme->ie, sme->ie_len);
-		}
-
 	} else if (dev == wl_to_prmry_ndev(wl)) {
 		/* find the RSN_IE */
 		if ((wpa2_ie = bcm_parse_tlvs((u8 *)sme->ie, sme->ie_len,
@@ -2936,7 +2918,7 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 				wl->ioctl_buf, WLC_IOCTL_MAXLEN, &wl->ioctl_buf_sync);
 		}
 
-		err = wl_cfgp2p_set_management_ie(wl, dev, -1,
+		err = wl_cfgp2p_set_management_ie(wl, dev, wl_cfgp2p_find_idx(wl, dev),
 			VNDR_IE_ASSOCREQ_FLAG, (u8 *)sme->ie, sme->ie_len);
 		if (unlikely(err)) {
 			return err;
@@ -3037,9 +3019,11 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	ext_join_params->scan.passive_time = WL_SCAN_PASSIVE_TIME*3;
 	/* Set up join scan parameters */
 	ext_join_params->scan.scan_type = -1;
+
 	ext_join_params->scan.nprobes
-		= (ext_join_params->scan.active_time/(WL_SCAN_ACTIVE_TIME *2));
-	ext_join_params->scan.home_time = -1;
+		= (ext_join_params->scan.active_time/15);
+	/* do not allow to switch channel during assoc scan */
+	ext_join_params->scan.home_time = 0;
 
 	if (sme->bssid)
 		memcpy(&ext_join_params->assoc.bssid, sme->bssid, ETH_ALEN);
@@ -3988,7 +3972,7 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 		struct timer_list *_timer;
 		WL_DBG(("scan is running. go to fake listen state\n"));
 
-		wl_set_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, ndev);
+		wl_set_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, dev);
 
 		if (timer_pending(&wl->p2p->listen_timer)) {
 			WL_DBG(("cancel current listen timer \n"));
@@ -4010,9 +3994,9 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 		 * remain on channel completion will be returned by waiting next af completion.
 		 */
 #ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
-		wl_set_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, ndev);
+		wl_set_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, dev);
 #else
-		wl_set_drv_status(wl, REMAINING_ON_CHANNEL, ndev);
+		wl_set_drv_status(wl, REMAINING_ON_CHANNEL, dev);
 #endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
 		goto exit;
 	}
@@ -4064,41 +4048,7 @@ wl_cfg80211_cancel_remain_on_channel(struct wiphy *wiphy, struct net_device *dev
 	WL_DBG((" enter ) netdev_ifidx: %d \n", dev->ifindex));
 	return err;
 }
-static s32
-wl_cfg80211_send_pending_tx_act_frm(struct wl_priv *wl)
-{
-	wl_af_params_t *tx_act_frm;
-	struct net_device *dev = wl->afx_hdl->dev;
 
-	if (dev == NULL)
-		return -1;
-
-	if (!p2p_is_on(wl))
-		return -1;
-
-	if (dev == wl->p2p_net) {
-		dev = wl_to_prmry_ndev(wl);
-	}
-
-	tx_act_frm = wl->afx_hdl->pending_tx_act_frm;
-	WL_DBG(("Sending the action frame\n"));
-	wl->afx_hdl->pending_tx_act_frm = NULL;
-	if (tx_act_frm != NULL) {
-		/* Suspend P2P discovery's search-listen to prevent it from
-		 * starting a scan or changing the channel.
-		 */
-		wl_clr_drv_status(wl, SCANNING, wl->afx_hdl->dev);
-/* Do not abort scan for VSDB. Scan will be aborted in firmware if necessary */
-#ifndef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
-		wl_notify_escan_complete(wl, dev, true, true);
-#endif /* not WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
-		wl_cfgp2p_discover_enable_search(wl, false);
-		tx_act_frm->channel = wl->afx_hdl->peer_chan;
-		wl->afx_hdl->ack_recv = (wl_cfgp2p_tx_action_frame(wl, dev,
-			tx_act_frm, wl->afx_hdl->bssidx)) ? false : true;
-	}
-	return 0;
-}
 static void
 wl_cfg80211_afx_handler(struct work_struct *work)
 {
@@ -4109,7 +4059,8 @@ wl_cfg80211_afx_handler(struct work_struct *work)
 	afx_instance = container_of(work, struct afx_hdl, work);
 	if (afx_instance != NULL && wl->afx_hdl->is_active) {
 		if (wl->afx_hdl->is_listen && wl->afx_hdl->my_listen_chan) {
-			ret = wl_cfgp2p_discover_listen(wl, wl->afx_hdl->my_listen_chan, 200);
+			ret = wl_cfgp2p_discover_listen(wl, wl->afx_hdl->my_listen_chan,
+				(100 * (1 + (random32() % 3)))); /* 100ms ~ 300ms */
 		} else {
 			ret = wl_cfgp2p_act_frm_search(wl, wl->afx_hdl->dev,
 				wl->afx_hdl->bssidx, wl->afx_hdl->peer_listen_chan);
@@ -4122,26 +4073,20 @@ wl_cfg80211_afx_handler(struct work_struct *work)
 	}
 }
 
-static bool
-wl_cfg80211_send_at_common_channel(struct wl_priv *wl,
-	struct net_device *dev,
-	wl_af_params_t *af_params)
+static s32
+wl_cfg80211_af_searching_channel(struct wl_priv *wl, struct net_device *dev)
 {
 	u32 max_retry = WL_CHANNEL_SYNC_RETRY;
 
+	if (dev == NULL)
+		return -1;
+
 	WL_DBG((" enter ) \n"));
-	/* initialize afx_hdl */
-	wl->afx_hdl->pending_tx_act_frm = af_params;
-	wl->afx_hdl->bssidx = wl_cfgp2p_find_idx(wl, dev);
-	wl->afx_hdl->dev = dev;
-	wl->afx_hdl->retry = 0;
-	wl->afx_hdl->peer_chan = WL_INVALID;
-	wl->afx_hdl->ack_recv = false;
 
 	wl_set_drv_status(wl, FINDING_COMMON_CHANNEL, dev);
 	wl->afx_hdl->is_active = TRUE;
 
-	/* Loop to wait until we have sent the pending tx action frame or the
+	/* Loop to wait until we find a peer's channel or the
 	 * pending action frame tx is cancelled.
 	 */
 	while ((wl->afx_hdl->retry < max_retry) &&
@@ -4180,21 +4125,369 @@ wl_cfg80211_send_at_common_channel(struct wl_priv *wl,
 	wl_clr_drv_status(wl, SCANNING, dev);
 	wl_clr_drv_status(wl, FINDING_COMMON_CHANNEL, dev);
 
-	if (wl->afx_hdl->peer_chan != WL_INVALID)
-		wl_cfg80211_send_pending_tx_act_frm(wl);
-	else {
-		WL_ERR(("Couldn't find the peer after %d retries\n",
-			wl->afx_hdl->retry));
-	}
-	wl->afx_hdl->is_listen = FALSE;
-	wl->afx_hdl->pending_tx_act_frm = NULL;
-	wl->afx_hdl->dev = NULL;
-	wl->afx_hdl->bssidx = WL_INVALID;
+	return (wl->afx_hdl->peer_chan);
+}
 
-	if (wl->afx_hdl->ack_recv)
-		return true; /* ACK */
-	else
-		return false; /* NO ACK */
+struct p2p_config_af_params {
+	s32 max_tx_retry;	/* max tx retry count if tx no ack */
+	/* To make sure to send successfully action frame, we have to turn off mpc
+	 * 0: off, 1: on,  (-1): do nothing
+	 */
+	s32 mpc_onoff;
+#ifdef WL_CFG80211_GON_COLLISION
+	/* drop tx go nego request if go nego collision occurs */
+	bool drop_tx_req;
+#endif
+#ifdef WL_CFG80211_SYNC_GON
+	bool extra_listen;
+#endif
+	bool search_channel;	/* 1: search peer's channel to send af */
+};
+
+static s32
+wl_cfg80211_config_p2p_pub_af_tx(struct wiphy *wiphy,
+	wl_action_frame_t *action_frame, wl_af_params_t *af_params,
+	struct p2p_config_af_params *config_af_params)
+{
+	s32 err = BCME_OK;
+	struct wl_priv *wl = wiphy_priv(wiphy);
+	wifi_p2p_pub_act_frame_t *act_frm =
+		(wifi_p2p_pub_act_frame_t *) (action_frame->data);
+
+	/* initialize default value */
+#ifdef WL_CFG80211_GON_COLLISION
+	config_af_params->drop_tx_req = false;
+#endif
+#ifdef WL_CFG80211_SYNC_GON
+	config_af_params->extra_listen = true;
+#endif
+	config_af_params->search_channel = false;
+	config_af_params->max_tx_retry = WL_AF_TX_MAX_RETRY;
+	config_af_params->mpc_onoff = -1;
+
+	switch (act_frm->subtype) {
+	case P2P_PAF_GON_REQ: {
+		WL_DBG(("P2P: GO_NEG_PHASE status set \n"));
+		wl_set_p2p_status(wl, GO_NEG_PHASE);
+
+		config_af_params->mpc_onoff = 0;
+		config_af_params->search_channel = true;
+		wl->next_af_subtype = act_frm->subtype + 1;
+
+		/* increase dwell time to wait for RESP frame */
+		af_params->dwell_time = WL_MED_DWELL_TIME;
+
+#ifdef WL_CFG80211_GON_COLLISION
+		config_af_params->drop_tx_req = true;
+#endif /* WL_CFG80211_GON_COLLISION */
+		break;
+	}
+	case P2P_PAF_GON_RSP: {
+		wl->next_af_subtype = act_frm->subtype + 1;
+		/* increase dwell time to wait for CONF frame */
+		af_params->dwell_time = WL_MED_DWELL_TIME;
+		break;
+	}
+	case P2P_PAF_GON_CONF: {
+		/* If we reached till GO Neg confirmation reset the filter */
+		WL_DBG(("P2P: GO_NEG_PHASE status cleared \n"));
+		wl_clr_p2p_status(wl, GO_NEG_PHASE);
+
+		/* turn on mpc again if go nego is done */
+		config_af_params->mpc_onoff = 1;
+
+		/* minimize dwell time */
+		af_params->dwell_time = WL_MIN_DWELL_TIME;
+
+#ifdef WL_CFG80211_GON_COLLISION
+		/* if go nego formation done, clear it */
+		wl->block_gon_req_tx_count = 0;
+		wl->block_gon_req_rx_count = 0;
+#endif /* WL_CFG80211_GON_COLLISION */
+#ifdef WL_CFG80211_SYNC_GON
+		config_af_params->extra_listen = false;
+#endif /* WL_CFG80211_SYNC_GON */
+		break;
+	}
+	case P2P_PAF_INVITE_REQ: {
+		config_af_params->search_channel = true;
+		wl->next_af_subtype = act_frm->subtype + 1;
+
+		/* increase dwell time */
+		af_params->dwell_time = WL_MED_DWELL_TIME;
+		break;
+	}
+	case P2P_PAF_INVITE_RSP:
+		/* minimize dwell time */
+		af_params->dwell_time = WL_MIN_DWELL_TIME;
+#ifdef WL_CFG80211_SYNC_GON
+		config_af_params->extra_listen = false;
+#endif /* WL_CFG80211_SYNC_GON */
+		break;
+	case P2P_PAF_DEVDIS_REQ: {
+		config_af_params->search_channel = true;
+
+		wl->next_af_subtype = act_frm->subtype + 1;
+		/* maximize dwell time to wait for RESP frame */
+		af_params->dwell_time = WL_LONG_DWELL_TIME;
+		break;
+	}
+	case P2P_PAF_DEVDIS_RSP:
+		/* minimize dwell time */
+		af_params->dwell_time = WL_MIN_DWELL_TIME;
+#ifdef WL_CFG80211_SYNC_GON
+		config_af_params->extra_listen = false;
+#endif /* WL_CFG80211_SYNC_GON */
+		break;
+	case P2P_PAF_PROVDIS_REQ: {
+		if (IS_PROV_DISC_WITHOUT_GROUP_ID(&act_frm->elts[0],
+			action_frame->len)) {
+			config_af_params->search_channel = true;
+		}
+
+		config_af_params->mpc_onoff = 0;
+		wl->next_af_subtype = act_frm->subtype + 1;
+		/* increase dwell time to wait for RESP frame */
+		af_params->dwell_time = WL_MED_DWELL_TIME;
+		break;
+	}
+	case P2P_PAF_PROVDIS_RSP: {
+		wl->next_af_subtype = P2P_PAF_GON_REQ;
+		/* increase dwell time to MED level */
+		af_params->dwell_time = WL_MED_DWELL_TIME;
+#ifdef WL_CFG80211_SYNC_GON
+		config_af_params->extra_listen = false;
+#endif /* WL_CFG80211_SYNC_GON */
+		break;
+	}
+	default:
+		WL_DBG(("Unknown p2p pub act frame subtype: %d\n",
+			act_frm->subtype));
+		err = BCME_BADARG;
+	}
+	return err;
+}
+
+
+static bool
+wl_cfg80211_send_action_frame(struct wiphy *wiphy, struct net_device *dev,
+	struct net_device *ndev, wl_af_params_t *af_params,
+	wl_action_frame_t *action_frame, u16 action_frame_len, s32 bssidx)
+{
+	struct wl_priv *wl = wiphy_priv(wiphy);
+	bool ack = false;
+	u8 category, action;
+	s32 tx_retry;
+	struct p2p_config_af_params config_af_params;
+
+	if (!af_params || !action_frame || !p2p_is_on(wl))
+		return false;
+
+	wl_cfgp2p_print_actframe(true, action_frame->data, action_frame->len);
+
+	category = action_frame->data[DOT11_ACTION_CAT_OFF];
+	action = action_frame->data[DOT11_ACTION_ACT_OFF];
+
+	/* initialize variables */
+	tx_retry = 0;
+	wl->next_af_subtype = -1;
+	config_af_params.max_tx_retry = WL_AF_TX_MAX_RETRY;
+	config_af_params.mpc_onoff = -1;
+	config_af_params.search_channel = false;
+#ifdef WL_CFG80211_GON_COLLISION
+	config_af_params.drop_tx_req = false;
+#endif
+#ifdef WL_CFG80211_SYNC_GON
+	config_af_params.extra_listen = false;
+#endif
+
+	/* config parameters */
+	/* Public Action Frame Process - DOT11_ACTION_CAT_PUBLIC */
+	if (category == DOT11_ACTION_CAT_PUBLIC) {
+		if ((action == P2P_PUB_AF_ACTION) &&
+			(action_frame_len >= sizeof(wifi_p2p_pub_act_frame_t))) {
+			/* p2p public action frame process */
+			if (BCME_OK != wl_cfg80211_config_p2p_pub_af_tx(wiphy,
+				action_frame, af_params, &config_af_params)) {
+				WL_DBG(("Unknown subtype.\n"));
+			}
+
+#ifdef WL_CFG80211_GON_COLLISION
+			if (config_af_params.drop_tx_req) {
+				if (wl->block_gon_req_tx_count) {
+					/* drop gon req tx action frame */
+					WL_DBG(("Drop gon req tx action frame: count %d\n",
+						wl->block_gon_req_tx_count));
+					goto exit;
+				}
+			}
+#endif /* WL_CFG80211_GON_COLLISION */
+		} else if (action_frame_len >= sizeof(wifi_p2psd_gas_pub_act_frame_t)) {
+			/* service discovery process */
+			if (action == P2PSD_ACTION_ID_GAS_IREQ ||
+				action == P2PSD_ACTION_ID_GAS_IREQ) {
+				/* configure service discovery query frame */
+
+				config_af_params.search_channel = true;
+
+				/* save next af suptype to cancel remained dwell time */
+				wl->next_af_subtype = action + 1;
+
+				af_params->dwell_time = WL_MED_DWELL_TIME;
+			} else if (action == P2PSD_ACTION_ID_GAS_IRESP ||
+				action == P2PSD_ACTION_ID_GAS_IRESP) {
+				/* configure service discovery response frame */
+				af_params->dwell_time = WL_MIN_DWELL_TIME;
+			} else {
+				WL_DBG(("Unknown action type: %d\n", action));
+			}
+		} else {
+			WL_DBG(("Unknown Frame: category 0x%x, action 0x%x, length %d\n",
+				category, action, action_frame_len));
+		}
+	} else if (category == P2P_AF_CATEGORY) {
+		/* do not configure anything. it will be sent with a default configuration */
+	} else {
+		WL_DBG(("Unknown Frame: category 0x%x, action 0x%x\n",
+			category, action));
+	}
+
+	/* To make sure to send successfully action frame, we have to turn off mpc */
+	if (config_af_params.mpc_onoff == 0) {
+		wldev_iovar_setint(dev, "mpc", 0);
+	}
+
+	/* validate channel and p2p ies */
+	if (config_af_params.search_channel && IS_P2P_SOCIAL(af_params->channel) &&
+		wl_to_p2p_bss_saved_ie(wl, P2PAPI_BSSCFG_DEVICE).p2p_probe_req_ie_len) {
+		config_af_params.search_channel = true;
+	} else {
+		config_af_params.search_channel = false;
+	}
+
+#ifdef VSDB
+	/* if connecting on primary iface, sleep for a while before sending af tx for VSDB */
+	if (wl_get_drv_status(wl, CONNECTING, wl_to_prmry_ndev(wl))) {
+		msleep(50);
+	}
+#endif
+
+	/* if scan is ongoing, abort current scan. */
+	if (wl_get_drv_status_all(wl, SCANNING)) {
+		wl_notify_escan_complete(wl, ndev, true, true);
+	}
+
+	/* set status and destination address before sending af */
+	if (wl->next_af_subtype != -1) {
+		/* set this status to cancel the remained dwell time in rx process */
+		wl_set_drv_status(wl, WAITING_NEXT_ACT_FRM, dev);
+	}
+	wl_set_drv_status(wl, SENDING_ACT_FRM, dev);
+	memcpy(wl->afx_hdl->tx_dst_addr.octet,
+		af_params->action_frame.da.octet,
+		sizeof(wl->afx_hdl->tx_dst_addr.octet));
+
+	/* save af_params for rx process */
+	wl->afx_hdl->pending_tx_act_frm = af_params;
+
+	/* search peer's channel */
+	if (config_af_params.search_channel) {
+		/* initialize afx_hdl */
+		wl->afx_hdl->bssidx = wl_cfgp2p_find_idx(wl, dev);
+		wl->afx_hdl->dev = dev;
+		wl->afx_hdl->retry = 0;
+		wl->afx_hdl->peer_chan = WL_INVALID;
+
+		if (wl_cfg80211_af_searching_channel(wl, dev) == WL_INVALID) {
+			WL_ERR(("couldn't find peer's channel.\n"));
+			goto exit;
+		}
+
+		/* Suspend P2P discovery's search-listen to prevent it from
+		 * starting a scan or changing the channel.
+		 */
+		wl_clr_drv_status(wl, SCANNING, wl->afx_hdl->dev);
+/* Do not abort scan for VSDB. Scan will be aborted in firmware if necessary */
+#ifndef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
+		wl_notify_escan_complete(wl, dev, true, true);
+#endif /* not WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
+		wl_cfgp2p_discover_enable_search(wl, false);
+
+		/* update channel */
+		af_params->channel = wl->afx_hdl->peer_chan;
+	}
+
+	/* Now send a tx action frame */
+	ack = wl_cfgp2p_tx_action_frame(wl, dev, af_params, bssidx) ? false : true;
+
+	/* if failed, retry it. tx_retry_max value is configure by .... */
+	while ((ack == false) && (tx_retry++ < config_af_params.max_tx_retry)) {
+		WL_AF_TX_KEEP_PRI_CONNECTION_VSDB(wl);
+
+		ack = wl_cfgp2p_tx_action_frame(wl, dev, af_params, bssidx) ?
+			false : true;
+	}
+	if (ack == false) {
+		WL_ERR(("Failed to send Action Frame(retry %d)\n", tx_retry));
+	}
+exit:
+	/* Clear SENDING_ACT_FRM after all sending af is done */
+	wl_clr_drv_status(wl, SENDING_ACT_FRM, dev);
+
+#ifdef WL_CFG80211_SYNC_GON
+	/* WAR: sometimes dongle does not keep the dwell time of 'actframe'.
+	 * if we coundn't get the next action response frame and dongle does not keep
+	 * the dwell time, go to listen state again to get next action response frame.
+	 */
+	if (ack && config_af_params.extra_listen &&
+#ifdef WL_CFG80211_GON_COLLISION
+		!wl->block_gon_req_tx_count &&
+#endif /* WL_CFG80211_GON_COLLISION */
+		wl_get_drv_status_all(wl, WAITING_NEXT_ACT_FRM) &&
+		wl->af_sent_channel == wl->afx_hdl->my_listen_chan) {
+		s32 extar_listen_time;
+
+		extar_listen_time = af_params->dwell_time -
+			jiffies_to_msecs(jiffies - wl->af_tx_sent_jiffies);
+
+		if (extar_listen_time > 50) {
+			wl_set_drv_status(wl, WAITING_NEXT_ACT_FRM_LISTEN, dev);
+			WL_DBG(("Wait more time! actual af time:%d,"
+				"calculated extar listen:%d\n",
+				af_params->dwell_time, extar_listen_time));
+			if (wl_cfgp2p_discover_listen(wl, wl->af_sent_channel,
+				extar_listen_time + 100) == BCME_OK) {
+				wait_for_completion_timeout(&wl->wait_next_af,
+					msecs_to_jiffies(extar_listen_time + 100 + 300));
+			}
+			wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM_LISTEN, dev);
+		}
+	}
+#endif /* WL_CFG80211_SYNC_GON */
+	wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM, dev);
+
+	if (wl->afx_hdl->pending_tx_act_frm)
+		wl->afx_hdl->pending_tx_act_frm = NULL;
+
+	WL_INFO(("-- sending Action Frame is %s, listen chan: %d\n",
+		(ack) ? "Succeeded!!":"Failed!!", wl->afx_hdl->my_listen_chan));
+
+#ifdef WL_CFG80211_GON_COLLISION
+	if (wl->block_gon_req_tx_count) {
+		wl->block_gon_req_tx_count--;
+		/* if ack is ture, supplicant will wait more time(100ms).
+		 * so we will return it as a success to get more time .
+		 */
+		ack = true;
+	}
+#endif /* WL_CFG80211_GON_COLLISION */
+
+	/* if all done, turn mpc on again */
+	if (config_af_params.mpc_onoff == 1) {
+		wldev_iovar_setint(dev, "mpc", 1);
+	}
+
+	return ack;
 }
 
 static s32
@@ -4220,15 +4513,8 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 	s32 err = BCME_OK;
 	s32 bssidx = 0;
 	u32 id;
-	u32 retry = 0;
 	bool ack = false;
-	wifi_p2p_pub_act_frame_t *act_frm = NULL;
-	wifi_p2p_action_frame_t *p2p_act_frm = NULL;
-	wifi_p2psd_gas_pub_act_frame_t *sd_act_frm = NULL;
 	s8 eabuf[ETHER_ADDR_STR_LEN];
-#ifdef WL_CFG80211_SYNC_GON
-	bool is_waiting_more_time = false;
-#endif /* WL_CFG80211_SYNC_GON */
 
 	WL_DBG(("Enter \n"));
 
@@ -4265,7 +4551,8 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 		if (ieee80211_is_probe_resp(mgmt->frame_control)) {
 			s32 ie_offset =  DOT11_MGMT_HDR_LEN + DOT11_BCN_PRB_FIXED_LEN;
 			s32 ie_len = len - ie_offset;
-
+			if (dev == wl_to_prmry_ndev(wl))
+				bssidx = wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_DEVICE);
 			wl_cfgp2p_set_management_ie(wl, dev, bssidx,
 				VNDR_IE_PRBRSP_FLAG, (u8 *)(buf + ie_offset), ie_len);
 			cfg80211_mgmt_tx_status(ndev, *cookie, buf, len, true, GFP_KERNEL);
@@ -4333,247 +4620,19 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 	wl->afx_hdl->peer_listen_chan = af_params->channel;
 	WL_DBG(("channel from upper layer %d\n", wl->afx_hdl->peer_listen_chan));
 
-	/* Add the dwell time
+	/* Add the default dwell time
 	 * Dwell time to stay off-channel to wait for a response action frame
 	 * after transmitting an GO Negotiation action frame
 	 */
 	af_params->dwell_time = WL_DWELL_TIME;
 
 	memcpy(action_frame->data, &buf[DOT11_MGMT_HDR_LEN], action_frame->len);
-	if (wl_cfgp2p_is_pub_action(action_frame->data, action_frame->len)) {
-		act_frm = (wifi_p2p_pub_act_frame_t *) (action_frame->data);
-		WL_DBG(("P2P PUB action_frame->len: %d chan %d category %d subtype %d\n",
-			action_frame->len, af_params->channel,
-			act_frm->category, act_frm->subtype));
 
-		if (act_frm->subtype == P2P_PAF_GON_REQ) {
-			WL_DBG(("P2P: GO_NEG_PHASE status set \n"));
-			wl_set_p2p_status(wl, GO_NEG_PHASE);
-		} else if (act_frm->subtype == P2P_PAF_GON_CONF) {
-			/* If we reached till GO Neg confirmation
-			 * reset the filter
-			 */
-			WL_DBG(("P2P: GO_NEG_PHASE status cleared \n"));
-			wl_clr_p2p_status(wl, GO_NEG_PHASE);
-		}
-
-	} else if (wl_cfgp2p_is_p2p_action(action_frame->data, action_frame->len)) {
-		p2p_act_frm = (wifi_p2p_action_frame_t *) (action_frame->data);
-		WL_DBG(("P2P action_frame->len: %d chan %d category %d subtype %d\n",
-			action_frame->len, af_params->channel,
-			p2p_act_frm->category, p2p_act_frm->subtype));
-	} else if (wl_cfgp2p_is_gas_action(action_frame->data, action_frame->len)) {
-		sd_act_frm = (wifi_p2psd_gas_pub_act_frame_t *) (action_frame->data);
-		WL_DBG(("Service Discovery action_frame->len: %d chan %d category %d action %d\n",
-			action_frame->len, af_params->channel,
-			sd_act_frm->category, sd_act_frm->action));
-		if (sd_act_frm) {
-			if (sd_act_frm->action == P2PSD_ACTION_ID_GAS_IREQ ||
-				sd_act_frm->action == P2PSD_ACTION_ID_GAS_CREQ) {
-				af_params->dwell_time = WL_MED_DWELL_TIME;
-				/* save the next sd af action type to cancel
-				 * the remained dwell time in rx process
-				 */
-				wl->next_af_subtype = sd_act_frm->action + 1;
-				wl_set_drv_status(wl, WAITING_NEXT_ACT_FRM, dev);
-			} else {
-				af_params->dwell_time = WL_MIN_DWELL_TIME;
-				wl->next_af_subtype = -1;
-			}
-		}
-	}
-	wl_cfgp2p_print_actframe(true, action_frame->data, action_frame->len);
-
-	if (act_frm) {
-		/*
-		 * To make sure to send successfully action frame, we have to turn off mpc
-		 */
-		if ((act_frm->subtype == P2P_PAF_GON_REQ) ||
-		  (act_frm->subtype == P2P_PAF_GON_RSP) ||
-		  (act_frm->subtype == P2P_PAF_GON_CONF) ||
-		  (act_frm->subtype == P2P_PAF_PROVDIS_REQ)) {
-			wldev_iovar_setint(dev, "mpc", 0);
-		}
-
-		if (act_frm->subtype == P2P_PAF_DEVDIS_REQ) {
-			af_params->dwell_time = WL_LONG_DWELL_TIME;
-		} else if (act_frm->subtype == P2P_PAF_PROVDIS_REQ ||
-			act_frm->subtype == P2P_PAF_PROVDIS_RSP ||
-			act_frm->subtype == P2P_PAF_GON_REQ ||
-			act_frm->subtype == P2P_PAF_GON_RSP ||
-			act_frm->subtype == P2P_PAF_INVITE_REQ) {
-			af_params->dwell_time = WL_MED_DWELL_TIME;
-		} else {
-			af_params->dwell_time = WL_MIN_DWELL_TIME;
-		}
-
-#ifdef WL_CFG80211_GON_COLLISION
-		if (wl->block_gon_req_tx_count && act_frm->subtype == P2P_PAF_GON_REQ) {
-			/* drop gon req tx action frame */
-			wl->block_gon_req_tx_count--;
-			WL_ERR(("Drop gon req tx action frame: count %d\n",
-				wl->block_gon_req_tx_count));
-			cfg80211_mgmt_tx_status(ndev, *cookie, buf, len, true, GFP_KERNEL);
-			kfree(af_params);
-			goto exit;
-		} else if (act_frm->subtype == P2P_PAF_GON_CONF) {
-			/* if go formation done, clear it */
-			wl->block_gon_req_tx_count = 0;
-			wl->block_gon_req_rx_count = 0;
-		}
-#endif /* WL_CFG80211_GON_COLLISION */
-
-		if (act_frm->subtype == P2P_PAF_GON_REQ) {
-			wl->afx_hdl->my_listen_chan =
-				wl_find_listen_channel(wl, act_frm->elts, action_frame->len);
-		}
-
-		if (act_frm->subtype == P2P_PAF_PROVDIS_REQ ||
-			act_frm->subtype == P2P_PAF_DEVDIS_REQ ||
-			act_frm->subtype == P2P_PAF_INVITE_REQ ||
-			act_frm->subtype == P2P_PAF_GON_REQ ||
-			act_frm->subtype == P2P_PAF_GON_RSP) {
-#ifdef WL_CFG80211_SYNC_GON
-			/* WAR: sometimes dongle does not keep the dwell time of 'actframe'.
-			 *if is_waiting_more_time is set, it will check jiffies after sent af
-			 */
-			is_waiting_more_time = true;
-#endif /* WL_CFG80211_SYNC_GON */
-
-			/* save the next pub af subtype to cancel the remained dwell time */
-			if (act_frm->subtype == P2P_PAF_PROVDIS_RSP)
-				wl->next_af_subtype = P2P_PAF_GON_REQ;
-			else
-				wl->next_af_subtype = act_frm->subtype + 1;
-
-			wl_set_drv_status(wl, WAITING_NEXT_ACT_FRM, dev);
-			wl->afx_hdl->peer_chan = WL_INVALID;
-		} else
-			wl->next_af_subtype = -1;
-	}
-
-#ifdef VSDB
-	/* if connecting, sleep for a while before sending af tx for VSDB */
-	if (wl_get_drv_status(wl, CONNECTING, wl_to_prmry_ndev(wl))) {
-		msleep(50);
-	}
-#endif
-
-	/* if scanning, abort current scan. */
-	if (wl_get_drv_status_all(wl, SCANNING)) {
-		/* wl_cfg80211_scan_abort(wl, dev); */
-		wl_notify_escan_complete(wl, ndev, true, true);
-	}
-
-	/* Set SENDING_ACT_FRM and destinatio address for sending af */
-	wl_set_drv_status(wl, SENDING_ACT_FRM, dev);
-	memcpy(wl->afx_hdl->tx_dst_addr.octet,
-		af_params->action_frame.da.octet,
-		sizeof(wl->afx_hdl->tx_dst_addr.octet));
-
-	if (IS_P2P_SOCIAL(af_params->channel) &&
-		(IS_P2P_PUB_ACT_REQ(act_frm, &act_frm->elts[0], action_frame->len) ||
-		IS_GAS_REQ(sd_act_frm, action_frame->len)) &&
-		wl_to_p2p_bss_saved_ie(wl, P2PAPI_BSSCFG_DEVICE).p2p_probe_req_ie_len) {
-		/* channel offload require P2P IE for Probe request
-		 * otherwise, we will use wl_cfgp2p_tx_action_frame directly.
-		 * channel offload for action request frame
-		 */
-
-		/* channel offload for action request frame */
-		ack = wl_cfg80211_send_at_common_channel(wl, dev, af_params);
-	} else {
-		ack = (wl_cfgp2p_tx_action_frame(wl, dev, af_params, bssidx)) ? false : true;
-		if (!ack) {
-			u32 max_retry = WL_CHANNEL_SYNC_RETRY;
-
-			if (wl_to_p2p_bss_saved_ie(wl, P2PAPI_BSSCFG_DEVICE).p2p_probe_req_ie_len) {
-				/* if the NO ACK occurs, the peer device will be on
-				* listen channel of the peer
-				* So, we have to find the peer and send action frame on
-				* that channel.
-				*/
-				/* if public action response, the peer only wait for 100ms.
-				 * do not sync channel
-				 */
-				if (act_frm && IS_P2P_SOCIAL(af_params->channel) &&
-					!IS_P2P_PUB_ACT_RSP_SUBTYPE(act_frm->subtype)) {
-					ack = wl_cfg80211_send_at_common_channel(wl, dev,
-						af_params);
-				} else {
-					for (retry = 0; retry < max_retry; retry++) {
-						WL_AF_TX_KEEP_PRI_CONNECTION_VSDB(wl);
-						ack = (wl_cfgp2p_tx_action_frame(wl, dev,
-							af_params, bssidx)) ? false : true;
-						if (ack)
-							break;
-					}
-				}
-			} else {
-				for (retry = 0; retry < max_retry; retry++) {
-					WL_AF_TX_KEEP_PRI_CONNECTION_VSDB(wl);
-					ack = (wl_cfgp2p_tx_action_frame(wl, dev,
-						af_params, bssidx)) ? false : true;
-					if (ack)
-						break;
-				}
-
-			}
-
-		}
-
-	}
-
-	/* Clear SENDING_ACT_FRM after all sending af is done */
-	wl_clr_drv_status(wl, SENDING_ACT_FRM, dev);
-
-#ifdef WL_CFG80211_SYNC_GON
-	/* WAR: sometimes dongle does not keep the dwell time of 'actframe'.
-	 * if we coundn't get the next action response frame and dongle does not keep
-	 * the dwell time, go to listen state again to get next action response frame.
-	 */
-	if (ack && is_waiting_more_time &&
-#ifdef WL_CFG80211_GON_COLLISION
-		!wl->block_gon_req_tx_count &&
-#endif /* WL_CFG80211_GON_COLLISION */
-		wl_get_drv_status_all(wl, WAITING_NEXT_ACT_FRM) &&
-		wl->af_sent_channel == wl->afx_hdl->my_listen_chan) {
-		s32 extar_listen_time;
-
-		extar_listen_time =	af_params->dwell_time -
-			jiffies_to_msecs(jiffies - wl->af_tx_sent_jiffies);
-
-		if (extar_listen_time > 50) {
-			wl_set_drv_status(wl, WAITING_NEXT_ACT_FRM_LISTEN, dev);
-			WL_DBG(("Wait more time! actual af time:%d,"
-				"calculated extar listen:%d\n",
-				af_params->dwell_time, extar_listen_time));
-			if (wl_cfgp2p_discover_listen(wl, wl->af_sent_channel,
-				extar_listen_time + 100) == BCME_OK) {
-				wait_for_completion_timeout(&wl->wait_next_af,
-					msecs_to_jiffies(extar_listen_time + 100 + 300));
-			}
-			wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM_LISTEN, dev);
-		}
-	}
-#endif /* WL_CFG80211_SYNC_GON */
-	wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM, dev);
-
-	WL_INFO(("-- sending Action Frame is %s, my listen chan: %d\n",
-		(ack) ? "Succeeded!!":"Failed!!", wl->afx_hdl->my_listen_chan));
-
-#ifdef WL_CFG80211_GON_COLLISION
-	/* if ack is ture, supplicant will wait more time(100ms).
-	 * so we will return it as a success if block gon req tx is on.
-	 */
-	if (wl->block_gon_req_tx_count)
-		ack = true;
-#endif /* WL_CFG80211_GON_COLLISION */
+	ack = wl_cfg80211_send_action_frame(wiphy, dev, ndev, af_params,
+		action_frame, action_frame->len, bssidx);
 
 	cfg80211_mgmt_tx_status(ndev, *cookie, buf, len, ack, GFP_KERNEL);
-	if (ack && act_frm && act_frm->subtype == P2P_PAF_GON_CONF) {
-		wldev_iovar_setint(dev, "mpc", 1);
-	}
+
 	kfree(af_params);
 exit:
 	return err;
@@ -5122,6 +5181,8 @@ static s32 wl_cfg80211_bcn_set_params(
 	}
 
 	if (info->hidden_ssid) {
+		if ((err = wldev_iovar_setint(dev, "closednet", 1)) < 0)
+			WL_ERR(("failed to set hidden : %d\n", err));
 		WL_DBG(("hidden_ssid_enum_val: %d \n", info->hidden_ssid));
 	}
 
@@ -5275,8 +5336,8 @@ wl_cfg80211_parse_set_ies(
 
 	/* Set Beacon IEs to FW */
 	if ((err = wl_cfgp2p_set_management_ie(wl, dev, bssidx,
-		VNDR_IE_BEACON_FLAG, (u8 *)info->beacon_ies,
-		info->beacon_ies_len)) < 0) {
+		VNDR_IE_BEACON_FLAG, (u8 *)info->tail,
+		info->tail_len)) < 0) {
 		WL_ERR(("Set Beacon IE Failed \n"));
 	} else {
 		WL_DBG(("Applied Vndr IEs for Beacon \n"));
@@ -5563,7 +5624,6 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 	struct parsed_ies ies;
 	bcm_tlv_t *ssid_ie;
 	bool pbc = 0;
-
 	WL_DBG(("interval (%d) dtim_period (%d) head_len (%d) tail_len (%d)\n",
 		info->interval, info->dtim_period, info->head_len, info->tail_len));
 
@@ -5615,7 +5675,8 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 	} else {
 		WL_DBG(("Applied Vndr IEs for Beacon \n"));
 	}
-	if (wl_cfg80211_bcn_validate_sec(dev, &ies, dev_role, bssidx) < 0)
+	if (!wl_cfgp2p_bss_isup(dev, bssidx) &&
+		(wl_cfg80211_bcn_validate_sec(dev, &ies, dev_role, bssidx) < 0))
 	{
 		WL_ERR(("Beacon set security failed \n"));
 		goto fail;
@@ -5652,9 +5713,9 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 	}
 
 	/* Enable Probe Req filter */
-	if ((dev_role == NL80211_IFTYPE_P2P_GO) ||
-		((dev_role == NL80211_IFTYPE_AP) && (ies.wps_ie))) {
-		wl_validate_wps_ie((char *) ies.wps_ie, &pbc);
+	if (((dev_role == NL80211_IFTYPE_P2P_GO) ||
+		(dev_role == NL80211_IFTYPE_AP)) && (ies.wps_ie != NULL)) {
+		wl_validate_wps_ie((char *) ies.wps_ie, ies.wps_ie_len, &pbc);
 		if (pbc)
 			wl_add_remove_eventmsg(dev, WLC_E_PROBREQ_MSG, true);
 	}
@@ -6734,7 +6795,7 @@ wl_gon_req_collision(struct wl_priv *wl, wl_action_frame_t *tx_act_frm,
 }
 #endif /* WL_CFG80211_GON_COLLISION */
 
-static void
+void
 wl_stop_wait_next_action_frame(struct wl_priv *wl, struct net_device *ndev)
 {
 	if (wl_get_drv_status_all(wl, SENDING_ACT_FRM) &&
@@ -7446,7 +7507,7 @@ static s32 wl_notify_escan_complete(struct wl_priv *wl,
 			dev = wl->scan_request->dev;
 	}
 	else {
-		WL_ERR(("wl->scan_request is NULL may be internal scan."
+		WL_DBG(("wl->scan_request is NULL may be internal scan."
 			"doing scan_abort for ndev %p primary %p p2p_net %p",
 				ndev, wl_to_prmry_ndev(wl), wl->p2p_net));
 		dev = ndev;
@@ -7934,7 +7995,7 @@ static s32 wl_notifier_change_state(struct wl_priv *wl, struct net_info *_net_in
 						((err = wldev_iovar_setint(iter->ndev, "roam_off",
 						iter->roam_off)) == BCME_OK)) {
 						iter->roam_off = WL_INVALID;
-					} else
+					} else if (err)
 						WL_ERR((" failed to set roam_off : %d\n", err));
 				}
 			}
@@ -8207,14 +8268,15 @@ void wl_cfg80211_detach(void *para)
 	wl_cfg80211_btcoex_deinit(wl);
 #endif 
 
-#if defined(WLP2P) && defined(WL_ENABLE_P2P_IF)
-	wl_cfg80211_detach_p2p();
-#endif
 	wl_setup_rfkill(wl, FALSE);
 	if (wl->p2p_supported) {
 		WL_ERR(("wl_cfgp2p_down() is not called yet\n"));
 		wl_cfgp2p_down(wl);
 	}
+
+#if defined(WLP2P) && defined(WL_ENABLE_P2P_IF)
+	wl_cfg80211_detach_p2p();
+#endif
 	wl_deinit_priv(wl);
 	wlcfg_drv_priv = NULL;
 	wl_cfg80211_clear_parent_dev();

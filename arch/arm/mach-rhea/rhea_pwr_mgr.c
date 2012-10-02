@@ -587,13 +587,14 @@ early_initcall(rhea_pwr_mgr_init);
 
 #ifdef CONFIG_DEBUG_FS
 
-void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param)
+void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param,
+		u32 dbg_bit_sel)
 {
 	if (db_mux == 0)	/*GPIO ? */
 		mux_param = (type == 0) ? DBG_BUS_PM_DBG_BUS_SEL
 				: DBG_BUS_BMDB_DBG_BUS_SEL;
 
-	debug_bus_mux_sel(db_mux, mux_param);
+	debug_bus_mux_sel(db_mux, mux_param, dbg_bit_sel);
 }
 
 #endif /*CONFIG_DEBUG_FS */

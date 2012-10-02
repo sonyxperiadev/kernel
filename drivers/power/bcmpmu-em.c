@@ -40,8 +40,7 @@
 #define BCMPMU_PRINT_REPORT (1U << 4)
 
 static int debug_mask = BCMPMU_PRINT_ERROR |
-			BCMPMU_PRINT_INIT |
-			BCMPMU_PRINT_REPORT;
+			BCMPMU_PRINT_INIT;
 
 /* static int debug_mask = 0xFF; */
 
@@ -2462,8 +2461,16 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_em_attr_group);
 #endif
+	if (pdata->tch_timer_dis) {
+		if ((bcmpmu->regmap[PMU_REG_TCH_TIMER].addr != 0) &&
+				(bcmpmu->regmap[PMU_REG_TCH_TIMER].mask != 0)) {
+			pr_em(INIT, "%s: Disable TCH timer\n", __func__);
+			bcmpmu->write_dev(bcmpmu, PMU_REG_TCH_TIMER,
+					bcmpmu->regmap[PMU_REG_TCH_TIMER].mask,
+					bcmpmu->regmap[PMU_REG_TCH_TIMER].mask);
+		}
+	}
 	schedule_delayed_work(&pem->work, msecs_to_jiffies(500));
-
 	return 0;
 
 err:

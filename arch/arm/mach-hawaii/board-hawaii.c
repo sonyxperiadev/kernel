@@ -105,12 +105,13 @@
 #include <linux/bma222.h>
 #endif
 
-#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 #include <linux/bmp18x.h>
 #include <mach/bmp18x_i2c_settings.h>
 #endif
 
 #if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
+#include <linux/al3006.h>
 #include <mach/al3006_i2c_settings.h>
 #endif
 
@@ -118,6 +119,13 @@
 #include <linux/mpu.h>
 #include <mach/mpu6050_settings.h>
 #endif
+
+#if defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
+#include <linux/ami306_def.h>
+#include <linux/ami_sensor.h>
+#include <mach/ami306_settings.h>
+#endif
+
 
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
@@ -198,26 +206,27 @@ extern int hawaii_wifi_status_register(
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 
-#define HAWAII_8250PORT(name, clk)				\
+#define HAWAII_8250PORT(name, clk, freq, uart_name)		\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
 	.irq        = BCM_INT_ID_##name,			\
-	.uartclk    = 26000000,					\
+	.uartclk    = freq,					\
 	.regshift   = 2,					\
-	.iotype     = UPIO_DWAPB,				\
+	.iotype     = UPIO_MEM32,				\
 	.type       = PORT_16550A,				\
 	.flags      = UPF_BOOT_AUTOCONF | UPF_BUG_THRE |	\
 			UPF_FIXED_TYPE | UPF_SKIP_TEST,		\
 	.private_data = (void __iomem *)((KONA_##name##_VA) +	\
 					UARTB_USR_OFFSET),	\
 	.clk_name = clk,					\
+	.port_name = uart_name,					\
 }
 
 static struct plat_serial8250_port hawaii_uart_platform_data[] = {
-	HAWAII_8250PORT(UART0, "uart0_clk"),
-	HAWAII_8250PORT(UART1, "uart1_clk"),
-	HAWAII_8250PORT(UART2, "uart2_clk"),
+	HAWAII_8250PORT(UART0, "uart0_clk", 26000000, "console"),
+	HAWAII_8250PORT(UART1, "uart1_clk", 48000000, "bluetooth"),
+	HAWAII_8250PORT(UART2, "uart2_clk", 26000000, "gps"),
 	{
 		.flags = 0,
 	},
@@ -522,7 +531,7 @@ static struct i2c_board_info __initdata bcmi2cnfc[] = {
 };
 #endif
 
-#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
 	{
 		I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
@@ -531,10 +540,30 @@ static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
 #endif
 
 #if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
+static struct al3006_platform_data al3006_pdata = {
+#ifdef AL3006_IRQ_GPIO
+	.irq_gpio = AL3006_IRQ_GPIO,
+#else
+	.irq_gpio = -1,
+#endif
+};
+
 static struct i2c_board_info __initdata i2c_al3006_info[] = {
 	{
 		I2C_BOARD_INFO("al3006", AL3006_I2C_ADDRESS),
-		.irq = gpio_to_irq(AL3006_IRQ_GPIO),
+		.platform_data = &al3006_pdata,
+	},
+};
+#endif
+
+#if defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
+static struct ami306_platform_data ami306_data = AMI306_DATA;
+static struct i2c_board_info __initdata i2c_ami306_info[] =
+{
+	{
+		I2C_BOARD_INFO(AMI_DRV_NAME, AMI_I2C_ADDRESS),
+		.platform_data = &ami306_data,
+		.irq =  gpio_to_irq(3),
 	},
 };
 #endif
@@ -548,27 +577,31 @@ static struct bma222_accl_platform_data bma_pdata = {
 
 #if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
 
-static struct mpu_platform_data mpu6050_platform_data = {
+static struct mpu_platform_data mpu6050_platform_data =
+{
 	.int_config  = MPU6050_INIT_CFG,
 	.level_shifter = 0,
 	.orientation = MPU6050_DRIVER_ACCEL_GYRO_ORIENTATION,
 };
 
-static struct ext_slave_platform_data mpu_compass_data = {
-	.bus = EXT_SLAVE_BUS_SECONDARY,
+/*static struct ext_slave_platform_data mpu_compass_data =
+{
+//	.bus = EXT_SLAVE_BUS_SECONDARY,
 	.orientation = MPU6050_DRIVER_COMPASS_ORIENTATION,
-};
+};*/
 
-static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] = {
+
+static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] =
+{
 	{
 		I2C_BOARD_INFO("mpu6050", MPU6050_SLAVE_ADDR),
 		.platform_data = &mpu6050_platform_data,
-		.irq = gpio_to_irq(MPU6050_IRQ_GPIO)
 	},
-	{
-		I2C_BOARD_INFO("ami306", MPU6050_COMPASS_SLAVE_ADDR),
+/*	{
+		I2C_BOARD_INFO("ami_sensor", MPU6050_COMPASS_SLAVE_ADDR),
 		.platform_data = &mpu_compass_data,
-	},
+		.irq =  gpio_to_irq(3),
+	},*/
 };
 
 #endif /* CONFIG_MPU_SENSORS_MPU6050B1 */
@@ -1216,19 +1249,49 @@ static void __init hawaii_add_i2c_devices(void)
 #endif
 
 #if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
-	i2c_register_board_info(MPU6050_I2C_BUS_ID, inv_mpu_i2c0_boardinfo,
-			ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
+#if defined(MPU6050_IRQ_GPIO)
+	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(MPU6050_IRQ_GPIO);
+#endif
+	i2c_register_board_info(MPU6050_I2C_BUS_ID,
+			inv_mpu_i2c0_boardinfo, ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
 #endif
 
-#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
-	i2c_register_board_info(BMP18X_I2C_BUS_ID, i2c_bmp18x_info,
-			ARRAY_SIZE(i2c_bmp18x_info));
+#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+	i2c_register_board_info(
+#ifdef BMP18X_I2C_BUS_ID
+			BMP18X_I2C_BUS_ID,
+#else
+			-1,
 #endif
+			i2c_bmp18x_info, ARRAY_SIZE(i2c_bmp18x_info));
+#endif
+
 
 #if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
-	i2c_register_board_info(AL3006_I2C_BUS_ID, i2c_al3006_info,
-			ARRAY_SIZE(i2c_al3006_info));
+#ifdef AL3006_IRQ
+	i2c_al3006_info[0].irq = gpio_to_irq(AL3006_IRQ_GPIO);
+#else
+	i2c_al3006_info[0].irq = -1;
 #endif
+	i2c_register_board_info(
+#ifdef AL3006_I2C_BUS_ID
+		AL3006_I2C_BUS_ID,
+#else
+		-1,
+#endif
+		i2c_al3006_info, ARRAY_SIZE(i2c_al3006_info));
+#endif /* CONFIG_AL3006 */
+
+#if  defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306)
+	i2c_register_board_info(
+#ifdef AMI306_I2C_BUS_ID
+			AMI306_I2C_BUS_ID,
+#else
+			-1,
+#endif
+			i2c_ami306_info, ARRAY_SIZE(i2c_ami306_info));
+#endif
+
 
 }
 

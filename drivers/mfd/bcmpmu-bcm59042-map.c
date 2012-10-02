@@ -335,6 +335,8 @@ static struct bcmpmu_reg_map bcm59042_reg_map[PMU_REG_MAX] = {
 		.mask = 0x07, .ro = 0, .shift = 0},
 	[PMU_REG_CHRGR_EOC] =		{.map = 0x00, .addr = 0x58,
 		.mask = 0x0F, .ro = 0, .shift = 0},
+	[PMU_REG_TCH_TIMER] =		{.map = 0x00, .addr = 0x50,
+		.mask = 0x38, .ro = 0, .shift = 3},
 	/* fuel gauge */
 	[PMU_REG_FG_ACCM0] =		{.map = 0x01, .addr = 0x49,
 		.mask = 0xFF, .ro = 1, .shift = 0},

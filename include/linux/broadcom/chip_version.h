@@ -29,27 +29,29 @@
 /* !< --- PreProcess --- >!*/
 
 /* Chip IDs: make sure they are the same as those defined in memmap.h */
-#define ML2000B			0
-#define ML2010			1
-#define ML2010B			2
-#define ML2020			3
-#define ML2020B			4
-#define	ML2029			5
-#define ML2010C			6
-#define ML2021			7	/*Development chip having HS DROM. */
-#define	BCM2132			8
-#define	BCM2133			9
-#define BCM2124			10
-#define BCM2152			11
-#define BCM2153			12
-#define BCM213x1		13
-#define BCM21551		14
-#define BCM213x1v		15
-#define BCM213x1j		16
-#define ATHENA			0x30
-#define HERA			0x31	/* Need to be replaced with real one */
-#define RHEA			0x32	/* Need to be replaced with real one */
-#define HAWAII			0x33	/* Need to be replaced with real one */
+#define ML2000B					0
+#define ML2010					1
+#define ML2010B					2
+#define ML2020					3
+#define ML2020B					4
+#define	ML2029					5
+#define ML2010C					6
+#define ML2021					7	/*Development chip having HS DROM. */
+#define	BCM2132					8
+#define	BCM2133					9
+#define BCM2124					10
+#define BCM2152					11
+#define BCM2153					12
+#define BCM213x1				13
+#define BCM21551				14
+#define BCM213x1v				15
+#define BCM213x1j                               16
+#define ATHENA                                  0x30
+#define HERA                                    0x31  /* Need to be replaced with real one */
+#define RHEA                                    0x32  /* Need to be replaced with real one */
+#define SAMOA                                   0x33  /* Need to be replaced with real one */
+#define CAPRI                                   0x34
+#define HAWAII                                  0x35
 
 /**
 *	Code generation:  the '!<gensym>! SYMBOL defined' comments
@@ -116,8 +118,13 @@
 
 #elif defined(_SAMOA_)
 #define CHIPID		SAMOA
+
+#elif defined(_CAPRI_)
+#define CHIPID		CAPRI
+
 #elif defined(_HAWAII_)
 #define CHIPID		HAWAII
+
 #else
 #error No chip version defined!!!
 #endif

@@ -60,6 +60,10 @@
 #define CCU_GPIO_DBG_BUS_SEL 0xB
 #define ROOT_CCU_GPIO_DBG_BUS_SEL 0xF
 #define ROOT_CCU_SDDAT_DBG_BUS_SEL 0x8
+#define GPIO_OFFSET(X) (PADCTRLREG_GPIO00_OFFSET + (4 * (X)))
+#define SDDAT_OFFSET(X) (PADCTRLREG_SDDAT0_OFFSET + (4 * (X)))
+#define GPIO_DBG_PINS 16
+#define SDDAT_DBG_PINS 4
 #endif
 
 static const char *const ccu_clks[] = {
@@ -7678,16 +7682,35 @@ int __clock_print_act_clks(void)
 EXPORT_SYMBOL(__clock_print_act_clks);
 
 #ifdef CONFIG_DEBUG_FS
-int debug_bus_mux_sel(int mux_sel, int mux_param)
+void store_padctrlreg_val(u32 gpio_reg_val[GPIO_DBG_PINS],
+		u32 sddat_reg_val[SDDAT_DBG_PINS])
+{
+	int i;
+	for (i = 0; i < GPIO_DBG_PINS; i++)
+		gpio_reg_val[i] = readl(KONA_PAD_CTRL + GPIO_OFFSET(i));
+	for (i = 0; i < SDDAT_DBG_PINS; i++)
+		sddat_reg_val[i] = readl(KONA_PAD_CTRL +
+				SDDAT_OFFSET(i));
+}
+int debug_bus_mux_sel(int mux_sel, int mux_param, u32 dbg_bit_sel)
 {
 	u32 reg_val;
 	static int reg_enabled;
 	static struct regulator *rgltr;
+	static u32 gpio_reg_val[GPIO_DBG_PINS];
+	static u32 sddat_reg_val[SDDAT_DBG_PINS];
+	static int store_reg_val;
+	int i;
+
 	if (rgltr == NULL) {
 		rgltr = regulator_get(NULL, "sddat_debug_bus");
 		if (IS_ERR_OR_NULL(rgltr))
 			pr_info("regulator_get failed\n");
 	}
+	/*storing the backup value when the function is first called */
+	if (store_reg_val == 0)
+		store_padctrlreg_val(gpio_reg_val, sddat_reg_val);
+	store_reg_val = 1;
 	/*Get pad control write access by rwiting password */
 	writel(0xa5a501, KONA_PAD_CTRL + PADCTRLREG_WR_ACCESS_OFFSET);
 	/* unlock pad control registers */
@@ -7705,24 +7728,16 @@ int debug_bus_mux_sel(int mux_sel, int mux_param)
 			reg_enabled = 0;
 		}
 		/* Configure GPIO_XX to TESTPORT_XX  */
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO01_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO02_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO03_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO04_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO05_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO06_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO07_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO08_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO09_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO10_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO11_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO12_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO13_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO14_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO15_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO16_OFFSET);
-
+		i = 0;
+		do {
+			if ((dbg_bit_sel >> i) & 1)
+				writel(0x503, KONA_PAD_CTRL +
+						GPIO_OFFSET(i));
+			else
+				writel(gpio_reg_val[i], KONA_PAD_CTRL +
+						GPIO_OFFSET(i));
+			i++;
+		} while (i < GPIO_DBG_PINS);
 		reg_val = readl(KONA_CHIPREG_VA +
 				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
 		reg_val &=
@@ -7739,10 +7754,16 @@ int debug_bus_mux_sel(int mux_sel, int mux_param)
 			regulator_enable(rgltr);
 			reg_enabled = 1;
 		}
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT0_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT1_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT2_OFFSET);
-		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_SDDAT3_OFFSET);
+		i = 0;
+		do {
+			if ((dbg_bit_sel >> i) & 1)
+				writel(0x503, KONA_PAD_CTRL +
+						SDDAT_OFFSET(i));
+			else
+				writel(sddat_reg_val[i], KONA_PAD_CTRL +
+						SDDAT_OFFSET(i));
+			i++;
+		} while (i < SDDAT_DBG_PINS);
 
 		reg_val = readl(KONA_CHIPREG_VA +
 				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
@@ -7761,10 +7782,10 @@ int debug_bus_mux_sel(int mux_sel, int mux_param)
     return 0;
 }
 int set_ccu_dbg_bus_mux(struct ccu_clk *ccu_clk, int mux_sel,
-			int mux_param)
+			int mux_param, u32 dbg_bit_sel)
 {
 	if (mux_sel == 0)
-		debug_bus_mux_sel(mux_sel, CCU_GPIO_DBG_BUS_SEL);
+		debug_bus_mux_sel(mux_sel, CCU_GPIO_DBG_BUS_SEL, dbg_bit_sel);
 	else {
 		u32 reg = readl(KONA_CHIPREG_VA +
 				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
@@ -7781,7 +7802,7 @@ int set_ccu_dbg_bus_mux(struct ccu_clk *ccu_clk, int mux_sel,
 	return 0;
 }
 
-int set_clk_idle_debug_mon(int clk_idle, int db_sel)
+int set_clk_idle_debug_mon(int clk_idle, int db_sel, u32 dbg_bit_sel)
 {
 	u32 reg_val;
 	struct clk *clk;
@@ -7794,7 +7815,7 @@ int set_clk_idle_debug_mon(int clk_idle, int db_sel)
 	}
 	debug_bus_mux_sel(db_sel,
 		(db_sel == 0) ? ROOT_CCU_GPIO_DBG_BUS_SEL :
-			ROOT_CCU_SDDAT_DBG_BUS_SEL);
+			ROOT_CCU_SDDAT_DBG_BUS_SEL, dbg_bit_sel);
 
 	clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
 	ccu_clk = to_ccu_clk(clk);
@@ -7811,7 +7832,7 @@ int set_clk_idle_debug_mon(int clk_idle, int db_sel)
 	return 0;
 }
 
-int set_clk_monitor_debug(int mon_select, int db_sel)
+int set_clk_monitor_debug(int mon_select, int db_sel, u32 dbg_bit_sel)
 {
 	pr_info("in %s monitor select: %d\n", __func__, mon_select);
 	switch (mon_select) {
@@ -7830,7 +7851,8 @@ int set_clk_monitor_debug(int mon_select, int db_sel)
 	case MONITOR_DEBUG_BUS_GPIO:
 		debug_bus_mux_sel(db_sel,
 			(db_sel == 0) ? ROOT_CCU_GPIO_DBG_BUS_SEL :
-					ROOT_CCU_SDDAT_DBG_BUS_SEL);
+					ROOT_CCU_SDDAT_DBG_BUS_SEL,
+					dbg_bit_sel);
 		break;
 	default:
 		return -EINVAL;

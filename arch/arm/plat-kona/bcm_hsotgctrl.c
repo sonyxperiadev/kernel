@@ -313,8 +313,9 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	/* Bring Put PHY out of reset state */
 	bcm_hsotgctrl_set_phy_resetb(true);
 
-	/* Disable software control of PHY-PM */
-	bcm_hsotgctrl_set_soft_ldo_pwrdn(false);
+	/* Don't disable software control of PHY-PM
+	 * We want to control the PHY LDOs from software
+	 */
 
 #ifndef CONFIG_ARCH_RHEA_BX
 	/* Do MDIO init values after PHY is up */
@@ -574,6 +575,47 @@ int bcm_hsotgctrl_bc_vdp_src_off(void)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_vdp_src_off);
 
+void bcm_hsotgctrl_wakeup_core(void)
+{
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
+		local_hsotgctrl_handle;
+
+	if (!clk_get_usage(bcm_hsotgctrl_handle->otg_clk)) {
+		/* Enable OTG AHB clock */
+		bcm_hsotgctrl_en_clock(true);
+	}
+
+	/* Disable wakeup interrupt */
+	bcm_hsotgctrl_phy_wakeup_condition(false);
+
+	/* Enable software control of PHY-PM */
+	bcm_hsotgctrl_set_soft_ldo_pwrdn(true);
+
+	/* PHY isolation */
+	bcm_hsotgctrl_set_phy_iso(true);
+
+	/* Power up ALDO */
+	bcm_hsotgctrl_set_aldo_pdn(true);
+	mdelay(PHY_PM_DELAY_IN_MS);
+
+	/* Put PHY in reset state */
+	bcm_hsotgctrl_set_phy_resetb(false);
+	mdelay(PHY_PM_DELAY_IN_MS);
+
+	/* De-assert PHY reset */
+	bcm_hsotgctrl_set_phy_resetb(true);
+
+	/* Remove PHY isolation */
+	bcm_hsotgctrl_set_phy_iso(false);
+	mdelay(PHY_PM_DELAY_IN_MS);
+
+	/* Request PHY clock */
+	bcm_hsotgctrl_set_phy_clk_request(true);
+	mdelay(PHY_PM_DELAY_IN_MS);
+
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_wakeup_core);
+
 static void bcm_hsotgctrl_delayed_wakeup_handler(struct work_struct *work)
 {
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
@@ -588,17 +630,8 @@ static void bcm_hsotgctrl_delayed_wakeup_handler(struct work_struct *work)
 
 	dev_info(bcm_hsotgctrl_handle->dev, "Do HSOTGCTRL wakeup\n");
 
-	if (!clk_get_usage(bcm_hsotgctrl_handle->otg_clk)) {
-		/* Enable OTG AHB clock */
-		bcm_hsotgctrl_en_clock(true);
-	}
-
-	/* Disable wakeup interrupt */
-	bcm_hsotgctrl_phy_wakeup_condition(false);
-
-	/* Request PHY clock */
-	bcm_hsotgctrl_set_phy_clk_request(true);
-
+	/* Use the PHY-core wakeup sequence */
+	bcm_hsotgctrl_wakeup_core();
 }
 
 static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
@@ -609,7 +642,7 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
 		return IRQ_NONE;
 
-	/* Disable wake IRQ */
+	/* Disable the IRQ since already waking up */
 	disable_irq_nosync(bcm_hsotgctrl_handle->hsotgctrl_irq);
 	bcm_hsotgctrl_handle->irq_enabled = false;
 
@@ -617,7 +650,6 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 	  msecs_to_jiffies(BCM_HSOTGCTRL_WAKEUP_PROCESSING_DELAY));
 
 	return IRQ_HANDLED;
-
 }
 
 int bcm_hsotgctrl_get_clk_count(void)
@@ -642,11 +674,21 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-	/* Enable wakeup interrupt */
-	bcm_hsotgctrl_phy_wakeup_condition(true);
+	/* Enable software control of PHY-PM */
+	bcm_hsotgctrl_set_soft_ldo_pwrdn(true);
+
+	/* PHY isolation */
+	bcm_hsotgctrl_set_phy_iso(true);
+	mdelay(PHY_PM_DELAY_IN_MS);
 
 	/* Clear PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(true);
+
+	/* Power down ALDO */
+	bcm_hsotgctrl_set_aldo_pdn(false);
+
+	/* Enable wakeup interrupt */
+	bcm_hsotgctrl_phy_wakeup_condition(true);
 
 	/* Disable OTG AHB clock */
 	bcm_hsotgctrl_en_clock(false);
@@ -1105,6 +1147,32 @@ int bcm_hsotgctrl_set_phy_resetb(bool on)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_set_phy_resetb);
 
+/* NOTE: PLL reset will be required in future if PHY_RESETB does not
+ * automatically reset PHY PLL
+ */
+int bcm_hsotgctrl_set_phy_pll_resetb(bool on)
+{
+	unsigned long val;
+	void *hsotg_ctrl_base;
+
+	if (NULL != local_hsotgctrl_handle)
+		hsotg_ctrl_base = local_hsotgctrl_handle->hsotg_ctrl_base;
+	else
+		return -ENODEV;
+
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+
+	if (on)
+		val |= HSOTG_CTRL_PHY_CFG_PLL_RESETB_MASK;
+	else
+		val &= ~HSOTG_CTRL_PHY_CFG_PLL_RESETB_MASK;
+
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_set_phy_pll_resetb);
+
 int bcm_hsotgctrl_set_phy_clk_request(bool on)
 {
 	unsigned long val;
@@ -1213,13 +1281,14 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_wakeup_condition);
 
 int bcm_hsotgctrl_is_suspend_allowed(bool *suspend_allowed)
 {
-	void *hsotg_ctrl_base;
-
 	if ((NULL != local_hsotgctrl_handle) &&
-		    suspend_allowed)
+		    suspend_allowed) {
+		/* Return the status */
 		*suspend_allowed = local_hsotgctrl_handle->allow_suspend;
-	else
+	} else {
+		/* No device handle */
 		return -ENODEV;
+	}
 
 	return 0;
 

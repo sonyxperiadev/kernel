@@ -175,6 +175,7 @@ enum {
 	CMD_DORMANT = 'd',
 	CMD_DISPLAY_STATS = 's',
 	CMD_FORCE_SLEEP = 'f',
+	CMD_PRINT_PM_LOG_BUF = 'p',
 };
 
 static void cmd_show_usage(void)
@@ -209,6 +210,10 @@ int get_force_sleep_state(void)
 extern void uas_jig_force_sleep(void);
 #endif
 
+static void cmd_print_pm_log_buf(const char *p)
+{
+	print_pm_log();
+}
 
 static void cmd_force_sleep(const char *p)
 {
@@ -279,6 +284,9 @@ static int param_set_debug(const char *val, const struct kernel_param *kp)
 		break;
 	case CMD_FORCE_SLEEP:
 		cmd_force_sleep(p);
+		break;
+	case CMD_PRINT_PM_LOG_BUF:
+		cmd_print_pm_log_buf(p);
 		break;
 	case CMD_SHOW_HELP: /* Fall-through */
 	default:

@@ -465,7 +465,7 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 	bcmpmu->rtcinfo = (void *)rdata;
 	rdata->update_irq_enabled = 0;
 	rdata->alarm_irq_enabled = 0;
-
+	device_init_wakeup(&pdev->dev, 1);
 	platform_set_drvdata(pdev, rdata);
 	rdata->rtc = rtc_device_register(pdev->name,
 			&pdev->dev, &bcmpmu_rtc_ops, THIS_MODULE);

@@ -56,6 +56,16 @@ Copyright 2009 - 2012  Broadcom Corporation
 #include "audio_controller.h"
 #include "audio_ddriver.h"
 #include "audio_trace.h"
+
+#include "taskmsgs.h"
+#include "ipcproperties.h"
+
+#include "rpc_global.h"
+#include "rpc_ipc.h"
+#include "xdr_porting_layer.h"
+#include "xdr.h"
+#include "rpc_api.h"
+
 /**
 *
 * @addtogroup AudioDriverGroup
@@ -893,6 +903,10 @@ void AUDDRV_SetAudioMode_voicerecord(AudioMode_t audio_mode,
 			"%s mode==%d, app=%d\n\r", __func__,
 			audio_mode, audio_app);
 
+	RPC_SetProperty(RPC_PROP_AUDIO_MODE,
+	      (UInt32) (audio_mode +
+		audio_app * AUDIO_MODE_NUMBER));
+
 	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
 			      (UInt32) audio_mode, (UInt32) audio_app, 0, 0, 0);
 	audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
@@ -949,6 +963,10 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 	aTrace(LOG_AUDIO_DRIVER,
 			"%s mode==%d, app=%d\n\r", __func__,
 			audio_mode, audio_app);
+
+	RPC_SetProperty(RPC_PROP_AUDIO_MODE,
+	      (UInt32) (audio_mode +
+		audio_app * AUDIO_MODE_NUMBER));
 
 	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
 			      (UInt32) audio_mode, (UInt32) audio_app, 0, 0, 0);

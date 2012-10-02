@@ -611,6 +611,8 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 			send_usb_event(bcmpmu, BCMPMU_USB_EVENT_IN, NULL);
 		break;
 	case PMU_IRQ_USBRM:
+		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_RM, NULL);
+
 		if ((paccy->bc != BCMPMU_BC_BB_BC11) &&
 		    (paccy->bc != BCMPMU_BC_BB_BC12)) {
 			schedule_delayed_work(&paccy->det_work, 0);

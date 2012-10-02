@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_sdio.c 347641 2012-07-27 11:55:19Z $
+ * $Id: dhd_sdio.c 349101 2012-08-07 01:19:08Z $
  */
 
 #include <typedefs.h>
@@ -810,18 +810,62 @@ dhdsdio_clk_kso_init(dhd_bus_t *bus)
 	return 0;
 }
 
+#define KSO_DBG(x)
+#define MAX_KSO_ATTEMPTS 64
 static int
 dhdsdio_clk_kso_enab(dhd_bus_t *bus, bool on)
 {
-	uint8 val = 0;
+	uint8 wr_val = 0, rd_val, cmp_val, bmask;
 	int err = 0;
+	int try_cnt = 0;
 
-	/* Don't read here since sdio could be off so just write only */
-	val |= (on << SBSDIO_FUNC1_SLEEPCSR_KSO_SHIFT);
-	bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_SLEEPCSR, val, &err);
+	wr_val |= (on << SBSDIO_FUNC1_SLEEPCSR_KSO_SHIFT);
 
-	if (err)
-		DHD_TRACE(("%s: KSO toggle %d failed: %d\n", __FUNCTION__, on, err));
+	if (on) {
+		cmp_val = SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |  SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK;
+		bmask = cmp_val;
+
+#ifdef DOEM_ANDROID
+		msleep(3);
+#else
+		OSL_DELAY(1000);
+#endif
+
+		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_SLEEPCSR, wr_val, &err);
+
+	} else {
+		/*  turn off  KSO  */
+		cmp_val = 0;
+		bmask = SBSDIO_FUNC1_SLEEPCSR_KSO_MASK;
+	}
+
+	do {
+		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_SLEEPCSR, wr_val, &err);
+
+#ifdef DOEM_ANDROID
+		msleep(1);
+#else
+		OSL_DELAY(1000);
+#endif
+		rd_val = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_SLEEPCSR, &err);
+		if (((rd_val & bmask) == cmp_val) && !err)
+			break;
+
+	} while (try_cnt++ < MAX_KSO_ATTEMPTS);
+
+
+	if (on && try_cnt > 1) {
+		KSO_DBG(("%s> >>>!!! KSO SET re-tries:%d <<<!!!\n",
+			__FUNCTION__, try_cnt));
+	} else {
+		KSO_DBG(("%s> >>>!!! KSO CLR re-tries:%d <<<!!!\n",
+			__FUNCTION__, try_cnt));
+	}
+
+	if (try_cnt > MAX_KSO_ATTEMPTS)  {
+		DHD_ERROR(("%s> op:%s, ERROR: try_cnt:%d, rd_val:%x, ERR:%x \n",
+			__FUNCTION__, (on ? "KSO_SET" : "KSO_CLR"), try_cnt, rd_val, err));
+	}
 	return err;
 }
 
@@ -990,7 +1034,8 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 
 		do {
 			err = dhdsdio_clk_kso_enab(bus, TRUE);
-			OSL_DELAY(10000);
+			if (err)
+				OSL_DELAY(10000);
 		} while ((err != 0) && (++retry < 3));
 
 		if (err != 0) {
@@ -1005,7 +1050,7 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 			/* Wait for device ready during transition to wake-up */
 			SPINWAIT((((csr = dhdsdio_sleepcsr_get(bus)) &
 				SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK) !=
-				(SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK)), (10000));
+				(SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK)), (20000));
 
 			DHD_TRACE(("%s: ExitSleep sleepcsr: 0x%x\n", __FUNCTION__, csr));
 
@@ -7896,7 +7941,7 @@ concate_revision(dhd_bus_t *bus, char *path, int path_len)
 	if (bus->sih->chip == BCM4334_CHIP_ID) {
 		return concate_revision_bcm4334(bus, path, path_len);
 	}
-	return -1;
 	DHD_ERROR(("REVISION SPECIFIC feature is not required\n"));
+	return -1;
 }
 #endif /* MULTIPLE_REVISION */

@@ -33,9 +33,8 @@ static int camera_id = 0;
 
 DECLARE_WAIT_QUEUE_HEAD(gCamdrvReadyQ);
 
-enum camdrv_ss_sensor_init_state_t
-{
-	CAMDRV_SS_NOT_INITIALIZED =0,
+enum camdrv_ss_sensor_init_state_t {
+	CAMDRV_SS_NOT_INITIALIZED = 0,
 	CAMDRV_SS_INITIALIZING,
 	CAMDRV_SS_INITIALIZE_DONE,
 	CAMDRV_SS_STREAMING,
@@ -52,7 +51,6 @@ static atomic_t gCapModeState = ATOMIC_INIT(CAMDRV_SS_CAPTURE_MODE_NOT_SUPPORT);
 
 static int camdrv_ss_cap_mode_change_monitor(struct v4l2_subdev *sd);
 static int camdrv_ss_cap_mode_change_monitor_thread_func(void *data);
-
 /* Camera register settings */
 static struct camdrv_ss_sensor_cap	sensor;
 static int camdrv_ss_s_stream(struct v4l2_subdev *sd, int enable);
@@ -87,51 +85,45 @@ struct device *sec_sub_cam_dev = NULL; /* /sys/class/camera/rear/rear_type */
 EXPORT_SYMBOL(sec_sub_cam_dev);
 
 static bool cam_class_init = false;
-
-struct camdrv_ss_state *to_state(struct v4l2_subdev *sd)
-{
-	return container_of(sd, struct camdrv_ss_state, sd);
-}
-
 ssize_t maincamtype_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	char *sensorname = CAMDRV_SS_MODULE_NAME_MAIN;
-	CAM_INFO_PRINTK( "%s  Enter\n", __func__);
+	CAM_INFO_PRINTK("%s  Enter\n", __func__);
 
 	return sprintf(buf, "%s\n", sensorname);
 }
 
 ssize_t maincamtype_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
-	CAM_INFO_PRINTK( "%s :  %s\n", __func__, buf);
+	CAM_INFO_PRINTK("%s :  %s\n", __func__, buf);
 	return size;
 }
 
 ssize_t maincamfw_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	char *sensorfw = "none";
-	CAM_INFO_PRINTK( "%s  Enter\n", __func__);
+	CAM_INFO_PRINTK("%s  Enter\n", __func__);
 
 	return sprintf(buf, "%s\n", sensorfw);
 }
 
 ssize_t maincamfw_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
-	CAM_INFO_PRINTK( "%s :  %s\n", __func__, buf);
+	CAM_INFO_PRINTK("%s :  %s\n", __func__, buf);
 	return size;
 }
 
 ssize_t subcamtype_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	char *sensorname = CAMDRV_SS_MODULE_NAME_SUB;
-	CAM_INFO_PRINTK( "%s  Enter\n", __func__);
+	CAM_INFO_PRINTK("%s  Enter\n", __func__);
 
 	return sprintf(buf, "%s\n", sensorname);
 }
 
 ssize_t subcamtype_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
-	CAM_INFO_PRINTK( "%s :  %s\n", __func__, buf);
+	CAM_INFO_PRINTK("%s :  %s\n", __func__, buf);
 
 	return size;
 }
@@ -139,22 +131,59 @@ ssize_t subcamtype_store(struct device *dev, struct device_attribute *attr, cons
 ssize_t subcamfw_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	char *sensorfw = "none";
-	CAM_INFO_PRINTK( "%s	Enter\n", __func__);
+	CAM_INFO_PRINTK("%s	Enter\n", __func__);
 
 	return sprintf(buf, "%s\n", sensorfw);
 }
 
 ssize_t subcamfw_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
-	CAM_INFO_PRINTK( "%s :  %s\n", __func__, buf);
+	CAM_INFO_PRINTK("%s :  %s\n", __func__, buf);
 	return size;
 }
 
-static DEVICE_ATTR(rear_type, 0644, maincamtype_show, NULL);
+static DEVICE_ATTR(rear_camtype, 0644, maincamtype_show, NULL);
 static DEVICE_ATTR(rear_camfw, 0644, maincamfw_show, NULL);
-static DEVICE_ATTR(front_type, 0644, subcamtype_show, NULL);
+static DEVICE_ATTR(front_camtype, 0644, subcamtype_show, NULL);
 static DEVICE_ATTR(front_camfw, 0644, subcamfw_show, NULL);
 
+int camera_antibanding = ANTI_BANDING_50HZ; /* default */
+
+int camera_antibanding_get(void)
+{
+	return camera_antibanding;
+}
+
+ssize_t camera_antibanding_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d", camera_antibanding);
+	CAM_INFO_PRINTK("%s : antibanding is %d\n", __func__, camera_antibanding);
+
+	return count;
+}
+
+ssize_t camera_antibanding_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	int tmp = 0;
+
+	sscanf(buf, "%d", &tmp);
+	if ((ANTI_BANDING_50HZ == tmp) || (ANTI_BANDING_60HZ == tmp)) {
+		camera_antibanding = tmp;
+		CAM_INFO_PRINTK("%s : antibanding is %d\n", __func__, camera_antibanding);
+	}
+
+	return size;
+}
+
+static struct device_attribute camera_antibanding_attr = {
+	.attr = {
+		.name = "anti-banding",
+		.mode = (S_IRUSR|S_IRGRP | S_IWUSR|S_IWGRP)},
+	.show = camera_antibanding_show,
+	.store = camera_antibanding_store
+};
 #endif
 
 
@@ -166,6 +195,11 @@ static DEVICE_ATTR(front_camfw, 0644, subcamfw_show, NULL);
 * FUNCTION DECLARE
 ***************************************************************************/
 
+
+inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd)
+{
+	return container_of(sd, struct camdrv_ss_state, sd);
+}
 
 /**************************************************************************
 * TUNING CONFIGURATION FUNCTIONS, DATAS
@@ -200,199 +234,193 @@ static int reg_num_of_element = 0;
 /* Warning!! : Register order is very important in aspect of performance of loading regs. */
 /* Place regs by the order as described in register header file. */
 static reg_hash_t reg_hash_table[] = {
-	{"init_regs",						NULL},
-	{"preview_camera_regs",					NULL},
-	{"snapshot_normal_regs",				NULL},
-	{"snapshot_lowlight_regs",				NULL},
-	{"snapshot_highlight_regs",				NULL},
-	{"snapshot_nightmode_regs",				NULL},
-	{"snapshot_flash_on_regs",				NULL},
-	{"snapshot_af_preflash_on_regs",			NULL},
-	{"snapshot_af_preflash_off_regs",			NULL},
+	{"init_regs",								NULL},
+	{"preview_camera_regs",							NULL},
+	{"snapshot_normal_regs",						NULL},
+	{"snapshot_lowlight_regs",						NULL},
+	{"snapshot_highlight_regs",						NULL},
+	{"snapshot_nightmode_regs",						NULL},
+	{"snapshot_flash_on_regs",						NULL},
+	{"snapshot_af_preflash_on_regs",					NULL},
+	{"snapshot_af_preflash_off_regs",					NULL},
 
-	{"focus_mode_off_regs",					NULL},
-	{"focus_mode_af_regs",					NULL},
-	{"focus_mode_macro_regs",				NULL},
-	{"focus_mode_facedetect_regs",				NULL},
-	{"focus_mode_infinity_regs",				NULL},
-	{"focus_mode_auto_regs",				NULL},
-	{"focus_mode_continuous_video_regs",			NULL},
-	{"focus_mode_continuous_picture_regs",			NULL},
-	{"focus_mode_continuous_picture_macro_regs",		NULL},
+	{"single_af_start_regs",						NULL},
+	{"get_1st_af_search_status",						NULL},
+	{"get_2nd_af_search_status",						NULL},
+	{"single_af_stop_regs",							NULL},
 
-	{"effect_normal_regs",					NULL},
-	{"effect_negative_regs",				NULL},
-	{"effect_sepia_regs",					NULL},
-	{"effect_mono_regs",					NULL},
-	{"effect_aqua_regs",					NULL},
-	{"effect_sharpen_regs",					NULL},
-	{"effect_solarization_regs",				NULL},
-	{"effect_black_white_regs",				NULL},
-	{"effect_emboss_regs",					NULL},
-	{"effect_outline_regs",					NULL},
+	{"effect_normal_regs",							NULL},
+	{"effect_negative_regs",						NULL},
+	{"effect_sepia_regs",							NULL},
+	{"effect_mono_regs",							NULL},
+	{"effect_aqua_regs",							NULL},
+	{"effect_sharpen_regs",							NULL},
+	{"effect_solarization_regs",						NULL},
+	{"effect_black_white_regs",						NULL},
 
-	{"wb_auto_regs",					NULL},
-	{"wb_daylight_regs",								NULL},
-	{"wb_cloudy_regs",					NULL},
-	{"wb_incandescent_regs",							NULL},
-	{"wb_fluorescent_regs",					NULL},
-	{"wb_cwf_regs",						NULL},
-	{"wb_daylight_regs",					NULL},
-	{"wb_incandescent_regs",				NULL},
-	{"wb_shade_regs",					NULL},
-	{"wb_horizon_regs",					NULL},
+	{"wb_auto_regs",							NULL},
+	{"wb_daylight_regs",							NULL},
+	{"wb_cloudy_regs",							NULL},
+	{"wb_incandescent_regs",						NULL},
+	{"wb_fluorescent_regs",							NULL},
 
-	{"metering_matrix_regs",				NULL},
-	{"metering_center_regs",				NULL},
-	{"metering_spot_regs",					NULL},
+	{"metering_matrix_regs",						NULL},
+	{"metering_center_regs",						NULL},
+	{"metering_spot_regs",							NULL},
 
-	{"ev_minus_4_regs",					NULL},
-	{"ev_minus_3_regs",					NULL},
-	{"ev_minus_2_regs",					NULL},
-	{"ev_minus_1_5_regs",					NULL},
-	{"ev_minus_1_regs",					NULL},
-	{"ev_minus_0_5_regs",					NULL},
-	{"ev_default_regs",					NULL},
-	{"ev_plus_0_5_regs",					NULL},
-	{"ev_plus_1_regs",					NULL},
-	{"ev_plus_1_5_regs",					NULL},
-	{"ev_plus_2_regs",					NULL},
-	{"ev_plus_3_regs",					NULL},
-	{"ev_plus_4_regs",					NULL},
+	{"ev_minus_4_regs",							NULL},
+	{"ev_minus_3_regs",							NULL},
+	{"ev_minus_2_regs",							NULL},
+	{"ev_minus_1_regs",							NULL},
+	{"ev_default_regs",							NULL},
+	{"ev_plus_1_regs",							NULL},
+	{"ev_plus_2_regs",							NULL},
+	{"ev_plus_3_regs",							NULL},
+	{"ev_plus_4_regs",							NULL},
 
-	{"iso_auto_regs",					NULL},
-	{"iso_50_regs",						NULL},
-	{"iso_100_regs",					NULL},
-	{"iso_200_regs",					NULL},
-	{"iso_400_regs",					NULL},
-	{"iso_800_regs",					NULL},
-	{"iso_1200_regs",					NULL},
-	{"iso_1600_regs",					NULL},
-	{"iso_2400_regs",					NULL},
-	{"iso_3200_regs",					NULL},
-	{"iso_sports_regs",					NULL},
-	{"iso_night_regs",					NULL},
-	{"iso_movie_regs",					NULL},
+	{"contrast_minus_2_regs",						NULL},
+	{"contrast_minus_1_regs",						NULL},
+	{"contrast_default_regs",						NULL},
+	{"contrast_plus_1_regs",						NULL},
+	{"contrast_plus_2_regs",						NULL},
 
-	{"contrast_minus_2_regs",				NULL},
-	{"contrast_minus_1_regs",				NULL},
-	{"contrast_default_regs",				NULL},
-	{"contrast_plus_1_regs",				NULL},
-	{"contrast_plus_2_regs",				NULL},
+	{"sharpness_minus_3_regs",						NULL},
+	{"sharpness_minus_2_regs",						NULL},
+	{"sharpness_minus_1_regs",						NULL},
+	{"sharpness_default_regs",						NULL},
+	{"sharpness_plus_1_regs",						NULL},
+	{"sharpness_plus_2_regs",						NULL},
+	{"sharpness_plus_3_regs",						NULL},
 
-	{"sharpness_minus_3_regs",				NULL},
-	{"sharpness_minus_2_regs",				NULL},
-	{"sharpness_minus_1_regs",				NULL},
-	{"sharpness_default_regs",				NULL},
-	{"sharpness_plus_1_regs",				NULL},
-	{"sharpness_plus_2_regs",				NULL},
-	{"sharpness_plus_3_regs",				NULL},
+	{"saturation_minus_2_regs",						NULL},
+	{"saturation_minus_1_regs",						NULL},
+	{"saturation_default_regs",						NULL},
+	{"saturation_plus_1_regs",						NULL},
+	{"saturation_plus_2_regs",						NULL},
 
-	{"saturation_minus_2_regs",				NULL},
-	{"saturation_minus_1_regs",				NULL},
-	{"saturation_default_regs",				NULL},
-	{"saturation_plus_1_regs",				NULL},
-	{"saturation_plus_2_regs",				NULL},
+	{"zoom_00_regs",							NULL},
+	{"zoom_01_regs",							NULL},
+	{"zoom_02_regs",							NULL},
+	{"zoom_03_regs",							NULL},
+	{"zoom_04_regs",							NULL},
+	{"zoom_05_regs",							NULL},
+	{"zoom_06_regs",							NULL},
+	{"zoom_07_regs",							NULL},
+	{"zoom_08_regs",							NULL},
 
-	{"zoom_00_regs",					NULL},
-	{"zoom_01_regs",					NULL},
-	{"zoom_02_regs",					NULL},
-	{"zoom_03_regs",					NULL},
-	{"zoom_04_regs",					NULL},
-	{"zoom_05_regs",					NULL},
-	{"zoom_06_regs",					NULL},
-	{"zoom_07_regs",					NULL},
-	{"zoom_08_regs",					NULL},
+	{"scene_none_regs",							NULL},
+	{"scene_portrait_regs",							NULL},
+	{"scene_nightshot_regs",						NULL},
+	{"scene_backlight_regs",						NULL},
+	{"scene_landscape_regs",						NULL},
+	{"scene_sports_regs",							NULL},
+	{"scene_party_indoor_regs",						NULL},
+	{"scene_beach_snow_regs",						NULL},
+	{"scene_sunset_regs",							NULL},
+	{"scene_duskdawn_regs",							NULL},
+	{"scene_fall_color_regs",						NULL},
+	{"scene_fireworks_regs",						NULL},
+	{"scene_candle_light_regs",						NULL},
+	{"scene_text_regs",							NULL},
 
-	{"scene_none_regs",					NULL},
-	{"scene_portrait_regs",					NULL},
-	{"scene_nightshot_regs",				NULL},
-	{"scene_backlight_regs",				NULL},
-	{"scene_landscape_regs",				NULL},
-	{"scene_sports_regs",					NULL},
-	{"scene_party_indoor_regs",				NULL},
-	{"scene_beach_snow_regs",				NULL},
-	{"scene_sunset_regs",					NULL},
-	{"scene_duskdawn_regs",					NULL},
-	{"scene_fall_color_regs",				NULL},
-	{"scene_fireworks_regs",				NULL},
-	{"scene_candle_light_regs",				NULL},
-	{"scene_text_regs",					NULL},
-        {"scene_nightshot_dark_regs",                           NULL},
+	{"fps_auto_regs",							NULL},
+	{"fps_5_regs",								NULL},
+	{"fps_7_regs",								NULL},
+	{"fps_10_regs",								NULL},
+	{"fps_15_regs",								NULL},
+	{"fps_20_regs",								NULL},
+	{"fps_25_regs",								NULL},
+	{"fps_30_regs",								NULL},
+	{"fps_60_regs",								NULL},
+	{"fps_120_regs",							NULL},
 
-	{"fps_auto_regs",					NULL},
-	{"fps_5_regs",						NULL},
-	{"fps_7_regs",						NULL},
-	{"fps_10_regs",						NULL},
-	{"fps_15_regs",						NULL},
-	{"fps_20_regs",						NULL},
-	{"fps_25_regs",						NULL},
-	{"fps_30_regs",						NULL},
-	{"fps_60_regs",						NULL},
-	{"fps_120_regs",					NULL},
+	{"quality_superfine_regs",						NULL},
+	{"quality_fine_regs",							NULL},
+	{"quality_normal_regs",							NULL},
+	{"quality_economy_regs",						NULL},
 
-	{"quality_superfine_regs",				NULL},
-	{"quality_fine_regs",					NULL},
-	{"quality_normal_regs",					NULL},
-	{"quality_economy_regs",				NULL},
+	{"preview_size_176x144_regs",						NULL},
+	{"preview_size_320x240_regs",						NULL},
+	{"preview_size_352x288_regs",						NULL},
+	{"preview_size_640x480_regs",						NULL},
+	{"preview_size_704x576_regs",						NULL},
+	{"preview_size_720x480_regs",						NULL},
+	{"preview_size_800x480_regs",						NULL},
+	{"preview_size_800x600_regs",						NULL},
+	{"preview_size_1024x600_regs",						NULL},
+	{"preview_size_1024x768_regs",						NULL},
+	{"preview_size_1280x960_regs",						NULL},
+	{"preview_size_1600x960_regs",						NULL},
+	{"preview_size_1600x1200_regs",						NULL},
+	{"preview_size_2048x1232_regs",						NULL},
+	{"preview_size_2048x1536_regs",						NULL},
+	{"preview_size_2560x1920_regs",						NULL},
 
-	{"preview_size_176x144_regs",				NULL},
-	{"preview_size_320x240_regs",				NULL},
-	{"preview_size_352x288_regs",				NULL},
-	{"preview_size_640x480_regs",				NULL},
-	{"preview_size_704x576_regs",				NULL},
-	{"preview_size_720x480_regs",				NULL},
-	{"preview_size_800x480_regs",				NULL},
-	{"preview_size_800x600_regs",				NULL},
-	{"preview_size_1024x600_regs",				NULL},
-	{"preview_size_1024x768_regs",				NULL},
-	{"preview_size_1280x960_regs",				NULL},
-	{"preview_size_1600x960_regs",				NULL},
-	{"preview_size_1600x1200_regs",				NULL},
-	{"preview_size_2048x1232_regs",				NULL},
-	{"preview_size_2048x1536_regs",				NULL},
-	{"preview_size_2560x1920_regs",				NULL},
+	{"capture_size_640x480_regs",						NULL},
+	{"capture_size_720x480_regs",						NULL},
+	{"capture_size_800x480_regs",						NULL},
+	{"capture_size_800x486_regs",						NULL},
+	{"capture_size_800x600_regs",						NULL},
+	{"capture_size_1024x600_regs",						NULL},
+	{"capture_size_1024x768_regs",						NULL},
+	{"capture_size_1280x960_regs",						NULL},
+	{"capture_size_1600x960_regs",						NULL},
+	{"capture_size_1600x1200_regs",						NULL},
+	{"capture_size_2048x1232_regs",						NULL},
+	{"capture_size_2048x1536_regs",						NULL},
+	{"capture_size_2560x1536_regs",						NULL},
+	{"capture_size_2560x1920_regs",						NULL},
 
-	{"capture_size_640x480_regs",				NULL},
-	{"capture_size_720x480_regs",				NULL},
-	{"capture_size_800x480_regs",				NULL},
-	{"capture_size_800x486_regs",				NULL},
-	{"capture_size_800x600_regs",				NULL},
-	{"capture_size_1024x600_regs",				NULL},
-	{"capture_size_1024x768_regs",				NULL},
-	{"capture_size_1280x960_regs",				NULL},
-	{"capture_size_1600x960_regs",				NULL},
-	{"capture_size_1600x1200_regs",				NULL},
-	{"capture_size_2048x1232_regs",				NULL},
-	{"capture_size_2048x1536_regs",				NULL},
-	{"capture_size_2560x1536_regs",				NULL},
-	{"capture_size_2560x1920_regs",				NULL},
+	{"pattern_on_regs",							NULL},
+	{"pattern_off_regs",							NULL},
 
-	{"pattern_on_regs",					NULL},
-	{"pattern_off_regs",					NULL},
+	{"ae_lock_regs",							NULL},
+	{"ae_unlock_regs",							NULL},
 
-	{"ae_lock_regs",					NULL},
-	{"ae_unlock_regs",					NULL},
+	{"awb_lock_regs",							NULL},
+	{"awb_unlock_regs",							NULL},
+	{"iso_auto_regs",							NULL},
+	{"iso_50_regs",								NULL},
+	{"iso_100_regs",							NULL},
+	{"iso_200_regs",							NULL},
+	{"iso_400_regs",							NULL},
+	{"wdr_on_regs",								NULL},
+	{"wdr_off_regs",							NULL},
 
-	{"awb_lock_regs",					NULL},
-	{"awb_unlock_regs",					NULL},
-        {"wdr_on_regs",								NULL},
-        {"wdr_off_regs",								NULL},
+	{"ev_camcorder_minus_4_regs",						NULL},
+	{"ev_camcorder_minus_3_regs",						NULL},
+	{"ev_camcorder_minus_2_regs",						NULL},
+	{"ev_camcorder_minus_1_regs",						NULL},
+	{"ev_camcorder_default_regs",						NULL},
+	{"ev_camcorder_plus_1_regs",						NULL},
+	{"ev_camcorder_plus_2_regs",						NULL},
+	{"ev_camcorder_plus_3_regs",						NULL},
+	{"ev_camcorder_plus_4_regs",						NULL},
 
-        {"ev_camcorder_minus_4_regs",                     NULL},
-        {"ev_camcorder_minus_3_regs",                     NULL},
-        {"ev_camcorder_minus_2_regs",                     NULL},
-        {"ev_camcorder_minus_1_regs",                     NULL},
-        {"ev_camcorder_default_regs",                     NULL},
-        {"ev_camcorder_plus_1_regs",                      NULL},
-        {"ev_camcorder_plus_2_regs",                      NULL},
-        {"ev_camcorder_plus_3_regs",                      NULL},
-        {"ev_camcorder_plus_4_regs",                      NULL},
+	{"auto_contrast_on_regs",						NULL},
+	{"auto_contrast_off_regs",						NULL},
 
-        {"auto_contrast_on_regs",								NULL},
-        {"auto_contrast_off_regs",								NULL},
-	{"vt_mode_regs",					NULL}
+	{"af_return_inf_pos",							NULL},
+	{"af_return_macro_pos",							NULL},
 
+	{"focus_mode_auto_regs",						NULL},
+	{"focus_mode_macro_regs",						NULL},
+	{"wb_iso_auto_regs",							NULL},
+	{"wb_manual_iso_auto_regs",						NULL},
+	{"wb_auto_iso_manual_regs",						NULL},
+	{"wb_manual_iso_manual_regs",						NULL},
+#if 0
+	{"focus_mode_off_regs",							NULL},
+	{"focus_mode_af_regs",							NULL},
+	{"focus_mode_macro_regs",						NULL},
+	{"focus_mode_facedetect_regs",						NULL},
+	{"focus_mode_infinity_regs",						NULL},
+	{"focus_mode_continuous_video_regs",					NULL},
+	{"focus_mode_continuous_picture_regs",					NULL},
+	{"focus_mode_continuous_picture_macro_regs",				NULL},
+#endif
+	{"vt_mode_regs",							NULL},
+	{"init_regs_smart_stay",						NULL}
 };
 
 static bool camdrv_ss_regs_get_line(char *line_buf)
@@ -486,30 +514,30 @@ static int camdrv_ss_regs_parse_table(void)
 		}
 
 
-	        if(sensor.register_size==4) {
-		/* Parsing a register format : 0x0000F000->reg=0x0000, data=0xF000 */
-		if ((current_line[0] == '0') && (current_line[10] == ',')) {
-			memcpy(reg, (const void *)&current_line[0], 10);
-			memcpy(reg_buf, (const void *)&current_line[0], 6);
-			reg_table[reg_index].subaddr = (unsigned short)simple_strtoul(reg_buf, NULL, 16);
-			reg_table[reg_index].value = (unsigned int)simple_strtoul(reg, NULL, 16) & 0x0000FFFF;
+		if (sensor.register_size == 4) {
+			/* Parsing a register format : 0x0000F000->reg=0x0000, data=0xF000 */
+			if ((current_line[0] == '0') && (current_line[10] == ',')) {
+				memcpy(reg, (const void *)&current_line[0], 10);
+				memcpy(reg_buf, (const void *)&current_line[0], 6);
+				reg_table[reg_index].subaddr = (unsigned short)simple_strtoul(reg_buf, NULL, 16);
+				reg_table[reg_index].value = (unsigned int)simple_strtoul(reg, NULL, 16) & 0x0000FFFF;
 
-			memset(reg_buf, '\0', strlen(reg_buf));
-			memset(reg, '\0', strlen(reg));
-//              	CAM_PRINTK("%s,reg_table[%d].subaddr = 0x%x \n",__func__, reg_index, reg_table[reg_index].subaddr );
-//              	CAM_PRINTK("%s,reg_table[%d].value = 0x%x \n",__func__, reg_index, reg_table[reg_index].value );
-			reg_index++;
-		}
-	        } else if(sensor.register_size==2) {
-	    		// Parsing a register format : 0x0000,
-	            	if((current_line[0] == '0') && (current_line[6] == ',')) {
-		                memcpy(reg, (const void *)&current_line[0], 6);
-		                reg_table[reg_index].value = (unsigned int)simple_strtoul(reg, NULL, 16)&0x0000FFFF;
-		                memset(reg,'\0',strlen(reg));
+				memset(reg_buf, '\0', strlen(reg_buf));
+				memset(reg, '\0', strlen(reg));
+				/* CAM_PRINTK("%s,reg_table[%d].subaddr = 0x%x\n",__func__, reg_index, reg_table[reg_index].subaddr ); */
+				/* CAM_PRINTK("%s,reg_table[%d].value = 0x%x\n",__func__, reg_index, reg_table[reg_index].value ); */
+				reg_index++;
+			}
+		} else if (sensor.register_size == 2) {
+			/* Parsing a register format : 0x0000, */
+			if ((current_line[0] == '0') && (current_line[6] == ',')) {
+				memcpy(reg, (const void *)&current_line[0], 6);
+				reg_table[reg_index].value = (unsigned int)simple_strtoul(reg, NULL, 16)&0x0000FFFF;
+				memset(reg, '\0', strlen(reg));
 
-//				CAM_PRINTK("%s,reg_table[%d].value = 0x%x \n",__func__, reg_index, reg_table[reg_index].value );
-                		reg_index++;
-            		}
+				/* CAM_PRINTK("%s,reg_table[%d].value = 0x%x\n",__func__, reg_index, reg_table[reg_index].value ); */
+				reg_index++;
+			}
 		}
 	}
 
@@ -533,12 +561,12 @@ static int camdrv_ss_regs_table_write(struct i2c_client *client, char *name)
 		}
 	}
 
-	CAM_ERROR_PRINTK("%s, name : %s, bFound_table : %d \n",__func__, name, bFound_table);
+	CAM_ERROR_PRINTK("%s, name : %s, bFound_table : %d\n", __func__, name, bFound_table);
 	if (bFound_table) {
 		reg_num_of_element = camdrv_ss_regs_parse_table();
-        CAM_ERROR_PRINTK("%s, reg_num_of_element : %d \n",__func__, reg_num_of_element);
+	CAM_ERROR_PRINTK("%s, reg_num_of_element : %d\n", __func__, reg_num_of_element);
 	} else {
-		CAM_ERROR_PRINTK( "[%s: %d] %s reg_table doesn't exist\n", __FILE__, __LINE__, name);
+		CAM_ERROR_PRINTK("[%s: %d] %s reg_table doesn't exist\n", __FILE__, __LINE__, name);
 		return -EIO;
 	}
 
@@ -550,118 +578,114 @@ static int camdrv_ss_regs_table_write(struct i2c_client *client, char *name)
 	struct i2c_msg msg = {client->addr, 0, 0, 0};
 	memset(pBurstData, 0, sizeof(pBurstData));
 
-	CAM_ERROR_PRINTK(" %s : sensor.register_size = %d \n", __func__, sensor.register_size);
-	if(sensor.register_size==4) {
-	for (i = 0; i < reg_num_of_element; i++) {
+	CAM_ERROR_PRINTK("%s : sensor.register_size = %d\n", __func__, sensor.register_size);
+	if (sensor.register_size == 4) {
+		for (i = 0; i < reg_num_of_element; i++) {
 
-		data_value = reg_table[i].value;
-		subaddr = reg_table[i].subaddr;
+			data_value = reg_table[i].value;
+			subaddr = reg_table[i].subaddr;
 
-		switch (subaddr) {
+			switch (subaddr) {
 #if 0
-		/* case START_BURST_MODE: */
-		case 0x0F12:
-		{
-			/* Start Burst datas */
+			/* case START_BURST_MODE: */
+			case 0x0F12:
+			{
+				/* Start Burst datas */
 
-			if (index == 0) {
-				pBurstData[index++] = subaddr >> 8;
-				pBurstData[index++] = subaddr & 0xFF;
-			}
-
-			pBurstData[index++] = data_value >> 8;
-			pBurstData[index++] = data_value & 0xFF;
-
-			/* Get Next Address */
-			if ((i+1) == reg_num_of_element) { /* The last code */
-				next_subaddr = 0xFFFF; /* Dummy */
-			} else {
-				/* next_subaddr = reg_buffer[i+1]>>16; */
-				next_subaddr = reg_table[i+1].subaddr;
-			}
-
-			/* CAM_ERROR_PRINTK( "%s  :i2c transfer 0x%x  0x%x 0x%x\n",__func__,subaddr,data_value,next_subaddr); */
-
-			/* If next subaddr is different from the current subaddr */
-			/* In other words, if burst mode ends, write the all of the burst datas which were gathered until now */
-			if (next_subaddr != subaddr) {
-				msg.buf = pBurstData;
-				msg.len = index;
-
-				err = i2c_transfer(client->adapter, &msg, 1);
-				if (err < 0) {
-					CAM_ERROR_PRINTK( "[%s: %d] i2c burst write fail\n", __FILE__, __LINE__);
-					return -EIO;
+				if (index == 0) {
+					pBurstData[index++] = subaddr >> 8;
+					pBurstData[index++] = subaddr & 0xFF;
 				}
 
-				/* Intialize and gather busrt datas again. */
-				index = 0;
-				memset(pBurstData, 0, sizeof(pBurstData));
-			}
+				pBurstData[index++] = data_value >> 8;
+				pBurstData[index++] = data_value & 0xFF;
 
-			break;
-		}
+				/* Get Next Address */
+				if ((i+1) == reg_num_of_element) { /* The last code */
+					next_subaddr = 0xFFFF; /* Dummy */
+				} else {
+					/* next_subaddr = reg_buffer[i+1]>>16; */
+					next_subaddr = reg_table[i+1].subaddr;
+				}
+
+				/* CAM_ERROR_PRINTK("%s  :i2c transfer 0x%x  0x%x 0x%x\n",__func__,subaddr,data_value,next_subaddr); */
+
+				/* If next subaddr is different from the current subaddr */
+				/* In other words, if burst mode ends, write the all of the burst datas which were gathered until now */
+				if (next_subaddr != subaddr) {
+					msg.buf = pBurstData;
+					msg.len = index;
+
+					err = i2c_transfer(client->adapter, &msg, 1);
+					if (err < 0) {
+						CAM_ERROR_PRINTK("[%s: %d] i2c burst write fail\n", __FILE__, __LINE__);
+						return -EIO;
+					}
+
+					/* Intialize and gather busrt datas again. */
+					index = 0;
+					memset(pBurstData, 0, sizeof(pBurstData));
+				}
+
+				break;
+			}
 #endif /* #if 0 */
 
-		/* case DELAY_SEQ: */
-		case 0xFFFF:
-		{
-			msleep(data_value);
-			break;
-		}
-
-		case 0xFCFC:
-		case 0x0028:
-		case 0x002A:
-		default:
-		{
-			err = camdrv_ss_i2c_write_4_bytes(client, subaddr, data_value);
-			if (err < 0) {
-				CAM_ERROR_PRINTK(" %s :i2c transfer failed !\n", __func__);
-				return -EIO;
+			/* case DELAY_SEQ: */
+			case 0xFFFF:
+			{
+				msleep(data_value);
+				break;
 			}
-			break;
-		}
+
+			case 0xFCFC:
+			case 0x0028:
+			case 0x002A:
+			default:
+			{
+				err = camdrv_ss_i2c_write_4_bytes(client, subaddr, data_value);
+				if (err < 0) {
+					CAM_ERROR_PRINTK(" %s :i2c transfer failed !\n", __func__);
+					return -EIO;
+				}
+				break;
+			}
+			} /* end of switch */
+		} /* end of for */
+
+	} else if (sensor.register_size == 2) { /* if(sensor.register_size==4) */
+
+		unsigned char subaddr8 = 0, data_value8 = 0;
+
+		for (i = 0; i < reg_num_of_element; i++) {
+			data_value = reg_table[i].value;
+
+			subaddr8 = data_value >> 8;
+			data_value8 = data_value & 0xff;
+
+			if (subaddr8 == sensor.delay_duration) {
+				CAM_INFO_PRINTK(" %s :delay : %d ms\n", __func__, data_value8*10);
+				msleep(data_value8*10);
+				break;
+			} else {
+				/* CAM_PRINTK(" %s : data : 0x%4x\n", __func__, data_value); */
+
+				err = camdrv_ss_i2c_write_2_bytes(client, subaddr8, data_value8);
+				if (err < 0) {
+					CAM_ERROR_PRINTK(" %s :i2c transfer failed !\n", __func__);
+					return -EIO;
+				}
+			}
+		} /* end of for */
 	}
-    }
 
-    }  //        if(sensor.register_size==4)
-    else if (sensor.register_size==2) {
-
-        unsigned char subaddr8 = 0,data_value8 = 0;
-        
-        for(i = 0; i < reg_num_of_element; i++)
-        {
-            data_value =reg_table[i].value;
-
-            subaddr8 = data_value >> 8;
-            data_value8 = data_value & 0xff;
-
-            if (subaddr8 == sensor.delay_duration) {
-//                CAM_PRINTK(" %s :delay : %d ms \n", __func__, delay_value*10);
-                msleep(data_value8*10);
-                break;
-            }
-            else {
-//                CAM_PRINTK(" %s : data : 0x%4x \n", __func__, data_value);
-
-                err = camdrv_ss_i2c_write_2_bytes(client, subaddr8, data_value8);
-                if(err < 0)
-                {
-                    CAM_ERROR_PRINTK(" %s :i2c transfer failed ! \n", __func__);
-                    return -EIO;
-                }
-            }            
-        } // for loop
-    }
-        
-	//sensor.i2c_set_data_burst(client, reg_table, reg_num_of_element);
+	/* sensor.i2c_set_data_burst(client, reg_table, reg_num_of_element); */
 
 	return err;
 }
 
 
-#define CAMDRV_SS_TUNING_FILE_PATH	"/mnt/extSdCard/camtuning/camdrv_ss_%s.h"
+#define CAMDRV_SS_TUNING_FILE_PATH   "/mnt/extSdCard/camtuning/camdrv_ss_%s.h"
 #define CAMDRV_SS_MAX_PATH		255
 
 int camdrv_ss_regs_table_init(struct v4l2_subdev *sd)
@@ -682,12 +706,12 @@ int camdrv_ss_regs_table_init(struct v4l2_subdev *sd)
 	memset(TUNING_FILE_PATH, 0x00, CAMDRV_SS_MAX_PATH+1);
 	sprintf(TUNING_FILE_PATH, CAMDRV_SS_TUNING_FILE_PATH, sensor.name);
 
-	CAM_INFO_PRINTK( "%s %d, PATH = %s, sensor name = %s\n", __func__, __LINE__, TUNING_FILE_PATH, sensor.name);
+	CAM_INFO_PRINTK("%s %d, PATH = %s, sensor name = %s\n", __func__, __LINE__, TUNING_FILE_PATH, sensor.name);
 
 	set_fs(get_ds());
 
 	if (TUNING_FILE_PATH == NULL) {
-		CAM_ERROR_PRINTK( "TUNING FILE PATH is NULL!!! %s %d\n", __func__, __LINE__);
+		CAM_ERROR_PRINTK("TUNING FILE PATH is NULL!!! %s %d\n", __func__, __LINE__);
 		return -EIO;
 	}
 
@@ -810,7 +834,7 @@ void camdrv_ss_regs_table_exit(void)
  *
  * Returns 0 on success, <0 on error
  ***************************************************************************/
- int camdrv_ss_i2c_read_1_byte(struct i2c_client *client,
+int camdrv_ss_i2c_read_1_byte(struct i2c_client *client,
 				unsigned char subaddr,
 				unsigned char *data)
 {
@@ -819,7 +843,7 @@ void camdrv_ss_regs_table_exit(void)
 	int err = 0;
 
 	if (!client->adapter) {
-		CAM_ERROR_PRINTK( "%s %s : client->adapter = NULL!!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : client->adapter = NULL!!!\n", sensor.name, __func__);
 		return -EIO;
 	}
 
@@ -827,7 +851,7 @@ void camdrv_ss_regs_table_exit(void)
 
 	err = i2c_transfer(client->adapter, &msg, 1);
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, subaddr);
+		CAM_ERROR_PRINTK("%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, subaddr);
 		return -EIO;
 	}
 
@@ -836,7 +860,7 @@ void camdrv_ss_regs_table_exit(void)
 
 	err = i2c_transfer(client->adapter, &msg, 1);
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, subaddr);
+		CAM_ERROR_PRINTK("%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, subaddr);
 		return -EIO;
 	}
 
@@ -854,7 +878,7 @@ int camdrv_ss_i2c_read_2_bytes(struct i2c_client *client,
 	int err = 0;
 
 	if (!client->adapter) {
-		CAM_ERROR_PRINTK( "%s %s : client->adapter = NULL!!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : client->adapter = NULL!!!\n", sensor.name, __func__);
 		return -EIO;
 	}
 
@@ -863,7 +887,7 @@ int camdrv_ss_i2c_read_2_bytes(struct i2c_client *client,
 
 	err = i2c_transfer(client->adapter, &msg, 1);
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, subaddr);
+		CAM_ERROR_PRINTK("%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, subaddr);
 		return -EIO;
 	}
 
@@ -872,7 +896,7 @@ int camdrv_ss_i2c_read_2_bytes(struct i2c_client *client,
 
 	err = i2c_transfer(client->adapter, &msg, 1);
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, subaddr);
+		CAM_ERROR_PRINTK("%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, subaddr);
 		return -EIO;
 	}
 
@@ -898,10 +922,10 @@ int camdrv_ss_i2c_write_4_bytes(struct i2c_client *client,
 	struct i2c_msg msg = {client->addr, 0, 4, buf};
 	int err = 0;
 	if (!client->adapter) {
-		CAM_ERROR_PRINTK( "%s %s : client->adapter = NULL !\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : client->adapter = NULL !\n", sensor.name, __func__);
 		return -EIO;
 	}
-	/* CAM_ERROR_PRINTK( "%s  :i2c transfer1 0x%x   %x\n", __func__, subaddr, data); */
+	/* CAM_ERROR_PRINTK("%s  :i2c transfer1 0x%x   %x\n", __func__, subaddr, data); */
 
 	buf[0] = subaddr >> 8;
 	buf[1] = subaddr & 0xFF;
@@ -911,10 +935,10 @@ int camdrv_ss_i2c_write_4_bytes(struct i2c_client *client,
 
 	err = i2c_transfer(client->adapter, &msg, 1);
 
-	/* CAM_ERROR_PRINTK( "%s  :i2c transfer2 0x%x  %x\n", __func__, subaddr, data); */
+	/* CAM_ERROR_PRINTK("%s  :i2c transfer2 0x%x  %x\n", __func__, subaddr, data); */
 
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, subaddr);
+		CAM_ERROR_PRINTK("%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, subaddr);
 		return -EIO;
 	}
 
@@ -931,7 +955,7 @@ int camdrv_ss_i2c_write_2_bytes(struct i2c_client *client,
 	int err = 0;
 
 	if (!client->adapter) {
-		CAM_ERROR_PRINTK( "%s %s : client->adapter = NULL !\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : client->adapter = NULL !\n", sensor.name, __func__);
 		return -EIO;
 	}
 
@@ -939,10 +963,10 @@ int camdrv_ss_i2c_write_2_bytes(struct i2c_client *client,
 	buf[1] = data & 0xff;
 
 	err = i2c_transfer(client->adapter, &msg, 1);
-	/* CAM_ERROR_PRINTK( "%s %s :i2c transfer 0x%x\n", sensor.name,__func__, data); */
+	/* CAM_ERROR_PRINTK("%s %s :i2c transfer 0x%x\n", sensor.name,__func__, data); */
 
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, data);
+		CAM_ERROR_PRINTK("%s %s :i2c transfer failed at address %d !\n", sensor.name, __func__, data);
 		return -EIO;
 	}
 
@@ -964,19 +988,21 @@ int camdrv_ss_i2c_set_config_register(struct i2c_client *client,
 					char *name)
 {
 	int err = 0;
-	int i = 0;
-	unsigned short subaddr = 0, data_value = 0;
-	unsigned char subaddr8 = 0,data_value8 = 0;
+	int i = 0, count = 0;
+	unsigned short subaddr = 0, data_value = 0, data_value1 = 0;
+	unsigned char subaddr8 = 0, data_value8 = 0;
 #ifdef CONFIG_LOAD_FILE
 	err = camdrv_ss_regs_table_write(client, name);
 #else
 
-	if (sensor.i2c_set_data_burst != NULL) {
+	CAM_ERROR_PRINTK("%s : %s : srn : %s\n", sensor.name, __func__, name);
+
+	if ((sensor.i2c_set_data_burst != NULL) && (strcmp(name, "init_regs") == 0)) {
 		CAM_INFO_PRINTK("%s, %s :: Burst mode enable :: name : %s, reg size : %d\n", sensor.name, __func__, name, sensor.register_size);
-		err = sensor.i2c_set_data_burst(client, reg_buffer, num_of_regs,name);
+		err = sensor.i2c_set_data_burst(client, reg_buffer, num_of_regs, name);
 	} else {
 
-		CAM_INFO_PRINTK("%s, %s :: Burst mode disable :: name : %s, reg_size = %d \n", sensor.name, __func__, name, sensor.register_size);
+		CAM_INFO_PRINTK("%s, %s :: Burst mode disable :: name : %s reg_size=%d reg num=%d\n", sensor.name, __func__, name, sensor.register_size, num_of_regs);
 
 		for (i = 0; i < num_of_regs; i++) {
 			if (sensor.register_size == 4) {
@@ -986,34 +1012,57 @@ int camdrv_ss_i2c_set_config_register(struct i2c_client *client,
 				if (subaddr == sensor.delay_duration) {
 
 					msleep(data_value);
-					CAM_INFO_PRINTK("%s :: register 4 size :: delay : delay_duration = 0x%x, real delay : %d ms\n", 
-						__func__, sensor.delay_duration, data_value); 
+					/* CAM_INFO_PRINTK("%s :: register 4 size :: delay : delay_duration = 0x%x, real delay : %d ms\n",
+						__func__, sensor.delay_duration, data_value); */
+
 				} else {
 				err = camdrv_ss_i2c_write_4_bytes(client, subaddr, data_value);
 				}
 			} else if (sensor.register_size == 2) {
-			
-				data_value = reg_buffer[i];
-				
-				subaddr8 = data_value >> 8;
-				data_value8 = data_value & 0xff;
-				CAM_INFO_PRINTK(" reg value=0x%x %x\n",subaddr8,data_value8);
+				if (count != num_of_regs) {
+					/* CAM_INFO_PRINTK("i=%d reg=%x\n", i, reg_buffer[i]); */
 
-				if(subaddr8==sensor.delay_duration) {
-					msleep(data_value8*10);
-					CAM_INFO_PRINTK("%s :: register 2 size :: delay : delay_duration = 0x%x, real delay : %d ms\n", 
+					data_value1 = (reg_buffer[i] >> 16);
+					data_value = reg_buffer[i];
+
+					subaddr8 = data_value >> 8;
+					data_value8 = data_value & 0xff;
+					/* CAM_INFO_PRINTK(" reg value=0x%x %x\n",subaddr8,data_value8); */
+
+					if (subaddr8 == sensor.delay_duration) {
+						count++;
+						msleep(data_value8*10);
+						CAM_INFO_PRINTK("%s :: register 2 size :: delay : delay_duration = 0x%x, real delay : %d ms\n",
 						__func__, sensor.delay_duration, data_value8*10);
-				} else {
-				err = camdrv_ss_i2c_write_2_bytes(client, subaddr8,data_value8);
+					} else {
+						count++;
+						err = camdrv_ss_i2c_write_2_bytes(client, subaddr8, data_value8);
+					}
+					/* aska test */
+					if (data_value1 != 0) {
+						subaddr8 = data_value1 >> 8;
+						data_value8 = data_value1 & 0xff;
+						/* CAM_INFO_PRINTK(" reg value=0x%x %x\n",subaddr8,data_value8); */
+
+						if (subaddr8 == sensor.delay_duration) {
+							count++;
+							msleep(data_value8*10);
+							CAM_INFO_PRINTK("%s :: register 2 size :: delay : delay_duration = 0x%x, real delay : %d ms\n",
+								__func__, sensor.delay_duration, data_value8*10);
+						} else {
+							count++;
+							err = camdrv_ss_i2c_write_2_bytes(client, subaddr8, data_value8);
+						}
+					}
+					/* CAM_INFO_PRINTK("reg count=%d\n",count); */
 				}
-				
 			} else {
-				CAM_ERROR_PRINTK( "%s %s :register size is not 4 or 2 bytes = %d !\n", sensor.name, __func__, sensor.register_size);
+				CAM_ERROR_PRINTK("%s %s :register size is not 4 or 2 bytes = %d !\n", sensor.name, __func__, sensor.register_size);
 				return -EIO;
 			}
 
 			if (err < 0) {
-				CAM_ERROR_PRINTK( "%s %s :i2c transfer failed !\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s :i2c transfer failed !\n", sensor.name, __func__);
 				return -EIO;
 			}
 		}
@@ -1030,54 +1079,54 @@ static int camdrv_ss_set_vt_mode(struct v4l2_subdev *sd, struct v4l2_control *ct
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :camdrv_ss_set_vt_mode E\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s :camdrv_ss_set_vt_mode E\n", sensor.name, __func__);
 
 	switch (ctrl->value) {
 	case CAM_VT_MODE_NONE:
 	{
 		if (sensor.vt_mode_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : CAM_VT_MODE_NONE not supported !!!\n", sensor.name, __func__);
-			err = -EIO;
+			CAM_ERROR_PRINTK("%s %s : CAM_VT_MODE_NONE not supported !!!\n", sensor.name, __func__);
+				 err = -EIO;
 		} else
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.vt_mode_regs, sensor.rows_num_vt_mode_regs, "vt_mode_regs");
 
-		break;
+			break;
 	}
 
 	case CAM_VT_MODE_3G:
 	{
 		if (sensor.vt_mode_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : CAM_VT_MODE_3G not supported !!!\n", sensor.name, __func__);
-			err = -EIO;
+			CAM_ERROR_PRINTK("%s %s : CAM_VT_MODE_3G not supported !!!\n", sensor.name, __func__);
+				 err = -EIO;
 		} else
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.vt_mode_regs, sensor.rows_num_vt_mode_regs, "vt_mode_regs");
 
-		break;
+			break;
 	}
 
 	case CAM_VT_MODE_VOIP:
 	{
 		if (sensor.vt_mode_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : CAM_VT_MODE_VOIP not supported !!!\n", sensor.name, __func__);
-			err = -EIO;
+			CAM_ERROR_PRINTK("%s %s : CAM_VT_MODE_VOIP not supported !!!\n", sensor.name, __func__);
+				 err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.vt_mode_regs, sensor.rows_num_vt_mode_regs, "vt_mode_regs");
 
-		break;
+			break;
 	}
 
 	default:
 	{
 		if (sensor.vt_mode_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : CAM_VT_MODE_3G not supported !!!\n", sensor.name, __func__);
-			err = -EIO;
+			CAM_ERROR_PRINTK("%s %s : CAM_VT_MODE_3G not supported !!!\n", sensor.name, __func__);
+				 err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.vt_mode_regs, sensor.rows_num_vt_mode_regs, "vt_mode_regs");
 
 		break;
 	}
 	} /* end of switch */
-	CAM_INFO_PRINTK( "%s %s :camdrv_ss_set_vt_mode X\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s :camdrv_ss_set_vt_mode X\n", sensor.name, __func__);
 
 	return 0;
 }
@@ -1089,7 +1138,7 @@ static int camdrv_ss_set_flash_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	struct camdrv_ss_state *state = to_state(sd);
 	/* struct i2c_client *client = v4l2_get_subdevdata(sd); */
 
-	CAM_INFO_PRINTK( "%s %s :camdrv_ss_set_flash_mode E\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s :camdrv_ss_set_flash_mode E\n", sensor.name, __func__);
 
 	switch (ctrl->value) {
 	case FLASH_MODE_ON:
@@ -1109,7 +1158,7 @@ static int camdrv_ss_set_flash_mode(struct v4l2_subdev *sd, struct v4l2_control 
 		if (sensor.AAT_flash_control != NULL)
 			sensor.AAT_flash_control(sd, FLASH_CONTROL_LOW_LEVEL);
 		else
-			CAM_ERROR_PRINTK( "%s %s :AAT_flash_control is NULL!!!s\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s :AAT_flash_control is NULL!!!s\n", sensor.name, __func__);
 
 		break;
 	}
@@ -1119,7 +1168,7 @@ static int camdrv_ss_set_flash_mode(struct v4l2_subdev *sd, struct v4l2_control 
 		if (sensor.AAT_flash_control != NULL)
 			sensor.AAT_flash_control(sd, FLASH_CONTROL_OFF);
 		else
-			CAM_ERROR_PRINTK( "%s %s :AAT_flash_control is NULL!!!s\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s :AAT_flash_control is NULL!!!s\n", sensor.name, __func__);
 
 		break;
 	}
@@ -1130,7 +1179,7 @@ static int camdrv_ss_set_flash_mode(struct v4l2_subdev *sd, struct v4l2_control 
 		if (sensor.AAT_flash_control != NULL)
 			sensor.AAT_flash_control(sd, FLASH_CONTROL_OFF);
 		else
-			CAM_ERROR_PRINTK( "%s %s :AAT_flash_control is NULL!!!s\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s :AAT_flash_control is NULL!!!s\n", sensor.name, __func__);
 
 		state->current_flash_mode = FLASH_MODE_OFF;
 		break;
@@ -1152,13 +1201,13 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 	struct camdrv_ss_state *state = to_state(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :camdrv_ss_set_frame_rate  E  = %d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s :camdrv_ss_set_frame_rate  E  = %d\n", sensor.name, __func__, ctrl->value);
 
 	switch (ctrl->value) {
 	case FRAME_RATE_AUTO:
 	{
 		if (sensor.fps_auto_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : fps_auto_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : fps_auto_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.fps_auto_regs, sensor.rows_num_fps_auto_regs, "fps_auto_regs");
@@ -1168,7 +1217,7 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 	case FRAME_RATE_5:
 	{
 		if (sensor.fps_5_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : fps_5_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : fps_5_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.fps_5_regs, sensor.rows_num_fps_5_regs, "fps_5_regs");
@@ -1178,7 +1227,7 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 	case FRAME_RATE_7:
 	{
 		if (sensor.fps_7_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : FRAME_RATE_7 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : FRAME_RATE_7 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_7_regs, sensor.rows_num_fps_7_regs, "fps_7_regs");
@@ -1188,7 +1237,7 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 	case FRAME_RATE_10:
 	{
 		if (sensor.fps_10_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : FRAME_RATE_10 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : FRAME_RATE_10 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_10_regs, sensor.rows_num_fps_10_regs, "fps_10_regs");
@@ -1198,7 +1247,7 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 	case FRAME_RATE_15:
 	{
 		if (sensor.fps_15_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : FRAME_RATE_15 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : FRAME_RATE_15 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_15_regs, sensor.rows_num_fps_15_regs, "fps_15_regs");
@@ -1208,7 +1257,7 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 	case FRAME_RATE_20:
 	{
 		if (sensor.fps_20_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : fps_20_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : fps_20_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_20_regs, sensor.rows_num_fps_20_regs, "fps_20_regs");
@@ -1216,10 +1265,10 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 	}
 
 	case FRAME_RATE_25:
-#if 0 /* fix me~!! currently sensor does not support 25 fps for recording : P120316-5148 */
+#if 1/*0*/ /* fix me~!! currently sensor does not support 25 fps for recording : P120316-5148 */
 	{
 		if (sensor.fps_25_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : FRAME_RATE_25 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : FRAME_RATE_25 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_25_regs, sensor.rows_num_fps_25_regs, "fps_25_regs");
@@ -1229,7 +1278,7 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 	case FRAME_RATE_30:
 	{
 		if (sensor.fps_30_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : FRAME_RATE_30 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : FRAME_RATE_30 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_30_regs, sensor.rows_num_fps_30_regs, "fps_30_regs");
@@ -1239,7 +1288,7 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 	case FRAME_RATE_60:
 	{
 		if (sensor.fps_60_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : fps_60_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : fps_60_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_60_regs, sensor.rows_num_fps_60_regs, "fps_60_regs");
@@ -1249,7 +1298,7 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 	case FRAME_RATE_120:
 	{
 		if (sensor.fps_120_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : FRAME_RATE_120 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : FRAME_RATE_120 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_120_regs, sensor.rows_num_fps_120_regs, "fps_120_regs");
@@ -1258,7 +1307,7 @@ static int camdrv_ss_set_frame_rate(struct v4l2_subdev *sd, struct v4l2_control 
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : FRAME_RATE_DEFAULT not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : FRAME_RATE_DEFAULT not supported !!!\n", sensor.name, __func__);
 		err = -EIO;
 
 		break;
@@ -1286,28 +1335,28 @@ int camdrv_ss_set_dataline_onoff(struct v4l2_subdev *sd, int onoff)
 
 	if (onoff) {
 		/* data line on */
-		CAM_INFO_PRINTK( "%s %s :ON !!\n", sensor.name, __func__);
+		CAM_INFO_PRINTK("%s %s :ON !!\n", sensor.name, __func__);
 
 		if (sensor.pattern_on_regs == NULL)
-			CAM_ERROR_PRINTK( "%s %s : pattern_on_regs is NULL, please check if it is needed !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : pattern_on_regs is NULL, please check if it is needed !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.pattern_on_regs, sensor.rows_num_pattern_on_regs, "pattern_on_regs");
 
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s %s : i2c failed !!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : i2c failed !!\n", sensor.name, __func__);
 			return -EIO;
 		}
 	} else {
 		/* data line off */
-		CAM_INFO_PRINTK( "%s %s :OFF !!\n", sensor.name, __func__);
+		CAM_INFO_PRINTK("%s %s :OFF !!\n", sensor.name, __func__);
 
 		if (sensor.pattern_off_regs == NULL)
-			CAM_ERROR_PRINTK( "%s %s : pattern_off_regs is NULL, please check if it is needed !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : pattern_off_regs is NULL, please check if it is needed !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.pattern_off_regs, sensor.rows_num_pattern_off_regs, "pattern_off_regs");
 
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s %s : i2c failed !!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : i2c failed !!\n", sensor.name, __func__);
 			return -EIO;
 		}
 
@@ -1315,36 +1364,30 @@ int camdrv_ss_set_dataline_onoff(struct v4l2_subdev *sd, int onoff)
 	}
 	msleep(100);
 
-	CAM_INFO_PRINTK( "%s %s :done .\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s :done .\n", sensor.name, __func__);
 
 	return err;
 }
 
 static int  camdrv_ss_set_preview_stop(struct v4l2_subdev *sd)
 {
-	//struct camdrv_ss_state *state = to_state(sd);
+	/* struct camdrv_ss_state *state = to_state(sd); */
 	/* struct i2c_client *client = v4l2_get_subdevdata(sd); */
 
-    struct v4l2_control ctrl;
-    int err;
-	CAM_INFO_PRINTK( "%s %s : camdrv_ss_set_preview_stop\n", sensor.name, __func__);
-	if(sensor.set_preview_stop != NULL)
-	{
-		CAM_ERROR_PRINTK( "%s %s :sensor has defined its preview or capture stop sequence  \n", sensor.name, __func__);
-		sensor.set_preview_stop(sd);
+	struct v4l2_control ctrl;
+	int err;
+
+	CAM_INFO_PRINTK("%s %s : camdrv_ss_set_preview_stop\n", sensor.name, __func__);
+
+	ctrl.value = AUTO_FOCUS_OFF;
+
+	if (sensor.set_auto_focus != NULL) {
+		err = sensor.set_auto_focus(sd, &ctrl);
+		if (err < 0) {
+			CAM_ERROR_PRINTK("%s %s : set_auto_focus error\n", sensor.name, __func__);
+			return -1;
+		}
 	}
-
-#if 0
-    ctrl.value = AUTO_FOCUS_OFF;
-
-    if (sensor.set_auto_focus != NULL) {
-        err = sensor.set_auto_focus(sd, &ctrl);
-        if (err < 0) {
-			CAM_ERROR_PRINTK( "%s %s : set_auto_focus error\n", sensor.name, __func__);
-            return -1;
-        }
-    }
-#endif
 
 	return 0;
 }
@@ -1360,13 +1403,13 @@ static int camdrv_ss_set_dzoom(struct v4l2_subdev *sd, struct v4l2_control *ctrl
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s : camdrv_ss_set_dzoom = %d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s : camdrv_ss_set_dzoom = %d\n", sensor.name, __func__, ctrl->value);
 
 	switch (ctrl->value) {
 	case ZOOM_LEVEL_0:
 	{
 		if (sensor.zoom_00_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : ZOOM_LEVEL_0 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ZOOM_LEVEL_0 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.zoom_00_regs, sensor.rows_num_zoom_00_regs, "zoom_00_regs");
@@ -1376,7 +1419,7 @@ static int camdrv_ss_set_dzoom(struct v4l2_subdev *sd, struct v4l2_control *ctrl
 	case ZOOM_LEVEL_1:
 	{
 		if (sensor.zoom_01_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : ZOOM_LEVEL_1 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ZOOM_LEVEL_1 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.zoom_01_regs, sensor.rows_num_zoom_01_regs, "zoom_01_regs");
@@ -1386,7 +1429,7 @@ static int camdrv_ss_set_dzoom(struct v4l2_subdev *sd, struct v4l2_control *ctrl
 	case ZOOM_LEVEL_2:
 	{
 		if (sensor.zoom_02_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : ZOOM_LEVEL_2 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ZOOM_LEVEL_2 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.zoom_02_regs, sensor.rows_num_zoom_02_regs, "zoom_02_regs");
@@ -1396,7 +1439,7 @@ static int camdrv_ss_set_dzoom(struct v4l2_subdev *sd, struct v4l2_control *ctrl
 	case ZOOM_LEVEL_3:
 	{
 		if (sensor.zoom_03_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : ZOOM_LEVEL_3 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ZOOM_LEVEL_3 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.zoom_03_regs, sensor.rows_num_zoom_03_regs, "zoom_03_regs");
@@ -1406,7 +1449,7 @@ static int camdrv_ss_set_dzoom(struct v4l2_subdev *sd, struct v4l2_control *ctrl
 	case ZOOM_LEVEL_4:
 	{
 		if (sensor.zoom_04_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : ZOOM_LEVEL_4 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ZOOM_LEVEL_4 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.zoom_04_regs, sensor.rows_num_zoom_04_regs, "zoom_04_regs");
@@ -1416,7 +1459,7 @@ static int camdrv_ss_set_dzoom(struct v4l2_subdev *sd, struct v4l2_control *ctrl
 	case ZOOM_LEVEL_5:
 	{
 		if (sensor.zoom_05_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : ZOOM_LEVEL_5 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ZOOM_LEVEL_5 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.zoom_05_regs, sensor.rows_num_zoom_05_regs, "zoom_05_regs");
@@ -1426,7 +1469,7 @@ static int camdrv_ss_set_dzoom(struct v4l2_subdev *sd, struct v4l2_control *ctrl
 	case ZOOM_LEVEL_6:
 	{
 		if (sensor.zoom_06_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : ZOOM_LEVEL_6 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ZOOM_LEVEL_6 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.zoom_06_regs, sensor.rows_num_zoom_06_regs, "zoom_06_regs");
@@ -1436,7 +1479,7 @@ static int camdrv_ss_set_dzoom(struct v4l2_subdev *sd, struct v4l2_control *ctrl
 	case ZOOM_LEVEL_7:
 	{
 		if (sensor.zoom_07_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : ZOOM_LEVEL_7 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ZOOM_LEVEL_7 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.zoom_07_regs, sensor.rows_num_zoom_07_regs, "zoom_07_regs");
@@ -1446,7 +1489,7 @@ static int camdrv_ss_set_dzoom(struct v4l2_subdev *sd, struct v4l2_control *ctrl
 	case ZOOM_LEVEL_8:
 	{
 		if (sensor.zoom_08_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : ZOOM_LEVEL_8 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ZOOM_LEVEL_8 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.zoom_08_regs, sensor.rows_num_zoom_08_regs, "zoom_08_regs");
@@ -1455,7 +1498,7 @@ static int camdrv_ss_set_dzoom(struct v4l2_subdev *sd, struct v4l2_control *ctrl
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default not supported !!!\n", sensor.name, __func__);
 		break;
 	}
 	}
@@ -1477,13 +1520,13 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 
 	index = state->preview_framesize_index;
 
-	CAM_INFO_PRINTK( "%s %s : index = %d\n", sensor.name, __func__, index);
+	CAM_INFO_PRINTK("%s %s : index = %d\n", sensor.name, __func__, index);
 
 	switch (index) {
 	case PREVIEW_SIZE_QCIF:
 	{
 		if (sensor.preview_size_176x144_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_QCIF not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_QCIF not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_176x144_regs, sensor.rows_num_preview_size_176x144_regs, "preview_size_176x144_regs");
@@ -1493,7 +1536,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_QVGA:
 	{
 		if (sensor.preview_size_320x240_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_QVGA not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_QVGA not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_320x240_regs, sensor.rows_num_preview_size_320x240_regs, "preview_size_320x240_regs");
@@ -1503,7 +1546,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_CIF:
 	{
 		if (sensor.preview_size_352x288_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_CIF not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_CIF not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_352x288_regs, sensor.rows_num_preview_size_352x288_regs, "preview_size_352x288_regs");
@@ -1513,7 +1556,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_VGA:
 	{
 		if (sensor.preview_size_640x480_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_VGA not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_VGA not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_640x480_regs, sensor.rows_num_preview_size_640x480_regs, "preview_size_640x480_regs");
@@ -1523,7 +1566,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_4CIF:
 	{
 		if (sensor.preview_size_704x576_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_4CIF not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_4CIF not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_704x576_regs, sensor.rows_num_preview_size_704x576_regs, "preview_size_704x576_regs");
@@ -1533,7 +1576,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_D1:
 	{
 		if (sensor.preview_size_720x480_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_D1 not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_D1 not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_720x480_regs, sensor.rows_num_preview_size_720x480_regs, "preview_size_720x480_regs");
@@ -1543,7 +1586,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_WVGA:
 	{
 		if (sensor.preview_size_800x480_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_WVGA not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_WVGA not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_800x480_regs, sensor.rows_num_preview_size_800x480_regs, "preview_size_800x480_regs");
@@ -1553,7 +1596,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_SVGA:
 	{
 		if (sensor.preview_size_800x600_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_SVGA not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_SVGA not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_800x600_regs, sensor.rows_num_preview_size_800x600_regs, "preview_size_800x600_regs");
@@ -1563,7 +1606,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_WSVGA:
 	{
 		if (sensor.preview_size_1024x600_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_WSVGA not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_WSVGA not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_1024x600_regs, sensor.rows_num_preview_size_1024x600_regs, "preview_size_1024x600_regs");
@@ -1573,7 +1616,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_XGA:
 	{
 		if (sensor.preview_size_1024x768_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_WSVGA not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_WSVGA not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_1024x768_regs, sensor.rows_num_preview_size_1024x768_regs, "preview_size_1024x768_regs");
@@ -1583,7 +1626,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_1MP:
 	{
 		if (sensor.preview_size_1280x960_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_1MP not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_1MP not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_1280x960_regs, sensor.rows_num_preview_size_1280x960_regs, "preview_size_1280x960_regs");
@@ -1593,7 +1636,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_W1MP:
 	{
 		if (sensor.preview_size_1600x960_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_W1MP not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_W1MP not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_1600x960_regs, sensor.rows_num_preview_size_1600x960_regs, "preview_size_1600x960_regs");
@@ -1603,7 +1646,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_2MP:
 	{
 		if (sensor.preview_size_1600x1200_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_W1MP not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_W1MP not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_1600x1200_regs, sensor.rows_num_preview_size_1600x1200_regs, "preview_size_1600x1200_regs");
@@ -1613,7 +1656,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_W2MP:
 	{
 		if (sensor.preview_size_2048x1232_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_W1MP not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_W1MP not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_2048x1232_regs, sensor.rows_num_preview_size_2048x1232_regs, "preview_size_2048x1232_regs");
@@ -1623,7 +1666,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_3MP:
 	{
 		if (sensor.preview_size_2048x1536_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_W1MP not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_W1MP not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_2048x1536_regs, sensor.rows_num_preview_size_2048x1536_regs, "preview_size_2048x1232_regs");
@@ -1633,7 +1676,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 	case PREVIEW_SIZE_5MP:
 	{
 		if (sensor.preview_size_2560x1920_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : PREVIEW_SIZE_W1MP not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : PREVIEW_SIZE_W1MP not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_size_2560x1920_regs, sensor.rows_num_preview_size_2560x1920_regs, "preview_size_2560x1920_regs");
@@ -1642,7 +1685,7 @@ int camdrv_ss_set_preview_size(struct v4l2_subdev *sd)
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default case not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default case not supported !!!\n", sensor.name, __func__);
 		err = -EINVAL;
 		break;
 	}
@@ -1658,47 +1701,46 @@ static int camdrv_ss_set_preview_start(struct v4l2_subdev *sd)
 	struct camdrv_ss_state *state = to_state(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s :\n", sensor.name, __func__);
 
 	if (!state->pix.width || !state->pix.height) {
-		CAM_ERROR_PRINTK( "%s %s : width or height is NULL!!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : width or height is NULL!!!\n", sensor.name, __func__);
 		return -EINVAL;
 	}
 
 	if (state->mode_switch == PICTURE_CAPTURE_TO_CAMERA_PREVIEW_RETURN) {
 		if (sensor.preview_camera_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : Returned after a capture, preview_camera_regs is NULL  !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : Returned after a capture, preview_camera_regs is NULL  !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.preview_camera_regs, sensor.rows_num_preview_camera_regs, "preview_camera_regs");
 
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s %s : I2C preview_camera_regs IS FAILED\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : I2C preview_camera_regs IS FAILED\n", sensor.name, __func__);
 			return -EIO;
 		}
 	}
 
 	err = camdrv_ss_set_preview_size(sd);
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s : camdrv_ss_set_preview_size is FAILED !!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : camdrv_ss_set_preview_size is FAILED !!\n", sensor.name, __func__);
 		return -EIO;
 	}
 
-	if(state->mode_switch == CAMERA_PREVIEW_TO_CAMCORDER_PREVIEW || state->mode_switch == INIT_DONE_TO_CAMCORDER_PREVIEW)
-	{
-		//Fixed FPS
+	if (state->mode_switch == CAMERA_PREVIEW_TO_CAMCORDER_PREVIEW || state->mode_switch == INIT_DONE_TO_CAMCORDER_PREVIEW) {
+		/* Fixed FPS */
 		if (sensor.fps_30_regs != 0)
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_30_regs, sensor.rows_num_fps_30_regs, "fps_30_regs");
-		else if(sensor.fps_25_regs != 0)
+		else if (sensor.fps_25_regs != 0)
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_25_regs, sensor.rows_num_fps_25_regs, "fps_25_regs");
-		else if(sensor.fps_20_regs != 0)
+		else if (sensor.fps_20_regs != 0)
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_20_regs, sensor.rows_num_fps_20_regs, "fps_20_regs");
-		else if(sensor.fps_15_regs != 0)
+		else if (sensor.fps_15_regs != 0)
 			err = camdrv_ss_i2c_set_config_register(client, sensor.fps_15_regs, sensor.rows_num_fps_15_regs, "fps_15_regs");
 		else
-			CAM_ERROR_PRINTK( "%s %s : Fixed FPS setting is not supported for 30,25,20,15 fps !!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : Fixed FPS setting is not supported for 30,25,20,15 fps !!\n", sensor.name, __func__);
 
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s %s : Fixed FPS setting is FAILED !!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : Fixed FPS setting is FAILED !!\n", sensor.name, __func__);
 			return -EIO;
 		}
 	}
@@ -1709,7 +1751,7 @@ static int camdrv_ss_set_preview_start(struct v4l2_subdev *sd)
 	if (state->check_dataline) { /* Output Test Pattern */
 		err = camdrv_ss_set_dataline_onoff(sd, 1);
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s %s : check_dataline is FAILED !!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : check_dataline is FAILED !!\n", sensor.name, __func__);
 			return -EIO;
 		}
 	}
@@ -1729,7 +1771,7 @@ static int camdrv_ss_set_jpeg_quality(struct v4l2_subdev *sd)
 
 	quality = state->jpeg_param.quality;
 
-	CAM_INFO_PRINTK( "%s %s :  quality =%d\n", sensor.name, __func__, quality);
+	CAM_INFO_PRINTK("%s %s :  quality =%d\n", sensor.name, __func__, quality);
 	x = 100/JPEG_QUALITY_MAX;
 	quality = quality / x;
 	if (quality >= JPEG_QUALITY_MAX)
@@ -1739,7 +1781,7 @@ static int camdrv_ss_set_jpeg_quality(struct v4l2_subdev *sd)
 	case JPEG_QUALITY_SUPERFINE:
 	{
 		if (sensor.quality_superfine_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : JPEG_QUALITY_SUPERFINE not supported ,trying  below quality!!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : JPEG_QUALITY_SUPERFINE not supported ,trying  below quality!!!\n", sensor.name, __func__);
 		} else {
 			err = camdrv_ss_i2c_set_config_register(client, sensor.quality_superfine_regs, sensor.rows_num_quality_superfine_regs, "quality_superfine_regs");
 			break;
@@ -1749,7 +1791,7 @@ static int camdrv_ss_set_jpeg_quality(struct v4l2_subdev *sd)
 	case JPEG_QUALITY_FINE:
 	{
 		if (sensor.quality_fine_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : JPEG_QUALITY_FINE not supported , trying  below quality !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : JPEG_QUALITY_FINE not supported , trying  below quality !!!\n", sensor.name, __func__);
 		} else {
 			err = camdrv_ss_i2c_set_config_register(client, sensor.quality_fine_regs, sensor.rows_num_quality_fine_regs, "quality_fine_regs");
 			break;
@@ -1759,7 +1801,7 @@ static int camdrv_ss_set_jpeg_quality(struct v4l2_subdev *sd)
 	case JPEG_QUALITY_NORMAL:
 	{
 		if (sensor.quality_normal_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : JPEG_QUALITY_NORMAL not supported , trying  below quality!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : JPEG_QUALITY_NORMAL not supported , trying  below quality!!\n", sensor.name, __func__);
 		} else {
 			err = camdrv_ss_i2c_set_config_register(client, sensor.quality_normal_regs, sensor.rows_num_quality_normal_regs, "quality_normal_regs");
 			break;
@@ -1769,7 +1811,7 @@ static int camdrv_ss_set_jpeg_quality(struct v4l2_subdev *sd)
 	case JPEG_QUALITY_ECONOMY:
 	{
 		if (sensor.quality_economy_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : JPEG_QUALITY_ECONOMY not supported , trying  below quality!!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : JPEG_QUALITY_ECONOMY not supported , trying  below quality!!!\n", sensor.name, __func__);
 		} else {
 			err = camdrv_ss_i2c_set_config_register(client, sensor.quality_economy_regs, sensor.rows_num_quality_economy_regs, "quality_economy_regs");
 			break;
@@ -1778,7 +1820,7 @@ static int camdrv_ss_set_jpeg_quality(struct v4l2_subdev *sd)
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : no level is  supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : no level is  supported !!!\n", sensor.name, __func__);
 		err = -EINVAL;
 		break;
 	}
@@ -1788,7 +1830,7 @@ static int camdrv_ss_set_jpeg_quality(struct v4l2_subdev *sd)
 }
 
 
-static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
+int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 {
 	struct camdrv_ss_state *state = to_state(sd);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1796,11 +1838,10 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 
 	index = state->capture_framesize_index;
 
-	CAM_INFO_PRINTK( "%s Entered : capture_framesize_index = %d \n", __func__,index);
+	CAM_INFO_PRINTK("%s Entered : capture_framesize_index = %d\n", __func__, index);
 
-	if(index < 0)
-	{
-		CAM_ERROR_PRINTK("%s: Sensor didn't define capture settings for this resolution. So taking from preview settings. \n", __func__);
+	if (index < 0) {
+		CAM_ERROR_PRINTK("%s: Sensor didn't define capture settings for this resolution. So taking from preview settings.\n", __func__);
 		return camdrv_ss_set_preview_size(sd);
 	}
 
@@ -1809,7 +1850,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_VGA: /* 416x320 */
 	{
 		if (sensor.capture_size_640x480_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_640x480_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_640x480_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_640x480_regs, sensor.rows_num_capture_size_640x480_regs, "capture_size_640x480_regs");
@@ -1820,7 +1861,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_WVGA:
 	{
 		if (sensor.capture_size_800x480_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_800x480_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_800x480_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_800x480_regs, sensor.rows_num_capture_size_800x480_regs, "capture_size_800x480_regs");
@@ -1831,7 +1872,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_SVGA:	/* 800x600 */
 	{
 		if (sensor.capture_size_800x600_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_800x600_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_800x600_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_800x600_regs, sensor.rows_num_capture_size_800x600_regs, "capture_size_800x600_regs");
@@ -1842,7 +1883,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_D1:		/* 720x480 */
 	{
 		if (sensor.capture_size_720x480_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_720x480_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_720x480_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_720x480_regs, sensor.rows_num_capture_size_720x480_regs, "capture_size_720x480_regs");
@@ -1850,10 +1891,10 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		break;
 	}
 
-	case CAPTURE_SIZE_WSVGA: 	/* 1024x600 */
+	case CAPTURE_SIZE_WSVGA:	/* 1024x600 */
 	{
 		if (sensor.capture_size_1024x600_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_1024x600_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_1024x600_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_1024x600_regs, sensor.rows_num_capture_size_1024x600_regs, "capture_size_1024x600_regs");
@@ -1864,7 +1905,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_XGA:	/* 1024x768 */
 	{
 		if (sensor.capture_size_1024x768_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_1024x768_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_1024x768_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_1024x768_regs, sensor.rows_num_capture_size_1024x768_regs, "capture_size_1024x768_regs");
@@ -1875,7 +1916,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_1MP:		/* 1280x960 */
 	{
 		if (sensor.capture_size_1280x960_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_1280x960_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_1280x960_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_1280x960_regs, sensor.rows_num_capture_size_1280x960_regs, "capture_size_1280x960_regs");
@@ -1885,7 +1926,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_W1MP:		/* 1600x960 */
 	{
 		if (sensor.capture_size_1600x960_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_1600x960_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_1600x960_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_1600x960_regs, sensor.rows_num_capture_size_1600x960_regs, "capture_size_1600x960_regs");
@@ -1896,7 +1937,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_2MP:	/* UXGA  - 1600x1200 */
 	{
 		if (sensor.capture_size_1600x1200_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_1600x1200_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_1600x1200_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_1600x1200_regs, sensor.rows_num_capture_size_1600x1200_regs, "capture_size_1600x1200_regs");
@@ -1907,7 +1948,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_W2MP:		/* 2048x1232, 2.4MP */
 	{
 		if (sensor.capture_size_2048x1232_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_2048x1232_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_2048x1232_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_2048x1232_regs, sensor.rows_num_capture_size_2048x1232_regs, "capture_size_2048x1232_regs");
@@ -1918,7 +1959,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_3MP:	/*2048x1536*/
 	{
 		if (sensor.capture_size_2048x1536_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_2048x1536_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_2048x1536_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_2048x1536_regs, sensor.rows_num_capture_size_2048x1536_regs, "capture_size_2048x1536_regs");
@@ -1929,7 +1970,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 	case CAPTURE_SIZE_5MP:		/* 2560x1920 */
 	{
 		if (sensor.capture_size_2560x1920_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : capture_size_2560x1920_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : capture_size_2560x1920_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_2560x1920_regs, sensor.rows_num_capture_size_2560x1920_regs, "capture_size_2560x1920_regs");
@@ -1939,7 +1980,7 @@ static int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default case not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default case not supported !!!\n", sensor.name, __func__);
 		err = -EINVAL;
 		break;
 	}
@@ -1955,56 +1996,41 @@ static int camdrv_ss_set_capture_start(struct v4l2_subdev *sd, struct v4l2_contr
 	int err = 0;
 	int light_state = CAM_NORMAL_LIGHT;
 
-	CAM_INFO_PRINTK( "%s Entered\n", __func__);
+	CAM_INFO_PRINTK("%s Entered\n", __func__);
 
 
 	/* SENSOR DOESN"T SUPPORT AUTO FRAME RATE DURING PICTURE CAPTURE MODE. CHANGE THE FPS */
 	/* CURRENTLY I SET THE ORDER 15,10,7,5,20,25,30 . PLEASE FEEL FREE TO MODIFY THE ORDER IF NECESSARY */
-#if 0 //aska modify
-	if(state->fps == FRAME_RATE_AUTO)
-	{
-		if(sensor.fps_15_regs)
-		{
-			CAM_ERROR_PRINTK( "%s FRAME_RATE_AUTO not supported during pictureMode. So change to 15fps !!!\n", __func__);
+#if 0 /* aska modify */
+	if (state->fps == FRAME_RATE_AUTO) {
+		if (sensor.fps_15_regs) {
+			CAM_ERROR_PRINTK("%s FRAME_RATE_AUTO not supported during pictureMode. So change to 15fps !!!\n", __func__);
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.fps_15_regs, sensor.rows_num_fps_15_regs, "fps_15_regs");
-		}
-		else if(sensor.fps_10_regs)
-		{
-			CAM_ERROR_PRINTK( "%s FRAME_RATE_AUTO not supported during pictureMode. So change to 10fps !!!\n", __func__);
+		} else if (sensor.fps_10_regs) {
+			CAM_ERROR_PRINTK("%s FRAME_RATE_AUTO not supported during pictureMode. So change to 10fps !!!\n", __func__);
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.fps_10_regs, sensor.rows_num_fps_10_regs, "fps_10_regs");
-		}
-		else if(sensor.fps_7_regs)
-		{
-			CAM_ERROR_PRINTK( "%s FRAME_RATE_AUTO not supported during pictureMode. So change to 7fps !!!\n", __func__);
+		} else if (sensor.fps_7_regs) {
+			CAM_ERROR_PRINTK("%s FRAME_RATE_AUTO not supported during pictureMode. So change to 7fps !!!\n", __func__);
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.fps_7_regs, sensor.rows_num_fps_7_regs, "fps_7_regs");
-		}
-		else if(sensor.fps_5_regs)
-		{
-			CAM_ERROR_PRINTK( "%s FRAME_RATE_AUTO not supported during pictureMode. So change to 5fps !!!\n", __func__);
+		} else if (sensor.fps_5_regs) {
+			CAM_ERROR_PRINTK("%s FRAME_RATE_AUTO not supported during pictureMode. So change to 5fps !!!\n", __func__);
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.fps_5_regs, sensor.rows_num_fps_5_regs, "fps_5_regs");
-		}
-		else if(sensor.fps_20_regs)
-		{
-			CAM_ERROR_PRINTK( "%s FRAME_RATE_AUTO not supported during pictureMode. So change to 20fps !!!\n", __func__);
+		} else if (sensor.fps_20_regs) {
+			CAM_ERROR_PRINTK("%s FRAME_RATE_AUTO not supported during pictureMode. So change to 20fps !!!\n", __func__);
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.fps_20_regs, sensor.rows_num_fps_20_regs, "fps_20_regs");
-		}
-		else if(sensor.fps_25_regs)
-		{
-			CAM_ERROR_PRINTK( "%s FRAME_RATE_AUTO not supported during pictureMode. So change to 25fps !!!\n", __func__);
+		} else if (sensor.fps_25_regs) {
+			CAM_ERROR_PRINTK("%s FRAME_RATE_AUTO not supported during pictureMode. So change to 25fps !!!\n", __func__);
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.fps_25_regs, sensor.rows_num_fps_25_regs, "fps_25_regs");
-		}
-		else if(sensor.fps_30_regs)
-		{
-			CAM_ERROR_PRINTK( "%s FRAME_RATE_AUTO not supported during pictureMode. So change to 30fps !!!\n", __func__);
+		} else if (sensor.fps_30_regs) {
+			CAM_ERROR_PRINTK("%s FRAME_RATE_AUTO not supported during pictureMode. So change to 30fps !!!\n", __func__);
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.fps_30_regs, sensor.rows_num_fps_30_regs, "fps_30_regs");
-		}
-		else
-			CAM_ERROR_PRINTK( "%s FRAME_RATE_AUTO not supported during pictureMode. NO OTHER FPS SUPPORTED !!!\n", __func__);
+		} else
+			CAM_ERROR_PRINTK("%s FRAME_RATE_AUTO not supported during pictureMode. NO OTHER FPS SUPPORTED !!!\n", __func__);
 
-		if(err<0)
-			CAM_ERROR_PRINTK( "%s FRAME RATE SETTING ERROR! FAILED !!!!\n", __func__);
+		if (err < 0)
+			CAM_ERROR_PRINTK("%s FRAME RATE SETTING ERROR! FAILED !!!!\n", __func__);
 		else
-			CAM_INFO_PRINTK( "%s frame rate setting success \n", __func__);
+			CAM_INFO_PRINTK("%s frame rate setting success\n", __func__);
 	}
 #endif
 
@@ -2013,20 +2039,20 @@ static int camdrv_ss_set_capture_start(struct v4l2_subdev *sd, struct v4l2_contr
 	/* Set image size */
 	err = camdrv_ss_set_capture_size(sd);
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s : camdrv_ss_set_capture_size not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : camdrv_ss_set_capture_size not supported !!!\n", sensor.name, __func__);
 		return -EIO;
 	}
 
 	if (state->currentScene == SCENE_MODE_NIGHTSHOT || state->currentScene == SCENE_MODE_FIREWORKS) {
 		/* Set Snapshot registers */
 		if (sensor.snapshot_nightmode_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : snapshot_nightmode_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : snapshot_nightmode_regs not supported !!!\n", sensor.name, __func__);
 			err = -EIO;
 		}
 
 		err = camdrv_ss_i2c_set_config_register(client, sensor.snapshot_nightmode_regs, sensor.rows_num_snapshot_nightmode_regs, "snapshot_nightmode_regs");
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "[%s : %d] ERROR! Could not take a picture\n", __FILE__, __LINE__);
+			CAM_ERROR_PRINTK("[%s : %d] ERROR! Could not take a picture\n", __FILE__, __LINE__);
 			return -EIO;
 		}
 	} else {
@@ -2041,7 +2067,7 @@ static int camdrv_ss_set_capture_start(struct v4l2_subdev *sd, struct v4l2_contr
 				if (sensor.check_flash_needed)
 					bflash_needed = sensor.check_flash_needed(sd);
 				else
-					CAM_ERROR_PRINTK( "%s %s : check_flash_needed is NULL !!!\n", sensor.name, __func__);
+					CAM_ERROR_PRINTK("%s %s : check_flash_needed is NULL !!!\n", sensor.name, __func__);
 
 				if (bflash_needed) {
 					state->camera_flash_fire = 1;
@@ -2052,46 +2078,46 @@ static int camdrv_ss_set_capture_start(struct v4l2_subdev *sd, struct v4l2_contr
 		if (state->camera_flash_fire) {
 			/* Set Snapshot registers */
 			if (sensor.snapshot_flash_on_regs == 0) {
-				CAM_ERROR_PRINTK( "%s %s : snapshot_lowlight_regs not supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : snapshot_lowlight_regs not supported !!!\n", sensor.name, __func__);
 				err = -EIO;
 			}
 			err = camdrv_ss_i2c_set_config_register(client, sensor.snapshot_flash_on_regs, sensor.rows_num_snapshot_flash_on_regs,
 							"snapshot_flash_on_regs");
 			if (err < 0) {
-				CAM_ERROR_PRINTK( "[%s : %d] ERROR! Couldn't Set Flash_on_regs\n", __FILE__, __LINE__);
+				CAM_ERROR_PRINTK("[%s : %d] ERROR! Couldn't Set Flash_on_regs\n", __FILE__, __LINE__);
 			}
 			if (sensor.AAT_flash_control == NULL)
-				CAM_ERROR_PRINTK( "%s %s : AAT_flash_control not supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : AAT_flash_control not supported !!!\n", sensor.name, __func__);
 			else
 				sensor.AAT_flash_control(sd, FLASH_CONTROL_MAX_LEVEL);
 		}
 
 		if (sensor.get_light_condition != NULL) {
 			sensor.get_light_condition(sd, &light_state);
-			CAM_ERROR_PRINTK( "%s %s : light_state =%d !!\n", sensor.name, __func__, light_state);
+			CAM_ERROR_PRINTK("%s %s : light_state =%d !!\n", sensor.name, __func__, light_state);
 		}
 
 		if (light_state == CAM_LOW_LIGHT) {
 			if (sensor.snapshot_lowlight_regs == 0) {
-				CAM_ERROR_PRINTK( "%s %s : snapshot_lowlight_regs not supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : snapshot_lowlight_regs not supported !!!\n", sensor.name, __func__);
 				err = -EIO;
 			}
 
 			err = camdrv_ss_i2c_set_config_register(client, sensor.snapshot_lowlight_regs, sensor.rows_num_snapshot_lowlight_regs, "snapshot_highlight_regs");
 			if (err < 0) {
-				CAM_ERROR_PRINTK( "%s %s : camdrv_ss_i2c_set_config_register failed  not supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : camdrv_ss_i2c_set_config_register failed  not supported !!!\n", sensor.name, __func__);
 				return -EIO;
 			}
 		} else if (light_state == CAM_HIGH_LIGHT) {
 			/* Set Snapshot registers */
 			if (sensor.snapshot_highlight_regs == 0) {
-				CAM_ERROR_PRINTK( "%s %s : snapshot_highlight_regs not supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : snapshot_highlight_regs not supported !!!\n", sensor.name, __func__);
 				err = -EIO;
 			}
 
 			err = camdrv_ss_i2c_set_config_register(client, sensor.snapshot_highlight_regs, sensor.rows_num_snapshot_highlight_regs, "snapshot_highlight_regs");
 			if (err < 0) {
-				CAM_ERROR_PRINTK( "%s %s : camdrv_ss_i2c_set_config_register failed  not supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : camdrv_ss_i2c_set_config_register failed  not supported !!!\n", sensor.name, __func__);
 				return -EIO;
 			}
 		}
@@ -2101,13 +2127,13 @@ static int camdrv_ss_set_capture_start(struct v4l2_subdev *sd, struct v4l2_contr
 
 	/* Set Snapshot registers */
 	if (sensor.snapshot_normal_regs == 0) {
-		CAM_ERROR_PRINTK( "%s %s : snapshot_normal_regs not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : snapshot_normal_regs not supported !!!\n", sensor.name, __func__);
 		err = -EIO;
 	}
 
 	err = camdrv_ss_i2c_set_config_register(client, sensor.snapshot_normal_regs, sensor.rows_num_snapshot_normal_regs, "snapshot_normal_regs");
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s : camdrv_ss_i2c_set_config_register failed  not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : camdrv_ss_i2c_set_config_register failed  not supported !!!\n", sensor.name, __func__);
 		return -EIO;
 	}
 
@@ -2120,38 +2146,35 @@ static int camdrv_ss_set_capture_done(struct v4l2_subdev *sd, struct v4l2_contro
 	struct camdrv_ss_state *state = to_state(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s\n", __func__);
+	CAM_INFO_PRINTK("%s\n", __func__);
 
 	if (state->camera_af_flash_fire) {
 		if (sensor.snapshot_af_preflash_off_regs == 0) {
-			CAM_ERROR_PRINTK( "%s %s : snapshot_af_preflash_off_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : snapshot_af_preflash_off_regs not supported !!!\n", sensor.name, __func__);
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.snapshot_af_preflash_off_regs, sensor.rows_num_snapshot_af_preflash_off_regs, "snapshot_af_preflash_off_regs");
 
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "[%s: %d] ERROR! Setting af_preflash_off_regs\n", __FILE__, __LINE__);
+			CAM_ERROR_PRINTK("[%s: %d] ERROR! Setting af_preflash_off_regs\n", __FILE__, __LINE__);
 		}
 	}
 
 	if (sensor.AAT_flash_control != NULL)
 		sensor.AAT_flash_control(sd, FLASH_CONTROL_OFF);
 
-	if(state->fps == FRAME_RATE_AUTO)
-	{
-		CAM_ERROR_PRINTK( "%s : Rollback to FRAME_RATE_AUTO again as capture is done !! \n",__func__);
+/*
+	if(state->fps == FRAME_RATE_AUTO) {
+		CAM_ERROR_PRINTK("%s : Rollback to FRAME_RATE_AUTO again as capture is done !!\n",__func__);
 
-		if (sensor.fps_auto_regs == 0)
-		{
-			CAM_ERROR_PRINTK( "%s %s : fps_auto_regs not supported !!\n", sensor.name, __func__);
-		}
-		else
-		{
+		if (sensor.fps_auto_regs == 0) {
+			CAM_ERROR_PRINTK("%s %s : fps_auto_regs not supported !!\n", sensor.name, __func__);
+		} else {
 			err =  camdrv_ss_i2c_set_config_register(client, sensor.fps_auto_regs, sensor.rows_num_fps_auto_regs, "fps_auto_regs");
-			if(err<0)
-				CAM_ERROR_PRINTK( "%s FRAME RATE AUTO SETTING ERROR ! FAILED !\n", __func__);
+			if(err < 0)
+				CAM_ERROR_PRINTK("%s FRAME RATE AUTO SETTING ERROR ! FAILED !\n", __func__);
 		}
 	}
-
+*/
 	atomic_set(&gCapModeState, CAMDRV_SS_CAPTURE_MODE_NOT_SUPPORT);
 
 	return 0;
@@ -2164,15 +2187,19 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	struct camdrv_ss_state *state = to_state(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :   value =%d\n", sensor.name, __func__, ctrl->value);
-
+	CAM_INFO_PRINTK("%s %s :   value =%d\n", sensor.name, __func__, ctrl->value);
+#if 1
+	if (state->current_mode == PICTURE_MODE) {
+		return 0;
+	}
+#endif
 	if (ctrl->value != SCENE_MODE_NONE) {
 		if (sensor.scene_none_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_none_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_none_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_none_regs, sensor.rows_num_scene_none_regs, "scene_none_regs");
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "[%s : %d] ERROR! Could not take a picture\n", __FILE__, __LINE__);
+			CAM_ERROR_PRINTK("[%s : %d] ERROR! Could not take a picture\n", __FILE__, __LINE__);
 			return -EIO;
 		}
 	}
@@ -2181,7 +2208,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	case SCENE_MODE_NONE:
 	{
 		if (sensor.scene_none_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_none_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_none_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_none_regs, sensor.rows_num_scene_none_regs, "scene_none_regs");
 		break;
@@ -2192,7 +2219,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 		/* Metering-Center, EV0, WB-Auto, Sharp-1, Sat0, AF-Auto will be set in HAL layer */
 
 		if (sensor.scene_portrait_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_portrait_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_portrait_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_portrait_regs, sensor.rows_num_scene_portrait_regs, "scene_portrait_regs");
 		break;
@@ -2200,16 +2227,16 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 
 	case SCENE_MODE_NIGHTSHOT:
 	{
-		if (sensor.scene_nightshot_regs == 0){
-			CAM_ERROR_PRINTK( "%s %s : scene_nightshot_regs not supported !!!\n", sensor.name, __func__);
-		}else{
-			 //aska add
-			if(sensor.get_nightmode(sd)){
+		if (sensor.scene_nightshot_regs == 0) {
+			CAM_ERROR_PRINTK("%s %s : scene_nightshot_regs not supported !!!\n", sensor.name, __func__);
+		} else {
+			/* aska add */
+			if (sensor.get_nightmode(sd)) {
 				CAM_ERROR_PRINTK("night mode dark\n");
 				err = camdrv_ss_i2c_set_config_register(client, sensor.scene_nightshot_dark_regs, sensor.rows_num_scene_nightshot_dark_regs, "scene_nightshot_dark_regs");
-			}else{
+			} else {
 				CAM_ERROR_PRINTK("night mode normal\n");
-			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_nightshot_regs, sensor.rows_num_scene_nightshot_regs, "scene_nightshot_regs");
+				err = camdrv_ss_i2c_set_config_register(client, sensor.scene_nightshot_regs, sensor.rows_num_scene_nightshot_regs, "scene_nightshot_regs");
 			}
 		}
 		break;
@@ -2219,7 +2246,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	{
 		/* Metering-Spot, EV0, WB-Auto, Sharp0, Sat0, AF-Auto will be set in HAL layer */
 		if (sensor.scene_backlight_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_backlight_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_backlight_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_backlight_regs, sensor.rows_num_scene_backlight_regs, "scene_backlight_regs");
 		break;
@@ -2230,7 +2257,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 		/* Metering-Matrix, EV0, WB-Auto, Sharp+1, Sat+1, AF-Auto will be set in HAL layer */
 
 		if (sensor.scene_landscape_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_landscape_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_landscape_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_landscape_regs, sensor.rows_num_scene_landscape_regs, "scene_landscape_regs");
 
@@ -2240,7 +2267,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	case SCENE_MODE_SPORTS:
 	{
 		if (sensor.scene_sports_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_sports_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_sports_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_sports_regs, sensor.rows_num_scene_sports_regs, "scene_sports_regs");
 
@@ -2250,7 +2277,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	case SCENE_MODE_PARTY_INDOOR:
 	{
 		if (sensor.scene_party_indoor_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_party_indoor_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_party_indoor_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_party_indoor_regs, sensor.rows_num_scene_party_indoor_regs, "scene_party_indoor_regs");
 
@@ -2261,7 +2288,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	{
 		/* Metering-Center, EV+1, WB-Auto, Sharp0, Sat+1, AF-Auto will be set in HAL layer */
 		if (sensor.scene_beach_snow_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : saturation_plus_1_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : saturation_plus_1_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_beach_snow_regs, sensor.rows_num_scene_beach_snow_regs, "scene_beach_snow_regs");
 
@@ -2272,7 +2299,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	{
 		/* Metering-Center, EV0, WB-daylight, Sharp0, Sat0, AF-Auto will be set in HAL layer */
 		if (sensor.scene_sunset_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_sunset_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_sunset_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_sunset_regs, sensor.rows_num_scene_sunset_regs, "scene_sunset_regs");
 		break;
@@ -2282,7 +2309,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	{
 		/* Metering-Center, EV0, WB-fluorescent, Sharp0, Sat0, AF-Auto will be set in HAL layer */
 		if (sensor.scene_duskdawn_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_duskdawn_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_duskdawn_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_duskdawn_regs, sensor.rows_num_scene_duskdawn_regs, "scene_duskdawn_regs");
 
@@ -2293,7 +2320,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	{
 		/* Metering-Center, EV0, WB-Auto, Sharp0, Sat+2, AF-Auto will be set in HAL layer */
 		if (sensor.scene_fall_color_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_fall_color_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_fall_color_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_fall_color_regs, sensor.rows_num_scene_fall_color_regs, "scene_fall_color_regs");
 
@@ -2303,7 +2330,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	case SCENE_MODE_FIREWORKS:
 	{
 		if (sensor.scene_fireworks_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_fireworks_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_fireworks_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_fireworks_regs, sensor.rows_num_scene_fireworks_regs, "scene_fireworks_regs");
 
@@ -2314,7 +2341,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	{
 		/* Metering-Center, EV0, WB-Auto, Sharp+2, Sat0, AF-Macro will be set in HAL layer */
 		if (sensor.scene_text_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_text_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_text_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_text_regs, sensor.rows_num_scene_text_regs, "scene_text_regs");
 
@@ -2325,7 +2352,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 	{
 		/* Metering-Center, EV0, WB-Daylight, Sharp0, Sat0, AF-Auto will be set in HAL layer */
 		if (sensor.scene_candle_light_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : scene_candle_light_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : scene_candle_light_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.scene_candle_light_regs, sensor.rows_num_scene_candle_light_regs, "scene_candle_light_regs");
 
@@ -2334,7 +2361,7 @@ static int camdrv_ss_set_scene_mode(struct v4l2_subdev *sd, struct v4l2_control 
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default not supported !!!\n", sensor.name, __func__);
 		err = -EINVAL;
 		break;
 	}
@@ -2351,13 +2378,13 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
 
 	switch (ctrl->value) {
 	case IMAGE_EFFECT_NONE:
 	{
 		if (sensor.effect_normal_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : effect_normal_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : effect_normal_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.effect_normal_regs, sensor.rows_num_effect_normal_regs, "effect_normal_regs");
 
@@ -2367,7 +2394,7 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 	case IMAGE_EFFECT_MONO:
 	{
 		if (sensor.effect_mono_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : effect_mono_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : effect_mono_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.effect_mono_regs, sensor.rows_num_effect_mono_regs, "effect_mono_regs");
 
@@ -2378,7 +2405,7 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 	case IMAGE_EFFECT_ANTIQUE:
 	{
 		if (sensor.effect_sepia_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : effect_sepia_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : effect_sepia_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.effect_sepia_regs, sensor.rows_num_effect_sepia_regs, "effect_sepia_regs");
 
@@ -2388,7 +2415,7 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 	case IMAGE_EFFECT_NEGATIVE:
 	{
 		if (sensor.effect_negative_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : effect_negative_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : effect_negative_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.effect_negative_regs, sensor.rows_num_effect_negative_regs, "effect_negative_regs");
 
@@ -2398,7 +2425,7 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 	case IMAGE_EFFECT_AQUA:
 	{
 		if (sensor.effect_aqua_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : effect_aqua_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : effect_aqua_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.effect_aqua_regs, sensor.rows_num_effect_aqua_regs, "effect_aqua_regs");
 
@@ -2408,7 +2435,7 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 	case IMAGE_EFFECT_BNW:
 	{
 		if (sensor.effect_black_white_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : effect_black_white_regsnot supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : effect_black_white_regsnot supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.effect_black_white_regs, sensor.rows_num_effect_black_white_regs, "effect_black_white_regs");
 
@@ -2418,7 +2445,7 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 	case IMAGE_EFFECT_SOLARIZATION:
 	{
 		if (sensor.effect_solarization_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : effect_solarization_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : effect_solarization_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.effect_solarization_regs, sensor.rows_num_effect_solarization_regs, "effect_solarization_regs");
 
@@ -2428,7 +2455,7 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 	case IMAGE_EFFECT_SHARPEN:
 	{
 		if (sensor.effect_sharpen_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : effect_sharpen_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : effect_sharpen_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.effect_sharpen_regs, sensor.rows_num_effect_sharpen_regs, "effect_sharpen_regs");
 
@@ -2437,7 +2464,7 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 	case IMAGE_EFFECT_EMBOSS:
 	{
 		if (sensor.effect_emboss_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : effect_emboss_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : effect_emboss_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.effect_emboss_regs, sensor.rows_num_effect_emboss_regs, "effect_emboss_regs");
 
@@ -2446,7 +2473,7 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 	case IMAGE_EFFECT_OUTLINE:
 	{
 		if (sensor.effect_outline_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : effect_outline_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : effect_outline_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.effect_outline_regs, sensor.rows_num_effect_outline_regs, "effect_outline_regs");
 
@@ -2455,7 +2482,7 @@ static int camdrv_ss_set_effect(struct v4l2_subdev *sd, struct v4l2_control *ctr
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default case not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default case not supported !!!\n", sensor.name, __func__);
 		break;
 	}
 	}
@@ -2470,13 +2497,13 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	struct camdrv_ss_state *state = to_state(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
 
 	switch (ctrl->value) {
 	case WHITE_BALANCE_AUTO:
 	{
 		if (sensor.wb_auto_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : wb_auto_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : wb_auto_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.wb_auto_regs, sensor.rows_num_wb_auto_regs, "wb_auto_regs");
 
@@ -2486,7 +2513,7 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	case WHITE_BALANCE_SUNNY:
 	{
 		if (sensor.wb_sunny_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : wb_sunny_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : wb_sunny_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.wb_sunny_regs, sensor.rows_num_wb_sunny_regs, "wb_sunny_regs");
 
@@ -2496,7 +2523,7 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	case WHITE_BALANCE_CLOUDY:
 	{
 		if (sensor.wb_cloudy_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : wb_cloudy_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : wb_cloudy_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.wb_cloudy_regs, sensor.rows_num_wb_cloudy_regs, "wb_cloudy_regs");
 
@@ -2506,7 +2533,7 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	case WHITE_BALANCE_TUNGSTEN:  /* WHITE_BALANCE_INCANDESCENT: */
 	{
 		if (sensor.wb_tungsten_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : wb_tungsten_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : wb_tungsten_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.wb_tungsten_regs, sensor.rows_num_wb_tungsten_regs, "wb_tungsten_regs");
 
@@ -2516,7 +2543,7 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	case WHITE_BALANCE_FLUORESCENT:
 	{
 		if (sensor.wb_fluorescent_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : wb_fluorescent_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : wb_fluorescent_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.wb_fluorescent_regs, sensor.rows_num_wb_fluorescent_regs, "wb_fluorescent_regs");
 
@@ -2526,7 +2553,7 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	case WHITE_BALANCE_CWF:
 	{
 		if (sensor.wb_cwf_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : wb_cwf_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : wb_cwf_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.wb_cwf_regs, sensor.rows_num_wb_cwf_regs, "wb_cwf_regs");
 
@@ -2535,7 +2562,7 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	case WHITE_BALANCE_DAYLIGHT:
 	{
 		if (sensor.wb_daylight_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : wb_daylight_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : wb_daylight_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.wb_daylight_regs, sensor.rows_num_wb_daylight_regs, "wb_daylight_regs");
 
@@ -2544,7 +2571,7 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	case WHITE_BALANCE_INCANDESCENT:
 	{
 		if (sensor.wb_incandescent_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : wb_incandescent_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : wb_incandescent_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.wb_incandescent_regs, sensor.rows_num_wb_incandescent_regs, "wb_incandescent_regs");
 
@@ -2553,7 +2580,7 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	case WHITE_BALANCE_SHADE:
 	{
 		if (sensor.wb_shade_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : wb_shade_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : wb_shade_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.wb_shade_regs, sensor.rows_num_wb_shade_regs, "wb_shade_regs");
 
@@ -2562,7 +2589,7 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	case WHITE_BALANCE_HORIZON:
 	{
 		if (sensor.wb_horizon_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : wb_horizon_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : wb_horizon_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.wb_horizon_regs, sensor.rows_num_wb_horizon_regs, "wb_horizon_regs");
 
@@ -2570,7 +2597,7 @@ static int camdrv_ss_set_white_balance(struct v4l2_subdev *sd, struct v4l2_contr
 	}
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default not supported !!!\n", sensor.name, __func__);
 		break;
 	}
 	}
@@ -2587,13 +2614,13 @@ static int camdrv_ss_set_metering(struct v4l2_subdev *sd, struct v4l2_control *c
 	struct camdrv_ss_state *state = to_state(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
 
 	switch (ctrl->value) {
 	case METERING_MATRIX:
 	{
 		if (sensor.metering_matrix_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : metering_matrix_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : metering_matrix_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.metering_matrix_regs, sensor.rows_num_metering_matrix_regs, "metering_matrix_regs");
 
@@ -2603,7 +2630,7 @@ static int camdrv_ss_set_metering(struct v4l2_subdev *sd, struct v4l2_control *c
 	case METERING_CENTER:
 	{
 		if (sensor.metering_center_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : metering_center_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : metering_center_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.metering_center_regs, sensor.rows_num_metering_center_regs, "metering_center_regs");
 
@@ -2614,7 +2641,7 @@ static int camdrv_ss_set_metering(struct v4l2_subdev *sd, struct v4l2_control *c
 	{
 
 		if (sensor.metering_spot_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : metering_spot_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : metering_spot_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.metering_spot_regs, sensor.rows_num_metering_spot_regs, "metering_spot_regs");
 
@@ -2624,7 +2651,7 @@ static int camdrv_ss_set_metering(struct v4l2_subdev *sd, struct v4l2_control *c
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default not supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default not supported !!!\n", sensor.name, __func__);
 		break;
 	}
 	}
@@ -2634,20 +2661,20 @@ static int camdrv_ss_set_metering(struct v4l2_subdev *sd, struct v4l2_control *c
 	return err;
 }
 
-
+#if 0
 static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = 0;
 
 
-	CAM_INFO_PRINTK( "%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
 
 	switch (ctrl->value) {
 	case ISO_AUTO:
 	{
 		if (sensor.iso_auto_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_auto_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_auto_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_auto_regs, sensor.rows_num_iso_auto_regs, "iso_auto_regs");
 
@@ -2656,7 +2683,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_50:
 	{
 		if (sensor.iso_50_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_50_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_50_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_50_regs, sensor.rows_num_iso_50_regs, "iso_50_regs");
 
@@ -2666,7 +2693,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_100:
 	{
 		if (sensor.iso_100_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_100_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_100_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_100_regs, sensor.rows_num_iso_100_regs, "iso_100_regs");
 
@@ -2675,7 +2702,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_200:
 	{
 		if (sensor.iso_200_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_200_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_200_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_200_regs, sensor.rows_num_iso_200_regs, "iso_200_regs");
 
@@ -2684,7 +2711,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_400:
 	{
 		if (sensor.iso_400_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_400_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_400_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_400_regs, sensor.rows_num_iso_400_regs, "iso_400_regs");
 
@@ -2694,7 +2721,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_800:
 	{
 		if (sensor.iso_800_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_800_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_800_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_800_regs, sensor.rows_num_iso_800_regs, "iso_800_regs");
 
@@ -2704,7 +2731,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_1200:
 	{
 		if (sensor.iso_1200_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_1200_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_1200_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_1200_regs, sensor.rows_num_iso_1200_regs, "iso_1200_regs");
 
@@ -2714,7 +2741,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_1600:
 	{
 		if (sensor.iso_1600_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_1600_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_1600_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_1600_regs, sensor.rows_num_iso_1600_regs, "iso_1600_regs");
 
@@ -2724,7 +2751,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_2400:
 	{
 		if (sensor.iso_2400_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_2400_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_2400_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_2400_regs, sensor.rows_num_iso_2400_regs, "iso_2400_regs");
 
@@ -2734,7 +2761,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_3200:
 	{
 		if (sensor.iso_3200_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_3200_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_3200_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_3200_regs, sensor.rows_num_iso_3200_regs, "iso_3200_regs");
 
@@ -2744,7 +2771,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_SPORTS:
 	{
 		if (sensor.iso_sports_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_sports_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_sports_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_sports_regs, sensor.rows_num_iso_sports_regs, "iso_sports_regs");
 
@@ -2754,7 +2781,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_NIGHT:
 	{
 		if (sensor.iso_night_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_night_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_night_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_night_regs, sensor.rows_num_iso_night_regs, "iso_night_regs");
 
@@ -2764,7 +2791,7 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case ISO_MOVIE:
 	{
 		if (sensor.iso_movie_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : iso_movie_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : iso_movie_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.iso_movie_regs, sensor.rows_num_iso_movie_regs, "iso_movie_regs");
 
@@ -2773,13 +2800,14 @@ static int camdrv_ss_set_iso(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default case supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default case supported !!!\n", sensor.name, __func__);
 		break;
 	}
 	} /* end of switch */
 
 	return err;
 }
+#endif /* #if 0 */
 
 static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
@@ -2787,13 +2815,13 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	/* struct camdrv_ss_state *state = to_state(sd); */
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
-	CAM_INFO_PRINTK( "%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
 
 	switch (ctrl->value) {
 	case EV_MINUS_4:
 	{
 		if (sensor.ev_minus_4_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_minus_4_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_minus_4_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_minus_4_regs, sensor.rows_num_ev_minus_4_regs, "ev_minus_4_regs");
 
@@ -2803,7 +2831,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_MINUS_3:
 	{
 		if (sensor.ev_minus_3_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_minus_3_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_minus_3_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_minus_3_regs, sensor.rows_num_ev_minus_3_regs, "ev_minus_3_regs");
 
@@ -2813,7 +2841,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_MINUS_2:
 	{
 		if (sensor.ev_minus_2_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_minus_2_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_minus_2_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_minus_2_regs, sensor.rows_num_ev_minus_2_regs, "ev_minus_2_regs");
 
@@ -2822,7 +2850,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_MINUS_1_5:
 	{
 		if (sensor.ev_minus_1_5_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_minus_1_5_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_minus_1_5_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_minus_1_5_regs, sensor.rows_num_ev_minus_1_5_regs, "ev_minus_1_5_regs");
 
@@ -2832,7 +2860,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_MINUS_1:
 	{
 		if (sensor.ev_minus_1_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_minus_1_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_minus_1_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_minus_1_regs, sensor.rows_num_ev_minus_1_regs, "ev_minus_1_regs");
 
@@ -2841,7 +2869,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_MINUS_0_5:
 	{
 		if (sensor.ev_minus_0_5_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_minus_0_5_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_minus_0_5_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_minus_0_5_regs, sensor.rows_num_ev_minus_0_5_regs, "ev_minus_0_5_regs");
 
@@ -2850,7 +2878,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_DEFAULT:
 	{
 		if (sensor.ev_default_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_default_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_default_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_default_regs, sensor.rows_num_ev_default_regs, "ev_default_regs");
 
@@ -2859,7 +2887,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_PLUS_0_5:
 	{
 		if (sensor.ev_plus_0_5_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_plus_0_5_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_plus_0_5_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_plus_0_5_regs, sensor.rows_num_ev_plus_0_5_regs, "ev_plus_0_5_regs");
 
@@ -2868,7 +2896,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_PLUS_1:
 	{
 		if (sensor.ev_plus_1_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_plus_1_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_plus_1_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_plus_1_regs, sensor.rows_num_ev_plus_1_regs, "ev_plus_1_regs");
 
@@ -2877,7 +2905,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_PLUS_1_5:
 	{
 		if (sensor.ev_plus_1_5_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_plus_1_5_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_plus_1_5_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_plus_1_regs, sensor.rows_num_ev_plus_1_5_regs, "ev_plus_1_5_regs");
 
@@ -2887,7 +2915,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_PLUS_2:
 	{
 		if (sensor.ev_plus_2_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_plus_2_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_plus_2_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_plus_2_regs, sensor.rows_num_ev_plus_2_regs, "ev_plus_2_regs");
 
@@ -2896,7 +2924,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_PLUS_3:
 	{
 		if (sensor.ev_plus_3_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_plus_3_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_plus_3_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_plus_3_regs, sensor.rows_num_ev_plus_3_regs, "ev_plus_3_regs");
 
@@ -2906,7 +2934,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case EV_PLUS_4:
 	{
 		if (sensor.ev_plus_4_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ev_plus_4_regs not supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ev_plus_4_regs not supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_plus_4_regs, sensor.rows_num_ev_plus_4_regs, "ev_plus_4_regs");
 
@@ -2915,7 +2943,7 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default case supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default case supported !!!\n", sensor.name, __func__);
 		break;
 	}
 	}
@@ -2929,13 +2957,13 @@ static int camdrv_ss_set_saturation(struct v4l2_subdev *sd, struct v4l2_control 
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
 
 	switch (ctrl->value) {
 	case SATURATION_MINUS_2:
 	{
 		if (sensor.saturation_minus_2_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : saturation_minus_2_regs supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : saturation_minus_2_regs supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.saturation_minus_2_regs, sensor.rows_num_saturation_minus_2_regs, "saturation_minus_2_regs");
 
@@ -2945,7 +2973,7 @@ static int camdrv_ss_set_saturation(struct v4l2_subdev *sd, struct v4l2_control 
 	case SATURATION_MINUS_1:
 	{
 		if (sensor.saturation_minus_1_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : saturation_minus_1_regs supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : saturation_minus_1_regs supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.saturation_minus_1_regs, sensor.rows_num_saturation_minus_1_regs, "saturation_minus_1_regs");
 
@@ -2955,7 +2983,7 @@ static int camdrv_ss_set_saturation(struct v4l2_subdev *sd, struct v4l2_control 
 	case SATURATION_DEFAULT:
 	{
 		if (sensor.saturation_default_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : saturation_default_regs supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : saturation_default_regs supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.saturation_default_regs, sensor.rows_num_saturation_default_regs, "saturation_default_regs");
 
@@ -2965,7 +2993,7 @@ static int camdrv_ss_set_saturation(struct v4l2_subdev *sd, struct v4l2_control 
 	case SATURATION_PLUS_1:
 	{
 		if (sensor.saturation_plus_1_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s :  saturation_plus_1_regs supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s :  saturation_plus_1_regs supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.saturation_plus_1_regs, sensor.rows_num_saturation_plus_1_regs, "saturation_plus_1_regs");
 
@@ -2975,7 +3003,7 @@ static int camdrv_ss_set_saturation(struct v4l2_subdev *sd, struct v4l2_control 
 	case SATURATION_PLUS_2:
 	{
 		if (sensor.saturation_plus_2_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : saturation_plus_2_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : saturation_plus_2_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.saturation_plus_2_regs, sensor.rows_num_saturation_plus_2_regs, "saturation_plus_2_regs");
 
@@ -2984,7 +3012,7 @@ static int camdrv_ss_set_saturation(struct v4l2_subdev *sd, struct v4l2_control 
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default case  supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default case  supported !!!\n", sensor.name, __func__);
 		break;
 	}
 	}
@@ -2998,13 +3026,13 @@ static int camdrv_ss_set_contrast(struct v4l2_subdev *sd, struct v4l2_control *c
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
 
 	switch (ctrl->value) {
 	case CONTRAST_MINUS_2:
 	{
 		if (sensor.contrast_minus_2_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : contrast_minus_2_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : contrast_minus_2_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.contrast_minus_2_regs, sensor.rows_num_contrast_minus_2_regs, "contrast_minus_2_regs");
 
@@ -3014,7 +3042,7 @@ static int camdrv_ss_set_contrast(struct v4l2_subdev *sd, struct v4l2_control *c
 	case CONTRAST_MINUS_1:
 	{
 		if (sensor.contrast_minus_1_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : contrast_minus_1_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : contrast_minus_1_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.contrast_minus_1_regs, sensor.rows_num_contrast_minus_1_regs, "contrast_minus_1_regs");
 
@@ -3024,7 +3052,7 @@ static int camdrv_ss_set_contrast(struct v4l2_subdev *sd, struct v4l2_control *c
 	case CONTRAST_DEFAULT:
 	{
 		if (sensor.contrast_default_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : contrast_default_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : contrast_default_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.contrast_default_regs, sensor.rows_num_contrast_default_regs, "contrast_default_regs");
 
@@ -3034,7 +3062,7 @@ static int camdrv_ss_set_contrast(struct v4l2_subdev *sd, struct v4l2_control *c
 	case CONTRAST_PLUS_1:
 	{
 		if (sensor.contrast_plus_1_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : contrast_plus_1_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : contrast_plus_1_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.contrast_plus_1_regs, sensor.rows_num_contrast_plus_1_regs, "contrast_plus_1_regs");
 
@@ -3044,7 +3072,7 @@ static int camdrv_ss_set_contrast(struct v4l2_subdev *sd, struct v4l2_control *c
 	case CONTRAST_PLUS_2:
 	{
 		if (sensor.contrast_plus_2_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : contrast_plus_2_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : contrast_plus_2_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.contrast_plus_2_regs, sensor.rows_num_contrast_plus_2_regs, "contrast_plus_2_regs");
 
@@ -3054,7 +3082,7 @@ static int camdrv_ss_set_contrast(struct v4l2_subdev *sd, struct v4l2_control *c
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default case  supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default case  supported !!!\n", sensor.name, __func__);
 		break;
 	}
 	}
@@ -3068,13 +3096,13 @@ static int camdrv_ss_set_sharpness(struct v4l2_subdev *sd, struct v4l2_control *
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s :  value =%d\n", sensor.name, __func__, ctrl->value);
 
 	switch (ctrl->value) {
 	case SHARPNESS_MINUS_2:
 	{
 		if (sensor.sharpness_minus_2_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : sharpness_minus_2_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : sharpness_minus_2_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.sharpness_minus_2_regs, sensor.rows_num_sharpness_minus_2_regs, "sharpness_minus_2_regs");
 
@@ -3084,7 +3112,7 @@ static int camdrv_ss_set_sharpness(struct v4l2_subdev *sd, struct v4l2_control *
 	case SHARPNESS_MINUS_1:
 	{
 		if (sensor.sharpness_minus_1_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : sharpness_minus_1_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : sharpness_minus_1_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.sharpness_minus_1_regs, sensor.rows_num_sharpness_minus_1_regs, "sharpness_minus_1_regs");
 
@@ -3094,7 +3122,7 @@ static int camdrv_ss_set_sharpness(struct v4l2_subdev *sd, struct v4l2_control *
 	case SHARPNESS_DEFAULT:
 	{
 		if (sensor.sharpness_default_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : sharpness_default_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : sharpness_default_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.sharpness_default_regs, sensor.rows_num_sharpness_default_regs, "sharpness_default_regs");
 
@@ -3104,7 +3132,7 @@ static int camdrv_ss_set_sharpness(struct v4l2_subdev *sd, struct v4l2_control *
 	case SHARPNESS_PLUS_1:
 	{
 		if (sensor.sharpness_plus_1_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : sharpness_plus_1_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : sharpness_plus_1_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.sharpness_plus_1_regs, sensor.rows_num_sharpness_plus_1_regs, "sharpness_plus_1_regs");
 
@@ -3114,7 +3142,7 @@ static int camdrv_ss_set_sharpness(struct v4l2_subdev *sd, struct v4l2_control *
 	case SHARPNESS_PLUS_2:
 	{
 		if (sensor.sharpness_plus_2_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : sharpness_plus_2_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : sharpness_plus_2_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.sharpness_plus_2_regs, sensor.rows_num_sharpness_plus_2_regs, "sharpness_plus_2_regs");
 
@@ -3123,7 +3151,7 @@ static int camdrv_ss_set_sharpness(struct v4l2_subdev *sd, struct v4l2_control *
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default case  supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default case  supported !!!\n", sensor.name, __func__);
 		break;
 	}
 	} /* end of switch */
@@ -3138,13 +3166,13 @@ static int camdrv_ss_set_focus_mode(struct v4l2_subdev *sd, int value)
 	struct camdrv_ss_state *state = to_state(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :  value =%d\n", sensor.name, __func__, value);
+	CAM_INFO_PRINTK("%s %s :  value =%d\n", sensor.name, __func__, value);
 
 	switch (value) {
 	case FOCUS_MODE_OFF:
 	{
 		if (sensor.focus_mode_off_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : focus_mode_off_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : focus_mode_off_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.focus_mode_off_regs, sensor.rows_num_focus_mode_off_regs, "focus_mode_off_regs");
 
@@ -3153,7 +3181,7 @@ static int camdrv_ss_set_focus_mode(struct v4l2_subdev *sd, int value)
 	case FOCUS_MODE_AF:
 	{
 		if (sensor.focus_mode_af_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : focus_mode_af_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : focus_mode_af_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.focus_mode_af_regs, sensor.rows_num_focus_mode_af_regs, "focus_mode_af_regs");
 
@@ -3162,7 +3190,7 @@ static int camdrv_ss_set_focus_mode(struct v4l2_subdev *sd, int value)
 	case FOCUS_MODE_MACRO:
 	{
 		if (sensor.focus_mode_macro_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : focus_mode_macro_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : focus_mode_macro_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.focus_mode_macro_regs, sensor.rows_num_focus_mode_macro_regs, "focus_mode_macro_regs");
 
@@ -3171,7 +3199,7 @@ static int camdrv_ss_set_focus_mode(struct v4l2_subdev *sd, int value)
 	case FOCUS_MODE_FACEDETECT:
 	{
 		if (sensor.focus_mode_facedetect_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : focus_mode_facedetect_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : focus_mode_facedetect_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.focus_mode_facedetect_regs, sensor.rows_num_focus_mode_facedetect_regs, "focus_mode_facedetect_regs");
 
@@ -3180,7 +3208,7 @@ static int camdrv_ss_set_focus_mode(struct v4l2_subdev *sd, int value)
 	case FOCUS_MODE_INFINITY:
 	{
 		if (sensor.focus_mode_infinity_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : focus_mode_infinity_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : focus_mode_infinity_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.focus_mode_infinity_regs, sensor.rows_num_focus_mode_infinity_regs, "focus_mode_infinity_regs");
 
@@ -3190,7 +3218,7 @@ static int camdrv_ss_set_focus_mode(struct v4l2_subdev *sd, int value)
 	case FOCUS_MODE_AUTO:
 	{
 		if (sensor.focus_mode_auto_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : focus_mode_auto_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : focus_mode_auto_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err |= camdrv_ss_i2c_set_config_register(client, sensor.focus_mode_auto_regs, sensor.rows_num_focus_mode_auto_regs, "focus_mode_auto_regs");
 
@@ -3199,7 +3227,7 @@ static int camdrv_ss_set_focus_mode(struct v4l2_subdev *sd, int value)
 	case FOCUS_MODE_CONTINUOUS_VIDEO:
 	{
 		if (sensor.focus_mode_continuous_video_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : focus_mode_continuous_video_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : focus_mode_continuous_video_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err |= camdrv_ss_i2c_set_config_register(client, sensor.focus_mode_continuous_video_regs, sensor.rows_num_focus_mode_continuous_video_regs, "focus_mode_continuous_video_regs");
 
@@ -3208,7 +3236,7 @@ static int camdrv_ss_set_focus_mode(struct v4l2_subdev *sd, int value)
 	case FOCUS_MODE_CONTINUOUS_PICTURE:
 	{
 		if (sensor.focus_mode_continuous_picture_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : focus_mode_continuous_picture_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : focus_mode_continuous_picture_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err |= camdrv_ss_i2c_set_config_register(client, sensor.focus_mode_continuous_picture_regs, sensor.rows_num_focus_mode_continuous_picture_regs, "focus_mode_continuous_picture_regs");
 
@@ -3217,7 +3245,7 @@ static int camdrv_ss_set_focus_mode(struct v4l2_subdev *sd, int value)
 	case FOCUS_MODE_CONTINUOUS_PICTURE_MACRO:
 	{
 		if (sensor.focus_mode_continuous_picture_macro_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : focus_mode_continuous_picture_macro_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : focus_mode_continuous_picture_macro_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err |= camdrv_ss_i2c_set_config_register(client, sensor.focus_mode_continuous_picture_macro_regs, sensor.rows_num_focus_mode_continuous_picture_macro_regs, "focus_mode_continuous_picture_macro_regs");
 
@@ -3226,7 +3254,7 @@ static int camdrv_ss_set_focus_mode(struct v4l2_subdev *sd, int value)
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default case not  supported !!!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : default case not  supported !!!\n", sensor.name, __func__);
 		break;
 	}
 	}
@@ -3242,7 +3270,7 @@ static int camdrv_ss_set_af_preflash(struct v4l2_subdev *sd, struct v4l2_control
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s : entered\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s : entered\n", sensor.name, __func__);
 
 	if (ctrl->value == PREFLASH_ON) {
 		state->camera_af_flash_fire = 0;
@@ -3253,7 +3281,7 @@ static int camdrv_ss_set_af_preflash(struct v4l2_subdev *sd, struct v4l2_control
 			bool bflash_needed = false;
 
 			if (sensor.check_flash_needed == 0)
-				CAM_ERROR_PRINTK( "%s %s : check_flash_needed NULL!! not supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : check_flash_needed NULL!! not supported !!!\n", sensor.name, __func__);
 			else
 				bflash_needed = sensor.check_flash_needed(sd);
 
@@ -3271,15 +3299,15 @@ static int camdrv_ss_set_af_preflash(struct v4l2_subdev *sd, struct v4l2_control
 		if (state->camera_af_flash_fire) {
 
 			if (sensor.snapshot_af_preflash_on_regs == 0)
-				CAM_ERROR_PRINTK( "%s %s : snapshot_af_preflash_on_regs NOT  supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : snapshot_af_preflash_on_regs NOT  supported !!!\n", sensor.name, __func__);
 			else
 				err = camdrv_ss_i2c_set_config_register(client, sensor.snapshot_af_preflash_on_regs, sensor.rows_num_snapshot_af_preflash_on_regs, "snapshot_af_preflash_on_regs");
 			if (err < 0) {
-				CAM_ERROR_PRINTK( "[%s: %d] ERROR! Setting af_preflash_on_regs\n", __FILE__, __LINE__);
+				CAM_ERROR_PRINTK("[%s: %d] ERROR! Setting af_preflash_on_regs\n", __FILE__, __LINE__);
 			}
 
 			if (sensor.AAT_flash_control == NULL)
-				CAM_ERROR_PRINTK( "%s %s : AAT_flash_control  NULL!!not  supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : AAT_flash_control  NULL!!not  supported !!!\n", sensor.name, __func__);
 			else
 				sensor.AAT_flash_control(sd, FLASH_CONTROL_MIDDLE_LEVEL);
 		} else {
@@ -3288,15 +3316,15 @@ static int camdrv_ss_set_af_preflash(struct v4l2_subdev *sd, struct v4l2_control
 	} else { /* if (ctrl->value == PREFLASH_ON) */
 		if (state->camera_af_flash_fire) {
 			if (sensor.snapshot_af_preflash_off_regs == NULL) {
-				CAM_ERROR_PRINTK( "%s %s : snapshot_af_preflash_off_regs NOT supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : snapshot_af_preflash_off_regs NOT supported !!!\n", sensor.name, __func__);
 			} else {
 				err = camdrv_ss_i2c_set_config_register(client, sensor.snapshot_af_preflash_off_regs, sensor.rows_num_snapshot_af_preflash_off_regs, "snapshot_af_preflash_off_regs");
 				if (err < 0) {
-					CAM_ERROR_PRINTK( "[%s: %d] ERROR! Setting af_preflash_off_regs\n", __FILE__, __LINE__);
+					CAM_ERROR_PRINTK("[%s: %d] ERROR! Setting af_preflash_off_regs\n", __FILE__, __LINE__);
 				}
 			}
 			if (sensor.AAT_flash_control == NULL)
-				CAM_ERROR_PRINTK( "%s %s : AAT_flash_control  NULL!!not  supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : AAT_flash_control  NULL!!not  supported !!!\n", sensor.name, __func__);
 			else
 				sensor.AAT_flash_control(sd, FLASH_CONTROL_OFF);
 
@@ -3312,37 +3340,37 @@ static int camdrv_ss_set_autocontrast(struct v4l2_subdev *sd, struct v4l2_contro
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = 0;
 
-	if (ctrl->value ) {
+	if (ctrl->value) {
 		/* on */
-		CAM_INFO_PRINTK( "%s %s :ON !! \n", sensor.name, __func__);
+		CAM_INFO_PRINTK("%s %s :ON !!\n", sensor.name, __func__);
 
 		if (sensor.auto_contrast_on_regs == NULL)
-			CAM_ERROR_PRINTK( "%s %s : auto_contrast_on_regs is NULL, please check if it is needed !!! \n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : auto_contrast_on_regs is NULL, please check if it is needed !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.auto_contrast_on_regs, sensor.rows_num_auto_contrast_on_regs, "auto_contrast_on_regs");
 
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s %s : i2c failed !! \n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : i2c failed !!\n", sensor.name, __func__);
 			return -EIO;
 		}
 	} else {
 		/*  off */
-		CAM_INFO_PRINTK( "%s %s :OFF !! \n", sensor.name, __func__);
+		CAM_INFO_PRINTK("%s %s :OFF !!\n", sensor.name, __func__);
 
 		if (sensor.auto_contrast_on_regs == NULL)
-			CAM_ERROR_PRINTK( "%s %s : auto_contrast_off_regs is NULL, please check if it is needed !!! \n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : auto_contrast_off_regs is NULL, please check if it is needed !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.auto_contrast_off_regs, sensor.rows_num_auto_contrast_off_regs, "auto_contrast_off_regs");
 
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s %s : i2c failed !! \n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : i2c failed !!\n", sensor.name, __func__);
 			return -EIO;
 		}
 
-		//state->check_dataline = CHK_DATALINE_OFF;
+		/* state->check_dataline = CHK_DATALINE_OFF; */
 	}
 
-	CAM_INFO_PRINTK( "%s %s :done . \n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s :done .\n", sensor.name, __func__);
 
 	return err;
 }
@@ -3354,19 +3382,19 @@ static int camdrv_ss_AE_AWB_lock(struct v4l2_subdev *sd, struct v4l2_control *ct
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = 0;
 
-	CAM_INFO_PRINTK( "%s %s :  value=%d\n", sensor.name, __func__, ctrl->value);
+	CAM_INFO_PRINTK("%s %s :  value=%d\n", sensor.name, __func__, ctrl->value);
 
 	/* Lock, Unlock only AE for LSI 5CC sensor. Don't change AWB. */
 	switch (ctrl->value) {
 	case AE_UNLOCK_AWB_UNLOCK:
 	{
 		if (sensor.ae_unlock_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ae_unlock_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ae_unlock_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ae_unlock_regs, sensor.rows_num_ae_unlock_regs, "ae_unlock_regs");
 
 		if (sensor.awb_unlock_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : awb_unlock_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : awb_unlock_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.awb_unlock_regs, sensor.rows_num_awb_unlock_regs, "awb_unlock_regs");
 		break;
@@ -3375,12 +3403,12 @@ static int camdrv_ss_AE_AWB_lock(struct v4l2_subdev *sd, struct v4l2_control *ct
 	case AE_LOCK_AWB_UNLOCK:
 	{
 		if (sensor.ae_lock_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ae_lock_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ae_lock_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ae_lock_regs, sensor.rows_num_ae_lock_regs, "ae_lock_regs");
 
 		if (sensor.awb_unlock_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : awb_unlock_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : awb_unlock_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.awb_unlock_regs, sensor.rows_num_awb_unlock_regs, "awb_unlock_regs");
 		break;
@@ -3389,12 +3417,12 @@ static int camdrv_ss_AE_AWB_lock(struct v4l2_subdev *sd, struct v4l2_control *ct
 	case AE_UNLOCK_AWB_LOCK:
 	{
 		if (sensor.ae_unlock_regs == 0)
-				CAM_ERROR_PRINTK( "%s %s : ae_unlock_regs  supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : ae_unlock_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ae_unlock_regs, sensor.rows_num_ae_unlock_regs, "ae_unlock_regs");
 
 		if (sensor.awb_lock_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : awb_lock_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : awb_lock_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.awb_lock_regs, sensor.rows_num_awb_lock_regs, "awb_lock_regs");
 		break;
@@ -3403,13 +3431,13 @@ static int camdrv_ss_AE_AWB_lock(struct v4l2_subdev *sd, struct v4l2_control *ct
 	case AE_LOCK_AWB_LOCK:
 	{
 		if (sensor.ae_lock_regs == 0)
-			CAM_ERROR_PRINTK( "%s %s : ae_lock_regs  supported !!!\n", sensor.name, __func__);
+			CAM_ERROR_PRINTK("%s %s : ae_lock_regs  supported !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.ae_lock_regs, sensor.rows_num_ae_lock_regs, "ae_lock_regs");
 
 		if (!state->camera_af_flash_fire) {
 			if (sensor.awb_lock_regs == 0)
-				CAM_ERROR_PRINTK( "%s %s : awb_lock_regs  supported !!!\n", sensor.name, __func__);
+				CAM_ERROR_PRINTK("%s %s : awb_lock_regs  supported !!!\n", sensor.name, __func__);
 			else
 				err = camdrv_ss_i2c_set_config_register(client, sensor.awb_lock_regs, sensor.rows_num_awb_lock_regs, "awb_lock_regs");
 		}
@@ -3418,13 +3446,13 @@ static int camdrv_ss_AE_AWB_lock(struct v4l2_subdev *sd, struct v4l2_control *ct
 
 	default:
 	{
-		CAM_ERROR_PRINTK( "[%s : %d] WARNING! Unsupported AE, AWB lock setting(%d)\n", __FILE__, __LINE__, ctrl->value);
+		CAM_ERROR_PRINTK("[%s : %d] WARNING! Unsupported AE, AWB lock setting(%d)\n", __FILE__, __LINE__, ctrl->value);
 		break;
 	}
 	}
 
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "[%s : %d] ERROR! AE, AWB lock failed\n", __FILE__, __LINE__);
+		CAM_ERROR_PRINTK("[%s : %d] ERROR! AE, AWB lock failed\n", __FILE__, __LINE__);
 		return -EIO;
 	}
 
@@ -3544,7 +3572,7 @@ static int camdrv_ss_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fm
 		fmt->width = state->pix.width = sensor.supported_capture_framesize_list[index].width;
 		fmt->height = state->pix.height = sensor.supported_capture_framesize_list[index].height;
 		state->capture_framesize_index = sensor.supported_capture_framesize_list[index].index;
-		CAM_INFO_PRINTK( "%s %s :  capture_framesize_index=%d\n", sensor.name, __func__, state->capture_framesize_index);
+		CAM_INFO_PRINTK("%s %s :  capture_framesize_index=%d\n", sensor.name, __func__, state->capture_framesize_index);
 
 	} else {
 		state->jpeg_param.enable = 0;
@@ -3555,16 +3583,13 @@ static int camdrv_ss_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fm
 		state->preview_framesize_index = sensor.supported_preview_framesize_list[index].index;
 
 		index =  camdrv_ss_find_capture_framesize(state->pix.width , state->pix.height);
-		if((fmt->width != sensor.supported_capture_framesize_list[index].width) || (fmt->height != sensor.supported_capture_framesize_list[index].height))
-		{
-			CAM_ERROR_PRINTK("%s: Sensor didn't define capture settings for %d x %d, So ,we will take preview settings  for capture also!!! \n",__func__,fmt->width,fmt->height);
+		if ((fmt->width != sensor.supported_capture_framesize_list[index].width) || (fmt->height != sensor.supported_capture_framesize_list[index].height)) {
+			CAM_ERROR_PRINTK("%s: Sensor didn't define capture settings for %d x %d, So ,we will take preview settings  for capture also!!!\n", __func__, fmt->width, fmt->height);
 			state->capture_framesize_index = -1;
-		}
-		else
-		{
+		} else {
 			state->capture_framesize_index = sensor.supported_capture_framesize_list[index].index;
 		}
-		CAM_INFO_PRINTK( "%s %s : preview_framesize_index=%d  capture_framesize_index = %d\n", sensor.name, __func__, state->preview_framesize_index, state->capture_framesize_index);
+		CAM_INFO_PRINTK("%s %s : preview_framesize_index=%d  capture_framesize_index = %d\n", sensor.name, __func__, state->preview_framesize_index, state->capture_framesize_index);
 
 	}
 	return 0;
@@ -3575,11 +3600,11 @@ static int camdrv_ss_enum_framesizes(struct v4l2_subdev *sd, struct v4l2_frmsize
 {
 	/* struct i2c_client *client = v4l2_get_subdevdata(sd); */
 
-	CAM_INFO_PRINTK( "%s %s Entered\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s Entered\n", sensor.name, __func__);
 
 	if (fsize->pixel_format == sensor.default_pix_fmt || fsize->pixel_format == sensor.default_mbus_pix_fmt) {
 		if (fsize->index >= sensor.supported_number_of_preview_sizes) {
-			CAM_ERROR_PRINTK( "%s %s : exceeded index =%d\n", sensor.name, __func__, fsize->index);
+			CAM_ERROR_PRINTK("%s %s : exceeded index =%d\n", sensor.name, __func__, fsize->index);
 			return -EINVAL;
 		}
 
@@ -3595,7 +3620,7 @@ static int camdrv_ss_enum_framesizes(struct v4l2_subdev *sd, struct v4l2_frmsize
 		fsize->discrete.height = sensor.supported_preview_framesize_list[fsize->index].height;
 	} else if (fsize->pixel_format == V4L2_PIX_FMT_JPEG || fsize->pixel_format == V4L2_MBUS_FMT_JPEG_1X8) {
 		if (fsize->index >=  sensor.supported_number_of_capture_sizes) {
-			CAM_ERROR_PRINTK( "%s %s : exceeded index =%d\n", sensor.name, __func__, fsize->index);
+			CAM_ERROR_PRINTK("%s %s : exceeded index =%d\n", sensor.name, __func__, fsize->index);
 			return -EINVAL;
 		}
 
@@ -3610,7 +3635,7 @@ static int camdrv_ss_enum_framesizes(struct v4l2_subdev *sd, struct v4l2_frmsize
 		fsize->discrete.width = sensor.supported_capture_framesize_list[fsize->index].width;
 		fsize->discrete.height = sensor.supported_capture_framesize_list[fsize->index].height;
 	} else {
-		CAM_ERROR_PRINTK( "%s %s : wrong format =%d ,failed !!\n", sensor.name, __func__, fsize->index);
+		CAM_ERROR_PRINTK("%s %s : wrong format =%d ,failed !!\n", sensor.name, __func__, fsize->index);
 		return -EINVAL;
 	}
 
@@ -3621,7 +3646,7 @@ static int camdrv_ss_enum_framesizes(struct v4l2_subdev *sd, struct v4l2_frmsize
 static int camdrv_ss_enum_frameintervals(struct v4l2_subdev *sd,
 					struct v4l2_frmivalenum *fival)
 {
-	CAM_INFO_PRINTK( "%s : camdrv_ss_enum_frameintervals w = %d h = %d\n", __func__, fival->width, fival->height);
+	CAM_INFO_PRINTK("%s : camdrv_ss_enum_frameintervals w = %d h = %d\n", __func__, fival->width, fival->height);
 	return sensor.enum_frameintervals(sd, fival);
 }
 
@@ -3631,7 +3656,7 @@ static int camdrv_ss_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 {
 	int num_entries = sensor.rows_num_fmts;
 	if (index >= num_entries) {
-		CAM_ERROR_PRINTK( "%s %s : index =%d, num_entries =%d failed\n", sensor.name, __func__, index, num_entries);
+		CAM_ERROR_PRINTK("%s %s : index =%d, num_entries =%d failed\n", sensor.name, __func__, index, num_entries);
 		return -EINVAL;
 	}
 
@@ -3652,12 +3677,12 @@ static int camdrv_ss_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *
 
 	for (i = 0; i < num_entries; i++) {
 		if (sensor.fmts[i].pixelformat == mf->code) {
-			CAM_INFO_PRINTK( "%s %s : match found for =%d !!\n", sensor.name, __func__, mf->code);
+			CAM_INFO_PRINTK("%s %s : match found for =%d !!\n", sensor.name, __func__, mf->code);
 			return 0;
 		}
 	}
 
-	CAM_ERROR_PRINTK( "%s %s : match not found for =%d  failed  !!\n", sensor.name, __func__, mf->code);
+	CAM_ERROR_PRINTK("%s %s : match not found for =%d  failed  !!\n", sensor.name, __func__, mf->code);
 
 	return ret;
 }
@@ -3680,23 +3705,17 @@ void camdrv_ss_init_func(struct v4l2_subdev *sd)
 	pinmux_set_pin_config(&GPIOSetup);
 
 	err = sensor.sensor_power(1);
-	if (err < 0)
-	{
-		atomic_set(&sensor_state,CAMDRV_SS_INITIALIZE_FAILED);
-		CAM_ERROR_PRINTK( "%s: sensor_power failed ! CAMDRV_SS_INITIALIZE_FAILED !!\n",__func__);
-	}
-	else
-	{
+	if (err < 0) {
+		atomic_set(&sensor_state, CAMDRV_SS_INITIALIZE_FAILED);
+		CAM_ERROR_PRINTK("%s: sensor_power failed ! CAMDRV_SS_INITIALIZE_FAILED !!\n", __func__);
+	} else {
 		err = camdrv_ss_init(sd, 1);
-		if (err < 0)
-		{
-			atomic_set(&sensor_state,CAMDRV_SS_INITIALIZE_FAILED);
-			CAM_ERROR_PRINTK( "%s:camdrv_ss_init failed! CAMDRV_SS_INITIALIZE_FAILED !!\n",__func__);
-		}
-		else
-		{
-			atomic_set(&sensor_state,CAMDRV_SS_INITIALIZE_DONE);
-			CAM_INFO_PRINTK("%s: CAMDRV_SS_INITIALIZE_DONE \n",__func__);
+		if (err < 0) {
+			atomic_set(&sensor_state, CAMDRV_SS_INITIALIZE_FAILED);
+			CAM_ERROR_PRINTK("%s:camdrv_ss_init failed! CAMDRV_SS_INITIALIZE_FAILED !!\n", __func__);
+		} else {
+			atomic_set(&sensor_state, CAMDRV_SS_INITIALIZE_DONE);
+			CAM_INFO_PRINTK("%s: CAMDRV_SS_INITIALIZE_DONE\n", __func__);
 		}
 	}
 
@@ -3705,13 +3724,10 @@ static int camdrv_ss_init_thread_func(void *data)
 {
 	struct v4l2_subdev *sd = (struct v4l2_subdev *)data;
 
-    if(atomic_read(&sensor_state) != CAMDRV_SS_INITIALIZING)
-    {
-		CAM_ERROR_PRINTK( "%s %s : incorrect camera state =%d....\n", sensor.name, __func__,atomic_read(&sensor_state));
-    }
-	else
-	{
-		CAM_INFO_PRINTK( "%s %s : Initializing camera in seperate thread....\n", sensor.name, __func__);
+	if (atomic_read(&sensor_state) != CAMDRV_SS_INITIALIZING) {
+		CAM_ERROR_PRINTK("%s %s : incorrect camera state =%d....\n", sensor.name, __func__, atomic_read(&sensor_state));
+	} else {
+		CAM_INFO_PRINTK("%s %s : Initializing camera in seperate thread....\n", sensor.name, __func__);
 		camdrv_ss_init_func(sd);
 	}
 	wake_up_interruptible(&gCamdrvReadyQ);
@@ -3768,7 +3784,7 @@ static int camdrv_ss_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	struct camdrv_ss_userset userset = state->userset;
 	int err = 0;
 
-	/* CAM_INFO_PRINTK( "%s %s : id = %d  Entered\n", sensor.name, __func__, ctrl->id); */
+	/* CAM_INFO_PRINTK("%s %s : id = %d  Entered\n", sensor.name, __func__, ctrl->id); */
 
 	switch (ctrl->id) {
 	case V4L2_CID_CAMERA_READ_MODE_CHANGE_REG:
@@ -3910,7 +3926,7 @@ static int camdrv_ss_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAM_DATE_INFO_YEAR:
 	{
-		ctrl->value = 2010; /* state->dateinfo.year; //bestiq */
+		ctrl->value = 2010; /* state->dateinfo.year; */ /*bestiq*/
 		break;
 	}
 
@@ -3960,6 +3976,18 @@ static int camdrv_ss_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	}
 
+	case V4L2_CID_CAMERA_POSTVIEW_WIDTH:
+	{
+		ctrl->value = state->postview_info.width;
+		break;
+	}
+
+	case V4L2_CID_CAMERA_POSTVIEW_HEIGHT:
+	{
+		ctrl->value = state->postview_info.height;
+		break;
+	}
+
 	case V4L2_CID_CAMERA_SENSOR_ID:
 	{
 		/* ctrl->value = SENSOR_ID; */
@@ -3968,21 +3996,23 @@ static int camdrv_ss_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_GET_ESD_SHOCK_STATUS:
 	{
-		if(sensor.getEsdStatus)
-		{
+		if (sensor.getEsdStatus) {
 			ctrl->value = sensor.getEsdStatus(sd);
-			CAM_INFO_PRINTK("after getEsdStatus : result : %d\n",ctrl->value);
-		}
-		else
-		{
-			CAM_INFO_PRINTK("%s, getEsdStatus is not implemented in sensor driver !\n",__func__);
+			CAM_INFO_PRINTK("after getEsdStatus : result : %d\n", ctrl->value);
+		} else {
+			CAM_INFO_PRINTK("%s, getEsdStatus is not implemented in sensor driver !\n", __func__);
 			ctrl->value = 0;
 		}
 		break;
 	}
+	case V4L2_CID_SCENEMODE:
+	{
+		ctrl->value = state->currentScene;
+		break;
+	}
 	default:
 	{
-		CAM_ERROR_PRINTK( "%s %s : default control id =%d failed !!\n", sensor.name, __func__, ctrl->id);
+		CAM_ERROR_PRINTK("%s %s : default control id =%d failed !!\n", sensor.name, __func__, ctrl->id);
 		return -ENOIOCTLCMD;
 	}
 	}
@@ -3998,22 +4028,26 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	int err = 0;
 	int temp_sensor_state = 0;
 
-	CAM_INFO_PRINTK( "%s %s : id = %d\n", sensor.name, __func__, ctrl->id);
+	CAM_INFO_PRINTK("%s %s : id = %d\n", sensor.name, __func__, ctrl->id);
 
-	if(ctrl->id == V4L2_CID_CAMERA_INITIALIZE)
-	{
+	if (ctrl->id == V4L2_CID_CAMERA_INITIALIZE) {
+		CAM_INFO_PRINTK("denis : sensor initialize %s\n", sensor.name);
+
+		if ((ctrl->value == 1) && (sensor.smartStayChangeInitSetting != NULL)) {
+			CAM_INFO_PRINTK("%s: smartStayChangeInitSetting called ..\n", __func__);
+			sensor.smartStayChangeInitSetting(&sensor);
+		}
+
 		struct task_struct *camdrv_ss_init_thread;
-		if(atomic_read(&sensor_state) == CAMDRV_SS_NOT_INITIALIZED)
-		{
-			atomic_set(&sensor_state,CAMDRV_SS_INITIALIZING);
-			CAM_INFO_PRINTK("%s %s :creating camera intialize thread... \n", sensor.name, __func__);
+		if (atomic_read(&sensor_state) == CAMDRV_SS_NOT_INITIALIZED) {
+			atomic_set(&sensor_state, CAMDRV_SS_INITIALIZING);
+			CAM_INFO_PRINTK("%s %s :creating camera intialize thread...\n", sensor.name, __func__);
 			state->current_mode = INIT_MODE;
 			state->mode_switch = INIT_DONE_TO_CAMERA_PREVIEW;
 			camdrv_ss_init_thread = kthread_run(camdrv_ss_init_thread_func, sd, "camdrv-ss-init-thread-func");
-			if (IS_ERR(camdrv_ss_init_thread))
-			{
-				atomic_set(&sensor_state,CAMDRV_SS_INITIALIZE_FAILED);
-				CAM_ERROR_PRINTK("%s: sensor_init_thread failed! CAMDRV_SS_INITIALIZE_FAILED !!\n",__func__);
+			if (IS_ERR(camdrv_ss_init_thread)) {
+				atomic_set(&sensor_state, CAMDRV_SS_INITIALIZE_FAILED);
+				CAM_ERROR_PRINTK("%s: sensor_init_thread failed! CAMDRV_SS_INITIALIZE_FAILED !!\n", __func__);
 				wake_up_interruptible(&gCamdrvReadyQ);
 				return -1;
 			}
@@ -4021,67 +4055,54 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		return 0;
 	}
 
-	if(ctrl->id == V4L2_CID_CAM_SET_MODE)
-	{
-		if(state->current_mode == INIT_MODE)
-		{
-			if(ctrl->value == CAMERA_PREVIEW_MODE)
+	if (ctrl->id == V4L2_CID_CAM_SET_MODE) {
+		if (state->current_mode == INIT_MODE) {
+			if (ctrl->value == CAMERA_PREVIEW_MODE)
 				state->mode_switch = INIT_DONE_TO_CAMERA_PREVIEW;
-			else if(ctrl->value == CAMCORDER_PREVIEW_MODE)
+			else if (ctrl->value == CAMCORDER_PREVIEW_MODE)
 				state->mode_switch = INIT_DONE_TO_CAMCORDER_PREVIEW;
-			else
-			{
-				CAM_ERROR_PRINTK("%s: Wrong state setting:current_mode= %d, new_mode =%d  failed !! \n",__func__,state->current_mode,ctrl->value);
+			else {
+				CAM_ERROR_PRINTK("%s: Wrong state setting:current_mode= %d, new_mode =%d  failed !!\n", __func__, state->current_mode, ctrl->value);
 				return	-ENOTSUPP;
 			}
-		}
-		else if(state->current_mode == CAMERA_PREVIEW_MODE)
-		{
-			if(ctrl->value == CAMERA_PREVIEW_MODE)
+		} else if (state->current_mode == CAMERA_PREVIEW_MODE) {
+			if (ctrl->value == CAMERA_PREVIEW_MODE)
 				state->mode_switch = CAMERA_PREVIEW_SIZE_CHANGE;
-			else if(ctrl->value == CAMCORDER_PREVIEW_MODE)
+			else if (ctrl->value == CAMCORDER_PREVIEW_MODE)
 				state->mode_switch = CAMERA_PREVIEW_TO_CAMCORDER_PREVIEW;
-			else if(ctrl->value == PICTURE_MODE)
+			else if (ctrl->value == PICTURE_MODE)
 				state->mode_switch = CAMERA_PREVIEW_TO_PICTURE_CAPTURE;
-			else
-			{
-				CAM_ERROR_PRINTK("%s: Wrong state setting:current_mode= %d, new_mode =%d  failed !! \n",__func__,state->current_mode,ctrl->value);
+			else {
+				CAM_ERROR_PRINTK("%s: Wrong state setting:current_mode= %d, new_mode =%d  failed !!\n", __func__, state->current_mode, ctrl->value);
 				return	-ENOTSUPP;
 			}
-		}
-		else if(state->current_mode == CAMCORDER_PREVIEW_MODE)
-		{
-			if(ctrl->value == CAMERA_PREVIEW_MODE)
+		} else if (state->current_mode == CAMCORDER_PREVIEW_MODE) {
+			if (ctrl->value == CAMERA_PREVIEW_MODE)
 				state->mode_switch = CAMCORDER_PREVIEW_TO_CAMERA_PREVIEW;
-			else if(ctrl->value == CAMCORDER_PREVIEW_MODE)
+			else if (ctrl->value == CAMCORDER_PREVIEW_MODE)
 				state->mode_switch = CAMCORDER_PREVIEW_SIZE_CHANGE;
-			else
-			{
-				CAM_ERROR_PRINTK("%s: Wrong state setting:current_mode= %d, new_mode =%d failed !! \n",__func__,state->current_mode,ctrl->value);
+			else {
+				CAM_ERROR_PRINTK("%s: Wrong state setting:current_mode= %d, new_mode =%d failed !!\n", __func__, state->current_mode, ctrl->value);
 				return	-ENOTSUPP;
 			}
-		}
-		else if(state->current_mode == PICTURE_MODE)
-		{
-			if(ctrl->value == CAMERA_PREVIEW_MODE)
+		} else if (state->current_mode == PICTURE_MODE) {
+			if (ctrl->value == CAMERA_PREVIEW_MODE)
 				state->mode_switch = PICTURE_CAPTURE_TO_CAMERA_PREVIEW_RETURN;
-			else
-			{
-				CAM_ERROR_PRINTK("%s: Wrong state setting:current_mode= %d, new_mode =%d  failed !! \n",__func__,state->current_mode,ctrl->value);
+			else {
+				CAM_ERROR_PRINTK("%s: Wrong state setting:current_mode= %d, new_mode =%d  failed !!\n", __func__, state->current_mode, ctrl->value);
 				return	-ENOTSUPP;
 			}
 		}
 
-		CAM_ERROR_PRINTK("%s: Mode changed from :current_mode= %d --> new_mode =%d \n",__func__,state->current_mode,ctrl->value);
+		CAM_ERROR_PRINTK("%s: Mode changed from :current_mode= %d --> new_mode =%d\n", __func__, state->current_mode, ctrl->value);
 		state->current_mode = ctrl->value;
 		return 0;
 	}
 
 
 	temp_sensor_state = atomic_read(&sensor_state);
-	if(temp_sensor_state != CAMDRV_SS_STREAMING && temp_sensor_state!= CAMDRV_SS_INITIALIZE_DONE)
-	{
-		CAM_ERROR_PRINTK( "%s %s :camera not yet initialized : state = %d !!\n", sensor.name, __func__,temp_sensor_state);
+	if (temp_sensor_state != CAMDRV_SS_STREAMING && temp_sensor_state != CAMDRV_SS_INITIALIZE_DONE) {
+		CAM_ERROR_PRINTK("%s %s :camera not yet initialized : state = %d !!\n", sensor.name, __func__, temp_sensor_state);
 		return 0;
 	}
 
@@ -4130,7 +4151,15 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_WHITE_BALANCE:
 	{
-		err = camdrv_ss_set_white_balance(sd, ctrl);
+		/* err = camdrv_ss_set_white_balance(sd, ctrl); */ /* aska modified */
+		if (sensor.set_white_balance != NULL) {
+			CAM_ERROR_PRINTK("%s %s :sensor has defined its sequence\n", sensor.name, __func__);
+			err = sensor.set_white_balance(sd, ctrl->value);
+
+		} else
+			err = camdrv_ss_set_white_balance(sd, ctrl);
+
+
 		break;
 	}
 
@@ -4142,7 +4171,8 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_ISO:
 	{
-		err = camdrv_ss_set_iso(sd, ctrl);
+		/* err = camdrv_ss_set_iso(sd, ctrl); */ /*aska modified */
+		err = sensor.set_iso(sd, ctrl->value);
 		break;
 	}
 
@@ -4172,7 +4202,7 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_WDR:
 	{
-		err = camdrv_ss_set_autocontrast(sd, ctrl);
+		/* err = camdrv_ss_set_autocontrast(sd, ctrl); */
 		break;
 	}
 
@@ -4194,6 +4224,15 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAMERA_FOCUS_MODE:
 	{
 		err = camdrv_ss_set_focus_mode(sd, ctrl->value);
+		break;
+	}
+
+	case V4L2_CID_CAMERA_DEFAULT_FOCUS_POSITION:
+	{
+		/* struct i2c_client *client = v4l2_get_subdevdata(sd); */
+		/* struct camdrv_ss_state *state = to_state(sd); */
+		CAM_INFO_PRINTK("%s %s :  value =%d\n", sensor.name, __func__, state->af_mode);
+		err = camdrv_ss_set_focus_mode(sd, state->af_mode);
 		break;
 	}
 
@@ -4226,38 +4265,42 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_SCENE_MODE:
 	{
-		err = camdrv_ss_set_scene_mode(sd, ctrl);
+		if (sensor.set_scene_mode != NULL) {  /* denis */
+			CAM_ERROR_PRINTK("%s %s set_scene_mode :sensor has defined its sequence\n", sensor.name, __func__);
+			sensor.set_scene_mode(sd, ctrl);
+		} else
+			err = camdrv_ss_set_scene_mode(sd, ctrl);
 		break;
 	}
 
 	case V4L2_CID_CAMERA_GPS_LATITUDE:
 	{
-		CAM_ERROR_PRINTK( "%s %s : V4L2_CID_CAMERA_GPS_LATITUDE not implemented !!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : V4L2_CID_CAMERA_GPS_LATITUDE not implemented !!\n", sensor.name, __func__);
 		break;
 	}
 
 	case V4L2_CID_CAMERA_GPS_LONGITUDE:
 	{
-		CAM_ERROR_PRINTK( "%s %s : V4L2_CID_CAMERA_GPS_LONGITUDE not implemented !!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : V4L2_CID_CAMERA_GPS_LONGITUDE not implemented !!\n", sensor.name, __func__);
 		break;
 	}
 
 	case V4L2_CID_CAMERA_GPS_TIMESTAMP:
 	{
-		CAM_ERROR_PRINTK( "%s %s : V4L2_CID_CAMERA_GPS_TIMESTAMP not implemented !!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : V4L2_CID_CAMERA_GPS_TIMESTAMP not implemented !!\n", sensor.name, __func__);
 		break;
 	}
 
 	case V4L2_CID_CAMERA_GPS_ALTITUDE:
 	{
-		CAM_ERROR_PRINTK( "%s %s : V4L2_CID_CAMERA_GPS_ALTITUDE not implemented !!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s : V4L2_CID_CAMERA_GPS_ALTITUDE not implemented !!\n", sensor.name, __func__);
 		break;
 	}
 
 	case V4L2_CID_CAMERA_ZOOM:
 	{
 		err = camdrv_ss_set_dzoom(sd, ctrl);
-		CAM_INFO_PRINTK( "%s : V4L2_CID_CAMERA_ZOOM success\n", __func__);
+		CAM_INFO_PRINTK("%s : V4L2_CID_CAMERA_ZOOM success\n", __func__);
 		break;
 	}
 
@@ -4274,16 +4317,25 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		state->touch_area.rightBottomY = touch_area.rightBottomY;
 		state->touch_area.weight = touch_area.weight;
 
-		if(touch_area.leftTopX == 0 && touch_area.leftTopY ==0 && touch_area.rightBottomX == 0 &&
-			touch_area.rightBottomY ==0 && touch_area.weight == 0)
+		if (touch_area.leftTopX == 0 && touch_area.leftTopY == 0 && touch_area.rightBottomX == 1 &&
+			touch_area.rightBottomY == 1 && touch_area.weight == 1)
 			state->bTouchFocus = false;
-		else
+		else {
+			if (sensor.set_touch_focus_area == NULL) {
+				err = -ENOTSUPP;
+				CAM_ERROR_PRINTK(
+					"%s %s :set_touch_focus_area is NULL!!!\n",
+					sensor.name, __func__);
+				break;
+			}
+			sensor.set_touch_focus_area(sd, TOUCH_AF_START, &(state->touch_area));
 			state->bTouchFocus = true;
+		}
 
 		CAM_INFO_PRINTK(
 			"%s : V4L2_CID_CAMERA_TOUCH_AF_AREA  IsTouchFocusAreaValid =%d "
 			"x =%d, y =%d ,w = %d, h =%d, weight=%d\n",
-			__func__,state->bTouchFocus,
+			__func__, state->bTouchFocus,
 			state->touch_area.leftTopX,
 			state->touch_area.leftTopY,
 			state->touch_area.rightBottomX,
@@ -4297,6 +4349,19 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	}
 
+	case V4L2_CID_CAMERA_OBJECT_POSITION_X:
+	{
+		state->af_info.x = ctrl->value;
+		err = 0;
+		break;
+	}
+
+	case V4L2_CID_CAMERA_OBJECT_POSITION_Y:
+	{
+		state->af_info.y = ctrl->value;
+		err = 0;
+		break;
+	}
 
 	case V4L2_CID_CAMERA_OBJ_TRACKING_START_STOP:
 	{
@@ -4321,7 +4386,7 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			}
 
 			if (ctrl->value == AUTO_FOCUS_ON) {
-				err = sensor.set_touch_focus(sd, TOUCH_AF_START, &(state->touch_area));
+				err = sensor.set_touch_focus(sd, TOUCH_AF_START, NULL);
 			} else {
 				err = sensor.set_touch_focus(sd, TOUCH_AF_STOP, NULL);
 				state->bTouchFocus = false;
@@ -4420,7 +4485,7 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		struct v4l2_exif_sensor_info exif_info;
 		int ret = -1;
 
-		CAM_INFO_PRINTK("%s, V4L2_CID_CAMERA_EXIF_SENSOR_INFO \n",__func__);
+		CAM_INFO_PRINTK("%s, V4L2_CID_CAMERA_EXIF_SENSOR_INFO\n", __func__);
 		err = camdrv_ss_g_exif_sensor_info(sd, &exif_info);
 		ret = copy_to_user(
 			(struct v4l2_exif_sensor_info *)ctrl->value,
@@ -4432,11 +4497,11 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAMERA_ESD_DETECTED_RESTART_CAMERA:
 	{
 		int camera_id = (int)ctrl->value;
-		CAM_INFO_PRINTK("%s :V4L2_CID_CAMERA_ESD_DETECTED_RESTART_CAMERA : camera_id = %d\n",__func__,camera_id);
-		camdrv_ss_s_stream(sd,0);
-		camdrv_ss_power(camera_id,0);
-		camdrv_ss_power(camera_id,1);
-		camdrv_ss_s_stream(sd,1);
+		CAM_INFO_PRINTK("%s :V4L2_CID_CAMERA_ESD_DETECTED_RESTART_CAMERA : camera_id = %d\n", __func__, camera_id);
+		camdrv_ss_s_stream(sd, 0);
+		camdrv_ss_power(camera_id, 0);
+		camdrv_ss_power(camera_id, 1);
+		camdrv_ss_s_stream(sd, 1);
 		break;
 	}
 	default:
@@ -4447,11 +4512,11 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	}
 
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s : ERROR for id  =%d but NOT RETURNING Error to App ,treated as WARNING !!!\n", sensor.name, __func__, ctrl->id);
+		CAM_ERROR_PRINTK("%s %s : ERROR for id  =%d but NOT RETURNING Error to App ,treated as WARNING !!!\n", sensor.name, __func__, ctrl->id);
 	}
 
 	mutex_unlock(&sensor_s_ctrl);
-	CAM_INFO_PRINTK( "%s %s : %d SUCCESS\n", sensor.name, __func__, ctrl->id);
+	CAM_INFO_PRINTK("%s %s : %d SUCCESS\n", sensor.name, __func__, ctrl->id);
 	return err;
 }
 
@@ -4462,25 +4527,33 @@ static int camdrv_ss_init(struct v4l2_subdev *sd, u32 val)
 	int err = 0;
 
 
-	CAM_INFO_PRINTK( "%s %s :\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s :\n", sensor.name, __func__);
 
 	camdrv_ss_init_parameters(sd);
 
 #ifdef CONFIG_LOAD_FILE
 	err = camdrv_ss_regs_table_init(sd);
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s: camdrv_ss_regs_table_init failed\n", __func__);
+		CAM_ERROR_PRINTK("%s: camdrv_ss_regs_table_init failed\n", __func__);
 		return -ENOIOCTLCMD;
 	}
 #endif /* CONFIG_LOAD_FILE */
-	CAM_INFO_PRINTK( "%s %s : rows = %d\n", sensor.name, __func__, sensor.rows_num_init_regs);
+	CAM_INFO_PRINTK("%s %s : rows = %d\n", sensor.name, __func__, sensor.rows_num_init_regs);
 	if (sensor.init_regs == NULL)
-		CAM_ERROR_PRINTK( "%s %s : init_regs is NULL, please check if it is needed !!!\n", sensor.name, __func__);
-	else
+		CAM_ERROR_PRINTK("%s %s : init_regs is NULL, please check if it is needed !!!\n", sensor.name, __func__);
+	else {
+#ifdef CONFIG_LOAD_FILE
+		if (sensor.smartStayChangeInitSetting != NULL) {
+			err = camdrv_ss_i2c_set_config_register(client, sensor.init_regs, sensor.rows_num_init_regs, "init_regs_smart_stay");
+		} else {
+			err = camdrv_ss_i2c_set_config_register(client, sensor.init_regs, sensor.rows_num_init_regs, "init_regs");
+		}
+#else
 		err = camdrv_ss_i2c_set_config_register(client, sensor.init_regs, sensor.rows_num_init_regs, "init_regs");
-
+#endif
+		}
 	if (err < 0) {
-		CAM_ERROR_PRINTK( "%s %s :i2c failed !!\n", sensor.name, __func__);
+		CAM_ERROR_PRINTK("%s %s :i2c failed !!\n", sensor.name, __func__);
 		return -EINVAL;
 	}
 
@@ -4565,76 +4638,74 @@ static int camdrv_ss_s_stream(struct v4l2_subdev *sd, int enable)
 	 struct camdrv_ss_state *state = to_state(sd);
 	/* struct i2c_client *client = v4l2_get_subdevdata(sd); */
 	int tmp_sensor_state = 0;
-	
+
 	CAM_INFO_PRINTK("%s %s :\n", sensor.name, __func__);
 
 	atomic_set(&gCapModeState, CAMDRV_SS_CAPTURE_MODE_NOT_SUPPORT);
 	tmp_sensor_state = atomic_read(&sensor_state);
 
-	if(enable && (tmp_sensor_state != CAMDRV_SS_STREAMING))
-	{
-		if(tmp_sensor_state == CAMDRV_SS_NOT_INITIALIZED)
-		{
-			CAM_ERROR_PRINTK("%s %s : CAMDRV_SS_NOT_INITIALIZED! Initialize again! Normally this case will not happen! ! \n", sensor.name, __func__);
+	if (enable && (tmp_sensor_state != CAMDRV_SS_STREAMING)) {
+		if (tmp_sensor_state == CAMDRV_SS_NOT_INITIALIZED) {
+			CAM_ERROR_PRINTK("%s %s : CAMDRV_SS_NOT_INITIALIZED! Initialize again! Normally this case will not happen! !\n", sensor.name, __func__);
 			camdrv_ss_init_func(sd);
 			tmp_sensor_state = atomic_read(&sensor_state);
 		}
 
-		if(tmp_sensor_state == CAMDRV_SS_INITIALIZE_FAILED)
-		{
-			CAM_ERROR_PRINTK("%s %s :  CAMDRV_SS_INITIALIZE_FAILED ! \n", sensor.name, __func__);
+		if (tmp_sensor_state == CAMDRV_SS_INITIALIZE_FAILED) {
+			CAM_ERROR_PRINTK("%s %s :  CAMDRV_SS_INITIALIZE_FAILED !\n", sensor.name, __func__);
 			return -EFAULT;
-		}
-		else if(tmp_sensor_state == CAMDRV_SS_INITIALIZING)
-		{
+		} else if (tmp_sensor_state == CAMDRV_SS_INITIALIZING) {
 			CAM_ERROR_PRINTK("%s %s : Waiting for the camera initalize thread to finish initialization .........\n", sensor.name, __func__);
-			if(0 == wait_event_interruptible_timeout(gCamdrvReadyQ,(atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_DONE),	msecs_to_jiffies(30000))) //aska modify for ivory 
-			{
-				CAM_ERROR_PRINTK("%s %s : TIMEOUT 6 sec, waited for event CAMDRV_SS_INITIALIZE_DONE: state =%d !\n", sensor.name, __func__,atomic_read(&sensor_state));
+			if (0 == wait_event_interruptible_timeout(gCamdrvReadyQ,
+				((atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_DONE) || (atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_FAILED)), msecs_to_jiffies(30000))) { /* aska modify for ivory */
+				CAM_ERROR_PRINTK("%s %s : TIMEOUT 6 sec, waited for event CAMDRV_SS_INITIALIZE_DONE: state =%d !\n", sensor.name, __func__, atomic_read(&sensor_state));
 				return -EFAULT;
 			}
-		}
-		else if(tmp_sensor_state == CAMDRV_SS_INITIALIZE_DONE)
-		{
+			if (atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_FAILED) {
+				CAM_ERROR_PRINTK("%s %s :  CAMDRV_SS_INITIALIZE_FAILED happened in init thread ! return ERROR !\n", sensor.name, __func__);
+				return -EFAULT;
+			}
+		} else if (tmp_sensor_state == CAMDRV_SS_INITIALIZE_DONE) {
 			CAM_INFO_PRINTK("%s %s : Already initialize is Finished .\n", sensor.name, __func__);
-		}
-		else
-		{
-			CAM_ERROR_PRINTK("%s %s : WRONG sensor state = %d ! ERROR! FAILED  .\n", sensor.name, __func__,tmp_sensor_state);
+		} else {
+			CAM_ERROR_PRINTK("%s %s : WRONG sensor state = %d ! ERROR! FAILED  .\n", sensor.name, __func__, tmp_sensor_state);
 			return -EFAULT;
 		}
 
-		if(state->mode_switch == CAMERA_PREVIEW_TO_PICTURE_CAPTURE)
-		{
-			CAM_ERROR_PRINTK( "%s %s : CAPTURE MODE..\n", sensor.name, __func__);
-			camdrv_ss_set_capture_start(sd, NULL);
+		if (state->mode_switch == CAMERA_PREVIEW_TO_PICTURE_CAPTURE) {
+			CAM_ERROR_PRINTK("%s %s : CAPTURE MODE..\n", sensor.name, __func__);
+
+			if (sensor.set_capture_start != NULL) {
+				CAM_ERROR_PRINTK("%s %s :sensor has defined its sequence\n", sensor.name, __func__);
+				sensor.set_capture_start(sd, NULL);
+			} else
+				camdrv_ss_set_capture_start(sd, NULL);
+
 			camdrv_ss_cap_mode_change_monitor(sd);
-		}
-		else
-		{
-			CAM_ERROR_PRINTK( "%s %s : CAM or REC PREVIEW MODE mode_switch =%d ..\n", sensor.name, __func__,state->mode_switch);
+		} else {
+			CAM_ERROR_PRINTK("%s %s : CAM or REC PREVIEW MODE mode_switch =%d ..\n", sensor.name, __func__, state->mode_switch);
 
 			/* If the perticular sensor needs a different sequence , it needs be defined in sensor driver file.
 			  * otherwise it will be executed in a standard sequence as s5k4ecgx */
-			if(sensor.set_preview_start != NULL)
-			{
-				CAM_ERROR_PRINTK( "%s %s :sensor has defined its sequence  \n", sensor.name, __func__);
+			if (state->mode_switch == CAMERA_PREVIEW_TO_CAMCORDER_PREVIEW)
+				camdrv_ss_set_preview_stop(sd);
+
+			if (sensor.set_preview_start != NULL) {
+				CAM_ERROR_PRINTK("%s %s :sensor has defined its sequence\n", sensor.name, __func__);
 				sensor.set_preview_start(sd);
-			}
-			else
+			} else
 				camdrv_ss_set_preview_start(sd);
 		}
 
-		atomic_set(&sensor_state,CAMDRV_SS_STREAMING);
+		atomic_set(&sensor_state, CAMDRV_SS_STREAMING);
 
-		CAM_INFO_PRINTK( "%s %s : START SUCCESS!!\n", sensor.name, __func__);
+		CAM_INFO_PRINTK("%s %s : START SUCCESS!!\n", sensor.name, __func__);
 	}
 
-	if(!enable)
-	{
-		camdrv_ss_set_preview_stop(sd);
-		atomic_set(&sensor_state,CAMDRV_SS_INITIALIZE_DONE);
-		CAM_INFO_PRINTK( "%s : STOP success\n", __func__);
+	if (!enable) {
+		/* camdrv_ss_set_preview_stop(sd); */
+		atomic_set(&sensor_state, CAMDRV_SS_INITIALIZE_DONE);
+		CAM_INFO_PRINTK("%s : STOP success\n", __func__);
 	}
 
 	return 0;
@@ -4675,7 +4746,7 @@ static int camdrv_ss_enum_input(struct soc_camera_device *icd, struct v4l2_input
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
 
 	if (!icd) {
-		CAM_ERROR_PRINTK( "%s %s : icd NULL failed !!\n", __func__, sensor.name);
+		CAM_ERROR_PRINTK("%s %s : icd NULL failed !!\n", __func__, sensor.name);
 		return -EINVAL;
 	}
 
@@ -4739,7 +4810,7 @@ static const struct v4l2_subdev_video_ops camdrv_ss_video_ops = {
 
 static int camdrv_ss_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
-	CAM_ERROR_PRINTK( "%s :sensor wants to skip frames = %d\n", __func__, sensor.skip_frames);
+	CAM_ERROR_PRINTK("%s :sensor wants to skip frames = %d\n", __func__, sensor.skip_frames);
 	*frames = sensor.skip_frames;
 	return 0;
 }
@@ -4796,14 +4867,14 @@ static const struct v4l2_subdev_ops camdrv_ss_subdev_ops = {
 bool camdrv_ss_power(int cam_id, int bOn)
 {
 	if (cam_id != CAMDRV_SS_CAM_ID_MAIN && cam_id != CAMDRV_SS_CAM_ID_SUB) {
-		CAM_ERROR_PRINTK( "%s camera id =%d is WRONG\n", __func__, cam_id);
+		CAM_ERROR_PRINTK("%s camera id =%d is WRONG\n", __func__, cam_id);
 		return false;
 	}
 	camera_id = cam_id;
 
 	if (bOn) {
 		memset(&sensor, 0, sizeof(struct camdrv_ss_sensor_cap));
-		CAM_INFO_PRINTK( "%s : cam_id = %d powering ON ..\n", __func__, cam_id);
+		CAM_INFO_PRINTK("%s : cam_id = %d powering ON ..\n", __func__, cam_id);
 
 		if (camera_id == CAMDRV_SS_CAM_ID_MAIN)
 			camdrv_ss_sensor_init_main(bOn, &sensor);
@@ -4813,17 +4884,17 @@ bool camdrv_ss_power(int cam_id, int bOn)
 #endif
 
 		if (sensor.thumbnail_ioctl == NULL) {
-			CAM_ERROR_PRINTK( "%s %s : sensor.thumbnail_ioctl == NULL failed !\n", __func__, sensor.name);
+			CAM_ERROR_PRINTK("%s %s : sensor.thumbnail_ioctl == NULL failed !\n", __func__, sensor.name);
 			return false;
 		}
 
 		if (sensor.controls == NULL) {
-			CAM_ERROR_PRINTK( "%s %s : sensor.controls == NULL failed !\n", __func__, sensor.name);
+			CAM_ERROR_PRINTK("%s %s : sensor.controls == NULL failed !\n", __func__, sensor.name);
 			return false;
 		}
 
 		if (sensor.enum_frameintervals == NULL) {
-			CAM_ERROR_PRINTK( "%s %s : sensor.enum_frameintervals == NULL failed !\n", __func__, sensor.name);
+			CAM_ERROR_PRINTK("%s %s : sensor.enum_frameintervals == NULL failed !\n", __func__, sensor.name);
 			return false;
 		}
 
@@ -4836,21 +4907,18 @@ bool camdrv_ss_power(int cam_id, int bOn)
 
 		camdrv_ss_ops.controls = sensor.controls;
 		camdrv_ss_ops.num_controls = sensor.rows_num_controls;
-		CAM_INFO_PRINTK( "%s : cam_id = %d power ON. DONE.  [Actually sensor is not powered] !\n", __func__, cam_id);
+		CAM_INFO_PRINTK("%s : cam_id = %d power ON. DONE.  [Actually sensor is not powered] !\n", __func__, cam_id);
 	} else {
-		CAM_INFO_PRINTK( "%s : cam_id = %d powering OFF ..\n", __func__, cam_id);
-		if(atomic_read(&sensor_state) == CAMDRV_SS_NOT_INITIALIZED)
-		{
+		CAM_INFO_PRINTK("%s : cam_id = %d powering OFF ..\n", __func__, cam_id);
+		if (atomic_read(&sensor_state) == CAMDRV_SS_NOT_INITIALIZED) {
 			CAM_ERROR_PRINTK("%s %s : Camera already in Power off state! no need to do anything !\n", sensor.name, __func__);
 			return true;
 		}
 
-		if(atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZING)
-		{
+		if (atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZING) {
 			CAM_ERROR_PRINTK("%s %s : Need to wait for the previous camera initialize finishes !\n", sensor.name, __func__);
-			if(0 == wait_event_interruptible_timeout(gCamdrvReadyQ,(atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_DONE),	msecs_to_jiffies(6000)))
-			{
-				CAM_ERROR_PRINTK("%s %s : Serious problem ,TIMEOUT 6 sec, waited for event CAMDRV_SS_INITIALIZE_DONE: state =%d !\n", sensor.name, __func__,atomic_read(&sensor_state));
+			if (0 == wait_event_interruptible_timeout(gCamdrvReadyQ, (atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_DONE), msecs_to_jiffies(6000))) {
+				CAM_ERROR_PRINTK("%s %s : Serious problem ,TIMEOUT 6 sec, waited for event CAMDRV_SS_INITIALIZE_DONE: state =%d !\n", sensor.name, __func__, atomic_read(&sensor_state));
 				return -EFAULT;
 			}
 		}
@@ -4879,7 +4947,7 @@ bool camdrv_ss_power(int cam_id, int bOn)
 		atomic_set(&sensor_state , CAMDRV_SS_NOT_INITIALIZED);
 
 		memset(&sensor, 0, sizeof(struct camdrv_ss_sensor_cap));
-		CAM_INFO_PRINTK( "%s : cam_id = %d powered OFF . Done\n", __func__, cam_id);
+		CAM_INFO_PRINTK("%s : cam_id = %d powered OFF . Done\n", __func__, cam_id);
 	}
 
 	return true;
@@ -4898,27 +4966,27 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 	struct soc_camera_device *icd = client->dev.platform_data;
 	struct soc_camera_link *icl = NULL;
 
-	CAM_INFO_PRINTK( "%s %s :\n", __func__, sensor.name);
+	CAM_INFO_PRINTK("%s %s :\n", __func__, sensor.name);
 
 	if (!icd) {
-		CAM_ERROR_PRINTK( "%s %s : icd NULL failed !!\n", __func__, sensor.name);
+		CAM_ERROR_PRINTK("%s %s : icd NULL failed !!\n", __func__, sensor.name);
 		return -EINVAL;
 	}
 
 	icl = to_soc_camera_link(icd);
 	if (!icl) {
-		CAM_ERROR_PRINTK( "%s %s : icl NULL failed !!\n", __func__, sensor.name);
+		CAM_ERROR_PRINTK("%s %s : icl NULL failed !!\n", __func__, sensor.name);
 		return -EINVAL;
 	}
 
 	if (!icl->priv) {
-		CAM_ERROR_PRINTK( "%s %s : icl->priv is NULL failed !!\n", __func__, sensor.name);
+		CAM_ERROR_PRINTK("%s %s : icl->priv is NULL failed !!\n", __func__, sensor.name);
 		return -EINVAL;
 	}
 
 	state = kzalloc(sizeof(struct camdrv_ss_state), GFP_KERNEL);
 	if (state == NULL) {
-		CAM_ERROR_PRINTK( "%s %s : alloc failed !!\n", __func__, sensor.name);
+		CAM_ERROR_PRINTK("%s %s : alloc failed !!\n", __func__, sensor.name);
 		return -ENOMEM;
 	}
 
@@ -4935,7 +5003,7 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 		strcpy(sd->name, CAMDRV_SS_MODULE_NAME_SUB);
 
 	/* strcpy(sd->name, CAMDRV_SS_MODULE_NAME_MAIN); */
-	CAM_INFO_PRINTK( "%s %s :\n", __func__, icl->module_name);
+	CAM_INFO_PRINTK("%s %s :\n", __func__, icl->module_name);
 
 	state->plat_parms = icl->priv;
 
@@ -4945,41 +5013,47 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 
 #ifdef FACTORY_CHECK
 	if (cam_class_init == false) {
-		CAM_INFO_PRINTK( "Start create class for factory test mode !\n");
+		CAM_INFO_PRINTK("Start create class for factory test mode !\n");
 		camera_class = class_create(THIS_MODULE, "camera");
 	}
 
 	{
 		if (camera_class) {
 			if (camera_id == CAMDRV_SS_CAM_ID_MAIN) {
-				CAM_INFO_PRINTK( "Creat Main cam device !\n");
+				CAM_INFO_PRINTK("Creat Main cam device !\n");
 
 				sec_main_cam_dev = device_create(camera_class, NULL, 0, NULL, "rear");
 
 				if (IS_ERR(sec_main_cam_dev)) {
-					CAM_ERROR_PRINTK( "Failed to create device(sec_main_cam_dev)!\n");
+					CAM_ERROR_PRINTK("Failed to create device(sec_main_cam_dev)!\n");
 				}
-				if (device_create_file(sec_main_cam_dev, &dev_attr_rear_type) < 0) {
-					CAM_ERROR_PRINTK( "failed to create main camera device file, %s\n",
-					dev_attr_rear_type.attr.name);
+				if (device_create_file(sec_main_cam_dev, &dev_attr_rear_camtype) < 0) {
+					CAM_ERROR_PRINTK("failed to create main camera device file, %s\n",
+					dev_attr_rear_camtype.attr.name);
 				}
 				if (device_create_file(sec_main_cam_dev, &dev_attr_rear_camfw) < 0) {
-					CAM_ERROR_PRINTK( "failed to create main camera device file, %s\n",
+					CAM_ERROR_PRINTK("failed to create main camera device file, %s\n",
 					dev_attr_rear_camfw.attr.name);
 				}
+
+			if (device_create_file(sec_main_cam_dev, &camera_antibanding_attr) < 0) {
+				CAM_ERROR_PRINTK("Failed to create anti-banding device file,  %s\n",
+				camera_antibanding_attr.attr.name);
+			}
+
 			} else {
-				CAM_ERROR_PRINTK( "Creat Sub cam device !\n");
+				CAM_ERROR_PRINTK("Creat Sub cam device !\n");
 
 				sec_sub_cam_dev = device_create(camera_class, NULL, 1, NULL, "front");
 				if (IS_ERR(sec_sub_cam_dev))	{
-					CAM_ERROR_PRINTK( "Failed to create device(sec_sub_cam_dev)!\n");
+					CAM_ERROR_PRINTK("Failed to create device(sec_sub_cam_dev)!\n");
 				}
-				if (device_create_file(sec_sub_cam_dev, &dev_attr_front_type) < 0) {
-					CAM_ERROR_PRINTK( "failed to create sub camera device file, %s\n",
-					dev_attr_front_type.attr.name);
+				if (device_create_file(sec_sub_cam_dev, &dev_attr_front_camtype) < 0) {
+					CAM_ERROR_PRINTK("failed to create sub camera device file, %s\n",
+					dev_attr_front_camtype.attr.name);
 				}
 				if (device_create_file(sec_sub_cam_dev, &dev_attr_front_camfw) < 0) {
-					CAM_ERROR_PRINTK( "failed to create sub camera device file, %s\n",
+					CAM_ERROR_PRINTK("failed to create sub camera device file, %s\n",
 					dev_attr_front_camfw.attr.name);
 				}
 			}
@@ -5010,7 +5084,7 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 	gpio_direction_input(52);
 	gpio_free(52);
 
-	CAM_INFO_PRINTK( "%s %s : success\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s : success\n", sensor.name, __func__);
 
 	return 0;
 }
@@ -5025,7 +5099,7 @@ static int camdrv_ss_remove(struct i2c_client *client)
 	/* struct soc_camera_device *icd = client->dev.platform_data; */
 	/* del struct soc_camera_link *icl = to_soc_camera_link(icd); */
 
-	CAM_INFO_PRINTK( "%s %s :\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s :\n", sensor.name, __func__);
 
 #ifdef CONFIG_LOAD_FILE
 	camdrv_ss_regs_table_exit();
@@ -5046,7 +5120,7 @@ static int camdrv_ss_remove(struct i2c_client *client)
 	}
 #endif
 
-	CAM_INFO_PRINTK( "%s %s : unloaded\n", sensor.name, __func__);
+	CAM_INFO_PRINTK("%s %s : unloaded\n", sensor.name, __func__);
 
 	return 0;
 }
@@ -5088,11 +5162,11 @@ static struct i2c_driver camdrv_ss_i2c_driver = {
 
 static int __init camdrv_ss_mod_init(void)
 {
-	CAM_INFO_PRINTK( "%s %s :\n", CAMDRV_SS_MODULE_NAME_MAIN, __func__);
+	CAM_INFO_PRINTK("%s %s :\n", CAMDRV_SS_MODULE_NAME_MAIN, __func__);
 #ifdef CONFIG_SOC_SUB_CAMERA
 	i2c_add_driver(&camdrv_ss_i2c_driver_sub);
 #endif
-	return 	i2c_add_driver(&camdrv_ss_i2c_driver);
+	return i2c_add_driver(&camdrv_ss_i2c_driver);
 }
 
 static void __exit camdrv_ss_mod_exit(void)

@@ -13,6 +13,8 @@
 
 #include <linux/suspend.h>
 
+#define PM_LOG_BUF_SIZE         SZ_32K
+
 /* Types of snapshot parms */
 enum {
 	SNAPSHOT_SIMPLE,
@@ -84,5 +86,14 @@ extern void kona_pm_reg_pm_enter_handler(int (*enter) (suspend_state_t state));
 /* Callbacks into machine code for instrumentation */
 extern void instrument_idle_entry(void);
 extern void instrument_idle_exit(void);
+
+#ifdef CONFIG_PM_LOG_TO_UNCACHED_MEM
+int print_pm_log(void);
+int log_pm(const char *fmt, ...);
+#else
+#define print_pm_log()
+#define log_pm(fmt, ...) \
+	printk(KERN_INFO fmt, ##__VA_ARGS__)
+#endif /* CONFIG_PM_LOG_TO_UNCACHED_MEM  */
 
 #endif /* _KONA_PM_DBG_H_ */

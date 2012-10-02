@@ -2425,7 +2425,56 @@ void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
 
 	return;
 }
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+/****************************************************************************
+ *
+ *  Function Name: csl_srcmixer_getMixOutGain
+ *  (CSL_CAPH_MIXER_e outChnl, int *gain_mB)
+ *
+ *  Description: Get the SRCMixer mixer output gain
+ *
+ ****************************************************************************/
+void csl_srcmixer_getMixOutGain(CSL_CAPH_MIXER_e outChnl,
+				int *gainL_mB, int *gainR_mB)
+{
+	UInt8 chalOutChnl = 0x0;
+	unsigned int scale_l, scale_r = 0;
 
+	/*
+	MixerOutFineGain:	SRC_SPK0_LT_GAIN_CTRL2 : SPK0_LT_FIXED_GAIN
+		13-bit interger unsigned
+		0x0000, = 0 dB
+		0x0001, = (6.02/256) dB attenuation ~ 0.0235 dB
+		0x1FFF	max attenuation
+	*/
+
+	/* get the cHAL output channel from CSL output channel */
+	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+	/* Set the mixer left/right channel output gain */
+	if (chalOutChnl & CAPH_M0_Left)
+		chal_caph_srcmixer_get_spkrgain(handle,
+			CAPH_M0_Left, (cUInt16 *)&scale_l);
+	if (chalOutChnl & CAPH_M0_Right)
+		chal_caph_srcmixer_get_spkrgain(handle,
+			CAPH_M0_Right, (cUInt16 *)&scale_r);
+	if (chalOutChnl & CAPH_M1_Left)
+		chal_caph_srcmixer_get_spkrgain(handle,
+			CAPH_M1_Left, (cUInt16 *)&scale_l);
+	if (chalOutChnl & CAPH_M1_Right)
+		chal_caph_srcmixer_get_spkrgain(handle,
+			CAPH_M1_Right, (cUInt16 *)&scale_r);
+
+	*gainL_mB = 0-(scale_l * 602)/256;
+	*gainR_mB = 0-(scale_r * 602)/256;
+	aTrace(LOG_AUDIO_CSL,
+	      "csl_srcmixer_getMixOutGain:: ch %x, "
+	      "gainL %d, scale_l 0x%x, "
+	      "gainR %d, scale_r 0x%x.\r\n",
+	      outChnl, *gainL_mB, scale_l, *gainR_mB, scale_r);
+
+	return;
+}
+#endif
 /****************************************************************************
  *
  *  Function Name: csl_srcmixer_setMixBitSel(

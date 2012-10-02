@@ -520,6 +520,13 @@ config USB_DWC_OTG
 	select USB_GADGET_SELECTED
 	select USB_GADGET_DUALSPEED
 
+config USB_DELAYED_SUSPEND_POWER_SAVING
+	boolean "USB suspend state powering saving workaroudn"
+	depends on USB_DWC_OTG
+	default ARCH_KONA
+	help
+	    Say "n" to disable Kona suspend mode power saving workaround
+
 #
 # LAST -- dummy/emulated controller
 #

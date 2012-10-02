@@ -48,13 +48,14 @@
 #include <linux/interrupt.h>
 #include <linux/input.h>
 #include <linux/string.h>
-
-#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
-#include <linux/brvsens_driver.h>
-
-static int mod_debug = 0x0;
-module_param(mod_debug, int, 0644);
+#include <linux/workqueue.h>
+#include <linux/hrtimer.h>
+#include <linux/gpio.h>
+#ifdef CONFIG_ARCH_KONA
+#include <linux/regulator/consumer.h>
 #endif
+#include <linux/al3006.h>
+
 
 #define AL3006_DRV_NAME	"al3006"
 //#define AL3006_DRV_NAME		"dyna"
@@ -86,6 +87,9 @@ module_param(mod_debug, int, 0644);
 #define AL3006_TIME_CTRL_SHIFT	(0)
 #define AL3006_TIME_CTRL_MASK	0x7F
 
+#define LIGHT_SENSOR_START_TIME_DELAY 50000000
+#define PROXIMITY_SENSOR_START_TIME_DELAY 50000000
+
 #define LSC_DBG
 #ifdef LSC_DBG
 #define LDBG(s,args...)	{printk("LDBG: func [%s], line [%d], ",__func__,__LINE__); printk(s,## args);}
@@ -93,13 +97,39 @@ module_param(mod_debug, int, 0644);
 #define LDBG(s,args...) {}
 #endif
 
+#define AL_ERROR(fmt, args...)   printk(KERN_ERR "%s, " fmt, __func__, ## args)
+#define AL_INFO(fmt, args...)   printk(KERN_INFO "%s, " fmt, __func__, ## args)
+#define AL_DEBUG(fmt, args...) \
+do { if (mod_debug) printk(KERN_WARNING "%s, " fmt, __func__, ## args); } \
+while (0)
+
+/* module parameter that enables tracing */
+static int mod_debug = 0x0;
+module_param(mod_debug, int, 0644);
+
+enum {
+	prox = 0,
+	light,
+	max_sensors
+};
+
 struct al3006_data {
 	struct i2c_client *client;
 	struct mutex lock;
 	u8 reg_cache[AL3006_NUM_CACHABLE_REGS];
 //	u8 power_state_before_suspend;
 	int irq;
-	struct input_dev *input;
+	struct input_dev *input_dev;
+	struct work_struct work_proximity;
+	struct work_struct work_light;
+	struct hrtimer timer_proximity;
+	struct hrtimer timer_light;
+	ktime_t poll_delay[max_sensors];
+	struct workqueue_struct *wq[max_sensors];
+	unsigned long power_state;
+#ifdef CONFIG_ARCH_KONA
+	struct regulator *regulator;
+#endif
 };
 
 static u8 al3006_reg[AL3006_NUM_CACHABLE_REGS] =
@@ -112,6 +142,11 @@ static int lux_table[64]={1,1,1,2,2,2,3,4,4,5,6,7,9,11,13,16,19,22,27,32,39,46,5
                           100000};
 
 int cali = 0;
+
+static enum hrtimer_restart al3006_light_timer_func(struct hrtimer *timer);
+static enum hrtimer_restart al3006_proximity_timer_func(struct hrtimer *timer);
+static void al3006_work_func_light(struct work_struct *work);
+static void al3006_work_func_proximity(struct work_struct *work);
 
 /*
  * register access helpers
@@ -237,42 +272,142 @@ static int al3006_get_intstat(struct i2c_client *client)
 	return val >> AL3006_INT_SHIFT;
 }
 
+static void al3006_light_enable(struct al3006_data *data)
+{
+	printk("al3006_light_enable called\n");
+	hrtimer_start(&data->timer_light,
+		ktime_set(0, LIGHT_SENSOR_START_TIME_DELAY), HRTIMER_MODE_REL);
+}
+
+static void al3006_light_disable(struct al3006_data *data)
+{
+	printk("al3006_light_disable called\n");
+	hrtimer_cancel(&data->timer_light);
+	cancel_work_sync(&data->work_light);
+}
+
+static void al3006_proximity_enable(struct al3006_data *data)
+{
+	printk("al3006_proximity_enable called\n");
+	hrtimer_start(&data->timer_proximity,
+		ktime_set(0, PROXIMITY_SENSOR_START_TIME_DELAY), HRTIMER_MODE_REL);
+}
+
+static void al3006_proximity_disable(struct al3006_data *data)
+{
+	printk("al3006_proximity_disable called\n");
+	hrtimer_cancel(&data->timer_proximity);
+	cancel_work_sync(&data->work_proximity);
+}
+
 /*
  * sysfs layer
  */
-static int al3006_input_init(struct al3006_data *data)
+static int al3006_input_init(struct al3006_data *pal3006)
 {
-    struct input_dev *dev;
-    int err;
+	struct input_dev *input_dev;
+	int err;
 
-    dev = input_allocate_device();
-    if (!dev) {
+	/* Light Sensor device */
+	/* hrtimer settings.  we poll for light values using a timer. */
+	hrtimer_init(&pal3006->timer_light, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	pal3006->poll_delay[light] = ns_to_ktime(500 * NSEC_PER_MSEC);
+	pal3006->timer_light.function = al3006_light_timer_func;
+
+	/* the timer just fires off a work queue request.  we need a thread
+	 * to read the i2c (can be slow and blocking)
+	*/
+	pal3006->wq[light] = create_singlethread_workqueue("al3006_light_wq");
+	if (!pal3006->wq[light]) {
+		pr_err("%s: could not create workqueue\n", __func__);
+		return -ENOMEM;
+	}
+	/* this is the thread function we run on the work queue */
+	INIT_WORK(&pal3006->work_light, al3006_work_func_light);
+
+	/* Proximity Sensor device */
+	if (pal3006->irq > 0)
+		goto create_input_dev;
+
+	/* hrtimer settings.  we poll for light values using a timer. */
+	hrtimer_init(&pal3006->timer_proximity, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	pal3006->poll_delay[prox] = ns_to_ktime(500 * NSEC_PER_MSEC);
+	pal3006->timer_proximity.function = al3006_proximity_timer_func;
+
+	/* the timer just fires off a work queue request.  we need a thread
+	* to read the i2c (can be slow and blocking)
+	*/
+	pal3006->wq[prox] = create_singlethread_workqueue("al3006_prox_wq");
+	if (!pal3006->wq[prox]) {
+		pr_err("%s: could not create workqueue\n", __func__);
+		destroy_workqueue(pal3006->wq[light]);
+		hrtimer_cancel(&pal3006->timer_light);
+		cancel_work_sync(&pal3006->work_light);
+		hrtimer_cancel(&pal3006->timer_proximity);
         return -ENOMEM;
     }
-    dev->name = "LSC_al3006";
-    dev->id.bustype = BUS_I2C;
+	/* this is the thread function we run on the work queue */
+	INIT_WORK(&pal3006->work_proximity, al3006_work_func_proximity);
 
-    input_set_capability(dev, EV_ABS, ABS_MISC);
-    input_set_capability(dev, EV_ABS, ABS_RUDDER);
-    input_set_drvdata(dev, data);
+create_input_dev:
+	input_dev = input_allocate_device();
+	if (!input_dev) {
+		destroy_workqueue(pal3006->wq[light]);
+		hrtimer_cancel(&pal3006->timer_light);
+		cancel_work_sync(&pal3006->work_light);
+		if (pal3006->irq != -1) {
+			destroy_workqueue(pal3006->wq[prox]);
+			hrtimer_cancel(&pal3006->timer_proximity);
+			cancel_work_sync(&pal3006->work_proximity);
+		}
+		return -ENOMEM;
+	}
+	pal3006->input_dev = input_dev;
+	input_set_drvdata(input_dev, pal3006);
+	input_dev->name = "AL3006";
+	input_dev->phys = AL3006_DRV_NAME;
+	input_dev->id.bustype = BUS_I2C;
+	input_dev->dev.parent = &pal3006->client->dev;
+	/* Light sensor */
+	input_set_capability(input_dev, EV_ABS, ABS_MISC);
+	input_set_abs_params(input_dev, ABS_MISC, 0, 5000, 0, 0);
+	/* Proximity sensor */
+	input_set_capability(input_dev, EV_ABS, ABS_DISTANCE);
+	input_set_abs_params(input_dev, ABS_DISTANCE, 0, 1, 0, 0);
 
-    err = input_register_device(dev);
+	err = input_register_device(input_dev);
     if (err < 0) {
-        input_free_device(dev);
+		destroy_workqueue(pal3006->wq[light]);
+		hrtimer_cancel(&pal3006->timer_light);
+		cancel_work_sync(&pal3006->work_light);
+		if (pal3006->irq != -1) {
+			destroy_workqueue(pal3006->wq[prox]);
+			hrtimer_cancel(&pal3006->timer_proximity);
+			cancel_work_sync(&pal3006->work_proximity);
+		}
+		input_free_device(pal3006->input_dev);
 		LDBG("input device register error! ret = [%d]\n", err)
         return err;
     }
-    data->input = dev;
 
+	printk("al3006_input_init success\n");
     return 0;
 }
 
-static void al3006_input_fini(struct al3006_data *data)
+static void al3006_input_fini(struct al3006_data *pal3006)
 {
-    struct input_dev *dev = data->input;
+	destroy_workqueue(pal3006->wq[light]);
+	hrtimer_cancel(&pal3006->timer_light);
+	cancel_work_sync(&pal3006->work_light);
 
-    input_unregister_device(dev);
-    input_free_device(dev);
+	if (pal3006->irq <= 0) {
+		destroy_workqueue(pal3006->wq[prox]);
+		hrtimer_cancel(&pal3006->timer_proximity);
+		cancel_work_sync(&pal3006->work_proximity);
+	}
+	input_unregister_device(pal3006->input_dev);
+	input_free_device(pal3006->input_dev);
+
 }
 
 /* range */
@@ -347,9 +482,71 @@ static ssize_t al3006_store_power_state(struct device *dev,
 	return ret ? ret : count;
 }
 
-static DEVICE_ATTR(power_state, S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(power_state, S_IRUGO | S_IWUSR | S_IWGRP,
 		   al3006_show_power_state, al3006_store_power_state);
 
+
+static ssize_t al3006_store_light_power_state(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct al3006_data *data = i2c_get_clientdata(client);
+	unsigned long val;
+	int ret = 0;
+
+	if ((strict_strtoul(buf, 10, &val) < 0) || (val > 1))
+		return -EINVAL;
+
+	//mutex_lock(&data->lock);
+	if (val) {
+		/* Check and see if other one is on */
+		ret = al3006_set_power_state(data->client, val);
+		al3006_light_enable(data);
+		set_bit(light, &data->power_state);
+	}
+	else {
+		if (!test_bit(prox, &data->power_state))
+			ret = al3006_set_power_state(data->client, val);
+		al3006_light_disable(data);
+		clear_bit(light, &data->power_state);
+	}
+	//mutex_unlock(&data->lock);
+	return ret? ret: count;
+}
+
+static DEVICE_ATTR(light_power_state, 0664,
+		   al3006_show_power_state, al3006_store_light_power_state);
+
+static ssize_t al3006_store_proximity_power_state(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct al3006_data *data = i2c_get_clientdata(client);
+	unsigned long val;
+	int ret = 0;
+
+	if ((strict_strtoul(buf, 10, &val) < 0) || (val > 1))
+		return -EINVAL;
+
+	if (val) {
+		ret = al3006_set_power_state(data->client, val);
+		al3006_proximity_enable(data);
+		set_bit(prox, &data->power_state);
+	}
+	else {
+		if (!test_bit(light, &data->power_state))
+			ret = al3006_set_power_state(data->client, val);
+		al3006_proximity_disable(data);
+		clear_bit(prox, &data->power_state);
+	}
+
+	return ret? ret: count;
+}
+
+static DEVICE_ATTR(prox_power_state, 0664,
+		   al3006_show_power_state, al3006_store_proximity_power_state);
 
 /* lux */
 static ssize_t al3006_show_lux(struct device *dev,
@@ -451,6 +648,78 @@ static ssize_t al3006_store_calibration_state(struct device *dev,
 static DEVICE_ATTR(calibration, S_IWUSR | S_IRUGO,
 		   al3006_show_calibration_state, al3006_store_calibration_state);
 
+static ssize_t proximity_poll_delay_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct input_dev *input = to_input_dev(dev);
+	struct al3006_data *data = input_get_drvdata(input);
+
+	return sprintf(buf, "%lld\n", ktime_to_ns(data->poll_delay[prox]));
+}
+
+static ssize_t proximity_poll_delay_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct input_dev *input = to_input_dev(dev);
+	struct al3006_data *data = input_get_drvdata(input);
+	int err;
+	int64_t new_delay;
+
+	err = strict_strtoll(buf, 10, &new_delay);
+	if (err < 0)
+		return err;
+
+	//mutex_lock(&data->power_lock);
+	if (new_delay != ktime_to_ns(data->poll_delay[prox])) {
+		data->poll_delay[prox] = ns_to_ktime(new_delay);
+		if (al3006_get_power_state(data->client) == 0x00) {
+			al3006_set_power_state(data->client, 0);
+			al3006_set_power_state(data->client, 1);
+		}
+	}
+	//mutex_unlock(&data->power_lock);
+	return count;
+}
+
+static DEVICE_ATTR(prox_poll_delay, 0664,
+		proximity_poll_delay_show, proximity_poll_delay_store);
+
+static ssize_t light_poll_delay_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct input_dev *input = to_input_dev(dev);
+	struct al3006_data *data = input_get_drvdata(input);
+
+	return sprintf(buf, "%lld\n", ktime_to_ns(data->poll_delay[light]));
+}
+
+static ssize_t light_poll_delay_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct input_dev *input = to_input_dev(dev);
+	struct al3006_data *data = input_get_drvdata(input);
+	int err;
+	int64_t new_delay;
+
+	err = strict_strtoll(buf, 10, &new_delay);
+	if (err < 0)
+		return err;
+
+	//mutex_lock(&data->power_lock);
+	if (new_delay != ktime_to_ns(data->poll_delay[light])) {
+		data->poll_delay[light] = ns_to_ktime(new_delay);
+		if (al3006_get_power_state(data->client)) {
+			al3006_set_power_state(data->client, 0);
+			al3006_set_power_state(data->client, 1);
+		}
+	}
+	//mutex_unlock(&data->power_lock);
+	return count;
+}
+static DEVICE_ATTR(light_poll_delay, 0664,
+		light_poll_delay_show, light_poll_delay_store);
 
 #ifdef LSC_DBG
 /* engineer mode */
@@ -517,7 +786,19 @@ static const struct attribute_group al3006_attr_group = {
 	.attrs = al3006_attributes,
 };
 
-#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
+static struct attribute *al3006_android_attributes[] = {
+	&dev_attr_light_power_state.attr,
+	&dev_attr_light_poll_delay.attr,
+	&dev_attr_prox_power_state.attr,
+	&dev_attr_prox_poll_delay.attr,
+	NULL
+};
+
+static const struct attribute_group al3006_android_attr_group = {
+	.attrs = al3006_android_attributes,
+};
+
+/* local function */
 static int al3006_set_mode_no_lock(struct al3006_data *data, u8 mode)
 {
 	int ret;
@@ -527,129 +808,116 @@ static int al3006_set_mode_no_lock(struct al3006_data *data, u8 mode)
 
 	ret = i2c_smbus_write_byte_data(data->client, AL3006_MODE_COMMAND, val);
 
-	if(mod_debug)
-		printk("%s() reg:0x%x mode:0x%x new_reg:0x%x return:%d\n", __func__, data->reg_cache[AL3006_MODE_COMMAND], mode, val, ret);
+	AL_DEBUG("reg:0x%x mode:0x%x new_reg:0x%x return:%d\n",
+		 data->reg_cache[AL3006_MODE_COMMAND], mode, val, ret);
 
 	if(!ret)
 		data->reg_cache[AL3006_MODE_COMMAND] = val;
 
 	return ret;
 }
-
-static int al3006_activate(struct al3006_data *data, u8 flag)
+/* Work funcion */
+static void al3006_work_func_light(struct work_struct *work)
 {
-	u8 reg, pwr;
-	int ret;
-
-	if(mod_debug)
-		printk("%s() %s reg:0x%x\n", __func__, flag?"UP":"DOWN", data->reg_cache[AL3006_MODE_COMMAND]);
+	struct al3006_data *data = container_of(work, struct al3006_data, work_light);
+	int value, val;
 
 	mutex_lock(&data->lock);
-	reg = data->reg_cache[AL3006_MODE_COMMAND];
-	pwr = (reg & AL3006_POW_MASK) >> AL3006_POW_SHIFT;
 
-	if(flag) /* activate */
-	{
-		if(pwr != AL3006_POW_UP)
-		{
-			reg &= ~AL3006_POW_MASK;
-			reg |= AL3006_POW_UP << AL3006_POW_SHIFT;
-		}
-		reg &= ~AL3006_MODE_MASK;
-		reg |= 0x03 << AL3006_MODE_SHIFT;
-	}
-	else /* deactivate */
-	{
-		if(pwr != AL3006_POW_DOWN)
-		{
-			reg &= ~AL3006_POW_MASK;
-			reg |= AL3006_POW_DOWN << AL3006_POW_SHIFT;
-		}
-		reg &= ~AL3006_MODE_MASK;
-		reg |= 0x03 << AL3006_MODE_SHIFT;
-	}
-
-	ret = i2c_smbus_write_byte_data(data->client, AL3006_MODE_COMMAND, reg);
-	if (!ret)
-		data->reg_cache[AL3006_MODE_COMMAND] = reg;
-
-	mutex_unlock(&data->lock);
-
-	if(ret)
-		printk(KERN_ERR "%s() I2C ERROR %d\n", __func__, ret);
-
-	if(mod_debug)
-		printk("%s() new_reg:0x%x return=%d\n", __func__, reg, ret);
-
-	return ret;
-}
-
-static int al3006_read_als(struct al3006_data *data, u16* value)
-{
-	int val;
-
-	mutex_lock(&data->lock);
+	/* Set Configuration Register Operation to 0x00 to enable ALS */
 	if(((data->reg_cache[AL3006_MODE_COMMAND] & AL3006_MODE_MASK) >> AL3006_MODE_SHIFT) != 0x00)
 	{
-		if(val = al3006_set_mode_no_lock(data, 0x00))
+		val = al3006_set_mode_no_lock(data, 0x00);
+		if(val)
 		{
 			mutex_unlock(&data->lock);
 			printk(KERN_ERR "%s() I2C ERROR %d\n", __func__, val);
-			return val;
+			return;
 		}
 	}
 
 	val = i2c_smbus_read_byte_data(data->client, AL3006_RES_COMMAND);
-	mutex_unlock(&data->lock);
 
 	if(val < 0)
 	{
 		printk("%s() I2C ERROR %d\n", __func__, val);
-		return val;
+		mutex_unlock(&data->lock);
+		return;
 	}
 
 	val &= AL3006_RES_MASK;
 	if((val + cali) > 63 || ((val + cali) < 0))
 		cali = 0;
 
-	*value = lux_table[(val + cali)];
+	value = lux_table[(val + cali)];
+	AL_DEBUG("val=%d cali=%d value=%d\n", val, cali, value);
 
-	if(mod_debug)
-		printk("%s() val=%d cali=%d value=%d\n", __func__, val, cali, *value);
-	return 0;
+	input_report_abs(data->input_dev, ABS_MISC, value);
+	input_sync(data->input_dev);
+	mutex_unlock(&data->lock);
+	return;
 }
 
-static int al3006_read_ps(struct al3006_data *data, u32* value)
+static void al3006_work_func_proximity(struct work_struct *work)
 {
-	int val;
+	struct al3006_data *data = container_of(work, struct al3006_data, work_proximity);
+	int value, val;
 
 	mutex_lock(&data->lock);
+	/* Set COnfiguration Register: Mode Operation Select = 0x01 : Enable PS */
 	if(((data->reg_cache[AL3006_MODE_COMMAND] & AL3006_MODE_MASK) >> AL3006_MODE_SHIFT) != 0x01)
 	{
-		if(val = al3006_set_mode_no_lock(data, 0x01))
+		val = al3006_set_mode_no_lock(data, 0x01);
+		if(val)
 		{
 			mutex_unlock(&data->lock);
 			printk(KERN_ERR "%s() I2C ERROR %d\n", __func__, val);
-			return val;
+			return;
 		}
 	}
 
 	val = i2c_smbus_read_byte_data(data->client, AL3006_RES_COMMAND);
-	mutex_unlock(&data->lock);
 
 	if(val < 0)
 	{
 		printk("%s() I2C ERROR %d\n", __func__, val);
-		return val;
+		mutex_unlock(&data->lock);
+		return;
 	}
 
-	*value = (val & AL3006_OBJ_MASK) >> AL3006_OBJ_SHIFT;
+	value = (val & AL3006_OBJ_MASK) >> AL3006_OBJ_SHIFT;
 
-	if(mod_debug)
-		printk("%s() value=%d %s\n", __func__, *value, *value ? "obj near":"obj far");
-	return 0;
-}
+#ifdef CONFIG_MACH_CAPRI_STONE
+	AL_DEBUG("raw value=%d force to 0\n", value);
+	value = 0;  /* force FAR when waiting for HW plastic fix */
 #endif
+
+	AL_DEBUG("value=%d %s\n", value, value ? "obj near" : "obj far");
+
+	input_report_abs(data->input_dev, ABS_DISTANCE, value);
+	input_sync(data->input_dev);
+	mutex_unlock(&data->lock);
+	return;
+}
+
+/* Timer function */
+static enum hrtimer_restart al3006_light_timer_func(struct hrtimer *timer)
+{
+	struct al3006_data *data = container_of(
+		timer, struct al3006_data, timer_light);
+	queue_work(data->wq[light], &data->work_light);
+	hrtimer_forward_now(&data->timer_light, data->poll_delay[light]);
+	return HRTIMER_RESTART;
+}
+
+static enum hrtimer_restart al3006_proximity_timer_func(struct hrtimer *timer)
+{
+	struct al3006_data *data = container_of(
+		timer, struct al3006_data, timer_proximity);
+	queue_work(data->wq[prox], &data->work_proximity);
+	hrtimer_forward_now(&data->timer_proximity, data->poll_delay[prox]);
+	return HRTIMER_RESTART;
+}
 
 static int al3006_init_client(struct i2c_client *client)
 {
@@ -670,8 +938,10 @@ static int al3006_init_client(struct i2c_client *client)
 	al3006_set_mode(client, 0);
 	al3006_set_power_state(client, 0);
 
-	/* set sensor responsiveness to fast (516 ms for the first read, 100ms afterward) */
-	__al3006_write_reg(client, AL3006_TIME_CTRL_COMMAND, AL3006_TIME_CTRL_MASK, AL3006_TIME_CTRL_SHIFT, 0x10);
+	/* set sensor responsiveness to fast
+	   (516 ms for the first read, 100ms afterward) */
+	__al3006_write_reg(client, AL3006_TIME_CTRL_COMMAND,
+			   AL3006_TIME_CTRL_MASK, AL3006_TIME_CTRL_SHIFT, 0x10);
 
 	return 0;
 }
@@ -710,11 +980,15 @@ static irqreturn_t al3006_irq(int irq, void *data_)
 }
 
 static int __devinit al3006_probe(struct i2c_client *client,
-				    const struct i2c_device_id *id)
+				  const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
+#ifdef CONFIG_ARCH_KONA
+	struct al3006_platform_data *pdata = client->dev.platform_data;
+#endif
 	struct al3006_data *data;
 	int err = 0;
+  int gpio_pin;
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE))
 		return -EIO;
@@ -723,53 +997,95 @@ static int __devinit al3006_probe(struct i2c_client *client,
 	if (!data)
 		return -ENOMEM;
 
+  dev_info(&client->adapter->dev,
+         "Installing irq using %d\n", client->irq);
+      gpio_pin = irq_to_gpio(client->irq);
+      if (!gpio_pin) {
+        dev_err(&client->adapter->dev,
+          "al3006_probe: no valid GPIO for the interrupt %d\n", client->irq);
+        goto exit_kfree;
+      }
+
+	if (pdata && client->irq >= 0) {
+		if (0 != gpio_request(gpio_pin, AL3006_DRV_NAME)) {
+			err = -EIO;
+			goto exit_kfree;
+		}
+	}
+
+#ifdef CONFIG_ARCH_KONA
+
+	data->regulator = regulator_get(&client->dev, "hv8");
+	err = IS_ERR_OR_NULL(data->regulator);
+	if (err) {
+		//AL_ERROR("%s can't get vdd regulator!\n", AL3006_NAME);
+		data->regulator = NULL;
+		err = -EIO;
+		goto exit_regulator;
+	}
+
+	/* make sure that regulator is enabled if device is successfully
+	   bound */
+	err = regulator_enable(data->regulator);
+	AL_INFO("called regulator_enable for vdd regulator. "
+		"Status: %d\n", err);
+	if (err) {
+		AL_ERROR("regulator_enable for vdd regulator "
+			 "failed with status: %d\n", err);
+		goto exit_regulator;
+	}
+#endif
+
 	data->client = client;
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->lock);
 	data->irq = client->irq;
 
+	data->power_state = 0;
 	/* initialize the AL3006 chip */
 	err = al3006_init_client(client);
 	if (err)
-		goto exit_kfree;
+		goto exit_regulator;
 
 	err = al3006_input_init(data);
 	if (err)
-		goto exit_kfree;
+		goto exit_regulator;
 
 	/* register sysfs hooks */
-	err = sysfs_create_group(&data->input->dev.kobj, &al3006_attr_group);
+	/* a bit dummy to sysfs create group two times, but clear */
+	err = sysfs_create_group(&data->input_dev->dev.kobj,
+				 &al3006_android_attr_group);
 	if (err)
-		goto exit_input;
+		goto exit_regulator;
 
-	err = request_threaded_irq(client->irq, NULL, al3006_irq,
-                               IRQF_TRIGGER_FALLING,
-                               "al3006", data);
-	if (err) {
-		dev_err(&client->dev, "ret: %d, could not get IRQ %d\n",err,client->irq);
-		goto exit_input;
+	if (client->irq != -1) {
+                printk(KERN_INFO "inside threaded irqs");
+     		err = request_threaded_irq(client->irq, NULL, al3006_irq,
+					   IRQF_TRIGGER_FALLING,
+					   "al3006", data);
+		if (err) {
+			dev_err(&client->dev,
+				"ret: %d, could not get IRQ %d\n",
+				err, client->irq);
+			goto exit_input;
+		}
 	}
-
-#ifdef CONFIG_BRCM_VIRTUAL_SENSOR
-	brvsens_register(
-		SENSOR_HANDLE_LIGHT,
-		AL3006_DRV_NAME,
-		(void*)data,
-		(PFNACTIVATE)al3006_activate,
-		(PFNREAD)al3006_read_als);
-
-	brvsens_register(
-		SENSOR_HANDLE_PROXIMITY,
-		AL3006_DRV_NAME,
-		(void*)data,
-		(PFNACTIVATE)al3006_activate,
-		(PFNREAD)al3006_read_ps);
-#endif
-	dev_info(&client->dev, "AL3006 driver version %s enabled\n", DRIVER_VERSION);
+	dev_info(&client->dev, "AL3006 driver version %s enabled\n",
+		 DRIVER_VERSION);
 	return 0;
 
 exit_input:
 	al3006_input_fini(data);
+
+exit_regulator:
+#ifdef CONFIG_ARCH_KONA
+	if (data->regulator) {
+		regulator_disable(data->regulator);
+		regulator_put(data->regulator);
+	}
+#endif
+	if (pdata && client->irq >= 0)
+		gpio_free(gpio_pin);
 
 exit_kfree:
 	kfree(data);
@@ -779,24 +1095,68 @@ exit_kfree:
 static int __devexit al3006_remove(struct i2c_client *client)
 {
 	struct al3006_data *data = i2c_get_clientdata(client);
-	free_irq(data->irq, data);
+	int ret = 0;
 
-	sysfs_remove_group(&data->input->dev.kobj, &al3006_attr_group);
+#ifdef CONFIG_ARCH_KONA
+	struct al3006_platform_data *pdata = client->dev.platform_data;
+#endif
+
+	if (data->irq > 0)
+		free_irq(data->irq, data);
+
+	sysfs_remove_group(&data->input_dev->dev.kobj,
+			   &al3006_android_attr_group);
+
 	al3006_set_power_state(client, 0);
 	kfree(i2c_get_clientdata(client));
-	return 0;
+
+#ifdef CONFIG_ARCH_KONA
+	if (data->regulator) {
+		ret = regulator_disable(data->regulator);
+		AL_DEBUG("called regulator_disable. Status: %d\n", ret);
+		if (ret) {
+			AL_ERROR("regulator_disable failed with status: %d\n",
+				  ret);
+			return ret;
+		}
+		regulator_put(data->regulator);
+	}
+#endif
+
+	if (pdata && client->irq >= 0)
+		gpio_free(client->irq);
+
+	return ret;
 }
 
-static int al3006_suspend(struct i2c_client *client, pm_message_t mesg)
+static void al3006_shutdown(struct i2c_client *client)
 {
 	struct al3006_data *data = i2c_get_clientdata(client);
-	return al3006_activate(data, 0);
-}
+	int ret = 0;
 
-static int al3006_resume(struct i2c_client *client)
-{
-	struct al3006_data *data = i2c_get_clientdata(client);
-	return al3006_activate(data, 1);
+#ifdef CONFIG_ARCH_KONA
+	struct al3006_platform_data *pdata = client->dev.platform_data;
+#endif
+
+	al3006_set_power_state(client, 0);
+
+#ifdef CONFIG_ARCH_KONA
+	if (data->regulator) {
+		ret = regulator_disable(data->regulator);
+		AL_DEBUG("called regulator_disable. Status: %d\n", ret);
+		if (ret) {
+			AL_ERROR("regulator_disable failed with status: %d\n",
+				  ret);
+			return;
+		}
+		regulator_put(data->regulator);
+	}
+#endif
+
+
+	if (pdata && client->irq >= 0)
+		gpio_free(client->irq);
+
 }
 
 static const struct i2c_device_id al3006_id[] = {
@@ -806,15 +1166,87 @@ static const struct i2c_device_id al3006_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, al3006_id);
 
+#ifdef CONFIG_PM
+static int al3006_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct al3006_data *data = i2c_get_clientdata(client);
+	int ret = 0;
+
+	AL_DEBUG("called\n");
+
+	/* set low power state */
+	ret = al3006_set_power_state(client, 0);
+	AL_DEBUG("set low power state. Status: %d\n", ret);
+	if (ret) {
+		AL_ERROR("set low power state failed with status: %d\n",
+				 ret);
+		return ret;
+	}
+
+#ifdef CONFIG_ARCH_KONA
+	if (data->regulator) {
+		ret = regulator_disable(data->regulator);
+		AL_DEBUG("called regulator_disable. Status: %d\n", ret);
+		if (ret)
+			AL_ERROR("regulator_disable failed with status: %d\n",
+				 ret);
+	}
+#endif
+	return ret;
+}
+
+static int al3006_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct al3006_data *data = i2c_get_clientdata(client);
+	int ret = 0;
+
+	AL_DEBUG("called\n");
+
+	/* set high power state if either light or proximity was enabled when
+	 * system was suspended */
+	if (test_bit(prox, &data->power_state) ||
+	    test_bit(light, &data->power_state)) {
+		ret = al3006_set_power_state(client, 1);
+		AL_DEBUG("set high power state. Status: %d\n", ret);
+		if (ret) {
+			AL_ERROR("set high power state failed with "
+				 "status: %d\n", ret);
+			return ret;
+		}
+	}
+
+#ifdef CONFIG_ARCH_KONA
+	if (data->regulator) {
+		ret = regulator_enable(data->regulator);
+		AL_DEBUG("called regulator_enable. Status: %d\n", ret);
+		if (ret)
+			AL_ERROR("regulator_enable failed with status: %d\n",
+				 ret);
+	}
+#endif
+	return ret;
+}
+
+static const struct dev_pm_ops al3006_pm_ops = {
+	.suspend	= al3006_suspend,
+	.resume		= al3006_resume
+};
+#endif
+
 static struct i2c_driver al3006_driver = {
 	.driver = {
 		.name	= AL3006_DRV_NAME,
 		.owner	= THIS_MODULE,
+#ifdef CONFIG_PM
+		.pm	= &al3006_pm_ops,
+#endif
+
 	},
-	.suspend = al3006_suspend,
-	.resume	= al3006_resume,
 	.probe	= al3006_probe,
 	.remove	= __devexit_p(al3006_remove),
+	.shutdown = al3006_shutdown,
 	.id_table = al3006_id,
 };
 

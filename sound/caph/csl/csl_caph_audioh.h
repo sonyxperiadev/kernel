@@ -190,7 +190,10 @@ void csl_caph_audioh_start_hs(void);
 void csl_caph_audioh_start_ihf(void);
 void csl_caph_audioh_stop_hs(void);
 void csl_caph_audioh_stop_ihf(void);
-
+#if defined(CONFIG_MFD_BCM59039) | defined(CONFIG_MFD_BCM59042)
+void csl_caph_audioh_hs_supply_get_hs_ds_indicator(UInt16 *hs_ds_indicator);
+void csl_caph_audioh_hs_supply_set_hs_ds_thres(UInt32 hs_ds_thres);
+#endif
 /**
 *
 *  @brief  Find register values for required mic path gain.

@@ -397,43 +397,45 @@ void bcm_sdiowl_term(void)
 	dev->wifi_gpio = NULL;
 
 
-//Set the Pull down on sdio lines
+/*
+ * 4334 bug requires us to Pull down on sdio lines on reset
+ */ 
 
 	SdioPinCfgs.name = PN_MMC1CMD;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=0;
 	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
 	SdioPinCfgs.name = PN_MMC1DAT0;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=0;
 	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT1;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=0;
 	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
 	SdioPinCfgs.name = PN_MMC1DAT2;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=0;
 	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
 	SdioPinCfgs.name = PN_MMC1DAT3;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn=1;
+	SdioPinCfgs.reg.b.pull_up=0;
 	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 

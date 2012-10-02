@@ -1,6 +1,6 @@
 config BCMDHD_4334
 	tristate "Broadcom 4334 wireless cards support"
-	depends on MMC
+	depends on WLAN
 	---help---
 	  This module adds support for wireless adapters based on
 	  Broadcom 4334 chipset.

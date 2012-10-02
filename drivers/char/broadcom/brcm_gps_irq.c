@@ -37,12 +37,19 @@
 #include <linux/unistd.h>
 #include <linux/kthread.h>
 
-/*#define NEW_GPSCHIP_I2C*/
+/*#define CONFIG_NEW_GPSCHIP_I2C*/
 #define GPS_VERSION	"2.00"
 
-#define RX_SIZE					128
+
+#if defined(CONFIG_NEW_GPSCHIP_I2C)
 #define TX_SIZE					64
 #define I2C_PACKET_SIZE			256
+#define RX_SIZE					128
+#else
+#define TX_SIZE					64
+#define I2C_PACKET_SIZE			64
+#define RX_SIZE					256
+#endif
 #define I2C_MAX_SIZE			256
 #define RX_BUFFER_LENGTH		16384
 #define UDELAY_AFTER_I2C_READ	30
@@ -77,6 +84,7 @@ struct gps_irq {
 int cnt;
 int cnt2;
 int zero_read;
+int first_time;
 
 void write_workqueue(struct work_struct *work)
 {
@@ -157,7 +165,7 @@ void read_workqueue(struct work_struct *work)
 		container_of(work, struct gps_irq, read_task);
 	--cnt;
 
-#if defined(NEW_GPSCHIP_I2C)
+#if defined(CONFIG_NEW_GPSCHIP_I2C)
 	read_new(ac_data);
 #else
 	int counter, ret;
@@ -192,6 +200,10 @@ void read_workqueue(struct work_struct *work)
 
 			if (ac_data->rbuffer_wp == ac_data->rbuffer_rp)
 				printk(KERN_INFO "read_workqueue overrun error\n");
+
+			ac_data->rxlength_wp = (ac_data->rxlength_wp+1) & (RX_SIZE-1);
+
+			wake_up_interruptible(&ac_data->wait);
 		}
 
 		udelay(UDELAY_AFTER_I2C_READ);
@@ -199,17 +211,7 @@ void read_workqueue(struct work_struct *work)
 
 		i = __gpio_get_value(ac_data->host_req_pin);
 	}  while (i == 1);
-
-	if (counter >= RX_SIZE)	{
-		printk(KERN_INFO "GPS overrun error\n");
-		ac_data->rxlength[ac_data->rxlength_wp] = RX_SIZE;
-	} else {
-		ac_data->rxlength[ac_data->rxlength_wp] = counter;
-		wake_up_interruptible(&ac_data->wait);
-	}
-
-	ac_data->rxlength_wp = (ac_data->rxlength_wp+1) & (RX_SIZE-1);
-	wake_up_interruptible(&ac_data->wait);
+	//printk(KERN_INFO "wake_up_interruptible %d \n",counter);
 #endif
 }
 
@@ -247,18 +249,12 @@ static int gps_irq_open(struct inode *inode, struct file *filp)
 	cnt2 = 0;
 
 	zero_read = 0;
+	first_time = 1;
 
 #ifdef POLLING
 	poll_thread_task = kthread_run(&poll_thread, ac_data, "poll_monitor");
 	if ((int)poll_thread_task == -ENOMEM)
 		printk(KERN_INFO "gps poll thread is not created\n");
-#endif
-
-#if defined(NEW_GPSCHIP_I2C)
-	i2c_master_send(ac_data->client, test, 10);
-	mdelay(10);
-	i2c_master_send(ac_data->client, test, 10);
-	mdelay(10);
 #endif
 
 	return ret;
@@ -300,58 +296,73 @@ static ssize_t gps_irq_read(struct file *filp,
 		ac_data->rxlength_wp,
 		ac_data->rxlength_rp); */
 
-#if defined(NEW_GPSCHIP_I2C)
+#if defined(CONFIG_NEW_GPSCHIP_I2C)
 	if (ac_data->rxlength_rp != ac_data->rxlength_wp) {
 		i = ac_data->rxlength[ac_data->rxlength_rp];
 
-		memcpy(ac_data->tmp+l,
-				&ac_data->rd_buffer[ac_data->rbuffer_rp],
-					i);
-		l = i;
-		ac_data->rbuffer_rp =
-			(ac_data->rbuffer_rp+1) & (RX_SIZE-1);
-		ac_data->rxlength_rp = (ac_data->rxlength_rp+1) & (RX_SIZE-1);
+		if (i>length)
+		{
+			memcpy(ac_data->tmp+l,
+					&ac_data->rd_buffer[ac_data->rbuffer_rp],
+						length);
+			for (j=0;j<(i-length);++j)
+				ac_data->rd_buffer[ac_data->rbuffer_rp][j]=ac_data->rd_buffer[ac_data->rbuffer_rp][j+length];
+			l=length;
+			ac_data->rxlength[ac_data->rxlength_rp]=i-length;
+		}
+		else
+		{
+			memcpy(ac_data->tmp+l,
+					&ac_data->rd_buffer[ac_data->rbuffer_rp],
+						i);
+			l = i;
+			ac_data->rbuffer_rp =
+				(ac_data->rbuffer_rp+1) & (RX_SIZE-1);
+			ac_data->rxlength_rp = (ac_data->rxlength_rp+1) & (RX_SIZE-1);
+		}
 		copy_to_user(buffer, ac_data->tmp, l);
 		return l;
 	} else
 		return 0;
 #else
 	if (ac_data->rxlength_rp != ac_data->rxlength_wp) {
-		i = ac_data->rxlength[ac_data->rxlength_rp];
+		//i = ac_data->rxlength[ac_data->rxlength_rp];
 
-		while (i) {
-			memcpy(ac_data->tmp+l,
-				&ac_data->rd_buffer[ac_data->rbuffer_rp],
-				I2C_PACKET_SIZE);
+		memcpy(ac_data->tmp,
+			&ac_data->rd_buffer[ac_data->rbuffer_rp],
+			I2C_PACKET_SIZE);
 
-			ac_data->rbuffer_rp =
-				(ac_data->rbuffer_rp+1) & (RX_SIZE-1);
-
-			l += I2C_PACKET_SIZE;
-			if (l >= (RX_BUFFER_LENGTH-I2C_PACKET_SIZE)) {
-				printk(KERN_INFO "gps_irq_read ran out of buffer %d\n"
-					, l);
-				ac_data->rxlength_rp =
-					(ac_data->rxlength_rp+1) & (RX_SIZE-1);
-
-				return 0;
-			}
-			--i;
-		}
-
+		ac_data->rbuffer_rp =
+			(ac_data->rbuffer_rp+1) & (RX_SIZE-1);
+		
 		ac_data->rxlength_rp = (ac_data->rxlength_rp+1) & (RX_SIZE-1);
-		copy_to_user(buffer, ac_data->tmp, l);
-		/* printk(KERN_INFO "read2 %d bytes %x",l,ac_data->tmp[0]); */
-		return l;
+
+		copy_to_user(buffer, ac_data->tmp, I2C_PACKET_SIZE);
+		//printk(KERN_INFO "read2 %d bytes %x",l,ac_data->tmp[0]);
+		return I2C_PACKET_SIZE;
 	} else
 		return 0;
-#endif
+#endif			   
 }
 
 static ssize_t gps_irq_write(struct file *filp, const char __user *buffer,
 				   size_t length, loff_t *offset)
 {
 	struct gps_irq *ac_data = filp->private_data;
+
+#if defined(CONFIG_NEW_GPSCHIP_I2C)
+
+	unsigned char test[] = {
+		0xfe, 0x00, 0xfd, 0xc0, 0x4c, 0x01, 0x00, 0x00, 0x00, 0xfc};
+
+	if (first_time==1){
+		i2c_master_send(ac_data->client, test, 10);
+		mdelay(10);
+		i2c_master_send(ac_data->client, test, 10);
+		mdelay(10);
+		first_time = 0;
+	}
+#endif
 
 	if (length <= I2C_MAX_SIZE) {
 		if (((ac_data->wbuffer_wp+1) & (TX_SIZE-1)) ==

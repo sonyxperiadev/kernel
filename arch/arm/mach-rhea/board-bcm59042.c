@@ -854,6 +854,7 @@ static struct bcmpmu_platform_data bcmpmu_plat_data = {
 	.support_chrg_maint = 1,
 	.wd_setting = &bcm59042_wd_setting,
 	.chrg_resume_lvl = 4150,
+	.tch_timer_dis = 1,
 	.fg_support_tc = 1,
 	.fg_tc_dn_lvl = 50, /* 5c */
 	.fg_tc_up_lvl = 200, /* 20c */
