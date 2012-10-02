@@ -171,7 +171,7 @@ int32_t V3dSession_Wait(V3dSessionType *Instance)
 			printk("%s: %u entries\n", __func__, Entries);
 			list_for_each(Current, &Instance->Issued.List) {
 				V3dDriver_JobType *Job = list_entry(Current, V3dDriver_JobType, Session.Link);
-				printk("  l %p j %p t %d\n", Current, Job, Job->UserJob.job_type);
+				printk(KERN_ERR "  l %p j %p t %d\n", Current, Job, Job->UserJob.job_type);
 			}
 		}
 		spin_unlock_irqrestore(&Instance->Issued.Lock, Flags);

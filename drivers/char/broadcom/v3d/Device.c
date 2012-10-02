@@ -126,7 +126,6 @@ static void InitialiseRegisters(V3dDeviceType *Instance)
 {
 	/* Disable L2 cache */
 	Write(Instance, V3D_L2CACTL_OFFSET, 1 << V3D_L2CACTL_L2CDIS_SHIFT);
-//	Write(Instance, V3D_L2CACTL_OFFSET, 1 << V3D_L2CACTL_L2CENA_SHIFT);
 
 #if 0
 	/* Reset control list executors */
@@ -314,7 +313,7 @@ static void SetMode(V3dDeviceType *Instance, V3dModeType Mode)
 
 static void SwitchOff(struct work_struct *Work)
 {
-	V3dDeviceType * Instance = container_of(Work, V3dDeviceType, SwitchOff.work);
+	V3dDeviceType *Instance = container_of(Work, V3dDeviceType, SwitchOff.work);
 	mutex_lock(&Instance->Power);
 	if (Instance->Idle != 0) {
 		BUG_ON(Instance->InProgress.BinRender != NULL);
@@ -329,7 +328,7 @@ static void SwitchOff(struct work_struct *Work)
 /* ================================================================ */
 
 /* Power mutex must be held by the caller */
-static V3dDriver_JobType * PostJob(V3dDeviceType * Instance)
+static V3dDriver_JobType *PostJob(V3dDeviceType * Instance)
 {
 	unsigned long      Flags;
 	V3dDriver_JobType *Job;
@@ -532,7 +531,7 @@ void V3dDevice_JobPosted(V3dDeviceType *Instance)
 
 /* ================================================================ */
 
-// Returns Complete?
+/* Returns Complete? */
 static int HandleBinRenderInterrupt(V3dDeviceType *Instance, uint32_t Status)
 {
 	int CompleteBinRender = 0;
@@ -614,7 +613,6 @@ int HandleUserInterrupt(V3dDeviceType *Instance, uint32_t QpuStatus)
 		Write(Instance, V3D_DBQITC_OFFSET, QpuStatus);
 
 	/* Complete user jobs */
-//	BUG_ON(Instance->InProgress.LastCompleted == Completed);
 	for (; Completed != (Instance->InProgress.LastCompleted & (V3D_SRQCS_QPURQCC_MASK >> V3D_SRQCS_QPURQCC_SHIFT)) ; ++Instance->InProgress.LastCompleted, Complete = 1) {
 		Index = Instance->InProgress.Tail++ & (V3D_USER_FIFO_LENGTH - 1);
 		Job   = Instance->InProgress.User[Index];

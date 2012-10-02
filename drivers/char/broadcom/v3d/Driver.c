@@ -194,7 +194,7 @@ int V3dDriver_ExclusiveStop(V3dDriverType *Instance)
 #if 0
 	{
 		unsigned int i;
-		for(i = 0 ; i < Instance->Job.TimeIndex ; ++i) {
+		for (i = 0 ; i < Instance->Job.TimeIndex ; ++i) {
 			printk(KERN_ERR "j %2u q %9u r %9u\n",
 				i, Instance->Job.Times[i].Queue, Instance->Job.Times[i].Run);
 		}
