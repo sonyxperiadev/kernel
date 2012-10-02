@@ -21,138 +21,12 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_DSP_DIGRF_H__
 #define __BRCM_RDB_DSP_DIGRF_H__
-
-#define DSP_DIGRF_DRFMODE_R_OFFSET                                        0x00000B40
-#define DSP_DIGRF_DRFMODE_R_TYPE                                          UInt16
-#define DSP_DIGRF_DRFMODE_R_RESERVED_MASK                                 0x00003F80
-#define    DSP_DIGRF_DRFMODE_R_ENTXSD_SHIFT                               15
-#define    DSP_DIGRF_DRFMODE_R_ENTXSD_MASK                                0x00008000
-#define    DSP_DIGRF_DRFMODE_R_ENLASTGUARD_SHIFT                          14
-#define    DSP_DIGRF_DRFMODE_R_ENLASTGUARD_MASK                           0x00004000
-#define    DSP_DIGRF_DRFMODE_R_GMSK_GS0_MODE_SHIFT                        6
-#define    DSP_DIGRF_DRFMODE_R_GMSK_GS0_MODE_MASK                         0x00000040
-#define    DSP_DIGRF_DRFMODE_R_SKIP_GUARD_SHIFT                           5
-#define    DSP_DIGRF_DRFMODE_R_SKIP_GUARD_MASK                            0x00000020
-#define    DSP_DIGRF_DRFMODE_R_POLARX_SHIFT                               4
-#define    DSP_DIGRF_DRFMODE_R_POLARX_MASK                                0x00000010
-#define    DSP_DIGRF_DRFMODE_R_POLATX_SHIFT                               3
-#define    DSP_DIGRF_DRFMODE_R_POLATX_MASK                                0x00000008
-#define    DSP_DIGRF_DRFMODE_R_POLASYS_SHIFT                              2
-#define    DSP_DIGRF_DRFMODE_R_POLASYS_MASK                               0x00000004
-#define    DSP_DIGRF_DRFMODE_R_RXORDER_SHIFT                              1
-#define    DSP_DIGRF_DRFMODE_R_RXORDER_MASK                               0x00000002
-#define    DSP_DIGRF_DRFMODE_R_TXMODE_SHIFT                               0
-#define    DSP_DIGRF_DRFMODE_R_TXMODE_MASK                                0x00000001
-
-#define DSP_DIGRF_DRFLPM_R_OFFSET                                         0x00000B42
-#define DSP_DIGRF_DRFLPM_R_TYPE                                           UInt16
-#define DSP_DIGRF_DRFLPM_R_RESERVED_MASK                                  0x0000C0C0
-#define    DSP_DIGRF_DRFLPM_R_LPOS_SHIFT                                  8
-#define    DSP_DIGRF_DRFLPM_R_LPOS_MASK                                   0x00003F00
-#define    DSP_DIGRF_DRFLPM_R_LPRE_SHIFT                                  0
-#define    DSP_DIGRF_DRFLPM_R_LPRE_MASK                                   0x0000003F
-
-#define DSP_DIGRF_DRFPREH_R_OFFSET                                        0x00000B44
-#define DSP_DIGRF_DRFPREH_R_TYPE                                          UInt16
-#define DSP_DIGRF_DRFPREH_R_RESERVED_MASK                                 0x00000000
-#define    DSP_DIGRF_DRFPREH_R_DRFPREH_SHIFT                              0
-#define    DSP_DIGRF_DRFPREH_R_DRFPREH_MASK                               0x0000FFFF
-
-#define DSP_DIGRF_DRFPREL_R_OFFSET                                        0x00000B46
-#define DSP_DIGRF_DRFPREL_R_TYPE                                          UInt16
-#define DSP_DIGRF_DRFPREL_R_RESERVED_MASK                                 0x00000000
-#define    DSP_DIGRF_DRFPREL_R_DRFPREL_SHIFT                              0
-#define    DSP_DIGRF_DRFPREL_R_DRFPREL_MASK                               0x0000FFFF
-
-#define DSP_DIGRF_DRFPOSH_R_OFFSET                                        0x00000B48
-#define DSP_DIGRF_DRFPOSH_R_TYPE                                          UInt16
-#define DSP_DIGRF_DRFPOSH_R_RESERVED_MASK                                 0x00000000
-#define    DSP_DIGRF_DRFPOSH_R_DRFPOSH_SHIFT                              0
-#define    DSP_DIGRF_DRFPOSH_R_DRFPOSH_MASK                               0x0000FFFF
-
-#define DSP_DIGRF_DRFPOSL_R_OFFSET                                        0x00000B4A
-#define DSP_DIGRF_DRFPOSL_R_TYPE                                          UInt16
-#define DSP_DIGRF_DRFPOSL_R_RESERVED_MASK                                 0x00000000
-#define    DSP_DIGRF_DRFPOSL_R_DRFPOSL_SHIFT                              0
-#define    DSP_DIGRF_DRFPOSL_R_DRFPOSL_MASK                               0x0000FFFF
-
-#define DSP_DIGRF_DRFPREH1_R_OFFSET                                       0x00000B4C
-#define DSP_DIGRF_DRFPREH1_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPREH1_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPREH1_R_DRFPREH_SHIFT                             0
-#define    DSP_DIGRF_DRFPREH1_R_DRFPREH_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPREL1_R_OFFSET                                       0x00000B4E
-#define DSP_DIGRF_DRFPREL1_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPREL1_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPREL1_R_DRFPREL_SHIFT                             0
-#define    DSP_DIGRF_DRFPREL1_R_DRFPREL_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPOSH1_R_OFFSET                                       0x00000B50
-#define DSP_DIGRF_DRFPOSH1_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPOSH1_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPOSH1_R_DRFPOSH_SHIFT                             0
-#define    DSP_DIGRF_DRFPOSH1_R_DRFPOSH_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPOSL1_R_OFFSET                                       0x00000B52
-#define DSP_DIGRF_DRFPOSL1_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPOSL1_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPOSL1_R_DRFPOSL_SHIFT                             0
-#define    DSP_DIGRF_DRFPOSL1_R_DRFPOSL_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPREH2_R_OFFSET                                       0x00000B54
-#define DSP_DIGRF_DRFPREH2_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPREH2_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPREH2_R_DRFPREH_SHIFT                             0
-#define    DSP_DIGRF_DRFPREH2_R_DRFPREH_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPREL2_R_OFFSET                                       0x00000B56
-#define DSP_DIGRF_DRFPREL2_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPREL2_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPREL2_R_DRFPREL_SHIFT                             0
-#define    DSP_DIGRF_DRFPREL2_R_DRFPREL_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPOSH2_R_OFFSET                                       0x00000B58
-#define DSP_DIGRF_DRFPOSH2_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPOSH2_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPOSH2_R_DRFPOSH_SHIFT                             0
-#define    DSP_DIGRF_DRFPOSH2_R_DRFPOSH_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPOSL2_R_OFFSET                                       0x00000B5A
-#define DSP_DIGRF_DRFPOSL2_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPOSL2_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPOSL2_R_DRFPOSL_SHIFT                             0
-#define    DSP_DIGRF_DRFPOSL2_R_DRFPOSL_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPREH3_R_OFFSET                                       0x00000B5C
-#define DSP_DIGRF_DRFPREH3_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPREH3_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPREH3_R_DRFPREH_SHIFT                             0
-#define    DSP_DIGRF_DRFPREH3_R_DRFPREH_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPREL3_R_OFFSET                                       0x00000B5E
-#define DSP_DIGRF_DRFPREL3_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPREL3_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPREL3_R_DRFPREL_SHIFT                             0
-#define    DSP_DIGRF_DRFPREL3_R_DRFPREL_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPOSH3_R_OFFSET                                       0x00000B60
-#define DSP_DIGRF_DRFPOSH3_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPOSH3_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPOSH3_R_DRFPOSH_SHIFT                             0
-#define    DSP_DIGRF_DRFPOSH3_R_DRFPOSH_MASK                              0x0000FFFF
-
-#define DSP_DIGRF_DRFPOSL3_R_OFFSET                                       0x00000B62
-#define DSP_DIGRF_DRFPOSL3_R_TYPE                                         UInt16
-#define DSP_DIGRF_DRFPOSL3_R_RESERVED_MASK                                0x00000000
-#define    DSP_DIGRF_DRFPOSL3_R_DRFPOSL_SHIFT                             0
-#define    DSP_DIGRF_DRFPOSL3_R_DRFPOSL_MASK                              0x0000FFFF
 
 #define DSP_DIGRF_DRFMODE_OFFSET                                          0x0000E5A0
 #define DSP_DIGRF_DRFMODE_TYPE                                            UInt16
@@ -279,6 +153,132 @@
 #define DSP_DIGRF_DRFPOSL3_RESERVED_MASK                                  0x00000000
 #define    DSP_DIGRF_DRFPOSL3_DRFPOSL_SHIFT                               0
 #define    DSP_DIGRF_DRFPOSL3_DRFPOSL_MASK                                0x0000FFFF
+
+#define DSP_DIGRF_DRFMODE_R_OFFSET                                        0x00000B40
+#define DSP_DIGRF_DRFMODE_R_TYPE                                          UInt16
+#define DSP_DIGRF_DRFMODE_R_RESERVED_MASK                                 0x00003F80
+#define    DSP_DIGRF_DRFMODE_R_ENTXSD_SHIFT                               15
+#define    DSP_DIGRF_DRFMODE_R_ENTXSD_MASK                                0x00008000
+#define    DSP_DIGRF_DRFMODE_R_ENLASTGUARD_SHIFT                          14
+#define    DSP_DIGRF_DRFMODE_R_ENLASTGUARD_MASK                           0x00004000
+#define    DSP_DIGRF_DRFMODE_R_GMSK_GS0_MODE_SHIFT                        6
+#define    DSP_DIGRF_DRFMODE_R_GMSK_GS0_MODE_MASK                         0x00000040
+#define    DSP_DIGRF_DRFMODE_R_SKIP_GUARD_SHIFT                           5
+#define    DSP_DIGRF_DRFMODE_R_SKIP_GUARD_MASK                            0x00000020
+#define    DSP_DIGRF_DRFMODE_R_POLARX_SHIFT                               4
+#define    DSP_DIGRF_DRFMODE_R_POLARX_MASK                                0x00000010
+#define    DSP_DIGRF_DRFMODE_R_POLATX_SHIFT                               3
+#define    DSP_DIGRF_DRFMODE_R_POLATX_MASK                                0x00000008
+#define    DSP_DIGRF_DRFMODE_R_POLASYS_SHIFT                              2
+#define    DSP_DIGRF_DRFMODE_R_POLASYS_MASK                               0x00000004
+#define    DSP_DIGRF_DRFMODE_R_RXORDER_SHIFT                              1
+#define    DSP_DIGRF_DRFMODE_R_RXORDER_MASK                               0x00000002
+#define    DSP_DIGRF_DRFMODE_R_TXMODE_SHIFT                               0
+#define    DSP_DIGRF_DRFMODE_R_TXMODE_MASK                                0x00000001
+
+#define DSP_DIGRF_DRFLPM_R_OFFSET                                         0x00000B42
+#define DSP_DIGRF_DRFLPM_R_TYPE                                           UInt16
+#define DSP_DIGRF_DRFLPM_R_RESERVED_MASK                                  0x0000C0C0
+#define    DSP_DIGRF_DRFLPM_R_LPOS_SHIFT                                  8
+#define    DSP_DIGRF_DRFLPM_R_LPOS_MASK                                   0x00003F00
+#define    DSP_DIGRF_DRFLPM_R_LPRE_SHIFT                                  0
+#define    DSP_DIGRF_DRFLPM_R_LPRE_MASK                                   0x0000003F
+
+#define DSP_DIGRF_DRFPREH_R_OFFSET                                        0x00000B44
+#define DSP_DIGRF_DRFPREH_R_TYPE                                          UInt16
+#define DSP_DIGRF_DRFPREH_R_RESERVED_MASK                                 0x00000000
+#define    DSP_DIGRF_DRFPREH_R_DRFPREH_SHIFT                              0
+#define    DSP_DIGRF_DRFPREH_R_DRFPREH_MASK                               0x0000FFFF
+
+#define DSP_DIGRF_DRFPREL_R_OFFSET                                        0x00000B46
+#define DSP_DIGRF_DRFPREL_R_TYPE                                          UInt16
+#define DSP_DIGRF_DRFPREL_R_RESERVED_MASK                                 0x00000000
+#define    DSP_DIGRF_DRFPREL_R_DRFPREL_SHIFT                              0
+#define    DSP_DIGRF_DRFPREL_R_DRFPREL_MASK                               0x0000FFFF
+
+#define DSP_DIGRF_DRFPOSH_R_OFFSET                                        0x00000B48
+#define DSP_DIGRF_DRFPOSH_R_TYPE                                          UInt16
+#define DSP_DIGRF_DRFPOSH_R_RESERVED_MASK                                 0x00000000
+#define    DSP_DIGRF_DRFPOSH_R_DRFPOSH_SHIFT                              0
+#define    DSP_DIGRF_DRFPOSH_R_DRFPOSH_MASK                               0x0000FFFF
+
+#define DSP_DIGRF_DRFPOSL_R_OFFSET                                        0x00000B4A
+#define DSP_DIGRF_DRFPOSL_R_TYPE                                          UInt16
+#define DSP_DIGRF_DRFPOSL_R_RESERVED_MASK                                 0x00000000
+#define    DSP_DIGRF_DRFPOSL_R_DRFPOSL_SHIFT                              0
+#define    DSP_DIGRF_DRFPOSL_R_DRFPOSL_MASK                               0x0000FFFF
+
+#define DSP_DIGRF_DRFPREH1_R_OFFSET                                       0x00000B4C
+#define DSP_DIGRF_DRFPREH1_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPREH1_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPREH1_R_DRFPREH_SHIFT                             0
+#define    DSP_DIGRF_DRFPREH1_R_DRFPREH_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPREL1_R_OFFSET                                       0x00000B4E
+#define DSP_DIGRF_DRFPREL1_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPREL1_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPREL1_R_DRFPREL_SHIFT                             0
+#define    DSP_DIGRF_DRFPREL1_R_DRFPREL_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPOSH1_R_OFFSET                                       0x00000B50
+#define DSP_DIGRF_DRFPOSH1_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPOSH1_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPOSH1_R_DRFPOSH_SHIFT                             0
+#define    DSP_DIGRF_DRFPOSH1_R_DRFPOSH_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPOSL1_R_OFFSET                                       0x00000B52
+#define DSP_DIGRF_DRFPOSL1_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPOSL1_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPOSL1_R_DRFPOSL_SHIFT                             0
+#define    DSP_DIGRF_DRFPOSL1_R_DRFPOSL_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPREH2_R_OFFSET                                       0x00000B54
+#define DSP_DIGRF_DRFPREH2_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPREH2_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPREH2_R_DRFPREH_SHIFT                             0
+#define    DSP_DIGRF_DRFPREH2_R_DRFPREH_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPREL2_R_OFFSET                                       0x00000B56
+#define DSP_DIGRF_DRFPREL2_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPREL2_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPREL2_R_DRFPREL_SHIFT                             0
+#define    DSP_DIGRF_DRFPREL2_R_DRFPREL_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPOSH2_R_OFFSET                                       0x00000B58
+#define DSP_DIGRF_DRFPOSH2_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPOSH2_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPOSH2_R_DRFPOSH_SHIFT                             0
+#define    DSP_DIGRF_DRFPOSH2_R_DRFPOSH_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPOSL2_R_OFFSET                                       0x00000B5A
+#define DSP_DIGRF_DRFPOSL2_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPOSL2_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPOSL2_R_DRFPOSL_SHIFT                             0
+#define    DSP_DIGRF_DRFPOSL2_R_DRFPOSL_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPREH3_R_OFFSET                                       0x00000B5C
+#define DSP_DIGRF_DRFPREH3_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPREH3_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPREH3_R_DRFPREH_SHIFT                             0
+#define    DSP_DIGRF_DRFPREH3_R_DRFPREH_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPREL3_R_OFFSET                                       0x00000B5E
+#define DSP_DIGRF_DRFPREL3_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPREL3_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPREL3_R_DRFPREL_SHIFT                             0
+#define    DSP_DIGRF_DRFPREL3_R_DRFPREL_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPOSH3_R_OFFSET                                       0x00000B60
+#define DSP_DIGRF_DRFPOSH3_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPOSH3_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPOSH3_R_DRFPOSH_SHIFT                             0
+#define    DSP_DIGRF_DRFPOSH3_R_DRFPOSH_MASK                              0x0000FFFF
+
+#define DSP_DIGRF_DRFPOSL3_R_OFFSET                                       0x00000B62
+#define DSP_DIGRF_DRFPOSL3_R_TYPE                                         UInt16
+#define DSP_DIGRF_DRFPOSL3_R_RESERVED_MASK                                0x00000000
+#define    DSP_DIGRF_DRFPOSL3_R_DRFPOSL_SHIFT                             0
+#define    DSP_DIGRF_DRFPOSL3_R_DRFPOSL_MASK                              0x0000FFFF
 
 #endif /* __BRCM_RDB_DSP_DIGRF_H__ */
 

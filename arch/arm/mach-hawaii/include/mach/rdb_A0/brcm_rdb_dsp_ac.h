@@ -21,28 +21,12 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_DSP_AC_H__
 #define __BRCM_RDB_DSP_AC_H__
-
-#define DSP_AC_AMPCR_R_OFFSET                                             0x00000A8C
-#define DSP_AC_AMPCR_R_TYPE                                               UInt16
-#define DSP_AC_AMPCR_R_RESERVED_MASK                                      0x00007FFB
-#define    DSP_AC_AMPCR_R_PWDAPCG1_SHIFT                                  15
-#define    DSP_AC_AMPCR_R_PWDAPCG1_MASK                                   0x00008000
-#define    DSP_AC_AMPCR_R_PWDAPCG0_SHIFT                                  2
-#define    DSP_AC_AMPCR_R_PWDAPCG0_MASK                                   0x00000004
-
-#define DSP_AC_FRQOR_R_OFFSET                                             0x00000AE6
-#define DSP_AC_FRQOR_R_TYPE                                               UInt16
-#define DSP_AC_FRQOR_R_RESERVED_MASK                                      0x00007C00
-#define    DSP_AC_FRQOR_R_FRQPEN_SHIFT                                    15
-#define    DSP_AC_FRQOR_R_FRQPEN_MASK                                     0x00008000
-#define    DSP_AC_FRQOR_R_FRQOR_SHIFT                                     0
-#define    DSP_AC_FRQOR_R_FRQOR_MASK                                      0x000003FF
 
 #define DSP_AC_AMPCR_OFFSET                                               0x0000E546
 #define DSP_AC_AMPCR_TYPE                                                 UInt16
@@ -59,6 +43,22 @@
 #define    DSP_AC_FRQOR_FRQPEN_MASK                                       0x00008000
 #define    DSP_AC_FRQOR_FRQOR_SHIFT                                       0
 #define    DSP_AC_FRQOR_FRQOR_MASK                                        0x000003FF
+
+#define DSP_AC_AMPCR_R_OFFSET                                             0x00000A8C
+#define DSP_AC_AMPCR_R_TYPE                                               UInt16
+#define DSP_AC_AMPCR_R_RESERVED_MASK                                      0x00007FFB
+#define    DSP_AC_AMPCR_R_PWDAPCG1_SHIFT                                  15
+#define    DSP_AC_AMPCR_R_PWDAPCG1_MASK                                   0x00008000
+#define    DSP_AC_AMPCR_R_PWDAPCG0_SHIFT                                  2
+#define    DSP_AC_AMPCR_R_PWDAPCG0_MASK                                   0x00000004
+
+#define DSP_AC_FRQOR_R_OFFSET                                             0x00000AE6
+#define DSP_AC_FRQOR_R_TYPE                                               UInt16
+#define DSP_AC_FRQOR_R_RESERVED_MASK                                      0x00007C00
+#define    DSP_AC_FRQOR_R_FRQPEN_SHIFT                                    15
+#define    DSP_AC_FRQOR_R_FRQPEN_MASK                                     0x00008000
+#define    DSP_AC_FRQOR_R_FRQOR_SHIFT                                     0
+#define    DSP_AC_FRQOR_R_FRQOR_MASK                                      0x000003FF
 
 #endif /* __BRCM_RDB_DSP_AC_H__ */
 

@@ -21,1408 +21,12 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_DSP_3WIRE_INTF_H__
 #define __BRCM_RDB_DSP_3WIRE_INTF_H__
-
-#define DSP_3WIRE_INTF_FQCR_R_OFFSET                                      0x00000AE0
-#define DSP_3WIRE_INTF_FQCR_R_TYPE                                        UInt16
-#define DSP_3WIRE_INTF_FQCR_R_RESERVED_MASK                               0x00000000
-#define    DSP_3WIRE_INTF_FQCR_R_FREQS_SHIFT                              15
-#define    DSP_3WIRE_INTF_FQCR_R_FREQS_MASK                               0x00008000
-#define    DSP_3WIRE_INTF_FQCR_R_FRQCP_SHIFT                              14
-#define    DSP_3WIRE_INTF_FQCR_R_FRQCP_MASK                               0x00004000
-#define    DSP_3WIRE_INTF_FQCR_R_FRQCD_SHIFT                              13
-#define    DSP_3WIRE_INTF_FQCR_R_FRQCD_MASK                               0x00002000
-#define    DSP_3WIRE_INTF_FQCR_R_FRQC_SHIFT                               8
-#define    DSP_3WIRE_INTF_FQCR_R_FRQC_MASK                                0x00001F00
-#define    DSP_3WIRE_INTF_FQCR_R_HS_SHIFT                                 7
-#define    DSP_3WIRE_INTF_FQCR_R_HS_MASK                                  0x00000080
-#define    DSP_3WIRE_INTF_FQCR_R_FRQDP_SHIFT                              6
-#define    DSP_3WIRE_INTF_FQCR_R_FRQDP_MASK                               0x00000040
-#define    DSP_3WIRE_INTF_FQCR_R_FRQDD_SHIFT                              5
-#define    DSP_3WIRE_INTF_FQCR_R_FRQDD_MASK                               0x00000020
-#define    DSP_3WIRE_INTF_FQCR_R_FRQD_SHIFT                               0
-#define    DSP_3WIRE_INTF_FQCR_R_FRQD_MASK                                0x0000001F
-
-#define DSP_3WIRE_INTF_FQC2R_R_OFFSET                                     0x00000AF2
-#define DSP_3WIRE_INTF_FQC2R_R_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FQC2R_R_RESERVED_MASK                              0x00000180
-#define    DSP_3WIRE_INTF_FQC2R_R_RDLN_SHIFT                              11
-#define    DSP_3WIRE_INTF_FQC2R_R_RDLN_MASK                               0x0000F800
-#define    DSP_3WIRE_INTF_FQC2R_R_RDEN_SHIFT                              10
-#define    DSP_3WIRE_INTF_FQC2R_R_RDEN_MASK                               0x00000400
-#define    DSP_3WIRE_INTF_FQC2R_R_EDGE_SHIFT                              9
-#define    DSP_3WIRE_INTF_FQC2R_R_EDGE_MASK                               0x00000200
-#define    DSP_3WIRE_INTF_FQC2R_R_FRQXP_SHIFT                             6
-#define    DSP_3WIRE_INTF_FQC2R_R_FRQXP_MASK                              0x00000040
-#define    DSP_3WIRE_INTF_FQC2R_R_FRQXD_SHIFT                             5
-#define    DSP_3WIRE_INTF_FQC2R_R_FRQXD_MASK                              0x00000020
-#define    DSP_3WIRE_INTF_FQC2R_R_FRQX_SHIFT                              0
-#define    DSP_3WIRE_INTF_FQC2R_R_FRQX_MASK                               0x0000001F
-
-#define DSP_3WIRE_INTF_FSHLR_R0_OFFSET                                    0x00001C00
-#define DSP_3WIRE_INTF_FSHLR_R0_TYPE                                      UInt32
-#define DSP_3WIRE_INTF_FSHLR_R0_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R0_FSN_SHIFT                              0
-#define    DSP_3WIRE_INTF_FSHLR_R0_FSN_MASK                               0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R1_OFFSET                                    0x00001C04
-#define DSP_3WIRE_INTF_FSHLR_R1_TYPE                                      UInt32
-#define DSP_3WIRE_INTF_FSHLR_R1_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R1_FSN_SHIFT                              0
-#define    DSP_3WIRE_INTF_FSHLR_R1_FSN_MASK                               0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R2_OFFSET                                    0x00001C08
-#define DSP_3WIRE_INTF_FSHLR_R2_TYPE                                      UInt32
-#define DSP_3WIRE_INTF_FSHLR_R2_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R2_FSN_SHIFT                              0
-#define    DSP_3WIRE_INTF_FSHLR_R2_FSN_MASK                               0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R3_OFFSET                                    0x00001C0C
-#define DSP_3WIRE_INTF_FSHLR_R3_TYPE                                      UInt32
-#define DSP_3WIRE_INTF_FSHLR_R3_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R3_FSN_SHIFT                              0
-#define    DSP_3WIRE_INTF_FSHLR_R3_FSN_MASK                               0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R4_OFFSET                                    0x00001C10
-#define DSP_3WIRE_INTF_FSHLR_R4_TYPE                                      UInt32
-#define DSP_3WIRE_INTF_FSHLR_R4_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R4_FSN_SHIFT                              0
-#define    DSP_3WIRE_INTF_FSHLR_R4_FSN_MASK                               0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R5_OFFSET                                    0x00001C14
-#define DSP_3WIRE_INTF_FSHLR_R5_TYPE                                      UInt32
-#define DSP_3WIRE_INTF_FSHLR_R5_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R5_FSN_SHIFT                              0
-#define    DSP_3WIRE_INTF_FSHLR_R5_FSN_MASK                               0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R6_OFFSET                                    0x00001C18
-#define DSP_3WIRE_INTF_FSHLR_R6_TYPE                                      UInt32
-#define DSP_3WIRE_INTF_FSHLR_R6_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R6_FSN_SHIFT                              0
-#define    DSP_3WIRE_INTF_FSHLR_R6_FSN_MASK                               0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R7_OFFSET                                    0x00001C1C
-#define DSP_3WIRE_INTF_FSHLR_R7_TYPE                                      UInt32
-#define DSP_3WIRE_INTF_FSHLR_R7_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R7_FSN_SHIFT                              0
-#define    DSP_3WIRE_INTF_FSHLR_R7_FSN_MASK                               0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R8_OFFSET                                    0x00001C20
-#define DSP_3WIRE_INTF_FSHLR_R8_TYPE                                      UInt32
-#define DSP_3WIRE_INTF_FSHLR_R8_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R8_FSN_SHIFT                              0
-#define    DSP_3WIRE_INTF_FSHLR_R8_FSN_MASK                               0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R9_OFFSET                                    0x00001C24
-#define DSP_3WIRE_INTF_FSHLR_R9_TYPE                                      UInt32
-#define DSP_3WIRE_INTF_FSHLR_R9_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R9_FSN_SHIFT                              0
-#define    DSP_3WIRE_INTF_FSHLR_R9_FSN_MASK                               0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R10_OFFSET                                   0x00001C28
-#define DSP_3WIRE_INTF_FSHLR_R10_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R10_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R10_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R10_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R11_OFFSET                                   0x00001C2C
-#define DSP_3WIRE_INTF_FSHLR_R11_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R11_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R11_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R11_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R12_OFFSET                                   0x00001C30
-#define DSP_3WIRE_INTF_FSHLR_R12_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R12_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R12_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R12_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R13_OFFSET                                   0x00001C34
-#define DSP_3WIRE_INTF_FSHLR_R13_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R13_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R13_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R13_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R14_OFFSET                                   0x00001C38
-#define DSP_3WIRE_INTF_FSHLR_R14_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R14_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R14_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R14_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R15_OFFSET                                   0x00001C3C
-#define DSP_3WIRE_INTF_FSHLR_R15_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R15_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R15_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R15_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R16_OFFSET                                   0x00001C40
-#define DSP_3WIRE_INTF_FSHLR_R16_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R16_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R16_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R16_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R17_OFFSET                                   0x00001C44
-#define DSP_3WIRE_INTF_FSHLR_R17_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R17_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R17_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R17_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R18_OFFSET                                   0x00001C48
-#define DSP_3WIRE_INTF_FSHLR_R18_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R18_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R18_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R18_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R19_OFFSET                                   0x00001C4C
-#define DSP_3WIRE_INTF_FSHLR_R19_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R19_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R19_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R19_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R20_OFFSET                                   0x00001C50
-#define DSP_3WIRE_INTF_FSHLR_R20_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R20_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R20_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R20_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R21_OFFSET                                   0x00001C54
-#define DSP_3WIRE_INTF_FSHLR_R21_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R21_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R21_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R21_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R22_OFFSET                                   0x00001C58
-#define DSP_3WIRE_INTF_FSHLR_R22_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R22_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R22_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R22_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R23_OFFSET                                   0x00001C5C
-#define DSP_3WIRE_INTF_FSHLR_R23_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R23_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R23_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R23_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R24_OFFSET                                   0x00001C60
-#define DSP_3WIRE_INTF_FSHLR_R24_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R24_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R24_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R24_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R25_OFFSET                                   0x00001C64
-#define DSP_3WIRE_INTF_FSHLR_R25_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R25_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R25_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R25_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R26_OFFSET                                   0x00001C68
-#define DSP_3WIRE_INTF_FSHLR_R26_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R26_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R26_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R26_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R27_OFFSET                                   0x00001C6C
-#define DSP_3WIRE_INTF_FSHLR_R27_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R27_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R27_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R27_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R28_OFFSET                                   0x00001C70
-#define DSP_3WIRE_INTF_FSHLR_R28_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R28_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R28_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R28_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R29_OFFSET                                   0x00001C74
-#define DSP_3WIRE_INTF_FSHLR_R29_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R29_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R29_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R29_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R30_OFFSET                                   0x00001C78
-#define DSP_3WIRE_INTF_FSHLR_R30_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R30_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R30_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R30_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R31_OFFSET                                   0x00001C7C
-#define DSP_3WIRE_INTF_FSHLR_R31_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R31_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R31_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R31_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R32_OFFSET                                   0x00001C80
-#define DSP_3WIRE_INTF_FSHLR_R32_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R32_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R32_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R32_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R33_OFFSET                                   0x00001C84
-#define DSP_3WIRE_INTF_FSHLR_R33_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R33_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R33_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R33_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R34_OFFSET                                   0x00001C88
-#define DSP_3WIRE_INTF_FSHLR_R34_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R34_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R34_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R34_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R35_OFFSET                                   0x00001C8C
-#define DSP_3WIRE_INTF_FSHLR_R35_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R35_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R35_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R35_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R36_OFFSET                                   0x00001C90
-#define DSP_3WIRE_INTF_FSHLR_R36_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R36_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R36_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R36_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R37_OFFSET                                   0x00001C94
-#define DSP_3WIRE_INTF_FSHLR_R37_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R37_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R37_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R37_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R38_OFFSET                                   0x00001C98
-#define DSP_3WIRE_INTF_FSHLR_R38_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R38_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R38_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R38_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R39_OFFSET                                   0x00001C9C
-#define DSP_3WIRE_INTF_FSHLR_R39_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R39_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R39_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R39_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R40_OFFSET                                   0x00001CA0
-#define DSP_3WIRE_INTF_FSHLR_R40_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R40_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R40_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R40_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R41_OFFSET                                   0x00001CA4
-#define DSP_3WIRE_INTF_FSHLR_R41_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R41_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R41_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R41_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R42_OFFSET                                   0x00001CA8
-#define DSP_3WIRE_INTF_FSHLR_R42_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R42_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R42_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R42_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R43_OFFSET                                   0x00001CAC
-#define DSP_3WIRE_INTF_FSHLR_R43_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R43_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R43_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R43_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R44_OFFSET                                   0x00001CB0
-#define DSP_3WIRE_INTF_FSHLR_R44_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R44_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R44_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R44_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R45_OFFSET                                   0x00001CB4
-#define DSP_3WIRE_INTF_FSHLR_R45_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R45_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R45_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R45_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R46_OFFSET                                   0x00001CB8
-#define DSP_3WIRE_INTF_FSHLR_R46_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R46_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R46_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R46_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R47_OFFSET                                   0x00001CBC
-#define DSP_3WIRE_INTF_FSHLR_R47_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R47_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R47_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R47_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R48_OFFSET                                   0x00001CC0
-#define DSP_3WIRE_INTF_FSHLR_R48_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R48_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R48_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R48_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R49_OFFSET                                   0x00001CC4
-#define DSP_3WIRE_INTF_FSHLR_R49_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R49_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R49_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R49_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R50_OFFSET                                   0x00001CC8
-#define DSP_3WIRE_INTF_FSHLR_R50_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R50_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R50_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R50_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R51_OFFSET                                   0x00001CCC
-#define DSP_3WIRE_INTF_FSHLR_R51_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R51_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R51_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R51_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R52_OFFSET                                   0x00001CD0
-#define DSP_3WIRE_INTF_FSHLR_R52_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R52_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R52_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R52_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R53_OFFSET                                   0x00001CD4
-#define DSP_3WIRE_INTF_FSHLR_R53_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R53_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R53_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R53_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R54_OFFSET                                   0x00001CD8
-#define DSP_3WIRE_INTF_FSHLR_R54_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R54_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R54_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R54_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R55_OFFSET                                   0x00001CDC
-#define DSP_3WIRE_INTF_FSHLR_R55_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R55_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R55_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R55_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R56_OFFSET                                   0x00001CE0
-#define DSP_3WIRE_INTF_FSHLR_R56_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R56_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R56_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R56_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R57_OFFSET                                   0x00001CE4
-#define DSP_3WIRE_INTF_FSHLR_R57_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R57_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R57_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R57_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R58_OFFSET                                   0x00001CE8
-#define DSP_3WIRE_INTF_FSHLR_R58_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R58_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R58_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R58_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R59_OFFSET                                   0x00001CEC
-#define DSP_3WIRE_INTF_FSHLR_R59_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R59_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R59_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R59_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R60_OFFSET                                   0x00001CF0
-#define DSP_3WIRE_INTF_FSHLR_R60_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R60_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R60_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R60_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R61_OFFSET                                   0x00001CF4
-#define DSP_3WIRE_INTF_FSHLR_R61_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R61_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R61_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R61_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R62_OFFSET                                   0x00001CF8
-#define DSP_3WIRE_INTF_FSHLR_R62_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R62_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R62_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R62_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R63_OFFSET                                   0x00001CFC
-#define DSP_3WIRE_INTF_FSHLR_R63_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R63_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R63_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R63_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R64_OFFSET                                   0x00001D00
-#define DSP_3WIRE_INTF_FSHLR_R64_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R64_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R64_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R64_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R65_OFFSET                                   0x00001D04
-#define DSP_3WIRE_INTF_FSHLR_R65_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R65_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R65_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R65_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R66_OFFSET                                   0x00001D08
-#define DSP_3WIRE_INTF_FSHLR_R66_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R66_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R66_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R66_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R67_OFFSET                                   0x00001D0C
-#define DSP_3WIRE_INTF_FSHLR_R67_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R67_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R67_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R67_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R68_OFFSET                                   0x00001D10
-#define DSP_3WIRE_INTF_FSHLR_R68_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R68_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R68_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R68_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R69_OFFSET                                   0x00001D14
-#define DSP_3WIRE_INTF_FSHLR_R69_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R69_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R69_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R69_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R70_OFFSET                                   0x00001D18
-#define DSP_3WIRE_INTF_FSHLR_R70_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R70_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R70_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R70_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R71_OFFSET                                   0x00001D1C
-#define DSP_3WIRE_INTF_FSHLR_R71_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R71_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R71_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R71_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R72_OFFSET                                   0x00001D20
-#define DSP_3WIRE_INTF_FSHLR_R72_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R72_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R72_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R72_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R73_OFFSET                                   0x00001D24
-#define DSP_3WIRE_INTF_FSHLR_R73_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R73_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R73_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R73_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R74_OFFSET                                   0x00001D28
-#define DSP_3WIRE_INTF_FSHLR_R74_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R74_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R74_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R74_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R75_OFFSET                                   0x00001D2C
-#define DSP_3WIRE_INTF_FSHLR_R75_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R75_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R75_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R75_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R76_OFFSET                                   0x00001D30
-#define DSP_3WIRE_INTF_FSHLR_R76_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R76_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R76_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R76_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R77_OFFSET                                   0x00001D34
-#define DSP_3WIRE_INTF_FSHLR_R77_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R77_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R77_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R77_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R78_OFFSET                                   0x00001D38
-#define DSP_3WIRE_INTF_FSHLR_R78_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R78_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R78_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R78_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R79_OFFSET                                   0x00001D3C
-#define DSP_3WIRE_INTF_FSHLR_R79_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R79_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R79_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R79_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R80_OFFSET                                   0x00001D40
-#define DSP_3WIRE_INTF_FSHLR_R80_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R80_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R80_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R80_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R81_OFFSET                                   0x00001D44
-#define DSP_3WIRE_INTF_FSHLR_R81_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R81_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R81_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R81_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R82_OFFSET                                   0x00001D48
-#define DSP_3WIRE_INTF_FSHLR_R82_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R82_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R82_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R82_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R83_OFFSET                                   0x00001D4C
-#define DSP_3WIRE_INTF_FSHLR_R83_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R83_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R83_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R83_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R84_OFFSET                                   0x00001D50
-#define DSP_3WIRE_INTF_FSHLR_R84_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R84_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R84_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R84_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R85_OFFSET                                   0x00001D54
-#define DSP_3WIRE_INTF_FSHLR_R85_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R85_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R85_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R85_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R86_OFFSET                                   0x00001D58
-#define DSP_3WIRE_INTF_FSHLR_R86_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R86_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R86_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R86_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R87_OFFSET                                   0x00001D5C
-#define DSP_3WIRE_INTF_FSHLR_R87_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R87_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R87_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R87_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R88_OFFSET                                   0x00001D60
-#define DSP_3WIRE_INTF_FSHLR_R88_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R88_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R88_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R88_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R89_OFFSET                                   0x00001D64
-#define DSP_3WIRE_INTF_FSHLR_R89_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R89_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R89_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R89_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R90_OFFSET                                   0x00001D68
-#define DSP_3WIRE_INTF_FSHLR_R90_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R90_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R90_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R90_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R91_OFFSET                                   0x00001D6C
-#define DSP_3WIRE_INTF_FSHLR_R91_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R91_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R91_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R91_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R92_OFFSET                                   0x00001D70
-#define DSP_3WIRE_INTF_FSHLR_R92_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R92_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R92_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R92_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R93_OFFSET                                   0x00001D74
-#define DSP_3WIRE_INTF_FSHLR_R93_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R93_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R93_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R93_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R94_OFFSET                                   0x00001D78
-#define DSP_3WIRE_INTF_FSHLR_R94_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R94_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R94_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R94_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R95_OFFSET                                   0x00001D7C
-#define DSP_3WIRE_INTF_FSHLR_R95_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R95_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R95_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R95_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R96_OFFSET                                   0x00001D80
-#define DSP_3WIRE_INTF_FSHLR_R96_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R96_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R96_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R96_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R97_OFFSET                                   0x00001D84
-#define DSP_3WIRE_INTF_FSHLR_R97_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R97_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R97_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R97_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R98_OFFSET                                   0x00001D88
-#define DSP_3WIRE_INTF_FSHLR_R98_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R98_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R98_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R98_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R99_OFFSET                                   0x00001D8C
-#define DSP_3WIRE_INTF_FSHLR_R99_TYPE                                     UInt32
-#define DSP_3WIRE_INTF_FSHLR_R99_RESERVED_MASK                            0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R99_FSN_SHIFT                             0
-#define    DSP_3WIRE_INTF_FSHLR_R99_FSN_MASK                              0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R100_OFFSET                                  0x00001D90
-#define DSP_3WIRE_INTF_FSHLR_R100_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R100_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R100_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R100_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R101_OFFSET                                  0x00001D94
-#define DSP_3WIRE_INTF_FSHLR_R101_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R101_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R101_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R101_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R102_OFFSET                                  0x00001D98
-#define DSP_3WIRE_INTF_FSHLR_R102_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R102_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R102_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R102_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R103_OFFSET                                  0x00001D9C
-#define DSP_3WIRE_INTF_FSHLR_R103_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R103_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R103_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R103_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R104_OFFSET                                  0x00001DA0
-#define DSP_3WIRE_INTF_FSHLR_R104_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R104_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R104_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R104_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R105_OFFSET                                  0x00001DA4
-#define DSP_3WIRE_INTF_FSHLR_R105_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R105_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R105_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R105_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R106_OFFSET                                  0x00001DA8
-#define DSP_3WIRE_INTF_FSHLR_R106_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R106_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R106_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R106_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R107_OFFSET                                  0x00001DAC
-#define DSP_3WIRE_INTF_FSHLR_R107_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R107_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R107_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R107_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R108_OFFSET                                  0x00001DB0
-#define DSP_3WIRE_INTF_FSHLR_R108_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R108_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R108_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R108_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R109_OFFSET                                  0x00001DB4
-#define DSP_3WIRE_INTF_FSHLR_R109_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R109_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R109_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R109_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R110_OFFSET                                  0x00001DB8
-#define DSP_3WIRE_INTF_FSHLR_R110_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R110_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R110_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R110_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R111_OFFSET                                  0x00001DBC
-#define DSP_3WIRE_INTF_FSHLR_R111_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R111_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R111_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R111_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R112_OFFSET                                  0x00001DC0
-#define DSP_3WIRE_INTF_FSHLR_R112_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R112_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R112_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R112_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R113_OFFSET                                  0x00001DC4
-#define DSP_3WIRE_INTF_FSHLR_R113_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R113_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R113_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R113_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R114_OFFSET                                  0x00001DC8
-#define DSP_3WIRE_INTF_FSHLR_R114_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R114_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R114_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R114_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R115_OFFSET                                  0x00001DCC
-#define DSP_3WIRE_INTF_FSHLR_R115_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R115_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R115_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R115_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R116_OFFSET                                  0x00001DD0
-#define DSP_3WIRE_INTF_FSHLR_R116_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R116_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R116_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R116_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R117_OFFSET                                  0x00001DD4
-#define DSP_3WIRE_INTF_FSHLR_R117_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R117_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R117_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R117_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R118_OFFSET                                  0x00001DD8
-#define DSP_3WIRE_INTF_FSHLR_R118_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R118_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R118_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R118_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R119_OFFSET                                  0x00001DDC
-#define DSP_3WIRE_INTF_FSHLR_R119_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R119_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R119_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R119_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R120_OFFSET                                  0x00001DE0
-#define DSP_3WIRE_INTF_FSHLR_R120_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R120_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R120_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R120_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R121_OFFSET                                  0x00001DE4
-#define DSP_3WIRE_INTF_FSHLR_R121_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R121_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R121_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R121_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R122_OFFSET                                  0x00001DE8
-#define DSP_3WIRE_INTF_FSHLR_R122_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R122_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R122_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R122_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R123_OFFSET                                  0x00001DEC
-#define DSP_3WIRE_INTF_FSHLR_R123_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R123_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R123_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R123_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R124_OFFSET                                  0x00001DF0
-#define DSP_3WIRE_INTF_FSHLR_R124_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R124_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R124_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R124_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R125_OFFSET                                  0x00001DF4
-#define DSP_3WIRE_INTF_FSHLR_R125_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R125_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R125_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R125_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R126_OFFSET                                  0x00001DF8
-#define DSP_3WIRE_INTF_FSHLR_R126_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R126_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R126_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R126_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R127_OFFSET                                  0x00001DFC
-#define DSP_3WIRE_INTF_FSHLR_R127_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R127_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R127_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R127_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R128_OFFSET                                  0x00001E00
-#define DSP_3WIRE_INTF_FSHLR_R128_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R128_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R128_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R128_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R129_OFFSET                                  0x00001E04
-#define DSP_3WIRE_INTF_FSHLR_R129_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R129_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R129_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R129_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R130_OFFSET                                  0x00001E08
-#define DSP_3WIRE_INTF_FSHLR_R130_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R130_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R130_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R130_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R131_OFFSET                                  0x00001E0C
-#define DSP_3WIRE_INTF_FSHLR_R131_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R131_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R131_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R131_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R132_OFFSET                                  0x00001E10
-#define DSP_3WIRE_INTF_FSHLR_R132_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R132_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R132_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R132_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R133_OFFSET                                  0x00001E14
-#define DSP_3WIRE_INTF_FSHLR_R133_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R133_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R133_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R133_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R134_OFFSET                                  0x00001E18
-#define DSP_3WIRE_INTF_FSHLR_R134_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R134_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R134_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R134_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R135_OFFSET                                  0x00001E1C
-#define DSP_3WIRE_INTF_FSHLR_R135_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R135_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R135_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R135_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R136_OFFSET                                  0x00001E20
-#define DSP_3WIRE_INTF_FSHLR_R136_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R136_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R136_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R136_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R137_OFFSET                                  0x00001E24
-#define DSP_3WIRE_INTF_FSHLR_R137_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R137_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R137_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R137_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R138_OFFSET                                  0x00001E28
-#define DSP_3WIRE_INTF_FSHLR_R138_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R138_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R138_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R138_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R139_OFFSET                                  0x00001E2C
-#define DSP_3WIRE_INTF_FSHLR_R139_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R139_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R139_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R139_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R140_OFFSET                                  0x00001E30
-#define DSP_3WIRE_INTF_FSHLR_R140_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R140_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R140_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R140_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R141_OFFSET                                  0x00001E34
-#define DSP_3WIRE_INTF_FSHLR_R141_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R141_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R141_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R141_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R142_OFFSET                                  0x00001E38
-#define DSP_3WIRE_INTF_FSHLR_R142_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R142_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R142_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R142_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R143_OFFSET                                  0x00001E3C
-#define DSP_3WIRE_INTF_FSHLR_R143_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R143_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R143_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R143_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R144_OFFSET                                  0x00001E40
-#define DSP_3WIRE_INTF_FSHLR_R144_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R144_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R144_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R144_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R145_OFFSET                                  0x00001E44
-#define DSP_3WIRE_INTF_FSHLR_R145_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R145_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R145_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R145_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R146_OFFSET                                  0x00001E48
-#define DSP_3WIRE_INTF_FSHLR_R146_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R146_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R146_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R146_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R147_OFFSET                                  0x00001E4C
-#define DSP_3WIRE_INTF_FSHLR_R147_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R147_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R147_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R147_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R148_OFFSET                                  0x00001E50
-#define DSP_3WIRE_INTF_FSHLR_R148_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R148_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R148_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R148_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R149_OFFSET                                  0x00001E54
-#define DSP_3WIRE_INTF_FSHLR_R149_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R149_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R149_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R149_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R150_OFFSET                                  0x00001E58
-#define DSP_3WIRE_INTF_FSHLR_R150_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R150_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R150_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R150_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R151_OFFSET                                  0x00001E5C
-#define DSP_3WIRE_INTF_FSHLR_R151_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R151_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R151_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R151_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R152_OFFSET                                  0x00001E60
-#define DSP_3WIRE_INTF_FSHLR_R152_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R152_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R152_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R152_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R153_OFFSET                                  0x00001E64
-#define DSP_3WIRE_INTF_FSHLR_R153_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R153_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R153_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R153_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R154_OFFSET                                  0x00001E68
-#define DSP_3WIRE_INTF_FSHLR_R154_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R154_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R154_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R154_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R155_OFFSET                                  0x00001E6C
-#define DSP_3WIRE_INTF_FSHLR_R155_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R155_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R155_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R155_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R156_OFFSET                                  0x00001E70
-#define DSP_3WIRE_INTF_FSHLR_R156_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R156_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R156_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R156_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R157_OFFSET                                  0x00001E74
-#define DSP_3WIRE_INTF_FSHLR_R157_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R157_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R157_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R157_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R158_OFFSET                                  0x00001E78
-#define DSP_3WIRE_INTF_FSHLR_R158_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R158_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R158_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R158_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FSHLR_R159_OFFSET                                  0x00001E7C
-#define DSP_3WIRE_INTF_FSHLR_R159_TYPE                                    UInt32
-#define DSP_3WIRE_INTF_FSHLR_R159_RESERVED_MASK                           0x00000000
-#define    DSP_3WIRE_INTF_FSHLR_R159_FSN_SHIFT                            0
-#define    DSP_3WIRE_INTF_FSHLR_R159_FSN_MASK                             0xFFFFFFFF
-
-#define DSP_3WIRE_INTF_FCHR_R0_OFFSET                                     0x00001E80
-#define DSP_3WIRE_INTF_FCHR_R0_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FCHR_R0_RESERVED_MASK                              0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX7_SHIFT                              14
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX7_MASK                               0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX6_SHIFT                              12
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX6_MASK                               0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX5_SHIFT                              10
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX5_MASK                               0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX4_SHIFT                              8
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX4_MASK                               0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX3_SHIFT                              6
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX3_MASK                               0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX2_SHIFT                              4
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX2_MASK                               0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX1_SHIFT                              2
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX1_MASK                               0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX0_SHIFT                              0
-#define    DSP_3WIRE_INTF_FCHR_R0_FSX0_MASK                               0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R1_OFFSET                                     0x00001E82
-#define DSP_3WIRE_INTF_FCHR_R1_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FCHR_R1_RESERVED_MASK                              0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX7_SHIFT                              14
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX7_MASK                               0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX6_SHIFT                              12
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX6_MASK                               0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX5_SHIFT                              10
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX5_MASK                               0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX4_SHIFT                              8
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX4_MASK                               0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX3_SHIFT                              6
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX3_MASK                               0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX2_SHIFT                              4
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX2_MASK                               0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX1_SHIFT                              2
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX1_MASK                               0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX0_SHIFT                              0
-#define    DSP_3WIRE_INTF_FCHR_R1_FSX0_MASK                               0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R2_OFFSET                                     0x00001E84
-#define DSP_3WIRE_INTF_FCHR_R2_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FCHR_R2_RESERVED_MASK                              0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX7_SHIFT                              14
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX7_MASK                               0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX6_SHIFT                              12
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX6_MASK                               0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX5_SHIFT                              10
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX5_MASK                               0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX4_SHIFT                              8
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX4_MASK                               0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX3_SHIFT                              6
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX3_MASK                               0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX2_SHIFT                              4
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX2_MASK                               0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX1_SHIFT                              2
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX1_MASK                               0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX0_SHIFT                              0
-#define    DSP_3WIRE_INTF_FCHR_R2_FSX0_MASK                               0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R3_OFFSET                                     0x00001E86
-#define DSP_3WIRE_INTF_FCHR_R3_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FCHR_R3_RESERVED_MASK                              0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX7_SHIFT                              14
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX7_MASK                               0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX6_SHIFT                              12
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX6_MASK                               0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX5_SHIFT                              10
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX5_MASK                               0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX4_SHIFT                              8
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX4_MASK                               0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX3_SHIFT                              6
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX3_MASK                               0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX2_SHIFT                              4
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX2_MASK                               0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX1_SHIFT                              2
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX1_MASK                               0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX0_SHIFT                              0
-#define    DSP_3WIRE_INTF_FCHR_R3_FSX0_MASK                               0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R4_OFFSET                                     0x00001E88
-#define DSP_3WIRE_INTF_FCHR_R4_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FCHR_R4_RESERVED_MASK                              0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX7_SHIFT                              14
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX7_MASK                               0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX6_SHIFT                              12
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX6_MASK                               0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX5_SHIFT                              10
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX5_MASK                               0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX4_SHIFT                              8
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX4_MASK                               0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX3_SHIFT                              6
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX3_MASK                               0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX2_SHIFT                              4
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX2_MASK                               0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX1_SHIFT                              2
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX1_MASK                               0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX0_SHIFT                              0
-#define    DSP_3WIRE_INTF_FCHR_R4_FSX0_MASK                               0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R5_OFFSET                                     0x00001E8A
-#define DSP_3WIRE_INTF_FCHR_R5_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FCHR_R5_RESERVED_MASK                              0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX7_SHIFT                              14
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX7_MASK                               0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX6_SHIFT                              12
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX6_MASK                               0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX5_SHIFT                              10
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX5_MASK                               0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX4_SHIFT                              8
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX4_MASK                               0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX3_SHIFT                              6
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX3_MASK                               0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX2_SHIFT                              4
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX2_MASK                               0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX1_SHIFT                              2
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX1_MASK                               0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX0_SHIFT                              0
-#define    DSP_3WIRE_INTF_FCHR_R5_FSX0_MASK                               0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R6_OFFSET                                     0x00001E8C
-#define DSP_3WIRE_INTF_FCHR_R6_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FCHR_R6_RESERVED_MASK                              0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX7_SHIFT                              14
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX7_MASK                               0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX6_SHIFT                              12
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX6_MASK                               0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX5_SHIFT                              10
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX5_MASK                               0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX4_SHIFT                              8
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX4_MASK                               0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX3_SHIFT                              6
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX3_MASK                               0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX2_SHIFT                              4
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX2_MASK                               0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX1_SHIFT                              2
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX1_MASK                               0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX0_SHIFT                              0
-#define    DSP_3WIRE_INTF_FCHR_R6_FSX0_MASK                               0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R7_OFFSET                                     0x00001E8E
-#define DSP_3WIRE_INTF_FCHR_R7_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FCHR_R7_RESERVED_MASK                              0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX7_SHIFT                              14
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX7_MASK                               0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX6_SHIFT                              12
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX6_MASK                               0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX5_SHIFT                              10
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX5_MASK                               0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX4_SHIFT                              8
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX4_MASK                               0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX3_SHIFT                              6
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX3_MASK                               0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX2_SHIFT                              4
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX2_MASK                               0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX1_SHIFT                              2
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX1_MASK                               0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX0_SHIFT                              0
-#define    DSP_3WIRE_INTF_FCHR_R7_FSX0_MASK                               0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R8_OFFSET                                     0x00001E90
-#define DSP_3WIRE_INTF_FCHR_R8_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FCHR_R8_RESERVED_MASK                              0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX7_SHIFT                              14
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX7_MASK                               0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX6_SHIFT                              12
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX6_MASK                               0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX5_SHIFT                              10
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX5_MASK                               0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX4_SHIFT                              8
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX4_MASK                               0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX3_SHIFT                              6
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX3_MASK                               0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX2_SHIFT                              4
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX2_MASK                               0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX1_SHIFT                              2
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX1_MASK                               0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX0_SHIFT                              0
-#define    DSP_3WIRE_INTF_FCHR_R8_FSX0_MASK                               0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R9_OFFSET                                     0x00001E92
-#define DSP_3WIRE_INTF_FCHR_R9_TYPE                                       UInt16
-#define DSP_3WIRE_INTF_FCHR_R9_RESERVED_MASK                              0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX7_SHIFT                              14
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX7_MASK                               0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX6_SHIFT                              12
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX6_MASK                               0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX5_SHIFT                              10
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX5_MASK                               0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX4_SHIFT                              8
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX4_MASK                               0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX3_SHIFT                              6
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX3_MASK                               0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX2_SHIFT                              4
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX2_MASK                               0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX1_SHIFT                              2
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX1_MASK                               0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX0_SHIFT                              0
-#define    DSP_3WIRE_INTF_FCHR_R9_FSX0_MASK                               0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R10_OFFSET                                    0x00001E94
-#define DSP_3WIRE_INTF_FCHR_R10_TYPE                                      UInt16
-#define DSP_3WIRE_INTF_FCHR_R10_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX7_SHIFT                             14
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX7_MASK                              0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX6_SHIFT                             12
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX6_MASK                              0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX5_SHIFT                             10
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX5_MASK                              0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX4_SHIFT                             8
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX4_MASK                              0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX3_SHIFT                             6
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX3_MASK                              0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX2_SHIFT                             4
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX2_MASK                              0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX1_SHIFT                             2
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX1_MASK                              0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX0_SHIFT                             0
-#define    DSP_3WIRE_INTF_FCHR_R10_FSX0_MASK                              0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R11_OFFSET                                    0x00001E96
-#define DSP_3WIRE_INTF_FCHR_R11_TYPE                                      UInt16
-#define DSP_3WIRE_INTF_FCHR_R11_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX7_SHIFT                             14
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX7_MASK                              0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX6_SHIFT                             12
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX6_MASK                              0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX5_SHIFT                             10
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX5_MASK                              0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX4_SHIFT                             8
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX4_MASK                              0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX3_SHIFT                             6
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX3_MASK                              0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX2_SHIFT                             4
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX2_MASK                              0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX1_SHIFT                             2
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX1_MASK                              0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX0_SHIFT                             0
-#define    DSP_3WIRE_INTF_FCHR_R11_FSX0_MASK                              0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R12_OFFSET                                    0x00001E98
-#define DSP_3WIRE_INTF_FCHR_R12_TYPE                                      UInt16
-#define DSP_3WIRE_INTF_FCHR_R12_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX7_SHIFT                             14
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX7_MASK                              0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX6_SHIFT                             12
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX6_MASK                              0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX5_SHIFT                             10
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX5_MASK                              0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX4_SHIFT                             8
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX4_MASK                              0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX3_SHIFT                             6
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX3_MASK                              0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX2_SHIFT                             4
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX2_MASK                              0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX1_SHIFT                             2
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX1_MASK                              0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX0_SHIFT                             0
-#define    DSP_3WIRE_INTF_FCHR_R12_FSX0_MASK                              0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R13_OFFSET                                    0x00001E9A
-#define DSP_3WIRE_INTF_FCHR_R13_TYPE                                      UInt16
-#define DSP_3WIRE_INTF_FCHR_R13_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX7_SHIFT                             14
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX7_MASK                              0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX6_SHIFT                             12
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX6_MASK                              0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX5_SHIFT                             10
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX5_MASK                              0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX4_SHIFT                             8
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX4_MASK                              0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX3_SHIFT                             6
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX3_MASK                              0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX2_SHIFT                             4
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX2_MASK                              0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX1_SHIFT                             2
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX1_MASK                              0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX0_SHIFT                             0
-#define    DSP_3WIRE_INTF_FCHR_R13_FSX0_MASK                              0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R14_OFFSET                                    0x00001E9C
-#define DSP_3WIRE_INTF_FCHR_R14_TYPE                                      UInt16
-#define DSP_3WIRE_INTF_FCHR_R14_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX7_SHIFT                             14
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX7_MASK                              0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX6_SHIFT                             12
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX6_MASK                              0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX5_SHIFT                             10
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX5_MASK                              0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX4_SHIFT                             8
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX4_MASK                              0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX3_SHIFT                             6
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX3_MASK                              0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX2_SHIFT                             4
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX2_MASK                              0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX1_SHIFT                             2
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX1_MASK                              0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX0_SHIFT                             0
-#define    DSP_3WIRE_INTF_FCHR_R14_FSX0_MASK                              0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R15_OFFSET                                    0x00001E9E
-#define DSP_3WIRE_INTF_FCHR_R15_TYPE                                      UInt16
-#define DSP_3WIRE_INTF_FCHR_R15_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX7_SHIFT                             14
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX7_MASK                              0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX6_SHIFT                             12
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX6_MASK                              0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX5_SHIFT                             10
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX5_MASK                              0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX4_SHIFT                             8
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX4_MASK                              0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX3_SHIFT                             6
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX3_MASK                              0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX2_SHIFT                             4
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX2_MASK                              0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX1_SHIFT                             2
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX1_MASK                              0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX0_SHIFT                             0
-#define    DSP_3WIRE_INTF_FCHR_R15_FSX0_MASK                              0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R16_OFFSET                                    0x00001EA0
-#define DSP_3WIRE_INTF_FCHR_R16_TYPE                                      UInt16
-#define DSP_3WIRE_INTF_FCHR_R16_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX7_SHIFT                             14
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX7_MASK                              0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX6_SHIFT                             12
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX6_MASK                              0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX5_SHIFT                             10
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX5_MASK                              0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX4_SHIFT                             8
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX4_MASK                              0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX3_SHIFT                             6
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX3_MASK                              0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX2_SHIFT                             4
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX2_MASK                              0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX1_SHIFT                             2
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX1_MASK                              0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX0_SHIFT                             0
-#define    DSP_3WIRE_INTF_FCHR_R16_FSX0_MASK                              0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R17_OFFSET                                    0x00001EA2
-#define DSP_3WIRE_INTF_FCHR_R17_TYPE                                      UInt16
-#define DSP_3WIRE_INTF_FCHR_R17_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX7_SHIFT                             14
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX7_MASK                              0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX6_SHIFT                             12
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX6_MASK                              0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX5_SHIFT                             10
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX5_MASK                              0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX4_SHIFT                             8
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX4_MASK                              0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX3_SHIFT                             6
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX3_MASK                              0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX2_SHIFT                             4
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX2_MASK                              0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX1_SHIFT                             2
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX1_MASK                              0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX0_SHIFT                             0
-#define    DSP_3WIRE_INTF_FCHR_R17_FSX0_MASK                              0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R18_OFFSET                                    0x00001EA4
-#define DSP_3WIRE_INTF_FCHR_R18_TYPE                                      UInt16
-#define DSP_3WIRE_INTF_FCHR_R18_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX7_SHIFT                             14
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX7_MASK                              0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX6_SHIFT                             12
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX6_MASK                              0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX5_SHIFT                             10
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX5_MASK                              0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX4_SHIFT                             8
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX4_MASK                              0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX3_SHIFT                             6
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX3_MASK                              0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX2_SHIFT                             4
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX2_MASK                              0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX1_SHIFT                             2
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX1_MASK                              0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX0_SHIFT                             0
-#define    DSP_3WIRE_INTF_FCHR_R18_FSX0_MASK                              0x00000003
-
-#define DSP_3WIRE_INTF_FCHR_R19_OFFSET                                    0x00001EA6
-#define DSP_3WIRE_INTF_FCHR_R19_TYPE                                      UInt16
-#define DSP_3WIRE_INTF_FCHR_R19_RESERVED_MASK                             0x00000000
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX7_SHIFT                             14
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX7_MASK                              0x0000C000
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX6_SHIFT                             12
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX6_MASK                              0x00003000
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX5_SHIFT                             10
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX5_MASK                              0x00000C00
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX4_SHIFT                             8
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX4_MASK                              0x00000300
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX3_SHIFT                             6
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX3_MASK                              0x000000C0
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX2_SHIFT                             4
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX2_MASK                              0x00000030
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX1_SHIFT                             2
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX1_MASK                              0x0000000C
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX0_SHIFT                             0
-#define    DSP_3WIRE_INTF_FCHR_R19_FSX0_MASK                              0x00000003
 
 #define DSP_3WIRE_INTF_FQCR_OFFSET                                        0x0000E570
 #define DSP_3WIRE_INTF_FQCR_TYPE                                          UInt16
@@ -2819,6 +1423,1402 @@
 #define    DSP_3WIRE_INTF_FCHR_19_FSX1_MASK                               0x0000000C
 #define    DSP_3WIRE_INTF_FCHR_19_FSX0_SHIFT                              0
 #define    DSP_3WIRE_INTF_FCHR_19_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FQCR_R_OFFSET                                      0x00000AE0
+#define DSP_3WIRE_INTF_FQCR_R_TYPE                                        UInt16
+#define DSP_3WIRE_INTF_FQCR_R_RESERVED_MASK                               0x00000000
+#define    DSP_3WIRE_INTF_FQCR_R_FREQS_SHIFT                              15
+#define    DSP_3WIRE_INTF_FQCR_R_FREQS_MASK                               0x00008000
+#define    DSP_3WIRE_INTF_FQCR_R_FRQCP_SHIFT                              14
+#define    DSP_3WIRE_INTF_FQCR_R_FRQCP_MASK                               0x00004000
+#define    DSP_3WIRE_INTF_FQCR_R_FRQCD_SHIFT                              13
+#define    DSP_3WIRE_INTF_FQCR_R_FRQCD_MASK                               0x00002000
+#define    DSP_3WIRE_INTF_FQCR_R_FRQC_SHIFT                               8
+#define    DSP_3WIRE_INTF_FQCR_R_FRQC_MASK                                0x00001F00
+#define    DSP_3WIRE_INTF_FQCR_R_HS_SHIFT                                 7
+#define    DSP_3WIRE_INTF_FQCR_R_HS_MASK                                  0x00000080
+#define    DSP_3WIRE_INTF_FQCR_R_FRQDP_SHIFT                              6
+#define    DSP_3WIRE_INTF_FQCR_R_FRQDP_MASK                               0x00000040
+#define    DSP_3WIRE_INTF_FQCR_R_FRQDD_SHIFT                              5
+#define    DSP_3WIRE_INTF_FQCR_R_FRQDD_MASK                               0x00000020
+#define    DSP_3WIRE_INTF_FQCR_R_FRQD_SHIFT                               0
+#define    DSP_3WIRE_INTF_FQCR_R_FRQD_MASK                                0x0000001F
+
+#define DSP_3WIRE_INTF_FQC2R_R_OFFSET                                     0x00000AF2
+#define DSP_3WIRE_INTF_FQC2R_R_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FQC2R_R_RESERVED_MASK                              0x00000180
+#define    DSP_3WIRE_INTF_FQC2R_R_RDLN_SHIFT                              11
+#define    DSP_3WIRE_INTF_FQC2R_R_RDLN_MASK                               0x0000F800
+#define    DSP_3WIRE_INTF_FQC2R_R_RDEN_SHIFT                              10
+#define    DSP_3WIRE_INTF_FQC2R_R_RDEN_MASK                               0x00000400
+#define    DSP_3WIRE_INTF_FQC2R_R_EDGE_SHIFT                              9
+#define    DSP_3WIRE_INTF_FQC2R_R_EDGE_MASK                               0x00000200
+#define    DSP_3WIRE_INTF_FQC2R_R_FRQXP_SHIFT                             6
+#define    DSP_3WIRE_INTF_FQC2R_R_FRQXP_MASK                              0x00000040
+#define    DSP_3WIRE_INTF_FQC2R_R_FRQXD_SHIFT                             5
+#define    DSP_3WIRE_INTF_FQC2R_R_FRQXD_MASK                              0x00000020
+#define    DSP_3WIRE_INTF_FQC2R_R_FRQX_SHIFT                              0
+#define    DSP_3WIRE_INTF_FQC2R_R_FRQX_MASK                               0x0000001F
+
+#define DSP_3WIRE_INTF_FSHLR_R0_OFFSET                                    0x00001C00
+#define DSP_3WIRE_INTF_FSHLR_R0_TYPE                                      UInt32
+#define DSP_3WIRE_INTF_FSHLR_R0_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R0_FSN_SHIFT                              0
+#define    DSP_3WIRE_INTF_FSHLR_R0_FSN_MASK                               0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R1_OFFSET                                    0x00001C04
+#define DSP_3WIRE_INTF_FSHLR_R1_TYPE                                      UInt32
+#define DSP_3WIRE_INTF_FSHLR_R1_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R1_FSN_SHIFT                              0
+#define    DSP_3WIRE_INTF_FSHLR_R1_FSN_MASK                               0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R2_OFFSET                                    0x00001C08
+#define DSP_3WIRE_INTF_FSHLR_R2_TYPE                                      UInt32
+#define DSP_3WIRE_INTF_FSHLR_R2_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R2_FSN_SHIFT                              0
+#define    DSP_3WIRE_INTF_FSHLR_R2_FSN_MASK                               0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R3_OFFSET                                    0x00001C0C
+#define DSP_3WIRE_INTF_FSHLR_R3_TYPE                                      UInt32
+#define DSP_3WIRE_INTF_FSHLR_R3_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R3_FSN_SHIFT                              0
+#define    DSP_3WIRE_INTF_FSHLR_R3_FSN_MASK                               0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R4_OFFSET                                    0x00001C10
+#define DSP_3WIRE_INTF_FSHLR_R4_TYPE                                      UInt32
+#define DSP_3WIRE_INTF_FSHLR_R4_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R4_FSN_SHIFT                              0
+#define    DSP_3WIRE_INTF_FSHLR_R4_FSN_MASK                               0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R5_OFFSET                                    0x00001C14
+#define DSP_3WIRE_INTF_FSHLR_R5_TYPE                                      UInt32
+#define DSP_3WIRE_INTF_FSHLR_R5_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R5_FSN_SHIFT                              0
+#define    DSP_3WIRE_INTF_FSHLR_R5_FSN_MASK                               0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R6_OFFSET                                    0x00001C18
+#define DSP_3WIRE_INTF_FSHLR_R6_TYPE                                      UInt32
+#define DSP_3WIRE_INTF_FSHLR_R6_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R6_FSN_SHIFT                              0
+#define    DSP_3WIRE_INTF_FSHLR_R6_FSN_MASK                               0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R7_OFFSET                                    0x00001C1C
+#define DSP_3WIRE_INTF_FSHLR_R7_TYPE                                      UInt32
+#define DSP_3WIRE_INTF_FSHLR_R7_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R7_FSN_SHIFT                              0
+#define    DSP_3WIRE_INTF_FSHLR_R7_FSN_MASK                               0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R8_OFFSET                                    0x00001C20
+#define DSP_3WIRE_INTF_FSHLR_R8_TYPE                                      UInt32
+#define DSP_3WIRE_INTF_FSHLR_R8_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R8_FSN_SHIFT                              0
+#define    DSP_3WIRE_INTF_FSHLR_R8_FSN_MASK                               0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R9_OFFSET                                    0x00001C24
+#define DSP_3WIRE_INTF_FSHLR_R9_TYPE                                      UInt32
+#define DSP_3WIRE_INTF_FSHLR_R9_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R9_FSN_SHIFT                              0
+#define    DSP_3WIRE_INTF_FSHLR_R9_FSN_MASK                               0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R10_OFFSET                                   0x00001C28
+#define DSP_3WIRE_INTF_FSHLR_R10_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R10_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R10_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R10_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R11_OFFSET                                   0x00001C2C
+#define DSP_3WIRE_INTF_FSHLR_R11_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R11_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R11_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R11_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R12_OFFSET                                   0x00001C30
+#define DSP_3WIRE_INTF_FSHLR_R12_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R12_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R12_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R12_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R13_OFFSET                                   0x00001C34
+#define DSP_3WIRE_INTF_FSHLR_R13_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R13_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R13_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R13_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R14_OFFSET                                   0x00001C38
+#define DSP_3WIRE_INTF_FSHLR_R14_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R14_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R14_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R14_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R15_OFFSET                                   0x00001C3C
+#define DSP_3WIRE_INTF_FSHLR_R15_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R15_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R15_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R15_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R16_OFFSET                                   0x00001C40
+#define DSP_3WIRE_INTF_FSHLR_R16_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R16_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R16_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R16_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R17_OFFSET                                   0x00001C44
+#define DSP_3WIRE_INTF_FSHLR_R17_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R17_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R17_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R17_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R18_OFFSET                                   0x00001C48
+#define DSP_3WIRE_INTF_FSHLR_R18_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R18_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R18_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R18_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R19_OFFSET                                   0x00001C4C
+#define DSP_3WIRE_INTF_FSHLR_R19_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R19_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R19_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R19_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R20_OFFSET                                   0x00001C50
+#define DSP_3WIRE_INTF_FSHLR_R20_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R20_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R20_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R20_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R21_OFFSET                                   0x00001C54
+#define DSP_3WIRE_INTF_FSHLR_R21_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R21_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R21_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R21_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R22_OFFSET                                   0x00001C58
+#define DSP_3WIRE_INTF_FSHLR_R22_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R22_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R22_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R22_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R23_OFFSET                                   0x00001C5C
+#define DSP_3WIRE_INTF_FSHLR_R23_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R23_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R23_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R23_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R24_OFFSET                                   0x00001C60
+#define DSP_3WIRE_INTF_FSHLR_R24_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R24_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R24_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R24_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R25_OFFSET                                   0x00001C64
+#define DSP_3WIRE_INTF_FSHLR_R25_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R25_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R25_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R25_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R26_OFFSET                                   0x00001C68
+#define DSP_3WIRE_INTF_FSHLR_R26_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R26_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R26_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R26_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R27_OFFSET                                   0x00001C6C
+#define DSP_3WIRE_INTF_FSHLR_R27_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R27_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R27_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R27_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R28_OFFSET                                   0x00001C70
+#define DSP_3WIRE_INTF_FSHLR_R28_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R28_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R28_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R28_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R29_OFFSET                                   0x00001C74
+#define DSP_3WIRE_INTF_FSHLR_R29_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R29_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R29_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R29_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R30_OFFSET                                   0x00001C78
+#define DSP_3WIRE_INTF_FSHLR_R30_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R30_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R30_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R30_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R31_OFFSET                                   0x00001C7C
+#define DSP_3WIRE_INTF_FSHLR_R31_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R31_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R31_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R31_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R32_OFFSET                                   0x00001C80
+#define DSP_3WIRE_INTF_FSHLR_R32_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R32_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R32_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R32_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R33_OFFSET                                   0x00001C84
+#define DSP_3WIRE_INTF_FSHLR_R33_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R33_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R33_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R33_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R34_OFFSET                                   0x00001C88
+#define DSP_3WIRE_INTF_FSHLR_R34_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R34_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R34_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R34_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R35_OFFSET                                   0x00001C8C
+#define DSP_3WIRE_INTF_FSHLR_R35_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R35_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R35_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R35_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R36_OFFSET                                   0x00001C90
+#define DSP_3WIRE_INTF_FSHLR_R36_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R36_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R36_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R36_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R37_OFFSET                                   0x00001C94
+#define DSP_3WIRE_INTF_FSHLR_R37_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R37_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R37_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R37_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R38_OFFSET                                   0x00001C98
+#define DSP_3WIRE_INTF_FSHLR_R38_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R38_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R38_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R38_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R39_OFFSET                                   0x00001C9C
+#define DSP_3WIRE_INTF_FSHLR_R39_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R39_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R39_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R39_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R40_OFFSET                                   0x00001CA0
+#define DSP_3WIRE_INTF_FSHLR_R40_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R40_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R40_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R40_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R41_OFFSET                                   0x00001CA4
+#define DSP_3WIRE_INTF_FSHLR_R41_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R41_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R41_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R41_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R42_OFFSET                                   0x00001CA8
+#define DSP_3WIRE_INTF_FSHLR_R42_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R42_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R42_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R42_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R43_OFFSET                                   0x00001CAC
+#define DSP_3WIRE_INTF_FSHLR_R43_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R43_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R43_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R43_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R44_OFFSET                                   0x00001CB0
+#define DSP_3WIRE_INTF_FSHLR_R44_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R44_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R44_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R44_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R45_OFFSET                                   0x00001CB4
+#define DSP_3WIRE_INTF_FSHLR_R45_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R45_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R45_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R45_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R46_OFFSET                                   0x00001CB8
+#define DSP_3WIRE_INTF_FSHLR_R46_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R46_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R46_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R46_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R47_OFFSET                                   0x00001CBC
+#define DSP_3WIRE_INTF_FSHLR_R47_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R47_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R47_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R47_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R48_OFFSET                                   0x00001CC0
+#define DSP_3WIRE_INTF_FSHLR_R48_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R48_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R48_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R48_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R49_OFFSET                                   0x00001CC4
+#define DSP_3WIRE_INTF_FSHLR_R49_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R49_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R49_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R49_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R50_OFFSET                                   0x00001CC8
+#define DSP_3WIRE_INTF_FSHLR_R50_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R50_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R50_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R50_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R51_OFFSET                                   0x00001CCC
+#define DSP_3WIRE_INTF_FSHLR_R51_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R51_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R51_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R51_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R52_OFFSET                                   0x00001CD0
+#define DSP_3WIRE_INTF_FSHLR_R52_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R52_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R52_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R52_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R53_OFFSET                                   0x00001CD4
+#define DSP_3WIRE_INTF_FSHLR_R53_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R53_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R53_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R53_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R54_OFFSET                                   0x00001CD8
+#define DSP_3WIRE_INTF_FSHLR_R54_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R54_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R54_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R54_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R55_OFFSET                                   0x00001CDC
+#define DSP_3WIRE_INTF_FSHLR_R55_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R55_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R55_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R55_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R56_OFFSET                                   0x00001CE0
+#define DSP_3WIRE_INTF_FSHLR_R56_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R56_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R56_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R56_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R57_OFFSET                                   0x00001CE4
+#define DSP_3WIRE_INTF_FSHLR_R57_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R57_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R57_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R57_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R58_OFFSET                                   0x00001CE8
+#define DSP_3WIRE_INTF_FSHLR_R58_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R58_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R58_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R58_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R59_OFFSET                                   0x00001CEC
+#define DSP_3WIRE_INTF_FSHLR_R59_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R59_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R59_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R59_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R60_OFFSET                                   0x00001CF0
+#define DSP_3WIRE_INTF_FSHLR_R60_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R60_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R60_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R60_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R61_OFFSET                                   0x00001CF4
+#define DSP_3WIRE_INTF_FSHLR_R61_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R61_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R61_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R61_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R62_OFFSET                                   0x00001CF8
+#define DSP_3WIRE_INTF_FSHLR_R62_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R62_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R62_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R62_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R63_OFFSET                                   0x00001CFC
+#define DSP_3WIRE_INTF_FSHLR_R63_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R63_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R63_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R63_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R64_OFFSET                                   0x00001D00
+#define DSP_3WIRE_INTF_FSHLR_R64_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R64_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R64_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R64_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R65_OFFSET                                   0x00001D04
+#define DSP_3WIRE_INTF_FSHLR_R65_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R65_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R65_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R65_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R66_OFFSET                                   0x00001D08
+#define DSP_3WIRE_INTF_FSHLR_R66_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R66_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R66_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R66_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R67_OFFSET                                   0x00001D0C
+#define DSP_3WIRE_INTF_FSHLR_R67_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R67_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R67_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R67_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R68_OFFSET                                   0x00001D10
+#define DSP_3WIRE_INTF_FSHLR_R68_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R68_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R68_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R68_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R69_OFFSET                                   0x00001D14
+#define DSP_3WIRE_INTF_FSHLR_R69_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R69_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R69_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R69_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R70_OFFSET                                   0x00001D18
+#define DSP_3WIRE_INTF_FSHLR_R70_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R70_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R70_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R70_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R71_OFFSET                                   0x00001D1C
+#define DSP_3WIRE_INTF_FSHLR_R71_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R71_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R71_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R71_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R72_OFFSET                                   0x00001D20
+#define DSP_3WIRE_INTF_FSHLR_R72_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R72_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R72_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R72_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R73_OFFSET                                   0x00001D24
+#define DSP_3WIRE_INTF_FSHLR_R73_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R73_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R73_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R73_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R74_OFFSET                                   0x00001D28
+#define DSP_3WIRE_INTF_FSHLR_R74_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R74_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R74_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R74_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R75_OFFSET                                   0x00001D2C
+#define DSP_3WIRE_INTF_FSHLR_R75_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R75_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R75_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R75_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R76_OFFSET                                   0x00001D30
+#define DSP_3WIRE_INTF_FSHLR_R76_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R76_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R76_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R76_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R77_OFFSET                                   0x00001D34
+#define DSP_3WIRE_INTF_FSHLR_R77_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R77_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R77_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R77_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R78_OFFSET                                   0x00001D38
+#define DSP_3WIRE_INTF_FSHLR_R78_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R78_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R78_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R78_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R79_OFFSET                                   0x00001D3C
+#define DSP_3WIRE_INTF_FSHLR_R79_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R79_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R79_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R79_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R80_OFFSET                                   0x00001D40
+#define DSP_3WIRE_INTF_FSHLR_R80_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R80_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R80_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R80_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R81_OFFSET                                   0x00001D44
+#define DSP_3WIRE_INTF_FSHLR_R81_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R81_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R81_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R81_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R82_OFFSET                                   0x00001D48
+#define DSP_3WIRE_INTF_FSHLR_R82_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R82_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R82_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R82_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R83_OFFSET                                   0x00001D4C
+#define DSP_3WIRE_INTF_FSHLR_R83_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R83_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R83_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R83_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R84_OFFSET                                   0x00001D50
+#define DSP_3WIRE_INTF_FSHLR_R84_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R84_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R84_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R84_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R85_OFFSET                                   0x00001D54
+#define DSP_3WIRE_INTF_FSHLR_R85_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R85_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R85_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R85_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R86_OFFSET                                   0x00001D58
+#define DSP_3WIRE_INTF_FSHLR_R86_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R86_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R86_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R86_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R87_OFFSET                                   0x00001D5C
+#define DSP_3WIRE_INTF_FSHLR_R87_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R87_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R87_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R87_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R88_OFFSET                                   0x00001D60
+#define DSP_3WIRE_INTF_FSHLR_R88_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R88_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R88_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R88_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R89_OFFSET                                   0x00001D64
+#define DSP_3WIRE_INTF_FSHLR_R89_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R89_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R89_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R89_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R90_OFFSET                                   0x00001D68
+#define DSP_3WIRE_INTF_FSHLR_R90_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R90_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R90_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R90_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R91_OFFSET                                   0x00001D6C
+#define DSP_3WIRE_INTF_FSHLR_R91_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R91_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R91_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R91_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R92_OFFSET                                   0x00001D70
+#define DSP_3WIRE_INTF_FSHLR_R92_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R92_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R92_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R92_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R93_OFFSET                                   0x00001D74
+#define DSP_3WIRE_INTF_FSHLR_R93_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R93_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R93_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R93_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R94_OFFSET                                   0x00001D78
+#define DSP_3WIRE_INTF_FSHLR_R94_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R94_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R94_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R94_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R95_OFFSET                                   0x00001D7C
+#define DSP_3WIRE_INTF_FSHLR_R95_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R95_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R95_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R95_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R96_OFFSET                                   0x00001D80
+#define DSP_3WIRE_INTF_FSHLR_R96_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R96_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R96_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R96_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R97_OFFSET                                   0x00001D84
+#define DSP_3WIRE_INTF_FSHLR_R97_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R97_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R97_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R97_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R98_OFFSET                                   0x00001D88
+#define DSP_3WIRE_INTF_FSHLR_R98_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R98_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R98_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R98_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R99_OFFSET                                   0x00001D8C
+#define DSP_3WIRE_INTF_FSHLR_R99_TYPE                                     UInt32
+#define DSP_3WIRE_INTF_FSHLR_R99_RESERVED_MASK                            0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R99_FSN_SHIFT                             0
+#define    DSP_3WIRE_INTF_FSHLR_R99_FSN_MASK                              0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R100_OFFSET                                  0x00001D90
+#define DSP_3WIRE_INTF_FSHLR_R100_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R100_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R100_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R100_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R101_OFFSET                                  0x00001D94
+#define DSP_3WIRE_INTF_FSHLR_R101_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R101_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R101_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R101_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R102_OFFSET                                  0x00001D98
+#define DSP_3WIRE_INTF_FSHLR_R102_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R102_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R102_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R102_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R103_OFFSET                                  0x00001D9C
+#define DSP_3WIRE_INTF_FSHLR_R103_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R103_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R103_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R103_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R104_OFFSET                                  0x00001DA0
+#define DSP_3WIRE_INTF_FSHLR_R104_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R104_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R104_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R104_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R105_OFFSET                                  0x00001DA4
+#define DSP_3WIRE_INTF_FSHLR_R105_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R105_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R105_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R105_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R106_OFFSET                                  0x00001DA8
+#define DSP_3WIRE_INTF_FSHLR_R106_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R106_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R106_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R106_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R107_OFFSET                                  0x00001DAC
+#define DSP_3WIRE_INTF_FSHLR_R107_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R107_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R107_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R107_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R108_OFFSET                                  0x00001DB0
+#define DSP_3WIRE_INTF_FSHLR_R108_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R108_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R108_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R108_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R109_OFFSET                                  0x00001DB4
+#define DSP_3WIRE_INTF_FSHLR_R109_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R109_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R109_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R109_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R110_OFFSET                                  0x00001DB8
+#define DSP_3WIRE_INTF_FSHLR_R110_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R110_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R110_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R110_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R111_OFFSET                                  0x00001DBC
+#define DSP_3WIRE_INTF_FSHLR_R111_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R111_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R111_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R111_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R112_OFFSET                                  0x00001DC0
+#define DSP_3WIRE_INTF_FSHLR_R112_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R112_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R112_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R112_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R113_OFFSET                                  0x00001DC4
+#define DSP_3WIRE_INTF_FSHLR_R113_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R113_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R113_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R113_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R114_OFFSET                                  0x00001DC8
+#define DSP_3WIRE_INTF_FSHLR_R114_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R114_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R114_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R114_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R115_OFFSET                                  0x00001DCC
+#define DSP_3WIRE_INTF_FSHLR_R115_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R115_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R115_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R115_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R116_OFFSET                                  0x00001DD0
+#define DSP_3WIRE_INTF_FSHLR_R116_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R116_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R116_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R116_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R117_OFFSET                                  0x00001DD4
+#define DSP_3WIRE_INTF_FSHLR_R117_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R117_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R117_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R117_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R118_OFFSET                                  0x00001DD8
+#define DSP_3WIRE_INTF_FSHLR_R118_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R118_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R118_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R118_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R119_OFFSET                                  0x00001DDC
+#define DSP_3WIRE_INTF_FSHLR_R119_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R119_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R119_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R119_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R120_OFFSET                                  0x00001DE0
+#define DSP_3WIRE_INTF_FSHLR_R120_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R120_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R120_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R120_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R121_OFFSET                                  0x00001DE4
+#define DSP_3WIRE_INTF_FSHLR_R121_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R121_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R121_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R121_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R122_OFFSET                                  0x00001DE8
+#define DSP_3WIRE_INTF_FSHLR_R122_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R122_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R122_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R122_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R123_OFFSET                                  0x00001DEC
+#define DSP_3WIRE_INTF_FSHLR_R123_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R123_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R123_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R123_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R124_OFFSET                                  0x00001DF0
+#define DSP_3WIRE_INTF_FSHLR_R124_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R124_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R124_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R124_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R125_OFFSET                                  0x00001DF4
+#define DSP_3WIRE_INTF_FSHLR_R125_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R125_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R125_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R125_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R126_OFFSET                                  0x00001DF8
+#define DSP_3WIRE_INTF_FSHLR_R126_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R126_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R126_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R126_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R127_OFFSET                                  0x00001DFC
+#define DSP_3WIRE_INTF_FSHLR_R127_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R127_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R127_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R127_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R128_OFFSET                                  0x00001E00
+#define DSP_3WIRE_INTF_FSHLR_R128_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R128_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R128_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R128_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R129_OFFSET                                  0x00001E04
+#define DSP_3WIRE_INTF_FSHLR_R129_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R129_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R129_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R129_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R130_OFFSET                                  0x00001E08
+#define DSP_3WIRE_INTF_FSHLR_R130_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R130_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R130_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R130_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R131_OFFSET                                  0x00001E0C
+#define DSP_3WIRE_INTF_FSHLR_R131_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R131_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R131_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R131_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R132_OFFSET                                  0x00001E10
+#define DSP_3WIRE_INTF_FSHLR_R132_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R132_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R132_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R132_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R133_OFFSET                                  0x00001E14
+#define DSP_3WIRE_INTF_FSHLR_R133_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R133_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R133_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R133_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R134_OFFSET                                  0x00001E18
+#define DSP_3WIRE_INTF_FSHLR_R134_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R134_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R134_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R134_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R135_OFFSET                                  0x00001E1C
+#define DSP_3WIRE_INTF_FSHLR_R135_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R135_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R135_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R135_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R136_OFFSET                                  0x00001E20
+#define DSP_3WIRE_INTF_FSHLR_R136_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R136_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R136_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R136_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R137_OFFSET                                  0x00001E24
+#define DSP_3WIRE_INTF_FSHLR_R137_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R137_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R137_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R137_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R138_OFFSET                                  0x00001E28
+#define DSP_3WIRE_INTF_FSHLR_R138_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R138_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R138_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R138_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R139_OFFSET                                  0x00001E2C
+#define DSP_3WIRE_INTF_FSHLR_R139_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R139_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R139_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R139_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R140_OFFSET                                  0x00001E30
+#define DSP_3WIRE_INTF_FSHLR_R140_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R140_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R140_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R140_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R141_OFFSET                                  0x00001E34
+#define DSP_3WIRE_INTF_FSHLR_R141_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R141_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R141_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R141_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R142_OFFSET                                  0x00001E38
+#define DSP_3WIRE_INTF_FSHLR_R142_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R142_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R142_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R142_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R143_OFFSET                                  0x00001E3C
+#define DSP_3WIRE_INTF_FSHLR_R143_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R143_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R143_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R143_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R144_OFFSET                                  0x00001E40
+#define DSP_3WIRE_INTF_FSHLR_R144_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R144_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R144_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R144_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R145_OFFSET                                  0x00001E44
+#define DSP_3WIRE_INTF_FSHLR_R145_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R145_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R145_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R145_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R146_OFFSET                                  0x00001E48
+#define DSP_3WIRE_INTF_FSHLR_R146_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R146_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R146_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R146_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R147_OFFSET                                  0x00001E4C
+#define DSP_3WIRE_INTF_FSHLR_R147_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R147_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R147_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R147_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R148_OFFSET                                  0x00001E50
+#define DSP_3WIRE_INTF_FSHLR_R148_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R148_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R148_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R148_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R149_OFFSET                                  0x00001E54
+#define DSP_3WIRE_INTF_FSHLR_R149_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R149_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R149_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R149_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R150_OFFSET                                  0x00001E58
+#define DSP_3WIRE_INTF_FSHLR_R150_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R150_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R150_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R150_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R151_OFFSET                                  0x00001E5C
+#define DSP_3WIRE_INTF_FSHLR_R151_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R151_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R151_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R151_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R152_OFFSET                                  0x00001E60
+#define DSP_3WIRE_INTF_FSHLR_R152_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R152_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R152_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R152_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R153_OFFSET                                  0x00001E64
+#define DSP_3WIRE_INTF_FSHLR_R153_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R153_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R153_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R153_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R154_OFFSET                                  0x00001E68
+#define DSP_3WIRE_INTF_FSHLR_R154_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R154_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R154_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R154_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R155_OFFSET                                  0x00001E6C
+#define DSP_3WIRE_INTF_FSHLR_R155_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R155_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R155_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R155_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R156_OFFSET                                  0x00001E70
+#define DSP_3WIRE_INTF_FSHLR_R156_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R156_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R156_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R156_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R157_OFFSET                                  0x00001E74
+#define DSP_3WIRE_INTF_FSHLR_R157_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R157_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R157_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R157_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R158_OFFSET                                  0x00001E78
+#define DSP_3WIRE_INTF_FSHLR_R158_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R158_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R158_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R158_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FSHLR_R159_OFFSET                                  0x00001E7C
+#define DSP_3WIRE_INTF_FSHLR_R159_TYPE                                    UInt32
+#define DSP_3WIRE_INTF_FSHLR_R159_RESERVED_MASK                           0x00000000
+#define    DSP_3WIRE_INTF_FSHLR_R159_FSN_SHIFT                            0
+#define    DSP_3WIRE_INTF_FSHLR_R159_FSN_MASK                             0xFFFFFFFF
+
+#define DSP_3WIRE_INTF_FCHR_R0_OFFSET                                     0x00001E80
+#define DSP_3WIRE_INTF_FCHR_R0_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FCHR_R0_RESERVED_MASK                              0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX7_SHIFT                              14
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX7_MASK                               0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX6_SHIFT                              12
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX6_MASK                               0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX5_SHIFT                              10
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX5_MASK                               0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX4_SHIFT                              8
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX4_MASK                               0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX3_SHIFT                              6
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX3_MASK                               0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX2_SHIFT                              4
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX2_MASK                               0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX1_SHIFT                              2
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX1_MASK                               0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX0_SHIFT                              0
+#define    DSP_3WIRE_INTF_FCHR_R0_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R1_OFFSET                                     0x00001E82
+#define DSP_3WIRE_INTF_FCHR_R1_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FCHR_R1_RESERVED_MASK                              0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX7_SHIFT                              14
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX7_MASK                               0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX6_SHIFT                              12
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX6_MASK                               0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX5_SHIFT                              10
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX5_MASK                               0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX4_SHIFT                              8
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX4_MASK                               0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX3_SHIFT                              6
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX3_MASK                               0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX2_SHIFT                              4
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX2_MASK                               0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX1_SHIFT                              2
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX1_MASK                               0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX0_SHIFT                              0
+#define    DSP_3WIRE_INTF_FCHR_R1_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R2_OFFSET                                     0x00001E84
+#define DSP_3WIRE_INTF_FCHR_R2_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FCHR_R2_RESERVED_MASK                              0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX7_SHIFT                              14
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX7_MASK                               0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX6_SHIFT                              12
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX6_MASK                               0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX5_SHIFT                              10
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX5_MASK                               0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX4_SHIFT                              8
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX4_MASK                               0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX3_SHIFT                              6
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX3_MASK                               0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX2_SHIFT                              4
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX2_MASK                               0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX1_SHIFT                              2
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX1_MASK                               0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX0_SHIFT                              0
+#define    DSP_3WIRE_INTF_FCHR_R2_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R3_OFFSET                                     0x00001E86
+#define DSP_3WIRE_INTF_FCHR_R3_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FCHR_R3_RESERVED_MASK                              0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX7_SHIFT                              14
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX7_MASK                               0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX6_SHIFT                              12
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX6_MASK                               0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX5_SHIFT                              10
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX5_MASK                               0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX4_SHIFT                              8
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX4_MASK                               0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX3_SHIFT                              6
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX3_MASK                               0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX2_SHIFT                              4
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX2_MASK                               0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX1_SHIFT                              2
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX1_MASK                               0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX0_SHIFT                              0
+#define    DSP_3WIRE_INTF_FCHR_R3_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R4_OFFSET                                     0x00001E88
+#define DSP_3WIRE_INTF_FCHR_R4_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FCHR_R4_RESERVED_MASK                              0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX7_SHIFT                              14
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX7_MASK                               0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX6_SHIFT                              12
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX6_MASK                               0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX5_SHIFT                              10
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX5_MASK                               0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX4_SHIFT                              8
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX4_MASK                               0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX3_SHIFT                              6
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX3_MASK                               0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX2_SHIFT                              4
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX2_MASK                               0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX1_SHIFT                              2
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX1_MASK                               0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX0_SHIFT                              0
+#define    DSP_3WIRE_INTF_FCHR_R4_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R5_OFFSET                                     0x00001E8A
+#define DSP_3WIRE_INTF_FCHR_R5_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FCHR_R5_RESERVED_MASK                              0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX7_SHIFT                              14
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX7_MASK                               0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX6_SHIFT                              12
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX6_MASK                               0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX5_SHIFT                              10
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX5_MASK                               0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX4_SHIFT                              8
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX4_MASK                               0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX3_SHIFT                              6
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX3_MASK                               0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX2_SHIFT                              4
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX2_MASK                               0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX1_SHIFT                              2
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX1_MASK                               0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX0_SHIFT                              0
+#define    DSP_3WIRE_INTF_FCHR_R5_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R6_OFFSET                                     0x00001E8C
+#define DSP_3WIRE_INTF_FCHR_R6_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FCHR_R6_RESERVED_MASK                              0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX7_SHIFT                              14
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX7_MASK                               0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX6_SHIFT                              12
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX6_MASK                               0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX5_SHIFT                              10
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX5_MASK                               0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX4_SHIFT                              8
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX4_MASK                               0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX3_SHIFT                              6
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX3_MASK                               0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX2_SHIFT                              4
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX2_MASK                               0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX1_SHIFT                              2
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX1_MASK                               0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX0_SHIFT                              0
+#define    DSP_3WIRE_INTF_FCHR_R6_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R7_OFFSET                                     0x00001E8E
+#define DSP_3WIRE_INTF_FCHR_R7_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FCHR_R7_RESERVED_MASK                              0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX7_SHIFT                              14
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX7_MASK                               0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX6_SHIFT                              12
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX6_MASK                               0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX5_SHIFT                              10
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX5_MASK                               0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX4_SHIFT                              8
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX4_MASK                               0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX3_SHIFT                              6
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX3_MASK                               0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX2_SHIFT                              4
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX2_MASK                               0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX1_SHIFT                              2
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX1_MASK                               0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX0_SHIFT                              0
+#define    DSP_3WIRE_INTF_FCHR_R7_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R8_OFFSET                                     0x00001E90
+#define DSP_3WIRE_INTF_FCHR_R8_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FCHR_R8_RESERVED_MASK                              0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX7_SHIFT                              14
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX7_MASK                               0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX6_SHIFT                              12
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX6_MASK                               0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX5_SHIFT                              10
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX5_MASK                               0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX4_SHIFT                              8
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX4_MASK                               0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX3_SHIFT                              6
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX3_MASK                               0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX2_SHIFT                              4
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX2_MASK                               0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX1_SHIFT                              2
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX1_MASK                               0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX0_SHIFT                              0
+#define    DSP_3WIRE_INTF_FCHR_R8_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R9_OFFSET                                     0x00001E92
+#define DSP_3WIRE_INTF_FCHR_R9_TYPE                                       UInt16
+#define DSP_3WIRE_INTF_FCHR_R9_RESERVED_MASK                              0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX7_SHIFT                              14
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX7_MASK                               0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX6_SHIFT                              12
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX6_MASK                               0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX5_SHIFT                              10
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX5_MASK                               0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX4_SHIFT                              8
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX4_MASK                               0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX3_SHIFT                              6
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX3_MASK                               0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX2_SHIFT                              4
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX2_MASK                               0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX1_SHIFT                              2
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX1_MASK                               0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX0_SHIFT                              0
+#define    DSP_3WIRE_INTF_FCHR_R9_FSX0_MASK                               0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R10_OFFSET                                    0x00001E94
+#define DSP_3WIRE_INTF_FCHR_R10_TYPE                                      UInt16
+#define DSP_3WIRE_INTF_FCHR_R10_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX7_SHIFT                             14
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX7_MASK                              0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX6_SHIFT                             12
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX6_MASK                              0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX5_SHIFT                             10
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX5_MASK                              0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX4_SHIFT                             8
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX4_MASK                              0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX3_SHIFT                             6
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX3_MASK                              0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX2_SHIFT                             4
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX2_MASK                              0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX1_SHIFT                             2
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX1_MASK                              0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX0_SHIFT                             0
+#define    DSP_3WIRE_INTF_FCHR_R10_FSX0_MASK                              0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R11_OFFSET                                    0x00001E96
+#define DSP_3WIRE_INTF_FCHR_R11_TYPE                                      UInt16
+#define DSP_3WIRE_INTF_FCHR_R11_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX7_SHIFT                             14
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX7_MASK                              0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX6_SHIFT                             12
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX6_MASK                              0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX5_SHIFT                             10
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX5_MASK                              0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX4_SHIFT                             8
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX4_MASK                              0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX3_SHIFT                             6
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX3_MASK                              0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX2_SHIFT                             4
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX2_MASK                              0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX1_SHIFT                             2
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX1_MASK                              0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX0_SHIFT                             0
+#define    DSP_3WIRE_INTF_FCHR_R11_FSX0_MASK                              0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R12_OFFSET                                    0x00001E98
+#define DSP_3WIRE_INTF_FCHR_R12_TYPE                                      UInt16
+#define DSP_3WIRE_INTF_FCHR_R12_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX7_SHIFT                             14
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX7_MASK                              0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX6_SHIFT                             12
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX6_MASK                              0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX5_SHIFT                             10
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX5_MASK                              0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX4_SHIFT                             8
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX4_MASK                              0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX3_SHIFT                             6
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX3_MASK                              0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX2_SHIFT                             4
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX2_MASK                              0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX1_SHIFT                             2
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX1_MASK                              0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX0_SHIFT                             0
+#define    DSP_3WIRE_INTF_FCHR_R12_FSX0_MASK                              0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R13_OFFSET                                    0x00001E9A
+#define DSP_3WIRE_INTF_FCHR_R13_TYPE                                      UInt16
+#define DSP_3WIRE_INTF_FCHR_R13_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX7_SHIFT                             14
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX7_MASK                              0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX6_SHIFT                             12
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX6_MASK                              0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX5_SHIFT                             10
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX5_MASK                              0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX4_SHIFT                             8
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX4_MASK                              0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX3_SHIFT                             6
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX3_MASK                              0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX2_SHIFT                             4
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX2_MASK                              0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX1_SHIFT                             2
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX1_MASK                              0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX0_SHIFT                             0
+#define    DSP_3WIRE_INTF_FCHR_R13_FSX0_MASK                              0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R14_OFFSET                                    0x00001E9C
+#define DSP_3WIRE_INTF_FCHR_R14_TYPE                                      UInt16
+#define DSP_3WIRE_INTF_FCHR_R14_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX7_SHIFT                             14
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX7_MASK                              0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX6_SHIFT                             12
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX6_MASK                              0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX5_SHIFT                             10
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX5_MASK                              0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX4_SHIFT                             8
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX4_MASK                              0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX3_SHIFT                             6
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX3_MASK                              0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX2_SHIFT                             4
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX2_MASK                              0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX1_SHIFT                             2
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX1_MASK                              0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX0_SHIFT                             0
+#define    DSP_3WIRE_INTF_FCHR_R14_FSX0_MASK                              0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R15_OFFSET                                    0x00001E9E
+#define DSP_3WIRE_INTF_FCHR_R15_TYPE                                      UInt16
+#define DSP_3WIRE_INTF_FCHR_R15_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX7_SHIFT                             14
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX7_MASK                              0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX6_SHIFT                             12
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX6_MASK                              0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX5_SHIFT                             10
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX5_MASK                              0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX4_SHIFT                             8
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX4_MASK                              0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX3_SHIFT                             6
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX3_MASK                              0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX2_SHIFT                             4
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX2_MASK                              0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX1_SHIFT                             2
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX1_MASK                              0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX0_SHIFT                             0
+#define    DSP_3WIRE_INTF_FCHR_R15_FSX0_MASK                              0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R16_OFFSET                                    0x00001EA0
+#define DSP_3WIRE_INTF_FCHR_R16_TYPE                                      UInt16
+#define DSP_3WIRE_INTF_FCHR_R16_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX7_SHIFT                             14
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX7_MASK                              0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX6_SHIFT                             12
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX6_MASK                              0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX5_SHIFT                             10
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX5_MASK                              0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX4_SHIFT                             8
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX4_MASK                              0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX3_SHIFT                             6
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX3_MASK                              0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX2_SHIFT                             4
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX2_MASK                              0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX1_SHIFT                             2
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX1_MASK                              0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX0_SHIFT                             0
+#define    DSP_3WIRE_INTF_FCHR_R16_FSX0_MASK                              0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R17_OFFSET                                    0x00001EA2
+#define DSP_3WIRE_INTF_FCHR_R17_TYPE                                      UInt16
+#define DSP_3WIRE_INTF_FCHR_R17_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX7_SHIFT                             14
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX7_MASK                              0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX6_SHIFT                             12
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX6_MASK                              0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX5_SHIFT                             10
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX5_MASK                              0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX4_SHIFT                             8
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX4_MASK                              0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX3_SHIFT                             6
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX3_MASK                              0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX2_SHIFT                             4
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX2_MASK                              0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX1_SHIFT                             2
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX1_MASK                              0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX0_SHIFT                             0
+#define    DSP_3WIRE_INTF_FCHR_R17_FSX0_MASK                              0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R18_OFFSET                                    0x00001EA4
+#define DSP_3WIRE_INTF_FCHR_R18_TYPE                                      UInt16
+#define DSP_3WIRE_INTF_FCHR_R18_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX7_SHIFT                             14
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX7_MASK                              0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX6_SHIFT                             12
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX6_MASK                              0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX5_SHIFT                             10
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX5_MASK                              0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX4_SHIFT                             8
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX4_MASK                              0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX3_SHIFT                             6
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX3_MASK                              0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX2_SHIFT                             4
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX2_MASK                              0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX1_SHIFT                             2
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX1_MASK                              0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX0_SHIFT                             0
+#define    DSP_3WIRE_INTF_FCHR_R18_FSX0_MASK                              0x00000003
+
+#define DSP_3WIRE_INTF_FCHR_R19_OFFSET                                    0x00001EA6
+#define DSP_3WIRE_INTF_FCHR_R19_TYPE                                      UInt16
+#define DSP_3WIRE_INTF_FCHR_R19_RESERVED_MASK                             0x00000000
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX7_SHIFT                             14
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX7_MASK                              0x0000C000
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX6_SHIFT                             12
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX6_MASK                              0x00003000
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX5_SHIFT                             10
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX5_MASK                              0x00000C00
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX4_SHIFT                             8
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX4_MASK                              0x00000300
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX3_SHIFT                             6
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX3_MASK                              0x000000C0
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX2_SHIFT                             4
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX2_MASK                              0x00000030
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX1_SHIFT                             2
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX1_MASK                              0x0000000C
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX0_SHIFT                             0
+#define    DSP_3WIRE_INTF_FCHR_R19_FSX0_MASK                              0x00000003
 
 #endif /* __BRCM_RDB_DSP_3WIRE_INTF_H__ */
 

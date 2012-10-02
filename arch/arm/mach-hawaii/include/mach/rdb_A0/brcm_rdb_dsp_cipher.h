@@ -21,212 +21,12 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_DSP_CIPHER_H__
 #define __BRCM_RDB_DSP_CIPHER_H__
-
-#define DSP_CIPHER_CRYKEY_R0_OFFSET                                       0x00000200
-#define DSP_CIPHER_CRYKEY_R0_TYPE                                         UInt16
-#define DSP_CIPHER_CRYKEY_R0_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYKEY_R0_CRYKEY_SHIFT                              0
-#define    DSP_CIPHER_CRYKEY_R0_CRYKEY_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYKEY_R1_OFFSET                                       0x00000202
-#define DSP_CIPHER_CRYKEY_R1_TYPE                                         UInt16
-#define DSP_CIPHER_CRYKEY_R1_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYKEY_R1_CRYKEY_SHIFT                              0
-#define    DSP_CIPHER_CRYKEY_R1_CRYKEY_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYKEY_R2_OFFSET                                       0x00000204
-#define DSP_CIPHER_CRYKEY_R2_TYPE                                         UInt16
-#define DSP_CIPHER_CRYKEY_R2_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYKEY_R2_CRYKEY_SHIFT                              0
-#define    DSP_CIPHER_CRYKEY_R2_CRYKEY_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYKEY_R3_OFFSET                                       0x00000206
-#define DSP_CIPHER_CRYKEY_R3_TYPE                                         UInt16
-#define DSP_CIPHER_CRYKEY_R3_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYKEY_R3_CRYKEY_SHIFT                              0
-#define    DSP_CIPHER_CRYKEY_R3_CRYKEY_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYKEY_R4_OFFSET                                       0x00000208
-#define DSP_CIPHER_CRYKEY_R4_TYPE                                         UInt16
-#define DSP_CIPHER_CRYKEY_R4_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYKEY_R4_CRYKEY_4_SHIFT                            0
-#define    DSP_CIPHER_CRYKEY_R4_CRYKEY_4_MASK                             0x0000FFFF
-
-#define DSP_CIPHER_CRYKEY_R5_OFFSET                                       0x0000020A
-#define DSP_CIPHER_CRYKEY_R5_TYPE                                         UInt16
-#define DSP_CIPHER_CRYKEY_R5_RESERVED_MASK                                0x00000FC0
-#define    DSP_CIPHER_CRYKEY_R5_BET_SHIFT                                 15
-#define    DSP_CIPHER_CRYKEY_R5_BET_MASK                                  0x00008000
-#define    DSP_CIPHER_CRYKEY_R5_A512_SHIFT                                14
-#define    DSP_CIPHER_CRYKEY_R5_A512_MASK                                 0x00004000
-#define    DSP_CIPHER_CRYKEY_R5_MODE_SHIFT                                13
-#define    DSP_CIPHER_CRYKEY_R5_MODE_MASK                                 0x00002000
-#define    DSP_CIPHER_CRYKEY_R5_A53_SHIFT                                 12
-#define    DSP_CIPHER_CRYKEY_R5_A53_MASK                                  0x00001000
-#define    DSP_CIPHER_CRYKEY_R5_CRYKEY_SHIFT                              0
-#define    DSP_CIPHER_CRYKEY_R5_CRYKEY_MASK                               0x0000003F
-
-#define DSP_CIPHER_CRYKEY_R6_OFFSET                                       0x0000020C
-#define DSP_CIPHER_CRYKEY_R6_TYPE                                         UInt16
-#define DSP_CIPHER_CRYKEY_R6_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYKEY_R6_CRYKEY_SHIFT                              0
-#define    DSP_CIPHER_CRYKEY_R6_CRYKEY_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYKEY_R7_OFFSET                                       0x0000020E
-#define DSP_CIPHER_CRYKEY_R7_TYPE                                         UInt16
-#define DSP_CIPHER_CRYKEY_R7_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYKEY_R7_CRYKEY_SHIFT                              0
-#define    DSP_CIPHER_CRYKEY_R7_CRYKEY_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYKEY_R8_OFFSET                                       0x00000210
-#define DSP_CIPHER_CRYKEY_R8_TYPE                                         UInt16
-#define DSP_CIPHER_CRYKEY_R8_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYKEY_R8_CRYKEY_SHIFT                              0
-#define    DSP_CIPHER_CRYKEY_R8_CRYKEY_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYKEY_R9_OFFSET                                       0x00000212
-#define DSP_CIPHER_CRYKEY_R9_TYPE                                         UInt16
-#define DSP_CIPHER_CRYKEY_R9_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYKEY_R9_CRYKEY_SHIFT                              0
-#define    DSP_CIPHER_CRYKEY_R9_CRYKEY_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R0_OFFSET                                       0x00000220
-#define DSP_CIPHER_CRYDAT_R0_TYPE                                         UInt16
-#define DSP_CIPHER_CRYDAT_R0_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYDAT_R0_CRYDAT_SHIFT                              0
-#define    DSP_CIPHER_CRYDAT_R0_CRYDAT_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R1_OFFSET                                       0x00000222
-#define DSP_CIPHER_CRYDAT_R1_TYPE                                         UInt16
-#define DSP_CIPHER_CRYDAT_R1_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYDAT_R1_CRYDAT_SHIFT                              0
-#define    DSP_CIPHER_CRYDAT_R1_CRYDAT_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R2_OFFSET                                       0x00000224
-#define DSP_CIPHER_CRYDAT_R2_TYPE                                         UInt16
-#define DSP_CIPHER_CRYDAT_R2_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYDAT_R2_CRYDAT_SHIFT                              0
-#define    DSP_CIPHER_CRYDAT_R2_CRYDAT_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R3_OFFSET                                       0x00000226
-#define DSP_CIPHER_CRYDAT_R3_TYPE                                         UInt16
-#define DSP_CIPHER_CRYDAT_R3_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYDAT_R3_CRYDAT_SHIFT                              0
-#define    DSP_CIPHER_CRYDAT_R3_CRYDAT_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R4_OFFSET                                       0x00000228
-#define DSP_CIPHER_CRYDAT_R4_TYPE                                         UInt16
-#define DSP_CIPHER_CRYDAT_R4_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYDAT_R4_CRYDAT_SHIFT                              0
-#define    DSP_CIPHER_CRYDAT_R4_CRYDAT_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R5_OFFSET                                       0x0000022A
-#define DSP_CIPHER_CRYDAT_R5_TYPE                                         UInt16
-#define DSP_CIPHER_CRYDAT_R5_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYDAT_R5_CRYDAT_SHIFT                              0
-#define    DSP_CIPHER_CRYDAT_R5_CRYDAT_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R6_OFFSET                                       0x0000022C
-#define DSP_CIPHER_CRYDAT_R6_TYPE                                         UInt16
-#define DSP_CIPHER_CRYDAT_R6_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYDAT_R6_CRYDAT_SHIFT                              0
-#define    DSP_CIPHER_CRYDAT_R6_CRYDAT_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R7_OFFSET                                       0x0000022E
-#define DSP_CIPHER_CRYDAT_R7_TYPE                                         UInt16
-#define DSP_CIPHER_CRYDAT_R7_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYDAT_R7_CRYDAT_SHIFT                              0
-#define    DSP_CIPHER_CRYDAT_R7_CRYDAT_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R8_OFFSET                                       0x00000230
-#define DSP_CIPHER_CRYDAT_R8_TYPE                                         UInt16
-#define DSP_CIPHER_CRYDAT_R8_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYDAT_R8_CRYDAT_SHIFT                              0
-#define    DSP_CIPHER_CRYDAT_R8_CRYDAT_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R9_OFFSET                                       0x00000232
-#define DSP_CIPHER_CRYDAT_R9_TYPE                                         UInt16
-#define DSP_CIPHER_CRYDAT_R9_RESERVED_MASK                                0x00000000
-#define    DSP_CIPHER_CRYDAT_R9_CRYDAT_SHIFT                              0
-#define    DSP_CIPHER_CRYDAT_R9_CRYDAT_MASK                               0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R10_OFFSET                                      0x00000234
-#define DSP_CIPHER_CRYDAT_R10_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R10_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R10_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R10_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R11_OFFSET                                      0x00000236
-#define DSP_CIPHER_CRYDAT_R11_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R11_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R11_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R11_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R12_OFFSET                                      0x00000238
-#define DSP_CIPHER_CRYDAT_R12_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R12_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R12_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R12_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R13_OFFSET                                      0x0000023A
-#define DSP_CIPHER_CRYDAT_R13_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R13_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R13_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R13_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R14_OFFSET                                      0x0000023C
-#define DSP_CIPHER_CRYDAT_R14_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R14_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R14_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R14_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R15_OFFSET                                      0x0000023E
-#define DSP_CIPHER_CRYDAT_R15_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R15_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R15_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R15_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R16_OFFSET                                      0x00000240
-#define DSP_CIPHER_CRYDAT_R16_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R16_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R16_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R16_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R17_OFFSET                                      0x00000242
-#define DSP_CIPHER_CRYDAT_R17_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R17_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R17_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R17_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R18_OFFSET                                      0x00000244
-#define DSP_CIPHER_CRYDAT_R18_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R18_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R18_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R18_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R19_OFFSET                                      0x00000246
-#define DSP_CIPHER_CRYDAT_R19_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R19_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R19_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R19_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R20_OFFSET                                      0x00000248
-#define DSP_CIPHER_CRYDAT_R20_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R20_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R20_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R20_CRYDAT_MASK                              0x0000FFFF
-
-#define DSP_CIPHER_CRYDAT_R21_OFFSET                                      0x0000024A
-#define DSP_CIPHER_CRYDAT_R21_TYPE                                        UInt16
-#define DSP_CIPHER_CRYDAT_R21_RESERVED_MASK                               0x00000000
-#define    DSP_CIPHER_CRYDAT_R21_CRYDAT_SHIFT                             0
-#define    DSP_CIPHER_CRYDAT_R21_CRYDAT_MASK                              0x0000FFFF
 
 #define DSP_CIPHER_CRYKEY_0_OFFSET                                        0x0000E100
 #define DSP_CIPHER_CRYKEY_0_TYPE                                          UInt16
@@ -427,6 +227,206 @@
 #define DSP_CIPHER_CRYDAT_21_RESERVED_MASK                                0x00000000
 #define    DSP_CIPHER_CRYDAT_21_CRYDAT_SHIFT                              0
 #define    DSP_CIPHER_CRYDAT_21_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYKEY_R0_OFFSET                                       0x00000200
+#define DSP_CIPHER_CRYKEY_R0_TYPE                                         UInt16
+#define DSP_CIPHER_CRYKEY_R0_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYKEY_R0_CRYKEY_SHIFT                              0
+#define    DSP_CIPHER_CRYKEY_R0_CRYKEY_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYKEY_R1_OFFSET                                       0x00000202
+#define DSP_CIPHER_CRYKEY_R1_TYPE                                         UInt16
+#define DSP_CIPHER_CRYKEY_R1_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYKEY_R1_CRYKEY_SHIFT                              0
+#define    DSP_CIPHER_CRYKEY_R1_CRYKEY_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYKEY_R2_OFFSET                                       0x00000204
+#define DSP_CIPHER_CRYKEY_R2_TYPE                                         UInt16
+#define DSP_CIPHER_CRYKEY_R2_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYKEY_R2_CRYKEY_SHIFT                              0
+#define    DSP_CIPHER_CRYKEY_R2_CRYKEY_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYKEY_R3_OFFSET                                       0x00000206
+#define DSP_CIPHER_CRYKEY_R3_TYPE                                         UInt16
+#define DSP_CIPHER_CRYKEY_R3_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYKEY_R3_CRYKEY_SHIFT                              0
+#define    DSP_CIPHER_CRYKEY_R3_CRYKEY_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYKEY_R4_OFFSET                                       0x00000208
+#define DSP_CIPHER_CRYKEY_R4_TYPE                                         UInt16
+#define DSP_CIPHER_CRYKEY_R4_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYKEY_R4_CRYKEY_4_SHIFT                            0
+#define    DSP_CIPHER_CRYKEY_R4_CRYKEY_4_MASK                             0x0000FFFF
+
+#define DSP_CIPHER_CRYKEY_R5_OFFSET                                       0x0000020A
+#define DSP_CIPHER_CRYKEY_R5_TYPE                                         UInt16
+#define DSP_CIPHER_CRYKEY_R5_RESERVED_MASK                                0x00000FC0
+#define    DSP_CIPHER_CRYKEY_R5_BET_SHIFT                                 15
+#define    DSP_CIPHER_CRYKEY_R5_BET_MASK                                  0x00008000
+#define    DSP_CIPHER_CRYKEY_R5_A512_SHIFT                                14
+#define    DSP_CIPHER_CRYKEY_R5_A512_MASK                                 0x00004000
+#define    DSP_CIPHER_CRYKEY_R5_MODE_SHIFT                                13
+#define    DSP_CIPHER_CRYKEY_R5_MODE_MASK                                 0x00002000
+#define    DSP_CIPHER_CRYKEY_R5_A53_SHIFT                                 12
+#define    DSP_CIPHER_CRYKEY_R5_A53_MASK                                  0x00001000
+#define    DSP_CIPHER_CRYKEY_R5_CRYKEY_SHIFT                              0
+#define    DSP_CIPHER_CRYKEY_R5_CRYKEY_MASK                               0x0000003F
+
+#define DSP_CIPHER_CRYKEY_R6_OFFSET                                       0x0000020C
+#define DSP_CIPHER_CRYKEY_R6_TYPE                                         UInt16
+#define DSP_CIPHER_CRYKEY_R6_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYKEY_R6_CRYKEY_SHIFT                              0
+#define    DSP_CIPHER_CRYKEY_R6_CRYKEY_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYKEY_R7_OFFSET                                       0x0000020E
+#define DSP_CIPHER_CRYKEY_R7_TYPE                                         UInt16
+#define DSP_CIPHER_CRYKEY_R7_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYKEY_R7_CRYKEY_SHIFT                              0
+#define    DSP_CIPHER_CRYKEY_R7_CRYKEY_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYKEY_R8_OFFSET                                       0x00000210
+#define DSP_CIPHER_CRYKEY_R8_TYPE                                         UInt16
+#define DSP_CIPHER_CRYKEY_R8_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYKEY_R8_CRYKEY_SHIFT                              0
+#define    DSP_CIPHER_CRYKEY_R8_CRYKEY_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYKEY_R9_OFFSET                                       0x00000212
+#define DSP_CIPHER_CRYKEY_R9_TYPE                                         UInt16
+#define DSP_CIPHER_CRYKEY_R9_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYKEY_R9_CRYKEY_SHIFT                              0
+#define    DSP_CIPHER_CRYKEY_R9_CRYKEY_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R0_OFFSET                                       0x00000220
+#define DSP_CIPHER_CRYDAT_R0_TYPE                                         UInt16
+#define DSP_CIPHER_CRYDAT_R0_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYDAT_R0_CRYDAT_SHIFT                              0
+#define    DSP_CIPHER_CRYDAT_R0_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R1_OFFSET                                       0x00000222
+#define DSP_CIPHER_CRYDAT_R1_TYPE                                         UInt16
+#define DSP_CIPHER_CRYDAT_R1_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYDAT_R1_CRYDAT_SHIFT                              0
+#define    DSP_CIPHER_CRYDAT_R1_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R2_OFFSET                                       0x00000224
+#define DSP_CIPHER_CRYDAT_R2_TYPE                                         UInt16
+#define DSP_CIPHER_CRYDAT_R2_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYDAT_R2_CRYDAT_SHIFT                              0
+#define    DSP_CIPHER_CRYDAT_R2_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R3_OFFSET                                       0x00000226
+#define DSP_CIPHER_CRYDAT_R3_TYPE                                         UInt16
+#define DSP_CIPHER_CRYDAT_R3_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYDAT_R3_CRYDAT_SHIFT                              0
+#define    DSP_CIPHER_CRYDAT_R3_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R4_OFFSET                                       0x00000228
+#define DSP_CIPHER_CRYDAT_R4_TYPE                                         UInt16
+#define DSP_CIPHER_CRYDAT_R4_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYDAT_R4_CRYDAT_SHIFT                              0
+#define    DSP_CIPHER_CRYDAT_R4_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R5_OFFSET                                       0x0000022A
+#define DSP_CIPHER_CRYDAT_R5_TYPE                                         UInt16
+#define DSP_CIPHER_CRYDAT_R5_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYDAT_R5_CRYDAT_SHIFT                              0
+#define    DSP_CIPHER_CRYDAT_R5_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R6_OFFSET                                       0x0000022C
+#define DSP_CIPHER_CRYDAT_R6_TYPE                                         UInt16
+#define DSP_CIPHER_CRYDAT_R6_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYDAT_R6_CRYDAT_SHIFT                              0
+#define    DSP_CIPHER_CRYDAT_R6_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R7_OFFSET                                       0x0000022E
+#define DSP_CIPHER_CRYDAT_R7_TYPE                                         UInt16
+#define DSP_CIPHER_CRYDAT_R7_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYDAT_R7_CRYDAT_SHIFT                              0
+#define    DSP_CIPHER_CRYDAT_R7_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R8_OFFSET                                       0x00000230
+#define DSP_CIPHER_CRYDAT_R8_TYPE                                         UInt16
+#define DSP_CIPHER_CRYDAT_R8_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYDAT_R8_CRYDAT_SHIFT                              0
+#define    DSP_CIPHER_CRYDAT_R8_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R9_OFFSET                                       0x00000232
+#define DSP_CIPHER_CRYDAT_R9_TYPE                                         UInt16
+#define DSP_CIPHER_CRYDAT_R9_RESERVED_MASK                                0x00000000
+#define    DSP_CIPHER_CRYDAT_R9_CRYDAT_SHIFT                              0
+#define    DSP_CIPHER_CRYDAT_R9_CRYDAT_MASK                               0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R10_OFFSET                                      0x00000234
+#define DSP_CIPHER_CRYDAT_R10_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R10_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R10_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R10_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R11_OFFSET                                      0x00000236
+#define DSP_CIPHER_CRYDAT_R11_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R11_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R11_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R11_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R12_OFFSET                                      0x00000238
+#define DSP_CIPHER_CRYDAT_R12_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R12_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R12_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R12_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R13_OFFSET                                      0x0000023A
+#define DSP_CIPHER_CRYDAT_R13_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R13_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R13_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R13_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R14_OFFSET                                      0x0000023C
+#define DSP_CIPHER_CRYDAT_R14_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R14_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R14_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R14_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R15_OFFSET                                      0x0000023E
+#define DSP_CIPHER_CRYDAT_R15_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R15_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R15_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R15_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R16_OFFSET                                      0x00000240
+#define DSP_CIPHER_CRYDAT_R16_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R16_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R16_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R16_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R17_OFFSET                                      0x00000242
+#define DSP_CIPHER_CRYDAT_R17_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R17_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R17_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R17_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R18_OFFSET                                      0x00000244
+#define DSP_CIPHER_CRYDAT_R18_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R18_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R18_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R18_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R19_OFFSET                                      0x00000246
+#define DSP_CIPHER_CRYDAT_R19_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R19_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R19_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R19_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R20_OFFSET                                      0x00000248
+#define DSP_CIPHER_CRYDAT_R20_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R20_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R20_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R20_CRYDAT_MASK                              0x0000FFFF
+
+#define DSP_CIPHER_CRYDAT_R21_OFFSET                                      0x0000024A
+#define DSP_CIPHER_CRYDAT_R21_TYPE                                        UInt16
+#define DSP_CIPHER_CRYDAT_R21_RESERVED_MASK                               0x00000000
+#define    DSP_CIPHER_CRYDAT_R21_CRYDAT_SHIFT                             0
+#define    DSP_CIPHER_CRYDAT_R21_CRYDAT_MASK                              0x0000FFFF
 
 #endif /* __BRCM_RDB_DSP_CIPHER_H__ */
 
