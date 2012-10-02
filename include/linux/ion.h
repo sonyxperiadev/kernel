@@ -27,6 +27,7 @@ struct ion_handle;
  * @ION_HEAP_TYPE_CARVEOUT:	 memory allocated from a prereserved
  * 				 carveout heap, allocations are physically
  * 				 contiguous
+ * @ION_HEAP_TYPE_DMA:	 memory allocated via DMA API
  * @ION_NUM_HEAPS:		 helper for iterating over heaps, a bit mask
  * 				 is used to identify the heaps, so only 32
  * 				 total heap types are supported
@@ -35,6 +36,7 @@ enum ion_heap_type {
 	ION_HEAP_TYPE_SYSTEM,
 	ION_HEAP_TYPE_SYSTEM_CONTIG,
 	ION_HEAP_TYPE_CARVEOUT,
+	ION_HEAP_TYPE_DMA,
 	ION_HEAP_TYPE_CUSTOM, /* must be last so device specific heaps always
 				 are at the end of this enum */
 	ION_NUM_HEAPS = 16,
@@ -43,6 +45,7 @@ enum ion_heap_type {
 #define ION_HEAP_SYSTEM_MASK		(1 << ION_HEAP_TYPE_SYSTEM)
 #define ION_HEAP_SYSTEM_CONTIG_MASK	(1 << ION_HEAP_TYPE_SYSTEM_CONTIG)
 #define ION_HEAP_CARVEOUT_MASK		(1 << ION_HEAP_TYPE_CARVEOUT)
+#define ION_HEAP_TYPE_DMA_MASK		(1 << ION_HEAP_TYPE_DMA)
 
 /**
  * heap flags - the lower 16 bits are used by core ion, the upper 16
@@ -52,6 +55,9 @@ enum ion_heap_type {
 					   cached, ion will do cache
 					   maintenance when the buffer is
 					   mapped for dma */
+#define ION_FLAG_WRITECOMBINE 2
+#define ION_FLAG_WRITETHROUGH 4 /* Needs explicit cache invalidates */
+#define ION_FLAG_WRITEBACK    8 /* Needs explicit cache flushes */
 
 #ifdef __KERNEL__
 struct ion_device;
@@ -69,7 +75,7 @@ struct ion_buffer;
 /**
  * struct ion_platform_heap - defines a heap in the given platform
  * @type:	type of the heap from ion_heap_type enum
- * @id:		unique identifier for heap.  When allocating (lower numbers 
+ * @id:		unique identifier for heap.  When allocating (lower numbers
  * 		will be allocated from first)
  * @name:	used for debug purposes
  * @base:	base address of heap in physical memory if applicable
@@ -82,6 +88,7 @@ struct ion_platform_heap {
 	unsigned int id;
 	const char *name;
 	ion_phys_addr_t base;
+	ion_phys_addr_t limit;
 	size_t size;
 };
 

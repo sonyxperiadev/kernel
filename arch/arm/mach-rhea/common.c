@@ -31,6 +31,10 @@
 #include <linux/dma-contiguous.h>
 #include <linux/dma-mapping.h>
 #include <linux/android_pmem.h>
+#ifdef CONFIG_ION
+#include <linux/ion.h>
+#include <linux/broadcom/kona_ion.h>
+#endif
 #include <linux/kernel_stat.h>
 #include <linux/memblock.h>
 #include <asm/mach/arch.h>
@@ -780,6 +784,71 @@ static struct platform_device board_unicam_device = {
 };
 #endif
 
+#ifdef CONFIG_ION
+
+static struct ion_platform_data ion_carveout_data = {
+	.nr = 2,
+	.heaps = {
+		[0] = {
+			.id = 0,
+			.type = ION_HEAP_TYPE_CARVEOUT,
+			.name = "ion-carveout-0",
+			.base = 0x90000000,
+			.limit = 0xa0000000,
+			.size = (8 * SZ_1M),
+		},
+		[1] = {
+			.id = 1,
+			.type = ION_HEAP_TYPE_CARVEOUT,
+			.name = "ion-carveout-1",
+			.base = 0,
+			.limit = 0,
+			.size = (0 * SZ_1M),
+		},
+	},
+};
+
+static struct platform_device ion_carveout_device = {
+	.name = "ion-kona",
+	.id = 0,
+	.dev = {
+		.platform_data = &ion_carveout_data,
+	},
+	.num_resources = 0,
+};
+
+#ifdef CONFIG_CMA
+
+static u64 ion_dmamask = DMA_BIT_MASK(32);
+static struct ion_platform_data ion_cma_data = {
+	.nr = 1,
+	.heaps = {
+		[0] = {
+			.id = 2,
+			.type = ION_HEAP_TYPE_DMA,
+			.name = "ion-cma-0",
+			.base = 0x90000000,
+			.limit = 0xa0000000,
+			.size = (0 * SZ_1M),
+		},
+	},
+};
+
+static struct platform_device ion_cma_device = {
+	.name = "ion-kona",
+	.id = 1,
+	.dev = {
+		.dma_mask = &ion_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+		.platform_data = &ion_cma_data,
+	},
+	.num_resources = 0,
+};
+
+#endif
+
+#endif
+
 /* Allocate the top 16M of the DRAM for the pmem. */
 static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
@@ -895,6 +964,82 @@ static int __init setup_etm(char *p)
 }
 early_param("etm_on", setup_etm);
 
+#ifdef CONFIG_ION
+/* Change carveout region size for ION */
+static int __init setup_ion_carveout0_pages(char *str)
+{
+	char *endp = NULL;
+	if (str)
+		ion_carveout_data.heaps[0].size = memparse((const char *)str,
+				&endp);
+	return 0;
+}
+early_param("carveout0", setup_ion_carveout0_pages);
+
+static int __init setup_ion_carveout1_pages(char *str)
+{
+	char *endp = NULL;
+	if (str)
+		ion_carveout_data.heaps[1].size = memparse((const char *)str,
+				&endp);
+	return 0;
+}
+early_param("carveout1", setup_ion_carveout1_pages);
+
+/* Carveout memory regions for ION */
+static void __init ion_carveout_memory(void)
+{
+	phys_addr_t carveout_size, carveout_base;
+	int i;
+
+	for (i = 0; i < ion_carveout_data.nr; i++) {
+		carveout_size = ion_carveout_data.heaps[i].size;
+		if (carveout_size) {
+			carveout_base = memblock_alloc_from_range(
+					carveout_size, SZ_1M,
+					ion_carveout_data.heaps[i].base,
+					ion_carveout_data.heaps[i].limit);
+			memblock_free(carveout_base, carveout_size);
+			memblock_remove(carveout_base, carveout_size);
+			pr_info("ion: carveout(%d) of (%d)MB from (%08x-%08x)\n",
+					i, (carveout_size>>20), carveout_base,
+					carveout_base + carveout_size);
+			ion_carveout_data.heaps[i].base = carveout_base;
+		} else {
+			ion_carveout_data.heaps[i].id = ION_INVALID_HEAP_ID;
+		}
+	}
+}
+
+#ifdef CONFIG_CMA
+/* Change cma region size for ION */
+static int __init setup_ion_cma0_pages(char *str)
+{
+	char *endp = NULL;
+	if (str)
+		ion_cma_data.heaps[0].size = memparse((const char *)str, &endp);
+	return 0;
+}
+early_param("cma0", setup_ion_cma0_pages);
+
+/* Reserve cma regions for ION */
+static void __init ion_cma_reserve(void)
+{
+	int i;
+	for (i = 0; i < ion_cma_data.nr; i++)
+		if (ion_cma_data.heaps[i].size)
+			dma_declare_contiguous(&ion_cma_device.dev,
+					ion_cma_data.heaps[i].size,
+					ion_cma_data.heaps[i].base,
+					ion_cma_data.heaps[i].limit);
+		else
+			ion_cma_data.heaps[i].id = ION_INVALID_HEAP_ID;
+}
+#endif
+
+#endif
+
+
 static int __init setup_pmem_pages(char *str)
 {
 	char *endp = NULL;
@@ -943,6 +1088,12 @@ void __init board_common_reserve(void)
 	phys_addr_t carveout_size, carveout_base;
 	unsigned long cmasize;
 
+#ifdef CONFIG_ION
+	ion_carveout_memory();
+#ifdef CONFIG_CMA
+	ion_cma_reserve();
+#endif
+#endif
 	carveout_size = android_pmem_data.carveout_size;
 	cmasize = android_pmem_data.cmasize;
 
@@ -974,6 +1125,12 @@ void __init board_add_common_devices(void)
 			     ARRAY_SIZE(board_common_plat_devices));
 
 	platform_device_register(&android_pmem);
+#ifdef CONFIG_ION
+	platform_device_register(&ion_carveout_device);
+#ifdef CONFIG_CMA
+	platform_device_register(&ion_cma_device);
+#endif
+#endif
 	printk(KERN_EMERG"PMEM : CMA size (0x%08lx, %lu pages)\n",
 				pmem_size, (pmem_size >> PAGE_SHIFT));
 }

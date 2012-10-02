@@ -1,9 +1,10 @@
 
 EXTRA_CFLAGS := -fno-inline -Wno-multichar -O2
 
+obj-$(CONFIG_HAWAII_MM) += mm/
 obj-$(CONFIG_V3D) += v3d/
 obj-$(CONFIG_MMDMA) += mmdma/
-obj-y += vce/
+obj-$(CONFIG_VCE) += vce/
 obj-y += fuse_log/
 obj-$(CONFIG_BCM_MODEM) += modem/
 obj-$(CONFIG_ISP) += isp/

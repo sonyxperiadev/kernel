@@ -13,6 +13,9 @@
  * GNU General Public License for more details.
  *
  */
+
+#define pr_fmt(fmt) "ion-carveout: " fmt
+
 #include <linux/spinlock.h>
 
 #include <linux/err.h>
@@ -23,6 +26,10 @@
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+#ifdef CONFIG_ION_KONA
+#include <linux/dma-direction.h>
+#include <asm/cacheflush.h>
+#endif
 #include "ion_priv.h"
 
 #include <asm/mach/map.h>
@@ -80,9 +87,9 @@ static void ion_carveout_heap_free(struct ion_buffer *buffer)
 {
 	struct ion_heap *heap = buffer->heap;
 
-	ion_carveout_free(heap, buffer->priv_phys, buffer->size);
-	buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
-}
+		ion_carveout_free(heap, buffer->priv_phys, buffer->size);
+		buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
+	}
 
 struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 					      struct ion_buffer *buffer)
@@ -93,13 +100,31 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 	table = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
 	if (!table)
 		return ERR_PTR(-ENOMEM);
-	ret = sg_alloc_table(table, 1, GFP_KERNEL);
-	if (ret) {
-		kfree(table);
-		return ERR_PTR(ret);
+	if (buffer->flags & ION_FLAG_CACHED) {
+		struct scatterlist *sg;
+		int ret, i;
+		int nents = PAGE_ALIGN(buffer->size) / PAGE_SIZE;
+		struct page *page = phys_to_page(buffer->priv_phys);
+
+		ret = sg_alloc_table(table, nents, GFP_KERNEL);
+		if (ret) {
+			kfree(table);
+			return ERR_PTR(ret);
+		}
+		sg = table->sgl;
+		for (i = 0; i < nents; i++) {
+			sg_set_page(sg, page + i, PAGE_SIZE, 0);
+			sg = sg_next(sg);
+		}
+	} else {
+		ret = sg_alloc_table(table, 1, GFP_KERNEL);
+		if (ret) {
+			kfree(table);
+			return ERR_PTR(ret);
+		}
+		sg_set_page(table->sgl, phys_to_page(buffer->priv_phys),
+				buffer->size, 0);
 	}
-	sg_set_page(table->sgl, phys_to_page(buffer->priv_phys), buffer->size,
-		    0);
 	return table;
 }
 
@@ -107,6 +132,7 @@ void ion_carveout_heap_unmap_dma(struct ion_heap *heap,
 				 struct ion_buffer *buffer)
 {
 	sg_free_table(buffer->sg_table);
+	kfree(buffer->sg_table);
 }
 
 void *ion_carveout_heap_map_kernel(struct ion_heap *heap,
@@ -132,11 +158,67 @@ void ion_carveout_heap_unmap_kernel(struct ion_heap *heap,
 int ion_carveout_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 			       struct vm_area_struct *vma)
 {
+#ifdef CONFIG_ION_KONA
+	if (buffer->flags & ION_FLAG_WRITECOMBINE)
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+	else if (buffer->flags & ION_FLAG_WRITETHROUGH)
+		vma->vm_page_prot = pgprot_writethrough(vma->vm_page_prot);
+	else if (buffer->flags & ION_FLAG_WRITEBACK)
+		vma->vm_page_prot = pgprot_writeback(vma->vm_page_prot);
+	else
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
 	return remap_pfn_range(vma, vma->vm_start,
-			       __phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
-			       vma->vm_end - vma->vm_start,
+			__phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
+			vma->vm_end - vma->vm_start,
+			vma->vm_page_prot);
+#else
+	return remap_pfn_range(vma, vma->vm_start,
+			__phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
+			vma->vm_end - vma->vm_start,
 			       pgprot_noncached(vma->vm_page_prot));
+#endif
 }
+
+#ifdef CONFIG_ION_KONA
+int ion_carveout_heap_flush_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+	int mtype = MT_MEMORY;
+	phys_addr_t pa;
+	void *va;
+
+	pa = buffer->priv_phys;
+	va = __arm_ioremap(buffer->priv_phys, buffer->size, mtype);
+	pr_debug("flush: pa(%x) va(%p) off(%ld) len(%ld)\n",
+			pa, va, offset, len);
+	dmac_flush_range(va + offset, va + offset + len);
+	outer_flush_range(pa + offset, pa + offset + len);
+	__arm_iounmap(va);
+
+	return 0;
+}
+
+int ion_carveout_heap_invalidate_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+	int mtype = MT_MEMORY;
+	phys_addr_t pa;
+	void *va;
+
+	pa = buffer->priv_phys;
+	va = __arm_ioremap(buffer->priv_phys, buffer->size, mtype);
+	pr_debug("inv: pa(%x) va(%p) off(%ld) len(%ld)\n",
+			pa, va, offset, len);
+	outer_inv_range(pa + offset, pa + offset + len);
+	dmac_unmap_area(va + offset, len, DMA_FROM_DEVICE);
+	__arm_iounmap(va);
+
+	return 0;
+}
+#endif
 
 static struct ion_heap_ops carveout_heap_ops = {
 	.allocate = ion_carveout_heap_allocate,
@@ -145,6 +227,12 @@ static struct ion_heap_ops carveout_heap_ops = {
 	.map_user = ion_carveout_heap_map_user,
 	.map_kernel = ion_carveout_heap_map_kernel,
 	.unmap_kernel = ion_carveout_heap_unmap_kernel,
+	.map_dma = ion_carveout_heap_map_dma,
+	.unmap_dma = ion_carveout_heap_unmap_dma,
+#ifdef CONFIG_ION_KONA
+	.flush_cache = ion_carveout_heap_flush_cache,
+	.invalidate_cache = ion_carveout_heap_invalidate_cache,
+#endif
 };
 
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
@@ -165,6 +253,9 @@ struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
 		     -1);
 	carveout_heap->heap.ops = &carveout_heap_ops;
 	carveout_heap->heap.type = ION_HEAP_TYPE_CARVEOUT;
+#ifdef CONFIG_ION_KONA
+	carveout_heap->heap.size = heap_data->size;
+#endif
 
 	return &carveout_heap->heap;
 }

@@ -887,7 +887,6 @@ static int kona_fb_probe(struct platform_device *pdev)
 err_fb_register_failed:
 err_set_var_failed:
 #ifdef CONFIG_ION
-	ion_unmap_dma(fb->ionClient, fb->ionHandle);
 	ion_free(fb->ionClient, fb->ionHandle);
 #else
 	dma_free_writecombine(&pdev->dev, fb->fb.fix.smem_len,
