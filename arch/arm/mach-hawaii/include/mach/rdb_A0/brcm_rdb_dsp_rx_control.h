@@ -21,104 +21,12 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_DSP_RX_CONTROL_H__
 #define __BRCM_RDB_DSP_RX_CONTROL_H__
-
-#define DSP_RX_CONTROL_RXCR_R_OFFSET                                      0x00000B66
-#define DSP_RX_CONTROL_RXCR_R_TYPE                                        UInt16
-#define DSP_RX_CONTROL_RXCR_R_RESERVED_MASK                               0x0000C000
-#define    DSP_RX_CONTROL_RXCR_R_SPI_RX_INDEX_EN_SHIFT                    13
-#define    DSP_RX_CONTROL_RXCR_R_SPI_RX_INDEX_EN_MASK                     0x00002000
-#define    DSP_RX_CONTROL_RXCR_R_GPEN_RX_INDEX_EN_SHIFT                   12
-#define    DSP_RX_CONTROL_RXCR_R_GPEN_RX_INDEX_EN_MASK                    0x00001000
-#define    DSP_RX_CONTROL_RXCR_R_MON_EN_SHIFT                             11
-#define    DSP_RX_CONTROL_RXCR_R_MON_EN_MASK                              0x00000800
-#define    DSP_RX_CONTROL_RXCR_R_BYPASSFILT_SHIFT                         10
-#define    DSP_RX_CONTROL_RXCR_R_BYPASSFILT_MASK                          0x00000400
-#define    DSP_RX_CONTROL_RXCR_R_CLASS33_SHIFT                            9
-#define    DSP_RX_CONTROL_RXCR_R_CLASS33_MASK                             0x00000200
-#define    DSP_RX_CONTROL_RXCR_R_RXSTAT_SHIFT                             8
-#define    DSP_RX_CONTROL_RXCR_R_RXSTAT_MASK                              0x00000100
-#define    DSP_RX_CONTROL_RXCR_R_RCON_SHIFT                               5
-#define    DSP_RX_CONTROL_RXCR_R_RCON_MASK                                0x000000E0
-#define    DSP_RX_CONTROL_RXCR_R_STOPRX_SHIFT                             4
-#define    DSP_RX_CONTROL_RXCR_R_STOPRX_MASK                              0x00000010
-#define    DSP_RX_CONTROL_RXCR_R_STARRX_SHIFT                             3
-#define    DSP_RX_CONTROL_RXCR_R_STARRX_MASK                              0x00000008
-#define    DSP_RX_CONTROL_RXCR_R_RBC_SHIFT                                0
-#define    DSP_RX_CONTROL_RXCR_R_RBC_MASK                                 0x00000007
-
-#define DSP_RX_CONTROL_RXSAMP_R_OFFSET                                    0x00000B68
-#define DSP_RX_CONTROL_RXSAMP_R_TYPE                                      UInt16
-#define DSP_RX_CONTROL_RXSAMP_R_RESERVED_MASK                             0x0000FF00
-#define    DSP_RX_CONTROL_RXSAMP_R_RXNUM_SHIFT                            0
-#define    DSP_RX_CONTROL_RXSAMP_R_RXNUM_MASK                             0x000000FF
-
-#define DSP_RX_CONTROL_RCOR_R_OFFSET                                      0x00000B80
-#define DSP_RX_CONTROL_RCOR_R_TYPE                                        UInt16
-#define DSP_RX_CONTROL_RCOR_R_RESERVED_MASK                               0x00000000
-#define    DSP_RX_CONTROL_RCOR_R_RCQ_SHIFT                                8
-#define    DSP_RX_CONTROL_RCOR_R_RCQ_MASK                                 0x0000FF00
-#define    DSP_RX_CONTROL_RCOR_R_RCI_SHIFT                                0
-#define    DSP_RX_CONTROL_RCOR_R_RCI_MASK                                 0x000000FF
-
-#define DSP_RX_CONTROL_RCDR_R_OFFSET                                      0x00000B82
-#define DSP_RX_CONTROL_RCDR_R_TYPE                                        UInt16
-#define DSP_RX_CONTROL_RCDR_R_RESERVED_MASK                               0x00000C00
-#define    DSP_RX_CONTROL_RCDR_R_CSHORT_SHIFT                             15
-#define    DSP_RX_CONTROL_RCDR_R_CSHORT_MASK                              0x00008000
-#define    DSP_RX_CONTROL_RCDR_R_RXCT_SHIFT                               12
-#define    DSP_RX_CONTROL_RCDR_R_RXCT_MASK                                0x00007000
-#define    DSP_RX_CONTROL_RCDR_R_DEL_SHIFT                                0
-#define    DSP_RX_CONTROL_RCDR_R_DEL_MASK                                 0x000003FF
-
-#define DSP_RX_CONTROL_RSDR_R_OFFSET                                      0x00000B84
-#define DSP_RX_CONTROL_RSDR_R_TYPE                                        UInt16
-#define DSP_RX_CONTROL_RSDR_R_RESERVED_MASK                               0x0000FC00
-#define    DSP_RX_CONTROL_RSDR_R_DEL_SHIFT                                0
-#define    DSP_RX_CONTROL_RSDR_R_DEL_MASK                                 0x000003FF
-
-#define DSP_RX_CONTROL_RSDR_MON_R_OFFSET                                  0x00000B86
-#define DSP_RX_CONTROL_RSDR_MON_R_TYPE                                    UInt16
-#define DSP_RX_CONTROL_RSDR_MON_R_RESERVED_MASK                           0x0000FC00
-#define    DSP_RX_CONTROL_RSDR_MON_R_DEL_SHIFT                            0
-#define    DSP_RX_CONTROL_RSDR_MON_R_DEL_MASK                             0x000003FF
-
-#define DSP_RX_CONTROL_RFRCOR_R_OFFSET                                    0x00000B88
-#define DSP_RX_CONTROL_RFRCOR_R_TYPE                                      UInt16
-#define DSP_RX_CONTROL_RFRCOR_R_RESERVED_MASK                             0x00000000
-#define    DSP_RX_CONTROL_RFRCOR_R_RFRCQ_SHIFT                            8
-#define    DSP_RX_CONTROL_RFRCOR_R_RFRCQ_MASK                             0x0000FF00
-#define    DSP_RX_CONTROL_RFRCOR_R_RFRCI_SHIFT                            0
-#define    DSP_RX_CONTROL_RFRCOR_R_RFRCI_MASK                             0x000000FF
-
-#define DSP_RX_CONTROL_REC4ADR_R_OFFSET                                   0x00000B90
-#define DSP_RX_CONTROL_REC4ADR_R_TYPE                                     UInt16
-#define DSP_RX_CONTROL_REC4ADR_R_RESERVED_MASK                            0x0000FFF0
-#define    DSP_RX_CONTROL_REC4ADR_R_ADDRESS_SHIFT                         0
-#define    DSP_RX_CONTROL_REC4ADR_R_ADDRESS_MASK                          0x0000000F
-
-#define DSP_RX_CONTROL_REC4DAT_R_OFFSET                                   0x00000B92
-#define DSP_RX_CONTROL_REC4DAT_R_TYPE                                     UInt16
-#define DSP_RX_CONTROL_REC4DAT_R_RESERVED_MASK                            0x0000E000
-#define    DSP_RX_CONTROL_REC4DAT_R_DATA13BIT_SHIFT                       0
-#define    DSP_RX_CONTROL_REC4DAT_R_DATA13BIT_MASK                        0x00001FFF
-
-#define DSP_RX_CONTROL_RXMATCH_R_OFFSET                                   0x00000B98
-#define DSP_RX_CONTROL_RXMATCH_R_TYPE                                     UInt16
-#define DSP_RX_CONTROL_RXMATCH_R_RESERVED_MASK                            0x0000FFC0
-#define    DSP_RX_CONTROL_RXMATCH_R_DATA_SHIFT                            0
-#define    DSP_RX_CONTROL_RXMATCH_R_DATA_MASK                             0x0000003F
-
-#define DSP_RX_CONTROL_RXBUF_R0TO619_OFFSET                               0x00001000
-#define DSP_RX_CONTROL_RXBUF_R0TO619_TYPE                                 UInt32
-#define DSP_RX_CONTROL_RXBUF_R0TO619_RESERVED_MASK                        0x00000000
-#define    DSP_RX_CONTROL_RXBUF_R0TO619_DATA_SHIFT                        0
-#define    DSP_RX_CONTROL_RXBUF_R0TO619_DATA_MASK                         0xFFFFFFFF
 
 #define DSP_RX_CONTROL_RXCR_OFFSET                                        0x0000E5B3
 #define DSP_RX_CONTROL_RXCR_TYPE                                          UInt16
@@ -2067,6 +1975,98 @@
 #define DSP_RX_CONTROL_RXBUF_311_RESERVED_MASK                            0x00000000
 #define    DSP_RX_CONTROL_RXBUF_311_DATA_SHIFT                            0
 #define    DSP_RX_CONTROL_RXBUF_311_DATA_MASK                             0xFFFFFFFF
+
+#define DSP_RX_CONTROL_RXCR_R_OFFSET                                      0x00000B66
+#define DSP_RX_CONTROL_RXCR_R_TYPE                                        UInt16
+#define DSP_RX_CONTROL_RXCR_R_RESERVED_MASK                               0x0000C000
+#define    DSP_RX_CONTROL_RXCR_R_SPI_RX_INDEX_EN_SHIFT                    13
+#define    DSP_RX_CONTROL_RXCR_R_SPI_RX_INDEX_EN_MASK                     0x00002000
+#define    DSP_RX_CONTROL_RXCR_R_GPEN_RX_INDEX_EN_SHIFT                   12
+#define    DSP_RX_CONTROL_RXCR_R_GPEN_RX_INDEX_EN_MASK                    0x00001000
+#define    DSP_RX_CONTROL_RXCR_R_MON_EN_SHIFT                             11
+#define    DSP_RX_CONTROL_RXCR_R_MON_EN_MASK                              0x00000800
+#define    DSP_RX_CONTROL_RXCR_R_BYPASSFILT_SHIFT                         10
+#define    DSP_RX_CONTROL_RXCR_R_BYPASSFILT_MASK                          0x00000400
+#define    DSP_RX_CONTROL_RXCR_R_CLASS33_SHIFT                            9
+#define    DSP_RX_CONTROL_RXCR_R_CLASS33_MASK                             0x00000200
+#define    DSP_RX_CONTROL_RXCR_R_RXSTAT_SHIFT                             8
+#define    DSP_RX_CONTROL_RXCR_R_RXSTAT_MASK                              0x00000100
+#define    DSP_RX_CONTROL_RXCR_R_RCON_SHIFT                               5
+#define    DSP_RX_CONTROL_RXCR_R_RCON_MASK                                0x000000E0
+#define    DSP_RX_CONTROL_RXCR_R_STOPRX_SHIFT                             4
+#define    DSP_RX_CONTROL_RXCR_R_STOPRX_MASK                              0x00000010
+#define    DSP_RX_CONTROL_RXCR_R_STARRX_SHIFT                             3
+#define    DSP_RX_CONTROL_RXCR_R_STARRX_MASK                              0x00000008
+#define    DSP_RX_CONTROL_RXCR_R_RBC_SHIFT                                0
+#define    DSP_RX_CONTROL_RXCR_R_RBC_MASK                                 0x00000007
+
+#define DSP_RX_CONTROL_RXSAMP_R_OFFSET                                    0x00000B68
+#define DSP_RX_CONTROL_RXSAMP_R_TYPE                                      UInt16
+#define DSP_RX_CONTROL_RXSAMP_R_RESERVED_MASK                             0x0000FF00
+#define    DSP_RX_CONTROL_RXSAMP_R_RXNUM_SHIFT                            0
+#define    DSP_RX_CONTROL_RXSAMP_R_RXNUM_MASK                             0x000000FF
+
+#define DSP_RX_CONTROL_RCOR_R_OFFSET                                      0x00000B80
+#define DSP_RX_CONTROL_RCOR_R_TYPE                                        UInt16
+#define DSP_RX_CONTROL_RCOR_R_RESERVED_MASK                               0x00000000
+#define    DSP_RX_CONTROL_RCOR_R_RCQ_SHIFT                                8
+#define    DSP_RX_CONTROL_RCOR_R_RCQ_MASK                                 0x0000FF00
+#define    DSP_RX_CONTROL_RCOR_R_RCI_SHIFT                                0
+#define    DSP_RX_CONTROL_RCOR_R_RCI_MASK                                 0x000000FF
+
+#define DSP_RX_CONTROL_RCDR_R_OFFSET                                      0x00000B82
+#define DSP_RX_CONTROL_RCDR_R_TYPE                                        UInt16
+#define DSP_RX_CONTROL_RCDR_R_RESERVED_MASK                               0x00000C00
+#define    DSP_RX_CONTROL_RCDR_R_CSHORT_SHIFT                             15
+#define    DSP_RX_CONTROL_RCDR_R_CSHORT_MASK                              0x00008000
+#define    DSP_RX_CONTROL_RCDR_R_RXCT_SHIFT                               12
+#define    DSP_RX_CONTROL_RCDR_R_RXCT_MASK                                0x00007000
+#define    DSP_RX_CONTROL_RCDR_R_DEL_SHIFT                                0
+#define    DSP_RX_CONTROL_RCDR_R_DEL_MASK                                 0x000003FF
+
+#define DSP_RX_CONTROL_RSDR_R_OFFSET                                      0x00000B84
+#define DSP_RX_CONTROL_RSDR_R_TYPE                                        UInt16
+#define DSP_RX_CONTROL_RSDR_R_RESERVED_MASK                               0x0000FC00
+#define    DSP_RX_CONTROL_RSDR_R_DEL_SHIFT                                0
+#define    DSP_RX_CONTROL_RSDR_R_DEL_MASK                                 0x000003FF
+
+#define DSP_RX_CONTROL_RSDR_MON_R_OFFSET                                  0x00000B86
+#define DSP_RX_CONTROL_RSDR_MON_R_TYPE                                    UInt16
+#define DSP_RX_CONTROL_RSDR_MON_R_RESERVED_MASK                           0x0000FC00
+#define    DSP_RX_CONTROL_RSDR_MON_R_DEL_SHIFT                            0
+#define    DSP_RX_CONTROL_RSDR_MON_R_DEL_MASK                             0x000003FF
+
+#define DSP_RX_CONTROL_RFRCOR_R_OFFSET                                    0x00000B88
+#define DSP_RX_CONTROL_RFRCOR_R_TYPE                                      UInt16
+#define DSP_RX_CONTROL_RFRCOR_R_RESERVED_MASK                             0x00000000
+#define    DSP_RX_CONTROL_RFRCOR_R_RFRCQ_SHIFT                            8
+#define    DSP_RX_CONTROL_RFRCOR_R_RFRCQ_MASK                             0x0000FF00
+#define    DSP_RX_CONTROL_RFRCOR_R_RFRCI_SHIFT                            0
+#define    DSP_RX_CONTROL_RFRCOR_R_RFRCI_MASK                             0x000000FF
+
+#define DSP_RX_CONTROL_REC4ADR_R_OFFSET                                   0x00000B90
+#define DSP_RX_CONTROL_REC4ADR_R_TYPE                                     UInt16
+#define DSP_RX_CONTROL_REC4ADR_R_RESERVED_MASK                            0x0000FFF0
+#define    DSP_RX_CONTROL_REC4ADR_R_ADDRESS_SHIFT                         0
+#define    DSP_RX_CONTROL_REC4ADR_R_ADDRESS_MASK                          0x0000000F
+
+#define DSP_RX_CONTROL_REC4DAT_R_OFFSET                                   0x00000B92
+#define DSP_RX_CONTROL_REC4DAT_R_TYPE                                     UInt16
+#define DSP_RX_CONTROL_REC4DAT_R_RESERVED_MASK                            0x0000E000
+#define    DSP_RX_CONTROL_REC4DAT_R_DATA13BIT_SHIFT                       0
+#define    DSP_RX_CONTROL_REC4DAT_R_DATA13BIT_MASK                        0x00001FFF
+
+#define DSP_RX_CONTROL_RXMATCH_R_OFFSET                                   0x00000B98
+#define DSP_RX_CONTROL_RXMATCH_R_TYPE                                     UInt16
+#define DSP_RX_CONTROL_RXMATCH_R_RESERVED_MASK                            0x0000FFC0
+#define    DSP_RX_CONTROL_RXMATCH_R_DATA_SHIFT                            0
+#define    DSP_RX_CONTROL_RXMATCH_R_DATA_MASK                             0x0000003F
+
+#define DSP_RX_CONTROL_RXBUF_R0TO619_OFFSET                               0x00001000
+#define DSP_RX_CONTROL_RXBUF_R0TO619_TYPE                                 UInt32
+#define DSP_RX_CONTROL_RXBUF_R0TO619_RESERVED_MASK                        0x00000000
+#define    DSP_RX_CONTROL_RXBUF_R0TO619_DATA_SHIFT                        0
+#define    DSP_RX_CONTROL_RXBUF_R0TO619_DATA_MASK                         0xFFFFFFFF
 
 #endif /* __BRCM_RDB_DSP_RX_CONTROL_H__ */
 

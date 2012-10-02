@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -2900,9 +2900,11 @@
 
 #define PADCTRLREG_TRACEDT00_OFFSET                                       0x00000214
 #define PADCTRLREG_TRACEDT00_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT00_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT00_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT00_PINSEL_TRACEDT00_SHIFT                    8
 #define    PADCTRLREG_TRACEDT00_PINSEL_TRACEDT00_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT00_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT00_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT00_PDN_TRACEDT00_SHIFT                       6
 #define    PADCTRLREG_TRACEDT00_PDN_TRACEDT00_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT00_PUP_TRACEDT00_SHIFT                       5
@@ -2911,6 +2913,8 @@
 #define    PADCTRLREG_TRACEDT00_SRC_TRACEDT00_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT00_IND_TRACEDT00_SHIFT                       3
 #define    PADCTRLREG_TRACEDT00_IND_TRACEDT00_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT00_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT00_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT00_SEL_1_TRACEDT00_SHIFT                     1
 #define    PADCTRLREG_TRACEDT00_SEL_1_TRACEDT00_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT00_SEL_0_TRACEDT00_SHIFT                     0
@@ -2918,9 +2922,11 @@
 
 #define PADCTRLREG_TRACEDT01_OFFSET                                       0x00000218
 #define PADCTRLREG_TRACEDT01_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT01_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT01_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT01_PINSEL_TRACEDT01_SHIFT                    8
 #define    PADCTRLREG_TRACEDT01_PINSEL_TRACEDT01_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT01_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT01_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT01_PDN_TRACEDT01_SHIFT                       6
 #define    PADCTRLREG_TRACEDT01_PDN_TRACEDT01_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT01_PUP_TRACEDT01_SHIFT                       5
@@ -2929,6 +2935,8 @@
 #define    PADCTRLREG_TRACEDT01_SRC_TRACEDT01_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT01_IND_TRACEDT01_SHIFT                       3
 #define    PADCTRLREG_TRACEDT01_IND_TRACEDT01_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT01_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT01_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT01_SEL_1_TRACEDT01_SHIFT                     1
 #define    PADCTRLREG_TRACEDT01_SEL_1_TRACEDT01_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT01_SEL_0_TRACEDT01_SHIFT                     0
@@ -2936,9 +2944,11 @@
 
 #define PADCTRLREG_TRACEDT02_OFFSET                                       0x0000021C
 #define PADCTRLREG_TRACEDT02_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT02_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT02_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT02_PINSEL_TRACEDT02_SHIFT                    8
 #define    PADCTRLREG_TRACEDT02_PINSEL_TRACEDT02_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT02_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT02_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT02_PDN_TRACEDT02_SHIFT                       6
 #define    PADCTRLREG_TRACEDT02_PDN_TRACEDT02_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT02_PUP_TRACEDT02_SHIFT                       5
@@ -2947,6 +2957,8 @@
 #define    PADCTRLREG_TRACEDT02_SRC_TRACEDT02_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT02_IND_TRACEDT02_SHIFT                       3
 #define    PADCTRLREG_TRACEDT02_IND_TRACEDT02_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT02_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT02_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT02_SEL_1_TRACEDT02_SHIFT                     1
 #define    PADCTRLREG_TRACEDT02_SEL_1_TRACEDT02_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT02_SEL_0_TRACEDT02_SHIFT                     0
@@ -2954,9 +2966,11 @@
 
 #define PADCTRLREG_TRACEDT03_OFFSET                                       0x00000220
 #define PADCTRLREG_TRACEDT03_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT03_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT03_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT03_PINSEL_TRACEDT03_SHIFT                    8
 #define    PADCTRLREG_TRACEDT03_PINSEL_TRACEDT03_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT03_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT03_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT03_PDN_TRACEDT03_SHIFT                       6
 #define    PADCTRLREG_TRACEDT03_PDN_TRACEDT03_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT03_PUP_TRACEDT03_SHIFT                       5
@@ -2965,6 +2979,8 @@
 #define    PADCTRLREG_TRACEDT03_SRC_TRACEDT03_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT03_IND_TRACEDT03_SHIFT                       3
 #define    PADCTRLREG_TRACEDT03_IND_TRACEDT03_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT03_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT03_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT03_SEL_1_TRACEDT03_SHIFT                     1
 #define    PADCTRLREG_TRACEDT03_SEL_1_TRACEDT03_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT03_SEL_0_TRACEDT03_SHIFT                     0
@@ -2972,9 +2988,11 @@
 
 #define PADCTRLREG_TRACEDT04_OFFSET                                       0x00000224
 #define PADCTRLREG_TRACEDT04_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT04_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT04_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT04_PINSEL_TRACEDT04_SHIFT                    8
 #define    PADCTRLREG_TRACEDT04_PINSEL_TRACEDT04_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT04_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT04_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT04_PDN_TRACEDT04_SHIFT                       6
 #define    PADCTRLREG_TRACEDT04_PDN_TRACEDT04_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT04_PUP_TRACEDT04_SHIFT                       5
@@ -2983,6 +3001,8 @@
 #define    PADCTRLREG_TRACEDT04_SRC_TRACEDT04_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT04_IND_TRACEDT04_SHIFT                       3
 #define    PADCTRLREG_TRACEDT04_IND_TRACEDT04_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT04_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT04_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT04_SEL_1_TRACEDT04_SHIFT                     1
 #define    PADCTRLREG_TRACEDT04_SEL_1_TRACEDT04_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT04_SEL_0_TRACEDT04_SHIFT                     0
@@ -2990,9 +3010,11 @@
 
 #define PADCTRLREG_TRACEDT05_OFFSET                                       0x00000228
 #define PADCTRLREG_TRACEDT05_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT05_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT05_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT05_PINSEL_TRACEDT05_SHIFT                    8
 #define    PADCTRLREG_TRACEDT05_PINSEL_TRACEDT05_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT05_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT05_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT05_PDN_TRACEDT05_SHIFT                       6
 #define    PADCTRLREG_TRACEDT05_PDN_TRACEDT05_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT05_PUP_TRACEDT05_SHIFT                       5
@@ -3001,6 +3023,8 @@
 #define    PADCTRLREG_TRACEDT05_SRC_TRACEDT05_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT05_IND_TRACEDT05_SHIFT                       3
 #define    PADCTRLREG_TRACEDT05_IND_TRACEDT05_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT05_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT05_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT05_SEL_1_TRACEDT05_SHIFT                     1
 #define    PADCTRLREG_TRACEDT05_SEL_1_TRACEDT05_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT05_SEL_0_TRACEDT05_SHIFT                     0
@@ -3008,9 +3032,11 @@
 
 #define PADCTRLREG_TRACEDT06_OFFSET                                       0x0000022C
 #define PADCTRLREG_TRACEDT06_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT06_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT06_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT06_PINSEL_TRACEDT06_SHIFT                    8
 #define    PADCTRLREG_TRACEDT06_PINSEL_TRACEDT06_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT06_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT06_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT06_PDN_TRACEDT06_SHIFT                       6
 #define    PADCTRLREG_TRACEDT06_PDN_TRACEDT06_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT06_PUP_TRACEDT06_SHIFT                       5
@@ -3019,6 +3045,8 @@
 #define    PADCTRLREG_TRACEDT06_SRC_TRACEDT06_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT06_IND_TRACEDT06_SHIFT                       3
 #define    PADCTRLREG_TRACEDT06_IND_TRACEDT06_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT06_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT06_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT06_SEL_1_TRACEDT06_SHIFT                     1
 #define    PADCTRLREG_TRACEDT06_SEL_1_TRACEDT06_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT06_SEL_0_TRACEDT06_SHIFT                     0
@@ -3026,9 +3054,11 @@
 
 #define PADCTRLREG_TRACEDT07_OFFSET                                       0x00000230
 #define PADCTRLREG_TRACEDT07_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT07_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT07_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT07_PINSEL_TRACEDT07_SHIFT                    8
 #define    PADCTRLREG_TRACEDT07_PINSEL_TRACEDT07_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT07_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT07_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT07_PDN_TRACEDT07_SHIFT                       6
 #define    PADCTRLREG_TRACEDT07_PDN_TRACEDT07_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT07_PUP_TRACEDT07_SHIFT                       5
@@ -3037,6 +3067,8 @@
 #define    PADCTRLREG_TRACEDT07_SRC_TRACEDT07_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT07_IND_TRACEDT07_SHIFT                       3
 #define    PADCTRLREG_TRACEDT07_IND_TRACEDT07_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT07_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT07_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT07_SEL_1_TRACEDT07_SHIFT                     1
 #define    PADCTRLREG_TRACEDT07_SEL_1_TRACEDT07_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT07_SEL_0_TRACEDT07_SHIFT                     0
@@ -3176,9 +3208,11 @@
 
 #define PADCTRLREG_TRACEDT08_OFFSET                                       0x0000024C
 #define PADCTRLREG_TRACEDT08_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT08_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT08_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT08_PINSEL_TRACEDT08_SHIFT                    8
 #define    PADCTRLREG_TRACEDT08_PINSEL_TRACEDT08_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT08_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT08_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT08_PDN_TRACEDT08_SHIFT                       6
 #define    PADCTRLREG_TRACEDT08_PDN_TRACEDT08_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT08_PUP_TRACEDT08_SHIFT                       5
@@ -3187,6 +3221,8 @@
 #define    PADCTRLREG_TRACEDT08_SRC_TRACEDT08_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT08_IND_TRACEDT08_SHIFT                       3
 #define    PADCTRLREG_TRACEDT08_IND_TRACEDT08_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT08_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT08_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT08_SEL_1_TRACEDT08_SHIFT                     1
 #define    PADCTRLREG_TRACEDT08_SEL_1_TRACEDT08_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT08_SEL_0_TRACEDT08_SHIFT                     0
@@ -3194,9 +3230,11 @@
 
 #define PADCTRLREG_TRACEDT09_OFFSET                                       0x00000250
 #define PADCTRLREG_TRACEDT09_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT09_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT09_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT09_PINSEL_TRACEDT09_SHIFT                    8
 #define    PADCTRLREG_TRACEDT09_PINSEL_TRACEDT09_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT09_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT09_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT09_PDN_TRACEDT09_SHIFT                       6
 #define    PADCTRLREG_TRACEDT09_PDN_TRACEDT09_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT09_PUP_TRACEDT09_SHIFT                       5
@@ -3205,6 +3243,8 @@
 #define    PADCTRLREG_TRACEDT09_SRC_TRACEDT09_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT09_IND_TRACEDT09_SHIFT                       3
 #define    PADCTRLREG_TRACEDT09_IND_TRACEDT09_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT09_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT09_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT09_SEL_1_TRACEDT09_SHIFT                     1
 #define    PADCTRLREG_TRACEDT09_SEL_1_TRACEDT09_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT09_SEL_0_TRACEDT09_SHIFT                     0
@@ -3212,9 +3252,11 @@
 
 #define PADCTRLREG_TRACEDT10_OFFSET                                       0x00000254
 #define PADCTRLREG_TRACEDT10_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT10_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT10_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT10_PINSEL_TRACEDT10_SHIFT                    8
 #define    PADCTRLREG_TRACEDT10_PINSEL_TRACEDT10_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT10_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT10_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT10_PDN_TRACEDT10_SHIFT                       6
 #define    PADCTRLREG_TRACEDT10_PDN_TRACEDT10_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT10_PUP_TRACEDT10_SHIFT                       5
@@ -3223,6 +3265,8 @@
 #define    PADCTRLREG_TRACEDT10_SRC_TRACEDT10_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT10_IND_TRACEDT10_SHIFT                       3
 #define    PADCTRLREG_TRACEDT10_IND_TRACEDT10_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT10_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT10_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT10_SEL_1_TRACEDT10_SHIFT                     1
 #define    PADCTRLREG_TRACEDT10_SEL_1_TRACEDT10_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT10_SEL_0_TRACEDT10_SHIFT                     0
@@ -3230,9 +3274,11 @@
 
 #define PADCTRLREG_TRACEDT11_OFFSET                                       0x00000258
 #define PADCTRLREG_TRACEDT11_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT11_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT11_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT11_PINSEL_TRACEDT11_SHIFT                    8
 #define    PADCTRLREG_TRACEDT11_PINSEL_TRACEDT11_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT11_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT11_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT11_PDN_TRACEDT11_SHIFT                       6
 #define    PADCTRLREG_TRACEDT11_PDN_TRACEDT11_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT11_PUP_TRACEDT11_SHIFT                       5
@@ -3241,6 +3287,8 @@
 #define    PADCTRLREG_TRACEDT11_SRC_TRACEDT11_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT11_IND_TRACEDT11_SHIFT                       3
 #define    PADCTRLREG_TRACEDT11_IND_TRACEDT11_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT11_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT11_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT11_SEL_1_TRACEDT11_SHIFT                     1
 #define    PADCTRLREG_TRACEDT11_SEL_1_TRACEDT11_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT11_SEL_0_TRACEDT11_SHIFT                     0
@@ -3248,9 +3296,11 @@
 
 #define PADCTRLREG_TRACEDT12_OFFSET                                       0x0000025C
 #define PADCTRLREG_TRACEDT12_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT12_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT12_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT12_PINSEL_TRACEDT12_SHIFT                    8
 #define    PADCTRLREG_TRACEDT12_PINSEL_TRACEDT12_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT12_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT12_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT12_PDN_TRACEDT12_SHIFT                       6
 #define    PADCTRLREG_TRACEDT12_PDN_TRACEDT12_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT12_PUP_TRACEDT12_SHIFT                       5
@@ -3259,6 +3309,8 @@
 #define    PADCTRLREG_TRACEDT12_SRC_TRACEDT12_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT12_IND_TRACEDT12_SHIFT                       3
 #define    PADCTRLREG_TRACEDT12_IND_TRACEDT12_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT12_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT12_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT12_SEL_1_TRACEDT12_SHIFT                     1
 #define    PADCTRLREG_TRACEDT12_SEL_1_TRACEDT12_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT12_SEL_0_TRACEDT12_SHIFT                     0
@@ -3266,9 +3318,11 @@
 
 #define PADCTRLREG_TRACEDT13_OFFSET                                       0x00000260
 #define PADCTRLREG_TRACEDT13_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT13_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT13_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT13_PINSEL_TRACEDT13_SHIFT                    8
 #define    PADCTRLREG_TRACEDT13_PINSEL_TRACEDT13_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT13_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT13_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT13_PDN_TRACEDT13_SHIFT                       6
 #define    PADCTRLREG_TRACEDT13_PDN_TRACEDT13_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT13_PUP_TRACEDT13_SHIFT                       5
@@ -3277,6 +3331,8 @@
 #define    PADCTRLREG_TRACEDT13_SRC_TRACEDT13_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT13_IND_TRACEDT13_SHIFT                       3
 #define    PADCTRLREG_TRACEDT13_IND_TRACEDT13_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT13_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT13_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT13_SEL_1_TRACEDT13_SHIFT                     1
 #define    PADCTRLREG_TRACEDT13_SEL_1_TRACEDT13_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT13_SEL_0_TRACEDT13_SHIFT                     0
@@ -3284,9 +3340,11 @@
 
 #define PADCTRLREG_TRACEDT14_OFFSET                                       0x00000264
 #define PADCTRLREG_TRACEDT14_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT14_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT14_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT14_PINSEL_TRACEDT14_SHIFT                    8
 #define    PADCTRLREG_TRACEDT14_PINSEL_TRACEDT14_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT14_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT14_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT14_PDN_TRACEDT14_SHIFT                       6
 #define    PADCTRLREG_TRACEDT14_PDN_TRACEDT14_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT14_PUP_TRACEDT14_SHIFT                       5
@@ -3295,6 +3353,8 @@
 #define    PADCTRLREG_TRACEDT14_SRC_TRACEDT14_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT14_IND_TRACEDT14_SHIFT                       3
 #define    PADCTRLREG_TRACEDT14_IND_TRACEDT14_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT14_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT14_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT14_SEL_1_TRACEDT14_SHIFT                     1
 #define    PADCTRLREG_TRACEDT14_SEL_1_TRACEDT14_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT14_SEL_0_TRACEDT14_SHIFT                     0
@@ -3302,9 +3362,11 @@
 
 #define PADCTRLREG_TRACEDT15_OFFSET                                       0x00000268
 #define PADCTRLREG_TRACEDT15_TYPE                                         UInt32
-#define PADCTRLREG_TRACEDT15_RESERVED_MASK                                0xFFFFF884
+#define PADCTRLREG_TRACEDT15_RESERVED_MASK                                0xFFFFF800
 #define    PADCTRLREG_TRACEDT15_PINSEL_TRACEDT15_SHIFT                    8
 #define    PADCTRLREG_TRACEDT15_PINSEL_TRACEDT15_MASK                     0x00000700
+#define    PADCTRLREG_TRACEDT15_UNUSED_7_SHIFT                            7
+#define    PADCTRLREG_TRACEDT15_UNUSED_7_MASK                             0x00000080
 #define    PADCTRLREG_TRACEDT15_PDN_TRACEDT15_SHIFT                       6
 #define    PADCTRLREG_TRACEDT15_PDN_TRACEDT15_MASK                        0x00000040
 #define    PADCTRLREG_TRACEDT15_PUP_TRACEDT15_SHIFT                       5
@@ -3313,6 +3375,8 @@
 #define    PADCTRLREG_TRACEDT15_SRC_TRACEDT15_MASK                        0x00000010
 #define    PADCTRLREG_TRACEDT15_IND_TRACEDT15_SHIFT                       3
 #define    PADCTRLREG_TRACEDT15_IND_TRACEDT15_MASK                        0x00000008
+#define    PADCTRLREG_TRACEDT15_UNUSED_2_SHIFT                            2
+#define    PADCTRLREG_TRACEDT15_UNUSED_2_MASK                             0x00000004
 #define    PADCTRLREG_TRACEDT15_SEL_1_TRACEDT15_SHIFT                     1
 #define    PADCTRLREG_TRACEDT15_SEL_1_TRACEDT15_MASK                      0x00000002
 #define    PADCTRLREG_TRACEDT15_SEL_0_TRACEDT15_SHIFT                     0

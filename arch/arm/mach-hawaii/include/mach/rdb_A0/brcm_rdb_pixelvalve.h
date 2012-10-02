@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -125,8 +125,8 @@
 #define PIXELVALVE_INTEN_OFFSET                                           0x00000024
 #define PIXELVALVE_INTEN_TYPE                                             UInt32
 #define PIXELVALVE_INTEN_RESERVED_MASK                                    0xFFFFF800
-#define    PIXELVALVE_INTEN_OF_UF_SHIFT                                   10
-#define    PIXELVALVE_INTEN_OF_UF_MASK                                    0x00000400
+#define    PIXELVALVE_INTEN_PV_UF_SHIFT                                   10
+#define    PIXELVALVE_INTEN_PV_UF_MASK                                    0x00000400
 #define    PIXELVALVE_INTEN_VID_IDLE_SHIFT                                9
 #define    PIXELVALVE_INTEN_VID_IDLE_MASK                                 0x00000200
 #define    PIXELVALVE_INTEN_VFP_END_SHIFT                                 8
@@ -151,8 +151,8 @@
 #define PIXELVALVE_INTSTAT_OFFSET                                         0x00000028
 #define PIXELVALVE_INTSTAT_TYPE                                           UInt32
 #define PIXELVALVE_INTSTAT_RESERVED_MASK                                  0xFFFFF800
-#define    PIXELVALVE_INTSTAT_OF_UF_SHIFT                                 10
-#define    PIXELVALVE_INTSTAT_OF_UF_MASK                                  0x00000400
+#define    PIXELVALVE_INTSTAT_PV_UF_SHIFT                                 10
+#define    PIXELVALVE_INTSTAT_PV_UF_MASK                                  0x00000400
 #define    PIXELVALVE_INTSTAT_VID_IDLE_SHIFT                              9
 #define    PIXELVALVE_INTSTAT_VID_IDLE_MASK                               0x00000200
 #define    PIXELVALVE_INTSTAT_VFP_END_SHIFT                               8
@@ -176,13 +176,15 @@
 
 #define PIXELVALVE_STAT_OFFSET                                            0x0000002C
 #define PIXELVALVE_STAT_TYPE                                              UInt32
-#define PIXELVALVE_STAT_RESERVED_MASK                                     0xFFFFF800
-#define    PIXELVALVE_STAT_HVS_OF_SHIFT                                   10
-#define    PIXELVALVE_STAT_HVS_OF_MASK                                    0x00000400
-#define    PIXELVALVE_STAT_PV_UF_SHIFT                                    9
-#define    PIXELVALVE_STAT_PV_UF_MASK                                     0x00000200
-#define    PIXELVALVE_STAT_HVS_UF_SHIFT                                   8
-#define    PIXELVALVE_STAT_HVS_UF_MASK                                    0x00000100
+#define PIXELVALVE_STAT_RESERVED_MASK                                     0xFFFFF000
+#define    PIXELVALVE_STAT_HVS_OF_SHIFT                                   11
+#define    PIXELVALVE_STAT_HVS_OF_MASK                                    0x00000800
+#define    PIXELVALVE_STAT_PV_UF_SHIFT                                    10
+#define    PIXELVALVE_STAT_PV_UF_MASK                                     0x00000400
+#define    PIXELVALVE_STAT_HVS_UF_SHIFT                                   9
+#define    PIXELVALVE_STAT_HVS_UF_MASK                                    0x00000200
+#define    PIXELVALVE_STAT_VID_IDLE_SHIFT                                 8
+#define    PIXELVALVE_STAT_VID_IDLE_MASK                                  0x00000100
 #define    PIXELVALVE_STAT_VFP_SHIFT                                      7
 #define    PIXELVALVE_STAT_VFP_MASK                                       0x00000080
 #define    PIXELVALVE_STAT_VACT_SHIFT                                     6

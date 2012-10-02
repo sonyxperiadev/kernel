@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -112,7 +112,7 @@
 
 #define CAM_PRI_OFFSET                                                    0x0000000C
 #define CAM_PRI_TYPE                                                      UInt32
-#define CAM_PRI_RESERVED_MASK                                             0xFFFC0009
+#define CAM_PRI_RESERVED_MASK                                             0xFFFC0008
 #define    CAM_PRI_BL_SHIFT                                               16
 #define    CAM_PRI_BL_MASK                                                0x00030000
 #define    CAM_PRI_BS_SHIFT                                               12
@@ -123,6 +123,8 @@
 #define    CAM_PRI_NP_MASK                                                0x000000F0
 #define    CAM_PRI_PT_SHIFT                                               1
 #define    CAM_PRI_PT_MASK                                                0x00000006
+#define    CAM_PRI_PE_SHIFT                                               0
+#define    CAM_PRI_PE_MASK                                                0x00000001
 
 #define CAM_CLK_OFFSET                                                    0x00000010
 #define CAM_CLK_TYPE                                                      UInt32

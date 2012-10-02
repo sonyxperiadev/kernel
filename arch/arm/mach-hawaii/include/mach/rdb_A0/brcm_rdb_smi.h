@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -320,9 +320,9 @@
 
 #define SMI_FD_OFFSET                                                     0x00000040
 #define SMI_FD_TYPE                                                       UInt32
-#define SMI_FD_RESERVED_MASK                                              0xFFFFC0C0
-#define    SMI_FD_FLVL_SHIFT                                              8
-#define    SMI_FD_FLVL_MASK                                               0x00003F00
+#define SMI_FD_RESERVED_MASK                                              0xFFFFE040
+#define    SMI_FD_FLVL_SHIFT                                              7
+#define    SMI_FD_FLVL_MASK                                               0x00001F80
 #define    SMI_FD_FCNT_SHIFT                                              0
 #define    SMI_FD_FCNT_MASK                                               0x0000003F
 

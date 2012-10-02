@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
@@ -504,6 +504,14 @@
 #define    KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_ARM_TRIGGER_OVERRIDE_SHIFT 0
 #define    KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_ARM_TRIGGER_OVERRIDE_MASK 0x00000001
 
+#define KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_OFFSET                         0x00000E0C
+#define KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_TYPE                           UInt32
+#define KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_RESERVED_MASK                  0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_PRIV_ACCESS_MODE_SHIFT      31
+#define    KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_PRIV_ACCESS_MODE_MASK       0x80000000
+#define    KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_KPROC_CCU_ARM_SYS_IDLE_SEL_SHIFT 0
+#define    KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_KPROC_CCU_ARM_SYS_IDLE_SEL_MASK 0x00000001
+
 #define KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET                                0x00000E10
 #define KPROC_CLK_MGR_REG_PLL_DEBUG_TYPE                                  UInt32
 #define KPROC_CLK_MGR_REG_PLL_DEBUG_RESERVED_MASK                         0x7FFFFFF8
@@ -602,9 +610,11 @@
 
 #define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_OFFSET                       0x00000E90
 #define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_TYPE                         UInt32
-#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_RESERVED_MASK                0x7FFFFF8E
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_RESERVED_MASK                0x7FFFE08E
 #define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_PRIV_ACCESS_MODE_SHIFT    31
 #define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_PRIV_ACCESS_MODE_MASK     0x80000000
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_PREDIV_SHIFT 8
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_PREDIV_MASK 0x00001F00
 #define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_CTRL_SHIFT 4
 #define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_CTRL_MASK 0x00000070
 #define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_START_SHIFT 0

@@ -21,224 +21,12 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 7/19/2012 6:24:14                                             */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
 /*     RDB file : //HAWAII/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_DSP_EQUALIZER_H__
 #define __BRCM_RDB_DSP_EQUALIZER_H__
-
-#define DSP_EQUALIZER_EQ_CFG_R_OFFSET                                     0x00000800
-#define DSP_EQUALIZER_EQ_CFG_R_TYPE                                       UInt16
-#define DSP_EQUALIZER_EQ_CFG_R_RESERVED_MASK                              0x0000BFC0
-#define    DSP_EQUALIZER_EQ_CFG_R_VITSTAT_SHIFT                           14
-#define    DSP_EQUALIZER_EQ_CFG_R_VITSTAT_MASK                            0x00004000
-#define    DSP_EQUALIZER_EQ_CFG_R_CH_UPDATE_EN_SHIFT                      4
-#define    DSP_EQUALIZER_EQ_CFG_R_CH_UPDATE_EN_MASK                       0x00000030
-#define    DSP_EQUALIZER_EQ_CFG_R_SYMSWAP_SHIFT                           3
-#define    DSP_EQUALIZER_EQ_CFG_R_SYMSWAP_MASK                            0x00000008
-#define    DSP_EQUALIZER_EQ_CFG_R_GMSK32S_SHIFT                           2
-#define    DSP_EQUALIZER_EQ_CFG_R_GMSK32S_MASK                            0x00000004
-#define       DSP_EQUALIZER_EQ_CFG_R_GMSK32S_CMD_STATE16                  0x00000000
-#define       DSP_EQUALIZER_EQ_CFG_R_GMSK32S_CMD_STATE32                  0x00000001
-#define    DSP_EQUALIZER_EQ_CFG_R_EQCFG_SHIFT                             0
-#define    DSP_EQUALIZER_EQ_CFG_R_EQCFG_MASK                              0x00000003
-#define       DSP_EQUALIZER_EQ_CFG_R_EQCFG_CMD_STOP                       0x00000000
-#define       DSP_EQUALIZER_EQ_CFG_R_EQCFG_CMD_GSMT                       0x00000001
-#define       DSP_EQUALIZER_EQ_CFG_R_EQCFG_CMD_GSMS                       0x00000002
-#define       DSP_EQUALIZER_EQ_CFG_R_EQCFG_CMD_EDGE                       0x00000003
-
-#define DSP_EQUALIZER_EQSEL_R_OFFSET                                      0x00000802
-#define DSP_EQUALIZER_EQSEL_R_TYPE                                        UInt16
-#define DSP_EQUALIZER_EQSEL_R_RESERVED_MASK                               0x000060E0
-#define    DSP_EQUALIZER_EQSEL_R_MTST_ENABLE_SHIFT                        15
-#define    DSP_EQUALIZER_EQSEL_R_MTST_ENABLE_MASK                         0x00008000
-#define    DSP_EQUALIZER_EQSEL_R_RD_SEL_ID_SHIFT                          8
-#define    DSP_EQUALIZER_EQSEL_R_RD_SEL_ID_MASK                           0x00001F00
-#define    DSP_EQUALIZER_EQSEL_R_WR_SEL_ID_SHIFT                          0
-#define    DSP_EQUALIZER_EQSEL_R_WR_SEL_ID_MASK                           0x0000001F
-
-#define DSP_EQUALIZER_EQAPR_R_OFFSET                                      0x00000804
-#define DSP_EQUALIZER_EQAPR_R_TYPE                                        UInt16
-#define DSP_EQUALIZER_EQAPR_R_RESERVED_MASK                               0x0000F000
-#define    DSP_EQUALIZER_EQAPR_R_OFF_ADDR_SHIFT                           0
-#define    DSP_EQUALIZER_EQAPR_R_OFF_ADDR_MASK                            0x00000FFF
-
-#define DSP_EQUALIZER_EQBUF_R_OFFSET                                      0x00000806
-#define DSP_EQUALIZER_EQBUF_R_TYPE                                        UInt16
-#define DSP_EQUALIZER_EQBUF_R_RESERVED_MASK                               0x00000000
-#define    DSP_EQUALIZER_EQBUF_R_VITLD_SHIFT                              0
-#define    DSP_EQUALIZER_EQBUF_R_VITLD_MASK                               0x0000FFFF
-
-#define DSP_EQUALIZER_EQBUF32_R_OFFSET                                    0x00000808
-#define DSP_EQUALIZER_EQBUF32_R_TYPE                                      UInt32
-#define DSP_EQUALIZER_EQBUF32_R_RESERVED_MASK                             0x00000000
-#define    DSP_EQUALIZER_EQBUF32_R_VITLD_SHIFT                            0
-#define    DSP_EQUALIZER_EQBUF32_R_VITLD_MASK                             0xFFFFFFFF
-
-#define DSP_EQUALIZER_VITRLL_I_R0_OFFSET                                  0x00000902
-#define DSP_EQUALIZER_VITRLL_I_R0_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_I_R0_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_I_R0_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_I_R0_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_I_R1_OFFSET                                  0x00000904
-#define DSP_EQUALIZER_VITRLL_I_R1_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_I_R1_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_I_R1_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_I_R1_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_I_R2_OFFSET                                  0x00000906
-#define DSP_EQUALIZER_VITRLL_I_R2_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_I_R2_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_I_R2_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_I_R2_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_I_R3_OFFSET                                  0x00000908
-#define DSP_EQUALIZER_VITRLL_I_R3_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_I_R3_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_I_R3_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_I_R3_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_I_R4_OFFSET                                  0x0000090A
-#define DSP_EQUALIZER_VITRLL_I_R4_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_I_R4_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_I_R4_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_I_R4_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_I_R5_OFFSET                                  0x0000090C
-#define DSP_EQUALIZER_VITRLL_I_R5_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_I_R5_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_I_R5_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_I_R5_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_Q_R0_OFFSET                                  0x00000910
-#define DSP_EQUALIZER_VITRLL_Q_R0_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_Q_R0_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_Q_R0_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_Q_R0_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_Q_R1_OFFSET                                  0x00000912
-#define DSP_EQUALIZER_VITRLL_Q_R1_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_Q_R1_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_Q_R1_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_Q_R1_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_Q_R2_OFFSET                                  0x00000914
-#define DSP_EQUALIZER_VITRLL_Q_R2_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_Q_R2_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_Q_R2_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_Q_R2_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_Q_R3_OFFSET                                  0x00000916
-#define DSP_EQUALIZER_VITRLL_Q_R3_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_Q_R3_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_Q_R3_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_Q_R3_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_Q_R4_OFFSET                                  0x00000918
-#define DSP_EQUALIZER_VITRLL_Q_R4_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_Q_R4_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_Q_R4_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_Q_R4_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_VITRLL_Q_R5_OFFSET                                  0x0000091A
-#define DSP_EQUALIZER_VITRLL_Q_R5_TYPE                                    UInt16
-#define DSP_EQUALIZER_VITRLL_Q_R5_RESERVED_MASK                           0x0000FE00
-#define    DSP_EQUALIZER_VITRLL_Q_R5_VITD_SHIFT                           0
-#define    DSP_EQUALIZER_VITRLL_Q_R5_VITD_MASK                            0x000001FF
-
-#define DSP_EQUALIZER_LHINIT_R_OFFSET                                     0x00000920
-#define DSP_EQUALIZER_LHINIT_R_TYPE                                       UInt16
-#define DSP_EQUALIZER_LHINIT_R_RESERVED_MASK                              0x00000000
-#define    DSP_EQUALIZER_LHINIT_R_MODE32_INTM_SHIFT                       8
-#define    DSP_EQUALIZER_LHINIT_R_MODE32_INTM_MASK                        0x00001F00
-#define    DSP_EQUALIZER_LHINIT_R_MODE32_INTS_SHIFT                       0
-#define    DSP_EQUALIZER_LHINIT_R_MODE32_INTS_MASK                        0x0000001F
-#define    DSP_EQUALIZER_LHINIT_R_MODE16_FINM_SHIFT                       12
-#define    DSP_EQUALIZER_LHINIT_R_MODE16_FINM_MASK                        0x0000F000
-#define    DSP_EQUALIZER_LHINIT_R_MODE16_FINS_SHIFT                       8
-#define    DSP_EQUALIZER_LHINIT_R_MODE16_FINS_MASK                        0x00000F00
-#define    DSP_EQUALIZER_LHINIT_R_MODE16_INTM_SHIFT                       4
-#define    DSP_EQUALIZER_LHINIT_R_MODE16_INTM_MASK                        0x000000F0
-#define    DSP_EQUALIZER_LHINIT_R_MODE16_INTS_SHIFT                       0
-#define    DSP_EQUALIZER_LHINIT_R_MODE16_INTS_MASK                        0x0000000F
-#define    DSP_EQUALIZER_LHINIT_R_EDGEMODE_INTS_SHIFT                     0
-#define    DSP_EQUALIZER_LHINIT_R_EDGEMODE_INTS_MASK                      0x0000003F
-
-#define DSP_EQUALIZER_RHINIT_R_OFFSET                                     0x00000922
-#define DSP_EQUALIZER_RHINIT_R_TYPE                                       UInt16
-#define DSP_EQUALIZER_RHINIT_R_RESERVED_MASK                              0x00000000
-#define    DSP_EQUALIZER_RHINIT_R_GSM32_INTM_SHIFT                        8
-#define    DSP_EQUALIZER_RHINIT_R_GSM32_INTM_MASK                         0x00001F00
-#define    DSP_EQUALIZER_RHINIT_R_GSM32_INTS_SHIFT                        0
-#define    DSP_EQUALIZER_RHINIT_R_GSM32_INTS_MASK                         0x0000001F
-#define    DSP_EQUALIZER_RHINIT_R_GSM16_FINM_SHIFT                        12
-#define    DSP_EQUALIZER_RHINIT_R_GSM16_FINM_MASK                         0x0000F000
-#define    DSP_EQUALIZER_RHINIT_R_GSM16_FINS_SHIFT                        8
-#define    DSP_EQUALIZER_RHINIT_R_GSM16_FINS_MASK                         0x00000F00
-#define    DSP_EQUALIZER_RHINIT_R_GSM16_INTM_SHIFT                        4
-#define    DSP_EQUALIZER_RHINIT_R_GSM16_INTM_MASK                         0x000000F0
-#define    DSP_EQUALIZER_RHINIT_R_GSM16_INTS_SHIFT                        0
-#define    DSP_EQUALIZER_RHINIT_R_GSM16_INTS_MASK                         0x0000000F
-#define    DSP_EQUALIZER_RHINIT_R_EDGEMODE_INTS_SHIFT                     0
-#define    DSP_EQUALIZER_RHINIT_R_EDGEMODE_INTS_MASK                      0x0000003F
-
-#define DSP_EQUALIZER_LHFIN_R_OFFSET                                      0x00000924
-#define DSP_EQUALIZER_LHFIN_R_TYPE                                        UInt16
-#define DSP_EQUALIZER_LHFIN_R_RESERVED_MASK                               0x0000E0E0
-#define    DSP_EQUALIZER_LHFIN_R_FINM_SHIFT                               8
-#define    DSP_EQUALIZER_LHFIN_R_FINM_MASK                                0x00001F00
-#define    DSP_EQUALIZER_LHFIN_R_FINS_SHIFT                               0
-#define    DSP_EQUALIZER_LHFIN_R_FINS_MASK                                0x0000001F
-
-#define DSP_EQUALIZER_LHFB_R_OFFSET                                       0x00000924
-#define DSP_EQUALIZER_LHFB_R_TYPE                                         UInt16
-#define DSP_EQUALIZER_LHFB_R_RESERVED_MASK                                0x00000000
-#define    DSP_EQUALIZER_LHFB_R_IND0_SHIFT                                15
-#define    DSP_EQUALIZER_LHFB_R_IND0_MASK                                 0x00008000
-#define    DSP_EQUALIZER_LHFB_R_IL_FB4_SHIFT                              12
-#define    DSP_EQUALIZER_LHFB_R_IL_FB4_MASK                               0x00007000
-#define    DSP_EQUALIZER_LHFB_R_IL_FB3_SHIFT                              9
-#define    DSP_EQUALIZER_LHFB_R_IL_FB3_MASK                               0x00000E00
-#define    DSP_EQUALIZER_LHFB_R_IL_FB2_SHIFT                              6
-#define    DSP_EQUALIZER_LHFB_R_IL_FB2_MASK                               0x000001C0
-#define    DSP_EQUALIZER_LHFB_R_IL_FB1_SHIFT                              3
-#define    DSP_EQUALIZER_LHFB_R_IL_FB1_MASK                               0x00000038
-#define    DSP_EQUALIZER_LHFB_R_IL_FB0_SHIFT                              0
-#define    DSP_EQUALIZER_LHFB_R_IL_FB0_MASK                               0x00000007
-
-#define DSP_EQUALIZER_RHFIN_R_OFFSET                                      0x00000928
-#define DSP_EQUALIZER_RHFIN_R_TYPE                                        UInt16
-#define DSP_EQUALIZER_RHFIN_R_RESERVED_MASK                               0x0000E0E0
-#define    DSP_EQUALIZER_RHFIN_R_FINM_SHIFT                               8
-#define    DSP_EQUALIZER_RHFIN_R_FINM_MASK                                0x00001F00
-#define    DSP_EQUALIZER_RHFIN_R_FINS_SHIFT                               0
-#define    DSP_EQUALIZER_RHFIN_R_FINS_MASK                                0x0000001F
-
-#define DSP_EQUALIZER_RHFB_R_OFFSET                                       0x00000928
-#define DSP_EQUALIZER_RHFB_R_TYPE                                         UInt16
-#define DSP_EQUALIZER_RHFB_R_RESERVED_MASK                                0x00000000
-#define    DSP_EQUALIZER_RHFB_R_IND1_SHIFT                                15
-#define    DSP_EQUALIZER_RHFB_R_IND1_MASK                                 0x00008000
-#define    DSP_EQUALIZER_RHFB_R_IR_FB4_SHIFT                              12
-#define    DSP_EQUALIZER_RHFB_R_IR_FB4_MASK                               0x00007000
-#define    DSP_EQUALIZER_RHFB_R_IR_FB3_SHIFT                              9
-#define    DSP_EQUALIZER_RHFB_R_IR_FB3_MASK                               0x00000E00
-#define    DSP_EQUALIZER_RHFB_R_IR_FB2_SHIFT                              6
-#define    DSP_EQUALIZER_RHFB_R_IR_FB2_MASK                               0x000001C0
-#define    DSP_EQUALIZER_RHFB_R_IR_FB1_SHIFT                              3
-#define    DSP_EQUALIZER_RHFB_R_IR_FB1_MASK                               0x00000038
-#define    DSP_EQUALIZER_RHFB_R_IR_FB0_SHIFT                              0
-#define    DSP_EQUALIZER_RHFB_R_IR_FB0_MASK                               0x00000007
-
-#define DSP_EQUALIZER_VITNSF_R_OFFSET                                     0x0000092E
-#define DSP_EQUALIZER_VITNSF_R_TYPE                                       UInt16
-#define DSP_EQUALIZER_VITNSF_R_RESERVED_MASK                              0x0000FFE0
-#define    DSP_EQUALIZER_VITNSF_R_NSF_SHIFT                               1
-#define    DSP_EQUALIZER_VITNSF_R_NSF_MASK                                0x0000001E
-#define    DSP_EQUALIZER_VITNSF_R_DELTA_SHIFT                             0
-#define    DSP_EQUALIZER_VITNSF_R_DELTA_MASK                              0x00000001
 
 #define DSP_EQUALIZER_EQ_CFG_OFFSET                                       0x0000E400
 #define DSP_EQUALIZER_EQ_CFG_TYPE                                         UInt16
@@ -451,6 +239,218 @@
 #define    DSP_EQUALIZER_VITNSF_NSF_MASK                                  0x0000001E
 #define    DSP_EQUALIZER_VITNSF_DELTA_SHIFT                               0
 #define    DSP_EQUALIZER_VITNSF_DELTA_MASK                                0x00000001
+
+#define DSP_EQUALIZER_EQ_CFG_R_OFFSET                                     0x00000800
+#define DSP_EQUALIZER_EQ_CFG_R_TYPE                                       UInt16
+#define DSP_EQUALIZER_EQ_CFG_R_RESERVED_MASK                              0x0000BFC0
+#define    DSP_EQUALIZER_EQ_CFG_R_VITSTAT_SHIFT                           14
+#define    DSP_EQUALIZER_EQ_CFG_R_VITSTAT_MASK                            0x00004000
+#define    DSP_EQUALIZER_EQ_CFG_R_CH_UPDATE_EN_SHIFT                      4
+#define    DSP_EQUALIZER_EQ_CFG_R_CH_UPDATE_EN_MASK                       0x00000030
+#define    DSP_EQUALIZER_EQ_CFG_R_SYMSWAP_SHIFT                           3
+#define    DSP_EQUALIZER_EQ_CFG_R_SYMSWAP_MASK                            0x00000008
+#define    DSP_EQUALIZER_EQ_CFG_R_GMSK32S_SHIFT                           2
+#define    DSP_EQUALIZER_EQ_CFG_R_GMSK32S_MASK                            0x00000004
+#define       DSP_EQUALIZER_EQ_CFG_R_GMSK32S_CMD_STATE16                  0x00000000
+#define       DSP_EQUALIZER_EQ_CFG_R_GMSK32S_CMD_STATE32                  0x00000001
+#define    DSP_EQUALIZER_EQ_CFG_R_EQCFG_SHIFT                             0
+#define    DSP_EQUALIZER_EQ_CFG_R_EQCFG_MASK                              0x00000003
+#define       DSP_EQUALIZER_EQ_CFG_R_EQCFG_CMD_STOP                       0x00000000
+#define       DSP_EQUALIZER_EQ_CFG_R_EQCFG_CMD_GSMT                       0x00000001
+#define       DSP_EQUALIZER_EQ_CFG_R_EQCFG_CMD_GSMS                       0x00000002
+#define       DSP_EQUALIZER_EQ_CFG_R_EQCFG_CMD_EDGE                       0x00000003
+
+#define DSP_EQUALIZER_EQSEL_R_OFFSET                                      0x00000802
+#define DSP_EQUALIZER_EQSEL_R_TYPE                                        UInt16
+#define DSP_EQUALIZER_EQSEL_R_RESERVED_MASK                               0x000060E0
+#define    DSP_EQUALIZER_EQSEL_R_MTST_ENABLE_SHIFT                        15
+#define    DSP_EQUALIZER_EQSEL_R_MTST_ENABLE_MASK                         0x00008000
+#define    DSP_EQUALIZER_EQSEL_R_RD_SEL_ID_SHIFT                          8
+#define    DSP_EQUALIZER_EQSEL_R_RD_SEL_ID_MASK                           0x00001F00
+#define    DSP_EQUALIZER_EQSEL_R_WR_SEL_ID_SHIFT                          0
+#define    DSP_EQUALIZER_EQSEL_R_WR_SEL_ID_MASK                           0x0000001F
+
+#define DSP_EQUALIZER_EQAPR_R_OFFSET                                      0x00000804
+#define DSP_EQUALIZER_EQAPR_R_TYPE                                        UInt16
+#define DSP_EQUALIZER_EQAPR_R_RESERVED_MASK                               0x0000F000
+#define    DSP_EQUALIZER_EQAPR_R_OFF_ADDR_SHIFT                           0
+#define    DSP_EQUALIZER_EQAPR_R_OFF_ADDR_MASK                            0x00000FFF
+
+#define DSP_EQUALIZER_EQBUF_R_OFFSET                                      0x00000806
+#define DSP_EQUALIZER_EQBUF_R_TYPE                                        UInt16
+#define DSP_EQUALIZER_EQBUF_R_RESERVED_MASK                               0x00000000
+#define    DSP_EQUALIZER_EQBUF_R_VITLD_SHIFT                              0
+#define    DSP_EQUALIZER_EQBUF_R_VITLD_MASK                               0x0000FFFF
+
+#define DSP_EQUALIZER_EQBUF32_R_OFFSET                                    0x00000808
+#define DSP_EQUALIZER_EQBUF32_R_TYPE                                      UInt32
+#define DSP_EQUALIZER_EQBUF32_R_RESERVED_MASK                             0x00000000
+#define    DSP_EQUALIZER_EQBUF32_R_VITLD_SHIFT                            0
+#define    DSP_EQUALIZER_EQBUF32_R_VITLD_MASK                             0xFFFFFFFF
+
+#define DSP_EQUALIZER_VITRLL_I_R0_OFFSET                                  0x00000902
+#define DSP_EQUALIZER_VITRLL_I_R0_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_I_R0_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_I_R0_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_I_R0_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_I_R1_OFFSET                                  0x00000904
+#define DSP_EQUALIZER_VITRLL_I_R1_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_I_R1_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_I_R1_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_I_R1_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_I_R2_OFFSET                                  0x00000906
+#define DSP_EQUALIZER_VITRLL_I_R2_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_I_R2_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_I_R2_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_I_R2_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_I_R3_OFFSET                                  0x00000908
+#define DSP_EQUALIZER_VITRLL_I_R3_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_I_R3_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_I_R3_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_I_R3_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_I_R4_OFFSET                                  0x0000090A
+#define DSP_EQUALIZER_VITRLL_I_R4_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_I_R4_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_I_R4_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_I_R4_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_I_R5_OFFSET                                  0x0000090C
+#define DSP_EQUALIZER_VITRLL_I_R5_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_I_R5_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_I_R5_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_I_R5_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_Q_R0_OFFSET                                  0x00000910
+#define DSP_EQUALIZER_VITRLL_Q_R0_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_Q_R0_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_Q_R0_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_Q_R0_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_Q_R1_OFFSET                                  0x00000912
+#define DSP_EQUALIZER_VITRLL_Q_R1_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_Q_R1_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_Q_R1_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_Q_R1_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_Q_R2_OFFSET                                  0x00000914
+#define DSP_EQUALIZER_VITRLL_Q_R2_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_Q_R2_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_Q_R2_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_Q_R2_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_Q_R3_OFFSET                                  0x00000916
+#define DSP_EQUALIZER_VITRLL_Q_R3_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_Q_R3_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_Q_R3_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_Q_R3_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_Q_R4_OFFSET                                  0x00000918
+#define DSP_EQUALIZER_VITRLL_Q_R4_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_Q_R4_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_Q_R4_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_Q_R4_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_VITRLL_Q_R5_OFFSET                                  0x0000091A
+#define DSP_EQUALIZER_VITRLL_Q_R5_TYPE                                    UInt16
+#define DSP_EQUALIZER_VITRLL_Q_R5_RESERVED_MASK                           0x0000FE00
+#define    DSP_EQUALIZER_VITRLL_Q_R5_VITD_SHIFT                           0
+#define    DSP_EQUALIZER_VITRLL_Q_R5_VITD_MASK                            0x000001FF
+
+#define DSP_EQUALIZER_LHINIT_R_OFFSET                                     0x00000920
+#define DSP_EQUALIZER_LHINIT_R_TYPE                                       UInt16
+#define DSP_EQUALIZER_LHINIT_R_RESERVED_MASK                              0x00000000
+#define    DSP_EQUALIZER_LHINIT_R_MODE32_INTM_SHIFT                       8
+#define    DSP_EQUALIZER_LHINIT_R_MODE32_INTM_MASK                        0x00001F00
+#define    DSP_EQUALIZER_LHINIT_R_MODE32_INTS_SHIFT                       0
+#define    DSP_EQUALIZER_LHINIT_R_MODE32_INTS_MASK                        0x0000001F
+#define    DSP_EQUALIZER_LHINIT_R_MODE16_FINM_SHIFT                       12
+#define    DSP_EQUALIZER_LHINIT_R_MODE16_FINM_MASK                        0x0000F000
+#define    DSP_EQUALIZER_LHINIT_R_MODE16_FINS_SHIFT                       8
+#define    DSP_EQUALIZER_LHINIT_R_MODE16_FINS_MASK                        0x00000F00
+#define    DSP_EQUALIZER_LHINIT_R_MODE16_INTM_SHIFT                       4
+#define    DSP_EQUALIZER_LHINIT_R_MODE16_INTM_MASK                        0x000000F0
+#define    DSP_EQUALIZER_LHINIT_R_MODE16_INTS_SHIFT                       0
+#define    DSP_EQUALIZER_LHINIT_R_MODE16_INTS_MASK                        0x0000000F
+#define    DSP_EQUALIZER_LHINIT_R_EDGEMODE_INTS_SHIFT                     0
+#define    DSP_EQUALIZER_LHINIT_R_EDGEMODE_INTS_MASK                      0x0000003F
+
+#define DSP_EQUALIZER_RHINIT_R_OFFSET                                     0x00000922
+#define DSP_EQUALIZER_RHINIT_R_TYPE                                       UInt16
+#define DSP_EQUALIZER_RHINIT_R_RESERVED_MASK                              0x00000000
+#define    DSP_EQUALIZER_RHINIT_R_GSM32_INTM_SHIFT                        8
+#define    DSP_EQUALIZER_RHINIT_R_GSM32_INTM_MASK                         0x00001F00
+#define    DSP_EQUALIZER_RHINIT_R_GSM32_INTS_SHIFT                        0
+#define    DSP_EQUALIZER_RHINIT_R_GSM32_INTS_MASK                         0x0000001F
+#define    DSP_EQUALIZER_RHINIT_R_GSM16_FINM_SHIFT                        12
+#define    DSP_EQUALIZER_RHINIT_R_GSM16_FINM_MASK                         0x0000F000
+#define    DSP_EQUALIZER_RHINIT_R_GSM16_FINS_SHIFT                        8
+#define    DSP_EQUALIZER_RHINIT_R_GSM16_FINS_MASK                         0x00000F00
+#define    DSP_EQUALIZER_RHINIT_R_GSM16_INTM_SHIFT                        4
+#define    DSP_EQUALIZER_RHINIT_R_GSM16_INTM_MASK                         0x000000F0
+#define    DSP_EQUALIZER_RHINIT_R_GSM16_INTS_SHIFT                        0
+#define    DSP_EQUALIZER_RHINIT_R_GSM16_INTS_MASK                         0x0000000F
+#define    DSP_EQUALIZER_RHINIT_R_EDGEMODE_INTS_SHIFT                     0
+#define    DSP_EQUALIZER_RHINIT_R_EDGEMODE_INTS_MASK                      0x0000003F
+
+#define DSP_EQUALIZER_LHFIN_R_OFFSET                                      0x00000924
+#define DSP_EQUALIZER_LHFIN_R_TYPE                                        UInt16
+#define DSP_EQUALIZER_LHFIN_R_RESERVED_MASK                               0x0000E0E0
+#define    DSP_EQUALIZER_LHFIN_R_FINM_SHIFT                               8
+#define    DSP_EQUALIZER_LHFIN_R_FINM_MASK                                0x00001F00
+#define    DSP_EQUALIZER_LHFIN_R_FINS_SHIFT                               0
+#define    DSP_EQUALIZER_LHFIN_R_FINS_MASK                                0x0000001F
+
+#define DSP_EQUALIZER_LHFB_R_OFFSET                                       0x00000924
+#define DSP_EQUALIZER_LHFB_R_TYPE                                         UInt16
+#define DSP_EQUALIZER_LHFB_R_RESERVED_MASK                                0x00000000
+#define    DSP_EQUALIZER_LHFB_R_IND0_SHIFT                                15
+#define    DSP_EQUALIZER_LHFB_R_IND0_MASK                                 0x00008000
+#define    DSP_EQUALIZER_LHFB_R_IL_FB4_SHIFT                              12
+#define    DSP_EQUALIZER_LHFB_R_IL_FB4_MASK                               0x00007000
+#define    DSP_EQUALIZER_LHFB_R_IL_FB3_SHIFT                              9
+#define    DSP_EQUALIZER_LHFB_R_IL_FB3_MASK                               0x00000E00
+#define    DSP_EQUALIZER_LHFB_R_IL_FB2_SHIFT                              6
+#define    DSP_EQUALIZER_LHFB_R_IL_FB2_MASK                               0x000001C0
+#define    DSP_EQUALIZER_LHFB_R_IL_FB1_SHIFT                              3
+#define    DSP_EQUALIZER_LHFB_R_IL_FB1_MASK                               0x00000038
+#define    DSP_EQUALIZER_LHFB_R_IL_FB0_SHIFT                              0
+#define    DSP_EQUALIZER_LHFB_R_IL_FB0_MASK                               0x00000007
+
+#define DSP_EQUALIZER_RHFIN_R_OFFSET                                      0x00000928
+#define DSP_EQUALIZER_RHFIN_R_TYPE                                        UInt16
+#define DSP_EQUALIZER_RHFIN_R_RESERVED_MASK                               0x0000E0E0
+#define    DSP_EQUALIZER_RHFIN_R_FINM_SHIFT                               8
+#define    DSP_EQUALIZER_RHFIN_R_FINM_MASK                                0x00001F00
+#define    DSP_EQUALIZER_RHFIN_R_FINS_SHIFT                               0
+#define    DSP_EQUALIZER_RHFIN_R_FINS_MASK                                0x0000001F
+
+#define DSP_EQUALIZER_RHFB_R_OFFSET                                       0x00000928
+#define DSP_EQUALIZER_RHFB_R_TYPE                                         UInt16
+#define DSP_EQUALIZER_RHFB_R_RESERVED_MASK                                0x00000000
+#define    DSP_EQUALIZER_RHFB_R_IND1_SHIFT                                15
+#define    DSP_EQUALIZER_RHFB_R_IND1_MASK                                 0x00008000
+#define    DSP_EQUALIZER_RHFB_R_IR_FB4_SHIFT                              12
+#define    DSP_EQUALIZER_RHFB_R_IR_FB4_MASK                               0x00007000
+#define    DSP_EQUALIZER_RHFB_R_IR_FB3_SHIFT                              9
+#define    DSP_EQUALIZER_RHFB_R_IR_FB3_MASK                               0x00000E00
+#define    DSP_EQUALIZER_RHFB_R_IR_FB2_SHIFT                              6
+#define    DSP_EQUALIZER_RHFB_R_IR_FB2_MASK                               0x000001C0
+#define    DSP_EQUALIZER_RHFB_R_IR_FB1_SHIFT                              3
+#define    DSP_EQUALIZER_RHFB_R_IR_FB1_MASK                               0x00000038
+#define    DSP_EQUALIZER_RHFB_R_IR_FB0_SHIFT                              0
+#define    DSP_EQUALIZER_RHFB_R_IR_FB0_MASK                               0x00000007
+
+#define DSP_EQUALIZER_VITNSF_R_OFFSET                                     0x0000092E
+#define DSP_EQUALIZER_VITNSF_R_TYPE                                       UInt16
+#define DSP_EQUALIZER_VITNSF_R_RESERVED_MASK                              0x0000FFE0
+#define    DSP_EQUALIZER_VITNSF_R_NSF_SHIFT                               1
+#define    DSP_EQUALIZER_VITNSF_R_NSF_MASK                                0x0000001E
+#define    DSP_EQUALIZER_VITNSF_R_DELTA_SHIFT                             0
+#define    DSP_EQUALIZER_VITNSF_R_DELTA_MASK                              0x00000001
 
 #endif /* __BRCM_RDB_DSP_EQUALIZER_H__ */
 
