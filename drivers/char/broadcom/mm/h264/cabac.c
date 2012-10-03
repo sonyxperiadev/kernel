@@ -20,7 +20,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_h264.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
-#include <linux/broadcom/cabac.h>
+#include "cabac.h"
 
 #define MM_CABAC_BASE_ADDR (H264_BASE_ADDR)
 #define CABAC_HW_SIZE (6148*1024)

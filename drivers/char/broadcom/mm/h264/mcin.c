@@ -20,7 +20,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_h264.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
-#include <linux/broadcom/mcin.h>
+#include "mcin.h"
 
 #define MM_MCIN_BASE_ADDR (H264_BASE_ADDR+H264_MCODEIN_CONTROL_OFFSET)
 #define MCIN_HW_SIZE (4*1024)

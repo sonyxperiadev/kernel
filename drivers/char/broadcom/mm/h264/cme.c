@@ -20,7 +20,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_h264.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
-#include <linux/broadcom/cme.h>
+#include "cme.h"
 
 #define MM_CME_BASE_ADDR (H264_BASE_ADDR+H264_CME_CURY_OFFSET)
 #define CME_HW_SIZE (4*1024)
