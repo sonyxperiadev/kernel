@@ -322,6 +322,7 @@ void *log_tx_param[] __aligned(8) = {
 	&radio_log,
 	&events_log,
 	&system_log,
+	(void *)NR_CPUS,	/* no of cpus */
 	(void *)0x656675F7,
 	(void *)0xFFEF0514	/* end flag */
 };
