@@ -35,18 +35,28 @@
 #include <media/soc_mediabus.h>
 
 #include <linux/broadcom/mobcom_types.h>
-#include "mm_csi0.h"
+#include <plat/csl/csl_cam.h>
 #include <linux/videodev2_brcm.h>
 
 #define UNICAM_BUF_MAGIC		0xBABEFACE
 #define UNICAM_CAM_DRV_NAME		"unicam-camera"
 
-#define UNICAM_CAPTURE_MODE BUFFER_TRIGGER
+/* CSL_CAM_CAPTURE_MODE_TRIGGER (Stills) CSL_CAM_CAPTURE_MODE_NORMAL (Video) */
+#define UNICAM_CAPTURE_MODE		CSL_CAM_CAPTURE_MODE_TRIGGER
+#define iprintk(format, arg...)	\
+	printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg)
+
+/* #define UNICAM_DEBUG */
+
+#ifdef UNICAM_DEBUG
+#define dprintk(format, arg...) \
+	printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg);
+#else
+#define dprintk(format, arg...)
+#endif
 
 #define pixfmtstr(x) (x) & 0xff, ((x) >> 8) & 0xff, ((x) >> 16) & 0xff, \
 	((x) >> 24) & 0xff
-int only_once = 0;
-extern reg_dump(void);
 
 struct unicam_camera_dev {
 	/* soc and vb3 rleated */
@@ -61,22 +71,16 @@ struct unicam_camera_dev {
 	void __iomem *mm_cfg_base;
 	void __iomem *mm_clk_base;
 
-	void *handle;
+	CSL_CAM_HANDLE cslCamHandle;
 	/* data structure needed to support streaming */
 	int sequence;
 	spinlock_t lock;
 	struct vb2_buffer *active;
 	struct list_head capture;
-	struct vb2_buffer *buff[2];
-	bool curr;
 	u8 streaming;
 	u32 skip_frames;
 	struct v4l2_subdev_sensor_interface_parms if_params;
-	enum buffer_mode b_mode;
-	struct v4l2_crop crop;
-	int cap_mode;
-	int cap_done;
-	u32 panic_count;
+
 };
 
 struct unicam_camera_buffer {
@@ -84,9 +88,8 @@ struct unicam_camera_buffer {
 	struct list_head queue;
 	unsigned int magic;
 };
-int first = 0;
+
 static irqreturn_t unicam_camera_isr(int irq, void *arg);
-static int unicam_stop(void );
 
 #ifdef UNICAM_DEBUG
 /* for debugging purpose */
@@ -119,11 +122,11 @@ static struct unicam_camera_buffer *to_unicam_camera_vb(struct vb2_buffer *vb)
 	return container_of(vb, struct unicam_camera_buffer, vb);
 }
 
-
 /* videobuf operations */
+
 static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
- 				 unsigned int *count, unsigned int *numplanes,
-				unsigned int sizes[], void *alloc_ctxs[])
+				 unsigned int *count, unsigned int *numplanes,
+				 unsigned int sizes[], void *alloc_ctxs[])
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vq);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
@@ -133,7 +136,7 @@ static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format 
 						     icd->
 						     current_fmt->host_fmt);
 
-	pr_debug("-enter");
+	dprintk("-enter");
 
 	if (bytes_per_line < 0)
 		return bytes_per_line;
@@ -148,9 +151,9 @@ static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format 
 	if (!*count)
 		*count = 2;
 
-	pr_debug("no_of_buf=%d size=%lu", *count, sizes[0]);
+	iprintk("no_of_buf=%d size=%u", *count, sizes[0]);
 
-	pr_debug("-exit");
+	dprintk("-exit");
 	return 0;
 }
 
@@ -162,11 +165,11 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 						     current_fmt->host_fmt);
 	unsigned long size;
 
-	pr_debug("-enter");
+	dprintk("-enter");
 	if (bytes_per_line < 0)
 		return bytes_per_line;
 
-	pr_debug("vb=0x%p vbuf=0x%p pbuf=0x%p, size=%lu", vb,
+	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p, size=%lu", vb,
 		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
 									   0),
 		vb2_get_plane_payload(vb, 0));
@@ -180,7 +183,7 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 	}
 	vb2_set_plane_payload(vb, 0, size);
 
-	pr_debug("-exit");
+	dprintk("-exit");
 	return 0;
 }
 
@@ -189,57 +192,47 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 {
 
 	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
-	struct buffer_desc im0,im1,dat0,dat1;
-	dma_addr_t phys_addr,phys_addr1 = 0;
+	CSL_CAM_BUFFER_st_t cslCamBuffer0;
+	CSL_CAM_BUFFER_st_t cslCamBuffer1;
+	CSL_CAM_BUFFER_st_t cslCamBufferData0;
+	CSL_CAM_BUFFER_st_t cslCamBufferData1;
+	dma_addr_t phys_addr;
 	unsigned int line_stride;
 	struct v4l2_format thumb_fmt;
 	struct v4l2_pix_format *pix;
 	int thumb = 0, ret;
 
-	pr_debug("-enter");
+	dprintk("-enter");
 
 	if (!unicam_dev->active) {
-		pr_debug("no active buffer found");
+		dev_err(unicam_dev->dev,
+			"%s unicam_camera_update_buf no active buffer found:"
+			" WARNING\n", __func__);
 		return -ENOMEM;
 	}
 
 	phys_addr = vb2_dma_contig_plane_dma_addr(unicam_dev->active, 0);
-	pr_debug("updating buffer phys=0x%p", (void *)phys_addr);
-	/* For crop use-cases only linestride matters that too only for non-JPEG cases */
+
+	dprintk("updating buffer phys=0x%p", (void *)phys_addr);
 
 	/* stride is in bytes */
 	if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8) {
-		if((unicam_dev->crop.c.top == 0) || (unicam_dev->crop.c.left == 0)){
-			/* Any one zero means no centering
-			   Reject all such crop attempts */
-			line_stride =
-			    soc_mbus_bytes_per_line(unicam_dev->icd->user_width,
-						    unicam_dev->icd->
-						    current_fmt->host_fmt);
-		} else {
-			line_stride =
-			    soc_mbus_bytes_per_line(unicam_dev->crop.c.width,
-						    unicam_dev->icd->
-						    current_fmt->host_fmt);
-		}
-		/* Non JPEG section of the code */    
+		line_stride =
+		    soc_mbus_bytes_per_line(unicam_dev->icd->user_width,
+					    unicam_dev->icd->
+					    current_fmt->host_fmt);
 		/* image 0 */
-		im0.start = (UInt32) phys_addr;
-		im0.ls = (UInt32) line_stride;
-		im0.size = line_stride * unicam_dev->icd->user_height;
+		cslCamBuffer0.start_addr = (UInt32) phys_addr;
+		cslCamBuffer0.line_stride = (UInt32) line_stride;
+		cslCamBuffer0.size = line_stride * unicam_dev->icd->user_height;
+		cslCamBuffer0.buffer_wrap_en = 1;
+		cslCamBuffer0.mem_type = CSL_CAM_MEM_TYPE_NONE;
 
-		if(unicam_dev->b_mode == BUFFER_DOUBLE && phys_addr1){
-			/* image 1 */
-			im1.start = phys_addr1;
-			im1.ls = im0.ls;
-			im1.size = im0.size;
-			mm_csi0_update_addr(&im0,&im1,NULL,NULL);
-		} else {
-			mm_csi0_update_addr(&im0,NULL,NULL,NULL);
-			pr_debug("Adr 0x%x ls 0x%x size 0x%x\n",im0.start, im0.ls,  im0.size);
-		}
+		dprintk
+		    ("cslCamBuffer0 start_addr = 0x%x, line_stride = %d, size = %d \n",
+		     cslCamBuffer0.start_addr, cslCamBuffer0.line_stride,
+		     cslCamBuffer0.size);
 	} else {
-		/* JPEG section always in DAT0 */
 		/* check whether sensor supports thumbnail */
 		ret =
 		    v4l2_subdev_call(sd, core, ioctl, VIDIOC_THUMB_SUPPORTED,
@@ -258,27 +251,84 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 			}
 			/* image 0 */
 			pix = &thumb_fmt.fmt.pix;
-        	        line_stride = unicam_dev->icd->user_width;
-			im0.start = (UInt32) phys_addr;
-			im0.ls = (UInt32) pix->bytesperline;
-			im0.size = pix->sizeimage;
-
-			/* DAT0 to an address after THUMB */
-			dat0.start = (UInt32) ((char *)phys_addr + pix->sizeimage);
-			dat0.ls = line_stride;
-			dat0.size = line_stride * unicam_dev->icd->user_height * 3/2;
-			mm_csi0_update_addr(&im0,NULL,&dat0,NULL);
+			cslCamBuffer0.start_addr = (UInt32) phys_addr;
+			cslCamBuffer0.line_stride = (UInt32) pix->bytesperline;
+			cslCamBuffer0.size = pix->sizeimage;
+			cslCamBuffer0.buffer_wrap_en = 1;
+			cslCamBuffer0.mem_type = CSL_CAM_MEM_TYPE_NONE;
 		} else {
 			/* no thumbnail supported */
 			/* don't set image0 since we are expecting data0
 			 * to contain jpeg data
-			 */ 
-			dat0.start = (UInt32) phys_addr;
-			dat0.ls = unicam_dev->icd->user_width;
-			dat0.size = unicam_dev->icd->user_width * unicam_dev->icd->user_height * 3/2;
+			 */
+			cslCamBuffer0.start_addr = 0;
+			cslCamBuffer0.line_stride = 0;
+			cslCamBuffer0.size = 0;
+			cslCamBuffer0.buffer_wrap_en = 0;
+			cslCamBuffer0.mem_type = CSL_CAM_MEM_TYPE_NONE;
 		}
 	}
-	pr_debug("-exit");
+
+	/* image 1 */
+	cslCamBuffer1.start_addr = 0;
+	cslCamBuffer1.line_stride = cslCamBuffer0.line_stride;
+	cslCamBuffer1.size = cslCamBuffer0.size;
+	cslCamBuffer1.buffer_wrap_en = cslCamBuffer0.buffer_wrap_en;
+	cslCamBuffer1.mem_type = cslCamBuffer0.mem_type;
+
+	/* set date buffer 0 */
+	if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8) {
+		cslCamBufferData0.start_addr = (UInt32) 0;
+		cslCamBufferData0.line_stride = 0;
+		cslCamBufferData0.buffer_wrap_en = 0;
+		cslCamBufferData0.size = 0;
+		cslCamBufferData0.mem_type = cslCamBuffer0.mem_type;
+	} else {
+
+		pix = &thumb_fmt.fmt.pix;
+		line_stride = unicam_dev->icd->user_width;
+		/* check if thumbnail is supported */
+		if (thumb)
+			cslCamBufferData0.start_addr =
+			    (UInt32) ((char *)phys_addr + pix->sizeimage);
+		else
+			cslCamBufferData0.start_addr = (UInt32) phys_addr;
+
+		cslCamBufferData0.line_stride = (UInt32) line_stride;
+		/* assume 12bpp */
+		cslCamBufferData0.size =
+		    (line_stride * unicam_dev->icd->user_height * 3 / 2);
+		cslCamBufferData0.buffer_wrap_en = 1;
+		cslCamBufferData0.mem_type = CSL_CAM_MEM_TYPE_NONE;
+		dprintk
+		    ("cslCamBufferData0 start_addr = 0x%x, line_stride = %d, size = %d\n",
+		     cslCamBufferData0.start_addr,
+		     cslCamBufferData0.line_stride, cslCamBufferData0.size);
+	}
+
+	/* set data buffer 1 */
+	cslCamBufferData1.start_addr = 0;
+
+	if (cslCamBuffer1.start_addr != 0) {
+		if (csl_cam_set_input_addr
+		    (unicam_dev->cslCamHandle, &cslCamBuffer0, &cslCamBuffer1,
+		     &cslCamBufferData0)) {
+
+			dev_err(unicam_dev->dev,
+				"csl_cam_set_input_addr(): FAILED\n");
+			return -1;
+		}
+	} else {
+		if (csl_cam_set_input_addr
+		    (unicam_dev->cslCamHandle, &cslCamBuffer0, NULL,
+		     &cslCamBufferData0)) {
+
+			dev_err(unicam_dev->dev,
+				"CamCslSetInputIntf(): csl_cam_set_input_addr(): FAILED\n");
+			return -1;
+		}
+	}
+	dprintk("-exit");
 	return 0;
 }
 
@@ -286,22 +336,37 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 {
 	int ret = 0;
-	struct int_desc i_desc;
-	pr_debug("-enter");
+	CSL_CAM_FRAME_st_t cslCamFrame;
+	dprintk("-enter");
 
 	if (!unicam_dev->active) {
-		pr_debug("no active buffer");
+		dev_err(unicam_dev->dev,
+			"%s: unicam_camera_capture no active buffer :"
+			" WARNING\n", __func__);
 		return ret;
 	}
-	if(unicam_dev->b_mode != BUFFER_TRIGGER)
-		return 0;
 
 	/* enable frame Interrupts */
-	memset(&i_desc,0x0,sizeof(struct int_desc));
-	i_desc.fei = 1;
-	i_desc.fsi = 1;
-	mm_csi0_trigger_cap();
-	pr_debug("-exit()");
+	cslCamFrame.int_enable = CSL_CAM_INT_FRAME_END;
+	/* for testing enabled frame start interrupt */
+	//cslCamFrame.int_enable |= CSL_CAM_INT_FRAME_START;
+	cslCamFrame.int_line_count = 0;
+	cslCamFrame.capture_mode = UNICAM_CAPTURE_MODE;
+	cslCamFrame.capture_size = 0;
+	if (csl_cam_set_frame_control(unicam_dev->cslCamHandle, &cslCamFrame)) {
+		dev_err(unicam_dev->dev,
+			"csl_cam_set_frame_control(): FAILED\n");
+		return -1;
+	}
+
+	if (UNICAM_CAPTURE_MODE == CSL_CAM_CAPTURE_MODE_TRIGGER) {
+		if (csl_cam_trigger_capture(unicam_dev->cslCamHandle) != 0) {
+			dev_err(unicam_dev->dev,
+				"error in triggering capture\n");
+			return -1;
+		}
+	}
+	dprintk("-exit()");
 	return ret;
 }
 
@@ -312,48 +377,31 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
 	unsigned long flags;
-	struct int_desc idesc;
 
-	pr_debug("-enter");
-	pr_debug("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,
+	dprintk("-enter");
+	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,
 		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
 									   0),
 		vb2_get_plane_payload(vb, 0));
-	//printk("Q 0x%x\n",vb2_dma_contig_plane_paddr(vb,0));
+
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	list_add_tail(&buf->queue, &unicam_dev->capture);
-	if(unicam_dev->cap_mode && unicam_dev->cap_done){
-		printk("Cap mode and already captured\n");
-		spin_unlock_irqrestore(&unicam_dev->lock, flags);
-		return;
-	}
-	if ((!unicam_dev->active)) {//  && (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1)) {
+
+	if (!unicam_dev->active) {
 		unicam_dev->active = vb;
-		unicam_camera_update_buf(unicam_dev);
+		/* use this buffer to trigger capture */
+		/* Configure HW only is streamon has been done
+		 * else only update active, HW would be configured
+		 * by streamon  */
 		if(unicam_dev->streaming){
-			mm_csi0_start_rx();
-		/* set data capture */
-			if (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
-				idesc.fsi = 1;
-				idesc.fei = 1;
-				idesc.lci = 0;
-				idesc.die = 1;
-				idesc.dataline = 2;
-				mm_csi0_config_int(&idesc, IMAGE_BUFFER);
-				mm_csi0_config_int(&idesc, DATA_BUFFER);
+			unicam_camera_update_buf(unicam_dev);
+			if (unicam_dev->if_params.if_mode ==
+				V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)
 				unicam_camera_capture(unicam_dev);
-			} else {
-				idesc.fsi = 0;
-				idesc.fei = 0;
-				idesc.lci = unicam_dev->icd->user_height;
-				idesc.die = 0;
-				idesc.dataline = 0;
-				mm_csi0_config_int(&idesc, IMAGE_BUFFER);
-			}
 		}
 	}
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
-	pr_debug("-exit");
+	dprintk("-exit");
 }
 
 static void unicam_videobuf_release(struct vb2_buffer *vb)
@@ -364,9 +412,9 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
 	unsigned long flags;
 
-	pr_debug("-enter");
+	dprintk("-enter");
 
-	pr_debug("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,
+	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,
 		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
 									   0),
 		vb2_get_plane_payload(vb, 0));
@@ -376,7 +424,7 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 		list_del_init(&buf->queue);
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 
-	pr_debug("-exit");
+	dprintk("-exit");
 }
 
 static int unicam_videobuf_init(struct vb2_buffer *vb)
@@ -387,30 +435,37 @@ static int unicam_videobuf_init(struct vb2_buffer *vb)
 	return 0;
 }
 
-int unicam_videobuf_start_streaming(struct vb2_queue *q)
+int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(q);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	struct v4l2_subdev_sensor_interface_parms if_params;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	struct rx_stat_list rx;
 	int ret;
-	int lane_err;
 	int thumb;
-	u32 raw_rx;
 
-	enum afe_num afe;
-	enum host_mode hmode;
-        enum csi1ccp2_clock_mode ccp2_clock;
-	enum csi2_lanes lanes = CSI2_SINGLE_LANE;
-	int vc = 0;
-	int id = 0;
-	struct int_desc idesc;
-	struct lane_timing timing;
-	pr_debug("-enter");
-	pr_debug("enabling csi");
-	unicam_dev->panic_count = 0;
+	CSL_CAM_INTF_CFG_st_t csl_cam_intf_cfg_st;
+	CSL_CAM_LANE_CONTROL_st_t cslCamLaneCtrl_st;
+	CSL_CAM_PIPELINE_st_t cslCamPipeline;
+	CSL_CAM_IMAGE_ID_st_t cslCamImageCtrl;
+	CSL_CAM_DATA_st_t cslCamDataCtrl;
+	CSL_CAM_FRAME_st_t cslCamFrame;
+
+	dprintk("-enter");
+	iprintk("enabling csi");
+
+	if (csl_cam_init()) {
+		dev_err(unicam_dev->dev, "error initializing csl camera\n");
+		return -1;
+	}
+
+	ret = v4l2_subdev_call(sd, video, s_stream, 1);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
+		return ret;
+	}
+
 	/* get the sensor interface information */
 	ret = v4l2_subdev_call(sd, sensor, g_interface_parms, &if_params);
 	if (ret < 0) {
@@ -422,17 +477,17 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	unicam_dev->if_params = if_params;
 
 	/* set camera interface parameters */
-	/* we only support serial and csi2 sensor */ 
+	memset(&csl_cam_intf_cfg_st, 0, sizeof(CSL_CAM_INTF_CFG_st_t));
+
+	/* we only support serial and csi2 sensor */
 	if ((unicam_dev->if_params.if_type == V4L2_SUBDEV_SENSOR_SERIAL)
 	    && (unicam_dev->if_params.if_mode ==
 		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)) {
-		hmode = CSI2;
-		unicam_dev->b_mode = BUFFER_TRIGGER;
+		csl_cam_intf_cfg_st.intf = CSL_CAM_INTF_CSI;
 	} else if ((unicam_dev->if_params.if_type == V4L2_SUBDEV_SENSOR_SERIAL)
 	    && (unicam_dev->if_params.if_mode ==
 		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1)) {
-		hmode = CSI1CCP2;
-		unicam_dev->b_mode = BUFFER_SINGLE;
+		csl_cam_intf_cfg_st.intf = CSL_CAM_INTF_CCP;
 	} else {
 		dev_err(unicam_dev->dev,
 			"CSI2 iface only supported,requested iface %d mode=%d\n",
@@ -442,9 +497,9 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	}
 
 	if (unicam_dev->if_params.parms.serial.channel == 0)
-		afe = AFE0;
+		csl_cam_intf_cfg_st.afe_port = CSL_CAM_PORT_AFE_0;
 	else if (unicam_dev->if_params.parms.serial.channel == 1)
-		afe = AFE1;
+		csl_cam_intf_cfg_st.afe_port = CSL_CAM_PORT_AFE_1;
 	else {
 		dev_err(unicam_dev->dev,
 			"receiver only supports two channels, request channel=%d\n",
@@ -452,14 +507,20 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 		return -EINVAL;
 	}
 
+	csl_cam_intf_cfg_st.frame_time_out = 1000;
+
+	/* open camera interface */
+	csl_cam_intf_cfg_st.p_cpi_intf_st = NULL;
+
 	if ((unicam_dev->if_params.if_type == V4L2_SUBDEV_SENSOR_SERIAL)
 	    && (unicam_dev->if_params.if_mode ==
 		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)) {
-		hmode = CSI2;
 		if (unicam_dev->if_params.parms.serial.lanes == 1)
-			lanes = CSI2_SINGLE_LANE;
+			csl_cam_intf_cfg_st.input_mode =
+				CSL_CAM_INPUT_SINGLE_LANE;
 		else if (unicam_dev->if_params.parms.serial.lanes == 2)
-			lanes = CSI2_DUAL_LANE;
+			csl_cam_intf_cfg_st.input_mode =
+				CSL_CAM_INPUT_DUAL_LANE;
 		else {
 			dev_err(unicam_dev->dev,
 				"receiver only supports max 2 lanes, requested lanes(%d)\n",
@@ -467,35 +528,65 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 			return -EINVAL;
 		}
 	} else {
-		hmode = CSI1CCP2;
-		ccp2_clock = DATA_CLOCK;
-		
+		 csl_cam_intf_cfg_st.input_mode = CSL_CAM_INPUT_MODE_DATA_CLOCK;
 	}
-	unicam_dev->handle = get_mm_csi0_handle (hmode, afe, lanes );
-	if (unicam_dev->handle == NULL){
-		printk ("Unable to get unicam handle\n");
-		return -EBUSY;
+
+	if (csl_cam_open(&csl_cam_intf_cfg_st, &unicam_dev->cslCamHandle)) {
+		dev_err(unicam_dev->dev, "%s: csl_cam_open(): ERROR\n",
+			__func__);
+		return -1;
 	}
-	ret = mm_csi0_init();
-	if(ret){
-		printk ("Unable to get unicam handle\n");
-		mm_csi0_teardown ();
-		return -EINVAL;
+
+	/* set data lane timing */
+	cslCamLaneCtrl_st.lane_select = CSL_CAM_DATA_LANE_0;
+	cslCamLaneCtrl_st.lane_control = CSL_CAM_LANE_HS_TERM_TIME;
+	cslCamLaneCtrl_st.param =
+	    unicam_dev->if_params.parms.serial.hs_term_time;
+
+	dprintk("hs_term_time is set to = %d\n", cslCamLaneCtrl_st.param);
+
+	if (csl_cam_set_lane_control
+	    (unicam_dev->cslCamHandle, &cslCamLaneCtrl_st)) {
+		dev_err(unicam_dev->dev,
+			"csl_cam_set_lane_control(): FAILED\n");
+		return -1;
 	}
-	mm_csi0_set_afe();
-	/* Compulsary to get these values from sensor for CSI2*/
-	/* Don't care for CCP2/CSI1 can send a struct with junk values 
-	   Will not be read */
-	timing.hs_settle_time = unicam_dev->if_params.parms.serial.hs_settle_time; 
-	timing.hs_term_time = unicam_dev->if_params.parms.serial.hs_term_time;
-	ret = mm_csi0_set_dig_phy(&timing);
-	if(ret){
-		printk ("Wrong digital timing\n");
-		mm_csi0_teardown ();
-		return -EINVAL;
+
+	if (unicam_dev->if_params.parms.serial.hs_settle_time != 0) {
+		cslCamLaneCtrl_st.lane_select = CSL_CAM_DATA_LANE_0;
+		cslCamLaneCtrl_st.lane_control = CSL_CAM_LANE_HS_SETTLE_TIME;
+		cslCamLaneCtrl_st.param =
+			unicam_dev->if_params.parms.serial.hs_settle_time;
+		dprintk("hs_settle_time is set to = %d\n",
+					cslCamLaneCtrl_st.param);
+		if (csl_cam_set_lane_control
+		    (unicam_dev->cslCamHandle, &cslCamLaneCtrl_st)) {
+			dev_err(unicam_dev->dev,
+				"csl_cam_set_lane_control(): FAILED\n");
+			return -1;
+		}
 	}
-	mm_csi0_set_mode(ccp2_clock);
+
+	/* pipelince decode */
+	cslCamPipeline.decode = CSL_CAM_DEC_NONE;
+	cslCamPipeline.unpack = CSL_CAM_PIXEL_NONE;
+	cslCamPipeline.pack = CSL_CAM_PIXEL_NONE;
+	cslCamPipeline.dec_adv_predictor = FALSE;
+
+	cslCamPipeline.encode = CSL_CAM_ENC_NONE;
+	cslCamPipeline.enc_adv_predictor = FALSE;
+	cslCamPipeline.encode_blk_size = 0x0000;
+
+	/* set pipeline */
+	if (csl_cam_set_pipeline_control
+	    (unicam_dev->cslCamHandle, &cslCamPipeline)) {
+		dev_err(unicam_dev->dev,
+			"csl_cam_set_pipeline_control(): FAILE\n");
+		return -1;
+	}
+
 	/* set image identifier (CSI mode only) */
+	memset(&cslCamImageCtrl, 0, sizeof(CSL_CAM_IMAGE_ID_st_t));
 
 	/* if thumbnail is supported we expect
 	 * thumbnail to be in image ptr format of thumbnails is yuv422
@@ -514,128 +605,77 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 			 ret);
 
 	if ((icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8)
-	    && (thumb == 0)){
-		id = 0;
-	}
+	    && (thumb == 0))
+		cslCamImageCtrl.image_data_id0 = 0x0;
 		/* thumbnail not supported */
-	else {
-		id = 0x1E;
-	}
-
-	if(icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8)
-		printk("JPEG mode of capture !!!!\n");
+	else
+		cslCamImageCtrl.image_data_id0 = 0x1E;
 
 	if (unicam_dev->if_params.if_mode ==
-		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1){
-		id = 0;
-	}
-	ret = mm_csi0_cfg_image_id(vc,id);
-	if(ret){
-		printk ("Wrong Image IDs set for a given mode\n");
-		mm_csi0_teardown ();
-		return -EINVAL;
-	}
-	ret = 0;
-	/* pipelince decode */
-	if(unicam_dev->cap_mode){
-		ret |=
-		mm_csi0_set_windowing_vertical(unicam_dev->crop.c.top,(unicam_dev->crop.c.top
-		+ unicam_dev->crop.c.height));
-	} else {
-		ret |= mm_csi0_set_windowing_vertical(0,0);
-	}
-	ret |= mm_csi0_cfg_pipeline_unpack(PIX_UNPACK_NONE);
-	ret |= mm_csi0_cfg_pipeline_dpcm_dec(DPCM_DEC_NONE);
-	if(unicam_dev->cap_mode){
-		ret |=
-		mm_csi0_set_windowing_horizontal(unicam_dev->crop.c.left,(unicam_dev->crop.c.left
-		+ unicam_dev->crop.c.width));
-	} else {
-		ret |= mm_csi0_set_windowing_horizontal(0,0);
-	}
-	ret |= mm_csi0_cfg_pipeline_dpcm_enc(DPCM_ENC_NONE);
-	ret |= mm_csi0_cfg_pipeline_pack(PIX_PACK_NONE);
-	ret |= mm_csi0_enable_fsp_ccp2();
+		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1)
+		cslCamImageCtrl.image_data_id0 = 0x0;	/* CCP2 channel ID 0 */
 
-	if(ret){
-		printk ("Something wrong with pipeline config .. pl go check\n");
-		mm_csi0_teardown ();
-		return -EINVAL;
+
+	if (csl_cam_set_image_type_control
+	    (unicam_dev->cslCamHandle, &cslCamImageCtrl)) {
+		dev_err(unicam_dev->dev,
+			"csl_cam_set_image_type_control(): FAILED\n");
+		return -1;
 	}
 
-	mm_csi0_buffering_mode(unicam_dev->b_mode);
-	mm_csi0_rx_burst();
+	/* set data capture */
+	cslCamDataCtrl.int_enable = (CSL_CAM_INTERRUPT_t) (CSL_CAM_INT_DISABLE);
+	if (unicam_dev->if_params.if_mode ==
+		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
+		cslCamDataCtrl.line_count = 2;
+		cslCamDataCtrl.fsp_decode_enable = FALSE;
+	} else {
+		cslCamDataCtrl.line_count = 0;
+		cslCamDataCtrl.fsp_decode_enable = TRUE;
+	}
+	cslCamDataCtrl.data_id = 0x00;
+	cslCamDataCtrl.data_size = CSL_CAM_PIXEL_8BIT;
+
+	if (csl_cam_set_data_type_control
+	    (unicam_dev->cslCamHandle, &cslCamDataCtrl)) {
+		dev_err(unicam_dev->dev,
+			"csl_cam_set_data_type_control(): FAILED\n");
+		return -1;
+	}
+
+	/* start receiver */
+	if (csl_cam_rx_start(unicam_dev->cslCamHandle)) {
+		dev_err(unicam_dev->dev, "csl_cam_rx_start(): FAILED\n");
+		return -1;
+	}
+
+	if (unicam_dev->if_params.if_mode ==
+		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1) {
+		cslCamFrame.int_enable = CSL_CAM_INT_LINE_COUNT;
+		/* CSL_CAM_INT_FRAME_END | CSL_CAM_INT_FRAME_START;
+		//CSL_CAM_INT_LINE_COUNT;
+		cslCamFrame.int_line_count =
+		(unicam_dev->icd->user_height - 1);*/
+		cslCamFrame.int_line_count = (unicam_dev->icd->user_height);
+		cslCamFrame.capture_mode = CSL_CAM_CAPTURE_MODE_NORMAL;
+		/* CSL_CAM_CAPTURE_MODE_NORMAL */
+		if (csl_cam_set_frame_control(
+			unicam_dev->cslCamHandle, &cslCamFrame)) {
+			dev_err(unicam_dev->dev,
+			"csl_cam_set_frame_control(): FAILED\n");
+			return -1;
+		}
+
+	}
+	/* Configure HW if buffer is queued ahead of streamon */
 	if(unicam_dev->active){
-		//unicam_camera_update_buf(unicam_dev);
-		mm_csi0_start_rx();
-		/* set data capture */
-		if (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
-			idesc.fsi = 1;
-			idesc.fei = 1;
-			idesc.lci = 0;
-			idesc.die = 1;
-			idesc.dataline = 2;
-			mm_csi0_config_int(&idesc, IMAGE_BUFFER);
-			mm_csi0_config_int(&idesc, DATA_BUFFER);
+		unicam_camera_update_buf(unicam_dev);
+		if (unicam_dev->if_params.if_mode ==
+			V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)
 			unicam_camera_capture(unicam_dev);
-		} else {
-			idesc.fsi = 0;
-			idesc.fei = 0;
-			idesc.lci = unicam_dev->icd->user_height;
-			idesc.die = 0;
-			idesc.dataline = 0;
-			mm_csi0_config_int(&idesc, IMAGE_BUFFER);
-		}
-
-		ret = v4l2_subdev_call(sd, video, s_stream, 1);
-		if (ret < 0 && ret != -ENOIOCTLCMD) {
-			dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
-			return ret;
-		}
-
-		udelay(30);
-
-		/* Error check code */
-		/* Check RX state for errors */
-		memset(&rx,0x00,sizeof(struct rx_stat_list));
-		raw_rx = mm_csi0_get_rx_stat(&rx,1);
-
-		if (unicam_dev->if_params.if_mode ==
-			V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1){
-			if(raw_rx & RX_CCP2_ERROR_MASK){
-				printk("Error seen pl check for CCP2 errors 0x%x\n",raw_rx);
-				if(rx.ssc)
-					printk("Shifted sync code in CCP2\n");
-				if(rx.ofo || rx.ifo || rx.bfo || rx.dl)	
-					printk("FIFO errors or data lost\n");
-				if(rx.crce)
-					printk("CRC error\n");
-			}
-		} else {
-			if(raw_rx & RX_CSI2_ERROR_MASK){
-				printk("Error seen pl check for CSI2 errors 0x%x\n",raw_rx);
-				if(rx.sbe || rx.pbe || rx.hoe || rx.ple)
-					printk("Specific errors in CSI2\n");
-				if(rx.ofo || rx.ifo || rx.bfo || rx.dl)	
-					printk("FIFO errors or data lost\n");
-				if(rx.crce)
-					printk("CRC error\n");
-			}
-		}
-		/* Check lane transitions */
-		if (unicam_dev->if_params.if_mode ==
-			V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2){
-			lane_err = mm_csi0_get_trans();
-			if(lane_err){
-				printk("Lane errors seen 0x%x\n",lane_err);
-				return -EFAULT;
-			}
-		}
 	}
-
-	reg_dump();
 	unicam_dev->streaming = 1;
-	pr_debug("-exit");
+	dprintk("-exit");
 	return 0;
 }
 
@@ -645,10 +685,9 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
+	CSL_CAM_FRAME_st_t cslCamFrame;
 	int ret = 0;
 	unsigned long flags;
-	struct int_desc idesc;
-	struct rx_stat_list rx;
 
 	/*
 	 * stop streaming before grabing spin lock
@@ -657,31 +696,51 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 
 	ret = v4l2_subdev_call(sd, video, s_stream, 0);
 	if (ret < 0 && ret != -ENOIOCTLCMD) {
-		printk(unicam_dev->dev, "failed to stop sensor streaming\n");
+		dev_err(unicam_dev->dev, "failed to stop sensor streaming\n");
 		ret = -1;
 	}
 	/* grab the lock */
 	spin_lock_irqsave(&unicam_dev->lock, flags);
-	pr_debug("-enter");
-	pr_debug("disabling csi");
-	pr_debug("stopping stream");
+	dprintk("-enter");
+	dprintk("disabling csi");
+	iprintk("stopping stream");
 	if (!unicam_dev->streaming) {
 		dev_err(unicam_dev->dev, "stream already turned off\n");
 		goto out;
 	}
-	unicam_stop();
-	/* Restart rx stat */
-	mm_csi0_get_rx_stat(&rx,1);
-	/* Don't bother what values were returned */
-	mm_csi0_teardown();
+
+	/* disable frame interrupts */
+	cslCamFrame.int_enable = CSL_CAM_INT_DISABLE;
+	cslCamFrame.int_line_count = 0;
+	cslCamFrame.capture_mode = UNICAM_CAPTURE_MODE;
+	cslCamFrame.capture_size = 0;
+
+	if (csl_cam_set_frame_control(unicam_dev->cslCamHandle, &cslCamFrame)) {
+		dev_err(unicam_dev->dev,
+			"csl_cam_set_frame_control(): FAILED\n");
+		ret = -1;
+	}
+
+	/* disable receiver */
+	if (csl_cam_rx_stop(unicam_dev->cslCamHandle)) {
+		dev_err(unicam_dev->dev, "csl_cam_rx_stop(): FAILED\n");
+		ret = -1;
+	}
+
+	if (csl_cam_close(unicam_dev->cslCamHandle)) {
+		dev_err(unicam_dev->dev, "cals_cam_exit(): FAILED\n");
+		ret = -1;
+	}
+
+	if (csl_cam_exit()) {
+		dev_err(unicam_dev->dev, "csl_cam_exit(): FAILED\n");
+		ret = -1;
+	}
+
 	unicam_dev->active = NULL;
 	unicam_dev->streaming = 0;
-	memset(&unicam_dev->crop,0x00,sizeof(struct v4l2_crop));
-	unicam_dev->cap_done = 0;
-	unicam_dev->cap_mode = 0;
-
 out:
-	pr_debug("-exit");
+	dprintk("-exit");
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	return ret;
 }
@@ -701,35 +760,35 @@ static struct vb2_ops unicam_videobuf_ops = {
 static int unicam_camera_init_videobuf(struct vb2_queue *q,
 				       struct soc_camera_device *icd)
 {
-	pr_debug("-enter");
+	dprintk("-enter");
 	q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	q->io_modes = VB2_MMAP | VB2_USERPTR | VB2_READ;
 	q->drv_priv = icd;
 	q->ops = &unicam_videobuf_ops;
 	q->mem_ops = &vb2_dma_contig_memops;
 	q->buf_struct_size = sizeof(struct unicam_camera_buffer);
-	pr_debug("-exit");
+	dprintk("-exit");
 	return vb2_queue_init(q);
 }
 
 static int unicam_camera_set_bus_param(struct soc_camera_device *icd,
 				       __u32 pixfmt)
 {
-	pr_debug("-enter");
-	pr_debug("-exit");
+	dprintk("-enter");
+	dprintk("-exit");
 	return 0;
 }
 
 static int unicam_camera_querycap(struct soc_camera_host *ici,
 				  struct v4l2_capability *cap)
 {
-	pr_debug("-enter");
+	dprintk("-enter");
 	/* cap->name is set by the firendly caller:-> */
 	strlcpy(cap->card, "Unicam Camera", sizeof(cap->card));
 	cap->version = KERNEL_VERSION(0, 1, 0);
 	cap->capabilities = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
 
-	pr_debug("-exit");
+	dprintk("-exit");
 	return 0;
 }
 
@@ -737,8 +796,8 @@ static unsigned int unicam_camera_poll(struct file *file, poll_table * pt)
 {
 	struct soc_camera_device *icd = file->private_data;
 
-	pr_debug("-enter");
-	pr_debug("-exit");
+	dprintk("-enter");
+	dprintk("-exit");
 	return vb2_poll(&icd->vb2_vidq, file, pt);
 }
 
@@ -755,7 +814,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	int thumb=0;
 	int ret;
 
-	pr_debug("-enter");
+	dprintk("-enter");
 	xlate = soc_camera_xlate_by_fourcc(icd, pixfmt);
 	if (!xlate) {
 		dev_warn(icd->dev.parent, "Format %x not found\n", pixfmt);
@@ -812,7 +871,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 			switch (thumb_pix->pixelformat) {
 			case V4L2_PIX_FMT_YUYV:
 			case V4L2_PIX_FMT_UYVY:
-				pr_debug
+				iprintk
 				    ("sensor supports thumbnail %c%c%c%c format",
 				     pixfmtstr(thumb_pix->pixelformat));
 				break;
@@ -823,7 +882,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 				return -EINVAL;
 			}
 		} else
-			pr_debug
+			iprintk
 			    ("sensor doesnot support thumbnail (thumb=%d, ret=%d)\n",
 			     thumb, ret);
 
@@ -837,121 +896,12 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 		return -EINVAL;
 	}
 
-	pr_debug("trying format=%c%c%c%c res=%dx%d success=%d",
+	iprintk("trying format=%c%c%c%c res=%dx%d success=%d",
 		pixfmtstr(pixfmt), mf.width, mf.height, ret);
-	pr_debug("-exit");
+	dprintk("-exit");
 	return ret;
 }
 
-static int unicam_stop()
-{
-	struct int_desc idesc;
- 	mm_csi0_stop_rx();
-	memset(&idesc,0x00,sizeof(struct int_desc));
-	mm_csi0_config_int(&idesc, IMAGE_BUFFER);
-	mm_csi0_config_int(&idesc, DATA_BUFFER);
-	return 0;
-}
-
-static int unicam_camera_s_ctrl(struct soc_camera_device *icd, 
-				 struct v4l2_control *ctl)
-{
-	struct device *dev = icd->dev.parent;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
-	struct unicam_camera_dev *unicam_dev = ici->priv;
-	int ret = 0;
-	if(ctl == NULL){
-		printk(KERN_ERR "Wrong host ops s_ctrl\n");
-		return -EINVAL;
-	}
-	switch(ctl->id){
-		case V4L2_CID_CAM_CAPTURE:
-		printk("V4L2_CID_CAM_CAPTURE\n");
-			unicam_dev->cap_mode = 1;
-			unicam_dev->cap_done = 0;
-		break;
-		case V4L2_CID_CAM_CAPTURE_DONE:
-		printk("V4L2_CID_CAM_CAPTURE_DONE\n");
-			unicam_dev->cap_mode = 0;
-		break;
-		default:
-			ret = -ENOIOCTLCMD;
-		break;
-	}
-	return ret;
-}
-/* This method shall be used only for unicam windowing
-   for zoom use-case */
-
-static int unicam_camera_get_crop(struct soc_camera_device *icd,
-				 struct v4l2_crop *crop)
-{
-	struct device *dev = icd->dev.parent;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
-	struct unicam_camera_dev *unicam_dev = ici->priv;
-	if(crop != NULL){
-		*crop = unicam_dev->crop;
-	}
-	return 0;
-}
-static int unicam_camera_set_crop(struct soc_camera_device *icd,
-				struct v4l2_crop *crop)
-{
-	struct device *dev = icd->dev.parent;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
-	struct unicam_camera_dev *unicam_dev = ici->priv;
-	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	unsigned long flags;
-	struct int_desc idesc;
-	if(crop == NULL)
-		return -EINVAL;
-	unicam_dev->crop = *crop;
-	return 0;
-#if 0
-	printk("Configuring crop to %d %d\n",crop->c.width,crop->c.height);
-	printk("Configuring top left to %d %d\n",crop->c.top,crop->c.left);
-	 v4l2_subdev_call(sd, video, s_stream, 0);
-	spin_lock_irqsave(&unicam_dev->lock, flags);
-	unicam_dev->crop = *crop;
-	if(unicam_dev->streaming){
-		printk("Stopping stream\n");
-		unicam_stop();
-	}
-	/* Configure new crop parameters */
-	mm_csi0_set_windowing_vertical(unicam_dev->crop.c.top,(unicam_dev->crop.c.top + unicam_dev->crop.c.height));
-	mm_csi0_cfg_pipeline_unpack(PIX_UNPACK_NONE);
-	mm_csi0_cfg_pipeline_dpcm_dec(DPCM_DEC_NONE);
-	mm_csi0_set_windowing_horizontal(unicam_dev->crop.c.left,(unicam_dev->crop.c.left + unicam_dev->crop.c.width));
-	mm_csi0_cfg_pipeline_dpcm_enc(DPCM_ENC_NONE);
-	mm_csi0_cfg_pipeline_pack(PIX_PACK_NONE);
-	mm_csi0_start_rx();
-
-	/* Re-configure buffer parameters */
-	unicam_camera_update_buf(unicam_dev);
-	/* set data capture */
-	if (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
-		idesc.fsi = 1;
-		idesc.fei = 1;
-		idesc.lci = 0;
-		idesc.die = 1;
-		idesc.dataline = 2;
-		mm_csi0_config_int(&idesc, IMAGE_BUFFER);
-		mm_csi0_config_int(&idesc, DATA_BUFFER);
-		unicam_camera_capture(unicam_dev);
-	} else {
-		idesc.fsi = 0;
-		idesc.fei = 0;
-		idesc.lci = unicam_dev->icd->user_height;
-		idesc.die = 0;
-		idesc.dataline = 0;
-		mm_csi0_config_int(&idesc, IMAGE_BUFFER);
-	}
-
-	spin_unlock_irqrestore(&unicam_dev->lock, flags);	
-	 v4l2_subdev_call(sd, video, s_stream, 1);
-	return 0;
-#endif
-}
 static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 				 struct v4l2_format *f)
 {
@@ -965,7 +915,7 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	int ret;
 	u32 skip_frames = 0;
 
-	pr_debug("-enter");
+	dprintk("-enter");
 	xlate = soc_camera_xlate_by_fourcc(icd, pix->pixelformat);
 	if (!xlate) {
 		dev_warn(dev, "Format %x not found\n", pix->pixelformat);
@@ -1000,25 +950,16 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	}
 
 	unicam_dev->skip_frames = skip_frames;
-	unicam_dev->curr = 0;
-	first = 2;
-        unicam_dev->buff[0] = NULL;
-        unicam_dev->buff[1] = NULL;
 
 	pix->width = mf.width;
 	pix->height = mf.height;
 	pix->field = mf.field;
 	pix->colorspace = mf.colorspace;
 	icd->current_fmt = xlate;
-	
-	/* Initialize crop window for now */
-	unicam_dev->crop.c.width = pix->width;
-	unicam_dev->crop.c.height = pix->height;
-	unicam_dev->crop.c.top = unicam_dev->crop.c.left = 0;
 
-	pr_debug("format set to %c%c%c%c res=%dx%d success=%d",
+	iprintk("format set to %c%c%c%c res=%dx%d success=%d",
 		pixfmtstr(pix->pixelformat), pix->width, pix->height, ret);
-	pr_debug("-exit");
+	dprintk("-exit");
 	return ret;
 }
 
@@ -1087,104 +1028,138 @@ static struct soc_camera_host_ops unicam_soc_camera_host_ops = {
 	.poll = unicam_camera_poll,
 	.querycap = unicam_camera_querycap,
 	.set_bus_param = unicam_camera_set_bus_param,
-	.set_livecrop = unicam_camera_set_crop,
-	.set_crop = unicam_camera_set_crop,
-	.get_crop = unicam_camera_get_crop,
-	.set_ctrl = unicam_camera_s_ctrl,
 };
 
 static irqreturn_t unicam_camera_isr(int irq, void *arg)
 {
 	struct unicam_camera_dev *unicam_dev = (struct unicam_camera_dev *)arg;
+	unsigned int status;
+	unsigned int reg_status;
 	int ret;
-	struct int_desc idesc;
-	struct rx_stat_list rx;
+	CSL_CAM_BUFFER_STATUS_st_t bufStatus;
+	unsigned int bytes_used;
 	static unsigned int t1 = 0, t2 = 0, fps = 0;
-	struct buffer_desc im0;
 
 	/* has the interrupt occured for Channel 0? */
-	memset(&rx,0x00,sizeof(struct rx_stat_list));
-	mm_csi0_get_rx_stat(&rx,1);
-	if(mm_csi0_get_panic_state()){
-		unicam_dev->panic_count++;
-		printk("PANIC asserted**\n");
-	}
-	if (rx.is) {
-		memset(&idesc,0x00,sizeof(struct int_desc));			    
-		mm_csi0_get_int_stat(&idesc,1);	
+	reg_status =
+	    csl_cam_get_rx_status(unicam_dev->cslCamHandle,
+				  (CSL_CAM_RX_STATUS_t *) &status);
+	dprintk("received unicam interrupt reg_status=0x%x status=0x%x\n",
+		reg_status, status);
 
-		if (idesc.fei || idesc.lci){
-			/* FS and FE handling */
-			if((idesc.fei) && (idesc.fsi)){
-				printk("FS and FE ** pairing observed\n");
-				printk("Just trigger once again\n");
-				unicam_camera_capture(unicam_dev);
-				return IRQ_HANDLED;				
-			}
-			struct vb2_buffer *vb = unicam_dev->active;;
+	if (status & CSL_CAM_RX_INT) {
+
+		/* get and clear interrupt status */
+		reg_status =
+		    csl_cam_get_intr_status(unicam_dev->cslCamHandle,
+					    (CSL_CAM_INTERRUPT_t *) &status);
+
+		if ((status & CSL_CAM_INT_FRAME_END) ||
+			(status & CSL_CAM_INT_LINE_COUNT)) {
+			struct vb2_buffer *vb = unicam_dev->active;
 			fps++;
+
 			if (t1 == 0 && t2 == 0)
 				t1 = t2 = jiffies_to_msecs(jiffies);
 
 			t2 = jiffies_to_msecs(jiffies);
 			if (t2 - t1 > 1000) {
-				printk(" sensor fps = %d panic count %d\n", fps, unicam_dev->panic_count);
+				printk(" sensor fps = %d \n", fps);
 				fps = 0;
 				t1 = t2;
 			}
 
-			pr_debug("frame received");
+			dprintk("frame received");
+			/* csl_cam_register_display(unicam_dev->cslCamHandle);*/
 			if (!vb)
 				goto out;
 			/* mark  the buffer done */
 			/* queue another buffer and trigger capture */
 			if (likely(unicam_dev->skip_frames <= 0)) {
+
 				list_del_init(&to_unicam_camera_vb(vb)->queue);
 				do_gettimeofday(&vb->v4l2_buf.timestamp);
 				vb->v4l2_planes[0].bytesused = 0;
 
 				if (unicam_dev->icd->current_fmt->code ==
 				    V4L2_MBUS_FMT_JPEG_1X8) {
+
+					ret =
+					    csl_cam_get_buffer_status
+					    (unicam_dev->cslCamHandle,
+					     CSL_CAM_DATA, &bufStatus);
+
+					if (ret == CSL_CAM_OK) {
+						bytes_used =
+						    (bufStatus.write_ptr -
+						     bufStatus.buffer_st.
+						     start_addr);
+						vb->v4l2_planes[0].bytesused =
+						    bytes_used;
+					} else
+						dev_warn(unicam_dev->dev,
+							 "%s:failed to get buffer status",
+							 __func__);
 				} else {
-					ret = 1; 
+					ret =
+					    csl_cam_get_buffer_status
+					    (unicam_dev->cslCamHandle,
+					     CSL_CAM_IMAGE, &bufStatus);
+					if (ret == CSL_CAM_OK) {
+						dprintk("Buffer Status:");
+						dprintk("addr:0x%x size:0x%x"
+							"ls:%d wp:0x%x"
+							"ppl:%d lpf:%d",
+							bufStatus.buffer_st.
+							start_addr,
+							bufStatus.buffer_st.
+							size,
+							bufStatus.buffer_st.
+							line_stride,
+							bufStatus.write_ptr,
+							bufStatus.
+							bytes_per_line,
+							bufStatus.
+							lines_per_frame);
+
+					}
 				}
 
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
-				if(unicam_dev->cap_mode == 1){
-					unicam_dev->cap_done = 1;
-					goto out;
-				}
-				if (!list_empty(&unicam_dev->capture)){
-						unicam_dev->active =
-						    unicam_dev->active =
-						    &list_entry(unicam_dev->
+
+				if (!list_empty(&unicam_dev->capture))
+					unicam_dev->active =
+					    &list_entry(unicam_dev->
 							capture.next, struct
- 							unicam_camera_buffer,
-								queue)->vb;
-					}
-				else {
-					printk("Buffers not available!!\n");
+							unicam_camera_buffer,
+							queue)->vb;
+				else
 					unicam_dev->active = NULL;
-					goto out;
-				}
-			} else {
+			} else
 				unicam_dev->skip_frames--;
+
+			ret = unicam_camera_update_buf(unicam_dev);
+			if (ret)
+				dev_err(unicam_dev->dev,
+					"%s: error while queueing"
+					" the buffer\n", __func__);
+			if (unicam_dev->if_params.if_mode ==
+				V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
+				ret = unicam_camera_capture(unicam_dev);
+				if (ret)
+					dprintk(KERN_INFO "error triggering capture\n");
 			}
-			im0.start = vb2_dma_contig_plane_dma_addr(unicam_dev->active, 0);
-			im0.size = unicam_dev->icd->user_width * unicam_dev->icd->user_height * 2; 
-			im0.ls = unicam_dev->icd->user_width * 2;
-			if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8) {
-				mm_csi0_update_one(&im0, unicam_dev->curr, IMAGE_BUFFER);
-			} else {
-				mm_csi0_update_one(&im0, unicam_dev->curr, DATA_BUFFER);
-			}
-				
-			unicam_camera_capture(unicam_dev);
 
 		}
-		else{
-		}
-	} 
+
+		else
+			dev_err(unicam_dev->dev,
+				"interrupt not handled reg_status=0x%x"
+				" status=0x%x\n", reg_status, status);
+	} else
+		dev_err(unicam_dev->dev,
+			"rx interrupt not handled reg_status=0x%x"
+			" status=0x%x\n", reg_status, status);
 
 out:
 	return IRQ_HANDLED;

@@ -560,7 +560,7 @@ comment "Flash devices"
 
 config VIDEO_ADP1653
 	tristate "ADP1653 flash support"
-	depends on I2C && VIDEO_V4L2 && MEDIA_CONTROLLER
+	depends on I2C && VIDEO_V4L2
 	---help---
 	  This is a driver for the ADP1653 flash controller. It is used for
 	  example in Nokia N900.
@@ -1241,13 +1241,28 @@ config VIDEO_UNICAM_CAMERA
 	tristate "Broadcom Unicam camera host interface driver"
 	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
 	select VIDEOBUF2_DMA_CONTIG
-	select KONA_CSL_CAMERA
-	select KONA_CHAL_CAMERA
 	---help---
 	  This is a v4l2 driver for Broadcom Unicam host interface.
 
 	  To compile this driver as a modulem choose M here: the
 	  module will be called unicam_camera
+
+config VIDEO_UNICAM_CAMERA_USE_CSL
+	tristate "Broadcom Unicam camera CSL driver"
+	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API && VIDEO_UNICAM_CAMERA
+	default y
+	select KONA_CSL_CAMERA
+	select KONA_CHAL_CAMERA
+	---help---
+		This enables the camera CSL and CHAL drivers
+		to be used by UNICAM driver
+
+config VIDEO_UNICAM_CAMERA_USE_MM_CSI0
+	tristate "Broadcom Unicam camera MM CSI0 driver"
+	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API && !VIDEO_UNICAM_CAMERA_USE_CSL && VIDEO_UNICAM_CAMERA
+	---help---
+		This enables the camera MM_CSI0 drivers
+		to be used by UNICAM driver
 
 source "drivers/media/video/s5p-tv/Kconfig"
 

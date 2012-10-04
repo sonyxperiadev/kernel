@@ -26,6 +26,9 @@
 #include <linux/videodev2_brcm.h>
 #include "ov5640.h"
 
+#ifdef CONFIG_VIDEO_ADP1653
+#include "adp1653.h"
+#endif
 /* #define OV5640_DEBUG */
 
 #define iprintk(format, arg...)	\
@@ -65,7 +68,7 @@ static const struct ov5640_datafmt ov5640_fmts[] = {
 	 */
 	{V4L2_MBUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_JPEG},
 	{V4L2_MBUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
-	/* {V4L2_MBUS_FMT_JPEG_1X8, V4L2_COLORSPACE_JPEG}, */
+/*	{V4L2_MBUS_FMT_JPEG_1X8, V4L2_COLORSPACE_JPEG}, */
 
 };
 
@@ -161,6 +164,7 @@ struct ov5640 {
 	*/
 	int touch_focus;
 	v4l2_touch_area touch_area[OV5640_MAX_FOCUS_AREAS];
+	int flashmode;
 };
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
@@ -657,6 +661,16 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .maximum = CONTRAST_PLUS_1,
 	 .step = 1,
 	 .default_value = CONTRAST_DEFAULT,
+	 },
+	{
+	 .id = V4L2_CID_CAMERA_FLASH_MODE,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "ADP1653-flash",
+	 .minimum = FLASH_MODE_OFF,
+	 .maximum = (1 << FLASH_MODE_OFF) | (1 << FLASH_MODE_ON) | (1 << FLASH_MODE_TORCH_OFF) |
+	 		(1 << FLASH_MODE_TORCH_ON),
+	 .step = 1,
+	 .default_value = FLASH_MODE_OFF,
 	 },
 	{
 	 .id = V4L2_CID_CAMERA_EFFECT,
@@ -1454,14 +1468,23 @@ static int ov5640_config_timing(struct i2c_client *client)
 static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov5640 *ov5640 = to_ov5640(client);
 	int ret = 0;
 
 	if (enable)
 		/* Power Up, Start Streaming */
 		ret = ov5640_reg_writes(client, ov5640_stream);
-	else
+	else{
 		/* Stop Streaming, Power Down*/
 		ret = ov5640_reg_writes(client, ov5640_power_down);
+#ifdef CONFIG_VIDEO_ADP1653
+		if(ov5640->flashmode != FLASH_MODE_OFF){
+			adp1653_clear_all();
+			adp1653_gpio_toggle(0);	
+		}
+#endif
+		ov5640->flashmode = FLASH_MODE_OFF;		
+	}
 
 	return ret;
 }
@@ -1686,6 +1709,9 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		 */
 		ctrl->value = ov5640_get_af_status(client, 100);
 		ov5640->touch_focus = 0;
+		break;
+	case V4L2_CID_CAMERA_FLASH_MODE:
+		ctrl->value = ov5640->flashmode;
 		break;
 	}
 
@@ -2045,6 +2071,40 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
+	case V4L2_CID_CAMERA_FLASH_MODE:
+		if ((ctrl->value == FLASH_MODE_OFF) || (ctrl->value == FLASH_MODE_TORCH_OFF)){
+#ifdef CONFIG_VIDEO_ADP1653
+			if(ov5640->flashmode != FLASH_MODE_OFF){
+				adp1653_clear_all();
+				adp1653_gpio_toggle(0);	
+			}
+			ov5640->flashmode = FLASH_MODE_OFF;
+#endif
+		} else if (ctrl->value == FLASH_MODE_TORCH_ON){
+#ifdef CONFIG_VIDEO_ADP1653
+			adp1653_gpio_toggle(1);
+			udelay(30);
+			adp1653_set_timer(1,0);
+			adp1653_set_ind_led(0);
+			adp1653_set_torch_flash(10); /* Torch current no indicator LED */
+			adp1653_sw_strobe(1);
+			ov5640->flashmode = ctrl->value;
+#endif			
+		} else if (ctrl->value == FLASH_MODE_ON){
+#ifdef CONFIG_VIDEO_ADP1653
+			adp1653_gpio_toggle(1);
+			udelay(30);
+			adp1653_set_timer(1,0);
+			adp1653_set_ind_led(1);
+			adp1653_set_torch_flash(28); /* Flash current indicator LED ON */
+			ov5640->flashmode = ctrl->value;
+			/* Strobing should hapen later */
+#endif			
+		} else {
+			ret = -EINVAL;
+		}
+
+		break;
 	}
 
 	return ret;
@@ -2184,6 +2244,7 @@ static int ov5640_init(struct i2c_client *client)
 	ov5640->focus_mode = FOCUS_MODE_AUTO;
 	ov5640->touch_focus = 0;
 	atomic_set(&ov5640->focus_status, OV5640_NOT_FOCUSING);
+	ov5640->flashmode = FLASH_MODE_OFF;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 
@@ -2294,10 +2355,10 @@ static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 15;
 		break;
-	case OV5640_SIZE_1280x960:
-	case OV5640_SIZE_720P:
 	case OV5640_SIZE_VGA:
 	case OV5640_SIZE_QVGA:
+	case OV5640_SIZE_1280x960:
+	case OV5640_SIZE_720P:
 	default:
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 24;

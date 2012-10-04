@@ -42,6 +42,8 @@
 #include <linux/clk.h>
 #include <linux/bootmem.h>
 #include <linux/mfd/bcm590xx/core.h>
+#include <asm/gpio.h>
+#include <linux/gpio.h>
 #include <linux/gpio_keys.h>
 #include <linux/i2c-kona.h>
 #include <linux/i2c.h>
@@ -206,27 +208,258 @@ extern int hawaii_wifi_status_register(
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 
-#define HAWAII_8250PORT(name, clk, freq, uart_name)		\
+#define HAWAII_8250PORT(name, clk)				\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
 	.irq        = BCM_INT_ID_##name,			\
-	.uartclk    = freq,					\
+	.uartclk    = 26000000,					\
 	.regshift   = 2,					\
-	.iotype     = UPIO_MEM32,				\
+	.iotype     = UPIO_DWAPB,				\
 	.type       = PORT_16550A,				\
 	.flags      = UPF_BOOT_AUTOCONF | UPF_BUG_THRE |	\
 			UPF_FIXED_TYPE | UPF_SKIP_TEST,		\
 	.private_data = (void __iomem *)((KONA_##name##_VA) +	\
 					UARTB_USR_OFFSET),	\
 	.clk_name = clk,					\
-	.port_name = uart_name,					\
 }
 
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+
+#define OV5640_I2C_ADDRESS (0x3C)
+#define OV7692_I2C_ADDRESS (0x3e)
+
+#define SENSOR_0_GPIO_PWRDN             (002)
+#define SENSOR_0_GPIO_RST               (111)
+#define SENSOR_0_CLK                    "dig_ch0_clk" // DCLK1 ??
+#define SENSOR_0_CLK_FREQ               (13000000)
+
+#define SENSOR_1_CLK                    "dig_ch0_clk" // DCLK1 ??
+#define SENSOR_1_CLK_FREQ               (26000000)
+
+#define SENSOR_1_GPIO_PWRDN             (005) 
+
+
+static struct i2c_board_info rhea_i2c_camera[] = {
+	        {
+		I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
+		},
+	        {
+		I2C_BOARD_INFO("ov7692", OV7692_I2C_ADDRESS),
+		},
+};
+
+static int rhea_camera_power(struct device *dev, int on)
+{
+	unsigned int value;
+        int ret = -1;
+        struct clk *clock;
+        struct clk *axi_clk;
+        static struct pi_mgr_dfs_node
+	unicam_dfs_node;
+        static int do_cam_reset = 1;
+
+	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
+	if (!unicam_dfs_node.valid) {
+		ret = pi_mgr_dfs_add_request(&unicam_dfs_node,"unicam",
+				    PI_MGR_PI_ID_MM,PI_MGR_DFS_MIN_VALUE);
+		if (ret) {
+			return -1;
+		}
+		if(gpio_request_one(SENSOR_0_GPIO_RST, GPIOF_DIR_OUT |
+			GPIOF_INIT_LOW,"CamRst")){
+			printk(KERN_ERR"Unable to get RST GPIO\n");
+			return -1;
+		}
+		if(gpio_request_one(SENSOR_0_GPIO_PWRDN, GPIOF_DIR_OUT |
+			GPIOF_INIT_LOW,"CamRst")){
+			printk(KERN_ERR"Unable to get RST GPIO\n");
+			return -1;
+		}
+	}
+
+	clock = clk_get(NULL, SENSOR_0_CLK);
+	if(IS_ERR_OR_NULL(clock)){
+		printk(KERN_ERR,"Unable to get SENSOR_0 clock\n");
+	}
+	axi_clk = clk_get(NULL, "csi0_axi_clk");
+	if(IS_ERR_OR_NULL(clock)){
+		printk(KERN_ERR,"Unable to get AXI clock\n");
+	}
+	if(on){
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
+			printk("DVFS for UNICAM failed\n");
+		}
+		value = clk_enable(axi_clk);
+		if(value){
+			printk(KERN_ERR"Failed to enable axi clock\n");
+			return -1;
+		}
+		value = clk_enable(clock);
+		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
+		if(value){
+			printk("Failed to enable sensor 0 clock\n");
+			return -1;
+		}
+		msleep(10);
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		msleep(10);
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
+		msleep(5);
+		gpio_set_value(SENSOR_0_GPIO_RST, 1);
+		msleep(30);
+	} else {
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
+		clk_disable(clock);
+		clk_disable(axi_clk);
+		if(pi_mgr_dfs_request_update(&unicam_dfs_node,PI_MGR_DFS_MIN_VALUE)){
+			printk("Failed to set DVFS for unicam\n");
+		}
+	}
+	return 0;
+}
+static int rhea_camera_reset(struct device *dev)
+{
+        /* reset the camera gpio */
+        printk(KERN_INFO "%s:camera reset\n", __func__);
+        return 0;
+}
+
+static int rhea_camera_power_front(struct device *dev, int on)
+{
+	unsigned int value;
+        int ret = -1;
+        struct clk *clock;
+        struct clk *axi_clk;
+        static struct pi_mgr_dfs_node
+	unicam_dfs_node;
+
+	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
+	if (!unicam_dfs_node.valid) {
+		ret = pi_mgr_dfs_add_request(&unicam_dfs_node,"unicam",
+				    PI_MGR_PI_ID_MM,PI_MGR_DFS_MIN_VALUE);
+		if (ret) {
+			return -1;
+		}
+		if(gpio_request_one(SENSOR_1_GPIO_PWRDN, GPIOF_DIR_OUT |
+			GPIOF_INIT_LOW,"CamRst")){
+			printk(KERN_ERR"Unable to get RST GPIO\n");
+			return -1;
+		}
+	}
+
+	clock = clk_get(NULL, SENSOR_1_CLK);
+	if(IS_ERR_OR_NULL(clock)){
+		printk(KERN_ERR,"Unable to get SENSOR_1 clock\n");
+	}
+	axi_clk = clk_get(NULL, "csi0_axi_clk");
+	if(IS_ERR_OR_NULL(clock)){
+		printk(KERN_ERR,"Unable to get AXI clock\n");
+	}
+	if(on){
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
+			printk("DVFS for UNICAM failed\n");
+		}
+		value = clk_enable(axi_clk);
+		if(value){
+			printk(KERN_ERR"Failed to enable axi clock\n");
+			return -1;
+		}
+		value = clk_enable(clock);
+		value = clk_set_rate(clock, SENSOR_1_CLK_FREQ);
+		if(value){
+			printk("Failed to enable sensor 1 clock\n");
+			return -1;
+		}
+		msleep(10);
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+		msleep(5);
+		msleep(30);
+	} else {
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		clk_disable(clock);
+		clk_disable(axi_clk);
+		if(pi_mgr_dfs_request_update(&unicam_dfs_node,PI_MGR_DFS_MIN_VALUE)){
+			printk("Failed to set DVFS for unicam\n");
+		}
+	}
+	return 0;
+}
+
+static int rhea_camera_reset_front(struct device *dev)
+{
+        /* reset the camera gpio */
+        printk(KERN_INFO "%s:camera reset\n", __func__);
+        return 0;
+}
+
+static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
+        .orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+	.facing = V4L2_SUBDEV_SENSOR_BACK,
+        .parms.serial = {
+		 .lanes = 2,
+		 .channel = 0,
+		 .phy_rate = 0,
+		 .pix_clk = 0
+	},
+};
+
+static struct soc_camera_link iclink_ov5640 = {
+	.bus_id = 0,
+	.board_info = &rhea_i2c_camera[0],
+	.i2c_adapter_id = 0,
+	.module_name = "ov5640",
+	.power = &rhea_camera_power,
+	.reset = &rhea_camera_reset,
+	.priv =  &ov5640_if_params,
+};
+
+static struct platform_device hawaii_camera_back = {
+	.name = "soc-camera-pdrv",
+	 .id = 0,
+	 .dev = {
+		 .platform_data = &iclink_ov5640,
+	 },
+};
+
+static struct v4l2_subdev_sensor_interface_parms ov7692_if_params = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
+        .orientation = V4L2_SUBDEV_SENSOR_LANDSCAPE,
+	.facing = V4L2_SUBDEV_SENSOR_FRONT,
+        .parms.serial = {
+		 .lanes = 1,
+		 .channel = 1,
+		 .phy_rate = 0,
+		 .pix_clk = 0
+	},
+};
+
+static struct soc_camera_link iclink_ov7692 = {
+	.bus_id = 0,
+	.board_info = &rhea_i2c_camera[1],
+	.i2c_adapter_id = 0,
+	.module_name = "ov7692",
+	.power = &rhea_camera_power_front,
+	.reset = &rhea_camera_reset_front,
+	.priv =  &ov7692_if_params,
+};
+
+static struct platform_device hawaii_camera_front = {
+	.name = "soc-camera-pdrv",
+	 .id = 1,
+	 .dev = {
+		 .platform_data = &iclink_ov7692,
+	 },
+};
+#endif /* CONFIG_VIDEO_UNICAM_CAMERA */
+
 static struct plat_serial8250_port hawaii_uart_platform_data[] = {
-	HAWAII_8250PORT(UART0, "uart0_clk", 26000000, "console"),
-	HAWAII_8250PORT(UART1, "uart1_clk", 48000000, "bluetooth"),
-	HAWAII_8250PORT(UART2, "uart2_clk", 26000000, "gps"),
+	HAWAII_8250PORT(UART0, "uart0_clk"),
+	HAWAII_8250PORT(UART1, "uart1_clk"),
+	HAWAII_8250PORT(UART2, "uart2_clk"),
 	{
 		.flags = 0,
 	},
@@ -399,7 +632,8 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
-	&hawaii_camera_device,
+	&hawaii_camera_back,
+	&hawaii_camera_front,
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
