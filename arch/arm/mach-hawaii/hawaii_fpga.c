@@ -111,44 +111,82 @@ static struct plat_serial8250_port uart_data[] = {
 };
 
 static struct bsc_adap_cfg bsc_i2c_cfg[] = {
-	{			/* for BSC0 */
-	 .speed = BSC_BUS_SPEED_400K,
-	 .dynamic_speed = 1,
-	 .bsc_clk = "bsc1_clk",
-	 .bsc_apb_clk = "bsc1_apb_clk",
-	 .retries = 1,
-	 .is_pmu_i2c = false,
-	 },
-	{			/* for BSC1 */
-	 .speed = BSC_BUS_SPEED_400K,
-	 .dynamic_speed = 1,
-	 .bsc_clk = "bsc2_clk",
-	 .bsc_apb_clk = "bsc2_apb_clk",
-	 .retries = 3,
-	 .is_pmu_i2c = false,
-	 },
-	{			/* for PMU */
-#ifdef CONFIG_KONA_PMU_BSC_HS_MODE
-	 .speed = BSC_BUS_SPEED_HS,
-	 /* No dynamic speed in HS mode */
-	 .dynamic_speed = 0,
-	 /*
-	  * PMU can NAK certain I2C read commands, while write
-	  * is in progress; and it takes a while to synchronise
-	  * writes between HS clock domain(3.25MHz) and
-	  * internal clock domains (32k). In such cases, we retry
-	  * PMU reads until the writes are through. PMU need more
-	  * retry counts in HS mode to handle this.
-	  */
-	 .retries = 5,
+	{
+		.speed = BSC_BUS_SPEED_400K,
+		.dynamic_speed = 1,
+		.bsc_clk = "bsc1_clk",
+		.bsc_apb_clk = "bsc1_apb_clk",
+		.retries = 1,
+		.is_pmu_i2c = false,
+		.fs_ref = BSC_BUS_REF_13MHZ,
+		.hs_ref = BSC_BUS_REF_104MHZ,
+	},
+
+	{
+		.speed = BSC_BUS_SPEED_400K,
+		.dynamic_speed = 1,
+		.bsc_clk = "bsc2_clk",
+		.bsc_apb_clk = "bsc2_apb_clk",
+		.retries = 3,
+		.is_pmu_i2c = false,
+		.fs_ref = BSC_BUS_REF_13MHZ,
+		.hs_ref = BSC_BUS_REF_104MHZ,
+	},
+
+	{
+		.speed = BSC_BUS_SPEED_400K,
+		.dynamic_speed = 1,
+		.bsc_clk = "bsc3_clk",
+		.bsc_apb_clk = "bsc3_apb_clk",
+		.retries = 1,
+		.is_pmu_i2c = false,
+		.fs_ref = BSC_BUS_REF_13MHZ,
+		.hs_ref = BSC_BUS_REF_104MHZ,
+	},
+
+	{
+		.speed = BSC_BUS_SPEED_400K,
+		.dynamic_speed = 1,
+		.bsc_clk = "bsc4_clk",
+		.bsc_apb_clk = "bsc4_apb_clk",
+		.retries = 1,
+		.is_pmu_i2c = false,
+		.fs_ref = BSC_BUS_REF_13MHZ,
+		.hs_ref = BSC_BUS_REF_104MHZ,
+	},
+
+	{
+#if defined(CONFIG_KONA_PMU_BSC_HS_MODE)
+		.speed = BSC_BUS_SPEED_HS,
+		/* No dynamic speed in HS mode */
+		.dynamic_speed = 0,
+		/*
+		 * PMU can NAK certain I2C read commands, while write
+		 * is in progress; and it takes a while to synchronise
+		 * writes between HS clock domain(3.25MHz) and
+		 * internal clock domains (32k). In such cases, we retry
+		 * PMU reads until the writes are through. PMU need more
+		 * retry counts in HS mode to handle this.
+		 */
+		.retries = 5,
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1MHZ)
+		.speed = BSC_BUS_SPEED_HS_1MHZ,
+		.dynamic_speed = 0,
+		.retries = 5,
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1625KHZ)
+		.speed = BSC_BUS_SPEED_HS_1625KHZ,
+		.dynamic_speed = 0,
+		.retries = 5,
 #else
-	 .speed = BSC_BUS_SPEED_50K,
-	 .dynamic_speed = 1,
-	 .retries = 3,
+		.speed = BSC_BUS_SPEED_50K,
+		.dynamic_speed = 1,
+		.retries = 3,
 #endif
-	 .bsc_clk = "pmu_bsc_clk",
-	 .bsc_apb_clk = "pmu_bsc_apb",
-	 .is_pmu_i2c = true,
+		.bsc_clk = "pmu_bsc_clk",
+		.bsc_apb_clk = "pmu_bsc_apb",
+		.is_pmu_i2c = true,
+		.fs_ref = BSC_BUS_REF_13MHZ,
+		.hs_ref = BSC_BUS_REF_26MHZ,
 	 },
 };
 
@@ -317,7 +355,7 @@ static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 	&rng_device,
 #endif
 #endif
-
+	&hawaii_i2c_adap_devices[4],
 #ifdef CONFIG_USB_DWC_OTG
 	&hawaii_hsotgctrl_platform_device,
 	&hawaii_otg_platform_device,
@@ -349,6 +387,8 @@ static void hawaii_ray_add_pdata(void)
 	hawaii_i2c_adap_devices[0].dev.platform_data = &bsc_i2c_cfg[0];
 	hawaii_i2c_adap_devices[1].dev.platform_data = &bsc_i2c_cfg[1];
 	hawaii_i2c_adap_devices[2].dev.platform_data = &bsc_i2c_cfg[2];
+	hawaii_i2c_adap_devices[3].dev.platform_data = &bsc_i2c_cfg[3];
+	hawaii_i2c_adap_devices[4].dev.platform_data = &bsc_i2c_cfg[4];
 	hawaii_ssp0_device.dev.platform_data = &sspi_spi0_info;
 	hawaii_ssp1_device.dev.platform_data = &sspi_spi2_info;
 }
