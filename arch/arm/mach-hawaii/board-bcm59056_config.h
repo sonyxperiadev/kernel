@@ -15,7 +15,7 @@
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0C
 #define PMU_INT_IRQ_NUM		BCM_INT_ID_PMU_INT
-#define PMU_DEVICE_I2C_BUSNO	2
+#define PMU_DEVICE_I2C_BUSNO	4
 
 static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x14, .val = 0x75, .mask = 0xFF},
