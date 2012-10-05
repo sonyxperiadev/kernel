@@ -260,6 +260,15 @@ static void PostBinRenderJob(V3dDeviceType *Instance, V3dDriver_JobType *Job)
 	Reset(Instance);
 	Job->Start = ktime_get();
 	Job->State = V3DDRIVER_JOB_ACTIVE;
+	if ((Job->UserJob.job_type & V3D_JOB_BIN) != 0) {
+		if (Job->UserJob.v3d_ct0ca != Job->UserJob.v3d_ct0ea) {
+			BUG_ON(Job->UserJob.v3d_ct0ca == 0);
+			BUG_ON(Job->UserJob.v3d_ct0ea == 0);
+			Write(Instance, V3D_CT0CA_OFFSET, Job->UserJob.v3d_ct0ca);
+			Write(Instance, V3D_CT0EA_OFFSET, Job->UserJob.v3d_ct0ea);
+		} else
+			Job->UserJob.job_type &= ~V3D_JOB_BIN;
+	}
 	if ((Job->UserJob.job_type & V3D_JOB_REND) != 0) {
 		if (Job->UserJob.v3d_ct1ca != Job->UserJob.v3d_ct1ea) {
 			BUG_ON(Job->UserJob.v3d_ct1ca == 0);
@@ -272,15 +281,6 @@ static void PostBinRenderJob(V3dDeviceType *Instance, V3dDriver_JobType *Job)
 #endif
 			Job->UserJob.job_type &= ~V3D_JOB_REND;
 		}
-	}
-	if ((Job->UserJob.job_type & V3D_JOB_BIN) != 0) {
-		if (Job->UserJob.v3d_ct0ca != Job->UserJob.v3d_ct0ea) {
-			BUG_ON(Job->UserJob.v3d_ct0ca == 0);
-			BUG_ON(Job->UserJob.v3d_ct0ea == 0);
-			Write(Instance, V3D_CT0CA_OFFSET, Job->UserJob.v3d_ct0ca);
-			Write(Instance, V3D_CT0EA_OFFSET, Job->UserJob.v3d_ct0ea);
-		} else
-			Job->UserJob.job_type &= ~V3D_JOB_BIN;
 	}
 }
 

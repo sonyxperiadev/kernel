@@ -61,12 +61,12 @@ typedef struct {
 			struct list_head BinRender;
 			struct list_head User;
 			struct {
-				struct mutex        Lock;
-				struct task_struct *Owner;
-				unsigned int        BinRenderCount;
-				unsigned int        UserCount;
-				struct list_head    BinRender;
-				struct list_head    User;
+				struct mutex          Lock;
+				struct V3dSessionTag *Owner;
+				unsigned int          BinRenderCount;
+				unsigned int          UserCount;
+				struct list_head      BinRender;
+				struct list_head      User;
 			} Exclusive;
 		} Posted;
 
@@ -97,8 +97,8 @@ extern int  V3dDriver_JobPost(
 	struct V3dSessionTag *Session,
 	const v3d_job_post_t *UserJob);
 
-extern void V3dDriver_ExclusiveStart(V3dDriverType *Instance);
-extern int  V3dDriver_ExclusiveStop(V3dDriverType *Instance);
+extern void V3dDriver_ExclusiveStart(V3dDriverType *Instance, struct V3dSessionTag *Session);
+extern int  V3dDriver_ExclusiveStop(V3dDriverType  *Instance, struct V3dSessionTag *Session);
 
 
 /* For V3dDevice to use */

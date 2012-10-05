@@ -43,6 +43,12 @@ void V3dSession_Delete(V3dSessionType *Instance)
 {
 	switch (Instance->Initialised) {
 	case 0:
+		/* Wait for all our jobs to complete */
+		V3dSession_Wait(Instance);
+
+		/* Ensure that any exclusive lock is released */
+		(void) V3dDriver_ExclusiveStop(Instance->Driver, Instance);
+
 		kfree(Instance);
 		break;
 	}

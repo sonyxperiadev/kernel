@@ -146,12 +146,12 @@ void V3dDriver_JobComplete(V3dDriverType *Instance, V3dDriver_JobType *Job)
 
 /* ================================================================ */
 
-void V3dDriver_ExclusiveStart(V3dDriverType *Instance)
+void V3dDriver_ExclusiveStart(V3dDriverType *Instance, struct V3dSessionTag *Session)
 {
 	unsigned long     Flags;
 	mutex_lock(&Instance->Job.Posted.Exclusive.Lock);
 	BUG_ON(Instance->Job.Posted.Exclusive.Owner != NULL);
-	Instance->Job.Posted.Exclusive.Owner = current;
+	Instance->Job.Posted.Exclusive.Owner = Session;
 	Instance->Job.TimeIndex = 0;
 
 	/* Count the number of jobs outstanding */
@@ -170,11 +170,11 @@ void V3dDriver_ExclusiveStart(V3dDriverType *Instance)
 	V3dDriver_JobUnlock(Instance, Flags);
 }
 
-int V3dDriver_ExclusiveStop(V3dDriverType *Instance)
+int V3dDriver_ExclusiveStop(V3dDriverType *Instance, struct V3dSessionTag *Session)
 {
 	unsigned long Flags;
 	int           Empty;
-	if (Instance->Job.Posted.Exclusive.Owner != current) {
+	if (Instance->Job.Posted.Exclusive.Owner != Session) {
 		printk(KERN_ERR "%s: Failed - not owner", __func__);
 		return -EPERM;
 	}
@@ -211,7 +211,7 @@ int V3dDriver_JobPost(
 	V3dDriver_JobType *Job;
 	unsigned long      Flags;
 	struct list_head  *List;
-	if (current == Instance->Job.Posted.Exclusive.Owner)
+	if (Session == Instance->Job.Posted.Exclusive.Owner)
 		List = UserJob->job_type == V3D_JOB_USER ? &Instance->Job.Posted.Exclusive.User : &Instance->Job.Posted.Exclusive.BinRender;
 	else
 		List = UserJob->job_type == V3D_JOB_USER ? &Instance->Job.Posted.User           : &Instance->Job.Posted.BinRender;

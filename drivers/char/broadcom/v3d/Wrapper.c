@@ -308,6 +308,8 @@ static int v3d_release(struct inode *inode, struct file *filp)
 	}
 	dvts_destroy_serializer(dev->shared_dvts_object);
 
+	V3dSession_Delete(dev->session);
+
 	kfree(dev); /*Freeing NULL is safe here*/
 
 	return 0;
@@ -365,11 +367,11 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case V3D_IOCTL_ACQUIRE_EXCLUSIVE:
-		V3dDriver_ExclusiveStart(v3d_state.v3d_driver);
+		V3dDriver_ExclusiveStart(v3d_state.v3d_driver, dev->session);
 		break;
 
 	case V3D_IOCTL_RELEASE_EXCLUSIVE:
-		ret = V3dDriver_ExclusiveStop(v3d_state.v3d_driver);
+		ret = V3dDriver_ExclusiveStop(v3d_state.v3d_driver, dev->session);
 		break;
 
 	case V3D_IOCTL_DVTS_CREATE:
@@ -617,6 +619,9 @@ void __exit v3d_exit(void)
 	/* Unmap addresses */
 	if (v3d_base)
 		iounmap(v3d_base);
+
+	V3dDriver_Delete(v3d_state.v3d_driver);
+	V3dDevice_Delete(v3d_state.v3d_device0);
 
 	device_destroy(v3d_state.v3d_class, MKDEV(v3d_major, 0));
 	class_destroy(v3d_state.v3d_class);
