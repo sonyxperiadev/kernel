@@ -38,7 +38,9 @@
 #define PMEM_CACHE_FLUSH	_IOW(PMEM_IOCTL_MAGIC, 8, unsigned int)
 #define PMEM_CACHE_INVALIDATE	_IOW(PMEM_IOCTL_MAGIC, 9, unsigned int)
 #define PMEM_CLEANER_WAIT	_IO(PMEM_IOCTL_MAGIC, 10)
-#define PMEM_CACHE_FLUSH_ALL		_IOW(PMEM_IOCTL_MAGIC, 11, unsigned int)
+#define PMEM_CACHE_FLUSH_ALL	_IOW(PMEM_IOCTL_MAGIC, 11, unsigned int)
+#define PMEM_SET_DIRTY_REGION	_IOW(PMEM_IOCTL_MAGIC, 12, unsigned int)
+#define PMEM_GET_DIRTY_REGION	_IOWR(PMEM_IOCTL_MAGIC, 13, unsigned int)
 
 struct android_pmem_platform_data
 {

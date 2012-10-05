@@ -943,6 +943,31 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		data->flags |= PMEM_FLAGS_DIRTY_REGION;
 		up_write(&data->sem);
 		break;
+	case PMEM_SET_DIRTY_REGION:
+		if (!has_allocation(file))
+			return -EINVAL;
+		data = (struct pmem_data *)file->private_data;
+		down_write(&data->sem);
+		data->flags |= PMEM_FLAGS_DIRTY_REGION;
+		up_write(&data->sem);
+		break;
+	case PMEM_GET_DIRTY_REGION:
+		if (!has_allocation(file))
+			return -EINVAL;
+		data = (struct pmem_data *)file->private_data;
+		down_write(&data->sem);
+		if (data->flags & PMEM_FLAGS_DIRTY_REGION) {
+			region.len = 1;
+			data->flags &= ~PMEM_FLAGS_DIRTY_REGION;
+		} else {
+			region.len = 0;
+		}
+		up_write(&data->sem);
+
+		if (copy_to_user((void __user *)arg, &region,
+				 sizeof(struct pmem_region)))
+			return -EFAULT;
+		break;
 	case PMEM_CACHE_FLUSH:
 		data = (struct pmem_data *)file->private_data;
 
