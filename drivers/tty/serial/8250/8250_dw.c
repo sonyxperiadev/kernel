@@ -154,6 +154,7 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 
 		pdev->dev.platform_data = p;
 
+#ifndef CONFIG_MACH_HAWAII_FPGA
 		data->clk = clk_get(port.dev, p->clk_name);
 		if (IS_ERR(data->clk))
 			return PTR_ERR(data->clk);
@@ -163,6 +164,7 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 		clk_enable(data->clk);
 
 		port.uartclk = clk_get_rate(data->clk);
+#endif
 
 		data->line = serial8250_register_port(&port);
 		if (data->line < 0) {
