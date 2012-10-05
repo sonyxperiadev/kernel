@@ -86,7 +86,7 @@ static int v3d_reset(void* device_id)
 
 	v3d_write(id,V3D_CT0CS_OFFSET , 0x8000);
 	v3d_write(id,V3D_CT1CS_OFFSET , 0x8000);
-	
+
 	v3d_write(id,V3D_L2CACTL_OFFSET , 2);
 
 	v3d_write(id,V3D_CT0CS_OFFSET , 0x8000);
@@ -132,7 +132,7 @@ static int v3d_abort(void* device_id, mm_job_post_t* job)
 	v3d_write(id,V3D_CT0CS_OFFSET , 0x8000);
 	v3d_write(id,V3D_CT1CS_OFFSET , 0x8000);
 
-	v3d_reset(id);	
+	v3d_reset(id);
 	return 0;
 }
 
@@ -246,7 +246,7 @@ mm_job_status_e v3d_start_job(void* device_id , mm_job_post_t* job, unsigned int
 }
 static v3d_device_t* v3d_device = NULL;
 
-int __init v3d_init(void)
+int __init mm_v3d_init(void)
 {
 	int ret = 0;
 	MM_CORE_HW_IFC core_param;
@@ -327,7 +327,7 @@ int __init v3d_init(void)
 
 	core_param.mm_timer = DEFAULT_MM_DEV_TIMER_MS;
 	core_param.mm_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
-	
+
 	core_param.mm_get_status = get_v3d_status;
 	core_param.mm_start_job = v3d_start_job;
 	core_param.mm_process_irq = process_v3d_irq;
@@ -359,13 +359,13 @@ int __init v3d_init(void)
 		}
 	pr_debug("V3D driver Module Init over");
 	return ret;
-	
+
 err:
 	pr_err("V3D driver Module Init Error");
 	return ret;
 }
 
-void __exit v3d_exit(void)
+void __exit mm_v3d_exit(void)
 {
 	pr_debug("V3D driver Module Exit");
 	if(v3d_device->fmwk_handle)
@@ -387,8 +387,8 @@ void __exit v3d_exit(void)
 }
 
 
-module_init(v3d_init);
-module_exit(v3d_exit);
+module_init(mm_v3d_init);
+module_exit(mm_v3d_exit);
 
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("V3D device driver");

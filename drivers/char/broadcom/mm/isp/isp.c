@@ -502,7 +502,7 @@ static mm_job_status_e isp_start_job(void* id , mm_job_post_t* job, unsigned int
 
 static isp_device_t* isp_device = NULL;
 
-int __init isp_init(void)
+int __init mm_isp_init(void)
 {
 	int ret = 0;
 	MM_CORE_HW_IFC core_param;
@@ -556,7 +556,7 @@ err:
 	return ret;
 }
 
-void __exit isp_exit(void)
+void __exit mm_isp_exit(void)
 {
 	pr_debug("ISP driver Module Exit");
 	if(isp_device->fmwk_handle)
@@ -564,8 +564,8 @@ void __exit isp_exit(void)
 	kfree(isp_device);
 }
 
-module_init(isp_init);
-module_exit(isp_exit);
+module_init(mm_isp_init);
+module_exit(mm_isp_exit);
 
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("ISP device driver");
