@@ -8,26 +8,6 @@ menuconfig BRCM_CHAR_DRIVERS
 	help
 	  Broadcom's char drivers
 
-config HAWAII_MM
-	tristate "Hawaii MM Driver Framework"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_HAWAII)
-	default n
-
-config HAWAII_MM_V3D
-	tristate "Hawaii V3D Driver (uses new Driver Framework)"
-	depends on HAWAII_MM
-	default n
-
-config HAWAII_MM_VCE
-	tristate "Hawaii VCE Driver (uses new Driver Framework)"
-	depends on HAWAII_MM
-	default n
-
-config HAWAII_MM_H264
-	tristate "Hawaii MM - H264 Driver"
-	depends on HAWAII_MM
-	default n
-
 config V3D
 	tristate "V3D Driver"
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
@@ -58,11 +38,6 @@ config STM_DEFAULT
 config BCM_CPDUMP_INIRQ
 	bool "cp crash dump in interrupt"
 	depends on BRCM_CHAR_DRIVERS
-	default n
-
-config HAWAII_MM_ISP
-	tristate "Hawaii ISP Driver (uses new Driver Framework)"
-	depends on HAWAII_MM
 	default n
 
 config ISP
@@ -109,6 +84,31 @@ config BCM_MDMGPIO
     default n
     ---help---
     Select to build the mdmgpio driver.
+
+config HAWAII_MM
+	tristate "Hawaii MM Driver Framework"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
+	default n
+
+config HAWAII_MM_V3D
+	tristate "Hawaii V3D Driver (uses new Driver Framework)"
+	depends on HAWAII_MM
+	default n
+
+config HAWAII_MM_VCE
+	tristate "Hawaii VCE Driver (uses new Driver Framework)"
+	depends on HAWAII_MM
+	default n
+
+config HAWAII_MM_H264
+	tristate "Hawaii MM - H264 Driver"
+	depends on HAWAII_MM
+	default n
+
+config HAWAII_MM_ISP
+	tristate "Hawaii ISP Driver (uses new Driver Framework)"
+	depends on HAWAII_MM
+	default n
 
 config BCM_AAA
     tristate "Android Amxr Audio ('AAA grade-beef') driver"
