@@ -24,6 +24,7 @@
 
 #include <asm/cputype.h>
 #include <asm/topology.h>
+#include <asm/smp_plat.h>
 
 /*
  * cpu power scale management
@@ -83,6 +84,26 @@ struct cpu_capacity *cpu_capacity;
 
 unsigned long middle_capacity = 1;
 
+static int __init get_dt_power_topology(struct device_node *cpun)
+{
+	const u32 *reg;
+	struct device_node *clustern;
+	int len, power = 0;
+
+	reg = of_get_property(cpun, "power-gate", &len);
+	if (reg && len == 4 && be32_to_cpup(reg))
+		power |= CPU_CORE_GATE;
+
+	clustern = of_parse_phandle(cpun, "cluster", 0);
+	if (clustern) {
+		reg = of_get_property(clustern, "power-gate", &len);
+		if (reg && len == 4 && be32_to_cpup(reg))
+			power |= CPU_CLUSTER_GATE;
+	}
+
+	return power;
+}
+
 /*
  * Iterate all CPUs' descriptor in DT and compute the efficiency
  * (as per table_efficiency). Also calculate a middle efficiency
@@ -105,10 +126,21 @@ static void __init parse_dt_topology(void)
 
 	while ((cn = of_find_node_by_type(cn, "cpu"))) {
 		const u32 *rate, *reg;
-		int len;
+		int len, hwid, lcpu;
 
 		if (cpu >= num_possible_cpus())
 			break;
+
+		reg = of_get_property(cn, "reg", &len);
+		if (!reg || len != 4) {
+			pr_err("%s missing reg property\n", cn->full_name);
+			continue;
+		}
+
+		hwid = be32_to_cpup(reg);
+		lcpu = get_logical_index(hwid);
+		if ( lcpu != -EINVAL)
+			cpu_topology[lcpu].flags = get_dt_power_topology(cn);
 
 		for (cpu_eff = table_efficiency; cpu_eff->compatible; cpu_eff++)
 			if (of_device_is_compatible(cn, cpu_eff->compatible))
@@ -124,12 +156,6 @@ static void __init parse_dt_topology(void)
 			continue;
 		}
 
-		reg = of_get_property(cn, "reg", &len);
-		if (!reg || len != 4) {
-			pr_err("%s missing reg property\n", cn->full_name);
-			continue;
-		}
-
 		capacity = ((be32_to_cpup(rate)) >> 20) * cpu_eff->efficiency;
 
 		/* Save min capacity of the system */
@@ -141,7 +167,7 @@ static void __init parse_dt_topology(void)
 			max_capacity = capacity;
 
 		cpu_capacity[cpu].capacity = capacity;
-		cpu_capacity[cpu++].hwid = be32_to_cpup(reg);
+		cpu_capacity[cpu++].hwid = hwid;
 	}
 
 	if (cpu < num_possible_cpus())
@@ -202,6 +228,25 @@ static inline void update_cpu_power(unsigned int cpuid, unsigned int mpidr) {}
  */
 struct cputopo_arm cpu_topology[NR_CPUS];
 EXPORT_SYMBOL_GPL(cpu_topology);
+
+int arch_sd_local_flags(int level, int cpu)
+{
+	/* Powergate at threading level doesn't make sense */
+	if (level & SD_SHARE_CPUPOWER)
+		return 1*SD_SHARE_POWERDOMAIN;
+
+	/* Powergate at core level if it defined by DT */
+	if ((level & SD_SHARE_PKG_RESOURCES) &&
+			!(cpu_topology[cpu].flags & CPU_CORE_GATE))
+		return 1*SD_SHARE_POWERDOMAIN;
+
+	/* Powergate at cluster level if it defined by DT */
+	if (!(level & SD_SHARE_PKG_RESOURCES) &&
+			!(cpu_topology[cpu].flags & CPU_CLUSTER_GATE))
+		return 1*SD_SHARE_POWERDOMAIN;
+
+	return 0*SD_SHARE_POWERDOMAIN;
+}
 
 const struct cpumask *cpu_coregroup_mask(int cpu)
 {
@@ -306,7 +351,7 @@ void __init init_cpu_topology(void)
 		cpu_topo->socket_id = -1;
 		cpumask_clear(&cpu_topo->core_sibling);
 		cpumask_clear(&cpu_topo->thread_sibling);
-
+		cpu_topo->flags = 0;
 		set_power_scale(cpu, SCHED_POWER_SCALE);
 	}
 	smp_wmb();

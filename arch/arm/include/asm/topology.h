@@ -5,12 +5,16 @@
 
 #include <linux/cpumask.h>
 
+#define CPU_CORE_GATE		0x1
+#define CPU_CLUSTER_GATE	0x2
+
 struct cputopo_arm {
 	int thread_id;
 	int core_id;
 	int socket_id;
 	cpumask_t thread_sibling;
 	cpumask_t core_sibling;
+	int flags;
 };
 
 extern struct cputopo_arm cpu_topology[NR_CPUS];
