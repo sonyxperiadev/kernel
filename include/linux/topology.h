@@ -85,7 +85,7 @@ int arch_update_cpu_topology(void);
 #define ARCH_HAS_SCHED_WAKE_IDLE
 /* Common values for SMT siblings */
 #ifndef SD_SIBLING_INIT
-#define SD_SIBLING_INIT (struct sched_domain) {				\
+#define SD_SIBLING_INIT(cpu) (struct sched_domain) {			\
 	.min_interval		= 1,					\
 	.max_interval		= 2,					\
 	.busy_factor		= 64,					\
@@ -99,6 +99,8 @@ int arch_update_cpu_topology(void);
 				| 1*SD_WAKE_AFFINE			\
 				| 1*SD_SHARE_CPUPOWER			\
 				| 1*SD_SHARE_PKG_RESOURCES		\
+				| arch_sd_local_flags(SD_SHARE_CPUPOWER|\
+					SD_SHARE_PKG_RESOURCES, cpu)	\
 				| 0*SD_SERIALIZE			\
 				| 0*SD_PREFER_SIBLING			\
 				| arch_sd_sibling_asym_packing()	\
@@ -113,7 +115,7 @@ int arch_update_cpu_topology(void);
 #ifdef CONFIG_SCHED_MC
 /* Common values for MC siblings. for now mostly derived from SD_CPU_INIT */
 #ifndef SD_MC_INIT
-#define SD_MC_INIT (struct sched_domain) {				\
+#define SD_MC_INIT(cpu) (struct sched_domain) {				\
 	.min_interval		= 1,					\
 	.max_interval		= 4,					\
 	.busy_factor		= 64,					\
@@ -131,6 +133,8 @@ int arch_update_cpu_topology(void);
 				| 1*SD_WAKE_AFFINE			\
 				| 0*SD_SHARE_CPUPOWER			\
 				| 1*SD_SHARE_PKG_RESOURCES		\
+				| arch_sd_local_flags(			\
+					SD_SHARE_PKG_RESOURCES, cpu)	\
 				| 0*SD_SERIALIZE			\
 				,					\
 	.last_balance		= jiffies,				\
@@ -141,7 +145,7 @@ int arch_update_cpu_topology(void);
 
 /* Common values for CPUs */
 #ifndef SD_CPU_INIT
-#define SD_CPU_INIT (struct sched_domain) {				\
+#define SD_CPU_INIT(cpu) (struct sched_domain) {			\
 	.min_interval		= 1,					\
 	.max_interval		= 4,					\
 	.busy_factor		= 64,					\
@@ -161,6 +165,7 @@ int arch_update_cpu_topology(void);
 				| 1*SD_WAKE_AFFINE			\
 				| 0*SD_SHARE_CPUPOWER			\
 				| 0*SD_SHARE_PKG_RESOURCES		\
+				| arch_sd_local_flags(0, cpu)		\
 				| 0*SD_SERIALIZE			\
 				| 1*SD_PREFER_SIBLING			\
 				,					\

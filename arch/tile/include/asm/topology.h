@@ -51,7 +51,7 @@ static inline const struct cpumask *cpumask_of_node(int node)
  */
 
 /* sched_domains SD_CPU_INIT for TILE architecture */
-#define SD_CPU_INIT (struct sched_domain) {				\
+#define SD_CPU_INIT(cpu) (struct sched_domain) {			\
 	.min_interval		= 4,					\
 	.max_interval		= 128,					\
 	.busy_factor		= 64,					\
@@ -71,6 +71,7 @@ static inline const struct cpumask *cpumask_of_node(int node)
 				| 0*SD_WAKE_AFFINE			\
 				| 0*SD_SHARE_CPUPOWER			\
 				| 0*SD_SHARE_PKG_RESOURCES		\
+				| arch_sd_local_flags(0, cpu)		\
 				| 0*SD_SERIALIZE			\
 				,					\
 	.last_balance		= jiffies,				\
