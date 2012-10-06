@@ -33,9 +33,6 @@ typedef uint16_t uint0p16_t;
 
 #include <linux/broadcom/mm_fw_usr_ifc.h>
 
-#ifndef ISP_DEV_NAME
-#define ISP_DEV_NAME	"bcm_isp"
-#endif
 #define BCM_ISP_MAGIC	'I'
 
 

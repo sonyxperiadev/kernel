@@ -14,7 +14,6 @@ the GPL, without Broadcom's express prior written consent.
 #define _V3D_H_
 #include <linux/ioctl.h>
 
-#define V3D_DEV_NAME	"v3d"
 #define BCM_V3D_MAGIC	'V'
 
 #define SUPPORT_V3D_WORKLIST
