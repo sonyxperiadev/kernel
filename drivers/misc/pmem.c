@@ -359,17 +359,45 @@ static bool should_retry_allocation(int id, struct pmem_data *data)
 
 #endif /* CONFIG_ANDROID_PMEM_LOW_MEMORY_KILLER */
 
+/* Must have down_write(&data->sem) locked */
 static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 {
 	struct page *page;
 	unsigned long nr_pages = len >> PAGE_SHIFT;
+	unsigned int pass = 0;
+	int ret = 0;
 
-	if (nr_pages > pmem[id].cma.nr_pages)
-		return -ENOMEM;
+	if (nr_pages > pmem[id].cma.nr_pages) {
+		ret = -ENOMEM;
+		goto out;
+	}
 
-	page = dma_alloc_from_contiguous(&pmem[id].pdev->dev, nr_pages, 0);
-	if (!page)
-		return -ENOMEM;
+	do {
+		page = dma_alloc_from_contiguous(&pmem[id].pdev->dev,
+						nr_pages, 0);
+		if (likely(page))
+			break;
+
+		if (fatal_signal_pending(current)) {
+			ret = -EINTR;
+			goto out;
+		}
+
+		if ((++pass % 10) == 0) {
+			printk(KERN_INFO"pmem: %s/%d tried %u times"
+					"to allocate %lu pages\n",
+					current->group_leader->comm,
+					current->pid, pass,
+					nr_pages);
+		}
+		if (pass > 50) {
+			ret = -ENOMEM;
+			goto out;
+		}
+	} while (should_retry_allocation(id, data));
+
+	if (unlikely(fatal_signal_pending(current)))
+		goto out;
 
 	BUG_ON(!current->group_leader->mm);
 
@@ -378,7 +406,10 @@ static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 	data->size = len;
 	data->flags |= PMEM_FLAGS_CMA;
 
-	return 0;
+	if (!pmem_watermark_ok(&pmem[id]))
+		wake_up_all(&cleaners);
+out:
+	return ret;
 }
 
 /* must be called with down_write(data->sem) */
@@ -386,9 +417,25 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 			 unsigned long len)
 {
 	unsigned long addr;
+	int ret = 0;
 
-	/* We only do allocation in pages */
-	BUG_ON(len < PAGE_SIZE);
+
+	if ((len < PAGE_SIZE) || !PMEM_IS_PAGE_ALIGNED(len)) {
+		printk(KERN_ERR"pmem: allocation (%lu) must be aligned"
+		       " to multiple of pages_size.\n", len);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (!data) {
+		printk(KERN_ERR"pmem: Invalid data passed to pmem_allocate\n");
+		ret = -ENODEV;
+		goto out;
+	}
+
+	down_write(&data->sem);
+
+	BUG_ON(has_allocation(file));
 
 	/* do not use kmalloc yet */
 	if (false && is_power_of_2(len) && (len <= KMALLOC_MAX_SIZE)) {
@@ -398,7 +445,7 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 			data->flags |= PMEM_FLAGS_KMALLOC;
 			data->pfn = __phys_to_pfn(virt_to_phys((void *)addr));
 			data->size = len;
-			return 0;
+			goto out_unlock;
 		}
 	}
 
@@ -412,17 +459,37 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 			data->pfn = __phys_to_pfn(addr);
 			data->size = len;
 			outer_inv_range(addr, addr+len);
-			return 0;
+			goto out_unlock;
 		} else {
 			printk(KERN_ALERT"carveout failed: %lukB\n", len/SZ_1K);
 		}
 		/* If we failed, fallback to CMA */
 	}
 
-	if (pmem_cma_allocate(id, len, data))
-		return -ENOMEM;
+	ret = pmem_cma_allocate(id, len, data);
+	if (ret == -ENOMEM) {
+		printk(KERN_ERR"%s:%d pmem: Alloc failed (%ldkB, %ld pages)\n",
+				current->group_leader->comm,
+				current->group_leader->pid,
+				len/SZ_1K, len >> PAGE_SHIFT);
+		get_dev_cma_info(&pmem[id].pdev->dev, &pmem[id].cma);
+		printk(KERN_ERR"CMA region details\n");
+		printk(KERN_ERR "start PFN    : %lx\n"
+				"nr_pages     : %ld pages\n"
+				"biggest free : %ld pages\n"
+				"total alloc  : %ld pages\n"
+				"peak alloc   : %ld pages\n",
+				 pmem[id].cma.start_pfn,
+				 pmem[id].cma.nr_pages,
+				 pmem[id].cma.max_free_block,
+				 pmem[id].cma.total_alloc,
+				 pmem[id].cma.peak_alloc);
+	}
 
-	return 0;
+out_unlock:
+	up_write(&data->sem);
+out:
+	return ret;
 }
 
 int is_pmem_file(struct file *file)
@@ -606,12 +673,23 @@ static int pmem_cma_free(int id, struct pmem_data *data)
 }
 
 /* must have down_write on data->sem */
-static int pmem_free(int id, struct pmem_data *data)
+static int pmem_free(struct file *file, int id, struct pmem_data *data)
 {
-	int ret = 0;
 	unsigned long addr;
+	int ret = 0;
 
-	BUG_ON((data->pfn == -1UL) || !data->size);
+	if (!data) {
+		printk(KERN_ERR"pmem: Invalida 'data' passed to pmem_free\n");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	down_write(&data->sem);
+
+	/* If we have nothing to free here */
+	if (!has_allocation(file))
+		goto out_unlock;
+
 	BUG_ON(!(data->flags & PMEM_FLAGS_ALLOCMASK));
 
 	/* restore kernel mappings if we changed them
@@ -643,6 +721,9 @@ static int pmem_free(int id, struct pmem_data *data)
 	data->pfn = -1UL;
 	data->size = 0;
 
+out_unlock:
+	up_write(&data->sem);
+out:
 	return ret;
 }
 
@@ -785,86 +866,49 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	struct pmem_data *data;
 	unsigned long vma_size = vma->vm_end - vma->vm_start;
-	int ret = 0, id = get_id(file);
-	unsigned int pass = 0;
+	int ret = 0;
 
 	if (vma->vm_pgoff || !PMEM_IS_PAGE_ALIGNED(vma_size)) {
 		printk(KERN_ERR "pmem: mmaps must be at offset zero, aligned"
 		       " and a multiple of pages_size.\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	data = (struct pmem_data *)file->private_data;
 	if (!data) {
 		ret = -ENODEV;
-		goto error;
+		goto out;
 	}
 
 	down_write(&data->sem);
 
-	if (likely(!has_allocation(file))) {
-		do {
-			ret = pmem_allocate(file, id, data,
-					    vma->vm_end - vma->vm_start);
-			if (ret == 0)
-				break;
-
-			if (fatal_signal_pending(current)) {
-				ret = -EINTR;
-				goto error_up_write;
-			}
-
-			if ((++pass % 10) == 0) {
-				printk(KERN_INFO"pmem: %s/%d tried %u times"
-						"to allocate %lu pages\n",
-						current->group_leader->comm,
-						current->pid, pass,
-						(vma_size >> PAGE_SHIFT));
-			}
-
-			if (pass > 50)
-				break;
-		} while (should_retry_allocation(id, data));
-
-		if (unlikely(fatal_signal_pending(current)))
-			goto error_up_write;
-
-		if (is_cma_allocation(data) &&
-			!pmem_watermark_ok(&pmem[id]))
-			wake_up_all(&cleaners);
+	if (unlikely(!has_allocation(file))) {
+		printk(KERN_ALERT"pmem: mmap without calling PMEM_ALLOCATE"
+				" is deprecated!!!\n");
+		up_write(&data->sem);
+		ret = pmem_allocate(file, get_id(file), data, vma_size);
+		if (ret)
+			goto out;
+		down_write(&data->sem);
 	}
 
 	if (pmem_len(data) != vma_size) {
-		printk(KERN_ERR"%s:%d pmem: Alloc failed (%ldkB, %ld pages)\n",
-				current->group_leader->comm,
-				current->group_leader->pid,
-				vma_size/SZ_1K, vma_size >> PAGE_SHIFT);
-		get_dev_cma_info(&pmem[id].pdev->dev, &pmem[id].cma);
-		printk(KERN_ERR"CMA region details\n");
-		printk(KERN_ERR "start PFN    : %lx\n"
-				"nr_pages     : %ld pages\n"
-				"biggest free : %ld pages\n"
-				"total alloc  : %ld pages\n"
-				"peak alloc   : %ld pages\n",
-				 pmem[id].cma.start_pfn,
-				 pmem[id].cma.nr_pages,
-				 pmem[id].cma.max_free_block,
-				 pmem[id].cma.total_alloc,
-				 pmem[id].cma.peak_alloc);
-		ret = -ENOMEM;
-		goto error_up_write;
+		printk(KERN_ERR"pmem: mmap (%lu pages) doesn't match"
+				" the allocation (%lu pages)\n",
+				(vma_size >> PAGE_SHIFT),
+				(pmem_len(data) >> PAGE_SHIFT));
+		ret = -EINVAL;
+		goto out_unlock;
 	}
 
 	vma->vm_pgoff = PMEM_START_ADDR(data) >> PAGE_SHIFT;
 	vma->vm_page_prot = pmem_access_prot(file, vma->vm_page_prot);
 
-	if (pmem_map_pfn_range(id, file, vma, data, 0, vma_size)) {
-		printk(KERN_INFO"pmem: mmap failed in kernel!\n");
+	if (pmem_map_pfn_range(get_id(file), file, vma, data, 0, vma_size)) {
+		printk(KERN_ERR"pmem: mmap failed in kernel!\n");
 		ret = -EAGAIN;
-		if (!(data->flags & PMEM_FLAGS_MASTERMAP))
-			goto error_free_mem;
-		else
-			goto error_up_write;
+		goto out_unlock;
 	}
 
 	if (!(data->flags & PMEM_FLAGS_MASTERMAP)) {
@@ -872,16 +916,9 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		data->pid = task_pid_nr(current->group_leader);
 	}
 
+out_unlock:
 	up_write(&data->sem);
-
-	return ret;
-
-error_free_mem:
-	printk(KERN_ERR "pmem: failed to free allocated memory\n");
-	pmem_free(id, data);
-error_up_write:
-	up_write(&data->sem);
-error:
+out:
 	return ret;
 
 }
@@ -895,8 +932,29 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	int ret = 0;
 
 	switch (cmd) {
+	case PMEM_ALLOCATE:
+		if (unlikely(has_allocation(file)))
+			return -EEXIST;
+		if (copy_from_user(&region, (void __user *)arg,
+				   sizeof(struct pmem_region)))
+			return -EFAULT;
+		data = (struct pmem_data *)file->private_data;
+		ret = pmem_allocate(file, get_id(file), data, region.len);
+		if (ret == 0) {
+			region.offset = PMEM_START_ADDR(data);
+		} else {
+			region.offset = -1UL;
+			region.len = -1UL;
+		}
+		if (copy_to_user((void __user *)arg, &region,
+				 sizeof(struct pmem_region))) {
+			pmem_free(file, get_id(file), data);
+			ret = -EFAULT;
+		}
+		break;
 	case PMEM_GET_PHYS:
-		DLOG("get_phys\n");
+	case PMEM_GET_SIZE:
+		DLOG("get phys / get size\n");
 		if (!has_allocation(file)) {
 			region.offset = 0;
 			region.len = 0;
@@ -909,24 +967,6 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				 sizeof(struct pmem_region)))
 			return -EFAULT;
 		break;
-	case PMEM_GET_SIZE:
-		DLOG("get_size\n");
-		if (!has_allocation(file))
-			return -EINVAL;
-		data = (struct pmem_data *)file->private_data;
-		down_write(&data->sem);
-		if (data->flags & PMEM_FLAGS_DIRTY_REGION) {
-			region.len = 1;
-			data->flags &= ~PMEM_FLAGS_DIRTY_REGION;
-		} else {
-			region.len = 0;
-		}
-		up_write(&data->sem);
-
-		if (copy_to_user((void __user *)arg, &region,
-				 sizeof(struct pmem_region)))
-			return -EFAULT;
-		break;
 	case PMEM_GET_TOTAL_SIZE:
 		DLOG("get total size\n");
 		region.offset = 0;
@@ -934,14 +974,6 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (copy_to_user((void __user *)arg, &region,
 				 sizeof(struct pmem_region)))
 			return -EFAULT;
-		break;
-	case PMEM_ALLOCATE:
-		if (!has_allocation(file))
-			return -EINVAL;
-		data = (struct pmem_data *)file->private_data;
-		down_write(&data->sem);
-		data->flags |= PMEM_FLAGS_DIRTY_REGION;
-		up_write(&data->sem);
 		break;
 	case PMEM_SET_DIRTY_REGION:
 		if (!has_allocation(file))
@@ -1033,18 +1065,13 @@ static int pmem_release(struct inode *inode, struct file *file)
 	list_del(&data->list);
 	mutex_unlock(&pmem[id].data_list_lock);
 
-	down_write(&data->sem);
-
 	/* if it has an allocation, free it */
-	if (has_allocation(file)) {
-		ret = pmem_free(id, data);
-		if (ret)
-			printk(KERN_ERR"pmem: pmem_free failed\n");
-	}
+	ret = pmem_free(file, id, data);
+	if (ret)
+		printk(KERN_ERR"pmem: pmem_free failed\n");
 
 	file->private_data = NULL;
 
-	up_write(&data->sem);
 	kfree(data);
 
 	return ret;
