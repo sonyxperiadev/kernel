@@ -48,22 +48,18 @@ the GPL, without Broadcom's express prior written consent.
 #if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
 #define V3D_BIN_OOM_SIZE 512*1024
 #else
-#define V3D_BIN_OOM_SIZE 2*1024*1024
+#define V3D_BIN_OOM_SIZE 8*1024*1024
 #endif
 
 typedef struct {
 #ifdef CONFIG_ION
 	struct ion_client *v3d_bin_oom_client;
 	struct ion_handle *v3d_bin_oom_handle;
-	struct ion_handle *v3d_bin_oom_handle2;
 #else
 	void* v3d_bin_oom_cpuaddr;
-	void* v3d_bin_oom_cpuaddr2;
 #endif
 	int v3d_bin_oom_block;
 	int v3d_bin_oom_size ;
-	int v3d_bin_oom_block2;
-	int v3d_bin_oom_size2 ;
 
 	volatile int v3d_oom_block_used ;
 
@@ -171,7 +167,7 @@ static mm_isr_type_e process_v3d_irq(void* device_id)
 			v3d_write(id,V3D_BPOA_OFFSET, id->v3d_bin_oom_block);
 			v3d_write(id,V3D_BPOS_OFFSET, id->v3d_bin_oom_size);
 			id->v3d_oom_block_used = 1;
-			pr_err("v3d hw asking for OOM");
+			pr_debug("v3d hw asking for OOM");
 		}/*else if (id->v3d_oom_block_used == 1) {
 			v3d_write(id,V3D_BPOA_OFFSET, id->v3d_bin_oom_block2);
 			v3d_write(id,V3D_BPOS_OFFSET, id->v3d_bin_oom_size2);
@@ -278,21 +274,6 @@ int __init mm_v3d_init(void)
 	pr_info("v3d bin oom dma[0x%08x], size[0x%08x] \n",
 	       v3d_device->v3d_bin_oom_block, v3d_device->v3d_bin_oom_size);
 
-	v3d_device->v3d_bin_oom_handle2 = ion_alloc(v3d_device->v3d_bin_oom_client,
-			V3D_BIN_OOM_SIZE, 0, ION_DEFAULT_HEAP, 0);
-	v3d_device->v3d_bin_oom_block2 = kona_ion_map_dma(v3d_device->v3d_bin_oom_client,
-			v3d_device->v3d_bin_oom_handle2);
-	if (v3d_device->v3d_bin_oom_block2 == 0) {
-		pr_err("ion alloc failed for v3d oom block2 size[0x%x] client[%p] handle2[%p] \n",
-		       V3D_BIN_OOM_SIZE, v3d_device->v3d_bin_oom_client, v3d_device->v3d_bin_oom_handle2);
-		v3d_device->v3d_bin_oom_size2 = 0;
-		ret = -ENOMEM;
-		goto err;
-	}
-	v3d_device->v3d_bin_oom_size2 = V3D_BIN_OOM_SIZE ;
-	pr_info("v3d bin oom 2 dma[0x%08x], size[0x%08x] \n",
-	       v3d_device->v3d_bin_oom_block2, v3d_device->v3d_bin_oom_size2);
-
 #else
 	v3d_device->v3d_bin_oom_cpuaddr = kmalloc(V3D_BIN_OOM_SIZE,GFP_KERNEL);//dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &v3d_device->v3d_bin_oom_block, GFP_ATOMIC | GFP_DMA);
 	if (v3d_device->v3d_bin_oom_cpuaddr == NULL) {
@@ -306,19 +287,6 @@ int __init mm_v3d_init(void)
 	v3d_device->v3d_bin_oom_size = V3D_BIN_OOM_SIZE ;
 	pr_debug("v3d bin oom phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
 		v3d_device->v3d_bin_oom_block,v3d_device->v3d_bin_oom_size, (int)v3d_device->v3d_bin_oom_cpuaddr);
-
-	v3d_device->v3d_bin_oom_cpuaddr2 = kmalloc(V3D_BIN_OOM_SIZE,GFP_KERNEL);//dma_alloc_coherent(NULL, V3D_BIN_OOM_SIZE, &v3d_device->v3d_bin_oom_block, GFP_ATOMIC | GFP_DMA);
-	if (v3d_device->v3d_bin_oom_cpuaddr2 == NULL) {
-		pr_err("dma_alloc_coherent failed for v3d oom block size[0x%x]", v3d_device->v3d_bin_oom_size2);
-		v3d_device->v3d_bin_oom_block2 = 0;
-		v3d_device->v3d_bin_oom_size2 = 0;
-		ret = -ENOMEM;
-		goto err;
-	}
- 	v3d_device->v3d_bin_oom_block = virt_to_phys(v3d_device->v3d_bin_oom_cpuaddr2);
-	v3d_device->v3d_bin_oom_size2 = V3D_BIN_OOM_SIZE;
-	pr_debug("v3d bin oom2 phys[0x%08x], size[0x%08x] cpuaddr[0x%08x]",
-		v3d_device->v3d_bin_oom_block2, v3d_device->v3d_bin_oom_size2, (int)v3d_device->v3d_bin_oom_cpuaddr2);
 #endif
 
 	core_param.mm_base_addr = MM_V3D_BASE_ADDR;
@@ -371,15 +339,11 @@ void __exit mm_v3d_exit(void)
 	if(v3d_device->fmwk_handle)
 		mm_fmwk_unregister(v3d_device->fmwk_handle);
 #ifdef CONFIG_ION
-	if (v3d_device->v3d_bin_oom_handle2)
-		ion_free(v3d_device->v3d_bin_oom_client, v3d_device->v3d_bin_oom_handle2);
 	if (v3d_device->v3d_bin_oom_handle)
 		ion_free(v3d_device->v3d_bin_oom_client, v3d_device->v3d_bin_oom_handle);
 	if (v3d_device->v3d_bin_oom_client)
 		ion_client_destroy(v3d_device->v3d_bin_oom_client);
 #else
-	if (v3d_device->v3d_bin_oom_cpuaddr2)
-		dma_free_coherent(NULL, v3d_device->v3d_bin_oom_size2, v3d_device->v3d_bin_oom_cpuaddr2, v3d_device->v3d_bin_oom_block2);
 	if (v3d_device->v3d_bin_oom_cpuaddr)
 		dma_free_coherent(NULL, v3d_device->v3d_bin_oom_size, v3d_device->v3d_bin_oom_cpuaddr, v3d_device->v3d_bin_oom_block);
 #endif
