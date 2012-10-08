@@ -44,6 +44,7 @@
 #include <mach/sdio_platform.h>
 #include <mach/kona.h>
 #include <mach/hawaii.h>
+#include <mach/clock.h>
 #include <asm/mach/map.h>
 #include <linux/clk.h>
 #include <linux/bootmem.h>
@@ -102,9 +103,9 @@
 }
 
 static struct plat_serial8250_port uart_data[] = {
-	KONA_8250PORT_FPGA(UART0, "uartb_clk", UART_CLK_HZ, "console"),
-	KONA_8250PORT_FPGA(UART1, "uartb2_clk", 48000000, "bluetooth"),
-	KONA_8250PORT_FPGA(UART2, "uartb3_clk", 26000000, "gps"),
+	KONA_8250PORT_FPGA(UART0, UARTB_PERI_CLK_NAME_STR, UART_CLK_HZ, "console"),
+	KONA_8250PORT_FPGA(UART1, UARTB2_PERI_CLK_NAME_STR, 48000000, "bluetooth"),
+	KONA_8250PORT_FPGA(UART2, UARTB3_PERI_CLK_NAME_STR, 26000000, "gps"),
 	{
 	 .flags = 0,
 	 },
