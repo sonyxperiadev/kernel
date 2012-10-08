@@ -402,7 +402,7 @@ static void local_secure_api(unsigned service_id,
 				__asmeq("%1", "r4")
 				__asmeq("%2", "r5")
 				__asmeq("%3", "r6")
-#ifdef REQUIRES_SEC
+#ifdef SMC_INSTR
 				".arch_extension sec\n"
 #endif
 				"smc	#0	@ switch to secure world\n"
