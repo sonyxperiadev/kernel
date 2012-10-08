@@ -16,12 +16,13 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/sched.h>
 #include <linux/wait.h>
 
+#include "Driver.h"
 #include "Session.h"
 
 
 /* ================================================================ */
 
-V3dSessionType *V3dSession_Create(V3dDriverType *Driver)
+V3dSessionType *V3dSession_Create(V3dDriverType *Driver, const char *Name)
 {
 	V3dSessionType *Instance = (V3dSessionType *) kmalloc(sizeof(V3dSessionType), GFP_KERNEL);
 	if (Instance == NULL)
@@ -31,9 +32,16 @@ V3dSessionType *V3dSession_Create(V3dDriverType *Driver)
 
 	/* Unconditional initialisation */
 	Instance->Driver = Driver;
+	Instance->Name   = Name;
 	Instance->LastId = 0;
 	spin_lock_init(&Instance->Issued.Lock);
 	INIT_LIST_HEAD(&Instance->Issued.List);
+
+	V3dSession_ResetStatistics(Instance);
+
+	if (V3dDriver_AddSession(Instance->Driver, Instance) != 0)
+		return V3dSession_Delete(Instance), NULL;
+	++Instance->Initialised;
 
 	/* Initialisation that can fail */
 	return Instance;
@@ -42,20 +50,54 @@ V3dSessionType *V3dSession_Create(V3dDriverType *Driver)
 void V3dSession_Delete(V3dSessionType *Instance)
 {
 	switch (Instance->Initialised) {
-	case 0:
+	case 1:
 		/* Wait for all our jobs to complete */
 		V3dSession_Wait(Instance);
 
 		/* Ensure that any exclusive lock is released */
 		(void) V3dDriver_ExclusiveStop(Instance->Driver, Instance);
 
+		V3dDriver_RemoveSession(Instance->Driver, Instance);
+
+	case 0:
 		kfree(Instance);
 		break;
 	}
 }
 
+void V3dSession_ResetStatistics(V3dSessionType *Instance)
+{
+	Instance->Start = ktime_get();
+	Instance->TotalRun = 0;
+	Statistics_Initialise(&Instance->BinRender.Queue);
+	Statistics_Initialise(&Instance->BinRender.Run);
+
+	Statistics_Initialise(&Instance->User.Queue);
+	Statistics_Initialise(&Instance->User.Run);
+}
+
+void V3dSession_AddStatistics(V3dSessionType *Instance, int User, unsigned int Queue, unsigned int Run)
+{
+	Instance->TotalRun += Run;
+	if (User != 0) {
+		Statistics_Add(&Instance->User.Queue, Queue);
+		Statistics_Add(&Instance->User.Run,   Run);
+	} else {
+		Statistics_Add(&Instance->BinRender.Queue, Queue);
+		Statistics_Add(&Instance->BinRender.Run,   Run);
+	}
+}
+
 
 /* ================================================================ */
+
+int V3dSession_JobPost(
+	V3dSessionType *Instance,
+	const v3d_job_post_t *UserJob)
+{
+	Instance->LastId = UserJob->job_id;
+	return V3dDriver_JobPost(Instance->Driver, Instance, UserJob);
+}
 
 void RemoveJob(struct kref *Reference)
 {

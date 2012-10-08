@@ -23,6 +23,12 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/kref.h>
 #include <linux/broadcom/v3d.h>
 
+#include "Session.h"
+#include "Statistics.h"
+
+#define V3D_DEV_NAME	"v3d"
+#define V3D_VERSION_STR	"1.0.0\n"
+
 
 struct V3dSessionTag;
 struct task_struct;
@@ -47,7 +53,7 @@ typedef struct V3dDriver_JobTag {
 } V3dDriver_JobType;
 
 struct V3dDeviceTag;
-typedef struct {
+typedef struct V3dDriverTag {
 	unsigned int Initialised;
 
 	struct {
@@ -72,17 +78,30 @@ typedef struct {
 
 #define FREE_JOBS 128
 		V3dDriver_JobType FreeJobs[FREE_JOBS];
-
-#if 1
-		struct {
-			unsigned int Queue;
-			unsigned int Run;
-		} Times[45];
-		unsigned int TimeIndex;
-#endif
 	} Job;
 
+	ktime_t        Start;
+	uint32_t       TotalRun;
+	struct {
+		StatisticsType Queue;
+		StatisticsType Run;
+	} BinRender;
+	struct {
+		StatisticsType Queue;
+		StatisticsType Run;
+	} User;
+
 	struct V3dDeviceTag *Device;
+
+#define MAX_SESSIONS 64
+	struct V3dSessionTag *Sessions[MAX_SESSIONS];
+
+	struct {
+		unsigned int           Initialised;
+		struct proc_dir_entry *Directory;
+		struct proc_dir_entry *Status;
+		struct proc_dir_entry *Version;
+	} Proc;
 } V3dDriverType;
 
 
@@ -100,6 +119,7 @@ extern int  V3dDriver_JobPost(
 extern void V3dDriver_ExclusiveStart(V3dDriverType *Instance, struct V3dSessionTag *Session);
 extern int  V3dDriver_ExclusiveStop(V3dDriverType  *Instance, struct V3dSessionTag *Session);
 
+extern void V3dDriver_ResetStatistics(V3dDriverType *Instance);
 
 /* For V3dDevice to use */
 static inline unsigned long V3dDriver_JobLock(V3dDriverType *Instance)
@@ -120,6 +140,12 @@ extern V3dDriver_JobType *V3dDriver_JobGet(
 extern void V3dDriver_JobComplete(
 	V3dDriverType     *Instance,
 	V3dDriver_JobType *Job);
+extern int V3dDriver_AddSession(V3dDriverType *Instance, struct V3dSessionTag *Session);
+extern void V3dDriver_RemoveSession(V3dDriverType *Instance, struct V3dSessionTag *Session);
+
+/* For V3dDriver internal use */
+extern int  V3dDriver_CreateProcEntries(V3dDriverType *Instance);
+extern void V3dDriver_DeleteProcEntries(V3dDriverType *Instance);
 
 
 #endif /* ifndef V3D_DRIVER_H_ */

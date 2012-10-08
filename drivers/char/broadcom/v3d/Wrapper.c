@@ -47,11 +47,9 @@ the GPL, without Broadcom's express prior written consent.
 #include "Device.h"
 #include "Session.h"
 
-#define V3D_DEV_NAME	"v3d"
 #define V3D_DEV_MAJOR	0
 #define RHEA_V3D_BASE_PERIPHERAL_ADDRESS	MM_V3D_BASE_ADDR
 #define IRQ_GRAPHICS	BCM_INT_ID_RESERVED148
-#define V3D_VERSION_STR	"1.0.0"
 
 #ifdef V3D_PERF_SUPPORT
 const char *perf_ctr_str[30] = {
@@ -199,7 +197,12 @@ static void __iomem *v3d_base;
 typedef struct {
 	dvts_object_t shared_dvts_object;
 	uint32_t shared_dvts_object_usecount;
+	char comm[TASK_COMM_LEN];
 	V3dSessionType *session;
+
+	struct proc_dir_entry *proc_dir;
+	struct proc_dir_entry *proc_status;
+	struct proc_dir_entry *proc_version;
 #ifdef V3D_PERF_SUPPORT
 	uint32_t perf_ctr[16];
 	uint32_t v3d_perf_mask;
@@ -212,11 +215,9 @@ static struct {
 	struct device *v3d_device;
 	V3dDeviceType *v3d_device0;
 	V3dDriverType *v3d_driver;
-	struct {
-		struct task_struct *owner;
-		struct mutex        lock;
-	} exclusive;
 } v3d_state;
+
+V3dDriverType *v3d_driver;
 
 /********************************************************
 	Imported stuff
@@ -262,8 +263,7 @@ static int v3d_open(struct inode *inode, struct file *filp)
 	dev = kmalloc(sizeof(v3d_t), GFP_KERNEL);
 	if (!dev)
 		goto kmalloc_fail;
-
-	dev->session = V3dSession_Create(v3d_state.v3d_driver);
+	dev->session = V3dSession_Create(v3d_state.v3d_driver, get_task_comm(dev->comm, current));
 	if (dev->session == NULL) {
 		printk(KERN_ERR "V3dSession_Create() failed");
 		goto session_fail;
@@ -550,9 +550,6 @@ int __init v3d_init(void)
 
 	printk(KERN_ERR "V3D register base address (remaped) = %p\n", v3d_base);
 
-	mutex_init(&v3d_state.exclusive.lock);
-	v3d_state.exclusive.owner = NULL;
-
 	ret = platform_device_register(&v3d_platform_device);
 	if (ret) {
 		KLOG_E("Failed to register platform device\n");
@@ -587,15 +584,18 @@ int __init v3d_init(void)
 
 	v3d_state.v3d_driver = V3dDriver_Create();
 	if (v3d_state.v3d_driver == NULL) {
-		printk(KERN_ERR "V3dDriver_Create() failed");
+		KLOG_E("V3dDriver_Create() failed");
 		goto err4;
 	}
 	v3d_state.v3d_device0 = V3dDevice_Create(v3d_state.v3d_driver, v3d_state.v3d_device, (uint32_t) v3d_base);
 	if (v3d_state.v3d_device0 == NULL) {
-		printk(KERN_ERR "V3dDevice_Create() failed");
+		KLOG_E("V3dDevice_Create() failed");
 		goto err5;
 	}
 	V3dDriver_AddDevice(v3d_state.v3d_driver, v3d_state.v3d_device0);
+
+	v3d_driver = v3d_state.v3d_driver;
+
 	return 0;
 
 err5:
@@ -620,6 +620,7 @@ void __exit v3d_exit(void)
 	if (v3d_base)
 		iounmap(v3d_base);
 
+	v3d_driver = NULL;
 	V3dDriver_Delete(v3d_state.v3d_driver);
 	V3dDevice_Delete(v3d_state.v3d_device0);
 

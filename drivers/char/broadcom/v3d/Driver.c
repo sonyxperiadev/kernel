@@ -15,6 +15,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/semaphore.h>
 #include <linux/sched.h>
 #include <linux/ktime.h>
+#include <linux/hrtimer.h>
 #include <asm/uaccess.h>
 #include "Session.h"
 #include "Device.h"
@@ -26,10 +27,23 @@ the GPL, without Broadcom's express prior written consent.
 void V3dDriver_Delete(V3dDriverType *Instance)
 {
 	switch (Instance->Initialised) {
+	case 1:
+		V3dDriver_DeleteProcEntries(Instance);
+
 	case 0:
 		kfree(Instance);
 		break;
 	}
+}
+
+void V3dDriver_ResetStatistics(V3dDriverType *Instance)
+{
+	Statistics_Initialise(&Instance->BinRender.Queue);
+	Statistics_Initialise(&Instance->BinRender.Run);
+	Statistics_Initialise(&Instance->User.Queue);
+	Statistics_Initialise(&Instance->User.Run);
+	Instance->TotalRun = 0;
+	Instance->Start = ktime_get();
 }
 
 V3dDriverType *V3dDriver_Create(void)
@@ -59,6 +73,15 @@ V3dDriverType *V3dDriver_Create(void)
 
 	Instance->Device = NULL;
 
+	V3dDriver_ResetStatistics(Instance);
+
+	memset(&Instance->Sessions, 0, sizeof(Instance->Sessions));
+
+	/* Stuff that can fail */
+	if (V3dDriver_CreateProcEntries(Instance) != 0)
+		return V3dDriver_Delete(Instance), NULL;
+	++Instance->Initialised;
+
 	return Instance;
 }
 
@@ -69,6 +92,32 @@ void V3dDriver_AddDevice(V3dDriverType *Instance, struct V3dDeviceTag *Device)
 {
 	BUG_ON(Instance->Device != NULL);
 	Instance->Device = Device;
+}
+
+static V3dSessionType **GetSessionEntry(V3dDriverType *Instance, V3dSessionType *Session)
+{
+	unsigned int i;
+	for (i = 0 ; i < sizeof(Instance->Sessions) / sizeof(Instance->Sessions[0]) ; ++i)
+		if (Instance->Sessions[i] == Session)
+			return &Instance->Sessions[i];
+	return NULL;
+}
+
+/* TODO: Lock - potentially in the caller */
+int V3dDriver_AddSession(V3dDriverType *Instance, struct V3dSessionTag *Session)
+{
+	V3dSessionType **Entry = GetSessionEntry(Instance, NULL);
+	if (Entry == NULL)
+		return -ENOMEM;
+	*Entry = Session;
+	return 0;
+}
+
+void V3dDriver_RemoveSession(V3dDriverType *Instance, struct V3dSessionTag *Session)
+{
+	V3dSessionType **Entry = GetSessionEntry(Instance, Session);
+	BUG_ON(Session == NULL);
+	*Entry = NULL;
 }
 
 
@@ -115,6 +164,8 @@ void V3dDriver_JobComplete(V3dDriverType *Instance, V3dDriver_JobType *Job)
 {
 	/* Return the job to Free.List */
 	unsigned long Flags;
+	unsigned int Queue;
+	unsigned int Run;
 	Job->End = ktime_get();
 	spin_lock_irqsave(&Instance->Job.Posted.Lock, Flags);
 	if (Job->State == V3DDRIVER_JOB_ISSUED) {
@@ -125,15 +176,17 @@ void V3dDriver_JobComplete(V3dDriverType *Instance, V3dDriver_JobType *Job)
 		list_del(&Job->Link);
 	}
 
-	if (Job->UserJob.job_type == V3D_JOB_USER && Instance->Job.TimeIndex < sizeof(Instance->Job.Times) / sizeof(Instance->Job.Times[0])) {
-		volatile unsigned int Queue = ktime_us_delta(Job->Start, Job->Queued);
-		volatile unsigned int Run   = ktime_us_delta(Job->End, Job->Start);
-#if 0
-		if (Run > 8000)
-			printk(KERN_ERR "q %u r %u\n", Queue, Run);
-#endif
-		Instance->Job.Times[Instance->Job.TimeIndex].Queue = Queue;
-		Instance->Job.Times[Instance->Job.TimeIndex++].Run   = Run;
+	Queue = ktime_us_delta(Job->Start, Job->Queued);
+	Run   = ktime_us_delta(Job->End,   Job->Start);
+	Instance->TotalRun += Run;
+	if (Job->UserJob.job_type == V3D_JOB_USER) {
+		Statistics_Add(&Instance->User.Queue, Queue);
+		Statistics_Add(&Instance->User.Run,   Run);
+		V3dSession_AddStatistics(Job->Session.Instance, 1 /* User? */, Queue, Run);
+	} else {
+		Statistics_Add(&Instance->BinRender.Queue, Queue);
+		Statistics_Add(&Instance->BinRender.Run,   Run);
+		V3dSession_AddStatistics(Job->Session.Instance, 0 /* User? */, Queue, Run);
 	}
 	spin_unlock_irqrestore(&Instance->Job.Posted.Lock, Flags);
 
@@ -152,7 +205,6 @@ void V3dDriver_ExclusiveStart(V3dDriverType *Instance, struct V3dSessionTag *Ses
 	mutex_lock(&Instance->Job.Posted.Exclusive.Lock);
 	BUG_ON(Instance->Job.Posted.Exclusive.Owner != NULL);
 	Instance->Job.Posted.Exclusive.Owner = Session;
-	Instance->Job.TimeIndex = 0;
 
 	/* Count the number of jobs outstanding */
 	Instance->Job.Posted.Exclusive.BinRenderCount = 0;

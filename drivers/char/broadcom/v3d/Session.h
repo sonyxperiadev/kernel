@@ -16,11 +16,15 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/spinlock.h>
 #include <linux/list.h>
+#include <linux/broadcom/v3d.h>
 
-#include "Driver.h"
+#include "Statistics.h"
 
 #define JOB_TIMEOUT_MS 500
 
+
+struct V3dDriverTag;
+struct V3dDriver_JobTag;
 
 struct V3dSessionTag;
 typedef struct V3dSessionTag V3dSessionType;
@@ -28,7 +32,8 @@ typedef struct V3dSessionTag V3dSessionType;
 struct V3dSessionTag {
 	unsigned int Initialised;
 
-	V3dDriverType *Driver;
+	struct V3dDriverTag *Driver;
+	const char          *Name;
 
 	int32_t        LastId;
 
@@ -37,26 +42,35 @@ struct V3dSessionTag {
 		struct list_head List;
 		spinlock_t       Lock;
 	} Issued;
+
+	ktime_t        Start;
+	uint32_t       TotalRun;
+	struct {
+		StatisticsType Queue;
+		StatisticsType Run;
+	} BinRender;
+	struct {
+		StatisticsType Queue;
+		StatisticsType Run;
+	} User;
 };
 
-extern V3dSessionType *V3dSession_Create(V3dDriverType *Driver);
+extern V3dSessionType *V3dSession_Create(struct V3dDriverTag *Driver, const char *Name);
 extern void            V3dSession_Delete(V3dSessionType *Instance);
 
 /* V3dDriver Interface */
-extern void            V3dSession_Issued(V3dDriver_JobType *Job);
-extern void            V3dSession_Complete(V3dDriver_JobType *Job);
+extern void            V3dSession_AddStatistics(V3dSessionType *Instance, int User, unsigned int Queue, unsigned int Run);
+extern void            V3dSession_ResetStatistics(V3dSessionType *Instance);
+extern void            V3dSession_Issued(struct V3dDriver_JobTag *Job);
+extern void            V3dSession_Complete(struct V3dDriver_JobTag *Job);
 
 /* External interface */
-static inline int      V3dSession_JobPost(
+extern int V3dSession_JobPost(
 	V3dSessionType *Instance,
-	const v3d_job_post_t *UserJob)
-{
-	Instance->LastId = UserJob->job_id;
-	return V3dDriver_JobPost(Instance->Driver, Instance, UserJob);
-}
+	const v3d_job_post_t *UserJob);
 
 /* Block until the last job submitted for this session completes */
-extern int32_t         V3dSession_Wait(V3dSessionType *Instance);
+extern int32_t V3dSession_Wait(V3dSessionType *Instance);
 
 
 #endif /* ifndef V3D_SESSION_H_ */
