@@ -61,6 +61,7 @@
 #include <mach/io_map.h>
 #include <mach/irqs.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
+#include <mach/clock.h>
 #include <plat/spi_kona.h>
 #include <plat/chal/chal_trace.h>
 #include <plat/pi_mgr.h>
@@ -158,7 +159,6 @@
 #endif
 
 #ifdef CONFIG_USB_DWC_OTG
-#include <mach/clock.h>
 #include <linux/usb/bcm_hsotgctrl.h>
 #include <linux/usb/otg.h>
 #endif
@@ -208,20 +208,21 @@ extern int hawaii_wifi_status_register(
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 
-#define HAWAII_8250PORT(name, clk)				\
+#define HAWAII_8250PORT(name, clk, freq, uart_name)		\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
 	.irq        = BCM_INT_ID_##name,			\
-	.uartclk    = 26000000,					\
+	.uartclk    = freq,					\
 	.regshift   = 2,					\
-	.iotype     = UPIO_DWAPB,				\
+	.iotype     = UPIO_MEM32,				\
 	.type       = PORT_16550A,				\
 	.flags      = UPF_BOOT_AUTOCONF | UPF_BUG_THRE |	\
 			UPF_FIXED_TYPE | UPF_SKIP_TEST,		\
 	.private_data = (void __iomem *)((KONA_##name##_VA) +	\
 					UARTB_USR_OFFSET),	\
 	.clk_name = clk,					\
+	.port_name = uart_name,					\
 }
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
@@ -457,9 +458,9 @@ static struct platform_device hawaii_camera_front = {
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
 
 static struct plat_serial8250_port hawaii_uart_platform_data[] = {
-	HAWAII_8250PORT(UART0, "uart0_clk"),
-	HAWAII_8250PORT(UART1, "uart1_clk"),
-	HAWAII_8250PORT(UART2, "uart2_clk"),
+	HAWAII_8250PORT(UART0, UARTB_PERI_CLK_NAME_STR, 26000000, "console"),
+	HAWAII_8250PORT(UART1, UARTB2_PERI_CLK_NAME_STR, 48000000, "bluetooth"),
+	HAWAII_8250PORT(UART2, UARTB3_PERI_CLK_NAME_STR, 26000000, "gps"),
 	{
 		.flags = 0,
 	},
