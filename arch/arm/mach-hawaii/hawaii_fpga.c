@@ -68,6 +68,8 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <linux/delay.h>
 #include <asm/hardware/gic.h>
+#include <mach/clock.h>
+#include <linux/usb/bcm_hsotgctrl.h>
 
 #ifdef CONFIG_MACH_HAWAII_FPGA
 #define UART_CLK_HZ 13000000
@@ -329,6 +331,16 @@ void __init board_add_sdio_devices(void)
 			     ARRAY_SIZE(board_sdio_plat_devices));
 }
 
+#if defined(CONFIG_USB_DWC_OTG)
+static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
+	.hsotgctrl_virtual_mem_base = KONA_USB_HSOTG_CTRL_VA,
+	.chipreg_virtual_mem_base = KONA_CHIPREG_VA,
+	.irq = BCM_INT_ID_HSOTG_WAKEUP,
+	.usb_ahb_clk_name = USB_OTG_AHB_BUS_CLK_NAME_STR,
+	.mdio_mstr_clk_name = MDIOMASTER_PERI_CLK_NAME_STR,
+};
+#endif
+
 /* Hawaii Ray specific platform devices */
 static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 	&hawaii_serial_device,
@@ -391,6 +403,9 @@ static void hawaii_ray_add_pdata(void)
 	hawaii_i2c_adap_devices[4].dev.platform_data = &bsc_i2c_cfg[4];
 	hawaii_ssp0_device.dev.platform_data = &sspi_spi0_info;
 	hawaii_ssp1_device.dev.platform_data = &sspi_spi2_info;
+#ifdef CONFIG_USB_DWC_OTG
+	hawaii_hsotgctrl_platform_device.dev.platform_data = &hsotgctrl_plat_data;
+#endif
 }
 
 /* Remove below extern when pmem pdata is moved to this file */
