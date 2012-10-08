@@ -28,6 +28,11 @@
 #include <asm/cacheflush.h>
 #endif
 
+/* #define RHEA_CMA */
+#ifdef RHEA_CMA
+#include <linux/dma-contiguous.h>
+#endif
+
 /* for ion_heap_ops structure */
 #include "ion_priv.h"
 
@@ -48,6 +53,10 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 	struct ion_cma_buffer_info *info;
 	int n_pages, i;
 	struct scatterlist *sg;
+#ifdef RHEA_CMA
+	struct page *page;
+	unsigned long nr_pages = len >> PAGE_SHIFT;
+#endif
 
 	dev_dbg(dev, "Request buffer allocation len %ld\n", len);
 
@@ -57,12 +66,24 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 		return ION_CMA_ALLOCATE_FAILED;
 	}
 
+#ifdef RHEA_CMA
+	page = dma_alloc_from_contiguous(dev, nr_pages, 0);
+	if (!page) {
+		dev_err(dev, "Fail to allocate buffer\n");
+		goto err;
+	}
+	if (current->group_leader && current->group_leader->mm)
+		atomic_long_add(nr_pages, &current->group_leader->mm->cma_stat);
+	info->handle = page_to_phys(page);
+	info->cpu_addr = phys_to_virt(info->handle);
+#else
 	info->cpu_addr = dma_alloc_coherent(dev, len, &(info->handle), 0);
 
 	if (!info->cpu_addr) {
 		dev_err(dev, "Fail to allocate buffer\n");
 		goto err;
 	}
+#endif
 
 	info->table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
 	if (!info->table) {
@@ -101,10 +122,21 @@ static void ion_cma_free(struct ion_buffer *buffer)
 {
 	struct device *dev = buffer->heap->priv;
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
+#ifdef RHEA_CMA
+	struct page *page;
+	unsigned long nr_pages = buffer->size >> PAGE_SHIFT;
+#endif
 
 	dev_dbg(dev, "Release buffer %p\n", buffer);
 	/* release memory */
+#ifdef RHEA_CMA
+	page = phys_to_page(info->handle);
+	dma_release_from_contiguous(dev, page, nr_pages);
+	if (current->group_leader && current->group_leader->mm)
+		atomic_long_add(-nr_pages, &current->group_leader->mm->cma_stat);
+#else
 	dma_free_coherent(dev, buffer->size, info->cpu_addr, info->handle);
+#endif
 	/* release sg table */
 	sg_free_table(info->table);
 	kfree(info->table);
