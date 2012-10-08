@@ -795,7 +795,7 @@ static struct ion_platform_data ion_carveout_data = {
 			.name = "ion-carveout-0",
 			.base = 0x90000000,
 			.limit = 0xa0000000,
-			.size = (8 * SZ_1M),
+			.size = (16 * SZ_1M),
 		},
 		[1] = {
 			.id = 1,
