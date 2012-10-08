@@ -222,6 +222,9 @@ static void ion_buffer_destroy(struct kref *kref)
 	buffer->heap->ops->unmap_dma(buffer->heap, buffer);
 	buffer->heap->ops->free(buffer);
 	mutex_lock(&dev->lock);
+#ifdef CONFIG_ION_KONA
+	buffer->heap->used -= buffer->size;
+#endif
 	rb_erase(&buffer->node, &dev->buffers);
 	mutex_unlock(&dev->lock);
 	kfree(buffer);
@@ -384,6 +387,9 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 	struct ion_handle *handle;
 	struct ion_device *dev = client->dev;
 	struct ion_buffer *buffer = NULL;
+#ifdef CONFIG_ION_KONA
+	struct ion_heap *heap_used = NULL;
+#endif
 
 	pr_debug("%s: len %d align %d heap_mask %u flags %x\n", __func__, len,
 		 align, heap_mask, flags);
@@ -407,10 +413,30 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 		/* if the caller didn't specify this heap type */
 		if (!((1 << heap->id) & heap_mask))
 			continue;
+#ifdef CONFIG_ION_KONA
+		heap_used = heap;
+		if (client->task)
+			pr_debug("Try heap(%d):(%d)KB - pid(%d) size(%d)KB\n",
+					heap->id, heap->used>>10,
+					client->task->pid, len>>10);
+#endif
 		buffer = ion_buffer_create(heap, dev, len, align, flags);
 		if (!IS_ERR_OR_NULL(buffer))
 			break;
 	}
+#ifdef CONFIG_ION_KONA
+	if (IS_ERR_OR_NULL(buffer)) {
+		if (client->task)
+			pr_err("Alloc Failed: mask(%x) pid(%d) size(%d)KB\n",
+					heap_mask, client->task->pid, len>>10);
+	} else {
+		heap_used->used += buffer->size;
+		if (client->task)
+			pr_debug("Alloc heap(%d):(%d)KB - pid(%d) size(%d)KB\n",
+					heap_used->id, heap_used->used>>10,
+					client->task->pid, len>>10);
+	}
+#endif
 	mutex_unlock(&dev->lock);
 
 	if (buffer == NULL)

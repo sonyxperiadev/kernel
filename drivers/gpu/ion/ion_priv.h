@@ -149,6 +149,7 @@ struct ion_heap {
 	void *priv;
 #ifdef CONFIG_ION_KONA
 	int size;
+	int used;
 #endif
 };
 
