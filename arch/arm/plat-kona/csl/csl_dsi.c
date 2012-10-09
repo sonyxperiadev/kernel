@@ -113,9 +113,23 @@
 #define CSL_DSI0_BASE_ADDR	KONA_DSI0_VA
 #define CSL_DSI1_BASE_ADDR	KONA_DSI1_VA
 
+#if 0
+#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
+int DE1_FIFO_SIZE_W = 256;
+int CM_PKT_SIZE_B= 256 * 3;
+int DE1_DEF_THRESHOLD_W = (256 * 3) >> 2;
+int DE1_DEF_THRESHOLD_B = 256 * 3;
+#else
+#define DE1_FIFO_SIZE_W		256
+#define CM_PKT_SIZE_B		(256 * 3)
+#define DE1_DEF_THRESHOLD_W	DE1_FIFO_SIZE_W
+#define DE1_DEF_THRESHOLD_B	(DE1_FIFO_SIZE_W * 4)
+#endif
+#else
 #define CM_PKT_SIZE_B		768
 #define DE1_DEF_THRESHOLD_W	(CM_PKT_SIZE_B >> 2)
 #define DE1_DEF_THRESHOLD_B	(CM_PKT_SIZE_B)
+#endif
 
 #ifdef UNDER_LINUX
 #define HW_REG_WRITE(a, v) writel(v, HW_IO_PHYS_TO_VIRT(a))
@@ -125,6 +139,7 @@
 #endif
 
 #define AXIPV_MIN_BUFF_SIZE (3 * 8)
+
 
 /* DSI Core clk tree configuration / settings */
 typedef struct {
@@ -813,7 +828,7 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 				dmaData1D.xferLength  = (updMsg->updReq.lineLenP
 					- spare_pix) * (updMsg->updReq.buffBpp);
 #ifdef CONFIG_ARCH_HAWAII
-				dmaData1D.burstWriteEnable32 = 1;
+				dmaData1D.burstWriteEnable32 = 0;
 #endif
 
 				if ((uint32_t)dmaData1D.xferLength & 0x3)
@@ -853,7 +868,7 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 	dmaData2D.xXferLength = width;
 	dmaData2D.yXferLength = height - 1;
 #ifdef CONFIG_ARCH_HAWAII
-	dmaData2D.burstWriteEnable32 = 1;
+	dmaData2D.burstWriteEnable32 = 0;
 #endif
 
 	if ((uint32_t)dmaData2D.xXferLength & 0x3) {

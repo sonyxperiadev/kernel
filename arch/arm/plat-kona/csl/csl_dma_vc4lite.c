@@ -102,7 +102,7 @@ struct CslDmaVc4lite {
 
 static struct CslDmaVc4lite dmac;
 
-#ifdef CONFIG_MACH_HAWAII_FPGA_E
+#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
 int gBurstEnable = 1;
 #endif
 
@@ -679,7 +679,7 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(DMA_VC4LITE_CHANNEL_t chanID,
 #endif
 	/* set the ctrl block information */
 #ifdef CONFIG_ARCH_HAWAII
-#ifdef CONFIG_MACH_HAWAII_FPGA_E
+#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
 	dmaCtrlBlkInfo.burstWriteEnable32 = gBurstEnable;
 #else
 	dmaCtrlBlkInfo.burstWriteEnable32 = pData->burstWriteEnable32;
@@ -812,7 +812,7 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data_ex(DMA_VC4LITE_CHANNEL_t chanID,
 #endif
 	/* set the ctrl block information */
 #ifdef CONFIG_ARCH_HAWAII
-#ifdef CONFIG_MACH_HAWAII_FPGA_E
+#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
 	dmaCtrlBlkInfo.burstWriteEnable32 = gBurstEnable;
 #else
 	dmaCtrlBlkInfo.burstWriteEnable32 = pData->burstWriteEnable32;

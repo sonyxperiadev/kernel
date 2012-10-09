@@ -621,7 +621,6 @@ cBool chal_dsi_set_timing(CHAL_HANDLE handle,
 		}
 	}
 
-#if 0
 	for (i = 0; i < DSI_C_MAX; i++) {
 		if (pDsiC[i].timeBase == DSI_C_TIME_ESC2LPDT) {
 			chal_dprintf(CDBG_ERRO,
@@ -645,7 +644,6 @@ cBool chal_dsi_set_timing(CHAL_HANDLE handle,
 
 	chal_dprintf(CDBG_ERRO, "[cHAL DSI] chal_dsi_set_timing: "
 		     "LP_DATA_RATE %u[kbps]\n\r", lp_clk_khz / 2);
-#endif
 
 	/* set ESC 2 LPDT ratio */
 	BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_PHYC,

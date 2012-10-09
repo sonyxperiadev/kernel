@@ -53,10 +53,6 @@
 #include "kona_fb.h"
 #include "lcd/display_drv.h"
 
-#ifdef CONFIG_ION
-#include <linux/broadcom/kona_ion.h>
-#endif
-
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 #include <video/kona_fb_image_dump.h>
 #include "lcd/cp_crash_start_565.h"
@@ -110,10 +106,6 @@ struct kona_fb {
 	void *buff1;
 	atomic_t force_update;
 	struct dispdrv_init_parms lcd_drv_parms;
-#ifdef CONFIG_ION
-	struct ion_client *ionClient;
-	struct ion_handle *ionHandle;
-#endif
 };
 
 static struct kona_fb *g_kona_fb;
@@ -712,24 +704,6 @@ static int kona_fb_probe(struct platform_device *pdev)
 	framesize = fb->display_info->width * fb->display_info->height *
 	    fb->display_info->Bpp * 2;
 
-#ifdef CONFIG_ION
-	fb->ionClient = ion_client_create(idev, ION_DEFAULT_HEAP, "kona_fb");
-	if (fb->ionClient == NULL) {
-		ret = -ENOMEM;
-		konafb_error("ion client creation failed \n");
-		goto err_ion_client_create_failed;
-	}
-	fb->ionHandle = ion_alloc(fb->ionClient,
-			framesize, SZ_4K, ION_DEFAULT_HEAP, 0);
-
-	fb->fb.screen_base = ion_map_kernel(fb->ionClient, fb->ionHandle);
-	fb->phys_fbbase = kona_ion_map_dma(fb->ionClient, fb->ionHandle);
-	if ((fb->fb.screen_base == NULL) || (fb->phys_fbbase == 0)) {
-		ret = -ENOMEM;
-		konafb_error("ion client creation failed \n");
-		goto err_fbmem_alloc_failed;
-	}
-#else
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
 						    framesize, &fb->phys_fbbase,
 						    GFP_KERNEL);
@@ -738,7 +712,6 @@ static int kona_fb_probe(struct platform_device *pdev)
 		konafb_error("Unable to allocate fb memory\n");
 		goto err_fbmem_alloc_failed;
 	}
-#endif
 
 	/* Now we should get correct width and height for this display .. */
 	width = fb->display_info->width;
@@ -886,22 +859,14 @@ static int kona_fb_probe(struct platform_device *pdev)
 
 err_fb_register_failed:
 err_set_var_failed:
-#ifdef CONFIG_ION
-	ion_free(fb->ionClient, fb->ionHandle);
-#else
 	dma_free_writecombine(&pdev->dev, fb->fb.fix.smem_len,
 			      fb->fb.screen_base, fb->fb.fix.smem_start);
-#endif
 
 	kona_clock_start(fb);
 	disable_display(fb);
 	kona_clock_stop(fb);
 
 err_fbmem_alloc_failed:
-#ifdef CONFIG_ION
-	ion_client_destroy(fb->ionClient);
-err_ion_client_create_failed:
-#endif
 	if (pi_mgr_dfs_request_remove(&fb->dfs_node))
 		printk(KERN_ERR "Failed to remove dfs request for LCD\n");
 err_enable_display_failed:
