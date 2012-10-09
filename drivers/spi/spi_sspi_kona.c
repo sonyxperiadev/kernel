@@ -42,7 +42,11 @@
 #include <mach/memory.h>
 
 #include <plat/chal/chal_types.h>
+#ifdef CONFIG_ARCH_HAWAII
+#include <plat/chal/chal_sspi_hawaii.h>
+#else
 #include <plat/chal/chal_sspi.h>
+#endif
 #include <plat/spi_kona.h>
 #include <linux/dma-mapping.h>
 #include <mach/dma.h>
@@ -307,9 +311,15 @@ static int spi_kona_configure(struct spi_kona_data *spi_kona,
 	if (ret < 0)
 		return ret;
 
+#ifdef CONFIG_ARCH_HAWAII
+	/* Set frame data size */
+	ret = chal_sspi_set_spi_frame(chandle, &frame_mask,
+				  config->mode & SPI_MODE_1, config->bpw, 0);
+#else
 	/* Set frame data size */
 	ret = chal_sspi_set_frame(chandle, &frame_mask,
 				  config->mode & SPI_MODE_1, config->bpw, 0);
+#endif
 	if (ret < 0)
 		return ret;
 
@@ -1078,7 +1088,6 @@ static int spi_kona_config_spi_hw(struct spi_kona_data *spi_kona)
 		pr_err("%s: invalid CHAL handler\n", __func__);
 		return -ENXIO;
 	}
-	chal_sspi_set_type(chandle, SSPI_TYPE_LITE);
 	/* Soft Reset SSPI */
 	chal_sspi_soft_reset(chandle);
 	/* Driver supports only Master Mode */
