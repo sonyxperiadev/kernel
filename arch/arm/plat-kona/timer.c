@@ -33,6 +33,7 @@
 #include <asm/smp_twd.h>
 #include <asm/mach/time.h>
 #include <asm/sched_clock.h>
+#include <asm/localtimer.h>
 #include <mach/io.h>
 #include <mach/io_map.h>
 #include <mach/kona_timer.h>
@@ -119,6 +120,7 @@ static struct clock_event_device clockevent_gptimer = {
 	.name = "gpt_event_1",
 	.features = CLOCK_EVT_FEAT_ONESHOT,
 	.shift = 32,
+	.rating = 200,
 	.set_next_event = gptimer_set_next_event,
 	.set_mode = gptimer_set_mode
 };
@@ -239,8 +241,16 @@ static void __init kona_twd_init(void)
 	if (err)
 		pr_err("twd_local_timer_register failed %d\n", err);
 }
-#else
-#define kona_twd_init()        do {} while(0)
+#endif
+
+#ifdef CONFIG_LOCAL_TIMERS
+int local_timer_setup(struct clock_event_device *evt);
+void local_timer_stop(struct clock_event_device *evt);
+
+struct local_timer_ops kona_local_timer_ops __cpuinitdata = {
+	.setup	= local_timer_setup,
+	.stop	= local_timer_stop,
+};
 #endif
 
 void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
@@ -249,6 +259,12 @@ void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
 	gptimer_clocksource_init();
 	gptimer_clockevents_init();
 	gptimer_set_next_event((CLOCK_TICK_RATE / HZ), NULL);
+#ifdef CONFIG_LOCAL_TIMERS
+#ifdef CONFIG_HAVE_ARM_TWD
 	kona_twd_init();
+#else
+	local_timer_register(&kona_local_timer_ops);
+#endif
+#endif
 	setup_sched_clock(kona_update_sched_clock, 32, CLOCK_TICK_RATE);
 }
