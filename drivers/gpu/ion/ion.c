@@ -1219,6 +1219,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	size_t total_orphaned_size = 0;
 	size_t total_shared_size = 0;
 
+	seq_printf(s, "%s:\n", heap->name);
 	seq_printf(s, "%16.s %16.s %16.s %16.s %16.s\n",
 			"client", "pid", "size", "shared", "oom_score_adj");
 	seq_printf(s, "----------------------------------------------------\n");
@@ -1265,6 +1266,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	}
 	mutex_unlock(&dev->lock);
 	seq_printf(s, "----------------------------------------------------\n");
+	seq_printf(s, "Summary:\n");
 	if (heap->size)
 		seq_printf(s, "%16.s %13u KB\n", "total reserved",
 				(heap->size>>10));
@@ -1273,6 +1275,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 			(total_shared_size>>10));
 	seq_printf(s, "%16.s %13u KB\n", "total orphaned",
 			(total_orphaned_size>>10));
+	seq_printf(s, "----------------------------------------------------\n");
 
 	return 0;
 }
