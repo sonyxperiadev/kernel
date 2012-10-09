@@ -274,8 +274,10 @@ extern void ion_unlock_buffer(struct ion_client *client,
 
 /**
  * struct ion_page_pool - pagepool struct
- * @count:		number of items in the pool
- * @items:		list of items
+ * @high_count:		number of highmem items in the pool
+ * @low_count:		number of lowmem items in the pool
+ * @high_items:		list of highmem items
+ * @low_items:		list of lowmem items
  * @shrinker:		a shrinker for the items
  * @mutex:		lock protecting this struct and especially the count
  *			item list
@@ -292,8 +294,10 @@ extern void ion_unlock_buffer(struct ion_client *client,
  * on many systems
  */
 struct ion_page_pool {
-	int count;
-	struct list_head items;
+	int high_count;
+	int low_count;
+	struct list_head high_items;
+	struct list_head low_items;
 	struct shrinker shrinker;
 	struct mutex mutex;
 	void *(*alloc)(struct ion_page_pool *pool);
