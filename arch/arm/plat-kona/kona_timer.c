@@ -67,14 +67,6 @@
 
 /* Data structures */
 
-struct kona_timer {
-	int ch_num;
-	int busy;
-	struct timer_ch_cfg cfg;
-	int irq;
-	struct kona_timer_module *ktm;
-};
-
 enum config_state {
 	NOT_CONFIGURED = 0,	/* Timer module not configured */
 	CONFIGURED_FREE,	/* Timer module configured but
@@ -1007,6 +999,7 @@ static irqreturn_t kona_timer_isr(int irq, void *dev_id)
 	struct kona_timer *kt;
 	int ch_num;
 	void __iomem *match_reg;
+	unsigned long flags;
 	unsigned long reg;
 
 	ktm = (struct kona_timer_module *)dev_id;
@@ -1016,6 +1009,8 @@ static irqreturn_t kona_timer_isr(int irq, void *dev_id)
 		pr_err("kona_timer_isr: Invalid dev_id or irq \r\n");
 		return IRQ_HANDLED;
 	}
+
+	spin_lock_irqsave(&ktm->lock, flags);
 
 	kt = ktm->pkt + ch_num;
 
@@ -1045,6 +1040,8 @@ static irqreturn_t kona_timer_isr(int irq, void *dev_id)
 		     (kt->ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
 		writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 	}
+
+	spin_unlock_irqrestore(&ktm->lock, flags);
 
 	/* Invoke the call back, if any */
 	if (kt->cfg.cb != NULL)

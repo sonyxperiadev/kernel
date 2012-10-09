@@ -1030,6 +1030,7 @@ config ARCH_KONA
         select ARM_ERRATA_764369 if SMP
         select KONA_WFI_WORKAROUND if SMP
 	select MIGHT_HAVE_CACHE_L2X0
+	select TICK_ONESHOT
         help
           This enables support for system based on Broadcom KONA architecture
 
@@ -1628,7 +1629,7 @@ config LOCAL_TIMERS
 	bool "Use local timer interrupts"
 	depends on SMP
 	default y
-	select HAVE_ARM_TWD if (!ARCH_MSM_SCORPIONMP && !EXYNOS4_MCT)
+	select HAVE_ARM_TWD if (!ARCH_MSM_SCORPIONMP && !EXYNOS4_MCT && !ARCH_KONA)
 	help
 	  Enable support for local timers on SMP platforms, rather then the
 	  legacy IPI broadcast method.  Local timers allows the system

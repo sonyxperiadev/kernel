@@ -26,6 +26,15 @@
 #ifndef __PLAT_KONA_TIMER_H
 #define __PLAT_KONA_TIMER_H
 
+/* There is 5 clock cycles delay in HUB Timer by ASIC limitation.
+ */
+#define MIN_KONA_DELTA_CLOCK     5
+
+/* On 32-bit mod timer, using large or max value 0xffffffff may trigger early
+ * timer interrupt. It has to be limited to avoid timer misbehavior.
+ */
+#define MAX_KONA_COUNT_CLOCK  0x7FFFFFFF
+
 /* Timer module specific data structures */
 struct kona_timer;
 
@@ -44,6 +53,14 @@ struct timer_ch_cfg {
 	unsigned long reload;	/* Holds the reload value in 
 				 * case of periodic timers 
 				 */
+};
+
+struct kona_timer {
+	int ch_num;
+	int busy;
+	struct timer_ch_cfg cfg;
+	int irq;
+	struct kona_timer_module *ktm;
 };
 
 /* Timer Module related APIs */
