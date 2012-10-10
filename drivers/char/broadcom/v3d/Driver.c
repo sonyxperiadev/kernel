@@ -226,10 +226,8 @@ int V3dDriver_ExclusiveStop(V3dDriverType *Instance, struct V3dSessionTag *Sessi
 {
 	unsigned long Flags;
 	int           Empty;
-	if (Instance->Job.Posted.Exclusive.Owner != Session) {
-		printk(KERN_ERR "%s: Failed - not owner", __func__);
+	if (Instance->Job.Posted.Exclusive.Owner != Session)
 		return -EPERM;
-	}
 
 	Flags = V3dDriver_JobLock(Instance);
 	Empty = list_empty(&Instance->Job.Posted.Exclusive.User) != 0
