@@ -120,14 +120,47 @@ bool is_pm_erratum(u32 erratum)
 	return !!(pm_erratum_flg & erratum);
 }
 
+
+#define CSR_RETN_VAL_SS			0x4
+#define CSR_ECO_VAL_SS			0xF
+#define CSR_NM1_VAL_SS			0x13
+#define CSR_NM2_VAL_SS			0x1D
+#define CSR_TURBO_VAL_SS		0x34
+
+#define MSR_RETN_VAL_SS			0x4
+#define MSR_ECO_VAL_SS			0x10
+#define MSR_NM1_VAL_SS			0x10
+#define MSR_NM2_VAL_SS			0x1A
+#define MSR_TURBO_VAL_SS		0x24
+
+
+const u8 swr_vlt_table[SR_VLT_LUT_SIZE] = {
+	INIT_LPM_VLT_IDS(MSR_RETN_VAL_SS, MSR_RETN_VAL_SS, MSR_RETN_VAL_SS),
+	INIT_A9_VLT_TABLE(CSR_ECO_VAL_SS, CSR_NM1_VAL_SS, CSR_NM2_VAL_SS,
+							CSR_TURBO_VAL_SS),
+	INIT_OTHER_VLT_TABLE(MSR_ECO_VAL_SS, MSR_NM1_VAL_SS, MSR_NM2_VAL_SS,
+							MSR_TURBO_VAL_SS),
+	INIT_UNUSED_VLT_IDS(MSR_RETN_VAL_SS)
+	};
+
+__weak const u8 *bcmpmu_get_sr_vlt_table (u32 silicon_type)
+{
+	return swr_vlt_table;
+}
+
+
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 {
+	#if !defined (CONFIG_MACH_HAWAII_FPGA)
 	int inx;
 	u8 *vlt_table;
 	vlt_table = (u8 *) bcmpmu_get_sr_vlt_table(SILICON_TYPE_SLOW);
 	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
 		sr_vlt_table[inx] = vlt_table[inx];
 	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
+	#else
+		return 0;
+	#endif	
 }
 
 #if !defined (CONFIG_MACH_HAWAII_FPGA)
