@@ -247,7 +247,7 @@ static char *hub_ccu[] = { KHUB_CCU_CLK_NAME_STR };
 struct pi_opp hub_opp = {
 	.opp = {
 		[PI_OPP_ECONOMY] = HUB_CCU_FREQ_ID_ECO,	/* 0 */
-		[PI_OPP_NORMAL] = HUB_CCU_FREQ_ID_NRML,
+		[PI_OPP_NORMAL] = HUB_CCU_FREQ_ID_NRML2,
 		},
 };
 
@@ -326,7 +326,7 @@ static char *aon_ccu[] = { KHUBAON_CCU_CLK_NAME_STR };
 struct pi_opp aon_opp = {
 	.opp = {
 		[PI_OPP_ECONOMY] = AON_CCU_FREQ_ID_ECO,	/* 0 */
-		[PI_OPP_NORMAL] = AON_CCU_FREQ_ID_NRML,
+		[PI_OPP_NORMAL] = AON_CCU_FREQ_ID_NRML2,
 		},
 };
 
@@ -395,12 +395,12 @@ static char *sub_sys_ccu[] = { KPM_CCU_CLK_NAME_STR, KPS_CCU_CLK_NAME_STR };
 struct pi_opp sub_sys_opp[2] = {
 	[0] = { /*KPM*/.opp = {
 			       [PI_OPP_ECONOMY] = KPM_CCU_FREQ_ID_ECO,
-			       [PI_OPP_NORMAL] = KPM_CCU_FREQ_ID_NRML,
+			       [PI_OPP_NORMAL] = KPM_CCU_FREQ_ID_NRML2,
 			       },
 	       },
 	[1] = { /*KPS*/.opp = {
 			       [PI_OPP_ECONOMY] = KPS_CCU_FREQ_ID_ECO,
-			       [PI_OPP_NORMAL] = KPS_CCU_FREQ_ID_NRML,
+			       [PI_OPP_NORMAL] = KPS_CCU_FREQ_ID_NRML2,
 			       },
 	       },
 

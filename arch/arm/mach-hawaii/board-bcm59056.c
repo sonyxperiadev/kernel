@@ -28,6 +28,7 @@
 #include <linux/uaccess.h>
 #include <linux/i2c.h>
 #include <linux/mfd/bcmpmu_56.h>
+#include "pm_params.h"
 
 // Seperate the PMU init data into different PCB-specific files under hw_cfg folder 
 // This is a temp solution until all board specific data put into DTS in the near future
@@ -158,6 +159,52 @@ static struct bcmpmu_voltcap_map batt_voltcap_map[] = {
 	{3411, 1},
 	{3300, 0},
 };
+
+#define CSR_RETN_VAL_SS			0x4
+#define CSR_ECO_VAL_SS			0xF
+#define CSR_NM1_VAL_SS			0x13
+#define CSR_NM2_VAL_SS			0x1D
+#define CSR_TURBO_VAL_SS		0x34
+
+#define MSR_RETN_VAL_SS			0x4
+#define MSR_ECO_VAL_SS			0x10
+#define MSR_NM1_VAL_SS			0x10
+#define MSR_NM2_VAL_SS			0x1A
+#define MSR_TURBO_VAL_SS		0x24
+
+
+const u8 sr_vlt_table_ss[SR_VLT_LUT_SIZE] = {
+		INIT_LPM_VLT_IDS(MSR_RETN_VAL_SS, MSR_RETN_VAL_SS, MSR_RETN_VAL_SS),
+		INIT_A9_VLT_TABLE(CSR_ECO_VAL_SS, CSR_NM1_VAL_SS, CSR_NM2_VAL_SS,
+							CSR_TURBO_VAL_SS),
+		INIT_OTHER_VLT_TABLE(MSR_ECO_VAL_SS, MSR_NM1_VAL_SS, MSR_NM2_VAL_SS,
+							MSR_TURBO_VAL_SS),
+		INIT_UNUSED_VLT_IDS(MSR_RETN_VAL_SS)
+	};
+
+const u8 *bcmpmu_get_sr_vlt_table (u32 silicon_type)
+{
+	pr_info("%s silicon_type = %d\n", __func__,
+			silicon_type);
+#ifdef CONFIG_KONA_AVS
+	switch (silicon_type) {
+	case SILICON_TYPE_SLOW:
+		return sr_vlt_table_ss;
+
+	case SILICON_TYPE_TYPICAL:
+		return sr_vlt_table_tt;
+
+	case SILICON_TYPE_FAST:
+		return sr_vlt_table_ff;
+
+	default:
+		BUG();
+	}
+#else
+	return sr_vlt_table_ss;
+#endif
+}
+
 
 static struct bcmpmu_fg_zone fg_zone[FG_TMP_ZONE_MAX+1] = {
 /* This table is default data, the real data from board file or device tree*/
@@ -415,7 +462,7 @@ __init int board_pmu_init(void)
 	i2c_register_board_info(PMU_DEVICE_I2C_BUSNO,
 				pmu_info,
 				ARRAY_SIZE(pmu_info));
-exit:	
+exit:
 	return ret;
 }
 
