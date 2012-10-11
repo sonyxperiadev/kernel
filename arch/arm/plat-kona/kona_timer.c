@@ -567,14 +567,17 @@ unsigned int notrace kona_timer_get_counter(struct kona_timer *kt)
 {
 	struct kona_timer_module *ktm;
 	unsigned int counter;
+	unsigned long flags;
 
 	if (NULL == kt) {
 		pr_err("%s timer object cannot be NULL\n", __func__);
 		BUG();
 	}
 
+	local_irq_save(flags);
 	ktm = kt->ktm;
 	counter = __get_counter(ktm->reg_base);
+	local_irq_restore(flags);
 
 	return counter;
 }
@@ -625,14 +628,26 @@ EXPORT_SYMBOL(kona_timer_disable_and_clear);
 /* Return the counter value of hub timer */
 unsigned long kona_hubtimer_get_counter(void)
 {
-	return __get_counter(timer_module_list[0].reg_base);
+	unsigned long flags, counter;
+
+	local_irq_save(flags);
+	counter = __get_counter(timer_module_list[0].reg_base);
+	local_irq_restore(flags);
+
+	return counter;
 }
 EXPORT_SYMBOL(kona_hubtimer_get_counter);
 
 /* Return the counter value of slave timer */
 unsigned long kona_slavetimer_get_counter(void)
 {
-	return __get_counter(timer_module_list[1].reg_base);
+	unsigned long flags, counter;
+
+	local_irq_save(flags);
+	counter = __get_counter(timer_module_list[1].reg_base);
+	local_irq_restore(flags);
+
+	return counter;
 }
 EXPORT_SYMBOL(kona_slavetimer_get_counter);
 
