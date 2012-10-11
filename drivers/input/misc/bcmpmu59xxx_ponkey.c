@@ -102,55 +102,58 @@ static int __devinit bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 	ponkey->idev->evbit[0] = BIT_MASK(EV_KEY);
 	ponkey->idev->keybit[BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER);
 	/* init shutdown/hard reset/restart details */
+/*
+ PMU_REG_GPIOCTRL2
 	if (pkey->hard_reset_en == 0 || pkey->hard_reset_en == 1) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_HOSTCTRL5, &val);
-		val &= ~HOSTCTRL5_POK_RSTPIN_ONLY_SHIFT;
-		val |= (pkey->hard_reset_en << HOSTCTRL5_POK_RSTPIN_ONLY_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_HOSTCTRL5, val);
 	}
+*/
+
 	if (pkey->restart_en == 0 || pkey->restart_en == 1) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL1, &val);
-		val &= (~PONKEY_RESTART_EN_MASK);
-		val |= (pkey->restart_en << PONKEY_RESTART_EN_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL1, val);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL4, &val);
+		val &= ~PONKEYCTRL4_POK_RESTART_EN_MASK;
+		val |= (pkey->restart_en << PONKEYCTRL4_POK_RESTART_EN_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL4, val);
 	}
 	if (pkey->pok_hold_deb > 0) {
 		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL1, &val);
-		val &= (~PONKEYOFF_HOLD_DEB_MASK);
-		val |= (pkey->pok_hold_deb << PONKEYOFF_HOLD_DEB_SHIFT);
+		val &= ~PONKEYCTRL1_PRESS_DEB_MASK;
+		val |= (pkey->pok_hold_deb << PONKEYCTRL1_PRESS_DEB_SHIFT);
 		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL1, val);
 	}
 	if (pkey->pok_shtdwn_dly > 0) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL2, &val);
-		val &= (~PONKEY_SHUTDOWN_DLY_MASK);
-		val |= (pkey->pok_shtdwn_dly << PONKEY_SHUTDOWN_DLY_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL2, val);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_HOSTCTRL4, &val);
+		val &= ~HOSTCTRL4_BB_SHDWN_DEB_MASK;
+		val |= (pkey->pok_shtdwn_dly << HOSTCTRL4_BB_SHDWN_DEB_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_HOSTCTRL4, val);
 	}
 	if (pkey->pok_restart_dly > 0) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL3, &val);
-		val &= (~PONKEY_RESTART_DLY_MASK);
-		val |= (pkey->pok_restart_dly << PONKEY_RESTART_DLY_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL3, val);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL7, &val);
+		val &= ~HOSTCTRL7_SW_RESTART_DLY_MASK;
+		val |= (pkey->pok_restart_dly <<
+			HOSTCTRL7_SW_RESTART_DLY_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL7, val);
 	}
 	if (pkey->pok_restart_deb > 0) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL3, &val);
-		val &= (~PONKEY_RESTART_DEB_MASK);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL4, &val);
+		val &= (~PONKEYCTRL4_POK_WAKUP_DEB_MASK);
 		val |= (pkey->pok_restart_deb <<
-				   PONKEY_RESTART_DEB_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL3, val);
+				   PONKEYCTRL4_POK_WAKUP_DEB_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL4, val);
 	}
+/*
 	if (pkey->pok_turn_on_deb >= 0) {
 		bcmpmu->read_dev(bcmpmu, PMU_REG_AUXCTRL, &val);
 		val &= (~PONKEY_ONHOLD_DEB_SHIFT);
 		val |= (pkey->pok_turn_on_deb << PONKEY_ONHOLD_DEB_SHIFT);
 		bcmpmu->write_dev(bcmpmu, PMU_REG_AUXCTRL, val);
 	}
+*/
 	/* set KEY_PAD_LOCK */
 	if (pkey->pok_lock == 0 || pkey->pok_lock == 1) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_AUXCTRL, &val);
-		val &= (~AUXCTRL_KEYPAD_LOCK_MASK);
-		val |= (pkey->pok_lock << AUXCTRL_KEYPAD_LOCK_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_AUXCTRL, val);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL4, &val);
+		val &= ~PONKEYCTRL4_KEY_PAD_LOCK_MASK;
+		val |= (pkey->pok_lock << PONKEYCTRL4_KEY_PAD_LOCK_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL4, val);
 	}
 	/* Request PRESSED and RELEASED interrupts.
 	 */

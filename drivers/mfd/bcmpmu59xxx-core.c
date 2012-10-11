@@ -290,7 +290,7 @@ int bcmpmu_client_hard_reset(u8 reset_reason)
 		goto err;
 
 	/* Set the reset reason */
-	ret = bcmpmu_gbl->read_dev(bcmpmu_gbl, PMU_REG_RTC_CORE,
+	ret = bcmpmu_gbl->read_dev(bcmpmu_gbl, PMU_REG_RTC_EXTRA,
 				(u8 *)&val);
 	if (unlikely(ret))
 		goto err;
@@ -303,7 +303,7 @@ int bcmpmu_client_hard_reset(u8 reset_reason)
 	val &= ~0xF3;
 	val |= (reset_reason << 4);
 
-	ret = bcmpmu_gbl->write_dev(bcmpmu_gbl, PMU_REG_RTC_CORE,
+	ret = bcmpmu_gbl->write_dev(bcmpmu_gbl, PMU_REG_RTC_EXTRA,
 				val);
 	if (unlikely(ret))
 		goto err;

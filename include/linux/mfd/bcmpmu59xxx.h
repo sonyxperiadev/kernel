@@ -13,11 +13,15 @@
 *
 *****************************************************************************/
 
+#ifndef __LINUX_MFD_BCMPMU59xxx_H_
+#define __LINUX_MFD_BCMPMU59xxx_H_
+
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/wait.h>
 #include <linux/wakelock.h>
+#include <linux/spinlock.h>
 #include <linux/i2c.h>
 #include <linux/power_supply.h>
 #include <linux/platform_device.h>
@@ -108,7 +112,7 @@ enum bcmpmu59xxx_irq {
 	PMU_IRQ_UBPD_CHG_F,
 	PMU_IRQ_FGC,
 	PMU_IRQ_MBWV_F,
-	PMU_IRQ_RSRV0,
+	PMU_IRQ_VBUS_OVERCURRENT,
 	PMU_IRQ_ACD_INS,
 	PMU_IRQ_ACD_RM,
 	PMU_IRQ_PONKEYB_HOLD,
@@ -116,16 +120,17 @@ enum bcmpmu59xxx_irq {
 	PMU_IRQ_PONKEYB_R,
 	PMU_IRQ_PONKEYB_OFFHOLD,
 	PMU_IRQ_PONKEYB_RESTART,
-	PMU_IRQ_RSRV1,
+	PMU_IRQ_SESSION_END_INVLD,
 	PMU_IRQ_IDCHG,
 	PMU_IRQ_JIG_USB_INS,
 	PMU_IRQ_JIG_UART_INS,
 	PMU_IRQ_ID_INS,
 	PMU_IRQ_ID_RM,
-	PMU_IRQ_RSRV2,
-	PMU_IRQ_RSRV3,
-	PMU_IRQ_RSRV4,
+	PMU_IRQ_ADP_CHANGE,
+	PMU_IRQ_ADP_SNS_END,
+	PMU_IRQ_SESSION_END_VLD,
 	PMU_IRQ_MAX,
+
 };
 
 enum bcmpmu_adc_sig {
@@ -415,41 +420,6 @@ enum {
 	BCMPMU_REGL_OFF_IN_DSM
 };
 
-enum bcmpmu_rgr_id {
-	BCMPMU_REGULATOR_RFLDO,
-	BCMPMU_REGULATOR_CAMLDO,
-	BCMPMU_REGULATOR_HV1LDO,
-	BCMPMU_REGULATOR_HV2LDO,
-	BCMPMU_REGULATOR_HV3LDO,
-	BCMPMU_REGULATOR_HV4LDO,
-	BCMPMU_REGULATOR_HV5LDO,
-	BCMPMU_REGULATOR_HV6LDO,
-	BCMPMU_REGULATOR_HV7LDO,
-	BCMPMU_REGULATOR_HV8LDO,
-	BCMPMU_REGULATOR_HV9LDO,
-	BCMPMU_REGULATOR_HV10LDO,
-	BCMPMU_REGULATOR_SIMLDO,
-	BCMPMU_REGULATOR_USBLDO,
-	BCMPMU_REGULATOR_BCDLDO,
-	BCMPMU_REGULATOR_DVS1LDO,
-	BCMPMU_REGULATOR_DVS2LDO,
-	BCMPMU_REGULATOR_SIM2LDO,
-	BCMPMU_REGULATOR_CSR_NM,
-	BCMPMU_REGULATOR_CSR_NM2,
-	BCMPMU_REGULATOR_CSR_LPM,
-	BCMPMU_REGULATOR_IOSR_NM,
-	BCMPMU_REGULATOR_IOSR_NM2,
-	BCMPMU_REGULATOR_IOSR_LPM,
-	BCMPMU_REGULATOR_SDSR_NM,
-	BCMPMU_REGULATOR_SDSR_NM2,
-	BCMPMU_REGULATOR_SDSR_LPM,
-	BCMPMU_REGULATOR_ASR_NM,
-	BCMPMU_REGULATOR_ASR_NM2,
-	BCMPMU_REGULATOR_ASR_LPM,
-
-	BCMPMU_REGULATOR_MAX,
-};
-
 struct bcmpmu59xxx_rw_data {
 	unsigned int addr;
 	unsigned int val;
@@ -460,6 +430,7 @@ struct bcmpmu59xxx_regulator_info {
 	struct regulator_desc *rdesc;
 	/* address of regulator control register for mode control */
 	u32 reg_addr;
+	u32 reg_addr1;
 	/* address of control register to change voltage */
 	u32 reg_addr_volt;
 	/* Map for converting register voltage to register value */
@@ -475,6 +446,10 @@ struct event_notifier {
 	u32 event_id;
 	struct blocking_notifier_head notifiers;
 };
+struct event_list {
+	struct list_head node;
+	u32 event;
+};
 
 struct bcmpmu_usb_accy_data {
 	enum bcmpmu_chrgr_type_t chrgr_type;
@@ -486,12 +461,17 @@ struct bcmpmu_usb_accy_data {
 
 struct bcmpmu_accy {
 	struct bcmpmu59xxx *bcmpmu;
+	struct event_list *free_list;
+	struct event_list *dispatch_list;
 	const int *usb_id_map;
 	int usb_id_map_len;
 	wait_queue_head_t wait;
-	struct delayed_work adp_work;
-	struct delayed_work det_work;
-	struct mutex lock;
+	struct work_struct adp_work;
+	struct work_struct det_work;
+	spinlock_t accy_lock;
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *dent_accy;
+#endif	/*CONFIG_DEBUG_FS*/
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock wake_lock;
 #endif
@@ -503,6 +483,7 @@ struct bcmpmu_accy {
 	int adp_sns_comp;
 	int retry_cnt;
 	int poll_cnt;
+	int latch_event;
 	bool clock_en;
 	enum bcmpmu_bc_t bc;
 	int piggyback_chrg;
@@ -510,9 +491,9 @@ struct bcmpmu_accy {
 	struct event_notifier event[BCMPMU_EVENT_MAX];
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;
-	int (*usb_set) (struct bcmpmu59xxx *pmu, enum bcmpmu_usb_ctrl_t ctrl,
+	int (*usb_set) (struct bcmpmu59xxx *pmu, int ctrl,
 			unsigned long val);
-	int (*usb_get) (struct bcmpmu59xxx *pmu, enum bcmpmu_usb_ctrl_t ctrl,
+	int (*usb_get) (struct bcmpmu59xxx *pmu, int ctrl,
 			void *val);
 };
 
@@ -557,8 +538,9 @@ struct bcmpmu59xxx_regulator_init_data {
 	struct regulator_init_data   *initdata;
 	/* Default opmode value.Pass 0xFF to
 	 * skip opmode setting for a ldo/sr */
-	u8 default_opmode;
-	u8 dsm_mode;
+	u16 default_opmode;
+	u16 dsm_mode;
+	u32 pc_pins_map;
 };
 
 struct bcmpmu59xxx_regulator_pdata {
@@ -628,11 +610,13 @@ int bcmpmu_add_notifier(u32 event_id, struct notifier_block *notifier);
 int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier);
 
 int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
-		enum bcmpmu_usb_ctrl_t ctrl, void *data);
+			int ctrl, void *data);
 
 int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
-		enum bcmpmu_usb_ctrl_t ctrl, unsigned long data);
+			int ctrl, unsigned long data);
 
 #ifdef CONFIG_DEBUG_FS
 int bcmpmu_debugfs_open(struct inode *inode, struct file *file);
+#endif
+
 #endif
