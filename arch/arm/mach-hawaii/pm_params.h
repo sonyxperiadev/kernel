@@ -22,87 +22,120 @@
 
 #define ARRAY_LIST(...) {__VA_ARGS__}
 #define SR_VLT_LUT_SIZE 16
-#define SR_ECO_INX_START	8
-#define SR_ECO_INX_END		0xA
-#define SR_NRML_INX_START	0xB
-#define SR_NRML_INX_END		0xD
-#define SR_TURBO_INX_START	0xE
-#define SR_TURBO_INX_END	0xF
 
-#define VLT_ID_OFF		0
-#define VLT_ID_RETN	1
-#define VLT_ID_WAKEUP	2
-#define VLT_ID_ECO		0xA
-#define VLT_ID_NORMAL	0xD
-#define VLT_ID_TURBO	0xF
+#define VLT_ID_OFF		0x0
+#define VLT_ID_RETN		0x1
+#define VLT_ID_WAKEUP		0x2
+#define VLT_ID_A9_ECO		0x8
+#define VLT_ID_OTHER_ECO	0x9
+#define VLT_ID_A9_NORMAL1	0xA
+#define VLT_ID_OTHER_NORMAL1	0xB
+#define VLT_ID_A9_NORMAL2	0xC
+#define VLT_ID_OTHER_NORMAL2	0xD
+#define VLT_ID_A9_TURBO		0xE
+#define VLT_ID_OTHER_TURBO	0xF
+
+#define INIT_A9_VLT_TABLE(eco , nm1, nm2, turbo) \
+				[VLT_ID_A9_ECO] = eco, \
+				[VLT_ID_A9_NORMAL1] = nm1, \
+				[VLT_ID_A9_NORMAL2] = nm2, \
+				[VLT_ID_A9_TURBO] = turbo
+
+#define INIT_OTHER_VLT_TABLE(eco , nm1, nm2 , turbo) \
+				[VLT_ID_OTHER_ECO] = eco, \
+				[VLT_ID_OTHER_NORMAL1] = nm1, \
+				[VLT_ID_OTHER_NORMAL2] = nm2, \
+				[VLT_ID_OTHER_TURBO] = turbo
+
+#define INIT_LPM_VLT_IDS(off, ret, wakeup) \
+				[VLT_ID_OFF]	= off, \
+				[VLT_ID_RETN]	= ret, \
+				[VLT_ID_WAKEUP]	= wakeup
+
+#define INIT_UNUSED_VLT_IDS(init_val) \
+				[0x3] =		init_val, \
+				[0x4] =		init_val, \
+				[0x5] =		init_val, \
+				[0x6] =		init_val, \
+				[0x7] =		init_val
 
 #define PROC_CCU_FREQ_ID_ECO	3
-
 #define PROC_CCU_FREQ_ID_NRML	6
+#define PROC_CCU_FREQ_ID_NRML2	6
 #define PROC_CCU_FREQ_ID_TURBO	7
 
-#define MM_CCU_FREQ_ID_ECO		1
-#define MM_CCU_FREQ_ID_NRML		4
+#define MM_CCU_FREQ_ID_ECO	1
+#define MM_CCU_FREQ_ID_NRML	2
+#define MM_CCU_FREQ_ID_NRML2	4
 #define MM_CCU_FREQ_ID_TURBO	5
 
-#define HUB_CCU_FREQ_ID_ECO		2
-#define HUB_CCU_FREQ_ID_NRML	2
+#define HUB_CCU_FREQ_ID_ECO	1
+#define HUB_CCU_FREQ_ID_NRML2	2
 
-#define AON_CCU_FREQ_ID_ECO		2
-#define AON_CCU_FREQ_ID_NRML	3
+#define AON_CCU_FREQ_ID_ECO	1
+#define AON_CCU_FREQ_ID_NRML2	2
 
-#define KPM_CCU_FREQ_ID_ECO		2
-#define KPM_CCU_FREQ_ID_NRML	3
+#define KPM_CCU_FREQ_ID_ECO	2
+#define KPM_CCU_FREQ_ID_NRML2	3
 
-#define KPS_CCU_FREQ_ID_ECO		1
-#define KPS_CCU_FREQ_ID_NRML	3
+#define KPS_CCU_FREQ_ID_ECO	1
+#define KPS_CCU_FREQ_ID_NRML2	3
 
-#define VLT_NORMAL_PERI		VLT_ID_ECO
-#define VLT_HIGH_PERI		VLT_ID_NORMAL
+#define VLT_NORMAL_PERI		VLT_ID_OTHER_NORMAL1
+#define VLT_HIGH_PERI		VLT_ID_OTHER_NORMAL2
 
 #define PROC_CCU_FREQ_VOLT_TBL	\
-		ARRAY_LIST(VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO,\
-			VLT_ID_ECO, VLT_ID_ECO, VLT_ID_NORMAL, VLT_ID_TURBO)
+		ARRAY_LIST(VLT_ID_A9_ECO, VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
+			VLT_ID_A9_ECO, VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
+			VLT_ID_A9_NORMAL2, VLT_ID_A9_TURBO)
 #define PROC_CCU_FREQ_VOLT_TBL_SZ	8
 
 #define MM_CCU_FREQ_VOLT_TBL	\
-		ARRAY_LIST(VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO,\
-			VLT_ID_NORMAL, VLT_ID_TURBO)
+		ARRAY_LIST(VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_NORMAL1, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_NORMAL2, VLT_ID_OTHER_TURBO)
 #define MM_CCU_FREQ_VOLT_TBL_SZ		6
 
 #define HUB_CCU_FREQ_VOLT_TBL	\
-		ARRAY_LIST(VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO,\
-			VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO)
+		ARRAY_LIST(VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_NORMAL2, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO)
 #define HUB_CCU_FREQ_VOLT_TBL_SZ	7
 
 /*AON is on fixed voltage domain. Voltage ids does not really matter*/
 #define AON_CCU_FREQ_VOLT_TBL	\
-		ARRAY_LIST(VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO,\
-			VLT_ID_ECO)
+		ARRAY_LIST(VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_NORMAL2, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_ECO)
 #define AON_CCU_FREQ_VOLT_TBL_SZ	5
 
 #define KPS_CCU_FREQ_VOLT_TBL	\
-		ARRAY_LIST(VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO, VLT_ID_NORMAL,\
-			VLT_ID_ECO, VLT_ID_ECO)
+		ARRAY_LIST(VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_ECO, VLT_ID_OTHER_NORMAL2,\
+			VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO)
 #define KPS_CCU_FREQ_VOLT_TBL_SZ	6
 
 #define KPM_CCU_FREQ_VOLT_TBL	\
-		ARRAY_LIST(VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO, VLT_ID_NORMAL,\
-			VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO, VLT_ID_ECO)
+		ARRAY_LIST(VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_ECO, VLT_ID_OTHER_NORMAL2,\
+			VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO)
 #define KPM_CCU_FREQ_VOLT_TBL_SZ	8
 
 #define BMDM_CCU_FREQ_VOLT_TBL	\
-		ARRAY_LIST(VLT_ID_ECO, VLT_ID_ECO, VLT_ID_NORMAL,\
-			VLT_ID_NORMAL, VLT_ID_NORMAL, VLT_ID_TURBO,\
-			VLT_ID_TURBO, VLT_ID_TURBO)
+		ARRAY_LIST(VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_NORMAL2, VLT_ID_OTHER_NORMAL2,\
+			VLT_ID_OTHER_NORMAL2, VLT_ID_OTHER_TURBO,\
+			VLT_ID_OTHER_TURBO, VLT_ID_OTHER_TURBO)
 /* As per RDB there are only 6 valid freq_ids for bmdm. this count
    is used only to initialize voltage table from AP */
 #define BMDM_CCU_FREQ_VOLT_TBL_SZ	8
 
 #define DSP_CCU_FREQ_VOLT_TBL	\
-		ARRAY_LIST(VLT_ID_ECO, VLT_ID_ECO, VLT_ID_NORMAL,\
-			VLT_ID_NORMAL, VLT_ID_TURBO, VLT_ID_TURBO,\
-			VLT_ID_TURBO, VLT_ID_TURBO)
+		ARRAY_LIST(VLT_ID_OTHER_ECO, VLT_ID_OTHER_ECO,\
+			VLT_ID_OTHER_NORMAL2, VLT_ID_OTHER_NORMAL2,\
+			VLT_ID_OTHER_TURBO, VLT_ID_OTHER_TURBO,\
+			VLT_ID_OTHER_TURBO, VLT_ID_OTHER_TURBO)
 /* As per RDB there are only 5 valid freq_ids for dsp. this count
    is used only to initialize voltage table from AP */
 #define DSP_CCU_FREQ_VOLT_TBL_SZ	8
@@ -115,16 +148,16 @@
 			MM_CCU_FREQ_ID_ECO, MM_CCU_FREQ_ID_TURBO)
 #define HUB_CCU_FREQ_POLICY_TBL	\
 		ARRAY_LIST(HUB_CCU_FREQ_ID_ECO, HUB_CCU_FREQ_ID_ECO,\
-			HUB_CCU_FREQ_ID_ECO, HUB_CCU_FREQ_ID_NRML)
+			HUB_CCU_FREQ_ID_ECO, HUB_CCU_FREQ_ID_NRML2)
 #define AON_CCU_FREQ_POLICY_TBL	\
 		ARRAY_LIST(AON_CCU_FREQ_ID_ECO, AON_CCU_FREQ_ID_ECO,\
-			AON_CCU_FREQ_ID_ECO, AON_CCU_FREQ_ID_NRML)
+			AON_CCU_FREQ_ID_ECO, AON_CCU_FREQ_ID_NRML2)
 #define KPM_CCU_FREQ_POLICY_TBL	\
 		ARRAY_LIST(KPM_CCU_FREQ_ID_ECO, KPM_CCU_FREQ_ID_ECO,\
-			KPM_CCU_FREQ_ID_ECO, KPM_CCU_FREQ_ID_NRML)
+			KPM_CCU_FREQ_ID_ECO, KPM_CCU_FREQ_ID_NRML2)
 #define KPS_CCU_FREQ_POLICY_TBL	\
 		ARRAY_LIST(KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_ECO,\
-			KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_NRML)
+			KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_NRML2)
 
 /* PLL Offset config values for RF interference reduction
 *  as suggested by modem team */
@@ -137,16 +170,6 @@
 #define ERRATUM_MM_V3D_TIMEOUT		(1 << 0)
 #define ERRATUM_MM_POWER_OK		(1 << 1)
 #define ERRATUM_PLL1_8PHASE_OFF		(1 << 2)
-
-
-/*supported A9 freqs*/
-enum {
-	A9_FREQ_700_MHZ,
-	A9_FREQ_800_MHZ,
-	A9_FREQ_850_MHZ,
-	A9_FREQ_1_GHZ,
-	A9_FREQ_MAX
-};
 
 #ifdef CONFIG_KONA_POWER_MGR
 struct pwrmgr_init_param {
@@ -177,8 +200,7 @@ extern struct pwrmgr_init_param pwrmgr_init_param;
 #endif	/*CONFIG_KONA_POWER_MGR */
 
 /*This API should be defined in appropriate PMU board file*/
-extern const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
-			u32 silicon_type);
+extern const u8 *bcmpmu_get_sr_vlt_table(u32 silicon_type);
 extern bool is_pm_erratum(u32 erratum);
 extern int __init pm_params_init(void);
 extern int pm_init_pmu_sr_vlt_map_table(u32 silicon_type);

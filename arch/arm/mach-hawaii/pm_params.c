@@ -31,10 +31,11 @@
 #include <linux/module.h>
 #include "pm_params.h"
 #include "sequencer_ucode.h"
+#include <plat/kona_avs.h>
 
 /*sysfs interface to read PMU vlt table*/
-static u32 csr_vlt_table[SR_VLT_LUT_SIZE];
-module_param_array_named(csr_vlt_table, csr_vlt_table, uint, NULL, S_IRUGO);
+static u32 sr_vlt_table[SR_VLT_LUT_SIZE];
+module_param_array_named(sr_vlt_table, sr_vlt_table, uint, NULL, S_IRUGO);
 
 static unsigned long pm_erratum_flg;
 module_param_named(pm_erratum_flg, pm_erratum_flg, ulong,
@@ -114,61 +115,59 @@ static void __init __pm_init_errata_flg(void)
 #define MHZ(x) ((x)*1000*1000)
 #define GHZ(x) (MHZ(x)*1000)
 
-static const u32 a9_freq_list[A9_FREQ_MAX] = {
-	[A9_FREQ_700_MHZ] = MHZ(700),
-	[A9_FREQ_800_MHZ] = MHZ(800),
-	[A9_FREQ_850_MHZ] = MHZ(850),
-	[A9_FREQ_1_GHZ] = GHZ(1),
-
-};
-
 bool is_pm_erratum(u32 erratum)
 {
 	return !!(pm_erratum_flg & erratum);
 }
 
 
+#define CSR_RETN_VAL_SS			0x4
+#define CSR_ECO_VAL_SS			0xF
+#define CSR_NM1_VAL_SS			0x13
+#define CSR_NM2_VAL_SS			0x1D
+#define CSR_TURBO_VAL_SS		0x34
+
+#define MSR_RETN_VAL_SS			0x4
+#define MSR_ECO_VAL_SS			0x10
+#define MSR_NM1_VAL_SS			0x10
+#define MSR_NM2_VAL_SS			0x1A
+#define MSR_TURBO_VAL_SS		0x24
+
+
+const u8 swr_vlt_table[SR_VLT_LUT_SIZE] = {
+	INIT_LPM_VLT_IDS(MSR_RETN_VAL_SS, MSR_RETN_VAL_SS, MSR_RETN_VAL_SS),
+	INIT_A9_VLT_TABLE(CSR_ECO_VAL_SS, CSR_NM1_VAL_SS, CSR_NM2_VAL_SS,
+							CSR_TURBO_VAL_SS),
+	INIT_OTHER_VLT_TABLE(MSR_ECO_VAL_SS, MSR_NM1_VAL_SS, MSR_NM2_VAL_SS,
+							MSR_TURBO_VAL_SS),
+	INIT_UNUSED_VLT_IDS(MSR_RETN_VAL_SS)
+	};
+
+__weak const u8 *bcmpmu_get_sr_vlt_table (u32 silicon_type)
+{
+	return swr_vlt_table;
+}
+
+
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 {
-#if 0
-#define RATE_ADJ 10
-	struct clk *a9_pll_chnl1;
 	int inx;
-	unsigned long rate;
 	u8 *vlt_table;
-
-	a9_pll_chnl1 = clk_get(NULL, A9_PLL_CHNL1_CLK_NAME_STR);
-
-	BUG_ON(IS_ERR_OR_NULL(a9_pll_chnl1));
-
-	rate = clk_get_rate(a9_pll_chnl1);
-	pr_info("%s : rate = %lu, silicon_type = %d\n",
-		__func__, rate, silicon_type);
-	rate += RATE_ADJ;
-
-	for (inx = A9_FREQ_MAX - 1; inx >= 0; inx--) {
-
-		if (rate / a9_freq_list[inx])
-			break;
-	}
-	if (inx < 0) {
-		pr_info("%s : BUG => No maching freq found!!!\n", __func__);
-		BUG();
-	}
-	vlt_table = (u8 *) bcmpmu_get_sr_vlt_table(0, (u32) inx, silicon_type);
+	vlt_table = (u8 *) bcmpmu_get_sr_vlt_table(SILICON_TYPE_SLOW);
 	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
-		csr_vlt_table[inx] = vlt_table[inx];
+		sr_vlt_table[inx] = vlt_table[inx];
 	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
-#else
-	return 0;
-#endif
 }
+
 #if !defined (CONFIG_MACH_HAWAII_FPGA)
 int __init pm_params_init(void)
 {
 	__pm_init_errata_flg();
 	pwrmgr_init_param.cmd_buf = i2c_cmd_buf;
 	pwrmgr_init_param.cmd_buf_size = cmd_buf_sz;
+	#ifndef CONFIG_KONA_AVS
+		pm_init_pmu_sr_vlt_map_table(SILICON_TYPE_SLOW);
+	#endif
 	return 0;
 }
 #endif
