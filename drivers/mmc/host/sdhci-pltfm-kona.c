@@ -126,6 +126,8 @@ static int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
 static int sdhci_pltfm_set_signalling(struct sdhci_host *host, int sig_vol);
 static int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host);
 static int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host);
+static void sdhci_pltfm_init_74_clocks(struct sdhci_host *host,
+							u8 power_mode);
 /*
  * Get the base clock. Use central clock source for now. Not sure if different
  * clock speed to each dev is allowed
@@ -153,6 +155,7 @@ static struct sdhci_ops sdhci_pltfm_ops = {
 	.get_timeout_clock = sdhci_get_timeout_clock,
 	.clk_enable = sdhci_pltfm_clk_enable,
 	.set_signalling = sdhci_pltfm_set_signalling,
+	.platform_send_init_74_clocks = sdhci_pltfm_init_74_clocks,
 };
 
 static int bcm_kona_sd_reset(struct sdio_dev *dev)
@@ -1228,3 +1231,11 @@ int wifi_get_irq_number(unsigned long *irq_flags_ptr)
 }
 EXPORT_SYMBOL(wifi_get_irq_number);
 #endif
+
+static void sdhci_pltfm_init_74_clocks(struct sdhci_host *host, u8 power_mode)
+{
+	if (power_mode == MMC_POWER_OFF)
+		return;
+	else
+		mdelay(10);
+}
