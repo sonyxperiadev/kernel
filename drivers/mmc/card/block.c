@@ -650,6 +650,26 @@ static inline int mmc_blk_part_switch(struct mmc_card *card,
 	}
 
 	main_md->part_curr = md->part_type;
+
+#ifdef CONFIG_MMC_BCM_SD
+	/*
+	 * Work-around for RPMB partition switch error on newer SS TLC MCP.
+	 * Below are details of the issue and suggested work-around from SS-
+	 * - I heard from Samsung HQ in Korea. There has been an error for
+	 *   RPMB partition switching at 4GB/8GB TLC product
+	 *   which has been produced since last May.
+	 * - Henry (Samsung planning guy) will send a report for it and
+	 *   release the re-patch date.
+	 * - Before that it is recommened to 1ms delay rather than 300us.
+	 *   1ms is totally safe based on Samsung test.
+	 * - It is also recommend to insert check the bit[1:0] of ext_csd[179]
+	 *   after RPMB partition switching.
+	 *
+	 * NOTE: I'm currently implementing only the 1ms delay workaround.
+	 */
+	mdelay(1);
+#endif
+
 	return 0;
 }
 
