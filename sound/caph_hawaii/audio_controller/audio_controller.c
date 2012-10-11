@@ -2002,12 +2002,22 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER) {
+#ifndef HAWAII_ZEBU_TEST
 		extGain = (short)p1->ext_speaker_pga_l;	/*Q13p2 dB */
 		extGain_r = (short)p1->ext_speaker_pga_r;	/*Q13p2 dB */
+#else
+		extGain = 0;
+		extGain_r = 0;
+#endif
 	} else{
 #endif
+#ifndef HAWAII_ZEBU_TEST
 		extGain = (short)p->ext_speaker_pga_l;	/*Q13p2 dB */
 		extGain_r = (short)p->ext_speaker_pga_r;	/*Q13p2 dB */
+#else
+		extGain = 0;
+		extGain_r = 0;
+#endif
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	}
 #endif
@@ -2048,12 +2058,23 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 		/*set CAPH gain */
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER) {
+#ifndef HAWAII_ZEBU_TEST
 		mixInGain = (short)p1->srcmixer_input_gain_l;	/*Q13p2 dB */
 		mixInGain_r = (short)p1->srcmixer_input_gain_r;	/*Q13p2 dB */
+#else
+		mixInGain =  0;
+		mixInGain_r = 0;
+#endif
 	} else{
 #endif
+#ifndef HAWAII_ZEBU_TEST
 		mixInGain = (short)p->srcmixer_input_gain_l;	/*Q13p2 dB */
 		mixInGain_r = (short)p->srcmixer_input_gain_r;	/*Q13p2 dB */
+#else
+		mixInGain = 0;
+		mixInGain_r = 0;
+#endif
+
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	}
 #endif
@@ -2072,12 +2093,22 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 		} else if (vol_left <= 0) {
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 			if (app >= AUDIO_APP_NUMBER)
+#ifndef HAWAII_ZEBU_TEST
 				mixBitSel
 				= (short)p1->srcmixer_output_coarse_gain_l;
+#else
+				mixBitSel
+				= 0;
+#endif
 			else
 #endif
+#ifndef HAWAII_ZEBU_TEST
 				mixBitSel
 				= (short)p->srcmixer_output_coarse_gain_l;
+#else
+				mixBitSel
+				= 0;
+#endif
 
 			mixBitSel = mixBitSel / 24; /* bit_shift */
 			mixOutGain = vol_left;
@@ -2096,12 +2127,22 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 		} else if (vol_right <= 0) {
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 			if (app >= AUDIO_APP_NUMBER)
+#ifndef HAWAII_ZEBU_TEST
 				mixBitSel_r
 				= (short)p1->srcmixer_output_coarse_gain_r;
+#else
+				mixBitSel_r
+				= 0;
+#endif
 			else
 #endif
+#ifndef HAWAII_ZEBU_TEST
 				mixBitSel_r
 				= (short)p->srcmixer_output_coarse_gain_r;
+#else
+				mixBitSel_r
+				= 0;
+#endif
 
 			mixBitSel_r = mixBitSel_r / 24; /* bit_shift */
 			mixOutGain_r = vol_right;
@@ -2232,16 +2273,30 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 				} else {
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 				if (app >= AUDIO_APP_NUMBER) {
+#ifndef HAWAII_ZEBU_TEST
 					mixInGain =
 					(short)p1->srcmixer_input_gain_l;
 					mixInGainR =
 					(short)p1->srcmixer_input_gain_r;
+#else
+					mixInGain =
+					0;
+					mixInGainR =
+					0;
+#endif
 				} else {
 #endif
+#ifndef HAWAII_ZEBU_TEST
 					mixInGain =
 						(short)p->srcmixer_input_gain_l;
 					mixInGainR =
 						(short)p->srcmixer_input_gain_r;
+#else
+					mixInGain =
+						0;
+					mixInGainR =
+						0;
+#endif
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 				}
 #endif
@@ -4031,28 +4086,53 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 #endif
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER)
+#ifndef HAWAII_ZEBU_TEST
 		pmu_gain = (short)p1->ext_speaker_pga_l;	/* Q13p2 dB */
+#else
+		pmu_gain = 0;
+#endif
 	else
 #endif
+#ifndef HAWAII_ZEBU_TEST
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
+#else
+		pmu_gain = 0;
+#endif
 
 		extern_hs_set_gain(pmu_gain * 25, AUDIO_HS_LEFT);
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER)
+#ifndef HAWAII_ZEBU_TEST
 		pmu_gain = (short)p1->ext_speaker_pga_r;	/* Q13p2 dB */
+#else
+		pmu_gain = 0;
+#endif
+
 	else
 #endif
+#ifndef HAWAII_ZEBU_TEST
 		pmu_gain = (short)p->ext_speaker_pga_r;	/* Q13p2 dB */
+#else
+		pmu_gain = 0;
+#endif
 
 		extern_hs_set_gain(pmu_gain * 25, AUDIO_HS_RIGHT);
 
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER)
+#ifndef HAWAII_ZEBU_TEST
 		pmu_gain = (int)p1->ext_speaker_high_gain_mode_enable;
+#else
+		pmu_gain = 0;
+#endif
+
 	else
 #endif
+#ifndef HAWAII_ZEBU_TEST
 		pmu_gain = (int)p->ext_speaker_high_gain_mode_enable;
-
+#else
+		pmu_gain = 0;
+#endif
 		extern_hs_en_hi_gain_mode(pmu_gain);
 
 		break;
@@ -4060,20 +4140,36 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 	case AUDIO_MODE_SPEAKERPHONE:
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER)
+#ifndef HAWAII_ZEBU_TEST
 		pmu_gain = (short)p1->ext_speaker_pga_l;	/* Q13p2 dB */
+#else
+		pmu_gain = 0;
+#endif
 	else
 #endif
+#ifndef HAWAII_ZEBU_TEST
 		pmu_gain = (short)p->ext_speaker_pga_l;	/* Q13p2 dB */
+#else
+		pmu_gain = 0;
+#endif
 
 		extern_ihf_set_gain(pmu_gain * 25);
 
+
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER)
+#ifndef HAWAII_ZEBU_TEST
 		pmu_gain = (int)p1->ext_speaker_high_gain_mode_enable;
+#else
+        pmu_gain = 0;
+#endif
 	else
 #endif
+#ifndef HAWAII_ZEBU_TEST
 		pmu_gain = (int)p->ext_speaker_high_gain_mode_enable;
-
+#else
+		pmu_gain = 0;
+#endif
 		extern_ihf_en_hi_gain_mode(pmu_gain);
 
 		break;
@@ -4132,22 +4228,44 @@ static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app)
 
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER)
+
+#ifndef HAWAII_ZEBU_TEST
 		user_vol_setting[app][mode].L
 			= (short)p1->srcmixer_output_fine_gain_l;
+#else
+		user_vol_setting[app][mode].L
+			= 0;
+#endif
 	else
 #endif
+#ifndef HAWAII_ZEBU_TEST
 		user_vol_setting[app][mode].L
 			= (short)p->srcmixer_output_fine_gain_l;
+#else
+		user_vol_setting[app][mode].L
+			= 0;
+#endif
 
 	user_vol_setting[app][mode].L *= 25;
 #if defined(USE_NEW_AUDIO_MM_PARAM)
 	if (app >= AUDIO_APP_NUMBER)
+#ifndef HAWAII_ZEBU_TEST
 		user_vol_setting[app][mode].R
 			= (short)p1->srcmixer_output_fine_gain_r;
+#else
+		user_vol_setting[app][mode].R
+			= 0;
+#endif
 	else
 #endif
+
+#ifndef HAWAII_ZEBU_TEST
 		user_vol_setting[app][mode].R
 			= (short)p->srcmixer_output_fine_gain_r;
+#else
+		user_vol_setting[app][mode].R
+			= 0;
+#endif
 	user_vol_setting[app][mode].R *= 25;
 	user_vol_setting[app][mode].valid = TRUE;
 }
