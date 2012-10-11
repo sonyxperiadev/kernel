@@ -48,15 +48,17 @@
 /**
  * struct ion_device - the metadata of the ion device node
  * @dev:		the actual misc device
- * @buffers:	an rb tree of all the existing buffers
- * @lock:		lock protecting the buffers & heaps trees
+ * @buffers:		an rb tree of all the existing buffers
+ * @buffer_lock:	lock protecting the tree of buffers
+ * @lock:		rwsem protecting the tree of heaps and clients
  * @heaps:		list of all the heaps in the system
  * @user_clients:	list of all the clients created from userspace
  */
 struct ion_device {
 	struct miscdevice dev;
 	struct rb_root buffers;
-	struct mutex lock;
+	struct mutex buffer_lock;
+	struct rw_semaphore lock;
 	struct rb_root heaps;
 	long (*custom_ioctl) (struct ion_client *client, unsigned int cmd,
 			      unsigned long arg);
@@ -234,7 +236,9 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 	   cached mapping that mapping has been invalidated */
 	for_each_sg(buffer->sg_table->sgl, sg, buffer->sg_table->nents, i)
 		sg_dma_address(sg) = sg_phys(sg);
+	mutex_lock(&dev->buffer_lock);
 	ion_buffer_add(dev, buffer);
+	mutex_unlock(&dev->buffer_lock);
 	return buffer;
 
 err:
@@ -260,12 +264,12 @@ static void ion_buffer_destroy(struct kref *kref)
 #endif
 	buffer->heap->ops->unmap_dma(buffer->heap, buffer);
 	buffer->heap->ops->free(buffer);
-	mutex_lock(&dev->lock);
+	mutex_lock(&dev->buffer_lock);
 #ifdef CONFIG_ION_KONA
 	buffer->heap->used -= buffer->size;
 #endif
 	rb_erase(&buffer->node, &dev->buffers);
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&dev->buffer_lock);
 	if (buffer->flags & ION_FLAG_CACHED)
 		kfree(buffer->dirty);
 	kfree(buffer);
@@ -283,9 +287,9 @@ static int ion_buffer_put(struct ion_buffer *buffer)
 
 static void ion_buffer_add_to_handle(struct ion_buffer *buffer)
 {
-	mutex_lock(&buffer->dev->lock);
+	mutex_lock(&buffer->lock);
 	buffer->handle_count++;
-	mutex_unlock(&buffer->dev->lock);
+	mutex_unlock(&buffer->lock);
 }
 
 static void ion_buffer_remove_from_handle(struct ion_buffer *buffer)
@@ -299,7 +303,7 @@ static void ion_buffer_remove_from_handle(struct ion_buffer *buffer)
 	 * The taskcomm and pid can provide a debug hint as to where this fd
 	 * is in the system
 	 */
-	mutex_lock(&buffer->dev->lock);
+	mutex_lock(&buffer->lock);
 	buffer->handle_count--;
 	BUG_ON(buffer->handle_count < 0);
 	if (!buffer->handle_count) {
@@ -309,7 +313,7 @@ static void ion_buffer_remove_from_handle(struct ion_buffer *buffer)
 		get_task_comm(buffer->task_comm, task);
 		buffer->pid = task_pid_nr(task);
 	}
-	mutex_unlock(&buffer->dev->lock);
+	mutex_unlock(&buffer->lock);
 }
 
 static struct ion_handle *ion_handle_create(struct ion_client *client,
@@ -595,7 +599,7 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 retry:
 	retry_flag = 0;
 #endif
-	mutex_lock(&dev->lock);
+	down_read(&dev->lock);
 	for (n = rb_first(&dev->heaps); n != NULL; n = rb_next(n)) {
 		struct ion_heap *heap = rb_entry(n, struct ion_heap, node);
 		/* if the client doesn't support this heap type */
@@ -651,7 +655,7 @@ retry:
 				heap_mask,  len>>10);
 	}
 #endif /* CONFIG_ION_KONA */
-	mutex_unlock(&dev->lock);
+	up_read(&dev->lock);
 
 #ifdef CONFIG_ION_OOM_KILLER
 	if (IS_ERR_OR_NULL(buffer)) {
@@ -910,7 +914,7 @@ struct ion_client *ion_client_create(struct ion_device *dev,
 	client->task = task;
 	client->pid = pid;
 
-	mutex_lock(&dev->lock);
+	down_write(&dev->lock);
 	p = &dev->clients.rb_node;
 	while (*p) {
 		parent = *p;
@@ -928,7 +932,7 @@ struct ion_client *ion_client_create(struct ion_device *dev,
 	client->debug_root = debugfs_create_file(debug_name, 0664,
 						 dev->debug_root, client,
 						 &debug_client_fops);
-	mutex_unlock(&dev->lock);
+	up_write(&dev->lock);
 
 	return client;
 }
@@ -944,12 +948,12 @@ void ion_client_destroy(struct ion_client *client)
 						     node);
 		ion_handle_destroy(&handle->ref);
 	}
-	mutex_lock(&dev->lock);
+	down_write(&dev->lock);
 	if (client->task)
 		put_task_struct(client->task);
 	rb_erase(&client->node, &dev->clients);
 	debugfs_remove_recursive(client->debug_root);
-	mutex_unlock(&dev->lock);
+	up_write(&dev->lock);
 
 	kfree(client);
 }
@@ -1484,7 +1488,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	seq_printf(s, "----------------------------------------------------\n");
 	seq_printf(s, "orphaned allocations (info is from last known client):"
 		   "\n");
-	mutex_lock(&dev->lock);
+	mutex_lock(&dev->buffer_lock);
 	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
 		struct ion_buffer *buffer = rb_entry(n, struct ion_buffer,
 						     node);
@@ -1500,7 +1504,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 		if (buffer->handle_count > 1)
 			total_shared_size += buffer->size;
 	}
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&dev->buffer_lock);
 	if (!total_orphaned_size)
 		seq_printf(s, "  No memory leak.\n");
 	seq_printf(s, "----------------------------------------------------\n");
@@ -1566,7 +1570,7 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 		       __func__);
 
 	heap->dev = dev;
-	mutex_lock(&dev->lock);
+	down_write(&dev->lock);
 	while (*p) {
 		parent = *p;
 		entry = rb_entry(parent, struct ion_heap, node);
@@ -1600,7 +1604,7 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 			(unsigned int *)&heap->lmc_min_free);
 #endif
 end:
-	mutex_unlock(&dev->lock);
+	up_write(&dev->lock);
 }
 
 struct ion_device *ion_device_create(long (*custom_ioctl)
@@ -1639,7 +1643,8 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 
 	idev->custom_ioctl = custom_ioctl;
 	idev->buffers = RB_ROOT;
-	mutex_init(&idev->lock);
+	mutex_init(&idev->buffer_lock);
+	init_rwsem(&idev->lock);
 	idev->heaps = RB_ROOT;
 	idev->clients = RB_ROOT;
 	return idev;
