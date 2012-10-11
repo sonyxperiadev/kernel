@@ -24,6 +24,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/mfd/bcmpmu59xxx.h>
+#include <linux/mfd/bcmpmu59xxx_reg.h>
 
 /*
 * Register field values for regulator.

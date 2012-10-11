@@ -34,5 +34,8 @@ ifneq ($(call as-instr,.arch_extension sec,+sec),)
 AFLAGS_v7.o :=-Wa,-march=armv7-a+sec
 endif
 ifeq ($(CONFIG_MFD_BCM_PMU59056), y)
-obj-y += board-bcm59056.o 
+obj-y += board-bcm59056.o
+endif
+ifeq ($(CONFIG_MFD_BCM_PMU59xxx), y)
+obj-y += board-bcm59xxx.o
 endif

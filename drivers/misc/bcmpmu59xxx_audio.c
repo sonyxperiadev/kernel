@@ -816,11 +816,11 @@ void bcmpmu_audio_init(void)
 		bcmpmu->write_dev(bcmpmu, PMU_REG_HSCP3, val);
 
 		/* enable HS offset correction */
-
+		/*
 		bcmpmu->read_dev(bcmpmu, PMU_REG_HSIST, &val);
 		val &= ~HSIST_OC_DISOCMUX;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_HSIST, val);
-
+		*/
 		/* IHF reset disable */
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFTOP, &val);
 		val &= ~IHFTOP_IHF_IDDQ_MASK;
@@ -864,10 +864,11 @@ void bcmpmu_audio_deinit(void)
 		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP1, val);
 
 		/* disable HS offset correction */
+		/*
 		bcmpmu->read_dev(bcmpmu, PMU_REG_HSIST, &val);
 		val |= HSIST_OC_DISOCMUX;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_HSIST, val);
-
+		*/
 		/* IHF Reset Enable */
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFTOP, &val);
 		val |= IHFTOP_IHF_IDDQ;
