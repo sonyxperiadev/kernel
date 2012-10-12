@@ -151,12 +151,16 @@ __weak const u8 *bcmpmu_get_sr_vlt_table (u32 silicon_type)
 
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 {
+	#if !defined (CONFIG_MACH_HAWAII_FPGA)
 	int inx;
 	u8 *vlt_table;
 	vlt_table = (u8 *) bcmpmu_get_sr_vlt_table(SILICON_TYPE_SLOW);
 	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
 		sr_vlt_table[inx] = vlt_table[inx];
 	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
+	#else
+		return 0;
+	#endif	
 }
 
 #if !defined (CONFIG_MACH_HAWAII_FPGA)
