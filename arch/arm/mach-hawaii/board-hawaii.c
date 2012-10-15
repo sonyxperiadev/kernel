@@ -1232,7 +1232,7 @@ static struct platform_pwm_backlight_data bcm_backlight_data = {
 	.max_brightness	= 32,   /* Android calibrates to 32 levels*/
 	.dft_brightness	= 32,
 	.polarity	= 1,    /* Inverted polarity */
-	.pwm_period_ns	=  5000000,
+	.pwm_period_ns	= 1000000,
 };
 
 static struct platform_device bcm_backlight_devices = {
