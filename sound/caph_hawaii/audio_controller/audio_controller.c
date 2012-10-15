@@ -228,7 +228,7 @@ static AudioMode_t currAudioMode = AUDIO_MODE_HANDSET;
 static AudioMode_t currAudioMode_playback = AUDIO_MODE_SPEAKERPHONE;
 static AudioMode_t currAudioMode_record = AUDIO_MODE_SPEAKERPHONE;
 
-static struct regulator *vibra_reg;
+static struct regulator *vibra_reg = NULL;
 
 /*wait in us, to avoid hs/ihf pop noise*/
 static int wait_bb_on;
@@ -1662,8 +1662,10 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 		if (!vibra_reg) {
 			vibra_reg = regulator_get(NULL, VIBRA_LDO_REGULATOR);
 
-			if (IS_ERR(vibra_reg))
+			if (IS_ERR(vibra_reg)) {
+				vibra_reg = NULL;
 				aError("Failed to get LDO for Vibra\n");
+			}
 		}
 		if (vibra_reg) {
 			ret = regulator_enable(vibra_reg);
@@ -3434,8 +3436,10 @@ void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction)
 	if (!vibra_reg) {
 		vibra_reg = regulator_get(NULL, VIBRA_LDO_REGULATOR);
 
-		if (IS_ERR(vibra_reg))
+		if (IS_ERR(vibra_reg)) {
+			vibra_reg = NULL;
 			aError("Failed to get LDO for Vibra\n");
+		}
 	}
 	if (vibra_reg) {
 		ret = regulator_enable(vibra_reg);
