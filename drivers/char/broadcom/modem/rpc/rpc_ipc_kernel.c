@@ -986,6 +986,9 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 		return -EFAULT;
 	}
 
+	if (ioc_param.clientId >= ARRAY_SIZE(gRpcClientList))
+		return -EINVAL;
+
 	cInfo = gRpcClientList[ioc_param.clientId];
 	if (!cInfo) {
 		_DBG(RPC_TRACE
@@ -1075,6 +1078,9 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
 
 	_DBG(RPC_TRACE
 	     ("k:handle_pkt_rx_buffer_ioc client=%d\n", ioc_param.clientId));
+
+	if (ioc_param.clientId >= ARRAY_SIZE(gRpcClientList))
+		return -EINVAL;
 
 	cInfo = gRpcClientList[ioc_param.clientId];
 
@@ -1760,6 +1766,9 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 		     ("k:handle_pkt_poll_ex_ioc - copy_from_user() had error\n"));
 		return -EFAULT;
 	}
+
+	if (ioc_param.clientId >= ARRAY_SIZE(gRpcClientList))
+			return -EINVAL;
 
 	cInfo = gRpcClientList[ioc_param.clientId];
 	if (!cInfo) {
