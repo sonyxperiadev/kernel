@@ -819,7 +819,14 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 		goto Error_bcm_hsotgctrl_probe;
 	}
 
+
 #ifndef CONFIG_USB_OTG_UTILS
+	/* Clear non-driving as default in case there
+	 * is no transceiver hookup */
+	bcm_hsotgctrl_phy_set_non_driving(false);
+#endif
+
+#ifdef CONFIG_NOP_USB_XCEIV
 	/* Clear non-driving as default in case there
 	 * is no transceiver hookup */
 	bcm_hsotgctrl_phy_set_non_driving(false);
