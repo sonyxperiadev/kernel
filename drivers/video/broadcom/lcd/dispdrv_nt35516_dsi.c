@@ -264,7 +264,7 @@ CSL_DSI_CFG_t NT35516_dsiCfg = {
 	FALSE,		/* enaLpTxEotPkt */
 	FALSE,		/* enaLpRxEotPkt */
 	1,		/* dispEngine */
-	1,		/* pixTxporter */
+	0,		/* pixTxporter */
 };
 
 

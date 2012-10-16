@@ -13,10 +13,16 @@ static struct timeval tv1, tv2;
 #endif
 
 
+#if 0
 #define axipv_info(fmt, args...) \
 		printk(KERN_INFO"%s:%d " fmt, __func__, __LINE__, ##args)
 #define axipv_debug(fmt, args...) \
 		printk(KERN_DEBUG"%s:%d " fmt, __func__, __LINE__, ##args)
+#else
+#define axipv_info(fmt, args...)
+#define axipv_debug(fmt, args...)
+#endif
+
 #define axipv_err(fmt, args...) \
 		printk(KERN_ERR"%s:%d " fmt, __func__, __LINE__, ##args)
 
@@ -234,7 +240,7 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	/* Do an immediate soft reset and wait for completion */
 	writel(ctrl, init->base_addr + REG_CTRL);
 	while (!(readl(init->base_addr + REG_CTRL) & SFT_RSTN_DONE)) {
-		printk("udelay\n");
+		axipv_debug("udelay\n");
 		udelay(5);
 	}
 
@@ -242,7 +248,7 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	dev->base_addr = init->base_addr;
 	dev->irq_cb = init->irq_cb;
 	dev->bypassPV = init->bypassPV;
-	printk("PV bypass is %d\n",init->bypassPV);
+	axipv_debug("PV bypass is %d\n",init->bypassPV);
 	dev->release_cb = init->release_cb;
 	INIT_WORK(&dev->irq_work, process_irq);
 	INIT_WORK(&dev->release_work, process_release);
@@ -305,7 +311,6 @@ static inline int axipv_config(struct axipv_config_t *config)
 		| AXIPV_ARCACHE	| (config->test ? AXIPV_TESTMODE : 0);
 
 	if (dev->bypassPV) {
-		printk("bypassing PV--ctrl\n");
 		ctrl = ctrl | (1 << 8) | (1 << 29);
 		ctrl = (ctrl & ~PIXEL_FORMAT_MASK) | (PIXEL_FORMAT_24BPP_RGB <<
 			PIXEL_FORMAT_SHIFT);
@@ -336,7 +341,6 @@ static inline int axipv_config(struct axipv_config_t *config)
 			tx_size);
 	}
 	if (dev->bypassPV) {
-		printk("bypassing PV--waterlevels\n");
 		int pv_start_thre = readl(axipv_base + REG_PV_THRESH);
 		if (!((config->pix_fmt == PIXEL_FORMAT_24BPP_RGB) ||
 			(config->pix_fmt == PIXEL_FORMAT_24BPP_BGR) ||
@@ -402,7 +406,7 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		irq_stat = irq_stat & ~AXIPV_DISABLED_INT;
 #if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
 		do_gettimeofday(&tv2);
-		printk("axipv tx time(us)=%d\n", (tv2.tv_sec-tv1.tv_sec)*1000000 +
+		axipv_info("axipv tx time(us)=%d\n", (tv2.tv_sec-tv1.tv_sec)*1000000 +
 		tv2.tv_usec - tv1.tv_usec);
 #endif
 	}

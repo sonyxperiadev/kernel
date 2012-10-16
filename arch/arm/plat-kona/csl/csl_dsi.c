@@ -301,26 +301,20 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 	axipvCfg->buff.sync.xlen = updMsg->updReq.lineLenP * 4;
 	axipvCfg->buff.sync.ylen = updMsg->updReq.lineCount;
 
-	printk("configure axipv\n");
 	axipv_change_state(AXIPV_CONFIG, axipvCfg);
 	if (!updMsg->dsiH->dispEngine) {
 		if (!pvCfg)
 			pr_err("pvCfg is NULL\n");
 		pvCfg->hact = updMsg->updReq.lineLenP;
 		pvCfg->vact = updMsg->updReq.lineCount;
-		printk("configure pv\n");
 		pv_change_state(PV_VID_CONFIG, pvCfg);
 	}
-	printk("enable axipv\n");
 	axipv_change_state(AXIPV_START, axipvCfg);
-	printk("waiting for axipv interrupt\n");
 	if (OSSTATUS_SUCCESS != OSSEMAPHORE_Obtain(updMsg->dsiH->semaAxipv,
 		TICKS_IN_MILLISECONDS(100))) {
 		pr_err("Timed out waiting for PV_START_THRESH interrupt\n");
 		return CSL_LCD_ERR;
 	}
-	printk("pv threshold axipv reached, continuing\n");
-
 #if 0
 		printk("Using AXIPV path, enable dsi\n");
 		chal_dsi_tx_start(updMsg->dsiH->chalH, TX_PKT_ENG_2, TRUE);
@@ -329,7 +323,6 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 #endif
 
 	if (!updMsg->dsiH->dispEngine) {
-		printk("enable pv\n");
 		pv_change_state(PV_START, pvCfg);
 	}
 
@@ -350,12 +343,7 @@ void cslDsiAxipvPollInt(DSI_UPD_REQ_MSG_T *updMsg)
 
 static void axipv_irq_cb(int stat)
 {
-	static int w_lvl2_cnt;
 	DSI_HANDLE dsiH = &dsiBus[0];
-	if (stat & WATER_LVL2_INT) {
-		w_lvl2_cnt++;
-		printk("w_lvl2 int stat=0x%x cnt=%d\n", stat, w_lvl2_cnt);
-	}
 	if (stat & PV_START_THRESH_INT)
 		OSSEMAPHORE_Release(dsiH->semaAxipv);
 }
