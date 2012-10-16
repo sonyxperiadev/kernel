@@ -658,7 +658,7 @@ void IPC_BufferDump(IPC_Buffer Buffer)
 	IPC_U32 *DataPtr = IPC_BufferDataPointer(Buffer);
 	IPC_BufferPool_T *PoolPtr;
 
-	if (BufferPtr == 0) {
+	if (BufferPtr == NULL) {
 		IPC_TRACE(IPC_Channel_General, "IPC_BufferDump",
 			  "Invalid Buffer %08X", Buffer, 0, 0, 0);
 		return;
@@ -692,6 +692,11 @@ void IPC_BufferDump(IPC_Buffer Buffer)
 	} else {
 		IPC_TRACE(IPC_Channel_General, "              ",
 			  "Invalid Status", 0, 0, 0, 0);
+	}
+
+	if (DataPtr == NULL) {
+		/* already reported in IPC_BufferDataPointer() */
+		return;
 	}
 
 	IPC_TRACE(IPC_Channel_General, "              ",
