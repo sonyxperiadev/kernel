@@ -20,7 +20,6 @@ config ARCH_RHEA
 config ARCH_HAWAII
 	bool "Broadcom Hawaii Soc"
 	select HAVE_SMP
-	select HAVE_PWM
 	help
 	  Support for the Broadcom Hawaii Soc platform.
 
