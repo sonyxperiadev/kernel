@@ -40,6 +40,12 @@ struct bcmpmu_ponkey {
 	struct bcmpmu		*bcmpmu;
 };
 
+u32 bcmpmu_get_ponkey_state(void)
+{
+	return 0;
+}
+EXPORT_SYMBOL(bcmpmu_get_ponkey_state);
+
 static void bcmpmu_ponkey_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu_ponkey *ponkey = data;
