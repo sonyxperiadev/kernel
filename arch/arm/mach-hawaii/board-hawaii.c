@@ -41,6 +41,7 @@
 #include <linux/spi/spi.h>
 #include <linux/clk.h>
 #include <linux/bootmem.h>
+#include <linux/input.h>
 #include <linux/mfd/bcm590xx/core.h>
 #include <asm/gpio.h>
 #include <linux/gpio.h>
@@ -1420,7 +1421,7 @@ static struct i2c_board_info bcm915500_i2c_boardinfo[] = {
 
 static struct platform_device *hawaii_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
-	&bcm_kp_device,
+	&hawaii_kp_device,
 #endif
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 	&headset_device,
