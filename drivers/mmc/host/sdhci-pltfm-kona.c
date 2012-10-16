@@ -77,6 +77,8 @@
 #define KONA_SDMMC_OFF_TIMEOUT		(8000)
 #endif
 
+#define BCM_REGULATOR_SKIP_QUIRK
+
 enum {ENABLED = 0, DISABLED, OFF};
 
 struct procfs {
@@ -577,16 +579,20 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		ret =
 		    sdhci_pltfm_regulator_init(dev,
 					       hw_cfg->vddo_regulator_name);
+#ifndef BCM_REGULATOR_SKIP_QUIRK
 		if (ret < 0)
 			goto err_term_clk;
+#endif
 	}
 
 	if (hw_cfg->vddsdxc_regulator_name) {
 		ret =
 		    sdhci_pltfm_regulator_sdxc_init(dev,
 					       hw_cfg->vddsdxc_regulator_name);
+#ifndef BCM_REGULATOR_SKIP_QUIRK
 		if (ret < 0)
 			goto err_term_clk;
+#endif
 	}
 
 	sdhci_kona_sdio_regulator_power(dev, 1);
