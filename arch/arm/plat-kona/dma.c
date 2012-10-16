@@ -496,6 +496,13 @@ int dma_setup_transfer(unsigned int chan,
 	bl = (((cfg & DMA_CFG_BURST_LENGTH_MASK) >> DMA_CFG_BURST_LENGTH_SHIFT)
 	      + 1);
 
+	/* Check for bs*bl <= 64 bytes*/
+	if ((w * bl) > 64) {
+		dev_err(dmac->pi->dev,
+			"total burst cannot be greater than 64 bytes\n");
+		goto err;
+	}
+
 	/* checking xfer size alignment */
 	if ((rqtype != MEMTOMEM) && (cfg & (DMA_PERI_END_SINGLE_REQ |
 					    DMA_PERI_REQ_ALWAYS_BURST))) {
@@ -688,6 +695,13 @@ int dma_setup_transfer_sg(unsigned int chan,
 	/* Burst Length */
 	bl = (((cfg & DMA_CFG_BURST_LENGTH_MASK) >> DMA_CFG_BURST_LENGTH_SHIFT)
 	      + 1);
+
+	/* Check for bs*bl <= 64 bytes*/
+	if ((w * bl) > 64) {
+		dev_err(dmac->pi->dev,
+			"total burst cannot be greater than 64 bytes\n");
+		goto err;
+	}
 
 	/* check buffer address alignment */
 	if (hw_addr % w) {
@@ -925,6 +939,13 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	bl = (((cfg & DMA_CFG_BURST_LENGTH_MASK) >> DMA_CFG_BURST_LENGTH_SHIFT)
 	      + 1);
 
+	/* Check for bs*bl <= 64 bytes*/
+	if ((w * bl) > 64) {
+		dev_err(dmac->pi->dev,
+			"total burst cannot be greater than 64 bytes\n");
+		goto err;
+	}
+
 	spin_lock_irqsave(&lock, flags);
 
 	/* Get channel descriptor */
@@ -1151,6 +1172,13 @@ int dma_setup_transfer_list_multi_sg(unsigned int chan,
 	/* Burst Length */
 	bl = (((cfg & DMA_CFG_BURST_LENGTH_MASK) >> DMA_CFG_BURST_LENGTH_SHIFT)
 	      + 1);
+
+	/* Check for bs*bl <= 64 bytes*/
+	if ((w * bl) > 64) {
+		dev_err(dmac->pi->dev,
+			"total burst cannot be greater than 64 bytes\n");
+		goto err;
+	}
 
 	/* check buffer address alignment */
 	if (hw_addr % w) {
