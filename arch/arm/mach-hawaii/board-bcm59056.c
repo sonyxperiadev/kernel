@@ -17,6 +17,7 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 //#include <linux/sysdev.h>
+#include <mach/rdb/brcm_rdb_include.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <asm/mach/arch.h>
@@ -30,10 +31,10 @@
 #include <linux/mfd/bcmpmu_56.h>
 #include "pm_params.h"
 
-// Seperate the PMU init data into different PCB-specific files under hw_cfg folder 
+// Seperate the PMU init data into different PCB-specific files under hw_cfg folder
 // This is a temp solution until all board specific data put into DTS in the near future
 #include "board-bcm59056_config.h"
-// Seperate the PMU init data into different PCB-specific files under hw_cfg folder 
+// Seperate the PMU init data into different PCB-specific files under hw_cfg folder
 // This is a temp solution until all board specific data put into DTS in the near future
 
 #define PMU_DEVICE_INT_GPIO 29
@@ -430,6 +431,18 @@ static struct i2c_board_info __initdata pmu_info[] = {
 	},
 };
 
+void bcmpmu_set_pullup_reg(void)
+{
+	volatile u32 val1, val2;
+
+	val1 = readl(KONA_CHIPREG_VA + CHIPREG_SPARE_CONTROL0_OFFSET);
+	val2 = readl(KONA_PMU_BSC_VA + I2C_MM_HS_PADCTL_OFFSET);
+	val1 |= (1 << 20 | 1 << 22);
+	val2 |= (1 << I2C_MM_HS_PADCTL_PULLUP_EN_SHIFT);
+	writel(val1, KONA_CHIPREG_VA + CHIPREG_SPARE_CONTROL0_OFFSET);
+	/*      writel(val2, KONA_PMU_BSC_VA + I2C_MM_HS_PADCTL_OFFSET); */
+}
+
 
 __init int board_pmu_init(void)
 {
@@ -458,7 +471,7 @@ __init int board_pmu_init(void)
 	}
 	irq = gpio_to_irq(PMU_DEVICE_INT_GPIO);
 	bcmpmu_plat_data.irq = irq;
-
+	bcmpmu_set_pullup_reg();
 	i2c_register_board_info(PMU_DEVICE_I2C_BUSNO,
 				pmu_info,
 				ARRAY_SIZE(pmu_info));

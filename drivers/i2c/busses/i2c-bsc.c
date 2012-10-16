@@ -1685,7 +1685,7 @@ static void pin_set_slew(enum PIN_NAME name, unsigned char slewed)
 
 static void i2c_pin_cfg(int id, unsigned char slewed)
 {
-	if (id > 2) {
+	if (id > 5) {
 		pr_err("Invalid I2C adaptor id %d\n", id);
 		return;
 	}
@@ -1699,7 +1699,7 @@ static void i2c_pin_cfg(int id, unsigned char slewed)
 		pin_set_slew(BSC2CLK_PAD_NAME, slewed);
 		pin_set_slew(BSC2DAT_PAD_NAME, slewed);
 		break;
-	case 2:
+	case 4:
 		pin_set_slew(PMBBSCCLK_PAD_NAME, slewed);
 		pin_set_slew(PMBBSCDAT_PAD_NAME, slewed);
 		break;
