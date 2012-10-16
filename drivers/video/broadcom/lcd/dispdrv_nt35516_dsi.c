@@ -61,7 +61,7 @@
 #define NT35516_CMND_IS_LP FALSE /* display init comm LP or HS mode */
 
 
-#if 1
+#if 0
 #define NT35516_LOG(id, fmt, args...) printk(KERN_ERR fmt, ##args)
 #else
 #define NT35516_LOG(id, fmt, args...)
@@ -215,7 +215,7 @@ static DISPDRV_INFO_T NT35516_Info = {
 	800,				/* width */
 	480,				/* height */
 #else
-	540,				/* width */
+	536,				/* width */
 	960,				/* height */
 #endif
 	DISPDRV_FB_FORMAT_RGB888_U,	/* input_format	*/
