@@ -106,7 +106,7 @@ static int bcmpmu_i2c_retry(struct bcmpmu *bcmpmu)
 			err = i2c_smbus_read_byte_data(i2c_client, map.addr);
 			if (err < 0)
 				return err;
-			if (err & map.mask)
+			if (!(err & map.mask))
 				udelay(PWRMGR_I2C_RETRY_DELAY_US);
 			else
 				return 0;

@@ -270,7 +270,7 @@ u32 get_cpu_freq_from_opp(int opp)
 
 	ret = cpufreq_get_policy(&policy, cpu);
 	if (ret) {
-		pr_err("%s:cpufreq not initialized yet\n", __func__);
+		pr_debug("%s:cpufreq not initialized yet\n", __func__);
 		return 0;
 	}
 	if (opp < 0)

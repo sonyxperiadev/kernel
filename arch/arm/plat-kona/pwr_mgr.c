@@ -936,6 +936,7 @@ EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);
 #else
 int pwr_mgr_pm_i2c_sem_lock()
 {
+#if 0
 	u32 value, read_val, write_val;
 	u32 ret = 0;
 	u32 insurance = 1000;
@@ -1003,12 +1004,15 @@ int pwr_mgr_pm_i2c_sem_lock()
 		pwr_mgr.sem_locked = true;
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return ret;
+#endif
+	return 0;
 }
 
 EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_lock);
 
 int pwr_mgr_pm_i2c_sem_unlock()
 {
+#if 0
 	unsigned long flgs;
 	int ret = 0;
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
@@ -1037,6 +1041,8 @@ int pwr_mgr_pm_i2c_sem_unlock()
 	}
 
 	return ret;
+#endif
+	return 0;
 }
 
 EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);
