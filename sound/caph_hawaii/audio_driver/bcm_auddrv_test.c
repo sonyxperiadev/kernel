@@ -91,7 +91,7 @@
 
 /* Macro to Enable and disable test data*/
 #define CONFIG_BCM_ENABLE_TESTDATA
-#define TEST_DATA_SIZE		(16 * 1024)
+#define TEST_DATA_SIZE		(96 * 1024)
 
 #ifdef CONFIG_BCM_ENABLE_TESTDATA
 #include "48k_stereo_16bit.h"
@@ -455,7 +455,7 @@ static int HandleControlCommand()
 				AUDIO_SINK_HANDSET);
 		AUDCTRL_EnableTelephony(AUDIO_SOURCE_ANALOG_MAIN,
 				AUDIO_SINK_HANDSET);
-#if 0		
+#if 0
 		(*((UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502F050))) =
 		 (UInt32) (0x805DC990));
 		(*((UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502F054))) =
@@ -470,7 +470,7 @@ static int HandleControlCommand()
 		 (UInt32) (0x07000000));
 		(*((UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502C264))) =
 		 (UInt32) (0x0));
-#endif		
+#endif
 
 		aTrace(LOG_AUDIO_DRIVER, " Telephony enabled\n");
 
@@ -960,6 +960,8 @@ static int HandleControlCommand()
 		AUDCTRL_SSP_BUS_e ssp_bus;
 		int en_lpbk = 0;
 		unsigned int ssp_tdx3 = 0x0, ssp_tdx4 = 0x0, ssp_tdx6 = 0x0;
+		unsigned int ssp1_di = 0x0, ssp2_di = 0x0, ssp2_do = 0x0;
+
 
 		if (sgBrcm_auddrv_TestValues[2] == 3)
 			ssp_port = AUDCTRL_SSP_3;
@@ -972,6 +974,7 @@ static int HandleControlCommand()
 			aTrace(LOG_AUDIO_DRIVER, "Pls provide proper SSP\n");
 			return 0;
 		}
+
 
 		if (sgBrcm_auddrv_TestValues[3] == 1)
 			ssp_bus = AUDCTRL_SSP_PCM;
@@ -998,6 +1001,29 @@ static int HandleControlCommand()
 			return 0;
 
 		AUDCTRL_ConfigSSP(ssp_port, ssp_bus, en_lpbk);
+
+		/* Pad Ctl Settings */
+		/* FM  SSP4 Writing '1' disables the "I/P
+					  disable control bit no 3 "*/
+		if (sgBrcm_auddrv_TestValues[2] == 4) {
+			WR_REG((0x35004800 + 0x00000024), 0x00000208); /* DCLK4 ->SSP1DO*/
+
+			ssp1_di = RD_REG(0x35004800 + 0x0000002C); /*DCLK4R -> DCLKREQ4 */
+			ssp1_di |= (1 << 3);
+			WR_REG((0x35004800 + 0x0000002C), ssp1_di);
+
+		} else if (sgBrcm_auddrv_TestValues[2] == 3 ) { /* BT SSP3 */
+			ssp2_di = RD_REG(0x35004800 + 0x00000054); /* GPIO06 -> SSP2DI */
+			ssp2_di |= (1 << 3);
+			WR_REG((0x35004800 + 0x00000054), ssp2_di);
+
+			ssp2_do = RD_REG(0x35004800 + 0x00000058); /* GPIO07 -> SSP2DO */
+			ssp2_do |= (1 << 3);
+			WR_REG((0x35004800 + 0x00000058), ssp2_do);
+		}
+
+
+#if 0
 
 		if (sgBrcm_auddrv_TestValues[2] == 3) {
 			ssp_tdx3 = RD_REG(0x35004800 + 0x00000354);
@@ -1064,6 +1090,7 @@ static int HandleControlCommand()
 								0x00000384));
 				}
 		}
+#endif
 		}
 		break;
 	default:

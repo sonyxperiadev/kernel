@@ -2709,6 +2709,7 @@ static void csl_ControlHWClock_2p4m(Boolean enable)
 		if (!gMIC_regulator) {
 			gMIC_regulator = regulator_get(NULL, "micldo_uc");
 			if (IS_ERR(gMIC_regulator))
+				gMIC_regulator = NULL;
 				aError("MICLDO Regulator_get -FAIL\n");
 		}
 		if (gMIC_regulator)
