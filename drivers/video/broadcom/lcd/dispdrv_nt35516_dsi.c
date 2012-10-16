@@ -998,6 +998,7 @@ Int32 NT35516_PowerControl(
 			OSTASK_Sleep(TICKS_IN_MILLISECONDS(20));
 			NT35516_reset(drvH, TRUE);
 
+			memset(&pPanel->win_cur, 0, sizeof(DISPDRV_WIN_t));
 			pPanel->pwrState = STATE_PWR_OFF;
 			NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV]	%s: PWR DOWN\n\r",
 				__func__);
