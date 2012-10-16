@@ -1072,7 +1072,7 @@ static int __init dwc_otg_driver_init(void)
 
 	pr_info("%s: version %s\n", dwc_driver_name, DWC_DRIVER_VERSION);
 	
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_NOP_USB_XCEIV
 	usb_nop_xceiv_register();
 #endif
 
@@ -1143,7 +1143,7 @@ static void __exit dwc_otg_driver_cleanup(void)
 	platform_driver_unregister(&dwc_otg_driver);
 #endif
 
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_NOP_USB_XCEIV
 	usb_nop_xceiv_unregister();
 #endif
 
