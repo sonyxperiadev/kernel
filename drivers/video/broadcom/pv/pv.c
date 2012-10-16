@@ -20,10 +20,16 @@
 #undef HVS_PIXRC0_ENABLE
 #undef HVS_PIXRC1_ENABLE
 
+#if 0
 #define pv_info(fmt, arg...) \
 		printk(KERN_INFO "%s:%d " fmt, __func__, __LINE__, ##arg)
 #define pv_debug(fmt, arg...) \
 		printk(KERN_DEBUG "%s:%d " fmt, __func__, __LINE__, ##arg)
+#else
+#define pv_info(fmt, arg...)
+#define pv_debug(fmt, arg...)
+#endif
+
 #define pv_err(fmt, arg...) \
 		printk(KERN_ERR "%s:%d " fmt, __func__, __LINE__, ##arg)
 
