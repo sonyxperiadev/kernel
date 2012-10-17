@@ -117,22 +117,24 @@ typedef struct {
 /* from kernel/arch/arm/mach-capri/include/mach/comms/platform_mconfig_rhea.h */
 #define CP_RO_RAM_OFFSET             0x200000
 #define CP_RO_RAM_ADDR              (EXT_RAM_BASE_ADDR + CP_RO_RAM_OFFSET)
-
+#if 0
 #define PARM_IND_RAM_OFFSET         0x100000
 #define PARM_IND_RAM_ADDR           (EXT_RAM_BASE_ADDR + PARM_IND_RAM_OFFSET)
 #define PARM_IND_SIZE               0x00040000
-
+#endif
 #define DSP_DRAM_RAM_OFFSET         0x1800000
 #define DSP_DRAM_RAM_ADDR           (EXT_RAM_BASE_ADDR + DSP_DRAM_RAM_OFFSET)
 #define DSP_DRAM_SIZE               0x00200000
-
+#if 0
 #define DSP_PRAM_RAM_OFFSET         0x160000
 #define DSP_PRAM_RAM_ADDR           (EXT_RAM_BASE_ADDR + DSP_PRAM_RAM_OFFSET)
 #define DSP_PRAM_SIZE               0x00004000
-
+#endif
+#if 0
 #define UMTS_CAL_RAM_OFFSET         0x64000
 #define UMTS_CAL_RAM_ADDR           (EXT_RAM_BASE_ADDR + UMTS_CAL_RAM_OFFSET)
 #define UMTS_CAL_SIZE               0x00020000
+#endif
 
 #define PARM_SPML_IND_RAM_OFFSET    0x1B0000
 #define PARM_SPML_IND_RAM_ADDR   (EXT_RAM_BASE_ADDR + PARM_SPML_IND_RAM_OFFSET)

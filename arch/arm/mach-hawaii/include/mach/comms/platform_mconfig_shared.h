@@ -33,9 +33,14 @@
 #define AP_SH_SIZE                             0x00020000
 
 /* 256kB IPC shared RAM */
+#if defined(USE_CAPRISTONE_INSTEAD_OF_HAWAIIRAY)
 #define IPC_OFFSET                             0x1D00000
-#define IPC_BASE                               (EXT_RAM_BASE_ADDR + IPC_OFFSET)
 #define IPC_SIZE                               0x00300000
+#else
+#define IPC_OFFSET                             0x1E00000
+#define IPC_SIZE                               0x00200000
+#endif
+#define IPC_BASE                               (EXT_RAM_BASE_ADDR + IPC_OFFSET)
 
 #define PARM_DEP_RAM_OFFSET                    0x180000
 #define PARM_DEP_RAM_ADDR                      \
