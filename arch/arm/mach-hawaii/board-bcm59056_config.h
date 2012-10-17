@@ -288,9 +288,10 @@ static struct regulator_init_data bcm59056_camldo2_data = {
 };
 
 
-struct regulator_consumer_supply sd_supply[] = {
+__weak struct regulator_consumer_supply sd_supply[] = {
 	{.supply = "sdldo_uc"},
 	REGULATOR_SUPPLY("vddmmc", "sdhci.3"), /* 0x3f1b0000.sdhci */
+	{.supply = "dummy"},
 };
 static struct regulator_init_data bcm59056_sdldo_data = {
 	.constraints = {
@@ -308,9 +309,10 @@ static struct regulator_init_data bcm59056_sdldo_data = {
 	.consumer_supplies = sd_supply,
 };
 
-struct regulator_consumer_supply sdx_supply[] = {
+__weak struct regulator_consumer_supply sdx_supply[] = {
 	{.supply = "sdxldo_uc"},
 	REGULATOR_SUPPLY("vddo", "sdhci.3"), /* 0x3f1b0000.sdhci */
+	{.supply = "dummy"},
 };
 static struct regulator_init_data bcm59056_sdxldo_data = {
 	.constraints = {

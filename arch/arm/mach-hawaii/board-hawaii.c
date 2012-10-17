@@ -659,6 +659,18 @@ struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "sddat_debug_bus"},
 };
 
+struct regulator_consumer_supply sd_supply[] = {
+	{.supply = "sdldo_uc"},
+	REGULATOR_SUPPLY("vddmmc", "sdhci.3"), /* 0x3f1b0000.sdhci */
+	{.supply = "vdd_sdio"},
+};
+
+struct regulator_consumer_supply sdx_supply[] = {
+	{.supply = "sdxldo_uc"},
+	REGULATOR_SUPPLY("vddo", "sdhci.3"), /* 0x3f1b0000.sdhci */
+	{.supply = "vdd_sdxc"},
+};
+
 static struct bcm_keymap hawaii_keymap[] = {
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Up Key", KEY_VOLUMEUP},
