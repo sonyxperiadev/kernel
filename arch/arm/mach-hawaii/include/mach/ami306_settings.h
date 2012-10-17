@@ -16,7 +16,7 @@
 #define AMI306_SETTINGS_H
 
 /* I2C */
-#define AMI306_I2C_BUS_ID	1
+#define AMI306_I2C_BUS_ID  2
 
 
 #ifdef AMI306L
