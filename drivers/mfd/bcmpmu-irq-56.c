@@ -328,11 +328,11 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	INIT_WORK(&idata->work, bcmpmu_irq_handler);
 	idata->irq = pdata->irq;
 	idata->runagain = 0;
-	
+
 	bcmpmu->irqinfo = idata;
 	ret = request_irq(pdata->irq, bcmpmu_isr,
-		/*IRQF_DISABLED | IRQF_TRIGGER_FALLING | */IRQF_NO_SUSPEND,
-		"bcmpmu-irq", idata);
+			IRQF_DISABLED | IRQF_TRIGGER_FALLING | IRQF_NO_SUSPEND,
+			"bcmpmu-irq", idata);
 	if (ret) {
 		pr_irq(ERROR, "%s, failed request irq.\n",__func__);
 		goto err;
