@@ -603,40 +603,21 @@ static int __devinit ami_probe(struct i2c_client *client,
 		pdev->gpio_intr = pdata->gpio_intr;
 
 		/* Init gpio */
-		/*if (pdata->gpio_drdy) {
+		/* Init gpio */
+		if (pdata->gpio_drdy) {
 			gpio_request(pdata->gpio_drdy, "AMI306 DRDY");
 			gpio_direction_input(pdata->gpio_drdy);
-		}*/
 
-
-	  dev_info(&client->adapter->dev,
-         "Installing irq using %d\n", client->irq);
-      gpio_pin = irq_to_gpio(client->irq);
-      if (!gpio_pin) {
-        dev_err(&client->adapter->dev,
-          "ami_probe: no valid GPIO for the interrupt %d\n", client->irq);
-        goto done;
-      }
-
-	if (pdata && client->irq >= 0) {
-		if (0 != gpio_request(gpio_pin, AMI_DRV_NAME)) {
-			dev_err(&client->adapter->dev,
-          "ami_probe: gpio_request failed");
-			goto done;
 		}
-	}
-
-	res = gpio_direction_input(gpio_pin);
-		if (res < 0) {
-			pr_err("mpu: set GPIO %d as input failed, err %d\n",
-				gpio_pin, res);
-			gpio_free(gpio_pin);
-			goto done;
+	if (pdata->gpio_intr) {
+			gpio_request(pdata->gpio_intr, "AMI306 INTR");
+			gpio_direction_input(pdata->gpio_intr);
 		}
 
 		printk("ami_probe: setup ami_dir:%d, ami_polarity:%d, intr:%d, drdy:%d\n",
 			pdev->ami_dir, pdev->ami_polarity, pdata->gpio_intr, pdata->gpio_drdy);
 	}
+
 
 	sema_init(&pdev->mutex, 1);
 	pdev->dev.minor = MISC_DYNAMIC_MINOR;

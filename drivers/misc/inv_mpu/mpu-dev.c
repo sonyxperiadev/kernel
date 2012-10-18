@@ -1125,7 +1125,6 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	struct mpu_platform_data *bcm_pdata;
 #endif
 
-  printk(KERN_INFO "inside mpu_probe");
 	dev_info(&client->adapter->dev, "%s: %d\n", __func__, ii++);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
@@ -1250,7 +1249,6 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	mpu->dev.minor = MISC_DYNAMIC_MINOR;
 	mpu->dev.name = "mpu";
 	mpu->dev.fops = &mpu_fops;
-  printk(KERN_INFO "it reaches just before misc_register(&mpu->dev)");
 	res = misc_register(&mpu->dev);
 	if (res < 0) {
 		dev_err(&client->adapter->dev,
