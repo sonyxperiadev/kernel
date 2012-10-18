@@ -463,7 +463,7 @@ static int enable_display(struct kona_fb *fb, struct dispdrv_init_parms *parms)
 	}
 
 	kona_clock_stop(fb);
-	konafb_info("kona display is enabled successfully\n");
+	konafb_debug("kona display is enabled successfully\n");
 	return 0;
 
 fail_to_power_control:
@@ -484,7 +484,7 @@ static int disable_display(struct kona_fb *fb)
 	fb->display_ops->close(fb->display_hdl);
 	fb->display_ops->exit(fb->display_hdl);
 
-	konafb_info("kona display is disabled successfully\n");
+	konafb_debug("kona display is disabled successfully\n");
 	return ret;
 }
 
@@ -531,7 +531,7 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 {
 	struct kona_fb *fb;
 
-	konafb_error("BRCM fb early suspend with level = %d\n", h->level);
+	konafb_debug("BRCM fb early suspend with level = %d\n", h->level);
 
 	switch (h->level) {
 
@@ -582,7 +582,7 @@ static void kona_fb_late_resume(struct early_suspend *h)
 {
 	struct kona_fb *fb;
 
-	konafb_error("BRCM fb late resume with level = %d\n", h->level);
+	konafb_debug("BRCM fb late resume with level = %d\n", h->level);
 
 	switch (h->level) {
 
@@ -782,14 +782,12 @@ static int kona_fb_probe(struct platform_device *pdev)
 		konafb_error("fb_set_var failed\n");
 		goto err_set_var_failed;
 	}
-#if 0
 	/* Paint it black (assuming default fb contents are all zero) */
 	ret = kona_fb_pan_display(&fb->fb.var, &fb->fb);
 	if (ret) {
 		konafb_error("Can not enable the LCD!\n");
 		goto err_fb_register_failed;
 	}
-#endif
 
 	if (fb->display_ops->set_brightness) {
 		kona_clock_start(fb);

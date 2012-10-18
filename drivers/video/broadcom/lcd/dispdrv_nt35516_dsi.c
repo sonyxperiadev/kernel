@@ -67,6 +67,8 @@
 #define NT35516_LOG(id, fmt, args...)
 #endif
 
+#define TE_SCAN_LINE 960
+
 typedef enum {
 	NT35516_CMD_NOP	= 0x00,
 	NT35516_CMD_SWRESET	= 0x01,
@@ -109,9 +111,11 @@ typedef enum {
 	NT35516_CMD_WRGAMMSET	= 0x58,
 	NT35516_CMD_RDFCS	= 0xAA,
 	NT35516_CMD_RDCCS	= 0xAF,
+	NT35516_CMD_DOPCTR      = 0xB1,
 	NT35516_CMD_RDID1	= 0xDA,
 	NT35516_CMD_RDID2	= 0xDB,
 	NT35516_CMD_RDID3	= 0xDC,
+	NT35516_CMD_MAUCCTR     = 0xF0,
 } NT35516_CMD_T;
 
 typedef struct {
@@ -234,8 +238,8 @@ CSL_DSI_CM_VC_t NT35516_VCCmCfg = {
 	LCD_IF_CM_O_RGB888,		/* cm_out */
 	/* TE configuration */
 	{
-		/*DSI_TE_CTRLR_INPUT_0,*//* DSI Te Inputi Type */
-		DSI_TE_NONE,	/* DSI Te Input Type */
+		DSI_TE_CTRLR_INPUT_0,/* DSI Te Inputi Type */
+		/*DSI_TE_NONE, *//* DSI Te Input Type */
 	},
 };
 
@@ -325,15 +329,27 @@ static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
 #ifdef CONFIG_MACH_HAWAII_FPGA_E
 	DISPCTRL_REC_T cmd_list[] = {
 		{DISPCTRL_WR_CMND, NT35516_CMD_DISPON, 0},
-		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_COLMOD, 0x07},
+		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_COLMOD, 0x77},
 		{DISPCTRL_LIST_END, 0, 0},
 	};
 #else
 	DISPCTRL_REC_T cmd_list[] = {
 		{DISPCTRL_WR_CMND, NT35516_CMD_SLPOUT, 0},
 		{DISPCTRL_SLEEP_MS, 0, 120},
-		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_COLMOD, 0x07},
-		{DISPCTRL_WR_CMND, NT35516_CMD_DISPON, 0},
+		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_COLMOD, 0x77},
+		/*{DISPCTRL_WR_CMND, NT35516_CMD_DISPON, 0},*/
+		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_TEON, 0x0},
+		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_MAUCCTR, 0x55},
+		{DISPCTRL_WR_DATA, 0, 0xAA},
+		{DISPCTRL_WR_DATA, 0, 0x52},
+		{DISPCTRL_WR_DATA, 0, 0x08},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_DOPCTR, 0xFC},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_STESL, (TE_SCAN_LINE &
+		0xFF00) >> 16},
+		{DISPCTRL_WR_DATA, 0, (TE_SCAN_LINE & 0xFF)},
 		{DISPCTRL_LIST_END, 0, 0},
 	};
 #endif
@@ -501,8 +517,6 @@ Int32 NT35516_WinSet(
 			msgData[3] = (p_win->r & 0xFF00) >> 8;
 			msgData[4] = (p_win->r & 0x00FF);
 
-			printk("%x %x %x %x %x\n", msgData[0], msgData[1],
-			msgData[2], msgData[3], msgData[4]);
 			CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 
 			msgData[0] = MIPI_DCS_SET_PAGE_ADDRESS;
@@ -511,8 +525,6 @@ Int32 NT35516_WinSet(
 			msgData[3] = (p_win->b & 0xFF00) >> 8;
 			msgData[4] = (p_win->b & 0x00FF);
 
-			printk("%x %x %x %x %x\n", msgData[0], msgData[1],
-			msgData[2], msgData[3], msgData[4]);
 			CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 
 			mdelay(5);
@@ -1046,7 +1058,6 @@ Int32 NT35516_PowerControl(
 	case CTRL_SCREEN_ON:
 		switch (pPanel->pwrState) {
 		case STATE_SCREEN_OFF:
-			OSTASK_Sleep(TICKS_IN_MILLISECONDS(100));
 			NT35516_panel_on(pPanel);
 
 			pPanel->pwrState = STATE_SCREEN_ON;
@@ -1076,7 +1087,6 @@ Int32 NT35516_PowerControl(
 			break;
 		}
 		break;
-
 	default:
 		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: Invalid Power "
 			"State[%d] Requested\n", __func__, state);

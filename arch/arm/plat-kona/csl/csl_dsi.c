@@ -1067,16 +1067,6 @@ static CSL_LCD_RES_T cslDsiWaitForInt(DSI_HANDLE dsiH, UInt32 tout_msec)
 		if (osRes == OSSTATUS_TIMEOUT) {
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
 				"ERR Timed Out!\n", __func__);
-			printk("cslDsiWaitForInt dsi_int_stat=0x%x,"
-			"dsi_int_en=0x%x dsi_stat=0x%x dmacs=0x%x dmati=0x%x,"
-			"dmaLen=0x%x dmadebug=0x%x\n",
-			readl(HW_IO_PHYS_TO_VIRT(0x3c200030)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c200034)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c200038)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c00A000)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c00A008)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c00A014)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c00A020)));
 			res = CSL_LCD_OS_TOUT;
 		} else {
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
@@ -1516,8 +1506,6 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 		res = CSL_LCD_ERR;
 		goto exit_err;
 	}
-
-	printk("cm_in=0x%d cm_out=%d\n", dsiCmVcCfg->cm_in, dsiCmVcCfg->cm_out);
 
 	switch (dsiCmVcCfg->cm_in) {
 		/* 1x888 pixel per 32-bit word (MSB DontCare) */
