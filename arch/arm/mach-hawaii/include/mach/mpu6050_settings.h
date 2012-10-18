@@ -45,9 +45,9 @@
 
 #define MPU6050_DRIVER_ACCEL_GYRO_ORIENTATION \
 { \
-	 0, 1, 0, \
-	-1, 0, 0, \
-	 0, 0, 1, \
+	0, 1, 0, \
+	1, 0, 0, \
+	0, 0, -1, \
 }
 
 #define MPU6050_DRIVER_COMPASS_ORIENTATION \

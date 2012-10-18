@@ -18,12 +18,7 @@
 /* I2C */
 #define AMI306_I2C_BUS_ID  2
 
-
-#ifdef AMI306L
-#define AMI_I2C_ADDRESS                 0x0F    /* 7-bit Addressing */
-#else
 #define AMI_I2C_ADDRESS                 0x0E    /* 7-bit Addressing */
-#endif
 
 /* GPIO */
 #define AMI_GPIO_INT                    135   /* Ball MPHI_RUN1 */
