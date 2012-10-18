@@ -765,6 +765,7 @@ static int dormant_enter_continue(unsigned long data)
 			(cpu_resume+SZ_1K+PHYS_OFFSET-PAGE_OFFSET));
 #endif
 	disable_clean_inv_dcache_v7_l1();
+	write_actlr(read_actlr() & ~(0x40));
 
 	/* Let us always indicate the dormant mode to the SCU
 	 * the external power-controller sees what is in the bypass
@@ -807,17 +808,6 @@ static int dormant_enter_continue(unsigned long data)
 
 
 	} else {
-		/* Only non-master cores clears it's SMP bit in the aux
-		 * control register. For core0, the boot ROM clears the
-		 * SMP bit just before WFI. If Linux clears the SMP bit
-		 * for CPU0 before the SMC call, it causes the shareable
-		 * regions to become non-cached. This results in the boot
-		 * ROM stack and data area to get written with incorrect
-		 * values when the boot ROM flushes D-cache at the end
-		 * of the dormant entry sequence.
-		 */
-		write_actlr(read_actlr() & ~(0x40));
-
 		/* Write the address where we want core-1 to boot */
 		writel_relaxed(virt_to_phys(cpu_resume),
 			       KONA_CHIPREG_VA + CHIPREG_BOOT_2ND_ADDR_OFFSET);
