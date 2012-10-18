@@ -811,7 +811,6 @@ static struct i2c_board_info __initdata i2c_ami306_info[] =
 	{
 		I2C_BOARD_INFO(AMI_DRV_NAME, AMI_I2C_ADDRESS),
 		.platform_data = &ami306_data,
-		.irq =  gpio_to_irq(3),
 	},
 };
 #endif
