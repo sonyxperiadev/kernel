@@ -215,7 +215,7 @@ static DISPDRV_INFO_T NT35516_Info = {
 	800,				/* width */
 	480,				/* height */
 #else
-	536,				/* width */
+	540,				/* width */
 	960,				/* height */
 #endif
 	DISPDRV_FB_FORMAT_RGB888_U,	/* input_format	*/
