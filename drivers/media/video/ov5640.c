@@ -1580,7 +1580,11 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	ov5640->i_size = ov5640_find_framesize(mf->width, mf->height);
 	ov5640->i_fmt = ov5640_find_datafmt(mf->code);
 
-
+	ret =  ov5640_reg_writes(client,configscript_common1);
+	if(ret){
+		printk("Error configuring configscript_common1\n");
+		return ret;
+	}
 	switch ((u32) ov5640_fmts[ov5640->i_fmt].code) {
 	case V4L2_MBUS_FMT_UYVY8_2X8:
 		ret = ov5640_reg_writes(client, yuv422_init_common);

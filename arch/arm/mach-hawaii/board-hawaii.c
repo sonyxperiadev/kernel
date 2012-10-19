@@ -274,8 +274,8 @@ static int rhea_camera_power(struct device *dev, int on)
 			return -1;
 		}
 		if(gpio_request_one(SENSOR_0_GPIO_PWRDN, GPIOF_DIR_OUT |
-			GPIOF_INIT_LOW,"CamRst")){
-			printk(KERN_ERR"Unable to get RST GPIO\n");
+			GPIOF_INIT_LOW,"CamPWDN")){
+			printk(KERN_ERR"Unable to get PWDN GPIO\n");
 			return -1;
 		}
 	}
@@ -634,6 +634,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
+	&hawaii_camera_device,
 	&hawaii_camera_back,
 	&hawaii_camera_front,
 #endif
