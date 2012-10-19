@@ -317,7 +317,7 @@ static int bcmpmu_i2c_write_device(struct bcmpmu59xxx *bcmpmu, u32 reg,
 	bcmpmu_i2c_lock(bcmpmu);
 	err = i2c_smbus_write_byte_data(clt, (u8) DEC_REG_ADD(reg), value);
 	bcmpmu_i2c_unlock(bcmpmu);
-	return err;
+	return (err < 0 ? err : 0);
 }
 
 static int bcmpmu_i2c_read_device_direct_bulk(struct bcmpmu59xxx *bcmpmu,
@@ -334,8 +334,7 @@ static int bcmpmu_i2c_read_device_direct_bulk(struct bcmpmu59xxx *bcmpmu,
 	err =
 	    i2c_smbus_read_i2c_block_data(clt, (u8) DEC_REG_ADD(reg), len, val);
 	bcmpmu_i2c_unlock(bcmpmu);
-
-	return err;
+	return (err < 0 ? err : 0);
 }
 
 static int bcmpmu_i2c_write_device_direct_bulk(struct bcmpmu59xxx *bcmpmu,
@@ -350,11 +349,10 @@ static int bcmpmu_i2c_write_device_direct_bulk(struct bcmpmu59xxx *bcmpmu,
 
 	bcmpmu_i2c_lock(bcmpmu);
 	err =
-	    i2c_smbus_write_i2c_block_data(clt, (u8) DEC_REG_ADD(reg),
-					   len, val);
+		i2c_smbus_write_i2c_block_data(clt, (u8) DEC_REG_ADD(reg),
+				len, val);
 	bcmpmu_i2c_unlock(bcmpmu);
-
-	return err;
+	return (err < 0 ? err : 0);
 }
 #endif
 

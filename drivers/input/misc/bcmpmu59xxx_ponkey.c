@@ -54,11 +54,11 @@ static void bcmpmu_ponkey_isr(u32 irq, void *data)
 	struct bcmpmu_ponkey *ponkey = data;
 
 	switch (irq) {
-	case PMU_IRQ_PONKEYB_F:
+	case PMU_IRQ_POK_PRESSED:
 		ponkey->ponkey_state = 1;
 		break;
 
-	case PMU_IRQ_PONKEYB_R:
+	case PMU_IRQ_POK_RELEASED:
 		ponkey->ponkey_state = 0;
 		break;
 
@@ -157,13 +157,13 @@ static int __devinit bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 	}
 	/* Request PRESSED and RELEASED interrupts.
 	 */
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_PONKEYB_F, bcmpmu_ponkey_isr,
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_POK_PRESSED, bcmpmu_ponkey_isr,
 			     ponkey);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_PONKEYB_R, bcmpmu_ponkey_isr,
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_POK_RELEASED, bcmpmu_ponkey_isr,
 			     ponkey);
 
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_PONKEYB_F);
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_PONKEYB_R);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_POK_PRESSED);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_POK_RELEASED);
 
 	error = input_register_device(ponkey->idev);
 	if (error) {
@@ -186,8 +186,8 @@ static int __devexit bcmpmu59xxx_ponkey_remove(struct platform_device *pdev)
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
 	struct bcmpmu_ponkey *ponkey = bcmpmu->ponkeyinfo;
 
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_PONKEYB_F);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_PONKEYB_R);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_PRESSED);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_RELEASED);
 	input_unregister_device(ponkey->idev);
 	kfree(ponkey);
 	return 0;
