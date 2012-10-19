@@ -361,6 +361,7 @@ static int wire_interrupt_handler(void)
 			err_print("request_irq failed s = %d\n", s);
 			goto err_request_irq_failed;
 		}
+                irq_set_affinity(IRQ_VCE, cpumask_of(0));
 
 		vce_state.isr_installed = 1;
 	}
