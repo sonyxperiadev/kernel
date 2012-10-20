@@ -226,6 +226,15 @@ extern int hawaii_wifi_status_register(
 	.port_name = uart_name,					\
 }
 
+#ifdef CONFIG_VIDEO_ADP1653
+#define ADP1653_I2C_ADDR 0x60
+static struct i2c_board_info adp1653_flash[] = {
+	{
+		I2C_BOARD_INFO("adp1653",(ADP1653_I2C_ADDR >> 1))
+	},
+};
+#endif
+
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 
 #define OV5640_I2C_ADDRESS (0x3C)
@@ -1475,6 +1484,9 @@ static struct platform_device *hawaii_devices[] __initdata = {
 static void __init hawaii_add_i2c_devices(void)
 {
 
+#ifdef CONFIG_VIDEO_ADP1653
+	i2c_register_board_info(0, adp1653_flash, ARRAY_SIZE(adp1653_flash));
+#endif
 #ifdef CONFIG_TOUCHSCREEN_TANGO
 	i2c_register_board_info(3, tango_info, ARRAY_SIZE(tango_info));
 #endif

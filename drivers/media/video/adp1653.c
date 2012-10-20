@@ -109,6 +109,8 @@ int adp1653_set_torch_flash(int hpled)
 	}
 	adp1653_reg_read(client1, 0x00, &val);
 	printk("adp1653_set_torch_flash read 0x%x\n",val);
+	printk("Forcing to torch mode for now\n");
+	hpled = 9;
 	if(hpled <= 11)
 		printk("Torch mode seq\n");
 	else	
