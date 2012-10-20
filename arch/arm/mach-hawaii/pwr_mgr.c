@@ -37,9 +37,7 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif
 #include "pm_params.h"
-#ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
-#endif
 
 #ifdef CONFIG_DEBUG_FS
 /*GPIO0-15 debug bus select values*/
@@ -736,6 +734,11 @@ static int __init hawaii_pwr_mgr_init(void)
 	__pwr_mgr_info.num_i2c_var_data = pwrmgr_init_param.vlt_tbl_size;
 
 	pwr_mgr_init(&__pwr_mgr_info);
+
+#ifndef CONFIG_KONA_AVS
+		pm_init_pmu_sr_vlt_map_table(SILICON_TYPE_SLOW);
+#endif
+
 	hawaii_pi_mgr_init();
 
 
