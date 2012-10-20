@@ -332,6 +332,101 @@ static struct regulator_init_data bcm59xxx_vibldo_data = {
 	.consumer_supplies = vib_supply,
 };
 
+__weak struct regulator_consumer_supply gpldo1_supply[] = {
+	{.supply = "gpldo1_uc"},
+};
+static struct regulator_init_data bcm59xxx_gpldo1_data = {
+	.constraints = {
+			.name = "gpldo1",
+			.min_uV = 1200000,
+			.max_uV = 3300000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(gpldo1_supply),
+	.consumer_supplies = gpldo1_supply,
+};
+
+__weak struct regulator_consumer_supply gpldo2_supply[] = {
+	{.supply = "gpldo2_uc"},
+};
+static struct regulator_init_data bcm59xxx_gpldo2_data = {
+	.constraints = {
+			.name = "gpldo2",
+			.min_uV = 1200000,
+			.max_uV = 3300000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(gpldo2_supply),
+	.consumer_supplies = gpldo2_supply,
+};
+
+__weak struct regulator_consumer_supply gpldo3_supply[] = {
+	{.supply = "gpldo3_uc"},
+};
+static struct regulator_init_data bcm59xxx_gpldo3_data = {
+	.constraints = {
+			.name = "gpldo3",
+			.min_uV = 1200000,
+			.max_uV = 3300000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(gpldo3_supply),
+	.consumer_supplies = gpldo3_supply,
+};
+
+__weak struct regulator_consumer_supply lvldo1_supply[] = {
+	{.supply = "lvldo1_uc"},
+};
+static struct regulator_init_data bcm59xxx_lvldo1_data = {
+	.constraints = {
+			.name = "lvldo1",
+			.min_uV = 1000000,
+			.max_uV = 1786000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(lvldo1_supply),
+	.consumer_supplies = lvldo1_supply,
+};
+
+__weak struct regulator_consumer_supply lvldo2_supply[] = {
+	{.supply = "lvldo2_uc"},
+};
+static struct regulator_init_data bcm59xxx_lvldo2_data = {
+	.constraints = {
+			.name = "lvldo2",
+			.min_uV = 1000000,
+			.max_uV = 1786000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 0,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(lvldo2_supply),
+	.consumer_supplies = lvldo2_supply,
+};
+
+__weak struct regulator_consumer_supply vsr_supply[] = {
+	{.supply = "vsr_uc"},
+};
+static struct regulator_init_data bcm59xxx_vsr_data = {
+	.constraints = {
+			.name = "vsrldo",
+			.min_uV = 860000,
+			.max_uV = 900000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 0,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(vsr_supply),
+	.consumer_supplies = vsr_supply,
+};
 
 struct bcmpmu59xxx_regulator_init_data
 bcm59xxx_regulators[BCMPMU_REGULATOR_MAX] = {
@@ -377,6 +472,24 @@ bcm59xxx_regulators[BCMPMU_REGULATOR_MAX] = {
 	},
 	[BCMPMU_REGULATOR_VIBLDO] = {
 		BCMPMU_REGULATOR_VIBLDO, &bcm59xxx_vibldo_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_GPLDO1] = {
+		BCMPMU_REGULATOR_GPLDO1, &bcm59xxx_gpldo1_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_GPLDO2] = {
+		BCMPMU_REGULATOR_GPLDO2, &bcm59xxx_gpldo2_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_GPLDO3] = {
+		BCMPMU_REGULATOR_GPLDO3, &bcm59xxx_gpldo3_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_LVLDO1] = {
+		BCMPMU_REGULATOR_LVLDO1, &bcm59xxx_lvldo1_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_LVLDO2] = {
+		BCMPMU_REGULATOR_LVLDO2, &bcm59xxx_lvldo2_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_VSR] = {
+		BCMPMU_REGULATOR_VSR, &bcm59xxx_vsr_data, 0x00, 0, 0x7
 	},
 };
 
