@@ -253,12 +253,14 @@ int bcmpmu59xxx_set_irq_mask(struct bcmpmu59xxx *pmu, int irq, bool mask)
 	u32 addr;
 	u8 bit, temp ;
 
+	pr_info("%s: irq %d mask %d\n", __func__, irq, mask);
 	irq_reg = irq / IRQ_REG_WIDTH;
 	irq_num = irq & (IRQ_REG_WIDTH - 1);
 
 	addr = irq_reg + PMU_REG_INT1MSK;
 
 	bit = 1 << irq_num ;
+	pr_info("%s: addr %d bit %d\n", __func__, addr, bit);
 	ret =
 	    pmu->read_dev(pmu, addr, &temp);
 	if (ret < 0)

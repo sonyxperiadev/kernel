@@ -169,9 +169,6 @@ int __init pm_params_init(void)
 	__pm_init_errata_flg();
 	pwrmgr_init_param.cmd_buf = i2c_cmd_buf;
 	pwrmgr_init_param.cmd_buf_size = cmd_buf_sz;
-	#ifndef CONFIG_KONA_AVS
-		pm_init_pmu_sr_vlt_map_table(SILICON_TYPE_SLOW);
-	#endif
 	return 0;
 }
 #endif

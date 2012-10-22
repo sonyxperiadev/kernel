@@ -250,13 +250,17 @@ static int h264_open(struct inode *inode, struct file *filp)
 	enable_h264_clock();
 	// Access to root reset manager register block.
 	writel(0xa5a501, HW_IO_PHYS_TO_VIRT(0x35001f00));
+	usleep_range(10, 20);
 	// Enable multimedia power domain.
 	// Test 0x3d should be sufficient for MM.
-	writel(0x3d, HW_IO_PHYS_TO_VIRT(0x35001f08));
+	writel(0xfd, HW_IO_PHYS_TO_VIRT(0x35001f08));
+	usleep_range(10, 20);
 	// Enable H264 Slave interface control register.
 	writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F004));
+	usleep_range(10, 20);
 	// Enable 	H264 Master interface control register.
 	writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F008));
+	usleep_range(10, 20);
 #ifdef H264_QOS_MGMT
 	ret = pi_mgr_qos_request_update(&h264_qos_node, 0);
 	if(ret) {
@@ -268,7 +272,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 #endif
 
 #endif
-
+	usleep_range(50, 100); // buffer to ensure everything above are done.
 	/* Register for the interrupts */
 	ret =
 	    request_irq(H264_AOB_IRQ, h264_isr, IRQF_DISABLED | IRQF_SHARED |
@@ -277,6 +281,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 		err_print("request_irq failed for AOB ret = %d\n", ret);
 		goto err;
 	}
+	irq_set_affinity(H264_AOB_IRQ, cpumask_of(0));
 
 	ret =
 	    request_irq(H264_CME_IRQ, h264_isr, IRQF_DISABLED | IRQF_SHARED |
@@ -285,6 +290,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 		err_print("request_irq failed for CME ret = %d\n", ret);
 		goto err;
 	}
+	irq_set_affinity(H264_CME_IRQ, cpumask_of(0));
 
 	ret =
 	    request_irq(H264_MCIN_CBC_IRQ, h264_isr, IRQF_DISABLED | IRQF_SHARED
@@ -293,6 +299,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 		err_print("request_irq failed for MCIN_CBC ret = %d\n", ret);
 		goto err;
 	}
+	irq_set_affinity(H264_MCIN_CBC_IRQ, cpumask_of(0));
 	disable_irq(H264_AOB_IRQ);
 	disable_irq(H264_CME_IRQ);
 	disable_irq(H264_MCIN_CBC_IRQ);

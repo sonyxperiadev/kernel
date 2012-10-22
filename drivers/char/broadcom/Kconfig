@@ -15,7 +15,7 @@ config V3D
 
 config VCE
 	tristate "VCE Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
 	default n
 
 config BCM_MMUTIL

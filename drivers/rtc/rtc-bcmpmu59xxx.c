@@ -478,7 +478,10 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 						__func__, PMU_IRQ_RTC_SEC);
 		goto err_irq_sec;
 	}
-
+	ret = bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTC_SEC);
+	if (ret)
+		pr_rtc(ERROR, "%s: Failed to disable RTC 1S interrupt\n",
+						__func__);
 #ifdef CONFIG_BCM_RTC_CAL
 	bcm_rtc_cal_init(rdata);
 	rtc_cal_run = true;
