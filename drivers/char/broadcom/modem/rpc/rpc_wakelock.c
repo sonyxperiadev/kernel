@@ -204,7 +204,9 @@ void rpc_wake_lock_remove(UInt32 elem)
 	isEmpty = (UInt8)list_empty(&pktHeadQ.mList);
 
 	if (isEmpty) {
+		spin_unlock_bh(&mLock);
 		ret = del_timer_sync(&ftimer);
+		spin_lock_bh(&mLock);
 		_DBG(WK_TRACE
 		     ("w:rpc_wake_lock UNLOCK elem=%d ret=%d\n", elem, isEmpty,
 		      ret));
