@@ -44,6 +44,11 @@
 #include <linux/regulator/consumer.h>
 #endif
 
+#ifdef CONFIG_MFD_BCM_PMU59056
+#define CAM2_REGULATOR "camldo2_uc"
+#else
+#define CAM2_REGULATOR "cam2"
+#endif
 
 static int mod_debug = 0x0;
 module_param(mod_debug, int, 0644);
@@ -575,7 +580,6 @@ static int __devinit ami_probe(struct i2c_client *client,
 	int res = 0;
 	struct ami306_dev_data *pdev = NULL;
 	struct ami306_platform_data  *pdata = NULL;
-	int gpio_pin;	
 
 	AMI_LOG("%s %s %s", AMI_DRV_NAME, __func__, "start");
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
@@ -631,6 +635,30 @@ static int __devinit ami_probe(struct i2c_client *client,
 		goto done;
 	}
 
+#ifdef CONFIG_ARCH_KONA
+        pdev->regulator = regulator_get(&client->dev, CAM2_REGULATOR);
+        res = IS_ERR_OR_NULL(pdev->regulator);
+        if (res) {
+                pdev->regulator = NULL;
+                AMI_LOG("AMI: %s, can't get vdd regulator!\n", __func__);
+                res = -EIO;
+                goto done;
+        }
+
+        /* make sure that regulator is enabled if device is successfully
+           bound */
+        res = regulator_enable(pdev->regulator);
+        AMI_LOG("AMI: %s, called regulator_enable for vdd regulator. "
+                "Status: %d\n", __func__, res);
+        if (res) {
+                AMI_LOG("AMI: %s, regulator_enable for vdd regulator "
+                        "failed with status: %d\n",
+                        __func__, res);
+                regulator_put(pdev->regulator);
+		goto done;
+        }
+#endif
+	
 #ifdef USER_MEMORY
 	/* Initialize driver command */
 	size = AMI_GetMemSize();
@@ -699,30 +727,6 @@ static int __devinit ami_probe(struct i2c_client *client,
 		res = -ENODEV;
 		goto done;
 	}
-
-#ifdef CONFIG_ARCH_KONA
-	pdev->regulator = regulator_get(&client->dev, "hv8");
-	res = IS_ERR_OR_NULL(pdev->regulator);
-	if (res) {
-		pdev->regulator = NULL;
-		AMI_LOG("AMI: %s, can't get vdd regulator!\n", __func__);
-		res = -EIO;
-		goto done;
-	}
-
-	/* make sure that regulator is enabled if device is successfully
-	   bound */
-	res = regulator_enable(pdev->regulator);
-	AMI_LOG("AMI: %s, called regulator_enable for vdd regulator. "
-		"Status: %d\n", __func__, res);
-	if (res) {
-		AMI_LOG("AMI: %s, regulator_enable for vdd regulator "
-			"failed with status: %d\n",
-			__func__, res);
-		regulator_put(pdev->regulator);
-	}
-	goto done;
-#endif
 
 	AMI_LOG("%s %s %s", AMI_DRV_NAME, __func__, "end");
 

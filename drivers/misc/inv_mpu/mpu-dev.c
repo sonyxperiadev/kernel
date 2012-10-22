@@ -55,6 +55,12 @@
 
 #include "accel/mpu6050.h"
 
+#ifdef CONFIG_MFD_BCM_PMU59056
+#define CAM2_REGULATOR "camldo2_uc"
+#else
+#define CAM2_REGULATOR "cam2"
+#endif
+
 /* Platform data for the MPU */
 struct mpu_private_data {
 	struct miscdevice dev;
@@ -1212,8 +1218,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	}
 
 #ifdef CONFIG_ARCH_KONA
-
-	mpu->regulator = regulator_get(&client->dev, "hv8");
+	mpu->regulator = regulator_get(&client->dev, CAM2_REGULATOR);
 	res = IS_ERR_OR_NULL(mpu->regulator);
 	if (res) {
 		dev_err(&client->adapter->dev, "can't get vdd regulator!\n");

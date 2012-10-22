@@ -51,9 +51,6 @@
 #include <linux/workqueue.h>
 #include <linux/hrtimer.h>
 #include <linux/gpio.h>
-#ifdef CONFIG_ARCH_KONA
-#include <linux/regulator/consumer.h>
-#endif
 #include <linux/al3006.h>
 
 
@@ -127,9 +124,6 @@ struct al3006_data {
 	ktime_t poll_delay[max_sensors];
 	struct workqueue_struct *wq[max_sensors];
 	unsigned long power_state;
-#ifdef CONFIG_ARCH_KONA
-	struct regulator *regulator;
-#endif
 };
 
 static u8 al3006_reg[AL3006_NUM_CACHABLE_REGS] =
@@ -1013,29 +1007,6 @@ static int __devinit al3006_probe(struct i2c_client *client,
 		}
 	}
 
-#ifdef CONFIG_ARCH_KONA
-
-	data->regulator = regulator_get(&client->dev, "hv8");
-	err = IS_ERR_OR_NULL(data->regulator);
-	if (err) {
-		//AL_ERROR("%s can't get vdd regulator!\n", AL3006_NAME);
-		data->regulator = NULL;
-		err = -EIO;
-		goto exit_regulator;
-	}
-
-	/* make sure that regulator is enabled if device is successfully
-	   bound */
-	err = regulator_enable(data->regulator);
-	AL_INFO("called regulator_enable for vdd regulator. "
-		"Status: %d\n", err);
-	if (err) {
-		AL_ERROR("regulator_enable for vdd regulator "
-			 "failed with status: %d\n", err);
-		goto exit_regulator;
-	}
-#endif
-
 	data->client = client;
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->lock);
@@ -1045,18 +1016,18 @@ static int __devinit al3006_probe(struct i2c_client *client,
 	/* initialize the AL3006 chip */
 	err = al3006_init_client(client);
 	if (err)
-		goto exit_regulator;
+		goto exit_err;
 
 	err = al3006_input_init(data);
 	if (err)
-		goto exit_regulator;
+		goto exit_err;
 
 	/* register sysfs hooks */
 	/* a bit dummy to sysfs create group two times, but clear */
 	err = sysfs_create_group(&data->input_dev->dev.kobj,
 				 &al3006_android_attr_group);
 	if (err)
-		goto exit_regulator;
+		goto exit_err;
 
 	if (client->irq != -1) {
                 printk(KERN_INFO "inside threaded irqs");
@@ -1077,13 +1048,7 @@ static int __devinit al3006_probe(struct i2c_client *client,
 exit_input:
 	al3006_input_fini(data);
 
-exit_regulator:
-#ifdef CONFIG_ARCH_KONA
-	if (data->regulator) {
-		regulator_disable(data->regulator);
-		regulator_put(data->regulator);
-	}
-#endif
+exit_err:
 	if (pdata && client->irq >= 0)
 		gpio_free(gpio_pin);
 
@@ -1110,19 +1075,6 @@ static int __devexit al3006_remove(struct i2c_client *client)
 	al3006_set_power_state(client, 0);
 	kfree(i2c_get_clientdata(client));
 
-#ifdef CONFIG_ARCH_KONA
-	if (data->regulator) {
-		ret = regulator_disable(data->regulator);
-		AL_DEBUG("called regulator_disable. Status: %d\n", ret);
-		if (ret) {
-			AL_ERROR("regulator_disable failed with status: %d\n",
-				  ret);
-			return ret;
-		}
-		regulator_put(data->regulator);
-	}
-#endif
-
 	if (pdata && client->irq >= 0)
 		gpio_free(client->irq);
 
@@ -1139,19 +1091,6 @@ static void al3006_shutdown(struct i2c_client *client)
 #endif
 
 	al3006_set_power_state(client, 0);
-
-#ifdef CONFIG_ARCH_KONA
-	if (data->regulator) {
-		ret = regulator_disable(data->regulator);
-		AL_DEBUG("called regulator_disable. Status: %d\n", ret);
-		if (ret) {
-			AL_ERROR("regulator_disable failed with status: %d\n",
-				  ret);
-			return;
-		}
-		regulator_put(data->regulator);
-	}
-#endif
 
 
 	if (pdata && client->irq >= 0)
@@ -1184,15 +1123,6 @@ static int al3006_suspend(struct device *dev)
 		return ret;
 	}
 
-#ifdef CONFIG_ARCH_KONA
-	if (data->regulator) {
-		ret = regulator_disable(data->regulator);
-		AL_DEBUG("called regulator_disable. Status: %d\n", ret);
-		if (ret)
-			AL_ERROR("regulator_disable failed with status: %d\n",
-				 ret);
-	}
-#endif
 	return ret;
 }
 
@@ -1217,15 +1147,6 @@ static int al3006_resume(struct device *dev)
 		}
 	}
 
-#ifdef CONFIG_ARCH_KONA
-	if (data->regulator) {
-		ret = regulator_enable(data->regulator);
-		AL_DEBUG("called regulator_enable. Status: %d\n", ret);
-		if (ret)
-			AL_ERROR("regulator_enable failed with status: %d\n",
-				 ret);
-	}
-#endif
 	return ret;
 }
 
