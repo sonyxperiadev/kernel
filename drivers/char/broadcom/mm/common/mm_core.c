@@ -19,25 +19,30 @@ the GPL, without Broadcom's express prior written consent.
 void dev_timer_callback (unsigned long data)
 {
 	mm_core_t *core_dev = (mm_core_t *)data;
-	queue_work(core_dev->mm_common->single_wq, &(core_dev->job_scheduler));
+	SCHEDULER_WORK(core_dev,&core_dev->job_scheduler);
 }
 
 static irqreturn_t dev_isr(int irq, void *data)
 {
 	mm_core_t* core_dev = (mm_core_t *)data;
 	MM_CORE_HW_IFC* hw_ifc = &core_dev->mm_device;
+	int ret =0;
 
 	mm_isr_type_e retval = hw_ifc->mm_process_irq(hw_ifc->mm_device_id);
 	switch(retval) {
 		case MM_ISR_ERROR:
 			pr_err("mm_isr %d",retval);
 		case MM_ISR_SUCCESS:
-			queue_work(core_dev->mm_common->single_wq, &(core_dev->job_scheduler));
+			SCHEDULER_WORK(core_dev,&core_dev->job_scheduler);
 		case MM_ISR_PROCESSED:
-			return IRQ_RETVAL(1);
+			ret=1;
+			break;
 		default:
-			return IRQ_RETVAL(0);
+			ret=0;
+			break;
 	}
+
+	return IRQ_RETVAL(ret);
 }
 
 static int mm_core_enable_clock(mm_core_t *core_dev) 
@@ -54,6 +59,7 @@ static int mm_core_enable_clock(mm_core_t *core_dev)
 		if(hw_ifc->mm_irq) {
 			ret = request_irq(hw_ifc->mm_irq, dev_isr, IRQF_SHARED,	core_dev->mm_common->mm_name, core_dev);
 			if(ret) pr_err("request_irq failed for %s ret = %d", core_dev->mm_common->mm_name, ret);
+			SET_IRQ_AFFINITY;
 			}
 		
 		core_dev->mm_core_is_on = true;
@@ -122,7 +128,7 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 			else {
 				job_list_elem->job.status = MM_JOB_STATUS_SUCCESS;
 				mm_common_job_completion(job_list_elem, core_dev);
-				queue_work(core_dev->mm_common->single_wq, &(core_dev->job_scheduler));
+				SCHEDULER_WORK(core_dev,&core_dev->job_scheduler);
 				}
 			}
 	} 
@@ -131,9 +137,10 @@ static void mm_fmwk_job_scheduler(struct work_struct* work)
 		getnstimeofday(&cur_time);
 		if(timespec_compare (&cur_time, & core_dev->sched_time) > 0) {
 			pr_err("abort hw ");
-			hw_ifc->mm_abort(hw_ifc->mm_device_id,&core_dev->current_job->job);
+			if(core_dev->current_job)
+				hw_ifc->mm_abort(hw_ifc->mm_device_id,&core_dev->current_job->job);
 			is_hw_busy = false;
-			queue_work(core_dev->mm_common->single_wq, &(core_dev->job_scheduler));
+			SCHEDULER_WORK(core_dev,&core_dev->job_scheduler);
 			}
 		}
 

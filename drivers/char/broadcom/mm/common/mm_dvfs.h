@@ -47,7 +47,7 @@ void mm_dvfs_update_handler(struct work_struct* work);
 		update.is_read = true;											\
 		update.mm_dvfs = mm_dvfs;										\
 		INIT_WORK(&(update.work), mm_dvfs_update_handler);				\
-		queue_work(mm_dvfs->mm_common->single_wq, &(update.work));		\
+		SCHEDULER_WORK(mm_dvfs, &(update.work));		\
 		flush_work_sync(&(update.work));								\
 		*param = update.param;											\
 		return 0;														\
@@ -60,7 +60,7 @@ void mm_dvfs_update_handler(struct work_struct* work);
 		update.is_read = false;											\
 		update.mm_dvfs = mm_dvfs;										\
 		INIT_WORK(&(update.work), mm_dvfs_update_handler); 				\
-		queue_work(mm_dvfs->mm_common->single_wq, &(update.work));		\
+		SCHEDULER_WORK(mm_dvfs, &(update.work));		\
 		flush_work_sync(&(update.work));								\
 		return 0;														\
 	}																	\

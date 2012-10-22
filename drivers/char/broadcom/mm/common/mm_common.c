@@ -63,6 +63,27 @@ void mm_common_disable_clock(mm_common_t *common)
 		}
 }
 
+static dev_job_list_t* mm_common_alloc_job(struct file_private_data* private)
+{
+	dev_job_list_t* job = (dev_job_list_t*)kmalloc(sizeof(dev_job_list_t),GFP_KERNEL);
+	
+	job->filp = private;
+	job->job.size = 0;
+	job->added2core = false;
+	job->successor = NULL;
+	job->predecessor = NULL;
+	INIT_LIST_HEAD(&job->wait_list);
+	INIT_LIST_HEAD(&job->file_list);
+	plist_node_init(&job->core_list,private->prio);
+	job->job.type = INTERLOCK_WAITING_JOB;
+	job->job.id = 0;
+	job->job.data = NULL;
+	job->job.size = 0;
+	job->job.status = MM_JOB_STATUS_READY;
+
+	return job;
+}
+
 void mm_common_priority_update(dev_job_list_t* to, int prio)
 {
 	dev_job_list_t* job = NULL;
@@ -105,7 +126,7 @@ typedef struct job_maint_work {
 	job_work_t _a;									\
 	INIT_WORK(&(_a.work), c); 						\
 	_a.u.a = b;										\
-	queue_work(common->single_wq, &(_a.work));		\
+	queue_work_on(0,common->single_wq, &(_a.work));	\
 	flush_work_sync(&(_a.work));					\
 }
 
@@ -134,14 +155,15 @@ void mm_common_wait_job(struct work_struct* work)
 	dev_job_list_t *to = maint_job->u.il.to;
 	dev_job_status_t* status = maint_job->u.il.status;
 	struct file_private_data *to_filp = to->filp;
+	mm_common_t* common = to_filp->common;
 
 	if(status) {		
-		if(0 == list_empty(&status->wait_list) ) {
-			list_del_init(&status->wait_list);
-			return;
+		if(status->status.status == MM_JOB_STATUS_INVALID){
+			list_add_tail(&status->wait_list,&to->wait_list);
 			}
 		else {
-			list_add_tail(&status->wait_list,&to->wait_list);
+			list_del_init(&status->wait_list);
+			return;
 			}
 		}
 	if(from) {
@@ -158,6 +180,7 @@ void mm_common_wait_job(struct work_struct* work)
 	list_add_tail(&(to->file_list), &(to_filp->write_head));
 
 	if((from == NULL) && list_is_singular(&to_filp->write_head) ) {
+		//pr_err("completing job %x %x",to,status);
 		mm_common_interlock_completion(to);
 		}
 	else if(from != NULL) {
@@ -204,17 +227,23 @@ void mm_common_release_jobs(struct work_struct* work)
 	dev_job_list_t *job = NULL;
 	dev_job_list_t *temp = NULL;
 
-	list_for_each_entry_safe(job, temp, &(filp->write_head), file_list)	{
-		if(job->job.type != INTERLOCK_WAITING_JOB) {
-			mm_core_abort_job(job, common->mm_core[(job->job.type&0xFF0000)>>16]);
-			mm_core_remove_job( job, common->mm_core[(job->job.type&0xFF0000)>>16] );
-			atomic_notifier_call_chain(&common->notifier_head, MM_FMWK_NOTIFY_JOB_REMOVE, NULL);
-			}
-		list_del(&job->file_list);
-		kfree(job->job.data);
-		kfree(job);
-		job = NULL;
+	
+	list_for_each_entry_safe(job, temp, &(filp->write_head), file_list) {
+		pr_err("this  = %x[%x] next = %x, prev= %x",&job->file_list,filp->prio,job->file_list.next,job->file_list.prev);
 		}
+
+	while(0 == list_empty(&filp->write_head)) {
+		job = list_first_entry(&filp->write_head, dev_job_list_t, file_list);
+		if(job->job.type != INTERLOCK_WAITING_JOB) {
+				mm_core_abort_job(job, common->mm_core[(job->job.type&0xFF0000)>>16]);
+				mm_common_job_completion( job, common->mm_core[(job->job.type&0xFF0000)>>16] );
+				atomic_notifier_call_chain(&common->notifier_head, MM_FMWK_NOTIFY_JOB_REMOVE, NULL);
+				}
+			else {
+				mm_common_interlock_completion(job);
+				}
+		}
+
 	list_for_each_entry_safe(job, temp, &(filp->read_head), file_list)	{
 		list_del(&job->file_list);
 		kfree(job->job.data);
@@ -223,32 +252,33 @@ void mm_common_release_jobs(struct work_struct* work)
 		}
 	filp->read_count = -1;
 	pr_debug(" %x %d",filp,filp->read_count);
-	wake_up_interruptible_all(&filp->queue);
+	wake_up_all(&filp->queue);
 }
 
 #define SCHEDULE_RELEASE_WORK(b) 	SCHEDULE_JOB_WORK(filp,b,mm_common_release_jobs)
 
 void mm_common_interlock_completion( dev_job_list_t* job)
 {
-	dev_job_status_t* wait_list = NULL;
-	dev_job_status_t* temp_wait_list = NULL;
-	dev_job_list_t* wait_job = NULL;
-	dev_job_list_t* temp_wait_job = NULL;
-	mm_common_t *common = job->filp->common;
+	struct file_private_data *filp = job->filp;
+	mm_common_t *common = filp->common;
 
 	BUG_ON(job->job.type != INTERLOCK_WAITING_JOB);
 
 	list_del(&job->file_list);
-	wait_job = list_first_entry(&(job->filp->write_head), dev_job_list_t, file_list);
 
 	if(job->predecessor) {
 		BUG_ON(job->filp->interlock_count==0);
 		job->filp->interlock_count--;
+		job->predecessor->successor = NULL;
+		job->predecessor = NULL;
 		}
 	if(job->successor) {
 		mm_common_interlock_completion(job->successor);
 		}
-	if(wait_job) {
+
+	if(0 == list_empty(&filp->write_head)) {
+		dev_job_list_t* temp_wait_job = NULL;
+		dev_job_list_t* wait_job = list_first_entry(&(filp->write_head), dev_job_list_t, file_list);
 		if ((wait_job->job.type == INTERLOCK_WAITING_JOB) &&
 			(wait_job->predecessor == NULL) ) {
 				mm_common_interlock_completion(wait_job);
@@ -264,49 +294,48 @@ void mm_common_interlock_completion( dev_job_list_t* job)
 				}
 			}
 		}
-
-	list_for_each_entry_safe(wait_list, temp_wait_list, &(job->wait_list), wait_list) {
-		wait_list->status.status = job->job.status;
+	if(0 == list_empty(&job->wait_list)) {
+		dev_job_status_t* wait_list = NULL;
+		dev_job_status_t* temp_wait_list = NULL;
+		list_for_each_entry_safe(wait_list, temp_wait_list, &(job->wait_list), wait_list) {
+			//pr_err("interlock completing job %x %x %x",job,wait_list,job->job.status);
+			wait_list->status.status = job->job.status;
+			list_del_init(&wait_list->wait_list);
+			}
+		wake_up_all(&mm_queue);
 		}
-	wake_up_interruptible_all(&mm_queue);
 
 	kfree(job);
 }
 
 void mm_common_job_completion( dev_job_list_t* job ,void* core)
 {
-	dev_job_status_t* wait_list = NULL;
-	dev_job_status_t* temp_wait_list = NULL;
-	dev_job_list_t* wait_job = NULL;
-	mm_common_t *common = job->filp->common;
+	struct file_private_data *filp = job->filp;
 	mm_core_t* core_dev = (mm_core_t*)core;
+	mm_common_t *common = filp->common;
 
 	list_del_init(&job->file_list);
-	wait_job = list_first_entry(&(job->filp->write_head), dev_job_list_t, file_list);
-
 	mm_core_remove_job(job,core_dev);
 	atomic_notifier_call_chain(&common->notifier_head, MM_FMWK_NOTIFY_JOB_COMPLETE,(void*) job->job.type);
-	if(wait_job) {
+
+	if(filp->readable) {
+		filp->read_count++;
+		list_add_tail(&(job->file_list), &(filp->read_head));
+		wake_up_all(&filp->queue);
+		}
+	else {
+		kfree(job->job.data);
+		kfree(job);
+		}
+
+	if(0 == list_empty(&filp->write_head)) {
+		dev_job_list_t* wait_job = list_first_entry(&(filp->write_head), dev_job_list_t, file_list);
 		if ((wait_job->job.type == INTERLOCK_WAITING_JOB) &&
 			(wait_job->predecessor == NULL) ) {
 				mm_common_interlock_completion(wait_job);
 				}
 		}
 
-	list_for_each_entry_safe(wait_list, temp_wait_list, &(job->wait_list), wait_list) {
-		wait_list->status.status = job->job.status;
-		}
-	wake_up_interruptible_all(&mm_queue);
-
-	if(job->filp->readable) {
-		job->filp->read_count++;
-		list_add_tail(&(job->file_list), &(job->filp->read_head));
-		wake_up_interruptible_all(&job->filp->queue);
-		}
-	else {
-		kfree(job->job.data);
-		kfree(job);
-		}
 }
 
 static int mm_file_open(struct inode *inode, struct file *filp)
@@ -469,13 +498,18 @@ int mm_file_fsync(struct file *filp, loff_t p1, loff_t p2, int datasync)
 	il.from = NULL;
 	il.to = mm_common_alloc_job(private);
 //	pr_err("++ %d",current->pid);
+//	pr_err("waiting job %x %x",il.to,il.status);
 	SCHEDULE_INTERLOCK_WORK(il);
 
+#if 1
+	wait_event(mm_queue, job_status.status.status != MM_JOB_STATUS_INVALID );
+#else
 	if(wait_event_interruptible(mm_queue, job_status.status.status != MM_JOB_STATUS_INVALID )) {
 		//Task interrupted... Ensure to remove from the waitlist
 		pr_err("Task interrupted");
 		SCHEDULE_INTERLOCK_WORK(il);
 		}
+#endif
 //	pr_err("-- %d",current->pid);
 	return 0;
 }
@@ -642,7 +676,7 @@ void* mm_fmwk_register( const char* name, const char* clk_name,
 	mutex_lock(&mm_fmwk_mutex);
 	if(single_wq == NULL) {
 		init_waitqueue_head(&mm_queue);
-		single_wq = alloc_ordered_workqueue(single_wq_name,WQ_HIGHPRI|WQ_MEM_RECLAIM);
+		single_wq = create_workqueue(single_wq_name);
 		if (single_wq == NULL) {
 			mutex_unlock(&mm_fmwk_mutex);
 			goto err_register;

@@ -46,7 +46,7 @@ void mm_prof_update_handler(struct work_struct* work);
 		update.is_read = true;											\
 		update.mm_prof = mm_prof;										\
 		INIT_WORK(&(update.work), mm_prof_update_handler);				\
-		queue_work(mm_prof->mm_common->single_wq, &(update.work));		\
+		SCHEDULER_WORK(mm_prof, &(update.work));		\
 		flush_work_sync(&(update.work));								\
 		*param = update.param;											\
 		return 0;														\
@@ -59,7 +59,7 @@ void mm_prof_update_handler(struct work_struct* work);
 		update.is_read = false;											\
 		update.mm_prof = mm_prof;										\
 		INIT_WORK(&(update.work), mm_prof_update_handler); 				\
-		queue_work(mm_prof->mm_common->single_wq, &(update.work));		\
+		SCHEDULER_WORK(mm_prof, &(update.work));		\
 		flush_work_sync(&(update.work));								\
 		return 0;														\
 	}																	\

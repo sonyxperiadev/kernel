@@ -18,7 +18,7 @@ static int mm_dfs_chg_notifier(struct notifier_block *self,
                                unsigned long event, void *data)
 {
 	mm_dvfs_t *mm_dvfs = container_of(self, mm_dvfs_t, mm_dfs_chg_notify_blk);
-	queue_work(mm_dvfs->mm_common->single_wq, &mm_dvfs->dvfs_notification);
+	SCHEDULER_WORK(mm_dvfs, &mm_dvfs->dvfs_notification);
 
 	return 0;
 }
@@ -47,7 +47,7 @@ int mm_dvfs_notification_handler(struct notifier_block* block,unsigned long para
 		
 		case MM_FMWK_NOTIFY_CLK_ENABLE:
 			getnstimeofday(&mm_dvfs->ts1);
-			if(mm_dvfs->timer_state == false) queue_work(mm_dvfs->mm_common->single_wq, &(mm_dvfs->dvfs_work));
+			if(mm_dvfs->timer_state == false) SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 			break;
 		case MM_FMWK_NOTIFY_CLK_DISABLE:
 			getnstimeofday(&diff);
@@ -65,7 +65,7 @@ int mm_dvfs_notification_handler(struct notifier_block* block,unsigned long para
 static void dvfs_timeout_callback (unsigned long data)
 {
 	mm_dvfs_t *mm_dvfs = (mm_dvfs_t *)data;
-	queue_work(mm_dvfs->mm_common->single_wq, &(mm_dvfs->dvfs_work));
+	SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 }
 
 static void dvfs_start_timer(mm_dvfs_t *mm_dvfs)
@@ -167,14 +167,14 @@ static void dev_early_suspend(struct early_suspend *desc)
 {
 	mm_dvfs_t *mm_dvfs = container_of(desc, mm_dvfs_t, early_suspend_desc);
 	mm_dvfs->suspend_requested = true;
-	queue_work(mm_dvfs->mm_common->single_wq, &(mm_dvfs->dvfs_work));
+	SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 }
 
 static void dev_late_resume(struct early_suspend *desc)
 {
 	mm_dvfs_t *mm_dvfs = container_of(desc, mm_dvfs_t, early_suspend_desc);
 	mm_dvfs->suspend_requested = false;
-	queue_work(mm_dvfs->mm_common->single_wq, &(mm_dvfs->dvfs_work));
+	SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 }
 #endif
 
