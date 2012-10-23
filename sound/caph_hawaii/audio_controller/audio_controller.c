@@ -2687,7 +2687,8 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 			/* without setting mic gains (such as PGA),
 			   idle mode recording gives low volume */
 			AUDDRV_SetAudioMode(
-				AUDCTRL_GetAudioMode(),
+				0,
+				/*AUDCTRL_GetAudioMode(),*/
 				AUDCTRL_GetAudioApp(), pathID, 0, 0);
 		}
 
@@ -2710,7 +2711,7 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 {
 	unsigned int pathID;
 	AudioApp_t app = AUDCTRL_GetAudioApp();
-	AudioMode_t mode = AUDCTRL_GetAudioMode();
+	AudioMode_t mode = 0; // AUDCTRL_GetAudioMode();
 	aTrace(LOG_AUDIO_CNTLR,
 			"%s src 0x%x, sink 0x%x,sr %d",
 			__func__, source, sink, sr);
