@@ -13,7 +13,7 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _H264_H_
 #define _H264_H_
 
-#define H264_SUBDEV_COUNT 3
+#define H264_SUBDEV_COUNT 4
 
 /*CME*/
 void 	cme_update_virt	(void* virt);
@@ -29,5 +29,10 @@ void 	mcin_deinit(void);
 void 	cabac_update_virt(void* virt);
 int 	cabac_init(MM_CORE_HW_IFC* core_param);
 void 	cabac_deinit(void);
+
+/*VCE*/
+void 	vce_update_virt(void* virt);
+int 	vce_init(MM_CORE_HW_IFC* core_param);
+void 	vce_deinit(void);
 
 #endif
