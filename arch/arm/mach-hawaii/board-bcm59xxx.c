@@ -631,6 +631,11 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.name = "bcmpmu_otg_xceiv",
 		.id = -1,
 	},
+	{
+		.name = "bcmpmu_charger",
+		.id = -1,
+	},
+
 };
 
 static struct i2c_board_info pmu_i2c_companion_info[] = {
