@@ -190,8 +190,8 @@ static struct mic_t *mic_dev;
 enum hs_type {
 	DISCONNECTED = 0,	/* Nothing is connected  */
 	HEADPHONE = 1,		/* The one without MIC   */
-	OPEN_CABLE,		/* Not sent to userland  */
 	HEADSET,		/* The one with MIC      */
+	OPEN_CABLE,		/* Not sent to userland  */
 	/* If more HS types are required to be added
 	 * add here, not below HS_TYPE_MAX
 	 */
