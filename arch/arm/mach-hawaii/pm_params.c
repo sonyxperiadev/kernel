@@ -105,16 +105,11 @@ static void __init __pm_init_errata_flg(void)
 		pm_erratum_flg |= ERRATUM_PLL1_8PHASE_OFF;
 #endif
 
-#ifdef CONFIG_MM_POWER_OK_ERRATUM
+#ifdef MM_V3D_TIMEOUT_ERRATUM
 	if (chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
 		pm_erratum_flg |= ERRATUM_MM_POWER_OK;
 #endif
 
-#ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
-	if (chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
-		pm_erratum_flg |= ERRATUM_MM_FREEZE_VAR500M;
-#endif
-		pr_info("%s:shameer flg = %x\n", __func__, pm_erratum_flg);
 }
 
 #define MHZ(x) ((x)*1000*1000)

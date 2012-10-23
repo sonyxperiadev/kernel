@@ -170,7 +170,6 @@
 #define ERRATUM_MM_V3D_TIMEOUT		(1 << 0)
 #define ERRATUM_MM_POWER_OK		(1 << 1)
 #define ERRATUM_PLL1_8PHASE_OFF		(1 << 2)
-#define ERRATUM_MM_FREEZE_VAR500M	(1 << 3)
 
 #ifdef CONFIG_KONA_POWER_MGR
 struct pwrmgr_init_param {
