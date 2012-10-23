@@ -112,6 +112,10 @@ typedef struct job_maint_work {
 		dev_job_list_t* job_list;
 		dev_job_status_t* job_status;
 		struct file_private_data *filp;
+		struct read {
+			dev_job_list_t** job_list;
+			struct file_private_data *filp;
+			} rd;
 		struct interlock {
 			dev_job_list_t* from;
 			dev_job_list_t* to;
@@ -196,28 +200,22 @@ void mm_common_wait_job(struct work_struct* work)
 void mm_common_read_job(struct work_struct* work)
 {
 	job_work_t *maint_job = container_of(work, job_work_t, work);
-	dev_job_status_t* temp_status = maint_job->u.job_status;
-	struct file_private_data *filp = temp_status->filp;
-	mm_common_t* common = filp->common;
-	mm_job_status_t *status = &temp_status->status;
+	dev_job_list_t** job_list = maint_job->u.rd.job_list;
+	struct file_private_data *filp = maint_job->u.rd.filp;
 
 	if(filp->read_count > 0){
 		dev_job_list_t *job = 
 			list_first_entry(&(filp->read_head), dev_job_list_t, file_list);
 		list_del(&job->file_list);
-		status->id = job->job.id;		
-		status->status = job->job.status;
-		kfree(job->job.data);
-		kfree(job);
+		*job_list = job;
 		filp->read_count--;
 		}
 	else {
-		status->id = 0;		
-		status->status = MM_JOB_STATUS_INVALID;
+			*job_list = NULL;
 		}
 
 }
-#define SCHEDULE_READ_WORK(b) 	SCHEDULE_JOB_WORK(job_status,b,mm_common_read_job)
+#define SCHEDULE_READ_WORK(b) 	SCHEDULE_JOB_WORK(rd,b,mm_common_read_job)
 
 void mm_common_release_jobs(struct work_struct* work)
 {
@@ -449,21 +447,41 @@ static int mm_file_read(struct file *filp, char __user *buf, size_t size, loff_t
 {
 	struct file_private_data *private = filp->private_data;
 	mm_common_t *common = private->common;
-	dev_job_status_t job_status;
-	job_status.filp = private;
-	INIT_LIST_HEAD(&job_status.wait_list);
+	struct read rd;
+	dev_job_list_t *job = NULL;
+	size_t bytes_read = 0;
+
+	rd.job_list = &job;
+	rd.filp = private;
 
 //	pr_err("something");
-	SCHEDULE_READ_WORK(&job_status);
+	SCHEDULE_READ_WORK(rd);
 
-	if(job_status.status.id) {
-		if (copy_to_user(buf, &job_status.status, sizeof(job_status.status))) {
+	if(job == NULL)
+		goto mm_file_read_end;
+
+	if(job->job.id) {
+		if (copy_to_user(buf, &job->job.status, sizeof(job->job.status))) {
 			pr_err("copy_to_user failed");
 			goto mm_file_read_end;
 			}
-		return 1;
+		bytes_read += sizeof(job->job.status);
+		buf +=  sizeof(job->job.status);
+		if (copy_to_user(buf, &job->job.id, sizeof(job->job.id))) {
+			pr_err("copy_to_user failed");
+			goto mm_file_read_end;
+			}
+		bytes_read += sizeof(job->job.id);
+		buf +=  sizeof(job->job.id);
+		if (copy_to_user(buf, job->job.data, job->job.size)) {
+			pr_err("copy_to_user failed");
+			goto mm_file_read_end;
+			}
+		bytes_read += job->job.size;
 		}
-
+	kfree(job->job.data);
+	kfree(job);
+	return bytes_read;
 mm_file_read_end:
 	return 0;
 }
