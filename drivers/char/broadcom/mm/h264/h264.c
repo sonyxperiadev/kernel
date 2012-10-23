@@ -60,9 +60,9 @@ int __init mm_h264_init(void)
 	h264_device->subdev_init[2] = &cabac_init;
 	h264_device->subdev_deinit[2] = &cabac_deinit;
 
-	h264_device->subdev_update_virt[3] = &vce_update_virt;
-	h264_device->subdev_init[3] = &vce_init;
-	h264_device->subdev_deinit[3] = &vce_deinit;
+	h264_device->subdev_update_virt[3] = &h264_vce_update_virt;
+	h264_device->subdev_init[3] = &h264_vce_init;
+	h264_device->subdev_deinit[3] = &h264_vce_deinit;
 
 	/*Calling init on sub devices*/
 	for(i=0;i<H264_SUBDEV_COUNT;i++){

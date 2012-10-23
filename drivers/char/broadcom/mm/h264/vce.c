@@ -143,7 +143,7 @@ static mm_isr_type_e process_vce_irq(void* device_id)
 	/*Clear interrupt bit*/
 	vce_write(id,VCE_SEMA_CLEAR_OFFSET,1<<31);
 
-	reason = (flags >> VCE_STATUS_REASON_POS) & 
+	reason = (flags >> VCE_STATUS_REASON_POS) &
 		VCE_STATUS_REASON_MASK;
 
 	if(flags & 1<<VCE_STATUS_INTERRUPT_POS){
@@ -155,7 +155,7 @@ static mm_isr_type_e process_vce_irq(void* device_id)
 			case VCE_REASON_STOPPED:
 				irq_retval = MM_ISR_PROCESSED;
 				break;
-			case VCE_STOP_SYM_RESET_INNER:				
+			case VCE_STOP_SYM_RESET_INNER:
 				pr_err("vce_isr VCE_STOP_SYM_RESET_INNER \n");
 				/*TODO: Do the handling as in DEC3 RTOS*/
 				/*Not Required as of Now*/
@@ -181,7 +181,7 @@ bool get_vce_status(void* device_id)
 	/*Read the status to find Hardware status*/
 	status  = vce_read(id,VCE_STATUS_OFFSET);
 	if(status & VCE_STATUS_BUSYBITS_MASK) {
-		reason = (status >> VCE_STATUS_REASON_POS) & 
+		reason = (status >> VCE_STATUS_REASON_POS) &
 			VCE_STATUS_REASON_MASK;
 		/*TODO: Add more checks if required*/
 		if( reason == VCE_REASON_END){
@@ -282,7 +282,7 @@ mm_job_status_e vce_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 				/*Pulse the stoppage code 1->0->1 to clear internal wait.*/
 				/*VCE might be waiting on another semaphore, or bkpt*/
 				vce_write(id,VCE_SEMA_CLEAR_OFFSET, 0xff);
-				vce_write(id,VCE_SEMA_SET_OFFSET, 1<<(vce_info->encode 
+				vce_write(id,VCE_SEMA_SET_OFFSET, 1<<(vce_info->encode
 							&(~VCE_NO_SEMAPHORE))| 1<<VCE_STOP_SYM_RESET_INNER);
 			} else {
 				vce_write(id,VCE_SEMA_CLEAR_OFFSET, 0xff);
@@ -301,7 +301,7 @@ mm_job_status_e vce_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 			/*Handle Job completion*/
 			status = vce_read(id,VCE_STATUS_OFFSET);
 
-			vce_info->stop_reason = (status >> VCE_STATUS_REASON_POS) & 
+			vce_info->stop_reason = (status >> VCE_STATUS_REASON_POS) &
 				VCE_STATUS_REASON_MASK;
 
 			if(vce_read(id,VCE_BAD_ADDR_OFFSET) != 0){
@@ -332,7 +332,7 @@ mm_job_status_e vce_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 				transfer_ptr++;
 				transfer_data_ptr = transfer_ptr;
 				for(j=0;j<transfer_size;j++) {
-					*((u32*)(transfer_data_ptr+j)) = 
+					*((u32*)(transfer_data_ptr+j)) =
 						vce_read(id,(VCE_DATA_MEM_OFFSET+vce_addr_offset+j*4));
 				}
 				transfer_ptr += transfer_size;
@@ -353,25 +353,25 @@ mm_job_status_e vce_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 }
 vce_device_t* vce_device = NULL;
 
-void vce_update_virt(void* virt)
+void h264_vce_update_virt(void* virt)
 {
 	pr_debug("vce_update_virt: \n");
 	vce_device->vaddr = virt;
 }
 
-int vce_init(MM_CORE_HW_IFC* core_param)
+int h264_vce_init(MM_CORE_HW_IFC* core_param)
 {
 	int ret = 0;
 
 	vce_device = kmalloc(sizeof(vce_device_t), GFP_KERNEL);
 	if(vce_device == NULL){
-		pr_err("vce_init: kmalloc failed\n");
+		pr_err("h264_vce_init: kmalloc failed\n");
 		ret = -ENOMEM;
 		goto err;
 	}
 
 	vce_device->vaddr = NULL;
-	pr_debug("vce_init: -->\n");
+	pr_debug("h264_vce_init: -->\n");
 
 	/*Do any device specific structure initialisation required.*/
 	core_param->mm_base_addr = MM_VCE_BASE_ADDR;
@@ -393,12 +393,12 @@ int vce_init(MM_CORE_HW_IFC* core_param)
 
 	return ret;
 err:
-	pr_err("vce_init: Error \n");
+	pr_err("h264_vce_init: Error \n");
 	return ret;
 }
 
-void vce_deinit(void)
+void h264_vce_deinit(void)
 {
-	pr_debug("vce_deinit:\n");
+	pr_debug("h264_vce_deinit:\n");
 	kfree(vce_device);
 }

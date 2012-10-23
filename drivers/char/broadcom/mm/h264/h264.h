@@ -31,8 +31,8 @@ int 	cabac_init(MM_CORE_HW_IFC* core_param);
 void 	cabac_deinit(void);
 
 /*VCE*/
-void 	vce_update_virt(void* virt);
-int 	vce_init(MM_CORE_HW_IFC* core_param);
-void 	vce_deinit(void);
+void 	h264_vce_update_virt(void* virt);
+int 	h264_vce_init(MM_CORE_HW_IFC* core_param);
+void 	h264_vce_deinit(void);
 
 #endif
