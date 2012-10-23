@@ -331,8 +331,17 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 
 static CSL_LCD_RES_T cslDsiAxipvStop(DSI_UPD_REQ_MSG_T *updMsg)
 {
-	/* For Video mode only */
-	/* In command mode, axipv and pv are automatically stopped */
+	struct axipv_config_t *axipvCfg = updMsg->dsiH->axipvCfg;
+	struct pv_config_t *pvCfg = updMsg->dsiH->pvCfg;
+
+	if (!axipvCfg)
+		pr_err("axipvCfg is NULL\n");
+	axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
+	if (!updMsg->dsiH->dispEngine) {
+		if (!pvCfg)
+			pr_err("pvCfg is NULL\n");
+		pv_change_state(PV_STOP_IMM, pvCfg);
+	}
 	return CSL_LCD_OK;
 }
 
@@ -1911,10 +1920,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 					"[CSL DSI][%d] %s: "
 					"ERR Timed Out Waiting For EOF DMA!\n",
 					dsiH->bus, __func__);
-					printk("int_stat=0x%x, int_en=0x%x\n\
-					stat=0x%x\n", readl(HW_IO_PHYS_TO_VIRT(0x3c200030)),
-					readl(HW_IO_PHYS_TO_VIRT(0x3c200034)),
-					readl(HW_IO_PHYS_TO_VIRT(0x3c200038)));
 					res = CSL_LCD_OS_TOUT;
 				} else {
 					LCD_DBG(LCD_DBG_ERR_ID,

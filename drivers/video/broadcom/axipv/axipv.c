@@ -184,9 +184,10 @@ static void process_release(struct work_struct *work)
 
 	for (i = 0; i < AXIPV_MAX_DISP_BUFF_SUPP; i++) {
 		if (AXIPV_BUFF_TXFERED == buff[i].status) {
-			dev->release_cb(buff[i].addr);
+			axipv_debug("releasing %p\n", buff[i].addr);
 			err = axipv_set_buff_status(buff, buff[i].addr,
 						AXIPV_BUFF_AVAILABLE);
+			dev->release_cb(buff[i].addr);
 			if (err)
 				axipv_err("couldn't set buff status err=%d\n",
 					err);
@@ -197,7 +198,7 @@ static void process_release(struct work_struct *work)
 
 int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 {
-	int ret = 0, ctrl = 0, i;
+	int ret = 0, ctrl = 0, i, tries;
 	struct axipv_dev *dev;
 
 	if (!init || !init->irq || !init->base_addr
@@ -223,7 +224,7 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 			"axipv", dev);
 	if (ret < 0) {
 		axipv_err("failed to irq\n");
-		goto fail;
+		goto fail_irq;
 	}
 
 #ifdef AXIPV_HAS_CLK
@@ -231,7 +232,7 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	if (IS_ERR(dev->clk)) {
 		axipv_err("failed to get clk");
 		ret = PTR_ERR(dev->clk);
-		goto fail;
+		goto fail_clk;
 	}
 #endif
 	axipv_clk_enable(dev);
@@ -239,16 +240,22 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	ctrl &= SFT_RSTN_MASK;
 	/* Do an immediate soft reset and wait for completion */
 	writel(ctrl, init->base_addr + REG_CTRL);
-	while (!(readl(init->base_addr + REG_CTRL) & SFT_RSTN_DONE)) {
-		axipv_debug("udelay\n");
+	tries = 10;
+	while (tries && !(readl(init->base_addr + REG_CTRL) & SFT_RSTN_DONE)) {
+		axipv_debug("waiting for reset to complete\n");
 		udelay(5);
+		--tries;
+	}
+	if (!tries) {
+		axipv_err("AXIPV couldn't be reset! Aborting\n");
+		ret = -ENODEV;
+		goto fail_reset;
 	}
 
 	axipv_clk_disable(dev);
 	dev->base_addr = init->base_addr;
 	dev->irq_cb = init->irq_cb;
 	dev->bypassPV = init->bypassPV;
-	axipv_debug("PV bypass is %d\n",init->bypassPV);
 	dev->release_cb = init->release_cb;
 	INIT_WORK(&dev->irq_work, process_irq);
 	INIT_WORK(&dev->release_work, process_release);
@@ -260,7 +267,10 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	ret = 0;
 	goto done;
 
-fail:
+fail_reset:
+	axipv_clk_disable(dev);
+fail_irq:
+fail_clk:
 	free_irq(init->irq, NULL);
 	kfree(dev);
 done:
@@ -286,6 +296,7 @@ static inline int axipv_config(struct axipv_config_t *config)
 	writel_relaxed(config->buff.sync.ylen,
 			axipv_base + REG_LINES_PER_FRAME);
 	writel_relaxed(config->buff.sync.addr, axipv_base + REG_NXT_FRAME);
+	axipv_debug("posting %p\n", config->buff.sync.addr);
 	g_curr = config->buff.sync.addr;
 	buff_index = axipv_get_free_buff_index(dev->buff);
 	if (buff_index >= AXIPV_MAX_DISP_BUFF_SUPP) {
@@ -383,8 +394,10 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		u32 curr_reg_val = readl(axipv_base + REG_CUR_FRAME);
 		if ((g_curr != curr_reg_val) ||
 			(AXIPV_STOPPING == dev->state)) {
-			if (g_curr)
+			if (g_curr){
+				axipv_debug("isr %p\n",g_curr);
 				axipv_release_buff(g_curr);
+			}
 			g_curr = curr_reg_val;
 			if (AXIPV_STOPPING == dev->state)
 				dev->state = AXIPV_STOPPED;
@@ -465,7 +478,7 @@ static inline int post_sync(struct axipv_config_t *config)
 	int buff_index;
 	struct axipv_dev *dev;
 	u32 axipv_base;
-/*	unsigned long flags; */
+	unsigned long flags;
 
 	dev = container_of(config, struct axipv_dev, config);
 	axipv_base = dev->base_addr;
@@ -511,7 +524,7 @@ static inline int post_sync(struct axipv_config_t *config)
 					config->buff.sync.addr);
 	}
 
-/*	spin_lock_irqsave(&lock, flags); */
+	spin_lock_irqsave(&lock, flags);
 	if (config->cmd)
 		writel(readl(axipv_base + REG_CTRL) | AXIPV_EN,
 				axipv_base + REG_CTRL);
@@ -519,8 +532,7 @@ static inline int post_sync(struct axipv_config_t *config)
 	/*Raghu: update state to enabled within spinlock */
 
 	if (g_curr) {
-		/* Not required, but just to be sure.
-		Use a semaphore instead and signal it in ISR */
+		/* Not required, but just to be sure */
 		while (config->buff.sync.addr !=
 			readl(axipv_base + REG_CUR_FRAME))
 			udelay(1);
@@ -530,7 +542,7 @@ static inline int post_sync(struct axipv_config_t *config)
 		writel(readl(axipv_base  + REG_CTRL) & ~AXIPV_EN,
 				axipv_base + REG_CTRL);
 	}
-/*	spin_lock_irqrestore(&lock, flags);*/
+	spin_unlock_irqrestore(&lock, flags);
 	g_nxt = config->buff.sync.addr;
 	return 0;
 }
@@ -552,9 +564,26 @@ int axipv_post(struct axipv_config_t *config)
 }
 
 
+void dump_debug_info(struct axipv_dev *dev)
+{
+	axipv_clk_enable(dev);
+	u32 ret = 0, axipv_base, cnt;
+	axipv_base = dev->base_addr;
+	axipv_debug("state=%d, gcurr=%p, gnxt=%p\n", dev->state, g_curr, g_nxt);
+	axipv_debug("%p %p %p %p %p\n",
+	readl(axipv_base+REG_CUR_FRAME),
+	readl(axipv_base+REG_NXT_FRAME),
+	readl(axipv_base+REG_CTRL),
+	readl(axipv_base+REG_AXIPV_STATUS),
+	readl(axipv_base+REG_INTR_STAT));
+	axipv_clk_disable(dev);
+}
+
+
+
 int axipv_change_state(u32 event, struct axipv_config_t *config)
 {
-	u32 ret = 0, axipv_base;
+	u32 ret = 0, axipv_base, cnt;
 	struct axipv_dev *dev;
 
 	if (!config)
@@ -565,7 +594,8 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 
 	switch (event) {
 	case AXIPV_CONFIG:
-		while (AXIPV_STOPPING == dev->state)
+		cnt = 10;
+		while (cnt-- && (AXIPV_STOPPING == dev->state))
 			usleep_range(1000, 1100);
 		if ((AXIPV_INIT_DONE == dev->state)
 			|| (AXIPV_STOPPED == dev->state)) {
@@ -575,6 +605,7 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 			dev->state = AXIPV_CONFIGURED;
 			ret = 0;
 		} else {
+			axipv_err("Frame transfer in progress\n");
 			return -EBUSY;
 		}
 		break;
@@ -623,6 +654,7 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 		}
 		break;
 	case AXIPV_STOP_IMM:
+		dump_debug_info(dev);
 		if ((AXIPV_ENABLED == dev->state)
 			|| (AXIPV_STOPPING == dev->state)) {
 			u32 ctrl = 0, count = 0;
@@ -636,11 +668,15 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 				udelay(1);
 				count++;
 			}
-			dev->state = AXIPV_INVALID_STATE;
+			if (count == 5)
+				axipv_err("Soft reset failed\n");
+			dev->state = AXIPV_STOPPED;
+			/* Set all buffers to transferred state */
 			axipv_clk_disable(dev);
 			spin_unlock_irqrestore(&lock, flags);
 			ret = 0;
 		} else {
+			axipv_err("AXIPV_STOP_IMM ignored\n");
 			return -EBUSY;
 		}
 		break;
