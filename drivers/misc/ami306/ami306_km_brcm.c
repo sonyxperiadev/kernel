@@ -622,19 +622,6 @@ static int __devinit ami_probe(struct i2c_client *client,
 			pdev->ami_dir, pdev->ami_polarity, pdata->gpio_intr, pdata->gpio_drdy);
 	}
 
-
-	sema_init(&pdev->mutex, 1);
-	pdev->dev.minor = MISC_DYNAMIC_MINOR;
-	pdev->dev.name = AMI_DRV_NAME;
-	pdev->dev.fops = &ami_fops;
-
-	res = misc_register(&pdev->dev);
-	if (res < 0) {
-		printk("ami_probe: failed to do misc_regsiter return %d\n", res);
-		kfree(pdev);
-		goto done;
-	}
-
 #ifdef CONFIG_ARCH_KONA
         pdev->regulator = regulator_get(&client->dev, CAM2_REGULATOR);
         res = IS_ERR_OR_NULL(pdev->regulator);
@@ -655,10 +642,22 @@ static int __devinit ami_probe(struct i2c_client *client,
                         "failed with status: %d\n",
                         __func__, res);
                 regulator_put(pdev->regulator);
-		goto done;
+                goto done;
         }
 #endif
-	
+
+	sema_init(&pdev->mutex, 1);
+	pdev->dev.minor = MISC_DYNAMIC_MINOR;
+	pdev->dev.name = AMI_DRV_NAME;
+	pdev->dev.fops = &ami_fops;
+
+	res = misc_register(&pdev->dev);
+	if (res < 0) {
+		printk("ami_probe: failed to do misc_regsiter return %d\n", res);
+		kfree(pdev);
+		goto done;
+	}
+
 #ifdef USER_MEMORY
 	/* Initialize driver command */
 	size = AMI_GetMemSize();
