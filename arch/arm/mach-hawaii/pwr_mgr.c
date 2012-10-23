@@ -260,7 +260,7 @@ static const struct event_table __event_table[] = {
 	{
 		.event_id	= COMMON_INT_TO_AC_EVENT,
 		.trig_type	= PM_TRIG_POS_EDGE,
-		.policy_modem	= PM_RET,
+		.policy_modem 	= PM_RET,
 		.policy_arm	= PM_DFS,
 		.policy_arm_sub	= PM_DFS,
 		.policy_aon	= PM_DFS,
@@ -270,7 +270,7 @@ static const struct event_table __event_table[] = {
 	{
 		.event_id	= COMMON_TIMER_0_EVENT,
 		.trig_type	= PM_TRIG_POS_EDGE,
-		.policy_modem	= PM_RET,
+		.policy_modem 	= PM_RET,
 		.policy_arm	= PM_DFS,
 		.policy_arm_sub	= PM_DFS,
 		.policy_aon	= PM_DFS,
@@ -280,7 +280,7 @@ static const struct event_table __event_table[] = {
 	{
 		.event_id	= COMMON_TIMER_1_EVENT,
 		.trig_type	= PM_TRIG_POS_EDGE,
-		.policy_modem	= PM_RET,
+		.policy_modem 	= PM_RET,
 		.policy_arm	= PM_DFS,
 		.policy_arm_sub	= PM_DFS,
 		.policy_aon	= PM_DFS,
@@ -288,9 +288,20 @@ static const struct event_table __event_table[] = {
 		.policy_mm	= PM_OFF,
 	},
 	{
+		.event_id       = COMMON_TIMER_2_EVENT,
+		.trig_type      = PM_TRIG_POS_EDGE,
+		.policy_modem   = PM_RET,
+		.policy_arm     = PM_DFS,
+		.policy_arm_sub = PM_DFS,
+		.policy_aon     = PM_DFS,
+		.policy_hub     = PM_DFS,
+		.policy_mm      = PM_OFF,
+	},
+
+	{
 		.event_id	= UBRX_EVENT,
 		.trig_type	= PM_TRIG_NEG_EDGE,
-		.policy_modem	= PM_RET,
+		.policy_modem 	= PM_RET,
 		.policy_arm	= PM_DFS,
 		.policy_arm_sub	= PM_DFS,
 		.policy_aon	= PM_DFS,
