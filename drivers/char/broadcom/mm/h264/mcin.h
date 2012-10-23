@@ -48,7 +48,7 @@ typedef struct{
 	unsigned int out_base;
 	unsigned int out_size;
 	unsigned int out_mark_offset;
-	unsigned int out_param_addr;
+	MCIN_OUT_PARAMS_T out_params;
 } mcin_job_t;
 
 #endif

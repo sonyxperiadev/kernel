@@ -50,7 +50,7 @@ typedef struct{
 	unsigned int cme_autolimit;
 	unsigned char auto_hrext;
 	unsigned char auto_ignorec;
-	unsigned int out_param_addr;
+	CME_OUT_PARAMS_T out_params;
 }cme_job_t;
 
 #endif

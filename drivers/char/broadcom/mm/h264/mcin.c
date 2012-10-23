@@ -57,6 +57,11 @@ static void print_job_struct(mcin_job_t* job)
 	for (i=0;i<7;i++) {
 		pr_debug("state [%d]: 0x%x\n",i,(u32)job->state[i]);
 	}
+	for (i=0;i<7;i++) {
+		pr_debug("out_p:state [%d]: 0x%x\n",i,(u32)job->out_params.state[i]);
+	}
+	pr_debug("out_p:remaining_len: 0x%x\n",(u32)job->out_params.remaining_len);
+	pr_debug("out_p:user_data: 0x%x\n",(u32)job->out_params.user_data);
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 }
 
@@ -195,7 +200,6 @@ mm_job_status_e mcin_start_job(void* device_id , mm_job_post_t* job, u32 profmas
 
 	u32 control = 0;
 	u32 control_extra = 0;
-	MCIN_OUT_PARAMS_T out_p;
 
 	if(jp == NULL){
 		pr_err("mcin_start_job: id or jp is null\n");
@@ -289,25 +293,15 @@ mm_job_status_e mcin_start_job(void* device_id , mm_job_post_t* job, u32 profmas
 			if ( jp->mcin_config.nal_end == 1)
 				mcin_complete_sequence(id);
 			/*read back the state variables for client*/
-			out_p.state[0] = mcin_read(id,H264_MCODEIN_STATE0_OFFSET);
-			out_p.state[1] = mcin_read(id,H264_MCODEIN_STATE1_OFFSET);
-			out_p.state[2] = mcin_read(id,H264_MCODEIN_STATE2_OFFSET);
-			out_p.state[3] = mcin_read(id,H264_MCODEIN_STATE3_OFFSET);
-			out_p.state[4] = mcin_read(id,H264_MCODEIN_STATE4_OFFSET);
-			out_p.state[5] = mcin_read(id,H264_MCODEIN_STATE5_OFFSET);
-			out_p.state[6] = mcin_read(id,H264_MCODEIN_STATE6_OFFSET);
-			out_p.remaining_len = mcin_read(id,H264_MCODEIN_LENGTH_OFFSET);
-			out_p.user_data = mcin_read(id,H264_MCODEIN_USERDATA_OFFSET);
-			/*copy the structure to user space*/
-			if((void*)jp->out_param_addr != NULL){
-				if(copy_to_user((void*)jp->out_param_addr,(void*)&out_p,
-							sizeof(MCIN_OUT_PARAMS_T)) != 0){
-					pr_err("mcin_start_job: copy_to_user for outparam failed \n");
-					return MM_JOB_STATUS_ERROR;
-				}
-			} else {
-				pr_info("mcin_start_job: out_param_addr is NULL\n");
-			}
+			jp->out_params.state[0] = mcin_read(id,H264_MCODEIN_STATE0_OFFSET);
+			jp->out_params.state[1] = mcin_read(id,H264_MCODEIN_STATE1_OFFSET);
+			jp->out_params.state[2] = mcin_read(id,H264_MCODEIN_STATE2_OFFSET);
+			jp->out_params.state[3] = mcin_read(id,H264_MCODEIN_STATE3_OFFSET);
+			jp->out_params.state[4] = mcin_read(id,H264_MCODEIN_STATE4_OFFSET);
+			jp->out_params.state[5] = mcin_read(id,H264_MCODEIN_STATE5_OFFSET);
+			jp->out_params.state[6] = mcin_read(id,H264_MCODEIN_STATE6_OFFSET);
+			jp->out_params.remaining_len = mcin_read(id,H264_MCODEIN_LENGTH_OFFSET);
+			jp->out_params.user_data = mcin_read(id,H264_MCODEIN_USERDATA_OFFSET);
 			job->status = MM_JOB_STATUS_SUCCESS;
 			return MM_JOB_STATUS_SUCCESS;
 
