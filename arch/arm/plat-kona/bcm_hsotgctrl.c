@@ -616,19 +616,21 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	hsotgctrl_drvdata->otg_clk = clk_get(NULL,
 		plat_data->usb_ahb_clk_name);
 
-	if (IS_ERR_OR_NULL(hsotgctrl_drvdata->otg_clk)) {
+	if (IS_ERR(hsotgctrl_drvdata->otg_clk)) {
+		error = PTR_ERR(hsotgctrl_drvdata->otg_clk);
 		dev_warn(&pdev->dev, "OTG clock allocation failed\n");
 		kfree(hsotgctrl_drvdata);
-		return -EIO;
+		return error;
 	}
 
 	hsotgctrl_drvdata->mdio_master_clk = clk_get(NULL,
 		plat_data->mdio_mstr_clk_name);
 
-	if (IS_ERR_OR_NULL(hsotgctrl_drvdata->mdio_master_clk)) {
+	if (IS_ERR(hsotgctrl_drvdata->mdio_master_clk)) {
+		error = PTR_ERR(hsotgctrl_drvdata->mdio_master_clk);
 		dev_warn(&pdev->dev, "MDIO Mst clk alloc failed\n");
 		kfree(hsotgctrl_drvdata);
-		return -EIO;
+		return error;
 	}
 
 	hsotgctrl_drvdata->allow_suspend = true;

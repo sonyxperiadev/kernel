@@ -155,7 +155,7 @@ CHAL_HANDLE chal_aci_init(cUInt32 baseAddr_NotUsed)
 	base_addr = (cUInt8 *)KONA_ACI_VA;
 	chal_aci_init_aci((cUInt32)base_addr);
 	audioh_apb_clk = clk_get(NULL, "audioh_apb_clk");
-	if (IS_ERR_OR_NULL(audioh_apb_clk)) {
+	if (IS_ERR(audioh_apb_clk)) {
 		pr_err("%s(): clk_get of audioh_apb_clk failed \r\n", __func__);
 		audioh_apb_clk = NULL;
 	}
