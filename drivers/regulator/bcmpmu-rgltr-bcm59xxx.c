@@ -308,10 +308,6 @@ struct regulator_desc rdesc[BCMPMU_REGULATOR_MAX] = {
 		.type = REGULATOR_VOLTAGE,
 		.owner = THIS_MODULE,
 	},
-<<<<<<< HEAD
-
-
-=======
 	[BCMPMU_REGULATOR_GPLDO1] = {
 		.name = "gpldo1",
 		.id = BCMPMU_REGULATOR_GPLDO1,
@@ -366,7 +362,6 @@ struct regulator_desc rdesc[BCMPMU_REGULATOR_MAX] = {
 		.type = REGULATOR_VOLTAGE,
 		.owner = THIS_MODULE,
 	},
->>>>>>> Br-bringup-hawaii-common-jb_rev2
 };
 
 struct bcmpmu59xxx_regulator_info
@@ -386,8 +381,6 @@ bcmpmu59xxx_rglr_info[BCMPMU_REGULATOR_MAX] = {
 		.rdesc = &rdesc[BCMPMU_REGULATOR_CAMLDO1],
 		.reg_addr = PMU_REG_CAMLDO1PMCTRL1,
 		.reg_addr_volt = PMU_REG_CAMLDO1PMCTRL1,
-<<<<<<< HEAD
-=======
 		.v_table = bcm59039_ldo_v_table,
 		.num_voltages =
 			ARRAY_SIZE(bcm59039_ldo_v_table),
@@ -462,108 +455,44 @@ bcmpmu59xxx_rglr_info[BCMPMU_REGULATOR_MAX] = {
 		.reg_addr = PMU_REG_MMCLDO1PMCTRL2,
 		.reg_addr_volt = PMU_REG_MMCLDO1PMCTRL2,
 		/*Configure for C0 by default */
->>>>>>> Br-bringup-hawaii-common-jb_rev2
 		.v_table = bcm59039_ldo_v_table,
 		.num_voltages =
 			ARRAY_SIZE(bcm59039_ldo_v_table),
 		.ldo_or_sr = BCMPMU_LDO,
 		.onoff = 0xFF,
 	},
-<<<<<<< HEAD
-	[BCMPMU_REGULATOR_CAMLDO2] = {
-		.rdesc = &rdesc[BCMPMU_REGULATOR_CAMLDO2],
-		.reg_addr = PMU_REG_CAMLDO2PMCTRL1,
-		.reg_addr_volt = PMU_REG_CAMLDO2PMCTRL1,
-=======
 	[BCMPMU_REGULATOR_AUDLDO] = {
 		.rdesc = &rdesc[BCMPMU_REGULATOR_AUDLDO],
 		.reg_addr = PMU_REG_AUDLDOPMCTRL1,
 		.reg_addr_volt = PMU_REG_AUDLDOPMCTRL1,
 		/*Configure for C0 by default */
->>>>>>> Br-bringup-hawaii-common-jb_rev2
 		.v_table = bcm59039_ldo_v_table,
 		.num_voltages =
 			ARRAY_SIZE(bcm59039_ldo_v_table),
 		.ldo_or_sr = BCMPMU_LDO,
 		.onoff = 0xFF,
 	},
-<<<<<<< HEAD
-	[BCMPMU_REGULATOR_SIMLDO1] = {
-		.rdesc = &rdesc[BCMPMU_REGULATOR_SIMLDO1],
-		.reg_addr = PMU_REG_SIMLDO1PMCTRL1,
-		.reg_addr_volt = PMU_REG_SIMLDO1PMCTRL1,
-=======
 	[BCMPMU_REGULATOR_MICLDO] = {
 		.rdesc = &rdesc[BCMPMU_REGULATOR_MICLDO],
 		.reg_addr = PMU_REG_MICLDOPMCTRL1,
 		.reg_addr_volt = PMU_REG_MICLDOPMCTRL2,
 		/*Configure for C0 by default */
->>>>>>> Br-bringup-hawaii-common-jb_rev2
 		.v_table = bcm59039_ldo_v_table,
 		.num_voltages =
 			ARRAY_SIZE(bcm59039_ldo_v_table),
 		.ldo_or_sr = BCMPMU_LDO,
 		.onoff = 0xFF,
 	},
-<<<<<<< HEAD
-	[BCMPMU_REGULATOR_SIMLDO2] = {
-		.rdesc = &rdesc[BCMPMU_REGULATOR_SIMLDO2],
-		.reg_addr = PMU_REG_SIMLDO2PMCTRL1,
-		.reg_addr_volt = PMU_REG_SIMLDO2PMCTRL1,
-=======
 	[BCMPMU_REGULATOR_USBLDO] = {
 		.rdesc = &rdesc[BCMPMU_REGULATOR_USBLDO],
 		.reg_addr = PMU_REG_USBLDOPMCTRL1,
 		.reg_addr_volt = PMU_REG_USBLDOPMCTRL1,
->>>>>>> Br-bringup-hawaii-common-jb_rev2
 		.v_table = bcm59039_ldo_v_table,
 		.num_voltages =
 			ARRAY_SIZE(bcm59039_ldo_v_table),
 		.ldo_or_sr = BCMPMU_LDO,
 		.onoff = 0xFF,
 	},
-<<<<<<< HEAD
-
-	[BCMPMU_REGULATOR_SDLDO] = {
-		.rdesc = &rdesc[BCMPMU_REGULATOR_SDLDO],
-		.reg_addr = PMU_REG_SDLDOPMCTRL1,
-		.reg_addr_volt = PMU_REG_SDLDOPMCTRL1,
-		/*Configure for C0 by default */
-		.v_table = bcm59039_c0_sr_v_table,
-		.num_voltages =
-			ARRAY_SIZE(bcm59039_c0_sr_v_table),
-		.ldo_or_sr = BCMPMU_SR,
-		.onoff = 0xFF,
-	},
-	[BCMPMU_REGULATOR_SDXLDO] = {
-		.rdesc = &rdesc[BCMPMU_REGULATOR_SDXLDO],
-		.reg_addr = PMU_REG_SDXLDOPMCTRL1,
-		.reg_addr_volt = PMU_REG_SDXLDOPMCTRL1,
-		/*Configure for C0 by default */
-		.v_table = bcm59039_c0_sr_v_table,
-		.num_voltages =
-			ARRAY_SIZE(bcm59039_c0_sr_v_table),
-		.ldo_or_sr = BCMPMU_SR,
-		.onoff = 0xFF,
-	},
-	[BCMPMU_REGULATOR_MMCLDO1] = {
-		.rdesc = &rdesc[BCMPMU_REGULATOR_MMCLDO1],
-		.reg_addr = PMU_REG_MMCLDO1PMCTRL1,
-		.reg_addr_volt = PMU_REG_MMCLDO1PMCTRL1,
-		/*Configure for C0 by default */
-		.v_table = bcm59039_c0_sr_v_table,
-		.num_voltages =
-			ARRAY_SIZE(bcm59039_c0_sr_v_table),
-		.ldo_or_sr = BCMPMU_SR,
-		.onoff = 0xFF,
-	},
-	[BCMPMU_REGULATOR_AUDLDO] = {
-		.rdesc = &rdesc[BCMPMU_REGULATOR_AUDLDO],
-		.reg_addr = PMU_REG_AUDLDOPMCTRL1,
-		.reg_addr_volt = PMU_REG_AUDLDOPMCTRL1,
-		/*Configure for C0 by default */
-		.v_table = bcm59039_c0_sr_v_table,
-=======
 	[BCMPMU_REGULATOR_VIBLDO] = {
 		.rdesc =
 			&rdesc[BCMPMU_REGULATOR_VIBLDO],
@@ -592,39 +521,22 @@ bcmpmu59xxx_rglr_info[BCMPMU_REGULATOR_MAX] = {
 		.reg_addr = PMU_REG_GPLDO2PMCTRL1,
 		.reg_addr_volt = PMU_REG_GPLDO2PMCTRL2,
 		.v_table = bcm59039_ldo_v_table,
->>>>>>> Br-bringup-hawaii-common-jb_rev2
 		.num_voltages =
 			ARRAY_SIZE(bcm59039_ldo_v_table),
 		.ldo_or_sr = BCMPMU_LDO,
 		.onoff = 0xFF,
 	},
-<<<<<<< HEAD
-	[BCMPMU_REGULATOR_USBLDO] = {
-		.rdesc = &rdesc[BCMPMU_REGULATOR_USBLDO],
-		.reg_addr = PMU_REG_USBLDOPMCTRL1,
-		.reg_addr_volt = PMU_REG_USBLDOPMCTRL1,
-		.v_table = bcm59039_sr_v_table,
-=======
 	[BCMPMU_REGULATOR_GPLDO3] = {
 		.rdesc =
 			&rdesc[BCMPMU_REGULATOR_GPLDO3],
 		.reg_addr = PMU_REG_GPLDO3PMCTRL1,
 		.reg_addr_volt = PMU_REG_GPLDO3PMCTRL1,
 		.v_table = bcm59039_ldo_v_table,
->>>>>>> Br-bringup-hawaii-common-jb_rev2
 		.num_voltages =
 			ARRAY_SIZE(bcm59039_ldo_v_table),
 		.ldo_or_sr = BCMPMU_LDO,
 		.onoff = 0xFF,
 	},
-<<<<<<< HEAD
-	[BCMPMU_REGULATOR_VIBLDO] = {
-		.rdesc =
-			&rdesc[BCMPMU_REGULATOR_VIBLDO],
-		.reg_addr = PMU_REG_VIBLDOPMCTRL1,
-		.reg_addr_volt = PMU_REG_VIBLDOPMCTRL1,
-		.v_table = bcm59039_sr_v_table,
-=======
 	[BCMPMU_REGULATOR_LVLDO1] = {
 		.rdesc =
 			&rdesc[BCMPMU_REGULATOR_LVLDO1],
@@ -653,21 +565,14 @@ bcmpmu59xxx_rglr_info[BCMPMU_REGULATOR_MAX] = {
 		.reg_addr = PMU_REG_VSRPMCTRL1,
 		.reg_addr_volt = PMU_REG_VSRPMCTRL1,
 		.v_table = bcmpmu_vsr_v_table,
->>>>>>> Br-bringup-hawaii-common-jb_rev2
 		.num_voltages =
 			ARRAY_SIZE(bcmpmu_vsr_v_table),
 		.ldo_or_sr = BCMPMU_SR,
 		.onoff = 0xFF,
 	},
 
-<<<<<<< HEAD
 };
 
-=======
-
-};
-
->>>>>>> Br-bringup-hawaii-common-jb_rev2
 struct bcmpmu59xxx_regulator_info *bcmpmu59xxx_get_rgltr_info(struct bcmpmu59xxx
 							      *bcmpmu)
 {

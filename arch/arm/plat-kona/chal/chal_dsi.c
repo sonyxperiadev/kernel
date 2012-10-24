@@ -619,6 +619,7 @@ cBool chal_dsi_set_timing(CHAL_HANDLE handle,
 		}
 	}
 
+#if 0
 	for (i = 0; i < DSI_C_MAX; i++) {
 		if (pDsiC[i].timeBase == DSI_C_TIME_ESC2LPDT) {
 			chal_dprintf(CDBG_ERRO,
