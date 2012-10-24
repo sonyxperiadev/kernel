@@ -331,8 +331,17 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 
 static CSL_LCD_RES_T cslDsiAxipvStop(DSI_UPD_REQ_MSG_T *updMsg)
 {
-	/* For Video mode only */
-	/* In command mode, axipv and pv are automatically stopped */
+	struct axipv_config_t *axipvCfg = updMsg->dsiH->axipvCfg;
+	struct pv_config_t *pvCfg = updMsg->dsiH->pvCfg;
+
+	if (!axipvCfg)
+		pr_err("axipvCfg is NULL\n");
+	axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
+	if (!updMsg->dsiH->dispEngine) {
+		if (!pvCfg)
+			pr_err("pvCfg is NULL\n");
+		pv_change_state(PV_STOP_IMM, pvCfg);
+	}
 	return CSL_LCD_OK;
 }
 
@@ -1067,16 +1076,6 @@ static CSL_LCD_RES_T cslDsiWaitForInt(DSI_HANDLE dsiH, UInt32 tout_msec)
 		if (osRes == OSSTATUS_TIMEOUT) {
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
 				"ERR Timed Out!\n", __func__);
-			printk("cslDsiWaitForInt dsi_int_stat=0x%x,"
-			"dsi_int_en=0x%x dsi_stat=0x%x dmacs=0x%x dmati=0x%x,"
-			"dmaLen=0x%x dmadebug=0x%x\n",
-			readl(HW_IO_PHYS_TO_VIRT(0x3c200030)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c200034)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c200038)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c00A000)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c00A008)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c00A014)),
-			readl(HW_IO_PHYS_TO_VIRT(0x3c00A020)));
 			res = CSL_LCD_OS_TOUT;
 		} else {
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
@@ -1517,8 +1516,6 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 		goto exit_err;
 	}
 
-	printk("cm_in=0x%d cm_out=%d\n", dsiCmVcCfg->cm_in, dsiCmVcCfg->cm_out);
-
 	switch (dsiCmVcCfg->cm_in) {
 		/* 1x888 pixel per 32-bit word (MSB DontCare) */
 	case LCD_IF_CM_I_RGB888U:
@@ -1923,10 +1920,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 					"[CSL DSI][%d] %s: "
 					"ERR Timed Out Waiting For EOF DMA!\n",
 					dsiH->bus, __func__);
-					printk("int_stat=0x%x, int_en=0x%x\n\
-					stat=0x%x\n", readl(HW_IO_PHYS_TO_VIRT(0x3c200030)),
-					readl(HW_IO_PHYS_TO_VIRT(0x3c200034)),
-					readl(HW_IO_PHYS_TO_VIRT(0x3c200038)));
 					res = CSL_LCD_OS_TOUT;
 				} else {
 					LCD_DBG(LCD_DBG_ERR_ID,

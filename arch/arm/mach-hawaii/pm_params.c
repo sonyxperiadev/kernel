@@ -148,7 +148,6 @@ __weak const u8 *bcmpmu_get_sr_vlt_table (u32 silicon_type)
 	return swr_vlt_table;
 }
 
-
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 {
 	#if !defined (CONFIG_MACH_HAWAII_FPGA)

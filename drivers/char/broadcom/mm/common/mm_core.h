@@ -44,7 +44,7 @@ static inline void mm_core_add_job(dev_job_list_t* job, mm_core_t* core_dev)
 //	pr_debug("%x %x %x",&job->core_list,job->core_list.next,job->core_list.prev);
 	plist_add(&(job->core_list), &(core_dev->job_list));
 	job->added2core = true;
-	queue_work(core_dev->mm_common->single_wq, &(core_dev->job_scheduler));
+	if(core_dev->current_job==NULL) SCHEDULER_WORK(core_dev,&core_dev->job_scheduler);
 }
 
 static inline void mm_core_remove_job(dev_job_list_t* job, mm_core_t* core_dev)
@@ -76,7 +76,7 @@ static inline void mm_core_abort_job(dev_job_list_t* job, mm_core_t* core_dev)
 		pr_err("aborting hw in release\n");
 		hw_ifc->mm_abort(hw_ifc->mm_device_id,&job->job);
 		core_dev->current_job = NULL;
-		queue_work(core_dev->mm_common->single_wq, &(core_dev->job_scheduler));
+		SCHEDULER_WORK(core_dev,&core_dev->job_scheduler);
 		}
 }
 /*

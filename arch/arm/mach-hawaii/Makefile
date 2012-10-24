@@ -39,3 +39,5 @@ endif
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx), y)
 obj-y += board-bcm59xxx.o
 endif
+
+CFLAGS_dm.o :=$(call as-instr,.arch_extension sec,-DSMC_INSTR=1)

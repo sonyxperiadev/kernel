@@ -402,7 +402,7 @@ static void local_secure_api(unsigned service_id,
 				__asmeq("%1", "r4")
 				__asmeq("%2", "r5")
 				__asmeq("%3", "r6")
-#ifdef REQUIRES_SEC
+#ifdef SMC_INSTR
 				".arch_extension sec\n"
 #endif
 				"smc	#0	@ switch to secure world\n"
@@ -765,6 +765,7 @@ static int dormant_enter_continue(unsigned long data)
 			(cpu_resume+SZ_1K+PHYS_OFFSET-PAGE_OFFSET));
 #endif
 	disable_clean_inv_dcache_v7_l1();
+	write_actlr(read_actlr() & ~(0x40));
 
 	/* Let us always indicate the dormant mode to the SCU
 	 * the external power-controller sees what is in the bypass

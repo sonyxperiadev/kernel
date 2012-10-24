@@ -55,6 +55,12 @@
 
 #include "accel/mpu6050.h"
 
+#ifdef CONFIG_MFD_BCM_PMU59056
+#define CAM2_REGULATOR "camldo2_uc"
+#else
+#define CAM2_REGULATOR "cam2"
+#endif
+
 /* Platform data for the MPU */
 struct mpu_private_data {
 	struct miscdevice dev;
@@ -1125,7 +1131,6 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	struct mpu_platform_data *bcm_pdata;
 #endif
 
-  printk(KERN_INFO "inside mpu_probe");
 	dev_info(&client->adapter->dev, "%s: %d\n", __func__, ii++);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
@@ -1213,8 +1218,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	}
 
 #ifdef CONFIG_ARCH_KONA
-
-	mpu->regulator = regulator_get(&client->dev, "hv8");
+	mpu->regulator = regulator_get(&client->dev, CAM2_REGULATOR);
 	res = IS_ERR_OR_NULL(mpu->regulator);
 	if (res) {
 		dev_err(&client->adapter->dev, "can't get vdd regulator!\n");
@@ -1250,7 +1254,6 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	mpu->dev.minor = MISC_DYNAMIC_MINOR;
 	mpu->dev.name = "mpu";
 	mpu->dev.fops = &mpu_fops;
-  printk(KERN_INFO "it reaches just before misc_register(&mpu->dev)");
 	res = misc_register(&mpu->dev);
 	if (res < 0) {
 		dev_err(&client->adapter->dev,

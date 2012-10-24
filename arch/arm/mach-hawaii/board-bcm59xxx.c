@@ -34,11 +34,12 @@
 #include <plat/kona_avs.h>
 #endif
 #include "pm_params.h"
+#include <mach/rdb/brcm_rdb_include.h>
 
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0c
 #define PMU_DEVICE_INT_GPIO	29
-#define PMU_DEVICE_I2C_BUSNO 2
+#define PMU_DEVICE_I2C_BUSNO 4
 
 /*850 Mhz CSR voltage definitions....*/
 
@@ -202,6 +203,8 @@ static struct regulator_init_data bcm59xxx_simldo2_data = {
 
 __weak struct regulator_consumer_supply sd_supply[] = {
 	{.supply = "sd_vcc"},
+	REGULATOR_SUPPLY("vddmmc", "sdhci.3"), /* 0x3f1b0000.sdhci */
+	{.supply = "dummy"},
 };
 static struct regulator_init_data bcm59xxx_sdldo_data = {
 	.constraints = {
@@ -211,13 +214,14 @@ static struct regulator_init_data bcm59xxx_sdldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 1,
-
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sd_supply),
 	.consumer_supplies = sd_supply,
 };
 __weak struct regulator_consumer_supply sdx_supply[] = {
 	{.supply = "sdx_vcc"},
+	REGULATOR_SUPPLY("vddo", "sdhci.3"), /* 0x3f1b0000.sdhci */
+	{.supply = "dummy"},
 };
 static struct regulator_init_data bcm59xxx_sdxldo_data = {
 	.constraints = {
@@ -265,7 +269,7 @@ static struct regulator_init_data bcm59xxx_mmcldo2_data = {
 };
 
 __weak struct regulator_consumer_supply aud_supply[] = {
-	{.supply = "aud_vcc"},
+	{.supply = "audldo_uc"},
 };
 static struct regulator_init_data bcm59xxx_audldo_data = {
 	.constraints = {
@@ -297,7 +301,7 @@ static struct regulator_init_data bcm59xxx_usbldo_data = {
 };
 
 __weak struct regulator_consumer_supply mic_supply[] = {
-	{.supply = "mic_vcc"},
+	{.supply = "micldo_uc"},
 };
 static struct regulator_init_data bcm59xxx_micldo_data = {
 	.constraints = {
@@ -313,7 +317,7 @@ static struct regulator_init_data bcm59xxx_micldo_data = {
 };
 
 __weak struct regulator_consumer_supply vib_supply[] = {
-	{.supply = "vib_vcc"},
+	{.supply = "vibldo_uc"},
 };
 static struct regulator_init_data bcm59xxx_vibldo_data = {
 	.constraints = {
@@ -328,6 +332,101 @@ static struct regulator_init_data bcm59xxx_vibldo_data = {
 	.consumer_supplies = vib_supply,
 };
 
+__weak struct regulator_consumer_supply gpldo1_supply[] = {
+	{.supply = "gpldo1_uc"},
+};
+static struct regulator_init_data bcm59xxx_gpldo1_data = {
+	.constraints = {
+			.name = "gpldo1",
+			.min_uV = 1200000,
+			.max_uV = 3300000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(gpldo1_supply),
+	.consumer_supplies = gpldo1_supply,
+};
+
+__weak struct regulator_consumer_supply gpldo2_supply[] = {
+	{.supply = "gpldo2_uc"},
+};
+static struct regulator_init_data bcm59xxx_gpldo2_data = {
+	.constraints = {
+			.name = "gpldo2",
+			.min_uV = 1200000,
+			.max_uV = 3300000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(gpldo2_supply),
+	.consumer_supplies = gpldo2_supply,
+};
+
+__weak struct regulator_consumer_supply gpldo3_supply[] = {
+	{.supply = "gpldo3_uc"},
+};
+static struct regulator_init_data bcm59xxx_gpldo3_data = {
+	.constraints = {
+			.name = "gpldo3",
+			.min_uV = 1200000,
+			.max_uV = 3300000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(gpldo3_supply),
+	.consumer_supplies = gpldo3_supply,
+};
+
+__weak struct regulator_consumer_supply lvldo1_supply[] = {
+	{.supply = "lvldo1_uc"},
+};
+static struct regulator_init_data bcm59xxx_lvldo1_data = {
+	.constraints = {
+			.name = "lvldo1",
+			.min_uV = 1000000,
+			.max_uV = 1786000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(lvldo1_supply),
+	.consumer_supplies = lvldo1_supply,
+};
+
+__weak struct regulator_consumer_supply lvldo2_supply[] = {
+	{.supply = "lvldo2_uc"},
+};
+static struct regulator_init_data bcm59xxx_lvldo2_data = {
+	.constraints = {
+			.name = "lvldo2",
+			.min_uV = 1000000,
+			.max_uV = 1786000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 0,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(lvldo2_supply),
+	.consumer_supplies = lvldo2_supply,
+};
+
+__weak struct regulator_consumer_supply vsr_supply[] = {
+	{.supply = "vsr_uc"},
+};
+static struct regulator_init_data bcm59xxx_vsr_data = {
+	.constraints = {
+			.name = "vsrldo",
+			.min_uV = 860000,
+			.max_uV = 900000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 0,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(vsr_supply),
+	.consumer_supplies = vsr_supply,
+};
 
 struct bcmpmu59xxx_regulator_init_data
 bcm59xxx_regulators[BCMPMU_REGULATOR_MAX] = {
@@ -373,6 +472,24 @@ bcm59xxx_regulators[BCMPMU_REGULATOR_MAX] = {
 	},
 	[BCMPMU_REGULATOR_VIBLDO] = {
 		BCMPMU_REGULATOR_VIBLDO, &bcm59xxx_vibldo_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_GPLDO1] = {
+		BCMPMU_REGULATOR_GPLDO1, &bcm59xxx_gpldo1_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_GPLDO2] = {
+		BCMPMU_REGULATOR_GPLDO2, &bcm59xxx_gpldo2_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_GPLDO3] = {
+		BCMPMU_REGULATOR_GPLDO3, &bcm59xxx_gpldo3_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_LVLDO1] = {
+		BCMPMU_REGULATOR_LVLDO1, &bcm59xxx_lvldo1_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_LVLDO2] = {
+		BCMPMU_REGULATOR_LVLDO2, &bcm59xxx_lvldo2_data, 0x00, 0, 0x7
+	},
+	[BCMPMU_REGULATOR_VSR] = {
+		BCMPMU_REGULATOR_VSR, &bcm59xxx_vsr_data, 0x00, 0, 0x7
 	},
 };
 
@@ -514,6 +631,10 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.name = "bcmpmu_otg_xceiv",
 		.id = -1,
 	},
+	{
+		.name = "bcmpmu_charger",
+		.id = -1,
+	},
 };
 
 static struct i2c_board_info pmu_i2c_companion_info[] = {
@@ -555,33 +676,64 @@ int bcmpmu_get_pmu_mfd_cell(struct mfd_cell **pmu_cell)
 }
 EXPORT_SYMBOL(bcmpmu_get_pmu_mfd_cell);
 
-const u8 *bcmpmu_get_sr_vlt_table(int sr, u32 freq_inx,
-						u32 silicon_type)
+#define CSR_RETN_VAL_SS			0x4
+#define CSR_ECO_VAL_SS			0xF
+#define CSR_NM1_VAL_SS			0x13
+#define CSR_NM2_VAL_SS			0x1D
+#define CSR_TURBO_VAL_SS		0x34
+
+#define MSR_RETN_VAL_SS			0x4
+#define MSR_ECO_VAL_SS			0x10
+#define MSR_NM1_VAL_SS			0x10
+#define MSR_NM2_VAL_SS			0x1A
+#define MSR_TURBO_VAL_SS		0x24
+
+
+const u8 sr_vlt_table_ss[SR_VLT_LUT_SIZE] = {
+	INIT_LPM_VLT_IDS(MSR_RETN_VAL_SS, MSR_RETN_VAL_SS, MSR_RETN_VAL_SS),
+	INIT_A9_VLT_TABLE(CSR_ECO_VAL_SS, CSR_NM1_VAL_SS, CSR_NM2_VAL_SS,
+							CSR_TURBO_VAL_SS),
+	INIT_OTHER_VLT_TABLE(MSR_ECO_VAL_SS, MSR_NM1_VAL_SS, MSR_NM2_VAL_SS,
+							MSR_TURBO_VAL_SS),
+	INIT_UNUSED_VLT_IDS(MSR_RETN_VAL_SS)
+	};
+
+
+const u8 *bcmpmu_get_sr_vlt_table (u32 silicon_type)
 {
-	pr_info("%s:sr = %i, freq_inx = %d,"
-			"silicon_type = %d\n", __func__,
-			sr, freq_inx, silicon_type);
-
-	BUG_ON(freq_inx > A9_FREQ_850_MHZ);
-
+	pr_info("%s silicon_type = %d\n", __func__,
+			silicon_type);
 #ifdef CONFIG_KONA_AVS
 	switch (silicon_type) {
 	case SILICON_TYPE_SLOW:
-		return csr_vlt_table_ss;
+		return sr_vlt_table_ss;
 
 	case SILICON_TYPE_TYPICAL:
-		return csr_vlt_table_tt;
+		return sr_vlt_table_tt;
 
 	case SILICON_TYPE_FAST:
-		return csr_vlt_table_ff;
+		return sr_vlt_table_ff;
 
 	default:
 		BUG();
 	}
 #else
-	return csr_vlt_table_ss;
+	return sr_vlt_table_ss;
 #endif
 }
+
+void bcmpmu_set_pullup_reg(void)
+{
+	volatile u32 val1, val2;
+
+	val1 = readl(KONA_CHIPREG_VA + CHIPREG_SPARE_CONTROL0_OFFSET);
+	val2 = readl(KONA_PMU_BSC_VA + I2C_MM_HS_PADCTL_OFFSET);
+	val1 |= (1 << 20 | 1 << 22);
+	val2 |= (1 << I2C_MM_HS_PADCTL_PULLUP_EN_SHIFT);
+	writel(val1, KONA_CHIPREG_VA + CHIPREG_SPARE_CONTROL0_OFFSET);
+	/*      writel(val2, KONA_PMU_BSC_VA + I2C_MM_HS_PADCTL_OFFSET); */
+}
+
 
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu)
 {
@@ -600,6 +752,7 @@ int board_bcm59xx_init(void)
 	int             ret = 0;
 	int             irq;
 
+	bcmpmu_set_pullup_reg();
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu59xxx-irq");
 	if (ret < 0) {
 		printk(KERN_ERR "<%s> failed at gpio_request\n", __func__);

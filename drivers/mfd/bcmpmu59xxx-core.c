@@ -95,8 +95,13 @@ static ssize_t bcmpmu_debugfs_regread(struct file *file,
 
 	ret = bcmpmu->read_dev_bulk(bcmpmu, reg_enc,
 			  results, num_reg);
-	if (ret)
-		return ret;
+	if (ret < 0) {
+		pr_info("%s: read bulk failed\n", __func__);
+		/* even on failure we will return count, so
+		 * that sysfs does not attempt again
+		 */
+		return count;
+	}
 	for (i = 0; i < num_reg; i++, reg++)
 		pr_info("[%x] = %x\n", reg, results[i]);
 	return count;
@@ -134,8 +139,8 @@ static ssize_t bcmpmu_debugfs_regwrite(struct file *file,
 	reg_enc = ENC_PMU_REG(FIFO_MODE, map, reg);
 	ret = bcmpmu->write_dev(bcmpmu, reg_enc,
 			  (u8)value);
-	if (ret)
-		return ret;
+	if (ret < 0)
+		pr_info("%s: write bulk failed\n", __func__);
 	return count;
 }
 

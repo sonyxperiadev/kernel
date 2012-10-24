@@ -234,7 +234,10 @@ static void bcmpmu_set_gain(struct gain_ramp *ramp, u32 reg, u8 new_gain)
 void bcmpmu_hs_power(bool on)
 {
 	u8 val;
-	struct bcmpmu59xxx *bcmpmu = pmu_audio->bcmpmu;
+	struct bcmpmu59xxx *bcmpmu;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
 	pr_audio(FLOW, "%s: ON = %d\n", __func__, on);
 	mutex_lock(&pmu_audio->lock);
 
@@ -253,9 +256,11 @@ EXPORT_SYMBOL(bcmpmu_hs_power);
 
 void bcmpmu_hs_shortcircuit_dis(bool disable)
 {
-	struct bcmpmu59xxx *bcmpmu = pmu_audio->bcmpmu;
+	struct bcmpmu59xxx *bcmpmu;
 	u8 val;
-
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
 	mutex_lock(&pmu_audio->lock);
 	bcmpmu->read_dev(bcmpmu, PMU_REG_HSDRV, &val);
 
@@ -272,11 +277,14 @@ EXPORT_SYMBOL(bcmpmu_hs_shortcircuit_dis);
 
 int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 {
-	struct bcmpmu59xxx *bcmpmu = pmu_audio->bcmpmu;
+	struct bcmpmu59xxx *bcmpmu;
 	u8 temp;
 	u32 data1, data2, data3;
 	int ret = 0;
 	int HSwasEn = 0;
+	if (!pmu_audio)
+		return -ENODEV;
+	bcmpmu = pmu_audio->bcmpmu;
 	pr_audio(FLOW, "Inside %s, HSgain %d, HSInputmode %d\n",
 			__func__, HSgain, HSInputmode);
 
@@ -381,6 +389,8 @@ void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, u32 gain)
 		.table = hs_gain_steps,
 		.size = hs_gain_nsteps,
 	};
+	if (!pmu_audio)
+		return;
 	pr_audio(FLOW, "%s: path = %d, gain = %d\n", __func__, path, gain);
 
 	mutex_lock(&pmu_audio->lock);
@@ -398,7 +408,10 @@ EXPORT_SYMBOL(bcmpmu_hs_set_gain);
 static void bcmpmu_ihf_manual_power(bool on)
 {
 	u8 temp;
-	struct bcmpmu59xxx *bcmpmu = pmu_audio->bcmpmu;
+	struct bcmpmu59xxx *bcmpmu;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
 	pr_audio(FLOW, "%s: ON = %d\n", __func__, on);
 
 	mutex_lock(&pmu_audio->lock);
@@ -581,8 +594,11 @@ static void bcmpmu_ihf_manual_power(bool on)
 */
 void bcmpmu_ihf_power(bool on)
 {
-	struct bcmpmu59xxx *bcmpmu = pmu_audio->bcmpmu;
+	struct bcmpmu59xxx *bcmpmu;
 	u8 temp;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
 	pr_audio(FLOW, "%s: ON = %d\n", __func__, on);
 	if (pmu_audio->ihf_autoseq_dis) {
 		bcmpmu_ihf_manual_power(on);
@@ -644,8 +660,11 @@ EXPORT_SYMBOL(bcmpmu_ihf_power);
 /*
 void bcmpmu_ihf_bypass_en(bool enable)
 {
-	struct bcmpmu59xxx *bcmpmu = pmu_audio->bcmpmu;
+	struct bcmpmu59xxx *bcmpmu;
 	int val;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
 	mutex_lock(&pmu_audio->lock);
 
 	if (enable)
@@ -665,6 +684,8 @@ void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain)
 		.table = ihf_gain_steps,
 		.size = ihf_gain_nsteps,
 	};
+	if (!pmu_audio)
+		return;
 	pr_audio(FLOW, "%s: gain = %d\n", __func__, gain);
 
 	mutex_lock(&pmu_audio->lock);
@@ -675,8 +696,11 @@ EXPORT_SYMBOL(bcmpmu_ihf_set_gain);
 
 void bcmpmu_hi_gain_mode_en(bool en)
 {
-	struct bcmpmu59xxx *bcmpmu = pmu_audio->bcmpmu;
+	struct bcmpmu59xxx *bcmpmu;
 	u8 val;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
 	pr_audio(FLOW, "%s: hi gain enabled = %d\n", __func__, en);
 
 	bcmpmu->read_dev(bcmpmu, PMU_REG_HIGH_GAIN_MODE, &val);
@@ -690,12 +714,16 @@ EXPORT_SYMBOL(bcmpmu_hi_gain_mode_en);
 
 BCMPMU_Audio_HS_Param bcmpmu_get_hs_param_from_audio_driver(void)
 {
+	if (!pmu_audio)
+		return;
 	return headset_param_set_from_audio_driver;
 }
 EXPORT_SYMBOL(bcmpmu_get_hs_param_from_audio_driver);
 
 void bcmpmu_audio_driver_set_hs_param(BCMPMU_Audio_HS_Param hs_param)
 {
+	if (!pmu_audio)
+		return;
 	headset_param_set_from_audio_driver = hs_param;
 }
 EXPORT_SYMBOL(bcmpmu_audio_driver_set_hs_param);
@@ -792,7 +820,10 @@ void bcmpmu_audio_hs_selftest_backup(bool Enable)
 void bcmpmu_audio_init(void)
 {
 	u8 val;
-	struct bcmpmu59xxx *bcmpmu = pmu_audio->bcmpmu;
+	struct bcmpmu59xxx *bcmpmu;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
 	pr_audio(FLOW, "%s: - pll_use_count = %u\n",
 			__func__, pmu_audio->pll_use_count);
 	mutex_lock(&pmu_audio->lock);
@@ -853,7 +884,10 @@ EXPORT_SYMBOL(bcmpmu_audio_init);
 void bcmpmu_audio_deinit(void)
 {
 	u8 val;
-	struct bcmpmu59xxx *bcmpmu = pmu_audio->bcmpmu;
+	struct bcmpmu59xxx *bcmpmu;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
 	pr_audio(FLOW, "%s: - pll_use_count = %u\n",
 			__func__, pmu_audio->pll_use_count);
 	mutex_lock(&pmu_audio->lock);

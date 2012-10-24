@@ -30,6 +30,12 @@
 static struct regulator *regulator;
 #endif
 
+#ifdef CONFIG_MFD_BCM_PMU59056
+#define CAM2_REGULATOR "camldo2_uc"
+#else
+#define CAM2_REGULATOR "cam2"
+#endif
+
 #define BMP_ERROR(fmt, args...)   printk(KERN_ERR "%s, " fmt, __func__, ## args)
 #define BMP_INFO(fmt, args...)   printk(KERN_INFO "%s, " fmt, __func__, ## args)
 #define BMP_DEBUG(fmt, args...) \
@@ -82,7 +88,7 @@ static int __devinit bmp18x_i2c_probe(struct i2c_client *client,
 	}
 
 #ifdef CONFIG_ARCH_KONA
-	regulator = regulator_get(&client->dev, "hv8");
+	regulator = regulator_get(&client->dev, CAM2_REGULATOR);
 	err = IS_ERR_OR_NULL(regulator);
 	if (err) {
 		regulator = NULL;

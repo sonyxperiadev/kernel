@@ -265,8 +265,6 @@ CHAL_HANDLE chal_dsi_init(cUInt32 baseAddr, pCHAL_DSI_INIT dsiInit)
 	struct CHAL_DSI *pDev = NULL;
 	cUInt32 i;
 
-	chal_dprintf(CDBG_INFO, "chal_dsi_init\n");
-
 	if (dsiInit->dlCount > DSI_DL_COUNT) {
 		chal_dprintf(CDBG_ERRO,
 			     "ERROR: chal_dsi_init: DataLine Count\n");
@@ -644,7 +642,7 @@ cBool chal_dsi_set_timing(CHAL_HANDLE handle,
 
 	chal_dprintf(CDBG_ERRO, "[cHAL DSI] chal_dsi_set_timing: "
 		     "LP_DATA_RATE %u[kbps]\n\r", lp_clk_khz / 2);
-
+#endif
 	/* set ESC 2 LPDT ratio */
 	BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_PHYC,
 			     ESC_CLK_LPDT, pDsiC[DSI_C_ESC2LP_RATIO].counter);

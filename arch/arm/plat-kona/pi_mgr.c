@@ -1044,8 +1044,6 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node *node, u32 pi_id,
 				__pi_disable(pi);
 			}
 		}
-		if (pi->flags & UPDATE_PM_QOS)
-			pm_qos_update_request(&pi->pm_qos, new_val);
 
 		pi_change_notify(pi->id, PI_NOTIFY_QOS_CHANGE,
 				 old_val, new_val, PI_POSTCHANGE);
@@ -1054,6 +1052,10 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node *node, u32 pi_id,
 	pi_dbg(pi->id, PI_LOG_QOS, "%s:%s state allowed = %d\n", __func__,
 	       pi->name, pi->state_allowed);
 	spin_unlock_irqrestore(&pi->lock, flgs);
+	/*We can't invoke pm_qos_update_request from intr disabled
+	context*/
+	if (pi->flags & UPDATE_PM_QOS && old_val != new_val)
+			pm_qos_update_request(&pi->pm_qos, new_val);
 	return new_val;
 }
 

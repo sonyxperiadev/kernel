@@ -226,6 +226,15 @@ extern int hawaii_wifi_status_register(
 	.port_name = uart_name,					\
 }
 
+#ifdef CONFIG_VIDEO_ADP1653
+#define ADP1653_I2C_ADDR 0x60
+static struct i2c_board_info adp1653_flash[] = {
+	{
+		I2C_BOARD_INFO("adp1653",(ADP1653_I2C_ADDR >> 1))
+	},
+};
+#endif
+
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 
 #define OV5640_I2C_ADDRESS (0x3C)
@@ -274,8 +283,8 @@ static int rhea_camera_power(struct device *dev, int on)
 			return -1;
 		}
 		if(gpio_request_one(SENSOR_0_GPIO_PWRDN, GPIOF_DIR_OUT |
-			GPIOF_INIT_LOW,"CamRst")){
-			printk(KERN_ERR"Unable to get RST GPIO\n");
+			GPIOF_INIT_LOW,"CamPWDN")){
+			printk(KERN_ERR"Unable to get PWDN GPIO\n");
 			return -1;
 		}
 	}
@@ -634,6 +643,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
+	&hawaii_camera_device,
 	&hawaii_camera_back,
 	&hawaii_camera_front,
 #endif
@@ -811,7 +821,6 @@ static struct i2c_board_info __initdata i2c_ami306_info[] =
 	{
 		I2C_BOARD_INFO(AMI_DRV_NAME, AMI_I2C_ADDRESS),
 		.platform_data = &ami306_data,
-		.irq =  gpio_to_irq(3),
 	},
 };
 #endif
@@ -1232,7 +1241,7 @@ static struct platform_pwm_backlight_data bcm_backlight_data = {
 	.max_brightness	= 32,   /* Android calibrates to 32 levels*/
 	.dft_brightness	= 32,
 	.polarity	= 1,    /* Inverted polarity */
-	.pwm_period_ns	=  5000000,
+	.pwm_period_ns	= 1000000,
 };
 
 static struct platform_device bcm_backlight_devices = {
@@ -1475,6 +1484,9 @@ static struct platform_device *hawaii_devices[] __initdata = {
 static void __init hawaii_add_i2c_devices(void)
 {
 
+#ifdef CONFIG_VIDEO_ADP1653
+	i2c_register_board_info(0, adp1653_flash, ARRAY_SIZE(adp1653_flash));
+#endif
 #ifdef CONFIG_TOUCHSCREEN_TANGO
 	i2c_register_board_info(3, tango_info, ARRAY_SIZE(tango_info));
 #endif

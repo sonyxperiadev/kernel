@@ -40,7 +40,7 @@
 				[VLT_ID_A9_NORMAL1] = nm1, \
 				[VLT_ID_A9_NORMAL2] = nm2, \
 				[VLT_ID_A9_TURBO] = turbo
-				
+
 #define INIT_OTHER_VLT_TABLE(eco , nm1, nm2 , turbo) \
 				[VLT_ID_OTHER_ECO] = eco, \
 				[VLT_ID_OTHER_NORMAL1] = nm1, \
@@ -51,13 +51,13 @@
 				[VLT_ID_OFF]	= off, \
 				[VLT_ID_RETN]	= ret, \
 				[VLT_ID_WAKEUP]	= wakeup
-				
+
 #define INIT_UNUSED_VLT_IDS(init_val) \
-				[0x3] = 	init_val, \
-				[0x4] = 	init_val, \
-				[0x5] = 	init_val, \
-				[0x6] = 	init_val, \
-				[0x7] = 	init_val
+				[0x3] =		init_val, \
+				[0x4] =		init_val, \
+				[0x5] =		init_val, \
+				[0x6] =		init_val, \
+				[0x7] =		init_val
 
 #define PROC_CCU_FREQ_ID_ECO	3
 #define PROC_CCU_FREQ_ID_NRML	6

@@ -47,7 +47,7 @@ int mm_prof_notification_handler(struct notifier_block* block,unsigned long para
 static void prof_timeout_callback (unsigned long data)
 {
 	mm_prof_t *mm_prof = (mm_prof_t *)data;
-	queue_work(mm_prof->mm_common->single_wq, &(mm_prof->prof_work));
+	SCHEDULER_WORK(mm_prof, &(mm_prof->prof_work));
 }
 
 static void prof_work(struct work_struct* work)
@@ -126,7 +126,7 @@ void mm_prof_update_handler(struct work_struct* work)
 				max = 600;
 				if(param > max) pr_err("Enter value <= %u ",max);
 				else mm_prof->T1 = param;
-				queue_work(mm_prof->mm_common->single_wq, &(mm_prof->prof_work));
+				SCHEDULER_WORK(mm_prof, &(mm_prof->prof_work));
 				break;
 			default:
 				pr_err("Not Supported at this time");

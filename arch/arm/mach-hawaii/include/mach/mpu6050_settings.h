@@ -37,17 +37,16 @@
 #endif
 
 /*
- *  Correction for the mount position of MPU6050 sensor on Hawaii.
- *  For x y
- *  For y reverse x
- *  For z z
+ * Correction for the mount position of MPU6050 sensor on RheaStone.
+ * For x reverse x
+ * For y y
+ * For z reverse z
  */
-
 #define MPU6050_DRIVER_ACCEL_GYRO_ORIENTATION \
 { \
-	 0, 1, 0, \
-	-1, 0, 0, \
-	 0, 0, 1, \
+	        -1, 0, 0, \
+	         0, 1, 0, \
+	         0, 0, -1, \
 }
 
 #define MPU6050_DRIVER_COMPASS_ORIENTATION \
