@@ -316,7 +316,10 @@ int enter_dormant_state(struct kona_idle_state *state)
 {
 #ifdef CONFIG_A9_DORMANT_MODE
 	if (dormant_enable != 0) {
-		dormant_enter(DORMANT_CORE_DOWN);
+		if (state->flags & CPUIDLE_ENTER_SUSPEND)
+			dormant_enter(DORMANT_CLUSTER_DOWN);
+		else
+			dormant_enter(DORMANT_CORE_DOWN);
 	} else {
 		enter_wfi();
 	}
