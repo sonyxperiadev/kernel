@@ -71,6 +71,8 @@ static u32 log_mask;
 static u32 dormant_enable;
 static int force_sleep;
 
+static DEFINE_SPINLOCK(pm_idle_lock);
+
 #define CHIPREG_PERIPH_SPARE_CONTROL2    \
 	(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET)
 
@@ -322,48 +324,6 @@ int enter_dormant_state(struct kona_idle_state *state)
 	return 0;
 }
 
-static int enter_retention_state(struct kona_idle_state *state)
-{
-	u32 sctlr[CONFIG_NR_CPUS];
-	u32 actlr[CONFIG_NR_CPUS];
-	int cpu;
-
-	/*per CPU access to clear/inv D$ */
-	cpu = get_cpu();
-	sctlr[cpu] = read_sctlr();
-	put_cpu();
-	disable_clean_inv_dcache_v7_l1();
-	cpu = get_cpu();
-	actlr[cpu] = read_actlr();
-	put_cpu();
-	write_actlr(read_actlr() & ~A9_SMP_BIT);
-
-	scu_set_power_mode(SCU_STATUS_DORMANT);
-	/*CHIREGS:PERIPH_SPARE_CONTROL2:PWRCTLx_BYPASS bits are
-	 * added for configuring low power modes. Hence these bits
-	 * also needs to be configured along with the POWER_STATUS
-	 * register in SCU.
-	 */
-	set_spare_power_status(SCU_STATUS_DORMANT);
-	if (RETENTION_TRACE_ENABLE)
-		instrument_retention(TRACE_ENTRY);
-
-	enter_wfi();
-
-	if (RETENTION_TRACE_ENABLE)
-		instrument_retention(TRACE_EXIT);
-
-	set_spare_power_status(SCU_STATUS_NORMAL);
-
-	/*perCpu config D$ */
-	cpu = get_cpu();
-	write_actlr(actlr[cpu]);
-	write_sctlr(sctlr[cpu]);
-	put_cpu();
-
-	return 0;
-}
-
 int disable_all_interrupts(void)
 {
 	if (force_sleep) {
@@ -382,6 +342,61 @@ int disable_all_interrupts(void)
 		writel(0xFFFFFFFF, KONA_GICDIST_VA +
 				GICDIST_ENABLE_CLR7_OFFSET);
 	}
+	return 0;
+}
+
+static u32 sctlr[CONFIG_NR_CPUS];
+static u32 actlr[CONFIG_NR_CPUS];
+static u32 ncores_in_retention;
+
+u32 num_cpus(void)
+{
+	return (readl(KONA_SCU_VA + SCU_CONFIG_OFFSET) &
+		SCU_CONFIG_NUM_CPUS_MASK) + 1;
+}
+
+static int enter_retention_state(struct kona_idle_state *state)
+{
+	unsigned long flags;
+
+	sctlr[smp_processor_id()] = read_sctlr();
+	actlr[smp_processor_id()] = read_actlr();
+
+	spin_lock_irqsave(&pm_idle_lock, flags);
+
+	ncores_in_retention++;
+	/* This is the last core trying to enter into retention */
+	if (ncores_in_retention == num_cpus())
+		set_spare_power_status(SCU_STATUS_DORMANT);
+
+	spin_unlock_irqrestore(&pm_idle_lock, flags);
+
+	disable_clean_inv_dcache_v7_l1();
+	write_actlr(read_actlr() & ~(A9_SMP_BIT));
+
+	writeb_relaxed(SCU_STATUS_DORMANT,
+		       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET +
+		       smp_processor_id());
+
+	wfi();
+
+	writeb_relaxed(SCU_STATUS_NORMAL,
+		       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET +
+		       smp_processor_id());
+
+	write_sctlr(sctlr[smp_processor_id()]);
+	write_actlr(actlr[smp_processor_id()]);
+
+	spin_lock_irqsave(&pm_idle_lock, flags);
+
+	/* This is the first core trying to come out of retention */
+	if (ncores_in_retention == num_cpus())
+		set_spare_power_status(SCU_STATUS_NORMAL);
+
+	if (ncores_in_retention)
+		ncores_in_retention--;
+
+	spin_unlock_irqrestore(&pm_idle_lock, flags);
 	return 0;
 }
 

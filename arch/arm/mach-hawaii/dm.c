@@ -275,15 +275,6 @@ static void save_proc_clk_regs(void)
 }
 
 /*
- * Function to return the number of CPUs
- */
-static u32 num_cpus(void)
-{
-	return (readl(KONA_SCU_VA + SCU_CONFIG_OFFSET) &
-		SCU_CONFIG_NUM_CPUS_MASK) + 1;
-}
-
-/*
  * Function to identify weather l2 controller is off
  */
 static u32 is_l2_disabled(void)
