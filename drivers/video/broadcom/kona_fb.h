@@ -1,7 +1,7 @@
 #ifndef __KONA_FB_H__
 #define __KONA_FB_H__
 
-#ifdef kona_FB_DEBUG
+#ifdef KONA_FB_DEBUG
 #define konafb_debug(fmt, arg...)	\
 	printk(KERN_INFO"%s:%d " fmt, __func__, __LINE__, ##arg)
 #else

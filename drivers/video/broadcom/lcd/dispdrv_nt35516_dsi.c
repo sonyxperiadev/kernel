@@ -140,10 +140,12 @@ typedef struct {
 	DISPDRV_INFO_T		*disp_info;
 } NT35516_PANEL_t;
 
+#if 0
 /* LOCAL FUNCTIONs */
 static void NT35516_WrCmndP0(
 	DISPDRV_HANDLE_T drvH,
 	UInt32 reg);
+#endif
 
 /* DRV INTERFACE FUNCTIONs */
 static Int32 NT35516_Init(
@@ -238,8 +240,11 @@ CSL_DSI_CM_VC_t NT35516_VCCmCfg = {
 	LCD_IF_CM_O_RGB888,		/* cm_out */
 	/* TE configuration */
 	{
-		DSI_TE_CTRLR_INPUT_0,/* DSI Te Inputi Type */
-		/*DSI_TE_NONE, *//* DSI Te Input Type */
+#ifdef CONFIG_VIDEO_MODE
+		DSI_TE_NONE, /* DSI Te Input Type */
+#else
+		DSI_TE_CTRLR_INPUT_0, /* DSI Te Inputi Type */
+#endif
 	},
 };
 
@@ -255,7 +260,11 @@ CSL_DSI_CFG_t NT35516_dsiCfg = {
 #if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
 	{1000, 1},
 #else
+#ifdef CONFIG_VIDEO_MODE
+	{1000, 3},	/* hsBitClk PLL 1000[MHz], DIV by 3 = 333[Mbps]	*/
+#else
 	{1000, 2},	/* hsBitClk PLL 1000[MHz], DIV by 2 = 500[Mbps]	*/
+#endif
 #endif
 
 	/* LP Speed */
@@ -267,8 +276,13 @@ CSL_DSI_CFG_t NT35516_dsiCfg = {
 	TRUE,		/* enaHsTxEotPkt */
 	FALSE,		/* enaLpTxEotPkt */
 	FALSE,		/* enaLpRxEotPkt */
+#ifdef CONFIG_VIDEO_MODE
+	0,		/* dispEngine */
+	0,		/* pixTxporter */
+#else
 	1,		/* dispEngine */
 	0,		/* pixTxporter */
+#endif
 };
 
 
@@ -336,9 +350,15 @@ static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
 	DISPCTRL_REC_T cmd_list[] = {
 		{DISPCTRL_WR_CMND, NT35516_CMD_SLPOUT, 0},
 		{DISPCTRL_SLEEP_MS, 0, 120},
+#ifndef CONFIG_VIDEO_MODE
 		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_COLMOD, 0x77},
-		/*{DISPCTRL_WR_CMND, NT35516_CMD_DISPON, 0},*/
+#endif
+#ifdef CONFIG_VIDEO_MODE
+		{DISPCTRL_WR_CMND, NT35516_CMD_DISPON, 0},
+#endif
+#ifndef CONFIG_VIDEO_MODE
 		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_TEON, 0x0},
+#endif
 		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_MAUCCTR, 0x55},
 		{DISPCTRL_WR_DATA, 0, 0xAA},
 		{DISPCTRL_WR_DATA, 0, 0x52},
@@ -347,9 +367,11 @@ static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
 		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_DOPCTR, 0xFC},
 		{DISPCTRL_WR_DATA, 0, 0x00},
 		{DISPCTRL_WR_DATA, 0, 0x00},
+#ifndef CONFIG_VIDEO_MODE
 		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_STESL, (TE_SCAN_LINE &
 		0xFF00) >> 16},
 		{DISPCTRL_WR_DATA, 0, (TE_SCAN_LINE & 0xFF)},
+#endif
 		{DISPCTRL_LIST_END, 0, 0},
 	};
 #endif
@@ -399,7 +421,7 @@ static int NT35516_TeOff(NT35516_PANEL_t *pPanel)
 	return res;
 }
 
-
+#if 0
 /*
  *
  *   Function Name: NT35516_WrCmndP0
@@ -428,52 +450,7 @@ static void NT35516_WrCmndP0(
 
 	CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 }
-
-/*
- *
- *   Function Name: NT35516_ReadReg
- *
- *   Description:   DSI Read Reg
- *
- */
-static int NT35516_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg)
-{
-	NT35516_PANEL_t		*pPanel	= (NT35516_PANEL_t *)drvH;
-	CSL_DSI_CMND_t msg;
-	CSL_DSI_REPLY_t rxMsg;	    /* DSI RX message */
-	UInt8 txData[1];  /* DCS Rd Command */
-	UInt8 rxBuff[1];  /* Read Buffer    */
-	Int32 res = 0;
-	CSL_LCD_RES_T cslRes;
-
-	msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
-	msg.msg	       = &txData[0];
-	msg.msgLen     = 1;
-	msg.vc	       = NT35516_VC;
-	msg.isLP       = FALSE;
-	msg.isLong     = FALSE;
-	msg.endWithBta = TRUE;
-
-	rxMsg.pReadReply = (UInt8 *)&rxBuff[0];
-	msg.reply	 = (CSL_DSI_REPLY_t *)&rxMsg;
-
-	txData[0] = reg;
-	cslRes = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
-	if ((cslRes != CSL_LCD_OK) ||
-		((rxMsg.type & DSI_RX_TYPE_READ_REPLY) == 0)) {
-
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERR"
-			"Reading From Reg[0x%08X]\n\r",
-			__func__, reg);
-		res = -1;
-	} else {
-		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	 OK"
-			"Reg[0x%08X] Val[0x%08X]\n\r",
-			__func__, reg, rxBuff[0]);
-	}
-
-	return res;
-}
+#endif
 
 /*
  *
@@ -493,6 +470,9 @@ Int32 NT35516_WinSet(
 	CSL_DSI_REPLY_t rxMsg;
 	UInt8 rx_buff[8];
 
+#ifdef CONFIG_VIDEO_MODE
+	return 0;
+#endif
 	if ((pPanel->win_cur.l != p_win->l) ||
 	    (pPanel->win_cur.r != p_win->r) ||
 	    (pPanel->win_cur.t != p_win->t) ||
@@ -546,7 +526,6 @@ Int32 NT35516_WinReset(DISPDRV_HANDLE_T drvH)
 	Int32 res;
 	NT35516_PANEL_t *pPanel = (NT35516_PANEL_t *) drvH;
 
-	printk("%s\n", __func__);
 	res = NT35516_WinSet(drvH, TRUE, &pPanel->win_dim);
 	return res;
 }
@@ -562,11 +541,16 @@ static void NT35516_reset(DISPDRV_HANDLE_T drvH, Boolean on)
 {
 	NT35516_PANEL_t *pPanel = (NT35516_PANEL_t *) drvH;
 
-	int reset_active = 0;
+	int ret, reset_active = 0;
 
 	if (!on) {
-		NT35516_LOG(LCD_DBG_ERR_ID, "Resetting the panel\n");
-		gpio_request(pPanel->rst_panel_reset, "LCD_RST1");
+		NT35516_LOG(LCD_DBG_ERR_ID, "Resetting the panel gpio=%d\n",
+			pPanel->rst_panel_reset);
+		ret = gpio_request(pPanel->rst_panel_reset, "LCD_RST");
+		if (ret < 0) {
+			NT35516_LOG(LCD_DBG_ERR_ID, "gpio_request failed!\n");
+			return;
+		}
 		gpio_direction_output(pPanel->rst_panel_reset, !reset_active);
 		udelay(5);
 		gpio_set_value_cansleep(pPanel->rst_panel_reset, reset_active);
@@ -1074,6 +1058,9 @@ Int32 NT35516_PowerControl(
 	case CTRL_SCREEN_OFF:
 		switch (pPanel->pwrState) {
 		case STATE_SCREEN_ON:
+#ifdef CONFIG_VIDEO_MODE
+			CSL_DSI_Suspend(pPanel->dsiCmVcHandle);
+#endif
 			NT35516_panel_off(pPanel);
 
 			pPanel->pwrState = STATE_SCREEN_OFF;
@@ -1173,7 +1160,7 @@ Int32 NT35516_GetDispDrvFeatures(
 	if ((NULL != driver_name)   && (NULL !=	version_major) &&
 	    (NULL != version_minor) && (NULL !=	flags))	{
 
-		*driver_name   = "UPD60801 (IN:RG565 OUT:RGB565)";
+		*driver_name   = "NT35516 (IN:ARG888 OUT:RGB888)";
 		*version_major = 0;
 		*version_minor = 15;
 		*flags	       = DISPDRV_SUPPORT_NONE;
@@ -1255,7 +1242,9 @@ Int32 NT35516_Update(
 	req.lineCount	= p_win->h;
 	req.xStrideB	= pPanel->disp_info->width - p_win->w;
 	req.buffBpp	= pPanel->disp_info->Bpp;
-#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
+#ifdef CONFIG_VIDEO_MODE
+	req.timeOut_ms = MAX_SCHEDULE_TIMEOUT;
+#elif defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
 	req.timeOut_ms	= 2000;
 #else
 	req.timeOut_ms	= 200;
@@ -1274,7 +1263,11 @@ Int32 NT35516_Update(
 	else
 		req.cslLcdCb = NULL;
 
+#ifndef CONFIG_VIDEO_MODE
 	if (CSL_DSI_UpdateCmVc(pPanel->dsiCmVcHandle, &req, pPanel->isTE)
+#else
+	if (CSL_DSI_UpdateVmVc(pPanel->dsiCmVcHandle, &req)
+#endif
 		!= CSL_LCD_OK)	{
 		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR ret by "
 			"CSL_DSI_UpdateCmVc\n\r", __func__);

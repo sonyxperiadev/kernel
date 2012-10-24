@@ -197,6 +197,7 @@ typedef struct {
 	Semaphore_t semaInt;
 	Semaphore_t semaDma;
 	Semaphore_t semaAxipv;
+	Semaphore_t semaPV;
 #ifdef UNDER_LINUX
 	irq_handler_t lisr;
 #else
@@ -223,6 +224,7 @@ typedef struct {
 	UInt32 pixTxporter;	/* Pixel Transporter- 0=AXIPV / 1=MMDMA
 					:Corresponds to the module which
 					fetches pixels and feeds DSI*/
+	UInt32 dlCount;		/* No. of data lanes*/
 } DSI_HANDLE_t, *DSI_HANDLE;
 
 typedef struct {
@@ -239,6 +241,7 @@ typedef enum {
 } DSI_LDO_STATE_t;
 
 static DSI_HANDLE_t dsiBus[DSI_INST_COUNT];
+static int videoEnabled;
 static void cslDsiEnaIntEvent(DSI_HANDLE dsiH, UInt32 intEventMask);
 static CSL_LCD_RES_T cslDsiWaitForStatAny_Poll(DSI_HANDLE dsiH, UInt32 mask,
 		UInt32 *intStat, UInt32 tout_msec);
@@ -294,8 +297,6 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 	axipvCfg->width = (updMsg->updReq.lineLenP +
 				updMsg->updReq.xStrideB) * 4;
 	axipvCfg->height = updMsg->updReq.lineCount;
-	axipvCfg->pix_fmt = AXIPV_PIXEL_FORMAT_24BPP_RGB;
-
 
 	axipvCfg->buff.sync.addr = (u32) updMsg->updReq.buff;
 	axipvCfg->buff.sync.xlen = updMsg->updReq.lineLenP * 4;
@@ -313,18 +314,13 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 	if (OSSTATUS_SUCCESS != OSSEMAPHORE_Obtain(updMsg->dsiH->semaAxipv,
 		TICKS_IN_MILLISECONDS(100))) {
 		pr_err("Timed out waiting for PV_START_THRESH interrupt\n");
+		axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
 		return CSL_LCD_ERR;
 	}
-#if 0
-		printk("Using AXIPV path, enable dsi\n");
-		chal_dsi_tx_start(updMsg->dsiH->chalH, TX_PKT_ENG_2, TRUE);
-		mb();
-		chal_dsi_tx_start(updMsg->dsiH->chalH, TX_PKT_ENG_1, TRUE);
-#endif
-
-	if (!updMsg->dsiH->dispEngine) {
+	if (axipvCfg->cmd == false)
+		chal_dsi_de0_enable(updMsg->dsiH->chalH, TRUE);
+	if (!updMsg->dsiH->dispEngine)
 		pv_change_state(PV_START, pvCfg);
-	}
 
 	return CSL_LCD_OK;
 }
@@ -353,6 +349,10 @@ void cslDsiAxipvPollInt(DSI_UPD_REQ_MSG_T *updMsg)
 static void axipv_irq_cb(int stat)
 {
 	DSI_HANDLE dsiH = &dsiBus[0];
+#ifdef CONFIG_VIDEO_MODE
+	if (stat & AXIPV_DISABLED_INT)
+		OSSEMAPHORE_Release(dsiH->semaAxipv);
+#endif
 	if (stat & PV_START_THRESH_INT)
 		OSSEMAPHORE_Release(dsiH->semaAxipv);
 }
@@ -370,7 +370,8 @@ static void pv_err_cb(int err)
 
 static void pv_eof_cb()
 {
-	pr_info("pv end of frame\n");
+	DSI_HANDLE dsiH = &dsiBus[0];
+	OSSEMAPHORE_Release(dsiH->semaPV);
 }
 
 /*
@@ -537,6 +538,7 @@ static void cslDsi0UpdateTask(void)
 			cslDsiPixTxStop(&updMsg);
 		}
 
+#ifndef CONFIG_VIDEO_MODE
 		if (res == CSL_LCD_OK)
 			res = cslDsiWaitForInt(dsiH, updMsg.updReq.timeOut_ms);
 		else
@@ -552,6 +554,7 @@ static void cslDsi0UpdateTask(void)
 
 		if (!updMsg.clientH->hasLock)
 			OSSEMAPHORE_Release(dsiH->semaDsi);
+#endif
 
 		if (updMsg.updReq.cslLcdCb)
 			updMsg.updReq.cslLcdCb(res, &updMsg.updReq.cslLcdCbRec);
@@ -699,12 +702,21 @@ Boolean cslDsiOsInit(DSI_HANDLE dsiH)
 	/* Axipv Semaphore */
 	dsiH->semaAxipv = OSSEMAPHORE_Create(0, OSSUSPEND_PRIORITY);
 	if (!dsiH->semaAxipv) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: ERR Sema Creation!\n",
-			__func__);
+		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] semaAxipv creation error\n");
 		res = FALSE;
 	} else {
 		OSSEMAPHORE_ChangeName(dsiH->semaAxipv,
 				dsiH->bus ? "Dsi1Axipv" : "Dsi0Axipv");
+	}
+
+	/* PV Semaphore */
+	dsiH->semaPV = OSSEMAPHORE_Create(0, OSSUSPEND_PRIORITY);
+	if (!dsiH->semaPV) {
+		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] semaPV creation error\n");
+		res = FALSE;
+	} else {
+		OSSEMAPHORE_ChangeName(dsiH->semaPV,
+				dsiH->bus ? "Dsi1PV" : "Dsi0PV");
 	}
 
 #ifndef __KERNEL__
@@ -1527,6 +1539,11 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 			cmVcH->wc_rshift = 0;
 			cmVcH->cm = dsiH->dispEngine ?
 					DE1_CM_888U : DE0_CM_888U;
+			if (!dsiH->pixTxporter)
+				dsiH->axipvCfg->pix_fmt =
+						AXIPV_PIXEL_FORMAT_24BPP_RGB;
+			if (!dsiH->dispEngine)
+				dsiH->pvCfg->pix_fmt = DSI_VIDEO_CMD_18_24BPP;
 			break;
 		default:
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
@@ -1547,6 +1564,15 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 			cmVcH->bpp_dma = 2;
 			cmVcH->bpp_wire = 2;
 			cmVcH->wc_rshift = 1;
+			if (!dsiH->pixTxporter)
+				dsiH->axipvCfg->pix_fmt =
+						AXIPV_PIXEL_FORMAT_16BPP_PACKED;
+			if (!dsiH->dispEngine) {
+				if (dsiH->pvCfg->cmd)
+					dsiH->pvCfg->pix_fmt = DSI_CMD_16BPP;
+				else
+					dsiH->pvCfg->pix_fmt = DSI_VIDEO_16BPP;
+			}
 			if (dsiCmVcCfg->cm_out == LCD_IF_CM_O_RGB565)
 				cmVcH->cm = dsiH->dispEngine ?
 						DE1_CM_565 : DE0_CM_565P;
@@ -1664,6 +1690,137 @@ void CSL_DSI_Force_Stop(CSL_LCD_HANDLE vcH)
 		chal_dsi_de0_enable(dsiH->chalH, FALSE);
 
 	cslDsiClearAllFifos(dsiH);
+}
+
+
+/*
+ *
+ * Function Name: CSL_DSI_UpdateVmVc
+ *
+ * Description:   Video Mode
+ *
+ */
+CSL_LCD_RES_T CSL_DSI_UpdateVmVc(CSL_LCD_HANDLE vcH,
+		pCSL_LCD_UPD_REQ req)
+{
+	CSL_LCD_RES_T res = CSL_LCD_OK;
+	DSI_HANDLE dsiH;
+	DSI_CLIENT clientH;
+	DSI_CM_HANDLE dsiChH;
+	DSI_UPD_REQ_MSG_T updMsg;
+	struct axipv_config_t *axipvCfg;
+	struct pv_config_t *pvCfg;
+	OSStatus_t osStat;
+
+	dsiChH = (DSI_CM_HANDLE) vcH;
+	clientH = (DSI_CLIENT) dsiChH->client;
+	updMsg.clientH = clientH;
+	dsiH = (DSI_HANDLE)clientH->lcdH;
+	updMsg.updReq = *req;
+	updMsg.dsiH = dsiH;
+	updMsg.updReq.buffBpp = dsiChH->bpp_dma;
+	axipvCfg = dsiH->axipvCfg;
+	pvCfg = dsiH->pvCfg;
+
+	if (!axipvCfg)
+		pr_err("axipvCfg is NULL\n");
+	if (!pvCfg)
+		pr_err("pvCfg is NULL\n");
+	if (dsiH->ulps) {
+		pr_err("dsi is in ulps!!\n");
+		return CSL_LCD_BAD_STATE;
+	}
+	if (!clientH->hasLock)
+		OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
+	if (!videoEnabled) {
+		cslDsiClearAllFifos(dsiH);
+		chal_dsi_clr_status(dsiH->chalH, 0xffffffff);
+		chal_dsi_de0_set_cm(dsiH->chalH, dsiChH->cm);
+		chal_dsi_de0_set_mode(dsiH->chalH, DE0_MODE_VID);
+		/* Set pix clk divider to bits per pixel for non-burst mode */
+		chal_dsi_de0_set_pix_clk_div(dsiH->chalH,
+			(dsiChH->bpp_wire << 3) / dsiH->dlCount);
+		mb();
+		res = cslDsiPixTxStart(&updMsg);
+		if (res != CSL_LCD_OK) {
+			LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
+			"ERR Failed To Start DMA!\n", dsiH->bus, __func__);
+			goto done;
+		}
+		videoEnabled = 1;
+	} else {
+		axipvCfg->buff.async = (u32) updMsg.updReq.buff;
+		axipv_post(axipvCfg);
+	}
+
+	osStat = OSQUEUE_Post(dsiH->updReqQ, (QMsg_t *)&updMsg, TICKS_NO_WAIT);
+	if (osStat != OSSTATUS_SUCCESS) {
+		if (osStat == OSSTATUS_TIMEOUT)
+			res = CSL_LCD_OS_TOUT;
+		else
+			res = CSL_LCD_OS_ERR;
+	}
+
+done:
+	if (!clientH->hasLock)
+		OSSEMAPHORE_Release(dsiH->semaDsi);
+	return res;
+}
+
+
+/*
+ *
+ * Function Name: CSL_DSI_Suspend
+ *
+ * Description:   Not applicable for Command mode
+ *
+ */
+CSL_LCD_RES_T CSL_DSI_Suspend(CSL_LCD_HANDLE vcH)
+{
+	DSI_HANDLE dsiH;
+	DSI_CLIENT clientH;
+	DSI_CM_HANDLE dsiChH;
+	struct axipv_config_t *axipvCfg;
+	struct pv_config_t *pvCfg;
+	OSStatus_t osStat;
+
+	dsiChH = (DSI_CM_HANDLE) vcH;
+	clientH = (DSI_CLIENT) dsiChH->client;
+	dsiH = (DSI_HANDLE)clientH->lcdH;
+	axipvCfg = dsiH->axipvCfg;
+	pvCfg = dsiH->pvCfg;
+
+	if (dsiH->pixTxporter)
+		return CSL_LCD_OK; /* MMDMA => Cmd mode. No action required */
+	if (!axipvCfg) {
+		pr_err("axipvCfg is NULL\n");
+		return CSL_LCD_BAD_HANDLE;
+	}
+	if (axipvCfg->cmd)
+		return CSL_LCD_OK; /* AXIPV cmd mode => No action required */
+	if (dsiH->dispEngine || !pvCfg) {
+		pr_err("pvCfg is NULL\n");
+		return CSL_LCD_BAD_HANDLE;
+	}
+	axipv_change_state(AXIPV_STOP_EOF, axipvCfg);
+	osStat = OSSEMAPHORE_Obtain(dsiH->semaAxipv, msecs_to_jiffies(100));
+	if (osStat == OSSTATUS_TIMEOUT) {
+		pr_err("couldn't stop AXIPV at EOF!\n");
+		axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
+	}
+	pv_change_state(PV_STOP_EOF, pvCfg);
+	/*cslDsiEnaIntEvent(dsiH, (UInt32)CHAL_DSI_ISTAT_PHY_CLK_ULPS);*/
+	/*wait for pv to stop*/
+	osStat = OSSEMAPHORE_Obtain(dsiH->semaPV, msecs_to_jiffies(100));
+	if (osStat == OSSTATUS_TIMEOUT) {
+		pr_err("couldn't stop PV at EOF!");
+		pv_change_state(PV_STOP_IMM, pvCfg);
+	}
+	/*wait for DSI lanes to go to low power*/
+	/*cslDsiWaitForInt(dsiH, TICKS_IN_MILLISECONDS(50));*/
+	chal_dsi_de0_enable(dsiH->chalH, FALSE);
+	videoEnabled = 0;
+	return CSL_LCD_OK;
 }
 
 
@@ -2256,6 +2413,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 
 		memset(dsiH, 0, sizeof(DSI_HANDLE_t));
 
+		dsiH->dlCount = dsiCfg->dlCount;
 		dsiH->dispEngine = dsiCfg->dispEngine;
 		dsiH->pixTxporter = dsiCfg->pixTxporter;
 		if(!dsiH->dispEngine && dsiH->pixTxporter) {
@@ -2273,19 +2431,29 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 						ret);
 					return CSL_LCD_ERR;
 				}
-				dsiH->pvCfg->pix_fmt = DSI_VIDEO_CMD_18_24BPP;
 				dsiH->pvCfg->pclk_sel = DISP_CTRL_DSI;
+#ifdef CONFIG_VIDEO_MODE
+				dsiH->pvCfg->cmd = false;
+				dsiH->pvCfg->cont = true;
+				dsiH->pvCfg->vs = 5;
+				dsiH->pvCfg->vbp = 60;
+				dsiH->pvCfg->vfp = 60;
+				dsiH->pvCfg->hs = 46;
+				dsiH->pvCfg->hbp = 46;
+				dsiH->pvCfg->hfp = 46;
+#else
 				dsiH->pvCfg->cmd = true;
 				dsiH->pvCfg->cont = false;
-				dsiH->pvCfg->interlaced = false;
-				dsiH->pvCfg->vsyncd = 0;
-				dsiH->pvCfg->pix_stretch = 0;
 				dsiH->pvCfg->vs = 0;
 				dsiH->pvCfg->vbp = 0;
 				dsiH->pvCfg->vfp = 1;
 				dsiH->pvCfg->hs = 0;
 				dsiH->pvCfg->hbp = 0;
 				dsiH->pvCfg->hfp = 0;
+#endif
+				dsiH->pvCfg->interlaced = false;
+				dsiH->pvCfg->vsyncd = 0;
+				dsiH->pvCfg->pix_stretch = 0;
 				axipv_init_data.bypassPV = 0;
 			} else {
 				axipv_init_data.bypassPV = 1;
@@ -2296,11 +2464,14 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 				pr_err("axipv_init failed with ret=%d\n", ret);
 				return CSL_LCD_ERR;
 			}
-			dsiH->axipvCfg->cmd = true;
 			dsiH->axipvCfg->test = false;
+#ifdef CONFIG_VIDEO_MODE
+			dsiH->axipvCfg->cmd = false;
+			dsiH->axipvCfg->async = true;
+#else
 			dsiH->axipvCfg->async = false;
-
-
+			dsiH->axipvCfg->cmd = true;
+#endif
 		}
 #endif
 
@@ -2419,3 +2590,4 @@ int Log_DebugPrintf(UInt16 logID, char *fmt, ...)
 	return 1;
 }
 #endif
+

@@ -56,6 +56,8 @@ struct pv_dev {
 #ifdef PV_HAS_CLK
 static inline void pv_clk_enable(struct pv_dev *dev)
 {
+	if (clk_enable(dev->apb_clk))
+		pv_err("failed to enable apb clk\n");
 	if (clk_enable(dev->pix_clk))
 		pv_err("failed to enable pix clk\n");
 }
@@ -63,6 +65,7 @@ static inline void pv_clk_enable(struct pv_dev *dev)
 static inline void pv_clk_disable(struct pv_dev *dev)
 {
 	clk_disable(dev->pix_clk);
+	clk_disable(dev->apb_clk);
 }
 #else
 static inline void pv_clk_enable(struct pv_dev *dev)
@@ -140,7 +143,6 @@ int pv_init(struct pv_init_t *init, struct pv_config_t **config)
 		ret = PTR_ERR(dev->apb_clk);
 		goto fail;
 	}
-	clk_enable(dev->apb_clk); /* Disbale when not required. TODO */
 
 	dev->pix_clk = clk_get(NULL, init->pix_clk_name);
 	if (IS_ERR(dev->pix_clk)) {
@@ -250,7 +252,7 @@ static int pv_vid_config(struct pv_config_t *vid_config)
 	writel_relaxed(vid_config->hact | (vid_config->hfp << HFP_SHIFT),
 			pv_base + REG_PV_HORZB);
 	writel_relaxed((vid_config->hact), pv_base + REG_PV_DSI_HACT_ACT);
-	writel_relaxed(vid_config->vs || (vid_config->vbp << VBP_SHIFT),
+	writel_relaxed(vid_config->vs | (vid_config->vbp << VBP_SHIFT),
 			pv_base + REG_PV_VERTA);
 	writel_relaxed(vid_config->vact | (vid_config->vfp << VFP_SHIFT),
 			pv_base + REG_PV_VERTB);

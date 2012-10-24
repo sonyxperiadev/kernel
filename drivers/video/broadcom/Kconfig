@@ -10,6 +10,14 @@ config FB_BRCM_KONA
 	help
 	  This framebuffer device driver is for the Broadcom KONA platform.
 
+config VIDEO_MODE
+	bool "Video Mode"
+	default N
+	help
+	  Enable this macro to enable the video mode capabilities in the DSI
+	  module and BRCM IP blocks- AXIPV, PV and DSI.
+
+
 config FB_BRCM_ASYNC_UPDATE
 	bool "FB Async Update"
 	default N

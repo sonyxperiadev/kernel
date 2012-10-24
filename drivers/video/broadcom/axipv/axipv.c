@@ -9,7 +9,12 @@
 
 #include <linux/time.h>
 #if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
-static struct timeval tv1, tv2;
+static struct timeval prof_tv1, prof_tv2;
+#endif
+
+#ifdef DEBUG_FPS
+static int fps;
+static struct timeval isr_tv1, isr_tv2;
 #endif
 
 
@@ -264,6 +269,10 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	dev->state = AXIPV_INIT_DONE;
 	g_axipv_init = true;
 	*config = &dev->config;
+#ifdef DEBUG_FPS
+	do_gettimeofday(&isr_tv1);
+	do_gettimeofday(&isr_tv2);
+#endif
 	ret = 0;
 	goto done;
 
@@ -297,6 +306,7 @@ static inline int axipv_config(struct axipv_config_t *config)
 			axipv_base + REG_LINES_PER_FRAME);
 	writel_relaxed(config->buff.sync.addr, axipv_base + REG_NXT_FRAME);
 	axipv_debug("posting %p\n", config->buff.sync.addr);
+	g_nxt = config->buff.sync.addr;
 	g_curr = config->buff.sync.addr;
 	buff_index = axipv_get_free_buff_index(dev->buff);
 	if (buff_index >= AXIPV_MAX_DISP_BUFF_SUPP) {
@@ -382,6 +392,7 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 	int irq_stat;
 	u32 axipv_base;
 	bool disable_axipv = false;
+	u32 curr_reg_val;
 
 	axipv_base = dev->base_addr;
 	irq_stat = readl(axipv_base + REG_INTR_STAT);
@@ -391,10 +402,20 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		 * Reason: This will only indicate that the entire frame has
 		 *         been fetched into AXIPV's LB. PV needs to pull in all
 		 *         the data in AXIPV's LB before we turn off clocks */
-		u32 curr_reg_val = readl(axipv_base + REG_CUR_FRAME);
+#ifdef DEBUG_FPS
+		++fps;
+		do_gettimeofday(&isr_tv1);
+		if ((isr_tv1.tv_sec - isr_tv2.tv_sec) > 1) {
+			axipv_err("axipv fps = %d\n", fps/((int)(isr_tv1.tv_sec
+				- isr_tv2.tv_sec)));
+			memcpy(&isr_tv2, &isr_tv1, sizeof(isr_tv1));
+			fps = 0;
+		}
+#endif
+		curr_reg_val = readl(axipv_base + REG_CUR_FRAME);
 		if ((g_curr != curr_reg_val) ||
 			(AXIPV_STOPPING == dev->state)) {
-			if (g_curr){
+			if (g_curr) {
 				axipv_debug("isr %p\n",g_curr);
 				axipv_release_buff(g_curr);
 			}
@@ -403,10 +424,10 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 				dev->state = AXIPV_STOPPED;
 		}
 		writel(FRAME_END_INT, axipv_base + REG_INTR_CLR);
-		irq_stat = irq_stat & ~FRAME_END_INT;
+		if (AXIPV_STOPPED != dev->state)
+			irq_stat = irq_stat & ~FRAME_END_INT;
 	}
 	if (irq_stat & AXIPV_DISABLED_INT) {
-		irq_stat |= AXIPV_DISABLED_INT;
 		if (g_curr) {
 			axipv_release_buff(g_curr);
 			g_curr = 0;
@@ -416,11 +437,13 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 			g_nxt = 0;
 		}
 		disable_axipv = true;
-		irq_stat = irq_stat & ~AXIPV_DISABLED_INT;
+		/* Client needs to be informed of the disabled state */
+		/* irq_stat = irq_stat & ~AXIPV_DISABLED_INT; */
 #if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
-		do_gettimeofday(&tv2);
-		axipv_info("axipv tx time(us)=%d\n", (tv2.tv_sec-tv1.tv_sec)*1000000 +
-		tv2.tv_usec - tv1.tv_usec);
+		do_gettimeofday(&prof_tv2);
+		axipv_info("axipv tx time(us)=%d\n",
+			(prof_tv2.tv_sec - prof_tv1.tv_sec) * 1000000 +
+			prof_tv2.tv_usec - prof_tv1.tv_usec);
 #endif
 	}
 
@@ -453,6 +476,7 @@ static inline int post_async(struct axipv_config_t *config)
 	dev = container_of(config, struct axipv_dev, config);
 	axipv_base = dev->base_addr;
 
+	axipv_debug("new buff posted 0x%x\n", config->buff.async);
 	writel(config->buff.async, axipv_base + REG_NXT_FRAME);
 	curr_reg_val = readl(axipv_base + REG_CUR_FRAME);
 	buff_index = axipv_get_free_buff_index(dev->buff);
@@ -462,14 +486,18 @@ static inline int post_async(struct axipv_config_t *config)
 		axipv_add_new_buff_info(dev->buff, buff_index,
 					config->buff.async);
 	}
-	if ((curr_reg_val == g_curr) || (curr_reg_val == config->buff.async)) {
+	/* if ((curr_reg_val == g_curr)
+		|| (curr_reg_val == config->buff.async)) {*/
+	if (curr_reg_val != g_nxt) {
 		/* Skipped buffer has to be released*/
 		if (g_nxt) {
+			axipv_debug("skipped buff=0x%x\n", g_nxt);
 			axipv_release_buff(g_nxt);
 			g_nxt = 0;
 		}
 	}
 	g_nxt = config->buff.async;
+
 	return 0;
 }
 
@@ -566,8 +594,8 @@ int axipv_post(struct axipv_config_t *config)
 
 void dump_debug_info(struct axipv_dev *dev)
 {
+	u32 axipv_base;
 	axipv_clk_enable(dev);
-	u32 ret = 0, axipv_base, cnt;
 	axipv_base = dev->base_addr;
 	axipv_debug("state=%d, gcurr=%p, gnxt=%p\n", dev->state, g_curr, g_nxt);
 	axipv_debug("%p %p %p %p %p\n",
@@ -586,6 +614,7 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 	u32 ret = 0, axipv_base, cnt;
 	struct axipv_dev *dev;
 
+	axipv_debug("event=%d\n", event);
 	if (!config)
 		return -EINVAL;
 
@@ -616,7 +645,7 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 
 			axipv_clk_enable(dev);
 #if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
-			do_gettimeofday(&tv1);
+			do_gettimeofday(&prof_tv1);
 #endif
 			spin_lock_irqsave(&lock, flags);
 			writel_relaxed(UINT_MAX, axipv_base + REG_INTR_EN);

@@ -532,6 +532,19 @@ extern "C" {
 
 /**
 *
+*  @brief    Set pixel clock divider
+*
+*  @param	 handle  (in)  DSI cHAL handle
+*  @param	 div     (in)  divider value
+*
+*  @return	 void
+*
+*  @note
+*****************************************************************************/
+	cVoid chal_dsi_de0_set_pix_clk_div(CHAL_HANDLE handle, cUInt32 div);
+
+/**
+*
 *  @brief    Enable/Disable Display Engine 0
 *
 *  @param	 handle  (in)  DSI cHAL handle

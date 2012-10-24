@@ -321,6 +321,7 @@ static void kona_display_done_cb(int status)
 #ifdef CONFIG_FB_BRCM_ASYNC_UPDATE
 	do_gettimeofday((struct timeval *)&prev_timeval);
 #endif
+	konafb_debug("kona_fb release called\n");
 	complete(&g_kona_fb->prev_buf_done_sem);
 }
 
@@ -334,15 +335,17 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 	static int do_vsync;
 #endif
 	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
-	uint32_t buff_idx;
+	static uint32_t buff_idx;
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	void *dst;
 #endif
 	DISPDRV_WIN_t region, *p_region;
 
+#ifndef CONFIG_VIDEO_MODE
 	buff_idx = var->yoffset ? 1 : 0;
+#endif
 
-	konafb_debug("kona %s with buff_idx =%d \n", __func__, buff_idx);
+	konafb_debug("kona %s with buff_idx =%d\n", __func__, buff_idx);
 
 	if (mutex_lock_killable(&fb->update_sem))
 		return -EINTR;
@@ -390,7 +393,9 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 			region.mode	= 1;
 			p_region = NULL;
 		}
+#ifndef CONFIG_VIDEO_MODE
 		wait_for_completion(&fb->prev_buf_done_sem);
+#endif
 
 #ifdef CONFIG_FB_BRCM_ASYNC_UPDATE
 		g_vsync_cnt++;
@@ -426,13 +431,17 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 					(DISPDRV_CB_T)kona_display_done_cb);
 
 #endif /* CONFIG_FB_BRCM_ASYNC_UPDATE */
+
+#ifdef CONFIG_VIDEO_MODE
+		buff_idx ^= 1;
+		konafb_debug("waiting for release of 0x%x\n",
+				buff_idx ? fb->buff0 : fb->buff1);
+		wait_for_completion(&fb->prev_buf_done_sem);
+#endif
 	}
 skip_drawing:
 	mutex_unlock(&fb->update_sem);
 
-	konafb_debug
-	    ("kona Display is updated once at %d time with yoffset=%d\n",
-	     fb->base_update_count, var->yoffset);
 	return ret;
 }
 
@@ -539,13 +548,17 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		/* Turn off the backlight */
 		fb = container_of(h, struct kona_fb, early_suspend_level1);
 		mutex_lock(&fb->update_sem);
+#ifndef CONFIG_VIDEO_MODE
 		wait_for_completion(&fb->prev_buf_done_sem);
+#endif
 		kona_clock_start(fb);
 		if (fb->display_ops->power_control(fb->display_hdl,
 					       CTRL_SCREEN_OFF))
 			konafb_error("Failed to blank this display device!\n");
 		kona_clock_stop(fb);
+#ifndef CONFIG_VIDEO_MODE
 		complete(&g_kona_fb->prev_buf_done_sem);
+#endif
 		mutex_unlock(&fb->update_sem);
 
 		break;
@@ -553,9 +566,13 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
 		fb = container_of(h, struct kona_fb, early_suspend_level2);
 		mutex_lock(&fb->update_sem);
+#ifndef CONFIG_VIDEO_MODE
 		wait_for_completion(&fb->prev_buf_done_sem);
+#endif
 		fb->g_stop_drawing = 1;
+#ifndef CONFIG_VIDEO_MODE
 		complete(&g_kona_fb->prev_buf_done_sem);
+#endif
 		mutex_unlock(&fb->update_sem);
 		break;
 
@@ -783,7 +800,9 @@ static int kona_fb_probe(struct platform_device *pdev)
 		goto err_set_var_failed;
 	}
 	/* Paint it black (assuming default fb contents are all zero) */
-	ret = kona_fb_pan_display(&fb->fb.var, &fb->fb);
+	kona_clock_start(fb);
+	ret = fb->display_ops->update(fb->display_hdl, fb->buff0, NULL, NULL);
+	kona_clock_stop(fb);
 	if (ret) {
 		konafb_error("Can not enable the LCD!\n");
 		goto err_fb_register_failed;
@@ -816,12 +835,14 @@ static int kona_fb_probe(struct platform_device *pdev)
 	konafb_info("kona Framebuffer probe successfull\n");
 
 #ifdef CONFIG_LOGO
+	fb->fb.screen_base += (width * height * fb->fb.var.bits_per_pixel / 8);
 	fb_prepare_logo(&fb->fb, 0);
 	fb_show_logo(&fb->fb, 0);
+	fb->fb.screen_base -= (width * height * fb->fb.var.bits_per_pixel / 8);
 
 	mutex_lock(&fb->update_sem);
 	kona_clock_start(fb);
-	fb->display_ops->update(fb->display_hdl, fb->buff0, NULL, NULL);
+	fb->display_ops->update(fb->display_hdl, fb->buff1, NULL, NULL);
 	kona_clock_stop(fb);
 	mutex_unlock(&fb->update_sem);
 #endif

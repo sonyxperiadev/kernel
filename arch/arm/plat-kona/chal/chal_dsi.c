@@ -317,7 +317,7 @@ cVoid chal_dsi_phy_state(CHAL_HANDLE handle, CHAL_DSI_PHY_STATE_t state)
 	    | DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSCLK, 1)
 	    | DSI_REG_FIELD_SET(DSI1_PHYC, TX_HSCLK_CONT, 1);
 
-#ifndef CONFIG_MACH_HAWAII_FPGA_E
+#if !defined(CONFIG_MACH_HAWAII_FPGA_E) || !defined(CONFIG_MACH_HAWAII_FPGA)
 	switch (pDev->dlCount) {
 	case 4:
 		regMask |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_3, 1);
@@ -1435,9 +1435,23 @@ cVoid chal_dsi_de0_set_cm(CHAL_HANDLE handle, CHAL_DSI_DE0_COL_MOD_t cm)
 
 /*
  *
+ *  Function Name:  chal_dsi_de0_set_pix_clk_div
+ *
+ *  Description:    Set pixel clock divider
+ *
+ */
+cVoid chal_dsi_de0_set_pix_clk_div(CHAL_HANDLE handle, cUInt32 div)
+{
+	struct CHAL_DSI *pDev = (struct CHAL_DSI *)handle;
+
+	BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_DISP0_CTRL, PIX_CLK_DIV, div);
+}
+
+/*
+ *
  *  Function Name:  chal_dsi_de1_enable
  *
- *  Description:    Ena | Dis Color Engine 1
+ *  Description:    Ena | Dis Color Engine 0
  *
  */
 cVoid chal_dsi_de0_enable(CHAL_HANDLE handle, cBool ena)

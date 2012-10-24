@@ -136,10 +136,12 @@ typedef struct {
 	DISPDRV_INFO_T		*disp_info;
 } LG4591_PANEL_t;
 
+#if 0
 /* LOCAL FUNCTIONs */
 static void LG4591_WrCmndP0(
 	DISPDRV_HANDLE_T drvH,
 	UInt32 reg);
+#endif
 
 /* DRV INTERFACE FUNCTIONs */
 static Int32 LG4591_Init(
@@ -246,7 +248,7 @@ CSL_DSI_CFG_t LG4591_dsiCfg = {
 	{500, 5},	/* escClk   500|312 500[MHz], DIV by 5 = 100[MHz] */
 
 	/* HS CLK Config, RHEA VCO range 600-2400 */
-	{1000, 2},	/* hsBitClk PLL 1000[MHz], DIV by 2 = 500[Mbps]	*/
+	{1000, 3},	/* hsBitClk PLL 1000[MHz], DIV by 2 = 500[Mbps]	*/
 
 	/* LP Speed */
 	5,		/* lpBitRate_Mbps, Max 10[Mbps]	*/
@@ -257,8 +259,8 @@ CSL_DSI_CFG_t LG4591_dsiCfg = {
 	TRUE,		/* enaHsTxEotPkt */
 	FALSE,		/* enaLpTxEotPkt */
 	FALSE,		/* enaLpRxEotPkt */
-	1,		/* dispEngine */
-	1,		/* pixTxporter */
+	0,		/* dispEngine */
+	0,		/* pixTxporter */
 };
 
 
@@ -315,19 +317,136 @@ static void LG4591_panel_sleep_out(LG4591_PANEL_t *pPanel)
 
 static void LG4591_panel_init(LG4591_PANEL_t *pPanel)
 {
-	DISPCTRL_REC_T cmd_list[] = {
+	static DISPCTRL_REC_T cmd_list[] = {
+		{DISPCTRL_WR_CMND, 0xE0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x43},
+		{DISPCTRL_WR_DATA, 0, 0x40},
+		{DISPCTRL_WR_DATA, 0, 0x80},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+
+		{DISPCTRL_WR_CMND, 0xB5, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x14},
+		{DISPCTRL_WR_DATA, 0, 0x20},
+		{DISPCTRL_WR_DATA, 0, 0x40},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+
+		{DISPCTRL_WR_CMND, 0xB6, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x01},
+		{DISPCTRL_WR_DATA, 0, 0x16},
+		{DISPCTRL_WR_DATA, 0, 0x0F},
+		{DISPCTRL_WR_DATA, 0, 0x16},
+		{DISPCTRL_WR_DATA, 0, 0x13},
+
+		{DISPCTRL_WR_CMND_DATA, 0xB3, 0x00},
+
+		{DISPCTRL_WR_CMND, 0xD0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x11},
+		{DISPCTRL_WR_DATA, 0, 0x64},
+		{DISPCTRL_WR_DATA, 0, 0x35},
+		{DISPCTRL_WR_DATA, 0, 0x18},
+		{DISPCTRL_WR_DATA, 0, 0x06},
+		{DISPCTRL_WR_DATA, 0, 0x51},
+		{DISPCTRL_WR_DATA, 0, 0x32},
+		{DISPCTRL_WR_DATA, 0, 0x02},
+
+		{DISPCTRL_WR_CMND, 0xD1, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x20},
+		{DISPCTRL_WR_DATA, 0, 0x14},
+		{DISPCTRL_WR_DATA, 0, 0x64},
+		{DISPCTRL_WR_DATA, 0, 0x34},
+		{DISPCTRL_WR_DATA, 0, 0x01},
+		{DISPCTRL_WR_DATA, 0, 0x05},
+		{DISPCTRL_WR_DATA, 0, 0x71},
+		{DISPCTRL_WR_DATA, 0, 0x33},
+		{DISPCTRL_WR_DATA, 0, 0x04},
+
+		{DISPCTRL_WR_CMND, 0xD2, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x11},
+		{DISPCTRL_WR_DATA, 0, 0x64},
+		{DISPCTRL_WR_DATA, 0, 0x35},
+		{DISPCTRL_WR_DATA, 0, 0x18},
+		{DISPCTRL_WR_DATA, 0, 0x06},
+		{DISPCTRL_WR_DATA, 0, 0x51},
+		{DISPCTRL_WR_DATA, 0, 0x32},
+		{DISPCTRL_WR_DATA, 0, 0x02},
+
+		{DISPCTRL_WR_CMND, 0xD3, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x20},
+		{DISPCTRL_WR_DATA, 0, 0x14},
+		{DISPCTRL_WR_DATA, 0, 0x64},
+		{DISPCTRL_WR_DATA, 0, 0x34},
+		{DISPCTRL_WR_DATA, 0, 0x01},
+		{DISPCTRL_WR_DATA, 0, 0x05},
+		{DISPCTRL_WR_DATA, 0, 0x71},
+		{DISPCTRL_WR_DATA, 0, 0x33},
+		{DISPCTRL_WR_DATA, 0, 0x04},
+
+		{DISPCTRL_WR_CMND, 0xD4, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x11},
+		{DISPCTRL_WR_DATA, 0, 0x64},
+		{DISPCTRL_WR_DATA, 0, 0x35},
+		{DISPCTRL_WR_DATA, 0, 0x18},
+		{DISPCTRL_WR_DATA, 0, 0x06},
+		{DISPCTRL_WR_DATA, 0, 0x51},
+		{DISPCTRL_WR_DATA, 0, 0x32},
+		{DISPCTRL_WR_DATA, 0, 0x02},
+
+		{DISPCTRL_WR_CMND, 0xD5, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x20},
+		{DISPCTRL_WR_DATA, 0, 0x14},
+		{DISPCTRL_WR_DATA, 0, 0x64},
+		{DISPCTRL_WR_DATA, 0, 0x34},
+		{DISPCTRL_WR_DATA, 0, 0x01},
+		{DISPCTRL_WR_DATA, 0, 0x05},
+		{DISPCTRL_WR_DATA, 0, 0x71},
+		{DISPCTRL_WR_DATA, 0, 0x33},
+		{DISPCTRL_WR_DATA, 0, 0x04},
+
+		{DISPCTRL_WR_CMND, 0xC0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+
+		{DISPCTRL_WR_CMND, 0xC3, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x01},
+		{DISPCTRL_WR_DATA, 0, 0x09},
+		{DISPCTRL_WR_DATA, 0, 0x10},
+		{DISPCTRL_WR_DATA, 0, 0x12},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x66},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x32},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+
+		{DISPCTRL_WR_CMND, 0xC4, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x22},
+		{DISPCTRL_WR_DATA, 0, 0x24},
+		{DISPCTRL_WR_DATA, 0, 0x18},
+		{DISPCTRL_WR_DATA, 0, 0x18},
+		{DISPCTRL_WR_DATA, 0, 0x4C},
+
+		{DISPCTRL_WR_CMND, 0xC6, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x42},
+		{DISPCTRL_WR_DATA, 0, 0x40},
+
+		{DISPCTRL_WR_CMND, 0xF9, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+		{DISPCTRL_WR_DATA, 0, 0x00},
+
 		{DISPCTRL_WR_CMND, LG4591_CMD_SLPOUT, 0},
-		{DISPCTRL_SLEEP_MS, 0, 120},
-		{DISPCTRL_WR_CMND_DATA, LG4591_CMD_COLMOD, 0x07},
+		{DISPCTRL_SLEEP_MS, 0, 250},
 		{DISPCTRL_WR_CMND, LG4591_CMD_DISPON, 0},
+
 		{DISPCTRL_LIST_END, 0, 0},
 	};
 
 	LG4591_ExecCmndList(pPanel, cmd_list);
-
 	return;
 }
-
 
 /*
  *
@@ -369,6 +488,7 @@ static int LG4591_TeOff(LG4591_PANEL_t *pPanel)
 }
 
 
+#if 0
 /*
  *
  *   Function Name: LG4591_WrCmndP0
@@ -436,13 +556,13 @@ static int LG4591_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg)
 			__func__, reg);
 		res = -1;
 	} else {
-		LG4591_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	 OK"
-			"Reg[0x%08X] Val[0x%08X]\n\r",
+		pr_err("[DISPDRV] %s:OK Reg[0x%08X] Val[0x%08X]\n\r",
 			__func__, reg, rxBuff[0]);
 	}
 
 	return res;
 }
+#endif
 
 /*
  *
@@ -535,17 +655,22 @@ static void LG4591_reset(DISPDRV_HANDLE_T drvH, Boolean on)
 {
 	LG4591_PANEL_t *pPanel = (LG4591_PANEL_t *) drvH;
 
-	int reset_active = 0;
+	int ret, reset_active = 0;
 
 	if (!on) {
-		LG4591_LOG(LCD_DBG_ERR_ID, "Resetting the panel\n");
-		gpio_request(pPanel->rst_panel_reset, "LCD_RST1");
+		LG4591_LOG(LCD_DBG_ERR_ID, "Resetting the panel gpio=%d\n",
+			(int)pPanel->rst_panel_reset);
+		ret = gpio_request(pPanel->rst_panel_reset, "LCD_RST");
+		if (ret < 0) {
+			LG4591_LOG(LCD_DBG_ERR_ID, "gpio_request failed!\n");
+			return;
+		}
 		gpio_direction_output(pPanel->rst_panel_reset, !reset_active);
-		udelay(5);
+		mdelay(5);
 		gpio_set_value_cansleep(pPanel->rst_panel_reset, reset_active);
-		udelay(15);
+		mdelay(1);
 		gpio_set_value_cansleep(pPanel->rst_panel_reset, !reset_active);
-		msleep(5);
+		mdelay(5);
 
 	} else {
 		LG4591_LOG(LCD_DBG_ERR_ID, "Powering off the panel\n");
@@ -658,7 +783,7 @@ Int32 LG4591_Init(
 		}
 
 		/* get reset pin */
-		pPanel->rst_panel_reset	  = parms->w1.bits.lcd_rst2;
+		pPanel->rst_panel_reset	  = parms->w1.bits.lcd_rst0;
 
 		pPanel->isTE = pPanel->cmnd_mode->teCfg.teInType != DSI_TE_NONE;
 
@@ -1146,7 +1271,7 @@ Int32 LG4591_GetDispDrvFeatures(
 	if ((NULL != driver_name)   && (NULL !=	version_major) &&
 	    (NULL != version_minor) && (NULL !=	flags))	{
 
-		*driver_name   = "UPD60801 (IN:RG565 OUT:RGB565)";
+		*driver_name   = "LG4591 (IN:ARGB8888 OUT:RGB888)";
 		*version_major = 0;
 		*version_minor = 15;
 		*flags	       = DISPDRV_SUPPORT_NONE;
@@ -1228,7 +1353,7 @@ Int32 LG4591_Update(
 	req.lineCount	= p_win->h;
 	req.xStrideB	= pPanel->disp_info->width - p_win->w;
 	req.buffBpp	= pPanel->disp_info->Bpp;
-	req.timeOut_ms	= 200;
+	req.timeOut_ms	= MAX_SCHEDULE_TIMEOUT;
 
 	LG4591_LOG(LCD_DBG_ID, "%s: buf=%08x, linelenp = %lu, linecnt =%lu\n",
 		__func__, (u32)req.buff, req.lineLenP, req.lineCount);
@@ -1243,7 +1368,7 @@ Int32 LG4591_Update(
 	else
 		req.cslLcdCb = NULL;
 
-	if (CSL_DSI_UpdateCmVc(pPanel->dsiCmVcHandle, &req, pPanel->isTE)
+	if (CSL_DSI_UpdateVmVc(pPanel->dsiCmVcHandle, &req)
 		!= CSL_LCD_OK)	{
 		LG4591_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR ret by "
 			"CSL_DSI_UpdateCmVc\n\r", __func__);

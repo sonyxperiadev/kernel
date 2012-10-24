@@ -255,7 +255,7 @@ extern "C" {
 *  @note
 *
 *****************************************************************************/
-	CSL_LCD_RES_T CSL_DSI_UpdatevmVc(CSL_LCD_HANDLE dsiCmVcH,
+	CSL_LCD_RES_T CSL_DSI_UpdateVmVc(CSL_LCD_HANDLE dsiCmVcH,
 					 pCSL_LCD_UPD_REQ req);
 
 /**
@@ -280,6 +280,15 @@ extern "C" {
  *
  ****************************************************************************/
 void CSL_DSI_Force_Stop(CSL_LCD_HANDLE vcH);
+
+
+
+/**
+ *
+ * Function Name: CSL_DSI_Suspend
+ *
+ ****************************************************************************/
+CSL_LCD_RES_T CSL_DSI_Suspend(CSL_LCD_HANDLE vcH);
 
 /**
 *
