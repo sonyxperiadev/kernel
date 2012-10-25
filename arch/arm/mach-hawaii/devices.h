@@ -18,6 +18,13 @@ extern struct platform_device pmu_device;
 extern struct platform_device hawaii_pwm_device;
 extern struct platform_device hawaii_ssp0_device;
 extern struct platform_device hawaii_ssp1_device;
+extern struct platform_device hawaii_sdio1_device;
+extern struct platform_device hawaii_sdio2_device;
+extern struct platform_device hawaii_sdio3_device;
+extern struct platform_device hawaii_kp_device;
+extern struct platform_device hawaii_headset_device;
+extern struct platform_device hawaii_pl330_dmac_device;
+extern struct platform_device hawaii_backlight_device;
 #ifdef CONFIG_SENSORS_KONA
 extern struct platform_device tmon_device;
 extern struct platform_device thermal_device;

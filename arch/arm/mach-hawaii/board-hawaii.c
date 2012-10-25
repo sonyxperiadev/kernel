@@ -654,16 +654,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 };
 
-
-#ifdef CONFIG_KEYBOARD_BCM
-/*
- * The keyboard definition structure.
- */
-struct platform_device hawaii_kp_device = {
-	.name = "bcm_keypad",
-	.id = -1,
-};
-
 struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "vdd_sdxc"},
 	{.supply = "sddat_debug_bus"},
@@ -681,6 +671,7 @@ struct regulator_consumer_supply sdx_supply[] = {
 	{.supply = "vdd_sdxc"},
 };
 
+#ifdef CONFIG_KEYBOARD_BCM
 static struct bcm_keymap hawaii_keymap[] = {
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Up Key", KEY_VOLUMEUP},
@@ -885,7 +876,7 @@ static unsigned int hawaii_button_adc_values_2_1[3][2] = {
 	/* Volue Down Min, Max*/
 	{330,   680},
 };
-static struct kona_headset_pd headset_data = {
+static struct kona_headset_pd hawaii_headset_data = {
 	/* GPIO state read is 0 on HS insert and 1 for
 	 * HS remove
 	 */
@@ -922,53 +913,6 @@ static struct kona_headset_pd headset_data = {
 	.button_adc_values_high = hawaii_button_adc_values_2_1,
 
 };
-
-static struct resource board_headset_resource[] = {
-	{	/* For AUXMIC */
-		.start = AUXMIC_BASE_ADDR,
-		.end = AUXMIC_BASE_ADDR + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{	/* For ACI */
-		.start = ACI_BASE_ADDR,
-		.end = ACI_BASE_ADDR + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{	/* For Headset IRQ */
-		.start = HS_IRQ,
-		.end = HS_IRQ,
-		.flags = IORESOURCE_IRQ,
-	},
-	{	/* For Headset button  press IRQ */
-		.start = HSB_IRQ,
-		.end = HSB_IRQ,
-		.flags = IORESOURCE_IRQ,
-	},
-	{	/* For Headset button  release IRQ */
-		.start = HSB_REL_IRQ,
-		.end = HSB_REL_IRQ,
-		.flags = IORESOURCE_IRQ,
-	},
-		/* For backward compatibility keep COMP1
-		 * as the last resource. The driver which
-		 * uses only GPIO and COMP2, might not use this at all
-		 */
-	{	/* COMP1 for type detection */
-		.start = BCM_INT_ID_AUXMIC_COMP1,
-		.end = HSB_REL_IRQ,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device headset_device = {
-	.name = "konaaciheadset",
-	.id = -1,
-	.resource = board_headset_resource,
-	.num_resources	= ARRAY_SIZE(board_headset_resource),
-	.dev	=	{
-		.platform_data = &headset_data,
-	},
-};
 #endif /* CONFIG_KONA_HEADSET_MULTI_BUTTON */
 
 #ifdef CONFIG_DMAC_PL330
@@ -983,15 +927,6 @@ static struct kona_pl330_data hawaii_pl330_pdata =	{
 	.irq_base = BCM_INT_ID_DMAC0,
 	/* # of PL330 Interrupt lines connected to GIC */
 	.irq_line_count = 8,
-};
-
-static struct platform_device pl330_dmac_device = {
-	.name = "kona-dmac-pl330",
-	.id = 0,
-	.dev = {
-		.platform_data = &hawaii_pl330_pdata,
-		.coherent_dma_mask  = DMA_BIT_MASK(64),
-	},
 };
 #endif
 
@@ -1094,44 +1029,6 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
-static struct resource hawaii_sdio1_resource[] = {
-	[0] = {
-		.start = SDIO1_BASE_ADDR,
-		.end = SDIO1_BASE_ADDR + SZ_64K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO0,
-		.end = BCM_INT_ID_SDIO0,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-static struct resource hawaii_sdio2_resource[] = {
-	[0] = {
-		.start = SDIO2_BASE_ADDR,
-		.end = SDIO2_BASE_ADDR + SZ_64K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO1,
-		.end = BCM_INT_ID_SDIO1,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-static struct resource hawaii_sdio3_resource[] = {
-	[0] = {
-		.start = SDIO3_BASE_ADDR,
-		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO_NAND,
-		.end = BCM_INT_ID_SDIO_NAND,
-		.flags = IORESOURCE_IRQ,
-	},
-};
 static struct sdio_platform_cfg hawaii_sdio_param[] = {
 	{
 		.id = 0,
@@ -1191,65 +1088,15 @@ static struct sdio_platform_cfg hawaii_sdio_param[] = {
 #endif
 };
 
-static struct platform_device hawaii_sdio1_device = {
-	.name = "sdhci",
-	.id = 0,
-	.resource = hawaii_sdio1_resource,
-	.num_resources   = ARRAY_SIZE(hawaii_sdio1_resource),
-	.dev      = {
-		.platform_data = &hawaii_sdio_param[0],
-	},
-};
-
-static struct platform_device hawaii_sdio2_device = {
-	.name = "sdhci",
-	.id = 1,
-	.resource = hawaii_sdio2_resource,
-	.num_resources   = ARRAY_SIZE(hawaii_sdio2_resource),
-	.dev      = {
-		.platform_data = &hawaii_sdio_param[1],
-	},
-};
-
-static struct platform_device hawaii_sdio3_device = {
-	.name = "sdhci",
-	.id = 2,
-	.resource = hawaii_sdio3_resource,
-	.num_resources   = ARRAY_SIZE(hawaii_sdio3_resource),
-	.dev      = {
-		.platform_data = &hawaii_sdio_param[2],
-	},
-};
-
-static struct platform_device *hawaii_sdio_devices[] __initdata = {
-	&hawaii_sdio2_device,
-	&hawaii_sdio3_device,
-	&hawaii_sdio1_device,
-};
-
-static void __init hawaii_add_sdio_devices(void)
-{
-	platform_add_devices(hawaii_sdio_devices,
-			ARRAY_SIZE(hawaii_sdio_devices));
-}
-
 #ifdef CONFIG_BACKLIGHT_PWM
 
-static struct platform_pwm_backlight_data bcm_backlight_data = {
+static struct platform_pwm_backlight_data hawaii_backlight_data = {
 /* backlight */
 	.pwm_id		= 2,
 	.max_brightness	= 32,   /* Android calibrates to 32 levels*/
 	.dft_brightness	= 32,
 	.polarity	= 1,    /* Inverted polarity */
 	.pwm_period_ns	= 1000000,
-};
-
-static struct platform_device bcm_backlight_devices = {
-	.name	= "pwm-backlight",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &bcm_backlight_data,
-	},
 };
 
 #endif /*CONFIG_BACKLIGHT_PWM */
@@ -1445,11 +1292,11 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&hawaii_kp_device,
 #endif
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
-	&headset_device,
+	&hawaii_headset_device,
 #endif
 
 #ifdef CONFIG_DMAC_PL330
-	&pl330_dmac_device,
+	&hawaii_pl330_dmac_device,
 #endif
 
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
@@ -1457,7 +1304,7 @@ static struct platform_device *hawaii_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_BACKLIGHT_PWM
-	&bcm_backlight_devices,
+	&hawaii_backlight_device,
 #endif
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
@@ -1479,6 +1326,12 @@ static struct platform_device *hawaii_devices[] __initdata = {
 #ifdef CONFIG_WD_TAPPER
 	&wd_tapper,
 #endif
+};
+
+struct platform_device *hawaii_sdio_devices[] __initdata = {
+	&hawaii_sdio2_device,
+	&hawaii_sdio3_device,
+	&hawaii_sdio1_device,
 };
 
 static void __init hawaii_add_i2c_devices(void)
@@ -1563,9 +1416,15 @@ static void hawaii_add_pdata(void)
 	hawaii_i2c_adap_devices[2].dev.platform_data = &bsc_i2c_cfg[2];
 	hawaii_i2c_adap_devices[3].dev.platform_data = &bsc_i2c_cfg[3];
 	hawaii_i2c_adap_devices[4].dev.platform_data = &bsc_i2c_cfg[4];
+	hawaii_sdio1_device.dev.platform_data = &hawaii_sdio_param[0];
+	hawaii_sdio2_device.dev.platform_data = &hawaii_sdio_param[1];
+	hawaii_sdio3_device.dev.platform_data = &hawaii_sdio_param[2];
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
+	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
+	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
+	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;
 #ifdef CONFIG_USB_DWC_OTG
 	hawaii_hsotgctrl_platform_device.dev.platform_data = &hsotgctrl_plat_data;
 #endif
@@ -1603,6 +1462,12 @@ static void __init hawaii_add_devices(void)
 
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
+}
+
+static void __init hawaii_add_sdio_devices(void)
+{
+	platform_add_devices(hawaii_sdio_devices,
+				ARRAY_SIZE(hawaii_sdio_devices));
 }
 
 #ifdef CONFIG_FB_BRCM_KONA
