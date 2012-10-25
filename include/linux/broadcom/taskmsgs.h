@@ -341,6 +341,11 @@ typedef enum
 	**/ 
 	MSG_VCC_VM_PWR_SAVING_IND       = MSG_GRP_NET+0x17, 
 
+	/**
+	This reports the RAT/Band change request has been completed.
+	**/
+	MSG_MS_SET_RAT_BAND_IND = MSG_GRP_NET + 0x18, /**< Payload type {::MSNetworkInfo_t} */
+
 	// End of MSG_GRP_NET (0x0200)
 
 	//---------------------------------------------------------------
