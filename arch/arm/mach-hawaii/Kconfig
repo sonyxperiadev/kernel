@@ -131,6 +131,14 @@ config MM_POWER_OK_ERRATUM
 	 Say Y to enable workaround for MM power ok mask erratum(HWRHEA-2272)
 	 Refer JIRA DB for more info
 
+config MM_FREEZE_VAR500M_ERRATUM
+	bool "Disable autogating for Varvdd500M clock to resolve MM freeze"
+	default y
+	help
+	 Say Y to enable workaround for MM freeze with varvdd500 autogating
+	 enabled erratum(HWHAWAII-73)
+	 Refer JIRA DB for more info
+
 config	HAWAIILC_2093
 	bool "Enable HawaiiLC&2093"
 	default n

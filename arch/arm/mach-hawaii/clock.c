@@ -7075,7 +7075,16 @@ int root_ccu_clk_init(struct clk* clk)
 	/* initialize PLL1 OFFSET */
 	writel(PLL1_OFFSET_CONFIG, KONA_ROOT_CLK_VA +
 			ROOT_CLK_MGR_REG_PLL1_OFFSET_OFFSET);
-
+#ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
+	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M)) {
+		reg_val = readl(KONA_ROOT_CLK_VA +
+				ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+		reg_val |=
+		ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
+		writel(reg_val,
+		KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+	}
+#endif
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
 
