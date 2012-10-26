@@ -1320,7 +1320,7 @@ static int bcmnand_init_chip(struct bcmnand_info *info)
 
 static int __devinit bcmnand_probe(struct platform_device *pdev)
 {
-	int ret = -ENOENT;
+	int ret;
 	struct bcmnand_info *info;
 #if 0				// FIXME - add resources later if appropriate
 	struct bcmnand_platform_data *pdata = pdev->dev.platform_data;
@@ -1332,14 +1332,18 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 	chal_nand_info_t *pni;
 
 	clk = clk_get(&pdev->dev, "nand_clk");
-	if (IS_ERR_OR_NULL(clk))
-		return -ENODEV;
-	clk_enable(clk);
+	if (IS_ERR(clk))
+		return PTR_ERR(clk);
+
+	ret = clk_enable(clk);
+	if (!ret)
+		goto out_put_clk;
 
 	info = kzalloc(sizeof(*info), GFP_KERNEL);
 	if (info == NULL) {
 		dev_err(&pdev->dev, "no memory for flash info\n");
 		return -ENOMEM;
+		goto out_disable_clk;
 	}
 
 	spin_lock_init(&info->controller.lock);
@@ -1413,16 +1417,20 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 	mtd->subpage_sft = 0;	/* subpages not supported */
 
 	chip->buffers = kmalloc(sizeof(*chip->buffers), GFP_KERNEL);
-	if (!chip->buffers)
-		return -ENOMEM;
+	if (!chip->buffers) {
+		ret = -ENOMEM;
+		goto out_free_info;
+	}
 
 	/* Set the internal oob buffer location, just after the page data */
 	chip->oob_poi = chip->buffers->databuf + mtd->writesize;
 
 #ifdef CONFIG_MTD_BCMNAND_VERIFY_WRITE
 	chip->verifybuf = kmalloc(mtd->writesize, GFP_KERNEL);
-	if (!chip->verifybuf)
-		return -ENOMEM;
+	if (!chip->verifybuf) {
+		ret = -ENOMEM;
+		goto out_free_buffers;
+	}
 #endif
 
 	chip->subpagesize = mtd->writesize >> mtd->subpage_sft;
@@ -1463,7 +1471,7 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 			printk(KERN_ERR "BCMNAND: Too few partitions - %d\n",
 			       nr_partitions);
 			ret = -EIO;
-			goto out_free_info;
+			goto out_free_verifybuf;
 		}
 		mtd_device_register(mtd, partition_info, nr_partitions);
 	}
@@ -1472,8 +1480,16 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 
 	return 0;
 
- out_free_info:
+out_free_verifybuf:
+	kfree(chip->verifybuf);
+out_free_buffers:
+	kfree(chip->buffers);
+out_free_info:
 	kfree(info);
+out_disable_clk:
+	clk_disable(clk);
+out_put_clk:
+	clk_put(clk);
 
 	return ret;
 }
