@@ -813,10 +813,12 @@ static void pmem_shrink(struct work_struct *work)
 		/* wait for process to die .... */
 		ret = down_timeout(&p_info->shrinker_sem, HZ*20);
 		if (ret == -ETIME) {
+			p_info->deathpending = NULL;
+			p_info->deathpending_rss = 0L;
 			printk(KERN_ALERT
 				"pmem: Shrinker took more than 20secs"
-				" to release memory, Crashing now!!\n");
-			*(unsigned long *)0xdeadd00d = 0xdeadd00d;
+				" to release memory from task (%s)!\n",
+				selected->comm);
 		}
 
 	}
