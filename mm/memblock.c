@@ -819,9 +819,6 @@ phys_addr_t __init memblock_alloc_from_range(phys_addr_t size,
 	if (alloc && !memblock_reserve(alloc, size))
 		return alloc;
 
-	panic("ERROR: Failed to allocate 0x%llx bytes below 0x%llx.\n",
-			(unsigned long long) size, (unsigned long long) max_addr);
-
 	return 0;
 }
 
