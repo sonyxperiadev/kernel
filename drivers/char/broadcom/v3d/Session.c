@@ -17,6 +17,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/wait.h>
 
 #include "Driver.h"
+#include "Device.h"
 #include "Session.h"
 
 
@@ -118,14 +119,14 @@ void V3dSession_Issued(V3dDriver_JobType *Job)
 	spin_unlock_irqrestore(&Instance->Issued.Lock, Flags);
 }
 
-void V3dSession_Complete(V3dDriver_JobType *Job)
+void V3dSession_Complete(V3dDriver_JobType *Job, int Status)
 {
 	V3dSessionType *Instance;
 	unsigned long   Flags;
 	int             Last;
 	BUG_ON(Job == NULL);
 	Instance = Job->Session.Instance;
-	Job->State = V3DDRIVER_JOB_COMPLETE;
+	Job->State = Status;
 	spin_lock_irqsave(&Instance->Issued.Lock, Flags);
 	Last = kref_put(&Job->Waiters, &RemoveJob);
 	spin_unlock_irqrestore(&Instance->Issued.Lock, Flags);
@@ -181,7 +182,7 @@ static void WaitJob(V3dSessionType *Instance, V3dDriver_JobType *Job)
 {
 	int Last;
 	unsigned long Flags;
-	int RemainingTime = wait_event_timeout(Job->WaitForCompletion, Job->State == V3DDRIVER_JOB_COMPLETE, msecs_to_jiffies(JOB_TIMEOUT_MS));
+	int RemainingTime = wait_event_timeout(Job->WaitForCompletion, Job->State >= V3DDRIVER_JOB_COMPLETE, msecs_to_jiffies(JOB_TIMEOUT_MS));
 	spin_lock_irqsave(&Instance->Issued.Lock, Flags);
 	if (RemainingTime == 0) {
 		(void) kref_put(&Job->Waiters, &RemoveJob); /* Remove completion reference as we timed-out */
@@ -190,8 +191,15 @@ static void WaitJob(V3dSessionType *Instance, V3dDriver_JobType *Job)
 	Last = kref_put(&Job->Waiters, &RemoveJob);
 	spin_unlock_irqrestore(&Instance->Issued.Lock, Flags);
 
-	if (Last != 0)
-		V3dDriver_JobComplete(Instance->Driver, Job);
+	if (Last != 0) {
+		if (RemainingTime == 0) {
+			/* Timed-out - V3dDevice needs to be ready */
+			/* for a new job */
+			V3dDevice_JobCancel(Job->Device);
+			V3dDriver_KickConsumers(Instance->Driver);
+		} else
+			V3dDriver_JobComplete(Instance->Driver, Job);
+	}
 }
 
 int32_t V3dSession_Wait(V3dSessionType *Instance)

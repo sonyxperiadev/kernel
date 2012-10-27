@@ -20,7 +20,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "Statistics.h"
 
-#define JOB_TIMEOUT_MS 500
+#define JOB_TIMEOUT_MS 1000
 
 
 struct V3dDriverTag;
@@ -62,7 +62,7 @@ extern void            V3dSession_Delete(V3dSessionType *Instance);
 extern void            V3dSession_AddStatistics(V3dSessionType *Instance, int User, unsigned int Queue, unsigned int Run);
 extern void            V3dSession_ResetStatistics(V3dSessionType *Instance);
 extern void            V3dSession_Issued(struct V3dDriver_JobTag *Job);
-extern void            V3dSession_Complete(struct V3dDriver_JobTag *Job);
+extern void            V3dSession_Complete(struct V3dDriver_JobTag *Job, int Status);
 
 /* External interface */
 extern int V3dSession_JobPost(

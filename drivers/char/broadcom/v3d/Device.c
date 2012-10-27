@@ -86,7 +86,8 @@ static void AllocateBinMemory(struct work_struct *Work)
 	unsigned long     Flags;
 	BUG_ON(Instance->OutOfMemory.Index.InUse != Instance->OutOfMemory.Index.Allocated);
 	if (Instance->OutOfMemory.Index.Allocated == sizeof(Instance->OutOfMemory.Memory) / sizeof(Instance->OutOfMemory.Memory[0])) {
-		printk(KERN_ERR "Out of overspill binning memory entries!\n");
+		printk(KERN_ERR "V3D: Out of overspill binning memory entries - job cancelled!\n");
+		V3dDevice_JobCancel(Instance);
 		return;
 	}
 
@@ -94,8 +95,8 @@ static void AllocateBinMemory(struct work_struct *Work)
 	Memory = &Instance->OutOfMemory.Memory[Instance->OutOfMemory.Index.Allocated];
 	Memory->Virtual = dma_alloc_coherent(Instance->Device, BIN_BLOCK_BYTES, &Memory->Physical, GFP_DMA);
 	if (Memory->Virtual == NULL) {
-		printk(KERN_ERR "Unable to allocate overspill binning memory!\n");
-		/* TODO: Fail the job .. */
+		printk(KERN_ERR "V3D: Unable to allocate overspill binning memory - job cancelled!\n");
+		V3dDevice_JobCancel(Instance);
 		return;
 	}
 	spin_lock_irqsave(&Instance->OutOfMemory.Lock, Flags);
@@ -114,8 +115,13 @@ static void FreeBinMemory(V3dDeviceType *Instance)
 {
 	unsigned int i;
 	for (i = 0 ; i < Instance->OutOfMemory.Index.Allocated ; ++i)
-		dma_free_coherent(Instance->Device, BIN_BLOCK_BYTES, Instance->OutOfMemory.Memory[i].Virtual, Instance->OutOfMemory.Memory[i].Physical);
-	Instance->OutOfMemory.Index.InUse = Instance->OutOfMemory.Index.Allocated = 0;
+		dma_free_coherent(
+			Instance->Device,
+			BIN_BLOCK_BYTES,
+			Instance->OutOfMemory.Memory[i].Virtual,
+			Instance->OutOfMemory.Memory[i].Physical);
+	Instance->OutOfMemory.Index.InUse = 0;
+	Instance->OutOfMemory.Index.Allocated = 0;
 }
 
 
@@ -318,6 +324,7 @@ static void SwitchOff(struct work_struct *Work)
 	if (Instance->Idle != 0) {
 		BUG_ON(Instance->InProgress.BinRender != NULL);
 		BUG_ON(Instance->InProgress.Head != Instance->InProgress.Tail);
+		FreeBinMemory(Instance);
 		PowerOff(Instance);
 		mutex_unlock(&Instance->Suspend);
 	}
@@ -343,6 +350,7 @@ static V3dDriver_JobType *PostJob(V3dDeviceType * Instance)
 		return NULL;
 
 	/* Starting a job */
+	Job->Device = Instance;
 
 	/* Avoid a race with SwitchOff */
 	if (Instance->Idle != 0)
@@ -376,7 +384,7 @@ void V3dDevice_Delete(V3dDeviceType *Instance)
 	switch (Instance->Initialised) {
 	case 7:
 		mutex_lock(&Instance->Suspend);
-		free_irq(IRQ_GRAPHICS, NULL);
+		free_irq(IRQ_GRAPHICS, Instance);
 		flush_delayed_work(&Instance->SwitchOff);
 		FreeBinMemory(Instance);
 
@@ -531,6 +539,17 @@ void V3dDevice_JobPosted(V3dDeviceType *Instance)
 
 /* ================================================================ */
 
+void V3dDevice_JobComplete(V3dDeviceType *Instance, int Status)
+{
+#ifdef VERBOSE_DEBUG
+	printk(KERN_ERR "%s: Complete j %p\n", __func__, Instance->InProgress.BinRender);
+#endif
+	/* Safe for user and bin/render jobs */
+	ReleaseBinMemory(Instance);
+	V3dSession_Complete(Instance->InProgress.BinRender, Status);
+	Instance->InProgress.BinRender = NULL;
+}
+
 /* Returns Complete? */
 static int HandleBinRenderInterrupt(V3dDeviceType *Instance, uint32_t Status)
 {
@@ -562,12 +581,8 @@ static int HandleBinRenderInterrupt(V3dDeviceType *Instance, uint32_t Status)
 	if ((Status & (1 << V3D_INTCTL_INT_FRDONE_SHIFT)) != 0)
 		CompleteBinRender = 1; /* Render complete => job complete */
 
-	if (CompleteBinRender != 0) {
-		/* Job complete */
-		ReleaseBinMemory(Instance);
-		V3dSession_Complete(Instance->InProgress.BinRender);
-		Instance->InProgress.BinRender = NULL;
-	}
+	if (CompleteBinRender != 0)
+		V3dDevice_JobComplete(Instance, V3DDRIVER_JOB_COMPLETE);
 	return CompleteBinRender;
 }
 
@@ -617,7 +632,7 @@ int HandleUserInterrupt(V3dDeviceType *Instance, uint32_t QpuStatus)
 		Index = Instance->InProgress.Tail++ & (V3D_USER_FIFO_LENGTH - 1);
 		Job   = Instance->InProgress.User[Index];
 		BUG_ON(Job == NULL);
-		V3dSession_Complete(Job);
+		V3dSession_Complete(Job, V3DDRIVER_JOB_COMPLETE);
 	}
 #ifdef VERBOSE_DEBUG
 	printk(KERN_ERR "%s: Completed ..%4x\n", __func__, Completed);
@@ -633,6 +648,45 @@ static uint32_t GetStatus(V3dDeviceType *Instance, uint32_t *Status, uint32_t *Q
 	return *Status | *QpuStatus;
 }
 
+/* Returns Issued? */
+static int IssueNextJob(V3dDeviceType *Instance)
+{
+	/* Job complete */
+	V3dDriver_JobType *Job;
+	unsigned long      Flags;
+	/* Issue the next one */
+	Flags = V3dDriver_JobLock(Instance->Driver.Instance);
+	Job = V3dDriver_JobGet(Instance->Driver.Instance, V3D_JOB_USER | V3D_JOB_BIN_REND);
+	if (Job != NULL) {
+#ifdef VERBOSE_DEBUG
+		printk(KERN_ERR "%s: Issuing job %p\n", __func__, Job);
+#endif
+		Job->Device = Instance;
+
+		/* Post the job to the hardware */
+		if (Job->UserJob.job_type == V3D_JOB_USER) {
+			SetMode(Instance, V3dMode_User);
+			PostUserJob(Instance, Job);
+		} else {
+			SetMode(Instance, V3dMode_Render);
+			PostBinRenderJob(Instance, Job);
+		}
+	}
+	V3dDriver_JobUnlock(Instance->Driver.Instance, Flags);
+	return Job != NULL;
+}
+
+static void CheckIdle(V3dDeviceType *Instance, uint32_t Status)
+{
+	/* Update Idle - we only go from busy to idle here */
+	if (Instance->InProgress.BinRender == NULL
+		&& Instance->InProgress.Head == Instance->InProgress.Tail
+		&& (Status & (1 << MEMORY_BIT)) == 0) {
+		Instance->Idle = 1;
+		schedule_delayed_work(&Instance->SwitchOff, msecs_to_jiffies(DELAY_SWITCHOFF_MS));
+	}
+}
+
 static irqreturn_t InterruptHandler(int Irq, void *Context)
 {
 	V3dDeviceType *Instance  = (V3dDeviceType *) Context;
@@ -646,37 +700,34 @@ static irqreturn_t InterruptHandler(int Irq, void *Context)
 			Complete |= HandleUserInterrupt(Instance, QpuStatus);
 	}
 
-	if (Complete != 0) {
-		/* Job complete */
-		V3dDriver_JobType *Job;
-		unsigned long      Flags;
-		/* Issue the next one */
-		Flags = V3dDriver_JobLock(Instance->Driver.Instance);
-		Job = V3dDriver_JobGet(Instance->Driver.Instance, V3D_JOB_USER | V3D_JOB_BIN_REND);
-		if (Job != NULL) {
-#ifdef VERBOSE_DEBUG
-			printk(KERN_ERR "%s: Issuing job %p\n", __func__, Job);
-#endif
-			/* Post the job to the hardware */
-			if (Job->UserJob.job_type == V3D_JOB_USER) {
-				SetMode(Instance, V3dMode_User);
-				PostUserJob(Instance, Job);
-			} else {
-				SetMode(Instance, V3dMode_Render);
-				PostBinRenderJob(Instance, Job);
-			}
-		}
-		V3dDriver_JobUnlock(Instance->Driver.Instance, Flags);
-	}
+	if (Complete != 0)
+		(void) IssueNextJob(Instance);
 
 	/* Update Idle - we only go from busy to idle here */
-	if (Instance->InProgress.BinRender == NULL
-		&& Instance->InProgress.Head == Instance->InProgress.Tail
-		&& (Status & (1 << MEMORY_BIT)) == 0) {
-		Instance->Idle = 1;
-		schedule_delayed_work(&Instance->SwitchOff, msecs_to_jiffies(DELAY_SWITCHOFF_MS));
-	}
+	CheckIdle(Instance, Status);
 	return IRQ_HANDLED;
+}
+
+
+/* ================================================================ */
+
+void V3dDevice_JobCancel(V3dDeviceType *Instance)
+{
+#ifdef VERBOSE_DEBUG
+	printk(KERN_ERR "%s: Timeout, Idle %d\n", __func__, Instance->Idle);
+#endif
+	Reset(Instance);
+
+	/* Complete all jobs outstanding - currently only one */
+	V3dDevice_JobComplete(Instance, V3DDRIVER_JOB_FAILED);
+
+	ResetState(Instance);
+
+	if (IssueNextJob(Instance) == 0) {
+		/* Update Idle - we only go from busy to idle here */
+		/* Safe out of in interrupt context, as we're idle */
+		CheckIdle(Instance, 0U);
+	}
 }
 
 

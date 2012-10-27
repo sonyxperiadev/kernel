@@ -346,7 +346,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case V3D_IOCTL_POST_JOB:
 		{
 			KLOG_V("v3d_ioctl :V3D_IOCTL_POST_JOB");
-			ret = V3dSession_JobPost(dev->session, (const v3d_job_post_t *)arg);
+			ret = arg != 0 ? V3dSession_JobPost(dev->session, (const v3d_job_post_t *)arg) : -EFAULT;
 		}
 		break;
 

@@ -299,6 +299,11 @@ int V3dDriver_JobPost(
 	spin_unlock_irqrestore(&Instance->Job.Posted.Lock, Flags);
 
 	/* Kick consumer(s) */
-	V3dDevice_JobPosted(Instance->Device);
+	V3dDriver_KickConsumers(Instance);
 	return 0;
+}
+
+void V3dDriver_KickConsumers(V3dDriverType *Instance)
+{
+	V3dDevice_JobPosted(Instance->Device);
 }

@@ -53,7 +53,7 @@ struct V3dDeviceTag {
 
 	struct {
 		spinlock_t Lock;
-#define BIN_BLOCKS 4
+#define BIN_BLOCKS 32
 #define BIN_BLOCK_BYTES (2 << 20)
 		struct {
 			unsigned int InUse;
@@ -111,6 +111,9 @@ extern void V3dDevice_Delete(V3dDeviceType *Instance);
 /* Called to indicate that a job has been posted
    Jobs are fetched when required via calls to GetJob */
 extern void V3dDevice_JobPosted(V3dDeviceType *Instance);
+
+extern void V3dDevice_JobComplete(V3dDeviceType *Instance, int Status);
+extern void V3dDevice_JobCancel(V3dDeviceType *Instance);
 
 extern void V3dDevice_Suspend(V3dDeviceType *Instance);
 extern void V3dDevice_Resume(V3dDeviceType *Instance);

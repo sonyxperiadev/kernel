@@ -30,6 +30,7 @@ the GPL, without Broadcom's express prior written consent.
 #define V3D_VERSION_STR	"1.0.0\n"
 
 
+struct V3dDeviceTag;
 struct V3dSessionTag;
 struct task_struct;
 
@@ -40,12 +41,14 @@ typedef struct V3dDriver_JobTag {
 		struct list_head      Link;
 		struct V3dSessionTag *Instance;
 	} Session;
+	struct V3dDeviceTag   *Device;
 	wait_queue_head_t      WaitForCompletion;
 	struct kref            Waiters;
 #define V3DDRIVER_JOB_INITIALISED 0
 #define V3DDRIVER_JOB_ISSUED      1
 #define V3DDRIVER_JOB_ACTIVE      2
 #define V3DDRIVER_JOB_COMPLETE    3
+#define V3DDRIVER_JOB_FAILED      4
 	volatile int           State;
 	ktime_t                Queued;
 	ktime_t                Start;
@@ -100,6 +103,7 @@ typedef struct V3dDriverTag {
 		unsigned int           Initialised;
 		struct proc_dir_entry *Directory;
 		struct proc_dir_entry *Status;
+		struct proc_dir_entry *Session;
 		struct proc_dir_entry *Version;
 	} Proc;
 } V3dDriverType;
@@ -142,6 +146,7 @@ extern void V3dDriver_JobComplete(
 	V3dDriver_JobType *Job);
 extern int V3dDriver_AddSession(V3dDriverType *Instance, struct V3dSessionTag *Session);
 extern void V3dDriver_RemoveSession(V3dDriverType *Instance, struct V3dSessionTag *Session);
+extern void V3dDriver_KickConsumers(V3dDriverType *Instance);
 
 /* For V3dDriver internal use */
 extern int  V3dDriver_CreateProcEntries(V3dDriverType *Instance);
