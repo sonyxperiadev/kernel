@@ -51,11 +51,11 @@ extern u32 cmd_buf_sz;
  */
 static struct v0x_spec_i2c_cmd_ptr v0_ptr = {
 	.other_ptr = VO0_HW_SEQ_START_OFF,
-	.set2_val = VLT_ID_RETN,	/*Retention voltage inx */
+	.set2_val = VLT_ID_WAKEUP,	/*Retention voltage inx */
 	.set2_ptr = VO0_SET2_OFFSET,
-	.set1_val = VLT_ID_WAKEUP,	/*wakeup from retention voltage inx */
+	.set1_val = VLT_ID_RETN,	/*wakeup from retention voltage inx */
 	.set1_ptr = VO0_SET1_OFFSET,
-	.zerov_ptr = VO0_SET2_OFFSET,	/* NO OFF State for  VO0 */
+	.zerov_ptr = VO0_SET1_OFFSET,	/* NO OFF State for  VO0 */
 };
 
 /**
@@ -63,9 +63,9 @@ static struct v0x_spec_i2c_cmd_ptr v0_ptr = {
  */
 static struct v0x_spec_i2c_cmd_ptr v1_ptr = {
 	.other_ptr = VO1_HW_SEQ_START_OFF,
-	.set2_val = VLT_ID_RETN,		/*Retention voltage inx */
+	.set2_val = VLT_ID_WAKEUP,		/*Retention voltage inx */
 	.set2_ptr = VO1_SET2_OFFSET,
-	.set1_val = VLT_ID_WAKEUP,	/*wakeup from retention voltage inx */
+	.set1_val = VLT_ID_RETN,	/*wakeup from retention voltage inx */
 	.set1_ptr = VO1_SET1_OFFSET,
 	.zerov_ptr = VO1_ZERO_PTR_OFFSET,
 };

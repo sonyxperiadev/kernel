@@ -37,6 +37,7 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif
 #include "pm_params.h"
+#include "sequencer_ucode.h"
 #include <plat/kona_avs.h>
 
 #ifdef CONFIG_DEBUG_FS
@@ -522,16 +523,17 @@ static struct i2c_cmd i2c_dummy_seq_cmd[] = {
 	{REG_ADDR, 0},		/*15 - NOP*/
 	{REG_ADDR, 0},		/*16 - NOP*/
 	{END, 0},			/*17 - End*/
-	{SET_PC_PINS, 0x22}, /*18 - wake up (other)*/
+	{SET_PC_PINS, SET_PC_PIN_CMD(PC1)}, /*18 - wake up (other)*/
 	{END, 0},			/*19 - End*/
 	{REG_ADDR, 0},		//20 - NOP
-	{SET_PC_PINS, 0x30}, /*21 - retention, zero (other)*/
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1)}, /*21 - retention, zero (other)*/
 	{END, 0},			/*22 - End*/
 	{REG_ADDR, 0},		/*23 - NOP*/
-	{SET_PC_PINS, 0x44}, /*24 - wake up(A9)*/
-	{END, 0},			/*25 - End*/
-	{REG_ADDR, 0},		/*26 - NOP*/
-	{SET_PC_PINS, 0x50}, /*27 - retention, zero (A9)*/
+	{SET_PC_PINS, SET_PC_PIN_CMD(PC2)}, /*24 - wake up(A9)*/
+	{WAIT_TIMER, SR_VLT_SOFT_START_DELAY}, /* Wait for voltage change */
+	{END, 0},			/*26 - End*/
+	{REG_ADDR, 0},		/*27 - NOP*/
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC2)}, /*28 - retention, zero (A9)*/
 	{END, 0},			/*28 - End*/
 	{REG_ADDR, 0},		/*29 - NOP*/
 	{REG_ADDR, 0},		/*30 - NOP*/
@@ -570,7 +572,17 @@ static struct i2c_cmd i2c_dummy_seq_cmd[] = {
 	{END, 0},		/*63 -END*/
 
 };
+/**
+ * Offsets in the dummy Sequencer code
+ */
+#define DUMMY_SEQ_VO0_HW_SEQ_START_OFF	2
+#define DUMMY_SEQ_VO0_SET1_OFFSET	21
+#define DUMMY_SEQ_VO0_SET2_OFFSET	18
 
+#define DUMMY_SEQ_VO1_HW_SEQ_START_OFF	2
+#define DUMMY_SEQ_VO1_SET1_OFFSET	28
+#define DUMMY_SEQ_VO1_ZERO_PTR_OFFSET	28
+#define DUMMY_SEQ_VO1_SET2_OFFSET	24
 
 #define HAWAII_EVENT_POLICY_OFFSET	{ \
 	[LCDTE_EVENT]		= 0x0, \
@@ -710,23 +722,22 @@ static int __init hawaii_pwr_mgr_init(void)
 	int i;
 	struct pi *pi;
 	struct v0x_spec_i2c_cmd_ptr dummy_seq_v0_ptr = {
-		.other_ptr = 2,
-		.set2_val = 1,	/*Retention voltage inx */
-		.set2_ptr = 21,
-		.set1_val = 2,	/*wakeup from retention voltage inx */
-		.set1_ptr = 18,
-		.zerov_ptr = 21,
+		.other_ptr = DUMMY_SEQ_VO0_HW_SEQ_START_OFF,
+		.set2_val = VLT_ID_WAKEUP,
+		.set2_ptr = DUMMY_SEQ_VO0_SET2_OFFSET,
+		.set1_val = VLT_ID_RETN,
+		.set1_ptr = DUMMY_SEQ_VO0_SET1_OFFSET,
+		.zerov_ptr = DUMMY_SEQ_VO0_SET1_OFFSET,
 	};
 
 	struct v0x_spec_i2c_cmd_ptr dummy_seq_v1_ptr = {
-		.other_ptr = 2,
-		.set2_val = 1,	/*Retention voltage inx */
-		.set2_ptr = 27,
-		.set1_val = 2,	/*wakeup from retention voltage inx */
-		.set1_ptr = 24,
-		.zerov_ptr = 27,
+		.other_ptr = DUMMY_SEQ_VO1_HW_SEQ_START_OFF,
+		.set2_val = VLT_ID_WAKEUP,
+		.set2_ptr = DUMMY_SEQ_VO1_SET2_OFFSET,
+		.set1_val = VLT_ID_RETN,
+		.set1_ptr = DUMMY_SEQ_VO1_SET1_OFFSET,
+		.zerov_ptr = DUMMY_SEQ_VO1_ZERO_PTR_OFFSET,
 	};
-
 
 	cfg.ac = 1;
 	cfg.atl = 0;
@@ -772,7 +783,20 @@ static int __init hawaii_pwr_mgr_init(void)
 	pwr_mgr_event_set(SOFTWARE_2_EVENT, 1);
 	pwr_mgr_event_set(SOFTWARE_0_EVENT, 1);
 
+	pwr_mgr_set_pc_sw_override(PC0, false, 0);
 	pwr_mgr_set_pc_clkreq_override(PC0, true, 1);
+
+	/* make sure that PC1, PC2 software override
+	 * is cleared so that sequencer can toggle these
+	 * pins during retention/off/wakeup
+	 */
+	pwr_mgr_set_pc_sw_override(PC1, false, 0);
+	pwr_mgr_set_pc_sw_override(PC2, false, 0);
+	pwr_mgr_set_pc_sw_override(PC3, false, 0);
+	pwr_mgr_set_pc_clkreq_override(PC1, false, 0);
+	pwr_mgr_set_pc_clkreq_override(PC2, false, 0);
+	pwr_mgr_set_pc_clkreq_override(PC3, false, 0);
+
 	pwr_mgr_pm_i2c_enable(true);
 	/*Init event table */
 	for (i = 0; i < ARRAY_SIZE(__event_table); i++) {

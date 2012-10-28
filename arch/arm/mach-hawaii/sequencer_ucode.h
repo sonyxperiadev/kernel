@@ -12,17 +12,29 @@
 * consent.
 *****************************************************************************/
 
+#define SET_PC_PIN_CMD(pc_pin)			\
+	(SET_PC_PIN_CMD_##pc_pin##_PIN_VALUE_MASK|\
+	 SET_PC_PIN_CMD_##pc_pin##_PIN_OVERRIDE_MASK)
+
+#define CLEAR_PC_PIN_CMD(pc_pin)			\
+	 SET_PC_PIN_CMD_##pc_pin##_PIN_OVERRIDE_MASK
+
+/**
+ * Rampupm time for CSR/MSR from off state to Vout
+ */
+#define SR_VLT_SOFT_START_DELAY		200
+
 /**
  * Offsets in the Sequencer code
  */
 #define VO0_HW_SEQ_START_OFF		64
-#define VO0_SET2_OFFSET			94
-#define VO0_SET1_OFFSET			96
+#define VO0_SET1_OFFSET			94
+#define VO0_SET2_OFFSET			96
 
 #define VO1_HW_SEQ_START_OFF		79
-#define VO1_SET2_OFFSET			98
-#define VO1_SET1_OFFSET			100
-#define VO1_ZERO_PTR_OFFSET		79
+#define VO1_SET1_OFFSET			79
+#define VO1_ZERO_PTR_OFFSET		98
+#define VO1_SET2_OFFSET			100
 
 #define VO0_VO1_JUMP_OFFSET		24
 

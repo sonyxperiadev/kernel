@@ -54,13 +54,6 @@
 #define BSC_PAD_OUT_EN			(0x0)
 #define BSC_PAD_OUT_DIS			(0x1<<2)
 
-#define SET_PC_PIN_CMD(pc_pin)			\
-	(SET_PC_PIN_CMD_##pc_pin##_PIN_VALUE_MASK|\
-	 SET_PC_PIN_CMD_##pc_pin##_PIN_OVERRIDE_MASK)
-
-#define CLEAR_PC_PIN_CMD(pc_pin)			\
-	 SET_PC_PIN_CMD_##pc_pin##_PIN_OVERRIDE_MASK
-
 #define PC_PIN_DEFAULT_STATE		SET_PC_PIN_CMD(PC3)
 
 struct i2c_cmd i2c_cmd[] = {
@@ -162,16 +155,15 @@ struct i2c_cmd i2c_cmd[] = {
 	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Register */
 	{REG_DATA, BSC_PAD_OUT_DIS},	/* Disable pad outpout */
 	{END, 0},		/*  93: -- VO1 -- End Sequence */
-	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1)},/* 94:set PC low-VO0_SET2_OFFSET*/
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1)},/* 94:set PC low-VO0_SET1_OFFSET*/
 	{END, 0},		/* End */
-	{SET_PC_PINS, SET_PC_PIN_CMD(PC1)},/* 96: set PC high-VO0_SET1_OFFSET*/
+	{SET_PC_PINS, SET_PC_PIN_CMD(PC1)},/* 96: set PC high-VO0_SET2_OFFSET*/
 	{END, 0},		/* END */
-	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC3)},/* 98:set PC low-VO1_SET2_OFFSET*/
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC2)},/* 98:set VO1_ZERO_PTR_OFFSET*/
 	{END, 0},		/* End sequence (SET2) */
-	{SET_PC_PINS, SET_PC_PIN_CMD(PC3)},/* 100:set PC high-VO1_SET1_OFFSET*/
-	{REG_ADDR, VO1_HW_SEQ_START_OFF},
-	{JUMP, VO1_HW_SEQ_START_OFF},
-	{END, 0},		/* 103: End sequence */
+	{SET_PC_PINS, SET_PC_PIN_CMD(PC2)},/* 100:set PC high-VO1_SET2_OFFSET*/
+	{WAIT_TIMER, SR_VLT_SOFT_START_DELAY}, /* Wait for voltage change */
+	{END, 0},		/*  102: -- VO1 -- End Sequence */
 };
 
 struct i2c_cmd *i2c_cmd_buf = i2c_cmd;

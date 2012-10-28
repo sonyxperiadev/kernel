@@ -171,11 +171,11 @@ static int bcmpmu_i2c_try_read(struct bcmpmu59xxx *bcmpmu, u32 reg, u8 * value)
 		if (check_fifo && (last_trans == I2C_TRANS_WRITE)) {
 			err =
 			pwr_mgr_pmu_reg_read((u8)
-					DEC_REG_ADD(PMU_REG_I2CCTRL2),
+					DEC_REG_ADD(PMU_REG_I2CCTRL1),
 					bcmpmu_get_slaveid(bcmpmu,
 					PMU_REG_I2CCTRL2),
 					&temp);
-			if (!err && !(temp & I2CCTRL2_RDBLOCK_MASK)) {
+			if (!err && (temp & I2CCTRL1_FIFOEMPTY_MASK)) {
 
 				err = pwr_mgr_pmu_reg_read((u8)
 							   DEC_REG_ADD
