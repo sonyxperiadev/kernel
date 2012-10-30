@@ -799,17 +799,6 @@ static int dormant_enter_continue(unsigned long data)
 
 
 	} else {
-		/* Only non-master cores clears it's SMP bit in the aux
-		 * control register. For core0, the boot ROM clears the
-		 * SMP bit just before WFI. If Linux clears the SMP bit
-		 * for CPU0 before the SMC call, it causes the shareable
-		 * regions to become non-cached. This results in the boot
-		 * ROM stack and data area to get written with incorrect
-		 * values when the boot ROM flushes D-cache at the end
-		 * of the dormant entry sequence.
-		 */
-		write_actlr(read_actlr() & ~(0x40));
-
 		/* Write the address where we want core-1 to boot */
 		writel_relaxed(virt_to_phys(cpu_resume),
 			       KONA_CHIPREG_VA + CHIPREG_BOOT_2ND_ADDR_OFFSET);
