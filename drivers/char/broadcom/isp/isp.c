@@ -144,7 +144,8 @@ static int isp_open(struct inode *inode, struct file *filp)
 		err_print("request_irq failed ret = %d\n", ret);
 		goto err;
 	}
-
+	/* Ensure that only one CORE handles interrupt for the MM block. */
+	irq_set_affinity(IRQ_ISP, cpumask_of(0));
 	disable_irq(IRQ_ISP);
 	return 0;
 

@@ -167,7 +167,6 @@ static irqreturn_t h264_isr(int irq, void *dev_id)
 
 		// Try CABAC
 		status = reg_read(h264_base, H264_REGC2_REGCABAC2BINSCTL_OFFSET);
-
 		if (status & H264_REGC2_REGCABAC2BINSCTL_INT_MASK) {
 			intr_status =
 			    reg_read(h264_base,
@@ -177,9 +176,6 @@ static irqreturn_t h264_isr(int irq, void *dev_id)
 
 			// Pass this info to the user space.
 			dev->dev_status.cbc_intr = intr_status;
-			spin_unlock_irqrestore(&dev->lock, flags);
-			complete(&dev->irq_sem);
-			return IRQ_RETVAL(1);
 		}
 		// First try MCIN.
 		status = reg_read(h264_base, H264_MCODEIN_STATUS_OFFSET);
@@ -192,10 +188,10 @@ static irqreturn_t h264_isr(int irq, void *dev_id)
 
 			// Pass this info to the user space.
 			dev->dev_status.mcin_intr = intr_status;
-			spin_unlock_irqrestore(&dev->lock, flags);
-			complete(&dev->irq_sem);
-			return IRQ_RETVAL(1);
 		}
+		spin_unlock_irqrestore(&dev->lock, flags);
+		complete(&dev->irq_sem);
+		return IRQ_RETVAL(1);
 	}
 	spin_unlock_irqrestore(&dev->lock, flags);
 	return IRQ_RETVAL(1);
@@ -281,6 +277,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 		err_print("request_irq failed for AOB ret = %d\n", ret);
 		goto err;
 	}
+	/* Ensure that only one CORE handles interrupt for the MM block. */
 	irq_set_affinity(H264_AOB_IRQ, cpumask_of(0));
 
 	ret =
@@ -290,6 +287,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 		err_print("request_irq failed for CME ret = %d\n", ret);
 		goto err;
 	}
+	/* Ensure that only one CORE handles interrupt for the MM block. */
 	irq_set_affinity(H264_CME_IRQ, cpumask_of(0));
 
 	ret =
@@ -299,6 +297,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 		err_print("request_irq failed for MCIN_CBC ret = %d\n", ret);
 		goto err;
 	}
+	/* Ensure that only one CORE handles interrupt for the MM block. */
 	irq_set_affinity(H264_MCIN_CBC_IRQ, cpumask_of(0));
 	disable_irq(H264_AOB_IRQ);
 	disable_irq(H264_CME_IRQ);
