@@ -783,7 +783,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	 * regulator string associated with USB. Hardcode for now
 	 */
 	xceiv_data->bcm_hsotg_regulator =
-		regulator_get(NULL, "hv2ldo_uc");
+		regulator_get(NULL, "usb_vcc");
 
 	if (IS_ERR(xceiv_data->bcm_hsotg_regulator)) {
 		dev_warn(&pdev->dev, "Failed to get regulator handle\n");

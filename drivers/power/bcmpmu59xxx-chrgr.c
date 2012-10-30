@@ -70,6 +70,7 @@ static enum power_supply_property bcmpmu_chrgr_props[] = {
 
 static enum power_supply_property bcmpmu_usb_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_MODEL_NAME,
 };
 
@@ -98,28 +99,6 @@ static char *chrgr_names[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_ACA]	= "aca",
 };
 
-static int bcmpmu_chrgr_usb_en(struct bcmpmu_chrgr_data *di, int enable)
-{
-	int ret = 0;
-	u8 reg;
-
-	if (!charging_enable)
-		return 0;
-
-	ret = di->bcmpmu->read_dev(di->bcmpmu, PMU_REG_MBCCTRL3, &reg);
-	if (ret)
-		return ret;
-
-	if (enable)
-		reg |= MBCCTRL3_USB_HOSTEN_MASK;
-	else
-		reg &= ~MBCCTRL3_USB_HOSTEN_MASK;
-
-	ret = di->bcmpmu->write_dev(di->bcmpmu, PMU_REG_MBCCTRL3, reg);
-
-	return ret;
-}
-
 static int bcmpmu_chrgr_ac_get_property(struct power_supply *psy,
 		enum power_supply_property psp,
 		union power_supply_propval *val)
@@ -139,6 +118,31 @@ static int bcmpmu_chrgr_ac_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_MODEL_NAME:
 		val->strval = chrgr_names[3];
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
+
+static int bcmpmu_chrgr_ac_set_property(struct power_supply *psy,
+		enum power_supply_property psp,
+		const union power_supply_propval *val)
+{
+	int ret = 0;
+	struct bcmpmu_chrgr_data *di = container_of(psy,
+			struct bcmpmu_chrgr_data, ac_psy);
+
+	pr_chrgr(FLOW, "%s: property %d\n", __func__, psp);
+
+	switch (psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		di->ac_chrgr_info.online = val->intval;
+		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		di->ac_chrgr_info.curr = val->intval;
+		break;
 	default:
 		ret = -EINVAL;
 		break;
@@ -164,6 +168,29 @@ static int bcmpmu_chrgr_usb_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_MODEL_NAME:
 		val->strval = usb_names[3];
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
+
+static int bcmpmu_chrgr_usb_set_property(struct power_supply *psy,
+		enum power_supply_property psp,
+		const union power_supply_propval *val)
+{
+	int ret = 0;
+	struct bcmpmu_chrgr_data *di = container_of(psy,
+			struct bcmpmu_chrgr_data, usb_psy);
+
+	pr_chrgr(FLOW, "%s: property %d\n", __func__, psp);
+	switch (psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		di->usb_chrgr_info.online = val->intval;
+		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		di->usb_chrgr_info.curr = val->intval;
 		break;
 	default:
 		ret = -EINVAL;
@@ -257,46 +284,6 @@ static int bcmpmu_chrgr_batt_get_property(struct power_supply *psy,
 	return ret;
 }
 
-static void bcmpmu_chrgr_work(struct work_struct *work)
-{
-	struct bcmpmu_chrgr_data *di = container_of(work,
-			struct bcmpmu_chrgr_data, chrgr_work.work);
-	struct bcmpmu59xxx *bcmpmu = di->bcmpmu;
-	int ret = 0;
-	u8 reg;
-
-	pr_chrgr(INIT, "%s\n", __func__);
-
-	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_ENV2, &reg);
-	if (ret)
-		return;
-	if (reg & ENV2_P_UBPD_CHG) {
-		pr_chrgr(INIT, "%s: Charger is connected\n", __func__);
-		bcmpmu_chrgr_usb_en(di, 1);
-		di->usb_chrgr_info.online = 1;
-		di->usb_chrgr_info.curr = 500;
-		power_supply_changed(&di->usb_psy);
-	}
-}
-
-static void bcmpmu_chrgr_irq_handler(u32 irq, void *data)
-{
-	struct bcmpmu_chrgr_data *di = (struct bcmpmu_chrgr_data *)data;
-	if (irq == PMU_IRQ_USBINS) {
-		pr_chrgr(ERROR, "%s: PMU_IRQ_USBINS\n", __func__);
-		bcmpmu_chrgr_usb_en(di, 1);
-		di->usb_chrgr_info.online = 1;
-		di->usb_chrgr_info.curr = 500;
-		power_supply_changed(&di->usb_psy);
-	} else if (irq == PMU_IRQ_USBRM) {
-		pr_chrgr(ERROR, "%s: PMU_IRQ_USBRM\n", __func__);
-		bcmpmu_chrgr_usb_en(di , 0);
-		di->usb_chrgr_info.online = 0;
-		di->usb_chrgr_info.curr = 0;
-		power_supply_changed(&di->usb_psy);
-	}
-}
-
 static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 {
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
@@ -311,17 +298,6 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	di->dev = &pdev->dev;
-
-	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBINS,
-			bcmpmu_chrgr_irq_handler,
-			di);
-	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBRM,
-			bcmpmu_chrgr_irq_handler,
-			di);
-	if (ret) {
-		pr_err("%s: Failed to get IRQ: PMU_IRQ_USBINS", __func__);
-		goto free_dev_info;
-	}
 	di->bcmpmu = bcmpmu;
 	platform_set_drvdata(pdev, di);
 
@@ -330,13 +306,14 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	di->ac_psy.properties = bcmpmu_chrgr_props;
 	di->ac_psy.num_properties = ARRAY_SIZE(bcmpmu_chrgr_props);
 	di->ac_psy.get_property = bcmpmu_chrgr_ac_get_property;
+	di->ac_psy.set_property = bcmpmu_chrgr_ac_set_property;
 
-	di->ac_psy.name = "bcmpmu_usb";
-	di->ac_psy.type = POWER_SUPPLY_TYPE_USB;
-	di->ac_psy.properties = bcmpmu_usb_props;
-	di->ac_psy.num_properties = ARRAY_SIZE(bcmpmu_usb_props);
-	di->ac_psy.get_property = bcmpmu_chrgr_usb_get_property;
-
+	di->usb_psy.name = "bcmpmu_usb";
+	di->usb_psy.type = POWER_SUPPLY_TYPE_USB;
+	di->usb_psy.properties = bcmpmu_usb_props;
+	di->usb_psy.num_properties = ARRAY_SIZE(bcmpmu_usb_props);
+	di->usb_psy.get_property = bcmpmu_chrgr_usb_get_property;
+	di->usb_psy.set_property = bcmpmu_chrgr_usb_set_property;
 	di->batt_psy.name = "battery";
 	di->batt_psy.type = POWER_SUPPLY_TYPE_BATTERY;
 	di->batt_psy.properties = bcmpmu_batt_props;
@@ -357,12 +334,6 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	if (ret)
 		goto unregister_ac_supply;
 
-	INIT_DELAYED_WORK(&di->chrgr_work, bcmpmu_chrgr_work);
-
-	ret = bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBINS);
-	ret = bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBRM);
-
-	schedule_delayed_work(&di->chrgr_work, 0);
 	dev_dbg(di->dev, "Probe success\n");
 	return 0;
 
