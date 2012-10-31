@@ -246,7 +246,7 @@ static struct regulator_init_data bcm59xxx_mmcldo1_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc1_supply),
 	.consumer_supplies = mmc1_supply,
@@ -262,7 +262,7 @@ static struct regulator_init_data bcm59xxx_mmcldo2_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc2_supply),
 	.consumer_supplies = mmc2_supply,
@@ -342,7 +342,7 @@ static struct regulator_init_data bcm59xxx_gpldo1_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo1_supply),
 	.consumer_supplies = gpldo1_supply,
@@ -358,7 +358,7 @@ static struct regulator_init_data bcm59xxx_gpldo2_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo2_supply),
 	.consumer_supplies = gpldo2_supply,
@@ -390,7 +390,7 @@ static struct regulator_init_data bcm59xxx_lvldo1_data = {
 			.max_uV = 1786000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(lvldo1_supply),
 	.consumer_supplies = lvldo1_supply,
@@ -419,7 +419,7 @@ static struct regulator_init_data bcm59xxx_vsr_data = {
 	.constraints = {
 			.name = "vsrldo",
 			.min_uV = 860000,
-			.max_uV = 900000,
+			.max_uV = 1800000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
@@ -428,70 +428,274 @@ static struct regulator_init_data bcm59xxx_vsr_data = {
 	.consumer_supplies = vsr_supply,
 };
 
-struct bcmpmu59xxx_regulator_init_data
-bcm59xxx_regulators[BCMPMU_REGULATOR_MAX] = {
-	[BCMPMU_REGULATOR_RFLDO] = {
-		BCMPMU_REGULATOR_RFLDO, &bcm59xxx_rfldo_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_CAMLDO1] = {
-		BCMPMU_REGULATOR_CAMLDO1, &bcm59xxx_camldo1_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_CAMLDO2] = {
-		BCMPMU_REGULATOR_CAMLDO2, &bcm59xxx_camldo2_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_SIMLDO1] = {
-		BCMPMU_REGULATOR_SIMLDO1, &bcm59xxx_simldo1_data, 0xAA,
-			BCMPMU_REGL_LPM_IN_DSM, 0x7
-	},
-	[BCMPMU_REGULATOR_SIMLDO2] = {
-		BCMPMU_REGULATOR_SIMLDO2, &bcm59xxx_simldo2_data, 0xAA,
-			BCMPMU_REGL_LPM_IN_DSM, 0x7
-	},
-	[BCMPMU_REGULATOR_SDLDO] = {
-		BCMPMU_REGULATOR_SDLDO, &bcm59xxx_sdldo_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_SDXLDO] = {
-		BCMPMU_REGULATOR_SDXLDO, &bcm59xxx_sdxldo_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_MMCLDO1] = {
-		BCMPMU_REGULATOR_MMCLDO1, &bcm59xxx_mmcldo1_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_MMCLDO2] = {
-		BCMPMU_REGULATOR_MMCLDO2, &bcm59xxx_mmcldo2_data, 0x00, 0, 0x7
-	},
-
-	[BCMPMU_REGULATOR_AUDLDO] = {
-		BCMPMU_REGULATOR_AUDLDO, &bcm59xxx_audldo_data, 0x00, 0, 0x7
-	},
-
-	[BCMPMU_REGULATOR_MICLDO] = {
-		BCMPMU_REGULATOR_MICLDO, &bcm59xxx_micldo_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_USBLDO] = {
-		BCMPMU_REGULATOR_USBLDO, &bcm59xxx_usbldo_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_VIBLDO] = {
-		BCMPMU_REGULATOR_VIBLDO, &bcm59xxx_vibldo_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_GPLDO1] = {
-		BCMPMU_REGULATOR_GPLDO1, &bcm59xxx_gpldo1_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_GPLDO2] = {
-		BCMPMU_REGULATOR_GPLDO2, &bcm59xxx_gpldo2_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_GPLDO3] = {
-		BCMPMU_REGULATOR_GPLDO3, &bcm59xxx_gpldo3_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_LVLDO1] = {
-		BCMPMU_REGULATOR_LVLDO1, &bcm59xxx_lvldo1_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_LVLDO2] = {
-		BCMPMU_REGULATOR_LVLDO2, &bcm59xxx_lvldo2_data, 0x00, 0, 0x7
-	},
-	[BCMPMU_REGULATOR_VSR] = {
-		BCMPMU_REGULATOR_VSR, &bcm59xxx_vsr_data, 0x00, 0, 0x7
-	},
+__weak struct regulator_consumer_supply csr_supply[] = {
+	{.supply = "csr_uc"},
 };
+
+static struct regulator_init_data bcm59xxx_csr_data = {
+	.constraints = {
+			.name = "csrldo",
+			.min_uV = 700000,
+			.max_uV = 1440000,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(csr_supply),
+	.consumer_supplies = csr_supply,
+};
+
+__weak struct regulator_consumer_supply mmsr_supply[] = {
+	{.supply = "mmsr_uc"},
+};
+
+static struct regulator_init_data bcm59xxx_mmsr_data = {
+	.constraints = {
+			.name = "mmsrldo",
+			.min_uV = 860000,
+			.max_uV = 1800000,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(mmsr_supply),
+	.consumer_supplies = mmsr_supply,
+};
+
+__weak struct regulator_consumer_supply sdsr1_supply[] = {
+	{.supply = "sdsr1_uc"},
+};
+
+static struct regulator_init_data bcm59xxx_sdsr1_data = {
+	.constraints = {
+			.name = "sdsr1ldo",
+			.min_uV = 860000,
+			.max_uV = 1800000,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(sdsr1_supply),
+	.consumer_supplies = sdsr1_supply,
+};
+
+__weak struct regulator_consumer_supply sdsr2_supply[] = {
+	{.supply = "sdsr2_uc"},
+};
+
+static struct regulator_init_data bcm59xxx_sdsr2_data = {
+	.constraints = {
+			.name = "sdsr2ldo",
+			.min_uV = 860000,
+			.max_uV = 1800000,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(sdsr2_supply),
+	.consumer_supplies = sdsr2_supply,
+};
+
+__weak struct regulator_consumer_supply iosr1_supply[] = {
+	{.supply = "iosr1_uc"},
+};
+
+static struct regulator_init_data bcm59xxx_iosr1_data = {
+	.constraints = {
+			.name = "iosr1ldo",
+			.min_uV = 860000,
+			.max_uV = 1800000,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+			.always_on = 1,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(iosr1_supply),
+	.consumer_supplies = iosr1_supply,
+};
+
+
+__weak struct regulator_consumer_supply iosr2_supply[] = {
+	{.supply = "iosr2_uc"},
+};
+
+static struct regulator_init_data bcm59xxx_iosr2_data = {
+	.constraints = {
+			.name = "iosr2ldo",
+			.min_uV = 860000,
+			.max_uV = 1800000,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+			.always_on = 0,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(iosr2_supply),
+	.consumer_supplies = iosr2_supply,
+};
+
+
+struct bcmpmu59xxx_regulator_init_data
+	bcm59xxx_regulators[BCMPMU_REGULATOR_MAX] = {
+		[BCMPMU_REGULATOR_RFLDO] = {
+			.id = BCMPMU_REGULATOR_RFLDO,
+			.initdata = &bcm59xxx_rfldo_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_CAMLDO1] = {
+			.id = BCMPMU_REGULATOR_CAMLDO1,
+			.initdata = &bcm59xxx_camldo1_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_CAMLDO2] = {
+			.id = BCMPMU_REGULATOR_CAMLDO2,
+			.initdata = &bcm59xxx_camldo2_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_SIMLDO1] = {
+			.id = BCMPMU_REGULATOR_SIMLDO1,
+			.initdata = &bcm59xxx_simldo1_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2),
+		},
+		[BCMPMU_REGULATOR_SIMLDO2] = {
+			.id = BCMPMU_REGULATOR_SIMLDO2,
+			.initdata = &bcm59xxx_simldo2_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC2),
+		},
+		[BCMPMU_REGULATOR_SDLDO] = {
+			.id = BCMPMU_REGULATOR_SDLDO,
+			.initdata = &bcm59xxx_sdldo_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_SDXLDO] = {
+			.id = BCMPMU_REGULATOR_SDXLDO,
+			.initdata = &bcm59xxx_sdxldo_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map =
+				 PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_MMCLDO1] = {
+			.id = BCMPMU_REGULATOR_MMCLDO1,
+			.initdata = &bcm59xxx_mmcldo1_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_MMCLDO2] = {
+			.id = BCMPMU_REGULATOR_MMCLDO2,
+			.initdata = &bcm59xxx_mmcldo2_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+
+		[BCMPMU_REGULATOR_AUDLDO] = {
+			.id = BCMPMU_REGULATOR_AUDLDO,
+			.initdata = &bcm59xxx_audldo_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
+		},
+
+		[BCMPMU_REGULATOR_MICLDO] = {
+			.id = BCMPMU_REGULATOR_MICLDO,
+			.initdata = &bcm59xxx_micldo_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_USBLDO] = {
+			.id = BCMPMU_REGULATOR_USBLDO,
+			.initdata = &bcm59xxx_usbldo_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_VIBLDO] = {
+			.id = BCMPMU_REGULATOR_VIBLDO,
+			.initdata = &bcm59xxx_vibldo_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_GPLDO1] = {
+			.id = BCMPMU_REGULATOR_GPLDO1,
+			.initdata = &bcm59xxx_gpldo1_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
+		},
+		[BCMPMU_REGULATOR_GPLDO2] = {
+			.id = BCMPMU_REGULATOR_GPLDO2,
+			.initdata = &bcm59xxx_gpldo2_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
+		},
+		[BCMPMU_REGULATOR_GPLDO3] = {
+			.id = BCMPMU_REGULATOR_GPLDO3,
+			.initdata = &bcm59xxx_gpldo3_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2),
+		},
+		[BCMPMU_REGULATOR_LVLDO1] = {
+			.id = BCMPMU_REGULATOR_LVLDO1,
+			.initdata = &bcm59xxx_lvldo1_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
+		},
+		[BCMPMU_REGULATOR_LVLDO2] = {
+			.id = BCMPMU_REGULATOR_LVLDO2,
+			.initdata = &bcm59xxx_lvldo2_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_VSR] = {
+			.id = BCMPMU_REGULATOR_VSR,
+			.initdata = &bcm59xxx_vsr_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_CSR] = {
+			.id = BCMPMU_REGULATOR_CSR,
+			.initdata = &bcm59xxx_csr_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_MMSR] = {
+			.id = BCMPMU_REGULATOR_MMSR,
+			.initdata = &bcm59xxx_mmsr_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC2),
+		},
+		[BCMPMU_REGULATOR_SDSR1] = {
+			.id = BCMPMU_REGULATOR_SDSR1,
+			.initdata = &bcm59xxx_sdsr1_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_SDSR2] = {
+			.id = BCMPMU_REGULATOR_SDSR2,
+			.initdata = &bcm59xxx_sdsr2_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_IOSR1] = {
+			.id = BCMPMU_REGULATOR_IOSR1,
+			.initdata = &bcm59xxx_iosr1_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+		},
+		[BCMPMU_REGULATOR_IOSR2] = {
+			.id = BCMPMU_REGULATOR_IOSR2,
+			.initdata = &bcm59xxx_iosr2_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*not used*/
+		},
+
+	};
 
 static struct bcmpmu59xxx_rw_data register_init_data[] = {
 /* mask 0x00 is invalid value for mask */
@@ -577,6 +781,18 @@ static struct bcmpmu59xxx_rw_data register_init_data[] = {
 	{.addr = PMU_REG_OTGCTRL1 , .val = 0x18, .mask = 0xFF},
 
 
+	/* MMSR LPM voltage - 0.88V */
+	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x4, .mask = 0x3F},
+	/* SDSR1 LPM voltage - 0.9V */
+	{.addr = PMU_REG_SDSR1VOUT2 , .val = 0x6, .mask = 0x3F},
+	/* SDSR2 LPM voltage - 1.24V */
+	{.addr = PMU_REG_SDSR2VOUT2 , .val = 0x28, .mask = 0x3F},
+	/* IOSR1 LPM voltage - 1.8V */
+	{.addr = PMU_REG_IOSR1VOUT2 , .val = 0x3E, .mask = 0x3F},
+
+	{.addr = PMU_REG_CSRVOUT1 , .val = 0x28, .mask = 0x3F},
+
+
 };
 
 struct bcmpmu59xxx_pok_pdata pok_pdata = {
@@ -596,7 +812,7 @@ struct bcmpmu59xxx_audio_pdata audio_pdata = {
 
 struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.bcmpmu_rgltr = bcm59xxx_regulators,
-	.num_of_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
+	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
 };
 
 /* The subdevices of the bcmpmu59xxx */
@@ -606,6 +822,10 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.id = -1,
 		.platform_data = &rgltr_pdata,
 		.pdata_size = sizeof(rgltr_pdata),
+	},
+	{
+		.name = "bcmpmu_charger",
+		.id = -1,
 	},
 	{
 		.name = "bcmpmu59xxx-ponkey",
@@ -629,10 +849,6 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	},
 	{
 		.name = "bcmpmu_otg_xceiv",
-		.id = -1,
-	},
-	{
-		.name = "bcmpmu_charger",
 		.id = -1,
 	},
 };
@@ -707,7 +923,7 @@ const u8 sr_vlt_table_ss[SR_VLT_LUT_SIZE] = {
 	};
 
 
-const u8 *bcmpmu_get_sr_vlt_table (u32 silicon_type)
+const u8 *bcmpmu_get_sr_vlt_table(u32 silicon_type)
 {
 	pr_info("%s silicon_type = %d\n", __func__,
 			silicon_type);
@@ -732,7 +948,7 @@ const u8 *bcmpmu_get_sr_vlt_table (u32 silicon_type)
 
 void bcmpmu_set_pullup_reg(void)
 {
-	volatile u32 val1, val2;
+	u32 val1, val2;
 
 	val1 = readl(KONA_CHIPREG_VA + CHIPREG_SPARE_CONTROL0_OFFSET);
 	val2 = readl(KONA_PMU_BSC_VA + I2C_MM_HS_PADCTL_OFFSET);

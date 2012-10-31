@@ -41,9 +41,25 @@
 #define BCMPMU_PRINT_DATA	(1U << 3)
 #define BCMPMU_PRINT_WARNING	(1U << 4)
 
-/* LDO or Switcher def */
-#define BCMPMU_LDO    0x10
-#define BCMPMU_SR     0x11
+/*helper macros to manage regulator PC pin map*/
+/*
+SET0 holds ORed list of PC pin - regualtor will be enabled if
+any of the PC pin in SET0 is HIGH
+
+SET1 holds compined set. Regualtor will be enabled if all
+the PC pins in SET1 are HIGH
+*/
+#define PCPIN_MAP_SET1_OFFSET   8
+#define PCPIN_MAP_SET0_OFFSET   0
+#define PCPIN_MAP_SET_MASK      7
+#define PCPIN_MAP_ENC(set1, set0) \
+	((((set1) & PCPIN_MAP_SET_MASK) << PCPIN_MAP_SET1_OFFSET) | \
+		(((set0) & PCPIN_MAP_SET_MASK) << PCPIN_MAP_SET0_OFFSET))
+#define PCPIN_MAP_GET_SET(map, n) \
+		(((map) >> PCPIN_MAP_SET##n##_OFFSET) &  PCPIN_MAP_SET_MASK)
+
+#define PCPIN_MAP_IS_SET0_MATCH(set, val) !(!((set) & (val)))
+#define PCPIN_MAP_IS_SET1_MATCH(set, val) ((set) && ((set) & (val)) == (set))
 
 struct bcmpmu59xxx;
 extern struct regulator_ops bcmpmu59xxx_ldo_ops;
@@ -64,76 +80,7 @@ enum bcmpmu59xxx_irq_reg {
 	PMU_REG_IRQ13,
 	PMU_REG_IRQ14,
 };
-#if 0
-enum bcmpmu59xxx_irq {
-	PMU_IRQ_RTC_ALARM,
-	PMU_IRQ_RTC_SEC,
-	PMU_IRQ_RTC_MIN,
-	PMU_IRQ_RTCADJ,
-	PMU_IRQ_BATINS,
-	PMU_IRQ_BATRM,
-	PMU_IRQ_GBAT_PLUG_IN,
-	PMU_IRQ_SMPL_INT,
-	PMU_IRQ_USBINS,
-	PMU_IRQ_USBRM,
-	PMU_IRQ_USBOV,
-	PMU_IRQ_EOC,
-	PMU_IRQ_RESUME_VBUS,
-	PMU_IRQ_CHG_HW_TTR_EXP,
-	PMU_IRQ_CHG_HW_TCH_EXP,
-	PMU_IRQ_CHG_SW_TMR_EXP,
-	PMU_IRQ_CHGDET_LATCH,
-	PMU_IRQ_CHGDET_TO,
-	PMU_IRQ_MBTEMPLOW,
-	PMU_IRQ_MBTEMPHIGH,
-	PMU_IRQ_MBOV,
-	PMU_IRQ_MBOV_DIS,
-	PMU_IRQ_USBOV_DIS,
-	PMU_IRQ_CHGERRDIS,
-	PMU_IRQ_VBUS_1V5_R,
-	PMU_IRQ_VBUS_4V5_R,
-	PMU_IRQ_VBUS_1V5_F,
-	PMU_IRQ_VBUS_4V5_F,
-	PMU_IRQ_MBWV_R_10S_WAIT,
-	PMU_IRQ_BBLOW,
-	PMU_IRQ_LOWBAT,
-	PMU_IRQ_VERYLOWBAT,
-	PMU_IRQ_RTM_DATA_RDY,
-	PMU_IRQ_RTM_IN_CON_MEAS,
-	PMU_IRQ_RTM_UPPER,
-	PMU_IRQ_RTM_IGNORE,
-	PMU_IRQ_RTM_OVERRIDDEN,
-	PMU_IRQ_AUD_HSAB_SHCKT,
-	PMU_IRQ_AUD_IHFD_SHCKT,
-	PMU_IRQ_MBC_TF,
-	PMU_IRQ_CSROVRI,
-	PMU_IRQ_IOSROVRI,
-	PMU_IRQ_SDSROVRI,
-	PMU_IRQ_ASROVRI,
-	PMU_IRQ_UBPD_CHG_F,
-	PMU_IRQ_FGC,
-	PMU_IRQ_MBWV_F,
-	PMU_IRQ_VBUS_OVERCURRENT,
-	PMU_IRQ_ACD_INS,
-	PMU_IRQ_ACD_RM,
-	PMU_IRQ_PONKEYB_HOLD,
-	PMU_IRQ_PONKEYB_F,
-	PMU_IRQ_PONKEYB_R,
-	PMU_IRQ_PONKEYB_OFFHOLD,
-	PMU_IRQ_PONKEYB_RESTART,
-	PMU_IRQ_SESSION_END_INVLD,
-	PMU_IRQ_IDCHG,
-	PMU_IRQ_JIG_USB_INS,
-	PMU_IRQ_JIG_UART_INS,
-	PMU_IRQ_ID_INS,
-	PMU_IRQ_ID_RM,
-	PMU_IRQ_ADP_CHANGE,
-	PMU_IRQ_ADP_SNS_END,
-	PMU_IRQ_SESSION_END_VLD,
-	PMU_IRQ_MAX,
 
-};
-#endif
 enum bcmpmu59xxx_irq {
 	PMU_IRQ_USBINS, /* 1 */
 	PMU_IRQ_USBRM,
@@ -263,7 +210,35 @@ enum bcmpmu59xxx_irq {
 	PMU_IRQ_VBOVRV,
 	PMU_IRQ_VBOVRI,
 	PMU_IRQ_MAX,
+};
 
+enum bcmpmu_rgr_id {
+	BCMPMU_REGULATOR_RFLDO,
+	BCMPMU_REGULATOR_CAMLDO1,
+	BCMPMU_REGULATOR_CAMLDO2,
+	BCMPMU_REGULATOR_SIMLDO1,
+	BCMPMU_REGULATOR_SIMLDO2,
+	BCMPMU_REGULATOR_SDLDO,
+	BCMPMU_REGULATOR_SDXLDO,
+	BCMPMU_REGULATOR_MMCLDO1,
+	BCMPMU_REGULATOR_MMCLDO2,
+	BCMPMU_REGULATOR_AUDLDO,
+	BCMPMU_REGULATOR_MICLDO,
+	BCMPMU_REGULATOR_USBLDO,
+	BCMPMU_REGULATOR_VIBLDO,
+	BCMPMU_REGULATOR_GPLDO1,
+	BCMPMU_REGULATOR_GPLDO2,
+	BCMPMU_REGULATOR_GPLDO3,
+	BCMPMU_REGULATOR_LVLDO1,
+	BCMPMU_REGULATOR_LVLDO2,
+	BCMPMU_REGULATOR_VSR,
+	BCMPMU_REGULATOR_CSR,
+	BCMPMU_REGULATOR_MMSR,
+	BCMPMU_REGULATOR_SDSR1,
+	BCMPMU_REGULATOR_SDSR2,
+	BCMPMU_REGULATOR_IOSR1,
+	BCMPMU_REGULATOR_IOSR2,
+	BCMPMU_REGULATOR_MAX,
 };
 
 enum bcmpmu_adc_sig {
@@ -548,7 +523,7 @@ enum bcmpmu_usb_det_state_t {
 Used to program PC2PC1 = 0b10 & 0b00 case
 when the regulator is enabled*/
 enum {
-	BCMPMU_REGL_ON_IN_DSM = 1,
+	BCMPMU_REGL_ON_IN_DSM = 0,
 	BCMPMU_REGL_LPM_IN_DSM,
 	BCMPMU_REGL_OFF_IN_DSM
 };
@@ -559,20 +534,35 @@ struct bcmpmu59xxx_rw_data {
 	unsigned int mask;
 };
 
+/*PMU PC PINs*/
+enum {
+	PMU_PC1 = 1,
+	PMU_PC2 = 1 << 1,
+	PMU_PC3 = 1 << 2,
+};
+
+/*regualtor control flags*/
+enum {
+	RGLR_ON = (1 << 0),
+	RGLR_SR = (1 << 1),
+	RGLR_3BIT_PMCTRL = (1 << 2),
+	RGLR_FIXED_VLT = (1 << 3),
+};
+
 struct bcmpmu59xxx_regulator_info {
 	struct regulator_desc *rdesc;
-	/* address of regulator control register for mode control */
-	u32 reg_addr;
-	u32 reg_addr1;
+	/*ctrl flags*/
+	u32 flags;
+	/* start addr of opmode ctrl register */
+	u32 reg_pmctrl1;
 	/* address of control register to change voltage */
-	u32 reg_addr_volt;
+	u32 reg_vout;
+	u32 vout_mask;
+	u32 vout_shift;
 	/* Map for converting register voltage to register value */
 	u32 *v_table;
 	/* Size of register map */
 	u32 num_voltages;
-	u8 ldo_or_sr;
-	/*latch state FF uninit,0 OFF, 1 ON*/
-	u8 onoff;
 };
 
 struct event_notifier {
@@ -667,18 +657,15 @@ struct bcmpmu59xxx_audio_pdata {
 };
 
 struct bcmpmu59xxx_regulator_init_data {
-	int regulator ; /* Regulator ID */
-	struct regulator_init_data   *initdata;
-	/* Default opmode value.Pass 0xFF to
-	 * skip opmode setting for a ldo/sr */
-	u16 default_opmode;
+	int id; /* Regulator ID */
+	struct regulator_init_data *initdata;
 	u16 dsm_mode;
 	u32 pc_pins_map;
 };
 
 struct bcmpmu59xxx_regulator_pdata {
-	struct bcmpmu59xxx_regulator_init_data  *bcmpmu_rgltr;
-	u8 num_of_rgltr;
+	struct bcmpmu59xxx_regulator_init_data *bcmpmu_rgltr;
+	u8 num_rgltr;
 };
 
 struct bcmpmu59xxx_platform_data {
