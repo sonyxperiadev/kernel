@@ -7,7 +7,7 @@ EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -Werror -O2
 EXTRA_CFLAGS  += -D__KERNEL__
 EXTRA_CFLAGS  += -D__linux__
 
-OBJ :=  Wrapper.o Session.o Driver.o Device.o Statistics.o Status.o
+OBJ :=  wrapper.o session.o driver.o device.o statistics.o status.o
 #OBJ :=  v3d.o
 
 obj-$(CONFIG_V3D) := v3d-driver.o

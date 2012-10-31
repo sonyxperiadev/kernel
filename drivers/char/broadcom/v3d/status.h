@@ -18,8 +18,8 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/proc_fs.h>
 
 
-extern struct proc_dir_entry *ProcEntry_Create(const char *Name, int Permission, struct proc_dir_entry *Directory, void *Context);
-extern void ProcEntry_Delete(const char *Name, struct proc_dir_entry *Directory);
+extern struct proc_dir_entry *proc_entry_create(const char *name, int permission, struct proc_dir_entry *directory, void *context);
+extern void proc_entry_delete(const char *name, struct proc_dir_entry *directory);
 
 
 #endif /* ifndef V3D_STATUS_H_ */

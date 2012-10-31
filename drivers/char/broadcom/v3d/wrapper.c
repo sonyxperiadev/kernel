@@ -43,9 +43,9 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/kthread.h>
 #include <mach/io_map.h>
 
-#include "Driver.h"
-#include "Device.h"
-#include "Session.h"
+#include "driver.h"
+#include "device.h"
+#include "session.h"
 
 #define V3D_DEV_MAJOR	0
 #define RHEA_V3D_BASE_PERIPHERAL_ADDRESS	MM_V3D_BASE_ADDR
@@ -94,7 +94,7 @@ const char *perf_ctr_str[30] = {
 /* Error Logs */
 #if 1
 #define KLOG_E(fmt, args...) \
-					do { printk(KERN_ERR "Error: [%s:%s:%d] "fmt"\n", KLOG_TAG, __func__, __LINE__, \
+					do { printk(KERN_ERR "error: [%s:%s:%d] "fmt"\n", KLOG_TAG, __func__, __LINE__, \
 			##args); } \
 					while (0)
 #else
@@ -198,7 +198,7 @@ typedef struct {
 	dvts_object_t shared_dvts_object;
 	uint32_t shared_dvts_object_usecount;
 	char comm[TASK_COMM_LEN];
-	V3dSessionType *session;
+	v3d_session_type *session;
 
 	struct proc_dir_entry *proc_dir;
 	struct proc_dir_entry *proc_status;
@@ -213,11 +213,11 @@ typedef struct {
 static struct {
 	struct class *v3d_class;
 	struct device *v3d_device;
-	V3dDeviceType *v3d_device0;
-	V3dDriverType *v3d_driver;
+	v3d_device_type *v3d_device0;
+	v3d_driver_type *v3d_driver;
 } v3d_state;
 
-V3dDriverType *v3d_driver;
+v3d_driver_type *v3d_driver;
 
 /********************************************************
 	Imported stuff
@@ -263,9 +263,9 @@ static int v3d_open(struct inode *inode, struct file *filp)
 	dev = kmalloc(sizeof(v3d_t), GFP_KERNEL);
 	if (!dev)
 		goto kmalloc_fail;
-	dev->session = V3dSession_Create(v3d_state.v3d_driver, get_task_comm(dev->comm, current));
+	dev->session = v3d_session_create(v3d_state.v3d_driver, get_task_comm(dev->comm, current));
 	if (dev->session == NULL) {
-		printk(KERN_ERR "V3dSession_Create() failed");
+		printk(KERN_ERR "v3d_session_create() failed");
 		goto session_fail;
 	}
 
@@ -287,7 +287,7 @@ static int v3d_open(struct inode *inode, struct file *filp)
 end:
 	return ret;
 dvts_create_fail:
-	V3dSession_Delete(dev->session);
+	v3d_session_delete(dev->session);
 session_fail:
 	kfree(dev);
 kmalloc_fail:
@@ -304,11 +304,11 @@ static int v3d_release(struct inode *inode, struct file *filp)
 		   would be rude to pollute the log with this message
 		   as an error... so we demote it to a verbose
 		   warning.  TODO: can this be fixed? */
-		KLOG_V("\nShared Deferred V3D Task Serializer Use Count > 0\n");
+		KLOG_V("\n_shared deferred V3D task serializer use count > 0\n");
 	}
 	dvts_destroy_serializer(dev->shared_dvts_object);
 
-	V3dSession_Delete(dev->session);
+	v3d_session_delete(dev->session);
 
 	kfree(dev); /*Freeing NULL is safe here*/
 
@@ -346,7 +346,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case V3D_IOCTL_POST_JOB:
 		{
 			KLOG_V("v3d_ioctl :V3D_IOCTL_POST_JOB");
-			ret = arg != 0 ? V3dSession_JobPost(dev->session, (const v3d_job_post_t *)arg) : -EFAULT;
+			ret = arg != 0 ? v3d_session_job_post(dev->session, (const v3d_job_post_t *)arg) : -EFAULT;
 		}
 		break;
 
@@ -354,7 +354,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		{
 			v3d_job_status_t job_status = {0, 0, 0};
 			KLOG_V("v3d_ioctl :V3D_IOCTL_WAIT_JOB");
-			job_status.job_id = V3dSession_Wait(dev->session);
+			job_status.job_id = v3d_session_wait(dev->session);
 			if (copy_to_user
 				((v3d_job_status_t *)arg, &job_status,
 				sizeof(job_status))) {
@@ -367,11 +367,11 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case V3D_IOCTL_ACQUIRE_EXCLUSIVE:
-		V3dDriver_ExclusiveStart(v3d_state.v3d_driver, dev->session);
+		v3d_driver_exclusive_start(v3d_state.v3d_driver, dev->session);
 		break;
 
 	case V3D_IOCTL_RELEASE_EXCLUSIVE:
-		ret = V3dDriver_ExclusiveStop(v3d_state.v3d_driver, dev->session);
+		ret = v3d_driver_exclusive_stop(v3d_state.v3d_driver, dev->session);
 		break;
 
 	case V3D_IOCTL_DVTS_CREATE:
@@ -480,7 +480,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #endif
 
 	default:
-		KLOG_E("%s: Unsupported %08x", __func__, cmd);
+		KLOG_E("%s: unsupported %08x", __func__, cmd);
 		break;
 	}
 
@@ -500,13 +500,13 @@ static const struct file_operations v3d_fops = {
 #ifdef CONFIG_PM
 static int v3d_suspend(struct platform_device *pdev, pm_message_t message)
 {
-	V3dDevice_Suspend(v3d_state.v3d_device0);
+	v3d_device_suspend(v3d_state.v3d_device0);
 	return 0;
 }
 
 static int v3d_resume(struct platform_device *pdev)
 {
-	V3dDevice_Resume(v3d_state.v3d_device0);
+	v3d_device_resume(v3d_state.v3d_device0);
 	return 0;
 }
 
@@ -536,7 +536,7 @@ int __init v3d_init(void)
 {
 	int ret = -1;
 
-	KLOG_D("V3D driver Init\n");
+	KLOG_D("V3D driver init\n");
 
 	/* initialize the V3D struct */
 	memset(&v3d_state, 0, sizeof(v3d_state));
@@ -552,19 +552,19 @@ int __init v3d_init(void)
 
 	ret = platform_device_register(&v3d_platform_device);
 	if (ret) {
-		KLOG_E("Failed to register platform device\n");
+		KLOG_E("failed to register platform device\n");
 		goto err2;
 	}
 
 	ret = platform_driver_register(&v3d_platform_driver);
 	if (ret) {
-		KLOG_E("Failed to register platform driver\n");
+		KLOG_E("failed to register platform driver\n");
 		goto err2;
 	}
 
 	ret = register_chrdev(v3d_major, V3D_DEV_NAME, &v3d_fops);
 	if (ret < 0) {
-		KLOG_E("Failed to register char driver\n");
+		KLOG_E("failed to register char driver\n");
 		ret = -EINVAL;
 		goto err2;
 	} else
@@ -572,7 +572,7 @@ int __init v3d_init(void)
 
 	v3d_state.v3d_class = class_create(THIS_MODULE, V3D_DEV_NAME);
 	if (IS_ERR(v3d_state.v3d_class)) {
-		KLOG_E("Failed to create V3D class\n");
+		KLOG_E("failed to create V3D class\n");
 		ret = PTR_ERR(v3d_state.v3d_class);
 		goto err3;
 	}
@@ -582,24 +582,24 @@ int __init v3d_init(void)
 			  V3D_DEV_NAME);
 	v3d_state.v3d_device->coherent_dma_mask = ((u64)~0);
 
-	v3d_state.v3d_driver = V3dDriver_Create();
+	v3d_state.v3d_driver = v3d_driver_create();
 	if (v3d_state.v3d_driver == NULL) {
-		KLOG_E("V3dDriver_Create() failed");
+		KLOG_E("v3d_driver_create() failed");
 		goto err4;
 	}
-	v3d_state.v3d_device0 = V3dDevice_Create(v3d_state.v3d_driver, v3d_state.v3d_device, (uint32_t) v3d_base);
+	v3d_state.v3d_device0 = v3d_device_create(v3d_state.v3d_driver, v3d_state.v3d_device, (uint32_t) v3d_base);
 	if (v3d_state.v3d_device0 == NULL) {
-		KLOG_E("V3dDevice_Create() failed");
+		KLOG_E("v3d_device_create() failed");
 		goto err5;
 	}
-	V3dDriver_AddDevice(v3d_state.v3d_driver, v3d_state.v3d_device0);
+	v3d_driver_add_device(v3d_state.v3d_driver, v3d_state.v3d_device0);
 
 	v3d_driver = v3d_state.v3d_driver;
 
 	return 0;
 
 err5:
-	V3dDriver_Delete(v3d_state.v3d_driver);
+	v3d_driver_delete(v3d_state.v3d_driver);
 err4:
 	device_destroy(v3d_state.v3d_class, MKDEV(v3d_major, 0));
 	class_destroy(v3d_state.v3d_class);
@@ -614,15 +614,15 @@ err:
 
 void __exit v3d_exit(void)
 {
-	KLOG_D("V3D driver Exit\n");
+	KLOG_D("V3D driver exit\n");
 
 	/* Unmap addresses */
 	if (v3d_base)
 		iounmap(v3d_base);
 
 	v3d_driver = NULL;
-	V3dDriver_Delete(v3d_state.v3d_driver);
-	V3dDevice_Delete(v3d_state.v3d_device0);
+	v3d_driver_delete(v3d_state.v3d_driver);
+	v3d_device_delete(v3d_state.v3d_device0);
 
 	device_destroy(v3d_state.v3d_class, MKDEV(v3d_major, 0));
 	class_destroy(v3d_state.v3d_class);

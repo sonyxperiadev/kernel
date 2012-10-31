@@ -17,27 +17,27 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/types.h>
 
 
-typedef struct StatisticsTag {
-	uint64_t     Sum;
-	uint64_t     Sum2;
-	unsigned int Minimum;
-	unsigned int Maximum;
-	unsigned int Samples;
-} StatisticsType;
+typedef struct statistics_tag {
+	uint64_t     sum;
+	uint64_t     sum2;
+	unsigned int minimum;
+	unsigned int maximum;
+	unsigned int samples;
+} statistics_type;
 
-extern void Statistics_Initialise(StatisticsType *Instance);
-extern void Statistics_Add(StatisticsType *Instance, unsigned int Sample);
+extern void statistics_initialise(statistics_type *instance);
+extern void statistics_add(statistics_type *instance, unsigned int sample);
 
 /* Multiplier multiplies up all calculated values, so that decimal places can be represented */
-extern void Statistics_Calculate(
-	const StatisticsType *Instance,
-	unsigned int          MeanMultiplier,
-	uint64_t             *Mean,
-	unsigned int          SDMultiplier,
-	uint64_t             *StandardDeviation,
-	unsigned int         *Minimum,
-	unsigned int         *Maximum,
-	unsigned int         *Samples);
+extern void statistics_calculate(
+	const statistics_type *instance,
+	unsigned int          mean_multiplier,
+	uint64_t             *mean,
+	unsigned int          s_d_multiplier,
+	uint64_t             *standard_deviation,
+	unsigned int         *minimum,
+	unsigned int         *maximum,
+	unsigned int         *samples);
 
 
 #endif /* ifndef V3D_STATISTICS_H_ */
