@@ -66,6 +66,18 @@ config	MACH_HAWAII_FPGA_USB_V1
 	  HAWAII_USB_v2.0.0
 endchoice
 
+choice
+	prompt "Hawaii SS based board type"
+	default MACH_HAWAII_SS_EVAL
+
+config	MACH_HAWAII_SS_EVAL
+	bool "Support Broadcom Hawaii Samsung Evaluate board"
+	help
+	  Support for the Broadcom Hawaii Samsung Evaluate board.
+
+endchoice
+
+
 config	IGNORE_DAP_POWERUP_REQ
 	bool "Ignore Powerup request from DAP"
 	depends on KONA_POWER_MGR
