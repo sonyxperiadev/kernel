@@ -249,6 +249,17 @@ static void pmem_update_kernel_mappings(int id, struct file *file,
 	if (data->flags & (PMEM_FLAGS_CARVEOUT | PMEM_FLAGS_KMALLOC))
 		return;
 
+	if (!pfn_valid(data->pfn)) {
+		printk(KERN_EMERG"pmem: pfn(%lx) is invalid\n"
+				" flags(0x%08x) process(%s/%d/%d)"
+				" allocsize(%ld pages). Crashing now!!\n",
+				data->pfn, data->flags,
+				current->group_leader->comm,
+				current->group_leader->pid,
+				current->pid, (pmem_len(data) >> PAGE_SHIFT));
+		BUG();
+	}
+
 	new_prot = pmem_access_prot(file, pgprot_kernel);
 	if (new_prot == pgprot_kernel) {
 		BUG_ON(file->f_flags & (O_SYNC | FASYNC));
@@ -282,7 +293,6 @@ static int pmem_map_pfn_range(int id, struct file *file,
 	BUG_ON(!PMEM_IS_PAGE_ALIGNED(vma->vm_start));
 	BUG_ON(!PMEM_IS_PAGE_ALIGNED(vma->vm_end));
 	BUG_ON(!PMEM_IS_PAGE_ALIGNED(len));
-	BUG_ON(!PMEM_IS_PAGE_ALIGNED(offset));
 	BUG_ON(!has_allocation(file));
 
 	/* If this is the first mmap */
