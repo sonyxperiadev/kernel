@@ -644,7 +644,15 @@ static struct i2c_board_info pmu_i2c_companion_info[] = {
 };
 
 static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
-	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), },
+#if defined(CONFIG_KONA_PMU_BSC_HS_MODE)
+	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS), },
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1MHZ)
+	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS_1MHZ), },
+#elif defined(CONFIG_KONA_PMU_BSC_HS_1625KHZ)
+	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS_1625KHZ), },
+#else
+	.i2c_pdata = { ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_50K), },
+#endif
 	.init = bcmpmu_init_platform_hw,
 	.exit = bcmpmu_exit_platform_hw,
 	.companion = BCMPMU_DUMMY_CLIENTS,
