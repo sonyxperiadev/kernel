@@ -231,6 +231,7 @@ UInt32 *csl_dsp_ext_modem_get_aadmac_buf_base_addr(
 	return base_addr;
 }
 #endif
+
 /*****************************************************************************/
 /**
 *

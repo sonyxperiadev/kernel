@@ -171,6 +171,7 @@
 #define	ARM2SP_DL_MIX			0x0100
 #define	ARM2SP_DL_OVERWRITE		0x0200
 #define	ARM2SP_DL_AFTER_PROC	0x0400				//bit10=1, play PCM after DL audio processing; default bit10=0
+#define ARM2SP_FIRST_INT_HAS_COME 0x0800            // Not coming from AP!!!
 #define	ARM2SP_16KHZ_SAMP_RATE  0x8000				//bit15=0 -> 8kHz data, bit15 = 1 -> 16kHz data
 
 #define	ARM2SP_FRAME_NUM		0x7000				//8K:1/2/3/4, 16K:1/2; if 0 (or other): 8K:4, 16K:2

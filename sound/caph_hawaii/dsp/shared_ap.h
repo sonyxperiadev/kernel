@@ -951,21 +951,9 @@ typedef enum
 	*  \par Command Code		   
 	* 				   0x1D
 	*  \par Description 
-	* 	  This command enables the output to the speaker path at 48kHz. This command has to be sent by the APE before 
-	*     sending COMMAND_SOFTWARE_ SPEAKER_PROTECTION_ENABLE. COMMAND_NEWAUDFIFO_START and before enabling EANC.
-	*     APE should enable the Audio interrupts to
-    *     come to the DSP at 16kHz using the COMMAND_AUDIO_ENABLE command, and the audio
-    *     input or output should be enabled using the COMMAND_AUDIO_CONNECT command.
-	* 			 
-	* 			 @param  UInt16  	{
-	*								Bit 0: Enable_48kHz_Speaker_Output: 0 = Disable, 1 = Enable
-	*                                                    Bit 1: Interrupt is enabled for this  // Not supported currently
-	*                                                    Bit 2: = 0 Mono, = 1 Stereo // Currently only supports mono 
-	*							}
-	*
-	* 			 \see COMMAND_SOFTWARE_SPEAKER_PROTECTION_ENABLE, NEWAUDFIFO Interface, COMMAND_NEWAUDFIFO_START  
+	* 	  This command is obsolete
 	*/
-	VP_COMMAND_48KHZ_SPEAKER_OUTPUT_ENABLE,	// 0x1D	  ( enable )
+	VP_COMMAND_48KHZ_SPEAKER_OUTPUT_ENABLE,	// 0x1D	  ( obsolete )
    /** \HR */
    /** \par Module
 	* 				   Audio 
@@ -1117,7 +1105,7 @@ typedef enum
      *                      \htmlonly
      *                      <pre>
      *                             {
-     *                               bit15:10    - reserved
+     *                               bit14:10    - reserved
      *                               bit9        - DL_OVERWRITE_bit
      *                                             1= overwrite ARM2SP_HQ_DL
      *                                                buffer to DL
@@ -1129,25 +1117,13 @@ typedef enum
      *                                                DL_OVERWRITE_bit
      *                                                setting)
      *                               bit7        - 48kHz Mono/Stereo
-     *                                             [0/1] = [Mono/Stereo]
+     *                                             [1/0] = [Mono/Stereo]
      *                               bit6-1      - reserved
      *                               bit0        - 48kHz DL PCM enable
      *                                             [1/0] = [enable/disable]
      *                             }
      *                      </pre>
      *                      \endhtmlonly
-     *              @param  UInt16 Reset_out_ptr_flag \BR
-     *                                        =0, reset output pointer -
-     *                                            shared_ARM2SP_HQ_DL_InBuf_out
-     *                                            - of buffer
-     *                                            shared_Arm2SP_InBuf[]
-     *                                            to 0. Used for new
-     *                                            ARM2SP_HQ_DL session.\BR
-     *                                        =1, keep output pointer -
-     *                                            shared_ARM2SP_HQ_DL_InBuf_out
-     *                                            - unchanged.
-     *                                            Used for PAUSE/RESUME the
-     *                                            same ARM2SP_HQ_DL session.
      * 
      *  \see ARM2SP_HQ_DL_interface, shared_Arm2SP_InBuf,
      *       shared_ARM2SP_HQ_DL_InBuf_out, shared_ARM2SP_HQ_DL_done_flag,
@@ -1204,7 +1180,7 @@ typedef enum
      *                      \htmlonly
      *                      <pre>
      *                             {
-     *                               bit15:10    - reserved
+     *                               bit14:10    - reserved
      *                               bit9        - DL_OVERWRITE_bit
      *                                             1= overwrite ARM2SP2_HQ_DL
      *                                                buffer to DL
@@ -1223,25 +1199,91 @@ typedef enum
      *                             }
      *                      </pre>
      *                      \endhtmlonly
-     *              @param  UInt16 Reset_out_ptr_flag \BR
-     *                                        =0, reset output pointer -
-     *                                            shared_ARM2SP2_HQ_DL_InBuf_out
-     *                                            - of buffer
-     *                                            shared_Arm2SP2_InBuf[]
-     *                                            to 0. Used for new
-     *                                            ARM2SP2_HQ_DL session.\BR
-     *                                        =1, keep output pointer -
-     *                                            shared_ARM2SP2_HQ_DL_InBuf_out
-     *                                            - unchanged.
-     *                                            Used for PAUSE/RESUME the
-     *                                            same ARM2SP2_HQ_DL session.
      * 
      *  \see ARM2SP2_HQ_DL_interface, shared_Arm2SP2_InBuf,
      *       shared_ARM2SP2_HQ_DL_InBuf_out, shared_ARM2SP2_HQ_DL_done_flag,
      *       VP_STATUS_ARM2SP2_HQ_DL_EMPTY
      *
      */
- 	VP_COMMAND_SET_ARM2SP2_HQ_DL   		   // 0x26
+ 	VP_COMMAND_SET_ARM2SP2_HQ_DL,  		   // 0x26
+	VP_COMMAND_ECHO_CANCELLATION,			// 0x27		( cmd_action, mode )
+	VP_COMMAND_NOISE_SUPPRESSION,			// 0x28		( cmd_action )
+	VP_COMMAND_ENABLE_DUAL_MIC,				// 0x29 (enable) arg0=0 Disable, 1 enable;
+	VP_COMMAND_SWITCH_AUDIO_PROFILE,		// 0x2A	arg0 = Is_spkr_mode, arg1 = 0, arg2 = 0;
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x2B
+    *  \par Description 
+    *       This command controls Downlink Noise Suppressor.
+    *              
+    *              @param  0 - disable, 1 - enable
+    *
+    */
+	VP_COMMAND_DOWNLINK_NOISE_SUPPRESSION,	// 0x2B (arg0: 0 - disable, 1 - enable)
+    VP_COMMAND_VOICE_FILTER_COEFS,			// 0x2C
+	VP_COMMAND_AUDIO_ENHANCEMENT_ENABLE,	// 0x2D
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x2E
+    *  \par Description 
+    *       This command configures the first 3 of the 10 sidetone Double Biquad filter's parameters.
+    *              
+    *              @param  UInt16 Coefficient 0
+    *              @param  UInt16 Coefficient 1
+    *              @param  UInt16 Coefficient 2
+    *
+    *  \see Software_Sidetone
+    */
+	VP_COMMAND_SIDETONE_COEFS_012,			// 0x2E		( SIDETONE_FILTER Biquad filter coefs 0, 1 and 2 )
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x2F 
+    *  \par Description 
+    *       This command configures the second 3 of the 10 sidetone Double Biquad filter's parameters.
+    *              
+    *              @param  UInt16 Coefficient 3
+    *              @param  UInt16 Coefficient 4
+    *              @param  UInt16 Coefficient 5
+    *
+    *  \see Software_Sidetone
+    */
+	VP_COMMAND_SIDETONE_COEFS_345,			// 0x2F		( SIDETONE_FILTER Biquad filter coefs 3, 4 and 5 )
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x30 
+    *  \par Description 
+    *       This command configures the third 3 of the 10 sidetone Double Biquad filter's parameters.
+    *              
+    *              @param  UInt16 Coefficient 6
+    *              @param  UInt16 Coefficient 7
+    *              @param  UInt16 Coefficient 8
+    *
+    *  \see Software_Sidetone
+    */
+	VP_COMMAND_SIDETONE_COEFS_678,			// 0x30		( SIDETONE_FILTER Biquad filter coefs 6, 7 and 8 )
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x31
+    *  \par Description 
+    *       This command configures the last (10th) sidetone Double Biquad filter's parameter.
+    *              
+    *              @param  UInt16 Coefficient 9
+    *
+    *  \see Software_Sidetone
+    */
+	VP_COMMAND_SIDETONE_COEFS_9,			// 0x31		( SIDETONE_FILTER Biquad filter coef 9 )
+	VP_COMMAND_INIT_SIDETONE_EXPANDER		// 0x32
+
 } VPCommand_t;                                 
 /**
  * @}
@@ -1884,7 +1926,13 @@ typedef enum
 		    *              \htmlonly
 		    *              <pre>
 		    *                             {
-		    *                               bit15:10    - reserved
+		    *                               bits14:12   - Number of frames of data
+		    *                                             after which the DSP is
+		    *                                             supposed to send the
+		    *                                             VP_STATUS_ARM2SP_HQ_DL_EMPTY
+		    *                                             reply
+		    *                                             (between 1 and 4 or 1 and 2)
+		    *                               bit11:10    - reserved
 		    *                               bit9        - DL_OVERWRITE_bit
 		    *                                             1= overwrite ARM2SP_HQ_DL
 		    *                                                buffer to DL
@@ -1896,7 +1944,7 @@ typedef enum
 		    *                                                DL_OVERWRITE_bit
 		    *                                                setting)
 		    *                               bit7        - 48kHz Mono/Stereo
-		    *                                             [0/1] = [Mono/Stereo]
+		    *                                             [1/0] = [Mono/Stereo]
 		    *                               bit6-1      - reserved
 		    *                               bit0        - 48kHz DL PCM enable
 		    *                                             [1/0] = [enable/disable]
@@ -1927,7 +1975,13 @@ typedef enum
 		    *              \htmlonly
 		    *              <pre>
 		    *                             {
-		    *                               bit15:10    - reserved
+		    *                               bits14:12   - Number of frames of data
+		    *                                             after which the DSP is
+		    *                                             supposed to send the
+		    *                                             VP_STATUS_ARM2SP2_HQ_DL_EMPTY
+		    *                                             reply
+		    *                                             (between 1 and 4 or 1 and 2)
+		    *                               bit11:10    - reserved
 		    *                               bit9        - DL_OVERWRITE_bit
 		    *                                             1= overwrite ARM2SP2_HQ_DL
 		    *                                                buffer to DL
@@ -1939,7 +1993,7 @@ typedef enum
 		    *                                                DL_OVERWRITE_bit
 		    *                                                setting)
 		    *                               bit7        - 48kHz Mono/Stereo
-		    *                                             [0/1] = [Mono/Stereo]
+		    *                                             [1/0] = [Mono/Stereo]
 		    *                               bit6-1      - reserved
 		    *                               bit0        - 48kHz DL PCM enable
 		    *                                             [1/0] = [enable/disable]
@@ -2055,155 +2109,13 @@ EXTERN VPStatQ_t vp_shared_statusq[ VP_STATUSQ_SIZE ]            AP_SHARED_SEC_C
  * @}
  */
 
-/** 
- * @addtogroup Shared_Audio_Buffers 
- * @{ */
-/** 
- * @addtogroup MM_VPU_Interface 
- *
- * The Multi-Media VPU Interface is used to do 16kHz record and playback in WB-AMR
- * format. This interface cannot do simulteneous record and playback.
- * It is meant to run only in idle mode. There is no uplink and/or downlink mixing
- * with a call data.
- *
- * \note As it stands the MM_VPU_RECORD interface can only be used for Recording and 
- * NOT for encoding of WB-AMR. \BR
- *
- * \note The MM_VPU_PLAYBACK interface can be used BOTH for WB-AMR decoding AND 
- * for Playback
- *
- * @{ */
-/** 
- * @addtogroup MM_VPU_RECORD
- *
- * The Voice codec is programmed to generate an Voice ISR
- * at 16Khz providing 320 PCM samples to DSP every 20 ms speech frame, using 
- * the COMMAND_AUDIO_ENABLE  command. \BR
- *
- * Recording of WB-AMR encoded data is started 
- * by setting the appropriate mode in the shared_WB_AMR_Ctrl_state variable and
- * by sending the COMMAND_MM_VPU_ENABLE command. \BR
- * 
- * Raw PCM samples from the microphone are directly copied to the a DSP internal 
- * memory buffer and then read back by
- * the encoder to process for the compression. \BR
- *
- * Compressed output bits are written back to the shared 
- * memory buffer shared_encoder_OutputBuffer for Flash or buffer storage. \BR
- *
- * When the encoder has completed encoding 4 20ms frames, the DSP sends an interrupt to
- * the ARM with the reply STATUS_PRAM_CODEC_DONE_RECORD, to go ahead and read the encoded
- * data.
- *
- * \see COMMAND_MM_VPU_ENABLE, COMMAND_AUDIO_ENABLE, COMMAND_AUDIO_CONNECT, 
- *      STATUS_PRAM_CODEC_DONE_RECORD, shared_WB_AMR_Ctrl_state, shared_encoder_OutputBuffer,
- *      shared_encodedSamples_buffer_in, shared_encodedSamples_buffer_out, COMMAND_MM_VPU_DISABLE
- *
- *  @{
- */
-/**
- *  @}
- */
-/** 
- * @addtogroup MM_VPU_PLAYBACK
- *
- * \section WB-AMR Encoding
- * This interface can be used to decode WB-AMR and playback (if needed). It can be also used to 
- * just do WB-AMR decoding with the output present 
- * in any of the three output shared memory buffers as selected by shared_WB_AMR_Ctrl_state. \BR
- *
- * Decoding of WB-AMR encoded data from an appropriate input shared memory buffer is started 
- * by setting the appropriate mode in the shared_WB_AMR_Ctrl_state variable and
- * by sending the COMMAND_MM_VPU_ENABLE command. Also, prior to sending the 
- * COMMAND_MM_VPU_ENABLE command, APE should set the shared_Inbuf_LOW_Sts_TH and 
- * shared_Outbuf_LOW_Sts_TH variables. \BR
- * 
- * \note These thresholds are currently not used in Athena. Currently these thresholds are
- * hard-coded in the code to 0x400 \BR
- *
- * DSP reads the input buffer (shared_decoder_InputBuffer) and runs the decoder to generate 
- * the synthesized speech to the output buffer, as selected by the shared_WB_AMR_Ctrl_state
- * variable. \BR
- *
- * If the amount of input encoded samples from the ARM in shared_decoder_InputBuffer,
- * becomes lower than the threshold shared_Inbuf_LOW_Sts_TH, the DSP sends a interrupt 
- * to the ARM with a status reply STATUS_PRAM_CODEC_INPUT_LOW, requesting the ARM to send
- * more downlink data. \BR
- *
- * If the amount of input encoded samples from the ARM in shared_decoder_InputBuffer
- * becomes lower than one frame's worth of samples, DSP sends an interrupt to the ARM 
- * with a status reply STATUS_PRAM_CODEC_INPUT_EMPTY, requesting the ARM to send
- * more downlink data immediately, and informing that under-flow is happening. \BR
- * 
- * If the amount of remaining space in the output PCM buffer (as selected by 
- * shared_WB_AMR_Ctrl_state variable) becomes lower than the threshold 
- * shared_Outbuf_LOW_Sts_TH, the DSP sends a interrupt 
- * to the ARM with a status reply STATUS_PRAM_CODEC_OUTPUT_LOW, requesting the ARM to slow
- * down in sending more downlink data. \BR
- *
- * If the amount of remaining space in the output PCM buffer (as selected by 
- * shared_WB_AMR_Ctrl_state variable) becomes lower than one frame's worth of samples,
- * DSP sends an interrupt to the ARM 
- * with a status reply STATUS_PRAM_CODEC_OUTPUT_FULL, requesting the ARM to stop
- * more downlink data immediately, and informing that over-flow is happening. \BR
- * 
- * When ARM was to complete the decoding process, it would set the appropriate Input Data Done Flag
- * (as selected by the shared_WB_AMR_Ctrl_state variable). The DSP stops any further decoding 
- * after it completes decoding the last frame of data and sends back a STATUS_PRAM_CODEC_DONEPLAY
- * reply to the ARM.
- *
- * \note Depending on the setting of shared_WB_AMR_Ctrl_state, the output buffers 
- * of MM_VPU_PLAYBACK overlap with the ones used by the NEWAUDFIFO interface.
- *
- * \see COMMAND_MM_VPU_ENABLE, shared_WB_AMR_Ctrl_state, COMMAND_MM_VPU_DISABLE,
- *      shared_decoder_InputBuffer, shared_NEWAUD_InBuf_in, shared_NEWAUD_InBuf_out, 
- *      shared_NEWAUD_InBuf_done_flag, shared_pram_codec_out0, shared_NEWAUD_OutBuf_in, 
- *      shared_NEWAUD_OutBuf_out, shared_newpr_codec_out0, shared_decoder_OutputBuffer,
- *      shared_encodedSamples_buffer_in, shared_encodedSamples_buffer_out, 
- *      shared_encodedSamples_done_flag, shared_decodedSamples_buffer_in,
- *      shared_decodedSamples_buffer_out,  shared_Inbuf_LOW_Sts_TH, 
- *      shared_Outbuf_LOW_Sts_TH, STATUS_PRAM_CODEC_INPUT_LOW, 
- *      STATUS_PRAM_CODEC_INPUT_EMPTY, STATUS_PRAM_CODEC_OUTPUT_LOW, STATUS_PRAM_CODEC_OUTPUT_FULL,
- *      STATUS_PRAM_CODEC_DONEPLAY
- *
- * \section Play-back
- * If in addition to decoding of WB-AMR, playback to the speaker is needed, 
- * in addition to sending the COMMAND_MM_VPU_ENABLE command, AP enable the Voice 
- * codec to generate a Voice audio at 16Khz using the COMMAND_AUDIO_ENABLE command. \BR 
- *
- * \note Unlike MM_VPU_RECORD, the playback Audio interrupts DO NOT need to come
- * at 16kHz frequency (even though the DAC is running at 16kHz). 
- *
- * \note From Athena Onwards, the MM_VPU_PLAYBACK no longer uses the NEWAUDFIFO 
- * interface for playback.
- *
- *  @{
- */
+/* This is an internal DSP buffer and not necessarily a shared buffer */
+EXTERN UInt16 ext_48khz_echo_ref[(IHF_48K_BUF_SIZE*2)+48] AP_SHARED_SEC_GEN_AUDIO;
 
-/**
- * This buffer is part of the MM_VPU_PLAYBACK interface. It is filled by ARM with 
- * WB-AMR encoded speech for DSP to decode.
- *
- * \see shared_WB_AMR_Ctrl_state, shared_encodedSamples_buffer_in, 
- *      shared_encodedSamples_buffer_out, shared_NEWAUD_InBuf_in, 
- *      shared_NEWAUD_InBuf_out
- */
-EXTERN UInt16 shared_decoder_InputBuffer[AUDIO_SIZE_PER_PAGE] AP_SHARED_SEC_GEN_AUDIO;
-
-/**
- * This buffer is part of the MM_VPU_PLAYBACK interface. It is filled by the DSP with 
- * decoded PCM speech for ARM to take and play. \BR
- *
- * ARM can select this buffer to be filled by the DSP, using shared_WB_AMR_Ctrl_state.
- *
- * \see shared_WB_AMR_Ctrl_state, shared_decodedSamples_buffer_in, 
- *      shared_decodedSamples_buffer_out
- *
- */
-EXTERN UInt16 shared_decoder_OutputBuffer[1] AP_SHARED_SEC_GEN_AUDIO; // This buffer is not used and hence change to only 1 word - should be removed later on
- /**
- *  @}
- */
+/* Unused in DSP */
+EXTERN UInt16 shared_unused_0x1000[AUDIO_SIZE_PER_PAGE-((IHF_48K_BUF_SIZE*2)+48)] AP_SHARED_SEC_GEN_AUDIO;
+/* Unused in DSP */
+EXTERN UInt16 shared_unused_1[1] AP_SHARED_SEC_GEN_AUDIO; // This buffer is not used and hence change to only 1 word - should be removed later on
 
 /**
  * \ingroup MM_VPU_RECORD
@@ -2880,7 +2792,8 @@ EXTERN UInt16 shared_aadmac_aud_enable            									AP_SHARED_SEC_GEN_AUD
  *
  * \see COMMAND_48KHZ_SPEAKER_OUTPUT_ENABLE
  */
-EXTERN UInt32 shared_aud_out_buf_48k[2][IHF_48K_BUF_SIZE]                   AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_aud_out_buf_48k[2][IHF_48K_BUF_SIZE]                   AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_aud_out_buf_48k_unused[2][IHF_48K_BUF_SIZE]            AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
@@ -2932,22 +2845,22 @@ EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_48K_SAMP_PER_INT0_INT]             
  * @}
  */
 
-EXTERN UInt32 shared_UNUSED[95-10]	AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_UNUSED[95-10]									        AP_SHARED_SEC_GEN_AUDIO;	// 10 - sizeof(DJB_STATS) in UInt32
 /**
  * @addtogroup Adaptive Jitter Buffer
  * @{
  */
 
-/**
+/** 
  * Adaptive Jitter Buffer statistics for reporting to ARM .\BR
- *
+ * 
  */
-EXTERN DJB_STATS shared_AjcStatistics	AP_SHARED_SEC_GEN_AUDIO;
+EXTERN DJB_STATS shared_AjcStatistics										AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
-EXTERN UInt16 shared_unused_extra	    AP_SHARED_SEC_GEN_AUDIO;
-EXTERN UInt16 shared_unused_voif        AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_unused_extra                                            AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_unused_voif                                             AP_SHARED_SEC_GEN_AUDIO;
 
 
 #ifdef FPGA_AUDIO_HUB_VERIFICATION
@@ -3376,6 +3289,8 @@ EXTERN UInt32 NOT_USE_shared_memory_end                                     AP_S
 } AP_SharedMem_t;
 #endif
 
+/* TODO: To go away later !!!!! */
+#define shared_Arm2SP_HQ_DL_InBuf shared_Arm2SP_InBuf
 
 //******************************************************************************
 // Function Prototypes
