@@ -1202,6 +1202,35 @@ cUInt32 chal_caph_cfifo_read_timestamp(CHAL_HANDLE handle,
     return ts;
 }
 
+/****************************************************************************
+*
+*  Function Name: cVoid chal_caph_fifo_clear_register(CHAL_HANDLE handle,
+				CAPH_CFIFO_e chal_fifo)
+*
+*  Description: Clears the cfifo register
+*
+****************************************************************************/
+
+cVoid chal_caph_fifo_clear_register(CHAL_HANDLE handle, CAPH_CFIFO_e chal_fifo)
+{
+	cUInt32 base = ((chal_caph_cfifo_cb_t *) handle)->base;
+	cUInt8 index;
+	cUInt32 cr = 0;
+
+	/* found the FIFO we are looking for, clear the FIFO */
+	for (index = 0; index < CHAL_CAPH_CFIFO_MAX_FIFOS; index++) {
+		if ((1UL << index) & chal_fifo) {
+			BRCM_WRITE_REG_IDX(base, CPH_CFIFO_CH1_PADDR,
+				index * CHAL_CAPH_CFIFO_PADDR_REG_SIZE, cr);
+			BRCM_WRITE_REG_IDX(base, CPH_CFIFO_CPH_CR_1,
+				index * CHAL_CAPH_CFIFO_CR_REG_SIZE, cr);
+			BRCM_WRITE_REG_IDX(base, CPH_CFIFO_CPH_SR_1,
+				index * CHAL_CAPH_CFIFO_CR_REG_SIZE, cr);
+		}
+	}
+	return;
+}
+
 #if defined( __KERNEL__ )
 
 #include <linux/module.h>
@@ -1233,6 +1262,7 @@ EXPORT_SYMBOL(chal_caph_cfifo_read_fifo_status);
 EXPORT_SYMBOL(chal_caph_cfifo_write_fifo);
 EXPORT_SYMBOL(chal_caph_cfifo_read_fifo);
 EXPORT_SYMBOL(chal_caph_cfifo_read_timestamp);
+EXPORT_SYMBOL(chal_caph_fifo_clear_register);
 
 #endif
 

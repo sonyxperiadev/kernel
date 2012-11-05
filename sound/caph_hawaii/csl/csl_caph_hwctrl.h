@@ -252,7 +252,7 @@ enum __CAPH_LIST_t {
 	LIST_SW,
 	LIST_MIX_SW,
 	LIST_MIX_DMA,
-	LIST_SW_MIX_SW_DMA,
+	LIST_SW_MIX_DMA,
 	LIST_NUM,
 }; /*the order must match caph_block_list[] */
 #define CAPH_LIST_t enum __CAPH_LIST_t
@@ -541,12 +541,12 @@ CSL_CAPH_DMA_CHNL_e csl_caph_hwctrl_GetdmaCH(CSL_CAPH_PathID pathID);
 *  @param ctrl (in)  control to loop back
 *			   TRUE - enable loop back in path,
 *			   FALSE - disbale loop back in path
-*  @param path (in)  internal loopback path
+*  @param dir (in)  internal loopback direction
 *
 *  @return
 ****************************************************************************/
 void csl_caph_audio_loopback_control(CSL_CAPH_DEVICE_e speaker,
-				     int path, Boolean ctrl);
+				     int dir, Boolean ctrl);
 
 /****************************************************************************
 *
@@ -667,12 +667,30 @@ void csl_caph_hwctrl_SetBTMode(int mode);
 
 /****************************************************************************
 *
-*  Function Name: csl_caph_arm2sp_set_fm_mixmode
+*  Function Name: csl_caph_hwctrl_GetDualMic_NoiseRefMic
 *
-*  Description: control the MixMode for ARM2SP FM feature
+*  Description: Get the noise ref mic for dual mic operation
 *
 ****************************************************************************/
-void csl_caph_arm2sp_set_fm_mixmode(int mixMode);
+CSL_CAPH_DEVICE_e csl_caph_hwctrl_GetDualMic_NoiseRefMic(void);
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_SetDualMic_NoiseRefMic
+*
+*  Description: Set the noise ref mic for dual mic operation
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetDualMic_NoiseRefMic(CSL_CAPH_DEVICE_e dev);
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_arm2sp_set_mixmode
+*
+*  Description: control the MixMode for ARM2SP feature
+*
+****************************************************************************/
+void csl_caph_arm2sp_set_mixmode(int type, int mixMode);
 
 void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 			       int en_lpbk);
@@ -818,4 +836,8 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path);
 *****************************************************************************/
 void csl_caph_hwctrl_PrintAllPaths(void);
 void csl_caph_dspcb(int path);
+void csl_caph_hwctrl_SetLongDma(CSL_CAPH_PathID pathID);
+int csl_caph_hwctrl_hub(int arg1, int arg2);
+int csl_caph_FindPathWithSink(CSL_CAPH_DEVICE_e sink, int skip_path);
+int csl_caph_hwctrl_aadmac_autogate_status(void);
 #endif

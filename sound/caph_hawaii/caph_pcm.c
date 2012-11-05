@@ -94,6 +94,16 @@ the GPL, without Broadcom's express prior written consent.
 static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate);
 static void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate);
 
+static unsigned int pcm_capture_period_bytes[] = {
+	PCM_MIN_CAPTURE_PERIOD_BYTES, PCM_MAX_CAPTURE_PERIOD_BYTES
+};
+static struct snd_pcm_hw_constraint_list
+	pcm_capture_period_bytes_constraints_list = {
+	.count = ARRAY_SIZE(pcm_capture_period_bytes),
+	.list = pcm_capture_period_bytes,
+	.mask = 0,
+};
+
 static unsigned int pcm_voice_capture_period_bytes[] = {
 	PCM_MIN_VOICE_CAPTURE_PERIOD_BYTES, PCM_MAX_VOICE_CAPTURE_PERIOD_BYTES
 };
@@ -165,6 +175,10 @@ static struct snd_pcm_hardware brcm_voice_capture_hw = {
 };
 
 static Int32 callMode;
+static void common_log_capture(CAPTURE_POINT_t log_point,
+				struct snd_pcm_substream *substream_new);
+
+bcm_caph_audio_log_t audio_log;
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++
  *
@@ -610,23 +624,6 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 	snd_pcm_uframes_t pos = 0;
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	UInt16 dmaPointer = 0;
-	if ((callMode == CALL_MODE_NONE)
-	    || (chip->streamCtl[substream->number].iLineSelect[0] ==
-		AUDIO_SINK_VIBRA && AUDCTRL_GetMFDMode())
-	    || (chip->streamCtl[substream->number].iLineSelect[0] ==
-		AUDIO_SINK_I2S)) {
-		dmaPointer =
-		    csl_audio_render_get_current_position(StreamIdOfDriver
-							  (runtime->
-							   private_data));
-		if (bytes_to_frames(runtime, dmaPointer) >=
-		    runtime->period_size)
-			aError("Error unexpected: PcmPlaybackPointer"
-				" hw_ptr = %d,dmaptr= %d, pos = %d\n",
-				(int)chip->streamCtl[substream->number].
-				stream_hw_ptr, dmaPointer, (int)pos);
-		dmaPointer = 0;
-	}
 
 	pos =
 	    chip->streamCtl[substream->number].stream_hw_ptr +
@@ -669,6 +666,15 @@ static int PcmCaptureOpen(struct snd_pcm_substream *substream)
 		chip->streamCtl[substream_number].dev_prop.c.drv_type =
 		    AUDIO_DRIVER_CAPT_HQ;
 		runtime->hw = brcm_capture_hw;
+		/* Lets make it a multiple of 4k */
+		err = snd_pcm_hw_constraint_step(runtime, 0,
+			SNDRV_PCM_HW_PARAM_BUFFER_BYTES,
+			4096);
+		err = snd_pcm_hw_constraint_list(runtime, 0,
+			SNDRV_PCM_HW_PARAM_PERIOD_BYTES,
+			&pcm_capture_period_bytes_constraints_list);
+		if (err < 0)
+			return err;
 	} else if ((substream_number + 1) == CTL_STREAM_PANEL_SPEECHIN) {
 		chip->streamCtl[substream_number].dev_prop.c.drv_type =
 		    AUDIO_DRIVER_CAPT_VOICE;
@@ -1105,7 +1111,8 @@ static void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 			/*send the period elapsed */
 			snd_pcm_period_elapsed(substream);
 
-			logmsg_ready(substream, AUD_LOG_PCMIN);
+			/* logmsg_ready(substream, AUD_LOG_PCMIN); */
+			common_log_capture(AUD_LOG_PCMIN, substream);
 
 		}
 		break;
@@ -1200,7 +1207,9 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 			/* send the period elapsed */
 			snd_pcm_period_elapsed(substream);
 
-			logmsg_ready(substream, AUD_LOG_PCMOUT);
+			/* logmsg_ready(substream, AUD_LOG_PCMOUT); */
+			common_log_capture(AUD_LOG_PCMOUT, substream);
+
 
 		}
 		break;
@@ -1284,11 +1293,41 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 #if defined(CONFIG_BCM_MODEM)
 	DSPDRV_Init();
 #endif
-	
 	AUDCTRL_Init();
 
 	aTrace(LOG_ALSA_INTERFACE,
 	       "\n PcmDeviceNew : PcmDeviceNew err=%d\n", err);
 	return err;
+
+}
+
+
+void common_log_capture(CAPTURE_POINT_t log_point,
+			struct snd_pcm_substream *substream_new)
+{
+	struct snd_pcm_substream *substream;
+
+	if (audio_log.audio_log_on <= 0)
+		return;
+
+	if (log_point == AUD_LOG_PCMOUT) {
+		substream = &audio_log.substream_playback;
+		if (mutex_lock_interruptible(&audio_log.playback_mutex))
+			return;
+
+	} else {
+		substream = &audio_log.substream_record;
+		if (mutex_lock_interruptible(&audio_log.record_mutex))
+			return;
+	}
+
+	memcpy(substream, substream_new, sizeof(*substream));
+
+	if (log_point == AUD_LOG_PCMOUT)
+		mutex_unlock(&audio_log.playback_mutex);
+	else
+		mutex_unlock(&audio_log.record_mutex);
+
+	logmsg_ready(substream, log_point);
 
 }

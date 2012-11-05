@@ -186,6 +186,7 @@ void csl_dsp_caph_control_aadmac_disable_path(UInt16 path)
 
 }
 
+#if defined(EXT_MODEM_INTERFACE)
 /*****************************************************************************/
 /**
 *
@@ -229,7 +230,7 @@ UInt32 *csl_dsp_ext_modem_get_aadmac_buf_base_addr(
 
 	return base_addr;
 }
-
+#endif
 /*****************************************************************************/
 /**
 *

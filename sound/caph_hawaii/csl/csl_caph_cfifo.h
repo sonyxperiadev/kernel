@@ -228,4 +228,6 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e
 */
 CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CHNL_e dmaCH);
 
+void csl_caph_cfifo_set_fifo_thres(CSL_CAPH_CFIFO_FIFO_e fifo,
+	UInt16 threshold);
 #endif /* _CSL_CAPH_CFIFO_ */

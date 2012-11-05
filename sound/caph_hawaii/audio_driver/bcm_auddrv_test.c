@@ -91,7 +91,7 @@
 
 /* Macro to Enable and disable test data*/
 #define CONFIG_BCM_ENABLE_TESTDATA
-#define TEST_DATA_SIZE		(96 * 1024)
+#define TEST_DATA_SIZE		(16 * 1024)
 
 #ifdef CONFIG_BCM_ENABLE_TESTDATA
 #include "48k_stereo_16bit.h"
@@ -452,7 +452,7 @@ static int HandleControlCommand()
 
 		aTrace(LOG_AUDIO_DRIVER, " Enable telephony\n");
 		AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_ANALOG_MAIN,
-				AUDIO_SINK_HANDSET);
+				AUDIO_SINK_HANDSET,false);
 		AUDCTRL_EnableTelephony(AUDIO_SOURCE_ANALOG_MAIN,
 				AUDIO_SINK_HANDSET);
 #if 0
@@ -955,13 +955,11 @@ static int HandleControlCommand()
 		break;
 	case 16:
 		{
-		aTrace(LOG_AUDIO_DRIVER, "SSPI Loopback\n");
 		AUDCTRL_SSP_PORT_e ssp_port;
 		AUDCTRL_SSP_BUS_e ssp_bus;
 		int en_lpbk = 0;
-		unsigned int ssp_tdx3 = 0x0, ssp_tdx4 = 0x0, ssp_tdx6 = 0x0;
-		unsigned int ssp1_di = 0x0, ssp2_di = 0x0, ssp2_do = 0x0;
 
+		aTrace(LOG_AUDIO_DRIVER, "SSPI Loopback\n");
 
 		if (sgBrcm_auddrv_TestValues[2] == 3)
 			ssp_port = AUDCTRL_SSP_3;
@@ -1002,95 +1000,23 @@ static int HandleControlCommand()
 
 		AUDCTRL_ConfigSSP(ssp_port, ssp_bus, en_lpbk);
 
-		/* Pad Ctl Settings */
-		/* FM  SSP4 Writing '1' disables the "I/P
-					  disable control bit no 3 "*/
+		/* Pad Ctl Settings SSP external loopback 
+		 * FM SSP4 */
 		if (sgBrcm_auddrv_TestValues[2] == 4) {
-			WR_REG((0x35004800 + 0x00000024), 0x00000208); /* DCLK4 ->SSP1DO*/
 
-			ssp1_di = RD_REG(0x35004800 + 0x0000002C); /*DCLK4R -> DCLKREQ4 */
-			ssp1_di |= (1 << 3);
-			WR_REG((0x35004800 + 0x0000002C), ssp1_di);
+			WR_REG(0x350049BC, 0x00000243); /* GPIO93*/
+			WR_REG(0x350049C0, 0x00000243); /* GPIO94*/
+			WR_REG(0x35004824, 0x00000203); /* DCLK4*/
+			WR_REG(0x3500482C, 0x00000203); /* DCLKREQ4*/
 
 		} else if (sgBrcm_auddrv_TestValues[2] == 3 ) { /* BT SSP3 */
-			ssp2_di = RD_REG(0x35004800 + 0x00000054); /* GPIO06 -> SSP2DI */
-			ssp2_di |= (1 << 3);
-			WR_REG((0x35004800 + 0x00000054), ssp2_di);
-
-			ssp2_do = RD_REG(0x35004800 + 0x00000058); /* GPIO07 -> SSP2DO */
-			ssp2_do |= (1 << 3);
-			WR_REG((0x35004800 + 0x00000058), ssp2_do);
 		}
 
+			WR_REG(0x35004874, 0x00000243); /* GPIO14*/
+			WR_REG(0x35004878, 0x00000243); /* GPIO15*/
+			WR_REG(0x35004854, 0x00000203); /* GPIO06 -> DI*/
+			WR_REG(0x35004858, 0x00000203); /* GPIO07 -> DO*/
 
-#if 0
-
-		if (sgBrcm_auddrv_TestValues[2] == 3) {
-			ssp_tdx3 = RD_REG(0x35004800 + 0x00000354);
-				if (en_lpbk == 1) {
-					ssp_tdx3 &= ~(1 << 3);
-					WR_REG((0x35004800 + 0x00000354),
-							ssp_tdx3);
-					aTrace(LOG_AUDIO_DRIVER,
-							"Enable loopback:"
-							"SSP_TDX3[0x%08x]\n",
-							RD_REG(0x35004800 +
-								0x00000354));
-				} else if (en_lpbk == 2) {
-					ssp_tdx3 |= (1 << 3);
-					WR_REG((0x35004800 + 0x00000354),
-							ssp_tdx3);
-					aTrace(LOG_AUDIO_DRIVER,
-							"Disable loopback"
-							"SSP_TDX3[0x%08x]\n",
-							RD_REG(0x35004800 +
-								0x00000354));
-				}
-		} else if (sgBrcm_auddrv_TestValues[2] == 4) {
-			ssp_tdx4 = RD_REG(0x35004800 + 0x00000364);
-				if (en_lpbk == 1) {
-					ssp_tdx4 &= ~(1 << 3);
-					WR_REG((0x35004800 + 0x00000364),
-							ssp_tdx4);
-					aTrace(LOG_AUDIO_DRIVER,
-							"Enable loopback"
-							"SSP_TDX4[0x%08x]\n",
-							RD_REG(0x35004800 +
-								0x00000364));
-				} else if (en_lpbk == 2) {
-					ssp_tdx4 |= (1 << 3);
-					WR_REG((0x35004800 + 0x00000364),
-							ssp_tdx4);
-					aTrace(LOG_AUDIO_DRIVER,
-							"Disable loopback"
-							"SSP_TDX4[0x%08x]\n",
-							RD_REG(0x35004800 +
-								0x00000364));
-				}
-
-		} else if (sgBrcm_auddrv_TestValues[2] == 6) {
-			ssp_tdx6 = RD_REG(0x35004800 + 0x00000384);
-				if (en_lpbk == 1) {
-					ssp_tdx6 &= ~(1 << 3);
-					WR_REG((0x35004800 + 0x00000384),
-							ssp_tdx6);
-					aTrace(LOG_AUDIO_DRIVER,
-							"Enable loopback"
-							"SSP_TDX6[0x%08x]\n",
-							RD_REG(0x35004800 +
-								0x00000384));
-				} else if (en_lpbk == 2) {
-					ssp_tdx6 |= (1 << 3);
-					WR_REG((0x35004800 + 0x00000384),
-							ssp_tdx6);
-					aTrace(LOG_AUDIO_DRIVER,
-							"Disable loopback"
-							"SSP_TDX6[0x%08x]\n",
-							RD_REG(0x35004800 +
-								0x00000384));
-				}
-		}
-#endif
 		}
 		break;
 	default:

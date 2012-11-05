@@ -101,6 +101,7 @@ enum {
 	VoIP_Ioctl_GetBitrate = _IOR('H', 0x1C, int),
 	VoIP_Ioctl_SetVoLTEFlag = _IOW('H', 0x1D, int),
 	VoIP_Ioctl_GetVoLTEFlag = _IOR('H', 0x1E, int),
+	VoIP_Ioctl_SetVoLTEDTX = _IOW('H', 0x1F, int),
 	DSPCtrl_Ioctl_SPCtrl = _IOW('H', 0x30, UserCtrl_data_t),
 	DSPCtrl_Ioctl_SPSetVar = _IOW('H', 0x31, UserCtrl_data_t),
 	DSPCtrl_Ioctl_SPQuery = _IOR('H', 0x32, UserCtrl_data_t),
@@ -193,9 +194,25 @@ struct _TPcm_Stream_Ctrls {
 
 #define	TPcm_Stream_Ctrls	struct _TPcm_Stream_Ctrls
 
+/*This is the stream IDs*/
+enum	CTL_STREAM_PANEL_t {
+	CTL_STREAM_PANEL_PCMOUT1 = 1,
+	CTL_STREAM_PANEL_FIRST = CTL_STREAM_PANEL_PCMOUT1,
+	CTL_STREAM_PANEL_PCMOUT2,
+	CTL_STREAM_PANEL_VOIPOUT,
+	CTL_STREAM_PANEL_PCMIN,
+	CTL_STREAM_PANEL_SPEECHIN,
+	CTL_STREAM_PANEL_VOIPIN,
+	CTL_STREAM_PANEL_VOICECALL,
+	CTL_STREAM_PANEL_FM,
+	CTL_STREAM_PANEL_MISC,
+	CTL_STREAM_PANEL_LAST
+};
+
+
 struct brcm_alsa_chip {
 	struct snd_card *card;
-	TPcm_Stream_Ctrls	streamCtl[CAPH_MAX_PCM_STREAMS];
+	TPcm_Stream_Ctrls	streamCtl[CTL_STREAM_PANEL_LAST];
 
 	/* workqueue */
 	struct work_struct work_play;
@@ -242,22 +259,6 @@ struct brcm_alsa_chip {
 #define	brcm_alsa_chip_t struct brcm_alsa_chip
 void caphassert(const char *fcn, int line, const char *expr);
 #define CAPH_ASSERT(e)   ((e) ? (void) 0 : caphassert(__func__, __LINE__, #e))
-
-/*This is the stream IDs*/
-enum	CTL_STREAM_PANEL_t {
-	CTL_STREAM_PANEL_PCMOUT1 = 1,
-	CTL_STREAM_PANEL_FIRST = CTL_STREAM_PANEL_PCMOUT1,
-	CTL_STREAM_PANEL_PCMOUT2,
-	CTL_STREAM_PANEL_VOIPOUT,
-	CTL_STREAM_PANEL_PCMIN,
-	CTL_STREAM_PANEL_SPEECHIN,
-	CTL_STREAM_PANEL_VOIPIN,
-	CTL_STREAM_PANEL_VOICECALL,
-	CTL_STREAM_PANEL_FM,
-	CTL_STREAM_PANEL_MISC,
-	CTL_STREAM_PANEL_LAST
-};
-
 
 
 enum	CTL_FUNCTION_t {

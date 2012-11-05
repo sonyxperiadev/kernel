@@ -63,3 +63,9 @@ config AUDIO_S2
         default n
         help
           Say Y here to enable Audio S2 features
+config AUDIO_FEATURE_SET_DISABLE_ECNS
+	boolean "Broadcom enable BT NREC off feature"
+	depends on BCM_MODEM
+	default n
+	help
+	  Say Y here to activate Brcm BT NREC OFF

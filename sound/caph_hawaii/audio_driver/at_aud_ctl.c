@@ -69,6 +69,15 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "audio_trace.h"
 #include "csl_voip.h"
 
+#include "taskmsgs.h"
+#include "ipcproperties.h"
+
+#include "rpc_global.h"
+#include "rpc_ipc.h"
+#include "xdr_porting_layer.h"
+#include "xdr.h"
+#include "rpc_api.h"
+
 /**
 	Description:
 	AT command handler, handle command AT commands at*maudmode=P1,P2,P3
@@ -216,9 +225,15 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].
 		    iLineSelect[1] = spk;
 
-		AUDCTRL_SetUserAudioApp(app);	/* for PCG to set new app */
-		if (app <= AUDIO_APP_VOICE_CALL_WB) {
-			AUDCTRL_SetTelephonyMicSpkr(mic, spk);
+		RPC_SetProperty(RPC_PROP_AUDIO_MODE,
+			(UInt32)(app * AUDIO_MODE_NUMBER + mode));
+
+		AUDCTRL_SaveAudioApp(app);	/* for PCG to set new app */
+		if (app == AUDIO_APP_VOICE_CALL
+		    || app == AUDIO_APP_VOICE_CALL_WB
+		    || app == AUDIO_APP_VT_CALL
+		    || app == AUDIO_APP_VT_CALL_WB) {
+			AUDCTRL_SetTelephonyMicSpkr(mic, spk, false);
 			AUDCTRL_SetAudioMode(mode, app);
 		} else if (app == AUDIO_APP_MUSIC) {
 			if (AUDCTRL_InVoiceCall() == FALSE) {
@@ -226,7 +241,9 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 				AUDCTRL_SaveAudioMode(mode);
 				AUDCTRL_SaveAudioApp(app);
 			}
-		} else if (app > AUDIO_APP_MUSIC) {
+		} else {
+			/* Handling all other apps cases */
+			/* For PCG to set new Mode */
 			AUDCTRL_SetAudioMode(mode, app);
 		}
 
@@ -239,11 +256,7 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 	/* needs to match to enum AudioTuneCommand_t in at_audtune.c */
 	case 16:
 		Params[0] = AUDIO_APP_NUMBER;
-#if defined(USE_NEW_AUDIO_MM_PARAM)
 		Params[1] = AUDIO_APP_MM_NUMBER;
-#else
-		Params[1] = 0;
-#endif
 		break;
 
 	case 99:		/* at*maudmode=99  --> stop tuning */

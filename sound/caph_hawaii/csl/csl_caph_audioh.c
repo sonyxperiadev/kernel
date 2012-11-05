@@ -49,7 +49,7 @@
 /***************************************************************************/
 /*                        L O C A L   S E C T I O N                        */
 /***************************************************************************/
-
+#define SDM_DITHERING_DEFAULT    0
 /***************************************************************************/
 /*local macro declarations                                                 */
 /***************************************************************************/
@@ -409,9 +409,16 @@ void csl_caph_audioh_config(int path_id, void *p)
 {
 	audio_config_t *pcfg = (void *)p;
 
-	if (path_id > 0 && path_id < AUDDRV_PATH_TOTAL)
+	/*
+	 * We're about to use path_id to index the array,
+	 * so it better be in bounds
+	 */
+	BUG_ON(path_id <= AUDDRV_PATH_NONE);
+	BUG_ON(path_id >= AUDDRV_PATH_TOTAL);
+
 		if (path[path_id].started)
 			return;
+
 	aTrace
 	      (LOG_AUDIO_CSL,
 	       "csl_caph_audioh_config:: path %d sr %d bits %d chNum %d pack %d eanc %d:%d.\r\n",
@@ -829,6 +836,7 @@ void csl_caph_audioh_start(int path_id)
 			audioh_hs_on = 1;
 			chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
 			chal_audio_hspath_set_gain(handle, 0);
+#if SDM_DITHERING_DEFAULT
 				/*enable dither*/
 			chal_audio_hspath_sdm_set_dither_seed(handle, 1, 1);
 			chal_audio_hspath_sdm_set_dither_poly(handle,
@@ -836,6 +844,7 @@ void csl_caph_audioh_start(int path_id)
 							0x41000000);
 			chal_audio_hspath_sdm_set_dither_strength(handle, 3, 3);
 			chal_audio_hspath_sdm_enable_dither(handle, 0x3);
+#endif
 		}
 		chal_audio_hspath_enable(handle, chnl_enable);
 		break;
@@ -864,6 +873,7 @@ void csl_caph_audioh_start(int path_id)
 		break;
 
 	case AUDDRV_PATH_EARPICEC_OUTPUT:
+		chal_audio_earpath_mute(handle, 1);
 
 		/* Isolate Input = 0 */
 		chal_audio_earpath_clear_isolation_ctrl(handle,
@@ -876,12 +886,12 @@ void csl_caph_audioh_start(int path_id)
 		chal_audio_earpath_set_drv_pwr(handle, CHAL_AUDIO_ENABLE);
 
 		/* Enable the Earpiece path */
-		chal_audio_earpath_enable(handle, CHAL_AUDIO_ENABLE);
+		/*chal_audio_earpath_enable(handle, CHAL_AUDIO_ENABLE);*/
 		epIHFStatus |= CSL_CAPH_AUDIOH_EP_ON;
 
 		/* Cause a raising edge on SR_PUP_ED_DRV_TRIG */
-		chal_audio_earpath_set_slowramp_ctrl(handle,
-					CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG);
+		/*chal_audio_earpath_set_slowramp_ctrl(handle,
+			CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG);*/
 
 		break;
 
@@ -2630,12 +2640,14 @@ void csl_caph_audioh_start_hs(void)
 
 	chal_audio_hspath_set_dac_pwr(handle, chnl_enable);
 	chal_audio_hspath_set_gain(handle, 0);
+#if SDM_DITHERING_DEFAULT
 	/*enable dither*/
 	chal_audio_hspath_sdm_set_dither_seed(handle, 1, 1);
 	chal_audio_hspath_sdm_set_dither_poly(handle, 0x48000000,
 					0x41000000);
 	chal_audio_hspath_sdm_set_dither_strength(handle, 3, 3);
 	chal_audio_hspath_sdm_enable_dither(handle, 0x3);
+#endif
 	/*chal_audio_hspath_enable(handle, chnl_enable);*/
 }
 
@@ -2734,3 +2746,60 @@ void csl_caph_audioh_stop_ihf(void)
 	if (epIHFStatus == 0)
 		chal_audio_earpath_set_dac_pwr(handle, 0);
 }
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_audioh_hs_path_sdm_mute
+*
+*  Description: Set stereo sdm mute channel
+*
+****************************************************************************/
+void csl_caph_audioh_hs_path_sdm_mute(Boolean mute, UInt16 lr_ch)
+{
+	UInt16 chal_lr_chnl = 0;
+	if (lr_ch & CSL_AUDIO_CHANNEL_LEFT)
+		chal_lr_chnl |= CHAL_AUDIO_CHANNEL_LEFT;
+	if (lr_ch & CSL_AUDIO_CHANNEL_RIGHT)
+		chal_lr_chnl |= CHAL_AUDIO_CHANNEL_RIGHT;
+
+	chal_audio_hspath_sdm_mute(handle, mute, chal_lr_chnl);
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_audio_enable_hs_path_dither
+*
+*  Description: Enables dither in headset path
+*
+****************************************************************************/
+void csl_caph_audio_enable_hs_path_dither(Boolean enable)
+{
+	if (enable)
+		chal_audio_hspath_sdm_enable_dither(handle, 0x3);
+	else
+		chal_audio_hspath_sdm_enable_dither(handle, 0);
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_audio_is_hs_path_dither_enabled
+*
+*  Description: Checks if dither in headset path enabled
+*
+****************************************************************************/
+UInt16 csl_caph_audio_is_hs_path_dither_enabled(void)
+{
+	return (UInt16)chal_audio_hspath_sdm_is_dither_enabled(handle);
+}
+
+void csl_caph_audioh_start_ep(void)
+{
+	/* Enable the Earpiece path */
+	chal_audio_earpath_enable(handle, CHAL_AUDIO_ENABLE);
+
+	/* Cause a raising edge on SR_PUP_ED_DRV_TRIG */
+	chal_audio_earpath_set_slowramp_ctrl(handle,
+		CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG);
+	chal_audio_earpath_mute(handle, 0);
+}
+

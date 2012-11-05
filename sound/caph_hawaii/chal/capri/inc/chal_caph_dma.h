@@ -106,6 +106,22 @@ CAPH_DMA_CHANNEL_e chal_caph_dma_alloc_given_channel(CHAL_HANDLE handle, CAPH_DM
 void chal_caph_dma_free_channel(CHAL_HANDLE handle,
 			CAPH_DMA_CHANNEL_e channel);
 
+
+/**
+*
+*  @brief  free caph dma channel
+*
+*  @param  handle  (in) handle of the caph dma block
+*  @param  channel  (in) channel id of the caph dma block
+*
+*  @return cVoid
+*
+****************************************************************************/
+cVoid chal_caph_dma_clear_register(CHAL_HANDLE handle,
+				  CAPH_DMA_CHANNEL_e channel);
+
+
+
 /**
 *
 *  @brief  Set caph dma channel data direction
@@ -341,6 +357,13 @@ void chal_caph_dma_set_hibuffer(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e  channel,
 ****************************************************************************/
 cVoid chal_caph_dma_en_hibuffer(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e channel);
 
-
+/****************************************************************************
+*
+*  Function Name: void chal_caph_dma_autogate_status(CHAL_HANDLE handle)
+*
+*  Description: get CAPH DMA autogate status
+*
+****************************************************************************/
+cUInt32 chal_caph_dma_autogate_status(CHAL_HANDLE handle);
 #endif /* _CHAL_CAPH_DMA_ */
 

@@ -622,6 +622,7 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 					 * If stIHF remove EP path first.
 					 */
 #ifndef CONFIG_CAPH_STEREO_IHF
+				if (i < MAX_PLAYBACK_DEV - 1)
 					if ((isSTIHF) &&
 					    (pCurSel[i] == AUDIO_SINK_LOUDSPK)
 					    && (pChip->streamCtl[stream - 1].
@@ -1081,7 +1082,8 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		uinfo->value.integer.max = 2;
 		break;
 	default:
-		aWarn("Unexpected function code %d\n", function);
+		aWarn("%s, Unexpected function code %d\n",
+			  __func__, function);
 		break;
 	}
 
@@ -1175,6 +1177,7 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 	case CTL_FUNCTION_CFG_IHF:
 		ucontrol->value.integer.value[0] = pChip->pi32CfgIHF[0];
 		ucontrol->value.integer.value[1] = pChip->pi32CfgIHF[1];
+		break;
 	case CTL_FUNCTION_CFG_SSP:
 		ucontrol->value.integer.value[0] =
 		    pChip->i32CfgSSP[kcontrol->id.index];
@@ -1202,6 +1205,9 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 	case CTL_FUNCTION_APP_SEL:
 		ucontrol->value.integer.value[0] = pChip->i32CurApp;
 		break;
+	case CTL_FUNCTION_APP_RMV:
+		/* don't need to do anything */
+		break;
 	case CTL_FUNCTION_AMP_CTL:
 		ucontrol->value.integer.value[0] = pChip->i32CurAmpState;
 		break;
@@ -1209,7 +1215,8 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[0] = pChip->iCallMode;
 		break;
 	default:
-		aWarn("Unexpected function code %d\n", function);
+		aWarn("%s, Unexpected function code %d\n",
+			  __func__, function);
 		break;
 	}
 
@@ -1280,23 +1287,19 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 			&ctl_parm.parm_loop, NULL, 0);
 		break;
 	case CTL_FUNCTION_PHONE_ENABLE:
-		switch (ucontrol->value.integer.value[0]) {
-		case 0:  /*Flag both DL and UL are down*/
+		/* 2 bits mask
+		00 - Voice call OFF
+		01 - Voice call ON
+		10 - VoIP OFF
+		11 - VoIP ON */
+		pChip->iEnablePhoneCall =
+			ucontrol->value.integer.value[0];
+		/* Right now, we don't need to differentiate
+		VoIP OFF/Voice call OFF.To keep the logic
+		simple, set the same value as Voice call
+		OFF for VoIP OFF */
+		if (pChip->iEnablePhoneCall == 2)
 			pChip->iEnablePhoneCall = 0;
-			break;
-		case 1: /*Flag both DL and UL are up*/
-			pChip->iEnablePhoneCall = 3;
-			break;
-		case 2: /*Flag DL is up*/
-			pChip->iEnablePhoneCall |= 1;
-			break;
-		case 3: /*Flag UL is up*/
-			pChip->iEnablePhoneCall |= 2;
-			break;
-		default:
-			break;
-		}
-
 		pSel =
 		    pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -
 				     1].iLineSelect;
@@ -1309,7 +1312,6 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		aTrace(LOG_ALSA_INTERFACE,
 		       "MiscCtrlPut CTL_FUNCTION_PHONE_ENABLE, %d\n",
 				pChip->iEnablePhoneCall);
-
 		if (!pChip->iEnablePhoneCall) {	/* disable voice call */
 			AUDIO_Ctrl_Trigger(ACTION_AUD_DisableTelephony,
 					   &ctl_parm.parm_call, NULL, 0);
@@ -1319,20 +1321,30 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				AUDIO_Ctrl_Trigger(ACTION_AUD_ConnectDL,
 					   NULL, NULL, 0);
 			} else {
+				if (pChip->iEnablePhoneCall == 3) { /* VoIP ON*/
+					/* set to 16K for VoIP*/
+					ctl_parm.parm_ratechange.codecID = 0x0A;
+					AUDIO_Ctrl_Trigger(
+					    ACTION_AUD_RateChange,
+					    &ctl_parm.parm_ratechange,
+					    NULL, 0);
+				}
 				AUDIO_Ctrl_Trigger(ACTION_AUD_EnableTelephony,
 					   &ctl_parm.parm_call, NULL, 0);
-				if (pChip->iEnablePhoneCall == 3)
+				if ((pChip->iEnablePhoneCall == 1)
+					|| (pChip->iEnablePhoneCall == 3))
 					pChip->iCallMode = MODEM_CALL;
 				/* Set Volume */
 				ctl_parm.parm_vol.stream = (stream - 1);
 				ctl_parm.parm_vol.source = pSel[0];
 				ctl_parm.parm_vol.sink = pSel[1];
 				ctl_parm.parm_vol.volume1 =
-				    pChip->pi32LevelVolume[CTL_STREAM_PANEL_VOICECALL -
-					       1][0];
+				    pChip->pi32LevelVolume[
+				    CTL_STREAM_PANEL_VOICECALL - 1][0];
 				ctl_parm.parm_vol.gain_format =
 				    AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN;
-				AUDIO_Ctrl_Trigger(ACTION_AUD_SetTelephonySpkrVolume,
+				AUDIO_Ctrl_Trigger(
+					ACTION_AUD_SetTelephonySpkrVolume,
 					   &ctl_parm.parm_vol, NULL, 0);
 			}
 		}
@@ -1803,7 +1815,8 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				   &ctl_parm.parm_call, NULL, 0);
 		break;
 	default:
-		aWarn("Unexpected function code %d\n", function);
+		aWarn("%s, Unexpected function code %d\n",
+			  __func__, function);
 		break;
 	}
 
@@ -2131,6 +2144,27 @@ static struct snd_kcontrol_new sgSndCtrls[] __devinitdata = {
 	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_DMA,
 			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
 				 CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_DUALMIC_REFMIC,
+			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
+				 CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_DAC_LPBK,
+			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
+				 CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_DOCKING,
+			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
+				 CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_EXTRA_VOLUME,
+			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
+				 CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_ARM2SP,
+			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
+				 CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_HUB,
+			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
+				 CTL_FUNCTION_HW_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_CFG_IHFDL,
+			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
+				 CTL_FUNCTION_HW_CTL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "HW-CTL", AUDCTRL_HW_READ_GAIN,
 			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
 				 CTL_FUNCTION_HW_CTL)),
@@ -2192,6 +2226,8 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		devSelect.name = gStrCtlNames[nIndex++];
 		devSelect.private_value = CAPH_CTL_PRIVATE(idx + 1, 0, 0);
 
+		if (idx >= CTL_STREAM_PANEL_MISC)
+			continue;
 		CAPH_ASSERT(strlen(devSelect.name) < MAX_CTL_NAME_LENGTH);
 		err = snd_ctl_add(card, snd_ctl_new1(&devSelect, pChip));
 		if (err < 0) {

@@ -276,9 +276,7 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t mic_selection,
 void AUDDRV_DisableDSPOutput(void);
 void AUDDRV_DisableDSPInput(int stop);
 
-#if defined(USE_NEW_AUDIO_MM_PARAM)
 SysMultimediaAudioParm_t *MMAudParmP(void);
-#endif
 
 #ifdef CONFIG_BCM_MODEM
 SysAudioParm_t *AudParmP(void);
@@ -294,8 +292,7 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param);
 
 #ifdef CONFIG_ENABLE_SSMULTICAST
-void AUDDRV_SetAudioMode_Multicast(AudioMode_t audio_mode,
-			AudioApp_t audio_app);
+void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param);
 #endif
 
 void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
@@ -317,6 +314,7 @@ void Audio_InitRpc(void);
 void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx);
 void AUDDRV_EC(Boolean enable, UInt32 arg);
 void AUDDRV_NS(Boolean enable);
+void AUDDRV_ECreset_NLPoff(Boolean ECenable);
 
 void AUDDRV_SetTuningFlag(int flag);
 int AUDDRV_TuningFlag(void);
@@ -325,5 +323,8 @@ void AUDDRV_SetCallMode(Int32);
 void AUDDRV_ConnectDL(void);
 void AUDDRV_CPResetCleanup(void);
 void AUDDRV_Telephony_DeinitHW(void);
-
+CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr(AUDIO_SINK_Enum_t spkr);
+CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic(AUDIO_SOURCE_Enum_t mic);
+void AUDDRV_SetCallSampleRate(UInt32 voiceSampleRate);
+void AUDDRV_SetIHFDLSampleRate(int mode);
 #endif				/* __AUDIO_VDRIVER_H__ */

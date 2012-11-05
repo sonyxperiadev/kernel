@@ -71,7 +71,10 @@ enum __AUDIO_DRIVER_CTRL_t {
 	AUDIO_DRIVER_SET_PTT_CB,
 	AUDIO_DRIVER_GET_PTT_BUFFER,
 	AUDIO_DRIVER_SET_PERIOD_COUNT,
-	AUDIO_DRIVER_SET_AMR
+	AUDIO_DRIVER_SET_AMR,
+
+	AUDIO_DRIVER_SET_DTX
+
 };
 #define AUDIO_DRIVER_CTRL_t enum __AUDIO_DRIVER_CTRL_t
 
@@ -117,6 +120,7 @@ struct _voip_data_t {
 	UInt32 codec_type;
 	UInt32 bitrate_index;
 	UInt8 isVoLTE;
+	UInt8 isDTXEnabled;
 };
 #define voip_data_t struct _voip_data_t
 

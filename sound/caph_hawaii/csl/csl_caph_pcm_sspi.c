@@ -865,10 +865,9 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		return CSL_PCM_ERR_SEQUENCE;
 
 		// Kishore - add Rhea code here or get Capri SSP
-#if 1		
 	if (chal_sspi_set_pcm_frame(handle, &frmMask, frm_arr))
 		return CSL_PCM_ERR_FRAME;
-#endif
+
 	return CSL_PCM_SUCCESS;
 }
 

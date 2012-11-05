@@ -54,7 +54,11 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_trace.h"
 
 #define USE_HR_TIMER
-
+/* #define USE_HUBCLK_AUTOGATE_WORKAROUND */
+/* for unknown reason, aadmac autogate bit
+   was set and leads to mute on Rhea. enable
+   this flag to report error when it is set */
+#define CHECK_AADMAC_AUTOGATE_STATUS
 #ifdef USE_HR_TIMER
 #include <linux/hrtimer.h>
 #include <linux/ktime.h>
@@ -101,6 +105,7 @@ struct TAudioHalThreadData {
 	spinlock_t m_lock_out;
 };
 
+#if 0
 static char action_names[ACTION_AUD_TOTAL][40] = {
 		"OpenPlay",
 		"ClosePlay",
@@ -144,8 +149,9 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 		"BufferReady",
 		"AtCtl",
 };
+#endif
 
-static unsigned int pathID[CAPH_MAX_PCM_STREAMS];
+static unsigned int pathID[CTL_STREAM_PANEL_LAST];
 static unsigned int n_msg_in, n_msg_out, last_action;
 static struct completion complete_kfifo;
 static struct TAudioHalThreadData sgThreadData;
@@ -724,6 +730,13 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 	int i;
 	unsigned int path;
 
+#ifdef CHECK_AADMAC_AUTOGATE_STATUS
+	if (AUDCTRL_AadmacAutoGateStatus())
+		/* this should never happen */
+		aError("\n %lx:AUDIO_Ctrl_Process-"
+			"!!! AADMAC_ENABLE_AUTO_GATE was set !!!\n",
+			jiffies);
+#endif
 	switch (action_code) {
 	case ACTION_AUD_OpenPlay:
 		{
@@ -1103,7 +1116,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    parm_call->new_mic, parm_call->new_spkr);
 
 			AUDCTRL_SetTelephonyMicSpkr(parm_call->new_mic,
-						    parm_call->new_spkr);
+						    parm_call->new_spkr,
+						    false);
 		}
 		break;
 
@@ -1342,7 +1356,6 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 * can set music app and mode
 			 */
 			/* re-enable FM; need to fill audio app */
-			AUDCTRL_SaveAudioApp(AUDIO_APP_FM_RADIO);
 			AUDCTRL_SaveAudioMode((AudioMode_t) parm_FM->sink);
 
 			AUDCTRL_EnablePlay(parm_FM->source,
@@ -1368,7 +1381,6 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDCTRL_DisablePlay(parm_FM->source, parm_FM->sink,
 					    pathID[parm_FM->stream]);
 			pathID[parm_FM->stream] = 0;
-			AUDCTRL_SetUserAudioApp(AUDIO_APP_MUSIC);
 		}
 		break;
 	case ACTION_AUD_SetARM2SPInst:
@@ -1379,7 +1391,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			aTrace(LOG_AUDIO_CNTLR,
 			    "AUDIO_Ctrl_Process ACTION_AUD_SetARM2SPInst\n");
 
-			AUDCTRL_SetArm2spParam(parm_FM->fm_mix, TRUE);
+			AUDCTRL_SetArm2spParam(CSL_CAPH_CFG_ARM2SP_FM,
+				parm_FM->fm_mix);
 		}
 		break;
 	case ACTION_AUD_SetPrePareParameters:
@@ -1429,7 +1442,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 	case ACTION_AUD_DisableECNSTelephony:
 		aTrace(LOG_AUDIO_CNTLR, "Telephony : Turning Off EC and NS\n");
-#ifdef AUDIO_FEATURE_SET_DISABLE_ECNS
+#ifdef CONFIG_AUDIO_FEATURE_SET_DISABLE_ECNS
 
 		/* when turning off EC and NS, using
 		 * AUDIO_MODE_HANDSFREE as customer's request
@@ -1483,7 +1496,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				"AUDIO_Ctrl_Process ACTION_AUD_SetAudioApp: aud_app=%d\n",
 				parm_setapp->aud_app);
 
-			AUDCTRL_SetUserAudioApp(parm_setapp->aud_app);
+			AUDCTRL_SaveAudioApp(parm_setapp->aud_app);
 		}
 		break;
 	case ACTION_AUD_RemoveAudioApp:

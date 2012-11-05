@@ -36,6 +36,7 @@
 #include <mach/comms/platform_mconfig.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
+#include <mach/memory.h>
 #include "msconsts.h"
 #include "shared.h"
 #include "csl_dsp.h"
@@ -53,17 +54,18 @@
 #include "chal_bmodem_intc_inc.h"
 #include "csl_arm2sp.h"
 #include "audio_trace.h"
-#include <mach/memory.h>
 
-typedef struct {
+struct Dspdrv_t {
 	struct tasklet_struct task;
 	CHAL_HANDLE h;
-} Dspdrv;
+};
+#define Dspdrv struct Dspdrv_t
 
 static Dspdrv dsp_drv;
 
 /* temporary to open CP DSP shared memory structure on AP */
-Dsp_SharedMem_t *cp_shared_mem = NULL;
+Dsp_SharedMem_t *cp_shared_mem;
+UInt32 *ap_shared_mem;
 
 /* Local function declarations */
 
@@ -148,6 +150,18 @@ void DSPDRV_Init()
 	return;
 }
 
+void DSPDRV_DeInit(void)
+{
+	if (cp_shared_mem)
+		iounmap(cp_shared_mem);
+
+	if (ap_shared_mem)
+		iounmap(ap_shared_mem);
+
+	cp_shared_mem = NULL;
+	ap_shared_mem = NULL;
+}
+
 /*****************************************************************************/
 /**
 *	Function Name:	DSPDRV_GetSharedMemoryAddress
@@ -159,18 +173,16 @@ void DSPDRV_Init()
 ******************************************************************************/
 static UInt32 *DSPDRV_GetSharedMemoryAddress()
 {
-	UInt32 *dsp_shared_mem = NULL;
-
-	if (dsp_shared_mem == NULL) {
-		dsp_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
-		if (dsp_shared_mem == NULL) {
+	if (ap_shared_mem == NULL) {
+		ap_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		if (ap_shared_mem == NULL) {
 			aTrace(LOG_AUDIO_DSP,
 			       "\n\r\t* mapping shared memory failed\n\r");
 			return NULL;
 		}
 	}
 
-	return dsp_shared_mem;
+	return ap_shared_mem;
 }
 
 /*****************************************************************************/

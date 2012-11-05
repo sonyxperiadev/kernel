@@ -33,6 +33,8 @@ Copyright 2009 - 2011  Broadcom Corporation
 #ifndef	__AUDDRV_AUDLOG_H__
 #define	__AUDDRV_AUDLOG_H__
 
+#include <sound/pcm.h>
+
 /**
 *
 * @addtogroup AudioLoggingDriver
@@ -80,6 +82,10 @@ enum __AUDLOG_DEST_en_t {
 #define AUDLOG_DEST_en_t enum __AUDLOG_DEST_en_t
 
 enum __AUDLOG_MUSIC_STREAM_INDEX_t {
+	VOICE_LOG_PATH_1 = 1,
+	VOICE_LOG_PATH_2 = 2,
+	VOICE_LOG_PATH_3 = 3,
+	VOICE_LOG_PATH_4 = 4,
 	AUDIO_LOG_PATH_1 = 17,
 	AUDIO_LOG_PATH_2 = 18,
 	AUDIO_LOG_PATH_3 = 19,
@@ -169,6 +175,31 @@ struct _LOG_MSG_SAVE_t {
 };
 #define LOG_MSG_SAVE_t struct _LOG_MSG_SAVE_t
 
+struct __bcm_caph_voip_log {
+	int voip_log_on;
+	struct snd_pcm_substream substream_ul;
+	struct snd_pcm_runtime runtime_ul;
+	struct snd_pcm_substream substream_dl;
+	struct snd_pcm_runtime runtime_dl;
+	struct mutex voip_ul_mutex;
+	struct mutex voip_dl_mutex;
+};
+
+#define	bcm_caph_voip_log_t struct __bcm_caph_voip_log
+
+
+struct __bcm_caph_audio_log {
+	int audio_log_on;
+	struct snd_pcm_substream substream_playback;
+	struct snd_pcm_substream substream_record;
+	struct mutex playback_mutex;
+	struct mutex record_mutex;
+};
+
+#define	bcm_caph_audio_log_t struct __bcm_caph_audio_log
+
+extern bcm_caph_audio_log_t audio_log;
+extern bcm_caph_voip_log_t voip_log;
 extern wait_queue_head_t bcmlogreadq;
 extern wait_queue_head_t bcmlogwriteq;
 extern int *bcmlog_stream_area;
@@ -204,6 +235,7 @@ Result_t AUDDRV_AudLog_StartRetrieveFile(char *filename);
 Result_t AUDDRV_AudLog_StopRetrieveFile(void);
 
 void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx);
+
 
 /** @} */
 

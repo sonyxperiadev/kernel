@@ -19,9 +19,9 @@ Broadcom's express prior written consent.
 ****************************************************************************/
 
 #include "chal_caph_dma.h"
-#include "mach/rdb/brcm_rdb_cph_aadmac.h"
-#include "chal/chal_util.h"
-#include "mach/rdb-fixups.h"
+#include <mach/rdb/brcm_rdb_cph_aadmac.h>
+#include <chal/chal_util.h>
+#include <mach/rdb-fixups.h>
 
 /*
  * ****************************************************************************
@@ -232,12 +232,11 @@ void chal_caph_dma_disable(CHAL_HANDLE handle,
 CAPH_DMA_CHANNEL_e chal_caph_dma_alloc_channel(CHAL_HANDLE handle)
 {
     chal_caph_dma_cb_t  *pchal_cb = (chal_caph_dma_cb_t*)handle;
-    cUInt32              ch = 0;
+    cUInt32              ch;
 
-    if(ch==0)
-    {
+	/*dma1 and 2 are reserved for big buffer (>=64kb)*/
         /* Look for a free (non-allocated) channel  */
-        for(;ch<CHAL_CAPH_DMA_MAX_CHANNELS;ch++)
+        for(ch=2;ch<CHAL_CAPH_DMA_MAX_CHANNELS;ch++)
         {
             if(pchal_cb->alloc_status[ch] == FALSE)
             {
@@ -245,7 +244,6 @@ CAPH_DMA_CHANNEL_e chal_caph_dma_alloc_channel(CHAL_HANDLE handle)
                 break;
             }
         }
-    }
 
     if(ch < CHAL_CAPH_DMA_MAX_CHANNELS)
     {
@@ -340,9 +338,46 @@ void chal_caph_dma_free_channel(CHAL_HANDLE handle,
 	return;
 }
 
+
 /****************************************************************************
 *
-*  Function Name: void chal_caph_dma_set_direction(CHAL_HANDLE handle,
+*  Function Name: cVoid chal_caph_dma_clear_register(CHAL_HANDLE handle,
+*                   CAPH_DMA_CHANNEL_e channel)
+*
+*  Description: Clear CR1 and CR2 registers before starting configuration
+*
+****************************************************************************/
+cVoid chal_caph_dma_clear_register(CHAL_HANDLE handle,
+				  CAPH_DMA_CHANNEL_e channel)
+{
+	cUInt32 base = ((chal_caph_dma_cb_t *) handle)->base;
+	cUInt8 index;
+	cUInt32 cr = 0;
+
+	/* Find the channel we are looking for */
+	for (index = 0; index < CHAL_CAPH_DMA_MAX_CHANNELS; index++) {
+		if ((1UL << index) & channel) {
+
+			/* Apply the settings in the hardware */
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_2,
+					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
+					   cr);
+
+			BRCM_WRITE_REG_IDX(base, CPH_AADMAC_CH1_AADMAC_CR_1,
+					   (index * CHAL_CAPH_DMA_CH_REG_SIZE),
+					   cr);
+			break;
+		}
+
+	}
+
+	return;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: cVoid chal_caph_dma_set_direction(CHAL_HANDLE handle,
 *                   CAPH_DMA_CHANNEL_e channel,
 *			CAPH_CFIFO_CHNL_DIRECTION_e direction)
 *
@@ -1058,6 +1093,25 @@ cVoid chal_caph_dma_en_hibuffer(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e channel)
 		}
 	}
 	return;
+}
+
+/****************************************************************************
+*
+*  Function Name: cUInt32 chal_caph_dma_autogate_status(CHAL_HANDLE handle)
+*
+*  Description: read CAPH DMA aadmac autogate status
+*
+****************************************************************************/
+cUInt32 chal_caph_dma_autogate_status(CHAL_HANDLE handle)
+{
+	cUInt32     base = ((chal_caph_dma_cb_t *)handle)->base;
+	cUInt32     st = 0;
+	/* read the aadmac auto gate status */
+	st = BRCM_READ_REG(base, CPH_AADMAC_AADMAC_GCR_1);
+	st &= CPH_AADMAC_AADMAC_GCR_1_AADMAC_ENABLE_AUTO_GATE_MASK;
+	st >>= CPH_AADMAC_AADMAC_GCR_1_AADMAC_ENABLE_AUTO_GATE_SHIFT;
+	/* return the auto gate status */
+	return st;
 }
 
 #if defined( __KERNEL__ )

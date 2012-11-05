@@ -588,6 +588,78 @@ void chal_audio_audiotx_set_spare_bit(CHAL_HANDLE handle)
     return;
 }
 
+/**
+*
+* Description:  Enable or Disable dac loopback
+*
+* Parameters:   handle - audio chal handle.
+*               enable - true : enable, false : disable.
+*
+* Return:       None.
+*
+*****************************************************************************/
+cVoid chal_audio_dac_loopback_enable(CHAL_HANDLE handle, cUInt16 enable)
+{
+	cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+	cUInt32 reg_val;
+
+	reg_val = BRCM_READ_REG(base, AUDIOH_LOOPBACK_CTRL);
+	if(enable == CHAL_AUDIO_ENABLE) {
+		reg_val |= AUDIOH_LOOPBACK_CTRL_ENABLE_DIG_TX_CLK_MASK;
+		reg_val |= AUDIOH_LOOPBACK_CTRL_DISABLE_ANA_TX_CLK_MASK;
+		reg_val |= AUDIOH_LOOPBACK_CTRL_DISABLE_ANA_RX_CLK_MASK;
+		reg_val |= AUDIOH_LOOPBACK_CTRL_DAC_SDM_LOOPBACK_9LEVEL_MASK;
+		reg_val |= AUDIOH_LOOPBACK_CTRL_DAC_SDM_LOOPBACK_EN_MASK;
+		reg_val &= ~AUDIOH_LOOPBACK_CTRL_LOOPBACK_EN_MASK;
+	} else {
+		reg_val  &= ~(AUDIOH_LOOPBACK_CTRL_ENABLE_DIG_TX_CLK_MASK |
+		AUDIOH_LOOPBACK_CTRL_DISABLE_ANA_TX_CLK_MASK |
+		AUDIOH_LOOPBACK_CTRL_DISABLE_ANA_RX_CLK_MASK |
+		AUDIOH_LOOPBACK_CTRL_DAC_SDM_LOOPBACK_9LEVEL_MASK|
+		AUDIOH_LOOPBACK_CTRL_DAC_SDM_LOOPBACK_EN_MASK);
+	}
+
+	/* Set the required setting */
+	BRCM_WRITE_REG(base,  AUDIOH_LOOPBACK_CTRL, reg_val);
+
+	return;
+}
+
+/**
+*
+* Description:  Enable or Disable dac loopback
+*
+* Description:  Enable or Disable analog mic loopback to the mentioned dac path
+*
+* Parameters:   handle   - audio chal handle.
+*               dac_mask - bit mask of DAC
+*               enable   - true : enable, false : disable.
+*
+* Return:       None.
+*
+*****************************************************************************/
+cVoid chal_audio_dac_loopback_set_out_paths(CHAL_HANDLE handle, cUInt32 dac_mask, cUInt16 enable)
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    cUInt32 reg_val;
+    cUInt32 regDacMask = 0;
+
+    regDacMask |= (dac_mask&0x7) <<AUDIOH_LOOPBACK_CTRL_DAC_SDM_LOOPBACK_SEL_SHIFT;
+
+    reg_val = BRCM_READ_REG(base, AUDIOH_LOOPBACK_CTRL);
+    reg_val &= (~regDacMask);
+
+    if(enable == CHAL_AUDIO_ENABLE)
+    {
+        reg_val |= regDacMask;
+    }
+
+    /* Set the required setting */
+    BRCM_WRITE_REG(base,  AUDIOH_LOOPBACK_CTRL, reg_val);
+
+    return;
+}
+
 #if defined( __KERNEL__ )
 
 #include <linux/module.h>
@@ -600,5 +672,6 @@ EXPORT_SYMBOL(chal_audio_loopback_set_out_paths);
 EXPORT_SYMBOL(chal_audio_audiotx_set_dac_ctrl);
 EXPORT_SYMBOL(chal_audio_audiotx_get_dac_ctrl);
 EXPORT_SYMBOL(chal_audio_audiotx_set_spare_bit);
-
+EXPORT_SYMBOL(chal_audio_dac_loopback_enable);
+EXPORT_SYMBOL(chal_audio_dac_loopback_set_out_paths);
 #endif

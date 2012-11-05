@@ -2082,7 +2082,7 @@ static int __init hs_probe(struct platform_device *pdev)
 	 * Assume that mic bias is ON, so that while initialization we can
 	 * turn this OFF and put it in known state.
 	 */
-	mic->mic_bias_status = 1;
+	mic->mic_bias_status = 0;
 
 	pr_info("%s() GPIO used for accessory insertion %d (1 - yes, 0 - no)",
 		__func__, mic->headset_pd->gpio_for_accessory_detection);

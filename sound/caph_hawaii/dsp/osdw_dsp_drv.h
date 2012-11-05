@@ -46,6 +46,7 @@
 #endif
 
 void DSPDRV_Init(void);
+void DSPDRV_DeInit(void);
 
 void VPSHAREDMEM_TriggerRIPInt(void);
 

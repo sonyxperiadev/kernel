@@ -451,7 +451,8 @@ void chal_caph_srcmixer_disable_chnl(CHAL_HANDLE handle,
     {
         reg_val = BRCM_READ_REG( base,  SRCMIXER_SRC_CHANNEL5_CTRL1);
         reg_val &= ~SRCMIXER_SRC_CHANNEL5_CTRL1_SRC_CHANNEL5_MODE_MASK;
-        BRCM_WRITE_REG(base,  SRCMIXER_SRC_CHANNEL5_CTRL1, reg_val);
+        /*do not stop src5 to avoid the rare distortion */
+	/*BRCM_WRITE_REG(base,  SRCMIXER_SRC_CHANNEL5_CTRL1, reg_val);*/
     }
 
     /* Find the 1st stereo passthrough CHNLs we are looking for */

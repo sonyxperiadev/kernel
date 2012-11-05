@@ -92,10 +92,10 @@ CSL_CFIFO_TABLE_t CSL_CFIFO_table[] = {
 	 CSL_CAPH_DMA_NONE},
 	{CSL_CAPH_CFIFO_FIFO9, 0x0400, 0x80, 0x8, CAPH_ARM, 0,
 	 CSL_CAPH_DMA_NONE},
-	{CSL_CAPH_CFIFO_FIFO10, 0x0480, 0x200, 0x100, CAPH_SSP, 0,
-	 CSL_CAPH_DMA_NONE},
-	{CSL_CAPH_CFIFO_FIFO11, 0x0680, 0x200, 0x100, CAPH_SSP, 0,
-	 CSL_CAPH_DMA_NONE},
+	{CSL_CAPH_CFIFO_FIFO10, 0x0480, 0x200, 0x100, CAPH_ARM, 0,
+	 CSL_CAPH_DMA_CH1},
+	{CSL_CAPH_CFIFO_FIFO11, 0x0680, 0x200, 0x100, CAPH_ARM, 0,
+	 CSL_CAPH_DMA_CH2},
 #if defined(ENABLE_DMA_VOICE)
 	{CSL_CAPH_CFIFO_FIFO12, 0x0880, 0x200, 0x4, CAPH_DSP, 0,
 		CSL_CAPH_DMA_CH12},
@@ -291,6 +291,9 @@ static void csl_caph_cfifo_fifo_init(void)
 	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++) {
 		chal_fifo =
 		    csl_caph_cfifo_get_chal_fifo((CSL_CAPH_CFIFO_FIFO_e) id);
+
+		chal_caph_fifo_clear_register(handle, chal_fifo);
+
 		chal_caph_cfifo_set_address(handle, chal_fifo,
 					    CSL_CFIFO_table[id].address);
 		chal_caph_cfifo_set_size(handle, chal_fifo,
@@ -593,7 +596,7 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CHNL_e dmaCH)
 	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++) {
 		if ((CSL_CFIFO_table[id].dmaCH == dmaCH)
 		    && (CSL_CFIFO_table[id].status == 0)
-		    && (CSL_CFIFO_table[id].owner == CAPH_DSP)) {
+		    /*&& (CSL_CFIFO_table[id].owner == CAPH_DSP)*/) {
 			csl_caph_cfifo_ch = (CSL_CAPH_CFIFO_FIFO_e) id;
 			CSL_CFIFO_table[id].status = 1;
 			break;
@@ -602,3 +605,28 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CHNL_e dmaCH)
 
 	return csl_caph_cfifo_ch;
 }
+
+/****************************************************************************
+*
+*  Description: set CAPH CFIFO threshold
+*
+****************************************************************************/
+void csl_caph_cfifo_set_fifo_thres(CSL_CAPH_CFIFO_FIFO_e fifo, UInt16 threshold)
+{
+	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
+
+	aTrace(LOG_AUDIO_CSL,
+		"csl_caph_cfifo_set_thres:: fifo %d threshold %d\n",
+		fifo, threshold);
+
+	chal_fifo = csl_caph_cfifo_get_chal_fifo(fifo);
+
+	if (chal_fifo != CAPH_CFIFO_VOID) {
+		/* threshold2 is hardcoded to 0 */
+		chal_caph_cfifo_set_fifo_thres(handle, chal_fifo, threshold, 0);
+
+	}
+
+	return;
+}
+

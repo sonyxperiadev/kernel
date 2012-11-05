@@ -52,6 +52,8 @@ typedef void (*VoIPStatusCB_t) (void);
 typedef void (*UserStatusCB_t) (UInt32 param1, UInt32 param2, UInt32 param3);
 typedef void (*AudioLogStatusCB_t) (UInt16 bufferIndex);
 typedef void (*AudioEnableDoneStatusCB_t) (UInt16 enabled_audio_path);
+typedef void (*ARM2SP_HQ_DL_InitDoneStatusCB_t) (void);
+typedef void (*ARM2SP2_HQ_DL_InitDoneStatusCB_t) (void);
 typedef void (*PTTStatusCB_t) (UInt32 param1, UInt32 param2, UInt32 param3);
 /**
  * @param enable = 0 = response to stop a call with external modem \BR
@@ -202,6 +204,30 @@ void CSL_RegisterAudioLogHandler(AudioLogStatusCB_t callbackFunction);
 *
 **********************************************************************/
 void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t
+					callbackFunction);
+
+/*********************************************************************/
+/**
+*
+*   CSL_RegisterARM2SP_HQ_DL_InitDoneHandler registers audio enable done
+*   status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register
+*
+**********************************************************************/
+void CSL_RegisterARM2SP_HQ_DL_InitDoneHandler(ARM2SP_HQ_DL_InitDoneStatusCB_t
+					callbackFunction);
+
+/*********************************************************************/
+/**
+*
+*   CSL_RegisterARM2SP2_HQ_DL_InitDoneHandler registers audio enable done
+*   status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register
+*
+**********************************************************************/
+void CSL_RegisterARM2SP2_HQ_DL_InitDoneHandler(ARM2SP2_HQ_DL_InitDoneStatusCB_t
 					callbackFunction);
 
 /*********************************************************************/

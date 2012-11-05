@@ -367,5 +367,7 @@ cUInt16 chal_caph_cfifo_read_fifo(CHAL_HANDLE handle,
 cUInt32 chal_caph_cfifo_read_timestamp(CHAL_HANDLE handle,
 			CAPH_CFIFO_e fifo);
 
+cVoid chal_caph_fifo_clear_register(CHAL_HANDLE handle, CAPH_CFIFO_e chal_fifo);
+
 #endif /* _CHAL_CAPH_CFIFO_ */
 

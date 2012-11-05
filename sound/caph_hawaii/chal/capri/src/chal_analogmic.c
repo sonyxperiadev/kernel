@@ -76,7 +76,6 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <mach/memory.h>
 
-
 /*
  * ****************************************************************************
  *                         G L O B A L   S E C T I O N
@@ -223,8 +222,6 @@ void chal_audio_mic_pga(CHAL_HANDLE handle, cUInt32 gain_regval)
 
 	if (gain_regval > 0x3f)
 		gain_regval = 0x3f;
-	if (gain_regval < 0x00)
-		gain_regval = 0;
 
 	reg_val |= (gain_regval
 		<< AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_GAINCTRL_SHIFT);
@@ -361,8 +358,9 @@ void chal_audio_mic_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
 		/* Set i_Bias_pwrup(1) */
-		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS,
-			       AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_BIAS);
+		reg_val |= AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK;
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS, reg_val);
 
 		/* Set i_mic_pwrdn(0) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
@@ -484,6 +482,7 @@ void chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 	cUInt32 reg_val;
 
 	if (pwronoff == TRUE) {
+		kona_mic_bias_on();
 		/*
 		   Step 0.  Power up of the mic bias circuits from
 		   scratch needs to follow certain sequence on the control
@@ -517,13 +516,16 @@ void chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VREF, reg_val);
 
 		/* Set i_VRX_RCM(01111) */
-		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1,
-			       0x0F <<
-			       AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_RCM_SHIFT);
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_LDO_DIG_PWRDN_MASK);
+		reg_val |= 0x0F <<
+				AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_RCM_SHIFT;
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
 		/* Set i_Bias_pwrup(1) */
-		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS,
-			       AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
+		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_BIAS);
+		reg_val |= AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK;
+		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS, reg_val);
 
 		/* Set i_mic_aux_pwrdn(0) ?? */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
@@ -598,6 +600,7 @@ void chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 		reg_val &= ~(AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_BIAS, reg_val);
 
+		kona_mic_bias_off();
 	}
 
 	return;
@@ -760,3 +763,82 @@ void chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 	/* For FPGA no pads are present */
 }
 
+#if 0
+/*
+ * ============================================================================
+ *
+ * Function Name: void chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle,
+ *					_Bool pwronoff)
+ *
+ * Description:   power on/off digital microphone path
+ *
+ * Parameters:
+ *                 handle   ---  the  audio handle
+ *			pwronoff ---  on or off selection
+ * Return:        none
+ *
+ * ============================================================================
+ */
+
+void chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
+{
+#ifndef CENTRALIZED_PADCTRL
+	cUInt32  regVal;
+	cUInt32   function = 0x4;
+
+	if (pwronoff == TRUE)
+		function = 0x0;
+
+	/* For function = 0 (alt_fn1), this will be set as DMIC1_CLK */
+	regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC1_CLK_OFFSET));
+	regVal &= (~PADCTRLREG_DIGMIC1_CLK_PINSEL_2_0_MASK);
+	regVal |= (function << PADCTRLREG_DIGMIC1_CLK_PINSEL_2_0_SHIFT);
+	WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC1_CLK_OFFSET), regVal);
+
+	/* For function = 0 (alt_fn1), this will be set as DMIC1_DATA */
+	regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC1_DQ_OFFSET));
+	regVal &= (~PADCTRLREG_DIGMIC1_DQ_PINSEL_2_0_MASK);
+	regVal |= (function << PADCTRLREG_DIGMIC1_DQ_PINSEL_2_0_SHIFT);
+	WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC1_DQ_OFFSET), regVal);
+#endif /* #ifndef CENTRALIZED_PADCTRL */
+
+}
+
+/*
+ * ============================================================================
+ *
+ *  Function Name: void chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle,
+ *						_Bool pwronoff)
+ *
+ *  Description:   power on/off digital microphone path
+ *
+ *  Parameters:
+ *                 handle   ---  the  audio handle
+ *			pwronoff ---  on or off selection
+ *  Return:        none
+ *
+ * ============================================================================
+ */
+void chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
+{
+#ifndef CENTRALIZED_PADCTRL
+	cUInt32  regVal;
+	cUInt32  function = 0x0;
+
+	if (pwronoff == TRUE)
+		function = 0x0;
+
+	/* For function = 0 (alt_fn1), this will be set as DMIC2_CLK */
+	regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC2_CLK_OFFSET));
+	regVal &= (~PADCTRLREG_DIGMIC2_CLK_PINSEL_2_0_MASK);
+	regVal |= (function << PADCTRLREG_DIGMIC2_CLK_PINSEL_2_0_SHIFT);
+	WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC2_CLK_OFFSET), regVal);
+
+	/* For function = 0 (alt_fn1), this will be set as DMIC2_DATA */
+	regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC2_DQ_OFFSET));
+	regVal &= (~PADCTRLREG_DIGMIC2_DQ_PINSEL_2_0_MASK);
+	regVal |= (function << PADCTRLREG_DIGMIC2_DQ_PINSEL_2_0_SHIFT);
+	WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DIGMIC2_DQ_OFFSET), regVal);
+#endif /* #ifndef CENTRALIZED_PADCTRL */
+}
+#endif

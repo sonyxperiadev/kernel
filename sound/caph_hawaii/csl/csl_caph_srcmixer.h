@@ -606,4 +606,5 @@ void csl_caph_srcmixer_set_linear_filter(CSL_CAPH_SRCM_INCHNL_e inChnl);
 ****************************************************************************/
 void csl_caph_srcmixer_set_minimum_filter(CSL_CAPH_SRCM_INCHNL_e inChnl);
 
+void csl_caph_srcmixer_enable_input(CSL_CAPH_SRCM_INCHNL_e in, int enable);
 #endif /* _CSL_CAPH_SRCMIXER_ */

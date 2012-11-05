@@ -1191,14 +1191,7 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
 {
 	int ch = 0;
 	CSL_CAPH_SRCM_INCHNL_e neededChnl = CSL_CAPH_SRCM_INCHNL_NONE;
-
-	aTrace
-	      (LOG_AUDIO_CSL, "csl_caph_srcmixer_obtain_inchnl::\n");
-	aTrace
-	      (LOG_AUDIO_CSL,
-	       "csl_caph_srcmixer_obtain_inchnl::"
-	       "dataFormat = 0x%x, sampleRate = 0x%x\n",
-	       dataFormat, sampleRate);
+	CSL_CAPH_SRCM_INCHNL_e ret = CSL_CAPH_SRCM_INCHNL_NONE;
 
 	if (dataFormat == CSL_CAPH_16BIT_STEREO
 			|| (dataFormat == CSL_CAPH_24BIT_STEREO)) {
@@ -1249,12 +1242,17 @@ CSL_CAPH_SRCM_INCHNL_e csl_caph_srcmixer_obtain_inchnl(CSL_CAPH_DATAFORMAT_e
 					[SRCM_STEREO_PASS_CH2_INDEX].
 					alloc_status = TRUE;
 #endif
-				return inChnlStatus[ch].inChnl;
+				ret =  inChnlStatus[ch].inChnl;
+				break;
 			}
 		}
 	}
+
+	aTrace(LOG_AUDIO_CSL, "csl_caph_srcmixer_obtain_inchnl::"
+	       "dataFormat = 0x%x, sampleRate = 0x%x inch 0x%x\n",
+	       dataFormat, sampleRate, ret);
 	/* No free channel available */
-	return CSL_CAPH_SRCM_INCHNL_NONE;
+	return ret;
 }
 
 /****************************************************************************
@@ -1312,6 +1310,8 @@ void csl_caph_srcmixer_release_inchnl(CSL_CAPH_SRCM_INCHNL_e chnl)
 	Boolean alreadyReleased = FALSE;
 	CAPH_SRCMixer_CHNL_e chalInChnl = CAPH_SRCM_CH_NONE;
 	CAPH_SRCMixer_FIFO_e fifo = CAPH_CH_INFIFO_NONE;
+
+	/*aTrace(LOG_AUDIO_CSL, "%s 0x%x\n", __func__, chnl);*/
 	if (chnl == CSL_CAPH_SRCM_INCHNL_NONE) {
 		/*SRCMixer is not used. Do nothing.*/
 		return;
@@ -1401,6 +1401,7 @@ void csl_caph_srcmixer_release_outchnl(CSL_CAPH_MIXER_e chnl)
 	UInt8 chalOutChnl = 0x0;
 	CAPH_SRCMixer_FIFO_e fifo = CAPH_CH_INFIFO_NONE;
 
+	/*aTrace(LOG_AUDIO_CSL, "%s 0x%x\n", __func__, chnl);*/
 	if (chnl == CSL_CAPH_SRCM_CH_NONE) {
 		/*SRCMixer is not used. Do nothing.*/
 		return;
@@ -2775,4 +2776,24 @@ void csl_caph_srcmixer_set_minimum_filter(CSL_CAPH_SRCM_INCHNL_e inChnl)
 	chal_caph_srcmixer_set_filter_type(handle, chalChnl,
 					   CAPH_SRCM_MINIMUM_PHASE);
 	return;
+}
+
+/****************************************************************************
+ *
+ *  Description: enable/disable mixer input
+ *
+ ****************************************************************************/
+void csl_caph_srcmixer_enable_input(CSL_CAPH_SRCM_INCHNL_e in, int enable)
+{
+	CAPH_SRCMixer_CHNL_e chalInChnl = CAPH_SRCM_CH_NONE;
+
+	if (in == CSL_CAPH_SRCM_INCHNL_NONE)
+		return;
+	aTrace(LOG_AUDIO_CSL, "%s in 0x%x, enable %d\n", __func__, in, enable);
+
+	chalInChnl = csl_caph_srcmixer_get_single_chal_inchnl(in);
+	if (enable)
+		chal_caph_srcmixer_enable_chnl(handle, (UInt16)chalInChnl);
+	else
+		chal_caph_srcmixer_disable_chnl(handle, (UInt16)chalInChnl);
 }
