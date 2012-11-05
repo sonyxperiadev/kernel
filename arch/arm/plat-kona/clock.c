@@ -4912,15 +4912,12 @@ __weak int set_clk_idle_debug_mon(int clk_idle, int db_sel, u32 dbg_bit_sel)
 	return 0;
 }
 
-__weak int set_clk_monitor_debug(int mon_select, int debug_bus, u32 dbg_bit_sel)
+__weak int clk_mon_dbg(struct clk *clock, int path, int clk_sel, int clk_ctl,
+		u32 dbg_bit_sel)
 {
 	return 0;
 }
 
-__weak int clock_monitor_enable(struct clk *clk, int monitor)
-{
-	return 0;
-}
 __weak int set_ccu_dbg_bus_mux(struct ccu_clk *ccu_clk, int mux_sel,
 			int mux_param, u32 dbg_bit_sel)
 {
@@ -4960,46 +4957,31 @@ static struct file_operations clock_idle_debug_fops = {
 	.write = set_clk_idle_debug,
 };
 
-static ssize_t set_clk_mon_debug(struct file *file, char const __user *buf,
+static ssize_t set_clk_mon_dbg(struct file *file, char const __user *buf,
 				 size_t count, loff_t *offset)
 {
+	struct clk *clock = file->private_data;
 	u32 len = 0;
-	int db_sel = 0;
-	int mon_sel = 0;
-	u32 dbg_bit_sel = 0;
+	int path = 0;
+	int clk_sel = 0;
+	int clk_ctl = 0;
 	char input_str[100];
-
+	u32 dbg_bit_sel = 0;
 	if (count > 100)
 		len = 100;
 	else
 		len = count;
-
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
-	sscanf(input_str, "%d%d%x", &mon_sel, &db_sel, &dbg_bit_sel);
-	clk_dbg("%s:Clock to be monitored on %s\n", __func__,
-		mon_sel ? "DEBUG_BUS_GPIO" : "CAMCS_PIN");
-	set_clk_monitor_debug(mon_sel, db_sel, dbg_bit_sel);
+	sscanf(input_str, "%d%d%d%x", &path, &clk_sel, &clk_ctl, &dbg_bit_sel);
+	clk_mon_dbg(clock, path, clk_sel, clk_ctl, dbg_bit_sel);
 	return count;
 }
 
-static struct file_operations clock_mon_debug_fops = {
+static const struct file_operations clk_mon_fops = {
 	.open = clk_debugfs_open,
-	.write = set_clk_mon_debug,
+	.write = set_clk_mon_dbg,
 };
-
-static int clk_mon_enable(void *data, u64 val)
-{
-	struct clk *clock = data;
-	if (val == 0 || val == 1)
-		clock_monitor_enable(clock, val);
-	else
-		clk_dbg("Invalid value \n");
-
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(clock_mon_fops, NULL, clk_mon_enable, "%llu\n");
 
 static int clk_debug_get_rate(void *data, u64 *val)
 {
@@ -5762,11 +5744,6 @@ int __init clock_debug_init(void)
 				 dent_clk_root_dir, NULL,
 				 &clock_idle_debug_fops))
 		return -ENOMEM;
-	if (!debugfs_create_file("clk_mon_debug", S_IRUSR | S_IWUSR,
-				 dent_clk_root_dir, NULL,
-				 &clock_mon_debug_fops))
-		return -ENOMEM;
-
 	return 0;
 }
 
@@ -5819,6 +5796,12 @@ int __init clock_debug_add_ccu(struct clk *c)
 					  &ccu_wr_en_fops);
 	if (!dentry[i])
 		goto err;
+	dentry[++i] = debugfs_create_file("clk_mon", S_IWUSR|S_IRUSR,
+			ccu_clk->dent_ccu_dir, c,
+			&clk_mon_fops);
+	if (!dentry[i])
+		goto err;
+
 
 	if (CLK_FLG_ENABLED(c, CCU_DBG_BUS_EN)) {
 		struct dentry *dent;
@@ -5912,16 +5895,10 @@ int __init clock_debug_add_clock(struct clk *c)
 					dent_clk_dir, c, &clock_rate_fops);
 	if (!dent_rate)
 		goto err;
-	/* file /clock/clk_a/monitor */
-	dent_clk_mon = debugfs_create_file("clk_mon", S_IRUGO,
-					   dent_clk_dir, c, &clock_mon_fops);
-	if (!dent_clk_mon)
-		goto err;
-
 	/* file /clock/clk_a/flags */
 	dent_flags = debugfs_create_u32("flags", S_IRUGO |
-					S_IWUSR, dent_clk_dir,
-					(unsigned int *)&c->flags);
+			S_IWUSR, dent_clk_dir,
+			(unsigned int *)&c->flags);
 	if (!dent_flags)
 		goto err;
 
