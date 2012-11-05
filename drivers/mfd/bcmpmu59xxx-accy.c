@@ -459,6 +459,13 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_CHGDET_LATCH:
+	case PMU_IRQ_CHGDET_TO:
+			/* Because of the FFB EDN00 wiring issue (CQ245795),
+			the PMU charger detection doesn't work and we will get
+			CHGDET_TO interrupt.  To resolve this issue, we
+			tempararily treat the CHGDET_TO interrupt as
+			CHGDET_LATCH as a workaround
+			*/
 		pr_accy(FLOW, "### ISR  PMU_IRQ_CHGDET_LATCH: %x\n",
 			PMU_IRQ_CHGDET_LATCH);
 		bcmpmu_paccy_latch_event(paccy,
@@ -540,12 +547,12 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 				BCMPMU_USB_EVENT_SESSION_END_VALID);
 		schedule_work(&paccy->det_work);
 		break;
-
+#if 0 /* remove the TO interrupt for the time being */
 	case PMU_IRQ_CHGDET_TO:
 		pr_accy(FLOW, "### ISR  PMU_IRQ_CHGDET_TO: %x\n",
 			PMU_IRQ_CHGDET_TO);
 		break;
-
+#endif
 	case PMU_IRQ_RESUME_VBUS:
 		pr_accy(FLOW, "### ISR  PMU_IRQ_RESUME_VBUS: %x\n",
 			PMU_IRQ_RESUME_VBUS);
