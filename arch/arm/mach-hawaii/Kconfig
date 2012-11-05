@@ -36,8 +36,24 @@ config	MACH_HAWAII_STONE
 	help
 	  Support for the Broadcom Hawaii Stone board.
 
+config	MACH_HAWAII_GARNET
+	bool "Support Broadcom Hawaii garnet board"
+	help
+	  Support for Broadcom Hawaii garnet board.
+
 endchoice
 
+choice
+	prompt "Hawaii GARNET type"
+	depends on MACH_HAWAII_GARNET
+	default MACH_HAWAII_GARNET_EDN000
+
+	config MACH_HAWAII_GARNET_EDN000
+	bool "GARNET EDN000"
+	help
+	  Support for Garnet edn000
+
+endchoice
 choice
 	prompt "Hawaii FPGA type"
 	depends on MACH_HAWAII_FPGA || MACH_HAWAII_FPGA_E
@@ -65,6 +81,7 @@ config	MACH_HAWAII_FPGA_USB_V1
 	  "Support Following USB FPGA Images :
 	  HAWAII_USB_v2.0.0
 endchoice
+
 
 choice
 	prompt "Hawaii SS based board type"
