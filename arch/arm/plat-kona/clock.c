@@ -2860,7 +2860,8 @@ static int peri_clk_enable(struct clk *clk, int enable)
 	u32 reg_val;
 	struct peri_clk *peri_clk;
 	int insurance;
-	clk_dbg("%s:%d, clock name: %s \n", __func__, enable, clk->name);
+	int ret = 0;
+	clk_dbg("%s:%d, clock name: %s\n", __func__, enable, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_PERI);
 	peri_clk = to_peri_clk(clk);
@@ -2868,9 +2869,9 @@ static int peri_clk_enable(struct clk *clk, int enable)
 	BUG_ON(!peri_clk->ccu_clk || (peri_clk->clk_gate_offset == 0));
 
 	if (clk->flags & AUTO_GATE || !peri_clk->clk_en_mask) {
-		clk_dbg("%s:%s: is auto gated or no enable bit\n", __func__,
-			clk->name);
-		return 0;
+		clk_dbg("%s:%s: is auto gated or no enable bit\n",
+				__func__, clk->name);
+		goto err;
 	}
 
 	/*enable write access */
@@ -2912,18 +2913,21 @@ static int peri_clk_enable(struct clk *clk, int enable)
 			 && insurance < 1000);
 	}
 	WARN_ON(insurance >= 1000);
+	if (insurance >= 1000)
+		ret = -EINVAL;
 	clk_dbg("%s:%s clk after stprsts start\n", __func__, clk->name);
-	clk_dbg("%s, %s is %s..! \n", __func__, clk->name,
-		enable ? "enabled" : "disabled");
 
 	/* disable write access */
 	ccu_write_access_enable(peri_clk->ccu_clk, false);
-
-	clk_dbg
-	    ("*************%s: peri clock %s count after %s : %d ***************\n",
-	     __func__, clk->name, enable ? "enable" : "disable", clk->use_cnt);
-
-	return 0;
+err:
+	if (!ret)
+		clk_dbg("****%s: peri clock %s count after %s : %d ****\n",
+		     __func__, clk->name, enable ? "enable" : "disable",
+			clk->use_cnt);
+	else
+		clk_dbg("%s, %s : Operation Unsuccesful!\n",
+				__func__, clk->name);
+	return ret;
 }
 
 static u32 compute_rate(u32 rate, u32 div, u32 dither, u32 max_dither,
@@ -3106,18 +3110,21 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 	u32 div, pre_div, src;
 	struct clk_div *clk_div;
 	int insurance;
-
-	if (clk->clk_type != CLK_TYPE_PERI)
-		return -EPERM;
+	int ret = 0;
+	if (clk->clk_type != CLK_TYPE_PERI) {
+		ret = -EPERM;
+		goto err1;
+	}
 
 	peri_clk = to_peri_clk(clk);
 
 	clk_dbg("%s : %s\n", __func__, clk->name);
 
 	if (CLK_FLG_ENABLED(clk, RATE_FIXED)) {
-		clk_dbg("%s : %s - fixed rate clk...rate cannot be changed\n",
+		clk_dbg("%s : %s - fixed rate...rate can't be changed\n",
 			__func__, clk->name);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto err1;
 
 	}
 	/*Clock should be in enabled state to set the rate,.
@@ -3132,7 +3139,8 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 			__func__, clk->name, rate, new_rate);
 		/* Disable clock to compensate enable call before set rate */
 		__peri_clk_disable(clk);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto err1;
 	}
 	clk_dbg
 	    ("%s clock name %s, src_rate %u sel %d div %u pre_div %u new_rate %u\n",
@@ -3194,6 +3202,10 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 		while ((GET_BIT_USING_MASK(reg_val, clk_div->div_trig_mask))
 		       && insurance < 1000);
 		WARN_ON(insurance >= 1000);
+		if (insurance >= 1000) {
+			ret = -EINVAL;
+			goto err;
+		}
 	}
 	if (clk_div->prediv_trig_offset && clk_div->prediv_trig_mask) {
 		reg_val =
@@ -3222,14 +3234,22 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 		while ((GET_BIT_USING_MASK(reg_val, clk_div->prediv_trig_mask))
 		       && insurance < 1000);
 		WARN_ON(insurance >= 1000);
+		if (insurance >= 1000) {
+			ret = -EINVAL;
+			goto err;
+		}
 	}
 	/* disable write access */
+err:
 	ccu_write_access_enable(peri_clk->ccu_clk, false);
 	/* Disable clock to compensate enable call before set rate */
 	__peri_clk_disable(clk);
-
-	clk_dbg("clock set rate done \n");
-	return 0;
+err1:
+	if (!ret)
+		clk_dbg("clock set rate done\n");
+	else
+		clk_dbg("clock set rate not done\n");
+	return ret;
 }
 
 static int peri_clk_init(struct clk *clk)
@@ -3587,6 +3607,7 @@ static int bus_clk_enable(struct clk *clk, int enable)
 	struct bus_clk *bus_clk;
 	u32 reg_val;
 	int insurance;
+	int ret = 0;
 
 	BUG_ON(clk->clk_type != CLK_TYPE_BUS);
 
@@ -3595,12 +3616,14 @@ static int bus_clk_enable(struct clk *clk, int enable)
 
 	bus_clk = to_bus_clk(clk);
 
-	if ((bus_clk->clk_gate_offset == 0) || (bus_clk->clk_en_mask == 0))
-		return -EPERM;
+	if ((bus_clk->clk_gate_offset == 0) || (bus_clk->clk_en_mask == 0)) {
+		ret = -EPERM;
+		goto err;
+	}
 
 	if (clk->flags & AUTO_GATE) {
 		clk_dbg("%s:%s: is auto gated\n", __func__, clk->name);
-		return 0;
+		goto err;
 	}
 
 	/* enable write access */
@@ -3643,17 +3666,23 @@ static int bus_clk_enable(struct clk *clk, int enable)
 			 && insurance < 1000);
 	}
 	WARN_ON(insurance >= 1000);
+	if (insurance >= 1000)
+		ret = -EINVAL;
 
 	clk_dbg("%s:%s clk after stprsts start\n", __func__, clk->name);
-	clk_dbg("%s -- %s is %s\n", __func__, clk->name,
-		enable ? "enabled" : "disabled");
+
 	/* disable write access */
 	ccu_write_access_enable(bus_clk->ccu_clk, false);
+err:
+	if (!ret)
+		clk_dbg("****%s: bus clock %s count after %s : %d****\n",
+			__func__, clk->name, enable ? "enable" : "disable",
+			clk->use_cnt);
+	else
+		clk_dbg("%s : %s : Operation Unsuccessful\n",
+				__func__, clk->name);
 
-	clk_dbg
-	    ("*************%s: bus clock %s count after %s : %d ***************\n",
-	     __func__, clk->name, enable ? "enable" : "disable", clk->use_cnt);
-	return 0;
+	return ret;
 }
 
 static unsigned long bus_clk_get_rate(struct clk *c)
@@ -4116,28 +4145,32 @@ static int pll_clk_set_rate(struct clk *clk, u32 rate)
 	u32 new_rate, reg_val;
 	u32 pll_cfg_ctrl = 0;
 	int insurance;
+	int ret = 0;
 	u32 ndiv_int, nfrac, pdiv;
 	int inx;
 	struct pll_cfg_ctrl_info *cfg_ctrl;
-	if (clk->clk_type != CLK_TYPE_PLL)
-		return -EPERM;
+	if (clk->clk_type != CLK_TYPE_PLL) {
+		ret = -EPERM;
+		goto err;
+	}
 
 	pll_clk = to_pll_clk(clk);
 
 	clk_dbg("%s : %s\n", __func__, clk->name);
 
 	if (CLK_FLG_ENABLED(clk, RATE_FIXED)) {
-		clk_dbg("%s : %s - fixed rate clk...rate cannot be changed\n",
+		clk_dbg("%s : %s - fixed rate...can't be changed\n",
 			__func__, clk->name);
-		return -EINVAL;
-
+		ret = -EINVAL;
+		goto err;
 	}
 	new_rate = compute_pll_vco_div(pll_clk, rate, &pdiv, &ndiv_int, &nfrac);
 
 	if (abs(new_rate - rate) > 100) {
 		clk_dbg("%s : %s - rate(%d) not supported\n",
 			__func__, clk->name, rate);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto err;
 	}
 
 	/* enable write access */
@@ -4207,13 +4240,19 @@ static int pll_clk_set_rate(struct clk *clk, u32 rate)
 		} while (!(GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock))
 			 && insurance < 1000);
 		WARN_ON(insurance >= 1000);
+		if (insurance >= 1000)
+			ret = -EINVAL;
 	}
 
 	/* disable write access */
 	ccu_write_access_enable(pll_clk->ccu_clk, false);
+err:
+	if (!ret)
+		clk_dbg("clock set rate done\n");
+	else
+		clk_dbg("clock set rate not done\n");
 
-	clk_dbg("clock set rate done \n");
-	return 0;
+	return ret;
 }
 
 static int pll_clk_enable(struct clk *clk, int enable)
@@ -4221,7 +4260,8 @@ static int pll_clk_enable(struct clk *clk, int enable)
 	u32 reg_val;
 	struct pll_clk *pll_clk;
 	int insurance;
-	clk_dbg("%s:%d, clock name: %s \n", __func__, enable, clk->name);
+	int ret = 0;
+	clk_dbg("%s:%d, clock name: %s\n", __func__, enable, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
 	pll_clk = to_pll_clk(clk);
@@ -4229,9 +4269,9 @@ static int pll_clk_enable(struct clk *clk, int enable)
 	BUG_ON(!pll_clk->ccu_clk || (pll_clk->pll_ctrl_offset == 0));
 
 	if (clk->flags & AUTO_GATE || !pll_clk->pwrdwn_mask) {
-		clk_dbg("%s:%s: is auto gated or no enable bit\n", __func__,
-			clk->name);
-		return 0;
+		clk_dbg("%s:%s: is auto gated or no enable bit\n",
+				__func__, clk->name);
+		goto err;
 	}
 
 	/*enable write access */
@@ -4299,19 +4339,22 @@ static int pll_clk_enable(struct clk *clk, int enable)
 		} while (!(GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock))
 			 && insurance < 1000);
 		WARN_ON(insurance >= 1000);
+		if (insurance >= 1000)
+			ret = -EINVAL;
 	}
 
-	clk_dbg("%s, %s is %s..! \n", __func__, clk->name,
-		enable ? "enabled" : "disabled");
 auto_gated:
 	/* disable write access */
 	ccu_write_access_enable(pll_clk->ccu_clk, false);
-
-	clk_dbg
-	    ("*************%s: pll clock %s count after %s : %d ***************\n",
-	     __func__, clk->name, enable ? "enable" : "disable", clk->use_cnt);
-
-	return 0;
+err:
+	if (!ret)
+		clk_dbg("****%s: pll clock %s count after %s : %d****\n",
+			__func__, clk->name, enable ? "enable" : "disable",
+			clk->use_cnt);
+	else
+		clk_dbg("%s, %s is : Operation Unsuccesful!\n",
+				__func__, clk->name);
+	return ret;
 }
 
 static int pll_clk_init(struct clk *clk)
