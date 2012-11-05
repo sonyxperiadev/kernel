@@ -13,8 +13,8 @@
 #include <linux/smp.h>
 #include <linux/completion.h>
 #include <asm/cp15.h>
-
 #include <asm/cacheflush.h>
+#include <plat/kona_pm.h>
 #ifdef CONFIG_A9_DORMANT_MODE
 #include <mach/dormant.h>
 #endif
@@ -70,7 +70,7 @@ static inline void platform_do_lowpower(unsigned int cpu)
 		 * here's the WFI
 		 */
 #ifdef CONFIG_A9_DORMANT_MODE
-		dormant_enter(DORMANT_CORE_DOWN);
+		kona_pm_cpu_lowpower();
 #else
 		asm(".word	0xe320f003\n"
 		    :

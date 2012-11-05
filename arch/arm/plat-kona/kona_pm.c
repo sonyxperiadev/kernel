@@ -195,6 +195,28 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 	return ret;
 }
 
+/**
+ * Here we ensure that cpu goes to lowpower mode using
+ * idle path, so that pi reference couters and other
+ * things are in place before entering lowpower mode
+ */
+int kona_pm_cpu_lowpower(void)
+{
+	int ret = 0;
+	struct kona_idle_state *suspend =
+		&pm_prms.states[pm_prms.suspend_state];
+
+	BUG_ON(!suspend);
+	if (LOG_LEVEL_ENABLED(KONA_PM_LOG_LVL_FLOW))
+		pr_info("Put cpu to lowpower\n");
+	if (suspend->enter) {
+		suspend->flags |= CPUIDLE_ENTER_SUSPEND;
+		suspend->enter(suspend);
+	}
+	return 0;
+}
+EXPORT_SYMBOL(kona_pm_cpu_lowpower);
+
 __weak void kona_mach_pm_finish(void)
 {
 	if (LOG_LEVEL_ENABLED(KONA_PM_LOG_LVL_FLOW))

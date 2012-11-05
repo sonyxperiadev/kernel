@@ -316,9 +316,18 @@ int enter_dormant_state(struct kona_idle_state *state)
 {
 #ifdef CONFIG_A9_DORMANT_MODE
 	if (dormant_enable != 0) {
+		/**
+		 * Workaround for Dormant core down
+		 * during platform suspend:
+		 * disable cluster down for time being as
+		 * its not working for suspend path when
+		 * cpu1 is shutdown first
+		 */
+#if 0
 		if (state->flags & CPUIDLE_ENTER_SUSPEND)
 			dormant_enter(DORMANT_CLUSTER_DOWN);
 		else
+#endif
 			dormant_enter(DORMANT_CORE_DOWN);
 	} else {
 		enter_wfi();
