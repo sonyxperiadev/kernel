@@ -105,28 +105,29 @@ struct platform_device android_pmem = {
 #endif
 
 #ifdef CONFIG_ION
-static struct ion_platform_data ion_data0 = {
-	.nr = 1,
-	.heaps = {
-		[0] = {
-			.id = 0,
-			.type = ION_HEAP_TYPE_CARVEOUT,
-			.name = "ion-carveout-0",
-			.base = 0,
-			.size = (48 * SZ_1M),
-		},
-	},
-};
-
-struct platform_device ion_device0 = {
+struct platform_device ion_carveout_device = {
 	.name = "ion-kona",
 	.id = 0,
 	.dev = {
-		.platform_data = &ion_data0,
+		.platform_data = &ion_carveout_data,
 	},
 	.num_resources = 0,
 };
-#endif
+
+#ifdef CONFIG_CMA
+static u64 ion_dmamask = DMA_BIT_MASK(32);
+struct platform_device ion_cma_device = {
+	.name = "ion-kona",
+	.id = 1,
+	.dev = {
+		.dma_mask = &ion_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+		.platform_data = &ion_cma_data,
+	},
+	.num_resources = 0,
+};
+#endif	/* CONFIG_CMA */
+#endif	/* CONFIG_ION */
 
 struct platform_device hawaii_serial_device = {
 	.name = "serial8250_dw",
@@ -884,56 +885,125 @@ static void __init pmem_reserve_memory(void)
 		android_pmem_data.cmasize = 0;
 	}
 }
-#endif /* CONFIG_ANDROID_PMEM */
+#endif
 
 #ifdef CONFIG_ION
-static int __init setup_ion_carveout0_pages(char *str)
+static int __init setup_ion_pages(char *str, struct ion_platform_data *pdata,
+		int idx)
 {
+	struct ion_platform_heap *heap;
 	char *endp = NULL;
 
-	if (str)
-		ion_data0.heaps[0].size = memparse((const char *)str, &endp);
+	if (str && (pdata->nr > idx)) {
+		heap = &(pdata->heaps[idx]);
+		heap->size = memparse((const char *)str, &endp);
+		pr_info("ion: Cmdline sets %16s heap, id(%d) size(%d)MB\n",
+				heap->name, heap->id, (heap->size)>>20);
+	}
+
 	return 0;
+}
+
+static int __init setup_ion_carveout0_pages(char *str)
+{
+	return setup_ion_pages(str, &ion_carveout_data, 0);
 }
 early_param("carveout0", setup_ion_carveout0_pages);
 
-/* Carveout memory regions for ION */
-static void __init ion_carveout_memory(void)
+static int __init setup_ion_carveout1_pages(char *str)
 {
-	int err;
-	phys_addr_t carveout_size, carveout_base;
+	return setup_ion_pages(str, &ion_carveout_data, 1);
+}
+early_param("carveout1", setup_ion_carveout1_pages);
 
-	carveout_size = ion_data0.heaps[0].size;
-	if (carveout_size) {
-		carveout_base =
-			memblock_alloc_from_range(carveout_size, SZ_4M, 0, 0xF0000000);
-		memblock_free(carveout_base, carveout_size);
-		err = memblock_remove(carveout_base, carveout_size);
-		if (!err) {
-			pr_info("android-ion: carveout-0 from (%08x-%08x) \n",
-					carveout_base,
-					carveout_base + carveout_size);
-			ion_data0.heaps[0].base = carveout_base;
-		} else {
-			pr_err("android-ion: Carveout memory failed\n");
-			ion_data0.heaps[0].size = 0;
+#ifdef CONFIG_CMA
+static int __init setup_ion_cma0_pages(char *str)
+{
+	return setup_ion_pages(str, &ion_cma_data, 0);
+}
+early_param("cma0", setup_ion_cma0_pages);
+#endif
+
+static phys_addr_t __init ion_find_memory_base(struct ion_platform_heap *heap,
+		unsigned char *heap_type, int idx)
+{
+	phys_addr_t base;
+
+	pr_info("ion: Try %8s %16s(%d) id(%d) size(%3d)MB base(%08x) limit(%08x)\n",
+			heap_type, heap->name, idx, heap->id, (heap->size)>>20,
+			(u32)heap->base, (u32)heap->limit);
+	base = memblock_alloc_from_range(
+			heap->size, SZ_1M, heap->base,
+			heap->limit);
+	if (base)
+		memblock_free(base, heap->size);
+	else
+		pr_err("ion: Failed Reserving  %16s(%d)\n", heap->name, idx);
+
+	return base;
+}
+
+static void __init ion_reserve_memory(void)
+{
+	struct ion_platform_heap *heap;
+	phys_addr_t base;
+	int i;
+
+	/* Carveout memory for ION */
+	for (i = 0; i < ion_carveout_data.nr; i++) {
+		heap = &ion_carveout_data.heaps[i];
+		if (heap->size) {
+			base = ion_find_memory_base(heap, "Carveout", i);
+			if (base) {
+				memblock_remove(base, heap->size);
+				pr_info("ion: %16s %3dMB (%08x-%08x)\n",
+					heap->name, (heap->size>>20),
+					base, base+heap->size);
+				heap->base = base;
+				continue;
+			}
 		}
+		heap->id = ION_INVALID_HEAP_ID;
 	}
-	if (ion_data0.heaps[0].size == 0) {
-		ion_data0.heaps[0].id = ION_INVALID_HEAP_ID;
+
+#ifdef CONFIG_CMA
+	/* Reserve CMA memory for ION */
+	for (i = 0; i < ion_cma_data.nr; i++) {
+		heap = &ion_cma_data.heaps[i];
+		if (heap->size) {
+			base = ion_find_memory_base(heap, "CMA", i);
+			if (base) {
+				if (!dma_declare_contiguous(&ion_cma_device.dev,
+							heap->size, base,
+							heap->limit)) {
+					pr_info("ion: %16s %3dMB (%08x-%08x)\n",
+							heap->name,
+							(heap->size>>20),
+							base, base+heap->size);
+					heap->base = base;
+					continue;
+				} else {
+					pr_info("ion: Failed CMA %3dMB (%08x-%08x)\n",
+							(heap->size>>20),
+							base, base+heap->size);
+				}
+			}
+		}
+		heap->id = ION_INVALID_HEAP_ID;
 	}
+#endif
 }
 #endif
 
-
 void __init hawaii_reserve(void)
 {
+
+#ifdef CONFIG_ION
+	ion_reserve_memory();
+#endif
 
 #ifdef CONFIG_ANDROID_PMEM
 	pmem_reserve_memory();
 #endif
 
-#ifdef CONFIG_ION
-	ion_carveout_memory();
-#endif
 }
