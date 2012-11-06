@@ -31,7 +31,9 @@
 #include <linux/serial_8250.h>
 #include <linux/dma-contiguous.h>
 #include <linux/dma-mapping.h>
+#ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
+#endif
 #include <linux/kernel_stat.h>
 #include <linux/broadcom/ipcinterface.h>
 #include <linux/memblock.h>
@@ -92,13 +94,7 @@
 unsigned int etm_on;
 EXPORT_SYMBOL(etm_on);
 
-struct android_pmem_platform_data android_pmem_data = {
-	.name = "pmem",
-	.cmasize = 0,
-	.carveout_base = 0,
-	.carveout_size = 0,
-};
-
+#ifdef CONFIG_ANDROID_PMEM
 struct platform_device android_pmem = {
 	.name = "android_pmem",
 	.id = 0,
@@ -106,6 +102,7 @@ struct platform_device android_pmem = {
 		.platform_data = &android_pmem_data,
 	},
 };
+#endif
 
 #ifdef CONFIG_ION
 static struct ion_platform_data ion_data0 = {
@@ -818,6 +815,7 @@ static int __init setup_etm(char *p)
 early_param("etm_on", setup_etm);
 
 
+#ifdef CONFIG_ANDROID_PMEM
 static int __init setup_pmem_pages(char *str)
 {
 	char *endp = NULL;
@@ -858,6 +856,36 @@ static int __init setup_pmem_carveout_pages(char *str)
 }
 early_param("carveout", setup_pmem_carveout_pages);
 
+static void __init pmem_reserve_memory(void)
+{
+	int err;
+	phys_addr_t carveout_size, carveout_base;
+	unsigned long cmasize;
+
+	carveout_size = android_pmem_data.carveout_size;
+	cmasize = android_pmem_data.cmasize;
+
+	if (carveout_size) {
+		carveout_base = memblock_alloc(carveout_size, SZ_16M);
+		memblock_free(carveout_base, carveout_size);
+		err = memblock_remove(carveout_base, carveout_size);
+		if (!err) {
+			printk(KERN_INFO"PMEM: Carve memory from (%08x-%08x)\n",
+					carveout_base,
+					carveout_base + carveout_size);
+			android_pmem_data.carveout_base = carveout_base;
+		} else {
+			printk(KERN_INFO"PMEM: Carve out memory failed\n");
+		}
+	}
+
+	if (dma_declare_contiguous(&android_pmem.dev, cmasize, 0, 0)) {
+		printk(KERN_ERR"PMEM: Failed to reserve CMA region\n");
+		android_pmem_data.cmasize = 0;
+	}
+}
+#endif /* CONFIG_ANDROID_PMEM */
+
 #ifdef CONFIG_ION
 static int __init setup_ion_carveout0_pages(char *str)
 {
@@ -897,33 +925,13 @@ static void __init ion_carveout_memory(void)
 }
 #endif
 
+
 void __init hawaii_reserve(void)
 {
-	int err;
-	phys_addr_t carveout_size, carveout_base;
-	unsigned long cmasize;
 
-	carveout_size = android_pmem_data.carveout_size;
-	cmasize = android_pmem_data.cmasize;
-
-	if (carveout_size) {
-		carveout_base = memblock_alloc(carveout_size, SZ_16M);
-		memblock_free(carveout_base, carveout_size);
-		err = memblock_remove(carveout_base, carveout_size);
-		if (!err) {
-			printk(KERN_INFO"PMEM: Carve memory from (%08x-%08x)\n",
-					carveout_base,
-					carveout_base + carveout_size);
-			android_pmem_data.carveout_base = carveout_base;
-		} else {
-			printk(KERN_INFO"PMEM: Carve out memory failed\n");
-		}
-	}
-
-	if (dma_declare_contiguous(&android_pmem.dev, cmasize, 0, 0)) {
-		printk(KERN_ERR"PMEM: Failed to reserve CMA region\n");
-		android_pmem_data.cmasize = 0;
-	}
+#ifdef CONFIG_ANDROID_PMEM
+	pmem_reserve_memory();
+#endif
 
 #ifdef CONFIG_ION
 	ion_carveout_memory();
