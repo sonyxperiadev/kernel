@@ -18,14 +18,15 @@
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <plat/clock.h>
+#include <mach/sram_config.h>
 
 #include <asm/cacheflush.h>
 
 #define SEC_EXIT_NORMAL 1
 #define SSAPI_RET_FROM_INT_SERV 4
 
-#define SEC_BUFFER_ADDR 0x3404E000 /* SRAM */
-#define SEC_BUFFER_SIZE 0x00000400 /* 1kB */
+#define SEC_BUFFER_ADDR SRAM_ROM_DORMANT_EXIT_BASE /* SRAM */
+#define SEC_BUFFER_SIZE SRAM_SHARED_BUF_SIZE /* 1kB */
 
 struct secure_bridge_data {
 	u32 *bounce;

@@ -34,6 +34,7 @@
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/cacheflush.h>
 #include <mach/pm.h>
+#include <mach/sram_config.h>
 /* Control variable to enter retention instead
  * of dormant in idle path but enter
  * dormant during suspend
@@ -86,8 +87,8 @@ static int cnt_failure;
 module_param_named(cnt_failure, cnt_failure, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 /* Buffer to pass parameters to secure rom */
-#define	SEC_BUFFER_ADDR			0x3404E400	/* SRAM */
-#define	SEC_BUFFER_SIZE			0x00000400	/* 1kB */
+#define	SEC_BUFFER_ADDR			SRAM_SHARED_BUF_BASE	/* SRAM */
+#define	SEC_BUFFER_SIZE			SRAM_SHARED_BUF_SIZE	/* 1kB */
 
 #define MAX_SECURE_BUFFER_SIZE		0x280
 #define NUM_API_PARAMETERS		0x3
