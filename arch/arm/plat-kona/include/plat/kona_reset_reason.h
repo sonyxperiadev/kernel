@@ -13,7 +13,6 @@
 #ifndef __KONA_RESET_REASON_H__
 #define __KONA_RESET_REASON_H__
 
-#define REG_EMU_AREA	0x3404BF90
 #define POWERON_RESET	0x1
 #define AP_ONLY_BOOT	0x4
 #define CHARGING_STATE	0x3
