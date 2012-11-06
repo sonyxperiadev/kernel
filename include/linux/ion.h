@@ -90,6 +90,11 @@ struct ion_platform_heap {
 	ion_phys_addr_t base;
 	ion_phys_addr_t limit;
 	size_t size;
+#ifdef CONFIG_ION_OOM_KILLER
+	int lmc_enable;
+	int lmc_min_score_adj;
+	int lmc_min_free;
+#endif
 };
 
 /**
