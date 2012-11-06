@@ -115,6 +115,8 @@ module_param_named(cnt_failure, cnt_failure, int, S_IRUGO | S_IWUSR | S_IWGRP);
 #define	PWRCTRL_DORMANT_L2_OFF_CORE_1	0x03000000
 
 #define	UNLOCK_PROC_CLK			0xA5A501
+#define	LOCK_PROC_CLK			0xA5A500
+
 #define FREQ_312_MHZ_ID			0x04040404
 
 #define DORMANT_ENTRY_SUCCESS		0
@@ -333,6 +335,7 @@ static void restore_proc_clk_regs(void)
 			 * to take effect
 			 */
 			do {
+				udelay(1);
 				val1 =
 				    readl_relaxed(PROC_CLK_REG_ADDR
 							(ARM_SEG_TRG)) &
@@ -354,13 +357,16 @@ static void restore_proc_clk_regs(void)
 		       PROC_CLK_REG_ADDR(LVM_EN));
 
 	while (readl_relaxed(PROC_CLK_REG_ADDR(LVM_EN)) &
-	       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK)
-		;
+	       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK) {
+		udelay(1);
+		}
 
 	/* Write the GO bit */
 	writel_relaxed(KPROC_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK |
 		       KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
 		       PROC_CLK_REG_ADDR(POLICY_CTL));
+	/* Lock CCU registers */
+	writel_relaxed(LOCK_PROC_CLK, PROC_CLK_REG_ADDR(WR_ACCESS));
 }
 
 /*
@@ -834,7 +840,6 @@ static int __init dormant_init(void)
 
 	secure_params->log_index = 0;
 
-	writel_relaxed(UNLOCK_PROC_CLK, KONA_PROC_CLK_VA);
 #if defined(CONFIG_CAPRI_DORMANT_MODE)
 	if (chipregHw_getChipIdRev() > 0xA1) {
 		/* Indicate that core-1 is always willing to enter dormnt
