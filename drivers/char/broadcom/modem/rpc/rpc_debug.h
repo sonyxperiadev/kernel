@@ -73,6 +73,7 @@ void RpcDbgInit(void);
 
 typedef struct {
 	int type; /* 0 is printk, 1 is seq_file, 2 is bcm log, 3 is crash dump*/
+	const Boolean protected;
 	struct seq_file *seq;
 	char buffer[MAX_BUF_LEN];
 /*	int len;*/
