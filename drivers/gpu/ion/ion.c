@@ -433,6 +433,22 @@ static struct notifier_block ion_task_nb = {
 static size_t ion_debug_heap_total(struct ion_client *client,
 				   int id, size_t *shared);
 
+int ion_minfree_get(struct ion_heap *heap)
+{
+	int min_free = 0;
+	int lmc_min_free = heap->lmc_min_free;
+
+	if ((lmc_min_free >= 0) && (lmc_min_free <= 100)) {
+		min_free = (heap->size / 100) * lmc_min_free;
+		min_free &= (PAGE_MASK);
+	} else {
+		pr_err("%16.s: min_free(%d) should be in [0-100] range\n",
+				heap->name, min_free);
+	}
+
+	return min_free;
+}
+
 static int ion_shrink(struct ion_device *dev, unsigned int heap_mask,
 		int min_oom_score_adj, int fail_size)
 {
@@ -512,6 +528,7 @@ static int ion_shrink(struct ion_device *dev, unsigned int heap_mask,
 	}
 	return 0;
 }
+
 #endif
 
 struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
@@ -581,6 +598,22 @@ retry:
 			pr_debug("Alloc heap(%d):(%d)KB - pid(%d) size(%d)KB\n",
 					heap_used->id, heap_used->used>>10,
 					client->task->pid, len>>10);
+#ifdef CONFIG_ION_OOM_KILLER
+		if ((heap_used->ops->needs_shrink) &&
+				(heap_used->ops->needs_shrink(heap_used))) {
+			int free_space = heap_used->size - heap_used->used;
+			int min_adj = heap_used->lmc_min_score_adj;
+			int min_free = ion_minfree_get(heap_used);
+
+			if (free_space < min_free) {
+				pr_debug("Lowmem killer heap(%s) adj(%d) minfree(%d)KB: free(%d)KB\n",
+						heap_used->name, min_adj,
+						min_free>>10, free_space>>10);
+				ion_shrink(dev, (1 << heap_used->id), min_adj,
+						0);
+			}
+		}
+#endif /* CONFIG_ION_OOM_KILLER */
 	} else {
 		pr_err("Alloc Failed  heap_mask(%d) size(%d)KB\n",
 				heap_mask,  len>>10);
@@ -1380,6 +1413,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	size_t total_size = 0;
 	size_t total_orphaned_size = 0;
 	size_t total_shared_size = 0;
+	int free_heap = 1;
 
 	seq_printf(s, "%s:\n", heap->name);
 	seq_printf(s, "%16.s %16.s %16.s %16.s %16.s\n",
@@ -1393,6 +1427,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 		size_t size = ion_debug_heap_total(client, heap->id, &shared);
 		if (!size)
 			continue;
+		free_heap = 0;
 		if (client->task) {
 			char task_comm[TASK_COMM_LEN];
 
@@ -1407,6 +1442,8 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 					(shared>>10));
 		}
 	}
+	if (free_heap)
+		seq_printf(s, "  No allocations present.\n");
 	seq_printf(s, "----------------------------------------------------\n");
 	seq_printf(s, "orphaned allocations (info is from last known client):"
 		   "\n");
@@ -1427,7 +1464,26 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 		}
 	}
 	mutex_unlock(&dev->lock);
+	if (!total_orphaned_size)
+		seq_printf(s, "  No memory leak.\n");
 	seq_printf(s, "----------------------------------------------------\n");
+
+#ifdef CONFIG_ION_OOM_KILLER
+	seq_printf(s, "Lowmemkiller Info:\n");
+	if ((heap->ops->needs_shrink) &&
+			(heap->ops->needs_shrink(heap))) {
+		int min_free = ion_minfree_get(heap);
+
+		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
+				"free mem", "threshold", "min_adj",
+				((heap->size - heap->used)>>10),
+				min_free>>10, heap->lmc_min_score_adj);
+	} else {
+		seq_printf(s, "  Lowmemkiller disabled.\n");
+	}
+	seq_printf(s, "----------------------------------------------------\n");
+#endif
+
 	seq_printf(s, "Summary:\n");
 	if (heap->size)
 		seq_printf(s, "%16.s %13u KB\n", "total reserved",
@@ -1438,19 +1494,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	seq_printf(s, "%16.s %13u KB\n", "total orphaned",
 			(total_orphaned_size>>10));
 	seq_printf(s, "----------------------------------------------------\n");
-
-#ifdef CONFIG_ION_OOM_KILLER
-	if ((heap->ops->needs_shrink) &&
-			(heap->ops->needs_shrink(heap))) {
-		seq_printf(s, "Lowmemkiller Info:\n");
-		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
-				"free mem", "threshold", "min_adj",
-				((heap->size - heap->used)>>10),
-				heap->lmc_min_free>>10,
-				heap->lmc_min_score_adj);
-	}
-	seq_printf(s, "----------------------------------------------------\n");
-#endif
+	seq_printf(s, "\n\n");
 	return 0;
 }
 
