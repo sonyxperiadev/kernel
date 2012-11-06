@@ -457,6 +457,7 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 	rdata->alarm_irq_enabled = 0;
 
 	platform_set_drvdata(pdev, rdata);
+	device_init_wakeup(&pdev->dev, 1);
 	rdata->rtc = rtc_device_register(pdev->name,
 			&pdev->dev, &bcmpmu_rtc_ops, THIS_MODULE);
 	if (IS_ERR(rdata->rtc)) {
@@ -495,10 +496,7 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 		bcmpmu->write_dev(bcmpmu, PMU_REG_RTCYR, 0);
 	}
 
-	device_set_wakeup_capable(&pdev->dev, 1);
-	rtc_sysfs_add_device(rdata->rtc);
 	ret = device_create_file(&rdata->rtc->dev, &dev_attr_dbgmask);
-
 	return 0;
 
 err_irq_sec:
