@@ -1451,7 +1451,11 @@ update_isolated_counts(struct mem_cgroup_zone *mz,
 			ClearPageActive(page);
 			nr_active += numpages;
 		}
-		count[lru] += numpages;
+		if (count) {
+			count[lru] += numpages;
+			if (PageCma(page))
+				count[LRU_CMA_BASE + lru] += numpages;
+		}
 	}
 
 	preempt_disable();
