@@ -30,6 +30,7 @@
 
 #include <mach/hardware.h>
 #include <mach/cdebugger.h>
+#include <mach/sram_config.h>
 #include <linux/fs.h>
 
 static void cdebugger_set_upload_magic(unsigned magic);
@@ -601,17 +602,11 @@ __init int cdebugger_init(void)
 	return 0;
 }
 
-/* Use the offset whose content is preserved across PON Key reset */
-#define CDEBUGGER_SRAM_MEM_OFFSET	0xBFBC
-#define INTERNAL_SRAM_BASE_ADDR		0x34040000
-#define SCRATCHRAM_BASE			INTERNAL_SRAM_BASE_ADDR
-
 unsigned int cdebugger_memory_init(void)
 {
 	pr_info("cdebugger_magic_init >\n");
 
-	cdebugger_mem_base = ioremap_nocache(SCRATCHRAM_BASE +
-					     CDEBUGGER_SRAM_MEM_OFFSET, SZ_1K);
+	cdebugger_mem_base = ioremap_nocache(SRAM_RAMDUMP_INFO_BASE, SZ_1K);
 
 	if (cdebugger_mem_base == NULL) {
 		pr_info("cdebugger ioremap failed!\n");
