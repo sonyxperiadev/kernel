@@ -263,38 +263,53 @@ struct android_pmem_platform_data android_pmem_data = {
 struct ion_platform_data ion_carveout_data = {
 	.nr = 2,
 	.heaps = {
-		  [0] = {
-			 .id = 0,
-			 .type = ION_HEAP_TYPE_CARVEOUT,
-			 .name = "ion-carveout-0",
-			 .base = 0x90000000,
-			 .limit = 0xa0000000,
-			 .size = (16 * SZ_1M),
-			 },
-		  [1] = {
-			 .id = 2,
-			 .type = ION_HEAP_TYPE_CARVEOUT,
-			 .name = "ion-carveout-1",
-			 .base = 0,
-			 .limit = 0,
-			 .size = (0 * SZ_1M),
-			 },
-		  },
+		[0] = {
+			.id    = 0,
+			.type  = ION_HEAP_TYPE_CARVEOUT,
+			.name  = "ion-carveout-0",
+			.base  = 0x90000000,
+			.limit = 0xa0000000,
+			.size  = (16 * SZ_1M),
+#ifdef CONFIG_ION_OOM_KILLER
+			.lmc_enable = 0,
+			.lmc_min_score_adj = 411,
+			.lmc_min_free = 30,
+#endif
+		},
+		[1] = {
+			.id    = 2,
+			.type  = ION_HEAP_TYPE_CARVEOUT,
+			.name  = "ion-carveout-1",
+			.base  = 0,
+			.limit = 0,
+			.size  = (0 * SZ_1M),
+#ifdef CONFIG_ION_OOM_KILLER
+			.lmc_enable = 0,
+			.lmc_min_score_adj = 411,
+			.lmc_min_free = 30,
+#endif
+		},
+	},
 };
 
 #ifdef CONFIG_CMA
 struct ion_platform_data ion_cma_data = {
 	.nr = 1,
 	.heaps = {
-		  [0] = {
-			 .id = 1,
-			 .type = ION_HEAP_TYPE_DMA,
-			 .name = "ion-cma-0",
-			 .base = 0x90000000,
-			 .limit = 0xa0000000,
-			 .size = (0 * SZ_1M),
-			 },
-		  },
+		[0] = {
+			.id = 1,
+			.type  = ION_HEAP_TYPE_DMA,
+			.name  = "ion-cma-0",
+			.base  = 0x90000000,
+			.limit = 0xa0000000,
+			.size  = (0 * SZ_1M),
+#ifdef CONFIG_ION_OOM_KILLER
+			.lmc_enable = 1,
+			.lmc_min_score_adj = 411,
+			.lmc_min_free = 30,
+#endif
+		},
+	},
 };
 #endif /* CONFIG_CMA */
 #endif /* CONFIG_ION */
