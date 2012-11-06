@@ -532,17 +532,8 @@ void dormant_enter(u32 service)
 		/* save all proc registers except arm_sys_idle_dly */
 		save_proc_clk_regs();
 
-		if (fake_dormant) {
-			reg_val = readl_relaxed(KONA_CHIPREG_VA +
-					CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
-			reg_val |=
-			  CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
-			writel_relaxed(reg_val, KONA_CHIPREG_VA +
-					CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
-
-			set_spare_power_status(SCU_STATUS_NORMAL);
-			pwr_mgr_arm_core_dormant_enable(false);
-		} else {
+		/* Write to spare register and enable pwr_mgr dormant only in case of actual dormant entry */
+		if(!fake_dormant && !(force_retention_in_idle && (service==DORMANT_CORE_DOWN))) {
 			reg_val = readl_relaxed(KONA_CHIPREG_VA +
 					CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
 			reg_val &=
