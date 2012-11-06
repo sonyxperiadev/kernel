@@ -88,9 +88,10 @@ static struct clk *h264_clk;
 #if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
 #define H264_TIMEOUT (1000 * 100)
 #else
-#define H264_TIMEOUT (500 * 2)
+#define H264_TIMEOUT (500 * 4)
 #endif
 
+DEFINE_MUTEX(h264_mutex);
 static inline unsigned int reg_read(void __iomem *, unsigned int reg);
 static inline void reg_write(void __iomem *, unsigned int reg,
 			     unsigned int value);
@@ -205,6 +206,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 		printk("\n Returning from no memory");
 		return -ENOMEM;
 	}
+	mutex_lock(&h264_mutex);
 	filp->private_data = dev;
 	spin_lock_init(&dev->lock);
 
@@ -311,6 +313,8 @@ qos_request_fail:
 err:
 	if (dev)
 		kfree(dev);
+	printk("\nError in the h264_open\n");
+	mutex_unlock(&h264_mutex);
 	return ret;
 }
 
@@ -353,7 +357,7 @@ static int h264_release(struct inode *inode, struct file *filp)
 
 	if (dev)
 		kfree(dev);
-
+	mutex_unlock(&h264_mutex);
 	return 0;
 }
 

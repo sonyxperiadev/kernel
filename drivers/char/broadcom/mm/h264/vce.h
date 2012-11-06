@@ -13,11 +13,13 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _VCE_H_
 #define _VCE_H_
 
+#define VCE_REGISTERS_COUNT 63
+
 /* vce job mem layout*/
 /*
    typedef struct vce_launch_s {
    unsigned int mem_start = 0xd7d7d7d7;
-   unsigned int job_size;
+   unsigned int job_size; - in bytes
    unsigned int pvt_offset;
    unsigned int datasize;
    unsigned int data[];
@@ -45,6 +47,11 @@ typedef enum {
 } vce_transfer_type_t;
 
 typedef struct {
+	unsigned int vce_regs[VCE_REGISTERS_COUNT];
+	unsigned int changed[VCE_REGISTERS_COUNT];
+} vce_regp_t;
+
+typedef struct {
 	unsigned int datasize;
 	unsigned int data_offset;
 	unsigned int codesize;
@@ -55,9 +62,9 @@ typedef struct {
 	unsigned int numuploads;
 	unsigned int download_start_offset;
 	unsigned int upload_start_offset;
-	unsigned int encode;
+	unsigned int endcode;
 	unsigned int stop_reason;
-	unsigned int vce_reg[62];
+	vce_regp_t 	vce_regpst;
 } vce_launch_info_t;
 
 #endif /*_VCE_H_*/

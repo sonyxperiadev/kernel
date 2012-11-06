@@ -9,7 +9,7 @@ http://www.gnu.org/copyleft/gpl.html (the "GPL").
 Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
- *******************************************************************************/
+ ******************************************************************************/
 
 #define pr_fmt(fmt) "vce: " fmt
 
@@ -34,6 +34,10 @@ the GPL, without Broadcom's express prior written consent.
 #define VCE_NO_WAIT					0x20000000
 #define VCE_STOP_SYM_RESET_INNER	0x5
 #define VCE_REASON_END				0x7
+
+#ifdef H264_VCE_STEP
+static volatile int break_var;
+#endif
 
 typedef struct {
 	volatile void *vaddr;
@@ -64,7 +68,7 @@ static void print_job_struct(void* job)
 	pr_debug("numuploads: 0x%x\n",vce_info->numuploads);
 	pr_debug("download_start_offset: 0x%x\n",vce_info->download_start_offset);
 	pr_debug("upload_start_offset: 0x%x\n",vce_info->upload_start_offset);
-	pr_debug("encode: 0x%x\n",vce_info->encode);
+	pr_debug("endcode: 0x%x\n", vce_info->endcode);
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 }
 
@@ -112,7 +116,8 @@ static int vce_reset(void* device_id)
 	/*do reg init*/
 	vce_reg_init(id);
 
-	while(vce_read(id,VCE_STATUS_OFFSET) & VCE_STATUS_BUSYBITS_MASK);
+	while (vce_read(id, VCE_STATUS_OFFSET) & VCE_STATUS_BUSYBITS_MASK)
+	;
 
 	return 0;
 }
@@ -197,7 +202,7 @@ bool get_vce_status(void* device_id)
 	return false;
 }
 
-mm_job_status_e vce_start_job(void* device_id , mm_job_post_t* job, u32 profmask)
+mm_job_status_e vce_start_job(void *device_id , mm_job_post_t *job, u32 prfmask)
 {
 	vce_device_t* id = (vce_device_t*)device_id;
 	u32* jp = (u32*)job->data;
@@ -238,6 +243,15 @@ mm_job_status_e vce_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 				return MM_JOB_STATUS_ERROR;
 			}
 			/*Program VCE*/
+
+		/*Write the registers passed*/
+		for (i=0; i < VCE_REGISTERS_COUNT; i++) {
+			if (vce_info->vce_regpst.changed[i] == 1) {
+				vce_write(id, (VCE_REGISTERS_OFFSET+(i*4)),
+					vce_info->vce_regpst.vce_regs[i]);
+			}
+		}
+
 			/*set return address to the finalising code*/
 			vce_write(id,VCE_REGISTERS_OFFSET,vce_info->finaladdr);
 
@@ -278,11 +292,11 @@ mm_job_status_e vce_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 			vce_write(id,VCE_PC_PF0_OFFSET,vce_info->startaddr);
 
 			/*Taken from DEC3 - TODO: Verify again*/
-			if( vce_info->encode &(~VCE_NO_SEMAPHORE)){
+		if (vce_info->endcode & (~VCE_NO_SEMAPHORE)) {
 				/*Pulse the stoppage code 1->0->1 to clear internal wait.*/
 				/*VCE might be waiting on another semaphore, or bkpt*/
 				vce_write(id,VCE_SEMA_CLEAR_OFFSET, 0xff);
-				vce_write(id,VCE_SEMA_SET_OFFSET, 1<<(vce_info->encode
+			vce_write(id, VCE_SEMA_SET_OFFSET, 1<<(vce_info->endcode
 							&(~VCE_NO_SEMAPHORE))| 1<<VCE_STOP_SYM_RESET_INNER);
 			} else {
 				vce_write(id,VCE_SEMA_CLEAR_OFFSET, 0xff);
@@ -291,6 +305,12 @@ mm_job_status_e vce_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 			/*Enable Interrupt*/
 			vce_write(id, 0x3408b8, 1<<26);
 
+#ifdef H264_VCE_STEP
+		/*Debug: For Stepping through VCE Instructions*/
+		while(break_var != 0){
+			vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_SINGLE_STEP);
+		}
+#endif
 			/*Set RUN Bit*/
 			vce_write(id,VCE_CONTROL_OFFSET,VCE_CONTROL_SET_RUN);
 
@@ -310,8 +330,9 @@ mm_job_status_e vce_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 			}
 
 			/*Backup Registers*/
-			for(i=0; i<62; i++) {
-				vce_info->vce_reg[i] = vce_read(id,(VCE_REGISTERS_OFFSET+(i*4)));
+		for (i=0; i<VCE_REGISTERS_COUNT; i++) {
+			vce_info->vce_regpst.vce_regs[i] =
+					vce_read(id, (VCE_REGISTERS_OFFSET+(i*4)));
 			}
 
 			/* Handle Upload*/

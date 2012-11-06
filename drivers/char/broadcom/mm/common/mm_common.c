@@ -39,6 +39,7 @@ void mm_common_enable_clock(mm_common_t *common)
 	if(common->mm_hw_is_on == 0) {
 		if(common->common_clk) {
 			clk_enable(common->common_clk);
+			if(strncmp(common->mm_name, "mm_h264", 7))
 			clk_reset(common->common_clk);
 			}
 		pr_debug("mm common clock turned on ");		
