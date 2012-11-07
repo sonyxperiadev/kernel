@@ -170,7 +170,7 @@ static struct regulator_init_data bcm59xxx_camldo2_data = {
 };
 
 __weak struct regulator_consumer_supply sim1_supply[] = {
-	{.supply = "sim1_vcc"},
+	{.supply = "sim_vcc"},
 };
 static struct regulator_init_data bcm59xxx_simldo1_data = {
 	.constraints = {
