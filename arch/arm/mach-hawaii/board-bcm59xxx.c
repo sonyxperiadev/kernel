@@ -531,7 +531,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_RFLDO] = {
 			.id = BCMPMU_REGULATOR_RFLDO,
 			.initdata = &bcm59xxx_rfldo_data,
-			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 		},
