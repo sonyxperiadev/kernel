@@ -58,7 +58,7 @@ static void hawaii_poweroff(void)
 	bcm590xx_shutdown();
 #endif
 
-#ifdef CONFIG_MFD_BCMPMU
+#if defined(CONFIG_MFD_BCMPMU) || defined(CONFIG_MFD_BCM_PMU59xxx)
 	bcmpmu_client_power_off();
 #endif
 
@@ -69,7 +69,7 @@ static void hawaii_poweroff(void)
 
 void hawaii_restart(char mode, const char *cmd)
 {
-#ifdef CONFIG_MFD_BCMPMU
+#if defined(CONFIG_MFD_BCMPMU) || defined(CONFIG_MFD_BCM_PMU59xxx)
 	if (hard_reset_reason)
 		bcmpmu_client_hard_reset(hard_reset_reason);
 	else {
