@@ -63,6 +63,8 @@ static unsigned long lowmem_deathpending_timeout;
 			printk(x);			\
 	} while (0)
 
+static int lowmem_oom_score_adj_to_oom_adj(int oom_score_adj);
+
 static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 {
 	struct task_struct *tsk;
@@ -105,9 +107,17 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		}
 	}
 	if (sc->nr_to_scan > 0)
+#ifndef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, ma %d\n",
 				sc->nr_to_scan, sc->gfp_mask, other_free,
 				other_file, min_score_adj);
+#else
+		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, msa %d"
+				" ma %d\n",
+				sc->nr_to_scan, sc->gfp_mask, other_free,
+				other_file, min_score_adj,
+				lowmem_oom_score_adj_to_oom_adj(min_score_adj));
+#endif
 	rem = global_page_state(NR_ACTIVE_ANON) +
 		global_page_state(NR_ACTIVE_FILE) +
 		global_page_state(NR_INACTIVE_ANON) +
@@ -166,16 +176,37 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		selected = p;
 		selected_tasksize = tasksize;
 		selected_oom_score_adj = oom_score_adj;
+#ifndef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 		lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
 			     p->pid, p->comm, oom_score_adj, tasksize);
+#else
+		lowmem_print(2, "select %d (%s), score_adj %d, adj %d,"
+				"size %d, to kill\n",
+			     p->pid, p->comm, oom_score_adj,
+			     lowmem_oom_score_adj_to_oom_adj(oom_score_adj),
+			     tasksize);
+#endif
 	}
 	if (selected) {
+#ifndef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d"
 				" with ofree %d %d, cfree %d %d ma %d\n",
 			     selected->pid, selected->comm,
 			     selected_oom_score_adj, selected_tasksize,
 			     other_free, other_file, cma_free, cma_file,
 			     min_score_adj);
+#else
+		lowmem_print(1, "send sigkill to %d (%s), score_adj %d,"
+				"adj %d, size %d with ofree %d %d, cfree %d %d"
+				" msa %d ma %d\n",
+		selected->pid, selected->comm,
+		selected_oom_score_adj,
+		lowmem_oom_score_adj_to_oom_adj(selected_oom_score_adj),
+		selected_tasksize,
+		other_free, other_file, cma_free, cma_file,
+		min_score_adj,
+		lowmem_oom_score_adj_to_oom_adj(min_score_adj));
+#endif
 		lowmem_deathpending_timeout = jiffies + HZ;
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
@@ -210,6 +241,14 @@ static int lowmem_oom_adj_to_oom_score_adj(int oom_adj)
 		return OOM_SCORE_ADJ_MAX;
 	else
 		return (oom_adj * OOM_SCORE_ADJ_MAX) / -OOM_DISABLE;
+}
+
+static int lowmem_oom_score_adj_to_oom_adj(int oom_score_adj)
+{
+	if (oom_score_adj == OOM_SCORE_ADJ_MAX)
+		return OOM_ADJUST_MAX;
+	else
+		return (oom_score_adj * -OOM_DISABLE) / OOM_SCORE_ADJ_MAX;
 }
 
 static void lowmem_autodetect_oom_adj_values(void)
