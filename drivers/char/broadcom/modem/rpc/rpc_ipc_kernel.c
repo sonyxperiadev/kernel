@@ -67,6 +67,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "rpc_debug.h"
 
 #include <linux/broadcom/rpc_ipc_kernel.h>
+#include <linux/time.h>
 
 MODULE_LICENSE("GPL");
 
@@ -163,7 +164,7 @@ typedef struct {
 } RpcPktkElement_t;
 
 typedef struct {
-	UInt32 ts;
+	struct timeval ts;
 	UInt8 state;
 	UInt8 clientId;
 	int notresponding;
@@ -940,7 +941,7 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 	    _DBG(RPC_TRACE("k:rpcipc_poll() precheck list not empty\n"));
 	    return mask;
 	}
-	cInfo->ts = jiffies_to_msecs(jiffies);
+	do_gettimeofday(&(cInfo->ts));
 	cInfo->state = 1;
 
 	spin_unlock_bh(&cInfo->mLock);
@@ -957,7 +958,7 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
 	_DBG(RPC_TRACE("rpcipc_poll: mask = %x\n", (int)mask));
 
 	cInfo->state = 2;
-	cInfo->ts = jiffies_to_msecs(jiffies);
+	do_gettimeofday(&(cInfo->ts));
 	cInfo->availData = 0;
 
 	spin_unlock_bh(&cInfo->mLock);
@@ -999,7 +1000,7 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 	if (ioc_param.isEmpty)
 		cInfo->availData = 0;
 
-	cInfo->ts = jiffies_to_msecs(jiffies);
+	do_gettimeofday(&(cInfo->ts));
 	cInfo->state = 1;
 	cInfo->tid = current->pid;
 
@@ -1028,7 +1029,7 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd,
 	    spin_lock_bh(&cInfo->mLock);
 		ioc_param.isEmpty = (Boolean) list_empty(&cInfo->mQ.mList);
 		cInfo->state = 2;
-		cInfo->ts = jiffies_to_msecs(jiffies);
+		do_gettimeofday(&(cInfo->ts));
 	    spin_unlock_bh(&cInfo->mLock);
 	}
 
@@ -1109,7 +1110,7 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
 	list_add_tail(&pktElem->mList, &cInfo->pktQ.mList);
 
 	cInfo->state = 2;
-	cInfo->ts = jiffies_to_msecs(jiffies);
+	do_gettimeofday(&(cInfo->ts));
 	cInfo->notresponding = 0;
 
 	spin_unlock_bh(&cInfo->mLock);
@@ -1746,10 +1747,12 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 	struct list_head *entry;
 	RpcCbkElement_t *Item = NULL;
 	rpc_pkt_rx_buf_ex_t ioc_param;
-	int jiffyBefore = jiffies;
+	unsigned int tsBefore = 0, tsnow = 0;
 	RpcPktkElement_t *pktElem = NULL;
-
-	/* coverity[ -tainted_data_argument : arg-0 ] */
+	struct timeval ts;
+	do_gettimeofday(&ts);
+	tsBefore = ts.tv_usec;
+	/* coverity[ -tainted_data_argument : arg-0 ]*/
 	if (copy_from_user
 	    (&ioc_param, (rpc_pkt_rx_buf_ex_t *) param,
 	     sizeof(rpc_pkt_rx_buf_ex_t)) != 0) {
@@ -1771,7 +1774,7 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 	if (ioc_param.isEmpty)
 		cInfo->availData = 0;
 	cInfo->state = 1;
-	cInfo->ts = jiffies_to_msecs(jiffies);
+	do_gettimeofday(&(cInfo->ts));
 	cInfo->tid = current->pid;
 	spin_unlock_bh(&cInfo->mLock);
 
@@ -1797,7 +1800,7 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 	    spin_lock_bh(&cInfo->mLock);
 		ioc_param.isEmpty = (UInt8) list_empty(&cInfo->mQ.mList);
 		cInfo->state = 2;
-		cInfo->ts = jiffies_to_msecs(jiffies);
+		do_gettimeofday(&(cInfo->ts));
 	    spin_unlock_bh(&cInfo->mLock);
 	}
 
@@ -1861,19 +1864,23 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 		} else {
 			kfree(pktElem);
 		}
+		do_gettimeofday(&(cInfo->ts));
+		tsnow = cInfo->ts.tv_usec;
 		_DBG(RPC_TRACE("k:handle_pkt_poll_ex_ioc cid=%d item=%x \
 				len=%d pkt=%d wait=%d\n",
 			ioc_param.clientId, (int)Item,
 			(int)ioc_param.bufInfo.bufferLen,
 			(int)Item->dataBufHandle,
-			jiffies_to_msecs(jiffies - jiffyBefore)));
+			tsnow - tsBefore));
 
 		kfree(entry);
 
 	} else {
+		do_gettimeofday(&(cInfo->ts));
+		tsnow = cInfo->ts.tv_usec;
 		_DBG(RPC_TRACE
 		    ("k:handle_pkt_poll_ex_ioc EMPTY cid=%d wait=%d\n",
-		    (int)ioc_param.clientId, jiffies_to_msecs(jiffies - jiffyBefore)));
+		     (int)ioc_param.clientId, tsnow - tsBefore));
 	}
 
 	if (copy_to_user
@@ -2353,12 +2360,14 @@ int RpcDbgListClientMsgs(RpcOutputContext_t *c)
 		if (!cInfo)
 			continue;
 
-		RpcDbgDumpStr(c, "%s cid:%d state:%s ts:%u \
-				RxData:%d Active:%d if:%d\n",
+		RpcDbgDumpStr(c,
+				"%s cid:%d state:%s ts:%u:%u RxData:%d \
+				Active:%d if:%d\n",
 				cInfo->pidName,
 				(int)clientId,
 				(cInfo->state == 1) ? "Wait" : "Active",
-				(unsigned int)cInfo->ts,
+				(unsigned int)cInfo->ts.tv_sec,
+				(unsigned int)cInfo->ts.tv_usec,
 				(int)cInfo->availData,
 				(int)cInfo->notresponding,
 				(int)cInfo->info.interfaceType);

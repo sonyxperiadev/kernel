@@ -61,7 +61,7 @@
 typedef struct {
 	UInt8 cid;
 	UInt32 status;
-	UInt32 ts;
+	struct timeval ts;
 } RpcDbgPktCidStatus_t;
 
 typedef struct {
@@ -70,7 +70,7 @@ typedef struct {
 	UInt8 context1;
 	UInt8 itype;
 	UInt16 context2;
-	UInt32 ts;
+	struct timeval ts;
 	RpcDbgPktCidStatus_t cidList[MAX_CID];
 } RpcDbgPktStatus_t;
 
@@ -82,7 +82,7 @@ typedef struct {
 	UInt32 cmd1;
 	UInt32 cmd2;
 	UInt32 pktHandle;
-	UInt32 ts;
+	struct timeval ts;
 	char data[MAX_DATA_STR + 1];
 } RpcDbgLogInfo_t;
 
@@ -125,7 +125,7 @@ void RpcDbgLogGenInfo(char *logStr, UInt8 cid, UInt32 pktHandle, UInt32 cmd1,
 	gRpcDbgGenInfoList[curIndex].cmd1 = cmd1;
 	gRpcDbgGenInfoList[curIndex].cmd2 = cmd2;
 	gRpcDbgGenInfoList[curIndex].pktHandle = pktHandle;
-	gRpcDbgGenInfoList[curIndex].ts = jiffies_to_msecs(jiffies);
+	do_gettimeofday(&(gRpcDbgGenInfoList[curIndex].ts));
 	strncpy(gRpcDbgGenInfoList[curIndex].data, logStr, MAX_DATA_STR);
 
 	/*The size is (MAX_DATA_STR + 1) */
@@ -167,7 +167,7 @@ void RpcDbgUpdatePktStateEx(UInt32 pktHandle, UInt32 pktstatus, UInt8 cid,
 	/* Set Data */
 	if (i < MAX_RPC_PACKETS) {
 		if (gRpcDbgPktStatusList[i].pktHandle == pktHandle) {
-			gRpcDbgPktStatusList[i].ts = jiffies_to_msecs(jiffies);
+			do_gettimeofday(&(gRpcDbgPktStatusList[i].ts));
 
 			if (pktstatus != PKT_STATE_NA)
 				gRpcDbgPktStatusList[i].status = pktstatus;
@@ -194,8 +194,8 @@ void RpcDbgUpdatePktStateEx(UInt32 pktHandle, UInt32 pktstatus, UInt8 cid,
 				if (k < MAX_CID) {
 					gRpcDbgPktStatusList[i].cidList[k].
 					    status = cidPktStatus;
-					gRpcDbgPktStatusList[i].cidList[k].ts =
-					    jiffies_to_msecs(jiffies);
+					do_gettimeofday(&(gRpcDbgPktStatusList
+							[i].cidList[k].ts));
 				}
 			}
 
@@ -259,9 +259,14 @@ int RbcDbgDumpGenInfo(RpcOutputContext_t *c, int *offset, int maxlimit)
 		if (gRpcDbgGenInfoList[i].type == 0)
 			break;
 
-		ret = RpcDbgDumpStr(c, "[%d] TS:%u %s cmd1:%d cmd2:%d pkt=%d\n",
-				    (unsigned int)gRpcDbgGenInfoList[i].count,
-				    (int)gRpcDbgGenInfoList[i].ts,
+		ret = RpcDbgDumpStr(c, "[%d] TS:%u:%u %s cmd1:%d  \
+					cmd2:%d pkt=%d\n",
+				    (unsigned int)gRpcDbgGenInfoList
+					[i].count,
+				    (unsigned int)gRpcDbgGenInfoList
+					[i].ts.tv_sec,
+				    (unsigned int)gRpcDbgGenInfoList
+					[i].ts.tv_usec,
 				    gRpcDbgGenInfoList[i].data,
 				    (int)gRpcDbgGenInfoList[i].cmd1,
 				    (int)gRpcDbgGenInfoList[i].cmd2,
@@ -298,10 +303,14 @@ int RpcDbgDumpPktState(RpcOutputContext_t *c, int *offset, int maxlimit)
 
 			ret =
 			    RpcDbgDumpStr(c,
-					  "pkt:%d TS:%u status:%s itype:%d c1=%d c2=0x%x\n",
-					  (unsigned int)gRpcDbgPktStatusList[i].
-					  pktHandle,
-					  (int)gRpcDbgPktStatusList[i].ts,
+					"pkt:%d TS:%u:%u status:%s itype:%d \
+					c1=%d c2=0x%x\n",
+					  (unsigned int)
+					  gRpcDbgPktStatusList[i].pktHandle,
+					  (unsigned int)
+					  gRpcDbgPktStatusList[i].ts.tv_sec,
+					  (unsigned int)
+					  gRpcDbgPktStatusList[i].ts.tv_usec,
 					  GetStatusStr(gRpcDbgPktStatusList[i].
 						       status),
 					  (int)gRpcDbgPktStatusList[i].itype,
@@ -316,12 +325,17 @@ int RpcDbgDumpPktState(RpcOutputContext_t *c, int *offset, int maxlimit)
 				    0) {
 					ret =
 					    RpcDbgDumpStr(c,
-							  "\tcid:%d TS:%u status:%s\n",
+							  "\tcid:%d TS:%u:%u status:%s\n",
 							  gRpcDbgPktStatusList
 							  [i].cidList[k].cid,
 							  (unsigned int)
 							  gRpcDbgPktStatusList
-							  [i].cidList[k].ts,
+							  [i].cidList[k].ts
+								.tv_sec,
+							  (unsigned int)
+							  gRpcDbgPktStatusList
+							  [i].cidList[k].ts
+								.tv_usec,
 							  GetStatusStr
 							  (gRpcDbgPktStatusList
 							   [i].cidList[k].
@@ -351,9 +365,10 @@ int RpcDbgDumpKthread(RpcOutputContext_t *c, int option)
 
 int RpcDbgDumpHdr(RpcOutputContext_t *c)
 {
-	RpcDbgDumpStr(c, "\nRcvCount=%d FreeCount=%d ts=%u\n", (int)recvRpcPkts,
-		      (int)freeRpcPkts, jiffies_to_msecs(jiffies));
-
+	struct timeval tv;
+	do_gettimeofday(&tv);
+	RpcDbgDumpStr(c, "\nRcvCount=%d FreeCount=%d ts=%u:%u\n",
+	(int)recvRpcPkts, (int)freeRpcPkts, tv.tv_sec, tv.tv_usec);
 	return 0;
 }
 
