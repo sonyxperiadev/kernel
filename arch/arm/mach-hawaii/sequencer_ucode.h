@@ -28,15 +28,14 @@
  * Offsets in the Sequencer code
  */
 #define VO0_HW_SEQ_START_OFF		64
-#define VO0_SET1_OFFSET			94
-#define VO0_SET2_OFFSET			96
+#define VO0_SET1_OFFSET			95
+#define VO0_SET2_OFFSET			97
 
-#define VO1_HW_SEQ_START_OFF		79
-#define VO1_SET1_OFFSET			79
-#define VO1_ZERO_PTR_OFFSET		98
-#define VO1_SET2_OFFSET			100
+#define VO1_HW_SEQ_START_OFF		80
+#define VO1_SET1_OFFSET			80
+#define VO1_ZERO_PTR_OFFSET		99
+#define VO1_SET2_OFFSET			101
 
-#define VO0_VO1_JUMP_OFFSET		24
 
 #define SW_SEQ_RD_START_OFF		2
 #define SW_SEQ_RD_SLAVE_ID_1_OFF	8

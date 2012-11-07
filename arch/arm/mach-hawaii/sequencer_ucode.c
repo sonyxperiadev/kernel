@@ -125,7 +125,17 @@ struct i2c_cmd i2c_cmd[] = {
 	{REG_ADDR, 0}, /* NOP */
 	{REG_ADDR, 0}, /* NOP */
 	{REG_ADDR, 0}, /* 63: NOP */
-	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* 64: VO0_HW_SEQ_START_OFF */
+	/*Temporary workaround for JIRA HWHAWAII-902 ( VO0 HW sequencer
+	sometimes fails to trigger for wake up voltage request and
+	MMSR continues to be in LPM when BMDM wakes up from retention)
+
+	As a temporary solution,  PC1 is set to HIGH for VO0 OTHER
+	voltage request also. This will make sure that PC1 will go HIGH
+	and MMSR voltage is restored even if HW sequencer fails to trigger
+	for wake up voltage request.
+	*/
+	{SET_PC_PINS, SET_PC_PIN_CMD(PC1)}, /* 64: VO0_HW_SEQ_START_OFF */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},
 	{REG_DATA, BSC_PAD_OUT_EN},	/* Enable pad output */
 	{REG_ADDR, 0x20},	/* Set BSC CS address */
 	{REG_DATA, START_CMD},	/* Start condition */
@@ -133,14 +143,14 @@ struct i2c_cmd i2c_cmd[] = {
 	{REG_DATA, 1},		/* Clear Start Condition */
 	{I2C_DATA, (PMU_SLAVE_ID << 1)},	/* Send Slave Address */
 	{WAIT_TIMER, WRITE_DELAY},	/* Wait ... */
-	{I2C_DATA, PMU_MSR_REG_ADDR},	/* Send CSR Reg address */
+	{I2C_DATA, PMU_MSR_REG_ADDR},	/* Send MMSR Reg address */
 	{WAIT_TIMER, WRITE_DELAY},	/*  Wait */
-	{I2C_VAR, 0},		/* 74: Write Variable voltage */
+	{I2C_VAR, 0},		/* 75: Write Variable voltage */
 	{WAIT_TIMER, VLT_CHANGE_DELAY},	/* Wait for voltage change */
 	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Register */
 	{REG_DATA, BSC_PAD_OUT_DIS},	/* Disable pad outpout */
-	{END, 0},		/*  78: -- VO0 -- End Sequence */
-	{REG_ADDR, PMU_BSC_PADCTL_REG},/* 79:VO1 SEQ: VO1_HW_SEQ_START_OFF*/
+	{END, 0},		/*  79: -- VO0 -- End Sequence */
+	{REG_ADDR, PMU_BSC_PADCTL_REG},/* 80:VO1 SEQ: VO1_HW_SEQ_START_OFF*/
 	{REG_DATA, BSC_PAD_OUT_EN},	/* Enable pad output */
 	{REG_ADDR, 0x20},	/* Set BSC CS address */
 	{REG_DATA, START_CMD},	/* Start condition */
@@ -150,20 +160,20 @@ struct i2c_cmd i2c_cmd[] = {
 	{WAIT_TIMER, WRITE_DELAY},	/* Wait ... */
 	{I2C_DATA, PMU_CSR_REG_ADDR},	/* Send CSR Reg address: fall through */
 	{WAIT_TIMER, WRITE_DELAY},	/* Wait */
-	{I2C_VAR, 0},		/* 89 : Write Variable voltage */
+	{I2C_VAR, 0},		/* 90 : Write Variable voltage */
 	{WAIT_TIMER, VLT_CHANGE_DELAY},	/* Wait for voltage change */
 	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Register */
 	{REG_DATA, BSC_PAD_OUT_DIS},	/* Disable pad outpout */
-	{END, 0},		/*  93: -- VO1 -- End Sequence */
-	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1)},/* 94:set PC low-VO0_SET1_OFFSET*/
+	{END, 0},		/*  94: -- VO1 -- End Sequence */
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1)},/* 95:set PC low-VO0_SET1_OFFSET*/
 	{END, 0},		/* End */
-	{SET_PC_PINS, SET_PC_PIN_CMD(PC1)},/* 96: set PC high-VO0_SET2_OFFSET*/
+	{SET_PC_PINS, SET_PC_PIN_CMD(PC1)},/* 97: set PC high-VO0_SET2_OFFSET*/
 	{END, 0},		/* END */
-	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC2)},/* 98:set VO1_ZERO_PTR_OFFSET*/
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC2)},/* 99:set VO1_ZERO_PTR_OFFSET*/
 	{END, 0},		/* End sequence (SET2) */
-	{SET_PC_PINS, SET_PC_PIN_CMD(PC2)},/* 100:set PC high-VO1_SET2_OFFSET*/
+	{SET_PC_PINS, SET_PC_PIN_CMD(PC2)},/* 101:set PC high-VO1_SET2_OFFSET*/
 	{WAIT_TIMER, SR_VLT_SOFT_START_DELAY}, /* Wait for voltage change */
-	{END, 0},		/*  102: -- VO1 -- End Sequence */
+	{END, 0},		/*  103: -- VO1 -- End Sequence */
 };
 
 struct i2c_cmd *i2c_cmd_buf = i2c_cmd;
