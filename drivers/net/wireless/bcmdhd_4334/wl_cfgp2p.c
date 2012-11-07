@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfgp2p.c 351769 2012-08-21 08:21:45Z $
+ * $Id: wl_cfgp2p.c 354184 2012-08-30 08:08:08Z $
  *
  */
 #include <typedefs.h>
@@ -108,6 +108,46 @@ bool wl_cfgp2p_is_p2p_action(void *frame, u32 frame_len)
 
 	return false;
 }
+
+/*
+* Currently Action frame just pass to P2P interface regardless real dst.
+* but GAS Action can be used for Hotspot2.0 as well
+* Need to distingush that it's for P2P or HS20
+*/
+#ifdef WL11U
+#define GAS_RESP_LEN		2
+#define DOUBLE_TLV_BODY_OFF	4
+#define GAS_RESP_OFFSET		4
+#define GAS_CRESP_OFFSET	5
+
+bool wl_cfgp2p_find_gas_subtype(u8 subtype, u8* data, u32 len)
+{
+	bcm_tlv_t *ie = (bcm_tlv_t *)data;
+	u8 *frame = NULL;
+	u16 id, flen;
+
+	/* Skipped first ANQP Element, if frame has anqp elemnt */
+	ie = bcm_parse_tlvs(ie, (int)len, DOT11_MNG_ADVERTISEMENT_ID);
+
+	if (ie == NULL)
+		return false;
+
+	frame = (uint8 *)ie + ie->len + TLV_HDR_LEN + GAS_RESP_LEN;
+	id = ((u16) (((frame)[1] << 8) | (frame)[0]));
+	flen = ((u16) (((frame)[3] << 8) | (frame)[2]));
+
+	/* If the contents match the OUI and the type */
+	if (flen >= WFA_OUI_LEN + 1 &&
+		id ==  P2PSD_GAS_NQP_INFOID &&
+		!bcmp(&frame[DOUBLE_TLV_BODY_OFF], (const uint8*)WFA_OUI, WFA_OUI_LEN) &&
+		subtype == frame[DOUBLE_TLV_BODY_OFF+WFA_OUI_LEN]) {
+		return true;
+	}
+
+	return false;
+}
+#endif /* WL11U */
+
 bool wl_cfgp2p_is_gas_action(void *frame, u32 frame_len)
 {
 
@@ -122,6 +162,22 @@ bool wl_cfgp2p_is_gas_action(void *frame, u32 frame_len)
 	if (sd_act_frm->category != P2PSD_ACTION_CATEGORY)
 		return false;
 
+#ifdef WL11U
+	if (sd_act_frm->action == P2PSD_ACTION_ID_GAS_IRESP)
+		return wl_cfgp2p_find_gas_subtype(P2PSD_GAS_OUI_SUBTYPE,
+			(u8 *)sd_act_frm->query_data + GAS_RESP_OFFSET,
+			frame_len);
+
+	else if (sd_act_frm->action == P2PSD_ACTION_ID_GAS_CRESP)
+		return wl_cfgp2p_find_gas_subtype(P2PSD_GAS_OUI_SUBTYPE,
+			(u8 *)sd_act_frm->query_data + GAS_CRESP_OFFSET,
+			frame_len);
+	else if (sd_act_frm->action == P2PSD_ACTION_ID_GAS_IREQ ||
+		sd_act_frm->action == P2PSD_ACTION_ID_GAS_CREQ)
+		return true;
+	else
+		return false;
+#else
 	if (sd_act_frm->action == P2PSD_ACTION_ID_GAS_IREQ ||
 		sd_act_frm->action == P2PSD_ACTION_ID_GAS_IRESP ||
 		sd_act_frm->action == P2PSD_ACTION_ID_GAS_CREQ ||
@@ -129,7 +185,7 @@ bool wl_cfgp2p_is_gas_action(void *frame, u32 frame_len)
 		return true;
 	else
 		return false;
-
+#endif /* WLC11U */
 }
 void wl_cfgp2p_print_actframe(bool tx, void *frame, u32 frame_len)
 {
@@ -143,43 +199,43 @@ void wl_cfgp2p_print_actframe(bool tx, void *frame, u32 frame_len)
 		pact_frm = (wifi_p2p_pub_act_frame_t *)frame;
 		switch (pact_frm->subtype) {
 			case P2P_PAF_GON_REQ:
-				CFGP2P_DBG(("%s P2P Group Owner Negotiation Req Frame\n",
+				CFGP2P_ACTION(("%s P2P Group Owner Negotiation Req Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_PAF_GON_RSP:
-				CFGP2P_DBG(("%s P2P Group Owner Negotiation Rsp Frame\n",
+				CFGP2P_ACTION(("%s P2P Group Owner Negotiation Rsp Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_PAF_GON_CONF:
-				CFGP2P_DBG(("%s P2P Group Owner Negotiation Confirm Frame\n",
+				CFGP2P_ACTION(("%s P2P Group Owner Negotiation Confirm Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_PAF_INVITE_REQ:
-				CFGP2P_DBG(("%s P2P Invitation Request  Frame\n",
+				CFGP2P_ACTION(("%s P2P Invitation Request  Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_PAF_INVITE_RSP:
-				CFGP2P_DBG(("%s P2P Invitation Response Frame\n",
+				CFGP2P_ACTION(("%s P2P Invitation Response Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_PAF_DEVDIS_REQ:
-				CFGP2P_DBG(("%s P2P Device Discoverability Request Frame\n",
+				CFGP2P_ACTION(("%s P2P Device Discoverability Request Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_PAF_DEVDIS_RSP:
-				CFGP2P_DBG(("%s P2P Device Discoverability Response Frame\n",
+				CFGP2P_ACTION(("%s P2P Device Discoverability Response Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_PAF_PROVDIS_REQ:
-				CFGP2P_DBG(("%s P2P Provision Discovery Request Frame\n",
+				CFGP2P_ACTION(("%s P2P Provision Discovery Request Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_PAF_PROVDIS_RSP:
-				CFGP2P_DBG(("%s P2P Provision Discovery Response Frame\n",
+				CFGP2P_ACTION(("%s P2P Provision Discovery Response Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			default:
-				CFGP2P_DBG(("%s Unknown P2P Public Action Frame\n",
+				CFGP2P_ACTION(("%s Unknown P2P Public Action Frame\n",
 					(tx)? "TX": "RX"));
 
 		}
@@ -188,23 +244,23 @@ void wl_cfgp2p_print_actframe(bool tx, void *frame, u32 frame_len)
 		act_frm = (wifi_p2p_action_frame_t *)frame;
 		switch (act_frm->subtype) {
 			case P2P_AF_NOTICE_OF_ABSENCE:
-				CFGP2P_DBG(("%s P2P Notice of Absence Frame\n",
+				CFGP2P_ACTION(("%s P2P Notice of Absence Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_AF_PRESENCE_REQ:
-				CFGP2P_DBG(("%s P2P Presence Request Frame\n",
+				CFGP2P_ACTION(("%s P2P Presence Request Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_AF_PRESENCE_RSP:
-				CFGP2P_DBG(("%s P2P Presence Response Frame\n",
+				CFGP2P_ACTION(("%s P2P Presence Response Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			case P2P_AF_GO_DISC_REQ:
-				CFGP2P_DBG(("%s P2P Discoverability Request Frame\n",
+				CFGP2P_ACTION(("%s P2P Discoverability Request Frame\n",
 					(tx)? "TX": "RX"));
 				break;
 			default:
-				CFGP2P_DBG(("%s Unknown P2P Action Frame\n",
+				CFGP2P_ACTION(("%s Unknown P2P Action Frame\n",
 					(tx)? "TX": "RX"));
 		}
 
@@ -212,29 +268,28 @@ void wl_cfgp2p_print_actframe(bool tx, void *frame, u32 frame_len)
 		sd_act_frm = (wifi_p2psd_gas_pub_act_frame_t *)frame;
 		switch (sd_act_frm->action) {
 			case P2PSD_ACTION_ID_GAS_IREQ:
-				CFGP2P_DBG(("%s P2P GAS Initial Request\n",
+				CFGP2P_ACTION(("%s P2P GAS Initial Request\n",
 					(tx)? "TX" : "RX"));
 				break;
 			case P2PSD_ACTION_ID_GAS_IRESP:
-				CFGP2P_DBG(("%s P2P GAS Initial Response\n",
+				CFGP2P_ACTION(("%s P2P GAS Initial Response\n",
 					(tx)? "TX" : "RX"));
 				break;
 			case P2PSD_ACTION_ID_GAS_CREQ:
-				CFGP2P_DBG(("%s P2P GAS Comback Request\n",
+				CFGP2P_ACTION(("%s P2P GAS Comback Request\n",
 					(tx)? "TX" : "RX"));
 				break;
 			case P2PSD_ACTION_ID_GAS_CRESP:
-				CFGP2P_DBG(("%s P2P GAS Comback Response\n",
+				CFGP2P_ACTION(("%s P2P GAS Comback Response\n",
 					(tx)? "TX" : "RX"));
 				break;
 			default:
-				CFGP2P_DBG(("%s Unknown P2P GAS Frame\n",
+				CFGP2P_ACTION(("%s Unknown P2P GAS Frame\n",
 					(tx)? "TX" : "RX"));
 		}
 
 
 	}
-
 }
 
 /*
@@ -353,9 +408,8 @@ wl_cfgp2p_ifadd(struct wl_priv *wl, struct ether_addr *mac, u8 if_type,
 	ifreq.chspec = chspec;
 	memcpy(ifreq.addr.octet, mac->octet, sizeof(ifreq.addr.octet));
 
-	CFGP2P_DBG(("---wl p2p_ifadd %02x:%02x:%02x:%02x:%02x:%02x %s %u\n",
-	    ifreq.addr.octet[0], ifreq.addr.octet[1], ifreq.addr.octet[2],
-		ifreq.addr.octet[3], ifreq.addr.octet[4], ifreq.addr.octet[5],
+	CFGP2P_DBG(("---wl p2p_ifadd "MACDBG" %s %u\n",
+		STR_TO_MACD(ifreq.addr.octet),
 		(if_type == WL_P2P_IF_GO) ? "go" : "client",
 	        (chspec & WL_CHANSPEC_CHAN_MASK) >> WL_CHANSPEC_CHAN_SHIFT));
 
@@ -383,9 +437,8 @@ wl_cfgp2p_ifdisable(struct wl_priv *wl, struct ether_addr *mac)
 	s32 ret;
 	struct net_device *netdev = wl_to_prmry_ndev(wl);
 
-	CFGP2P_INFO(("------primary idx %d : wl p2p_ifdis %02x:%02x:%02x:%02x:%02x:%02x\n",
-	    netdev->ifindex, mac->octet[0], mac->octet[1], mac->octet[2],
-	    mac->octet[3], mac->octet[4], mac->octet[5]));
+	CFGP2P_INFO(("------primary idx %d : wl p2p_ifdis "MACDBG"\n",
+		netdev->ifindex, STR_TO_MACD(mac->octet)));
 	ret = wldev_iovar_setbuf(netdev, "p2p_ifdis", mac, sizeof(*mac),
 		wl->ioctl_buf, WLC_IOCTL_MAXLEN, &wl->ioctl_buf_sync);
 	if (unlikely(ret < 0)) {
@@ -405,9 +458,8 @@ wl_cfgp2p_ifdel(struct wl_priv *wl, struct ether_addr *mac)
 	s32 ret;
 	struct net_device *netdev = wl_to_prmry_ndev(wl);
 
-	CFGP2P_INFO(("------primary idx %d : wl p2p_ifdel %02x:%02x:%02x:%02x:%02x:%02x\n",
-	    netdev->ifindex, mac->octet[0], mac->octet[1], mac->octet[2],
-	    mac->octet[3], mac->octet[4], mac->octet[5]));
+	CFGP2P_INFO(("------primary idx %d : wl p2p_ifdel "MACDBG"\n",
+	    netdev->ifindex, STR_TO_MACD(mac->octet)));
 	ret = wldev_iovar_setbuf(netdev, "p2p_ifdel", mac, sizeof(*mac),
 		wl->ioctl_buf, WLC_IOCTL_MAXLEN, &wl->ioctl_buf_sync);
 	if (unlikely(ret < 0)) {
@@ -435,10 +487,8 @@ wl_cfgp2p_ifchange(struct wl_priv *wl, struct ether_addr *mac, u8 if_type,
 	ifreq.chspec = chspec;
 	memcpy(ifreq.addr.octet, mac->octet, sizeof(ifreq.addr.octet));
 
-	CFGP2P_INFO(("---wl p2p_ifchange %02x:%02x:%02x:%02x:%02x:%02x %s %u"
-		" chanspec 0x%04x\n",
-		ifreq.addr.octet[0], ifreq.addr.octet[1], ifreq.addr.octet[2],
-		ifreq.addr.octet[3], ifreq.addr.octet[4], ifreq.addr.octet[5],
+	CFGP2P_INFO(("---wl p2p_ifchange "MACDBG" %s %u"
+		" chanspec 0x%04x\n", STR_TO_MACD(ifreq.addr.octet),
 		(if_type == WL_P2P_IF_GO) ? "go" : "client",
 		(chspec & WL_CHANSPEC_CHAN_MASK) >> WL_CHANSPEC_CHAN_SHIFT,
 		ifreq.chspec));
@@ -470,9 +520,7 @@ wl_cfgp2p_ifidx(struct wl_priv *wl, struct ether_addr *mac, s32 *index)
 	u8 getbuf[64];
 	struct net_device *dev = wl_to_prmry_ndev(wl);
 
-	CFGP2P_INFO(("---wl p2p_if %02x:%02x:%02x:%02x:%02x:%02x\n",
-	    mac->octet[0], mac->octet[1], mac->octet[2],
-	    mac->octet[3], mac->octet[4], mac->octet[5]));
+	CFGP2P_INFO(("---wl p2p_if "MACDBG"\n", STR_TO_MACD(mac->octet)));
 
 	ret = wldev_iovar_getbuf_bsscfg(dev, "p2p_if", mac, sizeof(*mac), getbuf,
 		sizeof(getbuf), wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_PRIMARY), NULL);
@@ -673,13 +721,15 @@ wl_cfgp2p_enable_discovery(struct wl_priv *wl, struct net_device *dev,
 		CFGP2P_ERR((" wsec error %d\n", ret));
 	}
 set_ie:
-	ret = wl_cfgp2p_set_management_ie(wl, dev,
-	            bssidx,
-	            VNDR_IE_PRBREQ_FLAG, ie, ie_len);
+	if (ie_len) {
+		ret = wl_cfgp2p_set_management_ie(wl, dev,
+			bssidx,
+			VNDR_IE_PRBREQ_FLAG, ie, ie_len);
 
-	if (unlikely(ret < 0)) {
-		CFGP2P_ERR(("set probreq ie occurs error %d\n", ret));
-		goto exit;
+		if (unlikely(ret < 0)) {
+			CFGP2P_ERR(("set probreq ie occurs error %d\n", ret));
+			goto exit;
+		}
 	}
 exit:
 	return ret;
@@ -741,10 +791,8 @@ wl_cfgp2p_escan(struct wl_priv *wl, struct net_device *dev, u16 active,
 #define P2PAPI_SCAN_NPROBES 1
 #define P2PAPI_SCAN_DWELL_TIME_MS 80
 #define P2PAPI_SCAN_SOCIAL_DWELL_TIME_MS 40
-#define P2PAPI_SCAN_ASSOC_TIME_MS 40
 #define P2PAPI_SCAN_HOME_TIME_MS 60
-#define P2PAPI_SCAN_NPROBS_TIME_MS 20
-#define P2PAPI_SCAN_NPROBS_MIN_TIME_MS	15
+#define P2PAPI_SCAN_NPROBS_TIME_MS 30
 #define P2PAPI_SCAN_AF_SEARCH_DWELL_TIME_MS 100
 
 	struct net_device *pri_dev = wl_to_p2p_bss_ndev(wl, P2PAPI_BSSCFG_PRIMARY);
@@ -805,12 +853,15 @@ wl_cfgp2p_escan(struct wl_priv *wl, struct net_device *dev, u16 active,
 
 	eparams->params.home_time = htod32(P2PAPI_SCAN_HOME_TIME_MS);
 
-	if (num_chans == SOCIAL_CHAN_CNT)
+	/* SOCIAL_CHAN_CNT + 1 takes care of the Progressive scan supported by
+	 * the supplicant
+	 */
+	if ((num_chans == SOCIAL_CHAN_CNT) || (num_chans == SOCIAL_CHAN_CNT + 1))
 		eparams->params.active_time = htod32(P2PAPI_SCAN_SOCIAL_DWELL_TIME_MS);
 	else if (num_chans == AF_PEER_SEARCH_CNT)
 		eparams->params.active_time = htod32(P2PAPI_SCAN_AF_SEARCH_DWELL_TIME_MS);
 	else if (wl_get_drv_status_all(wl, CONNECTED))
-		eparams->params.active_time = P2PAPI_SCAN_ASSOC_TIME_MS;
+		eparams->params.active_time = -1;
 	else
 		eparams->params.active_time = htod32(P2PAPI_SCAN_DWELL_TIME_MS);
 	eparams->params.nprobes = htod32((eparams->params.active_time /
@@ -818,14 +869,13 @@ wl_cfgp2p_escan(struct wl_priv *wl, struct net_device *dev, u16 active,
 
 	/* Override scan params to find a peer for a connection */
 	if (num_chans == 1) {
-		eparams->params.active_time = htod32(200);
-		eparams->params.home_time = 0;
-		eparams->params.nprobes = eparams->params.active_time /
-			P2PAPI_SCAN_NPROBS_MIN_TIME_MS;
+		eparams->params.active_time = htod32(WL_SCAN_CONNECT_DWELL_TIME_MS);
+		eparams->params.nprobes = htod32(eparams->params.active_time /
+			WL_SCAN_JOIN_PROBE_INTERVAL_MS);
 	}
+
 	if (eparams->params.nprobes <= 0)
 		eparams->params.nprobes = 1;
-
 	CFGP2P_DBG(("nprobes # %d, active_time %d\n",
 		eparams->params.nprobes, eparams->params.active_time));
 	eparams->params.passive_time = htod32(-1);
@@ -1397,7 +1447,12 @@ wl_cfgp2p_listen_complete(struct wl_priv *wl, struct net_device *ndev,
             const wl_event_msg_t *e, void *data)
 {
 	s32 ret = BCME_OK;
-	struct net_device *netdev = wl_to_prmry_ndev(wl);
+	struct net_device *netdev;
+	if (wl->p2p_net == ndev) {
+		netdev = wl_to_prmry_ndev(wl);
+	} else {
+		netdev = ndev;
+	}
 	CFGP2P_DBG((" Enter\n"));
 	if (wl_get_p2p_status(wl, LISTEN_EXPIRED) == 0) {
 		wl_set_p2p_status(wl, LISTEN_EXPIRED);
@@ -1412,12 +1467,12 @@ wl_cfgp2p_listen_complete(struct wl_priv *wl, struct net_device *ndev,
 		}
 #ifdef WL_CFG80211_SYNC_GON
 		else if (wl_get_drv_status_all(wl, WAITING_NEXT_ACT_FRM_LISTEN)) {
-			wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM_LISTEN, ndev);
+			wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM_LISTEN, netdev);
 			WL_DBG(("Listen DONE and wake up wait_next_af !!(%d)\n",
 				jiffies_to_msecs(jiffies - wl->af_tx_sent_jiffies)));
 
 			if (wl_get_drv_status_all(wl, WAITING_NEXT_ACT_FRM))
-				wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM, ndev);
+				wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM, netdev);
 
 			complete(&wl->wait_next_af);
 		}
@@ -1430,16 +1485,17 @@ wl_cfgp2p_listen_complete(struct wl_priv *wl, struct net_device *ndev,
 			wl_get_drv_status_all(wl, FAKE_REMAINING_ON_CHANNEL)) {
 #endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
 			WL_DBG(("Listen DONE for ramain on channel expired\n"));
-			wl_clr_drv_status(wl, REMAINING_ON_CHANNEL, ndev);
+			wl_clr_drv_status(wl, REMAINING_ON_CHANNEL, netdev);
 #ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
-			wl_clr_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, ndev);
+			wl_clr_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, netdev);
 #endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
 			if (ndev && (ndev->ieee80211_ptr != NULL)) {
 				cfg80211_remain_on_channel_expired(ndev, wl->last_roc_id,
 					&wl->remain_on_chan, wl->remain_on_chan_type, GFP_KERNEL);
 			}
 		}
-		if (wl_add_remove_eventmsg(netdev, WLC_E_P2P_PROBREQ_MSG, false) != BCME_OK) {
+		if (wl_add_remove_eventmsg(wl_to_prmry_ndev(wl),
+			WLC_E_P2P_PROBREQ_MSG, false) != BCME_OK) {
 			CFGP2P_ERR((" failed to unset WLC_E_P2P_PROPREQ_MSG\n"));
 		}
 	} else
@@ -2257,13 +2313,34 @@ static int wl_cfgp2p_if_open(struct net_device *net)
 
 static int wl_cfgp2p_if_stop(struct net_device *net)
 {
+	extern struct wl_priv *wlcfg_drv_priv;
+	struct wl_priv *wl = NULL;
+	unsigned long flags;
 	struct wireless_dev *wdev = net->ieee80211_ptr;
-
+	int clear_flag = 0;
 	if (!wdev)
 		return -EINVAL;
 
+	WL_TRACE(("Enter\n"));
+	wl = wlcfg_drv_priv;
+	if (!wl)
+		return -EINVAL;
+	spin_lock_irqsave(&wl->cfgdrv_lock, flags);
+	if (wl->scan_request && wl->scan_request->dev == net) {
+		cfg80211_scan_done(wl->scan_request, true);
+		wl->scan_request = NULL;
+		clear_flag = 1;
+	}
+	spin_unlock_irqrestore(&wl->cfgdrv_lock, flags);
+	if (clear_flag)
+		wl_clr_drv_status(wl, SCANNING, net);
 	wdev->wiphy->interface_modes = (wdev->wiphy->interface_modes)
 					& (~(BIT(NL80211_IFTYPE_P2P_CLIENT)|
 					BIT(NL80211_IFTYPE_P2P_GO)));
+#if defined(CUSTOMER_HW4)
+	if (net->flags & IFF_UP)
+		net->flags &= ~IFF_UP;
+#endif
+
 	return 0;
 }

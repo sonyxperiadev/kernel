@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfgp2p.h 346820 2012-07-24 13:53:12Z $
+ * $Id: wl_cfgp2p.h 354184 2012-08-30 08:08:08Z $
  */
 #ifndef _wl_cfgp2p_h_
 #define _wl_cfgp2p_h_
@@ -133,8 +133,6 @@ enum wl_cfgp2p_status {
 
 /* dword align allocation */
 #define WLC_IOCTL_MAXLEN 8192
-#define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
-#define MACSTR "%02x:%02x:%02x:%02x:%02x:%02x"
 
 #define CFGP2P_ERR(args)									\
 	do {										\
@@ -154,6 +152,14 @@ enum wl_cfgp2p_status {
 	do {									\
 		if (wl_dbg_level & WL_DBG_DBG) {			\
 			printk(KERN_DEBUG "CFGP2P-DEBUG) %s :", __func__);	\
+			printk args;							\
+		}									\
+	} while (0)
+
+#define	CFGP2P_ACTION(args)								\
+	do {									\
+		if (wl_dbg_level & WL_DBG_P2P_ACTION) {			\
+			printk(KERN_DEBUG "CFGP2P-ACTION) %s :", __func__);	\
 			printk args;							\
 		}									\
 	} while (0)

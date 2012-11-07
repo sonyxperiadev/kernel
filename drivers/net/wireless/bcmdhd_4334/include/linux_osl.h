@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: linux_osl.h 326751 2012-04-10 20:13:19Z $
+ * $Id: linux_osl.h 352246 2012-08-22 05:42:04Z $
  */
 
 #ifndef _linux_osl_h_
@@ -166,7 +166,7 @@ extern int osl_error(int bcmerror);
 #include <linux/kernel.h>       
 #include <linux/string.h>       
 
-#define OSL_SYSUPTIME()		((uint32)jiffies * (1000 / HZ))
+#define OSL_SYSUPTIME()		((uint32)jiffies_to_msecs(jiffies))
 #define	printf(fmt, args...)	printk(fmt , ## args)
 #include <linux/kernel.h>	
 #include <linux/string.h>	

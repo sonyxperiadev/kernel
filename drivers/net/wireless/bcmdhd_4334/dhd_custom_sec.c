@@ -41,6 +41,109 @@ struct dhd_info;
 extern int _dhd_set_mac_address(struct dhd_info *dhd,
 	int ifidx, struct ether_addr *addr);
 
+struct cntry_locales_custom {
+	char iso_abbrev[WLC_CNTRY_BUF_SZ]; /* ISO 3166-1 country abbreviation */
+	char custom_locale[WLC_CNTRY_BUF_SZ]; /* Custom firmware locale */
+	int32 custom_locale_rev; /* Custom local revisin default -1 */
+};
+
+/* Locale table for sec */
+const struct cntry_locales_custom translate_custom_table[] = {
+#ifdef BCM4334_CHIP
+	{"",   "XZ", 11},  /* Universal if Country code is unknown or empty */
+#endif
+	{"AE", "AE", 1},
+	{"AR", "AR", 1},
+	{"AT", "AT", 1},
+	{"AU", "AU", 2},
+	{"BE", "BE", 1},
+	{"BG", "BG", 1},
+	{"BN", "BN", 1},
+	{"CA", "CA", 2},
+	{"CH", "CH", 1},
+	{"CN", "CN", 0},
+	{"CY", "CY", 1},
+	{"CZ", "CZ", 1},
+	{"DE", "DE", 3},
+	{"DK", "DK", 1},
+	{"EE", "EE", 1},
+	{"ES", "ES", 1},
+	{"FI", "FI", 1},
+	{"FR", "FR", 1},
+	{"GB", "GB", 1},
+	{"GR", "GR", 1},
+	{"HR", "HR", 1},
+	{"HU", "HU", 1},
+	{"IE", "IE", 1},
+	{"IS", "IS", 1},
+	{"IT", "IT", 1},
+	{"JP", "JP", 5},
+	{"KR", "KR", 24},
+	{"KW", "KW", 1},
+	{"LI", "LI", 1},
+	{"LT", "LT", 1},
+	{"LU", "LU", 1},
+	{"LV", "LV", 1},
+	{"MA", "MA", 1},
+	{"MT", "MT", 1},
+	{"MX", "MX", 1},
+	{"NL", "NL", 1},
+	{"NO", "NO", 1},
+	{"PL", "PL", 1},
+	{"PT", "PT", 1},
+	{"PY", "PY", 1},
+	{"RO", "RO", 1},
+	{"SE", "SE", 1},
+	{"SI", "SI", 1},
+	{"SK", "SK", 1},
+	{"TR", "TR", 7},
+	{"TW", "TW", 2},
+	{"IR", "XZ", 11},	/* Universal if Country code is IRAN, (ISLAMIC REPUBLIC OF) */
+	{"SD", "XZ", 11},	/* Universal if Country code is SUDAN */
+	{"SY", "XZ", 11},	/* Universal if Country code is SYRIAN ARAB REPUBLIC */
+	{"GL", "XZ", 11},	/* Universal if Country code is GREENLAND */
+	{"PS", "XZ", 11},	/* Universal if Country code is PALESTINIAN TERRITORY, OCCUPIED */
+	{"TL", "XZ", 11},	/* Universal if Country code is TIMOR-LESTE (EAST TIMOR) */
+	{"MH", "XZ", 11},	/* Universal if Country code is MARSHALL ISLANDS */
+	{"PK", "XZ", 11},	/* Universal if Country code is PAKISTAN */
+#ifdef BCM4334_CHIP
+	{"RU", "RU", 5},
+	{"SG", "SG", 4},
+	{"US", "US", 46}
+#endif
+#ifdef BCM4330_CHIP
+	{"RU", "RU", 1},
+	{"US", "US", 5}
+#endif
+};
+
+/* Customized Locale convertor
+*  input : ISO 3166-1 country abbreviation
+*  output: customized cspec
+*/
+void get_customized_country_code(char *country_iso_code, wl_country_t *cspec)
+{
+	int size, i;
+
+	size = ARRAYSIZE(translate_custom_table);
+
+	if (cspec == 0)
+		 return;
+
+	if (size == 0)
+		 return;
+
+	for (i = 0; i < size; i++) {
+		if (strcmp(country_iso_code, translate_custom_table[i].iso_abbrev) == 0) {
+			memcpy(cspec->ccode,
+				translate_custom_table[i].custom_locale, WLC_CNTRY_BUF_SZ);
+			cspec->rev = translate_custom_table[i].custom_locale_rev;
+			return;
+		}
+	}
+	return;
+}
+
 #ifdef SLP_PATH
 #define CIDINFO "/opt/etc/.cid.info"
 #define PSMINFO "/opt/etc/.psm.info"
@@ -49,11 +152,11 @@ extern int _dhd_set_mac_address(struct dhd_info *dhd,
 #define	REVINFO "/data/.rev"
 #else
 #define MACINFO "/data/misc/wifi/.mac.info"
-#define MACINFO_EFS "/efs/wifi/.mac.info"
-#define NVMACINFO "/data/misc/wifi/.nvmac.info"
-#define	REVINFO "/data/misc/wifi/.rev"
-#define CIDINFO "/data/misc/wifi/.cid.info"
-#define PSMINFO "/data/misc/wifi/.psm.info"
+#define MACINFO_EFS  MACINFO
+#define NVMACINFO "/data/.nvmac.info"
+#define	REVINFO "/data/.rev"
+#define CIDINFO "/data/.cid.info"
+#define PSMINFO "/data/.psm.info"
 #endif /* SLP_PATH */
 
 #ifdef READ_MACADDR

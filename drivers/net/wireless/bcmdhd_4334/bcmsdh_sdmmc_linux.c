@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_sdmmc_linux.c 351757 2012-08-21 07:51:23Z $
+ * $Id: bcmsdh_sdmmc_linux.c 353908 2012-08-29 08:09:02Z $
  */
 
 #include <typedefs.h>
@@ -379,7 +379,7 @@ static int __init
 bcmsdh_module_init(void)
 {
 	int error = 0;
-	sdio_function_init();
+	error = sdio_function_init();
 	return error;
 }
 

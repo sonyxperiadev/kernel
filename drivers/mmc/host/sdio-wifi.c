@@ -216,7 +216,6 @@ int bcm_sdiowl_init(int onoff)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -224,14 +223,12 @@ int bcm_sdiowl_init(int onoff)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT1;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -239,7 +236,6 @@ int bcm_sdiowl_init(int onoff)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -247,7 +243,6 @@ int bcm_sdiowl_init(int onoff)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -255,14 +250,12 @@ int bcm_sdiowl_init(int onoff)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=1;
 	SdioPinCfgs.reg.b.pull_up=0;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_LCDTE;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=0;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs); 
 
 
@@ -382,7 +375,6 @@ void bcm_sdiowl_term(void)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=1;
 	SdioPinCfgs.reg.b.pull_up=0;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -390,14 +382,12 @@ void bcm_sdiowl_term(void)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=1;
 	SdioPinCfgs.reg.b.pull_up=0;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT1;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=1;
 	SdioPinCfgs.reg.b.pull_up=0;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -405,7 +395,6 @@ void bcm_sdiowl_term(void)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=1;
 	SdioPinCfgs.reg.b.pull_up=0;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -413,14 +402,12 @@ void bcm_sdiowl_term(void)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=1;
 	SdioPinCfgs.reg.b.pull_up=0;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT4;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=0;
 	SdioPinCfgs.reg.b.pull_up=1;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -428,7 +415,6 @@ void bcm_sdiowl_term(void)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=1;
 	SdioPinCfgs.reg.b.pull_up=0;
-	SdioPinCfgs.reg.b.drv_sth=3;
 	pinmux_set_pin_config(&SdioPinCfgs); 
 
 

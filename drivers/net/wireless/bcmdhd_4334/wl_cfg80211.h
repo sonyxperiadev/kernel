@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfg80211.h 351474 2012-08-19 14:32:03Z $
+ * $Id: wl_cfg80211.h 353885 2012-08-29 05:21:34Z $
  */
 
 #ifndef _wl_cfg80211_h_
@@ -52,7 +52,7 @@ struct wl_ibss;
 #define dtohchanspec(i) i
 
 #define WL_DBG_NONE	0
-#define WL_DBG_TRACE2	(1 << 5)
+#define WL_DBG_P2P_ACTION (1 << 5)
 #define WL_DBG_TRACE	(1 << 4)
 #define WL_DBG_SCAN 	(1 << 3)
 #define WL_DBG_DBG 	(1 << 2)
@@ -110,16 +110,20 @@ do {									\
 		printk args;							\
 	}									\
 } while (0)
-#ifdef WL_TRACE2
-#undef WL_TRACE2
+#ifdef WL_TRACE_HW4
+#undef WL_TRACE_HW4
 #endif
-#define	WL_TRACE2(args)								\
-do {									\
-	if (wl_dbg_level & WL_DBG_TRACE || wl_dbg_level & WL_DBG_TRACE2) {			\
-		printk(KERN_INFO "CFG80211-TRACE2) %s :", __func__);	\
-		printk args;							\
-	}									\
+#ifdef CUSTOMER_HW4
+#define	WL_TRACE_HW4(args)					\
+do {										\
+	if (wl_dbg_level & WL_DBG_ERR) {				\
+			printk(KERN_INFO "CFG80211-TRACE) %s : ", __func__);	\
+			printk args;						\
+		} 								\
 } while (0)
+#else
+#define	WL_TRACE_HW4			WL_TRACE
+#endif /* CUSTOMER_HW4 */
 #if (WL_DBG_LEVEL > 0)
 #define	WL_DBG(args)								\
 do {									\
@@ -153,6 +157,7 @@ do {									\
 #define WL_LONG_DWELL_TIME 	1000
 #define IFACE_MAX_CNT 		2
 #define WL_SCAN_CONNECT_DWELL_TIME_MS 200
+#define WL_SCAN_JOIN_PROBE_INTERVAL_MS 20
 #define WL_AF_TX_MAX_RETRY 	5
 
 #define WL_SCAN_TIMER_INTERVAL_MS	8000 /* Scan timeout */
@@ -469,6 +474,11 @@ struct parsed_ies {
 	u32 wpa2_ie_len;
 };
 
+#ifdef WL11U
+/* Max length of Interworking element */
+#define IW_IES_MAX_BUF_LEN 		9
+#endif
+
 /* private data of cfg80211 interface */
 struct wl_priv {
 	struct wireless_dev *wdev;	/* representing wl cfg80211 device */
@@ -561,6 +571,11 @@ struct wl_priv {
 		struct net_info *_net_info, enum wl_status state, bool set);
 	unsigned long interrested_state;
 	wlc_ssid_t hostapd_ssid;
+#ifdef WL11U
+	bool wl11u;
+	u8 iw_ie[IW_IES_MAX_BUF_LEN];
+	u32 iw_ie_len;
+#endif /* WL11U */
 };
 
 

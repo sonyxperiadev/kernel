@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_dbg.h 350488 2012-08-14 04:36:26Z $
+ * $Id: dhd_dbg.h 353490 2012-08-27 21:10:02Z $
  */
 
 #ifndef _dhd_dbg_
@@ -38,7 +38,6 @@
 #define DHD_ERROR(args)		do {if ((dhd_msg_level & DHD_ERROR_VAL) && USE_NET_RATELIMIT) \
 								printf args;} while (0)
 #define DHD_TRACE(args)		do {if (dhd_msg_level & DHD_TRACE_VAL) printf args;} while (0)
-#define DHD_TRACE2(args)	do {if (dhd_msg_level & DHD_TRACE2_VAL) printf args;} while (0)
 #define DHD_INFO(args)		do {if (dhd_msg_level & DHD_INFO_VAL) printf args;} while (0)
 #define DHD_DATA(args)		do {if (dhd_msg_level & DHD_DATA_VAL) printf args;} while (0)
 #define DHD_CTL(args)		do {if (dhd_msg_level & DHD_CTL_VAL) printf args;} while (0)
@@ -53,9 +52,14 @@
 #define DHD_ARPOE(args)		do {if (dhd_msg_level & DHD_ARPOE_VAL) printf args;} while (0)
 #define DHD_REORDER(args)	do {if (dhd_msg_level & DHD_REORDER_VAL) printf args;} while (0)
 
+#ifdef CUSTOMER_HW4
+#define DHD_TRACE_HW4	DHD_ERROR
+#else
+#define DHD_TRACE_HW4	DHD_TRACE
+#endif
+
 #define DHD_ERROR_ON()		(dhd_msg_level & DHD_ERROR_VAL)
 #define DHD_TRACE_ON()		(dhd_msg_level & DHD_TRACE_VAL)
-#define DHD_TRACE2_ON()		(dhd_msg_level & DHD_TRACE2_VAL)
 #define DHD_INFO_ON()		(dhd_msg_level & DHD_INFO_VAL)
 #define DHD_DATA_ON()		(dhd_msg_level & DHD_DATA_VAL)
 #define DHD_CTL_ON()		(dhd_msg_level & DHD_CTL_VAL)
@@ -74,7 +78,6 @@
 
 #define DHD_ERROR(args)		do {if (USE_NET_RATELIMIT) printf args;} while (0)
 #define DHD_TRACE(args)
-#define DHD_TRACE2(args)
 #define DHD_INFO(args)
 #define DHD_DATA(args)
 #define DHD_CTL(args)
@@ -89,9 +92,14 @@
 #define DHD_ARPOE(args)
 #define DHD_REORDER(args)
 
+#ifdef CUSTOMER_HW4
+#define DHD_TRACE_HW4	DHD_ERROR
+#else
+#define DHD_TRACE_HW4	DHD_TRACE
+#endif
+
 #define DHD_ERROR_ON()		0
 #define DHD_TRACE_ON()		0
-#define DHD_TRACE2_ON()		0
 #define DHD_INFO_ON()		0
 #define DHD_DATA_ON()		0
 #define DHD_CTL_ON()		0

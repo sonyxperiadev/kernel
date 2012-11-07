@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_sdio.c 349101 2012-08-07 01:19:08Z $
+ * $Id: dhd_sdio.c 354028 2012-08-29 20:08:39Z $
  */
 
 #include <typedefs.h>
@@ -819,47 +819,40 @@ dhdsdio_clk_kso_enab(dhd_bus_t *bus, bool on)
 	int err = 0;
 	int try_cnt = 0;
 
+	KSO_DBG(("%s> op:%s\n", __FUNCTION__, (on ? "KSO_SET" : "KSO_CLR")));
+
 	wr_val |= (on << SBSDIO_FUNC1_SLEEPCSR_KSO_SHIFT);
+
+	bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_SLEEPCSR, wr_val, &err);
 
 	if (on) {
 		cmp_val = SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |  SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK;
 		bmask = cmp_val;
 
-#ifdef DOEM_ANDROID
 		msleep(3);
-#else
-		OSL_DELAY(1000);
-#endif
-
-		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_SLEEPCSR, wr_val, &err);
 
 	} else {
-		/*  turn off  KSO  */
+		/*  Put device to sleep, turn off  KSO  */
 		cmp_val = 0;
 		bmask = SBSDIO_FUNC1_SLEEPCSR_KSO_MASK;
 	}
 
 	do {
-		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_SLEEPCSR, wr_val, &err);
-
-#ifdef DOEM_ANDROID
-		msleep(1);
-#else
-		OSL_DELAY(1000);
-#endif
 		rd_val = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_SLEEPCSR, &err);
 		if (((rd_val & bmask) == cmp_val) && !err)
 			break;
 
+		KSO_DBG(("%s> KSO wr/rd retry:%d, ERR:%x \n", __FUNCTION__, try_cnt, err));
+		OSL_DELAY(50);
+
+		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_SLEEPCSR, wr_val, &err);
+
 	} while (try_cnt++ < MAX_KSO_ATTEMPTS);
 
 
-	if (on && try_cnt > 1) {
-		KSO_DBG(("%s> >>>!!! KSO SET re-tries:%d <<<!!!\n",
-			__FUNCTION__, try_cnt));
-	} else {
-		KSO_DBG(("%s> >>>!!! KSO CLR re-tries:%d <<<!!!\n",
-			__FUNCTION__, try_cnt));
+	if (try_cnt > 1) {
+		KSO_DBG(("%s> op:%s, try_cnt:%d, rd_val:%x, ERR:%x \n",
+			__FUNCTION__, (on ? "KSO_SET" : "KSO_CLR"), try_cnt, rd_val, err));
 	}
 
 	if (try_cnt > MAX_KSO_ATTEMPTS)  {
@@ -1081,6 +1074,8 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 static int
 dhdsdio_htclk(dhd_bus_t *bus, bool on, bool pendok)
 {
+#define HT_AVAIL_ERROR_MAX 10
+	static int ht_avail_error = 0;
 	int err;
 	uint8 clkctl, clkreq, devctl;
 	bcmsdh_info_t *sdh;
@@ -1113,8 +1108,18 @@ dhdsdio_htclk(dhd_bus_t *bus, bool on, bool pendok)
 
 		bcmsdh_cfg_write(sdh, SDIO_FUNC_1, SBSDIO_FUNC1_CHIPCLKCSR, clkreq, &err);
 		if (err) {
-			DHD_ERROR(("%s: HT Avail request error: %d\n", __FUNCTION__, err));
-			return BCME_ERROR;
+			ht_avail_error++;
+			if (ht_avail_error < HT_AVAIL_ERROR_MAX) {
+				DHD_ERROR(("%s: HT Avail request error: %d\n", __FUNCTION__, err));
+			}
+
+		else {
+			if (ht_avail_error == HT_AVAIL_ERROR_MAX)
+				dhd_os_send_hang_message(bus->dhd);
+		}
+return BCME_ERROR;
+		} else {
+			ht_avail_error = 0;
 		}
 
 		if (pendok &&
@@ -3881,7 +3886,6 @@ dhdsdio_download_state(dhd_bus_t *bus, bool enter)
 			DHD_ERROR(("%s: could not write vars to RAM\n", __FUNCTION__));
 			goto fail;
 		}
-
 		/* Enable remap before ARM reset but after vars.
 		 * No backplane access in remap mode
 		 */
@@ -3895,7 +3899,6 @@ dhdsdio_download_state(dhd_bus_t *bus, bool enter)
 			goto fail;
 		}
 		W_SDREG(0xFFFFFFFF, &bus->regs->intstatus, retries);
-
 
 		if (!(si_setcore(bus->sih, ARM7S_CORE_ID, 0)) &&
 		    !(si_setcore(bus->sih, ARMCM3_CORE_ID, 0))) {
@@ -4207,6 +4210,7 @@ dhd_bus_init(dhd_pub_t *dhdp, bool enforce_mutex)
 	dhdsdio_clkctl(bus, CLK_AVAIL, FALSE);
 	if (bus->clkstate != CLK_AVAIL) {
 		DHD_ERROR(("%s: clock state is wrong. state = %d\n", __FUNCTION__, bus->clkstate));
+		ret = -1;
 		goto exit;
 	}
 
@@ -4242,6 +4246,7 @@ dhd_bus_init(dhd_pub_t *dhdp, bool enforce_mutex)
 	}
 	if (err) {
 		DHD_ERROR(("%s: Failed to force clock for F2: err %d\n", __FUNCTION__, err));
+		ret = -1;
 		goto exit;
 	}
 
@@ -4261,7 +4266,7 @@ dhd_bus_init(dhd_pub_t *dhdp, bool enforce_mutex)
 
 #endif /* !BCMSPI */
 
-	DHD_INFO(("%s: enable 0x%02x, ready 0x%02x (waited %uus)\n",
+	DHD_ERROR(("%s: enable 0x%02x, ready 0x%02x (waited %uus)\n",
 	          __FUNCTION__, enable, ready, tmo.elapsed));
 
 
@@ -4492,6 +4497,11 @@ done:
 	dhd_os_ioctl_resp_wake(bus->dhd);
 }
 
+#ifdef CUSTOMER_HW4
+int pkt_free;
+int caller;
+void *free_ptr;
+#endif
 static uint8
 dhdsdio_rxglom(dhd_bus_t *bus, uint8 rxseq)
 {
@@ -4514,6 +4524,9 @@ dhdsdio_rxglom(dhd_bus_t *bus, uint8 rxseq)
 	int ifidx = 0;
 	bool usechain = bus->use_rxchain;
 
+#ifdef CUSTOMER_HW4
+	pkt_free = 0;
+#endif
 	/* If packets, issue read(s) and send up packet chain */
 	/* Return sequence numbers consumed? */
 
@@ -4831,6 +4844,11 @@ dhdsdio_rxglom(dhd_bus_t *bus, uint8 rxseq)
 			reorder_info_len = sizeof(reorder_info_buf);
 
 			if (PKTLEN(osh, pfirst) == 0) {
+#ifdef CUSTOMER_HW4
+				pkt_free = 1;
+				caller = 1;
+				free_ptr = pfirst;
+#endif
 				PKTFREE(bus->dhd->osh, pfirst, FALSE);
 				if (plast) {
 					PKTSETNEXT(osh, plast, pnext);
@@ -4966,6 +4984,9 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 	bool sdtest = FALSE;	/* To limit message spew from test mode */
 #endif
 
+#ifdef CUSTOMER_HW4
+	pkt_free = 0;
+#endif
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
 	bus->readframes = TRUE;
@@ -5610,6 +5631,11 @@ deliver:
 
 		if (PKTLEN(osh, pkt) == 0) {
 			dhd_os_sdlock_rxq(bus->dhd);
+#ifdef CUSTOMER_HW4
+			pkt_free = 1;
+			caller = 0;
+			free_ptr = pkt;
+#endif
 			PKTFREE(bus->dhd->osh, pkt, FALSE);
 			dhd_os_sdunlock_rxq(bus->dhd);
 			continue;
@@ -5948,6 +5974,22 @@ clkwait:
 		bcmsdh_intr_enable(sdh);
 	}
 
+#if defined(OOB_INTR_ONLY) && !defined(HW_OOB)
+	/* In case of SW-OOB(using edge trigger),
+	 * Check interrupt status in the dongle again after enable irq on the host.
+	 * and rechedule dpc if interrupt is pended in the dongle.
+	 * There is a chance to miss OOB interrupt while irq is disabled on the host.
+	 * No need to do this with HW-OOB(level trigger)
+	 */
+	R_SDREG(newstatus, &regs->intstatus, retries);
+	if (bcmsdh_regfail(bus->sdh))
+		newstatus = 0;
+	if (newstatus & bus->hostintmask) {
+		bus->ipend = TRUE;
+		resched = TRUE;
+	}
+#endif /* defined(OOB_INTR_ONLY) && !defined(HW_OOB) */
+
 	if (TXCTLOK(bus) && bus->ctrl_frame_stat && (bus->clkstate == CLK_AVAIL))  {
 		int ret, i;
 
@@ -6010,7 +6052,7 @@ clkwait:
 	/* Resched if events or tx frames are pending, else await next interrupt */
 	/* On failed register access, all bets are off: no resched or interrupts */
 	if ((bus->dhd->busstate == DHD_BUS_DOWN) || bcmsdh_regfail(sdh)) {
-		if ((bus->sih->buscorerev >= 12) && !(dhdsdio_sleepcsr_get(bus) &
+		if ((bus->sih && bus->sih->buscorerev >= 12) && !(dhdsdio_sleepcsr_get(bus) &
 			SBSDIO_FUNC1_SLEEPCSR_KSO_MASK)) {
 			/* Bus failed because of KSO */
 			DHD_ERROR(("%s: Bus failed due to KSO\n", __FUNCTION__));

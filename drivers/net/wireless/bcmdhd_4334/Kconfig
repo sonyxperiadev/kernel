@@ -11,7 +11,7 @@ config BCMDHD_4334
 config BCMDHD_FW_PATH
 	depends on BCMDHD_4334
 	string "Firmware path"
-	default "/system/vendor/firmware/fw_wifi.bin_b2"
+	default "/system/vendor/firmware/fw_wifi.bin"
 	---help---
 	  Path to the firmware file.
 
