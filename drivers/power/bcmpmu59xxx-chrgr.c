@@ -287,7 +287,10 @@ static int bcmpmu_chrgr_batt_get_property(struct power_supply *psy,
 static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 {
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
+	struct bcmpmu_accy *paccy;
 	struct bcmpmu_chrgr_data *di;
+	enum bcmpmu_usb_type_t usb_type;
+	enum bcmpmu_chrgr_type_t chrgr_type;
 	int ret;
 
 	pr_chrgr(INIT, "%s called\n", __func__);
@@ -299,6 +302,8 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 
 	di->dev = &pdev->dev;
 	di->bcmpmu = bcmpmu;
+	paccy = bcmpmu->accyinfo;
+
 	platform_set_drvdata(pdev, di);
 
 	di->ac_psy.name = "bcmpmu_ac";
@@ -321,6 +326,17 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	di->batt_psy.get_property = bcmpmu_chrgr_batt_get_property;
 	di->batt_prev_cap = BATT_VOLT_TO_CAP(
 			bcmpmu_chrgr_get_batt_volt(di));
+
+	usb_type = paccy->usb_accy_data.usb_type;
+	chrgr_type = paccy->usb_accy_data.chrgr_type;
+	pr_chrgr(FLOW, "<%s> usb_type %d chrgr_type %d\n",
+		__func__, usb_type, chrgr_type);
+	if ((usb_type < PMU_USB_TYPE_MAX) &&
+		(usb_type > PMU_USB_TYPE_NONE))
+		di->usb_chrgr_info.online = 1 ;
+	if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
+		(chrgr_type < PMU_CHRGR_TYPE_NONE))
+		di->ac_chrgr_info.online = 1;
 
 	ret = power_supply_register(&pdev->dev, &di->batt_psy);
 	if (ret)
