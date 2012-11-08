@@ -39,7 +39,7 @@
  * of dormant in idle path but enter
  * dormant during suspend
  */
-static u32 force_retention_in_idle = 1;
+static u32 force_retention_in_idle;
 module_param_named(force_retention_in_idle, force_retention_in_idle,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 
