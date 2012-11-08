@@ -248,6 +248,11 @@ static struct i2c_board_info adp1653_flash[] = {
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 
+static struct regulator *d_gpsr_cam0_1v8;
+static struct regulator *d_lvldo2_cam1_1v8;
+static struct regulator *d_1v8_mmc1_vcc;
+static struct regulator *d_3v0_mmc1_vcc;
+
 #define OV5640_I2C_ADDRESS (0x3C)
 #define OV7692_I2C_ADDRESS (0x3e)
 
@@ -320,7 +325,7 @@ static struct i2c_board_info rhea_i2c_camera[] = {
 		},
 };
 
-static int rhea_camera_power(struct device *dev, int on)
+static int hawaii_camera_power(struct device *dev, int on)
 {
 	unsigned int value;
         int ret = -1;
@@ -328,7 +333,6 @@ static int rhea_camera_power(struct device *dev, int on)
         struct clk *axi_clk;
         static struct pi_mgr_dfs_node
 	unicam_dfs_node;
-        static int do_cam_reset = 1;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 	if (!unicam_dfs_node.valid) {
@@ -338,29 +342,45 @@ static int rhea_camera_power(struct device *dev, int on)
 			return -1;
 		}
 		if(gpio_request_one(SENSOR_0_GPIO_RST, GPIOF_DIR_OUT |
-			GPIOF_INIT_LOW,"CamRst")){
-			printk(KERN_ERR"Unable to get RST GPIO\n");
+			GPIOF_INIT_LOW, "Cam0Rst")){
+			printk(KERN_ERR"Unable to get cam0 RST GPIO\n");
 			return -1;
 		}
 		if(gpio_request_one(SENSOR_0_GPIO_PWRDN, GPIOF_DIR_OUT |
 			GPIOF_INIT_LOW,"CamPWDN")){
-			printk(KERN_ERR"Unable to get PWDN GPIO\n");
+			printk(KERN_ERR"Unable to get cam0 PWDN GPIO\n");
 			return -1;
 		}
+		/*MMC1 VCC */
+		d_1v8_mmc1_vcc = regulator_get(NULL, "mmc1_vcc");
+		if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
+			printk(KERN_ERR "Failed to  get d_1v8_mmc1_vcc\n");
+		d_3v0_mmc1_vcc = regulator_get(NULL, "mmc2_vcc");
+		if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
+			printk(KERN_ERR "Failed to  get d_3v0_mmc1_vcc\n");
+		d_gpsr_cam0_1v8 = regulator_get(NULL, "vsr_uc");
+		if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
+			printk(KERN_ERR "Failed to  get d_gpsr_cam0_1v8\n");
 	}
 
 	clock = clk_get(NULL, SENSOR_0_CLK);
 	if(IS_ERR_OR_NULL(clock)){
-		printk(KERN_ERR,"Unable to get SENSOR_0 clock\n");
+		printk(KERN_ERR "Unable to get SENSOR_0 clock\n");
 	}
 	axi_clk = clk_get(NULL, "csi0_axi_clk");
 	if(IS_ERR_OR_NULL(clock)){
-		printk(KERN_ERR,"Unable to get AXI clock\n");
+		printk(KERN_ERR "Unable to get AXI clock\n");
 	}
 	if(on){
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
 			printk("DVFS for UNICAM failed\n");
 		}
+		regulator_enable(d_3v0_mmc1_vcc);
+		usleep_range(1000, 1010);
+		regulator_enable(d_1v8_mmc1_vcc);
+		usleep_range(1000, 1010);
+		regulator_enable(d_gpsr_cam0_1v8);
+		usleep_range(1000, 1010);
 		value = clk_enable(axi_clk);
 		if(value){
 			printk(KERN_ERR"Failed to enable axi clock\n");
@@ -372,31 +392,34 @@ static int rhea_camera_power(struct device *dev, int on)
 			printk("Failed to enable sensor 0 clock\n");
 			return -1;
 		}
-		msleep(10);
+		usleep_range(10000, 10100);
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
-		msleep(10);
+		usleep_range(10000, 10100);
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
-		msleep(5);
+		usleep_range(5000, 5100);
 		gpio_set_value(SENSOR_0_GPIO_RST, 1);
 		msleep(30);
 	} else {
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 		clk_disable(clock);
 		clk_disable(axi_clk);
+		regulator_disable(d_3v0_mmc1_vcc);
+		regulator_disable(d_1v8_mmc1_vcc);
+		regulator_disable(d_gpsr_cam0_1v8);
 		if(pi_mgr_dfs_request_update(&unicam_dfs_node,PI_MGR_DFS_MIN_VALUE)){
 			printk("Failed to set DVFS for unicam\n");
 		}
 	}
 	return 0;
 }
-static int rhea_camera_reset(struct device *dev)
+static int hawaii_camera_reset(struct device *dev)
 {
         /* reset the camera gpio */
         printk(KERN_INFO "%s:camera reset\n", __func__);
         return 0;
 }
 
-static int rhea_camera_power_front(struct device *dev, int on)
+static int hawaii_camera_power_front(struct device *dev, int on)
 {
 	unsigned int value;
         int ret = -1;
@@ -413,24 +436,38 @@ static int rhea_camera_power_front(struct device *dev, int on)
 			return -1;
 		}
 		if(gpio_request_one(SENSOR_1_GPIO_PWRDN, GPIOF_DIR_OUT |
-			GPIOF_INIT_LOW,"CamRst")){
-			printk(KERN_ERR"Unable to get RST GPIO\n");
+			GPIOF_INIT_LOW, "Cam1PWDN")){
+			printk(KERN_ERR "Unable to get CAM1PWDN\n");
 			return -1;
+		}
+		d_lvldo2_cam1_1v8 = regulator_get(NULL, "lvldo2_uc");
+		if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
+			printk(KERN_ERR "Failed to get d_lvldo2_cam1_1v8\n");
+		if (d_1v8_mmc1_vcc == NULL) {
+			d_1v8_mmc1_vcc = regulator_get(NULL, "mmc1_vcc");
+			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
+				printk(KERN_ERR "Err d_1v8_mmc1_vcc\n");
 		}
 	}
 
 	clock = clk_get(NULL, SENSOR_1_CLK);
 	if(IS_ERR_OR_NULL(clock)){
-		printk(KERN_ERR,"Unable to get SENSOR_1 clock\n");
+		printk(KERN_ERR "Unable to get SENSOR_1 clock\n");
 	}
 	axi_clk = clk_get(NULL, "csi0_axi_clk");
 	if(IS_ERR_OR_NULL(clock)){
-		printk(KERN_ERR,"Unable to get AXI clock\n");
+		printk(KERN_ERR "Unable to get AXI clock\n");
 	}
 	if(on){
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
 			printk("DVFS for UNICAM failed\n");
 		}
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		usleep_range(5000, 5010);
+		regulator_enable(d_lvldo2_cam1_1v8);
+		usleep_range(1000, 1010);
+		regulator_enable(d_1v8_mmc1_vcc);
+		usleep_range(1000, 1010);
 		value = clk_enable(axi_clk);
 		if(value){
 			printk(KERN_ERR"Failed to enable axi clock\n");
@@ -442,14 +479,15 @@ static int rhea_camera_power_front(struct device *dev, int on)
 			printk("Failed to enable sensor 1 clock\n");
 			return -1;
 		}
-		msleep(10);
+		usleep_range(10000, 10100);
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
-		msleep(5);
 		msleep(30);
 	} else {
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
 		clk_disable(clock);
 		clk_disable(axi_clk);
+		regulator_disable(d_lvldo2_cam1_1v8);
+		regulator_disable(d_1v8_mmc1_vcc);
 		if(pi_mgr_dfs_request_update(&unicam_dfs_node,PI_MGR_DFS_MIN_VALUE)){
 			printk("Failed to set DVFS for unicam\n");
 		}
@@ -457,7 +495,7 @@ static int rhea_camera_power_front(struct device *dev, int on)
 	return 0;
 }
 
-static int rhea_camera_reset_front(struct device *dev)
+static int hawaii_camera_reset_front(struct device *dev)
 {
         /* reset the camera gpio */
         printk(KERN_INFO "%s:camera reset\n", __func__);
@@ -482,8 +520,8 @@ static struct soc_camera_link iclink_ov5640 = {
 	.board_info = &rhea_i2c_camera[0],
 	.i2c_adapter_id = 0,
 	.module_name = "ov5640",
-	.power = &rhea_camera_power,
-	.reset = &rhea_camera_reset,
+	.power = &hawaii_camera_power,
+	.reset = &hawaii_camera_reset,
 	.priv =  &ov5640_if_params,
 };
 
@@ -513,8 +551,8 @@ static struct soc_camera_link iclink_ov7692 = {
 	.board_info = &rhea_i2c_camera[1],
 	.i2c_adapter_id = 0,
 	.module_name = "ov7692",
-	.power = &rhea_camera_power_front,
-	.reset = &rhea_camera_reset_front,
+	.power = &hawaii_camera_power_front,
+	.reset = &hawaii_camera_reset_front,
 	.priv =  &ov7692_if_params,
 };
 
