@@ -202,17 +202,19 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
  */
 int kona_pm_cpu_lowpower(void)
 {
-	int ret = 0;
 	struct kona_idle_state *suspend =
 		&pm_prms.states[pm_prms.suspend_state];
 
 	BUG_ON(!suspend);
 	if (LOG_LEVEL_ENABLED(KONA_PM_LOG_LVL_FLOW))
 		pr_info("Put cpu to lowpower\n");
-	if (suspend->enter) {
-		suspend->flags |= CPUIDLE_ENTER_SUSPEND;
+	/**
+	 * Here we try to enter to WFI or Dormant
+	 * In dormant path, we will put this core
+	 * to DORMANT_CORE_DOWN.
+	 */
+	if (suspend->enter)
 		suspend->enter(suspend);
-	}
 	return 0;
 }
 EXPORT_SYMBOL(kona_pm_cpu_lowpower);
