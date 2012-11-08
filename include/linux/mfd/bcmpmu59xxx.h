@@ -265,28 +265,68 @@ enum bcmpmu_rgr_id {
 	BCMPMU_REGULATOR_MAX,
 };
 
-enum bcmpmu_adc_sig {
-	PMU_ADC_VMBATT,
-	PMU_ADC_VBBATT,
-	PMU_ADC_VWALL,
-	PMU_ADC_VBUS,
-	PMU_ADC_ID,
-	PMU_ADC_NTC,
-	PMU_ADC_BSI,
-	PMU_ADC_BOM,
-	PMU_ADC_32KTEMP,
-	PMU_ADC_PATEMP,
-	PMU_ADC_ALS,
-	PMU_ADC_RTM,
-	PMU_ADC_FG_CURRSMPL,
-	PMU_ADC_FG_RAW,
-	PMU_ADC_FG_VMBATT,
-	PMU_ADC_BSI_CAL_LO,
-	PMU_ADC_BSI_CAL_HI,
-	PMU_ADC_NTC_CAL_LO,
-	PMU_ADC_NTC_CAL_HI,
-	PMU_ADC_MAX,
+/* Warning: Donot change order of channels,
+ *	    Donot Insert/Remove channel from this enum
+ **/
+enum bcmpmu_adc_channel {
+	PMU_ADC_CHANN_VMBATT,
+	PMU_ADC_CHANN_VBBATT,
+	PMU_ADC_CHANN_RESERVED,
+	PMU_ADC_CHANN_VBUS,
+	PMU_ADC_CHANN_IDIN,
+	PMU_ADC_CHANN_NTC,
+	PMU_ADC_CHANN_BSI,
+	PMU_ADC_CHANN_BOM,
+	PMU_ADC_CHANN_32KTEMP,
+	PMU_ADC_CHANN_PATEMP,
+	PMU_ADC_CHANN_ALS,
+	PMU_ADC_CHANN_RID_CAL_L,
+	PMU_ADC_CHANN_NTC_CAL_L,
+	PMU_ADC_CHANN_NTC_CAL_H,
+	PMU_ADC_CHANN_DIE_TEMP,
+	PMU_ADC_CHANN_RID_CAL_H,
+	PMU_ADC_CHANN_MAX,
 };
+
+enum bcmpmu_adc_req {
+	PMU_ADC_REQ_SAR_MODE,
+	PMU_ADC_REQ_RTM_MODE,
+};
+
+enum bcmpmu_adc_flag {
+	PMU_ADC_FLAG_CONV_LUT = 0x1 << 0, /* USE Lookup table for conversion */
+};
+/**
+ * returns the adc result
+ * raw : adc sample raw value before any convertion
+ * conv : converted value
+ */
+struct bcmpmu_adc_result {
+	unsigned int raw;
+	unsigned int conv;
+};
+
+struct bcmpmu_adc_lut {
+	unsigned int raw;
+	unsigned int map; /* temp, volt, etc map value in table */
+};
+
+/**
+ * @chann: ADC channel
+ * @flags: ADC flags
+ * @resolution: resolution of ADC channel
+ * (BCM PMU supports 10 bit ADC resolution = 1024)
+ * @volt_range: voltage range of ADC channel in mv (designed voltage range)
+ * @lut: Lookup table to be used for conversion if @flags=PMU_ADC_FLAG_CONV_LUT
+ */
+struct bcmpmu_adc_pdata {
+	unsigned int flag;
+	int volt_range;
+	int adc_offset; /* +/- offset/gain */
+	struct bcmpmu_adc_lut *lut;
+	unsigned int lut_len;
+};
+
 
 enum bcmpmu_adc_ctrl {
 	PMU_ADC_RST_CNT,
@@ -719,6 +759,7 @@ struct bcmpmu59xxx {
 	void *accyinfo;
 	void *rgltr_data;
 	void *ponkeyinfo;
+	void *adc;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_bcmpmu;
 #endif	/*CONFIG_DEBUG_FS*/
@@ -760,6 +801,8 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 			int ctrl, unsigned long data);
 
+int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
+		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
 #ifdef CONFIG_DEBUG_FS
 int bcmpmu_debugfs_open(struct inode *inode, struct file *file);
 #endif
