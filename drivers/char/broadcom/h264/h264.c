@@ -42,6 +42,19 @@ the GPL, without Broadcom's express prior written consent.
 #include <plat/scu.h>
 #include <linux/delay.h>
 
+/*
+	TODO:
+	This macro enables the interrupt handling in this driver. The interupt
+	status are passed on to the user space for handling by the DEC3
+	software. Since, we are using MCIN, CABAC and VCE driver separately, this
+	driver need not handle interrupts. It is required only to open the
+	hardware block and mmap the register to user space.
+	Eventually, this driver will be deprecated and the new driver (mentioned
+	above will the used.
+
+#define ENABLE_H264_INT 1
+
+*/
 /* TODO - define the major device ID */
 #define H264_DEV_MAJOR    0
 
@@ -142,6 +155,8 @@ static void disable_h264_clock(void)
 }
 #endif
 
+#ifdef ENABLE_H264_INT
+/* This macro is required to avoid a compiler error. */
 static irqreturn_t h264_isr(int irq, void *dev_id)
 {
 	h264_t *dev;
@@ -197,6 +212,7 @@ static irqreturn_t h264_isr(int irq, void *dev_id)
 	spin_unlock_irqrestore(&dev->lock, flags);
 	return IRQ_RETVAL(1);
 }
+#endif
 
 static int h264_open(struct inode *inode, struct file *filp)
 {
@@ -271,6 +287,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 
 #endif
 	usleep_range(50, 100); // buffer to ensure everything above are done.
+#ifdef ENABLE_H264_INT
 	/* Register for the interrupts */
 	ret =
 	    request_irq(H264_AOB_IRQ, h264_isr, IRQF_DISABLED | IRQF_SHARED |
@@ -304,6 +321,7 @@ static int h264_open(struct inode *inode, struct file *filp)
 	disable_irq(H264_AOB_IRQ);
 	disable_irq(H264_CME_IRQ);
 	disable_irq(H264_MCIN_CBC_IRQ);
+#endif
 	return 0;
 
 #ifdef H264_QOS_MGMT
@@ -351,9 +369,11 @@ static int h264_release(struct inode *inode, struct file *filp)
 
 #endif
 
+#ifdef ENABLE_H264_INT
 	free_irq(H264_AOB_IRQ, dev);
 	free_irq(H264_CME_IRQ, dev);
 	free_irq(H264_MCIN_CBC_IRQ, dev);
+#endif
 
 	if (dev)
 		kfree(dev);
