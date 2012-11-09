@@ -79,11 +79,20 @@ static unsigned int get_emu_reset_reason(unsigned int const emu)
 	return rst;
 }
 
+static void do_clear_emu_reset_reason(void)
+{
+	unsigned int *rst = (unsigned int *)ioremap(SRAM_RST_REASON_BASE, 0x4);
+
+	*rst = 0;
+
+	iounmap(rst);
+}
+
 unsigned int is_charging_state(void)
 {
 	unsigned int state;
 
-	state = get_emu_reset_reason(SRAM_AP_ONLY_BOOT_BASE);
+	state = get_emu_reset_reason(SRAM_RST_REASON_BASE);
 
 	state = state & 0xf;
 
@@ -91,11 +100,11 @@ unsigned int is_charging_state(void)
 	return (state == CHARGING_STATE) ? 1 : 0;
 }
 
-
 void do_set_poweron_reset_boot(void)
 {
 	pr_info("%s\n", __func__);
-	set_emu_reset_reason(SRAM_AP_ONLY_BOOT_BASE, POWERON_RESET);
+	do_clear_emu_reset_reason();
+	set_emu_reset_reason(SRAM_RST_REASON_BASE, POWERON_RESET);
 }
 EXPORT_SYMBOL(do_set_poweron_reset_boot);
 
@@ -103,21 +112,21 @@ EXPORT_SYMBOL(do_set_poweron_reset_boot);
 void do_set_bootloader_boot(void)
 {
 	pr_info("%s\n", __func__);
-	set_emu_reset_reason(SRAM_AP_ONLY_BOOT_BASE, BOOTLOADER_BOOT);
+	set_emu_reset_reason(SRAM_RST_REASON_BASE, BOOTLOADER_BOOT);
 }
 EXPORT_SYMBOL(do_set_bootloader_boot);
 
 void do_set_recovery_boot(void)
 {
 	pr_info("%s\n", __func__);
-	set_emu_reset_reason(SRAM_AP_ONLY_BOOT_BASE, RECOVERY_BOOT);
+	set_emu_reset_reason(SRAM_RST_REASON_BASE, RECOVERY_BOOT);
 }
 EXPORT_SYMBOL(do_set_recovery_boot);
 
 void do_set_ap_only_boot(void)
 {
 	pr_debug("%s\n", __func__);
-	set_emu_reset_reason(SRAM_AP_ONLY_BOOT_BASE, AP_ONLY_BOOT);
+	set_emu_reset_reason(SRAM_RST_REASON_BASE, AP_ONLY_BOOT);
 }
 EXPORT_SYMBOL(do_set_ap_only_boot);
 
@@ -125,10 +134,10 @@ void do_clear_ap_only_boot(void)
 {
 	unsigned int rst;
 
-	rst = get_emu_reset_reason(SRAM_AP_ONLY_BOOT_BASE);
+	rst = get_emu_reset_reason(SRAM_RST_REASON_BASE);
 	rst = (rst & 0xf) & ~(AP_ONLY_BOOT);
 
-	set_emu_reset_reason(SRAM_AP_ONLY_BOOT_BASE, rst);
+	set_emu_reset_reason(SRAM_RST_REASON_BASE, rst);
 }
 EXPORT_SYMBOL(do_clear_ap_only_boot);
 
@@ -149,7 +158,7 @@ unsigned int is_ap_only_boot(void)
 	unsigned int rst;
 
 	if (!ap_only_boot)
-		rst = get_emu_reset_reason(SRAM_AP_ONLY_BOOT_BASE);
+		rst = get_emu_reset_reason(SRAM_RST_REASON_BASE);
 	else
 		rst = AP_ONLY_BOOT;
 	rst = rst & 0xf;
@@ -164,7 +173,7 @@ reset_reason_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	unsigned int index, rst;
 
-	rst = get_emu_reset_reason(SRAM_AP_ONLY_BOOT_BASE);
+	rst = get_emu_reset_reason(SRAM_RST_REASON_BASE);
 
 	switch (rst) {
 	case 0x1:
@@ -208,7 +217,7 @@ reset_reason_store(struct device *dev, struct device_attribute *attr,
 				break;
 		}
 
-		set_emu_reset_reason(SRAM_AP_ONLY_BOOT_BASE, (i + 1));
+		set_emu_reset_reason(SRAM_RST_REASON_BASE, (i + 1));
 
 		return n;
 	}
