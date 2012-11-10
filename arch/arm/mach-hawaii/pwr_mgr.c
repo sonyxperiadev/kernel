@@ -526,14 +526,16 @@ static struct i2c_cmd i2c_dummy_seq_cmd[] = {
 	{SET_PC_PINS, SET_PC_PIN_CMD(PC1)}, /*18 - wake up (other)*/
 	{END, 0},			/*19 - End*/
 	{REG_ADDR, 0},		//20 - NOP
-	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1)}, /*21 - retention, zero (other)*/
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1) |\
+		CLEAR_PC_PIN_CMD(PC0)}, /*21 - retention, zero (other)*/
 	{END, 0},			/*22 - End*/
 	{REG_ADDR, 0},		/*23 - NOP*/
 	{SET_PC_PINS, SET_PC_PIN_CMD(PC2)}, /*24 - wake up(A9)*/
 	{WAIT_TIMER, SR_VLT_SOFT_START_DELAY}, /* Wait for voltage change */
 	{END, 0},			/*26 - End*/
 	{REG_ADDR, 0},		/*27 - NOP*/
-	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC2)}, /*28 - retention, zero (A9)*/
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC2) |\
+		CLEAR_PC_PIN_CMD(PC0)}, /*28 - retention, zero (A9)*/
 	{END, 0},			/*28 - End*/
 	{REG_ADDR, 0},		/*29 - NOP*/
 	{REG_ADDR, 0},		/*30 - NOP*/

@@ -165,11 +165,13 @@ struct i2c_cmd i2c_cmd[] = {
 	{REG_ADDR, PMU_BSC_PADCTL_REG},	/* Set BSC PADCTL Register */
 	{REG_DATA, BSC_PAD_OUT_DIS},	/* Disable pad outpout */
 	{END, 0},		/*  94: -- VO1 -- End Sequence */
-	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1)},/* 95:set PC low-VO0_SET1_OFFSET*/
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC1) |\
+		CLEAR_PC_PIN_CMD(PC0)},	/* 95:set PC low-VO0_SET1_OFFSET*/
 	{END, 0},		/* End */
 	{SET_PC_PINS, SET_PC_PIN_CMD(PC1)},/* 97: set PC high-VO0_SET2_OFFSET*/
 	{END, 0},		/* END */
-	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC2)},/* 99:set VO1_ZERO_PTR_OFFSET*/
+	{SET_PC_PINS, CLEAR_PC_PIN_CMD(PC2) | \
+		CLEAR_PC_PIN_CMD(PC0)},		/* 99:set VO1_ZERO_PTR_OFFSET*/
 	{END, 0},		/* End sequence (SET2) */
 	{SET_PC_PINS, SET_PC_PIN_CMD(PC2)},/* 101:set PC high-VO1_SET2_OFFSET*/
 	{WAIT_TIMER, SR_VLT_SOFT_START_DELAY}, /* Wait for voltage change */
