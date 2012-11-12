@@ -15,6 +15,7 @@
 /* Additional cpuidle flags */
 #define CPUIDLE_FLAG_XTAL_ON    (1 << 16)
 #define CPUIDLE_ENTER_SUSPEND	(1 << 17)
+#define CPUIDLE_CSTATE_DISABLED	(1 << 18)
 
 struct kona_idle_state {
 	char *name;

@@ -68,7 +68,7 @@ enum {
 
 static u32 log_mask;
 /* Set this to 1 to enable dormant from boot */
-static u32 dormant_enable;
+static u32 dormant_enable = 1;
 static int force_sleep;
 
 static DEFINE_SPINLOCK(pm_idle_lock);
@@ -106,7 +106,8 @@ static struct kona_idle_state idle_states[] = {
 	{
 		.name = "C3",
 		.desc = "suspend-drmnt", /* suspend-dormant */
-		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
+		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON |
+					CPUIDLE_CSTATE_DISABLED,
 		.latency = EXIT_LAT_SUSPEND_DRMT,
 		.target_residency = TRGT_RESI_SUSPEND_DRMT,
 		.state = CSTATE_SUSPEND_DRMT,
@@ -114,7 +115,7 @@ static struct kona_idle_state idle_states[] = {
 	}, {
 		.name = "C4",
 		.desc = "ds-drmnt", /* deepsleep-dormant(XTAL OFF) */
-		.flags = CPUIDLE_FLAG_TIME_VALID,
+		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_CSTATE_DISABLED,
 		.latency = EXIT_LAT_DS_DRMT,
 		.target_residency = TRGT_RESI_DS_DRMT,
 		.state = CSTATE_DS_DRMT,
@@ -316,18 +317,9 @@ int enter_dormant_state(struct kona_idle_state *state)
 {
 #ifdef CONFIG_A9_DORMANT_MODE
 	if (dormant_enable != 0) {
-		/**
-		 * Workaround for Dormant core down
-		 * during platform suspend:
-		 * disable cluster down for time being as
-		 * its not working for suspend path when
-		 * cpu1 is shutdown first
-		 */
-#if 0
 		if (state->flags & CPUIDLE_ENTER_SUSPEND)
 			dormant_enter(DORMANT_CLUSTER_DOWN);
 		else
-#endif
 			dormant_enter(DORMANT_CORE_DOWN);
 	} else {
 		enter_wfi();
@@ -588,17 +580,10 @@ DEFINE_SIMPLE_ATTRIBUTE(pm_en_self_refresh_fops, NULL,
 /* Disable/enable dormant mode at runtime */
 static int dormant_enable_set(void *data, u64 val)
 {
-	if (val) {
+	if (val)
 		dormant_enable = 1;
-		kona_pm_disable_idle_state(CSTATE_SUSPEND_DRMT, false);
-		kona_pm_disable_idle_state(CSTATE_DS_DRMT, false);
-
-	} else {
-		kona_pm_disable_idle_state(CSTATE_SUSPEND_DRMT, true);
-		kona_pm_disable_idle_state(CSTATE_DS_DRMT, true);
-
+	else
 		dormant_enable = 0;
-	}
 	return 0;
 }
 
@@ -619,13 +604,6 @@ int __init __pm_debug_init(void)
 		dent_pm_root_dir, NULL, &pm_en_self_refresh_fops))
 		return -ENOMEM;
 
-	/* If dormant is not enabled out of boot, prevent cpuidle
-	 * from entering into dormant C-states.
-	 */
-	if (dormant_enable == 0) {
-		kona_pm_disable_idle_state(CSTATE_SUSPEND_DRMT, true);
-		kona_pm_disable_idle_state(CSTATE_DS_DRMT, true);
-	}
 	/* Interface to enable disable dormant mode at runtime */
 	if (!debugfs_create_file("dormant_enable", S_IRUGO | S_IWUSR,
 				 dent_pm_root_dir, NULL,
