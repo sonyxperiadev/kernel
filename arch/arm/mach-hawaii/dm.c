@@ -98,6 +98,7 @@ module_param_named(cnt_failure, cnt_failure, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 /* CORE-0 is the master core for boot-up */
 #define MASTER_CORE			0
+#define SECONDARY_CORE		1
 
 #define	SCU_DORMANT_L2_OFF_MODE		0x03030303
 #define	SCU_DORMANT_MODE		0x03030202
@@ -711,10 +712,9 @@ void dormant_enter(u32 service)
 			 * Here we got out of idle do we let the core-0
 			 * continue to run
 			 */
-			if (service == DORMANT_CORE_DOWN) {
-				/* It was not a cluster down but still,
-				 * we exited dormant. Let go of CORE-1
-				 */
+			 /*boot secondary CPU if its not offlined*/
+			if (cpu_online(SECONDARY_CORE)) {
+
 				boot_2nd_addr =
 				    readl_relaxed(KONA_CHIPREG_VA +
 						  CHIPREG_BOOT_2ND_ADDR_OFFSET);
