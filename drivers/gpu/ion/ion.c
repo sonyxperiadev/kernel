@@ -187,37 +187,26 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 		pr_err("%s: m4u mapping failed for size(%d) align (%d)\n",
 				__func__, buffer->size, buffer->align);
 		heap->ops->unmap_dma(heap, buffer);
+		heap->ops->free(buffer);
 		kfree(buffer);
-		return ERR_PTR(-EINVAL);
+		return ERR_PTR(ret);
 	}
 #endif
 	buffer->sg_table = table;
-	if (buffer->flags & ION_FLAG_CACHED)
+	if (buffer->flags & ION_FLAG_CACHED) {
 		for_each_sg(buffer->sg_table->sgl, sg, buffer->sg_table->nents,
 			    i) {
 			if (sg_dma_len(sg) == PAGE_SIZE)
 				continue;
 			pr_err("%s: cached mappings must have pagewise "
 			       "sg_lists\n", __func__);
-#ifdef CONFIG_M4U
-			m4u_unmap(g_mdev, buffer->dma_addr);
-#endif
-			heap->ops->unmap_dma(heap, buffer);
-			kfree(buffer);
-			return ERR_PTR(-EINVAL);
+			ret = -EINVAL;
+			goto err;
 		}
 
-	if (buffer->flags & ION_FLAG_CACHED) {
 		ret = ion_buffer_alloc_dirty(buffer);
-		if (ret) {
-#ifdef CONFIG_M4U
-			m4u_unmap(g_mdev, buffer->dma_addr);
-#endif
-			heap->ops->unmap_dma(heap, buffer);
-			heap->ops->free(buffer);
-			kfree(buffer);
-			return ERR_PTR(ret);
-		}
+		if (ret)
+			goto err;
 	}
 
 	buffer->dev = dev;
@@ -236,6 +225,15 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 		sg_dma_address(sg) = sg_phys(sg);
 	ion_buffer_add(dev, buffer);
 	return buffer;
+
+err:
+#ifdef CONFIG_M4U
+	m4u_unmap(g_mdev, buffer->dma_addr);
+#endif
+	heap->ops->unmap_dma(heap, buffer);
+	heap->ops->free(buffer);
+	kfree(buffer);
+	return ERR_PTR(ret);
 }
 
 static void ion_buffer_destroy(struct kref *kref)
@@ -245,9 +243,6 @@ static void ion_buffer_destroy(struct kref *kref)
 
 	if (WARN_ON(buffer->kmap_cnt > 0))
 		buffer->heap->ops->unmap_kernel(buffer->heap, buffer);
-
-	if (buffer->flags & ION_FLAG_CACHED)
-		kfree(buffer->dirty);
 #ifdef CONFIG_M4U
 	if (buffer->dma_addr != 0)
 		m4u_unmap(g_mdev, buffer->dma_addr);
@@ -260,6 +255,8 @@ static void ion_buffer_destroy(struct kref *kref)
 #endif
 	rb_erase(&buffer->node, &dev->buffers);
 	mutex_unlock(&dev->lock);
+	if (buffer->flags & ION_FLAG_CACHED)
+		kfree(buffer->dirty);
 	kfree(buffer);
 }
 
