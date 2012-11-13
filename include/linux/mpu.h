@@ -186,7 +186,6 @@ enum ext_slave_bus {
 	EXT_SLAVE_BUS_SECONDARY = 1
 };
 
-
 /**
  *  struct ext_slave_platform_data - Platform data for mpu3050 and mpu6050
  *  slave devices
@@ -272,8 +271,7 @@ struct ext_slave_descr {
 		       struct ext_slave_platform_data *pdata);
 	int (*read) (void *mlsl_handle,
 		     struct ext_slave_descr *slave,
-		     struct ext_slave_platform_data *pdata,
-		     __u8 *data);
+		     struct ext_slave_platform_data *pdata, __u8 *data);
 	int (*config) (void *mlsl_handle,
 		       struct ext_slave_descr *slave,
 		       struct ext_slave_platform_data *pdata,
@@ -311,7 +309,15 @@ struct mpu_platform_data {
 	__s8 orientation[GYRO_NUM_AXES * GYRO_NUM_AXES];
 };
 
-#define MPU_IOCTL (0x81) /* Magic number for MPU Iocts */
+#ifdef CONFIG_ARCH_KONA
+struct bcm_mpu_platform_data {
+	struct mpu_platform_data base_data;
+	/* Broadcom add-on's */
+	int irq_gpio;
+};
+#endif
+
+#define MPU_IOCTL (0x81)	/* Magic number for MPU Iocts */
 /* IOCTL commands for /dev/mpu */
 
 /*--------------------------------------------------------------------------
@@ -362,5 +368,4 @@ struct mpu_platform_data {
 #define MPU_GET_MLDL_STATUS		_IOR(MPU_IOCTL, 0x42, __u8)
 #define MPU_GET_I2C_SLAVES_ENABLED	_IOR(MPU_IOCTL, 0x43, __u8)
 
-
-#endif				/* __MPU_H_ */
+#endif /* __MPU_H_ */
