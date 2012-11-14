@@ -61,6 +61,30 @@ the PC pins in SET1 are HIGH
 #define PCPIN_MAP_IS_SET0_MATCH(set, val) !(!((set) & (val)))
 #define PCPIN_MAP_IS_SET1_MATCH(set, val) ((set) && ((set) & (val)) == (set))
 
+struct bcmpmu_rw_data_ltp {
+unsigned int map;
+unsigned int addr;
+unsigned int val[16];
+unsigned int mask;
+unsigned int len;
+};
+
+#define BCM_PMU_MAGIC   'P'
+#define BCM_PMU_CMD_READ_REG            0x83
+#define BCM_PMU_CMD_WRITE_REG           0x84
+#define BCM_PMU_CMD_BULK_READ_REG       0x85
+#define BCM_PMU_CMD_ADC_READ_REG        0x86
+#define BCM_PMU_CMD_NTC_TEMP            0x87
+#define BCM_PMU_IOCTL_READ_REG          \
+		_IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_READ_REG,\
+				struct bcmpmu_rw_data_ltp)
+#define BCM_PMU_IOCTL_BULK_READ_REG             \
+			_IOWR(BCM_PMU_MAGIC, BCM_PMU_CMD_BULK_READ_REG,\
+					struct bcmpmu_rw_data_ltp)
+#define BCM_PMU_IOCTL_WRITE_REG         \
+			_IOW(BCM_PMU_MAGIC, BCM_PMU_CMD_WRITE_REG,\
+					struct bcmpmu_rw_data_ltp)
+
 struct bcmpmu59xxx;
 extern struct regulator_ops bcmpmu59xxx_ldo_ops;
 
@@ -532,6 +556,7 @@ struct bcmpmu59xxx_rw_data {
 	unsigned int addr;
 	unsigned int val;
 	unsigned int mask;
+	unsigned int map;
 };
 
 /*PMU PC PINs*/
