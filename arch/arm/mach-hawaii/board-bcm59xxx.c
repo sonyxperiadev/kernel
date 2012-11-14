@@ -792,6 +792,10 @@ static struct bcmpmu59xxx_rw_data register_init_data[] = {
 
 	{.addr = PMU_REG_CSRVOUT1 , .val = 0x28, .mask = 0x3F},
 
+	/* PASRCTRL MobC00256738*/
+	{.addr = PMU_REG_PASRCTRL1 , .val = 0x00, .mask = 0x06},
+	{.addr = PMU_REG_PASRCTRL6 , .val = 0x00, .mask = 0xF0},
+	{.addr = PMU_REG_PASRCTRL7 , .val = 0x00, .mask = 0x3F},
 
 };
 
