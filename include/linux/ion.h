@@ -36,6 +36,7 @@ enum ion_heap_type {
 	ION_HEAP_TYPE_SYSTEM,
 	ION_HEAP_TYPE_SYSTEM_CONTIG,
 	ION_HEAP_TYPE_CARVEOUT,
+	ION_HEAP_TYPE_CHUNK,
 	ION_HEAP_TYPE_DMA,
 	ION_HEAP_TYPE_CUSTOM, /* must be last so device specific heaps always
 				 are at the end of this enum */
@@ -84,6 +85,8 @@ struct ion_buffer;
  * @name:	used for debug purposes
  * @base:	base address of heap in physical memory if applicable
  * @size:	size of the heap in bytes if applicable
+ * @align:	required alignment in physical memory if applicable
+ * @priv:	private info passed from the board file
  *
  * Provided by the board file.
  */
@@ -94,6 +97,8 @@ struct ion_platform_heap {
 	ion_phys_addr_t base;
 	ion_phys_addr_t limit;
 	size_t size;
+	ion_phys_addr_t align;
+	void *priv;
 #ifdef CONFIG_ION_OOM_KILLER
 	int lmk_enable;
 	int lmk_min_score_adj;
