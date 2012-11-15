@@ -34,7 +34,7 @@
 #include "dispdrv_common.h"	   /* dispdrv common */
 #include "lcd_clock.h"
 #include <plat/csl/csl_tectl_vc4lite.h>
-
+#include <linux/regulator/consumer.h>
 #else
 
 #include <stdio.h>
@@ -286,6 +286,7 @@ CSL_DSI_CFG_t NT35516_dsiCfg = {
 };
 
 
+static struct regulator *disp_reg;
 
 static NT35516_PANEL_t panel[1];
 
@@ -318,6 +319,17 @@ static void NT35516_panel_sleep_in(NT35516_PANEL_t *pPanel)
 {
 	DISPCTRL_REC_T cmd_list[] = {
 		{DISPCTRL_WR_CMND, NT35516_CMD_SLPIN, 0},
+		{DISPCTRL_LIST_END, 0, 0},
+	};
+
+	NT35516_ExecCmndList(pPanel, cmd_list);
+	return;
+}
+
+static void NT35516_panel_dstb(NT35516_PANEL_t *pPanel)
+{
+	DISPCTRL_REC_T cmd_list[] = {
+		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_DSTBON, 1},
 		{DISPCTRL_LIST_END, 0, 0},
 	};
 
@@ -541,16 +553,11 @@ static void NT35516_reset(DISPDRV_HANDLE_T drvH, Boolean on)
 {
 	NT35516_PANEL_t *pPanel = (NT35516_PANEL_t *) drvH;
 
-	int ret, reset_active = 0;
+	int reset_active = 0;
 
 	if (!on) {
 		NT35516_LOG(LCD_DBG_ERR_ID, "Resetting the panel gpio=%d\n",
 			pPanel->rst_panel_reset);
-		ret = gpio_request(pPanel->rst_panel_reset, "LCD_RST");
-		if (ret < 0) {
-			NT35516_LOG(LCD_DBG_ERR_ID, "gpio_request failed!\n");
-			return;
-		}
 		gpio_direction_output(pPanel->rst_panel_reset, !reset_active);
 		udelay(5);
 		gpio_set_value_cansleep(pPanel->rst_panel_reset, reset_active);
@@ -781,6 +788,20 @@ Int32 NT35516_Open(DISPDRV_HANDLE_T drvH)
 			goto err_dma_init;
 		}
 	}
+	if (!disp_reg) {
+		/*CAM2 LDO */
+		disp_reg = regulator_get(NULL, "cam2");
+		if (IS_ERR_OR_NULL(disp_reg)) {
+			pr_err("Failed to get disp_reg\n");
+			goto err_reg_init;
+		}
+	}
+	res = gpio_request(pPanel->rst_panel_reset, "LCD_RST");
+	if (res < 0) {
+		NT35516_LOG(LCD_DBG_ERR_ID, "gpio_request failed %ld\n", res);
+		goto err_gpio_request;
+	}
+
 	NT35516_reset(drvH, FALSE);
 
 	pPanel->win_dim.l = 0;
@@ -796,6 +817,9 @@ Int32 NT35516_Open(DISPDRV_HANDLE_T drvH)
 
 	return res;
 
+err_gpio_request:
+	gpio_free(pPanel->rst_panel_reset);
+err_reg_init:
 err_dma_init:
 	CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle);
 err_dsi_open_cm:
@@ -847,6 +871,8 @@ Int32 NT35516_Close(DISPDRV_HANDLE_T drvH)
 			"the pll clock\n", __func__);
 		return -1;
 	}
+
+	gpio_free(pPanel->rst_panel_reset);
 
 	pPanel->pwrState = STATE_PWR_OFF;
 	pPanel->drvState = DRV_STATE_INIT;
@@ -970,7 +996,14 @@ Int32 NT35516_PowerControl(
 	case CTRL_PWR_ON:
 		switch (pPanel->pwrState) {
 		case STATE_PWR_OFF:
-
+			res = regulator_enable(disp_reg);
+			if (res < 0) {
+				pr_err("Couldn't enable regulator, res=%ld\n",
+					res);
+				res = -1;
+				break;
+			}
+			usleep_range(1000, 1010);
 			NT35516_panel_init(pPanel);
 			OSTASK_Sleep(TICKS_IN_MILLISECONDS(120));
 			NT35516_WinSet(drvH, TRUE, &pPanel->win_dim);
@@ -991,9 +1024,16 @@ Int32 NT35516_PowerControl(
 		if (pPanel->pwrState !=	STATE_PWR_OFF) {
 			NT35516_panel_off(pPanel);
 			NT35516_panel_sleep_in(pPanel);
-			OSTASK_Sleep(TICKS_IN_MILLISECONDS(20));
-			NT35516_reset(drvH, TRUE);
+			OSTASK_Sleep(TICKS_IN_MILLISECONDS(120));
+			NT35516_panel_dstb(pPanel);
 
+			res = regulator_disable(disp_reg);
+			if (res < 0) {
+				pr_err("Couldn't disable regulator, res=%ld\n",
+					res);
+				res = -1;
+				break;
+			}
 			memset(&pPanel->win_cur, 0, sizeof(DISPDRV_WIN_t));
 			pPanel->pwrState = STATE_PWR_OFF;
 			NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV]	%s: PWR DOWN\n\r",
