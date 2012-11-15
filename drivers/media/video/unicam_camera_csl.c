@@ -349,7 +349,7 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 	/* enable frame Interrupts */
 	cslCamFrame.int_enable = CSL_CAM_INT_FRAME_END;
 	/* for testing enabled frame start interrupt */
-	//cslCamFrame.int_enable |= CSL_CAM_INT_FRAME_START;
+	cslCamFrame.int_enable |= CSL_CAM_INT_FRAME_START;
 	cslCamFrame.int_line_count = 0;
 	cslCamFrame.capture_mode = UNICAM_CAPTURE_MODE;
 	cslCamFrame.capture_size = 0;
@@ -1053,11 +1053,20 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		reg_status =
 		    csl_cam_get_intr_status(unicam_dev->cslCamHandle,
 					    (CSL_CAM_INTERRUPT_t *) &status);
+		if (status & CSL_CAM_INT_FRAME_START) {
+			if (reg_status & 0x2000) {
+			    printk("Camera: Urgent request was signalled at FS!!!! \n");
+			}
+			return IRQ_HANDLED;
+		}
 
 		if ((status & CSL_CAM_INT_FRAME_END) ||
 			(status & CSL_CAM_INT_LINE_COUNT)) {
 			struct vb2_buffer *vb = unicam_dev->active;
 			fps++;
+			if (reg_status & 0x2000) {
+				printk("Camera: Urgent request was signalled at FE!!!! \n");
+			}
 
 			if (t1 == 0 && t2 == 0)
 				t1 = t2 = jiffies_to_msecs(jiffies);
