@@ -22,25 +22,20 @@
 #include <linux/platform_device.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
-#include <linux/i2c/tango_ts.h>
+#include <linux/i2c/ft5306.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
 #include <linux/earlysuspend.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
 
-#define TP_CNTRL_PIN_WAKEUP	1
-#define TP_CNTRL_PIN_RESET	0
-#define TP_CNTRL_PIN_TYPE 	TP_CNTRL_PIN_WAKEUP
-#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
-#define TP_CNTRL_RESET_PIN	70
-#else
-#define TP_CNTRL_WAKEUP_PIN	70
-#endif
-
-#define TP_HW_INT_PIN 71
-
 #define GPIO_TO_IRQ gpio_to_irq
+
+static int ts_gpio_irq_pin=0;
+static int ts_gpio_reset_pin=0;
+static int ts_gpio_wakeup_pin=0;
+static int ts_x_max_value=0;
+static int ts_y_max_value=0;
 
 /*******************************/
 typedef unsigned char	FTS_BYTE;
@@ -729,27 +724,27 @@ static void Ft5306_Enter_Sleep(void)
 static void Ft5306_Exit_Sleep(void)
 {
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_WAKEUP)
-	gpio_request(TP_CNTRL_WAKEUP_PIN, "tp_wakeup");
-	gpio_direction_output(TP_CNTRL_WAKEUP_PIN, 0);
-	gpio_set_value(TP_CNTRL_WAKEUP_PIN, 0);
+	gpio_request(ts_gpio_wakeup_pin, "tp_wakeup");
+	gpio_direction_output(ts_gpio_wakeup_pin, 0);
+	gpio_set_value(ts_gpio_wakeup_pin, 0);
 	mdelay(5);
-	gpio_set_value(TP_CNTRL_WAKEUP_PIN, 1);
+	gpio_set_value(ts_gpio_wakeup_pin, 1);
 	mdelay(200);
-	gpio_free(TP_CNTRL_WAKEUP_PIN);
+	gpio_free(ts_gpio_wakeup_pin);
 #endif
 }
 
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
 void Ft5306_Hw_Reset(void)
 {
-	gpio_request(TP_CNTRL_RESET_PIN, "tp_reset");
-	gpio_direction_output(TP_CNTRL_RESET_PIN, 1);
-	gpio_set_value(TP_CNTRL_RESET_PIN, 1);
+	gpio_request(ts_gpio_reset_pin, "tp_reset");
+	gpio_direction_output(ts_gpio_reset_pin, 1);
+	gpio_set_value(ts_gpio_reset_pin, 1);
 	mdelay(10);
-	gpio_set_value(TP_CNTRL_RESET_PIN, 0);
+	gpio_set_value(ts_gpio_reset_pin, 0);
 	mdelay(10);
-	gpio_set_value(TP_CNTRL_RESET_PIN, 1);
-	gpio_free(TP_CNTRL_RESET_PIN);
+	gpio_set_value(ts_gpio_reset_pin, 1);
+	gpio_free(ts_gpio_reset_pin);
 	mdelay(10);
 }
 #endif
@@ -1224,7 +1219,16 @@ static int focaltech_ft5306_probe(
 	struct Synaptics_ts_platform_data *pdata;
 	struct kobject *properties_kobj;
 	ret = -1;
-        printk("ft5306 init\n");
+    printk("ft5306 init\n");
+	if(client==NULL)
+	{
+	    printk(KERN_ERR "ft5306 client null.\n");
+	    goto err_i2c_client_check;
+	}
+	if (client->dev.platform_data == NULL) {
+		printk(KERN_ERR "ft5306 platform_data null.\n");
+		goto err_i2c_client_check;
+	}
 	properties_kobj = kobject_create_and_add("board_properties", NULL);
 	if (properties_kobj)
 		ret = sysfs_create_group(properties_kobj,
@@ -1249,7 +1253,17 @@ static int focaltech_ft5306_probe(
 	i2c_set_clientdata(client, ts);
 	pdata = client->dev.platform_data;
 	if (pdata)
+	{
 		ts->power = pdata->power;
+		ts_gpio_irq_pin = pdata->gpio_irq_pin;
+		#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
+                ts_gpio_reset_pin = pdata->gpio_reset_pin;
+                #else
+                ts_gpio_wakeup_pin = pdata->gpio_wakeup_pin;
+                #endif
+		ts_x_max_value = pdata->x_max_value;
+		ts_y_max_value = pdata->y_max_value;
+	}
 
 	ts->input_dev = input_allocate_device();
 	if (!ts->input_dev) {
@@ -1269,12 +1283,12 @@ static int focaltech_ft5306_probe(
 	ft5306_focaltech_init_platform_hw();
 	
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_WAKEUP)
-	gpio_request(TP_CNTRL_WAKEUP_PIN, "tp_wakeup");
-	gpio_direction_output(TP_CNTRL_WAKEUP_PIN, 1);
-	gpio_set_value(TP_CNTRL_WAKEUP_PIN, 0);
+	gpio_request(ts_gpio_wakeup_pin, "tp_wakeup");
+	gpio_direction_output(ts_gpio_wakeup_pin, 1);
+	gpio_set_value(ts_gpio_wakeup_pin, 0);
 	mdelay(5);
-	gpio_set_value(TP_CNTRL_WAKEUP_PIN, 1);
-	gpio_free(TP_CNTRL_WAKEUP_PIN);
+	gpio_set_value(ts_gpio_wakeup_pin, 1);
+	gpio_free(ts_gpio_wakeup_pin);
 	mdelay(200);
 #endif
 
@@ -1302,27 +1316,27 @@ static int focaltech_ft5306_probe(
 	set_bit(KEY_BACK, ts->input_dev->keybit);
 	set_bit(KEY_SEARCH, ts->input_dev->keybit);
 
-        set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
+    set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
 
-	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, 479, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, 799, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, ts_x_max_value, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, ts_y_max_value, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 8, 0, 0);
 
 	InitFingersQueue();
 	if (client->irq) {
 		printk("%s IRQ %d", __func__, client->irq);
-		ret = gpio_request(TP_HW_INT_PIN, client->name);
+		ret = gpio_request(ts_gpio_irq_pin, client->name);
 		printk(KERN_INFO "%s: request tp int ret: %d\n", __func__, ret);
 		
-		gpio_direction_input(TP_HW_INT_PIN);
+		gpio_direction_input(ts_gpio_irq_pin);
 		printk("Requesting IRQ...\n");
 
-		if (request_irq(GPIO_TO_IRQ(TP_HW_INT_PIN), focaltech_ft5306_irq_handler,
+		if (request_irq(GPIO_TO_IRQ(ts_gpio_irq_pin), focaltech_ft5306_irq_handler,
 				IRQF_TRIGGER_FALLING, client->name, ts) >= 0) {
 			printk("Requested IRQ\n");
 			ts->use_irq = 1;
-			printk(KERN_INFO "GPIO_%d INT: %d", TP_HW_INT_PIN,
-						GPIO_TO_IRQ(TP_HW_INT_PIN));
+			printk(KERN_INFO "GPIO_%d INT: %d", ts_gpio_irq_pin,
+						GPIO_TO_IRQ(ts_gpio_irq_pin));
 			/*if ((ret = set_irq_wake(client->irq, 1)) < 0) {
 				printk(KERN_ERR "failed to set IRQ wake: %d\n", ret);
 			}*/
@@ -1360,8 +1374,6 @@ static int focaltech_ft5306_probe(
 	ts->early_suspend.resume = focaltech_ft5306_late_resume;
 	register_early_suspend(&ts->early_suspend);
 	#endif
-
-	
 	
 	printk("Tp Probe Done!!!");
 	
@@ -1373,6 +1385,7 @@ err_input_register_device_failed:
 err_alloc_dev_failed:
 err_pdt_read_failed:
 err_check_functionality_failed:
+err_i2c_client_check:
 
 	return ret;
 }
