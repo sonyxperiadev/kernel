@@ -48,7 +48,9 @@
 #include <linux/gpio_keys.h>
 #include <linux/i2c-kona.h>
 #include <linux/i2c.h>
+#ifdef CONFIG_TOUCHSCREEN_TANGO
 #include <linux/i2c/tango_ts.h>
+#endif
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <asm/mach/map.h>
@@ -171,7 +173,9 @@ extern int hawaii_wifi_status_register(
 		void (*callback)(int card_present, void *dev_id),
 		void *dev_id);
 #endif
-
+#ifdef CONFIG_TOUCHSCREEN_FT5306
+#include <linux/i2c/ft5306.h>
+#endif
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
 
@@ -194,10 +198,20 @@ extern int hawaii_wifi_status_register(
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
 
+#ifdef CONFIG_MACH_HAWAII_GARNET
+#define FT5306_MAX_X 720
+#define FT5306_MAX_Y 1280
+#else
+#define FT5306_MAX_X 480
+#define FT5306_MAX_Y 800
+#endif
+
 /* Touch */
 #define TSC_GPIO_IRQ_PIN			73
 
 #define TSC_GPIO_RESET_PIN			70
+#define TSC_GPIO_WAKEUP_PIN         70
+
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ	14
 
 /* NFC */
@@ -1234,19 +1248,35 @@ static int ts_power(ts_power_status vreg_en)
 	struct regulator *reg = NULL;
 	if (!reg) {
 /* Remove this comment when the regulator references are fixed here for Hawaii */
+                #ifdef CONFIG_MACH_HAWAII_GARNET
+		reg = regulator_get(NULL, "camldo2");
+		if (!reg || IS_ERR(reg)) {
+			pr_err("No Regulator available for camldo2\n");
+			return -1;
+		}
+		#else
 		reg = regulator_get(NULL, "hv8");
 		if (!reg || IS_ERR(reg)) {
 			pr_err("No Regulator available for ldo_hv8\n");
 			return -1;
 		}
+		#endif
 	}
 	if (reg) {
 		if (vreg_en) {
 			regulator_set_voltage(reg, 3000000, 3000000);
-			pr_err("Turn on TP (ldo_hv8) to 2.8V\n");
+		        #ifdef CONFIG_MACH_HAWAII_GARNET
+			pr_err("Turn on TP(camldo2) to 2.8V\n");
+		        #else
+			pr_err("Turn on TP(ldo_hv8) to 2.8V\n");
+		        #endif
 			regulator_enable(reg);
 		} else {
-			pr_err("Turn off TP (ldo_hv8)\n");
+		        #ifdef CONFIG_MACH_HAWAII_GARNET
+			pr_err("Turn off TP(camldo2)\n");
+		        #else
+		        pr_err("Turn off TP(ldo_hv8)\n");
+                        #endif
 			regulator_disable(reg);
 		}
 	} else {
@@ -1257,7 +1287,12 @@ static int ts_power(ts_power_status vreg_en)
 }
 
 static struct Synaptics_ts_platform_data ft5306_plat_data = {
-	.power = ts_power,
+    .gpio_irq_pin		= TSC_GPIO_IRQ_PIN,
+    .gpio_reset_pin		= TSC_GPIO_RESET_PIN,
+    .gpio_wakeup_pin    = TSC_GPIO_WAKEUP_PIN,
+    .x_max_value		= FT5306_MAX_X-1,
+    .y_max_value     	= FT5306_MAX_Y-1,
+	.power              = ts_power,
 };
 
 static struct i2c_board_info __initdata ft5306_info[] = {
