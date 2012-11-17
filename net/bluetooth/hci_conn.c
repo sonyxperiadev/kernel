@@ -212,28 +212,15 @@ enum {
 #define PCMI2S_DEF_ROLE PCMI2S_SLAVE_ROLE
 #endif
 
-#define CONFIG_BRCM_WBS_EXTENDED
-#ifndef CONFIG_BRCM_WBS_EXTENDED
 struct hci_vcs_enable_wbs {
 	__u8    enable;
 	__le16  type;
 } __packed;
-#else
-struct hci_vcs_enable_wbs {
-	__u8    enable;
-	__le16  type;
-	__le16  handle;
-} __packed;
-#endif
+
 static void setup_wbs(struct hci_dev* hdev, __u16 handle)
 {
-#ifndef CONFIG_BRCM_WBS_EXTENDED
 	struct hci_vcs_enable_wbs enable_wbs = { 0x01, 0x0002 };
 	__u16 enable_wbs_opcode = 0xFC7E;
-#else
-	struct hci_vcs_enable_wbs enable_wbs = { 0x01, 0x0002, 0x000b };
-	__u16 enable_wbs_opcode = 0xFD02;
-#endif
 	/* PCM, role x, 16KHz sample rate, clock xx */
 	__u8 i2spcm_int_param[] = { 0x00, (__u8)PCMI2S_DEF_ROLE, 0x01,
 			(__u8)PCMI2S_DEF_WBS_CLK };
@@ -244,13 +231,7 @@ static void setup_wbs(struct hci_dev* hdev, __u16 handle)
 			(__u8)PCMI2S_DEF_ROLE, (__u8)PCMI2S_DEF_ROLE };
 	__u16 scopcm_int_param_opcode = 0xFC1C;
 
-#ifdef CONFIG_BRCM_WBS_EXTENDED
-	BT_INFO("setup_wbs(): PCM1 block 16khz, clk: 0x%x, role: 0x%x, "
-		"handle: 0x%x", PCMI2S_DEF_WBS_CLK, PCMI2S_DEF_ROLE, handle);
-	enable_wbs.handle = cpu_to_le16(handle);
-#else
 	(void)handle;
-#endif
 	hci_send_cmd(hdev, enable_wbs_opcode, sizeof(enable_wbs),
 			(void *)&enable_wbs);
 	hci_send_cmd(hdev, i2spcm_int_param_opcode, sizeof(i2spcm_int_param),
@@ -262,28 +243,16 @@ static void setup_wbs(struct hci_dev* hdev, __u16 handle)
 
 static void setup_nbs(struct hci_dev* hdev, __u16 handle)
 {
-#ifndef CONFIG_BRCM_WBS_EXTENDED
 	struct hci_vcs_enable_wbs disable_wbs = { 0x00, 0x0002 };
 	__u16 disable_wbs_opcode = 0xFC7E;
-#else
-	struct hci_vcs_enable_wbs disable_wbs = {0x00, 0x0002, 0x000b};
-	__u16 disable_wbs_opcode = 0xFD02;
-#endif
 	/* PCM, role x, 8KHz sample rate, clock xx */
 	__u8 i2spcm_int_param[] = {0x00, (__u8)PCMI2S_DEF_ROLE, 0x00,
 			(__u8)PCMI2S_DEF_CLK};
 	__u16 i2spcm_int_param_opcode = 0xFC6D;
 
-#ifdef CONFIG_BRCM_WBS_EXTENDED
-	BT_INFO("setup_nbs(): PCM1 block 8khz, clk: 0x%x, role: 0x%x, "
-		"handle: 0x%x", PCMI2S_DEF_CLK, PCMI2S_DEF_ROLE, handle);
-
-	disable_wbs.handle = cpu_to_le16(handle);
-#else
 	BT_INFO("setup_nbs(): PCM1 block 8khz, clk: 0x%x, role: 0x%x",
 			PCMI2S_DEF_CLK, PCMI2S_DEF_ROLE);
 	(void)handle;
-#endif
 	hci_send_cmd(hdev, disable_wbs_opcode, sizeof(disable_wbs),
 			(void *)&disable_wbs);
 	hci_send_cmd(hdev, i2spcm_int_param_opcode, sizeof(i2spcm_int_param),
