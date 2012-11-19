@@ -251,35 +251,6 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 	.port_name = uart_name,					\
 }
 
-#ifdef CONFIG_VIDEO_ADP1653
-#define ADP1653_I2C_ADDR 0x60
-static struct i2c_board_info adp1653_flash[] = {
-	{
-	 I2C_BOARD_INFO("adp1653", (ADP1653_I2C_ADDR >> 1))
-	 },
-};
-#endif
-
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
-
-static struct regulator *d_gpsr_cam0_1v8;
-static struct regulator *d_lvldo2_cam1_1v8;
-static struct regulator *d_1v8_mmc1_vcc;
-static struct regulator *d_3v0_mmc1_vcc;
-
-#define OV5640_I2C_ADDRESS (0x3C)
-#define OV7692_I2C_ADDRESS (0x3e)
-
-#define SENSOR_0_GPIO_PWRDN             (002)
-#define SENSOR_0_GPIO_RST               (111)
-#define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
-#define SENSOR_0_CLK_FREQ               (13000000)
-
-#define SENSOR_1_CLK                    "dig_ch0_clk"	/* DCLK1 */
-#define SENSOR_1_CLK_FREQ               (26000000)
-
-#define SENSOR_1_GPIO_PWRDN             (005)
-
 #ifdef CONFIG_ANDROID_PMEM
 struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
@@ -328,6 +299,36 @@ struct ion_platform_data ion_cma_data = {
 };
 #endif /* CONFIG_CMA */
 #endif /* CONFIG_ION */
+
+#ifdef CONFIG_VIDEO_ADP1653
+#define ADP1653_I2C_ADDR 0x60
+static struct i2c_board_info adp1653_flash[] = {
+	{
+	 I2C_BOARD_INFO("adp1653", (ADP1653_I2C_ADDR >> 1))
+	 },
+};
+#endif
+
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+
+static struct regulator *d_gpsr_cam0_1v8;
+static struct regulator *d_lvldo2_cam1_1v8;
+static struct regulator *d_1v8_mmc1_vcc;
+static struct regulator *d_3v0_mmc1_vcc;
+
+#define OV5640_I2C_ADDRESS (0x3C)
+#define OV7692_I2C_ADDRESS (0x3e)
+
+#define SENSOR_0_GPIO_PWRDN             (002)
+#define SENSOR_0_GPIO_RST               (111)
+#define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
+#define SENSOR_0_CLK_FREQ               (13000000)
+
+#define SENSOR_1_CLK                    "dig_ch0_clk"	/* DCLK1 */
+#define SENSOR_1_CLK_FREQ               (26000000)
+
+#define SENSOR_1_GPIO_PWRDN             (005)
+
 
 static struct i2c_board_info rhea_i2c_camera[] = {
 	{
