@@ -106,8 +106,7 @@ static struct kona_idle_state idle_states[] = {
 	{
 		.name = "C3",
 		.desc = "suspend-drmnt", /* suspend-dormant */
-		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON |
-					CPUIDLE_CSTATE_DISABLED,
+		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
 		.latency = EXIT_LAT_SUSPEND_DRMT,
 		.target_residency = TRGT_RESI_SUSPEND_DRMT,
 		.state = CSTATE_SUSPEND_DRMT,
@@ -115,7 +114,7 @@ static struct kona_idle_state idle_states[] = {
 	}, {
 		.name = "C4",
 		.desc = "ds-drmnt", /* deepsleep-dormant(XTAL OFF) */
-		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_CSTATE_DISABLED,
+		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.latency = EXIT_LAT_DS_DRMT,
 		.target_residency = TRGT_RESI_DS_DRMT,
 		.state = CSTATE_DS_DRMT,
