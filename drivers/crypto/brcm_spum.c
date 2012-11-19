@@ -59,7 +59,7 @@ void spum_dma_init(void __iomem *io_axi_base)
 void spum_set_pkt_length(void __iomem *io_axi_base,
 				 u32 rx_len, u32 tx_len)
 {
-        writel((((rx_len+3)/4) + 1), io_axi_base + SPUM_AXI_IN_DMA_SIZE_OFFSET);
+	writel((rx_len+3)/4, io_axi_base + SPUM_AXI_IN_DMA_SIZE_OFFSET);
         writel((tx_len+3)/4, io_axi_base + SPUM_AXI_OUT_DMA_SIZE_OFFSET);
 }
 
@@ -228,6 +228,9 @@ static int __init brcm_spum_init(void)
 		kzalloc(sizeof(struct brcm_spum_device), GFP_KERNEL);
 
 	spin_lock_init(&spum_dev->lock);
+
+	crypto_init_queue(&spum_dev->spum_queue, SPUM_QUEUE_LENGTH);
+
 	spum_dev->flags = 0;
 
 	/* Aquire DMA channels */

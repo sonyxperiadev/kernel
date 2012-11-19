@@ -39,7 +39,7 @@
 #include "brcm_spum.h"
 
 /* Enable to run in PIO mode */
-/*#define SPUM_PIO_MODE*/
+/* #define SPUM_PIO_MODE */
 
 #ifdef DEBUG
 static void hexdump(unsigned char *buf, unsigned int len)
@@ -81,7 +81,31 @@ struct spum_request_context {
 
 static int spum_aes_dma_init(struct spum_aes_device *dd);
 
+static void dump_sg_list(struct scatterlist *sg)
+{
+	struct scatterlist *sgl = sg;
+
+	while (sgl) {
+		pr_debug("%s: %d", __func__, sgl->length);
+		sgl = sg_next(sgl);
+	}
+}
+
+#ifdef SPUM_PIO_MODE
 static unsigned int get_sg_list_len(struct scatterlist *sg)
+{
+	struct scatterlist *sgl = sg;
+	unsigned int cnt = 0;
+
+	while (sgl) {
+		cnt += sgl->length;
+		sgl = sg_next(sgl);
+	}
+	return cnt;
+}
+#endif
+
+static unsigned int get_sg_list_cnt(struct scatterlist *sg)
 {
 	struct scatterlist *sgl = sg;
 	unsigned int cnt = 0;
@@ -123,6 +147,23 @@ static void spum_unmap_sgl(struct spum_aes_device *dd,
 	}
 }
 
+static int spum_aes_finish_req(struct spum_aes_device *dd, int err)
+{
+	struct spum_request_context *rctx = ablkcipher_request_ctx(dd->req);
+	unsigned long flags;
+
+	pr_debug("%s: entry tx_len %d\n", __func__, rctx->tx_len);
+
+	dd->req->base.complete(&dd->req->base, err);
+	dd->req = NULL;
+	rctx->tx_offset = 0;
+	spin_lock_irqsave(&spum_dev->lock, flags);
+	clear_bit(FLAGS_BUSY, &spum_dev->flags);
+	spin_unlock_irqrestore(&spum_dev->lock, flags);
+
+	return 0;
+}
+
 #ifdef SPUM_PIO_MODE
 static int spum_aes_cpu_xfer(struct spum_aes_device *dd,
 		struct scatterlist *in_sg, struct scatterlist *out_sg)
@@ -137,12 +178,12 @@ static int spum_aes_cpu_xfer(struct spum_aes_device *dd,
 
 	spum_dma_init(dd->io_axi_base);
 
-	if (((spum_cmd->crypto_mode&SPUM_CMD_CMODE_MASK) ==
+	if (((spum_cmd->crypto_mode & SPUM_CMD_CMODE_MASK) ==
 		SPUM_CRYPTO_MODE_XTS) && (out_sg == NULL)) {
 		/* Copy the parameter i to in FIFO */
 
 		in_buff = (u32 *)sg_virt(in_sg);
-		in_len = (in_sg->length+3)/sizeof(u32);
+		in_len = (get_sg_list_len(in_sg) + 3) / sizeof(u32);
 
 		while (i < in_len) {
 			status = readl(dd->io_axi_base +
@@ -161,16 +202,16 @@ static int spum_aes_cpu_xfer(struct spum_aes_device *dd,
 			u32 out;
 			out = readl(dd->io_axi_base +
 				SPUM_AXI_FIFO_OUT_OFFSET);
-		status = readl(dd->io_axi_base +
-			SPUM_AXI_FIFO_STAT_OFFSET);
+			status = readl(dd->io_axi_base +
+				SPUM_AXI_FIFO_STAT_OFFSET);
 		}
 		return ret;
 	}
 
 	in_buff = (u32 *)sg_virt(in_sg);
 	out_buff = (u32 *)sg_virt(out_sg);
-	in_len = (in_sg->length+3)/sizeof(u32);
-	out_len = (out_sg->length+3)/sizeof(u32);
+	in_len = (get_sg_list_len(in_sg) + 3) / sizeof(u32);
+	out_len = (get_sg_list_len(out_sg) + 3) / sizeof(u32);
 
 	while (j < out_len) {
 		status = readl(dd->io_axi_base +
@@ -182,7 +223,7 @@ static int spum_aes_cpu_xfer(struct spum_aes_device *dd,
 			i++;
 		}
 		if (status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) {
-				*out_buff++ = readl(dd->io_axi_base +
+			*out_buff++ = readl(dd->io_axi_base +
 				SPUM_AXI_FIFO_OUT_OFFSET);
 			j++;
 		}
@@ -198,13 +239,26 @@ static int spum_aes_pio_xfer(struct spum_aes_device *dd)
 				(struct spum_hw_context *)rctx->spum_in_hdr;
 	struct scatterlist *in_sg;
 	struct scatterlist *out_sg;
+	u32 *out_stat_buff;
+	int err = 0;
+
+	if (!test_bit(FLAGS_BUSY, &spum_dev->flags)) {
+		pr_err("%s: Device is busy!!!", __func__);
+		BUG();
+	}
+
+	spum_init_device(dd->io_apb_base, dd->io_axi_base);
+	spum_set_pkt_length(dd->io_axi_base, rctx->rx_len, rctx->tx_len);
 
 	/* Process header */
 	spum_aes_cpu_xfer(dd, &rctx->spum_in_cmd_hdr,
 			&rctx->spum_out_cmd_hdr);
 
+	pr_debug("%s: dumping IN HDR sg: \n", __func__);
+	dump_sg_list(&rctx->spum_in_cmd_hdr);
+
 	/* If xts mode then pass tweak value, Parameter i */
-	if ((spum_cmd->crypto_mode&SPUM_CMD_CMODE_MASK) ==
+	if ((spum_cmd->crypto_mode & SPUM_CMD_CMODE_MASK) ==
 		SPUM_CRYPTO_MODE_XTS) {
 		spum_aes_cpu_xfer(dd, &rctx->spum_in_cmd_tweak,
 				NULL);
@@ -214,16 +268,37 @@ static int spum_aes_pio_xfer(struct spum_aes_device *dd)
 	in_sg = dd->req->src;
 	out_sg = dd->req->dst;
 
+	pr_debug("%s: dumping IN payload sg: \n", __func__);
+	dump_sg_list(in_sg);
+
 	while (in_sg && out_sg) {
 		spum_aes_cpu_xfer(dd, in_sg, out_sg);
 		in_sg = sg_next(in_sg);
 		out_sg = sg_next(out_sg);
 	}
 
+#if 0 /* Status word read gets stuck for some reason. Debug later */
 	/* Process status word */
-	/*spum_aes_cpu_xfer(dd, &rctx->spum_in_cmd_stat,
+	pr_debug("%s: dumping IN STATUS sg: \n", __func__);
+	dump_sg_list(&rctx->spum_in_cmd_stat);
+
+	spum_aes_cpu_xfer(dd, &rctx->spum_in_cmd_stat,
 			&rctx->spum_out_cmd_stat);
-	*/
+
+	/* Check status for success */
+	out_stat_buff = (u32 *)sg_virt(&rctx->spum_out_cmd_stat);
+	hexdump((unsigned char *)out_stat_buff, 4);
+	if (*out_stat_buff & SPUM_CMD_CRYPTO_STATUS_ERROR) {
+		pr_err("%s: SPU-M h/w returned ERROR in status field\n",
+			__func__);
+		err = -1;
+	}
+#endif
+
+	spum_aes_finish_req(dd, err);
+
+	if (spum_dev->spum_queue.qlen)
+		spum_queue_task((unsigned long)&spum_dev);
 
 	return 0;
 }
@@ -266,6 +341,15 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 	INIT_LIST_HEAD(&head_in);
 	INIT_LIST_HEAD(&head_out);
 
+	pr_debug("%s: dumping IN HDR sg: \n", __func__);
+	dump_sg_list(&rctx->spum_in_cmd_hdr);
+
+	pr_debug("%s: dumping IN payload sg: \n", __func__);
+	dump_sg_list(dd->req->src);
+
+	pr_debug("%s: dumping IN STATUS sg: \n", __func__);
+	dump_sg_list(&rctx->spum_in_cmd_stat);
+
 	/* DMA mapping of input/output sg list. */ /* TODO error condition. */
 	spum_map_sgl(dd, &rctx->spum_in_cmd_hdr, DMA_TO_DEVICE);
 	spum_map_sgl(dd, &rctx->spum_out_cmd_hdr, DMA_FROM_DEVICE);
@@ -277,31 +361,31 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 	/* Create IN lli */
 	/* Header */
 	lli_in_hdr.sgl = &rctx->spum_in_cmd_hdr;
-	lli_in_hdr.sg_len = get_sg_list_len(&rctx->spum_in_cmd_hdr);
+	lli_in_hdr.sg_len = get_sg_list_cnt(&rctx->spum_in_cmd_hdr);
 	/* If XTS mode. Set tweak value. */
 	if ((spum_cmd->crypto_mode&SPUM_CMD_CMODE_MASK) ==
 					 SPUM_CRYPTO_MODE_XTS) {
 		lli_in_tweak.sgl = &rctx->spum_in_cmd_tweak;
 		lli_in_tweak.sg_len =
-			 get_sg_list_len(&rctx->spum_in_cmd_tweak);
+			 get_sg_list_cnt(&rctx->spum_in_cmd_tweak);
 	}
 	/* Payload */
 	lli_in_data.sgl = dd->req->src;
-	lli_in_data.sg_len = get_sg_list_len(dd->req->src);
+	lli_in_data.sg_len = get_sg_list_cnt(dd->req->src);
 	/* status */
 	lli_in_stat.sgl = &rctx->spum_in_cmd_stat;
-	lli_in_stat.sg_len = get_sg_list_len(&rctx->spum_in_cmd_stat);
+	lli_in_stat.sg_len = get_sg_list_cnt(&rctx->spum_in_cmd_stat);
 
 	/* Create OUT lli */
 	/* Header */
 	lli_out_hdr.sgl = &rctx->spum_out_cmd_hdr;
-	lli_out_hdr.sg_len = get_sg_list_len(&rctx->spum_out_cmd_hdr);
+	lli_out_hdr.sg_len = get_sg_list_cnt(&rctx->spum_out_cmd_hdr);
 	/* Payload */
 	lli_out_data.sgl = dd->req->dst;
-	lli_out_data.sg_len = get_sg_list_len(dd->req->dst);
+	lli_out_data.sg_len = get_sg_list_cnt(dd->req->dst);
 	/* status */
 	lli_out_stat.sgl = &rctx->spum_out_cmd_stat;
-	lli_out_stat.sg_len = get_sg_list_len(&rctx->spum_out_cmd_stat);
+	lli_out_stat.sg_len = get_sg_list_cnt(&rctx->spum_out_cmd_stat);
 
 	/*  IN Linked list */
 	list_add_tail(&lli_in_hdr.next, &head_in);
@@ -370,20 +454,6 @@ err_xfer:
 	return err;
 }
 
-static int spum_aes_finish_req(struct spum_aes_device *dd, int err)
-{
-	struct spum_request_context *rctx = ablkcipher_request_ctx(dd->req);
-
-	pr_debug("%s: entry tx_len %d\n", __func__, rctx->tx_len);
-
-	dd->req->base.complete(&dd->req->base, err);
-	dd->req = NULL;
-	rctx->tx_offset = 0;
-	clear_bit(FLAGS_BUSY, &spum_dev->flags);
-
-	return 0;
-}
-
 int spum_aes_process_request(struct spum_aes_device *dd)
 {
 	int ret = 0;
@@ -394,6 +464,77 @@ int spum_aes_process_request(struct spum_aes_device *dd)
 #endif
 
 	return ret;
+}
+
+static void spum_aes_done_task(unsigned long data)
+{
+	struct spum_aes_device *dd = (struct spum_aes_device *)data;
+	struct spum_request_context *rctx = ablkcipher_request_ctx(dd->req);
+	int err = 0;
+
+	pr_debug("%s\n", __func__);
+
+	err = dma_stop_transfer(spum_dev->rx_dma_chan);
+	if (err)
+		pr_err("%s: Rx transfer stop failed %d\n", __func__, err);
+
+	err = dma_stop_transfer(spum_dev->tx_dma_chan);
+	if (err)
+		pr_err("%s: Tx transfer stop failed %d\n", __func__, err);
+
+	/* Free the DMA callback. */
+	dma_free_callback(spum_dev->tx_dma_chan);
+	dma_free_callback(spum_dev->rx_dma_chan);
+
+	dma_unmap_sg(dd->dev, &rctx->spum_in_cmd_hdr, 1, DMA_TO_DEVICE);
+	dma_unmap_sg(dd->dev, &rctx->spum_out_cmd_hdr, 1, DMA_FROM_DEVICE);
+	dma_unmap_sg(dd->dev, &rctx->spum_in_cmd_stat, 1, DMA_TO_DEVICE);
+	dma_unmap_sg(dd->dev, &rctx->spum_out_cmd_stat, 1, DMA_FROM_DEVICE);
+	spum_unmap_sgl(dd, dd->req->src, DMA_TO_DEVICE);
+	spum_unmap_sgl(dd, dd->req->dst, DMA_FROM_DEVICE);
+
+	spum_aes_finish_req(dd, err);
+
+	if (spum_dev->spum_queue.qlen)
+		spum_queue_task((unsigned long)&spum_dev);
+}
+
+static void spum_aes_dma_callback(void *data, enum pl330_xfer_status status)
+{
+	struct spum_aes_device *dd = NULL;
+	u32 *dma_chan = (u32 *)data;
+
+	pr_debug("%s: dma_chan: %d\n", __func__, *dma_chan);
+
+	list_for_each_entry(dd, &spum_drv_list, list) {
+		break;
+	}
+
+	if (*dma_chan == spum_dev->rx_dma_chan)
+		return;
+
+	tasklet_hi_schedule(&dd->done_task);
+}
+
+static int spum_aes_dma_init(struct spum_aes_device *dd)
+{
+
+	/* Register DMA callback */
+	if (dma_register_callback(spum_dev->tx_dma_chan, spum_aes_dma_callback,
+				  &spum_dev->tx_dma_chan) != 0) {
+		pr_err("%s: Tx dma_register_callback failed\n", __func__);
+		goto err1;
+	}
+	if (dma_register_callback(spum_dev->rx_dma_chan, spum_aes_dma_callback,
+				  &spum_dev->rx_dma_chan) != 0) {
+		pr_err("%s: Rx dma_register_callback failed\n", __func__);
+		goto err2;
+	}
+	return 0;
+err2:
+	dma_free_callback(spum_dev->tx_dma_chan);
+err1:
+	return -EIO;
 }
 
 static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
@@ -407,7 +548,8 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 	char *iv = "\x00\x00\x00\x00\x00\x00\x00\x00"
 	    "\x00\x00\x00\x00\x00\x00\x00\x00";
 
-	pr_debug("%s : entry\n", __func__);
+	pr_debug("%s : entry. nbytes: %d, mode: %d, op: %d\n",
+		__func__, req->nbytes, mode, op);
 
 	memset((void *)&spum_hw_aes_ctx, 0, sizeof(spum_hw_aes_ctx));
 	memset((void *)&rctx->spum_in_hdr[0], 0, ARRAY_SIZE(rctx->spum_in_hdr));
@@ -461,18 +603,24 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 
 	cmd_len_bytes = spum_format_command(&spum_hw_aes_ctx,
 						rctx->spum_in_hdr);
-	rctx->rx_len =
-	    cmd_len_bytes + spum_hw_aes_ctx.data_attribute.data_length;
-	rctx->tx_len =
-	    SPUM_OUTPUT_HEADER_LEN +
-	    spum_hw_aes_ctx.data_attribute.data_length + SPUM_OUTPUT_STATUS_LEN;
+	rctx->rx_len = cmd_len_bytes +
+			    spum_hw_aes_ctx.data_attribute.data_length +
+			    SPUM_INPUT_STATUS_LEN;
+	rctx->tx_len = SPUM_OUTPUT_HEADER_LEN +
+			    spum_hw_aes_ctx.data_attribute.data_length +
+			    SPUM_OUTPUT_STATUS_LEN;
+
+	pr_debug("%s: cmd_len_bytes: %d, total rx_len: %d, total tx_len: %d\n",
+		__func__, cmd_len_bytes, rctx->rx_len, rctx->tx_len);
 
 	/* Preparing sg node for SPUM input/output message commands. */
 	sg_init_one(&rctx->spum_in_cmd_hdr, rctx->spum_in_hdr, cmd_len_bytes);
 	sg_init_one(&rctx->spum_out_cmd_hdr, rctx->spum_out_hdr,
 			 SPUM_OUTPUT_HEADER_LEN);
-	sg_init_one(&rctx->spum_in_cmd_stat, rctx->spum_in_stat, sizeof(u32));
-	sg_init_one(&rctx->spum_out_cmd_stat, rctx->spum_out_stat, sizeof(u32));
+	sg_init_one(&rctx->spum_in_cmd_stat, rctx->spum_in_stat,
+			SPUM_INPUT_STATUS_LEN);
+	sg_init_one(&rctx->spum_out_cmd_stat, rctx->spum_out_stat,
+			SPUM_OUTPUT_STATUS_LEN);
 
 	if (mode == SPUM_CRYPTO_MODE_XTS) {
 		sg_init_one(&rctx->spum_in_cmd_tweak, req->info,
@@ -482,7 +630,7 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 	ret = spum_enqueue_request(&req->base);
 
 	if (ret == -EINPROGRESS)
-		tasklet_hi_schedule(&spum_dev->spum_queue_task);
+		spum_queue_task((unsigned long)&spum_dev);
 
 	pr_debug("%s : exit\n", __func__);
 
@@ -497,7 +645,7 @@ static int spum_aes_setkey(struct crypto_ablkcipher *tfm, const u8 *in_key,
 	const __le32 *key = (const __le32 *)in_key;
 	int ret = 0;
 
-	pr_debug("%s:Entry.%d\n", __func__, key_len);
+	pr_debug("%s: entry. key_len: %d\n", __func__, key_len);
 
 	if ((key_len < cipher->min_keysize) ||
 		(key_len > cipher->max_keysize)) {
@@ -508,7 +656,7 @@ static int spum_aes_setkey(struct crypto_ablkcipher *tfm, const u8 *in_key,
 		aes_ctx->key_len = key_len;
 	}
 
-	pr_debug("%s:Exit.\n", __func__);
+	pr_debug("%s: exit\n", __func__);
 	return ret;
 }
 
@@ -520,7 +668,7 @@ static int spum_aes_xts_setkey(struct crypto_ablkcipher *tfm, const u8 *in_key,
 	const __le32 *key = (const __le32 *)in_key;
 	int ret = 0;
 
-	pr_debug("%s:Entry.%d\n", __func__, key_len);
+	pr_debug("%s: entry. key_len: %d\n", __func__, key_len);
 
 	if ((key_len < cipher->min_keysize) ||
 		(key_len > cipher->max_keysize)) {
@@ -534,7 +682,7 @@ static int spum_aes_xts_setkey(struct crypto_ablkcipher *tfm, const u8 *in_key,
 		aes_ctx->key_len = key_len;
 	}
 
-	pr_debug("%s:Exit.\n", __func__);
+	pr_debug("%s: exit\n", __func__);
 	return ret;
 }
 
@@ -599,7 +747,7 @@ static int spum_aes_cra_init(struct crypto_tfm *tfm)
 	struct spum_aes_device *dd = NULL;
 	struct spum_aes_context *ctx = crypto_tfm_ctx(tfm);
 
-	pr_debug("%s: entry\n", __func__);
+	pr_debug("%s: enter\n", __func__);
 
 	list_for_each_entry(dd, &spum_drv_list, list) {
 		break;
@@ -715,84 +863,11 @@ static struct crypto_alg spum_algos[] = {
 	 },
 };
 
-static void spum_aes_done_task(unsigned long data)
-{
-	struct spum_aes_device *dd = (struct spum_aes_device *)data;
-	struct spum_request_context *rctx = ablkcipher_request_ctx(dd->req);
-	int err;
-
-	pr_debug("%s: entry\n", __func__);
-
-	err = dma_stop_transfer(spum_dev->rx_dma_chan);
-	if (err)
-		pr_err("%s: Rx transfer stop failed %d\n", __func__, err);
-
-	err = dma_stop_transfer(spum_dev->tx_dma_chan);
-	if (err)
-		pr_err("%s: Tx transfer stop failed %d\n", __func__, err);
-
-	/* Free the DMA callback. */
-	dma_free_callback(spum_dev->tx_dma_chan);
-	dma_free_callback(spum_dev->rx_dma_chan);
-
-	dma_unmap_sg(dd->dev, &rctx->spum_in_cmd_hdr, 1, DMA_TO_DEVICE);
-	dma_unmap_sg(dd->dev, &rctx->spum_out_cmd_hdr, 1, DMA_FROM_DEVICE);
-	dma_unmap_sg(dd->dev, &rctx->spum_in_cmd_stat, 1, DMA_TO_DEVICE);
-	dma_unmap_sg(dd->dev, &rctx->spum_out_cmd_stat, 1, DMA_FROM_DEVICE);
-	spum_unmap_sgl(dd, dd->req->src, DMA_TO_DEVICE);
-	spum_unmap_sgl(dd, dd->req->dst, DMA_FROM_DEVICE);
-
-	spum_aes_finish_req(dd, err);
-
-	if (spum_dev->spum_queue.qlen)
-		tasklet_hi_schedule(&spum_dev->spum_queue_task);
-}
-
-static void spum_aes_dma_callback(void *data, enum pl330_xfer_status status)
-{
-	struct spum_aes_device *dd = NULL;
-	u32 *dma_chan = (u32 *)data;
-
-	pr_debug("%s: entry %d\n", __func__, *dma_chan);
-
-	list_for_each_entry(dd, &spum_drv_list, list) {
-		break;
-	}
-
-	if (*dma_chan == spum_dev->rx_dma_chan)
-		return;
-
-	tasklet_hi_schedule(&dd->done_task);
-}
-
-static int spum_aes_dma_init(struct spum_aes_device *dd)
-{
-
-	/* Register DMA callback */
-	if (dma_register_callback(spum_dev->tx_dma_chan, spum_aes_dma_callback,
-				  &spum_dev->tx_dma_chan) != 0) {
-		pr_err("%s: Tx dma_register_callback failed\n", __func__);
-		goto err1;
-	}
-	if (dma_register_callback(spum_dev->rx_dma_chan, spum_aes_dma_callback,
-				  &spum_dev->rx_dma_chan) != 0) {
-		pr_err("%s: Rx dma_register_callback failed\n", __func__);
-		goto err2;
-	}
-	return 0;
-err2:
-	dma_free_callback(spum_dev->tx_dma_chan);
-err1:
-	return -EIO;
-}
-
 static int spum_aes_probe(struct platform_device *pdev)
 {
 	struct spum_aes_device *dd;
 	struct resource *res;
 	int ret = 0, i, j;
-
-	pr_debug("%s: entry\n", __func__);
 
 	dd = (struct spum_aes_device *)
 	    kzalloc(sizeof(struct spum_aes_device), GFP_KERNEL);
@@ -843,9 +918,6 @@ static int spum_aes_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	if (spum_dev->spum_queue.max_qlen != SPUM_QUEUE_LENGTH)
-		crypto_init_queue(&spum_dev->spum_queue, SPUM_QUEUE_LENGTH);
-
 	/* Initialize SPU-M block */
 	if (clk_set_rate(dd->spum_open_clk, FREQ_MHZ(156)))
 		pr_debug("%s: Clock set failed!!!\n", __func__);
@@ -854,15 +926,11 @@ static int spum_aes_probe(struct platform_device *pdev)
 	clk_disable(dd->spum_open_clk);
 
 	INIT_LIST_HEAD(&dd->list);
-	spin_lock_init(&dd->lock);
 	spin_lock(&spum_drv_lock);
 	list_add_tail(&dd->list, &spum_drv_list);
 	spin_unlock(&spum_drv_lock);
 
 	tasklet_init(&dd->done_task, spum_aes_done_task, (unsigned long)dd);
-	if (!spum_dev->spum_queue_task.func)
-		tasklet_init(&spum_dev->spum_queue_task, spum_queue_task,
-				(unsigned long)&spum_dev);
 
 	for (i = 0; i < ARRAY_SIZE(spum_algos); i++) {
 		ret = crypto_register_alg(&spum_algos[i]);
@@ -901,9 +969,6 @@ static int spum_aes_remove(struct platform_device *pdev)
 
 	for (i = 0; i < ARRAY_SIZE(spum_algos); i++)
 		crypto_unregister_alg(&spum_algos[i]);
-
-	if (spum_dev->spum_queue_task.func)
-		tasklet_kill(&spum_dev->spum_queue_task);
 
 	tasklet_kill(&dd->done_task);
 	clk_put(dd->spum_open_clk);
