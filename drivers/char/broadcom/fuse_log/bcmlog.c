@@ -1763,6 +1763,13 @@ void BCMLOG_HandleCpCrashMemDumpData(const char *inPhysAddr, int size)
 				 (int)(p - (unsigned long)MemDumpVAddr), size);
 			BCMLOG_LogCPCrashDumpString(tmpStr);
 		}
+		/**
+		 * A small sleep to let slower drivers like ACM time to dump
+		 **/
+		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM) {
+			set_current_state(TASK_INTERRUPTIBLE);
+			schedule_timeout(1);
+		}
 	}
 }
 
