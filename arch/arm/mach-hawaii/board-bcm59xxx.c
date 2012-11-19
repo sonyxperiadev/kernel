@@ -382,6 +382,22 @@ static struct regulator_init_data bcm59xxx_gpldo3_data = {
 	.consumer_supplies = gpldo3_supply,
 };
 
+__weak struct regulator_consumer_supply tcxldo_supply[] = {
+	{.supply = "tcxldo_uc"},
+};
+static struct regulator_init_data bcm59xxx_tcxldo_data = {
+	.constraints = {
+			.name = "tcxldo",
+			.min_uV = 1200000,
+			.max_uV = 3300000,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.always_on = 0,
+			},
+	.num_consumer_supplies = ARRAY_SIZE(tcxldo_supply),
+	.consumer_supplies = tcxldo_supply,
+};
+
 __weak struct regulator_consumer_supply lvldo1_supply[] = {
 	{.supply = "lvldo1_uc"},
 };
@@ -638,6 +654,12 @@ struct bcmpmu59xxx_regulator_init_data
 			.initdata = &bcm59xxx_gpldo3_data,
 			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2),
+		},
+		[BCMPMU_REGULATOR_TCXLDO] = {
+			.id = BCMPMU_REGULATOR_TCXLDO,
+			.initdata = &bcm59xxx_tcxldo_data,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, 0),
 		},
 		[BCMPMU_REGULATOR_LVLDO1] = {
 			.id = BCMPMU_REGULATOR_LVLDO1,

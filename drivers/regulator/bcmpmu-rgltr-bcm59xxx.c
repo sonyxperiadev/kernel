@@ -364,6 +364,15 @@ struct regulator_desc rdesc[BCMPMU_REGULATOR_MAX] = {
 		.type = REGULATOR_VOLTAGE,
 		.owner = THIS_MODULE,
 	},
+	[BCMPMU_REGULATOR_TCXLDO] = {
+		.name = "tcxldo",
+		.id = BCMPMU_REGULATOR_TCXLDO,
+		.n_voltages =
+			ARRAY_SIZE(bcmpmu_ldo_v_table1),
+		.ops = &bcmpmu59xxx_ldo_ops,
+		.type = REGULATOR_VOLTAGE,
+		.owner = THIS_MODULE,
+	},
 	[BCMPMU_REGULATOR_LVLDO1] = {
 		.name = "lvldo1",
 		.id = BCMPMU_REGULATOR_LVLDO1,
@@ -501,6 +510,9 @@ bcmpmu59xxx_rglr_info[BCMPMU_REGULATOR_MAX] = {
 	},
 	[BCMPMU_REGULATOR_GPLDO3] = {
 		GEN_LDO_INFO_INIT(GPLDO3, 1),
+	},
+	[BCMPMU_REGULATOR_TCXLDO] = {
+		GEN_LDO_INFO_INIT(TCXLDO, 1),
 	},
 	[BCMPMU_REGULATOR_LVLDO1] = {
 		GEN_LDO_INFO_INIT(LVLDO1, 3),
