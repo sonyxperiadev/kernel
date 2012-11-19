@@ -246,7 +246,8 @@ static struct regulator_init_data bcm59xxx_mmcldo1_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
+			.boot_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc1_supply),
 	.consumer_supplies = mmc1_supply,
@@ -263,6 +264,7 @@ static struct regulator_init_data bcm59xxx_mmcldo2_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.boot_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc2_supply),
 	.consumer_supplies = mmc2_supply,
@@ -406,7 +408,8 @@ static struct regulator_init_data bcm59xxx_lvldo2_data = {
 			.max_uV = 1786000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
+			.boot_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(lvldo2_supply),
 	.consumer_supplies = lvldo2_supply,
@@ -423,6 +426,7 @@ static struct regulator_init_data bcm59xxx_vsr_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.boot_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vsr_supply),
 	.consumer_supplies = vsr_supply,

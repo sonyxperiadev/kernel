@@ -1926,8 +1926,10 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 						ov5640_wb_def);
 			break;
 		}
-		if (ret)
+		if (ret) {
+			printk(KERN_ERR "Some error in AWB\n");
 			return ret;
+		}
 		break;
 
 	case V4L2_CID_CAMERA_FRAME_RATE:
@@ -2065,7 +2067,9 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			break;
 
 		case AUTO_FOCUS_ON:
-
+			ret = ov5640_af_enable(client);
+			if (ret)
+				return ret;
 			ret = ov5640_af_start(client);
 			atomic_set(&ov5640->focus_status, OV5640_FOCUSING);
 			break;
