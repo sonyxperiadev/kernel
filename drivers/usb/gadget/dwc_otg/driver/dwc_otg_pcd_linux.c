@@ -789,9 +789,11 @@ static int set_selfpowered(struct usb_gadget *gadget, int is_selfpowered)
 }
 
 
-static int dwc_udc_start(struct usb_gadget *gadget,
-								struct usb_gadget_driver *driver)
+static int dwc_udc_start(struct usb_gadget_driver *driver,
+			int (*bind)(struct usb_gadget *))
 {
+	int ret = 0;
+
 	DWC_DEBUGPL(DBG_PCD, "probing gadget driver '%s'\n",
 		    driver->driver.name);
 
@@ -811,7 +813,12 @@ static int dwc_udc_start(struct usb_gadget *gadget,
 
 	/* hook up the driver */
 	gadget_wrapper->driver = driver;
-	gadget->dev.driver = &driver->driver;
+
+	gadget_wrapper->gadget.dev.driver = &driver->driver;
+
+	ret = bind(&gadget_wrapper->gadget);
+	if (ret)
+		return ret;
 
 #ifdef CONFIG_USB_OTG_UTILS
 #ifndef CONFIG_USB_OTG
@@ -826,6 +833,12 @@ static int dwc_udc_start(struct usb_gadget *gadget,
 	}
 #endif /* CONFIG_USB_OTG_UTILS */
 
+/* USB connect and disconnect is controlled in
+android.c composite driver,hence default come up as disconnected */
+/* This is to ensure that USB connect happens only after
+the Android USB functionalities are initialized */
+
+#ifndef CONFIG_USB_G_ANDROID
 	dwc_otg_disable_global_interrupts(gadget_wrapper->pcd->core_if);
 	/* Default is to connect to USB host. Gadget driver may override
 	 * this during its bind using the pullup() API. We will set our internal
@@ -842,11 +855,12 @@ static int dwc_udc_start(struct usb_gadget *gadget,
 		    driver->driver.name);
 
 	dwc_otg_enable_global_interrupts(gadget_wrapper->pcd->core_if);
+#endif
 
 #ifdef CONFIG_USB_OTG_UTILS
 	if (gadget_wrapper->pcd->core_if->xceiver->otg->set_peripheral)
 		otg_set_peripheral(gadget_wrapper->pcd->core_if->xceiver->otg,
-				   gadget);
+				   &gadget_wrapper->gadget);
 #endif
 
 	return 0;
@@ -858,7 +872,7 @@ static int dwc_udc_start(struct usb_gadget *gadget,
  *
  * @param driver The driver being unregistered
  */
-static int dwc_udc_stop(struct usb_gadget *gadget, struct usb_gadget_driver *driver)
+static int dwc_udc_stop(struct usb_gadget_driver *driver)
 {
 	/*DWC_DEBUGPL(DBG_PCDV,"%s(%p)\n", __func__, _driver); */
 
@@ -872,6 +886,8 @@ static int dwc_udc_stop(struct usb_gadget *gadget, struct usb_gadget_driver *dri
 			    -EINVAL);
 		return -EINVAL;
 	}
+
+	driver->unbind(&gadget_wrapper->gadget);
 
 	dwc_otg_disable_global_interrupts(gadget_wrapper->pcd->core_if);
 	/* Gadget about to unbound, disable connection to USB host */
@@ -887,7 +903,7 @@ static int dwc_udc_stop(struct usb_gadget *gadget, struct usb_gadget_driver *dri
 	DWC_WORKQ_SCHEDULE(gadget_wrapper->pcd->core_if->wq_otg,
 			   w_shutdown_core, gadget_wrapper->pcd->core_if,
 			   "Shutdown core");
-	gadget->dev.driver = NULL;
+	gadget_wrapper->gadget.dev.driver = NULL;
 	gadget_wrapper->driver = 0;
 
 #ifdef CONFIG_USB_OTG_UTILS
@@ -909,8 +925,9 @@ static const struct usb_gadget_ops dwc_otg_pcd_ops = {
 	.lpm_support = test_lpm_enabled,
 #endif
 	.set_selfpowered = set_selfpowered,
-	.udc_start = dwc_udc_start,
-	.udc_stop = dwc_udc_stop,
+
+	.start = dwc_udc_start,
+	.stop = dwc_udc_stop,
 };
 
 static int _setup(dwc_otg_pcd_t *pcd, uint8_t *bytes)
