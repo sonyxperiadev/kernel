@@ -34,7 +34,9 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/mfd/bcm590xx/pmic.h>
+#ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
+#endif
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -262,8 +264,17 @@ static struct i2c_board_info adp1653_flash[] = {
 #define SENSOR_1_CLK                    "dig_ch0_clk" // DCLK1 ??
 #define SENSOR_1_CLK_FREQ               (26000000)
 
-#define SENSOR_1_GPIO_PWRDN             (005) 
+#define SENSOR_1_GPIO_PWRDN             (005)
 
+
+#ifdef CONFIG_ANDROID_PMEM
+struct android_pmem_platform_data android_pmem_data = {
+	.name = "pmem",
+	.cmasize = 0,
+	.carveout_base = 0,
+	.carveout_size = 0,
+};
+#endif
 
 static struct i2c_board_info rhea_i2c_camera[] = {
 	        {
@@ -1465,15 +1476,11 @@ static void hawaii_add_pdata(void)
 #endif
 }
 
-/* Remove below extern when pmem pdata is moved to this file */
-extern struct android_pmem_platform_data android_pmem_data;
 void __init hawaii_add_common_devices(void)
 {
-	unsigned long pmem_size = android_pmem_data.cmasize;
-
+#ifdef CONFIG_ANDROID_PMEM
 	platform_device_register(&android_pmem);
-	printk(KERN_EMERG"PMEM : CMA size (0x%08lx, %lu pages)\n",
-				pmem_size, (pmem_size >> PAGE_SHIFT));
+#endif
 
 #ifdef CONFIG_ION
 	platform_device_register(&ion_device0);
