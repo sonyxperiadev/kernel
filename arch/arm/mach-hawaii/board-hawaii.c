@@ -26,7 +26,6 @@
 /*  prior written consent.						*/
 /*									*/
 /************************************************************************/
-
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/device.h>
@@ -757,6 +756,9 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #ifdef CONFIG_SND_BCM_SOC
 	&caph_i2s_device,
 	&caph_pcm_device,
+#endif
+#ifdef CONFIG_KONA_MEMC
+	&kona_memc_device,
 #endif
 };
 
@@ -1738,6 +1740,7 @@ static void __init hawaii_add_devices(void)
 
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
+
 }
 
 static void __init hawaii_add_sdio_devices(void)

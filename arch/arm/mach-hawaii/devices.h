@@ -42,6 +42,9 @@ extern struct platform_device hawaii_otg_platform_device;
 #ifdef CONFIG_KONA_AVS
 extern struct platform_device kona_avs_device;
 #endif
+#ifdef CONFIG_KONA_MEMC
+extern struct platform_device kona_memc_device;
+#endif
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 extern struct platform_device kona_cpufreq_device;
 #endif
