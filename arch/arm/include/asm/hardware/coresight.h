@@ -181,5 +181,14 @@
 #define etb_unlock(t) \
 	do { etb_writel((t), UNLOCK_MAGIC, CSMR_LOCKACCESS); } while (0)
 
+#define ETM_BRCM_MOD
+#ifdef ETM_BRCM_MOD
+struct etb_platform_data {
+	char *tpiu_clk_name;
+	char *pti_clk_name;
+	int (*config_funnels)(void);
+};
+#endif
+
 #endif /* __ASM_HARDWARE_CORESIGHT_H */
 
