@@ -153,21 +153,33 @@ static struct pi_state mm_states[] = {
 	PI_STATE(PI_STATE_SHUTDOWN, SHTDWN_POLICY, 100, PI_STATE_SAVE_CONTEXT),
 };
 
-#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
-
+#if defined(CONFIG_PLL1_8PHASE_OFF_ERRATUM) || \
+		defined(CONFIG_MM_FREEZE_VAR500M_ERRATUM)
 static int mm_pi_enable(struct pi *pi, int enable)
 {
 	int ret;
 	pi_dbg(pi->id, PI_LOG_EN_DIS, "%s\n", __func__);
+#ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
+	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && enable)
+		var500m_clk_en_override(true);
+#endif
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
 		if (enable && ref_8ph_en_pll1_clk)
 			__clk_enable(ref_8ph_en_pll1_clk);
 	}
+#endif
 	ret = gen_pi_ops.enable(pi, enable);
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
 		if (!enable && ref_8ph_en_pll1_clk)
 			__clk_disable(ref_8ph_en_pll1_clk);
 	}
+#endif
+#ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
+	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && !enable)
+		var500m_clk_en_override(false);
+#endif
 	return ret;
 }
 static struct pi_ops mm_pi_ops;
@@ -234,7 +246,8 @@ static struct pi mm_pi = {
 		.trans_table = mm_trans_table,
 	},
 #endif
-#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
+#if defined(CONFIG_PLL1_8PHASE_OFF_ERRATUM) || \
+		defined(CONFIG_MM_FREEZE_VAR500M_ERRATUM)
 	.ops = &mm_pi_ops,
 #else
 	.ops = &gen_pi_ops,
@@ -557,7 +570,8 @@ char *get_opp_name(int opp)
 void __init hawaii_pi_mgr_init()
 {
 	int i;
-#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
+#if defined(CONFIG_PLL1_8PHASE_OFF_ERRATUM) || \
+		defined(CONFIG_MM_FREEZE_VAR500M_ERRATUM)
 		mm_pi_ops = gen_pi_ops;
 		mm_pi_ops.enable = mm_pi_enable;
 #endif
