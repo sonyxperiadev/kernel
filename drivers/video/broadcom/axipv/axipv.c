@@ -218,7 +218,7 @@ static void process_release(struct work_struct *work)
 
 	for (i = 0; i < AXIPV_MAX_DISP_BUFF_SUPP; i++) {
 		if (AXIPV_BUFF_TXFERED == buff[i].status) {
-			axipv_debug("releasing %p\n", buff[i].addr);
+			axipv_debug("releasing %p\n", (void *) buff[i].addr);
 			err = axipv_set_buff_status(buff, buff[i].addr,
 						AXIPV_BUFF_AVAILABLE);
 			dev->release_cb(buff[i].addr);
@@ -334,7 +334,7 @@ static inline int axipv_config(struct axipv_config_t *config)
 	writel_relaxed(config->buff.sync.ylen,
 			axipv_base + REG_LINES_PER_FRAME);
 	writel_relaxed(config->buff.sync.addr, axipv_base + REG_NXT_FRAME);
-	axipv_debug("posting %p\n", config->buff.sync.addr);
+	axipv_debug("posting %p\n", (void *) config->buff.sync.addr);
 	g_nxt = config->buff.sync.addr;
 	g_curr = config->buff.sync.addr;
 	buff_index = axipv_get_free_buff_index(dev->buff);
@@ -415,6 +415,18 @@ static inline int axipv_config(struct axipv_config_t *config)
 			schedule_work(&dev->release_work);\
 	} while (0)
 
+static bool __is_fifo_draining_eof(struct axipv_dev *dev)
+{
+	u32 axipv_base, curr_line_num;
+
+	axipv_base = dev->base_addr;
+	curr_line_num = readl(axipv_base + REG_AXIPV_STATUS) >> 16;
+	if (!curr_line_num || ((dev->config.height - curr_line_num)
+			< (AXIPV_LB_SIZE / (dev->config.width >> 2))))
+		return true;
+	return false;
+}
+
 static irqreturn_t axipv_isr(int err, void *dev_id)
 {
 	struct axipv_dev *dev = dev_id;
@@ -425,6 +437,16 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 
 	axipv_base = dev->base_addr;
 	irq_stat = readl(axipv_base + REG_INTR_STAT);
+
+	axipv_debug("irq_stat=0x%x\n", irq_stat);
+	if (irq_stat & WATER_LVL2_INT) {
+		if ((AXIPV_STOPPED == dev->state)
+			|| ((AXIPV_STOPPING == dev->state) &&
+			__is_fifo_draining_eof(dev))) {
+			irq_stat = irq_stat & ~WATER_LVL2_INT;
+			writel(WATER_LVL2_INT, axipv_base + REG_INTR_CLR);
+		}
+	}
 
 	if (irq_stat & FRAME_END_INT) {
 		/* Do not turn off clocks right here. Even in command mode!
@@ -445,7 +467,7 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		if ((g_curr != curr_reg_val) ||
 			(AXIPV_STOPPING == dev->state)) {
 			if (g_curr) {
-				axipv_debug("isr %p\n",g_curr);
+				axipv_debug("isr %p\n", (void *) g_curr);
 				axipv_release_buff(g_curr);
 			}
 			g_curr = curr_reg_val;
@@ -626,13 +648,14 @@ void dump_debug_info(struct axipv_dev *dev)
 	u32 axipv_base;
 	axipv_clk_enable(dev);
 	axipv_base = dev->base_addr;
-	axipv_debug("state=%d, gcurr=%p, gnxt=%p\n", dev->state, g_curr, g_nxt);
+	axipv_debug("state=%d, gcurr=%p, gnxt=%p\n", dev->state, (void *)
+			g_curr, (void *) g_nxt);
 	axipv_debug("%p %p %p %p %p\n",
-	readl(axipv_base+REG_CUR_FRAME),
-	readl(axipv_base+REG_NXT_FRAME),
-	readl(axipv_base+REG_CTRL),
-	readl(axipv_base+REG_AXIPV_STATUS),
-	readl(axipv_base+REG_INTR_STAT));
+	(void *) readl(axipv_base+REG_CUR_FRAME),
+	(void *) readl(axipv_base+REG_NXT_FRAME),
+	(void *) readl(axipv_base+REG_CTRL),
+	(void *) readl(axipv_base+REG_AXIPV_STATUS),
+	(void *) readl(axipv_base+REG_INTR_STAT));
 	axipv_clk_disable(dev);
 }
 
@@ -670,18 +693,19 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 	case AXIPV_START:
 		if ((AXIPV_CONFIGURED == dev->state)
 			|| (AXIPV_STOPPED == dev->state)) {
-			unsigned long flags;
+			unsigned long flags, intr_en;
 
 			axipv_clk_enable(dev);
 #if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
 			do_gettimeofday(&prof_tv1);
 #endif
 			spin_lock_irqsave(&lock, flags);
-			writel_relaxed(UINT_MAX, axipv_base + REG_INTR_EN);
+			intr_en = UINT_MAX & ~TE_INT;
 			if (config->cmd) {
 				writel_relaxed(readl(axipv_base + REG_CTRL) |
 				AXIPV_SINGLE_SHOT, axipv_base + REG_CTRL);
 			}
+			writel_relaxed(intr_en, axipv_base + REG_INTR_EN);
 			writel(readl(axipv_base + REG_CTRL) | AXIPV_EN,
 					axipv_base + REG_CTRL);
 
