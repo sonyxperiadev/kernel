@@ -595,6 +595,7 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 static void kona_fb_late_resume(struct early_suspend *h)
 {
 	struct kona_fb *fb;
+	int framesize;
 
 	konafb_debug("BRCM fb late resume with level = %d\n", h->level);
 
@@ -629,6 +630,16 @@ static void kona_fb_late_resume(struct early_suspend *h)
 		/* screen comes out of sleep */
 		if (enable_display(fb, &fb->lcd_drv_parms))
 			konafb_error("Failed to enable this display device\n");
+
+		framesize = fb->display_info->width * fb->display_info->height *
+		    fb->display_info->Bpp * 2;
+		memset(fb->fb.screen_base, 0, framesize);
+		wait_for_completion(&fb->prev_buf_done_sem);
+		kona_clock_start(fb);
+		fb->display_ops->update(fb->display_hdl,
+				fb->fb.var.yoffset ? fb->buff1 : fb->buff0,
+				NULL,
+				(DISPDRV_CB_T)kona_display_done_cb);
 		break;
 
 	default:

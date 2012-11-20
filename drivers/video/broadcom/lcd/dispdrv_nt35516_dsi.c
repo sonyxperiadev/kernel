@@ -364,11 +364,6 @@ static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
 		{DISPCTRL_SLEEP_MS, 0, 120},
 #ifndef CONFIG_VIDEO_MODE
 		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_COLMOD, 0x77},
-#endif
-#ifdef CONFIG_VIDEO_MODE
-		{DISPCTRL_WR_CMND, NT35516_CMD_DISPON, 0},
-#endif
-#ifndef CONFIG_VIDEO_MODE
 		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_TEON, 0x0},
 #endif
 		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_MAUCCTR, 0x55},
@@ -376,7 +371,7 @@ static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
 		{DISPCTRL_WR_DATA, 0, 0x52},
 		{DISPCTRL_WR_DATA, 0, 0x08},
 		{DISPCTRL_WR_DATA, 0, 0x00},
-		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_DOPCTR, 0xFC},
+		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_DOPCTR, 0x7C},
 		{DISPCTRL_WR_DATA, 0, 0x00},
 		{DISPCTRL_WR_DATA, 0, 0x00},
 #ifndef CONFIG_VIDEO_MODE
@@ -844,6 +839,9 @@ Int32 NT35516_Close(DISPDRV_HANDLE_T drvH)
 {
 	Int32 res = 0;
 	NT35516_PANEL_t	*pPanel	= (NT35516_PANEL_t *)drvH;
+#ifdef CONFIG_VIDEO_MODE
+	CSL_DSI_Suspend(pPanel->dsiCmVcHandle);
+#endif
 
 	if (CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle)) {
 		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: ERROR,	"
@@ -1098,9 +1096,6 @@ Int32 NT35516_PowerControl(
 	case CTRL_SCREEN_OFF:
 		switch (pPanel->pwrState) {
 		case STATE_SCREEN_ON:
-#ifdef CONFIG_VIDEO_MODE
-			CSL_DSI_Suspend(pPanel->dsiCmVcHandle);
-#endif
 			NT35516_panel_off(pPanel);
 
 			pPanel->pwrState = STATE_SCREEN_OFF;
