@@ -52,6 +52,10 @@ struct tracectx {
 	bool		dump_initial_etb;
 	struct device	*dev;
 	struct clk	*emu_clk;
+#ifdef	ETM_BRCM_MOD
+	struct clk	*tpiu_clk;
+	struct clk	*pti_clk;
+#endif
 	struct mutex	mutex;
 };
 
@@ -184,6 +188,10 @@ static int trace_start(struct tracectx *t)
 	int id;
 	u32 etb_fc = t->etb_fc;
 
+#ifdef ETM_BRCM_MOD
+	clk_enable(t->tpiu_clk);
+	clk_enable(t->pti_clk);
+#endif
 	etb_unlock(t);
 
 	t->dump_initial_etb = false;
@@ -281,6 +289,10 @@ static int trace_stop(struct tracectx *t)
 
 	t->flags &= ~TRACER_RUNNING;
 
+#ifdef ETM_BRCM_MOD
+	clk_disable(t->tpiu_clk);
+	clk_disable(t->pti_clk);
+#endif
 	return 0;
 }
 
@@ -348,6 +360,7 @@ static struct sysrq_key_op sysrq_etm_op = {
 	.action_msg = "etm",
 };
 
+#ifndef ETM_BRCM_MOD
 static int etb_open(struct inode *inode, struct file *file)
 {
 	if (!tracer.etb_regs)
@@ -440,12 +453,36 @@ static struct miscdevice etb_miscdev = {
 	.minor = 0,
 	.fops = &etb_fops,
 };
+#endif
 
 static int __devinit etb_probe(struct amba_device *dev, const struct amba_id *id)
 {
 	struct tracectx *t = &tracer;
 	int ret = 0;
+#ifdef ETM_BRCM_MOD
+	struct etb_platform_data *etb_data = dev->dev.platform_data;
 
+	if (!etb_data)
+		return -EINVAL;
+
+	etb_data->config_funnels();
+
+	/* TPIU & PTI clocks should be enabled. Otherwise
+	 * Replicators will stall */
+	t->tpiu_clk = clk_get(&dev->dev, etb_data->tpiu_clk_name);
+	if (IS_ERR(t->tpiu_clk)) {
+		dev_dbg(&dev->dev, "Failed to obtain %s.\n",
+				etb_data->tpiu_clk_name);
+		return -ENODEV;
+	}
+
+	t->pti_clk = clk_get(&dev->dev, etb_data->pti_clk_name);
+	if (IS_ERR(t->pti_clk)) {
+		dev_dbg(&dev->dev, "Failed to obtain %s.\n",
+				etb_data->pti_clk_name);
+		return -ENODEV;
+	}
+#endif
 	ret = amba_request_regions(dev, NULL);
 	if (ret)
 		goto out;
@@ -470,7 +507,13 @@ static int __devinit etb_probe(struct amba_device *dev, const struct amba_id *id
 	etb_writel(t, 0x1000, ETBR_FORMATTERCTRL);
 	etb_lock(t);
 	mutex_unlock(&t->mutex);
-
+	/*
+	* This is not required at the moment.
+	* Android is not booting with this enabled.
+	* we are not using misc device to read the etb buffer
+	* To be revisited.
+	*/
+#ifndef ETM_BRCM_MOD
 	etb_miscdev.parent = &dev->dev;
 
 	ret = misc_register(&etb_miscdev);
@@ -479,6 +522,9 @@ static int __devinit etb_probe(struct amba_device *dev, const struct amba_id *id
 
 	/* Get optional clock. Currently used to select clock source on omap3 */
 	t->emu_clk = clk_get(&dev->dev, "emu_src_ck");
+#else
+	t->emu_clk = clk_get(&dev->dev, "etb_apb");
+#endif
 	if (IS_ERR(t->emu_clk))
 		dev_dbg(&dev->dev, "Failed to obtain emu_src_ck.\n");
 	else
@@ -488,8 +534,9 @@ static int __devinit etb_probe(struct amba_device *dev, const struct amba_id *id
 
 out:
 	return ret;
-
+#ifndef	ETM_BRCM_MOD
 out_unmap:
+#endif
 	mutex_lock(&t->mutex);
 	amba_set_drvdata(dev, NULL);
 	iounmap(t->etb_regs);
