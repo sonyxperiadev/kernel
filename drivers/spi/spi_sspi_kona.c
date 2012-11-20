@@ -62,21 +62,26 @@
 #ifndef CONFIG_MACH_HAWAII_FPGA
 extern void csl_caph_ControlHWClock(Boolean eanble);
 #endif
-static uint8_t clk_name[3][32] = {"ssp0_clk", "ssp4_clk", "ssp3_clk"};
+static uint8_t clk_name[3][32] = { "ssp0_clk", "ssp4_clk", "ssp3_clk" };
 
 #ifdef CONFIG_DMAC_PL330
 static char dma_tx_chan_name[3][32] = {
 	"SSP_0B_TX0",
 	"SSP_1B_TX0",
-	"SSP_2B_TX0" };
+	"SSP_2B_TX0"
+};
+
 static char dma_rx_chan_name[3][32] = {
 	"SSP_0A_RX0",
 	"SSP_1A_RX0",
-	"SP_2A_RX0" };
+	"SP_2A_RX0"
+};
+
 static unsigned int dma_fifo_base[3] = {
 	SSP0_BASE_ADDR,
 	SSP4_BASE_ADDR,
-	SSP3_BASE_ADDR };
+	SSP3_BASE_ADDR
+};
 #endif
 struct spi_kona_config {
 	uint32_t speed_hz;
@@ -121,6 +126,9 @@ struct spi_kona_data {
 	int32_t rxpend;		/* No. of frames pending from Rx FIFO
 				   corresponding to Tx done */
 	uint8_t bytes_per_word;
+	uint8_t spi_mode;
+	int cs_change;
+	int do_setup;
 };
 
 #define SPI_KONA_BUF_RX(type, type2)					\
@@ -128,11 +136,11 @@ static void spi_kona_buf_rx_##type(struct spi_kona_data *d)		\
 {									\
 	type val = read##type2(d->base +				\
 		chal_sspi_rx0_get_dma_port_addr_offset());		\
-									\
 	if (d->rx_buf) {						\
 		*(type *)d->rx_buf = val;				\
 		d->rx_buf += sizeof(type);				\
 	}								\
+									\
 }
 
 #define SPI_KONA_BUF_TX(type, type2)					\
@@ -151,21 +159,21 @@ static void spi_kona_buf_tx_##type(struct spi_kona_data *d)		\
 }
 
 SPI_KONA_BUF_RX(u8, b)
-	SPI_KONA_BUF_TX(u8, b)
-	SPI_KONA_BUF_RX(u16, w)
-	SPI_KONA_BUF_TX(u16, w)
-	SPI_KONA_BUF_RX(u32, l)
-	SPI_KONA_BUF_TX(u32, l)
+SPI_KONA_BUF_TX(u8, b)
+SPI_KONA_BUF_RX(u16, w)
+SPI_KONA_BUF_TX(u16, w)
+SPI_KONA_BUF_RX(u32, l)
+SPI_KONA_BUF_TX(u32, l)
 
 /* DMA Burst size and Scheduler FIFO threshold */
 /*#define DMA_BURST_CONFIG_64_BYTES*/
 #define DMA_BURST_CONFIG_16_BYTES
 #ifdef DMA_BURST_CONFIG_16_BYTES
 #define FIFO_BURST_ALIGNMENT	16
-#define SSPI_FIFO_THRESHOLD	    16
+#define SSPI_FIFO_THRESHOLD	16
 #else
-#define FIFO_BURST_ALIGNMENT	64
-#define SSPI_FIFO_THRESHOLD	    64
+#define FIFO_BURST_ALIGNMENT    64
+#define SSPI_FIFO_THRESHOLD	64
 #endif
 static void spi_kona_tx_data(struct spi_kona_data *spi_kona)
 {
@@ -195,8 +203,8 @@ static irqreturn_t spi_kona_isr(int irq, void *dev_id)
 
 	if (status & SSPIL_INTERRUPT_STATUS_FIFO_OVERRUN_STATUS_MASK) {
 		chal_sspi_clear_intr(spi_kona->chandle,
-				SSPIL_INTERRUPT_STATUS_FIFO_OVERRUN_STATUS_MASK,
-			    dstat);
+		SSPIL_INTERRUPT_STATUS_FIFO_OVERRUN_STATUS_MASK,
+			dstat);
 		return IRQ_HANDLED;
 	}
 
@@ -216,16 +224,17 @@ static irqreturn_t spi_kona_isr(int irq, void *dev_id)
 
 		return IRQ_HANDLED;
 	}
-	if (spi_kona->rxpend) {
+
+	if (spi_kona->rxpend && spi_kona->rx_buf) {
 		/* No data left to Tx, but still waiting for rx data */
 		/* No need to re-enable Rx interrupt */
+
 		return IRQ_HANDLED;
 	}
 	/* Disable all Interrupt */
 	chal_sspi_enable_intr(spi_kona->chandle, 0);
 
 	complete(&spi_kona->xfer_done);
-
 	return IRQ_HANDLED;
 }
 
@@ -250,9 +259,6 @@ static int spi_kona_config_clk(struct spi_kona_data *spi_kona,
 	chal_sspi_set_clk_divider(chandle, SSPI_CLK_DIVIDER0, clk_pdiv);
 	chal_sspi_set_clk_divider(chandle, SSPI_CLK_REF_DIVIDER, clk_pdiv);
 	clk_enable(spi_kona->ssp_clk);
-	chal_sspi_set_clk_src_select(chandle, SSPI_CLK_SRC_EXTCLK);
-	chal_sspi_set_clk_divider(chandle, SSPI_CLK_DIVIDER0, clk_pdiv);
-	chal_sspi_set_clk_divider(chandle, SSPI_CLK_REF_DIVIDER, clk_pdiv);
 #endif
 	return 0;
 }
@@ -304,7 +310,7 @@ static int spi_kona_configure(struct spi_kona_data *spi_kona,
 
 	/* Configure the clock speed */
 #ifdef CONFIG_MACH_HAWAII_FPGA
-	ret = spi_kona_config_clk(spi_kona, 13*1000*1000);
+	ret = spi_kona_config_clk(spi_kona, 13 * 1000 * 1000);
 #else
 	ret = spi_kona_config_clk(spi_kona, config->speed_hz);
 #endif
@@ -314,11 +320,14 @@ static int spi_kona_configure(struct spi_kona_data *spi_kona,
 #ifdef CONFIG_ARCH_HAWAII
 	/* Set frame data size */
 	ret = chal_sspi_set_spi_frame(chandle, &frame_mask,
-				  config->mode & SPI_MODE_1, config->bpw, 0);
+				      config->mode, config->bpw, 0);
+
 #else
 	/* Set frame data size */
+
 	ret = chal_sspi_set_frame(chandle, &frame_mask,
-				  config->mode & SPI_MODE_1, config->bpw, 0);
+				  config->mode, config->bpw, 0);
+
 #endif
 	if (ret < 0)
 		return ret;
@@ -333,7 +342,7 @@ static int spi_kona_setupxfer(struct spi_device *spi, struct spi_transfer *t)
 
 	config.bpw = t ? t->bits_per_word : spi->bits_per_word;
 	config.speed_hz = t ? t->speed_hz : spi->max_speed_hz;
-	config.mode = spi->mode;
+	config.mode = spi_kona->spi_mode;
 	config.cs = spi->chip_select;
 
 	if (!config.speed_hz)
@@ -359,7 +368,6 @@ static int spi_kona_setupxfer(struct spi_device *spi, struct spi_transfer *t)
 		spi_kona->tx = spi_kona_buf_tx_u32;
 	} else
 		BUG();
-
 	return spi_kona_configure(spi_kona, &config);
 }
 
@@ -405,10 +413,8 @@ static int spi_kona_config_task(struct spi_device *spi,
 	    (SSPI_TASK_INIT_COND_THRESHOLD_TX0 |
 	     SSPI_TASK_INIT_COND_THRESHOLD_RX0) : 0;
 	task_conf.wait_before_start = 1;
-
-	if (chal_sspi_set_task(chandle, 0, spi->mode & SPI_MODE_1, &task_conf))
+	if (chal_sspi_set_task(chandle, 0, spi_kona->spi_mode, &task_conf))
 		return -EIO;
-
 	/* configure sequence */
 	seq_conf.tx_enable = (transfer->tx_buf) ? TRUE : FALSE;
 	seq_conf.rx_enable = (transfer->rx_buf) ? TRUE : FALSE;
@@ -423,8 +429,7 @@ static int spi_kona_config_task(struct spi_device *spi,
 	seq_conf.rx_sidetone_on = 0;
 	seq_conf.tx_sidetone_on = 0;
 	seq_conf.next_pc = 0;
-	if (chal_sspi_set_sequence(chandle, 0, spi->mode & SPI_MODE_1,
-				   &seq_conf))
+	if (chal_sspi_set_sequence(chandle, 0, spi_kona->spi_mode, &seq_conf))
 		return -EIO;
 
 	seq_conf.tx_enable = FALSE;
@@ -441,8 +446,7 @@ static int spi_kona_config_task(struct spi_device *spi,
 	seq_conf.rx_sidetone_on = 0;
 	seq_conf.tx_sidetone_on = 0;
 	seq_conf.next_pc = 0;
-	if (chal_sspi_set_sequence(chandle, 1, spi->mode & SPI_MODE_1,
-				   &seq_conf))
+	if (chal_sspi_set_sequence(chandle, 1, spi_kona->spi_mode, &seq_conf))
 		return -EIO;
 
 	/* enable scheduler operation */
@@ -516,7 +520,7 @@ static int spi_kona_dma_xfer_rx(struct spi_kona_data *spi_kona)
 
 	/* Enable Overrun interrupt */
 	chal_sspi_enable_intr(chandle,
-			SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK);
+		SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK);
 
 	/* Trigger RX FIFO DMA */
 	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_RX0,
@@ -627,8 +631,12 @@ static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 	    DMA_CFG_BURST_SIZE_4 | DMA_CFG_BURST_LENGTH_16;
 #endif
 
-	tx_fifo = dma_fifo_base[master->bus_num] + chal_sspi_tx0_get_dma_port_addr_offset();
-	rx_fifo = dma_fifo_base[master->bus_num] + chal_sspi_rx0_get_dma_port_addr_offset();
+	tx_fifo =
+	    dma_fifo_base[master->bus_num] +
+	    chal_sspi_tx0_get_dma_port_addr_offset();
+	rx_fifo =
+	    dma_fifo_base[master->bus_num] +
+	    chal_sspi_rx0_get_dma_port_addr_offset();
 
 	/* Get DMA'ble address */
 	if (spi_kona->tx_buf != NULL) {
@@ -675,7 +683,7 @@ static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 
 	/* Enable Overrun interrupt */
 	chal_sspi_enable_intr(chandle,
-			SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK);
+		SSPIL_INTERRUPT_ENABLE_FIFO_OVERRUN_INTERRUPT_ENB_MASK);
 
 	/* Trigger RX FIFO DMA */
 	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_RX0,
@@ -724,10 +732,12 @@ static int spi_kona_dma_xfer_tx(struct spi_kona_data *spi_kona)
 {
 	return 0;
 }
+
 static int spi_kona_dma_xfer_rx(struct spi_kona_data *spi_kona)
 {
 	return 0;
 }
+
 static int spi_kona_dma_xfer(struct spi_kona_data *spi_kona)
 {
 	return 0;
@@ -760,6 +770,7 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 	if (ret < 0)
 		return ret;
 
+#ifndef CONFIG_ARCH_HAWAII
 	/* Check if 8-byte unalligned address buffer was passed */
 	if (transfer->rx_buf != NULL && ((int)(transfer->rx_buf) % 8) != 0) {
 		pr_err("8-byte unalligned access seen for RX buffer\n");
@@ -770,7 +781,7 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 		pr_err("8-byte unalligned access seen for TX buffer\n");
 		return -EINVAL;
 	}
-
+#endif
 	spi_kona->rx_buf = transfer->rx_buf;
 	spi_kona->tx_buf = transfer->tx_buf;
 
@@ -841,14 +852,12 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 		/* If the remainder bits needs to be transferred
 		 * through PIO after DMA, reconfigure */
 		if (spi_kona->count != transfer->len) {
-			ret =
-			    chal_sspi_set_fifo_threshold(chandle,
+			ret = chal_sspi_set_fifo_threshold(chandle,
 							 SSPI_FIFO_ID_RX0,
 							 spi_kona->count);
 			if (ret < 0)
 				return ret;
-			ret =
-			    chal_sspi_set_fifo_threshold(chandle,
+			ret = chal_sspi_set_fifo_threshold(chandle,
 							 SSPI_FIFO_ID_TX0,
 							 spi_kona->count);
 			if (ret < 0)
@@ -912,6 +921,113 @@ static void spi_kona_chipselect(struct spi_device *spi, int is_active)
 	return;
 }
 
+static int spi_kona_do_transfer(struct spi_message *m, struct spi_device *spi,
+				struct spi_transfer *t)
+{
+
+	int status = 0;
+	struct spi_kona_data *spi_kona;
+	spi_kona = spi_master_get_devdata(spi->master);
+
+	/* override speed or wordsize? */
+	if (t->speed_hz || t->bits_per_word)
+		spi_kona->do_setup = 1;
+
+	/*init (-1) or override (1) transfer params */
+	if (spi_kona->do_setup != 0) {
+		status = spi_kona_setupxfer(spi, t);
+		if (status < 0)
+			goto transfer_err;
+	}
+
+	if (spi_kona->cs_change)
+		spi_kona_chipselect(spi, CS_ACTIVE);
+	spi_kona->cs_change = t->cs_change;
+
+	if (!t->tx_buf && !t->rx_buf && t->len) {
+		status = -EINVAL;
+		goto transfer_err;
+	}
+
+	if (t->len) {
+		if (!m->is_dma_mapped)
+			t->rx_dma = t->tx_dma = 0;
+		status = spi_kona_txrxfer_bufs(spi, t);
+	}
+	if (status > 0)
+		m->actual_length += status;
+	if (status != t->len) {
+		/* always report some kind of error */
+		if (status >= 0)
+			status = -EREMOTEIO;
+		goto transfer_err;
+	}
+	status = 0;
+
+	/*protocol tweaks before next transfer */
+	if (t->delay_usecs)
+		udelay(t->delay_usecs);
+transfer_err:
+	return status;
+}
+
+static int spi_kona_cmd_transfer(struct spi_message *m, struct spi_device *spi)
+{
+	int status = 0;
+	unsigned int tx_n = 0;
+	unsigned int rx_n = 0;
+	struct spi_transfer *t = NULL;
+	struct spi_transfer *local_trans = kmalloc(sizeof(struct spi_transfer),
+					   GFP_KERNEL);
+	u8 *local_buf = kmalloc(32, GFP_KERNEL);
+	if (local_trans == NULL) {
+		status = -ENOMEM;
+		pr_info("local buffer is not allocated\n");
+		return status;
+	}
+	if (local_buf == NULL) {
+		status = -ENOMEM;
+		pr_info("local buffer is not allocated\n");
+		kfree(local_trans);
+		return status;
+	}
+	memset(local_buf, 0x00, sizeof local_buf);
+	local_trans->len = 0;
+	local_trans->bits_per_word = 8;
+	local_trans->tx_dma = 0;
+	local_trans->rx_dma = 0;
+
+	list_for_each_entry(t, &m->transfers, transfer_list) {
+		if (t->rx_buf != NULL)
+			rx_n += t->len;
+		if (t->tx_buf != NULL) {
+			memcpy(local_buf + tx_n, t->tx_buf, t->len);
+			tx_n += t->len;
+		}
+		local_trans->speed_hz = t->speed_hz;
+	}
+	local_trans->tx_buf = local_buf;
+	local_trans->rx_buf = local_buf + tx_n;
+	local_trans->len = rx_n + tx_n;
+	status = spi_kona_do_transfer(m, spi, local_trans);
+	if (status < 0)
+		goto error1;
+	list_for_each_entry(t, &m->transfers, transfer_list) {
+		if (t->rx_buf != NULL) {
+			memcpy(t->rx_buf, local_trans->rx_buf + tx_n, rx_n);
+			break;
+		}
+	}
+	if (local_trans->delay_usecs)
+		udelay(local_trans->delay_usecs);
+
+error1:
+	kfree(local_buf);
+	kfree(local_trans);
+	return status;
+
+}
+
 /*
  * This costs a task context per controller, running the queue by
  * performing each transfer in sequence.
@@ -921,17 +1037,17 @@ static void spi_kona_work(struct work_struct *work)
 	struct spi_kona_data *spi_kona =
 	    container_of(work, struct spi_kona_data, work);
 	unsigned long flags;
-	int do_setup = -1;
+	unsigned int no_of_trans = 0;
 	struct spi_master *master = spi_kona->master;
 
 	spin_lock(&spi_kona->lock);
 	spi_kona->busy = 1;
+	spi_kona->do_setup = -1;
 	spin_unlock(&spi_kona->lock);
 	while (!list_empty(&spi_kona->queue)) {
 		struct spi_message *m;
 		struct spi_device *spi;
 		struct spi_transfer *t = NULL;
-		unsigned cs_change;
 		int status;
 
 		m = container_of(spi_kona->queue.next, struct spi_message,
@@ -942,87 +1058,59 @@ static void spi_kona_work(struct work_struct *work)
 		spin_unlock_irqrestore(&spi_kona->lock, flags);
 
 		spi = m->spi;
-		cs_change = 1;
+		spi_kona->cs_change = 1;
 		status = 0;
-
+		spi_kona->spi_mode = spi->mode;
+		if (spi->mode == SPI_LOOP)
+			spi_kona->spi_mode &= SPI_MODE_1;
 		if (master->bus_num != 0) {
 #if !defined(CONFIG_MACH_HAWAII_FPGA) && defined(CONFIG_BCM_ALSA_SOUND)
-			/*turn on caph clock for ssp1 and ssp2*/
+			/*turn on caph clock for ssp1 and ssp2 */
 			csl_caph_ControlHWClock(TRUE);
 #endif
 		}
-
 #ifndef CONFIG_MACH_HAWAII_FPGA
 		clk_enable(spi_kona->ssp_clk);
 #endif
+
+		/* One byte command transfer */
 		list_for_each_entry(t, &m->transfers, transfer_list) {
-
-			/* override speed or wordsize? */
-			if (t->speed_hz || t->bits_per_word)
-				do_setup = 1;
-
-			/* init (-1) or override (1) transfer params */
-			if (do_setup != 0) {
-				status = spi_kona_setupxfer(spi, t);
+			no_of_trans++;
+		}
+		if (no_of_trans >= 2 && spi_kona->spi_mode != SPI_LOOP) {
+			status = spi_kona_cmd_transfer(m, spi);
+		} else {
+			list_for_each_entry(t, &m->transfers, transfer_list) {
+				status = spi_kona_do_transfer(m, spi, t);
 				if (status < 0)
 					break;
-			}
-
-			if (cs_change)
-				spi_kona_chipselect(spi, CS_ACTIVE);
-			cs_change = t->cs_change;
-
-			if (!t->tx_buf && !t->rx_buf && t->len) {
-				status = -EINVAL;
-				break;
-			}
-
-			if (t->len) {
-				if (!m->is_dma_mapped)
-					t->rx_dma = t->tx_dma = 0;
-				status = spi_kona_txrxfer_bufs(spi, t);
-			}
-			if (status > 0)
-				m->actual_length += status;
-			if (status != t->len) {
-				/* always report some kind of error */
-				if (status >= 0)
-					status = -EREMOTEIO;
-				break;
-			}
-			status = 0;
-
-			/* protocol tweaks before next transfer */
-			if (t->delay_usecs)
-				udelay(t->delay_usecs);
-
-			if (!cs_change)
-				continue;
-			if (t->transfer_list.next == &m->transfers)
-				break;
+				if (!spi_kona->cs_change)
+					continue;
+				if (t->transfer_list.next == &m->transfers)
+					break;
 
 			/* sometimes a short mid-message deselect of the chip
 			 * may be needed to terminate a mode or command
 			 */
-			spi_kona_chipselect(spi, CS_INACTIVE);
+				spi_kona_chipselect(spi, CS_INACTIVE);
+			}
 		}
-
 		m->status = status;
 		m->complete(m->context);
 
 		/* restore speed and wordsize if it was overridden */
-		if (do_setup == 1) {
+		if (spi_kona->do_setup == 1) {
 			status = spi_kona_setupxfer(spi, NULL);
 			if (status < 0)
 				break;
 		}
-		do_setup = 0;
+		spi_kona->do_setup = 0;
 
 		/* normally deactivate chipselect ... unless no error and
 		 * cs_change has hinted that the next message will probably
 		 * be for this chip too.
 		 */
-		if (!(status == 0 && cs_change))
+		if (!(status == 0 && spi_kona->cs_change))
 			spi_kona_chipselect(spi, CS_INACTIVE);
 
 #ifndef CONFIG_MACH_HAWAII_FPGA
@@ -1030,10 +1118,11 @@ static void spi_kona_work(struct work_struct *work)
 #endif
 		if (master->bus_num != 0) {
 #if !defined(CONFIG_MACH_HAWAII_FPGA) && defined(CONFIG_BCM_ALSA_SOUND)
-			/*turn on caph clock for ssp1 and ssp2*/
+			/*turn on caph clock for ssp1 and ssp2 */
 			csl_caph_ControlHWClock(FALSE);
 #endif
 		}
+
 	}
 	spin_lock(&spi_kona->lock);
 	spi_kona->busy = 0;
@@ -1119,26 +1208,27 @@ static int spi_kona_config_spi_hw(struct spi_kona_data *spi_kona)
 						  SSPI_FIFO_ID_RX0, 1, 1);
 	chal_sspi_enable_intr(chandle, 0);
 	chal_sspi_enable_error_intr(chandle,
-				~SSPIL_INTERRUPT_ERROR_ENABLE_RESERVED_MASK);
+			~SSPIL_INTERRUPT_ERROR_ENABLE_RESERVED_MASK);
 	chal_sspi_enable(chandle, 1);
 
 	spi_kona->chandle = chandle;
 
 	return 0;
 }
+
 #ifdef CONFIG_DMAC_PL330
 static int spi_kona_setup_dma(struct spi_kona_data *spi_kona)
 {
 	struct spi_master *master = spi_kona->master;
-	
+
 	/* Aquire DMA channels */
 	if (dma_request_chan(&spi_kona->tx_dma_chan,
-			dma_tx_chan_name[master->bus_num]) != 0) {
+			     dma_tx_chan_name[master->bus_num]) != 0) {
 		pr_err("%s: Tx dma_request_chan failed\n", __func__);
 		return -EIO;
 	}
 	if (dma_request_chan(&spi_kona->rx_dma_chan,
-			dma_rx_chan_name[master->bus_num]) != 0) {
+			     dma_rx_chan_name[master->bus_num]) != 0) {
 		pr_err("%s: Rx dma_request_chan failed\n", __func__);
 		goto err;
 	}
@@ -1238,11 +1328,11 @@ static int spi_kona_probe(struct platform_device *pdev)
 		       __func__, status, spi_kona->irq);
 		goto out_iounmap;
 	}
-
 #ifndef CONFIG_MACH_HAWAII_FPGA
 	spi_kona->ssp_clk = clk_get(NULL, clk_name[master->bus_num]);
 	if (IS_ERR_OR_NULL(spi_kona->ssp_clk)) {
-		dev_err(&pdev->dev, "unable to get %s clock\n", clk_name[master->bus_num]);
+		dev_err(&pdev->dev, "unable to get %s clock\n",
+			clk_name[master->bus_num]);
 		status = PTR_ERR(spi_kona->ssp_clk);
 		goto out_free_irq;
 	}
@@ -1282,7 +1372,6 @@ static int spi_kona_probe(struct platform_device *pdev)
 		pr_err("%s: Failed to setup DMA, using PIO\n", __func__);
 		spi_kona->enable_dma = 0;
 	}
-
 #ifndef CONFIG_MACH_HAWAII_FPGA
 	clk_disable(spi_kona->ssp_clk);
 #endif
