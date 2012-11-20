@@ -6913,21 +6913,32 @@ int root_ccu_clk_init(struct clk* clk)
 	/* initialize PLL1 OFFSET */
 	writel(PLL1_OFFSET_CONFIG, KONA_ROOT_CLK_VA +
 			ROOT_CLK_MGR_REG_PLL1_OFFSET_OFFSET);
-#ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
-	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M)) {
-		reg_val = readl(KONA_ROOT_CLK_VA +
-				ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
-		reg_val |=
-		ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
-		writel(reg_val,
-		KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
-	}
-#endif
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
 
 	return 0;
 }
+#ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
+int var500m_clk_en_override(int enable)
+{
+	u32 reg_val = 0;
+
+	reg_val = readl(KONA_ROOT_CLK_VA +
+			ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+	if (enable) {
+		reg_val |=
+		ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
+	} else {
+		reg_val &=
+		~ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
+	}
+	writel(reg_val, KONA_ROOT_CLK_VA +
+		ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
+
+
+	return 0;
+}
+#endif
 
 /*Override ccu_clk_set_freq_policy for MM as the offset is different*/
 static int mm_ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
