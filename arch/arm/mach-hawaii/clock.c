@@ -5211,6 +5211,29 @@ static struct clk *ssp1_audio_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(
 							CLK_PTR(crystal),
 							CLK_PTR(ref_312m),
 							CLK_PTR(ref_cx40));
+
+static int clk_init_null(struct clk *clk)
+{
+	return 0;
+}
+
+static int clk_enable_null(struct clk *clk, int enable)
+{
+	return 0;
+}
+
+struct gen_clk_ops clkops_null = {
+	.init         =	clk_init_null,
+	.enable       =	clk_enable_null,
+};
+
+/* This is a hack added for AMBA driver */
+static struct clk dummy_apb_pclk = {
+	.id = CLK_APB_PCLK_DUMMY_CLK_ID,
+	.name = "apb_pclk",
+	.ops = &clkops_null,
+} ;
+
 static struct peri_clk clk_ssp1_audio = {
 	.clk =	{
 		.flags = SSP1_AUDIO_PERI_CLK_FLAGS,
@@ -7369,6 +7392,8 @@ static struct __init clk_lookup hawaii_clk_tbl[] =
 	BRCM_REGISTER_CLK(SSP1_APB_BUS_CLK_NAME_STR,  NULL,  ssp1_apb),
 	BRCM_REGISTER_CLK(SSP1_PERI_CLK_NAME_STR,  NULL,  ssp1),
 	BRCM_REGISTER_CLK(SSP1_AUDIO_PERI_CLK_NAME_STR,  NULL,  ssp1_audio),
+	BRCM_REGISTER_CLK_DIRECT(DUMMY_APB_PCLK_NAMER_STR, NULL,
+				&dummy_apb_pclk),
 	/*mm_switch_axi clk should be the last clock to be auto gated in MM CCU*/
 	BRCM_REGISTER_CLK(MM_SWITCH_AXI_PERI_CLK_NAME_STR, NULL, mm_switch_axi),
 };
