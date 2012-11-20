@@ -234,6 +234,7 @@
 #define	SSP1_APB_BUS_CLK_NAME_STR "ssp1_apb_clk"
 #define	SSP1_PERI_CLK_NAME_STR "ssp1_clk"
 #define	SSP1_AUDIO_PERI_CLK_NAME_STR "ssp1_audio_clk"
+#define	DUMMY_APB_PCLK_NAMER_STR "apb_pclk"
 
 /*
 Clock ids
@@ -452,6 +453,7 @@ enum {
 	CLK_SSP1_APB_BUS_CLK_ID,
 	CLK_SSP1_PERI_CLK_ID,
 	CLK_SSP1_AUDIO_PERI_CLK_ID,
+	CLK_APB_PCLK_DUMMY_CLK_ID,
 };
 
 #define ARM_SWITCH_CLK_FLAGS				AUTO_GATE|HYST_ENABLE|HYST_HIGH
