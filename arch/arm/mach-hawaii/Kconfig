@@ -226,4 +226,12 @@ config KONA_SECURE_MONITOR_CALL
 	  a secure monitor implementation to access secure registers
 	  and peripherals.
 
+config HAWAII_PTM
+	bool "Enable PTM"
+	depends on ARCH_KONA
+	select ARM_AMBA
+	select OC_ETM
+	help
+	  Say Y here to enable PTM hardware on hawaii.
+
 endmenu
