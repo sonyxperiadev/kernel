@@ -313,14 +313,45 @@ int memc_enable_selfrefresh(struct kona_memc *kmemc, int enable)
 	spin_lock(&kmemc->memc_lock);
 	reg = readl(MEMC0_NS_REG(kmemc, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET));
 	if (enable)
-		reg |= CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
+		reg |= CSR_HW_FREQ_CHANGE_CNTRL_HW_AUTO_PWR_TRANSITION_MASK;
 	else
-		reg &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
-	writel(reg,	MEMC0_NS_REG(kmemc, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET));
+		reg &= ~CSR_HW_FREQ_CHANGE_CNTRL_HW_AUTO_PWR_TRANSITION_MASK;
+	writel(reg, MEMC0_NS_REG(kmemc, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET));
 	spin_unlock(&kmemc->memc_lock);
 	return 0;
 }
 EXPORT_SYMBOL(memc_enable_selfrefresh);
+
+
+static int memc_init(struct kona_memc *kmemc)
+{
+	u32 reg;
+	struct kona_memc_pdata *pdata = kmemc->pdata;
+
+	memc_enable_selfrefresh(&kona_memc,
+			!!(pdata->flags & KONA_MEMC_ENABLE_SELFREFRESH));
+	memc_disable_ldo(&kona_memc,
+			!!(pdata->flags & KONA_MEMC_DISABLE_DDRLDO));
+	memc_disable_ldo_in_lpm(&kona_memc,
+			!!(pdata->flags & KONA_MEMC_DISABLE_DDRLDO_IN_LPM));
+	if (pdata->flags & KONA_MEMC_SET_SEQ_BUSY_CRITERIA)
+		memc_set_seq_busy_criteria(&kona_memc, pdata->seq_busy_val);
+
+	reg = readl(MEMC0_NS_REG(kmemc, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET));
+	if (pdata->flags & KONA_MEMC_HW_FREQ_CHANGE_EN)
+		reg |= CSR_HW_FREQ_CHANGE_CNTRL_HW_FREQ_CHANGE_EN_MASK;
+	else
+		reg &= ~CSR_HW_FREQ_CHANGE_CNTRL_HW_FREQ_CHANGE_EN_MASK;
+
+	if (pdata->flags & KONA_MEMC_DDR_PLL_PWRDN_EN)
+		reg |= CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
+	else
+		reg &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
+	writel(reg, MEMC0_NS_REG(kmemc, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET));
+	/*Set AP min power state to 0 by default*/
+	memc_set_min_pwr(kmemc, 0, MEMC_AP_MIN_PWR);
+	return 0;
+}
 
 static int kona_memc_probe(struct platform_device *pdev)
 {
@@ -335,15 +366,7 @@ static int kona_memc_probe(struct platform_device *pdev)
 	kona_memc.pdata = pdata;
 	kona_memc.memc0_ns_base = pdata->memc0_ns_base;
 	kona_memc.chipreg_base = pdata->chipreg_base;
-
-	memc_enable_selfrefresh(&kona_memc,
-			!!(pdata->flags & KONA_MEMC_ENABLE_SELFREFRESH));
-	memc_disable_ldo(&kona_memc,
-			!!(pdata->flags & KONA_MEMC_DISABLE_DDRLDO));
-	memc_disable_ldo_in_lpm(&kona_memc,
-			!!(pdata->flags & KONA_MEMC_DISABLE_DDRLDO_IN_LPM));
-	if (pdata->flags & KONA_MEMC_SET_SEQ_BUSY_CRITERIA)
-		memc_set_seq_busy_criteria(&kona_memc, pdata->seq_busy_val);
+	memc_init(&kona_memc);
 	return 0;
 }
 
@@ -361,6 +384,28 @@ static struct platform_driver kona_memc_driver = {
 };
 
 #ifdef CONFIG_DEBUG_FS
+
+static int memc_dbg_get_memc_selfrefresh_state(void *data, u64 *val)
+{
+	u32 reg;
+	struct kona_memc *kmemc = (struct kona_memc *)data;
+	BUG_ON(kmemc == NULL);
+	reg = readl(MEMC0_NS_REG(kmemc, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET));
+	*val = (reg & CSR_HW_FREQ_CHANGE_CNTRL_HW_AUTO_PWR_TRANSITION_MASK) ?
+									1 : 0;
+	return 0;
+}
+
+static int memc_dbg_selfrefresh_en(void *data, u64 val)
+{
+	struct kona_memc *kmemc = (struct kona_memc *)data;
+	BUG_ON(kmemc == NULL);
+	return memc_enable_selfrefresh(kmemc, (int)val);
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(memc_self_refresh_en_ops,
+	memc_dbg_get_memc_selfrefresh_state,
+	memc_dbg_selfrefresh_en, "%llu\n");
 
 static int memc_dbg_get_ap_min_pwr_state(void *data, u64 *val)
 {
@@ -479,6 +524,11 @@ static int kona_menc_init_debugfs(void)
 {
 	dent_kona_memc_dir = debugfs_create_dir("kona_memc", 0);
 	if (!dent_kona_memc_dir)
+		return -ENOMEM;
+
+	if (!debugfs_create_file("self_refresh_en", S_IRUGO | S_IWUSR,
+				dent_kona_memc_dir, &kona_memc ,
+				&memc_self_refresh_en_ops))
 		return -ENOMEM;
 
 	if (!debugfs_create_file("ap_min_pwr", S_IRUGO | S_IWUSR,

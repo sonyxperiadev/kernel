@@ -29,7 +29,6 @@
 #include <plat/scu.h>
 #include <plat/clock.h>
 #include <mach/io_map.h>
-#include <mach/rdb/brcm_rdb_csr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_gicdist.h>
@@ -124,39 +123,12 @@ static struct kona_idle_state idle_states[] = {
 };
 
 
-static int pm_enable_self_refresh(bool enable)
-{
-	u32 reg_val;
-	if (enable == true) {
-		writel(0, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-		reg_val =
-		readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-		reg_val |= CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
-		writel(reg_val,
-			KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-	} else {
-		writel(1, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
-		reg_val =
-		readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-		reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
-		writel(reg_val,
-			KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-	}
-
-	return 0;
-}
-
 static int pm_config_deep_sleep(void)
 {
 	u32 reg_val;
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
 	clk_set_crystal_pwr_on_idle(true);
-
-	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-	reg_val |= CSR_HW_FREQ_CHANGE_CNTRL_HW_AUTO_PWR_TRANSITION_MASK;
-	writel(reg_val, KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
-	pm_enable_self_refresh(true);
 
 /*Enable RAM standby
 If RAM standby is enabled, standby signal to RAM will be 0
@@ -564,18 +536,6 @@ device_initcall(__pm_init);
 
 #ifdef CONFIG_DEBUG_FS
 
-static int enable_self_refresh(void *data, u64 val)
-{
-	if (val == 0)
-		pm_enable_self_refresh(false);
-	else
-		pm_enable_self_refresh(true);
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(pm_en_self_refresh_fops, NULL,
-					enable_self_refresh, "%llu\n");
-
 /* Disable/enable dormant mode at runtime */
 static int dormant_enable_set(void *data, u64 val)
 {
@@ -598,9 +558,6 @@ int __init __pm_debug_init(void)
 		return -ENOMEM;
 	if (!debugfs_create_u32("log_mask", S_IRUGO | S_IWUSR,
 		dent_pm_root_dir, (int *)&log_mask))
-		return -ENOMEM;
-	if (!debugfs_create_file("en_self_refresh", S_IRUGO | S_IWUSR,
-		dent_pm_root_dir, NULL, &pm_en_self_refresh_fops))
 		return -ENOMEM;
 
 	/* Interface to enable disable dormant mode at runtime */
