@@ -79,6 +79,11 @@
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
 #endif
+
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+#include <linux/leds.h>
+#endif
+
 #ifdef CONFIG_DMAC_PL330
 #include <mach/irqs.h>
 #include <plat/pl330-pdata.h>
@@ -678,6 +683,39 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&caph_pcm_device,
 #endif
 };
+
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+#define BLUE_LED_GPIO		22
+#define GREEN_LED_GPIO		9
+static struct gpio_led gpio_leds[] = {
+	{
+		.name	= "blue",
+		.default_trigger = "timer",
+		.gpio	= BLUE_LED_GPIO ,
+		.active_low = 0,
+	},
+	{
+		.name	= "green",
+		.default_trigger = "timer",
+		.gpio	= GREEN_LED_GPIO ,
+		.active_low = 0,
+	},
+};
+
+static struct gpio_led_platform_data gpio_led_info = {
+	.leds		= gpio_leds,
+	.num_leds	= ARRAY_SIZE(gpio_leds),
+};
+
+static struct platform_device leds_gpio = {
+	.name	= "leds-gpio",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &gpio_led_info,
+	},
+};
+#endif
+
 
 struct regulator_consumer_supply hv6_supply[] = {
 	{.supply = "vdd_sdxc"},
@@ -1336,6 +1374,9 @@ static struct i2c_board_info bcm915500_i2c_boardinfo[] = {
 static struct platform_device *hawaii_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
 	&hawaii_kp_device,
+#endif
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+	&leds_gpio,
 #endif
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 	&hawaii_headset_device,
