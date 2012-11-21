@@ -23,9 +23,9 @@ the GPL, without Broadcom's express prior written consent.
 
 /* ================================================================ */
 
-v3d_session_type *v3d_session_create(v3d_driver_type *driver, const char *name)
+v3d_session_t *v3d_session_create(v3d_driver_t *driver, const char *name)
 {
-	v3d_session_type *instance = (v3d_session_type *) kmalloc(sizeof(v3d_session_type), GFP_KERNEL);
+	v3d_session_t *instance = (v3d_session_t *) kmalloc(sizeof(v3d_session_t), GFP_KERNEL);
 	if (instance == NULL)
 		return NULL;
 
@@ -37,6 +37,7 @@ v3d_session_type *v3d_session_create(v3d_driver_type *driver, const char *name)
 	instance->last_id = 0;
 	spin_lock_init(&instance->issued.lock);
 	INIT_LIST_HEAD(&instance->issued.list);
+	instance->performance_counter.enables = 0;
 
 	v3d_session_reset_statistics(instance);
 
@@ -48,7 +49,7 @@ v3d_session_type *v3d_session_create(v3d_driver_type *driver, const char *name)
 	return instance;
 }
 
-void v3d_session_delete(v3d_session_type *instance)
+void v3d_session_delete(v3d_session_t *instance)
 {
 	switch (instance->initialised) {
 	case 1:
@@ -66,7 +67,7 @@ void v3d_session_delete(v3d_session_type *instance)
 	}
 }
 
-void v3d_session_reset_statistics(v3d_session_type *instance)
+void v3d_session_reset_statistics(v3d_session_t *instance)
 {
 	instance->start = ktime_get();
 	instance->total_run = 0;
@@ -75,14 +76,17 @@ void v3d_session_reset_statistics(v3d_session_type *instance)
 
 	statistics_initialise(&instance->user.queue);
 	statistics_initialise(&instance->user.run);
+
+	statistics_initialise(&instance->binning_bytes);
 }
 
-void v3d_session_add_statistics(v3d_session_type *instance, int user, unsigned int queue, unsigned int run)
+void v3d_session_add_statistics(v3d_session_t *instance, int user, unsigned int queue, unsigned int run, unsigned int binning_bytes)
 {
 	instance->total_run += run;
 	if (user != 0) {
 		statistics_add(&instance->user.queue, queue);
 		statistics_add(&instance->user.run,   run);
+		statistics_add(&instance->binning_bytes, binning_bytes);
 	} else {
 		statistics_add(&instance->bin_render.queue, queue);
 		statistics_add(&instance->bin_render.run,   run);
@@ -93,23 +97,55 @@ void v3d_session_add_statistics(v3d_session_type *instance, int user, unsigned i
 /* ================================================================ */
 
 int v3d_session_job_post(
-	v3d_session_type *instance,
+	v3d_session_t *instance,
 	const v3d_job_post_t *user_job)
 {
 	instance->last_id = user_job->job_id;
 	return v3d_driver_job_post(instance->driver, instance, user_job);
 }
 
+
+/* ================================================================ */
+
 void remove_job(struct kref *reference)
 {
-	v3d_driver_job_type *job = container_of(reference, v3d_driver_job_type, waiters);
+	v3d_driver_job_t *job = container_of(reference, v3d_driver_job_t, waiters);
 	BUG_ON(job == NULL);
 	list_del(&job->session.link);
 }
 
-void v3d_session_issued(v3d_driver_job_type *job)
+void v3d_session_job_reference(struct v3d_driver_job_tag *job)
 {
-	v3d_session_type *instance = job->session.instance;
+	BUG_ON(job == NULL);
+	kref_get(&job->waiters); /* Prevents freeing on completion */
+}
+
+void v3d_session_job_release(struct v3d_driver_job_tag *job, const char *name)
+{
+	v3d_session_t *instance = job->session.instance;
+	unsigned long  flags;
+	int            last;
+	BUG_ON(job == NULL);
+	BUG_ON(job->state == V3DDRIVER_JOB_INVALID);
+	if (job->state > V3DDRIVER_JOB_ACTIVE)
+		wake_up_all(&job->wait_for_completion);
+	spin_lock_irqsave(&instance->issued.lock, flags);
+	last = kref_put(&job->waiters, &remove_job);
+	spin_unlock_irqrestore(&instance->issued.lock, flags);
+	if (last != 0) {
+		if (job->state == V3DDRIVER_JOB_COMPLETE)
+			v3d_driver_job_complete(instance->driver, job);
+		else
+			v3d_device_job_cancel(job->device);
+	}
+}
+
+
+/* ================================================================ */
+
+void v3d_session_issued(v3d_driver_job_t *job)
+{
+	v3d_session_t *instance = job->session.instance;
 	unsigned long   flags;
 	BUG_ON(job == NULL);
 	spin_lock_irqsave(&instance->issued.lock, flags);
@@ -119,34 +155,32 @@ void v3d_session_issued(v3d_driver_job_type *job)
 	spin_unlock_irqrestore(&instance->issued.lock, flags);
 }
 
-void v3d_session_complete(v3d_driver_job_type *job, int status)
+void v3d_session_complete(v3d_driver_job_t *job, int status)
 {
-	v3d_session_type *instance;
+	v3d_session_t *instance;
 	unsigned long   flags;
-	int             last;
 	BUG_ON(job == NULL);
 	instance = job->session.instance;
-	job->state = status;
+	if (job->state < status) /* Preserve any previous failure */
+		job->state = status;
 	spin_lock_irqsave(&instance->issued.lock, flags);
-	last = kref_put(&job->waiters, &remove_job);
+	if (instance->performance_counter.enables != 0)
+		v3d_device_counters_add(job->device, &instance->performance_counter.count[0]);
 	spin_unlock_irqrestore(&instance->issued.lock, flags);
-	if (last != 0)
-		v3d_driver_job_complete(instance->driver, job);
-	else
-		wake_up_all(&job->wait_for_completion);
+	v3d_session_job_release(job, __func__);
 }
 
 #if 0
-static v3d_driver_job_type *find_job(v3d_session_type *instance, int32_t id)
+static v3d_driver_job_t *find_job(v3d_session_t *instance, int32_t id)
 {
-	v3d_driver_job_type *job = NULL;
+	v3d_driver_job_t *job = NULL;
 	struct list_head  *current;
 	unsigned long      flags;
 	spin_lock_irqsave(&instance->issued.lock, flags);
 	list_for_each(current, &instance->issued.list) {
-		job = list_entry(current, v3d_driver_job_type, session.link);
+		job = list_entry(current, v3d_driver_job_t, session.link);
 		if (id == (int32_t) job->user_job.job_id) {
-			kref_get(&job->waiters); /* Prevents freeing on completion */
+			v3d_session_job_reference(job); /* Prevents freeing on completion */
 			spin_unlock_irqrestore(&instance->issued.lock, flags);
 			return job;
 		}
@@ -157,7 +191,7 @@ static v3d_driver_job_type *find_job(v3d_session_type *instance, int32_t id)
 #endif
 
 #if 0
-int wait_with_timeout(v3d_driver_job_type *job)
+int wait_with_timeout(v3d_driver_job_t *job)
 {
 	long ret = msecs_to_jiffies(JOB_TIMEOUT_MS);
 	if (job->state != V3DDRIVER_JOB_COMPLETE) {
@@ -178,74 +212,43 @@ int wait_with_timeout(v3d_driver_job_type *job)
 }
 #endif
 
-static void wait_job(v3d_session_type *instance, v3d_driver_job_type *job)
+static void wait_job(v3d_session_t *instance, v3d_driver_job_t *job)
 {
-	int last;
-	unsigned long flags;
-	int remaining_time = wait_event_timeout(job->wait_for_completion, job->state >= V3DDRIVER_JOB_COMPLETE, msecs_to_jiffies(JOB_TIMEOUT_MS));
-	spin_lock_irqsave(&instance->issued.lock, flags);
+	int remaining_time;
+	BUG_ON(job == NULL);
+	remaining_time = wait_event_timeout(job->wait_for_completion, job->state >= V3DDRIVER_JOB_COMPLETE, msecs_to_jiffies(JOB_TIMEOUT_MS));
 	if (remaining_time == 0) {
-		(void) kref_put(&job->waiters, &remove_job); /* Remove completion reference as we timed-out */
-		printk(KERN_ERR "V3D job %p timed-out", job);
+		job->state = V3DDRIVER_JOB_FAILED;
+		printk(KERN_ERR "V3D job %p timed-out in state %d, active %p", job, job->state, job->device->in_progress.bin_render);
 	}
-	last = kref_put(&job->waiters, &remove_job);
-	spin_unlock_irqrestore(&instance->issued.lock, flags);
-
-	if (last != 0) {
-		if (remaining_time == 0) {
-			/* Timed-out - V3dDevice needs to be ready */
-			/* for a new job */
-			v3d_device_job_cancel(job->device);
-			v3d_driver_kick_consumers(instance->driver);
-		} else
-			v3d_driver_job_complete(instance->driver, job);
-	}
+	v3d_session_job_release(job, __func__); /* Remove waiting reference */
 }
 
-int32_t v3d_session_wait(v3d_session_type *instance)
+int32_t v3d_session_wait(v3d_session_t *instance)
 {
 	int32_t       id = instance->last_id;
+	unsigned long flags;
 #if 0
 	/* Find the last ID issued */
-	v3d_driver_job_type *job = find_job(instance, id);
+	v3d_driver_job_t *job = find_job(instance, id);
 	if (job != NULL) {
 		/* Wait on this one first - will minimise the number of waits */
 		wait_job(instance, job);
 	}
 	return id;
 #else
-	unsigned long flags;
-	#if 0
-	{
-		unsigned int entries = 0;
-		struct list_head  *current;
-		spin_lock_irqsave(&instance->issued.lock, flags);
-		list_for_each(current, &instance->issued.list)
-			++entries;
-
-		if (entries > 2) {
-			printk("%s: %u entries\n", __func__, entries);
-			list_for_each(current, &instance->issued.list) {
-				v3d_driver_job_type *job = list_entry(current, v3d_driver_job_type, session.link);
-				printk(KERN_ERR "  l %p j %p t %d\n", current, job, job->user_job.job_type);
-			}
-		}
-		spin_unlock_irqrestore(&instance->issued.lock, flags);
-	}
-	#endif
-
 	/* Wait on all previous jobs, if any - only required when multiple V3D blocks exist */
 	do {
-		v3d_driver_job_type *job;
+		v3d_driver_job_t *job;
 		spin_lock_irqsave(&instance->issued.lock, flags);
 		if (list_empty(&instance->issued.list) != 0)
 			break;
 
-		job = list_first_entry(&instance->issued.list, v3d_driver_job_type, session.link);
+		job = list_first_entry(&instance->issued.list, v3d_driver_job_t, session.link);
 		if (id - (int32_t) job->user_job.job_id < 0)
 			break;
 
-		kref_get(&job->waiters); /* Prevents freeing on completion */
+		v3d_session_job_reference(job); /* Prevents freeing on completion */
 		spin_unlock_irqrestore(&instance->issued.lock, flags);
 
 		wait_job(instance, job);
@@ -259,4 +262,30 @@ int32_t v3d_session_wait(v3d_session_type *instance)
 	spin_unlock_irqrestore(&instance->issued.lock, flags);
 #endif
 	return id;
+}
+
+int v3d_session_counters_enable(v3d_session_t *instance, uint32_t enables)
+{
+	if (instance->performance_counter.enables != 0)
+		return -1;
+	instance->performance_counter.enables = enables;
+	memset(
+		&instance->performance_counter.count[0],
+		0,
+		sizeof(instance->performance_counter.count));
+	v3d_driver_counters_enable(instance->driver, enables);
+	return 0;
+}
+
+int v3d_session_counters_disable(v3d_session_t *instance)
+{
+	if (instance->performance_counter.enables == 0)
+		return -1;
+	instance->performance_counter.enables = 0;
+	return 0;
+}
+
+const uint32_t *v3d_session_counters_get(v3d_session_t *instance)
+{
+	return instance->performance_counter.enables == 0 ? &instance->performance_counter.count[0] : NULL;
 }

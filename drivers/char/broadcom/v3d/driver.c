@@ -24,7 +24,7 @@ the GPL, without Broadcom's express prior written consent.
 
 /* ================================================================ */
 
-void v3d_driver_delete(v3d_driver_type *instance)
+void v3d_driver_delete(v3d_driver_t *instance)
 {
 	switch (instance->initialised) {
 	case 1:
@@ -36,19 +36,20 @@ void v3d_driver_delete(v3d_driver_type *instance)
 	}
 }
 
-void v3d_driver_reset_statistics(v3d_driver_type *instance)
+void v3d_driver_reset_statistics(v3d_driver_t *instance)
 {
 	statistics_initialise(&instance->bin_render.queue);
 	statistics_initialise(&instance->bin_render.run);
+	statistics_initialise(&instance->bin_render.binning_bytes);
 	statistics_initialise(&instance->user.queue);
 	statistics_initialise(&instance->user.run);
 	instance->total_run = 0;
 	instance->start = ktime_get();
 }
 
-v3d_driver_type *v3d_driver_create(void)
+v3d_driver_t *v3d_driver_create(void)
 {
-	v3d_driver_type *instance = kmalloc(sizeof(v3d_driver_type), GFP_KERNEL);
+	v3d_driver_t *instance = kmalloc(sizeof(v3d_driver_t), GFP_KERNEL);
 	if (instance == NULL)
 		return NULL;
 	instance->initialised = 0;
@@ -88,13 +89,7 @@ v3d_driver_type *v3d_driver_create(void)
 
 /* ================================================================ */
 
-void v3d_driver_add_device(v3d_driver_type *instance, struct v3d_device_tag *device)
-{
-	BUG_ON(instance->device != NULL);
-	instance->device = device;
-}
-
-static v3d_session_type **get_session_entry(v3d_driver_type *instance, v3d_session_type *session)
+static v3d_session_t **get_session_entry(v3d_driver_t *instance, v3d_session_t *session)
 {
 	unsigned int i;
 	for (i = 0 ; i < sizeof(instance->sessions) / sizeof(instance->sessions[0]) ; ++i)
@@ -104,18 +99,18 @@ static v3d_session_type **get_session_entry(v3d_driver_type *instance, v3d_sessi
 }
 
 /* TODO: Lock - potentially in the caller */
-int v3d_driver_add_session(v3d_driver_type *instance, struct v3d_session_tag *session)
+int v3d_driver_add_session(v3d_driver_t *instance, struct v3d_session_tag *session)
 {
-	v3d_session_type **entry = get_session_entry(instance, NULL);
+	v3d_session_t **entry = get_session_entry(instance, NULL);
 	if (entry == NULL)
 		return -ENOMEM;
 	*entry = session;
 	return 0;
 }
 
-void v3d_driver_remove_session(v3d_driver_type *instance, struct v3d_session_tag *session)
+void v3d_driver_remove_session(v3d_driver_t *instance, struct v3d_session_tag *session)
 {
-	v3d_session_type **entry = get_session_entry(instance, session);
+	v3d_session_t **entry = get_session_entry(instance, session);
 	BUG_ON(session == NULL);
 	*entry = NULL;
 }
@@ -123,20 +118,20 @@ void v3d_driver_remove_session(v3d_driver_type *instance, struct v3d_session_tag
 
 /* ================================================================ */
 
-static v3d_driver_job_type *remove_head(struct list_head *list)
+static v3d_driver_job_t *remove_head(struct list_head *list)
 {
-	v3d_driver_job_type *job;
+	v3d_driver_job_t *job;
 	if (list_empty(list) != 0)
 		return NULL;
-	job = list_first_entry(list, v3d_driver_job_type, link);
+	job = list_first_entry(list, v3d_driver_job_t, link);
 	list_del(&job->link);
 	return job;
 }
 
 /* Requires Instance->Job.Posted.Lock to be held */
-v3d_driver_job_type *v3d_driver_job_get(v3d_driver_type *instance, unsigned int required)
+v3d_driver_job_t *v3d_driver_job_get(v3d_driver_t *instance, unsigned int required)
 {
-	v3d_driver_job_type *job = NULL;
+	v3d_driver_job_t *job = NULL;
 	int                exclusive;
 
 	/* See if we've completed everything queued */
@@ -160,15 +155,14 @@ v3d_driver_job_type *v3d_driver_job_get(v3d_driver_type *instance, unsigned int 
 	return job;
 }
 
-void v3d_driver_job_complete(v3d_driver_type *instance, v3d_driver_job_type *job)
+void v3d_driver_job_complete(v3d_driver_t *instance, v3d_driver_job_t *job)
 {
 	/* Return the job to Free.List */
 	unsigned long flags;
-	unsigned int queue;
-	unsigned int run;
+	BUG_ON(job == NULL);
 	job->end = ktime_get();
 	spin_lock_irqsave(&instance->job.posted.lock, flags);
-	if (job->state == V3DDRIVER_JOB_ISSUED) {
+	if (job->state == V3DDRIVER_JOB_INITIALISED) {
 		/* Hasn't yet made it to the hardware, so needs dequeueing */
 		/* Note: Even if a job is completed by both a time-out and */
 		/*       normal completion, the ref count only hits zero   */
@@ -176,22 +170,28 @@ void v3d_driver_job_complete(v3d_driver_type *instance, v3d_driver_job_type *job
 		list_del(&job->link);
 	}
 
-	queue = ktime_us_delta(job->start, job->queued);
-	run   = ktime_us_delta(job->end,   job->start);
-	instance->total_run += run;
-	if (job->user_job.job_type == V3D_JOB_USER) {
-		statistics_add(&instance->user.queue, queue);
-		statistics_add(&instance->user.run,   run);
-		v3d_session_add_statistics(job->session.instance, 1 /* User? */, queue, run);
-	} else {
-		statistics_add(&instance->bin_render.queue, queue);
-		statistics_add(&instance->bin_render.run,   run);
-		v3d_session_add_statistics(job->session.instance, 0 /* User? */, queue, run);
+	if (job->state > V3DDRIVER_JOB_ACTIVE) {
+		unsigned int queue = ktime_us_delta(job->start, job->queued);
+		unsigned int run   = ktime_us_delta(job->end,   job->start);
+		instance->total_run += run;
+		if (job->user_job.job_type == V3D_JOB_USER) {
+			statistics_add(&instance->user.queue, queue);
+			statistics_add(&instance->user.run,   run);
+			v3d_session_add_statistics(job->session.instance, 1 /* User? */, queue, run, 0U);
+		} else {
+			statistics_add(&instance->bin_render.queue, queue);
+			statistics_add(&instance->bin_render.run,   run);
+			statistics_add(&instance->bin_render.binning_bytes, job->binning_bytes);
+			v3d_session_add_statistics(job->session.instance, 0 /* User? */, queue, run, job->binning_bytes);
+		}
 	}
 	spin_unlock_irqrestore(&instance->job.posted.lock, flags);
 
 	spin_lock_irqsave(&instance->job.free.lock, flags);
 	list_add_tail(&job->link, &instance->job.free.list);
+#if 1
+	job->state = V3DDRIVER_JOB_INVALID;
+#endif
 	spin_unlock_irqrestore(&instance->job.free.lock, flags);
 	up(&instance->job.free.count);
 }
@@ -199,7 +199,7 @@ void v3d_driver_job_complete(v3d_driver_type *instance, v3d_driver_job_type *job
 
 /* ================================================================ */
 
-void v3d_driver_exclusive_start(v3d_driver_type *instance, struct v3d_session_tag *session)
+void v3d_driver_exclusive_start(v3d_driver_t *instance, struct v3d_session_tag *session)
 {
 	unsigned long     flags;
 	mutex_lock(&instance->job.posted.exclusive.lock);
@@ -222,7 +222,7 @@ void v3d_driver_exclusive_start(v3d_driver_type *instance, struct v3d_session_ta
 	v3d_driver_job_unlock(instance, flags);
 }
 
-int v3d_driver_exclusive_stop(v3d_driver_type *instance, struct v3d_session_tag *session)
+int v3d_driver_exclusive_stop(v3d_driver_t *instance, struct v3d_session_tag *session)
 {
 	unsigned long flags;
 	int           empty;
@@ -254,11 +254,11 @@ int v3d_driver_exclusive_stop(v3d_driver_type *instance, struct v3d_session_tag 
 }
 
 int v3d_driver_job_post(
-	v3d_driver_type        *instance,
-	v3d_session_type       *session,
+	v3d_driver_t        *instance,
+	v3d_session_t       *session,
 	const v3d_job_post_t *user_job)
 {
-	v3d_driver_job_type *job;
+	v3d_driver_job_t     *job;
 	unsigned long      flags;
 	struct list_head  *list;
 	if (session == instance->job.posted.exclusive.owner)
@@ -272,14 +272,17 @@ int v3d_driver_job_post(
 	/* Get a free job structure */
 	down(&instance->job.free.count);
 	spin_lock_irqsave(&instance->job.free.lock, flags);
-	job = list_first_entry(&instance->job.free.list, v3d_driver_job_type, link);
+	job = list_first_entry(&instance->job.free.list, v3d_driver_job_t, link);
 	list_del(&job->link);
 	spin_unlock_irqrestore(&instance->job.free.lock, flags);
 
 	/* Initialise and copy-in the user-side job information */
 	init_waitqueue_head(&job->wait_for_completion);
 	kref_init(&job->waiters); /* Starts at 1 - Completion reference */
-	job->state = V3DDRIVER_JOB_INITIALISED;
+	job->state = V3DDRIVER_JOB_INVALID;
+	job->queued = job->start = ktime_get();
+	job->binning_bytes = 0U;
+
 	if ((uint32_t) user_job < PAGE_OFFSET) {
 		int status = copy_from_user(&job->user_job, user_job, sizeof(job->user_job));
 		if (status != 0) {
@@ -289,11 +292,11 @@ int v3d_driver_job_post(
 		}
 	} else
 		job->user_job = *user_job;
+	job->state = V3DDRIVER_JOB_INITIALISED;
 	job->session.instance = session;
 	v3d_session_issued(job);
 
 	/* Queue it */
-	job->queued = ktime_get();
 	spin_lock_irqsave(&instance->job.posted.lock, flags);
 	list_add_tail(&job->link, list);
 	spin_unlock_irqrestore(&instance->job.posted.lock, flags);
@@ -303,7 +306,27 @@ int v3d_driver_job_post(
 	return 0;
 }
 
-void v3d_driver_kick_consumers(v3d_driver_type *instance)
+
+/* ================================================================ */
+/* The following functions are hard-coded for a single V3D block    */
+
+void v3d_driver_add_device(v3d_driver_t *instance, struct v3d_device_tag *device)
+{
+	BUG_ON(instance->device != NULL);
+	instance->device = device;
+}
+
+void v3d_driver_kick_consumers(v3d_driver_t *instance)
 {
 	v3d_device_job_posted(instance->device);
+}
+
+void v3d_driver_counters_enable(v3d_driver_t *instance, uint32_t enables)
+{
+	v3d_device_counters_enable(instance->device, enables);
+}
+
+void v3d_driver_counters_disable(v3d_driver_t *instance)
+{
+	v3d_device_counters_disable(instance->device);
 }

@@ -192,32 +192,26 @@ int dvts_wait_interruptible(dvts_object_t obj, dvts_target_t target)
 *******************************************************************/
 #define USAGE_PRINT_THRESHOLD_USEC (5000000)
 static int v3d_major = V3D_DEV_MAJOR;
-static void __iomem *v3d_base;
 
 typedef struct {
 	dvts_object_t shared_dvts_object;
 	uint32_t shared_dvts_object_usecount;
 	char comm[TASK_COMM_LEN];
-	v3d_session_type *session;
+	v3d_session_t *session;
 
 	struct proc_dir_entry *proc_dir;
 	struct proc_dir_entry *proc_status;
 	struct proc_dir_entry *proc_version;
-#ifdef V3D_PERF_SUPPORT
-	uint32_t perf_ctr[16];
-	uint32_t v3d_perf_mask;
-	bool v3d_perf_counter;
-#endif
 } v3d_t;
 
 static struct {
 	struct class *v3d_class;
 	struct device *v3d_device;
-	v3d_device_type *v3d_device0;
-	v3d_driver_type *v3d_driver;
+	v3d_device_t *v3d_device0;
+	v3d_driver_t *v3d_driver;
 } v3d_state;
 
-v3d_driver_type *v3d_driver;
+v3d_driver_t *v3d_driver;
 
 /********************************************************
 	Imported stuff
@@ -276,11 +270,6 @@ static int v3d_open(struct inode *inode, struct file *filp)
 		goto dvts_create_fail;
 
 	dev->shared_dvts_object_usecount = 0;
-
-#ifdef V3D_PERF_SUPPORT
-	dev->v3d_perf_mask = 0;
-	dev->v3d_perf_counter = false;
-#endif
 
 	KLOG_V("%s for dev %p\n", __func__, dev);
 
@@ -450,34 +439,33 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 					await_task_args.target);
 		}
 		break;
-#ifdef V3D_PERF_SUPPORT
 	case V3D_IOCTL_PERF_COUNTER_READ:
 		{
-			if (copy_to_user((unsigned int *)arg, &dev->perf_ctr,
-					 16 * sizeof(unsigned int))) {
-				KLOG_E
-				    ("V3D_IOCTL_WAIT_JOB copy_to_user failed\n");
-				ret = -EPERM;
-			}
+			const uint32_t *counts = v3d_session_counters_get(dev->session);
+			ret = counts == NULL ? -EBUSY : 0;
+			if (ret == 0)
+				if (copy_to_user(
+					(unsigned int *)arg,
+					counts,
+					16 * sizeof(*counts)) != 0) {
+					KLOG_E("V3D_IOCTL_WAIT_JOB copy_to_user failed\n");
+					ret = -EPERM;
+				}
 		}
 		break;
 	case V3D_IOCTL_PERF_COUNTER_ENABLE:
 		{
-			dev->v3d_perf_counter = true;
-			if (copy_from_user
-			    (&(dev->v3d_perf_mask), (uint32_t *)arg,
-			     sizeof(uint32_t))) {
-				KLOG_E
-				    ("V3D_IOCTL_PERF_COUNTER_ENABLE failed\n");
+			uint32_t enables;
+			if (copy_from_user(&enables, (void *) arg, sizeof(enables))) {
+				KLOG_E("V3D_IOCTL_PERF_COUNTER_ENABLE failed\n");
 				ret = -EPERM;
-			}
-		memset(&dev->perf_ctr, 0, sizeof(dev->perf_ctr));
+			} else
+				ret = v3d_session_counters_enable(dev->session, enables) == 0 ? 0 : -EALREADY;
 		}
 		break;
 	case V3D_IOCTL_PERF_COUNTER_DISABLE:
-		dev->v3d_perf_counter = false;
+		ret = v3d_session_counters_disable(dev->session) == 0 ? 0 : -EALREADY;
 		break;
-#endif
 
 	default:
 		KLOG_E("%s: unsupported %08x", __func__, cmd);
@@ -541,32 +529,23 @@ int __init v3d_init(void)
 	/* initialize the V3D struct */
 	memset(&v3d_state, 0, sizeof(v3d_state));
 
-	/* Map the V3D registers */
-	v3d_base =
-		(void __iomem *)ioremap_nocache(RHEA_V3D_BASE_PERIPHERAL_ADDRESS,
-		SZ_4K);
-	if (v3d_base == NULL)
-		goto err;
-
-	printk(KERN_ERR "V3D register base address (remaped) = %p\n", v3d_base);
-
 	ret = platform_device_register(&v3d_platform_device);
 	if (ret) {
 		KLOG_E("failed to register platform device\n");
-		goto err2;
+		goto err;
 	}
 
 	ret = platform_driver_register(&v3d_platform_driver);
 	if (ret) {
 		KLOG_E("failed to register platform driver\n");
-		goto err2;
+		goto err;
 	}
 
 	ret = register_chrdev(v3d_major, V3D_DEV_NAME, &v3d_fops);
 	if (ret < 0) {
 		KLOG_E("failed to register char driver\n");
 		ret = -EINVAL;
-		goto err2;
+		goto err;
 	} else
 		v3d_major = ret;
 
@@ -587,7 +566,7 @@ int __init v3d_init(void)
 		KLOG_E("v3d_driver_create() failed");
 		goto err4;
 	}
-	v3d_state.v3d_device0 = v3d_device_create(v3d_state.v3d_driver, v3d_state.v3d_device, (uint32_t) v3d_base);
+	v3d_state.v3d_device0 = v3d_device_create(v3d_state.v3d_driver, v3d_state.v3d_device);
 	if (v3d_state.v3d_device0 == NULL) {
 		KLOG_E("v3d_device_create() failed");
 		goto err5;
@@ -605,8 +584,6 @@ err4:
 	class_destroy(v3d_state.v3d_class);
 err3:
 	unregister_chrdev(v3d_major, V3D_DEV_NAME);
-err2:
-	iounmap(v3d_base);
 err:
 	KLOG_E("V3D init error %d\n", ret);
 	return ret;
@@ -615,10 +592,6 @@ err:
 void __exit v3d_exit(void)
 {
 	KLOG_D("V3D driver exit\n");
-
-	/* Unmap addresses */
-	if (v3d_base)
-		iounmap(v3d_base);
 
 	v3d_driver = NULL;
 	v3d_driver_delete(v3d_state.v3d_driver);

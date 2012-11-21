@@ -24,6 +24,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/kthread.h>
 #include <linux/err.h>
 
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_v3d.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <plat/scu.h>
@@ -47,25 +48,25 @@ static irqreturn_t interrupt_handler(int irq, void *context);
 
 /* ================================================================ */
 
-static inline uint32_t read(const v3d_device_type *instance, unsigned int offset)
+static inline uint32_t read(const v3d_device_t *instance, unsigned int offset)
 {
 	BUG_ON(instance->on == 0);
-	return ioread32(instance->rejister.base + offset);
+	return ioread32((uint8_t __iomem *) instance->registers.base + offset);
 }
 
-static inline void write(const v3d_device_type *instance, unsigned int offset, uint32_t value)
+static inline void write(const v3d_device_t *instance, unsigned int offset, uint32_t value)
 {
 	BUG_ON(instance->on == 0);
-	iowrite32(value, instance->rejister.base + offset);
+	iowrite32(value, (uint8_t __iomem *) instance->registers.base + offset);
 }
 
 
 /* ================================================================ */
 
-static void supply_binning_memory(v3d_device_type *instance, v3d_bin_memory_type *memory)
+static void supply_binning_memory(v3d_device_t *instance, v3d_bin_memory_t *memory)
 {
 #ifdef VERBOSE_DEBUG
-	printk(KERN_ERR "%s: supplying %08x (%1u/%1u)\n", __func__, memory->physical, instance->out_of_memory.index.in_use, instance->out_of_memory.index.allocated);
+	printk(KERN_ERR "%s: Supplying %08x (%1u/%1u)\n", __func__, memory->physical, instance->out_of_memory.index.in_use, instance->out_of_memory.index.allocated);
 #endif
 	BUG_ON(memory->physical == 0);
 	write(instance, V3D_BPOA_OFFSET, memory->physical);
@@ -81,12 +82,12 @@ static void supply_binning_memory(v3d_device_type *instance, v3d_bin_memory_type
 
 static void allocate_bin_memory(struct work_struct *work)
 {
-	v3d_device_type    *instance = container_of(work, v3d_device_type, out_of_memory.bin_allocation);
-	v3d_bin_memory_type *memory;
+	v3d_device_t    *instance = container_of(work, v3d_device_t, out_of_memory.bin_allocation);
+	v3d_bin_memory_t *memory;
 	unsigned long     flags;
 	BUG_ON(instance->out_of_memory.index.in_use != instance->out_of_memory.index.allocated);
 	if (instance->out_of_memory.index.allocated == sizeof(instance->out_of_memory.memory) / sizeof(instance->out_of_memory.memory[0])) {
-		printk(KERN_ERR "V3D: out of overspill binning memory entries - job cancelled!\n");
+		printk(KERN_ERR "V3D: Out of overspill binning memory entries - job cancelled!\n");
 		v3d_device_job_cancel(instance);
 		return;
 	}
@@ -95,7 +96,7 @@ static void allocate_bin_memory(struct work_struct *work)
 	memory = &instance->out_of_memory.memory[instance->out_of_memory.index.allocated];
 	memory->virtual = dma_alloc_coherent(instance->device, BIN_BLOCK_BYTES, &memory->physical, GFP_DMA);
 	if (memory->virtual == NULL) {
-		printk(KERN_ERR "V3D: unable to allocate overspill binning memory - job cancelled!\n");
+		printk(KERN_ERR "V3D: Unable to allocate overspill binning memory - job cancelled!\n");
 		v3d_device_job_cancel(instance);
 		return;
 	}
@@ -104,14 +105,17 @@ static void allocate_bin_memory(struct work_struct *work)
 	++instance->out_of_memory.index.in_use;
 	spin_unlock_irqrestore(&instance->out_of_memory.lock, flags);
 	supply_binning_memory(instance, memory);
+
+	/* Remove the reference added by the ISR */
+	v3d_session_job_release(instance->in_progress.bin_render, __func__);
 }
 
-static void release_bin_memory(v3d_device_type *instance)
+static void release_bin_memory(v3d_device_t *instance)
 {
 	instance->out_of_memory.index.in_use = 0;
 }
 
-static void free_bin_memory(v3d_device_type *instance)
+static void free_bin_memory(v3d_device_t *instance)
 {
 	unsigned int i;
 	for (i = 0 ; i < instance->out_of_memory.index.allocated ; ++i)
@@ -128,7 +132,7 @@ static void free_bin_memory(v3d_device_type *instance)
 /* ================================================================ */
 
 /* TODO: Removed reset value writes - we reset often */
-static void initialise_registers(v3d_device_type *instance)
+static void initialise_registers(v3d_device_t *instance)
 {
 	/* Disable L2 cache */
 	write(instance, V3D_L2CACTL_OFFSET, 1 << V3D_L2CACTL_L2CDIS_SHIFT);
@@ -182,13 +186,13 @@ static void initialise_registers(v3d_device_type *instance)
 	mb();
 }
 
-static void reset(v3d_device_type *instance)
+static void reset(v3d_device_t *instance)
 {
 	clk_reset(instance->clock);
 	initialise_registers(instance);
 }
 
-static void enable_clock(v3d_device_type *instance)
+static void enable_clock(v3d_device_t *instance)
 {
 	int status;
 	BUG_ON(IS_ERR_OR_NULL(instance->clock));
@@ -200,7 +204,7 @@ static void enable_clock(v3d_device_type *instance)
 	clk_reset(instance->clock);
 }
 
-static void disable_clock(v3d_device_type *instance)
+static void disable_clock(v3d_device_t *instance)
 {
 	int status;
 	status = pi_mgr_dfs_request_update(&instance->dfs_node, PI_MGR_DFS_MIN_VALUE);
@@ -210,10 +214,10 @@ static void disable_clock(v3d_device_type *instance)
 }
 
 /* Power mutex must be held by the caller of PowerOn() and PowerOff() */
-static void power_on(v3d_device_type *instance)
+static void power_on(v3d_device_t *instance)
 {
 #ifdef VERBOSE_DEBUG
-	printk(KERN_ERR "on\n");
+	printk(KERN_ERR "On\n");
 #endif
 	enable_clock(instance);
 	scu_standby(0);
@@ -222,10 +226,10 @@ static void power_on(v3d_device_type *instance)
 	initialise_registers(instance);
 }
 
-static void power_off(v3d_device_type *instance)
+static void power_off(v3d_device_t *instance)
 {
 #ifdef VERBOSE_DEBUG
-	printk(KERN_ERR "off\n");
+	printk(KERN_ERR "Off\n");
 #endif
 	instance->on = 0;
 	disable_clock(instance);
@@ -235,11 +239,11 @@ static void power_off(v3d_device_type *instance)
 
 /* ================================================================ */
 
-static void post_user_job(v3d_device_type *instance, v3d_driver_job_type *job)
+static void post_user_job(v3d_device_t *instance, v3d_driver_job_t *job)
 {
 	unsigned int index = instance->in_progress.head++ & (V3D_USER_FIFO_LENGTH - 1);
 #ifdef VERBOSE_DEBUG
-	printk(KERN_ERR "%s: issuing user job %p ID %08x (q %08x)\n", __func__, job, job->user_job.job_id, read(instance, V3D_SRQCS_OFFSET));
+	printk(KERN_ERR "%s: Issuing user job %p ID %08x (q %08x)\n", __func__, job, job->user_job.job_id, read(instance, V3D_SRQCS_OFFSET));
 #endif
 	BUG_ON(job == NULL);
 	instance->in_progress.user[index] = job;
@@ -251,7 +255,7 @@ static void post_user_job(v3d_device_type *instance, v3d_driver_job_type *job)
 	write(instance, V3D_SRQPC_OFFSET, job->user_job.v3d_srqpc[0]);
 }
 
-static void post_bin_render_job(v3d_device_type *instance, v3d_driver_job_type *job)
+static void post_bin_render_job(v3d_device_t *instance, v3d_driver_job_t *job)
 {
 	BUG_ON(instance->in_progress.bin_render != NULL);
 	BUG_ON(job == NULL);
@@ -283,7 +287,7 @@ static void post_bin_render_job(v3d_device_type *instance, v3d_driver_job_type *
 			write(instance, V3D_CT1EA_OFFSET, job->user_job.v3d_ct1ea);
 		} else {
 #ifdef VERBOSE_DEBUG
-			printk(KERN_ERR "%s: job %p has no rendering\n", __func__, job);
+			printk(KERN_ERR "%s: Job %p has no rendering\n", __func__, job);
 #endif
 			job->user_job.job_type &= ~V3D_JOB_REND;
 		}
@@ -293,7 +297,7 @@ static void post_bin_render_job(v3d_device_type *instance, v3d_driver_job_type *
 #ifdef WORKAROUND_GFXH16
 static int gfxh16thread(void *context)
 {
-	v3d_device_type *instance = (v3d_device_type *) context;
+	v3d_device_t *instance = (v3d_device_t *) context;
 	while (msleep(60), kthread_should_stop() == 0) {
 		int status = mutex_lock(&instance->power);
 		if (status != 0)
@@ -308,7 +312,7 @@ static int gfxh16thread(void *context)
 }
 #endif
 
-static void set_mode(v3d_device_type *instance, v3d_mode_type mode)
+static void set_mode(v3d_device_t *instance, v3d_mode_t mode)
 {
 	if (mode != instance->mode)
 		instance->mode = mode;
@@ -319,7 +323,7 @@ static void set_mode(v3d_device_type *instance, v3d_mode_type mode)
 
 static void switch_off(struct work_struct *work)
 {
-	v3d_device_type *instance = container_of(work, v3d_device_type, switch_off.work);
+	v3d_device_t *instance = container_of(work, v3d_device_t, switch_off.work);
 	mutex_lock(&instance->power);
 	if (instance->idle != 0) {
 		BUG_ON(instance->in_progress.bin_render != NULL);
@@ -335,10 +339,10 @@ static void switch_off(struct work_struct *work)
 /* ================================================================ */
 
 /* Power mutex must be held by the caller */
-static v3d_driver_job_type *post_job(v3d_device_type * instance)
+static v3d_driver_job_t *post_job(v3d_device_t * instance)
 {
 	unsigned long      flags;
-	v3d_driver_job_type *job;
+	v3d_driver_job_t *job;
 	if (instance->idle == 0)
 		return NULL;
 
@@ -379,41 +383,44 @@ static v3d_driver_job_type *post_job(v3d_device_type * instance)
 
 /* ================================================================ */
 
-void v3d_device_delete(v3d_device_type *instance)
+void v3d_device_delete(v3d_device_t *instance)
 {
 	switch (instance->initialised) {
-	case 7:
+	case 8:
 		mutex_lock(&instance->suspend);
 		free_irq(IRQ_GRAPHICS, instance);
 		flush_delayed_work(&instance->switch_off);
 		free_bin_memory(instance);
 
-	case 6:
+	case 7:
 		pi_mgr_qos_request_remove(&instance->qos_node);
 
-	case 5:
+	case 6:
 		pi_mgr_dfs_request_remove(&instance->dfs_node);
 
-	case 4:
+	case 5:
 #ifdef WORKAROUND_GFXH16
 		kthread_stop(instance->gfxh16thread);
 #endif
 
-	case 3:
+	case 4:
 #if 0
 		kthread_stop(instance->thread);
 		complete(&instance->post_event);
 #endif
 
-	case 2:
+	case 3:
 		destroy_workqueue(instance->out_of_memory.work_queue);
 
-	case 1:
+	case 2:
 		dma_free_coherent(
 			instance->device,
 			DUMMY_BYTES,
 			instance->dummy.virtual,
 			instance->dummy.physical);
+
+	case 1:
+		iounmap(&instance->registers.base);
 
 	case 0:
 		clk_put(instance->clock);
@@ -422,16 +429,16 @@ void v3d_device_delete(v3d_device_type *instance)
 	}
 }
 
-static void reset_state(v3d_device_type *instance)
+static void reset_state(v3d_device_t *instance)
 {
 	instance->in_progress.bin_render = NULL;
 	instance->in_progress.head = instance->in_progress.tail = 0;
 	instance->in_progress.last_completed = 0;
 }
 
-v3d_device_type *v3d_device_create(v3d_driver_type *driver, struct device *device, uint32_t register_base)
+v3d_device_t *v3d_device_create(v3d_driver_t *driver, struct device *device)
 {
-	v3d_device_type *instance = kmalloc(sizeof(v3d_device_type), GFP_KERNEL);
+	v3d_device_t *instance = kmalloc(sizeof(v3d_device_t), GFP_KERNEL);
 	int            status;
 	if (instance == NULL)
 		return NULL;
@@ -439,7 +446,6 @@ v3d_device_type *v3d_device_create(v3d_driver_type *driver, struct device *devic
 
 	/* Unconditional initialisation */
 	instance->mode = v3d_mode_undefined;
-	instance->rejister.base = register_base;
 	spin_lock_init(&instance->out_of_memory.lock);
 	instance->out_of_memory.index.in_use     = 0;
 	instance->out_of_memory.index.allocated = 0;
@@ -463,6 +469,11 @@ v3d_device_type *v3d_device_create(v3d_driver_type *driver, struct device *devic
 	BUG_ON(instance->clock == NULL);
 
 	/* Initialisation that could fail follows */
+	instance->registers.base = (void __iomem *) ioremap_nocache(MM_V3D_BASE_ADDR, SZ_4K);
+	if (instance->registers.base == NULL)
+		return printk(KERN_ERR "%s:%d fail\n", __func__, __LINE__), v3d_device_delete(instance), NULL;
+	++instance->initialised;
+
 	instance->dummy.virtual = dma_alloc_coherent(
 		instance->device,
 		DUMMY_BYTES,
@@ -522,10 +533,10 @@ v3d_device_type *v3d_device_create(v3d_driver_type *driver, struct device *devic
 
 /* ================================================================ */
 
-void v3d_device_job_posted(v3d_device_type *instance)
+void v3d_device_job_posted(v3d_device_t *instance)
 {
-	v3d_driver_job_type *job;
-	int                status;
+	v3d_driver_job_t *job;
+	int               status;
 	if (instance->idle == 0)
 		return; /* Job already on the queue, so no race */
 
@@ -539,7 +550,7 @@ void v3d_device_job_posted(v3d_device_type *instance)
 
 /* ================================================================ */
 
-void v3d_device_job_complete(v3d_device_type *instance, int status)
+void v3d_device_job_complete(v3d_device_t *instance, int status)
 {
 #ifdef VERBOSE_DEBUG
 	printk(KERN_ERR "%s: complete j %p\n", __func__, instance->in_progress.bin_render);
@@ -551,7 +562,7 @@ void v3d_device_job_complete(v3d_device_type *instance, int status)
 }
 
 /* Returns Complete? */
-static int handle_bin_render_interrupt(v3d_device_type *instance, uint32_t status)
+static int handle_bin_render_interrupt(v3d_device_t *instance, uint32_t status)
 {
 	int complete_bin_render = 0;
 
@@ -565,7 +576,7 @@ static int handle_bin_render_interrupt(v3d_device_type *instance, uint32_t statu
 	} else
 		if ((status & (1 << MEMORY_BIT)) != 0) {
 			/* Need more overflow binning memory */
-			v3d_bin_memory_type *memory = NULL;
+			v3d_bin_memory_t *memory = NULL;
 			spin_lock(&instance->out_of_memory.lock);
 			if (instance->out_of_memory.index.in_use != instance->out_of_memory.index.allocated)
 				memory = &instance->out_of_memory.memory[instance->out_of_memory.index.in_use++];
@@ -574,6 +585,7 @@ static int handle_bin_render_interrupt(v3d_device_type *instance, uint32_t statu
 				supply_binning_memory(instance, memory);
 			else {
 				/* Need another allocation */
+				v3d_session_job_reference(instance->in_progress.bin_render); /* Prevents freeing on completion */
 				write(instance, V3D_INTDIS_OFFSET, 1 << MEMORY_BIT);
 				queue_work(instance->out_of_memory.work_queue, &instance->out_of_memory.bin_allocation);
 			}
@@ -581,18 +593,23 @@ static int handle_bin_render_interrupt(v3d_device_type *instance, uint32_t statu
 	if ((status & (1 << V3D_INTCTL_INT_FRDONE_SHIFT)) != 0)
 		complete_bin_render = 1; /* Render complete => job complete */
 
-	if (complete_bin_render != 0)
+	if (complete_bin_render != 0) {
+		instance->in_progress.bin_render->binning_bytes =
+			instance->out_of_memory.index.in_use == 0 ?
+				0
+			: instance->out_of_memory.index.in_use*BIN_BLOCK_BYTES - read(instance, V3D_BPCS_OFFSET);
 		v3d_device_job_complete(instance, V3DDRIVER_JOB_COMPLETE);
+	}
 	return complete_bin_render;
 }
 
 /* Queue as many user requests as possible */
 #if 0
-static void top_up_user_fifo(v3d_device_type *instance)
+static void top_up_user_fifo(v3d_device_t *instance)
 {
 	unsigned long flags = v3d_driver_job_lock(instance->driver.instance);
 	if (instance->in_progress.head - instance->in_progress.tail < V3D_USER_FIFO_LENGTH) {
-		v3d_driver_job_type *job = v3d_driver_job_get(instance->driver.instance, V3D_JOB_USER);
+		v3d_driver_job_t *job = v3d_driver_job_get(instance->driver.instance, V3D_JOB_USER);
 #ifdef VERBOSE_DEBUG
 		printk(KERN_ERR "%s: posting, entries %x (%x - %x)\n",
 			__func__,
@@ -607,15 +624,15 @@ static void top_up_user_fifo(v3d_device_type *instance)
 }
 #endif
 
-int handle_user_interrupt(v3d_device_type *instance, uint32_t qpu_status)
+int handle_user_interrupt(v3d_device_t *instance, uint32_t qpu_status)
 {
 	/* User job(s) completed */
-	v3d_driver_job_type *job;
+	v3d_driver_job_t *job;
 	unsigned int       index;
 	uint32_t           user_fifo = read(instance, V3D_SRQCS_OFFSET);
 	int                complete = 0;
 
-	/* TODO: Correct for queueing multiple consequtive user jobs */
+	/* TODO: Correct for queueing multiple consecutive user jobs */
 	unsigned int completed = user_fifo >> V3D_SRQCS_QPURQCC_SHIFT
 		& V3D_SRQCS_QPURQCC_MASK >> V3D_SRQCS_QPURQCC_SHIFT;
 	BUG_ON((qpu_status & 1 << V3D_SRQCS_QPURQERR_SHIFT) != 0);
@@ -635,12 +652,12 @@ int handle_user_interrupt(v3d_device_type *instance, uint32_t qpu_status)
 		v3d_session_complete(job, V3DDRIVER_JOB_COMPLETE);
 	}
 #ifdef VERBOSE_DEBUG
-	printk(KERN_ERR "%s: completed ..%4x\n", __func__, completed);
+	printk(KERN_ERR "%s: Completed ..%4x\n", __func__, completed);
 #endif
 	return complete;
 }
 
-static uint32_t get_status(v3d_device_type *instance, uint32_t *status, uint32_t *qpu_status)
+static uint32_t get_status(v3d_device_t *instance, uint32_t *status, uint32_t *qpu_status)
 {
 	uint32_t enable = read(instance, V3D_INTENA_OFFSET);
 	*status    = read(instance, V3D_INTCTL_OFFSET) & enable;
@@ -649,17 +666,17 @@ static uint32_t get_status(v3d_device_type *instance, uint32_t *status, uint32_t
 }
 
 /* Returns Issued? */
-static int issue_next_job(v3d_device_type *instance)
+static int issue_next_job(v3d_device_t *instance)
 {
 	/* Job complete */
-	v3d_driver_job_type *job;
+	v3d_driver_job_t *job;
 	unsigned long      flags;
 	/* Issue the next one */
 	flags = v3d_driver_job_lock(instance->driver.instance);
 	job = v3d_driver_job_get(instance->driver.instance, V3D_JOB_USER | V3D_JOB_BIN_REND);
 	if (job != NULL) {
 #ifdef VERBOSE_DEBUG
-		printk(KERN_ERR "%s: issuing job %p\n", __func__, job);
+		printk(KERN_ERR "%s: Issuing job %p\n", __func__, job);
 #endif
 		job->device = instance;
 
@@ -676,7 +693,7 @@ static int issue_next_job(v3d_device_type *instance)
 	return job != NULL;
 }
 
-static void check_idle(v3d_device_type *instance, uint32_t status)
+static void check_idle(v3d_device_t *instance, uint32_t status)
 {
 	/* Update Idle - we only go from busy to idle here */
 	if (instance->in_progress.bin_render == NULL
@@ -689,7 +706,7 @@ static void check_idle(v3d_device_type *instance, uint32_t status)
 
 static irqreturn_t interrupt_handler(int irq, void *context)
 {
-	v3d_device_type *instance  = (v3d_device_type *) context;
+	v3d_device_t *instance  = (v3d_device_t *) context;
 	uint32_t       status, qpu_status;
 	int            complete = 0;
 	BUG_ON(instance->idle != 0);
@@ -700,21 +717,22 @@ static irqreturn_t interrupt_handler(int irq, void *context)
 			complete |= handle_user_interrupt(instance, qpu_status);
 	}
 
-	if (complete != 0)
+	if (complete != 0) {
 		(void) issue_next_job(instance);
 
-	/* Update Idle - we only go from busy to idle here */
-	check_idle(instance, status);
+		/* Update Idle - we only go from busy to idle here */
+		check_idle(instance, status);
+	}
 	return IRQ_HANDLED;
 }
 
 
 /* ================================================================ */
 
-void v3d_device_job_cancel(v3d_device_type *instance)
+void v3d_device_job_cancel(v3d_device_t *instance)
 {
 #ifdef VERBOSE_DEBUG
-	printk(KERN_ERR "%s: timeout, idle %d\n", __func__, instance->idle);
+	printk(KERN_ERR "%s: Timeout, idle %d\n", __func__, instance->idle);
 #endif
 	reset(instance);
 
@@ -725,7 +743,7 @@ void v3d_device_job_cancel(v3d_device_type *instance)
 
 	if (issue_next_job(instance) == 0) {
 		/* Update Idle - we only go from busy to idle here */
-		/* Safe out of in interrupt context, as we're idle */
+		/* Safe out of interrupt context, as we're idle    */
 		check_idle(instance, 0U);
 	}
 }
@@ -733,12 +751,41 @@ void v3d_device_job_cancel(v3d_device_type *instance)
 
 /* ================================================================ */
 
-void v3d_device_suspend(v3d_device_type *instance)
+void v3d_device_suspend(v3d_device_t *instance)
 {
 	mutex_lock(&instance->suspend);
 }
 
-void v3d_device_resume(v3d_device_type *instance)
+void v3d_device_resume(v3d_device_t *instance)
 {
 	mutex_unlock(&instance->suspend);
+}
+
+
+/* ================================================================ */
+
+void v3d_device_counters_enable(v3d_device_t *instance, uint32_t enables)
+{
+	/* Configure the counters to record the specified quantities */
+	unsigned int i, counter;
+	uint32_t     shift;
+	for (i = 0, shift = enables, counter = 0 ; shift != 0 && counter < 16 ; ++i, shift >>= 1)
+		if ((shift & 1) != 0) {
+			unsigned int offset = (V3D_PCTRS1_OFFSET - V3D_PCTRS0_OFFSET)*counter++;
+			write(instance, V3D_PCTRS0_OFFSET + offset, i);
+		}
+	write(instance, V3D_PCTRE_OFFSET, (1U << 31) | ((1U << counter) - 1U)); /* Enable counters */
+	write(instance, V3D_PCTRC_OFFSET, 0xffU); /* Clear all counters */
+}
+
+void v3d_device_counters_disable(v3d_device_t *instance)
+{
+	write(instance, V3D_PCTRE_OFFSET, 0U); /* Disable all counters */
+}
+
+void v3d_device_counters_add(v3d_device_t *instance, uint32_t *counters)
+{
+	unsigned int i;
+	for (i = 0 ; i < 16 ; ++i)
+		counters[i] += read(instance, V3D_PCTR0_OFFSET + 4*i);
 }

@@ -29,25 +29,25 @@ typedef struct {
 	unsigned int   allocated;
 	unsigned int   bytes;
 	unsigned int (*get_output)(char *buffer, unsigned int bytes);
-} proc_entry_type;
+} proc_entry_t;
 
 static unsigned int version_read(char *buffer, unsigned int bytes);
 static unsigned int status_read(char  *buffer, unsigned int bytes);
 static unsigned int session_read(char  *buffer, unsigned int bytes);
 
-proc_entry_type session = {
+proc_entry_t session = {
 	NULL,
 	0,
 	0,
 	&session_read
 };
-proc_entry_type status = {
+proc_entry_t status = {
 	NULL,
 	0,
 	0,
 	&status_read
 };
-proc_entry_type version = {
+proc_entry_t version = {
 	V3D_VERSION_STR,
 	sizeof(V3D_VERSION_STR) - 1,
 	sizeof(V3D_VERSION_STR) - 1,
@@ -65,7 +65,7 @@ static int proc_entry_verbose_read(
 	int   *eo_f,
 	void  *context)
 {
-	proc_entry_type *instance = (proc_entry_type *) context;
+	proc_entry_t *instance = (proc_entry_t *) context;
 	unsigned int copy;
 	if (offset == 0 || instance == NULL) {
 		if (instance == NULL || instance->buffer == NULL) {
@@ -133,7 +133,7 @@ void proc_entry_delete(const char *name, struct proc_dir_entry *directory)
 
 /* ================================================================ */
 
-static unsigned int my_s_n_printf(
+static unsigned int my_snprintf(
 	char        *buffer,
 	unsigned int count,
 	const char  *format,
@@ -163,19 +163,19 @@ static unsigned int statistics_output(
 	unsigned int  maximum)
 {
 	if (samples == 0)
-		return my_s_n_printf(buffer, bytes, "%s_no samples\n", indent);
+		return my_snprintf(buffer, bytes, "%sNo samples\n", indent);
 
 	if (minimum == maximum)
-		return my_s_n_printf(
+		return my_snprintf(
 			buffer, bytes,
-			"%s     %6u (%u sample%s)\n",
+			"%s     %8u (%u sample%s)\n",
 			indent,
 			mean,
 			samples, samples == 1 ? "" : "s");
 
-	return my_s_n_printf(
+	return my_snprintf(
 		buffer, bytes,
-		"%s_mean %6u SD %6u minimum %6u maximum %6u (%u sample%s)\n",
+		"%sMean %8u SD %8u Minimum %8u Maximum %8u (%u sample%s)\n",
 		indent,
 		mean,
 		standard_deviation,
@@ -192,7 +192,7 @@ static unsigned int version_read(char *buffer, unsigned int bytes)
 	return bytes; /* Already there */
 }
 
-extern v3d_driver_type *v3d_driver;
+extern v3d_driver_t *v3d_driver;
 
 typedef struct {
 	uint64_t     mean;
@@ -200,11 +200,11 @@ typedef struct {
 	unsigned int minimum;
 	unsigned int maximum;
 	unsigned int samples;
-} calculated_statistics_type;
+} calculated_statistics_t;
 
 static void calculate_job_statistics(
-	calculated_statistics_type *instance,
-	statistics_type           *statistics)
+	calculated_statistics_t *instance,
+	statistics_t           *statistics)
 {
 	statistics_calculate(
 		statistics,
@@ -220,7 +220,7 @@ static uint32_t rounding_division64(uint64_t numerator, uint64_t denominator)
 
 static int output_job_statistics(
 	const char                     *description,
-	const calculated_statistics_type *statistics,
+	const calculated_statistics_t *statistics,
 	char                           *buffer,
 	unsigned int                    bytes,
 	unsigned int                   *offset,
@@ -231,20 +231,20 @@ static int output_job_statistics(
 		return 0;
 
 	job_rate = elapsed / 1000 != 0 ? rounding_division64(10000ULL * (uint64_t) statistics[1].samples, elapsed / 1000) : 0;
-	*offset += my_s_n_printf(
+	*offset += my_snprintf(
 		buffer + *offset, bytes - *offset,
 		"  %-16s(%3u.%01u/s)\n",
 		description,
 		job_rate / 10, job_rate % 10);
 
 	*offset += statistics_output(
-		buffer + *offset, bytes - *offset, "   queue to run (us): ",
+		buffer + *offset, bytes - *offset, "   Queue to run (us): ",
 		statistics[0].samples,
 		(unsigned int) statistics[0].mean,
 		(unsigned int) statistics[0].standard_deviation,
 		statistics[0].minimum, statistics[0].maximum);
 	*offset += statistics_output(
-		buffer + *offset, bytes - *offset, "   run time     (us): ",
+		buffer + *offset, bytes - *offset, "   Run time     (us): ",
 		statistics[1].samples,
 		(unsigned int) statistics[1].mean,
 		(unsigned int) statistics[1].standard_deviation,
@@ -261,8 +261,8 @@ static unsigned int status_read(char *buffer, unsigned int bytes)
 	unsigned int  load    = elapsed == 0 ? 0 : rounding_division64(1000ULL * (uint64_t) run, (uint64_t) elapsed);
 	unsigned int  offset;
 	unsigned long flags;
-	calculated_statistics_type calculated_statistics[4];
-	statistics_type           statistics[4];
+	calculated_statistics_t calculated_statistics[5];
+	statistics_t           statistics[5];
 
 	/* Copy-out the raw statistics data to minimise the time we're locked */
 	spin_lock_irqsave(&v3d_driver->job.posted.lock, flags);
@@ -270,6 +270,7 @@ static unsigned int status_read(char *buffer, unsigned int bytes)
 	statistics[1] = v3d_driver->bin_render.run;
 	statistics[2] = v3d_driver->user.queue;
 	statistics[3] = v3d_driver->user.run;
+	statistics[4] = v3d_driver->bin_render.binning_bytes;
 	v3d_driver_reset_statistics(v3d_driver);
 	spin_unlock_irqrestore(&v3d_driver->job.posted.lock, flags);
 
@@ -278,12 +279,20 @@ static unsigned int status_read(char *buffer, unsigned int bytes)
 	calculate_job_statistics(&calculated_statistics[1], &statistics[1]);
 	calculate_job_statistics(&calculated_statistics[2], &statistics[2]);
 	calculate_job_statistics(&calculated_statistics[3], &statistics[3]);
+	calculate_job_statistics(&calculated_statistics[4], &statistics[4]);
 
-	offset = my_s_n_printf(
+	offset = my_snprintf(
 		buffer, bytes,
-		" overall                      load %3u.%01u%%\n", load / 10, load % 10);
-	output_job_statistics("bin/Render jobs", &calculated_statistics[0], buffer, bytes, &offset, elapsed);
-	output_job_statistics("user jobs",       &calculated_statistics[2], buffer, bytes, &offset, elapsed);
+		" Overall                      load %3u.%01u%%\n", load / 10, load % 10);
+	output_job_statistics("Bin/Render jobs", &calculated_statistics[0], buffer, bytes, &offset, elapsed);
+	if (calculated_statistics[4].samples != 0)
+		offset += statistics_output(
+			buffer + offset, bytes - offset, "   Binning bytes    : ",
+			calculated_statistics[4].samples,
+			(unsigned int) calculated_statistics[4].mean,
+			(unsigned int) calculated_statistics[4].standard_deviation,
+			calculated_statistics[4].minimum, calculated_statistics[4].maximum);
+	output_job_statistics("User jobs",       &calculated_statistics[2], buffer, bytes, &offset, elapsed);
 	return offset;
 }
 
@@ -294,16 +303,16 @@ static unsigned int session_read(char *buffer, unsigned int bytes)
 	ktime_t      now;
 
 	if (v3d_driver == NULL)
-		return my_s_n_printf(buffer, bytes, "no V3D driver\n");
+		return my_snprintf(buffer, bytes, "No V3D driver\n");
 
-	offset = my_s_n_printf(buffer, bytes, "V3D sessions\n");
+	offset = my_snprintf(buffer, bytes, "V3D sessions\n");
 
 	/* Session stats */
 	for (i = 0 ; i < sizeof(v3d_driver->sessions) / sizeof(v3d_driver->sessions[0]) ; ++i)
 		if (v3d_driver->sessions[i] != NULL) {
-			v3d_session_type *session = v3d_driver->sessions[i];
-			calculated_statistics_type calculated_statistics[4];
-			statistics_type           statistics[4];
+			v3d_session_t *session = v3d_driver->sessions[i];
+			calculated_statistics_t calculated_statistics[5];
+			statistics_t           statistics[5];
 			unsigned int    run     = session->total_run;
 			unsigned long   flags;
 			now     = ktime_get();
@@ -316,6 +325,7 @@ static unsigned int session_read(char *buffer, unsigned int bytes)
 			statistics[1] = session->bin_render.run;
 			statistics[2] = session->user.queue;
 			statistics[3] = session->user.run;
+			statistics[4] = session->binning_bytes;
 			v3d_session_reset_statistics(session);
 			spin_unlock_irqrestore(&v3d_driver->job.posted.lock, flags);
 
@@ -324,14 +334,22 @@ static unsigned int session_read(char *buffer, unsigned int bytes)
 			calculate_job_statistics(&calculated_statistics[1], &statistics[1]);
 			calculate_job_statistics(&calculated_statistics[2], &statistics[2]);
 			calculate_job_statistics(&calculated_statistics[3], &statistics[3]);
+			calculate_job_statistics(&calculated_statistics[4], &statistics[4]);
 
-			offset += my_s_n_printf(
+			offset += my_snprintf(
 				buffer + offset, bytes - offset,
-				" session %-20s load %3u.%01u%%\n",
+				" Session %-20s load %3u.%01u%%\n",
 				session->name != NULL ? session->name : "unknown",
 				load / 10, load % 10);
-			output_job_statistics("bin/Render jobs", &calculated_statistics[0], buffer, bytes, &offset, elapsed);
-			output_job_statistics("user jobs",       &calculated_statistics[2], buffer, bytes, &offset, elapsed);
+			output_job_statistics("Bin/Render jobs", &calculated_statistics[0], buffer, bytes, &offset, elapsed);
+			if (calculated_statistics[4].samples != 0)
+				offset += statistics_output(
+					buffer + offset, bytes - offset, "   Binning bytes    : ",
+					calculated_statistics[4].samples,
+					(unsigned int) calculated_statistics[4].mean,
+					(unsigned int) calculated_statistics[4].standard_deviation,
+					calculated_statistics[4].minimum, calculated_statistics[4].maximum);
+			output_job_statistics("User jobs",       &calculated_statistics[2], buffer, bytes, &offset, elapsed);
 		}
 
 	offset += status_read(buffer + offset, bytes - offset);
@@ -341,7 +359,7 @@ static unsigned int session_read(char *buffer, unsigned int bytes)
 
 /* ================================================================ */
 
-int v3d_driver_create_proc_entries(v3d_driver_type *instance)
+int v3d_driver_create_proc_entries(v3d_driver_t *instance)
 {
 	instance->proc.initialised = 0;
 
@@ -378,7 +396,7 @@ int v3d_driver_create_proc_entries(v3d_driver_type *instance)
 	return 0;
 }
 
-void v3d_driver_delete_proc_entries(v3d_driver_type *instance)
+void v3d_driver_delete_proc_entries(v3d_driver_t *instance)
 {
 	switch (instance->proc.initialised) {
 	case 6:
