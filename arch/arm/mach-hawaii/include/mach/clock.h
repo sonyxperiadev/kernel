@@ -235,6 +235,14 @@
 #define	SSP1_PERI_CLK_NAME_STR "ssp1_clk"
 #define	SSP1_AUDIO_PERI_CLK_NAME_STR "ssp1_audio_clk"
 #define	DUMMY_APB_PCLK_NAMER_STR "apb_pclk"
+#ifdef CONFIG_DEBUG_FS
+/*GPIO0-15 debug bus select values*/
+#define DBG_BUS_PM_DBG_BUS_SEL		0x2
+#define DBG_BUS_BMDB_DBG_BUS_SEL	0xD
+
+#define BMDM_CCU_DBG_BUS_SEL_MASK		0x7
+#define BMDM_CCU_DBG_BUS_SEL_SHIFT		0
+#endif
 
 /*
 Clock ids
