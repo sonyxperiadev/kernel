@@ -105,6 +105,8 @@ static AMBA_APB_DEVICE(hawaii_etm1, "etm1", 0x102bb950,
 			A9PTM1_BASE_ADDR, { }, NULL);
 
 static void *ddr_virt_addr;
+static	dma_addr_t ddr_dma_addr;
+
 static ssize_t sysfs_send_to_ddr_store(struct device *dev,
 				struct device_attribute *devattr,
 				const char *buf, size_t count)
@@ -156,9 +158,18 @@ static ssize_t sysfs_send_to_ddr_store(struct device *dev,
 	return count;
 }
 
+static ssize_t sysfs_ddr_phys_addr_show(struct device *dev,
+					struct device_attribute *devattr,
+					char *buf)
+{
+	return sprintf(buf, "%08x\n", ddr_dma_addr);
+}
+
+static DEVICE_ATTR(ddr_phys_addr, 0666, sysfs_ddr_phys_addr_show, NULL);
 static DEVICE_ATTR(send_to_ddr, 0666, NULL, sysfs_send_to_ddr_store);
 static struct attribute *etb_attrs[] = {
 	&dev_attr_send_to_ddr.attr,
+	&dev_attr_ddr_phys_addr.attr,
 	NULL,
 };
 
@@ -168,7 +179,6 @@ static struct attribute_group etb_attr_group = {
 
 static int __init ptm_init(void)
 {
-	dma_addr_t ddr_dma_addr;
 	int ret;
 
 	if (amba_device_register(&hawaii_etb_device, &iomem_resource))
