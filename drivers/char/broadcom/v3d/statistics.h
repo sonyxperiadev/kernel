@@ -23,14 +23,14 @@ typedef struct statistics_tag {
 	unsigned int minimum;
 	unsigned int maximum;
 	unsigned int samples;
-} statistics_type;
+} statistics_t;
 
-extern void statistics_initialise(statistics_type *instance);
-extern void statistics_add(statistics_type *instance, unsigned int sample);
+extern void statistics_initialise(statistics_t *instance);
+extern void statistics_add(statistics_t *instance, unsigned int sample);
 
 /* Multiplier multiplies up all calculated values, so that decimal places can be represented */
 extern void statistics_calculate(
-	const statistics_type *instance,
+	const statistics_t *instance,
 	unsigned int          mean_multiplier,
 	uint64_t             *mean,
 	unsigned int          s_d_multiplier,

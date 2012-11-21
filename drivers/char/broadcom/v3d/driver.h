@@ -27,7 +27,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "statistics.h"
 
 #define V3D_DEV_NAME	"v3d"
-#define V3D_VERSION_STR	"1.0.0\n"
+#define V3D_VERSION_STR	"2.0.0\n"
 
 
 struct v3d_device_tag;
@@ -44,16 +44,23 @@ typedef struct v3d_driver_job_tag {
 	struct v3d_device_tag   *device;
 	wait_queue_head_t      wait_for_completion;
 	struct kref            waiters;
-#define V3DDRIVER_JOB_INITIALISED 0
-#define V3DDRIVER_JOB_ISSUED      1
-#define V3DDRIVER_JOB_ACTIVE      2
-#define V3DDRIVER_JOB_COMPLETE    3
-#define V3DDRIVER_JOB_FAILED      4
+#define V3DDRIVER_JOB_INVALID     0
+#define V3DDRIVER_JOB_INITIALISED 1
+#define V3DDRIVER_JOB_ISSUED      2
+#define V3DDRIVER_JOB_ACTIVE      3
+#define V3DDRIVER_JOB_COMPLETE    4
+#define V3DDRIVER_JOB_FAILED      5
 	volatile int           state;
 	ktime_t                queued;
 	ktime_t                start;
 	ktime_t                end;
-} v3d_driver_job_type;
+	unsigned int           binning_bytes;
+
+	struct {
+		int      enable;
+		uint32_t count[16];
+	} performance_counter;
+} v3d_driver_job_t;
 
 struct v3d_device_tag;
 typedef struct v3d_driver_tag {
@@ -80,18 +87,19 @@ typedef struct v3d_driver_tag {
 		} posted;
 
 #define FREE_JOBS 128
-		v3d_driver_job_type free_jobs[FREE_JOBS];
+		v3d_driver_job_t free_jobs[FREE_JOBS];
 	} job;
 
 	ktime_t        start;
 	uint32_t       total_run;
 	struct {
-		statistics_type queue;
-		statistics_type run;
+		statistics_t queue;
+		statistics_t run;
+		statistics_t binning_bytes;
 	} bin_render;
 	struct {
-		statistics_type queue;
-		statistics_type run;
+		statistics_t queue;
+		statistics_t run;
 	} user;
 
 	struct v3d_device_tag *device;
@@ -106,51 +114,55 @@ typedef struct v3d_driver_tag {
 		struct proc_dir_entry *session;
 		struct proc_dir_entry *version;
 	} proc;
-} v3d_driver_type;
+} v3d_driver_t;
 
 
-extern v3d_driver_type *v3d_driver_create(void);
+extern v3d_driver_t *v3d_driver_create(void);
 extern void v3d_driver_add_device(
-	v3d_driver_type       *instance,
+	v3d_driver_t       *instance,
 	struct v3d_device_tag *device);
-extern void v3d_driver_delete(v3d_driver_type *instance);
+extern void v3d_driver_delete(v3d_driver_t *instance);
 
 extern int  v3d_driver_job_post(
-	v3d_driver_type *instance,
+	v3d_driver_t *instance,
 	struct v3d_session_tag *session,
 	const v3d_job_post_t *user_job);
 
-extern void v3d_driver_exclusive_start(v3d_driver_type *instance, struct v3d_session_tag *session);
-extern int  v3d_driver_exclusive_stop(v3d_driver_type  *instance, struct v3d_session_tag *session);
+extern void v3d_driver_exclusive_start(v3d_driver_t *instance, struct v3d_session_tag *session);
+extern int  v3d_driver_exclusive_stop(v3d_driver_t  *instance, struct v3d_session_tag *session);
 
-extern void v3d_driver_reset_statistics(v3d_driver_type *instance);
+extern void v3d_driver_reset_statistics(v3d_driver_t *instance);
 
 /* For V3dDevice to use */
-static inline unsigned long v3d_driver_job_lock(v3d_driver_type *instance)
+static inline unsigned long v3d_driver_job_lock(v3d_driver_t *instance)
 {
 	unsigned long flags;
 	spin_lock_irqsave(&instance->job.posted.lock, flags);
 	return flags;
 }
-static inline void v3d_driver_job_unlock(v3d_driver_type *instance, unsigned long flags)
+static inline void v3d_driver_job_unlock(v3d_driver_t *instance, unsigned long flags)
 {
 	spin_unlock_irqrestore(&instance->job.posted.lock, flags);
 }
-extern v3d_driver_job_type *v3d_driver_job_get(
-	v3d_driver_type *instance,
+extern v3d_driver_job_t *v3d_driver_job_get(
+	v3d_driver_t *instance,
 	unsigned int   required /* if non-zero, specifies job type required */);
 
 /* For V3dSession use */
 extern void v3d_driver_job_complete(
-	v3d_driver_type     *instance,
-	v3d_driver_job_type *job);
-extern int v3d_driver_add_session(v3d_driver_type *instance, struct v3d_session_tag *session);
-extern void v3d_driver_remove_session(v3d_driver_type *instance, struct v3d_session_tag *session);
-extern void v3d_driver_kick_consumers(v3d_driver_type *instance);
+	v3d_driver_t     *instance,
+	v3d_driver_job_t *job);
+extern int v3d_driver_add_session(v3d_driver_t *instance, struct v3d_session_tag *session);
+extern void v3d_driver_remove_session(v3d_driver_t *instance, struct v3d_session_tag *session);
+extern void v3d_driver_kick_consumers(v3d_driver_t *instance);
+
+/* Performance counters */
+extern void v3d_driver_counters_enable(v3d_driver_t *instance, uint32_t enables);
+extern void v3d_driver_counters_disable(v3d_driver_t *instance);
 
 /* For V3dDriver internal use */
-extern int  v3d_driver_create_proc_entries(v3d_driver_type *instance);
-extern void v3d_driver_delete_proc_entries(v3d_driver_type *instance);
+extern int  v3d_driver_create_proc_entries(v3d_driver_t *instance);
+extern void v3d_driver_delete_proc_entries(v3d_driver_t *instance);
 
 
 #endif /* ifndef V3D_DRIVER_H_ */

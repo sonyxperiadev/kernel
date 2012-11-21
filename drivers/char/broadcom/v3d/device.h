@@ -30,26 +30,26 @@ typedef struct {
 	uint32_t physical;
 	void    *virtual;
 	int      in_use;
-} v3d_bin_memory_type;
+} v3d_bin_memory_t;
 
 typedef enum {
 	v3d_mode_user      = 0,
 	v3d_mode_render    = 1,
 	v3d_mode_undefined = 2
-} v3d_mode_type;
+} v3d_mode_t;
 
 struct v3d_device_tag;
-typedef struct v3d_device_tag v3d_device_type;
+typedef struct v3d_device_tag v3d_device_t;
 struct v3d_device_tag {
 	unsigned int initialised;
 	struct {
-		uint32_t base;
-	} rejister;
+		void __iomem *base;
+	} registers;
 	struct {
-		v3d_driver_type *instance;
+		v3d_driver_t *instance;
 	} driver;
 
-	v3d_mode_type mode;
+	v3d_mode_t mode;
 
 	struct {
 		spinlock_t lock;
@@ -59,16 +59,16 @@ struct v3d_device_tag {
 			unsigned int in_use;
 			unsigned int allocated;
 		} index;
-		v3d_bin_memory_type         memory[BIN_BLOCKS];
+		v3d_bin_memory_t         memory[BIN_BLOCKS];
 		struct workqueue_struct *work_queue;
 		struct work_struct       bin_allocation;
 	} out_of_memory;
 
 	struct {
-		v3d_driver_job_type *bin_render;
+		v3d_driver_job_t *bin_render;
 #define V3D_USER_FIFO_LOG2_LENGTH 4
 #define V3D_USER_FIFO_LENGTH (1 << V3D_USER_FIFO_LOG2_LENGTH)
-		v3d_driver_job_type *user[V3D_USER_FIFO_LENGTH];
+		v3d_driver_job_t *user[V3D_USER_FIFO_LENGTH];
 		int          head;
 		int          tail;
 		unsigned int last_completed;
@@ -102,21 +102,24 @@ struct v3d_device_tag {
 };
 
 
-extern v3d_device_type *v3d_device_create(
-	v3d_driver_type *driver,
-	struct device *device,
-	uint32_t       register_base);
-extern void v3d_device_delete(v3d_device_type *instance);
+extern v3d_device_t *v3d_device_create(
+	v3d_driver_t *driver,
+	struct device *device);
+extern void v3d_device_delete(v3d_device_t *instance);
 
 /* Called to indicate that a job has been posted
    Jobs are fetched when required via calls to GetJob */
-extern void v3d_device_job_posted(v3d_device_type *instance);
+extern void v3d_device_job_posted(v3d_device_t *instance);
 
-extern void v3d_device_job_complete(v3d_device_type *instance, int status);
-extern void v3d_device_job_cancel(v3d_device_type *instance);
+extern void v3d_device_job_complete(v3d_device_t *instance, int status);
+extern void v3d_device_job_cancel(v3d_device_t *instance);
 
-extern void v3d_device_suspend(v3d_device_type *instance);
-extern void v3d_device_resume(v3d_device_type *instance);
+extern void v3d_device_suspend(v3d_device_t *instance);
+extern void v3d_device_resume(v3d_device_t *instance);
+
+extern void v3d_device_counters_enable(v3d_device_t *instance, uint32_t enables);
+extern void v3d_device_counters_disable(v3d_device_t *instance);
+extern void v3d_device_counters_add(v3d_device_t *instance, uint32_t *counters);
 
 
 #endif /* ifndef V3D_DEVICE_H_ */

@@ -16,7 +16,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "statistics.h"
 
 
-void statistics_initialise(statistics_type *instance)
+void statistics_initialise(statistics_t *instance)
 {
 	instance->sum = instance->sum2 = 0;
 	instance->minimum = ~0;
@@ -24,7 +24,7 @@ void statistics_initialise(statistics_type *instance)
 	instance->samples = 0;
 }
 
-void statistics_add(statistics_type *instance, unsigned int sample)
+void statistics_add(statistics_t *instance, unsigned int sample)
 {
 	instance->sum  += sample;
 	instance->sum2 += (uint64_t) sample * (uint64_t) sample;
@@ -61,7 +61,7 @@ static uint32_t square_root(uint64_t x)
 
 /* Multiplier multiplies up all calculated values, so that decimal places can be represented */
 void statistics_calculate(
-	const statistics_type *instance,
+	const statistics_t *instance,
 	unsigned int          mean_multiplier,
 	uint64_t             *mean,
 	unsigned int          s_d_multiplier,
