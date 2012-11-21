@@ -355,6 +355,7 @@ static int bcmpmu_chrgr_usb_en(struct bcmpmu_chrgr_data *di, int enable)
 	if (!charging_enable)
 		return 0;
 
+	pr_chrgr(FLOW, "------****%s****----,ENABLE %d\n", __func__, enable);
 	ret = di->bcmpmu->read_dev(di->bcmpmu, PMU_REG_MBCCTRL3, &reg);
 	if (ret)
 		return ret;
@@ -379,12 +380,12 @@ static int charger_event_handler(struct notifier_block *nb,
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	int chrgr_curr;
 
-	chrgr_type =  *(enum bcmpmu_chrgr_type_t *)para;
 	di = container_of(nb, struct bcmpmu_chrgr_data, nb);
 	bcmpmu = di->bcmpmu;
 	paccy = bcmpmu->accyinfo;
 	switch (event) {
 	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
+		chrgr_type =  *(enum bcmpmu_chrgr_type_t *)para;
 		pr_chrgr(FLOW, "****%s****, chrgr type=%d\n",
 				__func__, chrgr_type);
 		if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
@@ -406,20 +407,37 @@ static int charger_event_handler(struct notifier_block *nb,
 				power_supply_changed(&di->ac_psy);
 			}
 		} else {
-
 			bcmpmu_chrgr_usb_en(di, 0);
-			di->ac_chrgr_info.online = 0;
-			di->usb_chrgr_info.online = 0 ;
-			power_supply_changed(&di->ac_psy);
-			power_supply_changed(&di->usb_psy);
+			if (di->ac_chrgr_info.online) {
+				di->ac_chrgr_info.online = 0;
+				power_supply_changed(&di->ac_psy);
+			} else {
+				di->usb_chrgr_info.online = 0 ;
+				power_supply_changed(&di->usb_psy);
+			}
 
 		}
 		break;
 	case BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT:
 		chrgr_curr = *(int *)para;
+		chrgr_type = paccy->usb_accy_data.chrgr_type;
 		bcmpmu_set_icc_fc(bcmpmu, chrgr_curr);
+		if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
+				(chrgr_type >  PMU_CHRGR_TYPE_NONE)) {
+			if (!strcmp(get_supply_type_str(chrgr_type),
+				"bcmpmu_usb")) {
+				di->usb_chrgr_info.curr = chrgr_curr;
+				power_supply_changed(&di->usb_psy);
+			} else {
+				di->ac_chrgr_info.curr = chrgr_curr;
+				power_supply_changed(&di->ac_psy);
+			}
+
+		}
+
 		pr_chrgr(FLOW, "***%s***,chrgr curr=%d\n"
 			, __func__, chrgr_curr);
+		power_supply_changed(&di->ac_psy);
 		break;
 	}
 
@@ -433,6 +451,7 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	struct bcmpmu_chrgr_data *di;
 	enum bcmpmu_usb_type_t usb_type;
 	enum bcmpmu_chrgr_type_t chrgr_type;
+	int chrgr_curr;
 	int ret;
 
 	pr_chrgr(INIT, "%s called\n", __func__);
@@ -476,14 +495,19 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 
 	if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
 			(chrgr_type >  PMU_CHRGR_TYPE_NONE)) {
+		chrgr_curr = paccy->usb_accy_data.max_curr_chrgr;
+		bcmpmu_set_icc_fc(bcmpmu, chrgr_curr);
+		bcmpmu_chrgr_usb_en(di, 1);
 		if (!strcmp(get_supply_type_str(chrgr_type), "bcmpmu_usb")) {
 			di->usb_chrgr_info.online = 1 ;
 			di->usb_chrgr_info.model_name =
 				chrgr_names[chrgr_type];
+			di->usb_chrgr_info.curr = chrgr_curr;
 		} else {
 			di->ac_chrgr_info.online = 1;
 			di->ac_chrgr_info.model_name =
 				chrgr_names[chrgr_type];
+			di->ac_chrgr_info.curr = chrgr_curr;
 		}
 
 	}
