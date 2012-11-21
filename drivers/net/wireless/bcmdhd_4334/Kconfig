@@ -8,22 +8,32 @@ config BCMDHD_4334
 	  If you choose to build a module, it'll be called dhd. Say M if
 	  unsure.
 
+config BCM4330
+	tristate "Broadcom 4330 wireless cards support"
+	depends on WLAN
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4330 chipset.
+	  This driver uses the kernel's wireless extensions subsystem.
+	  If you choose to build a module, it'll be called dhd. Say M if
+	  unsure.
+
 config BCMDHD_FW_PATH
-	depends on BCMDHD_4334
+	depends on BCMDHD_4334 || BCM4330
 	string "Firmware path"
 	default "/system/vendor/firmware/fw_wifi.bin"
 	---help---
 	  Path to the firmware file.
 
 config BCMDHD_NVRAM_PATH
-	depends on BCMDHD_4334
+	depends on BCMDHD_4334 || BCM4330
 	string "NVRAM path"
 	default "/system/vendor/firmware/fw_wifi_nvram.txt"
 	---help---
 	  Path to the calibration file.
 
 config BCMDHD_IF_PREFIX
-	depends on BCMDHD_4334
+	depends on BCMDHD_4334 || BCM4330
 	string "Wireless interface prefix"
 	default "wlan%d"
 	---help---
