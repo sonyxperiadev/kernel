@@ -1298,6 +1298,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 			BRCM_AUDIO_Param_Spkr_t *parm_spkr =
 			    (BRCM_AUDIO_Param_Spkr_t *) arg_param;
+			AudioMode_t  audio_mode;
 			aTrace(LOG_AUDIO_CNTLR,
 			       "\n %lx:AUDIO_Ctrl_Process-"
 			       "ACTION_AUD_SwitchSpkr. stream=%d\n",
@@ -1306,6 +1307,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				    (CTL_STREAM_PANEL_FIRST - 1)
 				    && parm_spkr->stream <
 				    (CTL_STREAM_PANEL_LAST - 1));
+			audio_mode = GetAudioModeBySink(parm_spkr->sink);
+			AUDCTRL_SaveAudioMode(audio_mode);
 			AUDCTRL_SwitchPlaySpk(parm_spkr->src, parm_spkr->sink,
 					      pathID[parm_spkr->stream]);
 		}
