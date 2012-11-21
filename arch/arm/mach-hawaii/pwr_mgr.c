@@ -40,13 +40,6 @@
 #include "sequencer_ucode.h"
 #include <plat/kona_avs.h>
 
-#ifdef CONFIG_DEBUG_FS
-/*GPIO0-15 debug bus select values*/
-#define DBG_BUS_PM_DBG_BUS_SEL		0x2
-#define DBG_BUS_BMDB_DBG_BUS_SEL	0xD
-
-#endif
-
 #define VLT_LUT_SIZE	16
 /*PM policy definitions */
 #define PM_OFF		0

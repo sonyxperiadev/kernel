@@ -86,6 +86,8 @@ unsigned long clock_get_xtal(void)
 /*
 modem CCU clock
 */
+static struct ccu_clk_ops bmdm_ccu_ops;
+
 static struct ccu_clk CLK_NAME(bmdm) = {
 	.clk = {
 	    .flags = BMDM_CCU_CLK_FLAGS,
@@ -94,7 +96,7 @@ static struct ccu_clk CLK_NAME(bmdm) = {
 	    .ops = &gen_ccu_clk_ops,
 	    .clk_type = CLK_TYPE_CCU,
 	},
-	.ccu_ops = &gen_ccu_ops,
+	.ccu_ops = &bmdm_ccu_ops,
 	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(BMDM_CCU_BASE_ADDR),
 	.wr_access_offset = BMDM_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -106,6 +108,7 @@ static struct ccu_clk CLK_NAME(bmdm) = {
 	.freq_volt = BMDM_CCU_FREQ_VOLT_TBL,
 	.freq_count = BMDM_CCU_FREQ_VOLT_TBL_SZ,
 	.clk_mon_offset = BMDM_CLK_MGR_REG_CLKMON_OFFSET,
+	.dbg_bus_offset = BMDM_CLK_MGR_REG_DEBUG_BUS_CTRL_OFFSET,
 };
 
 /*
@@ -7471,7 +7474,30 @@ static int remove_dep_clks(void)
 	return 0;
 }
 #endif
+static int bmdm_ccu_clk_set_dbg_bus_sel(struct ccu_clk *ccu_clk, u32 sel)
+{
+	u32 reg;
+	BUG_ON(!ccu_clk ||
+			!CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN));
+	ccu_write_access_enable(ccu_clk, true);
+	reg = readl(CCU_DBG_BUS_REG(ccu_clk));
+	reg &= ~BMDM_CCU_DBG_BUS_SEL_MASK;
+	reg |= (sel << BMDM_CCU_DBG_BUS_SEL_SHIFT) &
+				BMDM_CCU_DBG_BUS_SEL_MASK;
+	writel(reg, CCU_DBG_BUS_REG(ccu_clk));
+	ccu_write_access_enable(ccu_clk, false);
+	return 0;
+}
 
+static int bmdm_ccu_clk_get_dbg_bus_sel(struct ccu_clk *ccu_clk)
+{
+	u32 reg;
+	BUG_ON(!ccu_clk ||
+			!CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN));
+	reg = readl(CCU_DBG_BUS_REG(ccu_clk));
+	return (int)((reg & BMDM_CCU_DBG_BUS_SEL_MASK) >>
+					BMDM_CCU_DBG_BUS_SEL_SHIFT);
+}
 int __init __clock_init(void)
 {
 
@@ -7493,6 +7519,10 @@ int __init __clock_init(void)
 	mm_ccu_ops.set_voltage = mm_ccu_clk_set_voltage;
 	mm_ccu_ops.get_voltage = mm_ccu_clk_get_voltage;
 	mm_ccu_ops.set_peri_voltage = mm_ccu_set_peri_voltage;
+
+	bmdm_ccu_ops = gen_ccu_ops;
+	bmdm_ccu_ops.set_dbg_bus_sel = bmdm_ccu_clk_set_dbg_bus_sel;
+	bmdm_ccu_ops.get_dbg_bus_sel = bmdm_ccu_clk_get_dbg_bus_sel;
 
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
 	dig_ch_peri_clk_ops.init = dig_clk_init;
@@ -7644,21 +7674,17 @@ int debug_bus_mux_sel(int mux_sel, int mux_param, u32 dbg_bit_sel)
 int set_ccu_dbg_bus_mux(struct ccu_clk *ccu_clk, int mux_sel,
 			int mux_param, u32 dbg_bit_sel)
 {
-	if (mux_sel == 0)
-		debug_bus_mux_sel(mux_sel, CCU_GPIO_DBG_BUS_SEL, dbg_bit_sel);
+	mux_param = (mux_sel == 0) ? DBG_BUS_BMDB_DBG_BUS_SEL
+		: mux_param;
+	if (ccu_clk->clk.id == CLK_BMDM_CCU_CLK_ID)
+		debug_bus_mux_sel(mux_sel, mux_param, dbg_bit_sel);
 	else {
-		u32 reg = readl(KONA_CHIPREG_VA +
-				CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
-		reg &=
-		~CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
-		reg |=
-		(CCU_GPIO_DBG_BUS_SEL <<
-		CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_SHIFT) &
-		CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
-		writel(reg,
-			KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+		if (mux_sel == 0)
+			debug_bus_mux_sel(mux_sel, CCU_GPIO_DBG_BUS_SEL,
+					dbg_bit_sel);
+		else
+			return -EINVAL;
 	}
-
 	return 0;
 }
 
