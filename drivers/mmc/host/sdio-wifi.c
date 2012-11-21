@@ -282,7 +282,7 @@ int bcm_sdiowl_init(int onoff)
 #endif
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-#if defined(CONFIG_MACH_HAWAII_RAY) || defined(CONFIG_MACH_HAWAII_STONE)
+#if defined(CONFIG_MACH_HAWAII_RAY) || defined(CONFIG_MACH_HAWAII_STONE) || defined(CONFIG_MACH_HAWAII_GARNET)
       dev->wifi_gpio->reset = 3;        
       dev->wifi_gpio->reg = -1;
       dev->wifi_gpio->host_wake = 74;
