@@ -10,62 +10,68 @@ Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
-#define pr_fmt(fmt) "<%s> %s:" fmt "\n",mm_prof->mm_common->mm_name,__func__
+#define pr_fmt(fmt) "<%s> %s:" fmt "\n", mm_prof->mm_common->mm_name, __func__
 
 #include "mm_prof.h"
 
-int mm_prof_notification_handler(struct notifier_block* block,unsigned long param, void* data)
+int mm_prof_notification_handler(struct notifier_block *block, \
+				unsigned long param, \
+				void *data)
 {
 	struct timespec diff;
-	mm_prof_t *mm_prof = container_of(block, mm_prof_t, mm_fmwk_notifier_blk);
+	mm_prof_t *mm_prof = container_of(block, mm_prof_t, \
+					mm_fmwk_notifier_blk);
 
-	switch(param) {
-		case MM_FMWK_NOTIFY_JOB_COMPLETE:
-		case MM_FMWK_NOTIFY_JOB_REMOVE:
-			mm_prof->jobs_done++;
-			mm_prof->jobs_done_type[(unsigned int)data & (MAX_JOB_TYPE-1)]++;
-			break;
-		case MM_FMWK_NOTIFY_CLK_ENABLE:
-			getnstimeofday(&mm_prof->ts1);
-			break;
-		case MM_FMWK_NOTIFY_CLK_DISABLE:
-			getnstimeofday(&diff);
-			diff = timespec_sub(diff, mm_prof->ts1);
-			mm_prof->hw_on_dur += timespec_to_ns(&diff);
-			pr_debug("dev stayed on for %llu nanoseconds", (unsigned long long)timespec_to_ns(&diff));
-			break;
-		case MM_FMWK_NOTIFY_DVFS_UPDATE:
-			mm_prof->current_mode = (dvfs_mode_e)data;
-			break;
-		case MM_FMWK_NOTIFY_INVALID:
-		default:
-			break;
-		}
+	switch (param) {
+	case MM_FMWK_NOTIFY_JOB_COMPLETE:
+	case MM_FMWK_NOTIFY_JOB_REMOVE:
+		mm_prof->jobs_done++;
+		mm_prof->jobs_done_type[(unsigned int)data & (MAX_JOB_TYPE-1)]++;
+		break;
+	case MM_FMWK_NOTIFY_CLK_ENABLE:
+		getnstimeofday(&mm_prof->ts1);
+		break;
+	case MM_FMWK_NOTIFY_CLK_DISABLE:
+		getnstimeofday(&diff);
+		diff = timespec_sub(diff, mm_prof->ts1);
+		mm_prof->hw_on_dur += timespec_to_ns(&diff);
+		pr_debug("dev stayed on for %llu nanoseconds", \
+			(unsigned long long)timespec_to_ns(&diff));
+		break;
+	case MM_FMWK_NOTIFY_DVFS_UPDATE:
+		mm_prof->current_mode = (dvfs_mode_e)data;
+		break;
+	case MM_FMWK_NOTIFY_INVALID:
+	default:
+		break;
+	}
 	return NOTIFY_DONE;
 }
 
-static void prof_timeout_callback (unsigned long data)
+static void prof_timeout_callback(unsigned long data)
 {
 	mm_prof_t *mm_prof = (mm_prof_t *)data;
 	SCHEDULER_WORK(mm_prof, &(mm_prof->prof_work));
 }
 
-static void prof_work(struct work_struct* work)
+static void prof_work(struct work_struct *work)
 {
 	struct timespec diff;
 	int percnt = 0, temp = 0;
 	mm_prof_t *mm_prof = container_of(work, mm_prof_t, prof_work);
 
-	if( mm_prof->T1 == 0) {
-		if(mm_prof->timer_state == true) {
+	if (mm_prof->T1 == 0) {
+		if (mm_prof->timer_state == true) {
 			del_timer_sync(&mm_prof->prof_timeout);
-			atomic_notifier_chain_unregister(&mm_prof->mm_common->notifier_head, &mm_prof->mm_fmwk_notifier_blk);
+			atomic_notifier_chain_unregister(\
+				&mm_prof->mm_common->notifier_head, \
+				&mm_prof->mm_fmwk_notifier_blk);
 			mm_prof->timer_state = false;
 			}
 		return;
 		}
-	
-	if(mm_prof->timer_state == false) {
+
+	if (mm_prof->timer_state == false) {
 		mm_prof->hw_on_dur = 0;
 		mm_prof->jobs_done = 0;
 		mm_prof->jobs_done_type[0] = 0;
@@ -73,18 +79,22 @@ static void prof_work(struct work_struct* work)
 		mm_prof->jobs_done_type[2] = 0;
 		mm_prof->jobs_done_type[3] = 0;
 		mm_prof->mm_fmwk_notifier_blk.notifier_call = mm_prof_notification_handler;
-		atomic_notifier_chain_register(&mm_prof->mm_common->notifier_head, &mm_prof->mm_fmwk_notifier_blk);
+		atomic_notifier_chain_register(&mm_prof->mm_common->notifier_head, \
+						&mm_prof->mm_fmwk_notifier_blk);
 		getnstimeofday(&(mm_prof->proft1));
 		init_timer(&(mm_prof->prof_timeout));
-		setup_timer(&(mm_prof->prof_timeout), prof_timeout_callback, (unsigned long)mm_prof);
-		mod_timer(&mm_prof->prof_timeout, jiffies+msecs_to_jiffies(mm_prof->T1*1000));
+		setup_timer(&(mm_prof->prof_timeout), \
+			prof_timeout_callback, \
+			(unsigned long)mm_prof);
+		mod_timer(&mm_prof->prof_timeout, \
+			jiffies+msecs_to_jiffies(mm_prof->T1*1000));
 		mm_prof->timer_state = true;
 		pr_debug("wake prof mode to normal..");
 		return;
 		}
 
 	getnstimeofday(&diff);
-	if(mm_prof->mm_common->mm_hw_is_on) {
+	if (mm_prof->mm_common->mm_hw_is_on) {
 		struct timespec diff2 = timespec_sub(diff, mm_prof->ts1);
 		mm_prof->hw_on_dur += timespec_to_ns(&diff2);
 		getnstimeofday(&mm_prof->ts1);
@@ -98,11 +108,11 @@ static void prof_work(struct work_struct* work)
 	temp = (timespec_to_ns(&diff)>>12);
 	percnt = percnt/temp;
 
-	pr_err("hw_usage: ON : %d%% [DVFS:%d] JOBS : %d [%d %d %d %d] in %d secs ",  
-						percnt,mm_prof->current_mode,
-						mm_prof->jobs_done, mm_prof->jobs_done_type[0], 
-						mm_prof->jobs_done_type[1], mm_prof->jobs_done_type[2],
-						mm_prof->jobs_done_type[3], mm_prof->T1);
+	pr_err("hw_usage: ON : %d%% [DVFS:%d] JOBS : %d [%d %d %d %d] in %d secs ",
+				percnt, mm_prof->current_mode,
+				mm_prof->jobs_done, mm_prof->jobs_done_type[0],
+				mm_prof->jobs_done_type[1], mm_prof->jobs_done_type[2],
+				mm_prof->jobs_done_type[3], mm_prof->T1);
 
 	mm_prof->hw_on_dur = 0;
 	mm_prof->jobs_done = 0;
@@ -113,47 +123,51 @@ static void prof_work(struct work_struct* work)
 	mod_timer(&mm_prof->prof_timeout, jiffies+msecs_to_jiffies(mm_prof->T1*1000));
 }
 
-void mm_prof_update_handler(struct work_struct* work)
+void mm_prof_update_handler(struct work_struct *work)
 {
-	 prof_update_t *update= container_of(work, prof_update_t, work);
+	 prof_update_t *update = container_of(work, prof_update_t, work);
 	 mm_prof_t *mm_prof = update->mm_prof;
 	 unsigned int param = update->param;
-	 unsigned int max =0, min = 0;
+	 unsigned int max = 0, min = 0;
 
-	 if(!update->is_read) {
-	 	switch(update->type){
-			case MM_PROF_UPDATE_TIME:
-				max = 600;
-				if(param > max) pr_err("Enter value <= %u ",max);
-				else mm_prof->T1 = param;
-				SCHEDULER_WORK(mm_prof, &(mm_prof->prof_work));
-				break;
-			default:
-				pr_err("Not Supported at this time");
-				break;
-	 		}
-	 	}
+	 if (!update->is_read) {
+		switch (update->type) {
+		case MM_PROF_UPDATE_TIME:
+			max = 600;
+			if (param > max)
+				pr_err("Enter value <= %u ", max);
+			else
+				mm_prof->T1 = param;
+			SCHEDULER_WORK(mm_prof, &(mm_prof->prof_work));
+			break;
+		default:
+			pr_err("Not Supported at this time");
+			break;
+		}
+	}
 	 else {
-		 switch(update->type){
-			 case MM_PROF_UPDATE_TIME:
-				 param = mm_prof->T1;
-				 break;
-			 default:
-				 pr_err("Not Supported at this time");
-				 break;
-			 }
+		 switch (update->type) {
+		 case MM_PROF_UPDATE_TIME:
+			 param = mm_prof->T1;
+			 break;
+		 default:
+			 pr_err("Not Supported at this time");
+			 break;
+		 }
 		 update->param = param;
-	 	}	
+	}
 }
 
 
-DEFINE_DEBUGFS_HANDLER(TIME,MM_PROF_UPDATE_TIME);
+DEFINE_DEBUGFS_HANDLER(TIME, MM_PROF_UPDATE_TIME);
 
-void* mm_prof_init(mm_common_t* mm_common, const char *dev_name, MM_PROF_HW_IFC *prof_params)
+void *mm_prof_init(mm_common_t *mm_common, \
+			const char *dev_name, \
+			MM_PROF_HW_IFC *prof_params)
 {
 	int ret = 0;
-	mm_prof_t *mm_prof = kmalloc(sizeof(mm_prof_t),GFP_KERNEL);
-	memset(mm_prof,0,sizeof(mm_prof_t));
+	mm_prof_t *mm_prof = kmalloc(sizeof(mm_prof_t), GFP_KERNEL);
+	memset(mm_prof, 0, sizeof(mm_prof_t));
 
 	mm_prof->mm_common = mm_common;
 	INIT_WORK(&(mm_prof->prof_work), prof_work);
@@ -163,25 +177,23 @@ void* mm_prof_init(mm_common_t* mm_common, const char *dev_name, MM_PROF_HW_IFC 
 	mm_prof->current_mode = ECONOMY;
 
 	mm_prof->prof_dir = debugfs_create_dir("prof", mm_prof->mm_common->debugfs_dir);
-    if(mm_prof->prof_dir == NULL) {
-		pr_err("Error %ld creating prof dir for %s",
-                           PTR_ERR(mm_prof->prof_dir), dev_name);
+	if (mm_prof->prof_dir == NULL) {
+		pr_err("Error %ld creating prof dir for %s", PTR_ERR(mm_prof->prof_dir), dev_name);
 		ret = -ENOENT;
 		}
 
-	CREATE_DEBUGFS_FILE(mm_prof,TIME,mm_prof->prof_dir);
+	CREATE_DEBUGFS_FILE(mm_prof, TIME, mm_prof->prof_dir);
 
 	return mm_prof;
 }
 
 
-void mm_prof_exit( void *dev_p)
+void mm_prof_exit(void *dev_p)
 {
-	mm_prof_t* mm_prof = (mm_prof_t*)dev_p;
+	mm_prof_t *mm_prof = (mm_prof_t *)dev_p;
 
-	if(mm_prof->prof_dir)
+	if (mm_prof->prof_dir)
 		debugfs_remove_recursive(mm_prof->prof_dir);
 
 	kfree(mm_prof);
 }
-
