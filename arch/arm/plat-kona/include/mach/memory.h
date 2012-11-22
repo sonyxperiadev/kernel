@@ -34,11 +34,90 @@
 
 #define PLAT_PHYS_OFFSET	PHYS_OFFSET
 
-#define IO_START_PA			(0x34000000)	/* HUB clock manager reg base */
-#define IO_START_VA			(PAGE_OFFSET + 0x30000000)
+#define IO_START_VA		(PAGE_OFFSET + 0x30000000)
 
-#define HW_IO_PHYS_TO_VIRT(phys)	((phys) - IO_START_PA + IO_START_VA)
-#define HW_IO_VIRT_TO_PHYS(virt)	((virt) - IO_START_VA + IO_START_PA)
+/* APB5, APB9 and SRAM */
+#define IO_G1_PHYS		0x34000000
+#define IO_G1_VIRT		(IO_START_VA)
+#define IO_G1_SIZE		(SZ_512K)
+
+/* APB6, PM, APB10*/
+#define IO_G2_PHYS		0x35000000
+#define IO_G2_VIRT		\
+	(IO_G1_VIRT + IO_G1_SIZE)
+#define IO_G2_SIZE		(SZ_256K)
+
+/* APB13, AHB, APB15 */
+#define IO_G3_PHYS		0x3A000000
+#define IO_G3_VIRT		\
+	(IO_G2_VIRT + IO_G2_SIZE)
+#define IO_G3_SIZE		(SZ_512K)
+
+/* MM, APB12 */
+#define IO_G4_PHYS		0x3C000000
+#define IO_G4_VIRT		\
+	(IO_G3_VIRT + IO_G3_SIZE)
+#define IO_G4_SIZE		(SZ_4M)
+
+/* APB1, APB2, Apps, SECURITY */
+#define IO_G5_PHYS		0x3E000000
+#define IO_G5_VIRT		\
+	(IO_G4_VIRT + IO_G4_SIZE)
+#define IO_G5_SIZE		(SZ_8M)
+
+/* APB4, APB8, AHB2 */
+#define IO_G6_PHYS		0x3F000000
+#define IO_G6_VIRT		\
+	(IO_G5_VIRT + IO_G5_SIZE)
+#define IO_G6_SIZE		(SZ_2M)
+
+/* APB0, APB11, AP_PRIVATE */
+#define IO_G7_PHYS		0x3FE00000
+#define IO_G7_VIRT		\
+	(IO_G6_VIRT + IO_G6_SIZE)
+#define IO_G7_SIZE		(SZ_2M)
+
+#define IO_START_PA		IO_G1_PHYS
+
+#define IO_BETWEEN(p, st, sz)   (((p) >= (st)) && ((p) < ((st) + (sz))))
+#define IO_XLATE(p, pst, vst)   ((p) - (pst) + (vst))
+#define IO_PHYS_TO_VIRT(n) (					\
+		IO_BETWEEN((n), IO_G1_PHYS, IO_G1_SIZE) ?	\
+			IO_XLATE((n), IO_G1_PHYS, IO_G1_VIRT) : \
+		IO_BETWEEN((n), IO_G2_PHYS, IO_G2_SIZE) ?	\
+			IO_XLATE((n), IO_G2_PHYS, IO_G2_VIRT) : \
+		IO_BETWEEN((n), IO_G3_PHYS, IO_G3_SIZE) ?	\
+			IO_XLATE((n), IO_G3_PHYS, IO_G3_VIRT) :	\
+		IO_BETWEEN((n), IO_G4_PHYS, IO_G4_SIZE) ?	\
+			IO_XLATE((n), IO_G4_PHYS, IO_G4_VIRT) :	\
+		IO_BETWEEN((n), IO_G5_PHYS, IO_G5_SIZE) ?	\
+			IO_XLATE((n), IO_G5_PHYS, IO_G5_VIRT) :	\
+		IO_BETWEEN((n), IO_G6_PHYS, IO_G6_SIZE) ?	\
+			IO_XLATE((n), IO_G6_PHYS, IO_G6_VIRT) :	\
+		IO_BETWEEN((n), IO_G7_PHYS, IO_G7_SIZE) ?	\
+			IO_XLATE((n), IO_G7_PHYS, IO_G7_VIRT) :	\
+		0)
+
+#define HW_IO_PHYS_TO_VIRT(phys) (IO_PHYS_TO_VIRT(phys))
+
+#define IO_VIRT_TO_PHYS(n) (					\
+		IO_BETWEEN((n), IO_G1_VIRT, IO_G1_SIZE) ?	\
+			IO_XLATE((n), IO_G1_VIRT, IO_G1_PHYS) :	\
+		IO_BETWEEN((n), IO_G2_VIRT, IO_G2_SIZE) ?	\
+			IO_XLATE((n), IO_G2_VIRT, IO_G2_PHYS) :	\
+		IO_BETWEEN((n), IO_G3_VIRT, IO_G3_SIZE) ?	\
+			IO_XLATE((n), IO_G3_VIRT, IO_G3_PHYS) :	\
+		IO_BETWEEN((n), IO_G4_VIRT, IO_G4_SIZE) ?	\
+			IO_XLATE((n), IO_G4_VIRT, IO_G4_PHYS) :	\
+		IO_BETWEEN((n), IO_G5_VIRT, IO_G5_SIZE) ?	\
+			IO_XLATE((n), IO_G5_VIRT, IO_G5_PHYS) :	\
+		IO_BETWEEN((n), IO_G6_VIRT, IO_G6_SIZE) ?	\
+			IO_XLATE((n), IO_G6_VIRT, IO_G6_PHYS) :	\
+		IO_BETWEEN((n), IO_G7_VIRT, IO_G7_SIZE) ?	\
+			IO_XLATE((n), IO_G7_VIRT, IO_G7_PHYS) :	\
+		0)
+
+#define HW_IO_VIRT_TO_PHYS(va) (IO_VIRT_TO_PHYS(IOMEM(va)))
 
 #define CONSISTENT_DMA_SIZE SZ_4M
 
