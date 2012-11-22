@@ -51,12 +51,6 @@ unsigned int kona_ion_map_dma(struct ion_client *client,
 	buffer = ion_lock_buffer(client, handle);
 	if (!buffer)
 		return dma_addr;
-	if (!buffer->dma_addr) {
-		buffer->dma_addr = m4u_map(g_mdev, sg_table, buffer->size,
-				buffer->align);
-		if (buffer->dma_addr == INVALID_MMA)
-			buffer->dma_addr = 0;
-	}
 	dma_addr = buffer->dma_addr;
 	ion_unlock_buffer(client, buffer);
 #else
