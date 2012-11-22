@@ -1005,7 +1005,7 @@ csl_caph_srcmixer_get_outchnl_trigger(CSL_CAPH_MIXER_e outChnl)
 /*
  * Function Name: csl_caph_get_audio_path
  * Description: get audioH path per sink
- */
+ /*/
 
 static AUDDRV_PATH_Enum_t csl_caph_get_audio_path(CSL_CAPH_DEVICE_e dev)
 {
@@ -2800,6 +2800,8 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 {
 	Boolean ssp3 = FALSE;
 	Boolean ssp4 = FALSE;
+	unsigned long ssp4_clk = 0;
+
 	/*Boolean ssp6 = FALSE;*/
 
 	/* BT and FM use case can either use SSP3/SSP4.
@@ -2858,8 +2860,11 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 			/* The clock is used as SSP master clock. its rate
 			 * need to be 2 times of the I2S bit clock rate
 			 */
+			ssp4_clk = clk_round_rate(clkIDSSP[CLK_SSP4_AUDIO],
+					SSP_I2S_SAMPLE_RATE *
+					SSP_I2S_SAMPLE_LEN * 2);
 			clk_set_rate(clkIDSSP[CLK_SSP4_AUDIO],
-				SSP_I2S_SAMPLE_RATE * SSP_I2S_SAMPLE_LEN * 2);
+				ssp4_clk);
 		} else if (!enable && clkIDSSP[CLK_SSP4_AUDIO]->use_cnt) {
 			clk_disable(clkIDSSP[CLK_SSP4_AUDIO]);
 		}
@@ -5188,12 +5193,12 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 		addr = (UInt32)SSP4_BASE_ADDR1;
 		rx_trigger = CAPH_SSP4_RX0_TRIGGER;
 		tx_trigger = CAPH_SSP4_TX0_TRIGGER;
-#if 0	
+#if 0
 	} else if (port == CSL_SSP_6) {
 		addr = (UInt32)SSP6_BASE_ADDR1;
 		rx_trigger = CAPH_SSP6_RX0_TRIGGER;
 		tx_trigger = CAPH_SSP6_TX0_TRIGGER;
-#endif		
+#endif
 	} else {
 		return;
 	}
