@@ -68,17 +68,25 @@ struct m4u_mapping {
 
 /* To be moved to board file - Start */
 static struct m4u_region m4u_regions[] = {
+#if 0
 	[0] = {
-		.mma		= 0x80000000,
-		.pa		= 0x80000000,
-		.size		= SZ_128M,
-		.page_size	= SZ_4K,
+		.mma			= 0xc0000000,
+		.pa			= 0x90000000,
+		.size			= SZ_256M,
+		.page_size		= SZ_32M,
 	},
+	[1] = {
+		.mma			= 0xd0000000,
+		.pa			= 0xa0000000,
+		.size			= SZ_256M,
+		.page_size		= SZ_32M,
+	},
+#endif
 };
 
 static struct m4u_platform_data m4u_pdata = {
-	.mma_begin		= 0x80000000,
-	.mma_size		= (SZ_2G - SZ_4M),
+	.mma_begin		= 0xc0000000,
+	.mma_size		= (SZ_1G - SZ_4M),
 	.xfifo_size		= SZ_16K,
 	.nr			= ARRAY_SIZE(m4u_regions),
 	.regions		= m4u_regions,
