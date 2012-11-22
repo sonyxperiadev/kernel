@@ -441,13 +441,13 @@ static int m4u_map_pages(struct m4u_device *mdev, u32 mma, u32 pa,
 				>> M4U_PAGE_SHIFT);
 		for (i = 0; i < n; i++) {
 			*pt++ = m4u_pte(pa, 0, valid);
-			pa += valid << M4U_PAGE_SHIFT;
+			pa += 1 << M4U_PAGE_SHIFT;
 		}
 	} else {
 		for (i = 0; i < n; i++) {
 			m4u_map_single_page(mdev, mma, pa, page_order, valid);
 			mma += 1 << page_order;
-			pa += valid << page_order;
+			pa += 1 << page_order;
 		}
 	}
 	if (valid)
