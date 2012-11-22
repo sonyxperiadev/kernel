@@ -33,9 +33,6 @@
 #include "plat/osdal_os.h"
 #include "linux/dma-mapping.h"
 #include <mach/memory.h>
-#ifdef CONFIG_ION
-#include <linux/broadcom/kona_ion.h>
-#endif
 
 #if defined(CONFIG_HAVE_CLK) && !defined(CONFIG_MACH_HAWAII_FPGA) \
 	&& defined(UNDER_LINUX)
@@ -61,10 +58,6 @@ static struct timeval tv1, tv2;
 #define DEBUG
 static UInt32 *dmaCtrlBlkList; /* Virtual address of DMA memory region */
 static UInt32 *dmaCtrlBlkListPhys;
-#ifdef CONFIG_ION
-static struct ion_client *dmaCtrlBlkListClient;
-static struct ion_handle *dmaCtrlBlkListHandle;
-#endif
 #else
 #pragma arm section zidata = "uncacheable"
 __align(32)
@@ -161,31 +154,12 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
 #ifdef UNDER_LINUX
 		/* Allocate dma memory */
 
-#ifdef CONFIG_ION
-		dmaCtrlBlkListClient = ion_client_create(idev, ION_DEFAULT_HEAP, "mmdma");
-		if (dmaCtrlBlkListClient == NULL) {
-			pr_err("ion client creation failed \n");
-			return -ENOMEM;
-		}
-		dmaCtrlBlkListHandle = ion_alloc(dmaCtrlBlkListClient,
-				size, 0, ION_DEFAULT_HEAP, 0);
-		dmaCtrlBlkList = ion_map_kernel(dmaCtrlBlkListClient,
-				dmaCtrlBlkListHandle);
-		dmaCtrlBlkListPhys = (UInt32*)kona_ion_map_dma(dmaCtrlBlkListClient,
-				dmaCtrlBlkListHandle);
-		if ((dmaCtrlBlkList == NULL) || (dmaCtrlBlkListPhys == 0)) {
-			ion_client_destroy(dmaCtrlBlkListClient);
-			pr_err("ion alloc failed for ctrl block size[0x%x]", size);
-			return -ENOMEM;
-		}
-#else
 		dmaCtrlBlkList =
 		    dma_alloc_coherent(NULL, size, (dma_addr_t*)&dmaCtrlBlkListPhys, GFP_KERNEL);
 		if ((void *)dmaCtrlBlkList == NULL) {
 			pr_info("DMA driver: failed to allocate DMA memory\n");
 			return -ENOMEM;
 		}
-#endif
 		pr_info("Ctrl Blk va(%p) da(%p) size(0x%x) \n",
 				dmaCtrlBlkList, dmaCtrlBlkListPhys, size);
 
