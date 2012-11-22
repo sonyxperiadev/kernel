@@ -256,12 +256,14 @@ static inline void m4u_tlb_invalidate(struct m4u_device *mdev, u32 mma,
 		int page_order, int n)
 {
 	u32 mma_aligned;
-	u32 flush_order;
+	u32 flush_order = 0;
+	u32 mask = MMMMU_OPEN_EFL_ADDRESS_MASK;
 
-	/* TODO: Invalidation on non-aligned boundaries */
-	mma_aligned = mma & MMMMU_OPEN_EFL_ADDRESS_MASK;
-	flush_order = (page_order - M4U_PAGE_SHIFT) +
-		(n - M4U_TLB_LINE_SHIFT);
+	if ((page_order + n) > (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT)) {
+		flush_order = page_order  + n - M4U_PAGE_SHIFT - M4U_TLB_LINE_SHIFT;
+		mask = (1 << (page_order + n)) - 1;
+	}
+	mma_aligned = mma & mask;
 	m4u_write_reg(mdev, MMMMU_OPEN_EFL_OFFSET, (mma_aligned | flush_order));
 }
 
@@ -519,14 +521,14 @@ static int m4u_mapping_create(struct m4u_device *mdev,
 	/* Add it to static list */
 	list_add_tail(&mapping->list, &mdev->map_list);
 
+	page_order = ilog2(region->page_size);
+	n = region->size >> page_order;
 	if (sgt) {
 		pr_info("SG table map\n");
 		m4u_map_sgtable(mdev, region->mma, sgt);
 	} else {
 		/* Validate the page size is multiple of 4K and number of pages
 		 * is multiple of 8 */
-		page_order = ilog2(region->page_size);
-		n = region->size >> page_order;
 		if ((page_order < M4U_PAGE_SHIFT) || (!n)) {
 			pr_err("Map Invalid page configuration. page_order(%d), n(%d)\n",
 					page_order, n);
@@ -535,9 +537,8 @@ static int m4u_mapping_create(struct m4u_device *mdev,
 		}
 		/* Create page table entries in the page table */
 		m4u_map_pages(mdev, region->mma, region->pa, page_order, n, 1);
-		m4u_tlb_invalidate(mdev, region->mma, page_order, n);
-		/* TODO: Reduce the number of invalidate operations */
 	}
+	m4u_tlb_invalidate(mdev, region->mma, page_order, n);
 
 	mutex_unlock(&mdev->lock);
 	return 0;
