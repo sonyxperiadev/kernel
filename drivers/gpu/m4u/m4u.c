@@ -232,7 +232,6 @@ static inline u32 m4u_pte(u32 pa, u32 order, u32 valid)
 }
 
 #if 0
-/* TODO: Threshold for locked TLB check */
 static inline void m4u_tlb_lock(struct m4u_device *mdev, u32 mma)
 {
 	u32 mma_aligned;
@@ -444,6 +443,35 @@ static int m4u_map_pages(struct m4u_device *mdev, u32 mma, u32 pa,
 	return 0;
 }
 
+static int m4u_map_sgtable(struct m4u_device *mdev, u32 mma, struct sg_table *sgt)
+{
+	struct m4u_platform_data *pdata = &mdev->pdata;
+	struct scatterlist *sg;
+	u32 *pt;
+	int i;
+
+	for_each_sg(sgt->sgl, sg, sgt->nents, i) {
+		u32 pa, page_size;
+		u32 size = sg_dma_len(sg);
+		int page_order, n;
+
+		pa = sg_phys(sg);
+
+		if (size == SZ_4K) {
+			pt = mdev->pt_base + ((mma - pdata->mma_begin) >> M4U_PAGE_SHIFT);
+			*pt++ = m4u_pte(sg_phys(sg), 0, 1);
+			mdev->map_page_count++;
+		} else {
+			page_size = m4u_get_page_size(pa, mma, size);
+			page_order = ilog2(page_size);
+			n = size >> page_order;
+			m4u_map_pages(mdev, mma, pa, page_order, n, 1);
+		}
+		mma += size;
+	}
+	return 0;
+}
+
 /**
  * Create a new mapping
  */
@@ -483,7 +511,7 @@ static int m4u_mapping_create(struct m4u_device *mdev,
 	 * multiple of 8 */
 	if (sgt) {
 		pr_info("SG table map\n");
-		/* TODO: If not contiguous, map pages in sgt to page table */
+		m4u_map_sgtable(mdev, region->mma, sgt);
 	} else {
 		page_order = ilog2(region->page_size);
 		n = region->size >> page_order;
@@ -524,7 +552,6 @@ static void _m4u_mapping_destroy(struct kref *kref)
 				page_order, n);
 	}
 	m4u_map_pages(mdev, r->mma, r->pa, page_order, n, 0);
-	/* TODO: Unlock TLB if region was TLB locked */
 	m4u_tlb_invalidate(mdev, r->mma, page_order, n);
 	m4u_pool_free_mma(mdev, r->mma, r->size >> M4U_PAGE_SHIFT);
 
@@ -555,6 +582,8 @@ static u32 m4u_mapping_lookup(struct m4u_device *mdev, u32 pa, u32 size,
 	mutex_lock(&mdev->lock);
 	list_for_each(elt, &mdev->map_list) {
 		mapping = list_entry(elt, struct m4u_mapping, list);
+		if (!mapping->contig_flag)
+			continue;
 		r = &mapping->region;
 		pr_debug("Search region mma(0x%08x) pa(0x%08x) size(0x%08x)\n",
 				r->mma, r->pa, r->size);
@@ -634,7 +663,7 @@ u32 m4u_map(struct m4u_device *mdev, struct sg_table *sgt, u32 size, u32 align)
 				region.pa = 0;
 				region.size = size;
 				/* TODO: Utilize bigger pagesizes */
-				region.page_size = (1 << M4U_PAGE_SHIFT);
+				region.page_size = 0;
 				ret = m4u_mapping_create(mdev, &region, sgt);
 				if (ret)
 					mma = INVALID_MMA;
