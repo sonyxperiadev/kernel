@@ -258,7 +258,7 @@ static int ion_cma_heap_needs_shrink(struct ion_heap *heap)
 	/* Any local checks and disabling lowmem check
 	 * can be done here
 	 **/
-	return heap->lmc_enable;
+	return heap->lmk_enable;
 }
 #endif
 
@@ -299,9 +299,9 @@ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data,
 	heap->size = data->size;
 #endif
 #ifdef CONFIG_ION_OOM_KILLER
-	heap->lmc_enable = data->lmc_enable;
-	heap->lmc_min_score_adj = data->lmc_min_score_adj;
-	heap->lmc_min_free = data->lmc_min_free;
+	heap->lmk_enable = data->lmk_enable;
+	heap->lmk_min_score_adj = data->lmk_min_score_adj;
+	heap->lmk_min_free = data->lmk_min_free;
 #endif
 
 	return heap;

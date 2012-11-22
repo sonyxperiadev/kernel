@@ -472,10 +472,10 @@ static size_t ion_debug_heap_total(struct ion_client *client,
 int ion_minfree_get(struct ion_heap *heap)
 {
 	int min_free = 0;
-	int lmc_min_free = heap->lmc_min_free;
+	int lmk_min_free = heap->lmk_min_free;
 
-	if ((lmc_min_free >= 0) && (lmc_min_free <= 100)) {
-		min_free = (heap->size / 100) * lmc_min_free;
+	if ((lmk_min_free >= 0) && (lmk_min_free <= 100)) {
+		min_free = (heap->size / 100) * lmk_min_free;
 		min_free &= (PAGE_MASK);
 	} else {
 		pr_err("%16.s: min_free(%d) should be in [0-100] range\n",
@@ -638,7 +638,7 @@ retry:
 		if ((heap_used->ops->needs_shrink) &&
 				(heap_used->ops->needs_shrink(heap_used))) {
 			int free_space = heap_used->size - heap_used->used;
-			int min_adj = heap_used->lmc_min_score_adj;
+			int min_adj = heap_used->lmk_min_score_adj;
 			int min_free = ion_minfree_get(heap_used);
 
 			if (free_space < min_free) {
@@ -1518,7 +1518,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
 				"free mem", "threshold", "min_adj",
 				((heap->size - heap->used)>>10),
-				min_free>>10, heap->lmc_min_score_adj);
+				min_free>>10, heap->lmk_min_score_adj);
 	} else {
 		seq_printf(s, "  Lowmemkiller disabled.\n");
 	}
@@ -1591,17 +1591,17 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 	debugfs_create_file(heap->name, 0664, dev->debug_root, heap,
 			    &debug_heap_fops);
 #ifdef CONFIG_ION_OOM_KILLER
-	snprintf(debug_name, 64, "lmc_%s", heap->name);
-	heap->lmc_debug_root = debugfs_create_dir(debug_name, dev->debug_root);
+	snprintf(debug_name, 64, "lmk_%s", heap->name);
+	heap->lmk_debug_root = debugfs_create_dir(debug_name, dev->debug_root);
 	debugfs_create_u32("enable", (S_IRUGO|S_IWUSR),
-			heap->lmc_debug_root,
-			(unsigned int *)&heap->lmc_enable);
+			heap->lmk_debug_root,
+			(unsigned int *)&heap->lmk_enable);
 	debugfs_create_u32("oom_score_adj", (S_IRUGO|S_IWUSR),
-			heap->lmc_debug_root,
-			(unsigned int *)&heap->lmc_min_score_adj);
+			heap->lmk_debug_root,
+			(unsigned int *)&heap->lmk_min_score_adj);
 	debugfs_create_u32("min_free", (S_IRUGO|S_IWUSR),
-			heap->lmc_debug_root,
-			(unsigned int *)&heap->lmc_min_free);
+			heap->lmk_debug_root,
+			(unsigned int *)&heap->lmk_min_free);
 #endif
 end:
 	up_write(&dev->lock);

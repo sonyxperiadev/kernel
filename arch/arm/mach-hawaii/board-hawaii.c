@@ -268,9 +268,9 @@ struct ion_platform_data ion_carveout_data = {
 			.limit = 0xa0000000,
 			.size  = (16 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
-			.lmc_enable = 0,
-			.lmc_min_score_adj = 411,
-			.lmc_min_free = 30,
+			.lmk_enable = 0,
+			.lmk_min_score_adj = 411,
+			.lmk_min_free = 30,
 #endif
 		},
 		[1] = {
@@ -281,9 +281,9 @@ struct ion_platform_data ion_carveout_data = {
 			.limit = 0,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
-			.lmc_enable = 0,
-			.lmc_min_score_adj = 411,
-			.lmc_min_free = 30,
+			.lmk_enable = 0,
+			.lmk_min_score_adj = 411,
+			.lmk_min_free = 30,
 #endif
 		},
 	},
@@ -301,9 +301,9 @@ struct ion_platform_data ion_cma_data = {
 			.limit = 0xa0000000,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
-			.lmc_enable = 1,
-			.lmc_min_score_adj = 411,
-			.lmc_min_free = 30,
+			.lmk_enable = 1,
+			.lmk_min_score_adj = 411,
+			.lmk_min_free = 30,
 #endif
 		},
 	},
