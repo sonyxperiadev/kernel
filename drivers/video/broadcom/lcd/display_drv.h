@@ -117,6 +117,7 @@ extern "C" {
 		UInt32 Bpp;	///< M  bytes per pixel
 		UInt32 phys_width;	///< physical width dimension in mm
 		UInt32 phys_height;	///< physical height dimension in mm
+		UInt32 pixclock;	/* < pixclock to set the FPS */
 	} DISPDRV_INFO_T;
 
 /**

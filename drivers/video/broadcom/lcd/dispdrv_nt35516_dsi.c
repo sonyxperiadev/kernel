@@ -227,6 +227,9 @@ static DISPDRV_INFO_T NT35516_Info = {
 	DISPDRV_FB_FORMAT_RGB888_U,	/* input_format	*/
 	DISPLAY_BUS_DSI,		/* bus_type */
 	4,				/* Bpp */
+	54,				/* phys_width */
+	95,				/* phys_height */
+	32150,				/* pixclock */
 };
 
 /* DSI Command Mode VC Configuration */

@@ -766,6 +766,7 @@ static int kona_fb_probe(struct platform_device *pdev)
 	fb->fb.var.activate = FB_ACTIVATE_NOW;
 	fb->fb.var.height = fb->display_info->phys_height;
 	fb->fb.var.width = fb->display_info->phys_width;
+	fb->fb.var.pixclock = fb->display_info->pixclock;
 
 	switch (fb->display_info->input_format) {
 	case DISPDRV_FB_FORMAT_RGB565:
