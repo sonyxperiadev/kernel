@@ -266,7 +266,7 @@ struct ion_platform_data ion_carveout_data = {
 			.name  = "ion-carveout-0",
 			.base  = 0x90000000,
 			.limit = 0xa0000000,
-			.size  = (16 * SZ_1M),
+			.size  = (8 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
 			.lmk_min_score_adj = 411,
