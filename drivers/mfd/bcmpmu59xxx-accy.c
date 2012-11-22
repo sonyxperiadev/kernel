@@ -117,7 +117,8 @@ static const char *const chrgr_type_str[] = {
 /* Values in this table need to be revisited */
 static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_NONE] = 0,
-	[PMU_CHRGR_TYPE_SDP] = 0,
+	/* Fixme this for EDN00 SDP curr*/
+	[PMU_CHRGR_TYPE_SDP] = 500,
 	[PMU_CHRGR_TYPE_CDP] = 1500,
 	[PMU_CHRGR_TYPE_DCP] = 1500,
 	[PMU_CHRGR_TYPE_TYPE1] = 1000,
@@ -209,7 +210,7 @@ static void send_usb_event(struct bcmpmu59xxx *pmu,
 			event, para);
 }
 
-static char *get_supply_type_str(int chrgr_type)
+char *get_supply_type_str(int chrgr_type)
 {
 	switch (chrgr_type) {
 	case PMU_CHRGR_TYPE_SDP:
@@ -229,52 +230,16 @@ static char *get_supply_type_str(int chrgr_type)
 
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(get_supply_type_str);
 
 static void send_chrgr_event(struct bcmpmu59xxx *pmu,
 		enum bcmpmu_event_t event, void *para)
 {
-	struct power_supply *ps;
-	char *chrgr_str;
-	static char *last_chgr_str;
-	union power_supply_propval propval;
 	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)pmu->accyinfo;
 
 	pr_accy(FLOW, "Event send %x\n", event);
 	blocking_notifier_call_chain(&paccy->event[event].notifiers,
 			event, para);
-	if (paccy->usb_accy_data.chrgr_type == PMU_CHRGR_TYPE_NONE) {
-		chrgr_str = last_chgr_str;
-		last_chgr_str = NULL;
-	} else
-		last_chgr_str = chrgr_str =
-			get_supply_type_str(paccy->usb_accy_data.chrgr_type);
-
-	pr_accy(FLOW, "<%s> chrgr_str %s\n", __func__, chrgr_str);
-	if (NULL == chrgr_str)
-		return;
-	if (paccy->piggyback_chrg)
-		return;
-	ps = power_supply_get_by_name(chrgr_str);
-	if (ps == 0)
-		return;
-	if (event == BCMPMU_CHRGR_EVENT_CHGR_DETECTION) {
-		pr_accy(FLOW, "%s, chrgr change, chrgr_type=0x%X\n",
-				__func__, paccy->usb_accy_data.chrgr_type);
-		propval.intval = paccy->usb_accy_data.chrgr_type;
-		ps->set_property(ps, POWER_SUPPLY_PROP_TYPE, &propval);
-		if (paccy->det_state == USB_CONNECTED)
-			propval.intval = 1;
-		else
-			propval.intval = 0;
-		ps->set_property(ps, POWER_SUPPLY_PROP_ONLINE, &propval);
-
-	} else if (event == BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT) {
-		pr_accy(FLOW, "%s, charge current limit =0x%X\n",
-				__func__, paccy->usb_accy_data.max_curr_chrgr);
-		propval.intval = paccy->usb_accy_data.max_curr_chrgr;
-		ps->set_property(ps, POWER_SUPPLY_PROP_CURRENT_NOW, &propval);
-	}
-	power_supply_changed(ps);
 }
 
 void paccy_set_ldo_bit(struct bcmpmu_accy *paccy, int val)
@@ -297,7 +262,6 @@ static void usb_detect_state(struct bcmpmu_accy *paccy)
 	enum bcmpmu_usb_type_t usb_type = PMU_CHRGR_TYPE_NONE;
 	u32 vbus_status = 0, id_status = 0 , bc_status;
 	struct bcmpmu59xxx *bcmpmu = paccy->bcmpmu;
-	u32 tout = 100;
 	bcmpmu_usb_get(bcmpmu,
 			BCMPMU_USB_CTRL_GET_SESSION_STATUS,
 			(void *)&vbus_status);
@@ -322,7 +286,6 @@ static void usb_detect_state(struct bcmpmu_accy *paccy)
 				if (!wake_lock_active(&paccy->wake_lock))
 					wake_lock(&paccy->wake_lock);
 #endif
-				tout = 0;
 				switch (chrgr_type) {
 				case PMU_CHRGR_TYPE_SDP:
 					usb_type = PMU_USB_TYPE_SDP;
@@ -635,6 +598,7 @@ static void bcmpmu_notify_charger_state(struct bcmpmu_accy *paccy)
 		send_chrgr_event(paccy->bcmpmu,
 				BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
 				&chrgr_type);
+		/* Fixme this for EDN00 */
 		send_chrgr_event(paccy->bcmpmu,
 				BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
 				&chrgr_curr_lmt[chrgr_type]);
@@ -704,10 +668,10 @@ static void usb_deferred_work(struct work_struct *work)
 		break;
 	case USB_DISCONNECTED:
 		pr_accy(FLOW, "*** Charger disconnected event\n");
-		bcmpmu_notify_charger_state(paccy);
 		paccy->det_state = USB_IDLE;
 		paccy->usb_accy_data.usb_type = PMU_USB_TYPE_NONE;
 		paccy->usb_accy_data.chrgr_type = PMU_CHRGR_TYPE_NONE;
+		bcmpmu_notify_charger_state(paccy);
 		break;
 	default:
 		break;

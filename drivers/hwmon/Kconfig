@@ -1384,12 +1384,11 @@ config SENSORS_MC13783_ADC
           Support for the A/D converter on MC13783 and MC13892 PMIC.
 
 config SENSORS_BCMPMU
-	tristate "BRCM PMUs"
-	depends on MFD_BCMPMU || MFD_BCM_PMU59056 
+	tristate "BRCM PMUs HWMON"
+	depends on MFD_BCMPMU || MFD_BCM_PMU59056 || MFD_BCM_PMU59xxx
 	default n
 	help
-	  If you say yes here you get support for ADC and Fuel Gauge
-	  on Broadcom PMUs
+	  ADC driver for BRM PMU's
 
 if ACPI
 

@@ -1095,9 +1095,9 @@ Int32 csl_cam_open(pCSL_CAM_INTF_CFG_st intfCfg, CSL_CAM_HANDLE *cslCamH)
 			    (CHAL_CAM_BURST_SPACE_t) 0;
 
 			chal_cam_cfg_cntrl_st.panic_pr = 15;
-			chal_cam_cfg_cntrl_st.norm_pr = 10;
-			chal_cam_cfg_cntrl_st.panic_thr = 1;
-			chal_cam_cfg_cntrl_st.panic_enable = FALSE;
+			chal_cam_cfg_cntrl_st.norm_pr = 0;
+			chal_cam_cfg_cntrl_st.panic_thr = 2;
+			chal_cam_cfg_cntrl_st.panic_enable = TRUE;
 			chal_status |=
 			    chal_cam_cfg_cntrl(cslCamDrv.chalCamH,
 					       &chal_cam_cfg_cntrl_st);

@@ -348,10 +348,13 @@ void cslDsiAxipvPollInt(DSI_UPD_REQ_MSG_T *updMsg)
 
 static void axipv_irq_cb(int stat)
 {
+	static uint32_t w_lvl_2_cnt;
 	DSI_HANDLE dsiH = &dsiBus[0];
 #ifdef CONFIG_VIDEO_MODE
 	if (stat & AXIPV_DISABLED_INT)
 		OSSEMAPHORE_Release(dsiH->semaAxipv);
+	else if (stat & WATER_LVL2_INT)
+		pr_err("AXIPV hit W_LVL_2 threshold %d times\n", ++w_lvl_2_cnt);
 #endif
 	if (stat & PV_START_THRESH_INT)
 		OSSEMAPHORE_Release(dsiH->semaAxipv);
@@ -2435,9 +2438,9 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 #ifdef CONFIG_VIDEO_MODE
 				dsiH->pvCfg->cmd = false;
 				dsiH->pvCfg->cont = true;
-				dsiH->pvCfg->vs = 5;
-				dsiH->pvCfg->vbp = 60;
-				dsiH->pvCfg->vfp = 60;
+				dsiH->pvCfg->vs = 20;
+				dsiH->pvCfg->vbp = 20;
+				dsiH->pvCfg->vfp = 20;
 				dsiH->pvCfg->hs = 46;
 				dsiH->pvCfg->hbp = 46;
 				dsiH->pvCfg->hfp = 46;
@@ -2568,6 +2571,14 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiCfg->bus, __func__);
 		dsiH->init = DSI_INITIALIZED;
 		dsiH->bus = dsiCfg->bus;
+#ifdef CONFIG_VIDEO_MODE
+#define MM_SWITCH_QOS_ENABLE_REG HW_IO_PHYS_TO_VIRT(0x3C001444)
+#define MM_QOS_EN_REG HW_IO_PHYS_TO_VIRT(0x3C004060)
+#define ENABLE_AXIPV_QOS (1 << 7)
+		writel(readl(MM_SWITCH_QOS_ENABLE_REG) | ENABLE_AXIPV_QOS,
+			MM_SWITCH_QOS_ENABLE_REG);
+		writel(readl(MM_QOS_EN_REG) | ENABLE_AXIPV_QOS, MM_QOS_EN_REG);
+#endif
 	} else {
 		dsiH->init = 0;
 	}

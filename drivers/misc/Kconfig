@@ -440,6 +440,17 @@ config AL3006
 		To compile this driver as a module, choose M here: the
 		module will be called al3006.
 
+config TMD2771X
+	tristate "TMD2771X Digital Light + Proximity sensor"
+	depends on I2C && SYSFS
+	default n
+	help
+		If you say yes here you get support for DYNE image
+		Digital Light+Proximity sensor TMD2771X.
+
+		To compile this driver as a module, choose M here: the
+		module will be called TMD2771X.
+
 config BMP18X
 	tristate "BMP18X digital pressure sensor"
 	depends on (I2C || SPI_MASTER) && SYSFS
@@ -469,6 +480,21 @@ config BMP18X_SPI
 
 		To compile this driver as a module, choose M here: the
 		module will be called bmp18x-spi.
+
+config SENSORS_KIONIX_KXTIK
+	tristate "Analog Devices KIONIX KXTIK Three-Axis Digital Accelerometer"
+	depends on I2C && SYSFS
+	help
+                Say Y or M here if you want to support Bosch Sensortec BMA150
+		accelerometer.
+                If unsure, say N.
+
+config SENSORS_AK8963
+	tristate "AK8963 compass support"
+	depends on I2C
+	help
+	  If you say yes here you get support for Asahi Kasei's
+	  orientation sensor AK8963.
 
 config SENSORS_BMA150
 	tristate "BMA150 accelerometer sensor"

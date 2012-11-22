@@ -30,5 +30,6 @@ extern void *DISP_DRV_R61581_HVGA_SMI_GetFuncTable(void);
 extern void *DISPDRV_ili9486_GetFuncTable(void);
 extern void *DISPDRV_R61531_GetFuncTable(void);
 extern void *DISPDRV_ili9341_GetFuncTable(void);
+extern void *DISP_DRV_OTM1281A_GetFuncTable(void);
 extern void *LCD_DISPDRV_GetFuncTable(void);
 #endif /* KONA_FB_H_ */

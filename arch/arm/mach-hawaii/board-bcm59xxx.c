@@ -246,7 +246,8 @@ static struct regulator_init_data bcm59xxx_mmcldo1_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
+			.boot_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc1_supply),
 	.consumer_supplies = mmc1_supply,
@@ -263,6 +264,7 @@ static struct regulator_init_data bcm59xxx_mmcldo2_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.boot_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc2_supply),
 	.consumer_supplies = mmc2_supply,
@@ -406,7 +408,8 @@ static struct regulator_init_data bcm59xxx_lvldo2_data = {
 			.max_uV = 1786000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
+			.boot_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(lvldo2_supply),
 	.consumer_supplies = lvldo2_supply,
@@ -423,6 +426,7 @@ static struct regulator_init_data bcm59xxx_vsr_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.boot_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vsr_supply),
 	.consumer_supplies = vsr_supply,
@@ -792,6 +796,10 @@ static struct bcmpmu59xxx_rw_data register_init_data[] = {
 
 	{.addr = PMU_REG_CSRVOUT1 , .val = 0x28, .mask = 0x3F},
 
+	/* PASRCTRL MobC00256738*/
+	{.addr = PMU_REG_PASRCTRL1 , .val = 0x00, .mask = 0x06},
+	{.addr = PMU_REG_PASRCTRL6 , .val = 0x00, .mask = 0xF0},
+	{.addr = PMU_REG_PASRCTRL7 , .val = 0x00, .mask = 0x3F},
 
 };
 
@@ -814,7 +822,168 @@ struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.bcmpmu_rgltr = bcm59xxx_regulators,
 	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
 };
+/*
+static struct bcmpmu_adc_lut  pmu_die_temp_map[] = {
 
+	{466,	-40},
+	{476,	-35},
+	{485,	-30},
+	{495,	-25},
+	{505,	-20},
+	{515,	-15},
+	{524,	-10},
+	{534,	-5},
+	{544,	0},
+	{554,	5},
+	{564,	10},
+	{574,	15},
+	{584,	20},
+	{594,	25},
+	{604,	30},
+	{614,	35},
+	{624,	40},
+	{634,	45},
+	{644,	50},
+	{655,	55},
+	{665,	60},
+	{675,	65},
+	{685,	70},
+	{696,	75},
+	{706,	80},
+	{716,	85},
+	{727,	90},
+	{737,	95},
+	{747,	100},
+	{758,	105},
+	{768,	110},
+	{778,	115},
+	{789,	120},
+	{799,	125},
+	{809,	130},
+	{819,	135},
+	{829,	140},
+	{839,	145},
+	{849,	150},
+	{859,	155},
+	{869,	160},
+	{879,	165},
+	{889,	170},
+	{899,	175},
+
+};
+*/
+static struct bcmpmu_adc_lut batt_temp_map[] = {
+	{16, 100},			/* 100 C */
+	{20, 95},			/* 95 C */
+	{24, 90},			/* 90 C */
+	{28, 85},			/* 85 C */
+	{32, 80},			/* 80 C */
+	{36, 75},			/* 75 C */
+	{44, 70},			/* 70 C */
+	{52, 65},			/* 65 C */
+	{64, 60},			/* 60 C */
+	{76, 55},			/* 55 C */
+	{92, 50},			/* 50 C */
+	{112, 45},			/* 45 C */
+	{132, 40},			/* 40 C */
+	{160, 35},			/* 35 C */
+	{192, 30},			/* 30 C */
+	{228, 25},			/* 25 C */
+	{272, 20},			/* 20 C */
+	{324, 15},			/* 15 C */
+	{376, 10},			/* 10 C */
+	{440, 5},			/* 5 C */
+	{500, 0},			/* 0 C */
+	{568, -5},			/* -5 C */
+	{636, -10},			/* -10 C */
+	{704, -15},			/* -15 C */
+	{760, -20},			/* -20 C */
+	{816, -25},			/* -25 C */
+	{860, -30},			/* -30 C */
+	{900, -35},			/* -35 C */
+	{932, -40},			/* -40 C */
+};
+struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
+	[PMU_ADC_CHANN_VMBATT] = {
+					.flag = 0,
+					.volt_range = 4800,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+	},
+	[PMU_ADC_CHANN_VBBATT] = {
+					.flag = 0,
+					.volt_range = 4800,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+	},
+	[PMU_ADC_CHANN_VBUS] = {
+					.flag = 0,
+					.volt_range = 14400,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+	},
+	[PMU_ADC_CHANN_IDIN] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+	},
+	[PMU_ADC_CHANN_NTC] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = batt_temp_map,
+					.lut_len = ARRAY_SIZE(batt_temp_map),
+	},
+	[PMU_ADC_CHANN_BSI] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+	},
+	[PMU_ADC_CHANN_BOM] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+	},
+	[PMU_ADC_CHANN_32KTEMP] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = batt_temp_map,
+					.lut_len = ARRAY_SIZE(batt_temp_map),
+	},
+	[PMU_ADC_CHANN_PATEMP] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = batt_temp_map,
+					.lut_len = ARRAY_SIZE(batt_temp_map),
+	},
+	[PMU_ADC_CHANN_ALS] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+	},
+	[PMU_ADC_CHANN_DIE_TEMP] = {
+					.flag = 0,
+					/* Just for check */
+					.volt_range = 497,
+					/* Taking 276 insted of 275.7 */
+					.adc_offset = -276,
+					.lut = NULL,
+					.lut_len = 0,
+	},
+};
 /* The subdevices of the bcmpmu59xxx */
 static struct mfd_cell pmu59xxx_devs[] = {
 	{
@@ -850,6 +1019,12 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	{
 		.name = "bcmpmu_otg_xceiv",
 		.id = -1,
+	},
+	{
+		.name = "bcmpmu_adc",
+		.id = -1,
+		.platform_data = adc_pdata,
+		.pdata_size = sizeof(adc_pdata),
 	},
 };
 

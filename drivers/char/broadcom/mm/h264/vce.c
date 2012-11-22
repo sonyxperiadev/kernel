@@ -135,7 +135,6 @@ static int vce_abort(void* device_id, mm_job_post_t* job)
 static mm_isr_type_e process_vce_irq(void* device_id)
 {
 	u32 flags;
-	u32 reason;
 	mm_isr_type_e irq_retval = MM_ISR_UNKNOWN;
 	vce_device_t* id = (vce_device_t*)device_id;
 
@@ -148,30 +147,8 @@ static mm_isr_type_e process_vce_irq(void* device_id)
 	/*Clear interrupt bit*/
 	vce_write(id,VCE_SEMA_CLEAR_OFFSET,1<<31);
 
-	reason = (flags >> VCE_STATUS_REASON_POS) &
-		VCE_STATUS_REASON_MASK;
-
-	if(flags & 1<<VCE_STATUS_INTERRUPT_POS){
-		/*TODO: Implement other reason Handling if required*/
-		switch(reason){
-			case VCE_REASON_END:
-				irq_retval = MM_ISR_SUCCESS;
-				break;
-			case VCE_REASON_STOPPED:
-				irq_retval = MM_ISR_PROCESSED;
-				break;
-			case VCE_STOP_SYM_RESET_INNER:
-				pr_err("vce_isr VCE_STOP_SYM_RESET_INNER \n");
-				/*TODO: Do the handling as in DEC3 RTOS*/
-				/*Not Required as of Now*/
-				irq_retval = MM_ISR_ERROR;
-				break;
-			default:
-				/*TODO: Handle Any Error Here*/
-				pr_err("vce_isr error \n");
-				irq_retval = MM_ISR_ERROR;
-		}
-	}
+	/*TODO: Implement other reason Handling if required*/
+	irq_retval = MM_ISR_SUCCESS;
 
 	return irq_retval;
 }
@@ -189,7 +166,9 @@ bool get_vce_status(void* device_id)
 		reason = (status >> VCE_STATUS_REASON_POS) &
 			VCE_STATUS_REASON_MASK;
 		/*TODO: Add more checks if required*/
-		if( reason == VCE_REASON_END){
+		if (reason == VCE_REASON_END
+				/*Encode has reason 0*/
+				|| reason == 0){
 			pr_debug("get_vce_status : reason VCE_REASON_END\n");
 			return false;
 		} else {
@@ -244,13 +223,13 @@ mm_job_status_e vce_start_job(void *device_id , mm_job_post_t *job, u32 prfmask)
 			}
 			/*Program VCE*/
 
-		/*Write the registers passed*/
-		for (i=0; i < VCE_REGISTERS_COUNT; i++) {
-			if (vce_info->vce_regpst.changed[i] == 1) {
-				vce_write(id, (VCE_REGISTERS_OFFSET+(i*4)),
-					vce_info->vce_regpst.vce_regs[i]);
+			/*Write the registers passed*/
+			for (i = 0; i < VCE_REGISTERS_COUNT; i++) {
+				if (vce_info->vce_regpst.changed[i] == 1) {
+					vce_write(id, (VCE_REGISTERS_OFFSET+(i*4)),
+							vce_info->vce_regpst.vce_regs[i]);
+				}
 			}
-		}
 
 			/*set return address to the finalising code*/
 			vce_write(id,VCE_REGISTERS_OFFSET,vce_info->finaladdr);
@@ -292,11 +271,11 @@ mm_job_status_e vce_start_job(void *device_id , mm_job_post_t *job, u32 prfmask)
 			vce_write(id,VCE_PC_PF0_OFFSET,vce_info->startaddr);
 
 			/*Taken from DEC3 - TODO: Verify again*/
-		if (vce_info->endcode & (~VCE_NO_SEMAPHORE)) {
+			if (vce_info->endcode & (~VCE_NO_SEMAPHORE)) {
 				/*Pulse the stoppage code 1->0->1 to clear internal wait.*/
 				/*VCE might be waiting on another semaphore, or bkpt*/
 				vce_write(id,VCE_SEMA_CLEAR_OFFSET, 0xff);
-			vce_write(id, VCE_SEMA_SET_OFFSET, 1<<(vce_info->endcode
+				vce_write(id, VCE_SEMA_SET_OFFSET, 1<<(vce_info->endcode
 							&(~VCE_NO_SEMAPHORE))| 1<<VCE_STOP_SYM_RESET_INNER);
 			} else {
 				vce_write(id,VCE_SEMA_CLEAR_OFFSET, 0xff);
@@ -306,10 +285,10 @@ mm_job_status_e vce_start_job(void *device_id , mm_job_post_t *job, u32 prfmask)
 			vce_write(id, 0x3408b8, 1<<26);
 
 #ifdef H264_VCE_STEP
-		/*Debug: For Stepping through VCE Instructions*/
-		while(break_var != 0){
-			vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_SINGLE_STEP);
-		}
+			/*Debug: For Stepping through VCE Instructions*/
+			while (break_var != 0) {
+				vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_SINGLE_STEP);
+			}
 #endif
 			/*Set RUN Bit*/
 			vce_write(id,VCE_CONTROL_OFFSET,VCE_CONTROL_SET_RUN);
@@ -330,8 +309,8 @@ mm_job_status_e vce_start_job(void *device_id , mm_job_post_t *job, u32 prfmask)
 			}
 
 			/*Backup Registers*/
-		for (i=0; i<VCE_REGISTERS_COUNT; i++) {
-			vce_info->vce_regpst.vce_regs[i] =
+			for (i = 0; i < VCE_REGISTERS_COUNT; i++) {
+				vce_info->vce_regpst.vce_regs[i] =
 					vce_read(id, (VCE_REGISTERS_OFFSET+(i*4)));
 			}
 

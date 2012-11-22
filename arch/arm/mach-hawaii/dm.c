@@ -145,7 +145,7 @@ static DEFINE_SPINLOCK(dormant_entry_lock);
 /* Counts the numner of cores that are in the process of
  * entering dormant
  */
-u32 num_cores_in_dormant;
+static volatile u32 num_cores_in_dormant;
 
 u8 gic_dist_shared_data[GIC_DIST_SHARED_DATA_SIZE];
 
@@ -729,6 +729,12 @@ void dormant_enter(u32 service)
 					    readl_relaxed(KONA_CHIPREG_VA +
 						CHIPREG_BOOT_2ND_ADDR_OFFSET);
 				} while (boot_2nd_addr & 1);
+			/* Wait for core-1 to reach non-secure side.
+			 * Workaround added to avoid mm_stuct count mismatch
+			 * in idle path
+			 */
+			while (num_cores_in_dormant)
+				udelay(1);
 			} /* core down */
 		} /* Master core */
 #endif

@@ -1476,8 +1476,8 @@ static void __init hawaii_add_sdio_devices(void)
  */
 struct kona_fb_platform_data konafb_devices[] __initdata = {
 	{
-		.dispdrv_name  = "NT35516",
-		.dispdrv_entry = DISP_DRV_NT35516_GetFuncTable,
+		.dispdrv_name  = "OTM1281A",
+		.dispdrv_entry = DISP_DRV_OTM1281A_GetFuncTable,
 		.parms = {
 			.w0 = {
 				.bits = {
@@ -1494,7 +1494,7 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 			.w1 = {
 			.bits = {
 					.api_rev  =  KONA_LCD_BOOT_API_REV,
-					.lcd_rst0 =  22,
+					.lcd_rst0 =  8,
 				},
 			},
 		},

@@ -3,6 +3,7 @@ EXTRA_CFLAGS += -D_RHEA_
 obj-y	+= lcd_clock.o
 obj-$(CONFIG_ARCH_HAWAII)	+= dispdrv_nt35516_dsi.o
 obj-$(CONFIG_ARCH_HAWAII)	+= dispdrv_lg4591_dsi.o
+obj-$(CONFIG_ARCH_HAWAII)	+= dispdrv_otm1281a_dsi.o
 obj-$(CONFIG_ARCH_RHEA)		+= dispdrv_nt35582_wvga_smi.o
 obj-$(CONFIG_ARCH_RHEA)		+= dispdrv_bcm91008_alex_dsi.o
 obj-$(CONFIG_ARCH_RHEA)		+= dispdrv_R61581_hvga_smi.o

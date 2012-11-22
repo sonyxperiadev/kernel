@@ -28,11 +28,14 @@
 #ifndef __MLDL_CFG_H__
 #define __MLDL_CFG_H__
 
-
 #include "mltypes.h"
 #include "mlsl.h"
 #include <linux/mpu.h>
+#if defined(CONFIG_MPU_SENSORS_MPU3050)
+#include "mpu3050.h"
+#else
 #include "mpu6050b1.h"
+#endif
 
 #include <log.h>
 
@@ -94,8 +97,8 @@ struct mpu_gyro_cfg {
 
 /* Offset registers that can be calibrated */
 struct mpu_offsets {
-	__u8	tc[GYRO_NUM_AXES];
-	__u16	gyro[GYRO_NUM_AXES];
+	__u8 tc[GYRO_NUM_AXES];
+	__u16 gyro[GYRO_NUM_AXES];
 };
 
 /* Chip related information that can be read and verified */
@@ -108,7 +111,6 @@ struct mpu_chip_info {
 	/* Only used for MPU6050 */
 	__u16 accel_sens_trim;
 };
-
 
 struct inv_mpu_cfg {
 	__u32 requested_sensors;
@@ -132,20 +134,20 @@ struct inv_mpu_state {
 
 /* Platform data for the MPU */
 struct mldl_cfg {
-	struct mpu_ram			*mpu_ram;
-	struct mpu_gyro_cfg		*mpu_gyro_cfg;
-	struct mpu_offsets		*mpu_offsets;
-	struct mpu_chip_info		*mpu_chip_info;
+	struct mpu_ram *mpu_ram;
+	struct mpu_gyro_cfg *mpu_gyro_cfg;
+	struct mpu_offsets *mpu_offsets;
+	struct mpu_chip_info *mpu_chip_info;
 
 	/* MPU Related stored status and info */
-	struct inv_mpu_cfg		*inv_mpu_cfg;
-	struct inv_mpu_state		*inv_mpu_state;
+	struct inv_mpu_cfg *inv_mpu_cfg;
+	struct inv_mpu_state *inv_mpu_state;
 
 	/* Slave related information */
-	struct ext_slave_descr		*slave[EXT_SLAVE_NUM_TYPES];
+	struct ext_slave_descr *slave[EXT_SLAVE_NUM_TYPES];
 	/* Platform Data */
-	struct mpu_platform_data	*pdata;
-	struct ext_slave_platform_data	*pdata_slave[EXT_SLAVE_NUM_TYPES];
+	struct mpu_platform_data *pdata;
+	struct ext_slave_platform_data *pdata_slave[EXT_SLAVE_NUM_TYPES];
 };
 
 /* -------------------------------------------------------------------------- */
@@ -153,29 +155,24 @@ struct mldl_cfg {
 int inv_mpu_open(struct mldl_cfg *mldl_cfg,
 		 void *mlsl_handle,
 		 void *accel_handle,
-		 void *compass_handle,
-		 void *pressure_handle);
+		 void *compass_handle, void *pressure_handle);
 int inv_mpu_close(struct mldl_cfg *mldl_cfg,
 		  void *mlsl_handle,
 		  void *accel_handle,
-		  void *compass_handle,
-		  void *pressure_handle);
+		  void *compass_handle, void *pressure_handle);
 int inv_mpu_resume(struct mldl_cfg *mldl_cfg,
 		   void *gyro_handle,
 		   void *accel_handle,
 		   void *compass_handle,
-		   void *pressure_handle,
-		   unsigned long sensors);
+		   void *pressure_handle, unsigned long sensors);
 int inv_mpu_suspend(struct mldl_cfg *mldl_cfg,
 		    void *gyro_handle,
 		    void *accel_handle,
 		    void *compass_handle,
-		    void *pressure_handle,
-		    unsigned long sensors);
+		    void *pressure_handle, unsigned long sensors);
 int inv_mpu_set_firmware(struct mldl_cfg *mldl_cfg,
 			 void *mlsl_handle,
-			 const unsigned char *data,
-			 int size);
+			 const unsigned char *data, int size);
 
 /* -------------------------------------------------------------------------- */
 /* Slave Read functions */
@@ -194,11 +191,10 @@ static inline int inv_mpu_read_accel(struct mldl_cfg *mldl_cfg,
 		return INV_ERROR_INVALID_PARAMETER;
 	}
 
-	return inv_mpu_slave_read(
-		mldl_cfg, gyro_handle, accel_handle,
-		mldl_cfg->slave[EXT_SLAVE_TYPE_ACCEL],
-		mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_ACCEL],
-		data);
+	return inv_mpu_slave_read(mldl_cfg, gyro_handle, accel_handle,
+				  mldl_cfg->slave[EXT_SLAVE_TYPE_ACCEL],
+				  mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_ACCEL],
+				  data);
 }
 
 static inline int inv_mpu_read_compass(struct mldl_cfg *mldl_cfg,
@@ -211,11 +207,10 @@ static inline int inv_mpu_read_compass(struct mldl_cfg *mldl_cfg,
 		return INV_ERROR_INVALID_PARAMETER;
 	}
 
-	return inv_mpu_slave_read(
-		mldl_cfg, gyro_handle, compass_handle,
-		mldl_cfg->slave[EXT_SLAVE_TYPE_COMPASS],
-		mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_COMPASS],
-		data);
+	return inv_mpu_slave_read(mldl_cfg, gyro_handle, compass_handle,
+				  mldl_cfg->slave[EXT_SLAVE_TYPE_COMPASS],
+				  mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_COMPASS],
+				  data);
 }
 
 static inline int inv_mpu_read_pressure(struct mldl_cfg *mldl_cfg,
@@ -228,16 +223,14 @@ static inline int inv_mpu_read_pressure(struct mldl_cfg *mldl_cfg,
 		return INV_ERROR_INVALID_PARAMETER;
 	}
 
-	return inv_mpu_slave_read(
-		mldl_cfg, gyro_handle, pressure_handle,
-		mldl_cfg->slave[EXT_SLAVE_TYPE_PRESSURE],
-		mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_PRESSURE],
-		data);
+	return inv_mpu_slave_read(mldl_cfg, gyro_handle, pressure_handle,
+				  mldl_cfg->slave[EXT_SLAVE_TYPE_PRESSURE],
+				  mldl_cfg->
+				  pdata_slave[EXT_SLAVE_TYPE_PRESSURE], data);
 }
 
 int gyro_config(void *mlsl_handle,
-		struct mldl_cfg *mldl_cfg,
-		struct ext_slave_config *data);
+		struct mldl_cfg *mldl_cfg, struct ext_slave_config *data);
 
 /* Slave Config functions */
 int inv_mpu_slave_config(struct mldl_cfg *mldl_cfg,
@@ -256,10 +249,10 @@ static inline int inv_mpu_config_accel(struct mldl_cfg *mldl_cfg,
 		return INV_ERROR_INVALID_PARAMETER;
 	}
 
-	return inv_mpu_slave_config(
-		mldl_cfg, gyro_handle, accel_handle, data,
-		mldl_cfg->slave[EXT_SLAVE_TYPE_ACCEL],
-		mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_ACCEL]);
+	return inv_mpu_slave_config(mldl_cfg, gyro_handle, accel_handle, data,
+				    mldl_cfg->slave[EXT_SLAVE_TYPE_ACCEL],
+				    mldl_cfg->
+				    pdata_slave[EXT_SLAVE_TYPE_ACCEL]);
 }
 
 static inline int inv_mpu_config_compass(struct mldl_cfg *mldl_cfg,
@@ -272,10 +265,10 @@ static inline int inv_mpu_config_compass(struct mldl_cfg *mldl_cfg,
 		return INV_ERROR_INVALID_PARAMETER;
 	}
 
-	return inv_mpu_slave_config(
-		mldl_cfg, gyro_handle, compass_handle, data,
-		mldl_cfg->slave[EXT_SLAVE_TYPE_COMPASS],
-		mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_COMPASS]);
+	return inv_mpu_slave_config(mldl_cfg, gyro_handle, compass_handle, data,
+				    mldl_cfg->slave[EXT_SLAVE_TYPE_COMPASS],
+				    mldl_cfg->
+				    pdata_slave[EXT_SLAVE_TYPE_COMPASS]);
 }
 
 static inline int inv_mpu_config_pressure(struct mldl_cfg *mldl_cfg,
@@ -288,15 +281,15 @@ static inline int inv_mpu_config_pressure(struct mldl_cfg *mldl_cfg,
 		return INV_ERROR_INVALID_PARAMETER;
 	}
 
-	return inv_mpu_slave_config(
-		mldl_cfg, gyro_handle, pressure_handle, data,
-		mldl_cfg->slave[EXT_SLAVE_TYPE_PRESSURE],
-		mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_PRESSURE]);
+	return inv_mpu_slave_config(mldl_cfg, gyro_handle, pressure_handle,
+				    data,
+				    mldl_cfg->slave[EXT_SLAVE_TYPE_PRESSURE],
+				    mldl_cfg->
+				    pdata_slave[EXT_SLAVE_TYPE_PRESSURE]);
 }
 
 int gyro_get_config(void *mlsl_handle,
-		struct mldl_cfg *mldl_cfg,
-		struct ext_slave_config *data);
+		    struct mldl_cfg *mldl_cfg, struct ext_slave_config *data);
 
 /* Slave get config functions */
 int inv_mpu_get_slave_config(struct mldl_cfg *mldl_cfg,
@@ -316,10 +309,11 @@ static inline int inv_mpu_get_accel_config(struct mldl_cfg *mldl_cfg,
 		return INV_ERROR_INVALID_PARAMETER;
 	}
 
-	return inv_mpu_get_slave_config(
-		mldl_cfg, gyro_handle, accel_handle, data,
-		mldl_cfg->slave[EXT_SLAVE_TYPE_ACCEL],
-		mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_ACCEL]);
+	return inv_mpu_get_slave_config(mldl_cfg, gyro_handle, accel_handle,
+					data,
+					mldl_cfg->slave[EXT_SLAVE_TYPE_ACCEL],
+					mldl_cfg->
+					pdata_slave[EXT_SLAVE_TYPE_ACCEL]);
 }
 
 static inline int inv_mpu_get_compass_config(struct mldl_cfg *mldl_cfg,
@@ -332,10 +326,11 @@ static inline int inv_mpu_get_compass_config(struct mldl_cfg *mldl_cfg,
 		return INV_ERROR_INVALID_PARAMETER;
 	}
 
-	return inv_mpu_get_slave_config(
-		mldl_cfg, gyro_handle, compass_handle, data,
-		mldl_cfg->slave[EXT_SLAVE_TYPE_COMPASS],
-		mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_COMPASS]);
+	return inv_mpu_get_slave_config(mldl_cfg, gyro_handle, compass_handle,
+					data,
+					mldl_cfg->slave[EXT_SLAVE_TYPE_COMPASS],
+					mldl_cfg->
+					pdata_slave[EXT_SLAVE_TYPE_COMPASS]);
 }
 
 static inline int inv_mpu_get_pressure_config(struct mldl_cfg *mldl_cfg,
@@ -348,16 +343,17 @@ static inline int inv_mpu_get_pressure_config(struct mldl_cfg *mldl_cfg,
 		return INV_ERROR_INVALID_PARAMETER;
 	}
 
-	return inv_mpu_get_slave_config(
-		mldl_cfg, gyro_handle, pressure_handle, data,
-		mldl_cfg->slave[EXT_SLAVE_TYPE_PRESSURE],
-		mldl_cfg->pdata_slave[EXT_SLAVE_TYPE_PRESSURE]);
+	return inv_mpu_get_slave_config(mldl_cfg, gyro_handle, pressure_handle,
+					data,
+					mldl_cfg->
+					slave[EXT_SLAVE_TYPE_PRESSURE],
+					mldl_cfg->
+					pdata_slave[EXT_SLAVE_TYPE_PRESSURE]);
 }
 
 /* -------------------------------------------------------------------------- */
 
-static inline
-long inv_mpu_get_sampling_rate_hz(struct mpu_gyro_cfg *gyro_cfg)
+static inline long inv_mpu_get_sampling_rate_hz(struct mpu_gyro_cfg *gyro_cfg)
 {
 	if (((gyro_cfg->lpf) == 0) || ((gyro_cfg->lpf) == 7))
 		return 8000L / (gyro_cfg->divider + 1);
@@ -365,17 +361,15 @@ long inv_mpu_get_sampling_rate_hz(struct mpu_gyro_cfg *gyro_cfg)
 		return 1000L / (gyro_cfg->divider + 1);
 }
 
-static inline
-long inv_mpu_get_sampling_period_us(struct mpu_gyro_cfg *gyro_cfg)
+static inline long inv_mpu_get_sampling_period_us(struct mpu_gyro_cfg *gyro_cfg)
 {
 	if (((gyro_cfg->lpf) == 0) || ((gyro_cfg->lpf) == 7))
-		return (long) (1000000L * (gyro_cfg->divider + 1)) / 8000L;
+		return (long)(1000000L * (gyro_cfg->divider + 1)) / 8000L;
 	else
-		return (long) (1000000L * (gyro_cfg->divider + 1)) / 1000L;
+		return (long)(1000000L * (gyro_cfg->divider + 1)) / 1000L;
 }
 
-
-#endif				/* __MLDL_CFG_H__ */
+#endif /* __MLDL_CFG_H__ */
 
 /**
  * @}

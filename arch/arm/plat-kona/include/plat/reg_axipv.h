@@ -101,8 +101,8 @@
 /* Todo: Need to choose right values*/
 #define AXIPV_BURST_LEN 7
 #define AXIPV_TE_LINE 600
-#define AXIPV_PV_THRES ((AXIPV_LB_SIZE * 2) / 3)
-#define AXIPV_W_LVL_1 ((AXIPV_LB_SIZE * 2) / 3 - 1)
+#define AXIPV_PV_THRES ((AXIPV_LB_SIZE * 7) / 8)
+#define AXIPV_W_LVL_1 ((AXIPV_LB_SIZE * 7) / 8 - 1)
 #define AXIPV_W_LVL_2 (AXIPV_LB_SIZE / 4)
 #define AXIPV_LB_EMPTY_THRES (AXIPV_LB_SIZE / 20)
 #define AXIPV_LB_EMPTY_THRES_MIN 0
@@ -110,7 +110,7 @@
 #define AXIPV_W_LVL_1_MIN (AXIPV_W_LVL_2_MIN + 1)
 #define AXIPV_PV_THRES_MIN (AXIPV_W_LVL_1_MIN + 1)
 #define AXIPV_AXI_ID1 0
-#define AXIPV_AXI_ID2 0
+#define AXIPV_AXI_ID2 0x80
 #define AXIPV_MAX_XFERS NUM_OUTSTDG_XFERS_8
 #define AXIPV_ARPROT (2 << ARPROT_SHIFT)
 #define AXIPV_ARCACHE (2 << ARCACHE_SHIFT)

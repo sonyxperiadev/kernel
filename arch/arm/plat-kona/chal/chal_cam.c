@@ -378,7 +378,8 @@ CHAL_CAM_STATUS_CODES chal_cam_cfg_intf(CHAL_HANDLE handle, CHAL_CAM_CFG_INTF_st
     CHAL_CAM_PARAM_st_t chal_cam_param_st;
     cUInt32 cfg_base_addr;
     cUInt32 clk_base_addr;
-
+    cUInt32 mm_switch_base;
+    u32 valsw;
     DBG_OUT( chal_dprintf( CDBG_INFO, "chal_cam_cfg_intf\n") ); 
 
 // Reset Cam 
@@ -419,7 +420,18 @@ CHAL_CAM_STATUS_CODES chal_cam_cfg_intf(CHAL_HANDLE handle, CHAL_CAM_CFG_INTF_st
                 BRCM_WRITE_REG(clk_base_addr,MM_CLK_MGR_REG_CSI0_AXI_CLKGATE, 0x00000303);  // ...
                 BRCM_WRITE_REG(clk_base_addr,MM_CLK_MGR_REG_DIV_TRIG, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_SHIFT)); // CSI0 trigger change
             }
+/* MM_CFG changes here for QoS*/
 
+
+#ifndef __KERNEL__
+mm_switch_base = MM_CFG_BASE_ADDR;
+#else
+mm_switch_base = HW_IO_PHYS_TO_VIRT(MM_CFG_BASE_ADDR);
+valsw = readl((mm_switch_base + 0x444));
+valsw = valsw | 1;
+writel(valsw, (mm_switch_base + 0x444));
+#endif
+/* Enable CSI QOS in MM switch */
 
 // Memories Enabled
     BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_CTL,MEN,1);
@@ -533,7 +545,9 @@ CHAL_CAM_STATUS_CODES chal_cam_cfg_cntrl(CHAL_HANDLE handle, CHAL_CAM_CFG_CNTRL_
 // Normal Priority
     BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_PRI,NP,cfg->norm_pr);
 // Panic Threshold
-    BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_PRI,PT,cfg->panic_thr);
+    BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr, CAM_PRI, PT, cfg->panic_thr);
+    BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr, CAM_PRI, PE, cfg->panic_enable);
+    printk("Camera: Urgent request enable set to %d\n", cfg->panic_enable);
     return chal_status;
 }    
 

@@ -112,6 +112,7 @@ EXPORT_SYMBOL(do_set_poweron_reset_boot);
 void do_set_bootloader_boot(void)
 {
 	pr_info("%s\n", __func__);
+	do_clear_emu_reset_reason();
 	set_emu_reset_reason(SRAM_RST_REASON_BASE, BOOTLOADER_BOOT);
 }
 EXPORT_SYMBOL(do_set_bootloader_boot);
@@ -119,6 +120,7 @@ EXPORT_SYMBOL(do_set_bootloader_boot);
 void do_set_recovery_boot(void)
 {
 	pr_info("%s\n", __func__);
+	do_clear_emu_reset_reason();
 	set_emu_reset_reason(SRAM_RST_REASON_BASE, RECOVERY_BOOT);
 }
 EXPORT_SYMBOL(do_set_recovery_boot);
@@ -126,6 +128,7 @@ EXPORT_SYMBOL(do_set_recovery_boot);
 void do_set_ap_only_boot(void)
 {
 	pr_debug("%s\n", __func__);
+	do_clear_emu_reset_reason();
 	set_emu_reset_reason(SRAM_RST_REASON_BASE, AP_ONLY_BOOT);
 }
 EXPORT_SYMBOL(do_set_ap_only_boot);

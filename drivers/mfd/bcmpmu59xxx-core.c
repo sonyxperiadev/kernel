@@ -92,7 +92,6 @@ static ssize_t bcmpmu_debugfs_regread(struct file *file,
 		num_reg = REG_READ_COUNT_MAX;
 
 	reg_enc = ENC_PMU_REG(FIFO_MODE, map, reg);
-
 	ret = bcmpmu->read_dev_bulk(bcmpmu, reg_enc,
 			  results, num_reg);
 	if (ret < 0) {
@@ -347,7 +346,7 @@ int bcmpmu59xxx_init_pmurev_info(struct bcmpmu59xxx *bcmpmu)
 
 	bcmpmu->rev_info.dig_rev = ((u8)val) & 0xF;
 	bcmpmu->rev_info.ana_rev = (((u8)val) >> 4) & 0xF;
-	printk(KERN_INFO "%s: pmu revision info\n",
+	pr_pmucore(INIT, "%s: pmu revision info\n",
 			__func__);
 	pr_pmucore(INIT, "PMU Gen id = 0x%x\n",
 			bcmpmu->rev_info.gen_id);
@@ -359,6 +358,217 @@ int bcmpmu59xxx_init_pmurev_info(struct bcmpmu59xxx *bcmpmu)
 			bcmpmu->rev_info.ana_rev);
 	return ret;
 }
+
+static int bcmpmu_open(struct inode *inode, struct file *file)
+{
+	file->private_data = bcmpmu_gbl;
+	return 0;
+}
+
+static int bcmpmu_release(struct inode *inode, struct file *file)
+{
+	file->private_data = NULL;
+	return 0;
+}
+
+static ssize_t bcmpmu_read(struct file *file, char *data, size_t len,
+			   loff_t *p)
+{
+	struct bcmpmu59xxx *bcmpmu = file->private_data;
+	struct bcmpmu59xxx_rw_data reg;
+	ssize_t ret = 0;
+	u32 reg_enc;
+
+	if (data == NULL)
+		ret = -EFAULT;
+	else {
+		ret = copy_from_user((void *)&reg, (void *)data,
+		     sizeof(struct bcmpmu59xxx_rw_data));
+		if (!ret) {
+			reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map,
+					reg.addr);
+			ret = bcmpmu->read_dev(bcmpmu, reg_enc,
+					&reg.val);
+			if (ret != 0) {
+				pr_pmucore(ERROR, "%s: read_dev failed.\n",
+				       __func__);
+				goto err;
+			}
+			ret = copy_to_user((void *)data, (void *)&reg,
+			     sizeof(struct bcmpmu59xxx_rw_data));
+			if (!ret)
+				return sizeof(struct bcmpmu59xxx_rw_data);
+			else
+				pr_pmucore(ERROR, "%s: failed to copy"
+						"to user.\n", __func__);
+		} else
+			pr_pmucore(ERROR, "%s: failed to copy from user.\n",
+			       __func__);
+	}
+err:
+	return ret;
+}
+
+static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
+				unsigned long arg)
+{
+	struct bcmpmu59xxx *bcmpmu = file->private_data;
+	struct bcmpmu_rw_data_ltp reg;
+	void __user *argp = (void __user *)arg;
+	unsigned int value[16];
+	int i;
+	ssize_t ret = 0;
+	u32 reg_enc;
+	switch (cmd) {
+	case BCM_PMU_IOCTL_READ_REG:
+		ret = copy_from_user((void *)&reg, argp,
+		     sizeof(struct bcmpmu_rw_data_ltp));
+		if (!ret) {
+			reg.mask = 0xff;
+			reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map,
+					reg.addr);
+			ret = bcmpmu->read_dev(bcmpmu, reg_enc,
+					&value[0]);
+			if (ret != 0) {
+				pr_pmucore(ERROR, "%s: read_dev failed.\n",
+				       __func__);
+				goto err;
+			} else {
+				reg.val[0] = value[0] & 0xff;
+				pr_pmucore(DATA, "BCMPMU register=0x%X,"
+						"val=0x%X,map=0x%X\n",
+						reg.addr, reg.val[0],
+						reg.map);
+			}
+		} else {
+			pr_pmucore(ERROR, "%s: failed to copy"
+					"from user.\n", __func__);
+			goto err;
+		}
+		ret = copy_to_user(argp, (void *)&reg,
+		     sizeof(struct bcmpmu_rw_data_ltp));
+		if (ret != 0)
+			pr_pmucore(ERROR, "%s: failed to copy"
+					"to user.\n", __func__);
+		break;
+
+	case BCM_PMU_IOCTL_BULK_READ_REG:
+		ret = copy_from_user((void *)&reg, argp,
+		     sizeof(struct bcmpmu_rw_data_ltp));
+		if (!ret) {
+			pr_pmucore(DATA, "BCMPMU bulk map=0x%X, addr=0x%X,"
+					"len=0x%X\n", reg.map,
+					reg.addr, reg.len);
+			if ((reg.map < 2) && ((reg.addr + reg.len) < 255)
+			    && (reg.len < 16)) {
+				reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map,
+						reg.addr);
+				ret = bcmpmu->read_dev_bulk(bcmpmu, reg_enc,
+						&value[0], reg.len);
+				if (ret != 0) {
+					pr_pmucore(ERROR,
+					       "%s: read_dev_bulk failed.\n",
+					       __func__);
+					goto err;
+				} else {
+					memcpy(reg.val, value,
+						sizeof(value[reg.len]));
+					for (i = 0; i < reg.len; i++) {
+						reg.val[i] =
+							value[i] & 0xff;
+						pr_pmucore(DATA, "BCMPMU"
+							"register=0x%X,"
+							"value=0x%X\n",
+							reg.addr+i,
+							reg.val[i]);
+					}
+				}
+			}
+		} else {
+			pr_pmucore(ERROR, "%s: failed to copy"
+					"from user.\n", __func__);
+			goto err;
+		}
+		ret = copy_to_user(argp, (void *)&reg,
+		     sizeof(struct bcmpmu_rw_data_ltp));
+		if (ret != 0)
+			pr_pmucore(ERROR, "%s: failed to copy"
+					"to user\n", __func__);
+		break;
+
+	case BCM_PMU_IOCTL_WRITE_REG:
+		ret = copy_from_user((void *)&reg, argp,
+				sizeof(struct bcmpmu_rw_data_ltp));
+		if (!ret) {
+			reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map, reg.addr);
+			ret = bcmpmu->write_dev(bcmpmu, reg_enc, reg.val[0]);
+			pr_pmucore(DATA, "BCMPMU register=0x%X, val=0x%X,"
+					"map=0x%X\n", reg.addr,
+					reg.val[0], reg.map);
+			if (ret != 0) {
+				pr_pmucore(ERROR, "%s: write_dev failed.\n",
+				       __func__);
+				goto err;
+			}
+		} else {
+			pr_pmucore(ERROR, "%s: failed to copy from user.\n",
+			       __func__);
+			goto err;
+		}
+		ret = copy_to_user(argp, (void *)&reg,
+		     sizeof(struct bcmpmu_rw_data_ltp));
+		if (ret != 0)
+			pr_pmucore(ERROR, "%s: failed to copy"
+					"to user\n", __func__);
+		break;
+
+	default:
+		pr_pmucore(ERROR, "%s: bcmpmu_ioctltest: UNSUPPORTED CMD\n",
+			__func__);
+		ret = -ENOTTY;
+	}
+err:
+	return ret;
+}
+
+static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
+			    loff_t *p)
+{
+	struct bcmpmu59xxx *bcmpmu = file->private_data;
+	struct bcmpmu59xxx_rw_data reg;
+	ssize_t ret = 0;
+	u32 reg_enc;
+	if (data != NULL) {
+		ret = copy_from_user((void *)&reg, (void *)data,
+			sizeof(struct bcmpmu59xxx_rw_data));
+		if (!ret) {
+			reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map, reg.addr);
+			ret = bcmpmu->write_dev(bcmpmu, reg_enc, reg.val);
+			if (ret != 0)
+				pr_pmucore(ERROR, "%s: write_dev failed.\n",
+				       __func__);
+			else
+				return sizeof(struct bcmpmu59xxx_rw_data);
+		} else
+			pr_pmucore(ERROR, "%s: failed to copy from user.\n",
+					       __func__);
+	} else
+		ret = -EFAULT;
+	return ret;
+}
+
+static const struct file_operations bcmpmu_fops = {
+	.owner = THIS_MODULE,
+	.open = bcmpmu_open,
+	.read = bcmpmu_read,
+	.unlocked_ioctl = bcmpmu_ioctl_ltp,
+	.write = bcmpmu_write,
+	.release = bcmpmu_release,
+};
+
+static struct miscdevice bcmpmu_device = {
+	MISC_DYNAMIC_MINOR, "bcmpmu", &bcmpmu_fops
+};
 
 static void bcmpmu_register_init(struct bcmpmu59xxx *pmu)
 {
@@ -394,18 +604,18 @@ static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 	struct mfd_cell *pmucells ;
 
 	pr_pmucore(INIT, " <%s>\n", __func__);
-
 	ret = bcmpmu59xxx_init_pmurev_info(bcmpmu);
 	if (ret < 0) {
 		pr_pmucore(ERROR,
 			"Fail to init PMU rev info: %d\n", ret);
-		return ret;
+		goto err;
 	}
-	bcmpmu_gbl = bcmpmu ;
 	bcmpmu_register_init(bcmpmu);
+
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu59xxx_debug_init(bcmpmu);
 #endif
+	bcmpmu_gbl = bcmpmu;
 	mfd_add_devices(bcmpmu->dev, -1, irq_devs,
 				ARRAY_SIZE(irq_devs), NULL, 0);
 	size = bcmpmu_get_pmu_mfd_cell(&pmucells);
@@ -413,7 +623,13 @@ static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 		ret = mfd_add_devices(bcmpmu->dev, -1,
 				pmucells, size,
 				NULL, 0);
+		if (ret < 0)
+			goto err;
 	}
+	ret = misc_register(&bcmpmu_device);
+	if (ret < 0)
+		pr_pmucore(ERROR, "Misc Register failed");
+err:
 	return ret;
 }
 
@@ -424,6 +640,7 @@ static int __devexit bcmpmu59xxx_remove(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove(bcmpmu->dent_bcmpmu);
 #endif
+	misc_deregister(&bcmpmu_device);
 	return 0;
 }
 
