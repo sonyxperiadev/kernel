@@ -7883,8 +7883,14 @@ int __init clock_late_init(void)
 	int i;
 	clock_debug_init();
 	for (i = 0; i < ARRAY_SIZE(hawaii_clk_tbl); i++) {
-		if (hawaii_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU)
-			clock_debug_add_ccu(hawaii_clk_tbl[i].clk);
+		if (hawaii_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU) {
+			if (hawaii_clk_tbl[i].clk->id == CLK_ROOT_CCU_CLK_ID)
+				clock_debug_add_ccu(hawaii_clk_tbl[i].clk,
+						true);
+			else
+				clock_debug_add_ccu(hawaii_clk_tbl[i].clk,
+						false);
+		}
 		else if (hawaii_clk_tbl[i].clk->clk_type == CLK_TYPE_MISC)
 			clock_debug_add_misc_clock(hawaii_clk_tbl[i].clk);
 		else

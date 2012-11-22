@@ -727,7 +727,7 @@ unsigned long clock_get_xtal(void);
 #ifdef CONFIG_DEBUG_FS
 int clock_debug_init(void);
 int clock_debug_add_clock(struct clk *c);
-int __init clock_debug_add_ccu(struct clk *c);
+int __init clock_debug_add_ccu(struct clk *c, bool is_root_ccu);
 #else
 #define	clock_debug_init() do {} while(0)
 #define	clock_debug_add_clock(clk) do {} while(0)
