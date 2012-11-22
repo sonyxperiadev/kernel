@@ -111,6 +111,8 @@ static struct platform_device m4u_platform_device = {
 struct m4u_debugfs {
 	struct dentry			*debug_root;
 	struct dentry			*debug_map_fs;
+	struct dentry			*debug_xwp_fs;
+
 	struct dentry			*debug_reg_dir;
 	/* Registers */
 	struct dentry			*debug_cr_fs;
@@ -741,6 +743,12 @@ void m4u_debugfs_init(struct m4u_device *mdev, struct platform_device *pdev)
 	mdev->debugfs.debug_map_fs = debugfs_create_file(debug_name, 0664,
 						 mdev->debugfs.debug_root, mdev,
 						 &m4u_debug_map_fops);
+
+	/* Create debugfs xfifo write pointer file */
+	snprintf(debug_name, 64, "xfifo_wr_ptr");
+	mdev->debugfs.debug_xwp_fs = debugfs_create_u32(debug_name, 0664,
+						 mdev->debugfs.debug_root,
+						 (unsigned int *)&mdev->xfifo_widx);
 
 	/* Create register files */
 	snprintf(debug_name, 64, "registers");
