@@ -41,6 +41,7 @@
 #define	M4U_PAGE_SHIFT			(12)
 #define	M4U_TLB_LINE_SHIFT		(3)
 #define	M4U_TLB_LINE_SIZE		(1<<M4U_TLB_LINE_SHIFT)
+#define CONFIG_M4U_ALIGNMENT		(8)
 
 /**
  * m4u_mapping - m4u mapping structure
@@ -307,7 +308,6 @@ int m4u_pool_create(struct m4u_device *mdev)
 	return 0;
 }
 
-#define CONFIG_M4U_ALIGNMENT (8)
 static int m4u_pool_reserve_mma(struct m4u_device *mdev, u32 mma, int page_count)
 {
 	struct m4u_platform_data *pdata = &mdev->pdata;
@@ -347,8 +347,6 @@ static int m4u_pool_alloc_mma(struct m4u_device *mdev, u32 page_count, u32 align
 
 	if (!page_count || page_count > mdev->page_count)
 		return INVALID_MMA;
-	if (align > CONFIG_M4U_ALIGNMENT)
-		align = CONFIG_M4U_ALIGNMENT;
 	mask = (1 << align) - 1;
 	mutex_lock(&mdev->lock);
 	pageno = bitmap_find_next_zero_area(mdev->bitmap, mdev->page_count,
@@ -507,12 +505,12 @@ static int m4u_mapping_create(struct m4u_device *mdev,
 	/* Add it to static list */
 	list_add_tail(&mapping->list, &mdev->map_list);
 
-	/* Validate the page size is multiple of 4K and number of pages is
-	 * multiple of 8 */
 	if (sgt) {
 		pr_info("SG table map\n");
 		m4u_map_sgtable(mdev, region->mma, sgt);
 	} else {
+		/* Validate the page size is multiple of 4K and number of pages
+		 * is multiple of 8 */
 		page_order = ilog2(region->page_size);
 		n = region->size >> page_order;
 		if ((page_order < M4U_PAGE_SHIFT) || (!n)) {
@@ -576,9 +574,11 @@ static u32 m4u_mapping_lookup(struct m4u_device *mdev, u32 pa, u32 size,
 	struct list_head *elt;
 	struct m4u_mapping *mapping = NULL;
 	struct m4u_region *r;
+	u32 mask;
 	u32 mma = INVALID_MMA;
 	u32 pa_end = pa + size;
 
+	mask = (1 << align) - 1;
 	mutex_lock(&mdev->lock);
 	list_for_each(elt, &mdev->map_list) {
 		mapping = list_entry(elt, struct m4u_mapping, list);
@@ -588,10 +588,14 @@ static u32 m4u_mapping_lookup(struct m4u_device *mdev, u32 pa, u32 size,
 		pr_debug("Search region mma(0x%08x) pa(0x%08x) size(0x%08x)\n",
 				r->mma, r->pa, r->size);
 		if ((pa >= r->pa) && (pa_end <= r->pa + r->size)) {
-			/* TODO: Alignment check */
 			mma = r->mma + (pa - r->pa);
-			m4u_mapping_get(mapping);
-			break;
+			if ((mma & mask) == 0) {
+				m4u_mapping_get(mapping);
+				break;
+			} else {
+				pr_err("Lookup failed because of align mma(%#x) align(%d) \n",
+						mma, align);
+			}
 		}
 	}
 	mutex_unlock(&mdev->lock);
@@ -604,8 +608,12 @@ u32 m4u_map_contiguous(struct m4u_device *mdev, u32 pa, u32 size, u32 align)
 	u32 mma = INVALID_MMA;
 	int ret;
 
-	pr_debug("map_contiguous pa(0x%08x) size(0x%08x) align(%d) \n",
+	pr_debug("map_contiguous pa(0x%08x) size(0x%08x) align(%d)\n",
 			pa, size, align);
+	if (align > CONFIG_M4U_ALIGNMENT) {
+		pr_err("Align(%d) > max(%d)\n", align, CONFIG_M4U_ALIGNMENT);
+		align = CONFIG_M4U_ALIGNMENT;
+	}
 	/* Search for existing mapping matching pa, size, align */
 	mma = m4u_mapping_lookup(mdev, pa, size, align);
 	if (mma == INVALID_MMA) {
@@ -644,6 +652,10 @@ u32 m4u_map(struct m4u_device *mdev, struct sg_table *sgt, u32 size, u32 align)
 	u32 pa, mma = INVALID_MMA;
 	int ret;
 
+	if (align > CONFIG_M4U_ALIGNMENT) {
+		pr_err("Align(%d) > max(%d)\n", align, CONFIG_M4U_ALIGNMENT);
+		align = CONFIG_M4U_ALIGNMENT;
+	}
 	if (!IS_ERR_OR_NULL(sgt)) {
 		if (sgt->nents == 1)
 		{
