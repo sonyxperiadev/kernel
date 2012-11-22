@@ -260,6 +260,20 @@ struct android_pmem_platform_data android_pmem_data = {
 #endif
 
 #ifdef CONFIG_ION
+struct ion_platform_data ion_system_data = {
+	.nr = 1,
+	.heaps = {
+		[0] = {
+			.id    = 3,
+			.type  = ION_HEAP_TYPE_SYSTEM,
+			.name  = "ion-system-0",
+			.base  = 0,
+			.limit = 0,
+			.size  = 0,
+		},
+	},
+};
+
 struct ion_platform_data ion_carveout_data = {
 	.nr = 2,
 	.heaps = {
@@ -1721,6 +1735,9 @@ static void hawaii_add_pdata(void)
 	hawaii_hsotgctrl_platform_device.dev.platform_data =
 	    &hsotgctrl_plat_data;
 #endif
+#ifdef CONFIG_ION
+	ion_system_device.dev.platform_data = &ion_system_data;
+#endif
 }
 
 void __init hawaii_add_common_devices(void)
@@ -1743,6 +1760,9 @@ static void __init hawaii_add_devices(void)
 #endif
 
 #ifdef CONFIG_ION
+#ifdef CONFIG_M4U
+	platform_device_register(&ion_system_device);
+#endif
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);
