@@ -87,7 +87,6 @@ static struct resource m4u_resources[] = {
 	[0] = {
 		.start = MMMMU_OPEN_BASE_ADDR,
 		.end = MMMMU_OPEN_BASE_ADDR + SZ_4K - 1,
-		/* TODO: Size from rdb? */
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
@@ -143,8 +142,10 @@ struct m4u_device {
 	u32				*xfifo_base;
 	u32				xfifo_widx;
 	struct m4u_platform_data	pdata;
+	unsigned long			*bitmap;
+	unsigned long			page_count;
 	struct list_head		map_list;
-	int				page_count;
+	int				map_page_count;
 	u32				tlb_lock_count;
 	struct m4u_debugfs		debugfs;
 };
@@ -286,6 +287,108 @@ static int m4u_reg_init(struct m4u_device *mdev)
 	return 0;
 }
 
+int m4u_pool_create(struct m4u_device *mdev)
+{
+	struct m4u_platform_data *pdata = &mdev->pdata;
+	u32 page_count;
+	int bitmap_size;
+
+	page_count = pdata->mma_size >> M4U_PAGE_SHIFT;
+	mdev->page_count = page_count;
+	bitmap_size = BITS_TO_LONGS(page_count) * sizeof(long) + sizeof(long);
+	mdev->bitmap = kzalloc(bitmap_size, GFP_KERNEL);
+	if (!mdev->bitmap) {
+		pr_err("bitmap buffer allocation (0x%x) failed. \n", bitmap_size);
+		return -ENOMEM;
+	}
+	mdev->bitmap[BITS_TO_LONGS(page_count)] = 0x20;
+	pr_info("mma bitmap(%p 0x%08x) page_count(%ld) \n",
+			mdev->bitmap, bitmap_size, mdev->page_count);
+
+	return 0;
+}
+
+#define CONFIG_M4U_ALIGNMENT (8)
+static int m4u_pool_reserve_mma(struct m4u_device *mdev, u32 mma, int page_count)
+{
+	struct m4u_platform_data *pdata = &mdev->pdata;
+	unsigned long pageno, end;
+
+	pr_debug("reserve_mma: mma(%#x) page_count(%d) \n", mma, page_count);
+	if (!page_count || page_count > mdev->page_count)
+		goto err;
+	if ((mma < pdata->mma_begin) ||
+			(mma >= pdata->mma_begin + pdata->mma_size))
+		goto err;
+	pageno = (mma - pdata->mma_begin) >> M4U_PAGE_SHIFT;
+	if (pageno + page_count > mdev->page_count)
+		goto err;
+
+	mutex_lock(&mdev->lock);
+	end = find_next_bit(mdev->bitmap, mdev->page_count, pageno);
+	if (end < pageno+page_count) {
+		mutex_unlock(&mdev->lock);
+		goto err;
+	}
+	bitmap_set(mdev->bitmap, pageno, page_count);
+	mutex_unlock(&mdev->lock);
+	return 0;
+
+err:
+	pr_err("Reserving MMA failed for mma(%#x) page_count(%d) \n",
+			mma, page_count);
+	return -ENOMEM;
+}
+
+static int m4u_pool_alloc_mma(struct m4u_device *mdev, u32 page_count, u32 align)
+{
+	struct m4u_platform_data *pdata = &mdev->pdata;
+	unsigned long mask, pageno;
+	u32 mma = INVALID_MMA;
+
+	if (!page_count || page_count > mdev->page_count)
+		return INVALID_MMA;
+	if (align > CONFIG_M4U_ALIGNMENT)
+		align = CONFIG_M4U_ALIGNMENT;
+	mask = (1 << align) - 1;
+	mutex_lock(&mdev->lock);
+	pageno = bitmap_find_next_zero_area(mdev->bitmap, mdev->page_count,
+			0, page_count, mask);
+	if (pageno < mdev->page_count) {
+		bitmap_set(mdev->bitmap, pageno, page_count);
+		mma = pdata->mma_begin + (pageno << M4U_PAGE_SHIFT);
+	} else {
+		pr_err("MMA for (%#x)pages and (%d)align not available in pool \n",
+				page_count, align);
+	}
+	mutex_unlock(&mdev->lock);
+	pr_debug("get_mma: page_count(%d) align(%d) mma(%#x) \n",
+			page_count, align, mma);
+	return mma;
+}
+
+static void m4u_pool_free_mma(struct m4u_device *mdev, u32 mma, u32 page_count)
+{
+	struct m4u_platform_data *pdata = &mdev->pdata;
+	unsigned long pageno;
+
+	pr_debug("free_mma: mma(%#x) page_count(%d) \n", mma, page_count);
+	if (!page_count || page_count > mdev->page_count)
+		goto err;
+	if ((mma < pdata->mma_begin) ||
+			(mma >= pdata->mma_begin + pdata->mma_size))
+		goto err;
+	pageno = (mma - pdata->mma_begin) >> M4U_PAGE_SHIFT;
+	if (pageno + page_count > mdev->page_count)
+		goto err;
+	bitmap_clear(mdev->bitmap, pageno, page_count);
+	return;
+
+err:
+	pr_err("Freeing MMA failed for mma(%#x) page_count(%d) \n",
+			mma, page_count);
+}
+
 /* Invalidation of page will have to be done external */
 static void m4u_map_single_page(struct m4u_device *mdev, u32 mma, u32 pa,
 		int page_order, u32 valid)
@@ -335,9 +438,9 @@ static int m4u_map_pages(struct m4u_device *mdev, u32 mma, u32 pa,
 		}
 	}
 	if (valid)
-		mdev->page_count += n;
+		mdev->map_page_count += n;
 	else
-		mdev->page_count -= n;
+		mdev->map_page_count -= n;
 	return 0;
 }
 
@@ -368,7 +471,7 @@ static int m4u_mapping_create(struct m4u_device *mdev,
 		mapping->sgt = *sgt;
 	else
 		mapping->contig_flag = 1;
-	pr_info("Add region - mma(0x%08x) pa(0x%08x) size(0x%08x) page_size(0x%08x)\n",
+	pr_debug("Add region - mma(0x%08x) pa(0x%08x) size(0x%08x) page_size(0x%08x)\n",
 			region->mma, region->pa, region->size,
 			region->page_size);
 
@@ -423,6 +526,7 @@ static void _m4u_mapping_destroy(struct kref *kref)
 	m4u_map_pages(mdev, r->mma, r->pa, page_order, n, 0);
 	/* TODO: Unlock TLB if region was TLB locked */
 	m4u_tlb_invalidate(mdev, r->mma, page_order, n);
+	m4u_pool_free_mma(mdev, r->mma, r->size >> M4U_PAGE_SHIFT);
 
 	/* Remove the node from list and free the node */
 	list_del(&mapping->list);
@@ -471,6 +575,8 @@ u32 m4u_map_contiguous(struct m4u_device *mdev, u32 pa, u32 size, u32 align)
 	u32 mma = INVALID_MMA;
 	int ret;
 
+	pr_debug("map_contiguous pa(0x%08x) size(0x%08x) align(%d) \n",
+			pa, size, align);
 	/* Search for existing mapping matching pa, size, align */
 	mma = m4u_mapping_lookup(mdev, pa, size, align);
 	if (mma == INVALID_MMA) {
@@ -482,12 +588,16 @@ u32 m4u_map_contiguous(struct m4u_device *mdev, u32 pa, u32 size, u32 align)
 					size);
 			size = 1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT);
 		}
-		/* TODO: Get mma from pool satisfying the alignment request */
+		/* Get mma from pool satisfying the alignment request */
+		mma = m4u_pool_alloc_mma(mdev, size>>M4U_PAGE_SHIFT, align);
+		/* Create a single contiguouse m4u mapping if mma is available */
 		if (mma != INVALID_MMA) {
 			region.mma = mma;
 			region.pa = pa;
 			region.size = size;
-			region.page_size = size >> M4U_TLB_LINE_SHIFT;
+			/* TODO: Use bigger page-sizes if pa ia aligned */
+			/* region.page_size = size >> M4U_TLB_LINE_SHIFT; */
+			region.page_size = SZ_4K;
 			ret = m4u_mapping_create(mdev, &region, NULL);
 			if (ret)
 				mma = INVALID_MMA;
@@ -505,29 +615,33 @@ u32 m4u_map(struct m4u_device *mdev, struct sg_table *sgt, u32 size, u32 align)
 	u32 pa, mma = INVALID_MMA;
 	int ret;
 
-	if (!IS_ERR_OR_NULL(sgt) && (sgt->nents == 1)) {
-		pa = sg_phys(sgt->sgl);
-		mma = m4u_map_contiguous(mdev, pa, size, align);
-	} else {
-		size = roundup_pow_of_two(size);
-		if (size < (1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT))) {
-			pr_debug("Invalid size (%d) for creating mapping\n",
-					size);
-			size = 1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT);
+	if (!IS_ERR_OR_NULL(sgt)) {
+		if (sgt->nents == 1)
+		{
+			pa = sg_phys(sgt->sgl);
+			mma = m4u_map_contiguous(mdev, pa, size, align);
+		} else {
+			size = roundup_pow_of_two(size);
+			if (size < (1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT))) {
+				pr_debug("Invalid size (%d) for creating mapping \n", size);
+				size = 1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT);
+			}
+			/* Get mma from pool satisfying the alignment request */
+			mma = m4u_pool_alloc_mma(mdev, size>>M4U_PAGE_SHIFT, align);
+			/* Create a single contiguouse m4u mapping if mma is available */
+			if (mma != INVALID_MMA) {
+				region.mma = mma;
+				region.pa = 0;
+				region.size = size;
+				/* TODO: Utilize bigger pagesizes */
+				region.page_size = (1 << M4U_PAGE_SHIFT);
+				ret = m4u_mapping_create(mdev, &region, sgt);
+				if (ret)
+					mma = INVALID_MMA;
+			}
+			pr_debug("map_sgt mma(0x%08x) sgt(%p) size(0x%08x) align(%d) \n",
+					mma, sgt, size, align);
 		}
-		/* TODO: Get mma from pool satisfying the alignment request */
-		if (mma != INVALID_MMA) {
-			region.mma = mma;
-			region.pa = 0;
-			region.size = size;
-			/* TODO: Utilize bigger pagesizes */
-			region.page_size = (1 << M4U_PAGE_SHIFT);
-			ret = m4u_mapping_create(mdev, &region, sgt);
-			if (ret)
-				mma = INVALID_MMA;
-		}
-		pr_debug("map_sgt mma(0x%08x) sgt(%p) size(0x%08x) align(%d)\n",
-				mma, sgt, size, align);
 	}
 	return mma;
 }
@@ -574,6 +688,9 @@ static void m4u_exit(struct m4u_device *mdev)
 	if (mdev->garbage_page)
 		__free_page(mdev->garbage_page);
 	mdev->garbage_page = NULL;
+	if(mdev->bitmap)
+		kfree(mdev->bitmap);
+	mdev->bitmap = NULL;
 }
 
 static int m4u_init(struct m4u_device *mdev)
@@ -616,14 +733,18 @@ static int m4u_init(struct m4u_device *mdev)
 			mdev->xfifo_base, mdev->xfifo_handle,
 			pdata->xfifo_size);
 
-	/* TODO: Allocate bitmap for mma pool */
+	/* Allocate bitmap for mma pool */
+	if (m4u_pool_create(mdev))
+		goto error;
 
 	/* Initialize m4u registers */
 	m4u_reg_init(mdev);
 
 	/* Initialize m4u page table */
 	for (i = 0; i < pdata->nr; i++) {
-		/* TODO: Validate mma space is a valid area in pool */
+		ret = m4u_pool_reserve_mma(mdev, pdata->regions[i].mma, pdata->regions[i].size>>M4U_PAGE_SHIFT);
+		if (ret)
+			goto error;
 		ret = m4u_mapping_create(mdev, &pdata->regions[i], NULL);
 		if (ret)
 			goto error;
@@ -632,6 +753,7 @@ static int m4u_init(struct m4u_device *mdev)
 	return 0;
 
 error:
+	pr_err("m4u_init failed \n");
 	m4u_exit(mdev);
 	return -ENOMEM;
 }
