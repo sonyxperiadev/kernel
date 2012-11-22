@@ -62,13 +62,14 @@ config MMDMA
 	default n
 
 config BCMPMU_RPC
-	bool "Support rpc with bcmpmu driver"
+	bool "Enable BCMPMU RPC driver"
 	depends on BRCM_CHAR_DRIVERS
-	depends on MFD_BCMPMU || MFD_BCM_PMU59056
+	depends on MFD_BCM_PMU59xxx
 	depends on SENSORS_BCMPMU
 	default n
 	---help---
-	Select to support PMU ADC info to Modem.
+	Select to enable PMU RPC driver to send ADC raw data
+	to Modem.
 
 config BCM_AP_PANIC_ON_CPCRASH
         bool "Support for crashing AP when CP crashes"

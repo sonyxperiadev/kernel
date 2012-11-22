@@ -31,11 +31,6 @@
 #include <linux/seq_file.h>
 #endif
 
-#define BCMPMU_PRINT_ERROR (1U << 0)
-#define BCMPMU_PRINT_INIT (1U << 1)
-#define BCMPMU_PRINT_FLOW (1U << 2)
-#define BCMPMU_PRINT_DATA (1U << 3)
-
 #define PMU_TEMP_MULTI_CONST 497
 #define KELVIN_CONST 276
 
@@ -209,7 +204,7 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 
 	if (rtm_read[0] & ADC_READ_INVALID) {
 		pr_hwmon(ERROR, "%s RTM read INVALID, try again\n", __func__);
-		return -EAGAIN;
+		goto err;
 
 	} else {
 		/* clear all except 0, 1 bits*/

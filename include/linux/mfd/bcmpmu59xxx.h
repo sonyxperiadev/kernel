@@ -734,6 +734,11 @@ struct bcmpmu59xxx_regulator_pdata {
 	u8 num_rgltr;
 };
 
+struct bcmpmu59xxx_rpc_pdata {
+	u32 delay;
+};
+
+
 struct bcmpmu59xxx_platform_data {
 	struct i2c_slave_platform_data i2c_pdata;
 	int (*init) (struct bcmpmu59xxx *bcmpmu);
@@ -761,6 +766,7 @@ struct bcmpmu59xxx {
 	void *rgltr_data;
 	void *ponkeyinfo;
 	void *adc;
+	void *rpcinfo;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_bcmpmu;
 #endif	/*CONFIG_DEBUG_FS*/

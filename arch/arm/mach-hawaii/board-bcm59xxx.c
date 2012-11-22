@@ -842,6 +842,11 @@ struct bcmpmu59xxx_audio_pdata audio_pdata = {
 	.ihf_autoseq_dis = 100,
 };
 
+struct bcmpmu59xxx_rpc_pdata rpc_pdata = {
+	.delay = 30000, /*rpc delay - 30 sec*/
+};
+
+
 struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.bcmpmu_rgltr = bcm59xxx_regulators,
 	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
@@ -1050,6 +1055,13 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.platform_data = adc_pdata,
 		.pdata_size = sizeof(adc_pdata),
 	},
+	{
+		.name = "bcmpmu_rpc",
+		.id = -1,
+		.platform_data = &rpc_pdata,
+		.pdata_size = sizeof(rpc_pdata),
+	},
+
 };
 
 static struct i2c_board_info pmu_i2c_companion_info[] = {
