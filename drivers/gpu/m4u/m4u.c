@@ -386,6 +386,20 @@ err:
 			mma, page_count);
 }
 
+static inline u32 m4u_get_page_size(u32 pa, u32 mma, u32 size)
+{
+	u32 mask;
+
+	while (size > (1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT))) {
+		mask = size - 1;
+		if (((pa & mask) | (mma & mask)) == 0)
+			break;
+		size >>= 1;
+	}
+	return (size >> M4U_TLB_LINE_SHIFT);
+
+}
+
 /* Invalidation of page will have to be done external */
 static void m4u_map_single_page(struct m4u_device *mdev, u32 mma, u32 pa,
 		int page_order, u32 valid)
@@ -617,14 +631,16 @@ u32 m4u_map_contiguous(struct m4u_device *mdev, u32 pa, u32 size, u32 align)
 	/* Search for existing mapping matching pa, size, align */
 	mma = m4u_mapping_lookup(mdev, pa, size, align);
 	if (mma == INVALID_MMA) {
-		/* TODO: Use page_size = size for expected sizes and keep
-		 *  track of free areas in a separate list */
 		size = roundup_pow_of_two(size);
 		if (size < (1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT))) {
 			pr_debug("Invalid size (%d) for creating mapping\n",
 					size);
 			size = 1 << (M4U_PAGE_SHIFT + M4U_TLB_LINE_SHIFT);
 		}
+
+		/* TODO: Use page_size = size for expected sizes if aligned and
+		 * keep track of free areas in a separate list */
+
 		/* Get mma from pool satisfying the alignment request */
 		mma = m4u_pool_alloc_mma(mdev, size>>M4U_PAGE_SHIFT, align);
 		/* Create a single contiguouse m4u mapping if mma is available */
@@ -632,9 +648,7 @@ u32 m4u_map_contiguous(struct m4u_device *mdev, u32 pa, u32 size, u32 align)
 			region.mma = mma;
 			region.pa = pa;
 			region.size = size;
-			/* TODO: Use bigger page-sizes if pa ia aligned */
-			/* region.page_size = size >> M4U_TLB_LINE_SHIFT; */
-			region.page_size = SZ_4K;
+			region.page_size = m4u_get_page_size(pa, mma, size);
 			ret = m4u_mapping_create(mdev, &region, NULL);
 			if (ret)
 				mma = INVALID_MMA;
@@ -674,7 +688,8 @@ u32 m4u_map(struct m4u_device *mdev, struct sg_table *sgt, u32 size, u32 align)
 				region.mma = mma;
 				region.pa = 0;
 				region.size = size;
-				/* TODO: Utilize bigger pagesizes */
+				/* TODO: Utilize bigger pagesizes if bigger pageblocks
+				 * available in the sg_table  and are aligned */
 				region.page_size = 0;
 				ret = m4u_mapping_create(mdev, &region, sgt);
 				if (ret)
