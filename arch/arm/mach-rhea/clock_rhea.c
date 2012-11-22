@@ -7472,8 +7472,14 @@ int __init clock_late_init(void)
 	int i;
 	clock_debug_init();
 	for (i=0; i<ARRAY_SIZE(rhea_clk_tbl); i++) {
-		if (rhea_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU)
-			clock_debug_add_ccu(rhea_clk_tbl[i].clk);
+		if (rhea_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU) {
+			if (rhea_clk_tbl[i].clk->id == CLK_ROOT_CCU_CLK_ID)
+				clock_debug_add_ccu(rhea_clk_tbl[i].clk,
+						true);
+			else
+				clock_debug_add_ccu(rhea_clk_tbl[i].clk,
+						false);
+		}
 		else if (rhea_clk_tbl[i].clk->clk_type == CLK_TYPE_MISC)
 			clock_debug_add_misc_clock(rhea_clk_tbl[i].clk);
 		else

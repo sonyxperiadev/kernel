@@ -4990,7 +4990,7 @@ static ssize_t set_clk_idle_debug(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
-	sscanf(input_str, "%d%d%x", &clk_idle, &db_sel, &dbg_bit_sel);
+	sscanf(input_str, "%x%d%x", &clk_idle, &db_sel, &dbg_bit_sel);
 	set_clk_idle_debug_mon(clk_idle, db_sel, dbg_bit_sel);
 	return count;
 }
@@ -5016,7 +5016,7 @@ static ssize_t set_clk_mon_dbg(struct file *file, char const __user *buf,
 		len = count;
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
-	sscanf(input_str, "%d%d%d%x", &path, &clk_sel, &clk_ctl, &dbg_bit_sel);
+	sscanf(input_str, "%d%x%d%x", &path, &clk_sel, &clk_ctl, &dbg_bit_sel);
 	clk_mon_dbg(clock, path, clk_sel, clk_ctl, dbg_bit_sel);
 	return count;
 }
@@ -5783,14 +5783,10 @@ int __init clock_debug_init(void)
 				dent_clk_root_dir, (int *)&clk_debug))
 		return -ENOMEM;
 
-	if (!debugfs_create_file("clk_idle_debug", S_IRUSR | S_IWUSR,
-				 dent_clk_root_dir, NULL,
-				 &clock_idle_debug_fops))
-		return -ENOMEM;
 	return 0;
 }
 
-int __init clock_debug_add_ccu(struct clk *c)
+int __init clock_debug_add_ccu(struct clk *c, bool is_root_ccu)
 {
 	#define DENT_COUNT 6
 	struct ccu_clk *ccu_clk;
@@ -5851,6 +5847,12 @@ int __init clock_debug_add_ccu(struct clk *c)
 		dent = debugfs_create_file("dbg_bus", S_IWUSR|S_IRUGO,
 					  ccu_clk->dent_ccu_dir, c,
 					  &ccu_dbg_bus_fops);
+	}
+	if (is_root_ccu) {
+		if (!debugfs_create_file("clk_idle_debug", S_IRUSR | S_IWUSR,
+					ccu_clk->dent_ccu_dir, NULL,
+					&clock_idle_debug_fops))
+			return -ENOMEM;
 	}
 
 	return 0;
