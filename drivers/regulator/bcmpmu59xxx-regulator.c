@@ -84,7 +84,15 @@ static int debug_mask =  BCMPMU_PRINT_INIT | BCMPMU_PRINT_ERROR;
 		} \
 	} while (0)
 
+#ifdef CONFIG_DEBUG_FS
+struct pwr_mode_reg {
+	u8 pwr_mode[REGL_PMMODE_REG_MAX];
+};
 
+struct pwr_mode_reg rgltr_pmode_buf[BCMPMU_REGULATOR_MAX];
+
+static int force_enable;
+#endif
 static int __3bit_pmmode_frm_map(u32 pcpin_map, u32 dsm_mode,
 					u8 *pmmode)
 {
@@ -287,16 +295,24 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 						initdata->dsm_mode,
 						pmmode);
 	for (i = 0; i < count; i++) {
-		/*TODO: should we change to read-modify-write ??*/
-		ret = bcmpmu->write_dev(bcmpmu, rinfo[id].reg_pmctrl1 + i,
-						 pmmode[i]);
-		if (ret)
-			break;
-
-		pr_rgltr(FLOW, "<%s> wrtite : reg[%x] =  %x\n",
-		__func__, rinfo[id].reg_pmctrl1 + i, pmmode[i]);
+#ifdef CONFIG_DEBUG_FS
+		if (force_enable == 0) {
+#endif
+			/*TODO: should we change to read-modify-write ??*/
+			ret = bcmpmu->write_dev(bcmpmu,
+					rinfo[id].reg_pmctrl1 + i,
+					pmmode[i]);
+			if (ret)
+				break;
+			pr_rgltr(FLOW, "<%s> wrtite : reg[%x] =  %x\n",
+					__func__, rinfo[id].reg_pmctrl1 + i,
+					pmmode[i]);
+#ifdef CONFIG_DEBUG_FS
+		} else {
+			rgltr_pmode_buf[id].pwr_mode[i] = pmmode[i];
+		}
+#endif
 	}
-
 	if (ret) {
 		pr_rgltr(ERROR, "regltr enable error <%s>\n", __func__);
 		return ret;
@@ -340,20 +356,30 @@ static int bcmpmureg_disable(struct regulator_dev *rdev)
 		reg_cnt = 2;
 	}
 
-	for (i = 0; i < reg_cnt; i++) {
-		/*TODO: should we change to read-modify-write ??*/
-		ret = bcmpmu->write_dev(bcmpmu, rinfo[id].reg_pmctrl1 + i, val);
-		if (ret)
-			break;
-
-		pr_rgltr(FLOW, "<%s> wrtite : reg[%x] =  %x\n",
-		__func__, rinfo[id].reg_pmctrl1 + i, val);
+#ifdef CONFIG_DEBUG_FS
+	if (force_enable == 0) {
+#endif
+		for (i = 0; i < reg_cnt; i++) {
+			/*TODO: should we change to read-modify-write ??*/
+			ret = bcmpmu->write_dev(bcmpmu,
+					rinfo[id].reg_pmctrl1 + i,
+					val);
+			if (ret)
+				break;
+			pr_rgltr(FLOW, "<%s> wrtite : reg[%x] =  %x\n",
+					__func__, rinfo[id].reg_pmctrl1 + i,
+					val);
+		}
+		if (ret) {
+			pr_rgltr(ERROR, "ERROR <%s>\n", __func__);
+			return ret;
+		}
+#ifdef CONFIG_DEBUG_FS
+	} else {
+		for (i = 0; i < reg_cnt; i++)
+			rgltr_pmode_buf[id].pwr_mode[i] = val;
 	}
-
-	if (ret) {
-		pr_rgltr(ERROR, "ERROR <%s>\n", __func__);
-		return ret;
-	}
+#endif
 	rinfo[id].flags &= ~RGLR_ON;
 	return 0;
 }
@@ -694,6 +720,112 @@ static const struct file_operations debug_rgltr_get_vlt_fops = {
 	.write = bcmpmu_dbg_rgltr_get_vlt,
 };
 
+static int dbg_enable_all_regulators(struct bcmpmu59xxx *bcmpmu)
+{
+	int id;
+	struct bcmpmu59xxx_regulator_info *rinfo;
+	int count, i;
+	int ret = 0;
+
+	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
+
+	BUG_ON(rinfo == NULL);
+	for (id = 0; id < BCMPMU_REGULATOR_MAX; id++) {
+		if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
+			count = REGL_PMMODE_REG_MAX;
+		else
+			count = 2;
+		for (i = 0; i < count; i++) {
+			ret = bcmpmu->write_dev(bcmpmu,
+					rinfo[id].reg_pmctrl1 + i, 0);
+			if (ret)
+				break;
+		}
+		if (ret) {
+			pr_info("rgltr enable error <%s>\n", __func__);
+			return ret;
+		}
+	}
+	return 0;
+}
+
+static int dbg_restore_rgltr_reg(struct bcmpmu59xxx *bcmpmu)
+{
+	int id;
+	struct bcmpmu59xxx_regulator_info *rinfo;
+	int count, i;
+	int ret = 0;
+
+	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
+	BUG_ON(rinfo == NULL);
+	for (id = 0; id < BCMPMU_REGULATOR_MAX; id++) {
+		if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
+			count = REGL_PMMODE_REG_MAX;
+		else
+			count = 2;
+		for (i = 0; i < count; i++) {
+			ret = bcmpmu->write_dev(bcmpmu,
+					rinfo[id].reg_pmctrl1 + i,
+					rgltr_pmode_buf[id].pwr_mode[i]);
+			if (ret)
+				break;
+		}
+		if (ret) {
+			pr_info("rgltr restore error <%s>\n", __func__);
+			return ret;
+		}
+	}
+	return 0;
+}
+
+static int bcmpmu_debug_get_enable_all(void *data, u64 *val)
+{
+	*val = (u64)force_enable;
+	return 0;
+}
+
+static int bcmpmu_debug_set_enable_all(void *data, u64 val)
+{
+	struct bcmpmu59xxx *bcmpmu = (struct bcmpmu59xxx *)data;
+	BUG_ON(!bcmpmu);
+
+	if (val == 1 && force_enable == 0) {
+		int id;
+		struct bcmpmu59xxx_regulator_info *rinfo;
+		struct bcmpmu59xxx_regulator_init_data *initdata;
+		struct bcmpmu59xxx_rgltr_param *param;
+		int count, i;
+		u8 reg_val;
+		rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
+		param = bcmpmu->rgltr_data;
+		BUG_ON(rinfo == NULL || param == NULL);
+		for (id = 0; id < BCMPMU_REGULATOR_MAX; id++) {
+			initdata = param->pdata->bcmpmu_rgltr + id;
+			if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
+				count = REGL_PMMODE_REG_MAX;
+			else
+				count = 2;
+			for (i = 0; i < count; i++) {
+				bcmpmu->read_dev(bcmpmu,
+						rinfo[id].reg_pmctrl1 + i,
+						&reg_val);
+				rgltr_pmode_buf[id].pwr_mode[i] = reg_val;
+			}
+		}
+		dbg_enable_all_regulators(bcmpmu);
+		force_enable = 1;
+	} else if (val == 0 && force_enable == 1) {
+		dbg_restore_rgltr_reg(bcmpmu);
+		force_enable = 0;
+	} else
+		return -EINVAL;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(debug_rgltr_enable_all_fops,
+		bcmpmu_debug_get_enable_all,
+		bcmpmu_debug_set_enable_all, "%llu\n");
+
 static void bcmpmu59xxx_debug_init(struct bcmpmu59xxx_rgltr_param *param)
 {
 	struct bcmpmu59xxx *bcmpmu = param->bcmpmu;
@@ -734,6 +866,10 @@ static void bcmpmu59xxx_debug_init(struct bcmpmu59xxx_rgltr_param *param)
 	if (!debugfs_create_u32("dbg_mask", S_IWUSR | S_IRUSR,
 				param->rgltr_dbgfs, &debug_mask))
 		goto err ;
+	if (!debugfs_create_file("force_enable_all", S_IWUSR | S_IRUSR,
+				param->rgltr_dbgfs, bcmpmu,
+				&debug_rgltr_enable_all_fops))
+		goto err;
 
 	return;
 err:
