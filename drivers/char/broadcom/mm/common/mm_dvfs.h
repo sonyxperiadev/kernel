@@ -17,7 +17,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "mm_common.h"
 
 typedef enum {
-	MM_DVFS_UPDATE_UNKNOWN=0,
+	MM_DVFS_UPDATE_UNKNOWN = 0,
 	MM_DVFS_UPDATE_ENABLE,
 	MM_DVFS_UPDATE_SUSPEND,
 	MM_DVFS_UPDATE_REQ_MODE,
@@ -33,14 +33,15 @@ typedef struct {
 	mm_dvfs_update_t type;
 	bool is_read;
 	u64 param;
-	struct _mm_dvfs* mm_dvfs;
+	struct _mm_dvfs *mm_dvfs;
 } dvfs_update_t;
 
-void mm_dvfs_update_handler(struct work_struct* work);
+void mm_dvfs_update_handler(struct work_struct *work);
 
-#define DEFINE_DEBUGFS_HANDLER(name,type_name)							\
-	static int mm_dvfs_debugfs_##name##_get(void* root, u64* param) {	\
-		mm_dvfs_t* mm_dvfs = (mm_dvfs_t*)root;							\
+#define DEFINE_DEBUGFS_HANDLER(name, type_name)							\
+	static int mm_dvfs_debugfs_##name##_get(void *root, u64 *param)				\
+	{											\
+		mm_dvfs_t *mm_dvfs = (mm_dvfs_t *)root;							\
 		dvfs_update_t update;											\
 		update.type = type_name;										\
 		update.param = 0;												\
@@ -52,14 +53,15 @@ void mm_dvfs_update_handler(struct work_struct* work);
 		*param = update.param;											\
 		return 0;														\
 	}																	\
-	static int mm_dvfs_debugfs_##name##_set(void* root, u64 param) {	\
-		mm_dvfs_t* mm_dvfs = (mm_dvfs_t*)root;							\
+	static int mm_dvfs_debugfs_##name##_set(void *root, u64 param)				\
+	{											\
+		mm_dvfs_t *mm_dvfs = (mm_dvfs_t *)root;							\
 		dvfs_update_t update;											\
 		update.type = type_name;										\
 		update.param = param;											\
 		update.is_read = false;											\
 		update.mm_dvfs = mm_dvfs;										\
-		INIT_WORK(&(update.work), mm_dvfs_update_handler); 				\
+		INIT_WORK(&(update.work), mm_dvfs_update_handler);				\
 		SCHEDULER_WORK(mm_dvfs, &(update.work));		\
 		flush_work_sync(&(update.work));								\
 		return 0;														\
@@ -70,14 +72,14 @@ void mm_dvfs_update_handler(struct work_struct* work);
 							#name" : %llu\n");							\
 
 
-#define CREATE_DEBUGFS_FILE(root,name,dir)								\
-	root->name = debugfs_create_file(#name, 								\
-									(S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP),\
-									dir, root, &mm_dvfs_debugfs_##name)
+#define CREATE_DEBUGFS_FILE(root, name, dir)								\
+	{ 	root->name = debugfs_create_file(#name,									\
+		(S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP),\
+		dir, root, &mm_dvfs_debugfs_##name); }  \
 
 typedef struct _mm_dvfs {
 
-	mm_common_t* mm_common;
+	mm_common_t *mm_common;
 
 	struct notifier_block mm_fmwk_notifier_blk;
 	struct notifier_block mm_dfs_chg_notify_blk;
@@ -85,25 +87,25 @@ typedef struct _mm_dvfs {
 	struct work_struct dvfs_notification;
 
 	/* for job based profiling, 'n' jobs take how many microsecs */
-    struct dentry *dvfs_dir;
-    struct dentry *ON;
-    struct dentry *T1;
+	struct dentry *dvfs_dir;
+	struct dentry *ON;
+	struct dentry *T1;
 	struct dentry *P1;
 	struct dentry *T2;
 	struct dentry *P2;
-	struct dentry* MODE;
+	struct dentry *MODE;
 
 	struct pi_mgr_dfs_node dev_dfs_node;
 	/* for dvfs */
-	dvfs_mode_e requested_mode; // updated based on profiling and requested to Power Manger
-	dvfs_mode_e current_mode; //updated in DVFS callback from Power Manager
-	bool suspend_requested; // volatile flag updated in early-suspend/late-resume
-	bool timer_state; // DVFS timer state (initialized/unintialized)
-	MM_DVFS_HW_IFC dvfs; // DVFS tunable parameters
+	dvfs_mode_e requested_mode; /* updated based on profiling and requested to Power Manger*/
+	dvfs_mode_e current_mode; /*updated in DVFS callback from Power Manager*/
+	bool suspend_requested; /* volatile flag updated in early-suspend/late-resume*/
+	bool timer_state; /* DVFS timer state (initialized/unintialized)*/
+	MM_DVFS_HW_IFC dvfs; /* DVFS tunable parameters*/
 
 	struct timer_list dvfs_timeout;
 	struct work_struct dvfs_work;
-	
+
 	struct timespec ts1;
 	struct timespec dvfst1;
 
@@ -113,11 +115,13 @@ typedef struct _mm_dvfs {
 
 	/* for PM notification callback*/
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    struct early_suspend early_suspend_desc;
+	struct early_suspend early_suspend_desc;
 #endif
 } mm_dvfs_t;
 
-void* mm_dvfs_init(mm_common_t* mm_common, const char *mm_dev_name, MM_DVFS_HW_IFC *dvfs_params);
-void mm_dvfs_exit( void *mm_dvfs);
+void *mm_dvfs_init(mm_common_t *mm_common, \
+			const char *mm_dev_name, \
+			MM_DVFS_HW_IFC *dvfs_params);
+void mm_dvfs_exit(void *mm_dvfs);
 
 #endif

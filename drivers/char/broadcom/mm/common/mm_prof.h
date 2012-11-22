@@ -18,7 +18,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "mm_dvfs.h"
 
 typedef enum {
-	MM_PROF_UPDATE_UNKNOWN=0,
+	MM_PROF_UPDATE_UNKNOWN = 0,
 	MM_PROF_UPDATE_TIME,
 	MM_PROF_UPDATE_JOB,
 	MM_PROF_UPDATE_HW,
@@ -29,17 +29,18 @@ typedef struct {
 	mm_prof_update_t type;
 	bool is_read;
 	u64 param;
-	struct _mm_prof* mm_prof;
+	struct _mm_prof *mm_prof;
 } prof_update_t;
 
-void mm_prof_update_handler(struct work_struct* work);
+void mm_prof_update_handler(struct work_struct *work);
 
 #undef DEFINE_DEBUGFS_HANDLER
 #undef CREATE_DEBUGFS_FILE
 
-#define DEFINE_DEBUGFS_HANDLER(name,type_name)							\
-	static int mm_prof_debugfs_##name##_get(void* root, u64* param) {	\
-		mm_prof_t* mm_prof = (mm_prof_t*)root;							\
+#define DEFINE_DEBUGFS_HANDLER(name, type_name)							\
+	static int mm_prof_debugfs_##name##_get(void *root, u64 *param)				\
+	{											\
+		mm_prof_t *mm_prof = (mm_prof_t *)root;							\
 		prof_update_t update;											\
 		update.type = type_name;										\
 		update.param = 0;												\
@@ -51,14 +52,15 @@ void mm_prof_update_handler(struct work_struct* work);
 		*param = update.param;											\
 		return 0;														\
 	}																	\
-	static int mm_prof_debugfs_##name##_set(void* root, u64 param) {	\
-		mm_prof_t* mm_prof = (mm_prof_t*)root;							\
+	static int mm_prof_debugfs_##name##_set(void *root, u64 param)				\
+	{											\
+		mm_prof_t *mm_prof = (mm_prof_t *)root;							\
 		prof_update_t update;											\
 		update.type = type_name;										\
 		update.param = param;											\
 		update.is_read = false;											\
 		update.mm_prof = mm_prof;										\
-		INIT_WORK(&(update.work), mm_prof_update_handler); 				\
+		INIT_WORK(&(update.work), mm_prof_update_handler);				\
 		SCHEDULER_WORK(mm_prof, &(update.work));		\
 		flush_work_sync(&(update.work));								\
 		return 0;														\
@@ -69,15 +71,15 @@ void mm_prof_update_handler(struct work_struct* work);
 							#name" : %llu\n");							\
 
 
-#define CREATE_DEBUGFS_FILE(root,name,dir)								\
-	root->name = debugfs_create_file(#name, 								\
+#define CREATE_DEBUGFS_FILE(root, name, dir)								\
+	{ root->name = debugfs_create_file(#name,									\
 									(S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP),\
-									dir, root, &mm_prof_debugfs_##name)
+									dir, root, &mm_prof_debugfs_##name); }
 
 #define MAX_JOB_TYPE 4
 typedef struct _mm_prof {
 
-	mm_common_t* mm_common;
+	mm_common_t *mm_common;
 
 	struct notifier_block mm_fmwk_notifier_blk;
 
@@ -88,16 +90,16 @@ typedef struct _mm_prof {
 	struct dentry *HW;
 
 	/* for prof */
-	dvfs_mode_e current_mode; //updated in PROF callback from Power Manager
-	bool timer_state; // PROF timer state (initialized/unintialized)
+	dvfs_mode_e current_mode; /*updated in PROF callback from Power Manager*/
+	bool timer_state; /* PROF timer state (initialized/unintialized)*/
 	MM_PROF_HW_IFC prof;
 
 
-	unsigned int T1; // Profiling time
+	unsigned int T1; /* Profiling time*/
 
 	struct timer_list prof_timeout;
 	struct work_struct prof_work;
-	
+
 	struct timespec ts1;
 	struct timespec proft1;
 
@@ -107,8 +109,10 @@ typedef struct _mm_prof {
 
 } mm_prof_t;
 
-void* mm_prof_init(mm_common_t* mm_common, const char *mm_dev_name, MM_PROF_HW_IFC *prof_params);
-void mm_prof_exit( void *mm_prof);
+void *mm_prof_init(mm_common_t *mm_common, \
+		const char *mm_dev_name, \
+		MM_PROF_HW_IFC *prof_params);
+void mm_prof_exit(void *mm_prof);
 
 
 #endif
