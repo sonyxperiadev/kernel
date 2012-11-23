@@ -33,7 +33,7 @@ enum {
 	MM_FMWK_NOTIFY_DVFS_UPDATE
 };
 
-typedef struct mm_common {
+struct mm_common {
 	struct atomic_notifier_head notifier_head;
 	struct miscdevice mdev;
 	struct list_head device_list;
@@ -52,10 +52,10 @@ typedef struct mm_common {
 
     /* Used for exporting per-device information to debugfs */
 	struct dentry *debugfs_dir;
-} mm_common_t;
+};
 
 struct file_private_data {
-	mm_common_t *common;
+	struct mm_common *common;
 	int interlock_count;
 	int prio;
 	int read_count;
@@ -65,7 +65,7 @@ struct file_private_data {
 	struct list_head write_head;
 };
 
-typedef struct dev_job_list {
+struct dev_job_list {
 	struct plist_node core_list;
 	bool added2core;
 
@@ -77,19 +77,21 @@ typedef struct dev_job_list {
 
 	mm_job_post_t job;
 	struct file_private_data *filp;
-} dev_job_list_t;
+};
 
-typedef struct dev_status_list {
+struct dev_status_list {
 	mm_job_status_t status;
 	struct list_head wait_list;
 	struct file_private_data *filp;
-} dev_job_status_t;
+};
 
-void mm_common_enable_clock(mm_common_t *common);
-void mm_common_disable_clock(mm_common_t *common);
-void mm_common_job_completion(dev_job_list_t *job, void *core);
+void mm_common_interlock_completion(struct dev_job_list *job);
+void mm_common_enable_clock(struct mm_common *common);
+void mm_common_disable_clock(struct mm_common *common);
+void mm_common_job_completion(struct dev_job_list *job, void *core);
 
-#define SCHEDULER_WORK(core, work) queue_work_on(0, core->mm_common->single_wq, work)
+#define SCHEDULER_WORK(core, work) \
+		queue_work_on(0, core->mm_common->single_wq, work)
 #define SET_IRQ_AFFINITY irq_set_affinity(hw_ifc->mm_irq, cpumask_of(0))
 
 
