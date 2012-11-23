@@ -34,7 +34,19 @@
 
 #define PLAT_PHYS_OFFSET	PHYS_OFFSET
 
-#define IO_START_VA		(PAGE_OFFSET + 0x30000000)
+/* The reason for 32M.
+ * There was a need for a way to fix the
+ * IO_START_VA in such a way that, we need
+ * not modify it every time we change the
+ * VMALLOC_START. So now what we do here
+ * is to fix the IO VA we really use, which
+ * we consider as 32M, and start the IO VA
+ * at an offset of 32M from VMALLOC_END
+ * into the vmalloc region. So now we are
+ * safe until we map more than 32M of IO,
+ * which is unlikely.
+ */
+#define IO_START_VA		(0xff000000 - SZ_32M)
 
 /* APB5, APB9 and SRAM */
 #define IO_G1_PHYS		0x34000000
