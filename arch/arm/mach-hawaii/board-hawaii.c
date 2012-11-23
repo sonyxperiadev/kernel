@@ -254,7 +254,7 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
 	.cmasize = 0,
-	.carveout_base = 0,
+	.carveout_base = 0xae000000,
 	.carveout_size = 0,
 };
 #endif

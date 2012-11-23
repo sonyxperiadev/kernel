@@ -891,19 +891,39 @@ static void __init pmem_reserve_memory(void)
 
 	carveout_size = android_pmem_data.carveout_size;
 	cmasize = android_pmem_data.cmasize;
+	carveout_base = android_pmem_data.carveout_base;
 
 	if (carveout_size) {
-		carveout_base = memblock_alloc(carveout_size, SZ_16M);
-		memblock_free(carveout_base, carveout_size);
-		err = memblock_remove(carveout_base, carveout_size);
-		if (!err) {
-			printk(KERN_INFO"PMEM: Carve memory from (%08x-%08x)\n",
-					carveout_base,
-					carveout_base + carveout_size);
-			android_pmem_data.carveout_base = carveout_base;
-		} else {
-			printk(KERN_INFO"PMEM: Carve out memory failed\n");
-		}
+		do {
+			carveout_base = memblock_alloc_from_range(
+				carveout_size, SZ_16M, carveout_base,
+			carveout_base + carveout_size);
+
+			if (!carveout_base) {
+				pr_err("FATAL: PMEM: unable to");
+				pr_err(" carveout at 0x%x\n",
+					android_pmem_data.carveout_base);
+				break;
+			}
+
+			if (carveout_base !=
+				android_pmem_data.carveout_base) {
+				pr_err("PMEM: Requested block at 0x%x,",
+					android_pmem_data.carveout_base);
+				pr_err(" but got 0x%x", carveout_base);
+			}
+
+			memblock_free(carveout_base, carveout_size);
+			err = memblock_remove(carveout_base, carveout_size);
+			if (!err) {
+				printk(KERN_INFO"PMEM: Carve memory from (%08x-%08x)\n",
+						carveout_base,
+						carveout_base + carveout_size);
+				android_pmem_data.carveout_base = carveout_base;
+			} else {
+				printk(KERN_INFO"PMEM: Carve out memory failed\n");
+			}
+		} while (0);
 	}
 
 	if (dma_declare_contiguous(&android_pmem.dev, cmasize, 0, 0)) {
