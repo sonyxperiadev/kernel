@@ -77,7 +77,13 @@
 #define KONA_SDMMC_OFF_TIMEOUT		(8000)
 #endif
 
+/* Enable this quirk if regulators are always ON
+ * but the regulator framework is not funtional.
+ * In such a case, we dont want our probe to fail.
+ */
+#if 0
 #define BCM_REGULATOR_SKIP_QUIRK
+#endif
 
 enum {ENABLED = 0, DISABLED, OFF};
 
