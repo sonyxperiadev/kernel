@@ -261,6 +261,14 @@ static struct i2c_board_info adp1653_flash[] = {
 };
 #endif
 
+#ifdef CONFIG_VIDEO_AS3643
+#define AS3643_I2C_ADDR 0x60
+static struct i2c_board_info as3643_flash[] = {
+	{
+	 I2C_BOARD_INFO("as3643", (AS3643_I2C_ADDR >> 1))
+	 },
+};
+#endif
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 
 #define OV5640_I2C_ADDRESS (0x3C)
@@ -1460,6 +1468,9 @@ static void __init hawaii_add_i2c_devices(void)
 
 #ifdef CONFIG_VIDEO_ADP1653
 	i2c_register_board_info(0, adp1653_flash, ARRAY_SIZE(adp1653_flash));
+#endif
+#ifdef CONFIG_VIDEO_AS3643
+	i2c_register_board_info(0, as3643_flash, ARRAY_SIZE(as3643_flash));
 #endif
 #ifdef CONFIG_TOUCHSCREEN_TANGO
 	i2c_register_board_info(3, tango_info, ARRAY_SIZE(tango_info));
