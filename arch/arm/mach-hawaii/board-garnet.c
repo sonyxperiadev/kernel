@@ -149,6 +149,11 @@
 #include <video/kona_fb.h>
 #endif
 
+#if defined(CONFIG_BCM_ALSA_SOUND)
+#include <mach/caph_platform.h>
+#include <mach/caph_settings.h>
+#endif
+
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 #include <media/soc_camera.h>
 #endif
@@ -1371,6 +1376,30 @@ static struct i2c_board_info bcm915500_i2c_boardinfo[] = {
 };
 #endif
 
+#if defined(CONFIG_BCM_ALSA_SOUND)
+static struct caph_platform_cfg board_caph_platform_cfg =
+#ifdef HW_CFG_CAPH
+	HW_CFG_CAPH;
+#else
+{
+	.aud_ctrl_plat_cfg = {
+			      .ext_aud_plat_cfg = {
+						   .ihf_ext_amp_gpio = -1,
+						   }
+			      }
+};
+#endif
+
+static struct platform_device board_caph_device = {
+	.name = "brcm_caph_device",
+	.id = -1,		/*Indicates only one device */
+	.dev = {
+		.platform_data = &board_caph_platform_cfg,
+		},
+};
+
+#endif /* CONFIG_BCM_ALSA_SOUND */
+
 static struct platform_device *hawaii_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
 	&hawaii_kp_device,
@@ -1413,6 +1442,11 @@ static struct platform_device *hawaii_devices[] __initdata = {
 #ifdef CONFIG_WD_TAPPER
 	&wd_tapper,
 #endif
+
+#if defined(CONFIG_BCM_ALSA_SOUND)
+	&board_caph_device,
+#endif
+
 };
 
 struct platform_device *hawaii_sdio_devices[] __initdata = {
