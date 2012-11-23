@@ -17,8 +17,8 @@ the GPL, without Broadcom's express prior written consent.
 static int mm_dfs_chg_notifier(struct notifier_block *self,
 				unsigned long event, void *data)
 {
-	mm_dvfs_t *mm_dvfs = container_of(self, \
-				mm_dvfs_t, \
+	struct _mm_dvfs *mm_dvfs = container_of(self, \
+				struct _mm_dvfs, \
 				mm_dfs_chg_notify_blk);
 	SCHEDULER_WORK(mm_dvfs, &mm_dvfs->dvfs_notification);
 
@@ -27,7 +27,9 @@ static int mm_dfs_chg_notifier(struct notifier_block *self,
 
 static void mm_dfs_notifier(struct work_struct *work)
 {
-	mm_dvfs_t *mm_dvfs = container_of(work, mm_dvfs_t, dvfs_notification);
+	struct _mm_dvfs *mm_dvfs = container_of(work, \
+					struct _mm_dvfs, \
+					dvfs_notification);
 	mm_dvfs->current_mode = pi_get_active_opp(PI_MGR_PI_ID_MM);
 	atomic_notifier_call_chain(&mm_dvfs->mm_common->notifier_head, \
 					MM_FMWK_NOTIFY_DVFS_UPDATE, \
@@ -39,8 +41,8 @@ int mm_dvfs_notification_handler(struct notifier_block *block, \
 				void *data)
 {
 	struct timespec diff;
-	mm_dvfs_t *mm_dvfs = container_of(block, \
-				mm_dvfs_t,\
+	struct _mm_dvfs *mm_dvfs = container_of(block, \
+				struct _mm_dvfs,\
 				mm_fmwk_notifier_blk);
 
 	switch (param) {
@@ -73,11 +75,11 @@ int mm_dvfs_notification_handler(struct notifier_block *block, \
 
 static void dvfs_timeout_callback(unsigned long data)
 {
-	mm_dvfs_t *mm_dvfs = (mm_dvfs_t *)data;
+	struct _mm_dvfs *mm_dvfs = (struct _mm_dvfs *)data;
 	SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 }
 
-static void dvfs_start_timer(mm_dvfs_t *mm_dvfs)
+static void dvfs_start_timer(struct _mm_dvfs *mm_dvfs)
 {
 	mm_dvfs->jobs_done = 0;
 	mm_dvfs->hw_on_dur = 0;
@@ -94,7 +96,9 @@ static void dvfs_work(struct work_struct *work)
 	struct timespec diff;
 	int percnt = 0;
 	int temp = 0, temp2 = 0;
-	mm_dvfs_t *mm_dvfs = container_of(work, mm_dvfs_t, dvfs_work);
+	struct _mm_dvfs *mm_dvfs = container_of(work, \
+					struct _mm_dvfs, \
+					dvfs_work);
 
 	if (mm_dvfs->suspend_requested)	{
 		mm_dvfs->requested_mode = ECONOMY;
@@ -107,7 +111,8 @@ static void dvfs_work(struct work_struct *work)
 		}
 
 	if ((mm_dvfs->dvfs.is_dvfs_on == false) &&
-		(mm_dvfs->requested_mode != mm_dvfs->dvfs.user_requested_mode)) {
+		(mm_dvfs->requested_mode \
+		!= mm_dvfs->dvfs.user_requested_mode)) {
 		mm_dvfs->requested_mode = mm_dvfs->dvfs.user_requested_mode;
 		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
 					mm_dvfs->requested_mode);
@@ -147,8 +152,10 @@ static void dvfs_work(struct work_struct *work)
 /*	percnt = percnt/temp;*/
 
 
-	/* In addition to Hardware ON time, the Framework also uses the average Job time (in previous slot)
-	  * and the number of pending jobs in the list will also be used to move to TURBO
+	/* In addition to Hardware ON time,
+	  * the Framework also uses the average Job time (in previous slot)
+	  * and the number of pending jobs in the list will also be used to
+	  * move to TURBO
 	  * (this shall not be used as a measure for coming back to NORMAL)*/
 	/* access mm_dvfs->jobs_done*/
 	/* access mm_dvfs->jobs_pend*/
@@ -184,14 +191,18 @@ static void dvfs_work(struct work_struct *work)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void dev_early_suspend(struct early_suspend *desc)
 {
-	mm_dvfs_t *mm_dvfs = container_of(desc, mm_dvfs_t, early_suspend_desc);
+	struct _mm_dvfs *mm_dvfs = container_of(desc, \
+					struct _mm_dvfs, \
+					early_suspend_desc);
 	mm_dvfs->suspend_requested = true;
 	SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 }
 
 static void dev_late_resume(struct early_suspend *desc)
 {
-	mm_dvfs_t *mm_dvfs = container_of(desc, mm_dvfs_t, early_suspend_desc);
+	struct _mm_dvfs *mm_dvfs = container_of(desc, \
+					struct _mm_dvfs, \
+					early_suspend_desc);
 	mm_dvfs->suspend_requested = false;
 	SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 }
@@ -199,8 +210,10 @@ static void dev_late_resume(struct early_suspend *desc)
 
 void mm_dvfs_update_handler(struct work_struct *work)
 {
-	 dvfs_update_t *update = container_of(work, dvfs_update_t, work);
-	 mm_dvfs_t *mm_dvfs = update->mm_dvfs;
+	 struct dvfs_update *update = container_of(work, \
+					struct dvfs_update, \
+					work);
+	 struct _mm_dvfs *mm_dvfs = update->mm_dvfs;
 	 unsigned int param = update->param;
 	 unsigned int max = 0, min = 0;
 
@@ -212,7 +225,8 @@ void mm_dvfs_update_handler(struct work_struct *work)
 			else
 				mm_dvfs->dvfs.is_dvfs_on = param;
 			if (mm_dvfs->dvfs.is_dvfs_on) {
-				mm_dvfs->mm_fmwk_notifier_blk.notifier_call = mm_dvfs_notification_handler;
+				mm_dvfs->mm_fmwk_notifier_blk.notifier_call \
+						= mm_dvfs_notification_handler;
 				atomic_notifier_chain_register( \
 					&mm_dvfs->mm_common->notifier_head, \
 					&mm_dvfs->mm_fmwk_notifier_blk);
@@ -246,7 +260,8 @@ void mm_dvfs_update_handler(struct work_struct *work)
 			max = 100;
 			min = (mm_dvfs->dvfs.P2*TURBO_RATE)/NORMAL_RATE;
 			if ((param > max) || (param < min))
-				pr_err("Enter value between %u and %u ", min, max);
+				pr_err("Enter value between %u and %u ", \
+								min, max);
 			else
 				mm_dvfs->dvfs.P1 = param;
 			break;
@@ -261,7 +276,8 @@ void mm_dvfs_update_handler(struct work_struct *work)
 			min = 100*NORMAL_RATE/TURBO_RATE;
 			max = (mm_dvfs->dvfs.P1*NORMAL_RATE)/TURBO_RATE;
 			if ((param > max) || (param < min))
-				pr_err("Enter value between %u and %u ", min, max);
+				pr_err("Enter value between %u and %u ", \
+								min, max);
 			else
 				mm_dvfs->dvfs.P2 = param;
 			break;
@@ -311,12 +327,12 @@ DEFINE_DEBUGFS_HANDLER(P1, MM_DVFS_UPDATE_P1);
 DEFINE_DEBUGFS_HANDLER(T2, MM_DVFS_UPDATE_T2);
 DEFINE_DEBUGFS_HANDLER(P2, MM_DVFS_UPDATE_P2);
 
-void *mm_dvfs_init(mm_common_t *mm_common, \
+void *mm_dvfs_init(struct mm_common *mm_common, \
 		const char *dev_name, MM_DVFS_HW_IFC *dvfs_params)
 {
 	int ret = 0;
-	mm_dvfs_t *mm_dvfs = kmalloc(sizeof(mm_dvfs_t), GFP_KERNEL);
-	memset(mm_dvfs, 0, sizeof(mm_dvfs_t));
+	struct _mm_dvfs *mm_dvfs = kmalloc(sizeof(struct _mm_dvfs), GFP_KERNEL);
+	memset(mm_dvfs, 0, sizeof(struct _mm_dvfs));
 
 	mm_dvfs->mm_common = mm_common;
 	INIT_WORK(&(mm_dvfs->dvfs_work), dvfs_work);
@@ -328,7 +344,8 @@ void *mm_dvfs_init(mm_common_t *mm_common, \
 	mm_dvfs->current_mode = mm_dvfs->requested_mode;
 
 	if (mm_dvfs->dvfs.is_dvfs_on) {
-		mm_dvfs->mm_fmwk_notifier_blk.notifier_call = mm_dvfs_notification_handler;
+		mm_dvfs->mm_fmwk_notifier_blk.notifier_call \
+				= mm_dvfs_notification_handler;
 		atomic_notifier_chain_register(\
 			&mm_common->notifier_head, \
 			&mm_dvfs->mm_fmwk_notifier_blk);
@@ -369,7 +386,8 @@ void *mm_dvfs_init(mm_common_t *mm_common, \
 
 	if (mm_dvfs->dvfs.enable_suspend_resume) {
 #ifdef CONFIG_HAS_EARLYSUSPEND
-		mm_dvfs->early_suspend_desc.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
+		mm_dvfs->early_suspend_desc.level \
+				= EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
 		mm_dvfs->early_suspend_desc.suspend = dev_early_suspend;
 		mm_dvfs->early_suspend_desc.resume = dev_late_resume;
 		register_early_suspend(&mm_dvfs->early_suspend_desc);
@@ -381,7 +399,7 @@ void *mm_dvfs_init(mm_common_t *mm_common, \
 
 void mm_dvfs_exit(void *dev_p)
 {
-	mm_dvfs_t *mm_dvfs = (mm_dvfs_t *)dev_p;
+	struct _mm_dvfs *mm_dvfs = (struct _mm_dvfs *)dev_p;
 	atomic_notifier_chain_unregister(\
 		&mm_dvfs->mm_common->notifier_head, \
 		&mm_dvfs->mm_fmwk_notifier_blk);

@@ -16,18 +16,18 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "mm_common.h"
 
-typedef struct {
-	mm_common_t *mm_common;
+struct mm_core {
+	struct mm_common *mm_common;
 
 	/*Job Scheduling and Waiting.
 	Should be modified to an array for SMP*/
 	struct timespec sched_time;
 	struct work_struct job_scheduler;
-	volatile void __iomem *dev_base;
+	void __iomem *dev_base;
 	MM_CORE_HW_IFC mm_device;
 
-	volatile bool mm_core_is_on;
-	dev_job_list_t *current_job;
+	bool mm_core_is_on;
+	struct dev_job_list *current_job;
 
 
 	/* job list. will be Unique for SMP*/
@@ -35,21 +35,28 @@ typedef struct {
 	struct plist_head job_list;
 	uint32_t device_job_id;
 
-} mm_core_t;
+};
 
-static inline void mm_core_add_job(dev_job_list_t *job, mm_core_t *core_dev)
+static inline void mm_core_add_job(\
+			struct dev_job_list *job, \
+			struct mm_core *core_dev)
 {
 	if (job->added2core)
 		return;
 	job->job.status = MM_JOB_STATUS_READY;
-/*	pr_debug("%x %x %x",&job->core_list,job->core_list.next,job->core_list.prev);*/
+/*	pr_debug("%x %x %x", \
+		&job->core_list, \
+		job->core_list.next, \
+		job->core_list.prev);*/
 	plist_add(&(job->core_list), &(core_dev->job_list));
 	job->added2core = true;
 	if (core_dev->current_job == NULL)
 		SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
 }
 
-static inline void mm_core_remove_job(dev_job_list_t *job, mm_core_t *core_dev)
+static inline void mm_core_remove_job(\
+			struct dev_job_list *job, \
+			struct mm_core *core_dev)
 {
 	if (job->added2core == false)
 		return;
@@ -57,8 +64,8 @@ static inline void mm_core_remove_job(dev_job_list_t *job, mm_core_t *core_dev)
 	job->added2core = false;
 }
 
-static inline void mm_core_move_job(dev_job_list_t *job, \
-					mm_core_t *core_dev, \
+static inline void mm_core_move_job(struct dev_job_list *job, \
+				struct mm_core *core_dev, \
 					int prio)
 {
 	if (job->added2core == false)
@@ -70,10 +77,12 @@ static inline void mm_core_move_job(dev_job_list_t *job, \
 		}
 }
 
-static inline void mm_core_abort_job(dev_job_list_t *job, mm_core_t *core_dev)
+static inline void mm_core_abort_job(\
+			struct dev_job_list *job, \
+			struct mm_core *core_dev)
 {
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
-	mm_common_t *common = core_dev->mm_common;
+	struct mm_common *common = core_dev->mm_common;
 	if ((job->job.status > MM_JOB_STATUS_READY) &&
 		(job->job.status < MM_JOB_STATUS_SUCCESS)) {
 		/* reset once in release */
@@ -84,12 +93,12 @@ static inline void mm_core_abort_job(dev_job_list_t *job, mm_core_t *core_dev)
 		}
 }
 /*
-static inline dev_job_list_t* mm_core_find_job(\
+static inline struct dev_job_list* mm_core_find_job(\
 			struct file_private_data* filp, \
-			mm_core_t* core_dev)
+			struct mm_core *core_dev)
 {
-	dev_job_list_t *job_list = NULL;
-	dev_job_list_t *temp_list = NULL;
+	struct dev_job_list *job_list = NULL;
+	struct dev_job_list *temp_list = NULL;
 	list_for_each_entry_safe_reverse(job_list, \
 					temp_list, \
 					&(core_dev->job_list), \
@@ -101,7 +110,7 @@ static inline dev_job_list_t* mm_core_find_job(\
 	return NULL;
 }
 */
-void *mm_core_init(mm_common_t *mm_common, \
+void *mm_core_init(struct mm_common *mm_common, \
 		const char *mm_dev_name, \
 		MM_CORE_HW_IFC *core_params);
 void mm_core_exit(void *mm_dvfs);

@@ -18,13 +18,13 @@ the GPL, without Broadcom's express prior written consent.
 
 void dev_timer_callback(unsigned long data)
 {
-	mm_core_t *core_dev = (mm_core_t *)data;
+	struct mm_core *core_dev = (struct mm_core *)data;
 	SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
 }
 
 static irqreturn_t dev_isr(int irq, void *data)
 {
-	mm_core_t *core_dev = (mm_core_t *)data;
+	struct mm_core *core_dev = (struct mm_core *)data;
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 	int ret = 0;
 
@@ -44,7 +44,7 @@ static irqreturn_t dev_isr(int irq, void *data)
 	return IRQ_RETVAL(ret);
 }
 
-static int mm_core_enable_clock(mm_core_t *core_dev)
+static int mm_core_enable_clock(struct mm_core *core_dev)
 {
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 	int ret = 0;
@@ -79,7 +79,7 @@ static int mm_core_enable_clock(mm_core_t *core_dev)
 
 }
 
-static void mm_core_disable_clock(mm_core_t *core_dev)
+static void mm_core_disable_clock(struct mm_core *core_dev)
 {
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 
@@ -102,7 +102,9 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 	mm_job_status_e status = MM_JOB_STATUS_INVALID;
 	bool is_hw_busy = false;
 
-	mm_core_t *core_dev = container_of(work, mm_core_t, job_scheduler);
+	struct mm_core *core_dev = container_of(work, \
+					struct mm_core, \
+					job_scheduler);
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 
 	if (mm_core_enable_clock(core_dev))
@@ -110,7 +112,7 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 
 	is_hw_busy = hw_ifc->mm_get_status(hw_ifc->mm_device_id);
 	if (!is_hw_busy) {
-		dev_job_list_t *job_list_elem = core_dev->current_job;
+		struct dev_job_list *job_list_elem = core_dev->current_job;
 		core_dev->current_job = NULL;
 		if (job_list_elem) {
 			status  = hw_ifc->mm_start_job(hw_ifc->mm_device_id, \
@@ -123,8 +125,8 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 			}
 		if (plist_head_empty(&core_dev->job_list) == 0) {
 			job_list_elem = plist_first_entry(\
-						&(core_dev->job_list), \
-						dev_job_list_t, core_list);
+					&(core_dev->job_list), \
+					struct dev_job_list, core_list);
 			if (job_list_elem->job.size) {
 				status	= hw_ifc->mm_start_job(\
 						hw_ifc->mm_device_id, \
@@ -132,17 +134,22 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 				if (status == MM_JOB_STATUS_RUNNING) {
 					core_dev->current_job = job_list_elem ;
 					getnstimeofday(&core_dev->sched_time);
-					timespec_add_ns(&core_dev->sched_time, \
-						hw_ifc->mm_timeout * NSEC_PER_MSEC);
+					timespec_add_ns(\
+					&core_dev->sched_time, \
+					hw_ifc->mm_timeout * NSEC_PER_MSEC);
+
 					is_hw_busy = true;
 					pr_debug("job posted ");
+
 					atomic_notifier_call_chain(\
-						&core_dev->mm_common->notifier_head, \
-						MM_FMWK_NOTIFY_JOB_STARTED, NULL);
+					&core_dev->mm_common->notifier_head, \
+					MM_FMWK_NOTIFY_JOB_STARTED, NULL);
+
 					}
 				}
 			else {
-				job_list_elem->job.status = MM_JOB_STATUS_SUCCESS;
+				job_list_elem->job.status \
+					= MM_JOB_STATUS_SUCCESS;
 				mm_common_job_completion(\
 					job_list_elem, core_dev);
 				SCHEDULER_WORK(core_dev, \
@@ -164,8 +171,11 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 		}
 
 	if (is_hw_busy) {
-		mod_timer(&core_dev->dev_timer, jiffies + msecs_to_jiffies(hw_ifc->mm_timer));
-		pr_debug("mod_timer  %lx %lx", jiffies, msecs_to_jiffies(hw_ifc->mm_timer));
+		mod_timer(&core_dev->dev_timer, \
+			jiffies + msecs_to_jiffies(hw_ifc->mm_timer));
+		pr_debug("mod_timer  %lx %lx", \
+				jiffies, \
+				msecs_to_jiffies(hw_ifc->mm_timer));
 		return;
 		}
 
@@ -179,17 +189,17 @@ static int validate(MM_CORE_HW_IFC *core_params)
 	return 0;
 }
 
-void *mm_core_init(mm_common_t *mm_common, \
+void *mm_core_init(struct mm_common *mm_common, \
 		const char *mm_dev_name, \
 		MM_CORE_HW_IFC *core_params)
 {
-	mm_core_t *core_dev = NULL;
+	struct mm_core *core_dev = NULL;
 
 	if (validate(core_params))
 		goto err_register;
 
-	core_dev = kmalloc(sizeof(mm_core_t), GFP_KERNEL);
-	memset(core_dev, 0, sizeof(mm_core_t));
+	core_dev = kmalloc(sizeof(struct mm_core), GFP_KERNEL);
+	memset(core_dev, 0, sizeof(struct mm_core));
 
 	/* Init structure */
 	INIT_WORK(&(core_dev->job_scheduler), mm_fmwk_job_scheduler);
@@ -226,11 +236,10 @@ err_register:
 
 void mm_core_exit(void *dev_handle)
 {
-	mm_core_t *core_dev = (mm_core_t *)dev_handle;
+	struct mm_core *core_dev = (struct mm_core *)dev_handle;
 
 	if (core_dev->dev_base)
 		iounmap(core_dev->dev_base);
 
-	if (core_dev)
 		kfree(core_dev);
 }

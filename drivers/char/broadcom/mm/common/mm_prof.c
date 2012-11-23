@@ -19,14 +19,15 @@ int mm_prof_notification_handler(struct notifier_block *block, \
 				void *data)
 {
 	struct timespec diff;
-	mm_prof_t *mm_prof = container_of(block, mm_prof_t, \
+	struct _mm_prof *mm_prof = container_of(block, struct _mm_prof, \
 					mm_fmwk_notifier_blk);
 
 	switch (param) {
 	case MM_FMWK_NOTIFY_JOB_COMPLETE:
 	case MM_FMWK_NOTIFY_JOB_REMOVE:
 		mm_prof->jobs_done++;
-		mm_prof->jobs_done_type[(unsigned int)data & (MAX_JOB_TYPE-1)]++;
+		mm_prof->jobs_done_type\
+		[(unsigned int)data & (MAX_JOB_TYPE-1)]++;
 		break;
 	case MM_FMWK_NOTIFY_CLK_ENABLE:
 		getnstimeofday(&mm_prof->ts1);
@@ -50,7 +51,7 @@ int mm_prof_notification_handler(struct notifier_block *block, \
 
 static void prof_timeout_callback(unsigned long data)
 {
-	mm_prof_t *mm_prof = (mm_prof_t *)data;
+	struct _mm_prof *mm_prof = (struct _mm_prof *)data;
 	SCHEDULER_WORK(mm_prof, &(mm_prof->prof_work));
 }
 
@@ -58,7 +59,9 @@ static void prof_work(struct work_struct *work)
 {
 	struct timespec diff;
 	int percnt = 0, temp = 0;
-	mm_prof_t *mm_prof = container_of(work, mm_prof_t, prof_work);
+	struct _mm_prof *mm_prof = container_of(work, \
+					struct _mm_prof, \
+					prof_work);
 
 	if (mm_prof->T1 == 0) {
 		if (mm_prof->timer_state == true) {
@@ -78,9 +81,11 @@ static void prof_work(struct work_struct *work)
 		mm_prof->jobs_done_type[1] = 0;
 		mm_prof->jobs_done_type[2] = 0;
 		mm_prof->jobs_done_type[3] = 0;
-		mm_prof->mm_fmwk_notifier_blk.notifier_call = mm_prof_notification_handler;
-		atomic_notifier_chain_register(&mm_prof->mm_common->notifier_head, \
-						&mm_prof->mm_fmwk_notifier_blk);
+		mm_prof->mm_fmwk_notifier_blk.notifier_call = \
+					mm_prof_notification_handler;
+		atomic_notifier_chain_register(\
+					&mm_prof->mm_common->notifier_head, \
+					&mm_prof->mm_fmwk_notifier_blk);
 		getnstimeofday(&(mm_prof->proft1));
 		init_timer(&(mm_prof->prof_timeout));
 		setup_timer(&(mm_prof->prof_timeout), \
@@ -111,8 +116,10 @@ static void prof_work(struct work_struct *work)
 	pr_err("hw_usage: ON : %d%% [DVFS:%d] JOBS : %d [%d %d %d %d] in %d secs ",
 				percnt, mm_prof->current_mode,
 				mm_prof->jobs_done, mm_prof->jobs_done_type[0],
-				mm_prof->jobs_done_type[1], mm_prof->jobs_done_type[2],
-				mm_prof->jobs_done_type[3], mm_prof->T1);
+				mm_prof->jobs_done_type[1], \
+				mm_prof->jobs_done_type[2], \
+				mm_prof->jobs_done_type[3], \
+				mm_prof->T1);
 
 	mm_prof->hw_on_dur = 0;
 	mm_prof->jobs_done = 0;
@@ -120,13 +127,16 @@ static void prof_work(struct work_struct *work)
 	mm_prof->jobs_done_type[1] = 0;
 	mm_prof->jobs_done_type[2] = 0;
 	mm_prof->jobs_done_type[3] = 0;
-	mod_timer(&mm_prof->prof_timeout, jiffies+msecs_to_jiffies(mm_prof->T1*1000));
+	mod_timer(&mm_prof->prof_timeout, \
+		jiffies+msecs_to_jiffies(mm_prof->T1*1000));
 }
 
 void mm_prof_update_handler(struct work_struct *work)
 {
-	 prof_update_t *update = container_of(work, prof_update_t, work);
-	 mm_prof_t *mm_prof = update->mm_prof;
+	 struct prof_update *update = container_of(work, \
+						struct prof_update, \
+						work);
+	 struct _mm_prof *mm_prof = update->mm_prof;
 	 unsigned int param = update->param;
 	 unsigned int max = 0, min = 0;
 
@@ -161,13 +171,13 @@ void mm_prof_update_handler(struct work_struct *work)
 
 DEFINE_DEBUGFS_HANDLER(TIME, MM_PROF_UPDATE_TIME);
 
-void *mm_prof_init(mm_common_t *mm_common, \
+void *mm_prof_init(struct mm_common *mm_common, \
 			const char *dev_name, \
-			MM_PROF_HW_IFC *prof_params)
+			MM_PROF_HW_IFC * prof_params)
 {
 	int ret = 0;
-	mm_prof_t *mm_prof = kmalloc(sizeof(mm_prof_t), GFP_KERNEL);
-	memset(mm_prof, 0, sizeof(mm_prof_t));
+	struct _mm_prof *mm_prof = kmalloc(sizeof(struct _mm_prof), GFP_KERNEL);
+	memset(mm_prof, 0, sizeof(struct _mm_prof));
 
 	mm_prof->mm_common = mm_common;
 	INIT_WORK(&(mm_prof->prof_work), prof_work);
@@ -176,9 +186,12 @@ void *mm_prof_init(mm_common_t *mm_common, \
 	mm_prof->prof = *prof_params;
 	mm_prof->current_mode = ECONOMY;
 
-	mm_prof->prof_dir = debugfs_create_dir("prof", mm_prof->mm_common->debugfs_dir);
+	mm_prof->prof_dir = \
+		debugfs_create_dir("prof", mm_prof->mm_common->debugfs_dir);
 	if (mm_prof->prof_dir == NULL) {
-		pr_err("Error %ld creating prof dir for %s", PTR_ERR(mm_prof->prof_dir), dev_name);
+		pr_err("Error %ld creating prof dir for %s", \
+					PTR_ERR(mm_prof->prof_dir), \
+					dev_name);
 		ret = -ENOENT;
 		}
 
@@ -190,7 +203,7 @@ void *mm_prof_init(mm_common_t *mm_common, \
 
 void mm_prof_exit(void *dev_p)
 {
-	mm_prof_t *mm_prof = (mm_prof_t *)dev_p;
+	struct _mm_prof *mm_prof = (struct _mm_prof *)dev_p;
 
 	if (mm_prof->prof_dir)
 		debugfs_remove_recursive(mm_prof->prof_dir);
