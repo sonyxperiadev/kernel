@@ -539,7 +539,7 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 		else
 			cdebugger_set_upload_cause(UPLOAD_CAUSE_KERNEL_PANIC);
 
-		handle_sysrq('t');
+		show_state();
 
 		cdebugger_dump_stack();
 
