@@ -431,6 +431,19 @@ static int rhea_camera_power_front(struct device *dev, int on)
 			printk(KERN_ERR"Unable to get RST GPIO\n");
 			return -1;
 		}
+
+		if (d_gpsr_cam0_1v8 == NULL){
+			d_gpsr_cam0_1v8 = regulator_get(NULL, "vsr_uc");
+			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
+				printk(KERN_ERR "Failed to  get d_gpsr_cam0_1v8\n");
+		}
+		
+		if (d_1v8_mmc1_vcc == NULL) {
+			d_1v8_mmc1_vcc = regulator_get(NULL, "mmc1_vcc");
+			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
+				printk(KERN_ERR "Err d_1v8_mmc1_vcc\n");
+		}
+		
 	}
 
 	clock = clk_get(NULL, SENSOR_1_CLK);
@@ -445,6 +458,14 @@ static int rhea_camera_power_front(struct device *dev, int on)
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
 			printk("DVFS for UNICAM failed\n");
 		}
+
+		//gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		usleep_range(5000, 5010);
+		regulator_enable(d_gpsr_cam0_1v8);
+		usleep_range(1000, 1010);
+		regulator_enable(d_1v8_mmc1_vcc);
+		usleep_range(1000, 1010);
+		
 		value = clk_enable(axi_clk);
 		if(value){
 			printk(KERN_ERR"Failed to enable axi clock\n");
@@ -464,6 +485,10 @@ static int rhea_camera_power_front(struct device *dev, int on)
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
 		clk_disable(clock);
 		clk_disable(axi_clk);
+
+		regulator_disable(d_gpsr_cam0_1v8);
+		regulator_disable(d_1v8_mmc1_vcc);
+		
 		if(pi_mgr_dfs_request_update(&unicam_dfs_node,PI_MGR_DFS_MIN_VALUE)){
 			printk("Failed to set DVFS for unicam\n");
 		}
