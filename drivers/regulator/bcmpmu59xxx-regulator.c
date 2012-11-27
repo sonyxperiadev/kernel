@@ -260,10 +260,8 @@ static int bcmpmureg_is_enabled(struct regulator_dev *rdev)
 /*
 * @enable: Configure the regulator as enabled.
 */
-static int bcmpmureg_enable(struct regulator_dev *rdev)
+static int __bcmpmureg_enable(struct bcmpmu59xxx *bcmpmu, int id)
 {
-	struct bcmpmu59xxx *bcmpmu;
-	int id;
 	u8 pmmode[REGL_PMMODE_REG_MAX] = {0};
 	struct bcmpmu59xxx_regulator_info *rinfo;
 	struct bcmpmu59xxx_regulator_init_data *initdata;
@@ -271,20 +269,13 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 	int count, i;
 	int ret = 0;
 
-	if ((!rdev || !rdev->desc))
-		return -1;
-	bcmpmu = rdev_get_drvdata(rdev);
-	id = rdev_get_id(rdev);
 	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
 	param = bcmpmu->rgltr_data;
-
 	pr_rgltr(FLOW, "<%s> id =  %d\n",
 		__func__, id);
-
-	BUG_ON(id >= BCMPMU_REGULATOR_MAX ||
-			rinfo == NULL || param == NULL);
-
 	initdata = param->pdata->bcmpmu_rgltr + id;
+
+	BUG_ON(!rinfo || !param || !initdata);
 
 	if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
 		count = __3bit_pmmode_frm_map(initdata->pc_pins_map,
@@ -321,29 +312,37 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 	return 0;
 }
 
-/*
-* @disable: Configure the regulator as disabled.
-*/
-static int bcmpmureg_disable(struct regulator_dev *rdev)
+static int bcmpmureg_enable(struct regulator_dev *rdev)
 {
 	struct bcmpmu59xxx *bcmpmu;
 	int id;
-	struct bcmpmu59xxx_regulator_info *rinfo;
-	int reg_cnt, i;
-	int ret = 0;
-	u8 val;
 
 	if ((!rdev || !rdev->desc))
 		return -1;
 	bcmpmu = rdev_get_drvdata(rdev);
 	id = rdev_get_id(rdev);
+	BUG_ON(bcmpmu == NULL || id >= BCMPMU_REGULATOR_MAX);
+
+	return __bcmpmureg_enable(bcmpmu, id);
+}
+
+/*
+* @disable: Configure the regulator as disabled.
+*/
+static int __bcmpmureg_disable(struct bcmpmu59xxx *bcmpmu, int id)
+{
+	struct bcmpmu59xxx_regulator_info *rinfo;
+	int reg_cnt, i;
+	int ret = 0;
+	u8 val;
+
 	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
 
 	pr_rgltr(FLOW, "<%s> id =  %d\n",
 		__func__, id);
 
-	BUG_ON(id >= BCMPMU_REGULATOR_MAX ||
-			rinfo == NULL);
+	BUG_ON(rinfo == NULL);
+
 	if (rinfo[id].flags & RGLR_3BIT_PMCTRL) {
 		val = PMMODE_OFF << PMMODE_3BIT_PM0_SHIFT |
 				PMMODE_OFF << PMMODE_3BIT_PM1_SHIFT;
@@ -382,6 +381,19 @@ static int bcmpmureg_disable(struct regulator_dev *rdev)
 #endif
 	rinfo[id].flags &= ~RGLR_ON;
 	return 0;
+}
+
+static int bcmpmureg_disable(struct regulator_dev *rdev)
+{
+	struct bcmpmu59xxx *bcmpmu;
+	int id;
+	if ((!rdev || !rdev->desc))
+		return -1;
+	bcmpmu = rdev_get_drvdata(rdev);
+	id = rdev_get_id(rdev);
+	BUG_ON(bcmpmu == NULL || id >= BCMPMU_REGULATOR_MAX);
+
+	return __bcmpmureg_disable(bcmpmu, id);
 }
 
 /*
@@ -474,7 +486,8 @@ static int bcmpmuldo_set_voltage(struct regulator_dev *rdev, int min_uv,
 	int id, i;
 	struct bcmpmu59xxx_regulator_info *rinfo;
 	u8 val;
-	int uv;
+	u32 uv;
+	int match;
 
 	if ((!rdev || !rdev->desc))
 		return -1;
@@ -485,21 +498,33 @@ static int bcmpmuldo_set_voltage(struct regulator_dev *rdev, int min_uv,
 			rinfo == NULL);
 
 	*sel = -1;
-
+	match = rinfo[id].num_voltages; /*init to max*/
+	/*Find nearest match*/
 	for (i = 0; i < rinfo[id].num_voltages; i++) {
 		uv = rinfo[id].v_table[i];
-
-		if (min_uv <= uv && uv <= max_uv) {
-			*sel = i;
-			bcmpmu->read_dev(bcmpmu, rinfo[id].reg_vout, &val);
-			val &= ~rinfo[id].vout_mask;
-			val = (i  << rinfo[id].vout_shift) &
+		pr_rgltr(FLOW, "uv = %u min_uv = %d max_uv = %d match = %d\n",
+			uv, min_uv, max_uv, match);
+		if (min_uv <= uv && uv <= max_uv &&
+			(match == rinfo[id].num_voltages ||
+			rinfo[id].v_table[match] > uv)) {
+				match = i;
+				pr_rgltr(FLOW, "i = %d, match_v = %u\n", i,
+					rinfo[id].v_table[match]);
+				if (uv == min_uv)
+					break;
+			}
+	}
+	pr_rgltr(FLOW, "<%s> match = %x\n", __func__, match);
+	if (match < rinfo[id].num_voltages) {
+		*sel = match;
+		bcmpmu->read_dev(bcmpmu, rinfo[id].reg_vout, &val);
+		val &= ~rinfo[id].vout_mask;
+		val |= (match  << rinfo[id].vout_shift) &
 						rinfo[id].vout_mask;
-			pr_rgltr(FLOW, "<%s> wrtite : reg[%x] =  %x\n",
-				__func__, rinfo[id].reg_vout, val);
-			return bcmpmu->write_dev(bcmpmu,
-					rinfo[id].reg_vout, val);
-		}
+		pr_rgltr(FLOW, "<%s> wrtite : reg[%x] =  %x\n",
+			__func__, rinfo[id].reg_vout, val);
+		return bcmpmu->write_dev(bcmpmu,
+				rinfo[id].reg_vout, val);
 	}
 	return -EINVAL;
 }
@@ -602,8 +627,8 @@ static ssize_t bcmpmu_dbg_rgltr_set_vlt(struct file *file,
 	u32 len;
 	char input_str[100] = {0};
 	char consumer[20] = {0};
-	u32 min_v = 0xFFFF;
-	u32 max_v = 0xFFFF;
+	u32 min_v = 0xFFFFFFFF;
+	u32 max_v = 0xFFFFFFFF;
 	struct regulator *regl;
 	struct bcmpmu59xxx *bcmpmu = file->private_data;
 	BUG_ON(!bcmpmu);
@@ -614,13 +639,13 @@ static ssize_t bcmpmu_dbg_rgltr_set_vlt(struct file *file,
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
 	sscanf(input_str, "%s%u%u", consumer, &min_v, &max_v);
-	if (consumer[0] == 0 || min_v == 0xFFFF ||
-			max_v == 0xFFFF) {
+	if (consumer[0] == 0 || min_v == 0xFFFFFFFF ||
+			max_v == 0xFFFFFFFF) {
 		pr_info("invalid param !!\n");
 		return -EFAULT;
 	}
 
-
+	pr_info("%s, %u %u\n", consumer, min_v, max_v);
 	regl = regulator_get(NULL, consumer);
 	if (unlikely(IS_ERR_OR_NULL(regl))) {
 		pr_info("regulator_get for %s failed\n", consumer);
@@ -924,9 +949,9 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 					bcmpmu_rgltrs[i].pc_pins_map);
 			if (bcmpmu_rgltrs[i].initdata->constraints.always_on ||
 				bcmpmu_rgltrs[i].initdata->constraints.boot_on)
-				rgltr_info[rgltr_id].flags &= ~RGLR_ON;
+				__bcmpmureg_enable(bcmpmu, rgltr_id);
 			else
-				rgltr_info[rgltr_id].flags |= RGLR_ON;
+				__bcmpmureg_disable(bcmpmu, rgltr_id);
 			regl[i] =
 				regulator_register(rgltr_info[rgltr_id].rdesc,
 						&pdev->dev,
