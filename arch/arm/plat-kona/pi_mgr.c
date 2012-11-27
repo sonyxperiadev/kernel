@@ -539,19 +539,22 @@ static int pi_set_ccu_freq(struct pi *pi, u32 policy, u32 opp_inx)
 {
 	int inx;
 	int res = 0;
-	u32 freq_id;
+	struct opp_conf *opp_conf;
+	struct pi_opp *pi_opp;
+
 	BUG_ON(opp_inx >= pi->num_opp);
 	for (inx = 0; inx < pi->num_ccu_id; inx++) {
-		freq_id = pi->pi_opp[inx].opp[opp_inx];
+		pi_opp = &pi->pi_opp[inx];
+		opp_conf = &pi_opp->opp[opp_inx];
 
 		if (ccu_get_freq_policy(to_ccu_clk(pi->pi_ccu[inx]),
-			CCU_POLICY(policy)) != freq_id) {
+			CCU_POLICY(policy)) !=  opp_conf->freq_id) {
 			pi_dbg(pi->id, PI_LOG_DFS,
 		       "%s:%s  policy => %x freq_id => %d\n", __func__,
-		       pi->pi_ccu[inx]->name, policy, freq_id);
-					res = ccu_set_freq_policy(
-						to_ccu_clk(pi->pi_ccu[inx]),
-						CCU_POLICY(policy), freq_id);
+		       pi->pi_ccu[inx]->name, policy, opp_conf->freq_id);
+			res = ccu_set_freq_policy(to_ccu_clk(pi->pi_ccu[inx]),
+					  CCU_POLICY(policy), opp_conf);
+
 			if (res != 0) {
 				pi_dbg(pi->id, PI_LOG_DFS,
 				"%s:ccu_set_freq_policy failed\n", __func__);
@@ -670,8 +673,12 @@ static int pi_def_init_state(struct pi *pi)
 {
 #ifdef CONFIG_CHANGE_POLICY_FOR_DFS
 	pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy =
-	    pi->pi_opp[0].opp[pi->opp_active];
-	pi_set_policy(pi, pi->pi_opp[0].opp[pi->opp_active], POLICY_DFS);
+		pi->pi_opp[0]->opp[pi->opp_active].freq_id;
+	pi_set_policy(pi, pi->pi_opp[0]->opp[pi->opp_active].freq_id,
+				POLICY_DFS);
+#else
+	pi_set_ccu_freq(pi, pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
+			pi->opp_active);
 #endif
 	return 0;
 }
@@ -710,7 +717,8 @@ static int pi_def_init(struct pi *pi)
 		plist_head_init(&dfs->requests);
 		dfs->pi_id = pi->id;
 		dfs->default_opp = 0;
-		BUG_ON(pi->num_opp && pi->pi_opp == NULL);
+		BUG_ON(pi->num_opp && (pi->pi_opp == NULL ||
+			pi->pi_opp->opp	== NULL));
 		if (pi->flags & DFS_LIMIT_CHECK_EN)
 			BUG_ON(pi->num_opp <= pi->opp_lmt_max ||
 			       pi->opp_lmt_max < pi->opp_lmt_min);
@@ -822,7 +830,7 @@ static u32 pi_mgr_dfs_get_opp(const struct pi_mgr_dfs_object *dfs)
 {
 	u32 opp = dfs->default_opp;
 	int i;
-	int sum[PI_OPP_MAX - 1] = { 0 };
+	int sum[PROC_OPP_MAX - 1] = { 0 };
 	struct pi_mgr_dfs_node *dfs_node;
 	struct pi *pi = pi_mgr.pi_list[dfs->pi_id];
 
@@ -921,12 +929,14 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
 				__func__, pi_id, old_val, new_val);
 #ifdef CONFIG_CHANGE_POLICY_FOR_DFS
 			pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy =
-			    pi->pi_opp[0].opp[new_val];
+				pi->pi_opp[0]->opp[new_val].freq_id;
 			if (pi_is_enabled(pi))
-				pi_set_policy(pi, pi->pi_opp[0].opp[new_val],
+				pi_set_policy(pi,
+				pi->pi_opp[0]->opp[new_val].freq_id,
 					      POLICY_QOS);
 			if (pi->dfs_sw_event_id != pi->qos_sw_event_id)
-				pi_set_policy(pi, pi->pi_opp[0].opp[new_val],
+				pi_set_policy(pi,
+				pi->pi_opp[0]->opp[new_val].freq_id,
 					      POLICY_DFS);
 #else
 			/*Update freq if in enabled state
@@ -1426,8 +1436,8 @@ int pi_mgr_disable_policy_change(int pi_id, int disable)
 		/*Update PI DFS freq based on opp_active value */
 #ifdef CONFIG_CHANGE_POLICY_FOR_DFS
 		pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy =
-		    pi->pi_opp[0].opp[pi->opp_active];
-		pi_set_policy(pi, pi->pi_opp[0].opp[pi->opp_active],
+			pi->pi_opp[0]->opp[pi->opp_active].freq_id;
+		pi_set_policy(pi, pi->pi_opp[0]->opp[pi->opp_active].freq_id,
 			      POLICY_DFS);
 #else
 		pi_set_ccu_freq(pi,

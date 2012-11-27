@@ -124,6 +124,15 @@ config	DELAYED_PM_INIT
 	  is recieved, all the PIs start changing policies, arm can enter LPM and
 	  arm dfs is allowed.
 
+config	PWRMGR_1P2GHZ_OPS_SET_SELECT
+	depends on ARCH_HAWAII && KONA_POWER_MGR
+	bool "Reconfigure the pll for OPS set with Turbo at 1.2GHz"
+	default n
+	help
+	  Say Y if you want to reconfigure the pll for Turbo at 1.2G. All other
+	  ops gets adjusted accordingly. If this is not selected,
+	  default OPP set is with Turbo at 1GHz.
+
 config	PWRMGR_DUMMY_SEQUENCER
 	bool "Use dummy PWRMGR HW I2C sequencer"
 	default n

@@ -336,7 +336,7 @@ struct peri_clk_ops {
 
 struct bus_clk_ops {
 };
-
+struct opp_conf;
 struct ccu_clk;
 struct ccu_clk_ops {
 	int (*write_access) (struct ccu_clk * ccu_clk, int enable);
@@ -348,7 +348,7 @@ struct ccu_clk_ops {
 	int (*int_enable) (struct ccu_clk * ccu_clk, int int_type, int enable);
 	int (*int_status_clear) (struct ccu_clk * ccu_clk, int int_type);
 	int (*set_freq_policy) (struct ccu_clk * ccu_clk, int policy_id,
-				int freq_id);
+				struct opp_conf *opp_conf);
 	int (*get_freq_policy) (struct ccu_clk * ccu_clk, int policy_id);
 	int (*set_peri_voltage) (struct ccu_clk * ccu_clk, int peri_volt_id,
 				 u8 voltage);
@@ -739,7 +739,6 @@ int clk_init(struct clk *clk);
 int clk_reset(struct clk *clk);
 int clk_get_usage(struct clk *clk);
 int clk_register(struct clk_lookup *clk_lkup, int num_clks);
-int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id, int freq_id);
 int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl);
 int peri_clk_hyst_enable(struct peri_clk *peri_clk, int enable, int delay);
 int peri_clk_set_pll_select(struct peri_clk *peri_clk, int source);
@@ -750,7 +749,8 @@ int ccu_policy_engine_stop(struct ccu_clk *ccu_clk);
 int ccu_set_policy_ctrl(struct ccu_clk *ccu_clk, int pol_ctrl_id, int action);
 int ccu_int_enable(struct ccu_clk *ccu_clk, int int_type, int enable);
 int ccu_int_status_clear(struct ccu_clk *ccu_clk, int int_type);
-int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id, int freq_id);
+int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
+				struct opp_conf *opp_conf);
 int ccu_get_freq_policy(struct ccu_clk *ccu_clk, int policy_id);
 int ccu_set_peri_voltage(struct ccu_clk *ccu_clk, int peri_volt_id, u8 voltage);
 int ccu_set_voltage(struct ccu_clk *ccu_clk, int volt_id, u8 voltage);

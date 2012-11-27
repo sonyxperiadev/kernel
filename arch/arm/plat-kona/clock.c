@@ -1901,14 +1901,15 @@ int ccu_int_status_clear(struct ccu_clk *ccu_clk, int int_type)
 
 EXPORT_SYMBOL(ccu_int_status_clear);
 
-int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id, int freq_id)
+int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
+			struct opp_conf *opp_conf)
 {
 	int ret;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->set_freq_policy)
 		return -EINVAL;
 	ret = ccu_clk->ccu_ops->set_freq_policy(ccu_clk,
-			policy_id, freq_id);
+			policy_id, opp_conf);
 	return ret;
 
 }
@@ -2243,15 +2244,15 @@ static int ccu_clk_int_status_clear(struct ccu_clk *ccu_clk, int int_type)
 }
 
 static int ccu_clk_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
-				   int freq_id)
+				   struct opp_conf *opp_conf)
 {
 	u32 reg_val = 0;
 	u32 shift;
 	unsigned long flags;
 	clk_dbg("%s:%s ccu , freq_id = %d policy_id = %d\n", __func__,
-		ccu_clk->clk.name, freq_id, policy_id);
+		ccu_clk->clk.name, opp_conf->freq_id, policy_id);
 
-	if (freq_id >= ccu_clk->freq_count)
+	if (opp_conf->freq_id >= ccu_clk->freq_count)
 		return -EINVAL;
 
 	switch (policy_id) {
@@ -2275,7 +2276,7 @@ static int ccu_clk_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	clk_dbg("%s: reg_val:%08x shift:%d\n", __func__, reg_val, shift);
 	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
 
-	reg_val |= freq_id << shift;
+	reg_val |= opp_conf->freq_id << shift;
 
 	ccu_write_access_enable(ccu_clk, true);
 	ccu_policy_engine_stop(ccu_clk);
@@ -2634,6 +2635,7 @@ static int ccu_clk_init(struct clk *clk)
 	struct ccu_clk *ccu_clk;
 	int inx;
 	u32 reg_val;
+	struct opp_conf opp_conf;
 
 	clk_dbg("%s - %s\n", __func__, clk->name);
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
@@ -2676,8 +2678,9 @@ static int ccu_clk_init(struct clk *clk)
 		for (inx = 0; inx < MAX_CCU_POLICY_COUNT; inx++) {
 			BUG_ON(ccu_clk->freq_policy[inx] >=
 			       ccu_clk->freq_count);
-			ccu_set_freq_policy(ccu_clk, inx,
-					    ccu_clk->freq_policy[inx]);
+			opp_conf.flags = 0;
+			opp_conf.freq_id = ccu_clk->freq_policy[inx];
+			ccu_set_freq_policy(ccu_clk, inx, &opp_conf);
 		}
 	}
 	/*Set ATL & AC */

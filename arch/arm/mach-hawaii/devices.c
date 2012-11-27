@@ -57,6 +57,7 @@
 #include <linux/cpufreq.h>
 #include <mach/clock.h>
 #include <linux/clk.h>
+#include <plat/pi_mgr.h>
 #include <mach/pi_mgr.h>
 #endif
 
@@ -642,27 +643,34 @@ struct platform_device hawaii_otg_platform_device = {
 
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] = {
-	FTBL_INIT(312000, PI_OPP_ECONOMY),
-	FTBL_INIT(666667, PI_OPP_NORMAL),
-	FTBL_INIT(1000000, PI_OPP_TURBO),
+	FTBL_INIT(312000, PI_OPP_INDEX0),
+	FTBL_INIT(499999, PI_OPP_INDEX1),
+	FTBL_INIT(666667, PI_OPP_INDEX2),
+	FTBL_INIT(1000000, PI_OPP_INDEX3),
 };
 
 void hawaii_cpufreq_init(void)
 {
 	struct clk *a9_pll_chnl0;
 	struct clk *a9_pll_chnl1;
+	struct clk *a9_pll;
+
+	a9_pll = clk_get(NULL, A9_PLL_CLK_NAME_STR);
 	a9_pll_chnl0 = clk_get(NULL, A9_PLL_CHNL0_CLK_NAME_STR);
 	a9_pll_chnl1 = clk_get(NULL, A9_PLL_CHNL1_CLK_NAME_STR);
 
-	BUG_ON(IS_ERR_OR_NULL(a9_pll_chnl0) || IS_ERR_OR_NULL(a9_pll_chnl1));
+	BUG_ON(IS_ERR_OR_NULL(a9_pll) || IS_ERR_OR_NULL(a9_pll_chnl0)
+				|| IS_ERR_OR_NULL(a9_pll_chnl1));
 
 	/*Update DVFS freq table based on PLL settings done by the loader */
 	/*For B0 and above, ECONOMY:0 NORMAL:1 TURBO:2 */
-	kona_freq_tbl[1].cpu_freq = clk_get_rate(a9_pll_chnl0) / 1000;
-	kona_freq_tbl[2].cpu_freq = clk_get_rate(a9_pll_chnl1) / 1000;
+	kona_freq_tbl[1].cpu_freq = clk_get_rate(a9_pll) / (4 * 1000);
+	kona_freq_tbl[2].cpu_freq = clk_get_rate(a9_pll) / (3 * 1000);
+	kona_freq_tbl[3].cpu_freq = clk_get_rate(a9_pll_chnl1) / 1000;
 
-	pr_info("%s a9_pll_chnl0 freq = %dKhz a9_pll_chnl1 freq = %dKhz\n",
-		__func__, kona_freq_tbl[1].cpu_freq, kona_freq_tbl[2].cpu_freq);
+	pr_info("%s a9_pll_chnl0 OPP0_freq = %dkHz OPP1_freq = %dKhz a9_pll_chnl1 freq = %dKhz\n",
+		__func__, kona_freq_tbl[1].cpu_freq, kona_freq_tbl[2].cpu_freq,
+		kona_freq_tbl[3].cpu_freq);
 }
 
 struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {

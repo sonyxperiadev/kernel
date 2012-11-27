@@ -61,6 +61,31 @@ struct pi_mgr_qos_node;
 struct pi_mgr_dfs_node;
 
 enum {
+	OPP_POLICY_CHANGE = 0x1,
+	OPP_FREQ_ID_CHANGE = 0x2,
+	OPP_PLL_CHNL_CHANGE = 0x4,
+	OPP_NEED_INTERIM_SWITCH = 0x8,
+};
+
+enum {
+	PI_OPP_INDEX0,
+	PI_OPP_INDEX1,
+	PI_OPP_INDEX2,
+	PI_OPP_INDEX3,
+	PI_OPP_INDEX4,
+	PI_OPP_INDEX5,
+	PI_OPP_INDEX6,
+	PI_OPP_INDEX7,
+};
+
+struct opp_conf {
+	u32 freq_id;
+	u32 opp_inx;
+	u32 flags;
+};
+
+
+enum {
 	SUB_DOMAIN_0,
 	SUB_DOMAIN_1,
 	SUB_DOMAIN_BOTH,
@@ -135,7 +160,7 @@ struct pi_state {
 };
 
 struct pi_opp {
-	u32 opp[PI_OPP_MAX];
+	struct opp_conf *opp;
 };
 
 #ifdef	CONFIG_KONA_PI_DFS_STATS

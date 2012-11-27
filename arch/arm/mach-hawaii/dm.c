@@ -38,6 +38,13 @@
 #include <asm/cacheflush.h>
 #include <mach/pm.h>
 #include <mach/sram_config.h>
+#include <plat/clock.h>
+/* variable to store proc_ccu pointer. This is
+ * used to enable/disable access to proc_ccu using
+ * clock module API.
+ */
+static struct ccu_clk *proc_ccu;
+
 /* Control variable to enter retention instead
  * of dormant in idle path but enter
  * dormant during suspend
@@ -336,7 +343,8 @@ static void restore_proc_clk_regs(void)
 	u32 val1, val2;
 
 	/* Allow write access to the CCU registers */
-	writel_relaxed(UNLOCK_PROC_CLK, PROC_CLK_REG_ADDR(WR_ACCESS));
+	if (proc_ccu)
+		ccu_write_access_enable(proc_ccu, true);
 
 #if defined(CONFIG_BCM_HWCAPRI_1605) || defined(CONFIG_BCM_HWCAPRI_1605_A2)
 	/* If the issue is not fixed, first step to 312 MHZ before restoring
@@ -405,7 +413,8 @@ static void restore_proc_clk_regs(void)
 		       KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
 		       PROC_CLK_REG_ADDR(POLICY_CTL));
 	/* Lock CCU registers */
-	writel_relaxed(LOCK_PROC_CLK, PROC_CLK_REG_ADDR(WR_ACCESS));
+	if (proc_ccu)
+		ccu_write_access_enable(proc_ccu, false);
 }
 
 /*
@@ -861,8 +870,16 @@ static int __init dormant_init(void)
 
 
 	void *vptr = NULL;
+	struct clk *clk;
 
 	dma_addr_t drmt_buf_phy;
+
+	clk = clk_get(NULL, KPROC_CCU_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(clk))
+		return -EPERM;
+	proc_ccu = to_ccu_clk(clk);
+	if (proc_ccu == NULL)
+		return -EPERM;
 
 	vptr = dma_alloc_coherent(NULL, SZ_1K * num_cpus(),
 				  &drmt_buf_phy, GFP_ATOMIC);

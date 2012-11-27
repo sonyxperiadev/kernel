@@ -46,7 +46,7 @@
 #define OPP_TURBO_STRING	"TURBO"
 
 
-#define	ARM_PI_NUM_OPP			3
+#define	ARM_PI_NUM_OPP			4
 #define	MM_PI_NUM_OPP			3
 #define	HUB_PI_NUM_OPP			2
 #define	AON_PI_NUM_OPP			2
@@ -63,12 +63,31 @@ static struct clk *ref_8ph_en_pll1_clk;
 
 char *armc_core_ccu[] = { KPROC_CCU_CLK_NAME_STR };
 
+struct opp_conf arm_opp_conf[] = {
+	[PI_OPP_INDEX0] = {
+		.freq_id = PROC_CCU_FREQ_ID_ECO,
+		.opp_inx = PI_OPP_INDEX0,
+		.flags = OPP_FREQ_ID_CHANGE,
+	},
+	[PI_OPP_INDEX1] = {
+		.freq_id = PROC_CCU_FREQ_ID_NRML,
+		.opp_inx = PI_OPP_INDEX1,
+		.flags = OPP_FREQ_ID_CHANGE | OPP_PLL_CHNL_CHANGE,
+	},
+	[PI_OPP_INDEX2] = {
+		.freq_id = PROC_CCU_FREQ_ID_NRML,
+		.opp_inx = PI_OPP_INDEX2,
+		.flags = OPP_FREQ_ID_CHANGE | OPP_PLL_CHNL_CHANGE,
+	},
+	[PI_OPP_INDEX3] = {
+		.freq_id = PROC_CCU_FREQ_ID_TURBO,
+		.opp_inx = PI_OPP_INDEX3,
+		.flags = OPP_FREQ_ID_CHANGE,
+	},
+};
+
 struct pi_opp arm_opp = {
-	.opp = {
-		[PI_OPP_ECONOMY] = PROC_CCU_FREQ_ID_ECO,
-		[PI_OPP_NORMAL] = PROC_CCU_FREQ_ID_NRML,
-		[PI_OPP_TURBO] = PROC_CCU_FREQ_ID_TURBO,
-		},
+	.opp = &arm_opp_conf[PI_OPP_INDEX0],
 };
 
 static struct pi_state arm_core_states[] = {
@@ -100,8 +119,8 @@ static struct pi arm_core_pi = {
 	.state_allowed = ARM_CORE_STATE_DORMANT,
 	.pi_state = arm_core_states,
 	.num_states = ARRAY_SIZE(arm_core_states),
-	.opp_active = 2,
-	.opp_lmt_max = 2,
+	.opp_active = 3,
+	.opp_lmt_max = 3,
 	.opp_lmt_min = 0,
 	.pi_opp = &arm_opp,
 	.num_opp = ARM_PI_NUM_OPP,
@@ -139,12 +158,23 @@ static struct pi arm_core_pi = {
 /*MM PI CCU Id*/
 static char *mm_ccu[] = { MM_CCU_CLK_NAME_STR };
 
+struct opp_conf mm_opp_conf[] = {
+	[PI_OPP_INDEX0] = {
+		.freq_id = MM_CCU_FREQ_ID_ECO,
+		.opp_inx = PI_OPP_INDEX0,
+	},
+	[PI_OPP_INDEX1] = {
+		.freq_id = MM_CCU_FREQ_ID_NRML,
+		.opp_inx = PI_OPP_INDEX1,
+	},
+	[PI_OPP_INDEX2] = {
+		.freq_id = MM_CCU_FREQ_ID_TURBO,
+		.opp_inx = PI_OPP_INDEX2,
+	},
+};
+
 struct pi_opp mm_opp = {
-	.opp = {
-		[PI_OPP_ECONOMY] = MM_CCU_FREQ_ID_ECO,
-		[PI_OPP_NORMAL] = MM_CCU_FREQ_ID_NRML,
-		[PI_OPP_TURBO] = MM_CCU_FREQ_ID_TURBO,
-		},
+	.opp = &mm_opp_conf[PI_OPP_INDEX0],
 };
 
 static struct pi_state mm_states[] = {
@@ -257,11 +287,18 @@ static struct pi mm_pi = {
 /*HUB PI CCU Id*/
 static char *hub_ccu[] = { KHUB_CCU_CLK_NAME_STR };
 
+struct opp_conf hub_opp_conf[] = {
+	[PI_OPP_INDEX0] = {
+		.freq_id = HUB_CCU_FREQ_ID_ECO, /* 0 */
+		.opp_inx = PI_OPP_INDEX0,
+	},
+	[PI_OPP_INDEX1] = {
+		.freq_id = HUB_CCU_FREQ_ID_NRML2,
+		.opp_inx = PI_OPP_INDEX1,
+	},
+};
 struct pi_opp hub_opp = {
-	.opp = {
-		[PI_OPP_ECONOMY] = HUB_CCU_FREQ_ID_ECO,	/* 0 */
-		[PI_OPP_NORMAL] = HUB_CCU_FREQ_ID_NRML2,
-		},
+	&hub_opp_conf[PI_OPP_INDEX0],
 };
 
 static struct pi_state hub_states[] = {
@@ -336,11 +373,18 @@ static struct pi hub_pi = {
 /*AON PI CCU Id*/
 static char *aon_ccu[] = { KHUBAON_CCU_CLK_NAME_STR };
 
+struct opp_conf aon_opp_conf[] = {
+	[PI_OPP_INDEX0] = {
+		.freq_id = AON_CCU_FREQ_ID_ECO, /* 0 */
+		.opp_inx = PI_OPP_INDEX0,
+	},
+	[PI_OPP_INDEX1] = {
+		.freq_id = AON_CCU_FREQ_ID_NRML2,
+		.opp_inx = PI_OPP_INDEX1,
+	},
+};
 struct pi_opp aon_opp = {
-	.opp = {
-		[PI_OPP_ECONOMY] = AON_CCU_FREQ_ID_ECO,	/* 0 */
-		[PI_OPP_NORMAL] = AON_CCU_FREQ_ID_NRML2,
-		},
+	&aon_opp_conf[PI_OPP_INDEX0],
 };
 
 static struct pi_state aon_states[] = {
@@ -405,18 +449,36 @@ static struct pi aon_pi = {
 /*ARM subsystem PI Id*/
 static char *sub_sys_ccu[] = { KPM_CCU_CLK_NAME_STR, KPS_CCU_CLK_NAME_STR };
 
-struct pi_opp sub_sys_opp[2] = {
-	[0] = { /*KPM*/.opp = {
-			       [PI_OPP_ECONOMY] = KPM_CCU_FREQ_ID_ECO,
-			       [PI_OPP_NORMAL] = KPM_CCU_FREQ_ID_NRML2,
-			       },
-	       },
-	[1] = { /*KPS*/.opp = {
-			       [PI_OPP_ECONOMY] = KPS_CCU_FREQ_ID_ECO,
-			       [PI_OPP_NORMAL] = KPS_CCU_FREQ_ID_NRML2,
-			       },
-	       },
+struct opp_conf kpm_opp_conf[2] = {
+	/* KPM */
+	[PI_OPP_INDEX0] = {
+	    .freq_id = KPM_CCU_FREQ_ID_ECO, /* 0 */
+	    .opp_inx = PI_OPP_INDEX0,
+	},
+	[PI_OPP_INDEX1] = {
+	    .freq_id = KPM_CCU_FREQ_ID_NRML2,
+	    .opp_inx = PI_OPP_INDEX1,
+	},
+};
+struct opp_conf kps_opp_conf[2] = {
+	/* KPS */
+	[PI_OPP_INDEX0] = {
+	    .freq_id = KPS_CCU_FREQ_ID_ECO, /* 0 */
+	    .opp_inx = PI_OPP_INDEX0,
+	},
+	[PI_OPP_INDEX1] = {
+	    .freq_id = KPS_CCU_FREQ_ID_NRML2,
+	    .opp_inx = PI_OPP_INDEX1,
+	},
+};
 
+struct pi_opp sub_sys_opp[2] = {
+	[0] = {
+		.opp = &kpm_opp_conf[PI_OPP_INDEX0],
+	},
+	[1] = {
+		.opp = &kps_opp_conf[PI_OPP_INDEX0],
+	}
 };
 
 static struct pi_state sub_sys_states[] = {

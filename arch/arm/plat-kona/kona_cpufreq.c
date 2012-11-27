@@ -25,10 +25,12 @@
 #include <plat/kona_cpufreq_drv.h>
 
 #include <plat/pi_mgr.h>
+#include <mach/pwr_mgr.h>
 #include <asm/cpu.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#include <asm/uaccess.h>
 #include <linux/seq_file.h>
 #endif
 
@@ -41,6 +43,9 @@
 		printk(format); 	\
 	} while(0)
 #endif
+
+#define PLL_VAL_FOR_TURBO_1P2G	1200000
+#define PLL_VAL_FOR_TURBO_1G	999999
 
 static int kcf_debug = 0;
 
@@ -625,6 +630,102 @@ static struct file_operations bogo_mips_fops = {
 	.read = kona_cpufreq_bogmips_get,
 };
 
+static int cpufreq_debugfs_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+static ssize_t cpufreq_get_ops_set(struct file *file,
+					char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	u32 len = 0;
+	char out_str[20];
+
+	memset(out_str, 0, sizeof(out_str));
+	if (kona_cpufreq->freq_map[kona_cpufreq->no_of_opps-1].cpu_freq ==
+						    PLL_VAL_FOR_TURBO_1G)
+		len += snprintf(out_str+len, sizeof(out_str)-len,
+			"%s\n", "1GHz OPS Set\n");
+	else if (kona_cpufreq->freq_map[kona_cpufreq->no_of_opps-1].cpu_freq
+					== PLL_VAL_FOR_TURBO_1P2G)
+		len += snprintf(out_str+len, sizeof(out_str)-len,
+			"%s\n", "1.2GHz OPs Set\n");
+
+	return simple_read_from_buffer(user_buf, count, ppos,
+			out_str, len);
+}
+
+__weak int pm_parm_config_a9_pll(int turbo_val)
+{
+	return -1;
+}
+
+static ssize_t cpufreq_set_ops_set(struct file *file,
+				  char const __user *buf, size_t count,
+				  loff_t *offset)
+{
+	u32 len = 0;
+	char input_str[20];
+	u32 pll_val = 0;
+	int i, ret = 0;
+
+	memset(input_str, 0, ARRAY_SIZE(input_str));
+	if (count > ARRAY_SIZE(input_str))
+		len = ARRAY_SIZE(input_str);
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	sscanf(&input_str[0], "%d", &pll_val);
+	if (cpufreq_unregister_driver(&kona_cpufreq_driver) != 0) {
+		kcf_dbg("%s: cpufreq unregister failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	ret = pi_mgr_dfs_request_remove(&kona_cpufreq->dfs_node);
+	if (ret)
+		kcf_dbg("%s: dfs remove request failed\n", __func__);
+
+	pm_parm_config_a9_pll(pll_val);
+
+	/*Invlide init callback function if valid */
+	if (kona_cpufreq->pdata->cpufreq_init)
+		kona_cpufreq->pdata->cpufreq_init();
+
+	kona_cpufreq->no_of_opps = kona_cpufreq->pdata->num_freqs;
+	for (i = 0; i < kona_cpufreq->no_of_opps; i++) {
+		kona_cpufreq->freq_map[i].cpu_freq =
+		    kona_cpufreq->pdata->freq_tbl[i].cpu_freq;
+		kona_cpufreq->freq_map[i].opp =
+				kona_cpufreq->pdata->freq_tbl[i].opp;
+	}
+
+	/*Add  DFS client for ARM CCU. this client will be used later
+	   for changinf ARM freq via cpu-freq. */
+	ret =
+	    pi_mgr_dfs_add_request(&kona_cpufreq->dfs_node, "cpu_freq",
+				   kona_cpufreq->pi_id,
+				   pi_get_active_opp(kona_cpufreq->pi_id));
+	if (ret) {
+		kcf_dbg("Failed add dfs request for CPU\n");
+		return -ENOMEM;
+	}
+	ret = cpufreq_register_driver(&kona_cpufreq_driver);
+
+
+	return count;
+}
+
+static const struct file_operations cpu_config_set_ops_fops = {
+	.open = cpufreq_debugfs_open,
+	.write = cpufreq_set_ops_set,
+	.read = cpufreq_get_ops_set,
+};
+
 static struct dentry *dent_kcf_root_dir;
 int __init kona_cpufreq_debug_init(void)
 {
@@ -638,6 +739,12 @@ int __init kona_cpufreq_debug_init(void)
 	if (!debugfs_create_file
 	    ("bogo_mips", S_IRUSR, dent_kcf_root_dir, NULL, &bogo_mips_fops))
 		return -ENOMEM;
+
+	if (!debugfs_create_file
+	    ("config_ops_set", S_IRUSR, dent_kcf_root_dir, NULL,
+						&cpu_config_set_ops_fops))
+		return -ENOMEM;
+
 	return 0;
 
 }
