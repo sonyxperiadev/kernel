@@ -715,7 +715,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_STM_TRACE
-/* &hawaii_stm_device,*/
+	&hawaii_stm_device,
 #endif
 
 #if defined(CONFIG_HW_RANDOM_KONA)
