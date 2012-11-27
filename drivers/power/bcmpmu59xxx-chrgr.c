@@ -57,8 +57,6 @@ struct bcmpmu_chrgr_data {
 	struct bcmpmu_chrgr_info ac_chrgr_info;
 	struct power_supply usb_psy;
 	struct bcmpmu_chrgr_info usb_chrgr_info;
-	struct power_supply batt_psy;
-	int batt_prev_cap;
 	struct delayed_work chrgr_work;
 	struct notifier_block nb;
 };
@@ -75,12 +73,6 @@ static enum power_supply_property bcmpmu_usb_props[] = {
 	POWER_SUPPLY_PROP_MODEL_NAME,
 };
 
-static enum power_supply_property bcmpmu_batt_props[] = {
-	POWER_SUPPLY_PROP_STATUS,
-	POWER_SUPPLY_PROP_PRESENT,
-	POWER_SUPPLY_PROP_CAPACITY,
-	POWER_SUPPLY_PROP_TECHNOLOGY,
-};
 /*
 static char *usb_names[PMU_USB_TYPE_MAX] = {
 	[PMU_USB_TYPE_NONE]	= "none",
@@ -111,6 +103,10 @@ static u32 bcmpmu_pmu_curr_table[] = {
 	695,	/* 0x110 */
 	765,	/* 0x111 */
 	935,	/* 0x1000 */
+};
+
+const char *supplies_to[] = {
+	"battery",
 };
 
 static int bcmpmu_get_curr_val(int curr)
@@ -261,93 +257,7 @@ static int bcmpmu_chrgr_usb_set_property(struct power_supply *psy,
 	return ret;
 }
 
-static int bcmpmu_chrgr_get_batt_volt(struct bcmpmu_chrgr_data *di)
-{
-	int ret;
-	u8 adc_msb;
-	u8 adc_lsb;
-	int adc_sample;
-	int volt_mv;
-	struct bcmpmu59xxx *bcmpmu = di->bcmpmu;
-
-	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_ADCCTRL3, &adc_msb);
-	if (ret)
-		return ret;
-	if (adc_msb & 0x4)
-		return -EAGAIN;
-	adc_msb &= 0x3;
-
-	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_ADCCTRL4, &adc_lsb);
-	if (ret)
-		return ret;
-	adc_sample = ((adc_msb << 8) | (adc_lsb));
-	volt_mv = (adc_sample * 4800) / 1024;
-	pr_chrgr(FLOW, "%s: VMBATT Sample %d volt %d\n", __func__,
-			adc_sample, volt_mv);
-
-	return volt_mv;
-}
-
-static int bcmpmu_chrgr_get_batt_avg_volt(struct bcmpmu_chrgr_data *di)
-{
-	int ret;
-	int volt = 0;
-	int samples = 8;
-
-	while (samples--) {
-		ret = bcmpmu_chrgr_get_batt_volt(di);
-		if (ret > 0)
-			volt += ret;
-		msleep(20);
-	}
-	return volt/8;
-}
-
-static int bcmpmu_chrgr_batt_get_property(struct power_supply *psy,
-		enum power_supply_property psp,
-		union power_supply_propval *val)
-{
-	int ret = 0;
-	int batt_volt;
-	int cap_percentage;
-	struct bcmpmu_chrgr_data *di = container_of(psy,
-			struct bcmpmu_chrgr_data, batt_psy);
-
-	pr_chrgr(FLOW, "%s: property %d\n", __func__, psp);
-	switch (psp) {
-	case POWER_SUPPLY_PROP_STATUS:
-		if (di->usb_chrgr_info.online)
-			val->intval = POWER_SUPPLY_STATUS_CHARGING;
-		else
-			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
-		break;
-	case POWER_SUPPLY_PROP_PRESENT:
-		val->intval = 1;
-		break;
-	case POWER_SUPPLY_PROP_CAPACITY:
-		batt_volt = bcmpmu_chrgr_get_batt_avg_volt(di);
-		cap_percentage = BATT_VOLT_TO_CAP(batt_volt);
-		if ((abs(cap_percentage - di->batt_prev_cap)) >
-				10)
-			cap_percentage = di->batt_prev_cap;
-		else
-			di->batt_prev_cap = cap_percentage;
-		pr_chrgr(INIT, "%s: Batt capacity %d\n", __func__,
-				cap_percentage);
-		val->intval = cap_percentage;
-		break;
-	case POWER_SUPPLY_PROP_TECHNOLOGY:
-		val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-	return ret;
-}
-
-
-static int bcmpmu_chrgr_usb_en(struct bcmpmu_chrgr_data *di, int enable)
+int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable)
 {
 	int ret = 0;
 	u8 reg;
@@ -356,7 +266,7 @@ static int bcmpmu_chrgr_usb_en(struct bcmpmu_chrgr_data *di, int enable)
 		return 0;
 
 	pr_chrgr(FLOW, "------****%s****----,ENABLE %d\n", __func__, enable);
-	ret = di->bcmpmu->read_dev(di->bcmpmu, PMU_REG_MBCCTRL3, &reg);
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
 	if (ret)
 		return ret;
 
@@ -365,7 +275,7 @@ static int bcmpmu_chrgr_usb_en(struct bcmpmu_chrgr_data *di, int enable)
 	else
 		reg &= ~MBCCTRL3_USB_HOSTEN_MASK;
 
-	ret = di->bcmpmu->write_dev(di->bcmpmu, PMU_REG_MBCCTRL3, reg);
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL3, reg);
 
 	return ret;
 }
@@ -390,7 +300,7 @@ static int charger_event_handler(struct notifier_block *nb,
 				__func__, chrgr_type);
 		if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
 				(chrgr_type > PMU_CHRGR_TYPE_NONE)) {
-			bcmpmu_chrgr_usb_en(di, 1);
+			bcmpmu_chrgr_usb_en(di->bcmpmu, 1);
 			if ((get_supply_type_str(chrgr_type) != NULL) &&
 					(strcmp(get_supply_type_str(chrgr_type),
 						"bcmpmu_usb") == 0)) {
@@ -407,7 +317,7 @@ static int charger_event_handler(struct notifier_block *nb,
 				power_supply_changed(&di->ac_psy);
 			}
 		} else {
-			bcmpmu_chrgr_usb_en(di, 0);
+			bcmpmu_chrgr_usb_en(di->bcmpmu, 0);
 			if (di->ac_chrgr_info.online) {
 				di->ac_chrgr_info.online = 0;
 				power_supply_changed(&di->ac_psy);
@@ -473,6 +383,8 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	di->ac_psy.num_properties = ARRAY_SIZE(bcmpmu_chrgr_props);
 	di->ac_psy.get_property = bcmpmu_chrgr_ac_get_property;
 	di->ac_psy.set_property = bcmpmu_chrgr_ac_set_property;
+	di->ac_psy.supplied_to = supplies_to;
+	di->ac_psy.num_supplicants = ARRAY_SIZE(supplies_to);
 
 	di->usb_psy.name = "bcmpmu_usb";
 	di->usb_psy.type = POWER_SUPPLY_TYPE_USB;
@@ -480,13 +392,8 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	di->usb_psy.num_properties = ARRAY_SIZE(bcmpmu_usb_props);
 	di->usb_psy.get_property = bcmpmu_chrgr_usb_get_property;
 	di->usb_psy.set_property = bcmpmu_chrgr_usb_set_property;
-	di->batt_psy.name = "battery";
-	di->batt_psy.type = POWER_SUPPLY_TYPE_BATTERY;
-	di->batt_psy.properties = bcmpmu_batt_props;
-	di->batt_psy.num_properties = ARRAY_SIZE(bcmpmu_batt_props);
-	di->batt_psy.get_property = bcmpmu_chrgr_batt_get_property;
-	di->batt_prev_cap = BATT_VOLT_TO_CAP(
-			bcmpmu_chrgr_get_batt_volt(di));
+	di->usb_psy.supplied_to = supplies_to;
+	di->usb_psy.num_supplicants = ARRAY_SIZE(supplies_to);
 
 	usb_type = paccy->usb_accy_data.usb_type;
 	chrgr_type = paccy->usb_accy_data.chrgr_type;
@@ -497,7 +404,7 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 			(chrgr_type >  PMU_CHRGR_TYPE_NONE)) {
 		chrgr_curr = paccy->usb_accy_data.max_curr_chrgr;
 		bcmpmu_set_icc_fc(bcmpmu, chrgr_curr);
-		bcmpmu_chrgr_usb_en(di, 1);
+		bcmpmu_chrgr_usb_en(di->bcmpmu, 1);
 		if (!strcmp(get_supply_type_str(chrgr_type), "bcmpmu_usb")) {
 			di->usb_chrgr_info.online = 1 ;
 			di->usb_chrgr_info.model_name =
@@ -526,14 +433,9 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 				__func__, ret);
 		goto free_dev_info;
 	}
-
-	ret = power_supply_register(&pdev->dev, &di->batt_psy);
-	if (ret)
-		goto free_dev_info;
-
 	ret = power_supply_register(&pdev->dev, &di->ac_psy);
 	if (ret)
-		goto unregister_batt_supply;
+		goto free_dev_info;
 
 	ret = power_supply_register(&pdev->dev, &di->usb_psy);
 	if (ret)
@@ -544,8 +446,6 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 
 unregister_ac_supply:
 	power_supply_unregister(&di->ac_psy);
-unregister_batt_supply:
-	power_supply_unregister(&di->batt_psy);
 free_dev_info:
 	kfree(di);
 	return ret;

@@ -807,6 +807,7 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 
 int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 			int ctrl, unsigned long data);
+int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable);
 
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
