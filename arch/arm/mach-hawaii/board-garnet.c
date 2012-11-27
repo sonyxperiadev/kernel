@@ -274,6 +274,12 @@ static struct i2c_board_info as3643_flash[] = {
 #define OV5640_I2C_ADDRESS (0x3C)
 #define OV7692_I2C_ADDRESS (0x3e)
 
+static struct regulator *d_gpsr_cam0_1v8;
+static struct regulator *d_lvldo2_cam1_1v8;
+static struct regulator *d_1v8_mmc1_vcc;
+static struct regulator *d_3v0_mmc1_vcc;
+
+
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
 #define SENSOR_0_CLK                    "dig_ch0_clk" // DCLK1 ??
@@ -330,6 +336,18 @@ static int rhea_camera_power(struct device *dev, int on)
 			printk(KERN_ERR"Unable to get PWDN GPIO\n");
 			return -1;
 		}
+
+		/*MMC1 VCC */
+		d_1v8_mmc1_vcc = regulator_get(NULL, "mmc1_vcc");
+		if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
+			printk(KERN_ERR "Failed to  get d_1v8_mmc1_vcc\n");
+		d_3v0_mmc1_vcc = regulator_get(NULL, "mmc2_vcc");
+		if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
+			printk(KERN_ERR "Failed to  get d_3v0_mmc1_vcc\n");
+		d_gpsr_cam0_1v8 = regulator_get(NULL, "vsr_uc");
+		if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
+			printk(KERN_ERR "Failed to  get d_gpsr_cam0_1v8\n");
+		
 	}
 
 	clock = clk_get(NULL, SENSOR_0_CLK);
@@ -344,6 +362,14 @@ static int rhea_camera_power(struct device *dev, int on)
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
 			printk("DVFS for UNICAM failed\n");
 		}
+
+		regulator_enable(d_3v0_mmc1_vcc);
+		usleep_range(1000, 1010);
+		regulator_enable(d_1v8_mmc1_vcc);
+		usleep_range(1000, 1010);
+		regulator_enable(d_gpsr_cam0_1v8);
+		usleep_range(1000, 1010);
+		
 		value = clk_enable(axi_clk);
 		if(value){
 			printk(KERN_ERR"Failed to enable axi clock\n");
@@ -366,6 +392,11 @@ static int rhea_camera_power(struct device *dev, int on)
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 		clk_disable(clock);
 		clk_disable(axi_clk);
+
+		regulator_disable(d_3v0_mmc1_vcc);
+		regulator_disable(d_1v8_mmc1_vcc);
+		regulator_disable(d_gpsr_cam0_1v8);
+		
 		if(pi_mgr_dfs_request_update(&unicam_dfs_node,PI_MGR_DFS_MIN_VALUE)){
 			printk("Failed to set DVFS for unicam\n");
 		}
@@ -450,7 +481,7 @@ static int rhea_camera_reset_front(struct device *dev)
 static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
-        .orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+        .orientation = V4L2_SUBDEV_SENSOR_LANDSCAPE,
 	.facing = V4L2_SUBDEV_SENSOR_BACK,
         .parms.serial = {
 		 .lanes = 2,
