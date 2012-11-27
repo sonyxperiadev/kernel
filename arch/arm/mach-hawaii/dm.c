@@ -26,6 +26,7 @@
 #include <mach/rdb/brcm_rdb_scu.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_cstf.h>
 #include <mach/rdb/brcm_rdb_pl310.h>
 #include <plat/scu.h>
 #include <plat/pi_mgr.h>
@@ -157,6 +158,18 @@ u32 un_cached_stack_ptr;
 
 #define PROC_CLK_ITEM_DEFINE(reg_name)	{PROC_CLK_REG_ADDR(reg_name), 0}
 
+#define PROC_CLK_ITEM_ADDR(index)	(proc_clk_regs[(index)][0])
+#define PROC_CLK_ITEM_VALUE(index)	(proc_clk_regs[(index)][1])
+
+#define LOG_BUFFER_SIZE (SEC_BUFFER_SIZE -\
+		(MAX_SECURE_BUFFER_SIZE +\
+			sizeof(u32)*NUM_API_PARAMETERS +\
+			sizeof(u32)*1))
+
+#define ADDNL_REG_DEFINE(base, offset)	{(base) + (offset), 0}
+#define ADDNL_REG_ADDR(inx)	(addnl_regs[(inx)][0])
+#define ADDNL_REG_VAL(inx)	(addnl_regs[(inx)][1])
+
 /* PROC ccu registers that are lost. Be careful
  * when changing the order etc.
  */
@@ -209,13 +222,12 @@ static u32 proc_clk_regs[][2] = {
 	PROC_CLK_ITEM_DEFINE(TGTMASK_DBG1)
 };
 
-#define PROC_CLK_ITEM_ADDR(index)	(proc_clk_regs[(index)][0])
-#define PROC_CLK_ITEM_VALUE(index)	(proc_clk_regs[(index)][1])
+/*List of additional registers that needs to
+be saved/restored during A9 dormant*/
+static u32 addnl_regs[][2] = {
+	ADDNL_REG_DEFINE(KONA_FUNNEL_VA, CSTF_FUNNEL_CONTROL_OFFSET),
+};
 
-#define LOG_BUFFER_SIZE (SEC_BUFFER_SIZE -\
-		(MAX_SECURE_BUFFER_SIZE +\
-			sizeof(u32)*NUM_API_PARAMETERS +\
-			sizeof(u32)*1))
 
 /* Structure of the parameters passed in the buffer to secure side */
 struct secure_params_t {
@@ -267,6 +279,26 @@ static inline void log_dormant_event(enum DORMANT_LOG_TYPE log)
 	secure_params->log_buffer[secure_params->log_index++] =
 	    (log | processor_id << 7);
 }
+
+/*
+ * Function to save additional registers that are
+ * lost upon dormant entry */
+static void save_addnl_regs(void)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(addnl_regs); i++)
+		ADDNL_REG_VAL(i) = readl_relaxed(ADDNL_REG_ADDR(i));
+}
+/*
+ * Function to restore additional registers that are
+ * lost upon dormant entry */
+static void restore_addnl_regs(void)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(addnl_regs); i++)
+		writel_relaxed(ADDNL_REG_VAL(i), ADDNL_REG_ADDR(i));
+}
+
 
 /*
  * Function to save proc_clk registers that are
@@ -538,6 +570,7 @@ void dormant_enter(u32 service)
 
 		/* save all proc registers except arm_sys_idle_dly */
 		save_proc_clk_regs();
+		save_addnl_regs();
 
 		/* Write to spare register and enable pwr_mgr dormant only in case of actual dormant entry */
 		if(!fake_dormant && !(force_retention_in_idle && (service==DORMANT_CORE_DOWN))) {
@@ -648,6 +681,7 @@ void dormant_enter(u32 service)
 			 * us first restore the proc registers
 			 */
 			restore_proc_clk_regs();
+			restore_addnl_regs();
 		}
 
 		/* restore everything that is specific to this core */
