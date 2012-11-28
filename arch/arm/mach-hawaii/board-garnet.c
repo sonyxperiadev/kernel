@@ -804,6 +804,82 @@ struct regulator_consumer_supply sdx_supply[] = {
 };
 
 #ifdef CONFIG_KEYBOARD_BCM
+#if defined(CONFIG_MACH_HAWAII_GARNET_EDN000)
+static struct bcm_keymap hawaii_keymap[] = {
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "Vol Up Key", KEY_VOLUMEUP},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "Camera Key", KEY_CAMERA},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
+};
+
+static struct bcm_keypad_platform_info hawaii_keypad_data = {
+	.row_num = 2,
+	.col_num = 3,
+	.keymap = hawaii_keymap,
+	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
+};
+
+#else
 static struct bcm_keymap hawaii_keymap[] = {
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Up Key", KEY_VOLUMEUP},
@@ -877,6 +953,8 @@ static struct bcm_keypad_platform_info hawaii_keypad_data = {
 	.keymap = hawaii_keymap,
 	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
 };
+
+#endif
 
 #endif
 
