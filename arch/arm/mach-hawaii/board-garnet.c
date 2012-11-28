@@ -299,15 +299,6 @@ struct android_pmem_platform_data android_pmem_data = {
 };
 #endif
 
-#ifdef CONFIG_ANDROID_PMEM
-struct android_pmem_platform_data android_pmem_data = {
-	.name = "pmem",
-	.cmasize = 0,
-	.carveout_base = 0,
-	.carveout_size = 0,
-};
-#endif
-
 static struct i2c_board_info rhea_i2c_camera[] = {
 	        {
 		I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
@@ -808,6 +799,82 @@ struct regulator_consumer_supply sdx_supply[] = {
 };
 
 #ifdef CONFIG_KEYBOARD_BCM
+#if defined(CONFIG_MACH_HAWAII_GARNET_EDN000)
+static struct bcm_keymap hawaii_keymap[] = {
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "Vol Up Key", KEY_VOLUMEUP},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "Camera Key", KEY_CAMERA},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
+};
+
+static struct bcm_keypad_platform_info hawaii_keypad_data = {
+	.row_num = 2,
+	.col_num = 3,
+	.keymap = hawaii_keymap,
+	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
+};
+
+#else
 static struct bcm_keymap hawaii_keymap[] = {
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Up Key", KEY_VOLUMEUP},
@@ -881,6 +948,8 @@ static struct bcm_keypad_platform_info hawaii_keypad_data = {
 	.keymap = hawaii_keymap,
 	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
 };
+
+#endif
 
 #endif
 
