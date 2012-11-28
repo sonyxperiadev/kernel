@@ -105,7 +105,7 @@ void cleanup_netpoll_unlock(void)
 
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
 #define	MAX_RX_SKB_SIZE			2048
-#define	UETH_RX_SKB_THRESHOLD	40
+#define	UETH_RX_SKB_THRESHOLD	192
 static struct sk_buff_head skb_rx_pool;
 static int	rx_skb_limit_no;
 static bool is_rx_threshold_mode;

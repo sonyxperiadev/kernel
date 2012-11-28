@@ -250,7 +250,7 @@ adb_function_bind_config(struct android_usb_function *f,
 
 static void adb_android_function_enable(struct android_usb_function *f)
 {
-	struct android_dev *dev = _android_dev;
+/*	struct android_dev *dev = _android_dev; */
 	struct adb_data *data = f->config;
 
 	data->enabled = true;
@@ -263,7 +263,7 @@ static void adb_android_function_enable(struct android_usb_function *f)
 
 static void adb_android_function_disable(struct android_usb_function *f)
 {
-	struct android_dev *dev = _android_dev;
+/*	struct android_dev *dev = _android_dev; */
 	struct adb_data *data = f->config;
 
 	data->enabled = false;
