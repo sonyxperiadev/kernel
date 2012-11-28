@@ -196,6 +196,10 @@ static Int32 NT35516_Update(
 
 static Int32 NT35516_WinReset(DISPDRV_HANDLE_T drvH);
 
+static int NT35516_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff);
+
+static int NT35516_ReadPanelID(NT35516_PANEL_t *pPanel);
+
 
 static DISPDRV_T NT35516_Drv = {
 	&NT35516_Init,		/* init	*/
@@ -388,7 +392,38 @@ static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
 
 	NT35516_ExecCmndList(pPanel, cmd_list);
 
+	if (NT35516_ReadPanelID(pPanel) < 0)
+		pr_err("NT35516 not detected!\n");
 	return;
+}
+
+struct panel_id {
+	UInt8 reg;
+	UInt8 val;
+};
+
+static int NT35516_ReadPanelID(NT35516_PANEL_t *pPanel)
+{
+	int ret = 0, count;
+	UInt8 buff[2];
+	struct panel_id NT35516_ID[] = {
+		{NT35516_CMD_RDID1, 0x00},
+		{NT35516_CMD_RDID2, 0x80},
+		{NT35516_CMD_RDID3, 0x00},
+	};
+
+	count = sizeof(NT35516_ID) / sizeof(struct panel_id);
+	while (count--) {
+		ret = NT35516_ReadReg(pPanel, NT35516_ID[count].reg, buff);
+		/*
+		pr_err("Reg=0x%x returned size=%d buff[0]=0x%x, buff[1]=0x%x\n",
+			NT35516_ID[count].reg, ret, buff[0], buff[1]);
+		*/
+		if ((ret < 0) || (NT35516_ID[count].val != buff[0]))
+			break;
+	}
+
+	return ret;
 }
 
 
@@ -428,6 +463,50 @@ static int NT35516_TeOff(NT35516_PANEL_t *pPanel)
 
 	res = CSL_TECTL_VC4L_CloseInput(pPanel->teIn);
 
+	return res;
+}
+
+/*
+ *
+ *   Function Name: NT35516_ReadReg
+ *
+ *   Description:   DSI Read Reg
+ *
+ */
+static int NT35516_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff)
+{
+	NT35516_PANEL_t         *pPanel = (NT35516_PANEL_t *)drvH;
+	CSL_DSI_CMND_t msg;
+	CSL_DSI_REPLY_t rxMsg;      /* DSI RX message */
+	UInt8 txData[1];  /* DCS Rd Command */
+	Int32 res = 0;
+	CSL_LCD_RES_T cslRes;
+
+	msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
+	msg.msg        = &txData[0];
+	msg.msgLen     = 1;
+	msg.vc         = NT35516_VC;
+	msg.isLP       = FALSE;
+	msg.isLong     = FALSE;
+	msg.endWithBta = TRUE;
+
+	rxMsg.pReadReply = (UInt8 *)rxBuff;
+	msg.reply        = (CSL_DSI_REPLY_t *)&rxMsg;
+
+	txData[0] = reg;
+	cslRes = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
+	if ((cslRes != CSL_LCD_OK) ||
+		((rxMsg.type & DSI_RX_TYPE_READ_REPLY) == 0)) {
+
+		pr_err("Reading From Reg[0x%08X]\n", reg);
+		res = -1;
+	} else {
+		/*
+		pr_err("OK Reg[0x%08X] Val[0x%08X][0x%08X] Size=[0x%08X]\n",
+				reg, rxBuff[1], rxBuff[0], rxMsg.readReplySize);
+		*/
+		res = rxMsg.readReplySize;
+	}
 	return res;
 }
 
