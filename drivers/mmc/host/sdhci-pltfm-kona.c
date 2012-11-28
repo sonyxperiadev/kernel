@@ -77,6 +77,7 @@
 #define KONA_SDMMC_OFF_TIMEOUT		(8000)
 #endif
 
+#define KONA_SD_CONTRLR_REG_LPCNT	(50)
 /* Enable this quirk if regulators are always ON
  * but the regulator framework is not funtional.
  * In such a case, we dont want our probe to fail.
@@ -120,7 +121,7 @@ static struct sdio_dev *gDevs[SDIO_DEV_TYPE_MAX];
 static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name);
 static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev,
 					   char *reg_name);
-static int sdhci_kona_sdio_regulator_power(struct sdio_dev *dev,
+static int kona_sdxc_regulator_power(struct sdio_dev *dev,
 		int power_state);
 static int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
 static int sdhci_pltfm_set_signalling(struct sdhci_host *host, int sig_vol);
@@ -365,12 +366,62 @@ static void proc_term(struct platform_device *pdev)
 static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 {
 	struct sdio_dev *dev = (struct sdio_dev *)dev_id;
+	struct sdhci_host *host = dev->host;
+	int count = 0;
 
 	/* card insert */
-	if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
+	if (gpio_get_value_cansleep(dev->cd_gpio) == 0) {
+
+		/* Turn ON the SD controller regulator.
+		 * The card regulator will be truned on
+		 * during set_ios.
+		 */
+		kona_sdxc_regulator_power(dev, 1);
+		host->flags &= ~SDHCI_DEVICE_DEAD;
 		bcm_kona_sd_card_emulate(dev, 1);
-	else	/* card removal */
+	} else {	/* card removal */
+
+		/* Set the device as dead, so that
+		 * set_ios will turn off the regulator.
+		 */
+		host->flags |= SDHCI_DEVICE_DEAD;
 		bcm_kona_sd_card_emulate(dev, 0);
+
+		/* As soon as the card emulate is
+		 * done, the interrupt will be received
+		 * and card will be removed. Here we sleep
+		 * and wait, so that set_ios would have
+		 * completed turning off the card
+		 * regulator. Then it is safe to turn off
+		 * the controller regulator.
+		 */
+		do {
+			while (regulator_is_enabled(host->vmmc)) {
+				if (++count > KONA_SD_CONTRLR_REG_LPCNT) {
+					pr_err("ERR: Unable to swoff reg\n");
+					break;
+				}
+				/* How these values were arrived at.
+				 * The waiting time here was measured to be
+				 * ranging from 300ms to 900ms, with less
+				 * load on the system. So with the numbers
+				 * below, the loop was exiting for a count
+				 * of 2. This means we dont choke the system
+				 * as we sleep most of the time.
+				 */
+				usleep_range(100000, 200000);
+			}
+
+			/* For some reason card regulator is not
+			 * off. Lets us not turn off the controller
+			 * regulator, giving a chance for the driver
+			 * to recover from the error it has encountered.
+			 */
+			if (count > KONA_SD_CONTRLR_REG_LPCNT)
+				break;
+			kona_sdxc_regulator_power(dev, 0);
+		} while (0);
+	}
 
 	return IRQ_HANDLED;
 }
@@ -604,7 +655,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 #endif
 	}
 
-	sdhci_kona_sdio_regulator_power(dev, 1);
+	kona_sdxc_regulator_power(dev, 1);
 
 	ret = bcm_kona_sd_reset(dev);
 	if (ret)
@@ -671,6 +722,13 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		}
 		pr_info("%s: card insert emulated!\n", devname);
 	} else if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
+
+		/* Let the card regulator be handled by the host driver.
+		 * We dont touch it here, except doing a regulator get.
+		 */
+		if (dev->vddo_sd_regulator)
+			host->vmmc = dev->vddo_sd_regulator;
+
 		ret = gpio_request(dev->cd_gpio, "sdio cd");
 
 		if (ret < 0) {
@@ -733,6 +791,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 				hw_cfg->configure_sdio_pullup(1);
 			}
 			bcm_kona_sd_card_emulate(dev, 1);
+		} else {
+			/* If card is not present disable the regulator */
+			kona_sdxc_regulator_power(dev, 0);
 		}
 	}
 
@@ -816,13 +877,6 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 		gpio_free(dev->cd_gpio);
 	}
 
-	if (dev->vddo_sd_regulator) {
-		/* Playing safe- if regulator is enabled, disable it first */
-		if (regulator_is_enabled(dev->vddo_sd_regulator) > 0)
-			regulator_disable(dev->vddo_sd_regulator);
-
-		regulator_put(dev->vddo_sd_regulator);
-	}
 	if (dev->vdd_sdxc_regulator) {
 		/* Playing safe- if regulator is enabled, disable it first */
 		if (regulator_is_enabled(dev->vdd_sdxc_regulator) > 0)
@@ -874,7 +928,7 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 		return ret;
 	}
 
-	sdhci_kona_sdio_regulator_power(dev, 0);
+	kona_sdxc_regulator_power(dev, 0);
 
 ret_path:
 	dev->suspended = 1;
@@ -890,7 +944,7 @@ static int sdhci_pltfm_resume(struct platform_device *pdev)
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		goto ret_path;
 
-	sdhci_kona_sdio_regulator_power(dev, 1);
+	kona_sdxc_regulator_power(dev, 1);
 	ret = sdhci_resume_host(host);
 	if (ret) {
 		dev_err(&pdev->dev,
@@ -1137,7 +1191,7 @@ static int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host)
 }
 
 static int
-sdhci_kona_sdio_regulator_power(struct sdio_dev *dev, int power_state)
+kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 {
 	int ret = 0;
 	struct device *pdev = dev->dev;
@@ -1166,28 +1220,18 @@ sdhci_kona_sdio_regulator_power(struct sdio_dev *dev, int power_state)
 			}
 			pr_info("Turning ON sdxc sd\n");
 			ret = regulator_enable(dev->vdd_sdxc_regulator);
-		} else {
+		} else if (regulator_is_enabled(dev->vdd_sdxc_regulator)) {
 			pr_info("Turning OFF sdxc sd\n");
 			ret = regulator_disable(dev->vdd_sdxc_regulator);
 
 			if ((hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) &&
-				(hw_cfg->configure_sdio_pullup))	{
+			(hw_cfg->configure_sdio_pullup)) {
 				dev_info(dev->dev, "Pull Down CMD/DAT Line\n");
 				/* Pull-down SDCMD, SDDAT[0:3] */
 				hw_cfg->configure_sdio_pullup(0);
 			}
 		}
-	 }
-
-	 if (dev->vddo_sd_regulator) {
-		if (power_state) {
-			pr_info("Turning ON vddo sd\n");
-			ret = regulator_enable(dev->vddo_sd_regulator);
-		} else{
-			pr_info("Turning OFF vddo sd\n");
-			ret = regulator_disable(dev->vddo_sd_regulator);
-		}
-	 }
+	}
 
 	return ret;
 }
