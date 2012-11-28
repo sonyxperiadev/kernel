@@ -397,7 +397,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 
 	switch (irq) {
 	case PMU_IRQ_VA_SESS_VALID_R:
-		pr_accy(FLOW, "### ISR  PMU_IRQ_VA_SESS_VALID_R: %x\n",
+		pr_accy(INIT, "### ISR  PMU_IRQ_VA_SESS_VALID_R: %x\n",
 			PMU_IRQ_VA_SESS_VALID_R);
 
 		bcmpmu_paccy_latch_event(paccy,
@@ -406,7 +406,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_USBINS:
-		pr_accy(FLOW, "### ISR  PMU_IRQ_USBINS: %x\n",
+		pr_accy(INIT, "### ISR  PMU_IRQ_USBINS: %x\n",
 			PMU_IRQ_USBINS);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_IN);
@@ -414,7 +414,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_USBRM:
-		pr_accy(FLOW, "### ISR  PMU_IRQ_USBRM: %x\n",
+		pr_accy(INIT, "### ISR  PMU_IRQ_USBRM: %x\n",
 			PMU_IRQ_USBRM);
 		paccy->det_state = USB_DISCONNECTED;
 		usb_handle_state(paccy);
@@ -429,7 +429,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			tempararily treat the CHGDET_TO interrupt as
 			CHGDET_LATCH as a workaround
 			*/
-		pr_accy(FLOW, "### ISR  PMU_IRQ_CHGDET_LATCH: %x\n",
+		pr_accy(INIT, "### ISR  PMU_IRQ_CHGDET_LATCH: %x\n",
 			PMU_IRQ_CHGDET_LATCH);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_CHGDET_LATCH);
@@ -439,7 +439,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_OTG_SESS_VALID_F:
-		pr_accy(FLOW, "### ISR  PMU_IRQ_OTG_SESS_VALID_F : %x\n",
+		pr_accy(INIT, "### ISR  PMU_IRQ_OTG_SESS_VALID_F : %x\n",
 				PMU_IRQ_OTG_SESS_VALID_F);
 		if ((get_supply_type_str(prev_chrgr_type) != NULL) &&
 			(strcmp(get_supply_type_str
@@ -451,7 +451,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_VBUS_VALID_R:
-		pr_accy(FLOW, "### ISR  PMU_IRQ_VBUS_VALID_R: %x\n",
+		pr_accy(INIT, "### ISR  PMU_IRQ_VBUS_VALID_R: %x\n",
 			PMU_IRQ_VBUS_VALID_R);
 		paccy->det_state = USB_IDLE;
 		bcmpmu_paccy_latch_event(paccy,
@@ -460,7 +460,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_VBUS_VALID_F:
-		pr_accy(FLOW, "### ISR  PMU_IRQ_VBUS_VALID_F:%x\n",
+		pr_accy(INIT, "### ISR  PMU_IRQ_VBUS_VALID_F:%x\n",
 				PMU_IRQ_VBUS_VALID_F);
 		if ((get_supply_type_str(prev_chrgr_type) != NULL) &&
 			(strcmp(get_supply_type_str
@@ -504,7 +504,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_VB_SESS_END_R:
-		pr_accy(FLOW, "### ISR  PMU_IRQ_VB_SESS_END_R: %x\n",
+		pr_accy(INIT, "### ISR  PMU_IRQ_VB_SESS_END_R: %x\n",
 			PMU_IRQ_VB_SESS_END_R);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_SESSION_END_VALID);
@@ -517,7 +517,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		break;
 #endif
 	case PMU_IRQ_RESUME_VBUS:
-		pr_accy(FLOW, "### ISR  PMU_IRQ_RESUME_VBUS: %x\n",
+		pr_accy(INIT, "### ISR  PMU_IRQ_RESUME_VBUS: %x\n",
 			PMU_IRQ_RESUME_VBUS);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS);
@@ -605,6 +605,18 @@ static void bcmpmu_notify_charger_state(struct bcmpmu_accy *paccy)
 	}
 
 }
+
+static bcmpmu_accy_chrgr_detect_state(struct bcmpmu59xxx *bcmpmu, int val)
+{
+	u8 reg;
+	bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL5, &reg);
+	if (val)
+		reg |= MBCCTRL5_BC12_EN_MASK;
+	else
+		reg &= ~MBCCTRL5_BC12_EN_MASK;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL5, reg);
+}
+
 /* workq func */
 static void usb_deferred_work(struct work_struct *work)
 {
@@ -665,10 +677,12 @@ static void usb_deferred_work(struct work_struct *work)
 	case USB_CONNECTED:
 		pr_accy(FLOW, "*** Charger Connected event\n");
 		bcmpmu_notify_charger_state(paccy);
+		bcmpmu_accy_chrgr_detect_state(paccy->bcmpmu, 0);
 		break;
 	case USB_DISCONNECTED:
 		pr_accy(FLOW, "*** Charger disconnected event\n");
 		paccy->det_state = USB_IDLE;
+		bcmpmu_accy_chrgr_detect_state(paccy->bcmpmu, 1);
 		paccy->usb_accy_data.usb_type = PMU_USB_TYPE_NONE;
 		paccy->usb_accy_data.chrgr_type = PMU_CHRGR_TYPE_NONE;
 		bcmpmu_notify_charger_state(paccy);

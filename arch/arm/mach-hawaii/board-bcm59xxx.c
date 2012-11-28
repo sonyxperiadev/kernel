@@ -755,6 +755,8 @@ static struct bcmpmu59xxx_rw_data register_init_data[] = {
 	{.addr = PMU_REG_MBCCTRL2, .val = 0x0, .mask = 0x04},
 	/* SWUP */
 	{.addr = PMU_REG_MBCCTRL3, .val = 0x04, .mask = 0x04},
+	/* Enable BC12_EN */
+	{.addr = PMU_REG_MBCCTRL5, .val = 0x01, .mask = 0x01},
 	/* Max VFLOAT to 4.2*/
 	{.addr = PMU_REG_MBCCTRL6, .val = 0x0C, .mask = 0xFF},
 	/*  ICCMAX to 1500mA*/
