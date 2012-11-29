@@ -37,7 +37,6 @@
 #ifdef CONFIG_ION_OOM_KILLER
 #include <linux/oom.h>
 #include <linux/delay.h>
-/* #define ION_OOM_KILLER_DEBUG */
 #endif
 
 #include "ion_priv.h"
@@ -85,10 +84,6 @@ struct ion_client {
 	struct task_struct *task;
 	pid_t pid;
 	struct dentry *debug_root;
-#ifdef CONFIG_ION_OOM_KILLER
-	int deathpending;
-	unsigned long timeout;
-#endif
 };
 
 /**
@@ -388,132 +383,6 @@ static void ion_handle_add(struct ion_client *client, struct ion_handle *handle)
 	rb_insert_color(&handle->node, &client->handles);
 }
 
-#ifdef ION_OOM_KILLER_DEBUG
-static size_t ion_debug_print_heap_status(struct ion_device *dev, int heap_id)
-{
-	struct rb_node *n;
-	size_t total_size = 0, orphan = 0, shared = 0;
-	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
-		struct ion_buffer *buffer = rb_entry(n, struct ion_buffer,
-				node);
-		if (buffer->heap->id == heap_id) {
-			total_size += buffer->size;
-			if (!buffer->handle_count)
-				orphan += buffer->size;
-			if (buffer->handle_count > 1)
-				shared += buffer->size;
-		}
-	}
-	pr_info("heap_id(%d) total(%d) orphan(%d) shared(%d)\n",
-			heap_id, total_size, orphan, shared);
-	return total_size;
-}
-
-static int ion_task_exit_notifier(struct notifier_block *self,
-		      unsigned long val, void *data)
-{
-	struct task_struct *task = data;
-	char task_comm[TASK_COMM_LEN];
-
-	get_task_comm(task_comm, task);
-	pr_debug("Task Exit: %16.s: adj(%d) jiff(%lu)\n",
-			task_comm,
-			task->signal->oom_score_adj,
-			jiffies);
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block ion_task_nb = {
-	.notifier_call = ion_task_exit_notifier,
-};
-#endif
-
-#ifdef CONFIG_ION_OOM_KILLER
-static size_t ion_debug_heap_total(struct ion_client *client,
-				   int id, size_t *shared);
-
-static int ion_shrink(struct ion_device *dev, unsigned int heap_mask,
-		int min_oom_score_adj, int fail_size)
-{
-	struct rb_node *m, *n;
-	struct ion_client *selected_client = NULL;
-	struct ion_heap *selected_heap = NULL;
-	int selected_size = 0;
-	int selected_oom = 0;
-	char task_comm[TASK_COMM_LEN];
-
-	/* TODO: Loop till free mem satisfies fail size. */
-	for (m = rb_first(&dev->heaps); m != NULL; m = rb_next(m)) {
-		struct ion_heap *heap = rb_entry(m, struct ion_heap, node);
-		struct ion_client *client;
-		int shared;
-
-		/* TODO: if the client doesn't support this heap type */
-
-		/* if the caller didn't specify this heap type */
-		if (!((1 << heap->id) & heap_mask))
-			continue;
-		for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
-			size_t size;
-			struct task_struct *p;
-
-			client = rb_entry(n, struct ion_client, node);
-			if (!client->task)
-				continue;
-			p = client->task;
-			if (client->deathpending) {
-#ifdef ION_OOM_KILLER_DEBUG
-				get_task_comm(task_comm, p);
-				pr_debug("Death pending: %16.s: adj(%d) jiff(%lu)\n",
-						task_comm,
-						p->signal->oom_score_adj,
-						jiffies);
-#endif
-				if (time_before_eq(jiffies,
-							client->timeout)) {
-					return -1;
-				}
-				continue;
-			}
-			if (p->signal->oom_score_adj < min_oom_score_adj)
-				continue;
-			size = ion_debug_heap_total(client, heap->id, &shared);
-			if (!size)
-				continue;
-			if (selected_client) {
-				if (p->signal->oom_score_adj < selected_oom)
-					continue;
-				if (p->signal->oom_score_adj == selected_oom &&
-						size <= selected_size)
-					continue;
-			}
-			selected_client = client;
-			selected_heap = heap;
-			selected_size = size;
-			selected_oom = p->signal->oom_score_adj;
-		}
-	}
-	if (selected_client) {
-		struct task_struct *p;
-		int free_space = selected_heap->size - selected_heap->used;
-
-		p = selected_client->task;
-		get_task_comm(task_comm, p);
-		selected_client->deathpending = 1;
-		pr_info("shrink  %16.s heap, free mem(%u), required(%u)\n",
-				selected_heap->name, free_space, fail_size);
-		pr_info("lowmem kill  %16.s: size(%u) adj(%d) timeout(%lu)\n",
-				task_comm, selected_size, selected_oom,
-				selected_client->timeout);
-		send_sig(SIGKILL, p, 0);
-		selected_client->timeout = jiffies + HZ;
-		return selected_size;
-	}
-	return 0;
-}
-#endif
-
 struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 			     size_t align, unsigned int heap_mask,
 			     unsigned int flags)
@@ -524,9 +393,6 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 	struct ion_buffer *buffer = NULL;
 #ifdef CONFIG_ION_KONA
 	struct ion_heap *heap_used = NULL;
-#endif
-#ifdef CONFIG_ION_OOM_KILLER
-	int retry_flag;
 #endif
 
 	pr_debug("%s: len %d align %d heap_mask %u flags %x\n", __func__, len,
@@ -542,10 +408,6 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 
 	len = PAGE_ALIGN(len);
 
-#ifdef CONFIG_ION_OOM_KILLER
-retry:
-	retry_flag = 0;
-#endif
 	mutex_lock(&dev->lock);
 	for (n = rb_first(&dev->heaps); n != NULL; n = rb_next(n)) {
 		struct ion_heap *heap = rb_entry(n, struct ion_heap, node);
@@ -561,46 +423,26 @@ retry:
 			pr_debug("Try heap(%d):(%d)KB - pid(%d) size(%d)KB\n",
 					heap->id, heap->used>>10,
 					client->task->pid, len>>10);
-#endif /* CONFIG_ION_KONA */
+#endif
 		buffer = ion_buffer_create(heap, dev, len, align, flags);
 		if (!IS_ERR_OR_NULL(buffer))
 			break;
 	}
 #ifdef CONFIG_ION_KONA
-	if (buffer == ERR_PTR(-ENOMEM)) {
-		/* Alloc failed: Kill task to free memory */
-		pr_debug("Alloc Failed. Call shrink: mask(%x) pid(%d) size(%d)KB\n",
-				heap_mask, client->task->pid, len>>10);
-#ifdef CONFIG_ION_OOM_KILLER
-		if (ion_shrink(dev, heap_mask, 0, len))
-			retry_flag = 1;
-#endif /* CONFIG_ION_OOM_KILLER */
-	} else if (!IS_ERR_OR_NULL(buffer)) {
+	if (IS_ERR_OR_NULL(buffer)) {
+		if (client->task)
+			pr_err("Alloc Failed: mask(%x) pid(%d) size(%d)KB\n",
+					heap_mask, client->task->pid, len>>10);
+	} else {
 		heap_used->used += buffer->size;
 		if (client->task)
 			pr_debug("Alloc heap(%d):(%d)KB - pid(%d) size(%d)KB\n",
 					heap_used->id, heap_used->used>>10,
 					client->task->pid, len>>10);
-	} else {
-		pr_err("Alloc Failed  heap_mask(%d) size(%d)KB\n",
-				heap_mask,  len>>10);
 	}
-#endif /* CONFIG_ION_KONA */
+#endif
 	mutex_unlock(&dev->lock);
 
-#ifdef CONFIG_ION_OOM_KILLER
-	if (IS_ERR_OR_NULL(buffer)) {
-		if (!fatal_signal_pending(current) && retry_flag) {
-			/* Schedule out and wait for the task to which signal
-			 *  was sent to free the memory and exit */
-			msleep(20);
-			goto retry;
-		}
-		if (client->task)
-			pr_err("Alloc Failed: mask(%x) pid(%d) size(%d)KB\n",
-					heap_mask, client->task->pid, len>>10);
-	}
-#endif /* CONFIG_ION_OOM_KILLER */
 	if (buffer == NULL)
 		return ERR_PTR(-ENODEV);
 
@@ -1547,10 +1389,6 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 	idev->debug_root = debugfs_create_dir("ion", NULL);
 	if (IS_ERR_OR_NULL(idev->debug_root))
 		pr_err("ion: failed to create debug files.\n");
-
-#ifdef ION_OOM_KILLER_DEBUG
-	task_free_register(&ion_task_nb);
-#endif
 
 	idev->custom_ioctl = custom_ioctl;
 	idev->buffers = RB_ROOT;
