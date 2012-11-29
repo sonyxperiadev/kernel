@@ -76,7 +76,7 @@ typedef IPC_U32 IPC_SmPtr;	/* "Pointer" in Shared Memory */
 /* Special values used to mark the top 2 bytes of IPC version */
 #define IPC_VersionHi		0xabcd
 /* IPC version, starting from 1 */
-#define IPC_VersionLo		0x1
+#define IPC_VersionLo		0x2
 #define IPC_Version		((IPC_VersionHi << 16) | IPC_VersionLo)
 
 /**************************************************
@@ -84,7 +84,7 @@ typedef IPC_U32 IPC_SmPtr;	/* "Pointer" in Shared Memory */
 * per CPU i.e. IPC_SM_MAX_BUFFERS can be owned by both Apps and Comms
 * Must be a power of 2
 **************************************************/
-#define IPC_SM_MAX_BUFFER_POWER	(10)
+#define IPC_SM_MAX_BUFFER_POWER	(11)
 #define IPC_SM_MAX_BUFFERS		(1 << IPC_SM_MAX_BUFFER_POWER)
 
 /*============================================================
