@@ -110,12 +110,6 @@ struct platform_device android_pmem = {
 #endif
 
 #ifdef CONFIG_ION
-struct platform_device ion_system_device = {
-	.name = "ion-kona",
-	.id = 2,
-	.num_resources = 0,
-};
-
 struct platform_device ion_carveout_device = {
 	.name = "ion-kona",
 	.id = 0,
