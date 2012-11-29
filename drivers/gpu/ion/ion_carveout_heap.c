@@ -220,16 +220,6 @@ int ion_carveout_heap_invalidate_cache(struct ion_heap *heap,
 }
 #endif
 
-#ifdef CONFIG_ION_OOM_KILLER
-static int ion_carveout_heap_needs_shrink(struct ion_heap *heap)
-{
-	/* Any local checks and disabling lowmem check
-	 * can be done here
-	 **/
-	return heap->lmc_enable;
-}
-#endif
-
 static struct ion_heap_ops carveout_heap_ops = {
 	.allocate = ion_carveout_heap_allocate,
 	.free = ion_carveout_heap_free,
@@ -242,9 +232,6 @@ static struct ion_heap_ops carveout_heap_ops = {
 #ifdef CONFIG_ION_KONA
 	.flush_cache = ion_carveout_heap_flush_cache,
 	.invalidate_cache = ion_carveout_heap_invalidate_cache,
-#endif
-#ifdef CONFIG_ION_OOM_KILLER
-	.needs_shrink = ion_carveout_heap_needs_shrink,
 #endif
 };
 
@@ -268,11 +255,6 @@ struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
 	carveout_heap->heap.type = ION_HEAP_TYPE_CARVEOUT;
 #ifdef CONFIG_ION_KONA
 	carveout_heap->heap.size = heap_data->size;
-#endif
-#ifdef CONFIG_ION_OOM_KILLER
-	carveout_heap->heap.lmc_enable = heap_data->lmc_enable;
-	carveout_heap->heap.lmc_min_score_adj = heap_data->lmc_min_score_adj;
-	carveout_heap->heap.lmc_min_free = heap_data->lmc_min_free;
 #endif
 
 	return &carveout_heap->heap;

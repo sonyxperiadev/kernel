@@ -17,17 +17,6 @@ config ION_KONA
 	help
 	  Choose this option if you wish to use ion on a Broadcom Kona processor.
 
-config ION_OOM_KILLER
-	tristate "Ion lowmem/oom killer"
-	depends on ION_KONA
-	help
-	  This config enables lowmemkiller options which can be set on per heap
-	  basis or for entire heap mask. The parameters can be set in platform
-	  file at compile time or via debugfs at runtime.
-	  This config also enables oom killer for ION
-	  Choose this option if you wish to enable lowmemkiller and oom killer
-	   in ion.
-
 config M4U
 	tristate "M4U for Broadcom Kona Processor"
 	depends on ARCH_HAWAII

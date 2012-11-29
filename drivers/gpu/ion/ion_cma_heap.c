@@ -78,7 +78,9 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 	info->cpu_addr = phys_to_virt(info->handle);
 #else
 	info->cpu_addr = dma_alloc_coherent(dev, len, &(info->handle), 0);
+
 	if (!info->cpu_addr) {
+		dev_err(dev, "Fail to allocate buffer\n");
 		goto err;
 	}
 #endif
@@ -252,16 +254,6 @@ int ion_cma_heap_invalidate_cache(struct ion_heap *heap,
 }
 #endif
 
-#ifdef CONFIG_ION_OOM_KILLER
-static int ion_cma_heap_needs_shrink(struct ion_heap *heap)
-{
-	/* Any local checks and disabling lowmem check
-	 * can be done here
-	 **/
-	return heap->lmc_enable;
-}
-#endif
-
 static struct ion_heap_ops ion_cma_ops = {
 	.allocate = ion_cma_allocate,
 	.free = ion_cma_free,
@@ -274,9 +266,6 @@ static struct ion_heap_ops ion_cma_ops = {
 #ifdef CONFIG_ION_KONA
 	.flush_cache = ion_cma_heap_flush_cache,
 	.invalidate_cache = ion_cma_heap_invalidate_cache,
-#endif
-#ifdef CONFIG_ION_OOM_KILLER
-	.needs_shrink = ion_cma_heap_needs_shrink,
 #endif
 };
 
@@ -298,12 +287,6 @@ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data,
 #ifdef CONFIG_ION_KONA
 	heap->size = data->size;
 #endif
-#ifdef CONFIG_ION_OOM_KILLER
-	heap->lmc_enable = data->lmc_enable;
-	heap->lmc_min_score_adj = data->lmc_min_score_adj;
-	heap->lmc_min_free = data->lmc_min_free;
-#endif
-
 	return heap;
 }
 

@@ -119,9 +119,6 @@ struct ion_heap_ops {
 			struct ion_buffer *buffer, unsigned long offset,
 			unsigned long len);
 #endif
-#ifdef CONFIG_ION_OOM_KILLER
-	int (*needs_shrink) (struct ion_heap *heap);
-#endif
 };
 
 /**
@@ -153,12 +150,6 @@ struct ion_heap {
 #ifdef CONFIG_ION_KONA
 	int size;
 	int used;
-#endif
-#ifdef CONFIG_ION_OOM_KILLER
-	int lmc_enable;
-	int lmc_min_score_adj;
-	int lmc_min_free;
-	struct dentry *lmc_debug_root;
 #endif
 };
 

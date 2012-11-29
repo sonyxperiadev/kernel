@@ -34,10 +34,6 @@
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
 #include <linux/dma-buf.h>
-#ifdef CONFIG_ION_OOM_KILLER
-#include <linux/oom.h>
-#include <linux/delay.h>
-#endif
 
 #include "ion_priv.h"
 
@@ -1281,18 +1277,6 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 			(total_orphaned_size>>10));
 	seq_printf(s, "----------------------------------------------------\n");
 
-#ifdef CONFIG_ION_OOM_KILLER
-	if ((heap->ops->needs_shrink) &&
-			(heap->ops->needs_shrink(heap))) {
-		seq_printf(s, "Lowmemkiller Info:\n");
-		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
-				"free mem", "threshold", "min_adj",
-				((heap->size - heap->used)>>10),
-				heap->lmc_min_free>>10,
-				heap->lmc_min_score_adj);
-	}
-	seq_printf(s, "----------------------------------------------------\n");
-#endif
 	return 0;
 }
 
@@ -1313,9 +1297,6 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 	struct rb_node **p = &dev->heaps.rb_node;
 	struct rb_node *parent = NULL;
 	struct ion_heap *entry;
-#ifdef CONFIG_ION_OOM_KILLER
-	char debug_name[64];
-#endif
 
 	if (!heap->ops->allocate || !heap->ops->free || !heap->ops->map_dma ||
 	    !heap->ops->unmap_dma)
@@ -1343,19 +1324,6 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 	rb_insert_color(&heap->node, &dev->heaps);
 	debugfs_create_file(heap->name, 0664, dev->debug_root, heap,
 			    &debug_heap_fops);
-#ifdef CONFIG_ION_OOM_KILLER
-	snprintf(debug_name, 64, "lmc_%s", heap->name);
-	heap->lmc_debug_root = debugfs_create_dir(debug_name, dev->debug_root);
-	debugfs_create_u32("enable", (S_IRUGO|S_IWUSR),
-			heap->lmc_debug_root,
-			(unsigned int *)&heap->lmc_enable);
-	debugfs_create_u32("oom_score_adj", (S_IRUGO|S_IWUSR),
-			heap->lmc_debug_root,
-			(unsigned int *)&heap->lmc_min_score_adj);
-	debugfs_create_u32("min_free", (S_IRUGO|S_IWUSR),
-			heap->lmc_debug_root,
-			(unsigned int *)&heap->lmc_min_free);
-#endif
 end:
 	mutex_unlock(&dev->lock);
 }
