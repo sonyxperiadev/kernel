@@ -791,11 +791,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 };
 
-struct regulator_consumer_supply hv6_supply[] = {
-	{.supply = "vdd_sdxc"},
-	{.supply = "sddat_debug_bus"},
-};
-
 struct regulator_consumer_supply sd_supply[] = {
 	{.supply = "sdldo_uc"},
 	REGULATOR_SUPPLY("vddmmc", "sdhci.3"),	/* 0x3f1b0000.sdhci */
@@ -806,6 +801,7 @@ struct regulator_consumer_supply sdx_supply[] = {
 	{.supply = "sdxldo_uc"},
 	REGULATOR_SUPPLY("vddo", "sdhci.3"),	/* 0x3f1b0000.sdhci */
 	{.supply = "vdd_sdxc"},
+	{.supply = "sddat_debug_bus"},
 };
 
 #ifdef CONFIG_KEYBOARD_BCM

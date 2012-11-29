@@ -223,6 +223,7 @@ __weak struct regulator_consumer_supply sdx_supply[] = {
 	{.supply = "sdx_vcc"},
 	REGULATOR_SUPPLY("vddo", "sdhci.3"), /* 0x3f1b0000.sdhci */
 	{.supply = "dummy"},
+	{.supply = "dummy"},
 };
 static struct regulator_init_data bcm59xxx_sdxldo_data = {
 	.constraints = {
