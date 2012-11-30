@@ -638,6 +638,7 @@ struct event_notifier {
 struct event_list {
 	struct list_head node;
 	u32 event;
+	void *para;
 };
 
 struct bcmpmu_usb_accy_data {
@@ -671,7 +672,6 @@ struct bcmpmu_accy {
 	int adp_prob_comp;
 	int adp_sns_comp;
 	int retry_cnt;
-	int poll_cnt;
 	int latch_event;
 	bool clock_en;
 	enum bcmpmu_bc_t bc;
