@@ -51,19 +51,19 @@
 /* APB5, APB9 and SRAM */
 #define IO_G1_PHYS		0x34000000
 #define IO_G1_VIRT		(IO_START_VA)
-#define IO_G1_SIZE		(SZ_512K)
+#define IO_G1_SIZE		(SZ_1M)
 
 /* APB6, PM, APB10*/
 #define IO_G2_PHYS		0x35000000
 #define IO_G2_VIRT		\
 	(IO_G1_VIRT + IO_G1_SIZE)
-#define IO_G2_SIZE		(SZ_256K)
+#define IO_G2_SIZE		(SZ_1M)
 
 /* APB13, AHB, APB15 */
 #define IO_G3_PHYS		0x3A000000
 #define IO_G3_VIRT		\
 	(IO_G2_VIRT + IO_G2_SIZE)
-#define IO_G3_SIZE		(SZ_512K)
+#define IO_G3_SIZE		(SZ_1M)
 
 /* MM, APB12 */
 #define IO_G4_PHYS		0x3C000000
