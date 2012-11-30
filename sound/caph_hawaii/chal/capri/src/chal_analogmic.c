@@ -353,7 +353,7 @@ void chal_audio_mic_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 		/* Set i_VRX_RCM(01111) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
 		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_LDO_DIG_PWRDN_MASK);
-		reg_val |= 0x0F <<
+		reg_val |= 0x00 <<
 				AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_RCM_SHIFT;
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
@@ -518,7 +518,7 @@ void chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 		/* Set i_VRX_RCM(01111) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
 		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_LDO_DIG_PWRDN_MASK);
-		reg_val |= 0x0F <<
+		reg_val |= 0x00 <<
 				AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_RCM_SHIFT;
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
