@@ -48,7 +48,7 @@
 
 #define FG_PERIODIC_WORK_POLL_TIME	msecs_to_jiffies(5000)
 #define CHARG_ALGO_POLL_TIME		msecs_to_jiffies(5000)
-#define DISCHARGE_ALGO_POLL_TIME	msecs_to_jiffies(112000)
+#define DISCHARGE_ALGO_POLL_TIME	msecs_to_jiffies(60000)
 
 #define INTERPOLATE_LINEAR(X, Xa, Ya, Xb, Yb) \
 	(Ya + (((Yb - Ya) * (X - Xa))/(Xb - Xa)))
@@ -1050,12 +1050,15 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 				fg->capacity_info.initial);
 		fg->psy.external_power_changed(&fg->psy);
 		bcmpmu_fg_check_capacity_change(fg, true);
+		fg->flags.reschedule_work = true;
 		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
 	} else if ((fg->flags.batt_status == POWER_SUPPLY_STATUS_CHARGING) ||
 			(fg->flags.batt_status == POWER_SUPPLY_STATUS_FULL))
 		bcmpmu_fg_charging_algo(fg);
 	else
 		bcmpmu_fg_discharging_algo(fg);
+
+	pr_fg(FLOW, "%s reschedule: %d\n", __func__, fg->flags.reschedule_work);
 }
 
 static int bcmpmu_fg_get_capacity_level(struct bcmpmu_fg_data *fg)
@@ -1273,6 +1276,9 @@ debugfs_clean:
 static int bcmpmu_fg_resume(struct platform_device *pdev)
 {
 	struct bcmpmu_fg_data *fg = platform_get_drvdata(pdev);
+
+	pr_fg(FLOW, "%s\n", __func__);
+
 	fg->flags.reschedule_work = true;
 	queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
 	return 0;
@@ -1281,6 +1287,9 @@ static int bcmpmu_fg_resume(struct platform_device *pdev)
 static int bcmpmu_fg_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct bcmpmu_fg_data *fg = platform_get_drvdata(pdev);
+
+	pr_fg(FLOW, "%s\n", __func__);
+
 	fg->flags.reschedule_work = false;
 	flush_delayed_work_sync(&fg->fg_periodic_work);
 	return 0;
