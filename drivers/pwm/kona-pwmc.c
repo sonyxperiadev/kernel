@@ -333,7 +333,6 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
 	int chan = kona_get_chan(ap, p);
 	int ret = 0;
 
-	clk_enable(ap->clk);
 	if (test_bit(PWM_CONFIG_POLARITY, &c->config_mask))
 		kona_pwmc_config_polarity(ap, chan, c);
 
@@ -362,11 +361,12 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
 		};
 
 		ap->pwm_started = 1;
+		usleep_range(3000, 7000);
+		clk_enable(ap->clk);
 		kona_pwmc_clear_set_bit(ap, pwm_chan_ctrl_info[chan].offset,
 					pwm_chan_ctrl_info[chan].
 					smooth_type_shift, 1);
 		kona_pwmc_config_duty_ticks(ap, chan, &d);
-		clk_enable(ap->clk);
 		kona_pwmc_start(ap, chan);
 	}
 
@@ -377,17 +377,16 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
 		};
 
 		ap->pwm_started = 0;
+		kona_pwmc_config_duty_ticks(ap, chan, &d);
 		kona_pwmc_clear_set_bit(ap, pwm_chan_ctrl_info[chan].offset,
 					pwm_chan_ctrl_info[chan].
 					smooth_type_shift, 0);
-		kona_pwmc_config_duty_ticks(ap, chan, &d);
 		/* turn-off the PWM clock i.e. enabled during pwm_start */
 		ndelay(410);
 		clk_disable(ap->clk);
 	}
 
 out:
-	clk_disable(ap->clk);
 	return ret;
 }
 
