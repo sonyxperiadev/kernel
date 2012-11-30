@@ -726,6 +726,7 @@ struct kona_memc_pdata kmemc_plat_data = {
 		KONA_MEMC_HW_FREQ_CHANGE_EN,
 	.memc0_ns_base = KONA_MEMC0_NS_VA,
 	.chipreg_base = KONA_CHIPREG_VA,
+	.memc0_aphy_base = KONA_MEMC0_APHY_VA,
 	.seq_busy_val = 2,
 	.max_pwr = 3,
 };

@@ -50,6 +50,7 @@ struct kona_memc_pdata {
 	u32 max_pwr;
 	u32 memc0_ns_base;
 	u32 chipreg_base;
+	u32 memc0_aphy_base;
 };
 
 enum {
@@ -73,6 +74,7 @@ struct kona_memc {
 	u32 memc0_ns_base;
 	u32 chipreg_base;
 	u32 active_min_pwr;
+	u32 memc0_aphy_base;
 	struct kona_memc_pdata *pdata;
 };
 
