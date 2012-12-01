@@ -141,7 +141,7 @@ static int bcmpmu_get_curr_val(int curr)
 	return ret;
 }
 
-static int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
+int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 {
 	int ret = 0;
 	int val ;
@@ -152,6 +152,33 @@ static int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL10, (val & 0xF));
 	return ret;
 }
+EXPORT_SYMBOL(bcmpmu_set_icc_fc);
+
+int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable)
+{
+	int ret = 0;
+	u8 reg;
+
+	if (!charging_enable)
+		return 0;
+
+	pr_chrgr(FLOW, "------****%s****----,ENABLE %d\n", __func__, enable);
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
+	if (ret)
+		return ret;
+
+	if (enable)
+		reg |= MBCCTRL3_USB_HOSTEN_MASK;
+	else
+		reg &= ~MBCCTRL3_USB_HOSTEN_MASK;
+
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL3, reg);
+
+	return ret;
+}
+EXPORT_SYMBOL(bcmpmu_chrgr_usb_en);
+
+
 
 static int bcmpmu_chrgr_ac_get_property(struct power_supply *psy,
 		enum power_supply_property psp,
@@ -257,29 +284,6 @@ static int bcmpmu_chrgr_usb_set_property(struct power_supply *psy,
 	return ret;
 }
 
-int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable)
-{
-	int ret = 0;
-	u8 reg;
-
-	if (!charging_enable)
-		return 0;
-
-	pr_chrgr(FLOW, "------****%s****----,ENABLE %d\n", __func__, enable);
-	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
-	if (ret)
-		return ret;
-
-	if (enable)
-		reg |= MBCCTRL3_USB_HOSTEN_MASK;
-	else
-		reg &= ~MBCCTRL3_USB_HOSTEN_MASK;
-
-	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL3, reg);
-
-	return ret;
-}
-
 static int charger_event_handler(struct notifier_block *nb,
 		unsigned long event, void *para)
 {
@@ -376,6 +380,9 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	paccy = bcmpmu->accyinfo;
 
 	platform_set_drvdata(pdev, di);
+	/*do not register psy if SPA is enabled*/
+	if (bcmpmu->flags & BCMPMU_SPA_EN)
+		return 0;
 
 	di->ac_psy.name = "bcmpmu_ac";
 	di->ac_psy.type = POWER_SUPPLY_TYPE_MAINS;
@@ -454,8 +461,10 @@ free_dev_info:
 static int __devexit bcmpmu_chrgr_remove(struct platform_device *pdev)
 {
 	struct bcmpmu_chrgr_data *di = platform_get_drvdata(pdev);
-	power_supply_unregister(&di->ac_psy);
-	power_supply_unregister(&di->usb_psy);
+	if (!(di->bcmpmu->flags & BCMPMU_SPA_EN)) {
+		power_supply_unregister(&di->ac_psy);
+		power_supply_unregister(&di->usb_psy);
+	}
 	kfree(di);
 	return 0;
 }

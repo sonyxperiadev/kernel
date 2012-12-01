@@ -355,9 +355,18 @@ config BCMPMU_EM
 	 Say Y to include kernel charging and gauging module for BCM PMUs.
 
 config CHARGER_BCMPMU_SPA
-	bool "BCMPMU support SPA"
-	depends on MFD_BCMPMU
+	bool "BCMPMU SPA driver"
+	depends on MFD_BCM_PMU59xxx
 	default n
 	help
 	 Say Y to support SPA charging module for BCM PMUs.
+
+config SEC_CHARGING_FEATURE
+	tristate "Samsung Charging driver"
+	depends on POWER_SUPPLY
+	default n
+	select CHARGER_BCMPMU_SPA
+	help
+	 Say Y to enable Samsung charging drivers.
+
 endif # POWER_SUPPLY

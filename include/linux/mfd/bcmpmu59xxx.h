@@ -738,8 +738,18 @@ struct bcmpmu59xxx_rpc_pdata {
 	u32 delay;
 };
 
+struct bcmpmu59xxx_spa_pb_pdata {
+	char *chrgr_name;
+};
+
+
+/*BCMPMU generic control flags*/
+enum {
+	BCMPMU_SPA_EN = 1,
+};
 
 struct bcmpmu59xxx_platform_data {
+	u32 flags; /*ctrl flags*/
 	struct i2c_slave_platform_data i2c_pdata;
 	int (*init) (struct bcmpmu59xxx *bcmpmu);
 	int (*exit) (struct bcmpmu59xxx *bcmpmu);
@@ -767,6 +777,9 @@ struct bcmpmu59xxx {
 	void *ponkeyinfo;
 	void *adc;
 	void *rpcinfo;
+	void *fg;
+	void *spa_pb_info;
+	u32 flags; /*ctrl flags - copied from pdata*/
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_bcmpmu;
 #endif	/*CONFIG_DEBUG_FS*/
@@ -774,15 +787,15 @@ struct bcmpmu59xxx {
 	int (*read_dev) (struct bcmpmu59xxx *bcmpmu, u32 reg, u8 *val);
 	int (*write_dev) (struct bcmpmu59xxx *bcmpmu, u32 reg, u8 val);
 	int (*read_dev_bulk) (struct bcmpmu59xxx *bcmpmu, u32 reg,
-			  u8 *val, int len);
+			u8 *val, int len);
 	int (*write_dev_bulk) (struct bcmpmu59xxx *bcmpmu, u32 reg,
-			   u8 *val, int len);
+			u8 *val, int len);
 	/* Set PMU Bus read/write mode - Interrupt or polled */
 	int (*set_dev_mode) (struct bcmpmu59xxx *bcmpmu59, int poll);
 	/* irq */
 	int (*register_irq) (struct bcmpmu59xxx *bcmpmu, u32 irq,
-			     void (*callback) (u32 irq, void *),
-			     void *data);
+			void (*callback) (u32 irq, void *),
+			void *data);
 	int (*unregister_irq) (struct bcmpmu59xxx *bcmpmu, u32 irq);
 	int (*mask_irq) (struct bcmpmu59xxx *bcmpmu, u32 irq);
 	int (*unmask_irq) (struct bcmpmu59xxx *bcmpmu, u32 irq);
@@ -808,9 +821,26 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 			int ctrl, unsigned long data);
 int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable);
-
+int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr);
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+int bcmpmu_post_spa_event_to_queue(struct bcmpmu59xxx *bcmpmu,
+	u32 event, u32 param);
+int bcmpmu_post_spa_event(struct bcmpmu59xxx *bcmpmu, u32 event,
+		u32 param);
+#else
+static inline int bcmpmu_post_spa_event_to_queue(struct bcmpmu59xxx *bcmpmu,
+	u32 event, u32 param)
+{
+	return 0;
+}
+static inline int bcmpmu_post_spa_event(struct bcmpmu59xxx *bcmpmu,
+	u32 event, u32 param)
+{
+	return 0;
+}
+#endif /*CONFIG_CHARGER_BCMPMU_SPA*/
 #ifdef CONFIG_DEBUG_FS
 int bcmpmu_debugfs_open(struct inode *inode, struct file *file);
 #endif

@@ -615,6 +615,8 @@ static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu59xxx_debug_init(bcmpmu);
 #endif
+	/*Copy flags from pdata*/
+	bcmpmu->flags = bcmpmu->pdata->flags;
 	bcmpmu_gbl = bcmpmu;
 	mfd_add_devices(bcmpmu->dev, -1, irq_devs,
 				ARRAY_SIZE(irq_devs), NULL, 0);

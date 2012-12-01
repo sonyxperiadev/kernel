@@ -21,11 +21,13 @@ enum vfloat_level {
 	VFLOAT_LVL_3_90,
 	VFLOAT_LVL_4_00,
 	VFLOAT_LVL_4_05,
+	VFLOAT_LVL_4_10,
 	VFLOAT_LVL_4_125,
 	VFLOAT_LVL_4_150,
 	VFLOAT_LVL_4_175,
 	VFLOAT_LVL_4_20,
 	VFLOAT_LVL_4_225,
+	VFLOAT_LVL_4_25,
 	VFLOAT_LVL_4_275,
 	VFLOAT_LVL_4_30,
 	VFLOAT_LVL_4_325,
@@ -37,6 +39,11 @@ enum vfloat_level {
 	VFLOAT_LVL_4_475,
 	VFLOAT_LVL_4_50,
 	VFLOAT_LVL_MAX,
+};
+
+struct vfloat_lvl_volt_map {
+	enum vfloat_level vfloat;
+	int volt;
 };
 
 struct batt_volt_cap_map {
@@ -101,7 +108,9 @@ struct bcmpmu_batt_volt_levels {
 	int low;
 	int normal;
 	int high;
-	enum vfloat_level vfloat_lvl; /* float voltage */
+	enum vfloat_level vfloat_lvl; /* float voltage in mV*/
+	enum vfloat_level vfloat_max; /* maximum float voltage for protection */
+	int vfloat_gap;
 };
 
 struct bcmpmu_batt_calibration_data {
@@ -116,12 +125,17 @@ struct bcmpmu_fg_pdata {
 	struct bcmpmu_batt_cap_levels *cap_levels;
 	struct bcmpmu_batt_volt_levels *volt_levels;
 	struct bcmpmu_batt_calibration_data *calibration_data;
+	struct vfloat_lvl_volt_map *vfloat_volt_lut;
+	u32 vfloat_volt_lut_sz;
 
 	int sns_resist;	/* FG sense resistor in Ohm */
 	int sys_impedence;
 	int eoc_current; /* EOC current */
-	bool hw_maintenance_charging;
 	int sleep_current_ua; /*sleep current when PC1,PC2,PC3 = 0,0,0 */
 	int sleep_sample_rate; /* sampling rate during sleep mode */
+	int fg_factor;
+	bool hw_maintenance_charging;
 };
 
+int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);
+void bcmpmu_fg_chrgr_status_cb(struct bcmpmu59xxx *bcmpmu, int status);
