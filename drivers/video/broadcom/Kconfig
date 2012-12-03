@@ -32,33 +32,3 @@ config FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	  This is used for LCD to show that cp goes into crahs dump state.
 	  If you do not know about this config, please just say 'N' here.
 
-config FB_BRCM_ILI9486
-	tristate "LCD Panel ILI9486 Controller"
-	default N
-	help 
-		HVGA LCD panel (ILI9486 controller)
-	  
-config LCD_ILI9486_SUPPORT
-        tristate "LCD Panel- ILI9486 controller"
-        default N
-        help
-	  HVGA LCD panel (ILI9486 controller)
-
-config LCD_R61531_SUPPORT
-        tristate "LCD Panel- R61531 controller"
-        default N
-        help
-	  HVGA LCD panel (R61531 controller)
-
-config LCD_ILI9341_SUPPORT
-        tristate "LCD Panel- ILI9341 controller"
-        default N
-        help
-	  QVGA LCD panel (ILI9341 controller)
-
-config LCD_HX8369_SUPPORT
-        tristate "LCD Panel- HX8369 controller"
-        default N
-	select FB_BRCM_ASYNC_UPDATE
-        help
-	  WVGA LCD panel (HX8369 controller)
