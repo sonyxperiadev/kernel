@@ -651,6 +651,7 @@ static int pmem_cma_free(int id, struct pmem_data *data)
 	int ret;
 	struct page *page;
 	int nr_pages = pmem_len(data) >> PAGE_SHIFT;
+	struct task_struct *task = current->group_leader;
 
 	BUG_ON(!nr_pages);
 	BUG_ON(!(data->flags & PMEM_FLAGS_CMA));
@@ -661,9 +662,10 @@ static int pmem_cma_free(int id, struct pmem_data *data)
 	ret = dma_release_from_contiguous(&pmem[id].pdev->dev, page, nr_pages);
 	BUG_ON(ret == 0);
 
-	if (!(current->flags & PF_EXITING) &&
-		task_is_allocator(data, current->group_leader)) {
-		atomic_long_add(-nr_pages, &current->group_leader->mm->cma_stat);
+	if (!(task->flags & PF_EXITING) &&
+		task_is_allocator(data, task) &&
+		task->mm) {
+		atomic_long_add(-nr_pages, &task->mm->cma_stat);
 	}
 
 	if (pmem[id].deathpending) {
@@ -1118,7 +1120,7 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 			return -ENOMEM;
 
 		n = scnprintf(buffer, debug_bufmax,
-			      "process (pid #) : rss | flags | size | range | mapped regions (start, end) (start, end)...\n");
+			      "process (pid #) :  flags | size | range | mapped regions (start, end) (start, end)...\n");
 
 		mutex_lock(&pmem[id].data_list_lock);
 		list_for_each(elt, &pmem[id].data_list) {
@@ -1141,15 +1143,11 @@ static ssize_t debug_read(struct file *file, char __user * buf, size_t count,
 					       "%-16s (%6u) :",
 					       task->comm, data->pid);
 
-				n += scnprintf(buffer + n, debug_bufmax - n,
-					       "  %08ld", get_mm_cma(task->mm));
 				task_unlock(task);
 			} else {
 				n += scnprintf(buffer + n, debug_bufmax - n,
 					       "%-25s :",
 					       "non-allocating task");
-				n += scnprintf(buffer + n, debug_bufmax - n,
-					       "        %s", "N/A");
 			}
 
 			size = pmem_len(data);
