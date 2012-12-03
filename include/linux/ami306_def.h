@@ -26,6 +26,12 @@ typedef unsigned long u32;
 #define AMI_OVERFLOW	-20		/**< mag overflow */
 #define	AMI_ERROR	-99		/**< other Error  */
 
+#define AMI_ST_OK			0	/* OK */
+#define AMI_ST_ERR_COMMUNICATION	1	/* Communication Error */
+#define AMI_ST_ERR_OTP			2	/* OTP Error */
+#define AMI_ST_ERR_TEMP_SENSOR		3	/* Temp sensor Error */
+#define AMI_ST_ERR_MI_ELEMENT		4	/* MI element Error */
+#define AMI_ST_ERR_DIGITAL_CIRCUIT	5	/* Digital circuit Error */
 /******************************************************************************
  Struct definition
  ******************************************************************************/
@@ -40,9 +46,7 @@ struct ami_chipinfo {
 /** magnetic sensor parameter */
 struct ami_mag_parameter {
 	u16 sensitivity[3];		/**< sensitivity */
-	u16 origin[3];			/**< origin  */
 	u8 interference[6];		/**< axis interference */
-	s16 inter_offset[6];		/**< interference offset */
 };
 
 /** magnetic sensor window parameter */

@@ -34,63 +34,60 @@
 /*-------+---------+---------+---------+---------+---------+---------+---------+
  *		Driver Information.
  *-------+---------+---------+---------+---------+---------+---------+--------*/
-#define	THIS_CODE_REMARKS "ami306 refactoring version"
+#define	THIS_CODE_REMARKS "ami306 20121011"
 #define THIS_VER_MAJOR	1
-#define THIS_VER_MIDDLE	1
+#define THIS_VER_MIDDLE	4
 #define THIS_VER_MINOR	0
 
 /*-------+---------+---------+---------+---------+---------+---------+---------+
  *		define
  *-------+---------+---------+---------+---------+---------+---------+--------*/
-#define AMI_ORIGIN			0x800
-
-#define AMI_INIT_MODE			0
-#define AMI_STANDBY_MODE		1
-#define AMI_NORMAL_MODE			2
-#define AMI_FORCE_MODE			3
+#define AMI_STANDBY_MODE		0xFFFF
+#define AMI_NORMAL_MODE			0
+#define AMI_FORCE_MODE			1
 
 /*-------+---------+---------+---------+---------+---------+---------+---------+
  *		struct
  *-------+---------+---------+---------+---------+---------+---------+--------*/
 struct ami_stat {
-	void *comm;
+	void *i2c_hnd;
 	s16 mode;
 	struct ami_sensor_parameter prm;
+	s16 lsb[3];
+	s16 dir;
+	s16 polarity;
+	s16 si[9];
 };
 
 /*-------+---------+---------+---------+---------+---------+---------+---------+
  *		Some routines using i2c interface
  *-------+---------+---------+---------+---------+---------+---------+--------*/
 /*---------------------------------------------------------------------------*/
-int AMI_i2c_send_b(void *handle, u8 cmd, u8 buf)
+int AMI_i2c_send_b(void *i2c_hnd, u8 cmd, u8 buf)
 {
-	struct ami_stat *stat = handle;
-	return AMI_i2c_send(stat->comm, cmd, 1, &buf);
+	return AMI_i2c_send(i2c_hnd, cmd, 1, &buf);
 }
 
 /*---------------------------------------------------------------------------*/
-int AMI_i2c_recv_b(void *handle, u8 cmd, u8 *buf)
+int AMI_i2c_recv_b(void *i2c_hnd, u8 cmd, u8 *buf)
 {
-	struct ami_stat *stat = handle;
-	return AMI_i2c_recv(stat->comm, cmd, 1, buf);
+	return AMI_i2c_recv(i2c_hnd, cmd, 1, buf);
 }
 
 /*---------------------------------------------------------------------------*/
-int AMI_i2c_send_w(void *handle, u8 cmd, u16 buf)
+int AMI_i2c_send_w(void *i2c_hnd, u8 cmd, u16 buf)
 {
-	struct ami_stat *stat = handle;
 	u8 dat[2];
 	dat[0] = 0xFF & buf;
 	dat[1] = 0xFF & buf >> 8;
-	return AMI_i2c_send(stat->comm, cmd, sizeof(dat), dat);
+	return AMI_i2c_send(i2c_hnd, cmd, sizeof(dat), dat);
 }
 
 /*---------------------------------------------------------------------------*/
-int AMI_i2c_recv_w(void *handle, u8 cmd, u16 *buf)
+int AMI_i2c_recv_w(void *i2c_hnd, u8 cmd, u16 *buf)
 {
-	struct ami_stat *stat = handle;
 	u8 dat[2];
-	int ret = AMI_i2c_recv(stat->comm, cmd, sizeof(dat), dat);
+	int ret = AMI_i2c_recv(i2c_hnd, cmd, sizeof(dat), dat);
 	*buf = dat[1] << 8 | dat[0];
 	return ret;
 }
@@ -98,26 +95,26 @@ int AMI_i2c_recv_w(void *handle, u8 cmd, u16 *buf)
 /*-------+---------+---------+---------+---------+---------+---------+---------+
  *	Some routines, bit Up or bit Dn AMI register.
  *-------+---------+---------+---------+---------+---------+---------+--------*/
-static int AMI_Up_RegisterBit8(void *handle, u8 regiaddr, u8 bit)
+static int AMI_Up_RegisterBit8(void *i2c_hnd, u8 regiaddr, u8 bit)
 {
 	int res = 0;
 	u8 buf;
 
-	res = AMI_i2c_recv_b(handle, regiaddr, &buf);
+	res = AMI_i2c_recv_b(i2c_hnd, regiaddr, &buf);
 	buf |= bit;
-	res = AMI_i2c_send_b(handle, regiaddr, buf);
+	res = AMI_i2c_send_b(i2c_hnd, regiaddr, buf);
 	return (res);		/* At read error, it may happen write error. */
 }
 
 /*---------------------------------------------------------------------------*/
-static int AMI_Dn_RegisterBit8(void *handle, u8 regiaddr, u8 maskbit)
+static int AMI_Dn_RegisterBit8(void *i2c_hnd, u8 regiaddr, u8 maskbit)
 {
 	int res = 0;
 	u8 buf;
 
-	res = AMI_i2c_recv_b(handle, regiaddr, &buf);
+	res = AMI_i2c_recv_b(i2c_hnd, regiaddr, &buf);
 	buf &= (u8) ~ (maskbit);
-	res = AMI_i2c_send_b(handle, regiaddr, buf);
+	res = AMI_i2c_send_b(i2c_hnd, regiaddr, buf);
 	return (res);		/* At read error, it may happen write error. */
 }
 
@@ -125,17 +122,17 @@ static int AMI_Dn_RegisterBit8(void *handle, u8 regiaddr, u8 maskbit)
  *	Some routines ami command
  *-------+---------+---------+---------+---------+---------+---------+--------*/
 /* HighSpeedMode */
-static int AMI_HighSpeedMea(void *handle)
+int AMI_HighSpeedMea(void *i2c_hnd)
 {
-	return AMI_i2c_send_w(handle, AMI_REG_CTRL4, AMI_CTRL4_HS);
+	return AMI_i2c_send_w(i2c_hnd, AMI_REG_CTRL4, AMI_CTRL4_HS);
 }
 
 /*---------------------------------------------------------------------------*/
 /* FS1 Force & PC1 Active */
-static int AMI_ForceModeActive(void *handle)
+int AMI_ForceModeActive(void *i2c_hnd)
 {
 	int res = 0;
-	res = AMI_Up_RegisterBit8(handle, AMI_REG_CTRL1,
+	res = AMI_Up_RegisterBit8(i2c_hnd, AMI_REG_CTRL1,
 				  AMI_CTRL1_PC1 | AMI_CTRL1_FS1_FORCE);
 	AMI_udelay(8);		/* 8microsec(Turn on time 2) */
 	return (res);
@@ -144,11 +141,11 @@ static int AMI_ForceModeActive(void *handle)
 /*---------------------------------------------------------------------------*/
 /* FS1 Normal & PC1 Active */
 #if 0				/* not use */
-static int AMI_NormalModeActive(void *handle)
+static int AMI_NormalModeActive(void *i2c_hnd)
 {
 	int res = 0;
-	res = AMI_Dn_RegisterBit8(handle, AMI_REG_CTRL1, AMI_CTRL1_FS1_FORCE);
-	res = AMI_Up_RegisterBit8(handle, AMI_REG_CTRL1,
+	res = AMI_Dn_RegisterBit8(i2c_hnd, AMI_REG_CTRL1, AMI_CTRL1_FS1_FORCE);
+	res = AMI_Up_RegisterBit8(i2c_hnd, AMI_REG_CTRL1,
 				  AMI_CTRL1_PC1 | AMI_CTRL1_ODR1);
 	AMI_udelay(8);		/* 8microsec(Turn on time 2) */
 	return (res);
@@ -157,48 +154,45 @@ static int AMI_NormalModeActive(void *handle)
 
 /*---------------------------------------------------------------------------*/
 /* PC1 Stand-by */
-static int AMI_Standby(void *handle)
+static int AMI_Standby(void *i2c_hnd)
 {
 	int res = 0;
-	res = AMI_Dn_RegisterBit8(handle, AMI_REG_CTRL1, AMI_CTRL1_PC1);
+	res = AMI_Dn_RegisterBit8(i2c_hnd, AMI_REG_CTRL1, AMI_CTRL1_PC1);
 	AMI_udelay(30);		/* 30microsec(Turn off time 1) */
 	return (res);
 }
 
 /*---------------------------------------------------------------------------*/
 /* DRDY enable */
-static int AMI_DRDY_Enable(void *handle)
+int AMI_DRDY_Enable(void *i2c_hnd)
 {
-	return AMI_Up_RegisterBit8(handle, AMI_REG_CTRL2, AMI_CTRL2_DREN);
+	return AMI_Up_RegisterBit8(i2c_hnd, AMI_REG_CTRL2, AMI_CTRL2_DREN);
 }
 
 /*---------------------------------------------------------------------------*/
 /* SoftReSeT */
-#if 0				/* not use */
-static int AMI_SRSTset(void *handle)
+int AMI_SRSTset(void *i2c_hnd)
 {
 	int res = 0;
-	res = AMI_Up_RegisterBit8(handle, AMI_REG_CTRL3, AMI_CTRL3_SRST_BIT);
+	res = AMI_Up_RegisterBit8(i2c_hnd, AMI_REG_CTRL3, AMI_CTRL3_SRST_BIT);
 	AMI_udelay(250);	/* 250microsec(Turn on time 1) */
 	return (res);
 }
-#endif
 
 /*---------------------------------------------------------------------------*/
 /* FORCE=1*/
-static int AMI_FORCEset(void *handle)
+static int AMI_FORCEset(void *i2c_hnd)
 {
-	return AMI_Up_RegisterBit8(handle, AMI_REG_CTRL3, AMI_CTRL3_FORCE_BIT);
+	return AMI_Up_RegisterBit8(i2c_hnd, AMI_REG_CTRL3, AMI_CTRL3_FORCE_BIT);
 }
 
 /*---------------------------------------------------------------------------*/
 /* DATA X,Y,Z read */
-static int AMI_Read_RawData(void *handle, s16 dat[3])
+static int AMI_Read_RawData(void *i2c_hnd, s16 dat[3])
 {
 	int ret = 0;
-	struct ami_stat *stat = handle;
 	u8 buf[6];
-	ret = AMI_i2c_recv(stat->comm, AMI_REG_DATAX, sizeof(buf), buf);
+	ret = AMI_i2c_recv(i2c_hnd, AMI_REG_DATAX, sizeof(buf), buf);
 	dat[0] = buf[1] << 8 | buf[0];
 	dat[1] = buf[3] << 8 | buf[2];
 	dat[2] = buf[5] << 8 | buf[4];
@@ -208,47 +202,47 @@ static int AMI_Read_RawData(void *handle, s16 dat[3])
 /*---------------------------------------------------------------------------*/
 /* Temperature */
 #if 0				/* not use */
-static int AMI_Read_Temperature(void *handle, u16 *dat)
+static int AMI_Read_Temperature(void *i2c_hnd, u16 *dat)
 {
-	return AMI_i2c_recv_w(handle, AMI_REG_TEMP, dat);
+	return AMI_i2c_recv_w(i2c_hnd, AMI_REG_TEMP, dat);
 }
 #endif
 
 /*---------------------------------------------------------------------------*/
 /* read fine_output */
-static int AMI_FineOutput(void *handle, u16 dat[3])
+int AMI_FineOutput(void *i2c_hnd, u16 dat[3])
 {
 	int ret = 0;
-	ret = AMI_i2c_recv_w(handle, AMI_REG_FINEOUTPUT_X, &dat[0]);
-	ret = AMI_i2c_recv_w(handle, AMI_REG_FINEOUTPUT_Y, &dat[1]);
-	ret = AMI_i2c_recv_w(handle, AMI_REG_FINEOUTPUT_Z, &dat[2]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_FINEOUTPUT_X, &dat[0]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_FINEOUTPUT_Y, &dat[1]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_FINEOUTPUT_Z, &dat[2]);
 	return ret;
 }
 
 /*---------------------------------------------------------------------------*/
 /* OFF X,Y,Z write */
-static int AMI_Write_Offset(void *handle, u8 fine[3])
+int AMI_Write_Offset(void *i2c_hnd, u8 fine[3])
 {
 	int ret = 0;
 	u16 dat[3];
 	dat[0] = 0x7f & fine[0];
 	dat[1] = 0x7f & fine[1];
 	dat[2] = 0x7f & fine[2];
-	ret = AMI_i2c_send_w(handle, AMI_REG_OFFX, dat[0]);
-	ret = AMI_i2c_send_w(handle, AMI_REG_OFFY, dat[1]);
-	ret = AMI_i2c_send_w(handle, AMI_REG_OFFZ, dat[2]);
+	ret = AMI_i2c_send_w(i2c_hnd, AMI_REG_OFFX, dat[0]);
+	ret = AMI_i2c_send_w(i2c_hnd, AMI_REG_OFFY, dat[1]);
+	ret = AMI_i2c_send_w(i2c_hnd, AMI_REG_OFFZ, dat[2]);
 	return ret;
 }
 
 /*---------------------------------------------------------------------------*/
 /* OFF X,Y,Z read */
-static int AMI_Read_Offset(void *handle, u8 fine[3])
+static int AMI_Read_Offset(void *i2c_hnd, u8 fine[3])
 {
 	int ret = 0;
 	u16 dat[3];
-	ret = AMI_i2c_recv_w(handle, AMI_REG_OFFX, &dat[0]);
-	ret = AMI_i2c_recv_w(handle, AMI_REG_OFFY, &dat[1]);
-	ret = AMI_i2c_recv_w(handle, AMI_REG_OFFZ, &dat[2]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_OFFX, &dat[0]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_OFFY, &dat[1]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_OFFZ, &dat[2]);
 	fine[0] = (u8) (dat[0] & 0x007f);
 	fine[1] = (u8) (dat[1] & 0x007f);
 	fine[2] = (u8) (dat[2] & 0x007f);
@@ -257,13 +251,13 @@ static int AMI_Read_Offset(void *handle, u8 fine[3])
 
 /*---------------------------------------------------------------------------*/
 /* OFFOTP X,Y,Z read */
-static int AMI_Read_OffsetOTP(void *handle, u8 fine[3])
+static int AMI_Read_OffsetOTP(void *i2c_hnd, u8 fine[3])
 {
 	int ret = 0;
 	u16 dat[3];
-	ret = AMI_i2c_recv_w(handle, AMI_REG_OFFOTPX, &dat[0]);
-	ret = AMI_i2c_recv_w(handle, AMI_REG_OFFOTPY, &dat[1]);
-	ret = AMI_i2c_recv_w(handle, AMI_REG_OFFOTPZ, &dat[2]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_OFFOTPX, &dat[0]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_OFFOTPY, &dat[1]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_OFFOTPZ, &dat[2]);
 	fine[0] = (u8) (dat[0] & 0x007f);
 	fine[1] = (u8) (dat[1] & 0x007f);
 	fine[2] = (u8) (dat[2] & 0x007f);
@@ -272,24 +266,24 @@ static int AMI_Read_OffsetOTP(void *handle, u8 fine[3])
 
 /*---------------------------------------------------------------------------*/
 /* SENS X,Y,Z read */
-static int AMI_Read_Sense(void *handle, u16 dat[3])
+static int AMI_Read_Sense(void *i2c_hnd, u16 dat[3])
 {
 	int ret = 0;
-	ret = AMI_i2c_recv_w(handle, AMI_REG_SENX, &dat[0]);
-	ret = AMI_i2c_recv_w(handle, AMI_REG_SENY, &dat[1]);
-	ret = AMI_i2c_recv_w(handle, AMI_REG_SENZ, &dat[2]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_SENX, &dat[0]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_SENY, &dat[1]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_SENZ, &dat[2]);
 	return ret;
 }
 
 /*---------------------------------------------------------------------------*/
 /* GAIN PARA X,Y,Z read */
-static int AMI_Read_GainPara(void *handle, u8 interference[6])
+static int AMI_Read_GainPara(void *i2c_hnd, u8 interference[6])
 {
 	int ret = 0;
 	u16 dat[3];
-	ret = AMI_i2c_recv_w(handle, AMI_REG_GAINX, &dat[0]);
-	ret = AMI_i2c_recv_w(handle, AMI_REG_GAINY, &dat[1]);
-	ret = AMI_i2c_recv_w(handle, AMI_REG_GAINZ, &dat[2]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_GAINX, &dat[0]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_GAINY, &dat[1]);
+	ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_GAINZ, &dat[2]);
 	interference[0] = 0xFF & dat[0] >> 8;	/*xy */
 	interference[1] = 0xFF & dat[0];	/*xz */
 	interference[2] = 0xFF & dat[1] >> 8;	/*yx */
@@ -301,21 +295,21 @@ static int AMI_Read_GainPara(void *handle, u8 interference[6])
 
 /*---------------------------------------------------------------------------*/
 /* Wait DataReaDY */
-static int AMI_Wait_DataReady(void *handle, u16 secs, u16 times)
+static int AMI_Wait_DataReady(void *i2c_hnd, u16 secs, u16 times)
 {
 	s16 i;
 
 	for (i = 0; i < times; i++) {
 #ifdef USE_DRDY_PIN
 		if (AMI_DRDY_Value() > 0) {
-			AMI_DLOG("DRDY ON (%d)", i);
+			AMI_DLOG("DRDY(DRDY PIN) ON (%d)", i);
 			return 0;
 		}
 #else
 		u8 buf = 0;
-		AMI_i2c_recv_b(handle, AMI_REG_STA1, &buf);
+		AMI_i2c_recv_b(i2c_hnd, AMI_REG_STA1, &buf);
 		if (buf & AMI_STA1_DRDY_BIT) {
-			AMI_DLOG("DRDY ON (%d)", i);
+			AMI_DLOG("DRDY(STA1 DRDY BIT) ON (%d)", i);
 			return 0;
 		}
 #endif
@@ -330,32 +324,32 @@ static int AMI_Wait_DataReady(void *handle, u16 secs, u16 times)
 
 /*---------------------------------------------------------------------------*/
 /* read WIA */
-static int AMI_WhoIam(void *handle, u8 *dat)
+static int AMI_WhoIam(void *i2c_hnd, u8 *dat)
 {
-	return AMI_i2c_recv_b(handle, AMI_REG_WIA, dat);
+	return AMI_i2c_recv_b(i2c_hnd, AMI_REG_WIA, dat);
 }
 
 /*---------------------------------------------------------------------------*/
 /* read VERSION */
-static int AMI_GetVersion(void *handle, u16 *dat)
+static int AMI_GetVersion(void *i2c_hnd, u16 *dat)
 {
-	int ret = AMI_i2c_recv_w(handle, AMI_REG_VER, dat);
+	int ret = AMI_i2c_recv_w(i2c_hnd, AMI_REG_VER, dat);
 	*dat &= 0x7f;
 	return ret;
 }
 
 /*---------------------------------------------------------------------------*/
 /* read S/N */
-static int AMI_SerialNumber(void *handle, u16 *dat)
+static int AMI_SerialNumber(void *i2c_hnd, u16 *dat)
 {
-	return AMI_i2c_recv_w(handle, AMI_REG_SN, dat);
+	return AMI_i2c_recv_w(i2c_hnd, AMI_REG_SN, dat);
 }
 
 /*---------------------------------------------------------------------------*/
 /* read MoreInfo */
-static int AMI_MoreInfo(void *handle, u16 *dat)
+static int AMI_MoreInfo(void *i2c_hnd, u16 *dat)
 {
-	return AMI_i2c_recv_w(handle, AMI_REG_INFO, dat);
+	return AMI_i2c_recv_w(i2c_hnd, AMI_REG_INFO, dat);
 }
 
 /*-------+---------+---------+---------+---------+---------+---------+---------+
@@ -369,21 +363,21 @@ static int AMI_MoreInfo(void *handle, u16 *dat)
 #define AMI_DRDY_WAIT		100	/* u(micro) sec */
 #endif
 /*---------------------------------------------------------------------------*/
-static int AMI_ForceMesurement(void *handle, s16 ver[3])
+static int AMI_ForceMesurement(void *i2c_hnd, s16 ver[3])
 {
 	int res;
 	/* Write CNTL3:FORCE = 1 */
-	res = AMI_FORCEset(handle);
+	res = AMI_FORCEset(i2c_hnd);
 	if (0 > res)
 		return res;
 
 	/* Wait DRDY high */
-	res = AMI_Wait_DataReady(handle, AMI_DRDY_WAIT, AMI_DRDY_RETRY);
+	res = AMI_Wait_DataReady(i2c_hnd, AMI_DRDY_WAIT, AMI_DRDY_RETRY);
 	if (0 > res)
 		return res;
 
 	/* READ DATA X,Y,Z */
-	res = AMI_Read_RawData(handle, ver);
+	res = AMI_Read_RawData(i2c_hnd, ver);
 	if (0 > res)
 		return res;
 
@@ -391,44 +385,25 @@ static int AMI_ForceMesurement(void *handle, s16 ver[3])
 }
 
 /*---------------------------------------------------------------------------*/
-static int AMI_Mea(void *handle, s16 val[3])
+int AMI_Mea(void *i2c_hnd, s16 val[3])
 {
-	int res = AMI_ForceMesurement(handle, val);
+	int res = AMI_ForceMesurement(i2c_hnd, val);
 	if (0 > res)
 		return res;
 
-	val[0] += AMI_ORIGIN;
-	val[1] += AMI_ORIGIN;
-	val[2] += AMI_ORIGIN;
 	return res;
 }
 
 /*-------+---------+---------+---------+---------+---------+---------+---------+
  *		Read parameter
  *-------+---------+---------+---------+---------+---------+---------+--------*/
-static int AMI_ReadWinParam(void *handle, struct ami_win_parameter *win)
+static int AMI_ReadWinParam(void *i2c_hnd, struct ami_win_parameter *win)
 {
 	int res = 0;
 	u16 m_fineout[3];
 	u8 fine[3];
 
-	res = AMI_Read_OffsetOTP(handle, fine);	/* OFFOTP */
-	if (0 > res)
-		return res;
-
-	win->zero_gauss_fine[0] = fine[0];
-	win->zero_gauss_fine[1] = fine[1];
-	win->zero_gauss_fine[2] = fine[2];
-
-	res = AMI_Read_Offset(handle, fine);
-	if (0 > res)
-		return res;
-
-	win->fine[0] = fine[0];
-	win->fine[1] = fine[1];
-	win->fine[2] = fine[2];
-
-	res = AMI_FineOutput(handle, m_fineout);	/*fine output */
+	res = AMI_FineOutput(i2c_hnd, m_fineout);	/*fine output */
 	if (0 > res)
 		return res;
 
@@ -436,17 +411,32 @@ static int AMI_ReadWinParam(void *handle, struct ami_win_parameter *win)
 	win->fine_output[1] = m_fineout[1];
 	win->fine_output[2] = m_fineout[2];
 
+	res = AMI_Read_Offset(i2c_hnd, fine);
+	if (0 > res)
+		return res;
+
+	win->fine[0] = fine[0];
+	win->fine[1] = fine[1];
+	win->fine[2] = fine[2];
+
+	res = AMI_Read_OffsetOTP(i2c_hnd, fine);	/* OFFOTP */
+	if (0 > res)
+		return res;
+
+	win->zero_gauss_fine[0] = fine[0];
+	win->zero_gauss_fine[1] = fine[1];
+	win->zero_gauss_fine[2] = fine[2];
+
 	return res;
 }
 
 /*---------------------------------------------------------------------------*/
-static int AMI_ReadMagParam(void *handle, struct ami_mag_parameter *prm)
+static int AMI_ReadMagParam(void *i2c_hnd, struct ami_mag_parameter *prm)
 {
 	int res = 0;
 	u16 sensitivity[3];
-	struct ami_stat *stat = handle;
 
-	res = AMI_Read_Sense(handle, sensitivity);
+	res = AMI_Read_Sense(i2c_hnd, sensitivity);
 	if (0 > res)
 		return res;
 
@@ -454,37 +444,30 @@ static int AMI_ReadMagParam(void *handle, struct ami_mag_parameter *prm)
 	prm->sensitivity[1] = sensitivity[1];
 	prm->sensitivity[2] = sensitivity[2];
 
-	res = AMI_Read_GainPara(handle, prm->interference);
+	res = AMI_Read_GainPara(i2c_hnd, prm->interference);
 	if (0 > res)
 		return res;
-
-	prm->origin[0] = AMI_ORIGIN;
-	prm->origin[1] = AMI_ORIGIN;
-	prm->origin[2] = AMI_ORIGIN;
-
-	memcpy(prm->inter_offset, stat->prm.mag.inter_offset,
-	       sizeof(prm->inter_offset));
 
 	return res;
 }
 
 /*---------------------------------------------------------------------------*/
-static int AMI_ChipInformation(void *handle, struct ami_chipinfo *chip)
+static int AMI_ChipInformation(void *i2c_hnd, struct ami_chipinfo *chip)
 {
 	int res;
-	res = AMI_WhoIam(handle, &chip->wia);
+	res = AMI_WhoIam(i2c_hnd, &chip->wia);
 	if (res < 0)
 		return res;
 
-	res = AMI_GetVersion(handle, &chip->ver);
+	res = AMI_MoreInfo(i2c_hnd, &chip->info);
 	if (res < 0)
 		return res;
 
-	res = AMI_SerialNumber(handle, &chip->sn);
+	res = AMI_GetVersion(i2c_hnd, &chip->ver);
 	if (res < 0)
 		return res;
 
-	res = AMI_MoreInfo(handle, &chip->info);
+	res = AMI_SerialNumber(i2c_hnd, &chip->sn);
 	if (res < 0)
 		return res;
 
@@ -497,15 +480,14 @@ static int AMI_ChipInformation(void *handle, struct ami_chipinfo *chip)
 #define AMI_FINE_MIN	1
 #define AMI_FINE_MAX	95
 
-#define SEH_RANGE_MIN	100
-#define SEH_RANGE_MAX	3950
+#define SEH_RANGE_MIN	(-1948)
+#define SEH_RANGE_MAX	(1902)
 #define SEH_RANGE	(SEH_RANGE_MAX - SEH_RANGE_MIN)
 
-#define AMI_WIN_RANGE	1800
-#define AMI_WIN_MAX	(AMI_ORIGIN + AMI_WIN_RANGE)
-#define AMI_WIN_MIN	(AMI_ORIGIN - AMI_WIN_RANGE)
+#define AMI_WIN_MAX	1800
+#define AMI_WIN_MIN	-1800
 
-#define WIN_CHANGE_VAL  4000
+#define SEARCH_COUNT	3
 
 /*---------------------------------------------------------------------------*/
 static int AMI_CalcNewOffset(u8 *fine, s16 val, u8 win_range_fine,
@@ -525,8 +507,8 @@ static int AMI_CalcNewOffset(u8 *fine, s16 val, u8 win_range_fine,
 	}
 	/* In the current window. */
 	if (SEH_RANGE_MIN <= val && val <= SEH_RANGE_MAX) {
-		s16 quo = (val - AMI_ORIGIN) / fine_output;
-		s16 rem = (val - AMI_ORIGIN) % fine_output;
+		s16 quo = val / fine_output;
+		s16 rem = val % fine_output;
 		rem = fine_output < 2 ? 0 : rem / (fine_output / 2);
 		new_fine += (quo + rem);
 		AMI_DLOG("mid : fine=%d (%d,%d)", new_fine, quo, rem);
@@ -541,6 +523,82 @@ static int AMI_CalcNewOffset(u8 *fine, s16 val, u8 win_range_fine,
 		*fine = (u8)new_fine;
 
 	return res;
+}
+
+int AMI_SearchOffsetProc(void *i2c_hnd, u8 fine[3])
+{
+	int res = AMI_ERROR;
+	s16 axis;
+	u8 run_flg = 0;
+	u8 win_range_fine[3];
+	s16 fine_output[3];
+	s16 val[3];
+	u16 cnt = 0;
+
+	AMI_DLOG("--- Search Offset ---");
+
+	res = AMI_FineOutput(i2c_hnd, (u16 *) fine_output);
+	if (0 > res) {
+		AMI_LOG("AMI_FineOutput ERROR(%d)", res);
+		return res;
+	}
+	AMI_DLOG("fine_output (%d, %d, %d)",
+		 fine_output[0], fine_output[1], fine_output[2]);
+
+	for (axis = 0; axis < 3; ++axis) {
+		if (fine_output[axis] == 0) {
+			AMI_LOG("fine_output=0 axis:%d ", axis);
+			return AMI_SYSTEM_ERR;
+		}
+		/* fines per a window */
+		win_range_fine[axis] = SEH_RANGE / fine_output[axis];
+	}
+	AMI_DLOG("win_range_fine (%d, %d, %d)",
+		 win_range_fine[0], win_range_fine[1], win_range_fine[2]);
+
+	/* get current fine */
+	res = AMI_Read_Offset(i2c_hnd, fine);
+	if (0 > res) {
+		AMI_LOG("AMI_Read_Offset ERROR(%d)", res);
+		return res;
+	}
+
+	while (run_flg != 0x7) {
+
+		if (cnt > SEARCH_COUNT) {
+			AMI_LOG("Search Offset Count Over");
+			return 0;
+		}
+		cnt++;
+
+		res = AMI_Mea(i2c_hnd, val);
+		if (0 > res) {
+			AMI_LOG("AMI_Mea ERROR(%d)", res);
+			return res;
+		}
+		AMI_DLOG("fine (%d, %d, %d)", fine[0], fine[1], fine[2]);
+		AMI_DLOG("val  (%d, %d, %d)", val[0], val[1], val[2]);
+
+		/* X-axis is reversed */
+		val[0] *= -1;
+
+		for (axis = 0; axis < 3; ++axis) {
+
+			res = AMI_CalcNewOffset(&fine[axis], val[axis],
+						win_range_fine[axis],
+						fine_output[axis]);
+			if (res == 1)
+				run_flg |= (0x1 << axis);
+		}
+		/* set current fine */
+		res = AMI_Write_Offset(i2c_hnd, fine);
+		if (0 > res) {
+			AMI_LOG("AMI_Write_Offset ERROR(%d)", res);
+			return res;
+		}
+	}
+	AMI_DLOG("-- fine (%d, %d, %d) --", fine[0], fine[1], fine[2]);
+	return 0;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -597,30 +655,45 @@ static void AMI_Sen2Dev(s16 dir, s16 polarity, s16 mag[3])
  * @param sensitivity	magnetic sensor sensitivity
  * @param mag		magnetic value(mGauss)
  */
-static void AMIL_MagInterference(u8 inter[6], s16 inter_offset[6],
-				 s16 sens[3], s16 mag[3])
+static void AMIL_MagInterference(u8 inter[6], s16 sens[3], s16 mag[3])
 {
 	s32 wk[3];
 	/* sens compensate */
 	wk[0] = mag[0]
-	    - (mag[1] * 100 / sens[1]) * ((inter[2] + inter_offset[2]) - 127)
-	    * sens[0] / 100000
-	    - (mag[2] * 100 / sens[2]) * ((inter[4] + inter_offset[4]) - 127)
-	    * sens[0] / 100000;
+	      - (mag[1] * 100 / sens[1]) * (inter[2] - 127) * sens[0] / 100000
+	      - (mag[2] * 100 / sens[2]) * (inter[4] - 127) * sens[0] / 100000;
 	wk[1] = mag[1]
-	    - (mag[0] * 100 / sens[0]) * ((inter[0] + inter_offset[0]) - 127)
-	    * sens[1] / 100000
-	    - (mag[2] * 100 / sens[2]) * ((inter[5] + inter_offset[5]) - 127)
-	    * sens[1] / 100000;
+	      - (mag[0] * 100 / sens[0]) * (inter[0] - 127) * sens[1] / 100000
+	      - (mag[2] * 100 / sens[2]) * (inter[5] - 127) * sens[1] / 100000;
 	wk[2] = mag[2]
-	    - (mag[0] * 100 / sens[0]) * ((inter[1] + inter_offset[1]) - 127)
-	    * sens[2] / 100000
-	    - (mag[1] * 100 / sens[1]) * ((inter[3] + inter_offset[3]) - 127)
-	    * sens[2] / 100000;
+	      - (mag[0] * 100 / sens[0]) * (inter[1] - 127) * sens[2] / 100000
+	      - (mag[1] * 100 / sens[1]) * (inter[3] - 127) * sens[2] / 100000;
 
 	mag[0] = wk[0];
 	mag[1] = wk[1];
 	mag[2] = wk[2];
+}
+
+/**
+ * Soft Iron
+ *
+ * @param si	soft iron parameter
+ * @param mag		magnetic value(mGauss)
+ */
+static void AMIL_SoftIron(s16 si[9], s16 mag[3])
+{
+	s32 wk[3];
+
+	wk[0] = mag[0] * si[0] / 1000 + mag[1] * si[3] / 1000
+	      + mag[2] * si[6] / 1000;
+	wk[1] = mag[0] * si[1] / 1000 + mag[1] * si[4] / 1000
+	      + mag[2] * si[7] / 1000;
+	wk[2] = mag[0] * si[2] / 1000 + mag[1] * si[5] / 1000
+	      + mag[2] * si[8] / 1000;
+
+	mag[0] = (s16)wk[0];
+	mag[1] = (s16)wk[1];
+	mag[2] = (s16)wk[2];
 }
 
 /**
@@ -631,39 +704,40 @@ static void AMIL_MagInterference(u8 inter[6], s16 inter_offset[6],
  * @param mag		magnetic value(mGauss)
  */
 static void AMI_ConvertMag(s16 val[3], struct ami_sensor_parameter *prm,
-			   s16 mag[3])
+			   s16 si[9], s16 mag[3])
 {
 	s16 sens[3];
-	s16 v[3];
+	s32 v[3];
 
-	v[0] = (val[0] - AMI_ORIGIN) - (prm->win.fine_output[0] *
-		   (prm->win.fine[0] - prm->win.zero_gauss_fine[0]));
-	v[1] = (val[1] - AMI_ORIGIN) + (prm->win.fine_output[1] *
-		   (prm->win.fine[1] - prm->win.zero_gauss_fine[1]));
-	v[2] = (val[2] - AMI_ORIGIN) + (prm->win.fine_output[2] *
-		   (prm->win.fine[2] - prm->win.zero_gauss_fine[2]));
+	v[0] = val[0] - (prm->win.fine_output[0] *
+	       (prm->win.fine[0] - prm->win.zero_gauss_fine[0]));
+	v[1] = val[1] + (prm->win.fine_output[1] *
+	       (prm->win.fine[1] - prm->win.zero_gauss_fine[1]));
+	v[2] = val[2] + (prm->win.fine_output[2] *
+	       (prm->win.fine[2] - prm->win.zero_gauss_fine[2]));
 
 #if 0
-printk("convert %d,%d,%d  %d,%d,%d  %d,%d,%d  %d,%d,%d  %d,%d,%d  %d,%d,%d\n",
- v[0], v[1], v[2],
- val[0] - AMI_ORIGIN, val[1] - AMI_ORIGIN, val[2] - AMI_ORIGIN,
- prm->win.fine[0], prm->win.fine[1], prm->win.fine[2],
- prm->win.zero_gauss_fine[0], prm->win.zero_gauss_fine[1],
- prm->win.zero_gauss_fine[2],
- prm->win.fine_output[0], prm->win.fine_output[1], prm->win.fine_output[2],
- prm->mag.sensitivity[0], prm->mag.sensitivity[1], prm->mag.sensitivity[2]);
+printf("convert %d,%d,%d  %d,%d,%d  %d,%d,%d  %d,%d,%d  %d,%d,%d  %d,%d,%d\r",
+v[0], v[1], v[2],
+val[0], val[1], val[2],
+prm->win.fine[0], prm->win.fine[1], prm->win.fine[2],
+prm->win.zero_gauss_fine[0], prm->win.zero_gauss_fine[1],
+prm->win.zero_gauss_fine[2],
+prm->win.fine_output[0], prm->win.fine_output[1], prm->win.fine_output[2],
+prm->mag.sensitivity[0], prm->mag.sensitivity[1], prm->mag.sensitivity[2]);
 #endif
 
 	sens[0] = prm->mag.sensitivity[0] == 0 ? 600 : prm->mag.sensitivity[0];
 	sens[1] = prm->mag.sensitivity[1] == 0 ? 600 : prm->mag.sensitivity[1];
 	sens[2] = prm->mag.sensitivity[2] == 0 ? 600 : prm->mag.sensitivity[2];
 
-	mag[0] = v[0] * 1000 / sens[0];
-	mag[1] = v[1] * 1000 / sens[1];
-	mag[2] = v[2] * 1000 / sens[2];
+	mag[0] = (s16)(v[0] * 1000 / sens[0]);
+	mag[1] = (s16)(v[1] * 1000 / sens[1]);
+	mag[2] = (s16)(v[2] * 1000 / sens[2]);
 
-	AMIL_MagInterference(prm->mag.interference, prm->mag.inter_offset,
-			     sens, mag);
+	AMIL_MagInterference(prm->mag.interference, sens, mag);
+
+	AMIL_SoftIron(si, mag);
 }
 
 /*-------+---------+---------+---------+---------+---------+---------+---------+
@@ -689,14 +763,19 @@ int AMI_GetMemSize(void)
  * @param comm_handle	Communication handle
  * @return handle
  */
-void *AMI_InitDriver(void *mem, void *comm_handle)
+void *AMI_InitDriver(void *mem, void *comm_handle,
+		int ami_dir, int ami_polarity)
 {
 	int res = 0;
 	struct ami_stat *stat = mem;
-	stat->comm = comm_handle;
-	stat->mode = AMI_INIT_MODE;
+	memset(stat, 0, sizeof(struct ami_stat));
 
-	memset(&stat->prm, 0, sizeof(stat->prm));
+	stat->i2c_hnd = comm_handle;
+	stat->mode = AMI_STANDBY_MODE;
+	stat->dir = ami_dir;
+	stat->polarity = ami_polarity;
+	stat->si[0] = stat->si[4] = stat->si[8] = 1000;
+
 	res = AMI_ReadParameter(stat, &stat->prm);
 	if (res < 0)
 		return NULL;
@@ -711,14 +790,18 @@ void *AMI_InitDriver(void *mem, void *comm_handle)
  * @param comm_handle	Communication handle
  * @return handle
  */
-void *AMI_InitDriver(void *comm_handle)
+void *AMI_InitDriver(void *comm_handle, int ami_dir, int ami_polarity)
 {
 	int res = 0;
 	static struct ami_stat stat;
-	stat.comm = comm_handle;
-	stat.mode = AMI_INIT_MODE;
+	memset(&stat, 0, sizeof(stat));
 
-	memset(&stat.prm, 0, sizeof(stat.prm));
+	stat.i2c_hnd = comm_handle;
+	stat.mode = AMI_STANDBY_MODE;
+	stat.dir = ami_dir;
+	stat.polarity = ami_polarity;
+	stat.si[0] = stat.si[4] = stat.si[8] = 1000;
+
 	res = AMI_ReadParameter(&stat, &stat.prm);
 	if (res < 0)
 		return NULL;
@@ -740,19 +823,19 @@ int AMI_StartSensor(void *handle)
 	struct ami_stat *stat = handle;
 
 	/* Step 1 */
-	res = AMI_ForceModeActive(handle);
+	res = AMI_ForceModeActive(stat->i2c_hnd);
 	if (0 > res) {
 		AMI_LOG("AMI_ForceModeActive ERROR(%d)", res);
 		return res;
 	}
 	/* Step 2 */
-	res = AMI_DRDY_Enable(handle);
+	res = AMI_DRDY_Enable(stat->i2c_hnd);
 	if (0 > res) {
 		AMI_LOG("AMI_DRDY_Enable ERROR(%d)", res);
 		return res;
 	}
 	/* Step 3 */
-	res = AMI_HighSpeedMea(handle);
+	res = AMI_HighSpeedMea(stat->i2c_hnd);
 	if (0 > res) {
 		AMI_LOG("AMI_HighSpeedMea ERROR(%d)", res);
 		return res;
@@ -773,7 +856,7 @@ int AMI_StartSensor(void *handle)
 int AMI_StopSensor(void *handle)
 {
 	struct ami_stat *stat = handle;
-	int res = AMI_Standby(handle);
+	int res = AMI_Standby(stat->i2c_hnd);
 	if (0 > res) {
 		AMI_LOG("AMI_Standby ERROR(%d)", res);
 		return res;
@@ -792,7 +875,7 @@ int AMI_StopSensor(void *handle)
  * @param val		Sensor Value
  * @return result
  */
-int AMI_GetValue(void *handle, struct ami_sensor_value *val, int ami_dir, int ami_polarity)
+int AMI_GetValue(void *handle, struct ami_sensor_value *val)
 {
 	int res = 0;
 	int win_flg = 0;
@@ -804,7 +887,7 @@ int AMI_GetValue(void *handle, struct ami_sensor_value *val, int ami_dir, int am
 		return AMI_SEQ_ERR;
 	}
 
-	res = AMI_Mea(handle, lsb);
+	res = AMI_Mea(stat->i2c_hnd, lsb);
 	if (0 > res) {
 		AMI_LOG("AMI_Mea ERROR(%d)", res);
 		return res;
@@ -816,19 +899,20 @@ int AMI_GetValue(void *handle, struct ami_sensor_value *val, int ami_dir, int am
 		if (0 > res)
 			return res;
 
-		res = AMI_Mea(handle, lsb);
+		res = AMI_Mea(stat->i2c_hnd, lsb);
 		if (0 > res)
 			return res;
 	}
 
 	/* convert LSB to mGauss */
-	AMI_ConvertMag(lsb, &stat->prm, val->mag);
+	AMI_ConvertMag(lsb, &stat->prm, stat->si, val->mag);
 
+	memcpy(stat->lsb, lsb, sizeof(lsb));
 	AMI_DLOG("%d, %d, %d, %d, %d, %d",
 		 lsb[0], lsb[1], lsb[2],
 		 val->mag[0], val->mag[1], val->mag[2]);
 
-	AMI_Sen2Dev(ami_dir, ami_polarity, val->mag);
+	AMI_Sen2Dev(stat->dir, stat->polarity, val->mag);
 
 	return 0;
 }
@@ -841,86 +925,24 @@ int AMI_GetValue(void *handle, struct ami_sensor_value *val, int ami_dir, int am
  */
 int AMI_SearchOffset(void *handle)
 {
-	int res = AMI_ERROR;
-	s16 axis;
-	u8 run_flg = 0;
-	u8 fine[3];
-	u8 win_range_fine[3];
-	s16 fine_output[3];
-	s16 val[3];
-	u16 cnt = 0;
 	struct ami_stat *stat = handle;
+	int res = 0;
+	u8 fine[3];
 
-	AMI_DLOG("--- Search Offset ---");
 	if (stat->mode != AMI_FORCE_MODE) {
 		AMI_LOG("mode != AMI_FORCE_MODE");
 		return AMI_SEQ_ERR;
 	}
 
-	res = AMI_FineOutput(handle, (u16 *) fine_output);
-	if (0 > res) {
-		AMI_LOG("AMI_FineOutput ERROR(%d)", res);
+	res = AMI_SearchOffsetProc(stat->i2c_hnd, fine);
+	if (res < 0) {
+		AMI_LOG("AMI_SearchOffsetProc ERROR(%d)", res);
 		return res;
 	}
-	AMI_DLOG("fine_output (%d, %d, %d)",
-		 fine_output[0], fine_output[1], fine_output[2]);
+	stat->prm.win.fine[0] = fine[0];
+	stat->prm.win.fine[1] = fine[1];
+	stat->prm.win.fine[2] = fine[2];
 
-	for (axis = 0; axis < 3; ++axis) {
-		if (fine_output[axis] == 0) {
-			AMI_LOG("fine_output=0 axis:%d ", axis);
-			return AMI_SYSTEM_ERR;
-		}
-		/* fines per a window */
-		win_range_fine[axis] = SEH_RANGE / fine_output[axis];
-	}
-	AMI_DLOG("win_range_fine (%d, %d, %d)",
-		 win_range_fine[0], win_range_fine[1], win_range_fine[2]);
-
-	/* get current fine */
-	res = AMI_Read_Offset(handle, fine);
-	if (0 > res) {
-		AMI_LOG("AMI_Read_Offset ERROR(%d)", res);
-		return res;
-	}
-
-	while (run_flg != 0x7) {
-
-		if (cnt > 3) {
-			AMI_LOG("Search Offset Count ERR");
-			return 0;
-		}
-		cnt++;
-
-		res = AMI_Mea(handle, val);
-		if (0 > res) {
-			AMI_LOG("AMI_Mea ERROR(%d)", res);
-			return res;
-		}
-		AMI_DLOG("fine (%d, %d, %d)", fine[0], fine[1], fine[2]);
-		AMI_DLOG("val  (%d, %d, %d)", val[0], val[1], val[2]);
-
-		/* X-axis is reversed */
-		val[0] = 0x0FFF & ~val[0];
-
-		for (axis = 0; axis < 3; ++axis) {
-
-			res = AMI_CalcNewOffset(&fine[axis], val[axis],
-						win_range_fine[axis],
-						fine_output[axis]);
-			if (res == 1)
-				run_flg |= (0x1 << axis);
-		}
-		/* set current fine */
-		res = AMI_Write_Offset(handle, fine);
-		if (0 > res) {
-			AMI_LOG("AMI_Write_Offset ERROR(%d)", res);
-			return res;
-		}
-		stat->prm.win.fine[0] = fine[0];
-		stat->prm.win.fine[1] = fine[1];
-		stat->prm.win.fine[2] = fine[2];
-	}
-	AMI_DLOG("-- fine (%d, %d, %d) --", fine[0], fine[1], fine[2]);
 	return 0;
 }
 
@@ -943,7 +965,7 @@ int AMI_WriteOffset(void *handle, u8 offset[3])
 	}
 
 	/* set current fine */
-	res = AMI_Write_Offset(handle, offset);
+	res = AMI_Write_Offset(stat->i2c_hnd, offset);
 	if (0 > res) {
 		AMI_LOG("AMI_Write_Offset ERROR(%d)", res);
 		return res;
@@ -963,7 +985,10 @@ int AMI_WriteOffset(void *handle, u8 offset[3])
  */
 int AMI_ReadOffset(void *handle, u8 offset[3])
 {
-	int res = AMI_Read_Offset(handle, offset);
+	struct ami_stat *stat = handle;
+	int res = 0;
+
+	res = AMI_Read_Offset(stat->i2c_hnd, offset);
 	if (0 > res) {
 		AMI_LOG("AMI_Read_Offset ERROR(%d)", res);
 		return res;
@@ -972,21 +997,62 @@ int AMI_ReadOffset(void *handle, u8 offset[3])
 }
 
 /**
- * Set InterferenceOffset
+ * Set Soft iron parameter
  *
  * @param handle	handle(returned by AMI_InitDriver())
- * @param inter_offset	interference offset
+ * @param si	soft iron parameter
  * @return result
  */
-int AMI_SetInterferenceOffset(void *handle, s16 inter_offset[6])
+int AMI_SetSoftIron(void *handle, s16 si[9])
 {
 	struct ami_stat *stat = handle;
-	stat->prm.mag.inter_offset[0] = inter_offset[0];
-	stat->prm.mag.inter_offset[1] = inter_offset[1];
-	stat->prm.mag.inter_offset[2] = inter_offset[2];
-	stat->prm.mag.inter_offset[3] = inter_offset[3];
-	stat->prm.mag.inter_offset[4] = inter_offset[4];
-	stat->prm.mag.inter_offset[5] = inter_offset[5];
+	memcpy(stat->si, si, sizeof(s16)*9);
+	return 0;
+}
+
+/**
+ * Get Soft iron parameter
+ *
+ * @param handle	handle(returned by AMI_InitDriver())
+ * @param si	soft iron parameter
+ * @return result
+ */
+int AMI_GetSoftIron(void *handle, s16 si[9])
+{
+	struct ami_stat *stat = handle;
+	memcpy(si, stat->si, sizeof(s16)*9);
+	return 0;
+}
+
+/**
+ * Set Sensor Direction Information
+ *
+ * @param handle	handle(returned by AMI_InitDriver())
+ * @param dir	direction
+ * @param polarity	polarity
+ * @return result
+ */
+int AMI_SetDirection(void *handle, s16 dir, s16 polarity)
+{
+	struct ami_stat *stat = handle;
+	stat->dir = dir;
+	stat->polarity = polarity;
+	return 0;
+}
+
+/**
+ * Get Sensor Direction Information
+ *
+ * @param handle	handle(returned by AMI_InitDriver())
+ * @param dir	direction
+ * @param polarity	polarity
+ * @return result
+ */
+int AMI_GetDirection(void *handle, s16 *dir, s16 *polarity)
+{
+	struct ami_stat *stat = handle;
+	*dir = stat->dir;
+	*polarity = stat->polarity;
 	return 0;
 }
 
@@ -999,19 +1065,21 @@ int AMI_SetInterferenceOffset(void *handle, s16 inter_offset[6])
  */
 int AMI_ReadParameter(void *handle, struct ami_sensor_parameter *prm)
 {
-	int res = AMI_ReadWinParam(handle, &prm->win);
+	struct ami_stat *stat = handle;
+
+	int res = AMI_ReadWinParam(stat->i2c_hnd, &prm->win);
 	if (0 > res) {
 		AMI_LOG("AMI_ReadWinParam ERROR(%d)", res);
 		return res;
 	}
 
-	res = AMI_ReadMagParam(handle, &prm->mag);
+	res = AMI_ReadMagParam(stat->i2c_hnd, &prm->mag);
 	if (0 > res) {
 		AMI_LOG("AMI_ReadMagParam ERROR(%d)", res);
 		return res;
 	}
 
-	res = AMI_ChipInformation(handle, &prm->chip);
+	res = AMI_ChipInformation(stat->i2c_hnd, &prm->chip);
 	if (0 > res) {
 		AMI_LOG("AMI_ChipInformation ERROR(%d)", res);
 		return res;
@@ -1033,5 +1101,21 @@ int AMI_DriverInformation(void *handle, struct ami_driverinfo *drv)
 	drv->ver_minor = THIS_VER_MINOR;
 	sprintf((char *)drv->datetime, "%s %s", __DATE__, __TIME__);
 	sprintf((char *)drv->remarks, "%s", THIS_CODE_REMARKS);
+	return 0;
+}
+
+/**
+ * Get Raw Value (LSB)
+ *
+ * @param handle	handle(returned by AMI_InitDriver())
+ * @param val		Sensor Raw Value(LSB)
+ * @return result
+ */
+int AMI_GetRawValue(void *handle, struct ami_sensor_value *raw_val)
+{
+	struct ami_stat *stat = handle;
+	raw_val->mag[0] = stat->lsb[0];
+	raw_val->mag[1] = stat->lsb[1];
+	raw_val->mag[2] = stat->lsb[2];
 	return 0;
 }

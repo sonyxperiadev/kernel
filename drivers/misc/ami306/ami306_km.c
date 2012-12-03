@@ -161,7 +161,8 @@ static int ami_release(struct inode *inode, struct file *file)
 static struct ami_sensor_parameter k_param;
 static struct ami_sensor_value k_val;
 static u8 k_offset[3];
-static s16 k_inter_offset[6];
+static s16 k_si[9];
+static s16 k_dir[2];
 static struct ami_driverinfo k_drv;
 static struct ami_register k_reg;
 static char *k_mem = NULL;
@@ -212,12 +213,34 @@ static int ami_cmd(unsigned int cmd, unsigned long arg)
 		if (copy_to_user(argp, k_offset, sizeof k_offset))
 			return -EFAULT;
 		break;
-	case AMI_IOCTL_SET_INTER_OFFSET:
-		if (copy_from_user(k_inter_offset, argp,
-		    sizeof(k_inter_offset)))
+	case AMI_IOCTL_SET_SOFTIRON:
+		if (copy_from_user(k_si, argp, sizeof(k_si)))
 			return -EFAULT;
-		res = AMI_SetInterferenceOffset(g_handle, k_inter_offset);
+		res = AMI_SetSoftIron(g_handle, k_si);
 		if (0 > res)
+			return -EFAULT;
+		break;
+	case AMI_IOCTL_GET_SOFTIRON:
+		res = AMI_GetSoftIron(g_handle, k_si);
+		if (0 > res)
+			return -EFAULT;
+		if (copy_to_user(argp, k_si, sizeof k_si))
+			return -EFAULT;
+		break;
+	case AMI_IOCTL_SET_DIR:
+		AMI_DLOG("Set Direction");
+		if (copy_from_user(k_dir, argp, sizeof(k_dir)))
+			return -EFAULT;
+		res = AMI_SetDirection(g_handle, k_dir[0], k_dir[1]);
+		if (0 > res)
+			return -EFAULT;
+		break;
+	case AMI_IOCTL_GET_DIR:
+		AMI_DLOG("Get Direction");
+		res = AMI_GetDirection(g_handle, &k_dir[0], &k_dir[1]);
+		if (0 > res)
+			return -EFAULT;
+		if (copy_to_user(argp, k_dir, sizeof k_dir))
 			return -EFAULT;
 		break;
 	case AMI_IOCTL_READ_PARAMS:
@@ -234,14 +257,23 @@ static int ami_cmd(unsigned int cmd, unsigned long arg)
 		if (copy_to_user(argp, &k_drv, sizeof k_drv))
 			return -EFAULT;
 		break;
+
+	/* Self Test */
+	case AMI_IOCTL_SELF_TEST:
+		AMI_DLOG("Self Test");
+		res = AMI_SelfTest(g_client);
+		if (copy_to_user(argp, &res, sizeof(res)))
+			return -EFAULT;
+		break;
+	/* i2c debug  */
 	case AMI_IOCTL_DBG_READ:
 	case AMI_IOCTL_DBG_READ_W:
 		if (copy_from_user(&k_reg, argp, sizeof(k_reg)))
 			return -EFAULT;
 		if (cmd == AMI_IOCTL_DBG_READ)
-			AMI_i2c_recv_b(g_handle, k_reg.adr, &k_reg.dat.byte);
+			AMI_i2c_recv_b(g_client, k_reg.adr, &k_reg.dat.byte);
 		if (cmd == AMI_IOCTL_DBG_READ_W)
-			AMI_i2c_recv_w(g_handle, k_reg.adr, &k_reg.dat.word);
+			AMI_i2c_recv_w(g_client, k_reg.adr, &k_reg.dat.word);
 		if (copy_to_user(argp, &k_reg, sizeof k_reg))
 			return -EFAULT;
 		break;
@@ -250,9 +282,16 @@ static int ami_cmd(unsigned int cmd, unsigned long arg)
 		if (copy_from_user(&k_reg, argp, sizeof(k_reg)))
 			return -EFAULT;
 		if (cmd == AMI_IOCTL_DBG_WRITE)
-			AMI_i2c_send_b(g_handle, k_reg.adr, k_reg.dat.byte);
+			AMI_i2c_send_b(g_client, k_reg.adr, k_reg.dat.byte);
 		if (cmd == AMI_IOCTL_DBG_WRITE_W)
-			AMI_i2c_send_w(g_handle, k_reg.adr, k_reg.dat.word);
+			AMI_i2c_send_w(g_client, k_reg.adr, k_reg.dat.word);
+		break;
+	case AMI_IOCTL_GET_RAW:
+		res = AMI_GetRawValue(g_handle, &k_val);
+		if (0 > res)
+			return -EFAULT;
+		if (copy_to_user(argp, &k_val, sizeof k_val))
+			return -EFAULT;
 		break;
 	default:
 		AMI_LOG("%s not supported = 0x%08x", __FUNCTION__, cmd);
@@ -316,6 +355,7 @@ static int __devinit ami_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
+#ifdef USER_MEMORY
 	/* Initialize driver command */
 	size = AMI_GetMemSize();
 	k_mem = kmalloc(size, GFP_KERNEL);
@@ -328,6 +368,13 @@ static int __devinit ami_probe(struct i2c_client *client,
 		AMI_LOG("AMI : AMI_InitDriver error.");
 		return -ENODEV;
 	}
+#else
+	g_handle = AMI_InitDriver(client);
+	if (g_handle == NULL) {
+		AMI_LOG("AMI : AMI_InitDriver error.");
+		return -ENODEV;
+	}
+#endif
 
 	AMI_LOG("%s %s %s", AMI_DRV_NAME, __FUNCTION__, "end");
 
@@ -338,7 +385,8 @@ static int __devinit ami_probe(struct i2c_client *client,
 static int __devexit ami_remove(struct i2c_client *client)
 {
 	AMI_LOG("%s %s %s", AMI_DRV_NAME, __FUNCTION__, "start");
-	kfree(k_mem);
+	if (k_mem != NULL)
+		kfree(k_mem);
 	AMI_LOG("%s %s %s", AMI_DRV_NAME, __FUNCTION__, "end");
 	return 0;
 }

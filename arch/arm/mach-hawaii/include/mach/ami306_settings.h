@@ -21,7 +21,7 @@
 #define AMI_I2C_ADDRESS                 0x0E    /* 7-bit Addressing */
 
 /* GPIO */
-#define AMI_GPIO_INT                    135   /* Ball MPHI_RUN1 */
+#define AMI_GPIO_INT                    0   /* Ball MPHI_RUN1 */
 #define AMI_GPIO_DRDY                   0
 
 /* sensor position */

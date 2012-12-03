@@ -53,8 +53,6 @@
 static int mod_debug = 0x0;
 module_param(mod_debug, int, 0644);
 
-#define DEBUG_SYSFS	1
-#define DEBUG_DLOG	2
 
 #define AMI306_EVENT_NUM 64
 #define AMI_SENSOR_START_TIME_DELAY 50000000
@@ -154,7 +152,7 @@ void AMI_LOG(const char *fmt, ...)
  */
 void AMI_DLOG(const char *fmt, ...)
 {
-	if (mod_debug & DEBUG_DLOG) {
+	if (mod_debug) {
 		va_list argp;
 		char buf[256];
 		va_start(argp, fmt);
@@ -214,7 +212,8 @@ static int ami_release(struct inode *inode, struct file *file)
 static struct ami_sensor_parameter k_param;
 static struct ami_sensor_value k_val;
 static u8 k_offset[3];
-static s16 k_inter_offset[6];
+static s16 k_si[9];
+static s16 k_dir[2];
 static struct ami_driverinfo k_drv;
 static struct ami_register k_reg;
 static char *k_mem = NULL;
@@ -225,12 +224,12 @@ static void ami_work_func(struct work_struct *work)
 	struct ami_sensor_value axis;
 	int res;
 
-	res = AMI_GetValue(pdev->handle, &axis, pdev->ami_dir, pdev->ami_polarity);
+	res = AMI_GetValue(pdev->handle, &axis);
 	/* Copy data to the KFIFO */
 	if (res == 0) {
 		kfifo_in(&pdev->ebuff, &axis, 1);
 		wake_up_interruptible(&pdev->waitq);
-        if (mod_debug & DEBUG_SYSFS)
+	if (mod_debug)
             printk("ami_work_func: pass(%d,%d, %d) to HAL\n", axis.mag[0], axis.mag[1], axis.mag[2]);
 	}
 }
@@ -300,7 +299,7 @@ static int ami_cmd(unsigned int cmd, unsigned long arg, struct ami306_dev_data *
 			return -EFAULT;
 		break;
 	case AMI_IOCTL_GET_VALUE:
-		res = AMI_GetValue(pdev->handle, &k_val, pdev->ami_dir, pdev->ami_polarity);
+		res = AMI_GetValue(pdev->handle, &k_val);
 		if (0 > res)
 			return -EFAULT;
 		if (copy_to_user(argp, &k_val, sizeof k_val))
@@ -337,12 +336,33 @@ static int ami_cmd(unsigned int cmd, unsigned long arg, struct ami306_dev_data *
 		if (copy_to_user(argp, k_offset, sizeof k_offset))
 			return -EFAULT;
 		break;
-	case AMI_IOCTL_SET_INTER_OFFSET:
-		if (copy_from_user(k_inter_offset, argp,
-				sizeof(k_inter_offset)))
+	case AMI_IOCTL_SET_SOFTIRON:
+		if (copy_from_user(k_si, argp, sizeof(k_si)))
 			return -EFAULT;
-		res = AMI_SetInterferenceOffset(pdev->handle, k_inter_offset);
+		res = AMI_SetSoftIron(pdev->handle, k_si);
 		if (0 > res)
+			return -EFAULT;
+		break;
+	case AMI_IOCTL_GET_SOFTIRON:
+		res = AMI_GetSoftIron(pdev->handle, k_si);
+		if (0 > res)
+			return -EFAULT;
+		if (copy_to_user(argp, k_si, sizeof k_si))
+			return -EFAULT;
+	case AMI_IOCTL_SET_DIR:
+		AMI_DLOG("Set Direction");
+		if (copy_from_user(k_dir, argp, sizeof(k_dir)))
+			return -EFAULT;
+		res = AMI_SetDirection(pdev->handle, k_dir[0], k_dir[1]);
+		if (0 > res)
+			return -EFAULT;
+		break;
+	case AMI_IOCTL_GET_DIR:
+		AMI_DLOG("Get Direction");
+		res = AMI_GetDirection(pdev->handle, &k_dir[0], &k_dir[1]);
+		if (0 > res)
+			return -EFAULT;
+		if (copy_to_user(argp, k_dir, sizeof k_dir))
 			return -EFAULT;
 		break;
 	case AMI_IOCTL_READ_PARAMS:
@@ -359,14 +379,22 @@ static int ami_cmd(unsigned int cmd, unsigned long arg, struct ami306_dev_data *
 		if (copy_to_user(argp, &k_drv, sizeof k_drv))
 			return -EFAULT;
 		break;
+	case AMI_IOCTL_SELF_TEST:
+		AMI_DLOG("Self Test");
+		res = AMI_SelfTest(pdev->client);
+		if (copy_to_user(argp, &res, sizeof(res)))
+			return -EFAULT;
+		break;
 	case AMI_IOCTL_DBG_READ:
 	case AMI_IOCTL_DBG_READ_W:
 		if (copy_from_user(&k_reg, argp, sizeof(k_reg)))
 			return -EFAULT;
 		if (cmd == AMI_IOCTL_DBG_READ)
-			AMI_i2c_recv_b(pdev->handle, k_reg.adr, &k_reg.dat.byte);
+			AMI_i2c_recv_b(pdev->client,
+					k_reg.adr, &k_reg.dat.byte);
 		if (cmd == AMI_IOCTL_DBG_READ_W)
-			AMI_i2c_recv_w(pdev->handle, k_reg.adr, &k_reg.dat.word);
+			AMI_i2c_recv_w(pdev->client,
+					k_reg.adr, &k_reg.dat.word);
 		if (copy_to_user(argp, &k_reg, sizeof k_reg))
 			return -EFAULT;
 		break;
@@ -375,9 +403,16 @@ static int ami_cmd(unsigned int cmd, unsigned long arg, struct ami306_dev_data *
 		if (copy_from_user(&k_reg, argp, sizeof(k_reg)))
 			return -EFAULT;
 		if (cmd == AMI_IOCTL_DBG_WRITE)
-			AMI_i2c_send_b(pdev->handle, k_reg.adr, k_reg.dat.byte);
+			AMI_i2c_send_b(pdev->client, k_reg.adr, k_reg.dat.byte);
 		if (cmd == AMI_IOCTL_DBG_WRITE_W)
-			AMI_i2c_send_w(pdev->handle, k_reg.adr, k_reg.dat.word);
+			AMI_i2c_send_w(pdev->client, k_reg.adr, k_reg.dat.word);
+		break;
+	case AMI_IOCTL_GET_RAW:
+		res = AMI_GetRawValue(pdev->handle, &k_val);
+		if (0 > res)
+			return -EFAULT;
+		if (copy_to_user(argp, &k_val, sizeof k_val))
+			return -EFAULT;
 		break;
 	default:
 		AMI_LOG("%s not supported = 0x%08x", __func__, cmd);
@@ -576,7 +611,6 @@ static struct file_operations ami_fops = {
 static int __devinit ami_probe(struct i2c_client *client,
 			       const struct i2c_device_id *devid)
 {
-	int size = 0;
 	int res = 0;
 	struct ami306_dev_data *pdev = NULL;
 	struct ami306_platform_data  *pdata = NULL;
@@ -589,11 +623,10 @@ static int __devinit ami_probe(struct i2c_client *client,
 
 	pdev = (struct ami306_dev_data *)kzalloc(sizeof(struct ami306_dev_data), GFP_KERNEL);
 	if (!pdev) {
-		AMI_LOG("AMI: no memory to allocate ami306_dev_data\n");
+		AMI_LOG("AMI: no memory to allocate ami306_dev_data");
 		return -ENOMEM;
 	}
 
-	gpdev = pdev;
 
 	pdata = (struct ami306_platform_data *)client->dev.platform_data;
 	if (!pdata) {
@@ -609,19 +642,48 @@ static int __devinit ami_probe(struct i2c_client *client,
 		/* Init gpio */
 		/* Init gpio */
 		if (pdata->gpio_drdy) {
-			gpio_request(pdata->gpio_drdy, "AMI306 DRDY");
-			gpio_direction_input(pdata->gpio_drdy);
-
+			res = gpio_request (pdata->gpio_drdy, "AMI306 DRDY");
+			if (res) {
+				printk(KERN_ERR "ami_probe: failed to request GPIO\n");
+				goto err_free_pdev;
+			}
+			res = gpio_direction_input (pdata->gpio_drdy);
+			if (res) {
+				printk(KERN_ERR "ami_probe: failed to set"
+						"direction for GPIO\n");
+				goto err_free_pdev;
+			}
 		}
-	if (pdata->gpio_intr) {
-			gpio_request(pdata->gpio_intr, "AMI306 INTR");
-			gpio_direction_input(pdata->gpio_intr);
+		if (pdata->gpio_intr) {
+			res = gpio_request (pdata->gpio_intr, "AMI306 INTR");
+			if (res) {
+				printk(KERN_ERR "ami_probe: failed to"
+						"request GPIO\n");
+				goto err_free_pdev;
+			}
+			res = gpio_direction_input (pdata->gpio_intr);
+			if (res) {
+				printk(KERN_ERR "ami_probe: failed to"
+						"set direction for GPIO\n");
+				goto err_free_pdev;
+			}
 		}
-
-		printk("ami_probe: setup ami_dir:%d, ami_polarity:%d, intr:%d, drdy:%d\n",
-			pdev->ami_dir, pdev->ami_polarity, pdata->gpio_intr, pdata->gpio_drdy);
+		printk("ami_probe: setup ami_dir:%d, ami_polarity:%d,"
+				"intr:%d, drdy:%d\n",
+			pdev->ami_dir, pdev->ami_polarity,
+			pdata->gpio_intr, pdata->gpio_drdy);
 	}
 
+	sema_init(&pdev->mutex, 1);
+	pdev->dev.minor = MISC_DYNAMIC_MINOR;
+	pdev->dev.name = AMI_DRV_NAME;
+	pdev->dev.fops = &ami_fops;
+	res = misc_register(&pdev->dev);
+	if (res < 0) {
+		printk(KERN_ERR "ami_probe: failed to do "
+				"misc_regsiter return %d\n", res);
+		goto err_free_pdev;
+	}
 #ifdef CONFIG_ARCH_KONA
         pdev->regulator = regulator_get(&client->dev, CAM2_REGULATOR);
         res = IS_ERR_OR_NULL(pdev->regulator);
@@ -629,59 +691,44 @@ static int __devinit ami_probe(struct i2c_client *client,
                 pdev->regulator = NULL;
                 AMI_LOG("AMI: %s, can't get vdd regulator!\n", __func__);
                 res = -EIO;
-                goto done;
+		goto err_misc_deregister;
         }
 
         /* make sure that regulator is enabled if device is successfully
            bound */
-        res = regulator_enable(pdev->regulator);
-        AMI_LOG("AMI: %s, called regulator_enable for vdd regulator. "
-                "Status: %d\n", __func__, res);
-        if (res) {
-                AMI_LOG("AMI: %s, regulator_enable for vdd regulator "
-                        "failed with status: %d\n",
-                        __func__, res);
-                regulator_put(pdev->regulator);
-                goto done;
+	res = regulator_enable(pdev->regulator);
+	AMI_LOG("AMI: %s, called regulator_enable for cam2 regulator. "
+		"Status: %d\n", __func__, res);
+	if (res) {
+		AMI_LOG("AMI: %s, regulator_enable for cam2 regulator "
+			"failed with status: %d\n",
+			__func__, res);
+		res = -EIO;
+		goto err_regulator_enable;
         }
 #endif
 
-	sema_init(&pdev->mutex, 1);
-	pdev->dev.minor = MISC_DYNAMIC_MINOR;
-	pdev->dev.name = AMI_DRV_NAME;
-	pdev->dev.fops = &ami_fops;
 
-	res = misc_register(&pdev->dev);
-	if (res < 0) {
-		printk("ami_probe: failed to do misc_regsiter return %d\n", res);
-		kfree(pdev);
-		goto done;
-	}
 
 #ifdef USER_MEMORY
 	/* Initialize driver command */
-	size = AMI_GetMemSize();
-	k_mem = kmalloc(size, GFP_KERNEL);
+	k_mem = kmalloc(AMI_GetMemSize(), GFP_KERNEL);
 	if (k_mem == NULL) {
-		AMI_LOG("AMI : kmalloc error.");
-		misc_deregister(&pdev->dev);
-		kfree(pdev);
+		printk(KERN_ERR "ami_probe: kmalloc error");
 		res = -ENODEV;
-		goto done;
+		goto err_exit_regulator;
 	}
 
-	pdev->handle = AMI_InitDriver(k_mem, client);
+	pdev->handle = AMI_InitDriver(k_mem, client,
+				pdev->ami_dir, pdev->ami_polarity);
 #else
-	pdev->handle = AMI_InitDriver(client);
+	pdev->handle = AMI_InitDriver(client,
+				pdev->ami_dir, pdev->ami_polarity);
 #endif
 	if (pdev->handle == NULL) {
 		AMI_LOG("AMI : AMI_InitDriver error.");
-		misc_deregister(&pdev->dev);
-		kfree(pdev);
-		if (k_mem)
-			kfree(k_mem);
 		res = -ENODEV;
-		goto done;
+		goto err_free_kmem;
 	}
 	pdev->client = client;
 	i2c_set_clientdata(client, pdev);
@@ -695,13 +742,9 @@ static int __devinit ami_probe(struct i2c_client *client,
 	/* create workqueue */
 	pdev->wq = create_singlethread_workqueue("ami306_wq");
 	if (!pdev->wq) {
-		AMI_LOG("AMI: Failed to create workqueue\n");
-		misc_deregister(&pdev->dev);
-		kfree(pdev);
-		if (k_mem)
-			kfree(k_mem);
+		AMI_LOG("AMI: Failed to create workqueue");
 		res = -ENOMEM;
-		goto done;
+		goto err_free_kmem;
 	}
 
 	/* initialize the work struct */
@@ -717,19 +760,38 @@ static int __devinit ami_probe(struct i2c_client *client,
 	/* Register sysfs hooks */
 	res = sysfs_create_group(&client->dev.kobj, &ami_attr_group);
 	if (res) {
-		AMI_LOG("AMI: sysfs_create_group failed with error %d\n", res);
-		destroy_workqueue(pdev->wq);
-		misc_deregister(&pdev->dev);
-		kfree(pdev);
-		if (k_mem)
-			kfree(k_mem);
+		AMI_LOG("AMI: sysfs_create_group failed with error %d", res);
 		res = -ENODEV;
-		goto done;
+		goto err_destroy_workqueue;
 	}
-
 	AMI_LOG("%s %s %s", AMI_DRV_NAME, __func__, "end");
-
-done:
+	return res;
+err_destroy_workqueue:
+		destroy_workqueue(pdev->wq);
+err_free_kmem:
+#ifdef USER_MEMORY
+	if (k_mem) {
+		kfree(k_mem);
+		k_mem = NULL;
+	}
+#endif
+err_exit_regulator:
+#ifdef CONFIG_ARCH_KONA
+	if (pdev->regulator) {
+		regulator_disable(pdev->regulator);
+	}
+#endif
+err_regulator_enable:
+#ifdef CONFIG_ARCH_KONA
+	if (pdev->regulator) {
+		regulator_put(pdev->regulator);
+	}
+#endif
+err_misc_deregister:
+	misc_deregister(&pdev->dev);
+err_free_pdev:
+	kfree(pdev);
+	i2c_set_clientdata(client, NULL);
 	return res;
 }
 
@@ -741,11 +803,6 @@ static int __devexit ami_remove(struct i2c_client *client)
 
 	AMI_LOG("%s %s %s", AMI_DRV_NAME, __func__, "start");
 
-	sysfs_remove_group(&client->dev.kobj, &ami_attr_group);
-	misc_deregister(&pdata->dev);
-	kfree(pdata);
-	if (k_mem)
-		kfree(k_mem);
 
 #if defined(CONFIG_PM) && defined(CONFIG_ARCH_KONA)
 	if (pdata->regulator) {
@@ -761,6 +818,14 @@ static int __devexit ami_remove(struct i2c_client *client)
 	}
 #endif
 
+	sysfs_remove_group(&client->dev.kobj, &ami_attr_group);
+	misc_deregister(&pdata->dev);
+	kfree(pdata);
+	i2c_set_clientdata(client, NULL);
+	if (k_mem) {
+		kfree(k_mem);
+		k_mem = NULL;
+	}
 	AMI_LOG("%s %s %s", AMI_DRV_NAME, __func__, "end");
 	return 0;
 }
@@ -774,11 +839,11 @@ static int ami306_suspend(struct device *dev)
 
 	if (pdata->regulator) {
 		ret = regulator_disable(pdata->regulator);
-		AMI_LOG("AMI: %s, called regulator_disable. Status: %d\n",
+		AMI_LOG("AMI: %s, called regulator_disable. Status: %d",
 			__func__, ret);
 		if (ret)
 			AMI_LOG("AMI: %s, regulator_disable failed with "
-				"status: %d\n", __func__, ret);
+				"status: %d", __func__, ret);
 	}
 	return ret;
 }
