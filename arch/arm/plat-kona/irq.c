@@ -26,7 +26,9 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/cpumask.h>
-
+#ifdef CONFIG_OF
+#include <linux/of_irq.h>
+#endif
 #include <asm/io.h>
 #include <asm/mach/map.h>
 #include <asm/hardware/gic.h>
@@ -35,9 +37,20 @@
 #include <mach/irqs.h>
 #include <mach/io_map.h>
 
+#ifdef CONFIG_OF
+static const struct of_device_id kona_dt_irq_match[] __initconst = {
+	{ .compatible = "arm,cortex-a9-gic", .data = gic_of_init },
+	{ }
+};
+#endif
+
 void __init kona_init_irq(void)
 {
 	/* start with GLBTIMER */
-	gic_init(0, BCM_INT_ID_PPI11, IOMEM(KONA_GICDIST_VA),
-		 IOMEM(KONA_GICCPU_VA));
+	if (!of_have_populated_dt())
+		gic_init(0, BCM_INT_ID_PPI11, IOMEM(KONA_GICDIST_VA),
+			IOMEM(KONA_GICCPU_VA));
+#ifdef CONFIG_OF
+	of_irq_init(kona_dt_irq_match);
+#endif
 }

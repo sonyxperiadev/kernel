@@ -116,47 +116,140 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 	int i, irqflag = 0;
 	struct dw8250_data *data;
 	struct plat_serial8250_port *p = pdev->dev.platform_data;
+	struct resource *regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	struct resource *irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	struct device_node *np = pdev->dev.of_node;
+	u32 val;
+	const char *prop;
 
-	for (i = 0; p && p->flags != 0; p++, i++) {
+	if (p) {
+		for (i = 0; p && p->flags != 0; p++, i++) {
+			data = devm_kzalloc(&pdev->dev, sizeof(*data),
+				GFP_KERNEL);
+			if (!data)
+				return -ENOMEM;
+			port.private_data = data;
+
+			port.iobase             = p->iobase;
+			port.membase            = p->membase;
+			port.irq                = p->irq;
+			port.irqflags           = p->irqflags;
+			port.uartclk            = p->uartclk;
+			port.regshift           = p->regshift;
+			port.iotype             = p->iotype;
+			port.flags              = p->flags;
+			port.mapbase            = p->mapbase;
+			port.hub6               = p->hub6;
+			port.type               = p->type;
+			port.serial_in          = dw8250_serial_in;
+			port.serial_out         = dw8250_serial_out;
+			if (!(p->handle_irq)) {
+				/* Default 8250_dw handler */
+				port.handle_irq = dw8250_handle_irq;
+#ifdef CONFIG_DW_BT_UART_CHANGES
+				if (p->port_name) {
+					if (!strcmp(p->port_name, "bluetooth"))
+						port.handle_irq =
+							bt_dw8250_handle_irq;
+				}
+#endif
+			}
+
+			port.set_termios	= p->set_termios;
+			port.pm                 = p->pm;
+			port.dev                = &pdev->dev;
+			port.irqflags           |= irqflag;
+
+			pdev->dev.platform_data = p;
+
+#ifndef CONFIG_MACH_HAWAII_FPGA
+			data->clk = clk_get(port.dev, p->clk_name);
+			if (IS_ERR(data->clk))
+				return PTR_ERR(data->clk);
+
+			clk_disable(data->clk);
+			clk_set_rate(data->clk, port.uartclk);
+			clk_enable(data->clk);
+
+			port.uartclk = clk_get_rate(data->clk);
+#endif
+
+			data->line = serial8250_register_port(&port);
+			if (data->line < 0) {
+				return data->line;
+			}
+		}
+	} else { /* Get info from DT */
+
+		if (!regs || !irq) {
+			dev_err(&pdev->dev, "no registers/irq defined\n");
+			return -EINVAL;
+		}
+
 		data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
 		if (!data)
 			return -ENOMEM;
 		port.private_data = data;
 
-		port.iobase             = p->iobase;
-		port.membase            = p->membase;
-		port.irq                = p->irq;
-		port.irqflags           = p->irqflags;
-		port.uartclk            = p->uartclk;
-		port.regshift           = p->regshift;
-		port.iotype             = p->iotype;
-		port.flags              = p->flags;
-		port.mapbase            = p->mapbase;
-		port.hub6               = p->hub6;
-		port.type               = p->type;
-		port.serial_in          = dw8250_serial_in;
-		port.serial_out         = dw8250_serial_out;
-		if (!(p->handle_irq)) {
-			/* Default 8250_dw handler */
-			port.handle_irq = dw8250_handle_irq;
-#ifdef CONFIG_DW_BT_UART_CHANGES
-			if (p->port_name) {
-				if (!strcmp(p->port_name, "bluetooth"))
-					port.handle_irq = bt_dw8250_handle_irq;
+		spin_lock_init(&port.lock);
+		port.mapbase = regs->start;
+		port.irq = irq->start;
+#ifdef CONFIG_BRCM_UART_CHANGES
+		port.membase = ioremap(regs->start, resource_size(regs));
+		port.irqflags = 0;
+#endif /* CONFIG_BRCM_UART_CHANGES */
+		port.handle_irq = dw8250_handle_irq;
+		port.type = PORT_16550A;
+		port.flags = UPF_BOOT_AUTOCONF | UPF_BUG_THRE |
+			UPF_SKIP_TEST | UPF_FIXED_TYPE;
+		port.dev = &pdev->dev;
+
+		port.iotype = UPIO_MEM32;
+		port.serial_in = dw8250_serial_in;
+		port.serial_out = dw8250_serial_out;
+		if (!of_property_read_u32(np, "reg-io-width", &val)) {
+			switch (val) {
+			case 1:
+				break;
+			case 4:
+				port.iotype = UPIO_MEM32;
+				port.serial_in = dw8250_serial_in32;
+				port.serial_out = dw8250_serial_out32;
+				break;
+			default:
+				dev_err(&pdev->dev, "unsupported reg-io-width\
+						(%u)\n", val);
+				return -EINVAL;
 			}
+		}
+
+		if (!of_property_read_u32(np, "reg-shift", &val))
+			port.regshift = val;
+
+		if (of_property_read_u32(np, "clock-frequency", &val)) {
+			dev_err(&pdev->dev, "no clock-frequency property set\n");
+			return -EINVAL;
+		}
+		port.uartclk = val;
+
+#ifdef CONFIG_BRCM_UART_CHANGES
+		val = of_property_read_string(np, "port-name", &prop);
+		if (prop != NULL) {
+#ifdef CONFIG_DW_BT_UART_CHANGES
+			if (!strcmp(prop, "bluetooth"))
+				port.handle_irq = bt_dw8250_handle_irq;
 #endif
 		}
 
-		port.set_termios	= p->set_termios;
-		port.pm                 = p->pm;
-		port.dev                = &pdev->dev;
-		port.irqflags           |= irqflag;
-
-		pdev->dev.platform_data = p;
-
 #ifndef CONFIG_MACH_HAWAII_FPGA
-		data->clk = clk_get(port.dev, p->clk_name);
-		if (IS_ERR(data->clk))
+		of_property_read_string(np, "clk-name", &prop);
+		if (prop == NULL) {
+			dev_err(&pdev->dev,"clk-name Not found in dt-blob \n");
+			return -1;
+		}
+
+		data->clk = clk_get(port.dev, prop);
+		if (IS_ERR_OR_NULL(data->clk))
 			return PTR_ERR(data->clk);
 
 		clk_disable(data->clk);
@@ -165,71 +258,14 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 
 		port.uartclk = clk_get_rate(data->clk);
 #endif
+#endif /* CONFIG_BRCM_UART_CHANGES */
 
 		data->line = serial8250_register_port(&port);
-		if (data->line < 0) {
+		if (data->line < 0)
 			return data->line;
-		}
-	}
-#else
-	struct resource *regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	struct resource *irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	struct device_node *np = pdev->dev.of_node;
-	u32 val;
-	struct dw8250_data *data;
 
-	if (!regs || !irq) {
-		dev_err(&pdev->dev, "no registers/irq defined\n");
-		return -EINVAL;
-	}
-
-	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
-	port.private_data = data;
-
-	spin_lock_init(&port.lock);
-	port.mapbase = regs->start;
-	port.irq = irq->start;
-	port.handle_irq = dw8250_handle_irq;
-	port.type = PORT_8250;
-	port.flags = UPF_SHARE_IRQ | UPF_BOOT_AUTOCONF | UPF_IOREMAP |
-		UPF_FIXED_PORT | UPF_FIXED_TYPE;
-	port.dev = &pdev->dev;
-
-	port.iotype = UPIO_MEM;
-	port.serial_in = dw8250_serial_in;
-	port.serial_out = dw8250_serial_out;
-	if (!of_property_read_u32(np, "reg-io-width", &val)) {
-		switch (val) {
-		case 1:
-			break;
-		case 4:
-			port.iotype = UPIO_MEM32;
-			port.serial_in = dw8250_serial_in32;
-			port.serial_out = dw8250_serial_out32;
-			break;
-		default:
-			dev_err(&pdev->dev, "unsupported reg-io-width (%u)\n",
-				val);
-			return -EINVAL;
-		}
-	}
-
-	if (!of_property_read_u32(np, "reg-shift", &val))
-		port.regshift = val;
-
-	if (of_property_read_u32(np, "clock-frequency", &val)) {
-		dev_err(&pdev->dev, "no clock-frequency property set\n");
-		return -EINVAL;
-	}
-	port.uartclk = val;
-
-	data->line = serial8250_register_port(&port);
-	if (data->line < 0)
-		return data->line;
-
-	platform_set_drvdata(pdev, data);
+		platform_set_drvdata(pdev, data);
+	} /* if (platform_data) else DT */
 #endif
 
 	return 0;
@@ -255,6 +291,9 @@ EXPORT_SYMBOL(serial8250_togglerts_afe);
 #endif
 
 static const struct of_device_id dw8250_match[] = {
+#ifdef CONFIG_BRCM_UART_CHANGES
+	{ .compatible = "bcm,uart" },
+#endif
 	{ .compatible = "snps,dw-apb-uart" },
 	{ /* Sentinel */ }
 };

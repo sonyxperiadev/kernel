@@ -45,6 +45,8 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 
+#include <linux/of.h>
+
 #include "8250.h"
 
 /*
@@ -3387,6 +3389,7 @@ int serial8250_register_port(struct uart_port *port)
 	int ret = -ENOSPC;
 #ifdef CONFIG_BRCM_UART_CHANGES
 	struct plat_serial8250_port *p = port->dev->platform_data;
+	const char *prop;
 #endif
 
 	if (port->uartclk == 0)
@@ -3401,10 +3404,31 @@ int serial8250_register_port(struct uart_port *port)
 #if defined(CONFIG_HAS_WAKELOCK)
 		wake_lock_init(&uart->uart_lock, WAKE_LOCK_IDLE, "UARTWAKE");
 #endif /* CONFIG_HAS_WAKELOCK */
-		ret = pi_mgr_qos_add_request(&uart->qos_tx_node,(char *)p->clk_name,
-			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
-		ret = pi_mgr_qos_add_request(&uart->qos_rx_node,(char *)p->clk_name,
-			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
+		if (p) {
+			ret = pi_mgr_qos_add_request(&uart->qos_tx_node,
+					(char *)p->clk_name,
+					PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+					PI_MGR_QOS_DEFAULT_VALUE);
+			ret = pi_mgr_qos_add_request(&uart->qos_rx_node,
+					(char *)p->clk_name,
+					PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+					PI_MGR_QOS_DEFAULT_VALUE);
+		} else {
+			of_property_read_string(port->dev->of_node,
+					"clk-name", &prop);
+			if (prop == NULL) {
+				printk(KERN_ERR"clkname Not found in dtblob\n");
+				return -1;
+			}
+			ret = pi_mgr_qos_add_request(&uart->qos_tx_node,
+					(char *)prop,
+					PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+					PI_MGR_QOS_DEFAULT_VALUE);
+			ret = pi_mgr_qos_add_request(&uart->qos_rx_node,
+					(char *)prop,
+					PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+					PI_MGR_QOS_DEFAULT_VALUE);
+		}
 
 		init_timer(&uart->rx_shutoff_timer);
 		uart->rx_shutoff_timer.function = rx_timeout_handler;

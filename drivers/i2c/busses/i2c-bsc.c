@@ -29,6 +29,7 @@
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/i2c-kona.h>
+#include <linux/of_i2c.h>
 #include <mach/chip_pinmux.h>
 #include <mach/pinmux.h>
 
@@ -1781,6 +1782,97 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		rc = bsc_enable_clk(dev);
 		if (rc)
 			goto err_free_clk;
+	} else if (pdev->dev.of_node) {
+		const char *prop;
+		u32 val;
+
+		hw_cfg = kzalloc(sizeof(struct bsc_adap_cfg), GFP_KERNEL);
+		if (!hw_cfg) {
+			dev_err(&pdev->dev,
+				"unable to allocate mem for private data\n");
+			rc = -ENOMEM;
+			goto err_free_dev_mem;
+		}
+
+		pdev->dev.platform_data = hw_cfg;
+
+		/* Id value */
+		if (of_property_read_u32(pdev->dev.of_node, "cell-index", &val))
+			goto err_free_priv_data_mem;
+
+		pdev->id = val;
+
+		/* Speed */
+		if (of_property_read_u32(pdev->dev.of_node, "speed", &val))
+			goto err_free_priv_data_mem;
+
+		hw_cfg->speed = dev->speed = val;
+
+		if (of_property_read_u32(pdev->dev.of_node, "dynamic-speed",
+			&val))
+			goto err_free_priv_data_mem;
+
+		dev->dynamic_speed = hw_cfg->dynamic_speed = val;
+
+		of_property_read_string(pdev->dev.of_node, "bsc-clk", &prop);
+		if (prop == NULL)
+			goto err_free_priv_data_mem;
+
+		hw_cfg->bsc_clk = (char *)prop;
+
+		of_property_read_string(pdev->dev.of_node, "bsc-apb-clk",
+			&prop);
+		if (prop == NULL)
+			goto err_free_priv_data_mem;
+
+		hw_cfg->retries = val;
+
+		if (of_property_read_u32(pdev->dev.of_node, "is-pmu-i2c", &val))
+			goto err_free_priv_data_mem;
+
+		hw_cfg->is_pmu_i2c = val;
+
+		if (of_property_read_u32(pdev->dev.of_node, "fs-ref-frequency",
+			&val))
+			goto err_free_priv_data_mem;
+
+		hw_cfg->fs_ref = val;
+
+		if (of_property_read_u32(pdev->dev.of_node, "hs-ref-frequency",
+			&val))
+			goto err_free_priv_data_mem;
+
+		hw_cfg->hs_ref = val;
+
+		rc = bsc_get_clk(dev, hw_cfg);
+		if (rc)
+			goto err_free_dev_mem;
+
+		/* validate the speed parameter */
+		if (dev->speed >= BSC_BUS_SPEED_MAX) {
+			dev_err(&pdev->dev, "invalid bus speed parameter\n");
+			rc = -EFAULT;
+			goto err_free_clk;
+		}
+
+		/* high speed - For any speed defined between BSC_BUS_SPEED_HS
+		 *  * & BSC_BUS_SPEED_HS_FPGA */
+		if (dev->speed >= BSC_BUS_SPEED_HS
+				&& dev->speed <= BSC_BUS_SPEED_HS_FPGA)
+			dev->high_speed_mode = 1;
+		else
+			dev->high_speed_mode = 0;
+
+		/* Depending on the mode - HS or FS/SS, set the clock rate */
+		if (dev->high_speed_mode)
+			clk_set_rate(dev->bsc_clk, hw_cfg->hs_ref);
+		else
+			clk_set_rate(dev->bsc_clk, hw_cfg->fs_ref);
+
+		/* Enable the bsc clocks */
+		rc = bsc_enable_clk(dev);
+		if (rc)
+			goto err_free_clk;
 	} else {
 		/* use default speed */
 		dev->speed = DEFAULT_I2C_BUS_SPEED;
@@ -1905,10 +1997,11 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	i2c_set_adapdata(adap, dev);
 	adap->owner = THIS_MODULE;
 	adap->class = UINT_MAX;	/* can be used by any I2C device */
-	snprintf(adap->name, sizeof(adap->name), "bsc-i2c%d", pdev->id);
+	strlcpy(adap->name, "Kona BSC I2C adapter", sizeof(adap->name));
 	adap->algo = &bsc_algo;
 	adap->dev.parent = &pdev->dev;
 	adap->nr = pdev->id;
+	adap->dev.of_node = pdev->dev.of_node;
 	adap->retries = hw_cfg ? hw_cfg->retries : 0;
 
 	/* Initialize the proc entry */
@@ -1972,6 +2065,10 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* Disable the BSC clocks before returning */
 	bsc_disable_clk(dev);
 
+	if (pdev->dev.of_node)
+		of_i2c_register_devices(adap);
+	dev_info(dev->device, "bus %d at speed %d\n", adap->nr, dev->speed);
+
 	return 0;
 
  err_hw_sem:
@@ -2001,6 +2098,10 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
  err_free_clk:
 	bsc_put_clk(dev);
+
+err_free_priv_data_mem:
+	if (pdev->dev.of_node)
+		kfree(hw_cfg);
 
  err_free_dev_mem:
 	kfree(dev);
@@ -2079,10 +2180,18 @@ static int bsc_resume(struct platform_device *pdev)
 #define bsc_resume     NULL
 #endif
 
+static const struct of_device_id bsc_i2c_of_match[] = {
+	{ .compatible = "bcm,bsc-i2c", },
+	{},
+}
+
+MODULE_DEVICE_TABLE(of, bsc_i2c_of_match);
+
 static struct platform_driver bsc_driver = {
 	.driver = {
 		   .name = "bsc-i2c",
 		   .owner = THIS_MODULE,
+		   .of_match_table = bsc_i2c_of_match,
 		   },
 	.probe = bsc_probe,
 	.remove = __devexit_p(bsc_remove),
