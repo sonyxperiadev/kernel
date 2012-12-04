@@ -250,11 +250,12 @@ mm_job_status_e cme_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 					return MM_JOB_STATUS_ERROR;
 			}
 
-			cme_write(id,H264_CME_INTCS_OFFSET,0x8);
 			cme_write(id,H264_CME_DUMPADDR_OFFSET,jp->vetctor_dump_addr);
 			cme_write(id,H264_CME_DUMPSTRIDE_OFFSET, (jp->dump_vstride_bytes << 16) |
 					(jp->dump_hstride_bytes));
 			cme_write(id,H264_CME_BIAS_OFFSET,jp->cme_bias);
+			cme_write(id, H264_CME_AUTOLIMIT_OFFSET,
+						jp->cme_autolimit);
 
 			temp = (jp->height_mb << 24) | (jp->width_mb << 16) |
 				(jp->vradius_mb << 14) | ((jp->hradius_mb & 3) << 12) |
@@ -263,6 +264,7 @@ mm_job_status_e cme_start_job(void* device_id , mm_job_post_t* job, u32 profmask
 
 			cme_write(id,H264_CME_AUTOCTRL_OFFSET,temp);
 			job->status = MM_JOB_STATUS_RUNNING;
+			cme_write(id, H264_CME_INTCS_OFFSET, 0x8);
 			return MM_JOB_STATUS_RUNNING;
 
 		case MM_JOB_STATUS_RUNNING:
