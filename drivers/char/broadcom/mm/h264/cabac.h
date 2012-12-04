@@ -9,19 +9,18 @@ http://www.gnu.org/copyleft/gpl.html (the "GPL").
 Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
- *******************************************************************************/
+*******************************************************************************/
 #ifndef _CABAC_H_
 #define _CABAC_H_
 
-typedef enum
-{
+enum CABAC_ENDIANNESS_CONF_T {
 	CABAC_CONF_BE,
 	CABAC_CONF_LE,
 	CABAC_CONF_BE_SW_OVERRIDE,
 	CABAC_CONF_LE_SW_OVERRIDE
-} CABAC_ENDIANNESS_CONF_T;
+};
 
-typedef struct{
+struct cabac_job_t {
 	unsigned int highest_ctxt_used;
 	unsigned int rd_ctxt_addr;
 	unsigned int wt_ctxt_addr;
@@ -29,7 +28,7 @@ typedef struct{
 	unsigned int log2_cmd_buf_size;
 	unsigned int upstride_base_addr;
 	unsigned int num_cmds;
-	CABAC_ENDIANNESS_CONF_T end_conf;
-} cabac_job_t;
+	enum CABAC_ENDIANNESS_CONF_T end_conf;
+};
 
 #endif

@@ -21,9 +21,9 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/semaphore.h>
 #include <linux/mutex.h>
 #include <mach/irqs.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <linux/clk.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <linux/proc_fs.h>
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
@@ -51,32 +51,32 @@ the GPL, without Broadcom's express prior written consent.
 /* #define ISP_DEBUG */
 #ifdef ISP_DEBUG
 #define dbg_print(fmt, arg...) \
-    printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
+	printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
 #else
 #define dbg_print(fmt, arg...)   do { } while (0)
 #endif
 
 #define err_print(fmt, arg...) \
-    printk(KERN_ERR "%s():" fmt, __func__, ##arg)
+	printk(KERN_ERR "%s():" fmt, __func__, ##arg)
 
 static int isp_major = ISP_DEV_MAJOR;
 static struct class *isp_class;
-static void __iomem *isp_base = NULL;
-static void __iomem *mmclk_base = NULL;
+static void __iomem *isp_base;
+static void __iomem *mmclk_base;
 static struct clk *isp_clk;
-static int interrupt_irq = 0;
+static int interrupt_irq;
 static struct pi_mgr_dfs_node isp_dfs_node;
 static struct pi_mgr_qos_node isp_qos_node;
 
-typedef struct {
+struct isp_status_t {
 	unsigned int status;
-} isp_status_t;
+};
 
-typedef struct {
+struct isp_t {
 	struct completion irq_sem;
 	spinlock_t lock;
-	isp_status_t isp_status;
-} isp_t;
+	struct isp_status_t isp_status;
+};
 
 static int enable_isp_clock(void);
 static void disable_isp_clock(void);
@@ -86,10 +86,10 @@ static inline void reg_write(void __iomem *, unsigned int reg,
 
 static irqreturn_t isp_isr(int irq, void *dev_id)
 {
-	isp_t *dev;
+	struct isp_t *dev;
 	unsigned long flags;
 
-	dev = (isp_t *) dev_id;
+	dev = (struct isp_t *) dev_id;
 
 	spin_lock_irqsave(&dev->lock, flags);
 	dev->isp_status.status = reg_read(isp_base, ISP_STATUS_OFFSET);
@@ -106,7 +106,7 @@ static int isp_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
 
-	isp_t *dev = kmalloc(sizeof(isp_t), GFP_KERNEL);
+	struct isp_t *dev = kmalloc(sizeof(struct isp_t), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
@@ -126,9 +126,12 @@ static int isp_open(struct inode *inode, struct file *filp)
 		goto err;
 	}
 
-	ret = pi_mgr_qos_add_request(&isp_qos_node, "isp", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+	ret = pi_mgr_qos_add_request(&isp_qos_node, "isp",
+					PI_MGR_PI_ID_ARM_CORE,
+					PI_MGR_QOS_DEFAULT_VALUE);
 	if (ret) {
-		printk(KERN_ERR "%s: failed to register PI QOS request\n", __func__);
+		printk(KERN_ERR "%s: failed to register PI QOS request\n",
+				__func__);
 		ret = -EIO;
 		goto qos_request_fail;
 	}
@@ -153,14 +156,13 @@ static int isp_open(struct inode *inode, struct file *filp)
 qos_request_fail:
 	pi_mgr_dfs_request_remove(&isp_dfs_node);
 err:
-	if (dev)
-		kfree(dev);
+	kfree(dev);
 	return ret;
 }
 
 static int isp_release(struct inode *inode, struct file *filp)
 {
-	isp_t *dev = (isp_t *) filp->private_data;
+	struct isp_t *dev = (struct isp_t *) filp->private_data;
 
 	pi_mgr_qos_request_update(&isp_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 	scu_standby(1);
@@ -178,8 +180,7 @@ static int isp_release(struct inode *inode, struct file *filp)
 	isp_qos_node.name = NULL;
 
 	free_irq(IRQ_ISP, dev);
-	if (dev)
-		kfree(dev);
+	kfree(dev);
 
 	return 0;
 }
@@ -190,15 +191,15 @@ static int isp_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	if (vma_size & (~PAGE_MASK)) {
 		pr_err(KERN_ERR
-		       "isp_mmap: mmaps must be aligned to a multiple of pages_size.\n");
+			"isp_mmap: mmaps must be aligned to " \
+			"a multiple of pages_size.\n");
 		return -EINVAL;
 	}
 
-	if (!vma->vm_pgoff) {
+	if (!vma->vm_pgoff)
 		vma->vm_pgoff = RHEA_ISP_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
-	} else {
+	else
 		return -EINVAL;
-	}
 
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
@@ -206,7 +207,7 @@ static int isp_mmap(struct file *filp, struct vm_area_struct *vma)
 	if (remap_pfn_range(vma,
 			    vma->vm_start,
 			    vma->vm_pgoff, vma_size, vma->vm_page_prot)) {
-		pr_err("%s(): remap_pfn_range() failed\n", __FUNCTION__);
+		pr_err("%s(): remap_pfn_range() failed\n", __func__);
 		return -EINVAL;
 	}
 
@@ -215,7 +216,7 @@ static int isp_mmap(struct file *filp, struct vm_area_struct *vma)
 
 static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	isp_t *dev;
+	struct isp_t *dev;
 	int ret = 0;
 
 	if (_IOC_TYPE(cmd) != BCM_ISP_MAGIC)
@@ -233,7 +234,7 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	if (ret)
 		return -EFAULT;
 
-	dev = (isp_t *) (filp->private_data);
+	dev = (struct isp_t *) (filp->private_data);
 
 	switch (cmd) {
 	case ISP_IOCTL_WAIT_IRQ:
@@ -249,16 +250,15 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			if (copy_to_user
 			    ((u32 *) arg, &dev->isp_status,
 			     sizeof(dev->isp_status))) {
-				err_print
-				    ("ISP_IOCTL_WAIT_IRQ copy_to_user failed\n");
+				err_print("ISP_IOCTL_WAIT_IRQ " \
+						"copy_to_user failed\n");
 				ret = -EFAULT;
 			}
 
 			dbg_print("Disabling ISP interrupt\n");
 			disable_irq(IRQ_ISP);
-			if (interrupt_irq) {
+			if (interrupt_irq)
 				return -EIO;
-			}
 		}
 		break;
 
@@ -291,11 +291,11 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	return ret;
 }
 
-static struct file_operations isp_fops = {
+static const struct file_operations isp_fops = {
 	.open = isp_open,
 	.release = isp_release,
 	.mmap = isp_mmap,
-	.unlocked_ioctl = isp_ioctl,
+	.unlocked_ioctl = isp_ioctl
 };
 
 static int enable_isp_clock(void)
@@ -330,8 +330,8 @@ static int enable_isp_clock(void)
 	rate = clk_get_rate(isp_clk);
 	dbg_print("isp_clk_clk rate %lu\n", rate);
 
-	dbg_print
-	    ("mmclk policy status 08:%08x 0c:%08x 10:%08x 14:%08x 18:%08x 1c:%08x ec0:%08x\n",
+	dbg_print("mmclk policy status 08:%08x 0c:%08x 10:%08x 14:%08x " \
+		"18:%08x 1c:%08x ec0:%08x\n",
 	     reg_read(mmclk_base, 0x08), reg_read(mmclk_base, 0x0c),
 	     reg_read(mmclk_base, 0x10), reg_read(mmclk_base, 0x14),
 	     reg_read(mmclk_base, 0x18), reg_read(mmclk_base, 0x1c),
@@ -410,7 +410,7 @@ err3:
 	iounmap(isp_base);
 err2:
 	err_print("Failed to MAP the ISP IO space\n");
-	device_destroy(isp_class, MKDEV(isp_major,0));
+	device_destroy(isp_class, MKDEV(isp_major, 0));
 err:
 	class_destroy(isp_class);
 	unregister_chrdev(isp_major, ISP_DEV_NAME);

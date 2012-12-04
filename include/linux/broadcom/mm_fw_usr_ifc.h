@@ -16,7 +16,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #define MAX_HANDLES 4
 
-typedef enum {
+enum {
 	INTERLOCK_INVALID_JOB = 0x64000000,
 	INTERLOCK_WAITING_JOB,
 	INTERLOCK_LAST_JOB,
@@ -50,9 +50,10 @@ typedef enum {
 	H264_VCE_INVALID_JOB = 0x67030000,
 	H264_VCE_LAUNCH_JOB,
 	H264_VCE_LAST_JOB
-} mm_job_type_e;
+};
+#define mm_job_type_e unsigned int
 
-typedef enum {
+enum {
 	MM_JOB_STATUS_INVALID = 0,
 	MM_JOB_STATUS_READY,
 	MM_JOB_STATUS_RUNNING,
@@ -62,18 +63,20 @@ typedef enum {
 	MM_JOB_STATUS_TIMED_OUT,
 	MM_JOB_STATUS_SKIP,
 	MM_JOB_STATUS_LAST
-} mm_job_status_e;
+};
+#define mm_job_status_e unsigned int
 
-typedef struct {
+struct MM_JOB_POST_T {
 	mm_job_status_e status;
-    mm_job_type_e type;
+	mm_job_type_e type;
 	uint32_t id;
-    unsigned int size;
-    void *data;
+	unsigned int size;
+	void *data;
 	uint32_t handle;
 	uint32_t num_dep_handles;
 	uint32_t dep_handles[MAX_HANDLES];
-} mm_job_post_t;
+};
+#define mm_job_post_t struct MM_JOB_POST_T
 
 #define INTERLOCK_DEV_NAME	"mm_interlock"
 #define V3D_DEV_NAME	"mm_v3d"
@@ -83,26 +86,31 @@ typedef struct {
 
 enum {
 	MM_CMD_QUERY = 0x80,
-    MM_CMD_POST_JOB,
-    MM_CMD_WAIT_JOB,
-    MM_CMD_WAIT_HANDLES,
-    MM_CMD_LAST
+	MM_CMD_POST_JOB,
+	MM_CMD_WAIT_JOB,
+	MM_CMD_WAIT_HANDLES,
+	MM_CMD_LAST
 };
 
-typedef struct {
-        uint32_t id;
-        mm_job_status_e status;
-		int32_t timeout;
-} mm_job_status_t;
+struct MM_JOB_STATUS_T {
+	uint32_t id;
+	mm_job_status_e status;
+	int32_t timeout;
+};
+#define mm_job_status_t struct MM_JOB_STATUS_T
 
-typedef struct {
+struct MM_HANDLE_STATUS_T {
 	uint32_t num_handles;
 	uint32_t handles[MAX_HANDLES];
 	mm_job_status_e status[MAX_HANDLES];
-} mm_handle_status_t;
+};
+#define mm_handle_status_t struct MM_HANDLE_STATUS_T
 
-#define MM_IOCTL_POST_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_POST_JOB, mm_job_post_t)
-#define MM_IOCTL_WAIT_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_JOB, mm_job_status_t)
-#define MM_IOCTL_WAIT_HANDLES _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_HANDLES, mm_handle_status_t)
+#define MM_IOCTL_POST_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_POST_JOB, \
+						mm_job_post_t)
+#define MM_IOCTL_WAIT_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_JOB, \
+						mm_job_status_t)
+#define MM_IOCTL_WAIT_HANDLES _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_HANDLES, \
+						mm_handle_status_t)
 
 #endif

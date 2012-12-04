@@ -22,9 +22,9 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/mutex.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <linux/clk.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
 #include <linux/bootmem.h>
@@ -33,41 +33,42 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
 
-typedef struct {
-	void* fmwk_handle;
-} interlock_device_t;
+struct interlock_device_t {
+	void *fmwk_handle;
+};
 
-static int interlock_reset(void* device_id)
+static int interlock_reset(void *device_id)
 {
 	return 0;
 }
 
-static int interlock_get_regs(void* device_id, MM_REG_VALUE* ptr, int count)
+static int interlock_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
 {
 	return 0;
 }
 
-static int interlock_abort(void* device_id, mm_job_post_t* job)
+static int interlock_abort(void *device_id, mm_job_post_t *job)
 {
 	return 0;
 }
 
-static mm_isr_type_e process_interlock_irq(void* device_id)
+static mm_isr_type_e process_interlock_irq(void *device_id)
 {
 	return MM_ISR_SUCCESS;
 }
 
-bool get_interlock_status(void* device_id)
+bool get_interlock_status(void *device_id)
 {
 	return false;
 }
 
-mm_job_status_e interlock_start_job(void* device_id , mm_job_post_t* job, unsigned int profmask)
+mm_job_status_e interlock_start_job(void *device_id, mm_job_post_t *job,
+						unsigned int profmask)
 {
 	job->status = MM_JOB_STATUS_SUCCESS;
 	return MM_JOB_STATUS_SUCCESS;
 }
-static interlock_device_t* interlock_device = NULL;
+static struct interlock_device_t *interlock_device;
 
 int __init interlock_init(void)
 {
@@ -75,7 +76,8 @@ int __init interlock_init(void)
 	MM_CORE_HW_IFC core_param;
 	MM_DVFS_HW_IFC dvfs_param;
 	MM_PROF_HW_IFC prof_param;
-	interlock_device = kmalloc(sizeof(interlock_device_t), GFP_KERNEL);
+	interlock_device = kmalloc(sizeof(struct interlock_device_t),
+							GFP_KERNEL);
 	pr_debug("INTERLOCK driver Module Init");
 
 	core_param.mm_base_addr = 0;
@@ -104,13 +106,14 @@ int __init interlock_init(void)
 	dvfs_param.P2 = 30;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
-	interlock_device->fmwk_handle = mm_fmwk_register(INTERLOCK_DEV_NAME,NULL,1,
-												&core_param,&dvfs_param,&prof_param);
+	interlock_device->fmwk_handle = mm_fmwk_register(INTERLOCK_DEV_NAME,
+						NULL, 1, &core_param,
+						&dvfs_param, &prof_param);
 
-	if( interlock_device->fmwk_handle == NULL) {
+	if (interlock_device->fmwk_handle == NULL) {
 		ret = -ENOMEM;
 		goto err;
-		}
+	}
 	pr_debug("INTERLOCK driver Module Init over");
 	return ret;
 
@@ -122,7 +125,7 @@ err:
 void __exit interlock_exit(void)
 {
 	pr_debug("INTERLOCK driver Module Exit");
-	if(interlock_device->fmwk_handle)
+	if (interlock_device->fmwk_handle)
 		mm_fmwk_unregister(interlock_device->fmwk_handle);
 	kfree(interlock_device);
 }
