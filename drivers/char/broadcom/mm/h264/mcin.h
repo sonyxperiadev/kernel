@@ -9,26 +9,23 @@ http://www.gnu.org/copyleft/gpl.html (the "GPL").
 Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
- *******************************************************************************/
+*******************************************************************************/
 #ifndef _MCIN_H_
 #define _MCIN_H_
 
 #define VD3_INPUT_MCI_BUFFER_ALIGNMENT 4096
 
-typedef enum
-{
+enum mcin_input_config_flags_t {
 	MCIN_INPUT_CONFIG_AVS       = 1
-} mcin_input_config_flags_t;
+};
 
-typedef struct mcin_out_params_t
-{
+struct MCIN_OUT_PARAMS_T {
 	unsigned int state[7];
 	unsigned int remaining_len;
 	unsigned int user_data;
-} MCIN_OUT_PARAMS_T;
+};
 
-typedef struct mcin_input_config_t
-{
+struct MCIN_INPUT_CONFIG_T {
 	unsigned char start_byte;
 	unsigned char start_mask;
 	unsigned char guard_byte;
@@ -36,11 +33,11 @@ typedef struct mcin_input_config_t
 	unsigned char use_ep;
 	unsigned char no_startcodes;
 	unsigned char nal_end;
-	mcin_input_config_flags_t flags;
-} MCIN_INPUT_CONFIG_T;
+	enum mcin_input_config_flags_t flags;
+};
 
-typedef struct{
-	MCIN_INPUT_CONFIG_T mcin_config;
+struct mcin_job_t {
+	struct MCIN_INPUT_CONFIG_T mcin_config;
 	unsigned int state[7];
 	unsigned int user_data;
 	unsigned int in_addr;
@@ -48,7 +45,7 @@ typedef struct{
 	unsigned int out_base;
 	unsigned int out_size;
 	unsigned int out_mark_offset;
-	MCIN_OUT_PARAMS_T out_params;
-} mcin_job_t;
+	struct MCIN_OUT_PARAMS_T out_params;
+};
 
 #endif

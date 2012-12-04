@@ -9,7 +9,7 @@ http://www.gnu.org/copyleft/gpl.html (the "GPL").
 Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
- *******************************************************************************/
+*******************************************************************************/
 #ifndef _VCE_H_
 #define _VCE_H_
 
@@ -27,7 +27,7 @@ the GPL, without Broadcom's express prior written consent.
    unsigned int code[];
    unsigned int startaddr;
    unsigned int finaladdr;
-   unsigned int numdownloads; 
+	unsigned int numdownloads;
    unsigned int numuploads;
    unsigned int transfer_dir;
    unsigned int vce_addr;
@@ -41,30 +41,30 @@ the GPL, without Broadcom's express prior written consent.
    }
    */
 
-typedef enum {
+enum vce_transfer_type_t {
 	VCE_DATA_DOWNLOAD,
 	VCE_DATA_UPLOAD
-} vce_transfer_type_t;
+};
 
-typedef struct {
+struct vce_regp_t {
 	unsigned int vce_regs[VCE_REGISTERS_COUNT];
 	unsigned int changed[VCE_REGISTERS_COUNT];
-} vce_regp_t;
+};
 
-typedef struct {
+struct vce_launch_info_t {
 	unsigned int datasize;
 	unsigned int data_offset;
 	unsigned int codesize;
 	unsigned int code_offset;
 	unsigned int startaddr;
 	unsigned int finaladdr;
-	unsigned int numdownloads; 
+	unsigned int numdownloads;
 	unsigned int numuploads;
 	unsigned int download_start_offset;
 	unsigned int upload_start_offset;
 	unsigned int endcode;
 	unsigned int stop_reason;
-	vce_regp_t 	vce_regpst;
-} vce_launch_info_t;
+	struct vce_regp_t vce_regpst;
+};
 
 #endif /*_VCE_H_*/

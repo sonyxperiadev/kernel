@@ -9,7 +9,7 @@ http://www.gnu.org/copyleft/gpl.html (the "GPL").
 Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
- *******************************************************************************/
+*******************************************************************************/
 
 #define pr_fmt(fmt) "h264: " fmt
 
@@ -19,18 +19,18 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/init.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include "h264.h"
 
-typedef struct {
-	void* 	fmwk_handle;
-	void 	(*subdev_update_virt[H264_SUBDEV_COUNT])(void* virt);
-	int 	(*subdev_init[H264_SUBDEV_COUNT])(MM_CORE_HW_IFC* core_param);
-	void 	(*subdev_deinit[H264_SUBDEV_COUNT])(void);
-} h264_device_t;
+struct h264_device_t {
+	void	*fmwk_handle;
+	void	(*subdev_update_virt[H264_SUBDEV_COUNT])(void *virt);
+	int	(*subdev_init[H264_SUBDEV_COUNT])(MM_CORE_HW_IFC * core_param);
+	void	(*subdev_deinit[H264_SUBDEV_COUNT])(void);
+};
 
-h264_device_t* h264_device = NULL;
+struct h264_device_t *h264_device;
 
 int __init mm_h264_init(void)
 {
@@ -41,8 +41,8 @@ int __init mm_h264_init(void)
 	int i = 0;
 
 	pr_debug("h264_init: -->\n");
-	h264_device = kmalloc(sizeof(h264_device_t), GFP_KERNEL);
-	if(h264_device == NULL){
+	h264_device = kmalloc(sizeof(struct h264_device_t), GFP_KERNEL);
+	if (h264_device == NULL) {
 		pr_err("h264_init: kmalloc failed\n");
 		ret = -ENOMEM;
 		goto err;
@@ -65,10 +65,11 @@ int __init mm_h264_init(void)
 	h264_device->subdev_deinit[3] = &h264_vce_deinit;
 
 	/*Calling init on sub devices*/
-	for(i=0;i<H264_SUBDEV_COUNT;i++){
+	for (i = 0; i < H264_SUBDEV_COUNT; i++) {
 		ret = h264_device->subdev_init[i](&core_param[i]);
-		if(ret != 0){
-			pr_err("mm_h264_init: subdev init for %d returned error\n",i);
+		if (ret != 0) {
+			pr_err("mm_h264_init: subdev init for " \
+				"%d returned error\n", i);
 			goto err1;
 		}
 	}
@@ -83,25 +84,27 @@ int __init mm_h264_init(void)
 	dvfs_param.P2 = 30;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
-	h264_device->fmwk_handle = mm_fmwk_register(H264_DEV_NAME,H264_AXI_BUS_CLK_NAME_STR,
-												H264_SUBDEV_COUNT,
-												&core_param[0],&dvfs_param,&prof_param);
-	if( (h264_device->fmwk_handle == NULL)) {
+	h264_device->fmwk_handle = mm_fmwk_register(H264_DEV_NAME,
+						H264_AXI_BUS_CLK_NAME_STR,
+						H264_SUBDEV_COUNT,
+						&core_param[0],
+						&dvfs_param,
+						&prof_param);
+	if ((h264_device->fmwk_handle == NULL)) {
 		ret = -ENOMEM;
 		goto err1;
 	}
 
-	for(i=0;i<H264_SUBDEV_COUNT;i++){
-		if( (core_param[i].mm_virt_addr == NULL)) {
+	for (i = 0; i < H264_SUBDEV_COUNT; i++) {
+		if ((core_param[i].mm_virt_addr == NULL)) {
 			ret = -ENOMEM;
 			goto err1;
 		}
 	}
 
 	/*Update the virtual address for sub devices*/
-	for(i=0;i<H264_SUBDEV_COUNT;i++){
+	for (i = 0; i < H264_SUBDEV_COUNT; i++)
 		h264_device->subdev_update_virt[i](core_param[i].mm_virt_addr);
-	}
 
 	pr_debug("h264_init: H264 driver Module Init over");
 	return ret;
@@ -116,13 +119,12 @@ void __exit mm_h264_exit(void)
 {
 	int i = 0;
 	pr_debug("H264_exit:\n");
-	if(h264_device->fmwk_handle)
+	if (h264_device->fmwk_handle)
 		mm_fmwk_unregister(h264_device->fmwk_handle);
 	kfree(h264_device);
 	/*Sub device deinit*/
-	for(i=0;i<H264_SUBDEV_COUNT;i++){
+	for (i = 0; i < H264_SUBDEV_COUNT; i++)
 		h264_device->subdev_deinit[i]();
-	}
 }
 
 module_init(mm_h264_init);
