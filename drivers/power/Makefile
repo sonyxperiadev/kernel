@@ -64,6 +64,6 @@ else
 obj-$(CONFIG_POWER_BCMPMU)	+= bcmpmu-batt.o bcmpmu-chrgr.o
 obj-$(CONFIG_BCMPMU_EM) 	+= bcmpmu-em.o
 endif
-obj-$(CONFIG_MFD_BCM_PMU59xxx) 	+= bcmpmu59xxx-chrgr.o
+obj-$(CONFIG_MFD_BCM_PMU59xxx) 	+= bcmpmu59xxx-chrgr.o bcmpmu-fg.o
 obj-$(CONFIG_CHARGER_BCMPMU_SPA) += bcmpmu-chrgr-pb.o
 obj-$(CONFIG_BATTERY_ANDROID)	+= android_battery.o

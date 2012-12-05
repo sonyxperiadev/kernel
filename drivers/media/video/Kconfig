@@ -565,6 +565,12 @@ config VIDEO_ADP1653
 	  This is a driver for the ADP1653 flash controller. It is used for
 	  example in Nokia N900.
 
+config VIDEO_AS3643
+    tristate "AS3643 flash support"
+    depends on I2C && VIDEO_V4L2
+    ---help---
+      This is a driver for the AS3643 flash controller.
+
 config VIDEO_AS3645A
 	tristate "AS3645A flash driver support"
 	depends on I2C && VIDEO_V4L2 && MEDIA_CONTROLLER
@@ -1087,7 +1093,7 @@ config SOC_CAMERA_TCM9001
 	  This is a TCM9001 camera driver
 	  The camera supports VGA/QVGA at 30fps
 	  over a parallel interface
-	  
+	  	  
 config SOC_CAMERA_OV5640
 	tristate "ov5640 camera support"
 	depends on SOC_CAMERA && I2C

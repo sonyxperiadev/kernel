@@ -254,50 +254,109 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
 	.cmasize = 0,
-	.carveout_base = 0,
+	.carveout_base = 0xae000000,
 	.carveout_size = 0,
 };
 #endif
 
 #ifdef CONFIG_ION
+struct ion_platform_data ion_system_data = {
+	.nr = 1,
+	.heaps = {
+		[0] = {
+			.id    = 3,
+			.type  = ION_HEAP_TYPE_SYSTEM,
+			.name  = "ion-system-0",
+			.base  = 0,
+			.limit = 0,
+			.size  = 0,
+		},
+	},
+};
+
 struct ion_platform_data ion_carveout_data = {
 	.nr = 2,
 	.heaps = {
-		  [0] = {
-			 .id = 0,
-			 .type = ION_HEAP_TYPE_CARVEOUT,
-			 .name = "ion-carveout-0",
-			 .base = 0x90000000,
-			 .limit = 0xa0000000,
-			 .size = (16 * SZ_1M),
-			 },
-		  [1] = {
-			 .id = 2,
-			 .type = ION_HEAP_TYPE_CARVEOUT,
-			 .name = "ion-carveout-1",
-			 .base = 0,
-			 .limit = 0,
-			 .size = (0 * SZ_1M),
-			 },
-		  },
+		[0] = {
+			.id    = 0,
+			.type  = ION_HEAP_TYPE_CARVEOUT,
+			.name  = "ion-carveout-0",
+			.base  = 0x90000000,
+			.limit = 0xa0000000,
+			.size  = (16 * SZ_1M),
+#ifdef CONFIG_ION_OOM_KILLER
+			.lmc_enable = 0,
+			.lmc_min_score_adj = 411,
+			.lmc_min_free = 30,
+#endif
+		},
+		[1] = {
+			.id    = 2,
+			.type  = ION_HEAP_TYPE_CARVEOUT,
+			.name  = "ion-carveout-1",
+			.base  = 0,
+			.limit = 0,
+			.size  = (0 * SZ_1M),
+#ifdef CONFIG_ION_OOM_KILLER
+			.lmc_enable = 0,
+			.lmc_min_score_adj = 411,
+			.lmc_min_free = 30,
+#endif
+		},
+	},
 };
 
 #ifdef CONFIG_CMA
 struct ion_platform_data ion_cma_data = {
 	.nr = 1,
 	.heaps = {
-		  [0] = {
-			 .id = 1,
-			 .type = ION_HEAP_TYPE_DMA,
-			 .name = "ion-cma-0",
-			 .base = 0x90000000,
-			 .limit = 0xa0000000,
-			 .size = (0 * SZ_1M),
-			 },
-		  },
+		[0] = {
+			.id = 1,
+			.type  = ION_HEAP_TYPE_DMA,
+			.name  = "ion-cma-0",
+			.base  = 0x90000000,
+			.limit = 0xa0000000,
+			.size  = (0 * SZ_1M),
+#ifdef CONFIG_ION_OOM_KILLER
+			.lmc_enable = 1,
+			.lmc_min_score_adj = 411,
+			.lmc_min_free = 30,
+#endif
+		},
+	},
 };
 #endif /* CONFIG_CMA */
 #endif /* CONFIG_ION */
+
+#ifdef CONFIG_VIDEO_ADP1653
+#define ADP1653_I2C_ADDR 0x60
+static struct i2c_board_info adp1653_flash[] = {
+	{
+	 I2C_BOARD_INFO("adp1653", (ADP1653_I2C_ADDR >> 1))
+	 },
+};
+#endif
+
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+
+static struct regulator *d_gpsr_cam0_1v8;
+static struct regulator *d_lvldo2_cam1_1v8;
+static struct regulator *d_1v8_mmc1_vcc;
+static struct regulator *d_3v0_mmc1_vcc;
+
+#define OV5640_I2C_ADDRESS (0x3C)
+#define OV7692_I2C_ADDRESS (0x3e)
+
+#define SENSOR_0_GPIO_PWRDN             (002)
+#define SENSOR_0_GPIO_RST               (111)
+#define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
+#define SENSOR_0_CLK_FREQ               (13000000)
+
+#define SENSOR_1_CLK                    "dig_ch0_clk"	/* DCLK1 */
+#define SENSOR_1_CLK_FREQ               (26000000)
+
+#define SENSOR_1_GPIO_PWRDN             (005)
+
 
 #ifdef CONFIG_VIDEO_ADP1653
 #define ADP1653_I2C_ADDR 0x60
@@ -715,7 +774,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_STM_TRACE
-/* &hawaii_stm_device,*/
+	&hawaii_stm_device,
 #endif
 
 #if defined(CONFIG_HW_RANDOM_KONA)
@@ -1706,6 +1765,9 @@ static void hawaii_add_pdata(void)
 	hawaii_hsotgctrl_platform_device.dev.platform_data =
 	    &hsotgctrl_plat_data;
 #endif
+#ifdef CONFIG_ION
+	ion_system_device.dev.platform_data = &ion_system_data;
+#endif
 }
 
 void __init hawaii_add_common_devices(void)
@@ -1728,6 +1790,9 @@ static void __init hawaii_add_devices(void)
 #endif
 
 #ifdef CONFIG_ION
+#ifdef CONFIG_M4U
+	platform_device_register(&ion_system_device);
+#endif
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);

@@ -511,49 +511,15 @@ int __init kona_gpio_init(int num_bank)
 				if (mask & (1 << GPIO_BIT(gpio))) {
 					//printk(KERN_INFO "Configure GPIO%d to 0x%x\n", gpio, dt_gpio[gpio]);
 
+					gpio_request(gpio, "gpio");
 					if (dt_gpio[gpio] & DT_GPIO_INPUT) {
-						val =
-						    __raw_readl(reg_base +
-								GPIO_CTRL
-								(gpio));
-						val &= ~GPIO_GPCTR0_IOTR_MASK;
-						val |=
-						    GPIO_GPCTR0_IOTR_CMD_INPUT;
-						__raw_writel(val,
-							     reg_base +
-							     GPIO_CTRL(gpio));
+						gpio_direction_input(gpio);
 					} else {	/* output */
-						val =
-						    __raw_readl(reg_base +
-								GPIO_CTRL
-								(gpio));
-						val &= ~GPIO_GPCTR0_IOTR_MASK;
-						val |=
-						    GPIO_GPCTR0_IOTR_CMD_0UTPUT;
-						__raw_writel(val,
-							     reg_base +
-							     GPIO_CTRL(gpio));
-
-						val =
-						    __raw_readl(reg_base +
-								GPIO_OUT_SET
-								(GPIO_BANK
-								 (gpio)));
-						val =
-						    (dt_gpio[gpio] &
-						     DT_GPIO_OUTPUT_VAL) ? (val
-									    | (1
-									       <<
-									       GPIO_BIT
-									       (gpio)))
-						    : (val &
-						       (~
-							(1 << GPIO_BIT(gpio))));
-						__raw_writel(val,
-							     reg_base +
-							     GPIO_OUT_SET
-							     (GPIO_BANK(gpio)));
+						gpio_direction_output(gpio,
+							(dt_gpio[gpio] &
+							 DT_GPIO_OUTPUT_VAL));
 					}
+					gpio_free(gpio);
 					mask &= ~(1 << GPIO_BIT(gpio));
 				} else {
 					printk(KERN_ERR

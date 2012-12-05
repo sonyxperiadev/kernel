@@ -147,7 +147,12 @@ static const struct ov5640_reg configscript_common1[] = {
 	{0x3c0b, 0x40},
 
 	/* Sensor Read */
-	{0x3820, 0x40},		/*vflip */
+
+#ifdef CONFIG_MACH_HAWAII_GARNET 
+	{0x3820, 0x46},   /*vflip */
+#else
+	{0x3820, 0x40},  /*vflip */
+#endif
 	{0x3814, 0x11},		/*X incr */
 	{0x3815, 0x11},		/*Y incr */
 	/* Sensor Timing control  2624 x 1952 --> 2560 x 1920 */

@@ -29,6 +29,7 @@
 #include <linux/mfd/core.h>
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
+#include <linux/power/bcmpmu-fg.h>
 #include <linux/broadcom/bcmpmu-ponkey.h>
 #ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
@@ -213,7 +214,7 @@ static struct regulator_init_data bcm59xxx_sdldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sd_supply),
 	.consumer_supplies = sd_supply,
@@ -230,7 +231,7 @@ static struct regulator_init_data bcm59xxx_sdxldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sdx_supply),
 	.consumer_supplies = sdx_supply,
@@ -755,6 +756,8 @@ static struct bcmpmu59xxx_rw_data register_init_data[] = {
 	{.addr = PMU_REG_MBCCTRL2, .val = 0x0, .mask = 0x04},
 	/* SWUP */
 	{.addr = PMU_REG_MBCCTRL3, .val = 0x04, .mask = 0x04},
+	/* Enable BC12_EN */
+	{.addr = PMU_REG_MBCCTRL5, .val = 0x01, .mask = 0x01},
 	/* Max VFLOAT to 4.2*/
 	{.addr = PMU_REG_MBCCTRL6, .val = 0x0C, .mask = 0xFF},
 	/*  ICCMAX to 1500mA*/
@@ -1013,6 +1016,167 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.lut_len = 0,
 	},
 };
+
+static struct batt_volt_cap_map bl_84_volt_cap_lut[] = {
+	{4153, 100},
+	{4086, 95},
+	{4042, 90},
+	{4011, 86},
+	{3976, 81},
+	{3946, 76},
+	{3919, 71},
+	{3894, 66},
+	{3867, 61},
+	{3841, 57},
+	{3815, 52},
+	{3798, 47},
+	{3788, 42},
+	{3780, 37},
+	{3776, 33},
+	{3764, 28},
+	{3743, 23},
+	{3720, 18},
+	{3685, 13},
+	{3678, 12},
+	{3675, 11},
+	{3672, 10},
+	{3668, 9},
+	{3664, 8},
+	{3658, 7},
+	{3648, 6},
+	{3589, 4},
+	{3544, 3},
+	{3487, 2},
+	{3411, 1},
+	{3300, 0},
+};
+
+static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
+	{
+		.temp = -20,
+		.reset = 0, .fct = 26, .guardband = 50,
+		.esr_vl_lvl = 3788, .esr_vm_lvl = 3814, .esr_vh_lvl = 4088,
+		.esr_vl_slope = -31479, .esr_vl_offset = 121154,
+		.esr_vm_slope = -7916, .esr_vm_offset = 31900,
+		.esr_vh_slope = -597, .esr_vh_offset = 3985,
+		.esr_vf_slope = -7664, .esr_vf_offset = 32875,
+	},
+	{
+		.temp = -15,
+		.reset = 0, .fct = 210, .guardband = 50,
+		.esr_vl_lvl = 3788, .esr_vm_lvl = 3814, .esr_vh_lvl = 4088,
+		.esr_vl_slope = -31479, .esr_vl_offset = 121154,
+		.esr_vm_slope = -7916, .esr_vm_offset = 31900,
+		.esr_vh_slope = -597, .esr_vh_offset = 3985,
+		.esr_vf_slope = -7664, .esr_vf_offset = 32875,
+	},
+	{
+		.temp = -10,
+		.reset = 0, .fct = 394, .guardband = 50,
+		.esr_vl_lvl = 3742, .esr_vm_lvl = 3798, .esr_vh_lvl = 4088,
+		.esr_vl_slope = -8481, .esr_vl_offset = 33090,
+		.esr_vm_slope = -6677, .esr_vm_offset = 26338,
+		.esr_vh_slope = -611, .esr_vh_offset = 3297,
+		.esr_vf_slope = -2255, .esr_vf_offset = 10018,
+	},
+	{
+		.temp = -5,
+		.reset = 0, .fct = 565, .guardband = 50,
+		.esr_vl_lvl = 3742, .esr_vm_lvl = 3798, .esr_vh_lvl = 4088,
+		.esr_vl_slope = -8481, .esr_vl_offset = 33090,
+		.esr_vm_slope = -6677, .esr_vm_offset = 26338,
+		.esr_vh_slope = -611, .esr_vh_offset = 3297,
+		.esr_vf_slope = -2255, .esr_vf_offset = 10018,
+	},
+	{
+		.temp = 0,
+		.reset = 0, .fct = 736, .guardband = 50,
+		.esr_vl_lvl = 3679, .esr_vm_lvl = 3788, .esr_vh_lvl = 4088,
+		.esr_vl_slope = -31497, .esr_vl_offset = 117159,
+		.esr_vm_slope = -6612, .esr_vm_offset = 25599,
+		.esr_vh_slope = -393, .esr_vh_offset = 2042,
+		.esr_vf_slope = -1918, .esr_vf_offset = 8277,
+	},
+	{
+		.temp = 5,
+		.reset = 0, .fct = 811, .guardband = 50,
+		.esr_vl_lvl = 3663, .esr_vm_lvl = 3679, .esr_vh_lvl = 3798,
+		.esr_vl_slope = -18140, .esr_vl_offset = 67518,
+		.esr_vm_slope = -28827, .esr_vm_offset = 106665,
+		.esr_vh_slope = -2252, .esr_vh_offset = 8887,
+		.esr_vf_slope = -370, .esr_vf_offset = 1739,
+	},
+	{
+		.temp = 10,
+		.reset = 0, .fct = 887, .guardband = 30,
+		.esr_vl_lvl = 3663, .esr_vm_lvl = 3679, .esr_vh_lvl = 3798,
+		.esr_vl_slope = -18140, .esr_vl_offset = 67518,
+		.esr_vm_slope = -28827, .esr_vm_offset = 106665,
+		.esr_vh_slope = -2252, .esr_vh_offset = 8887,
+		.esr_vf_slope = -370, .esr_vf_offset = 1739,
+	},
+	{
+		.temp = 15,
+		.reset = 0, .fct = 943, .guardband = 30,
+		.esr_vl_lvl = 3668, .esr_vm_lvl = 3687, .esr_vh_lvl = 3896,
+		.esr_vl_slope = -908, .esr_vl_offset = 3574,
+		.esr_vm_slope = -1936, .esr_vm_offset = 7344,
+		.esr_vh_slope = 124, .esr_vh_offset = -251,
+		.esr_vf_slope = -417, .esr_vf_offset = 1857,
+	},
+	{
+		.temp = 20,
+		.reset = 0, .fct = 1000, .guardband = 30,
+		.esr_vl_lvl = 3668, .esr_vm_lvl = 3687, .esr_vh_lvl = 3896,
+		.esr_vl_slope = -908, .esr_vl_offset = 3574,
+		.esr_vm_slope = -1936, .esr_vm_offset = 7344,
+		.esr_vh_slope = 124, .esr_vh_offset = -251,
+		.esr_vf_slope = -417, .esr_vf_offset = 1857,
+	},
+};
+
+static struct bcmpmu_batt_property bl_84_props = {
+	.model = "BRCM BL-84",
+	.min_volt = 3000,
+	.max_volt = 4200,
+	.full_cap = 1500 * 3600,
+	.volt_cap_lut = bl_84_volt_cap_lut,
+	.volt_cap_lut_sz = ARRAY_SIZE(bl_84_volt_cap_lut),
+	.esr_temp_lut = bl_84_esr_temp_lut,
+	.esr_temp_lut_sz = ARRAY_SIZE(bl_84_esr_temp_lut),
+};
+
+static struct bcmpmu_batt_cap_levels bl_84_cap_levels = {
+	.critical = 5,
+	.low = 15,
+	.normal = 75,
+	.high = 95,
+};
+
+static struct bcmpmu_batt_volt_levels bl_84_volt_levels = {
+	.critical = 3300,
+	.low = 3500,
+	.normal = 3700,
+	.high = 4190,
+	.vfloat_lvl = VFLOAT_LVL_4_20,
+};
+
+static struct bcmpmu_batt_calibration_data bl_84_cal_data = {
+	.volt_low = 3550,
+};
+static struct bcmpmu_fg_pdata fg_pdata = {
+	.batt_prop = &bl_84_props,
+	.cap_levels = &bl_84_cap_levels,
+	.volt_levels = &bl_84_volt_levels,
+	.calibration_data = &bl_84_cal_data,
+	.sns_resist = 10,
+	.sys_impedence = 33,
+	.eoc_current = 75, /* End of charge current in mA */
+	.hw_maintenance_charging = true, /* enable HW EOC of PMU */
+	.sleep_current_ua = 2000, /* floor during sleep */
+	.sleep_sample_rate = 32000,
+};
+
 /* The subdevices of the bcmpmu59xxx */
 static struct mfd_cell pmu59xxx_devs[] = {
 	{
@@ -1061,7 +1225,12 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.platform_data = &rpc_pdata,
 		.pdata_size = sizeof(rpc_pdata),
 	},
-
+	{
+		.name = "bcmpmu_fg",
+		.id = -1,
+		.platform_data = &fg_pdata,
+		.pdata_size = sizeof(fg_pdata),
+	},
 };
 
 static struct i2c_board_info pmu_i2c_companion_info[] = {

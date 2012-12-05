@@ -1405,8 +1405,9 @@ static void start_panic_crashlog(void)
 #endif /* !defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) */
 
 
-static void start_sdcard_crashlog(struct file *inDumpFile)
+static int start_sdcard_crashlog(struct file *inDumpFile)
 {
+	int ret_status;
 	struct timespec ts;
 	struct rtc_time tm;
 	char assertFileName[CP_CRASH_DUMP_MAX_LEN];
@@ -1433,10 +1434,13 @@ static void start_sdcard_crashlog(struct file *inDumpFile)
 		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
 			      "failed to open sdDumpFile %s\n", assertFileName);
 		sDumpFile = NULL;
-	} else {
+		ret_status = 0;
+		} else {
 		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
 			      "sdDumpFile %s opened OK\n", assertFileName);
-	}
+		ret_status = 1;
+		}
+	return ret_status;
 }
 
 /**
@@ -1485,8 +1489,13 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile)
 
 	switch (BCMLOG_GetCpCrashLogDevice()) {
 	case BCMLOG_OUTDEV_SDCARD:
-		start_sdcard_crashlog(inDumpFile);
-		break;
+		if (start_sdcard_crashlog(inDumpFile)) {
+			break;
+		} else {
+			/* sdcard absent for failed, save the dume to flash */
+			BCMLOG_SetCpCrashLogDevice(BCMLOG_OUTDEV_PANIC);
+			abort();
+		}
 	case BCMLOG_OUTDEV_PANIC:
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 		start_emmc_crashlog();

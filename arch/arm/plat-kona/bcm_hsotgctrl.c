@@ -378,6 +378,7 @@ int bcm_hsotgctrl_phy_deinit(void)
 	bcm_hsotgctrl_phy_wakeup_condition(false);
 
 	/* Stay disconnected */
+	bcm_hsotgctrl_wakeup_core();
 	bcm_hsotgctrl_phy_set_non_driving(true);
 
 	/* Disable pad, internal PLL etc. */

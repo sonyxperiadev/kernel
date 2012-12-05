@@ -341,7 +341,7 @@ extern "C" {
 	extern int BCMLOG_RegisterHandler(char log_type,
 					  int (*handler) (const char *,
 							  unsigned int, char));
-
+	extern void abort(void);
 /**
  *	printk redirect callback registration
  **/	typedef int (*BrcmRedirectPrintkCbk)(const char *str);

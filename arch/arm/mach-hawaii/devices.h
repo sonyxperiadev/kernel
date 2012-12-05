@@ -69,6 +69,7 @@ extern struct android_pmem_platform_data android_pmem_data;
 extern struct platform_device android_pmem;
 #endif
 #ifdef CONFIG_ION
+extern struct platform_device ion_system_device;
 extern struct ion_platform_data ion_carveout_data;
 extern struct platform_device ion_carveout_device;
 #ifdef CONFIG_CMA

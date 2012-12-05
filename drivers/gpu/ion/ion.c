@@ -34,21 +34,31 @@
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
 #include <linux/dma-buf.h>
+#ifdef CONFIG_ION_OOM_KILLER
+#include <linux/oom.h>
+#include <linux/delay.h>
+/* #define ION_OOM_KILLER_DEBUG */
+#endif
+#ifdef CONFIG_M4U
+#include <linux/broadcom/m4u.h>
+#endif
 
 #include "ion_priv.h"
 
 /**
  * struct ion_device - the metadata of the ion device node
  * @dev:		the actual misc device
- * @buffers:	an rb tree of all the existing buffers
- * @lock:		lock protecting the buffers & heaps trees
+ * @buffers:		an rb tree of all the existing buffers
+ * @buffer_lock:	lock protecting the tree of buffers
+ * @lock:		rwsem protecting the tree of heaps and clients
  * @heaps:		list of all the heaps in the system
  * @user_clients:	list of all the clients created from userspace
  */
 struct ion_device {
 	struct miscdevice dev;
 	struct rb_root buffers;
-	struct mutex lock;
+	struct mutex buffer_lock;
+	struct rw_semaphore lock;
 	struct rb_root heaps;
 	long (*custom_ioctl) (struct ion_client *client, unsigned int cmd,
 			      unsigned long arg);
@@ -80,6 +90,10 @@ struct ion_client {
 	struct task_struct *task;
 	pid_t pid;
 	struct dentry *debug_root;
+#ifdef CONFIG_ION_OOM_KILLER
+	int deathpending;
+	unsigned long timeout;
+#endif
 };
 
 /**
@@ -101,6 +115,17 @@ struct ion_handle {
 	struct rb_node node;
 	unsigned int kmap_cnt;
 };
+
+bool ion_buffer_fault_user_mappings(struct ion_buffer *buffer)
+{
+        return ((buffer->flags & ION_FLAG_CACHED) &&
+                !(buffer->flags & ION_FLAG_CACHED_NEEDS_SYNC));
+}
+
+bool ion_buffer_cached(struct ion_buffer *buffer)
+{
+        return !!(buffer->flags & ION_FLAG_CACHED);
+}
 
 /* this function should only be called while dev->lock is held */
 static void ion_buffer_add(struct ion_device *dev,
@@ -147,6 +172,7 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 		return ERR_PTR(-ENOMEM);
 
 	buffer->heap = heap;
+	buffer->flags = flags;
 	kref_init(&buffer->ref);
 
 	ret = heap->ops->allocate(heap, buffer, len, align, flags);
@@ -157,7 +183,6 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 
 	buffer->dev = dev;
 	buffer->size = len;
-	buffer->flags = flags;
 #ifdef CONFIG_ION_KONA
 	buffer->align = align;
 #endif
@@ -168,27 +193,33 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 		kfree(buffer);
 		return ERR_PTR(PTR_ERR(table));
 	}
+#ifdef CONFIG_M4U
+	buffer->dma_addr = m4u_map(g_mdev, table, buffer->size,
+			buffer->align);
+	if (buffer->dma_addr == INVALID_MMA) {
+		pr_err("%s: m4u mapping failed for size(%d) align (%d)\n",
+				__func__, buffer->size, buffer->align);
+		heap->ops->unmap_dma(heap, buffer);
+		heap->ops->free(buffer);
+		kfree(buffer);
+		return ERR_PTR(ret);
+	}
+#endif
 	buffer->sg_table = table;
-	if (buffer->flags & ION_FLAG_CACHED)
+	if (ion_buffer_fault_user_mappings(buffer)) {
 		for_each_sg(buffer->sg_table->sgl, sg, buffer->sg_table->nents,
 			    i) {
 			if (sg_dma_len(sg) == PAGE_SIZE)
 				continue;
-			pr_err("%s: cached mappings must have pagewise "
-			       "sg_lists\n", __func__);
-			heap->ops->unmap_dma(heap, buffer);
-			kfree(buffer);
-			return ERR_PTR(-EINVAL);
+			pr_err("%s: cached mappings that will be faulted in "
+			       "must have pagewise sg_lists\n", __func__);
+			ret = -EINVAL;
+			goto err;
 		}
 
-	if (buffer->flags & ION_FLAG_CACHED) {
 		ret = ion_buffer_alloc_dirty(buffer);
-		if (ret) {
-			heap->ops->unmap_dma(heap, buffer);
-			heap->ops->free(buffer);
-			kfree(buffer);
-			return ERR_PTR(ret);
-		}
+		if (ret)
+			goto err;
 	}
 
 	buffer->dev = dev;
@@ -205,8 +236,19 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 	   cached mapping that mapping has been invalidated */
 	for_each_sg(buffer->sg_table->sgl, sg, buffer->sg_table->nents, i)
 		sg_dma_address(sg) = sg_phys(sg);
+	mutex_lock(&dev->buffer_lock);
 	ion_buffer_add(dev, buffer);
+	mutex_unlock(&dev->buffer_lock);
 	return buffer;
+
+err:
+#ifdef CONFIG_M4U
+	m4u_unmap(g_mdev, buffer->dma_addr);
+#endif
+	heap->ops->unmap_dma(heap, buffer);
+	heap->ops->free(buffer);
+	kfree(buffer);
+	return ERR_PTR(ret);
 }
 
 static void ion_buffer_destroy(struct kref *kref)
@@ -216,17 +258,20 @@ static void ion_buffer_destroy(struct kref *kref)
 
 	if (WARN_ON(buffer->kmap_cnt > 0))
 		buffer->heap->ops->unmap_kernel(buffer->heap, buffer);
-
-	if (buffer->flags & ION_FLAG_CACHED)
-		kfree(buffer->dirty);
+#ifdef CONFIG_M4U
+	if (buffer->dma_addr != 0)
+		m4u_unmap(g_mdev, buffer->dma_addr);
+#endif
 	buffer->heap->ops->unmap_dma(buffer->heap, buffer);
 	buffer->heap->ops->free(buffer);
-	mutex_lock(&dev->lock);
+	mutex_lock(&dev->buffer_lock);
 #ifdef CONFIG_ION_KONA
 	buffer->heap->used -= buffer->size;
 #endif
 	rb_erase(&buffer->node, &dev->buffers);
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&dev->buffer_lock);
+	if (buffer->flags & ION_FLAG_CACHED)
+		kfree(buffer->dirty);
 	kfree(buffer);
 }
 
@@ -242,9 +287,9 @@ static int ion_buffer_put(struct ion_buffer *buffer)
 
 static void ion_buffer_add_to_handle(struct ion_buffer *buffer)
 {
-	mutex_lock(&buffer->dev->lock);
+	mutex_lock(&buffer->lock);
 	buffer->handle_count++;
-	mutex_unlock(&buffer->dev->lock);
+	mutex_unlock(&buffer->lock);
 }
 
 static void ion_buffer_remove_from_handle(struct ion_buffer *buffer)
@@ -258,7 +303,7 @@ static void ion_buffer_remove_from_handle(struct ion_buffer *buffer)
 	 * The taskcomm and pid can provide a debug hint as to where this fd
 	 * is in the system
 	 */
-	mutex_lock(&buffer->dev->lock);
+	mutex_lock(&buffer->lock);
 	buffer->handle_count--;
 	BUG_ON(buffer->handle_count < 0);
 	if (!buffer->handle_count) {
@@ -268,7 +313,7 @@ static void ion_buffer_remove_from_handle(struct ion_buffer *buffer)
 		get_task_comm(buffer->task_comm, task);
 		buffer->pid = task_pid_nr(task);
 	}
-	mutex_unlock(&buffer->dev->lock);
+	mutex_unlock(&buffer->lock);
 }
 
 static struct ion_handle *ion_handle_create(struct ion_client *client,
@@ -379,6 +424,149 @@ static void ion_handle_add(struct ion_client *client, struct ion_handle *handle)
 	rb_insert_color(&handle->node, &client->handles);
 }
 
+#ifdef ION_OOM_KILLER_DEBUG
+static size_t ion_debug_print_heap_status(struct ion_device *dev, int heap_id)
+{
+	struct rb_node *n;
+	size_t total_size = 0, orphan = 0, shared = 0;
+	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
+		struct ion_buffer *buffer = rb_entry(n, struct ion_buffer,
+				node);
+		if (buffer->heap->id == heap_id) {
+			total_size += buffer->size;
+			if (!buffer->handle_count)
+				orphan += buffer->size;
+			if (buffer->handle_count > 1)
+				shared += buffer->size;
+		}
+	}
+	pr_info("heap_id(%d) total(%d) orphan(%d) shared(%d)\n",
+			heap_id, total_size, orphan, shared);
+	return total_size;
+}
+
+static int ion_task_exit_notifier(struct notifier_block *self,
+		      unsigned long val, void *data)
+{
+	struct task_struct *task = data;
+	char task_comm[TASK_COMM_LEN];
+
+	get_task_comm(task_comm, task);
+	pr_debug("Task Exit: %16.s: adj(%d) jiff(%lu)\n",
+			task_comm,
+			task->signal->oom_score_adj,
+			jiffies);
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block ion_task_nb = {
+	.notifier_call = ion_task_exit_notifier,
+};
+#endif
+
+#ifdef CONFIG_ION_OOM_KILLER
+static size_t ion_debug_heap_total(struct ion_client *client,
+				   int id, size_t *shared);
+
+int ion_minfree_get(struct ion_heap *heap)
+{
+	int min_free = 0;
+	int lmc_min_free = heap->lmc_min_free;
+
+	if ((lmc_min_free >= 0) && (lmc_min_free <= 100)) {
+		min_free = (heap->size / 100) * lmc_min_free;
+		min_free &= (PAGE_MASK);
+	} else {
+		pr_err("%16.s: min_free(%d) should be in [0-100] range\n",
+				heap->name, min_free);
+	}
+
+	return min_free;
+}
+
+static int ion_shrink(struct ion_device *dev, unsigned int heap_mask,
+		int min_oom_score_adj, int fail_size)
+{
+	struct rb_node *m, *n;
+	struct ion_client *selected_client = NULL;
+	struct ion_heap *selected_heap = NULL;
+	int selected_size = 0;
+	int selected_oom = 0;
+	char task_comm[TASK_COMM_LEN];
+
+	/* TODO: Loop till free mem satisfies fail size. */
+	for (m = rb_first(&dev->heaps); m != NULL; m = rb_next(m)) {
+		struct ion_heap *heap = rb_entry(m, struct ion_heap, node);
+		struct ion_client *client;
+		int shared;
+
+		/* TODO: if the client doesn't support this heap type */
+
+		/* if the caller didn't specify this heap type */
+		if (!((1 << heap->id) & heap_mask))
+			continue;
+		for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
+			size_t size;
+			struct task_struct *p;
+
+			client = rb_entry(n, struct ion_client, node);
+			if (!client->task)
+				continue;
+			p = client->task;
+			if (client->deathpending) {
+#ifdef ION_OOM_KILLER_DEBUG
+				get_task_comm(task_comm, p);
+				pr_debug("Death pending: %16.s: adj(%d) jiff(%lu)\n",
+						task_comm,
+						p->signal->oom_score_adj,
+						jiffies);
+#endif
+				if (time_before_eq(jiffies,
+							client->timeout)) {
+					return -1;
+				}
+				continue;
+			}
+			if (p->signal->oom_score_adj < min_oom_score_adj)
+				continue;
+			size = ion_debug_heap_total(client, heap->id, &shared);
+			if (!size)
+				continue;
+			if (selected_client) {
+				if (p->signal->oom_score_adj < selected_oom)
+					continue;
+				if (p->signal->oom_score_adj == selected_oom &&
+						size <= selected_size)
+					continue;
+			}
+			selected_client = client;
+			selected_heap = heap;
+			selected_size = size;
+			selected_oom = p->signal->oom_score_adj;
+		}
+	}
+	if (selected_client) {
+		struct task_struct *p;
+		int free_space = selected_heap->size - selected_heap->used;
+
+		p = selected_client->task;
+		get_task_comm(task_comm, p);
+		selected_client->deathpending = 1;
+		pr_info("shrink  %16.s heap, free mem(%u), required(%u)\n",
+				selected_heap->name, free_space, fail_size);
+		pr_info("lowmem kill  %16.s: size(%u) adj(%d) timeout(%lu)\n",
+				task_comm, selected_size, selected_oom,
+				selected_client->timeout);
+		send_sig(SIGKILL, p, 0);
+		selected_client->timeout = jiffies + HZ;
+		return selected_size;
+	}
+	return 0;
+}
+
+#endif
+
 struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 			     size_t align, unsigned int heap_mask,
 			     unsigned int flags)
@@ -389,6 +577,9 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 	struct ion_buffer *buffer = NULL;
 #ifdef CONFIG_ION_KONA
 	struct ion_heap *heap_used = NULL;
+#endif
+#ifdef CONFIG_ION_OOM_KILLER
+	int retry_flag;
 #endif
 
 	pr_debug("%s: len %d align %d heap_mask %u flags %x\n", __func__, len,
@@ -404,7 +595,11 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 
 	len = PAGE_ALIGN(len);
 
-	mutex_lock(&dev->lock);
+#ifdef CONFIG_ION_OOM_KILLER
+retry:
+	retry_flag = 0;
+#endif
+	down_read(&dev->lock);
 	for (n = rb_first(&dev->heaps); n != NULL; n = rb_next(n)) {
 		struct ion_heap *heap = rb_entry(n, struct ion_heap, node);
 		/* if the client doesn't support this heap type */
@@ -419,26 +614,62 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 			pr_debug("Try heap(%d):(%d)KB - pid(%d) size(%d)KB\n",
 					heap->id, heap->used>>10,
 					client->task->pid, len>>10);
-#endif
+#endif /* CONFIG_ION_KONA */
 		buffer = ion_buffer_create(heap, dev, len, align, flags);
 		if (!IS_ERR_OR_NULL(buffer))
 			break;
 	}
 #ifdef CONFIG_ION_KONA
-	if (IS_ERR_OR_NULL(buffer)) {
-		if (client->task)
-			pr_err("Alloc Failed: mask(%x) pid(%d) size(%d)KB\n",
-					heap_mask, client->task->pid, len>>10);
-	} else {
+	if (buffer == ERR_PTR(-ENOMEM)) {
+		/* Alloc failed: Kill task to free memory */
+		pr_debug("Alloc Failed. Call shrink: mask(%x) pid(%d) size(%d)KB\n",
+				heap_mask, client->task->pid, len>>10);
+#ifdef CONFIG_ION_OOM_KILLER
+		if (ion_shrink(dev, heap_mask, 0, len))
+			retry_flag = 1;
+#endif /* CONFIG_ION_OOM_KILLER */
+	} else if (!IS_ERR_OR_NULL(buffer)) {
 		heap_used->used += buffer->size;
 		if (client->task)
 			pr_debug("Alloc heap(%d):(%d)KB - pid(%d) size(%d)KB\n",
 					heap_used->id, heap_used->used>>10,
 					client->task->pid, len>>10);
-	}
-#endif
-	mutex_unlock(&dev->lock);
+#ifdef CONFIG_ION_OOM_KILLER
+		if ((heap_used->ops->needs_shrink) &&
+				(heap_used->ops->needs_shrink(heap_used))) {
+			int free_space = heap_used->size - heap_used->used;
+			int min_adj = heap_used->lmc_min_score_adj;
+			int min_free = ion_minfree_get(heap_used);
 
+			if (free_space < min_free) {
+				pr_debug("Lowmem killer heap(%s) adj(%d) minfree(%d)KB: free(%d)KB\n",
+						heap_used->name, min_adj,
+						min_free>>10, free_space>>10);
+				ion_shrink(dev, (1 << heap_used->id), min_adj,
+						0);
+			}
+		}
+#endif /* CONFIG_ION_OOM_KILLER */
+	} else {
+		pr_err("Alloc Failed  heap_mask(%d) size(%d)KB\n",
+				heap_mask,  len>>10);
+	}
+#endif /* CONFIG_ION_KONA */
+	up_read(&dev->lock);
+
+#ifdef CONFIG_ION_OOM_KILLER
+	if (IS_ERR_OR_NULL(buffer)) {
+		if (!fatal_signal_pending(current) && retry_flag) {
+			/* Schedule out and wait for the task to which signal
+			 *  was sent to free the memory and exit */
+			msleep(20);
+			goto retry;
+		}
+		if (client->task)
+			pr_err("Alloc Failed: mask(%x) pid(%d) size(%d)KB\n",
+					heap_mask, client->task->pid, len>>10);
+	}
+#endif /* CONFIG_ION_OOM_KILLER */
 	if (buffer == NULL)
 		return ERR_PTR(-ENODEV);
 
@@ -683,7 +914,7 @@ struct ion_client *ion_client_create(struct ion_device *dev,
 	client->task = task;
 	client->pid = pid;
 
-	mutex_lock(&dev->lock);
+	down_write(&dev->lock);
 	p = &dev->clients.rb_node;
 	while (*p) {
 		parent = *p;
@@ -701,7 +932,7 @@ struct ion_client *ion_client_create(struct ion_device *dev,
 	client->debug_root = debugfs_create_file(debug_name, 0664,
 						 dev->debug_root, client,
 						 &debug_client_fops);
-	mutex_unlock(&dev->lock);
+	up_write(&dev->lock);
 
 	return client;
 }
@@ -717,12 +948,12 @@ void ion_client_destroy(struct ion_client *client)
 						     node);
 		ion_handle_destroy(&handle->ref);
 	}
-	mutex_lock(&dev->lock);
+	down_write(&dev->lock);
 	if (client->task)
 		put_task_struct(client->task);
 	rb_erase(&client->node, &dev->clients);
 	debugfs_remove_recursive(client->debug_root);
-	mutex_unlock(&dev->lock);
+	up_write(&dev->lock);
 
 	kfree(client);
 }
@@ -795,7 +1026,7 @@ static void ion_buffer_sync_for_device(struct ion_buffer *buffer,
 	pr_debug("%s: syncing for device %s\n", __func__,
 		 dev ? dev_name(dev) : "null");
 
-	if (!(buffer->flags & ION_FLAG_CACHED))
+	if (!ion_buffer_fault_user_mappings(buffer))
 		return;
 
 	mutex_lock(&buffer->lock);
@@ -885,17 +1116,20 @@ static int ion_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 		return -EINVAL;
 	}
 
-	if (buffer->flags & ION_FLAG_CACHED) {
+	if (ion_buffer_fault_user_mappings(buffer)) {
 		vma->vm_private_data = buffer;
 		vma->vm_ops = &ion_vma_ops;
 		ion_vm_open(vma);
-	} else {
-		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
-		mutex_lock(&buffer->lock);
-		/* now map it to userspace */
-		ret = buffer->heap->ops->map_user(buffer->heap, buffer, vma);
-		mutex_unlock(&buffer->lock);
+		return 0;
 	}
+
+	if (!(buffer->flags & ION_FLAG_CACHED))
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+
+	mutex_lock(&buffer->lock);
+	/* now map it to userspace */
+	ret = buffer->heap->ops->map_user(buffer->heap, buffer, vma);
+	mutex_unlock(&buffer->lock);
 
 	if (ret)
 		pr_err("%s: failure mapping buffer to userspace\n",
@@ -1053,7 +1287,9 @@ static int ion_sync_for_device(struct ion_client *client, int fd)
 		return -EINVAL;
 	}
 	buffer = dmabuf->priv;
-	ion_buffer_sync_for_device(buffer, NULL, DMA_BIDIRECTIONAL);
+
+	dma_sync_sg_for_device(NULL, buffer->sg_table->sgl,
+			       buffer->sg_table->nents, DMA_BIDIRECTIONAL);
 	dma_buf_put(dmabuf);
 	return 0;
 }
@@ -1218,6 +1454,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	size_t total_size = 0;
 	size_t total_orphaned_size = 0;
 	size_t total_shared_size = 0;
+	int free_heap = 1;
 
 	seq_printf(s, "%s:\n", heap->name);
 	seq_printf(s, "%16.s %16.s %16.s %16.s %16.s\n",
@@ -1231,6 +1468,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 		size_t size = ion_debug_heap_total(client, heap->id, &shared);
 		if (!size)
 			continue;
+		free_heap = 0;
 		if (client->task) {
 			char task_comm[TASK_COMM_LEN];
 
@@ -1245,27 +1483,52 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 					(shared>>10));
 		}
 	}
+	if (free_heap)
+		seq_printf(s, "  No allocations present.\n");
 	seq_printf(s, "----------------------------------------------------\n");
 	seq_printf(s, "orphaned allocations (info is from last known client):"
 		   "\n");
-	mutex_lock(&dev->lock);
+	mutex_lock(&dev->buffer_lock);
 	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
 		struct ion_buffer *buffer = rb_entry(n, struct ion_buffer,
 						     node);
-		if (buffer->heap->id == heap->id) {
-			total_size += buffer->size;
-			if (!buffer->handle_count) {
-				seq_printf(s, "%16.s %16u %13u KB\n",
-						buffer->task_comm,
-						buffer->pid, buffer->size);
-				total_orphaned_size += buffer->size;
-			}
-			if (buffer->handle_count > 1)
-				total_shared_size += buffer->size;
+		if (buffer->heap->id != heap->id)
+			continue;
+		total_size += buffer->size;
+		if (!buffer->handle_count) {
+			seq_printf(s, "%16.s %16u %16u %d %d\n", buffer->task_comm,
+				   buffer->pid, buffer->size, buffer->kmap_cnt,
+				   atomic_read(&buffer->ref.refcount));
+			total_orphaned_size += buffer->size;
 		}
+		if (buffer->handle_count > 1)
+			total_shared_size += buffer->size;
 	}
-	mutex_unlock(&dev->lock);
+	mutex_unlock(&dev->buffer_lock);
+	if (!total_orphaned_size)
+		seq_printf(s, "  No memory leak.\n");
 	seq_printf(s, "----------------------------------------------------\n");
+
+#ifdef CONFIG_ION_OOM_KILLER
+	seq_printf(s, "Lowmemkiller Info:\n");
+	if ((heap->ops->needs_shrink) &&
+			(heap->ops->needs_shrink(heap))) {
+		int min_free = ion_minfree_get(heap);
+
+		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
+				"free mem", "threshold", "min_adj",
+				((heap->size - heap->used)>>10),
+				min_free>>10, heap->lmc_min_score_adj);
+	} else {
+		seq_printf(s, "  Lowmemkiller disabled.\n");
+	}
+	seq_printf(s, "----------------------------------------------------\n");
+#endif
+
+	if (heap->debug_show)
+		heap->debug_show(heap, s, unused);
+	seq_printf(s, "----------------------------------------------------\n");
+
 	seq_printf(s, "Summary:\n");
 	if (heap->size)
 		seq_printf(s, "%16.s %13u KB\n", "total reserved",
@@ -1276,7 +1539,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	seq_printf(s, "%16.s %13u KB\n", "total orphaned",
 			(total_orphaned_size>>10));
 	seq_printf(s, "----------------------------------------------------\n");
-
+	seq_printf(s, "\n\n");
 	return 0;
 }
 
@@ -1297,6 +1560,9 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 	struct rb_node **p = &dev->heaps.rb_node;
 	struct rb_node *parent = NULL;
 	struct ion_heap *entry;
+#ifdef CONFIG_ION_OOM_KILLER
+	char debug_name[64];
+#endif
 
 	if (!heap->ops->allocate || !heap->ops->free || !heap->ops->map_dma ||
 	    !heap->ops->unmap_dma)
@@ -1304,7 +1570,7 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 		       __func__);
 
 	heap->dev = dev;
-	mutex_lock(&dev->lock);
+	down_write(&dev->lock);
 	while (*p) {
 		parent = *p;
 		entry = rb_entry(parent, struct ion_heap, node);
@@ -1324,8 +1590,21 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 	rb_insert_color(&heap->node, &dev->heaps);
 	debugfs_create_file(heap->name, 0664, dev->debug_root, heap,
 			    &debug_heap_fops);
+#ifdef CONFIG_ION_OOM_KILLER
+	snprintf(debug_name, 64, "lmc_%s", heap->name);
+	heap->lmc_debug_root = debugfs_create_dir(debug_name, dev->debug_root);
+	debugfs_create_u32("enable", (S_IRUGO|S_IWUSR),
+			heap->lmc_debug_root,
+			(unsigned int *)&heap->lmc_enable);
+	debugfs_create_u32("oom_score_adj", (S_IRUGO|S_IWUSR),
+			heap->lmc_debug_root,
+			(unsigned int *)&heap->lmc_min_score_adj);
+	debugfs_create_u32("min_free", (S_IRUGO|S_IWUSR),
+			heap->lmc_debug_root,
+			(unsigned int *)&heap->lmc_min_free);
+#endif
 end:
-	mutex_unlock(&dev->lock);
+	up_write(&dev->lock);
 }
 
 struct ion_device *ion_device_create(long (*custom_ioctl)
@@ -1358,9 +1637,14 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 	if (IS_ERR_OR_NULL(idev->debug_root))
 		pr_err("ion: failed to create debug files.\n");
 
+#ifdef ION_OOM_KILLER_DEBUG
+	task_free_register(&ion_task_nb);
+#endif
+
 	idev->custom_ioctl = custom_ioctl;
 	idev->buffers = RB_ROOT;
-	mutex_init(&idev->lock);
+	mutex_init(&idev->buffer_lock);
+	init_rwsem(&idev->lock);
 	idev->heaps = RB_ROOT;
 	idev->clients = RB_ROOT;
 	return idev;

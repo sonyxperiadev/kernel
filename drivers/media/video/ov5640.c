@@ -29,6 +29,12 @@
 #ifdef CONFIG_VIDEO_ADP1653
 #include "adp1653.h"
 #endif
+
+#ifdef CONFIG_VIDEO_AS3643
+#include "as3643.h"
+#endif
+
+
 /* #define OV5640_DEBUG */
 
 #define iprintk(format, arg...)	\
@@ -194,7 +200,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
 			      .v_even_ss_inc = 1,
+#ifdef CONFIG_MACH_HAWAII_GARNET
+				  .out_mode_sel = 0x01,
+#else
 			      .out_mode_sel = 0x07,
+#endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			       },
@@ -218,7 +228,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
 			      .v_even_ss_inc = 1,
+#ifdef CONFIG_MACH_HAWAII_GARNET
+				  .out_mode_sel = 0x01,
+#else
 			      .out_mode_sel = 0x07,
+#endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			       },
@@ -242,7 +256,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
 			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x07,
+#ifdef CONFIG_MACH_HAWAII_GARNET
+				  .out_mode_sel = 0x01,
+#else
+				  .out_mode_sel = 0x07,
+#endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			      },
@@ -266,7 +284,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
 			      .v_even_ss_inc = 1,
+#ifdef CONFIG_MACH_HAWAII_GARNET
+				  .out_mode_sel = 0x01,
+#else
 			      .out_mode_sel = 0x07,
+#endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			      },
@@ -290,7 +312,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
+#ifdef CONFIG_MACH_HAWAII_GARNET
+				  .out_mode_sel = 0x00,
+#else
 			      .out_mode_sel = 0x06,
+#endif
 			      .sclk_dividers = 0x02,
 			      .sys_mipi_clk = 0x12,
 			      },
@@ -314,7 +340,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x06,
+#ifdef CONFIG_MACH_HAWAII_GARNET
+				  .out_mode_sel = 0x00,
+#else
+				  .out_mode_sel = 0x06,
+#endif
 			      .sclk_dividers = 0x02,
 			      .sys_mipi_clk = 0x12,
 			      },
@@ -338,7 +368,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x06,
+#ifdef CONFIG_MACH_HAWAII_GARNET
+				  .out_mode_sel = 0x00,
+#else
+				  .out_mode_sel = 0x06,
+#endif
 			      .sclk_dividers = 0x02,
 			      .sys_mipi_clk = 0x12,
 			      },
@@ -665,7 +699,11 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	{
 	 .id = V4L2_CID_CAMERA_FLASH_MODE,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
+#ifdef CONFIG_VIDEO_AS3643
+	 .name = "AS3643-flash",
+#else
 	 .name = "ADP1653-flash",
+#endif
 	 .minimum = FLASH_MODE_OFF,
 	 .maximum = (1 << FLASH_MODE_OFF) | (1 << FLASH_MODE_ON) | (1 << FLASH_MODE_TORCH_OFF) |
 	 		(1 << FLASH_MODE_TORCH_ON),
@@ -1483,6 +1521,12 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 			adp1653_gpio_toggle(0);	
 		}
 #endif
+#ifdef CONFIG_VIDEO_AS3643
+        if(ov5640->flashmode != FLASH_MODE_OFF){
+        as3643_clear_all();
+        as3643_gpio_toggle(0);
+                                                    }
+#endif
 		ov5640->flashmode = FLASH_MODE_OFF;		
 	}
 
@@ -2088,6 +2132,14 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			}
 			ov5640->flashmode = FLASH_MODE_OFF;
 #endif
+#ifdef CONFIG_VIDEO_AS3643
+			if (ov5640->flashmode != FLASH_MODE_OFF) {
+				as3643_clear_all();
+				as3643_gpio_toggle(0);
+			}
+			ov5640->flashmode = FLASH_MODE_OFF;
+#endif
+
 		} else if (ctrl->value == FLASH_MODE_TORCH_ON){
 #ifdef CONFIG_VIDEO_ADP1653
 			adp1653_gpio_toggle(1);
@@ -2097,7 +2149,13 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			adp1653_set_torch_flash(10); /* Torch current no indicator LED */
 			adp1653_sw_strobe(1);
 			ov5640->flashmode = ctrl->value;
-#endif			
+#endif		
+#ifdef CONFIG_VIDEO_AS3643
+			as3643_gpio_toggle(1);
+			usleep_range(25, 30);
+			as3643_set_torch_flash(0x80);
+			ov5640->flashmode = ctrl->value;
+#endif
 		} else if (ctrl->value == FLASH_MODE_ON){
 #ifdef CONFIG_VIDEO_ADP1653
 			adp1653_gpio_toggle(1);
@@ -2107,7 +2165,14 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			adp1653_set_torch_flash(28); /* Flash current indicator LED ON */
 			ov5640->flashmode = ctrl->value;
 			/* Strobing should hapen later */
-#endif			
+#endif		
+#ifdef CONFIG_VIDEO_AS3643
+			as3643_gpio_toggle(1);
+			usleep_range(25, 30);
+			as3643_set_ind_led(0x80);
+			ov5640->flashmode = ctrl->value;
+#endif
+
 		} else {
 			ret = -EINVAL;
 		}
