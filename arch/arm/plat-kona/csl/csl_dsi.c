@@ -394,12 +394,18 @@ static void cslDsi0Stat_LISR(void)
 	DSI_HANDLE dsiH = &dsiBus[0];
 
 	uint32_t int_status = chal_dsi_get_int(dsiH->chalH);
+	if (!int_status) {
+		pr_err("DSI interrupt status is NULL. Hence ignoring\n");
+		return IRQ_HANDLED;
+	}
 	mb();
 	if (int_status & (1 << 22))
 		pr_info("dsi int fifo error 0x%x\n", int_status);
 
 	chal_dsi_ena_int(dsiH->chalH, 0);
+	mb();
 	chal_dsi_clr_int(dsiH->chalH, int_status);
+	mb();
 
 	OSSEMAPHORE_Release(dsiH->semaInt);
 
