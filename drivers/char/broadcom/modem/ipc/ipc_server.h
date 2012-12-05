@@ -22,6 +22,7 @@ extern "C" {
 	extern int IPC_IsCpIpcInit(void *pSmBase, IPC_CPU_ID_T Cpu);
 	extern void abort(void);
 
+	extern int ipc_crashsupport_init(void);
 #if defined(CONFIG_BCM215X_PM) && defined(CONFIG_ARCH_BCM2153)
 	extern void
 	    pm_ipc_power_saving_init(IPC_PlatformSpecificPowerSavingInfo_T *

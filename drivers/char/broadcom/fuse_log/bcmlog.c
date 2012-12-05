@@ -48,9 +48,10 @@
 
 #include <linux/fs.h>
 #include <linux/uaccess.h>
-
+#include <linux/vmalloc.h>
 #include <linux/mtd/mtd.h>
 #include <linux/broadcom/ipcinterface.h>
+#include <mach/ns_ioremap.h>
 
 #include "bcmmtt.h"
 #include "bcmlog.h"
@@ -130,6 +131,10 @@ static void BCMLOG_klogging_crashdump(const char *buf, int size)
 #endif
 	mdelay(10);
 }
+
+struct vm_struct *bcmlog_cpmap_area;
+
+#define get_vaddr(area)	(bcmlog_cpmap_area->addr + area)
 
 static unsigned int compress_memcpy(char *dest, char *src,
 				    unsigned short nbytes);
@@ -471,6 +476,21 @@ static int BCMLOG_Release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+int __init bcmlog_crashsupport_init(void)
+{
+	bcmlog_cpmap_area = plat_get_vm_area(BCMLOG_IOREMAP_NUM_PAGES);
+
+	if (!bcmlog_cpmap_area) {
+		pr_err("bcmlog_cpmap_area:Failed to allocate vm area\n");
+		return -ENOMEM;
+	}
+
+	pr_info("bcmlog:vm area:start:0x%lx, size:%lx\n",
+			(unsigned long __force)bcmlog_cpmap_area->addr,
+			bcmlog_cpmap_area->size);
+	return 0;
+}
+
 /**
  *	Called by Linux I/O system to initialize module.
  *	@return	int		0 if success, -1 if error
@@ -490,6 +510,9 @@ static int __init BCMLOG_ModuleInit(void)
 	sDumpFile = NULL;
 	g_module.console_msg_lvl = BCMLOG_CONSOLE_MSG_LVL;
 	g_module.logdrv_class = NULL;
+
+	if (bcmlog_crashsupport_init())
+		return -1;
 
 	if (0 != BCMLOG_OutputInit()) {
 		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR, "output init error\n");
@@ -1666,13 +1689,12 @@ void BCMLOG_LogCPCrashDumpString(const char *inLogString)
  **/
 void BCMLOG_HandleCpCrashMemDumpData(const char *inPhysAddr, int size)
 {
-	unsigned long p, sz, csz, n;
+	unsigned long p, sz, csz, n, progress;
 	unsigned char *pHbuf;
 	unsigned char *pLength;
 	unsigned char *pChksum;
 	unsigned short chksum;
 	char tmpStr[255];
-	void __iomem *MemDumpVAddr = NULL;
 	unsigned long currPhysical = (unsigned long)inPhysAddr;
 
 	/* make sure we were able to allocate our buffer... */
@@ -1685,19 +1707,7 @@ void BCMLOG_HandleCpCrashMemDumpData(const char *inPhysAddr, int size)
 		BCMLOG_LogCPCrashDumpString(tmpStr);
 		return;
 	}
-	/* get virtual address of mem dump area */
-	MemDumpVAddr = ioremap_nocache((unsigned long)(inPhysAddr), size);
-	if (NULL == MemDumpVAddr) {
-		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
-			      "BCMLOG_HandleCpCrashMemDumpData: failed to remap CP dump addr\n");
-		snprintf(tmpStr, 255,
-			 "*** %s: failed to remap CP dump addr ***", __func__);
-		BCMLOG_LogCPCrashDumpString(tmpStr);
-		return;
-	}
 
-	BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_DEBUG, " MemDumpVAddr:0x%x size %d\n",
-		      (int)MemDumpVAddr, size);
 	BCMLOG_LogCPCrashDumpString("** BCMLOG_HandlCpCrashMemDumpData **\n");
 
 	/**
@@ -1705,14 +1715,28 @@ void BCMLOG_HandleCpCrashMemDumpData(const char *inPhysAddr, int size)
 	 * DUMP_Signal() from CIB dump.c
 	 **/
 	n = 0;
-	for (p = (unsigned long)MemDumpVAddr;
-	     p < (unsigned long)MemDumpVAddr + size;
-	     p += (WORDS_PER_SIGNAL << 2), currPhysical +=
-	     (WORDS_PER_SIGNAL << 2)) {
-		sz = (unsigned long)MemDumpVAddr + size - p;
+	for (progress = 0; progress < size; currPhysical +=
+	     (WORDS_PER_SIGNAL << 2), progress += (WORDS_PER_SIGNAL << 2)) {
+		sz = size - progress;
 		if (sz > (WORDS_PER_SIGNAL << 2))
 			sz = WORDS_PER_SIGNAL << 2;
 
+		p = (unsigned long) plat_ioremap_ns((unsigned long __force)
+				get_vaddr(BCMLOG_IOREMAP_AREA),
+				BCMLOG_IOREMAP_AREA_SZ,
+				(phys_addr_t)currPhysical);
+
+		if (!p) {
+			BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+					"BCMLOG: remap failed 0x%lx, 0x%lx\n",
+					p, currPhysical);
+			snprintf(tmpStr, 255,
+					"%s remap failed 0x%lx, 0x%lx",
+					__func__, p, currPhysical);
+
+			BCMLOG_LogCPCrashDumpString(tmpStr);
+			return;
+		}
 		/**
 		 * **FIXME** MAG doesn't appear to be needed under Android...
 		 * address p may point to unreadable address; memcpy here for
@@ -1768,8 +1792,8 @@ void BCMLOG_HandleCpCrashMemDumpData(const char *inPhysAddr, int size)
 		if (n >= 32) {
 			n = 0;
 			snprintf(tmpStr, 255,
-				 "CP memory dump done %d of %d bytes. Do not stop logging",
-				 (int)(p - (unsigned long)MemDumpVAddr), size);
+				 "CP memory dump done %ld of %d bytes. Do not stop logging",
+				 progress, size);
 			BCMLOG_LogCPCrashDumpString(tmpStr);
 		}
 		/**
@@ -1779,6 +1803,9 @@ void BCMLOG_HandleCpCrashMemDumpData(const char *inPhysAddr, int size)
 			set_current_state(TASK_INTERRUPTIBLE);
 			schedule_timeout(1);
 		}
+
+		plat_iounmap_ns(get_vaddr(BCMLOG_IOREMAP_AREA),
+				free_size_bcmlog(BCMLOG_IOREMAP_AREA_SZ));
 	}
 }
 

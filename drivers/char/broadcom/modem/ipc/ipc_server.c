@@ -586,6 +586,9 @@ static int __init ipcs_module_init(void)
 	int rc = -1;
 	struct proc_dir_entry *dir;
 
+	if (ipc_crashsupport_init())
+		goto out;
+
 	dir =
 	    create_proc_read_entry("driver/bcmipc", 0, NULL, ipcs_read_proc,
 				   NULL);
