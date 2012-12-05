@@ -573,7 +573,10 @@ void dormant_enter(u32 service)
 
 		/* save all proc registers except arm_sys_idle_dly */
 		save_proc_clk_regs();
-		save_addnl_regs();
+		/*TODO: Saving the funnel registers and restoring
+		 * back needs to be logical
+		 */
+		/* save_addnl_regs(); */
 
 		/* Write to spare register and enable pwr_mgr dormant only in case of actual dormant entry */
 		if(!fake_dormant && !(force_retention_in_idle && (service==DORMANT_CORE_DOWN))) {
@@ -684,7 +687,11 @@ void dormant_enter(u32 service)
 			 * us first restore the proc registers
 			 */
 			restore_proc_clk_regs();
-			restore_addnl_regs();
+			/*TODO: Need to restore the right funnel value
+			 * as exiting out of dormant may not have
+			 * the required sequence.
+			 */
+			/* restore_addnl_regs();*/
 		}
 
 		/* restore everything that is specific to this core */
