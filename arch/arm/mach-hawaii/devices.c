@@ -673,6 +673,7 @@ struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
 	.latency = 10 * 1000,
 	.pi_id = PI_MGR_PI_ID_ARM_CORE,
 	.cpufreq_init = hawaii_cpufreq_init,
+	.flags = KONA_CPUFREQ_UPDATE_LPJ,
 };
 
 struct platform_device kona_cpufreq_device = {

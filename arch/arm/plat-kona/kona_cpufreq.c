@@ -154,6 +154,7 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 	}
 	freqs.old = kona_cpufreq_get_speed(policy->cpu);
 	freqs.new = kona_cpufreq->kona_freqs_table[index].frequency;
+	freqs.cpu = policy->cpu;
 
 	if (freqs.old == freqs.new)
 		return 0;
@@ -178,14 +179,11 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 	}
 
 	local_irq_enable();
-	for_each_online_cpu(freqs.cpu)
-	    cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 #ifdef CONFIG_SMP
 	if (pdata->flags & KONA_CPUFREQ_UPDATE_LPJ) {
 		int i;
 		for_each_online_cpu(i) {
-
 			per_cpu(cpu_data, i).loops_per_jiffy =
 			    cpufreq_scale(kona_cpufreq->l_p_j_ref,
 					  kona_cpufreq->l_p_j_ref_freq,
@@ -193,6 +191,8 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 		}
 	}
 #endif
+	for_each_online_cpu(freqs.cpu)
+	    cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 	return ret;
 }
@@ -240,6 +240,14 @@ static int kona_cpufreq_init(struct cpufreq_policy *policy)
 	kona_cpufreq->policy = policy;
 
 #ifdef CONFIG_SMP
+	/*
+	 * Multi-core processors where
+	 * the frequency cannot be set independently for each core.
+	 * Each cpu is bound to the same speed.
+	 * So the affected cpu is all of the cpus.
+	 */
+	cpumask_setall(policy->cpus);
+
 	if (kona_cpufreq->l_p_j_ref == 0
 	    && (pdata->flags & KONA_CPUFREQ_UPDATE_LPJ)) {
 		kona_cpufreq->l_p_j_ref = per_cpu(cpu_data, 0).loops_per_jiffy;
