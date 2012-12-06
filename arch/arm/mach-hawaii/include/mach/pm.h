@@ -115,7 +115,12 @@ extern void enter_wfi(void);
 extern void dbg_gpio_set(u32 gpio);
 extern void dbg_gpio_clr(u32 gpio);
 extern int hawaii_force_sleep(suspend_state_t state);
+
+#ifdef CONFIG_EARLYSUSPEND
 extern void request_suspend_state(suspend_state_t state);
+#else
+static inline void request_suspend_state(suspend_state_t state) { }
+#endif
 extern void instrument_dormant_entry(void);
 extern void instrument_dormant_exit(void);
 extern void instrument_wfi(int trace_path);

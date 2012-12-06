@@ -26,9 +26,7 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
-#ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
-#endif
 #include <linux/semaphore.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
@@ -88,9 +86,7 @@ static RAW_NOTIFIER_HEAD(cp_state_notifier_list);
 static DEFINE_SPINLOCK(cp_state_notifier_lock);
 
 extern void ipc_set_interrupt_mask(void);
-#ifdef CONFIG_HAS_WAKELOCK
 struct wake_lock ipc_wake_lock;
-#endif
 static IPC_PlatformSpecificPowerSavingInfo_T ipc_ps;
 
 extern int IpcCPCrashCheck(void);
@@ -220,9 +216,7 @@ void ipcs_intr_tasklet_handler(unsigned long data)
 		IPC_ProcessEvents();
 	} else {
 		IPC_ProcessEvents();
-#ifdef CONFIG_HAS_WAKELOCK
 		wake_unlock(&ipc_wake_lock);
-#endif
 	}
 }
 
@@ -241,9 +235,7 @@ static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 
 	IPC_UpdateIrqStats();
 
-#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&ipc_wake_lock);
-#endif
 	tasklet_schedule(&g_ipc_info.intr_tasklet);
 
 	return IRQ_HANDLED;
@@ -652,9 +644,7 @@ static int __init ipcs_module_init(void)
 
 	IPC_DEBUG(DBG_TRACE, "ok\n");
 
-#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&ipc_wake_lock, WAKE_LOCK_SUSPEND, "ipc_wake_lock");
-#endif
 
 	IPC_DEBUG(DBG_TRACE, "request_irq\n");
 	rc = request_irq(IRQ_IPC_C2A, ipcs_interrupt, IRQF_NO_SUSPEND,
@@ -670,8 +660,8 @@ static int __init ipcs_module_init(void)
 	return 0;
 
 out_irq_req_fail:
-	wake_lock_destroy(&ipc_wake_lock);
 
+	wake_lock_destroy(&ipc_wake_lock);
 out_ipc_init_fail:
 	iounmap(g_ipc_info.apcp_shmem);
 
@@ -694,9 +684,7 @@ static void __exit ipcs_module_exit(void)
 
 	free_irq(IRQ_IPC_C2A, &g_ipc_info);
 
-#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&ipc_wake_lock);
-#endif
 	device_destroy(g_ipc_info.mDriverClass, MKDEV(IPC_MAJOR, 0));
 	class_destroy(g_ipc_info.mDriverClass);
 

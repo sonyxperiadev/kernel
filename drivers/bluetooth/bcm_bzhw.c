@@ -21,7 +21,6 @@
 #include <linux/platform_device.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
-
 #include <linux/interrupt.h>
 #include <asm/irq.h>
 #include <linux/uaccess.h>
@@ -98,10 +97,9 @@ void bcm_bzhw_timer_bt_wake(unsigned long data)
 				      PI_MGR_QOS_DEFAULT_VALUE);
 		priv->bzhw_state = BZHW_ASLEEP;
 		del_timer(&sleep_timer_bw);
-#ifdef CONFIG_HAS_WAKELOCK
+
 	if (wake_lock_active(&priv_g->bzhw_data.bt_wake_lock))
 		wake_unlock(&priv_g->bzhw_data.bt_wake_lock);
-#endif
 	} else {
 		pr_debug("%s BLUETOOTH: state changed restart timer\n",
 		__func__);
@@ -140,10 +138,8 @@ void bcm_bzhw_timer_host_wake(unsigned long data)
 				      PI_MGR_QOS_DEFAULT_VALUE);
 			priv->bzhw_state = BZHW_ASLEEP;
 			del_timer(&priv->sleep_timer_hw);
-			#ifdef CONFIG_HAS_WAKELOCK
 			if (wake_lock_active(&priv->bzhw_data.host_wake_lock))
 				wake_unlock(&priv->bzhw_data.host_wake_lock);
-			#endif
 
 		} else {
 			pr_err("%s BLUETOOTH: state changed Asleep to Awake\n",
@@ -172,10 +168,8 @@ void bcm_bzhw_timer_host_wake(unsigned long data)
 		pi_mgr_qos_request_update(&priv->qos_node,
 			PI_MGR_QOS_DEFAULT_VALUE);
 		del_timer(&priv->sleep_timer_hw);
-		#ifdef CONFIG_HAS_WAKELOCK
 			if (wake_lock_active(&priv->bzhw_data.host_wake_lock))
 				wake_unlock(&priv->bzhw_data.host_wake_lock);
-		#endif
 	} else {
 	hostwake = gpio_get_value(priv->bzhw_data.gpio_host_wake);
 	if (hostwake == BZHW_HOST_WAKE_DEASSERT) {
@@ -201,10 +195,8 @@ void bcm_bzhw_timer_host_wake(unsigned long data)
 	} else if (hostwake == BZHW_HOST_WAKE_ASSERT) {
 			pr_debug("%s BLUETOOTH: change state to Awake\n",
 				__func__);
-		#ifdef CONFIG_HAS_WAKELOCK
 		if (!(wake_lock_active(&priv->bzhw_data.host_wake_lock)))
 			wake_lock(&priv->bzhw_data.host_wake_lock);
-		#endif
 			pi_mgr_qos_request_update(&priv->qos_node,
 				      0);
 			priv->bzhw_state = BZHW_AWAKE;
@@ -281,12 +273,10 @@ int bcm_bzhw_assert_bt_wake(int bt_wake_gpio, struct pi_mgr_qos_node *lqos_node,
 	gpio_set_value(bt_wake_gpio, BZHW_BT_WAKE_ASSERT);
 	pr_debug("%s BLUETOOTH:ASSERT BT_WAKE\n", __func__);
 	rc = pi_mgr_qos_request_update(lqos_node, 0);
-#ifdef CONFIG_HAS_WAKELOCK
 	if (priv_g != NULL) {
 		if (!wake_lock_active(&priv_g->bzhw_data.bt_wake_lock))
 			wake_lock(&priv_g->bzhw_data.bt_wake_lock);
 	}
-#endif
 	return 0;
 }
 
@@ -300,12 +290,10 @@ int bcm_bzhw_deassert_bt_wake(int bt_wake_gpio, int host_wake_gpio)
 		if (ret) {
 			pr_debug("%s: Bluetooth: Is timer pending Yes, so do nothing\n",
 			__func__);
-		#ifdef CONFIG_HAS_WAKELOCK
 		if (priv_g != NULL) {
 			if (wake_lock_active(&priv_g->bzhw_data.bt_wake_lock))
 				wake_unlock(&priv_g->bzhw_data.bt_wake_lock);
 			}
-			#endif
 		} else {
 			pr_debug("%s: Bluetooth: Is timer pending : No\n",
 				__func__);
@@ -342,10 +330,8 @@ static int bcm_bzhw_init_bt_wake(struct bcmbzhw_struct *priv)
 
 	rc = gpio_direction_output(priv->pdata->gpio_bt_wake,
 				BZHW_BT_WAKE_DEASSERT);
-#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&priv->bzhw_data.bt_wake_lock,
 			WAKE_LOCK_SUSPEND, "BTWAKE");
-#endif
 	priv->bzhw_data.gpio_bt_wake = priv->pdata->gpio_bt_wake;
 	return 0;
 
@@ -356,9 +342,7 @@ static void bcm_bzhw_clean_bt_wake(struct bcmbzhw_struct *priv)
 	if (priv->pdata->gpio_bt_wake < 0)
 		return;
 
-#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&priv->bzhw_data.bt_wake_lock);
-#endif
 	gpio_free((unsigned)priv->pdata->gpio_bt_wake);
 
 }
@@ -378,10 +362,8 @@ static irqreturn_t bcm_bzhw_host_wake_isr(int irq, void *dev)
 	if (BZHW_HOST_WAKE_ASSERT == host_wake) {
 		pr_debug("%s BLUETOOTH: hostwake ISR Assert\n", __func__);
 		/* wake up peripheral clock */
-#ifdef CONFIG_HAS_WAKELOCK
 	if (!wake_lock_active(&priv->bzhw_data.host_wake_lock))
 		wake_lock(&priv->bzhw_data.host_wake_lock);
-#endif
 		ret = pi_mgr_qos_request_update(&priv->qos_node, 0);
 		priv->bzhw_state = BZHW_AWAKE;
 		spin_unlock_irqrestore(&priv->bzhw_lock, flags);
@@ -404,10 +386,8 @@ static int bcm_bzhw_init_hostwake(struct bcmbzhw_struct *priv)
 	int rc;
 	if (priv->pdata->gpio_host_wake < 0)
 		return 0;
-#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&priv->bzhw_data.host_wake_lock, WAKE_LOCK_SUSPEND,
 		       "HOSTWAKE");
-#endif
 
 	rc = gpio_request(priv->pdata->gpio_host_wake, "BT Host Power Mgmt");
 	if (rc) {
@@ -430,9 +410,7 @@ static void bcm_bzhw_clean_host_wake(struct bcmbzhw_struct *priv)
 	if (priv->bzhw_data.host_irq >= 0)
 		free_irq(priv->bzhw_data.host_irq, bcm_bzhw_host_wake_isr);
 
-#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&priv->bzhw_data.host_wake_lock);
-#endif
 	gpio_free((unsigned)priv->pdata->gpio_host_wake);
 
 }
@@ -489,9 +467,7 @@ struct bcmbzhw_struct *bcm_bzhw_start(struct tty_struct* tty)
 		return NULL;
 	}
 exit_lock_host_wake:
-#ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&priv_g->bzhw_data.host_wake_lock);
-#endif
 	gpio_free((unsigned)priv_g->pdata->gpio_host_wake);
 	return NULL;
 
@@ -509,12 +485,12 @@ void bcm_bzhw_stop(struct bcmbzhw_struct *hw_val)
 	del_timer(&sleep_timer_bw);
 	pi_mgr_qos_request_update(&hw_val->qos_node,
 				    PI_MGR_QOS_DEFAULT_VALUE);
+
 	if (wake_lock_active(&hw_val->bzhw_data.host_wake_lock))
 		wake_unlock(&hw_val->bzhw_data.host_wake_lock);
 
 	if (wake_lock_active(&hw_val->bzhw_data.bt_wake_lock))
 		wake_unlock(&hw_val->bzhw_data.bt_wake_lock);
-
 	if (hw_val->bzhw_data.host_irq >= 0)
 		free_irq(hw_val->bzhw_data.host_irq, hw_val);
 
