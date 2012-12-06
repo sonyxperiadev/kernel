@@ -1054,6 +1054,21 @@ static struct batt_volt_cap_map bl_84_volt_cap_lut[] = {
 	{3300, 0},
 };
 
+static struct batt_eoc_curr_cap_map bl_84_eoc_cap_lut[] = {
+	{290, 90},
+	{270, 91},
+	{250, 92},
+	{228, 93},
+	{208, 94},
+	{185, 95},
+	{165, 96},
+	{145, 97},
+	{125, 98},
+	{105, 99},
+	{85, 100},
+	{0, 100},
+};
+
 static struct vfloat_lvl_volt_map bcmpmu59xxx_vfloat_volt_map[] = {
 	{VFLOAT_LVL_3_4, 3400},
 	{VFLOAT_LVL_3_6, 3600},
@@ -1176,6 +1191,8 @@ static struct bcmpmu_batt_property bl_84_props = {
 	.volt_cap_lut_sz = ARRAY_SIZE(bl_84_volt_cap_lut),
 	.esr_temp_lut = bl_84_esr_temp_lut,
 	.esr_temp_lut_sz = ARRAY_SIZE(bl_84_esr_temp_lut),
+	.eoc_cap_lut = bl_84_eoc_cap_lut,
+	.eoc_cap_lut_sz = ARRAY_SIZE(bl_84_eoc_cap_lut),
 };
 
 static struct bcmpmu_batt_cap_levels bl_84_cap_levels = {
@@ -1190,6 +1207,7 @@ static struct bcmpmu_batt_volt_levels bl_84_volt_levels = {
 	.low = 3500,
 	.normal = 3700,
 	.high = 4190,
+	.crit_cutoff_cnt = 3,
 	.vfloat_lvl = VFLOAT_LVL_4_20,
 	.vfloat_max = VFLOAT_LVL_4_325,
 	.vfloat_gap = 150, /* in mV */

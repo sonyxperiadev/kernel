@@ -43,7 +43,7 @@
 
 #define FG_CAP_DELTA_THRLD		10
 #define ADC_VBAT_AVG_SAMPLES		8
-#define FG_INIT_CAPACITY_AVG_SAMPLES	5
+#define FG_INIT_CAPACITY_AVG_SAMPLES	8
 #define FG_INIT_CAPACITY_SAMPLE_DELAY	160
 #define ADC_READ_TRIES			5
 #define AVG_SAMPLES			5
@@ -51,6 +51,7 @@
 #define FG_PERIODIC_WORK_POLL_TIME	msecs_to_jiffies(5000)
 #define CHARG_ALGO_POLL_TIME		msecs_to_jiffies(5000)
 #define DISCHARGE_ALGO_POLL_TIME	msecs_to_jiffies(60000)
+#define LOW_BATT_POLL_TIME		msecs_to_jiffies(5000)
 
 #define INTERPOLATE_LINEAR(X, Xa, Ya, Xb, Yb) \
 	(Ya + (((Yb - Ya) * (X - Xa))/(Xb - Xa)))
@@ -65,6 +66,8 @@
 #define FG_SLEEP_SAMPLE_RATE		32000
 #define FG_SLEEP_CURR_UA		1000
 #define FG_EOC_CURRENT			75
+#define FG_CURR_SAMPLE_MAX		2000
+#define FG_EOC_CNT_THRLD		5
 
 /**
  * FG should go to synchronous mode (modulator turned off)
@@ -83,9 +86,6 @@
 	memset(&fg->avg_samples, 0, sizeof(fg->avg_samples)); \
 	fg->avg_samples.idx = 0;\
 }
-
-#define capacity_to_percentage(fg, cap)		\
-	((cap * 100) / fg->capacity_info.max_design)
 
 #define percentage_to_capacity(fg, percentage)	\
 	((fg->capacity_info.max_design * percentage) / 100)
@@ -190,7 +190,8 @@ struct bcmpmu_fg_status_flags {
 
 #define BATTERY_STATUS_UNKNOWN(flag)	\
 	(!flag.batt_present || \
-	 (flag.batt_status == POWER_SUPPLY_STATUS_UNKNOWN))
+	  (flag.batt_status == POWER_SUPPLY_STATUS_UNKNOWN) || \
+	  (flag.init_capacity))
 
 struct bcmpmu_batt_cap_info {
 	int max_design; /* maximum desing capacity of battery */
@@ -199,6 +200,13 @@ struct bcmpmu_batt_cap_info {
 	int percentage; /* current capacity in percentage */
 	int prev_percentage; /* previous capacity percentage */
 	int prev_level; /* previous capacity level */
+};
+
+struct batt_adc_data {
+	int temp;
+	int volt;
+	int curr_inst;
+	int esr;
 };
 
 struct avg_sample_buff {
@@ -230,10 +238,16 @@ struct bcmpmu_fg_data {
 	struct bcmpmu_batt_cap_info capacity_info;
 	struct bcmpmu_fg_status_flags flags;
 	struct avg_sample_buff avg_samples;
+	struct batt_adc_data adc_data;
+
 	enum bcmpmu_fg_cal_state cal_state;
 	enum bcmpmu_batt_charging_state charging_state;
 	enum bcmpmu_batt_discharging_state discharge_state;
 	enum bcmpmu_fg_sample_rate sample_rate;
+
+	int cap_adj_fct;
+	int crit_cutoff_cnt;
+	int eoc_cnt;
 	int accumulator;
 	int lock_cnt; /* for debugging only */
 };
@@ -251,6 +265,25 @@ static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 	} while (0)
 #endif
 
+static inline int capacity_to_percentage(struct bcmpmu_fg_data *fg, int cap)
+{
+	u64 capacity;
+
+	capacity = cap * 100 + fg->capacity_info.max_design / 2;
+	capacity = div64_s64(capacity, fg->capacity_info.max_design);
+
+	return capacity;
+}
+
+static int cmp(const void *a, const void *b)
+{
+	if (*((int *)a) < *((int *)b))
+		return -1;
+	if (*((int *)a) > *((int *)b))
+		return 1;
+	return 0;
+}
+
 static inline int average(int *data, int samples)
 {
 	int i;
@@ -262,6 +295,31 @@ static inline int average(int *data, int samples)
 	return sum/i;
 }
 
+/**
+ * calculates interquartile mean of the integer data set @data
+ * @size is the number of samples. It is assumed that
+ * @size is divisible by 4 to ease the calculations
+ */
+
+static int interquartile_mean(int *data, int num)
+{
+	int i, j;
+	int avg = 0;
+
+	BUG_ON((!data) || ((num % 4) != 0));
+
+	sort(data, num, sizeof(int), cmp, NULL);
+
+	i = num / 4;
+	j = num - i;
+
+	for ( ; i < j; i++)
+		avg += data[i];
+
+	avg = avg / (j - (num / 4));
+
+	return avg;
+}
 
 /**
  * bcmpmu_fgsmpl_to_curr - Converts current sample to current
@@ -491,19 +549,36 @@ static int bcmpmu_fg_volt_to_cap(struct bcmpmu_fg_data *fg, int volt)
 			break;
 	}
 
-	if (idx > 0)
+	if (idx > 0) {
 		cap_percentage = INTERPOLATE_LINEAR(volt,
-				lut[idx - 1].volt,
-				lut[idx - 1].cap,
 				lut[idx].volt,
-				lut[idx].cap);
+				lut[idx].cap,
+				lut[idx - 1].volt,
+				lut[idx - 1].cap);
+
+	}
 	else if (idx == 0)
 		cap_percentage = 100; /* full capacity */
 	else
 		cap_percentage = 0;
 
-	pr_fg(FLOW, "volt->capacity percentage: %d\n", cap_percentage);
 	return cap_percentage;
+}
+
+static int bcmpmu_fg_eoc_curr_to_capacity(struct bcmpmu_fg_data *fg, int curr)
+{
+	struct batt_eoc_curr_cap_map *lut = fg->pdata->batt_prop->eoc_cap_lut;
+	u32 lut_sz = fg->pdata->batt_prop->eoc_cap_lut_sz;
+	int idx;
+
+	if (!lut)
+		return -EINVAL;
+
+	for (idx = 0; idx < lut_sz - 1; idx++)
+		if ((curr < lut[idx].eoc_curr) &&
+				(curr >= lut[idx + 1].eoc_curr))
+			break;
+	return lut[idx].capacity;
 }
 
 static int bcmpmu_fg_get_batt_esr(struct bcmpmu_fg_data *fg, int volt, int temp)
@@ -541,8 +616,6 @@ static int bcmpmu_fg_get_batt_esr(struct bcmpmu_fg_data *fg, int volt, int temp)
 	esr = (volt * slope) / 1000;
 	esr += offset;
 
-	pr_fg(FLOW, "volt: %d temp: %d esr_slope: %d esr_offset: %d ESR %d\n",
-			volt, temp, slope, offset, esr);
 	return esr;
 }
 
@@ -565,14 +638,24 @@ static inline int bcmpmu_fg_get_batt_volt(struct bcmpmu_fg_data *fg)
 static int bcmpmu_fg_get_avg_volt(struct bcmpmu_fg_data *fg)
 {
 	int i = 0;
-	int volt = 0;
+	int volt_sum = 0;
+	int volt_samples[ADC_VBAT_AVG_SAMPLES];
 
 	do {
-		volt += bcmpmu_fg_get_batt_volt(fg);
+		volt_samples[i] = bcmpmu_fg_get_batt_volt(fg);
+
+		/**
+		 * voltage too high?? may be wrong ADC
+		 * sample. Ignore it !!
+		 */
+		if (volt_samples[i] > fg->pdata->batt_prop->max_volt)
+			continue;
+		volt_sum += volt_samples[i];
 		i++;
 		msleep(50);
 	} while (i < ADC_VBAT_AVG_SAMPLES);
-	return volt / i;
+
+	return interquartile_mean(volt_samples, ADC_VBAT_AVG_SAMPLES);
 }
 
 static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
@@ -623,30 +706,73 @@ static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg)
  */
 
 static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
-		bool load_comp)
+		bool load_comp, bool avg)
 {
-	int vbat_avg;
-	int vbat_comp;
-	int temp;
-	int esr;
-	int curr_inst;
+	int vbat;
+	int vbat_comp = 0;
 	int capacity_percentage = 0;
 
-	temp = bcmpmu_fg_get_batt_temp(fg);
-	vbat_avg = bcmpmu_fg_get_avg_volt(fg);
-	esr = bcmpmu_fg_get_batt_esr(fg, vbat_avg, temp);
-	curr_inst = bcmpmu_fg_get_curr_inst(fg);
+	fg->adc_data.temp = bcmpmu_fg_get_batt_temp(fg);
+
+	if (avg) {
+		vbat = bcmpmu_fg_get_avg_volt(fg);
+		fg->adc_data.volt = vbat;
+	} else {
+		fg->adc_data.volt = bcmpmu_fg_get_batt_volt(fg);
+		vbat = fg->adc_data.volt;
+	}
+
+	fg->adc_data.esr = bcmpmu_fg_get_batt_esr(fg, vbat, fg->adc_data.temp);
+	fg->adc_data.curr_inst = bcmpmu_fg_get_curr_inst(fg);
+
+	if (fg->adc_data.curr_inst > FG_CURR_SAMPLE_MAX)
+		fg->adc_data.curr_inst = 0;
 
 	if (load_comp) {
-		vbat_comp = vbat_avg - (esr * curr_inst)/1000;
+		vbat_comp = vbat - ((fg->adc_data.esr * fg->adc_data.curr_inst)/
+				1000);
 		capacity_percentage = bcmpmu_fg_volt_to_cap(fg, vbat_comp);
 	} else
-		capacity_percentage = bcmpmu_fg_volt_to_cap(fg, vbat_avg);
-	pr_fg(INIT, "%s: vbat_avg: %d vbat_comp: %d", __func__, vbat_avg,
-			vbat_comp);
-	pr_fg(INIT, "temp: %d curr_inst: %d\n", temp, curr_inst);
+		capacity_percentage = bcmpmu_fg_volt_to_cap(fg, vbat);
+
+	pr_fg(INIT, "vbat: %d vbat_comp: %d temp: %d curr: %d esr: %d cap: %d",
+			vbat, vbat_comp, fg->adc_data.temp,
+			fg->adc_data.curr_inst,
+			fg->adc_data.esr,
+			capacity_percentage);
+
 	BUG_ON(capacity_percentage > 100);
+
 	return capacity_percentage;
+}
+
+static void bcmpmu_fg_get_capacity_adj_factor(struct bcmpmu_fg_data *fg)
+{
+	struct bcmpmu_fg_pdata *pdata = fg->pdata;
+	struct batt_adc_data *adc = &fg->adc_data;
+	struct batt_eoc_curr_cap_map *lut = pdata->batt_prop->eoc_cap_lut;
+	int capacity = fg->capacity_info.percentage;
+	int capacity_eoc;
+	bool charging;
+
+	charging = ((fg->flags.batt_status == POWER_SUPPLY_STATUS_CHARGING) ?
+			true : false);
+
+	if (lut && charging) {
+		if ((capacity >= lut[0].capacity) &&
+				(capacity < CAPACITY_PERCENTAGE_FULL) &&
+				(adc->curr_inst <= lut[0].eoc_curr)) {
+			capacity_eoc =
+				bcmpmu_fg_eoc_curr_to_capacity(fg,
+						adc->curr_inst);
+			if (capacity < CAPACITY_PERCENTAGE_FULL)
+				fg->cap_adj_fct = (((capacity_eoc - capacity) *
+							100) /
+						(capacity - 100));
+			pr_fg(FLOW, "EOC capacity: %d factor: %d\n",
+					capacity_eoc, fg->cap_adj_fct);
+		}
+	}
 }
 
 static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
@@ -655,9 +781,15 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	int sample_count;
 	int sleep_count;
 	int capacity_delta;
+	int capacity_adj;
+	int capacity_load_comp;
 	u8 accm[4];
 	u8 act_cnt[2];
 	u8 sleep_cnt[2];
+
+	capacity_load_comp = bcmpmu_fg_get_load_comp_capacity(fg, true, false);
+
+	bcmpmu_fg_get_capacity_adj_factor(fg);
 
 	/**
 	 * latch accumulator, active counter and sleep counter
@@ -705,7 +837,10 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	 */
 	capacity_delta = bcmpmu_fg_accumulator_to_capacity(fg, fg->accumulator,
 			sample_count, sleep_count);
-	fg->capacity_info.capacity += capacity_delta;
+	capacity_adj = (capacity_delta -
+			(capacity_delta * fg->cap_adj_fct / 100));
+
+	fg->capacity_info.capacity += capacity_adj;
 
 	if (fg->capacity_info.capacity > fg->capacity_info.max_design)
 		fg->capacity_info.capacity = fg->capacity_info.max_design;
@@ -713,8 +848,9 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	fg->capacity_info.percentage = capacity_to_percentage(fg,
 			fg->capacity_info.capacity);
 
-	pr_fg(FLOW, "accumulator: %dmAs capacity: %dmAs cap percentage:%d\n",
-			capacity_delta, fg->capacity_info.capacity,
+	pr_fg(FLOW, "accm: %d accm_adj: %d capacity: %d percentage: %d\n",
+			capacity_delta, capacity_adj,
+			fg->capacity_info.capacity,
 			fg->capacity_info.percentage);
 }
 
@@ -1011,7 +1147,7 @@ static void bcmpmu_fg_hw_init(struct bcmpmu_fg_data *fg)
 }
 
 static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg,
-		bool initial)
+		bool force_update)
 {
 	bool update_psy = false;
 
@@ -1027,7 +1163,7 @@ static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg,
 		update_psy = true;
 	}
 
-	if (update_psy || initial) {
+	if (update_psy || force_update) {
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
 					BCMPMU_CHRGR_EVENT_CAPACITY,
@@ -1043,20 +1179,19 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	int init_cap = 0;
 	int init_cap_mas;
 	int i = 0;
+	int cap_samples[FG_INIT_CAPACITY_AVG_SAMPLES];
 
 	saved_cap = bcmpmu_fg_get_saved_cap(fg);
 
 	do {
-		init_cap += bcmpmu_fg_get_load_comp_capacity(fg, true);
+		cap_samples[i] = bcmpmu_fg_get_load_comp_capacity(fg, true,
+				true);
 		i++;
 		msleep(FG_INIT_CAPACITY_SAMPLE_DELAY);
 	} while (i < FG_INIT_CAPACITY_AVG_SAMPLES);
 
-	/**
-	 * Average of samples
-	 */
-	init_cap = init_cap / i;
-
+	init_cap = interquartile_mean(cap_samples,
+			FG_INIT_CAPACITY_AVG_SAMPLES);
 	BUG_ON(init_cap > 100);
 
 	pr_fg(FLOW, "saved capacity: %d open circuit cap: %d\n",
@@ -1073,18 +1208,21 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	return init_cap_mas;
 }
 
-static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg,
-		int avg_volt, int avg_curr)
+static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 {
 	struct bcmpmu_batt_volt_levels *volt_levels = fg->pdata->volt_levels;
 	struct bcmpmu_fg_status_flags *flags = &fg->flags;
 	int vfloat_volt;
 	int volt_thrld;
 	int cap_percentage;
+	int volt;
+	int curr;
 
 	vfloat_volt = bcmpmu_fg_vfloat_to_volt(fg, volt_levels->vfloat_lvl);
 	volt_thrld = vfloat_volt - volt_levels->vfloat_gap;
 	cap_percentage = fg->capacity_info.percentage;
+	volt = fg->adc_data.volt;
+	curr = fg->adc_data.curr_inst;
 
 	if ((flags->fg_eoc) &&
 			(flags->batt_status == POWER_SUPPLY_STATUS_DISCHARGING))
@@ -1096,21 +1234,33 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg,
 			pr_fg(FLOW, "sw_maint_chrgr: SPA SW EOC cleared\n");
 			flags->fg_eoc = false;
 		} else if (!(fg->bcmpmu->flags & BCMPMU_SPA_EN) &&
-				(avg_volt < volt_thrld)) {
+				(volt < volt_thrld)) {
 			pr_fg(FLOW, "sw_maint_chrgr: SW EOC cleared\n");
 			flags->prev_batt_status = flags->batt_status;
 			flags->batt_status = POWER_SUPPLY_STATUS_CHARGING;
 			flags->fg_eoc = false;
-		}
-		if (!(fg->bcmpmu->flags & BCMPMU_SPA_EN))
 			bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
+		}
 	} else if ((!flags->fg_eoc) &&
-			(avg_volt >= vfloat_volt) &&
-			((avg_curr > 0) &&
-			 (avg_curr <= fg->pdata->eoc_current)) &&
-			(cap_percentage == CAPACITY_PERCENTAGE_FULL)) {
+			(volt >= vfloat_volt) &&
+			((curr > 0) &&
+			 (curr <= fg->pdata->eoc_current)) &&
+			(fg->eoc_cnt++ > FG_EOC_CNT_THRLD)) {
 		pr_fg(FLOW, "sw_maint_chrgr: SW EOC tripped\n");
+		/**
+		 * EOC condition is met but coulomb capacity is
+		 * still not reporting 100%??
+		 * We will gratually increment the capacity to 100%
+		 */
+		if (cap_percentage != CAPACITY_PERCENTAGE_FULL) {
+			cap_percentage += 1;
+			fg->capacity_info.percentage += cap_percentage;
+			fg->capacity_info.capacity =
+				percentage_to_capacity(fg, cap_percentage);
+			goto exit;
+		}
 		flags->fg_eoc = true;
+		fg->eoc_cnt = 0;
 		flags->prev_batt_status = flags->batt_status;
 		flags->batt_status = POWER_SUPPLY_STATUS_FULL;
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN) {
@@ -1118,38 +1268,31 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg,
 					BCMPMU_CHRGR_EVENT_EOC, 0);
 			flags->eoc_chargr_en = false;
 		} else {
+			pr_fg(FLOW, "sw_maint_chrgr: disable charging\n");
 			bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
 			bcmpmu_fg_update_psy(fg, false);
 		}
+	} else if ((!flags->fg_eoc) && fg->eoc_cnt &&
+			((volt < vfloat_volt) ||
+				(curr > fg->pdata->eoc_current))) {
+		pr_fg(FLOW, "clear EOC counter\n");
+		fg->eoc_cnt = 0;
 	}
+exit:
 	return 0;
 }
 
 static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 {
-	struct avg_sample_buff *avg_samples = &fg->avg_samples;
-	int avg_volt, avg_curr;
 	int poll_time = CHARG_ALGO_POLL_TIME;
 
 	pr_fg(FLOW, "%s\n", __func__);
 
 	bcmpmu_fg_get_coulomb_counter(fg);
 
-	avg_samples->curr[avg_samples->idx] = bcmpmu_fg_get_curr_inst(fg);
-	avg_samples->volt[avg_samples->idx] = bcmpmu_fg_get_batt_volt(fg);
 
-	if (++avg_samples->idx == AVG_SAMPLES) {
-		avg_volt = average(avg_samples->volt, AVG_SAMPLES);
-		avg_curr = average(avg_samples->curr, AVG_SAMPLES);
-		pr_fg(FLOW, "charging_algo: avg_volt: %d avg_curr: %d\n",
-				avg_volt, avg_curr);
-
-		if (!fg->pdata->hw_maintenance_charging)
-			bcmpmu_fg_sw_maint_charging_algo(fg, avg_volt,
-					avg_curr);
-
-		clear_avg_sample_buff(fg);
-	}
+	if (!fg->pdata->hw_maintenance_charging)
+		bcmpmu_fg_sw_maint_charging_algo(fg);
 
 
 	/**
@@ -1163,7 +1306,6 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 		fg->capacity_info.capacity = fg->capacity_info.max_design;
 		fg->capacity_info.percentage = CAPACITY_PERCENTAGE_FULL;
 		fg->capacity_info.prev_percentage = CAPACITY_PERCENTAGE_FULL;
-		poll_time = DISCHARGE_ALGO_POLL_TIME;
 	}
 
 	bcmpmu_fg_update_psy(fg, false);
@@ -1176,14 +1318,33 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 
 static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 {
+	int poll_time = DISCHARGE_ALGO_POLL_TIME;
+	bool force_update_psy = false;
+
 	pr_fg(FLOW, "discharging_algo\n");
+
 	bcmpmu_fg_get_coulomb_counter(fg);
-	bcmpmu_fg_update_psy(fg, false);
+
+	if (fg->adc_data.volt <= fg->pdata->volt_levels->critical) {
+		if (++fg->crit_cutoff_cnt >
+				fg->pdata->volt_levels->crit_cutoff_cnt) {
+			pr_fg(ERROR, "dischrgr_algo: Critical volt cutoff\n");
+			/**
+			 * force the capacity level to 0
+			 */
+			fg->capacity_info.percentage = 0;
+			force_update_psy = true;
+		} else
+			poll_time = LOW_BATT_POLL_TIME;
+	} else if (fg->crit_cutoff_cnt > 0)
+		fg->crit_cutoff_cnt = 0;
+
+	bcmpmu_fg_update_psy(fg, force_update_psy);
 
 	FG_LOCK(fg);
 	if (fg->flags.reschedule_work)
 		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work,
-				DISCHARGE_ALGO_POLL_TIME);
+				poll_time);
 	FG_UNLOCK(fg);
 }
 

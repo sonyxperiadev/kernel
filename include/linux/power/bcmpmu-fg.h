@@ -56,6 +56,11 @@ struct batt_temp_adc_map {
 	int temp;
 };
 
+struct batt_eoc_curr_cap_map {
+	int eoc_curr;
+	int capacity;
+};
+
 struct batt_esr_temp_lut {
 	int temp;
 	int reset;
@@ -91,10 +96,19 @@ struct bcmpmu_batt_property {
 	u32 temp_adc_lut_sz;
 	struct batt_esr_temp_lut *esr_temp_lut;
 	u32 esr_temp_lut_sz;
+	struct batt_eoc_curr_cap_map *eoc_cap_lut;
+	u32 eoc_cap_lut_sz;
 };
 
 /**
  * Battery capacity levels in percentage
+ * @critical: Critical cap level. When capacity
+ *	fall below critical level, FG driver will
+ *	report POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL
+ * @low: low capacity level. When capacity level
+ *	falls below low, FG driver will report
+ *	POWER_SUPPLY_CAPACITY_LEVEL_LOW
+ * @normal: POWER_SUPPLY_CAPACITY_LEVEL_NORMAL
  */
 struct bcmpmu_batt_cap_levels {
 	int critical;
@@ -103,11 +117,33 @@ struct bcmpmu_batt_cap_levels {
 	int high;
 };
 
+/**
+ * Battery voltage thresholds
+ * @critical: Critical voltage level in mV
+ * @low: low voltage level in mV
+ * @normal: Nominal voltage level in mV
+ * @high: high voltage level in mV
+ * @crit_cutoff_cnt : Critical voltage level cutoff
+ *	threshold counter. if battery voltage is below
+ *	critical level for @@crit_cutoff_cnt times,
+ *	FG driver will report 0% capacity, no matter
+ *	what couloumb counter capacity says
+ * @Float_lvl: float level voltage. During charging, when battery
+ *	voltage reaches this level and battery current is less
+ *	than @bcmpmu_fg_pdata.eoc_current, FG will enter
+ *	maintenance charging algo
+ * @vfloat_max: Maximum float voltage to be written to PMU
+ *	for battery protection during charging
+ * @vfloat_gap: Resume the charging again when battery
+ *	voltage goes below @vfloat_lvl- @vfloat_gap
+ *	during maintenance charging
+ */
 struct bcmpmu_batt_volt_levels {
 	int critical;
 	int low;
 	int normal;
 	int high;
+	int crit_cutoff_cnt;
 	enum vfloat_level vfloat_lvl; /* float voltage in mV*/
 	enum vfloat_level vfloat_max; /* maximum float voltage for protection */
 	int vfloat_gap;
