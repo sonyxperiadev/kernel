@@ -82,9 +82,8 @@ static void SetConfigDefaults(void)
 	g_config.runlog.dev = BCMLOG_OUTDEV_STM;
 	g_config.cp_crashlog.dev = BCMLOG_OUTDEV_STM;
 #else
-	g_config.runlog.dev = BCMLOG_OUTDEV_STM;
-	/* eventually set to BCMLOG_OUTDEV_PANIC once its working */
-	g_config.cp_crashlog.dev = BCMLOG_OUTDEV_STM;
+	g_config.runlog.dev = BCMLOG_OUTDEV_NONE;
+	g_config.cp_crashlog.dev = BCMLOG_OUTDEV_PANIC;
 #endif
 	/* Max size of MTT SD file (MB) */
 	g_config.file_max = DEFAULT_MTT_SD_SIZE;
