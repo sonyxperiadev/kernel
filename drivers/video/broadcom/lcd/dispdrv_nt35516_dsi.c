@@ -355,6 +355,50 @@ static void NT35516_panel_sleep_out(NT35516_PANEL_t *pPanel)
 	return;
 }
 
+#ifdef CONFIG_VIDEO_MODE
+/* Template for Video mode commands like Turn On Peripheral, Shutdown etc. */
+static int NT35516_panel_shut_down(NT35516_PANEL_t *pPanel)
+{
+	CSL_DSI_CMND_t msg;
+	int res = 0;
+	UInt8 msg_buff[2];
+
+	msg.dsiCmnd = DSI_DT_SH_SHUT_DOWN;
+	msg.msg	       = &msg_buff[0];
+	msg.msgLen     = 1;
+	msg.vc	       = NT35516_VC;
+	msg.isLP       = NT35516_CMND_IS_LP;
+	msg.isLong     = FALSE;
+	msg.endWithBta = FALSE;
+	msg.reply = NULL;
+
+	res = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
+	pr_err("[DISPDRV] %s: DT[0x%02lX] SIZE[%lu]\n",
+			__func__, msg.dsiCmnd, msg.msgLen);
+	return res;
+}
+
+static int NT35516_panel_turn_on(NT35516_PANEL_t *pPanel)
+{
+	CSL_DSI_CMND_t msg;
+	int res = 0;
+	UInt8 msg_buff[2];
+
+	msg.dsiCmnd = DSI_DT_SH_TURN_ON;
+	msg.msg	       = &msg_buff[0];
+	msg.msgLen     = 1;
+	msg.vc	       = NT35516_VC;
+	msg.isLP       = NT35516_CMND_IS_LP;
+	msg.isLong     = FALSE;
+	msg.endWithBta = FALSE;
+	msg.reply = NULL;
+
+	res = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
+	pr_err("[DISPDRV] %s: DT[0x%02lX] SIZE[%lu]\n",
+			__func__, msg.dsiCmnd, msg.msgLen);
+	return res;
+}
+#endif
 
 static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
 {
@@ -392,8 +436,10 @@ static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
 
 	NT35516_ExecCmndList(pPanel, cmd_list);
 
+#ifndef CONFIG_VIDEO_MODE
 	if (NT35516_ReadPanelID(pPanel) < 0)
 		pr_err("NT35516 not detected!\n");
+#endif
 	return;
 }
 
@@ -1102,7 +1148,11 @@ Int32 NT35516_PowerControl(
 
 	case CTRL_PWR_OFF:
 		if (pPanel->pwrState !=	STATE_PWR_OFF) {
+#ifdef CONFIG_VIDEO_MODE
+			NT35516_panel_shut_down(pPanel);
+#else
 			NT35516_panel_off(pPanel);
+#endif
 			NT35516_panel_sleep_in(pPanel);
 			OSTASK_Sleep(TICKS_IN_MILLISECONDS(120));
 			NT35516_panel_dstb(pPanel);
@@ -1124,7 +1174,11 @@ Int32 NT35516_PowerControl(
 	case CTRL_SLEEP_IN:
 		switch (pPanel->pwrState) {
 		case STATE_SCREEN_ON:
+#ifdef CONFIG_VIDEO_MODE
+			NT35516_panel_shut_down(pPanel);
+#else
 			NT35516_panel_off(pPanel);
+#endif
 		case STATE_SCREEN_OFF:
 			NT35516_panel_sleep_in(pPanel);
 			OSTASK_Sleep(TICKS_IN_MILLISECONDS(120));
@@ -1162,7 +1216,11 @@ Int32 NT35516_PowerControl(
 	case CTRL_SCREEN_ON:
 		switch (pPanel->pwrState) {
 		case STATE_SCREEN_OFF:
+#ifdef CONFIG_VIDEO_MODE
+			NT35516_panel_turn_on(pPanel);
+#else
 			NT35516_panel_on(pPanel);
+#endif
 
 			pPanel->pwrState = STATE_SCREEN_ON;
 			NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV]	%s: SCREEN ON\n",
@@ -1178,7 +1236,11 @@ Int32 NT35516_PowerControl(
 	case CTRL_SCREEN_OFF:
 		switch (pPanel->pwrState) {
 		case STATE_SCREEN_ON:
+#ifdef CONFIG_VIDEO_MODE
+			NT35516_panel_shut_down(pPanel);
+#else
 			NT35516_panel_off(pPanel);
+#endif
 
 			pPanel->pwrState = STATE_SCREEN_OFF;
 			NT35516_LOG(LCD_DBG_ERR_ID, "[DISPDRV]	%s: SCREEN OFF\n",
