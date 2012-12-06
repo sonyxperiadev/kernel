@@ -29,6 +29,7 @@
 #include <mach/rdb/brcm_rdb_a9ptm.h>
 #include <mach/rdb/brcm_rdb_cstf.h>
 #include <mach/rdb/brcm_rdb_pl310.h>
+#include <mach/rdb/brcm_rdb_swstm.h>
 #include <plat/scu.h>
 #include <plat/pi_mgr.h>
 #include <plat/pwr_mgr.h>
@@ -227,6 +228,8 @@ static u32 proc_clk_regs[][2] = {
 be saved/restored during A9 dormant*/
 static u32 addnl_regs[][2] = {
 	ADDNL_REG_DEFINE(KONA_FUNNEL_VA, CSTF_FUNNEL_CONTROL_OFFSET),
+	ADDNL_REG_DEFINE(KONA_SWSTM_VA, SWSTM_R_CONFIG_OFFSET),
+	ADDNL_REG_DEFINE(KONA_SWSTM_ST_VA, SWSTM_R_CONFIG_OFFSET),
 	ADDNL_REG_DEFINE(KONA_A9PTM0_VA, A9PTM_ETMTRACEIDR_OFFSET),
 	ADDNL_REG_DEFINE(KONA_A9PTM1_VA, A9PTM_ETMTRACEIDR_OFFSET),
 };
