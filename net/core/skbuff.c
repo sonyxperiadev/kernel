@@ -246,6 +246,60 @@ nodata:
 }
 EXPORT_SYMBOL(__alloc_skb);
 
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+/**
+ *	alloc_skb_uether_rx	-	allocate a network buffer
+ *							with recycled skb data.
+ *	@size: size to allocate
+ *	@data: recycled skb data
+ *	@gfp_mask: allocation mask
+ *
+ *	Buffers may only be allocated from interrupts using a @gfp_mask of
+ *	%GFP_ATOMIC.
+ */
+struct sk_buff *alloc_skb_uether_rx(unsigned int size, unsigned char *data,
+		gfp_t gfp_mask)
+{
+	struct kmem_cache *cache;
+	struct skb_shared_info *shinfo;
+	struct sk_buff *skb;
+
+	cache = skbuff_head_cache;
+
+	/* Get the HEAD */
+	skb = kmem_cache_alloc_node(cache, gfp_mask & ~__GFP_DMA, NUMA_NO_NODE);
+	if (!skb) {
+		pr_err("can not allocate skb_buf in __alloc_skb_uther_rx");
+		return NULL;
+	}
+	prefetchw(skb);
+
+	/*
+	 * Only clear those fields we need to clear, not those that we will
+	 * actually initialise below. Hence, don't put any more fields after
+	 * the tail pointer in struct sk_buff!
+	 */
+	memset(skb, 0, offsetof(struct sk_buff, tail));
+	skb->truesize = size + sizeof(struct sk_buff);
+	atomic_set(&skb->users, 1);
+	skb->head = data;
+	skb->data = data;
+	skb_reset_tail_pointer(skb);
+	skb->end = skb->tail + size;
+#ifdef NET_SKBUFF_DATA_USES_OFFSET
+	skb->mac_header = ~0U;
+#endif
+
+	/* make sure we initialize shinfo sequentially */
+	shinfo = skb_shinfo(skb);
+	memset(shinfo, 0, offsetof(struct skb_shared_info, dataref));
+	atomic_set(&shinfo->dataref, 1);
+	kmemcheck_annotate_variable(shinfo->destructor_arg);
+	skb->signature = SKB_UETH_RX_THRESHOLD_SIG;
+	return skb;
+}
+EXPORT_SYMBOL(alloc_skb_uether_rx);
+#endif
 /**
  * build_skb - build a network buffer
  * @data: data buffer provided by caller
@@ -405,7 +459,13 @@ static void skb_release_data(struct sk_buff *skb)
 
 		if (skb_has_frag_list(skb))
 			skb_drop_fraglist(skb);
-
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+		if (skb->signature == SKB_UETH_RX_THRESHOLD_SIG) {
+			ueth_recycle_rx_skb_data(skb->head, GFP_ATOMIC);
+			skb->signature = 0;
+			return;
+		}
+#endif
 		kfree(skb->head);
 	}
 }
@@ -509,20 +569,6 @@ static void recycle_skbs_process(struct sk_buff *skb, int skb_size)
 }
 #endif /* #ifdef CONFIG_BRCM_NETCONSOLE */
 
-#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-static void skb_recycle_ueth(struct sk_buff *skb)
-{
-	if (skb_recycle_check(skb, ueth_rx_skb_size() - NET_SKB_PAD))
-		ueth_recycle_rx_skbs(skb);
-	else {
-		skb->signature = 0;
-		skb_release_all(skb);
-		kfree_skbmem(skb);
-	}
-	atomic_dec(&ueth_rx_skb_ref_count);
-}
-#endif
-
 /**
  *	__kfree_skb - private function
  *	@skb: buffer
@@ -543,11 +589,6 @@ void __kfree_skb(struct sk_buff *skb)
 
 	} else
 #endif	/* #ifdef CONFIG_BRCM_NETCONSOLE */
-#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-	 if (skb->signature == SKB_UETH_RX_THRESHOLD_SIG)
-		skb_recycle_ueth(skb);
-	else
-#endif
 	{
 		skb_release_all(skb);
 		kfree_skbmem(skb);
