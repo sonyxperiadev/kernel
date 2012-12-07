@@ -162,12 +162,14 @@ static void bcmpmu59xxx_debug_init(struct bcmpmu59xxx *bcmpmu)
 			return;
 		}
 	}
-	if (!debugfs_create_file("regread", S_IRUSR, bcmpmu->dent_bcmpmu,
-				bcmpmu, &debug_pmu_read_fops))
+	if (!debugfs_create_file("regread", S_IWUSR | S_IRUSR,
+				bcmpmu->dent_bcmpmu, bcmpmu,
+				&debug_pmu_read_fops))
 		goto err;
 
-	if (!debugfs_create_file("regwrite", S_IRUSR, bcmpmu->dent_bcmpmu,
-				bcmpmu, &debug_pmu_write_fops))
+	if (!debugfs_create_file("regwrite", S_IWUSR | S_IRUSR,
+				bcmpmu->dent_bcmpmu, bcmpmu,
+				&debug_pmu_write_fops))
 		goto err;
 
 	if (!debugfs_create_u32("dbg_mask", S_IWUSR | S_IRUSR,
