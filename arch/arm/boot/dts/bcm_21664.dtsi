@@ -19,7 +19,7 @@
 		compatible = "bcm,wd-tapper";
 	};
 
-	pwmc@0x3e01a000 {
+	kona_pwmc@3e01a000 {
 		compatible = "bcm,pwmc";
 		reg = <0x3e01a000 0x10>;
 	};

@@ -442,7 +442,7 @@ static int __devinit kona_pwmc_probe(struct platform_device *pdev)
 
 	for (chan = 0; chan < KONA_PWM_CHANNEL_CNT; chan++) {
 		ap->p[chan] = pwm_register(&kona_pwm_ops, &pdev->dev, "%s:%d",
-					   dev_name(&pdev->dev), chan);
+					   "kona_pwmc", chan);
 		if (IS_ERR_OR_NULL(ap->p[chan]))
 			goto err_pwm_register;
 		pwm_set_drvdata(ap->p[chan], ap);
