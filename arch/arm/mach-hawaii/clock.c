@@ -6862,22 +6862,27 @@ EXPORT_SYMBOL(clk_set_pll_pwr_on_idle);
 
 int clk_set_crystal_pwr_on_idle(int enable)
 {
-    u32 reg_val = 0;
+	u32 reg_val = 0;
+	unsigned long flgs;
 	/* enable write access*/
-	ccu_write_access_enable(&CLK_NAME(root),true);
-
-    reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET);
-    if(enable)
-		reg_val |= ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
-    else
-		reg_val &= ~ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+	ccu_write_access_enable(&CLK_NAME(root), true);
+	spin_lock_irqsave(&CLK_NAME(root).access_lock, flgs);
+	reg_val =
+		readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET);
+	if (enable)
+		reg_val |=
+		ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+	else
+		reg_val &=
+		~ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
 
 	writel_relaxed(reg_val , KONA_ROOT_CLK_VA +
 		  ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET);
 	/* disable write access*/
+	spin_unlock_irqrestore(&CLK_NAME(root).access_lock, flgs);
 	ccu_write_access_enable(&CLK_NAME(root), false);
 
-    return 0;
+	return 0;
 }
 EXPORT_SYMBOL(clk_set_crystal_pwr_on_idle);
 
@@ -6894,7 +6899,7 @@ int root_ccu_clk_init(struct clk* clk)
 
 
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, 1);
-    clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, 1);
+	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, 1);
 	clk_set_crystal_pwr_on_idle(1);
 
 	/* enable write access*/
@@ -7005,14 +7010,12 @@ static int mm_ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u
 	else
 		return -EINVAL;
 
-	ccu_write_access_enable(ccu_clk,true);
 	reg_val = readl(CCU_VLT_PERI_REG(ccu_clk));
 
 	reg_val  = (reg_val & ~(CCU_PERI_VLT_MASK << shift)) |
 	           ((voltage & CCU_PERI_VLT_MASK) << shift);
 
 	 writel(reg_val,CCU_VLT_PERI_REG(ccu_clk));
-	 ccu_write_access_enable(ccu_clk,false);
 	return 0;
 }
 
@@ -7724,6 +7727,9 @@ int clk_mon_dbg(struct clk *clock, int path, int clk_sel_no, int clk_div,
 	static int gpio_path, camcs1_path;
 	static u32 camcs1_reg_val;
 	u32 reg_val;
+	struct ccu_clk *ccu_clk;
+	int clk_mon_sel;
+
 	if (camcs1_path == 0)
 		camcs1_reg_val = readl(KONA_PAD_CTRL +
 				PADCTRLREG_CAMCS1_OFFSET);
@@ -7761,8 +7767,8 @@ int clk_mon_dbg(struct clk *clock, int path, int clk_sel_no, int clk_div,
 		return -EINVAL;
 	}
 	reg_val = 0;
-	struct ccu_clk *ccu_clk = to_ccu_clk(clock);
-	int clk_mon_sel = clk_sel_no;
+	ccu_clk = to_ccu_clk(clock);
+	clk_mon_sel = clk_sel_no;
 
 	ccu_write_access_enable(ccu_clk, true);
 	reg_val = readl(ccu_clk->ccu_clk_mgr_base + ccu_clk->clk_mon_offset);

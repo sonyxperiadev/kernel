@@ -164,9 +164,9 @@
 			struct pi *pi = pi_mgr_get((ccu)->pi_id);\
 			BUG_ON(pi == NULL);\
 			if (en)\
-				__pi_enable(pi);\
+				pi_enable(pi, 1);\
 			else\
-				__pi_disable(pi);\
+				pi_enable(pi, 0);\
 		}
 #else
 #define CCU_ACCESS_EN(ccu, en)	{}
@@ -501,7 +501,8 @@ struct ccu_clk {
 	u8 active_policy;
 	u32 *freq_tbl[MAX_CCU_FREQ_COUNT];
 	struct ccu_state_save *ccu_state_save;
-	spinlock_t lock;
+	spinlock_t clk_lock;
+	spinlock_t access_lock;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_ccu_dir;
 	u32 policy_dbg_offset;

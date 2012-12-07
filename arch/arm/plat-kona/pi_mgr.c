@@ -117,6 +117,7 @@ struct pi_mgr {
 };
 
 static struct pi_mgr pi_mgr;
+static int pi_set_ccu_freq(struct pi *pi, u32 policy, u32 opp_inx);
 
 static int pi_change_notify(int pi_id, u32 type, u32 old_val,
 			    u32 new_val, u32 state)
@@ -192,6 +193,12 @@ int __pi_enable(struct pi *pi)
 			/*Restore the context if state was saved */
 			if (pi->state_saved)
 				pi_save_state(pi, 0/*restore*/);
+			/*Update freq if a new freq was set while
+			PI was in disabled state*/
+			pi_set_ccu_freq(pi,
+			pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
+				pi->opp_active);
+
 		}
 	}
 	return ret;
@@ -537,15 +544,18 @@ static int pi_set_ccu_freq(struct pi *pi, u32 policy, u32 opp_inx)
 	for (inx = 0; inx < pi->num_ccu_id; inx++) {
 		freq_id = pi->pi_opp[inx].opp[opp_inx];
 
-		pi_dbg(pi->id, PI_LOG_DFS,
+		if (ccu_get_freq_policy(to_ccu_clk(pi->pi_ccu[inx]),
+			CCU_POLICY(policy)) != freq_id) {
+			pi_dbg(pi->id, PI_LOG_DFS,
 		       "%s:%s  policy => %x freq_id => %d\n", __func__,
 		       pi->pi_ccu[inx]->name, policy, freq_id);
-
-		res = ccu_set_freq_policy(to_ccu_clk(pi->pi_ccu[inx]),
-					  CCU_POLICY(policy), freq_id);
-		if (res != 0) {
-			pi_dbg(pi->id, PI_LOG_DFS,
-			       "%s:ccu_set_freq_policy failed\n", __func__);
+					res = ccu_set_freq_policy(
+						to_ccu_clk(pi->pi_ccu[inx]),
+						CCU_POLICY(policy), freq_id);
+			if (res != 0) {
+				pi_dbg(pi->id, PI_LOG_DFS,
+				"%s:ccu_set_freq_policy failed\n", __func__);
+			}
 		}
 	}
 	return res;
@@ -662,9 +672,6 @@ static int pi_def_init_state(struct pi *pi)
 	pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy =
 	    pi->pi_opp[0].opp[pi->opp_active];
 	pi_set_policy(pi, pi->pi_opp[0].opp[pi->opp_active], POLICY_DFS);
-#else
-	pi_set_ccu_freq(pi, pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
-			pi->opp_active);
 #endif
 	return 0;
 }
@@ -922,7 +929,10 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
 				pi_set_policy(pi, pi->pi_opp[0].opp[new_val],
 					      POLICY_DFS);
 #else
-			pi_set_ccu_freq(pi,
+			/*Update freq if in enabled state
+			pi_enable function will set the new freq otherwise*/
+			if (pi_is_enabled(pi))
+				pi_set_ccu_freq(pi,
 					pi->pi_state[PI_MGR_ACTIVE_STATE_INX].
 					state_policy, new_val);
 #endif
