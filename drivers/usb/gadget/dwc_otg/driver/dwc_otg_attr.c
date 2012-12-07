@@ -1011,14 +1011,17 @@ static ssize_t regdump_show(struct device *_dev,
 	/* We want to be able to do this with and without
 	 * USB-PMU-xceiver interface so use direct API
 	 */
-	bcm_hsotgctrl_en_clock(true);
+	int clk_cnt = bcm_hsotgctrl_get_clk_count();
+	if (!clk_cnt)
+		bcm_hsotgctrl_en_clock(true);
 	dwc_otg_dump_global_registers(otg_dev->core_if);
 	if (dwc_otg_is_host_mode(otg_dev->core_if))
 		dwc_otg_dump_host_registers(otg_dev->core_if);
 	else
 		dwc_otg_dump_dev_registers(otg_dev->core_if);
 
-	bcm_hsotgctrl_en_clock(false);
+	if (!clk_cnt)
+		bcm_hsotgctrl_en_clock(false);
 #else
 	dwc_otg_dump_global_registers(otg_dev->core_if);
 	if (dwc_otg_is_host_mode(otg_dev->core_if))
