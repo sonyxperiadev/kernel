@@ -3561,6 +3561,7 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 				int arg1, int arg2, int arg3, int arg4)
 {
 	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
+	Boolean bClk = csl_caph_QueryHWClock();
 
 	aTrace(LOG_AUDIO_CNTLR,
 			"AUDCTRL_HardwareControl::type %d,"
@@ -3580,7 +3581,8 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 		is26MClk = arg1 ? TRUE : FALSE;
 		csl_caph_SetSRC26MClk(is26MClk);
 	}
-	csl_caph_ControlHWClock(TRUE);
+	if (!bClk)
+		csl_caph_ControlHWClock(TRUE);
 
 	switch (access_type) {
 	case AUDCTRL_HW_CFG_HEADSET:
@@ -3768,6 +3770,8 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 	default:
 		break;
 	}
+	if (!bClk)
+		csl_caph_ControlHWClock(FALSE);
 
 	return 0;
 }
