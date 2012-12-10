@@ -183,7 +183,7 @@ static struct regulator_init_data bcm59xxx_simldo1_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim1_supply),
 	.consumer_supplies = sim1_supply,
@@ -199,7 +199,7 @@ static struct regulator_init_data bcm59xxx_simldo2_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
 	.consumer_supplies = sim2_supply,
@@ -372,7 +372,7 @@ static struct regulator_init_data bcm59xxx_gpldo2_data = {
 };
 
 __weak struct regulator_consumer_supply gpldo3_supply[] = {
-	{.supply = "gpldo3_uc"},
+	{.supply = "sim3_vcc"},
 };
 static struct regulator_init_data bcm59xxx_gpldo3_data = {
 	.constraints = {
@@ -381,7 +381,7 @@ static struct regulator_init_data bcm59xxx_gpldo3_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo3_supply),
 	.consumer_supplies = gpldo3_supply,
