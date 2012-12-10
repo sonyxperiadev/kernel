@@ -43,7 +43,6 @@ static int dbg_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |
 #define SPA_FIFO_IS_FULL(f) ((f).full)
 
 #define SPA_WORK_SCHEDULE_DELAY	0
-
 struct spa_event_fifo {
 	u32 head;
 	u32 tail;
@@ -209,7 +208,9 @@ static int bcmpmu_spa_pb_chrgr_get_property(struct power_supply *ps,
 			if (prop == POWER_SUPPLY_PROP_BATT_TEMP_ADC)
 				propval->intval = adc_result.raw;
 			else
-				propval->intval = adc_result.conv;
+				/* SPA expects temperature in
+				 * centigrade * 10 format */
+				propval->intval = adc_result.conv * 10;
 		} else
 			ret = -ENODATA;
 		break;
