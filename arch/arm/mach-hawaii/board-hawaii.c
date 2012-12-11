@@ -351,6 +351,8 @@ static struct regulator *d_3v0_mmc1_vcc;
 #define SENSOR_0_GPIO_RST               (111)
 #define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
 #define SENSOR_0_CLK_FREQ               (13000000)
+#define CSI0_LP_FREQ			(100000000)
+#define CSI1_LP_FREQ			(100000000)
 
 #define SENSOR_1_CLK                    "dig_ch0_clk"	/* DCLK1 */
 #define SENSOR_1_CLK_FREQ               (26000000)
@@ -372,6 +374,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 	unsigned int value;
 	int ret = -1;
 	struct clk *clock;
+	struct clk *lp_clock;
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 
@@ -405,12 +408,24 @@ static int hawaii_camera_power(struct device *dev, int on)
 			printk(KERN_ERR "Failed to  get d_gpsr_cam0_1v8\n");
 	}
 
+	ret = -1;
+	lp_clock = clk_get(NULL, CSI0_LP_PERI_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(lp_clock)) {
+		printk(KERN_ERR "Unable to get %s clock\n",
+		CSI0_LP_PERI_CLK_NAME_STR);
+		goto e_clk_get;
+	}
+
 	clock = clk_get(NULL, SENSOR_0_CLK);
-	if (IS_ERR_OR_NULL(clock))
+	if (IS_ERR_OR_NULL(clock)) {
 		printk(KERN_ERR "Unable to get SENSOR_0 clock\n");
+		goto e_clk_get;
+	}
 	axi_clk = clk_get(NULL, "csi0_axi_clk");
-	if (IS_ERR_OR_NULL(clock))
+	if (IS_ERR_OR_NULL(axi_clk)) {
 		printk(KERN_ERR "Unable to get AXI clock\n");
+		goto e_clk_get;
+	}
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
 			printk("DVFS for UNICAM failed\n");
@@ -420,16 +435,46 @@ static int hawaii_camera_power(struct device *dev, int on)
 		usleep_range(1000, 1010);
 		regulator_enable(d_gpsr_cam0_1v8);
 		usleep_range(1000, 1010);
+
+		if (mm_ccu_set_pll_select(CSI0_BYTE1_PLL, 8)) {
+			pr_err("failed to set BYTE1\n");
+			goto e_clk_pll;
+		}
+		if (mm_ccu_set_pll_select(CSI0_BYTE0_PLL, 8)) {
+			pr_err("failed to set BYTE0\n");
+			goto e_clk_pll;
+		}
+		if (mm_ccu_set_pll_select(CSI0_CAMPIX_PLL, 8)) {
+			pr_err("failed to set PIXPLL\n");
+			goto e_clk_pll;
+		}
+
 		value = clk_enable(axi_clk);
 		if (value) {
-			printk(KERN_ERR "Failed to enable axi clock\n");
-			return -1;
+			pr_err(KERN_ERR "Failed to enable axi clock\n");
+			goto e_clk_axi;
 		}
+		value = clk_enable(lp_clock);
+		if (value) {
+			pr_err(KERN_ERR "Failed to enable lp clock\n");
+			goto e_clk_lp;
+		}
+
+		value = clk_set_rate(lp_clock, CSI0_LP_FREQ);
+		if (value) {
+			pr_err("Failed to set lp clock\n");
+			goto e_clk_set_lp;
+		}
+
 		value = clk_enable(clock);
+		if (value) {
+			pr_err("Failed to enable sensor 0 clock\n");
+			goto e_clk_sensor;
+		}
 		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
 		if (value) {
-			printk("Failed to enable sensor 0 clock\n");
-			return -1;
+			pr_err("Failed to set sensor0 clock\n");
+			goto e_clk_set_sensor;
 		}
 		usleep_range(10000, 10100);
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
@@ -441,6 +486,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 	} else {
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 		clk_disable(clock);
+		clk_disable(lp_clock);
 		clk_disable(axi_clk);
 		regulator_disable(d_3v0_mmc1_vcc);
 		regulator_disable(d_1v8_mmc1_vcc);
@@ -451,6 +497,18 @@ static int hawaii_camera_power(struct device *dev, int on)
 		}
 	}
 	return 0;
+
+e_clk_set_sensor:
+	clk_disable(clock);
+e_clk_sensor:
+e_clk_set_lp:
+	clk_disable(lp_clock);
+e_clk_lp:
+	clk_disable(axi_clk);
+e_clk_axi:
+e_clk_pll:
+e_clk_get:
+	return ret;
 }
 static int hawaii_camera_reset(struct device *dev)
 {
@@ -465,6 +523,9 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	int ret = -1;
 	struct clk *clock;
 	struct clk *axi_clk;
+	struct clk *axi_clk_0;
+	struct clk *lp_clock_0;
+	struct clk *lp_clock_1;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
@@ -490,12 +551,36 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		}
 	}
 
+	ret = -1;
+	lp_clock_0 = clk_get(NULL, CSI0_LP_PERI_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(lp_clock_0)) {
+		printk(KERN_ERR "Unable to get %s clock\n",
+		CSI0_LP_PERI_CLK_NAME_STR);
+		goto e_clk_get;
+	}
+
+	lp_clock_1 = clk_get(NULL, CSI1_LP_PERI_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(lp_clock_1)) {
+		printk(KERN_ERR "Unable to get %s clock\n",
+		CSI1_LP_PERI_CLK_NAME_STR);
+		goto e_clk_get;
+	}
+
 	clock = clk_get(NULL, SENSOR_1_CLK);
-	if (IS_ERR_OR_NULL(clock))
+	if (IS_ERR_OR_NULL(clock)) {
 		printk(KERN_ERR "Unable to get SENSOR_1 clock\n");
-	axi_clk = clk_get(NULL, "csi0_axi_clk");
-	if (IS_ERR_OR_NULL(clock))
-		printk(KERN_ERR "Unable to get AXI clock\n");
+		goto e_clk_get;
+	}
+	axi_clk_0 = clk_get(NULL, "csi0_axi_clk");
+	if (IS_ERR_OR_NULL(axi_clk_0)) {
+		printk(KERN_ERR "Unable to get AXI clock 0\n");
+		goto e_clk_get;
+	}
+	axi_clk = clk_get(NULL, "csi1_axi_clk");
+	if (IS_ERR_OR_NULL(axi_clk)) {
+		printk(KERN_ERR "Unable to get AXI clock 1\n");
+		goto e_clk_get;
+	}
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
 			printk("DVFS for UNICAM failed\n");
@@ -505,24 +590,74 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		usleep_range(1000, 1010);
 		regulator_enable(d_1v8_mmc1_vcc);
 		usleep_range(1000, 1010);
+
+		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
+			pr_err("failed to set BYTE1\n");
+			goto e_clk_pll;
+		}
+		if (mm_ccu_set_pll_select(CSI1_BYTE0_PLL, 8)) {
+			pr_err("failed to set BYTE0\n");
+			goto e_clk_pll;
+		}
+		if (mm_ccu_set_pll_select(CSI1_CAMPIX_PLL, 8)) {
+			pr_err("failed to set PIXPLL\n");
+			goto e_clk_pll;
+		}
+
+		value = clk_enable(lp_clock_0);
+		if (value) {
+			printk(KERN_ERR "Failed to enable lp clock 0\n");
+			goto e_clk_lp0;
+		}
+
+		value = clk_set_rate(lp_clock_0, CSI0_LP_FREQ);
+		if (value) {
+			pr_err("Failed to set lp clock 0\n");
+			goto e_clk_set_lp0;
+		}
+
+		value = clk_enable(lp_clock_1);
+		if (value) {
+			pr_err(KERN_ERR "Failed to enable lp clock 1\n");
+			goto e_clk_lp1;
+		}
+
+		value = clk_set_rate(lp_clock_1, CSI1_LP_FREQ);
+		if (value) {
+			pr_err("Failed to set lp clock 1\n");
+			goto e_clk_set_lp1;
+		}
+
+		value = clk_enable(axi_clk_0);
+		if (value) {
+			printk(KERN_ERR "Failed to enable axi clock 0\n");
+			goto e_clk_axi_clk_0;
+		}
 		value = clk_enable(axi_clk);
 		if (value) {
-			printk(KERN_ERR "Failed to enable axi clock\n");
-			return -1;
+			printk(KERN_ERR "Failed to enable axi clock 1\n");
+			goto e_clk_axi;
 		}
 		value = clk_enable(clock);
-		value = clk_set_rate(clock, SENSOR_1_CLK_FREQ);
 		if (value) {
 			printk("Failed to enable sensor 1 clock\n");
-			return -1;
+			goto e_clk_clock;
+		}
+		value = clk_set_rate(clock, SENSOR_1_CLK_FREQ);
+		if (value) {
+			printk("Failed to set sensor 1 clock\n");
+			goto e_clk_set_clock;
 		}
 		usleep_range(10000, 10100);
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
 		msleep(30);
 	} else {
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		clk_disable(lp_clock_0);
+		clk_disable(lp_clock_1);
 		clk_disable(clock);
 		clk_disable(axi_clk);
+		clk_disable(axi_clk_0);
 		regulator_disable(d_lvldo2_cam1_1v8);
 		regulator_disable(d_1v8_mmc1_vcc);
 		if (pi_mgr_dfs_request_update
@@ -531,6 +666,23 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		}
 	}
 	return 0;
+
+e_clk_set_clock:
+	clk_disable(clock);
+e_clk_clock:
+	clk_disable(axi_clk);
+e_clk_axi:
+	clk_disable(axi_clk_0);
+e_clk_axi_clk_0:
+e_clk_set_lp1:
+	clk_disable(lp_clock_1);
+e_clk_lp1:
+e_clk_set_lp0:
+	clk_disable(lp_clock_0);
+e_clk_lp0:
+e_clk_pll:
+e_clk_get:
+	return ret;
 }
 
 static int hawaii_camera_reset_front(struct device *dev)

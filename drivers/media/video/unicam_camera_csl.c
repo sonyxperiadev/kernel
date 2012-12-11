@@ -80,7 +80,8 @@ struct unicam_camera_dev {
 	u8 streaming;
 	u32 skip_frames;
 	struct v4l2_subdev_sensor_interface_parms if_params;
-
+	struct semaphore stop_sem;
+	bool stopping;
 };
 
 struct unicam_camera_buffer {
@@ -152,7 +153,6 @@ static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format 
 		*count = 2;
 
 	iprintk("no_of_buf=%d size=%u", *count, sizes[0]);
-
 	dprintk("-exit");
 	return 0;
 }
@@ -444,6 +444,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	int ret;
 	int thumb;
+	unsigned long flags;
 
 	CSL_CAM_INTF_CFG_st_t csl_cam_intf_cfg_st;
 	CSL_CAM_LANE_CONTROL_st_t cslCamLaneCtrl_st;
@@ -455,16 +456,21 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	dprintk("-enter");
 	iprintk("enabling csi");
 
+	spin_lock_irqsave(&unicam_dev->lock, flags);
+	unicam_dev->stopping = false;
+	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	if (csl_cam_init()) {
 		dev_err(unicam_dev->dev, "error initializing csl camera\n");
 		return -1;
 	}
 
+/*
 	ret = v4l2_subdev_call(sd, video, s_stream, 1);
 	if (ret < 0 && ret != -ENOIOCTLCMD) {
 		dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
 		return ret;
 	}
+	*/
 
 	/* get the sensor interface information */
 	ret = v4l2_subdev_call(sd, sensor, g_interface_parms, &if_params);
@@ -649,6 +655,13 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 		return -1;
 	}
 
+	/* Enabling sensor after enabling unicam */
+	ret = v4l2_subdev_call(sd, video, s_stream, 1);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
+		return ret;
+	}
+
 	if (unicam_dev->if_params.if_mode ==
 		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1) {
 		cslCamFrame.int_enable = CSL_CAM_INT_LINE_COUNT;
@@ -694,11 +707,26 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	 * since this function can sleep.
 	 * */
 
+	spin_lock_irqsave(&unicam_dev->lock, flags);
+	if (unicam_dev->active) {
+		unicam_dev->stopping = true;
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+		ret = down_timeout(&unicam_dev->stop_sem,
+				msecs_to_jiffies(200));
+		if (ret == -ETIME)
+			pr_err("Unicam: semaphore timed out waiting to STOP\n");
+	} else {
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+	}
+
+	/*
 	ret = v4l2_subdev_call(sd, video, s_stream, 0);
 	if (ret < 0 && ret != -ENOIOCTLCMD) {
 		dev_err(unicam_dev->dev, "failed to stop sensor streaming\n");
 		ret = -1;
 	}
+	*/
+
 	/* grab the lock */
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	dprintk("-enter");
@@ -742,6 +770,13 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 out:
 	dprintk("-exit");
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
+
+	/* Stopping stream after stopping unicam */
+	ret = v4l2_subdev_call(sd, video, s_stream, 0);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		dev_err(unicam_dev->dev, "failed to stop sensor streaming\n");
+		ret = -1;
+	}
 	return ret;
 }
 
@@ -895,7 +930,6 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 			mf.code);
 		return -EINVAL;
 	}
-
 	iprintk("trying format=%c%c%c%c res=%dx%d success=%d",
 		pixfmtstr(pixfmt), mf.width, mf.height, ret);
 	dprintk("-exit");
@@ -956,7 +990,6 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	pix->field = mf.field;
 	pix->colorspace = mf.colorspace;
 	icd->current_fmt = xlate;
-
 	iprintk("format set to %c%c%c%c res=%dx%d success=%d",
 		pixfmtstr(pix->pixelformat), pix->width, pix->height, ret);
 	dprintk("-exit");
@@ -1054,9 +1087,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		    csl_cam_get_intr_status(unicam_dev->cslCamHandle,
 					    (CSL_CAM_INTERRUPT_t *) &status);
 		if (status & CSL_CAM_INT_FRAME_START) {
-			if (reg_status & 0x2000) {
-			    printk("Camera: Urgent request was signalled at FS!!!! \n");
-			}
+			if (reg_status & 0x2000)
+				pr_err("Camera: Urgent request was signalled at FS!!!\n");
 			return IRQ_HANDLED;
 		}
 
@@ -1064,10 +1096,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			(status & CSL_CAM_INT_LINE_COUNT)) {
 			struct vb2_buffer *vb = unicam_dev->active;
 			fps++;
-			if (reg_status & 0x2000) {
-				printk("Camera: Urgent request was signalled at FE!!!! \n");
-			}
-
+			if (reg_status & 0x2000)
+				pr_err("Camera: Urgent request was signalled at FE!!!!\n");
 			if (t1 == 0 && t2 == 0)
 				t1 = t2 = jiffies_to_msecs(jiffies);
 
@@ -1077,7 +1107,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				fps = 0;
 				t1 = t2;
 			}
-
 			dprintk("frame received");
 			/* csl_cam_register_display(unicam_dev->cslCamHandle);*/
 			if (!vb)
@@ -1136,14 +1165,22 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
 
-				if (!list_empty(&unicam_dev->capture))
+				if (!list_empty(&unicam_dev->capture)) {
 					unicam_dev->active =
 					    &list_entry(unicam_dev->
 							capture.next, struct
 							unicam_camera_buffer,
 							queue)->vb;
-				else
+				} else {
+					unsigned long flags;
+					spin_lock_irqsave(&unicam_dev->lock,
+					flags);
 					unicam_dev->active = NULL;
+					if (unicam_dev->stopping)
+						up(&unicam_dev->stop_sem);
+					spin_unlock_irqrestore(&unicam_dev->lock
+					, flags);
+				}
 			} else
 				unicam_dev->skip_frames--;
 
@@ -1197,6 +1234,8 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 
 	INIT_LIST_HEAD(&unicam_dev->capture);
 	spin_lock_init(&unicam_dev->lock);
+	sema_init(&unicam_dev->stop_sem, 0);
+	unicam_dev->stopping = false;
 
 	unicam_dev->dev = &pdev->dev;
 	unicam_dev->irq = irq;

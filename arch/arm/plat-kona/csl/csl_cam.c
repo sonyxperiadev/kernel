@@ -42,7 +42,6 @@
 #define IRQ_Disable(irq_id) 	do {} while (0)	//disable_irq_nosync(irq_id)
 #define IRQ_Enable(irq_id)	do {} while (0)	//enable_irq(irq_id)
 
-#define POWER_MANAGEMENT_ENABLE 0
 #undef PMUX_INCLUDED
 
 #ifdef ENABLE_DEBUG
@@ -152,7 +151,6 @@ static CHAL_CAM_PORT_AFE_t cslCamChalPortAFE(CSL_CAM_PORT_AFE_T csl_val);
 static CHAL_CAM_CHAN_t cslCamChalPortChan(CSL_CAM_PORT_CHAN_T csl_val);
 
 static Int32 cslCamClock(UInt32 clk_select, UInt32 freq, Boolean enable);
-static void cslCamReset(void);
 
 
 /******************************************************************************
@@ -524,24 +522,6 @@ static CHAL_CAM_PIXEL_SIZE_t cslCamChalPixelSize(CSL_CAM_PIXEL_SIZE_T csl_val)
 }
 
 
-/*****************************************************************************
- * NAME:    cslCamReset
- *
- * Description: this function Reset Unicam Block
- *
- ******************************************************************************/
-static void cslCamReset(void)
-{
-	struct clk *unicam_clk;
-
-	/* Reset UNICAM interface */
-	unicam_clk = clk_get(NULL, "csi0_axi_clk");
-	if (!unicam_clk)
-		return;
-	/* Should clear and set CSI0_SOFT_RSTN_MASK */
-	clk_reset(unicam_clk);
-}
-
 
 /*****************************************************************************
  * NAME:    cslCamClock
@@ -564,80 +544,6 @@ static Int32 cslCamClock(UInt32 clk_select, UInt32 freq, Boolean enable)
 #if defined(PMUX_INCLUDED)
 	PinMuxConfig_t pinMuxCfg;
 #endif
-
-#if POWER_MANAGEMENT_ENABLE
-	switch (freq) {
-	case CSL_CAM_CLK_48MHz:
-		clock_freq = 48000000;
-		break;
-	case CSL_CAM_CLK_24MHz:
-		clock_freq = 24000000;
-		break;
-	case CSL_CAM_CLK_12MHz:
-		clock_freq = 12000000;
-		break;
-	default:
-		clock_freq = 26000000;
-		break;
-	case CSL_CAM_CLK_13MHz:
-		clock_freq = 13000000;
-		break;
-	case CSL_CAM_CLK_Disabled:
-		clock_freq = 26000000;
-		break;
-	case CSL_CAM_CLK_26MHz:
-		clock_freq = 26000000;
-		break;
-	}
-
-// Enable clock    
-	if (enable == 1) {
-		// Enable Clock Select 1
-		if (clk_select == 1) {
-#if defined(PMUX_INCLUDED)
-			// Set Pin Mux for DCLK2:  Select GPIO32 to be DCLK2  ( bits 10:8 = 0x300 => DCLK2 , bits 2:0 = 3 => 8 mAmps strength
-			pinMuxCfg.PinMuxConfigBitField.mode = PAD_DRV_STRENGTH_12MA;	///< pinMuxDrvStrength_en
-			pinMuxCfg.PinMuxConfigBitField.ind = 0;	///< input disable control
-			pinMuxCfg.PinMuxConfigBitField.rate = 0;	///< rate of pad output control
-			pinMuxCfg.PinMuxConfigBitField.pup = 0;	///< pull-up
-			pinMuxCfg.PinMuxConfigBitField.pdn = 1;	///< pull-down
-			pinMuxCfg.PinMuxConfigBitField.hys = 0;	///< turn on hysteresis of input
-			pinMuxCfg.PinMuxConfigBitField.mux = PAD_ALT3;	///< function interface of pin mux
-			PMUXDRV_Config_Pad(GPIO32_PAD, pinMuxCfg);
-#endif
-			PRM_set_clock_state(cslCamDrv.prmClientId,
-					    RESOURCE_DIGI_CH1, CLOCK_ON);
-			PRM_set_clock_speed(cslCamDrv.prmClientId,
-					    RESOURCE_DIGI_CH1, clock_freq);
-		} else {
-#if defined(PMUX_INCLUDED)
-			// Set Pin Mux for DCLK1
-			pinMuxCfg.PinMuxConfigBitField.mode = PAD_DRV_STRENGTH_12MA;	///< pinMuxDrvStrength_en
-			pinMuxCfg.PinMuxConfigBitField.ind = 0;	///< input disable control
-			pinMuxCfg.PinMuxConfigBitField.rate = 0;	///< rate of pad output control
-			pinMuxCfg.PinMuxConfigBitField.pup = 0;	///< pull-up
-			pinMuxCfg.PinMuxConfigBitField.pdn = 1;	///< pull-down
-			pinMuxCfg.PinMuxConfigBitField.hys = 0;	///< turn on hysteresis of input
-			pinMuxCfg.PinMuxConfigBitField.mux = PAD_ALT0;	///< function interface of pin mux
-			PMUXDRV_Config_Pad(DCLK1_PAD, pinMuxCfg);
-#endif
-			PRM_set_clock_state(cslCamDrv.prmClientId,
-					    RESOURCE_DIGI_CH0, CLOCK_ON);
-			PRM_set_clock_speed(cslCamDrv.prmClientId,
-					    RESOURCE_DIGI_CH0, clock_freq);
-		}
-	} else if (enable == 0) {
-		// Disable Dig Clk1
-		if (clk_select == 1) {
-			PRM_set_clock_state(cslCamDrv.prmClientId,
-					    RESOURCE_DIGI_CH1, CLOCK_OFF);
-		} else {
-			// Disable Clock Select 0
-			PRM_set_clock_state(cslCamDrv.prmClientId,
-					    RESOURCE_DIGI_CH0, CLOCK_OFF);
-		}
-	}
-#else
 
 	switch (freq) {
 	case CSL_CAM_CLK_48MHz:
@@ -664,7 +570,6 @@ static Int32 cslCamClock(UInt32 clk_select, UInt32 freq, Boolean enable)
 			 "[cslCamClock][Info] : chal_cam_clock():  ERROR!\n"));
 		success |= CSL_CAM_BAD_CLK;
 	}
-#endif
 	return success;
 }
 
@@ -699,16 +604,6 @@ Int32 csl_cam_init(void)
 			cslCamDrv.camH[instance].port_chan_sel =
 			    (CSL_CAM_PORT_CHAN_T) (1 << instance);
 		}
-
-#if POWER_MANAGEMENT_ENABLE
-		// Register Power Management Client Id
-		cslCamDrv.prmClientId = PRM_client_register("csl_cam");
-		if (cslCamDrv.prmClientId < 0) {
-			success |= CSL_CAM_ID;
-			CSLCAM_DBG(CSLCAM_DBG_ID,
-				   "[csl_cam_init][Error] : PRM_client_register() FAILED \n");
-		}
-#endif
 
 		// Init CHAL
 		printk("csl_cam_init() chal_cam_init()\n");
@@ -746,17 +641,9 @@ Int32 csl_cam_exit(void)
 
 	if (cslCamDrv.init) {
 		chal_cam_deinit(cslCamDrv.chalCamH);
-#if POWER_MANAGEMENT_ENABLE
-		// De-Register Power Management Client Id
-		if (PRM_client_deregister(cslCamDrv.prmClientId) != 0) {
-			success |= CSL_CAM_ID;
-			CSLCAM_DBG(CSLCAM_DBG_ID,
-				   "[csl_cam_exit][Error] : PRM_client_deregister() FAILED \n");
-		}
-#endif
 		cslCamDrv.init = 0;
 	}
-	DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID, "[csl_cam_exit][Info] : exit: \n"));
+	DBG_OUT(CSLCAM_DBG(CSLCAM_DBG_ID, "[csl_cam_exit][Info] : exit:\n"));
 	return success;
 }
 
@@ -883,149 +770,6 @@ Int32 csl_cam_open(pCSL_CAM_INTF_CFG_st intfCfg, CSL_CAM_HANDLE *cslCamH)
 				 camH->port_chan_sel,
 				 cslCamDrv.intf_cfg.input_mode,
 				 cslCamDrv.intf_cfg.frame_time_out));
-
-#if POWER_MANAGEMENT_ENABLE
-			// Set Camera CSIx Phy & Clock Registers
-			if (cslCamDrv.intf_cfg.afe_port == CSL_CAM_PORT_AFE_1) {
-				// CSI0_LP                      
-				if (PRM_set_clock_state
-				    (cslCamDrv.prmClientId, RESOURCE_CSI0,
-				     CLOCK_ON) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_state(): FAILED \n"));
-				}
-				if (PRM_set_clock_divider
-				    (cslCamDrv.prmClientId, RESOURCE_CSI0, 0, 0,
-				     4, 0) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_divider(): FAILED \n"));
-				}
-				// CSI0_AXI                     
-				if (PRM_set_clock_state
-				    (cslCamDrv.prmClientId, RESOURCE_CSI0_AXI,
-				     CLOCK_ON) != BRCM_PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_state(): RESOURCE_CSI0_AXI: FAILED \n"));
-				}
-				// CSI1_LP                      
-				if (PRM_set_clock_state
-				    (cslCamDrv.prmClientId, RESOURCE_CSI1,
-				     CLOCK_ON) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_state(): RESOURCE_CSI1: FAILED \n"));
-				}
-				// CSI1_AXI     
-				if (PRM_set_clock_state
-				    (cslCamDrv.prmClientId, RESOURCE_CSI1_AXI,
-				     CLOCK_ON) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_state(): RESOURCE_CSI1_AXI: FAILED \n"));
-				}
-				// CSI1_DIV             
-				if (PRM_set_clock_divider
-				    (cslCamDrv.prmClientId, RESOURCE_CSI1, 0, 0,
-				     4, 0) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_divider(): FAILED \n"));
-				}
-				// CSI1_PHY_DIV         
-				//  write_reg(CSI1_PHY_DIV, 0x00000888);            // csi1_rx0_bclkhs
-				if (PRM_set_clock_divider
-				    (cslCamDrv.prmClientId,
-				     RESOURCE_CSI1_CAMPIX, 8, 0, 0,
-				     0) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_divider(): RESOURCE_CSI1_CAMPIX: FAILED \n"));
-				}
-				if (PRM_set_clock_divider
-				    (cslCamDrv.prmClientId, RESOURCE_CSI1_BYTE1,
-				     8, 0, 0, 0) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_divider(): RESOURCE_CSI1_BYTE1: FAILED \n"));
-				}
-				if (PRM_set_clock_divider
-				    (cslCamDrv.prmClientId, RESOURCE_CSI1_BYTE0,
-				     8, 0, 0, 0) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_divider(): RESOURCE_CSI1_BYTE0: FAILED \n"));
-				}
-			} else {
-				// CSI0_LP                      
-				if (PRM_set_clock_state
-				    (cslCamDrv.prmClientId, RESOURCE_CSI0,
-				     CLOCK_ON) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_state(): FAILED \n"));
-				}
-				// CSI0_AXI                     
-				if (PRM_set_clock_state
-				    (cslCamDrv.prmClientId, RESOURCE_CSI0_AXI,
-				     CLOCK_ON) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_state(): RESOURCE_CSI0_AXI: FAILED \n"));
-				}
-				if (PRM_set_clock_divider
-				    (cslCamDrv.prmClientId, RESOURCE_CSI0, 0, 0,
-				     4, 0) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_divider(): FAILED \n"));
-				}
-				// CSI0_PHY_DIV         
-				//  write_reg(CSI0_PHY_DIV, 0x00000888);            // csi0_rx0_bclkhs
-				if (PRM_set_clock_divider
-				    (cslCamDrv.prmClientId,
-				     RESOURCE_CSI0_CAMPIX, 8, 0, 0,
-				     0) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_divider(): RESOURCE_CSI0_CAMPIX: FAILED \n"));
-				}
-				if (PRM_set_clock_divider
-				    (cslCamDrv.prmClientId, RESOURCE_CSI0_BYTE1,
-				     8, 0, 0, 0) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_divider(): RESOURCE_CSI0_BYTE1: FAILED \n"));
-				}
-				if (PRM_set_clock_divider
-				    (cslCamDrv.prmClientId, RESOURCE_CSI0_BYTE0,
-				     8, 0, 0, 0) != PRM_OK) {
-					success |= CSL_CAM_BAD_CLK;
-					DBG_OUT(CSLCAM_DBG
-						(CSLCAM_DBG_ID,
-						 "[csl_cam_open][Error] :  PRM_set_clock_divider(): RESOURCE_CSI0_BYTE0: FAILED \n"));
-				}
-			}
-#endif
-
-			/* Reset Unicam Interface */
-			cslCamReset();
 
 			// Set Interface
 			chal_cam_intf_st.intf =
@@ -1249,63 +993,6 @@ Int32 csl_cam_close(CSL_CAM_HANDLE cslCamH)
 				"CHAL_CAM_ANALOG: FAILED\n"));
 			success |= CSL_CAM_ERR;
 		}
-
-		/* Reset Unicam Interface */
-		cslCamReset();
-#if 0
-		/* Have we been asked to register a callback? */
-		if (cslCamDrv.int_registered == TRUE) {
-			// Disable device irq
-			IRQ_Disable((InterruptId_t) cslCamDrv.int_id);
-			IRQ_Clear((InterruptId_t) cslCamDrv.int_id);
-
-			free_irq(cslCamDrv.int_id, (void *)NULL);
-
-			cslCamDrv.int_registered = FALSE;
-		}
-#endif
-#if POWER_MANAGEMENT_ENABLE
-		// Disable Clocks
-		if (cslCamDrv.intf_cfg.afe_port == CSL_CAM_PORT_AFE_1) {
-			// CSI1_LP                  
-			if (PRM_set_clock_state
-			    (cslCamDrv.prmClientId, RESOURCE_CSI1,
-			     CLOCK_OFF) != PRM_OK) {
-				success |= CSL_CAM_BAD_CLK;
-				DBG_OUT(CSLCAM_DBG
-					(CSLCAM_DBG_ID,
-					 "[csl_cam_open][Error] :  PRM_set_clock_state(): FAILED \n"));
-			}
-			// CSI1_AXI                 
-			if (PRM_set_clock_state
-			    (cslCamDrv.prmClientId, RESOURCE_CSI1_AXI,
-			     CLOCK_OFF) != PRM_OK) {
-				success |= CSL_CAM_BAD_CLK;
-				DBG_OUT(CSLCAM_DBG
-					(CSLCAM_DBG_ID,
-					 "[csl_cam_open][Error] :  PRM_set_clock_state(): RESOURCE_CSI1_AXI: FAILED \n"));
-			}
-		} else {
-			// CSI0_LP                  
-			if (PRM_set_clock_state
-			    (cslCamDrv.prmClientId, RESOURCE_CSI0,
-			     CLOCK_OFF) != PRM_OK) {
-				success |= CSL_CAM_BAD_CLK;
-				DBG_OUT(CSLCAM_DBG
-					(CSLCAM_DBG_ID,
-					 "[csl_cam_open][Error] :  PRM_set_clock_state(): FAILED \n"));
-			}
-			// CSI0_AXI                 
-			if (PRM_set_clock_state
-			    (cslCamDrv.prmClientId, RESOURCE_CSI0_AXI,
-			     CLOCK_OFF) != PRM_OK) {
-				success |= CSL_CAM_BAD_CLK;
-				DBG_OUT(CSLCAM_DBG
-					(CSLCAM_DBG_ID,
-					 "[csl_cam_open][Error] :  PRM_set_clock_state(): RESOURCE_CSI0_AXI: FAILED \n"));
-			}
-		}
-#endif
 	}
 // close handle
 	camH->open = 0;
