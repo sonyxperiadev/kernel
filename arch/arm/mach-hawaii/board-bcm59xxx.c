@@ -1237,39 +1237,6 @@ struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
 	.chrgr_name = "bcmpmu_charger",
 };
 
-static struct spa_temp_tb spa_batt_temp_map[] = {
-/*	adc		temp*/
-	{932, -400},			/* -40 C */
-	{900, -350},			/* -35 C */
-	{860, -300},			/* -30 C */
-	{816, -250},			/* -25 C */
-	{760, -200},			/* -20 C */
-	{704, -150},			/* -15 C */
-	{636, -100},			/* -10 C */
-	{568, -50},			/* -5 C */
-	{500, 0},			/* 0 C */
-	{440, 50},			/* 5 C */
-	{376, 100},			/* 10 C */
-	{324, 150},			/* 15 C */
-	{272, 200},			/* 20 C */
-	{228, 250},			/* 25 C */
-	{192, 300},			/* 30 C */
-	{160, 350},			/* 35 C */
-	{132, 400},			/* 40 C */
-	{112, 450},			/* 45 C */
-	{92, 500},			/* 50 C */
-	{76, 550},			/* 55 C */
-	{64, 600},			/* 60 C */
-	{52, 650},			/* 65 C */
-	{44, 700},			/* 70 C */
-	{36, 750},			/* 75 C */
-	{32, 800},			/* 80 C */
-	{28, 850},			/* 85 C */
-	{24, 900},			/* 90 C */
-	{20, 950},			/* 95 C */
-	{16, 1000},			/* 100 C */
-};
-
 struct spa_power_data spa_data = {
 	.charger_name = "bcmpmu_charger",
 
@@ -1282,8 +1249,6 @@ struct spa_power_data spa_data = {
 	.charging_cur_usb = 500,
 	.charging_cur_wall = 1500,
 	.charge_timer_limit = 10,
-	.batt_temp_tb = spa_batt_temp_map,
-	.batt_temp_tb_len = ARRAY_SIZE(spa_batt_temp_map),
 };
 #endif /*CONFIG_CHARGER_BCMPMU_SPA*/
 /* The subdevices of the bcmpmu59xxx */

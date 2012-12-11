@@ -599,7 +599,7 @@ static int spa_get_batt_temp(struct spa_power_desc *spa_power_iter)
 	struct power_supply *ps;
 	union power_supply_propval value;
 
-#if 0
+#if 1
 	pr_spa_dbg(LEVEL4,"%s : enter \n", __func__);
 	ps = power_supply_get_by_name(spa_power_iter->charger_info.charger_name);
 
@@ -633,10 +633,10 @@ static int spa_get_batt_temp(struct spa_power_desc *spa_power_iter)
 			return temp;
 		}
 	}
-#endif
 	pr_spa_dbg(LEVEL3, "%s : temperature = %d \n", __func__, value.intval);
 	pr_spa_dbg(LEVEL4, "%s : leave \n", __func__);
 	return temp;
+#endif
 }
 
 static int spa_get_batt_temp_avg(struct spa_power_desc *spa_power_iter)

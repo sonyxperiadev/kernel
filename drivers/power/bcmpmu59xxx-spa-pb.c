@@ -43,6 +43,8 @@ static int dbg_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |
 #define SPA_FIFO_IS_FULL(f) ((f).full)
 
 #define SPA_WORK_SCHEDULE_DELAY	0
+
+#define SPA_ADC_READ_TRIES 5
 struct spa_event_fifo {
 	u32 head;
 	u32 tail;
@@ -162,6 +164,21 @@ static int bcmpmu_spa_pb_chrgr_set_property(struct power_supply *ps,
 	return ret;
 }
 
+static void  spa_bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu,
+				enum bcmpmu_adc_channel channel,
+				enum bcmpmu_adc_req req,
+				struct bcmpmu_adc_result *result)
+{
+	int ret = 0;
+	int retries = SPA_ADC_READ_TRIES;
+
+	while (retries--) {
+		ret = bcmpmu_adc_read(bcmpmu, channel, req, result);
+		if (!ret)
+			break;
+	}
+	BUG_ON(retries <= 0);
+}
 static int bcmpmu_spa_pb_chrgr_get_property(struct power_supply *ps,
 	enum power_supply_property prop,
 	union power_supply_propval *propval)
@@ -201,18 +218,15 @@ static int bcmpmu_spa_pb_chrgr_get_property(struct power_supply *ps,
 
 	case POWER_SUPPLY_PROP_TEMP:
 	case POWER_SUPPLY_PROP_BATT_TEMP_ADC:
-		ret = bcmpmu_adc_read(bcmpmu, PMU_ADC_CHANN_NTC,
+		spa_bcmpmu_adc_read(bcmpmu, PMU_ADC_CHANN_NTC,
 				PMU_ADC_REQ_SAR_MODE, &adc_result);
-		if (!ret) {
-			bcmpmu_spa_pb->temp_adc = adc_result.raw;
-			if (prop == POWER_SUPPLY_PROP_BATT_TEMP_ADC)
-				propval->intval = adc_result.raw;
-			else
-				/* SPA expects temperature in
-				 * centigrade * 10 format */
-				propval->intval = adc_result.conv * 10;
-		} else
-			ret = -ENODATA;
+		bcmpmu_spa_pb->temp_adc = adc_result.raw;
+		if (prop == POWER_SUPPLY_PROP_BATT_TEMP_ADC)
+			propval->intval = adc_result.raw;
+		else
+			/* SPA expects temperature in
+			 * centigrade * 10 format */
+			propval->intval = adc_result.conv * 10;
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
@@ -220,25 +234,19 @@ static int bcmpmu_spa_pb_chrgr_get_property(struct power_supply *ps,
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		ret = bcmpmu_adc_read(bcmpmu, PMU_ADC_CHANN_VMBATT,
+		spa_bcmpmu_adc_read(bcmpmu, PMU_ADC_CHANN_VMBATT,
 				PMU_ADC_REQ_SAR_MODE, &adc_result);
 
-		if (!ret) {
-			bcmpmu_spa_pb->vbat = adc_result.conv;
-			propval->intval = adc_result.conv;
-		} else
-			ret = -ENODATA;
+		bcmpmu_spa_pb->vbat = adc_result.conv;
+		propval->intval = adc_result.conv;
 		break;
 
 	case POWER_SUPPLY_PROP_PRESENT:
-		ret = bcmpmu_adc_read(bcmpmu, PMU_ADC_CHANN_BSI,
+		spa_bcmpmu_adc_read(bcmpmu, PMU_ADC_CHANN_BSI,
 				PMU_ADC_REQ_SAR_MODE, &adc_result);
 
-		if (!ret) {
-			bcmpmu_spa_pb->present = adc_result.raw;
-			propval->intval = (adc_result.raw == 0x3FF) ? 0 : 1;
-		} else
-			ret = -ENODATA;
+		bcmpmu_spa_pb->present = adc_result.raw;
+		propval->intval = (adc_result.raw == 0x3FF) ? 0 : 1;
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
