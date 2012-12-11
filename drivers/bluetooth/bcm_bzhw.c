@@ -27,6 +27,9 @@
 #include <linux/tty.h>
 #include <linux/delay.h>
 
+#include <linux/of.h>
+#include <linux/of_platform.h>
+
 #ifdef CONFIG_BCM_BZHW
 #define BZHW_CLOCK_ENABLE 1
 #define BZHW_CLOCK_DISABLE 0
@@ -317,7 +320,7 @@ static int bcm_bzhw_init_bt_wake(struct bcmbzhw_struct *priv)
 	if (priv->pdata->gpio_bt_wake < 0) {
 		pr_debug("%s: gpio_bt_wake=%d\n",
 			__func__, priv->pdata->gpio_bt_wake);
-		return 0;
+		return -EINVAL;
 	}
 
 	rc = gpio_request(priv->pdata->gpio_bt_wake, "BT Power Mgmt");
@@ -333,7 +336,7 @@ static int bcm_bzhw_init_bt_wake(struct bcmbzhw_struct *priv)
 	wake_lock_init(&priv->bzhw_data.bt_wake_lock,
 			WAKE_LOCK_SUSPEND, "BTWAKE");
 	priv->bzhw_data.gpio_bt_wake = priv->pdata->gpio_bt_wake;
-	return 0;
+	return rc;
 
 }
 
@@ -344,6 +347,7 @@ static void bcm_bzhw_clean_bt_wake(struct bcmbzhw_struct *priv)
 
 	wake_lock_destroy(&priv->bzhw_data.bt_wake_lock);
 	gpio_free((unsigned)priv->pdata->gpio_bt_wake);
+	priv->bzhw_data.gpio_bt_wake = -1;
 
 }
 
@@ -385,7 +389,7 @@ static int bcm_bzhw_init_hostwake(struct bcmbzhw_struct *priv)
 {
 	int rc;
 	if (priv->pdata->gpio_host_wake < 0)
-		return 0;
+		return -EINVAL;
 	wake_lock_init(&priv->bzhw_data.host_wake_lock, WAKE_LOCK_SUSPEND,
 		       "HOSTWAKE");
 
@@ -400,19 +404,21 @@ static int bcm_bzhw_init_hostwake(struct bcmbzhw_struct *priv)
 	rc = bcm_bzhw_init_clock(priv);
 	priv->bzhw_data.gpio_host_wake = priv->pdata->gpio_host_wake;
 
-	return 0;
+	return rc;
 }
 
 static void bcm_bzhw_clean_host_wake(struct bcmbzhw_struct *priv)
 {
 	if (priv->pdata->gpio_host_wake == -1)
 		return;
-	if (priv->bzhw_data.host_irq >= 0)
+	if (priv->bzhw_data.host_irq >= 0) {
 		free_irq(priv->bzhw_data.host_irq, bcm_bzhw_host_wake_isr);
+		priv->bzhw_data.host_irq = -1;
+	}
 
 	wake_lock_destroy(&priv->bzhw_data.host_wake_lock);
 	gpio_free((unsigned)priv->pdata->gpio_host_wake);
-
+	priv->bzhw_data.gpio_host_wake = -1;
 }
 
 struct bcmbzhw_struct *bcm_bzhw_start(struct tty_struct* tty)
@@ -500,19 +506,42 @@ static int bcm_bzhw_probe(struct platform_device *pdev)
 {
 
 	int rc = 0;
+	u32 val;
+
 	priv_g = kzalloc(sizeof(*priv_g), GFP_ATOMIC);
 	if (!priv_g)
 		return -ENOMEM;
+
 	spin_lock_init(&priv_g->bzhw_lock);
-	priv_g->pdata =
+
+	if (pdev->dev.platform_data) {
+		priv_g->pdata =
 		(struct bcm_bzhw_platform_data *)pdev->dev.platform_data;
+	} else if (pdev->dev.of_node) {
+		priv_g->pdata = kzalloc(sizeof(struct bcm_bzhw_platform_data),
+					GFP_ATOMIC);
+		if (priv_g->pdata == NULL)
+			goto error1;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+					"bt-wake-gpio",
+					&val))
+			goto error2;
+		priv_g->pdata->gpio_bt_wake = val;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+					"host-wake-gpio",
+					&val))
+			goto error2;
+		priv_g->pdata->gpio_host_wake = val;
+	} else {
+		pr_err("%s: **ERROR** NO platform data available\n", __func__);
+		goto error1;
+	}
+
 	priv_g->bzhw_data.gpio_bt_wake = -1;
 	priv_g->bzhw_data.gpio_host_wake = -1;
 	priv_g->bzhw_data.host_irq = -1;
-	if (!priv_g->pdata) {
-		pr_err("%s: platform data is not set\n", __func__);
-		return -ENODEV;
-	}
 	pr_info("%s: gpio_bt_wake=%d, gpio_host_wake=%d\n", __func__,
 		priv_g->pdata->gpio_bt_wake, priv_g->pdata->gpio_host_wake);
 
@@ -522,25 +551,36 @@ static int bcm_bzhw_probe(struct platform_device *pdev)
 	rc = bcm_bzhw_init_hostwake(priv_g);
 
 	if (rc)
-		return rc;
+		goto error2;
 
 	return 0;
+error2:
+	if (pdev->dev.of_node != NULL)
+		kfree(priv_g->pdata);
+error1:
+	kfree(priv_g);
+	return rc;
 }
 
 static int bcm_bzhw_remove(struct platform_device *pdev)
 {
-	struct bcmbzhw_struct *priv = NULL;
-	priv->pdata = pdev->dev.platform_data;
+	if (priv_g == NULL)
+		return 0;
 
-	if (priv->pdata) {
-		del_timer(&priv->sleep_timer_hw);
-		bcm_bzhw_clean_bt_wake(priv);
-		bcm_bzhw_clean_host_wake(priv);
-		if (pi_mgr_qos_request_remove(&priv->qos_node))
+	if (priv_g->pdata) {
+		del_timer(&priv_g->sleep_timer_hw);
+		bcm_bzhw_clean_bt_wake(priv_g);
+		bcm_bzhw_clean_host_wake(priv_g);
+		if (pi_mgr_qos_request_remove(&priv_g->qos_node))
 			pr_info("%s failed to unregister qos client\n",
 				__func__);
 	}
-	kfree(priv);
+
+	if (priv_g != NULL) {
+		if ((pdev->dev.of_node != NULL) && (priv_g->pdata != NULL))
+			kfree(priv_g->pdata);
+		kfree(priv_g);
+	}
 	return 0;
 }
 
@@ -562,6 +602,10 @@ static int bcm_bzhw_resume(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id bcm_bzhw_match[] = {
+	{ .compatible = "bcm,bzhw"},
+	{ /* Sentinel */ }
+};
 
 static struct platform_driver bcm_bzhw_platform_driver = {
 	.probe = bcm_bzhw_probe,
@@ -571,6 +615,7 @@ static struct platform_driver bcm_bzhw_platform_driver = {
 	.driver = {
 		   .name = "bcm_bzhw",
 		   .owner = THIS_MODULE,
+		   .of_match_table = bcm_bzhw_match,
 		   },
 };
 

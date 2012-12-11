@@ -1079,23 +1079,6 @@ static struct platform_device hawaii_bcmbt_rfkill_device = {
 };
 #endif
 
-#ifdef CONFIG_BCM_BZHW
-#define GPIO_BT_WAKE	32
-#define GPIO_HOST_WAKE	72
-static struct bcm_bzhw_platform_data bcm_bzhw_data = {
-	.gpio_bt_wake = GPIO_BT_WAKE,
-	.gpio_host_wake = GPIO_HOST_WAKE,
-};
-
-static struct platform_device hawaii_bcm_bzhw_device = {
-	.name = "bcm_bzhw",
-	.id = -1,
-	.dev = {
-		.platform_data = &bcm_bzhw_data,
-		},
-};
-#endif
-
 #ifdef CONFIG_BCM_BT_LPM
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
@@ -1399,9 +1382,6 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&hawaii_bcmbt_rfkill_device,
 #endif
 
-#ifdef CONFIG_BCM_BZHW
-	&hawaii_bcm_bzhw_device,
-#endif
 
 #ifdef CONFIG_BCM_BT_LPM
 	&board_bcmbt_lpm_device,
