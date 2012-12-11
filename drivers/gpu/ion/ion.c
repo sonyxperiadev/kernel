@@ -73,7 +73,6 @@ struct ion_device {
  * @dev:		backpointer to ion device
  * @handles:		an rb tree of all the handles in this client
  * @lock:		lock protecting the tree of handles
- * @heap_type_mask:	mask of all supported heap types
  * @name:		used for debugging
  * @task:		used for debugging
  *
@@ -86,7 +85,6 @@ struct ion_client {
 	struct ion_device *dev;
 	struct rb_root handles;
 	struct mutex lock;
-	unsigned int heap_type_mask;
 	const char *name;
 	struct task_struct *task;
 	pid_t pid;
@@ -602,9 +600,6 @@ retry:
 #endif
 	down_read(&dev->lock);
 	plist_for_each_entry(heap, &dev->heaps, node) {
-		/* if the client doesn't support this heap type */
-		if (!((1 << heap->type) & client->heap_type_mask))
-			continue;
 		/* if the caller didn't specify this heap id */
 		if (!((1 << heap->id) & heap_id_mask))
 			continue;
@@ -875,7 +870,6 @@ static const struct file_operations debug_client_fops = {
 };
 
 struct ion_client *ion_client_create(struct ion_device *dev,
-				     unsigned int heap_type_mask,
 				     const char *name)
 {
 	struct ion_client *client;
@@ -910,7 +904,6 @@ struct ion_client *ion_client_create(struct ion_device *dev,
 	client->handles = RB_ROOT;
 	mutex_init(&client->lock);
 	client->name = name;
-	client->heap_type_mask = heap_type_mask;
 	client->task = task;
 	client->pid = pid;
 
@@ -1410,7 +1403,7 @@ static int ion_open(struct inode *inode, struct file *file)
 	struct ion_client *client;
 
 	pr_debug("%s: %d\n", __func__, __LINE__);
-	client = ion_client_create(dev, -1, "user");
+	client = ion_client_create(dev, "user");
 	if (IS_ERR_OR_NULL(client))
 		return PTR_ERR(client);
 	file->private_data = client;
@@ -1426,7 +1419,7 @@ static const struct file_operations ion_fops = {
 };
 
 static size_t ion_debug_heap_total(struct ion_client *client,
-				   int id, size_t *shared)
+				   unsigned int id, size_t *shared)
 {
 	size_t size = 0;
 	struct rb_node *n;
