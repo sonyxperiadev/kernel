@@ -25,6 +25,8 @@ struct bcm_hsotgctrl_platform_data {
 	const unsigned char *mdio_mstr_clk_name;
 };
 
+typedef void (*send_core_event_cb_t)(void);
+
 int bcm_hsotgctrl_phy_set_vbus_stat(bool on);
 int bcm_hsotgctrl_phy_set_non_driving(bool on);
 int bcm_hsotgctrl_set_phy_off(bool on);
@@ -46,7 +48,8 @@ int bcm_hsotgctrl_set_phy_clk_request(bool on);
 int bcm_hsotgctrl_phy_mdio_init(void);
 int bcm_hsotgctrl_set_ldo_suspend_mask(void);
 int bcm_hsotgctrl_phy_wakeup_condition(bool set);
-int bcm_hsotgctrl_handle_bus_suspend(void);
+int bcm_hsotgctrl_handle_bus_suspend(send_core_event_cb_t suspend_core_cb,
+		send_core_event_cb_t wakeup_core_cb);
 int bcm_hsotgctrl_get_clk_count(void);
 int bcm_hsotgctrl_is_suspend_allowed(bool *suspend_allowed);
 void bcm_hsotgctrl_wakeup_core(void);

@@ -127,6 +127,29 @@ void w_init_core(void *p)
 		}
 	}
 }
+void w_suspend_core(void *p)
+{
+	dwc_otg_core_if_t *core_if = p;
+
+	dwc_otg_core_global_regs_t *global_regs = core_if->core_global_regs;
+
+
+	/* Clear any pending OTG Interrupts */
+	dwc_write_reg32(&global_regs->gotgint, 0xFFFFFFFF);
+
+	/* Clear any pending interrupts */
+	dwc_write_reg32(&global_regs->gintsts, 0xFFFFFFFF);
+
+	dwc_otg_disable_global_interrupts(core_if);
+}
+
+
+void w_wakeup_core(void *p)
+{
+	dwc_otg_core_if_t *core_if = p;
+	dwc_otg_enable_global_interrupts(core_if);
+
+}
 
 void w_shutdown_core(void *p)
 {
@@ -183,6 +206,16 @@ static int dwc_otg_xceiv_nb_callback(struct notifier_block *nb,
 		/* Schedule a work item to de-init the core */
 		DWC_WORKQ_SCHEDULE(core_if->wq_otg, w_shutdown_core,
 				   core_if, "shutdown core");
+		break;
+	case USB_EVENT_SUSPEND_CORE:
+		/* Schedule a work item to de-init the core */
+		DWC_WORKQ_SCHEDULE(core_if->wq_otg, w_suspend_core,
+			   core_if, "suspend core");
+		break;
+	case USB_EVENT_WAKEUP_CORE:
+		/* Schedule a work item to de-init the core */
+		DWC_WORKQ_SCHEDULE(core_if->wq_otg, w_wakeup_core,
+			   core_if, "wake up core ");
 		break;
 	default:
 		DWC_DEBUGPL(DBG_CIL, "Unhandled OTG notification\n");
