@@ -244,6 +244,18 @@ static int bcmpmu_otg_xceiv_pullup_on(struct usb_phy *phy,
 	return 0;
 }
 
+static void bcmpmu_otg_xceiv_suspend_core(void)
+{
+	atomic_notifier_call_chain(&usb_get_transceiver()->notifier,
+			USB_EVENT_SUSPEND_CORE, NULL);
+}
+
+static void bcmpmu_otg_xceiv_wakeup_core(void)
+{
+	atomic_notifier_call_chain(&usb_get_transceiver()->notifier,
+			USB_EVENT_WAKEUP_CORE, NULL);
+}
+
 static int bcmpmu_otg_xceiv_set_suspend(struct usb_phy *phy,
 					int suspend)
 {
@@ -254,7 +266,9 @@ static int bcmpmu_otg_xceiv_set_suspend(struct usb_phy *phy,
 		return -EINVAL;
 
 	if (!xceiv_data->otg_enabled && suspend)
-		bcm_hsotgctrl_handle_bus_suspend();
+		bcm_hsotgctrl_handle_bus_suspend(
+					bcmpmu_otg_xceiv_suspend_core,
+					bcmpmu_otg_xceiv_wakeup_core);
 
 	return 0;
 }
