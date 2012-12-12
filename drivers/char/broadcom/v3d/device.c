@@ -216,6 +216,7 @@ static void disable_clock(v3d_device_t *instance)
 /* Power mutex must be held by the caller of PowerOn() and PowerOff() */
 static void power_on(v3d_device_t *instance)
 {
+	int ret;
 #ifdef VERBOSE_DEBUG
 	printk(KERN_ERR "On\n");
 #endif
@@ -224,10 +225,13 @@ static void power_on(v3d_device_t *instance)
 	mb();
 	instance->on = 1;
 	initialise_registers(instance);
+	ret = request_irq(IRQ_GRAPHICS, interrupt_handler,
+			IRQF_TRIGGER_HIGH | IRQF_SHARED, "v3d", instance);
 }
 
 static void power_off(v3d_device_t *instance)
 {
+	free_irq(IRQ_GRAPHICS, instance);
 #ifdef VERBOSE_DEBUG
 	printk(KERN_ERR "Off\n");
 #endif
@@ -388,7 +392,6 @@ void v3d_device_delete(v3d_device_t *instance)
 	switch (instance->initialised) {
 	case 8:
 		mutex_lock(&instance->suspend);
-		free_irq(IRQ_GRAPHICS, instance);
 		flush_delayed_work(&instance->switch_off);
 		free_bin_memory(instance);
 
@@ -522,7 +525,6 @@ v3d_device_t *v3d_device_create(v3d_driver_t *driver, struct device *device)
 		return printk(KERN_ERR "%s:%d fail\n", __func__, __LINE__), v3d_device_delete(instance), NULL;
 	++instance->initialised;
 
-	status = request_irq(IRQ_GRAPHICS, interrupt_handler, IRQF_TRIGGER_HIGH, "v3d", instance);
 	if (status != 0)
 		return printk(KERN_ERR "%s:%d fail\n", __func__, __LINE__), v3d_device_delete(instance), NULL;
 	++instance->initialised;
