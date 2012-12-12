@@ -59,9 +59,9 @@ enum ion_heap_type {
 					   at mmap time, if this is set
 					   caches must be managed manually */
 
-#define ION_FLAG_WRITETHROUGH 4 /* Needs explicit cache invalidates */
-#define ION_FLAG_WRITEBACK    8 /* Needs explicit cache flushes */
-#define ION_FLAG_WRITECOMBINE 16
+#define ION_FLAG_WRITECOMBINE (1 << 16)
+#define ION_FLAG_WRITETHROUGH (2 << 16) /* Needs explicit cache invalidates */
+#define ION_FLAG_WRITEBACK    (4 << 16) /* Needs explicit cache flushes */
 
 #ifdef __KERNEL__
 struct ion_device;
