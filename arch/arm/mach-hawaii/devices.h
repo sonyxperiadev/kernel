@@ -38,6 +38,7 @@ extern struct platform_device rng_device;
 #ifdef CONFIG_USB_DWC_OTG
 extern struct platform_device hawaii_hsotgctrl_platform_device;
 extern struct platform_device hawaii_otg_platform_device;
+extern struct platform_device hawaii_usb_phy_platform_device;
 #endif
 #ifdef CONFIG_KONA_AVS
 extern struct platform_device kona_avs_device;

@@ -618,6 +618,26 @@ struct platform_device hawaii_hsotgctrl_platform_device = {
 	.num_resources = ARRAY_SIZE(hawaii_hsotgctrl_platform_resource),
 };
 
+static struct resource hawaii_usb_phy_platform_resource[] = {
+	[0] = {
+	       .start = HSOTG_CTRL_BASE_ADDR,
+	       .end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+	[1] = {
+	       .start = CHIPREGS_BASE_ADDR,
+	       .end = CHIPREGS_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	       },
+};
+
+struct platform_device hawaii_usb_phy_platform_device = {
+	.name = "bcm_hsotgctrl_phy_mdio",
+	.id = -1,
+	.resource = hawaii_usb_phy_platform_resource,
+	.num_resources = ARRAY_SIZE(hawaii_usb_phy_platform_resource),
+};
+
 static struct resource hawaii_otg_platform_resource[] = {
 	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to
 				be compatible with legacy code */

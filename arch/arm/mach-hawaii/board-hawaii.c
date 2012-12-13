@@ -905,6 +905,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 
 #if defined(CONFIG_USB_DWC_OTG)
 	&hawaii_hsotgctrl_platform_device,
+	&hawaii_usb_phy_platform_device,
 	&hawaii_otg_platform_device,
 #endif
 
@@ -1886,6 +1887,8 @@ static void hawaii_add_pdata(void)
 #ifdef CONFIG_USB_DWC_OTG
 	hawaii_hsotgctrl_platform_device.dev.platform_data =
 	    &hsotgctrl_plat_data;
+	hawaii_usb_phy_platform_device.dev.platform_data =
+		&hsotgctrl_plat_data;
 #endif
 #ifdef CONFIG_ION
 	ion_system_device.dev.platform_data = &ion_system_data;
