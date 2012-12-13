@@ -844,6 +844,7 @@ CONFIG_MMDMA=y
 # CONFIG_GPS_IRQ is not set
 # CONFIG_BCM_LOGRAM_HELPER is not set
 # CONFIG_NEW_GPSCHIP_I2C is not set
+CONFIG_BCM_GPS_CNTIN=y
 # CONFIG_RAMOOPS is not set
 # CONFIG_BCM_GPS is not set
 # CONFIG_I2C is not set
