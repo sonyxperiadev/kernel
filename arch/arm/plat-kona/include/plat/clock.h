@@ -24,6 +24,8 @@
 #include <linux/debugfs.h>
 #endif
 
+extern unsigned read_mpidr(void);
+
 #define GET_BIT_USING_MASK(reg_val, mask)	(!!((reg_val) & (mask)))
 #define SET_BIT_USING_MASK(reg_val, mask)	((reg_val) | (mask))
 #define RESET_BIT_USING_MASK(reg_val, mask)	((reg_val) & ~(mask))
@@ -468,7 +470,7 @@ struct ccu_clk {
 	struct clk clk;
 	int pi_id;
 	struct list_head clk_list;
-
+	u32 lock_flag;
 	u32 pol_engine_dis_cnt;
 	u32 write_access_en_count;
 
