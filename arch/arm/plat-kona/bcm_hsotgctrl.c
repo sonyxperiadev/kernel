@@ -32,6 +32,7 @@
 #include <plat/pi_mgr.h>
 #include <plat/clock.h>
 #include <linux/usb/bcm_hsotgctrl.h>
+#include <linux/usb/bcm_hsotgctrl_phy_mdio.h>
 
 #define	PHY_MODE_OTG		2
 #define BCCFG_SW_OVERWRITE_KEY 0x55560000
@@ -161,124 +162,6 @@ int bcm_hsotgctrl_en_clock(bool on)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_en_clock);
 
-#if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042)
-int bcm_hsotgctrl_phy_Update_MDIO(void)
-{
-	int val;
-
-	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
-		local_hsotgctrl_handle;
-
-	if ((!bcm_hsotgctrl_handle->mdio_master_clk) ||
-		  (!bcm_hsotgctrl_handle->dev))
-		return -EIO;
-
-	/* Enable mdio. Just enable clk. Assume all other steps
-	 * are already done during clk init
-	 */
-	clk_enable(bcm_hsotgctrl_handle->mdio_master_clk);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-
-	/* Program necessary values */
-	/* data.set EAHB:0x3500403C %long 0x29000000 */
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO0 <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-
-#ifdef CONFIG_MFD_BCM59039
-	/* *******MDIO REG 0::-->
-	 * Write to MDIO0 (to 0x18) as ASIC team suggested
-	 */
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO0 <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK | 0x18);
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-
-	/* --------------------------------------------------------------*/
-	val =	(CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO0 <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-
-	/* *******MDIO REG 1:: -->
-	 * Write to MDIO1 (to 0x80) as ASIC team suggested
-	 */
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO1 <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK | 0x80);
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-
-	/* ------------------------------------------------------------*/
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO1 <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-#endif
-
-	/* ******* MDIO REG 3:: -->
-	 * Write to MDIO3 (to 0x2600) as ASIC team suggested
-	 */
-	val =
-	  (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-	    (USB_PHY_MDIO_ID <<
-	      CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-	    (USB_PHY_MDIO3 <<
-	      CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
-	    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK |
-	    0x2600);
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO3 <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_READ_START_MASK);
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-
-	val = readl(bcm_hsotgctrl_handle->chipregs_base +
-		CHIPREG_MDIO_RDDATA_OFFSET);
-
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO0 <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-
-	/* Disable mdio */
-	clk_disable(bcm_hsotgctrl_handle->mdio_master_clk);
-
-	return 0;
-
-}
-#endif
-
 int bcm_hsotgctrl_phy_init(bool id_device)
 {
 	int val;
@@ -344,7 +227,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 #endif
 
 #if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042)
-	bcm_hsotgctrl_phy_Update_MDIO();
+	bcm_hsotgctrl_phy_mdio_initialization();
 #endif
 
 	if (id_device) {
@@ -650,6 +533,10 @@ void bcm_hsotgctrl_wakeup_core(void)
 	/* Request PHY clock */
 	bcm_hsotgctrl_set_phy_clk_request(true);
 	mdelay(PHY_PM_DELAY_IN_MS);
+
+	/* Do MDIO init values after PHY is up */
+	bcm_hsotgctrl_phy_mdio_initialization();
+
 	if (local_wakeup_core_cb) {
 		local_wakeup_core_cb();
 		local_wakeup_core_cb = NULL;
