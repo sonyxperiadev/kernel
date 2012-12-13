@@ -324,3 +324,9 @@ config NEW_GPSCHIP_I2C
 	--help---
 		If GPS I2C using new comm protocol
 
+config BCM_GPS_CNTIN
+	boolean "Broadcom gps cntin driver"
+	default y
+	---help---
+	Say Y to enable the GPS CNTIN support.
+
