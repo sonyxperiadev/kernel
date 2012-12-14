@@ -29,6 +29,20 @@ the GPL, without Broadcom's express prior written consent.
 #define V3D_DEV_NAME	"v3d"
 #define V3D_VERSION_STR	"2.0.0\n"
 
+#if 0
+#define MY_ASSERT(c) \
+do { \
+	if (!(c)) { \
+		volatile int i = 0; \
+		printk(KERN_ERR "Assert failed %s:%d: %s\n", __func__, __LINE__, #c); \
+		while (i == 0) \
+			; \
+	} \
+} while (0)
+#else
+#define MY_ASSERT(c) BUG_ON(!(c))
+#endif
+
 
 struct v3d_device_tag;
 struct v3d_session_tag;

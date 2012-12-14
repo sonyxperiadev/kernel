@@ -49,10 +49,10 @@ struct v3d_device_tag {
 		v3d_driver_t *instance;
 	} driver;
 
+	unsigned int irq;
 	v3d_mode_t mode;
 
 	struct {
-		spinlock_t lock;
 #define BIN_BLOCKS 32
 #define BIN_BLOCK_BYTES (2 << 20)
 		struct {
@@ -65,13 +65,8 @@ struct v3d_device_tag {
 	} out_of_memory;
 
 	struct {
-		v3d_driver_job_t *bin_render;
-#define V3D_USER_FIFO_LOG2_LENGTH 4
-#define V3D_USER_FIFO_LENGTH (1 << V3D_USER_FIFO_LOG2_LENGTH)
-		v3d_driver_job_t *user[V3D_USER_FIFO_LENGTH];
-		int          head;
-		int          tail;
-		unsigned int last_completed;
+		v3d_driver_job_t   *job;
+		spinlock_t          lock;
 	} in_progress;
 
 	struct device      *device;
@@ -104,15 +99,16 @@ struct v3d_device_tag {
 
 extern v3d_device_t *v3d_device_create(
 	v3d_driver_t *driver,
-	struct device *device);
+	struct device *device,
+	uint32_t register_base,
+	unsigned int irq);
 extern void v3d_device_delete(v3d_device_t *instance);
 
 /* Called to indicate that a job has been posted
    Jobs are fetched when required via calls to GetJob */
 extern void v3d_device_job_posted(v3d_device_t *instance);
 
-extern void v3d_device_job_complete(v3d_device_t *instance, int status);
-extern void v3d_device_job_cancel(v3d_device_t *instance);
+extern void v3d_device_job_cancel(v3d_device_t *instance, v3d_driver_job_t *job, int flush);
 
 extern void v3d_device_suspend(v3d_device_t *instance);
 extern void v3d_device_resume(v3d_device_t *instance);
