@@ -630,6 +630,7 @@ static struct file_operations bogo_mips_fops = {
 	.read = kona_cpufreq_bogmips_get,
 };
 
+#ifdef CONFIG_KONA_CPU_FREQ_ENABLE_OPP_SET_CHANGE
 static int cpufreq_debugfs_open(struct inode *inode, struct file *file)
 {
 	file->private_data = inode->i_private;
@@ -725,7 +726,7 @@ static const struct file_operations cpu_config_set_ops_fops = {
 	.write = cpufreq_set_ops_set,
 	.read = cpufreq_get_ops_set,
 };
-
+#endif
 static struct dentry *dent_kcf_root_dir;
 int __init kona_cpufreq_debug_init(void)
 {
@@ -739,10 +740,11 @@ int __init kona_cpufreq_debug_init(void)
 	if (!debugfs_create_file
 	    ("bogo_mips", S_IRUSR, dent_kcf_root_dir, NULL, &bogo_mips_fops))
 		return -ENOMEM;
-
+#ifdef CONFIG_KONA_CPU_FREQ_ENABLE_OPP_SET_CHANGE
 	if (!debugfs_create_file
 	    ("config_ops_set", S_IRUSR, dent_kcf_root_dir, NULL,
 						&cpu_config_set_ops_fops))
+#endif
 		return -ENOMEM;
 
 	return 0;
