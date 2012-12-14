@@ -244,7 +244,7 @@ static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 /**
    @fn int ipc_ipc_init(void *smbase, unsigned int size);
 */
-int __init ipc_ipc_init(void *smbase, unsigned int size)
+int ipc_ipc_init(void *smbase, unsigned int size)
 {
 	IPC_ControlInfo_T ipc_control;
 
