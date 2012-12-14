@@ -566,7 +566,7 @@ int __init v3d_init(void)
 		KLOG_E("v3d_driver_create() failed");
 		goto err4;
 	}
-	v3d_state.v3d_device0 = v3d_device_create(v3d_state.v3d_driver, v3d_state.v3d_device);
+	v3d_state.v3d_device0 = v3d_device_create(v3d_state.v3d_driver, v3d_state.v3d_device, RHEA_V3D_BASE_PERIPHERAL_ADDRESS, IRQ_GRAPHICS);
 	if (v3d_state.v3d_device0 == NULL) {
 		KLOG_E("v3d_device_create() failed");
 		goto err5;

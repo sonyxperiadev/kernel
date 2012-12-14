@@ -79,7 +79,7 @@ extern void           v3d_session_complete(struct v3d_driver_job_tag *job, int s
 extern int v3d_session_job_post(
 	v3d_session_t *instance,
 	const v3d_job_post_t *user_job);
-extern void v3d_session_job_reference(struct v3d_driver_job_tag *job);
+extern void v3d_session_job_reference(struct v3d_driver_job_tag *job, const char *name);
 extern void v3d_session_job_release(struct v3d_driver_job_tag *job, const char *name);
 
 extern int v3d_session_counters_enable(v3d_session_t *instance, uint32_t enables);

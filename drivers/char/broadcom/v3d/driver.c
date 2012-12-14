@@ -111,7 +111,7 @@ int v3d_driver_add_session(v3d_driver_t *instance, struct v3d_session_tag *sessi
 void v3d_driver_remove_session(v3d_driver_t *instance, struct v3d_session_tag *session)
 {
 	v3d_session_t **entry = get_session_entry(instance, session);
-	BUG_ON(session == NULL);
+	MY_ASSERT(session != NULL);
 	*entry = NULL;
 }
 
@@ -159,7 +159,7 @@ void v3d_driver_job_complete(v3d_driver_t *instance, v3d_driver_job_t *job)
 {
 	/* Return the job to Free.List */
 	unsigned long flags;
-	BUG_ON(job == NULL);
+	MY_ASSERT(job != NULL);
 	job->end = ktime_get();
 	spin_lock_irqsave(&instance->job.posted.lock, flags);
 	if (job->state == V3DDRIVER_JOB_INITIALISED) {
@@ -203,7 +203,7 @@ void v3d_driver_exclusive_start(v3d_driver_t *instance, struct v3d_session_tag *
 {
 	unsigned long     flags;
 	mutex_lock(&instance->job.posted.exclusive.lock);
-	BUG_ON(instance->job.posted.exclusive.owner != NULL);
+	MY_ASSERT(instance->job.posted.exclusive.owner == NULL);
 	instance->job.posted.exclusive.owner = session;
 
 	/* Count the number of jobs outstanding */
@@ -312,7 +312,7 @@ int v3d_driver_job_post(
 
 void v3d_driver_add_device(v3d_driver_t *instance, struct v3d_device_tag *device)
 {
-	BUG_ON(instance->device != NULL);
+	MY_ASSERT(instance->device == NULL);
 	instance->device = device;
 }
 

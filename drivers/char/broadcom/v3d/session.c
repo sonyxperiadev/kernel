@@ -110,13 +110,16 @@ int v3d_session_job_post(
 void remove_job(struct kref *reference)
 {
 	v3d_driver_job_t *job = container_of(reference, v3d_driver_job_t, waiters);
-	BUG_ON(job == NULL);
+	MY_ASSERT(job != NULL);
 	list_del(&job->session.link);
 }
 
-void v3d_session_job_reference(struct v3d_driver_job_tag *job)
+void v3d_session_job_reference(struct v3d_driver_job_tag *job, const char *name)
 {
-	BUG_ON(job == NULL);
+	MY_ASSERT(job != NULL);
+#ifdef VERBOSE_DEBUG
+	printk(KERN_ERR "%s: j %p %s\n", __func__, job, name);
+#endif
 	kref_get(&job->waiters); /* Prevents freeing on completion */
 }
 
@@ -125,18 +128,21 @@ void v3d_session_job_release(struct v3d_driver_job_tag *job, const char *name)
 	v3d_session_t *instance = job->session.instance;
 	unsigned long  flags;
 	int            last;
-	BUG_ON(job == NULL);
-	BUG_ON(job->state == V3DDRIVER_JOB_INVALID);
+	MY_ASSERT(job != NULL);
+	MY_ASSERT(job->state != V3DDRIVER_JOB_INVALID);
+#ifdef VERBOSE_DEBUG
+	printk(KERN_ERR "%s: j %p %s\n", __func__, job, name);
+#endif
 	if (job->state > V3DDRIVER_JOB_ACTIVE)
 		wake_up_all(&job->wait_for_completion);
 	spin_lock_irqsave(&instance->issued.lock, flags);
 	last = kref_put(&job->waiters, &remove_job);
 	spin_unlock_irqrestore(&instance->issued.lock, flags);
 	if (last != 0) {
-		if (job->state == V3DDRIVER_JOB_COMPLETE)
-			v3d_driver_job_complete(instance->driver, job);
-		else
-			v3d_device_job_cancel(job->device);
+#ifdef VERBOSE_DEBUG
+		printk(KERN_ERR "%s: j %p %s - completing\n", __func__, job, name);
+#endif
+		v3d_driver_job_complete(instance->driver, job);
 	}
 }
 
@@ -147,7 +153,7 @@ void v3d_session_issued(v3d_driver_job_t *job)
 {
 	v3d_session_t *instance = job->session.instance;
 	unsigned long   flags;
-	BUG_ON(job == NULL);
+	MY_ASSERT(job != NULL);
 	spin_lock_irqsave(&instance->issued.lock, flags);
 	instance->last_id = (int32_t) job->user_job.job_id;
 	job->state = V3DDRIVER_JOB_ISSUED;
@@ -159,7 +165,10 @@ void v3d_session_complete(v3d_driver_job_t *job, int status)
 {
 	v3d_session_t *instance;
 	unsigned long   flags;
-	BUG_ON(job == NULL);
+	MY_ASSERT(job != NULL);
+#ifdef VERBOSE_DEBUG
+	printk(KERN_ERR "%s: j %p s %d\n", __func__, job, status);
+#endif
 	instance = job->session.instance;
 	if (job->state < status) /* Preserve any previous failure */
 		job->state = status;
@@ -180,7 +189,7 @@ static v3d_driver_job_t *find_job(v3d_session_t *instance, int32_t id)
 	list_for_each(current, &instance->issued.list) {
 		job = list_entry(current, v3d_driver_job_t, session.link);
 		if (id == (int32_t) job->user_job.job_id) {
-			v3d_session_job_reference(job); /* Prevents freeing on completion */
+			v3d_session_job_reference(job, __func__); /* Prevents freeing on completion */
 			spin_unlock_irqrestore(&instance->issued.lock, flags);
 			return job;
 		}
@@ -215,13 +224,13 @@ int wait_with_timeout(v3d_driver_job_t *job)
 static void wait_job(v3d_session_t *instance, v3d_driver_job_t *job)
 {
 	int remaining_time;
-	BUG_ON(job == NULL);
+	MY_ASSERT(job != NULL);
 	remaining_time = wait_event_timeout(job->wait_for_completion, job->state >= V3DDRIVER_JOB_COMPLETE, msecs_to_jiffies(JOB_TIMEOUT_MS));
 	if (remaining_time == 0) {
-		job->state = V3DDRIVER_JOB_FAILED;
-		printk(KERN_ERR "V3D job %p timed-out in state %d, active %p", job, job->state, job->device->in_progress.bin_render);
-	}
-	v3d_session_job_release(job, __func__); /* Remove waiting reference */
+		printk(KERN_ERR "V3D job %p timed-out in state %d, active %p", job, job->state, job->device->in_progress.job);
+		v3d_device_job_cancel(job->device, job, 1);
+	} else
+		v3d_session_job_release(job, __func__); /* Remove waiting reference */
 }
 
 int32_t v3d_session_wait(v3d_session_t *instance)
@@ -248,7 +257,7 @@ int32_t v3d_session_wait(v3d_session_t *instance)
 		if (id - (int32_t) job->user_job.job_id < 0)
 			break;
 
-		v3d_session_job_reference(job); /* Prevents freeing on completion */
+		v3d_session_job_reference(job, __func__); /* Prevents freeing on completion */
 		spin_unlock_irqrestore(&instance->issued.lock, flags);
 
 		wait_job(instance, job);
