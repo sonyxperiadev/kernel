@@ -1304,6 +1304,8 @@ static void serial8250_stop_tx(struct uart_port *port)
 	 * should be send out. */
 	udelay(70);
 	pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
+	if (up->bugs & UART_BUG_THRE)
+		del_timer_sync(&up->timer);
 #endif /* CONFIG_BRCM_UART_CHANGES */
 }
 
@@ -1314,6 +1316,12 @@ static void serial8250_start_tx(struct uart_port *port)
 
 #ifdef CONFIG_BRCM_UART_CHANGES
 	pi_mgr_qos_request_update(&up->qos_tx_node,0);
+	if (up->bugs & UART_BUG_THRE) {
+		up->timer.function = serial8250_backup_timeout;
+		up->timer.data = (unsigned long)up;
+		mod_timer(&up->timer, jiffies +
+			uart_poll_timeout(&up->port) + HZ / 5);
+	}
 #endif
 	if (!(up->ier & UART_IER_THRI)) {
 		up->ier |= UART_IER_THRI;
@@ -1540,13 +1548,16 @@ void serial8250_tx_chars(struct uart_8250_port *up)
 		port->x_char = 0;
 		return;
 	}
-	/*if (!(up->mcr & UART_MCR_AFE) && uart_tx_stopped(port)) { */
-	if (uart_tx_stopped(port)) {
+	if (!(up->mcr & UART_MCR_AFE) && uart_tx_stopped(port)) {
+	/*if (uart_tx_stopped(port)) {*/
 		serial8250_stop_tx(port);
 		return;
 	}
 	if (uart_circ_empty(xmit)) {
 		__stop_tx(up);
+#ifdef CONFIG_BRCM_UART_CHANGES
+		pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
+#endif
 		return;
 	}
 
@@ -1861,9 +1872,6 @@ static void serial8250_backup_timeout(unsigned long data)
 	struct uart_8250_port *up = (struct uart_8250_port *)data;
 	unsigned int iir, ier = 0, lsr;
 	unsigned long flags;
-#ifdef CONFIG_BRCM_UART_CHANGES
-	static int tx_flag;
-#endif
 
 	spin_lock_irqsave(&up->port.lock, flags);
 
@@ -1894,24 +1902,8 @@ static void serial8250_backup_timeout(unsigned long data)
 	}
 
 	if (!(iir & UART_IIR_NO_INT)) {
-#ifdef CONFIG_BRCM_UART_CHANGES
-		/* qos_tx_node is acquired in serial8250_tx_chars() and is
-		 * release when THRE interrupt is occured.
-		 * tx_flag is used to the release the qos_tx_node when there is
-		 * no data in UART Tx FIFO and uart_circ_empty(). */
-		tx_flag = 1;
-#endif
 		serial8250_tx_chars(up);
 	}
-
-#ifdef CONFIG_BRCM_UART_CHANGES
-	if ((lsr & BOTH_EMPTY) && uart_circ_empty(&up->port.state->xmit)) {
-		if (tx_flag == 1) {
-			tx_flag = 0;
-			pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
-		}
-	}
-#endif
 
 	if (up->port.irq)
 		serial_out(up, UART_IER, ier);
@@ -1919,8 +1911,13 @@ static void serial8250_backup_timeout(unsigned long data)
 	spin_unlock_irqrestore(&up->port.lock, flags);
 
 	/* Standard timer interval plus 0.2s to keep the port running */
+#ifndef CONFIG_BRCM_UART_CHANGES
+	/* Dont update this timer periodically. Instead this Timer gets
+	 * started at serial8250_start_tx() and  deleted at
+	 * serial8250_stop_tx() */
 	mod_timer(&up->timer,
 		jiffies + uart_poll_timeout(&up->port) + HZ / 5);
+#endif
 }
 
 static unsigned int serial8250_tx_empty(struct uart_port *port)
@@ -2041,15 +2038,31 @@ static void wait_for_xmitr(struct uart_8250_port *up, int bits)
  * Console polling routines for writing and reading from the uart while
  * in an interrupt or debug context.
  */
-
+/* Added QOS support for Console poll */
 static int serial8250_get_poll_char(struct uart_port *port)
 {
 	unsigned char lsr = serial_port_in(port, UART_LSR);
+#ifdef CONFIG_BRCM_UART_CHANGES
+	struct uart_8250_port *up =
+		container_of(port, struct uart_8250_port, port);
+	unsigned int val;
 
-	if (!(lsr & UART_LSR_DR))
+	pi_mgr_qos_request_update(&up->qos_rx_node,0);
+#endif
+	if (!(lsr & UART_LSR_DR)) {
+#ifdef CONFIG_BRCM_UART_CHANGES
+		pi_mgr_qos_request_update(&up->qos_rx_node,
+				PI_MGR_QOS_DEFAULT_VALUE);
+#endif
 		return NO_POLL_CHAR;
+	}
 
-	return serial_port_in(port, UART_RX);
+	val = serial_port_in(port, UART_RX);
+#ifdef CONFIG_BRCM_UART_CHANGES
+	pi_mgr_qos_request_update(&up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
+#endif
+
+	return val;
 }
 
 
@@ -2060,6 +2073,9 @@ static void serial8250_put_poll_char(struct uart_port *port,
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
+#ifdef CONFIG_BRCM_UART_CHANGES
+	pi_mgr_qos_request_update(&up->qos_tx_node,0);
+#endif
 	/*
 	 *	First save the IER then disable the interrupts
 	 */
@@ -2086,6 +2102,9 @@ static void serial8250_put_poll_char(struct uart_port *port,
 	 */
 	wait_for_xmitr(up, BOTH_EMPTY);
 	serial_port_out(port, UART_IER, ier);
+#ifdef CONFIG_BRCM_UART_CHANGES
+	pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
+#endif
 }
 
 #endif /* CONFIG_CONSOLE_POLL */

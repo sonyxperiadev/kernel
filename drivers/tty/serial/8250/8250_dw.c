@@ -40,6 +40,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
+#include <linux/pm.h>
 #include "8250.h"
 
 #ifdef CONFIG_DW_BT_UART_CHANGES
@@ -101,7 +102,7 @@ static int dw8250_handle_irq(struct uart_port *p)
 	} else if ((iir & UART_IIR_BUSY) == UART_IIR_BUSY) {
 		/* Clear the USR and write the LCR again. */
 		(void)p->serial_in(p, UART_USR);
-		p->serial_out(p, d->last_lcr, UART_LCR);
+		p->serial_out(p, UART_LCR, d->last_lcr);
 
 		return 1;
 	}
@@ -178,6 +179,7 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 			if (data->line < 0) {
 				return data->line;
 			}
+			platform_set_drvdata(pdev, data);
 		}
 	} else { /* Get info from DT */
 
@@ -271,6 +273,21 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static int dw8250_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct dw8250_data *data = platform_get_drvdata(pdev);
+	serial8250_suspend_port(data->line);
+	return 0;
+}
+
+#ifdef CONFIG_BRCM_UART_CHANGES
+static int dw8250_resume(struct platform_device *pdev)
+{
+	struct dw8250_data *data = platform_get_drvdata(pdev);
+	serial8250_resume_port(data->line);
+	return 0;
+}
+
 static int __devexit dw8250_remove(struct platform_device *pdev)
 {
 	struct dw8250_data *data = platform_get_drvdata(pdev);
@@ -280,12 +297,27 @@ static int __devexit dw8250_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_BRCM_UART_CHANGES
 void serial8250_togglerts_afe(struct uart_port *port, unsigned int flowon)
 {
 	/* Keeping this as a dummy function.
 	 * Thsi function has a dependency in drivers/bluetooth/bcm_bzhw.c
 	 * Need to discuss with BT floks and remove this function.*/
+	unsigned char old_mcr;
+
+	old_mcr = port->serial_in(port, UART_MCR);
+	if (flowon) {
+		/* Enable AFE */
+		old_mcr |= (UART_MCR_AFE | UART_MCR_RTS);
+		port->serial_out(port, UART_MCR, old_mcr);
+	} else {
+		/* In case of flow_off, Disable AFE and pull the RTS line high.
+		 * This will make sure BT will NOT send data. */
+		old_mcr &= ~(UART_MCR_AFE);
+		port->serial_out(port, UART_MCR, old_mcr);
+		/* Writing MCR[1] = 0, make RTS line to go high */
+		old_mcr &= ~(UART_MCR_RTS);
+		port->serial_out(port, UART_MCR, old_mcr);
+	}
 }
 EXPORT_SYMBOL(serial8250_togglerts_afe);
 #endif
@@ -310,6 +342,10 @@ static struct platform_driver dw8250_platform_driver = {
 		.of_match_table	= dw8250_match,
 	},
 	.probe			= dw8250_probe,
+#ifdef CONFIG_BRCM_UART_CHANGES
+	.suspend		= dw8250_suspend,
+	.resume			= dw8250_resume,
+#endif
 	.remove			= __devexit_p(dw8250_remove),
 };
 
