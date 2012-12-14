@@ -193,7 +193,7 @@ static int __devexit bcmpmu59xxx_ponkey_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver bcmpmu59xxx_ponkey = {
+static struct platform_driver __refdata bcmpmu59xxx_ponkey = {
 	.driver = {
 		   .name = "bcmpmu59xxx-ponkey",
 		   .owner = THIS_MODULE,
