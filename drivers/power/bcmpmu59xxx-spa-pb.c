@@ -412,16 +412,24 @@ static void bcmpmu_spa_pb_isr(u32 irq, void *data)
 
 	switch (irq) {
 	case PMU_IRQ_MBTEMPHIGH:
+		bcmpmu_spa_pb->temp_lmt = 1;
+		bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
+			BCMPMU_CHRGR_EVENT_MBTEMP,
+			POWER_SUPPLY_HEALTH_OVERHEAT);
+		break;
+
 	case PMU_IRQ_MBTEMPLOW:
 		bcmpmu_spa_pb->temp_lmt = 1;
 		bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-			BCMPMU_CHRGR_EVENT_MBTEMP, 1);
+			BCMPMU_CHRGR_EVENT_MBTEMP,
+			POWER_SUPPLY_HEALTH_COLD);
 		break;
 
 	case PMU_IRQ_CHGERRDIS:
 		if (bcmpmu_spa_pb->temp_lmt) {
 			bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-				BCMPMU_CHRGR_EVENT_MBTEMP, 0);
+				BCMPMU_CHRGR_EVENT_MBTEMP,
+				POWER_SUPPLY_HEALTH_GOOD);
 			bcmpmu_spa_pb->temp_lmt = 0;
 		}
 		if (bcmpmu_spa_pb->mb_ov) {

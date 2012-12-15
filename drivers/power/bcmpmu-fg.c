@@ -52,6 +52,7 @@
 #define CHARG_ALGO_POLL_TIME		msecs_to_jiffies(5000)
 #define DISCHARGE_ALGO_POLL_TIME	msecs_to_jiffies(60000)
 #define LOW_BATT_POLL_TIME		msecs_to_jiffies(5000)
+#define FAKE_BATT_POLL_TIME		msecs_to_jiffies(60000)
 
 #define INTERPOLATE_LINEAR(X, Xa, Ya, Xb, Yb) \
 	(Ya + (((Yb - Ya) * (X - Xa))/(Xb - Xa)))
@@ -182,6 +183,7 @@ struct bcmpmu_fg_status_flags {
 	int batt_status;
 	int prev_batt_status;
 	bool batt_present;
+	bool chrgr_pause;
 	bool init_capacity;
 	bool fg_eoc;
 	bool reschedule_work;
@@ -189,8 +191,7 @@ struct bcmpmu_fg_status_flags {
 };
 
 #define BATTERY_STATUS_UNKNOWN(flag)	\
-	(!flag.batt_present || \
-	  (flag.batt_status == POWER_SUPPLY_STATUS_UNKNOWN) || \
+	((flag.batt_status == POWER_SUPPLY_STATUS_UNKNOWN) || \
 	  (flag.init_capacity))
 
 struct bcmpmu_batt_cap_info {
@@ -249,7 +250,9 @@ struct bcmpmu_fg_data {
 	int crit_cutoff_cnt;
 	int eoc_cnt;
 	int accumulator;
-	int lock_cnt; /* for debugging only */
+
+	/* for debugging only */
+	int lock_cnt;
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -391,14 +394,14 @@ __weak int bcmpmu_fg_accumulator_to_capacity(struct bcmpmu_fg_data *fg,
 
 	cap_mas = accm_act - accm_sleep;
 
-	pr_fg(FLOW, "accm_act: %d accm_sleep: %d cap_mas: %d\n",
+	pr_fg(VERBOSE, "accm_act: %d accm_sleep: %d cap_mas: %d\n",
 			accm_act, accm_sleep, cap_mas);
 
 	if (sample_cnt || sleep_cnt) {
 		ibat_avg = (cap_mas * 1000) /
 			((sample_cnt * 1000000 / sample_rate) +
 			(sleep_cnt * 1000000 / fg->pdata->sleep_sample_rate));
-		pr_fg(FLOW, "AVG Current %d\n", ibat_avg);
+		pr_fg(VERBOSE, "AVG Current %d\n", ibat_avg);
 	}
 	return cap_mas;
 }
@@ -735,9 +738,12 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 	} else
 		capacity_percentage = bcmpmu_fg_volt_to_cap(fg, vbat);
 
-	pr_fg(INIT, "vbat: %d vbat_comp: %d temp: %d curr: %d esr: %d cap: %d",
-			vbat, vbat_comp, fg->adc_data.temp,
-			fg->adc_data.curr_inst,
+	pr_fg(FLOW, "vbat: %d curr: %d temp: %d\n", vbat,
+			fg->adc_data.curr_inst, fg->adc_data.temp);
+
+	pr_fg(VERBOSE, "vbat_comp: %d temp: %d esr: %d cap: %d",
+			vbat_comp,
+			fg->adc_data.temp,
 			fg->adc_data.esr,
 			capacity_percentage);
 
@@ -758,9 +764,10 @@ static void bcmpmu_fg_get_capacity_adj_factor(struct bcmpmu_fg_data *fg)
 	charging = ((fg->flags.batt_status == POWER_SUPPLY_STATUS_CHARGING) ?
 			true : false);
 
-	if (lut && charging) {
+	if (lut && charging && !fg->flags.fg_eoc) {
 		if ((capacity >= lut[0].capacity) &&
 				(capacity < CAPACITY_PERCENTAGE_FULL) &&
+				(adc->curr_inst > 0) &&
 				(adc->curr_inst <= lut[0].eoc_curr)) {
 			capacity_eoc =
 				bcmpmu_fg_eoc_curr_to_capacity(fg,
@@ -805,9 +812,9 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	if (ret)
 		return;
 
-	pr_fg(FLOW, "FG ACCMx : %x %x %x %x", accm[0], accm[1], accm[2],
+	pr_fg(VERBOSE, "FG ACCMx : %x %x %x %x", accm[0], accm[1], accm[2],
 			accm[3]);
-	pr_fg(FLOW, "FG CNTx: %x %x SLEEPCNTx: %x %x\n", act_cnt[0],
+	pr_fg(VERBOSE, "FG CNTx: %x %x SLEEPCNTx: %x %x\n", act_cnt[0],
 			act_cnt[1], sleep_cnt[0], sleep_cnt[1]);
 
 	/**
@@ -840,6 +847,12 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	capacity_adj = (capacity_delta -
 			(capacity_delta * fg->cap_adj_fct / 100));
 
+	/**
+	 * clear the capacity adjustment factor. New factor should
+	 * be calculated in next round
+	 */
+	fg->cap_adj_fct = 0;
+
 	fg->capacity_info.capacity += capacity_adj;
 
 	if (fg->capacity_info.capacity > fg->capacity_info.max_design)
@@ -848,9 +861,8 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	fg->capacity_info.percentage = capacity_to_percentage(fg,
 			fg->capacity_info.capacity);
 
-	pr_fg(FLOW, "accm: %d accm_adj: %d capacity: %d percentage: %d\n",
+	pr_fg(FLOW, "accm: %d accm_adj: %d cap_percentage: %d\n",
 			capacity_delta, capacity_adj,
-			fg->capacity_info.capacity,
 			fg->capacity_info.percentage);
 }
 
@@ -943,7 +955,6 @@ static int bcmpmu_fg_set_vfloat_level(struct bcmpmu_fg_data *fg, int vfloat)
 
 	WARN_ON(vfloat < VFLOAT_LVL_3_4);
 
-	if (fg->pdata->hw_maintenance_charging)
 		ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_MBCCTRL7,
 				vfloat);
 
@@ -1085,13 +1096,13 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 
 		FG_LOCK(fg);
 		if (chrgr_type == PMU_USB_TYPE_NONE) {
-			pr_fg(ERROR, "usb disconnected!!\n");
+			pr_fg(FLOW, "usb disconnected!!\n");
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
 			fg->flags.fg_eoc = false;
 			bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
 		} else {
-			pr_fg(ERROR, "usb connected!!\n");
+			pr_fg(FLOW, "usb connected!!\n");
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_CHARGING;
 			bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
@@ -1152,9 +1163,10 @@ static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg,
 	bool update_psy = false;
 
 	if (fg->capacity_info.prev_percentage != fg->capacity_info.percentage) {
-		pr_fg(FLOW, "Change in capacity.. Update power supply\n");
+		pr_fg(VERBOSE, "Change in capacity.. Update power supply\n");
 		fg->capacity_info.prev_percentage =
 			fg->capacity_info.percentage;
+		bcmpmu_fg_save_cap(fg, fg->capacity_info.percentage);
 		update_psy = true;
 	}
 
@@ -1194,7 +1206,7 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 			FG_INIT_CAPACITY_AVG_SAMPLES);
 	BUG_ON(init_cap > 100);
 
-	pr_fg(FLOW, "saved capacity: %d open circuit cap: %d\n",
+	pr_fg(INIT, "saved capacity: %d open circuit cap: %d\n",
 			saved_cap, init_cap);
 
 	if (saved_cap > 0) {
@@ -1218,7 +1230,7 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 	int volt;
 	int curr;
 
-	vfloat_volt = bcmpmu_fg_vfloat_to_volt(fg, volt_levels->vfloat_lvl);
+	vfloat_volt = fg->pdata->volt_levels->high;
 	volt_thrld = vfloat_volt - volt_levels->vfloat_gap;
 	cap_percentage = fg->capacity_info.percentage;
 	volt = fg->adc_data.volt;
@@ -1246,19 +1258,14 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 			((curr > 0) &&
 			 (curr <= fg->pdata->eoc_current)) &&
 			(fg->eoc_cnt++ > FG_EOC_CNT_THRLD)) {
-		pr_fg(FLOW, "sw_maint_chrgr: SW EOC tripped\n");
-		/**
-		 * EOC condition is met but coulomb capacity is
-		 * still not reporting 100%??
-		 * We will gratually increment the capacity to 100%
-		 */
 		if (cap_percentage != CAPACITY_PERCENTAGE_FULL) {
 			cap_percentage += 1;
-			fg->capacity_info.percentage += cap_percentage;
+			fg->capacity_info.percentage = cap_percentage;
 			fg->capacity_info.capacity =
 				percentage_to_capacity(fg, cap_percentage);
 			goto exit;
 		}
+		pr_fg(FLOW, "sw_maint_chrgr: SW EOC tripped\n");
 		flags->fg_eoc = true;
 		fg->eoc_cnt = 0;
 		flags->prev_batt_status = flags->batt_status;
@@ -1286,7 +1293,7 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 {
 	int poll_time = CHARG_ALGO_POLL_TIME;
 
-	pr_fg(FLOW, "%s\n", __func__);
+	pr_fg(VERBOSE, "%s\n", __func__);
 
 	bcmpmu_fg_get_coulomb_counter(fg);
 
@@ -1321,7 +1328,7 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 	int poll_time = DISCHARGE_ALGO_POLL_TIME;
 	bool force_update_psy = false;
 
-	pr_fg(FLOW, "discharging_algo\n");
+	pr_fg(VERBOSE, "discharging_algo\n");
 
 	bcmpmu_fg_get_coulomb_counter(fg);
 
@@ -1368,12 +1375,20 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 			fg_periodic_work.work);
 	struct bcmpmu_fg_status_flags flags;
 
-	if (!fg->flags.batt_present)
-		return;
-
 	FG_LOCK(fg);
 	flags = fg->flags;
 	FG_UNLOCK(fg);
+
+	/**
+	 * No battery Case (BSI/BCL pin is not connected)
+	 * if battery is not present (booting with power supply
+	 * and BCL pin floating, we will not do coloumb counting
+	 */
+	if (!fg->flags.batt_present && !fg->flags.init_capacity) {
+		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work,
+				FAKE_BATT_POLL_TIME);
+		return;
+	}
 
 	if (fg->flags.init_capacity) {
 		fg->capacity_info.initial = bcmpmu_fg_get_init_cap(fg);
@@ -1401,7 +1416,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 	else
 		bcmpmu_fg_discharging_algo(fg);
 
-	pr_fg(FLOW, "flags: %d %d %d %d %d",
+	pr_fg(FLOW, "flags: %d %d %d %d %d\n",
 			flags.reschedule_work,
 			flags.batt_status,
 			flags.prev_batt_status,
@@ -1443,21 +1458,22 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 		val->intval = flags.batt_status;
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
-		val->intval = flags.batt_present;
+		val->intval = 1;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		if (BATTERY_STATUS_UNKNOWN(flags))
 			val->intval = CAPACITY_PERCENTAGE_FULL;
 		else
 			val->intval = fg->capacity_info.prev_percentage;
-		pr_fg(FLOW, "POWER_SUPPLY_PROP_CAPACITY = %d\n", val->intval);
+		pr_fg(VERBOSE, "POWER_SUPPLY_PROP_CAPACITY = %d\n",
+				val->intval);
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
 		if (BATTERY_STATUS_UNKNOWN(flags))
 			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 		else
 			val->intval = bcmpmu_fg_get_capacity_level(fg);
-		pr_fg(FLOW, "POWER_SUPPLY_PROP_CAPACITY_LEVEL = %d\n",
+		pr_fg(VERBOSE, "POWER_SUPPLY_PROP_CAPACITY_LEVEL = %d\n",
 				val->intval);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
@@ -1502,7 +1518,7 @@ static int bcmpmu_fg_power_supply_class_data(struct device *dev, void *data)
 	for (i = 0; i < ext_psy->num_supplicants; i++) {
 		if (strcmp(ext_psy->supplied_to[i], psy->name) == 0) {
 			found_supply = true;
-			pr_fg(FLOW, "Found matching power supplier %s\n",
+			pr_fg(VERBOSE, "Found matching power supplier %s\n",
 					ext_psy->name);
 			break;
 		}
@@ -1543,7 +1559,7 @@ static int bcmpmu_fg_power_supply_class_data(struct device *dev, void *data)
 	}
 
 	if (online.intval) {
-		pr_fg(FLOW, "Power supply %s is online & "
+		pr_fg(VERBOSE, "Power supply %s is online & "
 				"and charging\n", ext_psy->name);
 		FG_LOCK(fg);
 		fg->flags.prev_batt_status = fg->flags.batt_status;
@@ -1552,7 +1568,7 @@ static int bcmpmu_fg_power_supply_class_data(struct device *dev, void *data)
 		bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
 		FG_UNLOCK(fg);
 	} else if (!online.intval) {
-		pr_fg(FLOW, "Power Supply removed\n");
+		pr_fg(VERBOSE, "Power Supply removed\n");
 		FG_LOCK(fg);
 		fg->flags.prev_batt_status = fg->flags.batt_status;
 		fg->flags.batt_status =
@@ -1568,7 +1584,7 @@ static void bcmpmu_fg_external_power_changed(struct power_supply *psy)
 {
 	struct bcmpmu_fg_data *fg = to_bcmpmu_fg_data(psy, psy);
 
-	pr_fg(FLOW, "%s\n", __func__);
+	pr_fg(VERBOSE, "%s\n", __func__);
 
 	/**
 	 * iterate over list of the power supply devices and find
@@ -1646,6 +1662,13 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 
 	fg->capacity_info.max_design = pdata->batt_prop->full_cap;
 
+	if (fg->pdata->volt_levels->vfloat_max)
+		bcmpmu_fg_set_vfloat_max_level(fg,
+				pdata->volt_levels->vfloat_max);
+	else
+		bcmpmu_fg_set_vfloat_max_level(fg, VFLOAT_LVL_4_20);
+
+
 	/**
 	 * set VFLOAT levels
 	 */
@@ -1653,12 +1676,6 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 		bcmpmu_fg_set_vfloat_level(fg, pdata->volt_levels->vfloat_lvl);
 	else
 		bcmpmu_fg_set_vfloat_level(fg, VFLOAT_LVL_4_20);
-
-	if (fg->pdata->volt_levels->vfloat_max)
-		bcmpmu_fg_set_vfloat_max_level(fg,
-				pdata->volt_levels->vfloat_max);
-	else
-		bcmpmu_fg_set_vfloat_max_level(fg, VFLOAT_LVL_4_20);
 
 	return 0;
 }
@@ -1673,7 +1690,7 @@ int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current)
 
 	BUG_ON(!fg);
 
-	pr_fg(ERROR, "set sw eoc current level to: %d\n", eoc_current);
+	pr_fg(FLOW, "set sw eoc current level to: %d\n", eoc_current);
 	FG_LOCK(fg);
 	fg->pdata->eoc_current = eoc_current;
 	FG_UNLOCK(fg);
@@ -1691,9 +1708,13 @@ void bcmpmu_fg_chrgr_status_cb(struct bcmpmu59xxx *bcmpmu, int status)
 	if (!fg)
 		return;
 	pr_fg(FLOW, "%s: chrgr status: %d\n", __func__, status);
-	if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
+
+	BUG_ON(!(fg->bcmpmu->flags & BCMPMU_SPA_EN));
+
+	if (fg->bcmpmu->flags & BCMPMU_SPA_EN) {
 		if (fg->flags.fg_eoc && status)
 			fg->flags.eoc_chargr_en = true;
+	}
 }
 EXPORT_SYMBOL(bcmpmu_fg_chrgr_status_cb);
 
@@ -1955,10 +1976,11 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 	fg->flags.prev_batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
 	fg->flags.init_capacity = true;
 
-	if (bcmpmu_fg_is_batt_present(fg))
+	if (bcmpmu_fg_is_batt_present(fg)) {
+		pr_fg(INIT, "main battery present\n");
 		fg->flags.batt_present = true;
-	else
-		pr_fg(ERROR, "No Battery Detected!!\n");
+	} else
+		pr_fg(INIT, "booting with power supply\n");
 
 	fg->sample_rate = SAMPLE_RATE_2HZ;
 	bcmpmu_fg_hw_init(fg);

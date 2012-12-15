@@ -40,6 +40,7 @@
 #define BCMPMU_PRINT_FLOW	(1U << 2)
 #define BCMPMU_PRINT_DATA	(1U << 3)
 #define BCMPMU_PRINT_WARNING	(1U << 4)
+#define BCMPMU_PRINT_VERBOSE	(1U << 5)
 
 /*helper macros to manage regulator PC pin map*/
 /*
