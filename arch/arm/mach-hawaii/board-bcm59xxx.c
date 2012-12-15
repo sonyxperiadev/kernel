@@ -1446,7 +1446,7 @@ static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu)
 	return 0;
 }
 
-int board_bcm59xx_init(void)
+int __init board_bcm59xx_init(void)
 {
 	int             ret = 0;
 	int             irq;
