@@ -372,6 +372,7 @@ static struct fiops_ioc *fiops_select_ioc(struct fiops_data *fiopsd)
 	struct fiops_ioc *ioc;
 	struct fiops_rb_root *service_tree = NULL;
 	int i;
+	struct request *rq;
 
 	for (i = RT_WORKLOAD; i >= IDLE_WORKLOAD; i--) {
 		if (!RB_EMPTY_ROOT(&fiopsd->service_tree[i].rb)) {
@@ -384,6 +385,17 @@ static struct fiops_ioc *fiops_select_ioc(struct fiops_data *fiopsd)
 		return NULL;
 
 	ioc = fiops_rb_first(service_tree);
+
+	rq = rq_entry_fifo(ioc->fifo.next);
+	/*
+	 * we are the only async task and sync requests are in flight, delay a
+	 * moment. If there are other tasks coming, sync tasks have no chance
+	 * to be starved, don't delay
+	 */
+	if (!rq_is_sync(rq) && fiopsd->in_flight[1] != 0 &&
+			service_tree->count == 1)
+		return NULL;
+
 	return ioc;
 }
 
