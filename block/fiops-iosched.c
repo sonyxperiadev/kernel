@@ -188,9 +188,12 @@ static void fiops_service_tree_add(struct fiops_data *fiopsd,
 	int left;
 
 	/* New added IOC */
-	if (RB_EMPTY_NODE(&ioc->rb_node))
-		vios = max_vios(service_tree->min_vios, ioc->vios);
-	else {
+	if (RB_EMPTY_NODE(&ioc->rb_node)) {
+		if (ioc->in_flight > 0)
+			vios = ioc->vios;
+		else
+			vios = max_vios(service_tree->min_vios, ioc->vios);
+	} else {
 		vios = ioc->vios;
 		/* ioc->service_tree might not equal to service_tree */
 		fiops_rb_erase(&ioc->rb_node, ioc->service_tree);
