@@ -30,6 +30,7 @@
 
 #include <mach/hardware.h>
 #include <mach/cdebugger.h>
+#include <mach/kona_timer.h>
 #include <mach/sram_config.h>
 #include <linux/fs.h>
 
@@ -539,6 +540,9 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 			cdebugger_set_upload_cause(UPLOAD_CAUSE_KERNEL_PANIC);
 
 		show_state();
+
+		/* Save kona timer state */
+		kona_hubtimer_save_state(false);
 
 		cdebugger_dump_stack();
 

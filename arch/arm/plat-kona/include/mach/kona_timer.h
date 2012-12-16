@@ -168,6 +168,11 @@ int kona_timer_free(struct kona_timer *kt);
 unsigned long kona_hubtimer_get_counter(void);
 
 /*
+ * kona_hubtimer_save_state - Saves and optionally print aon hub timer state
+ */
+void kona_hubtimer_save_state(bool print_state);
+
+/*
  * kona_slavetimer_get_counter - Returns the counter value of slave timer
  */
 unsigned long kona_slavetimer_get_counter(void);

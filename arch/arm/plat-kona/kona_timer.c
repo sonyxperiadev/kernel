@@ -638,6 +638,59 @@ unsigned long kona_hubtimer_get_counter(void)
 }
 EXPORT_SYMBOL(kona_hubtimer_get_counter);
 
+/* Capture the current state of hub timer */
+struct kona_timer_regs {
+	int stcs;
+	int stclo;
+	int stchi;
+	int stcm0;
+	int stcm1;
+	int stcm2;
+	int stcm3;
+};
+static struct kona_timer_regs kona_timer_state;
+void kona_hubtimer_save_state(bool print_state)
+{
+	unsigned long flags;
+	struct kona_timer_module *ktm = &timer_module_list[0];
+
+	spin_lock_irqsave(&ktm->lock, flags);
+	kona_timer_state.stcs = readl(ktm->reg_base +
+		KONA_GPTIMER_STCS_OFFSET);
+	kona_timer_state.stclo = readl(ktm->reg_base +
+		KONA_GPTIMER_STCLO_OFFSET);
+	kona_timer_state.stchi = readl(ktm->reg_base +
+		KONA_GPTIMER_STCHI_OFFSET);
+	kona_timer_state.stcm0 = readl(ktm->reg_base +
+		KONA_GPTIMER_STCM0_OFFSET);
+	kona_timer_state.stcm1 = readl(ktm->reg_base +
+		KONA_GPTIMER_STCM1_OFFSET);
+	kona_timer_state.stcm2 = readl(ktm->reg_base +
+		KONA_GPTIMER_STCM2_OFFSET);
+	kona_timer_state.stcm3 = readl(ktm->reg_base +
+		KONA_GPTIMER_STCM3_OFFSET);
+	spin_unlock_irqrestore(&ktm->lock, flags);
+
+	if (print_state) {
+		printk(KERN_ERR "Kona Timer: STCS =%08x\n",
+				kona_timer_state.stcs);
+		printk(KERN_ERR "Kona Timer: STCLO=%08x\n",
+				kona_timer_state.stclo);
+		printk(KERN_ERR "Kona Timer: STCHI=%08x\n",
+				kona_timer_state.stchi);
+		printk(KERN_ERR "Kona Timer: STCM0=%08x\n",
+				kona_timer_state.stcm0);
+		printk(KERN_ERR "Kona Timer: STCM1=%08x\n",
+				kona_timer_state.stcm1);
+		printk(KERN_ERR "Kona Timer: STCM2=%08x\n",
+				kona_timer_state.stcm2);
+		printk(KERN_ERR "Kona Timer: STCM3=%08x\n",
+				kona_timer_state.stcm3);
+	}
+}
+EXPORT_SYMBOL(kona_hubtimer_save_state);
+
+
 /* Return the counter value of slave timer */
 unsigned long kona_slavetimer_get_counter(void)
 {
