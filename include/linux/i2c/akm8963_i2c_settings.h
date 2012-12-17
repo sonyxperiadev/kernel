@@ -13,17 +13,24 @@
 *****************************************************************************/
 #ifndef _AKM8963_I2C_SETTINGS_H_
 #define _AKM8963_I2C_SETTINGS_H_
-
+#if defined(CONFIG_MACH_HAWAII_GARNET) && defined(CONFIG_MPU_SENSORS_MPU3050)
+#define AKM8963_I2C_BUS_ID	    (2)
+#define AKM8963_I2C_ADDRESS	    (0x18)
+#else
 #define AKM8963_I2C_BUS_ID	    (0)
 #define AKM8963_I2C_ADDRESS	    (0x0C)
-
+#endif
 #define AKM8963_GPIO_RESET_PIN  (143)
 
 /* Disable interrupt as HAL doesn't expect this. Otherwise Android will hang */
 #define AKM8963_IRQ
 
 #ifdef AKM8963_IRQ
+#if defined(CONFIG_MACH_HAWAII_GARNET) && defined(CONFIG_MPU_SENSORS_MPU3050)
+#define AKM8963_IRQ_GPIO	(4)
+#else
 #define AKM8963_IRQ_GPIO	(135)	/* MPHI_RUN1 */
+#endif
 #else
 #undef AKM8963_IRQ_GPIO
 #endif

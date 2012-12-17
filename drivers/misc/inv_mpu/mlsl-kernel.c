@@ -20,8 +20,12 @@
 #include "mlsl.h"
 #include <linux/i2c.h>
 #include "log.h"
+#if defined(CONFIG_MACH_HAWAII_GARNET) && defined(CONFIG_MPU_SENSORS_MPU3050)
+#include "mpu3050.h"
+#define SINGLE_I2C_TRANSFER
+#else
 #include "mpu6050b1.h"
-
+#endif
 static int inv_i2c_write(struct i2c_adapter *i2c_adap,
 			    unsigned char address,
 			    unsigned int len, unsigned char const *data)
@@ -100,7 +104,9 @@ static int mpu_memory_read(struct i2c_adapter *i2c_adap,
 	unsigned char bank[2];
 	unsigned char addr[2];
 	unsigned char buf;
-
+#if defined(CONFIG_MACH_HAWAII_GARNET) && defined(CONFIG_MPU_SENSORS_MPU3050)
+	int i;
+#endif
 	struct i2c_msg msgs[4];
 	int res;
 
@@ -137,14 +143,28 @@ static int mpu_memory_read(struct i2c_adapter *i2c_adap,
 	msgs[3].flags = I2C_M_RD;
 	msgs[3].buf = data;
 	msgs[3].len = len;
-
+#ifdef SINGLE_I2C_TRANSFER
+#if defined(CONFIG_MACH_HAWAII_GARNET) && defined(CONFIG_MPU_SENSORS_MPU3050)
+	for (i = 0; i < 4; i++) {
+		res = i2c_transfer(i2c_adap, msgs + i, 1);
+		if (res < 1) {
+			if (res == 0)
+				res = -EIO;
+			LOG_RESULT_LOCATION(res);
+			return res;
+		}
+	}
+#endif
+#else	/* orignial multiple msgs transfer */
 	res = i2c_transfer(i2c_adap, msgs, 4);
 	if (res != 4) {
 		if (res >= 0)
 			res = -EIO;
 		LOG_RESULT_LOCATION(res);
 		return res;
-	} else
+	}
+#endif
+
 		return 0;
 }
 
@@ -153,6 +173,11 @@ static int mpu_memory_write(struct i2c_adapter *i2c_adap,
 			    unsigned short mem_addr,
 			    unsigned int len, unsigned char const *data)
 {
+#if defined(CONFIG_MACH_HAWAII_GARNET) && defined(CONFIG_MPU_SENSORS_MPU3050)
+#ifdef SINGLE_I2C_TRANSFER
+	int i;
+#endif
+#endif
 	unsigned char bank[2];
 	unsigned char addr[2];
 	unsigned char buf[513];
@@ -194,13 +219,28 @@ static int mpu_memory_write(struct i2c_adapter *i2c_adap,
 	msgs[2].buf = (unsigned char *)buf;
 	msgs[2].len = len + 1;
 
+#ifdef SINGLE_I2C_TRANSFER
+#if defined(CONFIG_MACH_HAWAII_GARNET) && defined(CONFIG_MPU_SENSORS_MPU3050)
+	for (i = 0; i < 3; i++) {
+		res = i2c_transfer(i2c_adap, msgs + i, 1);
+		if (res < 1) {
+			if (res == 0)
+				res = -EIO;
+			LOG_RESULT_LOCATION(res);
+			return res;
+		}
+	}
+#endif
+#else	/* orignial multiple msgs transfer */
 	res = i2c_transfer(i2c_adap, msgs, 3);
 	if (res != 3) {
 		if (res >= 0)
 			res = -EIO;
 		LOG_RESULT_LOCATION(res);
 		return res;
-	} else
+	}
+#endif
+
 		return 0;
 }
 

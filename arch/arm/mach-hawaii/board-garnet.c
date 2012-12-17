@@ -133,12 +133,24 @@
 #include <mach/mpu6050_settings.h>
 #endif
 
+#if defined(CONFIG_MPU_SENSORS_MPU3050)
+#include <linux/mpu.h>
+#include <linux/i2c/mpu3050_settings.h>
+#endif
+
+#if defined(CONFIG_SENSORS_KIONIX_KXTIK)	\
+			|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
+#include <linux/kxtik.h>
+#endif /* CONFIG_SENSORS_KIONIX_KXTIK */
+
+#include <linux/akm8963.h>
+#include <linux/i2c/akm8963_i2c_settings.h>
+
 #if defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
 #include <linux/ami306_def.h>
 #include <linux/ami_sensor.h>
 #include <mach/ami306_settings.h>
 #endif
-
 
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
@@ -176,6 +188,10 @@
 #ifdef CONFIG_USB_DWC_OTG
 #include <linux/usb/bcm_hsotgctrl.h>
 #include <linux/usb/otg.h>
+#endif
+
+#if defined(CONFIG_TMD2771)
+#include <linux/i2c/taos_common.h>
 #endif
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
@@ -993,6 +1009,14 @@ static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
 };
 #endif
 
+#if defined(CONFIG_TMD2771)
+static struct i2c_board_info __initdata i2c_tmd2771_info[] = {
+	{
+		I2C_BOARD_INFO("tmd2771", 0x39),
+	},
+};
+#endif
+
 #if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
 static struct al3006_platform_data al3006_pdata = {
 #ifdef AL3006_IRQ_GPIO
@@ -1020,6 +1044,105 @@ static struct i2c_board_info __initdata i2c_ami306_info[] =
 	},
 };
 #endif
+#if defined(CONFIG_SENSORS_KIONIX_KXTIK) \
+	|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
+#define KXTIK_DEVICE_MAP    2
+#define KXTIK_MAP_X         ((KXTIK_DEVICE_MAP-1)%2)
+#define KXTIK_MAP_Y         (KXTIK_DEVICE_MAP%2)
+#define KXTIK_NEG_X         (((KXTIK_DEVICE_MAP+2)/2)%2)
+#define KXTIK_NEG_Y         (((KXTIK_DEVICE_MAP+5)/4)%2)
+#define KXTIK_NEG_Z         ((KXTIK_DEVICE_MAP-1)/4)
+
+struct kxtik_platform_data kxtik_pdata = {
+	.min_interval = 5,
+	.poll_interval = 200,
+	.axis_map_x = KXTIK_MAP_X,
+	.axis_map_y = KXTIK_MAP_Y,
+	.axis_map_z = 2,
+	.negate_x = KXTIK_NEG_X,
+	.negate_y = KXTIK_NEG_Y,
+	.negate_z = KXTIK_NEG_Z,
+	.res_12bit = RES_12BIT,
+	.g_range = KXTIK_G_2G,
+};
+
+#define KXTIK_GPIO_IRQ_PIN          (64)
+#define KXTIK_I2C_BUS_ID            (0)
+
+static struct i2c_board_info __initdata kxtik_i2c_boardinfo[] = {
+	{
+	 I2C_BOARD_INFO("kxtik", KXTIK_SLAVE_ADDR),
+	 .platform_data = &kxtik_pdata,
+	 .irq = gpio_to_irq(KXTIK_GPIO_IRQ_PIN),
+	 },
+};
+
+static int kxtik_init_platform_hw(void)
+{
+	int ret = 0;
+	ret = gpio_request(KXTIK_GPIO_IRQ_PIN, "kxtik-irq");
+	if (ret < 0) {
+		printk(KERN_INFO
+		       "kxtik: sensors gpio_request GPIO %d failed, err %d\n",
+		       KXTIK_GPIO_IRQ_PIN, ret);
+		return ret;
+	}
+	ret = gpio_direction_input(KXTIK_GPIO_IRQ_PIN);
+	if (ret < 0) {
+		printk(KERN_INFO
+		       "kxtik: sensors gpio_direction_input set GPIO %d as input failed, err %d\n",
+		       KXTIK_GPIO_IRQ_PIN, ret);
+		gpio_free(KXTIK_GPIO_IRQ_PIN);
+		return ret;
+	}
+	return ret;
+}
+#endif /* CONFIG_SENSORS_KIONIX_KXTIK */
+
+
+#if defined(CONFIG_MPU_SENSORS_MPU3050)
+static struct bcm_mpu_platform_data bcm_mpu3050_platform_data = {
+	.base_data = {
+		      .int_config = MPU3050_INIT_CFG,
+		      .orientation = MPU3050_DRIVER_GYRO_ORIENTATION,
+		      },
+	.irq_gpio = MPU3050_IRQ_GPIO,
+};
+
+static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] = {
+	{
+	 I2C_BOARD_INFO("mpu3050", MPU3050_SLAVE_ADDR),
+	 .platform_data = &bcm_mpu3050_platform_data,
+	 },
+};
+#endif /* CONFIG_MPU_SENSORS_MPU3050 */
+
+#if defined(CONFIG_MPU_SENSORS_KXTF9)
+static struct ext_slave_platform_data inv_mpu_kxtf9_data = {
+	.bus = EXT_SLAVE_BUS_SECONDARY,
+	.orientation = MPU3050_DRIVER_ACCEL_KXTF9_ORIENTATION,
+};
+
+static struct i2c_board_info __initdata inv_mpu_kxtf9_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("kxtf9", MPU_SENSORS_KXTF9_SLAVE_ADDR),
+		.platform_data = &inv_mpu_kxtf9_data,
+	},
+};
+
+static struct ext_slave_platform_data inv_mpu_akm8975_data = {
+	.bus = EXT_SLAVE_BUS_PRIMARY,
+	.orientation = MPU3050_DRIVER_COMPASS_ORIENTATION
+};
+
+static struct i2c_board_info __initdata inv_mpu_akm8975_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("ak8975", 0x0c),
+		.platform_data = &inv_mpu_akm8975_data,
+	},
+};
+
+#endif /* CONFIG_MPU_SENSORS_KXTF9 */
 
 #if defined(CONFIG_SENSORS_BMA222)
 static struct bma222_accl_platform_data bma_pdata = {
@@ -1613,7 +1736,32 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(2, bma222_accl_info, ARRAY_SIZE(bma222_accl_info));
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+#if defined(CONFIG_MPU_SENSORS_MPU3050)
+	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(MPU3050_IRQ_GPIO);
+
+	i2c_register_board_info(2, inv_mpu_i2c0_boardinfo,
+				ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
+#endif /* CONFIG_MPU_SENSORS_MPU3050 */
+
+#if defined(CONFIG_MPU_SENSORS_KXTF9)
+	inv_mpu_kxtf9_boardinfo[0].irq =
+		gpio_to_irq(MPU_SENSORS_KXTF9_IRQ_GPIO);
+	i2c_register_board_info(2, inv_mpu_kxtf9_boardinfo,
+		ARRAY_SIZE(inv_mpu_akm8975_boardinfo));
+	i2c_register_board_info(2, inv_mpu_akm8975_boardinfo,
+		ARRAY_SIZE(inv_mpu_akm8975_boardinfo));
+#endif /* CONFIG_MPU_SENSORS_KXTF9 */
+
+#if defined(CONFIG_SENSORS_KIONIX_KXTIK)	\
+			|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
+	i2c_register_board_info(2,
+			kxtik_i2c_boardinfo,
+			ARRAY_SIZE(kxtik_i2c_boardinfo));
+#endif /* CONFIG_SENSORS_KIONIX_KXTIK */
+
+
+#if defined(CONFIG_TOUCHSCREEN_BCM915500) ||	\
+		defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 	i2c_register_board_info(3, bcm915500_i2c_boardinfo,
 				ARRAY_SIZE(bcm915500_i2c_boardinfo));
 #endif
@@ -1629,6 +1777,12 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(MPU6050_I2C_BUS_ID,
 			inv_mpu_i2c0_boardinfo, ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
 #endif
+#if defined(CONFIG_TMD2771)
+	i2c_register_board_info(2,
+					i2c_tmd2771_info,
+					ARRAY_SIZE(i2c_tmd2771_info));
+#endif
+
 
 #if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 	i2c_register_board_info(

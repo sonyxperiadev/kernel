@@ -863,6 +863,7 @@ int mpu_dev_suspend(struct i2c_client *client, pm_message_t mesg)
 			"%s: Already suspended %d\n", __func__, mesg.event);
 	}
 #ifdef CONFIG_ARCH_KONA
+#ifndef CONFIG_MACH_HAWAII_GARNET
 	if (mpu->regulator) {
 		res = regulator_disable(mpu->regulator);
 		dev_info(&client->adapter->dev,
@@ -873,6 +874,7 @@ int mpu_dev_suspend(struct i2c_client *client, pm_message_t mesg)
 				"%s, regulator_disable failed "
 				"with status: %d\n", __func__, res);
 	}
+#endif
 #endif
 
 	mutex_unlock(&mpu->mutex);
@@ -902,6 +904,7 @@ int mpu_dev_resume(struct i2c_client *client)
 
 	mutex_lock(&mpu->mutex);
 #ifdef CONFIG_ARCH_KONA
+#ifndef CONFIG_MACH_HAWAII_GARNET
 	if (mpu->regulator) {
 		res = regulator_enable(mpu->regulator);
 		dev_info(&client->adapter->dev,
@@ -912,6 +915,7 @@ int mpu_dev_resume(struct i2c_client *client)
 				"%s, regulator_enable failed "
 				"with status: %d\n", __func__, res);
 	}
+#endif
 #endif
 
 	if (mpu->pid && !mldl_cfg->inv_mpu_cfg->ignore_system_suspend) {
@@ -1205,6 +1209,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	mldl_cfg->pdata = pdata;
 #ifdef CONFIG_MPU_SENSORS_MPU3050
 #ifdef CONFIG_ARCH_KONA
+#ifndef CONFIG_MACH_HAWAII_GARNET
 	bcm_pdata = (struct bcm_mpu_platform_data *)pdata;
 	if (bcm_pdata) {
 		res = gpio_request(bcm_pdata->irq_gpio, "mpu6050_int");
@@ -1242,6 +1247,7 @@ int mpu_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 			"%s, can't enable vdd regulator\n", __func__);
 		goto out_regulator_enable_failed;
 	}
+#endif
 #endif
 #else
 
@@ -1362,15 +1368,19 @@ out_misc_register_failed:
 	inv_mpu_close(&mpu->mldl_cfg, client->adapter, NULL, NULL, NULL);
 out_whoami_failed:
 #ifdef CONFIG_ARCH_KONA
+#ifndef CONFIG_MACH_HAWAII_GARNET
 	if (mpu->regulator)
 		regulator_disable(mpu->regulator);
 out_regulator_enable_failed:
 	if (mpu->regulator)
 		regulator_put(mpu->regulator);
+#endif
 out_regulator_failed:
 #ifdef CONFIG_MPU_SENSORS_MPU3050
+#ifndef CONFIG_MACH_HAWAII_GARNET
 	if (bcm_pdata)
 		gpio_free(bcm_pdata->irq_gpio);
+#endif
 #else
 	gpio_free(gpio_pin);
 #endif
@@ -1445,6 +1455,7 @@ static int mpu_remove(struct i2c_client *client)
 	unregister_pm_notifier(&mpu->nb);
 #ifdef CONFIG_MPU_SENSORS_MPU3050
 #ifdef CONFIG_ARCH_KONA
+#ifndef CONFIG_MACH_HAWAII_GARNET
 	bcm_pdata = (struct bcm_mpu_platform_data *)mldl_cfg->pdata;
 	if (mpu->regulator) {
 		res = regulator_disable(mpu->regulator);
@@ -1458,6 +1469,7 @@ static int mpu_remove(struct i2c_client *client)
 		regulator_put(mpu->regulator);
 	}
 	gpio_free(bcm_pdata->irq_gpio);
+#endif
 #endif
 #else
 #ifdef CONFIG_ARCH_KONA
