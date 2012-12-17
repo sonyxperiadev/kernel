@@ -1457,7 +1457,7 @@ CONFIG_BROADCOM_WIFI_RESERVED_MEM=y
 # CONFIG_B43 is not set
 # CONFIG_B43LEGACY is not set
 # CONFIG_BCMDHD_4334 is not set
-CONFIG_BCM4330=y
+CONFIG_BCM4330=m
 CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_wifi.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/fw_wifi_nvram.txt"
 CONFIG_BCMDHD_IF_PREFIX="wlan%d"
