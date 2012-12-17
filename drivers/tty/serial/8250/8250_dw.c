@@ -91,18 +91,29 @@ static unsigned int dw8250_serial_in32(struct uart_port *p, int offset)
 
 /* Offset for the DesignWare's UART Status Register. */
 //#define UART_USR	0x1f
-static int dw8250_handle_irq(struct uart_port *p)
+static int dw8250_handle_irq(struct uart_port *port)
 {
-	struct dw8250_data *d = p->private_data;
-	unsigned int iir = p->serial_in(p, UART_IIR);
+	struct dw8250_data *d = port->private_data;
+	unsigned int iir = port->serial_in(port, UART_IIR);
+#ifdef CONFIG_BRCM_UART_CHANGES
+	struct uart_8250_port *up =
+		container_of(port, struct uart_8250_port, port);
 
+	/* This is used for checking the Timeout interrupt in
+	 * serial8250_rx_chars() */
+	up->iir = iir;
+#endif
 
-	if (serial8250_handle_irq(p, iir)) {
+	if (serial8250_handle_irq(port, iir)) {
 		return 1;
 	} else if ((iir & UART_IIR_BUSY) == UART_IIR_BUSY) {
 		/* Clear the USR and write the LCR again. */
-		(void)p->serial_in(p, UART_USR);
-		p->serial_out(p, UART_LCR, d->last_lcr);
+		(void)port->serial_in(port, UART_USR);
+#ifdef CONFIG_BRCM_UART_CHANGES
+		/* Stop writing to LCR if the value is same. */
+		if (port->serial_in(port, UART_LCR) != d->last_lcr)
+#endif
+			port->serial_out(port, UART_LCR, d->last_lcr);
 
 		return 1;
 	}
