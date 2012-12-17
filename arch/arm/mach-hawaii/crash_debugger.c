@@ -33,7 +33,6 @@
 #include <mach/sram_config.h>
 #include <linux/fs.h>
 
-static void cdebugger_set_upload_magic(unsigned magic);
 enum cdebugger_upload_cause_t {
 	UPLOAD_CAUSE_INIT = 0xCAFEBABE,
 	UPLOAD_CAUSE_KERNEL_PANIC = 0x000000C8,
@@ -484,7 +483,7 @@ void cdebugger_save_pte(void *pte, int task_addr)
 	cdebugger_fault_status[cpuid].cur_process_magic = task_addr;
 }
 
-static void cdebugger_set_upload_magic(unsigned magic)
+void cdebugger_set_upload_magic(unsigned magic)
 {
 
 	iowrite32(magic, cdebugger_mem_base);
@@ -493,6 +492,7 @@ static void cdebugger_set_upload_magic(unsigned magic)
 
 	outer_flush_all();
 }
+EXPORT_SYMBOL(cdebugger_set_upload_magic);
 
 static int cdebugger_normal_reboot_handler(struct notifier_block *nb,
 					   unsigned long l, void *p)
