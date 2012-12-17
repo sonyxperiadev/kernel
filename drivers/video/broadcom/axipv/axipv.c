@@ -143,6 +143,12 @@ static inline u32 axipv_get_free_buff_index(struct axipv_buff *buff)
 		if (AXIPV_BUFF_AVAILABLE == buff[i].status)
 			break;
 	}
+
+	if (unlikely(AXIPV_MAX_DISP_BUFF_SUPP == i)) {
+		for (i = 0; i < AXIPV_MAX_DISP_BUFF_SUPP; i++)
+			axipv_err("0x%x state=%d\n",
+				buff[i].addr, buff[i].status);
+	}
 	return i;
 }
 
@@ -439,6 +445,8 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 	irq_stat = readl(axipv_base + REG_INTR_STAT);
 
 	axipv_debug("irq_stat=0x%x\n", irq_stat);
+	if (!irq_stat)
+		axipv_err("irq_stat is NULL => clk might have been released\n");
 	if (irq_stat & WATER_LVL2_INT) {
 		if ((AXIPV_STOPPED == dev->state)
 			|| ((AXIPV_STOPPING == dev->state) &&
@@ -528,6 +536,17 @@ static inline int post_async(struct axipv_config_t *config)
 	axipv_base = dev->base_addr;
 
 	axipv_debug("new buff posted 0x%x\n", config->buff.async);
+
+	/* Handle the unusal case by bypassing the hardware since the hardware
+	 * is transferring the same buffer */
+	if (config->buff.async == g_curr) {
+		axipv_err("AXIPV has received the same buffer which is used\n");
+		axipv_err("It is likely that we see display tearing\n");
+		axipv_err("Preventing a potential lock-up by signalling\n");
+		dev->release_cb(config->buff.async);
+		return 0;
+	}
+
 	writel(config->buff.async, axipv_base + REG_NXT_FRAME);
 	curr_reg_val = readl(axipv_base + REG_CUR_FRAME);
 	buff_index = axipv_get_free_buff_index(dev->buff);

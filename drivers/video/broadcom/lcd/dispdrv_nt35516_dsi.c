@@ -1403,6 +1403,7 @@ Int32 NT35516_Update(
 			"Power State\n", __func__);
 		return -1;
 	}
+	NT35516_LOG(LCD_DBG_ID, "buff=0x%x\n", buff);
 
 	if (p_win == NULL)
 		p_win =	&pPanel->win_dim;
