@@ -127,33 +127,6 @@ bool is_pm_erratum(u32 erratum)
 }
 
 
-#define CSR_RETN_VAL_SS			0x4
-#define CSR_ECO_VAL_SS			0xF
-#define CSR_NM1_VAL_SS			0x13
-#define CSR_NM2_VAL_SS			0x1D
-#define CSR_TURBO_VAL_SS		0x34
-
-#define MSR_RETN_VAL_SS			0x4
-#define MSR_ECO_VAL_SS			0x10
-#define MSR_NM1_VAL_SS			0x10
-#define MSR_NM2_VAL_SS			0x1A
-#define MSR_TURBO_VAL_SS		0x24
-
-
-const u8 swr_vlt_table[SR_VLT_LUT_SIZE] = {
-	INIT_LPM_VLT_IDS(MSR_RETN_VAL_SS, MSR_RETN_VAL_SS, MSR_RETN_VAL_SS),
-	INIT_A9_VLT_TABLE(CSR_ECO_VAL_SS, CSR_NM1_VAL_SS, CSR_NM2_VAL_SS,
-							CSR_TURBO_VAL_SS),
-	INIT_OTHER_VLT_TABLE(MSR_ECO_VAL_SS, MSR_NM1_VAL_SS, MSR_NM2_VAL_SS,
-							MSR_TURBO_VAL_SS),
-	INIT_UNUSED_VLT_IDS(MSR_RETN_VAL_SS)
-	};
-
-__weak const u8 *bcmpmu_get_sr_vlt_table (u32 silicon_type)
-{
-	return swr_vlt_table;
-}
-
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 {
 	#if !defined (CONFIG_MACH_HAWAII_FPGA)
@@ -184,7 +157,7 @@ int __init pm_params_init(void)
 static int switch_a9_pll(int freq_id, int policy)
 {
 	int ret = 0;
-	struct opp_conf opp_conf;
+	struct opp_info opp_info;
 	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 
@@ -195,11 +168,10 @@ static int switch_a9_pll(int freq_id, int policy)
 	}
 	ccu_clk = to_ccu_clk(clk);
 
-	opp_conf.flags = 0;
-	opp_conf.freq_id = freq_id;
+	opp_info.freq_id = freq_id;
 
 	ret = ccu_set_freq_policy(ccu_clk, CCU_POLICY(policy),
-				&opp_conf);
+				&opp_info);
 out:
 	return ret;
 }
@@ -220,7 +192,8 @@ int pm_parm_config_a9_pll(int turbo_val)
 	else if (turbo_val == CONFIG_A9_PLL_2P4GHZ)
 		clk_set_rate(clk, 2400000000UL);
 
-	ret = switch_a9_pll(PROC_CCU_FREQ_ID_TURBO, PM_WKP);/*TURBO => A9 PLL*/
+	ret = switch_a9_pll(PROC_CCU_FREQ_ID_SUPER_TURBO, PM_WKP);
+	/*SUPER TURBO => A9 PLL*/
 	return ret;
 }
 

@@ -45,7 +45,6 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #endif
-#include <linux/clk.h>
 #include <asm/io.h>
 #include <mach/pi_mgr.h>
 #include <mach/memory.h>
@@ -6952,15 +6951,15 @@ int var500m_clk_en_override(int enable)
 
 /*Override ccu_clk_set_freq_policy for MM as the offset is different*/
 static int mm_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
-					struct opp_conf *opp_conf)
+					struct opp_info *opp_info)
 {
 	u32 reg_val = 0;
 	u32 shift;
 
 	clk_dbg("%s:%s ccu , freq_id = %d policy_id = %d\n",__func__,
-			ccu_clk->clk.name, opp_conf->freq_id, policy_id);
+			ccu_clk->clk.name, opp_info->freq_id, policy_id);
 
-	if (opp_conf->freq_id >= ccu_clk->freq_count)
+	if (opp_info->freq_id >= ccu_clk->freq_count)
 		return -EINVAL;
 
 	switch(policy_id)
@@ -6985,7 +6984,7 @@ static int mm_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	clk_dbg("%s: reg_val:%08x shift:%d\n",__func__, reg_val, shift);
 	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
 
-	reg_val |= opp_conf->freq_id << shift;
+	reg_val |= opp_info->freq_id << shift;
 
 	ccu_write_access_enable(ccu_clk,true);
 	ccu_policy_engine_stop(ccu_clk);
@@ -7531,96 +7530,18 @@ static int proc_ccu_get_freq_policy(struct ccu_clk *ccu_clk, int policy_id)
 	return (reg_val >> shift) & CCU_FREQ_POLICY_MASK;
 }
 
-/* To be called with CCU access enabled */
-static int __set_a9_pll_chnl_div(u32 pll_chnl_no, u32 mdiv)
-{
-	u32 reg_val;
-	struct pll_chnl_clk *pll_chnl_clk;
-
-	clk_dbg("%s pll_chnl_no:%d, mdiv:%d\n", __func__, pll_chnl_no, mdiv);
-
-	if (pll_chnl_no == 0)
-		pll_chnl_clk = &clk_a9_pll_chnl0;
-	else if (pll_chnl_no == 1)
-		pll_chnl_clk = &clk_a9_pll_chnl1;
-	else
-		return -EINVAL;
-
-	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
-			pll_chnl_clk->pll_load_ch_en_offset));
-	reg_val &= ~pll_chnl_clk->load_en_mask;
-	reg_val |= 0x6 << 12;
-	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
-			pll_chnl_clk->pll_load_ch_en_offset));
-
-	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
-			pll_chnl_clk->cfg_reg_offset));
-	reg_val &= ~pll_chnl_clk->mdiv_mask;
-	reg_val |= mdiv << pll_chnl_clk->mdiv_shift;
-	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
-			pll_chnl_clk->cfg_reg_offset));
-
-	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
-			pll_chnl_clk->pll_load_ch_en_offset));
-	reg_val |= pll_chnl_clk->load_en_mask;
-	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
-			pll_chnl_clk->pll_load_ch_en_offset));
-
-	return 0;
-}
-
-struct arm_freq_switch_conf {
-	u32 opp_inx;
-	u32 freq_id;
-	u32 mdiv;
-	u32 volt_id;
-	u32 switch_freq_id;
-	u32 pll_chnl;
-};
-
-static int get_freq_switch_conf(struct arm_freq_switch_conf*
-conf, u32 opp_inx)
-{
-	if (conf == NULL)
-		return -EINVAL;
-	switch (opp_inx) {
-	case PI_OPP_INDEX1:
-		conf->freq_id = PROC_CCU_FREQ_ID_NRML;
-		conf->mdiv = 4;
-		conf->volt_id = VLT_ID_A9_NORMAL1;
-		conf->switch_freq_id = 3;
-		conf->pll_chnl = 0;
-		break;
-	case PI_OPP_INDEX2:
-		conf->freq_id = PROC_CCU_FREQ_ID_NRML;
-		conf->mdiv = 3;
-		conf->volt_id = VLT_ID_A9_NORMAL1;
-		conf->switch_freq_id = 3;
-		conf->pll_chnl = 0;
-		break;
-	default:
-		return -EINVAL;
-	}
-	return 0;
-}
-
 static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
-				   struct opp_conf *opp_conf)
+				   struct opp_info *opp_info)
 {
-	int ret;
 	u32 reg_val = 0;
 	u32 shift;
-	u32 cur_volt_id = 0;
-	u32 switch_volt_id = 0;
-	struct arm_freq_switch_conf conf;
-/* start - to avoid pll glitch */
-	int saved_pllarma = 0;
-	int saved_pll_debug = 0;
-/* end - to avoid pll glitch */
+	u32 target_volt;
+	int curr_opp;
+	struct clk *src_clk = &CLK_NAME(a9_pll_chnl0).clk;
 	clk_dbg("%s:freq_id = %d policy_id = %d\n", __func__,
-		opp_conf->freq_id, policy_id);
+		opp_info->freq_id, policy_id);
 
-	if (opp_conf->freq_id >= ccu_clk->freq_count)
+	if (opp_info->freq_id >= ccu_clk->freq_count)
 		return -EINVAL;
 	switch (policy_id) {
 	case CCU_POLICY0:
@@ -7638,93 +7559,34 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	default:
 		return -EINVAL;
 	}
-	if (opp_conf->flags & OPP_PLL_CHNL_CHANGE) {
-		memset(&conf, 0, sizeof(conf));
-		ret = get_freq_switch_conf(&conf, opp_conf->opp_inx);
-		if (ret)
-			return -EINVAL;
-	}
 	ccu_write_access_enable(ccu_clk, true);
-	if (opp_conf->flags & OPP_PLL_CHNL_CHANGE) {
-		clk_dbg("opp_conf->freq_id:%d, opp_conf->opp_inx:%d, conf.volt_id:%d\n",
-			opp_conf->freq_id, opp_conf->opp_inx, conf.volt_id);
-		/* start - to avoid PLL glitches */
-		reg_val = readl(CLK_NAME(kproc).ccu_clk_mgr_base +
-			KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-		saved_pllarma = reg_val;
-		reg_val &=
-		~KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
-		writel(reg_val, CLK_NAME(kproc).ccu_clk_mgr_base +
-			KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-		reg_val = readl(CLK_NAME(kproc).ccu_clk_mgr_base +
-			KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET);
-		saved_pll_debug = reg_val;
-		reg_val |=
-		KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_TIMER_LOCK_EN_MASK;
-		writel(reg_val, CLK_NAME(kproc).ccu_clk_mgr_base +
-			KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET);
-		/* end - to avoid PLL glitches */
-		if (opp_conf->flags & OPP_NEED_INTERIM_SWITCH) {
-			/* switch to intermediate OPP and then to target OPP */
-			reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
-			reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
-			reg_val |= conf.switch_freq_id << shift;
-			/*dont let the sequencer run for this interim switch.
-			 * also assumption here that interim OPP is less than
-			 * the target OPP */
-			switch_volt_id = ccu_get_voltage(ccu_clk,
-						conf.switch_freq_id);
-			ccu_set_voltage(ccu_clk, conf.switch_freq_id,
-					conf.volt_id);
-			ccu_policy_engine_stop(ccu_clk);
-			writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
-			ccu_policy_engine_resume(ccu_clk,
-				ccu_clk->clk.flags & CCU_TARGET_LOAD ?
-				CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
+	ccu_policy_engine_stop(ccu_clk);
+	if (opp_info->ctrl_prms != CCU_POLICY_FREQ_REG_INIT &&
+			(opp_info->opp_id == PI_OPP_NORMAL ||
+			opp_info->opp_id == PI_OPP_TURBO)) {
 
-		}
-		cur_volt_id = ccu_get_voltage(ccu_clk, opp_conf->freq_id);
-		clk_dbg("freq_id:%d, cur_volt_id:%d\n", opp_conf->freq_id,
-								cur_volt_id);
-		if (conf.volt_id > cur_volt_id) {
-			ccu_policy_engine_stop(ccu_clk);
-			ccu_set_voltage(ccu_clk, opp_conf->freq_id,
-							conf.volt_id);
-			ccu_policy_engine_resume(ccu_clk,
-				ccu_clk->clk.
-				flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET :
-				CCU_LOAD_ACTIVE);
-		}
-		__set_a9_pll_chnl_div(conf.pll_chnl, conf.mdiv);
-		if (conf.volt_id < cur_volt_id)
-			ccu_set_voltage(ccu_clk, opp_conf->freq_id,
-							conf.volt_id);
-		/* start - to avoid PLL glitches */
-		writel(saved_pllarma, CLK_NAME(kproc).ccu_clk_mgr_base +
-				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-		writel(saved_pll_debug, CLK_NAME(kproc).ccu_clk_mgr_base +
-			KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET);
-		/* end - to avoid PLL glitches */
+		target_volt = (opp_info->opp_id == PI_OPP_NORMAL) ?
+				VLT_ID_A9_NORMAL : VLT_ID_A9_TURBO;
+		curr_opp = pi_get_active_opp(ccu_clk->pi_id);
+		if (opp_info->opp_id > curr_opp)
+			ccu_set_voltage(ccu_clk,
+				opp_info->freq_id, target_volt);
+		clk_set_rate(src_clk, opp_info->ctrl_prms);
+		if (opp_info->opp_id < curr_opp)
+			ccu_set_voltage(ccu_clk, opp_info->freq_id,
+				target_volt);
 	}
 
 	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
 	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
-	reg_val |= opp_conf->freq_id << shift;
-	/* set the voltage for interim freq id back to its value */
-	if ((opp_conf->flags & OPP_PLL_CHNL_CHANGE) && (opp_conf->flags &
-	    OPP_NEED_INTERIM_SWITCH))
-		ccu_set_voltage(ccu_clk, conf.switch_freq_id,
-				switch_volt_id);
+	reg_val |= opp_info->freq_id << shift;
 
-	ccu_policy_engine_stop(ccu_clk);
 	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
-	ccu_policy_engine_resume(ccu_clk,
-				 ccu_clk->clk.
-				 flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET :
-				 CCU_LOAD_ACTIVE);
+
+	ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
+		CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
 
 	ccu_write_access_enable(ccu_clk, false);
-
 	clk_dbg("%s:%s ccu OK\n", __func__, ccu_clk->clk.name);
 	return 0;
 }

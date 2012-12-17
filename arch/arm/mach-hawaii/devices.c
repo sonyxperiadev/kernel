@@ -663,10 +663,10 @@ struct platform_device hawaii_otg_platform_device = {
 
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] = {
-	FTBL_INIT(312000, PI_OPP_INDEX0),
-	FTBL_INIT(499999, PI_OPP_INDEX1),
-	FTBL_INIT(666667, PI_OPP_INDEX2),
-	FTBL_INIT(1000000, PI_OPP_INDEX3),
+	FTBL_INIT(312000, PI_OPP_ECONOMY),
+	FTBL_INIT(499999, PI_OPP_NORMAL),
+	FTBL_INIT(666667, PI_OPP_TURBO),
+	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO),
 };
 
 void hawaii_cpufreq_init(void)

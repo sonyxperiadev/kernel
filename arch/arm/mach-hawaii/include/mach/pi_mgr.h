@@ -26,18 +26,12 @@ enum {
 };
 
 enum {
+	PI_OPP_XTAL,
 	PI_OPP_ECONOMY,
 	PI_OPP_NORMAL,
 	PI_OPP_TURBO,
+	PI_OPP_SUPER_TURBO,
 	PI_OPP_MAX
-};
-
-enum {
-	PROC_OPP_ECONOMY,
-	PROC_OPP_NORMAL1,
-	PROC_OPP_NORMAL2,
-	PROC_OPP_TURBO,
-	PROC_OPP_MAX
 };
 
 void hawaii_pi_mgr_init(void);

@@ -40,11 +40,11 @@
 #define RETN_POLICY PM_POLICY_1
 #define SHTDWN_POLICY PM_POLICY_0
 
-
+#define OPP_XTAL_STRING		"XTAL"
 #define OPP_ECONOMY_STRING	"ECONOMY"
 #define OPP_NORMAL_STRING	"NORMAL"
 #define OPP_TURBO_STRING	"TURBO"
-
+#define OPP_SUPER_TURBO_STRING	"SUPER TURBO"
 
 #define	ARM_PI_NUM_OPP			4
 #define	MM_PI_NUM_OPP			3
@@ -63,31 +63,35 @@ static struct clk *ref_8ph_en_pll1_clk;
 
 char *armc_core_ccu[] = { KPROC_CCU_CLK_NAME_STR };
 
-struct opp_conf arm_opp_conf[] = {
-	[PI_OPP_INDEX0] = {
+struct opp_info __arm_opp_info[] = {
+	[0] = {
 		.freq_id = PROC_CCU_FREQ_ID_ECO,
-		.opp_inx = PI_OPP_INDEX0,
-		.flags = OPP_FREQ_ID_CHANGE,
+		.opp_id = PI_OPP_ECONOMY,
 	},
-	[PI_OPP_INDEX1] = {
+	[1] = {
 		.freq_id = PROC_CCU_FREQ_ID_NRML,
-		.opp_inx = PI_OPP_INDEX1,
-		.flags = OPP_FREQ_ID_CHANGE | OPP_PLL_CHNL_CHANGE,
+		.opp_id = PI_OPP_NORMAL,
+		.ctrl_prms = A9_NORMAL_FREQ,
 	},
-	[PI_OPP_INDEX2] = {
-		.freq_id = PROC_CCU_FREQ_ID_NRML,
-		.opp_inx = PI_OPP_INDEX2,
-		.flags = OPP_FREQ_ID_CHANGE | OPP_PLL_CHNL_CHANGE,
-	},
-	[PI_OPP_INDEX3] = {
+	[2] = {
 		.freq_id = PROC_CCU_FREQ_ID_TURBO,
-		.opp_inx = PI_OPP_INDEX3,
-		.flags = OPP_FREQ_ID_CHANGE,
+		.opp_id = PI_OPP_TURBO,
+		.ctrl_prms = A9_TURBO_FREQ,
+	},
+	[3] = {
+		.freq_id = PROC_CCU_FREQ_ID_SUPER_TURBO,
+		.opp_id = PI_OPP_SUPER_TURBO,
 	},
 };
 
+struct opp_info *arm_opp_info[] = {__arm_opp_info};
+
 struct pi_opp arm_opp = {
-	.opp = &arm_opp_conf[PI_OPP_INDEX0],
+	.opp_info = arm_opp_info,
+	.num_opp = ARM_PI_NUM_OPP,
+	.opp_map = OPP_ID_MASK(PI_OPP_ECONOMY) | OPP_ID_MASK(PI_OPP_NORMAL) |
+		OPP_ID_MASK(PI_OPP_TURBO) | OPP_ID_MASK(PI_OPP_SUPER_TURBO),
+	.def_weightage = NULL,
 };
 
 static struct pi_state arm_core_states[] = {
@@ -119,11 +123,10 @@ static struct pi arm_core_pi = {
 	.state_allowed = ARM_CORE_STATE_DORMANT,
 	.pi_state = arm_core_states,
 	.num_states = ARRAY_SIZE(arm_core_states),
-	.opp_active = 3,
+	.opp_inx_act = 3,
 	.opp_lmt_max = 3,
 	.opp_lmt_min = 0,
 	.pi_opp = &arm_opp,
-	.num_opp = ARM_PI_NUM_OPP,
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
 
 	.pi_info = {
@@ -158,23 +161,30 @@ static struct pi arm_core_pi = {
 /*MM PI CCU Id*/
 static char *mm_ccu[] = { MM_CCU_CLK_NAME_STR };
 
-struct opp_conf mm_opp_conf[] = {
-	[PI_OPP_INDEX0] = {
+struct opp_info __mm_opp_info[] = {
+	[0] = {
 		.freq_id = MM_CCU_FREQ_ID_ECO,
-		.opp_inx = PI_OPP_INDEX0,
+		.opp_id = PI_OPP_ECONOMY,
 	},
-	[PI_OPP_INDEX1] = {
+	[1] = {
 		.freq_id = MM_CCU_FREQ_ID_NRML,
-		.opp_inx = PI_OPP_INDEX1,
+		.opp_id = PI_OPP_NORMAL,
 	},
-	[PI_OPP_INDEX2] = {
+	[2] = {
 		.freq_id = MM_CCU_FREQ_ID_TURBO,
-		.opp_inx = PI_OPP_INDEX2,
+		.opp_id = PI_OPP_TURBO,
 	},
 };
 
+struct opp_info *mm_opp_info[] = {__mm_opp_info};
+u32 mm_weightage[] = {35, 50, 0};
+
 struct pi_opp mm_opp = {
-	.opp = &mm_opp_conf[PI_OPP_INDEX0],
+	.opp_info = mm_opp_info,
+	.num_opp = MM_PI_NUM_OPP,
+	.opp_map = OPP_ID_MASK(PI_OPP_ECONOMY) | OPP_ID_MASK(PI_OPP_NORMAL) |
+		OPP_ID_MASK(PI_OPP_TURBO),
+	.def_weightage = mm_weightage,
 };
 
 static struct pi_state mm_states[] = {
@@ -227,22 +237,17 @@ static struct pi mm_pi = {
 	.name = "mm",
 	.id = PI_MGR_PI_ID_MM,
 #ifdef CONFIG_PI_MGR_DISABLE_POLICY_CHANGE
-	.flags = NO_POLICY_CHANGE | DFS_LIMIT_CHECK_EN,
+	.flags = NO_POLICY_CHANGE | DFS_LIMIT_CHECK_EN | DEFER_DFS_UPDATE,
 #else
-	.flags = DFS_LIMIT_CHECK_EN,
+	.flags = DFS_LIMIT_CHECK_EN | DEFER_DFS_UPDATE,
 #endif
 	.ccu_id = mm_ccu,
 	.num_ccu_id = ARRAY_SIZE(mm_ccu),
 	.state_allowed = PI_STATE_RETENTION,
 	.pi_state = mm_states,
 	.num_states = ARRAY_SIZE(mm_states),
-	.opp_active = 0,
+	.opp_inx_act = 0,
 	.pi_opp = &mm_opp,
-	.opp_def_weightage = {
-			      [PI_OPP_ECONOMY] = 35,
-			      [PI_OPP_NORMAL] = 50,
-			      },
-	.num_opp = MM_PI_NUM_OPP,
 	.opp_lmt_max = 2,
 	.opp_lmt_min = 0,
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
@@ -291,18 +296,26 @@ static struct pi mm_pi = {
 /*HUB PI CCU Id*/
 static char *hub_ccu[] = { KHUB_CCU_CLK_NAME_STR };
 
-struct opp_conf hub_opp_conf[] = {
-	[PI_OPP_INDEX0] = {
+struct opp_info __hub_opp_info[] = {
+	[0] = {
 		.freq_id = HUB_CCU_FREQ_ID_ECO, /* 0 */
-		.opp_inx = PI_OPP_INDEX0,
+		.opp_id = PI_OPP_ECONOMY,
 	},
-	[PI_OPP_INDEX1] = {
-		.freq_id = HUB_CCU_FREQ_ID_NRML2,
-		.opp_inx = PI_OPP_INDEX1,
+	[1] = {
+		.freq_id = HUB_CCU_FREQ_ID_NRML,
+		.opp_id = PI_OPP_NORMAL,
 	},
 };
+
+struct opp_info *hub_opp_info[] = {__hub_opp_info};
+
+u32 hub_weightage[] = {25, 0};
+
 struct pi_opp hub_opp = {
-	&hub_opp_conf[PI_OPP_INDEX0],
+	.opp_info = hub_opp_info,
+	.num_opp = HUB_PI_NUM_OPP,
+	.def_weightage = hub_weightage,
+	.opp_map = OPP_ID_MASK(PI_OPP_ECONOMY) | OPP_ID_MASK(PI_OPP_NORMAL),
 };
 
 static struct pi_state hub_states[] = {
@@ -327,15 +340,10 @@ static struct pi hub_pi = {
 	.state_allowed = PI_STATE_RETENTION,
 	.pi_state = hub_states,
 	.num_states = ARRAY_SIZE(hub_states),
-	.opp_active = 0,
+	.opp_inx_act = 0,
 	.pi_opp = &hub_opp,
-	.num_opp = HUB_PI_NUM_OPP,
 	.opp_lmt_max = 1,
 	.opp_lmt_min = 0,
-	.opp_def_weightage = {
-			      [PI_OPP_ECONOMY] = 25,
-			      },
-
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
 
 	.pi_info = {
@@ -377,18 +385,24 @@ static struct pi hub_pi = {
 /*AON PI CCU Id*/
 static char *aon_ccu[] = { KHUBAON_CCU_CLK_NAME_STR };
 
-struct opp_conf aon_opp_conf[] = {
-	[PI_OPP_INDEX0] = {
+struct opp_info __aon_opp_info[] = {
+	[0] = {
 		.freq_id = AON_CCU_FREQ_ID_ECO, /* 0 */
-		.opp_inx = PI_OPP_INDEX0,
+		.opp_id = PI_OPP_ECONOMY,
 	},
-	[PI_OPP_INDEX1] = {
-		.freq_id = AON_CCU_FREQ_ID_NRML2,
-		.opp_inx = PI_OPP_INDEX1,
+	[1] = {
+		.freq_id = AON_CCU_FREQ_ID_NRML,
+		.opp_id = PI_OPP_NORMAL,
 	},
 };
+
+struct opp_info *aon_opp_info[] = {__aon_opp_info};
+
 struct pi_opp aon_opp = {
-	&aon_opp_conf[PI_OPP_INDEX0],
+	.opp_info = aon_opp_info,
+	.num_opp = AON_PI_NUM_OPP,
+	.opp_map = OPP_ID_MASK(PI_OPP_ECONOMY) | OPP_ID_MASK(PI_OPP_NORMAL),
+	.def_weightage = NULL,
 };
 
 static struct pi_state aon_states[] = {
@@ -413,10 +427,8 @@ static struct pi aon_pi = {
 	.state_allowed = PI_STATE_RETENTION,
 	.pi_state = aon_states,
 	.num_states = ARRAY_SIZE(aon_states),
-	.opp_active = 0,
-	/*opp frequnecies ...need to revisit */
+	.opp_inx_act = 0,
 	.pi_opp = &aon_opp,
-	.num_opp = AON_PI_NUM_OPP,
 	.opp_lmt_max = 1,
 	.opp_lmt_min = 0,
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
@@ -453,36 +465,39 @@ static struct pi aon_pi = {
 /*ARM subsystem PI Id*/
 static char *sub_sys_ccu[] = { KPM_CCU_CLK_NAME_STR, KPS_CCU_CLK_NAME_STR };
 
-struct opp_conf kpm_opp_conf[2] = {
+u32 sub_sys_weightage[] = {25, 0};
+
+struct opp_info kpm_opp_info[2] = {
 	/* KPM */
-	[PI_OPP_INDEX0] = {
+	[0] = {
 	    .freq_id = KPM_CCU_FREQ_ID_ECO, /* 0 */
-	    .opp_inx = PI_OPP_INDEX0,
+	    .opp_id = PI_OPP_ECONOMY,
 	},
-	[PI_OPP_INDEX1] = {
-	    .freq_id = KPM_CCU_FREQ_ID_NRML2,
-	    .opp_inx = PI_OPP_INDEX1,
+	[1] = {
+	    .freq_id = KPM_CCU_FREQ_ID_NRML,
+	    .opp_id = PI_OPP_NORMAL,
 	},
 };
-struct opp_conf kps_opp_conf[2] = {
+struct opp_info kps_opp_info[2] = {
 	/* KPS */
-	[PI_OPP_INDEX0] = {
+	[0] = {
 	    .freq_id = KPS_CCU_FREQ_ID_ECO, /* 0 */
-	    .opp_inx = PI_OPP_INDEX0,
+	    .opp_id = PI_OPP_ECONOMY,
 	},
-	[PI_OPP_INDEX1] = {
-	    .freq_id = KPS_CCU_FREQ_ID_NRML2,
-	    .opp_inx = PI_OPP_INDEX1,
+	[1] = {
+	    .freq_id = KPS_CCU_FREQ_ID_NRML,
+	    .opp_id = PI_OPP_NORMAL,
 	},
 };
 
-struct pi_opp sub_sys_opp[2] = {
-	[0] = {
-		.opp = &kpm_opp_conf[PI_OPP_INDEX0],
-	},
-	[1] = {
-		.opp = &kps_opp_conf[PI_OPP_INDEX0],
-	}
+struct opp_info *sub_sys_opp_info[] = {kpm_opp_info, kps_opp_info};
+
+struct pi_opp sub_sys_opp = {
+		.opp_info = sub_sys_opp_info,
+		.num_opp = SUB_SYS_PI_NUM_OPP,
+		.def_weightage = &sub_sys_weightage[0],
+		.opp_map = OPP_ID_MASK(PI_OPP_ECONOMY) |
+				OPP_ID_MASK(PI_OPP_NORMAL),
 };
 
 static struct pi_state sub_sys_states[] = {
@@ -511,14 +526,10 @@ static struct pi sub_sys_pi = {
 	.state_allowed = PI_STATE_RETENTION,
 	.pi_state = sub_sys_states,
 	.num_states = ARRAY_SIZE(sub_sys_states),
-	.opp_active = 0,
-	.pi_opp = sub_sys_opp,
-	.num_opp = SUB_SYS_PI_NUM_OPP,
+	.opp_inx_act = 0,
+	.pi_opp = &sub_sys_opp,
 	.opp_lmt_max = 1,
 	.opp_lmt_min = 0,
-	.opp_def_weightage = {
-			      [PI_OPP_ECONOMY] = 25,
-			      },
 
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
 
@@ -617,6 +628,9 @@ char *get_opp_name(int opp)
 {
 	char *name = NULL;
 	switch (opp) {
+	case PI_OPP_XTAL:
+		name = OPP_XTAL_STRING;
+		break;
 	case PI_OPP_ECONOMY:
 		name = OPP_ECONOMY_STRING;
 		break;
@@ -625,6 +639,9 @@ char *get_opp_name(int opp)
 		break;
 	case PI_OPP_TURBO:
 		name = OPP_TURBO_STRING;
+		break;
+	case PI_OPP_SUPER_TURBO:
+		name = OPP_SUPER_TURBO_STRING;
 		break;
 	default:
 		return NULL;

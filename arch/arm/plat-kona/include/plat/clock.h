@@ -84,6 +84,8 @@ extern unsigned read_mpidr(void);
 #define CCU_FREQ_POLICY3_SHIFT	24
 #define CCU_FREQ_POLICY_MASK	7
 
+#define CCU_POLICY_FREQ_REG_INIT	0xFFFFFFFF
+
 #define CCU_ACT_INT_SHIFT	1
 #define CCU_TGT_INT_SHIFT	0
 #define CCU_INT_EN			1
@@ -338,7 +340,6 @@ struct peri_clk_ops {
 
 struct bus_clk_ops {
 };
-struct opp_conf;
 struct ccu_clk;
 struct ccu_clk_ops {
 	int (*write_access) (struct ccu_clk * ccu_clk, int enable);
@@ -350,7 +351,7 @@ struct ccu_clk_ops {
 	int (*int_enable) (struct ccu_clk * ccu_clk, int int_type, int enable);
 	int (*int_status_clear) (struct ccu_clk * ccu_clk, int int_type);
 	int (*set_freq_policy) (struct ccu_clk * ccu_clk, int policy_id,
-				struct opp_conf *opp_conf);
+				struct opp_info *opp_info);
 	int (*get_freq_policy) (struct ccu_clk * ccu_clk, int policy_id);
 	int (*set_peri_voltage) (struct ccu_clk * ccu_clk, int peri_volt_id,
 				 u8 voltage);
@@ -752,7 +753,7 @@ int ccu_set_policy_ctrl(struct ccu_clk *ccu_clk, int pol_ctrl_id, int action);
 int ccu_int_enable(struct ccu_clk *ccu_clk, int int_type, int enable);
 int ccu_int_status_clear(struct ccu_clk *ccu_clk, int int_type);
 int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
-				struct opp_conf *opp_conf);
+				struct opp_info *opp_info);
 int ccu_get_freq_policy(struct ccu_clk *ccu_clk, int policy_id);
 int ccu_set_peri_voltage(struct ccu_clk *ccu_clk, int peri_volt_id, u8 voltage);
 int ccu_set_voltage(struct ccu_clk *ccu_clk, int volt_id, u8 voltage);

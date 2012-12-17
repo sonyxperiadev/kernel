@@ -108,7 +108,7 @@ static int __peri_clk_init(struct clk *clk)
 
 	CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 
-	/*Add DSF request */
+	/*Add DFS request */
 #ifdef CONFIG_KONA_PI_MGR
 	if (peri_clk->clk_dfs) {
 		BUG_ON(peri_clk->ccu_clk->pi_id == -1);
@@ -2034,14 +2034,14 @@ int ccu_int_status_clear(struct ccu_clk *ccu_clk, int int_type)
 EXPORT_SYMBOL(ccu_int_status_clear);
 
 int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
-			struct opp_conf *opp_conf)
+			struct opp_info *opp_info)
 {
 	int ret;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->set_freq_policy)
 		return -EINVAL;
 	ret = ccu_clk->ccu_ops->set_freq_policy(ccu_clk,
-			policy_id, opp_conf);
+			policy_id, opp_info);
 	return ret;
 
 }
@@ -2376,15 +2376,15 @@ static int ccu_clk_int_status_clear(struct ccu_clk *ccu_clk, int int_type)
 }
 
 static int ccu_clk_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
-				   struct opp_conf *opp_conf)
+				   struct opp_info *opp_info)
 {
 	u32 reg_val = 0;
 	u32 shift;
 	unsigned long flags;
 	clk_dbg("%s:%s ccu , freq_id = %d policy_id = %d\n", __func__,
-		ccu_clk->clk.name, opp_conf->freq_id, policy_id);
+		ccu_clk->clk.name, opp_info->freq_id, policy_id);
 
-	if (opp_conf->freq_id >= ccu_clk->freq_count)
+	if (opp_info->freq_id >= ccu_clk->freq_count)
 		return -EINVAL;
 
 	switch (policy_id) {
@@ -2408,7 +2408,7 @@ static int ccu_clk_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	clk_dbg("%s: reg_val:%08x shift:%d\n", __func__, reg_val, shift);
 	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
 
-	reg_val |= opp_conf->freq_id << shift;
+	reg_val |= opp_info->freq_id << shift;
 
 	ccu_write_access_enable(ccu_clk, true);
 	ccu_policy_engine_stop(ccu_clk);
@@ -2420,7 +2420,6 @@ static int ccu_clk_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 				 flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET :
 				 CCU_LOAD_ACTIVE);
 	ccu_write_access_enable(ccu_clk, false);
-
 	clk_dbg("%s:%s ccu OK\n", __func__, ccu_clk->clk.name);
 	return 0;
 }
@@ -2767,7 +2766,7 @@ static int ccu_clk_init(struct clk *clk)
 	struct ccu_clk *ccu_clk;
 	int inx;
 	u32 reg_val;
-	struct opp_conf opp_conf;
+	struct opp_info opp_info;
 
 	clk_dbg("%s - %s\n", __func__, clk->name);
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
@@ -2805,14 +2804,15 @@ static int ccu_clk_init(struct clk *clk)
 					     ccu_clk->volt_peri[inx]);
 		}
 	}
+
+	opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
 	if (ccu_clk->policy_freq_offset != 0) {
 		/*Init freq policy */
 		for (inx = 0; inx < MAX_CCU_POLICY_COUNT; inx++) {
 			BUG_ON(ccu_clk->freq_policy[inx] >=
 			       ccu_clk->freq_count);
-			opp_conf.flags = 0;
-			opp_conf.freq_id = ccu_clk->freq_policy[inx];
-			ccu_set_freq_policy(ccu_clk, inx, &opp_conf);
+			opp_info.freq_id = ccu_clk->freq_policy[inx];
+			ccu_set_freq_policy(ccu_clk, inx, &opp_info);
 		}
 	}
 	/*Set ATL & AC */
