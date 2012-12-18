@@ -50,6 +50,7 @@ struct cpufreq_interactive_cpuinfo {
 	unsigned int target_freq;
 	unsigned int floor_freq;
 	u64 floor_validate_time;
+	u64 hispeed_validate_time;
 	int governor_enabled;
 };
 
@@ -681,6 +682,8 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 					     &pcpu->target_set_time);
 			pcpu->floor_freq = pcpu->target_freq;
 			pcpu->floor_validate_time =
+				pcpu->target_set_time;
+			pcpu->hispeed_validate_time =
 				pcpu->target_set_time;
 			pcpu->governor_enabled = 1;
 			smp_wmb();
