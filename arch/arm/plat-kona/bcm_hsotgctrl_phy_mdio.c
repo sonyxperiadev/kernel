@@ -779,7 +779,7 @@ static int __init bcm_hsotgctrl_usb_phy_mdio_init(void)
 
 	return platform_driver_register(&bcm_hsotgctrl_phy_mdio_driver);
 }
-arch_initcall(bcm_hsotgctrl_usb_phy_mdio_init);
+postcore_initcall(bcm_hsotgctrl_usb_phy_mdio_init);
 
 static void __exit bcm_hsotgctrl_phy_mdio_exit(void)
 {
