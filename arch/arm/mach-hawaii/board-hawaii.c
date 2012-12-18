@@ -1210,28 +1210,6 @@ static struct kona_pl330_data hawaii_pl330_pdata = {
 };
 #endif
 
-#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-#define BCMBT_VREG_GPIO		26
-#define BCMBT_N_RESET_GPIO	(-1)	/* Unused */
-#define BCMBT_AUX0_GPIO		(-1)	/* clk32 */
-#define BCMBT_AUX1_GPIO		(-1)	/* UARTB_SEL */
-
-static struct bcmbt_rfkill_platform_data hawaii_bcmbt_rfkill_cfg = {
-	.vreg_gpio = BCMBT_VREG_GPIO,
-	.n_reset_gpio = BCMBT_N_RESET_GPIO,
-	.aux0_gpio = BCMBT_AUX0_GPIO,	/* CLK32 */
-	.aux1_gpio = BCMBT_AUX1_GPIO,	/* UARTB_SEL, probably not required */
-};
-
-static struct platform_device hawaii_bcmbt_rfkill_device = {
-	.name = "bcmbt-rfkill",
-	.id = -1,
-	.dev = {
-		.platform_data = &hawaii_bcmbt_rfkill_cfg,
-		},
-};
-#endif
-
 #ifdef CONFIG_BCM_BT_LPM
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
@@ -1530,11 +1508,6 @@ static struct platform_device *hawaii_devices[] __initdata = {
 #ifdef CONFIG_BACKLIGHT_PWM
 	&hawaii_backlight_device,
 #endif
-
-#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-	&hawaii_bcmbt_rfkill_device,
-#endif
-
 
 #ifdef CONFIG_BCM_BT_LPM
 	&board_bcmbt_lpm_device,
