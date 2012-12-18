@@ -1003,7 +1003,6 @@ static int sdhci_pltfm_suspend(struct device *device)
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		goto ret_path;
 
-	pm_runtime_get_sync(dev->dev);
 	ret = sdhci_suspend_host(host);
 	if (ret) {
 		dev_err(dev->dev, "Unable to suspend sdhci host err=%d\n",
@@ -1037,8 +1036,6 @@ static int sdhci_pltfm_resume(struct device *device)
 		 "Unable to resume sdhci host err=%d\n", ret);
 		return ret;
 	}
-	pm_runtime_mark_last_busy(dev->dev);
-	pm_runtime_put_autosuspend(dev->dev);
 
 ret_path:
 	dev->suspended = 0;
