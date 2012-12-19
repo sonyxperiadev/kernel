@@ -102,7 +102,8 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 		instrument_idle_entry();
 
 		if (kona_state->enter)
-			mach_ret = kona_state->enter(kona_state);
+			mach_ret = kona_state->enter(kona_state,
+					kona_state->params);
 		else
 			cpu_do_idle();
 		instrument_idle_exit();
@@ -179,9 +180,8 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(1);
 #endif
-			suspend->flags |= CPUIDLE_ENTER_SUSPEND;
-			suspend->enter(suspend);
-			suspend->flags &= ~CPUIDLE_ENTER_SUSPEND;
+			suspend->enter(suspend,
+				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(0);
 #endif
@@ -214,7 +214,7 @@ int kona_pm_cpu_lowpower(void)
 	 * to DORMANT_CORE_DOWN.
 	 */
 	if (suspend->enter)
-		suspend->enter(suspend);
+		suspend->enter(suspend, suspend->params);
 	return 0;
 }
 EXPORT_SYMBOL(kona_pm_cpu_lowpower);
@@ -286,7 +286,7 @@ int __init kona_pm_init(struct pm_init_param *ip)
 		state->name[CPUIDLE_NAME_LEN - 1] = 0;
 		strncpy(state->desc, ip->states[i].desc, CPUIDLE_DESC_LEN - 1);
 		state->desc[CPUIDLE_DESC_LEN - 1] = 0;
-		if (ip->states[i].flags & CPUIDLE_CSTATE_DISABLED)
+		if (ip->states[i].params & CTRL_PARAMS_CSTATE_DISABLED)
 			state->disable = 1;
 	}
 	kona_idle_driver.state_count = ip->num_states;

@@ -49,10 +49,10 @@
 #define DORMANT_CTRL_PROG_END       0xE1
 
 #ifndef __ASSEMBLY__
+
 /**
  * C State definitions and latencies
  */
-
 enum {
 	CSTATE_SIMPLE_WFI, /* Simple WFI */
 	CSTATE_SUSPEND_RETN, /* suspend retention */
