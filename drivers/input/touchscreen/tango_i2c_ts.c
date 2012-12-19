@@ -47,6 +47,10 @@
 
 #include <linux/hrtimer.h>
 
+#include <linux/of.h>
+#include <linux/of_irq.h>
+#include <linux/of_platform.h>
+
 #include <linux/i2c/tango_ts.h>
 
 /* ---- Public Variables ------------------------------------------------- */
@@ -76,7 +80,6 @@ struct tango_i2c {
 	struct delayed_work work;
 	struct mutex mutex_wq;
 	struct i2c_client *client;
-	struct i2c_client *dummy_client;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend suspend_desc;
 #endif
@@ -226,9 +229,7 @@ static ssize_t i2c_ts_driver_calibration(struct device *dev,
 
 	printk(KERN_INFO "starting calibration\n");
 
-	rc = i2c_master_send((p_tango_i2c_dev->dummy_client) ?
-			     p_tango_i2c_dev->dummy_client :
-			     p_tango_i2c_dev->client, buffer, 2);
+	rc = i2c_master_send(p_tango_i2c_dev->client, buffer, 2);
 	/*
 	 * Disabling interrupts till calibrated data is written into flash.
 	 * This wont effect system performace because calibration is done
@@ -334,8 +335,7 @@ int is_pen_down(void)
 {
 	struct i2c_client *client;
 
-	client = (p_tango_i2c_dev->dummy_client) ? p_tango_i2c_dev->dummy_client
-	    : p_tango_i2c_dev->client;
+	client = p_tango_i2c_dev->client;
 	return i2c_smbus_read_byte_data(client, gp_i2c_ts->num_fingers_idx);
 }
 
@@ -380,8 +380,7 @@ int i2c_ts_driver_read(void)
 		return -1;
 	}
 
-	client = (p_tango_i2c_dev->dummy_client) ? p_tango_i2c_dev->dummy_client
-	    : p_tango_i2c_dev->client;
+	client = p_tango_i2c_dev->client;
 	rc = i2c_smbus_read_i2c_block_data(client,
 					   MSI_REG_OFFSET,
 					   gp_i2c_ts->num_bytes_to_read,
@@ -442,8 +441,7 @@ int i2c_ts_driver_write(int length)
 	int rc;
 	struct i2c_client *client;
 
-	client = (p_tango_i2c_dev->dummy_client) ? p_tango_i2c_dev->dummy_client
-	    : p_tango_i2c_dev->client;
+	client = p_tango_i2c_dev->client;
 	rc = i2c_master_send(client, gp_buffer, length);
 	return rc;
 }
@@ -820,6 +818,10 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 {
 	int rc = 0;
 
+	struct TANGO_I2C_TS_t *dt_i2c_ts = NULL;
+	struct device_node *np = p_i2c_client->dev.of_node;
+	u32 val;
+
 	if (p_i2c_client == NULL) {
 		TS_ERR("%s i2c_ts_driver_probe() p_i2c_client == NULL\n",
 		       I2C_TS_DRIVER_NAME);
@@ -827,12 +829,97 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		goto ERROR1;
 	}
 
-	if (p_i2c_client->dev.platform_data == NULL) {
-		TS_ERR("%s i2c_ts_driver_probe() "
-		       "p_i2c_client->dev.platform_data == NULL\n",
-		       I2C_TS_DRIVER_NAME);
-		rc = -1;
-		goto ERROR1;
+	dt_i2c_ts = kzalloc(sizeof(struct TANGO_I2C_TS_t), GFP_KERNEL);
+	if (!dt_i2c_ts) {
+		printk(KERN_ERR"Unable to allocate memory for ***** dt_i2c_ts ***** \n");
+		return -ENOMEM;
+	}
+
+	if (p_i2c_client->dev.of_node != NULL) {
+		if (!of_property_read_u32(np, "gpio-irq-pin", &val))
+			dt_i2c_ts->gpio_irq_pin = val;
+
+		if (!of_property_read_u32(np, "gpio-reset-pin", &val))
+			dt_i2c_ts->gpio_reset_pin = val;
+
+		if (!of_property_read_u32(np, "x-max-value", &val))
+			dt_i2c_ts->x_max_value = val;
+
+		if (!of_property_read_u32(np, "y-max-value", &val))
+			dt_i2c_ts->y_max_value = val;
+
+		if (!of_property_read_u32(np, "layout", &val))
+			dt_i2c_ts->layout = val;
+
+		if (!of_property_read_u32(np, "num-bytes-to-read", &val))
+			dt_i2c_ts->num_bytes_to_read = val;
+
+		if (!of_property_read_u32(np, "is-multi-touch", &val))
+			dt_i2c_ts->is_multi_touch = val;
+
+		if (!of_property_read_u32(np, "is-resetable", &val))
+			dt_i2c_ts->is_resetable = val;
+
+		if (!of_property_read_u32(np, "num-fingers-idx", &val))
+			dt_i2c_ts->num_fingers_idx = val;
+
+		if (!of_property_read_u32(np, "old-touching-idx", &val))
+			dt_i2c_ts->old_touching_idx = val;
+
+		if (!of_property_read_u32(np, "x1-lo-idx", &val))
+			dt_i2c_ts->x1_lo_idx = val;
+
+		if (!of_property_read_u32(np, "x1-hi-idx", &val))
+			dt_i2c_ts->x1_hi_idx = val;
+
+		if (!of_property_read_u32(np, "y1-lo-idx", &val))
+			dt_i2c_ts->y1_lo_idx = val;
+
+		if (!of_property_read_u32(np, "y1-hi-idx", &val))
+			dt_i2c_ts->y1_hi_idx = val;
+
+		if (!of_property_read_u32(np, "x2-lo-idx", &val))
+			dt_i2c_ts->x2_lo_idx = val;
+
+		if (!of_property_read_u32(np, "x2-hi-idx", &val))
+			dt_i2c_ts->x2_hi_idx = val;
+
+		if (!of_property_read_u32(np, "y2-lo-idx", &val))
+			dt_i2c_ts->y2_lo_idx = val;
+
+		if (!of_property_read_u32(np, "y2-hi-idx", &val))
+			dt_i2c_ts->y2_hi_idx = val;
+
+		if (!of_property_read_u32(np, "x1-width-idx", &val))
+			dt_i2c_ts->x1_width_idx = val;
+
+		if (!of_property_read_u32(np, "y1-width-idx", &val))
+			dt_i2c_ts->y1_width_idx = val;
+
+		if (!of_property_read_u32(np, "x2-width-idx", &val))
+			dt_i2c_ts->x2_width_idx = val;
+
+		if (!of_property_read_u32(np, "y2-width-idx", &val))
+			dt_i2c_ts->y2_width_idx = val;
+
+		if (!of_property_read_u32(np, "power-mode-idx", &val))
+			dt_i2c_ts->power_mode_idx = val;
+
+		if (!of_property_read_u32(np, "int-mode-idx", &val))
+			dt_i2c_ts->int_mode_idx = val;
+
+		if (!of_property_read_u32(np, "int-width-idx", &val))
+			dt_i2c_ts->int_width_idx = val;
+
+		if (!of_property_read_u32(np, "min-finger-val", &val))
+			dt_i2c_ts->min_finger_val = val;
+
+		if (!of_property_read_u32(np, "max-finger-val", &val))
+			dt_i2c_ts->max_finger_val = val;
+
+		if (!of_property_read_u32(np, "panel-width", &val))
+			dt_i2c_ts->panel_width = val;
+
 	}
 
 	if (!i2c_check_functionality(p_i2c_client->adapter,
@@ -854,6 +941,9 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 
 	/* Get the I2C information compiled in for this platform. */
 	gp_i2c_ts = (struct TANGO_I2C_TS_t *)p_i2c_client->dev.platform_data;
+
+	if (p_i2c_client->dev.of_node != NULL)
+		gp_i2c_ts = dt_i2c_ts;
 
 	if (gp_i2c_ts == NULL) {
 		/* Cannot access platform data. */
@@ -922,48 +1012,8 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	gp_buffer[0] = gp_i2c_ts->power_mode_idx;
 	gp_buffer[1] = POWER_MODE_ACTIVE;
 	gp_buffer[2] = INT_MODE_ACT_LOW_TOUCH;
-	p_tango_i2c_dev->dummy_client = 0;
 
 	p_tango_i2c_dev->client = p_i2c_client;
-
-	p_tango_i2c_dev->dummy_client = i2c_new_dummy(p_i2c_client->adapter,
-						      TANGO_S32_SLAVE_ADDR);
-	if (!p_tango_i2c_dev->dummy_client) {
-		TS_ERR("Subclient 0x%x registration failed\n",
-		       TANGO_S32_SLAVE_ADDR);
-		rc = -ENOMEM;
-		goto ERROR2;
-	}
-	/* try to access slave addr 0x5C first, if NAKed, TS slave address
-	 *should be 0x45 or 0x46 */
-	rc = i2c_master_send(p_tango_i2c_dev->dummy_client, gp_buffer, 3);
-	if (rc < 0) {
-		TS_ERR("Detecting slave 0x%x failed\n", TANGO_S32_SLAVE_ADDR);
-		i2c_unregister_device(p_tango_i2c_dev->dummy_client);
-
-		p_tango_i2c_dev->dummy_client = i2c_new_dummy(
-					p_i2c_client->adapter,
-					TANGO_M29_SLAVE_ADDR_1);
-		if (!p_tango_i2c_dev->dummy_client) {
-			TS_ERR("Subclient 0x%x registration failed\n",
-					TANGO_M29_SLAVE_ADDR_1);
-			rc = -ENOMEM;
-			goto ERROR3;
-		}
-		/* try to access slave addr 0x46 first, if NAKed, then
-		 * try 0x45 */
-		rc = i2c_master_send(p_tango_i2c_dev->dummy_client,
-							gp_buffer, 3);
-		if (rc < 0) {
-			TS_ERR("Detecting slave 0x%x failed\n",
-					TANGO_M29_SLAVE_ADDR_1);
-			i2c_unregister_device(p_tango_i2c_dev->dummy_client);
-			p_tango_i2c_dev->dummy_client = 0;
-		}
-
-		gp_i2c_ts->layout = TANGO_M29_LAYOUT;
-	} else
-		gp_i2c_ts->layout = TANGO_S32_LAYOUT;
 
 	g_low_power_changed = 1;
 	rc = i2c_ts_driver_check_mod_params();
@@ -980,21 +1030,11 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		rc = 0;
 	}
 
-	if (p_tango_i2c_dev->dummy_client) {
-		rc = device_create_file(&p_tango_i2c_dev->dummy_client->dev,
-					&dev_attr);
-		if (rc) {
-			TS_ERR("%s:%s Cannot create sysfs entry\n",
-			       I2C_TS_DRIVER_NAME, __func__);
-			goto ERROR2;
-		}
-	} else {
-		rc = device_create_file(&p_i2c_client->dev, &dev_attr);
-		if (rc) {
-			TS_ERR("%s:%s Cannot create sysfs entry\n",
-			       I2C_TS_DRIVER_NAME, __func__);
-			goto ERROR2;
-		}
+	rc = device_create_file(&p_i2c_client->dev, &dev_attr);
+	if (rc) {
+		TS_ERR("%s:%s Cannot create sysfs entry\n",
+			I2C_TS_DRIVER_NAME, __func__);
+		goto ERROR2;
 	}
 
 	mutex_init(&p_tango_i2c_dev->mutex_wq);
@@ -1116,6 +1156,7 @@ ERROR3:
 ERROR2:
 	kfree(gp_buffer);
 ERROR1:
+	kfree(dt_i2c_ts);
 	return rc;
 }
 
@@ -1157,9 +1198,15 @@ static struct i2c_device_id tango_i2c_idtable[] = {
 	{}
 };
 
+static const struct of_device_id tango_ts_match[] = {
+	{ .compatible = "bcm,tango_ts" },
+};
+
 static struct i2c_driver tango_i2c_driver = {
 	.driver = {
 		   .name = "tango_ts",
+		   .owner = THIS_MODULE,
+		   .of_match_table = tango_ts_match,
 		   },
 	.id_table = tango_i2c_idtable,
 	.class = I2C_CLASS_TOUCHSCREEN,

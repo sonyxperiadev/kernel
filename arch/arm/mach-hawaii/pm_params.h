@@ -81,7 +81,7 @@
 #define KPS_CCU_FREQ_ID_ECO	1
 #define KPS_CCU_FREQ_ID_NRML2	3
 
-#define VLT_NORMAL_PERI		VLT_ID_OTHER_NORMAL1
+#define VLT_NORMAL_PERI		VLT_ID_OTHER_ECO
 #define VLT_HIGH_PERI		VLT_ID_OTHER_NORMAL2
 
 #define PROC_CCU_FREQ_VOLT_TBL	\
@@ -205,6 +205,12 @@ extern const u8 *bcmpmu_get_sr_vlt_table(u32 silicon_type);
 extern bool is_pm_erratum(u32 erratum);
 extern int __init pm_params_init(void);
 extern int pm_init_pmu_sr_vlt_map_table(u32 silicon_type);
+
+#define CONFIG_A9_PLL_2GHZ	1
+#define CONFIG_A9_PLL_2P4GHZ	2
+/*Wake up PM policy*/
+#define PM_WKP          7
+int pm_parm_config_a9_pll(int turbo_val);
 
 #endif	/*__PM_PARAMS_H__*/
 

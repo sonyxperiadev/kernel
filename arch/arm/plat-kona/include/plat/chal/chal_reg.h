@@ -23,6 +23,7 @@
 * $brcm_Log: $
 *
 ***************************************************************************/
+#include <asm/io.h>
 #ifndef CHAL_REG_H__
 #define CHAL_REG_H__
 
@@ -35,13 +36,13 @@ extern "C" {
 * Register access defines
 *
 *****************************************************************************/
-#define CHAL_REG_READ8(addr)  (*((volatile unsigned char *)(addr)))
-#define CHAL_REG_READ16(addr) (*((volatile unsigned short *)(addr)))
-#define CHAL_REG_READ32(addr) (*((volatile unsigned int *)(addr)))
+#define CHAL_REG_READ8(addr)  readb(addr)
+#define CHAL_REG_READ16(addr) readw(addr)
+#define CHAL_REG_READ32(addr) readl(addr)
 
-#define CHAL_REG_WRITE8(addr, val)  (*((volatile unsigned char *)(addr)) = (val))
-#define CHAL_REG_WRITE16(addr, val) (*((volatile unsigned short *)(addr)) = (val))
-#define CHAL_REG_WRITE32(addr, val) (*((volatile unsigned int *)(addr)) = (val))
+#define CHAL_REG_WRITE8(addr, val)  writeb(val, addr)
+#define CHAL_REG_WRITE16(addr, val) writew(val, addr)
+#define CHAL_REG_WRITE32(addr, val) writel(val, addr)
 
 #define CHAL_REG_CLRBIT8(addr, bits)   (CHAL_REG_WRITE8(addr, (CHAL_REG_READ8(addr)  & (~(bits)))))
 #define CHAL_REG_CLRBIT16(addr, bits)  (CHAL_REG_WRITE16(addr, (CHAL_REG_READ16(addr) & (~(bits)))))
@@ -51,13 +52,13 @@ extern "C" {
 #define CHAL_REG_SETBIT16(addr, bits)  (CHAL_REG_WRITE16(addr, (CHAL_REG_READ16(addr) | (bits))))
 #define CHAL_REG_SETBIT32(addr, bits)  (CHAL_REG_WRITE32(addr, (CHAL_REG_READ32(addr) | (bits))))
 
-#define CHAL_REG_WRITE8_P(addr, val)   (*(volatile unsigned char  *)(&(addr)) = ((unsigned char)(val)))
-#define CHAL_REG_WRITE16_P(addr, val)  (*(volatile unsigned short *)(&(addr)) = ((unsigned short)(val)))
-#define CHAL_REG_WRITE32_P(addr, val)  (*(volatile unsigned long  *)(&(addr))  = ((unsigned long)(val)))
+#define CHAL_REG_WRITE8_P(addr, val)   writeb(val, &addr)
+#define CHAL_REG_WRITE16_P(addr, val)  writew(val, &addr)
+#define CHAL_REG_WRITE32_P(addr, val)  writel(val, &addr)
 
-#define CHAL_REG_READ8_P(addr)      (*(volatile unsigned char  *)(&(addr)))
-#define CHAL_REG_READ16_P(addr)     (*(volatile unsigned short *)(&(addr)))
-#define CHAL_REG_READ32_P(addr)     (*(volatile unsigned long  *)(&(addr)))
+#define CHAL_REG_READ8_P(addr)      readb(&addr)
+#define CHAL_REG_READ16_P(addr)     readw(&addr)
+#define CHAL_REG_READ32_P(addr)     readl(&addr)
 
 #define CHAL_REG_CLRBIT8_P(addr, bits)   (CHAL_REG_WRITE8_P(addr, (CHAL_REG_READ8_P(addr)  & (~(bits)))))
 #define CHAL_REG_CLRBIT16_P(addr,bits)  (CHAL_REG_WRITE16_P(addr, (CHAL_REG_READ16_P(addr) & (~(bits)))))

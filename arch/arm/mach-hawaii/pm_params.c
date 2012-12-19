@@ -24,6 +24,7 @@
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
+#include<plat/clock.h>
 #include <mach/cpu.h>
 #include <mach/clock.h>
 #include <linux/clk.h>
@@ -164,7 +165,7 @@ int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
 	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
 	#else
 		return 0;
-	#endif	
+	#endif
 }
 
 #if !defined (CONFIG_MACH_HAWAII_FPGA)
@@ -176,6 +177,50 @@ int __init pm_params_init(void)
 	#ifndef CONFIG_KONA_AVS
 		pm_init_pmu_sr_vlt_map_table(SILICON_TYPE_SLOW);
 	#endif
-	return 0;	
+	return 0;
 }
 #endif
+
+static int switch_a9_pll(int freq_id, int policy)
+{
+	int ret = 0;
+	struct opp_conf opp_conf;
+	struct clk *clk;
+	struct ccu_clk *ccu_clk;
+
+	clk = clk_get(NULL, KPROC_CCU_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(clk)) {
+		ret = -EINVAL;
+		goto out;
+	}
+	ccu_clk = to_ccu_clk(clk);
+
+	opp_conf.flags = 0;
+	opp_conf.freq_id = freq_id;
+
+	ret = ccu_set_freq_policy(ccu_clk, CCU_POLICY(policy),
+				&opp_conf);
+out:
+	return ret;
+}
+int pm_parm_config_a9_pll(int turbo_val)
+{
+	int ret = 0;
+	struct clk *clk;
+
+	clk = clk_get(NULL, A9_PLL_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(clk))
+		return -EINVAL;
+	ret = switch_a9_pll(PROC_CCU_FREQ_ID_ECO, PM_WKP); /*ECO => sys PLL*/
+	if (ret)
+		return ret;
+
+	if (turbo_val == CONFIG_A9_PLL_2GHZ)
+		clk_set_rate(clk, 2000000000UL);
+	else if (turbo_val == CONFIG_A9_PLL_2P4GHZ)
+		clk_set_rate(clk, 2400000000UL);
+
+	ret = switch_a9_pll(PROC_CCU_FREQ_ID_TURBO, PM_WKP);/*TURBO => A9 PLL*/
+	return ret;
+}
+

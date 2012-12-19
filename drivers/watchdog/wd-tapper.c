@@ -30,6 +30,10 @@
 #include <mach/kona_timer.h>
 #include <linux/broadcom/wd-tapper.h>
 
+#include <linux/of.h>
+#include <linux/of_irq.h>
+#include <linux/of_platform.h>
+
 static DEFINE_SPINLOCK(tapper_lock);
 
 /* The Driver specific data */
@@ -118,46 +122,88 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
 {
 	struct wd_tapper_platform_data *pltfm_data;
 	struct timer_ch_cfg cfg;
-	unsigned int ch_num;
+	unsigned int ch_num = 0xFFFF; /* Invalid channel number */
+	struct device_node *np = pdev->dev.of_node;
+	u32 val;
+	char *prop;
 
 	wd_tapper_data = vmalloc(sizeof(struct wd_tapper_data));
+	if (wd_tapper_data == NULL) {
+		dev_err(&pdev->dev,"Unable to allocate mem for wd_tapper_data\n");
+		return -1;
+	}
 
 	/* Obtain the platform data */
 	pltfm_data = dev_get_platdata(&pdev->dev);
-
+#if 0
 	/* Validate the data obtained */
 	if (!pltfm_data) {
 		dev_err(&pdev->dev, "can't get the platform data\n");
 		goto out;
 	}
+#endif
 
-	/* Get the time out period */
-	wd_tapper_data->count = sec_to_ticks(pltfm_data->count);
-	wd_tapper_data->def_count = wd_tapper_data->count;
+	if (pltfm_data) {
+		/* Get the time out period */
+		wd_tapper_data->count = sec_to_ticks(pltfm_data->count);
+		wd_tapper_data->def_count = wd_tapper_data->count;
 
-	if (wd_tapper_data->count == 0) {
-		dev_err(&pdev->dev, "count value set is 0 - INVALID\n");
-		goto out;
-	}
+		if (wd_tapper_data->count == 0) {
+			dev_err(&pdev->dev, "count value set is 0 - INVALID\n");
+			goto out;
+		}
 
-	/* Get the channel number */
-	ch_num = pltfm_data->ch_num;
-	if (ch_num > 3) {
-		dev_err(&pdev->dev,
+		/* Get the channel number */
+		ch_num = pltfm_data->ch_num;
+		if (ch_num > 3) {
+			dev_err(&pdev->dev,
 			"Wrong choice of channel number to match\n");
-		goto out;
+			goto out;
+		}
+
+		if (pltfm_data->name == NULL) {
+			dev_err(&pdev->dev, "Timer name passed is NULL.\n");
+			goto out;
+		}
+
+		/* Request the timer context */
+		wd_tapper_data->kt = kona_timer_request(pltfm_data->name, ch_num);
+		if (wd_tapper_data->kt == NULL) {
+			dev_err(&pdev->dev, "kona_timer_request returned error \r\n");
+			goto out;
+		}
 	}
 
-	if (pltfm_data->name == NULL) {
-		dev_err(&pdev->dev, "Timer name passed is NULL.\n");
-		goto out;
-	}
+	if (pltfm_data == NULL) {
+		/* Get the platform data form dt-blob */
+		if (!of_property_read_u32(np, "count", &val))
+			wd_tapper_data->count = sec_to_ticks(val);
 
-	/* Request the timer context */
-	wd_tapper_data->kt = kona_timer_request(pltfm_data->name, ch_num);
-	if (wd_tapper_data->kt == NULL) {
-		dev_err(&pdev->dev, "kona_timer_request returned error \r\n");
-		goto out;
+		if (wd_tapper_data->count == 0) {
+			dev_err(&pdev->dev, "count value set is 0 - INVALID\n");
+			goto out;
+		}
+
+		if (!of_property_read_u32(np, "ch-num", &val))
+			ch_num = val;
+
+		if (ch_num > 3) {
+			dev_err(&pdev->dev,
+				"Wrong choice of channel number to match\n");
+			goto out;
+		}
+
+		val = of_property_read_string(np, "timer-name",
+				(const char **)&prop);
+		if (prop == NULL)
+			goto out;
+
+		wd_tapper_data->kt = kona_timer_request(prop, ch_num);
+		if (wd_tapper_data->kt == NULL) {
+			dev_err(&pdev->dev,
+				"kona_timer_request returned error \r\n");
+			goto out;
+		}
 	}
 
 	/* Populate the timer config */
@@ -194,10 +240,16 @@ static int __devexit wd_tapper_pltfm_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id wd_tapper_match[] = {
+	{ .compatible = "bcm,wd-tapper" },
+	{ /* Sentinel */ }
+};
+
 static struct platform_driver wd_tapper_pltfm_driver = {
 	.driver = {
 		   .name = "wd_tapper",
 		   .owner = THIS_MODULE,
+		   .of_match_table = wd_tapper_match,
 		   },
 	.probe = wd_tapper_pltfm_probe,
 	.remove = __devexit_p(wd_tapper_pltfm_remove),

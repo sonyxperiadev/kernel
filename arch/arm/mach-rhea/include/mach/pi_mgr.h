@@ -32,6 +32,14 @@ enum {
 	PI_OPP_MAX
 };
 
+enum {
+	PROC_OPP_ECONOMY,
+	PROC_OPP_PRE_ECONOMY,
+	PROC_OPP_NORMAL,
+	PROC_OPP_TURBO,
+	PROC_OPP_MAX
+};
+
 void rhea_pi_mgr_init(void);
 int rhea_pi_mgr_print_act_pis(void);
 #endif /*__RHEA_PI_MNGR_H__*/

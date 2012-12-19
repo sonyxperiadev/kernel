@@ -442,7 +442,7 @@ static int __devinit kona_pwmc_probe(struct platform_device *pdev)
 
 	for (chan = 0; chan < KONA_PWM_CHANNEL_CNT; chan++) {
 		ap->p[chan] = pwm_register(&kona_pwm_ops, &pdev->dev, "%s:%d",
-					   dev_name(&pdev->dev), chan);
+					   "kona_pwmc", chan);
 		if (IS_ERR_OR_NULL(ap->p[chan]))
 			goto err_pwm_register;
 		pwm_set_drvdata(ap->p[chan], ap);
@@ -503,11 +503,18 @@ static int kona_pwmc_resume(struct platform_device *pdev)
 #define kona_pwmc_resume     NULL
 #endif
 
+static const struct of_device_id kona_pwmc_dt_ids[] = {
+	{ .compatible = "bcm,pwmc", },
+	{}
+};
+
 static struct platform_driver kona_pwmc_driver = {
 	.driver = {
-		   .name = "kona_pwmc",
-		   .owner = THIS_MODULE,
-		   },
+		.name = "kona_pwmc",
+		.owner = THIS_MODULE,
+		.of_match_table = kona_pwmc_dt_ids,
+	},
+	.probe = kona_pwmc_probe,
 	.remove = __devexit_p(kona_pwmc_remove),
 	.suspend = kona_pwmc_suspend,
 	.resume = kona_pwmc_resume,
@@ -518,7 +525,7 @@ static const __devinitconst char gBanner[] =
 static int __init kona_pwmc_init(void)
 {
 	printk(gBanner);
-	return platform_driver_probe(&kona_pwmc_driver, kona_pwmc_probe);
+	return platform_driver_register(&kona_pwmc_driver);
 }
 
 static void __exit kona_pwmc_exit(void)

@@ -22,10 +22,13 @@
 #include <asm/mach/arch.h>
 #include <mach/io_map.h>
 #include <linux/io.h>
+#include <linux/clk.h>
+#include <linux/err.h>
 #include <mach/irqs.h>
 #include <mach/memory.h>
 #include<mach/clock.h>
 #include<plat/pi_mgr.h>
+#include<plat/clock.h>
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
@@ -46,6 +49,7 @@
 #define PM_RET		1
 #define	PM_ECO		4
 #define	PM_DFS		5
+#define	PM_WKP		7
 
 static int delayed_init_complete;
 
@@ -833,6 +837,13 @@ static int __init hawaii_pwr_mgr_init(void)
 	/*init clks */
 	__clock_init();
 
+#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	pm_parm_config_a9_pll(CONFIG_A9_PLL_2P4GHZ);
+#else
+	pm_parm_config_a9_pll(CONFIG_A9_PLL_2GHZ);
+#endif
+
+
 	return 0;
 }
 
@@ -853,7 +864,7 @@ void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param,
 #endif /*CONFIG_DEBUG_FS */
 
 
-int hawaii_pwr_mgr_delayed_init(void)
+int __init hawaii_pwr_mgr_delayed_init(void)
 {
 	int i;
 	struct pi *pi;
@@ -885,7 +896,7 @@ int hawaii_pwr_mgr_delayed_init(void)
 }
 
 #ifdef CONFIG_DELAYED_PM_INIT
-static int param_set_pm_late_init(const char *val,
+static int __init param_set_pm_late_init(const char *val,
 			const struct kernel_param *kp)
 {
 	int ret = -1;
@@ -938,7 +949,7 @@ late_initcall(hawaii_pwr_mgr_late_init);
  * enabled
  */
 
-int __init mach_init_sequencer(void)
+int __devinit mach_init_sequencer(void)
 {
 
 #ifndef CONFIG_PWRMGR_DUMMY_SEQUENCER

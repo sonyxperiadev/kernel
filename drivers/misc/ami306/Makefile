@@ -5,7 +5,8 @@
 obj-$(CONFIG_MPU_SENSORS_AMI306)	:= ami306.o
 
 ami306-y := 	ami306_km_brcm.o	\
-		ami306_cmd.o
+		ami306_cmd.o \
+		ami306_self_test.o
 
 #EXTRA_CFLAGS += -DDEBUG_LOG
 #EXTRA_CFLAGS += -DUSE_DRDY_PIN

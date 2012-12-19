@@ -385,7 +385,7 @@ static void bcmpmu59xxx_debug_init(struct bcmpmu59xxx *bcmpmu)
 		debugfs_remove(bcmpmu->pmu_bus->dentry);
 
 }
-static int bcmpmu59xxx_i2c_probe(struct i2c_client *i2c,
+static int __devinit bcmpmu59xxx_i2c_probe(struct i2c_client *i2c,
 				 const struct i2c_device_id *id)
 {
 	struct bcmpmu59xxx_platform_data *pdata;
@@ -472,7 +472,7 @@ static const struct i2c_device_id bcmpmu59xxx_i2c_id[] = {
 };
 
 MODULE_DEVICE_TABLE(i2c, bcmpmu59xxx_i2c_id);
-static struct i2c_driver bcmpmu59xxx_i2c_driver = {
+static struct i2c_driver __refdata bcmpmu59xxx_i2c_driver = {
 	.driver = {
 		   .name = "bcmpmu59xxx_i2c",
 		   .owner = THIS_MODULE,

@@ -128,4 +128,10 @@
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <26000000>;
 	};
+
+	bluetooth-bzhw {
+		compatible = "bcm,bzhw";
+		bt-wake-gpio = <32>;
+		host-wake-gpio = <72>;
+	};
 };

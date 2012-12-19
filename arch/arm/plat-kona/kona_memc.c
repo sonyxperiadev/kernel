@@ -37,6 +37,7 @@
 #include <linux/spinlock.h>
 #include <mach/rdb/brcm_rdb_csr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#include <mach/rdb/brcm_rdb_aphy_csr.h>
 #include <linux/delay.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/uaccess.h>
@@ -44,10 +45,11 @@
 #include <linux/seq_file.h>
 #endif
 
+#define MEMC0_APHY_REG(kmemc, off) ((kmemc)->memc0_aphy_base + (off))
 #define MEMC0_NS_REG(kmemc, off) ((kmemc)->memc0_ns_base + (off))
 #define CHIPREG_REG(kmemc, off) ((kmemc)->chipreg_base + (off))
 #define INSURANCE_MAX	10000
-
+#define FREF 26000000
 enum {
 	MEMC_NODE_ADD,
 	MEMC_NODE_DEL,
@@ -322,6 +324,55 @@ int memc_enable_selfrefresh(struct kona_memc *kmemc, int enable)
 }
 EXPORT_SYMBOL(memc_enable_selfrefresh);
 
+unsigned long compute_ddr_clk_freq(struct kona_memc *kmemc)
+{
+	u32 reg_val = 0;
+	u32 mdiv, ndiv_int, ndiv_frac, pdiv, phy_div, frac_div;
+	u64 temp;
+
+	frac_div = 0x100000;
+	reg_val = readl(MEMC0_NS_REG(kmemc,
+				CSR_MEMC_FREQ_STATE_MAPPING_OFFSET));
+	phy_div = (reg_val &
+		CSR_MEMC_FREQ_STATE_MAPPING_DDR_FREQ_DIVIDE_VAL_MASK)  >>
+		CSR_MEMC_FREQ_STATE_MAPPING_DDR_FREQ_DIVIDE_VAL_SHIFT;
+	phy_div = 2 * (phy_div + 1);
+
+	reg_val = readl(MEMC0_APHY_REG(kmemc,
+				APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_OFFSET));
+	ndiv_int = (reg_val & APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_NDIV_INT_MASK) >>
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_NDIV_INT_SHIFT;
+	if (ndiv_int == 0)
+		ndiv_int = 1024;
+
+	reg_val = readl(MEMC0_APHY_REG(kmemc,
+				APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL1_OFFSET));
+	ndiv_frac = (reg_val &
+			APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL1_NDIV_FRAC_MASK) >>
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL1_NDIV_FRAC_SHIFT;
+
+	reg_val = readl(MEMC0_APHY_REG(kmemc,
+				APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_OFFSET));
+	pdiv = (reg_val & APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_PDIV_MASK) >>
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_PDIV_SHIFT;
+	if (pdiv == 0)
+		pdiv = 8;
+
+	reg_val = readl(MEMC0_APHY_REG(kmemc,
+				APHY_CSR_DDR_PLL_MDIV_VALUE_OFFSET));
+	mdiv = (reg_val & APHY_CSR_DDR_PLL_MDIV_VALUE_MDIV_MASK) >>
+		APHY_CSR_DDR_PLL_MDIV_VALUE_MDIV_SHIFT;
+	mdiv = 2 << mdiv;
+
+	/*fddr = ddr_pll_fref / phy_div
+	  = (fref * (ndiv_int * 2^20 + ndiv_frac)) /
+	  (pdiv * 2^20 *mdiv * phy_div) */
+	temp = ((u64)(ndiv_int * frac_div + ndiv_frac) * FREF);
+
+	do_div(temp, pdiv * mdiv * phy_div * frac_div);
+
+	return (unsigned long)temp;
+}
 
 static int memc_init(struct kona_memc *kmemc)
 {
@@ -366,7 +417,10 @@ static int kona_memc_probe(struct platform_device *pdev)
 	kona_memc.pdata = pdata;
 	kona_memc.memc0_ns_base = pdata->memc0_ns_base;
 	kona_memc.chipreg_base = pdata->chipreg_base;
+	kona_memc.memc0_aphy_base = pdata->memc0_aphy_base;
 	memc_init(&kona_memc);
+	pr_info("%s: ddr freq = %lu\n", __func__,
+			compute_ddr_clk_freq(&kona_memc));
 	return 0;
 }
 
@@ -518,6 +572,18 @@ DEFINE_SIMPLE_ATTRIBUTE(memc_force_max_pwr_ops,
 		memc_dbg_get_force_max_pwr_state,
 		memc_dbg_force_max_pwr_state, "%llu\n");
 
+
+static int memc_dbg_get_ddr_clk_freq(void *data, u64 *val)
+{
+	struct kona_memc *kmemc = (struct kona_memc *)data;
+	*val = compute_ddr_clk_freq(kmemc);
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(memc_get_ddr_clk_freq_ops,
+		memc_dbg_get_ddr_clk_freq,
+		NULL, "%llu\n");
+
 static struct dentry *dent_kona_memc_dir;
 
 static int kona_menc_init_debugfs(void)
@@ -552,6 +618,12 @@ static int kona_menc_init_debugfs(void)
 				 dent_kona_memc_dir, &kona_memc,
 				 &memc_force_max_pwr_ops))
 		return -ENOMEM;
+
+	if (!debugfs_create_file("ddr_pll_rate", S_IRUGO,
+				 dent_kona_memc_dir, &kona_memc,
+				 &memc_get_ddr_clk_freq_ops))
+		return -ENOMEM;
+
 
 	return 0;
 }

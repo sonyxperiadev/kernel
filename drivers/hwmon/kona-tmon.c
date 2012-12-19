@@ -380,6 +380,11 @@ static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t mesg)
 #define kona_tmon_resume     NULL
 #endif
 
+static const struct of_device_id kona_tmon_dt_ids[] = {
+	{ .compatible = "bcm,tmon", },
+	{}
+};
+
 /*********************************************************************
  *             Driver initialisation and finalization
  *********************************************************************/
@@ -388,6 +393,7 @@ static struct platform_driver kona_tmon_driver = {
         .driver = {
                 .name = "kona-tmon",
                 .owner = THIS_MODULE,
+		.of_match_table = kona_tmon_dt_ids,
         },
         .probe = kona_tmon_probe,
         .remove = kona_tmon_remove,

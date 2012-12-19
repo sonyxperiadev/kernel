@@ -12,11 +12,10 @@
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
-
-#include <crypto/algapi.h>
-
 #ifndef _BRCM_SPUM_H_
 #define _BRCM_SPUM_H_
+
+#include <crypto/algapi.h>
 
 #define SPUM_CMD_CRYPTO_ENCRYPTION        0x00000000
 #define SPUM_CMD_CRYPTO_DECRYPTION        0x80000000
@@ -156,6 +155,7 @@
 #define SPUM_CMD_CRYPTO_STATUS_ERROR                 0x00020000
 
 #define SPUM_OUTPUT_HEADER_LEN            12	/* Total SPU output header in bytes */
+#define SPUM_INPUT_STATUS_LEN		  4	/* Out status length in bytes */
 #define SPUM_OUTPUT_STATUS_LEN            4	/* Out status length in bytes */
 
 /* Misc. defines for command buffer */
@@ -296,19 +296,17 @@ struct spum_hw_context {
 #define SPUM_QUEUE_LENGTH       300
 
 struct spum_hash_device {
-	struct list_head list;
-	struct device *dev;
 	void __iomem *io_apb_base;
 	void __iomem *io_axi_base;
+	struct list_head list;
+	struct device *dev;
+	struct clk *spum_open_clk;
 	u32 dma_len;
 	struct scatterlist *sg;
-	spinlock_t lock;
 	struct ahash_request *req;
-	struct clk *spum_open_clk;
 };
 
 struct spum_aes_device {
-	spinlock_t lock;
 	void __iomem *io_apb_base;
 	void __iomem *io_axi_base;
 	struct list_head list;
@@ -326,7 +324,6 @@ struct brcm_spum_device {
 	struct spum_hash_device *hash_dev;
 	struct spum_aes_device *aes_dev;
 	struct crypto_queue spum_queue;
-	struct tasklet_struct spum_queue_task;
 };
 
 extern struct brcm_spum_device *spum_dev;

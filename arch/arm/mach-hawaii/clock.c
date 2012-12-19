@@ -812,6 +812,8 @@ static struct ref_clk CLK_NAME(ref_32k) = {
     .ccu_clk = &CLK_NAME(root),
 };
 
+static struct ccu_clk_ops proc_ccu_ops;
+
 /*
 CCU clock name PROC_CCU
 */
@@ -824,7 +826,7 @@ static struct ccu_clk CLK_NAME(kproc) = {
 			.clk_type = CLK_TYPE_CCU,
 			.ops = &gen_ccu_clk_ops,
 		},
-	.ccu_ops = &gen_ccu_ops,
+	.ccu_ops = &proc_ccu_ops,
 	.pi_id = PI_MGR_PI_ID_ARM_CORE,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(PROC_CLK_BASE_ADDR),
 	.wr_access_offset = KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -6862,22 +6864,27 @@ EXPORT_SYMBOL(clk_set_pll_pwr_on_idle);
 
 int clk_set_crystal_pwr_on_idle(int enable)
 {
-    u32 reg_val = 0;
+	u32 reg_val = 0;
+	unsigned long flgs;
 	/* enable write access*/
-	ccu_write_access_enable(&CLK_NAME(root),true);
-
-    reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET);
-    if(enable)
-		reg_val |= ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
-    else
-		reg_val &= ~ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+	ccu_write_access_enable(&CLK_NAME(root), true);
+	spin_lock_irqsave(&CLK_NAME(root).access_lock, flgs);
+	reg_val =
+		readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET);
+	if (enable)
+		reg_val |=
+		ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+	else
+		reg_val &=
+		~ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
 
 	writel_relaxed(reg_val , KONA_ROOT_CLK_VA +
 		  ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET);
 	/* disable write access*/
+	spin_unlock_irqrestore(&CLK_NAME(root).access_lock, flgs);
 	ccu_write_access_enable(&CLK_NAME(root), false);
 
-    return 0;
+	return 0;
 }
 EXPORT_SYMBOL(clk_set_crystal_pwr_on_idle);
 
@@ -6894,7 +6901,7 @@ int root_ccu_clk_init(struct clk* clk)
 
 
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, 1);
-    clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, 1);
+	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, 1);
 	clk_set_crystal_pwr_on_idle(1);
 
 	/* enable write access*/
@@ -6944,15 +6951,16 @@ int var500m_clk_en_override(int enable)
 #endif
 
 /*Override ccu_clk_set_freq_policy for MM as the offset is different*/
-static int mm_ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
+static int mm_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
+					struct opp_conf *opp_conf)
 {
 	u32 reg_val = 0;
 	u32 shift;
 
 	clk_dbg("%s:%s ccu , freq_id = %d policy_id = %d\n",__func__,
-				ccu_clk->clk.name,freq_id,policy_id);
+			ccu_clk->clk.name, opp_conf->freq_id, policy_id);
 
-	if(freq_id >= ccu_clk->freq_count)
+	if (opp_conf->freq_id >= ccu_clk->freq_count)
 		return -EINVAL;
 
 	switch(policy_id)
@@ -6977,7 +6985,7 @@ static int mm_ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int fr
 	clk_dbg("%s: reg_val:%08x shift:%d\n",__func__, reg_val, shift);
 	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
 
-	reg_val |= freq_id << shift;
+	reg_val |= opp_conf->freq_id << shift;
 
 	ccu_write_access_enable(ccu_clk,true);
 	ccu_policy_engine_stop(ccu_clk);
@@ -7005,14 +7013,12 @@ static int mm_ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u
 	else
 		return -EINVAL;
 
-	ccu_write_access_enable(ccu_clk,true);
 	reg_val = readl(CCU_VLT_PERI_REG(ccu_clk));
 
 	reg_val  = (reg_val & ~(CCU_PERI_VLT_MASK << shift)) |
 	           ((voltage & CCU_PERI_VLT_MASK) << shift);
 
 	 writel(reg_val,CCU_VLT_PERI_REG(ccu_clk));
-	 ccu_write_access_enable(ccu_clk,false);
 	return 0;
 }
 
@@ -7498,6 +7504,231 @@ static int bmdm_ccu_clk_get_dbg_bus_sel(struct ccu_clk *ccu_clk)
 	return (int)((reg & BMDM_CCU_DBG_BUS_SEL_MASK) >>
 					BMDM_CCU_DBG_BUS_SEL_SHIFT);
 }
+static int proc_ccu_get_freq_policy(struct ccu_clk *ccu_clk, int policy_id)
+{
+	u32 shift, reg_val;
+
+	switch (policy_id) {
+	case CCU_POLICY0:
+		shift = CCU_FREQ_POLICY0_SHIFT;
+		break;
+	case CCU_POLICY1:
+		shift = CCU_FREQ_POLICY1_SHIFT;
+		break;
+	case CCU_POLICY2:
+		shift = CCU_FREQ_POLICY2_SHIFT;
+		break;
+	case CCU_POLICY3:
+		shift = CCU_FREQ_POLICY3_SHIFT;
+		break;
+	default:
+		return CCU_FREQ_INVALID;
+
+	}
+	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
+	clk_dbg("%s: reg_val:%08x shift:%d\n", __func__, reg_val, shift);
+
+	return (reg_val >> shift) & CCU_FREQ_POLICY_MASK;
+}
+
+/* To be called with CCU access enabled */
+static int __set_a9_pll_chnl_div(u32 pll_chnl_no, u32 mdiv)
+{
+	u32 reg_val;
+	struct pll_chnl_clk *pll_chnl_clk;
+
+	clk_dbg("%s pll_chnl_no:%d, mdiv:%d\n", __func__, pll_chnl_no, mdiv);
+
+	if (pll_chnl_no == 0)
+		pll_chnl_clk = &clk_a9_pll_chnl0;
+	else if (pll_chnl_no == 1)
+		pll_chnl_clk = &clk_a9_pll_chnl1;
+	else
+		return -EINVAL;
+
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+			pll_chnl_clk->pll_load_ch_en_offset));
+	reg_val &= ~pll_chnl_clk->load_en_mask;
+	reg_val |= 0x6 << 12;
+	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+			pll_chnl_clk->pll_load_ch_en_offset));
+
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+			pll_chnl_clk->cfg_reg_offset));
+	reg_val &= ~pll_chnl_clk->mdiv_mask;
+	reg_val |= mdiv << pll_chnl_clk->mdiv_shift;
+	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+			pll_chnl_clk->cfg_reg_offset));
+
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+			pll_chnl_clk->pll_load_ch_en_offset));
+	reg_val |= pll_chnl_clk->load_en_mask;
+	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+			pll_chnl_clk->pll_load_ch_en_offset));
+
+	return 0;
+}
+
+struct arm_freq_switch_conf {
+	u32 opp_inx;
+	u32 freq_id;
+	u32 mdiv;
+	u32 volt_id;
+	u32 switch_freq_id;
+	u32 pll_chnl;
+};
+
+static int get_freq_switch_conf(struct arm_freq_switch_conf*
+conf, u32 opp_inx)
+{
+	if (conf == NULL)
+		return -EINVAL;
+	switch (opp_inx) {
+	case PI_OPP_INDEX1:
+		conf->freq_id = PROC_CCU_FREQ_ID_NRML;
+		conf->mdiv = 4;
+		conf->volt_id = VLT_ID_A9_NORMAL1;
+		conf->switch_freq_id = 3;
+		conf->pll_chnl = 0;
+		break;
+	case PI_OPP_INDEX2:
+		conf->freq_id = PROC_CCU_FREQ_ID_NRML;
+		conf->mdiv = 3;
+		conf->volt_id = VLT_ID_A9_NORMAL1;
+		conf->switch_freq_id = 3;
+		conf->pll_chnl = 0;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
+				   struct opp_conf *opp_conf)
+{
+	int ret;
+	u32 reg_val = 0;
+	u32 shift;
+	u32 cur_volt_id = 0;
+	u32 switch_volt_id = 0;
+	struct arm_freq_switch_conf conf;
+/* start - to avoid pll glitch */
+	int saved_pllarma = 0;
+	int saved_pll_debug = 0;
+/* end - to avoid pll glitch */
+	clk_dbg("%s:freq_id = %d policy_id = %d\n", __func__,
+		opp_conf->freq_id, policy_id);
+
+	if (opp_conf->freq_id >= ccu_clk->freq_count)
+		return -EINVAL;
+	switch (policy_id) {
+	case CCU_POLICY0:
+		shift = CCU_FREQ_POLICY0_SHIFT;
+		break;
+	case CCU_POLICY1:
+		shift = CCU_FREQ_POLICY1_SHIFT;
+		break;
+	case CCU_POLICY2:
+		shift = CCU_FREQ_POLICY2_SHIFT;
+		break;
+	case CCU_POLICY3:
+		shift = CCU_FREQ_POLICY3_SHIFT;
+		break;
+	default:
+		return -EINVAL;
+	}
+	if (opp_conf->flags & OPP_PLL_CHNL_CHANGE) {
+		memset(&conf, 0, sizeof(conf));
+		ret = get_freq_switch_conf(&conf, opp_conf->opp_inx);
+		if (ret)
+			return -EINVAL;
+	}
+	ccu_write_access_enable(ccu_clk, true);
+	if (opp_conf->flags & OPP_PLL_CHNL_CHANGE) {
+		clk_dbg("opp_conf->freq_id:%d, opp_conf->opp_inx:%d, conf.volt_id:%d\n",
+			opp_conf->freq_id, opp_conf->opp_inx, conf.volt_id);
+		/* start - to avoid PLL glitches */
+		reg_val = readl(CLK_NAME(kproc).ccu_clk_mgr_base +
+			KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+		saved_pllarma = reg_val;
+		reg_val &=
+		~KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+		writel(reg_val, CLK_NAME(kproc).ccu_clk_mgr_base +
+			KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+		reg_val = readl(CLK_NAME(kproc).ccu_clk_mgr_base +
+			KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET);
+		saved_pll_debug = reg_val;
+		reg_val |=
+		KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_TIMER_LOCK_EN_MASK;
+		writel(reg_val, CLK_NAME(kproc).ccu_clk_mgr_base +
+			KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET);
+		/* end - to avoid PLL glitches */
+		if (opp_conf->flags & OPP_NEED_INTERIM_SWITCH) {
+			/* switch to intermediate OPP and then to target OPP */
+			reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
+			reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
+			reg_val |= conf.switch_freq_id << shift;
+			/*dont let the sequencer run for this interim switch.
+			 * also assumption here that interim OPP is less than
+			 * the target OPP */
+			switch_volt_id = ccu_get_voltage(ccu_clk,
+						conf.switch_freq_id);
+			ccu_set_voltage(ccu_clk, conf.switch_freq_id,
+					conf.volt_id);
+			ccu_policy_engine_stop(ccu_clk);
+			writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
+			ccu_policy_engine_resume(ccu_clk,
+				ccu_clk->clk.flags & CCU_TARGET_LOAD ?
+				CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
+
+		}
+		cur_volt_id = ccu_get_voltage(ccu_clk, opp_conf->freq_id);
+		clk_dbg("freq_id:%d, cur_volt_id:%d\n", opp_conf->freq_id,
+								cur_volt_id);
+		if (conf.volt_id > cur_volt_id) {
+			ccu_policy_engine_stop(ccu_clk);
+			ccu_set_voltage(ccu_clk, opp_conf->freq_id,
+							conf.volt_id);
+			ccu_policy_engine_resume(ccu_clk,
+				ccu_clk->clk.
+				flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET :
+				CCU_LOAD_ACTIVE);
+		}
+		__set_a9_pll_chnl_div(conf.pll_chnl, conf.mdiv);
+		if (conf.volt_id < cur_volt_id)
+			ccu_set_voltage(ccu_clk, opp_conf->freq_id,
+							conf.volt_id);
+		/* start - to avoid PLL glitches */
+		writel(saved_pllarma, CLK_NAME(kproc).ccu_clk_mgr_base +
+				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+		writel(saved_pll_debug, CLK_NAME(kproc).ccu_clk_mgr_base +
+			KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET);
+		/* end - to avoid PLL glitches */
+	}
+
+	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
+	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
+	reg_val |= opp_conf->freq_id << shift;
+	/* set the voltage for interim freq id back to its value */
+	if ((opp_conf->flags & OPP_PLL_CHNL_CHANGE) && (opp_conf->flags &
+	    OPP_NEED_INTERIM_SWITCH))
+		ccu_set_voltage(ccu_clk, conf.switch_freq_id,
+				switch_volt_id);
+
+	ccu_policy_engine_stop(ccu_clk);
+	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
+	ccu_policy_engine_resume(ccu_clk,
+				 ccu_clk->clk.
+				 flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET :
+				 CCU_LOAD_ACTIVE);
+
+	ccu_write_access_enable(ccu_clk, false);
+
+	clk_dbg("%s:%s ccu OK\n", __func__, ccu_clk->clk.name);
+	return 0;
+}
+
 int __init __clock_init(void)
 {
 
@@ -7523,6 +7754,10 @@ int __init __clock_init(void)
 	bmdm_ccu_ops = gen_ccu_ops;
 	bmdm_ccu_ops.set_dbg_bus_sel = bmdm_ccu_clk_set_dbg_bus_sel;
 	bmdm_ccu_ops.get_dbg_bus_sel = bmdm_ccu_clk_get_dbg_bus_sel;
+
+	proc_ccu_ops = gen_ccu_ops;
+	proc_ccu_ops.set_freq_policy = proc_ccu_set_freq_policy;
+	proc_ccu_ops.get_freq_policy = proc_ccu_get_freq_policy;
 
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
 	dig_ch_peri_clk_ops.init = dig_clk_init;
@@ -7724,6 +7959,9 @@ int clk_mon_dbg(struct clk *clock, int path, int clk_sel_no, int clk_div,
 	static int gpio_path, camcs1_path;
 	static u32 camcs1_reg_val;
 	u32 reg_val;
+	struct ccu_clk *ccu_clk;
+	int clk_mon_sel;
+
 	if (camcs1_path == 0)
 		camcs1_reg_val = readl(KONA_PAD_CTRL +
 				PADCTRLREG_CAMCS1_OFFSET);
@@ -7761,8 +7999,8 @@ int clk_mon_dbg(struct clk *clock, int path, int clk_sel_no, int clk_div,
 		return -EINVAL;
 	}
 	reg_val = 0;
-	struct ccu_clk *ccu_clk = to_ccu_clk(clock);
-	int clk_mon_sel = clk_sel_no;
+	ccu_clk = to_ccu_clk(clock);
+	clk_mon_sel = clk_sel_no;
 
 	ccu_write_access_enable(ccu_clk, true);
 	reg_val = readl(ccu_clk->ccu_clk_mgr_base + ccu_clk->clk_mon_offset);

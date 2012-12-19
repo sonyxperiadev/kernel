@@ -45,7 +45,7 @@
 
 static struct dentry *root_entry, *dump_dentry;
 
-static int pindump_proc_show(struct seq_file *m, void *v)
+static int pindump_show(struct seq_file *m, void *v)
 {
 	void __iomem *base;
 	void __iomem *reg_base = (void __iomem *)(KONA_GPIO2_VA);
@@ -86,7 +86,7 @@ static int pindump_proc_show(struct seq_file *m, void *v)
 
 static int pindump_proc_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, pindump_proc_show, NULL);
+	return single_open(file, pindump_show, NULL);
 }
 
 static const struct file_operations pindump_proc_fops = {
@@ -115,46 +115,9 @@ module_init(proc_pindump_init);
 
 /* dump initial values */
 #ifdef CONFIG_KONA_ATAG_DT
-static int dtsdump_show(struct seq_file *m, void *v)
-{
-	int i, sel, gpio, gpio_cnt = 0;
-	uint32_t val, gpctr;
-	uint32_t dt_pinmux;
-	uint32_t dt_pinmux_nr = get_dts_pinmux_nr();
-
-	/* print pin-mux */
-	for (i = 0; i < dt_pinmux_nr; i++) {
-		dt_pinmux = get_dts_pinmux_value(i);
-		seq_printf(m, "0x%08x /* pad 0x%x*/\n", dt_pinmux, i * 4);
-	}
-
-	/* print configured GPIO */
-	seq_printf(m, "Pin-mux configured as GPIO\n");
-	for (i = 0; i < dt_pinmux_nr; i++) {
-		val = get_dts_pinmux_value(i);
-		sel = ((union pinmux_reg)val).b.sel;
-		if (g_chip_pin_desc.desc_tbl[i].f_tbl[sel] >= PF_FIRST_GPIO &&
-		    g_chip_pin_desc.desc_tbl[i].f_tbl[sel] <= PF_LAST_GPIO) {
-			gpio_cnt++;
-			gpio =
-			    g_chip_pin_desc.desc_tbl[i].f_tbl[sel] -
-			    PF_FIRST_GPIO;
-			gpctr = get_dts_gpio_value(gpio);
-			gpctr &= GPIO_GPCTR0_IOTR_MASK;
-			seq_printf(m, "%d  0x%08x /*%s*/\n", gpio, gpctr,
-				   ((gpctr ==
-				     GPIO_GPCTR0_IOTR_CMD_INPUT) ? "Input" :
-				    "Output"));
-		}
-	}
-	seq_printf(m, "Total Pin-mux configured as GPIO= %d\n", gpio_cnt);
-	return 0;
-
-}
-
 static int dtsdump_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, dtsdump_show, inode->i_private);
+	return single_open(file, pindump_show, inode->i_private);
 }
 
 static const struct file_operations default_file_operations = {

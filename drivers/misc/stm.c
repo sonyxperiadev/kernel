@@ -196,7 +196,7 @@ int kona_trace_set_sw_stm(int on)
 	return status;
 }
 
-static int __init kona_trace_init(void)
+static int __devinit kona_trace_init(void)
 {
 	int status = -EIO;
 	int base;

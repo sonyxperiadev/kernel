@@ -582,7 +582,7 @@ static int __devexit profiler_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver kona_profiler_driver = {
+static struct platform_driver __refdata kona_profiler_driver = {
 	.probe = profiler_probe,
 	.remove = profiler_remove,
 	.suspend = profiler_suspend,

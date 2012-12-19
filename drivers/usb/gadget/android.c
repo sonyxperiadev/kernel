@@ -52,6 +52,7 @@
 #define USB_ETH_RNDIS y
 #include "f_rndis.c"
 #include "rndis.c"
+#include "f_ncm.c"
 #include "u_ether.c"
 
 MODULE_AUTHOR("Mike Lockwood");
@@ -250,7 +251,7 @@ adb_function_bind_config(struct android_usb_function *f,
 
 static void adb_android_function_enable(struct android_usb_function *f)
 {
-	struct android_dev *dev = _android_dev;
+/*	struct android_dev *dev = _android_dev; */
 	struct adb_data *data = f->config;
 
 	data->enabled = true;
@@ -263,7 +264,7 @@ static void adb_android_function_enable(struct android_usb_function *f)
 
 static void adb_android_function_disable(struct android_usb_function *f)
 {
-	struct android_dev *dev = _android_dev;
+/*	struct android_dev *dev = _android_dev; */
 	struct adb_data *data = f->config;
 
 	data->enabled = false;
@@ -643,6 +644,179 @@ static struct android_usb_function rndis_function = {
 	.attributes	= rndis_function_attributes,
 };
 
+struct ncm_function_config {
+	u8      ethaddr[ETH_ALEN];
+	u32     vendorID;
+	char	manufacturer[256];
+	u32	ntb_out_size;
+};
+
+static int ncm_function_init(struct android_usb_function *f,
+	struct usb_composite_dev *cdev)
+{
+	f->config = kzalloc(sizeof(struct ncm_function_config), GFP_KERNEL);
+	if (!f->config)
+		return -ENOMEM;
+	return 0;
+}
+
+static void ncm_function_cleanup(struct android_usb_function *f)
+{
+	kfree(f->config);
+	f->config = NULL;
+}
+
+static int ncm_function_bind_config(struct android_usb_function *f,
+					struct usb_configuration *c)
+{
+	int ret = 0;
+	struct ncm_function_config *ncm = f->config;
+
+	if (!ncm) {
+		pr_err("%s: ncm_pdata\n", __func__);
+		return -1;
+	}
+
+	pr_info("%s MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", __func__,
+		ncm->ethaddr[0], ncm->ethaddr[1], ncm->ethaddr[2],
+		ncm->ethaddr[3], ncm->ethaddr[4], ncm->ethaddr[5]);
+
+	ret = gether_setup_name(c->cdev->gadget, ncm->ethaddr, "ncm");
+	if (ret) {
+		pr_err("%s: gether_setup failed\n", __func__);
+		return ret;
+	}
+
+	return ncm_bind_config(c, ncm->ethaddr);
+}
+
+static void ncm_function_unbind_config(struct android_usb_function *f,
+						struct usb_configuration *c)
+{
+	gether_cleanup();
+}
+
+static ssize_t ncm_manufacturer_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct android_usb_function *f = dev_get_drvdata(dev);
+	struct ncm_function_config *config = f->config;
+	return sprintf(buf, "%s\n", config->manufacturer);
+}
+
+static ssize_t ncm_manufacturer_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct android_usb_function *f = dev_get_drvdata(dev);
+	struct ncm_function_config *config = f->config;
+
+	if (size >= sizeof(config->manufacturer))
+		return -EINVAL;
+	if (sscanf(buf, "%s", config->manufacturer) == 1)
+		return size;
+	return -1;
+}
+
+static DEVICE_ATTR(manufacturer_ncm, S_IRUGO | S_IWUSR, ncm_manufacturer_show,
+						    ncm_manufacturer_store);
+
+static ssize_t ncm_ethaddr_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct android_usb_function *f = dev_get_drvdata(dev);
+	struct ncm_function_config *ncm = f->config;
+	return sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x\n",
+		ncm->ethaddr[0], ncm->ethaddr[1], ncm->ethaddr[2],
+		ncm->ethaddr[3], ncm->ethaddr[4], ncm->ethaddr[5]);
+}
+
+static ssize_t ncm_ethaddr_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct android_usb_function *f = dev_get_drvdata(dev);
+	struct ncm_function_config *ncm = f->config;
+
+	if (sscanf(buf, "%02x:%02x:%02x:%02x:%02x:%02x\n",
+		    (int *)&ncm->ethaddr[0], (int *)&ncm->ethaddr[1],
+		    (int *)&ncm->ethaddr[2], (int *)&ncm->ethaddr[3],
+		    (int *)&ncm->ethaddr[4], (int *)&ncm->ethaddr[5]) == 6)
+		return size;
+	return -EINVAL;
+}
+
+static DEVICE_ATTR(ethaddr_ncm, S_IRUGO | S_IWUSR, ncm_ethaddr_show,
+					       ncm_ethaddr_store);
+
+static ssize_t ncm_vendorID_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct android_usb_function *f = dev_get_drvdata(dev);
+	struct ncm_function_config *config = f->config;
+	return sprintf(buf, "%04x\n", config->vendorID);
+}
+
+static ssize_t ncm_vendorID_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct android_usb_function *f = dev_get_drvdata(dev);
+	struct ncm_function_config *config = f->config;
+	int value;
+
+	if (sscanf(buf, "%04x", &value) == 1) {
+		config->vendorID = value;
+		return size;
+	}
+	return -EINVAL;
+}
+
+static DEVICE_ATTR(vendorID_ncm, S_IRUGO | S_IWUSR, ncm_vendorID_show,
+						ncm_vendorID_store);
+
+static ssize_t ncm_ntb_out_size_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct android_usb_function *f = dev_get_drvdata(dev);
+	struct ncm_function_config *config = f->config;
+	return sprintf(buf, "%d\n", config->ntb_out_size);
+}
+
+static ssize_t ncm_ntb_out_size_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct android_usb_function *f = dev_get_drvdata(dev);
+	struct ncm_function_config *config = f->config;
+	int value;
+
+	if (sscanf(buf, "%d", &value) == 1) {
+		config->ntb_out_size = value;
+		pr_info("ntb_out_size = %d bytes", config->ntb_out_size);
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+		ncm_ntb_out_size(config->ntb_out_size);
+#endif
+		return size;
+	}
+	return -EINVAL;
+}
+
+static DEVICE_ATTR(ntb_out_size_ncm, S_IRUGO | S_IWUSR, ncm_ntb_out_size_show,
+						ncm_ntb_out_size_store);
+
+static struct device_attribute *ncm_function_attributes[] = {
+	&dev_attr_manufacturer_ncm,
+	&dev_attr_ethaddr_ncm,
+	&dev_attr_vendorID_ncm,
+	&dev_attr_ntb_out_size_ncm,
+	NULL
+};
+
+static struct android_usb_function ncm_function = {
+	.name		= "ncm",
+	.init		= ncm_function_init,
+	.cleanup	= ncm_function_cleanup,
+	.bind_config	= ncm_function_bind_config,
+	.unbind_config	= ncm_function_unbind_config,
+	.attributes	= ncm_function_attributes,
+};
 
 struct mass_storage_function_config {
 	struct fsg_config fsg;
@@ -837,6 +1011,7 @@ static struct android_usb_function *supported_functions[] = {
 	&mass_storage_function,
 	&accessory_function,
 	&audio_source_function,
+	&ncm_function,
 	NULL
 };
 

@@ -16,9 +16,7 @@
 #ifndef __BCM_BZHW_H
 #define __BCM_BZHW_H
 
-#ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
-#endif
 #include <linux/serial_core.h>
 #ifdef CONFIG_KONA_PI_MGR
 #include <mach/pi_mgr.h>
@@ -33,10 +31,8 @@ struct bcm_bzhw_data {
 	unsigned int gpio_bt_wake;	/* HOST -> BCM chip wakeup gpio */
 	unsigned int gpio_host_wake;	/* BCM chip -> HOST wakeup gpio */
 
-#ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock host_wake_lock;	/* rx path */
 	struct wake_lock bt_wake_lock;	/* tx path */
-#endif
 	unsigned int host_irq;
 };
 

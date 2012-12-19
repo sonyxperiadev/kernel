@@ -30,8 +30,7 @@
 #include <asm/clkdev.h>
 #include <plat/clock.h>
 #include <asm/io.h>
-#include<plat/pi_mgr.h>
-
+#include <plat/pi_mgr.h>
 #ifdef CONFIG_SMP
 #include <asm/cpu.h>
 #endif
@@ -41,12 +40,12 @@
 #include <asm/uaccess.h>
 #include <linux/seq_file.h>
 #endif
-
 /* global spinlock for clock API */
 static DEFINE_SPINLOCK(clk_gen_lock);
+static DEFINE_SPINLOCK(gen_access_lock);
 
 int clk_debug = 0;
-
+u32 gen_lock_flag;
 /*clk_dfs_request_update -  action*/
 enum {
 	CLK_STATE_CHANGE,	/*param = 1 => enable. param =0 => disable */
@@ -61,6 +60,9 @@ static int peri_clk_set_voltage_lvl(struct peri_clk *peri_clk, int voltage_lvl);
 static int clk_dfs_request_update(struct clk *clk, u32 action, u32 param);
 #endif
 static int ccu_init_state_save_buf(struct ccu_clk *ccu_clk);
+
+static int ccu_access_lock(struct ccu_clk *ccu_clk, unsigned long *flags);
+static int ccu_access_unlock(struct ccu_clk *ccu_clk, unsigned long *flags);
 
 static int __ccu_clk_init(struct clk *clk)
 {
@@ -98,7 +100,7 @@ static int __peri_clk_init(struct clk *clk)
 	struct peri_clk *peri_clk;
 	int ret = 0;
 
-	clk_dbg("%s, clock name: %s \n", __func__, clk->name);
+	clk_dbg("%s, clock name: %s\n", __func__, clk->name);
 
 	peri_clk = to_peri_clk(clk);
 	BUG_ON(peri_clk->ccu_clk == NULL);
@@ -198,7 +200,7 @@ static int __pll_clk_init(struct clk *clk)
 	struct pll_clk *pll_clk;
 	int ret = 0;
 
-	clk_dbg("%s, clock name: %s \n", __func__, clk->name);
+	clk_dbg("%s, clock name: %s\n", __func__, clk->name);
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
 	pll_clk = to_pll_clk(clk);
 	BUG_ON(pll_clk->ccu_clk == NULL);
@@ -228,7 +230,7 @@ static int __pll_chnl_clk_init(struct clk *clk)
 	struct pll_chnl_clk *pll_chnl_clk;
 	int ret = 0;
 
-	clk_dbg("%s, clock name: %s \n", __func__, clk->name);
+	clk_dbg("%s, clock name: %s\n", __func__, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL_CHNL);
 	pll_chnl_clk = to_pll_chnl_clk(clk);
@@ -351,25 +353,206 @@ static struct ccu_clk *get_ccu_clk(struct clk *clk)
 	return ccu_clk;
 }
 
+/*This function is used to lock the CCU lock of dependent clock
+Does nothing if dependent clock is also under same CCU.
+ccu_clk can be NULL
+*/
+
+/* Using flags after acquiring clk_lock. If a core has got a spinlock,
+   then it sets the bit corresponding to its cpu_id in the flag variable.
+   If the core again tries to acquire the clk_lock, it results in a deadlock.
+   To detect that we are adding a BUG(). The concept is, only the core
+   that has got the lock can release it, and if it has already got a lock,
+   it shouldn't try to acquire it again thereby creating a freeze.
+   Also, we use access locks, to prevent the corruption of the flag variable.
+   For clocks belonging to ccu, we have a dedicated access_lock and flag.
+   And for misc clocks, there is a global access lock(gen_access_clk)
+   and flag(gen_lock_flag).
+*/
+
+static int dep_clk_lock(struct ccu_clk *ccu_clk, struct clk *dep_clk,
+	unsigned long *flags)
+{
+	struct ccu_clk *dep_ccu_clk = get_ccu_clk(dep_clk);
+	int cpu_id;
+	unsigned long access_flags;
+	if (dep_ccu_clk == ccu_clk)
+		return 0;
+	clk_dbg("%s:ccu_clk =  %s : dep_ccu_clk->name = %s\n", __func__,
+			ccu_clk ? ccu_clk->clk.name : "NULL",
+			dep_ccu_clk ? dep_ccu_clk->clk.name : "NULL");
+	if (dep_ccu_clk) {
+		cpu_id = 1 << (read_mpidr() & 0x3);
+		if (dep_ccu_clk->lock_flag & cpu_id) {
+			printk(KERN_ALERT "same core getting lock again");
+			printk(KERN_ALERT "%s:ccu_clk =  %s : dep_ccu = %s\n",
+				__func__, ccu_clk->clk.name,
+				dep_ccu_clk->clk.name);
+			BUG();
+		}
+/* Acquire clk_lock, update the flag immediately with access lock*/
+		spin_lock_irqsave(&dep_ccu_clk->clk_lock, *flags);
+		ccu_access_lock(dep_ccu_clk, &access_flags);
+		dep_ccu_clk->lock_flag |= cpu_id;
+		ccu_access_unlock(dep_ccu_clk, &access_flags);
+	} else {
+		cpu_id = 1 << (read_mpidr() & 0x3);
+		if (gen_lock_flag & cpu_id) {
+			printk(KERN_ALERT "same core getting lock again");
+			printk(KERN_ALERT "%s:ccu_clk =  %s : dep_clk = %s\n",
+				__func__, ccu_clk->clk.name, dep_clk->name);
+			BUG();
+		}
+		spin_lock_irqsave(&clk_gen_lock, *flags);
+		spin_lock_irqsave(&gen_access_lock, access_flags);
+		gen_lock_flag |= cpu_id;
+		spin_unlock_irqrestore(&gen_access_lock, access_flags);
+	}
+	return 0;
+}
+
+/*This function is used to unlock the CCU lock of dependent clock
+Does nothing if dependent clock is also under same CCU.
+ccu_clk can be NULL
+*/
+static int dep_clk_unlock(struct ccu_clk *ccu_clk, struct clk *dep_clk,
+	unsigned long *flags)
+
+{
+	struct ccu_clk *dep_ccu_clk = get_ccu_clk(dep_clk);
+	int cpu_id;
+	unsigned long access_flags;
+	if (dep_ccu_clk == ccu_clk)
+		return 0;
+	clk_dbg("%s:ccu_clk =  %s : dep_ccu_clk->name = %s\n", __func__,
+			ccu_clk ? ccu_clk->clk.name : "NULL",
+			dep_ccu_clk ? dep_ccu_clk->clk.name : "NULL");
+
+	if (dep_ccu_clk) {
+		cpu_id = 1 << (read_mpidr() & 0x3);
+		if (cpu_id & dep_ccu_clk->lock_flag) {
+			/* Clear the flag and release the clk_lock */
+			ccu_access_lock(dep_ccu_clk, &access_flags);
+			dep_ccu_clk->lock_flag &= ~cpu_id;
+			ccu_access_unlock(dep_ccu_clk, &access_flags);
+			spin_unlock_irqrestore(&dep_ccu_clk->clk_lock, *flags);
+		} else {
+			printk(KERN_ALERT "Has not acquired lock previously");
+			printk(KERN_ALERT "%s:ccu_clk =  %s : dep_ccu = %s\n",
+				__func__, ccu_clk->clk.name,
+				dep_ccu_clk->clk.name);
+			BUG();
+		}
+	} else {
+		cpu_id = 1 << (read_mpidr() & 0x3);
+		if (cpu_id & gen_lock_flag) {
+			spin_lock_irqsave(&gen_access_lock, access_flags);
+			gen_lock_flag &= ~cpu_id;
+			spin_unlock_irqrestore(&gen_access_lock, access_flags);
+			spin_unlock_irqrestore(&clk_gen_lock, *flags);
+		} else {
+			printk(KERN_ALERT "Has not acquired lock previously");
+			printk(KERN_ALERT "%s:ccu_clk =  %s : dep_ccu = %s\n",
+				__func__, ccu_clk->clk.name, dep_clk->name);
+			BUG();
+		}
+	}
+	return 0;
+}
+
 static int clk_lock(struct clk *clk, unsigned long *flags)
 {
 	struct ccu_clk *ccu_clk = get_ccu_clk(clk);
-	if (ccu_clk)
-		spin_lock_irqsave(&ccu_clk->lock, *flags);
-	else
+	int cpu_id;
+	unsigned long access_flags;
+	clk_dbg("%s:ccu_clk =  %s, clk = %s\n", __func__,
+			ccu_clk ? ccu_clk->clk.name : "NULL",
+			clk ? clk->name : "NULL");
+	if (ccu_clk) {
+		cpu_id = 1 << (read_mpidr() & 0x3);
+		if (ccu_clk->lock_flag & cpu_id) {
+			printk(KERN_ALERT "same core getting lock again");
+			printk(KERN_ALERT "%s:ccu_clk =  %s, clk = %s\n",
+				__func__, ccu_clk->clk.name, clk->name);
+			BUG();
+		}
+		spin_lock_irqsave(&ccu_clk->clk_lock, *flags);
+		ccu_access_lock(ccu_clk, &access_flags);
+		ccu_clk->lock_flag |= cpu_id;
+		ccu_access_unlock(ccu_clk, &access_flags);
+	} else {
+		cpu_id = 1 << (read_mpidr() & 0x3);
+		if (gen_lock_flag & cpu_id) {
+			printk(KERN_ALERT "same core getting lock again");
+			printk(KERN_ALERT "%s:ccu_clk =  %s, clk - %s\n",
+				__func__, ccu_clk->clk.name, clk->name);
+			BUG();
+		}
 		spin_lock_irqsave(&clk_gen_lock, *flags);
+		spin_lock_irqsave(&gen_access_lock, access_flags);
+		gen_lock_flag |= cpu_id;
+		spin_unlock_irqrestore(&gen_access_lock, access_flags);
+	}
 	return 0;
 }
 
 static int clk_unlock(struct clk *clk, unsigned long *flags)
 {
 	struct ccu_clk *ccu_clk = get_ccu_clk(clk);
-	if (ccu_clk)
-		spin_unlock_irqrestore(&ccu_clk->lock, *flags);
-	else
-		spin_unlock_irqrestore(&clk_gen_lock, *flags);
+	int cpu_id;
+	unsigned long access_flags;
+	clk_dbg("%s:ccu_clk =  %s, clk = %s\n", __func__,
+			ccu_clk ? ccu_clk->clk.name : "NULL",
+			clk ? clk->name : "NULL");
+
+	if (ccu_clk) {
+		cpu_id = 1 << (read_mpidr() & 0x3);
+		if (ccu_clk->lock_flag & cpu_id) {
+			ccu_access_lock(ccu_clk, &access_flags);
+			ccu_clk->lock_flag &= ~cpu_id;
+			ccu_access_unlock(ccu_clk, &access_flags);
+			spin_unlock_irqrestore(&ccu_clk->clk_lock, *flags);
+		} else {
+			printk(KERN_ALERT "Has not acquired lock previously");
+			printk(KERN_ALERT "%s:ccu_clk =  %s, clk = %s\n",
+				__func__, ccu_clk->clk.name, clk->name);
+			BUG();
+		}
+	} else {
+		cpu_id = 1 << (read_mpidr() & 0x3);
+		if (gen_lock_flag & cpu_id) {
+			spin_lock_irqsave(&gen_access_lock, access_flags);
+			gen_lock_flag &= ~cpu_id;
+			spin_unlock_irqrestore(&gen_access_lock, access_flags);
+			spin_unlock_irqrestore(&clk_gen_lock, *flags);
+		} else {
+			printk(KERN_ALERT "Has not acquired lock previously");
+			printk(KERN_ALERT "%s:ccu_clk =  %s, clk = %s\n",
+				__func__, ccu_clk->clk.name, clk->name);
+			BUG();
+		}
+	}
 	return 0;
 }
+
+static int ccu_access_lock(struct ccu_clk *ccu_clk, unsigned long *flags)
+{
+		clk_dbg("%s:ccu_clk =  %s\n", __func__,
+			ccu_clk ? ccu_clk->clk.name : "NULL");
+
+	spin_lock_irqsave(&ccu_clk->access_lock, *flags);
+	return 0;
+}
+
+static int ccu_access_unlock(struct ccu_clk *ccu_clk, unsigned long *flags)
+{
+	clk_dbg("%s:ccu_clk =  %s\n", __func__,
+			ccu_clk ? ccu_clk->clk.name : "NULL");
+
+	spin_unlock_irqrestore(&ccu_clk->access_lock, *flags);
+	return 0;
+}
+
 
 int clk_init(struct clk *clk)
 {
@@ -411,7 +594,7 @@ int clk_reset(struct clk *clk)
 
 	if (IS_ERR_OR_NULL(clk))
 		return -EINVAL;
-
+	 clk_dbg("%s - %s\n", __func__, clk->name);
 	clk_lock(clk, &flags);
 	ret = __clk_reset(clk);
 	clk_unlock(clk, &flags);
@@ -426,6 +609,7 @@ static int __ccu_clk_enable(struct clk *clk)
 	int ret = 0;
 	int inx;
 	struct ccu_clk *ccu_clk;
+	unsigned long flgs;
 	clk_dbg("%s ccu name:%s\n", __func__, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
@@ -434,8 +618,9 @@ static int __ccu_clk_enable(struct clk *clk)
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
 		clk_dbg("%s, Enabling dependant clock %s\n", __func__,
 			clk->dep_clks[inx]->name);
-
+		dep_clk_lock(ccu_clk, clk->dep_clks[inx], &flgs);
 		__clk_enable(clk->dep_clks[inx]);
+		dep_clk_unlock(ccu_clk, clk->dep_clks[inx], &flgs);
 	}
 	/*enable PI */
 #ifdef CONFIG_KONA_PI_MGR
@@ -443,7 +628,7 @@ static int __ccu_clk_enable(struct clk *clk)
 		struct pi *pi = pi_mgr_get(ccu_clk->pi_id);
 
 		BUG_ON(!pi);
-		__pi_enable(pi);
+		pi_enable(pi, 1);
 	}
 #endif
 	if (clk->use_cnt++ == 0) {
@@ -460,8 +645,9 @@ static int __peri_clk_enable(struct clk *clk)
 	int inx;
 	int ret = 0;
 	struct clk *src_clk;
+	unsigned long flgs;
 
-	clk_dbg("%s clock name: %s \n", __func__, clk->name);
+	clk_dbg("%s clock name: %s\n", __func__, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_PERI);
 	peri_clk = to_peri_clk(clk);
@@ -475,10 +661,11 @@ static int __peri_clk_enable(struct clk *clk)
 
 	/*Make sure that all dependent & src clks are enabled/disabled */
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
-		clk_dbg("%s, Enabling dependant clock %s \n", __func__,
+		clk_dbg("%s, Enabling dependant clock %s\n", __func__,
 			clk->dep_clks[inx]->name);
-
+		dep_clk_lock(peri_clk->ccu_clk, clk->dep_clks[inx], &flgs);
 		__clk_enable(clk->dep_clks[inx]);
+		dep_clk_unlock(peri_clk->ccu_clk, clk->dep_clks[inx], &flgs);
 	}
 
 	/*Enable src clock, if valid */
@@ -487,7 +674,9 @@ static int __peri_clk_enable(struct clk *clk)
 		BUG_ON(!src_clk);
 		clk_dbg("%s, after enabling source clock %s\n", __func__,
 			src_clk->name);
+		dep_clk_lock(peri_clk->ccu_clk, src_clk, &flgs);
 		__clk_enable(src_clk);
+		dep_clk_unlock(peri_clk->ccu_clk, src_clk, &flgs);
 	}
 
 	clk_dbg("%s:%s use count = %d\n", __func__, clk->name,
@@ -519,6 +708,7 @@ static int __bus_clk_enable(struct clk *clk)
 	struct bus_clk *bus_clk;
 	int inx;
 	int ret = 0;
+	unsigned long flgs;
 
 	BUG_ON(clk->clk_type != CLK_TYPE_BUS);
 
@@ -536,15 +726,21 @@ static int __bus_clk_enable(struct clk *clk)
 
 	/*Make sure that all dependent & src clks are enabled/disabled */
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
-		clk_dbg("%s, Enabling dependant clock %s \n", __func__,
+		clk_dbg("%s, Enabling dependant clock %s\n", __func__,
 			clk->dep_clks[inx]->name);
+
+		dep_clk_lock(bus_clk->ccu_clk, clk->dep_clks[inx], &flgs);
 		__clk_enable(clk->dep_clks[inx]);
+		dep_clk_unlock(bus_clk->ccu_clk, clk->dep_clks[inx], &flgs);
+
 	}
 
 	if (bus_clk->src_clk) {
-		clk_dbg("%s src clock %s enable \n", __func__,
+		clk_dbg("%s src clock %s enable\n", __func__,
 			bus_clk->src_clk->name);
+		dep_clk_lock(bus_clk->ccu_clk, bus_clk->src_clk, &flgs);
 		__clk_enable(bus_clk->src_clk);
+		dep_clk_unlock(bus_clk->ccu_clk, bus_clk->src_clk, &flgs);
 	}
 
 	/*Increment usage count... return if already enabled */
@@ -624,12 +820,16 @@ static int __misc_clk_enable(struct clk *clk)
 {
 	int ret = 0;
 	int inx;
+	unsigned long flgs;
 
 	/*Make sure that all dependent clks are enabled*/
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
-		clk_dbg("%s, Disabling dependant clock %s\n", __func__,
+		clk_dbg("%s, Enabling dependant clock %s\n", __func__,
 			clk->dep_clks[inx]->name);
+		dep_clk_lock(get_ccu_clk(clk), clk->dep_clks[inx], &flgs);
 		__clk_enable(clk->dep_clks[inx]);
+		dep_clk_unlock(get_ccu_clk(clk), clk->dep_clks[inx], &flgs);
+
 	}
 	if (clk->use_cnt++ == 0) {
 		if (clk->ops && clk->ops->enable)
@@ -676,7 +876,7 @@ int __clk_enable(struct clk *clk)
 			ret = clk->ops->enable(clk, 1);
 		else {
 			clk_dbg
-			    ("%s - %s: unknown clk_type & func ptr == NULL \n",
+			    ("%s - %s: unknown clk_type & func ptr == NULL\n",
 			     __func__, clk->name);
 		}
 		break;
@@ -691,7 +891,7 @@ int clk_enable(struct clk *clk)
 
 	if (IS_ERR_OR_NULL(clk))
 		return -EINVAL;
-
+	 clk_dbg("%s - %s\n", __func__, clk->name);
 	clk_lock(clk, &flags);
 	ret = __clk_enable(clk);
 	clk_unlock(clk, &flags);
@@ -706,6 +906,8 @@ static int __ccu_clk_disable(struct clk *clk)
 	int ret = 0;
 	int inx;
 	struct ccu_clk *ccu_clk;
+	unsigned long flgs;
+
 	clk_dbg("%s ccu name:%s\n", __func__, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
@@ -725,14 +927,17 @@ static int __ccu_clk_disable(struct clk *clk)
 		struct pi *pi = pi_mgr_get(ccu_clk->pi_id);
 
 		BUG_ON(!pi);
-		__pi_disable(pi);
+		pi_enable(pi, 0);
 	}
 #endif
 	/*Make sure that all dependent & src clks are disabled*/
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
 		clk_dbg("%s, Disabling dependant clock %s\n", __func__,
 				clk->dep_clks[inx]->name);
+		dep_clk_lock(ccu_clk, clk->dep_clks[inx], &flgs);
 		__clk_disable(clk->dep_clks[inx]);
+		dep_clk_unlock(ccu_clk, clk->dep_clks[inx], &flgs);
+
 	}
 
 	return ret;
@@ -744,11 +949,12 @@ static int __peri_clk_disable(struct clk *clk)
 	int inx;
 	struct clk *src_clk;
 	int ret = 0;
+	unsigned long flgs;
 
 	BUG_ON(clk->clk_type != CLK_TYPE_PERI);
 
 	peri_clk = to_peri_clk(clk);
-	clk_dbg("%s: clock name: %s \n", __func__, clk->name);
+	clk_dbg("%s: clock name: %s\n", __func__, clk->name);
 
 	BUG_ON(!peri_clk->ccu_clk);
 
@@ -777,17 +983,21 @@ static int __peri_clk_disable(struct clk *clk)
 
 	/*Make sure that all dependent & src clks are disabled */
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
-		clk_dbg("%s, Disabling dependant clock %s \n", __func__,
+		clk_dbg("%s, Disabling dependant clock %s\n", __func__,
 			clk->dep_clks[inx]->name);
+		dep_clk_lock(peri_clk->ccu_clk, clk->dep_clks[inx], &flgs);
 		__clk_disable(clk->dep_clks[inx]);
+		dep_clk_unlock(peri_clk->ccu_clk, clk->dep_clks[inx], &flgs);
+
 	}
 
 	if (PERI_SRC_CLK_VALID(peri_clk)) {
 		src_clk = GET_PERI_SRC_CLK(peri_clk);
 		BUG_ON(!src_clk);
-		clk_dbg("%s, disabling source clock \n", __func__);
-
+		clk_dbg("%s, disabling source clock\n", __func__);
+		dep_clk_lock(peri_clk->ccu_clk, src_clk, &flgs);
 		__clk_disable(src_clk);
+		dep_clk_unlock(peri_clk->ccu_clk, src_clk, &flgs);
 	}
 
 	if (!(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU)
@@ -804,6 +1014,7 @@ static int __bus_clk_disable(struct clk *clk)
 	struct bus_clk *bus_clk;
 	int ret = 0;
 	int inx;
+	unsigned long flgs;
 
 	BUG_ON(clk->clk_type != CLK_TYPE_BUS);
 
@@ -833,15 +1044,19 @@ static int __bus_clk_disable(struct clk *clk)
 
 	/*Disable dependent & src clks */
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
-		clk_dbg("%s, Disabling dependant clock %s \n", __func__,
+		clk_dbg("%s, Disabling dependant clock %s\n", __func__,
 			clk->dep_clks[inx]->name);
+		dep_clk_lock(bus_clk->ccu_clk, clk->dep_clks[inx], &flgs);
 		__clk_disable(clk->dep_clks[inx]);
+		dep_clk_unlock(bus_clk->ccu_clk, clk->dep_clks[inx], &flgs);
 	}
 
 	if (bus_clk->src_clk) {
-		clk_dbg("%s src clock %s disable \n", __func__,
+		clk_dbg("%s src clock %s disable\n", __func__,
 			bus_clk->src_clk->name);
+		dep_clk_lock(bus_clk->ccu_clk, bus_clk->src_clk, &flgs);
 		__clk_disable(bus_clk->src_clk);
+		dep_clk_unlock(bus_clk->ccu_clk, bus_clk->src_clk, &flgs);
 	}
 
 	if (!(clk->flags & AUTO_GATE) && (clk->flags & NOTIFY_STATUS_TO_CCU)) {
@@ -920,6 +1135,7 @@ static int __pll_chnl_clk_disable(struct clk *clk)
 static int __misc_clk_disable(struct clk *clk)
 {
 	int inx, ret = 0;
+	unsigned long flgs;
 	if (clk->use_cnt && --clk->use_cnt == 0) {
 		/*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
@@ -932,7 +1148,9 @@ static int __misc_clk_disable(struct clk *clk)
 		inx++) {
 		clk_dbg("%s, Disabling dependant clock %s\n", __func__,
 			clk->dep_clks[inx]->name);
+		dep_clk_lock(get_ccu_clk(clk), clk->dep_clks[inx], &flgs);
 		__clk_disable(clk->dep_clks[inx]);
+		dep_clk_unlock(get_ccu_clk(clk), clk->dep_clks[inx], &flgs);
 	}
 
 	return ret;
@@ -982,7 +1200,7 @@ void __clk_disable(struct clk *clk)
 			ret = clk->ops->enable(clk, 0);
 		else {
 			clk_dbg
-			    ("%s - %s: unknown clk_type & func ptr == NULL \n",
+			    ("%s - %s: unknown clk_type & func ptr == NULL\n",
 			     __func__, clk->name);
 		}
 #endif /*CONFIG_KONA_PM_NO_CLK_DISABLE */
@@ -996,7 +1214,7 @@ void clk_disable(struct clk *clk)
 
 	if (IS_ERR_OR_NULL(clk))
 		return;
-
+	 clk_dbg("%s - %s\n", __func__, clk->name);
 	clk_lock(clk, &flags);
 	__clk_disable(clk);
 	clk_unlock(clk, &flags);
@@ -1144,7 +1362,7 @@ static unsigned long __clk_get_rate(struct clk *clk)
 			rate = clk->ops->get_rate(clk);
 		else {
 			clk_dbg
-			    ("%s - %s: unknown clk_type & func ptr == NULL \n",
+			    ("%s - %s: unknown clk_type & func ptr == NULL\n",
 			     __func__, clk->name);
 		}
 		break;
@@ -1159,7 +1377,7 @@ unsigned long clk_get_rate(struct clk *clk)
 
 	if (IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->get_rate)
 		return -EINVAL;
-
+	 clk_dbg("%s - %s\n", __func__, clk->name);
 	clk_lock(clk, &flags);
 	rate = __clk_get_rate(clk);
 	clk_unlock(clk, &flags);
@@ -1307,7 +1525,7 @@ static long __clk_round_rate(struct clk *clk, unsigned long rate)
 			actual = clk->ops->round_rate(clk, rate);
 		else {
 			clk_dbg
-			    ("%s - %s: unknown clk_type & func ptr == NULL \n",
+			    ("%s - %s: unknown clk_type & func ptr == NULL\n",
 			     __func__, clk->name);
 		}
 		break;
@@ -1322,7 +1540,7 @@ long clk_round_rate(struct clk *clk, unsigned long rate)
 
 	if (IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->round_rate)
 		return -EINVAL;
-
+	 clk_dbg("%s - %s\n", __func__, clk->name);
 	clk_lock(clk, &flags);
 	actual = __clk_round_rate(clk, rate);
 	clk_unlock(clk, &flags);
@@ -1478,7 +1696,7 @@ static long __clk_set_rate(struct clk *clk, unsigned long rate)
 			ret = clk->ops->set_rate(clk, rate);
 		else {
 			clk_dbg
-			    ("%s - %s: unknown clk_type & func ptr == NULL \n",
+			    ("%s - %s: unknown clk_type & func ptr == NULL\n",
 			     __func__, clk->name);
 		}
 		break;
@@ -1493,7 +1711,7 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 
 	if (IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->set_rate)
 		return -EINVAL;
-
+	 clk_dbg("%s - %s\n", __func__, clk->name);
 	clk_lock(clk, &flags);
 	ret = __clk_set_rate(clk, rate);
 	clk_unlock(clk, &flags);
@@ -1510,7 +1728,7 @@ int clk_get_usage(struct clk *clk)
 
 	if (IS_ERR_OR_NULL(clk))
 		return -EINVAL;
-
+	 clk_dbg("%s - %s\n", __func__, clk->name);
 	clk_lock(clk, &flags);
 	ret = clk->use_cnt;
 	clk_unlock(clk, &flags);
@@ -1656,7 +1874,8 @@ int clk_register(struct clk_lookup *clk_lkup, int num_clks)
 		/*Init per-ccu spin lock */
 		if (clk_lkup[i].clk->clk_type == CLK_TYPE_CCU) {
 			struct ccu_clk *ccu_clk = to_ccu_clk(clk_lkup[i].clk);
-			spin_lock_init(&ccu_clk->lock);
+			spin_lock_init(&ccu_clk->clk_lock);
+			spin_lock_init(&ccu_clk->access_lock);
 		}
 		ret |= clk_init(clk_lkup[i].clk);
 		if (ret)
@@ -1670,10 +1889,15 @@ EXPORT_SYMBOL(clk_register);
 
 int ccu_reset_write_access_enable(struct ccu_clk *ccu_clk, int enable)
 {
+	int ret;
+	unsigned long flags;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->rst_write_access)
 		return -EINVAL;
-	return ccu_clk->ccu_ops->rst_write_access(ccu_clk, enable);
+	ccu_access_lock(ccu_clk, &flags);
+	ret =  ccu_clk->ccu_ops->rst_write_access(ccu_clk, enable);
+	ccu_access_unlock(ccu_clk, &flags);
+	return ret;
 }
 
 EXPORT_SYMBOL(ccu_reset_write_access_enable);
@@ -1706,26 +1930,27 @@ static int ccu_rst_write_access_enable(struct ccu_clk *ccu_clk, int enable)
 int ccu_write_access_enable(struct ccu_clk *ccu_clk, int enable)
 {
 	int ret;
+	unsigned long flags;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->write_access)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
+	ccu_access_lock(ccu_clk, &flags);
 	ret = ccu_clk->ccu_ops->write_access(ccu_clk, enable);
-	CCU_ACCESS_EN(ccu_clk, 0);
+	ccu_access_unlock(ccu_clk, &flags);
 	return ret;
 }
-
 EXPORT_SYMBOL(ccu_write_access_enable);
 
 int ccu_policy_engine_resume(struct ccu_clk *ccu_clk, int load_type)
 {
 	int ret;
+	unsigned long flags;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops ||
 	    !ccu_clk->ccu_ops->policy_engine_resume)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
+	ccu_access_lock(ccu_clk, &flags);
 	ret = ccu_clk->ccu_ops->policy_engine_resume(ccu_clk, load_type);
-	CCU_ACCESS_EN(ccu_clk, 0);
+	ccu_access_unlock(ccu_clk, &flags);
 	return ret;
 }
 
@@ -1733,13 +1958,14 @@ EXPORT_SYMBOL(ccu_policy_engine_resume);
 
 int ccu_policy_engine_stop(struct ccu_clk *ccu_clk)
 {
+	unsigned long flags;
 	int ret;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops ||
 	    !ccu_clk->ccu_ops->policy_engine_stop)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
+	ccu_access_lock(ccu_clk, &flags);
 	ret = ccu_clk->ccu_ops->policy_engine_stop(ccu_clk);
-	CCU_ACCESS_EN(ccu_clk, 0);
+	ccu_access_unlock(ccu_clk, &flags);
 	return ret;
 
 }
@@ -1749,12 +1975,13 @@ EXPORT_SYMBOL(ccu_policy_engine_stop);
 int ccu_set_policy_ctrl(struct ccu_clk *ccu_clk, int pol_ctrl_id, int action)
 {
 	int ret;
+	unsigned long flags;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops ||
 	    !ccu_clk->ccu_ops->set_policy_ctrl)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
+	ccu_access_lock(ccu_clk, &flags);
 	ret = ccu_clk->ccu_ops->set_policy_ctrl(ccu_clk, pol_ctrl_id, action);
-	CCU_ACCESS_EN(ccu_clk, 0);
+	ccu_access_unlock(ccu_clk, &flags);
 	return ret;
 
 }
@@ -1764,12 +1991,13 @@ EXPORT_SYMBOL(ccu_set_policy_ctrl);
 int ccu_int_enable(struct ccu_clk *ccu_clk, int int_type, int enable)
 {
 	int ret;
+	unsigned long flags;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops ||
 	    !ccu_clk->ccu_ops->int_enable)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
+	ccu_access_lock(ccu_clk, &flags);
 	ret = ccu_clk->ccu_ops->int_enable(ccu_clk, int_type, enable);
-	CCU_ACCESS_EN(ccu_clk, 0);
+	ccu_access_unlock(ccu_clk, &flags);
 	return ret;
 }
 
@@ -1778,30 +2006,30 @@ EXPORT_SYMBOL(ccu_int_enable);
 int ccu_int_status_clear(struct ccu_clk *ccu_clk, int int_type)
 {
 	int ret;
+	unsigned long flags;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops ||
 	    !ccu_clk->ccu_ops->int_status_clear)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
+	ccu_access_lock(ccu_clk, &flags);
 	ret = ccu_clk->ccu_ops->int_status_clear(ccu_clk, int_type);
-	CCU_ACCESS_EN(ccu_clk, 0);
+	ccu_access_unlock(ccu_clk, &flags);
 	return ret;
 }
 
 EXPORT_SYMBOL(ccu_int_status_clear);
 
-int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id, int freq_id)
+int ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
+			struct opp_conf *opp_conf)
 {
 	int ret;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->set_freq_policy)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
-	ret = ccu_clk->ccu_ops->set_freq_policy(ccu_clk, policy_id, freq_id);
-	CCU_ACCESS_EN(ccu_clk, 0);
+	ret = ccu_clk->ccu_ops->set_freq_policy(ccu_clk,
+			policy_id, opp_conf);
 	return ret;
 
 }
-
 EXPORT_SYMBOL(ccu_set_freq_policy);
 
 int ccu_get_freq_policy(struct ccu_clk *ccu_clk, int policy_id)
@@ -1810,9 +2038,7 @@ int ccu_get_freq_policy(struct ccu_clk *ccu_clk, int policy_id)
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->get_freq_policy)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->get_freq_policy(ccu_clk, policy_id);
-	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 
@@ -1821,13 +2047,14 @@ EXPORT_SYMBOL(ccu_get_freq_policy);
 int ccu_set_peri_voltage(struct ccu_clk *ccu_clk, int peri_volt_id, u8 voltage)
 {
 	int ret;
+	unsigned long flags;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->set_peri_voltage)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
-	ret =
-	    ccu_clk->ccu_ops->set_peri_voltage(ccu_clk, peri_volt_id, voltage);
-	CCU_ACCESS_EN(ccu_clk, 0);
+	ccu_access_lock(ccu_clk, &flags);
+	ret = ccu_clk->ccu_ops->set_peri_voltage(ccu_clk,
+		peri_volt_id, voltage);
+	ccu_access_unlock(ccu_clk, &flags);
 	return ret;
 
 }
@@ -1837,12 +2064,13 @@ EXPORT_SYMBOL(ccu_set_peri_voltage);
 int ccu_set_voltage(struct ccu_clk *ccu_clk, int volt_id, u8 voltage)
 {
 	int ret;
+	unsigned long flags;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->set_voltage)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
+	ccu_access_lock(ccu_clk, &flags);
 	ret = ccu_clk->ccu_ops->set_voltage(ccu_clk, volt_id, voltage);
-	CCU_ACCESS_EN(ccu_clk, 0);
+	ccu_access_unlock(ccu_clk, &flags);
 	return ret;
 
 }
@@ -1855,9 +2083,7 @@ int ccu_get_voltage(struct ccu_clk *ccu_clk, int freq_id)
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->get_voltage)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->get_voltage(ccu_clk, freq_id);
-	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 
 }
@@ -1870,9 +2096,7 @@ int ccu_set_active_policy(struct ccu_clk *ccu_clk, u32 policy)
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->set_active_policy)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->set_active_policy(ccu_clk, policy);
-	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 
 }
@@ -1885,23 +2109,20 @@ int ccu_get_active_policy(struct ccu_clk *ccu_clk)
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->get_active_policy)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->get_active_policy(ccu_clk);
-	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 
 EXPORT_SYMBOL(ccu_get_active_policy);
 
+/*caller should make sure that PI is in enabled state */
 int ccu_save_state(struct ccu_clk *ccu_clk, int save)
 {
 	int ret;
 	if (IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops
 	    || !ccu_clk->ccu_ops->save_state)
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->save_state(ccu_clk, save);
-	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_save_state);
@@ -1914,9 +2135,7 @@ int ccu_get_dbg_bus_status(struct ccu_clk *ccu_clk)
 	    || !ccu_clk->ccu_ops->get_dbg_bus_status
 		|| !CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN))
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->get_dbg_bus_status(ccu_clk);
-	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_get_dbg_bus_status);
@@ -1928,9 +2147,7 @@ int ccu_set_dbg_bus_sel(struct ccu_clk *ccu_clk, u32 sel)
 	    || !ccu_clk->ccu_ops->set_dbg_bus_sel
 		|| !CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN))
 		return -EINVAL;
-	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->set_dbg_bus_sel(ccu_clk, sel);
-	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_set_dbg_bus_sel);
@@ -1943,9 +2160,7 @@ int ccu_get_dbg_bus_sel(struct ccu_clk *ccu_clk)
 		|| !CLK_FLG_ENABLED(&ccu_clk->clk, CCU_DBG_BUS_EN))
 		return -EINVAL;
 
-	CCU_ACCESS_EN(ccu_clk, 1);
 	ret = ccu_clk->ccu_ops->get_dbg_bus_sel(ccu_clk);
-	CCU_ACCESS_EN(ccu_clk, 0);
 	return ret;
 }
 EXPORT_SYMBOL(ccu_get_dbg_bus_sel);
@@ -2146,15 +2361,15 @@ static int ccu_clk_int_status_clear(struct ccu_clk *ccu_clk, int int_type)
 }
 
 static int ccu_clk_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
-				   int freq_id)
+				   struct opp_conf *opp_conf)
 {
 	u32 reg_val = 0;
 	u32 shift;
-
+	unsigned long flags;
 	clk_dbg("%s:%s ccu , freq_id = %d policy_id = %d\n", __func__,
-		ccu_clk->clk.name, freq_id, policy_id);
+		ccu_clk->clk.name, opp_conf->freq_id, policy_id);
 
-	if (freq_id >= ccu_clk->freq_count)
+	if (opp_conf->freq_id >= ccu_clk->freq_count)
 		return -EINVAL;
 
 	switch (policy_id) {
@@ -2178,12 +2393,13 @@ static int ccu_clk_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	clk_dbg("%s: reg_val:%08x shift:%d\n", __func__, reg_val, shift);
 	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
 
-	reg_val |= freq_id << shift;
+	reg_val |= opp_conf->freq_id << shift;
 
 	ccu_write_access_enable(ccu_clk, true);
 	ccu_policy_engine_stop(ccu_clk);
-
+	ccu_access_lock(ccu_clk, &flags);
 	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
+	ccu_access_unlock(ccu_clk, &flags);
 	ccu_policy_engine_resume(ccu_clk,
 				 ccu_clk->clk.
 				 flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET :
@@ -2536,6 +2752,7 @@ static int ccu_clk_init(struct clk *clk)
 	struct ccu_clk *ccu_clk;
 	int inx;
 	u32 reg_val;
+	struct opp_conf opp_conf;
 
 	clk_dbg("%s - %s\n", __func__, clk->name);
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
@@ -2578,8 +2795,9 @@ static int ccu_clk_init(struct clk *clk)
 		for (inx = 0; inx < MAX_CCU_POLICY_COUNT; inx++) {
 			BUG_ON(ccu_clk->freq_policy[inx] >=
 			       ccu_clk->freq_count);
-			ccu_set_freq_policy(ccu_clk, inx,
-					    ccu_clk->freq_policy[inx]);
+			opp_conf.flags = 0;
+			opp_conf.freq_id = ccu_clk->freq_policy[inx];
+			ccu_set_freq_policy(ccu_clk, inx, &opp_conf);
 		}
 	}
 	/*Set ATL & AC */
@@ -2879,7 +3097,7 @@ static int peri_clk_enable(struct clk *clk, int enable)
 
 	reg_val =
 	    readl(CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset));
-	clk_dbg("%s, Before change clk_gate reg value: %08x  \n", __func__,
+	clk_dbg("%s, Before change clk_gate reg value: %08x\n", __func__,
 		reg_val);
 	if (enable)
 		reg_val = reg_val | peri_clk->clk_en_mask;
@@ -3175,7 +3393,7 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 	/*set the source clock selected */
 	peri_clk_set_pll_select(peri_clk, src);
 
-	clk_dbg("Before trigger clock \n");
+	clk_dbg("Before trigger clock\n");
 	if (clk_div->div_trig_offset && clk_div->div_trig_mask) {
 		reg_val =
 		    readl(CCU_REG_ADDR
@@ -3257,22 +3475,27 @@ static int peri_clk_init(struct clk *clk)
 	struct peri_clk *peri_clk;
 	struct src_clk *src_clks;
 	int inx;
+	unsigned long flgs;
 
 	BUG_ON(clk->clk_type != CLK_TYPE_PERI);
 	peri_clk = to_peri_clk(clk);
 
 	BUG_ON(peri_clk->ccu_clk == NULL);
 
-	clk_dbg("%s, clock name: %s \n", __func__, clk->name);
+	clk_dbg("%s, clock name: %s\n", __func__, clk->name);
 
 	/* enable write access */
 	ccu_write_access_enable(peri_clk->ccu_clk, true);
 
 	/*Init dependent clocks .... */
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
-		clk_dbg("%s dep clock %s init \n", __func__,
+		clk_dbg("%s dep clock %s init\n", __func__,
 			clk->dep_clks[inx]->name);
+		dep_clk_lock(peri_clk->ccu_clk, clk->dep_clks[inx],
+			&flgs);
 		__clk_init(clk->dep_clks[inx]);
+		dep_clk_unlock(peri_clk->ccu_clk, clk->dep_clks[inx],
+			&flgs);
 	}
 	/*Init source clocks */
 	/*enable/disable src clk */
@@ -3282,9 +3505,13 @@ static int peri_clk_init(struct clk *clk)
 	if (PERI_SRC_CLK_VALID(peri_clk)) {
 		src_clks = &peri_clk->src_clk;
 		for (inx = 0; inx < src_clks->count; inx++) {
-			clk_dbg("%s src clock %s init \n", __func__,
+			clk_dbg("%s src clock %s init\n", __func__,
 				src_clks->clk[inx]->name);
+			dep_clk_lock(peri_clk->ccu_clk, src_clks->clk[inx],
+				&flgs);
 			__clk_init(src_clks->clk[inx]);
+			dep_clk_unlock(peri_clk->ccu_clk, src_clks->clk[inx],
+				&flgs);
 		}
 		/*set the default src clock */
 		BUG_ON(peri_clk->src_clk.src_inx >= peri_clk->src_clk.count);
@@ -3387,7 +3614,7 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 	if (clk_div->div_offset && clk_div->div_mask) {
 		reg_val =
 		    readl(CCU_REG_ADDR(peri_clk->ccu_clk, clk_div->div_offset));
-		clk_dbg("div_offset:%08x reg_val:%08x \n", clk_div->div_offset,
+		clk_dbg("div_offset:%08x reg_val:%08x\n", clk_div->div_offset,
 			reg_val);
 		div =
 		    GET_VAL_USING_MASK_SHIFT(reg_val, clk_div->div_mask,
@@ -3505,10 +3732,8 @@ int bus_clk_get_gating_ctrl(struct bus_clk *bus_clk)
 		return -EINVAL;
 
 	BUG_ON(!bus_clk->ccu_clk);
-	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 	reg_val =
 	    readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
-	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, bus_clk->gating_sel_mask);
 }
@@ -3560,10 +3785,8 @@ static int bus_clk_get_enable_bit(struct bus_clk *bus_clk)
 	BUG_ON(!bus_clk->ccu_clk);
 	if (!bus_clk->clk_gate_offset || !bus_clk->clk_en_mask)
 		return -EINVAL;
-	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 	reg_val =
 	    readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
-	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 
 	return GET_BIT_USING_MASK(reg_val, bus_clk->clk_en_mask);
 }
@@ -3726,6 +3949,7 @@ static int bus_clk_init(struct clk *clk)
 {
 	struct bus_clk *bus_clk;
 	int inx;
+	unsigned long flgs;
 
 	BUG_ON(clk->clk_type != CLK_TYPE_BUS);
 
@@ -3740,17 +3964,25 @@ static int bus_clk_init(struct clk *clk)
 	clk_dbg("%s init dep clks -- %s\n", __func__, clk->name);
 	/*Init dependent clocks, if any */
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++) {
-		clk_dbg("%s Dependant clock %s init \n", __func__,
+		clk_dbg("%s Dependant clock %s init\n", __func__,
 			clk->dep_clks[inx]->name);
+		dep_clk_lock(bus_clk->ccu_clk, clk->dep_clks[inx],
+			&flgs);
 		__clk_init(clk->dep_clks[inx]);
+		dep_clk_unlock(bus_clk->ccu_clk, clk->dep_clks[inx],
+			&flgs);
 	}
 
 	clk_dbg("%s init src clks -- %s\n", __func__, clk->name);
 	/*Init src clk, if any */
 	if (bus_clk->src_clk) {
-		clk_dbg("%s src clock %s init \n", __func__,
+		clk_dbg("%s src clock %s init\n", __func__,
 			bus_clk->src_clk->name);
+		dep_clk_lock(bus_clk->ccu_clk, bus_clk->src_clk,
+			&flgs);
 		__clk_init(bus_clk->src_clk);
+		dep_clk_unlock(bus_clk->ccu_clk, bus_clk->src_clk,
+			&flgs);
 	}
 
 	if (bus_clk->hyst_val_mask)
@@ -3962,7 +4194,7 @@ static int ref_clk_init(struct clk *clk)
 	ref_clk = to_ref_clk(clk);
 	BUG_ON(ref_clk->ccu_clk == NULL);
 
-	clk_dbg("%s, clock name: %s \n", __func__, clk->name);
+	clk_dbg("%s, clock name: %s\n", __func__, clk->name);
 
 	/* enable write access */
 	ccu_write_access_enable(ref_clk->ccu_clk, true);
@@ -4281,7 +4513,7 @@ static int pll_clk_enable(struct clk *clk, int enable)
 		reg_val =
 		    readl(CCU_REG_ADDR
 			  (pll_clk->ccu_clk, pll_clk->pll_ctrl_offset));
-		clk_dbg("%s, Before change pll_ctrl reg value: %08x  \n",
+		clk_dbg("%s, Before change pll_ctrl reg value: %08x\n",
 			__func__, reg_val);
 		/*Return if sw_override bit is set */
 		if (GET_BIT_USING_MASK
@@ -4367,7 +4599,7 @@ static int pll_clk_init(struct clk *clk)
 
 	BUG_ON(pll_clk->ccu_clk == NULL);
 
-	clk_dbg("%s, clock name: %s \n", __func__, clk->name);
+	clk_dbg("%s, clock name: %s\n", __func__, clk->name);
 
 	/* enable write access */
 	ccu_write_access_enable(pll_clk->ccu_clk, true);
@@ -4504,7 +4736,7 @@ static int pll_chnl_clk_enable(struct clk *clk, int enable)
 {
 	u32 reg_val;
 	struct pll_chnl_clk *pll_chnl_clk;
-	clk_dbg("%s:%d, clock name: %s \n", __func__, enable, clk->name);
+	clk_dbg("%s:%d, clock name: %s\n", __func__, enable, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL_CHNL);
 	pll_chnl_clk = to_pll_chnl_clk(clk);
@@ -4667,14 +4899,14 @@ static int pll_chnl_clk_set_rate(struct clk *clk, u32 rate)
 	/* disable write access */
 	ccu_write_access_enable(pll_chnl_clk->ccu_clk, false);
 
-	clk_dbg("clock set rate done \n");
+	clk_dbg("clock set rate done\n");
 	return 0;
 }
 
 static int pll_chnl_clk_init(struct clk *clk)
 {
 	struct pll_chnl_clk *pll_chnl_clk;
-	clk_dbg("%s, clock name: %s \n", __func__, clk->name);
+	clk_dbg("%s, clock name: %s\n", __func__, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL_CHNL);
 	pll_chnl_clk = to_pll_chnl_clk(clk);
@@ -4832,7 +5064,7 @@ static int core_clk_set_rate(struct clk *clk, u32 rate)
 static int core_clk_init(struct clk *clk)
 {
 	struct core_clk *core_clk;
-	clk_dbg("%s, clock name: %s \n", __func__, clk->name);
+	clk_dbg("%s, clock name: %s\n", __func__, clk->name);
 
 	BUG_ON(clk->clk_type != CLK_TYPE_CORE);
 	core_clk = to_core_clk(clk);
@@ -5102,7 +5334,9 @@ static ssize_t ccu_debug_get_dbg_bus_status(struct file *file,
 	BUG_ON(clk == NULL);
 	ccu_clk = to_ccu_clk(clk);
 	memset(out_str, 0, sizeof(out_str));
+	CCU_ACCESS_EN(ccu_clk, 1);
 	status = ccu_get_dbg_bus_status(ccu_clk);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	if (status == -EINVAL)
 		len += snprintf(out_str+len, sizeof(out_str)-len,
 			"error!!\n");
@@ -5139,7 +5373,9 @@ static ssize_t ccu_debug_set_dbg_bus_sel(struct file *file,
 
 	sscanf(&input_str[0], "%x%x%x%x", &sel, &mux, &mux_parm, &dbg_bit_sel);
 	set_ccu_dbg_bus_mux(ccu_clk, mux, mux_parm, dbg_bit_sel);
+	CCU_ACCESS_EN(ccu_clk, 1);
 	ccu_set_dbg_bus_sel(ccu_clk, sel);
+	CCU_ACCESS_EN(ccu_clk, 0);
 	return count;
 }
 
@@ -5234,7 +5470,7 @@ static int clk_debug_reset(void *data, u64 val)
 	if (val == 1)		/*reset and release the clock from reset */
 		clk_reset(clock);
 	else
-		clk_dbg("Invalid value \n");
+		clk_dbg("Invalid value\n");
 
 	return 0;
 }
@@ -5249,7 +5485,7 @@ static int clk_debug_set_enable(void *data, u64 val)
 	else if (val == 0)
 		clk_disable(clock);
 	else
-		clk_dbg("Invalid value \n");
+		clk_dbg("Invalid value\n");
 
 	return 0;
 }
@@ -5313,12 +5549,14 @@ static int print_bus_clock_params(struct seq_file *seq, struct clk *temp_clk)
 	status = bus_clk_get_gating_status(bus_clk);
 	if (status < 0)
 		status = -1;
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 	auto_gate = bus_clk_get_gating_ctrl(bus_clk);
 	if (auto_gate < 0)
 		auto_gate = -1;
 	enable_bit = bus_clk_get_enable_bit(bus_clk);
 	if (enable_bit < 0)
 		enable_bit = -1;
+	CCU_ACCESS_EN(bus_clk->ccu_clk, 0);
 	sleep_prev = CLK_FLG_ENABLED(temp_clk, NOTIFY_STATUS_TO_CCU)
 	    && !CLK_FLG_ENABLED(temp_clk, AUTO_GATE);
 	seq_printf(seq,
@@ -5675,6 +5913,7 @@ int ccu_volt_tbl_display(struct clk *clk, u8 *volt_tbl)
 	if (IS_ERR_OR_NULL(clk))
 		return -EINVAL;
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
+	 clk_dbg("%s - %s\n", __func__, clk->name);
 	ccu_clk = to_ccu_clk(clk);
 	clk_lock(clk, &flags);
 	CCU_ACCESS_EN(ccu_clk, 1);
@@ -5869,7 +6108,7 @@ int __init clock_debug_add_clock(struct clk *c)
 	struct dentry *dent_clk_dir = 0, *dent_rate = 0, *dent_enable = 0,
 	    *dent_status = 0, *dent_flags = 0, *dent_use_cnt = 0, *dent_id = 0,
 	    *dent_parent = 0, *dent_source = 0, *dent_ccu_dir = 0,
-	    *dent_clk_mon = 0, *dent_reset = 0;
+	    *dent_reset = 0;
 	struct peri_clk *peri_clk;
 	struct pll_clk *pll_clk;
 	struct core_clk *core_clk;

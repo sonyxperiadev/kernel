@@ -49,11 +49,17 @@
 #include <video/kona_fb_image_dump.h>
 #endif
 
+#include <mach/ns_ioremap.h>
+
 /* CP crash recovery action */
 #define   RECOVERY_ACTION_NONE                      0
 #define   RECOVERY_ACTION_SYSRESET                  1
 #define   RECOVERY_ACTION_SYSRESET_USERCONFIRM      2
 #define   RECOVERY_ACTION_TBD                       3
+
+struct vm_struct *ipc_cpmap_area;
+
+#define get_vaddr(area)	(ipc_cpmap_area->addr + area)
 
 /* following structs must match definition for CP from dump.h
  * **FIXME** MAG - add dump.h to headers imported from CP when doing
@@ -211,12 +217,22 @@ void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf, UInt32 inStrBufLen)
 {
 	void __iomem *virtAddr;
 
-	virtAddr = ioremap_nocache(inPhysAddr, inStrBufLen);
+	virtAddr = plat_ioremap_ns((unsigned long __force)
+			get_vaddr(IPC_CP_STRING_MAP_AREA),
+			IPC_CP_STRING_MAP_AREA_SZ,
+			(phys_addr_t)inPhysAddr);
+	if (!virtAddr) {
+		IPC_DEBUG(DBG_ERROR,
+			"ioremap failed in GetStringFromPA\n");
+		return;
+	}
 
 	strncpy(inStrBuf, (char *)virtAddr, inStrBufLen);
 
 	/* pad NULL in the end of the string */
-	inStrBuf[inStrBufLen - 1] = '\0', iounmap(virtAddr);
+	inStrBuf[inStrBufLen - 1] = '\0';
+	plat_iounmap_ns(get_vaddr(IPC_CP_STRING_MAP_AREA),
+			free_size_ipc(IPC_CP_STRING_MAP_AREA_SZ));
 }
 
 static IPCAP_CPResetHandler_T sCPResetHandler;
@@ -693,11 +709,15 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	 * (in case user not running MTT) */
 	Dump = (void *)SmLocalControl.SmControl->CrashDump;
 
-	IPC_DEBUG(DBG_ERROR, "ioremap_nocache\n");
-	DumpVAddr = ioremap_nocache((UInt32) Dump,
-				    sizeof(struct T_CRASH_SUMMARY));
-	if (NULL == DumpVAddr) {
-		IPC_DEBUG(DBG_ERROR, "VirtualAlloc failed\n");
+	IPC_DEBUG(DBG_ERROR, "ioremap\n");
+
+	DumpVAddr = plat_ioremap_ns((unsigned long __force)
+			get_vaddr(IPC_CP_CRASH_SUMMARY_AREA),
+			IPC_CP_CRASH_SUMMARY_AREA_SZ, (phys_addr_t)Dump);
+
+	if (!DumpVAddr) {
+		IPC_DEBUG(DBG_ERROR,
+			"ioremap failed in ProcessCPCrashedDump\n");
 		goto cleanUp;
 	}
 
@@ -760,8 +780,9 @@ void ProcessCPCrashedDump(struct work_struct *work)
 
 cleanUp:
 
-	if (NULL != DumpVAddr)
-		iounmap(DumpVAddr);
+	if (DumpVAddr)
+		plat_iounmap_ns(get_vaddr(IPC_CP_CRASH_SUMMARY_AREA),
+				free_size_ipc(IPC_CP_CRASH_SUMMARY_AREA_SZ));
 
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_unlock(&ipc_wake_lock);
@@ -877,12 +898,14 @@ void DUMP_CP_assert_log(void)
 		retryCount = 0;
 
 		/* get virtual address of CP assert buffer */
-		AssertLogVAddr = ioremap_nocache((UInt32)
-						 (SmLocalControl.SmControl->
-						  CrashCode), ASSERT_BUF_SIZE);
-		if (NULL == AssertLogVAddr) {
+		AssertLogVAddr = plat_ioremap_ns((unsigned long __force)
+			get_vaddr(IPC_CP_ASSERT_BUF_AREA),
+			IPC_CP_ASSERT_BUF_AREA_SZ,
+			(phys_addr_t)SmLocalControl.SmControl->CrashCode);
+
+		if (!AssertLogVAddr) {
 			IPC_DEBUG(DBG_ERROR,
-				  "ioremap_nocache failed in DUMP_CP_assert_log\n");
+				  "ioremap failed in DUMP_CP_assert_log\n");
 			break;
 		}
 
@@ -896,7 +919,8 @@ void DUMP_CP_assert_log(void)
 			IPC_DEBUG(DBG_ERROR,
 				  "assert log size 0, exiting, packetCount:0x%x\n",
 				  (int)packetCount);
-			iounmap(AssertLogVAddr);
+			plat_iounmap_ns(get_vaddr(IPC_CP_ASSERT_BUF_AREA),
+				free_size_ipc(IPC_CP_ASSERT_BUF_AREA_SZ));
 			AssertLogVAddr = NULL;
 			break;
 		}
@@ -906,7 +930,8 @@ void DUMP_CP_assert_log(void)
 				  "Abort --- improper size [%08x]=%d\n",
 				  SmLocalControl.SmControl->CrashCode,
 				  (int)size);
-			iounmap(AssertLogVAddr);
+			plat_iounmap_ns(get_vaddr(IPC_CP_ASSERT_BUF_AREA),
+				free_size_ipc(IPC_CP_ASSERT_BUF_AREA_SZ));
 			AssertLogVAddr = NULL;
 			break;
 		}
@@ -914,7 +939,8 @@ void DUMP_CP_assert_log(void)
 		BCMLOG_HandleCpCrashDumpData((const char *)(p + 2), size);
 
 		packetCount++;
-		iounmap(AssertLogVAddr);
+		plat_iounmap_ns(get_vaddr(IPC_CP_ASSERT_BUF_AREA),
+				free_size_ipc(IPC_CP_ASSERT_BUF_AREA_SZ));
 		AssertLogVAddr = NULL;
 
 #if 0
@@ -970,11 +996,12 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 	void __iomem *RamDumpBlockVAddr = NULL;
 	struct T_RAMDUMP_BLOCK *pBlockVAddr = NULL;
 
-	RamDumpBlockVAddr =
-	    ioremap_nocache((UInt32) (mem_dump),
-			    (MAX_RAMDUMP_BLOCKS *
-			     sizeof(struct T_RAMDUMP_BLOCK)));
-	if (NULL == RamDumpBlockVAddr) {
+	RamDumpBlockVAddr = plat_ioremap_ns((unsigned long __force)
+		get_vaddr(IPC_CP_RAMDUMP_BLOCK_AREA),
+		IPC_CP_RAMDUMP_BLOCK_AREA_SZ,
+		(phys_addr_t)mem_dump);
+
+	if (!RamDumpBlockVAddr) {
 		IPC_DEBUG(DBG_ERROR, "failed to remap RAM dump block addr\n");
 		return;
 	}
@@ -1089,7 +1116,23 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 		i++;
 	}
 
-	iounmap(RamDumpBlockVAddr);
+	plat_iounmap_ns(get_vaddr(IPC_CP_RAMDUMP_BLOCK_AREA),
+		free_size_ipc(IPC_CP_RAMDUMP_BLOCK_AREA_SZ));
 
 }
 
+int __init ipc_crashsupport_init(void)
+{
+	ipc_cpmap_area = plat_get_vm_area(IPC_CPMAP_NUM_PAGES);
+
+	if (!ipc_cpmap_area) {
+		pr_err("Failed to allocate vm area\n");
+		return -ENOMEM;
+	}
+
+	pr_info("ipc:vm area:start:0x%lx, size:%lx\n",
+			(unsigned long __force)ipc_cpmap_area->addr,
+			ipc_cpmap_area->size);
+
+	return 0;
+}

@@ -32,6 +32,14 @@ enum {
 	PI_OPP_MAX
 };
 
+enum {
+	PROC_OPP_ECONOMY,
+	PROC_OPP_NORMAL1,
+	PROC_OPP_NORMAL2,
+	PROC_OPP_TURBO,
+	PROC_OPP_MAX
+};
+
 void hawaii_pi_mgr_init(void);
 
 #endif /*__HAWAII_PI_MNGR_H__*/

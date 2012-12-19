@@ -34,6 +34,7 @@
 #include <linux/gpio.h>
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pm_runtime.h>
 #include <mach/sdio_platform.h>
 #ifdef CONFIG_APANIC_ON_MMC
 #include <linux/mmc-poll/mmc_poll_stack.h>
@@ -78,6 +79,9 @@
 #endif
 
 #define KONA_SD_CONTRLR_REG_LPCNT	(50)
+
+#define KONA_MMC_AUTOSUSPEND_DELAY	(10)
+
 /* Enable this quirk if regulators are always ON
  * but the regulator framework is not funtional.
  * In such a case, we dont want our probe to fail.
@@ -123,7 +127,7 @@ static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev,
 					   char *reg_name);
 static int kona_sdxc_regulator_power(struct sdio_dev *dev,
 		int power_state);
-static int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
+static int sdhci_pltfm_clk_enable(struct sdio_dev *dev, int enable);
 static int sdhci_pltfm_set_signalling(struct sdhci_host *host, int sig_vol);
 static int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host);
 static int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host);
@@ -154,7 +158,6 @@ static unsigned int sdhci_get_timeout_clock(struct sdhci_host *host)
 static struct sdhci_ops sdhci_pltfm_ops = {
 	.get_max_clock = sdhci_get_max_clk,
 	.get_timeout_clock = sdhci_get_timeout_clock,
-	.clk_enable = sdhci_pltfm_clk_enable,
 	.set_signalling = sdhci_pltfm_set_signalling,
 	.platform_send_init_74_clocks = sdhci_pltfm_init_74_clocks,
 };
@@ -235,12 +238,12 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
 	uint32_t val;
 	unsigned long flags;
 
+#ifndef CONFIG_ARCH_ISLAND
+	pm_runtime_get_sync(dev->dev);
+#endif
 	/* this function can be called from various contexts including ISR */
 	spin_lock_irqsave(&host->lock, flags);
 
-#ifndef CONFIG_ARCH_ISLAND
-	sdhci_pltfm_clk_enable(host, 1);
-#endif
 	/* Ensure SD bus scanning to detect media change */
 	host->mmc->rescan_disable = 0;
 
@@ -426,13 +429,13 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
+static int sdhci_pltfm_clk_enable(struct sdio_dev *dev, int enable)
 {
 #if defined(CONFIG_ARCH_SAMOA) || defined(CONFIG_MACH_HAWAII_FPGA)
 	return 0;
 #else
 	int ret = 0;
-	struct sdio_dev *dev = sdhci_priv(host);
+
 	BUG_ON(!dev);
 	if (enable) {
 		/* peripheral clock */
@@ -488,6 +491,80 @@ static void kona_sdio_status_notify_cb(int card_present, void *dev_id)
 
 	pr_debug("%s: MMC_DETECT_CHANGE DONE\n", __func__);
 }
+#endif
+
+#ifdef CONFIG_PM_RUNTIME
+
+static int sdhci_pltfm_runtime_suspend(struct device *device)
+{
+	int ret = 0;
+	unsigned long flags;
+	struct sdio_dev *dev =
+		platform_get_drvdata(to_platform_device(device));
+	struct sdhci_host *host = dev->host;
+
+	spin_lock_irqsave(&host->lock, flags);
+	host->runtime_suspended = true;
+	spin_unlock_irqrestore(&host->lock, flags);
+
+	ret = sdhci_pltfm_clk_enable(dev, 0);
+	if (ret) {
+		pr_err("Failed to disable clock during run time suspend%s%d\n",
+				DEV_NAME, (to_platform_device(device))->id);
+		sdhci_runtime_resume_host(host);
+		return -EAGAIN;
+	}
+
+	return 0;
+}
+
+static int sdhci_pltfm_runtime_resume(struct device *device)
+{
+	int ret = 0;
+	unsigned long flags;
+	struct sdio_dev *dev =
+		platform_get_drvdata(to_platform_device(device));
+	struct sdhci_host *host = dev->host;
+
+	spin_lock_irqsave(&host->lock, flags);
+	host->runtime_suspended = false;
+	spin_unlock_irqrestore(&host->lock, flags);
+
+	ret = sdhci_pltfm_clk_enable(dev, 1);
+	if (ret) {
+		pr_err("Failed to enable clock during run time resume%s%d\n",
+				DEV_NAME, (to_platform_device(device))->id);
+		return -EAGAIN;
+	}
+
+	return 0;
+}
+
+static int sdhci_pltfm_runtime_idle(struct device *device)
+{
+	return 0;
+}
+
+static void __devinit sdhci_pltfm_runtime_pm_init(struct device *dev)
+{
+	pm_runtime_enable(dev);
+	pm_runtime_set_autosuspend_delay(dev, KONA_MMC_AUTOSUSPEND_DELAY);
+	pm_runtime_use_autosuspend(dev);
+}
+
+static void __devexit sdhci_pltfm_runtime_pm_forbid(struct device *dev)
+{
+	pm_runtime_forbid(dev);
+	pm_runtime_get_noresume(dev);
+	pm_runtime_disable(dev);
+}
+
+#else
+
+#define sdhci_pltfm_runtime_suspend      NULL
+#define sdhci_pltfm_runtime_resume       NULL
+#define sdhci_pltfm_runtime_idle         NULL
+
 #endif
 
 static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
@@ -579,6 +656,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	dev->host = host;
 	dev->devtype = hw_cfg->devtype;
 	dev->cd_gpio = hw_cfg->cd_gpio;
+	host->mmc->parent = dev->dev;
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		dev->wifi_gpio = &hw_cfg->wifi_gpio;
 
@@ -624,7 +702,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err_sleep_clk_put;
 	}
 
-	ret = sdhci_pltfm_clk_enable(host, 1);
+	ret = sdhci_pltfm_clk_enable(dev, 1);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize core clock for %s\n",
 			devname);
@@ -812,7 +890,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 #endif
 
 	atomic_set(&dev->initialized, 1);
-	sdhci_pltfm_clk_enable(host, 0);
+	sdhci_pltfm_clk_enable(dev, 0);
+
+	sdhci_pltfm_runtime_pm_init(dev->dev);
 
 	pr_info("%s: initialized properly\n", devname);
 
@@ -832,7 +912,7 @@ err_reset:
 	bcm_kona_sd_reset(dev);
 
 err_term_clk:
-	sdhci_pltfm_clk_enable(host, 0);
+	sdhci_pltfm_clk_enable(dev, 0);
 
 #if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_HAWAII_FPGA)
 err_sleep_clk_disable:
@@ -887,14 +967,14 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 
 	proc_term(pdev);
 
-	sdhci_pltfm_clk_enable(host, 1);
+	pm_runtime_get_sync(dev->dev);
 	dead = 0;
 	scratch = readl(host->ioaddr + SDHCI_INT_STATUS);
 	if (scratch == (u32)-1)
 		dead = 1;
 	sdhci_remove_host(host, dead);
 
-	sdhci_pltfm_clk_enable(host, 0);
+	pm_runtime_put_sync_suspend(dev->dev);
 
 #if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_HAWAII_FPGA)
 	clk_disable(dev->sleep_clk);
@@ -902,6 +982,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	clk_put(dev->peri_clk);
 #endif
 
+	sdhci_pltfm_runtime_pm_forbid(dev->dev);
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);
 	iounmap(host->ioaddr);
@@ -912,9 +993,10 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
+static int sdhci_pltfm_suspend(struct device *device)
 {
-	struct sdio_dev *dev = platform_get_drvdata(pdev);
+	struct sdio_dev *dev =
+		platform_get_drvdata(to_platform_device(device));
 	struct sdhci_host *host = dev->host;
 	int ret = 0;
 
@@ -923,10 +1005,11 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 
 	ret = sdhci_suspend_host(host);
 	if (ret) {
-		dev_err(&pdev->dev, "Unable to suspend sdhci host err=%d\n",
+		dev_err(dev->dev, "Unable to suspend sdhci host err=%d\n",
 			ret);
 		return ret;
 	}
+	pm_runtime_put_sync_suspend(dev->dev);
 
 	kona_sdxc_regulator_power(dev, 0);
 
@@ -935,19 +1018,21 @@ ret_path:
 	return 0;
 }
 
-static int sdhci_pltfm_resume(struct platform_device *pdev)
+static int sdhci_pltfm_resume(struct device *device)
 {
-	struct sdio_dev *dev = platform_get_drvdata(pdev);
+	struct sdio_dev *dev =
+		platform_get_drvdata(to_platform_device(device));
 	struct sdhci_host *host = dev->host;
 	int ret = 0;
 
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		goto ret_path;
 
+	pm_runtime_get_sync(dev->dev);
 	kona_sdxc_regulator_power(dev, 1);
 	ret = sdhci_resume_host(host);
 	if (ret) {
-		dev_err(&pdev->dev,
+		dev_err(dev->dev,
 		 "Unable to resume sdhci host err=%d\n", ret);
 		return ret;
 	}
@@ -961,15 +1046,22 @@ ret_path:
 #define sdhci_pltfm_resume NULL
 #endif /* CONFIG_PM */
 
+static const struct dev_pm_ops sdhci_pltfm_pm_ops = {
+	.runtime_suspend = sdhci_pltfm_runtime_suspend,
+	.runtime_resume = sdhci_pltfm_runtime_resume,
+	.runtime_idle = sdhci_pltfm_runtime_idle,
+	.suspend = sdhci_pltfm_suspend,
+	.resume = sdhci_pltfm_resume,
+};
+
 static struct platform_driver sdhci_pltfm_driver = {
 	.driver = {
 		   .name = "sdhci",
 		   .owner = THIS_MODULE,
+		   .pm = &sdhci_pltfm_pm_ops,
 		   },
 	.probe = sdhci_pltfm_probe,
 	.remove = __devexit_p(sdhci_pltfm_remove),
-	.suspend = sdhci_pltfm_suspend,
-	.resume = sdhci_pltfm_resume,
 };
 
 static int __init sdhci_drv_init(void)
@@ -1080,7 +1172,11 @@ int sdio_stop_clk(enum sdio_devtype devtype, int insert)
 	dev = gDevs[devtype];
 	host = dev->host;
 
-	sdhci_pltfm_clk_enable(host, insert);
+	if (insert)
+		pm_runtime_get_sync(dev->dev);
+	else
+		pm_runtime_put_sync_suspend(dev->dev);
+
 #endif
 	return 0;
 }

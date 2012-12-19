@@ -160,7 +160,14 @@ static char __initdata __log_buf[__LOG_BUF_LEN];
 #else
 static char __log_buf[__LOG_BUF_LEN];
 #endif
-char *log_buf = __log_buf;
+
+/*
+ * In the case of CONFIG_LOGBUF_NONCACHE,
+ * we need __log_buf till we can perform
+ * dma_alloc_coherent. So this is a valid
+ * reference. Thus __refdata.
+ * */
+char *log_buf __refdata = __log_buf;
 int log_buf_len = __LOG_BUF_LEN;
 static unsigned logged_chars; /* Number of chars produced since last read+clear operation */
 static int saved_console_loglevel = -1;

@@ -142,6 +142,14 @@ config KONA_CPU_FREQ_LIMITS
 	using these interfaces. Interace to read freq table and active freq
 	also get added if this config is enabled.
 
+config KONA_CPU_FREQ_ENABLE_OPP_SET_CHANGE
+	bool "Enable OPP set change to select a different OPP set"
+	depends on KONA_CPU_FREQ_DRV
+	default n
+	help
+	    Say Y to enable dynamic switching of OPP set. This will provide
+	    debugfs interface to switch OPP set dynamically.
+
 config KONA_POWER_MGR
        bool "Enable Kona power manager driver"
        select KONA_PI_MGR

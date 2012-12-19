@@ -1092,7 +1092,7 @@ CHAL_CAM_STATUS_CODES chal_cam_cfg_afe_cntrl(CHAL_HANDLE handle, CHAL_CAM_AFE_CF
         {
             reg |= (1 << CAM_ANA_DDL_SHIFT);
         }
-    reg = BRCM_WRITE_REG(pCamDevice->baseAddr,CAM_ANA,reg);
+    BRCM_WRITE_REG(pCamDevice->baseAddr,CAM_ANA,reg);
     return chal_status;
 }    
 

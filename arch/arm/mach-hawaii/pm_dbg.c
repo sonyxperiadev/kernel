@@ -202,6 +202,7 @@ static void cmd_force_sleep(const char *p)
 
 	pr_info("Forcing system to state: %d\n", force_sleep_state);
 	kona_pm_reg_pm_enter_handler(&hawaii_force_sleep);
+
 	request_suspend_state(PM_SUSPEND_MEM);
 }
 

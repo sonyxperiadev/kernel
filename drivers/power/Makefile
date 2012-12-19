@@ -65,5 +65,6 @@ obj-$(CONFIG_POWER_BCMPMU)	+= bcmpmu-batt.o bcmpmu-chrgr.o
 obj-$(CONFIG_BCMPMU_EM) 	+= bcmpmu-em.o
 endif
 obj-$(CONFIG_MFD_BCM_PMU59xxx) 	+= bcmpmu59xxx-chrgr.o bcmpmu-fg.o
-obj-$(CONFIG_CHARGER_BCMPMU_SPA) += bcmpmu-chrgr-pb.o
+obj-$(CONFIG_CHARGER_BCMPMU_SPA) += bcmpmu59xxx-spa-pb.o
 obj-$(CONFIG_BATTERY_ANDROID)	+= android_battery.o
+obj-$(CONFIG_SEC_CHARGING_FEATURE) +=spa_power.o spa_ps.o

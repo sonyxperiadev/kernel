@@ -160,10 +160,10 @@ struct ion_heap {
 	int used;
 #endif
 #ifdef CONFIG_ION_OOM_KILLER
-	int lmc_enable;
-	int lmc_min_score_adj;
-	int lmc_min_free;
-	struct dentry *lmc_debug_root;
+	int lmk_enable;
+	int lmk_min_score_adj;
+	int lmk_min_free;
+	struct dentry *lmk_debug_root;
 #endif
 };
 

@@ -264,7 +264,6 @@ struct sdhci_ops {
 	void	(*set_clock)(struct sdhci_host *host, unsigned int clock);
 
 #ifdef CONFIG_MMC_SDHCI_PLTFM_KONA
-	int             (*clk_enable)(struct sdhci_host *host, int enable);
         int (*set_signalling)(struct sdhci_host *host, int sig_vol);
 #endif			
 

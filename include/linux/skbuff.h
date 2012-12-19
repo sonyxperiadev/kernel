@@ -53,9 +53,10 @@
 #define SKB_UETH_RX_PRE_ALLOC_MEM_SIG	0xfedcba98
 #define SKB_UETH_RX_THRESHOLD_SIG	0x789ABCDE
 
-extern atomic_t ueth_rx_skb_ref_count;
 extern unsigned short ueth_rx_skb_size(void);
-extern void ueth_recycle_rx_skbs(struct sk_buff *skb);
+extern void ueth_recycle_rx_skb_data(unsigned char *data, gfp_t gfp_flags);
+extern struct sk_buff *alloc_skb_uether_rx(unsigned int size,
+		unsigned char *data, gfp_t gfp_mask);
 #endif
 /* return minimum truesize of one skb containing X bytes of data */
 #define SKB_TRUESIZE(X) ((X) +						\

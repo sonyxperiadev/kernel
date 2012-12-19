@@ -368,4 +368,8 @@ struct bcm_mpu_platform_data {
 #define MPU_GET_MLDL_STATUS		_IOR(MPU_IOCTL, 0x42, __u8)
 #define MPU_GET_I2C_SLAVES_ENABLED	_IOR(MPU_IOCTL, 0x43, __u8)
 
+#define MPU_START			_IO(MPU_IOCTL, 0x50)
+#define MPU_STOP			_IO(MPU_IOCTL, 0x51)
+#define MPU_SET_ACC_DELAY	_IOW(MPU_IOCTL, 0x52, int64_t)
+#define MPU_SET_GYRO_DELAY	_IOW(MPU_IOCTL, 0x53, int64_t)
 #endif /* __MPU_H_ */

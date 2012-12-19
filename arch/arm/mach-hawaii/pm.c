@@ -126,9 +126,6 @@ static struct kona_idle_state idle_states[] = {
 static int pm_config_deep_sleep(void)
 {
 	u32 reg_val;
-	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
-	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
-	clk_set_crystal_pwr_on_idle(true);
 
 /*Enable RAM standby
 If RAM standby is enabled, standby signal to RAM will be 0

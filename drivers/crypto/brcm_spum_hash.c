@@ -39,9 +39,12 @@
 #include <mach/rdb/brcm_rdb_spum_axi.h>
 #include "brcm_spum.h"
 
+/*#define  SPUM_PIO_MODE*/
 #define	OP_UPDATE	1
 #define	OP_FINAL	2
 #define OP_INIT		3
+
+#define SHA224_INT_DIGEST_SIZE 32
 
 #define FLAGS_FINUP	1
 
@@ -128,19 +131,17 @@ static void hexdump(unsigned char *buf, unsigned int len)
 	print_hex_dump(KERN_CONT, "", DUMP_PREFIX_OFFSET,
 		       16, 1, buf, len, false);
 }
+#endif
 
-void show_sglist(struct scatterlist *sg)
+void dump_sg_list(struct scatterlist *sg)
 {
 	struct scatterlist *sgl = sg;
 
-	pr_debug("%s: Show sg list\n", __func__);
 	while (sgl) {
-		pr_debug("length %d\n", sgl->length);
+		pr_debug("%s: %d\n", __func__, sgl->length);
 		sgl = sg_next(sgl);
 	}
-
 }
-#endif
 
 static inline void spum_sg_chain(struct scatterlist *prv,
 		 unsigned int prv_nents, struct scatterlist *sgl)
@@ -242,7 +243,7 @@ static u32 get_sg_update(struct spum_request_context *rctx,
 			sgl = scatterwalk_sg_next(sgl);
 		} else {
 			rctx->sg_updt = sgl;
-			sg_mark_end(sg);
+			sg_mark_end(rctx->sg_updt);
 			break;
 		}
 	}
@@ -295,6 +296,7 @@ static int spum_dma_xfer(struct spum_hash_device *dd,
 	struct dma_transfer_list_sg lli_in_hdr, lli_in_data, lli_in_stat;
 	struct dma_transfer_list_sg lli_out_hdr, lli_out_data, lli_out_stat;
 	u32 cfg_rx, cfg_tx, rx_fifo, tx_fifo;
+	unsigned long flags;
 	int err = -EINPROGRESS;
 
 	if (!test_bit(FLAGS_BUSY, &spum_dev->flags)) {
@@ -336,6 +338,15 @@ static int spum_dma_xfer(struct spum_hash_device *dd,
 	lli_in_stat.sg_len = get_sg_list_len(&rctx->spum_in_cmd_stat);
 	spum_map_sgl(dd, &rctx->spum_in_cmd_stat, lli_in_stat.sg_len,
 			 DMA_TO_DEVICE);
+
+	pr_debug("%s: dumping IN HDR sg: \n", __func__);
+	dump_sg_list(&rctx->spum_in_cmd_hdr);
+
+	pr_debug("%s: dumping IN payload sg: \n", __func__);
+	dump_sg_list(sgl);
+
+	pr_debug("%s: dumping IN STATUS sg: \n", __func__);
+	dump_sg_list(&rctx->spum_in_cmd_stat);
 
 	/* Create OUT lli */
 	/* Header */
@@ -390,8 +401,10 @@ static int spum_dma_xfer(struct spum_hash_device *dd,
 	}
 
 	/* Set the DMA channel busy flags. */
+	spin_lock_irqsave(&spum_dev->lock, flags);
 	set_bit(FLAGS_TBUSY, &spum_dev->flags);
 	set_bit(FLAGS_RBUSY, &spum_dev->flags);
+	spin_unlock_irqrestore(&spum_dev->lock, flags);
 
 
 	/* Rx start xfer */
@@ -421,8 +434,6 @@ err:
 static int spum_generate_hdr(struct spum_hash_device *dd, u32 length)
 {
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(dd->req);
-	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
 	struct spum_hw_context spum_hw_hash_ctx;
 	u32 cmd_len_bytes, rx_len, tx_len;
 
@@ -454,14 +465,16 @@ static int spum_generate_hdr(struct spum_hash_device *dd, u32 length)
 
 	case SHA224_DIGEST_SIZE:
 		spum_hw_hash_ctx.auth_algo = SPUM_AUTH_ALGO_SHA224;
-		spum_hw_hash_ctx.icv_len = (SHA224_DIGEST_SIZE / sizeof(u32));
+		/*SHA224 intermediate digest size is 256 bits*/
+		spum_hw_hash_ctx.icv_len = (SHA224_DIGEST_SIZE / sizeof(u32))
+						+ 1;
 		spum_hw_hash_ctx.auth_type =
 			rctx->
 			hash_init ? SPUM_AUTH_TYPE_SHA1_UPDATE :
 			SPUM_AUTH_TYPE_SHA1_INIT;
 		spum_hw_hash_ctx.auth_key_len =
 			rctx->hash_init ?
-				(SHA224_DIGEST_SIZE / sizeof(u32)) : 0;
+				((SHA224_DIGEST_SIZE / sizeof(u32)) + 1) : 0;
 		break;
 
 	case SHA256_DIGEST_SIZE:
@@ -513,7 +526,8 @@ static int spum_generate_hdr(struct spum_hash_device *dd, u32 length)
 		(spum_hw_hash_ctx.icv_len * sizeof(u32)) +
 		 SPUM_OUTPUT_STATUS_LEN;
 
-	rx_len = spum_hw_hash_ctx.data_attribute.data_length + cmd_len_bytes;
+	rx_len = spum_hw_hash_ctx.data_attribute.data_length + cmd_len_bytes +
+		SPUM_INPUT_STATUS_LEN;
 
 	spum_init_device(dd->io_apb_base, dd->io_axi_base);
 	spum_set_pkt_length(dd->io_axi_base, rx_len, tx_len);
@@ -521,6 +535,148 @@ static int spum_generate_hdr(struct spum_hash_device *dd, u32 length)
 	return 0;
 }
 
+#ifdef SPUM_PIO_MODE
+static int spum_hash_cpu_xfer(struct spum_hash_device *dd,
+		struct scatterlist *in_sg, struct scatterlist *out_sg,
+		int len, int type)
+{
+	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
+	struct spum_hw_context *spum_cmd =
+				(struct spum_hw_context *)rctx->spum_in_hdr;
+	u32 status, in_len, out_len;
+	u32 *in_buff, *out_buff;
+	u32 result_fifo[32];
+	int ret = 0, j = 0;
+	u32 i = 0;
+	spum_dma_init(dd->io_axi_base);
+	in_buff = (u32 *)sg_virt(in_sg);
+	out_buff = (u32 *)sg_virt(out_sg);
+
+	pr_debug("%s: entry\n", __func__);
+
+	/*Calculating length to be sent and received*/
+	if (!type) {
+		in_len = (in_sg->length+3)/sizeof(u32);
+		out_len = ((out_sg->length+3)/sizeof(u32));
+	} else {
+		if (in_sg->length > len) {
+			in_len = len/sizeof(u32);
+			out_len = len/sizeof(u32);
+		} else {
+			in_len = (in_sg->length+3)/sizeof(u32);
+			out_len = ((out_sg->length+3)/sizeof(u32));
+
+		}
+	}
+
+	pr_debug("in_len=%d, out_len=%d\n", in_len, out_len);
+	/*Send and Receive data*/
+	while (j < out_len) {
+		status = readl(dd->io_axi_base +
+			SPUM_AXI_FIFO_STAT_OFFSET);
+		if ((status & SPUM_AXI_FIFO_STAT_IFIFO_RDY_MASK)
+			&& (i < in_len)) {
+			writel(*in_buff++, dd->io_axi_base +
+					SPUM_AXI_FIFO_IN_OFFSET);
+			i++;
+		}
+		status = readl(dd->io_axi_base +
+			SPUM_AXI_FIFO_STAT_OFFSET);
+		if (status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK) {
+			*out_buff++ = readl(dd->io_axi_base +
+				SPUM_AXI_FIFO_OUT_OFFSET);
+			j++;
+
+		}
+	}
+
+	j = 0;
+
+	/*If data is payload reading the hash value*/
+	if (type == 1) {
+		status = readl(dd->io_axi_base +
+			SPUM_AXI_FIFO_STAT_OFFSET);
+		while ((status & SPUM_AXI_FIFO_STAT_OFIFO_RDY_MASK)
+					&& j < 8) {
+			result_fifo[j % 32] = readl(dd->io_axi_base +
+					SPUM_AXI_FIFO_OUT_OFFSET);
+			j++;
+			status = readl(dd->io_axi_base +
+				SPUM_AXI_FIFO_STAT_OFFSET);
+		}
+	}
+
+	/*Copy the rssult hash to send back*/
+	/*SHA224 intermediate digest size is 256 bits*/
+	if (rctx->digestsize == SHA224_DIGEST_SIZE && rctx->op == OP_UPDATE)
+		memcpy(&rctx->digest, result_fifo, SHA224_INT_DIGEST_SIZE);
+	else
+		memcpy(&rctx->digest, result_fifo, rctx->digestsize);
+
+	pr_debug("%s: exit\n", __func__);
+	return ret;
+
+}
+
+static int spum_hash_pio_xfer(struct spum_hash_device *dd,
+			struct scatterlist *sg, int length)
+{
+	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
+	struct spum_hw_context *spum_cmd =
+				(struct spum_hw_context *)rctx->spum_in_hdr;
+	struct scatterlist *in_sg;
+	struct scatterlist *out_sg;
+	u32 locallength = 0, len = length;
+	int ret;
+	/*Sending header*/
+	pr_debug("%s: entry\n", __func__);
+	spum_hash_cpu_xfer(dd, &rctx->spum_in_cmd_hdr,
+			&rctx->spum_out_cmd_hdr, 0, 0);
+
+	in_sg = sg;
+	out_sg = sg;
+	pr_debug("header sent and received in func %s", __func__);
+	/*Sending payload*/
+	while (in_sg && out_sg) {
+		ret = spum_hash_cpu_xfer(dd, in_sg, out_sg, len, 1);
+		if (in_sg->length > len)
+			break;
+		else
+			len -= in_sg->length;
+
+		in_sg = sg_next(in_sg);
+		out_sg = sg_next(out_sg);
+	}
+	pr_debug("payload sent and received in func %s", __func__);
+	/*Sending status*/
+	/*spum_hash_cpu_xfer(dd, &rctx->spum_in_cmd_stat,
+			&rctx->spum_out_cmd_stat, 0);*/
+
+	/*Resoring the original SG*/
+	if ((rctx->rx_len == 0)
+		&& (rctx->partial != 0)) {
+		while (!sg_is_last(sg)) {
+			if (sg == rctx->tsg)
+				break;
+			sg = sg_next(sg);
+		}
+		sg->length = rctx->tlen;
+		pr_debug("sg length reverted back to %d in func %s",
+			sg->length, __func__);
+	}
+	rctx->buff[rctx->index].bufcnt = 0;
+	ret = spum_hash_finish(dd, ret);
+	if (rctx->flags & FLAGS_FINUP && (ret != -EINPROGRESS))
+		ret = spum_hash_final(dd->req);
+	if (ret != -EINPROGRESS) {
+		if (spum_dev->spum_queue.qlen)
+			spum_queue_task((unsigned long)&spum_dev);
+	}
+	pr_debug("%s: exit\n", __func__);
+	return 0;
+
+}
+#endif
 
 static int spum_hash_update_data(struct spum_hash_device *dd)
 {
@@ -545,8 +701,14 @@ static int spum_hash_update_data(struct spum_hash_device *dd)
 			dd->sg = &rctx->spum_local_data;
 			dd->dma_len = 1;
 			spum_generate_hdr(dd, rctx->buff[rctx->index].bufcnt);
-			return spum_dma_xfer(dd, &rctx->spum_local_data, 1,
+			#ifdef SPUM_PIO_MODE
+				return  spum_hash_pio_xfer(dd,
+					&rctx->spum_local_data,
 					 rctx->buff[rctx->index].bufcnt);
+			#else
+				return spum_dma_xfer(dd, &rctx->spum_local_data,
+					1, rctx->buff[rctx->index].bufcnt);
+			#endif
 		} else
 			return -ENOSR;
 	}
@@ -557,7 +719,12 @@ static int spum_hash_update_data(struct spum_hash_device *dd)
 		rctx->rx_len -= length;
 		dd->sg = rctx->sg;
 		spum_generate_hdr(dd, length);
-		return spum_dma_xfer(dd, dd->sg, dd->dma_len, length);
+		#ifdef SPUM_PIO_MODE
+			return spum_hash_pio_xfer(dd, dd->sg, length);
+		#else
+			return spum_dma_xfer(dd, dd->sg,
+				dd->dma_len, length);
+		#endif
 	}
 
 	/* Unaligned size sg node. Handle individually. */
@@ -574,8 +741,14 @@ static int spum_hash_update_data(struct spum_hash_device *dd)
 				dd->dma_len = 1;
 				spum_generate_hdr(dd,
 					 rctx->buff[rctx->index].bufcnt);
-				return spum_dma_xfer(dd, dd->sg, 1,
+
+				#ifdef SPUM_PIO_MODE
+					return spum_hash_pio_xfer(dd, dd->sg,
 					 rctx->buff[rctx->index].bufcnt);
+				#else
+					return spum_dma_xfer(dd, dd->sg, 1,
+					 rctx->buff[rctx->index].bufcnt);
+				#endif
 			} else
 				return -ENOSR;
 		} else {
@@ -589,9 +762,15 @@ static int spum_hash_update_data(struct spum_hash_device *dd)
 				dd->dma_len = 1;
 				spum_generate_hdr(dd,
 					 rctx->buff[rctx->index].bufcnt);
-				return spum_dma_xfer(dd,
+				#ifdef SPUM_PIO_MODE
+					return spum_hash_pio_xfer(dd,
+					&rctx->spum_local_data,
+					rctx->buff[rctx->index].bufcnt);
+				#else
+					return spum_dma_xfer(dd,
 					 &rctx->spum_local_data, 1,
 					 rctx->buff[rctx->index].bufcnt);
+				#endif
 			} else
 				return -ENOSR;
 		}
@@ -612,6 +791,9 @@ static int spum_hash_update(struct ahash_request *req)
 	u32 len = 0;
 	int ret = 0;
 
+	pr_debug("%s: entry\n", __func__);
+	pr_debug("%s: req->nbytes: %d\n", __func__, req->nbytes);
+
 	if (!req->nbytes)
 		return ret;
 
@@ -627,6 +809,11 @@ static int spum_hash_update(struct ahash_request *req)
 
 	if (rctx->buff[rctx->index].bufcnt + req->nbytes
 			 <= SPUM_HASH_BLOCK_SIZE) {
+		pr_debug("%s: Appending to local buff; "
+			"bufcnt: %d, req->nbytes: %d\n",
+			__func__,
+			rctx->buff[rctx->index].bufcnt,
+			req->nbytes);
 		spum_append_sg(rctx, rctx->index);
 		return ret;
 	}
@@ -635,6 +822,10 @@ static int spum_hash_update(struct ahash_request *req)
 	rctx->rx_len = (rctx->buff[rctx->index].bufcnt + rctx->total) -
 			 rctx->partial;
 	rctx->blk_cnt += rctx->rx_len;
+
+	pr_debug("%s: rctx->partial: %d; rctx->rx_len: %d, "
+		"rctx->blk_cnt: %d\n", __func__, rctx->partial,
+		rctx->rx_len, rctx->blk_cnt);
 
 	/* Strip the partial length payload from the end
 	*  of the input sglist and copy into local buffer.
@@ -687,7 +878,7 @@ static int spum_hash_update(struct ahash_request *req)
 	ret = spum_enqueue_request(&req->base);
 
 	if (ret == -EINPROGRESS)
-		tasklet_hi_schedule(&spum_dev->spum_queue_task);
+		spum_queue_task((unsigned long)&spum_dev);
 
 	return ret;
 }
@@ -695,7 +886,6 @@ static int spum_hash_update(struct ahash_request *req)
 static int spum_hash_init(struct ahash_request *req)
 {
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
 	struct spum_request_context *rctx = ahash_request_ctx(req);
 	int err = 0;
 
@@ -724,14 +914,16 @@ static int spum_hash_init(struct ahash_request *req)
 
 static int spum_hash_finish(struct spum_hash_device *dd, int err)
 {
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(dd->req);
-	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
 	int ret = 0;
+	unsigned long flags;
 
 	pr_debug("%s: entry\n", __func__);
 
+	spin_lock_irqsave(&spum_dev->lock, flags);
 	clear_bit(FLAGS_BUSY, &spum_dev->flags);
+	spin_unlock_irqrestore(&spum_dev->lock, flags);
+
 	rctx->offset = 0;
 	if (!rctx->buff[rctx->index].bufcnt)
 		rctx->index ^= 0x1;
@@ -812,7 +1004,7 @@ static int spum_hash_final(struct ahash_request *req)
 	ret = spum_enqueue_request(&req->base);
 
 	if (ret == -EINPROGRESS)
-		tasklet_hi_schedule(&spum_dev->spum_queue_task);
+		spum_queue_task((unsigned long)&spum_dev);
 
 	return ret;
 }
@@ -858,6 +1050,7 @@ static int spum_hash_cra_init(struct crypto_tfm *tfm)
 				 sizeof(struct spum_request_context));
 
 	clk_enable(ctx->dd->spum_open_clk);
+
 	return err;
 }
 
@@ -963,8 +1156,6 @@ static void spum_dma_tasklet(unsigned long data)
 {
 	struct spum_hash_device *dd = (struct spum_hash_device *)data;
 	struct spum_request_context *rctx = ahash_request_ctx(dd->req);
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(dd->req);
-	struct spum_hash_context *ctx = crypto_ahash_ctx(tfm);
 	int err = -EINPROGRESS;
 	struct scatterlist *sg = dd->req->src;
 
@@ -989,7 +1180,11 @@ static void spum_dma_tasklet(unsigned long data)
 	dma_unmap_sg(dd->dev, &rctx->spum_out_cmd_stat, 1, DMA_FROM_DEVICE);
 
 	/* Collect the intermediate hash value. */
-	memcpy(&rctx->digest, (u8 *)sg_virt(&rctx->spum_out_cmd_stat),
+	if (rctx->digestsize == SHA224_DIGEST_SIZE && rctx->op == OP_UPDATE)
+		memcpy(&rctx->digest, (u8 *)sg_virt(&rctx->spum_out_cmd_stat),
+			SHA224_INT_DIGEST_SIZE);
+	else
+		memcpy(&rctx->digest, (u8 *)sg_virt(&rctx->spum_out_cmd_stat),
 		 rctx->digestsize);
 
 	rctx->buff[rctx->index].bufcnt = 0;
@@ -1014,7 +1209,7 @@ static void spum_dma_tasklet(unsigned long data)
 			err = spum_hash_final(dd->req);
 		if (err != -EINPROGRESS) {
 			if (spum_dev->spum_queue.qlen)
-				tasklet_hi_schedule(&spum_dev->spum_queue_task);
+				spum_queue_task((unsigned long)&spum_dev);
 		}
 	}
 }
@@ -1023,6 +1218,7 @@ static void spum_dma_callback(void *data, enum pl330_xfer_status status)
 {
 	struct spum_hash_device *dd;
 	u32 *dma_chan = (u32 *)data;
+	unsigned long flags;
 
 	pr_debug("%s: dma_chain %d\n", __func__, *dma_chan);
 
@@ -1033,11 +1229,17 @@ static void spum_dma_callback(void *data, enum pl330_xfer_status status)
 		break;
 	}
 
-	if (*dma_chan == spum_dev->rx_dma_chan)
+	if (*dma_chan == spum_dev->rx_dma_chan) {
+		spin_lock_irqsave(&spum_dev->lock, flags);
 		clear_bit(FLAGS_RBUSY, &spum_dev->flags);
+		spin_unlock_irqrestore(&spum_dev->lock, flags);
+	}
 
-	if (*dma_chan == spum_dev->tx_dma_chan)
+	if (*dma_chan == spum_dev->tx_dma_chan) {
+		spin_lock_irqsave(&spum_dev->lock, flags);
 		clear_bit(FLAGS_TBUSY, &spum_dev->flags);
+		spin_unlock_irqrestore(&spum_dev->lock, flags);
+	}
 
 	if ((!test_bit(FLAGS_TBUSY, &spum_dev->flags))
 	    && (!test_bit(FLAGS_RBUSY, &spum_dev->flags)))
@@ -1124,24 +1326,17 @@ static int __devinit spum_hash_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	if (spum_dev->spum_queue.max_qlen != SPUM_QUEUE_LENGTH)
-		crypto_init_queue(&spum_dev->spum_queue, SPUM_QUEUE_LENGTH);
-
 	/* Initialize SPU-M block */
 	clk_enable(dd->spum_open_clk);
 	spum_init_device(dd->io_apb_base, dd->io_axi_base);
 	clk_disable(dd->spum_open_clk);
 
 	INIT_LIST_HEAD(&dd->list);
-	spin_lock_init(&dd->lock);
 	spin_lock(&spum_drv.lock);
 	list_add_tail(&dd->list, &spum_drv.dev_list);
 	spin_unlock(&spum_drv.lock);
 
 	tasklet_init(&dma_tasklet, spum_dma_tasklet, (unsigned long)dd);
-	if (!spum_dev->spum_queue_task.func)
-		tasklet_init(&spum_dev->spum_queue_task, spum_queue_task,
-				(unsigned long)&spum_dev);
 
 	for (i = 0; i < ARRAY_SIZE(spum_algo); i++) {
 		ret = crypto_register_ahash(&spum_algo[i]);
@@ -1185,8 +1380,6 @@ static int __devexit spum_hash_remove(struct platform_device *pdev)
 		crypto_unregister_ahash(&spum_algo[i]);
 
 	tasklet_kill(&dma_tasklet);
-	if (spum_dev->spum_queue_task.func)
-		tasklet_kill(&spum_dev->spum_queue_task);
 
 	clk_put(dd->spum_open_clk);
 	kfree(dd);

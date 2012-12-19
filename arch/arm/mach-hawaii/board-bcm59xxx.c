@@ -36,6 +36,9 @@
 #endif
 #include "pm_params.h"
 #include <mach/rdb/brcm_rdb_include.h>
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+#include <linux/spa_power.h>
+#endif
 
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0c
@@ -180,7 +183,7 @@ static struct regulator_init_data bcm59xxx_simldo1_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim1_supply),
 	.consumer_supplies = sim1_supply,
@@ -196,7 +199,7 @@ static struct regulator_init_data bcm59xxx_simldo2_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
 	.consumer_supplies = sim2_supply,
@@ -222,6 +225,7 @@ static struct regulator_init_data bcm59xxx_sdldo_data = {
 __weak struct regulator_consumer_supply sdx_supply[] = {
 	{.supply = "sdx_vcc"},
 	REGULATOR_SUPPLY("vddo", "sdhci.3"), /* 0x3f1b0000.sdhci */
+	{.supply = "dummy"},
 	{.supply = "dummy"},
 };
 static struct regulator_init_data bcm59xxx_sdxldo_data = {
@@ -329,7 +333,7 @@ static struct regulator_init_data bcm59xxx_vibldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vib_supply),
 	.consumer_supplies = vib_supply,
@@ -368,7 +372,7 @@ static struct regulator_init_data bcm59xxx_gpldo2_data = {
 };
 
 __weak struct regulator_consumer_supply gpldo3_supply[] = {
-	{.supply = "gpldo3_uc"},
+	{.supply = "sim3_vcc"},
 };
 static struct regulator_init_data bcm59xxx_gpldo3_data = {
 	.constraints = {
@@ -377,7 +381,7 @@ static struct regulator_init_data bcm59xxx_gpldo3_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo3_supply),
 	.consumer_supplies = gpldo3_supply,
@@ -759,7 +763,6 @@ static struct bcmpmu59xxx_rw_data register_init_data[] = {
 	/* Enable BC12_EN */
 	{.addr = PMU_REG_MBCCTRL5, .val = 0x01, .mask = 0x01},
 	/* Max VFLOAT to 4.2*/
-	{.addr = PMU_REG_MBCCTRL6, .val = 0x0C, .mask = 0xFF},
 	/*  ICCMAX to 1500mA*/
 	{.addr = PMU_REG_MBCCTRL8, .val = 0x09, .mask = 0xFF},
 	/* Set curr to 100mA during boot*/
@@ -1051,6 +1054,50 @@ static struct batt_volt_cap_map bl_84_volt_cap_lut[] = {
 	{3300, 0},
 };
 
+static struct batt_eoc_curr_cap_map bl_84_eoc_cap_lut[] = {
+	{290, 90},
+	{270, 91},
+	{250, 92},
+	{228, 93},
+	{208, 94},
+	{185, 95},
+	{165, 96},
+	{145, 97},
+	{125, 98},
+	{105, 99},
+	{85, 100},
+	{0, 100},
+};
+
+static struct vfloat_lvl_volt_map bcmpmu59xxx_vfloat_volt_map[] = {
+	{VFLOAT_LVL_3_4, 3400},
+	{VFLOAT_LVL_3_6, 3600},
+	{VFLOAT_LVL_3_75, 3750},
+	{VFLOAT_LVL_3_80, 3800},
+	{VFLOAT_LVL_3_85, 3850},
+	{VFLOAT_LVL_3_90, 3900},
+	{VFLOAT_LVL_4_00, 4000},
+	{VFLOAT_LVL_4_05, 4005},
+	{VFLOAT_LVL_4_10, 4010},
+	{VFLOAT_LVL_4_125, 4125},
+	{VFLOAT_LVL_4_150, 4150},
+	{VFLOAT_LVL_4_175, 4175},
+	{VFLOAT_LVL_4_20, 4200},
+	{VFLOAT_LVL_4_225, 4225},
+	{VFLOAT_LVL_4_25, 4250},
+	{VFLOAT_LVL_4_275, 4275},
+	{VFLOAT_LVL_4_30, 4300},
+	{VFLOAT_LVL_4_325, 4325},
+	{VFLOAT_LVL_4_35, 4350},
+	{VFLOAT_LVL_4_375, 4374},
+	{VFLOAT_LVL_4_40, 4400},
+	{VFLOAT_LVL_4_425, 4425},
+	{VFLOAT_LVL_4_45, 4450},
+	{VFLOAT_LVL_4_475, 4475},
+	{VFLOAT_LVL_4_50, 4500},
+	{VFLOAT_LVL_MAX, 4500},
+};
+
 static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 	{
 		.temp = -20,
@@ -1144,6 +1191,8 @@ static struct bcmpmu_batt_property bl_84_props = {
 	.volt_cap_lut_sz = ARRAY_SIZE(bl_84_volt_cap_lut),
 	.esr_temp_lut = bl_84_esr_temp_lut,
 	.esr_temp_lut_sz = ARRAY_SIZE(bl_84_esr_temp_lut),
+	.eoc_cap_lut = bl_84_eoc_cap_lut,
+	.eoc_cap_lut_sz = ARRAY_SIZE(bl_84_eoc_cap_lut),
 };
 
 static struct bcmpmu_batt_cap_levels bl_84_cap_levels = {
@@ -1157,8 +1206,11 @@ static struct bcmpmu_batt_volt_levels bl_84_volt_levels = {
 	.critical = 3300,
 	.low = 3500,
 	.normal = 3700,
-	.high = 4190,
+	.high = 4140, /* should be ~60mv less than vfloat_lvl */
+	.crit_cutoff_cnt = 3,
 	.vfloat_lvl = VFLOAT_LVL_4_20,
+	.vfloat_max = VFLOAT_LVL_4_20,
+	.vfloat_gap = 100, /* in mV */
 };
 
 static struct bcmpmu_batt_calibration_data bl_84_cal_data = {
@@ -1169,14 +1221,36 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.cap_levels = &bl_84_cap_levels,
 	.volt_levels = &bl_84_volt_levels,
 	.calibration_data = &bl_84_cal_data,
+	.vfloat_volt_lut = bcmpmu59xxx_vfloat_volt_map,
+	.vfloat_volt_lut_sz = ARRAY_SIZE(bcmpmu59xxx_vfloat_volt_map),
 	.sns_resist = 10,
 	.sys_impedence = 33,
-	.eoc_current = 75, /* End of charge current in mA */
-	.hw_maintenance_charging = true, /* enable HW EOC of PMU */
+	.eoc_current = 85, /* End of charge current in mA */
+	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
+	.fg_factor = 976,
 };
 
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
+	.chrgr_name = "bcmpmu_charger",
+};
+
+struct spa_power_data spa_data = {
+	.charger_name = "bcmpmu_charger",
+
+	.suspend_temp_hot = 400,
+	.recovery_temp_hot = 300,
+	.suspend_temp_cold = -20,
+	.recovery_temp_cold = -15,
+	.eoc_current = 85,
+	.recharge_voltage = 4100, /** should be < bl_84_volt_levels.high */
+	.charging_cur_usb = 500,
+	.charging_cur_wall = 1500,
+	.charge_timer_limit = 10,
+};
+#endif /*CONFIG_CHARGER_BCMPMU_SPA*/
 /* The subdevices of the bcmpmu59xxx */
 static struct mfd_cell pmu59xxx_devs[] = {
 	{
@@ -1210,14 +1284,36 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.id = -1,
 	},
 	{
-		.name = "bcmpmu_otg_xceiv",
-		.id = -1,
-	},
-	{
 		.name = "bcmpmu_adc",
 		.id = -1,
 		.platform_data = adc_pdata,
 		.pdata_size = sizeof(adc_pdata),
+	},
+#ifdef CONFIG_CHARGER_BCMPMU_SPA
+	{
+		.name = "bcmpmu_spa_pb",
+		.id = -1,
+		.platform_data = &spa_pb_pdata,
+		.pdata_size = sizeof(spa_pb_pdata),
+	},
+#ifdef CONFIG_SEC_CHARGING_FEATURE
+	{
+		.name = "spa_power",
+		.id = -1,
+		.platform_data = &spa_data,
+		.pdata_size = sizeof(spa_data),
+	},
+	{
+		.name = "spa_ps",
+		.id = -1,
+		.platform_data = NULL,
+		.pdata_size = 0,
+	},
+#endif /*CONFIG_SEC_CHARGING_FEATURE*/
+#endif /*CONFIG_CHARGER_BCMPMU_SPA*/
+	{
+		.name = "bcmpmu_otg_xceiv",
+		.id = -1,
 	},
 	{
 		.name = "bcmpmu_rpc",
@@ -1259,8 +1355,7 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 	.init_max = ARRAY_SIZE(register_init_data),
 	.bc = BCMPMU_BC_PMU_BC12,
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
-	.piggyback_chrg = 1,
-	.piggyback_chrg_name = "bcm59039_charger",
+.flags = BCMPMU_SPA_EN,
 #endif
 
 };
@@ -1351,7 +1446,7 @@ static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu)
 	return 0;
 }
 
-int board_bcm59xx_init(void)
+int __init board_bcm59xx_init(void)
 {
 	int             ret = 0;
 	int             irq;

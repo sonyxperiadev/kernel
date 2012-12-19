@@ -193,7 +193,7 @@ static int Get_SDCARD_Available(void)
 
 	ret = kern_path("/sdcard/", LOOKUP_DIRECTORY, &path);
 	if (ret < 0)
-		goto out;
+		return ret;
 
 	ret = vfs_statfs(&path, &sbuf);
 	if (ret < 0)
@@ -202,6 +202,7 @@ static int Get_SDCARD_Available(void)
 	ret = (int)min(sbuf.f_bavail * sbuf.f_bsize, int_max);
 
 out:
+	path_put(&path);
 	return ret;
 }
 

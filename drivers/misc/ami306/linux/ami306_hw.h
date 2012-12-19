@@ -11,8 +11,8 @@
 #define AMI_I2C_ADDRESS			0x0E	/* pandaboard */
 
 /* GPIO */
-#define AMI_GPIO_INT			152
-#define AMI_GPIO_DRDY			39
+#define AMI_GPIO_INT			0
+#define AMI_GPIO_DRDY			0
 
 /* sensor position */
 #define AMI_DIR				6
