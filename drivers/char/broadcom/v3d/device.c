@@ -86,33 +86,25 @@ static void allocate_bin_memory(struct work_struct *work)
 	v3d_bin_memory_t  memory;
 	unsigned long     flags;
 
-	/* Job may have been cancelled before we got here */
-	if (job == NULL) {
-		v3d_session_job_release(job, __func__);
-		return;
-	}
 	MY_ASSERT(instance->out_of_memory.index.in_use == instance->out_of_memory.index.allocated);
 	if (instance->out_of_memory.index.allocated == sizeof(instance->out_of_memory.memory) / sizeof(instance->out_of_memory.memory[0])) {
 		printk(KERN_ERR "V3D: Out of overspill binning memory entries - job cancelled!\n");
 		v3d_device_job_cancel(instance, job, 0);
-		v3d_session_job_release(job, __func__);
 		return;
 	}
 
-	/* We only change Allocated here */
 	memory.virtual = dma_alloc_coherent(instance->device, BIN_BLOCK_BYTES, &memory.physical, GFP_DMA);
 	if (memory.virtual == NULL) {
 		printk(KERN_ERR "V3D: Unable to allocate overspill binning memory - job cancelled!\n");
 		v3d_device_job_cancel(instance, job, 0);
-		v3d_session_job_release(job, __func__);
 		return;
 	}
 
-	/* Has the job we were allocating for been cancelled? */
+	/* Do we have an active job */
 	spin_lock_irqsave(&instance->in_progress.lock, flags);
-	if (job != instance->in_progress.job) {
+	if (instance->in_progress.job == NULL) {
 #ifdef VERBOSE_DEBUG
-		printk(KERN_ERR "%s: Next job (%p) already running\n", __func__, instance->in_progress.job);
+		printk(KERN_ERR "%s: No job running\n", __func__);
 #endif
 		spin_unlock_irqrestore(&instance->in_progress.lock, flags);
 		dma_free_coherent(
@@ -125,12 +117,14 @@ static void allocate_bin_memory(struct work_struct *work)
 
 	instance->out_of_memory.memory[instance->out_of_memory.index.allocated] = memory;
 	++instance->out_of_memory.index.allocated;
-	++instance->out_of_memory.index.in_use;
-	supply_binning_memory(instance, &memory);
-	spin_unlock_irqrestore(&instance->in_progress.lock, flags);
 
-	/* Remove the reference added by the ISR */
-	v3d_session_job_release(job, __func__);
+	/* We've allocated the memory, but we only supply it if the current job is stalled */
+	if ((read(instance, V3D_INTCTL_OFFSET) & V3D_INTCTL_INT_OUTOMEM_MASK) != 0
+		&& (read(instance, V3D_INTENA_OFFSET) & V3D_INTENA_EI_OUTOMEM_MASK) == 0) {
+		++instance->out_of_memory.index.in_use;
+		supply_binning_memory(instance, &memory);
+	}
+	spin_unlock_irqrestore(&instance->in_progress.lock, flags);
 }
 
 static void release_bin_memory(v3d_device_t *instance)
@@ -592,14 +586,12 @@ static int handle_bin_render_interrupt(v3d_device_t *instance, uint32_t status)
 	} else
 		if ((status & (1 << MEMORY_BIT)) != 0) {
 			/* Need more overflow binning memory */
-			v3d_bin_memory_t *memory = NULL;
-			if (instance->out_of_memory.index.in_use != instance->out_of_memory.index.allocated)
-				memory = &instance->out_of_memory.memory[instance->out_of_memory.index.in_use++];
-			if (memory != NULL)
+			if (instance->out_of_memory.index.in_use != instance->out_of_memory.index.allocated) {
+				v3d_bin_memory_t *memory = &instance->out_of_memory.memory[instance->out_of_memory.index.in_use++];
 				supply_binning_memory(instance, memory);
+			}
 			else {
 				/* Need another allocation */
-				v3d_session_job_reference(instance->in_progress.job, __func__); /* Prevents freeing on completion */
 				write(instance, V3D_INTDIS_OFFSET, 1 << MEMORY_BIT);
 				queue_work(instance->out_of_memory.work_queue, &instance->out_of_memory.bin_allocation);
 			}
@@ -697,6 +689,9 @@ static irqreturn_t interrupt_handler(int irq, void *context)
 	spin_lock_irqsave(&instance->in_progress.lock, flags);
 	job = instance->in_progress.job;
 	while (get_status(instance, &status, &qpu_status) != 0) {
+#ifdef VERBOSE_DEBUG
+		printk(KERN_ERR "%s: s %08x q %08x\n", __func__, status, qpu_status);
+#endif
 		if (status != 0)
 			complete |= handle_bin_render_interrupt(instance, status);
 		if (qpu_status != 0)
