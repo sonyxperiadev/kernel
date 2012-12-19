@@ -36,6 +36,11 @@
 #define GPIO_GPORC_BASE_PHYS    (GPIO2_BASE_ADDR + GPIO_GPORC0_OFFSET)
 #define GPIO_GPORC_BASE_VIRT    (KONA_GPIO2_VA + GPIO_GPORC0_OFFSET)
 
+#define	RETENTION_TRACE_OFFSET		(SZ_1K)
+#define	WFI_TRACE_OFFSET		(SZ_2K)
+#define	TRACE_PATTERN_OFFSET		0 /* 1st word from offset */
+#define	COUNTER_OFFSET			1 /* 2nd word from offset */
+
 /* No check for gpio number to speed up the API */
 void dbg_gpio_set(u32 gpio)
 {
@@ -132,8 +137,18 @@ static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 {
 }
 #endif /* DORMANT_PROFILE && CONFIG_A9_DORMANT_MODE */
-
 u32 dorm_profile_enable;
+
+struct lowpower_trace {
+	u32 *dormant_trace_v;
+	u32 *dormant_trace_p;
+	u32 *retention_trace;
+	u32 *wfi_trace;
+	u32 dorm_count;
+	u32 *curr_dorm_trace;
+};
+
+struct lowpower_trace lp_trace[CONFIG_NR_CPUS];
 
 struct debug {
 	int dummy;
@@ -276,15 +291,19 @@ static int param_get_debug(char *buffer, const struct kernel_param *kp)
 /*****************************************************************************
  *                       DORMANT MODE INSTRUMENTATION                        *
  *****************************************************************************/
-
-void instrument_dormant_entry(void)
+void instrument_dormant_trace(u32 trace, u32 service, u32 success)
 {
-	dormant_profile_entry();
-}
-
-void instrument_dormant_exit(void)
-{
-	dormant_profile_exit();
+	u32 cpu = smp_processor_id();
+	if (lp_trace[cpu].dormant_trace_v) {
+		lp_trace[cpu].curr_dorm_trace
+			= lp_trace[cpu].dormant_trace_v
+				+ lp_trace[cpu].dorm_count;
+		*(lp_trace[cpu].curr_dorm_trace)
+			= trace + success + (service * 2);
+		lp_trace[cpu].dorm_count
+			= (lp_trace[cpu].dorm_count + 1)
+				& DORMANT_MAX_TRACE_ENTRIES;
+	}
 }
 
 /*****************************************************************************
@@ -401,9 +420,33 @@ void instrument_wfi(int trace_path)
 
 int __init __pmdbg_init(void)
 {
+	void *v[CONFIG_NR_CPUS];
+	dma_addr_t p[CONFIG_NR_CPUS];
+	int i;
+
 	snapshot_table_register(snapshot, ARRAY_SIZE(snapshot));
 	dormant_profile_config(0, 0, 0, 0);
 
+	for (i = 0; i < CONFIG_NR_CPUS; i++) {
+		v[i] = dma_alloc_coherent(NULL, SZ_4K, &p[i],
+				GFP_ATOMIC | __GFP_ZERO);
+		if (v[i] == NULL) {
+			pr_info("%s: cpu%d tracer dma buffer alloc failed\n",
+				__func__, i);
+			return -ENOMEM;
+		}
+		lp_trace[i].dormant_trace_v = (u32 *) v[i];
+		lp_trace[i].dormant_trace_p = (u32 *) p[i];
+		lp_trace[i].retention_trace = (u32 *)((u32)v[i]
+						+ RETENTION_TRACE_OFFSET);
+		lp_trace[i].wfi_trace = (u32 *)((u32)v[i] + WFI_TRACE_OFFSET);
+		lp_trace[i].dorm_count = 0;
+		pr_info("%s: cpu%d dormant_trace_v:0x%x,_p:0x%x\n",
+				__func__, i, (u32) v[i], (u32) p[i]);
+		pr_info("%s: cpi%d ret_trace:0x%x; wfi_trace:0x%x\n",
+			__func__, i, (u32) lp_trace[i].retention_trace,
+				(u32) lp_trace[i].wfi_trace);
+	}
 	return 0;
 }
 

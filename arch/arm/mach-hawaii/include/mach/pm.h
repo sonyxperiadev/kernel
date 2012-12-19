@@ -34,9 +34,23 @@
 /* #define DORMANT_PROFILE */
 
 /* Set this to 0 to disable dormant mode tracing code */
-#define DORMANT_TRACE_ENABLE        1
-#define DORMANT_ENTRY               0xF0F0F0F0
-#define DORMANT_EXIT                0xE0E0E0E0
+#define DORMANT_TRACE_ENABLE		1
+#define DORMANT_MAX_TRACE_ENTRIES	0x1f
+
+/* Dormant trace values */
+#define DORMANT_ENTRY			0x10
+#define DORMANT_ENTRY_REGS_SAVE		0x20
+#define DORMANT_ENTRY_L2_OFF		0x30
+#define DORMANT_ENTRY_SWITCHES_OFF	0x40
+#define DORMANT_ENTRY_LINUX		0x50
+#define DORMANT_EXIT_WAKE_UP		0x90
+#define DORMANT_EXIT_L2_ON		0xA0
+#define DORMANT_EXIT_BASIC_RESTORE	0xB0
+#define DORMANT_EXIT_SWITCHES_ON	0xC0
+#define DORMANT_EXIT_REGS_RESTORE	0xD0
+#define DORMANT_EXIT_CPU1_WAKEUP	0xE0
+#define DORMANT_EXIT			0xF0
+
 #define DEEP_SLEEP_LATENCY     8000 /*latency due to xtal warm up delay*/
 
 /* Following macro values should be loadable via a single
@@ -121,8 +135,7 @@ extern void request_suspend_state(suspend_state_t state);
 #else
 static inline void request_suspend_state(suspend_state_t state) { }
 #endif
-extern void instrument_dormant_entry(void);
-extern void instrument_dormant_exit(void);
+extern void instrument_dormant_trace(u32 trace, u32 service, u32 success);
 extern void instrument_wfi(int trace_path);
 extern void instrument_retention(int trace_path);
 extern int get_force_sleep_state(void);

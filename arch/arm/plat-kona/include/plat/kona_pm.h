@@ -17,6 +17,12 @@
 #define CTRL_PARAMS_ENTER_SUSPEND	(1 << 1)
 #define CTRL_PARAMS_CSTATE_DISABLED	(1 << 2)
 
+/* Additional dormant traces for idle and suspend */
+#define DORMANT_IDLE_PATH_ENTRY		0xA0A0
+#define DORMANT_IDLE_PATH_EXIT		0xB0B0
+#define DORMANT_SUSPEND_PATH_ENTRY	0xE0E0
+#define DORMANT_SUSPEND_PATH_EXIT	0xF0F0
+
 struct kona_idle_state {
 	char *name;
 	char *desc;

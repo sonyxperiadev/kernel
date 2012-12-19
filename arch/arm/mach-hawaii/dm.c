@@ -536,6 +536,8 @@ void dormant_enter(u32 service)
 		return;
 	}
 
+	instrument_dormant_trace(DORMANT_ENTRY, service, 0);
+
 	/* Save CCU registers TBD */
 
 	/* Save all the local data for this CPU for either service */
@@ -568,12 +570,13 @@ void dormant_enter(u32 service)
 
 	save_mmu((void *)__get_cpu_var(mmu_data));
 
+	instrument_dormant_trace(DORMANT_ENTRY_REGS_SAVE, service, 0);
 	if ((service == DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
 			local_secure_api(SSAPI_DISABLE_L2_CACHE, 0, 0, 0);
+	instrument_dormant_trace(DORMANT_ENTRY_L2_OFF, service, 0);
 
 	spin_lock_irqsave(&dormant_entry_lock, flgs);
 	num_cores_in_dormant++;
-	log_dormant_event(DORMNAT_ENTRY_LOG);
 	if (num_cores_in_dormant == num_cpus()) {
 		/* This is the last core going down */
 		cnt_attempts++;
@@ -620,6 +623,7 @@ void dormant_enter(u32 service)
 	}
 	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
 
+	instrument_dormant_trace(DORMANT_ENTRY_SWITCHES_OFF, service, 0);
 	dormant_return = cpu_suspend(0, dormant_enter_continue);
 
 	/* We are here after either a failed dormant or a successful
@@ -631,8 +635,10 @@ void dormant_enter(u32 service)
 		       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET +
 		       smp_processor_id());
 
+	instrument_dormant_trace(DORMANT_EXIT_WAKE_UP, service, dormant_return);
 	if ((service == DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
 			local_secure_api(SSAPI_ENABLE_L2_CACHE, 0, 0, 0);
+	instrument_dormant_trace(DORMANT_EXIT_L2_ON, service, dormant_return);
 
 	/* if we failed to enter dormant, restore
 	 * only what might have changed when dormant fails
@@ -653,17 +659,12 @@ void dormant_enter(u32 service)
 		restore_performance_monitors((void *)__get_cpu_var(pmu_data));
 	}
 
+	instrument_dormant_trace(DORMANT_EXIT_BASIC_RESTORE,
+				service, dormant_return);
 	spin_lock_irqsave(&dormant_entry_lock, flgs);
 
-	if (dormant_return == DORMANT_ENTRY_FAILURE)
-		log_dormant_event(DORMANT_EXIT_FAILURE_LOG);
-	else
-		log_dormant_event(DORMANT_EXIT_SUCCESS_LOG);
-
 	if (num_cores_in_dormant == num_cpus()) {
-
 		/* This is the first core trying to come out of dormant */
-
 		/* Did we enter retention or dormant */
 		if (!pwr_mgr_is_event_active(SOFTWARE_2_EVENT))
 			cnt_success++;
@@ -679,14 +680,14 @@ void dormant_enter(u32 service)
 
 		set_spare_power_status(SCU_STATUS_NORMAL);
 		pwr_mgr_arm_core_dormant_enable(false);
-
-
 	}
 
 	if (num_cores_in_dormant)
 		num_cores_in_dormant--;
 
 	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
+	instrument_dormant_trace(DORMANT_EXIT_SWITCHES_ON,
+				service, dormant_return);
 
 	/* If dormant exit is successful, restore context */
 	if (dormant_return == DORMANT_ENTRY_SUCCESS) {
@@ -755,6 +756,8 @@ void dormant_enter(u32 service)
 		invalidate_tlb_btac();
 		flush_cache_all();
 
+		instrument_dormant_trace(DORMANT_EXIT_REGS_RESTORE,
+					service, dormant_return);
 #if defined(CONFIG_SMP)
 		if (smp_processor_id() == MASTER_CORE) {
 			/*
@@ -778,6 +781,9 @@ void dormant_enter(u32 service)
 					    readl_relaxed(KONA_CHIPREG_VA +
 						CHIPREG_BOOT_2ND_ADDR_OFFSET);
 				} while (boot_2nd_addr & 1);
+			instrument_dormant_trace(DORMANT_EXIT_CPU1_WAKEUP,
+						service, dormant_return);
+
 			/* Wait for core-1 to reach non-secure side.
 			 * Workaround added to avoid mm_stuct count mismatch
 			 * in idle path
@@ -788,6 +794,7 @@ void dormant_enter(u32 service)
 		} /* Master core */
 #endif
 	} /* Success dormant return */
+instrument_dormant_trace(DORMANT_EXIT, service, dormant_return);
 }
 
 /*
@@ -818,7 +825,6 @@ static int dormant_enter_continue(unsigned long data)
 	writeb_relaxed(SCU_DORMANT_MODE_B,
 		       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET + processor_id);
 
-
 	if (processor_id == MASTER_CORE) {
 
 		secure_params->core0_reset_address = virt_to_phys(cpu_resume);
@@ -838,11 +844,15 @@ static int dormant_enter_continue(unsigned long data)
 			wfi();
 		} else {
 			if (is_l2_disabled() || fake_dormant) {
+				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
+									1, 0);
 				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
 						 (u32)SEC_BUFFER_ADDR,
 						 (u32)SEC_BUFFER_ADDR +
 						 MAX_SECURE_BUFFER_SIZE, 3);
 			} else {
+				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
+									0, 0);
 				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
 						 (u32)SEC_BUFFER_ADDR,
 						 (u32)SEC_BUFFER_ADDR +
@@ -856,6 +866,7 @@ static int dormant_enter_continue(unsigned long data)
 		writel_relaxed(virt_to_phys(cpu_resume),
 			       KONA_CHIPREG_VA + CHIPREG_BOOT_2ND_ADDR_OFFSET);
 
+		instrument_dormant_trace(DORMANT_ENTRY_LINUX, 0, 0);
 		/* Directly execute WFI for non core-0 cores */
 		wfi();
 
