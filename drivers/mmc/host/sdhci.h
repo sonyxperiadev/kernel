@@ -265,6 +265,8 @@ struct sdhci_ops {
 
 #ifdef CONFIG_MMC_SDHCI_PLTFM_KONA
         int (*set_signalling)(struct sdhci_host *host, int sig_vol);
+	int (*clk_enable)(struct sdhci_host *host, int enable);
+	int (*rpm_enabled)(struct sdhci_host *host);
 #endif			
 
 	int		(*enable_dma)(struct sdhci_host *host);

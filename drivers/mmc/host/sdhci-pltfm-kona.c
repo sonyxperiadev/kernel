@@ -105,6 +105,7 @@ struct sdio_dev {
 	enum sdio_devtype devtype;
 	int cd_gpio;
 	int suspended;
+	int runtime_pm_enabled;
 	struct sdio_wifi_gpio_cfg *wifi_gpio;
 	struct procfs proc;
 	struct clk *peri_clk;
@@ -133,6 +134,9 @@ static int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host);
 static int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host);
 static void sdhci_pltfm_init_74_clocks(struct sdhci_host *host,
 							u8 power_mode);
+static int sdhci_pltfm_rpm_enabled(struct sdio_dev *dev);
+static int sdhci_rpm_enabled(struct sdhci_host *host);
+static int sdhci_clk_enable(struct sdhci_host *host, int enable);
 /*
  * Get the base clock. Use central clock source for now. Not sure if different
  * clock speed to each dev is allowed
@@ -158,6 +162,8 @@ static unsigned int sdhci_get_timeout_clock(struct sdhci_host *host)
 static struct sdhci_ops sdhci_pltfm_ops = {
 	.get_max_clock = sdhci_get_max_clk,
 	.get_timeout_clock = sdhci_get_timeout_clock,
+	.clk_enable = sdhci_clk_enable,
+	.rpm_enabled = sdhci_rpm_enabled,
 	.set_signalling = sdhci_pltfm_set_signalling,
 	.platform_send_init_74_clocks = sdhci_pltfm_init_74_clocks,
 };
@@ -237,9 +243,23 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
 	struct sdhci_host *host = dev->host;
 	uint32_t val;
 	unsigned long flags;
+	int ret = 0;
 
 #ifndef CONFIG_ARCH_ISLAND
-	pm_runtime_get_sync(dev->dev);
+	/*
+	 * The clock enabled here will be disabled in
+	 * sdhci_tasklet_card
+	 */
+	if (sdhci_pltfm_rpm_enabled(dev)) {
+		pm_runtime_get_sync(dev->dev);
+	} else {
+		ret = sdhci_pltfm_clk_enable(dev, 1);
+		if (ret) {
+			dev_err(dev->dev,
+				"enable clock during card emulate failed\n");
+			return -EAGAIN;
+		}
+	}
 #endif
 	/* this function can be called from various contexts including ISR */
 	spin_lock_irqsave(&host->lock, flags);
@@ -449,6 +469,18 @@ static int sdhci_pltfm_clk_enable(struct sdio_dev *dev, int enable)
 #endif
 }
 
+static int sdhci_clk_enable(struct sdhci_host *host, int enable)
+{
+	struct sdio_dev *dev = sdhci_priv(host);
+	int ret = 0;
+
+	ret = sdhci_pltfm_clk_enable(dev, enable);
+	if (ret)
+		dev_err(dev->dev,
+			"clock %s failed\n", enable ? "enable" : "disable");
+	return ret;
+}
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 static void kona_sdio_status_notify_cb(int card_present, void *dev_id)
 {
@@ -503,14 +535,22 @@ static int sdhci_pltfm_runtime_suspend(struct device *device)
 		platform_get_drvdata(to_platform_device(device));
 	struct sdhci_host *host = dev->host;
 
+	/* This is never going to happen, but still */
+	if (!sdhci_pltfm_rpm_enabled(dev)) {
+		dev_err(dev->dev,
+			"Spurious rpm suspend call\n");
+		/* But no meaning in returning error */
+		return 0;
+	}
+
 	spin_lock_irqsave(&host->lock, flags);
 	host->runtime_suspended = true;
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	ret = sdhci_pltfm_clk_enable(dev, 0);
 	if (ret) {
-		pr_err("Failed to disable clock during run time suspend%s%d\n",
-				DEV_NAME, (to_platform_device(device))->id);
+		dev_err(dev->dev,
+			"Failed to disable clock during run time suspend\n");
 		sdhci_runtime_resume_host(host);
 		return -EAGAIN;
 	}
@@ -526,14 +566,21 @@ static int sdhci_pltfm_runtime_resume(struct device *device)
 		platform_get_drvdata(to_platform_device(device));
 	struct sdhci_host *host = dev->host;
 
+	/* This is never going to happen, but still */
+	if (!sdhci_pltfm_rpm_enabled(dev)) {
+		dev_err(dev->dev, "Spurious rpm resume call\n");
+		/* But no menaing in returning error */
+		return 0;
+	}
+
 	spin_lock_irqsave(&host->lock, flags);
 	host->runtime_suspended = false;
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	ret = sdhci_pltfm_clk_enable(dev, 1);
 	if (ret) {
-		pr_err("Failed to enable clock during run time resume%s%d\n",
-				DEV_NAME, (to_platform_device(device))->id);
+		dev_err(dev->dev,
+			"Failed to enable clock during run time resume\n");
 		return -EAGAIN;
 	}
 
@@ -545,18 +592,30 @@ static int sdhci_pltfm_runtime_idle(struct device *device)
 	return 0;
 }
 
-static void __devinit sdhci_pltfm_runtime_pm_init(struct device *dev)
+static void __devinit sdhci_pltfm_runtime_pm_init(struct device *device)
 {
-	pm_runtime_enable(dev);
-	pm_runtime_set_autosuspend_delay(dev, KONA_MMC_AUTOSUSPEND_DELAY);
-	pm_runtime_use_autosuspend(dev);
+	struct sdio_dev *dev =
+		platform_get_drvdata(to_platform_device(device));
+
+	if (!sdhci_pltfm_rpm_enabled(dev))
+		return;
+
+	pm_runtime_enable(device);
+	pm_runtime_set_autosuspend_delay(device, KONA_MMC_AUTOSUSPEND_DELAY);
+	pm_runtime_use_autosuspend(device);
 }
 
-static void __devexit sdhci_pltfm_runtime_pm_forbid(struct device *dev)
+static void __devexit sdhci_pltfm_runtime_pm_forbid(struct device *device)
 {
-	pm_runtime_forbid(dev);
-	pm_runtime_get_noresume(dev);
-	pm_runtime_disable(dev);
+	struct sdio_dev *dev =
+		platform_get_drvdata(to_platform_device(device));
+
+	if (!sdhci_pltfm_rpm_enabled(dev))
+		return;
+
+	pm_runtime_forbid(device);
+	pm_runtime_get_noresume(device);
+	pm_runtime_disable(device);
 }
 
 #else
@@ -782,6 +841,21 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	if (dev->devtype == SDIO_DEV_TYPE_EMMC)
 		host->mmc->caps2 |= MMC_CAP2_NO_SLEEP_CMD;
 
+	/*
+	 * This has to be done before sdhci_add_host.
+	 * As soon as we add the host, request
+	 * starts. If we dont enable this here, the
+	 * runtime get and put of sdhci will fallback to
+	 * clk_enable and clk_disable which will conflict
+	 * with the PM runtime when it gets enabled just
+	 * after sdhci_add_host. Now with this, the RPM
+	 * calls will fail until RPM is enabled, but things
+	 * will work well, as we have clocks enabled till the
+	 * probe ends.
+	 */
+	if (dev->devtype != SDIO_DEV_TYPE_WIFI)
+		dev->runtime_pm_enabled = 1;
+
 	ret = sdhci_add_host(host);
 	if (ret)
 		goto err_reset;
@@ -789,6 +863,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	ret = proc_init(pdev);
 	if (ret)
 		goto err_rm_host;
+
+	/* Should be done only after sdhci_add_host */
+	sdhci_pltfm_runtime_pm_init(dev->dev);
 
 	/* if device is eMMC, emulate card insert right here */
 	if (dev->devtype == SDIO_DEV_TYPE_EMMC) {
@@ -892,8 +969,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	atomic_set(&dev->initialized, 1);
 	sdhci_pltfm_clk_enable(dev, 0);
 
-	sdhci_pltfm_runtime_pm_init(dev->dev);
-
 	pr_info("%s: initialized properly\n", devname);
 
 	return 0;
@@ -948,6 +1023,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	struct resource *iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	int dead;
 	u32 scratch;
+	int ret = 0;
 
 	atomic_set(&dev->initialized, 0);
 	gDevs[dev->devtype] = NULL;
@@ -967,14 +1043,29 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 
 	proc_term(pdev);
 
-	pm_runtime_get_sync(dev->dev);
+	if (sdhci_pltfm_rpm_enabled(dev)) {
+		pm_runtime_get_sync(dev->dev);
+	} else {
+		ret = sdhci_pltfm_clk_enable(dev, 1);
+		if (ret)
+			dev_err(dev->dev,
+				"enable clock during pltfm remove failed\n");
+	}
+
 	dead = 0;
 	scratch = readl(host->ioaddr + SDHCI_INT_STATUS);
 	if (scratch == (u32)-1)
 		dead = 1;
 	sdhci_remove_host(host, dead);
 
-	pm_runtime_put_sync_suspend(dev->dev);
+	if (sdhci_pltfm_rpm_enabled(dev)) {
+		pm_runtime_put_sync_suspend(dev->dev);
+	} else {
+		ret = sdhci_pltfm_clk_enable(dev, 0);
+		if (ret)
+			dev_err(dev->dev,
+				"disable clock during pltfm remove failed\n");
+	}
 
 #if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_HAWAII_FPGA)
 	clk_disable(dev->sleep_clk);
@@ -1003,13 +1094,36 @@ static int sdhci_pltfm_suspend(struct device *device)
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		goto ret_path;
 
+	if (!sdhci_pltfm_rpm_enabled(dev)) {
+		ret = sdhci_pltfm_clk_enable(dev, 1);
+		if (ret) {
+			dev_err(dev->dev,
+				"Failed to enable clock during suspend\n");
+			return -EAGAIN;
+		}
+	}
+
 	ret = sdhci_suspend_host(host);
 	if (ret) {
 		dev_err(dev->dev, "Unable to suspend sdhci host err=%d\n",
 			ret);
 		return ret;
 	}
-	pm_runtime_put_sync_suspend(dev->dev);
+
+	if (sdhci_pltfm_rpm_enabled(dev)) {
+		/*
+		 * Note that we havent done a get_sync. The
+		 * pm core takes care of that.
+		 */
+		pm_runtime_put_sync_suspend(dev->dev);
+	} else {
+		ret = sdhci_pltfm_clk_enable(dev, 0);
+		if (ret) {
+			dev_err(dev->dev,
+				"Failed to disable clock during suspend\n");
+			/* Not really a big error to cry and return */
+		}
+	}
 
 	kona_sdxc_regulator_power(dev, 0);
 
@@ -1028,13 +1142,36 @@ static int sdhci_pltfm_resume(struct device *device)
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		goto ret_path;
 
-	pm_runtime_get_sync(dev->dev);
+	if (sdhci_pltfm_rpm_enabled(dev)) {
+		/*
+		 * Note that we havent done a put_sync. The
+		 * pm core takes care of that.
+		 */
+		pm_runtime_get_sync(dev->dev);
+	} else {
+		ret = sdhci_pltfm_clk_enable(dev, 1);
+		if (ret) {
+			dev_err(dev->dev,
+				"Failed to enable clock during resume\n");
+			return -EAGAIN;
+		}
+	}
+
 	kona_sdxc_regulator_power(dev, 1);
 	ret = sdhci_resume_host(host);
 	if (ret) {
 		dev_err(dev->dev,
 		 "Unable to resume sdhci host err=%d\n", ret);
 		return ret;
+	}
+
+	if (!sdhci_pltfm_rpm_enabled(dev)) {
+		ret = sdhci_pltfm_clk_enable(dev, 0);
+		if (ret) {
+			dev_err(dev->dev,
+				"Failed to disable clock during resume\n");
+			/* Not really a big error to cry and return*/
+		}
 	}
 
 ret_path:
@@ -1045,6 +1182,18 @@ ret_path:
 #define sdhci_pltfm_suspend NULL
 #define sdhci_pltfm_resume NULL
 #endif /* CONFIG_PM */
+
+static inline int sdhci_pltfm_rpm_enabled(struct sdio_dev *dev)
+{
+	return dev->runtime_pm_enabled;
+}
+
+static int sdhci_rpm_enabled(struct sdhci_host *host)
+{
+	struct sdio_dev *dev = sdhci_priv(host);
+
+	return sdhci_pltfm_rpm_enabled(dev);
+}
 
 static const struct dev_pm_ops sdhci_pltfm_pm_ops = {
 	.runtime_suspend = sdhci_pltfm_runtime_suspend,
@@ -1161,6 +1310,7 @@ EXPORT_SYMBOL(sdio_card_emulate);
 int sdio_stop_clk(enum sdio_devtype devtype, int insert)
 {
 	int rc;
+	int ret = 0;
 	struct sdio_dev *dev;
 	struct sdhci_host *host;
 
@@ -1172,11 +1322,25 @@ int sdio_stop_clk(enum sdio_devtype devtype, int insert)
 	dev = gDevs[devtype];
 	host = dev->host;
 
-	if (insert)
-		pm_runtime_get_sync(dev->dev);
-	else
-		pm_runtime_put_sync_suspend(dev->dev);
-
+	if (insert) {
+		if (sdhci_pltfm_rpm_enabled(dev)) {
+			pm_runtime_get_sync(dev->dev);
+		} else {
+			ret = sdhci_pltfm_clk_enable(dev, 1);
+			if (ret)
+				dev_err(dev->dev,
+					"stop_clk:clk enable failed\n");
+		}
+	} else {
+		if (sdhci_pltfm_rpm_enabled(dev)) {
+			pm_runtime_put_sync_suspend(dev->dev);
+		} else {
+			ret = sdhci_pltfm_clk_enable(dev, 0);
+			if (ret)
+				dev_err(dev->dev,
+					"stop_clk:clk disable failed\n");
+		}
+	}
 #endif
 	return 0;
 }
