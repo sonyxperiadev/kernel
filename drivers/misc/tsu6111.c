@@ -1122,6 +1122,7 @@ static void fsa9485_init_detect(struct work_struct *work)
 #if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
 	u8 mhl_ret = 0;
 #endif
+#if 0
 	fsa9485_read_word_reg(client, FSA9485_REG_DEV_T1, &device_type);
 	if (device_type < 0) {
 		dev_err(&client->dev, "%s: err %d\n", __func__, device_type);
@@ -1131,10 +1132,10 @@ static void fsa9485_init_detect(struct work_struct *work)
 	val2 = device_type >> 8;
 
 	dev_info(&client->dev, "$s: dev1: 0x%x, dev2: 0x%x\n", __func__, val1, val2);
-	/*
 	mutex_lock(&usbsw->mutex);
 	fsa9485_detect_dev(usbsw);
-	mutex_unlock(&usbsw->mutex);*/
+	mutex_unlock(&usbsw->mutex);
+#endif
 
 	ret = fsa9485_irq_init(usbsw);
 	if (ret)
@@ -1229,6 +1230,7 @@ static int __devinit fsa9485_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&usbsw->init_work, fsa9485_init_detect);
 	INIT_DELAYED_WORK(&usbsw->detect_work, fsa9485_detect_work);
 	schedule_delayed_work(&usbsw->init_work, msecs_to_jiffies(5));
+	schedule_delayed_work(&usbsw->detect_work, msecs_to_jiffies(10));
 
 	pr_info("fsa9485_probe end.\n");
 	return 0;

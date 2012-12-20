@@ -53,7 +53,6 @@
 #include <linux/bootmem.h>
 #include <linux/input.h>
 #include <linux/mfd/bcm590xx/core.h>
-#include <asm/gpio.h>
 #include <linux/gpio.h>
 #include <linux/gpio_keys.h>
 #include <linux/i2c-kona.h>
@@ -80,6 +79,10 @@
 #include <plat/spi_kona.h>
 
 #include <trace/stm.h>
+
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+#endif
 
 #include "devices.h"
 
@@ -120,7 +123,8 @@
 #include <linux/bma222.h>
 #endif
 
-#if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C)
+	|| defined(CONFIG_BMP18X_I2C_MODULE)
 #include <linux/bmp18x.h>
 #include <mach/bmp18x_i2c_settings.h>
 #endif
@@ -130,12 +134,14 @@
 #include <mach/al3006_i2c_settings.h>
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1)
+	|| defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
 #include <linux/mpu.h>
 #include <mach/mpu6050_settings.h>
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
+#if defined(CONFIG_MPU_SENSORS_AMI306)
+	|| defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
 #include <linux/ami306_def.h>
 #include <linux/ami_sensor.h>
 #include <mach/ami306_settings.h>
@@ -186,7 +192,8 @@
 #include <linux/i2c/tsu6111.h>
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+#if defined(CONFIG_TOUCHSCREEN_BCM915500)
+	|| defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 #include <linux/i2c/bcm15500_i2c_ts.h>
 #endif
 
@@ -719,7 +726,8 @@ static struct i2c_board_info __initdata bcmi2cnfc[] = {
 };
 #endif
 
-#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C)
+	|| defined(CONFIG_BMP18X_I2C_MODULE)
 static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
 	{
 		I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
@@ -744,7 +752,8 @@ static struct i2c_board_info __initdata i2c_al3006_info[] = {
 };
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
+#if defined(CONFIG_MPU_SENSORS_AMI306)
+	|| defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
 static struct ami306_platform_data ami306_data = AMI306_DATA;
 static struct i2c_board_info __initdata i2c_ami306_info[] = {
 	{
@@ -754,7 +763,8 @@ static struct i2c_board_info __initdata i2c_ami306_info[] = {
 };
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1)
+	|| defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
 
 static struct mpu_platform_data mpu6050_platform_data = {
 	.int_config  = MPU6050_INIT_CFG,
@@ -863,9 +873,9 @@ static struct kona_headset_pd hawaii_headset_data = {
 	/*
 	 * Because of the presence of the resistor in the MIC_IN line.
 	 * The actual ground may not be 0, but a small offset is added to it.
-	 * This needs to be subtracted from the measured voltage to determine the
-	 * correct value. This will vary for different HW based on the resistor
-	 * values used.
+	 * This needs to be subtracted from the measured voltage to determine
+	 * the correct value. This will vary for different HW based on the
+	 * resistor values used.
 	 *
 	 * if there is a resistor present on this line, please measure the load
 	 * value and put it here, otherwise 0.
@@ -1116,7 +1126,8 @@ static struct i2c_board_info __initdata ft5306_info[] = {
 };
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+#if defined(CONFIG_TOUCHSCREEN_BCM915500)
+	|| defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 static struct bcm915500_platform_data bcm915500_i2c_param = {
 	.id = 3,
 	.i2c_adapter_id = 3,
@@ -1172,6 +1183,25 @@ enum cable_type_t {
 #define GPIO_USB_I2C_SCL 114
 #define GPIO_USB_INT 56
 
+#ifdef CONFIG_HAS_WAKELOCK
+static struct wake_lock fsa9485_jig_wakelock;
+#endif
+#ifdef CONFIG_KONA_PI_MGR
+static struct pi_mgr_qos_node qos_node;
+#endif
+
+static void fsa9485_wakelock_init(void)
+{
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&fsa9485_jig_wakelock, WAKE_LOCK_SUSPEND,
+		"fsa9485_jig_wakelock");
+#endif
+
+#ifdef CONFIG_KONA_PI_MGR
+	pi_mgr_qos_add_request(&qos_node, "fsa9485_jig_qos",
+		PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
+#endif
+}
 static void fsa9485_usb_cb(bool attached)
 {
 	pr_info("fsa9485_usb_cb attached %d\n", attached);
@@ -1185,10 +1215,46 @@ static void fsa9485_charger_cb(bool attached)
 static void fsa9485_jig_cb(bool attached)
 {
 	pr_info("fsa9480_jig_cb attached %d\n", attached);
+	if (attached) {
+		#ifdef CONFIG_HAS_WAKELOCK
+			if (!wake_lock_active(&fsa9485_jig_wakelock))
+				wake_lock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
+			pi_mgr_qos_request_update(&qos_node, 0);
+		#endif
+	} else {
+		#ifdef CONFIG_HAS_WAKELOCK
+			if (wake_lock_active(&fsa9485_jig_wakelock))
+				wake_unlock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
+			pi_mgr_qos_request_update(&qos_node,
+				PI_MGR_QOS_DEFAULT_VALUE);
+		#endif
+	}
 }
 static void fsa9485_uart_cb(bool attached)
 {
 	pr_info("fsa9485_uart_cb attached %d\n", attached);
+	if (attached) {
+		#ifdef CONFIG_HAS_WAKELOCK
+		if (!wake_lock_active(&fsa9485_jig_wakelock))
+			wake_lock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
+			pi_mgr_qos_request_update(&qos_node, 0);
+		#endif
+	} else {
+		#ifdef CONFIG_HAS_WAKELOCK
+		if (wake_lock_active(&fsa9485_jig_wakelock))
+			wake_unlock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
+			pi_mgr_qos_request_update(&qos_node,
+				PI_MGR_QOS_DEFAULT_VALUE);
+		#endif
+		}
 }
 
 static struct fsa9485_platform_data fsa9485_pdata = {
@@ -1275,7 +1341,8 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(0, adp1653_flash, ARRAY_SIZE(adp1653_flash));
 #endif
 #if defined(CONFIG_TOUCHSCREEN_MMS134S)
-	i2c_register_board_info(3, zinitix_i2c_devices, ARRAY_SIZE(zinitix_i2c_devices));
+	i2c_register_board_info(3, zinitix_i2c_devices,
+		ARRAY_SIZE(zinitix_i2c_devices));
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_FT5306
@@ -1283,18 +1350,23 @@ static void __init hawaii_add_i2c_devices(void)
 #endif
 
 #ifdef CONFIG_SENSORS_BMA222
-	i2c_register_board_info(2, bma222_accl_info, ARRAY_SIZE(bma222_accl_info));
+	i2c_register_board_info(2, bma222_accl_info,
+		ARRAY_SIZE(bma222_accl_info));
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+#if defined(CONFIG_TOUCHSCREEN_BCM915500)
+	|| defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 	i2c_register_board_info(3, bcm915500_i2c_boardinfo,
 				ARRAY_SIZE(bcm915500_i2c_boardinfo));
 #endif
 
 #ifdef CONFIG_USB_SWITCH_TSU6111
 	pr_info("tsu6111\n");
+#ifdef CONFIG_HAS_WAKELOCK
+	fsa9485_wakelock_init();
+#endif
 	i2c_register_board_info(FSA9485_I2C_BUS_ID, micro_usb_i2c_devices_info,
-				ARRAY_SIZE(micro_usb_i2c_devices_info));
+		ARRAY_SIZE(micro_usb_i2c_devices_info));
 #endif
 
 #ifdef CONFIG_USB_SWITCH_TSU6111
@@ -1306,12 +1378,13 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1)
+	|| defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
 #if defined(MPU6050_IRQ_GPIO)
 	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(MPU6050_IRQ_GPIO);
 #endif
 	i2c_register_board_info(MPU6050_I2C_BUS_ID,
-			inv_mpu_i2c0_boardinfo, ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
+		inv_mpu_i2c0_boardinfo, ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
 #endif
 
 #if defined(CONFIG_SENSORS_BMA2X2) || defined(CONFIG_SENSORS_BMM050)
@@ -1324,7 +1397,8 @@ static void __init hawaii_add_i2c_devices(void)
 		proxy_boardinfo, ARRAY_SIZE(proxy_boardinfo));
 #endif
 
-#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C)
+	|| defined(CONFIG_BMP18X_I2C_MODULE)
 	i2c_register_board_info(
 #ifdef BMP18X_I2C_BUS_ID
 			BMP18X_I2C_BUS_ID,
@@ -1375,7 +1449,8 @@ static void hawaii_add_pdata(void)
 #endif
 
 #ifdef CONFIG_USB_DWC_OTG
-	hawaii_hsotgctrl_platform_device.dev.platform_data = &hsotgctrl_plat_data;
+	hawaii_hsotgctrl_platform_device.dev.platform_data =
+		&hsotgctrl_plat_data;
 #endif
 }
 
