@@ -316,13 +316,12 @@ void *log_tx_param[] __aligned(8) = {
 	0,
 	0,
 	0,
-	(void *)0x7A9,	/* 0x7A9 = CortexA9 */
+	(void *)0x7A92,	/* 0x7A92 = CortexA9MPCore with 2 cores */
 	(void *)2,	/* 0=Nucleus, 1=ThreadX 2=Linux*/
 	&main_log,
 	&radio_log,
 	&events_log,
 	&system_log,
-	(void *)NR_CPUS,	/* no of cpus */
 	(void *)0x656675F7,
 	(void *)0xFFEF0514	/* end flag */
 };
