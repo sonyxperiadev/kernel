@@ -38,13 +38,17 @@
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <plat/profiler.h>
+#include <mach/profiler.h>
 #include <plat/ccu_profiler.h>
 #include <plat/pi_profiler.h>
+#include <linux/module.h>
+#include <mach/memory.h>
 
 DEFINE_CCU_PROFILER(khub) = {
 	.profiler = {
-		.name = "ccu_khub",
+		.name = PROF_STR_CCU_KHUB,
 		.owner = THIS_MODULE,
+		.prof_type = PROFILER_CCU,
 	},
 	.clk_dev_id = KHUB_CCU_CLK_NAME_STR,
 	.ctrl_offset = KHUB_CLK_MGR_REG_CLK_PROF_CTRL_OFFSET,
@@ -86,14 +90,15 @@ DEFINE_CCU_PROFILER(khub) = {
 
 DEFINE_CCU_PROFILER(root) = {
 	.profiler = {
-		.name = "ccu_root",
+		.name = PROF_STR_CCU_ROOT,
 		.owner = THIS_MODULE,
+		.prof_type = PROFILER_CCU,
 	},
 	.clk_dev_id = ROOT_CCU_CLK_NAME_STR,
 	.ctrl_offset = ROOT_CLK_MGR_REG_CLK_PROF_CTRL_OFFSET,
 	.policy_sel_offset = ROOT_CLK_MGR_REG_CLK_PROF_SEL1_OFFSET,
 	.auto_gate_sel0_offset = ROOT_CLK_MGR_REG_CLK_PROF_SEL2_OFFSET,
-	.auto_gate_sel1_offset = 0,
+	.auto_gate_sel1_offset = ROOT_CLK_MGR_REG_CLK_PROF_SEL5_OFFSET,
 	.clk_req_sel0_offset = ROOT_CLK_MGR_REG_CLK_PROF_SEL3_OFFSET,
 	.clk_req_sel1_offset = ROOT_CLK_MGR_REG_CLK_PROF_SEL4_OFFSET,
 	.counter_offset = ROOT_CLK_MGR_REG_CLK_PROF_CNT_OFFSET,
@@ -105,6 +110,8 @@ DEFINE_CCU_PROFILER(root) = {
 		ROOT_CLK_MGR_REG_CLK_PROF_SEL1_CLK_PROF_POLICY_SEL_MASK,
 	.auto_gate_sel0_mask =
 		ROOT_CLK_MGR_REG_CLK_PROF_SEL2_CLK_PROF_AUTOGATING_SEL0_MASK,
+	.auto_gate_sel1_mask =
+		ROOT_CLK_MGR_REG_CLK_PROF_SEL5_CLK_PROF_AUTOGATING_SEL1_MASK,
 	.clk_req_sel0_mask =
 		ROOT_CLK_MGR_REG_CLK_PROF_SEL3_CLK_PROF_CLK_REQ_SEL0_MASK,
 	.clk_req_sel1_mask =
@@ -119,6 +126,8 @@ DEFINE_CCU_PROFILER(root) = {
 		ROOT_CLK_MGR_REG_CLK_PROF_SEL1_CLK_PROF_POLICY_SEL_SHIFT,
 	.auto_gate_sel0_shift =
 		ROOT_CLK_MGR_REG_CLK_PROF_SEL2_CLK_PROF_AUTOGATING_SEL0_SHIFT,
+	.auto_gate_sel1_shift =
+		ROOT_CLK_MGR_REG_CLK_PROF_SEL5_CLK_PROF_AUTOGATING_SEL1_SHIFT,
 	.clk_req_sel0_shift =
 		ROOT_CLK_MGR_REG_CLK_PROF_SEL3_CLK_PROF_CLK_REQ_SEL0_SHIFT,
 	.clk_req_sel1_shift =
@@ -129,8 +138,9 @@ DEFINE_CCU_PROFILER(root) = {
 
 DEFINE_CCU_PROFILER(kpm) = {
 	.profiler = {
-		.name = "ccu_kpm",
+		.name = PROF_STR_CCU_KPM,
 		.owner = THIS_MODULE,
+		.prof_type = PROFILER_CCU,
 	},
 	.clk_dev_id = KPM_CCU_CLK_NAME_STR,
 	.ctrl_offset = KPM_CLK_MGR_REG_CLK_PROF_CTRL_OFFSET,
@@ -167,8 +177,9 @@ DEFINE_CCU_PROFILER(kpm) = {
 
 DEFINE_CCU_PROFILER(kps) = {
 	.profiler = {
-		.name = "ccu_kps",
+		.name = PROF_STR_CCU_KPS,
 		.owner = THIS_MODULE,
+		.prof_type = PROFILER_CCU,
 	},
 	.clk_dev_id = KPS_CCU_CLK_NAME_STR,
 	.ctrl_offset = KPS_CLK_MGR_REG_CLK_PROF_CTRL_OFFSET,
@@ -219,8 +230,9 @@ static struct ccu_profiler *__ccu_profiler_tbl[] = {
  */
 DEFINE_PI_PROFILER(arm) = {
 	.profiler = {
-		.name = "pi_arm",
+		.name = PROF_STR_PI_ARM,
 		.owner = THIS_MODULE,
+		.prof_type = PROFILER_PI_ON,
 	},
 	.pi_prof_addr_base = HW_IO_PHYS_TO_VIRT(PWRMGR_BASE_ADDR),
 	.pi_id = PI_MGR_PI_ID_ARM_CORE,
@@ -248,8 +260,9 @@ DEFINE_PI_PROFILER(arm) = {
  */
 DEFINE_PI_PROFILER(armsubsys) = {
 	.profiler = {
-		.name = "pi_armsub",
+		.name = PROF_STR_PI_ARMSUB,
 		.owner = THIS_MODULE,
+		.prof_type = PROFILER_PI_ON,
 	},
 	.pi_prof_addr_base = HW_IO_PHYS_TO_VIRT(PWRMGR_BASE_ADDR),
 	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
@@ -277,8 +290,9 @@ DEFINE_PI_PROFILER(armsubsys) = {
  */
 DEFINE_PI_PROFILER(modem) = {
 	.profiler = {
-		.name = "pi_modem",
+		.name = PROF_STR_PI_MODEM,
 		.owner = THIS_MODULE,
+		.prof_type = PROFILER_PI_ON,
 	},
 	.pi_prof_addr_base = HW_IO_PHYS_TO_VIRT(PWRMGR_BASE_ADDR),
 	.pi_id = PI_MGR_PI_ID_MODEM,
@@ -304,8 +318,9 @@ DEFINE_PI_PROFILER(modem) = {
  */
 DEFINE_PI_PROFILER(mm) = {
 	.profiler = {
-		.name = "pi_mm",
+		.name = PROF_STR_PI_MM,
 		.owner = THIS_MODULE,
+		.prof_type = PROFILER_PI_ON,
 	},
 	.pi_prof_addr_base = HW_IO_PHYS_TO_VIRT(PWRMGR_BASE_ADDR),
 	.pi_id = PI_MGR_PI_ID_MM,
@@ -329,8 +344,9 @@ DEFINE_PI_PROFILER(mm) = {
  */
 DEFINE_PI_PROFILER(hub) = {
 	.profiler = {
-		.name = "pi_hub",
+		.name = PROF_STR_PI_HUB,
 		.owner = THIS_MODULE,
+		.prof_type = PROFILER_PI_ON,
 	},
 	.pi_prof_addr_base = HW_IO_PHYS_TO_VIRT(PWRMGR_BASE_ADDR),
 	.pi_id = PI_MGR_PI_ID_HUB_SWITCHABLE,
@@ -359,8 +375,9 @@ DEFINE_PI_PROFILER(hub) = {
  */
 DEFINE_PI_PROFILER(aon) = {
 	.profiler = {
-		.name = "pi_aon",
+		.name = PROF_STR_PI_AON,
 		.owner = THIS_MODULE,
+		.prof_type = PROFILER_PI_ON,
 	},
 	.pi_prof_addr_base = HW_IO_PHYS_TO_VIRT(PWRMGR_BASE_ADDR),
 	.pi_id = PI_MGR_PI_ID_HUB_AON,

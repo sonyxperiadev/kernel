@@ -38,10 +38,10 @@ enum ccu_profiling_counter {
 };
 
 enum ccu_prof_policy_sel {
-	CCU_PROF_POLICY_4 = 1<<0,
-	CCU_PROF_POLICY_5 = 1<<1,
-	CCU_PROF_POLICY_6 = 1<<2,
-	CCU_PROF_POLICY_7 = 1<<3,
+	CCU_PROF_POLICY_4 = (1<<0),
+	CCU_PROF_POLICY_5 = (1<<1),
+	CCU_PROF_POLICY_6 = (1<<2),
+	CCU_PROF_POLICY_7 = (1<<3),
 };
 
 struct ccu_profiler;
@@ -66,6 +66,14 @@ struct gen_ccu_prof_ops {
 /**
  * Kona CCU Profiler
  */
+
+struct ccu_prof_parameter {
+	enum ccu_profiling_counter count_type;
+	enum ccu_prof_policy_sel policy;
+	int val;
+	int sel;
+};
+
 struct ccu_profiler {
 	struct profiler profiler;
 
@@ -74,8 +82,6 @@ struct ccu_profiler {
 	u32 auto_gate_sel1;
 	u32 clk_req_sel0;
 	u32 clk_req_sel1;
-	u32 counter;
-
 	/**
 	 * Kona ccu clock device name to access the CCU registers
 	 */

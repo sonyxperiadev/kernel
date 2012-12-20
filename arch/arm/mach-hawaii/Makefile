@@ -25,6 +25,7 @@ obj-$(CONFIG_KONA_PI_MGR) += pi_mgr.o
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += pm.o sleep.o pm_dbg.o
 obj-$(CONFIG_KONA_SECURE_MONITOR_CALL) += sec_api.o
 obj-$(CONFIG_HAWAII_PTM) += coresight.o
+obj-$(CONFIG_KONA_PROFILER) += profiler.o
 
 CFLAGS_sec_api.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
 

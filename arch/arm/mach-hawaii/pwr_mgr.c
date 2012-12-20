@@ -877,12 +877,6 @@ int __init hawaii_pwr_mgr_delayed_init(void)
 		pi_init_state(pi);
 	}
 
-	/* Enable PI counters */
-	for (i = 0; i < PI_MGR_PI_ID_MAX; i++)
-		pwr_mgr_pi_counter_enable(i, 1);
-	pm_mgr_pi_count_clear(1);
-	pm_mgr_pi_count_clear(0);
-
 #ifdef CONFIG_IGNORE_DAP_POWERUP_REQ
 	pwr_mgr_ignore_dap_powerup_request(true);
 	pwr_mgr_ignore_mdm_dap_powerup_req(true);

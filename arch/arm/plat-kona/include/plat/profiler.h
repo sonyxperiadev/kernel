@@ -18,8 +18,8 @@
 #ifndef _KONA_PROFILER_H
 #define _KONA_PROFILER_H
 
-#define COUNTER_CLK_RATE		(26000000/8)
-#define COUNTER_TO_MS(cnt)		((cnt/COUNTER_CLK_RATE) * 1000)
+#define COUNTER_CLK_RATE		3250
+#define COUNTER_TO_MS(cnt)		(cnt/COUNTER_CLK_RATE)
 
 #define PROFILER_ROOT_DIR_NAME			("profiler")
 #define PROFILER_SUFFIX				("prof")
@@ -27,6 +27,12 @@
 	(module_name##_##profiler_name##_prof)
 #define PROFILER_NAME(name)		(name##_##PROFILER_SUFFIX)
 
+enum profiler_flags {
+	PROFILER_RUNNING = 0x00000001,
+	PROFILER_OVERFLOW = 0x00000002,
+};
+
+#define OVERFLOW_VAL			0x3FFFFFFF
 #ifndef PROF_CIRC_BUFF_MAX_ENTRIES
 #define PROF_CIRC_BUFF_MAX_ENTRIES	(256)
 #endif
@@ -56,16 +62,6 @@ enum profiler_type {
 	PROFILER_L2C,
 };
 
-struct profiler_module {
-	const char *name;
-	enum profiler_type type;
-};
-
-enum profiler_flag {
-	PROFILER_RUNNING = 0x00000001,
-};
-
-
 struct profiler;
 
 struct prof_ops {
@@ -75,6 +71,8 @@ struct prof_ops {
 	int (*get_counter) (struct profiler *profiler,
 			unsigned long *counter, int *overflow);
 	int (*print) (struct profiler *profiler);
+	int (*start_profiler) (struct profiler *profiler,
+			void *data);
 };
 
 /**
@@ -88,17 +86,21 @@ struct profiler {
 	struct module *owner;
 	struct dentry *dentry_dir;
 	const char *name;
-	enum profiler_flag flags;
+	enum profiler_flags flags;
 	unsigned long start_time;
 	unsigned long stop_time;
 	struct prof_ops *ops;
+	unsigned long running_time;
+	int overflow;
+	enum profiler_type prof_type;
 };
-
 
 /**
  * interface to kona profilers
  */
 
+int start_profiler(char *name, void *data);
+int stop_profiler(char *name);
 int profiler_register(struct profiler *profiler);
 int profiler_unregister(struct profiler *profiler);
 void profiler_print(const char *log);

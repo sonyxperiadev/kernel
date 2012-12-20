@@ -35,9 +35,11 @@
 #include <mach/timex.h>
 #include <plat/clock.h>
 #include <plat/profiler.h>
+#include <plat/pwr_mgr.h>
+#include <linux/hrtimer.h>
 #include <plat/ccu_profiler.h>
 #include <plat/pi_profiler.h>
-
+#include <asm-generic/errno-base.h>
 /**
  * Macros
  */
@@ -100,8 +102,62 @@ struct profiler_data {
 
 static struct profiler_data *profiler_data;
 int profiler_debug;
-
+unsigned long strt_time;
 module_param_named(profiler_debug, profiler_debug, int, S_IRUSR | S_IWUSR);
+
+static struct profiler *get_profiler(char *name)
+{
+	struct profiler *profiler;
+	list_for_each_entry(profiler, &profiler_data->profiler_list, node)
+		if (strcmp(profiler->name, name) == 0)
+			return profiler;
+	return NULL;
+}
+
+int start_profiler(char *name, void *data)
+{
+	struct profiler *profiler;
+	profiler = get_profiler(name);
+	if (!profiler)
+		return -EINVAL;
+	if (profiler->flags & PROFILER_RUNNING)
+		return -EBUSY;
+	if (!(profiler->ops->start_profiler))
+		return -EINVAL;
+	return profiler->ops->start_profiler(profiler, data);
+}
+
+int stop_profiler(char *name)
+{
+	struct profiler *profiler;
+	profiler = get_profiler(name);
+	if (!profiler)
+		return -EINVAL;
+	if ((profiler->flags & PROFILER_RUNNING) == 0)
+		return -EINVAL;
+	profiler->ops->get_counter(profiler, &profiler->running_time,
+			&profiler->overflow);
+	profiler->stop_time = kona_hubtimer_get_counter();
+	if (profiler->overflow) {
+		if (profiler->flags & PROFILER_OVERFLOW) {
+			if (((profiler->stop_time - profiler->start_time)
+					/33) < 330000)
+				profiler->overflow = 0;
+		} else if (((profiler->stop_time - profiler->start_time)
+					/33) < 330000)
+			profiler->overflow = 0;
+	}
+	printk(KERN_ALERT "Total Duration: %lums ", (profiler->stop_time -
+			profiler->start_time)/32);
+	printk(KERN_ALERT "Profiler_Running_Time: %lums %s",
+				profiler->running_time/3250,
+				profiler->overflow ? "*" : " ");
+	if (profiler->ops->start(profiler, 0))
+		return -EBUSY;
+	if (profiler->overflow)
+		return OVERFLOW_VAL;
+	return profiler->running_time/3250;
+}
 
 static void log_counters(struct profiler_data *profiler_data,
 				      char *state)
@@ -111,7 +167,6 @@ static void log_counters(struct profiler_data *profiler_data,
 	int circ_idx;
 	int overflow;
 	int err = 0;
-
 	if (!profiler_data->running)
 		return;
 
@@ -121,16 +176,22 @@ static void log_counters(struct profiler_data *profiler_data,
 		circ_idx = profiler_data->circ_idx;
 		if (circ_idx == PROF_CIRC_BUFF_MAX_ENTRIES)
 			profiler_data->circ_idx = 0;
-		profiler_data->circ_buff[circ_idx].time =
-			kona_hubtimer_get_counter();
 		profiler_data->circ_buff[circ_idx].profiler = profiler;
 		profiler_data->circ_buff[circ_idx].log_state = state;
+		profiler_data->circ_buff[circ_idx].time =
+					ktime_to_ms(ktime_get());
 		err = profiler->ops->get_counter(profiler, &counter, &overflow);
 		BUG_ON(err < 0);
 		profiler_data->circ_buff[circ_idx].counter = counter;
+		if (profiler->flags & PROFILER_OVERFLOW)
+			overflow = 0;
 		profiler_data->circ_buff[circ_idx].overflow = overflow;
 		profiler_data->circ_idx++;
+		profiler->ops->start(profiler, false);
+		profiler->ops->start(profiler, true);
 	}
+	pm_mgr_pi_count_clear(true);
+	pm_mgr_pi_count_clear(false);
 }
 
 static void flush_circ_buff(struct profiler_data *profiler_data)
@@ -141,36 +202,37 @@ static void flush_circ_buff(struct profiler_data *profiler_data)
 	u8 buffer[128];
 	int count = 0;
 
-	profiler_print("name \t   sample_time(ms) \t   log_state\t"
-			"start_time(ms) \t cnt_raw \t   cnt_ms\n");
+	profiler_print("\t Name \t  Duration(ms)\t log_state" \
+			"    cnt_raw    cnt_ms\n");
 	for (idx = 0; idx < profiler_data->circ_idx; idx++) {
 		memset(buffer, 0, sizeof(buffer));
 		prof_buff = &profiler_data->circ_buff[idx];
 		profiler = prof_buff->profiler;
+		if ((prof_buff->time - strt_time) < profiler_data->period)
+			continue;
 		if (profiler->name)
-			count = snprintf(buffer, PROF_NAME_MAX_LEN, "%s",
+			count = snprintf(buffer, PROF_NAME_MAX_LEN, "%-10s",
 					profiler->name);
 		else
-			count = snprintf(buffer, PROF_NAME_MAX_LEN, "%s",
+			count = snprintf(buffer, PROF_NAME_MAX_LEN, "%-10s",
 					"unknown");
 
 		count += snprintf(buffer + count, sizeof(buffer) - count,
-				"\t %10lu \t\t %s \t %10lu \t ",
-				(prof_buff->time/CLOCK_TICK_RATE)*1000,
-				prof_buff->log_state,
-				((profiler->start_time/CLOCK_TICK_RATE)*1000));
+				" %10lu \t %s     ",
+				prof_buff->time - strt_time,
+				prof_buff->log_state);
 		/**
 		 * Append "*" to the counter and counter_ms if the counter
 		 * has overflowed (to indicate that counter has overflowed)
 		 */
 		if (prof_buff->overflow) {
 			snprintf(buffer + count, sizeof(buffer) - count,
-					"%10lu* \t %10lu*\n",
+					"%10lu* %10lu*\n",
 					prof_buff->counter,
 					COUNTER_TO_MS(prof_buff->counter));
 		} else {
 			snprintf(buffer + count, sizeof(buffer) - count,
-					"%10lu \t %10lu\n",
+					"%-10lu %-10lu\n",
 					prof_buff->counter,
 					COUNTER_TO_MS(prof_buff->counter));
 		}
@@ -345,7 +407,6 @@ DEFINE_SIMPLE_ATTRIBUTE(prof_period_fops,
 static int set_prof_flush(void *data, u64 flush)
 {
 	struct profiler_data *profiler_data = data;
-
 	if (flush != 1)
 		return -EINVAL;
 
@@ -353,9 +414,11 @@ static int set_prof_flush(void *data, u64 flush)
 	 * flush the profiler log buffer
 	 * on terminal or to MTT
 	 */
+
 	mutex_lock(&profiler_data->mutex);
 	flush_circ_buff(profiler_data);
 	mutex_unlock(&profiler_data->mutex);
+
 	return 0;
 }
 
@@ -374,7 +437,6 @@ static int set_prof_start(void *data, u64 start)
 {
 	struct profiler_data *profiler_data = data;
 	int err = 0;
-
 	mutex_lock(&profiler_data->mutex);
 	if (start == 1) {
 		if (profiler_data->running)
@@ -387,20 +449,24 @@ static int set_prof_start(void *data, u64 start)
 			}
 			BUG_ON(delayed_work_pending(
 					&profiler_data->prof_periodic_work));
+			strt_time = ktime_to_ms(ktime_get());
 			schedule_delayed_work(
 				&profiler_data->prof_periodic_work,
-				msecs_to_jiffies(profiler_data->period));
-			pr_info("Started Periodic Profiling with period %lu\n",
+				msecs_to_jiffies(0));
+			pr_info("Profiling with period %lums\n",
 					profiler_data->period);
 		}
-		pr_info("To flush the counters: [echo 1 > flush]\n");
+		pr_info("To flush the buffers: [echo 1 > flush]\n");
 		profiler_data->running = 1;
 
 	} else if (start == 0) {
+		if (!profiler_data->running)
+			goto out_unlock;
 		profiler_data->running = 0;
 		mutex_unlock(&profiler_data->mutex);
 		cancel_delayed_work_sync(&profiler_data->prof_periodic_work);
 		flush_circ_buff(profiler_data);
+		pm_mgr_pi_count_clear(true);
 		return 0;
 	}
 out_unlock:

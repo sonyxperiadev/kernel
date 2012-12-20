@@ -29,6 +29,11 @@
 #include <linux/broadcom/bcm_rpc.h>
 #endif
 
+#include <plat/ccu_profiler.h>
+#include <plat/profiler.h>
+#include <mach/kona_timer.h>
+int deepsleep_profiling;
+
 enum {
 	KONA_PM_LOG_LVL_NONE = 0,
 	KONA_PM_LOG_LVL_ERROR = 1,
@@ -69,6 +74,9 @@ module_param_named(log_lvl, pm_prms.log_lvl,
 
 module_param_named(suspend_state, pm_prms.suspend_state, int,
 					S_IRUGO | S_IWUSR | S_IWGRP);
+
+module_param_named(deepsleep_profiling, deepsleep_profiling, int,
+	S_IRUGO | S_IWUSR | S_IWGRP);
 
 __weak void instrument_dormant_trace(u32 trace, u32 service, u32 success)
 {
@@ -161,7 +169,11 @@ __weak int kona_mach_pm_prepare(void)
 
 __weak int kona_mach_pm_enter(suspend_state_t state)
 {
-	int ret = 0;
+	int ret = 0, err = 0;
+	long unsigned time_awake, time1, time2;
+	struct ccu_prof_parameter param = {
+		.count_type = CCU_PROF_ALWAYS_ON,
+	};
 	struct kona_idle_state *suspend =
 		&pm_prms.states[pm_prms.suspend_state];
 	BUG_ON(!suspend);
@@ -187,12 +199,31 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(1);
 #endif
+			if (deepsleep_profiling) {
+				err = start_profiler("ccu_root",
+						((void *)&param));
+				if (!err)
+					time1 = kona_hubtimer_get_counter();
+			}
 			instrument_dormant_trace(DORMANT_SUSPEND_PATH_ENTRY,
-						0, 0);
+					0, 0);
 			suspend->enter(suspend,
 				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
 			instrument_dormant_trace(DORMANT_SUSPEND_PATH_EXIT,
-						0, 0);
+					0, 0);
+			if (!err && deepsleep_profiling) {
+				time_awake = stop_profiler("ccu_root");
+				if (time_awake == OVERFLOW_VAL)
+					printk(KERN_ALERT "counter overflow");
+				else if	(time_awake > 0) {
+					time2 =	kona_hubtimer_get_counter();
+					printk(KERN_ALERT "SuspendTime:	%lums",
+						(time2 - time1)/32);
+					printk(KERN_ALERT "System awake	time" \
+						"during deepsleep:%lums",
+						time_awake);
+				}
+			}
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(0);
 #endif

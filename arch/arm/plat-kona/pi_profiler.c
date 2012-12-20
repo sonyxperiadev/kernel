@@ -35,6 +35,7 @@
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
 #include <mach/kona_timer.h>
+#include <linux/hrtimer.h>
 
 static struct dentry *dentry_root_dir;
 static struct dentry *dentry_pi_dir;
@@ -56,41 +57,22 @@ static int pi_prof_start(struct profiler *profiler, int start)
 
 	profiler_dbg("%s\n", __func__);
 
-	/**
-	 * By default, PI ON counters are started at boot
-	 * It can not be started and stopped at run time due to
-	 * know ASIC issue. So to satify the user, we will just
-	 * update the flag as running and report to user that
-	 * PI ON counter is running now
-	 */
-	if (start == 1)
-		pi_profiler->profiler.flags |= PROFILER_RUNNING;
-	else
-		pi_profiler->profiler.flags &= ~PROFILER_RUNNING;
-#if 0
-	if (start == 1)
+	if (start == 1) {
+		pi_profiler->profiler.flags = PROFILER_RUNNING;
 		pwr_mgr_pi_counter_enable(pi_profiler->pi_id, true);
-	else if (start == 0)
+	} else {
+		pi_profiler->profiler.flags = 0;
 		pwr_mgr_pi_counter_enable(pi_profiler->pi_id, false);
-#endif
+	}
+
 	return 0;
 }
+
 static int pi_prof_status(struct profiler *profiler)
 {
-	struct pi_profiler *pi_profiler = container_of(profiler,
-				struct pi_profiler, profiler);
-
-	return pi_profiler->profiler.flags & PROFILER_RUNNING;
-#if 0
-	if (!pi_profiler->counter_offset) {
-		pr_err("counter offset not defined\n");
-		return 0;
-	}
-	reg = readl(PI_PROF_REG_ADDR(pi_profiler,
-				pi_profiler->counter_offset));
-	return reg & pi_profiler->counter_en_mask;
-#endif
+	return profiler->flags;
 }
+
 static int pi_prof_get_counter(struct profiler *profiler,
 			       unsigned long *counter,
 			       int *overflow)
@@ -145,17 +127,27 @@ static int set_pi_prof_start(void *data, u64 start)
 	int err = 0;
 
 	if (start == 1) {
+		pi_profiler->profiler.start_time = ktime_to_ms(ktime_get());
 		err = pi_profiler->profiler.ops->start(&pi_profiler->profiler,
 				1);
 		if (err < 0)
 			pr_err("Failed to start PI profiler %s\n",
 					pi_profiler->profiler.name);
-		pi_profiler->profiler.start_time =
-			kona_hubtimer_get_counter();
+		pm_mgr_pi_count_clear(false);
+		pi_profiler->profiler.stop_time = 0;
+		pi_profiler->profiler.running_time = 0;
 	} else if (start == 0) {
+		if (!pi_profiler->profiler.ops->status(
+					&pi_profiler->profiler))
+			return 0;
+		pi_profiler->profiler.ops->get_counter(
+				&pi_profiler->profiler,
+				&pi_profiler->profiler.running_time,
+				&pi_profiler->profiler.overflow);
 		err = pi_profiler->profiler.ops->start(&pi_profiler->profiler,
 				0);
-		pi_profiler->profiler.start_time = 0;
+		pm_mgr_pi_count_clear(true);
+		pi_profiler->profiler.stop_time = ktime_to_ms(ktime_get());
 	}
 	return err;
 }
@@ -185,27 +177,42 @@ static int get_counter_read(struct file *file, char __user *buf, size_t len,
 	int count = 0;
 	int overflow = 0;
 	unsigned long cnt = 0;
-	unsigned long duration_ms = 0;
+	unsigned long duration = 0;
 	unsigned long curr_time = 0;
-	u8 buffer[64];
+	unsigned long start_time;
+	u8 buffer[128];
 
-	if (pi_profiler->profiler.ops->status(&pi_profiler->profiler)) {
-		curr_time = kona_hubtimer_get_counter();
+	int status =
+		pi_profiler->profiler.ops->status(&pi_profiler->profiler);
+	if (status) {
+		curr_time = ktime_to_ms(ktime_get());
+		start_time = pi_profiler->profiler.start_time;
 		err = pi_profiler->profiler.ops->get_counter(
 				&pi_profiler->profiler,
 				&cnt, &overflow);
-		duration_ms = (((curr_time - pi_profiler->profiler.start_time)/
-					CLOCK_TICK_RATE) * 1000);
+		duration = (curr_time - start_time);
+	} else if (pi_profiler->profiler.stop_time) {
+		curr_time = pi_profiler->profiler.stop_time;
+		start_time = pi_profiler->profiler.start_time;
+		duration = (curr_time - start_time);
+		overflow = pi_profiler->profiler.overflow;
+		cnt = pi_profiler->profiler.running_time;
 	}
-	if (overflow) {
-		count = sprintf(buffer,
-				"duration_ms = %lu cnt_raw = %lu* cnt_ms = %lu*\n",
-				duration_ms, cnt, COUNTER_TO_MS(cnt));
-	} else {
-		count = sprintf(buffer,
-				"duration_ms = %lu cnt_raw = %lu cnt_ms = %lu\n",
-				duration_ms, cnt, COUNTER_TO_MS(cnt));
-	}
+
+	if (status) {
+		count = sprintf(buffer, "Status: Running" \
+				"\t Duration = %lums \t cnt_raw = %lu" \
+				"\t cnt = %lu%sms\n",
+				duration, cnt, COUNTER_TO_MS(cnt),
+				(overflow) ? "* " : " ");
+	} else if (pi_profiler->profiler.stop_time) {
+		count = sprintf(buffer, "Status: Stopped" \
+				"\t Duration = %lums \t cnt_raw = %lu" \
+				"\t cnt = %lu%sms\n",
+				duration, cnt, COUNTER_TO_MS(cnt),
+				(overflow) ? "* " : " ");
+	} else
+		count = sprintf(buffer,	"Status: Yet to begin\n");
 	count = simple_read_from_buffer(buf, len, ppos, buffer, count);
 	return count;
 }
@@ -215,12 +222,30 @@ static const struct file_operations pi_prof_counter_fops = {
 	.read = get_counter_read,
 };
 
+static int pi_profiler_start(struct profiler *profiler, void *data)
+{
+	struct pi_profiler *pi_profiler;
+	int ret;
+	if (!profiler) {
+		ret = -EINVAL;
+		goto err;
+	}
+	pi_profiler = container_of(profiler, struct pi_profiler,
+						profiler);
+	ret = pi_profiler->profiler.ops->start(profiler, 1);
+	if (!ret)
+		profiler->start_time = kona_hubtimer_get_counter();
+err:
+	return ret;
+}
+
 struct prof_ops pi_prof_ops = {
 	.init = pi_prof_init,
 	.start = pi_prof_start,
 	.status = pi_prof_status,
 	.get_counter = pi_prof_get_counter,
 	.print = pi_prof_print,
+	.start_profiler = pi_profiler_start,
 };
 
 struct gen_pi_prof_ops gen_pi_prof_ops = {

@@ -28,6 +28,16 @@
  * Size of the profiler log buffer
  */
 #define PROF_CIRC_BUFF_MAX_ENTRIES		(256)
+
+#define PROF_STR_CCU_ROOT	"ccu_root"
+#define PROF_STR_CCU_KHUB	"ccu_khub"
+#define PROF_STR_CCU_KPM	"ccu_kpm"
+#define PROF_STR_CCU_KPS	"ccu_kps"
+#define PROF_STR_PI_HUB		"pi_hub"
+#define PROF_STR_PI_MM		"pi_mm"
+#define PROF_STR_PI_MODEM	"pi_modem"
+#define PROF_STR_PI_ARM		"pi_arm"
+#define PROF_STR_PI_ARMSUB	"pi_armsub"
+#define PROF_STR_PI_AON		"pi_aon"
+
 #endif
-
-

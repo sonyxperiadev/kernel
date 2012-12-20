@@ -34,10 +34,25 @@
 #include <plat/ccu_profiler.h>
 #include <mach/kona_timer.h>
 #include <mach/timex.h>
+#include <linux/ktime.h>
+#include <linux/hrtimer.h>
 
 static struct dentry *dentry_root_dir;
 static struct dentry *dentry_ccu_dir;
 static unsigned long init;
+
+char *get_prof_name(enum ccu_profiling_counter prof_type)
+{
+	switch (prof_type) {
+	case CCU_PROF_NONE:		return "None";
+	case CCU_PROF_PLL_PWRDWN:	return "PLL Power Down";
+	case CCU_PROF_AUTOGATING:	return "Clk_Idle";
+	case CCU_PROF_POLICY:		return "Policy";
+	case CCU_PROF_CLK_REQ:		return "Clk_Req";
+	case CCU_PROF_ALWAYS_ON:	return "Always ON";
+	default:			return "Invalid";
+	}
+}
 
 static int ccu_prof_check_params(struct ccu_profiler *ccu_profiler)
 {
@@ -50,7 +65,7 @@ static int ccu_prof_check_params(struct ccu_profiler *ccu_profiler)
 	u32 clkreq_sel1 = 0;
 	int err = 0;
 	enum ccu_profiling_counter cnt_type = CCU_PROF_NONE;
-	int policy;
+	enum ccu_prof_policy_sel policy;
 
 	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
 	if (IS_ERR_OR_NULL(clk)) {
@@ -166,11 +181,15 @@ static int ccu_prof_start(struct profiler *profiler, int start)
 		err = ccu_prof_check_params(ccu_profiler);
 		if (err < 0)
 			goto out_err;
-
+	/* To support restart, clear and then start the counter */
+		reg &= ~ccu_profiler->cntr_start_mask;
+		writel(reg, CCU_REG_ADDR(ccu_clk, ccu_profiler->ctrl_offset));
 		reg |= (ccu_profiler->cntr_start_mask <<
 				ccu_profiler->cntrl_start_shift);
+		profiler->flags |= PROFILER_RUNNING;
 	} else if (start == 0) {
 		reg &= ~ccu_profiler->cntr_start_mask;
+		profiler->flags &= ~PROFILER_RUNNING;
 	}
 	profiler_dbg("writing regiter value %x\n", reg);
 	writel(reg, CCU_REG_ADDR(ccu_clk, ccu_profiler->ctrl_offset));
@@ -408,7 +427,7 @@ int ccu_prof_set_autogate_sel(struct ccu_profiler *ccu_profiler,
 		reg |= value & ccu_profiler->auto_gate_sel0_mask;
 		profiler_dbg("set autogate sel0 reg %x\n", reg);
 		writel(reg, CCU_REG_ADDR(ccu_clk,
-				ccu_profiler->auto_gate_sel1_offset));
+				ccu_profiler->auto_gate_sel0_offset));
 	} else if (select == 1) {
 		if (ccu_profiler->auto_gate_sel1_offset == 0) {
 			profiler_dbg("autogate select1 not supported by ccu\n");
@@ -565,19 +584,37 @@ static int set_ccu_prof_start(void *data, u64 start)
 {
 	struct ccu_profiler *ccu_profiler = data;
 	int err = 0;
-
 	if (start == 1) {
 		err = ccu_profiler->profiler.ops->start(&ccu_profiler->profiler,
 				1);
-		if (err < 0)
+		if (err < 0) {
 			pr_err("Failed to start ccu profiler\n");
-		else
-			ccu_profiler->profiler.start_time =
-				kona_hubtimer_get_counter();
+			return err;
+		}
+		ccu_profiler->profiler.start_time = ktime_to_ms(ktime_get());
+		ccu_profiler->profiler.stop_time = 0;
+		ccu_profiler->profiler.overflow = 0;
+		ccu_profiler->profiler.running_time = 0;
+		ccu_profiler->profiler.ops->get_counter(
+				&ccu_profiler->profiler,
+				&ccu_profiler->profiler.running_time,
+				&ccu_profiler->profiler.overflow);
+		if (ccu_profiler->profiler.overflow)
+			ccu_profiler->profiler.flags |= PROFILER_OVERFLOW;
+	/* Overflow bit once set cannot be flushed, due to known ASIC issue
+		So, we have to keep track of it for the next cycles */
 	} else if (start == 0) {
-		err = ccu_profiler->profiler.ops->start(&ccu_profiler->profiler,
-				0);
-		ccu_profiler->profiler.start_time = 0;
+		if (ccu_profiler->profiler.ops->status(&ccu_profiler->profiler)
+				== 0)
+			return 0;
+		ccu_profiler->profiler.stop_time = ktime_to_ms(ktime_get());
+		ccu_profiler->profiler.ops->get_counter(
+				&ccu_profiler->profiler,
+				&ccu_profiler->profiler.running_time,
+				&ccu_profiler->profiler.overflow);
+	/* Read everything before clearing the counters	*/
+		err = ccu_profiler->profiler.ops->start(
+				&ccu_profiler->profiler, 0);
 	}
 	return err;
 }
@@ -604,7 +641,7 @@ static int set_ccu_prof_type(void *data, u64 counter_type)
 	}
 
 	err = ccu_profiler->ccu_gen_prof_ops->set_prof_type(ccu_profiler,
-			(enum ccu_profiling_counter)(counter_type));
+			counter_type);
 	if (err < 0)
 		pr_err("Failed to set profiling counter type\n");
 	return err;
@@ -644,11 +681,11 @@ static int get_ccu_prof_policy(void *data, u64 *policy)
 	struct ccu_profiler *ccu_profiler = data;
 	int err = 0;
 	err = ccu_profiler->ccu_gen_prof_ops->get_prof_policy(ccu_profiler);
-	if (err == 0)
-		*policy = err;
-	else
+	if (err < 0)
 		pr_err("Failed to get profiler policy\n");
-	return err;
+	else
+		*policy = err;
+	return 0;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(ccu_prof_policy_fops,
@@ -784,30 +821,57 @@ static int get_counter_read(struct file *file, char __user *buf, size_t len,
 {
 	struct ccu_profiler *ccu_profiler = file->private_data;
 	int err = 0;
-	int count;
+	int count = 0;
 	int overflow = 0;
+	int history = 0;
 	unsigned long cnt = 0;
-	unsigned long duration_ms = 0;
-	unsigned long curr_time = 0;
-	u8 buffer[64];
-
-	if (ccu_profiler->profiler.ops->status(&ccu_profiler->profiler)) {
-		curr_time = kona_hubtimer_get_counter();
+	unsigned long duration = 0;
+	unsigned curr_time = 0;
+	u8 buffer[128];
+	unsigned long start_time = 0;
+	int status = ccu_profiler->profiler.ops->status
+				(&ccu_profiler->profiler);
+	int type = ccu_profiler->ccu_gen_prof_ops->get_prof_type
+				(ccu_profiler);
+	if (status) {
+		curr_time = ktime_to_ms(ktime_get());
 		err = ccu_profiler->profiler.ops->get_counter(
 				&ccu_profiler->profiler,
 				&cnt, &overflow);
-		duration_ms = (((curr_time - ccu_profiler->profiler.start_time)/
-					CLOCK_TICK_RATE) * 1000);
+		start_time = ccu_profiler->profiler.start_time;
+		duration = curr_time - start_time;
+		if (ccu_profiler->profiler.flags & PROFILER_OVERFLOW)
+			history = 1;
+	} else if (ccu_profiler->profiler.stop_time) {
+		curr_time = ccu_profiler->profiler.stop_time;
+		start_time = ccu_profiler->profiler.start_time;
+		duration = curr_time - start_time;
+		overflow = ccu_profiler->profiler.overflow;
+		cnt = ccu_profiler->profiler.running_time;
+		if (ccu_profiler->profiler.flags & PROFILER_OVERFLOW)
+			history = 1;
 	}
-	if (overflow) {
-		count = sprintf(buffer,
-				"duration_ms = %lu cnt_raw = %lu* cnt_ms = %lu*\n",
-				duration_ms, cnt, COUNTER_TO_MS(cnt));
-	} else {
-		count = sprintf(buffer,
-				"duration_ms = %lu cnt_raw = %lu cnt_ms = %lu\n",
-				duration_ms, cnt, COUNTER_TO_MS(cnt));
-	}
+	if (status) {
+		count = sprintf(buffer,	"Profile: %s\t Status: Running" \
+				"\tDuration = %lums\t cnt_raw = %lu\t" \
+				"cnt = %lums %s\n", get_prof_name(type),
+				duration, cnt, COUNTER_TO_MS(cnt),
+				((!overflow) ? " " : ((history == overflow)
+				? ((duration < 330000) ? " " : "*") :
+				(duration < 330000) ? " " : "*")));
+	} else if (ccu_profiler->profiler.stop_time) {
+		count = sprintf(buffer, "Profile: %s\t Status: Stopped" \
+				"\tDuration = %lums\t cnt_raw = %lu\t" \
+				"cnt = %lums %s\n", get_prof_name(type),
+				duration, cnt, COUNTER_TO_MS(cnt),
+				((!overflow) ? " " : ((history == overflow)
+				? ((duration < 330000) ? " " : "*") :
+				(duration < 330000) ? " " : "*")));
+	} else
+		count = sprintf(buffer, "Status: Yet to begin\n");
+	/* If overflow bit isn't set, then value is proper. If it is
+	set, it is compared with history and till 165 sec, the value
+	is guaranteed to be correct */
 	count = simple_read_from_buffer(buf, len, ppos, buffer, count);
 	return count;
 }
@@ -817,12 +881,80 @@ static const struct file_operations ccu_prof_counter_fops = {
 	.read = get_counter_read,
 };
 
+static int ccu_profiler_start(struct profiler *profiler, void *data)
+{
+	int ret = 0;
+	struct ccu_profiler *ccu_profiler;
+	struct ccu_prof_parameter *param;
+	if (!profiler) {
+		ret = -EINVAL;
+		goto err;
+	}
+	ccu_profiler = container_of(profiler, struct ccu_profiler,
+						profiler);
+	param =	(struct ccu_prof_parameter *)data;
+
+	switch (param->count_type) {
+	case CCU_PROF_NONE:
+	case CCU_PROF_PLL_PWRDWN:
+				goto err;
+
+	case CCU_PROF_AUTOGATING:
+				ccu_profiler->ccu_gen_prof_ops->
+					set_prof_type(ccu_profiler,
+						param->count_type);
+				ccu_profiler->ccu_gen_prof_ops->
+					set_autogate_sel(ccu_profiler,
+						param->sel, param->val);
+				break;
+
+	case CCU_PROF_POLICY:
+				ccu_profiler->ccu_gen_prof_ops->
+					set_prof_type(ccu_profiler,
+						param->count_type);
+				ccu_profiler->ccu_gen_prof_ops->
+					set_prof_policy(ccu_profiler,
+						param->val);
+				break;
+
+	case CCU_PROF_CLK_REQ:
+				ccu_profiler->ccu_gen_prof_ops->
+					set_prof_type(ccu_profiler,
+						param->count_type);
+				ccu_profiler->ccu_gen_prof_ops->
+					set_clkreq_sel(ccu_profiler,
+						param->sel, param->val);
+				break;
+
+	case CCU_PROF_ALWAYS_ON:
+				ccu_profiler->ccu_gen_prof_ops->
+					set_prof_type(ccu_profiler,
+						param->count_type);
+				break;
+
+	default:
+				profiler_dbg("Wrong type");
+				ret = -EINVAL;
+				goto err;
+		}
+	ret = profiler->ops->start(profiler, 1);
+	profiler->start_time = kona_hubtimer_get_counter();
+	profiler->ops->get_counter(profiler,
+				&profiler->running_time,
+				&profiler->overflow);
+	if (profiler->overflow)
+		profiler->flags |= PROFILER_OVERFLOW;
+err:
+	return ret;
+}
+
 struct prof_ops ccu_prof_ops = {
 	.init = ccu_prof_init,
 	.start = ccu_prof_start,
 	.status = ccu_prof_status,
 	.get_counter = ccu_prof_get_counter,
 	.print = ccu_prof_print,
+	.start_profiler = ccu_profiler_start,
 };
 
 struct gen_ccu_prof_ops gen_ccu_prof_ops = {
