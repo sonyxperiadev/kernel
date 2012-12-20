@@ -76,9 +76,9 @@ static DEFINE_SPINLOCK(pm_idle_lock);
 	(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET)
 
 
-static int enter_idle_state(struct kona_idle_state *state);
+static int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params);
 static int enter_suspend_state(struct kona_idle_state *state);
-static int enter_dormant_state(struct kona_idle_state *state);
+static int enter_dormant_state(u32 ctrl_params);
 
 static struct kona_idle_state idle_states[] = {
 	{
@@ -94,7 +94,8 @@ static struct kona_idle_state idle_states[] = {
 	{
 		.name = "C2",
 		.desc = "suspend-rtn", /*suspend-retention (XTAL ON)*/
-		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
+		.flags = CPUIDLE_FLAG_TIME_VALID,
+		.params = CTRL_PARAMS_FLAG_XTAL_ON,
 		.latency = EXIT_LAT_SUSPEND_RETN,
 		.target_residency = TRGT_RESI_SUSPEND_RETN,
 		.state = CSTATE_SUSPEND_RETN,
@@ -105,7 +106,8 @@ static struct kona_idle_state idle_states[] = {
 	{
 		.name = "C3",
 		.desc = "suspend-drmnt", /* suspend-dormant */
-		.flags = CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_XTAL_ON,
+		.flags = CPUIDLE_FLAG_TIME_VALID,
+		.params = CTRL_PARAMS_FLAG_XTAL_ON,
 		.latency = EXIT_LAT_SUSPEND_DRMT,
 		.target_residency = TRGT_RESI_SUSPEND_DRMT,
 		.state = CSTATE_SUSPEND_DRMT,
@@ -281,17 +283,16 @@ void set_spare_power_status(unsigned int mode)
 		       CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
 }
 
-int enter_dormant_state(struct kona_idle_state *state)
+int enter_dormant_state(u32 ctrl_params)
 {
 #ifdef CONFIG_A9_DORMANT_MODE
 	if (dormant_enable != 0) {
-		if (state->flags & CPUIDLE_ENTER_SUSPEND)
+		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
 			dormant_enter(DORMANT_CLUSTER_DOWN);
 		else
 			dormant_enter(DORMANT_CORE_DOWN);
-	} else {
+	} else
 		enter_wfi();
-	}
 #endif /* CONFIG_A9_DORMANT_MODE */
 	return 0;
 }
@@ -398,11 +399,11 @@ int hawaii_force_sleep(suspend_state_t state)
 		}
 		disable_all_interrupts();
 
-		enter_idle_state(&s);
+		enter_idle_state(&s, s.params);
 	}
 }
 
-int enter_idle_state(struct kona_idle_state *state)
+int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 {
 	struct pi *pi = NULL;
 
@@ -414,7 +415,7 @@ int enter_idle_state(struct kona_idle_state *state)
 	pwr_mgr_event_clear_events(USBOTG_EVENT, MODEMBUS_ACTIVE_EVENT);
 
 		/*Turn off XTAL only for deep sleep state*/
-	if (state->flags & CPUIDLE_FLAG_XTAL_ON || keep_xtl_on)
+	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(false);
 
 	clear_wakeup_interrupts();
@@ -425,7 +426,7 @@ int enter_idle_state(struct kona_idle_state *state)
 	pi_enable(pi, 0);
 
 	if (clk_dbg_dsm)
-		if (state->flags & CPUIDLE_ENTER_SUSPEND)
+		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
 			__clock_print_act_clks();
 
 	switch (state->state) {
@@ -434,7 +435,7 @@ int enter_idle_state(struct kona_idle_state *state)
 		break;
 	case CSTATE_SUSPEND_DRMT:
 	case CSTATE_DS_DRMT:
-		enter_dormant_state(state);
+		enter_dormant_state(ctrl_params);
 		break;
 	}
 
@@ -508,10 +509,10 @@ int enter_idle_state(struct kona_idle_state *state)
 	pwr_mgr_process_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT, false);
 	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
 
-	if (state->flags & CPUIDLE_ENTER_SUSPEND)
+	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
 		log_wakeup_interrupts();
 
-	if (state->flags & CPUIDLE_FLAG_XTAL_ON || keep_xtl_on)
+	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(true);
 	return -1;
 }

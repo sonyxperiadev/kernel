@@ -70,6 +70,9 @@ module_param_named(log_lvl, pm_prms.log_lvl,
 module_param_named(suspend_state, pm_prms.suspend_state, int,
 					S_IRUGO | S_IWUSR | S_IWGRP);
 
+__weak void instrument_dormant_trace(u32 trace, u32 service, u32 success)
+{
+}
 
 #ifdef CONFIG_CPU_IDLE
 
@@ -101,9 +104,14 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 		local_fiq_disable();
 		instrument_idle_entry();
 
-		if (kona_state->enter)
-			mach_ret = kona_state->enter(kona_state);
-		else
+		if (kona_state->enter) {
+			instrument_dormant_trace(DORMANT_IDLE_PATH_ENTRY,
+						kona_state->state, 0);
+			mach_ret = kona_state->enter(kona_state,
+					kona_state->params);
+			instrument_dormant_trace(DORMANT_IDLE_PATH_EXIT,
+						kona_state->state, 0);
+		} else
 			cpu_do_idle();
 		instrument_idle_exit();
 
@@ -179,9 +187,12 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(1);
 #endif
-			suspend->flags |= CPUIDLE_ENTER_SUSPEND;
-			suspend->enter(suspend);
-			suspend->flags &= ~CPUIDLE_ENTER_SUSPEND;
+			instrument_dormant_trace(DORMANT_SUSPEND_PATH_ENTRY,
+						0, 0);
+			suspend->enter(suspend,
+				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
+			instrument_dormant_trace(DORMANT_SUSPEND_PATH_EXIT,
+						0, 0);
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(0);
 #endif
@@ -213,8 +224,13 @@ int kona_pm_cpu_lowpower(void)
 	 * In dormant path, we will put this core
 	 * to DORMANT_CORE_DOWN.
 	 */
-	if (suspend->enter)
-		suspend->enter(suspend);
+	if (suspend->enter) {
+		instrument_dormant_trace(DORMANT_SUSPEND_PATH_ENTRY,
+					0, 0);
+		suspend->enter(suspend, suspend->params);
+		instrument_dormant_trace(DORMANT_SUSPEND_PATH_EXIT,
+					0, 0);
+	}
 	return 0;
 }
 EXPORT_SYMBOL(kona_pm_cpu_lowpower);
@@ -286,7 +302,7 @@ int __init kona_pm_init(struct pm_init_param *ip)
 		state->name[CPUIDLE_NAME_LEN - 1] = 0;
 		strncpy(state->desc, ip->states[i].desc, CPUIDLE_DESC_LEN - 1);
 		state->desc[CPUIDLE_DESC_LEN - 1] = 0;
-		if (ip->states[i].flags & CPUIDLE_CSTATE_DISABLED)
+		if (ip->states[i].params & CTRL_PARAMS_CSTATE_DISABLED)
 			state->disable = 1;
 	}
 	kona_idle_driver.state_count = ip->num_states;

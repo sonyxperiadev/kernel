@@ -2105,8 +2105,13 @@ static void sdhci_tasklet_card(unsigned long param)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	/* This corresponds to the clock enabled in cd interrupt */
-	sdhci_runtime_pm_put(host);
+	/*
+	 * This corresponds to the clock enabled in cd interrupt
+	 * We cant do an autosuspend here. If the card is removed
+	 * the clock may be turned ON forever if the disable is
+	 * delayed.
+	 */
+	pm_runtime_put_sync_suspend(host->mmc->parent);
 
 	mmc_detect_change(host->mmc, msecs_to_jiffies(200));
 }
@@ -2753,13 +2758,20 @@ EXPORT_SYMBOL_GPL(sdhci_enable_irq_wakeups);
 
 static int sdhci_runtime_pm_get(struct sdhci_host *host)
 {
-	return pm_runtime_get_sync(host->mmc->parent);
+	if (host->ops->rpm_enabled(host))
+		return pm_runtime_get_sync(host->mmc->parent);
+	else
+		return host->ops->clk_enable(host, 1);
 }
 
 static int sdhci_runtime_pm_put(struct sdhci_host *host)
 {
-	pm_runtime_mark_last_busy(host->mmc->parent);
-	return pm_runtime_put_autosuspend(host->mmc->parent);
+	if (host->ops->rpm_enabled(host)) {
+		pm_runtime_mark_last_busy(host->mmc->parent);
+		return pm_runtime_put_autosuspend(host->mmc->parent);
+	} else {
+		return host->ops->clk_enable(host, 0);
+	}
 }
 
 int sdhci_runtime_suspend_host(struct sdhci_host *host)

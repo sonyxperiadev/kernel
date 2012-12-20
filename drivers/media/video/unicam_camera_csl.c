@@ -1087,14 +1087,16 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		    csl_cam_get_intr_status(unicam_dev->cslCamHandle,
 					    (CSL_CAM_INTERRUPT_t *) &status);
 		if (status & CSL_CAM_INT_FRAME_START) {
+			status = status & ~CSL_CAM_INT_FRAME_START;
 			if (reg_status & 0x2000)
 				pr_err("Camera: Urgent request was signalled at FS!!!\n");
-			return IRQ_HANDLED;
 		}
 
 		if ((status & CSL_CAM_INT_FRAME_END) ||
 			(status & CSL_CAM_INT_LINE_COUNT)) {
 			struct vb2_buffer *vb = unicam_dev->active;
+			status &= ~(CSL_CAM_INT_FRAME_END |
+					CSL_CAM_INT_LINE_COUNT);
 			fps++;
 			if (reg_status & 0x2000)
 				pr_err("Camera: Urgent request was signalled at FE!!!!\n");
@@ -1198,7 +1200,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
 		}
 
-		else
+		if (status)
 			dev_err(unicam_dev->dev,
 				"interrupt not handled reg_status=0x%x"
 				" status=0x%x\n", reg_status, status);

@@ -857,56 +857,7 @@ struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.bcmpmu_rgltr = bcm59xxx_regulators,
 	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
 };
-/*
-static struct bcmpmu_adc_lut  pmu_die_temp_map[] = {
 
-	{466,	-40},
-	{476,	-35},
-	{485,	-30},
-	{495,	-25},
-	{505,	-20},
-	{515,	-15},
-	{524,	-10},
-	{534,	-5},
-	{544,	0},
-	{554,	5},
-	{564,	10},
-	{574,	15},
-	{584,	20},
-	{594,	25},
-	{604,	30},
-	{614,	35},
-	{624,	40},
-	{634,	45},
-	{644,	50},
-	{655,	55},
-	{665,	60},
-	{675,	65},
-	{685,	70},
-	{696,	75},
-	{706,	80},
-	{716,	85},
-	{727,	90},
-	{737,	95},
-	{747,	100},
-	{758,	105},
-	{768,	110},
-	{778,	115},
-	{789,	120},
-	{799,	125},
-	{809,	130},
-	{819,	135},
-	{829,	140},
-	{839,	145},
-	{849,	150},
-	{859,	155},
-	{869,	160},
-	{879,	165},
-	{889,	170},
-	{899,	175},
-
-};
-*/
 static struct bcmpmu_adc_lut batt_temp_map[] = {
 	{16, 100},			/* 100 C */
 	{20, 95},			/* 95 C */
@@ -1006,15 +957,6 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.flag = 0,
 					.volt_range = 1200,
 					.adc_offset = 0,
-					.lut = NULL,
-					.lut_len = 0,
-	},
-	[PMU_ADC_CHANN_DIE_TEMP] = {
-					.flag = 0,
-					/* Just for check */
-					.volt_range = 497,
-					/* Taking 276 insted of 275.7 */
-					.adc_offset = -276,
 					.lut = NULL,
 					.lut_len = 0,
 	},

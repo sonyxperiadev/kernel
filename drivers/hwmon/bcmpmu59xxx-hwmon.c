@@ -98,13 +98,6 @@ static int bcmpmu_adc_convert(struct bcmpmu59xxx *bcmpmu,
 	int index = 0;
 	int len = 0;
 
-	if (adc->pdata[channel].volt_range == 0) {
-		result->conv = 0;
-		pr_hwmon(ERROR, "%s channel:%d has no platform data\n",
-							__func__, channel);
-		return -ENODEV;
-	}
-
 	if (adc->pdata[channel].lut) {
 		len = adc->pdata[channel].lut_len;
 		lut = adc->pdata[channel].lut;

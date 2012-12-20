@@ -36,13 +36,14 @@ extern void sec_gaf_supply_rqinfo(unsigned short curr_offset,
 
 extern void cdebugger_save_pte(void *pte, int task_addr);
 
+extern void cdebugger_set_upload_magic(unsigned magic);
+
 extern unsigned char _buf_log_main[512 * 1024];
 extern unsigned char _buf_log_radio[256 * 1024];
 extern unsigned char _buf_log_events[256 * 1024];
 extern unsigned char _buf_log_system[256 * 1024];
 extern char *log_buf;
 extern int log_buf_len;
-
 #else
 static inline int cdebugger_init(void)
 {
@@ -82,7 +83,9 @@ static inline void sec_gaf_supply_rqinfo(unsigned short curr_offset,
 void cdebugger_save_pte(void *pte, unsigned int faulttype)
 {
 }
-
+static inline void cdebugger_set_upload_magic(unsigned magic)
+{
+}
 #endif
 
 #endif /* CDEBUGGER_H */

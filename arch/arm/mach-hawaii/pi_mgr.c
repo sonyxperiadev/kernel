@@ -189,26 +189,30 @@ static int mm_pi_enable(struct pi *pi, int enable)
 {
 	int ret;
 	pi_dbg(pi->id, PI_LOG_EN_DIS, "%s\n", __func__);
-#ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
-	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && enable)
-		var500m_clk_en_override(true);
-#endif
+
 #ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
 		if (enable && ref_8ph_en_pll1_clk)
 			__clk_enable(ref_8ph_en_pll1_clk);
 	}
 #endif
+
+#ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
+	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && enable)
+		var500m_clk_en_override(true);
+#endif
 	ret = gen_pi_ops.enable(pi, enable);
+
+#ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
+	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && !enable)
+		var500m_clk_en_override(false);
+#endif
+
 #ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
 		if (!enable && ref_8ph_en_pll1_clk)
 			__clk_disable(ref_8ph_en_pll1_clk);
 	}
-#endif
-#ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
-	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && !enable)
-		var500m_clk_en_override(false);
 #endif
 	return ret;
 }

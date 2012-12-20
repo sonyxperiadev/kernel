@@ -51,6 +51,7 @@
 #include <plat/scu.h>
 #include <plat/kona_reset_reason.h>
 #include <mach/sec_api.h>
+#include <mach/cdebugger.h>
 
 static void hawaii_poweroff(void)
 {
@@ -81,6 +82,9 @@ void hawaii_restart(char mode, const char *cmd)
 			break;
 		case 'h':
 		default:
+		/* Clear the magic key when reboot is required */
+			if (cmd == NULL)
+				cdebugger_set_upload_magic(0x00);
 			kona_reset(mode, cmd);
 			break;
 		}
@@ -94,6 +98,9 @@ void hawaii_restart(char mode, const char *cmd)
 		break;
 	case 'h':
 	default:
+	/* Clear the magic key when reboot is required */
+		if (cmd == NULL)
+			cdebugger_set_upload_magic(0x00);
 		kona_reset(mode, cmd);
 		break;
 	}

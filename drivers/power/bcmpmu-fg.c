@@ -622,6 +622,70 @@ static int bcmpmu_fg_get_batt_esr(struct bcmpmu_fg_data *fg, int volt, int temp)
 	return esr;
 }
 
+static int bcmpmu_fg_get_esr_to_ocv(int volt, int curr, int offset,
+		int slope)
+{
+	int ocv;
+	s64 temp, temp1;
+
+	temp = 1000 + (slope * curr / 1000);
+	temp1 = 1000 * volt - offset * curr;
+	ocv = div64_s64(temp1, temp);
+
+	return ocv;
+}
+
+static int bcmpmu_fg_get_batt_ocv(struct bcmpmu_fg_data *fg, int volt, int curr,
+		int temp)
+{
+	struct batt_esr_temp_lut *lut = fg->pdata->batt_prop->esr_temp_lut;
+	int lut_sz = fg->pdata->batt_prop->esr_temp_lut_sz;
+	int slope, offset, ocv;
+	int idx;
+
+	if (!lut) {
+		pr_fg(ERROR, "ESR<->TEMP table is not defined\n");
+		return 0;
+	}
+
+	/*find esr zone */
+	for (idx = 0; idx < lut_sz; idx++) {
+		if (temp <= lut[idx].temp)
+			break;
+	}
+	if (idx == lut_sz)
+		idx = lut_sz - 1;
+
+	slope = lut[idx].esr_vl_slope;
+	offset = lut[idx].esr_vl_offset;
+	ocv = bcmpmu_fg_get_esr_to_ocv(volt, curr, offset, slope);
+	if (ocv < lut[idx].esr_vl_lvl)
+		goto exit;
+
+	slope = lut[idx].esr_vm_slope;
+	offset = lut[idx].esr_vm_offset;
+	ocv = bcmpmu_fg_get_esr_to_ocv(volt, curr, offset, slope);
+	if (ocv < lut[idx].esr_vm_lvl)
+		goto exit;
+
+	slope = lut[idx].esr_vh_slope;
+	offset = lut[idx].esr_vh_offset;
+	ocv = bcmpmu_fg_get_esr_to_ocv(volt, curr, offset, slope);
+	if (ocv < lut[idx].esr_vh_lvl)
+		goto exit;
+
+	slope = lut[idx].esr_vf_slope;
+	offset = lut[idx].esr_vf_offset;
+	ocv = bcmpmu_fg_get_esr_to_ocv(volt, curr, offset, slope);
+
+exit:
+	pr_fg(FLOW, "fg_zone:%d volt: %d curr: %d temp: %d\n",
+			idx, volt, curr, temp);
+	pr_fg(VERBOSE, "FG_ZONE: slope: %d offset: %d ocv: %d\n",
+			slope, offset, ocv);
+	return ocv;
+}
+
 static inline int bcmpmu_fg_get_batt_volt(struct bcmpmu_fg_data *fg)
 {
 	struct bcmpmu_adc_result result;
@@ -712,7 +776,7 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 		bool load_comp, bool avg)
 {
 	int vbat;
-	int vbat_comp = 0;
+	int vbat_oc = 0;
 	int capacity_percentage = 0;
 
 	fg->adc_data.temp = bcmpmu_fg_get_batt_temp(fg);
@@ -725,27 +789,20 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 		vbat = fg->adc_data.volt;
 	}
 
-	fg->adc_data.esr = bcmpmu_fg_get_batt_esr(fg, vbat, fg->adc_data.temp);
 	fg->adc_data.curr_inst = bcmpmu_fg_get_curr_inst(fg);
 
-	if (fg->adc_data.curr_inst > FG_CURR_SAMPLE_MAX)
+	if (abs(fg->adc_data.curr_inst) > FG_CURR_SAMPLE_MAX)
 		fg->adc_data.curr_inst = 0;
 
 	if (load_comp) {
-		vbat_comp = vbat - ((fg->adc_data.esr * fg->adc_data.curr_inst)/
-				1000);
-		capacity_percentage = bcmpmu_fg_volt_to_cap(fg, vbat_comp);
+		vbat_oc = bcmpmu_fg_get_batt_ocv(fg, vbat,
+				fg->adc_data.curr_inst,
+				fg->adc_data.temp);
+		capacity_percentage = bcmpmu_fg_volt_to_cap(fg, vbat_oc);
 	} else
 		capacity_percentage = bcmpmu_fg_volt_to_cap(fg, vbat);
 
-	pr_fg(FLOW, "vbat: %d curr: %d temp: %d\n", vbat,
-			fg->adc_data.curr_inst, fg->adc_data.temp);
-
-	pr_fg(VERBOSE, "vbat_comp: %d temp: %d esr: %d cap: %d",
-			vbat_comp,
-			fg->adc_data.temp,
-			fg->adc_data.esr,
-			capacity_percentage);
+	pr_fg(FLOW, "vbat_comp: %d ocv_cap: %d", vbat_oc, capacity_percentage);
 
 	BUG_ON(capacity_percentage > 100);
 

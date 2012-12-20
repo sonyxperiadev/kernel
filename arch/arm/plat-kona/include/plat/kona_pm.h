@@ -12,20 +12,27 @@
 #ifndef __KONA_PM_H__
 #define __KONA_PM_H__
 
-/* Additional cpuidle flags */
-#define CPUIDLE_FLAG_XTAL_ON    (1 << 16)
-#define CPUIDLE_ENTER_SUSPEND	(1 << 17)
-#define CPUIDLE_CSTATE_DISABLED	(1 << 18)
+/* Additional control parameters */
+#define CTRL_PARAMS_FLAG_XTAL_ON    (1 << 0)
+#define CTRL_PARAMS_ENTER_SUSPEND	(1 << 1)
+#define CTRL_PARAMS_CSTATE_DISABLED	(1 << 2)
+
+/* Additional dormant traces for idle and suspend */
+#define DORMANT_IDLE_PATH_ENTRY		0xA0A0
+#define DORMANT_IDLE_PATH_EXIT		0xB0B0
+#define DORMANT_SUSPEND_PATH_ENTRY	0xE0E0
+#define DORMANT_SUSPEND_PATH_EXIT	0xF0F0
 
 struct kona_idle_state {
 	char *name;
 	char *desc;
 	u32 flags;
+	const u32 params;
 	u32 state;
 	int	power_usage;
 	u32 latency;		/* in uS */
 	u32 target_residency;	/* in uS */
-	int (*enter) (struct kona_idle_state * state);
+	int (*enter) (struct kona_idle_state *state, u32 ctrl_params);
 };
 struct pm_init_param {
 	struct kona_idle_state *states;
