@@ -39,6 +39,12 @@ struct bcmpmu_ponkey {
 	u32 ponkey_state;/*0: Released, 1 : Pressed */
 };
 
+enum {
+	PKEY_TIMER_T1,
+	PKEY_TIMER_T2,
+	PKEY_TIMER_T3,
+};
+
 static struct bcmpmu_ponkey *bcmpmu_pkey;
 
 u32 bcmpmu_get_ponkey_state(void)
@@ -66,21 +72,97 @@ static void bcmpmu_ponkey_isr(u32 irq, void *data)
 		pr_info("Invalid IRQ %d\n", irq);
 		return;
 	}
-
+	pr_info("%s: ponkey_state - %d\n", __func__,
+		ponkey->ponkey_state);
 	input_report_key(ponkey->idev,
 		KEY_POWER, ponkey->ponkey_state);
 	input_sync(ponkey->idev);
 }
 
+static int __ponkey_init_timer_func(struct bcmpmu59xxx *bcmpmu, int timer,
+		struct pkey_timer_act *t)
+{
+	u32 reg = 0;
+	u8 val = 0;
+	int ret = 0;
+	u32 action;
+
+	switch (timer) {
+	case PKEY_TIMER_T1:
+		reg = PMU_REG_PONKEYCTRL2;
+		break;
+	case PKEY_TIMER_T2:
+		reg = PMU_REG_PONKEYCTRL3;
+		break;
+	case PKEY_TIMER_T3:
+		reg = PMU_REG_PONKEYCTRL8;
+		break;
+	default:
+		BUG();
+	}
+
+	ret = bcmpmu->read_dev(bcmpmu, reg, &val);
+	val &= ~PONKEY_TX_ACTION_MASK;
+	if (!t) {
+		val |= PKEY_ACTION_NOP << PONKEY_TX_ACTION_SHIFT;
+		action = PKEY_ACTION_NOP;
+	} else if (t->action <= PKEY_ACTION_NOP) {
+		action = t->action;
+		val |= action << PONKEY_TX_ACTION_SHIFT;
+		val &= ~(PONKEY_TX_DLY_MASK | PONKEY_TX_DEB_MASK);
+		val |= (t->timer_dly << PONKEY_TX_DLY_SHIFT) &
+				PONKEY_TX_DLY_MASK;
+		val |= (t->timer_deb << PONKEY_TX_DEB_SHIFT) &
+				PONKEY_TX_DEB_MASK;
+	} else
+		return -EINVAL;
+	ret |= bcmpmu->write_dev(bcmpmu, reg, val);
+
+	switch (action) {
+	case PKEY_ACTION_SHUTDOWN:
+		if (bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL4, &val))
+			return -EINVAL;
+		val &= ~PONKEYCTRL4_KEY_PAD_LOCK_MASK;
+		if (bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL4, val))
+			return -EINVAL;
+		break;
+
+	case PKEY_ACTION_RESTART:
+		if (bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL4, &val))
+			return -EINVAL;
+		val |= PONKEYCTRL4_POK_RESTART_EN_MASK;
+		if (bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL4, val))
+			return -EINVAL;
+		break;
+
+	case PKEY_ACTION_SMART_RESET:
+		if (bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL6, &val))
+			return -EINVAL;
+		val |= PONKEY_SMART_RST_EN_MASK;
+		if (t->flags & PKEY_SMART_RST_PWR_EN)
+			val |= PONKEY_SMART_RST_PWR_EN_MASK;
+		val &= ~PONKEY_SMART_RST_DLY_MASK;
+		val |= (t->ctrl_params << PONKEY_SMART_RST_DLY_SHIFT) &
+				PONKEY_SMART_RST_DLY_MASK;
+		if (bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL6, val))
+			return -EINVAL;
+		break;
+
+	default:
+		break;
+	}
+	return ret;
+}
+
 static int __devinit bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 {
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
-	struct bcmpmu59xxx_pok_pdata *pkey;
+	struct bcmpmu59xxx_pkey_pdata *pkey;
 	struct bcmpmu_ponkey *ponkey;
 	int error;
 	u8 val;
 
-	pkey = (struct bcmpmu59xxx_pok_pdata *)pdev->dev.platform_data;
+	pkey = (struct bcmpmu59xxx_pkey_pdata *)pdev->dev.platform_data;
 
 	ponkey = kzalloc(sizeof(struct bcmpmu_ponkey), GFP_KERNEL);
 	bcmpmu_pkey = ponkey;
@@ -101,60 +183,37 @@ static int __devinit bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 	ponkey->idev->dev.parent = &pdev->dev;
 	ponkey->idev->evbit[0] = BIT_MASK(EV_KEY);
 	ponkey->idev->keybit[BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER);
-	/* init shutdown/hard reset/restart details */
-/*
- PMU_REG_GPIOCTRL2
-	if (pkey->hard_reset_en == 0 || pkey->hard_reset_en == 1) {
-	}
-*/
+	/*Disable all smart timer features by default
+	__ponkey_init_timer_func function will enable it as needed*/
+	if (bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL4, &val))
+		return -EINVAL;
+	val &= ~(PONKEYCTRL4_POK_RESTART_EN_MASK |
+				PONKEYCTRL4_POK_WAKUP_DEB_MASK);
+	val |= PONKEYCTRL4_KEY_PAD_LOCK_MASK;
+	val |= (pkey->wakeup_deb << PONKEYCTRL4_POK_WAKUP_DEB_SHIFT) &
+			PONKEYCTRL4_POK_WAKUP_DEB_MASK;
+	if (bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL4, val))
+		return -EINVAL;
+	/*Clear smart reset feature bits in PMU_REG_PONKEYCTRL6*/
+	pr_info("%s: smart rest status: %x\n", __func__, val);
+	if (bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL6, 0))
+		return -EINVAL;
 
-	if (pkey->restart_en == 0 || pkey->restart_en == 1) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL4, &val);
-		val &= ~PONKEYCTRL4_POK_RESTART_EN_MASK;
-		val |= (pkey->restart_en << PONKEYCTRL4_POK_RESTART_EN_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL4, val);
-	}
-	if (pkey->pok_hold_deb > 0) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL1, &val);
-		val &= ~PONKEYCTRL1_PRESS_DEB_MASK;
-		val |= (pkey->pok_hold_deb << PONKEYCTRL1_PRESS_DEB_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL1, val);
-	}
-	if (pkey->pok_shtdwn_dly > 0) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_HOSTCTRL4, &val);
-		val &= ~HOSTCTRL4_BB_SHDWN_DEB_MASK;
-		val |= (pkey->pok_shtdwn_dly << HOSTCTRL4_BB_SHDWN_DEB_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_HOSTCTRL4, val);
-	}
-	if (pkey->pok_restart_dly > 0) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL7, &val);
-		val &= ~HOSTCTRL7_SW_RESTART_DLY_MASK;
-		val |= (pkey->pok_restart_dly <<
-			HOSTCTRL7_SW_RESTART_DLY_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL7, val);
-	}
-	if (pkey->pok_restart_deb > 0) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL4, &val);
-		val &= (~PONKEYCTRL4_POK_WAKUP_DEB_MASK);
-		val |= (pkey->pok_restart_deb <<
-				   PONKEYCTRL4_POK_WAKUP_DEB_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL4, val);
-	}
-/*
-	if (pkey->pok_turn_on_deb >= 0) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_AUXCTRL, &val);
-		val &= (~PONKEY_ONHOLD_DEB_SHIFT);
-		val |= (pkey->pok_turn_on_deb << PONKEY_ONHOLD_DEB_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_AUXCTRL, val);
-	}
-*/
-	/* set KEY_PAD_LOCK */
-	if (pkey->pok_lock == 0 || pkey->pok_lock == 1) {
-		bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL4, &val);
-		val &= ~PONKEYCTRL4_KEY_PAD_LOCK_MASK;
-		val |= (pkey->pok_lock << PONKEYCTRL4_KEY_PAD_LOCK_SHIFT);
-		bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL4, val);
-	}
+	val = (pkey->press_deb << PONKEYCTRL1_PRESS_DEB_SHIFT) &
+			PONKEYCTRL1_PRESS_DEB_MASK;
+	val |= (pkey->release_deb << PONKEYCTRL1_RELEASE_DEB_SHIFT) &
+			PONKEYCTRL1_RELEASE_DEB_MASK;
+	if (bcmpmu->write_dev(bcmpmu, PMU_REG_PONKEYCTRL1, val))
+		return -EINVAL;
+
+	if (__ponkey_init_timer_func(bcmpmu, PKEY_TIMER_T1, pkey->t1))
+		return -EINVAL;
+	if (__ponkey_init_timer_func(bcmpmu, PKEY_TIMER_T2, pkey->t2))
+		return -EINVAL;
+	if (__ponkey_init_timer_func(bcmpmu, PKEY_TIMER_T3, pkey->t3))
+		return -EINVAL;
+
+
 	/* Request PRESSED and RELEASED interrupts.
 	 */
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_POK_PRESSED, bcmpmu_ponkey_isr,

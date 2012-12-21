@@ -833,15 +833,20 @@ static struct bcmpmu59xxx_rw_data register_init_data[] = {
 
 };
 
-struct bcmpmu59xxx_pok_pdata pok_pdata = {
-	.hard_reset_en = -1,
-	.restart_en = -1,
-	.pok_hold_deb = -1,
-	.pok_shtdwn_dly = -1,
-	.pok_restart_dly = -1,
-	.pok_restart_deb = -1,
-	.pok_lock = 1, /*Keep ponkey locked by default*/
-	.pok_turn_on_deb = -1,
+/*Ponkey platform data*/
+struct pkey_timer_act pkey_t3_action = {
+	.flags = PKEY_SMART_RST_PWR_EN,
+	.action = PKEY_ACTION_SMART_RESET,
+	.timer_dly = PKEY_ACT_DELAY_7S,
+	.timer_deb = PKEY_ACT_DEB_1S,
+	.ctrl_params = PKEY_SR_DLY_30MS,
+};
+
+struct bcmpmu59xxx_pkey_pdata pkey_pdata = {
+	.press_deb = PKEY_DEB_100MS,
+	.release_deb = PKEY_DEB_100MS,
+	.wakeup_deb = PKEY_WUP_DEB_1000MS,
+	.t3 = &pkey_t3_action,
 };
 
 struct bcmpmu59xxx_audio_pdata audio_pdata = {
@@ -1208,8 +1213,8 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	{
 		.name = "bcmpmu59xxx-ponkey",
 		.id = -1,
-		.platform_data = &pok_pdata,
-		.pdata_size = sizeof(pok_pdata),
+		.platform_data = &pkey_pdata,
+		.pdata_size = sizeof(pkey_pdata),
 	},
 	{
 		.name = "bcmpmu59xxx_rtc",

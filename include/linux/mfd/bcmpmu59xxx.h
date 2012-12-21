@@ -708,15 +708,108 @@ struct mutex i2c_mutex;
 #endif
 };
 
-struct bcmpmu59xxx_pok_pdata {
-	int hard_reset_en;
-	int restart_en;
-	int pok_hold_deb;
-	int pok_shtdwn_dly;
-	int pok_restart_dly;
-	int pok_restart_deb;
-	int pok_lock;
-	int pok_turn_on_deb;
+/*PONKEY press/release debounce*/
+enum {
+	PKEY_DEB_330US,
+	PKEY_DEB_1P2MS,
+	PKEY_DEB_10MS,
+	PKEY_DEB_50MS,
+	PKEY_DEB_100MS,
+	PKEY_DEB_500MS,
+	PKEY_DEB_1000MS,
+	PKEY_DEB_2000MS,
+	PKEY_DEB_MAX,
+};
+
+/*PONKEY wakeup debounce*/
+enum {
+	PKEY_WUP_DEB_NONE,
+	PKEY_WUP_DEB_50MS,
+	PKEY_WUP_DEB_100MS,
+	PKEY_WUP_DEB_500MS,
+	PKEY_WUP_DEB_1000MS,
+	PKEY_WUP_DEB_2000MS,
+	PKEY_WUP_DEB_3000MS,
+	PKEY_WUP_DEB_MAX,
+};
+
+
+/*PONKEY long press function definition*/
+enum {
+	PKEY_ACTION_SHUTDOWN,
+	PKEY_ACTION_RESTART,
+	PKEY_ACTION_SMART_RESET,
+	PKEY_ACTION_NOP,
+};
+/*PONKEY timer action delay*/
+enum {
+	PKEY_ACT_DELAY_50MS,
+	PKEY_ACT_DELAY_500MS,
+	PKEY_ACT_DELAY_1S,
+	PKEY_ACT_DELAY_5S,
+	PKEY_ACT_DELAY_7S,
+	PKEY_ACT_DELAY_9S,
+	PKEY_ACT_DELAY_11S,
+	PKEY_ACT_DELAY_13S,
+	PKEY_ACT_DELAY_MAX,
+};
+
+/*PONKEY timer action debounce*/
+enum {
+	PKEY_ACT_DEB_NONE,
+	PKEY_ACT_DEB_1S,
+	PKEY_ACT_DEB_2S,
+	PKEY_ACT_DEB_3S,
+	PKEY_ACT_DEB_4S,
+	PKEY_ACT_DEB_5S,
+	PKEY_ACT_DEB_6S,
+	PKEY_ACT_DEB_7S,
+	PKEY_ACT_DEB_8S,
+	PKEY_ACT_DEB_MAX,
+};
+
+/*Tx action control flags*/
+enum {
+	PKEY_SMART_RST_PWR_EN = 1,
+};
+
+/*Ponkey smart reset pulse duration
+POK_SMART_RST_DLY_1_0_*/
+enum {
+	PKEY_SR_DLY_30MS,
+	PKEY_SR_DLY_60MS,
+	PKEY_SR_DLY_90MS,
+	PKEY_SR_DLY_120MS,
+	PKEY_SR_DLY_MAX
+};
+
+/*Ponkey restart delay
+POK_RESTART_DLY_1_0_*/
+enum {
+	PKEY_RESTART_DLY_500MS,
+	PKEY_RESTART_DLY_1S,
+	PKEY_RESTART_DLY_2S,
+	PKEY_RESTART_DLY_4S,
+	PKEY_RESTART_DLY_MAX
+};
+
+
+/*PONKEY T1/T2/T3 action config*/
+struct pkey_timer_act {
+	u32 flags;
+	u32 action;
+	u32 timer_dly;
+	u32 timer_deb;
+	u32 ctrl_params; /*action specific*/
+};
+
+struct bcmpmu59xxx_pkey_pdata {
+	u32 press_deb;
+	u32 release_deb;
+	u32 wakeup_deb;
+	struct pkey_timer_act *t1;
+	struct pkey_timer_act *t2;
+	struct pkey_timer_act *t3;
 };
 
 struct bcmpmu59xxx_audio_pdata {
