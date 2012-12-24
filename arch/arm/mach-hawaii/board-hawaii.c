@@ -237,7 +237,7 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
 	.cmasize = 0,
-	.carveout_base = 0xae000000,
+	.carveout_base = 0x9e000000,
 	.carveout_size = 0,
 };
 #endif
@@ -264,8 +264,8 @@ struct ion_platform_data ion_carveout_data = {
 			.id    = 3,
 			.type  = ION_HEAP_TYPE_CARVEOUT,
 			.name  = "ion-carveout-0",
-			.base  = 0x90000000,
-			.limit = 0xa0000000,
+			.base  = 0xa0000000,
+			.limit = 0xb0000000,
 			.size  = (8 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
@@ -297,8 +297,8 @@ struct ion_platform_data ion_cma_data = {
 			.id = 2,
 			.type  = ION_HEAP_TYPE_DMA,
 			.name  = "ion-cma-0",
-			.base  = 0x90000000,
-			.limit = 0xa0000000,
+			.base  = 0xa0000000,
+			.limit = 0xb0000000,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 1,
