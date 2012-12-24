@@ -38,6 +38,9 @@
 #ifdef CONFIG_ION_OOM_KILLER
 #include <linux/oom.h>
 #include <linux/delay.h>
+
+#define ION_OOM_SLEEP_TIME_MS		(1)
+#define ION_OOM_TIMEOUT_JIFFIES		(HZ)
 /* #define ION_OOM_KILLER_DEBUG */
 #endif
 #ifdef CONFIG_M4U
@@ -500,6 +503,8 @@ static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 		int shared;
 
 		/* if the caller didn't specify this heap id type */
+		if (heap->type <= ION_HEAP_TYPE_SYSTEM_CONTIG)
+			continue;
 		if (!((1 << heap->id) & heap_id_mask))
 			continue;
 		for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
@@ -512,7 +517,7 @@ static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 			p = client->task;
 			if (client->deathpending) {
 				get_task_comm(task_comm, p);
-				pr_debug("Death pending: (%16.s:%d) adj(%d) "
+				pr_info("Death pending: (%16.s:%d) adj(%d) "
 						"jiffies(%lu) timeout(%lu)\n",
 						task_comm, p->pid,
 						p->signal->oom_score_adj,
@@ -543,23 +548,26 @@ static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 	}
 	if (selected_client) {
 		struct task_struct *p;
-		int free_space = selected_heap->size - selected_heap->used;
 		pid_t selected_pid, current_pid;
+		char current_name[TASK_COMM_LEN];
+		int free_space = selected_heap->size - selected_heap->used;
 
+		selected_client->deathpending = 1;
 		p = selected_client->task;
 		get_task_comm(task_comm, p);
-		selected_client->deathpending = 1;
 		selected_pid = task_pid_nr(p);
-		current_pid = task_pid_nr(current);
-		pr_info("%s shrink (%s) invoked from pid(%d) "
+		current_pid = task_pid_nr(current->group_leader);
+		get_task_comm(current_name, current->group_leader);
+		pr_info("%s shrink (%s) invoked from (%16.s:%d) "
 				"Free(%u)KB, Required(%u)KB\n",
 				fail_size ? "OOM" : "LMK", selected_heap->name,
-				current->pid, free_space>>10, fail_size>>10);
+				current_name, current_pid, free_space>>10,
+				fail_size>>10);
 		pr_info("Kill (%16.s:%d) Size(%u) Adj(%d) Timeout(%lu)\n",
 				task_comm, selected_pid, selected_size,
 				selected_oom, selected_client->timeout);
 		send_sig(SIGKILL, p, 0);
-		selected_client->timeout = jiffies + HZ;
+		selected_client->timeout = jiffies + ION_OOM_TIMEOUT_JIFFIES;
 		return selected_size;
 	}
 	return 0;
@@ -672,9 +680,10 @@ retry:
 		if (!fatal_signal_pending(current) && retry_flag) {
 			/* Schedule out and wait for the task to which signal
 			 *  was sent to free the memory and exit */
-			pr_info("(%16.s:%d) Sleep for (%d)KB to get freed\n",
-					client_name, client_pid, len>>10);
-			msleep(20);
+			pr_info("(%16.s:%d) Sleep (%d)ms for (%d)KB\n",
+					client_name, client_pid,
+					ION_OOM_SLEEP_TIME_MS, len>>10);
+			msleep(ION_OOM_SLEEP_TIME_MS);
 			goto retry;
 		}
 		pr_err("(%16.s:%d) Fatal O Alloc fail. mask(%x) size(%d)KB\n",
