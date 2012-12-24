@@ -430,26 +430,6 @@ static void ion_handle_add(struct ion_client *client, struct ion_handle *handle)
 }
 
 #ifdef ION_OOM_KILLER_DEBUG
-static size_t ion_debug_print_heap_status(struct ion_device *dev, int heap_id)
-{
-	struct rb_node *n;
-	size_t total_size = 0, orphan = 0, shared = 0;
-	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
-		struct ion_buffer *buffer = rb_entry(n, struct ion_buffer,
-				node);
-		if (buffer->heap->id == heap_id) {
-			total_size += buffer->size;
-			if (!buffer->handle_count)
-				orphan += buffer->size;
-			if (buffer->handle_count > 1)
-				shared += buffer->size;
-		}
-	}
-	pr_info("heap_id(%d) total(%d) orphan(%d) shared(%d)\n",
-			heap_id, total_size, orphan, shared);
-	return total_size;
-}
-
 static int ion_task_exit_notifier(struct notifier_block *self,
 		      unsigned long val, void *data)
 {
@@ -473,6 +453,21 @@ static struct notifier_block ion_task_nb = {
 #ifdef CONFIG_ION_OOM_KILLER
 static size_t ion_debug_heap_total(struct ion_client *client,
 				   unsigned int id, size_t *shared);
+
+static void ion_debug_print_heap_status(struct ion_device *dev,
+		int heap_id_mask)
+{
+	struct ion_heap *heap;
+
+	plist_for_each_entry(heap, &dev->heaps, node) {
+		if (!heap->size)
+			continue;
+		if (!((1 << heap->id) & heap_id_mask))
+			continue;
+		pr_info("Heap(%16.s) Size(%d)KB Used(%d)KB\n",
+				heap->name, heap->size>>10, heap->used>>10);
+	}
+}
 
 int ion_minfree_get(struct ion_heap *heap)
 {
@@ -676,6 +671,7 @@ retry:
 		pr_err("(%16.s:%d) Fatal Alloc fail. mask(%x) size(%d)KB\n",
 				client_name, client_pid, heap_id_mask,
 				len>>10);
+		ion_debug_print_heap_status(dev, heap_id_mask);
 	}
 #endif /* CONFIG_ION_KONA */
 	up_read(&dev->lock);
@@ -694,6 +690,9 @@ retry:
 		pr_err("(%16.s:%d) Fatal O Alloc fail. mask(%x) size(%d)KB\n",
 				client_name, client_pid, heap_id_mask,
 				len>>10);
+		down_read(&dev->lock);
+		ion_debug_print_heap_status(dev, heap_id_mask);
+		up_read(&dev->lock);
 	}
 #endif /* CONFIG_ION_OOM_KILLER */
 	if (buffer == NULL)
