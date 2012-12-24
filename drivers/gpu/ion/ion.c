@@ -466,7 +466,7 @@ static struct notifier_block ion_task_nb = {
 
 #ifdef CONFIG_ION_OOM_KILLER
 static size_t ion_debug_heap_total(struct ion_client *client,
-				   int id, size_t *shared);
+				   unsigned int id, size_t *shared);
 
 int ion_minfree_get(struct ion_heap *heap)
 {
@@ -484,26 +484,23 @@ int ion_minfree_get(struct ion_heap *heap)
 	return min_free;
 }
 
-static int ion_shrink(struct ion_device *dev, unsigned int heap_mask,
+static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 		int min_oom_score_adj, int fail_size)
 {
-	struct rb_node *m, *n;
+	struct rb_node *n;
 	struct ion_client *selected_client = NULL;
-	struct ion_heap *selected_heap = NULL;
+	struct ion_heap *heap, *selected_heap = NULL;
 	int selected_size = 0;
 	int selected_oom = 0;
 	char task_comm[TASK_COMM_LEN];
 
 	/* TODO: Loop till free mem satisfies fail size. */
-	for (m = rb_first(&dev->heaps); m != NULL; m = rb_next(m)) {
-		struct ion_heap *heap = rb_entry(m, struct ion_heap, node);
+	plist_for_each_entry(heap, &dev->heaps, node) {
 		struct ion_client *client;
 		int shared;
 
-		/* TODO: if the client doesn't support this heap type */
-
-		/* if the caller didn't specify this heap type */
-		if (!((1 << heap->id) & heap_mask))
+		/* if the caller didn't specify this heap id type */
+		if (!((1 << heap->id) & heap_id_mask))
 			continue;
 		for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
 			size_t size;
@@ -618,9 +615,9 @@ retry:
 	if (buffer == ERR_PTR(-ENOMEM)) {
 		/* Alloc failed: Kill task to free memory */
 		pr_debug("Alloc Failed. Call shrink: mask(%x) pid(%d) size(%d)KB\n",
-				heap_mask, client->task->pid, len>>10);
+				heap_id_mask, client->task->pid, len>>10);
 #ifdef CONFIG_ION_OOM_KILLER
-		if (ion_shrink(dev, heap_mask, 0, len))
+		if (ion_shrink(dev, heap_id_mask, 0, len))
 			retry_flag = 1;
 #endif /* CONFIG_ION_OOM_KILLER */
 	} else if (!IS_ERR_OR_NULL(buffer)) {
@@ -646,8 +643,8 @@ retry:
 		}
 #endif /* CONFIG_ION_OOM_KILLER */
 	} else {
-		pr_err("Alloc Failed  heap_mask(%d) size(%d)KB\n",
-				heap_mask,  len>>10);
+		pr_err("Alloc Failed  heap_id_mask(%d) size(%d)KB\n",
+				heap_id_mask,  len>>10);
 	}
 #endif /* CONFIG_ION_KONA */
 	up_read(&dev->lock);
@@ -662,7 +659,7 @@ retry:
 		}
 		if (client->task)
 			pr_err("Alloc Failed: mask(%x) pid(%d) size(%d)KB\n",
-					heap_mask, client->task->pid, len>>10);
+					heap_id_mask, client->task->pid, len>>10);
 	}
 #endif /* CONFIG_ION_OOM_KILLER */
 	if (buffer == NULL)
