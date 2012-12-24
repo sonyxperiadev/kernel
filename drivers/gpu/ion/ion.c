@@ -476,11 +476,11 @@ int ion_minfree_get(struct ion_heap *heap)
 	int min_free = 0;
 	int lmk_min_free = heap->lmk_min_free;
 
-	if ((lmk_min_free >= 0) && (lmk_min_free <= 100)) {
-		min_free = (heap->size / 100) * lmk_min_free;
+	if ((lmk_min_free >= 0) && (lmk_min_free <= 128)) {
+		min_free = (heap->size / 128) * lmk_min_free;
 		min_free &= (PAGE_MASK);
 	} else {
-		pr_err("%16.s: min_free(%d) should be in [0-100] range\n",
+		pr_err("%16.s: min_free(%d) should be in [0-128] range\n",
 				heap->name, min_free);
 	}
 

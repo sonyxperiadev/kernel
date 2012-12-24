@@ -270,7 +270,7 @@ struct ion_platform_data ion_carveout_data = {
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
 			.lmk_min_score_adj = 411,
-			.lmk_min_free = 30,
+			.lmk_min_free = 32,
 #endif
 		},
 		[1] = {
@@ -283,7 +283,7 @@ struct ion_platform_data ion_carveout_data = {
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
 			.lmk_min_score_adj = 411,
-			.lmk_min_free = 30,
+			.lmk_min_free = 32,
 #endif
 		},
 	},
@@ -303,7 +303,7 @@ struct ion_platform_data ion_cma_data = {
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 1,
 			.lmk_min_score_adj = 411,
-			.lmk_min_free = 30,
+			.lmk_min_free = 32,
 #endif
 		},
 	},

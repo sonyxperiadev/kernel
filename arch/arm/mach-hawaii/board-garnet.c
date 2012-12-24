@@ -293,7 +293,7 @@ struct ion_platform_data ion_carveout_data = {
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
 			.lmk_min_score_adj = 411,
-			.lmk_min_free = 30,
+			.lmk_min_free = 32,
 #endif
 		},
 		[1] = {
@@ -306,7 +306,7 @@ struct ion_platform_data ion_carveout_data = {
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
 			.lmk_min_score_adj = 411,
-			.lmk_min_free = 30,
+			.lmk_min_free = 32,
 #endif
 		},
 	},
@@ -326,7 +326,7 @@ struct ion_platform_data ion_cma_data = {
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 1,
 			.lmk_min_score_adj = 411,
-			.lmk_min_free = 30,
+			.lmk_min_free = 32,
 #endif
 		},
 	},
@@ -548,13 +548,13 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 				printk(KERN_ERR "Failed to  get d_gpsr_cam0_1v8\n");
 		}
-		
+
 		if (d_1v8_mmc1_vcc == NULL) {
 			d_1v8_mmc1_vcc = regulator_get(NULL, "mmc1_vcc");
 			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 				printk(KERN_ERR "Err d_1v8_mmc1_vcc\n");
 		}
-		
+
 	}
 
 	ret = -1;
