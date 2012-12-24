@@ -1,11 +1,11 @@
-/* Hawaii_edn01X Dts file */
+/* Hawaii_edn010 Dts file */
 
 /dts-v1/;
 
 /include/ "bcm_21664.dtsi"
 
 / {
-	model = "Hawaiistone EDN01x";
+	model = "Hawaiistone EDN010";
 	compatible = "bcm,hawaii";
 
 	chosen {
