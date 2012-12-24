@@ -68,6 +68,9 @@ struct ion_device {
 			      unsigned long arg);
 	struct rb_root clients;
 	struct dentry *debug_root;
+#ifdef CONFIG_ION_OOM_KILLER
+	u32 oom_kill_count;
+#endif
 };
 
 /**
@@ -552,17 +555,19 @@ static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 		char current_name[TASK_COMM_LEN];
 		int free_space = selected_heap->size - selected_heap->used;
 
+		if (fail_size)
+			dev->oom_kill_count++;
 		selected_client->deathpending = 1;
 		p = selected_client->task;
 		get_task_comm(task_comm, p);
 		selected_pid = task_pid_nr(p);
 		current_pid = task_pid_nr(current->group_leader);
 		get_task_comm(current_name, current->group_leader);
-		pr_info("%s shrink (%s) invoked from (%16.s:%d) "
+		pr_info("%s shrink (%s) invoked from (%16.s:%d) oom_cnt(%d)"
 				"Free(%u)KB, Required(%u)KB\n",
 				fail_size ? "OOM" : "LMK", selected_heap->name,
-				current_name, current_pid, free_space>>10,
-				fail_size>>10);
+				current_name, current_pid, dev->oom_kill_count,
+				free_space>>10,	fail_size>>10);
 		pr_info("Kill (%16.s:%d) Size(%u) Adj(%d) Timeout(%lu)\n",
 				task_comm, selected_pid, selected_size,
 				selected_oom, selected_client->timeout);
@@ -1639,6 +1644,13 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 	idev->debug_root = debugfs_create_dir("ion", NULL);
 	if (IS_ERR_OR_NULL(idev->debug_root))
 		pr_err("ion: failed to create debug files.\n");
+
+#ifdef CONFIG_ION_OOM_KILLER
+	if (!IS_ERR_OR_NULL(idev->debug_root))
+		debugfs_create_u32("oom_kill_count", (S_IRUGO|S_IWUSR),
+				idev->debug_root,
+				(unsigned int *)&idev->oom_kill_count);
+#endif
 
 #ifdef ION_OOM_KILLER_DEBUG
 	task_free_register(&ion_task_nb);
