@@ -401,14 +401,7 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 	list_add_tail(&lli_out_data.next, &head_out);
 	list_add_tail(&lli_out_stat.next, &head_out);
 
-	spum_init_device(dd->io_apb_base, dd->io_axi_base);
 	spum_set_pkt_length(dd->io_axi_base, rctx->rx_len, rctx->tx_len);
-
-	if (spum_aes_dma_init(dd)) {
-		pr_err("%s: DMA callback register failed\n", __func__);
-		err = -EIO;
-		goto err_xfer;
-	}
 
 	/* Rx setup */
 	if (dma_setup_transfer_list_multi_sg
@@ -482,10 +475,6 @@ static void spum_aes_done_task(unsigned long data)
 	if (err)
 		pr_err("%s: Tx transfer stop failed %d\n", __func__, err);
 
-	/* Free the DMA callback. */
-	dma_free_callback(spum_dev->tx_dma_chan);
-	dma_free_callback(spum_dev->rx_dma_chan);
-
 	dma_unmap_sg(dd->dev, &rctx->spum_in_cmd_hdr, 1, DMA_TO_DEVICE);
 	dma_unmap_sg(dd->dev, &rctx->spum_out_cmd_hdr, 1, DMA_FROM_DEVICE);
 	dma_unmap_sg(dd->dev, &rctx->spum_in_cmd_stat, 1, DMA_TO_DEVICE);
@@ -528,11 +517,9 @@ static int spum_aes_dma_init(struct spum_aes_device *dd)
 	if (dma_register_callback(spum_dev->rx_dma_chan, spum_aes_dma_callback,
 				  &spum_dev->rx_dma_chan) != 0) {
 		pr_err("%s: Rx dma_register_callback failed\n", __func__);
-		goto err2;
+		goto err1;
 	}
 	return 0;
-err2:
-	dma_free_callback(spum_dev->tx_dma_chan);
 err1:
 	return -EIO;
 }
@@ -923,6 +910,11 @@ static int spum_aes_probe(struct platform_device *pdev)
 		pr_debug("%s: Clock set failed!!!\n", __func__);
 	clk_enable(dd->spum_open_clk);
 	spum_init_device(dd->io_apb_base, dd->io_axi_base);
+	if (spum_aes_dma_init(dd)) {
+		pr_err("%s: DMA callback register failed\n", __func__);
+		ret = -EIO;
+		goto exit;
+	}
 	clk_disable(dd->spum_open_clk);
 
 	INIT_LIST_HEAD(&dd->list);
@@ -962,6 +954,10 @@ static int spum_aes_remove(struct platform_device *pdev)
 
 	if (!dd)
 		return -ENODEV;
+
+	/* Free the DMA callback. */
+	dma_free_callback(spum_dev->tx_dma_chan);
+	dma_free_callback(spum_dev->rx_dma_chan);
 
 	spin_lock(&spum_drv_lock);
 	list_del(&dd->list);
