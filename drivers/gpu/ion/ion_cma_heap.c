@@ -36,8 +36,6 @@
 /* for ion_heap_ops structure */
 #include "ion_priv.h"
 
-#define ION_CMA_ALLOCATE_FAILED -1
-
 struct ion_cma_buffer_info {
 	void *cpu_addr;
 	dma_addr_t handle;
@@ -63,7 +61,7 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 	info = kzalloc(sizeof(struct ion_cma_buffer_info), GFP_KERNEL);
 	if (!info) {
 		dev_err(dev, "Can't allocate buffer info\n");
-		return ION_CMA_ALLOCATE_FAILED;
+		return -ENOMEM;
 	}
 
 #ifdef RHEA_CMA
@@ -113,7 +111,7 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 
 err:
 	kfree(info);
-	return ION_CMA_ALLOCATE_FAILED;
+	return -ENOMEM;
 }
 
 static void ion_cma_free(struct ion_buffer *buffer)
