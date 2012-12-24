@@ -321,7 +321,7 @@ int v3d_bin_render_init(MM_CORE_HW_IFC *core_param)
 	pr_debug("v3d_bin_render_init: -->\n");
 
 #ifdef CONFIG_ION
-	v3d_device->v3d_bin_oom_client = ion_client_create(idev, ION_DEFAULT_HEAP, "v3d");
+	v3d_device->v3d_bin_oom_client = ion_client_create(idev, "v3d");
 	if (v3d_device->v3d_bin_oom_client == NULL) {
 		ret = -ENOMEM;
 		goto err;
