@@ -260,6 +260,10 @@ static void ion_buffer_destroy(struct kref *kref)
 {
 	struct ion_buffer *buffer = container_of(kref, struct ion_buffer, ref);
 	struct ion_device *dev = buffer->dev;
+#ifdef CONFIG_ION_KONA
+	pid_t client_pid;
+	char client_name[TASK_COMM_LEN];
+#endif
 
 	if (WARN_ON(buffer->kmap_cnt > 0))
 		buffer->heap->ops->unmap_kernel(buffer->heap, buffer);
@@ -271,7 +275,12 @@ static void ion_buffer_destroy(struct kref *kref)
 	buffer->heap->ops->free(buffer);
 	mutex_lock(&dev->buffer_lock);
 #ifdef CONFIG_ION_KONA
+	client_pid = task_pid_nr(current->group_leader);
+	get_task_comm(client_name, current->group_leader);
 	buffer->heap->used -= buffer->size;
+	pr_debug("(%16.s:%d) Free heap(%16.s) buf(%p) (%d)KB used(%d)KB\n",
+			client_name, client_pid, buffer->heap->name,
+			buffer, buffer->size>>10, buffer->heap->used>>10);
 #endif
 	rb_erase(&buffer->node, &dev->buffers);
 	mutex_unlock(&dev->buffer_lock);
@@ -646,9 +655,9 @@ retry:
 #endif /* CONFIG_ION_OOM_KILLER */
 	} else if (!IS_ERR_OR_NULL(buffer)) {
 		heap_used->used += buffer->size;
-		pr_debug("(%16.s:%d) Alloc heap(%16.s) (%d)KB used(%d)KB\n",
+		pr_debug("(%16.s:%d) Alloc heap(%16.s) %p (%d)KB used(%d)KB\n",
 				client_name, client_pid, heap_used->name,
-				len>>10, heap_used->used>>10);
+				buffer, len>>10, heap_used->used>>10);
 #ifdef CONFIG_ION_OOM_KILLER
 		if ((heap_used->ops->needs_shrink) &&
 				(heap_used->ops->needs_shrink(heap_used))) {
