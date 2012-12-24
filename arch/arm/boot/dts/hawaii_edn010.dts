@@ -137,7 +137,7 @@
 
 	bcmbt-rfkill {
 		compatible = "bcm,bcmbt-rfkill";
-		verg-gpio = <26>;
+		verg-gpio = <28>;
 		n-reset-gpio = <0xFFFFFFFF>;
 		aux0-gpio = <0xFFFFFFFF>; /* CLK32 */
 		aux1-gpio = <0xFFFFFFFF>; /* UARTB_SEL,probably not required */
