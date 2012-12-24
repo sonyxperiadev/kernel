@@ -459,10 +459,7 @@ static struct notifier_block ion_task_nb = {
 };
 #endif
 
-#ifdef CONFIG_ION_OOM_KILLER
-static size_t ion_debug_heap_total(struct ion_client *client,
-				   unsigned int id, size_t *shared);
-
+#ifdef CONFIG_ION_KONA
 static void ion_debug_print_heap_status(struct ion_device *dev,
 		int heap_id_mask)
 {
@@ -477,6 +474,11 @@ static void ion_debug_print_heap_status(struct ion_device *dev,
 				heap->name, heap->size>>10, heap->used>>10);
 	}
 }
+#endif
+
+#ifdef CONFIG_ION_OOM_KILLER
+static size_t ion_debug_heap_total(struct ion_client *client,
+				   unsigned int id, size_t *shared);
 
 int ion_minfree_get(struct ion_heap *heap)
 {
