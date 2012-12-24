@@ -36,6 +36,11 @@
 #include <media/videobuf-core.h>
 #include <media/videobuf2-core.h>
 #include <media/soc_mediabus.h>
+#include <linux/string.h>
+
+#include <linux/of.h>
+#include <linux/of_irq.h>
+#include <linux/of_platform.h>
 
 /* Default to VGA resolution */
 #define DEFAULT_WIDTH	640
@@ -49,6 +54,7 @@
 static LIST_HEAD(hosts);
 static LIST_HEAD(devices);
 static DEFINE_MUTEX(list_lock);	/* Protects the list of hosts */
+
 
 static int soc_camera_power_set(struct soc_camera_device *icd,
 				struct soc_camera_link *icl, int power_on)
@@ -1584,14 +1590,77 @@ static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
 {
 	struct soc_camera_link *icl = pdev->dev.platform_data;
 	struct soc_camera_device *icd;
-	int ret;
+	struct i2c_board_info *i2c_camera;
+	static struct v4l2_subdev_sensor_interface_parms *parms;
 
+	int ret;
+	u32 val;
+	const char *prop;
 	if (!icl)
 		return -EINVAL;
-
 	icd = kzalloc(sizeof(*icd), GFP_KERNEL);
 	if (!icd)
 		return -ENOMEM;
+
+	if (pdev->dev.of_node)	 {
+		i2c_camera = kzalloc(sizeof(struct i2c_board_info),
+			GFP_ATOMIC);
+		if (!i2c_camera)
+			return -ENOMEM;
+		parms = kzalloc(sizeof(struct
+			v4l2_subdev_sensor_interface_parms),
+			GFP_ATOMIC);
+		if (!parms) {
+			kfree(i2c_camera);
+			return -ENOMEM;
+		}
+
+		if (of_property_read_u32(pdev->dev.of_node, "bus-id", &val))
+			goto out;
+		icl->bus_id = val;
+		if (of_property_read_string(pdev->dev.of_node,
+			"i2c-type", &prop))
+			goto out;
+		strcpy(i2c_camera->type, prop);
+		if (of_property_read_u32(pdev->dev.of_node, "i2c-addr", &val))
+			goto out;
+		i2c_camera->addr = val;
+		icl->board_info = i2c_camera;
+		if (of_property_read_u32(pdev->dev.of_node,
+			"i2c-adapter-id", &val))
+			goto out;
+		icl->i2c_adapter_id = val;
+		if (of_property_read_string(pdev->dev.of_node,
+			"module-name", &prop))
+			goto out;
+		icl->module_name = (char *)prop;
+		if (of_property_read_u32(pdev->dev.of_node, "if-type", &val))
+			goto out;
+		parms->if_type = val;
+		if (of_property_read_u32(pdev->dev.of_node, "if-mode", &val))
+			goto out;
+		parms->if_mode = val;
+		if (of_property_read_u32(pdev->dev.of_node,
+			"orientation", &val))
+			goto out;
+		parms->orientation = val;
+		if (of_property_read_u32(pdev->dev.of_node, "facing", &val))
+			goto out;
+		parms->facing = val;
+		if (of_property_read_u32(pdev->dev.of_node, "lanes", &val))
+			goto out;
+		parms->parms.serial.lanes = val;
+		if (of_property_read_u32(pdev->dev.of_node, "channel", &val))
+			goto out;
+		parms->parms.serial.channel = val;
+		if (of_property_read_u32(pdev->dev.of_node, "phy-rate", &val))
+			goto out;
+		parms->parms.serial.phy_rate = val;
+		if (of_property_read_u32(pdev->dev.of_node, "pix-clk", &val))
+			goto out;
+		parms->parms.serial.pix_clk = val;
+		icl->priv = parms;
+	}
 
 	icd->iface = icl->bus_id;
 	icd->pdev = &pdev->dev;
@@ -1608,10 +1677,15 @@ static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
 
 	return 0;
 
-      escdevreg:
+escdevreg:
 	kfree(icd);
-
 	return ret;
+out:
+	if (pdev->dev.of_node) {
+		kfree(i2c_camera);
+		kfree(parms);
+	}
+	return -EINVAL;
 }
 
 /*
@@ -1622,22 +1696,33 @@ static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
 static int __devexit soc_camera_pdrv_remove(struct platform_device *pdev)
 {
 	struct soc_camera_device *icd = platform_get_drvdata(pdev);
-
+	struct soc_camera_link *icl = to_soc_camera_link(icd);
 	if (!icd)
 		return -EINVAL;
 
 	soc_camera_device_unregister(icd);
-
 	kfree(icd);
+	if (pdev->dev.of_node)	 {
+		if (icl->board_info != NULL)
+			kfree(icl->board_info);
+		if (icl->priv != NULL)
+			kfree(icl->priv);
+	}
 
 	return 0;
 }
+static const struct of_device_id soc_camera_of_match[] = {
+	{ .compatible = "bcm,soc-camera", },
+	{},
+}
+MODULE_DEVICE_TABLE(of, soc_camera_of_match);
 
 static struct platform_driver __refdata soc_camera_pdrv = {
 	.remove = __devexit_p(soc_camera_pdrv_remove),
 	.driver = {
 		   .name = "soc-camera-pdrv",
 		   .owner = THIS_MODULE,
+		   .of_match_table = soc_camera_of_match,
 		   },
 };
 

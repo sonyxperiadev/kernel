@@ -327,9 +327,6 @@ static struct regulator *d_lvldo2_cam1_1v8;
 static struct regulator *d_1v8_mmc1_vcc;
 static struct regulator *d_3v0_mmc1_vcc;
 
-#define OV5640_I2C_ADDRESS (0x3C)
-#define OV7692_I2C_ADDRESS (0x3e)
-
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
 #define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
@@ -342,15 +339,6 @@ static struct regulator *d_3v0_mmc1_vcc;
 
 #define SENSOR_1_GPIO_PWRDN             (005)
 
-
-static struct i2c_board_info rhea_i2c_camera[] = {
-	{
-	 I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS),
-	 },
-	{
-	 I2C_BOARD_INFO("ov7692", OV7692_I2C_ADDRESS),
-	 },
-};
 
 static int hawaii_camera_power(struct device *dev, int on)
 {
@@ -674,66 +662,24 @@ static int hawaii_camera_reset_front(struct device *dev)
 	return 0;
 }
 
-static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
-	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
-	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
-	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
-	.facing = V4L2_SUBDEV_SENSOR_BACK,
-	.parms.serial = {
-			 .lanes = 2,
-			 .channel = 0,
-			 .phy_rate = 0,
-			 .pix_clk = 0},
-};
-
 static struct soc_camera_link iclink_ov5640 = {
-	.bus_id = 0,
-	.board_info = &rhea_i2c_camera[0],
-	.i2c_adapter_id = 0,
-	.module_name = "ov5640",
 	.power = &hawaii_camera_power,
 	.reset = &hawaii_camera_reset,
-	.priv = &ov5640_if_params,
-};
-
-static struct platform_device hawaii_camera_back = {
-	.name = "soc-camera-pdrv",
-	.id = 0,
-	.dev = {
-		.platform_data = &iclink_ov5640,
-		},
-};
-
-static struct v4l2_subdev_sensor_interface_parms ov7692_if_params = {
-	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
-	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
-	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
-	.facing = V4L2_SUBDEV_SENSOR_FRONT,
-	.parms.serial = {
-			 .lanes = 1,
-			 .channel = 1,
-			 .phy_rate = 0,
-			 .pix_clk = 0},
 };
 
 static struct soc_camera_link iclink_ov7692 = {
-	.bus_id = 0,
-	.board_info = &rhea_i2c_camera[1],
-	.i2c_adapter_id = 0,
-	.module_name = "ov7692",
 	.power = &hawaii_camera_power_front,
 	.reset = &hawaii_camera_reset_front,
-	.priv = &ov7692_if_params,
 };
 
-static struct platform_device hawaii_camera_front = {
-	.name = "soc-camera-pdrv",
-	.id = 1,
-	.dev = {
-		.platform_data = &iclink_ov7692,
-		},
-};
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
+static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
+		"soc-back-camera", &iclink_ov5640),
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
+		"soc-front-camera", &iclink_ov7692),
+	{},
+};
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
 #ifdef CONFIG_DMAC_PL330
@@ -816,8 +762,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 	&hawaii_camera_device,
-	&hawaii_camera_back,
-	&hawaii_camera_front,
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
@@ -1741,7 +1685,8 @@ static void __init hawaii_init(void)
 #endif
 	hawaii_add_common_devices();
 	/* Populate platform_devices from device tree data */
-	of_platform_populate(NULL, hawaii_dt_match_table, NULL, NULL);
+	of_platform_populate(NULL, hawaii_dt_match_table,
+			hawaii_auxdata_lookup, NULL);
 	return;
 }
 
