@@ -246,7 +246,7 @@ static int bcmpmu_i2c_pwrmgr_read_bulk(struct bcmpmu59xxx *bcmpmu,
 		val[i] = temp;
 	}
 	bcmpmu_i2c_unlock(bcmpmu);
-	return 0;
+	return err;
 }
 
 static int bcmpmu_i2c_pwrmgr_write_bulk(struct bcmpmu59xxx *bcmpmu,

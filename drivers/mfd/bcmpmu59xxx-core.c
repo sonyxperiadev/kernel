@@ -390,7 +390,7 @@ static ssize_t bcmpmu_read(struct file *file, char *data, size_t len,
 			reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map,
 					reg.addr);
 			ret = bcmpmu->read_dev(bcmpmu, reg_enc,
-					&reg.val);
+					(u8 *)&reg.val);
 			if (ret != 0) {
 				pr_pmucore(ERROR, "%s: read_dev failed.\n",
 				       __func__);
@@ -430,7 +430,7 @@ static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 			reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map,
 					reg.addr);
 			ret = bcmpmu->read_dev(bcmpmu, reg_enc,
-					&value[0]);
+					(u8 *)&value[0]);
 			if (ret != 0) {
 				pr_pmucore(ERROR, "%s: read_dev failed.\n",
 				       __func__);
@@ -466,7 +466,7 @@ static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 				reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map,
 						reg.addr);
 				ret = bcmpmu->read_dev_bulk(bcmpmu, reg_enc,
-						&value[0], reg.len);
+						(u8 *)&value[0], reg.len);
 				if (ret != 0) {
 					pr_pmucore(ERROR,
 					       "%s: read_dev_bulk failed.\n",
@@ -578,7 +578,6 @@ static void bcmpmu_register_init(struct bcmpmu59xxx *pmu)
 	int i;
 	u8 temp;
 	pdata = pmu->pdata;
-	pr_pmucore(INIT, "%s: register init\n", __func__);
 	for (i = 0; i < pdata->init_max; i++) {
 		if (!pdata->init_data[i].mask)
 			continue;
@@ -592,9 +591,7 @@ static void bcmpmu_register_init(struct bcmpmu59xxx *pmu)
 					&temp);
 			temp &= ~(pdata->init_data[i].mask);
 			temp |= pdata->init_data[i].val;
-			pmu->write_dev(pmu,
-					pdata->init_data[i].addr,
-					temp);
+			pmu->write_dev(pmu, pdata->init_data[i].addr, temp);
 		}
 	}
 }

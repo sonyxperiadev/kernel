@@ -39,6 +39,9 @@
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 #include <linux/spa_power.h>
 #endif
+#include <linux/of_platform.h>
+#include <linux/of.h>
+#include <linux/of_fdt.h>
 
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0c
@@ -122,6 +125,112 @@ u8 csr_vlt_table_tt[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_TT_850M;
 u8 csr_vlt_table_ff[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_FF_850M;
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu);
 static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu);
+
+/* Used only when no bcmpmu dts entry found */
+static struct bcmpmu59xxx_rw_data register_init_data[] = {
+/* mask 0x00 is invalid value for mask */
+	/* pin mux selection for pc3 and simldo1
+	 * AUXONb Wakeup disabled */
+	{.addr = PMU_REG_GPIOCTRL1, .val = 0x75, .mask = 0xFF},
+	/*  enable PC3 function */
+	{.addr = PMU_REG_GPIOCTRL2, .val = 0x0E, .mask = 0xFF},
+	/* Selecting 0.87V */
+	{.addr = PMU_REG_MMSRVOUT1, .val = 0x30, .mask = 0xFF},
+	/* Mask Interrupt */
+	{.addr = PMU_REG_INT1MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT2MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT3MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT4MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT5MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT6MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT7MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT8MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT9MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT10MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT11MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT12MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT13MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT14MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT15MSK, .val = 0xFF, .mask = 0xFF},
+	{.addr = PMU_REG_INT16MSK, .val = 0xFF, .mask = 0xFF},
+	/* Trickle charging timer setting */
+	{.addr = PMU_REG_MBCCTRL1, .val = 0x38, .mask = 0x38},
+	/*  disable software charger timer */
+	{.addr = PMU_REG_MBCCTRL2, .val = 0x0, .mask = 0x04},
+	/* SWUP */
+	{.addr = PMU_REG_MBCCTRL3, .val = 0x04, .mask = 0x04},
+	/* Enable BC12_EN */
+	{.addr = PMU_REG_MBCCTRL5, .val = 0x01, .mask = 0x01},
+	/* Max VFLOAT to 4.2*/
+	/*  ICCMAX to 1500mA*/
+	{.addr = PMU_REG_MBCCTRL8, .val = 0x09, .mask = 0xFF},
+	/* Set curr to 100mA during boot*/
+	{.addr = PMU_REG_MBCCTRL10, .val = 0x0, .mask = 0xF},
+	/* NTC Hot Temperature Comparator*/
+	{.addr = PMU_REG_CMPCTRL5, .val = 0x43, .mask = 0xFF},
+	/* NTC Hot Temperature Comparator*/
+	{.addr = PMU_REG_CMPCTRL6, .val = 0x7F, .mask = 0xFF},
+	/* NTC Cold Temperature Comparator */
+	{.addr = PMU_REG_CMPCTRL7, .val = 0x3B, .mask = 0xFF},
+	/* NTC Cold Temperature Comparator */
+	{.addr = PMU_REG_CMPCTRL8, .val = 0xF8, .mask = 0xFF},
+	/* NTC Hot Temperature Comparator bit 9,8 */
+	{.addr = PMU_REG_CMPCTRL9, .val = 0x09, .mask = 0xFF},
+	/* ID detection method selection
+	 *  current source Trimming */
+	{.addr = PMU_REG_OTGCTRL8, .val = 0xD2, .mask = 0xFF},
+	{.addr = PMU_REG_OTGCTRL9, .val = 0x98, .mask = 0xFF},
+	{.addr = PMU_REG_OTGCTRL10, .val = 0xF0, .mask = 0xFF},
+	/*ADP_THR_RATIO*/
+	{.addr = PMU_REG_OTGCTRL11, .val = 0x58, .mask = 0xFF},
+	/* Enable ADP_PRB  ADP_DSCHG comparators */
+	{.addr = PMU_REG_OTGCTRL12, .val = 0xC3, .mask = 0xFF},
+
+/* Regulator configuration */
+/* TODO regulator */
+	{.addr = PMU_REG_FG_EOC_TH, .val = 0x64, .mask = 0xFF},
+	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0x44, .mask = 0xFF},
+	{.addr = PMU_REG_FGOCICCTRL, .val = 0x02, .mask = 0xFF},
+	 /* FG power down */
+	{.addr = PMU_REG_FGCTRL1, .val = 0x00, .mask = 0xFF},
+	/* Enable operation mode for PC3PC2PC1 */
+	{.addr = PMU_REG_GPLDO2PMCTRL2, .val = 0x00, .mask = 0xFF},
+	 /* PWMLED blovk powerdown */
+	{.addr =  PMU_REG_PWMLEDCTRL1, .val = 0x23, .mask = 0xFF},
+	{.addr = PMU_REG_HSCP3, .val = 0x00, .mask = 0xFF},
+	 /* HS audio powerdown feedback path */
+	{.addr =  PMU_REG_IHF_NGMISC, .val = 0x0C, .mask = 0xFF},
+	/* NTC BiasSynchronous Mode,Host Enable Control NTC_PM0 Disable*/
+	{.addr =  PMU_REG_CMPCTRL14, .val = 0x13, .mask = 0xFF},
+	{.addr =  PMU_REG_CMPCTRL15, .val = 0x01, .mask = 0xFF},
+	/* BSI Bias Host Control, Synchronous Mode Enable */
+
+	{.addr =  PMU_REG_CMPCTRL16, .val = 0x13, .mask = 0xFF},
+	/* BSI_EN_PM0 disable */
+	{.addr =  PMU_REG_CMPCTRL17, .val = 0x01, .mask = 0xFF},
+	/* Mask RTM conversion */
+	{.addr =  PMU_REG_ADCCTRL1, .val = 0x08, .mask = 0x08},
+	/* EN_SESS_VALID  enable ID detection */
+	{.addr = PMU_REG_OTGCTRL1 , .val = 0x18, .mask = 0xFF},
+
+
+	/* MMSR LPM voltage - 0.88V */
+	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x4, .mask = 0x3F},
+	/* SDSR1 LPM voltage - 0.9V */
+	{.addr = PMU_REG_SDSR1VOUT2 , .val = 0x6, .mask = 0x3F},
+	/* SDSR2 LPM voltage - 1.24V */
+	{.addr = PMU_REG_SDSR2VOUT2 , .val = 0x28, .mask = 0x3F},
+	/* IOSR1 LPM voltage - 1.8V */
+	{.addr = PMU_REG_IOSR1VOUT2 , .val = 0x3E, .mask = 0x3F},
+
+	{.addr = PMU_REG_CSRVOUT1 , .val = 0x28, .mask = 0x3F},
+
+	/* PASRCTRL MobC00256738*/
+	{.addr = PMU_REG_PASRCTRL1 , .val = 0x00, .mask = 0x06},
+	{.addr = PMU_REG_PASRCTRL6 , .val = 0x00, .mask = 0xF0},
+	{.addr = PMU_REG_PASRCTRL7 , .val = 0x00, .mask = 0x3F},
+
+};
 
 __weak struct regulator_consumer_supply rf_supply[] = {
 	{.supply = "rf"},
@@ -728,111 +837,6 @@ struct bcmpmu59xxx_regulator_init_data
 
 	};
 
-static struct bcmpmu59xxx_rw_data register_init_data[] = {
-/* mask 0x00 is invalid value for mask */
-	/* pin mux selection for pc3 and simldo1
-	 * AUXONb Wakeup disabled */
-	{.addr = PMU_REG_GPIOCTRL1, .val = 0x75, .mask = 0xFF},
-	/*  enable PC3 function */
-	{.addr = PMU_REG_GPIOCTRL2, .val = 0x0E, .mask = 0xFF},
-	/* Selecting 0.87V */
-	{.addr = PMU_REG_MMSRVOUT1, .val = 0x30, .mask = 0xFF},
-	/* Mask Interrupt */
-	{.addr = PMU_REG_INT1MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT2MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT3MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT4MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT5MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT6MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT7MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT8MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT9MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT10MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT11MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT12MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT13MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT14MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT15MSK, .val = 0xFF, .mask = 0xFF},
-	{.addr = PMU_REG_INT16MSK, .val = 0xFF, .mask = 0xFF},
-	/* Trickle charging timer setting */
-	{.addr = PMU_REG_MBCCTRL1, .val = 0x38, .mask = 0x38},
-	/*  disable software charger timer */
-	{.addr = PMU_REG_MBCCTRL2, .val = 0x0, .mask = 0x04},
-	/* SWUP */
-	{.addr = PMU_REG_MBCCTRL3, .val = 0x04, .mask = 0x04},
-	/* Enable BC12_EN */
-	{.addr = PMU_REG_MBCCTRL5, .val = 0x01, .mask = 0x01},
-	/* Max VFLOAT to 4.2*/
-	/*  ICCMAX to 1500mA*/
-	{.addr = PMU_REG_MBCCTRL8, .val = 0x09, .mask = 0xFF},
-	/* Set curr to 100mA during boot*/
-	{.addr = PMU_REG_MBCCTRL10, .val = 0x0, .mask = 0xF},
-	/* NTC Hot Temperature Comparator*/
-	{.addr = PMU_REG_CMPCTRL5, .val = 0x43, .mask = 0xFF},
-	/* NTC Hot Temperature Comparator*/
-	{.addr = PMU_REG_CMPCTRL6, .val = 0x7F, .mask = 0xFF},
-	/* NTC Cold Temperature Comparator */
-	{.addr = PMU_REG_CMPCTRL7, .val = 0x3B, .mask = 0xFF},
-	/* NTC Cold Temperature Comparator */
-	{.addr = PMU_REG_CMPCTRL8, .val = 0xF8, .mask = 0xFF},
-	/* NTC Hot Temperature Comparator bit 9,8 */
-	{.addr = PMU_REG_CMPCTRL9, .val = 0x09, .mask = 0xFF},
-	/* ID detection method selection
-	 *  current source Trimming */
-	{.addr = PMU_REG_OTGCTRL8, .val = 0xD2, .mask = 0xFF},
-	{.addr = PMU_REG_OTGCTRL9, .val = 0x98, .mask = 0xFF},
-	{.addr = PMU_REG_OTGCTRL10, .val = 0xF0, .mask = 0xFF},
-	/*ADP_THR_RATIO*/
-	{.addr = PMU_REG_OTGCTRL11, .val = 0x58, .mask = 0xFF},
-	/* Enable ADP_PRB  ADP_DSCHG comparators */
-	{.addr = PMU_REG_OTGCTRL12, .val = 0xC3, .mask = 0xFF},
-
-/* Regulator configuration */
-/* TODO regulator */
-	{.addr = PMU_REG_FG_EOC_TH, .val = 0x64, .mask = 0xFF},
-	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0x44, .mask = 0xFF},
-	{.addr = PMU_REG_FGOCICCTRL, .val = 0x02, .mask = 0xFF},
-	 /* FG power down */
-	{.addr = PMU_REG_FGCTRL1, .val = 0x00, .mask = 0xFF},
-	/* Enable operation mode for PC3PC2PC1 */
-	{.addr = PMU_REG_GPLDO2PMCTRL2, .val = 0x00, .mask = 0xFF},
-	 /* PWMLED blovk powerdown */
-	{.addr =  PMU_REG_PWMLEDCTRL1, .val = 0x23, .mask = 0xFF},
-	{.addr = PMU_REG_HSCP3, .val = 0x00, .mask = 0xFF},
-	 /* HS audio powerdown feedback path */
-	{.addr =  PMU_REG_IHF_NGMISC, .val = 0x0C, .mask = 0xFF},
-	/* NTC BiasSynchronous Mode,Host Enable Control NTC_PM0 Disable*/
-	{.addr =  PMU_REG_CMPCTRL14, .val = 0x13, .mask = 0xFF},
-	{.addr =  PMU_REG_CMPCTRL15, .val = 0x01, .mask = 0xFF},
-	/* BSI Bias Host Control, Synchronous Mode Enable */
-
-	{.addr =  PMU_REG_CMPCTRL16, .val = 0x13, .mask = 0xFF},
-	/* BSI_EN_PM0 disable */
-	{.addr =  PMU_REG_CMPCTRL17, .val = 0x01, .mask = 0xFF},
-	/* Mask RTM conversion */
-	{.addr =  PMU_REG_ADCCTRL1, .val = 0x08, .mask = 0x08},
-	/* EN_SESS_VALID  enable ID detection */
-	{.addr = PMU_REG_OTGCTRL1 , .val = 0x18, .mask = 0xFF},
-
-
-	/* MMSR LPM voltage - 0.88V */
-	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x4, .mask = 0x3F},
-	/* SDSR1 LPM voltage - 0.9V */
-	{.addr = PMU_REG_SDSR1VOUT2 , .val = 0x6, .mask = 0x3F},
-	/* SDSR2 LPM voltage - 1.24V */
-	{.addr = PMU_REG_SDSR2VOUT2 , .val = 0x28, .mask = 0x3F},
-	/* IOSR1 LPM voltage - 1.8V */
-	{.addr = PMU_REG_IOSR1VOUT2 , .val = 0x3E, .mask = 0x3F},
-
-	{.addr = PMU_REG_CSRVOUT1 , .val = 0x28, .mask = 0x3F},
-
-	/* PASRCTRL MobC00256738*/
-	{.addr = PMU_REG_PASRCTRL1 , .val = 0x00, .mask = 0x06},
-	{.addr = PMU_REG_PASRCTRL6 , .val = 0x00, .mask = 0xF0},
-	{.addr = PMU_REG_PASRCTRL7 , .val = 0x00, .mask = 0x3F},
-
-};
-
 /*Ponkey platform data*/
 struct pkey_timer_act pkey_t3_action = {
 	.flags = PKEY_SMART_RST_PWR_EN,
@@ -1298,8 +1302,6 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 	.i2c_companion_info = pmu_i2c_companion_info,
 	.i2c_adapter_id = PMU_DEVICE_I2C_BUSNO,
 	.i2c_pagesize = 256,
-	.init_data = register_init_data,
-	.init_max = ARRAY_SIZE(register_init_data),
 	.bc = BCMPMU_BC_PMU_BC12,
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 .flags = BCMPMU_SPA_EN,
@@ -1393,11 +1395,62 @@ static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu)
 	return 0;
 }
 
+static const struct of_device_id matches[] __initconst = {
+	{ .compatible = "Broadcom,bcmpmu" },
+	{ }
+};
+
+int bcmpmu_reg_init(void)
+{
+	struct device_node *np;
+	int reg_init = 0;
+	struct property *prop;
+	int size, i;
+	uint32_t *p, *p1;
+	struct bcmpmu59xxx_rw_data *tbl;
+
+	np = of_find_matching_node(NULL, matches);
+	if (np) {
+		prop = of_find_property(np, "initdata", &size);
+		if (prop == NULL) {
+			printk(KERN_INFO "%s pmu initdata not found\n",
+				__func__);
+			return 0;
+		}
+		tbl = kzalloc(size, GFP_KERNEL);
+		if (tbl == NULL)
+			printk(KERN_INFO "%s Failed  alloc bcmpmu init_data\n"
+					, __func__);
+		else {
+			p = (uint32_t *)prop->value;
+			p1 = (uint32_t *)tbl;
+			for (i = 0; i < size; i++)
+				*p1++ = be32_to_cpu(*p++);
+			bcmpmu_i2c_pdata.init_data = tbl;
+			bcmpmu_i2c_pdata.init_max =
+				size / sizeof(struct bcmpmu59xxx_rw_data);
+			reg_init = 1;
+		}
+		for (i = 0; i < bcmpmu_i2c_pdata.init_max; i++) {
+			bcmpmu_i2c_pdata.
+			init_data[i].addr = ENC_PMU_REG(FIFO_MODE,
+					bcmpmu_i2c_pdata.init_data[i].map,
+					bcmpmu_i2c_pdata.init_data[i].addr);
+		}
+	}
+
+	if (!reg_init) {
+		bcmpmu_i2c_pdata.init_data =  register_init_data;
+		bcmpmu_i2c_pdata.init_max = ARRAY_SIZE(register_init_data);
+	}
+	return 0;
+}
+
 int __init board_bcm59xx_init(void)
 {
 	int             ret = 0;
 	int             irq;
-
+	bcmpmu_reg_init();
 	bcmpmu_set_pullup_reg();
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu59xxx-irq");
 	if (ret < 0) {

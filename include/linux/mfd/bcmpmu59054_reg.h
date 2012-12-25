@@ -1257,7 +1257,7 @@
 #define ENV9_SR_OVERI_SHDWN	0x80
 
 
-#define PMU_REG_MAX		0x1000
+#define PMU_REG_MAX		0x100
 
 
 #endif /*__LINUX_MFD_BCMPMU59054_REG_H_*/
