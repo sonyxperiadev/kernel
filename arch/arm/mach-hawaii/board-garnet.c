@@ -33,6 +33,10 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/mfd/bcm590xx/pmic.h>
+#include <linux/of_platform.h>
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
@@ -252,27 +256,6 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 #define NFC_WAKE 25
 #define NFC_ENABLE 100
 
-#define KONA_UART0_PA   UARTB_BASE_ADDR
-#define KONA_UART1_PA   UARTB2_BASE_ADDR
-#define KONA_UART2_PA   UARTB3_BASE_ADDR
-
-#define HAWAII_8250PORT(name, clk, freq, uart_name)		\
-{								\
-	.membase    = (void __iomem *)(KONA_##name##_VA),	\
-	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
-	.irq        = BCM_INT_ID_##name,			\
-	.uartclk    = freq,					\
-	.regshift   = 2,					\
-	.iotype     = UPIO_MEM32,				\
-	.type       = PORT_16550A,				\
-	.flags      = UPF_BOOT_AUTOCONF | UPF_BUG_THRE |	\
-			UPF_FIXED_TYPE | UPF_SKIP_TEST,		\
-	.private_data = (void __iomem *)((KONA_##name##_VA) +	\
-					UARTB_USR_OFFSET),	\
-	.clk_name = clk,					\
-	.port_name = uart_name,					\
-}
-
 #ifdef CONFIG_ANDROID_PMEM
 struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
@@ -306,11 +289,11 @@ struct ion_platform_data ion_carveout_data = {
 			.name  = "ion-carveout-0",
 			.base  = 0x90000000,
 			.limit = 0xa0000000,
-			.size  = (16 * SZ_1M),
+			.size  = (8 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
-			.lmc_enable = 0,
-			.lmc_min_score_adj = 411,
-			.lmc_min_free = 30,
+			.lmk_enable = 0,
+			.lmk_min_score_adj = 411,
+			.lmk_min_free = 30,
 #endif
 		},
 		[1] = {
@@ -321,9 +304,9 @@ struct ion_platform_data ion_carveout_data = {
 			.limit = 0,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
-			.lmc_enable = 0,
-			.lmc_min_score_adj = 411,
-			.lmc_min_free = 30,
+			.lmk_enable = 0,
+			.lmk_min_score_adj = 411,
+			.lmk_min_free = 30,
 #endif
 		},
 	},
@@ -341,9 +324,9 @@ struct ion_platform_data ion_cma_data = {
 			.limit = 0xa0000000,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
-			.lmc_enable = 1,
-			.lmc_min_score_adj = 411,
-			.lmc_min_free = 30,
+			.lmk_enable = 1,
+			.lmk_min_score_adj = 411,
+			.lmk_min_free = 30,
 #endif
 		},
 	},
@@ -496,7 +479,6 @@ static int hawaii_camera_power(struct device *dev, int on)
 			pr_err("Failed to set lp clock\n");
 			goto e_clk_set_lp;
 		}
-
 		value = clk_enable(clock);
 		if (value) {
 			pr_err("Failed to enable sensor 0 clock\n");
@@ -671,12 +653,12 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		}
 		value = clk_enable(clock);
 		if (value) {
-			printk(KERN_ERR "Failed to enable sensor 1 clock\n");
+			printk("Failed to enable sensor 1 clock\n");
 			goto e_clk_clock;
 		}
 		value = clk_set_rate(clock, SENSOR_1_CLK_FREQ);
 		if (value) {
-			printk(KERN_ERR "Failed to set sensor 1 clock\n");
+			printk("Failed to set sensor 1 clock\n");
 			goto e_clk_set_clock;
 		}
 		usleep_range(10000, 10100);
@@ -693,7 +675,7 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		regulator_disable(d_1v8_mmc1_vcc);
 		if (pi_mgr_dfs_request_update
 		    (&unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
-			printk(KERN_ERR "Failed to set DVFS for unicam\n");
+			printk("Failed to set DVFS for unicam\n");
 		}
 	}
 	return 0;
@@ -784,95 +766,6 @@ static struct platform_device hawaii_camera_front = {
 };
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
 
-static struct plat_serial8250_port hawaii_uart_platform_data[] = {
-	HAWAII_8250PORT(UART0, UARTB_PERI_CLK_NAME_STR, 26000000, "console"),
-	HAWAII_8250PORT(UART1, UARTB2_PERI_CLK_NAME_STR, 48000000, "bluetooth"),
-	HAWAII_8250PORT(UART2, UARTB3_PERI_CLK_NAME_STR, 26000000, "gps"),
-	{
-	 .flags = 0,
-	 },
-};
-
-static struct bsc_adap_cfg bsc_i2c_cfg[] = {
-	{
-	 .speed = BSC_BUS_SPEED_400K,
-	 .dynamic_speed = 1,
-	 .bsc_clk = "bsc1_clk",
-	 .bsc_apb_clk = "bsc1_apb_clk",
-	 .retries = 1,
-	 .is_pmu_i2c = false,
-	 .fs_ref = BSC_BUS_REF_13MHZ,
-	 .hs_ref = BSC_BUS_REF_104MHZ,
-	 },
-
-	{
-	 .speed = BSC_BUS_SPEED_400K,
-	 .dynamic_speed = 1,
-	 .bsc_clk = "bsc2_clk",
-	 .bsc_apb_clk = "bsc2_apb_clk",
-	 .retries = 3,
-	 .is_pmu_i2c = false,
-	 .fs_ref = BSC_BUS_REF_13MHZ,
-	 .hs_ref = BSC_BUS_REF_104MHZ,
-	 },
-
-	{
-	 .speed = BSC_BUS_SPEED_400K,
-	 .dynamic_speed = 1,
-	 .bsc_clk = "bsc3_clk",
-	 .bsc_apb_clk = "bsc3_apb_clk",
-	 .retries = 1,
-	 .is_pmu_i2c = false,
-	 .fs_ref = BSC_BUS_REF_13MHZ,
-	 .hs_ref = BSC_BUS_REF_104MHZ,
-	 },
-
-	{
-	 .speed = BSC_BUS_SPEED_400K,
-	 .dynamic_speed = 1,
-	 .bsc_clk = "bsc4_clk",
-	 .bsc_apb_clk = "bsc4_apb_clk",
-	 .retries = 1,
-	 .is_pmu_i2c = false,
-	 .fs_ref = BSC_BUS_REF_13MHZ,
-	 .hs_ref = BSC_BUS_REF_104MHZ,
-	 },
-
-	{
-#if defined(CONFIG_KONA_PMU_BSC_HS_MODE)
-	 .speed = BSC_BUS_SPEED_HS,
-	 /* No dynamic speed in HS mode */
-	 .dynamic_speed = 0,
-	 /*
-	  * PMU can NAK certain I2C read commands, while write
-	  * is in progress; and it takes a while to synchronise
-	  * writes between HS clock domain(3.25MHz) and
-	  * internal clock domains (32k). In such cases, we retry
-	  * PMU reads until the writes are through. PMU need more
-	  * retry counts in HS mode to handle this.
-	  */
-	 .retries = 5,
-#elif defined(CONFIG_KONA_PMU_BSC_HS_1MHZ)
-	 .speed = BSC_BUS_SPEED_HS_1MHZ,
-	 .dynamic_speed = 0,
-	 .retries = 5,
-#elif defined(CONFIG_KONA_PMU_BSC_HS_1625KHZ)
-	 .speed = BSC_BUS_SPEED_HS_1625KHZ,
-	 .dynamic_speed = 0,
-	 .retries = 5,
-#else
-	 .speed = BSC_BUS_SPEED_50K,
-	 .dynamic_speed = 1,
-	 .retries = 3,
-#endif
-	 .bsc_clk = "pmu_bsc_clk",
-	 .bsc_apb_clk = "pmu_bsc_apb",
-	 .is_pmu_i2c = true,
-	 .fs_ref = BSC_BUS_REF_13MHZ,
-	 .hs_ref = BSC_BUS_REF_26MHZ,
-	 },
-};
-
 static struct spi_kona_platform_data hawaii_ssp0_info = {
 #ifdef CONFIG_DMAC_PL330
 	.enable_dma = 1,
@@ -911,18 +804,10 @@ static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
 #endif
 
 struct platform_device *hawaii_common_plat_devices[] __initdata = {
-	&hawaii_serial_device,
-	&hawaii_i2c_adap_devices[0],
-	&hawaii_i2c_adap_devices[1],
-	&hawaii_i2c_adap_devices[2],
-	&hawaii_i2c_adap_devices[3],
-	&hawaii_i2c_adap_devices[4],
 	&pmu_device,
-	&hawaii_pwm_device,
 	&hawaii_ssp0_device,
 
 #ifdef CONFIG_SENSORS_KONA
-	&hawaii_tmon_device,
 	&thermal_device,
 #endif
 
@@ -935,6 +820,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #if defined(CONFIG_USB_DWC_OTG)
+	&hawaii_usb_phy_platform_device,
 	&hawaii_hsotgctrl_platform_device,
 	&hawaii_otg_platform_device,
 #endif
@@ -1487,45 +1373,6 @@ static struct kona_pl330_data hawaii_pl330_pdata = {
 };
 #endif
 
-#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-#define BCMBT_VREG_GPIO		26
-#define BCMBT_N_RESET_GPIO	(-1)	/* Unused */
-#define BCMBT_AUX0_GPIO		(-1)	/* clk32 */
-#define BCMBT_AUX1_GPIO		(-1)	/* UARTB_SEL */
-
-static struct bcmbt_rfkill_platform_data hawaii_bcmbt_rfkill_cfg = {
-	.vreg_gpio = BCMBT_VREG_GPIO,
-	.n_reset_gpio = BCMBT_N_RESET_GPIO,
-	.aux0_gpio = BCMBT_AUX0_GPIO,	/* CLK32 */
-	.aux1_gpio = BCMBT_AUX1_GPIO,	/* UARTB_SEL, probably not required */
-};
-
-static struct platform_device hawaii_bcmbt_rfkill_device = {
-	.name = "bcmbt-rfkill",
-	.id = -1,
-	.dev = {
-		.platform_data = &hawaii_bcmbt_rfkill_cfg,
-		},
-};
-#endif
-
-#ifdef CONFIG_BCM_BZHW
-#define GPIO_BT_WAKE	32
-#define GPIO_HOST_WAKE	72
-static struct bcm_bzhw_platform_data bcm_bzhw_data = {
-	.gpio_bt_wake = GPIO_BT_WAKE,
-	.gpio_host_wake = GPIO_HOST_WAKE,
-};
-
-static struct platform_device hawaii_bcm_bzhw_device = {
-	.name = "bcm_bzhw",
-	.id = -1,
-	.dev = {
-		.platform_data = &bcm_bzhw_data,
-		},
-};
-#endif
-
 #ifdef CONFIG_BCM_BT_LPM
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
@@ -1712,72 +1559,6 @@ late_initcall(hawaii_camera_init);
 #endif
 /* Remove this comment when camera data for Hawaii is updated */
 
-#ifdef CONFIG_WD_TAPPER
-static struct wd_tapper_platform_data wd_tapper_data = {
-	/* Set the count to the time equivalent to the time-out in seconds
-	 * required to pet the PMU watchdog to overcome the problem of reset in
-	 * suspend*/
-	.count = 120,
-	.ch_num = 1,
-	.name = "aon-timer",
-};
-
-static struct platform_device wd_tapper = {
-	.name = "wd_tapper",
-	.id = 0,
-	.dev = {
-		.platform_data = &wd_tapper_data,
-		},
-};
-#endif
-
-#ifdef CONFIG_TOUCHSCREEN_TANGO
-static struct TANGO_I2C_TS_t tango_plat_data = {
-	.i2c_pdata = {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),},
-	.i2c_slave_address = 0,
-	.gpio_irq_pin = TSC_GPIO_IRQ_PIN,
-	.gpio_reset_pin = TSC_GPIO_RESET_PIN,
-	.x_max_value = 480,
-	.y_max_value = 800,
-	.layout = TANGO_S32_LAYOUT,
-	.num_bytes_to_read = TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ,
-	.is_multi_touch = 1,
-	.is_resetable = 1,
-	.num_fingers_idx = 0,
-	.old_touching_idx = 1,
-	.x1_lo_idx = 2,
-	.x1_hi_idx = 3,
-	.y1_lo_idx = 4,
-	.y1_hi_idx = 5,
-	.x2_lo_idx = 6,
-	.x2_hi_idx = 7,
-	.y2_lo_idx = 8,
-	.y2_hi_idx = 9,
-	.x1_width_idx = 10,	/* X1 coordinate touch area of
-					the first finger */
-	.y1_width_idx = 11,	/* Y1 coordinate touch area of
-					the first finger */
-	.x2_width_idx = 12,	/* X2 coordinate touch area of
-					the first finger */
-	.y2_width_idx = 13,	/* Y2 coordinate touch area of
-					the first finger */
-	.power_mode_idx = 20,
-	.int_mode_idx = 21,	/* INT)mode register */
-	.int_width_idx = 22,	/* Interrupt pulse width */
-	.min_finger_val = 0,
-	.max_finger_val = 2,
-	.panel_width = 56,
-};
-
-static struct i2c_board_info __initdata tango_info[] = {
-	{
-	 I2C_BOARD_INFO(I2C_TS_DRIVER_NAME, TANGO_M29_SLAVE_ADDR),
-	 .platform_data = &tango_plat_data,
-	 .irq = gpio_to_irq(TSC_GPIO_IRQ_PIN),
-	 },
-};
-#endif
-
 #if defined(CONFIG_SENSORS_BMA222)
 static struct i2c_board_info __initdata bma222_accl_info[] = {
 	{
@@ -1794,35 +1575,19 @@ static int ts_power(ts_power_status vreg_en)
 	struct regulator *reg = NULL;
 	if (!reg) {
 /* Remove this comment when the regulator references are fixed here for Hawaii */
-                #ifdef CONFIG_MACH_HAWAII_GARNET
-		reg = regulator_get(NULL, "camldo2");
-		if (!reg || IS_ERR(reg)) {
-			pr_err("No Regulator available for camldo2\n");
-			return -1;
-		}
-		#else
 		reg = regulator_get(NULL, "hv8");
 		if (!reg || IS_ERR(reg)) {
 			pr_err("No Regulator available for ldo_hv8\n");
 			return -1;
 		}
-		#endif
 	}
 	if (reg) {
 		if (vreg_en) {
 			regulator_set_voltage(reg, 3000000, 3000000);
-		        #ifdef CONFIG_MACH_HAWAII_GARNET
-			pr_err("Turn on TP(camldo2) to 2.8V\n");
-		        #else
-			pr_err("Turn on TP(ldo_hv8) to 2.8V\n");
-		        #endif
+			pr_err("Turn on TP (ldo_hv8) to 2.8V\n");
 			regulator_enable(reg);
 		} else {
-		        #ifdef CONFIG_MACH_HAWAII_GARNET
-			pr_err("Turn off TP(camldo2)\n");
-		        #else
-		        pr_err("Turn off TP(ldo_hv8)\n");
-                        #endif
+			pr_err("Turn off TP (ldo_hv8)\n");
 			regulator_disable(reg);
 		}
 	} else {
@@ -1915,24 +1680,12 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&hawaii_backlight_device,
 #endif
 
-#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-	&hawaii_bcmbt_rfkill_device,
-#endif
-
-#ifdef CONFIG_BCM_BZHW
-	&hawaii_bcm_bzhw_device,
-#endif
-
 #ifdef CONFIG_BCM_BT_LPM
 	&board_bcmbt_lpm_device,
 #endif
 
 #ifdef CONFIG_VIDEO_KONA
 	&hawaii_unicam_device,
-#endif
-
-#ifdef CONFIG_WD_TAPPER
-	&wd_tapper,
 #endif
 
 #if defined(CONFIG_BCM_ALSA_SOUND)
@@ -1955,9 +1708,6 @@ static void __init hawaii_add_i2c_devices(void)
 #endif
 #ifdef CONFIG_VIDEO_AS3643
 	i2c_register_board_info(0, as3643_flash, ARRAY_SIZE(as3643_flash));
-#endif
-#ifdef CONFIG_TOUCHSCREEN_TANGO
-	i2c_register_board_info(3, tango_info, ARRAY_SIZE(tango_info));
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_FT5306
@@ -2065,12 +1815,6 @@ static void __init hawaii_add_i2c_devices(void)
 
 static void hawaii_add_pdata(void)
 {
-	hawaii_serial_device.dev.platform_data = &hawaii_uart_platform_data;
-	hawaii_i2c_adap_devices[0].dev.platform_data = &bsc_i2c_cfg[0];
-	hawaii_i2c_adap_devices[1].dev.platform_data = &bsc_i2c_cfg[1];
-	hawaii_i2c_adap_devices[2].dev.platform_data = &bsc_i2c_cfg[2];
-	hawaii_i2c_adap_devices[3].dev.platform_data = &bsc_i2c_cfg[3];
-	hawaii_i2c_adap_devices[4].dev.platform_data = &bsc_i2c_cfg[4];
 	hawaii_sdio1_device.dev.platform_data = &hawaii_sdio_param[0];
 	hawaii_sdio2_device.dev.platform_data = &hawaii_sdio_param[1];
 	hawaii_sdio3_device.dev.platform_data = &hawaii_sdio_param[2];
@@ -2083,6 +1827,8 @@ static void hawaii_add_pdata(void)
 #ifdef CONFIG_USB_DWC_OTG
 	hawaii_hsotgctrl_platform_device.dev.platform_data =
 	    &hsotgctrl_plat_data;
+	hawaii_usb_phy_platform_device.dev.platform_data =
+		&hsotgctrl_plat_data;
 #endif
 #ifdef CONFIG_ION
 	ion_system_device.dev.platform_data = &ion_system_data;
@@ -2167,6 +1913,10 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 #include "kona_fb_init.c"
 #endif /* #ifdef CONFIG_FB_BRCM_KONA */
 
+static struct of_device_id hawaii_dt_match_table[] __initdata = {
+	{ .compatible = "simple-bus", },
+	{}
+};
 static void __init hawaii_init(void)
 {
 	hawaii_add_devices();
@@ -2174,6 +1924,8 @@ static void __init hawaii_init(void)
 	konafb_init();
 #endif
 	hawaii_add_common_devices();
+	/* Populate platform_devices from device tree data */
+	of_platform_populate(NULL, hawaii_dt_match_table, NULL, NULL);
 	return;
 }
 
@@ -2189,8 +1941,8 @@ static int __init hawaii_add_lateinit_devices(void)
 
 late_initcall(hawaii_add_lateinit_devices);
 
-MACHINE_START(HAWAII, "Hawaii")
-	.atag_offset = 0x100,
+static const char *hawaii_dt_compat[] = { "bcm,hawaii", NULL, };
+DT_MACHINE_START(HAWAII, "hawaii")
 	.map_io = hawaii_map_io,
 	.init_irq = kona_init_irq,
 	.handle_irq = gic_handle_irq,
@@ -2198,4 +1950,5 @@ MACHINE_START(HAWAII, "Hawaii")
 	.init_machine = hawaii_init,
 	.reserve = hawaii_reserve,
 	.restart = hawaii_restart,
+	.dt_compat = hawaii_dt_compat,
 MACHINE_END
