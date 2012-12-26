@@ -112,6 +112,8 @@ struct sdio_dev {
 	struct clk *sleep_clk;
 	struct regulator *vddo_sd_regulator;
 	struct regulator *vdd_sdxc_regulator;
+	struct wake_lock cd_int_wake_lock;
+	unsigned char *cd_int_wake_lock_name;
 };
 
 #ifdef CONFIG_MACH_BCM2850_FPGA
@@ -392,6 +394,8 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 	struct sdhci_host *host = dev->host;
 	int count = 0;
 
+	wake_lock(&dev->cd_int_wake_lock);
+
 	/* card insert */
 	if (gpio_get_value_cansleep(dev->cd_gpio) == 0) {
 
@@ -446,6 +450,7 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 		} while (0);
 	}
 
+	wake_unlock(&dev->cd_int_wake_lock);
 	return IRQ_HANDLED;
 }
 
@@ -878,6 +883,18 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		pr_info("%s: card insert emulated!\n", devname);
 	} else if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
 
+		dev->cd_int_wake_lock_name = kasprintf(GFP_KERNEL,
+				"%s_cd_int", devname);
+
+		if (!dev->cd_int_wake_lock_name) {
+			dev_err(&pdev->dev,
+				"error allocating mem for wake_lock_name\n");
+			goto err_proc_term;
+		}
+
+		wake_lock_init(&dev->cd_int_wake_lock, WAKE_LOCK_SUSPEND,
+				dev->cd_int_wake_lock_name);
+
 		/* Let the card regulator be handled by the host driver.
 		 * We dont touch it here, except doing a regulator get.
 		 */
@@ -1074,6 +1091,8 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 #endif
 
 	sdhci_pltfm_runtime_pm_forbid(dev->dev);
+	kfree(dev->cd_int_wake_lock_name);
+	wake_lock_destroy(&dev->cd_int_wake_lock);
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);
 	iounmap(host->ioaddr);
