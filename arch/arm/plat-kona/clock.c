@@ -33,6 +33,7 @@
 #include <plat/pi_mgr.h>
 #ifdef CONFIG_SMP
 #include <asm/cpu.h>
+#include <linux/smp.h>
 #endif
 
 #ifdef CONFIG_DEBUG_FS
@@ -381,13 +382,15 @@ static int dep_clk_lock(struct ccu_clk *ccu_clk, struct clk *dep_clk,
 	clk_dbg("%s:ccu_clk =  %s : dep_ccu_clk->name = %s\n", __func__,
 			ccu_clk ? ccu_clk->clk.name : "NULL",
 			dep_ccu_clk ? dep_ccu_clk->clk.name : "NULL");
+	cpu_id = 1 << get_cpu();
 	if (dep_ccu_clk) {
-		cpu_id = 1 << (read_mpidr() & 0x3);
 		if (dep_ccu_clk->lock_flag & cpu_id) {
 			printk(KERN_ALERT "same core getting lock again");
 			printk(KERN_ALERT "%s:ccu_clk =  %s : dep_ccu = %s\n",
 				__func__, ccu_clk->clk.name,
 				dep_ccu_clk->clk.name);
+			printk(KERN_ALERT "cpu=%d, flag=%d", cpu_id,
+					 dep_ccu_clk->lock_flag);
 			BUG();
 		}
 /* Acquire clk_lock, update the flag immediately with access lock*/
@@ -396,11 +399,12 @@ static int dep_clk_lock(struct ccu_clk *ccu_clk, struct clk *dep_clk,
 		dep_ccu_clk->lock_flag |= cpu_id;
 		ccu_access_unlock(dep_ccu_clk, &access_flags);
 	} else {
-		cpu_id = 1 << (read_mpidr() & 0x3);
 		if (gen_lock_flag & cpu_id) {
 			printk(KERN_ALERT "same core getting lock again");
 			printk(KERN_ALERT "%s:ccu_clk =  %s : dep_clk = %s\n",
 				__func__, ccu_clk->clk.name, dep_clk->name);
+			printk(KERN_ALERT "cpu=%d, genlockflag=%d", cpu_id,
+					 gen_lock_flag);
 			BUG();
 		}
 		spin_lock_irqsave(&clk_gen_lock, *flags);
@@ -408,6 +412,7 @@ static int dep_clk_lock(struct ccu_clk *ccu_clk, struct clk *dep_clk,
 		gen_lock_flag |= cpu_id;
 		spin_unlock_irqrestore(&gen_access_lock, access_flags);
 	}
+	put_cpu();
 	return 0;
 }
 
@@ -427,9 +432,8 @@ static int dep_clk_unlock(struct ccu_clk *ccu_clk, struct clk *dep_clk,
 	clk_dbg("%s:ccu_clk =  %s : dep_ccu_clk->name = %s\n", __func__,
 			ccu_clk ? ccu_clk->clk.name : "NULL",
 			dep_ccu_clk ? dep_ccu_clk->clk.name : "NULL");
-
+	cpu_id = 1 << get_cpu();
 	if (dep_ccu_clk) {
-		cpu_id = 1 << (read_mpidr() & 0x3);
 		if (cpu_id & dep_ccu_clk->lock_flag) {
 			/* Clear the flag and release the clk_lock */
 			ccu_access_lock(dep_ccu_clk, &access_flags);
@@ -441,10 +445,11 @@ static int dep_clk_unlock(struct ccu_clk *ccu_clk, struct clk *dep_clk,
 			printk(KERN_ALERT "%s:ccu_clk =  %s : dep_ccu = %s\n",
 				__func__, ccu_clk->clk.name,
 				dep_ccu_clk->clk.name);
+			printk(KERN_ALERT "cpu=%d, flag=%d", cpu_id,
+					 dep_ccu_clk->lock_flag);
 			BUG();
 		}
 	} else {
-		cpu_id = 1 << (read_mpidr() & 0x3);
 		if (cpu_id & gen_lock_flag) {
 			spin_lock_irqsave(&gen_access_lock, access_flags);
 			gen_lock_flag &= ~cpu_id;
@@ -454,9 +459,12 @@ static int dep_clk_unlock(struct ccu_clk *ccu_clk, struct clk *dep_clk,
 			printk(KERN_ALERT "Has not acquired lock previously");
 			printk(KERN_ALERT "%s:ccu_clk =  %s : dep_ccu = %s\n",
 				__func__, ccu_clk->clk.name, dep_clk->name);
+			printk(KERN_ALERT "cpu=%d, genlockflag=%d", cpu_id,
+					 gen_lock_flag);
 			BUG();
 		}
 	}
+	put_cpu();
 	return 0;
 }
 
@@ -468,12 +476,14 @@ static int clk_lock(struct clk *clk, unsigned long *flags)
 	clk_dbg("%s:ccu_clk =  %s, clk = %s\n", __func__,
 			ccu_clk ? ccu_clk->clk.name : "NULL",
 			clk ? clk->name : "NULL");
+	cpu_id = 1 << get_cpu();
 	if (ccu_clk) {
-		cpu_id = 1 << (read_mpidr() & 0x3);
 		if (ccu_clk->lock_flag & cpu_id) {
 			printk(KERN_ALERT "same core getting lock again");
 			printk(KERN_ALERT "%s:ccu_clk =  %s, clk = %s\n",
 				__func__, ccu_clk->clk.name, clk->name);
+			printk(KERN_ALERT "cpu=%d, flag=%d", cpu_id,
+					ccu_clk->lock_flag);
 			BUG();
 		}
 		spin_lock_irqsave(&ccu_clk->clk_lock, *flags);
@@ -481,11 +491,12 @@ static int clk_lock(struct clk *clk, unsigned long *flags)
 		ccu_clk->lock_flag |= cpu_id;
 		ccu_access_unlock(ccu_clk, &access_flags);
 	} else {
-		cpu_id = 1 << (read_mpidr() & 0x3);
 		if (gen_lock_flag & cpu_id) {
 			printk(KERN_ALERT "same core getting lock again");
 			printk(KERN_ALERT "%s:ccu_clk =  %s, clk - %s\n",
 				__func__, ccu_clk->clk.name, clk->name);
+			printk(KERN_ALERT "cpu=%d, genlockflag=%d", cpu_id,
+					 gen_lock_flag);
 			BUG();
 		}
 		spin_lock_irqsave(&clk_gen_lock, *flags);
@@ -493,6 +504,7 @@ static int clk_lock(struct clk *clk, unsigned long *flags)
 		gen_lock_flag |= cpu_id;
 		spin_unlock_irqrestore(&gen_access_lock, access_flags);
 	}
+	put_cpu();
 	return 0;
 }
 
@@ -504,9 +516,8 @@ static int clk_unlock(struct clk *clk, unsigned long *flags)
 	clk_dbg("%s:ccu_clk =  %s, clk = %s\n", __func__,
 			ccu_clk ? ccu_clk->clk.name : "NULL",
 			clk ? clk->name : "NULL");
-
+	cpu_id = 1 << get_cpu();
 	if (ccu_clk) {
-		cpu_id = 1 << (read_mpidr() & 0x3);
 		if (ccu_clk->lock_flag & cpu_id) {
 			ccu_access_lock(ccu_clk, &access_flags);
 			ccu_clk->lock_flag &= ~cpu_id;
@@ -516,10 +527,11 @@ static int clk_unlock(struct clk *clk, unsigned long *flags)
 			printk(KERN_ALERT "Has not acquired lock previously");
 			printk(KERN_ALERT "%s:ccu_clk =  %s, clk = %s\n",
 				__func__, ccu_clk->clk.name, clk->name);
+			printk(KERN_ALERT "cpu=%d, flag=%d", cpu_id,
+					 ccu_clk->lock_flag);
 			BUG();
 		}
 	} else {
-		cpu_id = 1 << (read_mpidr() & 0x3);
 		if (gen_lock_flag & cpu_id) {
 			spin_lock_irqsave(&gen_access_lock, access_flags);
 			gen_lock_flag &= ~cpu_id;
@@ -529,9 +541,12 @@ static int clk_unlock(struct clk *clk, unsigned long *flags)
 			printk(KERN_ALERT "Has not acquired lock previously");
 			printk(KERN_ALERT "%s:ccu_clk =  %s, clk = %s\n",
 				__func__, ccu_clk->clk.name, clk->name);
+			printk(KERN_ALERT "cpu=%d, genlockflag=%d", cpu_id,
+					 gen_lock_flag);
 			BUG();
 		}
 	}
+	put_cpu();
 	return 0;
 }
 
