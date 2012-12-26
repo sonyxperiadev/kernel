@@ -2136,6 +2136,12 @@ static void sdhci_tasklet_card(unsigned long param)
 	 */
 	pm_runtime_put_sync_suspend(host->mmc->parent);
 
+	/*
+	 * We do this here for reasons stated in the comment
+	 * in card emulate function
+	 */
+	host->ops->clk_enable(host, 0);
+
 	mmc_detect_change(host->mmc, msecs_to_jiffies(200));
 }
 

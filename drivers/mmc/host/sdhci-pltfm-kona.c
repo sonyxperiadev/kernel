@@ -253,14 +253,37 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
 	 * sdhci_tasklet_card
 	 */
 	if (sdhci_pltfm_rpm_enabled(dev)) {
+		/*
+		 * The code below can be executed just
+		 * after a device resume. pm core
+		 * enables the runtime pm for the device
+		 * when the resume callback returns.
+		 * It is possible that we reach here before
+		 * that. One option is to wait for the RPM
+		 * to be enabled, but this can create an
+		 * obvious issue when we perform card
+		 * insert/removal during the probe. We cant
+		 * remove the pm_runtime_get_sync with a
+		 * direct clock enable here, because the
+		 * sdhci_irq will complain about "interrupt
+		 * while runtime suspened". We cant even check
+		 * for pm_runtime status and take an appropriate
+		 * action, because if the status changes by the
+		 * time the clcok disable is done in card tasklet,
+		 * it will result in unbalanced RPM usage. Moreover
+		 * why to wait for something in an ISR when we have
+		 * an option.
+		 * So a better option is to do both.
+		 */
 		pm_runtime_get_sync(dev->dev);
-	} else {
-		ret = sdhci_pltfm_clk_enable(dev, 1);
-		if (ret) {
-			dev_err(dev->dev,
-				"enable clock during card emulate failed\n");
-			return -EAGAIN;
-		}
+	}
+
+	/* Enable clock once irrespective of RPM state */
+	ret = sdhci_pltfm_clk_enable(dev, 1);
+	if (ret) {
+		dev_err(dev->dev,
+			"enable clock during card emulate failed\n");
+		return -EAGAIN;
 	}
 #endif
 	/* this function can be called from various contexts including ISR */
