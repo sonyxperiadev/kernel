@@ -2073,6 +2073,29 @@ static void sdhci_tasklet_card(unsigned long param)
 			tasklet_schedule(&host->finish_tasklet);
 #ifdef CONFIG_MMC_BCM_SD
 			pr_info("SD Card Removed\n");
+		} else {
+			/*
+			 * Though we do the same stuff here as above,
+			 * this is seperated out to deal cleanly with
+			 * merge issues and to make this case exceptional.
+			 */
+			pr_err("%s: Card removed & inserted during transfer\n",
+				mmc_hostname(host->mmc));
+			sdhci_reset(host, SDHCI_RESET_CMD);
+			sdhci_reset(host, SDHCI_RESET_DATA);
+
+			/*
+			 * During a request in progress, if we reach here
+			 * it defenitely means that the card had got removed
+			 * at least once during the transfer, though the
+			 * present state says the other way. This can be a
+			 * case of a person with magically quick fingers
+			 * performing multiple card insert/removals. The
+			 * reason why we end up here is because the
+			 * cd interrupt handler is a "threaded irq".
+			 */
+			host->mrq->cmd->error = -ENOMEDIUM;
+			tasklet_schedule(&host->finish_tasklet);
 		}
 	} else {
 		if (!(sdhci_readl(host, SDHCI_PRESENT_STATE) &
