@@ -393,11 +393,23 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 	struct sdio_dev *dev = (struct sdio_dev *)dev_id;
 	struct sdhci_host *host = dev->host;
 	int count = 0;
+	int gpio_status;
 
 	wake_lock(&dev->cd_int_wake_lock);
 
+	gpio_status = gpio_get_value_cansleep(dev->cd_gpio);
+
+	/* If suspended, wait for the device to be resumed.
+	 * It is important that we get the gpio status first
+	 * and then go for sleep. Otherwise a state change can
+	 * happen during the sleep, and we end up passing consecutive
+	 * card insert or removal indications to uppper layer.
+	 */
+	while (dev->suspended)
+		usleep_range(1000, 5000);
+
 	/* card insert */
-	if (gpio_get_value_cansleep(dev->cd_gpio) == 0) {
+	if (!gpio_status) {
 
 		/* Turn ON the SD controller regulator.
 		 * The card regulator will be truned on
