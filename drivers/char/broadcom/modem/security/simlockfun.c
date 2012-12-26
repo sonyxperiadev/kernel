@@ -174,6 +174,12 @@ static SIMLOCK_RESULT_t Service_Provider_Lock_Status[DUAL_SIM_SIZE] = { 0 };
 static SIMLOCK_RESULT_t Corporate_Lock_Status[DUAL_SIM_SIZE] = { 0 };
 static SIMLOCK_RESULT_t Phone_Lock_Status[DUAL_SIM_SIZE] = { 0 };
 
+Boolean IsBothSIMLocked = FALSE;
+Boolean AttemptUnlock = FALSE;
+SimNumber_t SIMEXCHID[DUAL_SIM_SIZE] = {
+	SIM_SINGLE, SIM_DUAL_SECOND, SIM_DUAL_FIRST
+};
+
 /* Number of attempts to unlock after powerup: these variables are used only
  * when the "ResetUnlockCounter" element in "SIMLock_CodeFile_t" structure
  * is TRUE.
@@ -881,8 +887,8 @@ static Boolean SIMLockCheckNetSubsetLock(SimNumber_t SimId, UInt8 *imsi)
 				    && (network_subset_code->mnc[0] == imsi[3])
 				    && (network_subset_code->mnc[1] == imsi[4])
 				    && (network_subset_code->mnc[2] ==
-					'\0' ? TRUE : network_subset_code->
-					mnc[2] == imsi[5])
+					'\0' ? TRUE :
+					network_subset_code->mnc[2] == imsi[5])
 				    &&
 				    ((network_subset_code->mnc[2] ==
 				      '\0' ? imsi[5] : imsi[6]) ==
@@ -1146,11 +1152,20 @@ static SEC_SimLock_Status_t SIMLockUnlockOneType(SEC_SimLock_LockType_t
 				*unlock_attempt = 0;
 				*lock_ind = FALSE;
 			} else {
-				(*unlock_attempt)++;
+				if (IsBothSIMLocked == TRUE) {
+					if (AttemptUnlock == FALSE) {
+						(*unlock_attempt)++;
+						AttemptUnlock = TRUE;
+					} else {
+						AttemptUnlock = FALSE;
+					}
+				} else {
+					(*unlock_attempt)++;
+				}
+
 				result =
 				    (*unlock_attempt >=
-				     simlockFile->
-				     maxUnlockAttempt ?
+				     simlockFile->maxUnlockAttempt ?
 				     SEC_SIMLOCK_PERMANENTLY_LOCKED :
 				     SEC_SIMLOCK_WRONG_KEY);
 			}
@@ -1684,6 +1699,20 @@ Boolean SIMLockCheckAllLocks(SimNumber_t SimId, UInt8 *imsi, UInt8 *gid1,
 			Phone_Lock_Status[SimId] = SIMLOCK_CLOSED;
 			result = FALSE;
 		}
+	}
+
+	if (((Network_Lock_Status[SimId] == SIMLOCK_CLOSED) &&
+	     (Network_Lock_Status[SIMEXCHID[SimId]] == SIMLOCK_CLOSED)) ||
+	    ((Network_Subset_Lock_Status[SimId] == SIMLOCK_CLOSED) &&
+	     (Network_Subset_Lock_Status[SIMEXCHID[SimId]] == SIMLOCK_CLOSED))
+	    || ((Service_Provider_Lock_Status[SimId] == SIMLOCK_CLOSED)
+		&& (Service_Provider_Lock_Status[SIMEXCHID[SimId]] ==
+		    SIMLOCK_CLOSED))
+	    || ((Corporate_Lock_Status[SimId] == SIMLOCK_CLOSED)
+		&& (Corporate_Lock_Status[SIMEXCHID[SimId]] == SIMLOCK_CLOSED))
+	    || ((Phone_Lock_Status[SimId] == SIMLOCK_CLOSED)
+		&& (Phone_Lock_Status[SIMEXCHID[SimId]] == SIMLOCK_CLOSED))) {
+		IsBothSIMLocked = TRUE;
 	}
 
 	return result;

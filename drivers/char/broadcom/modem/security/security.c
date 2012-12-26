@@ -202,32 +202,38 @@ static long sec_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case SEC_SIMLOCK_IS_LOCK_ON_IOC:
 		{
+			pr_info("SEC_SIMLOCK_IS_LOCK_ON_IOC\n");
 			retVal = handle_is_lock_on_ioc(filp, cmd, arg);
 			break;
 		}
 	case SEC_SIMLOCK_SET_LOCK_IOC:
 		{
+			pr_info("SEC_SIMLOCK_SET_LOCK_IOC\n");
 			retVal = handle_set_lock_ioc(filp, cmd, arg);
 			break;
 		}
 	case SEC_SIMLOCK_UNLOCK_SIM_IOC:
 		{
+			pr_info("SEC_SIMLOCK_UNLOCK_SIM_IOC\n");
 			retVal = handle_unlock_sim_ioc(filp, cmd, arg);
 			break;
 		}
 	case SEC_SIMLOCK_GET_LOCK_STATE_IOC:
 		{
+			pr_info("SEC_SIMLOCK_GET_LOCK_STATE_IOC\n");
 			retVal = handle_get_lock_state_ioc(filp, cmd, arg);
 			break;
 		}
 	case SEC_SIMLOCK_GET_REMAIN_ATTMPT_IOC:
 		{
+			pr_info("SEC_SIMLOCK_GET_REMAIN_ATTMPT_IOC\n");
 			retVal =
 			    handle_get_remain_attempt_info_ioc(filp, cmd, arg);
 			break;
 		}
 	case SEC_GET_IMEI_IOC:
 		{
+			pr_info("SEC_GET_IMEI_IOC\n");
 			retVal =
 				handle_get_imei_ioc(filp, cmd, arg);
 			break;
@@ -286,37 +292,37 @@ static long handle_set_lock_ioc(struct file *filp, unsigned int cmd,
 	/* try setting lock */
 	ioc_param.set_lock_status = SIMLockSetLock(ioc_param.sim_id,
 				(UInt8) ioc_param.action,
-				ioc_param.
-				full_lock_on ? TRUE : FALSE,
-				ioc_param.lock_type,
+						   ioc_param.full_lock_on ? TRUE
+						   : FALSE, ioc_param.lock_type,
 				ioc_param.key);
 
-	ioc_param.remain_attempt =
-			(int)SIMLockGetRemainAttempt(ioc_param.sim_id);
+	if (ioc_param.set_lock_status != SEC_SIMLOCK_FAILURE) {
+		ioc_param.remain_attempt =
+		    (int)SIMLockGetRemainAttempt(ioc_param.sim_id);
 
-	/* Coverity [TAINTED_SCALAR] */
-	SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
+		/* Coverity [TAINTED_SCALAR] */
+		SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
 
-	sys_lock_status.network_lock_enabled =
-				sec_lock_state.network_lock_enabled;
-	sys_lock_status.network_subset_lock_enabled =
-				sec_lock_state.network_subset_lock_enabled;
-	sys_lock_status.service_provider_lock_enabled =
-				sec_lock_state.service_provider_lock_enabled;
-	sys_lock_status.corporate_lock_enabled =
-				sec_lock_state.corporate_lock_enabled;
-	sys_lock_status.phone_lock_enabled =
-				sec_lock_state.phone_lock_enabled;
-	sys_lock_status.network_lock =
-				sec_lock_state.network_lock;
-	sys_lock_status.network_subset_lock =
-				sec_lock_state.network_subset_lock;
-	sys_lock_status.service_provider_lock =
-				sec_lock_state.service_provider_lock;
-	sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
-	sys_lock_status.phone_lock = sec_lock_state.phone_lock;
+		sys_lock_status.network_lock_enabled =
+		    sec_lock_state.network_lock_enabled;
+		sys_lock_status.network_subset_lock_enabled =
+		    sec_lock_state.network_subset_lock_enabled;
+		sys_lock_status.service_provider_lock_enabled =
+		    sec_lock_state.service_provider_lock_enabled;
+		sys_lock_status.corporate_lock_enabled =
+		    sec_lock_state.corporate_lock_enabled;
+		sys_lock_status.phone_lock_enabled =
+		    sec_lock_state.phone_lock_enabled;
+		sys_lock_status.network_lock = sec_lock_state.network_lock;
+		sys_lock_status.network_subset_lock =
+		    sec_lock_state.network_subset_lock;
+		sys_lock_status.service_provider_lock =
+		    sec_lock_state.service_provider_lock;
+		sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
+		sys_lock_status.phone_lock = sec_lock_state.phone_lock;
 
-	SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
+		SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
+	}
 
 	if (copy_to_user
 		((sec_simlock_set_lock_t *) param, &ioc_param,
@@ -348,31 +354,32 @@ static long handle_unlock_sim_ioc(struct file *filp, unsigned int cmd,
 							ioc_param.lock_type,
 							ioc_param.password);
 
-	ioc_param.remain_attempt =
-		(int)SIMLockGetRemainAttempt(ioc_param.sim_id);
-	/* Coverity [TAINTED_SCALAR] */
-	SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
+	if (ioc_param.unlock_status != SEC_SIMLOCK_FAILURE) {
+		ioc_param.remain_attempt =
+		    (int)SIMLockGetRemainAttempt(ioc_param.sim_id);
+		/* Coverity [TAINTED_SCALAR] */
+		SIMLockGetSIMLockState(ioc_param.sim_id, &sec_lock_state);
 
-	sys_lock_status.network_lock_enabled =
-		sec_lock_state.network_lock_enabled;
-	sys_lock_status.network_subset_lock_enabled =
-		sec_lock_state.network_subset_lock_enabled;
-	sys_lock_status.service_provider_lock_enabled =
-		sec_lock_state.service_provider_lock_enabled;
-	sys_lock_status.corporate_lock_enabled =
-		sec_lock_state.corporate_lock_enabled;
-	sys_lock_status.phone_lock_enabled =
-		sec_lock_state.phone_lock_enabled;
-	sys_lock_status.network_lock =
-		sec_lock_state.network_lock;
-	sys_lock_status.network_subset_lock =
-		sec_lock_state.network_subset_lock;
-	sys_lock_status.service_provider_lock =
-		sec_lock_state.service_provider_lock;
-	sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
-	sys_lock_status.phone_lock = sec_lock_state.phone_lock;
+		sys_lock_status.network_lock_enabled =
+		    sec_lock_state.network_lock_enabled;
+		sys_lock_status.network_subset_lock_enabled =
+		    sec_lock_state.network_subset_lock_enabled;
+		sys_lock_status.service_provider_lock_enabled =
+		    sec_lock_state.service_provider_lock_enabled;
+		sys_lock_status.corporate_lock_enabled =
+		    sec_lock_state.corporate_lock_enabled;
+		sys_lock_status.phone_lock_enabled =
+		    sec_lock_state.phone_lock_enabled;
+		sys_lock_status.network_lock = sec_lock_state.network_lock;
+		sys_lock_status.network_subset_lock =
+		    sec_lock_state.network_subset_lock;
+		sys_lock_status.service_provider_lock =
+		    sec_lock_state.service_provider_lock;
+		sys_lock_status.corporate_lock = sec_lock_state.corporate_lock;
+		sys_lock_status.phone_lock = sec_lock_state.phone_lock;
 
-	SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
+		SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
+	}
 
 	if (copy_to_user
 		((sec_simlock_unlock_t *) param, &ioc_param,
@@ -447,12 +454,10 @@ static long handle_get_imei_ioc(struct file *filp, unsigned int cmd,
 
 	if (copy_from_user(&ioc_param, (sec_get_imei_data_t *) param,
 			   sizeof(sec_get_imei_data_t)) != 0) {
-		pr_err
-		("handle_get_imei_ioc: copy_from_user error\n");
+		pr_err("handle_get_imei_ioc: copy_from_user error\n");
 		return -EFAULT;
 	}
 	memset(&ioc_param, 0x0, sizeof(sec_get_imei_data_t));
-
 
 	if (!read_imei(ioc_param.imei1_string, ioc_param.imei2_string))	{
 #ifdef CONFIG_BRCM_SIM_SECURE_ENABLE
@@ -478,8 +483,7 @@ static long handle_get_imei_ioc(struct file *filp, unsigned int cmd,
 
 	if (copy_to_user((sec_get_imei_data_t *) param,
 			 &ioc_param, sizeof(sec_get_imei_data_t)) != 0) {
-		pr_err
-		 ("handle_get_imei_ioc: copy_to_user error\n");
+		pr_err("handle_get_imei_ioc: copy_to_user error\n");
 		return -EFAULT;
 	}
 
