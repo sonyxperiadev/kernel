@@ -479,6 +479,13 @@ static int hawaii_camera_power(struct device *dev, int on)
 			pr_err("Failed to set lp clock\n");
 			goto e_clk_set_lp;
 		}
+
+		value = clk_set_rate(lp_clock, CSI0_LP_FREQ);
+		if (value) {
+			pr_err("Failed to set lp clock\n");
+			goto e_clk_set_lp;
+		}
+
 		value = clk_enable(clock);
 		if (value) {
 			pr_err("Failed to enable sensor 0 clock\n");
@@ -902,7 +909,6 @@ struct regulator_consumer_supply sdx_supply[] = {
 	{.supply = "sdxldo_uc"},
 	REGULATOR_SUPPLY("vddo", "sdhci.3"),	/* 0x3f1b0000.sdhci */
 	{.supply = "vdd_sdxc"},
-	{.supply = "sddat_debug_bus"},
 };
 
 #ifdef CONFIG_KEYBOARD_BCM
