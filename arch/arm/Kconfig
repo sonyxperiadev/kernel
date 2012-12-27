@@ -1032,6 +1032,7 @@ config ARCH_KONA
         select KONA_WFI_WORKAROUND if SMP
 	select MIGHT_HAVE_CACHE_L2X0
 	select TICK_ONESHOT
+	select ARM_AMBA
         help
           This enables support for system based on Broadcom KONA architecture
 

@@ -313,6 +313,11 @@ config DW_BT_UART_CHANGES
 	help
 	  Handling BT UART ISR changes.
 
+config KONA_AXITRACE
+        bool "Enable axitrace sources"
+        depends on ARM_AMBA
+        help
+          Say Y here to enable axitrace sources on hawaii.
 
 endmenu
 
