@@ -34,67 +34,82 @@
  * ------------------------------------------------------------------------
  */
 #define SRAM_SECURE_RAM_BASE			SRAM_BASE_ADDR
+						/* 0x34040000 -- 0x3404DFFF */
 #define SRAM_SECURE_RAM_SIZE			0xE000
 
 /* Publc RAM can be used after ROM boot up */
 #define SRAM_PUBLIC_RAM_BASE			(SRAM_SECURE_RAM_BASE \
 						+ SRAM_SECURE_RAM_SIZE)
+						/* 0x3404e000 -- 0x34052000 */
 #define SRAM_PUBLIC_RAM_SIZE			0x4000
 
 /* ------------------------------------------------------------------------
- *  *    SRAM usage in Platfrom SWs
- *   * ------------------------------------------------------------------------
- *    */
+ *    SRAM usage in Platfrom SWs
+ * ------------------------------------------------------------------------
+ */
 #define SRAM_ROM_DORMANT_EXIT_BASE		(SRAM_PUBLIC_RAM_BASE)
+						/* 0x3404e000 -- 0x3404E3FF */
 #define SRAM_ROM_DORMANT_EXIT_SIZE		0x400
 #define SRAM_SHARED_BUF_BASE			(SRAM_ROM_DORMANT_EXIT_BASE \
 						+ SRAM_ROM_DORMANT_EXIT_SIZE)
+						/* 0x3404e400 -- 0x3404E7FF */
 #define SRAM_SHARED_BUF_SIZE			0x400
 
 #define SRAM_DSP_AREA1_BASE			(SRAM_SHARED_BUF_BASE \
 						+ SRAM_SHARED_BUF_SIZE)
+						/* 0x3404E800 -- 0x340507ff */
 #define SRAM_DSP_AREA1_SIZE			0x2000
 
 #define SRAM_SROM_BOOT_TRACE_BASE		(SRAM_DSP_AREA1_BASE \
 						+ SRAM_DSP_AREA1_SIZE)
+						/* 0x34050800 -- 0x3405081F */
 #define SRAM_SROM_BOOT_TRACE_SIZE		0x20
 
 #define SRAM_DSP_AREA2_BASE			(SRAM_SROM_BOOT_TRACE_BASE \
 						+ SRAM_SROM_BOOT_TRACE_SIZE)
+						/* 0x34050820 -- 0x34051F7f */
 #define SRAM_DSP_AREA2_SIZE			0x1760
 
 /* ROM doesn't touch this area  : Value can be retained thorugh reset*/
 #define SRAM_RST_REASON_BASE			(SRAM_DSP_AREA2_BASE \
 						+ SRAM_DSP_AREA2_SIZE)
+						/* 0x34051F80 -- 0x34051F83 */
 #define SRAM_RST_REASON_SIZE			0x04
 
 #define SRAM_AXI_CP_SETTING_BASE		(SRAM_RST_REASON_BASE \
 						+ SRAM_RST_REASON_SIZE)
+						/* 0x34051F84 -- 0x34051F87 */
 #define SRAM_AXI_CP_SETTING_SIZE		0x04
 
 #define SRAM_RAMDUMP_INFO_BASE			(SRAM_AXI_CP_SETTING_BASE \
 						+ SRAM_AXI_CP_SETTING_SIZE)
+						/* 0x34051F88 -- 0x34051F8B */
 #define SRAM_RAMDUMP_INFO_SIZE			0x04
 
 #define SRAM_AP_ONLY_BOOT_BASE			(SRAM_RAMDUMP_INFO_BASE \
 						+ SRAM_RAMDUMP_INFO_SIZE)
+						/* 0x34051F8C -- 0x34051F8F */
 #define SRAM_AP_ONLY_BOOT_SIZE			0x04
 
 #define SRAM_NON_INIT_FREE1_BASE		(SRAM_AP_ONLY_BOOT_BASE \
 						+ SRAM_AP_ONLY_BOOT_SIZE)
+						/* 0x34051F90 -- 0x34051F9F */
 #define SRAM_NON_INIT_FREE1_SIZE		0x10
 
 /* ROM doesn't touch this area  : Value can be retained thorugh reset*/
 #define SRAM_OTP_INFO_BASE			(SRAM_NON_INIT_FREE1_BASE \
 						+ SRAM_NON_INIT_FREE1_SIZE)
+						/* 0x34051FA0 -- 0x34051FAF */
 #define SRAM_OTP_INFO_SIZE			0x10
 
 #define SRAM_NON_INIT_FREE2_BASE		(SRAM_OTP_INFO_BASE \
 						+ SRAM_OTP_INFO_SIZE)
+						/* 0x34051FB0 -- 0x34051FDF */
 #define SRAM_NON_INIT_FREE2_SIZE		0x30
 
 #define SRAM_CUST_REBOOT_REASON_BASE		(SRAM_NON_INIT_FREE2_BASE \
 						+ SRAM_NON_INIT_FREE2_SIZE)
+						/* 0x34051FE0 -- 0x34051FFF */
 #define SRAM_CUST_REBOOT_REASON_SIZE		0x20
 
 #endif /* _SRAM_DEF_HAWAII_H_ */
