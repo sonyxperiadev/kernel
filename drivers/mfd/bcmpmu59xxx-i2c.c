@@ -15,6 +15,7 @@
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
+#include <linux/dma-mapping.h>
 #include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/i2c.h>
@@ -37,6 +38,9 @@
 #define PWRMGR_I2C_RETRY_DELAY_US  10
 #define PWRMGR_I2C_RDWR_MAX_TRIES 10
 
+#define I2C_LOG_BUF_SZ		(SZ_1K)
+#define I2C_LOG_BUF_OFF		0
+
 static int debug_mask = BCMPMU_PRINT_INIT |  BCMPMU_PRINT_ERROR;
 #define pr_pmui2c(debug_level, args...) \
 	do { \
@@ -56,6 +60,41 @@ static struct platform_device bcmpmu59xxx_pdev = {
 #ifdef CONFIG_HAS_WAKELOCK
 static DEFINE_SPINLOCK(wl_lock);
 #endif
+
+static u32 *i2c_log_buf_v;
+static u32 *i2c_log_buf_p;
+
+/**
+ * bcmpmu_i2c_log - log i2c data to un-cached buffer
+ *
+ * @bcmpmu_i2c:		Pointer to bcmpmu_i2c struct
+ * @rdwr:		READ/WRITE flag. 1 for read, 0 for write
+ *			and negative value for ERROR
+ * @slave:		Slave id
+ * @reg:		register address
+ * @val:		value
+ *
+ * Log the i2c data in uncached buffer. Offset 0 in the
+ * @bcmpmu_i2c->i2c_log_buf_v is reserved for index purpose.
+ * Value at offset 0 shows the current index where new data will be
+ * written. @rdwr, @slave, @reg and @val are packed in a interger
+ * and then written to the buffer
+ */
+
+static void bcmpmu_i2c_log(u32 *buf_v, char rdwr, u8 slave, u8 reg, u8 val)
+{
+	int new_off;
+
+	BUG_ON(buf_v == NULL);
+
+	new_off = *(buf_v + I2C_LOG_BUF_OFF);
+	if ((new_off > (I2C_LOG_BUF_SZ / SZ_4)) || (new_off == I2C_LOG_BUF_OFF))
+		new_off = I2C_LOG_BUF_OFF + 1;
+
+	*(buf_v + new_off) = ((slave << 24) | (reg << 16) |
+			(val << 8) | ((rdwr < 0) ? 'X' : (rdwr ? 'R' : 'W')));
+	*(buf_v + I2C_LOG_BUF_OFF) = ++new_off;
+}
 
 static inline void bcmpmu_i2c_lock(struct bcmpmu59xxx *bcmpmu)
 {
@@ -145,6 +184,17 @@ static int bcmpmu_i2c_try_write(struct bcmpmu59xxx *bcmpmu, u32 reg, u8 value)
 		err = -EAGAIN;
 		pr_pmui2c(ERROR, "ERR: I2C SW SEQ Write MAX Tries\n");
 	}
+	if (!err)
+		bcmpmu_i2c_log(i2c_log_buf_v, 0,
+				bcmpmu_get_slaveid(bcmpmu, reg),
+				DEC_REG_ADD(reg),
+				value);
+	else
+		bcmpmu_i2c_log(i2c_log_buf_v, (char)err,
+				bcmpmu_get_slaveid(bcmpmu, reg),
+				DEC_REG_ADD(reg),
+				value);
+
 	return err;
 }
 
@@ -190,10 +240,10 @@ static int bcmpmu_i2c_try_read(struct bcmpmu59xxx *bcmpmu, u32 reg, u8 * value)
 			}
 		} else {
 			err =
-			    pwr_mgr_pmu_reg_read((u8) DEC_REG_ADD(reg),
-						 bcmpmu_get_slaveid(bcmpmu,
-								    reg),
-						 value);
+				pwr_mgr_pmu_reg_read((u8) DEC_REG_ADD(reg),
+						bcmpmu_get_slaveid(bcmpmu,
+							reg),
+						value);
 			if (err == 0) {
 				last_trans = I2C_TRANS_READ;
 				break;
@@ -205,6 +255,18 @@ static int bcmpmu_i2c_try_read(struct bcmpmu59xxx *bcmpmu, u32 reg, u8 * value)
 		pr_pmui2c(ERROR, "ERR: I2C SW SEQ Max Tries\n");
 		err = -EAGAIN;
 	}
+
+	if (!err)
+		bcmpmu_i2c_log(i2c_log_buf_v, 1,
+				bcmpmu_get_slaveid(bcmpmu, reg),
+				DEC_REG_ADD(reg),
+				*value);
+	else
+		bcmpmu_i2c_log(i2c_log_buf_v, (char)err,
+				bcmpmu_get_slaveid(bcmpmu, reg),
+				DEC_REG_ADD(reg),
+				*value);
+
 	return err;
 }
 
@@ -396,18 +458,30 @@ static int __devinit bcmpmu59xxx_i2c_probe(struct i2c_client *i2c,
 	u8 i;
 	struct i2c_adapter *adp;
 #endif
+	void *virt;
+	dma_addr_t phy;
+
 	pdata = (struct bcmpmu59xxx_platform_data *)i2c->dev.platform_data;
 	pr_pmui2c(INIT, "%s\n", __func__);
 	pr_pmui2c(INIT, "%s called\n", __func__);
 	ic_bus = kzalloc(sizeof(struct bcmpmu59xxx_bus), GFP_KERNEL);
 	bcmpmu = kzalloc(sizeof(struct bcmpmu59xxx), GFP_KERNEL);
-	if (bcmpmu == NULL || ic_bus == NULL) {
+	virt = dma_zalloc_coherent(NULL, I2C_LOG_BUF_SZ, &phy, GFP_KERNEL);
+
+	if ((bcmpmu == NULL) || (ic_bus == NULL) || (virt == NULL)) {
 		pr_pmui2c(ERROR, "ERR: %s failed to alloc mem.\n", __func__);
 		ret = -ENOMEM;
 		goto err;
 	}
 	bcmpmu->pmu_bus = ic_bus;
 	bcmpmu->pdata = pdata;
+
+	i2c_log_buf_p = (u32 *)phy;
+	i2c_log_buf_v = (u32 *)virt;
+
+	pr_pmui2c(INIT, "%s: i2c log buff phy_addr %p virt_addr %p\n",
+			__func__, i2c_log_buf_p, i2c_log_buf_v);
+
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&ic_bus->i2c_lock, WAKE_LOCK_SUSPEND,
 		"bcmpmu_i2c");
@@ -462,6 +536,8 @@ static int bcmpmu59xxx_i2c_remove(struct i2c_client *i2c)
 	debugfs_remove(bcmpmu->pmu_bus->dentry);
 #endif
 	platform_device_unregister(&bcmpmu59xxx_pdev);
+	dma_free_coherent(NULL, I2C_LOG_BUF_SZ, i2c_log_buf_v,
+			(dma_addr_t)i2c_log_buf_p);
 	kfree(bcmpmu->pmu_bus);
 	kfree(bcmpmu);
 	return 0;
