@@ -1524,19 +1524,19 @@ static int ts_power(ts_power_status vreg_en)
 	struct regulator *reg = NULL;
 	if (!reg) {
 /* Remove this comment when the regulator references are fixed here for Hawaii */
-		reg = regulator_get(NULL, "hv8");
+		reg = regulator_get(NULL, "camldo2");
 		if (!reg || IS_ERR(reg)) {
-			pr_err("No Regulator available for ldo_hv8\n");
+			pr_err("No Regulator available for ldo_camldo2\n");
 			return -1;
 		}
 	}
 	if (reg) {
 		if (vreg_en) {
 			regulator_set_voltage(reg, 3000000, 3000000);
-			pr_err("Turn on TP (ldo_hv8) to 2.8V\n");
+			pr_err("Turn on TP (ldo_camldo2) to 2.8V\n");
 			regulator_enable(reg);
 		} else {
-			pr_err("Turn off TP (ldo_hv8)\n");
+			pr_err("Turn off TP (ldo_camldo2)\n");
 			regulator_disable(reg);
 		}
 	} else {
