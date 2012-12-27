@@ -80,7 +80,7 @@
 
 #define KONA_SD_CONTRLR_REG_LPCNT	(50)
 
-#define KONA_MMC_AUTOSUSPEND_DELAY	(10)
+#define KONA_MMC_AUTOSUSPEND_DELAY	(200)
 
 /* Enable this quirk if regulators are always ON
  * but the regulator framework is not funtional.
