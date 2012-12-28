@@ -173,6 +173,8 @@ struct ov5640 {
 	int flashmode;
 };
 
+static int set_flash_mode(int, struct ov5640 *);
+
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
 {
 	return container_of(i2c_get_clientdata(client), struct ov5640, subdev);
@@ -1509,25 +1511,18 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 	struct ov5640 *ov5640 = to_ov5640(client);
 	int ret = 0;
 
-	if (enable)
+	if (enable) {
+		if ((ov5640->flashmode == FLASH_MODE_ON)
+			|| (ov5640->flashmode == FLASH_MODE_AUTO))
+			adp1653_gpio_strobe(1);
 		/* Power Up, Start Streaming */
 		ret = ov5640_reg_writes(client, ov5640_stream);
-	else{
+		if ((ov5640->flashmode == FLASH_MODE_ON)
+			|| (ov5640->flashmode == FLASH_MODE_AUTO))
+			adp1653_gpio_strobe(0);
+	} else {
 		/* Stop Streaming, Power Down*/
 		ret = ov5640_reg_writes(client, ov5640_power_down);
-#ifdef CONFIG_VIDEO_ADP1653
-		if(ov5640->flashmode != FLASH_MODE_OFF){
-			adp1653_clear_all();
-			adp1653_gpio_toggle(0);	
-		}
-#endif
-#ifdef CONFIG_VIDEO_AS3643
-        if(ov5640->flashmode != FLASH_MODE_OFF){
-        as3643_clear_all();
-        as3643_gpio_toggle(0);
-                                                    }
-#endif
-		ov5640->flashmode = FLASH_MODE_OFF;		
 	}
 
 	return ret;
@@ -2124,63 +2119,89 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ret;
 		break;
 	case V4L2_CID_CAMERA_FLASH_MODE:
-		if ((ctrl->value == FLASH_MODE_OFF) || (ctrl->value == FLASH_MODE_TORCH_OFF)){
-#ifdef CONFIG_VIDEO_ADP1653
-			if(ov5640->flashmode != FLASH_MODE_OFF){
-				adp1653_clear_all();
-				adp1653_gpio_toggle(0);	
-			}
-			ov5640->flashmode = FLASH_MODE_OFF;
-#endif
-#ifdef CONFIG_VIDEO_AS3643
-			if (ov5640->flashmode != FLASH_MODE_OFF) {
-				as3643_clear_all();
-				as3643_gpio_toggle(0);
-			}
-			ov5640->flashmode = FLASH_MODE_OFF;
-#endif
-
-		} else if (ctrl->value == FLASH_MODE_TORCH_ON){
-#ifdef CONFIG_VIDEO_ADP1653
-			adp1653_gpio_toggle(1);
-			udelay(30);
-			adp1653_set_timer(1,0);
-			adp1653_set_ind_led(0);
-			adp1653_set_torch_flash(10); /* Torch current no indicator LED */
-			adp1653_sw_strobe(1);
-			ov5640->flashmode = ctrl->value;
-#endif		
-#ifdef CONFIG_VIDEO_AS3643
-			as3643_gpio_toggle(1);
-			usleep_range(25, 30);
-			as3643_set_torch_flash(0x80);
-			ov5640->flashmode = ctrl->value;
-#endif
-		} else if (ctrl->value == FLASH_MODE_ON){
-#ifdef CONFIG_VIDEO_ADP1653
-			adp1653_gpio_toggle(1);
-			udelay(30);
-			adp1653_set_timer(1,0);
-			adp1653_set_ind_led(1);
-			adp1653_set_torch_flash(28); /* Flash current indicator LED ON */
-			ov5640->flashmode = ctrl->value;
-			/* Strobing should hapen later */
-#endif		
-#ifdef CONFIG_VIDEO_AS3643
-			as3643_gpio_toggle(1);
-			usleep_range(25, 30);
-			as3643_set_ind_led(0x80);
-			ov5640->flashmode = ctrl->value;
-#endif
-
-		} else {
-			ret = -EINVAL;
-		}
-
+		set_flash_mode(ctrl->value, ov5640);
 		break;
 	}
 
 	return ret;
+}
+
+int set_flash_mode(int mode, struct ov5640 *ov5640)
+{
+	if (ov5640->flashmode == mode)
+		return 0;
+
+#ifdef CONFIG_VIDEO_ADP1653
+	if ((mode == FLASH_MODE_OFF) || (mode == FLASH_MODE_TORCH_OFF)) {
+		if (ov5640->flashmode != FLASH_MODE_OFF) {
+			adp1653_clear_all();
+			adp1653_gpio_toggle(0);
+			mode = FLASH_MODE_OFF;
+		}
+	} else if (mode == FLASH_MODE_TORCH_ON) {
+		if ((ov5640->flashmode == FLASH_MODE_ON)
+			|| (ov5640->flashmode == FLASH_MODE_AUTO))
+			set_flash_mode(FLASH_MODE_OFF, ov5640);
+		adp1653_gpio_toggle(1);
+		adp1653_gpio_strobe(0);
+		usleep_range(30, 31);
+		adp1653_set_timer(1, 0);
+		adp1653_set_ind_led(1);
+		/* Torch current no indicator LED */
+		adp1653_set_torch_flash(10);
+		adp1653_sw_strobe(1);
+	} else if (mode == FLASH_MODE_ON) {
+		if ((ov5640->flashmode == FLASH_MODE_TORCH_ON)
+			|| (ov5640->flashmode == FLASH_MODE_AUTO))
+			set_flash_mode(FLASH_MODE_OFF, ov5640);
+		adp1653_gpio_strobe(0);
+		adp1653_gpio_toggle(1);
+		usleep_range(30, 31);
+		adp1653_set_timer(1, 0x5);
+		adp1653_set_ind_led(1);
+		/* Flash current indicator LED ON */
+		adp1653_set_torch_flash(28);
+		/* Strobing should hapen later */
+	} else if (mode == FLASH_MODE_AUTO) {
+		if ((ov5640->flashmode == FLASH_MODE_TORCH_ON)
+			|| (ov5640->flashmode == FLASH_MODE_ON))
+			set_flash_mode(FLASH_MODE_OFF, ov5640);
+		adp1653_gpio_strobe(0);
+		adp1653_gpio_toggle(1);
+		usleep_range(30, 31);
+		adp1653_set_timer(1, 0x5);
+		adp1653_set_ind_led(1);
+		/* Flash current indicator LED ON */
+		adp1653_set_torch_flash(28);
+		/* Camera sensor will strobe if required */
+	} else {
+		return -EINVAL;
+	}
+	ov5640->flashmode = mode;
+#endif
+
+#ifdef CONFIG_VIDEO_AS3643
+	if ((mode == FLASH_MODE_OFF) || (mode == FLASH_MODE_TORCH_OFF)) {
+		if (ov5640->flashmode != FLASH_MODE_OFF) {
+			as3643_clear_all();
+			as3643_gpio_toggle(0);
+		}
+	} else if (mode == FLASH_MODE_TORCH_ON) {
+		as3643_gpio_toggle(1);
+		usleep_range(25, 30);
+		as3643_set_torch_flash(0x80);
+	} else if (mode == FLASH_MODE_ON) {
+		as3643_gpio_toggle(1);
+		usleep_range(25, 30);
+		as3643_set_ind_led(0x80);
+	} else if (mode == FLASH_MODE_AUTO) {
+		/* Not yet implemented */
+	} else {
+		return -EINVAL;
+	}
+	ov5640->flashmode = mode;
+#endif
+	return 0;
 }
 
 static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)

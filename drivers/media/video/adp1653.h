@@ -19,6 +19,6 @@ extern int adp1653_set_torch_flash(int hpled);
 extern int adp1653_sw_strobe(int on);
 extern int adp1653_set_timer(int timer_on, int timer_val);
 extern int adp1653_gpio_toggle(bool en);
-extern int adp1653_clear_all();
+extern int adp1653_clear_all(void);
 extern int adp1653_gpio_strobe(int on);
 

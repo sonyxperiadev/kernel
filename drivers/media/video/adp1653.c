@@ -108,9 +108,6 @@ int adp1653_set_torch_flash(int hpled)
 		return -EINVAL;
 	}
 	adp1653_reg_read(client1, 0x00, &val);
-	printk("adp1653_set_torch_flash read 0x%x\n",val);
-	printk("Forcing to torch mode for now\n");
-	hpled = 9;
 	if(hpled <= 11)
 		printk("Torch mode seq\n");
 	else	
@@ -118,7 +115,6 @@ int adp1653_set_torch_flash(int hpled)
 	
 	val = val & 0x7;
 	val = val | (hpled << 3);
-	printk("adp1653_set_torch_flash to write 0x%x\n",val);
 	adp1653_reg_write(client1, 0x00, val);
 	return 0;
 }
@@ -127,57 +123,39 @@ int adp1653_sw_strobe(int on)
 {
 	u8 val;
 	val = 0;
-	if(on){
-		printk("ADP1653 turn on SW strobe\n");
+	if (on)
 		adp1653_reg_write(client1, 0x02, 1);
-	} else {	
-		printk("ADP1653 turn off SW strobe\n");
+	else
 		adp1653_reg_write(client1, 0x02, 0);
-	}
 	return 0;	
 }
 
 int adp1653_gpio_strobe(int on)
 {
-	if(on){
-	 	if (gpio_request_one(GPIO_FLASH_TRIG , GPIOF_DIR_OUT | GPIOF_INIT_LOW,
-		              "Flash-Trig")) {
-		                          printk(KERN_ERR "GPIO flash Trig failed\n");
-		                          return -1;
-	 	}
-		gpio_set_value(GPIO_FLASH_TRIG,1);
-	} else {
-		gpio_set_value(GPIO_FLASH_TRIG,0);
-		gpio_free(GPIO_FLASH_TRIG);
-	}
+	if (on)
+		gpio_set_value(GPIO_FLASH_TRIG, 1);
+	else
+		gpio_set_value(GPIO_FLASH_TRIG, 0);
 	return 0;
 }
 int adp1653_set_timer(int timer_on, int timer_val)
 {
 	u8 val;
-	if(timer_on){
-		printk("Turn on timer before flash\n");
+	if (timer_on) {
 		val = 0x10 | (timer_val); 
-		adp1653_reg_write(client1, 0x01,val);
+		adp1653_reg_write(client1, 0x01, val);
 	} else {
-		adp1653_reg_write(client1, 0x01,0x00);
+		adp1653_reg_write(client1, 0x01, 0x00);
 	}
 	return 0;	
 }
 
 int adp1653_gpio_toggle(bool en)
 {
-	 if(en){
-	 	if (gpio_request_one(GPIO_FLASH_EN , GPIOF_DIR_OUT | GPIOF_INIT_LOW,
-		              "Flash-En")) {
-		                          printk(KERN_ERR "GPIO flash En failed\n");
-		                          return -1;
-	 	}
-		 gpio_set_value(GPIO_FLASH_EN,1);
-	 } else	{ 
-		 gpio_set_value(GPIO_FLASH_EN,0);
-		 gpio_free(GPIO_FLASH_EN);
-	 }
+	 if (en)
+		gpio_set_value(GPIO_FLASH_EN, 1);
+	 else
+		gpio_set_value(GPIO_FLASH_EN, 0);
 	 return 0;
 }
 
@@ -222,11 +200,23 @@ static struct i2c_driver adp1653_i2c_driver = {
 
 static int __init adp1653_mod_init(void)
 {
+	if (gpio_request_one(GPIO_FLASH_TRIG , GPIOF_DIR_OUT | GPIOF_INIT_LOW,
+		      "Flash-Trig")) {
+		printk(KERN_ERR "GPIO flash Trig failed\n");
+		return -1;
+	}
+	if (gpio_request_one(GPIO_FLASH_EN , GPIOF_DIR_OUT | GPIOF_INIT_LOW,
+		      "Flash-En")) {
+		printk(KERN_ERR "GPIO flash En failed\n");
+		return -1;
+	}
 	return i2c_add_driver(&adp1653_i2c_driver);
 }
 
 static void __exit adp1653_mod_exit(void)
 {
+	gpio_free(GPIO_FLASH_TRIG);
+	gpio_free(GPIO_FLASH_EN);
 	i2c_del_driver(&adp1653_i2c_driver);
 }
 
