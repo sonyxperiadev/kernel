@@ -43,6 +43,9 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 
+#define BOARD_EDN010 "Hawaiistone EDN010"
+#define BOARD_EDN01x "Hawaiistone EDN01x"
+
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0c
 #define PMU_DEVICE_INT_GPIO	29
@@ -1408,34 +1411,40 @@ int bcmpmu_reg_init(void)
 	int size, i;
 	uint32_t *p, *p1;
 	struct bcmpmu59xxx_rw_data *tbl;
+	unsigned long dt_root;
+	const char *model;
 
 	np = of_find_matching_node(NULL, matches);
 	if (np) {
 		prop = of_find_property(np, "initdata", &size);
 		if (prop == NULL) {
 			printk(KERN_INFO "%s pmu initdata not found\n",
-				__func__);
-			return 0;
-		}
-		tbl = kzalloc(size, GFP_KERNEL);
-		if (tbl == NULL)
-			printk(KERN_INFO "%s Failed  alloc bcmpmu init_data\n"
-					, __func__);
-		else {
-			p = (uint32_t *)prop->value;
-			p1 = (uint32_t *)tbl;
-			for (i = 0; i < size; i++)
-				*p1++ = be32_to_cpu(*p++);
-			bcmpmu_i2c_pdata.init_data = tbl;
-			bcmpmu_i2c_pdata.init_max =
-				size / sizeof(struct bcmpmu59xxx_rw_data);
-			reg_init = 1;
-		}
-		for (i = 0; i < bcmpmu_i2c_pdata.init_max; i++) {
-			bcmpmu_i2c_pdata.
-			init_data[i].addr = ENC_PMU_REG(FIFO_MODE,
-					bcmpmu_i2c_pdata.init_data[i].map,
-					bcmpmu_i2c_pdata.init_data[i].addr);
+					__func__);
+		} else {
+			tbl = kzalloc(size, GFP_KERNEL);
+			if (tbl == NULL)
+				printk(KERN_INFO
+						"%s Failed  alloc bcmpmu init_data\n"
+						, __func__);
+			else {
+				p = (uint32_t *)prop->value;
+				p1 = (uint32_t *)tbl;
+				for (i = 0; i < size; i++)
+					*p1++ = be32_to_cpu(*p++);
+				bcmpmu_i2c_pdata.init_data = tbl;
+				bcmpmu_i2c_pdata.init_max =
+					size /
+					sizeof(struct bcmpmu59xxx_rw_data);
+				reg_init = 1;
+			}
+			for (i = 0; i < bcmpmu_i2c_pdata.init_max; i++) {
+				bcmpmu_i2c_pdata.init_data[i].addr =
+					ENC_PMU_REG(FIFO_MODE,
+							bcmpmu_i2c_pdata.
+							init_data[i].map,
+							bcmpmu_i2c_pdata.
+							init_data[i].addr);
+			}
 		}
 	}
 
@@ -1443,6 +1452,19 @@ int bcmpmu_reg_init(void)
 		bcmpmu_i2c_pdata.init_data =  register_init_data;
 		bcmpmu_i2c_pdata.init_max = ARRAY_SIZE(register_init_data);
 	}
+
+	dt_root = of_get_flat_dt_root();
+	if (dt_root) {
+		model = of_get_flat_dt_prop(dt_root, "model", NULL);
+		if (!strcmp(model, BOARD_EDN010))
+			bcmpmu_i2c_pdata.board_id = EDN010;
+		else
+			bcmpmu_i2c_pdata.board_id = EDN010x;
+	} else
+		bcmpmu_i2c_pdata.board_id = EDN010x;
+
+	pr_info("Board id from dtb %x\n", bcmpmu_i2c_pdata.board_id);
+
 	return 0;
 }
 

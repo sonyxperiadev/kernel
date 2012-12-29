@@ -841,7 +841,11 @@ struct bcmpmu59xxx_spa_pb_pdata {
 enum {
 	BCMPMU_SPA_EN = 1,
 };
-
+/* Board id enum */
+enum {
+	EDN010x,
+	EDN010,
+};
 struct bcmpmu59xxx_platform_data {
 	u32 flags; /*ctrl flags*/
 	struct i2c_slave_platform_data i2c_pdata;
@@ -858,6 +862,7 @@ struct bcmpmu59xxx_platform_data {
 	enum bcmpmu_bc_t bc;
 	int piggyback_chrg;
 	char *piggyback_chrg_name;
+	int board_id;
 };
 
 struct bcmpmu59xxx {

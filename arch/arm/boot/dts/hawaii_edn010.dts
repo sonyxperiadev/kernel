@@ -3,6 +3,7 @@
 /dts-v1/;
 
 /include/ "bcm_21664.dtsi"
+/include/ "hawaii_bcmpmu_edn010.dtsi"
 
 / {
 	model = "Hawaiistone EDN010";
