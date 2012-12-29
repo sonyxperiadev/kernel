@@ -1459,9 +1459,9 @@ int bcmpmu_reg_init(void)
 		if (!strcmp(model, BOARD_EDN010))
 			bcmpmu_i2c_pdata.board_id = EDN010;
 		else
-			bcmpmu_i2c_pdata.board_id = EDN010x;
+			bcmpmu_i2c_pdata.board_id = EDN01x;
 	} else
-		bcmpmu_i2c_pdata.board_id = EDN010x;
+		bcmpmu_i2c_pdata.board_id = EDN01x;
 
 	pr_info("Board id from dtb %x\n", bcmpmu_i2c_pdata.board_id);
 

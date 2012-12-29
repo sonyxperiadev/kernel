@@ -31,6 +31,7 @@
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 #include <linux/usb/bcm_hsotgctrl.h>
+#include <plat/kona_reset_reason.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
@@ -38,6 +39,7 @@
 #define MAX_EVENT_QUEUE 30
 #define BC_MAX_RETRIES		3
 
+#define ACCY_WORK_DELAY  msecs_to_jiffies(5)
 static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 static int prev_chrgr_type;
 
@@ -110,7 +112,6 @@ static const char *const chrgr_type_str[] = {
 /* Values in this table need to be revisited */
 static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_NONE] = 0,
-	/* Fixme this for EDN00 SDP curr*/
 	[PMU_CHRGR_TYPE_SDP] = 500,
 	[PMU_CHRGR_TYPE_CDP] = 1500,
 	[PMU_CHRGR_TYPE_DCP] = 1500,
@@ -282,7 +283,8 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 			bc_det_sts_clear(paccy);
 			bc_det_restart(paccy);
 			*/
-			schedule_work(&paccy->det_work);
+			schedule_delayed_work(&paccy->det_work,
+						ACCY_WORK_DELAY);
 		} else {
 			pr_accy(ERROR, "%s, failed, retry times=%d\n",
 					__func__, paccy->retry_cnt);
@@ -297,7 +299,7 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 		pr_accy(FLOW, "*** Charger Connected event\n");
 		bcmpmu_notify_charger_state(paccy);
 		bcmpmu_accy_chrgr_detect_state(paccy->bcmpmu, 0);
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
 	case USB_DISCONNECTED:
@@ -311,7 +313,7 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 		if (wake_lock_active(&paccy->wake_lock))
 			wake_unlock(&paccy->wake_lock);
 #endif
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
 	default:
@@ -337,7 +339,7 @@ static void bcmpmu_paccy_latch_event(struct bcmpmu_accy *accy,
 		spin_unlock_irqrestore(&accy->accy_lock, flags);
 		pr_accy(FLOW, "Event Latch %x para %p\n", event, para);
 	} else {
-		flush_work(&accy->det_work);
+		flush_delayed_work(&accy->det_work);
 		entry = list_first_entry(&accy->free_list->node,
 			struct event_list, node);
 		spin_lock_irqsave(&accy->accy_lock, flags);
@@ -353,6 +355,9 @@ static void bcmpmu_paccy_latch_event(struct bcmpmu_accy *accy,
 static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 {
 	struct bcmpmu_accy *paccy = data;
+	struct bcmpmu59xxx *bcmpmu = paccy->bcmpmu;
+	int board_id = bcmpmu->pdata->board_id;
+
 	pr_accy(FLOW, "#### %s interrupt = %d\n", __func__, irq);
 
 	switch (irq) {
@@ -362,7 +367,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_SESSION_VALID, NULL);
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
 	case PMU_IRQ_USBINS:
@@ -371,7 +376,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			/*
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_IN, NULL);
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		*/
 		break;
 
@@ -385,6 +390,8 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	case PMU_IRQ_CHGDET_TO:
 		pr_accy(INIT, "### ISR  PMU_IRQ_CHGDET_TO: %x\n",
 			PMU_IRQ_CHGDET_TO);
+		if (board_id != EDN01x)
+			break;
 	case PMU_IRQ_CHGDET_LATCH:
 			/* Because of the FFB EDN00 wiring issue (CQ245795),
 			the PMU charger detection doesn't work and we will get
@@ -410,17 +417,17 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 				(prev_chrgr_type), "bcmpmu_usb") == 0)) {
 			bcmpmu_paccy_latch_event(paccy,
 					BCMPMU_USB_EVENT_SESSION_INVALID, NULL);
-			schedule_work(&paccy->det_work);
+			schedule_delayed_work(&paccy->det_work,
+						ACCY_WORK_DELAY);
 		}
 		break;
 
 	case PMU_IRQ_VBUS_VALID_R:
 		pr_accy(INIT, "### ISR  PMU_IRQ_VBUS_VALID_R: %x\n",
 			PMU_IRQ_VBUS_VALID_R);
-		paccy->det_state = USB_IDLE;
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_VBUS_VALID, NULL);
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
 	case PMU_IRQ_VBUS_VALID_F:
@@ -431,7 +438,8 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 				(prev_chrgr_type), "bcmpmu_usb") == 0)) {
 			bcmpmu_paccy_latch_event(paccy,
 					BCMPMU_USB_EVENT_VBUS_INVALID, NULL);
-			schedule_work(&paccy->det_work);
+			schedule_delayed_work(&paccy->det_work,
+							ACCY_WORK_DELAY);
 		}
 		break;
 
@@ -440,7 +448,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			PMU_IRQ_IDCHG);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_ID_CHANGE, NULL);
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
 	case PMU_IRQ_ADP_CHANGE:
@@ -448,7 +456,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			PMU_IRQ_ADP_CHANGE);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_ADP_CHANGE, NULL);
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
 	case PMU_IRQ_ADP_SNS_END:
@@ -456,7 +464,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			PMU_IRQ_ADP_SNS_END);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_ADP_SENSE_END, NULL);
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
 	case PMU_IRQ_VB_SESS_END_F:
@@ -464,7 +472,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			PMU_IRQ_VB_SESS_END_F);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_SESSION_END_VALID, NULL);
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
 	case PMU_IRQ_VB_SESS_END_R:
@@ -472,7 +480,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			PMU_IRQ_VB_SESS_END_R);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_SESSION_END_VALID, NULL);
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 #if 0 /* remove the TO interrupt for the time being */
 	case PMU_IRQ_CHGDET_TO:
@@ -485,7 +493,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			PMU_IRQ_RESUME_VBUS);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS, NULL);
-		schedule_work(&paccy->det_work);
+		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
 	default:
@@ -524,29 +532,33 @@ err:
 
 #endif
 
-
 static void bcmpmu_notify_charger_state(struct bcmpmu_accy *paccy)
 {
 	enum bcmpmu_usb_type_t usb_type = paccy->usb_accy_data.usb_type;
 	enum bcmpmu_chrgr_type_t chrgr_type = paccy->usb_accy_data.chrgr_type;
+	struct bcmpmu59xxx *bcmpmu = paccy->bcmpmu;
+	int board_id = bcmpmu->pdata->board_id;
 	pr_accy(FLOW, "===chrgr_type %d, usb_type %d\n", chrgr_type, usb_type);
-	if ((usb_type < PMU_USB_TYPE_MAX) && (usb_type > PMU_USB_TYPE_NONE))
-		bcmpmu_call_notifier(paccy->bcmpmu,
-				BCMPMU_USB_EVENT_USB_DETECTION,
-				&usb_type);
-	if (chrgr_type < PMU_CHRGR_TYPE_MAX) {
-		paccy->usb_accy_data.chrgr_type = chrgr_type;
-		paccy->usb_accy_data.max_curr_chrgr =
-			chrgr_curr_lmt[chrgr_type];
-		bcmpmu_paccy_latch_event(paccy,
-				BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
-				&paccy->usb_accy_data.chrgr_type);
-		/* Fixme this for EDN00 */
+
+	if (is_charging_state()) {
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
 				&chrgr_curr_lmt[chrgr_type]);
+		return;
 	}
 
+	if ((usb_type < PMU_USB_TYPE_MAX) && (usb_type > PMU_USB_TYPE_NONE)) {
+		bcmpmu_paccy_latch_event(paccy,
+				BCMPMU_USB_EVENT_USB_DETECTION,
+				&usb_type);
+		if (board_id == EDN01x)
+			bcmpmu_paccy_latch_event(paccy,
+					BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+					&chrgr_curr_lmt[chrgr_type]);
+	} else
+		bcmpmu_paccy_latch_event(paccy,
+				BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+				&chrgr_curr_lmt[chrgr_type]);
 }
 
 static void bcmpmu_accy_chrgr_detect_state(struct bcmpmu59xxx *bcmpmu, int val)
@@ -570,7 +582,7 @@ static void usb_deferred_work(struct work_struct *work)
 	unsigned long flags;
 	struct event_list *entry ;
 	struct bcmpmu_accy *paccy =
-		container_of(work, struct bcmpmu_accy, det_work);
+		container_of(work, struct bcmpmu_accy, det_work.work);
 	struct bcmpmu59xxx *bcmpmu = paccy->bcmpmu;
 
 	pr_accy(FLOW, "%s, enter state=%d, vbus=0x%X\n", __func__,
@@ -1075,7 +1087,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	paccy->usb_get = bcmpmu_usb_get;
 	paccy->usb_set = bcmpmu_usb_set;
 	paccy->usb_accy_data.usb_type = PMU_USB_TYPE_NONE;
-	paccy->usb_accy_data.chrgr_type = PMU_CHRGR_TYPE_MAX;
+	paccy->usb_accy_data.chrgr_type = PMU_CHRGR_TYPE_NONE;
 	paccy->usb_accy_data.max_curr_chrgr = 0;
 	paccy->adp_cal_done = 0;
 	paccy->det_state = USB_IDLE;
@@ -1092,7 +1104,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	spin_lock_init(&paccy->accy_lock);
 
 	INIT_WORK(&paccy->adp_work, usb_adp_work);
-	INIT_WORK(&paccy->det_work, usb_deferred_work);
+	INIT_DELAYED_WORK(&paccy->det_work, usb_deferred_work);
 
 	ret = bcmpmu_accy_eventq_init(paccy);
 	if (ret)
@@ -1168,7 +1180,7 @@ static int __devexit bcmpmu_accy_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_VBUS_VALID_F);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_IDCHG);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
-	cancel_work_sync(&paccy->det_work);
+	cancel_delayed_work_sync(&paccy->det_work);
 	cancel_work_sync(&paccy->adp_work);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&paccy->wake_lock);

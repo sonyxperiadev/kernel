@@ -658,7 +658,7 @@ struct bcmpmu_accy {
 	int usb_id_map_len;
 	wait_queue_head_t wait;
 	struct work_struct adp_work;
-	struct work_struct det_work;
+	struct delayed_work det_work;
 	spinlock_t accy_lock;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_accy;
@@ -841,7 +841,7 @@ enum {
 };
 /* Board id enum */
 enum {
-	EDN010x,
+	EDN01x,
 	EDN010,
 };
 struct bcmpmu59xxx_platform_data {
