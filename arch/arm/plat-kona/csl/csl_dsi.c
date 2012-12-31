@@ -1551,7 +1551,7 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 					DE1_CM_888U : DE0_CM_888U;
 			if (!dsiH->pixTxporter)
 				dsiH->axipvCfg->pix_fmt =
-						AXIPV_PIXEL_FORMAT_24BPP_RGB;
+						AXIPV_PIXEL_FORMAT_24BPP_BGR;
 			if (!dsiH->dispEngine)
 				dsiH->pvCfg->pix_fmt = DSI_VIDEO_CMD_18_24BPP;
 			break;

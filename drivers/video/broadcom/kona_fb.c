@@ -780,11 +780,11 @@ static int kona_fb_probe(struct platform_device *pdev)
 		break;
 
 	case DISPDRV_FB_FORMAT_RGB888_U:
-		fb->fb.var.red.offset = 16;
+		fb->fb.var.red.offset = 0;
 		fb->fb.var.red.length = 8;
 		fb->fb.var.green.offset = 8;
 		fb->fb.var.green.length = 8;
-		fb->fb.var.blue.offset = 0;
+		fb->fb.var.blue.offset = 16;
 		fb->fb.var.blue.length = 8;
 		fb->fb.var.transp.offset = 24;
 		fb->fb.var.transp.length = 8;
