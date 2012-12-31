@@ -16,23 +16,32 @@
 #ifndef __KONA_AVS___
 #define __KONA_AVS___
 
-#define ATE_FIELD_RESERVED	(0xFF)
-#define VM_BIN_LUT_SIZE		(4)
-
 enum {
 	SILICON_TYPE_SLOW,
+	SILICON_TYPE_TYP_SLOW,
 	SILICON_TYPE_TYPICAL,
-	SILICON_TYPE_FAST
+	SILICON_TYPE_TYP_FAST,
+	SILICON_TYPE_FAST,
+	SILICON_TYPE_MAX,
 };
 
 enum {
-	AVS_TYPE_OPEN = 1,
-	AVS_TYPE_BOOT = 1 << 1,
-	/*specify OTP row no as param */
-	AVS_READ_FROM_OTP = 1 << 2,
-	/*specify physical mem addr as param */
-	AVS_READ_FROM_MEM = 1 << 3,
-	AVS_ATE_FEATURE_ENABLE = 1 << 4,
+	A9_FREQ_UNKNOWN,
+	A9_FREQ_1000_MHZ,
+	A9_FREQ_1200_MHZ,
+	A9_FREQ_1500_MHZ,
+	A9_FREQ_MAX,
+};
+
+enum {
+	AVS_VDDVAR_A9_EN = 1,
+	AVS_VDDVAR_EN = 1 << 1,
+	AVS_VDDFIX_EN = 1 << 2,
+};
+
+enum {
+	AVS_VDDVAR_A9_ADJ_EN = 1,
+	AVS_VDDFIX_ADJ_EN = 1 << 1,
 };
 
 struct kona_ate_lut_entry {
@@ -40,18 +49,25 @@ struct kona_ate_lut_entry {
 	int silicon_type;
 };
 
-struct kona_avs_pdata {
+struct adj_param {
+	int *vddvar_a9_adj_val;
+	int *vddfix_adj_val;
 	u32 flags;
-	u32 avs_mon_addr;
-	u32 avs_ate_addr;
-	int ate_default_silicon_type; /* default silicon type when CRC fails */
-
-	void (*silicon_type_notify) (u32 silicon_type, int freq_id);
-	u32 (*vm_bin_lut)[VM_BIN_LUT_SIZE];
-	u32 *silicon_type_lut;
-	struct kona_ate_lut_entry *ate_lut;
 };
 
-u32 kona_avs_get_solicon_type(void);
+struct kona_avs_pdata {
+	u32 flags;
+	u32 avs_addr_row4, avs_addr_row5, avs_addr_row8;
 
+	void (*silicon_type_notify) (u32 silicon_type, int *freq_id,
+			struct adj_param *param);
+	u32 *silicon_type_lut;
+	struct kona_ate_lut_entry *ate_lut;
+	u32 *irdrop_lut;
+	struct adj_param *adj_param;
+};
+
+u32 kona_avs_get_silicon_type(void);
+u32 kona_avs_is_supp_freq(int freq_id);
+struct adj_param *kona_avs_get_vlt_adj_param(void);
 #endif	  /*__KONA_AVS___*/

@@ -289,7 +289,7 @@ enum {
 
 	/* PLL flags */
 	INIT_PLL_OFFSET_CFG = (1 << 28),
-
+	DELAYED_PLL_LOCK = (1 << 29),
 };
 
 /*clk type*/

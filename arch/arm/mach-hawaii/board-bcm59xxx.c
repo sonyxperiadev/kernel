@@ -31,10 +31,6 @@
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 #include <linux/power/bcmpmu-fg.h>
 #include <linux/broadcom/bcmpmu-ponkey.h>
-#ifdef CONFIG_KONA_AVS
-#include <plat/kona_avs.h>
-#endif
-#include "pm_params.h"
 #include <mach/rdb/brcm_rdb_include.h>
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 #include <linux/spa_power.h>
@@ -42,7 +38,10 @@
 #include <linux/of_platform.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
-
+#ifdef CONFIG_KONA_AVS
+#include <plat/kona_avs.h>
+#endif
+#include "pm_params.h"
 #define BOARD_EDN010 "Hawaiistone EDN010"
 #define BOARD_EDN01x "Hawaiistone EDN01x"
 
@@ -51,81 +50,6 @@
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 4
 
-/*850 Mhz CSR voltage definitions....*/
-
-#define CSR_VAL_RETN_SS_850M	0x3 /*0.88V*/
-#define CSR_VAL_RETN_TT_850M	0x3 /*0.88V*/
-#define CSR_VAL_RETN_FF_850M	0x3 /*0.88V*/
-
-#define CSR_VAL_ECO_SS_850M	0xd /*1.08V*/
-#define CSR_VAL_ECO_TT_850M	0x8 /*0.98V*/
-#define CSR_VAL_ECO_FF_850M	0x8 /*0.98V*/
-
-#define CSR_VAL_NRML_SS_850M	0x10 /*1.14V*/
-#define CSR_VAL_NRML_TT_850M	0x0E /*1.10V*/
-#define CSR_VAL_NRML_FF_850M	0xA  /*1.02V*/
-
-#define CSR_VAL_TURBO_SS_850M	0x1B /*1.36V*/
-#define CSR_VAL_TURBO_TT_850M	0x17 /*1.28V*/
-#define CSR_VAL_TURBO_FF_850M	0x11 /*1.16V*/
-
-#define PMU_CSR_VLT_TBL_SS_850M	ARRAY_LIST(\
-					CSR_VAL_RETN_SS_850M,\
-					CSR_VAL_RETN_SS_850M,\
-					CSR_VAL_RETN_SS_850M,\
-					CSR_VAL_RETN_SS_850M,\
-					CSR_VAL_RETN_SS_850M,\
-					CSR_VAL_RETN_SS_850M,\
-					CSR_VAL_RETN_SS_850M,\
-					CSR_VAL_RETN_SS_850M,\
-					CSR_VAL_ECO_SS_850M,\
-					CSR_VAL_ECO_SS_850M,\
-					CSR_VAL_ECO_SS_850M,\
-					CSR_VAL_NRML_SS_850M,\
-					CSR_VAL_NRML_SS_850M,\
-					CSR_VAL_NRML_SS_850M,\
-					CSR_VAL_TURBO_SS_850M,\
-					CSR_VAL_TURBO_SS_850M)
-
-#define PMU_CSR_VLT_TBL_TT_850M	ARRAY_LIST(\
-					CSR_VAL_RETN_TT_850M,\
-					CSR_VAL_RETN_TT_850M,\
-					CSR_VAL_RETN_TT_850M,\
-					CSR_VAL_RETN_TT_850M,\
-					CSR_VAL_RETN_TT_850M,\
-					CSR_VAL_RETN_TT_850M,\
-					CSR_VAL_RETN_TT_850M,\
-					CSR_VAL_RETN_TT_850M,\
-					CSR_VAL_ECO_TT_850M,\
-					CSR_VAL_ECO_TT_850M,\
-					CSR_VAL_ECO_TT_850M,\
-					CSR_VAL_NRML_TT_850M,\
-					CSR_VAL_NRML_TT_850M,\
-					CSR_VAL_NRML_TT_850M,\
-					CSR_VAL_TURBO_TT_850M,\
-					CSR_VAL_TURBO_TT_850M)
-
-#define PMU_CSR_VLT_TBL_FF_850M	ARRAY_LIST(\
-						CSR_VAL_RETN_FF_850M,\
-						CSR_VAL_RETN_FF_850M,\
-						CSR_VAL_RETN_FF_850M,\
-						CSR_VAL_RETN_FF_850M,\
-						CSR_VAL_RETN_FF_850M,\
-						CSR_VAL_RETN_FF_850M,\
-						CSR_VAL_RETN_FF_850M,\
-						CSR_VAL_RETN_FF_850M,\
-						CSR_VAL_ECO_FF_850M,\
-						CSR_VAL_ECO_FF_850M,\
-						CSR_VAL_ECO_FF_850M,\
-						CSR_VAL_NRML_FF_850M,\
-						CSR_VAL_NRML_FF_850M,\
-						CSR_VAL_NRML_FF_850M,\
-						CSR_VAL_TURBO_FF_850M,\
-						CSR_VAL_TURBO_FF_850M)
-
-u8 csr_vlt_table_ss[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_SS_850M;
-u8 csr_vlt_table_tt[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_TT_850M;
-u8 csr_vlt_table_ff[SR_VLT_LUT_SIZE] = PMU_CSR_VLT_TBL_FF_850M;
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu);
 static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu);
 
@@ -1330,52 +1254,6 @@ int bcmpmu_get_pmu_mfd_cell(struct mfd_cell **pmu_cell)
 	return ARRAY_SIZE(pmu59xxx_devs);
 }
 EXPORT_SYMBOL(bcmpmu_get_pmu_mfd_cell);
-
-#define CSR_RETN_VAL_SS			0x4
-#define CSR_ECO_VAL_SS			0xF
-#define CSR_NM_VAL_SS			0x13
-#define CSR_TURBO_VAL_SS		0x1D
-#define CSR_SUPER_TURBO_VAL_SS		0x34
-
-#define MSR_RETN_VAL_SS			0x4
-#define MSR_ECO_VAL_SS			0x10
-#define MSR_NM_VAL_SS			0x1A
-#define MSR_TURBO_VAL_SS		0x24
-#define MSR_SUPER_TURBO_VAL_SS		0x24
-
-
-const u8 sr_vlt_table_ss[SR_VLT_LUT_SIZE] = {
-	INIT_LPM_VLT_IDS(MSR_RETN_VAL_SS, MSR_RETN_VAL_SS, MSR_RETN_VAL_SS),
-	INIT_A9_VLT_TABLE(CSR_ECO_VAL_SS, CSR_NM_VAL_SS, CSR_TURBO_VAL_SS,
-						CSR_SUPER_TURBO_VAL_SS),
-	INIT_OTHER_VLT_TABLE(MSR_ECO_VAL_SS, MSR_NM_VAL_SS, MSR_TURBO_VAL_SS,
-						MSR_SUPER_TURBO_VAL_SS),
-	INIT_UNUSED_VLT_IDS(MSR_RETN_VAL_SS)
-	};
-
-
-const u8 *bcmpmu_get_sr_vlt_table(u32 silicon_type)
-{
-	pr_info("%s silicon_type = %d\n", __func__,
-			silicon_type);
-#ifdef CONFIG_KONA_AVS
-	switch (silicon_type) {
-	case SILICON_TYPE_SLOW:
-		return sr_vlt_table_ss;
-
-	case SILICON_TYPE_TYPICAL:
-		return sr_vlt_table_tt;
-
-	case SILICON_TYPE_FAST:
-		return sr_vlt_table_ff;
-
-	default:
-		BUG();
-	}
-#else
-	return sr_vlt_table_ss;
-#endif
-}
 
 void bcmpmu_set_pullup_reg(void)
 {

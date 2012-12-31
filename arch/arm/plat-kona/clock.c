@@ -4486,9 +4486,10 @@ static int pll_clk_set_rate(struct clk *clk, u32 rate)
 			insurance++;
 		} while (!(GET_BIT_USING_MASK(reg_val, pll_clk->pll_lock))
 			 && insurance < 1000);
-		WARN_ON(insurance >= 1000);
-		if (insurance >= 1000)
+		if (insurance >= 1000 && !(clk->flags & DELAYED_PLL_LOCK)) {
+			__WARN();
 			ret = -EINVAL;
+		}
 	}
 
 	/* disable write access */

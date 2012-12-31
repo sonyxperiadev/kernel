@@ -757,7 +757,7 @@ static int __init hawaii_pwr_mgr_init(void)
 	pwr_mgr_init(&__pwr_mgr_info);
 
 #ifndef CONFIG_KONA_AVS
-		pm_init_pmu_sr_vlt_map_table(SILICON_TYPE_SLOW);
+		pm_init_pmu_sr_vlt_map_table(0, 0, NULL);
 #endif
 
 	hawaii_pi_mgr_init();
@@ -838,9 +838,9 @@ static int __init hawaii_pwr_mgr_init(void)
 	__clock_init();
 
 #ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
-	pm_parm_config_a9_pll(CONFIG_A9_PLL_2P4GHZ);
+	mach_config_a9_pll(CONFIG_A9_PLL_2P4GHZ, 0);
 #else
-	pm_parm_config_a9_pll(CONFIG_A9_PLL_2GHZ);
+	mach_config_a9_pll(CONFIG_A9_PLL_2GHZ, 0);
 #endif
 
 

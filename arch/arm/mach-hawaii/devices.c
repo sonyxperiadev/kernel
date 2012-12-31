@@ -710,37 +710,98 @@ struct platform_device kona_cpufreq_device = {
 #endif /*CONFIG_KONA_CPU_FREQ_DRV */
 
 #ifdef CONFIG_KONA_AVS
+void avs_silicon_type_notify(u32 silicon_type, int *freq_id,
+		struct adj_param *param)
+{
+	pr_info("%s : silicon type = %d freq = %d\n", __func__,
+			silicon_type, *freq_id);
+
+	switch ((*freq_id)) {
+	case A9_FREQ_UNKNOWN:
+		printk(KERN_ALERT "Unknown freqid. Set to max supported\n");
+#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+		*freq_id = A9_FREQ_1200_MHZ;
+#else
+		*freq_id = A9_FREQ_1000_MHZ;
+#endif
+		break;
+	case A9_FREQ_1000_MHZ:
+#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+		printk(KERN_ALERT "AVS says 1 GHZ, system conf says 1.2 GHZ");
+		BUG();
+#endif
+		break;
+	case A9_FREQ_1200_MHZ:
+#ifndef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+		printk(KERN_ALERT "AVS says 1.2 GHZ, system conf for 1GHZ");
+		*freq_id = A9_FREQ_1000_MHZ;
+#endif
+		break;
+	case A9_FREQ_1500_MHZ:
+		break;
+	default:
+		BUG();
+	}
+
+	pm_init_pmu_sr_vlt_map_table(silicon_type, freq_id, param);
+}
+
+u32 silicon_type_lut[] = {
+	SILICON_TYPE_SLOW, SILICON_TYPE_TYP_SLOW,
+	SILICON_TYPE_TYPICAL, SILICON_TYPE_TYP_FAST,
+	SILICON_TYPE_FAST,
+};
+
+static struct kona_ate_lut_entry ate_lut[] = {
+	{A9_FREQ_UNKNOWN, SILICON_TYPE_SLOW}, /* 0 - Default*/
+	{A9_FREQ_1000_MHZ, SILICON_TYPE_FAST},   /* 1 */
+	{A9_FREQ_1000_MHZ, SILICON_TYPE_TYP_FAST},/* 2 */
+	{A9_FREQ_1000_MHZ, SILICON_TYPE_TYPICAL},   /* 3 */
+	{A9_FREQ_1000_MHZ, SILICON_TYPE_TYP_SLOW},     /* 4 */
+	{A9_FREQ_1000_MHZ, SILICON_TYPE_SLOW},  /* 5 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_FAST},/* 6 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYP_FAST},/* 7 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYPICAL},/* 8 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYP_SLOW},/* 9 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_SLOW},/* 10 */
+	{A9_FREQ_1500_MHZ, SILICON_TYPE_FAST},    /* 11 */
+	{A9_FREQ_1500_MHZ, SILICON_TYPE_TYP_FAST},/* 12 */
+	{A9_FREQ_1500_MHZ, SILICON_TYPE_TYPICAL},/* 13 */
+	{A9_FREQ_1500_MHZ, SILICON_TYPE_TYP_SLOW},/* 14 */
+	{A9_FREQ_1500_MHZ, SILICON_TYPE_SLOW},/* 15 */
+};
+
+static u32 irdrop_lut[] = {470, 489, 519, 550, UINT_MAX};
+
+static int vddvar_a9_adj_val[] = {0, 0, 0, 0, 0};
+
+static struct adj_param adj_param = {
+	.vddvar_a9_adj_val = vddvar_a9_adj_val, /*0 mv */
+	.vddfix_adj_val = NULL, /*0 mv*/
+	.flags = 0,
+};
+
+static struct kona_avs_pdata avs_pdata = {
+	.flags = AVS_VDDVAR_A9_EN,
+	/* Mem addr where perf mon and SDSR OPP values are copied by ABI */
+	.avs_addr_row4 = 0x34051FB0,
+	/* Mem addr where ATE values is copied by ABI */
+	.avs_addr_row5 = 0x34051FA0,
+	/* Mem addr where MSR OPP values are copied by ABI */
+	.avs_addr_row8 = 0x34051FA8,
+	.silicon_type_lut = silicon_type_lut,
+	.ate_lut = ate_lut,
+	.irdrop_lut = irdrop_lut,
+	.silicon_type_notify = avs_silicon_type_notify,
+	.adj_param = &adj_param,
+};
+
 struct platform_device kona_avs_device = {
 	.name = "kona-avs",
 	.id = -1,
-};
-#endif
-
-#ifdef CONFIG_KONA_AVS
-void avs_silicon_type_notify(u32 silicon_type, int freq_id)
-{
-	pr_info("%s : silicon type = %d freq = %d\n", __func__,
-			silicon_type,
-			freq_id);
-	pm_init_pmu_sr_vlt_map_table(silicon_type);
-}
-
-u32 svt_pmos_bin[3 + 1] = { 125, 146, 171, 201 };
-u32 svt_nmos_bin[3 + 1] = { 75, 96, 126, 151 };
-
-u32 lvt_pmos_bin[3 + 1] = { 150, 181, 216, 251 };
-u32 lvt_nmos_bin[3 + 1] = { 90, 111, 146, 181 };
-
-u32 svt_silicon_type_lut[3 * 3] = {
-	SILICON_TYPE_SLOW, SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL,
-	SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL,
-	SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL, SILICON_TYPE_FAST
-};
-
-u32 lvt_silicon_type_lut[3 * 3] = {
-	SILICON_TYPE_SLOW, SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL,
-	SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL,
-	SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL, SILICON_TYPE_FAST
+	.dev = {
+		.platform_data = &avs_pdata,
+	}
 };
 #endif
 

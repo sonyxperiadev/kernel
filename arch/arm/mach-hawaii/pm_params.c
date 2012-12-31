@@ -32,7 +32,9 @@
 #include <linux/module.h>
 #include "pm_params.h"
 #include "sequencer_ucode.h"
+#ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
+#endif
 
 /*sysfs interface to read PMU vlt table*/
 static u32 sr_vlt_table[SR_VLT_LUT_SIZE];
@@ -41,7 +43,6 @@ module_param_array_named(sr_vlt_table, sr_vlt_table, uint, NULL, S_IRUGO);
 static unsigned long pm_erratum_flg;
 module_param_named(pm_erratum_flg, pm_erratum_flg, ulong,
 						S_IRUGO|S_IWUSR|S_IWGRP);
-
 
 #ifdef CONFIG_KONA_POWER_MGR
 extern struct i2c_cmd *i2c_cmd_buf;
@@ -126,13 +127,16 @@ bool is_pm_erratum(u32 erratum)
 	return !!(pm_erratum_flg & erratum);
 }
 
-
-int pm_init_pmu_sr_vlt_map_table(u32 silicon_type)
+int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int *freq_id,
+		void *param)
 {
+	struct adj_param *adj_param = (struct adj_param *)param;
 	#if !defined (CONFIG_MACH_HAWAII_FPGA)
 	int inx;
 	u8 *vlt_table;
-	vlt_table = (u8 *) bcmpmu_get_sr_vlt_table(SILICON_TYPE_SLOW);
+
+	vlt_table = (u8 *) get_sr_vlt_table(silicon_type, *freq_id,
+			adj_param);
 	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
 		sr_vlt_table[inx] = vlt_table[inx];
 	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
@@ -148,7 +152,7 @@ int __init pm_params_init(void)
 	pwrmgr_init_param.cmd_buf = i2c_cmd_buf;
 	pwrmgr_init_param.cmd_buf_size = cmd_buf_sz;
 	#ifndef CONFIG_KONA_AVS
-		pm_init_pmu_sr_vlt_map_table(SILICON_TYPE_SLOW);
+		pm_init_pmu_sr_vlt_map_table(0, 0, NULL);
 	#endif
 	return 0;
 }
@@ -175,11 +179,12 @@ static int switch_a9_pll(int freq_id, int policy)
 out:
 	return ret;
 }
-int pm_parm_config_a9_pll(int turbo_val)
+int mach_config_a9_pll(int turbo_val, int update_volt_tbl)
 {
 	int ret = 0;
 	struct clk *clk;
-
+	u32 silicon_type, freq_id;
+	struct adj_param *adj_param = NULL;
 	clk = clk_get(NULL, A9_PLL_CLK_NAME_STR);
 	if (IS_ERR_OR_NULL(clk))
 		return -EINVAL;
@@ -187,10 +192,56 @@ int pm_parm_config_a9_pll(int turbo_val)
 	if (ret)
 		return ret;
 
-	if (turbo_val == CONFIG_A9_PLL_2GHZ)
-		clk_set_rate(clk, 2000000000UL);
-	else if (turbo_val == CONFIG_A9_PLL_2P4GHZ)
-		clk_set_rate(clk, 2400000000UL);
+	if (turbo_val == CONFIG_A9_PLL_2GHZ) {
+		if (update_volt_tbl) {
+			silicon_type = kona_avs_get_silicon_type();
+			adj_param = kona_avs_get_vlt_adj_param();
+			freq_id = A9_FREQ_1000_MHZ;
+			ret = kona_avs_is_supp_freq(freq_id);
+			if (!ret)
+				pm_init_pmu_sr_vlt_map_table(silicon_type,
+					&freq_id, adj_param);
+			else {
+				printk(KERN_ALERT "Unsupported Freq\n");
+				return ret;
+			}
+		}
+		if (!ret)
+			clk_set_rate(clk, 2000000000UL);
+	} else if (turbo_val == CONFIG_A9_PLL_2P4GHZ) {
+		if (update_volt_tbl) {
+			silicon_type = kona_avs_get_silicon_type();
+			adj_param = kona_avs_get_vlt_adj_param();
+			freq_id = A9_FREQ_1200_MHZ;
+			ret = kona_avs_is_supp_freq(freq_id);
+			if (!ret)
+				pm_init_pmu_sr_vlt_map_table(silicon_type,
+					&freq_id, adj_param);
+			else {
+				printk(KERN_ALERT "Unsupported Freq\n");
+				return ret;
+			}
+		}
+		if (!ret)
+			clk_set_rate(clk, 2400000000UL);
+	} else if (turbo_val == CONFIG_A9_PLL_3GHZ) {
+		if (update_volt_tbl) {
+			silicon_type = kona_avs_get_silicon_type();
+			adj_param = kona_avs_get_vlt_adj_param();
+			freq_id = A9_FREQ_1500_MHZ;
+			ret = kona_avs_is_supp_freq(freq_id);
+			if (!ret)
+				pm_init_pmu_sr_vlt_map_table(silicon_type,
+					&freq_id, adj_param);
+			else {
+				printk(KERN_ALERT "Unsupported Freq\n");
+				return ret;
+			}
+		}
+		if (!ret)
+			clk_set_rate(clk, 3000000000UL);
+	} else
+		printk(KERN_ALERT "%s: Invalid freq value\n", __func__);
 
 	ret = switch_a9_pll(PROC_CCU_FREQ_ID_SUPER_TURBO, PM_WKP);
 	/*SUPER TURBO => A9 PLL*/
