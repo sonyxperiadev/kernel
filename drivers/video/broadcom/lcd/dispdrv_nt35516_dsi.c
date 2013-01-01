@@ -196,10 +196,11 @@ static Int32 NT35516_Update(
 
 static Int32 NT35516_WinReset(DISPDRV_HANDLE_T drvH);
 
+#ifndef CONFIG_VIDEO_MODE
 static int NT35516_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff);
 
 static int NT35516_ReadPanelID(NT35516_PANEL_t *pPanel);
-
+#endif
 
 static DISPDRV_T NT35516_Drv = {
 	&NT35516_Init,		/* init	*/
@@ -299,6 +300,7 @@ static NT35516_PANEL_t panel[1];
 
 /*###########################################################################*/
 
+#ifndef CONFIG_VIDEO_MODE
 static void NT35516_panel_on(NT35516_PANEL_t *pPanel)
 {
 	DISPCTRL_REC_T cmd_list[] = {
@@ -320,7 +322,7 @@ static void NT35516_panel_off(NT35516_PANEL_t *pPanel)
 	NT35516_ExecCmndList(pPanel, cmd_list);
 	return;
 }
-
+#endif
 
 static void NT35516_panel_sleep_in(NT35516_PANEL_t *pPanel)
 {
@@ -448,6 +450,7 @@ struct panel_id {
 	UInt8 val;
 };
 
+#ifndef CONFIG_VIDEO_MODE
 static int NT35516_ReadPanelID(NT35516_PANEL_t *pPanel)
 {
 	int ret = 0, count;
@@ -471,6 +474,7 @@ static int NT35516_ReadPanelID(NT35516_PANEL_t *pPanel)
 
 	return ret;
 }
+#endif
 
 
 /*
@@ -512,6 +516,7 @@ static int NT35516_TeOff(NT35516_PANEL_t *pPanel)
 	return res;
 }
 
+#ifndef CONFIG_VIDEO_MODE
 /*
  *
  *   Function Name: NT35516_ReadReg
@@ -555,6 +560,7 @@ static int NT35516_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff)
 	}
 	return res;
 }
+#endif
 
 #if 0
 /*
@@ -1408,8 +1414,8 @@ Int32 NT35516_Update(
 	if (p_win == NULL)
 		p_win =	&pPanel->win_dim;
 
-	NT35516_LOG(LCD_DBG_ID, "%s %d %d %d %d\n", __func__, p_win->l, p_win->r, p_win->t,
-		p_win->b);
+	NT35516_LOG(LCD_DBG_ID, "%s %d %d %d %d\n", __func__, p_win->l,
+			p_win->r, p_win->t, p_win->b);
 
 	NT35516_WinSet(drvH, TRUE, p_win);
 
@@ -1499,7 +1505,11 @@ Int32 NT35516_Atomic_Update(
 	req.lineLenP	= p_win->w;
 	req.lineCount	= p_win->h;
 	req.buffBpp	= pPanel->disp_info->Bpp;
+#ifdef CONFIG_VIDEO_MODE
+	req.timeOut_ms = MAX_SCHEDULE_TIMEOUT;
+#else
 	req.timeOut_ms	= 100;
+#endif
 	req.xStrideB	= 0;
 
 	NT35516_LOG(LCD_DBG_ID, "%s: buf=%08x, linelenp = %lu, linecnt =%lu\n",
@@ -1512,7 +1522,11 @@ Int32 NT35516_Atomic_Update(
 
 	req.cslLcdCb = NULL;
 
+#ifndef CONFIG_VIDEO_MODE
 	if (CSL_DSI_UpdateCmVc(pPanel->dsiCmVcHandle, &req, pPanel->isTE)
+#else
+	if (CSL_DSI_UpdateVmVc(pPanel->dsiCmVcHandle, &req)
+#endif
 		!= CSL_LCD_OK)	{
 		NT35516_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR ret by "
 			"CSL_DSI_UpdateCmVc\n\r", __func__);

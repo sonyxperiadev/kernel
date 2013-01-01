@@ -311,7 +311,9 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 		pv_change_state(PV_VID_CONFIG, pvCfg);
 	}
 	axipv_change_state(AXIPV_START, axipvCfg);
-	if (OSSTATUS_SUCCESS != OSSEMAPHORE_Obtain(updMsg->dsiH->semaAxipv,
+	if (updMsg->clientH->hasLock)
+		cslDsiAxipvPollInt(updMsg);
+	else if (OSSTATUS_SUCCESS != OSSEMAPHORE_Obtain(updMsg->dsiH->semaAxipv,
 		TICKS_IN_MILLISECONDS(100))) {
 		pr_err("Timed out waiting for PV_START_THRESH interrupt\n");
 		axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
@@ -330,12 +332,16 @@ static CSL_LCD_RES_T cslDsiAxipvStop(DSI_UPD_REQ_MSG_T *updMsg)
 	struct axipv_config_t *axipvCfg = updMsg->dsiH->axipvCfg;
 	struct pv_config_t *pvCfg = updMsg->dsiH->pvCfg;
 
-	if (!axipvCfg)
+	if (!axipvCfg) {
 		pr_err("axipvCfg is NULL\n");
+		return CSL_LCD_BAD_HANDLE;
+	}
 	axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
 	if (!updMsg->dsiH->dispEngine) {
-		if (!pvCfg)
+		if (!pvCfg) {
 			pr_err("pvCfg is NULL\n");
+			return CSL_LCD_BAD_HANDLE;
+		}
 		pv_change_state(PV_STOP_IMM, pvCfg);
 	}
 	return CSL_LCD_OK;
@@ -343,7 +349,13 @@ static CSL_LCD_RES_T cslDsiAxipvStop(DSI_UPD_REQ_MSG_T *updMsg)
 
 void cslDsiAxipvPollInt(DSI_UPD_REQ_MSG_T *updMsg)
 {
-	/* AXIPV and PV are not yet ready for this */
+	struct axipv_config_t *axipvCfg = updMsg->dsiH->axipvCfg;
+
+	if (!axipvCfg) {
+		pr_err("axipvCfg is NULL\n");
+		return;
+	}
+	axipv_change_state(AXIPV_WAIT_INTR, axipvCfg);
 }
 
 static void axipv_irq_cb(int stat)
@@ -1696,9 +1708,10 @@ void CSL_DSI_Force_Stop(CSL_LCD_HANDLE vcH)
 	chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
 	if (dsiH->dispEngine)
 		chal_dsi_de1_enable(dsiH->chalH, FALSE);
+/*
 	else
 		chal_dsi_de0_enable(dsiH->chalH, FALSE);
-
+*/
 	cslDsiClearAllFifos(dsiH);
 }
 
@@ -2103,14 +2116,14 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 			else
 				cslDsiWaitForInt(dsiH, 1);
 		} else {
-
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-				"In Atomic wait for DSI/DMA finish...\n",
+				"In Atomic wait for DSI/DMA/AXIPV finish...\n",
 				dsiH->bus, __func__);
 
 			cslDsiPixTxPollInt(&updMsgCm);
 			res = cslDsiWaitForStatAny_Poll(dsiH,
 					CHAL_DSI_STAT_TXPKT1_DONE, NULL, 100);
+			LCD_DBG(LCD_DBG_ERR_ID, "Frame data transfer done\n");
 		}
 
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);

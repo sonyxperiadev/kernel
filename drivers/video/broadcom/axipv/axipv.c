@@ -784,6 +784,36 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 	case AXIPV_RESET:
 		/* Take it to reset state */
 		break;
+	case AXIPV_WAIT_INTR:
+	{
+		uint32_t ctrl, intr;
+		unsigned long flags;
+		axipv_clk_enable(dev);
+		do {
+			udelay(1);
+			ctrl = readl(axipv_base + REG_CTRL);
+			intr = readl(axipv_base + REG_INTR_STAT);
+			intr &= PV_START_THRESH_INT;
+			ctrl &= AXIPV_ACTIVE;
+		/* Loop until ctrl=0 or any of intr=1*/
+		} while (ctrl && !intr);
+		writel(intr, axipv_base + REG_INTR_CLR);
+
+		spin_lock_irqsave(&lock, flags);
+		if (!ctrl) {
+			dev->state = AXIPV_STOPPED;
+			if (g_curr)
+				axipv_release_buff(g_curr);
+			if (g_nxt && (g_nxt != g_curr))
+				axipv_release_buff(g_nxt);
+			process_release(&dev->release_work);
+			g_curr = 0;
+			g_nxt = 0;
+		}
+		spin_unlock_irqrestore(&lock, flags);
+		axipv_clk_disable(dev);
+		break;
+	}
 	default:
 		axipv_err("Invalid event:%d\n", event);
 		break;

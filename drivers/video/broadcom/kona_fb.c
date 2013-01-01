@@ -55,11 +55,13 @@
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 #include <video/kona_fb_image_dump.h>
-#include "lcd/cp_crash_start_565.h"
-#include "lcd/cp_crash_end_565.h"
+#include "lcd/dump_start_img.h"
+#include "lcd/dump_end_img.h"
+#include "lcd/ap_start_dump_img.h"
+#include "lcd/cp_start_dump_img.h"
 #endif
 
-/*#define kona_FB_DEBUG */
+/*#define KONA_FB_DEBUG */
 /*#define PARTIAL_UPDATE_SUPPORT */
 #define KONA_FB_ENABLE_DYNAMIC_CLOCK	1
 
@@ -115,7 +117,7 @@ static int g_vsync_cnt;
 static volatile struct timeval prev_timeval, curr_timeval;
 #endif
 
-#ifdef kona_FB_DEBUG
+#ifdef KONA_FB_DEBUG
 #define kona_PROF_N_RECORDS 50
 static volatile struct {
 	struct timeval	curr_time;
@@ -125,6 +127,12 @@ static volatile struct {
 } kona_fb_profile[kona_PROF_N_RECORDS];
 
 static volatile u32 kona_fb_profile_cnt;
+
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+static void kona_fb_unpack_888rle(void *, void *, uint32_t, uint32_t, uint32_t);
+static void kona_fb_unpack_565rle(void *, void *, uint32_t, uint32_t, uint32_t);
+#endif
+
 
 void kona_fb_profile_record(struct timeval prev_timeval,
 		struct timeval curr_timeval, int is_too_late, int do_vsync)
@@ -183,7 +191,7 @@ proc_write_fb_test(struct file *file, const char __user *buffer,
 #define kona_fb_profile_record(prev_timeval, curr_timeval, is_too_late, \
 		do_vsync) do { } while (0)
 #define proc_write_fb_test NULL
-#endif /* kona_FB_DEBUG */
+#endif /* KONA_FB_DEBUG */
 
 static inline u32 convert_bitfield(int val, struct fb_bitfield *bf)
 {
@@ -270,38 +278,139 @@ static inline void kona_clock_stop(struct kona_fb *fb)
 
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
-void kona_display_crash_image(enum crash_dump_image_idx image_idx)
+static void kona_fb_unpack_565rle(void *dst, void *src, uint32_t image_size,
+				uint32_t img_w, uint32_t img_h)
 {
-	int ret = 0;
-	unsigned long flags, image_size, pos, count, index;
-	u16 *image_buf, *lcd_buf, len, bytes_565;
+	unsigned long count, index, len, data, pos;
+	u16 *lcd_buf, *image_buf;
 
-	atomic_set(&g_kona_fb->force_update, 1);
-	spin_lock_irqsave(&g_fb_crash_spin_lock, flags);
-	kona_clock_start(g_kona_fb);
-
-	if (image_idx == CP_CRASH_DUMP_START) {
-		image_buf = (u16 *)&cp_crash_start_565_rle[0];
-		image_size = sizeof(cp_crash_start_565_rle);
-	} else {
-		image_buf = (u16 *)&cp_crash_end_565_rle[0];
-		image_size = sizeof(cp_crash_end_565_rle);
-	}
-
-	lcd_buf   = (u16 *)g_kona_fb->fb.screen_base;
-	pos = 0;
-	if (image_size % 4)
-		printk(KERN_ERR "Wrong image source!");
-	for (count = 0; count < image_size/2; count += 2) {
+	image_buf = (u16 *)src;
+	lcd_buf = (u16 *)dst;
+	for (count = 0, pos = 0; count < image_size / 2; count += 2) {
 		len = image_buf[count];
-		bytes_565 = image_buf[count+1];
+		data = image_buf[count + 1];
 		for (index = 0; index < len; index++) {
-			lcd_buf[pos++] = bytes_565;
+			lcd_buf[pos++] = data;
 			if (pos >  g_kona_fb->fb.fix.smem_len / 4)
 				printk(KERN_ERR "Wrong image size!");
 		}
 	}
+}
 
+static void kona_fb_unpack_888rle(void *dst, void *src, uint32_t image_size,
+				uint32_t img_w, uint32_t img_h)
+{
+	unsigned long count, len, data, pos, pix_left_curr_line;
+	unsigned long x_margin, y_margin;
+	u32 *lcd_buf;
+	u16 *image_buf;
+
+	image_buf = (u16 *)src;
+	lcd_buf = (u32 *)dst;
+	x_margin = (g_kona_fb->fb.var.xres - img_w) / 2;
+	y_margin = (g_kona_fb->fb.var.yres - img_h) / 2;
+
+	pix_left_curr_line = img_w;
+	pos = y_margin * g_kona_fb->fb.var.xres;
+	pos += x_margin;
+	for (count = 0; count < image_size; count += 8) {
+		len = *image_buf++;
+		len |= (*image_buf++) << 16;
+		data = *image_buf++;
+		data |= (*image_buf++ << 16);
+		while (len) {
+			while (pix_left_curr_line) {
+				lcd_buf[pos++] = data;
+				--len;
+				--pix_left_curr_line;
+				if (pos > g_kona_fb->fb.fix.smem_len / 8)
+					printk(KERN_ERR "Wrong image size!");
+				if (!len)
+					break;
+			}
+			if (!pix_left_curr_line) {
+				pos += (x_margin * 2);
+				pix_left_curr_line = img_w;
+			}
+		}
+	}
+}
+
+void kona_display_crash_image(enum crash_dump_image_idx image_idx)
+{
+	int ret = 0;
+	unsigned long flags, image_size, img_w, img_h;
+	void *image_buf;
+	static bool crash_displayed;
+
+	pr_err("%s:%d image_idx=%d\n", __func__, __LINE__, image_idx);
+	atomic_set(&g_kona_fb->force_update, 1);
+	kona_clock_start(g_kona_fb);
+	spin_lock_irqsave(&g_fb_crash_spin_lock, flags);
+
+	switch (image_idx) {
+	case GENERIC_DUMP_START:
+		if (16 == g_kona_fb->fb.var.bits_per_pixel) {
+			image_buf = (void *) &dump_start_img_565[0];
+			image_size = sizeof(dump_start_img_565);
+		} else {
+			image_buf = (void *) &dump_start_img_888[0];
+			image_size = sizeof(dump_start_img_888);
+		}
+		img_w = dump_start_img_w;
+		img_h = dump_start_img_h;
+		break;
+	case CP_CRASH_DUMP_START:
+		if (16 == g_kona_fb->fb.var.bits_per_pixel) {
+			image_buf = (void *) &cp_dump_start_img_565[0];
+			image_size = sizeof(cp_dump_start_img_565);
+		} else {
+			image_buf = (void *) &cp_dump_start_img_888[0];
+			image_size = sizeof(cp_dump_start_img_888);
+		}
+		img_w = dump_cp_start_img_w;
+		img_h = dump_cp_start_img_h;
+		break;
+	case AP_CRASH_DUMP_START:
+		if (16 == g_kona_fb->fb.var.bits_per_pixel) {
+			image_buf = (void *) &ap_dump_start_img_565[0];
+			image_size = sizeof(ap_dump_start_img_565);
+		} else {
+			image_buf = (void *) &ap_dump_start_img_888[0];
+			image_size = sizeof(ap_dump_start_img_888);
+		}
+		img_w = dump_ap_start_img_w;
+		img_h = dump_ap_start_img_h;
+		break;
+	case GENERIC_DUMP_END:
+	case CP_CRASH_DUMP_END:
+	case AP_CRASH_DUMP_END:
+		if (16 == g_kona_fb->fb.var.bits_per_pixel) {
+			image_buf = (void *) &dump_end_img_565[0];
+			image_size = sizeof(dump_end_img_565);
+		} else {
+			image_buf = (void *) &dump_end_img_888[0];
+			image_size = sizeof(dump_end_img_888);
+		}
+		img_w = dump_end_img_w;
+		img_h = dump_end_img_h;
+		break;
+	default:
+		pr_err("Invalid image index passed\n");
+		goto err_idx;
+	}
+
+	if (16 == g_kona_fb->fb.var.bits_per_pixel)
+		kona_fb_unpack_565rle((void *)g_kona_fb->fb.screen_base,
+					image_buf, image_size, img_w, img_h);
+	else
+		kona_fb_unpack_888rle((void *)g_kona_fb->fb.screen_base,
+					image_buf, image_size, img_w, img_h);
+
+#ifdef CONFIG_VIDEO_MODE
+	/* For video mode, it is sufficient if we draw on the active buffer*/
+	if (false == crash_displayed)
+#endif
 	if (g_kona_fb->display_ops->update_no_os) {
 		ret =
 		g_kona_fb->display_ops->update_no_os(g_kona_fb->display_hdl,
@@ -309,8 +418,11 @@ void kona_display_crash_image(enum crash_dump_image_idx image_idx)
 				NULL);
 	}
 
+	crash_displayed = true;
+err_idx:
 	g_kona_fb->g_stop_drawing = 1;
 	spin_unlock_irqrestore(&g_fb_crash_spin_lock, flags);
+	kona_clock_stop(g_kona_fb);
 }
 #endif
 

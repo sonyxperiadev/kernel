@@ -17,8 +17,12 @@
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 enum crash_dump_image_idx {
-	CP_CRASH_DUMP_START = 0,
+	GENERIC_DUMP_START = 0,
+	CP_CRASH_DUMP_START,
+	AP_CRASH_DUMP_START,
+	GENERIC_DUMP_END,
 	CP_CRASH_DUMP_END,
+	AP_CRASH_DUMP_END,
 };
 
 extern void kona_display_crash_image(enum crash_dump_image_idx image_idx);
