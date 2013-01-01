@@ -677,8 +677,6 @@ struct bcmpmu_accy {
 	bool clock_en;
 	enum bcmpmu_bc_t bc;
 	int piggyback_chrg;
-	/* event notifier */
-	struct event_notifier event[BCMPMU_EVENT_MAX];
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;
 	int (*usb_set) (struct bcmpmu59xxx *pmu, int ctrl,
@@ -879,6 +877,8 @@ struct bcmpmu59xxx {
 	void *fg;
 	void *spa_pb_info;
 	u32 flags; /*ctrl flags - copied from pdata*/
+	/* event notifier */
+	struct event_notifier event[BCMPMU_EVENT_MAX];
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_bcmpmu;
 #endif	/*CONFIG_DEBUG_FS*/
@@ -914,13 +914,18 @@ int bcmpmu_add_notifier(u32 event_id, struct notifier_block *notifier);
 
 int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier);
 
+void bcmpmu_call_notifier(struct bcmpmu59xxx *pmu,
+					enum bcmpmu_event_t event, void *para);
+
 int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 			int ctrl, void *data);
 
 int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 			int ctrl, unsigned long data);
 int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable);
+int bcmpmu_is_usb_host_enabled(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr);
+int  bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
 #ifdef CONFIG_CHARGER_BCMPMU_SPA

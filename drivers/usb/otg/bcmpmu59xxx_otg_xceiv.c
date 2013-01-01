@@ -295,10 +295,21 @@ static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data
 static int bcmpmu_otg_xceiv_vbus_notif_handler(struct notifier_block *nb,
 					       unsigned long value, void *data)
 {
-	struct bcmpmu_otg_xceiv_data *xceiv_data =
-	    container_of(nb, struct bcmpmu_otg_xceiv_data,
-			 bcm_otg_vbus_validity_notifier);
+	struct bcmpmu_otg_xceiv_data *xceiv_data;
 	bool vbus_status = 0;
+
+	switch (value) {
+	case BCMPMU_USB_EVENT_VBUS_VALID:
+		xceiv_data = container_of(nb, struct bcmpmu_otg_xceiv_data,
+				bcm_otg_vbus_validity_notifier);
+		break;
+	case BCMPMU_USB_EVENT_SESSION_INVALID:
+		xceiv_data = container_of(nb, struct bcmpmu_otg_xceiv_data,
+				bcm_otg_session_invalid_notifier);
+		break;
+	default:
+		BUG_ON(1);
+	}
 
 	if (!xceiv_data)
 		return -EINVAL;
@@ -874,8 +885,12 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	    bcmpmu_otg_xceiv_vbus_notif_handler;
 	bcmpmu_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID,
 			    &xceiv_data->bcm_otg_vbus_validity_notifier);
+
+	xceiv_data->bcm_otg_session_invalid_notifier.notifier_call =
+	    bcmpmu_otg_xceiv_vbus_notif_handler;
 	bcmpmu_add_notifier(BCMPMU_USB_EVENT_SESSION_INVALID,
-			    &xceiv_data->bcm_otg_vbus_validity_notifier);
+			    &xceiv_data->bcm_otg_session_invalid_notifier);
+
 	xceiv_data->bcm_otg_id_chg_notifier.notifier_call =
 	    bcmpmu_otg_xceiv_id_chg_notif_handler;
 	bcmpmu_add_notifier(BCMPMU_USB_EVENT_ID_CHANGE,
@@ -978,7 +993,7 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_VBUS_VALID,
 			       &xceiv_data->bcm_otg_vbus_validity_notifier);
 	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_SESSION_INVALID,
-			       &xceiv_data->bcm_otg_vbus_validity_notifier);
+			       &xceiv_data->bcm_otg_session_invalid_notifier);
 	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_ID_CHANGE,
 			       &xceiv_data->bcm_otg_id_chg_notifier);
 	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_USB_DETECTION,

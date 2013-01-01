@@ -27,7 +27,6 @@
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
 #endif
-#include <linux/notifier.h>
 #include <linux/stringify.h>
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
@@ -168,48 +167,6 @@ static enum bcmpmu_chrgr_type_t get_charger_type(struct bcmpmu_accy *paccy,
 	return type;
 }
 
-int bcmpmu_add_notifier(u32 event_id, struct notifier_block *notifier)
-{
-	if (!bcmpmu_accy) {
-		pr_accy(ERROR, "%s: BCMPMU Accy driver is not initialized\n",
-				__func__);
-		return -EAGAIN;
-	}
-	if (unlikely(event_id >= BCMPMU_EVENT_MAX)) {
-		pr_accy(ERROR, "%s: Invalid event id\n", __func__);
-		return -EINVAL;
-	}
-	return blocking_notifier_chain_register(
-			&bcmpmu_accy->event[event_id].notifiers, notifier);
-}
-EXPORT_SYMBOL_GPL(bcmpmu_add_notifier);
-
-int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier)
-{
-	if (!bcmpmu_accy) {
-		pr_accy(ERROR, "%s: BCMPMU accy driver is not initialized\n",
-				__func__);
-		return -EAGAIN;
-	}
-	if (unlikely(event_id >= BCMPMU_EVENT_MAX)) {
-		pr_accy(ERROR, "%s: Invalid event id\n", __func__);
-		return -EINVAL;
-	}
-
-	return blocking_notifier_chain_unregister(
-			&bcmpmu_accy->event[event_id].notifiers, notifier);
-}
-EXPORT_SYMBOL_GPL(bcmpmu_remove_notifier);
-
-static void send_usb_event(struct bcmpmu59xxx *pmu,
-		enum bcmpmu_event_t event, void *para)
-{
-	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)pmu->accyinfo;
-	pr_accy(FLOW, "Event send %x\n", event);
-	blocking_notifier_call_chain(&paccy->event[event].notifiers,
-			event, para);
-}
-
 char *get_supply_type_str(int chrgr_type)
 {
 	switch (chrgr_type) {
@@ -231,16 +188,6 @@ char *get_supply_type_str(int chrgr_type)
 	return NULL;
 }
 EXPORT_SYMBOL_GPL(get_supply_type_str);
-
-static void send_chrgr_event(struct bcmpmu59xxx *pmu,
-		enum bcmpmu_event_t event, void *para)
-{
-	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)pmu->accyinfo;
-
-	pr_accy(FLOW, "Event send %x\n", event);
-	blocking_notifier_call_chain(&paccy->event[event].notifiers,
-			event, para);
-}
 
 void paccy_set_ldo_bit(struct bcmpmu_accy *paccy, int val)
 {
@@ -584,7 +531,7 @@ static void bcmpmu_notify_charger_state(struct bcmpmu_accy *paccy)
 	enum bcmpmu_chrgr_type_t chrgr_type = paccy->usb_accy_data.chrgr_type;
 	pr_accy(FLOW, "===chrgr_type %d, usb_type %d\n", chrgr_type, usb_type);
 	if ((usb_type < PMU_USB_TYPE_MAX) && (usb_type > PMU_USB_TYPE_NONE))
-		send_usb_event(paccy->bcmpmu,
+		bcmpmu_call_notifier(paccy->bcmpmu,
 				BCMPMU_USB_EVENT_USB_DETECTION,
 				&usb_type);
 	if (chrgr_type < PMU_CHRGR_TYPE_MAX) {
@@ -645,7 +592,7 @@ static void usb_deferred_work(struct work_struct *work)
 			list_del(&entry->node);
 			list_add_tail(&entry->node, &paccy->free_list->node);
 			spin_unlock_irqrestore(&paccy->accy_lock, flags);
-			send_usb_event(bcmpmu, event, para);
+			bcmpmu_call_notifier(bcmpmu, event, para);
 		}
 	}
 	switch (paccy->det_state) {
@@ -667,7 +614,7 @@ static void usb_adp_work(struct work_struct *work)
 		container_of(work, struct bcmpmu_accy, adp_work);
 	if (data->adp_cal_done == 0) {
 		data->adp_cal_done = 1;
-		send_usb_event(data->bcmpmu,
+		bcmpmu_call_notifier(data->bcmpmu,
 				BCMPMU_USB_EVENT_ADP_CALIBRATION_DONE, NULL);
 	}
 }
@@ -684,7 +631,7 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 	switch (ctrl) {
 	case BCMPMU_USB_CTRL_CHRG_CURR_LMT:
 		paccy->usb_accy_data.max_curr_chrgr = (int)data;
-		send_chrgr_event(paccy->bcmpmu,
+		bcmpmu_call_notifier(paccy->bcmpmu,
 				BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
 				&paccy->usb_accy_data.max_curr_chrgr);
 		break;
@@ -1111,7 +1058,6 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	struct bcmpmu59xxx *bcmpmu =  dev_get_drvdata(pdev->dev.parent);
 	struct bcmpmu_accy *paccy;
 	struct bcmpmu59xxx_platform_data *pdata ;
-	int i;
 	pdata = bcmpmu->pdata;
 
 	pr_accy(INIT, "%s, called\n", __func__);
@@ -1155,10 +1101,6 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&paccy->wake_lock, WAKE_LOCK_SUSPEND, "usb_accy");
 #endif
-	for (i = 0; i < BCMPMU_EVENT_MAX; i++) {
-		paccy->event[i].event_id = i;
-		BLOCKING_INIT_NOTIFIER_HEAD(&paccy->event[i].notifiers);
-	}
 
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBINS,
 				bcmpmu_accy_isr, paccy);

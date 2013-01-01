@@ -58,7 +58,8 @@ struct bcmpmu_chrgr_data {
 	struct power_supply usb_psy;
 	struct bcmpmu_chrgr_info usb_chrgr_info;
 	struct delayed_work chrgr_work;
-	struct notifier_block nb;
+	struct notifier_block chgr_detect;
+	struct notifier_block chgr_curr_lmt;
 };
 
 static enum power_supply_property bcmpmu_chrgr_props[] = {
@@ -147,12 +148,29 @@ int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 	int val ;
 	if (curr < 0)
 		return -EINVAL;
+	if (curr == 0) {
+		ret = bcmpmu_chrgr_usb_en(bcmpmu, 0);
+		return ret;
+	}
 	val = bcmpmu_get_curr_val(curr);
 	pr_chrgr(INIT , "%s: curr set to val %x\n", __func__, (val & 0xF));
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL10, (val & 0xF));
 	return ret;
 }
 EXPORT_SYMBOL(bcmpmu_set_icc_fc);
+
+int  bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL10, &reg);
+	if (reg < 0 || reg > ARRAY_SIZE(bcmpmu_pmu_curr_table))
+		return -EINVAL;
+	return bcmpmu_pmu_curr_table[reg];
+
+}
+EXPORT_SYMBOL(bcmpmu_get_icc_fc);
 
 int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable)
 {
@@ -173,12 +191,33 @@ int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable)
 		reg &= ~MBCCTRL3_USB_HOSTEN_MASK;
 
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL3, reg);
+	if (ret) {
+		return ret;
+		pr_chrgr(ERROR, "%s: PMU write failed\n", __func__);
+	}
+
+	bcmpmu_call_notifier(bcmpmu, BCMPMU_CHRGR_EVENT_CHRG_STATUS, &enable);
 
 	return ret;
 }
 EXPORT_SYMBOL(bcmpmu_chrgr_usb_en);
 
+int bcmpmu_is_usb_host_enabled(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	u8 reg;
 
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
+	if (ret)
+		return ret;
+
+	if (reg & MBCCTRL3_USB_HOSTEN_MASK)
+		return 0;
+
+	return -EINVAL;
+
+}
+EXPORT_SYMBOL(bcmpmu_is_usb_host_enabled);
 
 static int bcmpmu_chrgr_ac_get_property(struct power_supply *psy,
 		enum power_supply_property psp,
@@ -294,11 +333,11 @@ static int charger_event_handler(struct notifier_block *nb,
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	int chrgr_curr;
 
-	di = container_of(nb, struct bcmpmu_chrgr_data, nb);
-	bcmpmu = di->bcmpmu;
-	paccy = bcmpmu->accyinfo;
 	switch (event) {
 	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
+		di = container_of(nb, struct bcmpmu_chrgr_data, chgr_detect);
+		bcmpmu = di->bcmpmu;
+		paccy = bcmpmu->accyinfo;
 		chrgr_type =  *(enum bcmpmu_chrgr_type_t *)para;
 		pr_chrgr(FLOW, "****%s****, chrgr type=%d\n",
 				__func__, chrgr_type);
@@ -333,6 +372,9 @@ static int charger_event_handler(struct notifier_block *nb,
 		}
 		break;
 	case BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT:
+		di = container_of(nb, struct bcmpmu_chrgr_data, chgr_curr_lmt);
+		bcmpmu = di->bcmpmu;
+		paccy = bcmpmu->accyinfo;
 		chrgr_curr = *(int *)para;
 		chrgr_type = paccy->usb_accy_data.chrgr_type;
 		bcmpmu_set_icc_fc(bcmpmu, chrgr_curr);
@@ -427,14 +469,17 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	}
 	pr_chrgr(FLOW, "****<%s>****chrgr_name %s\n",
 		__func__, chrgr_names[chrgr_type]);
-	di->nb.notifier_call = charger_event_handler;
-	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &di->nb);
+	di->chgr_detect.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+							&di->chgr_detect);
 	if (ret) {
 		pr_chrgr(INIT, "%s, failed on chrgr det notifier, err=%d\n",
 				__func__, ret);
 		goto free_dev_info;
 	}
-	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT, &di->nb);
+	di->chgr_curr_lmt.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+							&di->chgr_curr_lmt);
 	if (ret) {
 		pr_chrgr(INIT, "%s,failed on chrgr curr lmt notifier,err=%d\n",
 				__func__, ret);

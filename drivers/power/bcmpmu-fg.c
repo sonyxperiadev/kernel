@@ -182,6 +182,8 @@ static enum power_supply_property bcmpmu_fg_props[] = {
 struct bcmpmu_fg_status_flags {
 	int batt_status;
 	int prev_batt_status;
+	bool usb_connected;
+	bool usb_host_enable;
 	bool batt_present;
 	bool chrgr_pause;
 	bool init_capacity;
@@ -235,6 +237,7 @@ struct bcmpmu_fg_data {
 	struct notifier_block accy_nb;
 	struct notifier_block usb_det_nb;
 	struct notifier_block chrgr_status_nb;
+	struct notifier_block chrgr_current_nb;
 
 	struct bcmpmu_batt_cap_info capacity_info;
 	struct bcmpmu_fg_status_flags flags;
@@ -1127,11 +1130,12 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 {
 	struct bcmpmu_fg_data *fg;
 	int chrgr_type;
-
+	int enable;
+	int chrgr_curr;
 	switch (event) {
 	case BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS:
 		fg = to_bcmpmu_fg_data(nb, accy_nb);
-
+		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS\n");
 		FG_LOCK(fg);
 		if (fg->pdata->hw_maintenance_charging && fg->flags.fg_eoc) {
 			pr_fg(FLOW, "maintenance charging: resume charging\n");
@@ -1145,27 +1149,53 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
 		fg = to_bcmpmu_fg_data(nb, usb_det_nb);
 		chrgr_type =  *(enum bcmpmu_chrgr_type_t *)data;
-
-		if (!(fg->bcmpmu->flags & BCMPMU_SPA_EN)) {
-			pr_fg(ERROR, "BUG:CHGR_DETECTION while SPA disabled\n");
-			break;
-		}
-
+		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHGR_DETECTION\n");
 		FG_LOCK(fg);
 		if (chrgr_type == PMU_USB_TYPE_NONE) {
 			pr_fg(FLOW, "usb disconnected!!\n");
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
 			fg->flags.fg_eoc = false;
+			fg->flags.usb_connected = false;
 			bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
 		} else {
 			pr_fg(FLOW, "usb connected!!\n");
-			fg->flags.prev_batt_status = fg->flags.batt_status;
-			fg->flags.batt_status = POWER_SUPPLY_STATUS_CHARGING;
+			fg->flags.usb_connected = true;
 			bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
 		}
 		FG_UNLOCK(fg);
 		break;
+	case BCMPMU_CHRGR_EVENT_CHRG_STATUS:
+		fg = to_bcmpmu_fg_data(nb, chrgr_status_nb);
+		enable = *(int *)data;
+		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHRG_STATUS\n");
+		FG_LOCK(fg);
+		if (enable) {
+			fg->flags.usb_host_enable = true;
+			pr_fg(FLOW, "usb host enabled\n");
+		} else if (!fg->flags.fg_eoc) {
+			fg->flags.usb_host_enable = false;
+			fg->flags.prev_batt_status = fg->flags.batt_status;
+			fg->flags.batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
+			pr_fg(FLOW, "usb host disabled\n");
+		}
+		FG_UNLOCK(fg);
+		break;
+	case BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT:
+		fg = to_bcmpmu_fg_data(nb, chrgr_current_nb);
+		chrgr_curr = *(int *)data;
+		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT\n");
+		FG_LOCK(fg);
+		if (fg->flags.usb_connected &&
+			fg->flags.usb_host_enable &&
+			chrgr_curr > 0) {
+			fg->flags.prev_batt_status = fg->flags.batt_status;
+			fg->flags.batt_status = POWER_SUPPLY_STATUS_CHARGING;
+			pr_fg(FLOW, "Charging current enabled\n");
+		}
+		FG_UNLOCK(fg);
+		break;
+
 	default:
 		BUG_ON(1);
 	}
@@ -1431,6 +1461,8 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 	struct bcmpmu_fg_data *fg = to_bcmpmu_fg_data(work,
 			fg_periodic_work.work);
 	struct bcmpmu_fg_status_flags flags;
+	enum bcmpmu_usb_type_t usb_type;
+	int data;
 
 	FG_LOCK(fg);
 	flags = fg->flags;
@@ -1462,8 +1494,32 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
 				BCMPMU_CHRGR_EVENT_CAPACITY,
 				fg->capacity_info.prev_percentage);
-		else
-			fg->psy.external_power_changed(&fg->psy);
+		else {
+			/*
+			 * fg->psy.external_power_changed(&fg->psy);
+			 * */
+			bcmpmu_usb_get(fg->bcmpmu,
+					BCMPMU_USB_CTRL_GET_USB_TYPE,
+					&data);
+			usb_type = data;
+			pr_fg(FLOW, "%s usb_type = %d\n", __func__, usb_type);
+			if ((usb_type > PMU_USB_TYPE_NONE &&
+				usb_type < PMU_USB_TYPE_MAX) &&
+				!bcmpmu_is_usb_host_enabled(fg->bcmpmu) &&
+				bcmpmu_get_icc_fc(fg->bcmpmu)) {
+
+				fg->flags.prev_batt_status =
+							fg->flags.batt_status;
+				fg->flags.batt_status =
+						POWER_SUPPLY_STATUS_CHARGING;
+			} else {
+				fg->flags.prev_batt_status =
+							fg->flags.batt_status;
+				fg->flags.batt_status =
+						POWER_SUPPLY_STATUS_DISCHARGING;
+			}
+
+		}
 		bcmpmu_fg_update_psy(fg, true);
 		fg->flags.reschedule_work = true;
 		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
@@ -1655,19 +1711,17 @@ static int bcmpmu_fg_register_notifiers(struct bcmpmu_fg_data *fg)
 {
 	int ret = 0;
 
-	if (fg->bcmpmu->flags & BCMPMU_SPA_EN) {
-		fg->usb_det_nb.notifier_call = bcmpmu_fg_event_handler;
-		fg->chrgr_status_nb.notifier_call = bcmpmu_fg_event_handler;
+	fg->usb_det_nb.notifier_call = bcmpmu_fg_event_handler;
+	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+			&fg->usb_det_nb);
+	if (ret)
+		return ret;
 
-		ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
-				&fg->usb_det_nb);
-		if (ret)
-			return ret;
-		ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_STATUS,
-				&fg->chrgr_status_nb);
-		if (ret)
-			goto unreg_usb_det_nb;
-	}
+	fg->chrgr_status_nb.notifier_call = bcmpmu_fg_event_handler;
+	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_STATUS,
+			&fg->chrgr_status_nb);
+	if (ret)
+		goto unreg_usb_det_nb;
 
 	fg->accy_nb.notifier_call = bcmpmu_fg_event_handler;
 	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
@@ -1675,8 +1729,17 @@ static int bcmpmu_fg_register_notifiers(struct bcmpmu_fg_data *fg)
 	if (ret)
 		goto unreg_chrg_status_nb;
 
-	return 0;
+	fg->chrgr_current_nb.notifier_call = bcmpmu_fg_event_handler;
+	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+			&fg->chrgr_current_nb);
+	if (ret)
+		goto unreg_chrgr_current_nb;
 
+
+	return 0;
+unreg_chrgr_current_nb:
+	bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
+			&fg->accy_nb);
 unreg_chrg_status_nb:
 	bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_STATUS,
 			&fg->chrgr_status_nb);
@@ -1993,7 +2056,6 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 		pr_fg(ERROR, "%s: kzalloc failed!!\n", __func__);
 		return -ENOMEM;
 	}
-
 	fg->bcmpmu = bcmpmu;
 	bcmpmu->fg = fg;
 
@@ -2006,8 +2068,11 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 		fg->psy.properties = bcmpmu_fg_props;
 		fg->psy.num_properties = ARRAY_SIZE(bcmpmu_fg_props);
 		fg->psy.get_property = bcmpmu_fg_get_properties;
+		fg->psy.external_power_changed = NULL;
+		/*
 		fg->psy.external_power_changed =
 			bcmpmu_fg_external_power_changed;
+		*/
 	}
 
 	fg->fg_wq = create_singlethread_workqueue("bcmpmu_fg_wq");
@@ -2024,7 +2089,6 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&fg->fg_low_batt_work, bcmpmu_fg_low_batt_work);
 
 	mutex_init(&fg->mutex);
-
 	ret = bcmpmu_fg_register_notifiers(fg);
 	if (ret)
 		goto destroy_workq;

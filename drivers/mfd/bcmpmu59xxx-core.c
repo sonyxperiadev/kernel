@@ -26,6 +26,7 @@
 #include <linux/mfd/core.h>
 #include <linux/uaccess.h>
 #include <linux/rtc.h>
+#include <linux/notifier.h>
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 
@@ -183,6 +184,47 @@ err:
 }
 
 #endif /* CONFIG_DEBUG_FS */
+
+int bcmpmu_add_notifier(u32 event_id, struct notifier_block *notifier)
+{
+	if (!bcmpmu_gbl) {
+		pr_err("%s: BCMPMU core driver is not initialized\n", __func__);
+		return -EAGAIN;
+	}
+
+	if (unlikely(event_id >= BCMPMU_EVENT_MAX)) {
+		pr_err("%s: Invalid event id\n", __func__);
+		return -EINVAL;
+	}
+	return blocking_notifier_chain_register(
+			&bcmpmu_gbl->event[event_id].notifiers, notifier);
+}
+EXPORT_SYMBOL_GPL(bcmpmu_add_notifier);
+
+int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier)
+{
+	if (!bcmpmu_gbl) {
+		pr_err("%s: BCMPMU core driver is not initialized\n", __func__);
+		return -EAGAIN;
+	}
+
+	if (unlikely(event_id >= BCMPMU_EVENT_MAX)) {
+		pr_err("%s: Invalid event id\n", __func__);
+		return -EINVAL;
+	}
+	return blocking_notifier_chain_unregister(
+			&bcmpmu_gbl->event[event_id].notifiers, notifier);
+}
+EXPORT_SYMBOL_GPL(bcmpmu_remove_notifier);
+
+void bcmpmu_call_notifier(struct bcmpmu59xxx *bcmpmu,
+				enum bcmpmu_event_t event, void *para)
+{
+	pr_pmucore(FLOW, "%s: event send %x\n", __func__, event);
+	blocking_notifier_call_chain(&bcmpmu->event[event].notifiers,
+								event, para);
+}
+EXPORT_SYMBOL_GPL(bcmpmu_call_notifier);
 
 int bcmpmu_reg_write_unlock(struct bcmpmu59xxx *bcmpmu)
 {
@@ -598,7 +640,7 @@ static void bcmpmu_register_init(struct bcmpmu59xxx *pmu)
 
 static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 {
-	int ret = 0, size;
+	int ret = 0, size, i;
 	struct bcmpmu59xxx *bcmpmu = pdev->dev.platform_data;
 	struct mfd_cell *pmucells ;
 
@@ -630,6 +672,11 @@ static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 	ret = misc_register(&bcmpmu_device);
 	if (ret < 0)
 		pr_pmucore(ERROR, "Misc Register failed");
+
+	for (i = 0; i < BCMPMU_EVENT_MAX; i++) {
+		bcmpmu->event[i].event_id = i;
+		BLOCKING_INIT_NOTIFIER_HEAD(&bcmpmu->event[i].notifiers);
+	}
 err:
 	return ret;
 }
