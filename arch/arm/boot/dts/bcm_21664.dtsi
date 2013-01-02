@@ -24,12 +24,6 @@
 		reg = <0x3e01a000 0x10>;
 	};
 
-	tmon@0x34008000 {
-		compatible = "bcm,tmon";
-		reg = <0x34008000 0x1000>;
-		interrupts = <0 183 4>;
-	};
-
 	uart@3e000000 {
 		compatible = "bcm,uart";
 		reg = <0x3e000000 0x1000>;

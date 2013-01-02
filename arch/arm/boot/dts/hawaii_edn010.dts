@@ -180,4 +180,22 @@
 		pix-clk = <0>;
 
 	};
+
+	tmon@0x34008000 {
+		compatible = "bcm,tmon";
+		reg = <0x34008000 0x1000>;
+		interrupts = <0 183 4>;
+		chipreg_addr = <0x35004000 0x1000>;
+		thold_size = <4>; /*number of threshold levels*/
+		poll_rate_ms = <30000>;
+		hysteresis = <0>;
+		flags = <1>;
+		interval_ms = <5>;
+		thold = <70 65 1
+			80 75 1
+			90 85 1
+			100 95 2>;
+		tmon_apb_clk = "tmon_apb";
+		tmon_1m_clk = "tmon_1m_clk";
+	};
 };

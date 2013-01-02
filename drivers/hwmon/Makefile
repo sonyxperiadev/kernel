@@ -136,6 +136,6 @@ obj-$(CONFIG_SENSORS_BCMPMU)	+= bcmpmu-hwmon.o
 endif
 
 obj-$(CONFIG_PMBUS)		+= pmbus/
-
+obj-$(CONFIG_KONA_TMON) 	+= kona_tmon.o
 ccflags-$(CONFIG_HWMON_DEBUG_CHIP) := -DDEBUG
 

@@ -1390,6 +1390,14 @@ config SENSORS_BCMPMU
 	help
 	  ADC driver for BRM PMU's
 
+config KONA_TMON
+       bool "enable Kona temperature monitor (TMON) driver"
+       help
+	Say Y if you want to enable kona
+	temperature monitoring.
+	Temperature threshold levels can be set
+	from driver platform data.
+
 if ACPI
 
 comment "ACPI drivers"
