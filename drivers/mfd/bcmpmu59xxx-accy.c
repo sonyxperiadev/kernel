@@ -32,15 +32,19 @@
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 #include <linux/usb/bcm_hsotgctrl.h>
 #include <plat/kona_reset_reason.h>
+#include <linux/io.h>
+#include <mach/io_map.h>
+#include <mach/rdb_A0/brcm_rdb_hsotg_ctrl.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #endif
 #define MAX_EVENT_QUEUE 30
-#define BC_MAX_RETRIES		3
+#define BC_MAX_RETRIES	10
 
 #define ACCY_WORK_DELAY  msecs_to_jiffies(5)
-static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
+static int debug_mask = BCMPMU_PRINT_ERROR |
+	BCMPMU_PRINT_INIT |  BCMPMU_PRINT_FLOW;
 static int prev_chrgr_type;
 
 #define pr_accy(debug_level, args...) \
@@ -50,31 +54,6 @@ static int prev_chrgr_type;
 		} \
 	} while (0)
 
-#define PMU_BC_STATUS_CODE_SHIFT	0
-#define PMU_BC_STATUS_DONE_SHIFT	8
-
-#define BB_BC_STS_SDP_MSK	(1<<0)
-#define BB_BC_STS_DCP_MSK	(1<<1)
-#define BB_BC_STS_CDP_MSK	(1<<2)
-#define BB_BC_STS_TYPE1_MSK	(1<<3)
-#define BB_BC_STS_TYPE2_MSK	(1<<4)
-#define BB_BC_STS_ACA_MSK	(1<<5)
-#define BB_BC_STS_PS2_MSK	(1<<6)
-#define BB_BC_STS_BC_DONE_MSK	(1<<7)
-
-#define PMU_BC_STS_SDP_MSK	(1<<2)
-#define PMU_BC_STS_DCP_MSK	(1<<1)
-#define PMU_BC_STS_CDP_MSK	(1<<3)
-#define PMU_BC_STS_TYPE1_MSK	(1<<5)
-#define PMU_BC_STS_TYPE2_MSK	(1<<6)
-#define PMU_BC_STS_ACA_MSK	(1<<7)
-#define PMU_BC_STS_PS2_MSK	(1<<4)
-#define PMU_BC_STS_BC_DONE_MSK	(1<<8)
-
-#define PMU_BC_SDP		1
-#define PMU_BC_CDP		2
-#define PMU_BC_DCP		3
-#define PMU_CHP_TYPE_MASK	0x3
 
 
 /* TPROBE_MAX definition */
@@ -128,41 +107,117 @@ static void bcmpmu_notify_charger_state(struct bcmpmu_accy *paccy);
 static void bcmpmu_accy_chrgr_detect_state(struct bcmpmu59xxx *bcmpmu, int val);
 static void bcmpmu_paccy_latch_event(struct bcmpmu_accy *accy,
 		u32 event, void *para);
+static void bcmpmu_update_pmu_chrgr_type(struct bcmpmu_accy *paccy);
+static void bcdldo_cycle_power(struct bcmpmu_accy *paccy);
+
+static void enable_bc_clock(struct bcmpmu_accy *paccy, bool en)
+{
+	if (paccy->bc == BCMPMU_BC_BB_BC12)
+		bcm_hsotgctrl_en_clock(en);
+}
+
+static void reset_bc(struct bcmpmu_accy *paccy)
+{
+	if (paccy->bc == BCMPMU_BC_BB_BC12)
+		bcm_hsotgctrl_bc_reset();
+}
+
+static int is_bb_detection_done(u32 status)
+{
+	int ret_status = 0;
+	if (status & BB_BC_STS_BC_DONE_MSK) {
+		/*Make sure that only one type bit is set*/
+		u32 type = status & 0x3F;
+		if (type && ((type & (type - 1)) == 0))
+			ret_status = 1;
+	}
+
+	return ret_status;
+
+}
+
+/* for external charger detection  apart from PMU/BB*/
+__weak int bcm_ext_bc_status(void)
+{
+	return 0;
+}
 
 static unsigned int get_bc_status(struct bcmpmu_accy *paccy)
 {
 	u32 status = 0;
+	unsigned long st;
 	struct bcmpmu59xxx *bcmpmu = paccy->bcmpmu;
 
 	if (paccy->bc == BCMPMU_BC_PMU_BC12) {
 		bcmpmu->read_dev(bcmpmu,
 				PMU_REG_MBCCTRL5, (u8 *)&status);
-		pr_accy(FLOW, " MBCTRL5 %x\n", status);
+		pr_accy(FLOW, " MBCCTRL5 %x\n", status);
 		status &= MBCCTRL5_CHP_TYP_MASK;
-		pr_accy(FLOW, "MBCTRL5 %x  mask %x\n",
-			status, MBCCTRL5_CHP_TYP_MASK);
+		pr_accy(FLOW, "MBCCTRL5 %x  mask %x\n",
+				status, MBCCTRL5_CHP_TYP_MASK);
 		status = status >> MBCCTRL5_CHP_TYP_SHIFT;
-		pr_accy(FLOW, " MBCTRL5 %x shift % d\n",
-			status, MBCCTRL5_CHP_TYP_SHIFT);
+		pr_accy(FLOW, " MBCCTRL5 %x shift % d\n",
+				status, MBCCTRL5_CHP_TYP_SHIFT);
 		return status;
-	} else
-		return 0;
+	} else if (paccy->bc == BCMPMU_BC_BB_BC12) {
+		bcm_hsotgctrl_bc_status(&st);
+		pr_accy(FLOW, "<%s> = status %x\n", __func__, (u32)st);
+		if (is_bb_detection_done(st))
+			return (u32)st;
+		else
+			return 0;
+	} else if (paccy->bc == BC_EXT_DETECT) {
+		status = bcm_ext_bc_status();
+	}
+
+	return status;
+}
+
+/* for external charger detection  apart from PMU/BB*/
+__weak enum bcmpmu_chrgr_type_t
+get_ext_charger_type(struct bcmpmu_accy *paccy, unsigned int bc_status)
+{
+	return 0;
 }
 
 static enum bcmpmu_chrgr_type_t get_charger_type(struct bcmpmu_accy *paccy,
 		unsigned int bc_status)
 {
 	enum bcmpmu_chrgr_type_t type;
-	u8 chp_typ =  (bc_status & PMU_CHP_TYPE_MASK);
-	if (chp_typ) {
-		if (chp_typ == PMU_BC_DCP)
+	u8 chp_typ;
+	if (paccy->bc == BCMPMU_BC_PMU_BC12) {
+		chp_typ =  (bc_status & PMU_CHP_TYPE_MASK);
+		if (chp_typ) {
+			if (chp_typ == PMU_BC_DCP)
+				type = PMU_CHRGR_TYPE_DCP;
+			else if (chp_typ == PMU_BC_SDP)
+				type = PMU_CHRGR_TYPE_SDP;
+			else if (chp_typ == PMU_BC_CDP)
+				type = PMU_CHRGR_TYPE_CDP;
+			else
+				type = PMU_CHRGR_TYPE_NONE;
+		} else
+			type = PMU_CHRGR_TYPE_NONE;
+	} else if (paccy->bc == BCMPMU_BC_BB_BC12) {
+		if (bc_status & BB_BC_STS_DCP_MSK)
 			type = PMU_CHRGR_TYPE_DCP;
-		else if (chp_typ == PMU_BC_SDP)
+		else if (bc_status & BB_BC_STS_SDP_MSK)
 			type = PMU_CHRGR_TYPE_SDP;
-		else if (chp_typ == PMU_BC_CDP)
+		else if (bc_status & BB_BC_STS_CDP_MSK)
 			type = PMU_CHRGR_TYPE_CDP;
+		else if (bc_status & BB_BC_STS_PS2_MSK)
+			type = PMU_CHRGR_TYPE_PS2;
+		else if (bc_status & BB_BC_STS_TYPE1_MSK)
+			type = PMU_CHRGR_TYPE_TYPE1;
+		else if (bc_status & BB_BC_STS_TYPE2_MSK)
+			type = PMU_CHRGR_TYPE_TYPE2;
+		else if (bc_status & BB_BC_STS_ACA_MSK)
+			type = PMU_CHRGR_TYPE_ACA;
 		else
 			type = PMU_CHRGR_TYPE_NONE;
+
+	} else if (paccy->bc == BC_EXT_DETECT) {
+		type = get_ext_charger_type(paccy, bc_status);
 	} else
 		type = PMU_CHRGR_TYPE_NONE;
 	return type;
@@ -202,6 +257,7 @@ void paccy_set_ldo_bit(struct bcmpmu_accy *paccy, int val)
 
 	paccy->bcmpmu->write_dev(paccy->bcmpmu,
 			PMU_REG_MBCCTRL5, status);
+	pr_accy(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, status);
 }
 
 static void usb_detect_state(struct bcmpmu_accy *paccy)
@@ -272,17 +328,19 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 {
 	switch (paccy->det_state) {
 	case USB_DETECT:
+		enable_bc_clock(paccy, 1);
 		usb_detect_state(paccy);
+		break;
+
+	case USB_IDLE:
+		enable_bc_clock(paccy, 0);
 		break;
 
 	case USB_RETRY:
 		paccy->retry_cnt++;
-		if (paccy->retry_cnt < 3) {
-			paccy->det_state = USB_DETECT;
-			/*
-			bc_det_sts_clear(paccy);
-			bc_det_restart(paccy);
-			*/
+		if (paccy->retry_cnt < BC_MAX_RETRIES) {
+			reset_bc(paccy);
+			bcdldo_cycle_power(paccy);
 			schedule_delayed_work(&paccy->det_work,
 						ACCY_WORK_DELAY);
 		} else {
@@ -299,6 +357,9 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 		pr_accy(FLOW, "*** Charger Connected event\n");
 		bcmpmu_notify_charger_state(paccy);
 		bcmpmu_accy_chrgr_detect_state(paccy->bcmpmu, 0);
+
+		if (paccy->bc == BCMPMU_BC_BB_BC12)
+			bcmpmu_update_pmu_chrgr_type(paccy);
 		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
@@ -358,7 +419,8 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	struct bcmpmu59xxx *bcmpmu = paccy->bcmpmu;
 	int board_id = bcmpmu->pdata->board_id;
 
-	pr_accy(FLOW, "#### %s interrupt = %d\n", __func__, irq);
+	pr_accy(INIT, "#### %s interrupt = %d  det state %d\n",
+		__func__, irq, paccy->det_state);
 
 	switch (irq) {
 	case PMU_IRQ_VA_SESS_VALID_R:
@@ -540,18 +602,16 @@ static void bcmpmu_notify_charger_state(struct bcmpmu_accy *paccy)
 	int board_id = bcmpmu->pdata->board_id;
 	pr_accy(FLOW, "===chrgr_type %d, usb_type %d\n", chrgr_type, usb_type);
 
-	if (is_charging_state()) {
-		bcmpmu_paccy_latch_event(paccy,
-				BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
-				&chrgr_curr_lmt[chrgr_type]);
-		return;
-	}
+	paccy->usb_accy_data.max_curr_chrgr = chrgr_curr_lmt[chrgr_type];
+	bcmpmu_paccy_latch_event(paccy, BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+			&paccy->usb_accy_data.chrgr_type);
 
-	if ((usb_type < PMU_USB_TYPE_MAX) && (usb_type > PMU_USB_TYPE_NONE)) {
+	if ((usb_type < PMU_USB_TYPE_MAX) &&
+		(usb_type > PMU_USB_TYPE_NONE)) {
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_USB_DETECTION,
 				&usb_type);
-		if (board_id == EDN01x)
+		if (is_charging_state() || (board_id == EDN01x))
 			bcmpmu_paccy_latch_event(paccy,
 					BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
 					&chrgr_curr_lmt[chrgr_type]);
@@ -565,11 +625,42 @@ static void bcmpmu_accy_chrgr_detect_state(struct bcmpmu59xxx *bcmpmu, int val)
 {
 	u8 reg;
 	bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL5, &reg);
+	pr_accy(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, reg);
 	if (val)
 		reg |= MBCCTRL5_BC12_EN_MASK;
 	else
 		reg &= ~MBCCTRL5_BC12_EN_MASK;
 	bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL5, reg);
+	pr_accy(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, reg);
+}
+
+static void bcdldo_cycle_power(struct bcmpmu_accy *paccy)
+{
+	paccy_set_ldo_bit(paccy, 0);
+	bcmpmu_accy_chrgr_detect_state(paccy->bcmpmu, 0);
+	/* Scope trace shows the decay time of the BCDLDO line
+	 * is about 4ms. Hence a 5ms delay here to ensure proper
+	 * power cycle.
+	 */
+	usleep_range(6000, 8000);
+	msleep(20);
+	paccy_set_ldo_bit(paccy, 1);
+	bcmpmu_accy_chrgr_detect_state(paccy->bcmpmu, 1);
+}
+
+static void bcmpmu_update_pmu_chrgr_type(struct bcmpmu_accy *paccy)
+{
+	struct bcmpmu59xxx *bcmpmu = paccy->bcmpmu;
+	enum bcmpmu_chrgr_type_t type = paccy->usb_accy_data.chrgr_type;
+	u8 chrgr = 0;
+	if (paccy->bc == BCMPMU_BC_BB_BC12) {
+		if (type)
+			chrgr = type <<  MBCCTRL5_CHP_TYP_SHIFT;
+		pr_accy(FLOW, "###<%s> MBCCTRL5 charger type bc %x pmu %x\n",
+			__func__, type, chrgr);
+		bcmpmu->write_dev(bcmpmu,
+				PMU_REG_MBCCTRL5, chrgr);
+	}
 }
 
 /* workq func */
@@ -609,6 +700,9 @@ static void usb_deferred_work(struct work_struct *work)
 	}
 	switch (paccy->det_state) {
 	case USB_IDLE:
+		bcdldo_cycle_power(paccy);
+		reset_bc(paccy);
+		enable_bc_clock(paccy, 0);
 		break;
 	case USB_DETECT:
 		break;
@@ -1090,7 +1184,6 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	paccy->usb_accy_data.chrgr_type = PMU_CHRGR_TYPE_NONE;
 	paccy->usb_accy_data.max_curr_chrgr = 0;
 	paccy->adp_cal_done = 0;
-	paccy->det_state = USB_IDLE;
 	/*
 	   paccy->usb_id_map = bcmpmu_get_usb_id_map(bcmpmu,
 	   &paccy->usb_id_map_len);
@@ -1144,20 +1237,20 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_VBUS_VALID_F);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_IDCHG);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
-	/* in 59039 BC happened from PMU and BB's BCDAVDD33 pin is floated
-	 * need to set bc_iso_i in order to avoid any impact due to
-	 * BCDAVDD33 as floated.
+
+	/*
+	 * For  BB's BC detection we need to select BCDAVDD33 pin
 	 */
-#if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042) || \
-	defined(CONFIG_MFD_BCM_PMU59xxx)
-	/* Enable/Disable USB OTG clock aroudn bc_iso change */
-	bcm_hsotgctrl_set_bc_iso(true);
-#endif
+	if (paccy->bc == BCMPMU_BC_BB_BC12)
+		bcm_hsotgctrl_set_bc_iso(false);
+	else
+		bcm_hsotgctrl_set_bc_iso(true);
 
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu_accy_debug_init(paccy);
 #endif
-	usb_detect_state(paccy);
+	paccy->det_state = USB_DETECT;
+	usb_handle_state(paccy);
 	return 0;
 
 err:

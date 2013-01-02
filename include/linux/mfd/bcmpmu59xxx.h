@@ -42,6 +42,31 @@
 #define BCMPMU_PRINT_WARNING	(1U << 4)
 #define BCMPMU_PRINT_VERBOSE	(1U << 5)
 
+#define BB_BC_STS_SDP_MSK	(1<<0)
+#define BB_BC_STS_DCP_MSK	(1<<1)
+#define BB_BC_STS_CDP_MSK	(1<<2)
+#define BB_BC_STS_TYPE1_MSK	(1<<3)
+#define BB_BC_STS_TYPE2_MSK	(1<<4)
+#define BB_BC_STS_ACA_MSK	(1<<5)
+#define BB_BC_STS_PS2_MSK	(1<<6)
+#define BB_BC_STS_BC_DONE_MSK	(1<<7)
+
+#define PMU_BC_STS_SDP_MSK	(1<<2)
+#define PMU_BC_STS_DCP_MSK	(1<<1)
+#define PMU_BC_STS_CDP_MSK	(1<<3)
+#define PMU_BC_STS_TYPE1_MSK	(1<<5)
+#define PMU_BC_STS_TYPE2_MSK	(1<<6)
+#define PMU_BC_STS_ACA_MSK	(1<<7)
+#define PMU_BC_STS_PS2_MSK	(1<<4)
+#define PMU_BC_STS_BC_DONE_MSK	(1<<8)
+
+#define PMU_BC_NONE		0
+#define PMU_BC_SDP		1
+#define PMU_BC_CDP		2
+#define PMU_BC_DCP		3
+#define PMU_CHP_TYPE_MASK	0x3
+
+
 /*helper macros to manage regulator PC pin map*/
 /*
 SET0 holds ORed list of PC pin - regualtor will be enabled if
@@ -512,6 +537,7 @@ enum bcmpmu_bc_t {
 	BCMPMU_BC_BB_BC11,
 	BCMPMU_BC_BB_BC12,
 	BCMPMU_BC_PMU_BC12,
+	BC_EXT_DETECT,
 };
 
 enum bcmpmu_event_t {

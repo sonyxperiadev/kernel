@@ -1305,7 +1305,7 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 	.i2c_companion_info = pmu_i2c_companion_info,
 	.i2c_adapter_id = PMU_DEVICE_I2C_BUSNO,
 	.i2c_pagesize = 256,
-	.bc = BCMPMU_BC_PMU_BC12,
+	.bc = BCMPMU_BC_BB_BC12,
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 .flags = BCMPMU_SPA_EN,
 #endif
