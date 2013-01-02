@@ -3075,6 +3075,16 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	}
 #endif
 
+#ifdef SET_CUSTOM_NVRAM
+	if (wifi_set_custom_nvram_path(nv_path)) {
+		DHD_ERROR(("%s: error in custom nvram path setting\n",
+			 __func__));
+		goto fail;
+	} else
+		DHD_INFO(("%s: custom nvram file path = %s\n",
+			__func__, nv_path));
+#endif
+
 	/* Allocate etherdev, including space for private structure */
 	if (!(net = alloc_etherdev(sizeof(dhd)))) {
 		DHD_ERROR(("%s: OOM - alloc_etherdev\n", __FUNCTION__));

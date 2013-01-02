@@ -29,3 +29,19 @@ int hawaii_wlan_init(void);
 #define RHEA_GPIO_DRV_CURR_10		10MA
 #define RHEA_GPIO_DRV_CURR_12		12MA
 #define RHEA_GPIO_DRV_CURR_16		16MA
+
+#define PRINT_ERR(format, args...) \
+	printk(KERN_ERR "%s: " format, __func__, ## args)
+#define PRINT_INFO(format, args...) \
+	printk(KERN_INFO "%s: " format, __func__, ## args)
+
+
+
+extern int sdio_dev_is_initialized(enum sdio_devtype devtype);
+extern struct sdio_wifi_gpio_cfg *sdio_get_wifi_gpio(enum sdio_devtype devtype);
+extern int sdio_stop_clk(enum sdio_devtype devtype, int insert);
+
+#ifdef CONFIG_MMC_KONA_SDIO_WIFI
+extern int bcm_sdiowl_init(int onoff);
+extern int bcm_sdiowl_term(void);
+#endif

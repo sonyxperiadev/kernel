@@ -886,4 +886,9 @@ dhd_write_rdwr_korics_macaddr(struct dhd_info *dhd, struct ether_addr *mac);
 #if defined(SUPPORT_MULTIPLE_REVISION)
 extern int concate_revision(struct dhd_bus *bus, char *path, int path_len);
 #endif /* SUPPORT_MULTIPLE_REVISION */
+
+#ifdef SET_CUSTOM_NVRAM
+extern int wifi_set_custom_nvram_path(char *nv_path);
+#endif
+
 #endif /* _dhd_h_ */
