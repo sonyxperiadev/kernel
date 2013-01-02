@@ -728,7 +728,7 @@ extern "C" {
 *  @brief    Configure DSI Timing
 *
 *  @param	 handle         (in)  DSI cHAL handle
-*  @param	 DPHY_SpecRev   (in)  DSI D-PHY Spec Rev
+*  @param	 phy_timing(in)  DSI protocol timing parameters
 *  @param	 coreClkSel     (in)  DSI Core Clock
 *  @param	 escClk_MHz     (in)  System Setting For ESC_CLK
 *  @param	 hsBitRate_Mbps (in)  Target HS Bit Rate
@@ -739,7 +739,7 @@ extern "C" {
 *  @note
 *****************************************************************************/
 	cBool chal_dsi_set_timing(CHAL_HANDLE handle,
-				  cUInt32 DPHY_SpecRev,
+				  void *phy_timing,
 				  CHAL_DSI_CLK_SEL_t coreClkSel,
 				  cUInt32 escClk_MHz,
 				  cUInt32 hsBitRate_Mbps,

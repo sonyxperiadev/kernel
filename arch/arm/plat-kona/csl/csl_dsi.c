@@ -2424,7 +2424,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 		chal_dsi_on(dsiH->chalH, &chalMode);
 
 		if (!chal_dsi_set_timing(dsiH->chalH,
-				dsiCfg->dPhySpecRev,
+				dsiCfg->phy_timing,
 				dsiH->clkCfg.coreClkSel,
 				dsiH->clkCfg.escClk_MHz,
 				dsiH->clkCfg.hsBitClk_MHz,
