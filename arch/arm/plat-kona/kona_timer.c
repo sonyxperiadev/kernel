@@ -975,6 +975,8 @@ static inline void __disable_channel(void __iomem *reg_base, int ch_num)
 {
 	int reg;
 	reg = readl(reg_base + KONA_GPTIMER_STCS_OFFSET);
+	reg &= ~KONA_GPTIMER_STCS_TIMER_MATCH_MASK;
+	reg |= 1 << (ch_num + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);
 	reg &= ~(1 << (ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
 	writel(reg, reg_base + KONA_GPTIMER_STCS_OFFSET);
 }
