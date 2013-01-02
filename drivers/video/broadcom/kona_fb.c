@@ -112,19 +112,14 @@ struct kona_fb {
 
 static struct kona_fb *g_kona_fb;
 
-#ifdef CONFIG_FB_BRCM_ASYNC_UPDATE
-static int g_vsync_cnt;
-static volatile struct timeval prev_timeval, curr_timeval;
-#endif
-
 #ifdef KONA_FB_DEBUG
-#define kona_PROF_N_RECORDS 50
+#define KONA_PROF_N_RECORDS 50
 static volatile struct {
 	struct timeval	curr_time;
 	struct timeval	prev_time;
 	int is_late;
 	int use_te;
-} kona_fb_profile[kona_PROF_N_RECORDS];
+} kona_fb_profile[KONA_PROF_N_RECORDS];
 
 static volatile u32 kona_fb_profile_cnt;
 
@@ -141,7 +136,7 @@ void kona_fb_profile_record(struct timeval prev_timeval,
 	kona_fb_profile[kona_fb_profile_cnt].prev_time =  prev_timeval;
 	kona_fb_profile[kona_fb_profile_cnt].is_late   = is_too_late;
 	kona_fb_profile[kona_fb_profile_cnt].use_te   = do_vsync;
-	kona_fb_profile_cnt = (kona_fb_profile_cnt+1) % kona_PROF_N_RECORDS;
+	kona_fb_profile_cnt = (kona_fb_profile_cnt+1) % KONA_PROF_N_RECORDS;
 }
 
 static int
@@ -169,7 +164,7 @@ proc_write_fb_test(struct file *file, const char __user *buffer,
 		kona_display_crash_image(1);
 
 	i = kona_fb_profile_cnt;
-	for (cnt = 0; cnt < kona_PROF_N_RECORDS; cnt++) {
+	for (cnt = 0; cnt < KONA_PROF_N_RECORDS; cnt++) {
 		if (i != 0)
 			printk(KERN_ERR "%8u,%8u,%8u,%8u,%8u,%d, %d",
 			kona_fb_profile[i].prev_time.tv_sec,
@@ -182,7 +177,7 @@ proc_write_fb_test(struct file *file, const char __user *buffer,
 			 kona_fb_profile[i-1].curr_time.tv_usec),
 			kona_fb_profile[i].is_late,
 			kona_fb_profile[i].use_te);
-		i = (i + 1) % kona_PROF_N_RECORDS;
+		i = (i + 1) % KONA_PROF_N_RECORDS;
 	}
 
 	return len;
@@ -430,9 +425,6 @@ static void kona_display_done_cb(int status)
 {
 	(void)status;
 	kona_clock_stop(g_kona_fb);
-#ifdef CONFIG_FB_BRCM_ASYNC_UPDATE
-	do_gettimeofday((struct timeval *)&prev_timeval);
-#endif
 	konafb_debug("kona_fb release called\n");
 	complete(&g_kona_fb->prev_buf_done_sem);
 }
@@ -441,11 +433,6 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 			       struct fb_info *info)
 {
 	int ret = 0;
-#ifdef CONFIG_FB_BRCM_ASYNC_UPDATE
-	int is_too_late;
-	s64 frame_gap;
-	static int do_vsync;
-#endif
 	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
 	uint32_t buff_idx;
 #ifdef CONFIG_FRAMEBUFFER_FPS
@@ -507,40 +494,12 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 		wait_for_completion(&fb->prev_buf_done_sem);
 #endif
 
-#ifdef CONFIG_FB_BRCM_ASYNC_UPDATE
-		g_vsync_cnt++;
-		do_gettimeofday((struct timeval *)&curr_timeval);
-		frame_gap = (s64)(curr_timeval.tv_sec - prev_timeval.tv_sec) *
-			1000000 + (s64)(curr_timeval.tv_usec -
-					prev_timeval.tv_usec);
-		if (frame_gap > 1000)
-			is_too_late = 1;
-		else
-			is_too_late = 0;
-
-		if ((g_vsync_cnt == 1) || (!do_vsync) || is_too_late)
-			do_vsync = 1;
-		else
-			do_vsync = 0;
-
-		kona_fb_profile_record(prev_timeval, curr_timeval,
-					is_too_late, do_vsync);
-
-		kona_clock_start(fb);
-		ret =
-		    fb->display_ops->update(fb->display_hdl,
-					buff_idx ? fb->buff1 : fb->buff0,
-					(DISPDRV_WIN_t *)do_vsync,
-					(DISPDRV_CB_T)kona_display_done_cb);
-#else
 		kona_clock_start(fb);
 		ret =
 		    fb->display_ops->update(fb->display_hdl,
 					buff_idx ? fb->buff1 : fb->buff0,
 					p_region,
 					(DISPDRV_CB_T)kona_display_done_cb);
-
-#endif /* CONFIG_FB_BRCM_ASYNC_UPDATE */
 
 #ifdef CONFIG_VIDEO_MODE
 		konafb_debug("waiting for release of 0x%x\n",

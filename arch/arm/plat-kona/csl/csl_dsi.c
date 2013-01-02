@@ -84,11 +84,7 @@
 #define DSI_CORE_CLK_MAX_MHZ	125000000
 
 #define DSI_INITIALIZED		0x13579BDF
-#ifdef CONFIG_ARCH_HAWAII
 #define DSI_INST_COUNT		(UInt32)1
-#else
-#define DSI_INST_COUNT		(UInt32)2
-#endif
 #define DSI_MAX_CLIENT		4
 #define DSI_CM_MAX_HANDLES	4
 
@@ -439,45 +435,6 @@ static void cslDsi0Stat_HISR(void)
 	OSSEMAPHORE_Release(dsiH->semaInt);
 }
 
-#ifndef CONFIG_ARCH_HAWAII
-/*
- *
- * Function Name:  cslDsi1Stat_LISR
- *
- * Description:    DSI Controller 1 LISR
- *
- */
-#ifdef __KERNEL__
-static irqreturn_t cslDsi1Stat_LISR(int i, void *j)
-#else
-static void cslDsi1Stat_LISR(void)
-#endif
-{
-	DSI_HANDLE dsiH = &dsiBus[1];
-
-	chal_dsi_ena_int(dsiH->chalH, 0);
-	chal_dsi_clr_int(dsiH->chalH, 0xFFFFFFFF);
-
-	OSSEMAPHORE_Release(dsiH->semaInt);
-
-#ifdef __KERNEL__
-	return IRQ_HANDLED;
-#endif
-}
-
-/*
- *
- * Function Name:  cslDsi1Stat_HISR
- *
- * Description:    DSI Controller 1 HISR
- *
- */
-static void cslDsi1Stat_HISR(void)
-{
-	DSI_HANDLE dsiH = &dsiBus[1];
-	OSSEMAPHORE_Release(dsiH->semaInt);
-}
-#endif
 
 /*
  *
@@ -498,26 +455,6 @@ static void cslDsi0EofDma(DMA_VC4LITE_CALLBACK_STATUS status)
 	OSSEMAPHORE_Release(dsiH->semaDma);
 }
 
-#ifndef CONFIG_ARCH_HAWAII
-/*
- *
- * Function Name:  cslDsi1EofDma
- *
- * Description:    DSI Controller 1 EOF DMA
- *
- */
-static void cslDsi1EofDma(DMA_VC4LITE_CALLBACK_STATUS status)
-{
-	DSI_HANDLE dsiH = &dsiBus[1];
-
-	if (status != DMA_VC4LITE_CALLBACK_SUCCESS) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: ERR DMA!\n",
-			__func__);
-	}
-
-	OSSEMAPHORE_Release(dsiH->semaDma);
-}
-#endif
 
 /*
  *
@@ -586,69 +523,6 @@ static void cslDsi0UpdateTask(void)
 	}
 }
 
-#ifndef CONFIG_ARCH_HAWAII
-/*
- *
- * Function Name:  cslDsi1UpdateTask
- *
- * Description:    DSI Controller 1 Update Task
- *
- */
-static void cslDsi1UpdateTask(void)
-{
-	DSI_UPD_REQ_MSG_T updMsg;
-	OSStatus_t osStat;
-	CSL_LCD_RES_T res;
-	DSI_HANDLE dsiH = &dsiBus[1];
-
-	for (;;) {
-		res = CSL_LCD_OK;
-
-		/* Wait for update request */
-		OSQUEUE_Pend(dsiH->updReqQ, (QMsg_t *)&updMsg, TICKS_FOREVER);
-
-		/* Wait For signal from eof DMA */
-		osStat = OSSEMAPHORE_Obtain(dsiH->semaDma,
-					    TICKS_IN_MILLISECONDS(updMsg.updReq.
-								  timeOut_ms));
-
-		if (osStat != OSSTATUS_SUCCESS) {
-			if (osStat == OSSTATUS_TIMEOUT) {
-				LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-					"TIMED OUT While waiting for "
-					"EOF DMA\n", __func__);
-				res = CSL_LCD_OS_TOUT;
-			} else {
-				LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-					"OS ERR While waiting for EOF DMA\n",
-					__func__);
-				res = CSL_LCD_OS_ERR;
-			}
-
-			cslDsiPixTxStop(&updMsg);
-		}
-
-		if (res == CSL_LCD_OK)
-			res = cslDsiWaitForInt(dsiH, 100);
-		else
-			cslDsiWaitForInt(dsiH, 1);
-
-		chal_dsi_de1_enable(dsiH->chalH, FALSE);
-		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
-		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
-
-		if (!updMsg.clientH->hasLock)
-			OSSEMAPHORE_Release(dsiH->semaDsi);
-
-		if (updMsg.updReq.cslLcdCb) {
-			updMsg.updReq.cslLcdCb(res, &updMsg.updReq.cslLcdCbRec);
-		} else {
-			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-				"Callback EQ NULL, Skipping\n", __func__);
-		}
-	}
-}
-#endif
 
 /*
  *
@@ -858,9 +732,7 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 				updMsg->dsiH->chalH);
 				dmaData1D.xferLength  = (updMsg->updReq.lineLenP
 					- spare_pix) * (updMsg->updReq.buffBpp);
-#ifdef CONFIG_ARCH_HAWAII
 				dmaData1D.burstWriteEnable32 = 0;
-#endif
 
 				if ((uint32_t)dmaData1D.xferLength & 0x3)
 					pr_info("xferlength unaligned 0x%x\n",
@@ -898,9 +770,7 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 	dmaData2D.dstAddr  = chal_dsi_de1_get_dma_address(updMsg->dsiH->chalH);
 	dmaData2D.xXferLength = width;
 	dmaData2D.yXferLength = height - 1;
-#ifdef CONFIG_ARCH_HAWAII
 	dmaData2D.burstWriteEnable32 = 0;
-#endif
 
 	if ((uint32_t)dmaData2D.xXferLength & 0x3) {
 		pr_info("xXferLength unaligned 0x%x stride=0x%x\n",
@@ -2392,7 +2262,6 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 	CHAL_DSI_INIT_t chalInit;
 	CHAL_DSI_AFE_CFG_t chalAfeCfg;
 
-#ifdef CONFIG_ARCH_HAWAII
 	struct axipv_init_t axipv_init_data = {
 		.irq = BCM_INT_ID_AXIPV,
 		.base_addr = KONA_AXIPV_VA,
@@ -2414,7 +2283,6 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 		.err_cb = pv_err_cb,
 		.eof_cb = pv_eof_cb,
 	};
-#endif
 
 
 	if (dsiCfg->bus >= DSI_INST_COUNT) {
@@ -2444,7 +2312,6 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiH->dispEngine = 1;
 		}
 
-#ifdef CONFIG_ARCH_HAWAII
 		if (0 == dsiH->pixTxporter) {
 			if (0 == dsiH->dispEngine) {
 				printk("Initialising PV\n");
@@ -2496,7 +2363,6 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiH->axipvCfg->cmd = true;
 #endif
 		}
-#endif
 
 		dsiH->bus = dsiCfg->bus;
 
@@ -2511,15 +2377,6 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiH->hisr = cslDsi0Stat_HISR;
 			dsiH->task = cslDsi0UpdateTask;
 			dsiH->dma_cb = cslDsi0EofDma;
-#ifndef CONFIG_ARCH_HAWAII
-		} else {
-			dsiH->dsiCoreRegAddr = CSL_DSI1_BASE_ADDR;
-			dsiH->interruptId = CSL_DSI1_IRQ;
-			dsiH->lisr = cslDsi1Stat_LISR;
-			dsiH->hisr = cslDsi1Stat_HISR;
-			dsiH->task = cslDsi1UpdateTask;
-			dsiH->dma_cb = cslDsi1EofDma;
-#endif
 		}
 
 		if (!cslDsiOsInit(dsiH)) {
