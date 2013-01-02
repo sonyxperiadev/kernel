@@ -174,6 +174,7 @@ struct ov5640 {
 };
 
 static int set_flash_mode(int, struct ov5640 *);
+static int flash_gpio_strobe(int);
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
 {
@@ -1514,12 +1515,12 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 	if (enable) {
 		if ((ov5640->flashmode == FLASH_MODE_ON)
 			|| (ov5640->flashmode == FLASH_MODE_AUTO))
-			adp1653_gpio_strobe(1);
+			flash_gpio_strobe(1);
 		/* Power Up, Start Streaming */
 		ret = ov5640_reg_writes(client, ov5640_stream);
 		if ((ov5640->flashmode == FLASH_MODE_ON)
 			|| (ov5640->flashmode == FLASH_MODE_AUTO))
-			adp1653_gpio_strobe(0);
+			flash_gpio_strobe(0);
 	} else {
 		/* Stop Streaming, Power Down*/
 		ret = ov5640_reg_writes(client, ov5640_power_down);
@@ -2202,6 +2203,16 @@ int set_flash_mode(int mode, struct ov5640 *ov5640)
 	ov5640->flashmode = mode;
 #endif
 	return 0;
+}
+
+static int flash_gpio_strobe(int on)
+{
+#ifdef CONFIG_VIDEO_ADP1653
+	return adp1653_gpio_strobe(on);
+#endif
+#ifdef CONFIG_VIDEO_AS3643
+	return 0;
+#endif
 }
 
 static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
