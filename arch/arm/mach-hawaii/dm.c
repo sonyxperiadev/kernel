@@ -161,6 +161,7 @@ u8 gic_dist_shared_data[GIC_DIST_SHARED_DATA_SIZE];
 
 /* un-cached memory for dormant stack */
 u32 un_cached_stack_ptr;
+dma_addr_t drmt_buf_phy;
 
 #define PROC_CLK_REG_ADDR(reg_name)		((u32)(KONA_PROC_CLK_VA + \
 		(KPROC_CLK_MGR_REG_##reg_name##_OFFSET)))
@@ -246,8 +247,11 @@ static u32 addnl_regs[][2] = {
 struct secure_params_t {
 	u32 core0_reset_address;
 	u32 core1_reset_address;
+	/* Pointer to DRAM address for secure side logging */
+	u32 dram_log_buffer;
+
 	/* Remaining part of the buffer space */
-	u8 buffer[MAX_SECURE_BUFFER_SIZE - 8];
+	u8 buffer[MAX_SECURE_BUFFER_SIZE - 12];
 
 	/* We use this address to pass in the parameters */
 	u32 api_params[NUM_API_PARAMETERS];
@@ -831,6 +835,7 @@ static int dormant_enter_continue(unsigned long data)
 
 		secure_params->core1_reset_address = virt_to_phys(cpu_resume);
 
+		secure_params->dram_log_buffer = drmt_buf_phy;
 
 		/* Check if L2 controller is off  or if this is a fake dormant
 		 * if it is, do not bother saving/restoring L2 controlelr
@@ -883,7 +888,6 @@ static int __init dormant_init(void)
 	void *vptr = NULL;
 	struct clk *clk;
 
-	dma_addr_t drmt_buf_phy;
 
 	clk = clk_get(NULL, KPROC_CCU_CLK_NAME_STR);
 	if (IS_ERR_OR_NULL(clk))
@@ -892,15 +896,16 @@ static int __init dormant_init(void)
 	if (proc_ccu == NULL)
 		return -EPERM;
 
-	vptr = dma_alloc_coherent(NULL, SZ_1K * num_cpus(),
+	vptr = dma_alloc_coherent(NULL, SZ_4K,
 				  &drmt_buf_phy, GFP_ATOMIC);
 
 	if (vptr == NULL) {
 		pr_info("%s: dormant dma buffer alloc failed\n", __func__);
 		return -ENOMEM;
 	}
-
 	un_cached_stack_ptr = (u32)vptr;
+	pr_info("%s:secure side dram log buffer; drmt_buf_phy = 0x%x",
+		__func__, drmt_buf_phy);
 
 	res = request_mem_region(SEC_BUFFER_ADDR, SEC_BUFFER_SIZE,
 				 "secure_params");
@@ -913,6 +918,7 @@ static int __init dormant_init(void)
 	BUG_ON(!secure_params);
 
 	secure_params->log_index = 0;
+	secure_params->dram_log_buffer = drmt_buf_phy;
 
 #if defined(CONFIG_CAPRI_DORMANT_MODE)
 	if (chipregHw_getChipIdRev() > 0xA1) {
