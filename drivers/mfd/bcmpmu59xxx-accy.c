@@ -112,8 +112,12 @@ static void bcdldo_cycle_power(struct bcmpmu_accy *paccy);
 
 static void enable_bc_clock(struct bcmpmu_accy *paccy, bool en)
 {
-	if (paccy->bc == BCMPMU_BC_BB_BC12)
+	if (paccy->bc == BCMPMU_BC_BB_BC12) {
 		bcm_hsotgctrl_en_clock(en);
+		paccy->clock_en = en;
+		pr_accy(FLOW, "======<%s> paccy clock %x\n"
+			, __func__, paccy->clock_en);
+	}
 }
 
 static void reset_bc(struct bcmpmu_accy *paccy)
@@ -328,12 +332,14 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 {
 	switch (paccy->det_state) {
 	case USB_DETECT:
-		enable_bc_clock(paccy, 1);
+		if (!paccy->clock_en)
+			enable_bc_clock(paccy, 1);
 		usb_detect_state(paccy);
 		break;
 
 	case USB_IDLE:
-		enable_bc_clock(paccy, 0);
+		if (paccy->clock_en)
+			enable_bc_clock(paccy, 0);
 		break;
 
 	case USB_RETRY:
@@ -355,6 +361,8 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 
 	case USB_CONNECTED:
 		pr_accy(FLOW, "*** Charger Connected event\n");
+		if (paccy->clock_en)
+			enable_bc_clock(paccy, 0);
 		bcmpmu_notify_charger_state(paccy);
 		bcmpmu_accy_chrgr_detect_state(paccy->bcmpmu, 0);
 
@@ -702,7 +710,8 @@ static void usb_deferred_work(struct work_struct *work)
 	case USB_IDLE:
 		bcdldo_cycle_power(paccy);
 		reset_bc(paccy);
-		enable_bc_clock(paccy, 0);
+		if (paccy->clock_en)
+			enable_bc_clock(paccy, 0);
 		break;
 	case USB_DETECT:
 		break;
@@ -1184,6 +1193,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	paccy->usb_accy_data.chrgr_type = PMU_CHRGR_TYPE_NONE;
 	paccy->usb_accy_data.max_curr_chrgr = 0;
 	paccy->adp_cal_done = 0;
+	paccy->clock_en = 0;
 	/*
 	   paccy->usb_id_map = bcmpmu_get_usb_id_map(bcmpmu,
 	   &paccy->usb_id_map_len);
