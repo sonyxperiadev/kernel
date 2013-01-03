@@ -49,7 +49,8 @@
 #include <linux/clk.h>
 #include <plat/pi_mgr.h>
 #include <linux/broadcom/mobcom_types.h>
-
+#include <linux/reboot.h>
+#include <linux/notifier.h>
 #include "kona_fb.h"
 #include "lcd/display_drv.h"
 
@@ -108,9 +109,17 @@ struct kona_fb {
 	void *buff1;
 	atomic_t force_update;
 	struct dispdrv_init_parms lcd_drv_parms;
+	struct notifier_block reboot_nb;
 };
 
 static struct kona_fb *g_kona_fb;
+
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+static void kona_fb_unpack_888rle(void *, void *, uint32_t, uint32_t, uint32_t);
+static void kona_fb_unpack_565rle(void *, void *, uint32_t, uint32_t, uint32_t);
+#endif
+
+static int kona_fb_reboot_cb(struct notifier_block *, unsigned long, void *);
 
 #ifdef KONA_FB_DEBUG
 #define KONA_PROF_N_RECORDS 50
@@ -122,12 +131,6 @@ static volatile struct {
 } kona_fb_profile[KONA_PROF_N_RECORDS];
 
 static volatile u32 kona_fb_profile_cnt;
-
-#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
-static void kona_fb_unpack_888rle(void *, void *, uint32_t, uint32_t, uint32_t);
-static void kona_fb_unpack_565rle(void *, void *, uint32_t, uint32_t, uint32_t);
-#endif
-
 
 void kona_fb_profile_record(struct timeval prev_timeval,
 		struct timeval curr_timeval, int is_too_late, int do_vsync)
@@ -560,7 +563,6 @@ static int disable_display(struct kona_fb *fb)
 	fb->display_ops->power_control(fb->display_hdl, CTRL_PWR_OFF);
 	fb->display_ops->close(fb->display_hdl);
 	fb->display_ops->exit(fb->display_hdl);
-
 	konafb_debug("kona display is disabled successfully\n");
 	return ret;
 }
@@ -952,6 +954,9 @@ static int kona_fb_probe(struct platform_device *pdev)
 		fb->proc_entry->write_proc = proc_write_fb_test;
 	}
 
+	fb->reboot_nb.notifier_call = kona_fb_reboot_cb;
+	register_reboot_notifier(&fb->reboot_nb);
+
 	return 0;
 
 err_fb_register_failed:
@@ -976,6 +981,19 @@ fb_data_failed:
 err_fb_alloc_failed:
 	return ret;
 }
+
+static int kona_fb_reboot_cb(struct notifier_block *nb,
+	unsigned long val, void *v)
+{
+	struct kona_fb *fb = container_of(nb, struct kona_fb, reboot_nb);
+	pr_err("Turning off display\n");
+	kona_clock_start(fb);
+	disable_display(fb);
+	kona_clock_stop(fb);
+	pr_err("Display disabled\n");
+	return 0;
+}
+
 
 static int __devexit kona_fb_remove(struct platform_device *pdev)
 {
