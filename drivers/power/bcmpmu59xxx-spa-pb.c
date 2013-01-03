@@ -224,9 +224,7 @@ static int bcmpmu_spa_pb_chrgr_get_property(struct power_supply *ps,
 		if (prop == POWER_SUPPLY_PROP_BATT_TEMP_ADC)
 			propval->intval = adc_result.raw;
 		else
-			/* SPA expects temperature in
-			 * centigrade * 10 format */
-			propval->intval = adc_result.conv * 10;
+			propval->intval = adc_result.conv;
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:

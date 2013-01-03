@@ -871,35 +871,35 @@ struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 };
 
 static struct bcmpmu_adc_lut batt_temp_map[] = {
-	{16, 100},			/* 100 C */
-	{20, 95},			/* 95 C */
-	{24, 90},			/* 90 C */
-	{28, 85},			/* 85 C */
-	{32, 80},			/* 80 C */
-	{36, 75},			/* 75 C */
-	{44, 70},			/* 70 C */
-	{52, 65},			/* 65 C */
-	{64, 60},			/* 60 C */
-	{76, 55},			/* 55 C */
-	{92, 50},			/* 50 C */
-	{112, 45},			/* 45 C */
-	{132, 40},			/* 40 C */
-	{160, 35},			/* 35 C */
-	{192, 30},			/* 30 C */
-	{228, 25},			/* 25 C */
-	{272, 20},			/* 20 C */
-	{324, 15},			/* 15 C */
-	{376, 10},			/* 10 C */
-	{440, 5},			/* 5 C */
+	{16, 1000},			/* 100 C */
+	{20, 950},			/* 95 C */
+	{24, 900},			/* 90 C */
+	{28, 850},			/* 85 C */
+	{32, 800},			/* 80 C */
+	{36, 750},			/* 75 C */
+	{44, 700},			/* 70 C */
+	{52, 650},			/* 65 C */
+	{64, 600},			/* 60 C */
+	{76, 550},			/* 55 C */
+	{92, 500},			/* 50 C */
+	{112, 450},			/* 45 C */
+	{132, 400},			/* 40 C */
+	{160, 350},			/* 35 C */
+	{192, 300},			/* 30 C */
+	{228, 250},			/* 25 C */
+	{272, 200},			/* 20 C */
+	{324, 150},			/* 15 C */
+	{376, 100},			/* 10 C */
+	{440, 50},			/* 5 C */
 	{500, 0},			/* 0 C */
-	{568, -5},			/* -5 C */
-	{636, -10},			/* -10 C */
-	{704, -15},			/* -15 C */
-	{760, -20},			/* -20 C */
-	{816, -25},			/* -25 C */
-	{860, -30},			/* -30 C */
-	{900, -35},			/* -35 C */
-	{932, -40},			/* -40 C */
+	{568, -50},			/* -5 C */
+	{636, -100},			/* -10 C */
+	{704, -150},			/* -15 C */
+	{760, -200},			/* -20 C */
+	{816, -250},			/* -25 C */
+	{860, -300},			/* -30 C */
+	{900, -350},			/* -35 C */
+	{932, -400},			/* -40 C */
 };
 struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 	[PMU_ADC_CHANN_VMBATT] = {
@@ -1054,7 +1054,7 @@ static struct vfloat_lvl_volt_map bcmpmu59xxx_vfloat_volt_map[] = {
 
 static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 	{
-		.temp = -20,
+		.temp = -200,
 		.reset = 0, .fct = 26, .guardband = 50,
 		.esr_vl_lvl = 3788, .esr_vm_lvl = 3814, .esr_vh_lvl = 4088,
 		.esr_vl_slope = -31479, .esr_vl_offset = 121154,
@@ -1063,7 +1063,7 @@ static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 		.esr_vf_slope = -7664, .esr_vf_offset = 32875,
 	},
 	{
-		.temp = -15,
+		.temp = -150,
 		.reset = 0, .fct = 210, .guardband = 50,
 		.esr_vl_lvl = 3788, .esr_vm_lvl = 3814, .esr_vh_lvl = 4088,
 		.esr_vl_slope = -31479, .esr_vl_offset = 121154,
@@ -1072,7 +1072,7 @@ static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 		.esr_vf_slope = -7664, .esr_vf_offset = 32875,
 	},
 	{
-		.temp = -10,
+		.temp = -100,
 		.reset = 0, .fct = 394, .guardband = 50,
 		.esr_vl_lvl = 3742, .esr_vm_lvl = 3798, .esr_vh_lvl = 4088,
 		.esr_vl_slope = -8481, .esr_vl_offset = 33090,
@@ -1081,7 +1081,7 @@ static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 		.esr_vf_slope = -2255, .esr_vf_offset = 10018,
 	},
 	{
-		.temp = -5,
+		.temp = -50,
 		.reset = 0, .fct = 565, .guardband = 50,
 		.esr_vl_lvl = 3742, .esr_vm_lvl = 3798, .esr_vh_lvl = 4088,
 		.esr_vl_slope = -8481, .esr_vl_offset = 33090,
@@ -1099,7 +1099,7 @@ static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 		.esr_vf_slope = -1918, .esr_vf_offset = 8277,
 	},
 	{
-		.temp = 5,
+		.temp = 50,
 		.reset = 0, .fct = 811, .guardband = 50,
 		.esr_vl_lvl = 3663, .esr_vm_lvl = 3679, .esr_vh_lvl = 3798,
 		.esr_vl_slope = -18140, .esr_vl_offset = 67518,
@@ -1108,7 +1108,7 @@ static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 		.esr_vf_slope = -370, .esr_vf_offset = 1739,
 	},
 	{
-		.temp = 10,
+		.temp = 100,
 		.reset = 0, .fct = 887, .guardband = 30,
 		.esr_vl_lvl = 3663, .esr_vm_lvl = 3679, .esr_vh_lvl = 3798,
 		.esr_vl_slope = -18140, .esr_vl_offset = 67518,
@@ -1117,7 +1117,7 @@ static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 		.esr_vf_slope = -370, .esr_vf_offset = 1739,
 	},
 	{
-		.temp = 15,
+		.temp = 150,
 		.reset = 0, .fct = 943, .guardband = 30,
 		.esr_vl_lvl = 3668, .esr_vm_lvl = 3687, .esr_vh_lvl = 3896,
 		.esr_vl_slope = -908, .esr_vl_offset = 3574,
@@ -1126,7 +1126,7 @@ static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 		.esr_vf_slope = -417, .esr_vf_offset = 1857,
 	},
 	{
-		.temp = 20,
+		.temp = 200,
 		.reset = 0, .fct = 1000, .guardband = 30,
 		.esr_vl_lvl = 3668, .esr_vm_lvl = 3687, .esr_vh_lvl = 3896,
 		.esr_vl_slope = -908, .esr_vl_offset = 3574,
@@ -1184,6 +1184,10 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
 	.fg_factor = 976,
+	.suspend_temp_hot = 500,
+	.recovery_temp_hot = 450,
+	.suspend_temp_cold = -60,
+	.recovery_temp_cold = -10,
 };
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
@@ -1194,10 +1198,10 @@ struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
 struct spa_power_data spa_data = {
 	.charger_name = "bcmpmu_charger",
 
-	.suspend_temp_hot = 400,
-	.recovery_temp_hot = 300,
-	.suspend_temp_cold = -20,
-	.recovery_temp_cold = -15,
+	.suspend_temp_hot = 500,
+	.recovery_temp_hot = 450,
+	.suspend_temp_cold = -60,
+	.recovery_temp_cold = -10,
 	.eoc_current = 85,
 	.recharge_voltage = 4100, /** should be < bl_84_volt_levels.high */
 	.charging_cur_usb = 500,

@@ -171,6 +171,10 @@ struct bcmpmu_fg_pdata {
 	int sleep_sample_rate; /* sampling rate during sleep mode */
 	int fg_factor;
 	bool hw_maintenance_charging;
+	int suspend_temp_hot;
+	int recovery_temp_hot;
+	int suspend_temp_cold;
+	int recovery_temp_cold;
 };
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);

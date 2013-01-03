@@ -175,6 +175,7 @@ static enum power_supply_property bcmpmu_fg_props[] = {
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
+	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_MODEL_NAME,
 };
@@ -182,8 +183,10 @@ static enum power_supply_property bcmpmu_fg_props[] = {
 struct bcmpmu_fg_status_flags {
 	int batt_status;
 	int prev_batt_status;
-	bool usb_connected;
-	bool usb_host_enable;
+	bool chrgr_connected;
+	bool charging_enabled;
+	bool temp_hot_state;
+	bool temp_cold_state;
 	bool batt_present;
 	bool chrgr_pause;
 	bool init_capacity;
@@ -805,7 +808,8 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 	} else
 		capacity_percentage = bcmpmu_fg_volt_to_cap(fg, vbat);
 
-	pr_fg(FLOW, "vbat_comp: %d ocv_cap: %d", vbat_oc, capacity_percentage);
+	pr_fg(FLOW, "vbat_comp: %d ocv_cap: %d\n",
+						vbat_oc, capacity_percentage);
 
 	BUG_ON(capacity_percentage > 100);
 
@@ -1152,15 +1156,15 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHGR_DETECTION\n");
 		FG_LOCK(fg);
 		if (chrgr_type == PMU_USB_TYPE_NONE) {
-			pr_fg(FLOW, "usb disconnected!!\n");
+			pr_fg(FLOW, "charger disconnected!!\n");
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
 			fg->flags.fg_eoc = false;
-			fg->flags.usb_connected = false;
+			fg->flags.chrgr_connected = false;
 			bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
 		} else {
-			pr_fg(FLOW, "usb connected!!\n");
-			fg->flags.usb_connected = true;
+			pr_fg(FLOW, "charger connected!!\n");
+			fg->flags.chrgr_connected = true;
 			bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
 		}
 		FG_UNLOCK(fg);
@@ -1171,13 +1175,15 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHRG_STATUS\n");
 		FG_LOCK(fg);
 		if (enable) {
-			fg->flags.usb_host_enable = true;
-			pr_fg(FLOW, "usb host enabled\n");
-		} else if (!fg->flags.fg_eoc) {
-			fg->flags.usb_host_enable = false;
+			fg->flags.charging_enabled = true;
+			pr_fg(FLOW, "charging enabled\n");
+		} else if (!fg->flags.fg_eoc &&
+				!fg->flags.temp_hot_state &&
+				!fg->flags.temp_cold_state) {
+			fg->flags.charging_enabled = false;
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
-			pr_fg(FLOW, "usb host disabled\n");
+			pr_fg(FLOW, "charging disabled\n");
 		}
 		FG_UNLOCK(fg);
 		break;
@@ -1186,12 +1192,12 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 		chrgr_curr = *(int *)data;
 		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT\n");
 		FG_LOCK(fg);
-		if (fg->flags.usb_connected &&
-			fg->flags.usb_host_enable &&
+		if (fg->flags.chrgr_connected &&
+			fg->flags.charging_enabled &&
 			chrgr_curr > 0) {
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_CHARGING;
-			pr_fg(FLOW, "Charging current enabled\n");
+			pr_fg(FLOW, "charging current enabled\n");
 		}
 		FG_UNLOCK(fg);
 		break;
@@ -1376,6 +1382,30 @@ exit:
 	return 0;
 }
 
+static void bcmpmu_fg_moniter_battery_temp(struct bcmpmu_fg_data *fg)
+{
+
+	if (unlikely(fg->adc_data.temp > fg->pdata->suspend_temp_hot)) {
+		fg->flags.temp_hot_state = 1;
+		pr_fg(FLOW, "suspend temp hot\n");
+		bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
+	} else if (unlikely(fg->flags.temp_hot_state &&
+			fg->adc_data.temp < fg->pdata->recovery_temp_hot)) {
+		fg->flags.temp_hot_state = 0;
+		pr_fg(FLOW, "recovery temp hot\n");
+		bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
+	} else if (unlikely(fg->adc_data.temp < fg->pdata->suspend_temp_cold)) {
+		fg->flags.temp_cold_state = 1;
+		pr_fg(FLOW, "suspend temp cold\n");
+		bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
+	} else if (unlikely(fg->flags.temp_cold_state &&
+			fg->adc_data.temp > fg->pdata->recovery_temp_cold)) {
+		fg->flags.temp_cold_state = 0;
+		pr_fg(FLOW, "recovery temp cold\n");
+		bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
+	}
+
+}
 static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 {
 	int poll_time = CHARG_ALGO_POLL_TIME;
@@ -1384,6 +1414,7 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 
 	bcmpmu_fg_get_coulomb_counter(fg);
 
+	bcmpmu_fg_moniter_battery_temp(fg);
 
 	if (!fg->pdata->hw_maintenance_charging)
 		bcmpmu_fg_sw_maint_charging_algo(fg);
@@ -1594,6 +1625,9 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 			val->intval = 3700;
 		else
 			val->intval = bcmpmu_fg_get_batt_volt(fg);
+		break;
+	case POWER_SUPPLY_PROP_TEMP:
+		val->intval = fg->adc_data.temp;
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		if (BATTERY_STATUS_UNKNOWN(flags))
