@@ -19,24 +19,27 @@
 struct kona_freq_tbl {
 	u32 cpu_freq;		/* in MHz */
 	int opp;		/* Operating point eg: ECONOMY, NORMAL, TURBO */
+	long max_temp;		/* max temperature supported in celcius */
 };
 
 /* Helper to initialize array of above structures */
-#define FTBL_INIT(freq, __opp)  \
+#define FTBL_INIT(freq, __opp, temp)  \
 {                              \
 	.cpu_freq    = freq,   \
 	.opp = __opp,   \
+	.max_temp = temp, \
 }
 
 enum {
 	KONA_CPUFREQ_UPDATE_LPJ = 1,
+	KONA_CPUFREQ_TMON = (1 << 1),
 };
 
 #define DEFAULT_LIMIT   (-1)
 #define MIN_LIMIT       (0)
 #define CURRENT_FREQ    (1)
 #define MAX_LIMIT       (2)
-
+#define TEMP_DONT_CARE  0xFFFFFFFF
 /* Platform data for Kona cpufreq driver */
 struct kona_cpufreq_drv_pdata {
 	/* Number of cpus */

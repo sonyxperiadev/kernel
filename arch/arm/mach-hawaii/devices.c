@@ -667,10 +667,10 @@ struct platform_device hawaii_otg_platform_device = {
 
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] = {
-	FTBL_INIT(312000, PI_OPP_ECONOMY),
-	FTBL_INIT(499999, PI_OPP_NORMAL),
-	FTBL_INIT(666667, PI_OPP_TURBO),
-	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO),
+	FTBL_INIT(312000, PI_OPP_ECONOMY, TEMP_DONT_CARE),
+	FTBL_INIT(499999, PI_OPP_NORMAL, 100),
+	FTBL_INIT(666667, PI_OPP_TURBO, 90),
+	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 80),
 };
 
 void hawaii_cpufreq_init(void)
@@ -705,7 +705,7 @@ struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
 	.latency = 10 * 1000,
 	.pi_id = PI_MGR_PI_ID_ARM_CORE,
 	.cpufreq_init = hawaii_cpufreq_init,
-	.flags = KONA_CPUFREQ_UPDATE_LPJ,
+	.flags = KONA_CPUFREQ_UPDATE_LPJ | KONA_CPUFREQ_TMON,
 };
 
 struct platform_device kona_cpufreq_device = {

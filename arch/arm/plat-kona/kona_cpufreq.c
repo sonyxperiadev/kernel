@@ -27,7 +27,6 @@
 #include <plat/pi_mgr.h>
 #include <mach/pwr_mgr.h>
 #include <asm/cpu.h>
-
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <asm/uaccess.h>
@@ -46,6 +45,9 @@
 
 #define PLL_VAL_FOR_TURBO_1P2G	1200000
 #define PLL_VAL_FOR_TURBO_1G	999999
+
+#include <mach/kona_tmon.h>
+#define INVALID_INX 0xFFFFFFFF
 
 static int kcf_debug = 0;
 
@@ -66,9 +68,53 @@ struct kona_cpufreq {
 	unsigned long l_p_j_ref;
 	unsigned int l_p_j_ref_freq;
 #endif
-
+	struct notifier_block tmon_nb;
+	int r_inx;
+	int f_inx;
 };
 static struct kona_cpufreq *kona_cpufreq;
+
+static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
+		long curr_temp, void *dev)
+{
+	int i;
+	struct kona_cpufreq *kona_cpufreq = container_of(nb,
+			struct kona_cpufreq, tmon_nb);
+	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
+	int f_inx = kona_cpufreq->f_inx;
+	int r_inx = kona_cpufreq->r_inx;
+
+	if ((f_inx != INVALID_INX) &&
+		curr_temp < pdata->freq_tbl[f_inx].max_temp) {
+
+		set_cpufreq_limit(pdata->freq_tbl[f_inx].cpu_freq,
+				MAX_LIMIT);
+		kona_cpufreq->r_inx = f_inx;
+		for (i = f_inx + 1; i < pdata->num_freqs; i++) {
+			if (pdata->freq_tbl[i].max_temp != TEMP_DONT_CARE) {
+				kona_cpufreq->f_inx = i;
+				break;
+			}
+		}
+		if (i == pdata->num_freqs)
+			kona_cpufreq->f_inx = INVALID_INX;
+	} else if ((r_inx != INVALID_INX) &&
+			curr_temp >= pdata->freq_tbl[r_inx].max_temp) {
+		BUG_ON(r_inx == 0);
+		set_cpufreq_limit(pdata->freq_tbl[r_inx - 1].cpu_freq,
+				MAX_LIMIT);
+		kona_cpufreq->f_inx = r_inx;
+		for (i = r_inx - 1; i > 0; i--) {
+			if (pdata->freq_tbl[i].max_temp != TEMP_DONT_CARE) {
+				kona_cpufreq->r_inx = i;
+				break;
+			}
+		}
+		if (!i)
+			kona_cpufreq->r_inx = INVALID_INX;
+	}
+	return 0;
+}
 
 /*********************************************************************
  *                   CPUFREQ TABLE MANIPULATION                      *
@@ -459,7 +505,9 @@ static struct cpufreq_driver kona_cpufreq_driver = {
 static int cpufreq_drv_probe(struct platform_device *pdev)
 {
 	struct kona_cpufreq_drv_pdata *pdata = pdev->dev.platform_data;
-	int i;
+	int i, j;
+	long max_temp;
+	long curr_temp;
 	int ret = -1;
 
 	kcf_dbg("%s\n", __func__);
@@ -515,6 +563,7 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 		kfree(kona_cpufreq);
 		return -ENOMEM;
 	}
+
 	kona_cpufreq->pdata = pdata;
 	platform_set_drvdata(pdev, kona_cpufreq);
 
@@ -527,6 +576,34 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 #endif
 	ret = cpufreq_register_driver(&kona_cpufreq_driver);
 
+	if (pdata->flags & KONA_CPUFREQ_TMON) {
+		kona_cpufreq->tmon_nb.notifier_call =
+			cpufreq_tmon_notify_handler;
+		curr_temp = tmon_get_current_temp();
+		kona_cpufreq->r_inx = pdata->num_freqs - 1;
+		kona_cpufreq->f_inx = INVALID_INX;
+		for (i = 0; i < pdata->num_freqs; i++) {
+			max_temp = pdata->freq_tbl[i].max_temp;
+			if (curr_temp >= max_temp &&
+					TEMP_DONT_CARE != max_temp) {
+				BUG_ON(i == 0);
+				set_cpufreq_limit(pdata->freq_tbl[i-1].cpu_freq,
+						MAX_LIMIT);
+				for (j = i - 1; j > 0; j--) {
+					max_temp = pdata->freq_tbl[j].max_temp;
+					if (max_temp != TEMP_DONT_CARE) {
+						kona_cpufreq->r_inx = j;
+						break;
+					}
+				}
+				if (!j)
+					kona_cpufreq->r_inx = INVALID_INX;
+				kona_cpufreq->f_inx = i;
+				break;
+			}
+		}
+		tmon_register_notifier(&kona_cpufreq->tmon_nb);
+	}
 	return ret;
 }
 
