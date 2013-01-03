@@ -368,15 +368,12 @@ static inline int axipv_config(struct axipv_config_t *config)
 
 	if (dev->bypassPV) {
 		ctrl = ctrl | (1 << 8) | (1 << 29);
-		ctrl = (ctrl & ~PIXEL_FORMAT_MASK) | (PIXEL_FORMAT_24BPP_RGB <<
-			PIXEL_FORMAT_SHIFT);
-	} else {
-		ctrl |= (config->pix_fmt << PIXEL_FORMAT_SHIFT);
 	}
+	ctrl |= (config->pix_fmt << PIXEL_FORMAT_SHIFT);
 
 	tx_size = config->buff.sync.xlen * config->buff.sync.ylen;
-	if ((PIXEL_FORMAT_24BPP_RGB == config->pix_fmt)
-		|| (PIXEL_FORMAT_24BPP_BGR == config->pix_fmt))
+	if ((AXIPV_PIXEL_FORMAT_24BPP_RGB == config->pix_fmt)
+		|| (AXIPV_PIXEL_FORMAT_24BPP_BGR == config->pix_fmt))
 		tx_size *= 4;
 	else
 		tx_size *= 2;
@@ -398,10 +395,10 @@ static inline int axipv_config(struct axipv_config_t *config)
 	}
 	if (dev->bypassPV) {
 		int pv_start_thre = readl(axipv_base + REG_PV_THRESH);
-		if (!((config->pix_fmt == PIXEL_FORMAT_24BPP_RGB) ||
-			(config->pix_fmt == PIXEL_FORMAT_24BPP_BGR) ||
-			(config->pix_fmt == PIXEL_FORMAT_16BPP_PACKED) ||
-			(config->pix_fmt == PIXEL_FORMAT_16BPP_UNPACKED)))
+		if (!((config->pix_fmt == AXIPV_PIXEL_FORMAT_24BPP_RGB) ||
+			(config->pix_fmt == AXIPV_PIXEL_FORMAT_24BPP_BGR) ||
+			(config->pix_fmt == AXIPV_PIXEL_FORMAT_16BPP_PACKED) ||
+			(config->pix_fmt == AXIPV_PIXEL_FORMAT_16BPP_UNPACKED)))
 			axipv_err("Unsupported format=%d!\n",config->pix_fmt);
 		writel_relaxed(pv_start_thre + 1, axipv_base + REG_W_LVL_1);
 		writel_relaxed(pv_start_thre / 4, axipv_base + REG_W_LVL_2);
@@ -589,8 +586,8 @@ static inline int post_sync(struct axipv_config_t *config)
 			axipv_base + REG_LINES_PER_FRAME);
 
 		tx_size = config->buff.sync.xlen * config->buff.sync.ylen;
-		if ((PIXEL_FORMAT_24BPP_RGB == config->pix_fmt)
-			|| (PIXEL_FORMAT_24BPP_BGR == config->pix_fmt))
+		if ((AXIPV_PIXEL_FORMAT_24BPP_RGB == config->pix_fmt)
+			|| (AXIPV_PIXEL_FORMAT_24BPP_BGR == config->pix_fmt))
 			tx_size *= 4;
 		else
 			tx_size *= 2;
