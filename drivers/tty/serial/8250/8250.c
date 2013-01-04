@@ -1553,9 +1553,25 @@ void serial8250_tx_chars(struct uart_8250_port *up)
 		serial8250_stop_tx(port);
 		return;
 	}
+    /*
+     * The below piece of code disables the TX interrupt if the
+     * circular buffer is empty. But please note that while using
+     * the qos APIs we need to disable the uart peri clock
+     * when
+     * a) The THR is empty, The Transmit FIFO is empty &&
+     * b) The circular buffer is also empty.
+     *
+     * But for that condition to happen we should not disable the
+     * interrupt after copying the data from the circular buffer to the
+     * FIFO and the circular buffer becomes empty.
+     * Instead we should keep the tx interrupt enabled and then when
+     * the next interrupt happens condition a)might have happended, now
+     * if the circular buffer is still empty there is nothing to transmit
+     * so go and disable the clock
+     */
 	if (uart_circ_empty(xmit)) {
+#ifndef CONFIG_BRCM_UART_CHANGES
 		__stop_tx(up);
-#ifdef CONFIG_BRCM_UART_CHANGES
 		pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 #endif
 		return;
@@ -2273,7 +2289,12 @@ static int serial8250_startup(struct uart_port *port)
 		if (port->irq)
 			up->port.mctrl |= TIOCM_OUT2;
 
+	/* only set OUT1&OUT2,termios is setting flow control signals. */
+#ifdef CONFIG_BRCM_UART_CHANGES
+	serial8250_set_mctrl(port, port->mctrl & (TIOCM_OUT1|TIOCM_OUT2));
+#else
 	serial8250_set_mctrl(port, port->mctrl);
+#endif
 
 	/* Serial over Lan (SoL) hack:
 	   Intel 8257x Gigabit ethernet chips have a
@@ -3514,6 +3535,11 @@ void serial8250_unregister_port(int line)
 	struct uart_8250_port *uart = &serial8250_ports[line];
 
 	mutex_lock(&serial_mutex);
+#ifdef CONFIG_BRCM_UART_CHANGES
+#if defined(CONFIG_HAS_WAKELOCK)
+	wake_lock_destroy(&uart->uart_lock);
+#endif
+#endif
 	uart_remove_one_port(&serial8250_reg, &uart->port);
 	if (serial8250_isa_devs) {
 		uart->port.flags &= ~UPF_BOOT_AUTOCONF;

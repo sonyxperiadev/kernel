@@ -196,7 +196,7 @@ static int bt_serial8250_handle_irq(struct uart_port *port, unsigned int iir)
 			uart_circ_empty(&up->port.state->xmit)) {
 		if (up->ier & UART_IER_THRI) {
 			up->ier &= ~UART_IER_THRI;
-			port->serial_in(port, UART_IER);
+			port->serial_out(port, UART_IER, up->ier);
 		}
 		pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 	} else if (status & UART_LSR_THRE)
