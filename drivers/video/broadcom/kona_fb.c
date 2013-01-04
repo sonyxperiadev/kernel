@@ -50,6 +50,7 @@
 #include <plat/pi_mgr.h>
 #include <linux/broadcom/mobcom_types.h>
 #include <linux/reboot.h>
+#include <linux/kdebug.h>
 #include <linux/notifier.h>
 #include "kona_fb.h"
 #include "lcd/display_drv.h"
@@ -110,6 +111,7 @@ struct kona_fb {
 	atomic_t force_update;
 	struct dispdrv_init_parms lcd_drv_parms;
 	struct notifier_block reboot_nb;
+	struct notifier_block die_nb;
 };
 
 static struct kona_fb *g_kona_fb;
@@ -120,6 +122,7 @@ static void kona_fb_unpack_565rle(void *, void *, uint32_t, uint32_t, uint32_t);
 #endif
 
 static int kona_fb_reboot_cb(struct notifier_block *, unsigned long, void *);
+static int kona_fb_die_cb(struct notifier_block *, unsigned long, void *);
 
 #ifdef KONA_FB_DEBUG
 #define KONA_PROF_N_RECORDS 50
@@ -956,6 +959,8 @@ static int kona_fb_probe(struct platform_device *pdev)
 
 	fb->reboot_nb.notifier_call = kona_fb_reboot_cb;
 	register_reboot_notifier(&fb->reboot_nb);
+	fb->die_nb.notifier_call = kona_fb_die_cb;
+	register_die_notifier(&fb->die_nb);
 
 	return 0;
 
@@ -992,6 +997,14 @@ static int kona_fb_reboot_cb(struct notifier_block *nb,
 	kona_clock_stop(fb);
 	pr_err("Display disabled\n");
 	return 0;
+}
+
+
+static int kona_fb_die_cb(struct notifier_block *nb, unsigned long val, void *v)
+{
+	pr_err("kona_fb: die notifier invoked\n");
+	kona_display_crash_image(AP_CRASH_DUMP_START);
+	return NOTIFY_DONE;
 }
 
 
