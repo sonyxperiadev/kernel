@@ -702,30 +702,6 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	int ret = 0;
 	unsigned long flags;
 
-	/*
-	 * stop streaming before grabing spin lock
-	 * since this function can sleep.
-	 * */
-
-	spin_lock_irqsave(&unicam_dev->lock, flags);
-	if (unicam_dev->active) {
-		unicam_dev->stopping = true;
-		spin_unlock_irqrestore(&unicam_dev->lock, flags);
-		ret = down_timeout(&unicam_dev->stop_sem,
-				msecs_to_jiffies(200));
-		if (ret == -ETIME)
-			pr_err("Unicam: semaphore timed out waiting to STOP\n");
-	} else {
-		spin_unlock_irqrestore(&unicam_dev->lock, flags);
-	}
-
-	/*
-	ret = v4l2_subdev_call(sd, video, s_stream, 0);
-	if (ret < 0 && ret != -ENOIOCTLCMD) {
-		dev_err(unicam_dev->dev, "failed to stop sensor streaming\n");
-		ret = -1;
-	}
-	*/
 
 	/* grab the lock */
 	spin_lock_irqsave(&unicam_dev->lock, flags);
@@ -736,6 +712,21 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 		dev_err(unicam_dev->dev, "stream already turned off\n");
 		goto out;
 	}
+	/*
+	 * stop streaming before grabing spin lock
+	 * since this function can sleep.
+	 * */
+	if (unicam_dev->active) {
+		unicam_dev->stopping = true;
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+		ret = down_timeout(&unicam_dev->stop_sem,
+				msecs_to_jiffies(500));
+		if (ret == -ETIME)
+			pr_err("Unicam: semaphore timed out waiting to STOP\n");
+	} else {
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+	}
+	spin_lock_irqsave(&unicam_dev->lock, flags);
 
 	/* disable frame interrupts */
 	cslCamFrame.int_enable = CSL_CAM_INT_DISABLE;
@@ -1071,8 +1062,17 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	int ret;
 	CSL_CAM_BUFFER_STATUS_st_t bufStatus;
 	unsigned int bytes_used;
+	unsigned long flags;
 	static unsigned int t1 = 0, t2 = 0, fps = 0;
 
+	spin_lock_irqsave(&unicam_dev->lock, flags);
+	if (!unicam_dev->streaming) {
+		pr_err("Interrupt triggered after stopping camera!\n");
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+		return IRQ_HANDLED;
+	} else {
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+	}
 	/* has the interrupt occured for Channel 0? */
 	reg_status =
 	    csl_cam_get_rx_status(unicam_dev->cslCamHandle,
@@ -1167,22 +1167,21 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
 
-				if (!list_empty(&unicam_dev->capture)) {
+				spin_lock_irqsave(&unicam_dev->lock, flags);
+				if (unicam_dev->stopping) {
+					up(&unicam_dev->stop_sem);
+					unicam_dev->active = NULL;
+				} else if (!list_empty(&unicam_dev->capture)) {
 					unicam_dev->active =
 					    &list_entry(unicam_dev->
 							capture.next, struct
 							unicam_camera_buffer,
 							queue)->vb;
 				} else {
-					unsigned long flags;
-					spin_lock_irqsave(&unicam_dev->lock,
-					flags);
 					unicam_dev->active = NULL;
-					if (unicam_dev->stopping)
-						up(&unicam_dev->stop_sem);
-					spin_unlock_irqrestore(&unicam_dev->lock
-					, flags);
 				}
+				spin_unlock_irqrestore(&unicam_dev->lock,
+					flags);
 			} else
 				unicam_dev->skip_frames--;
 
