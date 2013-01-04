@@ -822,7 +822,10 @@ static int dwc_udc_start(struct usb_gadget *gadget,
 #endif
 	{
 		/* Init the core */
-		w_init_core((void *)gadget_wrapper->pcd->core_if);
+
+		DWC_WORKQ_SCHEDULE(gadget_wrapper->pcd->core_if->wq_otg,
+				   w_init_core, gadget_wrapper->pcd->core_if,
+				   "init core");
 	}
 #endif /* CONFIG_USB_OTG_UTILS */
 

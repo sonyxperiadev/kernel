@@ -220,15 +220,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	/* Don't disable software control of PHY-PM
 	 * We want to control the PHY LDOs from software
 	 */
-
-#ifndef CONFIG_ARCH_RHEA_BX
-	/* Do MDIO init values after PHY is up */
-	bcm_hsotgctrl_phy_mdio_init();
-#endif
-
-#if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM59042)
 	bcm_hsotgctrl_phy_mdio_initialization();
-#endif
 
 	if (id_device) {
 		/* Set correct ID value */
@@ -242,6 +234,8 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 		/* Clear non-driving */
 		bcm_hsotgctrl_phy_set_non_driving(false);
 	}
+
+	msleep(HSOTGCTRL_ID_CHANGE_DELAY_IN_MS);
 
 	return 0;
 
@@ -312,75 +306,6 @@ int bcm_hsotgctrl_phy_deinit(void)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_deinit);
-
-int bcm_hsotgctrl_phy_mdio_init(void)
-{
-	int val;
-	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
-		local_hsotgctrl_handle;
-
-	if ((!bcm_hsotgctrl_handle->mdio_master_clk) ||
-		  (!bcm_hsotgctrl_handle->dev))
-		return -EIO;
-
-	/* Enable mdio */
-	clk_enable(bcm_hsotgctrl_handle->mdio_master_clk);
-
-	/* Program necessary values */
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO0 <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-
-
-	/* Write to MDIO0 (afe_pll_tst lower 16 bits) for
-	 * current reference adjustment
-	 */
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO0 <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK |
-		PHY_MDIO_CURR_REF_ADJUST_VALUE);
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-			CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-
-	/* Write to MDIO1 (afe_pll_tst upper 16 bits) for
-	 * voltage reference adjustment
-	 */
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO1 <<
-		  CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT) |
-		CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK |
-		PHY_MDIO_LDO_REF_VOLTAGE_ADJUST_VALUE);
-
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-			CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-
-	val = (CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK |
-		(USB_PHY_MDIO_ID <<
-		    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT) |
-		(USB_PHY_MDIO0 <<
-		    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT));
-
-	writel(val, bcm_hsotgctrl_handle->chipregs_base +
-			CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET);
-
-	msleep_interruptible(PHY_PM_DELAY_IN_MS);
-
-	/* Disable mdio */
-	clk_disable(bcm_hsotgctrl_handle->mdio_master_clk);
-
-	return 0;
-}
 
 int bcm_hsotgctrl_bc_reset(void)
 {
@@ -580,7 +505,6 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 	/* Disable the IRQ since already waking up */
 	disable_irq_nosync(bcm_hsotgctrl_handle->hsotgctrl_irq);
 	bcm_hsotgctrl_handle->irq_enabled = false;
-
 	schedule_delayed_work(&bcm_hsotgctrl_handle->wakeup_work,
 	  msecs_to_jiffies(BCM_HSOTGCTRL_WAKEUP_PROCESSING_DELAY));
 
