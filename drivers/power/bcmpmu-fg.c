@@ -44,7 +44,7 @@
 #define FG_CAP_DELTA_THRLD		10
 #define ADC_VBAT_AVG_SAMPLES		8
 #define FG_INIT_CAPACITY_AVG_SAMPLES	8
-#define FG_INIT_CAPACITY_SAMPLE_DELAY	160
+#define FG_INIT_CAPACITY_SAMPLE_DELAY	100
 #define ADC_READ_TRIES			5
 #define AVG_SAMPLES			5
 
@@ -725,7 +725,7 @@ static int bcmpmu_fg_get_avg_volt(struct bcmpmu_fg_data *fg)
 			continue;
 		volt_sum += volt_samples[i];
 		i++;
-		msleep(50);
+		msleep(25);
 	} while (i < ADC_VBAT_AVG_SAMPLES);
 
 	return interquartile_mean(volt_samples, ADC_VBAT_AVG_SAMPLES);
@@ -2161,7 +2161,7 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 	/**
 	 * Run FG algorithm now
 	 */
-	queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 500);
+	queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
 
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu_fg_debugfs_init(fg);
