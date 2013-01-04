@@ -96,10 +96,6 @@
 
 #include "devices.h"
 
-#ifdef CONFIG_KONA_TMON
-#include <mach/kona_tmon.h>
-#endif
-
 /* dynamic ETM support */
 unsigned int etm_on;
 EXPORT_SYMBOL(etm_on);
@@ -769,37 +765,6 @@ struct platform_device kona_memc_device = {
 	.id = -1,
 	.dev = {
 		.platform_data = &kmemc_plat_data,
-	},
-};
-#endif
-
-#ifdef CONFIG_KONA_TMON
-struct tmon_state threshold_val[] = {
-	{.rising = 10, .falling = 5, .flags = TMON_NOTIFY,},
-	{.rising = 20, .falling = 15, .flags = TMON_NOTIFY,},
-	{.rising = 30, .falling = 27, .flags = TMON_NOTIFY,},
-	{.rising = 40, .falling = 35, .flags = TMON_SHDWN,},
-};
-
-struct kona_tmon_pdata tmon_plat_data = {
-	.base_addr = KONA_TMON_VA,
-	.irq = BCM_INT_ID_TEMP_MON,
-	.thold = threshold_val,
-	.thold_size = ARRAY_SIZE(threshold_val),
-	.poll_rate_ms = 30000,
-	.hysteresis = 0,
-	.flags = ENBALE_VTMON,
-	.chipreg_addr = KONA_CHIPREG_VA,
-	.interval_ms = 5,
-	.tmon_apb_clk = "tmon_apb",
-	.tmon_1m_clk = "tmon_1m_clk",
-};
-
-struct platform_device kona_tmon_device = {
-	.name = "kona_tmon",
-	.id = -1,
-	.dev = {
-		.platform_data = &tmon_plat_data,
 	},
 };
 #endif

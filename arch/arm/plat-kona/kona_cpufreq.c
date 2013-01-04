@@ -46,8 +46,10 @@
 #define PLL_VAL_FOR_TURBO_1P2G	1200000
 #define PLL_VAL_FOR_TURBO_1G	999999
 
+#ifdef CONFIG_KONA_TMON
 #include <mach/kona_tmon.h>
 #define INVALID_INX 0xFFFFFFFF
+#endif
 
 static int kcf_debug = 0;
 
@@ -68,12 +70,15 @@ struct kona_cpufreq {
 	unsigned long l_p_j_ref;
 	unsigned int l_p_j_ref_freq;
 #endif
+#ifdef CONFIG_KONA_TMON
 	struct notifier_block tmon_nb;
 	int r_inx;
 	int f_inx;
+#endif
 };
 static struct kona_cpufreq *kona_cpufreq;
 
+#ifdef CONFIG_KONA_TMON
 static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
 		long curr_temp, void *dev)
 {
@@ -115,6 +120,7 @@ static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
 	}
 	return 0;
 }
+#endif
 
 /*********************************************************************
  *                   CPUFREQ TABLE MANIPULATION                      *
@@ -576,6 +582,7 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 #endif
 	ret = cpufreq_register_driver(&kona_cpufreq_driver);
 
+#ifdef CONFIG_KONA_TMON
 	if (pdata->flags & KONA_CPUFREQ_TMON) {
 		kona_cpufreq->tmon_nb.notifier_call =
 			cpufreq_tmon_notify_handler;
@@ -604,6 +611,7 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 		}
 		tmon_register_notifier(&kona_cpufreq->tmon_nb);
 	}
+#endif
 	return ret;
 }
 
