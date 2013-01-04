@@ -276,6 +276,14 @@ static void al3006_light_enable(struct al3006_data *data)
 static void al3006_light_disable(struct al3006_data *data)
 {
 	printk("al3006_light_disable called\n");
+	/* Initialze the light measurements with unsupported value.
+	 * This will generate an input event on first real reading.
+	 * Required by Android sensor HAL
+	 */
+	mutex_lock(&data->lock);
+	input_report_abs(data->input_dev, ABS_MISC, -1);
+	input_sync(data->input_dev);
+	mutex_unlock(&data->lock);
 	hrtimer_cancel(&data->timer_light);
 	cancel_work_sync(&data->work_light);
 }
@@ -283,6 +291,14 @@ static void al3006_light_disable(struct al3006_data *data)
 static void al3006_proximity_enable(struct al3006_data *data)
 {
 	printk("al3006_proximity_enable called\n");
+	/* Initialze the proximity measurements with unsupported value.
+	 * This will generate an input event on first real reading.
+	 * Required by Android sensor HAL
+	 */
+	mutex_lock(&data->lock);
+	input_report_abs(data->input_dev, ABS_DISTANCE, -1);
+	input_sync(data->input_dev);
+	mutex_unlock(&data->lock);
 	hrtimer_start(&data->timer_proximity,
 		ktime_set(0, PROXIMITY_SENSOR_START_TIME_DELAY), HRTIMER_MODE_REL);
 }
@@ -364,7 +380,7 @@ create_input_dev:
 	input_dev->dev.parent = &pal3006->client->dev;
 	/* Light sensor */
 	input_set_capability(input_dev, EV_ABS, ABS_MISC);
-	input_set_abs_params(input_dev, ABS_MISC, 0, 5000, 0, 0);
+	input_set_abs_params(input_dev, ABS_MISC, 1, 100000, 0, 0);
 	/* Proximity sensor */
 	input_set_capability(input_dev, EV_ABS, ABS_DISTANCE);
 	input_set_abs_params(input_dev, ABS_DISTANCE, 0, 1, 0, 0);
@@ -589,7 +605,7 @@ static ssize_t al3006_store_calibration_state(struct device *dev,
 	struct al3006_data *data = input_get_drvdata(input);
 	int stdls, val;
 	char tmp[10];
-	u8 i = 63;
+	int i = 63;
 
 	/* No LUX data if not operational */
 	if (al3006_get_power_state(data->client) != 0x00)
@@ -626,9 +642,9 @@ static ssize_t al3006_store_calibration_state(struct device *dev,
 	mutex_unlock(&data->lock);
 
 
-	while((stdls < lux_table[i]) && (i >= 0))
+	while ((i >= 0) && (stdls < lux_table[i]))
 	{
-		LDBG("[%d] < lux_table[%d] = %d \n", stdls, i, lux_table[i])
+		LDBG("[%d] < lux_table[%d] = %d\n", stdls, i, lux_table[i])
 		i--;
 	};
 
@@ -874,17 +890,12 @@ static void al3006_work_func_proximity(struct work_struct *work)
 
 	if(val < 0)
 	{
-		printk("%s() I2C ERROR %d\n", __func__, val);
+		printk(KERN_ERR "%s() I2C ERROR %d\n", __func__, val);
 		mutex_unlock(&data->lock);
 		return;
 	}
 
 	value = (val & AL3006_OBJ_MASK) >> AL3006_OBJ_SHIFT;
-
-#ifdef CONFIG_MACH_CAPRI_STONE
-	AL_DEBUG("raw value=%d force to 0\n", value);
-	value = 0;  /* force FAR when waiting for HW plastic fix */
-#endif
 
 	AL_DEBUG("value=%d %s\n", value, value ? "obj near" : "obj far");
 
@@ -929,13 +940,16 @@ static int al3006_init_client(struct i2c_client *client)
 	}
 
 	/* set defaults */
-	al3006_set_mode(client, 0);
-	al3006_set_power_state(client, 0);
+	if (al3006_set_mode(client, 0))
+		return -ENODEV;
+	if (al3006_set_power_state(client, 0))
+		return -ENODEV;
 
 	/* set sensor responsiveness to fast
 	   (516 ms for the first read, 100ms afterward) */
-	__al3006_write_reg(client, AL3006_TIME_CTRL_COMMAND,
-			   AL3006_TIME_CTRL_MASK, AL3006_TIME_CTRL_SHIFT, 0x10);
+	if (__al3006_write_reg(client, AL3006_TIME_CTRL_COMMAND,
+			AL3006_TIME_CTRL_MASK, AL3006_TIME_CTRL_SHIFT, 0x10))
+		return -ENODEV;
 
 	return 0;
 }
