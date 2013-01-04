@@ -79,6 +79,10 @@ typedef struct {
 	UInt32 val;
 } SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t;
 
+typedef struct {
+	UInt32  param;
+} CAPI2_SYS_SoftResetSystem_Req_t;
+
 /****************** < 2 > **********************/
 
 bool_t xdr_CAPI2_CPPS_Control_Req_t(void *xdrs, CAPI2_CPPS_Control_Req_t *rsp);
@@ -109,6 +113,8 @@ bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Req_t(void *xdrs,
 bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t(void *xdrs,
 						       SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t
 						       *rsp);
+bool_t xdr_CAPI2_SYS_SoftResetSystem_Req_t(void *xdrs,
+	CAPI2_SYS_SoftResetSystem_Req_t *rsp);
 
 /****************** < 3 > **********************/
 
@@ -128,6 +134,7 @@ Result_t Handle_SYS_SIMLOCKApi_SetStatusEx(RPC_Msg_t *pReqMsg, UInt8 simId,
 					   SYS_SIMLOCK_STATE_t *simlock_state);
 Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t *pReqMsg,
 						      UInt8 simId);
+Result_t Handle_CAPI2_SYS_SoftResetSystem(RPC_Msg_t *pReqMsg, UInt32 param);
 
 /****************** < 12 > **********************/
 
@@ -205,6 +212,20 @@ void SYS_SIMLOCKApi_SetStatusEx(UInt32 tid, UInt8 clientID, UInt8 simId,
 **/
 void SYS_SimApi_GetCurrLockedSimlockTypeEx(UInt32 tid, UInt8 clientID,
 					   UInt8 simId);
+
+/******************************************************************************/
+/**
+	Function response for the CAPI2_SYS_SoftResetSystem
+	@param		tid (in) Unique exchange/transaction id which is
+			passed in the request
+	@param		clientID (in) Client ID
+	@param		param(in) param of type UInt32
+	@return		Not Applicable
+	@note
+	Payload: default_proc
+	@n Response to CP will be notified via ::MSG_SYS_SOFT_RESET_SYSTEM_RSP
+**/
+void CAPI2_SYS_SoftResetSystem(UInt32 tid, UInt8 clientID, UInt32 param);
 
 /****************** < 16 > **********************/
 

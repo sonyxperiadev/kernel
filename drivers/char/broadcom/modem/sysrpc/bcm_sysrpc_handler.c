@@ -18,6 +18,10 @@
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
 #include <linux/err.h>
+#include <linux/unistd.h>
+#include <linux/reboot.h>
+#include <plat/kona_reset_reason.h>
+
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -214,3 +218,33 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 
 	return result;
 }
+
+
+Result_t Handle_CAPI2_SYS_SoftResetSystem(RPC_Msg_t *pReqMsg, UInt32 param)
+{
+	Result_t result = RESULT_OK;
+	SYS_ReqRep_t data;
+
+	memset(&data, 0, sizeof(SYS_ReqRep_t));
+
+	data.result = result;
+	Send_SYS_RspForRequest(pReqMsg, MSG_SYS_SOFT_RESET_SYSTEM_RSP, &data);
+
+	switch (param) {
+	case SYS_HALT:                  /* 0x002 */
+		kernel_halt();
+		break;
+
+	case SYS_POWER_OFF:             /* 0x003 */
+		kernel_power_off();
+		break;
+
+	case SYS_RESTART:      /* 0x0001 or SYS_DOWN  */
+	default:
+		kernel_restart(NULL);
+		break;
+	}
+
+	return result;
+}
+

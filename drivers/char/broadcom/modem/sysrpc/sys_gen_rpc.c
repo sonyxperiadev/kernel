@@ -20,9 +20,6 @@
 
 /***************************** Generated contents from ../sys_inc.txt file. ( Do not modify !!! ) Please checkout and modify ../sys_inc.txt to add any header files *************************/
 
-#define UNDEF_SYS_GEN_MIDS
-#define DEFINE_SYS_GEN_MIDS_NEW
-
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "taskmsgs.h"
@@ -333,6 +330,13 @@ Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
 								      req_rep_u.
 								      SYS_SimApi_GetCurrLockedSimlockTypeEx_Req.
 								      simId);
+		break;
+#endif
+
+#if defined(FUSE_APPS_PROCESSOR)
+	case MSG_SYS_SOFT_RESET_SYSTEM_REQ:
+		result = Handle_CAPI2_SYS_SoftResetSystem(pReqMsg,
+			req->req_rep_u.CAPI2_SYS_SoftResetSystem_Req.param);
 		break;
 #endif
 

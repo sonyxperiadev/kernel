@@ -12,8 +12,6 @@
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
-#define UNDEF_SYS_GEN_MIDS
-#define DEFINE_SYS_GEN_MIDS_NEW
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -119,6 +117,12 @@ static RPC_XdrInfo_t SYS_Prim_dscrm[] = {
 	 (xdrproc_t) xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t,
 	 sizeof(UInt32), 0},
 
+	{ MSG_SYS_SOFT_RESET_SYSTEM_REQ, _T("MSG_SYS_SOFT_RESET_SYSTEM_REQ"),
+	 (xdrproc_t) xdr_CAPI2_SYS_SoftResetSystem_Req_t, 0, 0},
+
+	{ MSG_SYS_SOFT_RESET_SYSTEM_RSP, _T("MSG_SYS_SOFT_RESET_SYSTEM_RSP"),
+	 (xdrproc_t) xdr_default_proc, 0, 0},
+
 	{(MsgType_t)__dontcare__, "", NULL_xdrproc_t, 0, 0}
 };
 
@@ -170,3 +174,16 @@ bool_t xdr_SYS_SIMLOCK_STATE_t(XDR *xdrs, SYS_SIMLOCK_STATE_t *simlock_state)
 		return FALSE;
 	}
 }
+
+bool_t
+xdr_CAPI2_SYS_SoftResetSystem_Req_t(void *xdrs,
+			CAPI2_SYS_SoftResetSystem_Req_t *rsp)
+{
+	XDR_LOG(xdrs, "CAPI2_SYS_SoftResetSystem_Req_t")
+
+	if (xdr_UInt32(xdrs, &rsp->param) && 1)
+		return TRUE;
+	else
+		return FALSE;
+}
+
