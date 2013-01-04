@@ -36,6 +36,8 @@
 #define GPIO_GPORC_BASE_PHYS    (GPIO2_BASE_ADDR + GPIO_GPORC0_OFFSET)
 #define GPIO_GPORC_BASE_VIRT    (KONA_GPIO2_VA + GPIO_GPORC0_OFFSET)
 
+#define CURR_DORM_TRACE_OFFSET		(SZ_4)
+#define DORMANT_TRACE_OFFSET		(SZ_8)
 #define	RETENTION_TRACE_OFFSET		(SZ_1K)
 #define	WFI_TRACE_OFFSET		(SZ_2K)
 #define	TRACE_PATTERN_OFFSET		0 /* 1st word from offset */
@@ -144,7 +146,7 @@ struct lowpower_trace {
 	u32 *dormant_trace_p;
 	u32 *retention_trace;
 	u32 *wfi_trace;
-	u32 dorm_count;
+	u32 *dorm_count;
 	u32 *curr_dorm_trace;
 };
 
@@ -297,11 +299,11 @@ void instrument_dormant_trace(u32 trace, u32 service, u32 success)
 	if (lp_trace[cpu].dormant_trace_v) {
 		lp_trace[cpu].curr_dorm_trace
 			= lp_trace[cpu].dormant_trace_v
-				+ lp_trace[cpu].dorm_count;
+				+ *lp_trace[cpu].dorm_count;
 		*(lp_trace[cpu].curr_dorm_trace)
 			= trace + success + (service * 2);
-		lp_trace[cpu].dorm_count
-			= (lp_trace[cpu].dorm_count + 1)
+		*lp_trace[cpu].dorm_count
+			= (*lp_trace[cpu].dorm_count + 1)
 				& DORMANT_MAX_TRACE_ENTRIES;
 	}
 }
@@ -435,15 +437,20 @@ int __init __pmdbg_init(void)
 				__func__, i);
 			return -ENOMEM;
 		}
-		lp_trace[i].dormant_trace_v = (u32 *) v[i];
-		lp_trace[i].dormant_trace_p = (u32 *) p[i];
+		lp_trace[i].dorm_count = (u32 *) v[i];
+		lp_trace[i].curr_dorm_trace = (u32 *)((u32)v[i]
+						+ CURR_DORM_TRACE_OFFSET);
+		lp_trace[i].dormant_trace_v = (u32 *)((u32)v[i]
+						+ DORMANT_TRACE_OFFSET);
+		lp_trace[i].dormant_trace_p = (u32 *)((u32)p[i]
+						+ DORMANT_TRACE_OFFSET);
 		lp_trace[i].retention_trace = (u32 *)((u32)v[i]
 						+ RETENTION_TRACE_OFFSET);
 		lp_trace[i].wfi_trace = (u32 *)((u32)v[i] + WFI_TRACE_OFFSET);
-		lp_trace[i].dorm_count = 0;
+		*lp_trace[i].dorm_count = 0;
 		pr_info("%s: cpu%d dormant_trace_v:0x%x,_p:0x%x\n",
 				__func__, i, (u32) v[i], (u32) p[i]);
-		pr_info("%s: cpi%d ret_trace:0x%x; wfi_trace:0x%x\n",
+		pr_info("%s: cpu%d ret_trace:0x%x; wfi_trace:0x%x\n",
 			__func__, i, (u32) lp_trace[i].retention_trace,
 				(u32) lp_trace[i].wfi_trace);
 	}
