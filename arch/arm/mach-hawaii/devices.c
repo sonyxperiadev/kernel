@@ -90,10 +90,6 @@
 #include <linux/broadcom/kona_ion.h>
 #endif
 
-#ifdef CONFIG_KONA_MEMC
-#include <plat/kona_memc.h>
-#endif
-
 #include "devices.h"
 
 /* dynamic ETM support */
@@ -745,27 +741,6 @@ u32 lvt_silicon_type_lut[3 * 3] = {
 	SILICON_TYPE_SLOW, SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL,
 	SILICON_TYPE_SLOW, SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL,
 	SILICON_TYPE_TYPICAL, SILICON_TYPE_TYPICAL, SILICON_TYPE_FAST
-};
-#endif
-
-#ifdef CONFIG_KONA_MEMC
-struct kona_memc_pdata kmemc_plat_data = {
-	.flags = KONA_MEMC_ENABLE_SELFREFRESH | KONA_MEMC_DISABLE_DDRLDO |
-		KONA_MEMC_SET_SEQ_BUSY_CRITERIA | KONA_MEMC_DDR_PLL_PWRDN_EN |
-		KONA_MEMC_HW_FREQ_CHANGE_EN,
-	.memc0_ns_base = KONA_MEMC0_NS_VA,
-	.chipreg_base = KONA_CHIPREG_VA,
-	.memc0_aphy_base = KONA_MEMC0_APHY_VA,
-	.seq_busy_val = 2,
-	.max_pwr = 3,
-};
-
-struct platform_device kona_memc_device = {
-	.name = "kona_memc",
-	.id = -1,
-	.dev = {
-		.platform_data = &kmemc_plat_data,
-	},
 };
 #endif
 

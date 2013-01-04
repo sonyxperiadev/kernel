@@ -43,6 +43,9 @@
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/of.h>
+#include <linux/of_irq.h>
+#include <linux/of_platform.h>
 #endif
 
 #define MEMC0_APHY_REG(kmemc, off) ((kmemc)->memc0_aphy_base + (off))
@@ -406,14 +409,86 @@ static int memc_init(struct kona_memc *kmemc)
 
 static int kona_memc_probe(struct platform_device *pdev)
 {
-	struct kona_memc_pdata *pdata =
-		(struct kona_memc_pdata *)pdev->dev.platform_data;
-	if (!pdata)
-		return -EINVAL;
-	pr_info("inside function %s\n", __func__);
+	u32 val, *addr;
+	int size, ret;
+	struct resource *iomem;
+	struct kona_memc_pdata *pdata;
 	spin_lock_init(&kona_memc.memc_lock);
 	plist_head_init(&kona_memc.min_pwr_list);
 	kona_memc.active_min_pwr = 0;
+
+	if (pdev->dev.of_node) {
+		pdata = kzalloc(sizeof(struct kona_memc_pdata),	GFP_KERNEL);
+
+		if (!pdata)
+			return -ENOMEM;
+
+		/* Get register memory resource */
+		iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		if (!iomem) {
+			pr_info("no mem resource\n");
+			kfree(pdata);
+			return -ENODEV;
+		}
+		pdata->memc0_ns_base = ioremap(iomem->start,
+				resource_size(iomem));
+		if (!pdata->memc0_ns_base) {
+			pr_info("unable to map in registers\n");
+			kfree(pdata);
+			return -ENOMEM;
+		}
+
+		addr = (u32 *)of_get_property(pdev->dev.of_node, "chipreg_base",
+				&size);
+		if (!addr) {
+			kfree(pdata);
+			return -EINVAL;
+		}
+		val = *(addr + 1);
+		pdata->chipreg_base = ioremap(be32_to_cpu(*addr),
+				be32_to_cpu(val));
+
+		addr = (u32 *)of_get_property(pdev->dev.of_node,
+				"memc0_aphy_base", &size);
+		if (!addr) {
+			kfree(pdata);
+			return -EINVAL;
+		}
+		val = *(addr + 1);
+		pdata->memc0_aphy_base = ioremap(be32_to_cpu(*addr),
+				be32_to_cpu(val));
+
+
+		ret = of_property_read_u32(pdev->dev.of_node,
+				"seq_busy_val", &val);
+		if (ret != 0) {
+			kfree(pdata);
+			return -EINVAL;
+		}
+		pdata->seq_busy_val = val;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+					"flags", &val)) {
+			kfree(pdata);
+			return -EINVAL;
+		}
+		pdata->flags = val;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+					"max_pwr", &val)) {
+			kfree(pdata);
+			return -EINVAL;
+		}
+		pdata->max_pwr = val;
+
+	} else if (pdev->dev.platform_data)
+		pdata =	(struct kona_memc_pdata *)pdev->dev.platform_data;
+
+	else {
+		pr_info("%s: no platform data found\n", __func__);
+		return -EINVAL;
+	}
+
 	kona_memc.pdata = pdata;
 	kona_memc.memc0_ns_base = pdata->memc0_ns_base;
 	kona_memc.chipreg_base = pdata->chipreg_base;
@@ -429,11 +504,18 @@ static int kona_memc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id kona_memc_dt_ids[] = {
+	{ .compatible = "bcm,memc", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, kona_memc_dt_ids);
+
 static struct platform_driver kona_memc_driver = {
 	.probe = kona_memc_probe,
 	.remove = kona_memc_remove,
 	.driver = {
 		.name = "kona_memc",
+		.of_match_table = kona_memc_dt_ids,
 	},
 };
 
