@@ -5214,6 +5214,15 @@ __weak int set_ccu_dbg_bus_mux(struct ccu_clk *ccu_clk, int mux_sel,
 	return 0;
 }
 
+__weak int set_misc_dbg_bus(int sel, u32 dbg_bit_sel)
+{
+	return 0;
+}
+
+__weak u32 get_misc_dbg_bus(void)
+{
+	return 0;
+}
 
 static int clk_debugfs_open(struct inode *inode, struct file *file)
 {
@@ -6026,6 +6035,51 @@ static struct file_operations ccu_volt_tbl_update_fops = {
 	.read = ccu_volt_id_display,
 };
 
+static ssize_t misc_dbg_bus_status(struct file *file,
+		char __user *user_buf, size_t count, loff_t *ppos)
+{
+	u32 len = 0;
+	char out_str[20];
+	u32 bus_val;
+
+	memset(out_str, 0, sizeof(out_str));
+	bus_val = get_misc_dbg_bus();
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+			"%x\n", bus_val);
+
+	return simple_read_from_buffer(user_buf, count, ppos,
+			out_str, len);
+}
+
+static ssize_t misc_dbg_bus_sel(struct file *file,
+		char const __user *buf, size_t count, loff_t *offset)
+{
+	char input_str[10];
+	u32 len = 0;
+	u32 sel = 0;
+	u32 dbg_bit_sel = 0;
+
+	memset(input_str, 0, ARRAY_SIZE(input_str));
+	if (count > ARRAY_SIZE(input_str))
+		len = ARRAY_SIZE(input_str);
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	sscanf(&input_str[0], "%x%x", &sel, &dbg_bit_sel);
+	set_misc_dbg_bus(sel, dbg_bit_sel);
+
+	return count;
+}
+
+static const struct file_operations misc_dbg_bus_fops = {
+	.open = clk_debugfs_open,
+	.write = misc_dbg_bus_sel,
+	.read = misc_dbg_bus_status,
+};
+
 static struct dentry *dent_clk_root_dir;
 int __init clock_debug_init(void)
 {
@@ -6035,6 +6089,9 @@ int __init clock_debug_init(void)
 		return -ENOMEM;
 	if (!debugfs_create_u32("debug", S_IRUGO | S_IWUSR,
 				dent_clk_root_dir, (int *)&clk_debug))
+		return -ENOMEM;
+	if (!debugfs_create_file("misc_debug_bus", S_IRUSR | S_IWUSR,
+				dent_clk_root_dir, NULL, &misc_dbg_bus_fops))
 		return -ENOMEM;
 
 	return 0;

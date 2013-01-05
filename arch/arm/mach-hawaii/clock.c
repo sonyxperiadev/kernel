@@ -7733,6 +7733,12 @@ int debug_bus_mux_sel(int mux_sel, int mux_param, u32 dbg_bit_sel)
 			(mux_param <<
 			CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_SHIFT) &
 			CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
+		if (mux_param & 0x10)
+			reg_val |=
+		CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MSB_MASK;
+		else
+			reg_val &=
+	~CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MSB_MASK;
 		writel(reg_val,
 			KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
 
@@ -7873,6 +7879,24 @@ int clk_mon_dbg(struct clk *clock, int path, int clk_sel_no, int clk_div,
 	ccu_write_access_enable(ccu_clk, false);
 
 	return 0;
+}
+
+int set_misc_dbg_bus(int sel, u32 dbg_bit_sel)
+{
+	sel |= 0x10;
+	debug_bus_mux_sel(0, sel, dbg_bit_sel);
+
+	return 0;
+}
+
+u32 get_misc_dbg_bus(void)
+{
+	u32 reg_val;
+
+	reg_val = readl(KONA_CHIPREG_VA + CHIPREG_SPARE_STATUS_OFFSET);
+	reg_val &= CHIPREG_SPARE_STATUS_DEBUG_TESTPORT_MASK;
+	reg_val >>= CHIPREG_SPARE_STATUS_DEBUG_TESTPORT_SHIFT;
+	return reg_val;
 }
 
 static int misc_clk_status(struct clk *clk)
