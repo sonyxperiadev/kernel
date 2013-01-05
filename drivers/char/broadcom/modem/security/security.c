@@ -70,6 +70,8 @@ the GPL, without Broadcom's express prior written consent
 
 MODULE_LICENSE("GPL");
 
+#define USE_BRCM_SIMCLOCK_SOLUTION
+
 /**
  *  module data
  */
@@ -119,6 +121,8 @@ static long handle_get_remain_attempt_info_ioc(struct file *filp,
 					       unsigned long param);
 static long handle_get_imei_ioc(struct file *filp, unsigned int cmd,
 				 unsigned long param);
+static long handle_set_lock_state_ioc(struct file *filp, unsigned int cmd,
+				unsigned long param);
 static Boolean read_imei(UInt8 *imeiStr1, UInt8 *imeiStr2);
 
 /*****************************************************************/
@@ -234,8 +238,13 @@ static long sec_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case SEC_GET_IMEI_IOC:
 		{
 			pr_info("SEC_GET_IMEI_IOC\n");
-			retVal =
-				handle_get_imei_ioc(filp, cmd, arg);
+			retVal = handle_get_imei_ioc(filp, cmd, arg);
+			break;
+		}
+	case SEC_SIMLOCK_SET_LOCK_STATE_IOC:
+		{
+			pr_info("SEC_SIMLOCK_SET_LOCK_STATE_IOC\n");
+			retVal = handle_set_lock_state_ioc(filp, cmd, arg);
 			break;
 		}
 	default:
@@ -291,10 +300,10 @@ static long handle_set_lock_ioc(struct file *filp, unsigned int cmd,
 
 	/* try setting lock */
 	ioc_param.set_lock_status = SIMLockSetLock(ioc_param.sim_id,
-				(UInt8) ioc_param.action,
-						   ioc_param.full_lock_on ? TRUE
-						   : FALSE, ioc_param.lock_type,
-				ioc_param.key);
+					(UInt8)ioc_param.action,
+					ioc_param.full_lock_on ? TRUE
+					: FALSE, ioc_param.lock_type,
+					ioc_param.key);
 
 	if (ioc_param.set_lock_status != SEC_SIMLOCK_FAILURE) {
 		ioc_param.remain_attempt =
@@ -398,10 +407,9 @@ static long handle_get_lock_state_ioc(struct file *filp, unsigned int cmd,
 
 	/* Coverity [TAINTED_SCALAR] */
 	if (copy_from_user
-		(&ioc_param, (sec_simlock_state_t *) param,
-		sizeof(sec_simlock_state_t)) != 0) {
-		pr_err
-		("handle_get_lock_state_ioc - copy_from_user() had error\n");
+	    (&ioc_param, (sec_simlock_state_t *)param,
+	     sizeof(sec_simlock_state_t)) != 0) {
+		pr_err("handle_get_lock_state_ioc - copy_from_user() had error\n");
 		return -EFAULT;
 	}
 
@@ -410,11 +418,10 @@ static long handle_get_lock_state_ioc(struct file *filp, unsigned int cmd,
 	SIMLockGetSIMLockState(ioc_param.sim_id, &ioc_param);
 
 	if (copy_to_user
-		((sec_simlock_state_t *) param, &ioc_param,
-		sizeof(sec_simlock_state_t)) != 0) {
-		pr_err
-		("handle_get_lock_state_ioc - copy_to_user() had error\n");
-	return -EFAULT;
+	    ((sec_simlock_state_t *)param, &ioc_param,
+	     sizeof(sec_simlock_state_t)) != 0) {
+		pr_err("handle_get_lock_state_ioc - copy_to_user() had error\n");
+		return -EFAULT;
 	}
 
 	return 0;
@@ -428,8 +435,7 @@ static long handle_get_remain_attempt_info_ioc(struct file *filp,
 
 	if (copy_from_user(&ioc_param, (sec_simlock_remain_t *) param,
 			   sizeof(sec_simlock_remain_t)) != 0) {
-		pr_err
-		("handle_get_remain_attempt_info_ioc: copy_from_user error\n");
+		pr_err("handle_get_remain_attempt_info_ioc: copy_from_user error\n");
 		return -EFAULT;
 	}
 
@@ -439,8 +445,7 @@ static long handle_get_remain_attempt_info_ioc(struct file *filp,
 
 	if (copy_to_user((sec_simlock_remain_t *) param,
 			 &ioc_param, sizeof(sec_simlock_remain_t)) != 0) {
-		pr_err
-		 ("handle_get_remain_attempt_info_ioc: copy_to_user error\n");
+		pr_err("handle_get_remain_attempt_info_ioc: copy_to_user error\n");
 		return -EFAULT;
 	}
 
@@ -474,8 +479,7 @@ static long handle_get_imei_ioc(struct file *filp, unsigned int cmd,
 
 	if (FALSE == SetImeiData(SEC_SimLock_SIM_DUAL_FIRST,
 		 (UInt8 *)ioc_param.imei1_string)) {
-		pr_err("SetImei IMEI 1:%s Failed!!!",
-				 ioc_param.imei1_string);
+		pr_err("SetImei IMEI 1:%s Failed!!!", ioc_param.imei1_string);
 		kernel_power_off();
 		return -EFAULT;
 	}
@@ -488,6 +492,51 @@ static long handle_get_imei_ioc(struct file *filp, unsigned int cmd,
 	}
 
 	return 0;
+}
+
+static long handle_set_lock_state_ioc(struct file *filp, unsigned int cmd,
+				unsigned long param)
+{
+#ifdef USE_BRCM_SIMCLOCK_SOLUTION
+	pr_err("SET_LOCK_STATE_IOC is not allowed.\n");
+	return -EFAULT;
+#else
+/* To support customer implement SIMLOCK on user space*/
+	sec_simlock_state_t ioc_param = { 0 };
+	SYS_SIMLOCK_STATE_t sys_lock_status = { 0 };
+
+	if (copy_from_user
+		(&ioc_param, (sec_simlock_state_t *) param,
+		 sizeof(sec_simlock_state_t)) != 0) {
+		pr_err("handle_set_lock_state_ioc - copy_from_user() had error\n");
+		return -EFAULT;
+	}
+
+	/* setting lock status*/
+
+	sys_lock_status.network_lock_enabled =
+				(UInt8)ioc_param.network_lock_enabled;
+	sys_lock_status.network_subset_lock_enabled =
+				(UInt8)ioc_param.network_subset_lock_enabled;
+	sys_lock_status.service_provider_lock_enabled =
+				(UInt8)ioc_param.service_provider_lock_enabled;
+	sys_lock_status.corporate_lock_enabled =
+				(UInt8)ioc_param.corporate_lock_enabled;
+	sys_lock_status.phone_lock_enabled =
+				(UInt8)ioc_param.phone_lock_enabled;
+	sys_lock_status.network_lock =
+				ioc_param.network_lock;
+	sys_lock_status.network_subset_lock =
+				ioc_param.network_subset_lock;
+	sys_lock_status.service_provider_lock =
+				ioc_param.service_provider_lock;
+	sys_lock_status.corporate_lock = ioc_param.corporate_lock;
+	sys_lock_status.phone_lock = ioc_param.phone_lock;
+
+	SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
+
+	return 0;
+#endif
 }
 
 /***************************************************************************/
@@ -511,12 +560,12 @@ Boolean read_imei(UInt8 *imeiStr1, UInt8 *imeiStr2)
 	}
 
 	if (read_imei1(imeiStr1, imeiMacStr1, IMEI_DIGITS,
-					IMEI_MAC_DIGITS) < 0){
+		IMEI_MAC_DIGITS) < 0) {
 		pr_err("ReadIMEIHexData: read_imei 1 is fail\n");
 	}
 
 	if (read_imei2(imeiStr2, imeiMacStr2, IMEI_DIGITS,
-					IMEI_MAC_DIGITS) < 0){
+		IMEI_MAC_DIGITS) < 0) {
 		pr_err("ReadIMEIHexData: read_imei 2 is fail\n");
 	}
 
@@ -532,6 +581,7 @@ ERROR:
 	return FALSE;
 #endif
 }
+
 /***************************************************************************/
 /**
  *  Called by CP via sysrpc driver to get current SIM lock state
@@ -544,12 +594,10 @@ ERROR:
  */
 int sec_simlock_get_status(sec_simlock_sim_data_t *sim_data,
 			   SEC_SimLock_SimNumber_t simID,
-			   int is_test_sim,
-			   sec_simlock_state_t *sim_lock_state)
+			   int is_test_sim, sec_simlock_state_t *sim_lock_state)
 {
 	int result = 0;
-	pr_err("%s:SIM%d; is_test_sim = %d\n", __func__,
-						simID, is_test_sim);
+	pr_err("%s:SIM%d; is_test_sim = %d\n", __func__, simID, is_test_sim);
 	if (!sim_data || !sim_lock_state) {
 		pr_err("%s: invalid sim_data or sim_lock_state ptrs, exit\n",
 								__func__);
@@ -565,14 +613,11 @@ int sec_simlock_get_status(sec_simlock_sim_data_t *sim_data,
 		sim_lock_state->corporate_lock_enabled = 0;
 		sim_lock_state->phone_lock_enabled = 0;
 		sim_lock_state->network_lock = SEC_SIMLOCK_SECURITY_OPEN;
-		sim_lock_state->network_subset_lock =
-					SEC_SIMLOCK_SECURITY_OPEN;
+		sim_lock_state->network_subset_lock = SEC_SIMLOCK_SECURITY_OPEN;
 		sim_lock_state->service_provider_lock =
 					SEC_SIMLOCK_SECURITY_OPEN;
-		sim_lock_state->corporate_lock =
-					SEC_SIMLOCK_SECURITY_OPEN;
-		sim_lock_state->phone_lock =
-					SEC_SIMLOCK_SECURITY_OPEN;
+		sim_lock_state->corporate_lock = SEC_SIMLOCK_SECURITY_OPEN;
+		sim_lock_state->phone_lock = SEC_SIMLOCK_SECURITY_OPEN;
 
 #ifdef CONFIG_BRCM_SIM_SECURE_ENABLE
 		pr_info("%s: SIM SECURE enabled\n", __func__);

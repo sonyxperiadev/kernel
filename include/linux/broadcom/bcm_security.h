@@ -18,6 +18,8 @@ the GPL, without Broadcom's express prior written consent.
 *
 *  @brief  Interface to the Broadcom security kernel driver.
 *
+*  @Note   The file must match with bcm_security.h in user space
+*
 ****************************************************************************/
 
 #ifndef __BCM_SECURITY_H
@@ -30,36 +32,45 @@ extern "C" {
 /* an 8-bit integer selected to be specific to this driver */
 #define BCM_SEC_IOC_MAGIC   0xF1
 #define BCM_SEC_NAME  "bcm_security"
+
 /**
  *
  *  ioctl commands
  *
  **/
-#define SEC_SIMLOCK_IS_LOCK_ON_IOC	   _IOWR(BCM_SEC_IOC_MAGIC, 1, \
-						sec_simlock_islockon_t)
-#define SEC_SIMLOCK_SET_LOCK_IOC	   _IOWR(BCM_SEC_IOC_MAGIC, 2, \
-						sec_simlock_set_lock_t)
-#define SEC_SIMLOCK_UNLOCK_SIM_IOC	   _IOWR(BCM_SEC_IOC_MAGIC, 3, \
-						sec_simlock_unlock_t)
-#define SEC_SIMLOCK_GET_LOCK_STATE_IOC	   _IOR(BCM_SEC_IOC_MAGIC, 4, \
-						sec_simlock_state_t)
+#define SEC_SIMLOCK_IS_LOCK_ON_IOC     _IOWR(BCM_SEC_IOC_MAGIC, 1, \
+			sec_simlock_islockon_t)
+#define SEC_SIMLOCK_SET_LOCK_IOC       _IOWR(BCM_SEC_IOC_MAGIC, 2, \
+			sec_simlock_set_lock_t)
+#define SEC_SIMLOCK_UNLOCK_SIM_IOC     _IOWR(BCM_SEC_IOC_MAGIC, 3, \
+			sec_simlock_unlock_t)
+#define SEC_SIMLOCK_GET_LOCK_STATE_IOC     _IOR(BCM_SEC_IOC_MAGIC, 4, \
+			sec_simlock_state_t)
 #define SEC_SIMLOCK_GET_REMAIN_ATTMPT_IOC  _IOR(BCM_SEC_IOC_MAGIC, 5, \
-						sec_simlock_remain_t)
+			sec_simlock_remain_t)
 #define SEC_GET_IMEI_IOC	           _IOR(BCM_SEC_IOC_MAGIC, 6, \
-						sec_get_imei_data_t)
-#define SEC_SIMLOCK_IOC_MAXNR			    7
+			sec_get_imei_data_t)
+#define SEC_SIMLOCK_SET_LOCK_STATE_IOC	_IOR(BCM_SEC_IOC_MAGIC, 7, \
+			sec_simlock_state_t)
+
+#define SEC_HDCP_AES_IOC    _IOWR(BCM_SEC_IOC_MAGIC, 8, \
+						sec_hdcp_aes_data_t)
+
+#define SEC_MEM_ALLOC       _IOW(BCM_SEC_IOC_MAGIC, 9, unsigned long)
+
+#define SEC_SIMLOCK_IOC_MAXNR			    10
 
 #define MAX_IMEI_DIGITS 15
-#define MAX_IMSI_DIGITS	15
+#define MAX_IMSI_DIGITS 15
 #define MAX_GID_DIGITS 10
 #define CK_MAX_LENGTH  16
+#define MAX_HDCP_DIGITS 320
 
 enum _SEC_SimLock_SimNumber_t {
 	SEC_SimLock_SIM_SINGLE,
 	SEC_SimLock_SIM_DUAL_FIRST,
 	SEC_SimLock_SIM_DUAL_SECOND,
 	SEC_SimLock_SIM_ALL = 0xFF
-
 };
 #define SEC_SimLock_SimNumber_t enum _SEC_SimLock_SimNumber_t
 
@@ -162,6 +173,15 @@ struct _sec_get_imei_data_t {
 };
 
 #define sec_get_imei_data_t struct _sec_get_imei_data_t
+
+struct _sec_hdcp_aes_data_t {
+	char hdcp_in_string[MAX_HDCP_DIGITS];
+	char hdcp_out_string[MAX_HDCP_DIGITS];
+	int hdcp_string_len;	/* bytes in HDCP element */
+	int hdcp_enc_dec;	/* 1: encryption; 0: decryption */
+	int hdcp_wrapping_key;	/* 1: wrapping key; 0: random key */
+};
+#define sec_hdcp_aes_data_t struct _sec_hdcp_aes_data_t
 
 int sec_simlock_get_status(sec_simlock_sim_data_t *sim_data,
 				SEC_SimLock_SimNumber_t simID,
