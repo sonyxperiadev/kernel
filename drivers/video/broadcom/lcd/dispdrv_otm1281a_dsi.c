@@ -286,8 +286,13 @@ CSL_DSI_CFG_t OTM1281A_dsiCfg = {
 	TRUE,		/* enaHsTxEotPkt */
 	FALSE,		/* enaLpTxEotPkt */
 	FALSE,		/* enaLpRxEotPkt */
+#ifdef CONFIG_VIDEO_MODE
+	0,		/* dispEngine */
+	0,		/* pixTxporter */
+#else
 	1,		/* dispEngine */
 	0,		/* pixTxporter */
+#endif
 };
 
 
@@ -578,6 +583,9 @@ Int32 OTM1281A_WinSet(
 	CSL_DSI_REPLY_t rxMsg;
 	UInt8 rx_buff[8];
 
+#ifdef CONFIG_VIDEO_MODE
+	return 0;
+#endif
 	if ((pPanel->win_cur.l != p_win->l) ||
 	    (pPanel->win_cur.r != p_win->r) ||
 	    (pPanel->win_cur.t != p_win->t) ||
@@ -920,6 +928,10 @@ Int32 OTM1281A_Close(DISPDRV_HANDLE_T drvH)
 {
 	Int32 res = 0;
 	OTM1281A_PANEL_t	*pPanel	= (OTM1281A_PANEL_t *)drvH;
+
+#ifdef CONFIG_VIDEO_MODE
+	CSL_DSI_Suspend(pPanel->dsiCmVcHandle);
+#endif
 
 	if (CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle)) {
 		OTM1281A_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s: ERROR,	"
@@ -1340,7 +1352,9 @@ Int32 OTM1281A_Update(
 	req.lineCount	= p_win->h;
 	req.xStrideB	= pPanel->disp_info->width - p_win->w;
 	req.buffBpp	= pPanel->disp_info->Bpp;
-#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
+#ifdef CONFIG_VIDEO_MODE
+	req.timeOut_ms = MAX_SCHEDULE_TIMEOUT;
+#elif defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
 	req.timeOut_ms	= 2000;
 #else
 	req.timeOut_ms	= 200;
@@ -1358,8 +1372,11 @@ Int32 OTM1281A_Update(
  		req.cslLcdCb = OTM1281A_Cb;
  	else
  		req.cslLcdCb = NULL;
- 
+#ifndef CONFIG_VIDEO_MODE
 	if (CSL_DSI_UpdateCmVc(pPanel->dsiCmVcHandle, &req, pPanel->isTE)
+#else
+	if (CSL_DSI_UpdateVmVc(pPanel->dsiCmVcHandle, &req)
+#endif
 		!= CSL_LCD_OK)	{
 		OTM1281A_LOG(LCD_DBG_ERR_ID,	"[DISPDRV] %s:	ERROR ret by "
 			"CSL_DSI_UpdateCmVc\n\r", __func__);
